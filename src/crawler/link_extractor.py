@@ -1,0 +1,112 @@
+from __future__ import annotations
+
+import logging
+from typing import Any, cast
+
+from playwright.sync_api import Page
+
+from crawler.page_crawler import FieldData, FormData, is_internal_link, normalize_url
+
+DEFAULT_FORM_METHOD = "get"
+EMPTY_TEXT = ""
+
+logger = logging.getLogger(__name__)
+
+
+def extract_internal_links(page: Page, base_url: str) -> list[str]:
+    try:
+        hrefs = cast(
+            list[str],
+            page.eval_on_selector_all("a[href]", "(els) => els.map((a) => a.href)"),
+        )
+    except Exception as exc:
+        logger.warning("リンク抽出に失敗しました: %s", exc)
+        return []
+
+    normalized_links = [
+        normalize_url(href) for href in hrefs if href and is_internal_link(base_url, href)
+    ]
+    return list(dict.fromkeys(normalized_links))
+
+
+def extract_forms(page: Page) -> list[FormData]:
+    try:
+        raw_forms = cast(list[dict[str, Any]], page.eval_on_selector_all("form", _FORM_SCRIPT))
+    except Exception as exc:
+        logger.warning("フォーム抽出に失敗しました: %s", exc)
+        return []
+    return [_to_form_data(raw_form) for raw_form in raw_forms]
+
+
+def extract_headings(page: Page) -> list[str]:
+    try:
+        values = cast(
+            list[str],
+            page.eval_on_selector_all(
+                "h1, h2, h3",
+                "(els) => els.map((el) => (el.innerText || '').trim()).filter(Boolean)",
+            ),
+        )
+    except Exception as exc:
+        logger.warning("見出し抽出に失敗しました: %s", exc)
+        return []
+    return values
+
+
+def extract_page_title(page: Page) -> str:
+    try:
+        return page.title().strip()
+    except Exception as exc:
+        logger.warning("タイトル抽出に失敗しました: %s", exc)
+        return EMPTY_TEXT
+
+
+def extract_buttons(page: Page) -> list[str]:
+    try:
+        values = cast(list[str], page.eval_on_selector_all(_BUTTON_SELECTOR, _BUTTON_SCRIPT))
+    except Exception as exc:
+        logger.warning("ボタン抽出に失敗しました: %s", exc)
+        return []
+    return list(dict.fromkeys([value for value in values if value]))
+
+
+def _to_form_data(raw_form: dict[str, Any]) -> FormData:
+    raw_fields = cast(list[dict[str, Any]], raw_form.get("fields", []))
+    fields = tuple(_to_field_data(raw_field) for raw_field in raw_fields)
+    return FormData(
+        action=str(raw_form.get("action") or EMPTY_TEXT),
+        method=str(raw_form.get("method") or DEFAULT_FORM_METHOD).lower(),
+        fields=fields,
+    )
+
+
+def _to_field_data(raw_field: dict[str, Any]) -> FieldData:
+    return FieldData(
+        field_type=str(raw_field.get("field_type") or EMPTY_TEXT),
+        name=str(raw_field.get("name") or EMPTY_TEXT),
+        placeholder=str(raw_field.get("placeholder") or EMPTY_TEXT),
+        required=bool(raw_field.get("required", False)),
+    )
+
+
+_FORM_SCRIPT = """
+(forms) => forms.map((form) => ({
+  action: form.getAttribute('action') || '',
+  method: (form.getAttribute('method') || 'get').toLowerCase(),
+  fields: Array.from(form.querySelectorAll('input, select, textarea')).map((field) => ({
+    field_type: field.tagName.toLowerCase() === 'input'
+      ? (field.getAttribute('type') || 'text').toLowerCase()
+      : field.tagName.toLowerCase(),
+    name: field.getAttribute('name') || field.getAttribute('id') || '',
+    placeholder: field.getAttribute('placeholder') || '',
+    required: Boolean(field.required),
+  })),
+}))
+"""
+
+_BUTTON_SELECTOR = "button, input[type=button], input[type=submit], input[type=reset]"
+_BUTTON_SCRIPT = """
+(els) => els.map((el) => (
+  el.innerText || el.getAttribute('value') || el.getAttribute('aria-label') || ''
+).trim()).filter(Boolean)
+"""

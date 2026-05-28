@@ -1,0 +1,22 @@
+# クローリング
+playwright==1.44.0
+
+# グラフ処理
+networkx==3.3
+
+# LLM
+anthropic==0.28.0
+
+# テンプレート
+jinja2==3.1.4
+
+# Excel 出力
+openpyxl==3.1.4
+
+# テスト
+pytest==8.2.2
+pytest-cov==5.0.0
+pytest-playwright==0.5.0
+
+# ユーティリティ
+python-dotenv==1.0.1

@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>企画書 — WebSpec2Doc | VERISERVE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/veriserve.css">
+</head>
+<body>
+
+<header class="vs-header">
+  <div class="vs-header__logo">
+    <div class="vs-header__logo-mark">VS</div>
+    <span class="vs-header__logo-text">VERISERVE</span>
+  </div>
+  <div class="vs-header__divider"></div>
+  <span class="vs-header__doc-title">企画書 — WebSpec2Doc</span>
+  <div class="vs-header__meta">
+    <span>Rev. 1.0 / 社外秘</span>
+    <span id="current-date"></span>
+  </div>
+</header>
+
+<nav class="vs-sidebar">
+  <div class="vs-sidebar__section-label">目次</div>
+  <div class="vs-sidebar__nav">
+    <a href="#background"><span class="nav-num">1</span>背景・課題</a>
+    <a href="#summary"><span class="nav-num">2</span>エグゼクティブサマリー</a>
+    <a href="#proposal"><span class="nav-num">3</span>提案内容</a>
+    <a href="#effect"><span class="nav-num">4</span>期待効果</a>
+    <a href="#roi"><span class="nav-num">5</span>投資対効果</a>
+    <a href="#scope"><span class="nav-num">6</span>スコープ・制約</a>
+    <a href="#next"><span class="nav-num">7</span>次のステップ</a>
+  </div>
+  <div class="vs-sidebar__doc-links">
+    <div class="vs-sidebar__section-label">関連文書</div>
+    <a href="index.html">🏠 文書ハブ</a>
+    <a href="02_要件定義書.html">📋 要件定義書</a>
+    <a href="03_技術設計書.html">⚙️ 技術設計書</a>
+    <a href="04_プロジェクト計画書.html">📅 計画書</a>
+  </div>
+</nav>
+
+<main class="vs-main">
+
+  <div class="vs-cover">
+    <div class="vs-cover__banner">
+      <div class="vs-cover__badge">企画書 / Project Proposal</div>
+      <div class="vs-cover__title">WebSpec2Doc</div>
+      <div class="vs-cover__subtitle">URL → QA テストインプット文書 自動生成ツール 企画書</div>
+    </div>
+    <div class="vs-cover__meta">
+      <div class="vs-cover__meta-item">
+        <div class="vs-cover__meta-label">文書番号</div>
+        <div class="vs-cover__meta-value">WSDoc-PP-001</div>
+      </div>
+      <div class="vs-cover__meta-item">
+        <div class="vs-cover__meta-label">版数</div>
+        <div class="vs-cover__meta-value">Rev. 1.0</div>
+      </div>
+      <div class="vs-cover__meta-item">
+        <div class="vs-cover__meta-label">作成部署</div>
+        <div class="vs-cover__meta-value">品質保証本部</div>
+      </div>
+      <div class="vs-cover__meta-item">
+        <div class="vs-cover__meta-label">作成日</div>
+        <div class="vs-cover__meta-value" id="date-cover">—</div>
+      </div>
+    </div>
+    <div class="vs-cover__confidential">
+      <span class="vs-confidential-badge">社外秘</span>
+      本文書はベリサーブ社内向け資料です。外部への開示は禁止されています。
+    </div>
+  </div>
+
+  <!-- 1. 背景・課題 -->
+  <div class="vs-section" id="background" data-section="background">
+    <div class="vs-section__header">
+      <div class="vs-section__num">1</div>
+      <div class="vs-section__title">背景・課題</div>
+    </div>
+    <div class="vs-section__body">
+      <div class="vs-subsection">
+        <div class="vs-subsection__title">現場の実態</div>
+        <p>当社が業務委託で参画するアジャイル開発・DevOps 現場においては、開発スピードを優先するあまり <strong>仕様書・設計書の整備が後回し</strong> になるケースが増加している。検証支援チームが着任した際に「ドキュメントはありません。実際に触って覚えてください」と言われることが珍しくない。</p>
+      </div>
+      <div class="vs-subsection">
+        <div class="vs-subsection__title">課題の構造</div>
+        <table class="vs-table">
+          <thead>
+            <tr><th>課題</th><th>影響</th><th>現状の対処</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>画面構成・遷移が不明</td>
+              <td>テスト設計の網羅性が担保できない</td>
+              <td>手動で全画面を触って一覧を作成（2〜4人日）</td>
+            </tr>
+            <tr>
+              <td>入力項目の仕様が不明</td>
+              <td>境界値・同値分割テストの対象が不明確</td>
+              <td>開発者にヒアリング（スケジュール調整が必要）</td>
+            </tr>
+            <tr>
+              <td>遷移条件・異常系が不明</td>
+              <td>異常系テストが属人的になる</td>
+              <td>勘・経験則に依存</td>
+            </tr>
+            <tr>
+              <td>ドキュメントの陳腐化</td>
+              <td>あっても信頼できない</td>
+              <td>実装を確認して都度アップデート</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="vs-subsection mt-16">
+        <div class="vs-subsection__title">問題の定量化</div>
+        <div class="vs-card-grid">
+          <div class="vs-card">
+            <div class="vs-card__label">情報収集にかかる工数</div>
+            <div class="vs-card__value">2〜4<span class="vs-card__unit">人日 / PJ</span></div>
+          </div>
+          <div class="vs-card">
+            <div class="vs-card__label">テスト設計開始までの遅延</div>
+            <div class="vs-card__value">1〜2<span class="vs-card__unit">週間</span></div>
+          </div>
+          <div class="vs-card">
+            <div class="vs-card__label">テスト漏れによる手戻り</div>
+            <div class="vs-card__value">月1〜2<span class="vs-card__unit">件発生</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. エグゼクティブサマリー -->
+  <div class="vs-section" id="summary" data-section="summary">
+    <div class="vs-section__header">
+      <div class="vs-section__num">2</div>
+      <div class="vs-section__title">エグゼクティブサマリー</div>
+    </div>
+    <div class="vs-section__body">
+      <div class="vs-info-box">
+        <strong>提案の一言：</strong> 「URL を渡すだけで、QA エンジニアがその日からテスト設計を始められる文書一式を自動生成する Python ツールを社内開発する」
+      </div>
+      <div class="vs-subsection mt-16">
+        <div class="vs-subsection__title">ソリューション概要</div>
+        <p>WebSpec2Doc は、公開 Web サービスの URL を入力として受け取り、<strong>Playwright</strong> によるブラウザ自動操作でページをクロールし、画面遷移グラフを構築する。そこから QA エンジニアが必要とする以下の文書を自動生成する：</p>
+        <ul style="margin-top:12px;padding-left:20px;list-style:disc;">
+          <li style="margin-bottom:8px">画面一覧表（URL・タイトル・主要要素・遷移先）</li>
+          <li style="margin-bottom:8px">画面遷移図（Mermaid フローチャート）</li>
+          <li style="margin-bottom:8px">入力項目一覧（フォーム・入力フィールド・推定バリデーション）</li>
+          <li style="margin-bottom:8px">画面仕様書 ※ Claude API オプション（目的・操作・テスト観点）</li>
+        </ul>
+      </div>
+      <div class="vs-subsection mt-16">
+        <div class="vs-subsection__title">競合・代替手段との差異</div>
+        <table class="vs-table">
+          <thead>
+            <tr><th>手段</th><th>できること</th><th>できないこと</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Screaming Frog 等 SEO ツール</td>
+              <td>URL 一覧・リンクマップ</td>
+              <td>QA 向け仕様書は出力できない</td>
+            </tr>
+            <tr>
+              <td>Slickplan 等サイトマップツール</td>
+              <td>ビジュアルサイトマップ</td>
+              <td>入力項目・遷移条件は取れない</td>
+            </tr>
+            <tr>
+              <td>手動調査</td>
+              <td>正確・詳細</td>
+              <td>2〜4人日のコスト / 属人化</td>
+            </tr>
+            <tr>
+              <td class="text-bold text-cyan">WebSpec2Doc（提案）</td>
+              <td class="text-bold">QA 向け文書一式を 5 分で自動生成</td>
+              <td>ログイン必須領域・完全なビジネスロジック仕様</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. 提案内容 -->
+  <div class="vs-section" id="proposal" data-section="proposal">
+    <div class="vs-section__header">
+      <div class="vs-section__num">3</div>
+      <div class="vs-section__title">提案内容</div>
+    </div>
+    <div class="vs-section__body">
+      <div class="vs-subsection">
+        <div class="vs-subsection__title">システム概要図</div>
+        <div style="background:#f8f9fa;border:1px solid #e0e0e0;border-radius:6px;padding:20px;text-align:center;margin-top:8px;">
+          <div style="display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;">
+            <div style="background:var(--vs-navy);color:white;padding:12px 20px;border-radius:6px;font-weight:700;font-size:13px;">🌐 URL 入力</div>
+            <div style="font-size:20px;color:var(--vs-cyan)">→</div>
+            <div style="background:var(--vs-navy);color:white;padding:12px 20px;border-radius:6px;font-weight:700;font-size:13px;">🤖 Playwright<br><span style="font-size:11px;font-weight:400">クローリング</span></div>
+            <div style="font-size:20px;color:var(--vs-cyan)">→</div>
+            <div style="background:var(--vs-navy);color:white;padding:12px 20px;border-radius:6px;font-weight:700;font-size:13px;">📊 グラフ構築<br><span style="font-size:11px;font-weight:400">networkx</span></div>
+            <div style="font-size:20px;color:var(--vs-cyan)">→</div>
+            <div style="background:var(--vs-cyan);color:white;padding:12px 20px;border-radius:6px;font-weight:700;font-size:13px;">📄 文書生成<br><span style="font-size:11px;font-weight:400">Mermaid/MD/Excel</span></div>
+          </div>
+          <div style="margin-top:16px;font-size:12px;color:#666">
+            ※ オプション：Claude API（Haiku）で各画面の目的・テスト観点を AI 推定
+          </div>
+        </div>
+      </div>
+      <div class="vs-subsection mt-16">
+        <div class="vs-subsection__title">生成される文書の例</div>
+        <table class="vs-table">
+          <thead>
+            <tr><th>文書</th><th>出力形式</th><th>主な用途</th><th>LLM 要否</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>画面一覧表</td>
+              <td>Markdown / Excel</td>
+              <td>テスト対象スコープ確定</td>
+              <td><span class="badge badge--could">不要</span></td>
+            </tr>
+            <tr>
+              <td>画面遷移図</td>
+              <td>Mermaid → PNG/SVG</td>
+              <td>結合テストのパス設計</td>
+              <td><span class="badge badge--could">不要</span></td>
+            </tr>
+            <tr>
+              <td>入力項目一覧</td>
+              <td>Markdown / Excel</td>
+              <td>同値分割・境界値分析</td>
+              <td><span class="badge badge--could">不要</span></td>
+            </tr>
+            <tr>
+              <td>画面仕様書</td>
+              <td>HTML / Markdown</td>
+              <td>テストケース設計の詳細化</td>
+              <td><span class="badge badge--must">必要</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. 期待効果 -->
+  <div class="vs-section" id="effect" data-section="effect">
+    <div class="vs-section__header">
+      <div class="vs-section__num">4</div>
+      <div class="vs-section__title">期待効果</div>
+    </div>
+    <div class="vs-section__body">
+      <div class="vs-subsection">
+        <div class="vs-subsection__title">定量効果</div>
+        <table class="vs-table">
+          <thead>
+            <tr><th>指標</th><th>現状</th><th>導入後（目標）</th><th>改善幅</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>テスト設計開始までの準備工数</td>
+              <td>2〜4 人日</td>
+              <td>5 分（自動生成）</td>
+              <td class="text-bold text-cyan">▼ 約 90%</td>
+            </tr>
+            <tr>
+              <td>画面一覧作成工数</td>
+              <td>0.5〜1 人日</td>
+              <td>自動（含む）</td>
+              <td class="text-bold text-cyan">▼ 100%</td>
+            </tr>
+            <tr>
+              <td>テスト設計の網羅性</td>
+              <td>属人的（経験依存）</td>
+              <td>全画面・全入力項目を網羅</td>
+              <td class="text-bold text-cyan">大幅向上</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="vs-subsection mt-16">
+        <div class="vs-subsection__title">定性効果</div>
+        <ul style="padding-left:20px;list-style:disc;">
+          <li style="margin-bottom:10px"><strong>QA エンジニアの価値向上：</strong>調査作業から解放され、テスト設計・実施に集中できる</li>
+          <li style="margin-bottom:10px"><strong>クライアントへの信頼性向上：</strong>初日からドキュメントを提示し、プロフェッショナリズムをアピールできる</li>
+          <li style="margin-bottom:10px"><strong>属人化の解消：</strong>ツールが構造を把握するため、担当者依存が減少する</li>
+          <li style="margin-bottom:10px"><strong>競合優位性：</strong>市場にほぼ存在しないツールであり、当社固有の強みとなる</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. 投資対効果 -->
+  <div class="vs-section" id="roi" data-section="roi">
+    <div class="vs-section__header">
+      <div class="vs-section__num">5</div>
+      <div class="vs-section__title">投資対効果（ROI）</div>
+    </div>
+    <div class="vs-section__body">
+      <div class="vs-subsection">
+        <div class="vs-subsection__title">コスト試算</div>
+        <table class="vs-table">
+          <thead>
+            <tr><th>項目</th><th>内容</th><th>試算コスト</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>初期開発工数</td>
+              <td>Phase 0〜2 実装（社内開発）</td>
+              <td>約 10〜15 人日</td>
+            </tr>
+            <tr>
+              <td>Claude API 費用</td>
+              <td>Haiku：$0.8/M tokens（LLM オプション使用時）</td>
+              <td>約 $1〜5 / プロジェクト</td>
+            </tr>
+            <tr>
+              <td>保守工数</td>
+              <td>月次バグ修正・改善</td>
+              <td>約 0.5 人日 / 月</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="vs-subsection mt-16">
+        <div class="vs-subsection__title">効果試算（年間）</div>
+        <div class="vs-info-box">
+          仮定：年間 20 プロジェクト × 平均 3 人日の削減効果 × 8 万円 / 人日 = <strong>年間 480 万円の工数削減</strong><br>
+          ※ 開発投資の回収期間：約 1 プロジェクト（導入後即回収）
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. スコープ・制約 -->
+  <div class="vs-section" id="scope" data-section="scope">
+    <div class="vs-section__header">
+      <div class="vs-section__num">6</div>
+      <div class="vs-section__title">スコープ・制約条件</div>
+    </div>
+    <div class="vs-section__body">
+      <div class="vs-subsection">
+        <div class="vs-subsection__title">スコープ内（対象）</div>
+        <ul style="padding-left:20px;list-style:disc;">
+          <li style="margin-bottom:6px">ログイン不要の公開 Web ページ</li>
+          <li style="margin-bottom:6px">クロール深さ 3 以内のページ（設定変更可能）</li>
+          <li style="margin-bottom:6px">最大 50 画面 / 実行（設定変更可能）</li>
+          <li style="margin-bottom:6px">静的 HTML・SPA（JavaScript レンダリング後）両対応</li>
+        </ul>
+      </div>
+      <div class="vs-subsection mt-16">
+        <div class="vs-subsection__title">スコープ外（対象外）</div>
+        <ul style="padding-left:20px;list-style:disc;">
+          <li style="margin-bottom:6px">ログイン必須ページ（将来的に拡張予定）</li>
+          <li style="margin-bottom:6px">ビジネスロジック・バックエンドの仕様</li>
+          <li style="margin-bottom:6px">非公開 API・内部通信の仕様</li>
+          <li style="margin-bottom:6px">モバイルアプリ（ネイティブ）</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. 次のステップ -->
+  <div class="vs-section" id="next" data-section="next">
+    <div class="vs-section__header">
+      <div class="vs-section__num">7</div>
+      <div class="vs-section__title">次のステップ</div>
+    </div>
+    <div class="vs-section__body">
+      <table class="vs-table">
+        <thead>
+          <tr><th>#</th><th>アクション</th><th>担当</th><th>期限</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>企画承認・予算確保</td>
+            <td>部門長</td>
+            <td>承認待ち</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>MVP クローラー実装（Phase 1）</td>
+            <td>開発担当</td>
+            <td>2 週間</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>実プロジェクトでのパイロット検証</td>
+            <td>QA リード</td>
+            <td>Phase 1 完了後</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td>LLM 連携・出力強化（Phase 2〜3）</td>
+            <td>開発担当</td>
+            <td>Phase 1 後 4 週間</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td>全社展開・運用マニュアル整備</td>
+            <td>PM</td>
+            <td>Phase 3 完了後</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<footer class="vs-footer">
+  <span class="vs-footer__left">WebSpec2Doc 企画書 WSDoc-PP-001 Rev.1.0 | © VERISERVE Corporation — SCSK Group</span>
+  <span class="vs-footer__right">社外秘 — 無断複製・転載を禁止します</span>
+</footer>
+
+<script src="assets/common.js"></script>
+<script>
+  document.getElementById("date-cover").textContent =
+    document.getElementById("current-date")?.textContent || "";
+</script>
+</body>
+</html>

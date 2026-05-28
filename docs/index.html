@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebSpec2Doc — 文書ハブ | VERISERVE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/veriserve.css">
+</head>
+<body>
+
+<!-- ヘッダー -->
+<header class="vs-header">
+  <div class="vs-header__logo">
+    <div class="vs-header__logo-mark">VS</div>
+    <span class="vs-header__logo-text">VERISERVE</span>
+  </div>
+  <div class="vs-header__divider"></div>
+  <span class="vs-header__doc-title">WebSpec2Doc — プロジェクト文書ハブ</span>
+  <div class="vs-header__meta">
+    <span>Rev. 1.0</span>
+    <span id="current-date"></span>
+  </div>
+</header>
+
+<!-- サイドバー -->
+<nav class="vs-sidebar">
+  <div class="vs-sidebar__section-label">このページ</div>
+  <div class="vs-sidebar__nav">
+    <a href="#overview" class="active"><span class="nav-num">01</span>プロジェクト概要</a>
+    <a href="#documents"><span class="nav-num">02</span>文書一覧</a>
+    <a href="#status"><span class="nav-num">03</span>進捗ステータス</a>
+    <a href="#quick-start"><span class="nav-num">04</span>クイックスタート</a>
+  </div>
+  <div class="vs-sidebar__doc-links">
+    <div class="vs-sidebar__section-label">関連文書</div>
+    <a href="01_企画書.html">📄 企画書</a>
+    <a href="02_要件定義書.html">📋 要件定義書</a>
+    <a href="03_技術設計書.html">⚙️ 技術設計書</a>
+    <a href="04_プロジェクト計画書.html">📅 プロジェクト計画書</a>
+  </div>
+</nav>
+
+<!-- メインコンテンツ -->
+<main class="vs-main">
+
+  <!-- 表紙 -->
+  <div class="vs-cover">
+    <div class="vs-cover__banner">
+      <div class="vs-cover__badge">Project Documents</div>
+      <div class="vs-cover__title">WebSpec2Doc</div>
+      <div class="vs-cover__subtitle">URL → QA テストインプット文書 自動生成ツール</div>
+    </div>
+    <div class="vs-cover__meta">
+      <div class="vs-cover__meta-item">
+        <div class="vs-cover__meta-label">プロジェクト番号</div>
+        <div class="vs-cover__meta-value">008-WSDoc</div>
+      </div>
+      <div class="vs-cover__meta-item">
+        <div class="vs-cover__meta-label">ステータス</div>
+        <div class="vs-cover__meta-value">計画中</div>
+      </div>
+      <div class="vs-cover__meta-item">
+        <div class="vs-cover__meta-label">作成部署</div>
+        <div class="vs-cover__meta-value">品質保証本部</div>
+      </div>
+      <div class="vs-cover__meta-item">
+        <div class="vs-cover__meta-label">最終更新</div>
+        <div class="vs-cover__meta-value" id="current-date-cover">—</div>
+      </div>
+    </div>
+    <div class="vs-cover__confidential">
+      <span class="vs-confidential-badge">社外秘</span>
+      本文書はベリサーブ社内向け資料です。外部への開示は禁止されています。
+    </div>
+  </div>
+
+  <!-- 概要 -->
+  <div class="vs-section" id="overview" data-section="overview">
+    <div class="vs-section__header">
+      <div class="vs-section__num">1</div>
+      <div class="vs-section__title">プロジェクト概要</div>
+    </div>
+    <div class="vs-section__body">
+      <div class="vs-subsection">
+        <div class="vs-subsection__title">背景・課題</div>
+        <p>アジャイル開発・DevOps 現場への第三者検証支援において、<strong>「仕様書・設計書がないので触って覚えてください」</strong>という状況が頻繁に発生している。ドキュメントのない状態ではテスト設計の網羅性が担保できず、品質保証専門家としての価値が発揮できない。</p>
+      </div>
+      <div class="vs-subsection">
+        <div class="vs-subsection__title">提案ソリューション</div>
+        <p>公開 Web サービスの URL を入力するだけで、QA エンジニアがテスト設計を始めるために必要な文書（画面一覧・画面遷移図・入力項目仕様）を自動生成するツールを開発する。</p>
+        <div class="vs-info-box mt-16">
+          <strong>目標：</strong> 「URL を渡したら 5 分以内に、テスト設計を始められる最低限の文書一式が生成される」
+        </div>
+      </div>
+      <div class="vs-subsection mt-16">
+        <div class="vs-subsection__title">主要指標（KPI）</div>
+        <div class="vs-card-grid">
+          <div class="vs-card">
+            <div class="vs-card__label">テスト設計開始までの時間</div>
+            <div class="vs-card__value">1<span class="vs-card__unit">日目から</span></div>
+          </div>
+          <div class="vs-card">
+            <div class="vs-card__label">文書生成時間</div>
+            <div class="vs-card__value">5<span class="vs-card__unit">分以内 / 50画面</span></div>
+          </div>
+          <div class="vs-card">
+            <div class="vs-card__label">対象ページ数</div>
+            <div class="vs-card__value">50<span class="vs-card__unit">画面 / 実行</span></div>
+          </div>
+          <div class="vs-card">
+            <div class="vs-card__label">想定工数削減</div>
+            <div class="vs-card__value">2〜4<span class="vs-card__unit">人日 / プロジェクト</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 文書一覧 -->
+  <div class="vs-section" id="documents" data-section="documents">
+    <div class="vs-section__header">
+      <div class="vs-section__num">2</div>
+      <div class="vs-section__title">文書一覧</div>
+    </div>
+    <div class="vs-section__body">
+      <table class="vs-table">
+        <thead>
+          <tr>
+            <th>文書名</th>
+            <th>概要</th>
+            <th>主な読者</th>
+            <th>ステータス</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><a href="01_企画書.html">📄 企画書</a></td>
+            <td>プロジェクトの背景・提案内容・期待効果・ROI</td>
+            <td>経営層・部門長</td>
+            <td><span class="badge badge--done">作成済</span></td>
+          </tr>
+          <tr>
+            <td><a href="02_要件定義書.html">📋 要件定義書</a></td>
+            <td>機能要件・非機能要件・受け入れ基準</td>
+            <td>PL・QAリード</td>
+            <td><span class="badge badge--done">作成済</span></td>
+          </tr>
+          <tr>
+            <td><a href="03_技術設計書.html">⚙️ 技術設計書</a></td>
+            <td>システムアーキテクチャ・コンポーネント設計・API仕様</td>
+            <td>開発者・技術リード</td>
+            <td><span class="badge badge--done">作成済</span></td>
+          </tr>
+          <tr>
+            <td><a href="04_プロジェクト計画書.html">📅 プロジェクト計画書</a></td>
+            <td>WBS・スケジュール・リスク管理・品質計画</td>
+            <td>PM・ステークホルダー</td>
+            <td><span class="badge badge--done">作成済</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 進捗ステータス -->
+  <div class="vs-section" id="status" data-section="status">
+    <div class="vs-section__header">
+      <div class="vs-section__num">3</div>
+      <div class="vs-section__title">開発フェーズ進捗</div>
+    </div>
+    <div class="vs-section__body">
+      <table class="vs-table">
+        <thead>
+          <tr>
+            <th>フェーズ</th>
+            <th>内容</th>
+            <th>ステータス</th>
+            <th>備考</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-bold">Phase 0</td>
+            <td>プロジェクト基盤・文書整備</td>
+            <td><span class="badge badge--done">完了</span></td>
+            <td>ディレクトリ・設定ファイル・ビジネス文書</td>
+          </tr>
+          <tr>
+            <td class="text-bold">Phase 1</td>
+            <td>MVP クローラー実装</td>
+            <td><span class="badge badge--wip">進行中</span></td>
+            <td>Playwright + グラフ + Mermaid 出力</td>
+          </tr>
+          <tr>
+            <td class="text-bold">Phase 2</td>
+            <td>LLM 解析連携</td>
+            <td><span class="badge badge--todo">未着手</span></td>
+            <td>Claude API / 画面仕様書生成</td>
+          </tr>
+          <tr>
+            <td class="text-bold">Phase 3</td>
+            <td>プロダクト化・出力強化</td>
+            <td><span class="badge badge--todo">未着手</span></td>
+            <td>HTML レポート・Excel 出力・UI</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- クイックスタート -->
+  <div class="vs-section" id="quick-start" data-section="quick-start">
+    <div class="vs-section__header">
+      <div class="vs-section__num">4</div>
+      <div class="vs-section__title">クイックスタート</div>
+    </div>
+    <div class="vs-section__body">
+      <div class="vs-subsection">
+        <div class="vs-subsection__title">環境構築</div>
+        <pre style="background:#1a2e4a;color:#e0f0ff;padding:16px;border-radius:6px;font-size:12px;overflow-x:auto;line-height:1.8">cd 008_CrateSpec2HTML
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+playwright install chromium
+cp .env.example .env
+<span style="color:#71c7e0"># .env を編集して ANTHROPIC_API_KEY を設定</span></pre>
+      </div>
+      <div class="vs-subsection mt-16">
+        <div class="vs-subsection__title">実行例</div>
+        <pre style="background:#1a2e4a;color:#e0f0ff;padding:16px;border-radius:6px;font-size:12px;overflow-x:auto;line-height:1.8"><span style="color:#71c7e0"># シンプル実行（LLM なし・無料）</span>
+python src/main.py --url https://example.com
+
+<span style="color:#71c7e0"># AI 解析付き（テスト観点を自動推定）</span>
+python src/main.py --url https://example.com --llm
+
+<span style="color:#71c7e0"># 全形式で出力</span>
+python src/main.py --url https://example.com --llm --format html,md,excel</pre>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- フッター -->
+<footer class="vs-footer">
+  <span class="vs-footer__left">© VERISERVE Corporation. All rights reserved. | SCSK Group</span>
+  <span class="vs-footer__right">社外秘 — 無断複製・転載を禁止します</span>
+</footer>
+
+<script src="assets/common.js"></script>
+<script>
+  document.getElementById("current-date-cover").textContent =
+    document.getElementById("current-date")?.textContent || "";
+</script>
+</body>
+</html>

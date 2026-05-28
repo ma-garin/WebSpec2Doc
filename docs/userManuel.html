@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ユーザーマニュアル — WebSpec2Doc | VERISERVE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/veriserve.css">
+  <style>
+    .step-list { counter-reset: step; list-style: none; padding: 0; margin: 1rem 0; }
+    .step-list li { counter-increment: step; display: flex; gap: 1rem; padding: .75rem 0; border-bottom: 1px solid var(--vs-gray-mid); }
+    .step-list li::before { content: counter(step); background: var(--vs-cyan); color: #fff; border-radius: 50%; width: 2rem; height: 2rem; min-width: 2rem; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .9rem; }
+    .option-table th:first-child { width: 160px; }
+    .flow-diagram { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin: 1rem 0; }
+    .flow-box { background: var(--vs-gray-bg); border: 2px solid var(--vs-cyan); border-radius: 6px; padding: .5rem 1rem; font-size: .9rem; font-weight: 500; }
+    .flow-arrow { color: var(--vs-cyan); font-size: 1.4rem; font-weight: 700; }
+    .usage-card { background: var(--vs-gray-bg); border-left: 4px solid var(--vs-cyan); border-radius: 0 6px 6px 0; padding: 1rem 1.2rem; margin: .75rem 0; }
+    .usage-card h4 { color: var(--vs-navy); margin-bottom: .5rem; font-size: .9rem; }
+    .qa-matrix th { white-space: nowrap; }
+    .warn-box { background: #fff8e1; border-left: 4px solid #f9a825; border-radius: 0 6px 6px 0; padding: .8rem 1.2rem; margin: .75rem 0; font-size: .9rem; }
+    .warn-box strong { color: #e65100; }
+    .tip-box  { background: #e8f5e9; border-left: 4px solid #43a047; border-radius: 0 6px 6px 0; padding: .8rem 1.2rem; margin: .75rem 0; font-size: .9rem; }
+    .tip-box strong { color: #2e7d32; }
+  </style>
+</head>
+<body>
+
+<header class="vs-header">
+  <div class="vs-header__logo">
+    <div class="vs-header__logo-mark">VS</div>
+    <span class="vs-header__logo-text">VERISERVE</span>
+  </div>
+  <div class="vs-header__divider"></div>
+  <span class="vs-header__doc-title">ユーザーマニュアル — WebSpec2Doc</span>
+  <div class="vs-header__meta">
+    <span>Rev. 1.0 / 社外秘</span>
+    <span id="current-date"></span>
+  </div>
+</header>
+
+<nav class="vs-sidebar">
+  <div class="vs-sidebar__section-label">目次</div>
+  <div class="vs-sidebar__nav">
+    <a href="#overview"><span class="nav-num">1</span>このツールについて</a>
+    <a href="#requirements"><span class="nav-num">2</span>動作環境</a>
+    <a href="#install"><span class="nav-num">3</span>インストール</a>
+    <a href="#usage"><span class="nav-num">4</span>基本的な使い方</a>
+    <a href="#options"><span class="nav-num">5</span>オプション詳細</a>
+    <a href="#outputs"><span class="nav-num">6</span>出力ファイルの見方</a>
+    <a href="#qa"><span class="nav-num">7</span>QA テスト設計への活用</a>
+    <a href="#troubleshoot"><span class="nav-num">8</span>トラブルシューティング</a>
+  </div>
+  <div class="vs-sidebar__doc-links">
+    <div class="vs-sidebar__section-label">関連文書</div>
+    <a href="index.html">🏠 文書ハブ</a>
+    <a href="userguide.md">⚡ クイックスタート</a>
+    <a href="01_企画書.html">📄 企画書</a>
+    <a href="02_要件定義書.html">📋 要件定義書</a>
+    <a href="03_技術設計書.html">⚙️ 技術設計書</a>
+  </div>
+</nav>
+
+<main class="vs-main">
+
+  <!-- 表紙 -->
+  <div class="vs-cover">
+    <div class="vs-cover__banner">
+      <div class="vs-cover__badge">ユーザーマニュアル / User Manual</div>
+      <div class="vs-cover__title">WebSpec2Doc</div>
+      <div class="vs-cover__subtitle">URL → QA テストインプット文書 自動生成ツール ユーザーマニュアル</div>
+    </div>
+    <div class="vs-cover__meta">
+      <div class="vs-cover__meta-item">
+        <div class="vs-cover__meta-label">文書番号</div>
+        <div class="vs-cover__meta-value">WSDoc-UM-001</div>
+      </div>
+      <div class="vs-cover__meta-item">
+        <div class="vs-cover__meta-label">版数</div>
+        <div class="vs-cover__meta-value">1.0</div>
+      </div>
+      <div class="vs-cover__meta-item">
+        <div class="vs-cover__meta-label">対象者</div>
+        <div class="vs-cover__meta-value">QA エンジニア</div>
+      </div>
+      <div class="vs-cover__meta-item">
+        <div class="vs-cover__meta-label">作成日</div>
+        <div class="vs-cover__meta-value">2026-05-28</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1. このツールについて -->
+  <section class="vs-section" id="overview">
+    <h2 class="vs-section__title"><span class="vs-section__num">1</span>このツールについて</h2>
+
+    <h3 class="vs-subsection__title">解決する課題</h3>
+    <p>アジャイル開発・DevOps 現場での第三者検証支援において、次のような状況が頻繁に起こります。</p>
+    <blockquote style="border-left:4px solid var(--vs-cyan);padding:.8rem 1.2rem;background:var(--vs-gray-bg);margin:1rem 0;font-style:italic;color:var(--vs-text-light);">
+      「ドキュメントがないので、まず触って覚えてください」
+    </blockquote>
+    <p>これでは<strong>テスト設計の網羅性が担保できません</strong>。WebSpec2Doc はウェブサイトを自動でクロールし、QA テスト設計のインプットとなる文書を即時生成することで、<strong>初日からテスト設計を開始できる</strong>状態を作ります。</p>
+
+    <h3 class="vs-subsection__title">生成されるもの</h3>
+    <table class="vs-table">
+      <thead><tr><th>成果物</th><th>内容</th><th>QA での用途</th></tr></thead>
+      <tbody>
+        <tr><td><strong>画面一覧</strong></td><td>検出した全画面の URL・タイトル・フォーム数</td><td>テスト対象範囲の確定</td></tr>
+        <tr><td><strong>画面遷移図</strong></td><td>画面間の移動経路を図示</td><td>遷移テスト・シナリオ設計</td></tr>
+        <tr><td><strong>入力項目仕様</strong></td><td>フォームのフィールド・型・必須可否</td><td>境界値テスト・バリデーション確認</td></tr>
+        <tr><td><strong>スクリーンショット</strong></td><td>各画面の自動撮影画像</td><td>テスト前確認・エビデンス比較</td></tr>
+        <tr><td><strong>HTML レポート</strong></td><td>上記をまとめた単一 HTML ファイル</td><td>チームへの共有・顧客提出</td></tr>
+      </tbody>
+    </table>
+
+    <h3 class="vs-subsection__title">対象サイト</h3>
+    <div class="tip-box"><strong>対応：</strong>公開されているウェブサイト・SPA（JavaScript レンダリング対応）</div>
+    <div class="warn-box"><strong>非対応：</strong>ログインが必要なページ（認証前ページまでは到達可能）</div>
+  </section>
+
+  <!-- 2. 動作環境 -->
+  <section class="vs-section" id="requirements">
+    <h2 class="vs-section__title"><span class="vs-section__num">2</span>動作環境</h2>
+    <table class="vs-table">
+      <thead><tr><th>項目</th><th>要件</th></tr></thead>
+      <tbody>
+        <tr><td>OS</td><td>macOS / Linux / Windows</td></tr>
+        <tr><td>Python</td><td>3.11 以上</td></tr>
+        <tr><td>ネットワーク</td><td>クロール対象サイトへの HTTP/HTTPS アクセス</td></tr>
+        <tr><td>ディスク</td><td>スクリーンショット保存用に数十 MB（サイト規模による）</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 3. インストール -->
+  <section class="vs-section" id="install">
+    <h2 class="vs-section__title"><span class="vs-section__num">3</span>インストール</h2>
+
+    <ol class="step-list">
+      <li>
+        <div>
+          <strong>仮想環境を作成・有効化</strong>
+          <pre class="vs-code">python -m venv venv
+source venv/bin/activate   # Windows: venv\Scripts\activate</pre>
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>依存パッケージをインストール</strong>
+          <pre class="vs-code">pip install -r requirements.txt</pre>
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Playwright ブラウザをインストール</strong>
+          <pre class="vs-code">playwright install chromium</pre>
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>動作確認</strong>
+          <pre class="vs-code">python src/main.py --help</pre>
+          <p style="font-size:.9rem;margin-top:.4rem;">「<code>usage: main.py [-h] --url URL ...</code>」と表示されれば成功です。</p>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <!-- 4. 基本的な使い方 -->
+  <section class="vs-section" id="usage">
+    <h2 class="vs-section__title"><span class="vs-section__num">4</span>基本的な使い方</h2>
+
+    <div class="usage-card">
+      <h4>⚡ 最小構成</h4>
+      <pre class="vs-code">python src/main.py --url https://example.com</pre>
+    </div>
+
+    <div class="usage-card">
+      <h4>⭐ 推奨（HTML レポート付き）</h4>
+      <pre class="vs-code">python src/main.py \
+  --url https://example.com \
+  --depth 2 \
+  --max-pages 30 \
+  --format md,html</pre>
+    </div>
+
+    <div class="usage-card">
+      <h4>📊 全形式出力（Excel 含む）</h4>
+      <pre class="vs-code">python src/main.py \
+  --url https://example.com \
+  --depth 2 \
+  --max-pages 30 \
+  --format md,html,excel</pre>
+    </div>
+
+    <h3 class="vs-subsection__title">実行後の流れ</h3>
+    <div class="flow-diagram">
+      <div class="flow-box">コマンド実行</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">ブラウザ起動・クロール</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">解析・グラフ生成</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">output/ に文書生成</div>
+    </div>
+    <p style="font-size:.9rem;margin-top:.5rem;">完了すると <code>output/{ドメイン名}/</code> に成果物が生成されます。</p>
+  </section>
+
+  <!-- 5. オプション詳細 -->
+  <section class="vs-section" id="options">
+    <h2 class="vs-section__title"><span class="vs-section__num">5</span>オプション詳細</h2>
+
+    <table class="vs-table option-table">
+      <thead><tr><th>オプション</th><th>デフォルト</th><th>説明</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>--url</code> <span style="color:var(--vs-danger);font-size:.8rem;">必須</span></td>
+          <td>—</td>
+          <td>クロールを開始する URL。<code>https://</code> を含めてください。</td>
+        </tr>
+        <tr>
+          <td><code>--depth</code></td>
+          <td><code>3</code></td>
+          <td>リンクを辿る深さ。初回は <code>2</code> を推奨。</td>
+        </tr>
+        <tr>
+          <td><code>--max-pages</code></td>
+          <td><code>50</code></td>
+          <td>クロールする最大ページ数。大規模サイトでは <code>20〜30</code> に制限推奨。</td>
+        </tr>
+        <tr>
+          <td><code>--output</code></td>
+          <td><code>./output</code></td>
+          <td>出力先ディレクトリ。実際には <code>{output}/{ドメイン}/</code> に生成。</td>
+        </tr>
+        <tr>
+          <td><code>--format</code></td>
+          <td><code>md</code></td>
+          <td><code>md</code> / <code>html</code> / <code>excel</code> をカンマ区切りで指定。</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3 class="vs-subsection__title">--depth の目安</h3>
+    <table class="vs-table">
+      <thead><tr><th>depth</th><th>クロール範囲</th><th>目安ページ数</th><th>推奨場面</th></tr></thead>
+      <tbody>
+        <tr><td><code>1</code></td><td>起点 URL のみ</td><td>1〜数ページ</td><td>単一ページの確認</td></tr>
+        <tr><td><code>2</code></td><td>直接リンク先まで</td><td>10〜30 ページ</td><td>初回調査・中規模サイト</td></tr>
+        <tr><td><code>3</code></td><td>さらにその先まで</td><td>30〜100 ページ</td><td>網羅的調査</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 6. 出力ファイルの見方 -->
+  <section class="vs-section" id="outputs">
+    <h2 class="vs-section__title"><span class="vs-section__num">6</span>出力ファイルの見方</h2>
+
+    <h3 class="vs-subsection__title">screens.md — 画面一覧</h3>
+    <p>Markdown テーブル形式で全画面を一覧化します。</p>
+    <table class="vs-table">
+      <thead><tr><th>列名</th><th>内容</th></tr></thead>
+      <tbody>
+        <tr><td>画面ID</td><td>P001 から連番。テスト仕様書の「対象画面」として使用できます。</td></tr>
+        <tr><td>URL</td><td>そのページのパス部分</td></tr>
+        <tr><td>タイトル</td><td><code>&lt;title&gt;</code> タグから取得</td></tr>
+        <tr><td>フォーム数</td><td>その画面で検出されたフォームの数</td></tr>
+        <tr><td>遷移先</td><td>リンクされている他の画面 ID</td></tr>
+      </tbody>
+    </table>
+
+    <h3 class="vs-subsection__title">forms.md — フォーム・入力項目一覧</h3>
+    <table class="vs-table">
+      <thead><tr><th>列名</th><th>内容</th></tr></thead>
+      <tbody>
+        <tr><td>画面ID</td><td>フォームがある画面の ID</td></tr>
+        <tr><td>フィールド名</td><td><code>name</code> 属性の値</td></tr>
+        <tr><td>型</td><td><code>text</code> / <code>email</code> / <code>password</code> / <code>select</code> / <code>textarea</code> など</td></tr>
+        <tr><td>必須</td><td><code>required</code> 属性の有無（Yes / No）</td></tr>
+        <tr><td>placeholder</td><td>入力ヒントテキスト</td></tr>
+      </tbody>
+    </table>
+
+    <h3 class="vs-subsection__title">transition.mmd — 画面遷移図（Mermaid 形式）</h3>
+    <p>ナビゲーション共通リンクを自動除外し、意味のある遷移のみを表示します。<a href="https://mermaid.live" target="_blank">Mermaid Live Editor</a> に貼り付けると図として描画できます。</p>
+
+    <h3 class="vs-subsection__title">report.html — 統合 HTML レポート</h3>
+    <p>上記すべてを 1 ファイルにまとめた HTML レポートです。ブラウザで開くと各画面のスクリーンショット・遷移図・テーブルを確認できます。ファイル 1 つをメール・チャットで共有できます。</p>
+    <div class="tip-box"><strong>ヒント：</strong>Mermaid 遷移図のレンダリングにはインターネット接続が必要です（CDN を使用）。</div>
+
+    <h3 class="vs-subsection__title">spec.xlsx — Excel 仕様書</h3>
+    <table class="vs-table">
+      <thead><tr><th>シート名</th><th>内容</th></tr></thead>
+      <tbody>
+        <tr><td>Screens</td><td>画面一覧（画面ID / URL / タイトル / フォーム数）</td></tr>
+        <tr><td>Forms</td><td>入力項目一覧（画面ID / URL / フィールド名 / 型 / 必須 / placeholder）</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 7. QA テスト設計への活用 -->
+  <section class="vs-section" id="qa">
+    <h2 class="vs-section__title"><span class="vs-section__num">7</span>QA テスト設計への活用方法</h2>
+
+    <h3 class="vs-subsection__title">テスト設計の流れ</h3>
+    <div class="flow-diagram" style="flex-direction:column;align-items:flex-start;gap:.3rem;">
+      <div style="display:flex;align-items:center;gap:.5rem;"><div class="flow-box">WebSpec2Doc 実行（5〜10分）</div></div>
+      <div class="flow-arrow" style="margin-left:1rem;">↓</div>
+      <div style="display:flex;align-items:center;gap:.5rem;"><div class="flow-box">screens.md で画面一覧を把握</div><span style="font-size:.85rem;color:var(--vs-text-light);">→ テスト対象範囲を確定</span></div>
+      <div class="flow-arrow" style="margin-left:1rem;">↓</div>
+      <div style="display:flex;align-items:center;gap:.5rem;"><div class="flow-box">transition.mmd で遷移経路を確認</div><span style="font-size:.85rem;color:var(--vs-text-light);">→ シナリオテストを設計</span></div>
+      <div class="flow-arrow" style="margin-left:1rem;">↓</div>
+      <div style="display:flex;align-items:center;gap:.5rem;"><div class="flow-box">forms.md で入力項目を整理</div><span style="font-size:.85rem;color:var(--vs-text-light);">→ 境界値・バリデーションテスト設計</span></div>
+      <div class="flow-arrow" style="margin-left:1rem;">↓</div>
+      <div style="display:flex;align-items:center;gap:.5rem;"><div class="flow-box">テスト仕様書・テストケース作成</div></div>
+    </div>
+
+    <h3 class="vs-subsection__title">フォーム情報とテスト設計の対応</h3>
+    <table class="vs-table qa-matrix">
+      <thead><tr><th>取得できる情報</th><th>設計すべきテスト</th><th>テスト技法</th></tr></thead>
+      <tbody>
+        <tr><td>型: <code>email</code></td><td>@ なし・不正形式での送信</td><td>同値分割・境界値</td></tr>
+        <tr><td>型: <code>password</code></td><td>最小長・最大長・使用禁止文字</td><td>境界値分析</td></tr>
+        <tr><td>型: <code>text</code></td><td>最大長超過・特殊文字・SQL インジェクション</td><td>境界値・セキュリティ</td></tr>
+        <tr><td>必須: Yes</td><td>空欄のまま送信</td><td>同値分割（無効クラス）</td></tr>
+        <tr><td>必須: No</td><td>任意項目が空でも送信できるか</td><td>同値分割（有効クラス）</td></tr>
+        <tr><td>placeholder</td><td>ヒントテキスト消去・アクセシビリティ</td><td>UI テスト</td></tr>
+      </tbody>
+    </table>
+
+    <h3 class="vs-subsection__title">遷移図の活用</h3>
+    <ul style="margin:1rem 0;padding-left:1.5rem;line-height:2;">
+      <li><strong>遷移テスト</strong>：図に表れているすべての矢印がテストすべき遷移経路</li>
+      <li><strong>デッドリンク確認</strong>：遷移先が存在しないノードの検出</li>
+      <li><strong>異常系</strong>：直接 URL アクセス・ブラウザの戻るボタンでの挙動</li>
+    </ul>
+  </section>
+
+  <!-- 8. トラブルシューティング -->
+  <section class="vs-section" id="troubleshoot">
+    <h2 class="vs-section__title"><span class="vs-section__num">8</span>トラブルシューティング</h2>
+
+    <table class="vs-table">
+      <thead><tr><th>症状</th><th>原因</th><th>対処方法</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>SSL 証明書エラーの警告</td>
+          <td>macOS の Python が SSL 証明書を参照できない</td>
+          <td><code>/Applications/Python 3.x/Install Certificates.command</code> を実行。クロール自体は継続するため無視も可。</td>
+        </tr>
+        <tr>
+          <td>ページ数が少ない・クロールされない</td>
+          <td>depth が浅い / ログインが必要なページ</td>
+          <td><code>--depth</code> を増やす。認証ページは対象外。</td>
+        </tr>
+        <tr>
+          <td>タイムアウトが頻発する</td>
+          <td>サーバーが重い / ネットワーク遅延</td>
+          <td><code>--max-pages</code> を減らしてページ数を絞る。</td>
+        </tr>
+        <tr>
+          <td>遷移図（Mermaid）が表示されない</td>
+          <td>オフライン環境 / CDN 未アクセス</td>
+          <td><code>transition.mmd</code> を <a href="https://mermaid.live" target="_blank">mermaid.live</a> に貼り付ける。</td>
+        </tr>
+        <tr>
+          <td>report.html のサイズが大きい</td>
+          <td>スクリーンショットが多い / ページ数が多い</td>
+          <td>500KB 超のスクショは自動スキップ。<code>--max-pages</code> を減らすと解消。</td>
+        </tr>
+        <tr>
+          <td><code>ModuleNotFoundError</code></td>
+          <td>仮想環境が有効でない / pip install 未実施</td>
+          <td><code>source venv/bin/activate</code> → <code>pip install -r requirements.txt</code></td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+</main>
+
+<footer class="vs-footer">
+  <div>WebSpec2Doc ユーザーマニュアル — WSDoc-UM-001 Rev.1.0</div>
+  <div>© VERISERVE Inc. All rights reserved. | 社外秘</div>
+  <div id="footer-page">p. 1</div>
+</footer>
+
+<script src="assets/common.js"></script>
+</body>
+</html>

@@ -18,5 +18,8 @@ pytest==8.2.2
 pytest-cov==5.0.0
 pytest-playwright==0.5.0
 
+# Web UI
+flask==3.0.3
+
 # ユーティリティ
 python-dotenv==1.0.1

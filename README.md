@@ -4,62 +4,98 @@
 
 公開 Web サービスの URL を渡すだけで、QA エンジニアがテスト設計を始めるために必要な文書を自動生成します。
 
+> 「ドキュメントがないので、まず触って覚えてください」という現場でも、初日からテスト設計を始められる状態を実現します。
+
+---
+
 ## 生成できる文書
 
-| 文書 | 内容 |
-|------|------|
-| 画面一覧表 | 全画面の URL・タイトル・主要要素・遷移先 |
-| 画面遷移図 | Mermaid 形式のフローチャート |
-| 入力項目一覧 | フォーム・入力フィールドの一覧と推定バリデーション |
-| 画面仕様書（LLM オプション） | 各画面の目的・操作・テスト観点 |
+| ファイル | 内容 |
+|---------|------|
+| `screens.md` | 全画面の URL・タイトル・フォーム数・遷移先 |
+| `forms.md` | フォーム・入力フィールド一覧（型・必須・placeholder） |
+| `transition.mmd` | 画面遷移図（Mermaid 形式） |
+| `report.html` | 上記すべて＋スクリーンショットをまとめた HTML レポート |
+| `spec.xlsx` | Excel 仕様書（TestRail / Jira 転記用） |
+| `screenshots/` | 各画面のスクリーンショット（PNG） |
+
+---
 
 ## セットアップ
 
 ```bash
-git clone <this-repo>
-cd 008_CrateSpec2HTML
+git clone https://github.com/ma-garin/WebSpec2Doc.git
+cd WebSpec2Doc
+
 python -m venv venv
 source venv/bin/activate   # Windows: venv\Scripts\activate
+
 pip install -r requirements.txt
 playwright install chromium
-cp .env.example .env
-# .env を編集して ANTHROPIC_API_KEY を設定（--llm オプション使用時のみ必要）
 ```
+
+---
 
 ## 使い方
 
 ```bash
-# シンプルに使う（LLM なし・無料）
+# 最小構成（Markdown 出力）
 python src/main.py --url https://example.com
 
-# LLM 解析付き（各画面の目的・テスト観点を AI が推定）
-python src/main.py --url https://example.com --llm
+# HTML レポート付き（推奨）
+python src/main.py --url https://example.com --format md,html
 
-# 詳細オプション
+# 全オプション指定
 python src/main.py \
   --url https://example.com \
-  --depth 3 \          # クロール深さ（デフォルト: 3）
-  --max-pages 50 \     # 最大ページ数（デフォルト: 50）
-  --output ./output \  # 出力先ディレクトリ
-  --llm \              # AI 解析を有効化
-  --format html,md,excel  # 出力形式（カンマ区切り）
+  --depth 2 \
+  --max-pages 30 \
+  --output ./output \
+  --format md,html,excel
 ```
+
+### オプション一覧
+
+| オプション | デフォルト | 説明 |
+|-----------|-----------|------|
+| `--url` | 必須 | クロール対象 URL |
+| `--depth` | `3` | リンクを辿る深さ |
+| `--max-pages` | `50` | クロールする最大ページ数 |
+| `--output` | `./output` | 出力先ディレクトリ |
+| `--format` | `md` | 出力形式（`md` / `html` / `excel` をカンマ区切り） |
+
+出力先は `{output}/{ドメイン名}/` に生成されます。
+
+---
+
+## ドキュメント
+
+- [クイックスタートガイド](docs/userguide.md)
+- [ユーザーマニュアル（詳細版）](docs/userManuel.md)
+
+---
 
 ## 制約事項
 
 - ログインが必要なページは対象外
-- JavaScript を多用する SPA は一部未対応の場合あり
 - 対象は公開されている Web ページのみ
+- robots.txt に従いクロールをスキップする場合あり
+
+---
 
 ## 技術スタック
 
+| 用途 | ライブラリ |
+|------|-----------|
+| ブラウザ自動操作 | [Playwright](https://playwright.dev/python/) |
+| グラフ処理 | [networkx](https://networkx.org/) |
+| Excel 出力 | [openpyxl](https://openpyxl.readthedocs.io/) |
+| テスト | pytest（カバレッジ 85%） |
+
 - Python 3.11+
-- Playwright（ブラウザ自動操作）
-- networkx（グラフ処理）
-- Claude API / Haiku（LLM 解析オプション）
-- Jinja2（HTML テンプレート）
-- openpyxl（Excel 出力）
+
+---
 
 ## ライセンス
 
-社内利用限定
+MIT

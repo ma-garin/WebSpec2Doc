@@ -14,6 +14,9 @@ app = Flask(__name__)
 
 OUTPUT_DIR = Path("output")
 SCREEN_ROW_RE = re.compile(r"^\|\s*\d+\s*\|")
+ENV_FILE = Path(".env")
+DEFAULT_OPENAI_MODEL = "gpt-4o-mini"
+ALLOWED_MODELS = ("gpt-4o-mini", "gpt-4o", "gpt-4-turbo")
 
 _HTML = """<!DOCTYPE html>
 <html lang="ja">
@@ -290,6 +293,29 @@ _HTML = """<!DOCTYPE html>
         <!-- ===== 設定ビュー ===== -->
         <section class="view" id="view-settings">
           <div class="input-card">
+            <h2 style="font-size:16px;font-weight:700;margin-bottom:4px">API設定</h2>
+            <p class="input-hint" style="margin-top:0;margin-bottom:14px">LLMテスト観点生成（今後実装）で使う OpenAI API の設定です。キーは <code>.env</code> に保存されます（ブラウザには保存しません）。</p>
+            <div class="options-grid">
+              <div class="field full">
+                <label for="api-key">API Key</label>
+                <input type="password" id="api-key" placeholder="sk-..." autocomplete="off">
+                <span id="api-key-state" style="font-size:12px;color:var(--text-muted)"></span>
+              </div>
+              <div class="field full">
+                <label for="api-model">モデル</label>
+                <select id="api-model" class="url-input" style="height:40px">
+                  <option value="gpt-4o-mini">gpt-4o-mini</option>
+                  <option value="gpt-4o">gpt-4o</option>
+                  <option value="gpt-4-turbo">gpt-4-turbo</option>
+                </select>
+              </div>
+            </div>
+            <button class="btn-primary" id="save-api" style="margin-top:18px">API設定を保存</button>
+            <div class="settings-msg" id="api-msg">API設定を保存しました</div>
+            <p class="input-hint" style="margin-top:14px">⚠ LLMテスト観点生成機能は未実装です。本設定はその準備です。</p>
+          </div>
+          <div class="input-card">
+            <h2 style="font-size:16px;font-weight:700;margin-bottom:14px">クロール既定値</h2>
             <div class="options-grid">
               <div class="field"><label for="set-depth">深さ（既定）</label><input type="number" id="set-depth" min="1" max="5"></div>
               <div class="field"><label for="set-max">最大ページ数（既定）</label><input type="number" id="set-max" min="1" max="200"></div>
@@ -459,9 +485,33 @@ form.addEventListener('submit', async (e) => {
   } else { execTitle.textContent = 'エラー'; execError.classList.add('show'); }
 });
 
+// ---- API設定（.env にサーバ保存）----
+async function loadApiSettings() {
+  try {
+    const res = await fetch('/api/settings');
+    const s = await res.json();
+    document.getElementById('api-model').value = s.openai_model || 'gpt-4o-mini';
+    const state = document.getElementById('api-key-state');
+    const keyInput = document.getElementById('api-key');
+    if (s.openai_key_set) { state.textContent = '✓ 設定済み（再入力すると更新します）'; keyInput.placeholder = '設定済み（変更時のみ入力）'; }
+    else { state.textContent = '未設定'; keyInput.placeholder = 'sk-...'; }
+  } catch (e) {}
+}
+document.getElementById('save-api').addEventListener('click', async () => {
+  const body = new URLSearchParams({
+    api_key: document.getElementById('api-key').value,
+    model: document.getElementById('api-model').value,
+  });
+  await fetch('/api/settings', { method: 'POST', body });
+  document.getElementById('api-key').value = '';
+  const msg = document.getElementById('api-msg'); msg.classList.add('show'); setTimeout(() => msg.classList.remove('show'), 2000);
+  loadApiSettings();
+});
+
 // 初期化
 applySettings();
 loadSettingsForm();
+loadApiSettings();
 </script>
 </body>
 </html>
@@ -530,6 +580,63 @@ def _count_screens(screens_md: Path) -> int:
     if not screens_md.exists():
         return 0
     return sum(1 for line in screens_md.read_text(encoding="utf-8").splitlines() if SCREEN_ROW_RE.match(line))
+
+
+def _sanitize(value: str) -> str:
+    return value.strip().replace("\n", "").replace("\r", "")
+
+
+def _read_env() -> dict[str, str]:
+    data: dict[str, str] = {}
+    if ENV_FILE.exists():
+        for line in ENV_FILE.read_text(encoding="utf-8").splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#") or "=" not in stripped:
+                continue
+            key, value = stripped.split("=", 1)
+            data[key.strip()] = value.strip()
+    return data
+
+
+def _write_env(updates: dict[str, str]) -> None:
+    lines: list[str] = []
+    seen: set[str] = set()
+    if ENV_FILE.exists():
+        for line in ENV_FILE.read_text(encoding="utf-8").splitlines():
+            stripped = line.strip()
+            if "=" in stripped and not stripped.startswith("#"):
+                key = stripped.split("=", 1)[0].strip()
+                if key in updates:
+                    lines.append(f"{key}={updates[key]}")
+                    seen.add(key)
+                    continue
+            lines.append(line)
+    for key, value in updates.items():
+        if key not in seen:
+            lines.append(f"{key}={value}")
+    ENV_FILE.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+@app.get("/api/settings")
+def get_settings() -> dict:
+    env = _read_env()
+    return {
+        "openai_key_set": bool(env.get("OPENAI_API_KEY")),
+        "openai_model": env.get("OPENAI_MODEL", DEFAULT_OPENAI_MODEL),
+    }
+
+
+@app.post("/api/settings")
+def post_settings() -> dict:
+    api_key = _sanitize(request.form.get("api_key", ""))
+    model = _sanitize(request.form.get("model", ""))
+    if model not in ALLOWED_MODELS:
+        model = DEFAULT_OPENAI_MODEL
+    updates = {"OPENAI_MODEL": model}
+    if api_key:
+        updates["OPENAI_API_KEY"] = api_key
+    _write_env(updates)
+    return {"ok": True, "openai_key_set": bool(_read_env().get("OPENAI_API_KEY")), "openai_model": model}
 
 
 @app.get("/open")

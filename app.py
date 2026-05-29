@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import sys
@@ -91,6 +92,8 @@ _HTML = """<!DOCTYPE html>
     .app-content { flex: 1; overflow: auto; padding: 28px 30px; }
     .app-content-inner { max-width: 880px; }
     .app-content.is-executing { overflow: hidden; padding: 16px 20px; height: 100%; }
+    .app-content.is-executing .app-content-inner { height: 100%; max-width: none; }
+    .app-content.is-executing .view.is-active { height: 100%; }
     .view { display: none; }
     .view.is-active { display: block; }
     .input-card {
@@ -241,32 +244,71 @@ _HTML = """<!DOCTYPE html>
     .spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; }
     .spinner-light { border-color: rgba(255,255,255,.4); border-top-color: #fff; }
 
-    /* ── 完了モーダル ── */
-    .modal-overlay { position: fixed; inset: 0; background: rgba(22,22,22,.45); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 20px; }
-    .modal-overlay.hidden { display: none; }
-    .completion-modal { width: 100%; max-width: 460px; background: var(--surface); border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.25); overflow: hidden; }
-    .cm-header { display: flex; align-items: center; gap: 14px; padding: 22px 24px 0; }
-    .cm-check-icon { width: 44px; height: 44px; border-radius: 50%; background: var(--ok-bg); color: var(--ok); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; flex-shrink: 0; }
-    .cm-title { font-size: 20px; line-height: 1.2; }
-    .cm-subtitle { color: var(--text-muted); font-size: 13px; margin-top: 2px; }
-    .cm-body { padding: 20px 24px; }
-    .cm-severities { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
-    .cm-sev { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-soft); padding: 14px; text-align: center; }
-    .cm-sev-num { display: block; font-size: 26px; font-weight: 800; color: var(--primary-dark); }
-    .cm-sev-label { font-size: 12px; color: var(--text-muted); }
-    .cm-actions { display: flex; gap: 10px; padding: 0 24px 24px; }
-    .cm-btn-primary { flex: 1; height: 44px; border: none; border-radius: 4px; background: var(--primary); color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; }
-    .cm-btn-primary:hover { background: var(--primary-dark); }
-    .cm-btn-close { height: 44px; padding: 0 18px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text); font-size: 14px; font-weight: 600; cursor: pointer; }
+    /* ── 結果ページ ── */
+    .result-panel { height: 100%; display: flex; flex-direction: column; gap: 10px; }
+    .result-panel.hidden { display: none; }
+    .result-summary { flex-shrink: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+    .result-summary-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .result-ok { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 4px; background: var(--ok-bg); color: var(--ok); font-size: 12px; font-weight: 800; }
+    .result-summary-head strong { font-size: 15px; word-break: break-all; }
+    .result-stats { display: grid; grid-template-columns: repeat(5,1fr); gap: 10px; }
+    .result-stats > div { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-soft); padding: 10px; text-align: center; display: grid; gap: 2px; }
+    .result-stats .num { font-size: 22px; font-weight: 800; color: var(--primary-dark); }
+    .result-stats span:last-child { font-size: 11px; color: var(--text-muted); }
+    .result-bar { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .result-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+    .result-tab { height: 34px; padding: 0 14px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface-soft); color: var(--text-muted); font-size: 13px; font-weight: 700; cursor: pointer; }
+    .result-tab.is-active { border-color: var(--primary); background: var(--info-bg); color: var(--primary-dark); }
+    .result-bar-actions { display: flex; gap: 8px; align-items: center; }
+    .result-hero { flex: 1; min-height: 0; border: 1px solid var(--border); border-radius: var(--radius); overflow: auto; background: var(--surface); }
+    .result-hero iframe { width: 100%; height: 100%; border: 0; display: block; }
+    .result-hero pre { margin: 0; padding: 16px; font-size: .8rem; white-space: pre-wrap; word-break: break-word; font-family: ui-monospace, monospace; color: var(--text); }
+    .result-hero .hero-msg { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 12px; color: var(--text-muted); text-align: center; padding: 20px; }
+    .hero-pad { padding: 16px; }
+    .hero-section-title { font-size: 14px; font-weight: 800; color: var(--primary-dark); margin: 4px 0 10px; }
+    /* マトリクス */
+    .matrix-toolbar { position: sticky; top: 0; z-index: 2; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 12px 14px; background: var(--surface); border-bottom: 1px solid var(--border); }
+    .matrix-toolbar input[type=search], .matrix-toolbar select { height: 34px; border: 1px solid var(--border); border-radius: 4px; padding: 0 10px; font-size: 13px; background: var(--surface-soft); color: var(--text); outline: none; }
+    .matrix-toolbar input[type=search] { min-width: 200px; }
+    .matrix-toolbar label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-muted); font-weight: 700; }
+    .matrix-toolbar .matrix-count { margin-left: auto; font-size: 12px; color: var(--text-muted); font-weight: 700; }
+    table.matrix { width: 100%; border-collapse: collapse; font-size: .8rem; }
+    table.matrix th { position: sticky; top: 58px; background: var(--primary); color: #fff; text-align: left; padding: 8px 10px; white-space: nowrap; z-index: 1; }
+    table.matrix td { padding: 8px 10px; border-bottom: 1px solid #eef; vertical-align: top; }
+    table.matrix tr:nth-child(even) td { background: var(--surface-soft); }
+    table.matrix .c-screen { font-weight: 700; color: var(--primary-dark); white-space: nowrap; }
+    table.matrix .c-req { color: var(--critical); font-weight: 700; }
+    table.matrix .c-loc { font-family: ui-monospace, monospace; font-size: .72rem; color: #5a3d8a; word-break: break-all; }
+    table.matrix .c-cond { color: #0a6b3a; white-space: pre-line; font-size: .76rem; }
+    /* 概要 */
+    .ov-screens { width: 100%; border-collapse: collapse; font-size: .85rem; }
+    .ov-screens th { background: var(--surface-soft); color: var(--text-muted); font-size: 12px; font-weight: 800; text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    .ov-screens td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    .ov-screens tr:hover td { background: var(--surface-soft); }
+    .ov-screens .num { font-variant-numeric: tabular-nums; }
+    .r-shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
+    .r-shots a { display: block; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+    .r-shots figure { margin: 0; }
+    .r-shots figcaption { font-size: 11px; color: var(--text-muted); padding: 4px 6px; background: var(--surface-soft); }
+    .r-shots img { width: 100%; display: block; }
+    .export-grid { display: grid; gap: 10px; }
+    .export-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-soft); }
+    .export-row strong { font-size: 14px; }
+    .export-row .export-desc { font-size: 12px; color: var(--text-muted); }
+    .export-row .export-main { flex: 1; min-width: 0; display: grid; gap: 2px; }
+    .export-row a { text-decoration: none; }
+    .export-missing { opacity: .5; }
 
     .app-footer { display: flex; align-items: center; justify-content: space-between; padding: 14px 30px; border-top: 1px solid var(--border); background: rgba(247,251,255,.96); color: var(--text-muted); font-size: 12px; flex-shrink: 0; }
     table.data { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-    table.data th { background: var(--surface-soft); color: var(--text-muted); font-size: 12px; font-weight: 800; text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+    table.data th { background: var(--surface-soft); color: var(--text-muted); font-size: 12px; font-weight: 800; text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--border); white-space: nowrap; }
     table.data td { padding: 12px 14px; border-bottom: 1px solid var(--border); font-size: 14px; }
     table.data tr:last-child td { border-bottom: none; }
     table.data tbody tr:hover { background: var(--surface-soft); }
     .num { font-variant-numeric: tabular-nums; }
     .history-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .fmt-badges { display: flex; gap: 4px; flex-wrap: wrap; }
+    .fmt-badge { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 4px; background: var(--info-bg); border: 1px solid var(--info-border); color: var(--primary-dark); font-size: 11px; font-weight: 700; }
     .empty { padding: 28px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border); border-radius: var(--radius); background: var(--surface-soft); }
     .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 4px; }
     .options-grid .full { grid-column: 1 / -1; }
@@ -320,9 +362,7 @@ _HTML = """<!DOCTYPE html>
               <nav class="wizard-progress" aria-label="設定ステップ">
                 <div class="wizard-step-node is-active" id="wnode-1"><div class="wizard-step-circle">1</div><span class="wizard-step-label">対象設定</span></div>
                 <div class="wizard-step-line" id="wline-12"></div>
-                <div class="wizard-step-node" id="wnode-2"><div class="wizard-step-circle">2</div><span class="wizard-step-label">出力設定</span></div>
-                <div class="wizard-step-line" id="wline-23"></div>
-                <div class="wizard-step-node" id="wnode-3"><div class="wizard-step-circle">3</div><span class="wizard-step-label">オプション</span></div>
+                <div class="wizard-step-node" id="wnode-2"><div class="wizard-step-circle">2</div><span class="wizard-step-label">出力形式</span></div>
               </nav>
 
               <form id="form">
@@ -353,7 +393,7 @@ _HTML = """<!DOCTYPE html>
                           <input type="number" id="crawl-depth" class="crawl-depth-input" value="2" min="1" max="5" />
                           <span class="crawl-depth-unit">階層</span>
                           <label for="max-pages" class="crawl-depth-label">最大</label>
-                          <input type="number" id="max-pages" class="crawl-depth-input" value="30" min="1" max="200" />
+                          <input type="number" id="max-pages" class="crawl-depth-input" value="30" min="1" max="300" />
                           <span class="crawl-depth-unit">ページ</span>
                           <button type="button" id="discover-btn" class="btn-outline-sm">画面リスト取得</button>
                         </div>
@@ -389,8 +429,21 @@ _HTML = """<!DOCTYPE html>
                     <ol id="target-preview-list"></ol>
                   </div>
 
+                  <details class="result-collapsible" style="margin-top:14px">
+                    <summary>詳細設定（ログイン）</summary>
+                    <div class="wizard-section" style="margin-top:12px">
+                      <div class="login-fields">
+                        <div class="field login-field-full">
+                          <label for="auth-path">認証セッション auth.json パス</label>
+                          <input type="text" id="auth-path" placeholder="auth.json" />
+                        </div>
+                      </div>
+                      <p class="input-hint">事前に <code>python src/main.py --login &lt;ログインURL&gt;</code> で保存した auth.json のパスを指定すると、認証後ページをクロールできます。</p>
+                    </div>
+                  </details>
+
                   <div class="wizard-footer">
-                    <button type="button" class="btn-primary" id="wnext-1">次へ：出力設定 →</button>
+                    <button type="button" class="btn-primary" id="wnext-1">次へ：出力形式 →</button>
                   </div>
                 </div>
 
@@ -415,25 +468,6 @@ _HTML = """<!DOCTYPE html>
                   </div>
                   <div class="wizard-footer">
                     <button type="button" class="btn-outline-sm" id="wback-2">← 戻る</button>
-                    <button type="button" class="btn-primary" id="wnext-2">次へ：オプション設定 →</button>
-                  </div>
-                </div>
-
-                <!-- ページ3: オプション -->
-                <div class="wizard-page" id="wpage-3">
-                  <div class="wizard-page-header"><h2>オプション設定</h2><p>ログイン後ページを対象にする場合は、保存済みセッションを指定します。</p></div>
-                  <div class="wizard-section">
-                    <p class="app-sidebar-section" style="padding:0 0 10px">ログイン設定（任意）</p>
-                    <div class="login-fields">
-                      <div class="field login-field-full">
-                        <label for="auth-path">認証セッション auth.json パス</label>
-                        <input type="text" id="auth-path" placeholder="auth.json" />
-                      </div>
-                    </div>
-                    <p class="input-hint">事前に <code>python src/main.py --login &lt;ログインURL&gt;</code> で保存した auth.json のパスを指定すると、認証後ページをクロールできます。</p>
-                  </div>
-                  <div class="wizard-footer">
-                    <button type="button" class="btn-outline-sm" id="wback-3">← 戻る</button>
                     <button type="submit" class="btn-primary" id="submit-btn">ドキュメント生成を開始</button>
                   </div>
                 </div>
@@ -472,11 +506,38 @@ _HTML = """<!DOCTYPE html>
                 <div class="execution-meta-item"><dt>状態</dt><dd id="exec-phase">準備中</dd></div>
               </dl>
               <div class="execution-bottombar-actions hidden" id="exec-actions">
-                <a id="exec-report-btn" class="btn-primary" style="display:none;align-items:center" target="_blank">レポートを見る</a>
-                <a id="exec-pdf-btn" class="btn-outline-sm" style="display:none" target="_blank">PDF</a>
-                <button type="button" id="exec-new-btn" class="btn-outline-sm">新しく生成</button>
+                <button type="button" id="exec-new-btn" class="btn-outline-sm">入力に戻る</button>
               </div>
             </div>
+          </div>
+
+          <!-- 結果ページ -->
+          <div id="result-panel" class="result-panel hidden">
+            <div class="result-summary">
+              <div class="result-summary-head">
+                <span class="result-ok">✓ 生成完了</span>
+                <strong id="r-domain">-</strong>
+              </div>
+              <div class="result-stats">
+                <div><span class="num" id="r-screens">0</span><span>画面数</span></div>
+                <div><span class="num" id="r-forms">0</span><span>フォーム数</span></div>
+                <div><span class="num" id="r-fields">0</span><span>入力項目数</span></div>
+                <div><span class="num" id="r-required">0</span><span>必須項目数</span></div>
+                <div><span class="num" id="r-buttons">0</span><span>操作要素数</span></div>
+              </div>
+            </div>
+            <div class="result-bar">
+              <div class="result-tabs">
+                <button type="button" class="result-tab is-active" data-tab="overview">概要</button>
+                <button type="button" class="result-tab" data-tab="matrix">入力項目・テスト条件</button>
+                <button type="button" class="result-tab" data-tab="report">画面別仕様</button>
+                <button type="button" class="result-tab" data-tab="export">エクスポート</button>
+              </div>
+              <div class="result-bar-actions">
+                <button type="button" id="r-new-btn" class="btn-primary" style="height:36px;padding:0 16px;font-size:13px">新しく生成</button>
+              </div>
+            </div>
+            <div class="result-hero" id="result-hero"></div>
           </div>
         </section>
 
@@ -542,7 +603,7 @@ _HTML = """<!DOCTYPE html>
               <p class="input-hint" style="margin-top:0;margin-bottom:14px">このブラウザに保存され、生成ウィザードの初期値に反映されます。</p>
               <div class="options-grid">
                 <div class="field"><label for="set-depth">階層数（既定）</label><input type="number" id="set-depth" min="1" max="5"></div>
-                <div class="field"><label for="set-max">最大ページ数（既定）</label><input type="number" id="set-max" min="1" max="200"></div>
+                <div class="field"><label for="set-max">最大ページ数（既定）</label><input type="number" id="set-max" min="1" max="300"></div>
                 <div class="field full">
                   <label>出力形式（既定）</label>
                   <div class="checkbox-group">
@@ -571,26 +632,6 @@ _HTML = """<!DOCTYPE html>
   </div>
 </div>
 
-<!-- 完了モーダル -->
-<div class="modal-overlay hidden" id="completion-modal">
-  <div class="completion-modal" role="dialog" aria-modal="true">
-    <div class="cm-header">
-      <span class="cm-check-icon">✓</span>
-      <div><h2 class="cm-title">生成完了</h2><p class="cm-subtitle" id="cm-subtitle">-</p></div>
-    </div>
-    <div class="cm-body">
-      <div class="cm-severities">
-        <div class="cm-sev"><span class="cm-sev-num" id="cm-screens">0</span><span class="cm-sev-label">画面数</span></div>
-        <div class="cm-sev"><span class="cm-sev-num" id="cm-forms">0</span><span class="cm-sev-label">フォーム数</span></div>
-        <div class="cm-sev"><span class="cm-sev-num" id="cm-fields">0</span><span class="cm-sev-label">入力項目数</span></div>
-      </div>
-    </div>
-    <div class="cm-actions">
-      <button type="button" class="cm-btn-primary" id="cm-detail-btn">レポートを見る</button>
-      <button type="button" class="cm-btn-close" id="cm-close-btn">閉じる</button>
-    </div>
-  </div>
-</div>
 
 <script>
 const SETTINGS_KEY = 'webspec2doc.settings';
@@ -645,20 +686,29 @@ async function loadHistory() {
     const res = await fetch('/api/history');
     const data = await res.json();
     if (!data.items.length) { body.innerHTML = '<div class="empty">まだ生成履歴がありません。「ドキュメント生成」から実行してください。</div>'; return; }
-    let html = '<table class="data"><thead><tr><th>ドメイン</th><th class="num">画面数</th><th>更新日時</th><th>操作</th></tr></thead><tbody>';
+    let html = '<table class="data"><thead><tr><th>ドメイン</th><th class="num">画面数</th><th class="num">入力項目</th><th>形式</th><th>更新日時</th><th>操作</th></tr></thead><tbody>';
     for (const it of data.items) {
-      const actions = [];
-      if (it.report) actions.push(`<a class="btn-outline-sm" href="/open?path=${encodeURIComponent(it.report)}">レポート</a>`);
-      if (it.pdf) actions.push(`<a class="btn-outline-sm" href="/open?path=${encodeURIComponent(it.pdf)}">PDF</a>`);
-      if (it.json) actions.push(`<a class="btn-outline-sm" href="/open?path=${encodeURIComponent(it.json)}">JSON</a>`);
-      if (it.diff) actions.push(`<a class="btn-outline-sm" href="/open?path=${encodeURIComponent(it.diff)}">差分</a>`);
-      html += `<tr><td>${escHtml(it.domain)}</td><td class="num">${it.screens}</td><td>${escHtml(it.updated)}</td><td><div class="history-actions">${actions.join('') || '<span style="color:#999">—</span>'}</div></td></tr>`;
+      const badges = (it.formats || []).map(f => `<span class="fmt-badge">${escHtml(f)}</span>`).join('');
+      html += `<tr><td><strong>${escHtml(it.domain)}</strong></td><td class="num">${it.screens}</td><td class="num">${it.fields}</td>` +
+        `<td><div class="fmt-badges">${badges || '—'}</div></td><td>${escHtml(it.updated)}</td>` +
+        `<td><button type="button" class="btn-primary hist-open" data-domain="${escHtml(it.domain)}" style="height:34px;padding:0 14px;font-size:13px">結果を見る</button></td></tr>`;
     }
     html += '</tbody></table>';
     body.innerHTML = html;
+    body.querySelectorAll('.hist-open').forEach(b => b.addEventListener('click', () => openResultsForDomain(b.dataset.domain)));
   } catch (e) { body.innerHTML = '<div class="empty">履歴の読み込みに失敗しました。</div>'; }
 }
 document.getElementById('reload-history').addEventListener('click', loadHistory);
+
+async function openResultsForDomain(domain) {
+  switchView('generate');
+  genPanel.style.display = 'none';
+  executionView.classList.add('hidden');
+  appContent.classList.add('is-executing');
+  resultPanel.classList.remove('hidden');
+  resultHero.innerHTML = '<div class="hero-msg">読み込み中…</div>';
+  await showResults(domain);
+}
 
 // ====================== ウィザード ======================
 let wizardStep = 1;
@@ -670,14 +720,13 @@ const targetPreview = document.getElementById('target-preview');
 const targetPreviewList = document.getElementById('target-preview-list');
 
 function showStep(n) {
-  for (let i = 1; i <= 3; i++) {
+  for (let i = 1; i <= 2; i++) {
     document.getElementById('wpage-' + i).classList.toggle('is-active', i === n);
     const node = document.getElementById('wnode-' + i);
     node.classList.toggle('is-active', i === n);
     node.classList.toggle('is-done', i < n);
   }
   document.getElementById('wline-12').classList.toggle('is-done', n > 1);
-  document.getElementById('wline-23').classList.toggle('is-done', n > 2);
   wizardStep = n;
 }
 function selectedMode() { return (document.querySelector('input[name=crawl-mode]:checked') || {}).value || 'single'; }
@@ -700,11 +749,6 @@ document.getElementById('wnext-1').addEventListener('click', () => {
   setUrlMessage(''); showStep(2);
 });
 document.getElementById('wback-2').addEventListener('click', () => showStep(1));
-document.getElementById('wnext-2').addEventListener('click', () => {
-  if (![...document.querySelectorAll('input[name=fmt]:checked')].length) { alert('出力形式を1つ以上選んでください'); return; }
-  showStep(3);
-});
-document.getElementById('wback-3').addEventListener('click', () => showStep(2));
 
 function setUrlMessage(msg, isError) {
   const el = document.getElementById('url-input-message');
@@ -807,8 +851,6 @@ const execPhase = document.getElementById('exec-phase');
 const execLog = document.getElementById('exec-log');
 const execError = document.getElementById('exec-error');
 const execActions = document.getElementById('exec-actions');
-const execReportBtn = document.getElementById('exec-report-btn');
-const execPdfBtn = document.getElementById('exec-pdf-btn');
 const previewImage = document.getElementById('exec-preview-image');
 const previewPlaceholder = document.getElementById('exec-preview-placeholder');
 const estep = [0,1,2,3].map(i => document.getElementById('estep-' + i));
@@ -852,10 +894,10 @@ document.getElementById('form').addEventListener('submit', async (e) => {
   });
 
   genPanel.style.display = 'none';
+  resultPanel.classList.add('hidden');
   executionView.classList.remove('hidden');
   appContent.classList.add('is-executing');
   execError.classList.add('hidden'); execActions.classList.add('hidden');
-  execReportBtn.style.display = 'none'; execPdfBtn.style.display = 'none';
   previewImage.classList.remove('show'); previewPlaceholder.classList.remove('hidden');
   execLog.textContent = '';
   execTarget.textContent = urls.length > 1 ? `${urls[0]} ほか ${urls.length - 1}件` : urls[0];
@@ -879,40 +921,218 @@ document.getElementById('form').addEventListener('submit', async (e) => {
   } catch (err) { execLog.textContent += '\\n通信エラー: ' + err.message; }
 
   stopTimer(); stopPreviewPolling();
-  execActions.classList.remove('hidden');
   if (ok || reportPath) {
     setStep(4); execProgressBar.style.width = '100%';
     estep.forEach(el => el.className = 'execution-step is-complete');
-    execTitle.textContent = '生成が完了しました'; execPhase.textContent = '完了';
-    execMessage.textContent = 'ドキュメントを生成しました。レポートで内容を確認できます。';
-    if (reportPath) { execReportBtn.href = '/open?path=' + encodeURIComponent(reportPath); execReportBtn.style.display = 'inline-flex'; }
-    if (pdfPath) { execPdfBtn.href = '/open?path=' + encodeURIComponent(pdfPath); execPdfBtn.style.display = 'inline-flex'; }
-    showCompletionModal(summary, reportPath);
+    await showResults(activeDomain);
   } else {
+    execActions.classList.remove('hidden');
     execTitle.textContent = 'エラー'; execPhase.textContent = 'エラー'; execError.classList.remove('hidden');
   }
 });
 
-document.getElementById('exec-new-btn').addEventListener('click', () => {
-  executionView.classList.add('hidden'); appContent.classList.remove('is-executing');
-  genPanel.style.display = ''; showStep(1);
-});
-
-// ---- 完了モーダル ----
-const completionModal = document.getElementById('completion-modal');
-function showCompletionModal(summary, reportPath) {
-  const s = summary || {};
-  document.getElementById('cm-screens').textContent = s.screens || 0;
-  document.getElementById('cm-forms').textContent = s.forms || 0;
-  document.getElementById('cm-fields').textContent = s.fields || 0;
-  document.getElementById('cm-subtitle').textContent = `${s.screens || 0}画面 / ${s.forms || 0}フォーム / ${s.fields || 0}入力項目を検出`;
-  const detailBtn = document.getElementById('cm-detail-btn');
-  detailBtn.style.display = reportPath ? '' : 'none';
-  detailBtn.onclick = () => { if (reportPath) window.open('/open?path=' + encodeURIComponent(reportPath), '_blank'); };
-  completionModal.classList.remove('hidden');
+function backToInput() {
+  executionView.classList.add('hidden'); resultPanel.classList.add('hidden');
+  appContent.classList.remove('is-executing'); genPanel.style.display = ''; showStep(1);
 }
-document.getElementById('cm-close-btn').addEventListener('click', () => completionModal.classList.add('hidden'));
-completionModal.addEventListener('click', e => { if (e.target === completionModal) completionModal.classList.add('hidden'); });
+document.getElementById('exec-new-btn').addEventListener('click', backToInput);
+document.getElementById('r-new-btn').addEventListener('click', backToInput);
+
+// ====================== 結果ページ（QAビュー軸） ======================
+const resultPanel = document.getElementById('result-panel');
+const resultHero = document.getElementById('result-hero');
+const EXPORT_DEFS = [
+  { key: 'html', label: 'HTMLレポート', desc: 'テスト分析インプット文書（画面別カード＋テスト条件）' },
+  { key: 'pdf', label: 'PDF', desc: '配布・印刷用（HTMLレポートのPDF版）' },
+  { key: 'screens_md', label: 'Markdown（画面一覧）', desc: 'screens.md' },
+  { key: 'forms_md', label: 'Markdown（フォーム）', desc: 'forms.md' },
+  { key: 'excel', label: 'Excel', desc: 'spec.xlsx（表計算で編集）' },
+  { key: 'json', label: 'JSON（機械可読）', desc: '自動化・連携用の構造化データ' },
+  { key: 'diff', label: '差分レポート', desc: '前回スナップショットとの差分' },
+];
+let resultData = null, reportJson = null, activeResultTab = 'overview';
+
+async function showResults(domain) {
+  let data;
+  try {
+    const res = await fetch('/api/result?domain=' + encodeURIComponent(domain));
+    data = await res.json();
+    if (!res.ok) throw new Error(data.error || '結果の取得に失敗しました');
+  } catch (e) {
+    execActions.classList.remove('hidden');
+    execTitle.textContent = '結果の取得に失敗しました'; execError.textContent = e.message; execError.classList.remove('hidden');
+    return;
+  }
+  resultData = data;
+  reportJson = null;
+  if (data.files && data.files.json) {
+    try { reportJson = await fetch('/preview?path=' + encodeURIComponent(data.files.json)).then(r => r.json()); } catch (e) {}
+  }
+  const s = data.summary || {};
+  const required = reportJson ? countRequired(reportJson) : 0;
+  document.getElementById('r-domain').textContent = domain;
+  document.getElementById('r-screens').textContent = s.screens || 0;
+  document.getElementById('r-forms').textContent = s.forms || 0;
+  document.getElementById('r-fields').textContent = s.fields || 0;
+  document.getElementById('r-required').textContent = required;
+  document.getElementById('r-buttons').textContent = s.buttons || 0;
+
+  executionView.classList.add('hidden'); resultPanel.classList.remove('hidden');
+  selectResultTab('overview');
+}
+
+document.querySelectorAll('.result-tab').forEach(t => t.addEventListener('click', () => selectResultTab(t.dataset.tab)));
+function selectResultTab(tab) {
+  activeResultTab = tab;
+  document.querySelectorAll('.result-tab').forEach(t => t.classList.toggle('is-active', t.dataset.tab === tab));
+  if (tab === 'overview') renderOverview();
+  else if (tab === 'matrix') renderMatrix();
+  else if (tab === 'report') renderReport();
+  else if (tab === 'export') renderExport();
+}
+
+function allFields(rj) {
+  const rows = [];
+  for (const sc of (rj.screens || [])) {
+    for (const fm of (sc.forms || [])) {
+      for (const fld of (fm.fields || [])) rows.push({ screen: sc.page_id, title: sc.title || '', field: fld });
+    }
+  }
+  return rows;
+}
+function countRequired(rj) { return allFields(rj).filter(r => r.field.required).length; }
+function constraintText(f) {
+  const p = [];
+  if (f.maxlength != null) p.push('最大' + f.maxlength + '文字');
+  if (f.minlength != null) p.push('最小' + f.minlength + '文字');
+  if (f.min_value) p.push('min=' + f.min_value);
+  if (f.max_value) p.push('max=' + f.max_value);
+  if (f.pattern) p.push('pattern=' + f.pattern);
+  if (f.placeholder) p.push('例: ' + f.placeholder);
+  return p.join(' / ');
+}
+function defaultOptionsText(f) {
+  if (f.options && f.options.length) return f.options.filter(Boolean).join(', ').slice(0, 120);
+  return f.default || '';
+}
+
+// ---- 概要 ----
+function renderOverview() {
+  if (!reportJson) { resultHero.innerHTML = '<div class="hero-msg">概要データ（report.json）を読み込めませんでした。</div>'; return; }
+  const screens = reportJson.screens || [];
+  const meta = reportJson.meta || {};
+  const rows = screens.map(sc => {
+    const fields = (sc.forms || []).reduce((n, fm) => n + (fm.fields || []).length, 0);
+    const to = (sc.transitions && sc.transitions.to || []).join(', ') || '—';
+    return `<tr><td class="c-screen">${escHtml(sc.page_id)}</td><td>${escHtml(sc.title || '')}</td>` +
+      `<td><code style="font-size:.78rem;color:var(--text-muted)">${escHtml(sc.url || '')}</code></td>` +
+      `<td class="num">${(sc.forms || []).length}</td><td class="num">${fields}</td><td>${escHtml(to)}</td></tr>`;
+  }).join('');
+  const shots = (resultData.screenshots || []).map(p =>
+    `<a href="/preview?path=${encodeURIComponent(p)}" target="_blank"><figure><img src="/preview?path=${encodeURIComponent(p)}" loading="lazy" alt=""><figcaption>${escHtml(p.split('/').pop())}</figcaption></figure></a>`).join('');
+  resultHero.innerHTML = '<div class="hero-pad">' +
+    `<p style="color:var(--text-muted);font-size:13px;margin-bottom:12px">対象 ${escHtml(meta.target_url || '')} ／ クロール: 深さ${meta.crawl_depth ?? '-'} ・最大${meta.max_pages ?? '-'}ページ ／ ${escHtml(meta.crawled_at || '')}</p>` +
+    '<div class="hero-section-title">画面インベントリ</div>' +
+    '<table class="ov-screens"><thead><tr><th>画面ID</th><th>タイトル</th><th>URL</th><th>フォーム</th><th>入力項目</th><th>遷移先</th></tr></thead><tbody>' +
+    (rows || '<tr><td colspan="6" style="color:var(--text-muted)">画面がありません</td></tr>') + '</tbody></table>' +
+    (shots ? '<div class="hero-section-title" style="margin-top:18px">スクリーンショット</div><div class="r-shots">' + shots + '</div>' : '') +
+    '</div>';
+}
+
+// ---- 入力項目・テスト条件マトリクス ----
+function renderMatrix() {
+  if (!reportJson) { resultHero.innerHTML = '<div class="hero-msg">マトリクスデータ（report.json）を読み込めませんでした。</div>'; return; }
+  const screens = (reportJson.screens || []).map(s => s.page_id);
+  resultHero.innerHTML =
+    '<div class="matrix-toolbar">' +
+    '<select id="mx-screen"><option value="">全画面</option>' + screens.map(s => `<option value="${escHtml(s)}">${escHtml(s)}</option>`).join('') + '</select>' +
+    '<input type="search" id="mx-search" placeholder="項目名・条件で検索" />' +
+    '<label><input type="checkbox" id="mx-required"> 必須のみ</label>' +
+    '<button type="button" class="btn-outline-sm" id="mx-csv">CSVで書き出し</button>' +
+    '<span class="matrix-count" id="mx-count"></span>' +
+    '</div><div id="mx-table-wrap"></div>';
+  const draw = () => drawMatrix();
+  document.getElementById('mx-screen').addEventListener('change', draw);
+  document.getElementById('mx-search').addEventListener('input', draw);
+  document.getElementById('mx-required').addEventListener('change', draw);
+  document.getElementById('mx-csv').addEventListener('click', exportMatrixCsv);
+  drawMatrix();
+}
+function matrixRows() {
+  const scFilter = (document.getElementById('mx-screen') || {}).value || '';
+  const q = ((document.getElementById('mx-search') || {}).value || '').toLowerCase();
+  const reqOnly = (document.getElementById('mx-required') || {}).checked;
+  return allFields(reportJson).filter(r => {
+    if (scFilter && r.screen !== scFilter) return false;
+    if (reqOnly && !r.field.required) return false;
+    if (q) {
+      const hay = (r.field.name + ' ' + (r.field.test_conditions || []).join(' ') + ' ' + constraintText(r.field)).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+function drawMatrix() {
+  const rows = matrixRows();
+  document.getElementById('mx-count').textContent = rows.length + ' 項目';
+  const body = rows.map(r => {
+    const f = r.field;
+    return '<tr>' +
+      `<td class="c-screen">${escHtml(r.screen)}</td>` +
+      `<td>${escHtml(f.name || '(無名)')}</td>` +
+      `<td>${escHtml(f.field_type || '')}</td>` +
+      `<td>${f.required ? '<span class="c-req">必須</span>' : '-'}</td>` +
+      `<td>${escHtml(constraintText(f)) || '-'}</td>` +
+      `<td>${escHtml(defaultOptionsText(f)) || '-'}</td>` +
+      `<td class="c-loc">${escHtml((f.locators || []).join(' / ')) || '-'}</td>` +
+      `<td class="c-cond">${escHtml((f.test_conditions || []).join('\\n'))}</td>` +
+    '</tr>';
+  }).join('');
+  document.getElementById('mx-table-wrap').innerHTML =
+    '<table class="matrix"><thead><tr><th>画面</th><th>項目名</th><th>型</th><th>必須</th><th>制約</th><th>既定/選択肢</th><th>ロケータ候補</th><th>導出テスト条件</th></tr></thead><tbody>' +
+    (body || '<tr><td colspan="8" style="padding:16px;color:var(--text-muted)">該当する入力項目がありません</td></tr>') + '</tbody></table>';
+}
+function exportMatrixCsv() {
+  const head = ['画面', '項目名', '型', '必須', '制約', '既定/選択肢', 'ロケータ候補', '導出テスト条件'];
+  const esc = v => '"' + String(v).replace(/"/g, '""') + '"';
+  const lines = [head.map(esc).join(',')];
+  for (const r of matrixRows()) {
+    const f = r.field;
+    lines.push([r.screen, f.name || '(無名)', f.field_type || '', f.required ? '必須' : '', constraintText(f), defaultOptionsText(f), (f.locators || []).join(' / '), (f.test_conditions || []).join(' / ')].map(esc).join(','));
+  }
+  const blob = new Blob(['\\uFEFF' + lines.join('\\r\\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'test_conditions.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ---- 画面別仕様（HTMLレポート埋め込み）----
+function renderReport() {
+  const html = (resultData.files || {}).html;
+  if (!html) { resultHero.innerHTML = '<div class="hero-msg"><p>HTMLレポートは生成されていません。</p><p style="font-size:13px">出力形式で「HTML」を選ぶと、ここに画面別の詳細仕様が表示されます。</p></div>'; return; }
+  resultHero.innerHTML = `<iframe src="/preview?path=${encodeURIComponent(html)}" title="画面別仕様"></iframe>`;
+}
+
+// ---- エクスポート ----
+function renderExport() {
+  const files = resultData.files || {};
+  const rows = EXPORT_DEFS.map(d => {
+    const path = files[d.key];
+    if (path) {
+      return `<div class="export-row"><div class="export-main"><strong>${escHtml(d.label)}</strong><span class="export-desc">${escHtml(d.desc)}</span></div>` +
+        `<a class="btn-outline-sm" href="/preview?path=${encodeURIComponent(path)}" target="_blank">開く</a>` +
+        `<a class="btn-primary" style="height:36px;padding:0 16px;font-size:13px;display:inline-flex;align-items:center" href="/download?path=${encodeURIComponent(path)}" download>DL</a></div>`;
+    }
+    return `<div class="export-row export-missing"><div class="export-main"><strong>${escHtml(d.label)}</strong><span class="export-desc">未生成（出力形式で選択すると生成されます）</span></div></div>`;
+  }).join('');
+  resultHero.innerHTML = '<div class="hero-pad"><div class="export-grid">' +
+    `<div class="export-row" style="background:var(--info-bg);border-color:var(--info-border)"><div class="export-main"><strong>すべてまとめてダウンロード</strong><span class="export-desc">生成物一式を ZIP で取得</span></div>` +
+    `<a class="btn-primary" style="height:36px;padding:0 16px;font-size:13px;display:inline-flex;align-items:center" href="/download-zip?domain=${encodeURIComponent(resultData_domain())}">ZIP DL</a></div>` +
+    rows + '</div></div>';
+}
+function resultData_domain() { return document.getElementById('r-domain').textContent || ''; }
 
 // ---- 設定サブタブ ----
 document.querySelectorAll('.set-tab').forEach(t => t.addEventListener('click', () => {
@@ -1002,6 +1222,11 @@ def run() -> Response:
     depth = request.form.get("depth", "2")
     max_pages = request.form.get("max_pages", "30")
     fmt = request.form.get("format", "md,html")
+    # report.json は結果ページ（概要・マトリクス）のデータ源なので常に生成する
+    selected = [f.strip() for f in fmt.split(",") if f.strip()]
+    if "json" not in selected:
+        selected.append("json")
+    fmt = ",".join(selected)
     compare = request.form.get("compare", "false") == "true"
     auth = request.form.get("auth", "").strip()
     domain = _domain_of(urls.split(",")[0]) if urls else ""
@@ -1048,18 +1273,126 @@ def live_screenshot() -> Response:
 
 
 def _summary_for_domain(domain: str) -> dict[str, int]:
+    """最新の生成結果（report.json）を唯一の真実源として集計する。
+    結果ページのサマリー／概要／マトリクス／履歴をすべて一致させるため。
+    report.json が無い旧データのみ snapshot → screens.md にフォールバック。"""
     domain_dir = OUTPUT_DIR / domain
+    report_json = domain_dir / "report.json"
+    if report_json.exists():
+        try:
+            data = json.loads(report_json.read_text(encoding="utf-8"))
+            screens = data.get("screens", [])
+            return {
+                "screens": len(screens),
+                "forms": sum(len(s.get("forms", [])) for s in screens),
+                "fields": sum(len(f.get("fields", [])) for s in screens for f in s.get("forms", [])),
+                "buttons": sum(len(s.get("buttons", [])) for s in screens),
+            }
+        except (OSError, json.JSONDecodeError):
+            pass
     snaps_dir = domain_dir / "snapshots"
     snaps = sorted(snaps_dir.glob("*.json")) if snaps_dir.is_dir() else []
     if not snaps:
-        return {"screens": _count_screens(domain_dir / "screens.md"), "forms": 0, "fields": 0}
+        return {"screens": _count_screens(domain_dir / "screens.md"), "forms": 0, "fields": 0, "buttons": 0}
     try:
         pages = json.loads(snaps[-1].read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
-        return {"screens": 0, "forms": 0, "fields": 0}
+        return {"screens": 0, "forms": 0, "fields": 0, "buttons": 0}
     forms = sum(len(p.get("forms", [])) for p in pages)
     fields = sum(len(f.get("fields", [])) for p in pages for f in p.get("forms", []))
-    return {"screens": len(pages), "forms": forms, "fields": fields}
+    buttons = sum(len(p.get("buttons", [])) for p in pages)
+    return {"screens": len(pages), "forms": forms, "fields": fields, "buttons": buttons}
+
+
+def _safe_output_path(raw: str) -> Path | None:
+    """Resolve a path and ensure it stays inside OUTPUT_DIR (anti path-traversal)."""
+    if not raw:
+        return None
+    try:
+        target = Path(raw).resolve()
+    except (OSError, ValueError, RuntimeError):
+        return None
+    base = OUTPUT_DIR.resolve()
+    if target != base and base not in target.parents:
+        return None
+    return target if target.is_file() else None
+
+
+_PREVIEW_MIME = {
+    ".html": "text/html; charset=utf-8",
+    ".pdf": "application/pdf",
+    ".json": "application/json; charset=utf-8",
+    ".md": "text/plain; charset=utf-8",
+    ".mmd": "text/plain; charset=utf-8",
+    ".png": "image/png",
+}
+
+
+@app.get("/preview")
+def preview() -> Response:
+    target = _safe_output_path(request.args.get("path", ""))
+    if target is None:
+        return Response(status=404)
+    mime = _PREVIEW_MIME.get(target.suffix.lower(), "text/plain; charset=utf-8")
+    resp = send_file(target, mimetype=mime)
+    resp.headers["Content-Disposition"] = "inline"
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+@app.get("/download")
+def download() -> Response:
+    target = _safe_output_path(request.args.get("path", ""))
+    if target is None:
+        return Response(status=404)
+    return send_file(target, as_attachment=True, download_name=target.name)
+
+
+@app.get("/download-zip")
+def download_zip() -> Response:
+    domain = request.args.get("domain", "")
+    base = (OUTPUT_DIR / domain).resolve()
+    if not domain or OUTPUT_DIR.resolve() not in base.parents or not base.is_dir():
+        return Response(status=404)
+    import io
+    import zipfile
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for f in base.rglob("*"):
+            if f.is_file():
+                zf.write(f, f.relative_to(base.parent))
+    buf.seek(0)
+    return send_file(buf, as_attachment=True, download_name=f"{domain}.zip", mimetype="application/zip")
+
+
+@app.get("/api/result")
+def api_result() -> dict | tuple[dict, int]:
+    domain = request.args.get("domain", "")
+    domain_dir = OUTPUT_DIR / domain
+    if not domain or not domain_dir.is_dir():
+        return {"error": "not found"}, 404
+
+    def path_of(name: str) -> str:
+        f = domain_dir / name
+        return str(f.resolve()) if f.exists() else ""
+
+    shots_dir = domain_dir / "screenshots"
+    shots = sorted(shots_dir.glob("*.png")) if shots_dir.is_dir() else []
+    return {
+        "summary": _summary_for_domain(domain),
+        "files": {
+            "html": path_of("report.html"),
+            "pdf": path_of("report.pdf"),
+            "json": path_of("report.json"),
+            "excel": path_of("spec.xlsx"),
+            "screens_md": path_of("screens.md"),
+            "forms_md": path_of("forms.md"),
+            "transition_mmd": path_of("transition.mmd"),
+            "diff": path_of("diff_report.html"),
+        },
+        "screenshots": [str(s.resolve()) for s in shots],
+    }
 
 
 @app.get("/api/history")
@@ -1068,18 +1401,21 @@ def api_history() -> dict:
     if OUTPUT_DIR.is_dir():
         domains = [d for d in OUTPUT_DIR.iterdir() if d.is_dir()]
         for d in sorted(domains, key=lambda p: p.stat().st_mtime, reverse=True):
-            report = d / "report.html"
-            diff = d / "diff_report.html"
-            pdf = d / "report.pdf"
-            report_json = d / "report.json"
+            summary = _summary_for_domain(d.name)
+            formats = [
+                name for name, fname in (
+                    ("HTML", "report.html"), ("PDF", "report.pdf"),
+                    ("Excel", "spec.xlsx"), ("JSON", "report.json"),
+                    ("MD", "screens.md"), ("差分", "diff_report.html"),
+                )
+                if (d / fname).exists()
+            ]
             items.append({
                 "domain": d.name,
-                "screens": _count_screens(d / "screens.md"),
+                "screens": summary.get("screens", 0),
+                "fields": summary.get("fields", 0),
                 "updated": datetime.fromtimestamp(d.stat().st_mtime).strftime("%Y-%m-%d %H:%M"),
-                "report": str(report.resolve()) if report.exists() else "",
-                "diff": str(diff.resolve()) if diff.exists() else "",
-                "pdf": str(pdf.resolve()) if pdf.exists() else "",
-                "json": str(report_json.resolve()) if report_json.exists() else "",
+                "formats": formats,
             })
     return {"items": items}
 
@@ -1165,13 +1501,13 @@ def post_settings() -> dict:
 
 @app.get("/open")
 def open_file() -> Response:
-    path = request.args.get("path", "")
-    if path and Path(path).exists():
-        subprocess.Popen(["open", path])
+    target = _safe_output_path(request.args.get("path", ""))
+    if target is not None:
+        subprocess.Popen(["open", str(target)])
     return redirect(url_for("index"))
 
 
-PORT = 8765
+PORT = int(os.environ.get("WEBSPEC2DOC_PORT", "8765"))
 
 
 def _open_browser() -> None:

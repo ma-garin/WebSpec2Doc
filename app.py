@@ -331,14 +331,14 @@ _HTML = """<!DOCTYPE html>
               <p class="input-hint" style="margin-top:0;margin-bottom:14px">LLMテスト観点生成（今後実装）で使うモデルです。候補から選ぶか直接入力できます。</p>
               <div class="field full">
                 <label for="api-model">OPENAI_MODEL</label>
-                <input type="text" id="api-model" class="url-input" list="model-list" placeholder="gpt-5.4-mini" style="height:40px">
-                <datalist id="model-list">
-                  <option value="gpt-5.4-mini">コスト効率・推奨</option>
-                  <option value="gpt-5.4-nano">最安・最速</option>
-                  <option value="gpt-5.5">高精度</option>
-                  <option value="gpt-5.4">フロンティア</option>
-                  <option value="gpt-4.1">非推論ツール呼び出し</option>
-                </datalist>
+                <select id="api-model" class="url-input" style="height:40px">
+                  <option value="gpt-5.4-mini">gpt-5.4-mini（コスト効率・推奨）</option>
+                  <option value="gpt-5.4-nano">gpt-5.4-nano（最安・最速）</option>
+                  <option value="gpt-5.4">gpt-5.4（標準）</option>
+                  <option value="gpt-5.5">gpt-5.5（高精度）</option>
+                  <option value="gpt-5.5-pro">gpt-5.5-pro（最高精度）</option>
+                  <option value="gpt-4.1">gpt-4.1（非推論・ツール呼び出し）</option>
+                </select>
               </div>
               <button class="btn-primary" id="save-model" style="margin-top:18px">モデルを保存</button>
               <div class="settings-msg" id="model-msg">保存しました</div>

@@ -7,6 +7,10 @@ import webbrowser
 from pathlib import Path
 
 from flask import Flask, Response, redirect, render_template_string, request, url_for
+from flask.typing import ResponseReturnValue
+
+sys.path.insert(0, str(Path(__file__).parent / "src"))
+from crawler.url_safety import is_safe_target  # noqa: E402
 
 app = Flask(__name__)
 
@@ -628,13 +632,25 @@ def run() -> Response:
     max_pages = request.form.get("max_pages", "30")
     fmt = request.form.get("format", "md,html")
 
+    if not is_safe_target(url):
+        return Response(
+            "クロールできない URL です（http/https の公開アドレスのみ対応）。\n",
+            mimetype="text/plain",
+            status=400,
+        )
+
     def generate():
         cmd = [
-            sys.executable, "src/main.py",
-            "--url", url,
-            "--depth", depth,
-            "--max-pages", max_pages,
-            "--format", fmt,
+            sys.executable,
+            "src/main.py",
+            "--url",
+            url,
+            "--depth",
+            depth,
+            "--max-pages",
+            max_pages,
+            "--format",
+            fmt,
         ]
         proc = subprocess.Popen(
             cmd,
@@ -644,7 +660,8 @@ def run() -> Response:
             bufsize=1,
         )
         report_path: str | None = None
-        for line in proc.stdout:  # type: ignore[union-attr]
+        assert proc.stdout is not None
+        for line in proc.stdout:
             yield line
             if "report.html" in line and report_path is None:
                 report_path = line.split()[-1].strip()
@@ -659,12 +676,25 @@ def run() -> Response:
     return Response(generate(), mimetype="text/plain")
 
 
+OUTPUT_ROOT = (Path(__file__).parent / "output").resolve()
+
+
+def _is_within(target: Path, root: Path) -> bool:
+    try:
+        return target.resolve().is_relative_to(root)
+    except (OSError, ValueError):
+        return False
+
+
 @app.get("/open")
-def open_file() -> Response:
-    path = request.args.get("path", "")
-    if path and Path(path).exists():
-        import subprocess as sp
-        sp.Popen(["open", path])
+def open_file() -> ResponseReturnValue:
+    raw = request.args.get("path", "")
+    if raw:
+        target = Path(raw)
+        if _is_within(target, OUTPUT_ROOT) and target.resolve().is_file():
+            subprocess.Popen(["open", str(target.resolve())])
+        else:
+            app.logger.warning("output/ 配下でないパスを拒否しました: %s", raw)
     return redirect(url_for("index"))
 
 
@@ -673,6 +703,7 @@ PORT = 8765
 
 def _open_browser() -> None:
     import time
+
     time.sleep(1.0)
     webbrowser.open(f"http://127.0.0.1:{PORT}")
 

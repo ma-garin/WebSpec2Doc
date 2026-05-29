@@ -10,6 +10,8 @@ from urllib.robotparser import RobotFileParser
 
 from playwright.sync_api import Browser, Page, sync_playwright
 
+from crawler.url_safety import is_safe_target
+
 CRAWL_DELAY_SEC = 1
 DEFAULT_DEPTH = 3
 DEFAULT_MAX_PAGES = 50
@@ -130,7 +132,7 @@ def _crawl_page_with_id(
     output_dir: Path | None,
 ) -> PageData | None:
     try:
-        setattr(page, "_webspec2doc_page_id", page_id)
+        page._webspec2doc_page_id = page_id  # type: ignore[attr-defined]
         return crawl_page(page, url, output_dir)
     except Exception as exc:
         logger.warning("ページのクロールに失敗しました: %s (%s)", url, exc)
@@ -145,7 +147,7 @@ def _load_robots_parser(base_url: str) -> RobotFileParser:
         parser.read()
     except Exception as exc:
         logger.warning("robots.txt を取得できませんでした: %s (%s)", robots_url, exc)
-        parser.allow_all = True
+        parser.allow_all = True  # type: ignore[attr-defined]
     return parser
 
 
@@ -157,6 +159,9 @@ def _should_skip(
     robots: RobotFileParser,
 ) -> bool:
     if current_depth > max_depth or url in visited:
+        return True
+    if not is_safe_target(url):
+        logger.warning("安全でない URL をスキップしました: %s", url)
         return True
     if not robots.can_fetch(USER_AGENT, url):
         logger.warning("robots.txt によりスキップしました: %s", url)

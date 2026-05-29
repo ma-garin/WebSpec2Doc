@@ -16,7 +16,6 @@ OUTPUT_DIR = Path("output")
 SCREEN_ROW_RE = re.compile(r"^\|\s*\d+\s*\|")
 ENV_FILE = Path(".env")
 DEFAULT_OPENAI_MODEL = "gpt-4o-mini"
-ALLOWED_MODELS = ("gpt-4o-mini", "gpt-4o", "gpt-4-turbo")
 
 _HTML = """<!DOCTYPE html>
 <html lang="ja">
@@ -188,6 +187,13 @@ _HTML = """<!DOCTYPE html>
     .empty { padding: 28px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border); border-radius: var(--radius); background: var(--surface-soft); }
     .settings-msg { margin-top: 14px; padding: 10px 14px; border-radius: var(--radius); background: var(--ok-bg); color: var(--ok); font-size: 13px; font-weight: 700; display: none; }
     .settings-msg.show { display: block; }
+    .set-tabs { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-soft); margin-bottom: 16px; }
+    .set-tab { height: 34px; padding: 0 16px; border: 0; border-radius: 4px; background: transparent; color: var(--text-muted); font-size: 13px; font-weight: 700; cursor: pointer; }
+    .set-tab.is-active { background: var(--surface); color: var(--primary-dark); box-shadow: inset 0 -2px 0 var(--primary); }
+    .set-panel { display: none; }
+    .set-panel.is-active { display: block; }
+    .key-current { padding: 10px 12px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface-soft); font-size: 13px; font-family: ui-monospace, monospace; color: var(--text); }
+    .set-card-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
     .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; display: none; }
     .btn-primary.running .spinner { display: inline-block; }
     .btn-primary.running { display: inline-flex; align-items: center; gap: 8px; }
@@ -292,46 +298,73 @@ _HTML = """<!DOCTYPE html>
 
         <!-- ===== 設定ビュー ===== -->
         <section class="view" id="view-settings">
-          <div class="input-card">
-            <h2 style="font-size:16px;font-weight:700;margin-bottom:4px">API設定</h2>
-            <p class="input-hint" style="margin-top:0;margin-bottom:14px">LLMテスト観点生成（今後実装）で使う OpenAI API の設定です。キーは <code>.env</code> に保存されます（ブラウザには保存しません）。</p>
-            <div class="options-grid">
-              <div class="field full">
-                <label for="api-key">API Key</label>
-                <input type="password" id="api-key" placeholder="sk-..." autocomplete="off">
-                <span id="api-key-state" style="font-size:12px;color:var(--text-muted)"></span>
-              </div>
-              <div class="field full">
-                <label for="api-model">モデル</label>
-                <select id="api-model" class="url-input" style="height:40px">
-                  <option value="gpt-4o-mini">gpt-4o-mini</option>
-                  <option value="gpt-4o">gpt-4o</option>
-                  <option value="gpt-4-turbo">gpt-4-turbo</option>
-                </select>
-              </div>
-            </div>
-            <button class="btn-primary" id="save-api" style="margin-top:18px">API設定を保存</button>
-            <div class="settings-msg" id="api-msg">API設定を保存しました</div>
-            <p class="input-hint" style="margin-top:14px">⚠ LLMテスト観点生成機能は未実装です。本設定はその準備です。</p>
+          <div class="set-tabs">
+            <button class="set-tab is-active" data-tab="api">APIキー</button>
+            <button class="set-tab" data-tab="model">モデル</button>
+            <button class="set-tab" data-tab="crawl">クロール既定値</button>
           </div>
-          <div class="input-card">
-            <h2 style="font-size:16px;font-weight:700;margin-bottom:14px">クロール既定値</h2>
-            <div class="options-grid">
-              <div class="field"><label for="set-depth">深さ（既定）</label><input type="number" id="set-depth" min="1" max="5"></div>
-              <div class="field"><label for="set-max">最大ページ数（既定）</label><input type="number" id="set-max" min="1" max="200"></div>
-              <div class="field full">
-                <label>出力形式（既定）</label>
-                <div class="checkbox-group">
-                  <label class="checkbox-chip"><input type="checkbox" name="set-fmt" value="html"> HTML</label>
-                  <label class="checkbox-chip"><input type="checkbox" name="set-fmt" value="md"> Markdown</label>
-                  <label class="checkbox-chip"><input type="checkbox" name="set-fmt" value="excel"> Excel</label>
-                </div>
+
+          <!-- APIキー -->
+          <div class="set-panel is-active" id="set-panel-api">
+            <div class="input-card">
+              <h2 class="set-card-title">OpenAI API キー</h2>
+              <p class="input-hint" style="margin-top:0;margin-bottom:14px">キーは <code>.env</code> に保存されます（ブラウザには保存しません）。空欄で保存すると既存キーを保持します。</p>
+              <div class="field full" style="margin-bottom:14px">
+                <label>現在のキー</label>
+                <div class="key-current" id="api-key-current">未設定</div>
               </div>
-              <div class="field full"><label for="set-auth">認証セッション auth.json パス（任意）</label><input type="text" id="set-auth" placeholder="auth.json"></div>
+              <div class="options-grid">
+                <div class="field full"><label for="api-key">OPENAI_API_KEY</label><input type="password" id="api-key" placeholder="sk-..." autocomplete="off"></div>
+                <div class="field"><label for="api-org">OPENAI_ORG_ID（任意）</label><input type="text" id="api-org" placeholder="org-..."></div>
+                <div class="field"><label for="api-project">OPENAI_PROJECT_ID（任意）</label><input type="text" id="api-project" placeholder="proj_..."></div>
+              </div>
+              <button class="btn-primary" id="save-api" style="margin-top:18px">APIキーを保存</button>
+              <div class="settings-msg" id="api-msg">保存しました</div>
+              <p class="input-hint" style="margin-top:14px">⚠ LLMテスト観点生成機能は未実装です。本設定はその準備です。</p>
             </div>
-            <button class="btn-primary" id="save-settings" style="margin-top:18px">設定を保存</button>
-            <div class="settings-msg" id="settings-msg">設定を保存しました</div>
-            <p class="input-hint" style="margin-top:14px">設定はこのブラウザに保存され、生成フォームの初期値に反映されます。</p>
+          </div>
+
+          <!-- モデル -->
+          <div class="set-panel" id="set-panel-model">
+            <div class="input-card">
+              <h2 class="set-card-title">回答生成モデル</h2>
+              <p class="input-hint" style="margin-top:0;margin-bottom:14px">LLMテスト観点生成（今後実装）で使うモデルです。候補から選ぶか直接入力できます。</p>
+              <div class="field full">
+                <label for="api-model">OPENAI_MODEL</label>
+                <input type="text" id="api-model" class="url-input" list="model-list" placeholder="gpt-4o-mini" style="height:40px">
+                <datalist id="model-list">
+                  <option value="gpt-4o-mini"></option>
+                  <option value="gpt-4o"></option>
+                  <option value="gpt-5.4-mini"></option>
+                  <option value="gpt-5.5"></option>
+                </datalist>
+              </div>
+              <button class="btn-primary" id="save-model" style="margin-top:18px">モデルを保存</button>
+              <div class="settings-msg" id="model-msg">保存しました</div>
+            </div>
+          </div>
+
+          <!-- クロール既定値 -->
+          <div class="set-panel" id="set-panel-crawl">
+            <div class="input-card">
+              <h2 class="set-card-title">クロール既定値</h2>
+              <p class="input-hint" style="margin-top:0;margin-bottom:14px">このブラウザに保存され、生成フォームの初期値に反映されます。</p>
+              <div class="options-grid">
+                <div class="field"><label for="set-depth">深さ（既定）</label><input type="number" id="set-depth" min="1" max="5"></div>
+                <div class="field"><label for="set-max">最大ページ数（既定）</label><input type="number" id="set-max" min="1" max="200"></div>
+                <div class="field full">
+                  <label>出力形式（既定）</label>
+                  <div class="checkbox-group">
+                    <label class="checkbox-chip"><input type="checkbox" name="set-fmt" value="html"> HTML</label>
+                    <label class="checkbox-chip"><input type="checkbox" name="set-fmt" value="md"> Markdown</label>
+                    <label class="checkbox-chip"><input type="checkbox" name="set-fmt" value="excel"> Excel</label>
+                  </div>
+                </div>
+                <div class="field full"><label for="set-auth">認証セッション auth.json パス（任意）</label><input type="text" id="set-auth" placeholder="auth.json"></div>
+              </div>
+              <button class="btn-primary" id="save-settings" style="margin-top:18px">設定を保存</button>
+              <div class="settings-msg" id="settings-msg">設定を保存しました</div>
+            </div>
           </div>
         </section>
 
@@ -485,27 +518,40 @@ form.addEventListener('submit', async (e) => {
   } else { execTitle.textContent = 'エラー'; execError.classList.add('show'); }
 });
 
+// ---- 設定サブタブ切替 ----
+document.querySelectorAll('.set-tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.set-tab').forEach(x => x.classList.toggle('is-active', x === t));
+    document.querySelectorAll('.set-panel').forEach(p => p.classList.toggle('is-active', p.id === 'set-panel-' + t.dataset.tab));
+  });
+});
+
 // ---- API設定（.env にサーバ保存）----
+function flash(id) { const m = document.getElementById(id); m.classList.add('show'); setTimeout(() => m.classList.remove('show'), 2000); }
 async function loadApiSettings() {
   try {
     const res = await fetch('/api/settings');
     const s = await res.json();
     document.getElementById('api-model').value = s.openai_model || 'gpt-4o-mini';
-    const state = document.getElementById('api-key-state');
-    const keyInput = document.getElementById('api-key');
-    if (s.openai_key_set) { state.textContent = '✓ 設定済み（再入力すると更新します）'; keyInput.placeholder = '設定済み（変更時のみ入力）'; }
-    else { state.textContent = '未設定'; keyInput.placeholder = 'sk-...'; }
+    document.getElementById('api-org').value = s.openai_org_id || '';
+    document.getElementById('api-project').value = s.openai_project_id || '';
+    document.getElementById('api-key-current').textContent = s.openai_key_set ? s.openai_key_masked : '未設定';
   } catch (e) {}
 }
 document.getElementById('save-api').addEventListener('click', async () => {
   const body = new URLSearchParams({
     api_key: document.getElementById('api-key').value,
-    model: document.getElementById('api-model').value,
+    org_id: document.getElementById('api-org').value,
+    project_id: document.getElementById('api-project').value,
   });
   await fetch('/api/settings', { method: 'POST', body });
   document.getElementById('api-key').value = '';
-  const msg = document.getElementById('api-msg'); msg.classList.add('show'); setTimeout(() => msg.classList.remove('show'), 2000);
-  loadApiSettings();
+  flash('api-msg'); loadApiSettings();
+});
+document.getElementById('save-model').addEventListener('click', async () => {
+  const body = new URLSearchParams({ model: document.getElementById('api-model').value });
+  await fetch('/api/settings', { method: 'POST', body });
+  flash('model-msg'); loadApiSettings();
 });
 
 // 初期化
@@ -617,26 +663,42 @@ def _write_env(updates: dict[str, str]) -> None:
     ENV_FILE.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def _mask_key(key: str) -> str:
+    if not key:
+        return ""
+    if len(key) <= 9:
+        return "****"
+    return f"{key[:5]}…{key[-4:]}"
+
+
 @app.get("/api/settings")
 def get_settings() -> dict:
     env = _read_env()
+    key = env.get("OPENAI_API_KEY", "")
     return {
-        "openai_key_set": bool(env.get("OPENAI_API_KEY")),
+        "openai_key_set": bool(key),
+        "openai_key_masked": _mask_key(key),
         "openai_model": env.get("OPENAI_MODEL", DEFAULT_OPENAI_MODEL),
+        "openai_org_id": env.get("OPENAI_ORG_ID", ""),
+        "openai_project_id": env.get("OPENAI_PROJECT_ID", ""),
     }
 
 
 @app.post("/api/settings")
 def post_settings() -> dict:
+    updates: dict[str, str] = {}
     api_key = _sanitize(request.form.get("api_key", ""))
-    model = _sanitize(request.form.get("model", ""))
-    if model not in ALLOWED_MODELS:
-        model = DEFAULT_OPENAI_MODEL
-    updates = {"OPENAI_MODEL": model}
     if api_key:
         updates["OPENAI_API_KEY"] = api_key
-    _write_env(updates)
-    return {"ok": True, "openai_key_set": bool(_read_env().get("OPENAI_API_KEY")), "openai_model": model}
+    if "model" in request.form:
+        updates["OPENAI_MODEL"] = _sanitize(request.form.get("model", "")) or DEFAULT_OPENAI_MODEL
+    if "org_id" in request.form:
+        updates["OPENAI_ORG_ID"] = _sanitize(request.form.get("org_id", ""))
+    if "project_id" in request.form:
+        updates["OPENAI_PROJECT_ID"] = _sanitize(request.form.get("project_id", ""))
+    if updates:
+        _write_env(updates)
+    return {"ok": True, "openai_key_set": bool(_read_env().get("OPENAI_API_KEY"))}
 
 
 @app.get("/open")

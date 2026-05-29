@@ -13,6 +13,9 @@ from dotenv import load_dotenv
 from analyzer.form_analyzer import summarize_forms
 from analyzer.html_analyzer import AnalyzedPage, analyze_pages
 from crawler.page_crawler import DEFAULT_DEPTH, DEFAULT_MAX_PAGES, PageData, crawl_site
+from diff.differ import compute_diff
+from diff.snapshot import latest_snapshot, load_snapshot, save_snapshot
+from generator.diff_reporter import generate_diff_report
 from generator.markdown_generator import (
     generate_forms_markdown,
     generate_screens_markdown,
@@ -26,6 +29,8 @@ FORMAT_SEPARATOR = ","
 LOGGER_FORMAT = "%(levelname)s:%(name)s:%(message)s"
 SUPPORTED_FORMATS = frozenset({"md", "html", "excel"})
 XLSX_FILE_NAME = "spec.xlsx"
+DIFF_REPORT_FILE_NAME = "diff_report.html"
+FIRST_SNAPSHOT_MESSAGE = "初回スナップショットを保存しました。次回実行から差分を検出できます"
 
 logger = logging.getLogger(__name__)
 
@@ -49,12 +54,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT_DIR, help="出力先")
     parser.add_argument("--llm", action="store_true", help="LLM解析を有効化")
     parser.add_argument("--format", default=DEFAULT_FORMATS, help="出力形式: md,html,excel")
+    parser.add_argument("--compare", action="store_true", help="前回スナップショットとの差分を出力")
     return parser.parse_args()
 
 
 def run(args: argparse.Namespace) -> None:
     formats = _parse_formats(str(args.format))
     output_dir = Path(args.output) / _domain_name(str(args.url))
+    prior_snapshot = latest_snapshot(output_dir)
     if args.llm:
         logger.warning("--llm は未実装のため無視します")
 
@@ -68,7 +75,31 @@ def run(args: argparse.Namespace) -> None:
     graph = build_graph(analyzed_pages)
     form_summary = summarize_forms(analyzed_pages)
     save_outputs(analyzed_pages, graph, form_summary, output_dir, formats)
+    new_snapshot = save_snapshot(pages, output_dir)
+    if bool(getattr(args, "compare", False)):
+        _save_diff_report(prior_snapshot, new_snapshot, pages, output_dir, str(args.url))
     logger.info("出力が完了しました: %s", output_dir)
+
+
+def _save_diff_report(
+    prior_snapshot: Path | None,
+    new_snapshot: Path,
+    pages: list[PageData],
+    output_dir: Path,
+    target_url: str,
+) -> None:
+    if prior_snapshot is None:
+        logger.info(FIRST_SNAPSHOT_MESSAGE)
+        return
+    old_pages = load_snapshot(prior_snapshot)
+    diff = compute_diff(old_pages, pages)
+    report_html = generate_diff_report(
+        diff=diff,
+        old_label=prior_snapshot.name,
+        new_label=new_snapshot.name,
+        target_url=target_url,
+    )
+    (output_dir / DIFF_REPORT_FILE_NAME).write_text(report_html, encoding="utf-8")
 
 
 def save_outputs(

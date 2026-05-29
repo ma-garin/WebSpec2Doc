@@ -7,7 +7,7 @@ on:
 
 jobs:
   quality:
-    name: lint / type / test / smoke
+    name: lint / type / test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,9 +20,6 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements-dev.txt
 
-      - name: Install Playwright browser
-        run: python -m playwright install --with-deps chromium
-
       - name: Lint (ruff)
         run: ruff check src app.py tests
 
@@ -34,6 +31,23 @@ jobs:
 
       - name: Tests + coverage gate (80%)
         run: pytest tests/ -q --cov=src --cov-report=term-missing --cov-fail-under=80
+
+  smoke:
+    name: smoke crawl (Playwright)
+    runs-on: ubuntu-22.04  # Playwright 1.44 の OS 依存は 24.04 と非互換のため固定
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install Playwright browser
+        run: python -m playwright install --with-deps chromium
 
       - name: Smoke crawl (--compare x2)
         run: |

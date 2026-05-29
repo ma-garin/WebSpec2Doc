@@ -97,7 +97,7 @@ python src/main.py \
 | ブラウザ自動操作 | [Playwright](https://playwright.dev/python/) |
 | グラフ処理 | [networkx](https://networkx.org/) |
 | Excel 出力 | [openpyxl](https://openpyxl.readthedocs.io/) |
-| テスト | pytest（144 件 / カバレッジ 80%+） |
+| テスト | pytest（162 件 / カバレッジ 80%+） |
 
 - Python 3.12（3.13 は greenlet ビルド失敗のため非対応）
 

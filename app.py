@@ -45,63 +45,90 @@ _HTML = """<!DOCTYPE html>
     :root {
       --primary:      #0F62FE;
       --primary-dark: #0043CE;
-      --text:         #161616;
-      --text-muted:   #525252;
-      --bg:           #F4F8FF;
+      --text:         #111827;
+      --text-muted:   #6B7280;
+      --text-subtle:  #9CA3AF;
+      --bg:           #F7F8FA;
       --surface:      #FFFFFF;
-      --surface-soft: #F7FBFF;
-      --surface-subtle:#E8F1FF;
-      --border:       #C9D9EE;
-      --ok:           #198038;
-      --ok-bg:        #DEFBE6;
-      --critical:     #DA1E28;
-      --critical-bg:  #FFF1F1;
-      --critical-border: #FFB3B8;
-      --info-bg:      #EDF5FF;
-      --info-border:  #A6C8FF;
-      --focus-ring:   rgba(15, 98, 254, .18);
-      --radius:       8px;
-      --shadow:       0 1px 2px rgba(22,22,22,.06), 0 8px 20px rgba(15,98,254,.04);
+      --surface-soft: #F9FAFB;
+      --surface-subtle:#F2F4F7;
+      --border:       #E5E7EB;
+      --border-strong:#D1D5DB;
+      --ok:           #1F8A4C;
+      --ok-bg:        #E7F4EC;
+      --ok-border:    #A7E0BD;
+      --warning:      #B45309;
+      --warning-bg:   #FEF6E7;
+      --warning-border:#FCD9A0;
+      --critical:     #D32F2F;
+      --critical-bg:  #FDECEC;
+      --critical-border: #F5B5B5;
+      --info:         #0F62FE;
+      --info-bg:      #EFF4FF;
+      --info-border:  #C7D7FE;
+      --focus-ring:   rgba(15, 98, 254, .16);
+      --radius:       6px;
+      --radius-lg:    8px;
+      --shadow-sm:    0 1px 2px rgba(16,24,40,.05);
+      --shadow:       0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.08);
+      --shadow-pop:   0 10px 24px rgba(16,24,40,.12), 0 2px 6px rgba(16,24,40,.08);
+      --sidebar-w:    256px;
     }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
-      background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.6;
+      background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
     }
     body.app-page { overflow: hidden; }
-    .app-shell { height: 100vh; display: grid; grid-template-columns: 248px minmax(0, 1fr); }
+    .app-shell { height: 100vh; display: grid; grid-template-columns: var(--sidebar-w) minmax(0, 1fr); }
+
+    /* ── サイドバー ── */
     .app-sidebar {
-      height: 100vh; overflow: auto; padding: 22px 16px;
-      display: flex; flex-direction: column; gap: 18px;
-      background: #EDF5FF; border-right: 1px solid var(--border);
+      height: 100vh; overflow: auto; padding: 16px 12px;
+      display: flex; flex-direction: column; gap: 14px;
+      background: var(--surface); border-right: 1px solid var(--border);
     }
-    .app-brand { color: var(--text); text-decoration: none; font-size: 20px; font-weight: 700; }
-    .app-nav { display: grid; gap: 6px; }
+    .app-brand { display: flex; align-items: center; gap: 10px; padding: 4px 8px; color: var(--text); text-decoration: none; }
+    .app-brand-mark {
+      width: 28px; height: 28px; border-radius: 7px; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--primary) 0%, #4589FF 100%);
+      display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 15px;
+      box-shadow: var(--shadow-sm);
+    }
+    .app-brand-text { display: grid; line-height: 1.15; }
+    .app-brand-text strong { font-size: 15px; font-weight: 700; letter-spacing: -.01em; }
+    .app-brand-text span { font-size: 10px; color: var(--text-subtle); font-weight: 600; letter-spacing: .02em; }
+    .app-nav { display: grid; gap: 2px; }
     .app-nav-item {
-      display: flex; align-items: center; min-height: 44px; padding: 0 14px;
-      border-radius: var(--radius); color: var(--text); text-decoration: none;
-      background: transparent; border: 1px solid transparent; font-size: 14px;
-      cursor: pointer; transition: background .15s, border-color .15s;
+      display: flex; align-items: center; gap: 10px; min-height: 38px; padding: 0 10px;
+      border-radius: var(--radius); color: var(--text-muted); text-decoration: none;
+      background: transparent; border: 0; font-size: 13.5px; font-weight: 600; width: 100%;
+      cursor: pointer; transition: background .12s, color .12s;
     }
-    .app-nav-item:hover { background: #fff; border-color: var(--info-border); }
-    .app-nav-item.is-active {
-      background: #fff; border-color: var(--info-border); color: var(--primary-dark);
-      box-shadow: inset 4px 0 0 var(--primary); font-weight: 600;
-    }
-    .app-sidebar-section {
-      font-size: 11px; font-weight: 800; text-transform: uppercase;
-      letter-spacing: .06em; color: var(--text-muted); padding: 0 14px;
-    }
-    .app-main { min-width: 0; height: 100vh; display: flex; flex-direction: column; }
+    .app-nav-item svg { width: 17px; height: 17px; flex-shrink: 0; opacity: .85; }
+    .app-nav-item:hover { background: var(--surface-subtle); color: var(--text); }
+    .app-nav-item.is-active { background: var(--info-bg); color: var(--primary-dark); }
+    .app-nav-item.is-active svg { opacity: 1; }
+    .app-nav-group { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--text-subtle); padding: 10px 10px 2px; }
+    .app-sidebar-section { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--text-subtle); padding: 0 10px; }
+    .app-sidebar-foot { font-size: 11.5px; color: var(--text-muted); line-height: 1.6; padding: 0 10px; }
+    .app-sidebar-foot a { color: var(--text-muted); }
+
+    .app-main { min-width: 0; height: 100vh; display: flex; flex-direction: column; background: var(--bg); }
+
+    /* ── ヘッダー（文脈：パンくず＋タイトル＋主要アクション）── */
     .app-topbar {
       display: flex; align-items: center; justify-content: space-between; gap: 16px;
-      padding: 18px 30px; border-bottom: 1px solid var(--border);
-      background: rgba(247,251,255,.96); backdrop-filter: blur(10px); flex-shrink: 0;
+      padding: 14px 28px; border-bottom: 1px solid var(--border);
+      background: var(--surface); flex-shrink: 0;
     }
-    .app-topbar-kicker {
-      color: var(--text-muted); font-size: 11px; font-weight: 800;
-      letter-spacing: .06em; text-transform: uppercase; margin-bottom: 3px;
-    }
-    .app-topbar-title { font-size: 24px; font-weight: 700; line-height: 1.15; }
+    .app-breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-subtle); font-weight: 600; margin-bottom: 2px; }
+    .app-breadcrumb a { color: var(--text-muted); text-decoration: none; cursor: pointer; }
+    .app-breadcrumb a:hover { color: var(--primary-dark); }
+    .app-breadcrumb .sep { color: var(--border-strong); }
+    .app-topbar-title { font-size: 20px; font-weight: 700; line-height: 1.2; letter-spacing: -.01em; }
+    .app-topbar-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .app-topbar-actions:empty { display: none; }
     .app-content { flex: 1; overflow: auto; padding: 28px 30px; }
     .app-content-inner { max-width: 880px; }
     .app-content.is-executing { overflow: hidden; padding: 16px 20px; height: 100%; }
@@ -141,20 +168,23 @@ _HTML = """<!DOCTYPE html>
     .checkbox-chip input { accent-color: var(--primary); width: 15px; height: 15px; }
     .checkbox-chip:has(input:checked) { border-color: var(--primary); background: var(--info-bg); color: var(--primary-dark); }
     .btn-primary {
-      height: 44px; padding: 0 22px; background: var(--primary); color: #fff;
-      border: none; border-radius: 4px; font-size: 15px; font-weight: 600;
-      cursor: pointer; white-space: nowrap; transition: background .15s;
+      display: inline-flex; align-items: center; justify-content: center;
+      height: 40px; padding: 0 18px; background: var(--primary); color: #fff;
+      border: none; border-radius: var(--radius); font-size: 14px; font-weight: 600;
+      cursor: pointer; white-space: nowrap; box-shadow: var(--shadow-sm);
+      transition: background .12s, box-shadow .12s;
     }
     .btn-primary:hover:not(:disabled) { background: var(--primary-dark); }
-    .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
     .btn-outline-sm {
-      display: inline-flex; align-items: center; height: 36px; padding: 0 16px;
-      border: 1px solid var(--border); border-radius: 4px; font-size: 13px; font-weight: 500;
+      display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px;
+      border: 1px solid var(--border-strong); border-radius: var(--radius); font-size: 13px; font-weight: 600;
       color: var(--text); background: var(--surface); text-decoration: none; cursor: pointer;
-      transition: border-color .15s, background .15s, color .15s;
+      transition: border-color .12s, background .12s, color .12s;
     }
-    .btn-outline-sm:hover { border-color: var(--info-border); color: var(--primary-dark); background: var(--info-bg); }
+    .btn-outline-sm:hover { border-color: var(--border-strong); color: var(--primary-dark); background: var(--surface-subtle); }
     .btn-outline-sm:disabled { opacity: .45; cursor: not-allowed; }
+    .btn-primary:focus-visible, .btn-outline-sm:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
     /* ── ウィザード ── */
     .wizard-progress { display: flex; align-items: center; gap: 6px; margin-bottom: 22px; }
@@ -261,7 +291,7 @@ _HTML = """<!DOCTYPE html>
     .result-panel { height: 100%; display: flex; flex-direction: column; gap: 10px; }
     .result-panel.hidden { display: none; }
     .result-summary { flex-shrink: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
-    .result-summary-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .result-summary-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
     .result-ok { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 4px; background: var(--ok-bg); color: var(--ok); font-size: 12px; font-weight: 800; }
     .result-summary-head strong { font-size: 15px; word-break: break-all; }
     .result-stats { display: grid; grid-template-columns: repeat(5,1fr); gap: 10px; }
@@ -353,34 +383,44 @@ _HTML = """<!DOCTYPE html>
 <div class="app-shell">
 
   <aside class="app-sidebar">
-    <a href="/" class="app-brand">WebSpec2Doc</a>
+    <a href="/" class="app-brand">
+      <span class="app-brand-mark">W</span>
+      <span class="app-brand-text"><strong>WebSpec2Doc</strong><span>QA テスト分析インプット</span></span>
+    </a>
+    <button type="button" class="btn-primary" id="add-site-btn" style="width:100%;height:40px;gap:6px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="16" height="16"><path d="M12 5v14M5 12h14"/></svg>
+      サイトを追加
+    </button>
     <nav class="app-nav">
-      <button class="app-nav-item is-active" data-view="generate">ドキュメント生成</button>
-      <button class="app-nav-item" data-view="history">実行履歴</button>
-      <button class="app-nav-item" data-view="settings">設定</button>
+      <div class="app-nav-group">メニュー</div>
+      <button class="app-nav-item is-active" data-view="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        ダッシュボード
+      </button>
+      <button class="app-nav-item" data-view="settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        設定
+      </button>
     </nav>
-    <div style="margin-top:auto">
-      <p class="app-sidebar-section">出力先</p>
-      <p style="font-size:12px;color:var(--text-muted);padding:8px 14px 0;line-height:1.6">
-        output/{ドメイン名}/<br>に生成されます
-      </p>
+    <div style="margin-top:auto" class="app-sidebar-foot">
+      稼働中のWebシステムから QA テスト分析インプットを生成し、<strong>再クロールで仕様ドリフトを検知</strong>します。
     </div>
   </aside>
 
   <div class="app-main">
     <header class="app-topbar">
-      <div>
-        <p class="app-topbar-kicker" id="topbar-kicker">Generate</p>
-        <h1 class="app-topbar-title" id="topbar-title">QA テストインプット文書を生成する</h1>
+      <div style="min-width:0">
+        <div class="app-breadcrumb" id="topbar-breadcrumb"><span>Dashboard</span></div>
+        <h1 class="app-topbar-title" id="topbar-title">監視対象サイト</h1>
       </div>
-      <a href="https://github.com/ma-garin/WebSpec2Doc" target="_blank" class="btn-outline-sm">GitHub</a>
+      <div class="app-topbar-actions" id="topbar-actions"></div>
     </header>
 
     <main class="app-content" id="app-content">
       <div class="app-content-inner">
 
         <!-- ===== 生成ビュー ===== -->
-        <section class="view is-active" id="view-generate">
+        <section class="view" id="view-generate">
           <div id="gen-panel">
             <div class="input-card">
               <nav class="wizard-progress" aria-label="設定ステップ">
@@ -542,8 +582,11 @@ _HTML = """<!DOCTYPE html>
           <div id="result-panel" class="result-panel hidden">
             <div class="result-summary">
               <div class="result-summary-head">
-                <span class="result-ok">✓ 生成完了</span>
-                <strong id="r-domain">-</strong>
+                <div style="display:flex;align-items:center;gap:10px;min-width:0">
+                  <strong id="r-domain">-</strong>
+                  <span id="r-crawled" style="font-size:12px;color:var(--text-muted)"></span>
+                </div>
+                <button type="button" id="r-recrawl-btn" class="btn-outline-sm">再クロール（ドリフト検知）</button>
               </div>
               <div class="result-stats">
                 <div><span class="num" id="r-screens">0</span><span>画面数</span></div>
@@ -562,19 +605,21 @@ _HTML = """<!DOCTYPE html>
                 <button type="button" class="result-tab" data-tab="export">エクスポート</button>
               </div>
               <div class="result-bar-actions">
-                <button type="button" id="r-rerun-btn" class="btn-outline-sm">同じ設定で再実行</button>
-                <button type="button" id="r-new-btn" class="btn-primary" style="height:36px;padding:0 16px;font-size:13px">新しく生成</button>
+                <button type="button" id="r-new-btn" class="btn-outline-sm">ダッシュボードへ</button>
               </div>
             </div>
             <div class="result-hero" id="result-hero"></div>
           </div>
         </section>
 
-        <!-- ===== 履歴ビュー ===== -->
-        <section class="view" id="view-history">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-            <p style="color:var(--text-muted);font-size:13px">過去に生成したドキュメント（output/ フォルダ）</p>
-            <button class="btn-outline-sm" id="reload-history">再読み込み</button>
+        <!-- ===== ダッシュボード（監視対象サイト） ===== -->
+        <section class="view is-active" id="view-dashboard">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px">
+            <p style="color:var(--text-muted);font-size:13px">監視対象サイト。<strong>再クロール</strong>すると前回からの仕様ドリフトを検知できます。</p>
+            <div style="display:flex;gap:8px">
+              <button class="btn-outline-sm" id="reload-history">再読み込み</button>
+              <button class="btn-primary" id="add-site-btn-2" style="height:36px;padding:0 16px;font-size:13px">+ サイトを追加</button>
+            </div>
           </div>
           <div id="history-body"><div class="empty">読み込み中...</div></div>
         </section>
@@ -664,18 +709,44 @@ _HTML = """<!DOCTYPE html>
 
 <script>
 const SETTINGS_KEY = 'webspec2doc.settings';
-const views = { generate: ['Generate','QA テストインプット文書を生成する'], history: ['History','実行履歴'], settings: ['Settings','設定'] };
+const VIEW_HEADER = {
+  dashboard: { trail: ['ダッシュボード'], title: '監視対象サイト' },
+  generate: { trail: ['ダッシュボード', 'サイトを追加'], title: 'サイトを追加 / 再クロール' },
+  settings: { trail: ['ダッシュボード', '設定'], title: '設定' },
+};
 const escHtml = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// ---- ヘッダー（パンくず＋タイトル）----
+function setHeader(trail, title) {
+  const bc = document.getElementById('topbar-breadcrumb');
+  bc.innerHTML = trail.map((t, i) => i === 0
+    ? `<a data-bc-root="1">${escHtml(t)}</a>`
+    : `<span class="sep">›</span><span>${escHtml(t)}</span>`).join('');
+  const root = bc.querySelector('[data-bc-root]');
+  if (root && trail.length > 1) root.addEventListener('click', () => switchView('dashboard'));
+  document.getElementById('topbar-title').textContent = title;
+  document.getElementById('topbar-actions').innerHTML = '';
+}
 
 // ---- ナビ切替 ----
 document.querySelectorAll('.app-nav-item').forEach(btn => btn.addEventListener('click', () => switchView(btn.dataset.view)));
 function switchView(name) {
   document.querySelectorAll('.app-nav-item').forEach(b => b.classList.toggle('is-active', b.dataset.view === name));
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('is-active', v.id === 'view-' + name));
-  document.getElementById('topbar-kicker').textContent = views[name][0];
-  document.getElementById('topbar-title').textContent = views[name][1];
-  if (name === 'history') loadHistory();
+  const h = VIEW_HEADER[name];
+  if (h) setHeader(h.trail, h.title);
+  if (name === 'dashboard') loadHistory();
 }
+// 「+ サイトを追加」: 新規ウィザードを開く
+function openAddSite() {
+  switchView('generate');
+  executionView.classList.add('hidden'); resultPanel.classList.add('hidden');
+  appContent.classList.remove('is-executing'); genPanel.style.display = '';
+  document.getElementById('url-input').value = '';
+  clearDiscovered(); updateTargetPreview(); showStep(1);
+}
+document.getElementById('add-site-btn').addEventListener('click', openAddSite);
+document.getElementById('add-site-btn-2').addEventListener('click', openAddSite);
 
 // ---- 設定（localStorage）----
 function getSettings() { try { return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}; } catch { return {}; } }
@@ -714,20 +785,47 @@ async function loadHistory() {
   try {
     const res = await fetch('/api/history');
     const data = await res.json();
-    if (!data.items.length) { body.innerHTML = '<div class="empty">まだ生成履歴がありません。「ドキュメント生成」から実行してください。</div>'; return; }
-    let html = '<table class="data"><thead><tr><th>ドメイン</th><th class="num">画面数</th><th class="num">入力項目</th><th>形式</th><th>更新日時</th><th>操作</th></tr></thead><tbody>';
+    if (!data.items.length) { body.innerHTML = '<div class="empty">まだ監視対象がありません。「+ サイトを追加」から最初のサイトをクロールしてください。</div>'; return; }
+    let html = '<table class="data"><thead><tr><th>サイト</th><th class="num">画面数</th><th class="num">入力項目</th><th>形式</th><th>最終クロール</th><th>操作</th></tr></thead><tbody>';
     for (const it of data.items) {
       const badges = (it.formats || []).map(f => `<span class="fmt-badge">${escHtml(f)}</span>`).join('');
       html += `<tr><td><strong>${escHtml(it.domain)}</strong></td><td class="num">${it.screens}</td><td class="num">${it.fields}</td>` +
         `<td><div class="fmt-badges">${badges || '—'}</div></td><td>${escHtml(it.updated)}</td>` +
-        `<td><button type="button" class="btn-primary hist-open" data-domain="${escHtml(it.domain)}" style="height:34px;padding:0 14px;font-size:13px">結果を見る</button></td></tr>`;
+        `<td><div class="history-actions">` +
+        `<button type="button" class="btn-outline-sm hist-recrawl" data-domain="${escHtml(it.domain)}">再クロール</button>` +
+        `<button type="button" class="btn-primary hist-open" data-domain="${escHtml(it.domain)}" style="height:36px;padding:0 14px;font-size:13px">開く</button>` +
+        `</div></td></tr>`;
     }
     html += '</tbody></table>';
     body.innerHTML = html;
     body.querySelectorAll('.hist-open').forEach(b => b.addEventListener('click', () => openResultsForDomain(b.dataset.domain)));
-  } catch (e) { body.innerHTML = '<div class="empty">履歴の読み込みに失敗しました。</div>'; }
+    body.querySelectorAll('.hist-recrawl').forEach(b => b.addEventListener('click', () => recrawlSite(b.dataset.domain)));
+  } catch (e) { body.innerHTML = '<div class="empty">サイト一覧の読み込みに失敗しました。</div>'; }
 }
 document.getElementById('reload-history').addEventListener('click', loadHistory);
+
+// ---- 再クロール（ドリフト検知）: 既知のサイトを同じ画面構成で取り直す ----
+const FILE_TO_FMT = { html: 'html', pdf: 'pdf', excel: 'excel', screens_md: 'md', json: 'json' };
+async function recrawlSite(domain) {
+  let urls = [], fmts = [];
+  try {
+    const data = await fetch('/api/result?domain=' + encodeURIComponent(domain)).then(r => r.json());
+    fmts = Object.keys(FILE_TO_FMT).filter(k => (data.files || {})[k]).map(k => FILE_TO_FMT[k]);
+    if (data.files && data.files.json) {
+      const rj = await fetch('/preview?path=' + encodeURIComponent(data.files.json)).then(r => r.json());
+      urls = (rj.screens || []).map(s => s.url).filter(Boolean);
+    }
+  } catch (e) {}
+  if (!urls.length) urls = ['https://' + domain + '/'];
+  if (!fmts.length) fmts = ['html', 'md'];
+  if (!fmts.includes('json')) fmts.push('json');
+  const body = new URLSearchParams({
+    urls: urls.join(','), depth: '2', max_pages: '300',
+    format: fmts.join(','), compare: 'true', auth: getSettings().auth || '',
+  });
+  switchView('generate');
+  runWith(body.toString(), domain, domain, urls.length);
+}
 
 async function openResultsForDomain(domain) {
   switchView('generate');
@@ -991,14 +1089,11 @@ document.getElementById('exec-stop-btn').addEventListener('click', async () => {
   if (runAbort) runAbort.abort();
 });
 
-function backToInput() {
-  executionView.classList.add('hidden'); resultPanel.classList.add('hidden');
-  appContent.classList.remove('is-executing'); genPanel.style.display = ''; showStep(1);
-}
-document.getElementById('exec-new-btn').addEventListener('click', backToInput);
-document.getElementById('r-new-btn').addEventListener('click', backToInput);
-document.getElementById('r-rerun-btn').addEventListener('click', () => {
-  if (lastRun) runWith(lastRun.bodyStr, lastRun.domain, lastRun.label, lastRun.urlCount);
+document.getElementById('exec-new-btn').addEventListener('click', () => switchView('dashboard'));
+document.getElementById('r-new-btn').addEventListener('click', () => switchView('dashboard'));
+document.getElementById('r-recrawl-btn').addEventListener('click', () => {
+  const domain = document.getElementById('r-domain').textContent.trim();
+  if (domain && domain !== '-') recrawlSite(domain);
 });
 
 // ====================== 結果ページ（QAビュー軸） ======================
@@ -1033,6 +1128,8 @@ async function showResults(domain) {
   }
   const s = data.summary || {};
   const required = reportJson ? countRequired(reportJson) : 0;
+  const crawledAt = reportJson && reportJson.meta ? reportJson.meta.crawled_at : '';
+  document.getElementById('r-crawled').textContent = crawledAt ? ('最終クロール: ' + crawledAt) : '';
   document.getElementById('r-domain').textContent = domain;
   document.getElementById('r-screens').textContent = s.screens || 0;
   document.getElementById('r-forms').textContent = s.forms || 0;
@@ -1040,6 +1137,7 @@ async function showResults(domain) {
   document.getElementById('r-required').textContent = required;
   document.getElementById('r-buttons').textContent = s.buttons || 0;
   document.getElementById('result-tab-diff').style.display = (data.files && data.files.diff) ? '' : 'none';
+  setHeader(['ダッシュボード', domain], domain);
 
   executionView.classList.add('hidden'); resultPanel.classList.remove('hidden');
   selectResultTab('overview');
@@ -1089,7 +1187,15 @@ function defaultOptionsText(f) {
 
 // ---- 概要 ----
 function renderOverview() {
-  if (!reportJson) { resultHero.innerHTML = '<div class="hero-msg">概要データ（report.json）を読み込めませんでした。</div>'; return; }
+  if (!reportJson) {
+    const shots = (resultData.screenshots || []).map(p =>
+      `<a href="/preview?path=${encodeURIComponent(p)}" target="_blank"><figure><img src="/preview?path=${encodeURIComponent(p)}" loading="lazy" alt=""><figcaption>${escHtml(p.split('/').pop())}</figcaption></figure></a>`).join('');
+    resultHero.innerHTML = '<div class="hero-pad">' +
+      '<p style="color:var(--text-muted);font-size:13px;margin-bottom:12px">このサイトは旧バージョンで生成されたため画面別の構造化データがありません。「<strong>再クロール</strong>」で最新のテスト条件マトリクスを生成できます。詳細は「画面別仕様」タブを参照してください。</p>' +
+      (shots ? '<div class="hero-section-title">スクリーンショット</div><div class="r-shots">' + shots + '</div>' : '') +
+      '</div>';
+    return;
+  }
   const screens = reportJson.screens || [];
   const meta = reportJson.meta || {};
   const rows = screens.map(sc => {
@@ -1099,7 +1205,9 @@ function renderOverview() {
       `<td><code style="font-size:.78rem;color:var(--text-muted)">${escHtml(sc.url || '')}</code></td>` +
       `<td class="num">${(sc.forms || []).length}</td><td class="num">${fields}</td><td>${escHtml(to)}</td></tr>`;
   }).join('');
-  const shots = (resultData.screenshots || []).map(p =>
+  // 現在のクロールに含まれる画面IDのスクショだけ表示（過去の残骸を除外）
+  const pageIds = new Set(screens.map(sc => sc.page_id));
+  const shots = (resultData.screenshots || []).filter(p => pageIds.has(p.split('/').pop().replace(/\\.png$/, ''))).map(p =>
     `<a href="/preview?path=${encodeURIComponent(p)}" target="_blank"><figure><img src="/preview?path=${encodeURIComponent(p)}" loading="lazy" alt=""><figcaption>${escHtml(p.split('/').pop())}</figcaption></figure></a>`).join('');
   resultHero.innerHTML = '<div class="hero-pad">' +
     `<p style="color:var(--text-muted);font-size:13px;margin-bottom:12px">対象 ${escHtml(meta.target_url || '')} ／ クロール: 深さ${meta.crawl_depth ?? '-'} ・最大${meta.max_pages ?? '-'}ページ ／ ${escHtml(meta.crawled_at || '')}</p>` +
@@ -1259,7 +1367,7 @@ async function loadUrlHistory() {
 }
 
 // 初期化
-applySettings(); loadSettingsForm(); loadApiSettings(); loadUrlHistory(); updateTargetPreview();
+applySettings(); loadSettingsForm(); loadApiSettings(); loadUrlHistory(); updateTargetPreview(); switchView('dashboard');
 </script>
 </body>
 </html>

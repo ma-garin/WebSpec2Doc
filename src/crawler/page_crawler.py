@@ -31,6 +31,13 @@ class FieldData:
     name: str
     placeholder: str
     required: bool
+    maxlength: int | None = None
+    minlength: int | None = None
+    min_value: str = ""
+    max_value: str = ""
+    pattern: str = ""
+    default: str = ""
+    options: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -48,6 +55,7 @@ class PageData:
     links: tuple[str, ...]
     forms: tuple[FormData, ...]
     screenshot_path: str | None
+    buttons: tuple[str, ...] = ()
 
 
 def crawl_site(
@@ -93,6 +101,7 @@ def crawl_site(
 
 def crawl_page(page: Page, url: str, output_dir: Path | None) -> PageData:
     from crawler.link_extractor import (
+        extract_buttons,
         extract_forms,
         extract_headings,
         extract_internal_links,
@@ -110,6 +119,7 @@ def crawl_page(page: Page, url: str, output_dir: Path | None) -> PageData:
         links=tuple(extract_internal_links(page, normalized_url)),
         forms=tuple(extract_forms(page)),
         screenshot_path=screenshot_path,
+        buttons=tuple(extract_buttons(page)),
     )
 
 

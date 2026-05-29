@@ -668,12 +668,15 @@ def open_file() -> Response:
     return redirect(url_for("index"))
 
 
+PORT = 8765
+
+
 def _open_browser() -> None:
     import time
     time.sleep(1.0)
-    webbrowser.open("http://127.0.0.1:5000")
+    webbrowser.open(f"http://127.0.0.1:{PORT}")
 
 
 if __name__ == "__main__":
     threading.Thread(target=_open_browser, daemon=True).start()
-    app.run(debug=False)
+    app.run(port=PORT, debug=False)

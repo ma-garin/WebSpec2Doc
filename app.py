@@ -15,7 +15,7 @@ app = Flask(__name__)
 OUTPUT_DIR = Path("output")
 SCREEN_ROW_RE = re.compile(r"^\|\s*\d+\s*\|")
 ENV_FILE = Path(".env")
-DEFAULT_OPENAI_MODEL = "gpt-4o-mini"
+DEFAULT_OPENAI_MODEL = "gpt-5.4-mini"
 
 _HTML = """<!DOCTYPE html>
 <html lang="ja">
@@ -331,12 +331,13 @@ _HTML = """<!DOCTYPE html>
               <p class="input-hint" style="margin-top:0;margin-bottom:14px">LLMテスト観点生成（今後実装）で使うモデルです。候補から選ぶか直接入力できます。</p>
               <div class="field full">
                 <label for="api-model">OPENAI_MODEL</label>
-                <input type="text" id="api-model" class="url-input" list="model-list" placeholder="gpt-4o-mini" style="height:40px">
+                <input type="text" id="api-model" class="url-input" list="model-list" placeholder="gpt-5.4-mini" style="height:40px">
                 <datalist id="model-list">
-                  <option value="gpt-4o-mini"></option>
-                  <option value="gpt-4o"></option>
-                  <option value="gpt-5.4-mini"></option>
-                  <option value="gpt-5.5"></option>
+                  <option value="gpt-5.4-mini">コスト効率・推奨</option>
+                  <option value="gpt-5.4-nano">最安・最速</option>
+                  <option value="gpt-5.5">高精度</option>
+                  <option value="gpt-5.4">フロンティア</option>
+                  <option value="gpt-4.1">非推論ツール呼び出し</option>
                 </datalist>
               </div>
               <button class="btn-primary" id="save-model" style="margin-top:18px">モデルを保存</button>
@@ -532,7 +533,7 @@ async function loadApiSettings() {
   try {
     const res = await fetch('/api/settings');
     const s = await res.json();
-    document.getElementById('api-model').value = s.openai_model || 'gpt-4o-mini';
+    document.getElementById('api-model').value = s.openai_model || 'gpt-5.4-mini';
     document.getElementById('api-org').value = s.openai_org_id || '';
     document.getElementById('api-project').value = s.openai_project_id || '';
     document.getElementById('api-key-current').textContent = s.openai_key_set ? s.openai_key_masked : '未設定';

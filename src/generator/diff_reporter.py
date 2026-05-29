@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import html
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from diff.differ import (
     CHANGE_ADDED,
@@ -32,7 +32,7 @@ def generate_diff_report(
     new_label: str,
     target_url: str,
 ) -> str:
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
     sections = [
         _section("画面の追加/削除", _page_changes_table(diff)),
         _section("フォーム項目の変化", _field_changes_table(diff.field_changes)),
@@ -40,17 +40,19 @@ def generate_diff_report(
         _section("タイトル変更", _title_changes_table(diff.title_changes)),
     ]
     notice = _notice() if not diff.has_changes else ""
-    return "\n".join([
-        _html_head(),
-        "<body>",
-        _header(target_url, old_label, new_label, now),
-        '<main class="container">',
-        _summary_cards(diff),
-        notice,
-        *sections,
-        "</main>",
-        "</body></html>",
-    ])
+    return "\n".join(
+        [
+            _html_head(),
+            "<body>",
+            _header(target_url, old_label, new_label, now),
+            '<main class="container">',
+            _summary_cards(diff),
+            notice,
+            *sections,
+            "</main>",
+            "</body></html>",
+        ]
+    )
 
 
 def _html_head() -> str:
@@ -248,4 +250,3 @@ def _field_value(field: object | None) -> str:
         f"placeholder={getattr(field, 'placeholder', '')}",
     )
     return html.escape(", ".join(str(item) for item in attrs))
-

@@ -1,4 +1,5 @@
 """link_extractor.py のユニットテスト（Playwright Page をモック）"""
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock
@@ -15,8 +16,8 @@ from crawler.link_extractor import (
     extract_page_title,
 )
 
-
 # ---------- _to_field_data ----------
+
 
 class TestToFieldData:
     def test_basic_text_field(self) -> None:
@@ -54,6 +55,7 @@ class TestToFieldData:
 
 # ---------- _to_form_data ----------
 
+
 class TestToFormData:
     def test_basic_form(self) -> None:
         raw = {"action": "/search", "method": "get", "fields": []}
@@ -66,9 +68,7 @@ class TestToFormData:
         raw = {
             "action": "/send",
             "method": "post",
-            "fields": [
-                {"field_type": "text", "name": "name", "placeholder": "", "required": True}
-            ],
+            "fields": [{"field_type": "text", "name": "name", "placeholder": "", "required": True}],
         }
         result = _to_form_data(raw)
         assert len(result.fields) == 1
@@ -97,6 +97,7 @@ class TestToFormData:
 
 
 # ---------- extract_internal_links ----------
+
 
 class TestExtractInternalLinks:
     def test_returns_only_internal_links(self) -> None:
@@ -140,6 +141,7 @@ class TestExtractInternalLinks:
 
 # ---------- extract_forms ----------
 
+
 class TestExtractForms:
     def test_returns_form_data_objects(self) -> None:
         page = MagicMock()
@@ -171,7 +173,9 @@ class TestExtractForms:
             {
                 "action": "/send",
                 "method": "post",
-                "fields": [{"field_type": "email", "name": "email", "placeholder": "", "required": True}],
+                "fields": [
+                    {"field_type": "email", "name": "email", "placeholder": "", "required": True}
+                ],
             }
         ]
         result = extract_forms(page)
@@ -180,6 +184,7 @@ class TestExtractForms:
 
 
 # ---------- extract_headings ----------
+
 
 class TestExtractHeadings:
     def test_returns_heading_list(self) -> None:
@@ -203,6 +208,7 @@ class TestExtractHeadings:
 
 # ---------- extract_page_title ----------
 
+
 class TestExtractPageTitle:
     def test_returns_stripped_title(self) -> None:
         page = MagicMock()
@@ -224,6 +230,7 @@ class TestExtractPageTitle:
 
 
 # ---------- extract_buttons ----------
+
 
 class TestExtractButtons:
     def test_returns_button_texts(self) -> None:

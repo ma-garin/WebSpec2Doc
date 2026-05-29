@@ -12,8 +12,10 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
 VENV_PY="$REPO_ROOT/venv/bin/python"
+VENV_BIN="$REPO_ROOT/venv/bin"
 SMOKE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/ws2d_verify.XXXXXX")"
 SMOKE_URL="https://example.com"
+COVERAGE_MIN=80
 
 red()   { printf '\033[31m%s\033[0m\n' "$1"; }
 green() { printf '\033[32m%s\033[0m\n' "$1"; }
@@ -33,7 +35,10 @@ step "0. 環境チェック (python3.12 venv)"
 PYVER="$("$VENV_PY" -c 'import sys;print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
 [ "$PYVER" = "3.12" ] || fail "venv が python$PYVER。3.12 で再構築が必要 (greenlet が 3.13 でビルド失敗するため)"
 "$VENV_PY" -c 'import playwright' 2>/dev/null || fail "playwright 未インストール。'pip install -r requirements.txt' を実行"
-green "OK: python$PYVER + playwright"
+for tool in ruff black mypy; do
+  [ -x "$VENV_BIN/$tool" ] || fail "$tool 未インストール。'pip install -r requirements-dev.txt' を実行"
+done
+green "OK: python$PYVER + playwright + ruff/black/mypy"
 
 # --- 1. py_compile 全ソース ---
 step "1. py_compile (構文チェック)"
@@ -42,13 +47,21 @@ while IFS= read -r f; do PY_FILES+=("$f"); done < <(find src app.py -name '*.py'
 "$VENV_PY" -m py_compile "${PY_FILES[@]}" || fail "py_compile エラー"
 green "OK: ${#PY_FILES[@]} ファイル"
 
-# --- 2. pytest 全件 ---
-step "2. pytest (全テスト)"
-"$VENV_PY" -m pytest tests/ -q || fail "pytest 失敗"
-green "OK: pytest pass"
+# --- 2. lint + フォーマット + 型チェック ---
+step "2. lint / format / 型チェック (ruff / black / mypy)"
+"$VENV_BIN/ruff" check src app.py tests || fail "ruff 違反"
+"$VENV_BIN/black" --check src app.py tests >/dev/null 2>&1 || fail "black 未整形 ('black src app.py tests' で整形)"
+"$VENV_BIN/mypy" || fail "mypy 型エラー"
+green "OK: ruff + black + mypy"
 
-# --- 3. スモーク: 実クロール2回 + 差分 ---
-step "3. スモーク (example.com を --compare で2回)"
+# --- 3. pytest 全件 + カバレッジゲート ---
+step "3. pytest (全テスト + カバレッジ ${COVERAGE_MIN}%)"
+"$VENV_PY" -m pytest tests/ -q --cov=src --cov-report=term-missing --cov-fail-under="$COVERAGE_MIN" \
+  || fail "pytest 失敗 or カバレッジ ${COVERAGE_MIN}% 未満"
+green "OK: pytest pass + カバレッジ ${COVERAGE_MIN}%+"
+
+# --- 4. スモーク: 実クロール2回 + 差分 ---
+step "4. スモーク (example.com を --compare で2回)"
 "$VENV_PY" src/main.py --url "$SMOKE_URL" --depth 1 --max-pages 2 \
   --format html,md --compare --output "$SMOKE_DIR" >/dev/null 2>&1 \
   || fail "1回目のクロールが失敗 (スタブが本物のクラッシュを隠していないか確認)"
@@ -57,8 +70,8 @@ step "3. スモーク (example.com を --compare で2回)"
   || fail "2回目のクロール(差分比較)が失敗"
 green "OK: クロール2回成功"
 
-# --- 4. 成果物の存在チェック ---
-step "4. 成果物チェック"
+# --- 5. 成果物の存在チェック ---
+step "5. 成果物チェック"
 DOMAIN_DIR="$SMOKE_DIR/example.com"
 for artifact in report.html screens.md transition.mmd diff_report.html; do
   [ -s "$DOMAIN_DIR/$artifact" ] || fail "成果物が空/欠落: $artifact"

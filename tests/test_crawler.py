@@ -1,7 +1,8 @@
 """page_crawler.py の純粋関数ユニットテスト（Playwright 不要）"""
+
 from __future__ import annotations
 
-import pytest
+from urllib.robotparser import RobotFileParser
 
 from crawler.page_crawler import (
     _format_page_id,
@@ -10,10 +11,9 @@ from crawler.page_crawler import (
     is_internal_link,
     normalize_url,
 )
-from urllib.robotparser import RobotFileParser
-
 
 # ---------- normalize_url ----------
+
 
 class TestNormalizeUrl:
     def test_trailing_slash_removed(self) -> None:
@@ -43,6 +43,7 @@ class TestNormalizeUrl:
 
 # ---------- is_internal_link ----------
 
+
 class TestIsInternalLink:
     def test_same_host_is_internal(self) -> None:
         assert is_internal_link("https://example.com/", "https://example.com/about") is True
@@ -71,6 +72,7 @@ class TestIsInternalLink:
 
 # ---------- _format_page_id ----------
 
+
 class TestFormatPageId:
     def test_single_digit(self) -> None:
         assert _format_page_id(1) == "P001"
@@ -87,6 +89,7 @@ class TestFormatPageId:
 
 # ---------- _should_skip ----------
 
+
 class TestShouldSkip:
     def _allow_all_robots(self) -> RobotFileParser:
         parser = RobotFileParser()
@@ -101,7 +104,9 @@ class TestShouldSkip:
         assert _should_skip("https://example.com/", 0, 3, visited, self._allow_all_robots()) is True
 
     def test_not_skip_valid_url(self) -> None:
-        assert _should_skip("https://example.com/page", 1, 3, set(), self._allow_all_robots()) is False
+        assert (
+            _should_skip("https://example.com/page", 1, 3, set(), self._allow_all_robots()) is False
+        )
 
     def test_skip_at_exact_max_depth(self) -> None:
         # depth == max_depth は許可（超過 = > のみスキップ）
@@ -114,6 +119,7 @@ class TestShouldSkip:
 
 
 # ---------- _next_urls ----------
+
 
 class TestNextUrls:
     def test_returns_next_depth_urls(self) -> None:

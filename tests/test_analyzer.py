@@ -1,14 +1,15 @@
 """html_analyzer.py / form_analyzer.py のユニットテスト"""
+
 from __future__ import annotations
 
 import pytest
 
 from analyzer.form_analyzer import summarize_forms
 from analyzer.html_analyzer import AnalyzedPage, analyze_pages, assign_page_ids
-from crawler.page_crawler import FieldData, FormData, PageData
-
+from crawler.page_crawler import PageData
 
 # ---------- assign_page_ids ----------
+
 
 class TestAssignPageIds:
     def test_ids_are_sequential(self, page_top: PageData, page_about: PageData) -> None:
@@ -23,13 +24,16 @@ class TestAssignPageIds:
     def test_empty_list(self) -> None:
         assert assign_page_ids([]) == {}
 
-    def test_unique_ids(self, page_top: PageData, page_about: PageData, page_contact: PageData) -> None:
+    def test_unique_ids(
+        self, page_top: PageData, page_about: PageData, page_contact: PageData
+    ) -> None:
         result = assign_page_ids([page_top, page_about, page_contact])
         ids = list(result.values())
         assert len(ids) == len(set(ids))
 
 
 # ---------- analyze_pages ----------
+
 
 class TestAnalyzePages:
     def test_returns_analyzed_page_list(self, page_top: PageData, page_about: PageData) -> None:
@@ -62,6 +66,7 @@ class TestAnalyzePages:
 
 
 # ---------- summarize_forms ----------
+
 
 class TestSummarizeForms:
     def test_returns_one_row_per_field(

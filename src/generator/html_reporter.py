@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import base64
 import html
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -28,7 +28,7 @@ def generate_html_report(
     mermaid_content: str,
     screenshots_dir: Path | None = None,
 ) -> str:
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
     forms_count = sum(len(p.page_data.forms) for p in pages)
     fields_count = len(form_summary)
 
@@ -40,18 +40,20 @@ def generate_html_report(
     if screenshots_dir is not None:
         sections.append(_section("スクリーンショット", _screenshots_grid(pages, screenshots_dir)))
 
-    return "\n".join([
-        _html_head(),
-        "<body>",
-        _header(target_url, now),
-        '<main class="container">',
-        _summary_cards(len(pages), forms_count, fields_count),
-        *sections,
-        "</main>",
-        _footer(now),
-        _mermaid_script(),
-        "</body></html>",
-    ])
+    return "\n".join(
+        [
+            _html_head(),
+            "<body>",
+            _header(target_url, now),
+            '<main class="container">',
+            _summary_cards(len(pages), forms_count, fields_count),
+            *sections,
+            "</main>",
+            _footer(now),
+            _mermaid_script(),
+            "</body></html>",
+        ]
+    )
 
 
 def _html_head() -> str:
@@ -110,7 +112,9 @@ def _header(target_url: str, now: str) -> str:
 
 def _summary_cards(pages: int, forms: int, fields: int) -> str:
     def card(num: int | str, label: str) -> str:
-        return f'<div class="card"><div class="num">{num}</div><div class="label">{label}</div></div>'
+        return (
+            f'<div class="card"><div class="num">{num}</div><div class="label">{label}</div></div>'
+        )
 
     return (
         '<div class="cards">'
@@ -145,7 +149,9 @@ def _screens_table(pages: list[AnalyzedPage], graph: nx.DiGraph) -> str:
         url_path = html.escape(_url_path(page.page_data.url))
         title = html.escape(page.page_data.title or "")
         forms_cnt = len(page.page_data.forms)
-        successors = ", ".join(graph.successors(page.page_id)) if graph.has_node(page.page_id) else ""
+        successors = (
+            ", ".join(graph.successors(page.page_id)) if graph.has_node(page.page_id) else ""
+        )
         rows.append(
             f"<tr><td>{i}</td><td>{page_id}</td><td>{url_path}</td>"
             f"<td>{title}</td><td>{forms_cnt}</td><td>{html.escape(successors)}</td></tr>"

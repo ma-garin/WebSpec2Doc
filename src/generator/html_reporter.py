@@ -15,12 +15,9 @@ from crawler.page_crawler import FormData
 
 REPORT_TITLE = "WebSpec2Doc テスト分析インプット"
 TOOL_NAME = "WebSpec2Doc"
-NAVY = "#00285E"
-CYAN = "#009FCA"
-GRAY = "#F5F5F5"
-TEXT = "#333333"
 SCREENSHOT_EXT = ".png"
 MAX_SCREENSHOT_BYTES = 500_000
+SIDEBAR_TITLE_LIMIT = 22
 
 
 def generate_html_report(
@@ -38,16 +35,18 @@ def generate_html_report(
 
     return "\n".join([
         _html_head(),
-        "<body>",
-        _header(target_url, now),
-        '<main class="container">',
-        _summary_cards(len(pages), forms_count, fields_count, buttons_count),
-        _section("目次", _toc(pages)),
-        _section("画面遷移図", _mermaid_block(mermaid_content)),
-        _section("画面カタログ", _screen_cards(pages, graph, screenshots_dir)),
+        '<body class="app-page"><div class="app-shell">',
+        _sidebar(pages),
+        '<div class="app-main">',
+        _topbar(target_url, now),
+        '<main class="app-content">',
+        _section("サマリー", _summary_cards(len(pages), forms_count, fields_count, buttons_count), "summary"),
+        _section("画面遷移図", _mermaid_block(mermaid_content), "transition"),
+        _section("画面カタログ", _screen_cards(pages, graph, screenshots_dir), "screens"),
         _meta_section(),
-        "</main>",
         _footer(now),
+        "</main></div></div>",
+        _scrollspy_script(),
         _mermaid_script(),
         "</body></html>",
     ])
@@ -65,60 +64,114 @@ def _html_head() -> str:
 
 
 def _css() -> str:
-    return f"""
-:root{{--navy:{NAVY};--cyan:{CYAN};--gray:{GRAY};--text:{TEXT}}}
-*{{box-sizing:border-box;margin:0;padding:0}}
-body{{font-family:"Noto Sans JP","Meiryo",sans-serif;color:var(--text);background:var(--gray);line-height:1.6}}
-.site-header{{background:var(--navy);color:#fff;padding:1.2rem 2rem}}
-.site-header h1{{font-size:1.4rem;font-weight:700}}
-.site-header .meta{{font-size:.85rem;opacity:.85;margin-top:.3rem}}
-.container{{max-width:1200px;margin:2rem auto;padding:0 1.5rem}}
-.cards{{display:flex;gap:1rem;margin-bottom:2rem;flex-wrap:wrap}}
-.card{{flex:1;min-width:130px;background:#fff;border:2px solid var(--cyan);border-radius:8px;padding:1rem 1.5rem;text-align:center}}
-.card .num{{font-size:2rem;font-weight:700;color:var(--navy)}}
-.card .label{{font-size:.85rem;color:#666;margin-top:.2rem}}
-section{{background:#fff;border-radius:8px;margin-bottom:2rem;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08)}}
-section>h2{{background:var(--navy);color:#fff;padding:.8rem 1.2rem;font-size:1rem}}
-.section-body{{padding:1.2rem;overflow-x:auto}}
-.toc{{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.5rem}}
-.toc a{{display:block;padding:.5rem .7rem;border:1px solid #ddd;border-radius:6px;text-decoration:none;color:var(--navy);font-size:.85rem}}
-.toc a:hover{{border-color:var(--cyan);background:#f0fafe}}
-.toc a b{{color:var(--cyan)}}
-table{{border-collapse:collapse;width:100%;font-size:.85rem}}
-th{{background:var(--navy);color:#fff;padding:.5rem .7rem;text-align:left;white-space:nowrap}}
-td{{padding:.5rem .7rem;border-bottom:1px solid #eee;vertical-align:top}}
-tr:nth-child(even) td{{background:#f9f9f9}}
-.badge-yes{{color:#c00;font-weight:600}}
-.mermaid-wrap{{overflow-x:auto;padding:.5rem}}
-.screen{{border:1px solid #e2e2e2;border-radius:8px;margin-bottom:1.5rem;overflow:hidden}}
-.screen-head{{display:flex;align-items:baseline;gap:.8rem;background:#eef4fb;padding:.7rem 1rem;border-bottom:1px solid #dde;flex-wrap:wrap}}
-.screen-head .pid{{font-weight:700;color:var(--navy);font-size:1rem}}
-.screen-head .title{{font-weight:600}}
-.screen-head .url{{color:#777;font-size:.8rem;margin-left:auto;word-break:break-all}}
-.screen-body{{display:grid;grid-template-columns:300px 1fr;gap:1rem;padding:1rem}}
-.screen-shot img{{width:100%;border:1px solid #eee;border-radius:6px;display:block}}
-.screen-shot .noshot{{color:#999;font-size:.8rem;padding:1rem;border:1px dashed #ccc;border-radius:6px;text-align:center}}
-.screen-info{{min-width:0}}
-.subhead{{font-size:.8rem;font-weight:700;color:var(--navy);margin:.8rem 0 .3rem;border-left:3px solid var(--cyan);padding-left:.5rem}}
-.subhead:first-child{{margin-top:0}}
-.chips{{display:flex;flex-wrap:wrap;gap:.4rem}}
-.chip{{background:#eef4fb;border:1px solid #cfe0f0;border-radius:4px;padding:.15rem .5rem;font-size:.78rem}}
-.muted{{color:#999;font-size:.8rem}}
-.cond{{color:#0a6b3a;font-size:.78rem;white-space:pre-line}}
-.form-meta{{font-size:.78rem;color:#666;margin-bottom:.3rem}}
-.site-footer{{text-align:center;color:#999;font-size:.8rem;padding:1.5rem}}
-.meta-table td{{white-space:normal}}
-@media(max-width:760px){{.screen-body{{grid-template-columns:1fr}}}}
+    return """
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--primary:#0F62FE;--primary-dark:#0043CE;--text:#161616;--text-muted:#525252;
+--bg:#F4F8FF;--surface:#fff;--surface-soft:#F7FBFF;--border:#C9D9EE;--ok:#198038;
+--critical:#DA1E28;--info-bg:#EDF5FF;--info-border:#A6C8FF;--radius:8px}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans','Noto Sans JP',sans-serif;
+color:var(--text);background:var(--bg);line-height:1.6;font-size:15px}
+body.app-page{overflow:hidden}
+.app-shell{height:100vh;display:grid;grid-template-columns:260px minmax(0,1fr)}
+.app-sidebar{height:100vh;overflow:auto;padding:20px 14px;background:#EDF5FF;border-right:1px solid var(--border)}
+.app-brand{font-size:19px;font-weight:700;color:var(--text)}
+.brand-sub{font-size:11px;color:var(--text-muted);margin-bottom:16px}
+.app-nav{display:grid;gap:3px}
+.nav-item{display:block;padding:.4rem .6rem;border-radius:6px;color:var(--text);text-decoration:none;
+font-size:13px;border:1px solid transparent}
+.nav-item:hover{background:#fff;border-color:var(--info-border)}
+.nav-item.is-active{background:#fff;border-color:var(--info-border);color:var(--primary-dark);
+box-shadow:inset 3px 0 0 var(--primary);font-weight:600}
+.nav-sub{padding-left:1.1rem;font-size:12px;color:var(--text-muted)}
+.nav-sub.is-active{color:var(--primary-dark)}
+.nav-group{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+color:var(--text-muted);padding:.6rem .6rem .2rem}
+.app-main{min-width:0;height:100vh;display:flex;flex-direction:column}
+.app-topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;
+padding:16px 28px;border-bottom:1px solid var(--border);background:rgba(247,251,255,.96);flex-shrink:0}
+.kicker{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted)}
+.topbar-title{font-size:21px;font-weight:700;line-height:1.2}
+.topbar-meta{font-size:12px;color:var(--text-muted);text-align:right}
+.topbar-meta a{color:var(--primary)}
+.app-content{flex:1;overflow:auto;padding:24px 28px;scroll-behavior:smooth}
+.block{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+margin-bottom:20px;box-shadow:0 1px 2px rgba(22,22,22,.05);overflow:hidden}
+.block>h2{font-size:14px;font-weight:700;padding:.7rem 1.1rem;border-bottom:1px solid var(--border);
+background:var(--surface-soft);color:var(--primary-dark)}
+.block-body{padding:1.1rem;overflow-x:auto}
+.cards{display:flex;gap:1rem;flex-wrap:wrap}
+.card{flex:1;min-width:120px;background:var(--surface-soft);border:1px solid var(--info-border);
+border-radius:var(--radius);padding:1rem;text-align:center}
+.card .num{font-size:1.9rem;font-weight:700;color:var(--primary-dark)}
+.card .label{font-size:.8rem;color:var(--text-muted);margin-top:.2rem}
+table{border-collapse:collapse;width:100%;font-size:.85rem}
+th{background:var(--primary);color:#fff;padding:.5rem .7rem;text-align:left;white-space:nowrap}
+td{padding:.5rem .7rem;border-bottom:1px solid #eef;vertical-align:top}
+tr:nth-child(even) td{background:var(--surface-soft)}
+.badge-yes{color:var(--critical);font-weight:600}
+.mermaid-wrap{overflow-x:auto;padding:.5rem}
+.screen{border:1px solid var(--border);border-radius:var(--radius);margin-bottom:1.3rem;overflow:hidden}
+.screen-head{display:flex;align-items:baseline;gap:.8rem;background:var(--info-bg);
+padding:.6rem 1rem;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.screen-head .pid{font-weight:700;color:var(--primary-dark)}
+.screen-head .title{font-weight:600}
+.screen-head .url{color:var(--text-muted);font-size:.8rem;margin-left:auto;word-break:break-all}
+.screen-body{display:grid;grid-template-columns:300px 1fr;gap:1rem;padding:1rem}
+.screen-shot img{width:100%;border:1px solid var(--border);border-radius:6px;display:block}
+.screen-shot .noshot{color:var(--text-muted);font-size:.8rem;padding:1rem;border:1px dashed var(--border);
+border-radius:6px;text-align:center}
+.screen-info{min-width:0}
+.subhead{font-size:.8rem;font-weight:700;color:var(--primary-dark);margin:.8rem 0 .3rem;
+border-left:3px solid var(--primary);padding-left:.5rem}
+.subhead:first-child{margin-top:0}
+.chips{display:flex;flex-wrap:wrap;gap:.4rem}
+.chip{background:var(--info-bg);border:1px solid var(--info-border);border-radius:4px;
+padding:.15rem .5rem;font-size:.78rem}
+.muted{color:var(--text-muted);font-size:.8rem}
+.cond{color:#0a6b3a;font-size:.78rem;white-space:pre-line}
+.form-meta{font-size:.78rem;color:var(--text-muted);margin-bottom:.3rem}
+.site-footer{text-align:center;color:var(--text-muted);font-size:.78rem;padding:1rem 0 2rem}
+.meta-table td{white-space:normal}
+@media(max-width:760px){.screen-body{grid-template-columns:1fr}}
+@media print{
+body.app-page{overflow:visible}
+.app-shell{display:block;height:auto}
+.app-sidebar{display:none}
+.app-main{height:auto}
+.app-topbar{position:static}
+.app-content{overflow:visible;height:auto;padding:0}
+.screen{break-inside:avoid}
+.block{box-shadow:none}
+}
 """
 
 
-def _header(target_url: str, now: str) -> str:
-    escaped = html.escape(target_url)
+def _sidebar(pages: list[AnalyzedPage]) -> str:
+    items = [
+        '<a href="#summary" class="nav-item">サマリー</a>',
+        '<a href="#transition" class="nav-item">画面遷移図</a>',
+        '<div class="nav-group">画面一覧</div>',
+    ]
+    for page in pages:
+        pid = html.escape(page.page_id)
+        raw = page.page_data.title or _url_path(page.page_data.url)
+        title = html.escape(raw[:SIDEBAR_TITLE_LIMIT])
+        items.append(f'<a href="#{pid}" class="nav-item nav-sub">{pid} {title}</a>')
+    items.append('<a href="#meta" class="nav-item">メタ情報</a>')
     return (
-        '<header class="site-header">'
-        f"<h1>{REPORT_TITLE}</h1>"
-        f'<div class="meta">対象システム: <a href="{escaped}" style="color:#7dcfea">{escaped}</a>'
-        f" &nbsp;|&nbsp; 生成日時: {now}</div>"
+        '<aside class="app-sidebar"><div class="app-brand">WebSpec2Doc</div>'
+        '<div class="brand-sub">テスト分析インプット</div>'
+        '<nav class="app-nav">' + "".join(items) + "</nav></aside>"
+    )
+
+
+def _topbar(target_url: str, now: str) -> str:
+    esc = html.escape(target_url)
+    return (
+        '<header class="app-topbar"><div>'
+        '<div class="kicker">Test Analysis Input</div>'
+        f'<div class="topbar-title">{REPORT_TITLE}</div></div>'
+        f'<div class="topbar-meta"><a href="{esc}" target="_blank">{esc}</a><br><span>{now}</span></div>'
         "</header>"
     )
 
@@ -137,17 +190,9 @@ def _summary_cards(pages: int, forms: int, fields: int, buttons: int) -> str:
     )
 
 
-def _section(title: str, body: str) -> str:
-    return f'<section><h2>{html.escape(title)}</h2><div class="section-body">{body}</div></section>'
-
-
-def _toc(pages: list[AnalyzedPage]) -> str:
-    links = []
-    for page in pages:
-        pid = html.escape(page.page_id)
-        title = html.escape(page.page_data.title or _url_path(page.page_data.url))
-        links.append(f'<a href="#{pid}"><b>{pid}</b> {title}</a>')
-    return '<div class="toc">' + "".join(links) + "</div>"
+def _section(title: str, body: str, anchor: str = "") -> str:
+    aid = f' id="{anchor}"' if anchor else ""
+    return f'<section class="block"{aid}><h2>{html.escape(title)}</h2><div class="block-body">{body}</div></section>'
 
 
 def _mermaid_block(content: str) -> str:
@@ -296,11 +341,23 @@ def _meta_section() -> str:
         "テスト条件は制約からの機械導出候補であり、要件に基づく精査が必要。</td></tr>"
         "</tbody></table>"
     )
-    return _section("メタ情報・トレーサビリティ", body)
+    return _section("メタ情報・トレーサビリティ", body, "meta")
 
 
 def _footer(now: str) -> str:
     return f'<footer class="site-footer">{html.escape(TOOL_NAME)} &mdash; {now}</footer>'
+
+
+def _scrollspy_script() -> str:
+    return (
+        "<script>"
+        "const obs=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){"
+        "document.querySelectorAll('.nav-item').forEach(n=>"
+        "n.classList.toggle('is-active',n.getAttribute('href')==='#'+e.target.id));}});},"
+        "{root:document.querySelector('.app-content'),rootMargin:'-35% 0px -60% 0px'});"
+        "document.querySelectorAll('section.block,.screen').forEach(s=>{if(s.id)obs.observe(s);});"
+        "</script>"
+    )
 
 
 def _mermaid_script() -> str:

@@ -1,8 +1,8 @@
 # WebSpec2Doc ユーザーマニュアル
 
-**バージョン**: 1.0  
+**バージョン**: 1.1  
 **対象者**: QA エンジニア・テスト設計担当者  
-**最終更新**: 2026-05-28
+**最終更新**: 2026-05-29
 
 ---
 
@@ -49,7 +49,7 @@ WebSpec2Doc は「URL を渡すだけで QA テストインプット文書を自
 | 項目 | 要件 |
 |---|---|
 | OS | macOS / Linux / Windows |
-| Python | 3.11 以上 |
+| Python | 3.12（3.13 は greenlet ビルド失敗のため非対応） |
 | ネットワーク | クロール対象サイトへの HTTP/HTTPS アクセス |
 
 ---
@@ -62,8 +62,8 @@ WebSpec2Doc は「URL を渡すだけで QA テストインプット文書を自
 # リポジトリをクローン（または ZIP 展開）後、プロジェクトディレクトリへ移動
 cd 008_CrateSpec2HTML
 
-# 仮想環境を作成・有効化
-python -m venv venv
+# 仮想環境を作成・有効化（Python は 3.12 を使う）
+python3.12 -m venv venv
 source venv/bin/activate        # macOS / Linux
 # venv\Scripts\activate         # Windows
 
@@ -182,6 +182,19 @@ python src/main.py \
 --format md,html,excel  # 全形式
 ```
 
+### `--compare`（デフォルト: off）
+
+前回のクロール結果（スナップショット）と今回を比較し、**仕様ドリフト差分レポート**（`diff_report.html`）を生成します。
+
+```bash
+python src/main.py --url https://example.com --compare
+```
+
+- 初回実行時はスナップショットを保存するだけ（差分レポートは次回から）
+- 検出する変更：新規画面 / 削除画面 / フォーム（入力項目）の変更 / リンクの変更 / タイトル変更
+- スナップショットは `output/{ドメイン名}/snapshots/` にタイムスタンプ名で蓄積されます
+- 用途：リリース前後で画面仕様が変わった箇所を特定し、テスト範囲を絞り込む
+
 ---
 
 ## 6. 出力ファイルの見方
@@ -236,6 +249,16 @@ graph LR
 ### `screenshots/` — スクリーンショット
 
 各画面を `P001.png` 〜 `P{n}.png` という名前で保存します。
+
+### `diff_report.html` — 仕様ドリフト差分レポート（`--compare` 指定時）
+
+前回クロールからの変更点を HTML で一覧化します。
+
+- **新規画面 / 削除画面**: 画面の増減
+- **フォーム変更**: 入力項目の追加・削除・型/必須/placeholder の変更
+- **リンク変更 / タイトル変更**: 遷移経路・画面名の変化
+
+リリース前後で実行し、テストすべき変更箇所を素早く特定するのに使います。
 
 ### `spec.xlsx` — Excel 仕様書（`--format excel` 指定時）
 

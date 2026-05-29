@@ -31,6 +31,9 @@ python src/main.py --url https://example.com --format md,html
 
 # 深さ・ページ数を指定
 python src/main.py --url https://example.com --depth 2 --max-pages 30
+
+# 仕様ドリフト検知（前回クロールとの差分を出力）
+python src/main.py --url https://example.com --compare
 ```
 
 ---
@@ -44,6 +47,7 @@ python src/main.py --url https://example.com --depth 2 --max-pages 30
 | `--max-pages` | `50` | クロールする最大ページ数 |
 | `--output` | `./output` | 出力先ディレクトリ |
 | `--format` | `md` | 出力形式（`md` / `html` / `excel` をカンマ区切り） |
+| `--compare` | off | 前回スナップショットとの差分を `diff_report.html` に出力 |
 
 ---
 
@@ -59,6 +63,7 @@ python src/main.py --url https://example.com --depth 2 --max-pages 30
 | `report.html` | 上記をまとめたレポート＋スクリーンショット付き |
 | `spec.xlsx` | Excel 仕様書（`--format excel` 指定時） |
 | `screenshots/` | 各画面のスクリーンショット（PNG） |
+| `diff_report.html` | 仕様ドリフト差分レポート（`--compare` 指定時） |
 
 ---
 

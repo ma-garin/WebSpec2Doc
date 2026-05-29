@@ -68,7 +68,7 @@ WebSpec2Doc の空白地帯：
    - 各画面に「QA テスト観点 3 点」を自動付与
    - Claude Haiku で低コスト処理（100 ページ ≒ $0.01）
    - 入力項目から「推定バリデーションルール」を推論
-   - env が揃ったら即実装可能（src/llm/ は骨格実装済み）
+   - src/llm/ は __init__ のみ（未実装）。env 準備 + 実装が必要
 
 ### 優先度 MEDIUM
 
@@ -137,7 +137,7 @@ WebSpec2Doc の空白地帯：
   - .DS_Store
 
 
-## 現在のシステム完成度（2026-05-28 時点）
+## 現在のシステム完成度（2026-05-29 時点）
 
 完了：
   [x] Playwright クローラー（SPA 対応、robots.txt 準拠）
@@ -146,12 +146,14 @@ WebSpec2Doc の空白地帯：
   [x] Markdown 出力（screens.md, forms.md, transition.mmd）
   [x] HTML レポート（スクリーンショット組み込み、Veriserve デザイン）
   [x] Excel 出力（spec.xlsx）
-  [x] テストカバレッジ 85%（目標 80% 達成）
+  [x] スペックドリフト検出（--compare / snapshot 保存・差分比較・diff_report.html）★楔完成
+  [x] ブラウザ GUI（Flask / ポート 8765）
+  [x] Codex 協働 harness（AGENTS.md / verify.sh / codex-task.sh）
+  [x] テスト 144件（目標カバレッジ 80% 達成）
   [x] ユーザードキュメント（userguide.md, userManuel.md, userManuel.html）
 
 未着手：
-  [ ] スペックドリフト検出
   [ ] ログイン対応
-  [ ] LLM テスト観点生成（環境準備後）
+  [ ] LLM テスト観点生成（src/llm/ は __init__ のみ。env 準備 + 実装が必要）
   [ ] TestRail / Jira 連携
   [ ] アクセシビリティ検査

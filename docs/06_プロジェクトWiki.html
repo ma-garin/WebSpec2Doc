@@ -115,7 +115,7 @@
       </div>
       <div class="vs-subsection mt-16">
         <div class="vs-subsection__title">現在の位置づけ</div>
-        <p>実装済みの MVP は「公開ページのクロール」「内部リンク抽出」「フォーム抽出」「遷移グラフ生成」「Markdown / Mermaid / HTML / Excel 出力」までを扱う。LLM 連携用のフラグとディレクトリは存在するが、現状の <span class="wiki-path">--llm</span> は未実装として無視される。</p>
+        <p>実装済みの MVP は「公開ページのクロール」「内部リンク抽出」「フォーム抽出」「遷移グラフ生成」「Markdown / Mermaid / HTML / Excel 出力」「仕様ドリフト検知（<span class="wiki-path">--compare</span> / スナップショット差分）」「ブラウザ GUI（Flask）」までを扱う。LLM 連携用のフラグとディレクトリは存在するが、現状の <span class="wiki-path">--llm</span> は未実装として無視される。</p>
       </div>
     </div>
   </div>
@@ -272,6 +272,9 @@
           <tr><td><span class="wiki-path">src/generator/markdown_generator.py</span></td><td>69</td><td>Markdown 出力</td><td><span class="wiki-path">screens.md</span> と <span class="wiki-path">forms.md</span> を生成。</td></tr>
           <tr><td><span class="wiki-path">src/generator/mermaid_generator.py</span></td><td>76</td><td>Mermaid 出力</td><td><span class="wiki-path">graph LR</span> 形式。ナビゲーションノイズ抑制あり。</td></tr>
           <tr><td><span class="wiki-path">src/generator/html_reporter.py</span></td><td>217</td><td>HTML レポート生成</td><td>画面一覧、フォーム一覧、遷移図、スクリーンショットを単一HTMLにまとめる。</td></tr>
+          <tr><td><span class="wiki-path">src/generator/diff_reporter.py</span></td><td>—</td><td>差分レポート生成</td><td>仕様ドリフトの差分（画面/フォーム/リンク/タイトル）を HTML 化。</td></tr>
+          <tr><td><span class="wiki-path">src/diff/snapshot.py</span></td><td>—</td><td>スナップショット</td><td>クロール結果を JSON 保存・復元。<span class="wiki-path">--compare</span> の土台。</td></tr>
+          <tr><td><span class="wiki-path">src/diff/differ.py</span></td><td>—</td><td>差分比較</td><td>新旧スナップショットを比較し、追加/削除/変更を検出。</td></tr>
           <tr><td><span class="wiki-path">src/llm/__init__.py</span></td><td>0</td><td>LLM 連携予定地</td><td>現時点では空。<span class="wiki-path">--llm</span> は未実装。</td></tr>
           <tr><td><span class="wiki-path">src/**/__init__.py</span></td><td>小</td><td>パッケージ初期化</td><td>各サブパッケージを import 可能にする。</td></tr>
         </tbody>

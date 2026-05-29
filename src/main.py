@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 
 from analyzer.form_analyzer import summarize_forms
 from analyzer.html_analyzer import AnalyzedPage, analyze_pages
+from crawler.auth import DEFAULT_AUTH_FILE, capture_auth_state
 from crawler.page_crawler import DEFAULT_DEPTH, DEFAULT_MAX_PAGES, PageData, crawl_site
 from diff.differ import compute_diff
 from diff.snapshot import latest_snapshot, load_snapshot, save_snapshot
@@ -43,7 +44,9 @@ def main() -> None:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="WebSpec2Doc web crawler")
-    parser.add_argument("--url", required=True, help="クロール対象URL")
+    parser.add_argument("--url", help="クロール対象URL")
+    parser.add_argument("--login", help="ログインセッション保存モード: ログインページURL")
+    parser.add_argument("--auth", type=Path, help="保存済みセッション(auth.json)を使ってクロール")
     parser.add_argument("--depth", type=int, default=DEFAULT_DEPTH, help="クロール深度")
     parser.add_argument(
         "--max-pages",
@@ -59,6 +62,15 @@ def parse_args() -> argparse.Namespace:
 
 
 def run(args: argparse.Namespace) -> None:
+    login_url = getattr(args, "login", None)
+    auth_path = getattr(args, "auth", None)
+    if login_url:
+        _capture_login(str(login_url), auth_path)
+        return
+    if not args.url:
+        logger.error("--url または --login のいずれかを指定してください")
+        return
+
     formats = _parse_formats(str(args.format))
     output_dir = Path(args.output) / _domain_name(str(args.url))
     prior_snapshot = latest_snapshot(output_dir)
@@ -70,6 +82,7 @@ def run(args: argparse.Namespace) -> None:
         depth=int(args.depth),
         max_pages=int(args.max_pages),
         output_dir=output_dir,
+        auth_state=Path(auth_path) if auth_path else None,
     )
     analyzed_pages = analyze_pages(pages)
     graph = build_graph(analyzed_pages)
@@ -79,6 +92,12 @@ def run(args: argparse.Namespace) -> None:
     if bool(getattr(args, "compare", False)):
         _save_diff_report(prior_snapshot, new_snapshot, pages, output_dir, str(args.url))
     logger.info("出力が完了しました: %s", output_dir)
+
+
+def _capture_login(login_url: str, auth_path: Path | None) -> None:
+    output_path = Path(auth_path) if auth_path else Path(DEFAULT_AUTH_FILE)
+    saved = capture_auth_state(login_url, output_path)
+    logger.info("ログインセッションを保存しました: %s （--auth %s でクロールに利用できます）", saved, saved)
 
 
 def _save_diff_report(

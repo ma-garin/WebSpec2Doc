@@ -55,6 +55,7 @@ def crawl_site(
     depth: int = DEFAULT_DEPTH,
     max_pages: int = DEFAULT_MAX_PAGES,
     output_dir: Path | None = None,
+    auth_state: Path | None = None,
 ) -> list[PageData]:
     base_url = normalize_url(url)
     robots = _load_robots_parser(base_url)
@@ -65,7 +66,11 @@ def crawl_site(
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True)
         try:
-            page = browser.new_page(user_agent=USER_AGENT)
+            context = browser.new_context(
+                user_agent=USER_AGENT,
+                storage_state=str(auth_state) if auth_state else None,
+            )
+            page = context.new_page()
             page.set_default_timeout(DEFAULT_TIMEOUT_MS)
             while queue and len(pages) < max_pages:
                 current_url, current_depth = queue.pop(0)

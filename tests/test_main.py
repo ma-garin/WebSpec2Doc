@@ -119,10 +119,12 @@ class TestHtmlReport:
 # ---------- parse_args ----------
 
 class TestParseArgs:
-    def test_url_required_raises(self) -> None:
-        with pytest.raises(SystemExit):
-            with patch("sys.argv", ["main.py"]):
-                parse_args()
+    def test_no_url_does_not_raise(self) -> None:
+        # --login を代替手段として追加したため --url は必須ではない
+        with patch("sys.argv", ["main.py"]):
+            args = parse_args()
+            assert args.url is None
+            assert args.login is None
 
     def test_url_parsed(self) -> None:
         with patch("sys.argv", ["main.py", "--url", "https://example.com"]):

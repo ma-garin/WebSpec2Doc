@@ -11,7 +11,7 @@ import networkx as nx
 
 from analyzer.html_analyzer import AnalyzedPage
 from analyzer.test_conditions import derive_conditions
-from crawler.page_crawler import FormData
+from crawler.page_crawler import DEFAULT_DEPTH, DEFAULT_MAX_PAGES, FieldData, FormData
 
 REPORT_TITLE = "WebSpec2Doc テスト分析インプット"
 TOOL_NAME = "WebSpec2Doc"
@@ -27,6 +27,9 @@ def generate_html_report(
     target_url: str,
     mermaid_content: str,
     screenshots_dir: Path | None = None,
+    crawl_depth: int = DEFAULT_DEPTH,
+    crawl_max_pages: int = DEFAULT_MAX_PAGES,
+    crawled_at: str = "",
 ) -> str:
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     forms_count = sum(len(p.page_data.forms) for p in pages)
@@ -43,7 +46,7 @@ def generate_html_report(
         _section("サマリー", _summary_cards(len(pages), forms_count, fields_count, buttons_count), "summary"),
         _section("画面遷移図", _mermaid_block(mermaid_content), "transition"),
         _section("画面カタログ", _screen_cards(pages, graph, screenshots_dir), "screens"),
-        _meta_section(),
+        _meta_section(target_url, crawl_depth, crawl_max_pages, crawled_at, len(pages)),
         _footer(now),
         "</main></div></div>",
         _scrollspy_script(),
@@ -129,6 +132,7 @@ border-left:3px solid var(--primary);padding-left:.5rem}
 padding:.15rem .5rem;font-size:.78rem}
 .muted{color:var(--text-muted);font-size:.8rem}
 .cond{color:#0a6b3a;font-size:.78rem;white-space:pre-line}
+.locator{color:#5a3d8a;font-size:.72rem;font-family:monospace;word-break:break-all}
 .form-meta{font-size:.78rem;color:var(--text-muted);margin-bottom:.3rem}
 .site-footer{text-align:center;color:var(--text-muted);font-size:.78rem;padding:1rem 0 2rem}
 .meta-table td{white-space:normal}
@@ -250,7 +254,8 @@ def _forms_block(forms: tuple[FormData, ...]) -> str:
         blocks.append(f'<div class="form-meta">フォーム{i}: {method} → {action}</div>')
         blocks.append(
             "<table><thead><tr>"
-            "<th>項目名</th><th>型</th><th>必須</th><th>制約</th><th>既定/選択肢</th><th>導出テスト条件</th>"
+            "<th>項目名</th><th>型</th><th>必須</th><th>制約</th><th>既定/選択肢</th>"
+            "<th>ロケータ候補</th><th>導出テスト条件</th>"
             "</tr></thead><tbody>" + _field_rows(form) + "</tbody></table>"
         )
     return "".join(blocks)
@@ -273,16 +278,18 @@ def _field_rows(form: FormData) -> str:
     return "".join(rows)
 
 
-def _field_row(field) -> str:
+def _field_row(field: FieldData) -> str:
     name = html.escape(field.name or "(無名)")
     ftype = html.escape(field.field_type)
     req = '<span class="badge-yes">必須</span>' if field.required else "-"
     constraints = html.escape(_constraints_text(field)) or "-"
     default_opts = html.escape(_default_options_text(field)) or "-"
+    locators = html.escape(" / ".join(_locator_candidates(field))) or "-"
     conditions = html.escape("\n".join(derive_conditions(field)))
     return (
         f"<tr><td>{name}</td><td>{ftype}</td><td>{req}</td>"
         f"<td>{constraints}</td><td>{default_opts}</td>"
+        f'<td class="locator">{locators}</td>'
         f'<td class="cond">{conditions}</td></tr>'
     )
 
@@ -331,11 +338,33 @@ def _transitions_block(page_id: str, graph: nx.DiGraph) -> str:
     )
 
 
-def _meta_section() -> str:
+def _locator_candidates(field: FieldData) -> list[str]:
+    candidates: list[str] = []
+    if field.element_id:
+        candidates.append(f"#{field.element_id}")
+    if field.name:
+        tag = "select" if field.field_type == "select" else (
+            "textarea" if field.field_type == "textarea" else "input"
+        )
+        candidates.append(f'{tag}[name="{field.name}"]')
+    return candidates
+
+
+def _meta_section(
+    target_url: str,
+    crawl_depth: int,
+    crawl_max_pages: int,
+    crawled_at: str,
+    page_count: int,
+) -> str:
+    crawled_at_cell = html.escape(crawled_at) if crawled_at else "（記録なし）"
     body = (
         '<table class="meta-table"><tbody>'
-        "<tr><th>改訂履歴</th><td>（レビュー時に追記）</td></tr>"
+        f"<tr><th>対象URL</th><td>{html.escape(target_url)}</td></tr>"
+        f"<tr><th>クロール条件</th><td>深度: {crawl_depth} / 最大ページ数: {crawl_max_pages} / 取得ページ数: {page_count}</td></tr>"
+        f"<tr><th>実行日時</th><td>{crawled_at_cell}</td></tr>"
         "<tr><th>実行環境</th><td>クロール: Chromium (Playwright) / 本文書は稼働システムから自動生成</td></tr>"
+        "<tr><th>改訂履歴</th><td>（レビュー時に追記）</td></tr>"
         "<tr><th>レビュー</th><td>レビュー者・承認日（第三者レビュー記入欄）</td></tr>"
         "<tr><th>制約</th><td>ログイン後ページは --auth 指定時のみ取得。JS動的生成リンクは取得漏れの可能性あり。"
         "テスト条件は制約からの機械導出候補であり、要件に基づく精査が必要。</td></tr>"

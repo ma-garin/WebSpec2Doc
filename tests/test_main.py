@@ -15,6 +15,7 @@ from graph.transition_graph import build_graph
 from main import (
     _domain_name,
     _parse_formats,
+    _parse_url_list,
     parse_args,
     run,
     save_outputs,
@@ -50,6 +51,32 @@ class TestParseFormats:
 
     def test_all_unknown_returns_empty(self) -> None:
         assert _parse_formats("foo,bar") == ()
+
+
+# ---------- _parse_url_list ----------
+
+class TestParseUrlList:
+    def test_none_returns_empty(self) -> None:
+        assert _parse_url_list(None) == []
+
+    def test_empty_returns_empty(self) -> None:
+        assert _parse_url_list("") == []
+
+    def test_splits_on_comma(self) -> None:
+        result = _parse_url_list("https://a.com/,https://a.com/x")
+        assert result == ["https://a.com/", "https://a.com/x"]
+
+    def test_strips_whitespace(self) -> None:
+        result = _parse_url_list(" https://a.com/ , https://a.com/x ")
+        assert result == ["https://a.com/", "https://a.com/x"]
+
+    def test_dedupes_preserving_order(self) -> None:
+        result = _parse_url_list("https://a.com/,https://a.com/,https://a.com/x")
+        assert result == ["https://a.com/", "https://a.com/x"]
+
+    def test_ignores_blank_segments(self) -> None:
+        result = _parse_url_list("https://a.com/,,  ,https://a.com/x")
+        assert result == ["https://a.com/", "https://a.com/x"]
 
 
 # ---------- _domain_name ----------

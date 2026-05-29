@@ -93,6 +93,7 @@ def _to_field_data(raw_field: dict[str, Any]) -> FieldData:
         pattern=str(raw_field.get("pattern") or EMPTY_TEXT),
         default=str(raw_field.get("default") or EMPTY_TEXT),
         options=tuple(str(opt) for opt in (raw_field.get("options") or [])),
+        element_id=str(raw_field.get("id") or EMPTY_TEXT),
     )
 
 
@@ -118,6 +119,7 @@ _FORM_SCRIPT = """
     return {
       field_type: type,
       name: field.getAttribute('name') || field.getAttribute('id') || '',
+      id: field.getAttribute('id') || '',
       placeholder: field.getAttribute('placeholder') || '',
       required: Boolean(field.required),
       maxlength: field.getAttribute('maxlength'),

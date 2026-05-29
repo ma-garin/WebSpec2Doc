@@ -45,6 +45,16 @@ class TestToFieldData:
         assert result.field_type == ""
         assert result.name == ""
 
+    def test_element_id_extracted(self) -> None:
+        raw = {"field_type": "text", "name": "q", "placeholder": "", "required": False, "id": "search-box"}
+        result = _to_field_data(raw)
+        assert result.element_id == "search-box"
+
+    def test_element_id_defaults_to_empty(self) -> None:
+        raw = {"field_type": "text", "name": "q", "placeholder": "", "required": False}
+        result = _to_field_data(raw)
+        assert result.element_id == ""
+
     def test_result_is_frozen(self) -> None:
         raw = {"field_type": "text", "name": "x", "placeholder": "", "required": False}
         result = _to_field_data(raw)

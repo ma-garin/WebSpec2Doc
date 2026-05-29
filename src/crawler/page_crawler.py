@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import logging
 import time
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 from urllib.parse import urljoin, urlparse, urlunparse
 from urllib.robotparser import RobotFileParser
 
@@ -38,6 +39,7 @@ class FieldData:
     pattern: str = ""
     default: str = ""
     options: tuple[str, ...] = ()
+    element_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -58,6 +60,23 @@ class PageData:
     buttons: tuple[str, ...] = ()
 
 
+@contextmanager
+def _browser_page(auth_state: Path | None) -> Iterator[Page]:
+    """Open a Playwright Chromium page with shared context settings."""
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        try:
+            context = browser.new_context(
+                user_agent=USER_AGENT,
+                storage_state=str(auth_state) if auth_state else None,
+            )
+            page = context.new_page()
+            page.set_default_timeout(DEFAULT_TIMEOUT_MS)
+            yield page
+        finally:
+            _close_browser(browser)
+
+
 def crawl_site(
     url: str,
     depth: int = DEFAULT_DEPTH,
@@ -71,32 +90,83 @@ def crawl_site(
     queue: list[tuple[str, int]] = [(base_url, 0)]
     pages: list[PageData] = []
 
-    with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(headless=True)
-        try:
-            context = browser.new_context(
-                user_agent=USER_AGENT,
-                storage_state=str(auth_state) if auth_state else None,
-            )
-            page = context.new_page()
-            page.set_default_timeout(DEFAULT_TIMEOUT_MS)
-            while queue and len(pages) < max_pages:
-                current_url, current_depth = queue.pop(0)
-                if _should_skip(current_url, current_depth, depth, visited, robots):
-                    continue
-                visited.add(current_url)
-                page_id = _format_page_id(len(pages) + 1)
-                page_data = _crawl_page_with_id(page, current_url, page_id, output_dir)
-                if page_data is None:
-                    time.sleep(CRAWL_DELAY_SEC)
-                    continue
-                pages.append(page_data)
-                queue.extend(_next_urls(page_data.links, current_depth, visited, depth))
+    with _browser_page(auth_state) as page:
+        while queue and len(pages) < max_pages:
+            current_url, current_depth = queue.pop(0)
+            if _should_skip(current_url, current_depth, depth, visited, robots):
+                continue
+            visited.add(current_url)
+            page_id = _format_page_id(len(pages) + 1)
+            page_data = _crawl_page_with_id(page, current_url, page_id, output_dir)
+            if page_data is None:
                 time.sleep(CRAWL_DELAY_SEC)
-        finally:
-            _close_browser(browser)
+                continue
+            pages.append(page_data)
+            queue.extend(_next_urls(page_data.links, current_depth, visited, depth))
+            time.sleep(CRAWL_DELAY_SEC)
 
     return pages
+
+
+def discover_pages(
+    url: str,
+    depth: int = DEFAULT_DEPTH,
+    max_pages: int = DEFAULT_MAX_PAGES,
+    auth_state: Path | None = None,
+) -> list[dict[str, str]]:
+    """Lightweight BFS listing reachable pages (url + title) without
+    screenshots or form extraction. Backs the GUI '画面リスト取得' step."""
+    base_url = normalize_url(url)
+    robots = _load_robots_parser(base_url)
+    visited: set[str] = set()
+    queue: list[tuple[str, int]] = [(base_url, 0)]
+    found: list[dict[str, str]] = []
+
+    with _browser_page(auth_state) as page:
+        while queue and len(found) < max_pages:
+            current_url, current_depth = queue.pop(0)
+            if _should_skip(current_url, current_depth, depth, visited, robots):
+                continue
+            visited.add(current_url)
+            links = _discover_one(page, current_url, found)
+            queue.extend(_next_urls(links, current_depth, visited, depth))
+            time.sleep(CRAWL_DELAY_SEC)
+
+    return found
+
+
+def crawl_urls(
+    urls: list[str],
+    output_dir: Path | None = None,
+    auth_state: Path | None = None,
+) -> list[PageData]:
+    """Crawl an explicit list of URLs (no link following). Backs the GUI
+    'selected pages' / 'manual URL' modes."""
+    targets = list(dict.fromkeys(normalize_url(u) for u in urls if u.strip()))
+    pages: list[PageData] = []
+
+    with _browser_page(auth_state) as page:
+        for target in targets:
+            page_id = _format_page_id(len(pages) + 1)
+            page_data = _crawl_page_with_id(page, target, page_id, output_dir)
+            if page_data is not None:
+                pages.append(page_data)
+            time.sleep(CRAWL_DELAY_SEC)
+
+    return pages
+
+
+def _discover_one(page: Page, url: str, found: list[dict[str, str]]) -> tuple[str, ...]:
+    from crawler.link_extractor import extract_internal_links, extract_page_title
+
+    normalized = normalize_url(url)
+    try:
+        page.goto(normalized, wait_until="networkidle", timeout=DEFAULT_TIMEOUT_MS)
+    except Exception as exc:
+        logger.warning("画面リスト取得に失敗しました: %s (%s)", url, exc)
+        return ()
+    found.append({"url": normalized, "title": extract_page_title(page)})
+    return tuple(extract_internal_links(page, normalized))
 
 
 def crawl_page(page: Page, url: str, output_dir: Path | None) -> PageData:

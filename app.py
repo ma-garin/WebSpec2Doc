@@ -6,6 +6,7 @@ import re
 import subprocess
 import sys
 import threading
+import uuid
 import webbrowser
 from datetime import datetime
 from pathlib import Path
@@ -20,6 +21,18 @@ SCREEN_ROW_RE = re.compile(r"^\|\s*\d+\s*\|")
 ENV_FILE = Path(".env")
 DEFAULT_OPENAI_MODEL = "gpt-5.4-mini"
 DISCOVER_TIMEOUT_SEC = 180
+
+# 実行中クロールのサブプロセス（run_id → Popen）。停止ボタンから kill するために保持。
+_RUNNING_PROCS: dict[str, subprocess.Popen] = {}
+
+
+def _terminate_proc(proc: subprocess.Popen) -> None:
+    if proc.poll() is None:
+        proc.terminate()
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
 
 _HTML = """<!DOCTYPE html>
 <html lang="ja">
@@ -273,13 +286,24 @@ _HTML = """<!DOCTYPE html>
     .matrix-toolbar label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-muted); font-weight: 700; }
     .matrix-toolbar .matrix-count { margin-left: auto; font-size: 12px; color: var(--text-muted); font-weight: 700; }
     table.matrix { width: 100%; border-collapse: collapse; font-size: .8rem; }
-    table.matrix th { position: sticky; top: 58px; background: var(--primary); color: #fff; text-align: left; padding: 8px 10px; white-space: nowrap; z-index: 1; }
-    table.matrix td { padding: 8px 10px; border-bottom: 1px solid #eef; vertical-align: top; }
+    table.matrix th { position: sticky; top: 58px; background: var(--primary); color: #fff; text-align: left; padding: 8px 10px; white-space: nowrap; z-index: 2; }
+    table.matrix td { padding: 8px 10px; border-bottom: 1px solid #eef; vertical-align: top; background: var(--surface); }
     table.matrix tr:nth-child(even) td { background: var(--surface-soft); }
+    /* 画面列を左固定 */
+    table.matrix th:first-child { left: 0; z-index: 3; }
+    table.matrix td:first-child { position: sticky; left: 0; z-index: 1; box-shadow: 1px 0 0 var(--border); }
     table.matrix .c-screen { font-weight: 700; color: var(--primary-dark); white-space: nowrap; }
     table.matrix .c-req { color: var(--critical); font-weight: 700; }
     table.matrix .c-loc { font-family: ui-monospace, monospace; font-size: .72rem; color: #5a3d8a; word-break: break-all; }
-    table.matrix .c-cond { color: #0a6b3a; white-space: pre-line; font-size: .76rem; }
+    table.matrix .c-cond { white-space: normal; }
+    .cond-pill { display: inline-block; margin: 1px 2px 1px 0; padding: 1px 6px; border-radius: 4px; font-size: .72rem; border: 1px solid; line-height: 1.5; }
+    .cc-req { background: var(--critical-bg); border-color: var(--critical-border); color: #a2191f; }
+    .cc-bound { background: #fff8e1; border-color: #f1c21b; color: #8d6b00; }
+    .cc-format { background: var(--info-bg); border-color: var(--info-border); color: var(--primary-dark); }
+    .cc-opt { background: var(--ok-bg); border-color: #a7f0ba; color: #0e6027; }
+    .cc-other { background: #f4f4f4; border-color: #e0e0e0; color: var(--text-muted); }
+    .cond-legend { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 11px; color: var(--text-muted); }
+    .cond-legend .cond-pill { cursor: default; }
     /* 概要 */
     .ov-screens { width: 100%; border-collapse: collapse; font-size: .85rem; }
     .ov-screens th { background: var(--surface-soft); color: var(--text-muted); font-size: 12px; font-weight: 800; text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
@@ -505,6 +529,9 @@ _HTML = """<!DOCTYPE html>
                 <div class="execution-meta-item"><dt>対象</dt><dd id="exec-target">-</dd></div>
                 <div class="execution-meta-item"><dt>状態</dt><dd id="exec-phase">準備中</dd></div>
               </dl>
+              <div class="execution-bottombar-actions" id="exec-running-actions">
+                <button type="button" id="exec-stop-btn" class="btn-outline-sm">停止</button>
+              </div>
               <div class="execution-bottombar-actions hidden" id="exec-actions">
                 <button type="button" id="exec-new-btn" class="btn-outline-sm">入力に戻る</button>
               </div>
@@ -531,9 +558,11 @@ _HTML = """<!DOCTYPE html>
                 <button type="button" class="result-tab is-active" data-tab="overview">概要</button>
                 <button type="button" class="result-tab" data-tab="matrix">入力項目・テスト条件</button>
                 <button type="button" class="result-tab" data-tab="report">画面別仕様</button>
+                <button type="button" class="result-tab" data-tab="diff" id="result-tab-diff" style="display:none">差分</button>
                 <button type="button" class="result-tab" data-tab="export">エクスポート</button>
               </div>
               <div class="result-bar-actions">
+                <button type="button" id="r-rerun-btn" class="btn-outline-sm">同じ設定で再実行</button>
                 <button type="button" id="r-new-btn" class="btn-primary" style="height:36px;padding:0 16px;font-size:13px">新しく生成</button>
               </div>
             </div>
@@ -851,10 +880,12 @@ const execPhase = document.getElementById('exec-phase');
 const execLog = document.getElementById('exec-log');
 const execError = document.getElementById('exec-error');
 const execActions = document.getElementById('exec-actions');
+const execRunningActions = document.getElementById('exec-running-actions');
 const previewImage = document.getElementById('exec-preview-image');
 const previewPlaceholder = document.getElementById('exec-preview-placeholder');
 const estep = [0,1,2,3].map(i => document.getElementById('estep-' + i));
 let timer, startTime, previewTimer, activeDomain = '';
+let runAbort = null, lastRun = null, activeRunId = '';
 
 function domainOf(url) { try { return new URL(url).host; } catch { return ''; } }
 function startTimer() { startTime = Date.now(); timer = setInterval(() => { const s = Math.floor((Date.now() - startTime) / 1000); execElapsed.textContent = String(Math.floor(s / 60)).padStart(2,'0') + ':' + String(s % 60).padStart(2,'0'); }, 500); }
@@ -877,13 +908,12 @@ function startPreviewPolling() {
 }
 function stopPreviewPolling() { clearInterval(previewTimer); }
 
-document.getElementById('form').addEventListener('submit', async (e) => {
+document.getElementById('form').addEventListener('submit', (e) => {
   e.preventDefault();
   const urls = buildTargetUrls();
   if (!urls.length) { showStep(1); setUrlMessage('対象URLが確定していません', true); return; }
   const fmts = [...document.querySelectorAll('input[name=fmt]:checked')].map(c => c.value);
   if (!fmts.length) { showStep(2); return; }
-  activeDomain = domainOf(urls[0]);
   const body = new URLSearchParams({
     urls: urls.join(','),
     depth: document.getElementById('crawl-depth').value,
@@ -892,36 +922,55 @@ document.getElementById('form').addEventListener('submit', async (e) => {
     compare: document.getElementById('compare').checked ? 'true' : 'false',
     auth: document.getElementById('auth-path').value.trim() || getSettings().auth || '',
   });
+  const label = urls.length > 1 ? `${urls[0]} ほか ${urls.length - 1}件` : urls[0];
+  runWith(body.toString(), domainOf(urls[0]), label, urls.length);
+});
 
+async function runWith(bodyStr, domain, label, urlCount) {
+  lastRun = { bodyStr, domain, label, urlCount };
+  activeDomain = domain;
+  runAbort = new AbortController();
   genPanel.style.display = 'none';
   resultPanel.classList.add('hidden');
   executionView.classList.remove('hidden');
   appContent.classList.add('is-executing');
   execError.classList.add('hidden'); execActions.classList.add('hidden');
+  execRunningActions.classList.remove('hidden');
+  const stopBtn = document.getElementById('exec-stop-btn');
+  stopBtn.disabled = false; stopBtn.textContent = '停止';
   previewImage.classList.remove('show'); previewPlaceholder.classList.remove('hidden');
   execLog.textContent = '';
-  execTarget.textContent = urls.length > 1 ? `${urls[0]} ほか ${urls.length - 1}件` : urls[0];
-  execTitle.textContent = 'クロール中…'; execMessage.textContent = `${urls.length}件の対象をクロールしてドキュメント化します。`;
+  execTarget.textContent = label;
+  execTitle.textContent = 'クロール中…'; execMessage.textContent = `${urlCount}件の対象をクロールしてドキュメント化します。`;
   execPhase.textContent = '実行中'; setStep(0); startTimer(); startPreviewPolling();
 
-  let reportPath = '', pdfPath = '', summary = null, ok = false, cur = 0;
+  activeRunId = '';
+  let reportPath = '', summary = null, ok = false, cur = 0, cancelled = false;
   try {
-    const res = await fetch('/run', { method: 'POST', body });
+    const res = await fetch('/run', { method: 'POST', body: bodyStr, headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: runAbort.signal });
     const reader = res.body.getReader(); const dec = new TextDecoder();
     while (true) {
       const { done, value } = await reader.read(); if (done) break;
-      let chunk = dec.decode(value);
+      const chunk = dec.decode(value);
+      const ri = chunk.match(/RUN_ID:(.*)/); if (ri) activeRunId = ri[1].trim();
       const rp = chunk.match(/REPORT_PATH:(.*)/); if (rp) { reportPath = rp[1].trim(); ok = true; }
-      const pp = chunk.match(/PDF_PATH:(.*)/); if (pp) pdfPath = pp[1].trim();
       const sm = chunk.match(/SUMMARY:(.*)/); if (sm) { try { summary = JSON.parse(sm[1].trim()); ok = true; } catch {} }
-      const clean = chunk.replace(/(REPORT_PATH|PDF_PATH|SUMMARY):.*\\n?/g, '');
+      if (/(^|\\n)\\s*停止しました。/.test(chunk)) cancelled = true;
+      const clean = chunk.replace(/(RUN_ID|REPORT_PATH|PDF_PATH|SUMMARY):.*\\n?/g, '');
       execLog.textContent += clean; execLog.scrollTop = execLog.scrollHeight;
       for (const line of clean.split('\\n')) { const st = guessStep(line); if (st >= 0 && st >= cur) { cur = st; setStep(st); } }
     }
-  } catch (err) { execLog.textContent += '\\n通信エラー: ' + err.message; }
+  } catch (err) {
+    if (err.name === 'AbortError') cancelled = true;
+    else execLog.textContent += '\\n通信エラー: ' + err.message;
+  }
 
-  stopTimer(); stopPreviewPolling();
-  if (ok || reportPath) {
+  stopTimer(); stopPreviewPolling(); execRunningActions.classList.add('hidden');
+  if (cancelled) {
+    execActions.classList.remove('hidden');
+    execTitle.textContent = '実行を停止しました'; execPhase.textContent = '停止';
+    execMessage.textContent = '停止要求により処理を終了しました。必要に応じて入力に戻って再実行してください。';
+  } else if (ok || reportPath) {
     setStep(4); execProgressBar.style.width = '100%';
     estep.forEach(el => el.className = 'execution-step is-complete');
     await showResults(activeDomain);
@@ -929,6 +978,17 @@ document.getElementById('form').addEventListener('submit', async (e) => {
     execActions.classList.remove('hidden');
     execTitle.textContent = 'エラー'; execPhase.textContent = 'エラー'; execError.classList.remove('hidden');
   }
+}
+
+document.getElementById('exec-stop-btn').addEventListener('click', async () => {
+  const stopBtn = document.getElementById('exec-stop-btn');
+  stopBtn.disabled = true; stopBtn.textContent = '停止中…';
+  execMessage.textContent = '停止要求を送信しています…';
+  // サーバ側のクロールプロセスを確実に終了させてから、クライアントの受信を中断する
+  if (activeRunId) {
+    try { await fetch('/api/cancel', { method: 'POST', body: new URLSearchParams({ run_id: activeRunId }) }); } catch (e) {}
+  }
+  if (runAbort) runAbort.abort();
 });
 
 function backToInput() {
@@ -937,6 +997,9 @@ function backToInput() {
 }
 document.getElementById('exec-new-btn').addEventListener('click', backToInput);
 document.getElementById('r-new-btn').addEventListener('click', backToInput);
+document.getElementById('r-rerun-btn').addEventListener('click', () => {
+  if (lastRun) runWith(lastRun.bodyStr, lastRun.domain, lastRun.label, lastRun.urlCount);
+});
 
 // ====================== 結果ページ（QAビュー軸） ======================
 const resultPanel = document.getElementById('result-panel');
@@ -976,6 +1039,7 @@ async function showResults(domain) {
   document.getElementById('r-fields').textContent = s.fields || 0;
   document.getElementById('r-required').textContent = required;
   document.getElementById('r-buttons').textContent = s.buttons || 0;
+  document.getElementById('result-tab-diff').style.display = (data.files && data.files.diff) ? '' : 'none';
 
   executionView.classList.add('hidden'); resultPanel.classList.remove('hidden');
   selectResultTab('overview');
@@ -988,7 +1052,14 @@ function selectResultTab(tab) {
   if (tab === 'overview') renderOverview();
   else if (tab === 'matrix') renderMatrix();
   else if (tab === 'report') renderReport();
+  else if (tab === 'diff') renderDiff();
   else if (tab === 'export') renderExport();
+}
+
+function renderDiff() {
+  const diff = (resultData.files || {}).diff;
+  if (!diff) { resultHero.innerHTML = '<div class="hero-msg">差分レポートはありません。出力設定で「前回との差分を出力」を有効にし、2回目以降の実行で生成されます。</div>'; return; }
+  resultHero.innerHTML = `<iframe src="/preview?path=${encodeURIComponent(diff)}" title="差分レポート"></iframe>`;
 }
 
 function allFields(rj) {
@@ -1050,6 +1121,13 @@ function renderMatrix() {
     '<label><input type="checkbox" id="mx-required"> 必須のみ</label>' +
     '<button type="button" class="btn-outline-sm" id="mx-csv">CSVで書き出し</button>' +
     '<span class="matrix-count" id="mx-count"></span>' +
+    '<span class="cond-legend">種別:' +
+    '<span class="cond-pill cc-req">必須</span>' +
+    '<span class="cond-pill cc-bound">境界値</span>' +
+    '<span class="cond-pill cc-format">形式</span>' +
+    '<span class="cond-pill cc-opt">選択肢</span>' +
+    '<span class="cond-pill cc-other">その他</span>' +
+    '</span>' +
     '</div><div id="mx-table-wrap"></div>';
   const draw = () => drawMatrix();
   document.getElementById('mx-screen').addEventListener('change', draw);
@@ -1057,6 +1135,13 @@ function renderMatrix() {
   document.getElementById('mx-required').addEventListener('change', draw);
   document.getElementById('mx-csv').addEventListener('click', exportMatrixCsv);
   drawMatrix();
+}
+function condClass(c) {
+  if (c.includes('必須')) return 'cc-req';
+  if (c.includes('最大長') || c.includes('最小長') || c.includes('範囲') || c.includes('境界')) return 'cc-bound';
+  if (c.includes('形式') || c.includes('メール') || c.includes('パターン') || c.includes('日付') || c.includes('電話') || c.includes('数値') || c.includes('パスワード')) return 'cc-format';
+  if (c.includes('選択肢') || c.includes('ON / OFF') || c.includes('未選択')) return 'cc-opt';
+  return 'cc-other';
 }
 function matrixRows() {
   const scFilter = (document.getElementById('mx-screen') || {}).value || '';
@@ -1085,7 +1170,7 @@ function drawMatrix() {
       `<td>${escHtml(constraintText(f)) || '-'}</td>` +
       `<td>${escHtml(defaultOptionsText(f)) || '-'}</td>` +
       `<td class="c-loc">${escHtml((f.locators || []).join(' / ')) || '-'}</td>` +
-      `<td class="c-cond">${escHtml((f.test_conditions || []).join('\\n'))}</td>` +
+      `<td class="c-cond">${(f.test_conditions || []).map(c => `<span class="cond-pill ${condClass(c)}">${escHtml(c)}</span>`).join('') || '-'}</td>` +
     '</tr>';
   }).join('');
   document.getElementById('mx-table-wrap').innerHTML =
@@ -1231,6 +1316,8 @@ def run() -> Response:
     auth = request.form.get("auth", "").strip()
     domain = _domain_of(urls.split(",")[0]) if urls else ""
 
+    run_id = uuid.uuid4().hex
+
     def generate():
         cmd = [
             sys.executable, "src/main.py", "--urls", urls,
@@ -1241,21 +1328,39 @@ def run() -> Response:
         if auth:
             cmd += ["--auth", auth]
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
-        for line in proc.stdout:  # type: ignore[union-attr]
-            yield line
-        proc.wait()
-        domain_dir = OUTPUT_DIR / domain
-        report = domain_dir / "report.html"
-        pdf = domain_dir / "report.pdf"
-        if report.exists():
-            yield f"REPORT_PATH:{report.resolve()}\n"
-        if pdf.exists():
-            yield f"PDF_PATH:{pdf.resolve()}\n"
-        yield f"SUMMARY:{json.dumps(_summary_for_domain(domain))}\n"
-        if proc.returncode != 0:
-            yield "\nエラーが発生しました。\n"
+        _RUNNING_PROCS[run_id] = proc
+        try:
+            yield f"RUN_ID:{run_id}\n"
+            for line in proc.stdout:  # type: ignore[union-attr]
+                yield line
+            proc.wait()
+            if proc.returncode is not None and proc.returncode < 0:
+                yield "\n停止しました。\n"
+                return
+            domain_dir = OUTPUT_DIR / domain
+            report = domain_dir / "report.html"
+            pdf = domain_dir / "report.pdf"
+            if report.exists():
+                yield f"REPORT_PATH:{report.resolve()}\n"
+            if pdf.exists():
+                yield f"PDF_PATH:{pdf.resolve()}\n"
+            yield f"SUMMARY:{json.dumps(_summary_for_domain(domain))}\n"
+            if proc.returncode != 0:
+                yield "\nエラーが発生しました。\n"
+        finally:
+            _RUNNING_PROCS.pop(run_id, None)
+            _terminate_proc(proc)
 
     return Response(generate(), mimetype="text/plain")
+
+
+@app.post("/api/cancel")
+def api_cancel() -> dict:
+    proc = _RUNNING_PROCS.get(request.form.get("run_id", ""))
+    if proc is None:
+        return {"ok": False}
+    _terminate_proc(proc)
+    return {"ok": True}
 
 
 @app.get("/api/live-screenshot")

@@ -18,6 +18,11 @@ from flask import Flask, Response, redirect, request, send_file, url_for
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
 from registry.site_registry import SiteConfig, load_site, save_site  # noqa: E402
+from registry.session_store import (  # noqa: E402
+    has_session,
+    session_path,
+    signal_path,
+)
 
 app = Flask(__name__)
 
@@ -39,6 +44,7 @@ SCREEN_ROW_RE = re.compile(r"^\|\s*\d+\s*\|")
 ENV_FILE = Path(".env")
 DEFAULT_OPENAI_MODEL = "gpt-5.4-mini"
 DISCOVER_TIMEOUT_SEC = 180
+LOGIN_FINISH_TIMEOUT_SEC = 60
 
 # 入力検証（多層防御: クライアントだけでなくサーバでも検証する）
 ALLOWED_FORMATS = ("md", "html", "excel", "pdf", "json")
@@ -581,13 +587,20 @@ _HTML = """<!DOCTYPE html>
                   <details class="result-collapsible" style="margin-top:14px">
                     <summary>詳細設定（ログイン）</summary>
                     <div class="wizard-section" style="margin-top:12px">
-                      <div class="login-fields">
+                      <p class="app-sidebar-section" style="padding:0 0 8px">手渡しログイン</p>
+                      <p class="input-hint" style="margin-top:0">「ログイン用ブラウザを開く」を押すとローカルにブラウザが開きます。ご自身でログイン（MFA・SSO 可）したら「ログイン完了」を押してください。パスワードはツールに保存されません。</p>
+                      <div class="login-handoff-actions" style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0">
+                        <button type="button" id="login-start-btn" class="btn-outline-sm">ログイン用ブラウザを開く</button>
+                        <button type="button" id="login-finish-btn" class="btn-outline-sm" disabled>ログイン完了</button>
+                      </div>
+                      <div id="login-status" class="input-field-message"></div>
+                      <div class="login-fields" style="margin-top:12px">
                         <div class="field login-field-full">
-                          <label for="auth-path">認証セッション auth.json パス</label>
+                          <label for="auth-path">認証セッション auth.json パス（手動指定する場合）</label>
                           <input type="text" id="auth-path" placeholder="auth.json" />
                         </div>
                       </div>
-                      <p class="input-hint">事前に <code>python src/main.py --login &lt;ログインURL&gt;</code> で保存した auth.json のパスを指定すると、認証後ページをクロールできます。</p>
+                      <p class="input-hint">CLI で <code>python src/main.py --login &lt;ログインURL&gt;</code> により保存した auth.json のパスを直接指定することもできます。</p>
                     </div>
                   </details>
 
@@ -980,6 +993,51 @@ function setUrlMessage(msg, isError) {
 
 // ---- 画面リスト取得（discover）----
 document.getElementById('discover-btn').addEventListener('click', discoverUrls);
+
+// ---- 手渡しログイン（ADR-0001: サブプロセス＋シグナル）----
+function loginDomain() {
+  const u = urlInput.value.trim();
+  try { return new URL(u).hostname; } catch (e) { return ''; }
+}
+function setLoginStatus(msg, isError) {
+  const el = document.getElementById('login-status');
+  el.textContent = msg; el.classList.toggle('input-field-message-error', !!(msg && isError));
+}
+document.getElementById('login-start-btn').addEventListener('click', async () => {
+  const domain = loginDomain();
+  if (!domain) { setLoginStatus('先に有効なURLを入力してください', true); return; }
+  const startBtn = document.getElementById('login-start-btn');
+  const finishBtn = document.getElementById('login-finish-btn');
+  startBtn.disabled = true;
+  setLoginStatus('ログイン用ブラウザを起動しています…', false);
+  try {
+    const res = await fetch('/api/login/start', { method: 'POST', body: new URLSearchParams({ url: urlInput.value.trim(), domain }) });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || 'ログイン開始に失敗しました');
+    setLoginStatus('ブラウザでログインを完了したら「ログイン完了」を押してください。', false);
+    finishBtn.disabled = false;
+  } catch (e) {
+    setLoginStatus(e.message, true); startBtn.disabled = false;
+  }
+});
+document.getElementById('login-finish-btn').addEventListener('click', async () => {
+  const domain = loginDomain();
+  const startBtn = document.getElementById('login-start-btn');
+  const finishBtn = document.getElementById('login-finish-btn');
+  finishBtn.disabled = true;
+  setLoginStatus('セッションを保存しています…', false);
+  try {
+    const res = await fetch('/api/login/finish', { method: 'POST', body: new URLSearchParams({ domain }) });
+    const data = await res.json();
+    if (!res.ok || !data.session_saved) throw new Error(data.error || 'セッション保存に失敗しました');
+    setLoginStatus('ログインセッションを保存しました。認証後ページを取得できます。', false);
+    document.getElementById('auth-path').value = 'output/' + domain + '/auth.json';
+  } catch (e) {
+    setLoginStatus(e.message, true); finishBtn.disabled = false;
+  } finally {
+    startBtn.disabled = false;
+  }
+});
 document.getElementById('select-all-btn').addEventListener('click', () => setAllDiscovered(true));
 document.getElementById('clear-all-btn').addEventListener('click', () => setAllDiscovered(false));
 async function discoverUrls() {
@@ -1592,6 +1650,49 @@ def api_site() -> dict:
         return {"site": None}
     config = load_site(domain, OUTPUT_DIR)
     return {"site": asdict(config) if config else None}
+
+
+_LOGIN_PROCS: dict[str, subprocess.Popen] = {}
+
+
+@app.post("/api/login/start")
+def api_login_start() -> tuple[dict, int] | dict:
+    """手渡しログイン用ブラウザをサブプロセスで開く（ADR-0001）。"""
+    login_url = request.form.get("url", "").strip()
+    domain = request.form.get("domain", "").strip()
+    if not login_url or not domain or not _valid_domain(domain):
+        return {"ok": False, "error": "ログインURLとドメインを指定してください"}, 400
+    sig = signal_path(domain, OUTPUT_DIR)
+    auth = session_path(domain, OUTPUT_DIR)
+    auth.parent.mkdir(parents=True, exist_ok=True)
+    if sig.exists():
+        sig.unlink()  # 前回の取り残しシグナルを掃除
+    cmd = [
+        sys.executable, "src/main.py", "--login", login_url,
+        "--login-signal", str(sig), "--auth", str(auth),
+    ]
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    _LOGIN_PROCS[domain] = proc
+    return {"ok": True, "domain": domain}
+
+
+@app.post("/api/login/finish")
+def api_login_finish() -> tuple[dict, int] | dict:
+    """ログイン完了シグナルを置き、サブプロセスのセッション保存完了を待つ。"""
+    domain = request.form.get("domain", "").strip()
+    if not domain or not _valid_domain(domain):
+        return {"ok": False, "error": "ドメインを指定してください"}, 400
+    proc = _LOGIN_PROCS.pop(domain, None)
+    if proc is None:
+        return {"ok": False, "error": "ログインセッションが開始されていません"}, 409
+    signal_path(domain, OUTPUT_DIR).write_text("", encoding="utf-8")
+    try:
+        proc.wait(timeout=LOGIN_FINISH_TIMEOUT_SEC)
+    except subprocess.TimeoutExpired:
+        _terminate_proc(proc)
+        return {"ok": False, "error": "セッション保存がタイムアウトしました"}, 504
+    saved = proc.returncode == 0 and has_session(domain, OUTPUT_DIR)
+    return {"ok": saved, "session_saved": saved}
 
 
 @app.post("/run")

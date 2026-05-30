@@ -67,6 +67,11 @@ def parse_args() -> argparse.Namespace:
         help="リンク追跡で到達するページ一覧(URL+タイトル)をJSONでstdoutに出力して終了",
     )
     parser.add_argument("--login", help="ログインセッション保存モード: ログインページURL")
+    parser.add_argument(
+        "--login-signal",
+        type=Path,
+        help="GUI 手渡しログイン用: このファイルが出現したらセッションを保存する",
+    )
     parser.add_argument("--auth", type=Path, help="保存済みセッション(auth.json)を使ってクロール")
     parser.add_argument("--depth", type=int, default=DEFAULT_DEPTH, help="クロール深度")
     parser.add_argument(
@@ -85,8 +90,9 @@ def parse_args() -> argparse.Namespace:
 def run(args: argparse.Namespace) -> None:
     login_url = getattr(args, "login", None)
     auth_path = getattr(args, "auth", None)
+    signal_path = getattr(args, "login_signal", None)
     if login_url:
-        _capture_login(str(login_url), auth_path)
+        _capture_login(str(login_url), auth_path, signal_path)
         return
     if bool(getattr(args, "discover", False)):
         _discover(args, auth_path)
@@ -142,8 +148,20 @@ def _parse_url_list(raw_urls: str | None) -> list[str]:
     return list(seen)
 
 
-def _capture_login(login_url: str, auth_path: Path | None) -> None:
+def _capture_login(
+    login_url: str, auth_path: Path | None, signal_path: Path | None = None
+) -> None:
     output_path = Path(auth_path) if auth_path else Path(DEFAULT_AUTH_FILE)
+    if signal_path is not None:
+        from crawler.auth import capture_auth_state_via_signal
+
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        saved = capture_auth_state_via_signal(login_url, output_path, Path(signal_path))
+        if saved is None:
+            logger.error("ログイン完了シグナルを待機中にタイムアウトしました")
+            sys.exit(1)
+        logger.info("ログインセッションを保存しました: %s", saved)
+        return
     saved = capture_auth_state(login_url, output_path)
     logger.info("ログインセッションを保存しました: %s （--auth %s でクロールに利用できます）", saved, saved)
 

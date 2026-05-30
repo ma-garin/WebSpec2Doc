@@ -413,7 +413,7 @@ _HTML = """<!DOCTYPE html>
     .export-row a { text-decoration: none; }
     .export-missing { opacity: .5; }
 
-    .app-footer { display: flex; align-items: center; justify-content: space-between; padding: 14px 30px; border-top: 1px solid var(--border); background: rgba(247,251,255,.96); color: var(--text-muted); font-size: 12px; flex-shrink: 0; }
+    .app-footer { display: flex; align-items: center; justify-content: space-between; padding: 14px 30px; border-top: 1px solid var(--border); background: var(--surface); color: var(--text-muted); font-size: 12px; flex-shrink: 0; }
     table.data { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
     table.data th { background: var(--surface-soft); color: var(--text-muted); font-size: 12px; font-weight: 800; text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--border); white-space: nowrap; }
     table.data td { padding: 12px 14px; border-bottom: 1px solid var(--border); font-size: 14px; }
@@ -437,6 +437,25 @@ _HTML = """<!DOCTYPE html>
     .set-card-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
     @keyframes shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── レスポンシブ ── */
+    #history-body { overflow-x: auto; }
+    table.data { min-width: 640px; }
+    .result-tab:focus-visible, .app-nav-item:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+    @media (max-width: 1020px) {
+      .result-stats { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+      .login-fields, .options-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 860px) {
+      :root { --sidebar-w: 60px; }
+      .app-brand-text, .nav-label, .add-site-label, .app-sidebar-foot, .app-nav-group { display: none; }
+      .app-sidebar { padding: 14px 8px; align-items: center; }
+      .app-brand { justify-content: center; padding: 0; }
+      #add-site-btn { padding: 0; }
+      .app-nav-item { justify-content: center; padding: 0; }
+      .app-topbar { padding: 12px 16px; }
+      .app-content { padding: 18px 16px; }
+    }
   </style>
 </head>
 <body class="app-page">
@@ -449,17 +468,17 @@ _HTML = """<!DOCTYPE html>
     </a>
     <button type="button" class="btn-primary" id="add-site-btn" style="width:100%;height:40px;gap:6px">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="16" height="16"><path d="M12 5v14M5 12h14"/></svg>
-      サイトを追加
+      <span class="add-site-label">サイトを追加</span>
     </button>
     <nav class="app-nav">
       <div class="app-nav-group">メニュー</div>
       <button class="app-nav-item is-active" data-view="dashboard">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
-        ダッシュボード
+        <span class="nav-label">ダッシュボード</span>
       </button>
       <button class="app-nav-item" data-view="settings">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-        設定
+        <span class="nav-label">設定</span>
       </button>
     </nav>
     <div style="margin-top:auto" class="app-sidebar-foot">
@@ -1205,13 +1224,24 @@ async function showResults(domain) {
   selectResultTab('overview');
 }
 
-document.querySelectorAll('.result-tab').forEach(t => t.addEventListener('click', () => selectResultTab(t.dataset.tab)));
+document.querySelectorAll('.result-tab').forEach(t => {
+  t.addEventListener('click', () => selectResultTab(t.dataset.tab));
+  t.addEventListener('keydown', e => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    e.preventDefault();
+    const tabs = [...document.querySelectorAll('.result-tab')].filter(x => x.offsetParent !== null);
+    const i = tabs.indexOf(t);
+    const next = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+    if (next) { selectResultTab(next.dataset.tab); next.focus(); }
+  });
+});
 function selectResultTab(tab) {
   activeResultTab = tab;
   document.querySelectorAll('.result-tab').forEach(t => {
     const on = t.dataset.tab === tab;
     t.classList.toggle('is-active', on);
     t.setAttribute('aria-selected', on ? 'true' : 'false');
+    t.tabIndex = on ? 0 : -1;
   });
   if (tab === 'overview') renderOverview();
   else if (tab === 'matrix') renderMatrix();

@@ -16,6 +16,7 @@ from dotenv import load_dotenv
 from analyzer.form_analyzer import summarize_forms
 from analyzer.html_analyzer import AnalyzedPage, analyze_pages
 from crawler.auth import DEFAULT_AUTH_FILE, capture_auth_state
+from crawler.session_guard import SessionExpiredError
 from crawler.page_crawler import (
     DEFAULT_DEPTH,
     DEFAULT_MAX_PAGES,
@@ -112,16 +113,22 @@ def run(args: argparse.Namespace) -> None:
 
     crawled_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     auth_state = Path(auth_path) if auth_path else None
-    if url_list:
-        pages = crawl_urls(url_list, output_dir=output_dir, auth_state=auth_state)
-    else:
-        pages = crawl_site(
-            url=primary_url,
-            depth=int(args.depth),
-            max_pages=int(args.max_pages),
-            output_dir=output_dir,
-            auth_state=auth_state,
-        )
+    try:
+        if url_list:
+            pages = crawl_urls(url_list, output_dir=output_dir, auth_state=auth_state)
+        else:
+            pages = crawl_site(
+                url=primary_url,
+                depth=int(args.depth),
+                max_pages=int(args.max_pages),
+                output_dir=output_dir,
+                auth_state=auth_state,
+            )
+    except SessionExpiredError as exc:
+        # snapshot 保存前に中断。古い結果を上書きせず GUI に再ログインを促す
+        logger.error("%s", exc)
+        sys.stdout.write("SESSION_EXPIRED\n")
+        sys.exit(2)
     analyzed_pages = analyze_pages(pages)
     graph = build_graph(analyzed_pages)
     form_summary = summarize_forms(analyzed_pages)

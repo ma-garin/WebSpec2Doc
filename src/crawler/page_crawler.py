@@ -91,6 +91,8 @@ def crawl_site(
     pages: list[PageData] = []
 
     with _browser_page(auth_state) as page:
+        if max_pages > 0:
+            _guard_session(page, base_url, auth_state)
         while queue and len(pages) < max_pages:
             current_url, current_depth = queue.pop(0)
             if _should_skip(current_url, current_depth, depth, visited, robots):
@@ -146,6 +148,8 @@ def crawl_urls(
     pages: list[PageData] = []
 
     with _browser_page(auth_state) as page:
+        if targets:
+            _guard_session(page, targets[0], auth_state)
         for target in targets:
             page_id = _format_page_id(len(pages) + 1)
             page_data = _crawl_page_with_id(page, target, page_id, output_dir)
@@ -154,6 +158,32 @@ def crawl_urls(
             time.sleep(CRAWL_DELAY_SEC)
 
     return pages
+
+
+def _guard_session(page: Page, url: str, auth_state: Path | None) -> None:
+    """認証付きクロールの入口で保存セッションの失効を確認する（#7）。
+    失効（login wall 検出）時は SessionExpiredError を送出しクロールを中断する。
+    中断により snapshot 保存に到達しないため、古い結果を上書きしない。"""
+    from analyzer.login_wall import PageAuthSignals
+    from crawler.link_extractor import has_password_field
+    from crawler.session_guard import SessionExpiredError, is_session_expired
+
+    if auth_state is None:
+        return
+    normalized = normalize_url(url)
+    try:
+        response = page.goto(normalized, wait_until="networkidle", timeout=DEFAULT_TIMEOUT_MS)
+    except Exception as exc:
+        logger.warning("セッション確認のためのアクセスに失敗しました: %s (%s)", url, exc)
+        return
+    signals = PageAuthSignals(
+        requested_url=normalized,
+        final_url=page.url,
+        status=response.status if response is not None else 0,
+        has_password_field=has_password_field(page),
+    )
+    if is_session_expired(auth_state, signals):
+        raise SessionExpiredError(f"保存セッションが失効しています: {url}")
 
 
 def _discover_one(page: Page, url: str, found: list[dict[str, object]]) -> tuple[str, ...]:

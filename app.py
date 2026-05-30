@@ -1200,7 +1200,7 @@ async function runWith(bodyStr, domain, label, urlCount) {
   execPhase.textContent = '実行中'; setStep(0); startTimer(); startPreviewPolling();
 
   activeRunId = '';
-  let reportPath = '', summary = null, ok = false, cur = 0, cancelled = false;
+  let reportPath = '', summary = null, ok = false, cur = 0, cancelled = false, sessionExpired = false;
   try {
     const res = await fetch('/run', { method: 'POST', body: bodyStr, headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: runAbort.signal });
     const reader = res.body.getReader(); const dec = new TextDecoder();
@@ -1211,6 +1211,7 @@ async function runWith(bodyStr, domain, label, urlCount) {
       const rp = chunk.match(/REPORT_PATH:(.*)/); if (rp) { reportPath = rp[1].trim(); ok = true; }
       const sm = chunk.match(/SUMMARY:(.*)/); if (sm) { try { summary = JSON.parse(sm[1].trim()); ok = true; } catch {} }
       if (/(^|\\n)\\s*停止しました。/.test(chunk)) cancelled = true;
+      if (/SESSION_EXPIRED/.test(chunk)) sessionExpired = true;
       const clean = chunk.replace(/(RUN_ID|REPORT_PATH|PDF_PATH|SUMMARY):.*\\n?/g, '');
       execLog.textContent += clean; execLog.scrollTop = execLog.scrollHeight;
       for (const line of clean.split('\\n')) { const st = guessStep(line); if (st >= 0 && st >= cur) { cur = st; setStep(st); } }
@@ -1221,7 +1222,11 @@ async function runWith(bodyStr, domain, label, urlCount) {
   }
 
   stopTimer(); stopPreviewPolling(); execRunningActions.classList.add('hidden');
-  if (cancelled) {
+  if (sessionExpired) {
+    execActions.classList.remove('hidden');
+    execTitle.textContent = 'セッションが失効しています'; execPhase.textContent = '要再ログイン';
+    execMessage.textContent = '保存済みのログインセッションが失効していたため、ドリフト誤検知を防ぐためクロールを中断しました（前回の結果は保持されています）。入力に戻り「ログイン用ブラウザを開く」から再ログインしてください。';
+  } else if (cancelled) {
     execActions.classList.remove('hidden');
     execTitle.textContent = '実行を停止しました'; execPhase.textContent = '停止';
     execMessage.textContent = '停止要求により処理を終了しました。必要に応じて入力に戻って再実行してください。';

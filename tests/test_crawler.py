@@ -257,3 +257,36 @@ class TestCrawlUrls:
              patch.object(pc.time, "sleep"):
             pages = pc.crawl_urls(["", "  ", "https://example.com/"])
         assert len(pages) == 1
+
+
+class TestSessionExpiry:
+    """#7: 認証付きクロールで login wall に当たると中断する。"""
+
+    def _login_wall_browser(self):
+        @contextmanager
+        def _cm(_auth):
+            page = MagicMock()
+            page.title.return_value = "Login"
+            page.eval_on_selector_all.return_value = []
+            page.url = "https://example.com/login"  # 認証ページへリダイレクト
+            page.goto.return_value = MagicMock(status=200)
+            page.query_selector.return_value = MagicMock()  # パスワード欄あり
+            yield page
+        return _cm
+
+    def test_crawl_urls_raises_when_session_expired(self, tmp_path) -> None:
+        from crawler.session_guard import SessionExpiredError
+
+        auth = tmp_path / "auth.json"
+        auth.write_text("{}", encoding="utf-8")
+        with patch.object(pc, "_browser_page", self._login_wall_browser()), \
+             patch.object(pc.time, "sleep"):
+            with pytest.raises(SessionExpiredError):
+                pc.crawl_urls(["https://example.com/dashboard"], auth_state=auth)
+
+    def test_crawl_urls_no_raise_without_auth(self) -> None:
+        with patch.object(pc, "_browser_page", self._login_wall_browser()), \
+             patch.object(pc, "_crawl_page_with_id", return_value=None), \
+             patch.object(pc.time, "sleep"):
+            pages = pc.crawl_urls(["https://example.com/dashboard"], auth_state=None)
+        assert pages == []

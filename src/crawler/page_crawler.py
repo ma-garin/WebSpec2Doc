@@ -113,14 +113,14 @@ def discover_pages(
     depth: int = DEFAULT_DEPTH,
     max_pages: int = DEFAULT_MAX_PAGES,
     auth_state: Path | None = None,
-) -> list[dict[str, str]]:
-    """Lightweight BFS listing reachable pages (url + title) without
-    screenshots or form extraction. Backs the GUI '画面リスト取得' step."""
+) -> list[dict[str, object]]:
+    """Lightweight BFS listing reachable pages (url + title + login wall 判定)
+    without screenshots or form extraction. Backs the GUI '画面リスト取得' step."""
     base_url = normalize_url(url)
     robots = _load_robots_parser(base_url)
     visited: set[str] = set()
     queue: list[tuple[str, int]] = [(base_url, 0)]
-    found: list[dict[str, str]] = []
+    found: list[dict[str, object]] = []
 
     with _browser_page(auth_state) as page:
         while queue and len(found) < max_pages:
@@ -156,16 +156,36 @@ def crawl_urls(
     return pages
 
 
-def _discover_one(page: Page, url: str, found: list[dict[str, str]]) -> tuple[str, ...]:
-    from crawler.link_extractor import extract_internal_links, extract_page_title
+def _discover_one(page: Page, url: str, found: list[dict[str, object]]) -> tuple[str, ...]:
+    from analyzer.login_wall import PageAuthSignals, detect_login_wall
+    from crawler.link_extractor import (
+        extract_internal_links,
+        extract_page_title,
+        has_password_field,
+    )
 
     normalized = normalize_url(url)
     try:
-        page.goto(normalized, wait_until="networkidle", timeout=DEFAULT_TIMEOUT_MS)
+        response = page.goto(normalized, wait_until="networkidle", timeout=DEFAULT_TIMEOUT_MS)
     except Exception as exc:
         logger.warning("画面リスト取得に失敗しました: %s (%s)", url, exc)
         return ()
-    found.append({"url": normalized, "title": extract_page_title(page)})
+    verdict = detect_login_wall(
+        PageAuthSignals(
+            requested_url=normalized,
+            final_url=page.url,
+            status=response.status if response is not None else 0,
+            has_password_field=has_password_field(page),
+        )
+    )
+    found.append(
+        {
+            "url": normalized,
+            "title": extract_page_title(page),
+            "login_required": verdict.is_login_required,
+            "login_reasons": list(verdict.reasons),
+        }
+    )
     return tuple(extract_internal_links(page, normalized))
 
 

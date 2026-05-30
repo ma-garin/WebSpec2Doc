@@ -29,6 +29,15 @@ def extract_internal_links(page: Page, base_url: str) -> list[str]:
     return list(dict.fromkeys(normalized_links))
 
 
+def has_password_field(page: Page) -> bool:
+    """ページ内に <input type=password> が存在するか（login wall 検出の素性）。"""
+    try:
+        return page.query_selector("input[type=password]") is not None
+    except Exception as exc:
+        logger.warning("パスワード欄の判定に失敗しました: %s", exc)
+        return False
+
+
 def extract_forms(page: Page) -> list[FormData]:
     try:
         raw_forms = cast(list[dict[str, Any]], page.eval_on_selector_all("form", _FORM_SCRIPT))

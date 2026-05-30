@@ -293,6 +293,7 @@ _HTML = """<!DOCTYPE html>
     .discovered-url-item span { display: grid; gap: 2px; min-width: 0; }
     .discovered-url-item strong { font-size: 12px; }
     .discovered-url-item code { font-family: ui-monospace, monospace; font-size: 12px; color: var(--text-muted); word-break: break-all; }
+    .disc-login-badge { display: inline-block; width: fit-content; margin-top: 2px; font-size: 11px; font-weight: 600; color: #8a4b00; background: #fff3e0; border: 1px solid #ffcc80; border-radius: 999px; padding: 1px 8px; cursor: help; }
     .manual-url-section { display: grid; gap: 8px; padding-left: 30px; }
     .url-list { display: grid; gap: 8px; }
     .url-list-item { display: flex; gap: 8px; align-items: center; }
@@ -996,7 +997,7 @@ function renderDiscovered() {
   list.innerHTML = discovered.map((it, i) => `
     <label class="discovered-url-item">
       <input type="checkbox" class="discovered-cb" value="${escHtml(it.url)}" checked />
-      <span><strong>${escHtml(it.title || ('タイトル未取得 ' + (i + 1)))}</strong><code>${escHtml(it.url)}</code></span>
+      <span><strong>${escHtml(it.title || ('タイトル未取得 ' + (i + 1)))}</strong><code>${escHtml(it.url)}</code>${it.login_required ? `<span class="disc-login-badge" title="${escHtml('認証が必要な可能性があります（根拠: ' + ((it.login_reasons || []).join(', ') || '不明') + '）。不要ならチェックを外してスキップできます。')}">要ログイン</span>` : ''}</span>
     </label>`).join('');
   list.querySelectorAll('.discovered-cb').forEach(cb => cb.addEventListener('change', updateTargetPreview));
 }

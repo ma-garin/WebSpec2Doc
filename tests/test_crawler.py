@@ -150,14 +150,30 @@ class TestDiscoverOne:
         page = MagicMock()
         page.title.return_value = title
         page.eval_on_selector_all.return_value = hrefs
+        page.url = "https://example.com/"
+        page.goto.return_value = MagicMock(status=200)
+        page.query_selector.return_value = None
         return page
 
     def test_appends_url_and_title(self) -> None:
         page = self._mock_page("ホーム", ["https://example.com/a"])
-        found: list[dict[str, str]] = []
+        found: list[dict[str, object]] = []
         _discover_one(page, "https://example.com/", found)
         assert found[0]["url"] == "https://example.com/"
         assert found[0]["title"] == "ホーム"
+
+    def test_public_page_not_login_required(self) -> None:
+        page = self._mock_page("ホーム", [])
+        found: list[dict[str, object]] = []
+        _discover_one(page, "https://example.com/", found)
+        assert found[0]["login_required"] is False
+
+    def test_password_page_is_login_required(self) -> None:
+        page = self._mock_page("ログイン", [])
+        page.query_selector.return_value = MagicMock()
+        found: list[dict[str, object]] = []
+        _discover_one(page, "https://example.com/", found)
+        assert found[0]["login_required"] is True
 
     def test_returns_internal_links(self) -> None:
         page = self._mock_page("t", ["https://example.com/a", "https://other.com/x"])

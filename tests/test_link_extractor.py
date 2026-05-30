@@ -13,7 +13,30 @@ from crawler.link_extractor import (
     extract_headings,
     extract_internal_links,
     extract_page_title,
+    has_password_field,
 )
+
+
+# ---------- has_password_field ----------
+
+
+def test_has_password_field_true_when_present() -> None:
+    page = MagicMock()
+    page.query_selector.return_value = MagicMock()
+    assert has_password_field(page) is True
+    page.query_selector.assert_called_once_with("input[type=password]")
+
+
+def test_has_password_field_false_when_absent() -> None:
+    page = MagicMock()
+    page.query_selector.return_value = None
+    assert has_password_field(page) is False
+
+
+def test_has_password_field_false_on_error() -> None:
+    page = MagicMock()
+    page.query_selector.side_effect = RuntimeError("boom")
+    assert has_password_field(page) is False
 
 
 # ---------- _to_field_data ----------

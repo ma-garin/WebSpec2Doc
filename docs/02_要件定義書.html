@@ -204,7 +204,7 @@
           <tr><td>セキュリティ</td><td>出力ファイルの管理</td><td>output/ は .gitignore 必須</td></tr>
           <tr><td>保守性</td><td>ファイルサイズ</td><td>1 ファイル 800 行以内</td></tr>
           <tr><td>保守性</td><td>テストカバレッジ</td><td>80% 以上</td></tr>
-          <tr><td>移植性</td><td>動作環境</td><td>Python 3.11+ / macOS・Linux</td></tr>
+          <tr><td>移植性</td><td>動作環境</td><td>Python 3.12 / macOS・Linux</td></tr>
           <tr><td>使いやすさ</td><td>CLI インターフェース</td><td>--url のみ指定で動作すること</td></tr>
         </tbody>
       </table>
@@ -224,7 +224,7 @@
           <tr><td>対象ページ</td><td>ログイン不要の公開ページのみ</td><td>認証情報を扱うとセキュリティリスクが生じるため（Phase 1 制約）</td></tr>
           <tr><td>クロール深さ</td><td>デフォルト depth=3（変更可）</td><td>処理時間と網羅性のバランス</td></tr>
           <tr><td>ページ数上限</td><td>デフォルト max_pages=50（変更可）</td><td>大規模サイトでの処理時間超過防止</td></tr>
-          <tr><td>言語</td><td>Python 3.11+</td><td>Playwright / Anthropic SDK との整合性</td></tr>
+          <tr><td>言語</td><td>Python 3.12</td><td>Playwright との整合性（3.13 は greenlet ビルド失敗）</td></tr>
           <tr><td>LLM</td><td>Claude Haiku のみ（Sonnet 以上は使わない）</td><td>大量ページ処理でのコスト抑制</td></tr>
           <tr><td>ライセンス</td><td>社内利用限定</td><td>クライアント情報が出力に含まれる可能性</td></tr>
         </tbody>

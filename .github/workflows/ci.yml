@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  quality:
+    name: lint / type / test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Lint (ruff)
+        run: ruff check src app.py tests
+
+      - name: Format check (black)
+        run: black --check src app.py tests
+
+      - name: Type check (mypy)
+        run: mypy
+
+      - name: Tests + coverage gate (80%)
+        run: pytest tests/ -q --cov=src --cov-report=term-missing --cov-fail-under=80
+
+  smoke:
+    name: smoke crawl (Playwright)
+    runs-on: ubuntu-22.04  # Playwright 1.44 の OS 依存は 24.04 と非互換のため固定
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install Playwright browser
+        run: python -m playwright install --with-deps chromium
+
+      - name: Smoke crawl (--compare x2)
+        run: |
+          python src/main.py --url https://example.com --depth 1 --max-pages 2 --format html,md --compare --output ./_ci_out
+          python src/main.py --url https://example.com --depth 1 --max-pages 2 --format html,md --compare --output ./_ci_out
+          test -s ./_ci_out/example.com/report.html
+          test -s ./_ci_out/example.com/diff_report.html
+
+  secret-scan:
+    name: secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,7 +1,6 @@
 """mermaid_generator.py / markdown_generator.py / transition_graph.py のユニットテスト"""
-from __future__ import annotations
 
-import pytest
+from __future__ import annotations
 
 from analyzer.html_analyzer import analyze_pages
 from crawler.page_crawler import PageData
@@ -9,13 +8,11 @@ from generator.markdown_generator import generate_forms_markdown, generate_scree
 from generator.mermaid_generator import generate_mermaid
 from graph.transition_graph import build_graph
 
-
 # ---------- build_graph ----------
 
+
 class TestBuildGraph:
-    def test_nodes_created_for_each_page(
-        self, page_top: PageData, page_about: PageData
-    ) -> None:
+    def test_nodes_created_for_each_page(self, page_top: PageData, page_about: PageData) -> None:
         analyzed = analyze_pages([page_top, page_about])
         graph = build_graph(analyzed)
         assert len(graph.nodes) == 2
@@ -30,9 +27,7 @@ class TestBuildGraph:
         assert "forms_count" in node_data
         assert "fields_count" in node_data
 
-    def test_edges_created_for_links(
-        self, page_top: PageData, page_about: PageData
-    ) -> None:
+    def test_edges_created_for_links(self, page_top: PageData, page_about: PageData) -> None:
         analyzed = analyze_pages([page_top, page_about])
         graph = build_graph(analyzed)
         # top → about のエッジが存在するはず
@@ -62,6 +57,7 @@ class TestBuildGraph:
 
 # ---------- generate_mermaid ----------
 
+
 class TestGenerateMermaid:
     def test_starts_with_graph_lr(self, page_top: PageData) -> None:
         analyzed = analyze_pages([page_top])
@@ -69,18 +65,14 @@ class TestGenerateMermaid:
         result = generate_mermaid(graph, analyzed)
         assert result.startswith("graph LR")
 
-    def test_contains_page_ids(
-        self, page_top: PageData, page_about: PageData
-    ) -> None:
+    def test_contains_page_ids(self, page_top: PageData, page_about: PageData) -> None:
         analyzed = analyze_pages([page_top, page_about])
         graph = build_graph(analyzed)
         result = generate_mermaid(graph, analyzed)
         assert "P001" in result
         assert "P002" in result
 
-    def test_contains_edge_arrow(
-        self, page_top: PageData, page_about: PageData
-    ) -> None:
+    def test_contains_edge_arrow(self, page_top: PageData, page_about: PageData) -> None:
         analyzed = analyze_pages([page_top, page_about])
         graph = build_graph(analyzed)
         result = generate_mermaid(graph, analyzed)
@@ -105,6 +97,7 @@ class TestGenerateMermaid:
 
     def test_special_chars_escaped_in_label(self) -> None:
         from crawler.page_crawler import PageData as PD
+
         page = PD(
             url='https://example.com/path"with"quotes',
             title='Title "quoted"',
@@ -117,10 +110,11 @@ class TestGenerateMermaid:
         graph = build_graph(analyzed)
         result = generate_mermaid(graph, analyzed)
         # ダブルクォートがシングルクォートにエスケープされていること
-        assert '\"' not in result.split("graph LR")[1] or "'" in result
+        assert '"' not in result.split("graph LR")[1] or "'" in result
 
 
 # ---------- generate_screens_markdown ----------
+
 
 class TestGenerateScreensMarkdown:
     def test_contains_header(self, page_top: PageData) -> None:
@@ -155,9 +149,7 @@ class TestGenerateScreensMarkdown:
         result = generate_screens_markdown(analyzed, graph, page_top.url)
         assert "テストサイト - トップ" in result
 
-    def test_transition_destinations(
-        self, page_top: PageData, page_about: PageData
-    ) -> None:
+    def test_transition_destinations(self, page_top: PageData, page_about: PageData) -> None:
         analyzed = analyze_pages([page_top, page_about])
         graph = build_graph(analyzed)
         result = generate_screens_markdown(analyzed, graph, page_top.url)
@@ -183,15 +175,17 @@ class TestGenerateScreensMarkdown:
         graph = build_graph(analyzed)
         result = generate_screens_markdown(analyzed, graph, page.url)
         # Markdown テーブルが壊れないようにパイプがエスケープされること
-        lines = [l for l in result.splitlines() if "Title" in l]
+        lines = [row for row in result.splitlines() if "Title" in row]
         assert all("\\|" in line or line.count("|") <= 7 for line in lines)
 
 
 # ---------- generate_forms_markdown ----------
 
+
 class TestGenerateFormsMd:
     def test_contains_header(self, page_top: PageData) -> None:
         from analyzer.form_analyzer import summarize_forms
+
         analyzed = analyze_pages([page_top])
         summary = summarize_forms(analyzed)
         result = generate_forms_markdown(summary)
@@ -199,6 +193,7 @@ class TestGenerateFormsMd:
 
     def test_contains_field_name(self, page_top: PageData) -> None:
         from analyzer.form_analyzer import summarize_forms
+
         analyzed = analyze_pages([page_top])
         summary = summarize_forms(analyzed)
         result = generate_forms_markdown(summary)
@@ -206,6 +201,7 @@ class TestGenerateFormsMd:
 
     def test_required_shown_as_yes(self, page_contact: PageData) -> None:
         from analyzer.form_analyzer import summarize_forms
+
         analyzed = analyze_pages([page_contact])
         summary = summarize_forms(analyzed)
         result = generate_forms_markdown(summary)
@@ -213,6 +209,7 @@ class TestGenerateFormsMd:
 
     def test_optional_shown_as_no(self, page_top: PageData) -> None:
         from analyzer.form_analyzer import summarize_forms
+
         analyzed = analyze_pages([page_top])
         summary = summarize_forms(analyzed)
         result = generate_forms_markdown(summary)

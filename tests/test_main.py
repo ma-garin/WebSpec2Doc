@@ -1,4 +1,5 @@
 """main.py のユニットテスト"""
+
 from __future__ import annotations
 
 import argparse
@@ -21,8 +22,8 @@ from main import (
     save_outputs,
 )
 
-
 # ---------- _parse_formats ----------
+
 
 class TestParseFormats:
     def test_single_format(self) -> None:
@@ -81,6 +82,7 @@ class TestParseUrlList:
 
 # ---------- _domain_name ----------
 
+
 class TestDomainName:
     def test_standard_url(self) -> None:
         assert _domain_name("https://example.com/path") == "example.com"
@@ -101,13 +103,15 @@ class TestDomainName:
 
 # ---------- generate_html_report ----------
 
+
 class TestHtmlReport:
     def _make_report(self, page_top) -> str:
         from generator.html_reporter import generate_html_report
+
         analyzed = analyze_pages([page_top])
         graph = build_graph(analyzed)
         summary = summarize_forms(analyzed)
-        mermaid = "graph LR\n  P001[\"P001\"]"
+        mermaid = 'graph LR\n  P001["P001"]'
         return generate_html_report(analyzed, graph, summary, page_top.url, mermaid)
 
     def test_contains_doctype(self, page_top) -> None:
@@ -128,6 +132,7 @@ class TestHtmlReport:
 
     def test_escapes_xss(self, page_top) -> None:
         from crawler.page_crawler import PageData
+
         page = PageData(
             url="https://example.com/",
             title='<script>alert("xss")</script>',
@@ -139,11 +144,13 @@ class TestHtmlReport:
         analyzed = analyze_pages([page])
         graph = build_graph(analyzed)
         from generator.html_reporter import generate_html_report
+
         result = generate_html_report(analyzed, graph, [], page.url, "graph LR")
         assert "<script>alert" not in result
 
 
 # ---------- parse_args ----------
+
 
 class TestParseArgs:
     def test_no_url_does_not_raise(self) -> None:
@@ -185,6 +192,7 @@ class TestParseArgs:
 
 
 # ---------- save_outputs ----------
+
 
 class TestSaveOutputs:
     def test_creates_md_files(self, tmp_path: Path, page_top) -> None:
@@ -256,6 +264,7 @@ class TestSaveOutputs:
 
 
 # ---------- run ----------
+
 
 class TestRun:
     def test_run_creates_output_files(self, tmp_path: Path, page_top) -> None:

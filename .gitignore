@@ -11,6 +11,9 @@ auth.json
 # 生成物（クライアント情報が含まれる可能性）
 output/
 
+# Codex 実行ログ（codex-task.sh の最終メッセージ）
+.codex-runs/
+
 # Python
 __pycache__/
 *.py[cod]

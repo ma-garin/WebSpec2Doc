@@ -10,7 +10,6 @@ import pytest
 
 from crawler.page_crawler import FieldData, FormData, PageData
 
-
 SAMPLE_SITE_DIR = Path(__file__).parent / "fixtures" / "sample_site"
 
 
@@ -36,8 +35,12 @@ def form_search(field_text: FieldData) -> FormData:
 
 @pytest.fixture()
 def form_contact(field_required_text: FieldData, field_email: FieldData) -> FormData:
-    field_message = FieldData(field_type="textarea", name="message", placeholder="メッセージ", required=False)
-    return FormData(action="/send", method="post", fields=(field_required_text, field_email, field_message))
+    field_message = FieldData(
+        field_type="textarea", name="message", placeholder="メッセージ", required=False
+    )
+    return FormData(
+        action="/send", method="post", fields=(field_required_text, field_email, field_message)
+    )
 
 
 @pytest.fixture()

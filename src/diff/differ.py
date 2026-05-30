@@ -159,8 +159,12 @@ def _link_changes(
     for url in urls:
         old_links = set(old_pages[url].links)
         new_links = set(new_pages[url].links)
-        changes.extend(LinkChange(url, link, CHANGE_ADDED) for link in sorted(new_links - old_links))
-        changes.extend(LinkChange(url, link, CHANGE_REMOVED) for link in sorted(old_links - new_links))
+        changes.extend(
+            LinkChange(url, link, CHANGE_ADDED) for link in sorted(new_links - old_links)
+        )
+        changes.extend(
+            LinkChange(url, link, CHANGE_REMOVED) for link in sorted(old_links - new_links)
+        )
     return tuple(changes)
 
 

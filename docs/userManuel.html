@@ -34,7 +34,7 @@
   <div class="vs-header__divider"></div>
   <span class="vs-header__doc-title">ユーザーマニュアル — WebSpec2Doc</span>
   <div class="vs-header__meta">
-    <span>Rev. 1.0 / 社外秘</span>
+    <span>Rev. 1.1 / 社外秘</span>
     <span id="current-date"></span>
   </div>
 </header>
@@ -77,7 +77,7 @@
       </div>
       <div class="vs-cover__meta-item">
         <div class="vs-cover__meta-label">版数</div>
-        <div class="vs-cover__meta-value">1.0</div>
+        <div class="vs-cover__meta-value">1.1</div>
       </div>
       <div class="vs-cover__meta-item">
         <div class="vs-cover__meta-label">対象者</div>
@@ -85,7 +85,7 @@
       </div>
       <div class="vs-cover__meta-item">
         <div class="vs-cover__meta-label">作成日</div>
-        <div class="vs-cover__meta-value">2026-05-28</div>
+        <div class="vs-cover__meta-value">2026-05-29</div>
       </div>
     </div>
   </div>
@@ -125,7 +125,7 @@
       <thead><tr><th>項目</th><th>要件</th></tr></thead>
       <tbody>
         <tr><td>OS</td><td>macOS / Linux / Windows</td></tr>
-        <tr><td>Python</td><td>3.11 以上</td></tr>
+        <tr><td>Python</td><td>3.12（3.13 は greenlet ビルド失敗のため非対応）</td></tr>
         <tr><td>ネットワーク</td><td>クロール対象サイトへの HTTP/HTTPS アクセス</td></tr>
         <tr><td>ディスク</td><td>スクリーンショット保存用に数十 MB（サイト規模による）</td></tr>
       </tbody>
@@ -238,6 +238,11 @@ source venv/bin/activate   # Windows: venv\Scripts\activate</pre>
           <td><code>md</code></td>
           <td><code>md</code> / <code>html</code> / <code>excel</code> をカンマ区切りで指定。</td>
         </tr>
+        <tr>
+          <td><code>--compare</code></td>
+          <td>off</td>
+          <td>前回スナップショットとの差分を <code>diff_report.html</code> に出力（仕様ドリフト検知）。初回はスナップショット保存のみ。</td>
+        </tr>
       </tbody>
     </table>
 
@@ -296,6 +301,9 @@ source venv/bin/activate   # Windows: venv\Scripts\activate</pre>
         <tr><td>Forms</td><td>入力項目一覧（画面ID / URL / フィールド名 / 型 / 必須 / placeholder）</td></tr>
       </tbody>
     </table>
+
+    <h3 class="vs-subsection__title">diff_report.html — 仕様ドリフト差分レポート（<code>--compare</code> 指定時）</h3>
+    <p>前回クロールからの変更点（新規/削除画面・フォームの変更・リンク変更・タイトル変更）を HTML で一覧化します。リリース前後で実行し、テストすべき変更箇所を素早く特定するのに使います。スナップショットは <code>snapshots/</code> にタイムスタンプ名で蓄積されます。</p>
   </section>
 
   <!-- 7. QA テスト設計への活用 -->
@@ -380,7 +388,7 @@ source venv/bin/activate   # Windows: venv\Scripts\activate</pre>
 </main>
 
 <footer class="vs-footer">
-  <div>WebSpec2Doc ユーザーマニュアル — WSDoc-UM-001 Rev.1.0</div>
+  <div>WebSpec2Doc ユーザーマニュアル — WSDoc-UM-001 Rev.1.1</div>
   <div>© VERISERVE Inc. All rights reserved. | 社外秘</div>
   <div id="footer-page">p. 1</div>
 </footer>

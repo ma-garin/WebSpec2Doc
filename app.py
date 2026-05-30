@@ -393,6 +393,13 @@ _HTML = """<!DOCTYPE html>
     .ov-screens td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
     .ov-screens tr:hover td { background: var(--surface-soft); }
     .ov-screens .num { font-variant-numeric: tabular-nums; }
+    .ov-screens td.num, .ov-screens th { white-space: nowrap; }
+    .tl-table input[type=radio] { accent-color: var(--primary); width: 15px; height: 15px; }
+    .tl-table th { text-align: left; }
+    .tl-latest { display: inline-block; padding: 0 6px; border-radius: 4px; background: var(--ok-bg); color: var(--ok); font-size: 11px; font-weight: 800; border: 1px solid var(--ok-border); }
+    .tl-diff-frame { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; height: 60vh; background: var(--surface); }
+    .tl-diff-frame iframe { width: 100%; height: 100%; border: 0; display: block; }
+    .tl-diff-frame .hero-msg { height: 100%; }
     .r-shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
     .r-shots a { display: block; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
     .r-shots figure { margin: 0; }
@@ -654,7 +661,7 @@ _HTML = """<!DOCTYPE html>
                 <button type="button" role="tab" aria-selected="true" class="result-tab is-active" data-tab="overview">概要</button>
                 <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="matrix">入力項目・テスト条件</button>
                 <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="report">画面別仕様</button>
-                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="diff" id="result-tab-diff" style="display:none">差分</button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="history">履歴・差分</button>
                 <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="export">エクスポート</button>
               </div>
               <div class="result-bar-actions">
@@ -1192,7 +1199,6 @@ async function showResults(domain) {
   document.getElementById('r-fields').textContent = s.fields || 0;
   document.getElementById('r-required').textContent = required;
   document.getElementById('r-buttons').textContent = s.buttons || 0;
-  document.getElementById('result-tab-diff').style.display = (data.files && data.files.diff) ? '' : 'none';
   setHeader(['ダッシュボード', domain], domain);
 
   executionView.classList.add('hidden'); resultPanel.classList.remove('hidden');
@@ -1210,14 +1216,51 @@ function selectResultTab(tab) {
   if (tab === 'overview') renderOverview();
   else if (tab === 'matrix') renderMatrix();
   else if (tab === 'report') renderReport();
-  else if (tab === 'diff') renderDiff();
+  else if (tab === 'history') renderTimeline();
   else if (tab === 'export') renderExport();
 }
 
-function renderDiff() {
-  const diff = (resultData.files || {}).diff;
-  if (!diff) { resultHero.innerHTML = '<div class="hero-msg">差分レポートはありません。出力設定で「前回との差分を出力」を有効にし、2回目以降の実行で生成されます。</div>'; return; }
-  resultHero.innerHTML = `<iframe src="/preview?path=${encodeURIComponent(diff)}" title="差分レポート"></iframe>`;
+// ---- 履歴・差分（クロール履歴タイムライン＋任意2点の仕様ドリフト比較）----
+let timelineDomain = '';
+async function renderTimeline() {
+  const domain = document.getElementById('r-domain').textContent.trim();
+  timelineDomain = domain;
+  resultHero.innerHTML = '<div class="hero-msg">クロール履歴を読み込み中…</div>';
+  let snaps = [];
+  try {
+    const data = await fetch('/api/snapshots?domain=' + encodeURIComponent(domain)).then(r => r.json());
+    snaps = data.snapshots || [];
+  } catch (e) {}
+  if (snaps.length < 2) {
+    resultHero.innerHTML = '<div class="hero-pad"><div class="hero-section-title">クロール履歴</div>' +
+      '<p style="color:var(--text-muted);font-size:13px">履歴が' + snaps.length + '件です。<strong>再クロール</strong>すると、前回との仕様ドリフト（追加/削除された画面・変更されたフォーム）を時系列で比較できます。</p></div>';
+    return;
+  }
+  // 既定: to=最新(0), from=ひとつ前(1)
+  const rows = snaps.map((s, i) => `
+    <tr>
+      <td style="text-align:center"><input type="radio" name="snap-from" value="${escHtml(s.id)}" ${i === 1 ? 'checked' : ''}></td>
+      <td style="text-align:center"><input type="radio" name="snap-to" value="${escHtml(s.id)}" ${i === 0 ? 'checked' : ''}></td>
+      <td>${escHtml(s.label)}${i === 0 ? ' <span class="tl-latest">最新</span>' : ''}</td>
+      <td class="num">${s.screens}</td><td class="num">${s.forms}</td><td class="num">${s.fields}</td>
+    </tr>`).join('');
+  resultHero.innerHTML = '<div class="hero-pad">' +
+    '<div class="hero-section-title">クロール履歴（' + snaps.length + '件）</div>' +
+    '<p style="color:var(--text-muted);font-size:13px;margin-bottom:10px">比較する2時点を選び、仕様ドリフトを確認します（比較元＝古い／比較先＝新しい）。</p>' +
+    '<table class="ov-screens tl-table"><thead><tr><th>比較元</th><th>比較先</th><th>クロール日時</th><th>画面</th><th>フォーム</th><th>入力項目</th></tr></thead><tbody>' +
+    rows + '</tbody></table>' +
+    '<div style="margin:12px 0"><button type="button" class="btn-primary" id="tl-diff-btn">この2時点の差分を表示</button></div>' +
+    '<div class="tl-diff-frame" id="tl-diff"></div></div>';
+  document.getElementById('tl-diff-btn').addEventListener('click', showTimelineDiff);
+  showTimelineDiff();
+}
+function showTimelineDiff() {
+  const from = (document.querySelector('input[name=snap-from]:checked') || {}).value;
+  const to = (document.querySelector('input[name=snap-to]:checked') || {}).value;
+  const box = document.getElementById('tl-diff');
+  if (!from || !to) { box.innerHTML = '<div class="hero-msg">2時点を選択してください。</div>'; return; }
+  if (from === to) { box.innerHTML = '<div class="hero-msg">異なる2時点を選択してください。</div>'; return; }
+  box.innerHTML = `<iframe src="/api/snapshot-diff?domain=${encodeURIComponent(timelineDomain)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}" title="仕様ドリフト差分"></iframe>`;
 }
 
 function allFields(rj) {
@@ -1674,6 +1717,72 @@ def api_result() -> dict | tuple[dict, int]:
         },
         "screenshots": [str(s.resolve()) for s in shots],
     }
+
+
+def _fmt_snap_ts(stem: str) -> str:
+    try:
+        return datetime.strptime(stem, "%Y%m%d-%H%M%S").strftime("%Y-%m-%d %H:%M")
+    except ValueError:
+        return stem
+
+
+@app.get("/api/snapshots")
+def api_snapshots() -> dict | tuple[dict, int]:
+    """サイトのクロール履歴（スナップショット）一覧。新しい順。"""
+    domain = request.args.get("domain", "")
+    if not _valid_domain(domain):
+        return {"error": "not found"}, 404
+    snaps_dir = OUTPUT_DIR / domain / "snapshots"
+    items: list[dict] = []
+    if snaps_dir.is_dir():
+        for f in sorted(snaps_dir.glob("*.json"), reverse=True):
+            try:
+                pages = json.loads(f.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            forms = sum(len(p.get("forms", [])) for p in pages)
+            fields = sum(len(fm.get("fields", [])) for p in pages for fm in p.get("forms", []))
+            items.append({
+                "id": f.stem,
+                "label": _fmt_snap_ts(f.stem),
+                "screens": len(pages),
+                "forms": forms,
+                "fields": fields,
+            })
+    return {"snapshots": items}
+
+
+@app.get("/api/snapshot-diff")
+def api_snapshot_diff() -> Response:
+    """2つのスナップショット間の仕様ドリフト差分をHTMLで返す。"""
+    domain = request.args.get("domain", "")
+    if not _valid_domain(domain):
+        return Response(status=404)
+    snaps_dir = OUTPUT_DIR / domain / "snapshots"
+    from_path = _safe_output_path(str(snaps_dir / (request.args.get("from", "") + ".json")))
+    to_path = _safe_output_path(str(snaps_dir / (request.args.get("to", "") + ".json")))
+    if from_path is None or to_path is None:
+        return Response("<p style='font-family:sans-serif;padding:16px'>指定されたスナップショットが見つかりません。</p>", mimetype="text/html")
+    if str(Path("src").resolve()) not in sys.path:
+        sys.path.insert(0, str(Path("src").resolve()))
+    try:
+        from diff.differ import compute_diff
+        from diff.snapshot import load_snapshot
+        from generator.diff_reporter import generate_diff_report
+    except ImportError:
+        return Response(status=500)
+    old_pages = load_snapshot(from_path)
+    new_pages = load_snapshot(to_path)
+    diff = compute_diff(old_pages, new_pages)
+    report_html = generate_diff_report(
+        diff=diff,
+        old_label=_fmt_snap_ts(from_path.stem),
+        new_label=_fmt_snap_ts(to_path.stem),
+        target_url=f"https://{domain}/",
+    )
+    resp = Response(report_html, mimetype="text/html")
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
 
 
 @app.get("/api/history")

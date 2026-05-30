@@ -12,7 +12,12 @@ from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
+from dataclasses import asdict
+
 from flask import Flask, Response, redirect, request, send_file, url_for
+
+sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
+from registry.site_registry import SiteConfig, load_site, save_site  # noqa: E402
 
 app = Flask(__name__)
 
@@ -887,21 +892,32 @@ document.getElementById('reload-history').addEventListener('click', loadHistory)
 // ---- 再クロール（ドリフト検知）: 既知のサイトを同じ画面構成で取り直す ----
 const FILE_TO_FMT = { html: 'html', pdf: 'pdf', excel: 'excel', screens_md: 'md', json: 'json' };
 async function recrawlSite(domain) {
-  let urls = [], fmts = [];
-  try {
-    const data = await fetch('/api/result?domain=' + encodeURIComponent(domain)).then(r => r.json());
-    fmts = Object.keys(FILE_TO_FMT).filter(k => (data.files || {})[k]).map(k => FILE_TO_FMT[k]);
-    if (data.files && data.files.json) {
-      const rj = await fetch('/preview?path=' + encodeURIComponent(data.files.json)).then(r => r.json());
-      urls = (rj.screens || []).map(s => s.url).filter(Boolean);
-    }
-  } catch (e) {}
+  // 保存済み site.json があれば前回設定を忠実に再現。無ければ旧データ用フォールバック。
+  let site = null;
+  try { site = (await fetch('/api/site?domain=' + encodeURIComponent(domain)).then(r => r.json())).site; } catch (e) {}
+  let urls = [], depth = '2', maxPages = '300', fmts = [], auth = getSettings().auth || '';
+  if (site) {
+    urls = site.urls || [];
+    depth = String(site.depth || 2);
+    maxPages = String(site.max_pages || 300);
+    fmts = site.formats || [];
+    auth = site.auth_path || auth;
+  } else {
+    try {
+      const data = await fetch('/api/result?domain=' + encodeURIComponent(domain)).then(r => r.json());
+      fmts = Object.keys(FILE_TO_FMT).filter(k => (data.files || {})[k]).map(k => FILE_TO_FMT[k]);
+      if (data.files && data.files.json) {
+        const rj = await fetch('/preview?path=' + encodeURIComponent(data.files.json)).then(r => r.json());
+        urls = (rj.screens || []).map(s => s.url).filter(Boolean);
+      }
+    } catch (e) {}
+  }
   if (!urls.length) urls = ['https://' + domain + '/'];
   if (!fmts.length) fmts = ['html', 'md'];
   if (!fmts.includes('json')) fmts.push('json');
   const body = new URLSearchParams({
-    urls: urls.join(','), depth: '2', max_pages: '300',
-    format: fmts.join(','), compare: 'true', auth: getSettings().auth || '',
+    urls: urls.join(','), depth: depth, max_pages: maxPages,
+    format: fmts.join(','), compare: 'true', auth: auth,
   });
   switchView('generate');
   runWith(body.toString(), domain, domain, urls.length);
@@ -1099,6 +1115,7 @@ document.getElementById('form').addEventListener('submit', (e) => {
     format: fmts.join(','),
     compare: document.getElementById('compare').checked ? 'true' : 'false',
     auth: document.getElementById('auth-path').value.trim() || getSettings().auth || '',
+    crawl_mode: (document.querySelector('input[name="crawl-mode"]:checked') || {}).value || '',
   });
   const label = urls.length > 1 ? `${urls[0]} ほか ${urls.length - 1}件` : urls[0];
   runWith(body.toString(), domainOf(urls[0]), label, urls.length);
@@ -1546,6 +1563,37 @@ def api_discover() -> Response | tuple[dict, int] | dict:
     return {"pages": data.get("pages", [])}
 
 
+def _save_site_config(
+    domain: str, urls: str, crawl_mode: str, depth: str, max_pages: str,
+    formats: list[str], auth: str,
+) -> None:
+    """クロール成功時に再クロール用の設定を site.json へ保存する。"""
+    try:
+        save_site(
+            SiteConfig(
+                domain=domain,
+                urls=tuple(u for u in urls.split(",") if u),
+                crawl_mode=crawl_mode,
+                depth=int(depth),
+                max_pages=int(max_pages),
+                formats=tuple(formats),
+                auth_path=auth,
+            ),
+            OUTPUT_DIR,
+        )
+    except (OSError, ValueError) as exc:
+        app.logger.warning("site.json の保存に失敗しました: %s (%s)", domain, exc)
+
+
+@app.get("/api/site")
+def api_site() -> dict:
+    domain = request.args.get("domain", "").strip()
+    if not domain or not _valid_domain(domain):
+        return {"site": None}
+    config = load_site(domain, OUTPUT_DIR)
+    return {"site": asdict(config) if config else None}
+
+
 @app.post("/run")
 def run() -> Response:
     urls = request.form.get("urls", "").strip()
@@ -1558,6 +1606,7 @@ def run() -> Response:
     fmt = ",".join(selected)
     compare = request.form.get("compare", "false") == "true"
     auth = _safe_auth_path(request.form.get("auth", "").strip())
+    crawl_mode = request.form.get("crawl_mode", "").strip()
     domain = _domain_of(urls.split(",")[0]) if urls else ""
 
     run_id = uuid.uuid4().hex
@@ -1589,6 +1638,8 @@ def run() -> Response:
             if pdf.exists():
                 yield f"PDF_PATH:{pdf.resolve()}\n"
             yield f"SUMMARY:{json.dumps(_summary_for_domain(domain))}\n"
+            if proc.returncode == 0 and domain:
+                _save_site_config(domain, urls, crawl_mode, depth, max_pages, selected, auth)
             if proc.returncode != 0:
                 yield "\nエラーが発生しました。\n"
         finally:

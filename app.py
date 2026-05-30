@@ -16,11 +16,61 @@ from flask import Flask, Response, redirect, request, send_file, url_for
 
 app = Flask(__name__)
 
+
+@app.before_request
+def _csrf_guard() -> Response | None:
+    """状態変更(POST)は同一オリジンのみ許可。ブラウザに開かれた悪意ページからの
+    localhost への cross-site POST を防ぐ簡易CSRF対策。"""
+    if request.method != "POST":
+        return None
+    origin = request.headers.get("Origin") or request.headers.get("Referer") or ""
+    if origin and request.host not in origin:
+        return Response(status=403)
+    return None
+
+
 OUTPUT_DIR = Path("output")
 SCREEN_ROW_RE = re.compile(r"^\|\s*\d+\s*\|")
 ENV_FILE = Path(".env")
 DEFAULT_OPENAI_MODEL = "gpt-5.4-mini"
 DISCOVER_TIMEOUT_SEC = 180
+
+# 入力検証（多層防御: クライアントだけでなくサーバでも検証する）
+ALLOWED_FORMATS = ("md", "html", "excel", "pdf", "json")
+DOMAIN_RE = re.compile(r"^[A-Za-z0-9._:-]{1,253}$")
+ENV_KEY_RE = re.compile(r"^[A-Z_][A-Z0-9_]*$")
+MAX_DEPTH = 5
+MAX_PAGES_LIMIT = 300
+
+
+def _clean_int(value: str, default: int, lo: int, hi: int) -> int:
+    try:
+        return max(lo, min(hi, int(value)))
+    except (TypeError, ValueError):
+        return default
+
+
+def _clean_formats(raw: str) -> list[str]:
+    picked = [f.strip().lower() for f in raw.split(",") if f.strip()]
+    return [f for f in picked if f in ALLOWED_FORMATS]
+
+
+def _valid_domain(domain: str) -> bool:
+    return bool(DOMAIN_RE.match(domain))
+
+
+def _safe_auth_path(raw: str) -> str:
+    """auth.json はプロジェクト配下のファイルのみ許可（任意ファイル読み取りを防ぐ）。"""
+    if not raw:
+        return ""
+    try:
+        target = Path(raw).resolve()
+    except (OSError, ValueError, RuntimeError):
+        return ""
+    base = Path.cwd().resolve()
+    if (target == base or base in target.parents) and target.is_file():
+        return str(target)
+    return ""
 
 # 実行中クロールのサブプロセス（run_id → Popen）。停止ボタンから kill するために保持。
 _RUNNING_PROCS: dict[str, subprocess.Popen] = {}
@@ -66,6 +116,8 @@ _HTML = """<!DOCTYPE html>
       --info:         #0F62FE;
       --info-bg:      #EFF4FF;
       --info-border:  #C7D7FE;
+      --primary-pale: #DCE7FB;
+      --accent:       #6E56CF;
       --focus-ring:   rgba(15, 98, 254, .16);
       --radius:       6px;
       --radius-lg:    8px;
@@ -109,7 +161,8 @@ _HTML = """<!DOCTYPE html>
     .app-nav-item:hover { background: var(--surface-subtle); color: var(--text); }
     .app-nav-item.is-active { background: var(--info-bg); color: var(--primary-dark); }
     .app-nav-item.is-active svg { opacity: 1; }
-    .app-nav-group { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--text-subtle); padding: 10px 10px 2px; }
+    .app-nav-group { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--text-muted); padding: 10px 10px 2px; }
+    .result-collapsible > summary { font-size: 13px; font-weight: 700; color: var(--text-muted); cursor: pointer; padding: 2px 0; }
     .app-sidebar-section { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--text-subtle); padding: 0 10px; }
     .app-sidebar-foot { font-size: 11.5px; color: var(--text-muted); line-height: 1.6; padding: 0 10px; }
     .app-sidebar-foot a { color: var(--text-muted); }
@@ -262,19 +315,19 @@ _HTML = """<!DOCTYPE html>
     .execution-title { font-size: 17px; font-weight: 700; line-height: 1.2; }
     .execution-message { font-size: 12px; color: var(--text-muted); margin: 0; }
     .execution-elapsed { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; flex-shrink: 0; }
-    .execution-progress { width: 100%; height: 6px; border-radius: 2px; background: #D0E2FF; overflow: hidden; }
+    .execution-progress { width: 100%; height: 6px; border-radius: 2px; background: var(--primary-pale); overflow: hidden; }
     .execution-progress-bar { height: 100%; width: 4%; border-radius: inherit; background: linear-gradient(90deg,#0F62FE 0%,#4589FF 55%,#78A9FF 100%); transition: width .45s ease; position: relative; overflow: hidden; }
     .execution-progress-bar::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,.42) 50%, transparent 100%); animation: shimmer 1.4s linear infinite; }
     .execution-steps { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; }
     .execution-step { border: 1px solid var(--border); border-radius: 4px; padding: 5px 8px; font-size: 11px; color: var(--text-muted); background: var(--surface-soft); text-align: center; transition: border-color .2s, background .2s, color .2s; }
     .execution-step.is-active { border-color: var(--info-border); background: var(--info-bg); color: var(--primary-dark); }
     .execution-step.is-complete { border-color: #bdddb0; background: var(--ok-bg); color: var(--ok); }
-    .execution-preview-frame { flex: 1; min-height: 0; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); background: #D0E2FF; display: flex; align-items: center; justify-content: center; }
-    .execution-preview-image { display: none; width: 100%; height: 100%; object-fit: contain; background: #EDF5FF; }
+    .execution-preview-frame { flex: 1; min-height: 0; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); background: var(--primary-pale); display: flex; align-items: center; justify-content: center; }
+    .execution-preview-image { display: none; width: 100%; height: 100%; object-fit: contain; background: var(--info-bg); }
     .execution-preview-image.show { display: block; }
     .execution-preview-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: var(--text-muted); text-align: center; padding: 20px; }
     .execution-preview-placeholder.hidden { display: none; }
-    .execution-log { flex-shrink: 0; background: #1e1e1e; color: #d4d4d4; padding: 12px; border-radius: 6px; font-size: .78rem; white-space: pre-wrap; max-height: 130px; overflow-y: auto; }
+    .execution-log { flex-shrink: 0; background: #1e1e1e; color: #d4d4d4; padding: 12px; border-radius: 6px; font-size: .78rem; white-space: pre-wrap; max-height: 220px; overflow-y: auto; }
     .execution-error-card { flex-shrink: 0; border: 1px solid var(--critical-border); background: var(--critical-bg); color: var(--critical); border-radius: var(--radius); padding: 12px 16px; font-size: 14px; font-weight: 700; }
     .execution-error-card.hidden { display: none; }
     .execution-bottombar { flex-shrink: 0; background: rgba(255,255,255,.96); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 16px; display: flex; align-items: center; gap: 12px; }
@@ -310,13 +363,13 @@ _HTML = """<!DOCTYPE html>
     .hero-pad { padding: 16px; }
     .hero-section-title { font-size: 14px; font-weight: 800; color: var(--primary-dark); margin: 4px 0 10px; }
     /* マトリクス */
-    .matrix-toolbar { position: sticky; top: 0; z-index: 2; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 12px 14px; background: var(--surface); border-bottom: 1px solid var(--border); }
+    .matrix-toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 12px 14px; background: var(--surface); border-bottom: 1px solid var(--border); }
     .matrix-toolbar input[type=search], .matrix-toolbar select { height: 34px; border: 1px solid var(--border); border-radius: 4px; padding: 0 10px; font-size: 13px; background: var(--surface-soft); color: var(--text); outline: none; }
     .matrix-toolbar input[type=search] { min-width: 200px; }
     .matrix-toolbar label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-muted); font-weight: 700; }
     .matrix-toolbar .matrix-count { margin-left: auto; font-size: 12px; color: var(--text-muted); font-weight: 700; }
     table.matrix { width: 100%; border-collapse: collapse; font-size: .8rem; }
-    table.matrix th { position: sticky; top: 58px; background: var(--primary); color: #fff; text-align: left; padding: 8px 10px; white-space: nowrap; z-index: 2; }
+    table.matrix th { position: sticky; top: 0; background: var(--primary); color: #fff; text-align: left; padding: 8px 10px; white-space: nowrap; z-index: 2; }
     table.matrix td { padding: 8px 10px; border-bottom: 1px solid #eef; vertical-align: top; background: var(--surface); }
     table.matrix tr:nth-child(even) td { background: var(--surface-soft); }
     /* 画面列を左固定 */
@@ -324,7 +377,7 @@ _HTML = """<!DOCTYPE html>
     table.matrix td:first-child { position: sticky; left: 0; z-index: 1; box-shadow: 1px 0 0 var(--border); }
     table.matrix .c-screen { font-weight: 700; color: var(--primary-dark); white-space: nowrap; }
     table.matrix .c-req { color: var(--critical); font-weight: 700; }
-    table.matrix .c-loc { font-family: ui-monospace, monospace; font-size: .72rem; color: #5a3d8a; word-break: break-all; }
+    table.matrix .c-loc { font-family: ui-monospace, monospace; font-size: .72rem; color: var(--accent); overflow-wrap: anywhere; min-width: 130px; }
     table.matrix .c-cond { white-space: normal; }
     .cond-pill { display: inline-block; margin: 1px 2px 1px 0; padding: 1px 6px; border-radius: 4px; font-size: .72rem; border: 1px solid; line-height: 1.5; }
     .cc-req { background: var(--critical-bg); border-color: var(--critical-border); color: #a2191f; }
@@ -597,18 +650,18 @@ _HTML = """<!DOCTYPE html>
               </div>
             </div>
             <div class="result-bar">
-              <div class="result-tabs">
-                <button type="button" class="result-tab is-active" data-tab="overview">概要</button>
-                <button type="button" class="result-tab" data-tab="matrix">入力項目・テスト条件</button>
-                <button type="button" class="result-tab" data-tab="report">画面別仕様</button>
-                <button type="button" class="result-tab" data-tab="diff" id="result-tab-diff" style="display:none">差分</button>
-                <button type="button" class="result-tab" data-tab="export">エクスポート</button>
+              <div class="result-tabs" role="tablist" aria-label="結果ビュー">
+                <button type="button" role="tab" aria-selected="true" class="result-tab is-active" data-tab="overview">概要</button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="matrix">入力項目・テスト条件</button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="report">画面別仕様</button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="diff" id="result-tab-diff" style="display:none">差分</button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="export">エクスポート</button>
               </div>
               <div class="result-bar-actions">
                 <button type="button" id="r-new-btn" class="btn-outline-sm">ダッシュボードへ</button>
               </div>
             </div>
-            <div class="result-hero" id="result-hero"></div>
+            <div class="result-hero" id="result-hero" role="tabpanel" tabindex="0"></div>
           </div>
         </section>
 
@@ -1117,8 +1170,11 @@ async function showResults(domain) {
     data = await res.json();
     if (!res.ok) throw new Error(data.error || '結果の取得に失敗しました');
   } catch (e) {
-    execActions.classList.remove('hidden');
-    execTitle.textContent = '結果の取得に失敗しました'; execError.textContent = e.message; execError.classList.remove('hidden');
+    // 実行ビューが隠れている（履歴から開いた）場合は結果領域にエラーを表示
+    executionView.classList.add('hidden'); resultPanel.classList.remove('hidden');
+    appContent.classList.add('is-executing');
+    setHeader(['ダッシュボード', domain], domain);
+    resultHero.innerHTML = `<div class="hero-msg"><p>結果の取得に失敗しました。</p><p style="font-size:13px;color:var(--text-muted)">${escHtml(e.message)}</p></div>`;
     return;
   }
   resultData = data;
@@ -1146,7 +1202,11 @@ async function showResults(domain) {
 document.querySelectorAll('.result-tab').forEach(t => t.addEventListener('click', () => selectResultTab(t.dataset.tab)));
 function selectResultTab(tab) {
   activeResultTab = tab;
-  document.querySelectorAll('.result-tab').forEach(t => t.classList.toggle('is-active', t.dataset.tab === tab));
+  document.querySelectorAll('.result-tab').forEach(t => {
+    const on = t.dataset.tab === tab;
+    t.classList.toggle('is-active', on);
+    t.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
   if (tab === 'overview') renderOverview();
   else if (tab === 'matrix') renderMatrix();
   else if (tab === 'report') renderReport();
@@ -1189,7 +1249,7 @@ function defaultOptionsText(f) {
 function renderOverview() {
   if (!reportJson) {
     const shots = (resultData.screenshots || []).map(p =>
-      `<a href="/preview?path=${encodeURIComponent(p)}" target="_blank"><figure><img src="/preview?path=${encodeURIComponent(p)}" loading="lazy" alt=""><figcaption>${escHtml(p.split('/').pop())}</figcaption></figure></a>`).join('');
+      `<a href="/preview?path=${encodeURIComponent(p)}" target="_blank"><figure><img src="/preview?path=${encodeURIComponent(p)}" loading="lazy" alt="${escHtml(p.split('/').pop())}"><figcaption>${escHtml(p.split('/').pop())}</figcaption></figure></a>`).join('');
     resultHero.innerHTML = '<div class="hero-pad">' +
       '<p style="color:var(--text-muted);font-size:13px;margin-bottom:12px">このサイトは旧バージョンで生成されたため画面別の構造化データがありません。「<strong>再クロール</strong>」で最新のテスト条件マトリクスを生成できます。詳細は「画面別仕様」タブを参照してください。</p>' +
       (shots ? '<div class="hero-section-title">スクリーンショット</div><div class="r-shots">' + shots + '</div>' : '') +
@@ -1208,7 +1268,7 @@ function renderOverview() {
   // 現在のクロールに含まれる画面IDのスクショだけ表示（過去の残骸を除外）
   const pageIds = new Set(screens.map(sc => sc.page_id));
   const shots = (resultData.screenshots || []).filter(p => pageIds.has(p.split('/').pop().replace(/\\.png$/, ''))).map(p =>
-    `<a href="/preview?path=${encodeURIComponent(p)}" target="_blank"><figure><img src="/preview?path=${encodeURIComponent(p)}" loading="lazy" alt=""><figcaption>${escHtml(p.split('/').pop())}</figcaption></figure></a>`).join('');
+    `<a href="/preview?path=${encodeURIComponent(p)}" target="_blank"><figure><img src="/preview?path=${encodeURIComponent(p)}" loading="lazy" alt="${escHtml(p.split('/').pop())}"><figcaption>${escHtml(p.split('/').pop())}</figcaption></figure></a>`).join('');
   resultHero.innerHTML = '<div class="hero-pad">' +
     `<p style="color:var(--text-muted);font-size:13px;margin-bottom:12px">対象 ${escHtml(meta.target_url || '')} ／ クロール: 深さ${meta.crawl_depth ?? '-'} ・最大${meta.max_pages ?? '-'}ページ ／ ${escHtml(meta.crawled_at || '')}</p>` +
     '<div class="hero-section-title">画面インベントリ</div>' +
@@ -1237,10 +1297,11 @@ function renderMatrix() {
     '<span class="cond-pill cc-other">その他</span>' +
     '</span>' +
     '</div><div id="mx-table-wrap"></div>';
-  const draw = () => drawMatrix();
-  document.getElementById('mx-screen').addEventListener('change', draw);
-  document.getElementById('mx-search').addEventListener('input', draw);
-  document.getElementById('mx-required').addEventListener('change', draw);
+  let t = null;
+  const debounced = () => { clearTimeout(t); t = setTimeout(drawMatrix, 150); };
+  document.getElementById('mx-screen').addEventListener('change', drawMatrix);
+  document.getElementById('mx-search').addEventListener('input', debounced);
+  document.getElementById('mx-required').addEventListener('change', drawMatrix);
   document.getElementById('mx-csv').addEventListener('click', exportMatrixCsv);
   drawMatrix();
 }
@@ -1297,7 +1358,9 @@ function exportMatrixCsv() {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = 'test_conditions.csv';
+  document.body.appendChild(a);
   a.click();
+  document.body.removeChild(a);
   URL.revokeObjectURL(a.href);
 }
 
@@ -1387,9 +1450,9 @@ def _domain_of(url: str) -> str:
 @app.post("/api/discover")
 def api_discover() -> Response | tuple[dict, int] | dict:
     url = request.form.get("url", "").strip()
-    depth = request.form.get("depth", "2")
-    max_pages = request.form.get("max_pages", "30")
-    auth = request.form.get("auth", "").strip()
+    depth = str(_clean_int(request.form.get("depth", "2"), 2, 1, MAX_DEPTH))
+    max_pages = str(_clean_int(request.form.get("max_pages", "30"), 30, 1, MAX_PAGES_LIMIT))
+    auth = _safe_auth_path(request.form.get("auth", "").strip())
     if not url:
         return {"pages": [], "error": "URLを入力してください"}, 400
     cmd = [
@@ -1412,16 +1475,15 @@ def api_discover() -> Response | tuple[dict, int] | dict:
 @app.post("/run")
 def run() -> Response:
     urls = request.form.get("urls", "").strip()
-    depth = request.form.get("depth", "2")
-    max_pages = request.form.get("max_pages", "30")
-    fmt = request.form.get("format", "md,html")
-    # report.json は結果ページ（概要・マトリクス）のデータ源なので常に生成する
-    selected = [f.strip() for f in fmt.split(",") if f.strip()]
+    depth = str(_clean_int(request.form.get("depth", "2"), 2, 1, MAX_DEPTH))
+    max_pages = str(_clean_int(request.form.get("max_pages", "30"), 30, 1, MAX_PAGES_LIMIT))
+    # 出力形式は許可リストで検証。report.json は結果ページのデータ源なので常に生成する
+    selected = _clean_formats(request.form.get("format", "md,html")) or ["md", "html"]
     if "json" not in selected:
         selected.append("json")
     fmt = ",".join(selected)
     compare = request.form.get("compare", "false") == "true"
-    auth = request.form.get("auth", "").strip()
+    auth = _safe_auth_path(request.form.get("auth", "").strip())
     domain = _domain_of(urls.split(",")[0]) if urls else ""
 
     run_id = uuid.uuid4().hex
@@ -1474,8 +1536,10 @@ def api_cancel() -> dict:
 @app.get("/api/live-screenshot")
 def live_screenshot() -> Response:
     domain = request.args.get("domain", "")
+    if not _valid_domain(domain):
+        return Response(status=404)
     shots_dir = OUTPUT_DIR / domain / "screenshots"
-    if not domain or not shots_dir.is_dir():
+    if not shots_dir.is_dir():
         return Response(status=404)
     pngs = sorted(shots_dir.glob("*.png"), key=lambda p: p.stat().st_mtime, reverse=True)
     if not pngs:
@@ -1564,8 +1628,10 @@ def download() -> Response:
 @app.get("/download-zip")
 def download_zip() -> Response:
     domain = request.args.get("domain", "")
+    if not _valid_domain(domain):
+        return Response(status=404)
     base = (OUTPUT_DIR / domain).resolve()
-    if not domain or OUTPUT_DIR.resolve() not in base.parents or not base.is_dir():
+    if OUTPUT_DIR.resolve() not in base.parents or not base.is_dir():
         return Response(status=404)
     import io
     import zipfile
@@ -1582,8 +1648,10 @@ def download_zip() -> Response:
 @app.get("/api/result")
 def api_result() -> dict | tuple[dict, int]:
     domain = request.args.get("domain", "")
+    if not _valid_domain(domain):
+        return {"error": "not found"}, 404
     domain_dir = OUTPUT_DIR / domain
-    if not domain or not domain_dir.is_dir():
+    if not domain_dir.is_dir():
         return {"error": "not found"}, 404
 
     def path_of(name: str) -> str:
@@ -1656,6 +1724,10 @@ def _read_env() -> dict[str, str]:
 
 
 def _write_env(updates: dict[str, str]) -> None:
+    # キー名を検証して .env への行インジェクションを防ぐ
+    updates = {k: v for k, v in updates.items() if ENV_KEY_RE.match(k)}
+    if not updates:
+        return
     lines: list[str] = []
     seen: set[str] = set()
     if ENV_FILE.exists():
@@ -1731,4 +1803,4 @@ def _open_browser() -> None:
 
 if __name__ == "__main__":
     threading.Thread(target=_open_browser, daemon=True).start()
-    app.run(port=PORT, debug=False)
+    app.run(host="127.0.0.1", port=PORT, debug=False)

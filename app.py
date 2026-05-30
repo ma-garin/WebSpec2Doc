@@ -535,11 +535,11 @@ _HTML = """<!DOCTYPE html>
                     <p class="app-sidebar-section" style="padding:0 0 10px">URLの指定方法</p>
                     <div class="crawl-mode-group">
                       <label class="crawl-mode-option">
-                        <input type="radio" name="crawl-mode" value="single" checked />
+                        <input type="radio" name="crawl-mode" value="single" />
                         <span class="crawl-mode-label"><strong>単体ページで生成</strong><span class="crawl-mode-desc">入力した1ページだけをドキュメント化します</span></span>
                       </label>
                       <label class="crawl-mode-option">
-                        <input type="radio" name="crawl-mode" value="crawl" />
+                        <input type="radio" name="crawl-mode" value="crawl" checked />
                         <span class="crawl-mode-label"><strong>オートクローリング</strong><span class="crawl-mode-desc">画面リストを取得して、選択したページだけをドキュメント化します</span></span>
                       </label>
                       <div class="crawl-discovery-section" id="crawl-discovery-section" style="display:none">
@@ -967,12 +967,14 @@ function showStep(n) {
 }
 function selectedMode() { return (document.querySelector('input[name=crawl-mode]:checked') || {}).value || 'single'; }
 
-document.querySelectorAll('input[name=crawl-mode]').forEach(r => r.addEventListener('change', () => {
+function applyCrawlMode() {
   const m = selectedMode();
   crawlDiscoverySection.style.display = m === 'crawl' ? '' : 'none';
   manualUrlSection.style.display = m === 'manual' ? '' : 'none';
   updateTargetPreview();
-}));
+}
+document.querySelectorAll('input[name=crawl-mode]').forEach(r => r.addEventListener('change', applyCrawlMode));
+applyCrawlMode();  // 既定（オートクローリング）をロード時に反映
 urlInput.addEventListener('input', () => { clearDiscovered(); updateTargetPreview(); });
 
 document.getElementById('wnext-1').addEventListener('click', () => {

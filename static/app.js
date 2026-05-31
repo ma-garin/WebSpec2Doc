@@ -144,7 +144,6 @@ let wizardStep = 1;
 let discovered = [];
 const urlInput = document.getElementById('url-input');
 const crawlDiscoverySection = document.getElementById('crawl-discovery-section');
-const manualUrlSection = document.getElementById('manual-url-section');
 const targetPreview = document.getElementById('target-preview');
 const targetPreviewList = document.getElementById('target-preview-list');
 
@@ -158,23 +157,13 @@ function showStep(n) {
   document.getElementById('wline-12').classList.toggle('is-done', n > 1);
   wizardStep = n;
 }
-function selectedMode() { return (document.querySelector('input[name=crawl-mode]:checked') || {}).value || 'single'; }
-
-function applyCrawlMode() {
-  const m = selectedMode();
-  crawlDiscoverySection.style.display = m === 'crawl' ? '' : 'none';
-  manualUrlSection.style.display = m === 'manual' ? '' : 'none';
-  updateTargetPreview();
-}
-document.querySelectorAll('input[name=crawl-mode]').forEach(r => r.addEventListener('change', applyCrawlMode));
-applyCrawlMode();  // 既定（オートクローリング）をロード時に反映
 urlInput.addEventListener('input', () => { clearDiscovered(); updateTargetPreview(); });
 
 document.getElementById('wnext-1').addEventListener('click', () => {
   const url = urlInput.value.trim();
   if (!url) { setUrlMessage('URL を入力してください', true); return; }
-  if (selectedMode() === 'crawl' && !selectedDiscovered().length) {
-    setUrlMessage(discovered.length ? 'ドキュメント化する画面を1件以上選択してください' : 'オートクローリングでは先に「画面リスト取得」を実行してください', true);
+  if (!selectedDiscovered().length) {
+    setUrlMessage(discovered.length ? 'ドキュメント化する画面を1件以上選択してください' : '先に「画面リスト取得」を実行してください', true);
     return;
   }
   setUrlMessage(''); showStep(2);
@@ -279,35 +268,13 @@ function clearDiscovered() {
 function setAllDiscovered(v) { document.querySelectorAll('.discovered-cb').forEach(cb => { cb.checked = v; }); updateTargetPreview(); }
 function selectedDiscovered() { return [...document.querySelectorAll('.discovered-cb:checked')].map(cb => cb.value); }
 
-// ---- 手動URL追加 ----
-document.getElementById('url-add-btn').addEventListener('click', () => {
-  const item = document.createElement('div');
-  item.className = 'url-list-item';
-  item.innerHTML = '<input type="url" class="url-input url-list-input" placeholder="https://example.com/page" /><button type="button" class="btn-outline-sm url-list-remove">削除</button>';
-  item.querySelector('.url-list-input').addEventListener('input', updateTargetPreview);
-  item.querySelector('.url-list-remove').addEventListener('click', () => { item.remove(); updateTargetPreview(); });
-  document.getElementById('url-list').appendChild(item);
-  updateTargetPreview();
-});
-function manualUrls() {
-  const primary = urlInput.value.trim();
-  const extras = [...document.querySelectorAll('.url-list-input')].map(i => i.value.trim()).filter(Boolean);
-  return [...new Set([primary, ...extras].filter(Boolean))];
-}
-
 // ---- 対象URLの確定 ----
-function buildTargetUrls() {
-  const mode = selectedMode();
-  if (mode === 'single') { const u = urlInput.value.trim(); return u ? [u] : []; }
-  if (mode === 'crawl') return selectedDiscovered();
-  return manualUrls();
-}
+function buildTargetUrls() { return selectedDiscovered(); }
 function updateTargetPreview() {
   const urls = buildTargetUrls();
   targetPreview.querySelector('strong').textContent = `チェック対象 ${urls.length}件`;
   if (!urls.length) {
-    const mode = selectedMode();
-    const msg = mode === 'crawl' && urlInput.value.trim() ? '画面リスト取得を実行してください' : 'URLを入力してください';
+    const msg = urlInput.value.trim() ? '画面リスト取得を実行してください' : 'URLを入力してください';
     targetPreviewList.innerHTML = `<li><span>未確定</span><code>${msg}</code></li>`;
     return;
   }
@@ -368,7 +335,7 @@ document.getElementById('form').addEventListener('submit', (e) => {
     format: fmts.join(','),
     compare: document.getElementById('compare').checked ? 'true' : 'false',
     auth: document.getElementById('auth-path').value.trim() || getSettings().auth || '',
-    crawl_mode: (document.querySelector('input[name="crawl-mode"]:checked') || {}).value || '',
+    crawl_mode: 'crawl',
   });
   const label = urls.length > 1 ? `${urls[0]} ほか ${urls.length - 1}件` : urls[0];
   runWith(body.toString(), domainOf(urls[0]), label, urls.length);

@@ -14,15 +14,15 @@ def _index_html() -> str:
     return appmod.app.test_client().get("/").get_data(as_text=True)
 
 
-def test_autocrawl_is_default_mode() -> None:
-    assert 'value="crawl" checked' in _index_html()
-
-
-def test_single_mode_is_not_default_but_available() -> None:
+def test_crawl_discovery_section_is_always_visible() -> None:
     html = _index_html()
-    assert 'value="single" checked' not in html
-    assert 'value="single"' in html
+    assert 'id="crawl-discovery-section"' in html
+    assert 'style="display:none"' not in html.split('id="crawl-discovery-section"')[1][:50]
 
 
-def test_manual_mode_still_available() -> None:
-    assert 'value="manual"' in _index_html()
+def test_single_mode_is_removed() -> None:
+    assert 'value="single"' not in _index_html()
+
+
+def test_manual_mode_is_removed() -> None:
+    assert 'value="manual"' not in _index_html()

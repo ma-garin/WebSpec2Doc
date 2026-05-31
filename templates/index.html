@@ -68,49 +68,27 @@
                   <p class="input-hint">公開ページはそのまま入力できます。サイト内URLを自動収集するか、入力したURLをまとめてドキュメント化できます。</p>
 
                   <div class="wizard-section" style="margin-top:16px">
-                    <p class="app-sidebar-section" style="padding:0 0 10px">URLの指定方法</p>
-                    <div class="crawl-mode-group">
-                      <label class="crawl-mode-option">
-                        <input type="radio" name="crawl-mode" value="single" />
-                        <span class="crawl-mode-label"><strong>単体ページで生成</strong><span class="crawl-mode-desc">入力した1ページだけをドキュメント化します</span></span>
-                      </label>
-                      <label class="crawl-mode-option">
-                        <input type="radio" name="crawl-mode" value="crawl" checked />
-                        <span class="crawl-mode-label"><strong>オートクローリング</strong><span class="crawl-mode-desc">画面リストを取得して、選択したページだけをドキュメント化します</span></span>
-                      </label>
-                      <div class="crawl-discovery-section" id="crawl-discovery-section" style="display:none">
-                        <div class="crawl-depth-row">
-                          <label for="crawl-depth" class="crawl-depth-label">収集する階層数</label>
-                          <input type="number" id="crawl-depth" class="crawl-depth-input" value="2" min="1" max="5" />
-                          <span class="crawl-depth-unit">階層</span>
-                          <label for="max-pages" class="crawl-depth-label">最大</label>
-                          <input type="number" id="max-pages" class="crawl-depth-input" value="30" min="1" max="300" />
-                          <span class="crawl-depth-unit">ページ</span>
-                          <button type="button" id="discover-btn" class="btn-outline-sm">画面リスト取得</button>
-                        </div>
-                        <div id="discover-loading" class="discover-loading" style="display:none"><span class="spinner"></span><span>画面リストを取得しています…</span></div>
-                        <div id="discover-status" class="discover-status"></div>
-                        <div id="discovered-url-panel" class="discovered-url-panel" style="display:none">
-                          <div class="section-head">
-                            <p class="app-sidebar-section" style="padding:0">取得した画面リスト</p>
-                            <div class="discovered-url-actions">
-                              <button type="button" id="select-all-btn" class="btn-outline-sm">全選択</button>
-                              <button type="button" id="clear-all-btn" class="btn-outline-sm">全解除</button>
-                            </div>
-                          </div>
-                          <div id="discovered-url-list" class="discovered-url-list"></div>
-                        </div>
+                    <div class="crawl-discovery-section" id="crawl-discovery-section">
+                      <div class="crawl-depth-row">
+                        <label for="crawl-depth" class="crawl-depth-label">収集する階層数</label>
+                        <input type="number" id="crawl-depth" class="crawl-depth-input" value="2" min="1" max="5" />
+                        <span class="crawl-depth-unit">階層</span>
+                        <label for="max-pages" class="crawl-depth-label">最大</label>
+                        <input type="number" id="max-pages" class="crawl-depth-input" value="30" min="1" max="300" />
+                        <span class="crawl-depth-unit">ページ</span>
+                        <button type="button" id="discover-btn" class="btn-outline-sm">画面リスト取得</button>
                       </div>
-                      <label class="crawl-mode-option">
-                        <input type="radio" name="crawl-mode" value="manual" />
-                        <span class="crawl-mode-label"><strong>URLを手動で追加</strong><span class="crawl-mode-desc">入力したURLをまとめてドキュメント化します</span></span>
-                      </label>
-                      <div id="manual-url-section" class="manual-url-section" style="display:none">
+                      <div id="discover-loading" class="discover-loading" style="display:none"><span class="spinner"></span><span>画面リストを取得しています…</span></div>
+                      <div id="discover-status" class="discover-status"></div>
+                      <div id="discovered-url-panel" class="discovered-url-panel" style="display:none">
                         <div class="section-head">
-                          <p class="app-sidebar-section" style="padding:0">追加URL（任意）</p>
-                          <button type="button" id="url-add-btn" class="btn-outline-sm">+ URL を追加</button>
+                          <p class="app-sidebar-section" style="padding:0">取得した画面リスト</p>
+                          <div class="discovered-url-actions">
+                            <button type="button" id="select-all-btn" class="btn-outline-sm">全選択</button>
+                            <button type="button" id="clear-all-btn" class="btn-outline-sm">全解除</button>
+                          </div>
                         </div>
-                        <div id="url-list" class="url-list"></div>
+                        <div id="discovered-url-list" class="discovered-url-list"></div>
                       </div>
                     </div>
                   </div>

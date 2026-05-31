@@ -69,7 +69,7 @@ python app.py   # → http://127.0.0.1:8765 が開く
 
 #### 認証が必要なサイト
 
-画面分析でログインが必要な画面を検出すると、ID/PASSWORD の入力フォームが自動的に表示されます。パスワードはセッション確立後に即破棄され、保存されません。
+画面分析でログインが必要な画面を検出すると、画面リストの直下に「要ログイン」バッジとともに ID/PASSWORD 入力フォームが自動表示されます。「ログイン」ボタンを押すと自動ログインして認証後ページを含めた再解析が実行されます。パスワードはセッション確立後に即破棄され、保存されません。
 
 ---
 
@@ -120,7 +120,7 @@ python src/main.py --url https://example.com --auth auth.json
 | 遷移図描画（GUI）| [vis.js](https://visjs.org/) |
 | Excel 出力 | [openpyxl](https://openpyxl.readthedocs.io/) |
 | Web サーバ | [Flask](https://flask.palletsprojects.com/) |
-| テスト | pytest（273 件・カバレッジ 80%+） |
+| テスト | pytest（273 件・カバレッジ 85%+） |
 
 - Python 3.12（3.13 は greenlet ビルド失敗のため非対応）
 - GUI ポート: **8765**（macOS AirPlay との衝突回避）

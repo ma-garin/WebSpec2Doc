@@ -1,4 +1,5 @@
 """サイト追加ウィザードの既定挙動テスト（Flask テストクライアント）"""
+
 from __future__ import annotations
 
 import sys

@@ -83,7 +83,9 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT_DIR, help="出力先")
     parser.add_argument("--llm", action="store_true", help="LLM解析を有効化")
-    parser.add_argument("--format", default=DEFAULT_FORMATS, help="出力形式: md,html,excel,pdf,json")
+    parser.add_argument(
+        "--format", default=DEFAULT_FORMATS, help="出力形式: md,html,excel,pdf,json"
+    )
     parser.add_argument("--compare", action="store_true", help="前回スナップショットとの差分を出力")
     return parser.parse_args()
 
@@ -133,7 +135,11 @@ def run(args: argparse.Namespace) -> None:
     graph = build_graph(analyzed_pages)
     form_summary = summarize_forms(analyzed_pages)
     save_outputs(
-        analyzed_pages, graph, form_summary, output_dir, formats,
+        analyzed_pages,
+        graph,
+        form_summary,
+        output_dir,
+        formats,
         crawl_depth=int(args.depth),
         crawl_max_pages=int(args.max_pages),
         crawled_at=crawled_at,
@@ -155,9 +161,7 @@ def _parse_url_list(raw_urls: str | None) -> list[str]:
     return list(seen)
 
 
-def _capture_login(
-    login_url: str, auth_path: Path | None, signal_path: Path | None = None
-) -> None:
+def _capture_login(login_url: str, auth_path: Path | None, signal_path: Path | None = None) -> None:
     output_path = Path(auth_path) if auth_path else Path(DEFAULT_AUTH_FILE)
     if signal_path is not None:
         from crawler.auth import capture_auth_state_via_signal
@@ -170,7 +174,9 @@ def _capture_login(
         logger.info("ログインセッションを保存しました: %s", saved)
         return
     saved = capture_auth_state(login_url, output_path)
-    logger.info("ログインセッションを保存しました: %s （--auth %s でクロールに利用できます）", saved, saved)
+    logger.info(
+        "ログインセッションを保存しました: %s （--auth %s でクロールに利用できます）", saved, saved
+    )
 
 
 def _discover(args: argparse.Namespace, auth_path: Path | None) -> None:
@@ -230,9 +236,14 @@ def save_outputs(
     (output_dir / "transition.mmd").write_text(transition_mmd, encoding="utf-8")
     if "html" in formats or "pdf" in formats:
         from generator.html_reporter import generate_html_report
+
         screenshots_dir = output_dir / "screenshots"
         report_html = generate_html_report(
-            pages, graph, form_summary, target_url, transition_mmd,
+            pages,
+            graph,
+            form_summary,
+            target_url,
+            transition_mmd,
             screenshots_dir=screenshots_dir if screenshots_dir.is_dir() else None,
             crawl_depth=crawl_depth,
             crawl_max_pages=crawl_max_pages,
@@ -242,11 +253,15 @@ def save_outputs(
         html_path.write_text(report_html, encoding="utf-8")
         if "pdf" in formats:
             from generator.pdf_reporter import generate_pdf
+
             generate_pdf(html_path, output_dir / PDF_FILE_NAME)
     if "json" in formats:
         from generator.json_reporter import generate_json_report
+
         report_json = generate_json_report(
-            pages, graph, target_url,
+            pages,
+            graph,
+            target_url,
             crawl_depth=crawl_depth,
             crawl_max_pages=crawl_max_pages,
             crawled_at=crawled_at,
@@ -260,9 +275,7 @@ def save_outputs(
 
 def _parse_formats(raw_formats: str) -> tuple[str, ...]:
     formats = tuple(
-        item.strip().lower()
-        for item in raw_formats.split(FORMAT_SEPARATOR)
-        if item.strip()
+        item.strip().lower() for item in raw_formats.split(FORMAT_SEPARATOR) if item.strip()
     )
     unknown = sorted(set(formats) - SUPPORTED_FORMATS)
     if unknown:
@@ -273,7 +286,6 @@ def _parse_formats(raw_formats: str) -> tuple[str, ...]:
 def _domain_name(url: str) -> str:
     parsed = urlparse(url)
     return parsed.netloc or parsed.path.replace("/", "_") or "site"
-
 
 
 def _save_excel_output(
@@ -292,10 +304,14 @@ def _save_excel_output(
     wb.save(output_dir / XLSX_FILE_NAME)
 
 
-def _write_screens_sheet(ws: openpyxl.worksheet.worksheet.Worksheet, pages: list[AnalyzedPage]) -> None:
+def _write_screens_sheet(
+    ws: openpyxl.worksheet.worksheet.Worksheet, pages: list[AnalyzedPage]
+) -> None:
     ws.append(["画面ID", "URL", "タイトル", "フォーム数"])
     for page in pages:
-        ws.append([page.page_id, page.page_data.url, page.page_data.title, len(page.page_data.forms)])
+        ws.append(
+            [page.page_id, page.page_data.url, page.page_data.title, len(page.page_data.forms)]
+        )
 
 
 def _write_forms_sheet(
@@ -304,14 +320,16 @@ def _write_forms_sheet(
 ) -> None:
     ws.append(["画面ID", "URL", "フィールド名", "型", "必須", "placeholder"])
     for item in form_summary:
-        ws.append([
-            item.get("page_id", ""),
-            item.get("url", ""),
-            item.get("name", ""),
-            item.get("field_type", ""),
-            item.get("required", False),
-            item.get("placeholder", ""),
-        ])
+        ws.append(
+            [
+                item.get("page_id", ""),
+                item.get("url", ""),
+                item.get("name", ""),
+                item.get("field_type", ""),
+                item.get("required", False),
+                item.get("placeholder", ""),
+            ]
+        )
 
 
 if __name__ == "__main__":

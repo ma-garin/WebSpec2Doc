@@ -1,4 +1,5 @@
 """ログイン対応（storage_state）のユニットテスト（実ブラウザ不要・全て mock）"""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -15,6 +16,7 @@ def _mock_playwright(mock_sync_playwright: MagicMock) -> MagicMock:
 
 
 # ---------- crawl_site: storage_state 配線 ----------
+
 
 class TestCrawlSiteAuthState:
     @patch("crawler.page_crawler._load_robots_parser")
@@ -42,6 +44,7 @@ class TestCrawlSiteAuthState:
 
 # ---------- capture_auth_state ----------
 
+
 class TestCaptureAuthState:
     @patch("builtins.input")
     @patch("crawler.auth.sync_playwright")
@@ -59,9 +62,7 @@ class TestCaptureAuthState:
 
     @patch("builtins.input")
     @patch("crawler.auth.sync_playwright")
-    def test_navigates_to_login_url(
-        self, mock_sp: MagicMock, mock_input: MagicMock
-    ) -> None:
+    def test_navigates_to_login_url(self, mock_sp: MagicMock, mock_input: MagicMock) -> None:
         browser = _mock_playwright(mock_sp)
         page = browser.new_context.return_value.new_page.return_value
 

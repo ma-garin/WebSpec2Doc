@@ -1,4 +1,5 @@
 """test_conditions.derive_conditions のユニットテスト"""
+
 from __future__ import annotations
 
 from analyzer.test_conditions import derive_conditions

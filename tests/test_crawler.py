@@ -1,4 +1,5 @@
 """page_crawler.py の純粋関数ユニットテスト（Playwright 不要）"""
+
 from __future__ import annotations
 
 from contextlib import contextmanager
@@ -19,6 +20,7 @@ from crawler.page_crawler import (
 )
 
 # ---------- normalize_url ----------
+
 
 class TestNormalizeUrl:
     def test_trailing_slash_removed(self) -> None:
@@ -48,6 +50,7 @@ class TestNormalizeUrl:
 
 # ---------- is_internal_link ----------
 
+
 class TestIsInternalLink:
     def test_same_host_is_internal(self) -> None:
         assert is_internal_link("https://example.com/", "https://example.com/about") is True
@@ -76,6 +79,7 @@ class TestIsInternalLink:
 
 # ---------- _format_page_id ----------
 
+
 class TestFormatPageId:
     def test_single_digit(self) -> None:
         assert _format_page_id(1) == "P001"
@@ -92,6 +96,7 @@ class TestFormatPageId:
 
 # ---------- _should_skip ----------
 
+
 class TestShouldSkip:
     def _allow_all_robots(self) -> RobotFileParser:
         parser = RobotFileParser()
@@ -106,7 +111,9 @@ class TestShouldSkip:
         assert _should_skip("https://example.com/", 0, 3, visited, self._allow_all_robots()) is True
 
     def test_not_skip_valid_url(self) -> None:
-        assert _should_skip("https://example.com/page", 1, 3, set(), self._allow_all_robots()) is False
+        assert (
+            _should_skip("https://example.com/page", 1, 3, set(), self._allow_all_robots()) is False
+        )
 
     def test_skip_at_exact_max_depth(self) -> None:
         # depth == max_depth は許可（超過 = > のみスキップ）
@@ -119,6 +126,7 @@ class TestShouldSkip:
 
 
 # ---------- _next_urls ----------
+
 
 class TestNextUrls:
     def test_returns_next_depth_urls(self) -> None:
@@ -143,6 +151,7 @@ class TestNextUrls:
 
 
 # ---------- _discover_one ----------
+
 
 class TestDiscoverOne:
     def _mock_page(self, title: str, hrefs: list[str]) -> MagicMock:
@@ -190,6 +199,7 @@ class TestDiscoverOne:
 
 # ---------- discover_pages / crawl_urls（_browser_page をモック）----------
 
+
 def _allow_all_robots() -> RobotFileParser:
     parser = RobotFileParser()
     parser.allow_all = True
@@ -207,10 +217,12 @@ class TestDiscoverPages:
             found.append({"url": url, "title": "x"})
             return ()
 
-        with patch.object(pc, "_browser_page", _fake_browser), \
-             patch.object(pc, "_discover_one", side_effect=fake_discover), \
-             patch.object(pc, "_load_robots_parser", return_value=_allow_all_robots()), \
-             patch.object(pc.time, "sleep"):
+        with (
+            patch.object(pc, "_browser_page", _fake_browser),
+            patch.object(pc, "_discover_one", side_effect=fake_discover),
+            patch.object(pc, "_load_robots_parser", return_value=_allow_all_robots()),
+            patch.object(pc.time, "sleep"),
+        ):
             found = pc.discover_pages("https://example.com/", depth=1, max_pages=5)
         assert len(found) == 1
         assert found[0]["url"] == "https://example.com/"
@@ -220,10 +232,12 @@ class TestDiscoverPages:
             found.append({"url": url, "title": "x"})
             return ("https://example.com/a", "https://example.com/b")
 
-        with patch.object(pc, "_browser_page", _fake_browser), \
-             patch.object(pc, "_discover_one", side_effect=fake_discover), \
-             patch.object(pc, "_load_robots_parser", return_value=_allow_all_robots()), \
-             patch.object(pc.time, "sleep"):
+        with (
+            patch.object(pc, "_browser_page", _fake_browser),
+            patch.object(pc, "_discover_one", side_effect=fake_discover),
+            patch.object(pc, "_load_robots_parser", return_value=_allow_all_robots()),
+            patch.object(pc.time, "sleep"),
+        ):
             found = pc.discover_pages("https://example.com/", depth=3, max_pages=2)
         assert len(found) == 2
 
@@ -233,27 +247,35 @@ class TestCrawlUrls:
         return PageData(url=url, title="t", headings=(), links=(), forms=(), screenshot_path=None)
 
     def test_dedupes_and_crawls(self) -> None:
-        with patch.object(pc, "_browser_page", _fake_browser), \
-             patch.object(pc, "_crawl_page_with_id", side_effect=lambda p, u, i, o: self._page(u)), \
-             patch.object(pc.time, "sleep"):
-            pages = pc.crawl_urls([
-                "https://example.com/",
-                "https://example.com/",
-                "https://example.com/a",
-            ])
+        with (
+            patch.object(pc, "_browser_page", _fake_browser),
+            patch.object(pc, "_crawl_page_with_id", side_effect=lambda p, u, i, o: self._page(u)),
+            patch.object(pc.time, "sleep"),
+        ):
+            pages = pc.crawl_urls(
+                [
+                    "https://example.com/",
+                    "https://example.com/",
+                    "https://example.com/a",
+                ]
+            )
         assert len(pages) == 2
 
     def test_skips_failed_pages(self) -> None:
-        with patch.object(pc, "_browser_page", _fake_browser), \
-             patch.object(pc, "_crawl_page_with_id", return_value=None), \
-             patch.object(pc.time, "sleep"):
+        with (
+            patch.object(pc, "_browser_page", _fake_browser),
+            patch.object(pc, "_crawl_page_with_id", return_value=None),
+            patch.object(pc.time, "sleep"),
+        ):
             pages = pc.crawl_urls(["https://example.com/"])
         assert pages == []
 
     def test_ignores_blank_urls(self) -> None:
-        with patch.object(pc, "_browser_page", _fake_browser), \
-             patch.object(pc, "_crawl_page_with_id", side_effect=lambda p, u, i, o: self._page(u)), \
-             patch.object(pc.time, "sleep"):
+        with (
+            patch.object(pc, "_browser_page", _fake_browser),
+            patch.object(pc, "_crawl_page_with_id", side_effect=lambda p, u, i, o: self._page(u)),
+            patch.object(pc.time, "sleep"),
+        ):
             pages = pc.crawl_urls(["", "  ", "https://example.com/"])
         assert len(pages) == 1
 
@@ -271,6 +293,7 @@ class TestSessionExpiry:
             page.goto.return_value = MagicMock(status=200)
             page.query_selector.return_value = MagicMock()  # パスワード欄あり
             yield page
+
         return _cm
 
     def test_crawl_urls_raises_when_session_expired(self, tmp_path) -> None:
@@ -278,14 +301,18 @@ class TestSessionExpiry:
 
         auth = tmp_path / "auth.json"
         auth.write_text("{}", encoding="utf-8")
-        with patch.object(pc, "_browser_page", self._login_wall_browser()), \
-             patch.object(pc.time, "sleep"):
+        with (
+            patch.object(pc, "_browser_page", self._login_wall_browser()),
+            patch.object(pc.time, "sleep"),
+        ):
             with pytest.raises(SessionExpiredError):
                 pc.crawl_urls(["https://example.com/dashboard"], auth_state=auth)
 
     def test_crawl_urls_no_raise_without_auth(self) -> None:
-        with patch.object(pc, "_browser_page", self._login_wall_browser()), \
-             patch.object(pc, "_crawl_page_with_id", return_value=None), \
-             patch.object(pc.time, "sleep"):
+        with (
+            patch.object(pc, "_browser_page", self._login_wall_browser()),
+            patch.object(pc, "_crawl_page_with_id", return_value=None),
+            patch.object(pc.time, "sleep"),
+        ):
             pages = pc.crawl_urls(["https://example.com/dashboard"], auth_state=None)
         assert pages == []

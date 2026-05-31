@@ -4,6 +4,7 @@
 `{base_dir}/{domain}/site.json` に保存・復元する。base_dir を注入できる
 ようにしてテスト可能に保つ（本番では output/ を渡す）。
 """
+
 from __future__ import annotations
 
 import json

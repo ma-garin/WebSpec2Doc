@@ -1,4 +1,5 @@
 """crawler.login_signal.wait_for_signal のユニットテスト"""
+
 from __future__ import annotations
 
 import threading

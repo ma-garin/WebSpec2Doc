@@ -1,4 +1,5 @@
 """registry.session_store のユニットテスト（tmp ディレクトリでセッション管理を検証）"""
+
 from __future__ import annotations
 
 from pathlib import Path

@@ -1,4 +1,5 @@
 """registry.site_registry のユニットテスト（tmp ディレクトリで永続化を検証）"""
+
 from __future__ import annotations
 
 from pathlib import Path

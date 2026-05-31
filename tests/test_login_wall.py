@@ -1,4 +1,5 @@
 """analyzer.login_wall.detect_login_wall のユニットテスト"""
+
 from __future__ import annotations
 
 from analyzer.login_wall import (

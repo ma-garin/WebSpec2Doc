@@ -82,6 +82,7 @@ def _safe_auth_path(raw: str) -> str:
         return str(target)
     return ""
 
+
 # 実行中クロールのサブプロセス（run_id → Popen）。停止ボタンから kill するために保持。
 _RUNNING_PROCS: dict[str, subprocess.Popen] = {}
 
@@ -93,6 +94,7 @@ def _terminate_proc(proc: subprocess.Popen) -> None:
             proc.wait(timeout=5)
         except subprocess.TimeoutExpired:
             proc.kill()
+
 
 _HTML = """<!DOCTYPE html>
 <html lang="ja">
@@ -1611,8 +1613,15 @@ def api_discover() -> Response | tuple[dict, int] | dict:
     if not url:
         return {"pages": [], "error": "URLを入力してください"}, 400
     cmd = [
-        sys.executable, "src/main.py", "--discover",
-        "--url", url, "--depth", depth, "--max-pages", max_pages,
+        sys.executable,
+        "src/main.py",
+        "--discover",
+        "--url",
+        url,
+        "--depth",
+        depth,
+        "--max-pages",
+        max_pages,
     ]
     if auth:
         cmd += ["--auth", auth]
@@ -1628,8 +1637,13 @@ def api_discover() -> Response | tuple[dict, int] | dict:
 
 
 def _save_site_config(
-    domain: str, urls: str, crawl_mode: str, depth: str, max_pages: str,
-    formats: list[str], auth: str,
+    domain: str,
+    urls: str,
+    crawl_mode: str,
+    depth: str,
+    max_pages: str,
+    formats: list[str],
+    auth: str,
 ) -> None:
     """クロール成功時に再クロール用の設定を site.json へ保存する。"""
     try:
@@ -1674,8 +1688,14 @@ def api_login_start() -> tuple[dict, int] | dict:
     if sig.exists():
         sig.unlink()  # 前回の取り残しシグナルを掃除
     cmd = [
-        sys.executable, "src/main.py", "--login", login_url,
-        "--login-signal", str(sig), "--auth", str(auth),
+        sys.executable,
+        "src/main.py",
+        "--login",
+        login_url,
+        "--login-signal",
+        str(sig),
+        "--auth",
+        str(auth),
     ]
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     _LOGIN_PROCS[domain] = proc
@@ -1720,14 +1740,24 @@ def run() -> Response:
 
     def generate():
         cmd = [
-            sys.executable, "src/main.py", "--urls", urls,
-            "--depth", depth, "--max-pages", max_pages, "--format", fmt,
+            sys.executable,
+            "src/main.py",
+            "--urls",
+            urls,
+            "--depth",
+            depth,
+            "--max-pages",
+            max_pages,
+            "--format",
+            fmt,
         ]
         if compare:
             cmd.append("--compare")
         if auth:
             cmd += ["--auth", auth]
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
+        proc = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
+        )
         _RUNNING_PROCS[run_id] = proc
         try:
             yield f"RUN_ID:{run_id}\n"
@@ -1793,7 +1823,9 @@ def _summary_for_domain(domain: str) -> dict[str, int]:
             return {
                 "screens": len(screens),
                 "forms": sum(len(s.get("forms", [])) for s in screens),
-                "fields": sum(len(f.get("fields", [])) for s in screens for f in s.get("forms", [])),
+                "fields": sum(
+                    len(f.get("fields", [])) for s in screens for f in s.get("forms", [])
+                ),
                 "buttons": sum(len(s.get("buttons", [])) for s in screens),
             }
         except (OSError, json.JSONDecodeError):
@@ -1801,7 +1833,12 @@ def _summary_for_domain(domain: str) -> dict[str, int]:
     snaps_dir = domain_dir / "snapshots"
     snaps = sorted(snaps_dir.glob("*.json")) if snaps_dir.is_dir() else []
     if not snaps:
-        return {"screens": _count_screens(domain_dir / "screens.md"), "forms": 0, "fields": 0, "buttons": 0}
+        return {
+            "screens": _count_screens(domain_dir / "screens.md"),
+            "forms": 0,
+            "fields": 0,
+            "buttons": 0,
+        }
     try:
         pages = json.loads(snaps[-1].read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
@@ -1873,7 +1910,9 @@ def download_zip() -> Response:
             if f.is_file():
                 zf.write(f, f.relative_to(base.parent))
     buf.seek(0)
-    return send_file(buf, as_attachment=True, download_name=f"{domain}.zip", mimetype="application/zip")
+    return send_file(
+        buf, as_attachment=True, download_name=f"{domain}.zip", mimetype="application/zip"
+    )
 
 
 @app.get("/api/result")
@@ -1930,13 +1969,15 @@ def api_snapshots() -> dict | tuple[dict, int]:
                 continue
             forms = sum(len(p.get("forms", [])) for p in pages)
             fields = sum(len(fm.get("fields", [])) for p in pages for fm in p.get("forms", []))
-            items.append({
-                "id": f.stem,
-                "label": _fmt_snap_ts(f.stem),
-                "screens": len(pages),
-                "forms": forms,
-                "fields": fields,
-            })
+            items.append(
+                {
+                    "id": f.stem,
+                    "label": _fmt_snap_ts(f.stem),
+                    "screens": len(pages),
+                    "forms": forms,
+                    "fields": fields,
+                }
+            )
     return {"snapshots": items}
 
 
@@ -1950,7 +1991,10 @@ def api_snapshot_diff() -> Response:
     from_path = _safe_output_path(str(snaps_dir / (request.args.get("from", "") + ".json")))
     to_path = _safe_output_path(str(snaps_dir / (request.args.get("to", "") + ".json")))
     if from_path is None or to_path is None:
-        return Response("<p style='font-family:sans-serif;padding:16px'>指定されたスナップショットが見つかりません。</p>", mimetype="text/html")
+        return Response(
+            "<p style='font-family:sans-serif;padding:16px'>指定されたスナップショットが見つかりません。</p>",
+            mimetype="text/html",
+        )
     if str(Path("src").resolve()) not in sys.path:
         sys.path.insert(0, str(Path("src").resolve()))
     try:
@@ -1981,27 +2025,37 @@ def api_history() -> dict:
         for d in sorted(domains, key=lambda p: p.stat().st_mtime, reverse=True):
             summary = _summary_for_domain(d.name)
             formats = [
-                name for name, fname in (
-                    ("HTML", "report.html"), ("PDF", "report.pdf"),
-                    ("Excel", "spec.xlsx"), ("JSON", "report.json"),
-                    ("MD", "screens.md"), ("差分", "diff_report.html"),
+                name
+                for name, fname in (
+                    ("HTML", "report.html"),
+                    ("PDF", "report.pdf"),
+                    ("Excel", "spec.xlsx"),
+                    ("JSON", "report.json"),
+                    ("MD", "screens.md"),
+                    ("差分", "diff_report.html"),
                 )
                 if (d / fname).exists()
             ]
-            items.append({
-                "domain": d.name,
-                "screens": summary.get("screens", 0),
-                "fields": summary.get("fields", 0),
-                "updated": datetime.fromtimestamp(d.stat().st_mtime).strftime("%Y-%m-%d %H:%M"),
-                "formats": formats,
-            })
+            items.append(
+                {
+                    "domain": d.name,
+                    "screens": summary.get("screens", 0),
+                    "fields": summary.get("fields", 0),
+                    "updated": datetime.fromtimestamp(d.stat().st_mtime).strftime("%Y-%m-%d %H:%M"),
+                    "formats": formats,
+                }
+            )
     return {"items": items}
 
 
 def _count_screens(screens_md: Path) -> int:
     if not screens_md.exists():
         return 0
-    return sum(1 for line in screens_md.read_text(encoding="utf-8").splitlines() if SCREEN_ROW_RE.match(line))
+    return sum(
+        1
+        for line in screens_md.read_text(encoding="utf-8").splitlines()
+        if SCREEN_ROW_RE.match(line)
+    )
 
 
 def _sanitize(value: str) -> str:
@@ -2094,6 +2148,7 @@ PORT = int(os.environ.get("WEBSPEC2DOC_PORT", "8765"))
 
 def _open_browser() -> None:
     import time
+
     time.sleep(1.0)
     webbrowser.open(f"http://127.0.0.1:{PORT}")
 

@@ -36,23 +36,29 @@ def generate_html_report(
     fields_count = len(form_summary)
     buttons_count = sum(len(p.page_data.buttons) for p in pages)
 
-    return "\n".join([
-        _html_head(),
-        '<body class="app-page"><div class="app-shell">',
-        _sidebar(pages),
-        '<div class="app-main">',
-        _topbar(target_url, now),
-        '<main class="app-content">',
-        _section("サマリー", _summary_cards(len(pages), forms_count, fields_count, buttons_count), "summary"),
-        _section("画面遷移図", _mermaid_block(mermaid_content), "transition"),
-        _section("画面カタログ", _screen_cards(pages, graph, screenshots_dir), "screens"),
-        _meta_section(target_url, crawl_depth, crawl_max_pages, crawled_at, len(pages)),
-        _footer(now),
-        "</main></div></div>",
-        _scrollspy_script(),
-        _mermaid_script(),
-        "</body></html>",
-    ])
+    return "\n".join(
+        [
+            _html_head(),
+            '<body class="app-page"><div class="app-shell">',
+            _sidebar(pages),
+            '<div class="app-main">',
+            _topbar(target_url, now),
+            '<main class="app-content">',
+            _section(
+                "サマリー",
+                _summary_cards(len(pages), forms_count, fields_count, buttons_count),
+                "summary",
+            ),
+            _section("画面遷移図", _mermaid_block(mermaid_content), "transition"),
+            _section("画面カタログ", _screen_cards(pages, graph, screenshots_dir), "screens"),
+            _meta_section(target_url, crawl_depth, crawl_max_pages, crawled_at, len(pages)),
+            _footer(now),
+            "</main></div></div>",
+            _scrollspy_script(),
+            _mermaid_script(),
+            "</body></html>",
+        ]
+    )
 
 
 def _html_head() -> str:
@@ -182,7 +188,9 @@ def _topbar(target_url: str, now: str) -> str:
 
 def _summary_cards(pages: int, forms: int, fields: int, buttons: int) -> str:
     def card(num: int, label: str) -> str:
-        return f'<div class="card"><div class="num">{num}</div><div class="label">{label}</div></div>'
+        return (
+            f'<div class="card"><div class="num">{num}</div><div class="label">{label}</div></div>'
+        )
 
     return (
         '<div class="cards">'
@@ -203,7 +211,9 @@ def _mermaid_block(content: str) -> str:
     return f'<div class="mermaid-wrap"><pre class="mermaid">{html.escape(content)}</pre></div>'
 
 
-def _screen_cards(pages: list[AnalyzedPage], graph: nx.DiGraph, screenshots_dir: Path | None) -> str:
+def _screen_cards(
+    pages: list[AnalyzedPage], graph: nx.DiGraph, screenshots_dir: Path | None
+) -> str:
     return "".join(_screen_card(page, graph, screenshots_dir) for page in pages)
 
 
@@ -234,7 +244,9 @@ def _screenshot_img(page: AnalyzedPage, screenshots_dir: Path | None) -> str:
     if not png.exists() or png.stat().st_size > MAX_SCREENSHOT_BYTES:
         return '<div class="noshot">スクリーンショットなし</div>'
     b64 = base64.b64encode(png.read_bytes()).decode("ascii")
-    return f'<img src="data:image/png;base64,{b64}" alt="{html.escape(page.page_id)}" loading="lazy">'
+    return (
+        f'<img src="data:image/png;base64,{b64}" alt="{html.escape(page.page_id)}" loading="lazy">'
+    )
 
 
 def _headings_block(headings: tuple[str, ...]) -> str:
@@ -343,8 +355,10 @@ def _locator_candidates(field: FieldData) -> list[str]:
     if field.element_id:
         candidates.append(f"#{field.element_id}")
     if field.name:
-        tag = "select" if field.field_type == "select" else (
-            "textarea" if field.field_type == "textarea" else "input"
+        tag = (
+            "select"
+            if field.field_type == "select"
+            else ("textarea" if field.field_type == "textarea" else "input")
         )
         candidates.append(f'{tag}[name="{field.name}"]')
     return candidates

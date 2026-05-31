@@ -1,4 +1,5 @@
 """/api/login/start・/api/login/finish ルートのテスト（subprocess をモック）"""
+
 from __future__ import annotations
 
 import sys
@@ -20,10 +21,14 @@ def test_login_start_spawns_subprocess(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(appmod, "OUTPUT_DIR", tmp_path)
     appmod._LOGIN_PROCS.clear()
     with patch.object(appmod.subprocess, "Popen", return_value=MagicMock()) as popen:
-        data = _client().post(
-            "/api/login/start",
-            data={"url": "https://example.com/login", "domain": "example.com"},
-        ).get_json()
+        data = (
+            _client()
+            .post(
+                "/api/login/start",
+                data={"url": "https://example.com/login", "domain": "example.com"},
+            )
+            .get_json()
+        )
     assert data["ok"] is True
     assert popen.called
     assert "example.com" in appmod._LOGIN_PROCS

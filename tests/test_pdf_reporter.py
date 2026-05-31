@@ -1,4 +1,5 @@
 """pdf_reporter.py のユニットテスト（Playwright をモック）"""
+
 from __future__ import annotations
 
 from pathlib import Path

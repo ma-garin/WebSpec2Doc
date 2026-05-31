@@ -1,4 +1,5 @@
 """/api/site ルートと site.json 連携のテスト（Flask テストクライアント）"""
+
 from __future__ import annotations
 
 import sys

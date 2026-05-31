@@ -4,6 +4,7 @@
 これを検出して中断することで、到達ページ激減による「大量削除」ドリフトの
 偽陽性を防ぐ。判定は #4 の detect_login_wall を再利用する。
 """
+
 from __future__ import annotations
 
 import logging

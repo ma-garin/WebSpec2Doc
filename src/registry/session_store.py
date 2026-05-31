@@ -4,6 +4,7 @@
 注入できるようにしてテスト可能に保つ（本番では output/ を渡す）。ログイン完了の
 合図には同ディレクトリのシグナルファイル（.login_done）を使う（ADR-0001 参照）。
 """
+
 from __future__ import annotations
 
 import logging

@@ -4,6 +4,7 @@
 認証によりアクセスがブロックされる地点かを判定する純粋関数。検出は補助であり、
 ユーザーが手動でスキップ／追加できる前提。
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass

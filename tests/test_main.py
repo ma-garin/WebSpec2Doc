@@ -55,6 +55,7 @@ class TestParseFormats:
 
 # ---------- _parse_url_list ----------
 
+
 class TestParseUrlList:
     def test_none_returns_empty(self) -> None:
         assert _parse_url_list(None) == []

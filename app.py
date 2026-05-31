@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
-import re
 import subprocess
 import sys
 import threading
@@ -11,9 +9,31 @@ import webbrowser
 from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
-from urllib.parse import urlparse
 
 from flask import Flask, Response, make_response, redirect, request, send_file, url_for
+from web.config import (
+    _PREVIEW_MIME,
+    DEFAULT_OPENAI_MODEL,
+    DISCOVER_TIMEOUT_SEC,
+    LOGIN_FINISH_TIMEOUT_SEC,
+    MAX_DEPTH,
+    MAX_PAGES_LIMIT,
+    OUTPUT_DIR,
+    PORT,
+)
+from web.env_store import _mask_key, _read_env, _write_env
+from web.process import _LOGIN_PROCS, _RUNNING_PROCS, _terminate_proc
+from web.security import csrf_guard
+from web.summary import _fmt_snap_ts, _summary_for_domain
+from web.validation import (
+    _clean_formats,
+    _clean_int,
+    _domain_of,
+    _safe_auth_path,
+    _safe_output_path,
+    _sanitize,
+    _valid_domain,
+)
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
 from registry.session_store import (  # noqa: E402
@@ -24,76 +44,7 @@ from registry.session_store import (  # noqa: E402
 from registry.site_registry import SiteConfig, load_site, save_site  # noqa: E402
 
 app = Flask(__name__)
-
-
-@app.before_request
-def _csrf_guard() -> Response | None:
-    """状態変更(POST)は同一オリジンのみ許可。ブラウザに開かれた悪意ページからの
-    localhost への cross-site POST を防ぐ簡易CSRF対策。"""
-    if request.method != "POST":
-        return None
-    origin = request.headers.get("Origin") or request.headers.get("Referer") or ""
-    if origin and request.host not in origin:
-        return Response(status=403)
-    return None
-
-
-OUTPUT_DIR = Path("output")
-SCREEN_ROW_RE = re.compile(r"^\|\s*\d+\s*\|")
-ENV_FILE = Path(".env")
-DEFAULT_OPENAI_MODEL = "gpt-5.4-mini"
-DISCOVER_TIMEOUT_SEC = 180
-LOGIN_FINISH_TIMEOUT_SEC = 60
-
-# 入力検証（多層防御: クライアントだけでなくサーバでも検証する）
-ALLOWED_FORMATS = ("md", "html", "excel", "pdf", "json")
-DOMAIN_RE = re.compile(r"^[A-Za-z0-9._:-]{1,253}$")
-ENV_KEY_RE = re.compile(r"^[A-Z_][A-Z0-9_]*$")
-MAX_DEPTH = 5
-MAX_PAGES_LIMIT = 300
-
-
-def _clean_int(value: str, default: int, lo: int, hi: int) -> int:
-    try:
-        return max(lo, min(hi, int(value)))
-    except (TypeError, ValueError):
-        return default
-
-
-def _clean_formats(raw: str) -> list[str]:
-    picked = [f.strip().lower() for f in raw.split(",") if f.strip()]
-    return [f for f in picked if f in ALLOWED_FORMATS]
-
-
-def _valid_domain(domain: str) -> bool:
-    return bool(DOMAIN_RE.match(domain))
-
-
-def _safe_auth_path(raw: str) -> str:
-    """auth.json はプロジェクト配下のファイルのみ許可（任意ファイル読み取りを防ぐ）。"""
-    if not raw:
-        return ""
-    try:
-        target = Path(raw).resolve()
-    except (OSError, ValueError, RuntimeError):
-        return ""
-    base = Path.cwd().resolve()
-    if (target == base or base in target.parents) and target.is_file():
-        return str(target)
-    return ""
-
-
-# 実行中クロールのサブプロセス（run_id → Popen）。停止ボタンから kill するために保持。
-_RUNNING_PROCS: dict[str, subprocess.Popen] = {}
-
-
-def _terminate_proc(proc: subprocess.Popen) -> None:
-    if proc.poll() is None:
-        proc.terminate()
-        try:
-            proc.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            proc.kill()
+app.before_request(csrf_guard)
 
 
 _HTML = """<!DOCTYPE html>
@@ -1599,11 +1550,6 @@ def index() -> str:
     return _HTML
 
 
-def _domain_of(url: str) -> str:
-    parsed = urlparse(url.strip())
-    return parsed.netloc or "site"
-
-
 @app.post("/api/discover")
 def api_discover() -> Response | tuple[dict, int] | dict:
     url = request.form.get("url", "").strip()
@@ -1670,9 +1616,6 @@ def api_site() -> dict:
         return {"site": None}
     config = load_site(domain, OUTPUT_DIR)
     return {"site": asdict(config) if config else None}
-
-
-_LOGIN_PROCS: dict[str, subprocess.Popen] = {}
 
 
 @app.post("/api/login/start")
@@ -1810,69 +1753,6 @@ def live_screenshot() -> Response:
     return resp
 
 
-def _summary_for_domain(domain: str) -> dict[str, int]:
-    """最新の生成結果（report.json）を唯一の真実源として集計する。
-    結果ページのサマリー／概要／マトリクス／履歴をすべて一致させるため。
-    report.json が無い旧データのみ snapshot → screens.md にフォールバック。"""
-    domain_dir = OUTPUT_DIR / domain
-    report_json = domain_dir / "report.json"
-    if report_json.exists():
-        try:
-            data = json.loads(report_json.read_text(encoding="utf-8"))
-            screens = data.get("screens", [])
-            return {
-                "screens": len(screens),
-                "forms": sum(len(s.get("forms", [])) for s in screens),
-                "fields": sum(
-                    len(f.get("fields", [])) for s in screens for f in s.get("forms", [])
-                ),
-                "buttons": sum(len(s.get("buttons", [])) for s in screens),
-            }
-        except (OSError, json.JSONDecodeError):
-            pass
-    snaps_dir = domain_dir / "snapshots"
-    snaps = sorted(snaps_dir.glob("*.json")) if snaps_dir.is_dir() else []
-    if not snaps:
-        return {
-            "screens": _count_screens(domain_dir / "screens.md"),
-            "forms": 0,
-            "fields": 0,
-            "buttons": 0,
-        }
-    try:
-        pages = json.loads(snaps[-1].read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return {"screens": 0, "forms": 0, "fields": 0, "buttons": 0}
-    forms = sum(len(p.get("forms", [])) for p in pages)
-    fields = sum(len(f.get("fields", [])) for p in pages for f in p.get("forms", []))
-    buttons = sum(len(p.get("buttons", [])) for p in pages)
-    return {"screens": len(pages), "forms": forms, "fields": fields, "buttons": buttons}
-
-
-def _safe_output_path(raw: str) -> Path | None:
-    """Resolve a path and ensure it stays inside OUTPUT_DIR (anti path-traversal)."""
-    if not raw:
-        return None
-    try:
-        target = Path(raw).resolve()
-    except (OSError, ValueError, RuntimeError):
-        return None
-    base = OUTPUT_DIR.resolve()
-    if target != base and base not in target.parents:
-        return None
-    return target if target.is_file() else None
-
-
-_PREVIEW_MIME = {
-    ".html": "text/html; charset=utf-8",
-    ".pdf": "application/pdf",
-    ".json": "application/json; charset=utf-8",
-    ".md": "text/plain; charset=utf-8",
-    ".mmd": "text/plain; charset=utf-8",
-    ".png": "image/png",
-}
-
-
 @app.get("/preview")
 def preview() -> Response:
     target = _safe_output_path(request.args.get("path", ""))
@@ -1944,13 +1824,6 @@ def api_result() -> dict | tuple[dict, int]:
         },
         "screenshots": [str(s.resolve()) for s in shots],
     }
-
-
-def _fmt_snap_ts(stem: str) -> str:
-    try:
-        return datetime.strptime(stem, "%Y%m%d-%H%M%S").strftime("%Y-%m-%d %H:%M")
-    except ValueError:
-        return stem
 
 
 @app.get("/api/snapshots")
@@ -2048,63 +1921,6 @@ def api_history() -> dict:
     return {"items": items}
 
 
-def _count_screens(screens_md: Path) -> int:
-    if not screens_md.exists():
-        return 0
-    return sum(
-        1
-        for line in screens_md.read_text(encoding="utf-8").splitlines()
-        if SCREEN_ROW_RE.match(line)
-    )
-
-
-def _sanitize(value: str) -> str:
-    return value.strip().replace("\n", "").replace("\r", "")
-
-
-def _read_env() -> dict[str, str]:
-    data: dict[str, str] = {}
-    if ENV_FILE.exists():
-        for line in ENV_FILE.read_text(encoding="utf-8").splitlines():
-            stripped = line.strip()
-            if not stripped or stripped.startswith("#") or "=" not in stripped:
-                continue
-            key, value = stripped.split("=", 1)
-            data[key.strip()] = value.strip()
-    return data
-
-
-def _write_env(updates: dict[str, str]) -> None:
-    # キー名を検証して .env への行インジェクションを防ぐ
-    updates = {k: v for k, v in updates.items() if ENV_KEY_RE.match(k)}
-    if not updates:
-        return
-    lines: list[str] = []
-    seen: set[str] = set()
-    if ENV_FILE.exists():
-        for line in ENV_FILE.read_text(encoding="utf-8").splitlines():
-            stripped = line.strip()
-            if "=" in stripped and not stripped.startswith("#"):
-                key = stripped.split("=", 1)[0].strip()
-                if key in updates:
-                    lines.append(f"{key}={updates[key]}")
-                    seen.add(key)
-                    continue
-            lines.append(line)
-    for key, value in updates.items():
-        if key not in seen:
-            lines.append(f"{key}={value}")
-    ENV_FILE.write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-
-def _mask_key(key: str) -> str:
-    if not key:
-        return ""
-    if len(key) <= 9:
-        return "****"
-    return f"{key[:5]}…{key[-4:]}"
-
-
 @app.get("/api/settings")
 def get_settings() -> dict:
     env = _read_env()
@@ -2141,9 +1957,6 @@ def open_file() -> Response:
     if target is not None:
         subprocess.Popen(["open", str(target)])
     return make_response(redirect(url_for("index")))
-
-
-PORT = int(os.environ.get("WEBSPEC2DOC_PORT", "8765"))
 
 
 def _open_browser() -> None:

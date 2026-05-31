@@ -5,9 +5,6 @@ import subprocess
 # 実行中クロールのサブプロセス（run_id → Popen）。停止ボタンから kill するために保持。
 _RUNNING_PROCS: dict[str, subprocess.Popen] = {}
 
-# ログインセッション保存中のサブプロセス（session_id → Popen）
-_LOGIN_PROCS: dict[str, subprocess.Popen] = {}
-
 
 def _terminate_proc(proc: subprocess.Popen) -> None:
     if proc.poll() is None:

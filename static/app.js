@@ -28,23 +28,58 @@ function switchView(name) {
   if (h) setHeader(h.trail, h.title);
   if (name === 'dashboard') loadHistory();
 }
-// 「+ サイトを追加」: 新規ウィザードを開く
+// ---- ウィザード ステップ管理 ----
+function showWizardStep(n) {
+  const p1 = document.getElementById('wizard-p1');
+  const p2 = document.getElementById('wizard-p2');
+  const bar = document.getElementById('wizard-progress-bar');
+  if (p1) p1.style.display = (n === 1) ? '' : 'none';
+  if (p2) p2.style.display = (n === 2) ? '' : 'none';
+  if (bar) bar.style.display = (n <= 2) ? '' : 'none';
+  [1, 2, 3, 4].forEach(i => {
+    const node = document.getElementById('ws-' + i);
+    if (!node) return;
+    node.classList.toggle('is-active', i === n);
+    node.classList.toggle('is-done', i < n);
+  });
+  [1, 2, 3].forEach(i => {
+    const line = document.getElementById('wl-' + i);
+    if (line) line.classList.toggle('is-done', i < n);
+  });
+}
+
+// 「+ サイトを追加」: 新規ウィザードを開く（P1から）
 function openAddSite() {
   switchView('generate');
   executionView.classList.add('hidden'); resultPanel.classList.add('hidden');
   appContent.classList.remove('is-executing'); genPanel.style.display = '';
   document.getElementById('url-input').value = '';
-  clearDiscovered(); updateTargetPreview(); showStep(1);
+  document.getElementById('p1-summary').style.display = 'none';
+  clearDiscovered(); updateTargetPreview(); showWizardStep(1);
 }
 document.getElementById('add-site-btn').addEventListener('click', openAddSite);
 document.getElementById('add-site-btn-2').addEventListener('click', openAddSite);
+
+// P1 → P2: 「次へ」ボタン
+document.getElementById('p1-next-btn').addEventListener('click', () => {
+  showWizardStep(2);
+  // 画面リストと必要なら認証パネルを表示
+  if (discovered.length) {
+    document.getElementById('discovered-url-panel').style.display = '';
+    updateTargetPreview();
+  }
+});
+
+// P2 → P1: 「解析に戻る」ボタン
+document.getElementById('p2-back-btn').addEventListener('click', () => {
+  showWizardStep(1);
+});
 
 // ---- 設定（localStorage）----
 function getSettings() { try { return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}; } catch { return {}; } }
 function applySettings() {
   const s = getSettings();
-  if (s.depth) document.getElementById('crawl-depth').value = s.depth;
-  if (s.maxPages) document.getElementById('max-pages').value = s.maxPages;
+  // crawl-depth / max-pages は MAX 固定（hidden input）のため上書きしない
   if (s.auth) document.getElementById('auth-path').value = s.auth;
 }
 function loadSettingsForm() {
@@ -93,30 +128,41 @@ document.getElementById('reload-history').addEventListener('click', loadHistory)
 // ---- 再クロール（ドリフト検知）: 既知のサイトを同じ画面構成で取り直す ----
 
 async function recrawlSite(domain) {
-  let site = null;
+  let site = null, urls = [], auth = getSettings().auth || '';
   try { site = (await fetch('/api/site?domain=' + encodeURIComponent(domain)).then(r => r.json())).site; } catch (e) {}
-  let urls = [], depth = '2', maxPages = '300', auth = getSettings().auth || '';
   if (site) {
     urls = site.urls || [];
-    depth = String(site.depth || 2);
-    maxPages = String(site.max_pages || 300);
     auth = site.auth_path || auth;
   } else {
     try {
       const data = await fetch('/api/result?domain=' + encodeURIComponent(domain)).then(r => r.json());
       if (data.files && data.files.json) {
         const rj = await fetch('/preview?path=' + encodeURIComponent(data.files.json)).then(r => r.json());
-        urls = (rj.screens || []).map(s => s.url).filter(Boolean);
+        urls = (rj.screens || []).map(s => ({ url: s.url, title: s.title || s.url }));
       }
     } catch (e) {}
   }
-  if (!urls.length) urls = ['https://' + domain + '/'];
-  const body = new URLSearchParams({
-    urls: urls.join(','), depth: depth, max_pages: maxPages,
-    format: 'html,pdf,md,excel,json', compare: 'true', auth: auth,
-  });
+  if (!urls.length) urls = [{ url: 'https://' + domain + '/', title: domain }];
+
+  // P2へ遷移して前回設定を復元
   switchView('generate');
-  runWith(body.toString(), domain, domain, urls.length);
+  executionView.classList.add('hidden'); resultPanel.classList.add('hidden');
+  appContent.classList.remove('is-executing'); genPanel.style.display = '';
+
+  document.getElementById('url-input').value = 'https://' + domain + '/';
+  if (auth) document.getElementById('auth-path').value = auth;
+  document.getElementById('compare').checked = true;
+  document.getElementById('p1-summary').style.display = 'none';
+
+  // 前回の画面リストを復元
+  discovered = (Array.isArray(urls) ? urls : []).map(u =>
+    typeof u === 'string'
+      ? { url: u, title: u, login_required: false, login_reasons: [], login_url: '' }
+      : { url: u.url, title: u.title || u.url, login_required: false, login_reasons: [], login_url: '' }
+  );
+  renderDiscovered();
+  updateTargetPreview();
+  showWizardStep(2);
 }
 
 async function openResultsForDomain(domain) {
@@ -150,77 +196,205 @@ function setUrlMessage(msg, isError) {
 // ---- 画面リスト取得（discover）----
 document.getElementById('discover-btn').addEventListener('click', discoverUrls);
 
-// ---- 手渡しログイン（ADR-0001: サブプロセス＋シグナル）----
+// ---- 自動ログイン（ADR-0002: GUIフォーム入力方式）----
 function loginDomain() {
   const u = urlInput.value.trim();
   try { return new URL(u).hostname; } catch (e) { return ''; }
 }
 function setLoginStatus(msg, isError) {
   const el = document.getElementById('login-status');
+  if (!el) return;
   el.textContent = msg; el.classList.toggle('input-field-message-error', !!(msg && isError));
 }
-document.getElementById('login-start-btn').addEventListener('click', async () => {
+function setLoginLoading(show, msg) {
+  const el = document.getElementById('login-loading');
+  if (!el) return;
+  el.style.display = show ? 'flex' : 'none';
+  if (msg) { const m = document.getElementById('login-loading-msg'); if (m) m.textContent = msg; }
+}
+
+// ---- シンプルログイン（インラインパネル）----
+document.getElementById('login-simple-btn').addEventListener('click', async () => {
   const domain = loginDomain();
-  if (!domain) { setLoginStatus('先に有効なURLを入力してください', true); return; }
-  const startBtn = document.getElementById('login-start-btn');
-  const finishBtn = document.getElementById('login-finish-btn');
-  startBtn.disabled = true;
-  setLoginStatus('ログイン用ブラウザを起動しています…', false);
+  const loginUrl = document.getElementById('login-inline-url').value.trim()
+    || document.getElementById('login-url').value.trim();
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  if (!loginUrl) { document.getElementById('login-simple-status').textContent = 'ログインURLが見つかりません。上級設定でURLを入力してください。'; return; }
+
+  const btn = document.getElementById('login-simple-btn');
+  const loading = document.getElementById('login-simple-loading');
+  const status = document.getElementById('login-simple-status');
+  btn.disabled = true; loading.style.display = 'flex'; status.textContent = '';
   try {
-    const res = await fetch('/api/login/start', { method: 'POST', body: new URLSearchParams({ url: urlInput.value.trim(), domain }) });
+    const res = await fetch('/api/login/simple', { method: 'POST', body: new URLSearchParams({
+      domain: domain || 'site', login_url: loginUrl, username, password,
+    }) });
     const data = await res.json();
-    if (!res.ok || !data.ok) throw new Error(data.error || 'ログイン開始に失敗しました');
-    setLoginStatus('ブラウザでログインを完了したら「ログイン完了」を押してください。', false);
-    finishBtn.disabled = false;
+    if (!res.ok || !data.success) throw new Error(data.error || 'ログインに失敗しました');
+    document.getElementById('auth-path').value = data.auth_path || ('output/' + domain + '/auth.json');
+    status.textContent = 'ログイン成功。認証後ページを再解析しています…';
+    status.classList.remove('input-field-message-error');
+    // パスワードフィールドをクリア（セキュリティ）
+    document.getElementById('login-password').value = '';
+    document.getElementById('login-inline-panel').style.display = 'none';
+    await discoverUrls(true);
   } catch (e) {
-    setLoginStatus(e.message, true); startBtn.disabled = false;
-  }
-});
-document.getElementById('login-finish-btn').addEventListener('click', async () => {
-  const domain = loginDomain();
-  const startBtn = document.getElementById('login-start-btn');
-  const finishBtn = document.getElementById('login-finish-btn');
-  finishBtn.disabled = true;
-  setLoginStatus('セッションを保存しています…', false);
-  try {
-    const res = await fetch('/api/login/finish', { method: 'POST', body: new URLSearchParams({ domain }) });
-    const data = await res.json();
-    if (!res.ok || !data.session_saved) throw new Error(data.error || 'セッション保存に失敗しました');
-    setLoginStatus('ログインセッションを保存しました。認証後ページを取得できます。', false);
-    document.getElementById('auth-path').value = 'output/' + domain + '/auth.json';
-  } catch (e) {
-    setLoginStatus(e.message, true); finishBtn.disabled = false;
+    status.textContent = e.message;
+    status.classList.add('input-field-message-error');
   } finally {
-    startBtn.disabled = false;
+    btn.disabled = false; loading.style.display = 'none';
   }
 });
+
+// ---- 上級ログイン（アコーディオン内）: フォームを取得ボタン ----
+document.getElementById('login-scrape-btn').addEventListener('click', async () => {
+  const url = document.getElementById('login-url').value.trim();
+  const domain = loginDomain();
+  if (!url) { setLoginStatus('ログインURLを入力してください', true); return; }
+  setLoginStatus('', false);
+  setLoginLoading(true, 'フォームを取得しています…');
+  document.getElementById('login-scrape-btn').disabled = true;
+  document.getElementById('login-fields-area').innerHTML = '';
+  try {
+    const res = await fetch('/api/login/scrape', { method: 'POST', body: new URLSearchParams({ url, domain: domain || 'site' }) });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || 'フォーム取得に失敗しました');
+    renderLoginFields(data.fields || [], data.current_url);
+  } catch (e) {
+    setLoginStatus(e.message, true);
+  } finally {
+    setLoginLoading(false);
+    document.getElementById('login-scrape-btn').disabled = false;
+  }
+});
+
+function renderLoginFields(fields, currentUrl) {
+  const area = document.getElementById('login-fields-area');
+  if (!fields.length) { setLoginStatus('フォームフィールドが見つかりませんでした。ログインURLを確認してください。', true); return; }
+  area.innerHTML = fields.map(f => {
+    const type = f.field_type === 'password' ? 'password' : (f.field_type === 'email' ? 'email' : 'text');
+    const ac = f.field_type === 'password' ? 'current-password' : (f.field_type === 'email' || f.name.includes('mail') || f.name.includes('user') ? 'username' : 'off');
+    return `<div class="field" style="margin-bottom:8px">
+      <label>${escHtml(f.placeholder || f.name || f.field_type)}</label>
+      <input type="${type}" class="url-input login-field-input" data-field-name="${escHtml(f.name || f.element_id)}" data-current-url="${escHtml(currentUrl)}" placeholder="${escHtml(f.placeholder)}" autocomplete="${ac}" />
+    </div>`;
+  }).join('') +
+    '<button type="button" id="login-submit-btn" class="btn-primary" style="margin-top:8px;height:36px;padding:0 18px;font-size:13px">ログイン</button>';
+  document.getElementById('login-submit-btn').addEventListener('click', submitLogin);
+  setLoginStatus('', false);
+}
+
+async function submitLogin() {
+  const domain = loginDomain();
+  const inputs = document.querySelectorAll('.login-field-input');
+  if (!inputs.length) { setLoginStatus('先にフォームを取得してください', true); return; }
+  const currentUrl = inputs[0].dataset.currentUrl || document.getElementById('login-url').value.trim();
+  const fieldValues = {};
+  inputs.forEach(inp => { if (inp.dataset.fieldName) fieldValues[inp.dataset.fieldName] = inp.value; });
+
+  setLoginLoading(true, 'ログインしています…');
+  const btn = document.getElementById('login-submit-btn');
+  if (btn) btn.disabled = true;
+  setLoginStatus('', false);
+  try {
+    const res = await fetch('/api/login/submit', { method: 'POST', body: new URLSearchParams({
+      domain: domain || 'site', current_url: currentUrl, fields_json: JSON.stringify(fieldValues),
+    }) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'ログインに失敗しました');
+    if (data.success) {
+      document.getElementById('auth-path').value = data.auth_path || ('output/' + domain + '/auth.json');
+      setLoginStatus('ログイン成功。認証後ページを再解析しています…', false);
+      setLoginLoading(true, '認証後ページを再解析しています…');
+      await discoverUrls(true);
+    } else if (data.needs_more_fields) {
+      setLoginStatus('追加認証（MFA等）が必要です。表示されたフィールドを入力してください。', false);
+      renderLoginFields(data.fields || [], data.current_url || currentUrl);
+    } else {
+      throw new Error(data.error || 'ログインに失敗しました');
+    }
+  } catch (e) {
+    setLoginStatus(e.message, true);
+  } finally {
+    setLoginLoading(false);
+    const b = document.getElementById('login-submit-btn');
+    if (b) b.disabled = false;
+  }
+}
 document.getElementById('select-all-btn').addEventListener('click', () => setAllDiscovered(true));
 document.getElementById('clear-all-btn').addEventListener('click', () => setAllDiscovered(false));
-async function discoverUrls() {
+
+// ---- 画面分析 経過時間タイマー ----
+let _discoverTimerInterval = null;
+function _startDiscoverTimer() {
+  const el = document.getElementById('discover-elapsed');
+  if (!el) return;
+  el.textContent = '0:00';
+  const t0 = Date.now();
+  _discoverTimerInterval = setInterval(() => {
+    const s = Math.floor((Date.now() - t0) / 1000);
+    el.textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  }, 1000);
+}
+function _stopDiscoverTimer() {
+  clearInterval(_discoverTimerInterval);
+  _discoverTimerInterval = null;
+  const el = document.getElementById('discover-elapsed');
+  if (el) el.textContent = '';
+}
+
+// skipLoginSection=true のとき（ログイン後の再解析）はログインセクションを再展開しない
+async function discoverUrls(skipLoginSection) {
   const url = urlInput.value.trim();
   if (!url) { setUrlMessage('URLを入力してから画面分析を実行してください', true); return; }
   const loading = document.getElementById('discover-loading');
   const status = document.getElementById('discover-status');
   const btn = document.getElementById('discover-btn');
-  loading.style.display = 'flex'; status.textContent = ''; status.classList.remove('discover-status-error'); btn.disabled = true;
+  loading.style.display = 'flex'; status.textContent = ''; status.classList.remove('discover-status-error');
+  btn.disabled = true;
+  _startDiscoverTimer();
   try {
-    const body = new URLSearchParams({
-      url, depth: document.getElementById('crawl-depth').value,
-      max_pages: document.getElementById('max-pages').value, auth: getSettings().auth || document.getElementById('auth-path').value.trim() || '',
-    });
+    const auth = document.getElementById('auth-path').value.trim() || getSettings().auth || '';
+    const body = new URLSearchParams({ url, depth: '5', max_pages: '300', auth });
     const res = await fetch('/api/discover', { method: 'POST', body });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || '画面リスト取得に失敗しました');
     discovered = (data.pages || []).filter(p => p && p.url);
     renderDiscovered();
-    if (discovered.some(p => p.login_required)) {
-      const loginDetails = document.querySelector('details.result-collapsible');
-      if (loginDetails) loginDetails.open = true;
+    if (!skipLoginSection && discovered.some(p => p.login_required)) {
+      // インラインログインパネルを表示
+      const inlinePanel = document.getElementById('login-inline-panel');
+      if (inlinePanel) {
+        inlinePanel.style.display = '';
+        // ログインURLを自動セット
+        const loginPage = discovered.find(p => p.login_required && p.login_url);
+        const detectedLoginUrl = loginPage ? loginPage.login_url : '';
+        const hiddenUrl = document.getElementById('login-inline-url');
+        if (hiddenUrl) hiddenUrl.value = detectedLoginUrl;
+        // 上級設定のURLフィールドにも反映
+        const advUrl = document.getElementById('login-url');
+        if (advUrl && !advUrl.value && detectedLoginUrl) advUrl.value = detectedLoginUrl;
+      }
     }
-    status.textContent = discovered.length ? `${discovered.length}件の画面を検出しました。対象を選択してください。` : '画面が0件でした。URLや階層数を確認してください。';
+    const loginCount = discovered.filter(p => p.login_required).length;
+    if (discovered.length) {
+      const summary = document.getElementById('p1-summary');
+      const countEl = document.getElementById('p1-count-text');
+      const hintEl = document.getElementById('p1-login-hint');
+      if (summary) {
+        countEl.textContent = `${discovered.length}件の画面を検出しました`;
+        hintEl.textContent = loginCount ? `うち${loginCount}件がログインを必要とします` : '';
+        summary.style.display = '';
+      }
+      status.textContent = '';
+    } else {
+      status.textContent = '画面が0件でした。URLを確認してください。';
+    }
   } catch (e) {
     clearDiscovered(); status.textContent = e.message; status.classList.add('discover-status-error');
   } finally {
+    _stopDiscoverTimer();
     loading.style.display = 'none'; btn.disabled = false; updateTargetPreview();
   }
 }
@@ -240,6 +414,8 @@ function clearDiscovered() {
   document.getElementById('discovered-url-panel').style.display = 'none';
   document.getElementById('discovered-url-list').innerHTML = '';
   document.getElementById('discover-status').textContent = '';
+  document.getElementById('login-inline-panel').style.display = 'none';
+  document.getElementById('login-simple-status').textContent = '';
 }
 function setAllDiscovered(v) { document.querySelectorAll('.discovered-cb').forEach(cb => { cb.checked = v; }); updateTargetPreview(); }
 function selectedDiscovered() { return [...document.querySelectorAll('.discovered-cb:checked')].map(cb => cb.value); }
@@ -364,7 +540,7 @@ async function runWith(bodyStr, domain, label, urlCount) {
   if (sessionExpired) {
     execActions.classList.remove('hidden');
     execTitle.textContent = 'セッションが失効しています'; execPhase.textContent = '要再ログイン';
-    execMessage.textContent = '保存済みのログインセッションが失効していたため、ドリフト誤検知を防ぐためクロールを中断しました（前回の結果は保持されています）。入力に戻り「ログイン用ブラウザを開く」から再ログインしてください。';
+    execMessage.textContent = '保存済みのログインセッションが失効していたため、ドリフト誤検知を防ぐためクロールを中断しました（前回の結果は保持されています）。入力に戻り「ログイン情報の設定」から再ログインしてください。';
   } else if (cancelled) {
     execActions.classList.remove('hidden');
     execTitle.textContent = '実行を停止しました'; execPhase.textContent = '停止';
@@ -376,6 +552,7 @@ async function runWith(bodyStr, domain, label, urlCount) {
     execMessage.textContent = 'ドキュメントの生成が完了しました。';
     document.getElementById('btn-view-report').style.display = '';
     execActions.classList.remove('hidden');
+    _showCompletionPopup(Math.floor((Date.now() - startTime) / 1000));
   } else {
     execActions.classList.remove('hidden');
     execTitle.textContent = 'エラー'; execPhase.textContent = 'エラー'; execError.classList.remove('hidden');
@@ -393,7 +570,12 @@ document.getElementById('exec-stop-btn').addEventListener('click', async () => {
   if (runAbort) runAbort.abort();
 });
 
-document.getElementById('exec-new-btn').addEventListener('click', () => switchView('dashboard'));
+document.getElementById('exec-new-btn').addEventListener('click', () => {
+  switchView('generate');
+  executionView.classList.add('hidden'); resultPanel.classList.add('hidden');
+  appContent.classList.remove('is-executing'); genPanel.style.display = '';
+  showWizardStep(2);
+});
 document.getElementById('r-new-btn').addEventListener('click', () => switchView('dashboard'));
 document.getElementById('btn-view-report').addEventListener('click', () => showResults(activeDomain));
 document.getElementById('r-recrawl-btn').addEventListener('click', () => {
@@ -447,8 +629,44 @@ async function showResults(domain) {
   setHeader(['ダッシュボード', domain], domain);
 
   executionView.classList.add('hidden'); resultPanel.classList.remove('hidden');
+  _buildExportDropdown(data);
+  showWizardStep(4);
   selectResultTab('overview');
 }
+
+function _buildExportDropdown(data) {
+  const menu = document.getElementById('export-dropdown-menu');
+  if (!menu) return;
+  const files = (data && data.files) || {};
+  const domain = (document.getElementById('r-domain') || {}).textContent || '';
+  const defs = [
+    { key: 'html', label: 'HTMLレポート' },
+    { key: 'pdf', label: 'PDF' },
+    { key: 'json', label: 'JSON' },
+    { key: 'excel', label: 'Excel' },
+    { key: 'screens_md', label: 'Markdown（画面一覧）' },
+    { key: 'transition_mmd', label: '遷移図（Mermaid）' },
+    { key: 'diff', label: '差分レポート' },
+  ];
+  const zipRow = `<div class="export-dropdown-item is-zip"><span>すべてZIPでダウンロード</span><a href="/download-zip?domain=${encodeURIComponent(domain)}" class="btn-primary" style="height:28px;padding:0 10px;font-size:12px">DL</a></div>`;
+  const fileRows = defs.map(d => {
+    if (files[d.key]) {
+      return `<div class="export-dropdown-item"><span>${escHtml(d.label)}</span><div style="display:flex;gap:4px"><a href="/preview?path=${encodeURIComponent(files[d.key])}" target="_blank" class="btn-outline-sm" style="height:28px;padding:0 8px;font-size:12px">開く</a><a href="/download?path=${encodeURIComponent(files[d.key])}" class="btn-outline-sm" style="height:28px;padding:0 8px;font-size:12px" download>DL</a></div></div>`;
+    }
+    return `<div class="export-dropdown-item is-missing"><span>${escHtml(d.label)}（未生成）</span></div>`;
+  }).join('');
+  menu.innerHTML = zipRow + fileRows;
+}
+
+// エクスポートドロップダウンの開閉
+document.getElementById('export-dropdown-btn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  document.getElementById('export-dropdown').classList.toggle('is-open');
+});
+document.addEventListener('click', () => {
+  const dd = document.getElementById('export-dropdown');
+  if (dd) dd.classList.remove('is-open');
+});
 
 document.querySelectorAll('.result-tab').forEach(t => {
   t.addEventListener('click', () => selectResultTab(t.dataset.tab));
@@ -472,9 +690,10 @@ function selectResultTab(tab) {
   if (tab === 'overview') renderOverview();
   else if (tab === 'matrix') renderMatrix();
   else if (tab === 'report') renderReport();
-  else if (tab === 'shots') renderShots();
+  else if (tab === 'design') renderDesign();
+  else if (tab === 'transition') renderTransition();
+  else if (tab === 'transition-table') renderTransitionTable();
   else if (tab === 'history') renderTimeline();
-  else if (tab === 'export') renderExport();
 }
 
 // ---- 履歴・差分（クロール履歴タイムライン＋任意2点の仕様ドリフト比較）----
@@ -519,4 +738,26 @@ function showTimelineDiff() {
   if (from === to) { box.innerHTML = '<div class="hero-msg">異なる2時点を選択してください。</div>'; return; }
   box.innerHTML = `<iframe src="/api/snapshot-diff?domain=${encodeURIComponent(timelineDomain)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}" title="仕様ドリフト差分"></iframe>`;
 }
+
+// ====================== 完了ポップアップ ======================
+function _showCompletionPopup(elapsedSec) {
+  const overlay = document.getElementById('completion-overlay');
+  const elapsedEl = document.getElementById('popup-elapsed');
+  if (!overlay) return;
+  const m = Math.floor(elapsedSec / 60);
+  const s = elapsedSec % 60;
+  elapsedEl.textContent = `${m}:${String(s).padStart(2, '0')}`;
+  overlay.classList.remove('hidden');
+}
+
+document.getElementById('popup-close-btn').addEventListener('click', () => {
+  document.getElementById('completion-overlay').classList.add('hidden');
+});
+document.getElementById('popup-view-report-btn').addEventListener('click', () => {
+  document.getElementById('completion-overlay').classList.add('hidden');
+  showResults(activeDomain);
+});
+document.getElementById('completion-overlay').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) document.getElementById('completion-overlay').classList.add('hidden');
+});
 

@@ -14,10 +14,11 @@ def _index_html() -> str:
     return appmod.app.test_client().get("/").get_data(as_text=True)
 
 
-def test_crawl_discovery_section_is_always_visible() -> None:
+def test_discover_btn_is_in_url_row() -> None:
     html = _index_html()
-    assert 'id="crawl-discovery-section"' in html
-    assert 'style="display:none"' not in html.split('id="crawl-discovery-section"')[1][:50]
+    assert 'id="discover-btn"' in html
+    # 画面分析ボタンがURL入力と同じ input-row 内にあること
+    assert 'id="url-input"' in html.split('id="discover-btn"')[0].split('class="input-row"')[-1]
 
 
 def test_single_mode_is_removed() -> None:

@@ -134,10 +134,10 @@ function exportMatrixCsv() {
   URL.revokeObjectURL(a.href);
 }
 
-// ---- 画面別仕様（HTMLレポート埋め込み）----
+// ---- 画面別仕様（リデザイン：全幅スクショ・フォームカード・クリック展開テスト条件）----
 function renderReport() {
   if (!reportJson || !(reportJson.screens || []).length) {
-    resultHero.innerHTML = '<div class="hero-msg"><p>画面別仕様データ（report.json）がありません。</p><p style="font-size:13px">出力形式で「HTML」または「JSON」を選んで再クロールすると表示されます。</p></div>';
+    resultHero.innerHTML = '<div class="hero-msg"><p>画面別仕様データ（report.json）がありません。</p></div>';
     return;
   }
   const screens = reportJson.screens;
@@ -155,7 +155,11 @@ function renderReport() {
     const item = document.createElement('div');
     item.className = 'rpt-list-item' + (idx === 0 ? ' is-active' : '');
     item.dataset.pid = sc.page_id;
-    item.innerHTML = `<strong>${escHtml(sc.page_id)}</strong><span>${escHtml(sc.title || '')}</span>`;
+    const hasForm = (sc.forms || []).some(f => (f.fields || []).length > 0);
+    item.innerHTML =
+      `<strong>${escHtml(sc.page_id)}</strong>` +
+      `<span>${escHtml(sc.title || '')}</span>` +
+      (hasForm ? '<span style="font-size:10px;color:var(--primary);font-weight:700">フォームあり</span>' : '');
     item.addEventListener('click', () => {
       list.querySelectorAll('.rpt-list-item').forEach(el => el.classList.remove('is-active'));
       item.classList.add('is-active');
@@ -169,30 +173,389 @@ function renderReport() {
 function renderReportDetail(sc, allShots) {
   const detail = document.getElementById('rpt-detail');
   if (!detail) return;
+
   const shotPath = allShots.find(p => p.split('/').pop().replace(/\.png$/, '') === sc.page_id);
   const shotHtml = shotPath
-    ? `<div class="rpt-shots"><img src="/preview?path=${encodeURIComponent(shotPath)}" class="rpt-thumb" loading="lazy" alt="${escHtml(sc.page_id)}" onclick="openLightbox('${escHtml('/preview?path=' + encodeURIComponent(shotPath))}')" /></div>`
+    ? `<img src="/preview?path=${encodeURIComponent(shotPath)}" class="rpt-screenshot" loading="lazy" alt="${escHtml(sc.page_id)}" onclick="openLightbox('${escHtml('/preview?path=' + encodeURIComponent(shotPath))}')" />`
     : '';
-  let fieldRows = '';
-  for (const fm of (sc.forms || [])) {
-    for (const f of (fm.fields || [])) {
-      const conds = (f.test_conditions || []).map(c => `<span class="cond-pill ${condClass(c)}">${escHtml(c)}</span>`).join('');
-      fieldRows +=
-        `<tr><td>${escHtml(f.name || '')}</td>` +
-        `<td>${escHtml(f.field_type || '')}</td>` +
-        `<td>${f.required ? '●' : ''}</td>` +
-        `<td>${escHtml(constraintText(f))}</td>` +
-        `<td>${escHtml(defaultOptionsText(f))}</td>` +
-        `<td><code class="loc-hint">${escHtml((f.locators || [])[0] || '')}</code></td>` +
-        `<td class="cond-cell">${conds || '—'}</td></tr>`;
-    }
+
+  const transTo = (sc.transitions && sc.transitions.to) || [];
+  const transFrom = (sc.transitions && sc.transitions.from) || [];
+  const transHtml = (transTo.length || transFrom.length)
+    ? `<div class="rpt-transitions">遷移先: ${transTo.length ? transTo.map(escHtml).join('、') : '—'} ／ 遷移元: ${transFrom.length ? transFrom.map(escHtml).join('、') : '—'}</div>`
+    : '';
+
+  const nonEmptyForms = (sc.forms || []).filter(f => (f.fields || []).length > 0);
+  let formsHtml = '';
+  if (!nonEmptyForms.length) {
+    formsHtml = '<p style="color:var(--text-muted);font-size:13px;padding:8px 0">この画面には入力フォームがありません。</p>';
+  } else {
+    formsHtml = nonEmptyForms.map((fm, fi) => {
+      const fieldRows = (fm.fields || []).map(f => {
+        const condCount = (f.test_conditions || []).length;
+        const condHtml = condCount
+          ? `<details class="rpt-cond-expand"><summary class="rpt-cond-summary">${condCount}件</summary><div class="rpt-cond-pills">${(f.test_conditions || []).map(c => `<span class="cond-pill ${condClass(c)}">${escHtml(c)}</span>`).join('')}</div></details>`
+          : '—';
+        return `<tr>
+          <td style="font-weight:600">${escHtml(f.name || '(無名)')}</td>
+          <td>${escHtml(f.field_type || '')}</td>
+          <td style="text-align:center">${f.required ? '<span style="color:var(--critical);font-weight:700">●</span>' : ''}</td>
+          <td style="font-size:11px">${escHtml(constraintText(f)) || '—'}</td>
+          <td><code class="loc-hint">${escHtml((f.locators || [])[0] || '')}</code></td>
+          <td>${condHtml}</td>
+        </tr>`;
+      }).join('');
+      return `<div class="rpt-form-card">
+        <div class="rpt-form-card-header">
+          フォーム ${fi + 1}
+          <span class="rpt-form-card-method">${escHtml(fm.method || 'get')}</span>
+          <span style="font-weight:400;margin-left:4px">${escHtml(fm.action || '')}</span>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="rpt-field-table">
+            <thead><tr><th>項目名</th><th>型</th><th>必須</th><th>制約</th><th>ロケータ候補</th><th>テスト条件</th></tr></thead>
+            <tbody>${fieldRows}</tbody>
+          </table>
+        </div>
+      </div>`;
+    }).join('');
   }
-  const tableHtml = fieldRows
-    ? '<table class="rpt-field-table"><thead><tr><th>項目名</th><th>型</th><th>必須</th><th>制約</th><th>既定・選択肢</th><th>ロケータ候補</th><th>テスト条件</th></tr></thead><tbody>' + fieldRows + '</tbody></table>'
-    : '<p style="color:var(--text-muted);font-size:13px">この画面には入力フォームがありません。</p>';
+
   detail.innerHTML =
-    `<div class="rpt-detail-header"><h3>${escHtml(sc.title || sc.page_id)}</h3><code class="rpt-url">${escHtml(sc.url || '')}</code></div>` +
-    shotHtml + tableHtml;
+    `<div class="rpt-detail-header" style="margin-bottom:12px">
+      <h3 style="font-size:16px;margin-bottom:4px">${escHtml(sc.title || sc.page_id)}</h3>
+      <code class="rpt-url">${escHtml(sc.url || '')}</code>
+    </div>` +
+    shotHtml + transHtml + formsHtml;
+}
+
+// ---- 設計（テスト設計技法 推奨） ----
+
+const DESIGN_TECHNIQUES = [
+  { key: 'ep',   label: '同値分割',               abbr: 'EP'  },
+  { key: 'bva',  label: '境界値分析',             abbr: 'BVA' },
+  { key: 'dt',   label: 'デシジョンテーブル',     abbr: 'DT'  },
+  { key: 'st',   label: '状態遷移テスト',         abbr: 'ST'  },
+  { key: 'ct',   label: 'クラシフィケーションツリー', abbr: 'CT' },
+  { key: 'pw',   label: 'ペアワイズ',             abbr: 'PW'  },
+  { key: 'uc',   label: 'ユースケーステスト',     abbr: 'UC'  },
+  { key: 'comb', label: '組み合わせ',             abbr: 'CB'  },
+];
+
+function _designInputFields(sc) {
+  const SKIP = new Set(['hidden','submit','button','reset','image']);
+  return (sc.forms || []).flatMap(f => (f.fields || []).filter(x => !SKIP.has(x.field_type)));
+}
+
+function _recommendFor(sc) {
+  const fields = _designInputFields(sc);
+  const boundary = fields.filter(f => f.maxlength || f.minlength || f.min_value || f.max_value || f.pattern);
+  const required = fields.filter(f => f.required);
+  const withOpts  = fields.filter(f => f.options && f.options.length > 0);
+  const selects   = fields.filter(f => f.field_type === 'select' || f.field_type === 'radio' || f.field_type === 'checkbox');
+  const to   = (sc.transitions && sc.transitions.to)   || [];
+  const from = (sc.transitions && sc.transitions.from) || [];
+  const hasForm = fields.length > 0;
+
+  const rec = {};
+
+  // 同値分割: 入力フィールドがあれば適用
+  if (hasForm) {
+    rec.ep = fields.map(f =>
+      `${escHtml(f.name || f.field_type)}: 有効値 / 無効値・空値クラス`
+    );
+  }
+
+  // 境界値分析: 上限・下限・パターン制約がある
+  if (boundary.length) {
+    rec.bva = boundary.map(f => {
+      const parts = [];
+      if (f.maxlength)  parts.push(`maxlength=${f.maxlength}`);
+      if (f.minlength)  parts.push(`minlength=${f.minlength}`);
+      if (f.min_value)  parts.push(`min=${f.min_value}`);
+      if (f.max_value)  parts.push(`max=${f.max_value}`);
+      if (f.pattern)    parts.push(`pattern 制約あり`);
+      return `${escHtml(f.name || f.field_type)}: ${parts.join('、')}`;
+    });
+  }
+
+  // デシジョンテーブル: 必須フィールドが 2 件以上
+  if (required.length >= 2) {
+    rec.dt = [
+      `必須フィールド ${required.length}件 → 入力有無の組み合わせで ${Math.pow(2, Math.min(required.length, 4))} パターン`,
+      required.map(f => escHtml(f.name || f.field_type)).join('、') + ' の有効/無効マトリクス',
+    ];
+  }
+
+  // 状態遷移テスト: 遷移先が存在する or 複数の遷移元
+  if (to.length > 0 || from.length > 1) {
+    const reasons = [];
+    if (to.length)   reasons.push(`遷移先: ${to.map(escHtml).join('、')}`);
+    if (from.length > 1) reasons.push(`複数の遷移元 (${from.length}件): ${from.map(escHtml).join('、')}`);
+    rec.st = reasons;
+  }
+
+  // クラシフィケーションツリー: select/radio/checkbox が 1 件以上 OR 入力が 3 件以上
+  if (selects.length >= 1 || fields.length >= 3) {
+    const reasons = [];
+    if (selects.length) reasons.push(...selects.map(f =>
+      `${escHtml(f.name || f.field_type)}: ${f.options.length || '複数'} 選択肢 → 独立した分類軸`
+    ));
+    if (!selects.length && fields.length >= 3)
+      reasons.push(`入力パラメータ ${fields.length}件 → 分類ツリーで網羅的カバー`);
+    rec.ct = reasons;
+  }
+
+  // ペアワイズ: 入力パラメータが 4 件以上
+  if (fields.length >= 4) {
+    rec.pw = [
+      `入力パラメータ ${fields.length}件 → 全組み合わせは ${fields.length <= 8 ? Math.pow(2, fields.length) + ' 件' : '膨大'} → ペアワイズで削減`,
+    ];
+  }
+
+  // ユースケーステスト: フォームがあり遷移先が存在 or ボタンが複数
+  const buttons = sc.buttons || [];
+  if (hasForm && (to.length > 0 || buttons.length >= 2)) {
+    const reasons = [`入力→送信→${to.length ? to.map(escHtml).join('、') + ' への遷移' : 'レスポンス確認'} の一連シナリオ`];
+    if (buttons.length >= 2) reasons.push(`操作ボタン: ${buttons.slice(0, 4).map(escHtml).join('、')}`);
+    rec.uc = reasons;
+  }
+
+  // 組み合わせ: 選択肢フィールドが 2 件以上 かつ 全パラメータ数 ≤ 5
+  if (withOpts.length >= 2 && fields.length <= 5) {
+    const total = withOpts.reduce((n, f) => n * Math.max(f.options.length, 2), 1);
+    rec.comb = [
+      `選択肢フィールド ${withOpts.length}件 → 全組み合わせ ${total} パターン（全数テスト可能範囲）`,
+      withOpts.map(f => `${escHtml(f.name)}: ${f.options.length}値`).join('、'),
+    ];
+  }
+
+  return rec;
+}
+
+function renderDesign() {
+  if (!reportJson || !(reportJson.screens || []).length) {
+    resultHero.innerHTML = '<div class="hero-msg"><p>設計データ（report.json）がありません。クロールを実行してください。</p></div>';
+    return;
+  }
+  const screens = reportJson.screens;
+
+  // ---- マトリクス ----
+  const matrixRows = screens.map(sc => {
+    const rec = _recommendFor(sc);
+    const cells = DESIGN_TECHNIQUES.map(t =>
+      rec[t.key]
+        ? `<td style="text-align:center;color:#24A148;font-size:15px">✓</td>`
+        : `<td style="text-align:center;color:var(--text-muted);font-size:12px">—</td>`
+    ).join('');
+    return `<tr><td class="c-screen">${escHtml(sc.page_id)}</td><td style="font-size:12px;color:var(--text-muted)">${escHtml(sc.title || '')}</td>${cells}</tr>`;
+  }).join('');
+
+  const matrixHead = DESIGN_TECHNIQUES.map(t =>
+    `<th style="font-size:11px;writing-mode:vertical-lr;min-width:28px;padding:6px 4px">${escHtml(t.abbr)}</th>`
+  ).join('');
+
+  // ---- 画面別詳細 ----
+  const TECH_COLORS = {
+    ep: '#0F62FE', bva: '#6929C4', dt: '#005D5D', st: '#9F1853',
+    ct: '#198038', pw: '#B12704', uc: '#0043CE', comb: '#6E6E6E',
+  };
+  const detailCards = screens.map(sc => {
+    const rec = _recommendFor(sc);
+    const keys = Object.keys(rec);
+    if (!keys.length) return `
+      <div style="border:1px solid var(--border);border-radius:6px;padding:14px 16px;margin-bottom:12px">
+        <div style="font-weight:600;margin-bottom:4px">${escHtml(sc.page_id)} <span style="color:var(--text-muted);font-weight:400">${escHtml(sc.title || '')}</span></div>
+        <p style="color:var(--text-muted);font-size:12px;margin:0">フォームも遷移もないページのため、技法の推奨なし</p>
+      </div>`;
+
+    const badges = keys.map(k => {
+      const t = DESIGN_TECHNIQUES.find(x => x.key === k);
+      const col = TECH_COLORS[k] || '#444';
+      return `<span style="display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;color:#fff;background:${col};margin:2px 3px 2px 0">${escHtml(t.label)}</span>`;
+    }).join('');
+
+    const rationale = keys.map(k => {
+      const t = DESIGN_TECHNIQUES.find(x => x.key === k);
+      const reasons = rec[k];
+      const col = TECH_COLORS[k] || '#444';
+      return `<div style="margin-bottom:8px">
+        <span style="font-size:12px;font-weight:700;color:${col}">${escHtml(t.label)}</span>
+        <ul style="margin:2px 0 0 0;padding-left:18px">
+          ${reasons.map(r => `<li style="font-size:12px;color:var(--text);margin-bottom:2px">${r}</li>`).join('')}
+        </ul>
+      </div>`;
+    }).join('');
+
+    return `
+      <div style="border:1px solid var(--border);border-radius:6px;padding:14px 16px;margin-bottom:12px">
+        <div style="font-weight:600;margin-bottom:6px">
+          ${escHtml(sc.page_id)}
+          <span style="color:var(--text-muted);font-weight:400"> ${escHtml(sc.title || '')}</span>
+          <code style="font-size:11px;color:var(--text-muted);margin-left:8px">${escHtml(sc.url || '')}</code>
+        </div>
+        <div style="margin-bottom:10px">${badges}</div>
+        <details style="font-size:12px">
+          <summary style="cursor:pointer;color:var(--text-muted);font-size:12px">根拠を表示</summary>
+          <div style="margin-top:8px;padding-left:4px">${rationale}</div>
+        </details>
+      </div>`;
+  }).join('');
+
+  // ---- 技法凡例 ----
+  const legend = DESIGN_TECHNIQUES.map(t => {
+    const col = TECH_COLORS[t.key] || '#444';
+    return `<span style="display:inline-flex;align-items:center;gap:4px;margin:2px 8px 2px 0;font-size:12px">
+      <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${col}"></span>${escHtml(t.abbr)} = ${escHtml(t.label)}
+    </span>`;
+  }).join('');
+
+  resultHero.innerHTML =
+    '<div class="hero-pad">' +
+    '<div class="hero-section-title">テスト設計技法マトリクス</div>' +
+    '<p style="color:var(--text-muted);font-size:12px;margin:0 0 8px">画面要素（入力フィールド・選択肢・遷移）に基づき推奨技法を自動判定します。</p>' +
+    `<div style="overflow-x:auto;margin-bottom:20px"><table class="ov-screens" style="min-width:max-content"><thead><tr><th>画面</th><th>タイトル</th>${matrixHead}</tr></thead><tbody>${matrixRows}</tbody></table></div>` +
+    '<div class="hero-section-title" style="margin-top:4px">画面別 推奨技法と根拠</div>' +
+    `<div style="margin-bottom:12px;line-height:2">${legend}</div>` +
+    detailCards +
+    '</div>';
+}
+
+// ---- 画面遷移図（vis.js / ADR-0003）----
+function renderTransition() {
+  if (!reportJson || !(reportJson.screens || []).length) {
+    resultHero.innerHTML = '<div class="hero-msg">遷移データがありません。クロールを実行してください。</div>';
+    return;
+  }
+  resultHero.innerHTML =
+    '<div style="display:flex;flex-direction:column;height:100%">' +
+    '<div class="vis-legend">' +
+    '<span class="vis-legend-item"><span class="vis-legend-dot" style="background:#0F62FE"></span>フォームあり</span>' +
+    '<span class="vis-legend-item"><span class="vis-legend-dot" style="background:#6B7280"></span>リンクのみ</span>' +
+    '<span class="vis-legend-item"><span style="display:inline-block;width:18px;height:2px;background:#D32F2F;border-bottom:2px dashed #D32F2F"></span>フォーム送信</span>' +
+    '<span style="margin-left:auto;font-size:11px">共通ナビ（50%以上から出る遷移）は非表示。ノードをクリックすると仕様を表示します。</span>' +
+    '</div>' +
+    '<div id="vis-network" style="flex:1;min-height:0"></div>' +
+    '</div>';
+  _loadVisJs(() => _drawVisNetwork(reportJson.screens));
+}
+
+function _loadVisJs(cb) {
+  if (window.vis) { cb(); return; }
+  const s = document.createElement('script');
+  s.src = 'https://cdn.jsdelivr.net/npm/vis-network/standalone/umd/vis-network.min.js';
+  s.onload = cb;
+  document.head.appendChild(s);
+}
+
+function _commonNavTargets(screens) {
+  const n = screens.length;
+  const count = {};
+  screens.forEach(sc => {
+    (sc.transitions && sc.transitions.to || []).forEach(to => { count[to] = (count[to] || 0) + 1; });
+  });
+  const threshold = Math.max(2, Math.floor(n * 0.5));
+  return new Set(Object.entries(count).filter(([, c]) => c >= threshold).map(([k]) => k));
+}
+
+function _drawVisNetwork(screens) {
+  const container = document.getElementById('vis-network');
+  if (!container || !window.vis) return;
+  const common = _commonNavTargets(screens);
+  const urlToId = {};
+  screens.forEach(sc => { urlToId[sc.url] = sc.page_id; });
+
+  const nodes = screens.map(sc => ({
+    id: sc.page_id,
+    label: sc.page_id + '\n' + (sc.title || '').slice(0, 18),
+    title: (sc.title || sc.page_id) + '\n' + sc.url,
+    color: { background: (sc.forms || []).some(f => f.fields && f.fields.length) ? '#0F62FE' : '#6B7280', border: '#fff', highlight: { background: '#0043CE', border: '#fff' } },
+    font: { color: '#fff', size: 11 },
+    shape: 'box',
+    borderWidth: 0,
+    margin: 8,
+  }));
+
+  const edges = [];
+  screens.forEach(sc => {
+    (sc.transitions && sc.transitions.to || []).forEach(to => {
+      if (!common.has(to)) edges.push({ from: sc.page_id, to, arrows: 'to', color: { color: '#9CA3AF', highlight: '#374151' }, width: 1 });
+    });
+    (sc.forms || []).forEach(f => {
+      const toId = f.action ? urlToId[f.action] : null;
+      if (toId && toId !== sc.page_id) edges.push({ from: sc.page_id, to: toId, arrows: 'to', dashes: true, color: { color: '#D32F2F', highlight: '#9F1853' }, width: 2, label: 'F', font: { size: 10, color: '#D32F2F' } });
+    });
+  });
+
+  const network = new vis.Network(container,
+    { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) },
+    {
+      layout: { hierarchical: { enabled: true, direction: 'LR', sortMethod: 'directed', levelSeparation: 160, nodeSpacing: 80 } },
+      physics: { enabled: false },
+      interaction: { hover: true, navigationButtons: true, keyboard: true },
+      nodes: { borderRadius: 4 },
+    }
+  );
+  network.on('click', params => {
+    if (params.nodes.length) {
+      selectResultTab('report');
+      setTimeout(() => {
+        const item = document.querySelector(`.rpt-list-item[data-pid="${params.nodes[0]}"]`);
+        if (item) item.click();
+      }, 80);
+    }
+  });
+}
+
+// ---- 画面遷移表（ISTQB 状態遷移テスト標準フォーマット）----
+function renderTransitionTable() {
+  if (!reportJson || !(reportJson.screens || []).length) {
+    resultHero.innerHTML = '<div class="hero-msg">遷移データがありません。</div>';
+    return;
+  }
+  const screens = reportJson.screens;
+  const common = _commonNavTargets(screens);
+  const idToTitle = {};
+  screens.forEach(sc => { idToTitle[sc.page_id] = sc.title || sc.page_id; });
+
+  const rows = [];
+  screens.forEach(sc => {
+    (sc.transitions && sc.transitions.to || []).forEach(to => {
+      if (common.has(to)) return;
+      rows.push({ fromId: sc.page_id, fromTitle: sc.title || sc.page_id, event: 'リンク', toId: to, toTitle: idToTitle[to] || to, action: '—' });
+    });
+    (sc.forms || []).forEach(f => {
+      if (!f.action) return;
+      const urlToId = {};
+      screens.forEach(s => { urlToId[s.url] = s.page_id; });
+      const toId = urlToId[f.action] || f.action;
+      const toTitle = idToTitle[toId] || '（未取得）';
+      rows.push({ fromId: sc.page_id, fromTitle: sc.title || sc.page_id, event: 'フォーム送信', toId, toTitle, action: `${(f.method || 'GET').toUpperCase()} ${f.action}` });
+    });
+  });
+
+  if (!rows.length) { resultHero.innerHTML = '<div class="hero-msg">遷移情報がありません（共通ナビのみ検出）。</div>'; return; }
+
+  const tableRows = rows.map(r =>
+    `<tr>
+      <td class="c-screen">${escHtml(r.fromId)}</td>
+      <td>${escHtml(r.fromTitle)}</td>
+      <td><span class="cond-pill ${r.event === 'フォーム送信' ? 'cc-format trans-event-form' : 'cc-other trans-event-link'}">${escHtml(r.event)}</span></td>
+      <td class="c-screen">${escHtml(r.toId)}</td>
+      <td>${escHtml(r.toTitle)}</td>
+      <td style="font-size:11px;font-family:monospace;color:var(--text-muted);word-break:break-all">${escHtml(r.action)}</td>
+    </tr>`
+  ).join('');
+
+  resultHero.innerHTML =
+    '<div class="hero-pad">' +
+    '<div class="hero-section-title">画面遷移表 — ISTQB 状態遷移テスト</div>' +
+    `<p style="color:var(--text-muted);font-size:12px;margin:0 0 12px">${rows.length}件の遷移。共通ナビ（${Math.floor(screens.length * 0.5)}件以上から発生）は除外しています。</p>` +
+    '<div style="overflow-x:auto">' +
+    '<table class="trans-table">' +
+    '<thead><tr><th>現在の画面</th><th>タイトル</th><th>イベント</th><th>遷移先</th><th>遷移先タイトル</th><th>アクション</th></tr></thead>' +
+    `<tbody>${tableRows}</tbody>` +
+    '</table></div></div>';
 }
 
 // ---- スクリーンショット一覧 ----

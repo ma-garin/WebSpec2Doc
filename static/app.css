@@ -450,3 +450,77 @@
 .lightbox img { max-width: 90vw; max-height: 88vh; border-radius: 6px; box-shadow: 0 8px 40px rgba(0,0,0,.5); }
 .lightbox-close { position: absolute; top: 16px; right: 20px; background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; line-height: 1; padding: 4px 8px; }
 .lightbox-close:hover { opacity: .7; }
+
+/* ── 完了ポップアップ ── */
+.completion-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.55);
+  z-index: 1000; display: flex; align-items: center; justify-content: center;
+  animation: fadeIn .18s ease;
+}
+.completion-overlay.hidden { display: none; }
+.completion-card {
+  background: var(--surface); border-radius: 12px;
+  padding: 36px 32px 28px; max-width: 400px; width: 90%;
+  text-align: center; box-shadow: var(--shadow-pop);
+  animation: slideUp .22s ease;
+}
+.completion-icon { font-size: 44px; margin-bottom: 10px; }
+.completion-title { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+.completion-time { font-size: 14px; color: var(--text-muted); margin-bottom: 20px; }
+.completion-time strong { font-size: 28px; font-weight: 800; color: var(--primary-dark); display: block; margin-bottom: 2px; font-variant-numeric: tabular-nums; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+/* ── 4ステップウィザード ── */
+.wizard-p1-summary { margin-top:16px; border:1px solid var(--info-border); border-radius:var(--radius-lg); background:var(--info-bg); padding:18px 20px; }
+.wizard-p1-summary-count { font-size:18px; font-weight:700; color:var(--primary-dark); display:block; margin-bottom:4px; }
+.wizard-p1-summary-hint { font-size:13px; color:var(--warning); font-weight:600; display:block; margin-bottom:14px; }
+.wizard-p1-summary-hint:empty { display:none; margin:0; }
+.wizard-p2-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid var(--border); }
+.wizard-p2-header h2 { font-size:16px; font-weight:700; }
+
+/* ── エクスポートドロップダウン ── */
+.export-dropdown { position:relative; display:inline-block; }
+.export-dropdown-menu {
+  position:absolute; right:0; top:calc(100% + 4px);
+  background:var(--surface); border:1px solid var(--border-strong);
+  border-radius:var(--radius); box-shadow:var(--shadow-pop);
+  min-width:220px; z-index:200; display:none;
+  overflow:hidden;
+}
+.export-dropdown.is-open .export-dropdown-menu { display:block; }
+.export-dropdown-item {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:9px 14px; font-size:13px; border-bottom:1px solid var(--border);
+  gap:12px;
+}
+.export-dropdown-item:last-child { border-bottom:none; }
+.export-dropdown-item.is-zip { background:var(--info-bg); font-weight:700; color:var(--primary-dark); }
+.export-dropdown-item.is-missing { opacity:.5; }
+.export-dropdown-item span { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* ── 画面別仕様 ─ リデザイン ── */
+.rpt-screenshot { width:100%; border:1px solid var(--border); border-radius:var(--radius); cursor:zoom-in; display:block; margin-bottom:16px; }
+.rpt-screenshot:hover { opacity:.9; }
+.rpt-form-card { border:1px solid var(--border); border-radius:var(--radius); margin-bottom:14px; overflow:hidden; }
+.rpt-form-card-header { background:var(--surface-subtle); padding:8px 14px; border-bottom:1px solid var(--border); font-size:12px; font-weight:700; color:var(--text-muted); display:flex; align-items:center; gap:8px; }
+.rpt-form-card-method { display:inline-block; padding:1px 7px; border-radius:4px; font-size:11px; font-weight:800; background:var(--info-bg); color:var(--primary-dark); border:1px solid var(--info-border); text-transform:uppercase; }
+.rpt-cond-expand { display:flex; align-items:center; gap:4px; }
+.rpt-cond-summary { cursor:pointer; font-size:12px; font-weight:600; color:var(--primary-dark); border:1px solid var(--info-border); background:var(--info-bg); border-radius:4px; padding:2px 7px; list-style:none; }
+.rpt-cond-summary::-webkit-details-marker { display:none; }
+.rpt-cond-pills { padding:6px 0 2px; display:flex; flex-wrap:wrap; gap:3px; }
+.rpt-transitions { margin-top:8px; font-size:12px; color:var(--text-muted); padding:8px 14px; background:var(--surface-soft); border:1px solid var(--border); border-radius:var(--radius); }
+
+/* ── 画面遷移図 vis.js ── */
+#vis-network { width:100%; height:100%; min-height:400px; }
+.vis-legend { display:flex; gap:16px; align-items:center; font-size:12px; color:var(--text-muted); padding:8px 14px; background:var(--surface-soft); border-bottom:1px solid var(--border); flex-shrink:0; }
+.vis-legend-item { display:flex; align-items:center; gap:5px; }
+.vis-legend-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+
+/* ── 画面遷移表 ── */
+.trans-table { width:100%; border-collapse:collapse; font-size:.8rem; }
+.trans-table th { background:var(--surface-soft); color:var(--text-muted); font-size:11px; font-weight:800; text-align:left; padding:8px 12px; border-bottom:2px solid var(--border); white-space:nowrap; position:sticky; top:0; z-index:2; }
+.trans-table td { padding:8px 12px; border-bottom:1px solid var(--border); vertical-align:top; }
+.trans-table tr:hover td { background:var(--surface-soft); }
+.trans-event-link { background:#f3f4f6; border:1px solid #d1d5db; color:var(--text-muted); }
+.trans-event-form { background:var(--info-bg); border:1px solid var(--info-border); color:var(--primary-dark); }

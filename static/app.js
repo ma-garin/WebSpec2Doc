@@ -35,7 +35,7 @@ function showWizardStep(n) {
   const bar = document.getElementById('wizard-progress-bar');
   if (p1) p1.style.display = (n === 1) ? '' : 'none';
   if (p2) p2.style.display = (n === 2) ? '' : 'none';
-  if (bar) bar.style.display = (n <= 2) ? '' : 'none';
+  if (bar) bar.style.display = '';
   [1, 2, 3, 4].forEach(i => {
     const node = document.getElementById('ws-' + i);
     if (!node) return;
@@ -340,8 +340,11 @@ function _startDiscoverTimer() {
 function _stopDiscoverTimer() {
   clearInterval(_discoverTimerInterval);
   _discoverTimerInterval = null;
+  // 最終経過時間をサマリー用に返す（消去しない）
   const el = document.getElementById('discover-elapsed');
+  const elapsed = el ? el.textContent : '';
   if (el) el.textContent = '';
+  return elapsed;
 }
 
 // skipLoginSection=true のとき（ログイン後の再解析）はログインセクションを再展開しない
@@ -394,19 +397,44 @@ async function discoverUrls(skipLoginSection) {
   } catch (e) {
     clearDiscovered(); status.textContent = e.message; status.classList.add('discover-status-error');
   } finally {
-    _stopDiscoverTimer();
+    const elapsed = _stopDiscoverTimer();
     loading.style.display = 'none'; btn.disabled = false; updateTargetPreview();
+    // 完了後：経過時間をサマリーに表示
+    if (elapsed) {
+      const hintEl = document.getElementById('p1-login-hint');
+      if (hintEl && hintEl.textContent) {
+        hintEl.textContent += ` （解析時間: ${elapsed}）`;
+      } else {
+        const countEl = document.getElementById('p1-count-text');
+        if (countEl) countEl.textContent += ` （解析時間: ${elapsed}）`;
+      }
+    }
   }
 }
 function renderDiscovered() {
   const panel = document.getElementById('discovered-url-panel');
   const list = document.getElementById('discovered-url-list');
   panel.style.display = discovered.length ? '' : 'none';
-  list.innerHTML = discovered.map((it, i) => `
+
+  const makeItem = (it, i) => `
     <label class="discovered-url-item">
       <input type="checkbox" class="discovered-cb" value="${escHtml(it.url)}" checked />
-      <span><strong>${escHtml(it.title || ('タイトル未取得 ' + (i + 1)))}</strong><code>${escHtml(it.url)}</code>${it.login_required ? `<span class="disc-login-badge" title="${escHtml('認証が必要な可能性があります（根拠: ' + ((it.login_reasons || []).join(', ') || '不明') + '）。不要ならチェックを外してスキップできます。')}">要ログイン</span>` : ''}</span>
-    </label>`).join('');
+      <span>
+        <strong>${escHtml(it.title || ('タイトル未取得 ' + (i + 1)))}</strong>
+        <code>${escHtml(it.url)}</code>
+        ${it.login_required ? `<span class="disc-login-badge" title="${escHtml('認証が必要（根拠: ' + ((it.login_reasons || []).join(', ') || '不明') + '）')}">要ログイン</span>` : ''}
+      </span>
+    </label>`;
+
+  const normalPages = discovered.filter(p => !p.login_required);
+  const loginPages = discovered.filter(p => p.login_required);
+
+  let html = normalPages.map(makeItem).join('');
+  if (loginPages.length) {
+    html += `<div class="disc-login-group-separator"><span>🔒 認証が必要なページ（${loginPages.length}件）</span></div>`;
+    html += loginPages.map(makeItem).join('');
+  }
+  list.innerHTML = html;
   list.querySelectorAll('.discovered-cb').forEach(cb => cb.addEventListener('change', updateTargetPreview));
 }
 function clearDiscovered() {
@@ -504,6 +532,7 @@ async function runWith(bodyStr, domain, label, urlCount) {
   resultPanel.classList.add('hidden');
   executionView.classList.remove('hidden');
   appContent.classList.add('is-executing');
+  showWizardStep(3);
   execError.classList.add('hidden'); execActions.classList.add('hidden');
   execRunningActions.classList.remove('hidden');
   const stopBtn = document.getElementById('exec-stop-btn');
@@ -691,6 +720,7 @@ function selectResultTab(tab) {
   else if (tab === 'matrix') renderMatrix();
   else if (tab === 'report') renderReport();
   else if (tab === 'design') renderDesign();
+  else if (tab === 'technique-detail') renderTechniqueDetail();
   else if (tab === 'transition') renderTransition();
   else if (tab === 'transition-table') renderTransitionTable();
   else if (tab === 'history') renderTimeline();

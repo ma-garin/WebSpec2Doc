@@ -175,8 +175,9 @@ function renderReportDetail(sc, allShots) {
   if (!detail) return;
 
   const shotPath = allShots.find(p => p.split('/').pop().replace(/\.png$/, '') === sc.page_id);
+  const shotSrc = shotPath ? `/preview?path=${encodeURIComponent(shotPath)}` : '';
   const shotHtml = shotPath
-    ? `<img src="/preview?path=${encodeURIComponent(shotPath)}" class="rpt-screenshot" loading="lazy" alt="${escHtml(sc.page_id)}" onclick="openLightbox('${escHtml('/preview?path=' + encodeURIComponent(shotPath))}')" />`
+    ? `<img src="${escHtml(shotSrc)}" class="rpt-screenshot" loading="lazy" alt="${escHtml(sc.page_id)}" onclick="openLightbox('${escHtml(shotSrc)}')" /><p class="rpt-screenshot-caption">クリックで全画面表示</p>`
     : '';
 
   const transTo = (sc.transitions && sc.transitions.to) || [];
@@ -188,7 +189,19 @@ function renderReportDetail(sc, allShots) {
   const nonEmptyForms = (sc.forms || []).filter(f => (f.fields || []).length > 0);
   let formsHtml = '';
   if (!nonEmptyForms.length) {
-    formsHtml = '<p style="color:var(--text-muted);font-size:13px;padding:8px 0">この画面には入力フォームがありません。</p>';
+    // フォームがない場合でも見出し・ボタン・リンクを表示
+    const headings = (sc.headings || []).filter(Boolean);
+    const buttons = (sc.buttons || []).filter(Boolean);
+    const links = (sc.transitions && sc.transitions.to || []).filter(Boolean);
+    const rows = [
+      ...headings.map(h => `<div class="rpt-element-row"><span class="rpt-element-kind">見出し</span><span class="rpt-element-val">${escHtml(h)}</span></div>`),
+      ...buttons.map(b => `<div class="rpt-element-row"><span class="rpt-element-kind">ボタン</span><span class="rpt-element-val">${escHtml(b)}</span></div>`),
+      ...links.map(l => `<div class="rpt-element-row"><span class="rpt-element-kind">遷移先</span><span class="rpt-element-val">${escHtml(l)}</span></div>`),
+    ];
+    formsHtml = '<div class="rpt-page-elements">' +
+      '<div class="rpt-page-elements-title">ページ要素（フォームなし）</div>' +
+      (rows.length ? rows.join('') : '<p style="color:var(--text-muted);font-size:12px;margin:0">解析可能な要素が見つかりませんでした。</p>') +
+      '</div>';
   } else {
     formsHtml = nonEmptyForms.map((fm, fi) => {
       const fieldRows = (fm.fields || []).map(f => {
@@ -232,14 +245,14 @@ function renderReportDetail(sc, allShots) {
 // ---- 設計（テスト設計技法 推奨） ----
 
 const DESIGN_TECHNIQUES = [
-  { key: 'ep',   label: '同値分割',               abbr: 'EP'  },
-  { key: 'bva',  label: '境界値分析',             abbr: 'BVA' },
-  { key: 'dt',   label: 'デシジョンテーブル',     abbr: 'DT'  },
-  { key: 'st',   label: '状態遷移テスト',         abbr: 'ST'  },
-  { key: 'ct',   label: 'クラシフィケーションツリー', abbr: 'CT' },
-  { key: 'pw',   label: 'ペアワイズ',             abbr: 'PW'  },
-  { key: 'uc',   label: 'ユースケーステスト',     abbr: 'UC'  },
-  { key: 'comb', label: '組み合わせ',             abbr: 'CB'  },
+  { key: 'ep',   label: '同値分割',               abbr: '同値分割'  },
+  { key: 'bva',  label: '境界値分析',             abbr: '境界値分析' },
+  { key: 'dt',   label: 'デシジョンテーブル',     abbr: '決定表'    },
+  { key: 'st',   label: '状態遷移テスト',         abbr: '状態遷移'  },
+  { key: 'ct',   label: 'クラシフィケーションツリー', abbr: '分類木'  },
+  { key: 'pw',   label: 'ペアワイズ',             abbr: 'PW法'      },
+  { key: 'uc',   label: 'ユースケーステスト',     abbr: 'UCテスト'  },
+  { key: 'comb', label: '組み合わせ',             abbr: '組合せ'    },
 ];
 
 function _designInputFields(sc) {
@@ -413,10 +426,69 @@ function renderDesign() {
   resultHero.innerHTML =
     '<div class="hero-pad">' +
     '<div class="hero-section-title">テスト設計技法マトリクス</div>' +
-    '<p style="color:var(--text-muted);font-size:12px;margin:0 0 8px">画面要素（入力フィールド・選択肢・遷移）に基づき推奨技法を自動判定します。</p>' +
+    '<p style="color:var(--text-muted);font-size:12px;margin:0 0 8px">画面要素（入力フィールド・選択肢・遷移）に基づき推奨技法を自動判定します。「技法詳細」タブで各画面の根拠を確認できます。</p>' +
     `<div style="overflow-x:auto;margin-bottom:20px"><table class="ov-screens" style="min-width:max-content"><thead><tr><th>画面</th><th>タイトル</th>${matrixHead}</tr></thead><tbody>${matrixRows}</tbody></table></div>` +
-    '<div class="hero-section-title" style="margin-top:4px">画面別 推奨技法と根拠</div>' +
+    '<div class="hero-section-title" style="margin-top:4px">技法凡例</div>' +
     `<div style="margin-bottom:12px;line-height:2">${legend}</div>` +
+    '</div>';
+}
+
+// ---- 技法詳細（画面ごとの推奨技法と根拠・動的導出） ----
+function renderTechniqueDetail() {
+  if (!reportJson || !(reportJson.screens || []).length) {
+    resultHero.innerHTML = '<div class="hero-msg"><p>設計データ（report.json）がありません。クロールを実行してください。</p></div>';
+    return;
+  }
+  const screens = reportJson.screens;
+
+  const TECH_COLORS = {
+    ep: '#0F62FE', bva: '#6929C4', dt: '#005D5D', st: '#9F1853',
+    ct: '#198038', pw: '#B12704', uc: '#0043CE', comb: '#6E6E6E',
+  };
+
+  const detailCards = screens.map(sc => {
+    const rec = _recommendFor(sc);
+    const keys = Object.keys(rec);
+    if (!keys.length) return `
+      <div style="border:1px solid var(--border);border-radius:6px;padding:14px 16px;margin-bottom:12px">
+        <div style="font-weight:600;margin-bottom:4px">${escHtml(sc.page_id)} <span style="color:var(--text-muted);font-weight:400">${escHtml(sc.title || '')}</span></div>
+        <p style="color:var(--text-muted);font-size:12px;margin:0">フォームも遷移もないページのため、技法の推奨なし</p>
+      </div>`;
+
+    const badges = keys.map(k => {
+      const t = DESIGN_TECHNIQUES.find(x => x.key === k);
+      const col = TECH_COLORS[k] || '#444';
+      return `<span style="display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;color:#fff;background:${col};margin:2px 3px 2px 0">${escHtml(t.label)}</span>`;
+    }).join('');
+
+    const rationale = keys.map(k => {
+      const t = DESIGN_TECHNIQUES.find(x => x.key === k);
+      const reasons = rec[k];
+      const col = TECH_COLORS[k] || '#444';
+      return `<div style="margin-bottom:8px">
+        <span style="font-size:12px;font-weight:700;color:${col}">${escHtml(t.label)}</span>
+        <ul style="margin:4px 0 0 0;padding-left:18px">
+          ${reasons.map(r => `<li style="font-size:12px;color:var(--text);margin-bottom:2px">${r}</li>`).join('')}
+        </ul>
+      </div>`;
+    }).join('');
+
+    return `
+      <div style="border:1px solid var(--border);border-radius:6px;padding:14px 16px;margin-bottom:12px">
+        <div style="font-weight:600;margin-bottom:6px">
+          ${escHtml(sc.page_id)}
+          <span style="color:var(--text-muted);font-weight:400"> ${escHtml(sc.title || '')}</span>
+          <code style="font-size:11px;color:var(--text-muted);margin-left:8px">${escHtml(sc.url || '')}</code>
+        </div>
+        <div style="margin-bottom:10px">${badges}</div>
+        <div style="font-size:12px">${rationale}</div>
+      </div>`;
+  }).join('');
+
+  resultHero.innerHTML =
+    '<div class="hero-pad">' +
+    '<div class="hero-section-title">画面別 推奨技法と根拠</div>' +
+    '<p style="color:var(--text-muted);font-size:12px;margin:0 0 12px">各画面の要素（フィールド種別・制約・選択肢数・遷移構造）から動的に導出した推奨技法と根拠です。</p>' +
     detailCards +
     '</div>';
 }
@@ -465,37 +537,63 @@ function _drawVisNetwork(screens) {
   const urlToId = {};
   screens.forEach(sc => { urlToId[sc.url] = sc.page_id; });
 
-  const nodes = screens.map(sc => ({
-    id: sc.page_id,
-    label: sc.page_id + '\n' + (sc.title || '').slice(0, 18),
-    title: (sc.title || sc.page_id) + '\n' + sc.url,
-    color: { background: (sc.forms || []).some(f => f.fields && f.fields.length) ? '#0F62FE' : '#6B7280', border: '#fff', highlight: { background: '#0043CE', border: '#fff' } },
-    font: { color: '#fff', size: 11 },
-    shape: 'box',
-    borderWidth: 0,
-    margin: 8,
-  }));
+  const nodes = screens.map(sc => {
+    const hasForm = (sc.forms || []).some(f => f.fields && f.fields.length);
+    const label = sc.page_id + '\n' + (sc.title || '').replace(/\s*[|｜]\s*.*/g, '').slice(0, 20);
+    return {
+      id: sc.page_id,
+      label,
+      title: `<b>${escHtml(sc.page_id)}</b> ${escHtml(sc.title || '')}<br><code>${escHtml(sc.url || '')}</code>`,
+      color: {
+        background: hasForm ? '#1D4ED8' : '#4B5563',
+        border: hasForm ? '#93C5FD' : '#9CA3AF',
+        highlight: { background: hasForm ? '#1E40AF' : '#374151', border: '#E5E7EB' },
+        hover: { background: hasForm ? '#2563EB' : '#374151', border: '#E5E7EB' },
+      },
+      font: { color: '#fff', size: 12, face: 'system-ui, sans-serif' },
+      shape: 'box',
+      borderWidth: 1,
+      borderWidthSelected: 2,
+      margin: { top: 8, bottom: 8, left: 12, right: 12 },
+      shadow: { enabled: true, size: 4, x: 0, y: 2, color: 'rgba(0,0,0,.15)' },
+    };
+  });
 
   const edges = [];
   screens.forEach(sc => {
     (sc.transitions && sc.transitions.to || []).forEach(to => {
-      if (!common.has(to)) edges.push({ from: sc.page_id, to, arrows: 'to', color: { color: '#9CA3AF', highlight: '#374151' }, width: 1 });
+      if (!common.has(to)) edges.push({
+        from: sc.page_id, to, arrows: { to: { enabled: true, scaleFactor: 0.7 } },
+        color: { color: '#9CA3AF', highlight: '#374151', hover: '#4B5563' }, width: 1, smooth: { type: 'curvedCW', roundness: 0.1 },
+      });
     });
     (sc.forms || []).forEach(f => {
       const toId = f.action ? urlToId[f.action] : null;
-      if (toId && toId !== sc.page_id) edges.push({ from: sc.page_id, to: toId, arrows: 'to', dashes: true, color: { color: '#D32F2F', highlight: '#9F1853' }, width: 2, label: 'F', font: { size: 10, color: '#D32F2F' } });
+      if (toId && toId !== sc.page_id) edges.push({
+        from: sc.page_id, to: toId, arrows: { to: { enabled: true, scaleFactor: 0.9 } },
+        dashes: [6, 3], color: { color: '#DC2626', highlight: '#991B1B', hover: '#B91C1C' }, width: 2,
+        label: 'フォーム送信', font: { size: 10, color: '#DC2626', strokeWidth: 2, strokeColor: '#fff' },
+        smooth: { type: 'curvedCCW', roundness: 0.15 },
+      });
     });
   });
 
   const network = new vis.Network(container,
     { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) },
     {
-      layout: { hierarchical: { enabled: true, direction: 'LR', sortMethod: 'directed', levelSeparation: 160, nodeSpacing: 80 } },
-      physics: { enabled: false },
-      interaction: { hover: true, navigationButtons: true, keyboard: true },
-      nodes: { borderRadius: 4 },
+      layout: { randomSeed: 2 },
+      physics: {
+        enabled: true,
+        solver: 'forceAtlas2Based',
+        forceAtlas2Based: { gravitationalConstant: -80, centralGravity: 0.01, springLength: 160, springConstant: 0.05, damping: 0.4 },
+        stabilization: { iterations: 300, updateInterval: 25 },
+      },
+      interaction: { hover: true, navigationButtons: true, keyboard: true, tooltipDelay: 100 },
+      nodes: { borderRadius: 6 },
+      edges: { selectionWidth: 2 },
     }
   );
+  network.once('stabilizationIterationsDone', () => { network.setOptions({ physics: { enabled: false } }); });
   network.on('click', params => {
     if (params.nodes.length) {
       selectResultTab('report');
@@ -518,19 +616,25 @@ function renderTransitionTable() {
   const idToTitle = {};
   screens.forEach(sc => { idToTitle[sc.page_id] = sc.title || sc.page_id; });
 
+  const urlToId = {};
+  screens.forEach(s => { urlToId[s.url] = s.page_id; });
+  const idToUrl = {};
+  screens.forEach(s => { idToUrl[s.page_id] = s.url; });
+
   const rows = [];
   screens.forEach(sc => {
     (sc.transitions && sc.transitions.to || []).forEach(to => {
       if (common.has(to)) return;
-      rows.push({ fromId: sc.page_id, fromTitle: sc.title || sc.page_id, event: 'リンク', toId: to, toTitle: idToTitle[to] || to, action: '—' });
+      const destUrl = idToUrl[to] || '';
+      let linkPath = destUrl;
+      try { linkPath = new URL(destUrl).pathname; } catch (e) {}
+      rows.push({ fromId: sc.page_id, fromTitle: sc.title || sc.page_id, event: 'リンク', eventDetail: linkPath, toId: to, toTitle: idToTitle[to] || to, action: destUrl });
     });
     (sc.forms || []).forEach(f => {
       if (!f.action) return;
-      const urlToId = {};
-      screens.forEach(s => { urlToId[s.url] = s.page_id; });
       const toId = urlToId[f.action] || f.action;
       const toTitle = idToTitle[toId] || '（未取得）';
-      rows.push({ fromId: sc.page_id, fromTitle: sc.title || sc.page_id, event: 'フォーム送信', toId, toTitle, action: `${(f.method || 'GET').toUpperCase()} ${f.action}` });
+      rows.push({ fromId: sc.page_id, fromTitle: sc.title || sc.page_id, event: 'フォーム送信', eventDetail: `${(f.method || 'GET').toUpperCase()}`, toId, toTitle, action: f.action });
     });
   });
 
@@ -540,7 +644,10 @@ function renderTransitionTable() {
     `<tr>
       <td class="c-screen">${escHtml(r.fromId)}</td>
       <td>${escHtml(r.fromTitle)}</td>
-      <td><span class="cond-pill ${r.event === 'フォーム送信' ? 'cc-format trans-event-form' : 'cc-other trans-event-link'}">${escHtml(r.event)}</span></td>
+      <td>
+        <span class="cond-pill ${r.event === 'フォーム送信' ? 'cc-format trans-event-form' : 'cc-other trans-event-link'}">${escHtml(r.event)}</span>
+        <span class="trans-link-detail">${escHtml(r.eventDetail)}</span>
+      </td>
       <td class="c-screen">${escHtml(r.toId)}</td>
       <td>${escHtml(r.toTitle)}</td>
       <td style="font-size:11px;font-family:monospace;color:var(--text-muted);word-break:break-all">${escHtml(r.action)}</td>

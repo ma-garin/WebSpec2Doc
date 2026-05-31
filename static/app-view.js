@@ -26,11 +26,8 @@ function defaultOptionsText(f) {
 // ---- 概要 ----
 function renderOverview() {
   if (!reportJson) {
-    const shots = (resultData.screenshots || []).map(p =>
-      `<a href="/preview?path=${encodeURIComponent(p)}" target="_blank"><figure><img src="/preview?path=${encodeURIComponent(p)}" loading="lazy" alt="${escHtml(p.split('/').pop())}"><figcaption>${escHtml(p.split('/').pop())}</figcaption></figure></a>`).join('');
     resultHero.innerHTML = '<div class="hero-pad">' +
       '<p style="color:var(--text-muted);font-size:13px;margin-bottom:12px">このサイトは旧バージョンで生成されたため画面別の構造化データがありません。「<strong>再クロール</strong>」で最新のテスト条件マトリクスを生成できます。詳細は「画面別仕様」タブを参照してください。</p>' +
-      (shots ? '<div class="hero-section-title">スクリーンショット</div><div class="r-shots">' + shots + '</div>' : '') +
       '</div>';
     return;
   }
@@ -43,16 +40,11 @@ function renderOverview() {
       `<td><code style="font-size:.78rem;color:var(--text-muted)">${escHtml(sc.url || '')}</code></td>` +
       `<td class="num">${(sc.forms || []).length}</td><td class="num">${fields}</td><td>${escHtml(to)}</td></tr>`;
   }).join('');
-  // 現在のクロールに含まれる画面IDのスクショだけ表示（過去の残骸を除外）
-  const pageIds = new Set(screens.map(sc => sc.page_id));
-  const shots = (resultData.screenshots || []).filter(p => pageIds.has(p.split('/').pop().replace(/\\.png$/, ''))).map(p =>
-    `<a href="/preview?path=${encodeURIComponent(p)}" target="_blank"><figure><img src="/preview?path=${encodeURIComponent(p)}" loading="lazy" alt="${escHtml(p.split('/').pop())}"><figcaption>${escHtml(p.split('/').pop())}</figcaption></figure></a>`).join('');
   resultHero.innerHTML = '<div class="hero-pad">' +
     `<p style="color:var(--text-muted);font-size:13px;margin-bottom:12px">対象 ${escHtml(meta.target_url || '')} ／ クロール: 深さ${meta.crawl_depth ?? '-'} ・最大${meta.max_pages ?? '-'}ページ ／ ${escHtml(meta.crawled_at || '')}</p>` +
     '<div class="hero-section-title">画面インベントリ</div>' +
     '<table class="ov-screens"><thead><tr><th>画面ID</th><th>タイトル</th><th>URL</th><th>フォーム</th><th>入力項目</th><th>遷移先</th></tr></thead><tbody>' +
     (rows || '<tr><td colspan="6" style="color:var(--text-muted)">画面がありません</td></tr>') + '</tbody></table>' +
-    (shots ? '<div class="hero-section-title" style="margin-top:18px">スクリーンショット</div><div class="r-shots">' + shots + '</div>' : '') +
     '</div>';
 }
 

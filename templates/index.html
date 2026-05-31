@@ -50,11 +50,6 @@
         <section class="view" id="view-generate">
           <div id="gen-panel">
             <div class="input-card">
-              <nav class="wizard-progress" aria-label="設定ステップ">
-                <div class="wizard-step-node is-active" id="wnode-1"><div class="wizard-step-circle">1</div><span class="wizard-step-label">対象設定</span></div>
-                <div class="wizard-step-line" id="wline-12"></div>
-                <div class="wizard-step-node" id="wnode-2"><div class="wizard-step-circle">2</div><span class="wizard-step-label">出力形式</span></div>
-              </nav>
 
               <form id="form">
                 <!-- ページ1: 対象設定 -->
@@ -76,13 +71,13 @@
                         <label for="max-pages" class="crawl-depth-label">最大</label>
                         <input type="number" id="max-pages" class="crawl-depth-input" value="30" min="1" max="300" />
                         <span class="crawl-depth-unit">ページ</span>
-                        <button type="button" id="discover-btn" class="btn-outline-sm">画面リスト取得</button>
+                        <button type="button" id="discover-btn" class="btn-outline-sm">画面分析</button>
                       </div>
-                      <div id="discover-loading" class="discover-loading" style="display:none"><span class="spinner"></span><span>画面リストを取得しています…</span></div>
+                      <div id="discover-loading" class="discover-loading" style="display:none"><span class="spinner"></span><span>画面を分析しています…</span></div>
                       <div id="discover-status" class="discover-status"></div>
                       <div id="discovered-url-panel" class="discovered-url-panel" style="display:none">
                         <div class="section-head">
-                          <p class="app-sidebar-section" style="padding:0">取得した画面リスト</p>
+                          <p class="app-sidebar-section" style="padding:0">分析した画面リスト</p>
                           <div class="discovered-url-actions">
                             <button type="button" id="select-all-btn" class="btn-outline-sm">全選択</button>
                             <button type="button" id="clear-all-btn" class="btn-outline-sm">全解除</button>
@@ -118,29 +113,12 @@
                     </div>
                   </details>
 
-                  <div class="wizard-footer">
-                    <button type="button" class="btn-primary" id="wnext-1">次へ：出力形式 →</button>
-                  </div>
-                </div>
-
-                <!-- ページ2: 出力設定 -->
-                <div class="wizard-page" id="wpage-2">
-                  <div class="wizard-page-header"><h2>出力設定</h2><p>生成するドキュメントの形式を選びます。</p></div>
-                  <div class="wizard-section">
-                    <label class="form-label">出力形式（複数選択可）</label>
-                    <div class="fmt-selector">
-                      <div class="fmt-cards" id="fmt-cards"></div>
-                      <div class="fmt-preview" id="fmt-preview" style="display:none"></div>
-                    </div>
-                  </div>
-                  <div class="wizard-section">
-                    <label class="form-label">オプション</label>
+                  <div class="wizard-section" style="margin-top:14px">
                     <div class="checkbox-group">
                       <label class="checkbox-chip"><input type="checkbox" id="compare"> 前回との差分を出力 (--compare)</label>
                     </div>
                   </div>
                   <div class="wizard-footer">
-                    <button type="button" class="btn-outline-sm" id="wback-2">← 戻る</button>
                     <button type="submit" class="btn-primary" id="submit-btn">ドキュメント生成を開始</button>
                   </div>
                 </div>
@@ -289,16 +267,7 @@
               <div class="options-grid">
                 <div class="field"><label for="set-depth">階層数（既定）</label><input type="number" id="set-depth" min="1" max="5"></div>
                 <div class="field"><label for="set-max">最大ページ数（既定）</label><input type="number" id="set-max" min="1" max="300"></div>
-                <div class="field full">
-                  <label>出力形式（既定）</label>
-                  <div class="checkbox-group">
-                    <label class="checkbox-chip"><input type="checkbox" name="set-fmt" value="html"> HTML</label>
-                    <label class="checkbox-chip"><input type="checkbox" name="set-fmt" value="pdf"> PDF</label>
-                    <label class="checkbox-chip"><input type="checkbox" name="set-fmt" value="md"> Markdown</label>
-                    <label class="checkbox-chip"><input type="checkbox" name="set-fmt" value="excel"> Excel</label>
-                    <label class="checkbox-chip"><input type="checkbox" name="set-fmt" value="json"> JSON</label>
-                  </div>
-                </div>
+
                 <div class="field full"><label for="set-auth">認証セッション auth.json パス（任意）</label><input type="text" id="set-auth" placeholder="auth.json"></div>
               </div>
               <button class="btn-primary" id="save-settings" style="margin-top:18px">設定を保存</button>

@@ -45,23 +45,18 @@ function applySettings() {
   const s = getSettings();
   if (s.depth) document.getElementById('crawl-depth').value = s.depth;
   if (s.maxPages) document.getElementById('max-pages').value = s.maxPages;
-  if (Array.isArray(s.formats)) document.querySelectorAll('input[name=fmt]').forEach(c => { c.checked = s.formats.includes(c.value); });
   if (s.auth) document.getElementById('auth-path').value = s.auth;
 }
 function loadSettingsForm() {
   const s = getSettings();
   document.getElementById('set-depth').value = s.depth || 2;
   document.getElementById('set-max').value = s.maxPages || 30;
-  const fmts = Array.isArray(s.formats) ? s.formats : ['html','md'];
-  document.querySelectorAll('input[name=set-fmt]').forEach(c => { c.checked = fmts.includes(c.value); });
   document.getElementById('set-auth').value = s.auth || '';
 }
 document.getElementById('save-settings').addEventListener('click', () => {
-  const formats = [...document.querySelectorAll('input[name=set-fmt]:checked')].map(c => c.value);
   localStorage.setItem(SETTINGS_KEY, JSON.stringify({
     depth: document.getElementById('set-depth').value,
     maxPages: document.getElementById('set-max').value,
-    formats,
     auth: document.getElementById('set-auth').value.trim(),
   }));
   applySettings();
@@ -96,22 +91,19 @@ async function loadHistory() {
 document.getElementById('reload-history').addEventListener('click', loadHistory);
 
 // ---- 再クロール（ドリフト検知）: 既知のサイトを同じ画面構成で取り直す ----
-const FILE_TO_FMT = { html: 'html', pdf: 'pdf', excel: 'excel', screens_md: 'md', json: 'json' };
+
 async function recrawlSite(domain) {
-  // 保存済み site.json があれば前回設定を忠実に再現。無ければ旧データ用フォールバック。
   let site = null;
   try { site = (await fetch('/api/site?domain=' + encodeURIComponent(domain)).then(r => r.json())).site; } catch (e) {}
-  let urls = [], depth = '2', maxPages = '300', fmts = [], auth = getSettings().auth || '';
+  let urls = [], depth = '2', maxPages = '300', auth = getSettings().auth || '';
   if (site) {
     urls = site.urls || [];
     depth = String(site.depth || 2);
     maxPages = String(site.max_pages || 300);
-    fmts = site.formats || [];
     auth = site.auth_path || auth;
   } else {
     try {
       const data = await fetch('/api/result?domain=' + encodeURIComponent(domain)).then(r => r.json());
-      fmts = Object.keys(FILE_TO_FMT).filter(k => (data.files || {})[k]).map(k => FILE_TO_FMT[k]);
       if (data.files && data.files.json) {
         const rj = await fetch('/preview?path=' + encodeURIComponent(data.files.json)).then(r => r.json());
         urls = (rj.screens || []).map(s => s.url).filter(Boolean);
@@ -119,11 +111,9 @@ async function recrawlSite(domain) {
     } catch (e) {}
   }
   if (!urls.length) urls = ['https://' + domain + '/'];
-  if (!fmts.length) fmts = ['html', 'md'];
-  if (!fmts.includes('json')) fmts.push('json');
   const body = new URLSearchParams({
     urls: urls.join(','), depth: depth, max_pages: maxPages,
-    format: fmts.join(','), compare: 'true', auth: auth,
+    format: 'html,pdf,md,excel,json', compare: 'true', auth: auth,
   });
   switchView('generate');
   runWith(body.toString(), domain, domain, urls.length);
@@ -139,66 +129,6 @@ async function openResultsForDomain(domain) {
   await showResults(domain);
 }
 
-// ====================== 出力形式セレクター ======================
-const FORMAT_DEFS = [
-  {
-    key: 'html', label: 'HTML レポート', defaultOn: true,
-    desc: 'ブラウザで読むテストベース文書',
-    includes: ['画面一覧（サイドバー）', '入力項目・テスト条件', 'ロケータ候補', 'スクリーンショット'],
-    mock: '<div class="fmt-mock-html"><div class="fmt-mock-sidebar"><div class="fmt-mock-bar"></div><div class="fmt-mock-bar short"></div><div class="fmt-mock-bar short"></div></div><div class="fmt-mock-body"><div class="fmt-mock-heading"></div><div class="fmt-mock-line"></div><div class="fmt-mock-line short"></div><div class="fmt-mock-table"><div class="fmt-mock-row"></div><div class="fmt-mock-row"></div></div></div></div>',
-  },
-  {
-    key: 'pdf', label: 'PDF', defaultOn: false,
-    desc: '配布・印刷用ドキュメント',
-    includes: ['HTMLレポートと同等の内容', '印刷・共有に最適化'],
-    mock: '<div class="fmt-mock-pdf"><div class="fmt-mock-pdf-title"></div><div class="fmt-mock-line"></div><div class="fmt-mock-line short"></div><div class="fmt-mock-line"></div><div class="fmt-mock-line short"></div></div>',
-  },
-  {
-    key: 'md', label: 'Markdown', defaultOn: true,
-    desc: '軽量テキスト形式',
-    includes: ['画面一覧', 'フォーム一覧', '遷移図（Mermaid）'],
-    mock: '<div class="fmt-mock-md"><div class="fmt-mock-md-h1"></div><div class="fmt-mock-md-h2"></div><div class="fmt-mock-line"></div><div class="fmt-mock-line short"></div><div class="fmt-mock-md-h2"></div><div class="fmt-mock-line"></div></div>',
-  },
-  {
-    key: 'excel', label: 'Excel', defaultOn: false,
-    desc: '表計算ソフトで編集可能',
-    includes: ['入力項目一覧（シート）', 'テスト条件一覧（シート）'],
-    mock: '<div class="fmt-mock-excel"><div class="fmt-mock-excel-header"><div></div><div></div><div></div><div></div></div><div class="fmt-mock-excel-row"><div></div><div></div><div></div><div></div></div><div class="fmt-mock-excel-row alt"><div></div><div></div><div></div><div></div></div><div class="fmt-mock-excel-row"><div></div><div></div><div></div><div></div></div></div>',
-  },
-  {
-    key: 'json', label: 'JSON', defaultOn: false,
-    desc: '自動化・CI連携用の構造化データ',
-    includes: ['全画面・フォーム・フィールド', 'テスト条件', 'ロケータ候補'],
-    mock: '<div class="fmt-mock-json"><span class="fmt-mock-brace">{</span><div class="fmt-mock-json-line"><span class="fmt-mock-key">"screens"</span>: [<span class="fmt-mock-brace">…</span>]</div><div class="fmt-mock-json-line"><span class="fmt-mock-key">"summary"</span>: {<span class="fmt-mock-brace">…</span>}</div><span class="fmt-mock-brace">}</span></div>',
-  },
-];
-
-(function initFormatCards() {
-  const container = document.getElementById('fmt-cards');
-  const preview = document.getElementById('fmt-preview');
-  if (!container) return;
-
-  FORMAT_DEFS.forEach(def => {
-    const card = document.createElement('label');
-    card.className = 'fmt-card' + (def.defaultOn ? ' is-selected' : '');
-    card.dataset.key = def.key;
-    card.innerHTML = `<input type="checkbox" name="fmt" value="${escHtml(def.key)}"${def.defaultOn ? ' checked' : ''} style="display:none"><span class="fmt-card-label">${escHtml(def.label)}</span>`;
-    card.addEventListener('click', (e) => {
-      e.preventDefault();
-      const cb = card.querySelector('input[type=checkbox]');
-      cb.checked = !cb.checked;
-      card.classList.toggle('is-selected', cb.checked);
-      showFormatPreview(def);
-    });
-    card.addEventListener('mouseenter', () => showFormatPreview(def));
-    container.appendChild(card);
-  });
-
-  function showFormatPreview(def) {
-    preview.style.display = '';
-    preview.innerHTML = `<div class="fmt-preview-mock">${def.mock}</div><div class="fmt-preview-info"><p class="fmt-preview-desc">${escHtml(def.desc)}</p><ul class="fmt-preview-includes">${def.includes.map(i => `<li>${escHtml(i)}</li>`).join('')}</ul></div>`;
-  }
-})();
 
 // ====================== ウィザード ======================
 let wizardStep = 1;
@@ -208,28 +138,9 @@ const crawlDiscoverySection = document.getElementById('crawl-discovery-section')
 const targetPreview = document.getElementById('target-preview');
 const targetPreviewList = document.getElementById('target-preview-list');
 
-function showStep(n) {
-  for (let i = 1; i <= 2; i++) {
-    document.getElementById('wpage-' + i).classList.toggle('is-active', i === n);
-    const node = document.getElementById('wnode-' + i);
-    node.classList.toggle('is-active', i === n);
-    node.classList.toggle('is-done', i < n);
-  }
-  document.getElementById('wline-12').classList.toggle('is-done', n > 1);
-  wizardStep = n;
-}
+function showStep(n) { wizardStep = n; }
 urlInput.addEventListener('input', () => { clearDiscovered(); updateTargetPreview(); });
 
-document.getElementById('wnext-1').addEventListener('click', () => {
-  const url = urlInput.value.trim();
-  if (!url) { setUrlMessage('URL を入力してください', true); return; }
-  if (!selectedDiscovered().length) {
-    setUrlMessage(discovered.length ? 'ドキュメント化する画面を1件以上選択してください' : '先に「画面リスト取得」を実行してください', true);
-    return;
-  }
-  setUrlMessage(''); showStep(2);
-});
-document.getElementById('wback-2').addEventListener('click', () => showStep(1));
 
 function setUrlMessage(msg, isError) {
   const el = document.getElementById('url-input-message');
@@ -287,7 +198,7 @@ document.getElementById('select-all-btn').addEventListener('click', () => setAll
 document.getElementById('clear-all-btn').addEventListener('click', () => setAllDiscovered(false));
 async function discoverUrls() {
   const url = urlInput.value.trim();
-  if (!url) { setUrlMessage('URLを入力してから画面リスト取得を実行してください', true); return; }
+  if (!url) { setUrlMessage('URLを入力してから画面分析を実行してください', true); return; }
   const loading = document.getElementById('discover-loading');
   const status = document.getElementById('discover-status');
   const btn = document.getElementById('discover-btn');
@@ -302,7 +213,11 @@ async function discoverUrls() {
     if (!res.ok || data.error) throw new Error(data.error || '画面リスト取得に失敗しました');
     discovered = (data.pages || []).filter(p => p && p.url);
     renderDiscovered();
-    status.textContent = discovered.length ? `${discovered.length}件の画面を取得しました。対象を選択してください。` : '画面リストは0件でした。URLや階層数を確認してください。';
+    if (discovered.some(p => p.login_required)) {
+      const loginDetails = document.querySelector('details.result-collapsible');
+      if (loginDetails) loginDetails.open = true;
+    }
+    status.textContent = discovered.length ? `${discovered.length}件の画面を検出しました。対象を選択してください。` : '画面が0件でした。URLや階層数を確認してください。';
   } catch (e) {
     clearDiscovered(); status.textContent = e.message; status.classList.add('discover-status-error');
   } finally {
@@ -385,15 +300,18 @@ function stopPreviewPolling() { clearInterval(previewTimer); }
 
 document.getElementById('form').addEventListener('submit', (e) => {
   e.preventDefault();
+  const url = urlInput.value.trim();
+  if (!url) { setUrlMessage('URL を入力してください', true); return; }
   const urls = buildTargetUrls();
-  if (!urls.length) { showStep(1); setUrlMessage('対象URLが確定していません', true); return; }
-  const fmts = [...document.querySelectorAll('input[name=fmt]:checked')].map(c => c.value);
-  if (!fmts.length) { showStep(2); return; }
+  if (!urls.length) {
+    setUrlMessage(discovered.length ? 'ドキュメント化する画面を1件以上選択してください' : '先に「画面分析」を実行してください', true);
+    return;
+  }
   const body = new URLSearchParams({
     urls: urls.join(','),
     depth: document.getElementById('crawl-depth').value,
     max_pages: document.getElementById('max-pages').value,
-    format: fmts.join(','),
+    format: 'html,pdf,md,excel,json',
     compare: document.getElementById('compare').checked ? 'true' : 'false',
     auth: document.getElementById('auth-path').value.trim() || getSettings().auth || '',
     crawl_mode: 'crawl',

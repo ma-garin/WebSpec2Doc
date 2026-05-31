@@ -30,7 +30,7 @@ def generate_pdf(html_path: Path, pdf_path: Path) -> Path:
 
 def _wait_for_mermaid(page: object) -> None:
     try:
-        page.wait_for_selector(_MERMAID_SELECTOR, timeout=_MERMAID_TIMEOUT_MS)  # type: ignore[union-attr]
+        page.wait_for_selector(_MERMAID_SELECTOR, timeout=_MERMAID_TIMEOUT_MS)  # type: ignore[attr-defined]
     except Exception:
         logger.warning(
             "Mermaid SVG が検出できませんでした。遷移図が PDF に含まれない可能性があります"

@@ -59,8 +59,8 @@ def _to_config(data: dict[str, object]) -> SiteConfig:
         domain=str(data["domain"]),
         urls=tuple(data.get("urls", ()) or ()),  # type: ignore[arg-type]
         crawl_mode=str(data.get("crawl_mode", "")),
-        depth=int(data.get("depth", 0)),  # type: ignore[arg-type]
-        max_pages=int(data.get("max_pages", 0)),  # type: ignore[arg-type]
+        depth=int(str(data.get("depth", 0))),
+        max_pages=int(str(data.get("max_pages", 0))),
         formats=tuple(data.get("formats", ()) or ()),  # type: ignore[arg-type]
         auth_path=str(data.get("auth_path", "")),
     )

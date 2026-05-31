@@ -13,7 +13,7 @@ from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
-from flask import Flask, Response, redirect, request, send_file, url_for
+from flask import Flask, Response, make_response, redirect, request, send_file, url_for
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
 from registry.session_store import (  # noqa: E402
@@ -1761,7 +1761,7 @@ def run() -> Response:
         _RUNNING_PROCS[run_id] = proc
         try:
             yield f"RUN_ID:{run_id}\n"
-            yield from proc.stdout  # type: ignore[union-attr]
+            yield from proc.stdout
             proc.wait()
             if proc.returncode is not None and proc.returncode < 0:
                 yield "\n停止しました。\n"
@@ -2140,7 +2140,7 @@ def open_file() -> Response:
     target = _safe_output_path(request.args.get("path", ""))
     if target is not None:
         subprocess.Popen(["open", str(target)])
-    return redirect(url_for("index"))
+    return make_response(redirect(url_for("index")))
 
 
 PORT = int(os.environ.get("WEBSPEC2DOC_PORT", "8765"))

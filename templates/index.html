@@ -211,6 +211,7 @@
                 <button type="button" role="tab" aria-selected="true" class="result-tab is-active" data-tab="overview">概要</button>
                 <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="matrix">入力項目・テスト条件</button>
                 <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="report">画面別仕様</button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="shots">スクリーンショット</button>
                 <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="history">履歴・差分</button>
                 <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="export">エクスポート</button>
               </div>
@@ -315,7 +316,12 @@
     </footer>
   </div>
 </div>
+  <div id="lightbox" class="lightbox" style="display:none" role="dialog" aria-modal="true">
+    <button class="lightbox-close" id="lightbox-close" aria-label="閉じる">✕</button>
+    <img id="lightbox-img" src="" alt="拡大表示" />
+  </div>
   <script src="{{ url_for('static', filename='app.js') }}"></script>
+  <script src="{{ url_for('static', filename='app-view.js') }}"></script>
 
 </body>
 </html>

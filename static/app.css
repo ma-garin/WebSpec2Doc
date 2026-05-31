@@ -439,3 +439,14 @@
 .rpt-field-table td { padding: 5px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
 .rpt-field-table .loc-hint { font-size: 10px; color: var(--text-muted); word-break: break-all; }
 .rpt-field-table .cond-cell { max-width: 220px; }
+
+/* ====================== スクショギャラリー + ライトボックス ====================== */
+.shots-grid { display: flex; flex-wrap: wrap; gap: 12px; padding: 16px; }
+.shots-item { margin: 0; text-align: center; }
+.shots-thumb { width: 160px; height: 110px; object-fit: cover; border: 1px solid var(--border); border-radius: 6px; cursor: zoom-in; transition: opacity .15s, box-shadow .15s; display: block; }
+.shots-thumb:hover { opacity: .85; box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+.shots-item figcaption { font-size: 10px; color: var(--text-muted); margin-top: 4px; word-break: break-all; max-width: 160px; }
+.lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.85); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+.lightbox img { max-width: 90vw; max-height: 88vh; border-radius: 6px; box-shadow: 0 8px 40px rgba(0,0,0,.5); }
+.lightbox-close { position: absolute; top: 16px; right: 20px; background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; line-height: 1; padding: 4px 8px; }
+.lightbox-close:hover { opacity: .7; }

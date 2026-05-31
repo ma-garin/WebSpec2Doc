@@ -14,7 +14,7 @@
 |------|------|
 | **画面仕様の自動生成** | 入力フィールド・制約・ロケータ候補・テスト条件を画面ごとに整理 |
 | **テスト設計技法の推奨** | 同値分割・境界値分析・デシジョンテーブル等を画面要素から自動判定 |
-| **画面遷移図・遷移表** | vis.js インタラクティブ遷移図 ＋ ISTQB 標準の画面遷移表 |
+| **画面遷移図・遷移表** | UML 遷移図（シーケンス図・コミュニケーション図・アクティビティ図）＋ ISTQB 標準の画面遷移表 |
 | **仕様ドリフト検知** | 再クロールで前回との差分（追加/削除/変更）を自動検出 |
 | **自動ログイン** | ID/PASSWORD をGUIで入力し、認証が必要なサイトにも対応 |
 | **スクリーンショット** | 全画面のキャプチャを仕様と並べて表示 |
@@ -117,7 +117,7 @@ python src/main.py --url https://example.com --auth auth.json
 |------|-----------|
 | ブラウザ自動操作 | [Playwright](https://playwright.dev/python/) |
 | グラフ処理 | [networkx](https://networkx.org/) |
-| 遷移図描画（GUI）| [vis.js](https://visjs.org/) |
+| 遷移図描画（GUI）| [Mermaid](https://mermaid.js.org/)（シーケンス図・コミュニケーション図・アクティビティ図） |
 | Excel 出力 | [openpyxl](https://openpyxl.readthedocs.io/) |
 | Web サーバ | [Flask](https://flask.palletsprojects.com/) |
 | テスト | pytest（273 件・カバレッジ 85%+） |

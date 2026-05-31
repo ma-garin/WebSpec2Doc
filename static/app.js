@@ -689,6 +689,7 @@ function _buildExportDropdown(data) {
     { key: 'json', label: 'JSON' },
     { key: 'excel', label: 'Excel' },
     { key: 'screens_md', label: 'Markdown（画面一覧）' },
+    { key: 'forms_md', label: 'Markdown（フォーム）' },
     { key: 'transition_mmd', label: '遷移図（Mermaid）' },
     { key: 'diff', label: '差分レポート' },
   ];

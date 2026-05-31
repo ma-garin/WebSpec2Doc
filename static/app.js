@@ -194,7 +194,7 @@ function setUrlMessage(msg, isError) {
 }
 
 // ---- 画面リスト取得（discover）----
-document.getElementById('discover-btn').addEventListener('click', discoverUrls);
+document.getElementById('discover-btn').addEventListener('click', () => discoverUrls());
 
 // ---- 自動ログイン（ADR-0002: GUIフォーム入力方式）----
 function loginDomain() {

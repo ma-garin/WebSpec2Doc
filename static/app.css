@@ -366,3 +366,55 @@
       .app-content { padding: 18px 16px; }
     }
   
+/* ====================== 出力形式セレクター ====================== */
+.fmt-selector { display: flex; flex-direction: column; gap: 12px; }
+.fmt-cards { display: flex; flex-wrap: wrap; gap: 8px; }
+.fmt-card {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border: 1.5px solid var(--border);
+  border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500;
+  color: var(--text); background: #fff; transition: border-color .15s, background .15s;
+  user-select: none;
+}
+.fmt-card:hover { border-color: var(--primary); }
+.fmt-card.is-selected { border-color: var(--primary); background: #EBF2FF; color: var(--primary); }
+.fmt-card-label { pointer-events: none; }
+.fmt-preview {
+  display: flex; gap: 16px; padding: 14px; background: var(--bg-panel);
+  border: 1px solid var(--border); border-radius: 8px; min-height: 100px;
+}
+.fmt-preview-mock { flex: 0 0 140px; display: flex; align-items: center; justify-content: center; }
+.fmt-preview-info { flex: 1; }
+.fmt-preview-desc { font-size: 13px; color: var(--text); margin-bottom: 8px; font-weight: 500; }
+.fmt-preview-includes { list-style: none; padding: 0; margin: 0; font-size: 12px; color: var(--text-muted); }
+.fmt-preview-includes li::before { content: "✓ "; color: var(--primary); }
+/* mock: HTML */
+.fmt-mock-html { display: flex; gap: 4px; width: 120px; height: 80px; background: #f0f2f5; border-radius: 4px; overflow: hidden; padding: 4px; }
+.fmt-mock-sidebar { width: 28px; background: #d1d5db; border-radius: 3px; display: flex; flex-direction: column; gap: 3px; padding: 4px 3px; }
+.fmt-mock-body { flex: 1; display: flex; flex-direction: column; gap: 3px; padding: 4px; }
+.fmt-mock-heading { height: 8px; background: var(--primary); border-radius: 2px; opacity: .7; }
+.fmt-mock-bar { height: 5px; background: #9ca3af; border-radius: 2px; }
+.fmt-mock-bar.short { width: 60%; }
+.fmt-mock-table { margin-top: 2px; display: flex; flex-direction: column; gap: 2px; }
+.fmt-mock-row { height: 6px; background: #e5e7eb; border-radius: 1px; }
+.fmt-mock-line { height: 4px; background: #d1d5db; border-radius: 1px; }
+.fmt-mock-line.short { width: 55%; }
+/* mock: PDF */
+.fmt-mock-pdf { width: 90px; height: 115px; background: #fff; border: 1px solid #d1d5db; border-radius: 2px; padding: 8px 6px; display: flex; flex-direction: column; gap: 4px; box-shadow: 1px 1px 4px rgba(0,0,0,.1); }
+.fmt-mock-pdf-title { height: 8px; background: var(--primary); border-radius: 2px; opacity: .6; margin-bottom: 4px; }
+/* mock: Markdown */
+.fmt-mock-md { width: 120px; height: 80px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; padding: 6px 8px; display: flex; flex-direction: column; gap: 3px; font-family: monospace; overflow: hidden; }
+.fmt-mock-md-h1 { height: 7px; background: #374151; border-radius: 2px; width: 70%; }
+.fmt-mock-md-h2 { height: 5px; background: #6b7280; border-radius: 2px; width: 50%; }
+/* mock: Excel */
+.fmt-mock-excel { width: 120px; height: 80px; display: flex; flex-direction: column; gap: 0; border: 1px solid #d1d5db; border-radius: 3px; overflow: hidden; }
+.fmt-mock-excel-header { display: flex; }
+.fmt-mock-excel-header > div { flex: 1; height: 14px; background: #374151; border-right: 1px solid #6b7280; }
+.fmt-mock-excel-row { display: flex; }
+.fmt-mock-excel-row > div { flex: 1; height: 11px; background: #f3f4f6; border-right: 1px solid #e5e7eb; border-bottom: 1px solid #e5e7eb; }
+.fmt-mock-excel-row.alt > div { background: #e9f0f8; }
+/* mock: JSON */
+.fmt-mock-json { width: 120px; height: 80px; background: #1e1e2e; border-radius: 4px; padding: 6px 8px; font-family: monospace; font-size: 9px; color: #cdd6f4; display: flex; flex-direction: column; gap: 1px; overflow: hidden; }
+.fmt-mock-brace { color: #cba6f7; }
+.fmt-mock-key { color: #89dceb; }
+.fmt-mock-json-line { padding-left: 10px; }

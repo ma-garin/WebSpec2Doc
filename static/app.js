@@ -139,6 +139,67 @@ async function openResultsForDomain(domain) {
   await showResults(domain);
 }
 
+// ====================== 出力形式セレクター ======================
+const FORMAT_DEFS = [
+  {
+    key: 'html', label: 'HTML レポート', defaultOn: true,
+    desc: 'ブラウザで読むテストベース文書',
+    includes: ['画面一覧（サイドバー）', '入力項目・テスト条件', 'ロケータ候補', 'スクリーンショット'],
+    mock: '<div class="fmt-mock-html"><div class="fmt-mock-sidebar"><div class="fmt-mock-bar"></div><div class="fmt-mock-bar short"></div><div class="fmt-mock-bar short"></div></div><div class="fmt-mock-body"><div class="fmt-mock-heading"></div><div class="fmt-mock-line"></div><div class="fmt-mock-line short"></div><div class="fmt-mock-table"><div class="fmt-mock-row"></div><div class="fmt-mock-row"></div></div></div></div>',
+  },
+  {
+    key: 'pdf', label: 'PDF', defaultOn: false,
+    desc: '配布・印刷用ドキュメント',
+    includes: ['HTMLレポートと同等の内容', '印刷・共有に最適化'],
+    mock: '<div class="fmt-mock-pdf"><div class="fmt-mock-pdf-title"></div><div class="fmt-mock-line"></div><div class="fmt-mock-line short"></div><div class="fmt-mock-line"></div><div class="fmt-mock-line short"></div></div>',
+  },
+  {
+    key: 'md', label: 'Markdown', defaultOn: true,
+    desc: '軽量テキスト形式',
+    includes: ['画面一覧', 'フォーム一覧', '遷移図（Mermaid）'],
+    mock: '<div class="fmt-mock-md"><div class="fmt-mock-md-h1"></div><div class="fmt-mock-md-h2"></div><div class="fmt-mock-line"></div><div class="fmt-mock-line short"></div><div class="fmt-mock-md-h2"></div><div class="fmt-mock-line"></div></div>',
+  },
+  {
+    key: 'excel', label: 'Excel', defaultOn: false,
+    desc: '表計算ソフトで編集可能',
+    includes: ['入力項目一覧（シート）', 'テスト条件一覧（シート）'],
+    mock: '<div class="fmt-mock-excel"><div class="fmt-mock-excel-header"><div></div><div></div><div></div><div></div></div><div class="fmt-mock-excel-row"><div></div><div></div><div></div><div></div></div><div class="fmt-mock-excel-row alt"><div></div><div></div><div></div><div></div></div><div class="fmt-mock-excel-row"><div></div><div></div><div></div><div></div></div></div>',
+  },
+  {
+    key: 'json', label: 'JSON', defaultOn: false,
+    desc: '自動化・CI連携用の構造化データ',
+    includes: ['全画面・フォーム・フィールド', 'テスト条件', 'ロケータ候補'],
+    mock: '<div class="fmt-mock-json"><span class="fmt-mock-brace">{</span><div class="fmt-mock-json-line"><span class="fmt-mock-key">"screens"</span>: [<span class="fmt-mock-brace">…</span>]</div><div class="fmt-mock-json-line"><span class="fmt-mock-key">"summary"</span>: {<span class="fmt-mock-brace">…</span>}</div><span class="fmt-mock-brace">}</span></div>',
+  },
+];
+
+(function initFormatCards() {
+  const container = document.getElementById('fmt-cards');
+  const preview = document.getElementById('fmt-preview');
+  if (!container) return;
+
+  FORMAT_DEFS.forEach(def => {
+    const card = document.createElement('label');
+    card.className = 'fmt-card' + (def.defaultOn ? ' is-selected' : '');
+    card.dataset.key = def.key;
+    card.innerHTML = `<input type="checkbox" name="fmt" value="${escHtml(def.key)}"${def.defaultOn ? ' checked' : ''} style="display:none"><span class="fmt-card-label">${escHtml(def.label)}</span>`;
+    card.addEventListener('click', (e) => {
+      e.preventDefault();
+      const cb = card.querySelector('input[type=checkbox]');
+      cb.checked = !cb.checked;
+      card.classList.toggle('is-selected', cb.checked);
+      showFormatPreview(def);
+    });
+    card.addEventListener('mouseenter', () => showFormatPreview(def));
+    container.appendChild(card);
+  });
+
+  function showFormatPreview(def) {
+    preview.style.display = '';
+    preview.innerHTML = `<div class="fmt-preview-mock">${def.mock}</div><div class="fmt-preview-info"><p class="fmt-preview-desc">${escHtml(def.desc)}</p><ul class="fmt-preview-includes">${def.includes.map(i => `<li>${escHtml(i)}</li>`).join('')}</ul></div>`;
+  }
+})();
+
 // ====================== ウィザード ======================
 let wizardStep = 1;
 let discovered = [];

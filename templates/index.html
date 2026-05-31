@@ -127,13 +127,10 @@
                 <div class="wizard-page" id="wpage-2">
                   <div class="wizard-page-header"><h2>出力設定</h2><p>生成するドキュメントの形式を選びます。</p></div>
                   <div class="wizard-section">
-                    <label class="form-label">出力形式</label>
-                    <div class="checkbox-group">
-                      <label class="checkbox-chip"><input type="checkbox" name="fmt" value="html" checked> HTML レポート</label>
-                      <label class="checkbox-chip"><input type="checkbox" name="fmt" value="pdf"> PDF</label>
-                      <label class="checkbox-chip"><input type="checkbox" name="fmt" value="md" checked> Markdown</label>
-                      <label class="checkbox-chip"><input type="checkbox" name="fmt" value="excel"> Excel</label>
-                      <label class="checkbox-chip"><input type="checkbox" name="fmt" value="json"> JSON</label>
+                    <label class="form-label">出力形式（複数選択可）</label>
+                    <div class="fmt-selector">
+                      <div class="fmt-cards" id="fmt-cards"></div>
+                      <div class="fmt-preview" id="fmt-preview" style="display:none"></div>
                     </div>
                   </div>
                   <div class="wizard-section">

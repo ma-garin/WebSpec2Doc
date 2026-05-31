@@ -92,7 +92,7 @@
     .app-topbar-actions:empty { display: none; }
     .app-content { flex: 1; overflow: auto; padding: 28px 30px; }
     .app-content-inner { max-width: 880px; }
-    .app-content.is-executing { overflow: hidden; padding: 16px 20px; height: 100%; }
+    .app-content.is-executing { overflow: hidden; padding: 12px 16px; height: 100%; }
     .app-content.is-executing .app-content-inner { height: 100%; max-width: none; }
     .app-content.is-executing .view.is-active { height: 100%; }
     .view { display: none; }
@@ -148,18 +148,18 @@
     .btn-primary:focus-visible, .btn-outline-sm:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
     /* ── ウィザード ── */
-    .wizard-progress { display: flex; align-items: center; gap: 6px; margin-bottom: 22px; overflow: hidden; }
-    .wizard-step-node { display: flex; align-items: center; gap: 8px; }
+    .wizard-progress { display: flex; align-items: center; gap: 4px; margin-bottom: 14px; min-width: 0; }
+    .wizard-step-node { display: flex; align-items: center; gap: 5px; flex-shrink: 1; min-width: 0; }
     .wizard-step-circle {
-      width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
       border: 2px solid var(--border); background: var(--surface); color: var(--text-muted);
-      font-size: 13px; font-weight: 800; flex-shrink: 0;
+      font-size: 12px; font-weight: 800; flex-shrink: 0;
     }
     .wizard-step-node.is-active .wizard-step-circle { border-color: var(--primary); background: var(--primary); color: #fff; }
     .wizard-step-node.is-done .wizard-step-circle { border-color: var(--ok); background: var(--ok); color: #fff; }
-    .wizard-step-label { font-size: 13px; font-weight: 700; color: var(--text-muted); white-space: nowrap; }
+    .wizard-step-label { font-size: 12px; font-weight: 700; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 5em; }
     .wizard-step-node.is-active .wizard-step-label { color: var(--primary-dark); }
-    .wizard-step-line { flex: 1; height: 2px; background: var(--border); border-radius: 2px; min-width: 16px; }
+    .wizard-step-line { flex: 1; height: 2px; background: var(--border); border-radius: 2px; min-width: 8px; }
     .wizard-step-line.is-done { background: var(--ok); }
     .wizard-page { display: none; }
     .wizard-page.is-active { display: block; }
@@ -195,7 +195,7 @@
     .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
     .discovered-url-actions { display: flex; gap: 8px; }
     .discovered-url-panel { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-soft); }
-    .discovered-url-list { display: grid; gap: 6px; max-height: 260px; overflow: auto; }
+    .discovered-url-list { display: grid; gap: 6px; max-height: min(55vh, 480px); overflow: auto; }
     .discovered-url-item { display: grid; grid-template-columns: 18px minmax(0,1fr); gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); cursor: pointer; }
     .discovered-url-item input { width: 16px; height: 16px; margin-top: 3px; accent-color: var(--primary); }
     .discovered-url-item span { display: grid; gap: 2px; min-width: 0; }
@@ -518,6 +518,12 @@
 .vis-legend-item { display:flex; align-items:center; gap:5px; }
 .vis-legend-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
 
+/* ── 画面遷移図 UML サブタブ ── */
+.uml-subtabs { display:flex; gap:0; border-bottom:none; }
+.uml-subtab { padding:7px 16px; font-size:13px; font-weight:600; border:1px solid var(--border); background:var(--surface-soft); color:var(--text-muted); cursor:pointer; border-bottom:none; border-radius:var(--radius) var(--radius) 0 0; margin-right:4px; }
+.uml-subtab.is-active { background:var(--surface); color:var(--primary-dark); border-bottom:1px solid var(--surface); position:relative; z-index:1; }
+.uml-subtab:hover:not(.is-active) { background:var(--surface); }
+
 /* ── 画面遷移表 ── */
 .trans-table { width:100%; border-collapse:collapse; font-size:.8rem; }
 .trans-table th { background:var(--surface-soft); color:var(--text-muted); font-size:11px; font-weight:800; text-align:left; padding:8px 12px; border-bottom:2px solid var(--border); white-space:nowrap; position:sticky; top:0; z-index:2; }
@@ -528,8 +534,17 @@
 .trans-link-detail { display:block; font-size:10px; font-family:monospace; color:var(--text-muted); margin-top:2px; word-break:break-all; }
 
 /* ── 画面リスト ログイングループ区切り ── */
-.disc-login-group-separator { display:flex; align-items:center; gap:8px; margin:10px 0 6px; font-size:12px; font-weight:700; color:var(--warning); }
+.disc-login-group-separator { display:flex; align-items:center; gap:8px; margin:10px 0 6px; font-size:11px; font-weight:700; color:var(--warning); }
 .disc-login-group-separator::before,.disc-login-group-separator::after { content:''; flex:1; height:1px; background:var(--warning-border); }
+
+/* ── 各「要ログイン」ページの個別ログインフォーム ── */
+.disc-login-item-wrap { border:1px solid var(--warning-border); border-radius:var(--radius); overflow:hidden; margin-bottom:4px; }
+.disc-login-item-wrap .discovered-url-item { border-bottom:1px solid var(--warning-border); border-radius:0; background:var(--warning-bg); }
+.disc-item-login-panel { padding:10px 12px 8px; background:#fff; }
+.disc-item-login-header { font-size:12px; font-weight:700; color:var(--warning); margin-bottom:8px; display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+.disc-item-login-urlpath { font-size:11px; font-weight:400; color:var(--text-muted); font-family:monospace; }
+.disc-item-login-body { }
+.disc-item-login-status { font-size:12px; }
 
 /* ── 画面別仕様 ページ要素（フォームなし画面） ── */
 .rpt-page-elements { border:1px solid var(--border); border-radius:var(--radius); padding:12px 16px; margin-bottom:14px; }

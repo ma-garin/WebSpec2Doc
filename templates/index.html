@@ -118,31 +118,6 @@
                       </div>
                     </div>
                     <div id="discovered-url-list" class="discovered-url-list"></div>
-
-                    <!-- ログイン入力（要ログイン画面が検出された場合にリスト直下に表示） -->
-                    <div id="login-inline-panel" style="display:none;margin-top:10px;border-top:2px dashed var(--warning-border);padding-top:12px">
-                      <p style="font-size:12px;color:var(--warning);font-weight:700;margin:0 0 10px">
-                        🔒 上記の「要ログイン」画面を取得するには認証情報が必要です
-                      </p>
-                      <table style="width:100%;border-collapse:collapse;border:1px solid var(--border);border-radius:6px;overflow:hidden">
-                        <tbody>
-                          <tr style="border-bottom:1px solid var(--border)">
-                            <td style="padding:10px 14px;font-weight:700;font-size:14px;width:30%;background:var(--surface-subtle)">ID</td>
-                            <td style="padding:8px 12px;background:var(--surface)"><input type="text" id="login-username" class="url-input" placeholder="ユーザーID・メールアドレス" autocomplete="username" style="margin:0;height:36px" /></td>
-                          </tr>
-                          <tr>
-                            <td style="padding:10px 14px;font-weight:700;font-size:14px;background:var(--surface-subtle)">PASSWORD</td>
-                            <td style="padding:8px 12px;background:var(--surface)"><input type="password" id="login-password" class="url-input" placeholder="パスワード" autocomplete="current-password" style="margin:0;height:36px" /></td>
-                          </tr>
-                        </tbody>
-                      </table>
-                      <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
-                        <button type="button" id="login-simple-btn" class="btn-primary" style="height:36px;padding:0 20px;font-size:13px">ログイン</button>
-                        <div id="login-simple-loading" style="display:none" class="discover-loading"><span class="spinner"></span><span id="login-simple-msg">ログインしています…</span></div>
-                      </div>
-                      <div id="login-simple-status" class="input-field-message" style="margin-top:6px"></div>
-                      <input type="hidden" id="login-inline-url" />
-                    </div>
                   </div>
 
                   <div id="target-preview" class="target-preview">

@@ -213,19 +213,20 @@ function setLoginLoading(show, msg) {
   if (msg) { const m = document.getElementById('login-loading-msg'); if (m) m.textContent = msg; }
 }
 
-// ---- シンプルログイン（インラインパネル）----
-document.getElementById('login-simple-btn').addEventListener('click', async () => {
+// ---- 各「要ログイン」ページに埋め込んだログインボタン（イベント委譲）----
+document.getElementById('discovered-url-list').addEventListener('click', async (e) => {
+  const btn = e.target.closest('.disc-item-login-btn');
+  if (!btn) return;
+  const panel = btn.closest('.disc-item-login-panel');
+  if (!panel) return;
+  const loginUrl = panel.dataset.loginUrl || document.getElementById('login-url').value.trim();
+  const username = panel.querySelector('.disc-item-login-user').value.trim();
+  const password = panel.querySelector('.disc-item-login-pass').value;
+  const statusEl = panel.querySelector('.disc-item-login-status');
+  const loadingEl = panel.querySelector('.disc-item-login-loading');
   const domain = loginDomain();
-  const loginUrl = document.getElementById('login-inline-url').value.trim()
-    || document.getElementById('login-url').value.trim();
-  const username = document.getElementById('login-username').value.trim();
-  const password = document.getElementById('login-password').value;
-  if (!loginUrl) { document.getElementById('login-simple-status').textContent = 'ログインURLが見つかりません。上級設定でURLを入力してください。'; return; }
-
-  const btn = document.getElementById('login-simple-btn');
-  const loading = document.getElementById('login-simple-loading');
-  const status = document.getElementById('login-simple-status');
-  btn.disabled = true; loading.style.display = 'flex'; status.textContent = '';
+  if (!loginUrl) { statusEl.textContent = 'ログインURLが見つかりません。上級設定でURLを入力してください。'; statusEl.classList.add('input-field-message-error'); return; }
+  btn.disabled = true; loadingEl.style.display = 'flex'; statusEl.textContent = '';
   try {
     const res = await fetch('/api/login/simple', { method: 'POST', body: new URLSearchParams({
       domain: domain || 'site', login_url: loginUrl, username, password,
@@ -233,17 +234,16 @@ document.getElementById('login-simple-btn').addEventListener('click', async () =
     const data = await res.json();
     if (!res.ok || !data.success) throw new Error(data.error || 'ログインに失敗しました');
     document.getElementById('auth-path').value = data.auth_path || ('output/' + domain + '/auth.json');
-    status.textContent = 'ログイン成功。認証後ページを再解析しています…';
-    status.classList.remove('input-field-message-error');
-    // パスワードフィールドをクリア（セキュリティ）
-    document.getElementById('login-password').value = '';
-    document.getElementById('login-inline-panel').style.display = 'none';
+    // パスワードを即破棄（セキュリティ）
+    panel.querySelector('.disc-item-login-pass').value = '';
+    statusEl.textContent = 'ログイン成功。認証後ページを再解析しています…';
+    statusEl.classList.remove('input-field-message-error');
     await discoverUrls(true);
-  } catch (e) {
-    status.textContent = e.message;
-    status.classList.add('input-field-message-error');
+  } catch (err) {
+    statusEl.textContent = err.message;
+    statusEl.classList.add('input-field-message-error');
   } finally {
-    btn.disabled = false; loading.style.display = 'none';
+    btn.disabled = false; loadingEl.style.display = 'none';
   }
 });
 
@@ -365,19 +365,12 @@ async function discoverUrls(skipLoginSection) {
     if (!res.ok || data.error) throw new Error(data.error || '画面リスト取得に失敗しました');
     discovered = (data.pages || []).filter(p => p && p.url);
     renderDiscovered();
+    // ログインURLを上級設定フィールドに反映（参考表示）
     if (!skipLoginSection && discovered.some(p => p.login_required)) {
-      // インラインログインパネルを表示
-      const inlinePanel = document.getElementById('login-inline-panel');
-      if (inlinePanel) {
-        inlinePanel.style.display = '';
-        // ログインURLを自動セット
-        const loginPage = discovered.find(p => p.login_required && p.login_url);
-        const detectedLoginUrl = loginPage ? loginPage.login_url : '';
-        const hiddenUrl = document.getElementById('login-inline-url');
-        if (hiddenUrl) hiddenUrl.value = detectedLoginUrl;
-        // 上級設定のURLフィールドにも反映
+      const loginPage = discovered.find(p => p.login_required && p.login_url);
+      if (loginPage) {
         const advUrl = document.getElementById('login-url');
-        if (advUrl && !advUrl.value && detectedLoginUrl) advUrl.value = detectedLoginUrl;
+        if (advUrl && !advUrl.value) advUrl.value = loginPage.login_url;
       }
     }
     const loginCount = discovered.filter(p => p.login_required).length;
@@ -416,23 +409,47 @@ function renderDiscovered() {
   const list = document.getElementById('discovered-url-list');
   panel.style.display = discovered.length ? '' : 'none';
 
-  const makeItem = (it, i) => `
+  const makeNormalItem = (it) => `
     <label class="discovered-url-item">
       <input type="checkbox" class="discovered-cb" value="${escHtml(it.url)}" checked />
-      <span>
-        <strong>${escHtml(it.title || ('タイトル未取得 ' + (i + 1)))}</strong>
-        <code>${escHtml(it.url)}</code>
-        ${it.login_required ? `<span class="disc-login-badge" title="${escHtml('認証が必要（根拠: ' + ((it.login_reasons || []).join(', ') || '不明') + '）')}">要ログイン</span>` : ''}
-      </span>
+      <span><strong>${escHtml(it.title || 'タイトル未取得')}</strong><code>${escHtml(it.url)}</code></span>
     </label>`;
+
+  const makeLoginItem = (it) => {
+    const loginUrl = it.login_url || '';
+    const loginUrlDisplay = loginUrl ? (() => { try { return new URL(loginUrl).pathname; } catch (e) { return loginUrl; } })() : '（検出中）';
+    return `
+    <div class="disc-login-item-wrap">
+      <label class="discovered-url-item">
+        <input type="checkbox" class="discovered-cb" value="${escHtml(it.url)}" checked />
+        <span>
+          <strong>${escHtml(it.title || 'タイトル未取得')}</strong>
+          <code>${escHtml(it.url)}</code>
+          <span class="disc-login-badge">要ログイン</span>
+        </span>
+      </label>
+      <div class="disc-item-login-panel" data-login-url="${escHtml(loginUrl)}">
+        <div class="disc-item-login-header">🔒 この画面へのアクセスに認証が必要です <span class="disc-item-login-urlpath">ログインURL: ${escHtml(loginUrlDisplay)}</span></div>
+        <div class="disc-item-login-body">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <input type="text" class="disc-item-login-user url-input" placeholder="ID / メールアドレス" autocomplete="username" style="flex:1;min-width:140px;height:34px;margin:0" />
+            <input type="password" class="disc-item-login-pass url-input" placeholder="パスワード" autocomplete="current-password" style="flex:1;min-width:140px;height:34px;margin:0" />
+            <button type="button" class="btn-primary disc-item-login-btn" style="height:34px;padding:0 16px;font-size:13px;flex-shrink:0">ログイン</button>
+          </div>
+          <div class="disc-item-login-loading discover-loading" style="display:none;margin-top:6px"><span class="spinner"></span><span>ログインしています…</span></div>
+          <div class="disc-item-login-status input-field-message" style="margin-top:4px"></div>
+        </div>
+      </div>
+    </div>`;
+  };
 
   const normalPages = discovered.filter(p => !p.login_required);
   const loginPages = discovered.filter(p => p.login_required);
 
-  let html = normalPages.map(makeItem).join('');
+  let html = normalPages.map(makeNormalItem).join('');
   if (loginPages.length) {
-    html += `<div class="disc-login-group-separator"><span>🔒 認証が必要なページ（${loginPages.length}件）</span></div>`;
-    html += loginPages.map(makeItem).join('');
+    html += `<div class="disc-login-group-separator"><span>🔒 認証が必要なページ（${loginPages.length}件）— 各画面の認証情報を入力してください</span></div>`;
+    html += loginPages.map(makeLoginItem).join('');
   }
   list.innerHTML = html;
   list.querySelectorAll('.discovered-cb').forEach(cb => cb.addEventListener('change', updateTargetPreview));
@@ -442,8 +459,6 @@ function clearDiscovered() {
   document.getElementById('discovered-url-panel').style.display = 'none';
   document.getElementById('discovered-url-list').innerHTML = '';
   document.getElementById('discover-status').textContent = '';
-  document.getElementById('login-inline-panel').style.display = 'none';
-  document.getElementById('login-simple-status').textContent = '';
 }
 function setAllDiscovered(v) { document.querySelectorAll('.discovered-cb').forEach(cb => { cb.checked = v; }); updateTargetPreview(); }
 function selectedDiscovered() { return [...document.querySelectorAll('.discovered-cb:checked')].map(cb => cb.value); }

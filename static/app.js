@@ -747,9 +747,63 @@ function exportMatrixCsv() {
 
 // ---- 画面別仕様（HTMLレポート埋め込み）----
 function renderReport() {
-  const html = (resultData.files || {}).html;
-  if (!html) { resultHero.innerHTML = '<div class="hero-msg"><p>HTMLレポートは生成されていません。</p><p style="font-size:13px">出力形式で「HTML」を選ぶと、ここに画面別の詳細仕様が表示されます。</p></div>'; return; }
-  resultHero.innerHTML = `<iframe src="/preview?path=${encodeURIComponent(html)}" title="画面別仕様"></iframe>`;
+  if (!reportJson || !(reportJson.screens || []).length) {
+    resultHero.innerHTML = '<div class="hero-msg"><p>画面別仕様データ（report.json）がありません。</p><p style="font-size:13px">出力形式で「HTML」または「JSON」を選んで再クロールすると表示されます。</p></div>';
+    return;
+  }
+  const screens = reportJson.screens;
+  const pageIds = new Set(screens.map(s => s.page_id));
+  const allShots = (resultData.screenshots || []).filter(p => pageIds.has(p.split('/').pop().replace(/\.png$/, '')));
+
+  resultHero.innerHTML =
+    '<div class="rpt-pane-wrap">' +
+    '<div class="rpt-list" id="rpt-list"></div>' +
+    '<div class="rpt-detail" id="rpt-detail"><p class="hero-msg" style="padding:24px">左の一覧から画面を選択してください。</p></div>' +
+    '</div>';
+
+  const list = document.getElementById('rpt-list');
+  screens.forEach((sc, idx) => {
+    const item = document.createElement('div');
+    item.className = 'rpt-list-item' + (idx === 0 ? ' is-active' : '');
+    item.dataset.pid = sc.page_id;
+    item.innerHTML = `<strong>${escHtml(sc.page_id)}</strong><span>${escHtml(sc.title || '')}</span>`;
+    item.addEventListener('click', () => {
+      list.querySelectorAll('.rpt-list-item').forEach(el => el.classList.remove('is-active'));
+      item.classList.add('is-active');
+      renderReportDetail(sc, allShots);
+    });
+    list.appendChild(item);
+  });
+  renderReportDetail(screens[0], allShots);
+}
+
+function renderReportDetail(sc, allShots) {
+  const detail = document.getElementById('rpt-detail');
+  if (!detail) return;
+  const shotPath = allShots.find(p => p.split('/').pop().replace(/\.png$/, '') === sc.page_id);
+  const shotHtml = shotPath
+    ? `<div class="rpt-shots"><img src="/preview?path=${encodeURIComponent(shotPath)}" class="rpt-thumb" loading="lazy" alt="${escHtml(sc.page_id)}" onclick="openLightbox('${escHtml('/preview?path=' + encodeURIComponent(shotPath))}')" /></div>`
+    : '';
+  let fieldRows = '';
+  for (const fm of (sc.forms || [])) {
+    for (const f of (fm.fields || [])) {
+      const conds = (f.test_conditions || []).map(c => `<span class="cond-pill ${condClass(c)}">${escHtml(c)}</span>`).join('');
+      fieldRows +=
+        `<tr><td>${escHtml(f.name || '')}</td>` +
+        `<td>${escHtml(f.field_type || '')}</td>` +
+        `<td>${f.required ? '●' : ''}</td>` +
+        `<td>${escHtml(constraintText(f))}</td>` +
+        `<td>${escHtml(defaultOptionsText(f))}</td>` +
+        `<td><code class="loc-hint">${escHtml((f.locators || [])[0] || '')}</code></td>` +
+        `<td class="cond-cell">${conds || '—'}</td></tr>`;
+    }
+  }
+  const tableHtml = fieldRows
+    ? '<table class="rpt-field-table"><thead><tr><th>項目名</th><th>型</th><th>必須</th><th>制約</th><th>既定・選択肢</th><th>ロケータ候補</th><th>テスト条件</th></tr></thead><tbody>' + fieldRows + '</tbody></table>'
+    : '<p style="color:var(--text-muted);font-size:13px">この画面には入力フォームがありません。</p>';
+  detail.innerHTML =
+    `<div class="rpt-detail-header"><h3>${escHtml(sc.title || sc.page_id)}</h3><code class="rpt-url">${escHtml(sc.url || '')}</code></div>` +
+    shotHtml + tableHtml;
 }
 
 // ---- エクスポート ----

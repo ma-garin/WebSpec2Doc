@@ -8,6 +8,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 import app as appmod
+import web.routes.site as site_mod
 
 from registry.site_registry import SiteConfig, save_site
 
@@ -17,7 +18,7 @@ def _client():
 
 
 def test_api_site_returns_saved_config(tmp_path: Path, monkeypatch) -> None:
-    monkeypatch.setattr(appmod, "OUTPUT_DIR", tmp_path)
+    monkeypatch.setattr(site_mod, "OUTPUT_DIR", tmp_path)
     save_site(
         SiteConfig(
             domain="example.com",
@@ -36,6 +37,6 @@ def test_api_site_returns_saved_config(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_api_site_unknown_domain_returns_none(tmp_path: Path, monkeypatch) -> None:
-    monkeypatch.setattr(appmod, "OUTPUT_DIR", tmp_path)
+    monkeypatch.setattr(site_mod, "OUTPUT_DIR", tmp_path)
     data = _client().get("/api/site?domain=nope.com").get_json()
     assert data["site"] is None

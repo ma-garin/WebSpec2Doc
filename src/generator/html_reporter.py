@@ -3,7 +3,7 @@ from __future__ import annotations
 import base64
 import html
 from dataclasses import replace
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -31,7 +31,7 @@ def generate_html_report(
     crawl_max_pages: int = DEFAULT_MAX_PAGES,
     crawled_at: str = "",
 ) -> str:
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
     forms_count = sum(len(p.page_data.forms) for p in pages)
     fields_count = len(form_summary)
     buttons_count = sum(len(p.page_data.buttons) for p in pages)

@@ -8,7 +8,6 @@ from pathlib import Path
 from unittest.mock import patch
 
 import networkx as nx
-import pytest
 
 from analyzer.form_analyzer import summarize_forms
 from analyzer.html_analyzer import analyze_pages

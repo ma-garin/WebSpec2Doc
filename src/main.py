@@ -4,9 +4,9 @@ import argparse
 import json
 import logging
 import sys
-from datetime import datetime, timezone
+from collections.abc import Sequence
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Sequence
 from urllib.parse import urlparse
 
 import networkx as nx
@@ -16,7 +16,6 @@ from dotenv import load_dotenv
 from analyzer.form_analyzer import summarize_forms
 from analyzer.html_analyzer import AnalyzedPage, analyze_pages
 from crawler.auth import DEFAULT_AUTH_FILE, capture_auth_state
-from crawler.session_guard import SessionExpiredError
 from crawler.page_crawler import (
     DEFAULT_DEPTH,
     DEFAULT_MAX_PAGES,
@@ -25,6 +24,7 @@ from crawler.page_crawler import (
     crawl_urls,
     discover_pages,
 )
+from crawler.session_guard import SessionExpiredError
 from diff.differ import compute_diff
 from diff.snapshot import latest_snapshot, load_snapshot, save_snapshot
 from generator.diff_reporter import generate_diff_report
@@ -111,7 +111,7 @@ def run(args: argparse.Namespace) -> None:
     if args.llm:
         logger.warning("--llm は未実装のため無視します")
 
-    crawled_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    crawled_at = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
     auth_state = Path(auth_path) if auth_path else None
     try:
         if url_list:

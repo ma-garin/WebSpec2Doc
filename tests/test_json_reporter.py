@@ -4,10 +4,9 @@ from __future__ import annotations
 import json
 
 import networkx as nx
-import pytest
 
 from analyzer.html_analyzer import analyze_pages
-from crawler.page_crawler import FieldData, FormData, PageData
+from crawler.page_crawler import FieldData, PageData
 from generator.json_reporter import (
     _field_type_tag,
     _locator_candidates,

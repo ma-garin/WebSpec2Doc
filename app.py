@@ -8,21 +8,20 @@ import sys
 import threading
 import uuid
 import webbrowser
+from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
-from dataclasses import asdict
-
 from flask import Flask, Response, redirect, request, send_file, url_for
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
-from registry.site_registry import SiteConfig, load_site, save_site  # noqa: E402
 from registry.session_store import (  # noqa: E402
     has_session,
     session_path,
     signal_path,
 )
+from registry.site_registry import SiteConfig, load_site, save_site  # noqa: E402
 
 app = Flask(__name__)
 

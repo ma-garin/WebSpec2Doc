@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
+from urllib.robotparser import RobotFileParser
 
 import pytest
 
@@ -16,8 +17,6 @@ from crawler.page_crawler import (
     is_internal_link,
     normalize_url,
 )
-from urllib.robotparser import RobotFileParser
-
 
 # ---------- normalize_url ----------
 

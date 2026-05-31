@@ -16,7 +16,6 @@ from crawler.link_extractor import (
     has_password_field,
 )
 
-
 # ---------- has_password_field ----------
 
 

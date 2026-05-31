@@ -7,6 +7,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 import app as appmod
+
 from registry.site_registry import SiteConfig, save_site
 
 

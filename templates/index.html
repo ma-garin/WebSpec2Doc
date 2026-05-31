@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebSpec2Doc</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body class="app-page">
+<div class="app-shell">
+
+  <aside class="app-sidebar">
+    <a href="/" class="app-brand">
+      <span class="app-brand-mark">W</span>
+      <span class="app-brand-text"><strong>WebSpec2Doc</strong><span>QA テスト分析インプット</span></span>
+    </a>
+    <button type="button" class="btn-primary" id="add-site-btn" style="width:100%;height:40px;gap:6px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="16" height="16"><path d="M12 5v14M5 12h14"/></svg>
+      <span class="add-site-label">サイトを追加</span>
+    </button>
+    <nav class="app-nav">
+      <div class="app-nav-group">メニュー</div>
+      <button class="app-nav-item is-active" data-view="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        <span class="nav-label">ダッシュボード</span>
+      </button>
+      <button class="app-nav-item" data-view="settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span class="nav-label">設定</span>
+      </button>
+    </nav>
+    <div style="margin-top:auto" class="app-sidebar-foot">
+      稼働中のWebシステムから QA テスト分析インプットを生成し、<strong>再クロールで仕様ドリフトを検知</strong>します。
+    </div>
+  </aside>
+
+  <div class="app-main">
+    <header class="app-topbar">
+      <div style="min-width:0">
+        <div class="app-breadcrumb" id="topbar-breadcrumb"><span>Dashboard</span></div>
+        <h1 class="app-topbar-title" id="topbar-title">監視対象サイト</h1>
+      </div>
+      <div class="app-topbar-actions" id="topbar-actions"></div>
+    </header>
+
+    <main class="app-content" id="app-content">
+      <div class="app-content-inner">
+
+        <!-- ===== 生成ビュー（4ステップウィザード） ===== -->
+        <section class="view" id="view-generate">
+
+          <!-- ウィザードステップインジケーター -->
+          <div class="wizard-progress" id="wizard-progress-bar" style="margin-bottom:16px;display:none">
+            <div class="wizard-step-node is-active" id="ws-1">
+              <div class="wizard-step-circle">1</div>
+              <span class="wizard-step-label">解析</span>
+            </div>
+            <div class="wizard-step-line" id="wl-1"></div>
+            <div class="wizard-step-node" id="ws-2">
+              <div class="wizard-step-circle">2</div>
+              <span class="wizard-step-label">条件設定</span>
+            </div>
+            <div class="wizard-step-line" id="wl-2"></div>
+            <div class="wizard-step-node" id="ws-3">
+              <div class="wizard-step-circle">3</div>
+              <span class="wizard-step-label">実行</span>
+            </div>
+            <div class="wizard-step-line" id="wl-3"></div>
+            <div class="wizard-step-node" id="ws-4">
+              <div class="wizard-step-circle">4</div>
+              <span class="wizard-step-label">レポート</span>
+            </div>
+          </div>
+
+          <div id="gen-panel">
+
+            <!-- ステップ1: URL入力・解析 -->
+            <div id="wizard-p1" class="input-card">
+              <label for="url-input" class="form-label">クロール対象 URL <span style="color:#DA1E28">*</span></label>
+              <div class="input-row" style="gap:8px">
+                <input type="url" id="url-input" class="url-input" placeholder="https://example.com" autocomplete="url" list="url-history-list" style="flex:1" />
+                <datalist id="url-history-list"></datalist>
+                <input type="hidden" id="crawl-depth" value="5" />
+                <input type="hidden" id="max-pages" value="300" />
+                <button type="button" id="discover-btn" class="btn-primary" style="height:40px;padding:0 18px;font-size:13px;white-space:nowrap">画面分析</button>
+              </div>
+              <div id="url-input-message" class="input-field-message"></div>
+              <div id="discover-loading" class="discover-loading" style="display:none;margin-top:10px">
+                <span class="spinner"></span>
+                <span>画面を分析しています…</span>
+                <span id="discover-elapsed" style="color:var(--text-muted);font-variant-numeric:tabular-nums;margin-left:8px;min-width:3ch"></span>
+              </div>
+              <div id="discover-status" class="discover-status"></div>
+              <!-- 解析完了サマリー -->
+              <div id="p1-summary" class="wizard-p1-summary" style="display:none">
+                <span class="wizard-p1-summary-count" id="p1-count-text"></span>
+                <span class="wizard-p1-summary-hint" id="p1-login-hint"></span>
+                <button type="button" id="p1-next-btn" class="btn-primary" style="height:40px;padding:0 22px;font-size:14px">次へ →</button>
+              </div>
+            </div>
+
+            <!-- ステップ2: 条件設定 -->
+            <div id="wizard-p2" style="display:none">
+              <form id="form">
+                <div class="input-card">
+                  <div class="wizard-p2-header">
+                    <h2>条件設定</h2>
+                    <button type="button" id="p2-back-btn" class="btn-outline-sm">← 解析に戻る</button>
+                  </div>
+
+                  <!-- ログイン（自動表示） -->
+                  <div id="login-inline-panel" style="display:none;margin-bottom:16px;border:1px solid var(--border);border-radius:6px;padding:14px 16px">
+                    <p style="font-size:13px;font-weight:600;margin:0 0 10px">ログインが必要な画面があります</p>
+                    <table style="width:100%;border-collapse:collapse">
+                      <tbody>
+                        <tr style="border-bottom:1px solid var(--border)">
+                          <td style="padding:10px 12px;font-weight:700;font-size:14px;width:35%;background:var(--surface-soft)">ID</td>
+                          <td style="padding:8px 12px"><input type="text" id="login-username" class="url-input" placeholder="ユーザーID・メールアドレス" autocomplete="username" style="margin:0" /></td>
+                        </tr>
+                        <tr>
+                          <td style="padding:10px 12px;font-weight:700;font-size:14px;background:var(--surface-soft)">PASSWORD</td>
+                          <td style="padding:8px 12px"><input type="password" id="login-password" class="url-input" placeholder="パスワード" autocomplete="current-password" style="margin:0" /></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
+                      <button type="button" id="login-simple-btn" class="btn-primary" style="height:36px;padding:0 20px;font-size:13px">ログイン</button>
+                      <div id="login-simple-loading" style="display:none" class="discover-loading"><span class="spinner"></span><span id="login-simple-msg">ログインしています…</span></div>
+                    </div>
+                    <div id="login-simple-status" class="input-field-message" style="margin-top:6px"></div>
+                    <input type="hidden" id="login-inline-url" />
+                  </div>
+
+                  <!-- 画面リスト -->
+                  <div id="discovered-url-panel" class="discovered-url-panel" style="display:none;margin-bottom:14px">
+                    <div class="section-head">
+                      <p class="app-sidebar-section" style="padding:0">取得対象の画面</p>
+                      <div class="discovered-url-actions">
+                        <button type="button" id="select-all-btn" class="btn-outline-sm">全選択</button>
+                        <button type="button" id="clear-all-btn" class="btn-outline-sm">全解除</button>
+                      </div>
+                    </div>
+                    <div id="discovered-url-list" class="discovered-url-list"></div>
+                  </div>
+
+                  <div id="target-preview" class="target-preview">
+                    <strong>チェック対象 0件</strong>
+                    <ol id="target-preview-list"></ol>
+                  </div>
+
+                  <!-- オプション -->
+                  <div style="margin-top:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+                    <label class="checkbox-chip"><input type="checkbox" id="compare"> 前回との差分を出力</label>
+                    <details id="login-setup-section" style="flex:1">
+                      <summary style="cursor:pointer;font-size:12px;color:var(--text-muted);padding:4px 0;user-select:none">上級設定（カスタムログインURL・auth.json）</summary>
+                      <div style="padding:10px 0 4px">
+                        <div class="field" style="margin-bottom:8px">
+                          <label for="login-url">ログインURL（カスタム）</label>
+                          <div style="display:flex;gap:6px;align-items:center">
+                            <input type="url" id="login-url" class="url-input" style="flex:1" placeholder="https://example.com/login" />
+                            <button type="button" id="login-scrape-btn" class="btn-outline-sm">フォームを取得</button>
+                          </div>
+                        </div>
+                        <div id="login-loading" style="display:none" class="discover-loading"><span class="spinner"></span><span id="login-loading-msg">フォームを取得しています…</span></div>
+                        <div id="login-fields-area"></div>
+                        <div id="login-status" class="input-field-message" style="margin-top:6px"></div>
+                        <div class="field" style="margin-top:8px">
+                          <label for="auth-path">auth.json パス（CLI保存済みの場合）</label>
+                          <input type="text" id="auth-path" placeholder="output/example.com/auth.json" />
+                        </div>
+                      </div>
+                    </details>
+                  </div>
+
+                  <div class="wizard-footer" style="justify-content:flex-end">
+                    <button type="submit" class="btn-primary" id="submit-btn" style="height:44px;padding:0 28px;font-size:15px">解析開始</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- ステップ3: 実行 -->
+          <div id="execution-view" class="execution-view hidden">
+            <div class="execution-topbar">
+              <div class="execution-topbar-head">
+                <h2 class="execution-title" id="exec-title">クロール中…</h2>
+                <span class="execution-elapsed" id="exec-elapsed">00:00</span>
+              </div>
+              <p class="execution-message" id="exec-message">対象を受け付けて、クロールの準備を進めています。</p>
+              <div class="execution-progress"><div class="execution-progress-bar" id="exec-progress-bar"></div></div>
+              <div class="execution-steps">
+                <div class="execution-step is-active" id="estep-0">1. 受付</div>
+                <div class="execution-step" id="estep-1">2. ページ取得</div>
+                <div class="execution-step" id="estep-2">3. 解析</div>
+                <div class="execution-step" id="estep-3">4. 結果整理</div>
+              </div>
+            </div>
+            <div class="execution-preview-frame">
+              <img id="exec-preview-image" class="execution-preview-image" alt="クロール中のライブプレビュー" />
+              <div id="exec-preview-placeholder" class="execution-preview-placeholder">
+                <div class="spinner"></div>
+                <p>ライブプレビューを準備しています…</p>
+              </div>
+            </div>
+            <pre class="execution-log" id="exec-log"></pre>
+            <div class="execution-error-card hidden" id="exec-error">エラーが発生しました。ログを確認してください。</div>
+            <div class="execution-bottombar">
+              <dl class="execution-meta-list">
+                <div class="execution-meta-item"><dt>対象</dt><dd id="exec-target">-</dd></div>
+                <div class="execution-meta-item"><dt>状態</dt><dd id="exec-phase">準備中</dd></div>
+              </dl>
+              <div class="execution-bottombar-actions" id="exec-running-actions">
+                <button type="button" id="exec-stop-btn" class="btn-outline-sm">停止</button>
+              </div>
+              <div class="execution-bottombar-actions hidden" id="exec-actions">
+                <button type="button" id="exec-new-btn" class="btn-outline-sm">条件設定に戻る</button>
+                <button type="button" id="btn-view-report" class="btn-primary" style="display:none">レポートを見る →</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ステップ4: レポート -->
+          <div id="result-panel" class="result-panel hidden">
+            <div class="result-summary">
+              <div class="result-summary-head">
+                <div style="display:flex;align-items:center;gap:10px;min-width:0">
+                  <strong id="r-domain">-</strong>
+                  <span id="r-crawled" style="font-size:12px;color:var(--text-muted)"></span>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center">
+                  <div class="export-dropdown" id="export-dropdown">
+                    <button type="button" class="btn-outline-sm" id="export-dropdown-btn">↓ エクスポート</button>
+                    <div class="export-dropdown-menu" id="export-dropdown-menu"></div>
+                  </div>
+                  <button type="button" id="r-recrawl-btn" class="btn-outline-sm">再クロール</button>
+                </div>
+              </div>
+              <div class="result-stats">
+                <div><span class="num" id="r-screens">0</span><span>画面数</span></div>
+                <div><span class="num" id="r-forms">0</span><span>フォーム数</span></div>
+                <div><span class="num" id="r-fields">0</span><span>入力項目数</span></div>
+                <div><span class="num" id="r-required">0</span><span>必須項目数</span></div>
+                <div><span class="num" id="r-buttons">0</span><span>操作要素数</span></div>
+              </div>
+            </div>
+            <div class="result-bar">
+              <div class="result-tabs" role="tablist" aria-label="結果ビュー">
+                <button type="button" role="tab" aria-selected="true" class="result-tab is-active" data-tab="overview">概要</button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="report">画面別仕様</button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="matrix">入力項目・テスト条件</button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="design">設計</button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="transition">画面遷移図</button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="transition-table">遷移表</button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="history">履歴・差分</button>
+              </div>
+              <div class="result-bar-actions">
+                <button type="button" id="r-new-btn" class="btn-outline-sm">ダッシュボードへ</button>
+              </div>
+            </div>
+            <div class="result-hero" id="result-hero" role="tabpanel" tabindex="0"></div>
+          </div>
+        </section>
+
+        <!-- ===== ダッシュボード（監視対象サイト） ===== -->
+        <section class="view is-active" id="view-dashboard">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px">
+            <p style="color:var(--text-muted);font-size:13px">監視対象サイト。<strong>再クロール</strong>すると前回からの仕様ドリフトを検知できます。</p>
+            <div style="display:flex;gap:8px">
+              <button class="btn-outline-sm" id="reload-history">再読み込み</button>
+              <button class="btn-primary" id="add-site-btn-2" style="height:36px;padding:0 16px;font-size:13px">+ サイトを追加</button>
+            </div>
+          </div>
+          <div id="history-body"><div class="empty">読み込み中...</div></div>
+        </section>
+
+        <!-- ===== 設定ビュー ===== -->
+        <section class="view" id="view-settings">
+          <div class="set-tabs">
+            <button class="set-tab is-active" data-tab="api">APIキー</button>
+            <button class="set-tab" data-tab="model">モデル</button>
+            <button class="set-tab" data-tab="crawl">クロール既定値</button>
+          </div>
+
+          <div class="set-panel is-active" id="set-panel-api">
+            <div class="input-card">
+              <h2 class="set-card-title">OpenAI API キー</h2>
+              <p class="input-hint" style="margin-top:0;margin-bottom:14px">キーは <code>.env</code> に保存されます（ブラウザには保存しません）。空欄で保存すると既存キーを保持します。</p>
+              <div class="field full" style="margin-bottom:14px">
+                <label>現在のキー</label>
+                <div class="key-current" id="api-key-current">未設定</div>
+              </div>
+              <div class="options-grid">
+                <div class="field full"><label for="api-key">OPENAI_API_KEY</label><input type="password" id="api-key" placeholder="sk-..." autocomplete="off"></div>
+                <div class="field"><label for="api-org">OPENAI_ORG_ID（任意）</label><input type="text" id="api-org" placeholder="org-..."></div>
+                <div class="field"><label for="api-project">OPENAI_PROJECT_ID（任意）</label><input type="text" id="api-project" placeholder="proj_..."></div>
+              </div>
+              <button class="btn-primary" id="save-api" style="margin-top:18px">APIキーを保存</button>
+              <div class="settings-msg" id="api-msg">保存しました</div>
+              <p class="input-hint" style="margin-top:14px">⚠ LLMテスト観点生成機能は未実装です。本設定はその準備です。</p>
+            </div>
+          </div>
+
+          <div class="set-panel" id="set-panel-model">
+            <div class="input-card">
+              <h2 class="set-card-title">回答生成モデル</h2>
+              <p class="input-hint" style="margin-top:0;margin-bottom:14px">LLMテスト観点生成（今後実装）で使うモデルです。</p>
+              <div class="field full">
+                <label for="api-model">OPENAI_MODEL</label>
+                <select id="api-model" class="url-input" style="height:40px">
+                  <option value="gpt-5.4-mini">gpt-5.4-mini（コスト効率・推奨）</option>
+                  <option value="gpt-5.4-nano">gpt-5.4-nano（最安・最速）</option>
+                  <option value="gpt-5.4">gpt-5.4（標準）</option>
+                  <option value="gpt-5.5">gpt-5.5（高精度）</option>
+                  <option value="gpt-5.5-pro">gpt-5.5-pro（最高精度）</option>
+                  <option value="gpt-4.1">gpt-4.1（非推論・ツール呼び出し）</option>
+                </select>
+              </div>
+              <button class="btn-primary" id="save-model" style="margin-top:18px">モデルを保存</button>
+              <div class="settings-msg" id="model-msg">保存しました</div>
+            </div>
+          </div>
+
+          <div class="set-panel" id="set-panel-crawl">
+            <div class="input-card">
+              <h2 class="set-card-title">クロール既定値</h2>
+              <p class="input-hint" style="margin-top:0;margin-bottom:14px">このブラウザに保存され、生成ウィザードの初期値に反映されます。</p>
+              <div class="options-grid">
+                <div class="field"><label for="set-depth">階層数（既定）</label><input type="number" id="set-depth" min="1" max="5"></div>
+                <div class="field"><label for="set-max">最大ページ数（既定）</label><input type="number" id="set-max" min="1" max="300"></div>
+
+                <div class="field full"><label for="set-auth">認証セッション auth.json パス（任意）</label><input type="text" id="set-auth" placeholder="auth.json"></div>
+              </div>
+              <button class="btn-primary" id="save-settings" style="margin-top:18px">設定を保存</button>
+              <div class="settings-msg" id="settings-msg">設定を保存しました</div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+
+    <footer class="app-footer">
+      <span>WebSpec2Doc</span>
+      <span>output/ フォルダに保存されます</span>
+    </footer>
+  </div>
+</div>
+  <!-- 実行完了ポップアップ -->
+  <div id="completion-overlay" class="completion-overlay hidden" role="dialog" aria-modal="true" aria-label="生成完了">
+    <div class="completion-card">
+      <div class="completion-icon">✅</div>
+      <div class="completion-title">生成完了</div>
+      <div class="completion-time">
+        <strong id="popup-elapsed">0:00</strong>
+        実行時間
+      </div>
+      <button type="button" id="popup-view-report-btn" class="btn-primary" style="width:100%;height:46px;font-size:15px">レポートを見る →</button>
+      <button type="button" id="popup-close-btn" style="margin-top:12px;background:none;border:none;color:var(--text-muted);font-size:13px;cursor:pointer;width:100%">閉じる</button>
+    </div>
+  </div>
+
+  <div id="lightbox" class="lightbox" style="display:none" role="dialog" aria-modal="true">
+    <button class="lightbox-close" id="lightbox-close" aria-label="閉じる">✕</button>
+    <img id="lightbox-img" src="" alt="拡大表示" />
+  </div>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+  <script src="{{ url_for('static', filename='app-view.js') }}"></script>
+
+</body>
+</html>

@@ -203,20 +203,20 @@ def _discover_one(page: Page, url: str, found: list[dict[str, object]]) -> tuple
     except Exception as exc:
         logger.warning("画面リスト取得に失敗しました: %s (%s)", url, exc)
         return ()
-    verdict = detect_login_wall(
-        PageAuthSignals(
-            requested_url=normalized,
-            final_url=page.url,
-            status=response.status if response is not None else 0,
-            has_password_field=has_password_field(page),
-        )
+    signals = PageAuthSignals(
+        requested_url=normalized,
+        final_url=page.url,
+        status=response.status if response is not None else 0,
+        has_password_field=has_password_field(page),
     )
+    verdict = detect_login_wall(signals)
     found.append(
         {
             "url": normalized,
             "title": extract_page_title(page),
             "login_required": verdict.is_login_required,
             "login_reasons": list(verdict.reasons),
+            "login_url": signals.final_url if verdict.is_login_required else "",
         }
     )
     return tuple(extract_internal_links(page, normalized))

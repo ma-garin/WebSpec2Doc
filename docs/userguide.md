@@ -1,4 +1,4 @@
-# WebSpec2Doc クイックスタートガイド
+# WebSpec2Doc ユーザーガイド
 
 URL を渡すだけで QA テストインプット文書を自動生成するツール。
 
@@ -7,79 +7,144 @@ URL を渡すだけで QA テストインプット文書を自動生成するツ
 ## セットアップ（初回のみ）
 
 ```bash
-# 1. 仮想環境を作成
-python -m venv venv
+# Python 3.12 が必要（3.13 は非対応）
+python3.12 -m venv venv
 source venv/bin/activate   # Windows: venv\Scripts\activate
 
-# 2. 依存パッケージをインストール
 pip install -r requirements.txt
-
-# 3. Playwright ブラウザをインストール
 playwright install chromium
 ```
 
 ---
 
-## 基本的な使い方
+## GUI で使う（推奨）
 
 ```bash
-# 最小構成（Markdown 出力）
-python src/main.py --url https://example.com
-
-# HTML レポート付き
-python src/main.py --url https://example.com --format md,html
-
-# 深さ・ページ数を指定
-python src/main.py --url https://example.com --depth 2 --max-pages 30
-
-# 仕様ドリフト検知（前回クロールとの差分を出力）
-python src/main.py --url https://example.com --compare
+python app.py
+# → ブラウザが自動で http://127.0.0.1:8765 を開きます
 ```
+
+### 4ステップの流れ
+
+#### ステップ 1: URL 入力・解析
+
+1. 「+ サイトを追加」をクリック
+2. クロール対象の URL を入力（例: `https://example.com`）
+3. **「画面分析」** ボタンを押す
+4. 分析完了後、「N 件の画面を検出しました」と表示される
+5. **「次へ →」** をクリック
+
+#### ステップ 2: 条件設定
+
+**画面の選択**
+- 取得する画面にチェックを入れる（デフォルト：全選択）
+- 不要な画面はチェックを外す
+
+**ログインが必要なサイトの場合**
+- 「ログインが必要な画面があります」のセクションが自動表示される
+- **ID**（ユーザーID・メールアドレス）と **PASSWORD** を入力
+- **「ログイン」** ボタンを押すと自動的にログインして認証後ページも取得する
+- パスワードはセッション確立後に即破棄（保存されない）
+
+**その他のオプション**
+- 「前回との差分を出力」をチェックすると仕様ドリフト検知が有効になる
+
+**「解析開始」** をクリックしてステップ 3 へ進む。
+
+#### ステップ 3: 実行
+
+- クロールの進捗がリアルタイムログで確認できる
+- 右側にライブプレビュー（取得中の画面）が表示される
+- 完了すると **完了ポップアップ** が表示される（実行時間と「レポートを見る」ボタン）
+- 「レポートを見る →」をクリックしてステップ 4 へ進む
+
+#### ステップ 4: レポート
+
+6 つのタブで成果物を確認できる。
+
+| タブ | 内容 |
+|------|------|
+| **概要** | 画面インベントリ一覧（URL・フォーム数・遷移先） |
+| **画面別仕様** | スクリーンショット＋フォームカード＋テスト条件（クリックで展開） |
+| **入力項目・テスト条件** | 全フィールドのテスト条件マトリクス（フィルタ・CSV 書き出し対応） |
+| **設計** | テスト設計技法の推奨（同値分割・境界値分析・デシジョンテーブル等）|
+| **画面遷移図** | インタラクティブな遷移グラフ（ノードクリックで仕様に移動） |
+| **遷移表** | ISTQB 標準フォーマットの画面遷移表 |
+| **履歴・差分** | クロール履歴と任意 2 時点の仕様ドリフト比較 |
+
+**エクスポート** はヘッダーの「↓ エクスポート」ボタンからいつでも行える（HTML / PDF / JSON / Excel / Markdown / ZIP）。
 
 ---
 
-## オプション一覧
+## 再クロール（仕様ドリフト検知）
+
+ダッシュボードの **「再クロール」** ボタンを押すと、前回の取得対象・設定を自動復元してステップ 2 から再開する。
+
+- 設定を確認・変更してから「解析開始」
+- 完了後のレポートに前回との差分（追加/削除された画面・変更されたフォーム）が表示される
+
+---
+
+## CLI で使う
+
+```bash
+# 最小構成
+python src/main.py --url https://example.com
+
+# HTML レポート付き（推奨）
+python src/main.py --url https://example.com --format md,html,excel,json
+
+# 仕様ドリフト検知
+python src/main.py --url https://example.com --compare
+
+# 認証が必要なサイト（手動セッション保存）
+python src/main.py --login https://example.com/login   # ブラウザでログイン後 Enter
+python src/main.py --url https://example.com --auth auth.json
+```
+
+### オプション一覧
 
 | オプション | デフォルト | 説明 |
-|---|---|---|
+|-----------|-----------|------|
 | `--url` | 必須 | クロール対象 URL |
-| `--depth` | `3` | リンクを辿る深さ（1〜3 推奨） |
+| `--depth` | `3` | リンクを辿る深さ |
 | `--max-pages` | `50` | クロールする最大ページ数 |
 | `--output` | `./output` | 出力先ディレクトリ |
-| `--format` | `md` | 出力形式（`md` / `html` / `excel` をカンマ区切り） |
-| `--compare` | off | 前回スナップショットとの差分を `diff_report.html` に出力 |
+| `--format` | `md` | 出力形式（`md,html,excel,pdf,json` をカンマ区切り） |
+| `--compare` | off | 前回スナップショットとの差分を出力 |
+| `--auth` | — | 保存済みセッション（auth.json）を指定 |
 
 ---
 
 ## 出力ファイル
 
-実行後に `output/{ドメイン名}/` に以下が生成されます。
+実行後に `output/{ドメイン名}/` に生成される。
 
 | ファイル | 内容 |
-|---|---|
-| `screens.md` | 画面一覧表（Markdown テーブル） |
-| `forms.md` | フォーム・入力項目一覧 |
+|---------|------|
+| `report.html` | 画面別仕様・テスト条件・スクリーンショット付きレポート |
+| `report.json` | 全データの構造化 JSON |
+| `spec.xlsx` | Excel 仕様書 |
+| `screens.md` | 画面一覧（Markdown） |
+| `forms.md` | フォーム・入力項目一覧（Markdown） |
 | `transition.mmd` | 画面遷移図（Mermaid 形式） |
-| `report.html` | 上記をまとめたレポート＋スクリーンショット付き |
-| `spec.xlsx` | Excel 仕様書（`--format excel` 指定時） |
+| `report.pdf` | PDF 版レポート |
+| `diff_report.html` | 仕様ドリフト差分レポート |
 | `screenshots/` | 各画面のスクリーンショット（PNG） |
-| `diff_report.html` | 仕様ドリフト差分レポート（`--compare` 指定時） |
+| `snapshots/` | ドリフト検知用スナップショット |
 
 ---
 
-## よくある使い方
+## よくある質問
 
-```bash
-# テスト対象サイトのドキュメントを素早く作る
-python src/main.py --url https://対象サイト.example.com --depth 2 --format md,html
+**Q: ログインが必要なページが取得できない**
+→ ステップ 2 の「ログインが必要な画面があります」セクションで ID/PASSWORD を入力してください。
 
-# ページ数が多いサイトは上限を設定
-python src/main.py --url https://大規模サイト.example.com --depth 1 --max-pages 20
+**Q: 画面遷移図がごちゃごちゃしている**
+→ 共通ナビゲーション（ヘッダー/フッター）のリンクは自動的に除外されます。ノードをクリックすると「画面別仕様」タブでその画面の詳細が開きます。
 
-# Excel も欲しいとき
-python src/main.py --url https://example.com --format md,html,excel
-```
+**Q: 前回との差分を確認したい**
+→ ダッシュボードから「再クロール」→ 「前回との差分を出力」にチェック → 「解析開始」。レポートの「履歴・差分」タブで確認できます。
 
----
-
-詳細は [userManuel.md](./userManuel.md) を参照してください。
+**Q: `greenlet` のビルドが失敗する**
+→ Python 3.13 は非対応です。`python3.12 -m venv venv` で Python 3.12 の仮想環境を作成してください。

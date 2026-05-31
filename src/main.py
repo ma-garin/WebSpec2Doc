@@ -67,12 +67,22 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="リンク追跡で到達するページ一覧(URL+タイトル)をJSONでstdoutに出力して終了",
     )
-    parser.add_argument("--login", help="ログインセッション保存モード: ログインページURL")
+    parser.add_argument("--login", help="ログインセッション保存モード: ログインページURL（CLI用）")
     parser.add_argument(
         "--login-signal",
         type=Path,
-        help="GUI 手渡しログイン用: このファイルが出現したらセッションを保存する",
+        help="GUI 手渡しログイン用: このファイルが出現したらセッションを保存する（廃止予定）",
     )
+    parser.add_argument("--login-simple", action="store_true", help="ID/PASSWORDをstdinのJSONで受取り自動ログイン")
+    parser.add_argument("--login-simple-url", help="--login-simple: ログインページURL")
+    parser.add_argument("--login-scrape", help="ログインURLのフォームフィールドを取得してJSONで出力")
+    parser.add_argument(
+        "--login-submit",
+        action="store_true",
+        help="ログインフォーム自動送信（フィールド値はstdinからJSON受取）",
+    )
+    parser.add_argument("--login-current-url", help="--login-submit: フォーム送信先URL（MFA対応）")
+    parser.add_argument("--login-temp-session", type=Path, help="MFA中間セッション保存パス")
     parser.add_argument("--auth", type=Path, help="保存済みセッション(auth.json)を使ってクロール")
     parser.add_argument("--depth", type=int, default=DEFAULT_DEPTH, help="クロール深度")
     parser.add_argument(
@@ -94,6 +104,15 @@ def run(args: argparse.Namespace) -> None:
     login_url = getattr(args, "login", None)
     auth_path = getattr(args, "auth", None)
     signal_path = getattr(args, "login_signal", None)
+    if getattr(args, "login_simple", False):
+        _submit_login_simple(args)
+        return
+    if login_scrape_url := getattr(args, "login_scrape", None):
+        _scrape_login(str(login_scrape_url))
+        return
+    if getattr(args, "login_submit", False):
+        _submit_login(args)
+        return
     if login_url:
         _capture_login(str(login_url), auth_path, signal_path)
         return
@@ -159,6 +178,104 @@ def _parse_url_list(raw_urls: str | None) -> list[str]:
         if cleaned:
             seen.setdefault(cleaned, None)
     return list(seen)
+
+
+def _submit_login_simple(args: argparse.Namespace) -> None:
+    """ID/PASSWORDをstdinのJSONで受取り、type属性ベースで自動マッピングしてログインする。"""
+    from dataclasses import asdict
+
+    from crawler.auto_login import submit_login_simple
+
+    login_url = getattr(args, "login_simple_url", None) or ""
+    if not login_url:
+        sys.stdout.write(json.dumps({"success": False, "error": "--login-simple-url が必要です"}))
+        return
+    auth_path = Path(args.auth) if args.auth else Path(DEFAULT_AUTH_FILE)
+    try:
+        raw = sys.stdin.read().strip() if not sys.stdin.isatty() else "{}"
+        creds: dict[str, str] = json.loads(raw) if raw else {}
+    except json.JSONDecodeError:
+        sys.stdout.write(json.dumps({"success": False, "error": "認証情報JSONが不正です"}))
+        return
+    result = submit_login_simple(
+        username=creds.get("username", ""),
+        password=creds.get("password", ""),
+        login_url=login_url,
+        auth_path=auth_path,
+    )
+    sys.stdout.write(
+        json.dumps(
+            {
+                "success": result.success,
+                "needs_more_fields": result.needs_more_fields,
+                "fields": [asdict(f) for f in result.fields],
+                "current_url": result.current_url,
+                "error": result.error,
+            },
+            ensure_ascii=False,
+        )
+    )
+
+
+def _scrape_login(url: str) -> None:
+    """ログインページのフォームフィールドを取得してJSONをstdoutに出力する。"""
+    from dataclasses import asdict
+
+    from crawler.auto_login import scrape_login_fields
+
+    result = scrape_login_fields(url)
+    sys.stdout.write(
+        json.dumps(
+            {
+                "ok": result.ok,
+                "fields": [asdict(f) for f in result.fields],
+                "current_url": result.current_url,
+                "error": result.error,
+            },
+            ensure_ascii=False,
+        )
+    )
+
+
+def _submit_login(args: argparse.Namespace) -> None:
+    """フォーム値をstdinからJSON受取して自動送信し、結果をstdoutに出力する。"""
+    from dataclasses import asdict
+
+    from crawler.auto_login import submit_login_form
+
+    current_url = getattr(args, "login_current_url", None) or ""
+    if not current_url:
+        sys.stdout.write(json.dumps({"success": False, "error": "--login-current-url が必要です"}))
+        return
+
+    auth_path = Path(args.auth) if args.auth else Path(DEFAULT_AUTH_FILE)
+    temp_session = getattr(args, "login_temp_session", None)
+
+    try:
+        raw = sys.stdin.read().strip() if not sys.stdin.isatty() else "{}"
+        field_values: dict[str, str] = json.loads(raw) if raw else {}
+    except json.JSONDecodeError:
+        sys.stdout.write(json.dumps({"success": False, "error": "フィールドJSONが不正です"}))
+        return
+
+    result = submit_login_form(
+        field_values=field_values,
+        current_url=current_url,
+        auth_path=auth_path,
+        temp_session_path=temp_session,
+    )
+    sys.stdout.write(
+        json.dumps(
+            {
+                "success": result.success,
+                "needs_more_fields": result.needs_more_fields,
+                "fields": [asdict(f) for f in result.fields],
+                "current_url": result.current_url,
+                "error": result.error,
+            },
+            ensure_ascii=False,
+        )
+    )
 
 
 def _capture_login(login_url: str, auth_path: Path | None, signal_path: Path | None = None) -> None:

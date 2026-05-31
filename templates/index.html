@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebSpec2Doc</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body class="app-page">
+<div class="app-shell">
+
+  <aside class="app-sidebar">
+    <a href="/" class="app-brand">
+      <span class="app-brand-mark">W</span>
+      <span class="app-brand-text"><strong>WebSpec2Doc</strong><span>QA テスト分析インプット</span></span>
+    </a>
+    <button type="button" class="btn-primary" id="add-site-btn" style="width:100%;height:40px;gap:6px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="16" height="16"><path d="M12 5v14M5 12h14"/></svg>
+      <span class="add-site-label">サイトを追加</span>
+    </button>
+    <nav class="app-nav">
+      <div class="app-nav-group">メニュー</div>
+      <button class="app-nav-item is-active" data-view="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        <span class="nav-label">ダッシュボード</span>
+      </button>
+      <button class="app-nav-item" data-view="settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span class="nav-label">設定</span>
+      </button>
+    </nav>
+    <div style="margin-top:auto" class="app-sidebar-foot">
+      稼働中のWebシステムから QA テスト分析インプットを生成し、<strong>再クロールで仕様ドリフトを検知</strong>します。
+    </div>
+  </aside>
+
+  <div class="app-main">
+    <header class="app-topbar">
+      <div style="min-width:0">
+        <div class="app-breadcrumb" id="topbar-breadcrumb"><span>Dashboard</span></div>
+        <h1 class="app-topbar-title" id="topbar-title">監視対象サイト</h1>
+      </div>
+      <div class="app-topbar-actions" id="topbar-actions"></div>
+    </header>
+
+    <main class="app-content" id="app-content">
+      <div class="app-content-inner">
+
+        <!-- ===== 生成ビュー ===== -->
+        <section class="view" id="view-generate">
+          <div id="gen-panel">
+            <div class="input-card">
+              <nav class="wizard-progress" aria-label="設定ステップ">
+                <div class="wizard-step-node is-active" id="wnode-1"><div class="wizard-step-circle">1</div><span class="wizard-step-label">対象設定</span></div>
+                <div class="wizard-step-line" id="wline-12"></div>
+                <div class="wizard-step-node" id="wnode-2"><div class="wizard-step-circle">2</div><span class="wizard-step-label">出力形式</span></div>
+              </nav>
+
+              <form id="form">
+                <!-- ページ1: 対象設定 -->
+                <div class="wizard-page is-active" id="wpage-1">
+                  <label for="url-input" class="form-label">クロール対象 URL <span style="color:#DA1E28">*</span></label>
+                  <div class="input-row">
+                    <input type="url" id="url-input" class="url-input" placeholder="https://example.com" autocomplete="url" list="url-history-list" />
+                    <datalist id="url-history-list"></datalist>
+                  </div>
+                  <div id="url-input-message" class="input-field-message"></div>
+                  <p class="input-hint">公開ページはそのまま入力できます。サイト内URLを自動収集するか、入力したURLをまとめてドキュメント化できます。</p>
+
+                  <div class="wizard-section" style="margin-top:16px">
+                    <p class="app-sidebar-section" style="padding:0 0 10px">URLの指定方法</p>
+                    <div class="crawl-mode-group">
+                      <label class="crawl-mode-option">
+                        <input type="radio" name="crawl-mode" value="single" />
+                        <span class="crawl-mode-label"><strong>単体ページで生成</strong><span class="crawl-mode-desc">入力した1ページだけをドキュメント化します</span></span>
+                      </label>
+                      <label class="crawl-mode-option">
+                        <input type="radio" name="crawl-mode" value="crawl" checked />
+                        <span class="crawl-mode-label"><strong>オートクローリング</strong><span class="crawl-mode-desc">画面リストを取得して、選択したページだけをドキュメント化します</span></span>
+                      </label>
+                      <div class="crawl-discovery-section" id="crawl-discovery-section" style="display:none">
+                        <div class="crawl-depth-row">
+                          <label for="crawl-depth" class="crawl-depth-label">収集する階層数</label>
+                          <input type="number" id="crawl-depth" class="crawl-depth-input" value="2" min="1" max="5" />
+                          <span class="crawl-depth-unit">階層</span>
+                          <label for="max-pages" class="crawl-depth-label">最大</label>
+                          <input type="number" id="max-pages" class="crawl-depth-input" value="30" min="1" max="300" />
+                          <span class="crawl-depth-unit">ページ</span>
+                          <button type="button" id="discover-btn" class="btn-outline-sm">画面リスト取得</button>
+                        </div>
+                        <div id="discover-loading" class="discover-loading" style="display:none"><span class="spinner"></span><span>画面リストを取得しています…</span></div>
+                        <div id="discover-status" class="discover-status"></div>
+                        <div id="discovered-url-panel" class="discovered-url-panel" style="display:none">
+                          <div class="section-head">
+                            <p class="app-sidebar-section" style="padding:0">取得した画面リスト</p>
+                            <div class="discovered-url-actions">
+                              <button type="button" id="select-all-btn" class="btn-outline-sm">全選択</button>
+                              <button type="button" id="clear-all-btn" class="btn-outline-sm">全解除</button>
+                            </div>
+                          </div>
+                          <div id="discovered-url-list" class="discovered-url-list"></div>
+                        </div>
+                      </div>
+                      <label class="crawl-mode-option">
+                        <input type="radio" name="crawl-mode" value="manual" />
+                        <span class="crawl-mode-label"><strong>URLを手動で追加</strong><span class="crawl-mode-desc">入力したURLをまとめてドキュメント化します</span></span>
+                      </label>
+                      <div id="manual-url-section" class="manual-url-section" style="display:none">
+                        <div class="section-head">
+                          <p class="app-sidebar-section" style="padding:0">追加URL（任意）</p>
+                          <button type="button" id="url-add-btn" class="btn-outline-sm">+ URL を追加</button>
+                        </div>
+                        <div id="url-list" class="url-list"></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div id="target-preview" class="target-preview">
+                    <strong>チェック対象 0件</strong>
+                    <ol id="target-preview-list"></ol>
+                  </div>
+
+                  <details class="result-collapsible" style="margin-top:14px">
+                    <summary>詳細設定（ログイン）</summary>
+                    <div class="wizard-section" style="margin-top:12px">
+                      <p class="app-sidebar-section" style="padding:0 0 8px">手渡しログイン</p>
+                      <p class="input-hint" style="margin-top:0">「ログイン用ブラウザを開く」を押すとローカルにブラウザが開きます。ご自身でログイン（MFA・SSO 可）したら「ログイン完了」を押してください。パスワードはツールに保存されません。</p>
+                      <div class="login-handoff-actions" style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0">
+                        <button type="button" id="login-start-btn" class="btn-outline-sm">ログイン用ブラウザを開く</button>
+                        <button type="button" id="login-finish-btn" class="btn-outline-sm" disabled>ログイン完了</button>
+                      </div>
+                      <div id="login-status" class="input-field-message"></div>
+                      <div class="login-fields" style="margin-top:12px">
+                        <div class="field login-field-full">
+                          <label for="auth-path">認証セッション auth.json パス（手動指定する場合）</label>
+                          <input type="text" id="auth-path" placeholder="auth.json" />
+                        </div>
+                      </div>
+                      <p class="input-hint">CLI で <code>python src/main.py --login &lt;ログインURL&gt;</code> により保存した auth.json のパスを直接指定することもできます。</p>
+                    </div>
+                  </details>
+
+                  <div class="wizard-footer">
+                    <button type="button" class="btn-primary" id="wnext-1">次へ：出力形式 →</button>
+                  </div>
+                </div>
+
+                <!-- ページ2: 出力設定 -->
+                <div class="wizard-page" id="wpage-2">
+                  <div class="wizard-page-header"><h2>出力設定</h2><p>生成するドキュメントの形式を選びます。</p></div>
+                  <div class="wizard-section">
+                    <label class="form-label">出力形式</label>
+                    <div class="checkbox-group">
+                      <label class="checkbox-chip"><input type="checkbox" name="fmt" value="html" checked> HTML レポート</label>
+                      <label class="checkbox-chip"><input type="checkbox" name="fmt" value="pdf"> PDF</label>
+                      <label class="checkbox-chip"><input type="checkbox" name="fmt" value="md" checked> Markdown</label>
+                      <label class="checkbox-chip"><input type="checkbox" name="fmt" value="excel"> Excel</label>
+                      <label class="checkbox-chip"><input type="checkbox" name="fmt" value="json"> JSON</label>
+                    </div>
+                  </div>
+                  <div class="wizard-section">
+                    <label class="form-label">オプション</label>
+                    <div class="checkbox-group">
+                      <label class="checkbox-chip"><input type="checkbox" id="compare"> 前回との差分を出力 (--compare)</label>
+                    </div>
+                  </div>
+                  <div class="wizard-footer">
+                    <button type="button" class="btn-outline-sm" id="wback-2">← 戻る</button>
+                    <button type="submit" class="btn-primary" id="submit-btn">ドキュメント生成を開始</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- 実行ビュー -->
+          <div id="execution-view" class="execution-view hidden">
+            <div class="execution-topbar">
+              <div class="execution-topbar-head">
+                <h2 class="execution-title" id="exec-title">ジョブを準備しています</h2>
+                <span class="execution-elapsed" id="exec-elapsed">00:00</span>
+              </div>
+              <p class="execution-message" id="exec-message">対象を受け付けて、クロールの準備を進めています。</p>
+              <div class="execution-progress"><div class="execution-progress-bar" id="exec-progress-bar"></div></div>
+              <div class="execution-steps">
+                <div class="execution-step is-active" id="estep-0">1. 受付</div>
+                <div class="execution-step" id="estep-1">2. ページ取得</div>
+                <div class="execution-step" id="estep-2">3. 解析</div>
+                <div class="execution-step" id="estep-3">4. 結果整理</div>
+              </div>
+            </div>
+            <div class="execution-preview-frame">
+              <img id="exec-preview-image" class="execution-preview-image" alt="クロール中のライブプレビュー" />
+              <div id="exec-preview-placeholder" class="execution-preview-placeholder">
+                <div class="spinner"></div>
+                <p>ライブプレビューを準備しています…</p>
+              </div>
+            </div>
+            <pre class="execution-log" id="exec-log"></pre>
+            <div class="execution-error-card hidden" id="exec-error">エラーが発生しました。ログを確認してください。</div>
+            <div class="execution-bottombar">
+              <dl class="execution-meta-list">
+                <div class="execution-meta-item"><dt>対象</dt><dd id="exec-target">-</dd></div>
+                <div class="execution-meta-item"><dt>状態</dt><dd id="exec-phase">準備中</dd></div>
+              </dl>
+              <div class="execution-bottombar-actions" id="exec-running-actions">
+                <button type="button" id="exec-stop-btn" class="btn-outline-sm">停止</button>
+              </div>
+              <div class="execution-bottombar-actions hidden" id="exec-actions">
+                <button type="button" id="exec-new-btn" class="btn-outline-sm">入力に戻る</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 結果ページ -->
+          <div id="result-panel" class="result-panel hidden">
+            <div class="result-summary">
+              <div class="result-summary-head">
+                <div style="display:flex;align-items:center;gap:10px;min-width:0">
+                  <strong id="r-domain">-</strong>
+                  <span id="r-crawled" style="font-size:12px;color:var(--text-muted)"></span>
+                </div>
+                <button type="button" id="r-recrawl-btn" class="btn-outline-sm">再クロール（ドリフト検知）</button>
+              </div>
+              <div class="result-stats">
+                <div><span class="num" id="r-screens">0</span><span>画面数</span></div>
+                <div><span class="num" id="r-forms">0</span><span>フォーム数</span></div>
+                <div><span class="num" id="r-fields">0</span><span>入力項目数</span></div>
+                <div><span class="num" id="r-required">0</span><span>必須項目数</span></div>
+                <div><span class="num" id="r-buttons">0</span><span>操作要素数</span></div>
+              </div>
+            </div>
+            <div class="result-bar">
+              <div class="result-tabs" role="tablist" aria-label="結果ビュー">
+                <button type="button" role="tab" aria-selected="true" class="result-tab is-active" data-tab="overview">概要</button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="matrix">入力項目・テスト条件</button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="report">画面別仕様</button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="history">履歴・差分</button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="export">エクスポート</button>
+              </div>
+              <div class="result-bar-actions">
+                <button type="button" id="r-new-btn" class="btn-outline-sm">ダッシュボードへ</button>
+              </div>
+            </div>
+            <div class="result-hero" id="result-hero" role="tabpanel" tabindex="0"></div>
+          </div>
+        </section>
+
+        <!-- ===== ダッシュボード（監視対象サイト） ===== -->
+        <section class="view is-active" id="view-dashboard">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px">
+            <p style="color:var(--text-muted);font-size:13px">監視対象サイト。<strong>再クロール</strong>すると前回からの仕様ドリフトを検知できます。</p>
+            <div style="display:flex;gap:8px">
+              <button class="btn-outline-sm" id="reload-history">再読み込み</button>
+              <button class="btn-primary" id="add-site-btn-2" style="height:36px;padding:0 16px;font-size:13px">+ サイトを追加</button>
+            </div>
+          </div>
+          <div id="history-body"><div class="empty">読み込み中...</div></div>
+        </section>
+
+        <!-- ===== 設定ビュー ===== -->
+        <section class="view" id="view-settings">
+          <div class="set-tabs">
+            <button class="set-tab is-active" data-tab="api">APIキー</button>
+            <button class="set-tab" data-tab="model">モデル</button>
+            <button class="set-tab" data-tab="crawl">クロール既定値</button>
+          </div>
+
+          <div class="set-panel is-active" id="set-panel-api">
+            <div class="input-card">
+              <h2 class="set-card-title">OpenAI API キー</h2>
+              <p class="input-hint" style="margin-top:0;margin-bottom:14px">キーは <code>.env</code> に保存されます（ブラウザには保存しません）。空欄で保存すると既存キーを保持します。</p>
+              <div class="field full" style="margin-bottom:14px">
+                <label>現在のキー</label>
+                <div class="key-current" id="api-key-current">未設定</div>
+              </div>
+              <div class="options-grid">
+                <div class="field full"><label for="api-key">OPENAI_API_KEY</label><input type="password" id="api-key" placeholder="sk-..." autocomplete="off"></div>
+                <div class="field"><label for="api-org">OPENAI_ORG_ID（任意）</label><input type="text" id="api-org" placeholder="org-..."></div>
+                <div class="field"><label for="api-project">OPENAI_PROJECT_ID（任意）</label><input type="text" id="api-project" placeholder="proj_..."></div>
+              </div>
+              <button class="btn-primary" id="save-api" style="margin-top:18px">APIキーを保存</button>
+              <div class="settings-msg" id="api-msg">保存しました</div>
+              <p class="input-hint" style="margin-top:14px">⚠ LLMテスト観点生成機能は未実装です。本設定はその準備です。</p>
+            </div>
+          </div>
+
+          <div class="set-panel" id="set-panel-model">
+            <div class="input-card">
+              <h2 class="set-card-title">回答生成モデル</h2>
+              <p class="input-hint" style="margin-top:0;margin-bottom:14px">LLMテスト観点生成（今後実装）で使うモデルです。</p>
+              <div class="field full">
+                <label for="api-model">OPENAI_MODEL</label>
+                <select id="api-model" class="url-input" style="height:40px">
+                  <option value="gpt-5.4-mini">gpt-5.4-mini（コスト効率・推奨）</option>
+                  <option value="gpt-5.4-nano">gpt-5.4-nano（最安・最速）</option>
+                  <option value="gpt-5.4">gpt-5.4（標準）</option>
+                  <option value="gpt-5.5">gpt-5.5（高精度）</option>
+                  <option value="gpt-5.5-pro">gpt-5.5-pro（最高精度）</option>
+                  <option value="gpt-4.1">gpt-4.1（非推論・ツール呼び出し）</option>
+                </select>
+              </div>
+              <button class="btn-primary" id="save-model" style="margin-top:18px">モデルを保存</button>
+              <div class="settings-msg" id="model-msg">保存しました</div>
+            </div>
+          </div>
+
+          <div class="set-panel" id="set-panel-crawl">
+            <div class="input-card">
+              <h2 class="set-card-title">クロール既定値</h2>
+              <p class="input-hint" style="margin-top:0;margin-bottom:14px">このブラウザに保存され、生成ウィザードの初期値に反映されます。</p>
+              <div class="options-grid">
+                <div class="field"><label for="set-depth">階層数（既定）</label><input type="number" id="set-depth" min="1" max="5"></div>
+                <div class="field"><label for="set-max">最大ページ数（既定）</label><input type="number" id="set-max" min="1" max="300"></div>
+                <div class="field full">
+                  <label>出力形式（既定）</label>
+                  <div class="checkbox-group">
+                    <label class="checkbox-chip"><input type="checkbox" name="set-fmt" value="html"> HTML</label>
+                    <label class="checkbox-chip"><input type="checkbox" name="set-fmt" value="pdf"> PDF</label>
+                    <label class="checkbox-chip"><input type="checkbox" name="set-fmt" value="md"> Markdown</label>
+                    <label class="checkbox-chip"><input type="checkbox" name="set-fmt" value="excel"> Excel</label>
+                    <label class="checkbox-chip"><input type="checkbox" name="set-fmt" value="json"> JSON</label>
+                  </div>
+                </div>
+                <div class="field full"><label for="set-auth">認証セッション auth.json パス（任意）</label><input type="text" id="set-auth" placeholder="auth.json"></div>
+              </div>
+              <button class="btn-primary" id="save-settings" style="margin-top:18px">設定を保存</button>
+              <div class="settings-msg" id="settings-msg">設定を保存しました</div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+
+    <footer class="app-footer">
+      <span>WebSpec2Doc</span>
+      <span>output/ フォルダに保存されます</span>
+    </footer>
+  </div>
+</div>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+
+</body>
+</html>

@@ -12,10 +12,14 @@ if str(_SRC) not in sys.path:
 
 
 def create_app() -> Flask:
+    from web.routes import pages
+    from web.security import csrf_guard
+
     app = Flask(
         __name__,
         template_folder=str(_ROOT / "templates"),
         static_folder=str(_ROOT / "static"),
     )
-    # before_request と blueprint は後続ステップで順次追加
+    app.before_request(csrf_guard)
+    app.register_blueprint(pages.bp)
     return app

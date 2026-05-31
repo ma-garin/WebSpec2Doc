@@ -1731,8 +1731,7 @@ def run() -> Response:
         _RUNNING_PROCS[run_id] = proc
         try:
             yield f"RUN_ID:{run_id}\n"
-            for line in proc.stdout:  # type: ignore[union-attr]
-                yield line
+            yield from proc.stdout  # type: ignore[union-attr]
             proc.wait()
             if proc.returncode is not None and proc.returncode < 0:
                 yield "\n停止しました。\n"

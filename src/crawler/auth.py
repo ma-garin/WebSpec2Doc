@@ -1,0 +1,62 @@
+from __future__ import annotations
+
+import logging
+from pathlib import Path
+
+from playwright.sync_api import Browser, sync_playwright
+
+from crawler.login_signal import wait_for_signal
+
+DEFAULT_AUTH_FILE = "auth.json"
+LOGIN_PROMPT = "ブラウザでログインを完了したら、このターミナルで Enter を押してください... "
+SIGNAL_WAIT_TIMEOUT_SEC = 600.0
+
+logger = logging.getLogger(__name__)
+
+
+def capture_auth_state(login_url: str, output_path: Path) -> Path:
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=False)
+        try:
+            context = browser.new_context()
+            page = context.new_page()
+            page.goto(login_url)
+            logger.info("ログインページを開きました: %s", login_url)
+            input(LOGIN_PROMPT)
+            context.storage_state(path=str(output_path))
+            logger.info("セッションを保存しました: %s", output_path)
+        finally:
+            _close_browser(browser)
+    return output_path
+
+
+def capture_auth_state_via_signal(
+    login_url: str,
+    output_path: Path,
+    signal_file: Path,
+    timeout: float = SIGNAL_WAIT_TIMEOUT_SEC,
+) -> Path | None:
+    """GUI 手渡しログイン用。signal_file の出現を待ってセッションを保存する（ADR-0001）。
+    タイムアウト時は None を返し、セッションは保存しない。"""
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=False)
+        try:
+            context = browser.new_context()
+            page = context.new_page()
+            page.goto(login_url)
+            logger.info("ログインページを開きました: %s", login_url)
+            if not wait_for_signal(signal_file, timeout=timeout):
+                logger.warning("ログイン完了シグナルを待機中にタイムアウトしました")
+                return None
+            context.storage_state(path=str(output_path))
+            logger.info("セッションを保存しました: %s", output_path)
+        finally:
+            _close_browser(browser)
+    return output_path
+
+
+def _close_browser(browser: Browser) -> None:
+    try:
+        browser.close()
+    except Exception as exc:
+        logger.warning("ブラウザ終了時にエラーが発生しました: %s", exc)

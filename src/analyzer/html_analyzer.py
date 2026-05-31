@@ -23,7 +23,7 @@ def analyze_pages(pages: list[PageData]) -> list[AnalyzedPage]:
         AnalyzedPage(
             page_id=page_ids[page.url],
             page_data=page,
-            buttons=(),
+            buttons=page.buttons,
             nav_elements=tuple(_link_path(link) for link in page.links),
         )
         for page in pages

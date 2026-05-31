@@ -8,7 +8,6 @@ from pathlib import Path
 from unittest.mock import patch
 
 import networkx as nx
-import pytest
 
 from analyzer.form_analyzer import summarize_forms
 from analyzer.html_analyzer import analyze_pages
@@ -16,6 +15,7 @@ from graph.transition_graph import build_graph
 from main import (
     _domain_name,
     _parse_formats,
+    _parse_url_list,
     parse_args,
     run,
     save_outputs,
@@ -51,6 +51,33 @@ class TestParseFormats:
 
     def test_all_unknown_returns_empty(self) -> None:
         assert _parse_formats("foo,bar") == ()
+
+
+# ---------- _parse_url_list ----------
+
+
+class TestParseUrlList:
+    def test_none_returns_empty(self) -> None:
+        assert _parse_url_list(None) == []
+
+    def test_empty_returns_empty(self) -> None:
+        assert _parse_url_list("") == []
+
+    def test_splits_on_comma(self) -> None:
+        result = _parse_url_list("https://a.com/,https://a.com/x")
+        assert result == ["https://a.com/", "https://a.com/x"]
+
+    def test_strips_whitespace(self) -> None:
+        result = _parse_url_list(" https://a.com/ , https://a.com/x ")
+        assert result == ["https://a.com/", "https://a.com/x"]
+
+    def test_dedupes_preserving_order(self) -> None:
+        result = _parse_url_list("https://a.com/,https://a.com/,https://a.com/x")
+        assert result == ["https://a.com/", "https://a.com/x"]
+
+    def test_ignores_blank_segments(self) -> None:
+        result = _parse_url_list("https://a.com/,,  ,https://a.com/x")
+        assert result == ["https://a.com/", "https://a.com/x"]
 
 
 # ---------- _domain_name ----------
@@ -126,10 +153,12 @@ class TestHtmlReport:
 
 
 class TestParseArgs:
-    def test_url_required_raises(self) -> None:
-        with pytest.raises(SystemExit):
-            with patch("sys.argv", ["main.py"]):
-                parse_args()
+    def test_no_url_does_not_raise(self) -> None:
+        # --login を代替手段として追加したため --url は必須ではない
+        with patch("sys.argv", ["main.py"]):
+            args = parse_args()
+            assert args.url is None
+            assert args.login is None
 
     def test_url_parsed(self) -> None:
         with patch("sys.argv", ["main.py", "--url", "https://example.com"]):

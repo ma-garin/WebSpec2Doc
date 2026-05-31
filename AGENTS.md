@@ -1,106 +1,47 @@
-# AGENTS.md — Codex 実装契約書
+# AGENTS.md — WebSpec2Doc 作業ガイド
 
-このファイルは Codex が自動で読み込む契約書です。**全ルールを厳守すること。**
-WebSpec2Doc は URL から QA テストインプット文書を自動生成する Python ツールです。
+常に日本語で回答してください。
 
----
+## クレジット節約方針（明示依頼がない限り順守）
 
-## 役割分担
+- まず最小限の調査で原因・方針だけを簡潔に報告する。
+- 大きなファイル全文取得・広範囲検索・大きな API レスポンス取得を避ける。
+- 2分以上かかりそうな調査・作業は、中断してユーザーに確認する。
+- 修正・コミット・push・デプロイまで進める場合は、ユーザーの明示的な依頼または承認を得る。
 
-| 担当 | 範囲 |
-|------|------|
-| **Claude**（設計者） | アーキテクチャ・タスク分解・指示書作成・diff レビュー・**commit** |
-| **Codex**（実装者） | 渡された指示書の範囲だけを実装。`scripts/verify.sh` を green にする |
+## UI変更時の必須フロー（検証方法）
 
-あなた（Codex）は実装者です。指示書に書かれたことだけを行います。
+UI（GUI / HTMLレポート等）を変更する場合は、必ず次の順で進める。
 
----
+1. **スキャン**: プロジェクト全体と関連ファイルをスキャンし、変更対象・影響範囲・既存UI構成を把握する。
+2. **提示**: 実装前に、理解した内容・実装方針・期待される画面状態をユーザーへ提示する。
+3. **合意**: ユーザーの合意を得てから実装する。
+4. **作業場所**: 作業ディレクトリ `/Users/fujimagariyuki/Desktop/app/014_WebSpec2Doc` で作業する（Windows パス `C:`/`D:` 前提にしない）。
+5. **プレビュー確認**: ブラウザで実際に開いて確認する。
+   - HTMLレポート: `output/{domain}/report.html` を開く
+   - GUI: `http://127.0.0.1:8765`
+6. **解像度確認**: 1920x900 / 1366x768 の両方で見た目が崩れないか確認する。
+7. **ユーザビリティ確認**: クリック・スクロール・履歴選択・URL遷移・入力欄・固定領域などの操作性を確認する。
+8. **反映**: 問題がなければ git にコミット／push して反映する。
+9. **構文・ドキュメント**: `python -m py_compile` で構文確認し、必要なドキュメント（README / docs）を更新する。
+10. **最終報告**: どの解像度で何を確認したか、確認内容を明記して報告する。
 
-## 絶対禁止（違反した時点でタスク失敗）
+## 進捗バー（応答末尾の慣習）
 
-1. **スタブ/モックの捏造で「動くフリ」をしない。**
-   - playwright 等が import できない場合に偽の代替モジュールを作るのは厳禁。
-   - 過去にこれで本物のクラッシュが隠蔽された。動かないなら「動かない」と報告する。
-2. **`venv/` を編集・削除しない。** 依存問題は報告のみ。勝手に再構築しない。
-3. **`.env` / API キー / 秘密情報を読まない・書かない・コミットしない。**
-4. **git 操作をしない。** `git add` / `git commit` / `git checkout` / `git reset` 一切禁止。コミットは Claude が行う。
-5. **指示書のスコープ外を変更しない。** 「ついでにリファクタ」「ついでに整形」禁止。
-6. **テストを通すためにテストを書き換えない。** テストが間違っている場合は報告する（実装を直すのが原則）。
-7. **`output/` のクライアント生成物をコミット対象にしない。**
-
----
-
-## 完了条件（Definition of Done）
-
-タスクは以下を**全て**満たして初めて完了：
-
-1. `scripts/verify.sh` を実行して末尾に `ALL GREEN` が出る（ruff・black・mypy・pytest+カバレッジ80%・スモークを含む）。
-2. 変更が指示書のスコープ内に収まっている。
-3. 最終メッセージに「何を・どのファイルで変更したか」と「verify.sh の結果」を報告する。
-
-verify.sh が落ちたまま「完了」と報告してはいけない。lint/型エラーを `# type: ignore` や `# noqa` で安易に黙らせない（根本原因を直す。フレームワーク制約など正当な理由がある場合のみ範囲を限定して使う）。
-
----
-
-## 実行環境（重要）
-
-- **Python は `venv/bin/python`（3.12）を使う。** システムの python3.13 は greenlet がビルド失敗する。
-- 依存は `pip install -r requirements-dev.txt`（ランタイム + ruff/black/mypy/pip-audit）。
-- テスト実行: `venv/bin/python -m pytest tests/ -q`
-- lint/整形/型: `venv/bin/ruff check ...` / `venv/bin/black ...` / `venv/bin/mypy`
-- 検証ゲート: `bash scripts/verify.sh`（これ1つで lint・型・テスト・カバレッジ・スモークを全部回す）
-
----
-
-## コード規約
-
-- **イミュータブル必須**: データは `@dataclass(frozen=True)`。変更は `dataclasses.replace()` で新オブジェクトを返す。in-place 変更禁止。
-- **型注釈必須**（全関数シグネチャ）。`from __future__ import annotations` を使う。
-- **関数 50 行以内 / ファイル 800 行以内。** 超えるなら分割。
-- **ネスト 4 段以内。** 早期 return を使う。
-- **PEP 8 準拠。** import は標準 → サードパーティ → ローカルの順。
-- **`print()` 禁止。** ログは `logging` を使う。
-- **エラーは握り潰さない。** 境界で検証し、明確なメッセージで fail-fast。
-- **ハードコード禁止。** 定数はモジュール先頭に定義。
-
----
-
-## アーキテクチャ（変更時の触る場所）
+毎回の応答末尾に進捗を視覚表示する。NN% はロードマップ達成数から正直に算出する。
 
 ```
-src/
-├── main.py            CLI エントリ。crawl→analyze→graph→generate→snapshot/compare の流れ
-├── crawler/           Playwright クローラー。PageData/FormData/FieldData (全て frozen)
-│   ├── page_crawler.py     データクラス定義 + crawl_site()
-│   └── link_extractor.py   リンク/フォーム/ボタン抽出 (JS injection)
-├── analyzer/          HTML 構造解析。page_id 付与・フォーム集計
-├── graph/             networkx.DiGraph で画面遷移グラフ
-├── generator/         文書生成 (markdown / mermaid / html_reporter / diff_reporter)
-├── diff/              スナップショット保存・比較 (snapshot.py / differ.py)
-└── llm/               (未実装) 将来の LLM テスト観点生成
+WebSpec2Doc  ████████░░ NN%
+[x] 完了マイルストーン
+[ ] 未着手
 ```
 
-| 変更したいもの | 触るレイヤ |
-|---------------|-----------|
-| クロールで取得する項目を追加 | `crawler/link_extractor.py` の JS + `page_crawler.py` のデータクラス + `diff/snapshot.py` の (de)serialize |
-| 差分検知のルール | `diff/differ.py` |
-| HTML レポートの見た目 | `generator/html_reporter.py` |
-| 新しい出力形式 | `generator/` に追加 + `main.py` の `--format` |
+## Codex への委任
 
-**データクラスにフィールドを足したら、`diff/snapshot.py` の `_*_from_dict` も必ず更新すること**（でないと差分検知でデータが欠落する）。
+- 仕様が固まった実装は Codex に委任してよい。セッションを 014 で開けばランタイムも 014 に固定される。
+- 委任後の成果物は**必ずレビュー**する（過去に未配線スタブ混入の事例あり）。
 
----
+## 検証とドキュメント
 
-## 既知の落とし穴
-
-- GUI (`app.py`) のポートは **8765**（5000 は macOS AirPlay と衝突）。
-- python は必ず **3.12 venv**（3.13 は greenlet ビルド失敗）。
-- Mermaid の自己ループエッジは除去する慣習。
-- スナップショットは `output/{domain}/snapshots/*.json` にタイムスタンプ名で保存される。
-
----
-
-## タスクの受け取り方
-
-タスクは指示書（Markdown）で渡される。指示書には「ゴール / 触るファイル / 完了条件 / スコープ外」が書かれている。
-不明点があれば実装を始める前に質問する（推測で広範囲を変えない）。
+- 変更後は `./scripts/verify.sh`（py_compile + pytest + スモークパイプライン）を実行。
+- アーキテクチャ・拡張手順・ロードマップ・ハマりどころは **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)** を参照。

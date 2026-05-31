@@ -2,9 +2,16 @@
 
 from __future__ import annotations
 
+from contextlib import contextmanager
+from unittest.mock import MagicMock, patch
 from urllib.robotparser import RobotFileParser
 
+import pytest
+
+import crawler.page_crawler as pc
 from crawler.page_crawler import (
+    PageData,
+    _discover_one,
     _format_page_id,
     _next_urls,
     _should_skip,
@@ -141,3 +148,171 @@ class TestNextUrls:
 
     def test_empty_links(self) -> None:
         assert _next_urls((), 0, set(), 3) == []
+
+
+# ---------- _discover_one ----------
+
+
+class TestDiscoverOne:
+    def _mock_page(self, title: str, hrefs: list[str]) -> MagicMock:
+        page = MagicMock()
+        page.title.return_value = title
+        page.eval_on_selector_all.return_value = hrefs
+        page.url = "https://example.com/"
+        page.goto.return_value = MagicMock(status=200)
+        page.query_selector.return_value = None
+        return page
+
+    def test_appends_url_and_title(self) -> None:
+        page = self._mock_page("ホーム", ["https://example.com/a"])
+        found: list[dict[str, object]] = []
+        _discover_one(page, "https://example.com/", found)
+        assert found[0]["url"] == "https://example.com/"
+        assert found[0]["title"] == "ホーム"
+
+    def test_public_page_not_login_required(self) -> None:
+        page = self._mock_page("ホーム", [])
+        found: list[dict[str, object]] = []
+        _discover_one(page, "https://example.com/", found)
+        assert found[0]["login_required"] is False
+
+    def test_password_page_is_login_required(self) -> None:
+        page = self._mock_page("ログイン", [])
+        page.query_selector.return_value = MagicMock()
+        found: list[dict[str, object]] = []
+        _discover_one(page, "https://example.com/", found)
+        assert found[0]["login_required"] is True
+
+    def test_returns_internal_links(self) -> None:
+        page = self._mock_page("t", ["https://example.com/a", "https://other.com/x"])
+        links = _discover_one(page, "https://example.com/", [])
+        assert "https://example.com/a" in links
+        assert all("other.com" not in link for link in links)
+
+    def test_returns_empty_on_goto_error(self) -> None:
+        page = MagicMock()
+        page.goto.side_effect = Exception("nav error")
+        found: list[dict[str, str]] = []
+        assert _discover_one(page, "https://example.com/", found) == ()
+        assert found == []
+
+
+# ---------- discover_pages / crawl_urls（_browser_page をモック）----------
+
+
+def _allow_all_robots() -> RobotFileParser:
+    parser = RobotFileParser()
+    parser.allow_all = True
+    return parser
+
+
+@contextmanager
+def _fake_browser(_auth):
+    yield MagicMock()
+
+
+class TestDiscoverPages:
+    def test_collects_discovered_pages(self) -> None:
+        def fake_discover(_page, url, found):
+            found.append({"url": url, "title": "x"})
+            return ()
+
+        with (
+            patch.object(pc, "_browser_page", _fake_browser),
+            patch.object(pc, "_discover_one", side_effect=fake_discover),
+            patch.object(pc, "_load_robots_parser", return_value=_allow_all_robots()),
+            patch.object(pc.time, "sleep"),
+        ):
+            found = pc.discover_pages("https://example.com/", depth=1, max_pages=5)
+        assert len(found) == 1
+        assert found[0]["url"] == "https://example.com/"
+
+    def test_respects_max_pages(self) -> None:
+        def fake_discover(_page, url, found):
+            found.append({"url": url, "title": "x"})
+            return ("https://example.com/a", "https://example.com/b")
+
+        with (
+            patch.object(pc, "_browser_page", _fake_browser),
+            patch.object(pc, "_discover_one", side_effect=fake_discover),
+            patch.object(pc, "_load_robots_parser", return_value=_allow_all_robots()),
+            patch.object(pc.time, "sleep"),
+        ):
+            found = pc.discover_pages("https://example.com/", depth=3, max_pages=2)
+        assert len(found) == 2
+
+
+class TestCrawlUrls:
+    def _page(self, url: str) -> PageData:
+        return PageData(url=url, title="t", headings=(), links=(), forms=(), screenshot_path=None)
+
+    def test_dedupes_and_crawls(self) -> None:
+        with (
+            patch.object(pc, "_browser_page", _fake_browser),
+            patch.object(pc, "_crawl_page_with_id", side_effect=lambda p, u, i, o: self._page(u)),
+            patch.object(pc.time, "sleep"),
+        ):
+            pages = pc.crawl_urls(
+                [
+                    "https://example.com/",
+                    "https://example.com/",
+                    "https://example.com/a",
+                ]
+            )
+        assert len(pages) == 2
+
+    def test_skips_failed_pages(self) -> None:
+        with (
+            patch.object(pc, "_browser_page", _fake_browser),
+            patch.object(pc, "_crawl_page_with_id", return_value=None),
+            patch.object(pc.time, "sleep"),
+        ):
+            pages = pc.crawl_urls(["https://example.com/"])
+        assert pages == []
+
+    def test_ignores_blank_urls(self) -> None:
+        with (
+            patch.object(pc, "_browser_page", _fake_browser),
+            patch.object(pc, "_crawl_page_with_id", side_effect=lambda p, u, i, o: self._page(u)),
+            patch.object(pc.time, "sleep"),
+        ):
+            pages = pc.crawl_urls(["", "  ", "https://example.com/"])
+        assert len(pages) == 1
+
+
+class TestSessionExpiry:
+    """#7: 認証付きクロールで login wall に当たると中断する。"""
+
+    def _login_wall_browser(self):
+        @contextmanager
+        def _cm(_auth):
+            page = MagicMock()
+            page.title.return_value = "Login"
+            page.eval_on_selector_all.return_value = []
+            page.url = "https://example.com/login"  # 認証ページへリダイレクト
+            page.goto.return_value = MagicMock(status=200)
+            page.query_selector.return_value = MagicMock()  # パスワード欄あり
+            yield page
+
+        return _cm
+
+    def test_crawl_urls_raises_when_session_expired(self, tmp_path) -> None:
+        from crawler.session_guard import SessionExpiredError
+
+        auth = tmp_path / "auth.json"
+        auth.write_text("{}", encoding="utf-8")
+        with (
+            patch.object(pc, "_browser_page", self._login_wall_browser()),
+            patch.object(pc.time, "sleep"),
+        ):
+            with pytest.raises(SessionExpiredError):
+                pc.crawl_urls(["https://example.com/dashboard"], auth_state=auth)
+
+    def test_crawl_urls_no_raise_without_auth(self) -> None:
+        with (
+            patch.object(pc, "_browser_page", self._login_wall_browser()),
+            patch.object(pc, "_crawl_page_with_id", return_value=None),
+            patch.object(pc.time, "sleep"),
+        ):
+            pages = pc.crawl_urls(["https://example.com/dashboard"], auth_state=None)
+        assert pages == []

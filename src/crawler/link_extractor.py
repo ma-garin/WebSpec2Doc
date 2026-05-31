@@ -29,6 +29,15 @@ def extract_internal_links(page: Page, base_url: str) -> list[str]:
     return list(dict.fromkeys(normalized_links))
 
 
+def has_password_field(page: Page) -> bool:
+    """ページ内に <input type=password> が存在するか（login wall 検出の素性）。"""
+    try:
+        return page.query_selector("input[type=password]") is not None
+    except Exception as exc:
+        logger.warning("パスワード欄の判定に失敗しました: %s", exc)
+        return False
+
+
 def extract_forms(page: Page) -> list[FormData]:
     try:
         raw_forms = cast(list[dict[str, Any]], page.eval_on_selector_all("form", _FORM_SCRIPT))
@@ -86,21 +95,51 @@ def _to_field_data(raw_field: dict[str, Any]) -> FieldData:
         name=str(raw_field.get("name") or EMPTY_TEXT),
         placeholder=str(raw_field.get("placeholder") or EMPTY_TEXT),
         required=bool(raw_field.get("required", False)),
+        maxlength=_to_int(raw_field.get("maxlength")),
+        minlength=_to_int(raw_field.get("minlength")),
+        min_value=str(raw_field.get("min") or EMPTY_TEXT),
+        max_value=str(raw_field.get("max") or EMPTY_TEXT),
+        pattern=str(raw_field.get("pattern") or EMPTY_TEXT),
+        default=str(raw_field.get("default") or EMPTY_TEXT),
+        options=tuple(str(opt) for opt in (raw_field.get("options") or [])),
+        element_id=str(raw_field.get("id") or EMPTY_TEXT),
     )
+
+
+def _to_int(value: Any) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 _FORM_SCRIPT = """
 (forms) => forms.map((form) => ({
   action: form.getAttribute('action') || '',
   method: (form.getAttribute('method') || 'get').toLowerCase(),
-  fields: Array.from(form.querySelectorAll('input, select, textarea')).map((field) => ({
-    field_type: field.tagName.toLowerCase() === 'input'
+  fields: Array.from(form.querySelectorAll('input, select, textarea')).map((field) => {
+    const tag = field.tagName.toLowerCase();
+    const type = tag === 'input'
       ? (field.getAttribute('type') || 'text').toLowerCase()
-      : field.tagName.toLowerCase(),
-    name: field.getAttribute('name') || field.getAttribute('id') || '',
-    placeholder: field.getAttribute('placeholder') || '',
-    required: Boolean(field.required),
-  })),
+      : tag;
+    const options = tag === 'select'
+      ? Array.from(field.options).map((o) => (o.value || o.text || '').trim()).filter(Boolean)
+      : [];
+    return {
+      field_type: type,
+      name: field.getAttribute('name') || field.getAttribute('id') || '',
+      id: field.getAttribute('id') || '',
+      placeholder: field.getAttribute('placeholder') || '',
+      required: Boolean(field.required),
+      maxlength: field.getAttribute('maxlength'),
+      minlength: field.getAttribute('minlength'),
+      min: field.getAttribute('min') || '',
+      max: field.getAttribute('max') || '',
+      pattern: field.getAttribute('pattern') || '',
+      default: field.getAttribute('value') || '',
+      options: options,
+    };
+  }),
 }))
 """
 

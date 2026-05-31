@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -33,6 +35,14 @@ class FieldData:
     name: str
     placeholder: str
     required: bool
+    maxlength: int | None = None
+    minlength: int | None = None
+    min_value: str = ""
+    max_value: str = ""
+    pattern: str = ""
+    default: str = ""
+    options: tuple[str, ...] = ()
+    element_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -50,6 +60,24 @@ class PageData:
     links: tuple[str, ...]
     forms: tuple[FormData, ...]
     screenshot_path: str | None
+    buttons: tuple[str, ...] = ()
+
+
+@contextmanager
+def _browser_page(auth_state: Path | None) -> Iterator[Page]:
+    """Open a Playwright Chromium page with shared context settings."""
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        try:
+            context = browser.new_context(
+                user_agent=USER_AGENT,
+                storage_state=str(auth_state) if auth_state else None,
+            )
+            page = context.new_page()
+            page.set_default_timeout(DEFAULT_TIMEOUT_MS)
+            yield page
+        finally:
+            _close_browser(browser)
 
 
 def crawl_site(
@@ -57,6 +85,7 @@ def crawl_site(
     depth: int = DEFAULT_DEPTH,
     max_pages: int = DEFAULT_MAX_PAGES,
     output_dir: Path | None = None,
+    auth_state: Path | None = None,
 ) -> list[PageData]:
     base_url = normalize_url(url)
     robots = _load_robots_parser(base_url)
@@ -64,32 +93,138 @@ def crawl_site(
     queue: list[tuple[str, int]] = [(base_url, 0)]
     pages: list[PageData] = []
 
-    with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(headless=True)
-        try:
-            page = browser.new_page(user_agent=USER_AGENT)
-            page.set_default_timeout(DEFAULT_TIMEOUT_MS)
-            while queue and len(pages) < max_pages:
-                current_url, current_depth = queue.pop(0)
-                if _should_skip(current_url, current_depth, depth, visited, robots):
-                    continue
-                visited.add(current_url)
-                page_id = _format_page_id(len(pages) + 1)
-                page_data = _crawl_page_with_id(page, current_url, page_id, output_dir)
-                if page_data is None:
-                    time.sleep(CRAWL_DELAY_SEC)
-                    continue
-                pages.append(page_data)
-                queue.extend(_next_urls(page_data.links, current_depth, visited, depth))
+    with _browser_page(auth_state) as page:
+        if max_pages > 0:
+            _guard_session(page, base_url, auth_state)
+        while queue and len(pages) < max_pages:
+            current_url, current_depth = queue.pop(0)
+            if _should_skip(current_url, current_depth, depth, visited, robots):
+                continue
+            visited.add(current_url)
+            page_id = _format_page_id(len(pages) + 1)
+            page_data = _crawl_page_with_id(page, current_url, page_id, output_dir)
+            if page_data is None:
                 time.sleep(CRAWL_DELAY_SEC)
-        finally:
-            _close_browser(browser)
+                continue
+            pages.append(page_data)
+            queue.extend(_next_urls(page_data.links, current_depth, visited, depth))
+            time.sleep(CRAWL_DELAY_SEC)
 
     return pages
 
 
+def discover_pages(
+    url: str,
+    depth: int = DEFAULT_DEPTH,
+    max_pages: int = DEFAULT_MAX_PAGES,
+    auth_state: Path | None = None,
+) -> list[dict[str, object]]:
+    """Lightweight BFS listing reachable pages (url + title + login wall 判定)
+    without screenshots or form extraction. Backs the GUI '画面リスト取得' step."""
+    base_url = normalize_url(url)
+    robots = _load_robots_parser(base_url)
+    visited: set[str] = set()
+    queue: list[tuple[str, int]] = [(base_url, 0)]
+    found: list[dict[str, object]] = []
+
+    with _browser_page(auth_state) as page:
+        while queue and len(found) < max_pages:
+            current_url, current_depth = queue.pop(0)
+            if _should_skip(current_url, current_depth, depth, visited, robots):
+                continue
+            visited.add(current_url)
+            links = _discover_one(page, current_url, found)
+            queue.extend(_next_urls(links, current_depth, visited, depth))
+            time.sleep(CRAWL_DELAY_SEC)
+
+    return found
+
+
+def crawl_urls(
+    urls: list[str],
+    output_dir: Path | None = None,
+    auth_state: Path | None = None,
+) -> list[PageData]:
+    """Crawl an explicit list of URLs (no link following). Backs the GUI
+    'selected pages' / 'manual URL' modes."""
+    targets = list(dict.fromkeys(normalize_url(u) for u in urls if u.strip()))
+    pages: list[PageData] = []
+
+    with _browser_page(auth_state) as page:
+        if targets:
+            _guard_session(page, targets[0], auth_state)
+        for target in targets:
+            page_id = _format_page_id(len(pages) + 1)
+            page_data = _crawl_page_with_id(page, target, page_id, output_dir)
+            if page_data is not None:
+                pages.append(page_data)
+            time.sleep(CRAWL_DELAY_SEC)
+
+    return pages
+
+
+def _guard_session(page: Page, url: str, auth_state: Path | None) -> None:
+    """認証付きクロールの入口で保存セッションの失効を確認する（#7）。
+    失効（login wall 検出）時は SessionExpiredError を送出しクロールを中断する。
+    中断により snapshot 保存に到達しないため、古い結果を上書きしない。"""
+    from analyzer.login_wall import PageAuthSignals
+    from crawler.link_extractor import has_password_field
+    from crawler.session_guard import SessionExpiredError, is_session_expired
+
+    if auth_state is None:
+        return
+    normalized = normalize_url(url)
+    try:
+        response = page.goto(normalized, wait_until="networkidle", timeout=DEFAULT_TIMEOUT_MS)
+    except Exception as exc:
+        logger.warning("セッション確認のためのアクセスに失敗しました: %s (%s)", url, exc)
+        return
+    signals = PageAuthSignals(
+        requested_url=normalized,
+        final_url=page.url,
+        status=response.status if response is not None else 0,
+        has_password_field=has_password_field(page),
+    )
+    if is_session_expired(auth_state, signals):
+        raise SessionExpiredError(f"保存セッションが失効しています: {url}")
+
+
+def _discover_one(page: Page, url: str, found: list[dict[str, object]]) -> tuple[str, ...]:
+    from analyzer.login_wall import PageAuthSignals, detect_login_wall
+    from crawler.link_extractor import (
+        extract_internal_links,
+        extract_page_title,
+        has_password_field,
+    )
+
+    normalized = normalize_url(url)
+    try:
+        response = page.goto(normalized, wait_until="networkidle", timeout=DEFAULT_TIMEOUT_MS)
+    except Exception as exc:
+        logger.warning("画面リスト取得に失敗しました: %s (%s)", url, exc)
+        return ()
+    verdict = detect_login_wall(
+        PageAuthSignals(
+            requested_url=normalized,
+            final_url=page.url,
+            status=response.status if response is not None else 0,
+            has_password_field=has_password_field(page),
+        )
+    )
+    found.append(
+        {
+            "url": normalized,
+            "title": extract_page_title(page),
+            "login_required": verdict.is_login_required,
+            "login_reasons": list(verdict.reasons),
+        }
+    )
+    return tuple(extract_internal_links(page, normalized))
+
+
 def crawl_page(page: Page, url: str, output_dir: Path | None) -> PageData:
     from crawler.link_extractor import (
+        extract_buttons,
         extract_forms,
         extract_headings,
         extract_internal_links,
@@ -107,6 +242,7 @@ def crawl_page(page: Page, url: str, output_dir: Path | None) -> PageData:
         links=tuple(extract_internal_links(page, normalized_url)),
         forms=tuple(extract_forms(page)),
         screenshot_path=screenshot_path,
+        buttons=tuple(extract_buttons(page)),
     )
 
 

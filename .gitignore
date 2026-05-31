@@ -4,6 +4,10 @@
 api-key.json
 *api-Key*
 
+# 認証セッション（機密）
+auth.json
+*.auth.json
+
 # 生成物（クライアント情報が含まれる可能性）
 output/
 

@@ -14,7 +14,30 @@ from crawler.link_extractor import (
     extract_headings,
     extract_internal_links,
     extract_page_title,
+    has_password_field,
 )
+
+# ---------- has_password_field ----------
+
+
+def test_has_password_field_true_when_present() -> None:
+    page = MagicMock()
+    page.query_selector.return_value = MagicMock()
+    assert has_password_field(page) is True
+    page.query_selector.assert_called_once_with("input[type=password]")
+
+
+def test_has_password_field_false_when_absent() -> None:
+    page = MagicMock()
+    page.query_selector.return_value = None
+    assert has_password_field(page) is False
+
+
+def test_has_password_field_false_on_error() -> None:
+    page = MagicMock()
+    page.query_selector.side_effect = RuntimeError("boom")
+    assert has_password_field(page) is False
+
 
 # ---------- _to_field_data ----------
 
@@ -45,6 +68,22 @@ class TestToFieldData:
         result = _to_field_data(raw)
         assert result.field_type == ""
         assert result.name == ""
+
+    def test_element_id_extracted(self) -> None:
+        raw = {
+            "field_type": "text",
+            "name": "q",
+            "placeholder": "",
+            "required": False,
+            "id": "search-box",
+        }
+        result = _to_field_data(raw)
+        assert result.element_id == "search-box"
+
+    def test_element_id_defaults_to_empty(self) -> None:
+        raw = {"field_type": "text", "name": "q", "placeholder": "", "required": False}
+        result = _to_field_data(raw)
+        assert result.element_id == ""
 
     def test_result_is_frozen(self) -> None:
         raw = {"field_type": "text", "name": "x", "placeholder": "", "required": False}

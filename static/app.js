@@ -454,7 +454,10 @@ async function runWith(bodyStr, domain, label, urlCount) {
   } else if (ok || reportPath) {
     setStep(4); execProgressBar.style.width = '100%';
     estep.forEach(el => el.className = 'execution-step is-complete');
-    await showResults(activeDomain);
+    execTitle.textContent = '生成完了'; execPhase.textContent = '完了';
+    execMessage.textContent = 'ドキュメントの生成が完了しました。';
+    document.getElementById('btn-view-report').style.display = '';
+    execActions.classList.remove('hidden');
   } else {
     execActions.classList.remove('hidden');
     execTitle.textContent = 'エラー'; execPhase.textContent = 'エラー'; execError.classList.remove('hidden');
@@ -474,6 +477,7 @@ document.getElementById('exec-stop-btn').addEventListener('click', async () => {
 
 document.getElementById('exec-new-btn').addEventListener('click', () => switchView('dashboard'));
 document.getElementById('r-new-btn').addEventListener('click', () => switchView('dashboard'));
+document.getElementById('btn-view-report').addEventListener('click', () => showResults(activeDomain));
 document.getElementById('r-recrawl-btn').addEventListener('click', () => {
   const domain = document.getElementById('r-domain').textContent.trim();
   if (domain && domain !== '-') recrawlSite(domain);

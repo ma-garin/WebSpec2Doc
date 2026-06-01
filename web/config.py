@@ -5,6 +5,7 @@ import re
 from pathlib import Path
 
 OUTPUT_DIR = Path("output")
+QA_VIEWPOINTS_CSV = Path(os.environ.get("QA_VIEWPOINTS_CSV", "data/qa_viewpoints_summary.csv"))
 SCREEN_ROW_RE = re.compile(r"^\|\s*\d+\s*\|")
 ENV_FILE = Path(".env")
 DEFAULT_OPENAI_MODEL = "gpt-5.4-mini"

@@ -84,7 +84,9 @@ def test_generate_creates_all_qa_process_files(tmp_path: Path, monkeypatch) -> N
     monkeypatch.setattr(qa_mod, "OUTPUT_DIR", tmp_path)
     domain_dir = _write_report(tmp_path)
 
-    res = _client().post("/api/qa-process/generate", data={"domain": "example.com", "step": "test_cases"})
+    res = _client().post(
+        "/api/qa-process/generate", data={"domain": "example.com", "step": "test_cases"}
+    )
     data = res.get_json()
 
     assert res.status_code == 200
@@ -98,12 +100,60 @@ def test_generate_creates_all_qa_process_files(tmp_path: Path, monkeypatch) -> N
         "test_cases.md",
         "cross_review.md",
         "qa_process_report.html",
+        "screen_transition_graph.json",
+        "model_graph.html",
+        "coverage_metrics.json",
+        "playwright_candidates.json",
+        "playwright_candidates.html",
+        "quality_viewpoints.json",
+        "quality_viewpoints.html",
     ):
         assert (qa_dir / filename).exists()
     assert "P001-F01-I01" in (qa_dir / "test_cases.md").read_text(encoding="utf-8")
     assert "外部LLM API未使用" in (qa_dir / "qa_process_report.html").read_text(encoding="utf-8")
     assert "CSV観点" in (qa_dir / "test_design.md").read_text(encoding="utf-8")
     assert "セキュリティ" in (qa_dir / "qa_process_report.html").read_text(encoding="utf-8")
+    assert (
+        json.loads((qa_dir / "screen_transition_graph.json").read_text(encoding="utf-8"))["edges"][
+            0
+        ]["trace_id"]
+        == "P001->P002"
+    )
+    assert "Playwright" in (qa_dir / "playwright_candidates.html").read_text(encoding="utf-8")
+    assert "OWASP" in (qa_dir / "quality_viewpoints.html").read_text(encoding="utf-8")
+
+
+def test_advanced_endpoint_returns_model_candidates_and_quality(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(qa_mod, "OUTPUT_DIR", tmp_path)
+    _write_report(tmp_path)
+
+    res = _client().get("/api/qa-process/advanced?domain=example.com")
+    data = res.get_json()
+
+    assert res.status_code == 200
+    assert data["transition_graph"]["nodes"][0]["id"] == "P001"
+    assert data["coverage_metrics"]["rates"]["screen_trace_rate"] == 100
+    assert data["playwright_candidates"]["execution_policy"].startswith("候補生成のみ")
+    assert any(
+        item["category"] == "OWASP WSTG/ASVS" for item in data["quality_viewpoints"]["items"]
+    )
+
+
+def test_generate_advanced_creates_preview_files(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(qa_mod, "OUTPUT_DIR", tmp_path)
+    domain_dir = _write_report(tmp_path)
+
+    res = _client().post("/api/qa-process/generate-advanced", data={"domain": "example.com"})
+    data = res.get_json()
+
+    assert res.status_code == 200
+    assert data["ok"] is True
+    qa_dir = domain_dir / "qa_process"
+    assert (qa_dir / "model_graph.html").exists()
+    assert (qa_dir / "coverage_metrics.json").exists()
+    assert data["outputs"]["model_graph"].endswith("model_graph.html")
 
 
 def test_generate_with_ai_requested_without_key_falls_back(tmp_path: Path, monkeypatch) -> None:
@@ -111,7 +161,9 @@ def test_generate_with_ai_requested_without_key_falls_back(tmp_path: Path, monke
     monkeypatch.setattr(qa_mod, "has_openai_api_key", lambda: False)
     _write_report(tmp_path)
 
-    res = _client().post("/api/qa-process/generate", data={"domain": "example.com", "use_ai": "true"})
+    res = _client().post(
+        "/api/qa-process/generate", data={"domain": "example.com", "use_ai": "true"}
+    )
     data = res.get_json()
 
     assert res.status_code == 200
@@ -141,19 +193,60 @@ def test_generate_with_ai_success_writes_structured_artifact(tmp_path: Path, mon
                 "questions": ["対応ブラウザ"],
             },
             "test_analysis": {
-                "source_inventory": [{"screen_id": "P001", "title": "トップ", "observations": ["検索フォーム"], "risk": "必須入力", "trace_id": "P001"}],
-                "risk_items": [{"risk_id": "R-001", "description": "未入力", "impact": "検索不可", "trace_id": "P001-F01-I01"}],
+                "source_inventory": [
+                    {
+                        "screen_id": "P001",
+                        "title": "トップ",
+                        "observations": ["検索フォーム"],
+                        "risk": "必須入力",
+                        "trace_id": "P001",
+                    }
+                ],
+                "risk_items": [
+                    {
+                        "risk_id": "R-001",
+                        "description": "未入力",
+                        "impact": "検索不可",
+                        "trace_id": "P001-F01-I01",
+                    }
+                ],
                 "questions": ["権限"],
             },
             "test_design": {
-                "viewpoints": [{"viewpoint_id": "TD-001", "target": "検索", "technique": "同値分割", "design_note": "必須確認", "trace_id": "P001-F01-I01"}],
-                "coverage_matrix": [{"trace_id": "P001-F01-I01", "covered_by": "TC-0001", "coverage_note": "正常/異常"}],
+                "viewpoints": [
+                    {
+                        "viewpoint_id": "TD-001",
+                        "target": "検索",
+                        "technique": "同値分割",
+                        "design_note": "必須確認",
+                        "trace_id": "P001-F01-I01",
+                    }
+                ],
+                "coverage_matrix": [
+                    {
+                        "trace_id": "P001-F01-I01",
+                        "covered_by": "TC-0001",
+                        "coverage_note": "正常/異常",
+                    }
+                ],
                 "questions": ["境界値"],
             },
             "test_cases": {
                 "expected_case_yield": "1件",
                 "case_expansion_ledger": ["必須項目から展開"],
-                "cases": [{"case_id": "TC-0001", "title": "検索必須", "precondition": "トップ表示", "steps": ["qを空にする"], "expected": "必須エラー", "execution_type": "自動化候補", "automation_candidate": "Playwright", "status": "生成済み", "trace_id": "P001-F01-I01"}],
+                "cases": [
+                    {
+                        "case_id": "TC-0001",
+                        "title": "検索必須",
+                        "precondition": "トップ表示",
+                        "steps": ["qを空にする"],
+                        "expected": "必須エラー",
+                        "execution_type": "自動化候補",
+                        "automation_candidate": "Playwright",
+                        "status": "生成済み",
+                        "trace_id": "P001-F01-I01",
+                    }
+                ],
                 "questions": ["エラーメッセージ"],
             },
             "cross_review": {
@@ -167,14 +260,18 @@ def test_generate_with_ai_success_writes_structured_artifact(tmp_path: Path, mon
 
     monkeypatch.setattr(qa_mod, "generate_openai_qa", fake_generate)
 
-    res = _client().post("/api/qa-process/generate", data={"domain": "example.com", "use_ai": "true"})
+    res = _client().post(
+        "/api/qa-process/generate", data={"domain": "example.com", "use_ai": "true"}
+    )
     data = res.get_json()
 
     assert res.status_code == 200
     assert data["ai"]["used"] is True
     assert data["ai_artifact"]["model"] == "gpt-test"
     assert (domain_dir / "qa_process" / "ai_artifacts.json").exists()
-    assert "OpenAI API補完" in (domain_dir / "qa_process" / "qa_process_report.html").read_text(encoding="utf-8")
+    assert "OpenAI API補完" in (domain_dir / "qa_process" / "qa_process_report.html").read_text(
+        encoding="utf-8"
+    )
 
 
 def test_result_returns_generated_output_paths(tmp_path: Path, monkeypatch) -> None:

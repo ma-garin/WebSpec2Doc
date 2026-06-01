@@ -146,6 +146,18 @@ QA観点には `data/qa_viewpoints_summary.csv` を使う。現在は `/Users/fu
 | `qa_process_report.html` | QAプロセス成果物を統合したHTMLレポート |
 | `ai_artifacts.json` | OpenAI API補完をONにした場合の構造化JSON成果物 |
 
+### 追加QA画面
+
+QAプロセスの補助画面として、左サイドメニューに次の画面がある。いずれも標準では外部LLM/APIを呼ばず、既存の `report.json` とQA観点CSVだけで生成する。
+
+| メニュー | 内容 | 生成ファイル |
+|---------|------|-------------|
+| モデル/カバレッジ | 画面遷移グラフ、Trace ID、カバレッジ、レビューゲートを確認する | `screen_transition_graph.json`, `model_graph.html`, `coverage_metrics.json` |
+| 自動テスト候補 | Playwright化しやすい候補をTrace ID付きで確認する。実行はしない | `playwright_candidates.json`, `playwright_candidates.html` |
+| 品質観点 | CSV観点、アクセシビリティ、OWASP WSTG/ASVS、境界値、ペアワイズ、API契約、ビジュアル回帰候補を確認する | `quality_viewpoints.json`, `quality_viewpoints.html` |
+
+自動テスト候補は「候補生成」までで止める。ブラウザ操作、ログイン済みセッション利用、テスト実行、外部サービス連携は、別途ユーザー承認後の工程として扱う。
+
 ### トレーサビリティID
 
 テスト設計とテストケースには、元画面・元フォーム・元入力項目へ戻れる Trace ID が付く。

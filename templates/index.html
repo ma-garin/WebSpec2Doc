@@ -28,6 +28,18 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 11l2 2 4-4"/><path d="M9 17h6"/><path d="M7 3h10l2 2v16H5V5l2-2z"/></svg>
         <span class="nav-label">QAプロセス</span>
       </button>
+      <button class="app-nav-item" data-view="qa-models">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="7" r="2"/><circle cx="8" cy="18" r="2"/><path d="M8 7l8 0M7 8l1 8M17 9l-8 8"/></svg>
+        <span class="nav-label">モデル/カバレッジ</span>
+      </button>
+      <button class="app-nav-item" data-view="qa-automation">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3h8l2 4H6l2-4z"/><path d="M5 7h14v11a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V7z"/><path d="M9 12h.01M15 12h.01M9 16h6"/></svg>
+        <span class="nav-label">自動テスト候補</span>
+      </button>
+      <button class="app-nav-item" data-view="qa-quality">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6l7-3z"/><path d="M9 12l2 2 4-5"/></svg>
+        <span class="nav-label">品質観点</span>
+      </button>
       <button class="app-nav-item" data-view="user-guide">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5V5a2 2 0 0 1 2-2h6v18H6a2 2 0 0 1-2-1.5z"/><path d="M12 3h6a2 2 0 0 1 2 2v14.5A2 2 0 0 0 18 18h-6"/></svg>
         <span class="nav-label">ユーザーガイド</span>
@@ -378,6 +390,85 @@
           </div>
         </section>
 
+        <!-- ===== モデル/カバレッジビュー ===== -->
+        <section class="view" id="view-qa-models">
+          <div class="input-card qa-tool-panel">
+            <div class="qa-page-title-row">
+              <div class="wizard-page-header">
+                <h2>モデル/カバレッジ</h2>
+                <p>画面遷移グラフ、Trace ID、カバレッジ、質問待ちを確認します。</p>
+              </div>
+              <button type="button" id="qa-model-generate" class="btn-primary">成果物を生成</button>
+            </div>
+            <label for="qa-model-domain-select" class="form-label">対象サイト</label>
+            <div class="input-row" style="align-items:center">
+              <select id="qa-model-domain-select" class="url-input qa-tool-domain" style="height:40px">
+                <option value="">解析済みサイトを選択</option>
+              </select>
+              <button type="button" class="btn-outline-sm qa-tool-reload">再読み込み</button>
+            </div>
+            <div id="qa-model-status" class="input-field-message"></div>
+            <div id="qa-model-content" class="qa-readable"><div class="empty">対象サイトを選択してください。</div></div>
+            <div class="hero-section-title" style="margin-top:18px">成果物</div>
+            <div id="qa-model-output-links" class="export-grid"></div>
+          </div>
+        </section>
+
+        <!-- ===== 自動テスト候補ビュー ===== -->
+        <section class="view" id="view-qa-automation">
+          <div class="input-card qa-tool-panel">
+            <div class="qa-page-title-row">
+              <div class="wizard-page-header">
+                <h2>自動テスト候補</h2>
+                <p>Playwright化しやすい候補をTrace ID付きで整理します。実行は行いません。</p>
+              </div>
+              <button type="button" id="qa-auto-generate" class="btn-primary">候補を生成</button>
+            </div>
+            <label for="qa-auto-domain-select" class="form-label">対象サイト</label>
+            <div class="input-row" style="align-items:center">
+              <select id="qa-auto-domain-select" class="url-input qa-tool-domain" style="height:40px">
+                <option value="">解析済みサイトを選択</option>
+              </select>
+              <button type="button" class="btn-outline-sm qa-tool-reload">再読み込み</button>
+            </div>
+            <div id="qa-auto-status" class="input-field-message"></div>
+            <div class="qa-readable-section">
+              <h3>実行ポリシー</h3>
+              <ul class="qa-check-list qa-question-list">
+                <li>この画面は候補生成のみです。ブラウザ操作やテスト実行はユーザー承認後の別工程にします。</li>
+                <li>ロケータは role / text / label / placeholder / test id を優先し、CSS/XPathは最終手段にします。</li>
+              </ul>
+            </div>
+            <div id="qa-auto-content" class="qa-readable"><div class="empty">対象サイトを選択してください。</div></div>
+            <div class="hero-section-title" style="margin-top:18px">成果物</div>
+            <div id="qa-auto-output-links" class="export-grid"></div>
+          </div>
+        </section>
+
+        <!-- ===== 品質観点ビュー ===== -->
+        <section class="view" id="view-qa-quality">
+          <div class="input-card qa-tool-panel">
+            <div class="qa-page-title-row">
+              <div class="wizard-page-header">
+                <h2>品質観点</h2>
+                <p>CSV観点、アクセシビリティ、セキュリティ、入力設計、API契約、ビジュアル回帰候補を確認します。</p>
+              </div>
+              <button type="button" id="qa-quality-generate" class="btn-primary">観点を生成</button>
+            </div>
+            <label for="qa-quality-domain-select" class="form-label">対象サイト</label>
+            <div class="input-row" style="align-items:center">
+              <select id="qa-quality-domain-select" class="url-input qa-tool-domain" style="height:40px">
+                <option value="">解析済みサイトを選択</option>
+              </select>
+              <button type="button" class="btn-outline-sm qa-tool-reload">再読み込み</button>
+            </div>
+            <div id="qa-quality-status" class="input-field-message"></div>
+            <div id="qa-quality-content" class="qa-readable"><div class="empty">対象サイトを選択してください。</div></div>
+            <div class="hero-section-title" style="margin-top:18px">成果物</div>
+            <div id="qa-quality-output-links" class="export-grid"></div>
+          </div>
+        </section>
+
         <!-- ===== ユーザーガイドビュー ===== -->
         <section class="view" id="view-user-guide">
           <div class="input-card user-guide-panel">
@@ -392,7 +483,9 @@
               <div class="qa-mini-card"><strong>3. 条件設定</strong><span>対象画面、ログイン、差分出力を確認します。</span></div>
               <div class="qa-mini-card"><strong>4. レポート確認</strong><span>概要、画面別仕様、入力項目、遷移、履歴差分を確認します。</span></div>
               <div class="qa-mini-card"><strong>5. QAプロセス</strong><span>解析済みサイトを選び、Step by StepでQA成果物を作成します。</span></div>
-              <div class="qa-mini-card"><strong>6. エクスポート</strong><span>HTML、PDF、JSON、Excel、Markdown、ZIPを出力します。</span></div>
+              <div class="qa-mini-card"><strong>6. モデル/カバレッジ</strong><span>画面遷移グラフとTrace IDの網羅性を確認します。</span></div>
+              <div class="qa-mini-card"><strong>7. 自動テスト候補</strong><span>Playwright化しやすい候補をレビューします。</span></div>
+              <div class="qa-mini-card"><strong>8. 品質観点</strong><span>CSV、a11y、OWASP、境界値、API契約の観点を確認します。</span></div>
             </div>
 
             <div class="qa-readable-section">
@@ -434,11 +527,26 @@
             </div>
 
             <div class="qa-readable-section">
+              <h3>追加QA画面</h3>
+              <table class="data">
+                <thead><tr><th>メニュー</th><th>内容</th><th>外部API</th></tr></thead>
+                <tbody>
+                  <tr><td>モデル/カバレッジ</td><td>画面遷移グラフ、Trace ID、カバレッジ、レビューゲートを表示します。</td><td>呼び出しません</td></tr>
+                  <tr><td>自動テスト候補</td><td>Playwright候補を生成します。実行はせず、レビュー待ちとして表示します。</td><td>呼び出しません</td></tr>
+                  <tr><td>品質観点</td><td>CSV観点、アクセシビリティ、OWASP WSTG/ASVS、境界値、ペアワイズ、API契約、ビジュアル回帰候補を表示します。</td><td>呼び出しません</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="qa-readable-section">
               <h3>出力ファイル</h3>
               <ul class="qa-check-list">
                 <li><strong>通常レポート:</strong> report.html / report.json / spec.xlsx / report.pdf / screens.md / forms.md</li>
                 <li><strong>差分:</strong> diff_report.html / snapshots/</li>
                 <li><strong>QAプロセス:</strong> qa_process/test_plan.md から qa_process_report.html まで</li>
+                <li><strong>モデル/カバレッジ:</strong> qa_process/screen_transition_graph.json / model_graph.html / coverage_metrics.json</li>
+                <li><strong>自動テスト候補:</strong> qa_process/playwright_candidates.json / playwright_candidates.html</li>
+                <li><strong>品質観点:</strong> qa_process/quality_viewpoints.json / quality_viewpoints.html</li>
                 <li><strong>追加料金:</strong> OpenAI補完OFFでは発生しません。ONの場合のみOpenAI API利用料金が発生します。</li>
               </ul>
             </div>

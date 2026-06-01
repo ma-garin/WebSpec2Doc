@@ -373,6 +373,13 @@
     .qa-mini-card { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-soft); padding: 12px; display: grid; gap: 4px; }
     .qa-mini-card strong { color: var(--text); }
     .qa-mini-card span { color: var(--text-muted); font-size: 12px; }
+    .qa-tool-panel { display: grid; gap: 16px; }
+    .qa-metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+    .qa-metric-card { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-soft); padding: 12px; display: grid; gap: 8px; }
+    .qa-metric-card strong { font-size: 12px; color: var(--text-muted); }
+    .qa-metric-card span { font-size: 24px; font-weight: 900; color: var(--text); }
+    .qa-meter { height: 8px; border-radius: 999px; overflow: hidden; background: var(--border); }
+    .qa-meter i { display: block; height: 100%; background: var(--primary); border-radius: inherit; }
     .user-guide-panel { display: grid; gap: 16px; }
     .user-guide-panel .qa-readable-section { margin: 0; }
 

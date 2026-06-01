@@ -33,6 +33,12 @@ def test_qa_process_view_is_present() -> None:
     html = _index_html()
     assert 'data-view="qa-process"' in html
     assert 'id="view-qa-process"' in html
+    assert 'data-view="qa-models"' in html
+    assert 'id="view-qa-models"' in html
+    assert 'data-view="qa-automation"' in html
+    assert 'id="view-qa-automation"' in html
+    assert 'data-view="qa-quality"' in html
+    assert 'id="view-qa-quality"' in html
     assert 'data-qa-page-panel="0"' in html
     assert 'data-qa-page-panel="6"' in html
     assert 'id="qa-use-ai"' in html

@@ -524,7 +524,10 @@
 
               <!-- フロー進捗 -->
               <div id="autorun-steps" style="margin-top:18px;display:none">
-                <div class="hero-section-title" style="margin-bottom:10px">進捗</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                  <div class="hero-section-title" style="margin:0">進捗</div>
+                  <span id="autorun-elapsed" style="font-size:12px;font-variant-numeric:tabular-nums;color:var(--text-muted);font-weight:600">0:00</span>
+                </div>
                 <div class="autorun-step-list">
                   <div class="autorun-step-item" id="ars-crawl">
                     <span class="autorun-step-icon">○</span>
@@ -556,6 +559,11 @@
                 <div id="autorun-approve-area" style="display:none;margin-top:14px">
                   <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Playwright スクリプトが生成されました。実行してよいですか？</p>
                   <button type="button" id="autorun-approve-btn" class="btn-primary" style="width:100%;height:40px;font-size:14px">テスト実行を承認</button>
+                </div>
+
+                <!-- 停止ボタン -->
+                <div id="autorun-cancel-area" style="display:none;margin-top:14px">
+                  <button type="button" id="autorun-cancel-btn" class="btn-outline-sm" style="width:100%;color:var(--critical);border-color:var(--critical)">停止</button>
                 </div>
 
                 <!-- 再実行 -->
@@ -794,6 +802,37 @@
       </div>
     </div>
   </div>
+  <!-- ===== AutoRun ログインポップアップ ===== -->
+  <div id="autorun-login-modal" class="file-preview-modal hidden" role="dialog" aria-modal="true" aria-label="ログイン情報の入力">
+    <div class="file-preview-overlay" id="autorun-login-overlay"></div>
+    <div class="file-preview-panel" style="max-width:480px;height:auto;max-height:90vh">
+      <div class="file-preview-header">
+        <span class="file-preview-title">ログイン情報の入力</span>
+        <button type="button" id="autorun-login-close" class="btn-outline-sm" style="font-size:12px;height:30px">✕ 閉じる</button>
+      </div>
+      <div style="padding:20px;overflow-y:auto">
+        <p id="autorun-login-msg" style="font-size:13px;color:var(--text-muted);margin-bottom:16px"></p>
+        <div class="field" style="margin-bottom:12px">
+          <label class="form-label">ログインURL</label>
+          <input type="url" id="autorun-login-url" class="url-input" style="height:38px;font-size:13px" readonly />
+        </div>
+        <div class="field" style="margin-bottom:12px">
+          <label class="form-label">ユーザー名 / メールアドレス</label>
+          <input type="text" id="autorun-login-username" class="url-input" style="height:38px;font-size:13px" autocomplete="username" placeholder="user@example.com" />
+        </div>
+        <div class="field" style="margin-bottom:16px">
+          <label class="form-label">パスワード</label>
+          <input type="password" id="autorun-login-password" class="url-input" style="height:38px;font-size:13px" autocomplete="current-password" />
+        </div>
+        <div id="autorun-login-status" class="input-field-message" style="min-height:14px;margin-bottom:10px"></div>
+        <div style="display:flex;gap:8px">
+          <button type="button" id="autorun-login-submit" class="btn-primary" style="flex:1;height:42px;font-size:14px">ログインして続行</button>
+          <button type="button" id="autorun-login-skip" class="btn-outline-sm" style="height:42px;padding:0 16px;font-size:13px">スキップ</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="{{ url_for('static', filename='app.js') }}"></script>
   <script src="{{ url_for('static', filename='app-view.js') }}"></script>
 

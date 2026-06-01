@@ -7,17 +7,17 @@ import sys
 import threading
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from flask import Blueprint, request
 
-from web.config import MAX_DEPTH, MAX_PAGES_LIMIT, OUTPUT_DIR
+from web.config import DISCOVER_TIMEOUT_SEC, MAX_DEPTH, MAX_PAGES_LIMIT, OUTPUT_DIR
 from web.routes.qa_process import _generate_advanced_outputs, _generate_outputs, _load_report
 from web.services.playwright_executor import run_playwright
 from web.services.spec_ts_generator import generate_spec_ts
-from web.validation import _clean_int, _domain_of, _safe_auth_path, _valid_domain
+from web.validation import _clean_int, _domain_of, _safe_auth_path
 
 bp = Blueprint("auto_run", __name__)
 logger = logging.getLogger(__name__)
@@ -31,6 +31,9 @@ class AutoRunJob:
     url: str
     domain: str = ""
     status: str = "idle"
+    # idle | discovering | awaiting_input | crawling | generating_qa
+    # generating_scripts | awaiting_approval | running_tests | complete
+    # cancelled | failed
     step_label: str = ""
     log: list[str] = field(default_factory=list)
     outputs: dict[str, str] = field(default_factory=dict)
@@ -39,10 +42,40 @@ class AutoRunJob:
     started_at: str = ""
     finished_at: str = ""
     approved: bool = False
+    auth_path: str = ""
+    input_request: dict[str, Any] | None = None
+
+    # 非シリアライズフィールド（dataclass外で設定）
+    _proc: Any = field(default=None, init=False, repr=False, compare=False)
+    _input_event: Any = field(
+        default_factory=threading.Event, init=False, repr=False, compare=False
+    )
+    _input_data: dict[str, Any] = field(
+        default_factory=dict, init=False, repr=False, compare=False
+    )
+    _cancelled: bool = field(default=False, init=False, repr=False, compare=False)
 
     def add_log(self, msg: str) -> None:
         self.log.append(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
         logger.info("autorun[%s] %s", self.job_id, msg)
+
+    def elapsed_sec(self) -> int:
+        if not self.started_at:
+            return 0
+        try:
+            start = datetime.fromisoformat(self.started_at)
+            if start.tzinfo is None:
+                start = start.replace(tzinfo=timezone.utc)
+            end_str = self.finished_at
+            if end_str:
+                end = datetime.fromisoformat(end_str)
+                if end.tzinfo is None:
+                    end = end.replace(tzinfo=timezone.utc)
+            else:
+                end = datetime.now(timezone.utc)
+            return max(0, int((end - start).total_seconds()))
+        except Exception:
+            return 0
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -51,14 +84,33 @@ class AutoRunJob:
             "domain": self.domain,
             "status": self.status,
             "step_label": self.step_label,
-            "log": self.log[-100:],
+            "log": self.log[-200:],
             "outputs": self.outputs,
             "test_results": self.test_results,
             "error": self.error,
             "started_at": self.started_at,
             "finished_at": self.finished_at,
+            "elapsed_sec": self.elapsed_sec(),
+            "input_request": self.input_request,
         }
 
+    def cancel(self) -> None:
+        self._cancelled = True
+        proc = self._proc
+        if proc and proc.poll() is None:
+            try:
+                proc.terminate()
+                proc.wait(timeout=5)
+            except Exception:
+                try:
+                    proc.kill()
+                except Exception:
+                    pass
+        # 入力待ちで止まっていたら解除
+        self._input_event.set()
+
+
+# ─────────────────────────── API ───────────────────────────
 
 @bp.post("/api/autorun/start")
 def api_autorun_start() -> dict | tuple[dict, int]:
@@ -74,26 +126,69 @@ def api_autorun_start() -> dict | tuple[dict, int]:
     auth = _safe_auth_path((request.form.get("auth") or body.get("auth", "")).strip())
 
     job_id = uuid.uuid4().hex
-    job = AutoRunJob(job_id=job_id, url=url, started_at=datetime.now().isoformat())
+    job = AutoRunJob(job_id=job_id, url=url, started_at=_now_iso())
+    if auth:
+        job.auth_path = auth
     _JOBS[job_id] = job
 
-    thread = threading.Thread(
-        target=_run_job,
-        args=(job, depth, max_pages, auth),
-        daemon=True,
-    )
-    thread.start()
+    threading.Thread(
+        target=_run_job, args=(job, depth, max_pages), daemon=True
+    ).start()
 
     return {"ok": True, "job_id": job_id}
 
 
 @bp.get("/api/autorun/status")
 def api_autorun_status() -> dict | tuple[dict, int]:
-    job_id = request.args.get("job_id", "")
-    job = _JOBS.get(job_id)
+    job = _JOBS.get(request.args.get("job_id", ""))
     if job is None:
         return {"error": "not found"}, 404
     return job.to_dict()
+
+
+@bp.post("/api/autorun/cancel")
+def api_autorun_cancel() -> dict | tuple[dict, int]:
+    body = request.get_json(silent=True) or {}
+    job_id = (request.form.get("job_id") or body.get("job_id", "")).strip()
+    job = _JOBS.get(job_id)
+    if job is None:
+        return {"error": "not found"}, 404
+    job.cancel()
+    job.status = "cancelled"
+    job.step_label = "キャンセルしました"
+    job.finished_at = _now_iso()
+    job.add_log("ユーザーによってキャンセルされました。")
+    return {"ok": True}
+
+
+@bp.post("/api/autorun/submit-input")
+def api_autorun_submit_input() -> dict | tuple[dict, int]:
+    """ログイン情報などの人的インプットを受け取り、待機中のジョブを再開する。"""
+    body = request.get_json(silent=True) or {}
+    job_id = (request.form.get("job_id") or body.get("job_id", "")).strip()
+    job = _JOBS.get(job_id)
+    if job is None:
+        return {"error": "not found"}, 404
+    if job.status != "awaiting_input":
+        return {"error": f"awaiting_input ではありません (status={job.status})"}, 400
+
+    input_type = (request.form.get("type") or body.get("type", "")).strip()
+    if input_type == "login":
+        job._input_data = {
+            "type": "login",
+            "username": (request.form.get("username") or body.get("username", "")).strip(),
+            "password": (request.form.get("password") or body.get("password", "")),
+            "skip": _truthy(request.form.get("skip") or body.get("skip", "")),
+        }
+    elif input_type == "skip":
+        job._input_data = {"type": "skip"}
+    else:
+        return {"error": f"unknown input type: {input_type}"}, 400
+
+    job.input_request = None
+    job.status = "crawling"
+    job._input_event.set()
+    return {"ok": True}
 
 
 @bp.post("/api/autorun/approve")
@@ -104,18 +199,16 @@ def api_autorun_approve() -> dict | tuple[dict, int]:
     if job is None:
         return {"error": "not found"}, 404
     if job.status != "awaiting_approval":
-        return {"error": f"cannot approve in status '{job.status}'"}, 400
+        return {"error": f"status '{job.status}' では承認できません"}, 400
 
     job.approved = True
-    thread = threading.Thread(target=_execute_tests, args=(job,), daemon=True)
-    thread.start()
+    threading.Thread(target=_execute_tests, args=(job,), daemon=True).start()
     return {"ok": True, "job_id": job_id}
 
 
 @bp.get("/api/autorun/report")
 def api_autorun_report() -> dict | tuple[dict, int]:
-    job_id = request.args.get("job_id", "")
-    job = _JOBS.get(job_id)
+    job = _JOBS.get(request.args.get("job_id", ""))
     if job is None:
         return {"error": "not found"}, 404
     return {**job.to_dict(), "report_html": _report_html_path(job)}
@@ -132,34 +225,153 @@ def api_autorun_jobs() -> dict:
                 "status": j.status,
                 "started_at": j.started_at,
                 "finished_at": j.finished_at,
+                "elapsed_sec": j.elapsed_sec(),
             }
             for j in reversed(list(_JOBS.values()))
         ][:20]
     }
 
 
-def _run_job(job: AutoRunJob, depth: int, max_pages: int, auth: str) -> None:
+# ─────────────────────────── ジョブ実行 ───────────────────────────
+
+def _run_job(job: AutoRunJob, depth: int, max_pages: int) -> None:
     try:
-        _phase_crawl(job, depth, max_pages, auth)
-        if job.status == "failed":
+        _phase_discover(job, depth, max_pages)
+        if job.status in ("failed", "cancelled"):
+            return
+
+        # ログイン入力待ち（最大 30 分）
+        if job.status == "awaiting_input":
+            job._input_event.wait(timeout=1800)
+            if job._cancelled:
+                return
+            if not job._input_data:
+                job.add_log("入力タイムアウト。スキップしてクロールを続行します。")
+
+            if job._input_data.get("type") == "login" and not job._input_data.get("skip"):
+                _do_login(job)
+                if job.status == "failed":
+                    return
+
+        _phase_crawl(job, depth, max_pages)
+        if job.status in ("failed", "cancelled"):
             return
         _phase_generate_qa(job)
-        if job.status == "failed":
+        if job.status in ("failed", "cancelled"):
             return
         _phase_generate_scripts(job)
-        if job.status == "failed":
+        if job.status in ("failed", "cancelled"):
             return
         job.status = "awaiting_approval"
         job.step_label = "テスト実行の承認待ち"
         job.add_log("自動生成完了。「テスト実行を承認」ボタンで Playwright を実行できます。")
     except Exception as exc:
+        if job._cancelled:
+            return
         job.status = "failed"
         job.error = str(exc)
         job.add_log(f"予期しないエラー: {exc}")
-        job.finished_at = datetime.now().isoformat()
+        job.finished_at = _now_iso()
 
 
-def _phase_crawl(job: AutoRunJob, depth: int, max_pages: int, auth: str) -> None:
+def _phase_discover(job: AutoRunJob, depth: int, max_pages: int) -> None:
+    """画面リスト取得 + ログイン壁検知。"""
+    job.status = "discovering"
+    job.step_label = "画面を分析中"
+    job.add_log(f"画面分析開始: {job.url}")
+
+    cmd = [
+        sys.executable,
+        "src/main.py",
+        "--discover",
+        "--url",
+        job.url,
+        "--depth",
+        str(depth),
+        "--max-pages",
+        str(max_pages),
+    ]
+    if job.auth_path:
+        cmd += ["--auth", job.auth_path]
+
+    try:
+        proc = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=DISCOVER_TIMEOUT_SEC,
+        )
+        data = json.loads(proc.stdout.strip() or "{}")
+        pages: list[dict[str, Any]] = data.get("pages", [])
+    except subprocess.TimeoutExpired:
+        job.add_log("画面分析タイムアウト。そのままクロールを続行します。")
+        return
+    except Exception as exc:
+        job.add_log(f"画面分析エラー: {exc}。そのままクロールを続行します。")
+        return
+
+    login_pages = [p for p in pages if p.get("login_required")]
+    job.add_log(f"画面分析完了: {len(pages)}件 (要ログイン: {len(login_pages)}件)")
+
+    if login_pages:
+        login_url = login_pages[0].get("login_url") or job.url
+        login_fields = login_pages[0].get("login_fields", [])
+        job.status = "awaiting_input"
+        job.step_label = "ログイン情報の入力待ち"
+        job.input_request = {
+            "type": "login",
+            "login_url": login_url,
+            "login_fields": login_fields,
+            "domain": _domain_of(job.url),
+            "message": f"{len(login_pages)}件のページにログインが必要です。認証情報を入力するかスキップしてください。",
+        }
+        job.add_log("ログインが必要なページが検出されました。認証情報の入力を待っています。")
+
+
+def _do_login(job: AutoRunJob) -> None:
+    input_data = job._input_data
+    login_url = (job.input_request or {}).get("login_url") or job.url
+    username = input_data.get("username", "")
+    password = input_data.get("password", "")
+    domain = _domain_of(job.url)
+
+    job.add_log(f"ログイン試行: {login_url}")
+
+    auth_path = OUTPUT_DIR / domain / "auth.json"
+    auth_path.parent.mkdir(parents=True, exist_ok=True)
+    creds_json = json.dumps({"username": username, "password": password})
+    cmd = [
+        sys.executable,
+        "src/main.py",
+        "--login-simple",
+        "--login-simple-url",
+        login_url,
+        "--auth",
+        str(auth_path),
+    ]
+    try:
+        proc = subprocess.run(
+            cmd,
+            input=creds_json,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        data = json.loads(proc.stdout.strip() or "{}")
+        if data.get("success"):
+            job.auth_path = str(auth_path.resolve())
+            job.add_log(f"ログイン成功。auth.json を保存しました: {job.auth_path}")
+        else:
+            job.add_log(
+                f"ログインに失敗しました: {data.get('error', '不明なエラー')}。スキップして続行します。"
+            )
+    except subprocess.TimeoutExpired:
+        job.add_log("ログインタイムアウト。スキップして続行します。")
+    except Exception as exc:
+        job.add_log(f"ログインエラー: {exc}。スキップして続行します。")
+
+
+def _phase_crawl(job: AutoRunJob, depth: int, max_pages: int) -> None:
     job.status = "crawling"
     job.step_label = "仕様書を生成中"
     job.add_log(f"クロール開始: {job.url} (depth={depth}, max={max_pages})")
@@ -176,28 +388,37 @@ def _phase_crawl(job: AutoRunJob, depth: int, max_pages: int, auth: str) -> None
         "--format",
         "json,md,html",
     ]
-    if auth:
-        cmd += ["--auth", auth]
+    if job.auth_path:
+        cmd += ["--auth", job.auth_path]
 
     try:
         proc = subprocess.Popen(
             cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
         )
+        job._proc = proc
         for line in proc.stdout:
+            if job._cancelled:
+                proc.terminate()
+                return
             line = line.rstrip()
             if line:
                 job.add_log(line)
         proc.wait(timeout=600)
+        job._proc = None
     except subprocess.TimeoutExpired:
-        proc.kill()
+        if proc:
+            proc.kill()
         job.status = "failed"
         job.error = "クロールタイムアウト"
-        job.finished_at = datetime.now().isoformat()
+        job.finished_at = _now_iso()
         return
     except Exception as exc:
         job.status = "failed"
         job.error = f"クロールエラー: {exc}"
-        job.finished_at = datetime.now().isoformat()
+        job.finished_at = _now_iso()
+        return
+
+    if job._cancelled:
         return
 
     domain = _domain_of(job.url)
@@ -206,7 +427,7 @@ def _phase_crawl(job: AutoRunJob, depth: int, max_pages: int, auth: str) -> None
     if not report_json.is_file():
         job.status = "failed"
         job.error = "クロール完了後に report.json が見つかりません"
-        job.finished_at = datetime.now().isoformat()
+        job.finished_at = _now_iso()
         return
 
     job.outputs["report_json"] = str(report_json.resolve())
@@ -217,6 +438,8 @@ def _phase_crawl(job: AutoRunJob, depth: int, max_pages: int, auth: str) -> None
 
 
 def _phase_generate_qa(job: AutoRunJob) -> None:
+    if job._cancelled:
+        return
     job.status = "generating_qa"
     job.step_label = "QA成果物を生成中"
     job.add_log("QAプロセス成果物を生成しています…")
@@ -226,7 +449,7 @@ def _phase_generate_qa(job: AutoRunJob) -> None:
     if report is None:
         job.status = "failed"
         job.error = "report.json の読み込みに失敗しました"
-        job.finished_at = datetime.now().isoformat()
+        job.finished_at = _now_iso()
         return
 
     try:
@@ -235,17 +458,18 @@ def _phase_generate_qa(job: AutoRunJob) -> None:
     except Exception as exc:
         job.status = "failed"
         job.error = f"QA成果物生成エラー: {exc}"
-        job.finished_at = datetime.now().isoformat()
+        job.finished_at = _now_iso()
         return
 
     for key, path in outputs.items():
         if path.is_file():
             job.outputs[key] = str(path.resolve())
-
     job.add_log(f"QA成果物生成完了: {len(outputs)}件")
 
 
 def _phase_generate_scripts(job: AutoRunJob) -> None:
+    if job._cancelled:
+        return
     job.status = "generating_scripts"
     job.step_label = "Playwright スクリプトを生成中"
     job.add_log("Playwright .spec.ts を生成しています…")
@@ -254,7 +478,7 @@ def _phase_generate_scripts(job: AutoRunJob) -> None:
     if not candidates_path.is_file():
         job.status = "failed"
         job.error = "playwright_candidates.json が見つかりません"
-        job.finished_at = datetime.now().isoformat()
+        job.finished_at = _now_iso()
         return
 
     spec_dir = OUTPUT_DIR / job.domain / "qa_process"
@@ -264,7 +488,7 @@ def _phase_generate_scripts(job: AutoRunJob) -> None:
     except Exception as exc:
         job.status = "failed"
         job.error = f"スクリプト生成エラー: {exc}"
-        job.finished_at = datetime.now().isoformat()
+        job.finished_at = _now_iso()
         return
 
     job.outputs["spec_ts"] = str(spec_path.resolve())
@@ -272,6 +496,8 @@ def _phase_generate_scripts(job: AutoRunJob) -> None:
 
 
 def _execute_tests(job: AutoRunJob) -> None:
+    if job._cancelled:
+        return
     job.status = "running_tests"
     job.step_label = "Playwright テストを実行中"
     job.add_log("Playwright テスト実行を開始します…")
@@ -280,39 +506,53 @@ def _execute_tests(job: AutoRunJob) -> None:
     if not spec_path_str:
         job.status = "failed"
         job.error = "spec.ts が見つかりません"
-        job.finished_at = datetime.now().isoformat()
+        job.finished_at = _now_iso()
         return
 
     spec_path = Path(spec_path_str)
     report_dir = OUTPUT_DIR / job.domain / "qa_process"
 
     try:
-        result = run_playwright(spec_path, report_dir)
+        result = run_playwright(spec_path, report_dir, add_log=job.add_log)
     except Exception as exc:
         job.status = "failed"
         job.error = f"テスト実行エラー: {exc}"
-        job.finished_at = datetime.now().isoformat()
+        job.finished_at = _now_iso()
         return
 
     job.test_results = result
     if (report_dir / "playwright_report.json").is_file():
-        job.outputs["playwright_report_json"] = str((report_dir / "playwright_report.json").resolve())
+        job.outputs["playwright_report_json"] = str(
+            (report_dir / "playwright_report.json").resolve()
+        )
     if (report_dir / "playwright_report.html").is_file():
-        job.outputs["playwright_report_html"] = str((report_dir / "playwright_report.html").resolve())
+        job.outputs["playwright_report_html"] = str(
+            (report_dir / "playwright_report.html").resolve()
+        )
 
     job.status = "complete"
     job.step_label = "完了"
-    job.finished_at = datetime.now().isoformat()
+    job.finished_at = _now_iso()
     passed = result.get("passed", 0)
     failed = result.get("failed", 0)
     total = result.get("total", 0)
     job.add_log(f"テスト実行完了: PASS={passed} FAIL={failed} TOTAL={total}")
     if result.get("unavailable"):
-        job.add_log("※ Playwright が未インストールのため実行をスキップしました。")
+        job.add_log("※ @playwright/test 未セットアップのため実行をスキップしました。")
 
+
+# ─────────────────────────── ユーティリティ ───────────────────────────
 
 def _report_html_path(job: AutoRunJob) -> str:
     path_str = job.outputs.get("playwright_report_html", "")
     if path_str and Path(path_str).is_file():
         return path_str
     return job.outputs.get("qa_process_report", "")
+
+
+def _now_iso() -> str:
+    return datetime.now().isoformat()
+
+
+def _truthy(value: Any) -> bool:
+    return str(value or "").strip().lower() in {"1", "true", "yes", "on"}

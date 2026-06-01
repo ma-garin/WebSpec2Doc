@@ -1,25 +1,51 @@
 from __future__ import annotations
 
+import html as html_mod
 import json
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
+
+# AutoRun が生成した .spec.ts を実行するための共有 node_modules の場所
+_PW_ENV_DIR = Path("output/.playwright_env")
 
 
-def run_playwright(spec_path: Path, output_dir: Path, timeout_sec: int = 300) -> dict[str, Any]:
+def run_playwright(
+    spec_path: Path,
+    output_dir: Path,
+    timeout_sec: int = 300,
+    add_log: Callable[[str], None] | None = None,
+) -> dict[str, Any]:
     """
     npx playwright test でスペックを実行し、結果を返す。
 
-    playwright / npx がない環境では即座に skip 結果を返す。
+    @playwright/test が未セットアップの場合は自動インストールを試みる。
+    それも不可能な場合は unavailable 結果を返す。
     """
     output_dir.mkdir(parents=True, exist_ok=True)
     json_report_path = output_dir / "playwright_report.json"
     html_report_path = output_dir / "playwright_report.html"
 
-    if not _playwright_available():
-        return _unavailable_result(spec_path, json_report_path, html_report_path)
+    def _log(msg: str) -> None:
+        if add_log:
+            add_log(msg)
 
+    if not shutil.which("npx"):
+        return _unavailable_result(
+            "npx が見つかりません。Node.js をインストールしてください。",
+            json_report_path,
+            html_report_path,
+        )
+
+    if not shutil.which("playwright") and not _pw_test_available():
+        _log("@playwright/test をセットアップしています…")
+        ok, msg = _ensure_pw_env(_PW_ENV_DIR)
+        _log(msg)
+        if not ok:
+            return _unavailable_result(msg, json_report_path, html_report_path)
+
+    env_node_modules = str((_PW_ENV_DIR / "node_modules").resolve())
     cmd = [
         "npx",
         "playwright",
@@ -29,12 +55,16 @@ def run_playwright(spec_path: Path, output_dir: Path, timeout_sec: int = 300) ->
         f"--output={output_dir / 'artifacts'}",
     ]
     try:
+        import os
+        env = os.environ.copy()
+        existing = env.get("NODE_PATH", "")
+        env["NODE_PATH"] = f"{env_node_modules}:{existing}" if existing else env_node_modules
         proc = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
             timeout=timeout_sec,
-            cwd=str(spec_path.parent.parent),
+            env=env,
         )
     except subprocess.TimeoutExpired:
         return _error_result("タイムアウト", json_report_path, html_report_path)
@@ -53,9 +83,12 @@ def run_playwright(spec_path: Path, output_dir: Path, timeout_sec: int = 300) ->
     return result
 
 
-def _playwright_available() -> bool:
-    if not shutil.which("npx"):
-        return False
+def _pw_test_available() -> bool:
+    """ローカルまたは共有 env に @playwright/test があるか確認。"""
+    local = Path("node_modules/@playwright/test")
+    shared = _PW_ENV_DIR / "node_modules/@playwright/test"
+    if local.is_dir() or shared.is_dir():
+        return True
     try:
         result = subprocess.run(
             ["node", "-e", "require.resolve('@playwright/test')"],
@@ -65,6 +98,36 @@ def _playwright_available() -> bool:
         return result.returncode == 0
     except Exception:
         return False
+
+
+def _ensure_pw_env(env_dir: Path) -> tuple[bool, str]:
+    """@playwright/test を env_dir にインストールする。"""
+    env_dir.mkdir(parents=True, exist_ok=True)
+    pkg_json = env_dir / "package.json"
+    if not pkg_json.exists():
+        pkg_json.write_text('{"name":"autorun-env","private":true}', encoding="utf-8")
+
+    pw_test_dir = env_dir / "node_modules/@playwright/test"
+    if pw_test_dir.is_dir():
+        return True, "@playwright/test は既にセットアップ済みです。"
+
+    if not shutil.which("npm"):
+        return False, "npm が見つかりません。Node.js をインストールしてください。"
+
+    try:
+        proc = subprocess.run(
+            ["npm", "install", "@playwright/test", "--prefix", str(env_dir)],
+            capture_output=True,
+            text=True,
+            timeout=180,
+        )
+        if proc.returncode == 0:
+            return True, "@playwright/test のインストールが完了しました。"
+        return False, f"npm install 失敗: {proc.stderr[:300]}"
+    except subprocess.TimeoutExpired:
+        return False, "npm install タイムアウト"
+    except Exception as exc:
+        return False, f"npm install エラー: {exc}"
 
 
 def _parse_results(
@@ -131,7 +194,7 @@ def _first_error(results: list[dict[str, Any]]) -> str:
 
 
 def _unavailable_result(
-    spec_path: Path, json_path: Path, html_path: Path
+    reason: str, json_path: Path, html_path: Path
 ) -> dict[str, Any]:
     result: dict[str, Any] = {
         "ok": False,
@@ -141,7 +204,7 @@ def _unavailable_result(
         "total": 0,
         "duration_ms": 0,
         "tests": [],
-        "error": "npx / Playwright が見つかりません。`npm install -D @playwright/test && npx playwright install` を実行してください。",
+        "error": reason,
         "unavailable": True,
     }
     json_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -149,9 +212,7 @@ def _unavailable_result(
     return result
 
 
-def _error_result(
-    error: str, json_path: Path, html_path: Path
-) -> dict[str, Any]:
+def _error_result(error: str, json_path: Path, html_path: Path) -> dict[str, Any]:
     result: dict[str, Any] = {
         "ok": False,
         "passed": 0,
@@ -168,23 +229,40 @@ def _error_result(
 
 
 def _build_html_report(result: dict[str, Any]) -> str:
-    import html as html_mod
-
     status_color = "#16a34a" if result.get("ok") else "#dc2626"
     status_text = "PASS" if result.get("ok") else "FAIL"
     error_section = ""
     if result.get("error"):
-        error_section = f'<div class="err"><strong>エラー:</strong> {html_mod.escape(str(result["error"]))}</div>'
+        error_section = (
+            f'<div class="err"><strong>エラー:</strong> '
+            f"{html_mod.escape(str(result['error']))}</div>"
+        )
 
     rows = "".join(
-        "<tr class='{cls}'><td>{title}</td><td>{status}</td><td>{dur}ms</td><td>{err}</td></tr>".format(
-            cls="pass" if t["status"] == "passed" else ("skip" if t["status"] == "skipped" else "fail"),
+        "<tr class='{cls}'><td>{title}</td><td>{status}</td>"
+        "<td>{dur}ms</td><td>{err}</td></tr>".format(
+            cls=(
+                "pass"
+                if t["status"] == "passed"
+                else ("skip" if t["status"] == "skipped" else "fail")
+            ),
             title=html_mod.escape(str(t.get("title", ""))),
             status=html_mod.escape(str(t.get("status", ""))),
             dur=t.get("duration_ms", 0),
             err=html_mod.escape(str(t.get("error") or "")[:120]),
         )
         for t in result.get("tests", [])
+    )
+
+    stdout_section = (
+        f"<h2>stdout</h2><pre>{html_mod.escape(result.get('stdout','')[:3000])}</pre>"
+        if result.get("stdout")
+        else ""
+    )
+    stderr_section = (
+        f"<h2>stderr</h2><pre>{html_mod.escape(result.get('stderr','')[:2000])}</pre>"
+        if result.get("stderr")
+        else ""
     )
 
     return f"""<!doctype html>
@@ -214,7 +292,8 @@ pre{{background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px;
   <div class="card"><div class="num">{result.get('total',0)}</div><div>TOTAL</div></div>
 </div>
 {error_section}
-<table><thead><tr><th>テスト</th><th>結果</th><th>時間</th><th>エラー</th></tr></thead><tbody>{rows}</tbody></table>
-{"<h2>stdout</h2><pre>" + html_mod.escape(result.get("stdout","")[:3000]) + "</pre>" if result.get("stdout") else ""}
-{"<h2>stderr</h2><pre>" + html_mod.escape(result.get("stderr","")[:2000]) + "</pre>" if result.get("stderr") else ""}
+<table><thead><tr><th>テスト</th><th>結果</th><th>時間</th><th>エラー</th></tr></thead>
+<tbody>{rows}</tbody></table>
+{stdout_section}
+{stderr_section}
 </body></html>"""

@@ -620,3 +620,68 @@
 
 /* ── P1 完了時経過時間 ── */
 .p1-summary-elapsed { font-size:12px; color:var(--text-muted); margin-left:4px; }
+
+/* ── QAツール 2ペインレイアウト ── */
+.app-content.is-qa-tool { overflow: hidden; padding: 0; }
+.app-content.is-qa-tool .app-content-inner { max-width: none; height: 100%; }
+.app-content.is-qa-tool .view.is-active { height: 100%; display: flex; flex-direction: column; }
+.qa-tool-2pane { display: grid; grid-template-columns: 280px 1fr; flex: 1; min-height: 0; overflow: hidden; }
+.qa-tool-sidebar { border-right: 1px solid var(--border); overflow-y: auto; padding: 18px 14px; display: flex; flex-direction: column; gap: 14px; background: var(--surface-soft); }
+.qa-tool-sidebar-title { font-size: 15px; font-weight: 700; }
+.qa-tool-sidebar-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-top: 3px; }
+.qa-tool-main { overflow-y: auto; padding: 20px; min-width: 0; background: var(--bg); }
+.qa-tool-policy { font-size: 11.5px; color: var(--text-muted); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px; line-height: 1.6; }
+
+/* ── コンパクト成果物リスト（サイドバー用）── */
+.qa-output-list { display: grid; gap: 5px; }
+.qa-output-item { display: flex; align-items: center; gap: 6px; padding: 7px 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); }
+.qa-output-item.is-missing { background: var(--surface-soft); opacity: .5; }
+.qa-output-item-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 600; color: var(--text); }
+.qa-output-item-actions { display: flex; gap: 3px; flex-shrink: 0; }
+.qa-output-btn { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; border: 1px solid var(--border-strong); border-radius: 3px; font-size: 11px; font-weight: 600; color: var(--text); background: var(--surface); text-decoration: none; cursor: pointer; transition: background .1s, color .1s; white-space: nowrap; }
+.qa-output-btn:hover { background: var(--info-bg); color: var(--primary-dark); border-color: var(--info-border); }
+
+/* ── ファイルプレビューモーダル ── */
+.file-preview-modal { position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center; animation: fadeIn .15s ease; }
+.file-preview-modal.hidden { display: none; animation: none; }
+.file-preview-overlay { position: absolute; inset: 0; background: rgba(0,0,0,.6); }
+.file-preview-panel { position: relative; z-index: 1; display: flex; flex-direction: column; background: var(--surface); width: calc(100vw - 64px); height: calc(100vh - 64px); max-width: 1400px; border-radius: var(--radius-lg); box-shadow: var(--shadow-pop); overflow: hidden; }
+.file-preview-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; background: var(--surface-soft); }
+.file-preview-title { font-size: 13px; font-weight: 700; color: var(--text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-preview-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.file-preview-body iframe { width: 100%; flex: 1; border: 0; display: block; }
+.file-preview-body pre { flex: 1; padding: 16px; font-size: 12px; font-family: ui-monospace, monospace; white-space: pre-wrap; word-break: break-word; background: var(--surface-soft); margin: 0; overflow: auto; }
+.file-preview-loading { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--text-muted); gap: 10px; }
+
+/* ── QAウィザード 成果物行（wizardステップ7用）── */
+.qa-output-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-soft); }
+.qa-output-row.is-ready { background: var(--surface); }
+.qa-output-row-name { flex: 1; min-width: 0; }
+.qa-output-row-name strong { font-size: 13px; display: block; }
+.qa-output-row-name span { font-size: 11px; color: var(--text-muted); word-break: break-all; }
+.qa-output-row-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* ── AutoRun ステップリスト ── */
+.autorun-step-list { display: flex; flex-direction: column; gap: 6px; }
+.autorun-step-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted); padding: 6px 0; border-bottom: 1px solid var(--border); }
+.autorun-step-item:last-child { border-bottom: none; }
+.autorun-step-item .autorun-step-icon { font-size: 15px; width: 20px; text-align: center; flex-shrink: 0; }
+.autorun-step-item.is-active { color: var(--primary); font-weight: 600; }
+.autorun-step-item.is-active .autorun-step-icon { animation: spin 1.2s linear infinite; }
+.autorun-step-item.is-done { color: var(--ok); }
+.autorun-step-item.is-done .autorun-step-icon { color: var(--ok); }
+.autorun-step-item.is-error { color: var(--critical); }
+@keyframes spin { to { transform: rotate(360deg); } }
+.autorun-result-card { border: 1px solid var(--border); border-radius: 8px; padding: 12px; text-align: center; background: var(--surface); }
+.autorun-result-card .num { font-size: 26px; font-weight: 800; }
+.autorun-result-card .lbl { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+/* ── レスポンシブ（2ペイン）── */
+@media (max-width: 1020px) {
+  .qa-tool-2pane { grid-template-columns: 240px 1fr; }
+}
+@media (max-width: 860px) {
+  .qa-tool-2pane { grid-template-columns: 1fr; overflow-y: auto; }
+  .qa-tool-sidebar { border-right: none; border-bottom: 1px solid var(--border); overflow-y: visible; }
+  .file-preview-panel { width: calc(100vw - 20px); height: calc(100vh - 20px); }
+}

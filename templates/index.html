@@ -40,6 +40,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6l7-3z"/><path d="M9 12l2 2 4-5"/></svg>
         <span class="nav-label">品質観点</span>
       </button>
+      <button class="app-nav-item" data-view="auto-run">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        <span class="nav-label">AutoRun</span>
+      </button>
       <button class="app-nav-item" data-view="user-guide">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5V5a2 2 0 0 1 2-2h6v18H6a2 2 0 0 1-2-1.5z"/><path d="M12 3h6a2 2 0 0 1 2 2v14.5A2 2 0 0 0 18 18h-6"/></svg>
         <span class="nav-label">ユーザーガイド</span>
@@ -392,80 +396,199 @@
 
         <!-- ===== モデル/カバレッジビュー ===== -->
         <section class="view" id="view-qa-models">
-          <div class="input-card qa-tool-panel">
-            <div class="qa-page-title-row">
-              <div class="wizard-page-header">
-                <h2>モデル/カバレッジ</h2>
-                <p>画面遷移グラフ、Trace ID、カバレッジ、質問待ちを確認します。</p>
+          <div class="qa-tool-2pane">
+            <div class="qa-tool-sidebar">
+              <div>
+                <h2 class="qa-tool-sidebar-title">モデル/カバレッジ</h2>
+                <p class="qa-tool-sidebar-desc">画面遷移グラフ、Trace ID、カバレッジ指標、レビューゲートを確認します。</p>
               </div>
-              <button type="button" id="qa-model-generate" class="btn-primary">成果物を生成</button>
+              <div>
+                <label for="qa-model-domain-select" class="form-label" style="font-size:12px;margin-bottom:6px">対象サイト</label>
+                <select id="qa-model-domain-select" class="url-input qa-tool-domain" style="height:36px;width:100%;margin-bottom:8px;font-size:13px">
+                  <option value="">解析済みサイトを選択</option>
+                </select>
+                <div style="display:flex;gap:6px">
+                  <button type="button" id="qa-model-generate" class="btn-primary" style="flex:1;height:36px;font-size:13px">成果物を生成</button>
+                  <button type="button" class="btn-outline-sm qa-tool-reload" title="サイト一覧を再読み込み" style="padding:0 10px">↺</button>
+                </div>
+                <div id="qa-model-status" class="input-field-message" style="margin-top:6px;min-height:16px"></div>
+              </div>
+              <div>
+                <div class="hero-section-title" style="margin:0 0 8px">成果物</div>
+                <div id="qa-model-output-links" class="qa-output-list"></div>
+              </div>
             </div>
-            <label for="qa-model-domain-select" class="form-label">対象サイト</label>
-            <div class="input-row" style="align-items:center">
-              <select id="qa-model-domain-select" class="url-input qa-tool-domain" style="height:40px">
-                <option value="">解析済みサイトを選択</option>
-              </select>
-              <button type="button" class="btn-outline-sm qa-tool-reload">再読み込み</button>
+            <div class="qa-tool-main">
+              <div id="qa-model-content" class="qa-readable">
+                <div class="empty">対象サイトを選択して「成果物を生成」を押してください。</div>
+              </div>
             </div>
-            <div id="qa-model-status" class="input-field-message"></div>
-            <div id="qa-model-content" class="qa-readable"><div class="empty">対象サイトを選択してください。</div></div>
-            <div class="hero-section-title" style="margin-top:18px">成果物</div>
-            <div id="qa-model-output-links" class="export-grid"></div>
           </div>
         </section>
 
         <!-- ===== 自動テスト候補ビュー ===== -->
         <section class="view" id="view-qa-automation">
-          <div class="input-card qa-tool-panel">
-            <div class="qa-page-title-row">
-              <div class="wizard-page-header">
-                <h2>自動テスト候補</h2>
-                <p>Playwright化しやすい候補をTrace ID付きで整理します。実行は行いません。</p>
+          <div class="qa-tool-2pane">
+            <div class="qa-tool-sidebar">
+              <div>
+                <h2 class="qa-tool-sidebar-title">自動テスト候補</h2>
+                <p class="qa-tool-sidebar-desc">Playwright化しやすい候補をTrace ID付きで整理します。実行は行いません。</p>
               </div>
-              <button type="button" id="qa-auto-generate" class="btn-primary">候補を生成</button>
+              <div>
+                <label for="qa-auto-domain-select" class="form-label" style="font-size:12px;margin-bottom:6px">対象サイト</label>
+                <select id="qa-auto-domain-select" class="url-input qa-tool-domain" style="height:36px;width:100%;margin-bottom:8px;font-size:13px">
+                  <option value="">解析済みサイトを選択</option>
+                </select>
+                <div style="display:flex;gap:6px">
+                  <button type="button" id="qa-auto-generate" class="btn-primary" style="flex:1;height:36px;font-size:13px">候補を生成</button>
+                  <button type="button" class="btn-outline-sm qa-tool-reload" title="サイト一覧を再読み込み" style="padding:0 10px">↺</button>
+                </div>
+                <div id="qa-auto-status" class="input-field-message" style="margin-top:6px;min-height:16px"></div>
+              </div>
+              <div>
+                <div class="qa-tool-policy">
+                  候補生成のみ。実行はユーザー承認後の別工程。<br>
+                  ロケータは role / text / label / placeholder / test id 優先。CSS/XPath は最終手段。
+                </div>
+              </div>
+              <div>
+                <div class="hero-section-title" style="margin:0 0 8px">成果物</div>
+                <div id="qa-auto-output-links" class="qa-output-list"></div>
+              </div>
             </div>
-            <label for="qa-auto-domain-select" class="form-label">対象サイト</label>
-            <div class="input-row" style="align-items:center">
-              <select id="qa-auto-domain-select" class="url-input qa-tool-domain" style="height:40px">
-                <option value="">解析済みサイトを選択</option>
-              </select>
-              <button type="button" class="btn-outline-sm qa-tool-reload">再読み込み</button>
+            <div class="qa-tool-main">
+              <div id="qa-auto-content" class="qa-readable">
+                <div class="empty">対象サイトを選択して「候補を生成」を押してください。</div>
+              </div>
             </div>
-            <div id="qa-auto-status" class="input-field-message"></div>
-            <div class="qa-readable-section">
-              <h3>実行ポリシー</h3>
-              <ul class="qa-check-list qa-question-list">
-                <li>この画面は候補生成のみです。ブラウザ操作やテスト実行はユーザー承認後の別工程にします。</li>
-                <li>ロケータは role / text / label / placeholder / test id を優先し、CSS/XPathは最終手段にします。</li>
-              </ul>
-            </div>
-            <div id="qa-auto-content" class="qa-readable"><div class="empty">対象サイトを選択してください。</div></div>
-            <div class="hero-section-title" style="margin-top:18px">成果物</div>
-            <div id="qa-auto-output-links" class="export-grid"></div>
           </div>
         </section>
 
         <!-- ===== 品質観点ビュー ===== -->
         <section class="view" id="view-qa-quality">
-          <div class="input-card qa-tool-panel">
-            <div class="qa-page-title-row">
-              <div class="wizard-page-header">
-                <h2>品質観点</h2>
-                <p>CSV観点、アクセシビリティ、セキュリティ、入力設計、API契約、ビジュアル回帰候補を確認します。</p>
+          <div class="qa-tool-2pane">
+            <div class="qa-tool-sidebar">
+              <div>
+                <h2 class="qa-tool-sidebar-title">品質観点</h2>
+                <p class="qa-tool-sidebar-desc">CSV観点、アクセシビリティ、OWASP、境界値、API契約、ビジュアル回帰候補を確認します。</p>
               </div>
-              <button type="button" id="qa-quality-generate" class="btn-primary">観点を生成</button>
+              <div>
+                <label for="qa-quality-domain-select" class="form-label" style="font-size:12px;margin-bottom:6px">対象サイト</label>
+                <select id="qa-quality-domain-select" class="url-input qa-tool-domain" style="height:36px;width:100%;margin-bottom:8px;font-size:13px">
+                  <option value="">解析済みサイトを選択</option>
+                </select>
+                <div style="display:flex;gap:6px">
+                  <button type="button" id="qa-quality-generate" class="btn-primary" style="flex:1;height:36px;font-size:13px">観点を生成</button>
+                  <button type="button" class="btn-outline-sm qa-tool-reload" title="サイト一覧を再読み込み" style="padding:0 10px">↺</button>
+                </div>
+                <div id="qa-quality-status" class="input-field-message" style="margin-top:6px;min-height:16px"></div>
+              </div>
+              <div>
+                <div class="hero-section-title" style="margin:0 0 8px">成果物</div>
+                <div id="qa-quality-output-links" class="qa-output-list"></div>
+              </div>
             </div>
-            <label for="qa-quality-domain-select" class="form-label">対象サイト</label>
-            <div class="input-row" style="align-items:center">
-              <select id="qa-quality-domain-select" class="url-input qa-tool-domain" style="height:40px">
-                <option value="">解析済みサイトを選択</option>
-              </select>
-              <button type="button" class="btn-outline-sm qa-tool-reload">再読み込み</button>
+            <div class="qa-tool-main">
+              <div id="qa-quality-content" class="qa-readable">
+                <div class="empty">対象サイトを選択して「観点を生成」を押してください。</div>
+              </div>
             </div>
-            <div id="qa-quality-status" class="input-field-message"></div>
-            <div id="qa-quality-content" class="qa-readable"><div class="empty">対象サイトを選択してください。</div></div>
-            <div class="hero-section-title" style="margin-top:18px">成果物</div>
-            <div id="qa-quality-output-links" class="export-grid"></div>
+          </div>
+        </section>
+
+        <!-- ===== AutoRun ビュー ===== -->
+        <section class="view" id="view-auto-run">
+          <div class="qa-tool-2pane">
+            <!-- 左ペイン: 設定・状態 -->
+            <div class="qa-tool-sidebar">
+              <div>
+                <h2 class="qa-tool-sidebar-title">AutoRun</h2>
+                <p class="qa-tool-sidebar-desc">URLを入力するだけで、仕様書生成 → QA設計 → Playwright実行 → レポートまでを自動化します。</p>
+              </div>
+              <div id="autorun-form-area">
+                <label class="form-label" style="font-size:12px;margin-bottom:6px">対象URL</label>
+                <input type="url" id="autorun-url" class="url-input" style="height:36px;width:100%;margin-bottom:8px;font-size:13px" placeholder="https://example.com" />
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
+                  <div>
+                    <label class="form-label" style="font-size:11px">深さ</label>
+                    <input type="number" id="autorun-depth" class="url-input" style="height:32px;width:100%;font-size:13px" value="2" min="1" max="5" />
+                  </div>
+                  <div>
+                    <label class="form-label" style="font-size:11px">最大ページ</label>
+                    <input type="number" id="autorun-max-pages" class="url-input" style="height:32px;width:100%;font-size:13px" value="30" min="1" max="300" />
+                  </div>
+                </div>
+                <button type="button" id="autorun-start-btn" class="btn-primary" style="width:100%;height:40px;font-size:14px">開始</button>
+                <div id="autorun-start-status" class="input-field-message" style="margin-top:6px;min-height:16px"></div>
+              </div>
+
+              <!-- フロー進捗 -->
+              <div id="autorun-steps" style="margin-top:18px;display:none">
+                <div class="hero-section-title" style="margin-bottom:10px">進捗</div>
+                <div class="autorun-step-list">
+                  <div class="autorun-step-item" id="ars-crawl">
+                    <span class="autorun-step-icon">○</span>
+                    <span>仕様書生成</span>
+                  </div>
+                  <div class="autorun-step-item" id="ars-qa">
+                    <span class="autorun-step-icon">○</span>
+                    <span>QA成果物</span>
+                  </div>
+                  <div class="autorun-step-item" id="ars-scripts">
+                    <span class="autorun-step-icon">○</span>
+                    <span>スクリプト生成</span>
+                  </div>
+                  <div class="autorun-step-item" id="ars-approval">
+                    <span class="autorun-step-icon">○</span>
+                    <span>承認待ち</span>
+                  </div>
+                  <div class="autorun-step-item" id="ars-running">
+                    <span class="autorun-step-icon">○</span>
+                    <span>テスト実行</span>
+                  </div>
+                  <div class="autorun-step-item" id="ars-done">
+                    <span class="autorun-step-icon">○</span>
+                    <span>完了</span>
+                  </div>
+                </div>
+
+                <!-- 承認ボタン -->
+                <div id="autorun-approve-area" style="display:none;margin-top:14px">
+                  <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Playwright スクリプトが生成されました。実行してよいですか？</p>
+                  <button type="button" id="autorun-approve-btn" class="btn-primary" style="width:100%;height:40px;font-size:14px">テスト実行を承認</button>
+                </div>
+
+                <!-- 再実行 -->
+                <div id="autorun-restart-area" style="display:none;margin-top:14px">
+                  <button type="button" id="autorun-restart-btn" class="btn-outline-sm" style="width:100%">新しく実行</button>
+                </div>
+              </div>
+
+              <!-- 成果物リンク -->
+              <div id="autorun-outputs-area" style="margin-top:18px;display:none">
+                <div class="hero-section-title" style="margin-bottom:8px">成果物</div>
+                <div id="autorun-output-links" class="qa-output-list"></div>
+              </div>
+            </div>
+
+            <!-- 右ペイン: ログ・結果 -->
+            <div class="qa-tool-main">
+              <div id="autorun-main-content" class="qa-readable">
+                <div id="autorun-idle-msg" class="empty">URLを入力して「開始」を押すと、仕様書生成からテスト実行まで全自動で処理します。</div>
+                <!-- ログパネル -->
+                <div id="autorun-log-panel" style="display:none">
+                  <div class="hero-section-title" style="margin-bottom:6px">実行ログ</div>
+                  <pre id="autorun-log" style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:11px;max-height:360px;overflow-y:auto;white-space:pre-wrap"></pre>
+                </div>
+                <!-- テスト結果サマリー -->
+                <div id="autorun-result-panel" style="display:none;margin-top:18px">
+                  <div class="hero-section-title" style="margin-bottom:12px">テスト結果</div>
+                  <div id="autorun-result-cards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px"></div>
+                  <div id="autorun-result-table-wrap"></div>
+                  <div id="autorun-report-links" style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"></div>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -653,6 +776,23 @@
   <div id="lightbox" class="lightbox" style="display:none" role="dialog" aria-modal="true">
     <button class="lightbox-close" id="lightbox-close" aria-label="閉じる">✕</button>
     <img id="lightbox-img" src="" alt="拡大表示" />
+  </div>
+
+  <!-- ===== ファイルプレビューモーダル ===== -->
+  <div id="file-preview-modal" class="file-preview-modal hidden" role="dialog" aria-modal="true" aria-label="ファイルプレビュー">
+    <div class="file-preview-overlay" id="file-preview-overlay"></div>
+    <div class="file-preview-panel">
+      <div class="file-preview-header">
+        <span id="file-preview-title" class="file-preview-title">プレビュー</span>
+        <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
+          <a id="file-preview-newtab" href="#" target="_blank" rel="noopener" class="btn-outline-sm" style="font-size:12px;height:30px">↗ 新規タブ</a>
+          <button type="button" id="file-preview-close" class="btn-outline-sm" style="font-size:12px;height:30px">✕ 閉じる</button>
+        </div>
+      </div>
+      <div class="file-preview-body" id="file-preview-body">
+        <div class="file-preview-loading"><span class="spinner"></span><span>読み込み中…</span></div>
+      </div>
+    </div>
   </div>
   <script src="{{ url_for('static', filename='app.js') }}"></script>
   <script src="{{ url_for('static', filename='app-view.js') }}"></script>

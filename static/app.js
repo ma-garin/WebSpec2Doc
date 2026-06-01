@@ -7,6 +7,7 @@ const VIEW_HEADER = {
   'qa-models': { trail: ['ダッシュボード', 'モデル/カバレッジ'], title: 'モデル/カバレッジ' },
   'qa-automation': { trail: ['ダッシュボード', '自動テスト候補'], title: '自動テスト候補' },
   'qa-quality': { trail: ['ダッシュボード', '品質観点'], title: '品質観点' },
+  'auto-run': { trail: ['ダッシュボード', 'AutoRun'], title: 'AutoRun — 全自動テスト実行' },
   'user-guide': { trail: ['ダッシュボード', 'ユーザーガイド'], title: 'ユーザーガイド' },
   settings: { trail: ['ダッシュボード', '設定'], title: '設定' },
 };
@@ -34,6 +35,9 @@ function switchView(name) {
   if (name === 'dashboard') loadHistory();
   if (name === 'qa-process') loadQaProcessSites();
   if (['qa-models', 'qa-automation', 'qa-quality'].includes(name)) loadQaToolSites(name);
+  // A: 2ペインツール画面では全高モードに切り替え
+  const appContentEl = document.getElementById('app-content');
+  if (appContentEl) appContentEl.classList.toggle('is-qa-tool', ['qa-models', 'qa-automation', 'qa-quality', 'auto-run'].includes(name));
 }
 // ---- ウィザード ステップ管理 ----
 function showWizardStep(n) {
@@ -165,6 +169,7 @@ let qaOutputs = {};
 let qaAiArtifact = null;
 let qaAiStatus = {};
 let qaViewpoints = [];
+const qaGeneratedSteps = new Set(); // D: 生成済みステップ追跡
 
 async function loadQaProcessSites(force) {
   const select = document.getElementById('qa-domain-select');
@@ -194,6 +199,7 @@ async function loadQaProcessInput(domain) {
   qaAiArtifact = null;
   qaAiStatus = {};
   qaViewpoints = [];
+  qaGeneratedSteps.clear(); // D: リセット
   renderQaOutputLinks({});
   renderQaReadablePages(null);
   if (!domain) {
@@ -212,6 +218,8 @@ async function loadQaProcessInput(domain) {
     qaAiArtifact = data.ai_artifact || null;
     qaAiStatus = data.ai || {};
     qaViewpoints = data.viewpoints || [];
+    // D: 既存成果物からステップを事前反映
+    Object.entries(qaOutputs).forEach(([key, path]) => { if (path) qaGeneratedSteps.add(key); });
     renderQaInputSummary(data);
     renderQaReadablePages(data);
     renderQaOutputLinks(qaOutputs);
@@ -255,14 +263,32 @@ function renderQaInputSummary(data) {
 }
 
 function renderQaOutputLinks(outputs) {
-  const rows = Object.entries(QA_STEP_LABELS).map(([key, label]) => {
+  // ウィザードステップ7の成果物リスト（B: プレビューボタン、D: 常時表示）
+  const basicSteps = [
+    ['test_plan', 'テスト計画'], ['test_analysis', 'テスト分析'], ['test_design', 'テスト設計'],
+    ['test_cases', 'テストケース'], ['cross_review', '横断レビュー'], ['qa_process_report', 'QAプロセスレポート'],
+  ];
+  const advancedSteps = [
+    ['screen_transition_graph', '遷移グラフJSON'], ['model_graph', 'モデルグラフHTML'],
+    ['coverage_metrics', 'カバレッジJSON'], ['playwright_candidates', 'Playwright候補JSON'],
+    ['playwright_candidates_html', 'Playwright候補HTML'], ['quality_viewpoints', '品質観点JSON'],
+    ['quality_viewpoints_html', '品質観点HTML'],
+  ];
+  const makeRow = ([key, label]) => {
     const path = outputs[key];
-    if (!path) return `<div class="export-row export-missing"><div class="export-main"><strong>${escHtml(label)}</strong><span class="export-desc">未生成</span></div></div>`;
-    return `<div class="export-row"><div class="export-main"><strong>${escHtml(label)}</strong><span class="export-desc">${escHtml(path)}</span></div>` +
-      `<a class="btn-outline-sm" href="/preview?path=${encodeURIComponent(path)}" target="_blank">開く</a>` +
-      `<a class="btn-outline-sm" href="/download?path=${encodeURIComponent(path)}" download>DL</a></div>`;
-  }).join('');
-  document.getElementById('qa-output-links').innerHTML = rows;
+    if (!path) return `<div class="qa-output-row"><div class="qa-output-row-name"><strong>${escHtml(label)}</strong><span>未生成</span></div></div>`;
+    const shortPath = path.split('/').slice(-2).join('/');
+    return `<div class="qa-output-row is-ready">` +
+      `<div class="qa-output-row-name"><strong>${escHtml(label)}</strong><span>${escHtml(shortPath)}</span></div>` +
+      `<div class="qa-output-row-actions">` +
+      `<button class="btn-outline-sm qa-preview-btn" data-path="${escHtml(path)}" data-label="${escHtml(label)}" style="font-size:12px;height:28px;padding:0 10px">プレビュー</button>` +
+      `<a class="btn-outline-sm" href="/download?path=${encodeURIComponent(path)}" download style="font-size:12px;height:28px;padding:0 10px">DL</a>` +
+      `</div></div>`;
+  };
+  const el = document.getElementById('qa-output-links');
+  if (!el) return;
+  el.innerHTML = basicSteps.map(makeRow).join('') +
+    (Object.values(outputs).some(Boolean) ? '<div class="hero-section-title" style="margin:14px 0 8px">高度QA成果物</div>' + advancedSteps.map(makeRow).join('') : '');
 }
 
 async function generateQaProcess(step) {
@@ -280,6 +306,8 @@ async function generateQaProcess(step) {
     qaOutputs = data.outputs || {};
     qaAiArtifact = data.ai_artifact || null;
     qaAiStatus = data.ai || {};
+    // D: 全ステップを生成済みとしてマーク（APIは常に全成果物を生成する）
+    ['test_plan', 'test_analysis', 'test_design', 'test_cases', 'cross_review', 'qa_process_report'].forEach(s => qaGeneratedSteps.add(s));
     renderQaOutputLinks(qaOutputs);
     renderQaReadablePages(qaInputData);
     if (qaAiStatus.used) {
@@ -288,6 +316,16 @@ async function generateQaProcess(step) {
       setQaStatus(`QAプロセス成果物を生成しました。OpenAI補完は使えずローカル生成に切り替えました。${qaAiStatus.error || ''}`, true);
     } else {
       setQaStatus('QAプロセス成果物を生成しました。外部LLM APIは呼び出していません。');
+    }
+    // C: 全成果物生成後はレポートステップへ自動遷移
+    if (step === 'qa_process_report') {
+      qaCurrentPage = QA_PAGES.length - 1;
+    }
+    updateQaWizard();
+    // C: ウィザードカードの先頭へスクロールして成果物リンクを見せる
+    if (step === 'qa_process_report') {
+      const wizardEl = document.querySelector('#view-qa-process .input-card');
+      if (wizardEl) wizardEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   } catch (e) {
     setQaStatus(e.message, true);
@@ -301,14 +339,19 @@ function setQaStatus(message, isError) {
   el.classList.toggle('input-field-message-error', !!isError);
 }
 
+// D/C: ページ番号→ステップキーのマッピング
+const QA_PAGE_STEP_KEY = [null, null, 'test_plan', 'test_analysis', 'test_design', 'test_cases', 'qa_process_report'];
+
 function updateQaWizard() {
   document.querySelectorAll('[data-qa-page-panel]').forEach(panel => {
     panel.classList.toggle('is-active', Number(panel.dataset.qaPagePanel) === qaCurrentPage);
   });
   document.querySelectorAll('.qa-step-dot').forEach(dot => {
     const page = Number(dot.dataset.qaPage);
+    const stepKey = QA_PAGE_STEP_KEY[page];
+    const isDone = page < qaCurrentPage || (stepKey && qaGeneratedSteps.has(stepKey));
     dot.classList.toggle('is-active', page === qaCurrentPage);
-    dot.classList.toggle('is-done', page < qaCurrentPage);
+    dot.classList.toggle('is-done', !!isDone);
   });
   const prev = document.getElementById('qa-prev');
   const next = document.getElementById('qa-next');
@@ -615,6 +658,9 @@ async function generateQaAdvanced(viewName) {
     cfg.render(data.advanced || {});
     renderQaToolOutputLinks(cfg.outputs, data.outputs || {}, viewName);
     setQaToolStatus(viewName, '成果物を生成しました。外部LLM/APIは呼び出していません。');
+    // C: 生成後はコンテンツエリア先頭へスクロール
+    const contentEl = document.getElementById(cfg.content);
+    if (contentEl) setTimeout(() => contentEl.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
   } catch (e) {
     setQaToolStatus(viewName, e.message, true);
   }
@@ -630,18 +676,29 @@ function setQaToolStatus(viewName, message, isError) {
 }
 
 function renderQaToolOutputLinks(containerId, outputs, viewName) {
+  // B: サイドバー用コンパクト成果物リスト（プレビューボタン、別ウィンドウ廃止）
   const keys = viewName === 'qa-models'
     ? ['screen_transition_graph', 'model_graph', 'coverage_metrics']
     : viewName === 'qa-automation'
       ? ['playwright_candidates', 'playwright_candidates_html']
       : ['quality_viewpoints', 'quality_viewpoints_html'];
-  document.getElementById(containerId).innerHTML = keys.map(key => {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = keys.map(key => {
     const path = outputs[key];
     const label = QA_STEP_LABELS[key] || key;
-    if (!path) return `<div class="export-row export-missing"><div class="export-main"><strong>${escHtml(label)}</strong><span class="export-desc">未生成</span></div></div>`;
-    return `<div class="export-row"><div class="export-main"><strong>${escHtml(label)}</strong><span class="export-desc">${escHtml(path)}</span></div>` +
-      `<a class="btn-outline-sm" href="/preview?path=${encodeURIComponent(path)}" target="_blank">開く</a>` +
-      `<a class="btn-outline-sm" href="/download?path=${encodeURIComponent(path)}" download>DL</a></div>`;
+    if (!path) {
+      return `<div class="qa-output-item is-missing">` +
+        `<span class="qa-output-item-name" title="${escHtml(label)}">${escHtml(label)}</span>` +
+        `<span style="font-size:11px;color:var(--text-muted)">未生成</span>` +
+        `</div>`;
+    }
+    return `<div class="qa-output-item">` +
+      `<span class="qa-output-item-name" title="${escHtml(label)}">${escHtml(label)}</span>` +
+      `<div class="qa-output-item-actions">` +
+      `<button class="qa-output-btn qa-preview-btn" data-path="${escHtml(path)}" data-label="${escHtml(label)}">プレビュー</button>` +
+      `<a class="qa-output-btn" href="/download?path=${encodeURIComponent(path)}" download>DL</a>` +
+      `</div></div>`;
   }).join('');
 }
 
@@ -721,6 +778,64 @@ document.querySelectorAll('.qa-tool-reload').forEach(btn => {
 document.getElementById('qa-model-generate').addEventListener('click', () => generateQaAdvanced('qa-models'));
 document.getElementById('qa-auto-generate').addEventListener('click', () => generateQaAdvanced('qa-automation'));
 document.getElementById('qa-quality-generate').addEventListener('click', () => generateQaAdvanced('qa-quality'));
+
+// ====================== B: ファイルプレビューモーダル ======================
+function openFilePreview(path, label) {
+  const modal = document.getElementById('file-preview-modal');
+  const body = document.getElementById('file-preview-body');
+  const titleEl = document.getElementById('file-preview-title');
+  const newtab = document.getElementById('file-preview-newtab');
+  if (!modal || !body) return;
+  titleEl.textContent = label || 'プレビュー';
+  const previewUrl = '/preview?path=' + encodeURIComponent(path);
+  newtab.href = previewUrl;
+  // ローディング表示
+  body.innerHTML = '<div class="file-preview-loading"><span class="spinner"></span><span>読み込み中…</span></div>';
+  modal.classList.remove('hidden');
+  const ext = path.split('.').pop().toLowerCase();
+  if (ext === 'html' || ext === 'htm') {
+    // HTMLはiframeでサンドボックス表示
+    body.innerHTML = `<iframe src="${escHtml(previewUrl)}" title="${escHtml(label || 'プレビュー')}" sandbox="allow-scripts allow-same-origin"></iframe>`;
+  } else {
+    // JSON / MD / テキストはコードブロックで表示
+    fetch(previewUrl)
+      .then(r => { if (!r.ok) throw new Error('読み込み失敗'); return r.text(); })
+      .then(text => {
+        const pre = document.createElement('pre');
+        pre.textContent = text; // textContent でXSSを完全回避
+        body.innerHTML = '';
+        body.appendChild(pre);
+      })
+      .catch(() => {
+        const pre = document.createElement('pre');
+        pre.textContent = 'ファイルの読み込みに失敗しました。';
+        body.innerHTML = '';
+        body.appendChild(pre);
+      });
+  }
+}
+
+function closeFilePreview() {
+  const modal = document.getElementById('file-preview-modal');
+  const body = document.getElementById('file-preview-body');
+  if (!modal) return;
+  modal.classList.add('hidden');
+  if (body) body.innerHTML = '';
+}
+
+document.getElementById('file-preview-close').addEventListener('click', closeFilePreview);
+document.getElementById('file-preview-overlay').addEventListener('click', closeFilePreview);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !document.getElementById('file-preview-modal')?.classList.contains('hidden')) {
+    closeFilePreview();
+  }
+});
+
+// B: プレビューボタンのイベント委譲（動的生成ボタン対応）
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.qa-preview-btn');
+  if (btn && btn.dataset.path) openFilePreview(btn.dataset.path, btn.dataset.label || 'プレビュー');
+});
 
 // ---- 再クロール（ドリフト検知）: 既知のサイトを同じ画面構成で取り直す ----
 
@@ -1403,3 +1518,251 @@ document.getElementById('popup-view-report-btn').addEventListener('click', () =>
 document.getElementById('completion-overlay').addEventListener('click', (e) => {
   if (e.target === e.currentTarget) document.getElementById('completion-overlay').classList.add('hidden');
 });
+
+// ====================== AutoRun ======================
+let _autoRunJobId = null;
+let _autoRunTimer = null;
+
+const AUTORUN_STEP_MAP = {
+  idle:              null,
+  crawling:          'ars-crawl',
+  generating_qa:     'ars-qa',
+  generating_scripts:'ars-scripts',
+  awaiting_approval: 'ars-approval',
+  running_tests:     'ars-running',
+  complete:          'ars-done',
+  failed:            null,
+};
+
+const AUTORUN_OUTPUT_LABELS = {
+  report_json:             '仕様書 JSON',
+  report_html:             '仕様書 HTML',
+  test_plan:               'テスト計画',
+  test_analysis:           'テスト分析',
+  test_design:             'テスト設計',
+  test_cases:              'テストケース',
+  cross_review:            '横断レビュー',
+  qa_process_report:       'QAプロセスレポート',
+  model_graph:             'モデルグラフ',
+  playwright_candidates_html: 'Playwright候補',
+  spec_ts:                 'autorun.spec.ts',
+  playwright_report_html:  'テスト実行レポート',
+  playwright_report_json:  '実行結果 JSON',
+};
+
+function autorunSetStartStatus(msg, isError) {
+  const el = document.getElementById('autorun-start-status');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.toggle('input-field-message-error', !!isError);
+}
+
+async function autorunStart() {
+  const url = (document.getElementById('autorun-url')?.value || '').trim();
+  if (!url) { autorunSetStartStatus('URLを入力してください。', true); return; }
+
+  const depth = document.getElementById('autorun-depth')?.value || '2';
+  const maxPages = document.getElementById('autorun-max-pages')?.value || '30';
+
+  const btn = document.getElementById('autorun-start-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '開始中…'; }
+  autorunSetStartStatus('', false);
+
+  try {
+    const res = await fetch('/api/autorun/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, depth: parseInt(depth), max_pages: parseInt(maxPages) }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || '開始に失敗しました');
+    _autoRunJobId = data.job_id;
+    autorunShowRunning();
+    autorunStartPolling();
+  } catch (e) {
+    autorunSetStartStatus(String(e), true);
+    if (btn) { btn.disabled = false; btn.textContent = '開始'; }
+  }
+}
+
+function autorunShowRunning() {
+  document.getElementById('autorun-steps')?.style && (document.getElementById('autorun-steps').style.display = '');
+  document.getElementById('autorun-start-btn').disabled = true;
+  document.getElementById('autorun-log-panel').style.display = '';
+  document.getElementById('autorun-idle-msg').style.display = 'none';
+  document.getElementById('autorun-result-panel').style.display = 'none';
+}
+
+function autorunStartPolling() {
+  if (_autoRunTimer) clearInterval(_autoRunTimer);
+  _autoRunTimer = setInterval(autorunPoll, 2000);
+}
+
+function autorunStopPolling() {
+  if (_autoRunTimer) { clearInterval(_autoRunTimer); _autoRunTimer = null; }
+}
+
+async function autorunPoll() {
+  if (!_autoRunJobId) return;
+  try {
+    const data = await fetch('/api/autorun/status?job_id=' + encodeURIComponent(_autoRunJobId)).then(r => r.json());
+    autorunRender(data);
+  } catch (e) {}
+}
+
+function autorunRender(data) {
+  if (!data) return;
+  const status = data.status || 'idle';
+
+  // ステップ更新
+  const activeStepId = AUTORUN_STEP_MAP[status];
+  const stepOrder = ['ars-crawl','ars-qa','ars-scripts','ars-approval','ars-running','ars-done'];
+  const activeIdx = stepOrder.indexOf(activeStepId);
+  stepOrder.forEach((sid, idx) => {
+    const el = document.getElementById(sid);
+    if (!el) return;
+    el.className = 'autorun-step-item';
+    if (sid === activeStepId) {
+      el.classList.add(status === 'failed' ? 'is-error' : 'is-active');
+      el.querySelector('.autorun-step-icon').textContent = status === 'failed' ? '✕' : '↻';
+    } else if (idx < activeIdx) {
+      el.classList.add('is-done');
+      el.querySelector('.autorun-step-icon').textContent = '✓';
+    } else {
+      el.querySelector('.autorun-step-icon').textContent = '○';
+    }
+  });
+  if (status === 'complete') {
+    const doneEl = document.getElementById('ars-done');
+    if (doneEl) {
+      doneEl.classList.add('is-done');
+      doneEl.querySelector('.autorun-step-icon').textContent = '✓';
+    }
+  }
+
+  // ログ
+  const logEl = document.getElementById('autorun-log');
+  if (logEl && data.log) {
+    logEl.textContent = data.log.join('\n');
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  // 承認ボタン
+  const approveArea = document.getElementById('autorun-approve-area');
+  if (approveArea) approveArea.style.display = (status === 'awaiting_approval') ? '' : 'none';
+
+  // 再実行ボタン
+  const restartArea = document.getElementById('autorun-restart-area');
+  if (restartArea) restartArea.style.display = (['complete','failed'].includes(status)) ? '' : 'none';
+
+  // 開始ボタン再活性
+  if (['complete','failed'].includes(status)) {
+    const btn = document.getElementById('autorun-start-btn');
+    if (btn) { btn.disabled = false; btn.textContent = '開始'; }
+    autorunStopPolling();
+  }
+
+  // 成果物リンク
+  if (data.outputs && Object.keys(data.outputs).length) {
+    const linksEl = document.getElementById('autorun-output-links');
+    const area = document.getElementById('autorun-outputs-area');
+    if (linksEl && area) {
+      area.style.display = '';
+      linksEl.innerHTML = Object.entries(data.outputs)
+        .filter(([, p]) => p)
+        .map(([key, path]) => {
+          const label = AUTORUN_OUTPUT_LABELS[key] || key;
+          return `<div class="qa-output-item">
+            <span class="qa-output-item-label">${escHtml(label)}</span>
+            <div class="qa-output-item-actions">
+              <button class="btn-outline-sm qa-preview-btn" data-path="${escHtml(path)}" data-label="${escHtml(label)}" style="font-size:11px;height:26px;padding:0 8px">プレビュー</button>
+            </div>
+          </div>`;
+        }).join('');
+    }
+  }
+
+  // テスト結果
+  if (data.test_results && data.test_results.total >= 0) {
+    autorunRenderResults(data.test_results, data.outputs || {});
+  }
+}
+
+function autorunRenderResults(results, outputs) {
+  const panel = document.getElementById('autorun-result-panel');
+  const cards = document.getElementById('autorun-result-cards');
+  const tableWrap = document.getElementById('autorun-result-table-wrap');
+  const reportLinks = document.getElementById('autorun-report-links');
+  if (!panel) return;
+  panel.style.display = '';
+
+  const passColor = '#16a34a', failColor = '#dc2626', skipColor = '#9ca3af', totColor = '#111827';
+  cards.innerHTML = [
+    { label: 'PASS', val: results.passed, color: passColor },
+    { label: 'FAIL', val: results.failed, color: failColor },
+    { label: 'SKIP', val: results.skipped, color: skipColor },
+    { label: 'TOTAL', val: results.total, color: totColor },
+  ].map(c => `<div class="autorun-result-card"><div class="num" style="color:${c.color}">${c.val}</div><div class="lbl">${c.label}</div></div>`).join('');
+
+  const tests = results.tests || [];
+  if (tests.length) {
+    const rows = tests.map(t => {
+      const cls = t.status === 'passed' ? 'color:#16a34a' : t.status === 'skipped' ? 'color:#9ca3af' : 'color:#dc2626';
+      return `<tr>
+        <td style="font-size:12px;word-break:break-all">${escHtml(t.title || '')}</td>
+        <td style="font-size:12px;font-weight:600;${cls}">${escHtml(t.status || '')}</td>
+        <td style="font-size:12px">${t.duration_ms || 0}ms</td>
+        <td style="font-size:11px;color:var(--critical)">${escHtml((t.error || '').substring(0, 100))}</td>
+      </tr>`;
+    }).join('');
+    tableWrap.innerHTML = `<table class="data" style="font-size:12px">
+      <thead><tr><th>テスト</th><th>結果</th><th>時間</th><th>エラー</th></tr></thead>
+      <tbody>${rows}</tbody></table>`;
+  } else if (results.error) {
+    tableWrap.innerHTML = `<div class="input-field-message input-field-message-error">${escHtml(results.error)}</div>`;
+  }
+
+  reportLinks.innerHTML = '';
+  if (outputs.playwright_report_html) {
+    reportLinks.innerHTML += `<button class="btn-primary qa-preview-btn" data-path="${escHtml(outputs.playwright_report_html)}" data-label="テスト実行レポート" style="height:36px;padding:0 18px;font-size:13px">実行レポートを見る</button>`;
+  }
+  if (outputs.qa_process_report) {
+    reportLinks.innerHTML += `<button class="btn-outline-sm qa-preview-btn" data-path="${escHtml(outputs.qa_process_report)}" data-label="QAプロセスレポート" style="height:36px;padding:0 18px;font-size:13px">QAレポートを見る</button>`;
+  }
+}
+
+async function autorunApprove() {
+  if (!_autoRunJobId) return;
+  const btn = document.getElementById('autorun-approve-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '承認中…'; }
+  try {
+    const res = await fetch('/api/autorun/approve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ job_id: _autoRunJobId }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || '承認に失敗しました');
+    autorunStartPolling();
+  } catch (e) {
+    autorunSetStartStatus(String(e), true);
+    if (btn) { btn.disabled = false; btn.textContent = 'テスト実行を承認'; }
+  }
+}
+
+function autorunReset() {
+  _autoRunJobId = null;
+  autorunStopPolling();
+  document.getElementById('autorun-steps').style.display = 'none';
+  document.getElementById('autorun-outputs-area').style.display = 'none';
+  document.getElementById('autorun-log-panel').style.display = 'none';
+  document.getElementById('autorun-result-panel').style.display = 'none';
+  document.getElementById('autorun-idle-msg').style.display = '';
+  document.getElementById('autorun-start-btn').disabled = false;
+  document.getElementById('autorun-url').value = '';
+  autorunSetStartStatus('', false);
+}
+
+document.getElementById('autorun-start-btn')?.addEventListener('click', autorunStart);
+document.getElementById('autorun-approve-btn')?.addEventListener('click', autorunApprove);
+document.getElementById('autorun-restart-btn')?.addEventListener('click', autorunReset);

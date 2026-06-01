@@ -1524,6 +1524,8 @@ let _autoRunJobId = null;
 let _autoRunPollTimer = null;
 let _autoRunElapsedTimer = null;
 let _autoRunStartedAt = null;  // ISO string from server
+let _autoRunPreviewLoaded = false;
+let _autoRunPreviewData = null;
 
 const AUTORUN_STEP_MAP = {
   idle:              null,
@@ -1606,6 +1608,7 @@ function _autorunShowRunning() {
   document.getElementById('autorun-log-panel').style.display = '';
   document.getElementById('autorun-idle-msg').style.display = 'none';
   document.getElementById('autorun-result-panel').style.display = 'none';
+  document.getElementById('autorun-preview-panel').style.display = 'none';
   document.getElementById('autorun-cancel-area').style.display = '';
 }
 
@@ -1694,6 +1697,17 @@ function _autorunRender(data) {
     _autorunHideLoginModal();
   }
 
+  // ---- プレビューパネル (awaiting_approval 時に表示) ----
+  const previewPanel = document.getElementById('autorun-preview-panel');
+  if (previewPanel) {
+    const showPreview = status === 'awaiting_approval';
+    previewPanel.style.display = showPreview ? '' : 'none';
+    if (showPreview && !_autoRunPreviewLoaded) {
+      _autoRunPreviewLoaded = true;
+      _autorunLoadPreview();
+    }
+  }
+
   // ---- 承認ボタン ----
   const approveArea = document.getElementById('autorun-approve-area');
   if (approveArea) approveArea.style.display = (status === 'awaiting_approval') ? '' : 'none';
@@ -1745,6 +1759,81 @@ function _autorunRender(data) {
   }
 }
 
+// ---- AutoRun: テストプレビュー ----
+async function _autorunLoadPreview() {
+  if (!_autoRunJobId) return;
+  const loadingEl = document.getElementById('autorun-preview-loading');
+  if (loadingEl) loadingEl.textContent = '読み込み中…';
+  try {
+    const data = await fetch('/api/autorun/preview?job_id=' + encodeURIComponent(_autoRunJobId)).then(r => r.json());
+    _autoRunPreviewData = data;
+    _autorunRenderPreview(data);
+    _autorunUpdateFilterCounts(data.summary?.filter_counts || {});
+    if (loadingEl) loadingEl.textContent = '';
+  } catch (e) {
+    if (loadingEl) loadingEl.textContent = '(読み込みエラー)';
+  }
+}
+
+function _autorunRenderPreview(data) {
+  const summaryEl = document.getElementById('autorun-preview-summary');
+  const tableWrap = document.getElementById('autorun-preview-table-wrap');
+  const specEl    = document.getElementById('autorun-preview-spec');
+
+  const summary    = data.summary || {};
+  const candidates = data.candidates || [];
+  const byStatus   = summary.by_status || {};
+  const byTitle    = summary.by_title || {};
+
+  // サマリーバー
+  if (summaryEl) {
+    const autoCount  = byStatus.auto || 0;
+    const skipCount  = (byStatus['manual-review'] || 0) + (byStatus.review || 0);
+    const titleBadges = Object.entries(byTitle)
+      .map(([t, c]) => `<span class="fmt-badge">${escHtml(t)}: ${c}</span>`)
+      .join('');
+    summaryEl.innerHTML = `
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px;font-size:12px">
+        <span><strong>${summary.total || 0}</strong> 件</span>
+        <span style="color:#16a34a">自動: ${autoCount}</span>
+        <span style="color:#9ca3af">スキップ: ${skipCount}</span>
+      </div>
+      <div class="fmt-badges" style="margin-bottom:10px">${titleBadges}</div>`;
+  }
+
+  // テストケーステーブル
+  if (tableWrap) {
+    if (candidates.length) {
+      const rows = candidates.map(c => {
+        const sClr = c.automation_status === 'auto' ? '#16a34a' : '#9ca3af';
+        return `<tr>
+          <td style="white-space:nowrap;font-size:11px">${escHtml(c.id || '')}</td>
+          <td style="font-size:12px">${escHtml(c.title || '')}</td>
+          <td style="font-size:11px;font-weight:600;color:${sClr}">${escHtml(c.automation_status || '')}</td>
+          <td style="font-size:11px;white-space:nowrap">${escHtml(c.trace_id || '')}</td>
+          <td style="font-size:11px;max-width:200px;word-break:break-word;color:var(--text-muted)">${escHtml((c.expected || '').substring(0, 60))}</td>
+        </tr>`;
+      }).join('');
+      tableWrap.innerHTML = `<table class="data" style="font-size:12px;width:100%">
+        <thead><tr><th>ID</th><th>タイトル</th><th>自動化</th><th>Trace</th><th>期待結果</th></tr></thead>
+        <tbody>${rows}</tbody></table>`;
+    } else {
+      tableWrap.innerHTML = '<div class="empty" style="padding:16px">テストケースなし</div>';
+    }
+  }
+
+  // スクリプト
+  if (specEl) specEl.textContent = data.spec_content || '(スクリプトなし)';
+}
+
+function _autorunUpdateFilterCounts(counts) {
+  const map = { all: '#afc-all', smoke: '#afc-smoke', transition: '#afc-transition', form: '#afc-form' };
+  Object.entries(map).forEach(([key, sel]) => {
+    const el = document.querySelector(sel);
+    if (el && counts[key] !== undefined) el.textContent = `(${counts[key]}件)`;
+  });
+}
+
 // ---- AutoRun: テスト結果 ----
 function _autorunRenderResults(results, outputs) {
   const panel      = document.getElementById('autorun-result-panel');
@@ -1793,11 +1882,15 @@ async function autorunApprove() {
   if (!_autoRunJobId) return;
   const btn = document.getElementById('autorun-approve-btn');
   if (btn) { btn.disabled = true; btn.textContent = '承認中…'; }
+
+  const filterMode = document.querySelector('input[name="autorun-filter"]:checked')?.value || 'all';
+  const timeoutSec = parseInt(document.getElementById('autorun-timeout')?.value || '60', 10);
+
   try {
     const res = await fetch('/api/autorun/approve', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ job_id: _autoRunJobId }),
+      body: JSON.stringify({ job_id: _autoRunJobId, filter_mode: filterMode, timeout_sec: timeoutSec }),
     });
     const data = await res.json();
     if (!res.ok || !data.ok) throw new Error(data.error || '承認に失敗しました');
@@ -1895,22 +1988,28 @@ async function _autorunSubmitLogin(skip) {
 
 // ---- AutoRun: リセット ----
 function autorunReset() {
-  _autoRunJobId     = null;
-  _autoRunStartedAt = null;
+  _autoRunJobId          = null;
+  _autoRunStartedAt      = null;
+  _autoRunPreviewLoaded  = false;
+  _autoRunPreviewData    = null;
   _autorunStopPolling();
   _autorunStopElapsed();
   _autorunHideLoginModal();
-  document.getElementById('autorun-steps').style.display         = 'none';
-  document.getElementById('autorun-outputs-area').style.display  = 'none';
-  document.getElementById('autorun-log-panel').style.display     = 'none';
-  document.getElementById('autorun-result-panel').style.display  = 'none';
-  document.getElementById('autorun-cancel-area').style.display   = 'none';
-  document.getElementById('autorun-restart-area').style.display  = 'none';
-  document.getElementById('autorun-idle-msg').style.display      = '';
+  document.getElementById('autorun-steps').style.display          = 'none';
+  document.getElementById('autorun-outputs-area').style.display   = 'none';
+  document.getElementById('autorun-log-panel').style.display      = 'none';
+  document.getElementById('autorun-preview-panel').style.display  = 'none';
+  document.getElementById('autorun-result-panel').style.display   = 'none';
+  document.getElementById('autorun-cancel-area').style.display    = 'none';
+  document.getElementById('autorun-restart-area').style.display   = 'none';
+  document.getElementById('autorun-idle-msg').style.display       = '';
   document.getElementById('autorun-start-btn').disabled = false;
   document.getElementById('autorun-start-btn').textContent = '開始';
   document.getElementById('autorun-url').value = '';
   document.getElementById('autorun-elapsed').textContent = '0:00';
+  // フィルターを全テストにリセット
+  const allRadio = document.querySelector('input[name="autorun-filter"][value="all"]');
+  if (allRadio) allRadio.checked = true;
   autorunSetStartStatus('', false);
 }
 
@@ -1925,4 +2024,14 @@ document.getElementById('autorun-login-close')?.addEventListener('click',  () =>
 document.getElementById('autorun-login-overlay')?.addEventListener('click',() => _autorunSubmitLogin(true));
 document.getElementById('autorun-login-password')?.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') _autorunSubmitLogin(false);
+});
+// プレビュータブ切り替え
+document.querySelectorAll('.autorun-preview-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tab = btn.dataset.ptab;
+    document.querySelectorAll('.autorun-preview-tab').forEach(b => b.classList.remove('is-active'));
+    btn.classList.add('is-active');
+    document.getElementById('autorun-ptab-cases').style.display  = (tab === 'cases')  ? '' : 'none';
+    document.getElementById('autorun-ptab-script').style.display = (tab === 'script') ? '' : 'none';
+  });
 });

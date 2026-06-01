@@ -16,7 +16,7 @@ from flask import Blueprint, request
 from web.config import DISCOVER_TIMEOUT_SEC, MAX_DEPTH, MAX_PAGES_LIMIT, OUTPUT_DIR
 from web.routes.qa_process import _generate_advanced_outputs, _generate_outputs, _load_report
 from web.services.playwright_executor import run_playwright
-from web.services.spec_ts_generator import generate_spec_ts
+from web.services.spec_ts_generator import compute_filter_counts, generate_spec_ts
 from web.validation import _clean_int, _domain_of, _safe_auth_path
 
 bp = Blueprint("auto_run", __name__)
@@ -44,6 +44,7 @@ class AutoRunJob:
     approved: bool = False
     auth_path: str = ""
     input_request: dict[str, Any] | None = None
+    run_policy: dict[str, Any] = field(default_factory=dict)
 
     # 非シリアライズフィールド（dataclass外で設定）
     _proc: Any = field(default=None, init=False, repr=False, compare=False)
@@ -92,6 +93,7 @@ class AutoRunJob:
             "finished_at": self.finished_at,
             "elapsed_sec": self.elapsed_sec(),
             "input_request": self.input_request,
+            "run_policy": self.run_policy,
         }
 
     def cancel(self) -> None:
@@ -191,6 +193,56 @@ def api_autorun_submit_input() -> dict | tuple[dict, int]:
     return {"ok": True}
 
 
+@bp.get("/api/autorun/preview")
+def api_autorun_preview() -> dict | tuple[dict, int]:
+    """テストケース一覧・スクリプト内容・フィルター件数を返す。"""
+    job = _JOBS.get(request.args.get("job_id", ""))
+    if job is None:
+        return {"error": "not found"}, 404
+
+    candidates_path = OUTPUT_DIR / job.domain / "qa_process" / "playwright_candidates.json"
+    spec_path_str = job.outputs.get("spec_ts", "")
+
+    result: dict[str, Any] = {"job_id": job.job_id}
+
+    # 候補一覧
+    if candidates_path.is_file():
+        try:
+            data = json.loads(candidates_path.read_text(encoding="utf-8"))
+            candidates: list[dict[str, Any]] = data.get("candidates", [])
+            by_status: dict[str, int] = {}
+            by_title: dict[str, int] = {}
+            for c in candidates:
+                s = c.get("automation_status", "")
+                t = c.get("title", "")
+                by_status[s] = by_status.get(s, 0) + 1
+                by_title[t] = by_title.get(t, 0) + 1
+            result["candidates"] = candidates
+            result["summary"] = {
+                "total": len(candidates),
+                "by_status": by_status,
+                "by_title": by_title,
+                "filter_counts": compute_filter_counts(candidates),
+            }
+        except Exception as exc:
+            result["candidates"] = []
+            result["summary"] = {"error": str(exc)}
+    else:
+        result["candidates"] = []
+        result["summary"] = {}
+
+    # スクリプト内容
+    if spec_path_str and Path(spec_path_str).is_file():
+        try:
+            result["spec_content"] = Path(spec_path_str).read_text(encoding="utf-8")
+        except Exception:
+            result["spec_content"] = ""
+    else:
+        result["spec_content"] = ""
+
+    return result
+
+
 @bp.post("/api/autorun/approve")
 def api_autorun_approve() -> dict | tuple[dict, int]:
     body = request.get_json(silent=True) or {}
@@ -200,6 +252,15 @@ def api_autorun_approve() -> dict | tuple[dict, int]:
         return {"error": "not found"}, 404
     if job.status != "awaiting_approval":
         return {"error": f"status '{job.status}' では承認できません"}, 400
+
+    filter_mode = (request.form.get("filter_mode") or body.get("filter_mode", "all")).strip()
+    if filter_mode not in ("all", "smoke", "transition", "form"):
+        filter_mode = "all"
+    timeout_sec = _clean_int(
+        request.form.get("timeout_sec") or body.get("timeout_sec", "60"), 60, 10, 600
+    )
+    job.run_policy = {"filter_mode": filter_mode, "timeout_sec": timeout_sec}
+    job.add_log(f"実行方針: {filter_mode} / タイムアウト {timeout_sec}秒")
 
     job.approved = True
     threading.Thread(target=_execute_tests, args=(job,), daemon=True).start()
@@ -512,8 +573,20 @@ def _execute_tests(job: AutoRunJob) -> None:
     spec_path = Path(spec_path_str)
     report_dir = OUTPUT_DIR / job.domain / "qa_process"
 
+    # ポリシーに基づいてスクリプトを再生成（フィルター適用）
+    filter_mode = job.run_policy.get("filter_mode", "all")
+    timeout_sec = int(job.run_policy.get("timeout_sec", 60))
+    if filter_mode != "all":
+        candidates_path = OUTPUT_DIR / job.domain / "qa_process" / "playwright_candidates.json"
+        if candidates_path.is_file():
+            try:
+                generate_spec_ts(job.domain, candidates_path, spec_path, filter_mode=filter_mode)
+                job.add_log(f"フィルター '{filter_mode}' を適用したスクリプトを再生成しました。")
+            except Exception as exc:
+                job.add_log(f"フィルター適用時エラー（元スクリプトで続行）: {exc}")
+
     try:
-        result = run_playwright(spec_path, report_dir, add_log=job.add_log)
+        result = run_playwright(spec_path, report_dir, timeout_sec=timeout_sec, add_log=job.add_log)
     except Exception as exc:
         job.status = "failed"
         job.error = f"テスト実行エラー: {exc}"

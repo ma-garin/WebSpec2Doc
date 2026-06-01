@@ -5,9 +5,26 @@ import re
 from pathlib import Path
 from typing import Any
 
+# タイトルベースのフィルター用定数（auto_run.py からも参照）
+SMOKE_TITLES: frozenset[str] = frozenset(["画面表示スモーク"])
+TRANSITION_TITLES: frozenset[str] = frozenset(["画面表示スモーク", "画面遷移"])
+FORM_TITLES: frozenset[str] = frozenset(["画面表示スモーク", "フォーム入力", "必須入力"])
 
-def generate_spec_ts(domain: str, candidates_path: Path, output_path: Path) -> Path:
-    """playwright_candidates.json から Playwright .spec.ts を生成する。"""
+
+def generate_spec_ts(
+    domain: str,
+    candidates_path: Path,
+    output_path: Path,
+    filter_mode: str = "all",
+) -> Path:
+    """playwright_candidates.json から Playwright .spec.ts を生成する。
+
+    filter_mode:
+      "all"        全候補（manual-review は test.skip）
+      "smoke"      画面表示スモークのみ
+      "transition" スモーク + 遷移テスト
+      "form"       スモーク + フォーム入力 + 必須入力
+    """
     data: dict[str, Any] = {}
     try:
         data = json.loads(candidates_path.read_text(encoding="utf-8"))
@@ -15,15 +32,17 @@ def generate_spec_ts(domain: str, candidates_path: Path, output_path: Path) -> P
         pass
 
     candidates: list[dict[str, Any]] = data.get("candidates", [])
+    filtered = _apply_filter(candidates, filter_mode)
+
     lines = [
         "import { test, expect } from '@playwright/test';",
         "",
         f"// AutoRun generated spec — {domain}",
-        f"// candidates: {len(candidates)}",
+        f"// filter: {filter_mode}  candidates: {len(filtered)}/{len(candidates)}",
         "",
     ]
 
-    for item in candidates:
+    for item in filtered:
         title = _safe_str(item.get("title", "untitled"))
         test_id = _safe_str(item.get("id", ""))
         trace_id = _safe_str(item.get("trace_id", ""))
@@ -50,6 +69,26 @@ def generate_spec_ts(domain: str, candidates_path: Path, output_path: Path) -> P
 
     output_path.write_text("\n".join(lines), encoding="utf-8")
     return output_path
+
+
+def compute_filter_counts(candidates: list[dict[str, Any]]) -> dict[str, int]:
+    """各フィルターモードでの件数を返す。"""
+    return {
+        "all": len(candidates),
+        "smoke": sum(1 for c in candidates if c.get("title") in SMOKE_TITLES),
+        "transition": sum(1 for c in candidates if c.get("title") in TRANSITION_TITLES),
+        "form": sum(1 for c in candidates if c.get("title") in FORM_TITLES),
+    }
+
+
+def _apply_filter(candidates: list[dict[str, Any]], mode: str) -> list[dict[str, Any]]:
+    if mode == "smoke":
+        return [c for c in candidates if c.get("title") in SMOKE_TITLES]
+    if mode == "transition":
+        return [c for c in candidates if c.get("title") in TRANSITION_TITLES]
+    if mode == "form":
+        return [c for c in candidates if c.get("title") in FORM_TITLES]
+    return candidates  # "all"
 
 
 def _extract_url(steps: list[Any]) -> str:

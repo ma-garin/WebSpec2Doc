@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>商用化戦略 $1M ARR — WebSpec2Doc</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/veriserve.css">
+  <style>
+    /* ── ページ固有スタイル ── */
+    .kpi-grid        { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:14px; margin:18px 0; }
+    .kpi-card        { background:#fff; border:1px solid var(--vs-border); border-radius:8px; padding:16px 14px; text-align:center; }
+    .kpi-card__num   { font-size:2rem; font-weight:700; color:var(--vs-navy); line-height:1.1; }
+    .kpi-card__label { font-size:11px; color:var(--vs-text-light); margin-top:4px; }
+    .kpi-card__sub   { font-size:11px; color:var(--vs-cyan); margin-top:2px; }
+
+    .scenario-grid   { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; margin:18px 0; }
+    .scenario-card   { background:#fff; border:2px solid var(--vs-border); border-radius:10px; padding:20px; }
+    .scenario-card.recommended { border-color:var(--vs-cyan); }
+    .scenario-card__badge { display:inline-block; font-size:10px; font-weight:700; padding:2px 8px; border-radius:999px; margin-bottom:10px; }
+    .scenario-card__badge--rec  { background:var(--vs-cyan); color:#fff; }
+    .scenario-card__badge--b    { background:#e3f2fd; color:#1565c0; }
+    .scenario-card__badge--a    { background:#f3e5f5; color:#7b1fa2; }
+    .scenario-card__title { font-size:15px; font-weight:700; color:var(--vs-navy); margin-bottom:8px; }
+    .scenario-card__arr   { font-size:22px; font-weight:800; color:var(--vs-cyan); margin:8px 0; }
+    .scenario-card pre    { background:#f5f5f5; border-radius:6px; padding:12px; font-size:11px; white-space:pre-wrap; margin-top:10px; }
+
+    .phase-list      { display:flex; flex-direction:column; gap:0; margin:18px 0; }
+    .phase-item      { display:flex; gap:0; }
+    .phase-line      { display:flex; flex-direction:column; align-items:center; width:40px; flex-shrink:0; }
+    .phase-dot       { width:14px; height:14px; border-radius:50%; margin-top:4px; flex-shrink:0; }
+    .phase-dot--red  { background:var(--vs-danger); }
+    .phase-dot--yel  { background:var(--vs-warning); }
+    .phase-dot--grn  { background:var(--vs-success); }
+    .phase-connector { flex:1; width:2px; background:var(--vs-border); margin:4px 0; }
+    .phase-body      { flex:1; padding:0 0 24px 8px; }
+    .phase-body__title   { font-size:14px; font-weight:700; color:var(--vs-navy); margin-bottom:6px; }
+    .phase-body__period  { font-size:11px; color:var(--vs-text-light); margin-bottom:8px; }
+    .phase-body__note    { font-size:12px; color:var(--vs-text-light); background:#fff9e6; border-left:3px solid var(--vs-warning); padding:6px 10px; border-radius:0 4px 4px 0; margin-bottom:8px; }
+
+    .moat-grid       { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; margin:18px 0; }
+    .moat-card       { background:#fff; border:1px solid var(--vs-border); border-radius:10px; padding:18px; }
+    .moat-card__icon { font-size:28px; margin-bottom:10px; }
+    .moat-card__title{ font-size:14px; font-weight:700; color:var(--vs-navy); margin-bottom:6px; }
+
+    .action-table th { white-space:nowrap; }
+    .pri-red   { color:var(--vs-danger);  font-weight:700; }
+    .pri-yel   { color:var(--vs-warning); font-weight:700; }
+    .pri-grn   { color:var(--vs-success); font-weight:700; }
+
+    .roadmap-bar     { display:flex; margin:20px 0; border:1px solid var(--vs-border); border-radius:8px; overflow:hidden; }
+    .roadmap-phase   { flex:1; padding:12px 10px; text-align:center; font-size:11px; font-weight:700; border-right:1px solid var(--vs-border); }
+    .roadmap-phase:last-child { border-right:none; }
+    .rp-1 { background:#fff0f0; color:var(--vs-danger); }
+    .rp-2 { background:#fff8e1; color:#e65100; }
+    .rp-3 { background:#e8f5e9; color:var(--vs-success); }
+    .rp-4 { background:#e3f2fd; color:#1565c0; }
+
+    .mrr-bar         { display:flex; align-items:flex-end; gap:8px; height:80px; margin:14px 0; }
+    .mrr-col         { flex:1; background:var(--vs-cyan); border-radius:4px 4px 0 0; display:flex; align-items:flex-end; justify-content:center; }
+    .mrr-col span    { font-size:10px; color:#fff; font-weight:700; padding:3px 0; writing-mode:horizontal-tb; }
+    .mrr-labels      { display:flex; gap:8px; }
+    .mrr-labels span { flex:1; text-align:center; font-size:10px; color:var(--vs-text-light); }
+
+    .risk-table .impact-high  { color:var(--vs-danger); font-weight:700; }
+    .risk-table .impact-mid   { color:var(--vs-warning); font-weight:700; }
+    .risk-table .impact-low   { color:var(--vs-success); font-weight:700; }
+
+    .checklist { list-style:none; padding:0; margin:10px 0; }
+    .checklist li { display:flex; gap:8px; align-items:flex-start; padding:4px 0; font-size:13px; }
+    .checklist li::before { content:'☐'; color:var(--vs-cyan); font-size:15px; flex-shrink:0; }
+
+    .gap-badge { display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:700; }
+    .gap-none  { background:#e8f5e9; color:var(--vs-success); }
+    .gap-weak  { background:#fff3e0; color:#e65100; }
+    .gap-miss  { background:#ffebee; color:var(--vs-danger); }
+
+    /* ── 共通ユーティリティ（veriserve.css 未収録分） ── */
+    .vs-h3 { font-size:14px; font-weight:700; color:var(--vs-navy); margin:20px 0 8px; border-left:3px solid var(--vs-cyan); padding-left:8px; }
+    .vs-callout { border-radius:6px; padding:12px 16px; margin:12px 0; font-size:13px; line-height:1.6; }
+    .vs-callout--info    { background:#e3f2fd; border-left:4px solid var(--vs-cyan); }
+    .vs-callout--success { background:#e8f5e9; border-left:4px solid var(--vs-success); }
+    .vs-callout--warn    { background:#fff3e0; border-left:4px solid var(--vs-warning); }
+    .vs-flow { display:flex; align-items:center; flex-wrap:wrap; gap:4px; }
+    .vs-flow-step  { background:var(--vs-navy); color:#fff; border-radius:6px; padding:8px 14px; font-size:12px; text-align:center; min-width:100px; }
+    .vs-flow-arrow { color:var(--vs-cyan); font-size:18px; font-weight:700; }
+    .vs-list { list-style:disc; padding-left:20px; margin:8px 0; font-size:13px; }
+    .vs-list li { margin-bottom:3px; }
+  </style>
+</head>
+<body>
+
+<header class="vs-header">
+  <div class="vs-header__logo">
+    <div class="vs-header__logo-mark">WS</div>
+    <span class="vs-header__logo-text">WebSpec2Doc</span>
+  </div>
+  <div class="vs-header__divider"></div>
+  <span class="vs-header__doc-title">商用化戦略 — $1M ARR 達成プラン</span>
+  <div class="vs-header__meta">
+    <span>WSD-STR-007 / Rev.1.0</span>
+    <span id="current-date"></span>
+  </div>
+</header>
+
+<nav class="vs-sidebar">
+  <div class="vs-sidebar__section-label">目次</div>
+  <div class="vs-sidebar__nav">
+    <a href="#position"><span class="nav-num">1</span>現在地と勝機</a>
+    <a href="#market"><span class="nav-num">2</span>市場と規模</a>
+    <a href="#revenue"><span class="nav-num">3</span>収益モデル</a>
+    <a href="#scenario"><span class="nav-num">4</span>ARRシナリオ</a>
+    <a href="#roadmap"><span class="nav-num">5</span>商用化ロードマップ</a>
+    <a href="#gtm"><span class="nav-num">6</span>GTM戦略</a>
+    <a href="#moat"><span class="nav-num">7</span>競合優位（モート）</a>
+    <a href="#kpi"><span class="nav-num">8</span>KPIと90日計画</a>
+    <a href="#risk"><span class="nav-num">9</span>リスクと対策</a>
+    <a href="#conclusion"><span class="nav-num">10</span>結論</a>
+  </div>
+  <div class="vs-sidebar__doc-links">
+    <div class="vs-sidebar__section-label">関連文書</div>
+    <a href="index.html">文書ハブ</a>
+    <a href="05_事業戦略提案.html">事業戦略提案</a>
+    <a href="04_プロジェクト計画書.html">計画書</a>
+    <a href="03_技術設計書.html">技術設計書</a>
+    <a href="DEVELOPMENT.md">開発ガイド</a>
+  </div>
+</nav>
+
+<main class="vs-main">
+
+  <!-- カバー -->
+  <div class="vs-cover">
+    <div class="vs-cover__banner">
+      <div class="vs-cover__badge">Commercialization Strategy / $1M ARR Playbook</div>
+      <div class="vs-cover__title">WebSpec2Doc</div>
+      <div class="vs-cover__subtitle">$1M ARR を達成するための市場分析・収益モデル・GTM 完全ガイド</div>
+    </div>
+    <div class="vs-cover__meta">
+      <div class="vs-cover__meta-item">
+        <div class="vs-cover__meta-label">文書番号</div>
+        <div class="vs-cover__meta-value">WSD-STR-007</div>
+      </div>
+      <div class="vs-cover__meta-item">
+        <div class="vs-cover__meta-label">版</div>
+        <div class="vs-cover__meta-value">1.0</div>
+      </div>
+      <div class="vs-cover__meta-item">
+        <div class="vs-cover__meta-label">作成日</div>
+        <div class="vs-cover__meta-value" id="cover-date"></div>
+      </div>
+      <div class="vs-cover__meta-item">
+        <div class="vs-cover__meta-label">分類</div>
+        <div class="vs-cover__meta-value">機密 / 社内限定</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── 1. 現在地と勝機 ─── -->
+  <section id="position" class="vs-section">
+    <h2 class="vs-section__title">1. 現在地の整理と勝機</h2>
+
+    <h3 class="vs-h3">プロダクトの本質的価値</h3>
+    <p>WebSpec2Doc は <strong>「稼働中の Web システムの URL を渡すだけで、QA テスト設計に必要な全素材を自動生成する」唯一のツール</strong>である。</p>
+
+    <div class="vs-flow" style="margin:18px 0">
+      <div class="vs-flow-step"><strong>URL 入力</strong></div>
+      <div class="vs-flow-arrow">→</div>
+      <div class="vs-flow-step"><strong>仕様書生成</strong><br><small>HTML/PDF/Excel/JSON</small></div>
+      <div class="vs-flow-arrow">→</div>
+      <div class="vs-flow-step"><strong>テスト設計</strong><br><small>観点・ケース・条件</small></div>
+      <div class="vs-flow-arrow">→</div>
+      <div class="vs-flow-step"><strong>Playwright スクリプト</strong></div>
+      <div class="vs-flow-arrow">→</div>
+      <div class="vs-flow-step"><strong>実行レポート</strong></div>
+    </div>
+
+    <h3 class="vs-h3">競合の穴 — 誰も解いていない問題</h3>
+    <table class="vs-table">
+      <thead>
+        <tr><th>ツール</th><th>得意なこと</th><th>解決できないこと</th><th>判定</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Testim / Mabl</td><td>テスト実行・AI 修復</td><td>仕様書・テスト観点の生成</td><td><span class="gap-badge gap-miss">空白</span></td></tr>
+        <tr><td>TestRail</td><td>テスト管理</td><td>仕様抽出機能なし</td><td><span class="gap-badge gap-miss">空白</span></td></tr>
+        <tr><td>Playwright</td><td>スクリプト実行基盤</td><td>テスト設計支援なし</td><td><span class="gap-badge gap-miss">空白</span></td></tr>
+        <tr><td>BrowserStack</td><td>クロスブラウザ実行</td><td>上流設計なし</td><td><span class="gap-badge gap-miss">空白</span></td></tr>
+        <tr><td><strong>WebSpec2Doc</strong></td><td><strong>上流〜実行まで一気通貫</strong></td><td>—</td><td><span class="gap-badge gap-none">独自</span></td></tr>
+      </tbody>
+    </table>
+
+    <div class="vs-callout vs-callout--info" style="margin-top:16px">
+      <strong>最大の差別化軸:</strong> テスト設計の上流（テストベース生成）に特化した SaaS はグローバルでも存在しない。
+      テストエンジニアの工数の <strong>50〜60%</strong> がテスト設計・仕様理解に費やされ、
+      アジャイル開発現場の <strong>70%以上</strong> で仕様書が存在しない or 更新されていない。
+    </div>
+  </section>
+
+  <!-- ─── 2. 市場と規模 ─── -->
+  <section id="market" class="vs-section">
+    <h2 class="vs-section__title">2. ターゲット市場と規模</h2>
+
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-card__num">2,000<span style="font-size:1rem">億円</span></div>
+        <div class="kpi-card__label">国内テスト市場規模</div>
+        <div class="kpi-card__sub">年率 +10% 成長</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card__num">$45B</div>
+        <div class="kpi-card__label">グローバル自動化市場</div>
+        <div class="kpi-card__sub">→ $90B（2028年）</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card__num">25%</div>
+        <div class="kpi-card__label">AI テスト CAGR</div>
+        <div class="kpi-card__sub">2023–2028</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card__num">70%</div>
+        <div class="kpi-card__label">仕様書なし現場</div>
+        <div class="kpi-card__sub">アジャイル開発</div>
+      </div>
+    </div>
+
+    <h3 class="vs-h3">日本市場（ファーストターゲット）</h3>
+    <table class="vs-table">
+      <thead><tr><th>セグメント</th><th>推定企業数</th><th>特徴・ニーズ</th></tr></thead>
+      <tbody>
+        <tr><td>第三者検証会社（SHIFT・バルテス・DTS 等）</td><td>~2,000 社</td><td>「資料なし現場」が日常、即日使える</td></tr>
+        <tr><td>SI 受託開発の QA 部門</td><td>~5,000 部門</td><td>仕様書整備コスト削減ニーズ大</td></tr>
+        <tr><td>スタートアップ内製 QA</td><td>~10,000 チーム</td><td>コスト敏感、自動化したい</td></tr>
+      </tbody>
+    </table>
+
+    <h3 class="vs-h3">競合他社価格帯（参考）</h3>
+    <table class="vs-table">
+      <thead><tr><th>ツール</th><th>月額下限</th><th>ビジネスモデル</th></tr></thead>
+      <tbody>
+        <tr><td>Testim</td><td>$450</td><td>シート課金＋実行数</td></tr>
+        <tr><td>Mabl</td><td>$500</td><td>実行ユニット従量制</td></tr>
+        <tr><td>Katalon</td><td>$208</td><td>Free → 有料の PLG</td></tr>
+        <tr><td>TestRail</td><td>$36/ユーザー</td><td>シート課金 SaaS</td></tr>
+        <tr><td>BrowserStack</td><td>$39</td><td>実行分課金</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ─── 3. 収益モデル ─── -->
+  <section id="revenue" class="vs-section">
+    <h2 class="vs-section__title">3. 収益モデル設計</h2>
+
+    <h3 class="vs-h3">プライシングラダー（月額）</h3>
+    <table class="vs-table">
+      <thead><tr><th>プラン</th><th>月額</th><th>主な機能</th><th>対象</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Free</strong></td><td>¥0</td>
+          <td>3 プロジェクト・月 5 クロール・HTML 出力（ウォーターマーク）</td>
+          <td>PLG 入口 / 個人</td>
+        </tr>
+        <tr>
+          <td><strong>Starter</strong></td><td>¥9,800<br><small>~$65</small></td>
+          <td>無制限クロール・全フォーマット（PDF/Excel）・Playwright 候補エクスポート</td>
+          <td>フリーランス QA・小規模チーム</td>
+        </tr>
+        <tr>
+          <td><strong>Team</strong></td><td>¥39,800<br><small>~$270</small></td>
+          <td>5 ユーザー・プロジェクト管理・Slack 通知・Jira 連携・AutoRun 完全版・CI/CD</td>
+          <td>QA 専門会社・スタートアップ</td>
+        </tr>
+        <tr>
+          <td><strong>Business</strong></td><td>¥119,800<br><small>~$800</small></td>
+          <td>無制限ユーザー・SSO・監査ログ・ホワイトラベル・API アクセス</td>
+          <td>中堅検証会社・SIer</td>
+        </tr>
+        <tr>
+          <td><strong>Enterprise</strong></td><td>応相談<br><small>¥500K~/月</small></td>
+          <td>オンプレ・SLA・専任 CSM・SOC2・ISMS・カスタム連携</td>
+          <td>SHIFT・大手 SIer・金融機関</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3 class="vs-h3">追加収益レバー</h3>
+    <table class="vs-table">
+      <thead><tr><th>レバー</th><th>内容</th><th>単価感</th></tr></thead>
+      <tbody>
+        <tr><td>Usage-based</td><td>クロール回数・ページ数超過課金</td><td>¥50/クロール〜</td></tr>
+        <tr><td>LLM テスト観点</td><td>AI 生成テストケース（従量）</td><td>¥5/ケース</td></tr>
+        <tr><td>プロフェッショナルサービス</td><td>導入支援・カスタム連携</td><td>¥500K〜/件</td></tr>
+        <tr><td>認定パートナー</td><td>検証会社への再販ライセンス</td><td>MRR 20%バック</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ─── 4. ARR シナリオ ─── -->
+  <section id="scenario" class="vs-section">
+    <h2 class="vs-section__title">4. $1M ARR 達成シナリオ</h2>
+
+    <div class="scenario-grid">
+      <div class="scenario-card">
+        <span class="scenario-card__badge scenario-card__badge--a">シナリオ A</span>
+        <div class="scenario-card__title">SMB / PLG 中心</div>
+        <div class="scenario-card__arr">~$120K ARR</div>
+        <small style="color:var(--vs-danger)">※ 日本のみでは規模不足</small>
+        <pre>Free signup 月 200件
+  → 6ヶ月で 1,200件蓄積
+  → 転換率 5% = 60 Paid
+     MRR ¥588,000
+
+Team/Business 転換 20件追加
+  MRR ¥1,500,000
+  ≈ ARR ¥18M ($120K)
+
+グローバル展開が必須</pre>
+      </div>
+
+      <div class="scenario-card">
+        <span class="scenario-card__badge scenario-card__badge--b">シナリオ B</span>
+        <div class="scenario-card__title">エンタープライズ直販</div>
+        <div class="scenario-card__arr">~$920K ARR</div>
+        <small style="color:var(--vs-warning)">※ Sales 活動が必要</small>
+        <pre>大手検証会社 5社
+  × ¥10M/年 = ¥50M
+
+中堅検証会社 20社
+  × ¥2M/年 = ¥40M
+
+Team 契約 100社
+  × ¥480K/年 = ¥48M
+
+合計 ¥138M ≈ $920K</pre>
+      </div>
+
+      <div class="scenario-card recommended">
+        <span class="scenario-card__badge scenario-card__badge--rec">★ 推奨 シナリオ C</span>
+        <div class="scenario-card__title">グローバル PLG + Enterprise</div>
+        <div class="scenario-card__arr">$1.01M ARR ✓</div>
+        <small style="color:var(--vs-success)">24ヶ月で達成可能</small>
+        <pre>日本 SMB 150社 × $200/月
+  = $30,000 MRR
+日本 Enterprise 5社 × $5K/月
+  = $25,000 MRR
+海外 SMB 100社 × $200/月
+  = $20,000 MRR
+海外 Enterprise 3社 × $3K/月
+  = $9,000 MRR
+
+計 $84,000 MRR
+  = $1,008,000 ARR ✓</pre>
+      </div>
+    </div>
+
+    <h3 class="vs-h3">MRR 成長イメージ</h3>
+    <div class="mrr-bar">
+      <div class="mrr-col" style="height:8%"><span>M6</span></div>
+      <div class="mrr-col" style="height:20%"><span>M9</span></div>
+      <div class="mrr-col" style="height:40%"><span>M12</span></div>
+      <div class="mrr-col" style="height:60%"><span>M15</span></div>
+      <div class="mrr-col" style="height:80%"><span>M18</span></div>
+      <div class="mrr-col" style="height:95%"><span>M21</span></div>
+      <div class="mrr-col" style="height:100%"><span>M24</span></div>
+    </div>
+    <div class="mrr-labels">
+      <span>¥500K</span><span>¥1.5M</span><span>¥3M</span><span>¥5M</span><span>¥8M</span><span>¥12M</span><span>¥15M</span>
+    </div>
+  </section>
+
+  <!-- ─── 5. ロードマップ ─── -->
+  <section id="roadmap" class="vs-section">
+    <h2 class="vs-section__title">5. 商用化必須ロードマップ</h2>
+
+    <div class="roadmap-bar">
+      <div class="roadmap-phase rp-1">Phase 1<br>SaaS 基盤<br>Month 0–3</div>
+      <div class="roadmap-phase rp-1">Phase 2<br>チーム機能<br>Month 2–4</div>
+      <div class="roadmap-phase rp-2">Phase 3<br>CI/CD 連携<br>Month 4–6</div>
+      <div class="roadmap-phase rp-2">Phase 4<br>ツール連携<br>Month 5–7</div>
+      <div class="roadmap-phase rp-3">Phase 5<br>LLM 強化<br>Month 6–9</div>
+      <div class="roadmap-phase rp-4">Phase 6<br>Enterprise<br>Month 9–12</div>
+    </div>
+
+    <div class="phase-list">
+
+      <div class="phase-item">
+        <div class="phase-line">
+          <div class="phase-dot phase-dot--red"></div>
+          <div class="phase-connector"></div>
+        </div>
+        <div class="phase-body">
+          <div class="phase-body__title">🔴 Phase 1: SaaS 基盤（Month 0–3・最優先）</div>
+          <div class="phase-body__period">2〜3 ヶ月</div>
+          <div class="phase-body__note">ローカル実行のままでは導入コストが高く失注する。「URL 入力 → 即使える」を実現することが全ての前提。</div>
+          <ul class="checklist">
+            <li>ユーザー認証（Auth0 / Firebase Auth・Google・GitHub OAuth）</li>
+            <li>組織・プロジェクト管理（マルチテナント設計）</li>
+            <li>Stripe 課金統合（サブスクリプション + Usage-based）</li>
+            <li>クロールのバックグラウンドワーカー化（Celery + Redis）</li>
+            <li>クラウドデプロイ（AWS Fargate または Render.com）</li>
+            <li>使用量メータリング（クロール数・ページ数・エクスポート数）</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="phase-item">
+        <div class="phase-line">
+          <div class="phase-dot phase-dot--red"></div>
+          <div class="phase-connector"></div>
+        </div>
+        <div class="phase-body">
+          <div class="phase-body__title">🔴 Phase 2: チーム機能（Month 2–4）</div>
+          <div class="phase-body__period">2 ヶ月</div>
+          <div class="phase-body__note">「個人ツール」から「チームツール」になることでチャーン激減・NRR 向上。</div>
+          <ul class="checklist">
+            <li>プロジェクト共有・権限管理（Owner / Editor / Viewer）</li>
+            <li>レポートへのコメント・メモ機能</li>
+            <li>Slack / Teams 通知（クロール完了・ドリフト検知時）</li>
+            <li>顧客向けレポート URL 共有（認証付き外部共有リンク）</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="phase-item">
+        <div class="phase-line">
+          <div class="phase-dot phase-dot--yel"></div>
+          <div class="phase-connector"></div>
+        </div>
+        <div class="phase-body">
+          <div class="phase-body__title">🟡 Phase 3: CI/CD インテグレーション（Month 4–6）</div>
+          <div class="phase-body__period">2 ヶ月</div>
+          <div class="phase-body__note">DevOps ワークフローに組み込まれると解約しにくくなる（スイッチングコスト向上）。</div>
+          <ul class="checklist">
+            <li>GitHub Actions 公式アクション（webspec2doc/action@v1）</li>
+            <li>GitLab CI テンプレート</li>
+            <li>Webhook API（外部トリガー対応）</li>
+            <li>REST API（プログラム的アクセス・OpenAPI 仕様書）</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="phase-item">
+        <div class="phase-line">
+          <div class="phase-dot phase-dot--yel"></div>
+          <div class="phase-connector"></div>
+        </div>
+        <div class="phase-body">
+          <div class="phase-body__title">🟡 Phase 4: 既存ツール連携（Month 5–7）</div>
+          <div class="phase-body__period">2 ヶ月</div>
+          <table class="vs-table" style="margin-top:8px">
+            <thead><tr><th>連携先</th><th>機能</th><th>効果</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Jira</strong></td><td>ドリフト検知 → 自動チケット起票</td><td>購買決裁者（PM）が価値を感じる</td></tr>
+              <tr><td><strong>TestRail</strong></td><td>テストケース → CSV インポート</td><td>乗り換え摩擦ゼロ</td></tr>
+              <tr><td><strong>Notion / Confluence</strong></td><td>レポートをページ同期</td><td>ドキュメント文化の会社に刺さる</td></tr>
+              <tr><td><strong>Slack bot</strong></td><td><code>/spec check https://...</code></td><td>口コミ拡散しやすい</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="phase-item">
+        <div class="phase-line">
+          <div class="phase-dot phase-dot--grn"></div>
+          <div class="phase-connector"></div>
+        </div>
+        <div class="phase-body">
+          <div class="phase-body__title">🟢 Phase 5: LLM テスト観点強化（Month 6–9）</div>
+          <div class="phase-body__period">3 ヶ月</div>
+          <ul class="checklist">
+            <li>「このフォームのリスク観点は？」→ AI 自然言語回答</li>
+            <li>画面の業務フローを推論して「見落としリスク」を提示</li>
+            <li>OWASP 準拠セキュリティ観点の自動チェックポイント生成</li>
+            <li>多言語テストシナリオ（日英自動翻訳）</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="phase-item">
+        <div class="phase-line">
+          <div class="phase-dot phase-dot--grn"></div>
+        </div>
+        <div class="phase-body">
+          <div class="phase-body__title">🟢 Phase 6: エンタープライズ機能（Month 9–12）</div>
+          <div class="phase-body__period">3 ヶ月</div>
+          <ul class="checklist">
+            <li>SAML / SCIM SSO（Okta・Azure AD 対応）</li>
+            <li>監査ログ（誰がいつ何をクロールしたか）</li>
+            <li>オンプレ / VPC 内デプロイ（Docker Compose / Helm chart）</li>
+            <li>SOC2 Type II 取得</li>
+            <li>ホワイトラベル（検証会社が自社ブランドで顧客提供）</li>
+            <li>SLA 99.9%</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ─── 6. GTM ─── -->
+  <section id="gtm" class="vs-section">
+    <h2 class="vs-section__title">6. GTM（市場参入）戦略</h2>
+
+    <h3 class="vs-h3">フェーズ 1: 日本 QA コミュニティ浸透（Month 0–6）</h3>
+    <table class="vs-table">
+      <thead><tr><th>チャネル</th><th>具体的アクション</th><th>期待効果</th></tr></thead>
+      <tbody>
+        <tr><td>JaSST</td><td>ソフトウェアテストシンポジウムで登壇・出展</td><td>認知獲得・権威性</td></tr>
+        <tr><td>JSTQB</td><td>資格コミュニティでのデモ・ハンズオン</td><td>専門家層へのリーチ</td></tr>
+        <tr><td>Qiita / Zenn</td><td>「Playwright 自動化を 5 分で始める方法」等の技術記事</td><td>SEO 流入・PLG</td></tr>
+        <tr><td>X / Slack</td><td>テスト自動化研究会での存在感確立</td><td>口コミ拡散</td></tr>
+        <tr><td>YouTube</td><td>「QA エンジニアのためのツール紹介」動画シリーズ</td><td>Time-to-value 体験</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:8px"><strong>目標:</strong> 3 ヶ月で Free signup 500 件</p>
+
+    <h3 class="vs-h3">フェーズ 2: 検証会社への直販（Month 3–12）</h3>
+    <div class="vs-callout vs-callout--info">
+      <strong>ターゲット企業（日本）:</strong>
+      SHIFT Inc.（東証プライム）、バルテス、DTS / SCSK QA 部門、NTT データ QA、富士通 QA、SBI QA
+    </div>
+    <table class="vs-table" style="margin-top:12px">
+      <thead><tr><th>ステップ</th><th>内容</th></tr></thead>
+      <tbody>
+        <tr><td>1. PoC 提供</td><td>1ヶ月間の無料試用（現場プロジェクトで実施）</td></tr>
+        <tr><td>2. ROI 資料</td><td>テスト設計工数 50%削減の試算・コスト比較表</td></tr>
+        <tr><td>3. 経営層提案</td><td>テスト担当者コスト × 効率化率 = 節減額の可視化</td></tr>
+        <tr><td>4. 契約</td><td>¥5M〜20M/年・案件（全社ライセンス）</td></tr>
+      </tbody>
+    </table>
+
+    <h3 class="vs-h3">フェーズ 3: グローバル展開（Month 12–24）</h3>
+    <table class="vs-table">
+      <thead><tr><th>市場</th><th>理由</th><th>参入方法</th></tr></thead>
+      <tbody>
+        <tr><td>🇰🇷 韓国</td><td>SI 文化・日本と類似</td><td>日本語版を参考に現地化</td></tr>
+        <tr><td>🇮🇳 インド</td><td>オフショア QA 会社多数</td><td>英語対応で PLG</td></tr>
+        <tr><td>🇹🇼 台湾</td><td>テック系スタートアップの QA 需要</td><td>英語対応で PLG</td></tr>
+        <tr><td>🇺🇸 米国</td><td>最大市場・AI ツール需要</td><td>ProductHunt / HN 露出</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ─── 7. モート ─── -->
+  <section id="moat" class="vs-section">
+    <h2 class="vs-section__title">7. 技術的競合優位（モート）</h2>
+
+    <div class="moat-grid">
+      <div class="moat-card">
+        <div class="moat-card__icon">🗄️</div>
+        <div class="moat-card__title">モート 1: データネットワーク効果</div>
+        <p>各クロールの匿名化データを蓄積することで自動生成精度が向上。後発が追いつけないデータ資産になる。</p>
+        <ul class="vs-list" style="margin-top:8px">
+          <li>「EC サイトで頻出するテスト条件 TOP20」</li>
+          <li>「認証フローの典型的な入力項目パターン」</li>
+        </ul>
+      </div>
+      <div class="moat-card">
+        <div class="moat-card__icon">🏭</div>
+        <div class="moat-card__title">モート 2: 業種別テンプレートライブラリ</div>
+        <table class="vs-table" style="margin-top:8px;font-size:12px">
+          <thead><tr><th>業種</th><th>テスト観点セット</th></tr></thead>
+          <tbody>
+            <tr><td>EC サイト</td><td>カート・決済・在庫</td></tr>
+            <tr><td>金融・銀行</td><td>振込・セッション・暗号化</td></tr>
+            <tr><td>医療</td><td>入力制限・アクセス制御</td></tr>
+            <tr><td>官公庁</td><td>JIS X 8341 アクセシビリティ</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="moat-card">
+        <div class="moat-card__icon">📡</div>
+        <div class="moat-card__title">モート 3: AutoRun × 常時監視サービス</div>
+        <p>週 1 回の定期クロール → ドリフト検知 → Slack アラート → 自動テスト実行</p>
+        <div class="vs-callout vs-callout--info" style="margin-top:10px;font-size:12px">
+          Datadog がインフラ監視を独占したように、WebSpec2Doc が「Web 仕様の常時監視」というカテゴリを定義する。
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── 8. KPI ─── -->
+  <section id="kpi" class="vs-section">
+    <h2 class="vs-section__title">8. KPIと優先アクション（最初の 90 日）</h2>
+
+    <h3 class="vs-h3">追うべき KPI</h3>
+    <table class="vs-table action-table">
+      <thead><tr><th>KPI</th><th>Month 6 目標</th><th>Month 18 目標</th></tr></thead>
+      <tbody>
+        <tr><td>Free signup / 月</td><td>200 件</td><td>500 件</td></tr>
+        <tr><td>Free → Paid 転換率</td><td>3%</td><td>7%</td></tr>
+        <tr><td>Paid MRR</td><td>¥500K</td><td>¥8.5M</td></tr>
+        <tr><td>NRR（ネット収益維持率）</td><td>100%</td><td>115%</td></tr>
+        <tr><td>チャーン率 / 月</td><td>&lt; 5%</td><td>&lt; 2%</td></tr>
+        <tr><td>NPS</td><td>30+</td><td>50+</td></tr>
+      </tbody>
+    </table>
+
+    <h3 class="vs-h3">90 日アクションリスト</h3>
+    <table class="vs-table action-table">
+      <thead><tr><th>期間</th><th>優先度</th><th>タスク</th></tr></thead>
+      <tbody>
+        <tr><td>Week 1–2</td><td class="pri-red">必須</td><td>Google OAuth ログイン（Flask-Login + OAuthlib）</td></tr>
+        <tr><td>Week 1–2</td><td class="pri-red">必須</td><td>Stripe 課金統合（stripe-python）</td></tr>
+        <tr><td>Week 1–2</td><td class="pri-red">必須</td><td>ユーザー・プロジェクト DB モデル（SQLAlchemy）</td></tr>
+        <tr><td>Week 3–4</td><td class="pri-red">必須</td><td>クロールのバックグラウンドタスク化（Celery + Redis）</td></tr>
+        <tr><td>Week 3–4</td><td class="pri-red">必須</td><td>Railway / Render.com にデプロイ（月 $20〜）</td></tr>
+        <tr><td>Week 3–4</td><td class="pri-red">必須</td><td>使用量メータリング実装</td></tr>
+        <tr><td>Week 5–8</td><td class="pri-yel">重要</td><td>ランディングページ（Framer または Webflow）</td></tr>
+        <tr><td>Week 5–8</td><td class="pri-yel">重要</td><td>ドキュメントサイト（Mintlify または Docusaurus）</td></tr>
+        <tr><td>Week 5–8</td><td class="pri-yel">重要</td><td>GitHub Actions 公式アクション</td></tr>
+        <tr><td>Week 9–12</td><td class="pri-grn">推奨</td><td>初期 10 社への無料 PoC 展開</td></tr>
+        <tr><td>Week 9–12</td><td class="pri-grn">推奨</td><td>Jira 連携プロトタイプ</td></tr>
+        <tr><td>Week 9–12</td><td class="pri-grn">推奨</td><td>LLM テスト観点（Claude API）実装開始</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ─── 9. リスク ─── -->
+  <section id="risk" class="vs-section">
+    <h2 class="vs-section__title">9. リスクと対策</h2>
+    <table class="vs-table risk-table">
+      <thead><tr><th>リスク</th><th>影響度</th><th>対策</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Playwright 本家が Spec 生成機能を追加</td>
+          <td class="impact-high">高</td>
+          <td>業種テンプレート・LLM 統合で差別化を先行、データ資産で守る</td>
+        </tr>
+        <tr>
+          <td>大手 SaaS（Mabl 等）が日本語対応強化</td>
+          <td class="impact-mid">中</td>
+          <td>検証会社との深い関係と日本語 UX・業種知識で守る</td>
+        </tr>
+        <tr>
+          <td>クロール対象サービスが拒否</td>
+          <td class="impact-low">低</td>
+          <td>User-Agent 管理、robots.txt 遵守、レート制限の徹底</td>
+        </tr>
+        <tr>
+          <td>セキュリティ懸念（認証情報管理）</td>
+          <td class="impact-high">高</td>
+          <td>SOC2 取得・暗号化徹底・ゼロ知識設計・auth.json の暗号化保存</td>
+        </tr>
+        <tr>
+          <td>開発リソース不足</td>
+          <td class="impact-high">高</td>
+          <td>Phase 1（課金基盤）のみに集中、残りは後回しにする</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ─── 10. 結論 ─── -->
+  <section id="conclusion" class="vs-section">
+    <h2 class="vs-section__title">10. 結論：最速ロードマップ</h2>
+
+    <div class="roadmap-bar">
+      <div class="roadmap-phase rp-1">SaaS 化<br>Month 0–3<br><small>課金・認証・クラウド</small></div>
+      <div class="roadmap-phase rp-2">PLG 浸透<br>Month 3–6<br><small>日本 QA コミュニティ</small></div>
+      <div class="roadmap-phase rp-2">Enterprise<br>Month 6–12<br><small>検証会社 5 社契約</small></div>
+      <div class="roadmap-phase rp-3">グローバル<br>Month 12–18<br><small>英語化・PLG</small></div>
+      <div class="roadmap-phase rp-4">$1M ARR<br>Month 18–24<br><small>✓ 達成</small></div>
+    </div>
+
+    <table class="vs-table" style="margin-top:18px">
+      <thead><tr><th>マイルストーン</th><th>MRR 目安</th><th>ARR 換算</th></tr></thead>
+      <tbody>
+        <tr><td>Month 6</td><td>¥500K ($3.5K)</td><td>$42K</td></tr>
+        <tr><td>Month 12</td><td>¥3M ($20K)</td><td>$240K</td></tr>
+        <tr><td>Month 18</td><td>¥8M ($53K)</td><td>$636K</td></tr>
+        <tr><td><strong>Month 24</strong></td><td><strong>¥15M ($100K)</strong></td><td><strong>$1.2M ✓</strong></td></tr>
+      </tbody>
+    </table>
+
+    <div class="vs-callout vs-callout--success" style="margin-top:20px">
+      <strong>最も重要な 1 つのアクション:</strong><br>
+      <code>python app.py</code> で起動するローカルツールを、今日から「URL を渡すだけで動く Web サービス」に変える。
+      <strong>SaaS 化が全ての起点</strong>であり、それ以外は全て後回しでよい。<br><br>
+      技術的には現在 <strong>85% 完成</strong>しており、残り 15%（SaaS 基盤・課金・チーム機能）が商用化の唯一の壁。
+      プロダクト自体の差別化軸は既に確立されているため、GTM と SaaS 化のスピードが勝負を決める。
+    </div>
+  </section>
+
+</main>
+
+<footer class="vs-footer">
+  <span>WSD-STR-007 Rev.1.0</span>
+  <span>WebSpec2Doc 商用化戦略 — $1M ARR 達成プラン</span>
+  <span id="footer-date"></span>
+</footer>
+
+<script>
+  const d = new Date().toLocaleDateString('ja-JP', { year:'numeric', month:'long', day:'numeric' });
+  ['current-date','cover-date','footer-date'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = d;
+  });
+
+  // サイドバーのスクロールハイライト
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks  = document.querySelectorAll('.vs-sidebar__nav a');
+  const observer  = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(a => a.classList.remove('is-active'));
+        const active = document.querySelector(`.vs-sidebar__nav a[href="#${e.target.id}"]`);
+        if (active) active.classList.add('is-active');
+      }
+    });
+  }, { rootMargin: '-30% 0px -60% 0px' });
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>

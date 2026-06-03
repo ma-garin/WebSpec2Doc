@@ -119,13 +119,12 @@
               <div id="autorun-main-content" class="qa-readable">
                 <div id="autorun-idle-msg" class="empty">URLを入力して「開始」を押すと、仕様書生成からテスト実行まで全自動で処理します。</div>
 
-                <!-- 実行ログ（折りたたみ） -->
+                <!-- 実行ログ（常時表示） -->
                 <div id="ar-log-section" style="display:none;margin-bottom:14px">
-                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                  <div style="margin-bottom:4px">
                     <span style="font-size:12px;font-weight:600;color:var(--text-muted)">実行ログ</span>
-                    <button type="button" id="ar-log-toggle" class="ar-log-toggle" onclick="arToggleLog()">▶ 展開</button>
                   </div>
-                  <pre id="autorun-log" style="display:none;background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:11px;max-height:180px;overflow-y:auto;white-space:pre-wrap"></pre>
+                  <pre id="autorun-log" style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:11px;max-height:200px;overflow-y:auto;white-space:pre-wrap"></pre>
                 </div>
 
                 <!-- ステップ完了タイムライン -->

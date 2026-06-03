@@ -92,15 +92,6 @@ function _autorunShowRunning() {
   document.getElementById('autorun-cancel-area').style.display = '';
 }
 
-// ---- AutoRun: ログ折りたたみ ----
-function arToggleLog() {
-  const pre = document.getElementById('autorun-log');
-  const btn = document.getElementById('ar-log-toggle');
-  if (!pre || !btn) return;
-  const open = pre.style.display === 'none';
-  pre.style.display = open ? '' : 'none';
-  btn.textContent = open ? '▲ 折りたたむ' : '▶ 展開';
-}
 
 // ---- AutoRun: ポーリング ----
 function _autorunStartPolling() {
@@ -636,9 +627,7 @@ function autorunReset() {
   const timeline = document.getElementById('ar-timeline');
   if (timeline) timeline.innerHTML = '';
   const logPre = document.getElementById('autorun-log');
-  if (logPre) { logPre.textContent = ''; logPre.style.display = 'none'; }
-  const logToggle = document.getElementById('ar-log-toggle');
-  if (logToggle) logToggle.textContent = '▶ 展開';
+  if (logPre) logPre.textContent = '';
   const allRadio = document.querySelector('input[name="autorun-filter"][value="all"]');
   if (allRadio) allRadio.checked = true;
   autorunSetStartStatus('', false);

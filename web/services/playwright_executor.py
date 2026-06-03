@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import html as html_mod
 import json
+import os
 import shutil
 import subprocess
 from collections.abc import Callable
@@ -10,6 +11,9 @@ from typing import Any
 
 # AutoRun が生成した .spec.ts を実行するための共有 node_modules の場所
 _PW_ENV_DIR = Path("output/.playwright_env")
+
+# Playwright HTML レポートのサブディレクトリ名（PLAYWRIGHT_HTML_REPORT で制御）
+_PW_HTML_SUBDIR = "playwright-report"
 
 
 def run_playwright(
@@ -21,12 +25,14 @@ def run_playwright(
     """
     npx playwright test でスペックを実行し、結果を返す。
 
+    --reporter=json,html + --screenshot=on + --trace=retain-on-failure で
+    ISTQB テスト実行レポートに必要なエビデンスを生成する。
     @playwright/test が未セットアップの場合は自動インストールを試みる。
-    それも不可能な場合は unavailable 結果を返す。
     """
     output_dir.mkdir(parents=True, exist_ok=True)
     json_report_path = output_dir / "playwright_report.json"
-    html_report_path = output_dir / "playwright_report.html"
+    fallback_html_path = output_dir / "playwright_report.html"
+    pw_html_dir = output_dir / _PW_HTML_SUBDIR
 
     def _log(msg: str) -> None:
         if add_log:
@@ -36,7 +42,7 @@ def run_playwright(
         return _unavailable_result(
             "npx が見つかりません。Node.js をインストールしてください。",
             json_report_path,
-            html_report_path,
+            fallback_html_path,
         )
 
     if not shutil.which("playwright") and not _pw_test_available():
@@ -44,7 +50,7 @@ def run_playwright(
         ok, msg = _ensure_pw_env(_PW_ENV_DIR)
         _log(msg)
         if not ok:
-            return _unavailable_result(msg, json_report_path, html_report_path)
+            return _unavailable_result(msg, json_report_path, fallback_html_path)
 
     env_node_modules = str((_PW_ENV_DIR / "node_modules").resolve())
     cmd = [
@@ -52,15 +58,16 @@ def run_playwright(
         "playwright",
         "test",
         str(spec_path),
-        "--reporter=json",
+        "--reporter=json,html",
         f"--output={output_dir / 'artifacts'}",
+        "--screenshot=on",
+        "--trace=retain-on-failure",
     ]
     try:
-        import os
-
         env = os.environ.copy()
         existing = env.get("NODE_PATH", "")
         env["NODE_PATH"] = f"{env_node_modules}:{existing}" if existing else env_node_modules
+        env["PLAYWRIGHT_HTML_REPORT"] = str(pw_html_dir)
         proc = subprocess.run(
             cmd,
             capture_output=True,
@@ -69,9 +76,9 @@ def run_playwright(
             env=env,
         )
     except subprocess.TimeoutExpired:
-        return _error_result("タイムアウト", json_report_path, html_report_path)
+        return _error_result("タイムアウト", json_report_path, fallback_html_path)
     except Exception as exc:
-        return _error_result(str(exc), json_report_path, html_report_path)
+        return _error_result(str(exc), json_report_path, fallback_html_path)
 
     raw_json: dict[str, Any] = {}
     try:
@@ -81,7 +88,6 @@ def run_playwright(
 
     result = _parse_results(raw_json, proc.stdout, proc.stderr, proc.returncode)
     json_report_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
-    html_report_path.write_text(_build_html_report(result), encoding="utf-8")
     return result
 
 

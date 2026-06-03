@@ -606,10 +606,13 @@ def _execute_tests(job: AutoRunJob) -> None:
         job.outputs["playwright_report_json"] = str(
             (report_dir / "playwright_report.json").resolve()
         )
-    if (report_dir / "playwright_report.html").is_file():
-        job.outputs["playwright_report_html"] = str(
-            (report_dir / "playwright_report.html").resolve()
-        )
+    # Playwright ネイティブ HTML レポート（スクショ・トレース付き）を優先
+    pw_html = report_dir / "playwright-report" / "index.html"
+    fallback_html = report_dir / "playwright_report.html"
+    if pw_html.is_file():
+        job.outputs["playwright_report_html"] = str(pw_html.resolve())
+    elif fallback_html.is_file():
+        job.outputs["playwright_report_html"] = str(fallback_html.resolve())
 
     job.status = "complete"
     job.step_label = "完了"

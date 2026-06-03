@@ -1,4 +1,4 @@
-// ---- 画面遷移図（UML 3種サブタブ）----
+// ---- 画面遷移図（vis.js ネットワーク）----
 function _commonNavTargets(screens) {
   const n = screens.length;
   const count = {};
@@ -9,135 +9,129 @@ function _commonNavTargets(screens) {
   return new Set(Object.entries(count).filter(([, c]) => c >= threshold).map(([k]) => k));
 }
 
-function renderTransition() {
-  if (!reportJson || !(reportJson.screens || []).length) {
-    resultHero.innerHTML = '<div class="hero-msg">遷移データがありません。クロールを実行してください。</div>';
-    return;
-  }
-  resultHero.innerHTML =
-    '<div style="display:flex;flex-direction:column;height:100%;min-height:0">' +
-    '<div class="uml-subtabs" id="uml-subtabs">' +
-    '<button class="uml-subtab is-active" data-uml="sequence">シーケンス図</button>' +
-    '<button class="uml-subtab" data-uml="communication">コミュニケーション図</button>' +
-    '<button class="uml-subtab" data-uml="activity">アクティビティ図</button>' +
-    '</div>' +
-    '<div id="uml-diagram-area" style="flex:1;overflow:auto;padding:16px;background:#fafafa;border:1px solid var(--border);border-top:none;"></div>' +
-    '</div>';
-
-  document.querySelectorAll('.uml-subtab').forEach(t => {
-    t.addEventListener('click', () => {
-      document.querySelectorAll('.uml-subtab').forEach(x => x.classList.toggle('is-active', x === t));
-      _renderUmlDiagram(t.dataset.uml, reportJson.screens);
-    });
-  });
-  _loadMermaid(() => _renderUmlDiagram('sequence', reportJson.screens));
-}
-
-function _loadMermaid(cb) {
-  if (window.mermaid) { cb(); return; }
+function _loadVisNetwork(cb) {
+  if (window.vis) { cb(); return; }
+  const css = document.createElement('link');
+  css.rel = 'stylesheet';
+  css.href = 'https://unpkg.com/vis-network@9/dist/dist/vis-network.min.css';
+  document.head.appendChild(css);
   const s = document.createElement('script');
-  s.src = 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js';
-  s.onload = () => {
-    window.mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose', fontFamily: 'system-ui, sans-serif' });
-    cb();
-  };
+  s.src = 'https://unpkg.com/vis-network@9/dist/vis-network.min.js';
+  s.onload = cb;
   document.head.appendChild(s);
 }
 
-async function _renderUmlDiagram(type, screens) {
-  const area = document.getElementById('uml-diagram-area');
-  if (!area) return;
-  const common = _commonNavTargets(screens);
-  const urlToId = {};
-  screens.forEach(s => { urlToId[s.url] = s.page_id; });
-
-  let src = '';
-  if (type === 'sequence') src = _buildSequenceDiagram(screens, common, urlToId);
-  else if (type === 'communication') src = _buildCommunicationDiagram(screens, common, urlToId);
-  else src = _buildActivityDiagram(screens, common, urlToId);
-
-  area.innerHTML = '<p style="color:var(--text-muted);font-size:12px;margin:0 0 8px">※ 共通ナビゲーション（全ページの50%以上から発生する遷移）は除外しています。</p><div id="uml-render-target"></div>';
-  try {
-    const { svg } = await window.mermaid.render('uml-svg-' + type + '-' + Date.now(), src);
-    document.getElementById('uml-render-target').innerHTML = svg;
-  } catch (e) {
-    area.innerHTML = `<pre style="font-size:11px;color:var(--critical)">${escHtml(String(e))}</pre><pre style="font-size:11px;background:#f3f4f6;padding:12px;border-radius:6px;overflow:auto">${escHtml(src)}</pre>`;
-  }
-}
-
-function _shortLabel(sc) {
+function _shortVisLabel(sc) {
   return (sc.title || sc.page_id).replace(/\s*[|｜]\s*.*/g, '').replace(/['"]/g, '').slice(0, 24) || sc.page_id;
 }
 
-function _buildSequenceDiagram(screens, common, urlToId) {
-  const lines = ['sequenceDiagram'];
-  screens.forEach(sc => {
-    lines.push(`  participant ${sc.page_id} as ${_shortLabel(sc)}`);
-  });
-  screens.forEach(sc => {
-    (sc.transitions && sc.transitions.to || []).forEach(to => {
-      if (!common.has(to)) lines.push(`  ${sc.page_id}->>${to}: リンク`);
-    });
-    (sc.forms || []).forEach(f => {
-      const toId = f.action ? urlToId[f.action] : null;
-      if (toId && toId !== sc.page_id && !common.has(toId)) {
-        lines.push(`  ${sc.page_id}-->>${toId}: フォーム送信`);
-      }
-    });
-  });
-  return lines.join('\n');
-}
+function renderTransition() {
+  const screens = reportJson && reportJson.screens || [];
+  if (!screens.length) {
+    resultHero.innerHTML = '<div class="hero-msg">遷移データがありません。クロールを実行してください。</div>';
+    return;
+  }
 
-function _buildCommunicationDiagram(screens, common, urlToId) {
-  const lines = ['graph LR'];
-  screens.forEach(sc => {
-    const label = _shortLabel(sc).replace(/[()]/g, '');
-    const shape = (sc.forms || []).some(f => f.fields && f.fields.length)
-      ? `${sc.page_id}["📋 ${sc.page_id}\\n${label}"]`
-      : `${sc.page_id}["📄 ${sc.page_id}\\n${label}"]`;
-    lines.push(`  ${shape}`);
-  });
-  let seq = 1;
-  screens.forEach(sc => {
-    (sc.transitions && sc.transitions.to || []).forEach(to => {
-      if (!common.has(to)) lines.push(`  ${sc.page_id} -->|"${seq++}. リンク"| ${to}`);
-    });
-    (sc.forms || []).forEach(f => {
-      const toId = f.action ? urlToId[f.action] : null;
-      if (toId && toId !== sc.page_id && !common.has(toId)) {
-        lines.push(`  ${sc.page_id} -.->|"${seq++}. ${(f.method || 'POST').toUpperCase()}"| ${toId}`);
-      }
-    });
-  });
-  return lines.join('\n');
-}
+  resultHero.innerHTML =
+    '<div style="display:flex;flex-direction:column;height:100%;min-height:0">' +
+    '<div id="vis-toolbar" style="padding:8px 12px;font-size:12px;color:var(--text-muted);border-bottom:1px solid var(--border);display:flex;gap:16px;align-items:center;flex-shrink:0;flex-wrap:wrap">' +
+    '<span>※ 共通ナビゲーション（全ページの50%以上）は除外</span>' +
+    '<span>📋 フォームあり画面</span>' +
+    '<span>- - → フォーム送信</span>' +
+    '<span style="color:var(--text-subtle)">ノードをクリック → 画面別仕様を表示</span>' +
+    '</div>' +
+    '<div id="vis-network-container" style="flex:1;min-height:0"></div>' +
+    '</div>';
 
-function _buildActivityDiagram(screens, common, urlToId) {
-  const lines = ['flowchart TD'];
-  lines.push('  START([▶ 開始])');
-  const starts = screens.filter(sc => (sc.transitions && sc.transitions.from || []).length === 0);
-  (starts.length ? starts : screens.slice(0, 1)).forEach(sc => {
-    lines.push(`  START --> ${sc.page_id}`);
-  });
-  screens.forEach(sc => {
-    const label = _shortLabel(sc).replace(/[()]/g, '');
-    const hasForm = (sc.forms || []).some(f => f.fields && f.fields.length);
-    const shape = hasForm ? `${sc.page_id}["📋 ${label}"]` : `${sc.page_id}["${label}"]`;
-    lines.push(`  ${shape}`);
-    (sc.transitions && sc.transitions.to || []).forEach(to => {
-      if (!common.has(to)) lines.push(`  ${sc.page_id} --> ${to}`);
+  _loadVisNetwork(() => {
+    const container = document.getElementById('vis-network-container');
+    if (!container) return;
+
+    const common = _commonNavTargets(screens);
+    const urlToId = {};
+    const knownIds = new Set();
+    screens.forEach(sc => {
+      urlToId[sc.url] = sc.page_id;
+      knownIds.add(sc.page_id);
     });
-    (sc.forms || []).forEach(f => {
-      const toId = f.action ? urlToId[f.action] : null;
-      if (toId && toId !== sc.page_id && !common.has(toId)) {
-        lines.push(`  ${sc.page_id} -->|"${(f.method || 'POST').toUpperCase()}"| ${toId}`);
+
+    const nodes = screens.map(sc => {
+      const hasForm = (sc.forms || []).some(f => f.fields && f.fields.length);
+      return {
+        id: sc.page_id,
+        label: `${sc.page_id}\n${_shortVisLabel(sc)}`,
+        shape: 'box',
+        font: { size: 12 },
+        color: hasForm
+          ? { background: '#DBEAFE', border: '#3B82F6' }
+          : { background: '#F3F4F6', border: '#9CA3AF' },
+      };
+    });
+
+    const edges = [];
+    const edgeKeys = new Set();
+    const addEdge = edge => {
+      const key = `${edge.from}:${edge.to}:${edge.label || 'link'}`;
+      if (!edgeKeys.has(key)) {
+        edgeKeys.add(key);
+        edges.push(edge);
+      }
+    };
+
+    screens.forEach(sc => {
+      (sc.transitions && sc.transitions.to || []).forEach(to => {
+        if (common.has(to) || !knownIds.has(to)) return;
+        addEdge({ from: sc.page_id, to, color: '#94A3B8' });
+      });
+      (sc.forms || []).forEach(f => {
+        const toId = f.action ? urlToId[f.action] : null;
+        if (!toId || toId === sc.page_id || common.has(toId) || !knownIds.has(toId)) return;
+        addEdge({ from: sc.page_id, to: toId, label: 'フォーム送信', dashes: true, color: '#F59E0B' });
+      });
+    });
+
+    const data = {
+      nodes: new vis.DataSet(nodes),
+      edges: new vis.DataSet(edges),
+    };
+    const options = {
+      physics: {
+        enabled: true,
+        hierarchicalRepulsion: { nodeDistance: 160 },
+        solver: 'hierarchicalRepulsion'
+      },
+      layout: {
+        hierarchical: {
+          enabled: true,
+          direction: 'LR',
+          sortMethod: 'directed',
+          levelSeparation: 200,
+          nodeSpacing: 120,
+        }
+      },
+      interaction: {
+        zoomView: true,
+        dragView: true,
+        hover: true,
+      },
+      edges: {
+        arrows: { to: { enabled: true, scaleFactor: 0.8 } },
+        smooth: { type: 'cubicBezier', forceDirection: 'horizontal' }
+      }
+    };
+
+    const network = new vis.Network(container, data, options);
+    network.on('click', (params) => {
+      if (params.nodes.length > 0) {
+        const nodeId = params.nodes[0];
+        selectResultTab('report');
+        setTimeout(() => {
+          const item = document.querySelector(`.rpt-list-item[data-id="${nodeId}"], .rpt-list-item[data-pid="${nodeId}"]`);
+          if (item) item.click();
+        }, 100);
       }
     });
   });
-  const ends = screens.filter(sc => (sc.transitions && sc.transitions.to || []).filter(t => !common.has(t)).length === 0);
-  (ends.length ? ends : []).forEach(sc => lines.push(`  ${sc.page_id} --> END`));
-  if (ends.length) lines.push('  END([⏹ 終了])');
-  return lines.join('\n');
 }
 
 // ---- 画面遷移表（ISTQB 状態遷移テスト標準フォーマット）----
@@ -199,4 +193,3 @@ function renderTransitionTable() {
     `<tbody>${tableRows}</tbody>` +
     '</table></div></div>';
 }
-

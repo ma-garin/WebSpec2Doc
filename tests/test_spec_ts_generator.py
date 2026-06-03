@@ -319,3 +319,90 @@ def test_smoke_titles_subset_of_transition() -> None:
 
 def test_smoke_titles_subset_of_form() -> None:
     assert SMOKE_TITLES.issubset(FORM_TITLES)
+
+
+# ─────────────────────── 改行・制御文字エスケープ ───────────────────────
+
+
+class TestEscControlChars:
+    def test_esc_escapes_newline(self) -> None:
+        assert _esc("line1\nline2") == "line1\\nline2"
+
+    def test_esc_escapes_carriage_return(self) -> None:
+        assert _esc("line1\rline2") == "line1\\rline2"
+
+    def test_esc_escapes_tab(self) -> None:
+        assert _esc("col1\tcol2") == "col1\\tcol2"
+
+    def test_newline_in_title_does_not_break_spec(self, tmp_path: Path) -> None:
+        """改行を含むタイトルが TypeScript として安全な1行文字列になる。"""
+        candidates_path = tmp_path / "c.json"
+        spec_path = tmp_path / "out.spec.ts"
+        candidates_path.write_text(
+            '{"candidates": [{"id": "PW-X", "title": "line1\\nline2", '
+            '"trace_id": "P001", "steps": [], "expected": "", "automation_status": "auto"}]}',
+            encoding="utf-8",
+        )
+        generate_spec_ts("dom", candidates_path, spec_path)
+        content = spec_path.read_text(encoding="utf-8")
+        # 生成されたファイル内にリテラル改行がテスト名に含まれていないこと
+        for line in content.splitlines():
+            if "test(" in line or "test.skip(" in line:
+                assert "\n" not in line
+
+
+# ─────────────────────── waitForLoadState 追加 ───────────────────────
+
+
+class TestWaitForLoadState:
+    def test_goto_followed_by_wait_for_load(self, tmp_path: Path) -> None:
+        """URL を含む smoke テストに waitForLoadState が挿入される。"""
+        candidates_path = tmp_path / "c.json"
+        spec_path = tmp_path / "out.spec.ts"
+        candidates_path.write_text(
+            '{"candidates": [{"id": "PW-1", "title": "画面表示スモーク", '
+            '"trace_id": "P001", "steps": ["page.goto(\'https://example.com/\')"], '
+            '"expected": "表示", "automation_status": "auto"}]}',
+            encoding="utf-8",
+        )
+        generate_spec_ts("example.com", candidates_path, spec_path)
+        content = spec_path.read_text(encoding="utf-8")
+        assert "waitForLoadState" in content
+
+    def test_no_url_no_wait_for_load(self, tmp_path: Path) -> None:
+        """URL なしのテストには waitForLoadState を挿入しない。"""
+        candidates_path = tmp_path / "c.json"
+        spec_path = tmp_path / "out.spec.ts"
+        candidates_path.write_text(
+            '{"candidates": [{"id": "PW-2", "title": "画面遷移", '
+            '"trace_id": "P001->P002", "steps": ["P001 を開く", "P002 へ遷移"], '
+            '"expected": "遷移成功", "automation_status": "auto"}]}',
+            encoding="utf-8",
+        )
+        generate_spec_ts("example.com", candidates_path, spec_path)
+        content = spec_path.read_text(encoding="utf-8")
+        assert "waitForLoadState" not in content
+
+    def test_goto_step_not_duplicated_in_comments(self, tmp_path: Path) -> None:
+        """page.goto() ステップはコメントとして重複出力されない。"""
+        candidates_path = tmp_path / "c.json"
+        spec_path = tmp_path / "out.spec.ts"
+        candidates_path.write_text(
+            '{"candidates": [{"id": "PW-3", "title": "画面表示スモーク", '
+            '"trace_id": "P001", "steps": ["page.goto(\'https://example.com/\')", "要素確認"], '
+            '"expected": "", "automation_status": "auto"}]}',
+            encoding="utf-8",
+        )
+        generate_spec_ts("example.com", candidates_path, spec_path)
+        content = spec_path.read_text(encoding="utf-8")
+        # goto ステップはコード行に含まれる、コメント行には含まれない
+        code_lines = [
+            ln
+            for ln in content.splitlines()
+            if "page.goto" in ln and not ln.strip().startswith("//")
+        ]
+        comment_lines = [
+            ln for ln in content.splitlines() if "page.goto" in ln and ln.strip().startswith("//")
+        ]
+        assert len(code_lines) >= 1
+        assert len(comment_lines) == 0

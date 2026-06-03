@@ -262,11 +262,14 @@ def api_autorun_approve() -> dict | tuple[dict, int]:
     filter_mode = (request.form.get("filter_mode") or body.get("filter_mode", "all")).strip()
     if filter_mode not in ("all", "smoke", "transition", "form"):
         filter_mode = "all"
-    timeout_sec = _clean_int(
-        request.form.get("timeout_sec") or body.get("timeout_sec", "60"), 60, 10, 600
+    per_test_timeout_sec = _clean_int(
+        request.form.get("per_test_timeout_sec") or body.get("per_test_timeout_sec", "30"),
+        30,
+        5,
+        120,
     )
-    job.run_policy = {"filter_mode": filter_mode, "timeout_sec": timeout_sec}
-    job.add_log(f"実行方針: {filter_mode} / タイムアウト {timeout_sec}秒")
+    job.run_policy = {"filter_mode": filter_mode, "per_test_timeout_sec": per_test_timeout_sec}
+    job.add_log(f"実行方針: {filter_mode} / 1テストあたり {per_test_timeout_sec}秒")
 
     job.approved = True
     threading.Thread(target=_execute_tests, args=(job,), daemon=True).start()
@@ -602,7 +605,7 @@ def _execute_tests(job: AutoRunJob) -> None:
 
     # ポリシーに基づいてスクリプトを再生成（フィルター適用）
     filter_mode = job.run_policy.get("filter_mode", "all")
-    timeout_sec = int(job.run_policy.get("timeout_sec", 60))
+    per_test_timeout_sec = int(job.run_policy.get("per_test_timeout_sec", 30))
     if filter_mode != "all":
         candidates_path = OUTPUT_DIR / job.domain / "qa_process" / "playwright_candidates.json"
         if candidates_path.is_file():
@@ -613,7 +616,12 @@ def _execute_tests(job: AutoRunJob) -> None:
                 job.add_log(f"フィルター適用時エラー（元スクリプトで続行）: {exc}")
 
     try:
-        result = run_playwright(spec_path, report_dir, timeout_sec=timeout_sec, add_log=job.add_log)
+        result = run_playwright(
+            spec_path,
+            report_dir,
+            per_test_timeout_sec=per_test_timeout_sec,
+            add_log=job.add_log,
+        )
     except Exception as exc:
         job.status = "failed"
         job.error = f"テスト実行エラー: {exc}"

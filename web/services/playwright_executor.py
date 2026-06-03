@@ -18,20 +18,25 @@ _PW_HTML_SUBDIR = "playwright-report"
 # spec ファイルと並べて生成する一時 JS コンフィグ名
 _PW_CONFIG_NAME = "_autorun_pw.config.js"
 
+# subprocess の最大待機時間（per-test timeout とは独立）
+_SUBPROCESS_MAX_SEC = 600
+
 
 def run_playwright(
     spec_path: Path,
     output_dir: Path,
-    timeout_sec: int = 300,
+    per_test_timeout_sec: int = 30,
+    timeout_sec: int = _SUBPROCESS_MAX_SEC,
     add_log: Callable[[str], None] | None = None,
 ) -> dict[str, Any]:
     """
     ローカル @playwright/test CLI でスペックを実行し、結果を返す。
 
-    解決策:
-      1. npx (global) ではなくローカル CLI を使う → CLI/パッケージのバージョン一致
-      2. JS 形式のコンフィグを生成 → testDir・testMatch を明示してテスト発見を保証
-      3. NODE_PATH で @playwright/test を spec ファイルから解決可能にする
+    Args:
+        spec_path: .spec.ts ファイルのパス
+        output_dir: レポート出力先ディレクトリ
+        per_test_timeout_sec: 1テストあたりの制限時間（Playwright config の timeout）
+        timeout_sec: subprocess 全体の最大待機時間（デフォルト 600s）
     """
     output_dir.mkdir(parents=True, exist_ok=True)
     json_report_path = output_dir / "playwright_report.json"
@@ -66,6 +71,7 @@ def run_playwright(
     config_path = _write_pw_config(
         spec_path=spec_path,
         html_output_dir=pw_html_dir,
+        per_test_timeout_ms=per_test_timeout_sec * 1000,
     )
 
     env_node_modules = str((_PW_ENV_DIR / "node_modules").resolve())
@@ -75,6 +81,9 @@ def run_playwright(
         cmd = ["npx", "playwright", "test", "--config", str(config_path.resolve())]
     else:
         cmd = [cli_cmd, "test", "--config", str(config_path.resolve())]
+
+    _log(f"Playwright 実行中: {spec_path.name} (1テストあたり{per_test_timeout_sec}秒)")
+
     try:
         env = os.environ.copy()
         existing = env.get("NODE_PATH", "")
@@ -87,31 +96,62 @@ def run_playwright(
             env=env,
         )
     except subprocess.TimeoutExpired:
-        return _error_result("タイムアウト", json_report_path, fallback_html_path)
+        return _error_result(
+            f"テスト実行が {timeout_sec}秒 でタイムアウトしました。1テストあたりの制限時間を短くするか、対象テスト数を減らしてください。",
+            json_report_path,
+            fallback_html_path,
+        )
     except Exception as exc:
         return _error_result(str(exc), json_report_path, fallback_html_path)
 
-    raw_json: dict[str, Any] = {}
-    try:
-        raw_json = json.loads(proc.stdout)
-    except (json.JSONDecodeError, ValueError):
-        pass
-
+    raw_json = _parse_stdout_json(proc.stdout)
     result = _parse_results(raw_json, proc.stdout, proc.stderr, proc.returncode)
     json_report_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     return result
 
 
-def _write_pw_config(spec_path: Path, html_output_dir: Path) -> Path:
+def _parse_stdout_json(stdout: str) -> dict[str, Any]:
+    """stdout から JSON オブジェクトを抽出する（プリアンブルがある場合も対応）。"""
+    if not stdout:
+        return {}
+    # JSON は { から始まる。前後に余分な出力があっても検索して取り出す
+    start = stdout.find("{")
+    if start < 0:
+        return {}
+    try:
+        return json.loads(stdout[start:])
+    except (json.JSONDecodeError, ValueError):
+        return {}
+
+
+def _write_pw_config(
+    spec_path: Path,
+    html_output_dir: Path,
+    per_test_timeout_ms: int = 30_000,
+) -> Path:
     """JS 形式の playwright config を生成する（TypeScript import 不要）。"""
     config_path = spec_path.parent / _PW_CONFIG_NAME
     spec_dir_abs = str(spec_path.parent.resolve())
     html_dir_abs = str(html_output_dir.resolve())
+    # テスト成果物（スクショ・トレース）の保存先
+    artifacts_dir_abs = str((html_output_dir.parent / "test-results").resolve())
+    # アクションタイムアウト: per-test timeout の半分（最大 15s）
+    action_timeout_ms = min(per_test_timeout_ms // 2, 15_000)
+    # ナビゲーションタイムアウト: per-test timeout（最大 30s）
+    nav_timeout_ms = min(per_test_timeout_ms, 30_000)
     config_js = (
         "module.exports = {\n"
         f"  testDir: {json.dumps(spec_dir_abs)},\n"
         f"  testMatch: {json.dumps(spec_path.name)},\n"
-        "  use: { screenshot: 'on', trace: 'retain-on-failure' },\n"
+        f"  timeout: {per_test_timeout_ms},\n"
+        "  workers: 1,\n"
+        f"  outputDir: {json.dumps(artifacts_dir_abs)},\n"
+        "  use: {\n"
+        "    screenshot: 'on',\n"
+        "    trace: 'retain-on-failure',\n"
+        f"    actionTimeout: {action_timeout_ms},\n"
+        f"    navigationTimeout: {nav_timeout_ms},\n"
+        "  },\n"
         "  reporter: [\n"
         "    ['json'],\n"
         f"    ['html', {{ outputFolder: {json.dumps(html_dir_abs)}, open: 'never' }}],\n"
@@ -220,6 +260,9 @@ def _parse_results(
         stats.get("skipped", 0)
     )
 
+    # stderr の先頭 500 文字をエラー診断用に保存
+    stderr_snippet = (stderr or "")[:500]
+
     return {
         "ok": returncode == 0,
         "passed": passed or int(stats.get("expected", 0)),
@@ -230,6 +273,7 @@ def _parse_results(
         "tests": tests,
         "stdout": stdout[:4000] if stdout else "",
         "stderr": stderr[:2000] if stderr else "",
+        "stderr_snippet": stderr_snippet,
     }
 
 
@@ -238,6 +282,9 @@ def _map_status(raw_status: str, results: list[dict[str, Any]]) -> str:
         return "passed"
     if raw_status in ("failed", "unexpected"):
         return "failed"
+    if raw_status == "flaky":
+        # リトライで合格したケース — 合格扱い
+        return "passed"
     if raw_status in ("skipped", "pending"):
         return "skipped"
     for r in results:

@@ -206,14 +206,17 @@ def _playwright_candidates(domain: str, report: dict[str, Any]) -> dict[str, Any
             )
         )
         case_no += 1
+        src_url = screen.get("url", "")
         for target in screen["transitions_to"]:
+            # 遷移元 URL を含めることで実際に画面を開いてから遷移テストを行える
+            goto_step = [f"page.goto('{src_url}')"] if src_url else []
             candidates.append(
                 _pw_candidate(
                     case_no,
                     "画面遷移",
                     f"{sid}->{target}",
                     "auto",
-                    [f"{sid} を開く", f"{target} へ遷移するリンクまたはボタンを操作"],
+                    goto_step + [f"{target} へ遷移するリンクまたはボタンを操作"],
                     "遷移先URLまたは遷移先画面の主要テキストが確認できる",
                     "リンク名、button role、aria-label、test idの順に候補化",
                 )
@@ -228,13 +231,15 @@ def _playwright_candidates(domain: str, report: dict[str, Any]) -> dict[str, Any
                 or field.get("placeholder")
                 or "unnamed"
             )
+            # フォームがあるページの URL を先頭に含める
+            form_goto_step = [f"page.goto('{src_url}')"] if src_url else []
             candidates.append(
                 _pw_candidate(
                     case_no,
                     "フォーム入力",
                     trace,
                     "auto",
-                    [f"`{label}` に代表値を入力", "送信または次操作を実行"],
+                    form_goto_step + [f"`{label}` に代表値を入力", "送信または次操作を実行"],
                     "入力値が受理される、または仕様通りのエラーが出る",
                     "getByLabel / getByPlaceholder / data-testid を優先",
                 )
@@ -247,7 +252,7 @@ def _playwright_candidates(domain: str, report: dict[str, Any]) -> dict[str, Any
                         "必須入力",
                         trace,
                         "auto",
-                        [f"`{label}` を空にする", "送信操作を実行"],
+                        form_goto_step + [f"`{label}` を空にする", "送信操作を実行"],
                         "必須エラーが表示され、送信されない",
                         "エラー文言は仕様不明の場合は質問待ち",
                     )

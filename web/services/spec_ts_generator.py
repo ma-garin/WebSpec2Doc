@@ -63,8 +63,10 @@ def generate_spec_ts(
             url = _extract_url(steps)
             if url:
                 lines.append(f"  await page.goto('{_esc(url)}');")
+                lines.append("  await page.waitForLoadState('domcontentloaded');")
             for step in steps:
-                lines.append(f"  // {_esc(step)}")
+                if not step.startswith("page.goto("):
+                    lines.append(f"  // {_esc(step)}")
             if expected:
                 lines.append(f"  // expected: {_esc(expected)}")
             lines.append("  await expect(page.locator('body')).toBeVisible();")
@@ -108,4 +110,10 @@ def _safe_str(value: object) -> str:
 
 
 def _esc(value: str) -> str:
-    return value.replace("\\", "\\\\").replace("'", "\\'")
+    return (
+        value.replace("\\", "\\\\")
+        .replace("'", "\\'")
+        .replace("\n", "\\n")
+        .replace("\r", "\\r")
+        .replace("\t", "\\t")
+    )

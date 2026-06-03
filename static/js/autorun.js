@@ -493,13 +493,13 @@ async function autorunApprove() {
   if (btn) { btn.disabled = true; btn.textContent = '承認中…'; }
 
   const filterMode = document.querySelector('input[name="autorun-filter"]:checked')?.value || 'all';
-  const timeoutSec = parseInt(document.getElementById('autorun-timeout')?.value || '60', 10);
+  const perTestTimeoutSec = parseInt(document.getElementById('autorun-timeout')?.value || '30', 10);
 
   try {
     const res = await fetch('/api/autorun/approve', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ job_id: _autoRunJobId, filter_mode: filterMode, timeout_sec: timeoutSec }),
+      body: JSON.stringify({ job_id: _autoRunJobId, filter_mode: filterMode, per_test_timeout_sec: perTestTimeoutSec }),
     });
     const data = await res.json();
     if (!res.ok || !data.ok) throw new Error(data.error || '承認に失敗しました');

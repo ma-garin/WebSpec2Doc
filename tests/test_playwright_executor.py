@@ -14,6 +14,7 @@ from web.services.playwright_executor import (
     _get_cli_version,
     _map_status,
     _parse_results,
+    _parse_stdout_json,
     _pw_test_available,
     _unavailable_result,
     _write_pw_config,
@@ -312,6 +313,7 @@ class TestMapStatus:
         [
             ("passed", "passed"),
             ("expected", "passed"),
+            ("flaky", "passed"),  # リトライで合格 → passed扱い
             ("failed", "failed"),
             ("unexpected", "failed"),
             ("skipped", "skipped"),
@@ -527,6 +529,25 @@ class TestWritePwConfig:
         assert "html" in content
         assert str(html_dir.resolve()) in content
 
+    def test_config_workers_1(self, tmp_path: Path) -> None:
+        spec = tmp_path / "autorun.spec.ts"
+        spec.write_text("", encoding="utf-8")
+        content = _write_pw_config(spec, tmp_path / "out").read_text()
+        assert "workers: 1" in content
+
+    def test_config_timeout_from_per_test_param(self, tmp_path: Path) -> None:
+        spec = tmp_path / "autorun.spec.ts"
+        spec.write_text("", encoding="utf-8")
+        content = _write_pw_config(spec, tmp_path / "out", per_test_timeout_ms=45_000).read_text()
+        assert "timeout: 45000" in content
+
+    def test_config_output_dir_for_artifacts(self, tmp_path: Path) -> None:
+        spec = tmp_path / "autorun.spec.ts"
+        spec.write_text("", encoding="utf-8")
+        content = _write_pw_config(spec, tmp_path / "playwright-report").read_text()
+        assert "outputDir" in content
+        assert "test-results" in content
+
 
 # ─────────────────────── _get_cli_version ───────────────────────
 
@@ -542,3 +563,82 @@ class TestGetCliVersion:
     def test_returns_empty_on_error(self) -> None:
         with patch("web.services.playwright_executor.subprocess.run", side_effect=OSError):
             assert _get_cli_version() == ""
+
+
+# ─────────────────────── _parse_stdout_json ───────────────────────
+
+
+class TestParseStdoutJson:
+    def test_pure_json(self) -> None:
+        data = {"suites": [], "stats": {}}
+        assert _parse_stdout_json(json.dumps(data)) == data
+
+    def test_json_with_preamble(self) -> None:
+        preamble = "Warning: some npm message\n"
+        data = {"suites": [], "stats": {"expected": 2}}
+        result = _parse_stdout_json(preamble + json.dumps(data))
+        assert result["stats"]["expected"] == 2
+
+    def test_empty_string_returns_empty(self) -> None:
+        assert _parse_stdout_json("") == {}
+
+    def test_no_json_returns_empty(self) -> None:
+        assert _parse_stdout_json("no json here") == {}
+
+    def test_invalid_json_after_brace_returns_empty(self) -> None:
+        assert _parse_stdout_json("{broken json") == {}
+
+
+# ─────────────────────── per_test_timeout_sec パラメータ ───────────────────────
+
+
+class TestPerTestTimeoutParam:
+    def test_per_test_timeout_passed_to_config(self, tmp_out: Path) -> None:
+        """per_test_timeout_sec が Playwright config の timeout (ms) として反映される。"""
+        captured_cmds: list[list[str]] = []
+        config_contents: list[str] = []
+
+        def fake_run(cmd: list[str], **_: object) -> MagicMock:
+            captured_cmds.append(cmd)
+            # --config の後の引数からコンフィグファイルパスを取得して内容を確認
+            idx = cmd.index("--config") + 1 if "--config" in cmd else -1
+            if idx > 0:
+                from pathlib import Path as P
+
+                try:
+                    config_contents.append(P(cmd[idx]).read_text())
+                except Exception:
+                    pass
+            return _mock_proc(_VALID_JSON)
+
+        with (
+            patch("web.services.playwright_executor.shutil.which", return_value="/usr/bin/npx"),
+            patch("web.services.playwright_executor._pw_test_available", return_value=True),
+            patch("web.services.playwright_executor.subprocess.run", side_effect=fake_run),
+        ):
+            run_playwright(Path("spec.ts"), tmp_out, per_test_timeout_sec=45)
+
+        assert any("timeout: 45000" in c for c in config_contents)
+
+    def test_default_per_test_timeout_is_30s(self, tmp_out: Path) -> None:
+        config_contents: list[str] = []
+
+        def fake_run(cmd: list[str], **_: object) -> MagicMock:
+            idx = cmd.index("--config") + 1 if "--config" in cmd else -1
+            if idx > 0:
+                from pathlib import Path as P
+
+                try:
+                    config_contents.append(P(cmd[idx]).read_text())
+                except Exception:
+                    pass
+            return _mock_proc(_VALID_JSON)
+
+        with (
+            patch("web.services.playwright_executor.shutil.which", return_value="/usr/bin/npx"),
+            patch("web.services.playwright_executor._pw_test_available", return_value=True),
+            patch("web.services.playwright_executor.subprocess.run", side_effect=fake_run),
+        ):
+            run_playwright(Path("spec.ts"), tmp_out)
+
+        assert any("timeout: 30000" in c for c in config_contents)

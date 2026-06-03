@@ -51,11 +51,15 @@ def generate_spec_ts(
         automation_status = _safe_str(item.get("automation_status", ""))
 
         if automation_status == "manual-review":
-            lines.append(f"test.skip('{_esc(test_id)} {_esc(title)} [{_esc(trace_id)}]', async () => {{")
+            lines.append(
+                f"test.skip('{_esc(test_id)} {_esc(title)} [{_esc(trace_id)}]', async () => {{"
+            )
             lines.append("  // manual-review: skip in CI")
             lines.append("});")
         else:
-            lines.append(f"test('{_esc(test_id)} {_esc(title)} [{_esc(trace_id)}]', async ({{ page }}) => {{")
+            lines.append(
+                f"test('{_esc(test_id)} {_esc(title)} [{_esc(trace_id)}]', async ({{ page }}) => {{"
+            )
             url = _extract_url(steps)
             if url:
                 lines.append(f"  await page.goto('{_esc(url)}');")

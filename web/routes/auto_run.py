@@ -7,7 +7,7 @@ import sys
 import threading
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -51,9 +51,7 @@ class AutoRunJob:
     _input_event: Any = field(
         default_factory=threading.Event, init=False, repr=False, compare=False
     )
-    _input_data: dict[str, Any] = field(
-        default_factory=dict, init=False, repr=False, compare=False
-    )
+    _input_data: dict[str, Any] = field(default_factory=dict, init=False, repr=False, compare=False)
     _cancelled: bool = field(default=False, init=False, repr=False, compare=False)
 
     def add_log(self, msg: str) -> None:
@@ -66,14 +64,14 @@ class AutoRunJob:
         try:
             start = datetime.fromisoformat(self.started_at)
             if start.tzinfo is None:
-                start = start.replace(tzinfo=timezone.utc)
+                start = start.replace(tzinfo=UTC)
             end_str = self.finished_at
             if end_str:
                 end = datetime.fromisoformat(end_str)
                 if end.tzinfo is None:
-                    end = end.replace(tzinfo=timezone.utc)
+                    end = end.replace(tzinfo=UTC)
             else:
-                end = datetime.now(timezone.utc)
+                end = datetime.now(UTC)
             return max(0, int((end - start).total_seconds()))
         except Exception:
             return 0
@@ -114,6 +112,7 @@ class AutoRunJob:
 
 # ─────────────────────────── API ───────────────────────────
 
+
 @bp.post("/api/autorun/start")
 def api_autorun_start() -> dict | tuple[dict, int]:
     body = request.get_json(silent=True) or {}
@@ -133,9 +132,7 @@ def api_autorun_start() -> dict | tuple[dict, int]:
         job.auth_path = auth
     _JOBS[job_id] = job
 
-    threading.Thread(
-        target=_run_job, args=(job, depth, max_pages), daemon=True
-    ).start()
+    threading.Thread(target=_run_job, args=(job, depth, max_pages), daemon=True).start()
 
     return {"ok": True, "job_id": job_id}
 
@@ -294,6 +291,7 @@ def api_autorun_jobs() -> dict:
 
 
 # ─────────────────────────── ジョブ実行 ───────────────────────────
+
 
 def _run_job(job: AutoRunJob, depth: int, max_pages: int) -> None:
     try:
@@ -457,7 +455,7 @@ def _phase_crawl(job: AutoRunJob, depth: int, max_pages: int) -> None:
             cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
         )
         job._proc = proc
-        for line in proc.stdout:
+        for line in proc.stdout or []:
             if job._cancelled:
                 proc.terminate()
                 return
@@ -615,6 +613,7 @@ def _execute_tests(job: AutoRunJob) -> None:
 
 
 # ─────────────────────────── ユーティリティ ───────────────────────────
+
 
 def _report_html_path(job: AutoRunJob) -> str:
     path_str = job.outputs.get("playwright_report_html", "")

@@ -83,7 +83,11 @@ def submit_login_form(
                 page.goto(normalized, wait_until="networkidle", timeout=DEFAULT_TIMEOUT_MS)
             except Exception as exc:
                 return SubmitResult(
-                    success=False, needs_more_fields=False, fields=(), current_url=normalized, error=str(exc)
+                    success=False,
+                    needs_more_fields=False,
+                    fields=(),
+                    current_url=normalized,
+                    error=str(exc),
                 )
             _fill(page, field_values)
             _submit(page)
@@ -99,7 +103,9 @@ def submit_login_form(
             if not verdict.is_login_required:
                 auth_path.parent.mkdir(parents=True, exist_ok=True)
                 ctx.storage_state(path=str(auth_path))
-                return SubmitResult(success=True, needs_more_fields=False, fields=(), current_url=page.url)
+                return SubmitResult(
+                    success=True, needs_more_fields=False, fields=(), current_url=page.url
+                )
 
             new_fields = _visible_fields(page)
             if new_fields and temp_session_path is not None:
@@ -108,11 +114,17 @@ def submit_login_form(
 
             if not new_fields:
                 return SubmitResult(
-                    success=False, needs_more_fields=False, fields=(), current_url=page.url,
+                    success=False,
+                    needs_more_fields=False,
+                    fields=(),
+                    current_url=page.url,
                     error="認証に失敗しました。IDまたはパスワードをご確認ください。",
                 )
             return SubmitResult(
-                success=False, needs_more_fields=True, fields=tuple(new_fields), current_url=page.url
+                success=False,
+                needs_more_fields=True,
+                fields=tuple(new_fields),
+                current_url=page.url,
             )
         finally:
             _close_browser(browser)
@@ -137,7 +149,11 @@ def submit_login_simple(
                 page.goto(normalized, wait_until="networkidle", timeout=DEFAULT_TIMEOUT_MS)
             except Exception as exc:
                 return SubmitResult(
-                    success=False, needs_more_fields=False, fields=(), current_url=normalized, error=str(exc)
+                    success=False,
+                    needs_more_fields=False,
+                    fields=(),
+                    current_url=normalized,
+                    error=str(exc),
                 )
             _fill_generic(page, username, password)
             _submit(page)
@@ -152,9 +168,14 @@ def submit_login_simple(
             if not verdict.is_login_required:
                 auth_path.parent.mkdir(parents=True, exist_ok=True)
                 ctx.storage_state(path=str(auth_path))
-                return SubmitResult(success=True, needs_more_fields=False, fields=(), current_url=page.url)
+                return SubmitResult(
+                    success=True, needs_more_fields=False, fields=(), current_url=page.url
+                )
             return SubmitResult(
-                success=False, needs_more_fields=False, fields=(), current_url=page.url,
+                success=False,
+                needs_more_fields=False,
+                fields=(),
+                current_url=page.url,
                 error="認証に失敗しました。IDまたはパスワードをご確認ください。",
             )
         finally:

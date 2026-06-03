@@ -4,8 +4,9 @@ import html as html_mod
 import json
 import shutil
 import subprocess
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 # AutoRun が生成した .spec.ts を実行するための共有 node_modules の場所
 _PW_ENV_DIR = Path("output/.playwright_env")
@@ -56,6 +57,7 @@ def run_playwright(
     ]
     try:
         import os
+
         env = os.environ.copy()
         existing = env.get("NODE_PATH", "")
         env["NODE_PATH"] = f"{env_node_modules}:{existing}" if existing else env_node_modules
@@ -193,9 +195,7 @@ def _first_error(results: list[dict[str, Any]]) -> str:
     return ""
 
 
-def _unavailable_result(
-    reason: str, json_path: Path, html_path: Path
-) -> dict[str, Any]:
+def _unavailable_result(reason: str, json_path: Path, html_path: Path) -> dict[str, Any]:
     result: dict[str, Any] = {
         "ok": False,
         "passed": 0,

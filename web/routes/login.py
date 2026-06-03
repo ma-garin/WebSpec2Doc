@@ -32,15 +32,20 @@ def api_login_simple() -> tuple[dict, int] | dict:
 
     creds_json = json.dumps({"username": username, "password": password})
     cmd = [
-        sys.executable, "src/main.py",
+        sys.executable,
+        "src/main.py",
         "--login-simple",
-        "--login-simple-url", login_url,
-        "--auth", str(auth_path),
+        "--login-simple-url",
+        login_url,
+        "--auth",
+        str(auth_path),
     ]
     try:
         proc = subprocess.run(
-            cmd, input=creds_json,
-            capture_output=True, text=True,
+            cmd,
+            input=creds_json,
+            capture_output=True,
+            text=True,
             timeout=SUBMIT_TIMEOUT_SEC,
         )
     except subprocess.TimeoutExpired:
@@ -64,9 +69,7 @@ def api_login_scrape() -> tuple[dict, int] | dict:
         return {"ok": False, "error": "URLとドメインを指定してください"}, 400
     cmd = [sys.executable, "src/main.py", "--login-scrape", url]
     try:
-        proc = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=SCRAPE_TIMEOUT_SEC
-        )
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=SCRAPE_TIMEOUT_SEC)
     except subprocess.TimeoutExpired:
         return {"ok": False, "error": "フォーム取得がタイムアウトしました"}, 504
     try:
@@ -96,17 +99,22 @@ def api_login_submit() -> tuple[dict, int] | dict:
     auth_path.parent.mkdir(parents=True, exist_ok=True)
 
     cmd = [
-        sys.executable, "src/main.py",
+        sys.executable,
+        "src/main.py",
         "--login-submit",
-        "--login-current-url", current_url,
-        "--auth", str(auth_path),
-        "--login-temp-session", str(temp_path),
+        "--login-current-url",
+        current_url,
+        "--auth",
+        str(auth_path),
+        "--login-temp-session",
+        str(temp_path),
     ]
     try:
         proc = subprocess.run(
             cmd,
             input=fields_json,
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
             timeout=SUBMIT_TIMEOUT_SEC,
         )
     except subprocess.TimeoutExpired:

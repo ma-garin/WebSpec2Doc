@@ -20,7 +20,9 @@ def has_openai_api_key() -> bool:
     return bool(_read_env().get("OPENAI_API_KEY", "").strip())
 
 
-def generate_openai_qa(domain: str, report: dict[str, Any], viewpoints: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+def generate_openai_qa(
+    domain: str, report: dict[str, Any], viewpoints: list[dict[str, Any]] | None = None
+) -> dict[str, Any]:
     env = _read_env()
     api_key = env.get("OPENAI_API_KEY", "").strip()
     if not api_key:
@@ -45,7 +47,9 @@ def generate_openai_qa(domain: str, report: dict[str, Any], viewpoints: list[dic
             },
             {
                 "role": "user",
-                "content": json.dumps(_safe_report_payload(domain, report, viewpoints or []), ensure_ascii=False),
+                "content": json.dumps(
+                    _safe_report_payload(domain, report, viewpoints or []), ensure_ascii=False
+                ),
             },
         ],
         "text": {
@@ -104,14 +108,18 @@ def _openai_headers(api_key: str, env: dict[str, str]) -> dict[str, str]:
     return headers
 
 
-def _safe_report_payload(domain: str, report: dict[str, Any], viewpoints: list[dict[str, Any]]) -> dict[str, Any]:
+def _safe_report_payload(
+    domain: str, report: dict[str, Any], viewpoints: list[dict[str, Any]]
+) -> dict[str, Any]:
     screens = _safe_screens(report)
     return {
         "domain": domain,
         "meta": {
-            "target_url": str(report.get("meta", {}).get("target_url", ""))[:500]
-            if isinstance(report.get("meta"), dict)
-            else "",
+            "target_url": (
+                str(report.get("meta", {}).get("target_url", ""))[:500]
+                if isinstance(report.get("meta"), dict)
+                else ""
+            ),
             "page_count": len(screens),
         },
         "source_files": ["report.json", "spec.xlsx", "report.html"],
@@ -162,7 +170,11 @@ def _safe_screens(report: dict[str, Any]) -> list[dict[str, Any]]:
                 "forms": _safe_forms(screen),
                 "transitions_to": [
                     _short(item, 80)
-                    for item in _list(screen.get("transitions", {}).get("to") if isinstance(screen.get("transitions"), dict) else [])
+                    for item in _list(
+                        screen.get("transitions", {}).get("to")
+                        if isinstance(screen.get("transitions"), dict)
+                        else []
+                    )
                 ],
             }
         )
@@ -190,8 +202,12 @@ def _safe_forms(screen: dict[str, Any]) -> list[dict[str, Any]]:
                     "placeholder": _short(field.get("placeholder"), 160),
                     "field_type": _short(field.get("field_type") or field.get("type"), 80),
                     "required": bool(field.get("required")),
-                    "constraints": [_short(item, 160) for item in _list(field.get("constraints"))[:20]],
-                    "test_conditions": [_short(item, 160) for item in _list(field.get("test_conditions"))[:20]],
+                    "constraints": [
+                        _short(item, 160) for item in _list(field.get("constraints"))[:20]
+                    ],
+                    "test_conditions": [
+                        _short(item, 160) for item in _list(field.get("test_conditions"))[:20]
+                    ],
                 }
             )
         safe_forms.append(
@@ -210,7 +226,9 @@ def _extract_output_text(response_data: dict[str, Any]) -> str:
     if isinstance(direct, str) and direct.strip():
         return direct
     chunks: list[str] = []
-    for item in response_data.get("output", []) if isinstance(response_data.get("output"), list) else []:
+    for item in (
+        response_data.get("output", []) if isinstance(response_data.get("output"), list) else []
+    ):
         if not isinstance(item, dict):
             continue
         for content in item.get("content", []) if isinstance(item.get("content"), list) else []:
@@ -267,7 +285,14 @@ QA_ARTIFACT_SCHEMA: dict[str, Any] = {
         "test_plan": {
             "type": "object",
             "additionalProperties": False,
-            "required": ["scope", "levels", "risks", "entry_criteria", "exit_criteria", "questions"],
+            "required": [
+                "scope",
+                "levels",
+                "risks",
+                "entry_criteria",
+                "exit_criteria",
+                "questions",
+            ],
             "properties": {
                 "scope": _array_of_strings("Testing scope."),
                 "levels": _array_of_strings("Test levels."),
@@ -324,7 +349,13 @@ QA_ARTIFACT_SCHEMA: dict[str, Any] = {
                     "items": {
                         "type": "object",
                         "additionalProperties": False,
-                        "required": ["viewpoint_id", "target", "technique", "design_note", "trace_id"],
+                        "required": [
+                            "viewpoint_id",
+                            "target",
+                            "technique",
+                            "design_note",
+                            "trace_id",
+                        ],
                         "properties": {
                             "viewpoint_id": {"type": "string"},
                             "target": {"type": "string"},

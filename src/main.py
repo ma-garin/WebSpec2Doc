@@ -73,9 +73,13 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         help="GUI 手渡しログイン用: このファイルが出現したらセッションを保存する（廃止予定）",
     )
-    parser.add_argument("--login-simple", action="store_true", help="ID/PASSWORDをstdinのJSONで受取り自動ログイン")
+    parser.add_argument(
+        "--login-simple", action="store_true", help="ID/PASSWORDをstdinのJSONで受取り自動ログイン"
+    )
     parser.add_argument("--login-simple-url", help="--login-simple: ログインページURL")
-    parser.add_argument("--login-scrape", help="ログインURLのフォームフィールドを取得してJSONで出力")
+    parser.add_argument(
+        "--login-scrape", help="ログインURLのフォームフィールドを取得してJSONで出力"
+    )
     parser.add_argument(
         "--login-submit",
         action="store_true",

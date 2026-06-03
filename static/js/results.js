@@ -41,6 +41,35 @@ async function showResults(domain) {
   document.getElementById('r-fields').textContent = s.fields || 0;
   document.getElementById('r-required').textContent = required;
   document.getElementById('r-buttons').textContent = s.buttons || 0;
+
+  // 差分バッジ（DOM APIで構築 — innerHTML を使わない）
+  const diffBadge = document.getElementById('r-diff-badge');
+  if (diffBadge) {
+    const hasDiff = data.files && data.files.diff;
+    diffBadge.replaceChildren();
+    if (hasDiff) {
+      const span = document.createElement('span');
+      span.className = 'diff-badge';
+      span.style.cursor = 'pointer';
+      span.title = '履歴・差分タブを開く';
+      span.textContent = '差分あり';
+      span.addEventListener('click', () => selectResultTab('history'));
+      diffBadge.appendChild(span);
+      diffBadge.style.display = '';
+    } else {
+      diffBadge.style.display = 'none';
+    }
+  }
+
+  // タブ件数バッジ
+  const screenCount = s.screens || 0;
+  const fieldCount = s.fields || 0;
+  const snapCount = data.snapshot_count || 0;
+  const setTabCount = (id, n) => { const el = document.getElementById(id); if (el) el.textContent = n > 0 ? ` ${n}` : ''; };
+  setTabCount('tab-count-report', screenCount);
+  setTabCount('tab-count-matrix', fieldCount);
+  setTabCount('tab-count-history', snapCount);
+
   setHeader(['ダッシュボード', domain], domain);
 
   executionView.classList.add('hidden'); resultPanel.classList.remove('hidden');

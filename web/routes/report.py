@@ -67,8 +67,11 @@ def api_result() -> dict | tuple[dict, int]:
 
     shots_dir = domain_dir / "screenshots"
     shots = sorted(shots_dir.glob("*.png")) if shots_dir.is_dir() else []
+    snap_dir = domain_dir / "snapshots"
+    snapshot_count = len(list(snap_dir.glob("*.json"))) if snap_dir.is_dir() else 0
     return {
         "summary": _summary_for_domain(domain),
+        "snapshot_count": snapshot_count,
         "files": {
             "html": path_of("report.html"),
             "pdf": path_of("report.pdf"),

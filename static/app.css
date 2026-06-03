@@ -300,6 +300,8 @@
     .result-tabs::-webkit-scrollbar { display: none; }
     .result-tab { height: 34px; padding: 0 14px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface-soft); color: var(--text-muted); font-size: 13px; font-weight: 700; cursor: pointer; }
     .result-tab.is-active { border-color: var(--primary); background: var(--info-bg); color: var(--primary-dark); }
+    .tab-count { display: inline-block; margin-left: 4px; background: var(--surface-subtle); border-radius: 10px; padding: 0 6px; font-size: 11px; font-weight: 800; color: var(--text-muted); min-width: 18px; text-align: center; vertical-align: middle; }
+    .result-tab.is-active .tab-count { background: color-mix(in srgb, var(--primary) 15%, transparent); color: var(--primary-dark); }
     .result-bar-actions { display: flex; gap: 8px; align-items: center; }
     .result-hero { flex: 1; min-height: 0; border: 1px solid var(--border); border-radius: var(--radius); overflow: auto; background: var(--surface); }
     /* タブ最大化モード */

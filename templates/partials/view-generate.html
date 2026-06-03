@@ -153,8 +153,9 @@
           <div id="result-panel" class="result-panel hidden">
             <div class="result-summary">
               <div class="result-summary-head">
-                <div style="display:flex;align-items:center;gap:10px;min-width:0">
+                <div style="display:flex;align-items:center;gap:10px;min-width:0;flex-wrap:wrap">
                   <strong id="r-domain">-</strong>
+                  <span id="r-diff-badge" style="display:none"></span>
                   <span id="r-crawled" style="font-size:12px;color:var(--text-muted)"></span>
                 </div>
                 <div style="display:flex;gap:8px;align-items:center">
@@ -176,13 +177,13 @@
             <div class="result-bar">
               <div class="result-tabs" role="tablist" aria-label="結果ビュー">
                 <button type="button" role="tab" aria-selected="true" class="result-tab is-active" data-tab="overview">概要</button>
-                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="report">画面別仕様</button>
-                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="matrix">入力項目・テスト条件</button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="report">画面別仕様<span class="tab-count" id="tab-count-report"></span></button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="matrix">テスト条件<span class="tab-count" id="tab-count-matrix"></span></button>
                 <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="design">設計</button>
                 <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="technique-detail">技法詳細</button>
                 <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="transition">画面遷移図</button>
                 <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="transition-table">遷移表</button>
-                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="history">履歴・差分</button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="history">履歴・差分<span class="tab-count" id="tab-count-history"></span></button>
               </div>
               <div class="result-bar-actions">
                 <button type="button" id="r-maximize-btn" class="btn-outline-sm" title="最大化 (Esc で解除)">⛶ 最大化</button>

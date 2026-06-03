@@ -644,8 +644,42 @@
 .rpt-cond-pills { padding:6px 0 2px; display:flex; flex-wrap:wrap; gap:3px; }
 .rpt-transitions { margin-top:8px; font-size:12px; color:var(--text-muted); padding:8px 14px; background:var(--surface-soft); border:1px solid var(--border); border-radius:var(--radius); }
 
-/* ── 画面遷移図 vis.js ── */
-#vis-network-container { width:100%; height:100%; min-height:400px; }
+/* ── 画面遷移図 UML ── */
+.uml-view { height:100%; min-height:0; display:flex; flex-direction:column; background:var(--surface); }
+.uml-subtabs { display:flex; gap:6px; padding:10px 12px; border-bottom:1px solid var(--border); background:var(--surface-soft); overflow-x:auto; flex-shrink:0; }
+.uml-subtab { min-width:176px; height:42px; padding:0 12px; border:1px solid var(--border); border-radius:4px; background:var(--surface); color:var(--text); cursor:pointer; font-size:13px; font-weight:800; text-align:left; }
+.uml-subtab span { display:block; margin-top:1px; font-size:10px; font-weight:600; color:var(--text-muted); }
+.uml-subtab.is-active { border-color:var(--primary); background:var(--info-bg); color:var(--primary-dark); }
+.uml-subtab.is-active span { color:var(--primary-dark); }
+.uml-diagram-area { flex:1; min-height:0; overflow:auto; }
+.uml-panel-head { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; padding:12px 16px; border-bottom:1px solid var(--border); background:var(--surface); }
+.uml-panel-head strong { display:block; font-size:14px; color:var(--text); }
+.uml-panel-head span,.uml-panel-head p { color:var(--text-muted); font-size:12px; margin:2px 0 0; }
+.uml-layout { display:grid; grid-template-columns:minmax(420px,1.2fr) minmax(360px,.8fr); gap:0; min-height:520px; }
+.uml-canvas { min-width:0; overflow:auto; padding:16px; border-right:1px solid var(--border); background:#fff; }
+.uml-canvas svg { max-width:none; min-width:100%; height:auto; display:block; }
+.uml-source { margin:0; padding:12px; border:1px solid var(--border); border-radius:4px; background:var(--surface-soft); font-size:12px; white-space:pre; overflow:auto; }
+.uml-table-wrap { min-width:0; overflow:auto; padding:16px; background:var(--surface); }
+.uml-table-title { font-size:12px; font-weight:800; color:var(--primary-dark); margin-bottom:8px; }
+.uml-linked-table td strong { display:block; font-size:12px; }
+.uml-linked-table td span:not(.cond-pill):not(.trans-link-detail) { display:block; color:var(--text-muted); font-size:11px; margin-top:2px; }
+.viewpoint-map { padding:16px; }
+.viewpoint-summary { display:grid; grid-template-columns:repeat(4,minmax(150px,1fr)); gap:10px; margin-bottom:14px; }
+.viewpoint-card { border:1px solid var(--border); border-radius:var(--radius); padding:12px 14px; background:var(--surface-soft); min-width:0; position:relative; }
+.viewpoint-card strong { display:block; font-size:13px; color:var(--text); padding-right:34px; }
+.viewpoint-card p { margin:5px 0 0; color:var(--text-muted); font-size:12px; line-height:1.45; }
+.viewpoint-count { position:absolute; top:10px; right:12px; min-width:26px; height:22px; display:inline-flex; align-items:center; justify-content:center; border-radius:999px; background:var(--info-bg); color:var(--primary-dark); border:1px solid var(--info-border); font-size:12px; font-weight:800; }
+.viewpoint-table-wrap { overflow:auto; }
+.viewpoint-pill { display:inline-flex; align-items:center; min-height:22px; padding:2px 8px; border-radius:999px; background:var(--info-bg); color:var(--primary-dark); border:1px solid var(--info-border); font-size:11px; font-weight:800; white-space:nowrap; }
+.viewpoint-table td { white-space:normal; }
+@media(max-width:1500px){
+  .uml-layout { grid-template-columns:1fr; }
+  .uml-canvas { border-right:none; border-bottom:1px solid var(--border); }
+  .viewpoint-summary { grid-template-columns:repeat(2,minmax(150px,1fr)); }
+}
+@media(max-width:760px){
+  .viewpoint-summary { grid-template-columns:1fr; }
+}
 
 /* ── 画面遷移表 ── */
 .trans-table { width:100%; border-collapse:collapse; font-size:.8rem; }

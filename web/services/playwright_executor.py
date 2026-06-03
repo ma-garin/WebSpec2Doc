@@ -12,8 +12,11 @@ from typing import Any
 # AutoRun が生成した .spec.ts を実行するための共有 node_modules の場所
 _PW_ENV_DIR = Path("output/.playwright_env")
 
-# Playwright HTML レポートのサブディレクトリ名（PLAYWRIGHT_HTML_REPORT で制御）
+# Playwright HTML レポートのサブディレクトリ名
 _PW_HTML_SUBDIR = "playwright-report"
+
+# spec ファイルと並べて生成する一時 JS コンフィグ名
+_PW_CONFIG_NAME = "_autorun_pw.config.js"
 
 
 def run_playwright(
@@ -23,11 +26,12 @@ def run_playwright(
     add_log: Callable[[str], None] | None = None,
 ) -> dict[str, Any]:
     """
-    npx playwright test でスペックを実行し、結果を返す。
+    ローカル @playwright/test CLI でスペックを実行し、結果を返す。
 
-    --reporter=json,html + --screenshot=on + --trace=retain-on-failure で
-    ISTQB テスト実行レポートに必要なエビデンスを生成する。
-    @playwright/test が未セットアップの場合は自動インストールを試みる。
+    解決策:
+      1. npx (global) ではなくローカル CLI を使う → CLI/パッケージのバージョン一致
+      2. JS 形式のコンフィグを生成 → testDir・testMatch を明示してテスト発見を保証
+      3. NODE_PATH で @playwright/test を spec ファイルから解決可能にする
     """
     output_dir.mkdir(parents=True, exist_ok=True)
     json_report_path = output_dir / "playwright_report.json"
@@ -45,7 +49,7 @@ def run_playwright(
             fallback_html_path,
         )
 
-    # @playwright/test パッケージを確認（playwright CLI の有無とは別）
+    # @playwright/test パッケージを確認・インストール（playwright CLI の有無とは独立）
     if not _pw_test_available():
         _log("@playwright/test をセットアップしています…")
         ok, msg = _ensure_pw_env(_PW_ENV_DIR)
@@ -53,28 +57,28 @@ def run_playwright(
         if not ok:
             return _unavailable_result(msg, json_report_path, fallback_html_path)
 
+    # ローカル CLI を優先（global CLI との version mismatch を回避）
+    local_cli = _PW_ENV_DIR / "node_modules" / ".bin" / "playwright"
+    cli_cmd = str(local_cli.resolve()) if local_cli.is_file() else "npx playwright"
+
+    # JS コンフィグを spec ファイルの隣に生成
+    config_path = _write_pw_config(
+        spec_path=spec_path,
+        html_output_dir=pw_html_dir,
+    )
+
     env_node_modules = str((_PW_ENV_DIR / "node_modules").resolve())
-    # Playwright は positional 引数を CWD 相対の regex pattern として扱うため相対パスで渡す
-    try:
-        spec_arg = str(spec_path.relative_to(Path.cwd()))
-    except ValueError:
-        spec_arg = str(spec_path)
     cmd = [
-        "npx",
-        "playwright",
+        cli_cmd,
         "test",
-        spec_arg,
-        "--reporter=json",  # stdout に JSON 出力（parse 用）
-        "--reporter=html",  # PLAYWRIGHT_HTML_REPORT にスクショ付き HTML 出力
-        f"--output={output_dir / 'artifacts'}",
-        "--screenshot=on",
-        "--trace=retain-on-failure",
+        "--config",
+        str(config_path),
+        "--reporter=json",
     ]
     try:
         env = os.environ.copy()
         existing = env.get("NODE_PATH", "")
         env["NODE_PATH"] = f"{env_node_modules}:{existing}" if existing else env_node_modules
-        env["PLAYWRIGHT_HTML_REPORT"] = str(pw_html_dir)
         proc = subprocess.run(
             cmd,
             capture_output=True,
@@ -98,6 +102,26 @@ def run_playwright(
     return result
 
 
+def _write_pw_config(spec_path: Path, html_output_dir: Path) -> Path:
+    """JS 形式の playwright config を生成する（TypeScript import 不要）。"""
+    config_path = spec_path.parent / _PW_CONFIG_NAME
+    spec_dir_abs = str(spec_path.parent.resolve())
+    html_dir_abs = str(html_output_dir.resolve())
+    config_js = (
+        "module.exports = {\n"
+        f"  testDir: {json.dumps(spec_dir_abs)},\n"
+        f"  testMatch: {json.dumps(spec_path.name)},\n"
+        "  use: { screenshot: 'on', trace: 'retain-on-failure' },\n"
+        "  reporter: [\n"
+        "    ['json'],\n"
+        f"    ['html', {{ outputFolder: {json.dumps(html_dir_abs)}, open: 'never' }}],\n"
+        "  ],\n"
+        "};\n"
+    )
+    config_path.write_text(config_js, encoding="utf-8")
+    return config_path
+
+
 def _pw_test_available() -> bool:
     """ローカルまたは共有 env に @playwright/test があるか確認。"""
     local = Path("node_modules/@playwright/test")
@@ -115,8 +139,26 @@ def _pw_test_available() -> bool:
         return False
 
 
+def _get_cli_version() -> str:
+    """npx playwright の version 文字列を返す（例: '1.59.1'）。"""
+    try:
+        proc = subprocess.run(
+            ["npx", "playwright", "--version"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        # "Version 1.59.1" → "1.59.1"
+        parts = proc.stdout.strip().split()
+        if len(parts) >= 2:
+            return parts[-1]
+    except Exception:
+        pass
+    return ""
+
+
 def _ensure_pw_env(env_dir: Path) -> tuple[bool, str]:
-    """@playwright/test を env_dir にインストールする。"""
+    """@playwright/test を env_dir にインストールする（CLI と同バージョン）。"""
     env_dir.mkdir(parents=True, exist_ok=True)
     pkg_json = env_dir / "package.json"
     if not pkg_json.exists():
@@ -129,15 +171,19 @@ def _ensure_pw_env(env_dir: Path) -> tuple[bool, str]:
     if not shutil.which("npm"):
         return False, "npm が見つかりません。Node.js をインストールしてください。"
 
+    # CLI と同バージョンをインストールして version mismatch を防ぐ
+    cli_ver = _get_cli_version()
+    pkg = f"@playwright/test@{cli_ver}" if cli_ver else "@playwright/test"
+
     try:
         proc = subprocess.run(
-            ["npm", "install", "@playwright/test", "--prefix", str(env_dir)],
+            ["npm", "install", pkg, "--prefix", str(env_dir)],
             capture_output=True,
             text=True,
             timeout=180,
         )
         if proc.returncode == 0:
-            return True, "@playwright/test のインストールが完了しました。"
+            return True, f"@playwright/test {cli_ver or ''} のインストールが完了しました。"
         return False, f"npm install 失敗: {proc.stderr[:300]}"
     except subprocess.TimeoutExpired:
         return False, "npm install タイムアウト"
@@ -170,13 +216,16 @@ def _parse_results(
     passed = sum(1 for t in tests if t["status"] == "passed")
     failed = sum(1 for t in tests if t["status"] == "failed")
     skipped = sum(1 for t in tests if t["status"] == "skipped")
+    total = len(tests) or int(stats.get("expected", 0)) + int(stats.get("unexpected", 0)) + int(
+        stats.get("skipped", 0)
+    )
 
     return {
         "ok": returncode == 0,
         "passed": passed or int(stats.get("expected", 0)),
         "failed": failed or int(stats.get("unexpected", 0)),
         "skipped": skipped or int(stats.get("skipped", 0)),
-        "total": len(tests) or int(stats.get("total", 0)),
+        "total": total,
         "duration_ms": int(stats.get("duration", 0)),
         "tests": tests,
         "stdout": stdout[:4000] if stdout else "",

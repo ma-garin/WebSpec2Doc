@@ -11,10 +11,12 @@ from web.services.playwright_executor import (
     _ensure_pw_env,
     _error_result,
     _first_error,
+    _get_cli_version,
     _map_status,
     _parse_results,
     _pw_test_available,
     _unavailable_result,
+    _write_pw_config,
     run_playwright,
 )
 
@@ -197,7 +199,7 @@ class TestRunPlaywright:
 
         assert "ok" in result
 
-    def test_cmd_includes_required_flags(self, tmp_out: Path) -> None:
+    def test_cmd_uses_local_cli_and_config(self, tmp_out: Path) -> None:
         captured: list[list[str]] = []
 
         def fake_run(cmd: list[str], **_: object) -> MagicMock:
@@ -213,11 +215,9 @@ class TestRunPlaywright:
 
         cmd = captured[0]
         assert "--reporter=json" in cmd
-        assert "--reporter=html" in cmd
-        assert "--screenshot=on" in cmd
-        assert "--trace=retain-on-failure" in cmd
+        assert "--config" in cmd
 
-    def test_playwright_html_report_env_var_set(self, tmp_out: Path) -> None:
+    def test_node_path_set_in_env(self, tmp_out: Path) -> None:
         captured_env: dict[str, str] = {}
 
         def fake_run(cmd: list[str], env: dict[str, str], **_: object) -> MagicMock:
@@ -231,8 +231,8 @@ class TestRunPlaywright:
         ):
             run_playwright(Path("spec.ts"), tmp_out)
 
-        assert "PLAYWRIGHT_HTML_REPORT" in captured_env
-        assert "playwright-report" in captured_env["PLAYWRIGHT_HTML_REPORT"]
+        assert "NODE_PATH" in captured_env
+        assert ".playwright_env" in captured_env["NODE_PATH"]
 
     def test_add_log_called(self, tmp_out: Path) -> None:
         logs: list[str] = []
@@ -492,3 +492,52 @@ class TestResultHelpers:
         assert result["ok"] is False
         assert result["error"] == "タイムアウト"
         assert "unavailable" not in result
+
+
+# ─────────────────────── _write_pw_config ───────────────────────
+
+
+class TestWritePwConfig:
+    def test_generates_js_config(self, tmp_path: Path) -> None:
+        spec = tmp_path / "autorun.spec.ts"
+        spec.write_text("", encoding="utf-8")
+        html_dir = tmp_path / "playwright-report"
+
+        config_path = _write_pw_config(spec, html_dir)
+
+        assert config_path.suffix == ".js"
+        content = config_path.read_text()
+        assert "module.exports" in content
+        assert "autorun.spec.ts" in content
+        assert str(tmp_path.resolve()) in content
+
+    def test_config_contains_screenshot_and_trace(self, tmp_path: Path) -> None:
+        spec = tmp_path / "autorun.spec.ts"
+        spec.write_text("", encoding="utf-8")
+        content = _write_pw_config(spec, tmp_path / "out").read_text()
+        assert "screenshot" in content
+        assert "trace" in content
+
+    def test_config_contains_html_reporter(self, tmp_path: Path) -> None:
+        spec = tmp_path / "autorun.spec.ts"
+        spec.write_text("", encoding="utf-8")
+        html_dir = tmp_path / "playwright-report"
+        content = _write_pw_config(spec, html_dir).read_text()
+        assert "html" in content
+        assert str(html_dir.resolve()) in content
+
+
+# ─────────────────────── _get_cli_version ───────────────────────
+
+
+class TestGetCliVersion:
+    def test_parses_version_string(self) -> None:
+        with patch(
+            "web.services.playwright_executor.subprocess.run",
+            return_value=_mock_proc("Version 1.59.1"),
+        ):
+            assert _get_cli_version() == "1.59.1"
+
+    def test_returns_empty_on_error(self) -> None:
+        with patch("web.services.playwright_executor.subprocess.run", side_effect=OSError):
+            assert _get_cli_version() == ""

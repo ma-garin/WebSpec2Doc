@@ -50,7 +50,6 @@ green "OK: ${#PY_FILES[@]} ファイル"
 # --- 1b. 800行ガード ---
 # Phase 1 分割対象の既知違反は一時除外（分割完了次第リストから削除する）
 PHASE1_ALLOWED=(
-  "web/routes/qa_process.py"   # Phase 1b: web/services/qa/ へ分割予定
   "templates/index.html"       # Phase 1c: templates/partials/ へ分割予定
 )
 step "1b. 800行ガード (.py/.js/.css/.html)"

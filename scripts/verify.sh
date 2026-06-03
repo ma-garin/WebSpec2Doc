@@ -43,14 +43,47 @@ green "OK: python$PYVER + playwright + ruff/black/mypy"
 # --- 1. py_compile 全ソース ---
 step "1. py_compile (構文チェック)"
 PY_FILES=()
-while IFS= read -r f; do PY_FILES+=("$f"); done < <(find src app.py -name '*.py' 2>/dev/null)
+while IFS= read -r f; do PY_FILES+=("$f"); done < <(find src web app.py -name '*.py' 2>/dev/null)
 "$VENV_PY" -m py_compile "${PY_FILES[@]}" || fail "py_compile エラー"
 green "OK: ${#PY_FILES[@]} ファイル"
 
+# --- 1b. 800行ガード ---
+# Phase 1 分割対象の既知違反は一時除外（分割完了次第リストから削除する）
+PHASE1_ALLOWED=(
+  "web/routes/qa_process.py"   # Phase 1b: web/services/qa/ へ分割予定
+  "static/app.js"              # Phase 1a: static/js/ へ分割予定
+  "templates/index.html"       # Phase 1c: templates/partials/ へ分割予定
+)
+step "1b. 800行ガード (.py/.js/.css/.html)"
+OVER800=()
+while IFS= read -r f; do
+  lines=$(wc -l < "$f" | tr -d ' ')
+  if [ "$lines" -gt 800 ]; then
+    rel="${f#$REPO_ROOT/}"
+    allowed=false
+    for exc in "${PHASE1_ALLOWED[@]}"; do
+      [ "$rel" = "$exc" ] && allowed=true && break
+    done
+    "$allowed" || OVER800+=("$rel ($lines 行)")
+  fi
+done < <(
+  find src web app.py tests static templates \
+    -not -path '*/output/*' -not -path '*/__pycache__/*' \
+    \( -name '*.py' -o -name '*.js' -o -name '*.css' -o -name '*.html' \) 2>/dev/null
+)
+if [ ${#OVER800[@]} -gt 0 ]; then
+  for item in "${OVER800[@]}"; do red "  800行超過: $item"; done
+  fail "800行ガード違反 (${#OVER800[@]} ファイル)"
+fi
+if [ ${#PHASE1_ALLOWED[@]} -gt 0 ]; then
+  printf '\033[33m  ⚠ 一時除外 (Phase 1 分割待ち): %s\033[0m\n' "${PHASE1_ALLOWED[@]}"
+fi
+green "OK: 新規ファイル全て 800行以内 (除外 ${#PHASE1_ALLOWED[@]} 件)"
+
 # --- 2. lint + フォーマット + 型チェック ---
 step "2. lint / format / 型チェック (ruff / black / mypy)"
-"$VENV_BIN/ruff" check src app.py tests || fail "ruff 違反"
-"$VENV_BIN/black" --check src app.py tests >/dev/null 2>&1 || fail "black 未整形 ('black src app.py tests' で整形)"
+"$VENV_BIN/ruff" check src app.py tests web || fail "ruff 違反"
+"$VENV_BIN/black" --check src app.py tests web >/dev/null 2>&1 || fail "black 未整形 ('black src app.py tests web' で整形)"
 "$VENV_BIN/mypy" || fail "mypy 型エラー"
 green "OK: ruff + black + mypy"
 

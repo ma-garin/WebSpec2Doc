@@ -39,3 +39,13 @@ htmlcov/
 
 # macOS
 .DS_Store
+
+# Claude Code / Codex ハーネス（リポジトリ管理不要）
+.agents/
+.claude/
+.playwright-mcp/
+skills-lock.json
+
+# 実装済み作業計画書（実装完了後は不要）
+Plan_*.md
+plan_*.md

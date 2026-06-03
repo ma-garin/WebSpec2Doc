@@ -5,6 +5,7 @@ let _autoRunElapsedTimer = null;
 let _autoRunStartedAt = null;  // ISO string from server
 let _autoRunPreviewLoaded = false;
 let _autoRunPreviewData = null;
+let _arCards = {};  // 生成済みカード管理: {crawl, qa, scripts, tests}
 
 const AUTORUN_STEP_MAP = {
   idle:              null,
@@ -84,11 +85,20 @@ async function autorunStart() {
 function _autorunShowRunning() {
   document.getElementById('autorun-steps').style.display = '';
   document.getElementById('autorun-start-btn').disabled = true;
-  document.getElementById('autorun-log-panel').style.display = '';
+  document.getElementById('ar-log-section').style.display = '';
   document.getElementById('autorun-idle-msg').style.display = 'none';
-  document.getElementById('autorun-result-panel').style.display = 'none';
   document.getElementById('autorun-preview-panel').style.display = 'none';
   document.getElementById('autorun-cancel-area').style.display = '';
+}
+
+// ---- AutoRun: ログ折りたたみ ----
+function arToggleLog() {
+  const pre = document.getElementById('autorun-log');
+  const btn = document.getElementById('ar-log-toggle');
+  if (!pre || !btn) return;
+  const open = pre.style.display === 'none';
+  pre.style.display = open ? '' : 'none';
+  btn.textContent = open ? '▲ 折りたたむ' : '▶ 展開';
 }
 
 // ---- AutoRun: ポーリング ----
@@ -176,16 +186,8 @@ function _autorunRender(data) {
     _autorunHideLoginModal();
   }
 
-  // ---- プレビューパネル (awaiting_approval 時に表示) ----
-  const previewPanel = document.getElementById('autorun-preview-panel');
-  if (previewPanel) {
-    const showPreview = status === 'awaiting_approval';
-    previewPanel.style.display = showPreview ? '' : 'none';
-    if (showPreview && !_autoRunPreviewLoaded) {
-      _autoRunPreviewLoaded = true;
-      _autorunLoadPreview();
-    }
-  }
+  // ---- タイムラインカード更新 ----
+  _autorunUpdateTimeline(data);
 
   // ---- 承認ボタン ----
   const approveArea = document.getElementById('autorun-approve-area');
@@ -213,7 +215,7 @@ function _autorunRender(data) {
     autorunSetStartStatus(data.error, true);
   }
 
-  // ---- 成果物リンク ----
+  // ---- 成果物リンク（左サイドバー） ----
   if (data.outputs && Object.keys(data.outputs).length) {
     const linksEl = document.getElementById('autorun-output-links');
     const area    = document.getElementById('autorun-outputs-area');
@@ -231,10 +233,138 @@ function _autorunRender(data) {
         }).join('');
     }
   }
+}
 
-  // ---- テスト結果 ----
-  if (data.test_results && typeof data.test_results.total === 'number') {
-    _autorunRenderResults(data.test_results, data.outputs || {});
+// ---- AutoRun: タイムラインカード管理 ----
+function _autorunUpdateTimeline(data) {
+  const outputs = data.outputs || {};
+  const sd = data.step_data || {};
+  const elapsed = autorunFmtElapsed(data.elapsed_sec || 0);
+  const status = data.status || 'idle';
+
+  // 仕様書生成完了カード
+  if (outputs.report_json && !_arCards.crawl) {
+    _arCards.crawl = true;
+    const crawl = sd.crawl || {};
+    const meta = crawl.screens != null
+      ? `${crawl.screens}画面 / ${crawl.forms || 0}フォーム を検出`
+      : `${crawl.domain || ''} クロール完了`;
+    const btns = [
+      outputs.report_html ? { label: 'HTMLレポート', cls: 'btn-primary', path: outputs.report_html, dataLabel: '仕様書 HTML' } : null,
+      outputs.report_json ? { label: 'JSON', cls: 'btn-outline-sm', path: outputs.report_json, dataLabel: '仕様書 JSON' } : null,
+    ].filter(Boolean);
+    _arAppendCard('crawl', '✅', '仕様書生成完了', elapsed, meta, btns);
+  }
+
+  // QA成果物完了カード
+  if (outputs.qa_process_report && !_arCards.qa) {
+    _arCards.qa = true;
+    const qa = sd.qa || {};
+    const meta = `テスト計画・分析・設計・ケース・横断レビュー${qa.count ? '（' + qa.count + '件）' : ''}`;
+    const btns = [{ label: 'QAレポートを見る', cls: 'btn-primary', path: outputs.qa_process_report, dataLabel: 'QAプロセスレポート' }];
+    _arAppendCard('qa', '✅', 'QA成果物生成完了', elapsed, meta, btns);
+  }
+
+  // テストスクリプトカード
+  if ((outputs.spec_ts || status === 'awaiting_approval') && !_arCards.scripts) {
+    _arCards.scripts = true;
+    const sc = sd.scripts || {};
+    const metaParts = [sc.all != null ? `${sc.all}件のテストケース` : 'テストケース生成完了'];
+    if (sc.smoke != null) metaParts.push(`スモーク:${sc.smoke}`);
+    if (sc.form != null) metaParts.push(`フォーム:${sc.form}`);
+    const btns = [{ label: 'テストケース確認', cls: 'btn-outline-sm', onclick: arShowPreview }];
+    const card = _arAppendCard('scripts',
+      status === 'awaiting_approval' ? '⏳' : '✅',
+      status === 'awaiting_approval' ? 'テストスクリプト 承認待ち' : 'テストスクリプト生成完了',
+      elapsed, metaParts.join(' / '), btns);
+    if (status === 'awaiting_approval' && card) {
+      const hint = document.createElement('p');
+      hint.style.cssText = 'font-size:11px;color:var(--text-muted);margin-top:6px';
+      hint.textContent = '← 左側で実行方針を選択してテスト実行を承認してください';
+      card.appendChild(hint);
+    }
+  }
+
+  // テスト結果カード
+  if (data.test_results && data.test_results.total != null && !_arCards.tests) {
+    _arCards.tests = true;
+    const r = data.test_results;
+    const ok = r.ok;
+    const meta = r.unavailable
+      ? (r.error || '@playwright/test 未セットアップ')
+      : `PASS: ${r.passed}　FAIL: ${r.failed}　SKIP: ${r.skipped}　TOTAL: ${r.total}`;
+    const btns = [
+      outputs.playwright_report_html ? { label: '実行レポートを見る', cls: 'btn-primary', path: outputs.playwright_report_html, dataLabel: 'テスト実行レポート' } : null,
+      outputs.qa_process_report ? { label: 'QAレポート', cls: 'btn-outline-sm', path: outputs.qa_process_report, dataLabel: 'QAプロセスレポート' } : null,
+    ].filter(Boolean);
+    const card = _arAppendCard('tests', ok ? '✅' : '❌', ok ? 'テスト実行完了' : 'テスト実行失敗', elapsed, meta, btns);
+    if (!ok && r.error && !r.unavailable && card) {
+      const errDiv = document.createElement('div');
+      errDiv.style.cssText = 'margin-top:6px;font-size:11px;color:var(--critical);word-break:break-all';
+      errDiv.textContent = r.error;
+      card.appendChild(errDiv);
+    }
+  }
+}
+
+// ---- カード生成（DOM API のみ・innerHTML 不使用） ----
+function _arAppendCard(id, icon, title, timeStr, meta, buttons) {
+  const timeline = document.getElementById('ar-timeline');
+  if (!timeline) return null;
+
+  const card = document.createElement('div');
+  card.className = 'ar-card';
+  card.id = `ar-card-${id}`;
+
+  const head = document.createElement('div');
+  head.className = 'ar-card-head';
+  const titleEl = document.createElement('div');
+  titleEl.className = 'ar-card-title';
+  titleEl.textContent = `${icon} ${title}`;
+  const timeEl = document.createElement('span');
+  timeEl.className = 'ar-card-time';
+  timeEl.textContent = timeStr;
+  head.appendChild(titleEl);
+  head.appendChild(timeEl);
+  card.appendChild(head);
+
+  const metaEl = document.createElement('div');
+  metaEl.className = 'ar-card-meta';
+  metaEl.textContent = meta;
+  card.appendChild(metaEl);
+
+  if (buttons && buttons.length) {
+    const actionsEl = document.createElement('div');
+    actionsEl.className = 'ar-card-actions';
+    for (const btn of buttons) {
+      const b = document.createElement('button');
+      b.className = (btn.cls || 'btn-outline-sm');
+      b.style.cssText = 'font-size:12px;height:30px;padding:0 12px';
+      b.textContent = btn.label;
+      if (btn.path) {
+        b.dataset.path = btn.path;
+        b.dataset.label = btn.dataLabel || btn.label;
+        b.classList.add('qa-preview-btn');
+      }
+      if (btn.onclick) b.addEventListener('click', btn.onclick);
+      actionsEl.appendChild(b);
+    }
+    card.appendChild(actionsEl);
+  }
+
+  timeline.appendChild(card);
+  return card;
+}
+
+// ---- AutoRun: テストケースプレビュー（スクリプトカードから呼び出し） ----
+function arShowPreview() {
+  const panel = document.getElementById('autorun-preview-panel');
+  if (!panel) return;
+  const visible = panel.style.display !== 'none';
+  panel.style.display = visible ? 'none' : '';
+  if (!visible && !_autoRunPreviewLoaded) {
+    _autoRunPreviewLoaded = true;
+    _autorunLoadPreview();
   }
 }
 
@@ -471,14 +601,14 @@ function autorunReset() {
   _autoRunStartedAt      = null;
   _autoRunPreviewLoaded  = false;
   _autoRunPreviewData    = null;
+  _arCards               = {};
   _autorunStopPolling();
   _autorunStopElapsed();
   _autorunHideLoginModal();
   document.getElementById('autorun-steps').style.display          = 'none';
   document.getElementById('autorun-outputs-area').style.display   = 'none';
-  document.getElementById('autorun-log-panel').style.display      = 'none';
+  document.getElementById('ar-log-section').style.display         = 'none';
   document.getElementById('autorun-preview-panel').style.display  = 'none';
-  document.getElementById('autorun-result-panel').style.display   = 'none';
   document.getElementById('autorun-cancel-area').style.display    = 'none';
   document.getElementById('autorun-restart-area').style.display   = 'none';
   document.getElementById('autorun-idle-msg').style.display       = '';
@@ -486,7 +616,12 @@ function autorunReset() {
   document.getElementById('autorun-start-btn').textContent = '開始';
   document.getElementById('autorun-url').value = '';
   document.getElementById('autorun-elapsed').textContent = '0:00';
-  // フィルターを全テストにリセット
+  const timeline = document.getElementById('ar-timeline');
+  if (timeline) timeline.innerHTML = '';
+  const logPre = document.getElementById('autorun-log');
+  if (logPre) { logPre.textContent = ''; logPre.style.display = 'none'; }
+  const logToggle = document.getElementById('ar-log-toggle');
+  if (logToggle) logToggle.textContent = '▶ 展開';
   const allRadio = document.querySelector('input[name="autorun-filter"][value="all"]');
   if (allRadio) allRadio.checked = true;
   autorunSetStartStatus('', false);

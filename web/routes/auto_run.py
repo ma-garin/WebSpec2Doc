@@ -39,6 +39,7 @@ class AutoRunJob:
     log: list[str] = field(default_factory=list)
     outputs: dict[str, str] = field(default_factory=dict)
     test_results: dict[str, Any] = field(default_factory=dict)
+    step_data: dict[str, Any] = field(default_factory=dict)
     error: str = ""
     started_at: str = ""
     finished_at: str = ""
@@ -93,6 +94,7 @@ class AutoRunJob:
             "elapsed_sec": self.elapsed_sec(),
             "input_request": self.input_request,
             "run_policy": self.run_policy,
+            "step_data": self.step_data,
         }
 
     def cancel(self) -> None:
@@ -380,6 +382,7 @@ def _phase_discover(job: AutoRunJob, depth: int, max_pages: int) -> None:
         return
 
     login_pages = [p for p in pages if p.get("login_required")]
+    job.step_data["discover"] = {"pages": len(pages), "login_required": len(login_pages)}
     job.add_log(f"画面分析完了: {len(pages)}件 (要ログイン: {len(login_pages)}件)")
 
     if login_pages:
@@ -503,6 +506,16 @@ def _phase_crawl(job: AutoRunJob, depth: int, max_pages: int) -> None:
     report_html = OUTPUT_DIR / domain / "report.html"
     if report_html.is_file():
         job.outputs["report_html"] = str(report_html.resolve())
+    try:
+        rj = json.loads(report_json.read_text(encoding="utf-8"))
+        screens = rj.get("screens", [])
+        job.step_data["crawl"] = {
+            "screens": len(screens),
+            "forms": sum(len(s.get("forms", [])) for s in screens),
+            "domain": domain,
+        }
+    except Exception:
+        job.step_data["crawl"] = {"domain": domain}
     job.add_log(f"クロール完了: {domain}")
 
 
@@ -533,6 +546,7 @@ def _phase_generate_qa(job: AutoRunJob) -> None:
     for key, path in outputs.items():
         if path.is_file():
             job.outputs[key] = str(path.resolve())
+    job.step_data["qa"] = {"count": len(outputs)}
     job.add_log(f"QA成果物生成完了: {len(outputs)}件")
 
 
@@ -560,6 +574,11 @@ def _phase_generate_scripts(job: AutoRunJob) -> None:
         job.finished_at = _now_iso()
         return
 
+    try:
+        raw = json.loads(candidates_path.read_text(encoding="utf-8"))
+        job.step_data["scripts"] = compute_filter_counts(raw.get("candidates", []))
+    except Exception:
+        job.step_data["scripts"] = {}
     job.outputs["spec_ts"] = str(spec_path.resolve())
     job.add_log(f"スクリプト生成完了: {spec_path.name}")
 

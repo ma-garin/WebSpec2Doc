@@ -215,7 +215,8 @@ class TestRunPlaywright:
             run_playwright(Path("my.spec.ts"), tmp_out)
 
         cmd = captured[0]
-        assert "--reporter=json,html" in cmd
+        assert "--reporter=json" in cmd
+        assert "--reporter=html" in cmd
         assert "--screenshot=on" in cmd
         assert "--trace=retain-on-failure" in cmd
 

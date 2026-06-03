@@ -787,3 +787,11 @@
   .qa-tool-sidebar { border-right: none; border-bottom: 1px solid var(--border); overflow-y: visible; }
   .file-preview-panel { width: calc(100vw - 20px); height: calc(100vh - 20px); }
 }
+.ar-timeline { display:flex; flex-direction:column; gap:10px; }
+.ar-card { border:1px solid var(--border); border-radius:8px; padding:12px 14px; background:var(--surface); }
+.ar-card-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
+.ar-card-title { font-size:13px; font-weight:700; color:var(--primary-dark); display:flex; align-items:center; gap:6px; }
+.ar-card-time { font-size:11px; color:var(--text-muted); font-variant-numeric:tabular-nums; white-space:nowrap; margin-left:8px; }
+.ar-card-meta { font-size:12px; color:var(--text-muted); margin:4px 0 6px; }
+.ar-card-actions { display:flex; gap:6px; flex-wrap:wrap; }
+.ar-log-toggle { font-size:11px; color:var(--primary); cursor:pointer; background:none; border:none; padding:0; text-decoration:underline; }

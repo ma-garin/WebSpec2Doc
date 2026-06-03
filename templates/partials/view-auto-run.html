@@ -114,45 +114,40 @@
               </div>
             </div>
 
-            <!-- 右ペイン: ログ・プレビュー・結果 -->
+            <!-- 右ペイン: ログ・タイムライン -->
             <div class="qa-tool-main">
               <div id="autorun-main-content" class="qa-readable">
                 <div id="autorun-idle-msg" class="empty">URLを入力して「開始」を押すと、仕様書生成からテスト実行まで全自動で処理します。</div>
 
-                <!-- ログパネル -->
-                <div id="autorun-log-panel" style="display:none">
-                  <div class="hero-section-title" style="margin-bottom:6px">実行ログ</div>
-                  <pre id="autorun-log" style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:11px;max-height:260px;overflow-y:auto;white-space:pre-wrap"></pre>
+                <!-- 実行ログ（折りたたみ） -->
+                <div id="ar-log-section" style="display:none;margin-bottom:14px">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                    <span style="font-size:12px;font-weight:600;color:var(--text-muted)">実行ログ</span>
+                    <button type="button" id="ar-log-toggle" class="ar-log-toggle" onclick="arToggleLog()">▶ 展開</button>
+                  </div>
+                  <pre id="autorun-log" style="display:none;background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:11px;max-height:180px;overflow-y:auto;white-space:pre-wrap"></pre>
                 </div>
 
-                <!-- テストケース・スクリプト プレビューパネル -->
-                <div id="autorun-preview-panel" style="display:none;margin-top:18px">
-                  <div class="hero-section-title" style="margin-bottom:10px">
-                    テストケース・スクリプト確認
-                    <span id="autorun-preview-loading" style="font-size:12px;font-weight:400;color:var(--text-muted);margin-left:8px"></span>
+                <!-- ステップ完了タイムライン -->
+                <div id="ar-timeline" class="ar-timeline"></div>
+
+                <!-- テストケースプレビュー（スクリプトカードのボタンから展開） -->
+                <div id="autorun-preview-panel" style="display:none;margin-top:12px;padding:12px;border:1px solid var(--border);border-radius:8px;background:var(--surface)">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                    <span style="font-size:13px;font-weight:700;color:var(--primary-dark)">テストケース・スクリプト確認</span>
+                    <span id="autorun-preview-loading" style="font-size:11px;color:var(--text-muted)"></span>
                   </div>
-                  <!-- タブ -->
-                  <div style="display:flex;gap:4px;margin-bottom:12px">
+                  <div style="display:flex;gap:4px;margin-bottom:10px">
                     <button class="result-tab is-active autorun-preview-tab" data-ptab="cases">テストケース一覧</button>
                     <button class="result-tab autorun-preview-tab" data-ptab="script">スクリプト (.spec.ts)</button>
                   </div>
-                  <!-- テストケースタブ -->
                   <div id="autorun-ptab-cases">
-                    <div id="autorun-preview-summary" style="margin-bottom:10px"></div>
-                    <div id="autorun-preview-table-wrap" style="max-height:380px;overflow-y:auto;border:1px solid var(--border);border-radius:6px"></div>
+                    <div id="autorun-preview-summary" style="margin-bottom:8px"></div>
+                    <div id="autorun-preview-table-wrap" style="max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:6px"></div>
                   </div>
-                  <!-- スクリプトタブ -->
                   <div id="autorun-ptab-script" style="display:none">
-                    <pre id="autorun-preview-spec" style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:11px;max-height:420px;overflow-y:auto;white-space:pre-wrap;font-family:ui-monospace,monospace"></pre>
+                    <pre id="autorun-preview-spec" style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:11px;max-height:360px;overflow-y:auto;white-space:pre-wrap;font-family:ui-monospace,monospace"></pre>
                   </div>
-                </div>
-
-                <!-- テスト結果サマリー -->
-                <div id="autorun-result-panel" style="display:none;margin-top:18px">
-                  <div class="hero-section-title" style="margin-bottom:12px">テスト結果</div>
-                  <div id="autorun-result-cards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px"></div>
-                  <div id="autorun-result-table-wrap"></div>
-                  <div id="autorun-report-links" style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"></div>
                 </div>
               </div>
             </div>

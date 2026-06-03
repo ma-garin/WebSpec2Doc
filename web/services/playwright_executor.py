@@ -53,12 +53,18 @@ def run_playwright(
             return _unavailable_result(msg, json_report_path, fallback_html_path)
 
     env_node_modules = str((_PW_ENV_DIR / "node_modules").resolve())
+    # Playwright は positional 引数を CWD 相対の regex pattern として扱うため相対パスで渡す
+    try:
+        spec_arg = str(spec_path.relative_to(Path.cwd()))
+    except ValueError:
+        spec_arg = str(spec_path)
     cmd = [
         "npx",
         "playwright",
         "test",
-        str(spec_path),
-        "--reporter=json,html",
+        spec_arg,
+        "--reporter=json",  # stdout に JSON 出力（parse 用）
+        "--reporter=html",  # PLAYWRIGHT_HTML_REPORT にスクショ付き HTML 出力
         f"--output={output_dir / 'artifacts'}",
         "--screenshot=on",
         "--trace=retain-on-failure",

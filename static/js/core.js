@@ -62,7 +62,8 @@ function showWizardStep(n) {
   const bar = document.getElementById('wizard-progress-bar');
   if (p1) p1.style.display = (n === 1) ? '' : 'none';
   if (p2) p2.style.display = (n === 2) ? '' : 'none';
-  if (bar) bar.style.display = (n === 4) ? 'none' : '';
+  // ステップ3（実行中）と4（レポート）ではウィザードバー不要（それぞれ専用UIあり）
+  if (bar) bar.style.display = (n >= 3) ? 'none' : '';
   [1, 2, 3, 4].forEach(i => {
     const node = document.getElementById('ws-' + i);
     if (!node) return;

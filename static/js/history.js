@@ -12,6 +12,7 @@ async function loadHistory() {
       html += `<tr><td><strong>${escHtml(it.domain)}</strong></td><td class="num">${it.screens}</td><td class="num">${it.fields}</td>` +
         `<td><div class="fmt-badges">${badges || '—'}</div></td><td>${escHtml(it.updated)}</td>` +
         `<td><div class="history-actions">` +
+        `<button type="button" class="btn-outline-sm hist-delete" data-domain="${escHtml(it.domain)}">削除</button>` +
         `<button type="button" class="btn-outline-sm hist-recrawl" data-domain="${escHtml(it.domain)}">再クロール</button>` +
         `<button type="button" class="btn-primary hist-open" data-domain="${escHtml(it.domain)}" style="height:36px;padding:0 14px;font-size:13px">開く</button>` +
         `</div></td></tr>`;
@@ -20,7 +21,23 @@ async function loadHistory() {
     body.innerHTML = html;
     body.querySelectorAll('.hist-open').forEach(b => b.addEventListener('click', () => openResultsForDomain(b.dataset.domain)));
     body.querySelectorAll('.hist-recrawl').forEach(b => b.addEventListener('click', () => recrawlSite(b.dataset.domain)));
+    body.querySelectorAll('.hist-delete').forEach(b => b.addEventListener('click', () => deleteSite(b.dataset.domain)));
   } catch (e) { body.innerHTML = '<div class="empty">サイト一覧の読み込みに失敗しました。</div>'; }
 }
 document.getElementById('reload-history').addEventListener('click', loadHistory);
 
+async function deleteSite(domain) {
+  if (!confirm(`「${domain}」のクロール結果をすべて削除しますか？\nこの操作は取り消せません。`)) return;
+  const res = await fetch('/api/site/' + encodeURIComponent(domain), { method: 'DELETE' });
+  let data = {};
+  try {
+    data = await res.json();
+  } catch (e) {
+    data = {};
+  }
+  if (res.ok) {
+    loadHistory();
+    return;
+  }
+  alert('削除に失敗しました: ' + (data.error || res.status));
+}

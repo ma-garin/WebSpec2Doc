@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -43,6 +44,28 @@ def api_history() -> dict:
                 }
             )
     return {"items": items}
+
+
+@bp.delete("/api/site/<domain>")
+def api_delete_site(domain: str) -> dict | tuple[dict, int]:
+    if not _valid_domain(domain):
+        return {"error": "invalid domain"}, 400
+    target_dir = OUTPUT_DIR / domain
+    # OUTPUT_DIR の外に出ないことをローカル参照で確認（_safe_output_path はモジュールレベルの定数を使うため）
+    try:
+        resolved = target_dir.resolve()
+        base = OUTPUT_DIR.resolve()
+    except (OSError, ValueError):
+        return {"error": "invalid path"}, 400
+    if base not in resolved.parents:
+        return {"error": "invalid path"}, 400
+    if not target_dir.is_dir():
+        return {"error": "not found"}, 404
+    try:
+        shutil.rmtree(str(target_dir))
+    except Exception as e:
+        return {"error": str(e)}, 500
+    return {"ok": True, "domain": domain}
 
 
 @bp.get("/api/snapshots")

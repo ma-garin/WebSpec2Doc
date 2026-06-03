@@ -7,7 +7,7 @@ on:
 
 jobs:
   quality:
-    name: lint / type / test
+    name: lint / type / test / security
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,11 +29,27 @@ jobs:
       - name: Type check (mypy)
         run: mypy
 
-      - name: Tests + coverage gate (80%)
-        run: pytest tests/ -q --cov=src --cov-report=term-missing --cov-fail-under=80
+      - name: Tests + coverage gate (80%) — src AND web
+        # web/ を含めることで認証・CSRF・API エンドポイントのカバレッジを計測
+        run: |
+          pytest tests/ --ignore=tests/e2e -q \
+            --cov=src --cov=web \
+            --cov-report=term-missing \
+            --cov-fail-under=80
+
+      - name: Security scan (bandit)
+        # 中程度以上の深刻度を検出。-q で冗長出力を抑制
+        run: |
+          pip install --quiet bandit
+          bandit -r src web app.py -ll -q
+
+      - name: Dependency vulnerability scan (pip-audit)
+        run: |
+          pip install --quiet pip-audit
+          pip-audit --requirement requirements.txt -q
 
   smoke:
-    name: smoke crawl (Playwright)
+    name: smoke crawl (Playwright CLI)
     runs-on: ubuntu-22.04  # Playwright 1.44 の OS 依存は 24.04 と非互換のため固定
     steps:
       - uses: actions/checkout@v4
@@ -55,6 +71,57 @@ jobs:
           python src/main.py --url https://example.com --depth 1 --max-pages 2 --format html,md --compare --output ./_ci_out
           test -s ./_ci_out/example.com/report.html
           test -s ./_ci_out/example.com/diff_report.html
+
+  e2e-ui:
+    name: E2E UI tests (L3 System Test)
+    runs-on: ubuntu-22.04  # smoke と OS 統一 (Playwright 1.44 互換)
+    # UI ファイル変更時、または main ブランチへの push 時に実行
+    if: |
+      github.ref == 'refs/heads/main' ||
+      contains(toJson(github.event.pull_request.changed_files), '.html') ||
+      contains(toJson(github.event.pull_request.changed_files), '.js') ||
+      contains(toJson(github.event.pull_request.changed_files), '.css') ||
+      true
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install Playwright browser
+        run: python -m playwright install --with-deps chromium
+
+      - name: Run E2E UI tests
+        # サーバーは conftest.py の flask_server fixture が自動起動する
+        run: |
+          pytest tests/e2e/ -v \
+            --tb=short \
+            --timeout=60 \
+            -x
+        env:
+          WEBSPEC2DOC_E2E_EXTERNAL: "0"
+
+      - name: Upload screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-screenshots-${{ github.run_id }}
+          path: tests/e2e/screenshots/
+          retention-days: 7
+
+      - name: Upload all screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-screenshots-all-${{ github.run_id }}
+          path: tests/e2e/screenshots/
+          retention-days: 3
 
   secret-scan:
     name: secret scan (gitleaks)

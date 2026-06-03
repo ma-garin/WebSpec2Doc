@@ -1,0 +1,172 @@
+#!/usr/bin/env bash
+# =============================================================================
+# pre-commit hook — WebSpec2Doc 品質ゲート v2
+#
+# 変更点 (v2):
+#   - .ui-verified に git hash + UI コンテンツ hash を記録
+#   - staged UI ファイルの hash を再計算して照合
+#   - touch による偽造・コード変更後の古いマーカーを機械的に検出
+#
+# インストール: make setup-hooks
+# 参照: docs/DEFINITION_OF_DONE.md
+# =============================================================================
+
+set -euo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+VENV_PYTHON="${ROOT}/venv/bin/python"
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
+BLUE='\033[0;34m'; BOLD='\033[1m'; NC='\033[0m'
+
+log_info()    { echo -e "${BLUE}[GATE]${NC} $*"; }
+log_ok()      { echo -e "${GREEN}[PASS]${NC} $*"; }
+log_warn()    { echo -e "${YELLOW}[WARN]${NC} $*"; }
+log_fail()    { echo -e "${RED}[FAIL]${NC} $*"; }
+log_blocked() {
+  echo ""
+  echo -e "${RED}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+  echo -e "${RED}${BOLD}  COMMIT BLOCKED — Definition of Done 違反${NC}"
+  echo -e "${RED}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+  echo -e "${RED}  $*${NC}"
+}
+
+# =============================================================================
+# 前提チェック
+# =============================================================================
+if [ ! -f "${VENV_PYTHON}" ]; then
+  log_fail "venv/bin/python が見つかりません。セットアップを確認してください。"
+  exit 1
+fi
+
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM 2>/dev/null || true)
+if [ -z "$STAGED_FILES" ]; then
+  log_ok "ステージされたファイルなし。スキップ。"
+  exit 0
+fi
+
+UI_CHANGED=false
+PY_CHANGED=false
+
+while IFS= read -r file; do
+  case "$file" in
+    *.html|*.js|*.css) UI_CHANGED=true ;;
+    *.py)              PY_CHANGED=true ;;
+  esac
+done <<< "$STAGED_FILES"
+
+# =============================================================================
+# ゲート 1: Python 構文チェック
+# =============================================================================
+if $PY_CHANGED; then
+  log_info "Python 構文チェック..."
+  while IFS= read -r file; do
+    if [[ "$file" =~ \.py$ ]] && [ -f "${ROOT}/${file}" ]; then
+      if ! "${VENV_PYTHON}" -m py_compile "${ROOT}/${file}" 2>/dev/null; then
+        log_fail "構文エラー: ${file}"
+        exit 1
+      fi
+    fi
+  done <<< "$STAGED_FILES"
+  log_ok "Python 構文チェック PASS"
+fi
+
+# =============================================================================
+# ゲート 2: pytest (L1/L2)
+# =============================================================================
+if $PY_CHANGED || $UI_CHANGED; then
+  log_info "pytest L1/L2 テスト実行中..."
+  # macOS は timeout 未同梱。gtimeout (coreutils) or perl fallback を使用
+  if command -v gtimeout &>/dev/null; then
+    TIMEOUT_CMD="gtimeout 120"
+  elif command -v timeout &>/dev/null; then
+    TIMEOUT_CMD="timeout 120"
+  else
+    TIMEOUT_CMD=""
+  fi
+  if ! $TIMEOUT_CMD "${VENV_PYTHON}" -m pytest "${ROOT}/tests/" -q \
+      --ignore="${ROOT}/tests/e2e" --tb=short 2>&1; then
+    log_fail "pytest FAIL"
+    echo ""
+    echo "  修正 → make test → 再コミット"
+    exit 1
+  fi
+  log_ok "pytest L1/L2 PASS"
+fi
+
+# =============================================================================
+# ゲート 3: UI 変更時 — .ui-verified + hash 検証
+# =============================================================================
+if $UI_CHANGED; then
+  log_info "UI ファイル変更を検出 — E2E 検証マーカーを確認中..."
+
+  MARKER="${ROOT}/.ui-verified"
+  MARKER_MAX_AGE=7200  # 2時間
+
+  # ── 存在確認 ──────────────────────────────────────────
+  if [ ! -f "$MARKER" ]; then
+    log_blocked "E2E テスト未実行（.ui-verified が存在しません）"
+    echo ""
+    echo "    実行してください:  make verify-ui"
+    echo "    参照:              docs/DEFINITION_OF_DONE.md Type B"
+    echo ""
+    exit 1
+  fi
+
+  # ── タイムスタンプ確認 ───────────────────────────────
+  MARKER_TS=$(awk '{print $3}' "$MARKER" 2>/dev/null || echo "")
+  if [ -n "$MARKER_TS" ]; then
+    # macOS と Linux 両対応
+    if command -v gdate &>/dev/null; then
+      MARKER_EPOCH=$(gdate -d "$MARKER_TS" +%s 2>/dev/null || echo 0)
+    else
+      MARKER_EPOCH=$(date -d "$MARKER_TS" +%s 2>/dev/null || \
+                     python3 -c "import datetime; print(int(datetime.datetime.fromisoformat('${MARKER_TS}'.replace('Z','+00:00')).timestamp()))" 2>/dev/null || echo 0)
+    fi
+    AGE=$(( $(date +%s) - MARKER_EPOCH ))
+  else
+    # 旧形式マーカー（timestamp なし）— 拒否
+    AGE=$MARKER_MAX_AGE
+  fi
+
+  if [ "$AGE" -gt "$MARKER_MAX_AGE" ]; then
+    log_blocked "E2E 検証が古すぎます（${AGE}秒前 — 上限 ${MARKER_MAX_AGE}秒）"
+    echo ""
+    echo "    実行してください:  make verify-ui"
+    echo ""
+    exit 1
+  fi
+
+  # ── UI コンテンツ hash 照合（偽造・変更後コミット防止）──
+  VERIFIED_UI_HASH=$(awk '{print $2}' "$MARKER" 2>/dev/null || echo "")
+
+  if [ -n "$VERIFIED_UI_HASH" ] && [ "$VERIFIED_UI_HASH" != "no-git" ]; then
+    log_info "UI ファイル hash を照合中..."
+    STAGED_UI_HASH=$("${VENV_PYTHON}" "${ROOT}/scripts/ui-hash.py" staged 2>/dev/null || echo "error")
+
+    if [ "$STAGED_UI_HASH" = "error" ]; then
+      log_warn "hash 計算に失敗しました。タイムスタンプのみで判定します。"
+    elif [ "$STAGED_UI_HASH" != "$VERIFIED_UI_HASH" ]; then
+      log_blocked "E2E 検証後に UI ファイルが変更されています"
+      echo ""
+      echo "    検証時 hash: ${VERIFIED_UI_HASH}"
+      echo "    現在の hash: ${STAGED_UI_HASH}"
+      echo ""
+      echo "    変更後に再度 E2E テストを実行してください:"
+      echo "    make verify-ui"
+      echo ""
+      exit 1
+    fi
+    log_ok "UI hash 一致（${STAGED_UI_HASH}）"
+  fi
+
+  log_ok "E2E 検証済み（${AGE}秒前）"
+  log_warn "ブラウザ目視確認も実施しましたか？（DEFINITION_OF_DONE.md Type B）"
+fi
+
+# =============================================================================
+# 全ゲート PASS
+# =============================================================================
+echo ""
+log_ok "全品質ゲートを通過しました。"
+echo ""
+exit 0

@@ -158,6 +158,18 @@ function showTimelineDiff() {
   box.innerHTML = `<iframe src="/api/snapshot-diff?domain=${encodeURIComponent(timelineDomain)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}" title="仕様ドリフト差分"></iframe>`;
 }
 
+// ====================== タブ最大化 ======================
+function _toggleMaximize() {
+  const maximized = document.body.classList.toggle('result-maximized');
+  const btn = document.getElementById('r-maximize-btn');
+  if (btn) btn.textContent = maximized ? '✕ 最大化解除' : '⛶ 最大化';
+}
+
+document.getElementById('r-maximize-btn')?.addEventListener('click', _toggleMaximize);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && document.body.classList.contains('result-maximized')) _toggleMaximize();
+});
+
 // ====================== 完了ポップアップ ======================
 function _showCompletionPopup(elapsedSec) {
   const overlay = document.getElementById('completion-overlay');

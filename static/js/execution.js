@@ -142,7 +142,10 @@ document.getElementById('exec-new-btn').addEventListener('click', () => {
   appContent.classList.remove('is-executing'); genPanel.style.display = '';
   showWizardStep(2);
 });
-document.getElementById('r-new-btn').addEventListener('click', () => switchView('dashboard'));
+document.getElementById('r-new-btn').addEventListener('click', () => {
+  document.body.classList.remove('result-maximized');
+  switchView('dashboard');
+});
 document.getElementById('btn-view-report').addEventListener('click', () => showResults(activeDomain));
 document.getElementById('r-recrawl-btn').addEventListener('click', () => {
   const domain = document.getElementById('r-domain').textContent.trim();

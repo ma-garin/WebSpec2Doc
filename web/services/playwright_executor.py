@@ -58,23 +58,23 @@ def run_playwright(
             return _unavailable_result(msg, json_report_path, fallback_html_path)
 
     # ローカル CLI を優先（global CLI との version mismatch を回避）
+    # resolve() はシンボリックリンクを辿って cli.js を返すため使わない
     local_cli = _PW_ENV_DIR / "node_modules" / ".bin" / "playwright"
-    cli_cmd = str(local_cli.resolve()) if local_cli.is_file() else "npx playwright"
+    cli_cmd = str(local_cli) if local_cli.is_file() else "npx"
 
-    # JS コンフィグを spec ファイルの隣に生成
+    # JS コンフィグを spec ファイルの隣に生成（レポーター含め全設定を記述）
     config_path = _write_pw_config(
         spec_path=spec_path,
         html_output_dir=pw_html_dir,
     )
 
     env_node_modules = str((_PW_ENV_DIR / "node_modules").resolve())
-    cmd = [
-        cli_cmd,
-        "test",
-        "--config",
-        str(config_path),
-        "--reporter=json",
-    ]
+    # --reporter=json は config の reporter 配列を上書きするため使わない
+    # config で json (stdout) + html (ファイル) の両方を設定済み
+    if cli_cmd == "npx":
+        cmd = ["npx", "playwright", "test", "--config", str(config_path.resolve())]
+    else:
+        cmd = [cli_cmd, "test", "--config", str(config_path.resolve())]
     try:
         env = os.environ.copy()
         existing = env.get("NODE_PATH", "")

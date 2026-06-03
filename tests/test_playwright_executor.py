@@ -214,7 +214,8 @@ class TestRunPlaywright:
             run_playwright(Path("my.spec.ts"), tmp_out)
 
         cmd = captured[0]
-        assert "--reporter=json" in cmd
+        # --reporter=json は config で定義するため CLI フラグには含まない
+        assert "--reporter=json" not in cmd
         assert "--config" in cmd
 
     def test_node_path_set_in_env(self, tmp_out: Path) -> None:

@@ -596,10 +596,18 @@
 @keyframes slideUp { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
 /* ── 4ステップウィザード ── */
-.wizard-p1-summary { margin-top:16px; border:1px solid var(--info-border); border-radius:var(--radius-lg); background:var(--info-bg); padding:18px 20px; }
-.wizard-p1-summary-count { font-size:18px; font-weight:700; color:var(--primary-dark); display:block; margin-bottom:4px; }
-.wizard-p1-summary-hint { font-size:13px; color:var(--warning); font-weight:600; display:block; margin-bottom:14px; }
-.wizard-p1-summary-hint:empty { display:none; margin:0; }
+.wizard-p1-summary { margin-top:16px; border:1px solid var(--info-border); border-radius:var(--radius-lg); background:var(--info-bg); padding:18px 20px; display:flex; flex-direction:column; gap:14px; }
+.wizard-p1-summary-hint { font-size:13px; color:var(--warning); font-weight:600; }
+.wizard-p1-summary-hint:empty { display:none; }
+.p1-result-cards { display:flex; gap:12px; flex-wrap:wrap; }
+.p1-result-card { display:flex; flex-direction:column; align-items:center; justify-content:center; min-width:90px; padding:12px 16px; border-radius:var(--radius); border:1px solid var(--border); background:var(--surface); gap:2px; }
+.p1-result-card--screens { border-color:var(--primary); background:var(--info-bg); }
+.p1-result-card--login { border-color:#FBBF24; background:#FFFBEB; }
+.p1-result-card--time { border-color:var(--border); background:var(--surface-soft); }
+.p1-result-num { font-size:28px; font-weight:800; line-height:1; color:var(--primary-dark); }
+.p1-result-card--login .p1-result-num { color:#92400E; }
+.p1-result-card--time .p1-result-num { font-size:18px; color:var(--text-muted); }
+.p1-result-label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.04em; }
 .wizard-p2-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid var(--border); }
 .wizard-p2-header h2 { font-size:16px; font-weight:700; }
 

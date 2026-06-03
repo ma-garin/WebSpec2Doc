@@ -45,9 +45,22 @@
               <div id="discover-status" class="discover-status"></div>
               <!-- 解析完了サマリー -->
               <div id="p1-summary" class="wizard-p1-summary" style="display:none">
-                <span class="wizard-p1-summary-count" id="p1-count-text"></span>
-                <span class="wizard-p1-summary-hint" id="p1-login-hint"></span>
-                <button type="button" id="p1-next-btn" class="btn-primary" style="height:40px;padding:0 22px;font-size:14px">次へ →</button>
+                <div class="p1-result-cards">
+                  <div class="p1-result-card p1-result-card--screens">
+                    <span class="p1-result-num" id="p1-screens-num">0</span>
+                    <span class="p1-result-label">画面を検出</span>
+                  </div>
+                  <div class="p1-result-card p1-result-card--login" id="p1-login-card" style="display:none">
+                    <span class="p1-result-num" id="p1-login-num">0</span>
+                    <span class="p1-result-label">ログイン必要</span>
+                  </div>
+                  <div class="p1-result-card p1-result-card--time" id="p1-time-card" style="display:none">
+                    <span class="p1-result-num" id="p1-elapsed-num">-</span>
+                    <span class="p1-result-label">解析時間</span>
+                  </div>
+                </div>
+                <span class="wizard-p1-summary-hint" id="p1-login-hint" style="display:none"></span>
+                <button type="button" id="p1-next-btn" class="btn-primary" style="height:44px;padding:0 28px;font-size:14px;margin-top:4px">条件設定へ →</button>
               </div>
             </div>
 

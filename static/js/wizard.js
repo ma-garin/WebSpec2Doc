@@ -198,11 +198,13 @@ async function discoverUrls(skipLoginSection) {
     const loginCount = discovered.filter(p => p.login_required).length;
     if (discovered.length) {
       const summary = document.getElementById('p1-summary');
-      const countEl = document.getElementById('p1-count-text');
-      const hintEl = document.getElementById('p1-login-hint');
       if (summary) {
-        countEl.textContent = `${discovered.length}件の画面を検出しました`;
-        hintEl.textContent = loginCount ? `うち${loginCount}件がログインを必要とします` : '';
+        const screensNum = document.getElementById('p1-screens-num');
+        if (screensNum) screensNum.textContent = discovered.length;
+        const loginCard = document.getElementById('p1-login-card');
+        const loginNum = document.getElementById('p1-login-num');
+        if (loginCard) loginCard.style.display = loginCount ? '' : 'none';
+        if (loginNum) loginNum.textContent = loginCount;
         summary.style.display = '';
       }
       status.textContent = '';
@@ -214,15 +216,11 @@ async function discoverUrls(skipLoginSection) {
   } finally {
     const elapsed = _stopDiscoverTimer();
     loading.style.display = 'none'; btn.disabled = false; updateTargetPreview();
-    // 完了後：経過時間をサマリーに表示
     if (elapsed) {
-      const hintEl = document.getElementById('p1-login-hint');
-      if (hintEl && hintEl.textContent) {
-        hintEl.textContent += ` （解析時間: ${elapsed}）`;
-      } else {
-        const countEl = document.getElementById('p1-count-text');
-        if (countEl) countEl.textContent += ` （解析時間: ${elapsed}）`;
-      }
+      const timeCard = document.getElementById('p1-time-card');
+      const elapsedNum = document.getElementById('p1-elapsed-num');
+      if (timeCard) timeCard.style.display = '';
+      if (elapsedNum) elapsedNum.textContent = elapsed;
     }
   }
 }

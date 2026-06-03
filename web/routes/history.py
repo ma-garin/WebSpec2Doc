@@ -34,13 +34,19 @@ def api_history() -> dict:
                 )
                 if (d / fname).exists()
             ]
+            snap_dir = d / "snapshots"
+            snapshot_count = len(list(snap_dir.glob("*.json"))) if snap_dir.is_dir() else 0
+            mtime = d.stat().st_mtime
             items.append(
                 {
                     "domain": d.name,
                     "screens": summary.get("screens", 0),
                     "fields": summary.get("fields", 0),
-                    "updated": datetime.fromtimestamp(d.stat().st_mtime).strftime("%Y-%m-%d %H:%M"),
+                    "updated": datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M"),
+                    "updated_ts": int(mtime),
                     "formats": formats,
+                    "snapshot_count": snapshot_count,
+                    "has_diff": (d / "diff_report.html").exists(),
                 }
             )
     return {"items": items}

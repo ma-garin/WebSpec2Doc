@@ -437,6 +437,21 @@
     .fmt-badges { display: flex; gap: 4px; flex-wrap: wrap; }
     .fmt-badge { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 4px; background: var(--info-bg); border: 1px solid var(--info-border); color: var(--primary-dark); font-size: 11px; font-weight: 700; }
     .empty { padding: 28px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border); border-radius: var(--radius); background: var(--surface-soft); }
+    /* ── ダッシュボード空状態 ── */
+    .dashboard-empty { padding: 48px 32px; text-align: center; border: 1px dashed var(--border); border-radius: var(--radius); background: var(--surface-soft); display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    .dashboard-empty-icon { font-size: 40px; line-height: 1; }
+    .dashboard-empty-title { font-size: 18px; font-weight: 700; color: var(--text); }
+    .dashboard-empty-desc { font-size: 13.5px; color: var(--text-muted); line-height: 1.7; max-width: 500px; }
+    /* ── ダッシュボードテーブル ── */
+    .dashboard-table .site-cell { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .diff-badge { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 10px; background: #FFF3CD; border: 1px solid #FBBF24; color: #92400E; font-size: 11px; font-weight: 800; white-space: nowrap; }
+    .snap-badge { display: inline-flex; align-items: center; height: 22px; padding: 0 10px; border-radius: 4px; background: var(--surface-soft); border: 1px solid var(--border); color: var(--text-muted); font-size: 12px; font-weight: 700; }
+    .snap-badge-first { background: var(--info-bg); border-color: var(--info-border); color: var(--primary-dark); }
+    .freshness { font-size: 13px; font-weight: 600; }
+    .fresh-today { color: #166534; }
+    .fresh-week  { color: var(--text); }
+    .fresh-month { color: #92400E; }
+    .fresh-old   { color: #991B1B; font-weight: 700; }
     .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 4px; }
     .options-grid .full { grid-column: 1 / -1; }
     .settings-msg { margin-top: 14px; padding: 10px 14px; border-radius: var(--radius); background: var(--ok-bg); color: var(--ok); font-size: 13px; font-weight: 700; display: none; }

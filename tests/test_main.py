@@ -312,3 +312,29 @@ class TestRun:
 
         output_dir = tmp_path / "example.com"
         assert (output_dir / "screens.md").exists()
+
+
+# ----------追加カバレッジ: main.py 主要パス ----------
+
+
+def _fake_pages():
+    from crawler.page_crawler import PageData
+
+    return [
+        PageData(
+            url="https://example.com/",
+            title="Top",
+            headings=(),
+            links=(),
+            forms=(),
+            screenshot_path=None,
+        )
+    ]
+
+
+def _fake_analyzed_pages():
+    return analyze_pages(_fake_pages())
+
+
+def _fake_graph(analyzed):
+    return build_graph(analyzed)

@@ -58,7 +58,7 @@ while IFS= read -r f; do
   if [ "$lines" -gt 800 ]; then
     rel="${f#$REPO_ROOT/}"
     allowed=false
-    for exc in "${PHASE1_ALLOWED[@]}"; do
+    for exc in "${PHASE1_ALLOWED[@]+"${PHASE1_ALLOWED[@]}"}"; do
       [ "$rel" = "$exc" ] && allowed=true && break
     done
     "$allowed" || OVER800+=("$rel ($lines 行)")
@@ -72,8 +72,8 @@ if [ ${#OVER800[@]} -gt 0 ]; then
   for item in "${OVER800[@]}"; do red "  800行超過: $item"; done
   fail "800行ガード違反 (${#OVER800[@]} ファイル)"
 fi
-if [ ${#PHASE1_ALLOWED[@]} -gt 0 ]; then
-  printf '\033[33m  ⚠ 一時除外 (Phase 1 分割待ち): %s\033[0m\n' "${PHASE1_ALLOWED[@]}"
+if [ ${#PHASE1_ALLOWED[@]+"${#PHASE1_ALLOWED[@]}"} -gt 0 ] 2>/dev/null; then
+  printf '\033[33m  ⚠ 一時除外 (Phase 1 分割待ち): %s\033[0m\n' "${PHASE1_ALLOWED[@]+"${PHASE1_ALLOWED[@]}"}"
 fi
 green "OK: 新規ファイル全て 800行以内 (除外 ${#PHASE1_ALLOWED[@]} 件)"
 

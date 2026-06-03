@@ -1,5 +1,19 @@
 
 const SETTINGS_KEY = 'webspec2doc.settings';
+const SIDEBAR_KEY  = 'webspec2doc.sidebar-collapsed';
+
+// ---- サイドバー折りたたみ（全画面共通・localStorage 永続） ----
+function _applySidebarCollapsed(collapsed) {
+  document.querySelector('.app-shell').classList.toggle('sidebar-collapsed', collapsed);
+  const btn = document.getElementById('sidebar-toggle-btn');
+  if (btn) btn.title = collapsed ? 'サイドバーを広げる' : 'サイドバーを折りたたむ';
+}
+_applySidebarCollapsed(localStorage.getItem(SIDEBAR_KEY) === '1');
+document.getElementById('sidebar-toggle-btn')?.addEventListener('click', () => {
+  const collapsed = !document.querySelector('.app-shell').classList.contains('sidebar-collapsed');
+  _applySidebarCollapsed(collapsed);
+  localStorage.setItem(SIDEBAR_KEY, collapsed ? '1' : '0');
+});
 const VIEW_HEADER = {
   dashboard: { trail: ['ダッシュボード'], title: '監視対象サイト' },
   generate: { trail: ['ダッシュボード', 'サイトを追加'], title: 'サイトを追加 / 再クロール' },
@@ -39,11 +53,7 @@ function switchView(name) {
   const appContentEl = document.getElementById('app-content');
   if (appContentEl) appContentEl.classList.toggle('is-qa-tool', ['qa-models', 'qa-automation', 'qa-quality', 'auto-run'].includes(name));
   // レポートモード解除（generate以外に遷移した時）
-  if (name !== 'generate') {
-    if (appContentEl) appContentEl.classList.remove('is-reporting');
-    const shell = document.querySelector('.app-shell');
-    if (shell) shell.classList.remove('is-reporting');
-  }
+  if (name !== 'generate' && appContentEl) appContentEl.classList.remove('is-reporting');
 }
 // ---- ウィザード ステップ管理 ----
 function showWizardStep(n) {
@@ -70,8 +80,6 @@ function openAddSite() {
   switchView('generate');
   executionView.classList.add('hidden'); resultPanel.classList.add('hidden');
   appContent.classList.remove('is-executing', 'is-reporting');
-  const _shell = document.querySelector('.app-shell');
-  if (_shell) _shell.classList.remove('is-reporting');
   genPanel.style.display = '';
   document.getElementById('url-input').value = '';
   document.getElementById('p1-summary').style.display = 'none';

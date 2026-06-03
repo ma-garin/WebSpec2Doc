@@ -45,7 +45,6 @@ async function showResults(domain) {
 
   executionView.classList.add('hidden'); resultPanel.classList.remove('hidden');
   appContent.classList.add('is-reporting');
-  document.querySelector('.app-shell').classList.add('is-reporting');
   _buildExportDropdown(data);
   showWizardStep(4);
   selectResultTab('overview');
@@ -160,14 +159,17 @@ function showTimelineDiff() {
 
 // ====================== タブ最大化 ======================
 function _toggleMaximize() {
-  const maximized = document.body.classList.toggle('result-maximized');
-  const btn = document.getElementById('r-maximize-btn');
-  if (btn) btn.textContent = maximized ? '✕ 最大化解除' : '⛶ 最大化';
+  document.body.classList.toggle('result-maximized');
 }
 
 document.getElementById('r-maximize-btn')?.addEventListener('click', _toggleMaximize);
+document.getElementById('r-maximize-exit-btn')?.addEventListener('click', () => {
+  document.body.classList.remove('result-maximized');
+});
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && document.body.classList.contains('result-maximized')) _toggleMaximize();
+  if (e.key === 'Escape' && document.body.classList.contains('result-maximized')) {
+    document.body.classList.remove('result-maximized');
+  }
 });
 
 // ====================== 完了ポップアップ ======================

@@ -19,7 +19,12 @@
       <span class="add-site-label">サイトを追加</span>
     </button>
 {% include 'partials/nav.html' %}
-    <div style="margin-top:auto" class="app-sidebar-foot">
+    <button type="button" id="sidebar-toggle-btn" class="sidebar-toggle-btn" title="サイドバーを折りたたむ">
+      <svg class="icon-collapse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      <svg class="icon-expand"  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+      <span class="nav-label">折りたたむ</span>
+    </button>
+    <div class="app-sidebar-foot">
       稼働中のWebシステムから QA テスト分析インプットを生成し、<strong>再クロールで仕様ドリフトを検知</strong>します。
     </div>
   </aside>
@@ -70,6 +75,12 @@
       <button type="button" id="popup-close-btn" style="margin-top:12px;background:none;border:none;color:var(--text-muted);font-size:13px;cursor:pointer;width:100%">閉じる</button>
     </div>
   </div>
+
+  <!-- 最大化モード退出ボタン（全タブ共通・常時 fixed 表示） -->
+  <button type="button" id="r-maximize-exit-btn" class="maximize-exit-btn" title="最大化解除 (Esc)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="15" height="15"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    最大化解除
+  </button>
 
   <div id="lightbox" class="lightbox" style="display:none" role="dialog" aria-modal="true">
     <button class="lightbox-close" id="lightbox-close" aria-label="閉じる">✕</button>

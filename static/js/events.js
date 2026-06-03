@@ -3,6 +3,13 @@ document.getElementById('autorun-start-btn')?.addEventListener('click', autorunS
 document.getElementById('autorun-approve-btn')?.addEventListener('click', autorunApprove);
 document.getElementById('autorun-cancel-btn')?.addEventListener('click', autorunCancel);
 document.getElementById('autorun-restart-btn')?.addEventListener('click', autorunReset);
+// 承認モーダル
+document.getElementById('arm-approve-btn')?.addEventListener('click', autorunApprovalModalApprove);
+document.getElementById('arm-later-btn')?.addEventListener('click', _autorunHideApprovalModal);
+document.getElementById('arm-close')?.addEventListener('click', _autorunHideApprovalModal);
+document.getElementById('autorun-approval-modal')?.addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) _autorunHideApprovalModal();
+});
 document.getElementById('autorun-login-submit')?.addEventListener('click', () => _autorunSubmitLogin(false));
 document.getElementById('autorun-login-skip')?.addEventListener('click',   () => _autorunSubmitLogin(true));
 document.getElementById('autorun-login-close')?.addEventListener('click',  () => _autorunSubmitLogin(true));

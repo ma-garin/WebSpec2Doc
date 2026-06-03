@@ -6,6 +6,7 @@ let _autoRunStartedAt = null;  // ISO string from server
 let _autoRunPreviewLoaded = false;
 let _autoRunPreviewData = null;
 let _arCards = {};  // 生成済みカード管理: {crawl, qa, scripts, tests}
+let _autoRunApprovalModalShown = false;
 
 const AUTORUN_STEP_MAP = {
   idle:              null,
@@ -148,6 +149,7 @@ function _autorunRender(data) {
   const stepOrder = ['ars-crawl','ars-qa','ars-scripts','ars-approval','ars-running','ars-done'];
   const activeIdx = stepOrder.indexOf(activeStepId);
   const isError = ['failed','cancelled'].includes(status);
+  const isAwaiting = (status === 'awaiting_approval');
   stepOrder.forEach((sid, idx) => {
     const el = document.getElementById(sid);
     if (!el) return;
@@ -155,6 +157,8 @@ function _autorunRender(data) {
     const icon = el.querySelector('.autorun-step-icon');
     if (sid === activeStepId && isError) {
       el.classList.add('is-error'); icon.textContent = '✕';
+    } else if (sid === 'ars-approval' && isAwaiting) {
+      el.classList.add('is-waiting'); icon.textContent = '⏳';
     } else if (sid === activeStepId) {
       el.classList.add('is-active'); icon.textContent = '↻';
     } else if (idx < activeIdx || status === 'complete') {
@@ -178,10 +182,19 @@ function _autorunRender(data) {
     _autorunHideLoginModal();
   }
 
+  // ---- 承認モーダル自動表示 ----
+  if (status === 'awaiting_approval' && !_autoRunApprovalModalShown) {
+    _autoRunApprovalModalShown = true;
+    _autorunPrepareAndShowApprovalModal();
+  }
+  if (status !== 'awaiting_approval') {
+    _autorunHideApprovalModal();
+  }
+
   // ---- タイムラインカード更新 ----
   _autorunUpdateTimeline(data);
 
-  // ---- 承認ボタン ----
+  // ---- 承認ボタン（サイドバー） ----
   const approveArea = document.getElementById('autorun-approve-area');
   if (approveArea) approveArea.style.display = (status === 'awaiting_approval') ? '' : 'none';
 
@@ -265,15 +278,15 @@ function _autorunUpdateTimeline(data) {
     if (sc.smoke != null) metaParts.push(`スモーク:${sc.smoke}`);
     if (sc.form != null) metaParts.push(`フォーム:${sc.form}`);
     const btns = [{ label: 'テストケース確認', cls: 'btn-outline-sm', onclick: arShowPreview }];
+    if (status === 'awaiting_approval') {
+      btns.push({ label: '実行設定・承認', cls: 'btn-primary', onclick: _autorunPrepareAndShowApprovalModal });
+    }
     const card = _arAppendCard('scripts',
       status === 'awaiting_approval' ? '⏳' : '✅',
-      status === 'awaiting_approval' ? 'テストスクリプト 承認待ち' : 'テストスクリプト生成完了',
+      status === 'awaiting_approval' ? 'スクリプト生成完了 — 承認待ち' : 'テストスクリプト生成完了',
       elapsed, metaParts.join(' / '), btns);
     if (status === 'awaiting_approval' && card) {
-      const hint = document.createElement('p');
-      hint.style.cssText = 'font-size:11px;color:var(--text-muted);margin-top:6px';
-      hint.textContent = '← 左側で実行方針を選択してテスト実行を承認してください';
-      card.appendChild(hint);
+      card.classList.add('is-approval');
     }
   }
 
@@ -486,15 +499,9 @@ function _autorunRenderResults(results, outputs) {
   }
 }
 
-// ---- AutoRun: 承認 ----
-async function autorunApprove() {
-  if (!_autoRunJobId) return;
-  const btn = document.getElementById('autorun-approve-btn');
-  if (btn) { btn.disabled = true; btn.textContent = '承認中…'; }
-
-  const filterMode = document.querySelector('input[name="autorun-filter"]:checked')?.value || 'all';
-  const perTestTimeoutSec = parseInt(document.getElementById('autorun-timeout')?.value || '30', 10);
-
+// ---- AutoRun: 承認（共通ロジック） ----
+async function _autorunDoApprove(filterMode, perTestTimeoutSec) {
+  if (!_autoRunJobId) return false;
   try {
     const res = await fetch('/api/autorun/approve', {
       method: 'POST',
@@ -503,11 +510,129 @@ async function autorunApprove() {
     });
     const data = await res.json();
     if (!res.ok || !data.ok) throw new Error(data.error || '承認に失敗しました');
+    _autorunHideApprovalModal();
     _autorunStartPolling();
     _autorunStartElapsed();
+    return true;
   } catch (e) {
     autorunSetStartStatus(String(e), true);
-    if (btn) { btn.disabled = false; btn.textContent = 'テスト実行を承認'; }
+    return false;
+  }
+}
+
+// サイドバーの承認ボタン
+async function autorunApprove() {
+  if (!_autoRunJobId) return;
+  const btn = document.getElementById('autorun-approve-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '承認中…'; }
+  const filterMode = document.querySelector('input[name="autorun-filter"]:checked')?.value || 'all';
+  const perTestTimeoutSec = parseInt(document.getElementById('autorun-timeout')?.value || '30', 10);
+  await _autorunDoApprove(filterMode, perTestTimeoutSec);
+  if (btn) { btn.disabled = false; btn.textContent = 'テスト実行を承認'; }
+}
+
+// 承認モーダルの承認ボタン
+async function autorunApprovalModalApprove() {
+  const btn = document.getElementById('arm-approve-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '開始中…'; }
+  const filterMode = document.querySelector('input[name="arm-filter"]:checked')?.value || 'all';
+  const perTestTimeoutSec = parseInt(document.getElementById('arm-timeout')?.value || '30', 10);
+  // サイドバーの値も同期（整合性保持）
+  const sbFilter = document.querySelector(`input[name="autorun-filter"][value="${filterMode}"]`);
+  if (sbFilter) sbFilter.checked = true;
+  const sbTimeout = document.getElementById('autorun-timeout');
+  if (sbTimeout) sbTimeout.value = String(perTestTimeoutSec);
+  await _autorunDoApprove(filterMode, perTestTimeoutSec);
+  if (btn) { btn.disabled = false; btn.textContent = 'テスト実行を開始'; }
+}
+
+// ---- AutoRun: 承認モーダル ----
+async function _autorunPrepareAndShowApprovalModal() {
+  if (!_autoRunPreviewLoaded) {
+    _autoRunPreviewLoaded = true;
+    await _autorunLoadPreview();
+  }
+  _autorunShowApprovalModal();
+}
+
+function _autorunShowApprovalModal() {
+  const modal = document.getElementById('autorun-approval-modal');
+  if (!modal) return;
+  _autorunPopulateApprovalModal();
+  modal.style.display = 'flex';
+}
+
+function _autorunHideApprovalModal() {
+  const modal = document.getElementById('autorun-approval-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function _autorunPopulateApprovalModal() {
+  if (!_autoRunPreviewData) return;
+  const summary = _autoRunPreviewData.summary || {};
+  const counts = summary.filter_counts || {};
+  const byStatus = summary.by_status || {};
+  const candidates = _autoRunPreviewData.candidates || [];
+
+  // サマリー数値ストリップ
+  const summaryEl = document.getElementById('arm-summary');
+  if (summaryEl) {
+    const total = summary.total || 0;
+    const auto  = byStatus.auto || 0;
+    const skip  = (byStatus['manual-review'] || 0) + (byStatus.review || 0);
+    summaryEl.textContent = '';
+    [
+      { n: total, label: 'テストケース', color: 'var(--text)' },
+      { n: auto,  label: '自動実行',    color: '#16a34a' },
+      { n: skip,  label: 'スキップ',    color: '#9ca3af' },
+    ].forEach(({ n, label, color }) => {
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:1px';
+      const num = document.createElement('strong');
+      num.style.cssText = `font-size:22px;font-weight:800;line-height:1.1;color:${color}`;
+      num.textContent = String(n);
+      const lbl = document.createElement('span');
+      lbl.style.cssText = 'font-size:10px;color:var(--text-muted)';
+      lbl.textContent = label;
+      wrap.appendChild(num); wrap.appendChild(lbl);
+      summaryEl.appendChild(wrap);
+    });
+  }
+
+  // フィルターカウントバッジ
+  const fcMap = { all: 'arm-fc-all', smoke: 'arm-fc-smoke', transition: 'arm-fc-transition', form: 'arm-fc-form' };
+  for (const [key, id] of Object.entries(fcMap)) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = counts[key] != null ? `${counts[key]}件` : '';
+  }
+
+  // テストケース一覧
+  const casesWrap = document.getElementById('arm-cases-wrap');
+  if (casesWrap) {
+    if (candidates.length) {
+      const rows = candidates.map(c => {
+        const clr = c.automation_status === 'auto' ? '#16a34a' : '#9ca3af';
+        return `<tr>
+          <td style="font-size:11px;white-space:nowrap;color:var(--text-muted)">${escHtml(c.id || '')}</td>
+          <td style="font-size:12px">${escHtml(c.title || '')}</td>
+          <td style="font-size:11px;font-weight:600;color:${clr}">${escHtml(c.automation_status || '')}</td>
+        </tr>`;
+      }).join('');
+      casesWrap.innerHTML = `<table class="data" style="width:100%">
+        <thead><tr><th>ID</th><th>タイトル</th><th>自動化</th></tr></thead>
+        <tbody>${rows}</tbody></table>`;
+    } else {
+      casesWrap.innerHTML = '<div class="empty" style="padding:12px">テストケースなし</div>';
+    }
+  }
+
+  // details toggle アイコン sync
+  const detail = document.getElementById('arm-cases-detail');
+  const icon = document.getElementById('arm-cases-toggle-icon');
+  if (detail && icon) {
+    detail.addEventListener('toggle', () => {
+      icon.textContent = detail.open ? '▼' : '▶';
+    }, { once: false });
   }
 }
 
@@ -605,13 +730,15 @@ function _autorunInitPreviewModal() {
 }
 
 function autorunReset() {
-  _autoRunJobId          = null;
-  _autoRunStartedAt      = null;
-  _autoRunPreviewLoaded  = false;
-  _autoRunPreviewData    = null;
-  _arCards               = {};
+  _autoRunJobId               = null;
+  _autoRunStartedAt           = null;
+  _autoRunPreviewLoaded       = false;
+  _autoRunPreviewData         = null;
+  _arCards                    = {};
+  _autoRunApprovalModalShown  = false;
   _autorunStopPolling();
   _autorunStopElapsed();
+  _autorunHideApprovalModal();
   _autorunHideLoginModal();
   document.getElementById('autorun-steps').style.display          = 'none';
   document.getElementById('autorun-outputs-area').style.display   = 'none';

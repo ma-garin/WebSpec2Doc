@@ -58,3 +58,19 @@ _Avoid_: 手渡しログイン（別ウィンドウ起動方式は廃止）
 **セッション**:
 自動ログインで取得し保存する認証状態（storage_state＝Cookie 等）。サイト単位で `output/{domain}/auth.json` に保存し再クロールで再利用する。期限切れはクロール中に検出し再ログインを促す。セッションにはID・パスワード本体を含まない。
 _Avoid_: 認証情報（credentials はパスワード本体を連想させるため避ける）
+
+### QA生成・自動テスト
+
+**QAプロセス**:
+クロール結果（report.json）を入力に、テスト計画・テスト分析・テスト設計・テストケース・横断レビューの5文書を生成するビュー。OpenAI API（OPENAI_API_KEY）が設定されている場合は補完・品質向上を行い、未設定の場合はローカルテンプレートでフォールバック生成する。実装: `web/routes/qa_process.py`（薄いルート）＋`web/services/qa/`（doc_generator/advanced_generator/advanced_html/helpers）。
+_Avoid_: QAドキュメント生成、テスト文書自動作成
+
+**高度QA成果物**:
+QAプロセスの拡張機能として生成する3種の追加成果物。①モデルグラフ（画面間遷移と状態をHTML可視化）②Playwright候補（自動テスト対象フォーム・ボタンのJSON/HTML）③品質観点（ISTQBに基づく観点カード）。`/api/qa-process/generate-advanced` で一括生成。
+
+**AutoRun**:
+URLを入力するだけでページ解析→クロール→QA生成→Playwright spec.ts 生成→テスト実行を全自動で行うビュー。ジョブ単位で状態管理（idle/discovering/crawling/generating_qa/generating_scripts/running_tests/complete）し、ポーリング方式でフロントに進捗を配信する。実装: `web/routes/auto_run.py`＋`web/services/spec_ts_generator.py`＋`web/services/playwright_executor.py`。
+_Avoid_: 全自動テスト、ワンクリックテスト
+
+**実行方針**:
+AutoRun でテストを実行する前にユーザーが選択するテスト実行の方針。全件実行・スモークのみ・重要画面のみ等の粒度を指定できる。承認ステップ（awaiting_approval）でユーザーが確認してから実行に進む。

@@ -1,0 +1,16 @@
+  <!-- ===== ファイルプレビューモーダル ===== -->
+  <div id="file-preview-modal" class="file-preview-modal hidden" role="dialog" aria-modal="true" aria-label="ファイルプレビュー">
+    <div class="file-preview-overlay" id="file-preview-overlay"></div>
+    <div class="file-preview-panel">
+      <div class="file-preview-header">
+        <span id="file-preview-title" class="file-preview-title">プレビュー</span>
+        <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
+          <a id="file-preview-newtab" href="#" target="_blank" rel="noopener" class="btn-outline-sm" style="font-size:12px;height:30px">↗ 新規タブ</a>
+          <button type="button" id="file-preview-close" class="btn-outline-sm" style="font-size:12px;height:30px">✕ 閉じる</button>
+        </div>
+      </div>
+      <div class="file-preview-body" id="file-preview-body">
+        <div class="file-preview-loading"><span class="spinner"></span><span>読み込み中…</span></div>
+      </div>
+    </div>
+  </div>

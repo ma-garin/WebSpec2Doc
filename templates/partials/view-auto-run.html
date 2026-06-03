@@ -1,0 +1,160 @@
+        <!-- ===== AutoRun ビュー ===== -->
+        <section class="view" id="view-auto-run">
+          <div class="qa-tool-2pane">
+            <!-- 左ペイン: 設定・状態 -->
+            <div class="qa-tool-sidebar">
+              <div>
+                <h2 class="qa-tool-sidebar-title">AutoRun</h2>
+                <p class="qa-tool-sidebar-desc">URLを入力するだけで、仕様書生成 → QA設計 → Playwright実行 → レポートまでを自動化します。</p>
+              </div>
+              <div id="autorun-form-area">
+                <label class="form-label" style="font-size:12px;margin-bottom:6px">対象URL</label>
+                <input type="url" id="autorun-url" class="url-input" style="height:36px;width:100%;margin-bottom:8px;font-size:13px" placeholder="https://example.com" />
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
+                  <div>
+                    <label class="form-label" style="font-size:11px">深さ</label>
+                    <input type="number" id="autorun-depth" class="url-input" style="height:32px;width:100%;font-size:13px" value="2" min="1" max="5" />
+                  </div>
+                  <div>
+                    <label class="form-label" style="font-size:11px">最大ページ</label>
+                    <input type="number" id="autorun-max-pages" class="url-input" style="height:32px;width:100%;font-size:13px" value="30" min="1" max="300" />
+                  </div>
+                </div>
+                <button type="button" id="autorun-start-btn" class="btn-primary" style="width:100%;height:40px;font-size:14px">開始</button>
+                <div id="autorun-start-status" class="input-field-message" style="margin-top:6px;min-height:16px"></div>
+              </div>
+
+              <!-- フロー進捗 -->
+              <div id="autorun-steps" style="margin-top:18px;display:none">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                  <div class="hero-section-title" style="margin:0">進捗</div>
+                  <span id="autorun-elapsed" style="font-size:12px;font-variant-numeric:tabular-nums;color:var(--text-muted);font-weight:600">0:00</span>
+                </div>
+                <div class="autorun-step-list">
+                  <div class="autorun-step-item" id="ars-crawl">
+                    <span class="autorun-step-icon">○</span>
+                    <span>仕様書生成</span>
+                  </div>
+                  <div class="autorun-step-item" id="ars-qa">
+                    <span class="autorun-step-icon">○</span>
+                    <span>QA成果物</span>
+                  </div>
+                  <div class="autorun-step-item" id="ars-scripts">
+                    <span class="autorun-step-icon">○</span>
+                    <span>スクリプト生成</span>
+                  </div>
+                  <div class="autorun-step-item" id="ars-approval">
+                    <span class="autorun-step-icon">○</span>
+                    <span>承認待ち</span>
+                  </div>
+                  <div class="autorun-step-item" id="ars-running">
+                    <span class="autorun-step-icon">○</span>
+                    <span>テスト実行</span>
+                  </div>
+                  <div class="autorun-step-item" id="ars-done">
+                    <span class="autorun-step-icon">○</span>
+                    <span>完了</span>
+                  </div>
+                </div>
+
+                <!-- 承認エリア（方針選択 + 承認ボタン） -->
+                <div id="autorun-approve-area" style="display:none;margin-top:14px">
+                  <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">スクリプト生成完了。右ペインで内容を確認し、実行方針を選択してください。</p>
+
+                  <div class="form-label" style="font-size:11px;margin-bottom:5px">実行対象</div>
+                  <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px">
+                    <label style="font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px">
+                      <input type="radio" name="autorun-filter" value="all" checked style="accent-color:var(--primary)">
+                      <span>全テスト</span>
+                      <span id="afc-all" style="color:var(--text-muted);font-size:11px"></span>
+                    </label>
+                    <label style="font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px">
+                      <input type="radio" name="autorun-filter" value="smoke" style="accent-color:var(--primary)">
+                      <span>スモークのみ</span>
+                      <span id="afc-smoke" style="color:var(--text-muted);font-size:11px"></span>
+                    </label>
+                    <label style="font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px">
+                      <input type="radio" name="autorun-filter" value="transition" style="accent-color:var(--primary)">
+                      <span>遷移テスト</span>
+                      <span id="afc-transition" style="color:var(--text-muted);font-size:11px"></span>
+                    </label>
+                    <label style="font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px">
+                      <input type="radio" name="autorun-filter" value="form" style="accent-color:var(--primary)">
+                      <span>フォームテスト</span>
+                      <span id="afc-form" style="color:var(--text-muted);font-size:11px"></span>
+                    </label>
+                  </div>
+
+                  <div class="form-label" style="font-size:11px;margin-bottom:4px">タイムアウト</div>
+                  <select id="autorun-timeout" class="url-input" style="height:30px;width:100%;font-size:12px;margin-bottom:12px">
+                    <option value="30">30秒</option>
+                    <option value="60" selected>60秒</option>
+                    <option value="120">120秒</option>
+                    <option value="300">300秒</option>
+                  </select>
+
+                  <button type="button" id="autorun-approve-btn" class="btn-primary" style="width:100%;height:40px;font-size:14px">テスト実行を承認</button>
+                </div>
+
+                <!-- 停止ボタン -->
+                <div id="autorun-cancel-area" style="display:none;margin-top:14px">
+                  <button type="button" id="autorun-cancel-btn" class="btn-outline-sm" style="width:100%;color:var(--critical);border-color:var(--critical)">停止</button>
+                </div>
+
+                <!-- 再実行 -->
+                <div id="autorun-restart-area" style="display:none;margin-top:14px">
+                  <button type="button" id="autorun-restart-btn" class="btn-outline-sm" style="width:100%">新しく実行</button>
+                </div>
+              </div>
+
+              <!-- 成果物リンク -->
+              <div id="autorun-outputs-area" style="margin-top:18px;display:none">
+                <div class="hero-section-title" style="margin-bottom:8px">成果物</div>
+                <div id="autorun-output-links" class="qa-output-list"></div>
+              </div>
+            </div>
+
+            <!-- 右ペイン: ログ・プレビュー・結果 -->
+            <div class="qa-tool-main">
+              <div id="autorun-main-content" class="qa-readable">
+                <div id="autorun-idle-msg" class="empty">URLを入力して「開始」を押すと、仕様書生成からテスト実行まで全自動で処理します。</div>
+
+                <!-- ログパネル -->
+                <div id="autorun-log-panel" style="display:none">
+                  <div class="hero-section-title" style="margin-bottom:6px">実行ログ</div>
+                  <pre id="autorun-log" style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:11px;max-height:260px;overflow-y:auto;white-space:pre-wrap"></pre>
+                </div>
+
+                <!-- テストケース・スクリプト プレビューパネル -->
+                <div id="autorun-preview-panel" style="display:none;margin-top:18px">
+                  <div class="hero-section-title" style="margin-bottom:10px">
+                    テストケース・スクリプト確認
+                    <span id="autorun-preview-loading" style="font-size:12px;font-weight:400;color:var(--text-muted);margin-left:8px"></span>
+                  </div>
+                  <!-- タブ -->
+                  <div style="display:flex;gap:4px;margin-bottom:12px">
+                    <button class="result-tab is-active autorun-preview-tab" data-ptab="cases">テストケース一覧</button>
+                    <button class="result-tab autorun-preview-tab" data-ptab="script">スクリプト (.spec.ts)</button>
+                  </div>
+                  <!-- テストケースタブ -->
+                  <div id="autorun-ptab-cases">
+                    <div id="autorun-preview-summary" style="margin-bottom:10px"></div>
+                    <div id="autorun-preview-table-wrap" style="max-height:380px;overflow-y:auto;border:1px solid var(--border);border-radius:6px"></div>
+                  </div>
+                  <!-- スクリプトタブ -->
+                  <div id="autorun-ptab-script" style="display:none">
+                    <pre id="autorun-preview-spec" style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:11px;max-height:420px;overflow-y:auto;white-space:pre-wrap;font-family:ui-monospace,monospace"></pre>
+                  </div>
+                </div>
+
+                <!-- テスト結果サマリー -->
+                <div id="autorun-result-panel" style="display:none;margin-top:18px">
+                  <div class="hero-section-title" style="margin-bottom:12px">テスト結果</div>
+                  <div id="autorun-result-cards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px"></div>
+                  <div id="autorun-result-table-wrap"></div>
+                  <div id="autorun-report-links" style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>

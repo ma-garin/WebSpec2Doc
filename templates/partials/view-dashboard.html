@@ -1,0 +1,11 @@
+        <!-- ===== ダッシュボード（監視対象サイト） ===== -->
+        <section class="view is-active" id="view-dashboard">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px">
+            <p style="color:var(--text-muted);font-size:13px">監視対象サイト。<strong>再クロール</strong>すると前回からの仕様ドリフトを検知できます。</p>
+            <div style="display:flex;gap:8px">
+              <button class="btn-outline-sm" id="reload-history">再読み込み</button>
+              <button class="btn-primary" id="add-site-btn-2" style="height:36px;padding:0 16px;font-size:13px">+ サイトを追加</button>
+            </div>
+          </div>
+          <div id="history-body"><div class="empty">読み込み中...</div></div>
+        </section>

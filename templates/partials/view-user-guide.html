@@ -1,0 +1,94 @@
+        <!-- ===== ユーザーガイドビュー ===== -->
+        <section class="view" id="view-user-guide">
+          <div class="input-card user-guide-panel">
+            <div class="wizard-page-header">
+              <h2>WebSpec2Doc ユーザーガイド</h2>
+              <p>URL解析からQAプロセス成果物の作成まで、画面上で確認できる操作ガイドです。</p>
+            </div>
+
+            <div class="qa-card-grid">
+              <div class="qa-mini-card"><strong>1. サイトを追加</strong><span>左上の「サイトを追加」から対象URLを入力します。</span></div>
+              <div class="qa-mini-card"><strong>2. 画面分析</strong><span>「画面分析」で取得対象ページを検出します。</span></div>
+              <div class="qa-mini-card"><strong>3. 条件設定</strong><span>対象画面、ログイン、差分出力を確認します。</span></div>
+              <div class="qa-mini-card"><strong>4. レポート確認</strong><span>概要、画面別仕様、入力項目、遷移、履歴差分を確認します。</span></div>
+              <div class="qa-mini-card"><strong>5. QAプロセス</strong><span>解析済みサイトを選び、Step by StepでQA成果物を作成します。</span></div>
+              <div class="qa-mini-card"><strong>6. モデル/カバレッジ</strong><span>画面遷移グラフとTrace IDの網羅性を確認します。</span></div>
+              <div class="qa-mini-card"><strong>7. 自動テスト候補</strong><span>Playwright化しやすい候補をレビューします。</span></div>
+              <div class="qa-mini-card"><strong>8. 品質観点</strong><span>CSV、a11y、OWASP、境界値、API契約の観点を確認します。</span></div>
+            </div>
+
+            <div class="qa-readable-section">
+              <h3>4ステップURL解析</h3>
+              <table class="data">
+                <thead><tr><th>Step</th><th>画面</th><th>操作</th></tr></thead>
+                <tbody>
+                  <tr><td>1</td><td>URL入力・解析</td><td>クロール対象URLを入力し、「画面分析」を押します。</td></tr>
+                  <tr><td>2</td><td>条件設定</td><td>取得対象画面、ログイン、差分出力を確認します。</td></tr>
+                  <tr><td>3</td><td>実行</td><td>受付、ページ取得、解析、結果整理の進捗を確認します。</td></tr>
+                  <tr><td>4</td><td>レポート</td><td>生成された仕様、入力項目、遷移、差分、出力形式を確認します。</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="qa-readable-section">
+              <h3>QAプロセス</h3>
+              <table class="data">
+                <thead><tr><th>Step</th><th>画面</th><th>内容</th></tr></thead>
+                <tbody>
+                  <tr><td>1</td><td>対象サイト選択</td><td>解析済みサイトを選びます。対象の report.json が必要です。</td></tr>
+                  <tr><td>2</td><td>入力仕様サマリー</td><td>画面、フォーム、入力項目、必須項目、操作要素を確認します。</td></tr>
+                  <tr><td>3</td><td>テスト計画</td><td>スコープ、テストレベル、質問待ち事項を整理します。</td></tr>
+                  <tr><td>4</td><td>テスト分析</td><td>画面別にリスク源と確認対象を洗い出します。</td></tr>
+                  <tr><td>5</td><td>テスト設計</td><td>観点IDと元仕様の対応を確認します。</td></tr>
+                  <tr><td>6</td><td>テストケース</td><td>Trace ID付きのケースを確認します。</td></tr>
+                  <tr><td>7</td><td>横断レビュー / レポート</td><td>欠落リスクを確認し、QAプロセスレポートを生成します。</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="qa-readable-section">
+              <h3>OpenAI補完とCSV観点</h3>
+              <ul class="qa-check-list">
+                <li><strong>標準:</strong> OpenAI APIを呼ばず、追加料金なしでローカル生成します。</li>
+                <li><strong>補完ON:</strong> 設定済みのOpenAI APIキーでStep 3〜7を構造化JSONとして補完します。</li>
+                <li><strong>CSV観点:</strong> SaaS/Webテスト観点CSVをテスト分析・設計・ケース・横断レビューに反映します。</li>
+              </ul>
+            </div>
+
+            <div class="qa-readable-section">
+              <h3>追加QA画面</h3>
+              <table class="data">
+                <thead><tr><th>メニュー</th><th>内容</th><th>外部API</th></tr></thead>
+                <tbody>
+                  <tr><td>モデル/カバレッジ</td><td>画面遷移グラフ、Trace ID、カバレッジ、レビューゲートを表示します。</td><td>呼び出しません</td></tr>
+                  <tr><td>自動テスト候補</td><td>Playwright候補を生成します。実行はせず、レビュー待ちとして表示します。</td><td>呼び出しません</td></tr>
+                  <tr><td>品質観点</td><td>CSV観点、アクセシビリティ、OWASP WSTG/ASVS、境界値、ペアワイズ、API契約、ビジュアル回帰候補を表示します。</td><td>呼び出しません</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="qa-readable-section">
+              <h3>出力ファイル</h3>
+              <ul class="qa-check-list">
+                <li><strong>通常レポート:</strong> report.html / report.json / spec.xlsx / report.pdf / screens.md / forms.md</li>
+                <li><strong>差分:</strong> diff_report.html / snapshots/</li>
+                <li><strong>QAプロセス:</strong> qa_process/test_plan.md から qa_process_report.html まで</li>
+                <li><strong>モデル/カバレッジ:</strong> qa_process/screen_transition_graph.json / model_graph.html / coverage_metrics.json</li>
+                <li><strong>自動テスト候補:</strong> qa_process/playwright_candidates.json / playwright_candidates.html</li>
+                <li><strong>品質観点:</strong> qa_process/quality_viewpoints.json / quality_viewpoints.html</li>
+                <li><strong>追加料金:</strong> OpenAI補完OFFでは発生しません。ONの場合のみOpenAI API利用料金が発生します。</li>
+              </ul>
+            </div>
+
+            <div class="qa-readable-section">
+              <h3>よくある確認</h3>
+              <ul class="qa-check-list qa-question-list">
+                <li>QAプロセスに対象サイトが出ない場合は、先にサイトを解析して report.json を生成してください。</li>
+                <li>ログインが必要な画面は、条件設定で認証情報を入力してから解析してください。</li>
+                <li>前回との差分は「再クロール」後、レポートの「履歴・差分」タブで確認できます。</li>
+              </ul>
+            </div>
+
+            <p class="input-hint">詳細なMarkdown版は <code>docs/userguide.md</code> にあります。</p>
+          </div>
+        </section>

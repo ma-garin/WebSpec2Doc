@@ -1,0 +1,30 @@
+  <!-- ===== AutoRun ログインポップアップ ===== -->
+  <div id="autorun-login-modal" class="file-preview-modal hidden" role="dialog" aria-modal="true" aria-label="ログイン情報の入力">
+    <div class="file-preview-overlay" id="autorun-login-overlay"></div>
+    <div class="file-preview-panel" style="max-width:480px;height:auto;max-height:90vh">
+      <div class="file-preview-header">
+        <span class="file-preview-title">ログイン情報の入力</span>
+        <button type="button" id="autorun-login-close" class="btn-outline-sm" style="font-size:12px;height:30px">✕ 閉じる</button>
+      </div>
+      <div style="padding:20px;overflow-y:auto">
+        <p id="autorun-login-msg" style="font-size:13px;color:var(--text-muted);margin-bottom:16px"></p>
+        <div class="field" style="margin-bottom:12px">
+          <label class="form-label">ログインURL</label>
+          <input type="url" id="autorun-login-url" class="url-input" style="height:38px;font-size:13px" readonly />
+        </div>
+        <div class="field" style="margin-bottom:12px">
+          <label class="form-label">ユーザー名 / メールアドレス</label>
+          <input type="text" id="autorun-login-username" class="url-input" style="height:38px;font-size:13px" autocomplete="username" placeholder="user@example.com" />
+        </div>
+        <div class="field" style="margin-bottom:16px">
+          <label class="form-label">パスワード</label>
+          <input type="password" id="autorun-login-password" class="url-input" style="height:38px;font-size:13px" autocomplete="current-password" />
+        </div>
+        <div id="autorun-login-status" class="input-field-message" style="min-height:14px;margin-bottom:10px"></div>
+        <div style="display:flex;gap:8px">
+          <button type="button" id="autorun-login-submit" class="btn-primary" style="flex:1;height:42px;font-size:14px">ログインして続行</button>
+          <button type="button" id="autorun-login-skip" class="btn-outline-sm" style="height:42px;padding:0 16px;font-size:13px">スキップ</button>
+        </div>
+      </div>
+    </div>
+  </div>

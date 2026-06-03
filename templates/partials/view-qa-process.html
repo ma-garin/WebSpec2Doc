@@ -1,0 +1,117 @@
+        <!-- ===== QAプロセスビュー ===== -->
+        <section class="view" id="view-qa-process">
+          <div class="input-card qa-wizard">
+            <div class="qa-wizard-head">
+              <div>
+                <p class="app-sidebar-section" style="padding:0">QAプロセス</p>
+                <h2 class="set-card-title" style="margin-top:4px">Step by Step でQA成果物を作成</h2>
+              </div>
+              <button type="button" id="qa-generate-all" class="btn-primary">全成果物を生成</button>
+            </div>
+
+            <div class="qa-stepper" id="qa-stepper" aria-label="QAプロセス進行状況">
+              <button type="button" class="qa-step-dot is-active" data-qa-page="0"><span>1</span><strong>対象</strong></button>
+              <button type="button" class="qa-step-dot" data-qa-page="1"><span>2</span><strong>入力</strong></button>
+              <button type="button" class="qa-step-dot" data-qa-page="2"><span>3</span><strong>計画</strong></button>
+              <button type="button" class="qa-step-dot" data-qa-page="3"><span>4</span><strong>分析</strong></button>
+              <button type="button" class="qa-step-dot" data-qa-page="4"><span>5</span><strong>設計</strong></button>
+              <button type="button" class="qa-step-dot" data-qa-page="5"><span>6</span><strong>ケース</strong></button>
+              <button type="button" class="qa-step-dot" data-qa-page="6"><span>7</span><strong>レポート</strong></button>
+            </div>
+
+            <div id="qa-status" class="input-field-message"></div>
+
+            <div class="qa-page is-active" data-qa-page-panel="0">
+              <div class="wizard-page-header">
+                <h2>対象サイト選択</h2>
+                <p>生成済みの report.json / spec.xlsx / report.html をQAプロセスの入力として使います。</p>
+              </div>
+              <label for="qa-domain-select" class="form-label">対象サイト</label>
+              <div class="input-row" style="align-items:center">
+                <select id="qa-domain-select" class="url-input" style="height:40px">
+                  <option value="">解析済みサイトを選択</option>
+                </select>
+                <button type="button" id="qa-reload-sites" class="btn-outline-sm">再読み込み</button>
+              </div>
+              <div class="qa-guide-grid">
+                <div class="qa-info-card"><strong>入力</strong><span>既存の解析結果を読み込みます。</span></div>
+                <div class="qa-info-card"><strong>観点</strong><span>CSVのSaaS/Webテスト観点を設計とレビューに使います。</span></div>
+                <div class="qa-info-card"><strong>確認</strong><span>各ステップを画面上で確認できます。</span></div>
+              </div>
+              <label class="qa-ai-toggle" for="qa-use-ai">
+                <input type="checkbox" id="qa-use-ai">
+                <span><strong>OpenAI APIで補完</strong><small>設定済みのOpenAI APIキーがある場合だけ、Step 3〜7の内容を構造化JSONで補完します。OFFの場合は追加料金なしのローカル生成です。</small></span>
+              </label>
+            </div>
+
+            <div class="qa-page" data-qa-page-panel="1">
+              <div class="wizard-page-header">
+                <h2>入力仕様サマリー</h2>
+                <p>画面、フォーム、入力項目、必須項目、操作要素、遷移を確認します。</p>
+              </div>
+              <div id="qa-input-summary" class="empty">対象サイトを選択してください。</div>
+            </div>
+
+            <div class="qa-page" data-qa-page-panel="2">
+              <div class="qa-page-title-row">
+                <div class="wizard-page-header">
+                  <h2>テスト計画</h2>
+                  <p>対象範囲、テストレベル、質問待ちを整理します。</p>
+                </div>
+                <button type="button" class="btn-primary qa-generate-current" data-qa-step="test_plan">このステップを生成</button>
+              </div>
+              <div id="qa-step-test-plan" class="qa-readable"></div>
+            </div>
+
+            <div class="qa-page" data-qa-page-panel="3">
+              <div class="qa-page-title-row">
+                <div class="wizard-page-header">
+                  <h2>テスト分析</h2>
+                  <p>画面単位でリスク源と確認対象を洗い出します。</p>
+                </div>
+                <button type="button" class="btn-primary qa-generate-current" data-qa-step="test_analysis">このステップを生成</button>
+              </div>
+              <div id="qa-step-test-analysis" class="qa-readable"></div>
+            </div>
+
+            <div class="qa-page" data-qa-page-panel="4">
+              <div class="qa-page-title-row">
+                <div class="wizard-page-header">
+                  <h2>テスト設計</h2>
+                  <p>観点IDと元仕様の対応を確認します。</p>
+                </div>
+                <button type="button" class="btn-primary qa-generate-current" data-qa-step="test_design">このステップを生成</button>
+              </div>
+              <div id="qa-step-test-design" class="qa-readable"></div>
+            </div>
+
+            <div class="qa-page" data-qa-page-panel="5">
+              <div class="qa-page-title-row">
+                <div class="wizard-page-header">
+                  <h2>テストケース</h2>
+                  <p>Trace ID付きで画面表示、遷移、操作、入力条件を確認します。</p>
+                </div>
+                <button type="button" class="btn-primary qa-generate-current" data-qa-step="test_cases">このステップを生成</button>
+              </div>
+              <div id="qa-step-test-cases" class="qa-readable"></div>
+            </div>
+
+            <div class="qa-page" data-qa-page-panel="6">
+              <div class="qa-page-title-row">
+                <div class="wizard-page-header">
+                  <h2>横断レビュー / QAプロセスレポート</h2>
+                  <p>網羅性と欠落リスクを確認し、成果物一式を出力します。</p>
+                </div>
+                <button type="button" class="btn-primary qa-generate-current" data-qa-step="qa_process_report">レポートを生成</button>
+              </div>
+              <div id="qa-step-report" class="qa-readable"></div>
+              <div class="hero-section-title" style="margin-top:18px">成果物</div>
+              <div id="qa-output-links" class="export-grid"></div>
+            </div>
+
+            <div class="wizard-footer">
+              <button type="button" id="qa-prev" class="btn-outline-sm">戻る</button>
+              <button type="button" id="qa-next" class="btn-primary">次へ</button>
+            </div>
+          </div>
+        </section>

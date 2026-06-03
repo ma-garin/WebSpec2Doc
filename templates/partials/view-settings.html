@@ -1,0 +1,62 @@
+        <!-- ===== 設定ビュー ===== -->
+        <section class="view" id="view-settings">
+          <div class="set-tabs">
+            <button class="set-tab is-active" data-tab="api">APIキー</button>
+            <button class="set-tab" data-tab="model">モデル</button>
+            <button class="set-tab" data-tab="crawl">クロール既定値</button>
+          </div>
+
+          <div class="set-panel is-active" id="set-panel-api">
+            <div class="input-card">
+              <h2 class="set-card-title">OpenAI API キー</h2>
+              <p class="input-hint" style="margin-top:0;margin-bottom:14px">キーは <code>.env</code> に保存されます（ブラウザには保存しません）。空欄で保存すると既存キーを保持します。</p>
+              <div class="field full" style="margin-bottom:14px">
+                <label>現在のキー</label>
+                <div class="key-current" id="api-key-current">未設定</div>
+              </div>
+              <div class="options-grid">
+                <div class="field full"><label for="api-key">OPENAI_API_KEY</label><input type="password" id="api-key" placeholder="sk-..." autocomplete="off"></div>
+                <div class="field"><label for="api-org">OPENAI_ORG_ID（任意）</label><input type="text" id="api-org" placeholder="org-..."></div>
+                <div class="field"><label for="api-project">OPENAI_PROJECT_ID（任意）</label><input type="text" id="api-project" placeholder="proj_..."></div>
+              </div>
+              <button class="btn-primary" id="save-api" style="margin-top:18px">APIキーを保存</button>
+              <div class="settings-msg" id="api-msg">保存しました</div>
+              <p class="input-hint" style="margin-top:14px">⚠ LLMテスト観点生成機能は未実装です。本設定はその準備です。</p>
+            </div>
+          </div>
+
+          <div class="set-panel" id="set-panel-model">
+            <div class="input-card">
+              <h2 class="set-card-title">回答生成モデル</h2>
+              <p class="input-hint" style="margin-top:0;margin-bottom:14px">LLMテスト観点生成（今後実装）で使うモデルです。</p>
+              <div class="field full">
+                <label for="api-model">OPENAI_MODEL</label>
+                <select id="api-model" class="url-input" style="height:40px">
+                  <option value="gpt-5.4-mini">gpt-5.4-mini（コスト効率・推奨）</option>
+                  <option value="gpt-5.4-nano">gpt-5.4-nano（最安・最速）</option>
+                  <option value="gpt-5.4">gpt-5.4（標準）</option>
+                  <option value="gpt-5.5">gpt-5.5（高精度）</option>
+                  <option value="gpt-5.5-pro">gpt-5.5-pro（最高精度）</option>
+                  <option value="gpt-4.1">gpt-4.1（非推論・ツール呼び出し）</option>
+                </select>
+              </div>
+              <button class="btn-primary" id="save-model" style="margin-top:18px">モデルを保存</button>
+              <div class="settings-msg" id="model-msg">保存しました</div>
+            </div>
+          </div>
+
+          <div class="set-panel" id="set-panel-crawl">
+            <div class="input-card">
+              <h2 class="set-card-title">クロール既定値</h2>
+              <p class="input-hint" style="margin-top:0;margin-bottom:14px">このブラウザに保存され、生成ウィザードの初期値に反映されます。</p>
+              <div class="options-grid">
+                <div class="field"><label for="set-depth">階層数（既定）</label><input type="number" id="set-depth" min="1" max="5"></div>
+                <div class="field"><label for="set-max">最大ページ数（既定）</label><input type="number" id="set-max" min="1" max="300"></div>
+
+                <div class="field full"><label for="set-auth">認証セッション auth.json パス（任意）</label><input type="text" id="set-auth" placeholder="auth.json"></div>
+              </div>
+              <button class="btn-primary" id="save-settings" style="margin-top:18px">設定を保存</button>
+              <div class="settings-msg" id="settings-msg">設定を保存しました</div>
+            </div>
+          </div>
+        </section>

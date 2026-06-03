@@ -23,6 +23,7 @@ bp = Blueprint("auto_run", __name__)
 logger = logging.getLogger(__name__)
 
 _JOBS: dict[str, AutoRunJob] = {}
+_JOBS_LOCK = threading.Lock()
 
 
 @dataclass
@@ -130,7 +131,8 @@ def api_autorun_start() -> dict | tuple[dict, int]:
     job = AutoRunJob(job_id=job_id, url=url, started_at=_now_iso())
     if auth:
         job.auth_path = auth
-    _JOBS[job_id] = job
+    with _JOBS_LOCK:
+        _JOBS[job_id] = job
 
     threading.Thread(target=_run_job, args=(job, depth, max_pages), daemon=True).start()
 
@@ -139,7 +141,8 @@ def api_autorun_start() -> dict | tuple[dict, int]:
 
 @bp.get("/api/autorun/status")
 def api_autorun_status() -> dict | tuple[dict, int]:
-    job = _JOBS.get(request.args.get("job_id", ""))
+    with _JOBS_LOCK:
+        job = _JOBS.get(request.args.get("job_id", ""))
     if job is None:
         return {"error": "not found"}, 404
     return job.to_dict()
@@ -149,7 +152,8 @@ def api_autorun_status() -> dict | tuple[dict, int]:
 def api_autorun_cancel() -> dict | tuple[dict, int]:
     body = request.get_json(silent=True) or {}
     job_id = (request.form.get("job_id") or body.get("job_id", "")).strip()
-    job = _JOBS.get(job_id)
+    with _JOBS_LOCK:
+        job = _JOBS.get(job_id)
     if job is None:
         return {"error": "not found"}, 404
     job.cancel()
@@ -165,7 +169,8 @@ def api_autorun_submit_input() -> dict | tuple[dict, int]:
     """ログイン情報などの人的インプットを受け取り、待機中のジョブを再開する。"""
     body = request.get_json(silent=True) or {}
     job_id = (request.form.get("job_id") or body.get("job_id", "")).strip()
-    job = _JOBS.get(job_id)
+    with _JOBS_LOCK:
+        job = _JOBS.get(job_id)
     if job is None:
         return {"error": "not found"}, 404
     if job.status != "awaiting_input":
@@ -193,7 +198,8 @@ def api_autorun_submit_input() -> dict | tuple[dict, int]:
 @bp.get("/api/autorun/preview")
 def api_autorun_preview() -> dict | tuple[dict, int]:
     """テストケース一覧・スクリプト内容・フィルター件数を返す。"""
-    job = _JOBS.get(request.args.get("job_id", ""))
+    with _JOBS_LOCK:
+        job = _JOBS.get(request.args.get("job_id", ""))
     if job is None:
         return {"error": "not found"}, 404
 
@@ -244,7 +250,8 @@ def api_autorun_preview() -> dict | tuple[dict, int]:
 def api_autorun_approve() -> dict | tuple[dict, int]:
     body = request.get_json(silent=True) or {}
     job_id = (request.form.get("job_id") or body.get("job_id", "")).strip()
-    job = _JOBS.get(job_id)
+    with _JOBS_LOCK:
+        job = _JOBS.get(job_id)
     if job is None:
         return {"error": "not found"}, 404
     if job.status != "awaiting_approval":
@@ -266,7 +273,8 @@ def api_autorun_approve() -> dict | tuple[dict, int]:
 
 @bp.get("/api/autorun/report")
 def api_autorun_report() -> dict | tuple[dict, int]:
-    job = _JOBS.get(request.args.get("job_id", ""))
+    with _JOBS_LOCK:
+        job = _JOBS.get(request.args.get("job_id", ""))
     if job is None:
         return {"error": "not found"}, 404
     return {**job.to_dict(), "report_html": _report_html_path(job)}
@@ -274,6 +282,8 @@ def api_autorun_report() -> dict | tuple[dict, int]:
 
 @bp.get("/api/autorun/jobs")
 def api_autorun_jobs() -> dict:
+    with _JOBS_LOCK:
+        jobs_snapshot = list(_JOBS.values())
     return {
         "jobs": [
             {
@@ -285,7 +295,7 @@ def api_autorun_jobs() -> dict:
                 "finished_at": j.finished_at,
                 "elapsed_sec": j.elapsed_sec(),
             }
-            for j in reversed(list(_JOBS.values()))
+            for j in reversed(jobs_snapshot)
         ][:20]
     }
 

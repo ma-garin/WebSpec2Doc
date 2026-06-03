@@ -73,6 +73,7 @@ async function autorunStart() {
     if (!res.ok || !data.ok) throw new Error(data.error || '開始に失敗しました');
     _autoRunJobId  = data.job_id;
     _autoRunStartedAt = null;
+    _autorunInitPreviewModal();
     _autorunShowRunning();
     _autorunStartPolling();
     _autorunStartElapsed();
@@ -356,16 +357,24 @@ function _arAppendCard(id, icon, title, timeStr, meta, buttons) {
   return card;
 }
 
-// ---- AutoRun: テストケースプレビュー（スクリプトカードから呼び出し） ----
+// ---- AutoRun: テストケースプレビューモーダル ----
 function arShowPreview() {
   const panel = document.getElementById('autorun-preview-panel');
   if (!panel) return;
-  const visible = panel.style.display !== 'none';
-  panel.style.display = visible ? 'none' : '';
-  if (!visible && !_autoRunPreviewLoaded) {
+  const isOpen = panel.style.display === 'flex';
+  if (isOpen) {
+    panel.style.display = 'none';
+    return;
+  }
+  panel.style.display = 'flex';
+  if (!_autoRunPreviewLoaded) {
     _autoRunPreviewLoaded = true;
     _autorunLoadPreview();
   }
+}
+
+function _autorunClosePreviewOnBackdrop(e) {
+  if (e.target === document.getElementById('autorun-preview-panel')) arShowPreview();
 }
 
 // ---- AutoRun: テストプレビュー ----
@@ -596,6 +605,14 @@ async function _autorunSubmitLogin(skip) {
 }
 
 // ---- AutoRun: リセット ----
+function _autorunInitPreviewModal() {
+  const panel = document.getElementById('autorun-preview-panel');
+  if (panel && !panel._backdropBound) {
+    panel.addEventListener('click', _autorunClosePreviewOnBackdrop);
+    panel._backdropBound = true;
+  }
+}
+
 function autorunReset() {
   _autoRunJobId          = null;
   _autoRunStartedAt      = null;

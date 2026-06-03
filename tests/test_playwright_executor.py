@@ -100,10 +100,7 @@ class TestRunPlaywright:
 
     def test_pw_test_setup_fails_returns_unavailable(self, tmp_out: Path) -> None:
         with (
-            patch(
-                "web.services.playwright_executor.shutil.which",
-                side_effect=lambda x: "npx" if x == "npx" else None,
-            ),
+            patch("web.services.playwright_executor.shutil.which", return_value="/usr/bin/npx"),
             patch("web.services.playwright_executor._pw_test_available", return_value=False),
             patch(
                 "web.services.playwright_executor._ensure_pw_env", return_value=(False, "npm失敗")
@@ -241,10 +238,7 @@ class TestRunPlaywright:
         logs: list[str] = []
 
         with (
-            patch(
-                "web.services.playwright_executor.shutil.which",
-                side_effect=lambda x: "npx" if x == "npx" else None,
-            ),
+            patch("web.services.playwright_executor.shutil.which", return_value="/usr/bin/npx"),
             patch("web.services.playwright_executor._pw_test_available", return_value=False),
             patch(
                 "web.services.playwright_executor._ensure_pw_env",

@@ -45,7 +45,8 @@ def run_playwright(
             fallback_html_path,
         )
 
-    if not shutil.which("playwright") and not _pw_test_available():
+    # @playwright/test パッケージを確認（playwright CLI の有無とは別）
+    if not _pw_test_available():
         _log("@playwright/test をセットアップしています…")
         ok, msg = _ensure_pw_env(_PW_ENV_DIR)
         _log(msg)

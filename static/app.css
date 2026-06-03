@@ -655,9 +655,16 @@
 .uml-panel-head { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; padding:12px 16px; border-bottom:1px solid var(--border); background:var(--surface); }
 .uml-panel-head strong { display:block; font-size:14px; color:var(--text); }
 .uml-panel-head span,.uml-panel-head p { color:var(--text-muted); font-size:12px; margin:2px 0 0; }
+.uml-panel-actions { display:flex; align-items:center; justify-content:flex-end; gap:12px; flex-wrap:wrap; }
+.uml-zoom-controls { display:inline-flex; align-items:center; gap:3px; padding:2px; border:1px solid var(--border); border-radius:4px; background:var(--surface-soft); }
+.uml-zoom-btn { height:28px; min-width:30px; padding:0 8px; border:1px solid transparent; border-radius:3px; background:transparent; color:var(--text); font-size:12px; font-weight:800; cursor:pointer; }
+.uml-zoom-btn:hover { border-color:var(--info-border); background:var(--surface); color:var(--primary-dark); }
+.uml-zoom-level { min-width:52px; color:var(--primary-dark); }
 .uml-layout { display:grid; grid-template-columns:minmax(420px,1.2fr) minmax(360px,.8fr); gap:0; min-height:520px; }
 .uml-canvas { min-width:0; overflow:auto; padding:16px; border-right:1px solid var(--border); background:#fff; }
 .uml-canvas svg { max-width:none; min-width:100%; height:auto; display:block; }
+.uml-zoom-stage { display:inline-block; position:relative; min-width:1px; min-height:1px; }
+.uml-zoom-stage svg { transform-origin:top left; }
 .uml-source { margin:0; padding:12px; border:1px solid var(--border); border-radius:4px; background:var(--surface-soft); font-size:12px; white-space:pre; overflow:auto; }
 .uml-table-wrap { min-width:0; overflow:auto; padding:16px; background:var(--surface); }
 .uml-table-title { font-size:12px; font-weight:800; color:var(--primary-dark); margin-bottom:8px; }
@@ -678,6 +685,8 @@
   .viewpoint-summary { grid-template-columns:repeat(2,minmax(150px,1fr)); }
 }
 @media(max-width:760px){
+  .uml-panel-head { flex-direction:column; }
+  .uml-panel-actions { justify-content:flex-start; }
   .viewpoint-summary { grid-template-columns:1fr; }
 }
 

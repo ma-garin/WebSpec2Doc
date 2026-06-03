@@ -1,4 +1,6 @@
 // ---- 画面遷移図（UML 3タブ + テスト観点マップ）----
+let umlZoom = 1;
+
 function _commonNavTargets(screens) {
   const n = screens.length;
   const count = {};
@@ -127,16 +129,31 @@ function _showUmlPanel(type, screens) {
     return;
   }
   const meta = _umlMeta(type);
+  umlZoom = 1;
   area.innerHTML =
     '<div class="uml-panel-head">' +
     `<div><strong>${escHtml(meta.title)}</strong><span>${escHtml(meta.desc)}</span></div>` +
+    '<div class="uml-panel-actions">' +
     `<p>${rows.length}件の遷移。共通ナビゲーション（全ページの50%以上から発生する遷移）は除外しています。</p>` +
+    _umlZoomControls() +
+    '</div>' +
     '</div>' +
     '<div class="uml-layout">' +
     '<div class="uml-canvas" id="uml-render-target"><div class="hero-msg">図を描画しています…</div></div>' +
     `<div class="uml-table-wrap">${_umlTable(type, rows)}</div>` +
     '</div>';
   _loadMermaid(() => _renderUmlDiagram(type, screens, rows));
+}
+
+function _umlZoomControls() {
+  return (
+    '<div class="uml-zoom-controls" aria-label="図のズーム">' +
+    '<button type="button" class="uml-zoom-btn" data-zoom="out" title="縮小">−</button>' +
+    '<button type="button" class="uml-zoom-btn uml-zoom-level" data-zoom="reset" title="100%に戻す">100%</button>' +
+    '<button type="button" class="uml-zoom-btn" data-zoom="in" title="拡大">＋</button>' +
+    '<button type="button" class="uml-zoom-btn" data-zoom="fit" title="幅に合わせる">Fit</button>' +
+    '</div>'
+  );
 }
 
 function _umlMeta(type) {
@@ -251,10 +268,56 @@ async function _renderUmlDiagram(type, screens, rows) {
     window.mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'strict' });
     const id = `uml-${type}-${Date.now()}`;
     const rendered = await window.mermaid.render(id, source);
-    target.innerHTML = rendered.svg || rendered;
+    target.innerHTML = `<div class="uml-zoom-stage" id="uml-zoom-stage">${rendered.svg || rendered}</div>`;
+    _prepareUmlZoom();
   } catch (e) {
     target.innerHTML = `<pre class="uml-source">${escHtml(source)}</pre>`;
   }
+}
+
+function _prepareUmlZoom() {
+  const stage = document.getElementById('uml-zoom-stage');
+  const svg = stage && stage.querySelector('svg');
+  if (!stage || !svg) return;
+  svg.style.maxWidth = 'none';
+  const box = svg.getBoundingClientRect();
+  stage.dataset.baseWidth = String(Math.max(1, Math.ceil(box.width)));
+  stage.dataset.baseHeight = String(Math.max(1, Math.ceil(box.height)));
+  _setUmlZoom(umlZoom);
+  document.querySelectorAll('.uml-zoom-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const mode = btn.dataset.zoom;
+      if (mode === 'in') _setUmlZoom(umlZoom + 0.15);
+      else if (mode === 'out') _setUmlZoom(umlZoom - 0.15);
+      else if (mode === 'reset') _setUmlZoom(1);
+      else if (mode === 'fit') _fitUmlZoom();
+    });
+  });
+}
+
+function _setUmlZoom(value) {
+  umlZoom = Math.min(2.5, Math.max(0.35, value));
+  const stage = document.getElementById('uml-zoom-stage');
+  const svg = stage && stage.querySelector('svg');
+  if (stage && svg) {
+    const baseWidth = Number(stage.dataset.baseWidth || 1);
+    const baseHeight = Number(stage.dataset.baseHeight || 1);
+    stage.style.width = `${Math.ceil(baseWidth * umlZoom)}px`;
+    stage.style.height = `${Math.ceil(baseHeight * umlZoom)}px`;
+    svg.style.transformOrigin = 'top left';
+    svg.style.transform = `scale(${umlZoom})`;
+  }
+  const level = document.querySelector('.uml-zoom-level');
+  if (level) level.textContent = `${Math.round(umlZoom * 100)}%`;
+}
+
+function _fitUmlZoom() {
+  const target = document.getElementById('uml-render-target');
+  const stage = document.getElementById('uml-zoom-stage');
+  if (!target || !stage) return;
+  const baseWidth = Number(stage.dataset.baseWidth || 1);
+  const next = (target.clientWidth - 32) / baseWidth;
+  _setUmlZoom(next);
 }
 
 function _umlSource(type, screens, rows) {

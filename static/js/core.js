@@ -38,6 +38,12 @@ function switchView(name) {
   // A: 2ペインツール画面では全高モードに切り替え
   const appContentEl = document.getElementById('app-content');
   if (appContentEl) appContentEl.classList.toggle('is-qa-tool', ['qa-models', 'qa-automation', 'qa-quality', 'auto-run'].includes(name));
+  // レポートモード解除（generate以外に遷移した時）
+  if (name !== 'generate') {
+    if (appContentEl) appContentEl.classList.remove('is-reporting');
+    const shell = document.querySelector('.app-shell');
+    if (shell) shell.classList.remove('is-reporting');
+  }
 }
 // ---- ウィザード ステップ管理 ----
 function showWizardStep(n) {
@@ -46,7 +52,7 @@ function showWizardStep(n) {
   const bar = document.getElementById('wizard-progress-bar');
   if (p1) p1.style.display = (n === 1) ? '' : 'none';
   if (p2) p2.style.display = (n === 2) ? '' : 'none';
-  if (bar) bar.style.display = '';
+  if (bar) bar.style.display = (n === 4) ? 'none' : '';
   [1, 2, 3, 4].forEach(i => {
     const node = document.getElementById('ws-' + i);
     if (!node) return;
@@ -63,7 +69,10 @@ function showWizardStep(n) {
 function openAddSite() {
   switchView('generate');
   executionView.classList.add('hidden'); resultPanel.classList.add('hidden');
-  appContent.classList.remove('is-executing'); genPanel.style.display = '';
+  appContent.classList.remove('is-executing', 'is-reporting');
+  const _shell = document.querySelector('.app-shell');
+  if (_shell) _shell.classList.remove('is-reporting');
+  genPanel.style.display = '';
   document.getElementById('url-input').value = '';
   document.getElementById('p1-summary').style.display = 'none';
   clearDiscovered(); updateTargetPreview(); showWizardStep(1);

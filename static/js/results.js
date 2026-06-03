@@ -44,6 +44,8 @@ async function showResults(domain) {
   setHeader(['ダッシュボード', domain], domain);
 
   executionView.classList.add('hidden'); resultPanel.classList.remove('hidden');
+  appContent.classList.add('is-reporting');
+  document.querySelector('.app-shell').classList.add('is-reporting');
   _buildExportDropdown(data);
   showWizardStep(4);
   selectResultTab('overview');

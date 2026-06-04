@@ -13,6 +13,7 @@
 実行方法:
     make verify-ui
 """
+
 from __future__ import annotations
 
 import json
@@ -39,10 +40,22 @@ _MOCK_STATUS_AWAITING = {
 
 _MOCK_PREVIEW = {
     "candidates": [
-        {"id": "PW-001", "title": "画面表示スモーク", "automation_status": "auto",
-         "trace_id": "P001", "steps": ["page.goto('https://example.com/')"], "expected": "表示される"},
-        {"id": "PW-002", "title": "ログインフォーム", "automation_status": "auto",
-         "trace_id": "P002", "steps": ["page.goto('https://example.com/login')"], "expected": "ログインできる"},
+        {
+            "id": "PW-001",
+            "title": "画面表示スモーク",
+            "automation_status": "auto",
+            "trace_id": "P001",
+            "steps": ["page.goto('https://example.com/')"],
+            "expected": "表示される",
+        },
+        {
+            "id": "PW-002",
+            "title": "ログインフォーム",
+            "automation_status": "auto",
+            "trace_id": "P002",
+            "steps": ["page.goto('https://example.com/login')"],
+            "expected": "ログインできる",
+        },
     ],
     "spec_content": "import { test, expect } from '@playwright/test';",
     "summary": {
@@ -279,9 +292,7 @@ class TestApprovalModalViaRoute:
 
         # 承認ステップが is-waiting クラスを持つ
         step = autorun_page.locator("#ars-approval")
-        expect(step).to_have_class(
-            "autorun-step-item is-waiting", timeout=10_000
-        )
+        expect(step).to_have_class("autorun-step-item is-waiting", timeout=10_000)
 
 
 class TestApprovalModalVisibility:

@@ -33,7 +33,13 @@ def _stack(
 
 
 def _ep(method: str = "GET", path: str = "/api/test", status: int = 200) -> ApiEndpoint:
-    return ApiEndpoint(method=method, path=path, status_code=status, content_type="application/json", sample_fields=())
+    return ApiEndpoint(
+        method=method,
+        path=path,
+        status_code=status,
+        content_type="application/json",
+        sample_fields=(),
+    )
 
 
 def test_generate_contains_mermaid_header() -> None:

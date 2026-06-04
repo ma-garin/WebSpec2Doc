@@ -152,8 +152,14 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
     graph = build_graph(analyzed_pages)
     form_summary = summarize_forms(analyzed_pages)
     save_outputs(
-        analyzed_pages, graph, form_summary, output_dir, formats,
-        crawl_depth=int(args.depth), crawl_max_pages=int(args.max_pages), crawled_at=crawled_at,
+        analyzed_pages,
+        graph,
+        form_summary,
+        output_dir,
+        formats,
+        crawl_depth=int(args.depth),
+        crawl_max_pages=int(args.max_pages),
+        crawled_at=crawled_at,
     )
     new_snapshot = save_snapshot(pages, output_dir)
     if bool(getattr(args, "compare", False)):
@@ -359,11 +365,21 @@ def save_outputs(
     _save_markdown_outputs(pages, graph, form_summary, output_dir, target_url, transition_mmd)
     if "html" in formats or "pdf" in formats:
         _save_html_outputs(
-            pages, graph, form_summary, output_dir, target_url, transition_mmd,
-            formats, crawl_depth, crawl_max_pages, crawled_at,
+            pages,
+            graph,
+            form_summary,
+            output_dir,
+            target_url,
+            transition_mmd,
+            formats,
+            crawl_depth,
+            crawl_max_pages,
+            crawled_at,
         )
     if "json" in formats:
-        _save_json_output(pages, graph, output_dir, target_url, crawl_depth, crawl_max_pages, crawled_at)
+        _save_json_output(
+            pages, graph, output_dir, target_url, crawl_depth, crawl_max_pages, crawled_at
+        )
     if "excel" in formats:
         _save_excel_output(output_dir, pages, form_summary)
     if llm_insights is not None:
@@ -414,14 +430,21 @@ def _save_html_outputs(
 
     screenshots_dir = output_dir / "screenshots"
     report_html = generate_html_report(
-        pages, graph, form_summary, target_url, transition_mmd,
+        pages,
+        graph,
+        form_summary,
+        target_url,
+        transition_mmd,
         screenshots_dir=screenshots_dir if screenshots_dir.is_dir() else None,
-        crawl_depth=crawl_depth, crawl_max_pages=crawl_max_pages, crawled_at=crawled_at,
+        crawl_depth=crawl_depth,
+        crawl_max_pages=crawl_max_pages,
+        crawled_at=crawled_at,
     )
     html_path = output_dir / "report.html"
     html_path.write_text(report_html, encoding="utf-8")
     if "pdf" in formats:
         from generator.pdf_reporter import generate_pdf
+
         generate_pdf(html_path, output_dir / PDF_FILE_NAME)
 
 
@@ -437,8 +460,12 @@ def _save_json_output(
     from generator.json_reporter import generate_json_report
 
     report_json = generate_json_report(
-        pages, graph, target_url,
-        crawl_depth=crawl_depth, crawl_max_pages=crawl_max_pages, crawled_at=crawled_at,
+        pages,
+        graph,
+        target_url,
+        crawl_depth=crawl_depth,
+        crawl_max_pages=crawl_max_pages,
+        crawled_at=crawled_at,
     )
     (output_dir / JSON_REPORT_FILE_NAME).write_text(report_json, encoding="utf-8")
 

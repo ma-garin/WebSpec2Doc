@@ -13,6 +13,7 @@
 実行方法:
     make verify-ui
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -41,7 +42,9 @@ def _assert_visual_match(page: Page, name: str, threshold: float = VISUAL_THRESH
     baseline_path = SNAPSHOTS_DIR / f"{name}.png"
     current_bytes = page.screenshot(full_page=False)
 
-    update_mode = "--update-snapshots" in str(pytest.ini_options if hasattr(pytest, "ini_options") else "")
+    update_mode = "--update-snapshots" in str(
+        pytest.ini_options if hasattr(pytest, "ini_options") else ""
+    )
 
     if not baseline_path.exists() or update_mode:
         baseline_path.write_bytes(current_bytes)

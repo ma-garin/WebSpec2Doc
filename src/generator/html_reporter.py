@@ -501,7 +501,11 @@ def _tech_stack_section(stack: object | None, endpoints: tuple[ApiEndpoint, ...]
             f"</tr></thead><tbody>{rows}</tbody></table>"
         )
 
-    body = stack_html + ep_html if (stack_html or ep_html) else '<div class="muted">検出情報なし（静的サイトまたはクロール未実施）</div>'
+    body = (
+        stack_html + ep_html
+        if (stack_html or ep_html)
+        else '<div class="muted">検出情報なし（静的サイトまたはクロール未実施）</div>'
+    )
     return _section("技術スタック・API エンドポイント", body, "techstack")
 
 

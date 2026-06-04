@@ -16,7 +16,8 @@ from typing import TYPE_CHECKING, Any
 from urllib.parse import urljoin, urlparse, urlunparse
 from urllib.robotparser import RobotFileParser
 
-from playwright.sync_api import Browser, Error as PlaywrightError, Page, sync_playwright
+from playwright.sync_api import Browser, Page, sync_playwright
+from playwright.sync_api import Error as PlaywrightError
 
 from crawler.url_safety import is_safe_target
 

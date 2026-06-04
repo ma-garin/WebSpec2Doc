@@ -41,15 +41,6 @@ def _assert_visual_match(page: Page, name: str, threshold: float = VISUAL_THRESH
     baseline_path = SNAPSHOTS_DIR / f"{name}.png"
     current_bytes = page.screenshot(full_page=False)
 
-    # --update-snapshots フラグ対応
-    request = pytest.current_test_node if hasattr(pytest, "current_test_node") else None
-    config_val = None
-    try:
-        import _pytest.config as _pconf
-        config_val = _pconf.get_plugin_manager  # type: ignore[attr-defined]
-    except Exception:
-        pass
-
     update_mode = "--update-snapshots" in str(pytest.ini_options if hasattr(pytest, "ini_options") else "")
 
     if not baseline_path.exists() or update_mode:
@@ -70,8 +61,8 @@ def _assert_visual_match(page: Page, name: str, threshold: float = VISUAL_THRESH
 
     # Pillow が使える場合: ピクセルレベル差分比較
     try:
-        from PIL import Image  # type: ignore[import]
         import numpy as np  # type: ignore[import]
+        from PIL import Image  # type: ignore[import]
 
         img_base = Image.open(io.BytesIO(baseline_bytes)).convert("RGB")
         img_curr = Image.open(io.BytesIO(current_bytes)).convert("RGB")

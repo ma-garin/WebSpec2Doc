@@ -14,12 +14,12 @@ import os
 import subprocess
 import sys
 import time
+from collections.abc import Generator
 from pathlib import Path
-from typing import Generator
 
 import pytest
 import requests
-from playwright.sync_api import Browser, BrowserContext, Page
+from playwright.sync_api import Page
 
 # プロジェクトルートを sys.path に追加
 ROOT = Path(__file__).parent.parent.parent

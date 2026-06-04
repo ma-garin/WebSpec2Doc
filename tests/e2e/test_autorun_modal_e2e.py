@@ -113,10 +113,12 @@ class TestApprovalModalStructure:
     def _open_modal(self, page: Page) -> None:
         """承認モーダルを JavaScript で直接表示する（E2E テスト用）。"""
         # モーダルを強制表示（実際の awaiting_approval 状態を模擬）
-        page.evaluate("""() => {
+        page.evaluate(
+            """() => {
             const modal = document.getElementById('autorun-approval-modal');
             if (modal) modal.style.display = 'flex';
-        }""")
+        }"""
+        )
         page.wait_for_selector("#autorun-approval-modal", state="visible")
 
     def test_modal_element_exists_in_dom(self, autorun_page: Page) -> None:
@@ -299,10 +301,12 @@ class TestApprovalModalVisibility:
     """承認モーダルの視認性チェック（INC-2026-001 で発覚した問題の防止）。"""
 
     def _open_modal(self, page: Page) -> None:
-        page.evaluate("""() => {
+        page.evaluate(
+            """() => {
             const modal = document.getElementById('autorun-approval-modal');
             if (modal) modal.style.display = 'flex';
-        }""")
+        }"""
+        )
         page.wait_for_selector("#autorun-approval-modal", state="visible")
 
     def test_filter_labels_are_visible(self, autorun_page: Page) -> None:

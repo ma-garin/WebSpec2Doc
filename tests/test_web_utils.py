@@ -4,17 +4,14 @@ import json
 import subprocess
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-
-import pytest
 
 import app as appmod
 import web.env_store as env_store_mod
 import web.routes.history as history_mod
 import web.routes.report as report_mod
-import web.routes.settings as settings_mod
 import web.summary as summary_mod
 import web.validation as validation_mod
 
@@ -66,9 +63,7 @@ class TestCsrfGuard:
     def test_post_with_null_origin_passes(self) -> None:
         from web.security import csrf_guard
 
-        with appmod.app.test_request_context(
-            "/", method="POST", headers={"Origin": "null"}
-        ):
+        with appmod.app.test_request_context("/", method="POST", headers={"Origin": "null"}):
             assert csrf_guard() is None
 
     def test_post_with_mismatched_origin_returns_403(self) -> None:
@@ -356,9 +351,9 @@ class TestTerminateProc:
 
 class TestFilterNavEdges:
     def test_small_graph_not_filtered(self) -> None:
-        from generator.mermaid_generator import _filter_nav_edges
-
         import networkx as nx
+
+        from generator.mermaid_generator import _filter_nav_edges
 
         g = nx.DiGraph()
         g.add_nodes_from(["A", "B", "C"])
@@ -367,17 +362,15 @@ class TestFilterNavEdges:
         assert len(result) == 2
 
     def test_nav_target_limited_to_one_edge(self) -> None:
-        from generator.mermaid_generator import _filter_nav_edges
-
         import networkx as nx
+
+        from generator.mermaid_generator import _filter_nav_edges
 
         g = nx.DiGraph()
         nodes = ["P001", "P002", "P003", "P004", "P005"]
         g.add_nodes_from(nodes)
         # Make P005 a nav target: pointed to by most nodes
-        g.add_edges_from(
-            [("P001", "P005"), ("P002", "P005"), ("P003", "P005"), ("P004", "P005")]
-        )
+        g.add_edges_from([("P001", "P005"), ("P002", "P005"), ("P003", "P005"), ("P004", "P005")])
         edges = [
             ("P001", "P005", {}),
             ("P002", "P005", {}),
@@ -389,9 +382,9 @@ class TestFilterNavEdges:
         assert len(nav_edges) == 1
 
     def test_non_nav_edges_preserved(self) -> None:
-        from generator.mermaid_generator import _filter_nav_edges
-
         import networkx as nx
+
+        from generator.mermaid_generator import _filter_nav_edges
 
         g = nx.DiGraph()
         g.add_nodes_from(["P001", "P002", "P003", "P004", "P005"])
@@ -427,7 +420,7 @@ class TestSettingsRoute:
         import web.env_store as _es
 
         env_file = tmp_path / ".env"
-        env_file.write_text("OPENAI_API_KEY=sk-test1234567\n", encoding="utf-8")
+        env_file.write_text("OPENAI_API_KEY=test-placeholder-key\n", encoding="utf-8")
         monkeypatch.setattr(_es, "ENV_FILE", env_file)
         data = _client().get("/api/settings").get_json()
         assert data["openai_key_set"] is True
@@ -441,26 +434,20 @@ class TestSettingsRoute:
     def test_post_settings_saves_key(self, tmp_path: Path, monkeypatch) -> None:
         env_file = tmp_path / ".env"
         monkeypatch.setattr(env_store_mod, "ENV_FILE", env_file)
-        res = _client().post(
-            "/api/settings", data={"api_key": "sk-newkey1234567890"}
-        )
+        res = _client().post("/api/settings", data={"api_key": "test-placeholder-key-for-ci"})
         assert res.status_code == 200
         assert res.get_json()["ok"] is True
 
     def test_post_settings_saves_model(self, tmp_path: Path, monkeypatch) -> None:
         env_file = tmp_path / ".env"
         monkeypatch.setattr(env_store_mod, "ENV_FILE", env_file)
-        res = _client().post(
-            "/api/settings", data={"model": "gpt-4o"}
-        )
+        res = _client().post("/api/settings", data={"model": "gpt-4o"})
         assert res.status_code == 200
 
     def test_post_settings_saves_org_and_project(self, tmp_path: Path, monkeypatch) -> None:
         env_file = tmp_path / ".env"
         monkeypatch.setattr(env_store_mod, "ENV_FILE", env_file)
-        res = _client().post(
-            "/api/settings", data={"org_id": "org-123", "project_id": "proj-abc"}
-        )
+        res = _client().post("/api/settings", data={"org_id": "org-123", "project_id": "proj-abc"})
         assert res.status_code == 200
 
 

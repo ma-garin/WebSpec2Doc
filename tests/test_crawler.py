@@ -190,8 +190,10 @@ class TestDiscoverOne:
         assert all("other.com" not in link for link in links)
 
     def test_returns_empty_on_goto_error(self) -> None:
+        from playwright.sync_api import Error as PlaywrightError
+
         page = MagicMock()
-        page.goto.side_effect = Exception("nav error")
+        page.goto.side_effect = PlaywrightError("nav error")
         found: list[dict[str, str]] = []
         assert _discover_one(page, "https://example.com/", found) == ()
         assert found == []

@@ -1,16 +1,12 @@
 from __future__ import annotations
 
-"""network_interceptor のユニットテスト。"""
-
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from crawler.network_interceptor import (
-    STATIC_EXTENSIONS,
     NetworkCapture,
     _extract_response_fields,
 )
-from crawler.page_crawler import ApiEndpoint
 
 
 def _make_response(

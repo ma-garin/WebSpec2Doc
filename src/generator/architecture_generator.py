@@ -1,10 +1,10 @@
-from __future__ import annotations
-
 """技術スタック・API エンドポイント情報から Mermaid アーキテクチャ図を生成する。
 
 ベテランエンジニアが参画初日に描く「フロントエンド → API → バックエンド」層構造を
 クロール結果から自動再現する。検出情報が不足している場合は推定として明示する。
 """
+
+from __future__ import annotations
 
 import html
 from collections import Counter

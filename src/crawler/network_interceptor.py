@@ -1,10 +1,10 @@
-from __future__ import annotations
-
 """クロール中の XHR / fetch レスポンスを傍受して API エンドポイントを記録する。
 
 NetworkCapture を crawl_page() の前後で attach/detach することで、
 1 ページ分のリクエストのみを正確に収集する。
 """
+
+from __future__ import annotations
 
 import json
 import logging

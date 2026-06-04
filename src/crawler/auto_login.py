@@ -1,10 +1,10 @@
-from __future__ import annotations
-
 """ログインフォームへの自動入力・送信・セッション保存を担う。
 
 GUI の「自動ログイン」フローと CLI の --login-simple / --login-scrape / --login-submit
 コマンドを実装する。パスワードはメモリ内のみで保持し、送信後は変数を破棄する。
 """
+
+from __future__ import annotations
 
 import logging
 from dataclasses import dataclass

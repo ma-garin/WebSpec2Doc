@@ -1,10 +1,10 @@
-from __future__ import annotations
-
 """Playwright を使った Web サイトクローラー。
 
 BFS でリンクを追跡し、各ページのメタ・フォーム・スクリーンショットと
 ネットワーク API 呼び出し・技術スタック情報を PageData として収集する。
 """
+
+from __future__ import annotations
 
 import logging
 import time

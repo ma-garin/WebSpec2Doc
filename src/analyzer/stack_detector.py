@@ -1,10 +1,10 @@
-from __future__ import annotations
-
 """フロントエンド・バックエンド技術スタックを Playwright で自動検出する。
 
 page.evaluate() でブラウザ内のグローバル変数・DOM マーカー・スクリプト URL を検査し、
 レスポンスヘッダー（Server / X-Powered-By）と組み合わせて StackInfo を生成する。
 """
+
+from __future__ import annotations
 
 import logging
 from dataclasses import dataclass

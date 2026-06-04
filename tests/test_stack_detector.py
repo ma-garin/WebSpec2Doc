@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-"""stack_detector のユニットテスト。"""
-
 from unittest.mock import MagicMock
 
 import pytest
@@ -10,11 +8,6 @@ from analyzer.stack_detector import (
     UNKNOWN,
     StackInfo,
     _collect_libraries,
-    _detect_backend,
-    _detect_css,
-    _detect_frontend,
-    _detect_rendering,
-    _detect_state,
     detect_stack,
 )
 
@@ -86,5 +79,5 @@ def test_playwright_error_fallback() -> None:
 def test_stack_info_is_immutable() -> None:
     page = _make_page({"hasVue3": True})
     result = detect_stack(page, {})
-    with pytest.raises(Exception):
+    with pytest.raises(AttributeError):
         result.frontend_framework = "changed"  # type: ignore[misc]

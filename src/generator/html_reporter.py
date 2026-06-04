@@ -1,10 +1,10 @@
-from __future__ import annotations
-
 """HTML テストベース文書（サイドバー型）を生成する。
 
 アーキテクチャ図・技術スタック・API エンドポイント・画面カタログを
 1 つの self-contained HTML ファイルにまとめる。
 """
+
+from __future__ import annotations
 
 import base64
 import html

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-"""architecture_generator のユニットテスト。"""
-
 from analyzer.stack_detector import StackInfo
 from crawler.page_crawler import ApiEndpoint
 from generator.architecture_generator import (

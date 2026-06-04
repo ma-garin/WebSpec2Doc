@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+"""HTML テストベース文書（サイドバー型）を生成する。
+
+アーキテクチャ図・技術スタック・API エンドポイント・画面カタログを
+1 つの self-contained HTML ファイルにまとめる。
+"""
+
 import base64
 import html
 from dataclasses import replace
@@ -11,13 +17,14 @@ import networkx as nx
 
 from analyzer.html_analyzer import AnalyzedPage
 from analyzer.test_conditions import derive_conditions
-from crawler.page_crawler import DEFAULT_DEPTH, DEFAULT_MAX_PAGES, FieldData, FormData
+from crawler.page_crawler import DEFAULT_DEPTH, DEFAULT_MAX_PAGES, ApiEndpoint, FieldData, FormData
 
 REPORT_TITLE = "WebSpec2Doc テスト分析インプット"
 TOOL_NAME = "WebSpec2Doc"
 SCREENSHOT_EXT = ".png"
 MAX_SCREENSHOT_BYTES = 500_000
 SIDEBAR_TITLE_LIMIT = 22
+UNKNOWN = "不明"
 
 
 def generate_html_report(
@@ -31,10 +38,23 @@ def generate_html_report(
     crawl_max_pages: int = DEFAULT_MAX_PAGES,
     crawled_at: str = "",
 ) -> str:
+    from analyzer.stack_detector import StackInfo
+    from generator.architecture_generator import (
+        generate_architecture_mermaid,
+        merge_api_endpoints,
+        merge_stack_infos,
+    )
+
     now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
     forms_count = sum(len(p.page_data.forms) for p in pages)
     fields_count = len(form_summary)
     buttons_count = sum(len(p.page_data.buttons) for p in pages)
+
+    stacks: list[StackInfo] = [p.page_data.stack_info for p in pages if p.page_data.stack_info]
+    merged_stack = merge_stack_infos(stacks)
+    merged_endpoints = merge_api_endpoints([p.page_data.api_calls for p in pages])
+    domain = _url_domain(target_url)
+    arch_mermaid = generate_architecture_mermaid(domain, merged_stack, merged_endpoints)
 
     return "\n".join(
         [
@@ -49,6 +69,8 @@ def generate_html_report(
                 _summary_cards(len(pages), forms_count, fields_count, buttons_count),
                 "summary",
             ),
+            _section("アーキテクチャ図", _mermaid_block(arch_mermaid), "architecture"),
+            _tech_stack_section(merged_stack, merged_endpoints),
             _section("画面遷移図", _mermaid_block(mermaid_content), "transition"),
             _section("画面カタログ", _screen_cards(pages, graph, screenshots_dir), "screens"),
             _meta_section(target_url, crawl_depth, crawl_max_pages, crawled_at, len(pages)),
@@ -73,6 +95,10 @@ def _html_head() -> str:
 
 
 def _css() -> str:
+    return _base_css() + _component_css() + _print_css()
+
+
+def _base_css() -> str:
     return """
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--primary:#0F62FE;--primary-dark:#0043CE;--text:#161616;--text-muted:#525252;
@@ -103,6 +129,11 @@ padding:16px 28px;border-bottom:1px solid var(--border);background:rgba(247,251,
 .topbar-meta{font-size:12px;color:var(--text-muted);text-align:right}
 .topbar-meta a{color:var(--primary)}
 .app-content{flex:1;overflow:auto;padding:24px 28px;scroll-behavior:smooth}
+"""
+
+
+def _component_css() -> str:
+    return """
 .block{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
 margin-bottom:20px;box-shadow:0 1px 2px rgba(22,22,22,.05);overflow:hidden}
 .block>h2{font-size:14px;font-weight:700;padding:.7rem 1.1rem;border-bottom:1px solid var(--border);
@@ -142,7 +173,20 @@ padding:.15rem .5rem;font-size:.78rem}
 .form-meta{font-size:.78rem;color:var(--text-muted);margin-bottom:.3rem}
 .site-footer{text-align:center;color:var(--text-muted);font-size:.78rem;padding:1rem 0 2rem}
 .meta-table td{white-space:normal}
+.stack-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.8rem}
+.stack-card{background:var(--surface-soft);border:1px solid var(--info-border);border-radius:var(--radius);
+padding:.8rem 1rem}
+.stack-card .sk-label{font-size:.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;
+letter-spacing:.05em}
+.stack-card .sk-value{font-size:.95rem;font-weight:600;color:var(--primary-dark);margin-top:.2rem}
+.api-badge{display:inline-block;background:#f3e8ff;border:1px solid #c084fc;border-radius:4px;
+padding:.1rem .4rem;font-size:.75rem;font-weight:600;color:#6b21a8;margin-right:.3rem}
 @media(max-width:760px){.screen-body{grid-template-columns:1fr}}
+"""
+
+
+def _print_css() -> str:
+    return """
 @media print{
 body.app-page{overflow:visible}
 .app-shell{display:block;height:auto}
@@ -159,6 +203,8 @@ body.app-page{overflow:visible}
 def _sidebar(pages: list[AnalyzedPage]) -> str:
     items = [
         '<a href="#summary" class="nav-item">サマリー</a>',
+        '<a href="#architecture" class="nav-item">アーキテクチャ図</a>',
+        '<a href="#techstack" class="nav-item">技術スタック</a>',
         '<a href="#transition" class="nav-item">画面遷移図</a>',
         '<div class="nav-group">画面一覧</div>',
     ]
@@ -410,6 +456,60 @@ def _mermaid_script() -> str:
     )
 
 
+def _tech_stack_section(stack: object | None, endpoints: tuple[ApiEndpoint, ...]) -> str:
+    from analyzer.stack_detector import StackInfo
+
+    cards: list[str] = []
+
+    def sk_card(label: str, value: str) -> str:
+        v = html.escape(value) if value and value != UNKNOWN else '<span class="muted">不明</span>'
+        return (
+            f'<div class="stack-card">'
+            f'<div class="sk-label">{html.escape(label)}</div>'
+            f'<div class="sk-value">{v}</div></div>'
+        )
+
+    if isinstance(stack, StackInfo):
+        cards.append(sk_card("フロントエンド", stack.frontend_framework))
+        cards.append(sk_card("レンダリング", stack.rendering_mode))
+        cards.append(sk_card("CSS フレームワーク", stack.css_framework))
+        cards.append(sk_card("状態管理", stack.state_management))
+        if stack.backend_hints:
+            cards.append(sk_card("バックエンド (観測)", " / ".join(stack.backend_hints[:3])))
+        if stack.detected_libraries:
+            libs = ", ".join(stack.detected_libraries)
+            cards.append(sk_card("検出ライブラリ", libs))
+
+    stack_html = f'<div class="stack-grid">{"".join(cards)}</div>' if cards else ""
+
+    ep_html = ""
+    if endpoints:
+        rows = "".join(
+            f"<tr>"
+            f'<td><span class="api-badge">{html.escape(ep.method)}</span></td>'
+            f"<td><code>{html.escape(ep.path)}</code></td>"
+            f"<td>{ep.status_code}</td>"
+            f"<td>{html.escape(ep.content_type or '-')}</td>"
+            f"<td>{html.escape(', '.join(ep.sample_fields[:6])) or '-'}</td>"
+            f"</tr>"
+            for ep in endpoints
+        )
+        ep_html = (
+            '<div class="subhead" style="margin-top:1rem">観測 API エンドポイント</div>'
+            "<table><thead><tr>"
+            "<th>Method</th><th>Path</th><th>Status</th><th>Content-Type</th><th>フィールド（推定）</th>"
+            f"</tr></thead><tbody>{rows}</tbody></table>"
+        )
+
+    body = stack_html + ep_html if (stack_html or ep_html) else '<div class="muted">検出情報なし（静的サイトまたはクロール未実施）</div>'
+    return _section("技術スタック・API エンドポイント", body, "techstack")
+
+
 def _url_path(url: str) -> str:
     parsed = urlparse(url)
     return parsed.path or "/"
+
+
+def _url_domain(url: str) -> str:
+    parsed = urlparse(url)
+    return parsed.netloc or url

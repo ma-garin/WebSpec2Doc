@@ -13,6 +13,7 @@
 実行方法:
     make verify-ui
 """
+
 from __future__ import annotations
 
 import json
@@ -39,10 +40,22 @@ _MOCK_STATUS_AWAITING = {
 
 _MOCK_PREVIEW = {
     "candidates": [
-        {"id": "PW-001", "title": "画面表示スモーク", "automation_status": "auto",
-         "trace_id": "P001", "steps": ["page.goto('https://example.com/')"], "expected": "表示される"},
-        {"id": "PW-002", "title": "ログインフォーム", "automation_status": "auto",
-         "trace_id": "P002", "steps": ["page.goto('https://example.com/login')"], "expected": "ログインできる"},
+        {
+            "id": "PW-001",
+            "title": "画面表示スモーク",
+            "automation_status": "auto",
+            "trace_id": "P001",
+            "steps": ["page.goto('https://example.com/')"],
+            "expected": "表示される",
+        },
+        {
+            "id": "PW-002",
+            "title": "ログインフォーム",
+            "automation_status": "auto",
+            "trace_id": "P002",
+            "steps": ["page.goto('https://example.com/login')"],
+            "expected": "ログインできる",
+        },
     ],
     "spec_content": "import { test, expect } from '@playwright/test';",
     "summary": {
@@ -100,10 +113,12 @@ class TestApprovalModalStructure:
     def _open_modal(self, page: Page) -> None:
         """承認モーダルを JavaScript で直接表示する（E2E テスト用）。"""
         # モーダルを強制表示（実際の awaiting_approval 状態を模擬）
-        page.evaluate("""() => {
+        page.evaluate(
+            """() => {
             const modal = document.getElementById('autorun-approval-modal');
             if (modal) modal.style.display = 'flex';
-        }""")
+        }"""
+        )
         page.wait_for_selector("#autorun-approval-modal", state="visible")
 
     def test_modal_element_exists_in_dom(self, autorun_page: Page) -> None:
@@ -279,19 +294,19 @@ class TestApprovalModalViaRoute:
 
         # 承認ステップが is-waiting クラスを持つ
         step = autorun_page.locator("#ars-approval")
-        expect(step).to_have_class(
-            "autorun-step-item is-waiting", timeout=10_000
-        )
+        expect(step).to_have_class("autorun-step-item is-waiting", timeout=10_000)
 
 
 class TestApprovalModalVisibility:
     """承認モーダルの視認性チェック（INC-2026-001 で発覚した問題の防止）。"""
 
     def _open_modal(self, page: Page) -> None:
-        page.evaluate("""() => {
+        page.evaluate(
+            """() => {
             const modal = document.getElementById('autorun-approval-modal');
             if (modal) modal.style.display = 'flex';
-        }""")
+        }"""
+        )
         page.wait_for_selector("#autorun-approval-modal", state="visible")
 
     def test_filter_labels_are_visible(self, autorun_page: Page) -> None:

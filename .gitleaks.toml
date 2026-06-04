@@ -1,0 +1,5 @@
+[allowlist]
+  description = "Suppress false positives in test fixtures and placeholder values"
+  paths = [
+    '''tests/.*\.py''',
+  ]

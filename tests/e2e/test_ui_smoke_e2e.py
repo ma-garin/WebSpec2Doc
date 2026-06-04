@@ -7,6 +7,7 @@
 実行方法:
     make verify-ui
 """
+
 from __future__ import annotations
 
 import re
@@ -41,7 +42,7 @@ class TestAppLoad:
     def test_sidebar_navigation_exists(self, page: Page) -> None:
         """サイドバーナビゲーションが存在する。"""
         page.goto(BASE_URL)
-        expect(page.locator(".app-sidebar, nav, #app-sidebar")).to_be_visible()
+        expect(page.locator("aside.app-sidebar")).to_be_visible()
 
 
 class TestNavigation:
@@ -51,7 +52,11 @@ class TestNavigation:
         """AutoRun ビューにナビゲーションできる。"""
         page.goto(BASE_URL)
         # AutoRun ナビゲーションリンクをクリック
-        autorun_link = page.locator("a, button").filter(has_text=re.compile(r"AutoRun|自動テスト", re.IGNORECASE)).first
+        autorun_link = (
+            page.locator("a, button")
+            .filter(has_text=re.compile(r"AutoRun|自動テスト", re.IGNORECASE))
+            .first
+        )
         if autorun_link.count() > 0:
             autorun_link.click()
             page.wait_for_load_state("domcontentloaded")
@@ -61,7 +66,9 @@ class TestNavigation:
     def test_dashboard_accessible(self, page: Page) -> None:
         """ダッシュボードが表示される。"""
         page.goto(BASE_URL)
-        expect(page.locator("#view-dashboard, .dashboard, [id*='dashboard']").first).to_be_attached()
+        expect(
+            page.locator("#view-dashboard, .dashboard, [id*='dashboard']").first
+        ).to_be_attached()
 
     def test_no_broken_links_in_sidebar(self, page: Page) -> None:
         """サイドバーのリンクが 404 を返さない（静的チェック）。"""
@@ -93,6 +100,6 @@ class TestResponsiveness:
         page.goto(BASE_URL)
         # body の scrollWidth が viewport 幅以下であることを確認
         scroll_width = page.evaluate("document.body.scrollWidth")
-        assert scroll_width <= 1366 + 20, (  # 20px の許容誤差
-            f"水平スクロールが発生しています: scrollWidth={scroll_width}px"
-        )
+        assert (
+            scroll_width <= 1366 + 20
+        ), f"水平スクロールが発生しています: scrollWidth={scroll_width}px"  # 20px の許容誤差

@@ -46,7 +46,7 @@ jobs:
       - name: Dependency vulnerability scan (pip-audit)
         run: |
           pip install --quiet pip-audit
-          pip-audit --requirement requirements.txt -q
+          pip-audit --requirement requirements.txt
 
   smoke:
     name: smoke crawl (Playwright CLI)

@@ -8,6 +8,7 @@
     - venv が有効化されていること
     - playwright install chromium が完了していること
 """
+
 from __future__ import annotations
 
 import os

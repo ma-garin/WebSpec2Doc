@@ -86,7 +86,9 @@ def test_extract_response_fields_too_large() -> None:
 
 def test_404_response_recorded() -> None:
     capture = NetworkCapture()
-    capture._record(_make_response(url="https://example.com/api/missing", status=404, ct="application/json"))
+    capture._record(
+        _make_response(url="https://example.com/api/missing", status=404, ct="application/json")
+    )
     result = capture.finalize()
     assert len(result) == 1
     assert result[0].status_code == 404

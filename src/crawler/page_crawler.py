@@ -1,3 +1,9 @@
+"""Playwright を使った Web サイトクローラー。
+
+BFS でリンクを追跡し、各ページのメタ・フォーム・スクリーンショットと
+ネットワーク API 呼び出し・技術スタック情報を PageData として収集する。
+"""
+
 from __future__ import annotations
 
 import logging
@@ -6,13 +12,17 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urljoin, urlparse, urlunparse
 from urllib.robotparser import RobotFileParser
 
 from playwright.sync_api import Browser, Page, sync_playwright
+from playwright.sync_api import Error as PlaywrightError
 
 from crawler.url_safety import is_safe_target
+
+if TYPE_CHECKING:
+    from analyzer.stack_detector import StackInfo
 
 CRAWL_DELAY_SEC = 1
 DEFAULT_DEPTH = 3
@@ -53,6 +63,17 @@ class FormData:
 
 
 @dataclass(frozen=True)
+class ApiEndpoint:
+    """クロール中に傍受した API 呼び出しの記録。"""
+
+    method: str
+    path: str
+    status_code: int
+    content_type: str
+    sample_fields: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class PageData:
     url: str
     title: str
@@ -61,6 +82,8 @@ class PageData:
     forms: tuple[FormData, ...]
     screenshot_path: str | None
     buttons: tuple[str, ...] = ()
+    api_calls: tuple[ApiEndpoint, ...] = ()
+    stack_info: StackInfo | None = None
 
 
 @contextmanager
@@ -176,7 +199,7 @@ def _guard_session(page: Page, url: str, auth_state: Path | None) -> None:
     normalized = normalize_url(url)
     try:
         response = page.goto(normalized, wait_until="networkidle", timeout=DEFAULT_TIMEOUT_MS)
-    except Exception as exc:
+    except PlaywrightError as exc:
         logger.warning("セッション確認のためのアクセスに失敗しました: %s (%s)", url, exc)
         return
     signals = PageAuthSignals(
@@ -200,7 +223,7 @@ def _discover_one(page: Page, url: str, found: list[dict[str, object]]) -> tuple
     normalized = normalize_url(url)
     try:
         response = page.goto(normalized, wait_until="networkidle", timeout=DEFAULT_TIMEOUT_MS)
-    except Exception as exc:
+    except PlaywrightError as exc:
         logger.warning("画面リスト取得に失敗しました: %s (%s)", url, exc)
         return ()
     signals = PageAuthSignals(
@@ -223,6 +246,7 @@ def _discover_one(page: Page, url: str, found: list[dict[str, object]]) -> tuple
 
 
 def crawl_page(page: Page, url: str, output_dir: Path | None) -> PageData:
+    from analyzer.stack_detector import detect_stack
     from crawler.link_extractor import (
         extract_buttons,
         extract_forms,
@@ -230,19 +254,35 @@ def crawl_page(page: Page, url: str, output_dir: Path | None) -> PageData:
         extract_internal_links,
         extract_page_title,
     )
+    from crawler.network_interceptor import NetworkCapture
 
     normalized_url = normalize_url(url)
-    page.goto(normalized_url, wait_until="networkidle", timeout=DEFAULT_TIMEOUT_MS)
-    page_id = str(getattr(page, "_webspec2doc_page_id", _format_page_id(1)))
-    screenshot_path = _save_screenshot(page, output_dir, page_id)
+    capture = NetworkCapture()
+    capture.attach(page)
+    try:
+        response = page.goto(normalized_url, wait_until="networkidle", timeout=DEFAULT_TIMEOUT_MS)
+        response_headers = dict(response.headers) if response else {}
+        page_id = str(getattr(page, "_webspec2doc_page_id", _format_page_id(1)))
+        screenshot_path = _save_screenshot(page, output_dir, page_id)
+        stack = detect_stack(page, response_headers)
+        title = extract_page_title(page)
+        headings = tuple(extract_headings(page))
+        links = tuple(extract_internal_links(page, normalized_url))
+        forms = tuple(extract_forms(page))
+        buttons = tuple(extract_buttons(page))
+    finally:
+        capture.detach()
+
     return PageData(
         url=normalized_url,
-        title=extract_page_title(page),
-        headings=tuple(extract_headings(page)),
-        links=tuple(extract_internal_links(page, normalized_url)),
-        forms=tuple(extract_forms(page)),
+        title=title,
+        headings=headings,
+        links=links,
+        forms=forms,
         screenshot_path=screenshot_path,
-        buttons=tuple(extract_buttons(page)),
+        buttons=buttons,
+        api_calls=capture.finalize(),
+        stack_info=stack,
     )
 
 
@@ -270,7 +310,7 @@ def _crawl_page_with_id(
     try:
         page._webspec2doc_page_id = page_id  # type: ignore[attr-defined]
         return crawl_page(page, url, output_dir)
-    except Exception as exc:
+    except PlaywrightError as exc:
         logger.warning("ページのクロールに失敗しました: %s (%s)", url, exc)
         return None
 
@@ -281,7 +321,7 @@ def _load_robots_parser(base_url: str) -> RobotFileParser:
     parser.set_url(robots_url)
     try:
         parser.read()
-    except Exception as exc:
+    except OSError as exc:
         logger.warning("robots.txt を取得できませんでした: %s (%s)", robots_url, exc)
         parser.allow_all = True  # type: ignore[attr-defined]
     return parser
@@ -325,7 +365,7 @@ def _save_screenshot(page: Page, output_dir: Path | None, page_id: str) -> str |
     screenshot_path = screenshots_dir / f"{page_id}.png"
     try:
         page.screenshot(path=str(screenshot_path), full_page=False)
-    except Exception as exc:
+    except PlaywrightError as exc:
         logger.warning("スクリーンショット保存に失敗しました: %s (%s)", screenshot_path, exc)
         return None
     return str(screenshot_path)
@@ -348,5 +388,5 @@ def _netloc_without_default_port(parsed: Any) -> str:
 def _close_browser(browser: Browser) -> None:
     try:
         browser.close()
-    except Exception as exc:
+    except PlaywrightError as exc:
         logger.warning("ブラウザ終了時にエラーが発生しました: %s", exc)

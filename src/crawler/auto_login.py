@@ -1,16 +1,23 @@
+"""ログインフォームへの自動入力・送信・セッション保存を担う。
+
+GUI の「自動ログイン」フローと CLI の --login-simple / --login-scrape / --login-submit
+コマンドを実装する。パスワードはメモリ内のみで保持し、送信後は変数を破棄する。
+"""
+
 from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
 from pathlib import Path
 
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import Page, sync_playwright
 
 from analyzer.login_wall import PageAuthSignals, detect_login_wall
 from crawler.link_extractor import extract_forms, has_password_field
 from crawler.page_crawler import DEFAULT_TIMEOUT_MS, USER_AGENT, _close_browser, normalize_url
 
 SUBMIT_TIMEOUT_MS = 15_000
+FILL_TIMEOUT_MS = 3_000
 EXCLUDED_TYPES = frozenset({"hidden", "submit", "button", "reset", "image"})
 
 logger = logging.getLogger(__name__)
@@ -182,23 +189,23 @@ def submit_login_simple(
             _close_browser(browser)
 
 
-def _fill_generic(page, username: str, password: str) -> None:
+def _fill_generic(page: Page, username: str, password: str) -> None:
     """ページ上の最初のテキスト/メール入力にusername、パスワード入力にpasswordを入力する。"""
     if username:
         try:
             page.locator('input[type="email"], input[type="text"], input:not([type])').first.fill(
-                username, timeout=3_000
+                username, timeout=FILL_TIMEOUT_MS
             )
         except Exception as exc:
             logger.warning("ユーザーID入力失敗: %s", exc)
     if password:
         try:
-            page.locator('input[type="password"]').first.fill(password, timeout=3_000)
+            page.locator('input[type="password"]').first.fill(password, timeout=FILL_TIMEOUT_MS)
         except Exception as exc:
             logger.warning("パスワード入力失敗: %s", exc)
 
 
-def _visible_fields(page) -> list[LoginField]:
+def _visible_fields(page: Page) -> list[LoginField]:
     forms = extract_forms(page)
     seen: set[str] = set()
     result: list[LoginField] = []
@@ -223,22 +230,22 @@ def _visible_fields(page) -> list[LoginField]:
     return result
 
 
-def _fill(page, field_values: dict[str, str]) -> None:
+def _fill(page: Page, field_values: dict[str, str]) -> None:
     for name, value in field_values.items():
         if not value:
             continue
         try:
-            page.locator(f'[name="{name}"]').first.fill(str(value), timeout=3_000)
+            page.locator(f'[name="{name}"]').first.fill(str(value), timeout=FILL_TIMEOUT_MS)
         except Exception:
             try:
-                page.locator(f"#{name}").first.fill(str(value), timeout=3_000)
+                page.locator(f"#{name}").first.fill(str(value), timeout=FILL_TIMEOUT_MS)
             except Exception as exc:
                 logger.warning("フィールド入力失敗: name=%s, %s", name, exc)
 
 
-def _submit(page) -> None:
+def _submit(page: Page) -> None:
     try:
-        page.locator("button[type=submit], input[type=submit]").first.click(timeout=3_000)
+        page.locator("button[type=submit], input[type=submit]").first.click(timeout=FILL_TIMEOUT_MS)
     except Exception:
         try:
             page.keyboard.press("Enter")

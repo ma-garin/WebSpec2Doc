@@ -105,9 +105,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def run(args: argparse.Namespace) -> None:
-    login_url = getattr(args, "login", None)
     auth_path = getattr(args, "auth", None)
-    signal_path = getattr(args, "login_signal", None)
     if getattr(args, "login_simple", False):
         _submit_login_simple(args)
         return
@@ -117,60 +115,69 @@ def run(args: argparse.Namespace) -> None:
     if getattr(args, "login_submit", False):
         _submit_login(args)
         return
+    login_url = getattr(args, "login", None)
     if login_url:
-        _capture_login(str(login_url), auth_path, signal_path)
+        _capture_login(str(login_url), auth_path, getattr(args, "login_signal", None))
         return
     if bool(getattr(args, "discover", False)):
         _discover(args, auth_path)
         return
+    _run_crawl(args, auth_path)
 
+
+def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
+    """メインクロール・分析・出力フローを実行する。"""
     url_list = _parse_url_list(getattr(args, "urls", None))
     primary_url = url_list[0] if url_list else (args.url or "")
     if not primary_url:
         logger.error("--url / --urls / --login のいずれかを指定してください")
         return
+    if args.llm:
+        logger.warning("--llm は未実装のため無視します")
 
     formats = _parse_formats(str(args.format))
     output_dir = Path(args.output) / _domain_name(primary_url)
     prior_snapshot = latest_snapshot(output_dir)
-    if args.llm:
-        logger.warning("--llm は未実装のため無視します")
-
     crawled_at = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
     auth_state = Path(auth_path) if auth_path else None
+
     try:
-        if url_list:
-            pages = crawl_urls(url_list, output_dir=output_dir, auth_state=auth_state)
-        else:
-            pages = crawl_site(
-                url=primary_url,
-                depth=int(args.depth),
-                max_pages=int(args.max_pages),
-                output_dir=output_dir,
-                auth_state=auth_state,
-            )
+        pages = _do_crawl(args, url_list, primary_url, output_dir, auth_state)
     except SessionExpiredError as exc:
-        # snapshot 保存前に中断。古い結果を上書きせず GUI に再ログインを促す
         logger.error("%s", exc)
         sys.stdout.write("SESSION_EXPIRED\n")
         sys.exit(2)
+
     analyzed_pages = analyze_pages(pages)
     graph = build_graph(analyzed_pages)
     form_summary = summarize_forms(analyzed_pages)
     save_outputs(
-        analyzed_pages,
-        graph,
-        form_summary,
-        output_dir,
-        formats,
-        crawl_depth=int(args.depth),
-        crawl_max_pages=int(args.max_pages),
-        crawled_at=crawled_at,
+        analyzed_pages, graph, form_summary, output_dir, formats,
+        crawl_depth=int(args.depth), crawl_max_pages=int(args.max_pages), crawled_at=crawled_at,
     )
     new_snapshot = save_snapshot(pages, output_dir)
     if bool(getattr(args, "compare", False)):
         _save_diff_report(prior_snapshot, new_snapshot, pages, output_dir, primary_url)
     logger.info("出力が完了しました: %s", output_dir)
+
+
+def _do_crawl(
+    args: argparse.Namespace,
+    url_list: list[str],
+    primary_url: str,
+    output_dir: Path,
+    auth_state: Path | None,
+) -> list[PageData]:
+    """URL リストまたは単一 URL をクロールして PageData リストを返す。"""
+    if url_list:
+        return crawl_urls(url_list, output_dir=output_dir, auth_state=auth_state)
+    return crawl_site(
+        url=primary_url,
+        depth=int(args.depth),
+        max_pages=int(args.max_pages),
+        output_dir=output_dir,
+        auth_state=auth_state,
+    )
 
 
 def _parse_url_list(raw_urls: str | None) -> list[str]:
@@ -348,50 +355,92 @@ def save_outputs(
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     target_url = pages[0].page_data.url if pages else ""
-    screens_md = generate_screens_markdown(pages, graph, target_url)
-    forms_md = generate_forms_markdown(form_summary)
     transition_mmd = generate_mermaid(graph, pages)
-
-    (output_dir / "screens.md").write_text(screens_md, encoding="utf-8")
-    (output_dir / "forms.md").write_text(forms_md, encoding="utf-8")
-    (output_dir / "transition.mmd").write_text(transition_mmd, encoding="utf-8")
+    _save_markdown_outputs(pages, graph, form_summary, output_dir, target_url, transition_mmd)
     if "html" in formats or "pdf" in formats:
-        from generator.html_reporter import generate_html_report
-
-        screenshots_dir = output_dir / "screenshots"
-        report_html = generate_html_report(
-            pages,
-            graph,
-            form_summary,
-            target_url,
-            transition_mmd,
-            screenshots_dir=screenshots_dir if screenshots_dir.is_dir() else None,
-            crawl_depth=crawl_depth,
-            crawl_max_pages=crawl_max_pages,
-            crawled_at=crawled_at,
+        _save_html_outputs(
+            pages, graph, form_summary, output_dir, target_url, transition_mmd,
+            formats, crawl_depth, crawl_max_pages, crawled_at,
         )
-        html_path = output_dir / "report.html"
-        html_path.write_text(report_html, encoding="utf-8")
-        if "pdf" in formats:
-            from generator.pdf_reporter import generate_pdf
-
-            generate_pdf(html_path, output_dir / PDF_FILE_NAME)
     if "json" in formats:
-        from generator.json_reporter import generate_json_report
-
-        report_json = generate_json_report(
-            pages,
-            graph,
-            target_url,
-            crawl_depth=crawl_depth,
-            crawl_max_pages=crawl_max_pages,
-            crawled_at=crawled_at,
-        )
-        (output_dir / JSON_REPORT_FILE_NAME).write_text(report_json, encoding="utf-8")
+        _save_json_output(pages, graph, output_dir, target_url, crawl_depth, crawl_max_pages, crawled_at)
     if "excel" in formats:
         _save_excel_output(output_dir, pages, form_summary)
     if llm_insights is not None:
         logger.warning("llm_insights は現在保存対象外です")
+
+
+def _save_markdown_outputs(
+    pages: list[AnalyzedPage],
+    graph: nx.DiGraph,
+    form_summary: list[dict[str, object]],
+    output_dir: Path,
+    target_url: str,
+    transition_mmd: str,
+) -> None:
+    from generator.architecture_generator import (
+        generate_architecture_mermaid,
+        merge_api_endpoints,
+        merge_stack_infos,
+    )
+
+    screens_md = generate_screens_markdown(pages, graph, target_url)
+    forms_md = generate_forms_markdown(form_summary)
+    (output_dir / "screens.md").write_text(screens_md, encoding="utf-8")
+    (output_dir / "forms.md").write_text(forms_md, encoding="utf-8")
+    (output_dir / "transition.mmd").write_text(transition_mmd, encoding="utf-8")
+
+    stacks = [p.page_data.stack_info for p in pages if p.page_data.stack_info]
+    merged_endpoints = merge_api_endpoints([p.page_data.api_calls for p in pages])
+    arch_mmd = generate_architecture_mermaid(
+        _domain_name(target_url), merge_stack_infos(stacks), merged_endpoints
+    )
+    (output_dir / "architecture.mmd").write_text(arch_mmd, encoding="utf-8")
+
+
+def _save_html_outputs(
+    pages: list[AnalyzedPage],
+    graph: nx.DiGraph,
+    form_summary: list[dict[str, object]],
+    output_dir: Path,
+    target_url: str,
+    transition_mmd: str,
+    formats: Sequence[str],
+    crawl_depth: int,
+    crawl_max_pages: int,
+    crawled_at: str,
+) -> None:
+    from generator.html_reporter import generate_html_report
+
+    screenshots_dir = output_dir / "screenshots"
+    report_html = generate_html_report(
+        pages, graph, form_summary, target_url, transition_mmd,
+        screenshots_dir=screenshots_dir if screenshots_dir.is_dir() else None,
+        crawl_depth=crawl_depth, crawl_max_pages=crawl_max_pages, crawled_at=crawled_at,
+    )
+    html_path = output_dir / "report.html"
+    html_path.write_text(report_html, encoding="utf-8")
+    if "pdf" in formats:
+        from generator.pdf_reporter import generate_pdf
+        generate_pdf(html_path, output_dir / PDF_FILE_NAME)
+
+
+def _save_json_output(
+    pages: list[AnalyzedPage],
+    graph: nx.DiGraph,
+    output_dir: Path,
+    target_url: str,
+    crawl_depth: int,
+    crawl_max_pages: int,
+    crawled_at: str,
+) -> None:
+    from generator.json_reporter import generate_json_report
+
+    report_json = generate_json_report(
+        pages, graph, target_url,
+        crawl_depth=crawl_depth, crawl_max_pages=crawl_max_pages, crawled_at=crawled_at,
+    )
+    (output_dir / JSON_REPORT_FILE_NAME).write_text(report_json, encoding="utf-8")
 
 
 def _parse_formats(raw_formats: str) -> tuple[str, ...]:

@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import re
 
-import pytest
 from playwright.sync_api import Page, expect
 
 BASE_URL = "http://127.0.0.1:8765"

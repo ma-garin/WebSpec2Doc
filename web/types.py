@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-try:
-    from typing import TypedDict
-except ImportError:
-    from typing_extensions import TypedDict  # type: ignore[assignment]
+from typing import TypedDict
 
 
 class ScheduleConfig(TypedDict, total=False):

@@ -320,7 +320,7 @@ def _crawl_page_with_id(
     output_dir: Path | None,
 ) -> PageData | None:
     try:
-        page._webspec2doc_page_id = page_id  # type: ignore[attr-defined]
+        page._webspec2doc_page_id = page_id  # type: ignore[attr-defined,unused-ignore]
         return crawl_page(page, url, output_dir)
     except PlaywrightError as exc:
         logger.warning("ページのクロールに失敗しました: %s (%s)", url, exc)

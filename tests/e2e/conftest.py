@@ -23,6 +23,7 @@ import requests
 
 try:
     from playwright.sync_api import sync_playwright  # noqa: F401
+
     PLAYWRIGHT_AVAILABLE = True
 except ImportError:
     PLAYWRIGHT_AVAILABLE = False
@@ -83,7 +84,9 @@ def flask_server() -> Generator[None, None, None]:
         time.sleep(0.5)
     else:
         proc.terminate()
-        pytest.skip(f"Flask サーバーが {BASE_URL} で起動しませんでした — E2E テストをスキップします。")
+        pytest.skip(
+            f"Flask サーバーが {BASE_URL} で起動しませんでした — E2E テストをスキップします。"
+        )
 
     yield
 

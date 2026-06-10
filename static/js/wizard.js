@@ -7,7 +7,18 @@ const targetPreview = document.getElementById('target-preview');
 const targetPreviewList = document.getElementById('target-preview-list');
 
 function showStep(n) { wizardStep = n; }
-urlInput.addEventListener('input', () => { clearDiscovered(); updateTargetPreview(); });
+
+// ---- URL リアルタイムバリデーション（送信前エラー防止） ----
+const URL_FORMAT_RE = /^https?:\/\/\S+\.\S+/i;
+function validateUrlInput() {
+  const v = urlInput.value.trim();
+  if (!v) { urlInput.classList.remove('is-invalid'); setUrlMessage('', false); return false; }
+  const ok = URL_FORMAT_RE.test(v);
+  urlInput.classList.toggle('is-invalid', !ok);
+  setUrlMessage(ok ? '' : 'URL は https://example.com の形式で入力してください', true);
+  return ok;
+}
+urlInput.addEventListener('input', () => { clearDiscovered(); updateTargetPreview(); validateUrlInput(); });
 
 
 function setUrlMessage(msg, isError) {
@@ -173,6 +184,7 @@ function _stopDiscoverTimer() {
 async function discoverUrls(skipLoginSection) {
   const url = urlInput.value.trim();
   if (!url) { setUrlMessage('URLを入力してから画面分析を実行してください', true); return; }
+  if (!validateUrlInput()) return;
   const loading = document.getElementById('discover-loading');
   const status = document.getElementById('discover-status');
   const btn = document.getElementById('discover-btn');

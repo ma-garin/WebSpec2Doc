@@ -12,8 +12,14 @@ async function loadHistory() {
     }
     body.innerHTML = _buildTable(data.items);
     body.querySelectorAll('.hist-open').forEach(b => b.addEventListener('click', () => openResultsForDomain(b.dataset.domain)));
-    body.querySelectorAll('.hist-recrawl').forEach(b => b.addEventListener('click', () => recrawlSite(b.dataset.domain)));
-    body.querySelectorAll('.hist-delete').forEach(b => b.addEventListener('click', () => deleteSite(b.dataset.domain)));
+    body.querySelectorAll('.hist-recrawl').forEach(b => b.addEventListener('click', async () => {
+      // 二重クリック防止 + ローディング表示
+      b.disabled = true;
+      const orig = b.textContent;
+      b.textContent = '読み込み中…';
+      try { await recrawlSite(b.dataset.domain); } finally { b.disabled = false; b.textContent = orig; }
+    }));
+    body.querySelectorAll('.hist-delete').forEach(b => b.addEventListener('click', () => deleteSite(b.dataset.domain, b)));
   } catch (e) {
     body.innerHTML = '<div class="empty">サイト一覧の読み込みに失敗しました。</div>';
   }
@@ -96,11 +102,28 @@ function _buildTable(items) {
   return html;
 }
 
-async function deleteSite(domain) {
-  if (!confirm(`「${domain}」のクロール結果をすべて削除しますか？\nこの操作は取り消せません。`)) return;
-  const res = await fetch('/api/site/' + encodeURIComponent(domain), { method: 'DELETE' });
-  let data = {};
-  try { data = await res.json(); } catch (e) { data = {}; }
-  if (res.ok) { loadHistory(); return; }
-  alert('削除に失敗しました: ' + (data.error || res.status));
+async function deleteSite(domain, btn) {
+  const ok = await confirmDialog({
+    title: 'クロール結果の削除',
+    message: `「${domain}」の画面一覧・スナップショット・スクリーンショットをすべて削除します。この操作は取り消せません。`,
+    confirmLabel: '削除する',
+    danger: true,
+  });
+  if (!ok) return;
+  if (btn) { btn.disabled = true; btn.textContent = '削除中…'; }
+  try {
+    const res = await fetch('/api/site/' + encodeURIComponent(domain), { method: 'DELETE' });
+    let data = {};
+    try { data = await res.json(); } catch (e) { data = {}; }
+    if (res.ok) {
+      showToast(`「${domain}」を削除しました`, 'success');
+      loadHistory();
+      return;
+    }
+    showToast('削除に失敗しました: ' + (data.error || res.status), 'error');
+  } catch (e) {
+    showToast('削除に失敗しました: 通信エラー', 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '削除'; }
+  }
 }

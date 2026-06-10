@@ -37,6 +37,7 @@ async function recrawlSite(domain) {
   renderDiscovered();
   updateTargetPreview();
   showWizardStep(2);
+  showToast(`前回の対象画面（${discovered.length}件）を復元しました。条件を確認して実行してください`, 'info');
 }
 
 async function openResultsForDomain(domain) {

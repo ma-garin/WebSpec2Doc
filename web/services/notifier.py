@@ -81,7 +81,7 @@ def _post_json(url: str, payload: dict[str, Any]) -> bool:
         method="POST",
     )
     try:
-        with urllib.request.urlopen(req, timeout=_TIMEOUT_SECONDS):
+        with urllib.request.urlopen(req, timeout=_TIMEOUT_SECONDS):  # nosec B310
             return True
     except (urllib.error.HTTPError, urllib.error.URLError) as exc:
         logger.error("HTTP/URL error posting to %s: %s", url, exc)

@@ -50,7 +50,7 @@ def compute_dom_signature(html_content: str) -> str:
         return "default"
 
     key = "|".join(sorted(set(identifiers)))
-    return hashlib.sha1(key.encode()).hexdigest()[:8]
+    return hashlib.sha1(key.encode(), usedforsecurity=False).hexdigest()[:8]  # noqa: S324
 
 
 def extract_internal_links(page: Page, base_url: str) -> list[str]:

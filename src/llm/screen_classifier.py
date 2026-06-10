@@ -134,7 +134,7 @@ def _call_llm(
         f"画面タイトル: {title}\n"
         f"見出し: {list(headings)}\n"
         f"フィールド名: {form_fields}\n\n"
-        '以下の JSON で回答してください:\n'
+        "以下の JSON で回答してください:\n"
         '{"screen_type": "payment/personal_info/auth/search/list/form/general のいずれか", '
         '"confidence": 0.0〜1.0, "keywords": ["...", ...], '
         '"test_priority": "critical/high/medium/low"}'

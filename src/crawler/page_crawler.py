@@ -84,7 +84,7 @@ class PageData:
     buttons: tuple[str, ...] = ()
     api_calls: tuple[ApiEndpoint, ...] = ()
     stack_info: StackInfo | None = None
-    state_id: str = "default"   # DOM シグネチャ由来の状態識別子
+    state_id: str = "default"  # DOM シグネチャ由来の状態識別子
 
 
 @contextmanager

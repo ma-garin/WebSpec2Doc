@@ -353,8 +353,5 @@ class TestComputeDomSignature:
     def test_duplicate_identifiers_deduplicated(self) -> None:
         # Same id appearing twice should produce same result as appearing once
         html_once = '<div role="dialog" id="dlg1"></div>'
-        html_twice = (
-            '<div role="dialog" id="dlg1"></div>'
-            '<span id="dlg1" role="dialog"></span>'
-        )
+        html_twice = '<div role="dialog" id="dlg1"></div>' '<span id="dlg1" role="dialog"></span>'
         assert compute_dom_signature(html_once) == compute_dom_signature(html_twice)

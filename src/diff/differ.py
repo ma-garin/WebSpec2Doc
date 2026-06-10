@@ -272,7 +272,9 @@ def _added_apis(
     new_apis: dict[str, ApiEndpoint],
 ) -> list[ApiChange]:
     return [
-        ApiChange(page_url=page_url, method=new_apis[path].method, path=path, change_type=CHANGE_ADDED)
+        ApiChange(
+            page_url=page_url, method=new_apis[path].method, path=path, change_type=CHANGE_ADDED
+        )
         for path in new_apis
         if path not in old_apis
     ]
@@ -284,7 +286,9 @@ def _removed_apis(
     new_apis: dict[str, ApiEndpoint],
 ) -> list[ApiChange]:
     return [
-        ApiChange(page_url=page_url, method=old_apis[path].method, path=path, change_type=CHANGE_REMOVED)
+        ApiChange(
+            page_url=page_url, method=old_apis[path].method, path=path, change_type=CHANGE_REMOVED
+        )
         for path in old_apis
         if path not in new_apis
     ]
@@ -296,7 +300,9 @@ def _modified_apis(
     new_apis: dict[str, ApiEndpoint],
 ) -> list[ApiChange]:
     return [
-        ApiChange(page_url=page_url, method=new_apis[path].method, path=path, change_type=CHANGE_MODIFIED)
+        ApiChange(
+            page_url=page_url, method=new_apis[path].method, path=path, change_type=CHANGE_MODIFIED
+        )
         for path in old_apis
         if path in new_apis and _api_modified(old_apis[path], new_apis[path])
     ]

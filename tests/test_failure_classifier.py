@@ -92,7 +92,9 @@ def test_classify_failure_test_rot_waiting_for_locator() -> None:
 
 
 def test_classify_failure_test_rot_strict_mode_violation() -> None:
-    result = classify_failure("TC002", "strict mode violation: locator('.btn') resolved to 2 elements")
+    result = classify_failure(
+        "TC002", "strict mode violation: locator('.btn') resolved to 2 elements"
+    )
     assert result.failure_type == FAILURE_TEST_ROT
 
 
@@ -136,6 +138,7 @@ def test_classify_failure_app_change_to_be_visible() -> None:
 
 def test_classify_failure_app_change_diff_no_changes_not_classified() -> None:
     """diff_result.has_changes が False のとき、expect/received だけでは app_change にならない。"""
+
     class _FakeDiffNoChange:
         has_changes = False
 
@@ -239,11 +242,13 @@ def test_classify_failures_passes_diff_result() -> None:
 
 def test_summarize_classifications() -> None:
     base = FailureClassification("x", FAILURE_APP_CHANGE, 0.8, "test", "action")
-    summary = summarize_classifications([
-        base,
-        FailureClassification("y", FAILURE_TEST_ROT, 0.85, "test", "action"),
-        FailureClassification("z", FAILURE_APP_CHANGE, 0.8, "test", "action"),
-    ])
+    summary = summarize_classifications(
+        [
+            base,
+            FailureClassification("y", FAILURE_TEST_ROT, 0.85, "test", "action"),
+            FailureClassification("z", FAILURE_APP_CHANGE, 0.8, "test", "action"),
+        ]
+    )
     assert summary[FAILURE_APP_CHANGE] == 2
     assert summary[FAILURE_TEST_ROT] == 1
 
@@ -274,9 +279,11 @@ def test_summarize_classifications_all_types() -> None:
 
 
 def test_summarize_classifications_returns_all_keys_even_if_zero() -> None:
-    summary = summarize_classifications([
-        FailureClassification("a", FAILURE_UNKNOWN, 0.5, "r", "act"),
-    ])
+    summary = summarize_classifications(
+        [
+            FailureClassification("a", FAILURE_UNKNOWN, 0.5, "r", "act"),
+        ]
+    )
     assert FAILURE_APP_CHANGE in summary
     assert FAILURE_TEST_ROT in summary
     assert FAILURE_ENV_ISSUE in summary

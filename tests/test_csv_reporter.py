@@ -92,13 +92,13 @@ class TestGenerateCsvReport:
             next(reader)  # header
             row = next(reader)
 
-        assert row[0] == "1"            # ページ番号
+        assert row[0] == "1"  # ページ番号
         assert row[1] == "お問い合わせ"
         assert row[2] == "https://example.com/contact"
-        assert row[3] == "/send"        # フォームアクション
-        assert row[4] == "email"        # フィールド名
-        assert row[5] == "email"        # フィールド種別
-        assert row[6] == "Yes"          # 必須
+        assert row[3] == "/send"  # フォームアクション
+        assert row[4] == "email"  # フィールド名
+        assert row[5] == "email"  # フィールド種別
+        assert row[6] == "Yes"  # 必須
 
     def test_page_without_forms_outputs_empty_row(self, tmp_path: Path) -> None:
         page = _make_page("https://example.com/about", "概要ページ")
@@ -240,7 +240,14 @@ class TestGenerateTestcaseCsv:
         with output.open(encoding="utf-8-sig") as f:
             header = next(csv.reader(f))
 
-        assert header == ["ID", "タイトル", "ステップ", "期待結果", "自動化ステータス", "トレースID"]
+        assert header == [
+            "ID",
+            "タイトル",
+            "ステップ",
+            "期待結果",
+            "自動化ステータス",
+            "トレースID",
+        ]
 
     def test_returns_path(self, tmp_path: Path) -> None:
         output = tmp_path / "testcases.csv"

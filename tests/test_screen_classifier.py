@@ -62,7 +62,10 @@ def test_keywords_captured_for_payment() -> None:
 
 def test_keywords_captured_for_auth_english() -> None:
     result = classify_screen_by_rules("login page", (), [])
-    assert any(kw in ("login", "ログイン", "signin", "パスワード", "password", "auth", "サインイン") for kw in result.keywords)
+    assert any(
+        kw in ("login", "ログイン", "signin", "パスワード", "password", "auth", "サインイン")
+        for kw in result.keywords
+    )
 
 
 def test_confidence_matched_is_high() -> None:
@@ -78,6 +81,7 @@ def test_confidence_fallback_is_lower() -> None:
 def test_screen_classification_is_frozen() -> None:
     result = classify_screen_by_rules("ホーム", (), [])
     import dataclasses
+
     assert dataclasses.is_dataclass(result)
     try:
         result.screen_type = "other"  # type: ignore[misc]

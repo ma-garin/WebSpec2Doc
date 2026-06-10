@@ -73,10 +73,7 @@ class TestGeneratePairwiseCases:
 
     def test_generate_pairwise_cases_caps_at_twenty(self) -> None:
         # 多フィールドで20ケース以内に収まる
-        fields = [
-            _field(name=f"f{i}", field_type="text")
-            for i in range(10)
-        ]
+        fields = [_field(name=f"f{i}", field_type="text") for i in range(10)]
         cases = generate_pairwise_cases(fields)
         assert len(cases) <= 20
 

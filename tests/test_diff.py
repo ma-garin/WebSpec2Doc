@@ -190,12 +190,8 @@ def test_field_modified_detects_options_change() -> None:
 
 def test_attribute_diffs_classify_severity() -> None:
     url = "https://example.com/form"
-    before_field = FieldData(
-        "text", "email", "", required=True, maxlength=100, pattern=""
-    )
-    after_field = FieldData(
-        "text", "email", "", required=False, maxlength=50, pattern=r".+@.+"
-    )
+    before_field = FieldData("text", "email", "", required=True, maxlength=100, pattern="")
+    after_field = FieldData("text", "email", "", required=False, maxlength=50, pattern=r".+@.+")
     old = [_page(url, "Form", fields=(before_field,))]
     new = [_page(url, "Form", fields=(after_field,))]
 

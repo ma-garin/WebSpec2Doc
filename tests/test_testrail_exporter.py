@@ -162,7 +162,10 @@ class TestBuildTestRailCasesFromReport:
                                     "element_id": "pw",
                                     "field_type": "password",
                                     "required": True,
-                                    "test_conditions": ["未入力で送信（必須チェック）", "パスワード: 最小長 / 記号含む / 空"],
+                                    "test_conditions": [
+                                        "未入力で送信（必須チェック）",
+                                        "パスワード: 最小長 / 記号含む / 空",
+                                    ],
                                 }
                             ],
                         }

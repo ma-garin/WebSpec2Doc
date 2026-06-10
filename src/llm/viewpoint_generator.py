@@ -38,6 +38,7 @@ class TestViewpoint:
 
 # ---------- ルールベース生成 ----------
 
+
 def generate_viewpoints_by_rules(
     screen_classification: ScreenClassification,
     field_data_list: list,  # list[FieldData]
@@ -187,6 +188,7 @@ def _field_viewpoints(field_data_list: list) -> list[TestViewpoint]:
 
 
 # ---------- LLM 版 ----------
+
 
 def generate_viewpoints_with_llm(
     screen_info: dict,

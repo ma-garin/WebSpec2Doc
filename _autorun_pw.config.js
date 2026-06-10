@@ -1,9 +1,17 @@
 module.exports = {
-  testDir: "/Users/fujimagariyuki/Desktop/app/014_WebSpec2Doc",
+  testDir: "/home/user/WebSpec2Doc",
   testMatch: "spec.ts",
-  use: { screenshot: 'on', trace: 'retain-on-failure' },
+  timeout: 30000,
+  workers: 1,
+  outputDir: "/tmp/pytest-of-root/pytest-20/test_default_per_test_timeout_0/out/test-results",
+  use: {
+    screenshot: 'on',
+    trace: 'retain-on-failure',
+    actionTimeout: 15000,
+    navigationTimeout: 30000,
+  },
   reporter: [
     ['json'],
-    ['html', { outputFolder: "/private/tmp/claude-501/pytest-of-fujimagariyuki/pytest-88/test_add_log_called0/out/playwright-report", open: 'never' }],
+    ['html', { outputFolder: "/tmp/pytest-of-root/pytest-20/test_default_per_test_timeout_0/out/playwright-report", open: 'never' }],
   ],
 };

@@ -88,14 +88,16 @@ def test_schedule_config_rejects_invalid_interval(tmp_path: Path, monkeypatch) -
     monkeypatch.setattr(schedule_mod, "OUTPUT_DIR", tmp_path)
     resp = _client().post(
         "/schedule/config",
-        data=json.dumps({
-            "domain": "example.com",
-            "site_url": "https://example.com",
-            "interval": "hourly",
-            "notify_type": "none",
-            "notify_endpoint": "",
-            "severity_filter": "all",
-        }),
+        data=json.dumps(
+            {
+                "domain": "example.com",
+                "site_url": "https://example.com",
+                "interval": "hourly",
+                "notify_type": "none",
+                "notify_endpoint": "",
+                "severity_filter": "all",
+            }
+        ),
         content_type="application/json",
     )
     assert resp.status_code == 400
@@ -105,14 +107,16 @@ def test_schedule_config_rejects_invalid_notify_type(tmp_path: Path, monkeypatch
     monkeypatch.setattr(schedule_mod, "OUTPUT_DIR", tmp_path)
     resp = _client().post(
         "/schedule/config",
-        data=json.dumps({
-            "domain": "example.com",
-            "site_url": "https://example.com",
-            "interval": "daily",
-            "notify_type": "sms",
-            "notify_endpoint": "",
-            "severity_filter": "all",
-        }),
+        data=json.dumps(
+            {
+                "domain": "example.com",
+                "site_url": "https://example.com",
+                "interval": "daily",
+                "notify_type": "sms",
+                "notify_endpoint": "",
+                "severity_filter": "all",
+            }
+        ),
         content_type="application/json",
     )
     assert resp.status_code == 400
@@ -122,14 +126,16 @@ def test_schedule_config_rejects_invalid_severity_filter(tmp_path: Path, monkeyp
     monkeypatch.setattr(schedule_mod, "OUTPUT_DIR", tmp_path)
     resp = _client().post(
         "/schedule/config",
-        data=json.dumps({
-            "domain": "example.com",
-            "site_url": "https://example.com",
-            "interval": "daily",
-            "notify_type": "none",
-            "notify_endpoint": "",
-            "severity_filter": "critical",
-        }),
+        data=json.dumps(
+            {
+                "domain": "example.com",
+                "site_url": "https://example.com",
+                "interval": "daily",
+                "notify_type": "none",
+                "notify_endpoint": "",
+                "severity_filter": "critical",
+            }
+        ),
         content_type="application/json",
     )
     assert resp.status_code == 400
@@ -139,14 +145,16 @@ def test_schedule_config_rejects_dotdot_domain_on_post(tmp_path: Path, monkeypat
     monkeypatch.setattr(schedule_mod, "OUTPUT_DIR", tmp_path)
     resp = _client().post(
         "/schedule/config",
-        data=json.dumps({
-            "domain": "../etc/passwd",
-            "site_url": "https://example.com",
-            "interval": "daily",
-            "notify_type": "none",
-            "notify_endpoint": "",
-            "severity_filter": "all",
-        }),
+        data=json.dumps(
+            {
+                "domain": "../etc/passwd",
+                "site_url": "https://example.com",
+                "interval": "daily",
+                "notify_type": "none",
+                "notify_endpoint": "",
+                "severity_filter": "all",
+            }
+        ),
         content_type="application/json",
     )
     assert resp.status_code == 400
@@ -156,14 +164,16 @@ def test_schedule_config_disabled_sets_next_run_at_null(tmp_path: Path, monkeypa
     monkeypatch.setattr(schedule_mod, "OUTPUT_DIR", tmp_path)
     resp = _client().post(
         "/schedule/config",
-        data=json.dumps({
-            "domain": "example.com",
-            "site_url": "https://example.com",
-            "interval": "disabled",
-            "notify_type": "none",
-            "notify_endpoint": "",
-            "severity_filter": "breaking",
-        }),
+        data=json.dumps(
+            {
+                "domain": "example.com",
+                "site_url": "https://example.com",
+                "interval": "disabled",
+                "notify_type": "none",
+                "notify_endpoint": "",
+                "severity_filter": "breaking",
+            }
+        ),
         content_type="application/json",
     )
     assert resp.status_code == 200

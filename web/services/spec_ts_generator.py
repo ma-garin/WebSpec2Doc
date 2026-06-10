@@ -128,6 +128,7 @@ def _sort_locators_by_reliability(locators: list[str]) -> list[str]:
       4. # で始まる（ID セレクタ）
       5. その他
     """
+
     def _priority(loc: str) -> int:
         if "data-testid" in loc:
             return 0
@@ -152,7 +153,7 @@ def _generate_validation_message_assertion(error_text: str) -> str:
     _ = error_text  # 将来の拡張のため受け取る（現在は固定セレクタ）
     return (
         "await expect("
-        "page.locator('[role=\"alert\"], .error-message, [aria-live=\"polite\"]').first()"
+        'page.locator(\'[role="alert"], .error-message, [aria-live="polite"]\').first()'
         ").toBeVisible();"
     )
 

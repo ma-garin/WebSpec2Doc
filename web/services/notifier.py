@@ -35,7 +35,7 @@ class DriftNotification:
 @dataclass(frozen=True)
 class NotifierConfig:
     notifier_type: str  # NOTIFIER_SLACK / NOTIFIER_EMAIL / NOTIFIER_WEBHOOK
-    endpoint: str       # Slack Webhook URL / SMTP host / Webhook URL
+    endpoint: str  # Slack Webhook URL / SMTP host / Webhook URL
     # メール専用（slack/webhook では無視）
     smtp_port: int = 465
     smtp_user: str = ""

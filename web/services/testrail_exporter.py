@@ -56,15 +56,17 @@ def export_to_testrail_csv(cases: list[TestRailCase], output_path: Path) -> Path
         writer = csv.writer(f)
         writer.writerow(CSV_HEADER)
         for case in cases:
-            writer.writerow([
-                case.section,
-                case.title,
-                case.steps,
-                case.expected,
-                case.priority,
-                case.case_type,
-                case.refs,
-            ])
+            writer.writerow(
+                [
+                    case.section,
+                    case.title,
+                    case.steps,
+                    case.expected,
+                    case.priority,
+                    case.case_type,
+                    case.refs,
+                ]
+            )
     logger.info("TestRail CSV 出力完了: %s (%d 件)", output_path, len(cases))
     return output_path
 

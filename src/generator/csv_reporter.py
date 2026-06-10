@@ -61,30 +61,34 @@ def _write_page_rows(
         return
     for form in page.forms:
         if not form.fields:
-            writer.writerow([
-                page_no,
-                page.title,
-                page.url,
-                form.action,
-                _EMPTY_FORM_LABEL,
-                "",
-                "",
-                "",
-            ])
+            writer.writerow(
+                [
+                    page_no,
+                    page.title,
+                    page.url,
+                    form.action,
+                    _EMPTY_FORM_LABEL,
+                    "",
+                    "",
+                    "",
+                ]
+            )
             continue
         for field in form.fields:
             conditions = derive_conditions(field)  # type: ignore[operator]
             conditions_str = "\n".join(str(c) for c in conditions)
-            writer.writerow([
-                page_no,
-                page.title,
-                page.url,
-                form.action,
-                field.name,
-                field.field_type,
-                "Yes" if field.required else "No",
-                conditions_str,
-            ])
+            writer.writerow(
+                [
+                    page_no,
+                    page.title,
+                    page.url,
+                    form.action,
+                    field.name,
+                    field.field_type,
+                    "Yes" if field.required else "No",
+                    conditions_str,
+                ]
+            )
 
 
 def generate_testcase_csv(test_cases: list[dict], output_path: Path) -> Path:
@@ -97,13 +101,15 @@ def generate_testcase_csv(test_cases: list[dict], output_path: Path) -> Path:
             steps = case.get("steps", "")
             if isinstance(steps, list):
                 steps = "\n".join(str(s) for s in steps)
-            writer.writerow([
-                case.get("id", ""),
-                case.get("title", ""),
-                steps,
-                case.get("expected", ""),
-                case.get("automation_status", ""),
-                case.get("trace_id", ""),
-            ])
+            writer.writerow(
+                [
+                    case.get("id", ""),
+                    case.get("title", ""),
+                    steps,
+                    case.get("expected", ""),
+                    case.get("automation_status", ""),
+                    case.get("trace_id", ""),
+                ]
+            )
     logger.info("テストケース CSV 出力完了: %s (%d 件)", output_path, len(test_cases))
     return output_path

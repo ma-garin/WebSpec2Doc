@@ -152,6 +152,4 @@ def get_additional_viewpoints(
     industry: str,
 ) -> list[str]:
     """業種と画面種別の組み合わせで特化した追加観点を返す。"""
-    return list(
-        _ADDITIONAL.get((industry, screen_classification.screen_type), [])
-    )
+    return list(_ADDITIONAL.get((industry, screen_classification.screen_type), []))

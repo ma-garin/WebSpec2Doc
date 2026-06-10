@@ -19,9 +19,7 @@ def _client():
 def _write_candidates(base: Path, domain: str, cases: list[dict]) -> None:
     domain_dir = base / domain
     domain_dir.mkdir(parents=True, exist_ok=True)
-    (domain_dir / "playwright_candidates.json").write_text(
-        json.dumps(cases), encoding="utf-8"
-    )
+    (domain_dir / "playwright_candidates.json").write_text(json.dumps(cases), encoding="utf-8")
 
 
 # ---------- GET /review/cases ----------
@@ -61,7 +59,12 @@ def test_review_cases_merges_saved_state(tmp_path: Path, monkeypatch) -> None:
     state = {
         "domain": "example.com",
         "cases": {
-            "TC001": {"status": "approved", "comment": "確認済み", "version": 2, "reviewed_at": "2026-06-10T00:00:00"}
+            "TC001": {
+                "status": "approved",
+                "comment": "確認済み",
+                "version": 2,
+                "reviewed_at": "2026-06-10T00:00:00",
+            }
         },
     }
     domain_dir = tmp_path / "example.com"
@@ -88,7 +91,14 @@ def test_review_update_saves_status(tmp_path: Path, monkeypatch) -> None:
 
     res = _client().post(
         "/review/update",
-        data=json.dumps({"domain": "example.com", "case_id": "TC001", "status": "reviewing", "comment": "確認中"}),
+        data=json.dumps(
+            {
+                "domain": "example.com",
+                "case_id": "TC001",
+                "status": "reviewing",
+                "comment": "確認中",
+            }
+        ),
         content_type="application/json",
     )
     assert res.status_code == 200
@@ -111,13 +121,22 @@ def test_review_update_increments_version_on_frozen(tmp_path: Path, monkeypatch)
     # 既存状態（version=1）を書いておく
     state = {
         "domain": "example.com",
-        "cases": {"TC001": {"status": "approved", "comment": "", "version": 1, "reviewed_at": "2026-06-10T00:00:00"}},
+        "cases": {
+            "TC001": {
+                "status": "approved",
+                "comment": "",
+                "version": 1,
+                "reviewed_at": "2026-06-10T00:00:00",
+            }
+        },
     }
     (domain_dir / "review_state.json").write_text(json.dumps(state), encoding="utf-8")
 
     res = _client().post(
         "/review/update",
-        data=json.dumps({"domain": "example.com", "case_id": "TC001", "status": "frozen", "comment": ""}),
+        data=json.dumps(
+            {"domain": "example.com", "case_id": "TC001", "status": "frozen", "comment": ""}
+        ),
         content_type="application/json",
     )
     assert res.status_code == 200
@@ -125,20 +144,31 @@ def test_review_update_increments_version_on_frozen(tmp_path: Path, monkeypatch)
     assert data["version"] == 2
 
 
-def test_review_update_does_not_increment_version_on_other_status(tmp_path: Path, monkeypatch) -> None:
+def test_review_update_does_not_increment_version_on_other_status(
+    tmp_path: Path, monkeypatch
+) -> None:
     monkeypatch.setattr(review_mod, "OUTPUT_DIR", tmp_path)
     domain_dir = tmp_path / "example.com"
     domain_dir.mkdir(parents=True, exist_ok=True)
 
     state = {
         "domain": "example.com",
-        "cases": {"TC001": {"status": "draft", "comment": "", "version": 1, "reviewed_at": "2026-06-10T00:00:00"}},
+        "cases": {
+            "TC001": {
+                "status": "draft",
+                "comment": "",
+                "version": 1,
+                "reviewed_at": "2026-06-10T00:00:00",
+            }
+        },
     }
     (domain_dir / "review_state.json").write_text(json.dumps(state), encoding="utf-8")
 
     res = _client().post(
         "/review/update",
-        data=json.dumps({"domain": "example.com", "case_id": "TC001", "status": "reviewing", "comment": ""}),
+        data=json.dumps(
+            {"domain": "example.com", "case_id": "TC001", "status": "reviewing", "comment": ""}
+        ),
         content_type="application/json",
     )
     assert res.get_json()["version"] == 1
@@ -148,7 +178,9 @@ def test_review_update_rejects_invalid_status(tmp_path: Path, monkeypatch) -> No
     monkeypatch.setattr(review_mod, "OUTPUT_DIR", tmp_path)
     res = _client().post(
         "/review/update",
-        data=json.dumps({"domain": "example.com", "case_id": "TC001", "status": "hacked", "comment": ""}),
+        data=json.dumps(
+            {"domain": "example.com", "case_id": "TC001", "status": "hacked", "comment": ""}
+        ),
         content_type="application/json",
     )
     assert res.status_code == 400
@@ -158,7 +190,9 @@ def test_review_update_rejects_invalid_domain(tmp_path: Path, monkeypatch) -> No
     monkeypatch.setattr(review_mod, "OUTPUT_DIR", tmp_path)
     res = _client().post(
         "/review/update",
-        data=json.dumps({"domain": "../etc/passwd", "case_id": "TC001", "status": "draft", "comment": ""}),
+        data=json.dumps(
+            {"domain": "../etc/passwd", "case_id": "TC001", "status": "draft", "comment": ""}
+        ),
         content_type="application/json",
     )
     assert res.status_code == 400
@@ -179,14 +213,27 @@ def test_review_export_filters_approved(tmp_path: Path, monkeypatch) -> None:
     state = {
         "domain": "example.com",
         "cases": {
-            "TC001": {"status": "approved", "comment": "", "version": 1, "reviewed_at": "2026-06-10T00:00:00"},
-            "TC002": {"status": "frozen",   "comment": "", "version": 2, "reviewed_at": "2026-06-10T00:00:00"},
-            "TC003": {"status": "draft",    "comment": "", "version": 1, "reviewed_at": "2026-06-10T00:00:00"},
+            "TC001": {
+                "status": "approved",
+                "comment": "",
+                "version": 1,
+                "reviewed_at": "2026-06-10T00:00:00",
+            },
+            "TC002": {
+                "status": "frozen",
+                "comment": "",
+                "version": 2,
+                "reviewed_at": "2026-06-10T00:00:00",
+            },
+            "TC003": {
+                "status": "draft",
+                "comment": "",
+                "version": 1,
+                "reviewed_at": "2026-06-10T00:00:00",
+            },
         },
     }
-    (tmp_path / "example.com" / "review_state.json").write_text(
-        json.dumps(state), encoding="utf-8"
-    )
+    (tmp_path / "example.com" / "review_state.json").write_text(json.dumps(state), encoding="utf-8")
 
     res = _client().get("/review/export?domain=example.com&filter=approved")
     assert res.status_code == 200

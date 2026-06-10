@@ -14,8 +14,15 @@ _MAX_PAIRWISE_CASES = 20
 _MAX_REPRESENTATIVE_VALUES = 3
 
 _CRITICALITY_KEYWORDS = (
-    "決済", "支払", "payment", "クレジット",
-    "個人情報", "プライバシー", "ログイン", "パスワード", "password",
+    "決済",
+    "支払",
+    "payment",
+    "クレジット",
+    "個人情報",
+    "プライバシー",
+    "ログイン",
+    "パスワード",
+    "password",
 )
 _HIGH_CRITICALITY = 3.0
 _NORMAL_CRITICALITY = 1.0
@@ -99,10 +106,9 @@ def generate_pairwise_cases(fields: list[FieldData]) -> list[dict[str, str]]:
     if len(active) <= 2:
         # 2フィールド以下は全組み合わせを直接返す
         combos = list(product(*rep_values))
-        return [
-            {active[i].name: combo[i] for i in range(len(active))}
-            for combo in combos
-        ][:_MAX_PAIRWISE_CASES]
+        return [{active[i].name: combo[i] for i in range(len(active))} for combo in combos][
+            :_MAX_PAIRWISE_CASES
+        ]
 
     # 3フィールド以上: 最初のフィールドの各値を基準行として、
     # 残りフィールドをラウンドロビンで割り当てることで2-wayカバレッジを近似する
@@ -154,8 +160,7 @@ def generate_decision_table(
         ]
         pw_cases = generate_pairwise_cases(pairwise_fields)
         combos = [
-            tuple(case.get(f.name, _condition_labels(f)[0]) for f in fields)
-            for case in pw_cases
+            tuple(case.get(f.name, _condition_labels(f)[0]) for f in fields) for case in pw_cases
         ]
 
     rows: list[dict[str, str | list[str]]] = []
@@ -176,8 +181,7 @@ def compute_risk_score(
     change_freq は 0.0〜1.0（過去スナップショット差分履歴から計算）。"""
     all_fields = [f for form in forms for f in form.fields]
     validation_count = sum(
-        1 for f in all_fields
-        if f.required or f.maxlength is not None or f.pattern or f.options
+        1 for f in all_fields if f.required or f.maxlength is not None or f.pattern or f.options
     )
     option_count = sum(len(f.options) for f in all_fields)
     complexity = len(all_fields) + validation_count + option_count

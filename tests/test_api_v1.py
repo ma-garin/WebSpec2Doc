@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
@@ -13,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 import app as appmod
 import web.routes.api_v1 as api_v1_mod
+
 from registry.site_registry import SiteConfig, save_site
 
 
@@ -41,9 +41,7 @@ def test_api_sites_returns_list(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
     assert "sites" in data
 
 
-def test_api_sites_includes_saved_config(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_api_sites_includes_saved_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(api_v1_mod, "OUTPUT_DIR", tmp_path)
     save_site(
         SiteConfig(
@@ -75,9 +73,7 @@ def test_api_report_returns_json(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     monkeypatch.setattr(api_v1_mod, "OUTPUT_DIR", tmp_path)
     domain_dir = tmp_path / "example.com"
     domain_dir.mkdir()
-    (domain_dir / "report.json").write_text(
-        json.dumps({"screens": []}), encoding="utf-8"
-    )
+    (domain_dir / "report.json").write_text(json.dumps({"screens": []}), encoding="utf-8")
     resp = _client().get("/api/v1/sites/example.com/report")
     assert resp.status_code == 200
     assert resp.get_json()["screens"] == []
@@ -186,9 +182,7 @@ def test_api_test_cases_empty(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
     assert resp.get_json()["total"] == 0
 
 
-def test_api_test_cases_returns_candidates(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_api_test_cases_returns_candidates(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(api_v1_mod, "OUTPUT_DIR", tmp_path)
     domain_dir = tmp_path / "example.com"
     domain_dir.mkdir()
@@ -204,9 +198,7 @@ def test_api_test_cases_returns_candidates(
     assert data["candidates"][0]["title"] == "ログインテスト"
 
 
-def test_api_test_cases_invalid_domain(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_api_test_cases_invalid_domain(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(api_v1_mod, "OUTPUT_DIR", tmp_path)
     resp = _client().get("/api/v1/sites/..bad../test-cases")
     assert resp.status_code in (400, 404)

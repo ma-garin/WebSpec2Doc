@@ -12,12 +12,12 @@ from diff.screenshot_diff import (
     compare_snapshot_screenshots,
 )
 
-
 # ─────────────────────── PNG 生成ヘルパー ───────────────────────
 
 
 def _make_minimal_png(path: Path, width: int = 2, height: int = 2, color: int = 0) -> None:
     """最小限の PNG ファイルを生成する（PIL 不要）。"""
+
     def chunk(name: bytes, data: bytes) -> bytes:
         c = zlib.crc32(name + data) & 0xFFFFFFFF
         return struct.pack(">I", len(data)) + name + data + struct.pack(">I", c)
@@ -247,4 +247,3 @@ class TestSizeFallback:
         ratio = _compute_size_diff_ratio(before, after)
 
         assert ratio == pytest.approx(0.5)
-

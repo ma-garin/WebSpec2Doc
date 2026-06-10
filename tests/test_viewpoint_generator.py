@@ -111,7 +111,8 @@ def test_general_screen_always_returns_at_least_one_viewpoint() -> None:
 
 
 def test_abnormal_scenarios_includes_sql_injection():
-    from llm.screen_classifier import ScreenClassification, SCREEN_GENERAL
+    from llm.screen_classifier import SCREEN_GENERAL, ScreenClassification
+
     sc = ScreenClassification(SCREEN_GENERAL, 0.5, (), "low")
     scenarios = generate_abnormal_scenarios_by_rules(sc, [])
     titles = [s.title for s in scenarios]
@@ -119,7 +120,8 @@ def test_abnormal_scenarios_includes_sql_injection():
 
 
 def test_abnormal_scenarios_auth_includes_bruteforce():
-    from llm.screen_classifier import ScreenClassification, SCREEN_AUTH
+    from llm.screen_classifier import SCREEN_AUTH, ScreenClassification
+
     sc = ScreenClassification(SCREEN_AUTH, 0.9, ("ログイン",), "critical")
     scenarios = generate_abnormal_scenarios_by_rules(sc, [])
     titles = [s.title for s in scenarios]
@@ -127,14 +129,16 @@ def test_abnormal_scenarios_auth_includes_bruteforce():
 
 
 def test_abnormal_scenarios_payment_includes_double_submit():
-    from llm.screen_classifier import ScreenClassification, SCREEN_PAYMENT
+    from llm.screen_classifier import SCREEN_PAYMENT, ScreenClassification
+
     sc = ScreenClassification(SCREEN_PAYMENT, 0.9, ("決済",), "critical")
     scenarios = generate_abnormal_scenarios_by_rules(sc, [])
     assert any(s.category == "業務フロー" for s in scenarios)
 
 
 def test_abnormal_scenarios_no_duplicates():
-    from llm.screen_classifier import ScreenClassification, SCREEN_GENERAL
+    from llm.screen_classifier import SCREEN_GENERAL, ScreenClassification
+
     sc = ScreenClassification(SCREEN_GENERAL, 0.5, (), "low")
     scenarios = generate_abnormal_scenarios_by_rules(sc, [])
     titles = [s.title for s in scenarios]
@@ -142,7 +146,8 @@ def test_abnormal_scenarios_no_duplicates():
 
 
 def test_generate_abnormal_with_llm_fallback_no_api_key():
-    from llm.screen_classifier import ScreenClassification, SCREEN_GENERAL
+    from llm.screen_classifier import SCREEN_GENERAL, ScreenClassification
+
     sc = ScreenClassification(SCREEN_GENERAL, 0.5, (), "low")
     # api_key="" でルールベースにフォールバックする
     scenarios = generate_abnormal_scenarios_with_llm(sc, [], api_key="")

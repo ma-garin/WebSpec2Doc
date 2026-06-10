@@ -443,9 +443,7 @@ def _fill_form_fields(page: Page, form_data: FormData) -> None:
     for field in form_data.fields:
         if not field.name and not field.element_id:
             continue
-        selector = (
-            f"#{field.element_id}" if field.element_id else f"[name='{field.name}']"
-        )
+        selector = f"#{field.element_id}" if field.element_id else f"[name='{field.name}']"
         ftype = field.field_type.lower()
         try:
             if ftype == "checkbox":

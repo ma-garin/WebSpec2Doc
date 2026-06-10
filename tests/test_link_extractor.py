@@ -362,7 +362,9 @@ class TestComputeDomSignature:
 
 
 class TestExtractFormsIncludingFrames:
-    def _make_page(self, forms_raw: list[dict], extra_frames: list[MagicMock] | None = None) -> MagicMock:
+    def _make_page(
+        self, forms_raw: list[dict], extra_frames: list[MagicMock] | None = None
+    ) -> MagicMock:
         page = MagicMock()
         # eval_on_selector_all used by extract_forms (main frame)
         page.eval_on_selector_all.return_value = forms_raw

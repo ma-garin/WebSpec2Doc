@@ -13,7 +13,6 @@ from graph.transition_graph import (
     transition_tests_to_dict,
 )
 
-
 # ---------- フィクスチャ ----------
 
 
@@ -76,8 +75,7 @@ class TestGenerateTransitionTests0Switch:
         paths = generate_transition_tests(pages_abc, coverage="0-switch")
         # 各パスの目的文にそのページのタイトルが含まれているはず
         titles_in_objectives = [
-            any(p.nodes[0] in obj or "ページ" in obj for obj in [p.test_objective])
-            for p in paths
+            any(p.nodes[0] in obj or "ページ" in obj for obj in [p.test_objective]) for p in paths
         ]
         assert all(titles_in_objectives)
 
@@ -153,9 +151,7 @@ class TestGenerateTransitionTests2Switch:
         spokes = [f"https://example.com/s{i}" for i in range(10)]
         pages: list[PageData] = [
             _make_page(hub, "ハブ", tuple(spokes)),
-        ] + [
-            _make_page(s, f"スポーク{i}", (hub,)) for i, s in enumerate(spokes)
-        ]
+        ] + [_make_page(s, f"スポーク{i}", (hub,)) for i, s in enumerate(spokes)]
         paths = generate_transition_tests(pages, coverage="2-switch")
         assert len(paths) <= 50
 

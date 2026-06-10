@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 logger = logging.getLogger(__name__)
 
@@ -77,9 +77,7 @@ def _determine_coverage(
     return "uncovered", ()
 
 
-def _build_requirement(
-    index: int, screen: dict, candidates: list[dict]
-) -> RequirementLink:
+def _build_requirement(index: int, screen: dict, candidates: list[dict]) -> RequirementLink:
     """1 画面分の RequirementLink を構築する。"""
     req_id = f"REQ-{index + 1:03d}"
     req_title = screen.get("title", screen.get("url", req_id))
@@ -116,7 +114,7 @@ def build_matrix(
 
     return TraceabilityMatrix(
         domain=domain,
-        generated_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        generated_at=datetime.now(UTC).isoformat(timespec="seconds"),
         requirements=requirements,
         total_requirements=total,
         covered_count=covered_count,

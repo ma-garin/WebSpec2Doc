@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import logging
 from dataclasses import asdict, dataclass
 
@@ -92,8 +91,7 @@ def generate_transition_tests(
         raw_paths = []
 
     return [
-        _make_path(i, node_list, coverage, url_to_title)
-        for i, node_list in enumerate(raw_paths)
+        _make_path(i, node_list, coverage, url_to_title) for i, node_list in enumerate(raw_paths)
     ]
 
 

@@ -156,12 +156,10 @@ class TestVisualRegressionAutoRun:
         page.set_viewport_size({"width": 1280, "height": 800})
         self._navigate_to_autorun(page)
         # モーダルをJSで開き、視覚的状態を検証
-        page.evaluate(
-            """() => {
+        page.evaluate("""() => {
             const modal = document.getElementById('autorun-approval-modal');
             if (modal) modal.style.display = 'flex';
-        }"""
-        )
+        }""")
         page.wait_for_selector("#autorun-approval-modal", state="visible")
         _assert_visual_match(page, "autorun_approval_modal_1280x800", threshold=0.04)
 
@@ -169,11 +167,9 @@ class TestVisualRegressionAutoRun:
         """承認モーダル 1366×768 でのビジュアル（モーダルオーバーフロー検知）。"""
         page.set_viewport_size({"width": 1366, "height": 768})
         self._navigate_to_autorun(page)
-        page.evaluate(
-            """() => {
+        page.evaluate("""() => {
             const modal = document.getElementById('autorun-approval-modal');
             if (modal) modal.style.display = 'flex';
-        }"""
-        )
+        }""")
         page.wait_for_selector("#autorun-approval-modal", state="visible")
         _assert_visual_match(page, "autorun_approval_modal_1366x768", threshold=0.04)

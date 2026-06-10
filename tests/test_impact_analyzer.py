@@ -1,15 +1,12 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-
-import pytest
+from dataclasses import dataclass
 
 from diff.impact_analyzer import (
     ImpactedTest,
     analyze_impact,
     format_impact_report,
 )
-
 
 # ─────────────────────── フィクスチャ用スタブ ───────────────────────
 
@@ -91,9 +88,7 @@ class TestAnalyzeImpactFieldChanges:
             change_type="removed",
         )
         diff = _DiffResult(field_changes=(fc,))
-        candidates = [
-            _candidate("TC002", steps=["page.goto('https://example.com/form')"])
-        ]
+        candidates = [_candidate("TC002", steps=["page.goto('https://example.com/form')"])]
 
         results = analyze_impact(diff, candidates)
 
@@ -106,9 +101,7 @@ class TestAnalyzeImpactFieldChanges:
             change_type="added",
         )
         diff = _DiffResult(field_changes=(fc,))
-        candidates = [
-            _candidate("TC003", steps=["page.goto('https://example.com/form')"])
-        ]
+        candidates = [_candidate("TC003", steps=["page.goto('https://example.com/form')"])]
 
         results = analyze_impact(diff, candidates)
 
@@ -173,9 +166,7 @@ class TestAnalyzeImpactPageChanges:
             change_type="removed",
         )
         diff = _DiffResult(removed_pages=(page,))
-        candidates = [
-            _candidate("TC001", steps=["page.goto('https://example.com/login')"])
-        ]
+        candidates = [_candidate("TC001", steps=["page.goto('https://example.com/login')"])]
 
         results = analyze_impact(diff, candidates)
 
@@ -196,9 +187,7 @@ class TestAnalyzeImpactAttributeDiffs:
             severity="breaking",
         )
         diff = _DiffResult(attribute_diffs=(ad,))
-        candidates = [
-            _candidate("TC001", steps=["page.goto('https://example.com/login')"])
-        ]
+        candidates = [_candidate("TC001", steps=["page.goto('https://example.com/login')"])]
 
         results = analyze_impact(diff, candidates)
 
@@ -215,9 +204,7 @@ class TestAnalyzeImpactAttributeDiffs:
             severity="warning",
         )
         diff = _DiffResult(attribute_diffs=(ad,))
-        candidates = [
-            _candidate("TC001", steps=["page.goto('https://example.com/form')"])
-        ]
+        candidates = [_candidate("TC001", steps=["page.goto('https://example.com/form')"])]
 
         # attribute_diffs からは breaking のみが追加される
         # field_changes なしなので field_changes 由来の impacts も 0
@@ -235,9 +222,7 @@ class TestAnalyzeImpactDeduplicate:
             change_type="modified",
         )
         diff = _DiffResult(field_changes=(fc, fc))  # 同じ変更が2回
-        candidates = [
-            _candidate("TC001", steps=["page.goto('https://example.com/form')"])
-        ]
+        candidates = [_candidate("TC001", steps=["page.goto('https://example.com/form')"])]
 
         results = analyze_impact(diff, candidates)
 

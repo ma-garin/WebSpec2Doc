@@ -15,10 +15,10 @@ from web.services.traceability import (
     matrix_to_dict,
 )
 
-
 # ──────────────────────────────────────────────
 # ヘルパー
 # ──────────────────────────────────────────────
+
 
 def _make_report(screens: list[dict]) -> dict:
     return {"screens": screens}
@@ -32,6 +32,7 @@ def _make_candidates(entries: list[dict]) -> list[dict]:
 # ──────────────────────────────────────────────
 # build_matrix
 # ──────────────────────────────────────────────
+
 
 def test_build_matrix_covered_when_url_matches() -> None:
     """candidates に URL が完全一致する場合 covered になる。"""
@@ -72,9 +73,7 @@ def test_build_matrix_coverage_rate() -> None:
             {"url": "https://example.com/b", "title": "B"},
         ]
     )
-    candidates = _make_candidates(
-        [{"id": "TC001", "steps": [{"url": "https://example.com/a"}]}]
-    )
+    candidates = _make_candidates([{"id": "TC001", "steps": [{"url": "https://example.com/a"}]}])
 
     matrix = build_matrix("example.com", report, candidates)
 
@@ -135,12 +134,11 @@ def test_build_matrix_multiple_candidates_same_url() -> None:
 # matrix_to_dict
 # ──────────────────────────────────────────────
 
+
 def test_matrix_to_dict_serializable() -> None:
     """dict 変換後に json.dumps できる（JSON シリアライズ可能）。"""
     report = _make_report([{"url": "https://example.com/", "title": "トップ"}])
-    candidates = _make_candidates(
-        [{"id": "TC001", "steps": [{"url": "https://example.com/"}]}]
-    )
+    candidates = _make_candidates([{"id": "TC001", "steps": [{"url": "https://example.com/"}]}])
     matrix = build_matrix("example.com", report, candidates)
 
     d = matrix_to_dict(matrix)
@@ -173,9 +171,7 @@ def test_matrix_to_dict_structure() -> None:
 def test_matrix_to_dict_test_ids_is_list() -> None:
     """test_ids が tuple ではなく list として返る。"""
     report = _make_report([{"url": "https://example.com/", "title": "T"}])
-    candidates = _make_candidates(
-        [{"id": "TC-X", "steps": [{"url": "https://example.com/"}]}]
-    )
+    candidates = _make_candidates([{"id": "TC-X", "steps": [{"url": "https://example.com/"}]}])
     matrix = build_matrix("example.com", report, candidates)
 
     d = matrix_to_dict(matrix)
@@ -185,6 +181,7 @@ def test_matrix_to_dict_test_ids_is_list() -> None:
 # ──────────────────────────────────────────────
 # RequirementLink / TraceabilityMatrix dataclass
 # ──────────────────────────────────────────────
+
 
 def test_requirement_link_is_frozen() -> None:
     """RequirementLink は frozen dataclass（イミュータブル）。"""
@@ -197,7 +194,7 @@ def test_requirement_link_is_frozen() -> None:
     )
     try:
         req.req_id = "REQ-999"  # type: ignore[misc]
-        assert False, "FrozenInstanceError が発生するはず"
+        raise AssertionError("FrozenInstanceError が発生するはず")
     except Exception:
         pass  # frozen なので変更不可
 
@@ -214,6 +211,6 @@ def test_traceability_matrix_is_frozen() -> None:
     )
     try:
         matrix.domain = "other.com"  # type: ignore[misc]
-        assert False, "FrozenInstanceError が発生するはず"
+        raise AssertionError("FrozenInstanceError が発生するはず")
     except Exception:
         pass

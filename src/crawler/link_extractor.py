@@ -5,8 +5,8 @@ import logging
 import re
 from typing import Any, cast
 
-from playwright.sync_api import Page
 from playwright.sync_api import Error as PlaywrightError
+from playwright.sync_api import Page
 
 from crawler.page_crawler import FieldData, FormData, is_internal_link, normalize_url
 

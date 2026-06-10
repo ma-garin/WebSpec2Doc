@@ -39,12 +39,12 @@ class TestViewpoint:
 
 @dataclass(frozen=True)
 class AbnormalScenario:
-    scenario_id: str       # 例: "AS001"
-    category: str          # "入力値異常" / "認証" / "ネットワーク" / "業務フロー" / "セキュリティ"
-    title: str             # シナリオタイトル
-    description: str       # 詳細説明（日本語）
+    scenario_id: str  # 例: "AS001"
+    category: str  # "入力値異常" / "認証" / "ネットワーク" / "業務フロー" / "セキュリティ"
+    title: str  # シナリオタイトル
+    description: str  # 詳細説明（日本語）
     affected_fields: tuple[str, ...]  # 影響フィールド名
-    risk_level: str        # "高" / "中" / "低"
+    risk_level: str  # "高" / "中" / "低"
     test_steps: tuple[str, ...]  # テストステップ（日本語）
 
 
@@ -204,7 +204,7 @@ def _field_viewpoints(field_data_list: list) -> list[TestViewpoint]:
 
 def generate_abnormal_scenarios_by_rules(
     screen_classification: Any,  # ScreenClassification
-    field_data_list: list,       # list[FieldData]
+    field_data_list: list,  # list[FieldData]
 ) -> list[AbnormalScenario]:
     """画面分類とフィールド情報からルールベースで異常系シナリオを生成する。"""
     raw: list[AbnormalScenario] = []

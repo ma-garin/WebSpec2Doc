@@ -63,7 +63,7 @@ def api_sites() -> tuple[dict, int] | dict:
         sites = [dataclasses.asdict(c) for c in configs]
         for site in sites:
             for key in ("urls", "formats"):
-                if isinstance(site.get(key), (list, tuple)):
+                if isinstance(site.get(key), list | tuple):
                     site[key] = list(site[key])
     except Exception as exc:
         logger.exception("list_sites に失敗しました: %s", exc)

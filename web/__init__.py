@@ -50,4 +50,8 @@ def create_app() -> Flask:
     app.register_blueprint(schedule.bp)
     app.register_blueprint(api_v1.bp)
     app.register_blueprint(traceability.traceability_bp)
+
+    from web.services.scheduler import start_scheduler
+
+    start_scheduler()
     return app

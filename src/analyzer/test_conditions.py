@@ -133,7 +133,7 @@ def generate_pairwise_cases(fields: list[FieldData]) -> list[dict[str, str]]:
 def generate_decision_table(
     fields: list[FieldData],
     transitions: list[str],
-) -> list[dict[str, str | list[str]]]:
+) -> list[dict[str, str | dict[str, str]]]:
     """条件（フィールド値の充足状態）× アクション（遷移先）のデシジョンテーブルを生成。
     transitions は遷移先 URL のリスト。"""
     if not fields or not transitions:
@@ -163,7 +163,7 @@ def generate_decision_table(
             tuple(case.get(f.name, _condition_labels(f)[0]) for f in fields) for case in pw_cases
         ]
 
-    rows: list[dict[str, str | list[str]]] = []
+    rows: list[dict[str, str | dict[str, str]]] = []
     for i, combo in enumerate(combos):
         conditions = {fields[j].name: combo[j] for j in range(len(fields))}
         url = transitions[i % len(transitions)]

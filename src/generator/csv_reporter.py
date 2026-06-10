@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import logging
 from pathlib import Path
+from typing import Any
 
 from crawler.page_crawler import PageData
 
@@ -50,7 +51,7 @@ def generate_csv_report(pages: list[PageData], output_path: Path) -> Path:
 
 
 def _write_page_rows(
-    writer: csv.writer,  # type: ignore[type-arg]
+    writer: Any,
     page_no: int,
     page: PageData,
     derive_conditions: object,

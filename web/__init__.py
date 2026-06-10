@@ -21,6 +21,7 @@ def create_app() -> Flask:
         pages,
         qa_process,
         report,
+        review,
         settings,
         site,
     )
@@ -42,4 +43,5 @@ def create_app() -> Flask:
     app.register_blueprint(settings.bp)
     app.register_blueprint(crawl.bp)
     app.register_blueprint(auto_run.bp)
+    app.register_blueprint(review.bp)
     return app

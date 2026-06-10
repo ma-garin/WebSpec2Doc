@@ -8,9 +8,14 @@ from web.services.spec_ts_generator import (
     SMOKE_TITLES,
     TRANSITION_TITLES,
     _apply_filter,
+    _build_resilient_locator,
     _esc,
     _extract_url,
+    _generate_form_submit_assertion,
+    _generate_url_assertion,
+    _generate_validation_message_assertion,
     _safe_str,
+    _sort_locators_by_reliability,
     compute_filter_counts,
     generate_spec_ts,
 )
@@ -406,3 +411,229 @@ class TestWaitForLoadState:
         ]
         assert len(code_lines) >= 1
         assert len(comment_lines) == 0
+
+
+# ─────────────────────── self-healing ロケータ ───────────────────────
+
+
+def test_generate_spec_ts_self_healing_locators(tmp_path: Path) -> None:
+    """locators フィールドがある候補で data-testid が先頭のロケータが生成される。"""
+    locators = [
+        "input[type='email']",
+        '[data-testid="email-input"]',
+        '[aria-label="メールアドレス"]',
+    ]
+    candidate = {
+        "title": "フォーム入力",
+        "id": "TC-SH-01",
+        "trace_id": "T01",
+        "steps": ["page.goto('https://example.com/login')", "メールを入力"],
+        "locators": locators,
+        "expected": "入力できる",
+        "automation_status": "automated",
+    }
+    src = tmp_path / "candidates.json"
+    src.write_text(json.dumps({"candidates": [candidate]}), encoding="utf-8")
+    out = tmp_path / "spec.ts"
+
+    generate_spec_ts("example.com", src, out, enable_self_healing=True)
+
+    content = out.read_text()
+    # data-testid が先頭に来ること
+    assert 'data-testid="email-input"' in content
+    # first() チェーンが使われること
+    assert ".first()" in content
+    # body アサーションは使われないこと
+    assert "page.locator('body')" not in content
+
+
+def test_generate_spec_ts_self_healing_falls_back_to_body_without_locators(
+    tmp_path: Path,
+) -> None:
+    """locators が空の場合は body アサーションにフォールバックする。"""
+    candidate = {
+        "title": "画面表示スモーク",
+        "id": "TC-SH-02",
+        "trace_id": "T02",
+        "steps": ["page.goto('https://example.com/')"],
+        "locators": [],
+        "expected": "表示される",
+        "automation_status": "automated",
+    }
+    src = tmp_path / "candidates.json"
+    src.write_text(json.dumps({"candidates": [candidate]}), encoding="utf-8")
+    out = tmp_path / "spec.ts"
+
+    generate_spec_ts("example.com", src, out, enable_self_healing=True)
+
+    content = out.read_text()
+    assert "page.locator('body')" in content
+
+
+# ─────────────────────── 強化アサーション ───────────────────────
+
+
+def test_generate_spec_ts_strong_assertions_validation(tmp_path: Path) -> None:
+    """expected に 'エラー' が含まれる場合に alert ロケータのアサーションが生成される。"""
+    candidate = {
+        "title": "必須入力",
+        "id": "TC-SA-01",
+        "trace_id": "T01",
+        "steps": ["page.goto('https://example.com/login')", "送信ボタンをクリック"],
+        "expected": "エラーメッセージが表示される",
+        "automation_status": "automated",
+    }
+    src = tmp_path / "candidates.json"
+    src.write_text(json.dumps({"candidates": [candidate]}), encoding="utf-8")
+    out = tmp_path / "spec.ts"
+
+    generate_spec_ts("example.com", src, out, enable_strong_assertions=True)
+
+    content = out.read_text()
+    assert 'role="alert"' in content
+    assert ".error-message" in content
+    assert "toBeVisible" in content
+
+
+def test_generate_spec_ts_strong_assertions_url(tmp_path: Path) -> None:
+    """expected に URL が含まれる場合に toHaveURL アサーションが生成される。"""
+    candidate = {
+        "title": "画面遷移",
+        "id": "TC-SA-02",
+        "trace_id": "T02",
+        "steps": ["page.goto('https://example.com/')", "ログインリンクをクリック"],
+        "expected": "https://example.com/dashboard に遷移する",
+        "automation_status": "automated",
+    }
+    src = tmp_path / "candidates.json"
+    src.write_text(json.dumps({"candidates": [candidate]}), encoding="utf-8")
+    out = tmp_path / "spec.ts"
+
+    generate_spec_ts("example.com", src, out, enable_strong_assertions=True)
+
+    content = out.read_text()
+    assert "toHaveURL" in content
+    assert "https://example.com/dashboard" in content
+
+
+def test_generate_spec_ts_strong_assertions_url_path_only(tmp_path: Path) -> None:
+    """expected に /path 形式の URL が含まれる場合も toHaveURL アサーションが生成される。"""
+    candidate = {
+        "title": "画面遷移",
+        "id": "TC-SA-03",
+        "trace_id": "T03",
+        "steps": ["page.goto('https://example.com/')"],
+        "expected": "/dashboard に遷移する",
+        "automation_status": "automated",
+    }
+    src = tmp_path / "candidates.json"
+    src.write_text(json.dumps({"candidates": [candidate]}), encoding="utf-8")
+    out = tmp_path / "spec.ts"
+
+    generate_spec_ts("example.com", src, out, enable_strong_assertions=True)
+
+    content = out.read_text()
+    assert "toHaveURL" in content
+
+
+def test_generate_spec_ts_no_strong_assertions_by_default(tmp_path: Path) -> None:
+    """デフォルト（enable_strong_assertions=False）では強化アサーションが生成されない。"""
+    candidate = {
+        "title": "必須入力",
+        "id": "TC-SA-04",
+        "trace_id": "T04",
+        "steps": ["page.goto('https://example.com/')"],
+        "expected": "エラーメッセージが表示される",
+        "automation_status": "automated",
+    }
+    src = tmp_path / "candidates.json"
+    src.write_text(json.dumps({"candidates": [candidate]}), encoding="utf-8")
+    out = tmp_path / "spec.ts"
+
+    generate_spec_ts("example.com", src, out)
+
+    content = out.read_text()
+    assert "toHaveURL" not in content
+    assert 'role="alert"' not in content
+
+
+# ─────────────────────── _sort_locators_by_reliability ───────────────────────
+
+
+def test_sort_locators_by_reliability_data_testid_first() -> None:
+    """data-testid ロケータが aria-label より優先される。"""
+    locators = [
+        '[aria-label="名前"]',
+        '[data-testid="name-input"]',
+        "input[type='text']",
+    ]
+    result = _sort_locators_by_reliability(locators)
+    assert result[0] == '[data-testid="name-input"]'
+    assert result[1] == '[aria-label="名前"]'
+
+
+def test_sort_locators_by_reliability_aria_label_before_type() -> None:
+    """aria-label が type= より優先される。"""
+    locators = [
+        "input[type='email']",
+        '[aria-label="メール"]',
+    ]
+    result = _sort_locators_by_reliability(locators)
+    assert result[0] == '[aria-label="メール"]'
+
+
+def test_sort_locators_by_reliability_id_before_generic() -> None:
+    """# で始まる ID セレクタが汎用 CSS セレクタより優先される。"""
+    locators = [".form-email", "#email"]
+    result = _sort_locators_by_reliability(locators)
+    assert result[0] == "#email"
+
+
+def test_sort_locators_by_reliability_preserves_order_within_same_priority() -> None:
+    """同一優先度内では元の順序が安定して保たれる。"""
+    locators = [
+        '[data-testid="a"]',
+        '[data-testid="b"]',
+    ]
+    result = _sort_locators_by_reliability(locators)
+    assert result == ['[data-testid="a"]', '[data-testid="b"]']
+
+
+# ─────────────────────── _build_resilient_locator ───────────────────────
+
+
+def test_build_resilient_locator_combines_and_calls_first() -> None:
+    """複数ロケータが , で結合され .first() が付く。"""
+    locators = ['[data-testid="x"]', '[aria-label="X"]']
+    result = _build_resilient_locator(locators)
+    assert ".first()" in result
+    assert 'data-testid="x"' in result
+    assert 'aria-label="X"' in result
+
+
+def test_build_resilient_locator_single_locator() -> None:
+    """ロケータが 1 つだけでも .first() が付く。"""
+    result = _build_resilient_locator(["#submit"])
+    assert "#submit" in result
+    assert ".first()" in result
+
+
+# ─────────────────────── アサーションヘルパー単体 ───────────────────────
+
+
+def test_generate_url_assertion_contains_expected_url() -> None:
+    result = _generate_url_assertion("https://example.com/dashboard")
+    assert "toHaveURL" in result
+    assert "https://example.com/dashboard" in result
+
+
+def test_generate_validation_message_assertion_contains_alert_selector() -> None:
+    result = _generate_validation_message_assertion("エラーが表示される")
+    assert 'role="alert"' in result
+    assert "toBeVisible" in result
+
+
+def test_generate_form_submit_assertion_contains_url_fragment() -> None:
+    result = _generate_form_submit_assertion("dashboard")
+    assert "toHaveURL" in result
+    assert "dashboard" in result

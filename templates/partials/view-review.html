@@ -1,0 +1,110 @@
+        <!-- ===== レビューワークフロービュー ===== -->
+        <section class="view" id="view-review">
+          <style>
+            .review-header {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              gap: 12px;
+              margin-bottom: 16px;
+            }
+            .review-header h2 {
+              margin: 0;
+              font-size: 18px;
+            }
+            .review-actions {
+              display: flex;
+              gap: 8px;
+              align-items: center;
+            }
+            .review-table {
+              width: 100%;
+              border-collapse: collapse;
+              font-size: 13px;
+            }
+            .review-table th,
+            .review-table td {
+              padding: 8px 10px;
+              border-bottom: 1px solid var(--border, #e0e0e0);
+              text-align: left;
+              vertical-align: middle;
+            }
+            .review-table th {
+              background: var(--surface-muted, #f5f5f5);
+              font-weight: 600;
+              color: var(--text-muted, #555);
+              white-space: nowrap;
+            }
+            .review-table td input[type="text"] {
+              width: 100%;
+              min-width: 120px;
+              box-sizing: border-box;
+              padding: 4px 6px;
+              border: 1px solid var(--border, #ccc);
+              border-radius: 4px;
+              font-size: 12px;
+            }
+            .review-table td input[type="text"]:disabled {
+              background: var(--surface-muted, #f5f5f5);
+              color: var(--text-muted, #888);
+              cursor: not-allowed;
+            }
+            .review-row-actions {
+              display: flex;
+              gap: 4px;
+              white-space: nowrap;
+            }
+            /* ステータスバッジ */
+            .status-badge {
+              display: inline-block;
+              padding: 2px 8px;
+              border-radius: 12px;
+              font-size: 11px;
+              font-weight: 600;
+              color: #fff;
+              white-space: nowrap;
+            }
+            .status-draft    { background: #888; }
+            .status-reviewing { background: #e67e22; }
+            .status-approved  { background: #27ae60; }
+            .status-frozen    { background: #2980b9; }
+            #review-empty {
+              padding: 32px;
+              text-align: center;
+              color: var(--text-muted, #888);
+              font-size: 14px;
+            }
+          </style>
+
+          <div class="review-header">
+            <h2>テストケースレビュー</h2>
+            <div class="review-actions">
+              <select id="review-filter" class="btn-outline-sm" style="height:36px;padding:0 10px;font-size:13px">
+                <option value="all">全件</option>
+                <option value="reviewing">レビュー中</option>
+                <option value="approved">承認済み</option>
+                <option value="frozen">確定版</option>
+              </select>
+              <button id="review-export-btn" class="btn-primary" style="height:36px;padding:0 14px;font-size:13px">確定版エクスポート</button>
+            </div>
+          </div>
+
+          <div id="review-cases-container">
+            <table class="review-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>タイトル</th>
+                  <th>ステータス</th>
+                  <th>コメント</th>
+                  <th>Ver.</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="review-cases-tbody">
+                <!-- JS で描画 -->
+              </tbody>
+            </table>
+            <div id="review-empty" style="display:none">テストケースがありません</div>
+          </div>
+        </section>

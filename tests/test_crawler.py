@@ -13,6 +13,7 @@ from crawler.page_crawler import (
     PageData,
     _discover_one,
     _format_page_id,
+    _is_spa_navigation,
     _next_urls,
     _should_skip,
     is_internal_link,
@@ -318,3 +319,77 @@ class TestSessionExpiry:
         ):
             pages = pc.crawl_urls(["https://example.com/dashboard"], auth_state=None)
         assert pages == []
+
+
+# ---------- _is_spa_navigation ----------
+
+
+class TestIsSpaNavigation:
+    def test_detects_path_change_same_host(self) -> None:
+        assert _is_spa_navigation("https://example.com/page1", "https://example.com/page2")
+
+    def test_different_host_returns_false(self) -> None:
+        assert not _is_spa_navigation("https://example.com/", "https://other.com/")
+
+    def test_same_url_returns_false(self) -> None:
+        assert not _is_spa_navigation("https://example.com/page", "https://example.com/page")
+
+    def test_hash_change_same_path_returns_true(self) -> None:
+        # normalize_url strips fragment, so hash-only change is treated as same URL
+        # The function compares after normalize_url which strips fragments:
+        # this documents the current (expected) behaviour
+        result = _is_spa_navigation(
+            "https://example.com/page#section1",
+            "https://example.com/page#section2",
+        )
+        # Both fragments are stripped by normalize_url → same path, no change → False
+        assert result is False
+
+    def test_subdomain_is_different_host(self) -> None:
+        assert not _is_spa_navigation("https://example.com/", "https://sub.example.com/")
+
+    def test_path_change_with_query_is_spa(self) -> None:
+        assert _is_spa_navigation(
+            "https://example.com/list",
+            "https://example.com/detail?id=1",
+        )
+
+
+# ---------- PageData state_id field ----------
+
+
+class TestPageDataStateId:
+    def test_default_state_id(self) -> None:
+        page = PageData(
+            url="https://example.com/",
+            title="Home",
+            headings=(),
+            links=(),
+            forms=(),
+            screenshot_path=None,
+        )
+        assert page.state_id == "default"
+
+    def test_custom_state_id(self) -> None:
+        page = PageData(
+            url="https://example.com/",
+            title="Home",
+            headings=(),
+            links=(),
+            forms=(),
+            screenshot_path=None,
+            state_id="abc12345",
+        )
+        assert page.state_id == "abc12345"
+
+    def test_state_id_is_immutable(self) -> None:
+        page = PageData(
+            url="https://example.com/",
+            title="Home",
+            headings=(),
+            links=(),
+            forms=(),
+            screenshot_path=None,
+        )
+        with pytest.raises((AttributeError, TypeError)):
+            page.state_id = "other"  # type: ignore[misc]

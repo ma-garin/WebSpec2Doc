@@ -9,6 +9,7 @@ import pytest
 from crawler.link_extractor import (
     _to_field_data,
     _to_form_data,
+    compute_dom_signature,
     extract_buttons,
     extract_forms,
     extract_headings,
@@ -302,3 +303,58 @@ class TestExtractButtons:
         page.eval_on_selector_all.return_value = []
         result = extract_buttons(page)
         assert result == []
+
+
+# ---------- compute_dom_signature ----------
+
+
+class TestComputeDomSignature:
+    def test_returns_default_for_plain_html(self) -> None:
+        html = "<html><body><p>Hello</p></body></html>"
+        assert compute_dom_signature(html) == "default"
+
+    def test_detects_open_dialog(self) -> None:
+        html = '<div role="dialog" id="modal1" aria-modal="true"><p>content</p></div>'
+        result = compute_dom_signature(html)
+        assert result != "default"
+        assert len(result) == 8
+
+    def test_same_elements_produce_same_hash(self) -> None:
+        html_a = '<div role="dialog" id="confirm-dlg"></div>'
+        html_b = '<section role="dialog" id="confirm-dlg"><p>Are you sure?</p></section>'
+        assert compute_dom_signature(html_a) == compute_dom_signature(html_b)
+
+    def test_different_state_produces_different_hash(self) -> None:
+        html_expanded = (
+            '<button aria-expanded="true" id="menu-toggle" aria-controls="nav-menu">'
+            "Menu</button>"
+        )
+        html_collapsed = (
+            '<button aria-expanded="false" id="menu-toggle" aria-controls="nav-menu">'
+            "Menu</button>"
+        )
+        assert compute_dom_signature(html_expanded) != compute_dom_signature(html_collapsed)
+
+    def test_tabpanel_id_is_detected(self) -> None:
+        html = '<div role="tabpanel" id="tab-content-1">Tab 1 content</div>'
+        result = compute_dom_signature(html)
+        assert result != "default"
+
+    def test_form_id_is_included(self) -> None:
+        html = '<form id="login-form" method="post"><input type="text"></form>'
+        result = compute_dom_signature(html)
+        assert result != "default"
+
+    def test_hash_length_is_eight(self) -> None:
+        html = '<div role="dialog" id="x"></div>'
+        result = compute_dom_signature(html)
+        assert len(result) == 8
+
+    def test_duplicate_identifiers_deduplicated(self) -> None:
+        # Same id appearing twice should produce same result as appearing once
+        html_once = '<div role="dialog" id="dlg1"></div>'
+        html_twice = (
+            '<div role="dialog" id="dlg1"></div>'
+            '<span id="dlg1" role="dialog"></span>'
+        )
+        assert compute_dom_signature(html_once) == compute_dom_signature(html_twice)

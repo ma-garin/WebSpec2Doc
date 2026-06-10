@@ -84,6 +84,7 @@ class PageData:
     buttons: tuple[str, ...] = ()
     api_calls: tuple[ApiEndpoint, ...] = ()
     stack_info: StackInfo | None = None
+    state_id: str = "default"   # DOM シグネチャ由来の状態識別子
 
 
 @contextmanager
@@ -248,6 +249,7 @@ def _discover_one(page: Page, url: str, found: list[dict[str, object]]) -> tuple
 def crawl_page(page: Page, url: str, output_dir: Path | None) -> PageData:
     from analyzer.stack_detector import detect_stack
     from crawler.link_extractor import (
+        compute_dom_signature,
         extract_buttons,
         extract_forms,
         extract_headings,
@@ -270,6 +272,8 @@ def crawl_page(page: Page, url: str, output_dir: Path | None) -> PageData:
         links = tuple(extract_internal_links(page, normalized_url))
         forms = tuple(extract_forms(page))
         buttons = tuple(extract_buttons(page))
+        page_html = page.content()
+        state_id = compute_dom_signature(page_html)
     finally:
         capture.detach()
 
@@ -283,6 +287,7 @@ def crawl_page(page: Page, url: str, output_dir: Path | None) -> PageData:
         buttons=buttons,
         api_calls=capture.finalize(),
         stack_info=stack,
+        state_id=state_id,
     )
 
 
@@ -383,6 +388,19 @@ def _netloc_without_default_port(parsed: Any) -> str:
     ):
         return hostname
     return f"{hostname}:{port}" if port else hostname
+
+
+def _is_spa_navigation(prev_url: str, new_url: str) -> bool:
+    """pushState/hashchange による同一ドメイン内の URL 変化かどうかを判定する。
+
+    host が同一でパス or ハッシュが変化した場合に True を返す。
+    """
+    prev = urlparse(normalize_url(prev_url))
+    new = urlparse(normalize_url(new_url))
+    same_host = _netloc_without_default_port(prev) == _netloc_without_default_port(new)
+    path_changed = prev.path != new.path
+    hash_changed = prev.fragment != new.fragment
+    return same_host and (path_changed or hash_changed)
 
 
 def _close_browser(browser: Browser) -> None:

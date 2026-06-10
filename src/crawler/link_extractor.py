@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import hashlib
 import logging
+import re
 from typing import Any, cast
 
 from playwright.sync_api import Page
@@ -11,6 +13,44 @@ DEFAULT_FORM_METHOD = "get"
 EMPTY_TEXT = ""
 
 logger = logging.getLogger(__name__)
+
+
+def compute_dom_signature(html_content: str) -> str:
+    """表示中のインタラクティブ要素の構造ハッシュを計算する。
+
+    モーダル・タブ・アコーディオンの開閉で変化する可視要素の集合が対象。
+    同一 URL で DOM 状態が変わったことを検出するために使用する。
+    """
+    identifiers: list[str] = []
+
+    # role="dialog"|"tabpanel" の id を抽出（属性順不同）
+    for m in re.finditer(
+        r'role=["\'](?:dialog|tabpanel)["\'][^>]*id=["\']([^"\']+)["\']',
+        html_content,
+    ):
+        identifiers.append(m.group(1))
+    for m in re.finditer(
+        r'id=["\']([^"\']+)["\'][^>]*role=["\'](?:dialog|tabpanel)["\']',
+        html_content,
+    ):
+        identifiers.append(m.group(1))
+
+    # aria-expanded="true" の id / aria-controls を抽出
+    for m in re.finditer(
+        r'aria-expanded=["\']true["\'][^>]*(?:id|aria-controls)=["\']([^"\']+)["\']',
+        html_content,
+    ):
+        identifiers.append(m.group(1))
+
+    # <form> の id / name を抽出（prefix で form との区別を明示）
+    for m in re.finditer(r'<form[^>]+(?:id|name)=["\']([^"\']+)["\']', html_content):
+        identifiers.append("form:" + m.group(1))
+
+    if not identifiers:
+        return "default"
+
+    key = "|".join(sorted(set(identifiers)))
+    return hashlib.sha1(key.encode()).hexdigest()[:8]
 
 
 def extract_internal_links(page: Page, base_url: str) -> list[str]:

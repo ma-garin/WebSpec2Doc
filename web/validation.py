@@ -19,7 +19,8 @@ def _clean_formats(raw: str) -> list[str]:
 
 
 def _valid_domain(domain: str) -> bool:
-    return bool(DOMAIN_RE.match(domain))
+    """ドメイン文字列の妥当性を検証する（パストラバーサル防止）。"""
+    return bool(domain) and ".." not in domain and bool(DOMAIN_RE.match(domain))
 
 
 def _safe_auth_path(raw: str) -> str:

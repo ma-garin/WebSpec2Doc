@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import shutil
 import sys
 from datetime import datetime
@@ -13,6 +14,7 @@ from web.summary import _fmt_snap_ts, _summary_for_domain
 from web.validation import _safe_output_path, _valid_domain
 
 bp = Blueprint("history", __name__)
+logger = logging.getLogger(__name__)
 
 
 @bp.get("/api/history")
@@ -70,7 +72,8 @@ def api_delete_site(domain: str) -> dict | tuple[dict, int]:
     try:
         shutil.rmtree(str(target_dir))
     except Exception as e:
-        return {"error": str(e)}, 500
+        logger.exception("サイト削除に失敗しました: domain=%s, error=%s", domain, e)
+        return {"error": "内部エラーが発生しました。ログを確認してください。"}, 500
     return {"ok": True, "domain": domain}
 
 

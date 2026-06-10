@@ -12,17 +12,13 @@ from pathlib import Path
 from flask import Blueprint, request
 
 from web.config import OUTPUT_DIR
+from web.validation import _valid_domain
 
 bp = Blueprint("api_v1", __name__, url_prefix="/api/v1")
 logger = logging.getLogger(__name__)
 
 # スナップショットファイル名の日時パターン: YYYYMMDD-HHMMSS
 _SNAPSHOT_TS_RE = re.compile(r"(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})")
-
-
-def _validate_domain(domain: str) -> bool:
-    """ドメイン文字列にパストラバーサル文字が含まれていないか検証する。"""
-    return ".." not in domain and "/" not in domain and len(domain) > 0
 
 
 def _src_path() -> str:
@@ -67,7 +63,7 @@ def api_sites() -> tuple[dict, int] | dict:
                     site[key] = list(site[key])
     except Exception as exc:
         logger.exception("list_sites に失敗しました: %s", exc)
-        return {"error": str(exc)}, 500
+        return {"error": "内部エラーが発生しました。ログを確認してください。"}, 500
     return {"sites": sites}
 
 
@@ -77,7 +73,7 @@ def api_sites() -> tuple[dict, int] | dict:
 @bp.get("/sites/<domain>/report")
 def api_report(domain: str) -> tuple[dict, int] | dict:
     """指定ドメインの最新 report.json を返す。"""
-    if not _validate_domain(domain):
+    if not _valid_domain(domain):
         return {"error": "invalid domain"}, 400
     report_path = OUTPUT_DIR / domain / "report.json"
     if not report_path.is_file():
@@ -96,7 +92,7 @@ def api_report(domain: str) -> tuple[dict, int] | dict:
 @bp.get("/sites/<domain>/snapshots")
 def api_snapshots(domain: str) -> tuple[dict, int] | dict:
     """スナップショット一覧（ファイル名・タイムスタンプ）を返す。"""
-    if not _validate_domain(domain):
+    if not _valid_domain(domain):
         return {"error": "invalid domain"}, 400
     snaps_dir = OUTPUT_DIR / domain / "snapshots"
     items: list[dict] = []
@@ -112,7 +108,7 @@ def api_snapshots(domain: str) -> tuple[dict, int] | dict:
 @bp.get("/sites/<domain>/diff")
 def api_diff(domain: str) -> tuple[dict, int] | dict:
     """最新 2 スナップショットの差分を返す。"""
-    if not _validate_domain(domain):
+    if not _valid_domain(domain):
         return {"error": "invalid domain"}, 400
     _ensure_src_in_path()
     domain_dir = OUTPUT_DIR / domain
@@ -131,7 +127,7 @@ def api_diff(domain: str) -> tuple[dict, int] | dict:
         diff_result = compute_diff(old_pages, new_pages)
     except Exception as exc:
         logger.exception("差分計算に失敗しました: %s", exc)
-        return {"error": str(exc)}, 500
+        return {"error": "内部エラーが発生しました。ログを確認してください。"}, 500
     return dataclasses.asdict(diff_result)
 
 
@@ -141,7 +137,7 @@ def api_diff(domain: str) -> tuple[dict, int] | dict:
 @bp.post("/sites/<domain>/crawl")
 def api_crawl(domain: str) -> tuple[dict, int] | dict:
     """非同期クロールをトリガーする（スタブ実装）。"""
-    if not _validate_domain(domain):
+    if not _valid_domain(domain):
         return {"error": "invalid domain"}, 400
     body = request.get_json(silent=True) or {}
     logger.info(
@@ -161,7 +157,7 @@ def api_crawl(domain: str) -> tuple[dict, int] | dict:
 @bp.get("/sites/<domain>/test-cases")
 def api_test_cases(domain: str) -> tuple[dict, int] | dict:
     """最新の playwright_candidates.json のテストケース一覧を返す。"""
-    if not _validate_domain(domain):
+    if not _valid_domain(domain):
         return {"error": "invalid domain"}, 400
     candidates_path = OUTPUT_DIR / domain / "playwright_candidates.json"
     if not candidates_path.is_file():

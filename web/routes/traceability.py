@@ -30,7 +30,7 @@ def _load_json_file(path_obj) -> dict | list | None:
 def api_traceability_matrix() -> tuple[dict, int] | dict:
     """report.json + playwright_candidates.json を読んで TraceabilityMatrix を返す。"""
     domain = request.args.get("domain", "").strip()
-    if not domain or not _valid_domain(domain):
+    if not _valid_domain(domain):
         return {"error": "invalid domain"}, 400
 
     domain_dir = OUTPUT_DIR / domain

@@ -3,7 +3,10 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from diff.differ import DiffResult
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +26,7 @@ class ImpactedTest:
 
 
 def analyze_impact(
-    diff_result: Any,  # DiffResult（循環 import 回避のため Any）
+    diff_result: DiffResult,
     candidates: list[dict],  # playwright_candidates.json の candidates リスト
 ) -> list[ImpactedTest]:
     """DiffResult と spec.ts 候補リストを照合し、再実行が必要なテストを返す。"""
@@ -72,7 +75,7 @@ def _candidate_url(candidate: dict) -> str:
 
 
 def _impacts_from_field_changes(
-    diff_result: Any,
+    diff_result: DiffResult,
     candidates: list[dict],
 ) -> list[ImpactedTest]:
     impacts: list[ImpactedTest] = []
@@ -97,7 +100,7 @@ def _impacts_from_field_changes(
 
 
 def _impacts_from_added_pages(
-    diff_result: Any,
+    diff_result: DiffResult,
     candidates: list[dict],
 ) -> list[ImpactedTest]:
     impacts: list[ImpactedTest] = []
@@ -116,7 +119,7 @@ def _impacts_from_added_pages(
 
 
 def _impacts_from_removed_pages(
-    diff_result: Any,
+    diff_result: DiffResult,
     candidates: list[dict],
 ) -> list[ImpactedTest]:
     impacts: list[ImpactedTest] = []
@@ -147,7 +150,7 @@ def _impacts_from_removed_pages(
 
 
 def _impacts_from_attribute_diffs(
-    diff_result: Any,
+    diff_result: DiffResult,
     candidates: list[dict],
 ) -> list[ImpactedTest]:
     impacts: list[ImpactedTest] = []

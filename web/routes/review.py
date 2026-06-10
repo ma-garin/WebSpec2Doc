@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 from datetime import datetime
 from pathlib import Path
 
@@ -13,6 +14,17 @@ from web.validation import _valid_domain
 logger = logging.getLogger(__name__)
 
 bp = Blueprint("review", __name__)
+
+_REVIEW_LOCKS: dict[str, threading.Lock] = {}
+_REVIEW_LOCKS_GUARD = threading.Lock()
+
+
+def _get_review_lock(domain: str) -> threading.Lock:
+    with _REVIEW_LOCKS_GUARD:
+        if domain not in _REVIEW_LOCKS:
+            _REVIEW_LOCKS[domain] = threading.Lock()
+        return _REVIEW_LOCKS[domain]
+
 
 _VALID_STATUSES = frozenset({"draft", "reviewing", "approved", "frozen"})
 
@@ -39,7 +51,9 @@ def _load_review_state(domain: str) -> dict:
 def _save_review_state(domain: str, state: dict) -> None:
     path = _review_state_path(domain)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp_path = path.with_suffix(".tmp")
+    tmp_path.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp_path.replace(path)  # atomic on POSIX
 
 
 def _merge_candidates_with_state(candidates: list[dict], state: dict) -> list[dict]:
@@ -64,7 +78,7 @@ def _merge_candidates_with_state(candidates: list[dict], state: dict) -> list[di
 @bp.get("/review/cases")
 def api_review_cases() -> tuple[dict, int] | dict:
     domain = request.args.get("domain", "").strip()
-    if not domain or not _valid_domain(domain) or ".." in domain:
+    if not _valid_domain(domain):
         return {"error": "invalid domain"}, 400
 
     candidates_path = _candidates_path(domain)
@@ -89,31 +103,33 @@ def api_review_update() -> tuple[dict, int] | dict:
     new_status = str(body.get("status", "")).strip()
     comment = str(body.get("comment", "")).strip()
 
-    if not domain or not _valid_domain(domain) or ".." in domain:
+    if not _valid_domain(domain):
         return {"error": "invalid domain"}, 400
     if new_status not in _VALID_STATUSES:
         return {"error": f"invalid status: {new_status}"}, 400
     if not case_id:
         return {"error": "case_id is required"}, 400
 
-    state = _load_review_state(domain)
-    cases: dict = state.setdefault("cases", {})
-    existing = cases.get(case_id, {})
+    lock = _get_review_lock(domain)
+    with lock:
+        state = _load_review_state(domain)
+        cases: dict = state.setdefault("cases", {})
+        existing = cases.get(case_id, {})
 
-    # frozen への遷移でバージョンをインクリメントする
-    prev_version: int = existing.get("version", 1)
-    new_version = prev_version + 1 if new_status == "frozen" else prev_version
+        # frozen への遷移でバージョンをインクリメントする
+        prev_version: int = existing.get("version", 1)
+        new_version = prev_version + 1 if new_status == "frozen" else prev_version
 
-    cases[case_id] = {
-        "status": new_status,
-        "comment": comment,
-        "version": new_version,
-        "reviewed_at": datetime.now().isoformat(timespec="seconds"),
-    }
-    state["domain"] = domain
-    state["updated_at"] = datetime.now().isoformat(timespec="seconds")
+        cases[case_id] = {
+            "status": new_status,
+            "comment": comment,
+            "version": new_version,
+            "reviewed_at": datetime.now().isoformat(timespec="seconds"),
+        }
+        state["domain"] = domain
+        state["updated_at"] = datetime.now().isoformat(timespec="seconds")
 
-    _save_review_state(domain, state)
+        _save_review_state(domain, state)
     return {"ok": True, "case_id": case_id, "status": new_status, "version": new_version}
 
 
@@ -122,7 +138,7 @@ def api_review_export() -> tuple[dict, int] | dict:
     domain = request.args.get("domain", "").strip()
     filter_mode = request.args.get("filter", "all").strip()
 
-    if not domain or not _valid_domain(domain) or ".." in domain:
+    if not _valid_domain(domain):
         return {"error": "invalid domain"}, 400
 
     candidates_path = _candidates_path(domain)

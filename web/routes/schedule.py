@@ -63,19 +63,11 @@ def _calc_next_run_at(interval: str) -> str | None:
     return None
 
 
-def _validate_domain(domain: str) -> str | None:
-    """Return error string if domain is invalid, else None."""
-    if not domain or ".." in domain or not _valid_domain(domain):
-        return "invalid domain"
-    return None
-
-
 @bp.get("/schedule/config")
 def api_schedule_config_get() -> tuple[dict, int] | dict:
     domain = request.args.get("domain", "").strip()
-    err = _validate_domain(domain)
-    if err:
-        return {"error": err}, 400
+    if not _valid_domain(domain):
+        return {"error": "invalid domain"}, 400
     return _load_config(domain)
 
 
@@ -83,9 +75,8 @@ def api_schedule_config_get() -> tuple[dict, int] | dict:
 def api_schedule_config_post() -> tuple[dict, int] | dict:
     body = request.get_json(silent=True) or {}
     domain = str(body.get("domain", "")).strip()
-    err = _validate_domain(domain)
-    if err:
-        return {"error": err}, 400
+    if not _valid_domain(domain):
+        return {"error": "invalid domain"}, 400
 
     interval = str(body.get("interval", "")).strip()
     if interval not in _VALID_INTERVALS:
@@ -127,9 +118,8 @@ def api_schedule_config_post() -> tuple[dict, int] | dict:
 def api_schedule_run_now() -> tuple[dict, int] | dict:
     body = request.get_json(silent=True) or {}
     domain = str(body.get("domain", "")).strip()
-    err = _validate_domain(domain)
-    if err:
-        return {"error": err}, 400
+    if not _valid_domain(domain):
+        return {"error": "invalid domain"}, 400
 
     config = _load_config(domain)
     now_iso = datetime.now().isoformat(timespec="seconds")
@@ -148,9 +138,8 @@ def api_schedule_run_now() -> tuple[dict, int] | dict:
 @bp.get("/schedule/status")
 def api_schedule_status() -> tuple[dict, int] | dict:
     domain = request.args.get("domain", "").strip()
-    err = _validate_domain(domain)
-    if err:
-        return {"error": err}, 400
+    if not _valid_domain(domain):
+        return {"error": "invalid domain"}, 400
 
     config = _load_config(domain)
     return {

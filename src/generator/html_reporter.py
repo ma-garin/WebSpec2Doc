@@ -352,7 +352,7 @@ def _field_row(field: FieldData) -> str:
     )
 
 
-def _constraints_text(field) -> str:
+def _constraints_text(field: FieldData) -> str:
     parts: list[str] = []
     if field.maxlength is not None:
         parts.append(f"最大{field.maxlength}文字")
@@ -369,7 +369,7 @@ def _constraints_text(field) -> str:
     return " / ".join(parts)
 
 
-def _default_options_text(field) -> str:
+def _default_options_text(field: FieldData) -> str:
     if field.options:
         shown = ", ".join(o for o in field.options if o)
         return shown[:120] or "(空の選択肢)"
@@ -451,7 +451,7 @@ def _scrollspy_script() -> str:
 
 def _mermaid_script() -> str:
     return (
-        '<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>'
+        '<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>'
         "<script>mermaid.initialize({startOnLoad:true,theme:'default'});</script>"
     )
 

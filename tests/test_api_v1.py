@@ -214,26 +214,34 @@ def test_api_domain_traversal_rejected(tmp_path: Path, monkeypatch: pytest.Monke
     assert resp.status_code in (400, 404)
 
 
-# ─────────────────────────── _validate_domain ユニットテスト ───────────────────────────
+# ─────────────────────────── _valid_domain ユニットテスト（web.validation に統一済み）───────────────────────────
 
 
 def test_validate_domain_valid() -> None:
-    assert api_v1_mod._validate_domain("example.com") is True
-    assert api_v1_mod._validate_domain("localhost:8765") is True
-    assert api_v1_mod._validate_domain("sub.domain.co.jp") is True
+    from web.validation import _valid_domain
+
+    assert _valid_domain("example.com") is True
+    assert _valid_domain("localhost:8765") is True
+    assert _valid_domain("sub.domain.co.jp") is True
 
 
 def test_validate_domain_rejects_traversal() -> None:
-    assert api_v1_mod._validate_domain("../etc") is False
-    assert api_v1_mod._validate_domain("foo/../bar") is False
+    from web.validation import _valid_domain
+
+    assert _valid_domain("../etc") is False
+    assert _valid_domain("foo/../bar") is False
 
 
 def test_validate_domain_rejects_slash() -> None:
-    assert api_v1_mod._validate_domain("foo/bar") is False
+    from web.validation import _valid_domain
+
+    assert _valid_domain("foo/bar") is False
 
 
 def test_validate_domain_rejects_empty() -> None:
-    assert api_v1_mod._validate_domain("") is False
+    from web.validation import _valid_domain
+
+    assert _valid_domain("") is False
 
 
 # ─────────────────────────── _snapshot_ts_to_iso ユニットテスト ───────────────────────────

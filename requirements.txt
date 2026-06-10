@@ -4,9 +4,6 @@ playwright==1.44.0
 # グラフ処理
 networkx==3.3
 
-# LLM
-anthropic==0.28.0
-
 # テンプレート
 jinja2==3.1.6
 

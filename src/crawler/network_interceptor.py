@@ -80,8 +80,8 @@ class NetworkCapture:
         if self._page is not None and self._handler is not None:
             try:
                 self._page.remove_listener("response", self._handler)
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("レスポンスリスナー解除時にエラーが発生しました: %s", exc)
         self._page = None
         self._handler = None
 
@@ -121,7 +121,8 @@ class NetworkCapture:
 
         try:
             method = response.request.method.upper()
-        except Exception:
+        except Exception as exc:
+            logger.debug("リクエストメソッド取得エラー: %s", exc)
             method = "GET"
 
         sample_fields: tuple[str, ...] = ()
@@ -142,6 +143,6 @@ def _extract_response_fields(response: Response) -> tuple[str, ...]:
             return tuple(list(data.keys())[:SAMPLE_FIELDS_LIMIT])
         if isinstance(data, list) and data and isinstance(data[0], dict):
             return tuple(list(data[0].keys())[:SAMPLE_FIELDS_LIMIT])
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("JSON レスポンスフィールド抽出エラー: %s", exc)
     return ()

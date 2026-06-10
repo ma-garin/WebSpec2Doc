@@ -112,10 +112,10 @@ def generate_pairwise_cases(fields: list[FieldData]) -> list[dict[str, str]]:
     rest_vals = rep_values[1:]
 
     max_rest_len = max(len(v) for v in rest_vals)
-    for fi, fval in enumerate(first_vals):
+    for _fi, fval in enumerate(first_vals):
         for ri in range(max_rest_len):
             row: dict[str, str] = {active[0].name: fval}
-            for j, (rf, rv) in enumerate(zip(rest_fields, rest_vals)):
+            for _j, (rf, rv) in enumerate(zip(rest_fields, rest_vals, strict=False)):
                 row[rf.name] = rv[ri % len(rv)]
             cases.append(row)
             if len(cases) >= _MAX_PAIRWISE_CASES:

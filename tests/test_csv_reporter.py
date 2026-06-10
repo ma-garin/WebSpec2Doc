@@ -5,8 +5,6 @@ from __future__ import annotations
 import csv
 from pathlib import Path
 
-import pytest
-
 from crawler.page_crawler import FieldData, FormData, PageData
 from generator.csv_reporter import generate_csv_report, generate_testcase_csv
 

@@ -11,7 +11,7 @@ from email.mime.text import MIMEText
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from src.diff.differ import DiffResult
+    pass
 
 logger = logging.getLogger(__name__)
 

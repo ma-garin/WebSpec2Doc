@@ -6,8 +6,6 @@ import csv
 import sys
 from pathlib import Path
 
-import pytest
-
 # web/ をパスに追加
 sys.path.insert(0, str(Path(__file__).parent.parent / "web"))
 

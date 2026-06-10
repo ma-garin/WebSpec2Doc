@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pytest
-
 from web.services.failure_classifier import (
     FAILURE_APP_CHANGE,
     FAILURE_ENV_ISSUE,
@@ -12,7 +11,6 @@ from web.services.failure_classifier import (
     classify_failures,
     summarize_classifications,
 )
-
 
 # ─────────────────────── classify_failure ───────────────────────
 

@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import urllib.error
 from dataclasses import dataclass
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
-
 from web.services.notifier import (
     NOTIFIER_EMAIL,
     NOTIFIER_SLACK,
@@ -15,7 +14,6 @@ from web.services.notifier import (
     build_notification,
     send_drift_notification,
 )
-
 
 # ─────────────────────── ダミー DiffResult ───────────────────────
 

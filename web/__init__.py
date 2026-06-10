@@ -13,6 +13,7 @@ if str(_SRC) not in sys.path:
 
 def create_app() -> Flask:
     from web.routes import (
+        api_v1,
         auto_run,
         crawl,
         discover,
@@ -25,6 +26,7 @@ def create_app() -> Flask:
         schedule,
         settings,
         site,
+        traceability,
     )
     from web.security import csrf_guard
 
@@ -46,4 +48,6 @@ def create_app() -> Flask:
     app.register_blueprint(auto_run.bp)
     app.register_blueprint(review.bp)
     app.register_blueprint(schedule.bp)
+    app.register_blueprint(api_v1.bp)
+    app.register_blueprint(traceability.traceability_bp)
     return app

@@ -11,6 +11,7 @@ import logging
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
+from typing import Any
 
 from llm.screen_classifier import (
     _LLM_MODEL,
@@ -34,6 +35,17 @@ class TestViewpoint:
     viewpoint: str
     risk_level: str  # "高" / "中" / "低"
     example_cases: tuple[str, ...]  # 2〜3 件
+
+
+@dataclass(frozen=True)
+class AbnormalScenario:
+    scenario_id: str       # 例: "AS001"
+    category: str          # "入力値異常" / "認証" / "ネットワーク" / "業務フロー" / "セキュリティ"
+    title: str             # シナリオタイトル
+    description: str       # 詳細説明（日本語）
+    affected_fields: tuple[str, ...]  # 影響フィールド名
+    risk_level: str        # "高" / "中" / "低"
+    test_steps: tuple[str, ...]  # テストステップ（日本語）
 
 
 # ---------- ルールベース生成 ----------
@@ -185,6 +197,315 @@ def _field_viewpoints(field_data_list: list) -> list[TestViewpoint]:
             )
         )
     return viewpoints
+
+
+# ---------- 異常系シナリオ生成（ルールベース） ----------
+
+
+def generate_abnormal_scenarios_by_rules(
+    screen_classification: Any,  # ScreenClassification
+    field_data_list: list,       # list[FieldData]
+) -> list[AbnormalScenario]:
+    """画面分類とフィールド情報からルールベースで異常系シナリオを生成する。"""
+    raw: list[AbnormalScenario] = []
+
+    raw.extend(_common_abnormal_scenarios())
+    raw.extend(_screen_type_abnormal_scenarios(screen_classification.screen_type))
+    raw.extend(_field_abnormal_scenarios(field_data_list))
+
+    seen: set[str] = set()
+    unique: list[AbnormalScenario] = []
+    for s in raw:
+        if s.title not in seen:
+            seen.add(s.title)
+            unique.append(s)
+
+    return [
+        AbnormalScenario(
+            scenario_id=f"AS{i + 1:03d}",
+            category=s.category,
+            title=s.title,
+            description=s.description,
+            affected_fields=s.affected_fields,
+            risk_level=s.risk_level,
+            test_steps=s.test_steps,
+        )
+        for i, s in enumerate(unique)
+    ]
+
+
+def _make_scenario(**kwargs: Any) -> AbnormalScenario:
+    """一時的な scenario_id="AS000" で AbnormalScenario を生成するヘルパー。"""
+    return AbnormalScenario(
+        scenario_id="AS000",
+        category=kwargs["category"],
+        title=kwargs["title"],
+        description=kwargs["description"],
+        affected_fields=kwargs.get("affected_fields", ()),
+        risk_level=kwargs["risk_level"],
+        test_steps=kwargs["test_steps"],
+    )
+
+
+def _common_abnormal_scenarios() -> list[AbnormalScenario]:
+    """全画面共通の異常系シナリオを返す。"""
+    return [
+        _make_scenario(
+            category="セキュリティ",
+            title="SQLインジェクション攻撃",
+            description="文字列フィールドに ' OR 1=1 -- を入力してSQLインジェクションを試みる。",
+            affected_fields=(),
+            risk_level="高",
+            test_steps=(
+                "対象画面を開く",
+                "文字列入力フィールドに ' OR 1=1 -- を入力する",
+                "送信し、エラーメッセージまたは異常な応答が返らないことを確認する",
+            ),
+        ),
+        _make_scenario(
+            category="セキュリティ",
+            title="XSS（クロスサイトスクリプティング）攻撃",
+            description="文字列フィールドに <script>alert(1)</script> を入力してXSSを試みる。",
+            affected_fields=(),
+            risk_level="高",
+            test_steps=(
+                "対象画面を開く",
+                "文字列入力フィールドに <script>alert(1)</script> を入力する",
+                "送信し、スクリプトが実行されないことを確認する",
+            ),
+        ),
+        _make_scenario(
+            category="入力値異常",
+            title="超長文字列入力",
+            description="文字列フィールドに10,000文字の入力を行い、システムの挙動を確認する。",
+            affected_fields=(),
+            risk_level="中",
+            test_steps=(
+                "対象画面を開く",
+                "文字列入力フィールドに10,000文字の文字列を入力する",
+                "送信し、適切なエラーまたは制限が働くことを確認する",
+            ),
+        ),
+        _make_scenario(
+            category="入力値異常",
+            title="nullバイト混入",
+            description="文字列フィールドにnullバイト（\\x00）を含む文字列を入力してシステムの挙動を確認する。",
+            affected_fields=(),
+            risk_level="中",
+            test_steps=(
+                "対象画面を開く",
+                "文字列入力フィールドにnullバイト（\\x00）を含む文字列を入力する",
+                "送信し、異常な挙動が発生しないことを確認する",
+            ),
+        ),
+    ]
+
+
+def _screen_type_abnormal_scenarios(screen_type: str) -> list[AbnormalScenario]:
+    """画面種別固有の異常系シナリオを返す。"""
+    if screen_type == SCREEN_AUTH:
+        return [
+            _make_scenario(
+                category="認証",
+                title="ブルートフォース攻撃（連続ログイン失敗）",
+                description="同一IPから100回連続でログイン失敗を試み、アカウントロックが機能することを確認する。",
+                affected_fields=(),
+                risk_level="高",
+                test_steps=(
+                    "ログインページを開く",
+                    "パスワードフィールドに100回連続で誤ったパスワードを入力する",
+                    "アカウントロックが発生することを確認する",
+                ),
+            ),
+            _make_scenario(
+                category="認証",
+                title="セッション固定攻撃",
+                description="ログイン前後でsession_idが変わらない脆弱性を確認する。",
+                affected_fields=(),
+                risk_level="高",
+                test_steps=(
+                    "ログイン前のsession_idを記録する",
+                    "正常にログインする",
+                    "ログイン後のsession_idがログイン前と異なることを確認する",
+                ),
+            ),
+            _make_scenario(
+                category="ユーザビリティ",
+                title="パスワードのクリップボード貼り付けログイン",
+                description="パスワードをクリップボードから貼り付けてログインできることを確認する。",
+                affected_fields=(),
+                risk_level="低",
+                test_steps=(
+                    "ログインページを開く",
+                    "パスワードをクリップボードにコピーする",
+                    "パスワードフィールドに貼り付けてログインする",
+                    "正常にログインできることを確認する",
+                ),
+            ),
+        ]
+    if screen_type == SCREEN_PAYMENT:
+        return [
+            _make_scenario(
+                category="業務フロー",
+                title="決済の二重送信",
+                description="ネットワーク遅延中にsubmitボタンを2回クリックして二重課金が発生しないことを確認する。",
+                affected_fields=(),
+                risk_level="高",
+                test_steps=(
+                    "決済画面を開き、決済情報を入力する",
+                    "ネットワーク遅延を模擬した状態でsubmitボタンを2回クリックする",
+                    "決済が1回のみ処理されることを確認する",
+                ),
+            ),
+            _make_scenario(
+                category="業務フロー",
+                title="決済中のブラウザバック",
+                description="決済処理中にブラウザの戻るボタンを押して、データ不整合が発生しないことを確認する。",
+                affected_fields=(),
+                risk_level="高",
+                test_steps=(
+                    "決済画面を開き、決済情報を入力して送信する",
+                    "処理中にブラウザの戻るボタンを押す",
+                    "決済状態およびデータに不整合が発生しないことを確認する",
+                ),
+            ),
+            _make_scenario(
+                category="業務フロー",
+                title="タイムアウト直前の送信",
+                description="セッションタイムアウト直前に決済を送信し、適切なエラーハンドリングが行われることを確認する。",
+                affected_fields=(),
+                risk_level="中",
+                test_steps=(
+                    "決済画面を開き、セッションがタイムアウト直前になるまで待つ",
+                    "決済情報を入力して送信する",
+                    "タイムアウトエラーまたは適切なメッセージが表示されることを確認する",
+                ),
+            ),
+        ]
+    return []
+
+
+def _field_abnormal_scenarios(field_data_list: list) -> list[AbnormalScenario]:
+    """フィールド属性から異常系シナリオを生成する。"""
+    scenarios: list[AbnormalScenario] = []
+
+    required_fields = [
+        getattr(f, "name", "") for f in field_data_list if getattr(f, "required", False)
+    ]
+    if required_fields:
+        scenarios.append(
+            _make_scenario(
+                category="入力値異常",
+                title="必須フィールドを空にして送信",
+                description="必須フィールドを空のまま送信し、バリデーションエラーが発生することを確認する。",
+                affected_fields=tuple(required_fields),
+                risk_level="中",
+                test_steps=(
+                    "対象画面を開く",
+                    "必須フィールドを空のままにする",
+                    "送信ボタンをクリックし、バリデーションエラーが表示されることを確認する",
+                ),
+            )
+        )
+
+    maxlength_fields = [
+        (getattr(f, "name", ""), getattr(f, "maxlength", None))
+        for f in field_data_list
+        if getattr(f, "maxlength", None) is not None
+    ]
+    if maxlength_fields:
+        field_name, maxlength = maxlength_fields[0]
+        scenarios.append(
+            _make_scenario(
+                category="入力値異常",
+                title="maxlength+1文字を入力して送信",
+                description=f"最大文字数（{maxlength}）を超える文字列を入力して送信し、適切なエラーが発生することを確認する。",
+                affected_fields=(field_name,) if field_name else (),
+                risk_level="低",
+                test_steps=(
+                    "対象画面を開く",
+                    f"maxlength制限のあるフィールドに{maxlength}+1文字を入力する",
+                    "送信し、入力または送信が拒否されることを確認する",
+                ),
+            )
+        )
+
+    return scenarios
+
+
+# ---------- LLM 版（異常系シナリオ） ----------
+
+
+def generate_abnormal_scenarios_with_llm(
+    screen_classification: Any,
+    field_data_list: list,
+    api_key: str = "",
+) -> list[AbnormalScenario]:
+    """LLMを使って異常系シナリオを生成し、失敗時はルールベースへフォールバックする。"""
+    if not api_key:
+        logger.info("api_key が未設定のためルールベースにフォールバックします。")
+        return generate_abnormal_scenarios_by_rules(screen_classification, field_data_list)
+    try:
+        import openai  # noqa: F401
+    except ImportError:
+        logger.warning("openai パッケージが見つからないためルールベースにフォールバックします。")
+        return generate_abnormal_scenarios_by_rules(screen_classification, field_data_list)
+    try:
+        return _call_llm_for_abnormal_scenarios(screen_classification, field_data_list, api_key)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("LLM abnormal scenario generation failed, falling back to rules: %s", exc)
+        return generate_abnormal_scenarios_by_rules(screen_classification, field_data_list)
+
+
+def _call_llm_for_abnormal_scenarios(
+    screen_classification: Any,
+    field_data_list: list,
+    api_key: str,
+) -> list[AbnormalScenario]:
+    """OpenAI API を呼び出して異常系シナリオ JSON 配列を取得する。"""
+    screen_info = {
+        "screen_type": screen_classification.screen_type,
+        "field_count": len(field_data_list),
+    }
+    prompt = (
+        "あなたは QA エンジニアです。以下の Web 画面情報に基づき異常系テストシナリオを JSON 配列で返してください。\n"
+        f"画面情報: {json.dumps(screen_info, ensure_ascii=False)}\n\n"
+        "各要素は以下のキーを持つこと: "
+        "category(入力値異常/認証/ネットワーク/業務フロー/セキュリティ), "
+        "title(シナリオタイトル), description(詳細説明), "
+        "affected_fields(影響フィールド名の配列), "
+        "risk_level(高/中/低), test_steps(テストステップ配列 2〜4 件)"
+    )
+    payload = {
+        "model": _LLM_MODEL,
+        "messages": [{"role": "user", "content": prompt}],
+        "response_format": {"type": "json_object"},
+        "temperature": 0,
+    }
+    request = urllib.request.Request(
+        _OPENAI_CHAT_URL,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(request, timeout=30) as resp:  # nosec B310
+        data = json.loads(resp.read().decode("utf-8"))
+    text = data["choices"][0]["message"]["content"]
+    parsed = json.loads(text)
+    items = parsed if isinstance(parsed, list) else parsed.get("scenarios", [])
+    raw = [
+        AbnormalScenario(
+            scenario_id=f"AS{i + 1:03d}",
+            category=str(item["category"]),
+            title=str(item["title"]),
+            description=str(item["description"]),
+            affected_fields=tuple(str(f) for f in item.get("affected_fields", [])),
+            risk_level=str(item["risk_level"]),
+            test_steps=tuple(str(s) for s in item.get("test_steps", [])),
+        )
+        for i, item in enumerate(items)
+    ]
+    return raw
 
 
 # ---------- LLM 版 ----------

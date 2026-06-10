@@ -12,6 +12,7 @@ from crawler.link_extractor import (
     compute_dom_signature,
     extract_buttons,
     extract_forms,
+    extract_forms_including_frames,
     extract_headings,
     extract_internal_links,
     extract_page_title,
@@ -355,3 +356,68 @@ class TestComputeDomSignature:
         html_once = '<div role="dialog" id="dlg1"></div>'
         html_twice = '<div role="dialog" id="dlg1"></div>' '<span id="dlg1" role="dialog"></span>'
         assert compute_dom_signature(html_once) == compute_dom_signature(html_twice)
+
+
+# ---------- extract_forms_including_frames ----------
+
+
+class TestExtractFormsIncludingFrames:
+    def _make_page(self, forms_raw: list[dict], extra_frames: list[MagicMock] | None = None) -> MagicMock:
+        page = MagicMock()
+        # eval_on_selector_all used by extract_forms (main frame)
+        page.eval_on_selector_all.return_value = forms_raw
+        main_frame = MagicMock()
+        page.main_frame = main_frame
+        page.frames = [main_frame] + (extra_frames or [])
+        return page
+
+    def test_no_iframes_returns_main_forms(self) -> None:
+        raw = [{"action": "/search", "method": "get", "fields": []}]
+        page = self._make_page(raw)
+        result = extract_forms_including_frames(page)
+        assert len(result) == 1
+        assert result[0].action == "/search"
+
+    def test_empty_page_returns_empty(self) -> None:
+        page = self._make_page([])
+        result = extract_forms_including_frames(page)
+        assert result == []
+
+    def test_iframe_forms_appended(self) -> None:
+        frame = MagicMock()
+        frame.eval_on_selector_all.return_value = [
+            {"action": "/iframe-form", "method": "post", "fields": []}
+        ]
+        raw_main = [{"action": "/main-form", "method": "get", "fields": []}]
+        page = self._make_page(raw_main, extra_frames=[frame])
+        result = extract_forms_including_frames(page)
+        actions = [f.action for f in result]
+        assert "/main-form" in actions
+        assert "/iframe-form" in actions
+
+    def test_iframe_duplicate_action_not_duplicated(self) -> None:
+        frame = MagicMock()
+        frame.eval_on_selector_all.return_value = [
+            {"action": "/shared", "method": "post", "fields": []}
+        ]
+        raw_main = [{"action": "/shared", "method": "get", "fields": []}]
+        page = self._make_page(raw_main, extra_frames=[frame])
+        result = extract_forms_including_frames(page)
+        assert len([f for f in result if f.action == "/shared"]) == 1
+
+    def test_cross_origin_iframe_skipped_on_error(self) -> None:
+        from playwright.sync_api import Error as PlaywrightError
+
+        frame = MagicMock()
+        frame.eval_on_selector_all.side_effect = PlaywrightError("cross-origin")
+        raw_main = [{"action": "/main", "method": "get", "fields": []}]
+        page = self._make_page(raw_main, extra_frames=[frame])
+        result = extract_forms_including_frames(page)
+        # Only the main frame form is returned
+        assert len(result) == 1
+        assert result[0].action == "/main"
+
+    def test_returns_list_type(self) -> None:
+        page = self._make_page([])
+        result = extract_forms_including_frames(page)
+        assert isinstance(result, list)

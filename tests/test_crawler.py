@@ -355,6 +355,145 @@ class TestIsSpaNavigation:
         )
 
 
+# ---------- _dummy_value ----------
+
+
+def test_dummy_value_email():
+    from crawler.page_crawler import _dummy_value
+
+    from crawler.page_crawler import FieldData
+    assert _dummy_value(FieldData("email", "email", "", False)) == "test@example.com"
+
+
+def test_dummy_value_password():
+    from crawler.page_crawler import _dummy_value, FieldData
+
+    assert _dummy_value(FieldData("password", "pwd", "", False)) == "Test1234!"
+
+
+def test_dummy_value_number_with_min():
+    from crawler.page_crawler import _dummy_value, FieldData
+
+    assert _dummy_value(FieldData("number", "qty", "", False, min_value="5")) == "5"
+
+
+def test_dummy_value_number_no_min():
+    from crawler.page_crawler import _dummy_value, FieldData
+
+    assert _dummy_value(FieldData("number", "qty", "", False)) == "1"
+
+
+def test_dummy_value_date():
+    from crawler.page_crawler import _dummy_value, FieldData
+
+    assert _dummy_value(FieldData("date", "dt", "", False)) == "2024-01-01"
+
+
+def test_dummy_value_checkbox():
+    from crawler.page_crawler import _dummy_value, FieldData
+
+    assert _dummy_value(FieldData("checkbox", "agree", "", False)) == "checked"
+
+
+def test_dummy_value_select_with_options():
+    from crawler.page_crawler import _dummy_value, FieldData
+
+    field = FieldData("select", "country", "", False, options=("jp", "us"))
+    assert _dummy_value(field) == "jp"
+
+
+def test_dummy_value_select_no_options():
+    from crawler.page_crawler import _dummy_value, FieldData
+
+    field = FieldData("select", "country", "", False)
+    assert _dummy_value(field) == ""
+
+
+def test_dummy_value_text():
+    from crawler.page_crawler import _dummy_value, FieldData
+
+    assert _dummy_value(FieldData("text", "name", "", False)) == "テスト入力値"
+
+
+def test_dummy_value_textarea():
+    from crawler.page_crawler import _dummy_value, FieldData
+
+    assert _dummy_value(FieldData("textarea", "body", "", False)) == "テスト入力値"
+
+
+def test_dummy_value_maxlength_truncates():
+    from crawler.page_crawler import _dummy_value, FieldData
+
+    v = _dummy_value(FieldData("text", "name", "", False, maxlength=3))
+    assert len(v) <= 3
+
+
+def test_dummy_value_maxlength_no_truncation_when_short():
+    from crawler.page_crawler import _dummy_value, FieldData
+
+    v = _dummy_value(FieldData("email", "em", "", False, maxlength=100))
+    assert v == "test@example.com"
+
+
+# ---------- _is_sensitive_form ----------
+
+
+def test_is_sensitive_form_payment():
+    from crawler.page_crawler import _is_sensitive_form, FormData
+
+    form = FormData(action="/payment/confirm", method="post", fields=())
+    assert _is_sensitive_form(form) is True
+
+
+def test_is_sensitive_form_checkout():
+    from crawler.page_crawler import _is_sensitive_form, FormData
+
+    form = FormData(action="/checkout", method="post", fields=())
+    assert _is_sensitive_form(form) is True
+
+
+def test_is_sensitive_form_billing():
+    from crawler.page_crawler import _is_sensitive_form, FormData
+
+    form = FormData(action="/billing/address", method="post", fields=())
+    assert _is_sensitive_form(form) is True
+
+
+def test_is_sensitive_form_personal():
+    from crawler.page_crawler import _is_sensitive_form, FormData
+
+    form = FormData(action="/personal/info", method="post", fields=())
+    assert _is_sensitive_form(form) is True
+
+
+def test_is_sensitive_form_private():
+    from crawler.page_crawler import _is_sensitive_form, FormData
+
+    form = FormData(action="/private/data", method="post", fields=())
+    assert _is_sensitive_form(form) is True
+
+
+def test_is_sensitive_form_general():
+    from crawler.page_crawler import _is_sensitive_form, FormData
+
+    form = FormData(action="/contact/submit", method="post", fields=())
+    assert _is_sensitive_form(form) is False
+
+
+def test_is_sensitive_form_empty_action():
+    from crawler.page_crawler import _is_sensitive_form, FormData
+
+    form = FormData(action="", method="post", fields=())
+    assert _is_sensitive_form(form) is False
+
+
+def test_is_sensitive_form_case_insensitive():
+    from crawler.page_crawler import _is_sensitive_form, FormData
+
+    form = FormData(action="/PAYMENT/confirm", method="post", fields=())
+    assert _is_sensitive_form(form) is True
+
+
 # ---------- PageData state_id field ----------
 
 

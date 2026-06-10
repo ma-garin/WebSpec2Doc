@@ -36,6 +36,13 @@ SCREENSHOTS_DIR_NAME = "screenshots"
 USER_AGENT = "WebSpec2Doc"
 NEXT_DEPTH_INCREMENT = 1
 
+_SENSITIVE_KEYWORDS = ("payment", "checkout", "billing", "personal", "private")
+_DUMMY_EMAIL = "test@example.com"
+_DUMMY_PASSWORD = "Test1234!"
+_DUMMY_DATE = "2024-01-01"
+_DUMMY_NUMBER = "1"
+_DUMMY_TEXT = "テスト入力値"
+
 logger = logging.getLogger(__name__)
 
 
@@ -251,7 +258,7 @@ def crawl_page(page: Page, url: str, output_dir: Path | None) -> PageData:
     from crawler.link_extractor import (
         compute_dom_signature,
         extract_buttons,
-        extract_forms,
+        extract_forms_including_frames,
         extract_headings,
         extract_internal_links,
         extract_page_title,
@@ -270,7 +277,7 @@ def crawl_page(page: Page, url: str, output_dir: Path | None) -> PageData:
         title = extract_page_title(page)
         headings = tuple(extract_headings(page))
         links = tuple(extract_internal_links(page, normalized_url))
-        forms = tuple(extract_forms(page))
+        forms = tuple(extract_forms_including_frames(page))
         buttons = tuple(extract_buttons(page))
         page_html = page.content()
         state_id = compute_dom_signature(page_html)
@@ -401,6 +408,179 @@ def _is_spa_navigation(prev_url: str, new_url: str) -> bool:
     path_changed = prev.path != new.path
     hash_changed = prev.fragment != new.fragment
     return same_host and (path_changed or hash_changed)
+
+
+def _is_sensitive_form(form_data: FormData) -> bool:
+    """決済・個人情報フォームか判定する（action URL にキーワードが含まれる場合）。"""
+    action_lower = form_data.action.lower()
+    return any(kw in action_lower for kw in _SENSITIVE_KEYWORDS)
+
+
+def _dummy_value(field: FieldData) -> str:
+    """フィールド種別に応じたダミー値を返す。maxlength がある場合は truncate する。"""
+    ftype = field.field_type.lower()
+    if ftype == "email":
+        value = _DUMMY_EMAIL
+    elif ftype == "password":
+        value = _DUMMY_PASSWORD
+    elif ftype in ("number", "range"):
+        value = field.min_value if field.min_value else _DUMMY_NUMBER
+    elif ftype == "date":
+        value = _DUMMY_DATE
+    elif ftype == "checkbox":
+        value = "checked"
+    elif ftype == "select":
+        value = field.options[0] if field.options else ""
+    else:
+        value = _DUMMY_TEXT
+    if field.maxlength is not None and len(value) > field.maxlength:
+        value = value[: field.maxlength]
+    return value
+
+
+def _fill_form_fields(page: Page, form_data: FormData) -> None:
+    """フォームの各フィールドにダミー値を入力する。"""
+    for field in form_data.fields:
+        if not field.name and not field.element_id:
+            continue
+        selector = (
+            f"#{field.element_id}" if field.element_id else f"[name='{field.name}']"
+        )
+        ftype = field.field_type.lower()
+        try:
+            if ftype == "checkbox":
+                page.check(selector)
+            elif ftype == "select":
+                val = field.options[0] if field.options else None
+                if val:
+                    page.select_option(selector, val)
+            else:
+                dummy = _dummy_value(field)
+                if dummy:
+                    page.fill(selector, dummy)
+        except PlaywrightError as exc:
+            logger.warning("フィールド入力をスキップしました: %s (%s)", selector, exc)
+
+
+def crawl_form_flow(
+    page: Page,
+    form_data: FormData,
+    output_dir: Path | None = None,
+    page_id_prefix: str = "F",
+    dry_run: bool = True,
+) -> list[PageData]:
+    """フォームにダミー値を入力し送信後の画面を取得する。
+
+    dry_run=True: submit をインターセプトしてキャンセルし、確認画面への遷移は試みない。
+    dry_run=False: 実際に送信（副作用あり・本番環境での使用禁止）。
+    決済/個人情報フォームは action URL に "payment"/"checkout"/"billing"/"personal"/"private"
+    が含まれる場合は dry_run=True を強制する。
+    """
+    if _is_sensitive_form(form_data):
+        dry_run = True
+
+    try:
+        _fill_form_fields(page, form_data)
+    except PlaywrightError as exc:
+        logger.warning("フォームへの入力に失敗しました: %s", exc)
+        return []
+
+    if dry_run:
+        return _crawl_form_dry_run(page, form_data, output_dir, page_id_prefix)
+    return _crawl_form_submit(page, form_data, output_dir, page_id_prefix)
+
+
+def _crawl_form_dry_run(
+    page: Page,
+    form_data: FormData,
+    output_dir: Path | None,
+    page_id_prefix: str,
+) -> list[PageData]:
+    """submit をインターセプトしてキャンセルし、現在ページの PageData を返す。"""
+    prev_url = page.url
+
+    def _abort(route: Any) -> None:
+        try:
+            route.abort()
+        except PlaywrightError:
+            pass
+
+    try:
+        page.route("**", _abort)
+        selector = (
+            f"form[action='{form_data.action}'] [type=submit]"
+            if form_data.action
+            else "[type=submit]"
+        )
+        page.click(selector, timeout=3_000)
+    except PlaywrightError as exc:
+        logger.warning("dry_run submit クリックをスキップしました: %s", exc)
+    finally:
+        try:
+            page.unroute("**")
+        except PlaywrightError:
+            pass
+
+    try:
+        page_id = f"{page_id_prefix}001"
+        screenshot_path = _save_screenshot(page, output_dir, page_id)
+        return [
+            PageData(
+                url=page.url or prev_url,
+                title=page.title(),
+                headings=(),
+                links=(),
+                forms=(),
+                screenshot_path=screenshot_path,
+            )
+        ]
+    except PlaywrightError as exc:
+        logger.warning("dry_run PageData 取得に失敗しました: %s", exc)
+        return []
+
+
+def _crawl_form_submit(
+    page: Page,
+    form_data: FormData,
+    output_dir: Path | None,
+    page_id_prefix: str,
+) -> list[PageData]:
+    """実際に submit して遷移先の PageData を返す。"""
+    from crawler.link_extractor import extract_page_title
+
+    prev_url = page.url
+    try:
+        selector = (
+            f"form[action='{form_data.action}'] [type=submit]"
+            if form_data.action
+            else "[type=submit]"
+        )
+        page.click(selector, timeout=DEFAULT_TIMEOUT_MS)
+        page.wait_for_load_state("networkidle", timeout=DEFAULT_TIMEOUT_MS)
+    except PlaywrightError as exc:
+        logger.warning("フォーム送信に失敗しました: %s", exc)
+        return []
+
+    new_url = page.url
+    if new_url == prev_url:
+        return []
+
+    try:
+        page_id = f"{page_id_prefix}001"
+        screenshot_path = _save_screenshot(page, output_dir, page_id)
+        return [
+            PageData(
+                url=new_url,
+                title=extract_page_title(page),
+                headings=(),
+                links=(),
+                forms=(),
+                screenshot_path=screenshot_path,
+            )
+        ]
+    except PlaywrightError as exc:
+        logger.warning("フォーム送信後の PageData 取得に失敗しました: %s", exc)
+        return []
 
 
 def _close_browser(browser: Browser) -> None:

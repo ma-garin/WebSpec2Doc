@@ -28,7 +28,7 @@ def create_app() -> Flask:
         site,
         traceability,
     )
-    from web.security import csrf_guard
+    from web.security import add_security_headers, csrf_guard
 
     app = Flask(
         __name__,
@@ -36,6 +36,7 @@ def create_app() -> Flask:
         static_folder=str(_ROOT / "static"),
     )
     app.before_request(csrf_guard)
+    app.after_request(add_security_headers)
     app.register_blueprint(pages.bp)
     app.register_blueprint(discover.bp)
     app.register_blueprint(site.bp)

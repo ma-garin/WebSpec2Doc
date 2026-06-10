@@ -153,23 +153,77 @@ def test_api_diff_two_snapshots(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
 # ─────────────────────────── POST /api/v1/sites/<domain>/crawl ───────────────────────────
 
 
-def test_api_crawl_stub_returns_501(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_api_crawl_requires_url(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """URL なしのリクエストは 400 を返す。"""
     monkeypatch.setattr(api_v1_mod, "OUTPUT_DIR", tmp_path)
     resp = _client().post(
         "/api/v1/sites/example.com/crawl",
         data=json.dumps({"depth": 2, "max_pages": 10}),
         content_type="application/json",
     )
-    assert resp.status_code == 501
+    assert resp.status_code == 400
+
+
+def test_api_crawl_queues_job(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """URL 付きのリクエストは 202 とジョブIDを返す。"""
+    from unittest.mock import patch
+
+    monkeypatch.setattr(api_v1_mod, "OUTPUT_DIR", tmp_path)
+    with patch("web.services.job_queue._run_job"):
+        resp = _client().post(
+            "/api/v1/sites/example.com/crawl",
+            data=json.dumps({"url": "https://example.com", "depth": 2, "max_pages": 10}),
+            content_type="application/json",
+        )
+    assert resp.status_code == 202
     data = resp.get_json()
     assert "job_id" in data
     assert data["status"] == "queued"
+    assert data["domain"] == "example.com"
+
+
+def test_api_crawl_rejects_invalid_url(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """http/https 以外のスキームは 400 を返す。"""
+    monkeypatch.setattr(api_v1_mod, "OUTPUT_DIR", tmp_path)
+    resp = _client().post(
+        "/api/v1/sites/example.com/crawl",
+        data=json.dumps({"url": "ftp://badscheme.com"}),
+        content_type="application/json",
+    )
+    assert resp.status_code == 400
 
 
 def test_api_crawl_invalid_domain(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(api_v1_mod, "OUTPUT_DIR", tmp_path)
     resp = _client().post("/api/v1/sites/..bad../crawl", content_type="application/json")
     assert resp.status_code in (400, 404)
+
+
+def test_api_job_status_not_found(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """存在しないジョブIDは 404 を返す。"""
+    monkeypatch.setattr(api_v1_mod, "OUTPUT_DIR", tmp_path)
+    resp = _client().get("/api/v1/jobs/nonexistent-job-id")
+    assert resp.status_code == 404
+
+
+def test_api_domain_jobs_empty(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """ジョブを作っていないドメインは空リストを返す。"""
+    monkeypatch.setattr(api_v1_mod, "OUTPUT_DIR", tmp_path)
+    resp = _client().get("/api/v1/sites/no-jobs-here.com/jobs")
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["jobs"] == []
+    assert data["domain"] == "no-jobs-here.com"
+
+
+def test_api_healthz_returns_ok(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """/api/v1/healthz は status=ok を返す。"""
+    monkeypatch.setattr(api_v1_mod, "OUTPUT_DIR", tmp_path)
+    resp = _client().get("/api/v1/healthz")
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["status"] == "ok"
+    assert "scheduler" in data
 
 
 # ─────────────────────────── GET /api/v1/sites/<domain>/test-cases ───────────────────────────

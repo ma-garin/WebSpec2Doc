@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from urllib.parse import urlparse
 
 from web.config import ALLOWED_FORMATS, DOMAIN_RE, OUTPUT_DIR
+
+_HTTP_URL_RE = re.compile(r"^https?://.{3,}", re.IGNORECASE)
 
 
 def _clean_int(value: str, default: int, lo: int, hi: int) -> int:
@@ -49,6 +52,16 @@ def _safe_output_path(raw: str) -> Path | None:
     if target != base and base not in target.parents:
         return None
     return target if target.is_file() else None
+
+
+def _valid_url(url: str) -> bool:
+    """http/https スキームを持つ URL かを確認する（SSRF 対策の最低限チェック）。"""
+    return bool(url) and bool(_HTTP_URL_RE.match(url.strip()))
+
+
+def error_json(message: str, code: int = 400) -> tuple[dict[str, str], int]:
+    """統一エラーレスポンスを生成する。"""
+    return {"error": message}, code
 
 
 def _sanitize(value: str) -> str:

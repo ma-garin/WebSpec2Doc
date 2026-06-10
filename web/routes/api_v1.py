@@ -5,20 +5,21 @@ import json
 import logging
 import re
 import sys
-import uuid
 from datetime import datetime
 from pathlib import Path
 
 from flask import Blueprint, request
 
-from web.config import OUTPUT_DIR
-from web.validation import _valid_domain
+from web.config import MAX_DEPTH, MAX_PAGES_LIMIT, OUTPUT_DIR
+from web.validation import _clean_int, _valid_domain, _valid_url
 
 bp = Blueprint("api_v1", __name__, url_prefix="/api/v1")
 logger = logging.getLogger(__name__)
 
 # スナップショットファイル名の日時パターン: YYYYMMDD-HHMMSS
 _SNAPSHOT_TS_RE = re.compile(r"(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})")
+
+_DEFAULT_FORMATS = ["md", "html", "json"]
 
 
 def _src_path() -> str:
@@ -43,6 +44,22 @@ def _snapshot_ts_to_iso(stem: str) -> str:
         return dt.isoformat()
     except ValueError:
         return stem
+
+
+# ─────────────────────────── GET /api/v1/healthz ───────────────────────────
+
+
+@bp.get("/healthz")
+def api_healthz() -> dict:
+    """システムヘルスチェック。スケジューラー稼働状態を返す。"""
+    from web.services.scheduler import _scheduler_started, _stop_event
+
+    scheduler_running = _scheduler_started and not _stop_event.is_set()
+    return {
+        "status": "ok",
+        "scheduler": {"running": scheduler_running},
+        "version": "1.0",
+    }
 
 
 # ─────────────────────────── GET /api/v1/sites ───────────────────────────
@@ -136,19 +153,73 @@ def api_diff(domain: str) -> tuple[dict, int] | dict:
 
 @bp.post("/sites/<domain>/crawl")
 def api_crawl(domain: str) -> tuple[dict, int] | dict:
-    """非同期クロールをトリガーする（スタブ実装）。"""
+    """非同期クロールをトリガーする。job_id を返し、バックグラウンドで実行する。"""
     if not _valid_domain(domain):
         return {"error": "invalid domain"}, 400
+
     body = request.get_json(silent=True) or {}
-    logger.info(
-        "api_v1 crawl requested: domain=%s depth=%s max_pages=%s format=%s",
-        domain,
-        body.get("depth"),
-        body.get("max_pages"),
-        body.get("format"),
+
+    # site_url: body 優先、なければ site.json から取得
+    site_url = str(body.get("url", "")).strip()
+    if not site_url:
+        _ensure_src_in_path()
+        try:
+            from registry.site_registry import load_site
+
+            config = load_site(domain, OUTPUT_DIR)
+            if config and config.urls:
+                site_url = config.urls[0]
+        except Exception:
+            pass
+    if not site_url:
+        return {"error": "url は必須です。body に url を指定してください。"}, 400
+    if not _valid_url(site_url):
+        return {"error": "invalid url: http/https のみ対応しています"}, 400
+
+    depth = _clean_int(str(body.get("depth", 2)), default=2, lo=1, hi=MAX_DEPTH)
+    max_pages = _clean_int(str(body.get("max_pages", 30)), default=30, lo=1, hi=MAX_PAGES_LIMIT)
+    compare = bool(body.get("compare", True))
+
+    from web.services.job_queue import start_crawl_job
+
+    job_id = start_crawl_job(
+        domain=domain,
+        site_url=site_url,
+        depth=depth,
+        max_pages=max_pages,
+        formats=_DEFAULT_FORMATS,
+        compare=compare,
     )
-    job_id = uuid.uuid4().hex
-    return {"job_id": job_id, "status": "queued", "message": "not yet implemented"}, 501
+    logger.info("crawl job queued: domain=%s job_id=%s url=%s", domain, job_id, site_url)
+    return {"job_id": job_id, "status": "queued", "domain": domain}, 202
+
+
+# ─────────────────────────── GET /api/v1/jobs/<job_id> ───────────────────────────
+
+
+@bp.get("/jobs/<job_id>")
+def api_job_status(job_id: str) -> tuple[dict, int] | dict:
+    """クロールジョブの現在の状態を返す。"""
+    from web.services.job_queue import get_job
+
+    job = get_job(job_id)
+    if job is None:
+        return {"error": "job not found"}, 404
+    return dataclasses.asdict(job)
+
+
+# ─────────────────────────── GET /api/v1/sites/<domain>/jobs ───────────────────────────
+
+
+@bp.get("/sites/<domain>/jobs")
+def api_domain_jobs(domain: str) -> tuple[dict, int] | dict:
+    """ドメインのジョブ履歴一覧を返す（新しい順、最大20件）。"""
+    if not _valid_domain(domain):
+        return {"error": "invalid domain"}, 400
+    from web.services.job_queue import list_jobs_for_domain
+
+    jobs = list_jobs_for_domain(domain)
+    return {"domain": domain, "jobs": [dataclasses.asdict(j) for j in jobs]}
 
 
 # ─────────────────────────── GET /api/v1/sites/<domain>/test-cases ───────────────────────────

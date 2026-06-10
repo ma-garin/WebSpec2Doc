@@ -8,7 +8,7 @@ from pathlib import Path
 from flask import Blueprint, request
 
 from web.config import OUTPUT_DIR
-from web.validation import _valid_domain
+from web.validation import _valid_domain, _valid_url
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +91,8 @@ def api_schedule_config_post() -> tuple[dict, int] | dict:
         return {"error": f"invalid severity_filter: {severity_filter}"}, 400
 
     site_url = str(body.get("site_url", "")).strip()
+    if site_url and not _valid_url(site_url):
+        return {"error": "invalid site_url: http/https のみ対応しています"}, 400
     notify_endpoint = str(body.get("notify_endpoint", "")).strip()
 
     existing = _load_config(domain)

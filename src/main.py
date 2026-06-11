@@ -338,6 +338,7 @@ def _discover(args: argparse.Namespace, auth_path: Path | None) -> None:
         sys.stdout.flush()
         return
     if bool(getattr(args, "stream", False)):
+
         def _emit(page: dict[str, object]) -> None:
             sys.stdout.write(json.dumps({"page": page}, ensure_ascii=False) + "\n")
             sys.stdout.flush()

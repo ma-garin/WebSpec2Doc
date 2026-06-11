@@ -281,6 +281,23 @@ html[data-theme="dark"] .uml-canvas.is-fullscreen { background: var(--bg); }
     .discover-loading { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--info-border); border-radius: var(--radius); background: var(--info-bg); color: var(--primary-dark); font-size: 13px; font-weight: 700; }
     .discover-status { min-height: 18px; font-size: 13px; color: var(--text-muted); }
     .discover-status-error { color: var(--critical); font-weight: 700; }
+
+    /* ---- Discover ライブフィード ---- */
+    .discover-live-card { background: var(--info-bg); border: 1px solid var(--info-border); border-radius: var(--radius); padding: 12px 14px; }
+    .discover-live-header { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--primary-dark); margin-bottom: 8px; }
+    .discover-live-count { margin-left: auto; font-weight: 700; color: var(--accent); font-size: 12px; white-space: nowrap; }
+    .discover-live-elapsed-label { color: var(--text-muted); font-size: 12px; }
+    .discover-live-elapsed { color: var(--text-muted); font-variant-numeric: tabular-nums; font-size: 12px; min-width: 3ch; }
+    .discover-live-feed { max-height: 156px; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: 1px; }
+    .discover-feed-row { display: flex; align-items: center; gap: 8px; padding: 3px 6px; border-radius: 4px; font-size: 12px; animation: discFeedIn 0.15s ease; }
+    .discover-feed-row--active { background: var(--info-bg); outline: 1px solid var(--info-border); }
+    .discover-feed-icon { width: 14px; text-align: center; flex-shrink: 0; font-size: 11px; }
+    .discover-feed-row--done .discover-feed-icon { color: #16A34A; }
+    .discover-feed-row--active .discover-feed-icon { color: var(--accent); }
+    .discover-feed-title { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
+    .discover-feed-path { color: var(--text-muted); font-family: var(--font-mono, monospace); font-size: 11px; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+    @keyframes discFeedIn { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: translateY(0); } }
+
     .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
     .discovered-url-actions { display: flex; gap: 8px; }
     .discovered-url-panel { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-soft); }

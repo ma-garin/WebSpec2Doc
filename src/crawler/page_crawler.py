@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -149,6 +149,7 @@ def discover_pages(
     depth: int = DEFAULT_DEPTH,
     max_pages: int = DEFAULT_MAX_PAGES,
     auth_state: Path | None = None,
+    on_page_found: Callable[[dict[str, object]], None] | None = None,
 ) -> list[dict[str, object]]:
     """Lightweight BFS listing reachable pages (url + title + login wall 判定)
     without screenshots or form extraction. Backs the GUI '画面リスト取得' step."""
@@ -160,11 +161,14 @@ def discover_pages(
 
     with _browser_page(auth_state) as page:
         while queue and len(found) < max_pages:
+            prev_count = len(found)
             current_url, current_depth = queue.pop(0)
             if _should_skip(current_url, current_depth, depth, visited, robots):
                 continue
             visited.add(current_url)
             links = _discover_one(page, current_url, found)
+            if on_page_found is not None and len(found) > prev_count:
+                on_page_found(found[-1])
             queue.extend(_next_urls(links, current_depth, visited, depth))
             time.sleep(CRAWL_DELAY_SEC)
 

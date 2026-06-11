@@ -67,6 +67,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="リンク追跡で到達するページ一覧(URL+タイトル)をJSONでstdoutに出力して終了",
     )
+    parser.add_argument(
+        "--stream",
+        action="store_true",
+        help="--discover と組み合わせ、発見ページを NDJSON でリアルタイム出力する（GUI用）",
+    )
     parser.add_argument("--login", help="ログインセッション保存モード: ログインページURL（CLI用）")
     parser.add_argument(
         "--login-signal",
@@ -330,14 +335,30 @@ def _discover(args: argparse.Namespace, auth_path: Path | None) -> None:
     """画面リストを探索し、JSON を stdout に出力する（GUI の画面リスト取得用）。"""
     if not args.url:
         sys.stdout.write(json.dumps({"pages": [], "error": "--url が必要です"}))
+        sys.stdout.flush()
         return
-    pages = discover_pages(
-        url=str(args.url),
-        depth=int(args.depth),
-        max_pages=int(args.max_pages),
-        auth_state=Path(auth_path) if auth_path else None,
-    )
-    sys.stdout.write(json.dumps({"pages": pages}, ensure_ascii=False))
+    if bool(getattr(args, "stream", False)):
+        def _emit(page: dict[str, object]) -> None:
+            sys.stdout.write(json.dumps({"page": page}, ensure_ascii=False) + "\n")
+            sys.stdout.flush()
+
+        pages = discover_pages(
+            url=str(args.url),
+            depth=int(args.depth),
+            max_pages=int(args.max_pages),
+            auth_state=Path(auth_path) if auth_path else None,
+            on_page_found=_emit,
+        )
+        sys.stdout.write(json.dumps({"done": True, "total": len(pages)}, ensure_ascii=False) + "\n")
+        sys.stdout.flush()
+    else:
+        pages = discover_pages(
+            url=str(args.url),
+            depth=int(args.depth),
+            max_pages=int(args.max_pages),
+            auth_state=Path(auth_path) if auth_path else None,
+        )
+        sys.stdout.write(json.dumps({"pages": pages}, ensure_ascii=False))
 
 
 def _save_diff_report(

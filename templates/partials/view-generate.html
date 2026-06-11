@@ -37,10 +37,15 @@
                 <button type="button" id="discover-btn" class="btn-primary" style="height:40px;padding:0 18px;font-size:13px;white-space:nowrap">画面分析</button>
               </div>
               <div id="url-input-message" class="input-field-message"></div>
-              <div id="discover-loading" class="discover-loading" style="display:none;margin-top:10px">
-                <span class="spinner"></span>
-                <span>画面を分析しています…</span>
-                <span id="discover-elapsed" style="color:var(--text-muted);font-variant-numeric:tabular-nums;margin-left:8px;min-width:3ch"></span>
+              <div id="discover-loading" class="discover-live-card" style="display:none;margin-top:10px">
+                <div class="discover-live-header">
+                  <span class="spinner"></span>
+                  <span>画面を分析しています...</span>
+                  <span id="discover-count-label" class="discover-live-count">0画面を発見</span>
+                  <span class="discover-live-elapsed-label">経過:</span>
+                  <span id="discover-elapsed" class="discover-live-elapsed"></span>
+                </div>
+                <div id="discover-live-feed" class="discover-live-feed"></div>
               </div>
               <div id="discover-status" class="discover-status"></div>
               <!-- 解析完了サマリー -->

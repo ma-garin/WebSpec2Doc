@@ -169,10 +169,14 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
     new_snapshot = save_snapshot(pages, output_dir)
     drift_detected = False
     if bool(getattr(args, "compare", False)):
-        drift_detected = _save_diff_report(prior_snapshot, new_snapshot, pages, output_dir, primary_url)
+        drift_detected = _save_diff_report(
+            prior_snapshot, new_snapshot, pages, output_dir, primary_url
+        )
     logger.info("出力が完了しました: %s", output_dir)
     if drift_detected and bool(getattr(args, "fail_on_drift", False)):
-        logger.warning("仕様ドリフトを検知しました（--fail-on-drift が有効）。exit code 1 で終了します。")
+        logger.warning(
+            "仕様ドリフトを検知しました（--fail-on-drift が有効）。exit code 1 で終了します。"
+        )
         sys.exit(1)
 
 

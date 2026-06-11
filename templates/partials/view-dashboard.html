@@ -1,7 +1,7 @@
         <!-- ===== ダッシュボード（監視対象サイト） ===== -->
         <section class="view is-active" id="view-dashboard">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px">
-            <p style="color:var(--text-muted);font-size:13px">監視対象サイト。<strong>再クロール</strong>すると前回からの仕様ドリフトを検知できます。</p>
+            <p style="color:var(--text-muted);font-size:13px">監視対象サイト。<strong class="term" data-term="再クロール: 同じサイトをもう一度読み取って最新の画面構成を取得すること">再クロール</strong>すると前回からの<span class="term" data-term="仕様ドリフト: 前回取得時から画面・入力項目・遷移が変わってしまっていること。テスト資産の陳腐化を意味します">仕様ドリフト</span>を検知できます。</p>
             <div style="display:flex;gap:8px">
               <button class="btn-outline-sm" id="reload-history">再読み込み</button>
               <button class="btn-primary" id="add-site-btn-2" style="height:36px;padding:0 16px;font-size:13px">+ サイトを追加</button>

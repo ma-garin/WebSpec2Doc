@@ -46,7 +46,13 @@ function switchView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('is-active', v.id === 'view-' + name));
   const h = VIEW_HEADER[name];
   if (h) setHeader(h.trail, h.title);
-  if (name === 'dashboard') loadHistory();
+  if (name === 'dashboard') {
+    loadHistory();
+    // ディープリンクのハッシュをクリア（レポートから戻った時のみ。初期化時は保持）
+    if (window._appBooted && location.hash.startsWith('#report/')) {
+      try { history.replaceState(null, '', location.pathname); } catch (e) {}
+    }
+  }
   if (name === 'qa-process') loadQaProcessSites();
   if (['qa-models', 'qa-automation', 'qa-quality'].includes(name)) loadQaToolSites(name);
   // A: 2ペインツール画面では全高モードに切り替え

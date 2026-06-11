@@ -21,7 +21,8 @@ logger = logging.getLogger(__name__)
 def api_history() -> dict:
     items: list[dict] = []
     if OUTPUT_DIR.is_dir():
-        domains = [d for d in OUTPUT_DIR.iterdir() if d.is_dir()]
+        # ドット始まり（.playwright_env 等の隠しディレクトリ）はサイトではないため除外
+        domains = [d for d in OUTPUT_DIR.iterdir() if d.is_dir() and not d.name.startswith(".")]
         for d in sorted(domains, key=lambda p: p.stat().st_mtime, reverse=True):
             summary = _summary_for_domain(d.name)
             formats = [

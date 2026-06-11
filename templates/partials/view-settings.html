@@ -4,6 +4,7 @@
             <button class="set-tab is-active" data-tab="api">APIキー</button>
             <button class="set-tab" data-tab="model">モデル</button>
             <button class="set-tab" data-tab="crawl">クロール既定値</button>
+            <button class="set-tab" data-tab="notify">通知</button>
           </div>
 
           <div class="set-panel is-active" id="set-panel-api">
@@ -21,7 +22,7 @@
               </div>
               <button class="btn-primary" id="save-api" style="margin-top:18px">APIキーを保存</button>
               <div class="settings-msg" id="api-msg">保存しました</div>
-              <p class="input-hint" style="margin-top:14px">⚠ LLMテスト観点生成機能は未実装です。本設定はその準備です。</p>
+              <div class="settings-msg" id="api-status-msg" style="display:none;margin-top:12px"></div>
             </div>
           </div>
 
@@ -42,6 +43,23 @@
               </div>
               <button class="btn-primary" id="save-model" style="margin-top:18px">モデルを保存</button>
               <div class="settings-msg" id="model-msg">保存しました</div>
+            </div>
+          </div>
+
+          <div class="set-panel" id="set-panel-notify">
+            <div class="input-card">
+              <h2 class="set-card-title">Slack 通知</h2>
+              <p class="input-hint" style="margin-top:0;margin-bottom:14px">仕様ドリフト（再クロール後の差分）を検知した際に Slack チャンネルへ通知します。<br>Incoming Webhook URL は <a href="https://api.slack.com/messaging/webhooks" target="_blank" rel="noopener">Slack API</a> で取得してください。</p>
+              <div class="field full" style="margin-bottom:14px">
+                <label>現在の設定</label>
+                <div class="key-current" id="slack-webhook-current">未設定</div>
+              </div>
+              <div class="field full">
+                <label for="slack-webhook-url">SLACK_WEBHOOK_URL</label>
+                <input type="password" id="slack-webhook-url" placeholder="https://hooks.slack.com/services/..." autocomplete="off" style="width:100%">
+              </div>
+              <button class="btn-primary" id="save-slack" style="margin-top:18px">Webhook URLを保存</button>
+              <div class="settings-msg" id="slack-msg">保存しました</div>
             </div>
           </div>
 

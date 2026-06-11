@@ -78,7 +78,7 @@ function _buildTable(items) {
       : '';
 
     html += `
-      <tr>
+      <tr class="${it.has_diff ? 'has-drift' : ''}">
         <td>
           <div class="site-cell">
             <strong>${escHtml(it.domain)}</strong>
@@ -91,9 +91,9 @@ function _buildTable(items) {
         <td><span class="freshness ${fresh.cls}">${fresh.label}</span></td>
         <td>
           <div class="history-actions">
-            <button type="button" class="btn-outline-sm hist-delete" data-domain="${escHtml(it.domain)}">削除</button>
-            <button type="button" class="btn-outline-sm hist-recrawl" data-domain="${escHtml(it.domain)}">再クロール</button>
             <button type="button" class="btn-primary hist-open" data-domain="${escHtml(it.domain)}" style="height:36px;padding:0 14px;font-size:13px">開く</button>
+            <button type="button" class="btn-outline-sm hist-recrawl" data-domain="${escHtml(it.domain)}">再クロール</button>
+            <button type="button" class="btn-outline-sm hist-delete" data-domain="${escHtml(it.domain)}">削除</button>
           </div>
         </td>
       </tr>`;

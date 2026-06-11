@@ -52,7 +52,13 @@ async function loadQaToolData(viewName, domain) {
   const cfg = QA_TOOL_CONFIG[viewName];
   if (!cfg) return;
   if (!domain) {
-    document.getElementById(cfg.content).innerHTML = '<div class="empty">対象サイトを選択してください。</div>';
+    const emptyMsgs = {
+      'qa-models': ['QAカバレッジ分析', 'リスクスコア・遷移エッジ・カバレッジ指標を一覧表示します'],
+      'qa-automation': ['Playwright自動テスト候補', 'Playwright化しやすい操作フローを自動抽出します\nロケータ候補・テスト種別・優先度スコアを表示'],
+      'qa-quality': ['品質観点レポート', '境界値・アクセシビリティ・セキュリティ等6観点でテスト観点を整理します'],
+    };
+    const [title, desc] = emptyMsgs[viewName] || ['データなし', 'サイトを選択してください'];
+    document.getElementById(cfg.content).innerHTML = `<div class="qa-empty-state"><div class="qa-empty-icon">📋</div><div class="qa-empty-title">${escHtml(title)}</div><div class="qa-empty-desc">${escHtml(desc)}</div></div>`;
     document.getElementById(cfg.outputs).innerHTML = '';
     setQaToolStatus(viewName, '');
     return;

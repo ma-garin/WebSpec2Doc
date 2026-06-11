@@ -13,12 +13,15 @@ bp = Blueprint("settings", __name__)
 def get_settings() -> dict:
     env = _read_env()
     key = env.get("OPENAI_API_KEY", "")
+    slack_url = env.get("SLACK_WEBHOOK_URL", "")
     return {
         "openai_key_set": bool(key),
         "openai_key_masked": _mask_key(key),
         "openai_model": env.get("OPENAI_MODEL", DEFAULT_OPENAI_MODEL),
         "openai_org_id": env.get("OPENAI_ORG_ID", ""),
         "openai_project_id": env.get("OPENAI_PROJECT_ID", ""),
+        "slack_webhook_set": bool(slack_url),
+        "slack_webhook_masked": (_mask_key(slack_url) if slack_url else ""),
     }
 
 
@@ -34,6 +37,14 @@ def post_settings() -> dict:
         updates["OPENAI_ORG_ID"] = _sanitize(request.form.get("org_id", ""))
     if "project_id" in request.form:
         updates["OPENAI_PROJECT_ID"] = _sanitize(request.form.get("project_id", ""))
+    slack_url = _sanitize(request.form.get("slack_webhook_url", ""))
+    if "slack_webhook_url" in request.form:
+        updates["SLACK_WEBHOOK_URL"] = slack_url
     if updates:
         _write_env(updates)
-    return {"ok": True, "openai_key_set": bool(_read_env().get("OPENAI_API_KEY"))}
+    env = _read_env()
+    return {
+        "ok": True,
+        "openai_key_set": bool(env.get("OPENAI_API_KEY")),
+        "slack_webhook_set": bool(env.get("SLACK_WEBHOOK_URL")),
+    }

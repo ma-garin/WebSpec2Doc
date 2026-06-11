@@ -171,7 +171,13 @@ function _autorunRender(data) {
   // ---- ログ ----
   const logEl = document.getElementById('autorun-log');
   if (logEl && data.log) {
-    logEl.textContent = data.log.join('\n');
+    logEl.innerHTML = data.log.map(line => {
+      const esc = escHtml(line);
+      if (/\[ERROR\]|エラー/.test(line)) return `<span class="log-error">${esc}</span>`;
+      if (/\[WARN\]|警告/.test(line)) return `<span class="log-warn">${esc}</span>`;
+      if (/\[OK\]|完了|成功|✓/.test(line)) return `<span class="log-ok">${esc}</span>`;
+      return esc;
+    }).join('\n');
     logEl.scrollTop = logEl.scrollHeight;
   }
 

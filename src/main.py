@@ -101,6 +101,11 @@ def parse_args() -> argparse.Namespace:
         "--format", default=DEFAULT_FORMATS, help="出力形式: md,html,excel,pdf,json"
     )
     parser.add_argument("--compare", action="store_true", help="前回スナップショットとの差分を出力")
+    parser.add_argument(
+        "--fail-on-drift",
+        action="store_true",
+        help="差分検知時に exit code 1 で終了（CI/CDパイプライン用）",
+    )
     return parser.parse_args()
 
 
@@ -162,9 +167,13 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
         crawled_at=crawled_at,
     )
     new_snapshot = save_snapshot(pages, output_dir)
+    drift_detected = False
     if bool(getattr(args, "compare", False)):
-        _save_diff_report(prior_snapshot, new_snapshot, pages, output_dir, primary_url)
+        drift_detected = _save_diff_report(prior_snapshot, new_snapshot, pages, output_dir, primary_url)
     logger.info("出力が完了しました: %s", output_dir)
+    if drift_detected and bool(getattr(args, "fail_on_drift", False)):
+        logger.warning("仕様ドリフトを検知しました（--fail-on-drift が有効）。exit code 1 で終了します。")
+        sys.exit(1)
 
 
 def _do_crawl(
@@ -333,10 +342,11 @@ def _save_diff_report(
     pages: list[PageData],
     output_dir: Path,
     target_url: str,
-) -> None:
+) -> bool:
+    """差分レポートを生成して保存する。差分がある場合は True を返す。"""
     if prior_snapshot is None:
         logger.info(FIRST_SNAPSHOT_MESSAGE)
-        return
+        return False
     old_pages = load_snapshot(prior_snapshot)
     diff = compute_diff(old_pages, pages)
     report_html = generate_diff_report(
@@ -346,6 +356,7 @@ def _save_diff_report(
         target_url=target_url,
     )
     (output_dir / DIFF_REPORT_FILE_NAME).write_text(report_html, encoding="utf-8")
+    return bool(getattr(diff, "has_changes", False))
 
 
 def save_outputs(

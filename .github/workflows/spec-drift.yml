@@ -1,0 +1,58 @@
+name: Spec Drift Detection
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: 'クロール対象URL (例: https://example.com)'
+        required: true
+        type: string
+  schedule:
+    - cron: '0 9 * * 1'  # 毎週月曜 JST 18:00 (UTC 9:00)
+
+jobs:
+  detect-drift:
+    name: Detect Specification Drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          playwright install chromium --with-deps
+
+      - name: Run spec drift detection
+        env:
+          TARGET_URL: ${{ inputs.target_url || vars.WEBSPEC_TARGET_URL }}
+        run: |
+          python src/main.py \
+            --url "$TARGET_URL" \
+            --compare \
+            --fail-on-drift \
+            --format json,html
+        continue-on-error: true
+        id: drift
+
+      - name: Upload drift report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spec-drift-report-${{ github.run_number }}
+          path: output/
+          retention-days: 30
+
+      - name: Report drift result
+        if: steps.drift.outcome == 'failure'
+        run: |
+          echo "::warning::仕様ドリフトを検知しました。アーティファクトの diff_report.html を確認してください。"
+          exit 1

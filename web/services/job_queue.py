@@ -7,11 +7,13 @@ REST API (/api/v1/sites/<domain>/crawl) から呼び出され、
 from __future__ import annotations
 
 import logging
+import os
 import subprocess
 import sys
 import threading
 from dataclasses import dataclass, field
 from datetime import datetime
+from pathlib import Path
 from typing import Literal
 
 _JOBS: dict[str, CrawlJob] = {}
@@ -128,9 +130,44 @@ def _run_job(
         log_text = "".join(log_buf)[-MAX_LOG_BYTES:]
         status: JobStatus = "completed" if proc.returncode == 0 else "failed"
         _update(job, status=status, exit_code=proc.returncode, log_tail=log_text)
+        if status == "completed" and compare:
+            _try_slack_notify(job)
     except OSError as exc:
         logger.error("クロールジョブ起動失敗: job_id=%s, %s", job.job_id, exc)
         _update(job, status="failed", exit_code=-1, log_tail=str(exc))
+
+
+def _try_slack_notify(job: CrawlJob) -> None:
+    """ドリフトがあればSlack通知を試みる（失敗しても例外を伝播させない）。"""
+    try:
+        from dotenv import dotenv_values
+
+        env = dotenv_values(".env")
+        webhook_url = env.get("SLACK_WEBHOOK_URL", "") or os.environ.get("SLACK_WEBHOOK_URL", "")
+        if not webhook_url:
+            return
+        diff_report = Path("output") / job.domain / "diff_report.html"
+        if not diff_report.exists():
+            return
+        from web.services.notifier import (
+            NOTIFIER_SLACK,
+            DriftNotification,
+            NotifierConfig,
+            send_drift_notification,
+        )
+
+        notification = DriftNotification(
+            site_url=job.site_url,
+            added_pages=0,
+            removed_pages=0,
+            field_changes=0,
+            api_changes=0,
+            report_url=f"output/{job.domain}/diff_report.html",
+        )
+        config = NotifierConfig(notifier_type=NOTIFIER_SLACK, endpoint=webhook_url)
+        send_drift_notification(config, notification)
+    except Exception:
+        logger.warning("Slack通知に失敗しました", exc_info=True)
 
 
 def _update(

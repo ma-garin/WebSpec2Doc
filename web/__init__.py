@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import time
 from pathlib import Path
 
 from flask import Flask
@@ -35,6 +36,9 @@ def create_app() -> Flask:
         template_folder=str(_ROOT / "templates"),
         static_folder=str(_ROOT / "static"),
     )
+    app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
+    _ver = str(int(time.time()))
+    app.jinja_env.globals["_ver"] = _ver
     app.before_request(csrf_guard)
     app.after_request(add_security_headers)
     app.register_blueprint(pages.bp)

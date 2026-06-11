@@ -7,7 +7,18 @@ const targetPreview = document.getElementById('target-preview');
 const targetPreviewList = document.getElementById('target-preview-list');
 
 function showStep(n) { wizardStep = n; }
-urlInput.addEventListener('input', () => { clearDiscovered(); updateTargetPreview(); });
+
+// ---- URL リアルタイムバリデーション（送信前エラー防止） ----
+const URL_FORMAT_RE = /^https?:\/\/\S+\.\S+/i;
+function validateUrlInput() {
+  const v = urlInput.value.trim();
+  if (!v) { urlInput.classList.remove('is-invalid'); setUrlMessage('', false); return false; }
+  const ok = URL_FORMAT_RE.test(v);
+  urlInput.classList.toggle('is-invalid', !ok);
+  setUrlMessage(ok ? '' : 'URL は https://example.com の形式で入力してください', true);
+  return ok;
+}
+urlInput.addEventListener('input', () => { clearDiscovered(); updateTargetPreview(); validateUrlInput(); });
 
 
 function setUrlMessage(msg, isError) {
@@ -173,19 +184,84 @@ function _stopDiscoverTimer() {
 async function discoverUrls(skipLoginSection) {
   const url = urlInput.value.trim();
   if (!url) { setUrlMessage('URLを入力してから画面分析を実行してください', true); return; }
+  if (!validateUrlInput()) return;
   const loading = document.getElementById('discover-loading');
   const status = document.getElementById('discover-status');
   const btn = document.getElementById('discover-btn');
-  loading.style.display = 'flex'; status.textContent = ''; status.classList.remove('discover-status-error');
+  const feed = document.getElementById('discover-live-feed');
+  const countLabel = document.getElementById('discover-count-label');
+
+  loading.style.display = '';
+  status.textContent = '';
+  status.classList.remove('discover-status-error');
   btn.disabled = true;
+  if (feed) feed.innerHTML = '';
+  if (countLabel) countLabel.textContent = '0画面を発見';
+  discovered = [];
   _startDiscoverTimer();
+
+  let lastRow = null;
+
+  function _addRow(page, active) {
+    if (!feed) return null;
+    const div = document.createElement('div');
+    div.className = 'discover-feed-row ' + (active ? 'discover-feed-row--active' : 'discover-feed-row--done');
+    let path = page.url;
+    try { path = new URL(page.url).pathname; } catch (e) {}
+    div.innerHTML =
+      `<span class="discover-feed-icon">${active ? '⟳' : '✓'}</span>` +
+      `<span class="discover-feed-title">${escHtml(page.title || path)}</span>` +
+      `<span class="discover-feed-path">${escHtml(path)}</span>`;
+    feed.appendChild(div);
+    feed.scrollTop = feed.scrollHeight;
+    return div;
+  }
+
+  function _markDone(row) {
+    if (!row) return;
+    row.classList.replace('discover-feed-row--active', 'discover-feed-row--done');
+    const icon = row.querySelector('.discover-feed-icon');
+    if (icon) icon.textContent = '✓';
+  }
+
   try {
     const auth = document.getElementById('auth-path').value.trim() || getSettings().auth || '';
     const body = new URLSearchParams({ url, depth: '5', max_pages: '300', auth });
-    const res = await fetch('/api/discover', { method: 'POST', body });
-    const data = await res.json();
-    if (!res.ok || data.error) throw new Error(data.error || '画面リスト取得に失敗しました');
-    discovered = (data.pages || []).filter(p => p && p.url);
+    const res = await fetch('/api/discover-stream', { method: 'POST', body });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || '画面リスト取得に失敗しました');
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const chunks = buf.split('\n\n');
+      buf = chunks.pop() ?? '';
+      for (const chunk of chunks) {
+        const line = chunk.replace(/^data:\s?/, '').trim();
+        if (!line) continue;
+        let obj;
+        try { obj = JSON.parse(line); } catch (e) { continue; }
+        if (obj.page) {
+          _markDone(lastRow);
+          discovered.push(obj.page);
+          if (countLabel) countLabel.textContent = `${discovered.length}画面を発見`;
+          lastRow = _addRow(obj.page, true);
+        } else if (obj.done) {
+          _markDone(lastRow);
+          lastRow = null;
+        } else if (obj.error) {
+          throw new Error(obj.error);
+        }
+      }
+    }
+
+    discovered = discovered.filter(p => p && p.url);
     renderDiscovered();
     // ログインURLを上級設定フィールドに反映（参考表示）
     if (!skipLoginSection && discovered.some(p => p.login_required)) {

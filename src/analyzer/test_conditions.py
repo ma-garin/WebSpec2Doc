@@ -1,8 +1,32 @@
 from __future__ import annotations
 
-from crawler.page_crawler import FieldData
+import logging
+from itertools import product
+
+from crawler.page_crawler import FieldData, FormData
+
+logger = logging.getLogger(__name__)
 
 _FALLBACK = "正常値 / 空値 / 特殊文字"
+
+_MAX_PAIRWISE_FIELDS = 8
+_MAX_PAIRWISE_CASES = 20
+_MAX_REPRESENTATIVE_VALUES = 3
+
+_CRITICALITY_KEYWORDS = (
+    "決済",
+    "支払",
+    "payment",
+    "クレジット",
+    "個人情報",
+    "プライバシー",
+    "ログイン",
+    "パスワード",
+    "password",
+)
+_HIGH_CRITICALITY = 3.0
+_NORMAL_CRITICALITY = 1.0
+_MAX_RISK_SCORE = 100.0
 
 
 def derive_conditions(field: FieldData) -> tuple[str, ...]:
@@ -49,3 +73,125 @@ def _type_conditions(field: FieldData) -> list[str]:
     if ftype == "checkbox":
         return ["ON / OFF"]
     return []
+
+
+def _get_representative_values(field: FieldData) -> list[str]:
+    """各フィールドの代表値（正常・境界・異常）を最大3件返す。"""
+    if field.options:
+        opts = list(field.options)
+        abnormal = "" if field.required else "invalid"
+        return [opts[0], opts[-1], abnormal][:_MAX_REPRESENTATIVE_VALUES]
+    if field.field_type == "email":
+        return ["user@example.com", "", "invalid-email"]
+    if field.field_type == "number":
+        return ["0", str(field.min_value or "1"), "abc"]
+    if field.maxlength is not None:
+        n = field.maxlength
+        # n-1 は境界未満、n は境界ちょうど、n+1 は境界超え（truncateして文字列で表現）
+        return [str(n - 1), str(n), str(n + 1)]
+    return ["正常値", "", "<script>"]
+
+
+def generate_pairwise_cases(fields: list[FieldData]) -> list[dict[str, str]]:
+    """2-way カバレッジ（ペアワイズ）でテストケースセットを生成する。
+    各フィールドの代表値（正常・境界・異常）を組み合わせ、
+    全ての 2 フィールドの組み合わせをカバーする最小セットを返す。
+    8 フィールド超は先頭 8 フィールドに縮退して爆発を防ぐ。"""
+    if not fields:
+        return []
+
+    active = fields[:_MAX_PAIRWISE_FIELDS]
+    rep_values = [_get_representative_values(f) for f in active]
+
+    if len(active) <= 2:
+        # 2フィールド以下は全組み合わせを直接返す
+        combos = list(product(*rep_values))
+        return [{active[i].name: combo[i] for i in range(len(active))} for combo in combos][
+            :_MAX_PAIRWISE_CASES
+        ]
+
+    # 3フィールド以上: 最初のフィールドの各値を基準行として、
+    # 残りフィールドをラウンドロビンで割り当てることで2-wayカバレッジを近似する
+    cases: list[dict[str, str]] = []
+    first_vals = rep_values[0]
+    rest_fields = active[1:]
+    rest_vals = rep_values[1:]
+
+    max_rest_len = max(len(v) for v in rest_vals)
+    for _fi, fval in enumerate(first_vals):
+        for ri in range(max_rest_len):
+            row: dict[str, str] = {active[0].name: fval}
+            for _j, (rf, rv) in enumerate(zip(rest_fields, rest_vals, strict=False)):
+                row[rf.name] = rv[ri % len(rv)]
+            cases.append(row)
+            if len(cases) >= _MAX_PAIRWISE_CASES:
+                return cases
+
+    return cases[:_MAX_PAIRWISE_CASES]
+
+
+def generate_decision_table(
+    fields: list[FieldData],
+    transitions: list[str],
+) -> list[dict[str, str | dict[str, str]]]:
+    """条件（フィールド値の充足状態）× アクション（遷移先）のデシジョンテーブルを生成。
+    transitions は遷移先 URL のリスト。"""
+    if not fields or not transitions:
+        return []
+
+    def _condition_labels(f: FieldData) -> tuple[str, str]:
+        return ("充足", "未充足") if f.required else ("入力", "未入力")
+
+    field_states = [_condition_labels(f) for f in fields]
+
+    if len(fields) <= 4:
+        combos = list(product(*field_states))
+    else:
+        # 5フィールド以上はペアワイズで縮退（全組み合わせ爆発を防ぐ）
+        pairwise_fields = [
+            FieldData(
+                field_type="text",
+                name=f.name,
+                placeholder="",
+                required=f.required,
+                options=tuple(_condition_labels(f)),
+            )
+            for f in fields
+        ]
+        pw_cases = generate_pairwise_cases(pairwise_fields)
+        combos = [
+            tuple(case.get(f.name, _condition_labels(f)[0]) for f in fields) for case in pw_cases
+        ]
+
+    rows: list[dict[str, str | dict[str, str]]] = []
+    for i, combo in enumerate(combos):
+        conditions = {fields[j].name: combo[j] for j in range(len(fields))}
+        url = transitions[i % len(transitions)]
+        rows.append({"conditions": conditions, "expected_transition": url})
+
+    return rows
+
+
+def compute_risk_score(
+    forms: list[FormData],
+    headings: tuple[str, ...],
+    change_freq: float = 0.0,
+) -> float:
+    """フォーム複雑度・変更頻度・重要度でリスクスコアを算出。
+    change_freq は 0.0〜1.0（過去スナップショット差分履歴から計算）。"""
+    all_fields = [f for form in forms for f in form.fields]
+    validation_count = sum(
+        1 for f in all_fields if f.required or f.maxlength is not None or f.pattern or f.options
+    )
+    option_count = sum(len(f.options) for f in all_fields)
+    complexity = len(all_fields) + validation_count + option_count
+
+    lower_headings = " ".join(headings).lower()
+    criticality = (
+        _HIGH_CRITICALITY
+        if any(kw.lower() in lower_headings for kw in _CRITICALITY_KEYWORDS)
+        else _NORMAL_CRITICALITY
+    )
+
+    risk = complexity * (1 + change_freq) * criticality
+    return min(risk, _MAX_RISK_SCORE)

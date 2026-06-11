@@ -4,6 +4,33 @@ from urllib.parse import urlparse
 
 from flask import Response, request
 
+# localhost 専用ツールとして実用的な CSP。
+# 'unsafe-inline' は生成済み report.html (Mermaid 初期化インラインスクリプト) のため必要。
+_CSP = (
+    "default-src 'self'; "
+    "script-src 'self' cdn.jsdelivr.net 'unsafe-inline'; "
+    "style-src 'self' 'unsafe-inline'; "
+    "img-src 'self' data: blob:; "
+    "frame-src 'self'; "
+    "connect-src 'self'; "
+    "object-src 'none'; "
+    "base-uri 'self'"
+)
+
+_SECURITY_HEADERS: dict[str, str] = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "SAMEORIGIN",
+    "Referrer-Policy": "same-origin",
+    "Content-Security-Policy": _CSP,
+}
+
+
+def add_security_headers(response: Response) -> Response:
+    """全レスポンスにセキュリティヘッダーを付与する。"""
+    for key, value in _SECURITY_HEADERS.items():
+        response.headers.setdefault(key, value)
+    return response
+
 
 def _host_matches(header_val: str, expected_host: str) -> bool:
     """Origin / Referer ヘッダーのホスト部分が expected_host と完全一致するか検証する。

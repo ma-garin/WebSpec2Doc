@@ -1,6 +1,58 @@
 // ---- 画面遷移図（UML 3タブ + テスト観点マップ）----
 let umlZoom = 1;
 
+function _setupPan(canvas) {
+  let dragging = false, startX = 0, startY = 0, startSL = 0, startST = 0;
+  canvas.addEventListener('pointerdown', e => {
+    if (e.button !== 0) return;
+    dragging = true;
+    startX = e.clientX; startY = e.clientY;
+    startSL = canvas.scrollLeft; startST = canvas.scrollTop;
+    canvas.classList.add('is-panning');
+    canvas.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  canvas.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    canvas.scrollLeft = startSL - (e.clientX - startX);
+    canvas.scrollTop = startST - (e.clientY - startY);
+  });
+  canvas.addEventListener('pointerup', () => { dragging = false; canvas.classList.remove('is-panning'); });
+  canvas.addEventListener('pointercancel', () => { dragging = false; canvas.classList.remove('is-panning'); });
+  canvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    _setUmlZoom(umlZoom + (e.deltaY < 0 ? 0.1 : -0.1));
+  }, { passive: false });
+}
+
+function _toggleUmlFullscreen() {
+  const canvas = document.getElementById('uml-render-target');
+  if (!canvas) return;
+  const isFs = canvas.classList.toggle('is-fullscreen');
+  document.querySelectorAll('[data-zoom="fullscreen"]').forEach(btn => {
+    btn.title = isFs ? '全画面を解除 (Esc)' : '全画面 (Esc で解除)';
+    btn.textContent = isFs ? '✕' : '⛶';
+  });
+  if (isFs) setTimeout(() => _fitUmlZoom(), 50);
+}
+
+function _exportUmlSvg() {
+  const stage = document.getElementById('uml-zoom-stage');
+  const svg = stage && stage.querySelector('svg');
+  if (!svg) return;
+  const blob = new Blob([new XMLSerializer().serializeToString(svg)], { type: 'image/svg+xml' });
+  const url = URL.createObjectURL(blob);
+  const a = Object.assign(document.createElement('a'), { href: url, download: 'diagram.svg' });
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  const canvas = document.getElementById('uml-render-target');
+  if (canvas && canvas.classList.contains('is-fullscreen')) _toggleUmlFullscreen();
+});
+
 function _commonNavTargets(screens) {
   const n = screens.length;
   const count = {};
@@ -148,11 +200,13 @@ function _showUmlPanel(type, screens) {
 function _umlZoomControls() {
   return (
     '<div class="uml-zoom-controls" aria-label="図のズーム">' +
-    '<button type="button" class="uml-zoom-btn" data-zoom="out" title="縮小">−</button>' +
+    '<button type="button" class="uml-zoom-btn" data-zoom="out" title="縮小 (ホイール↓)">−</button>' +
     '<button type="button" class="uml-zoom-btn uml-zoom-level" data-zoom="reset" title="100%に戻す">100%</button>' +
-    '<button type="button" class="uml-zoom-btn" data-zoom="in" title="拡大">＋</button>' +
+    '<button type="button" class="uml-zoom-btn" data-zoom="in" title="拡大 (ホイール↑)">＋</button>' +
     '<button type="button" class="uml-zoom-btn" data-zoom="fit" title="幅に合わせる">Fit</button>' +
-    '</div>'
+    '<button type="button" class="uml-zoom-btn uml-zoom-sep" data-zoom="fullscreen" title="全画面 (Esc で解除)">⛶</button>' +
+    '</div>' +
+    '<button type="button" class="uml-export-btn" title="SVGをダウンロード">↓ SVG</button>'
   );
 }
 
@@ -284,19 +338,25 @@ function _prepareUmlZoom() {
   stage.dataset.baseWidth = String(Math.max(1, Math.ceil(box.width)));
   stage.dataset.baseHeight = String(Math.max(1, Math.ceil(box.height)));
   _setUmlZoom(umlZoom);
+  const canvas = document.getElementById('uml-render-target');
+  if (canvas) _setupPan(canvas);
   document.querySelectorAll('.uml-zoom-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const mode = btn.dataset.zoom;
       if (mode === 'in') _setUmlZoom(umlZoom + 0.15);
       else if (mode === 'out') _setUmlZoom(umlZoom - 0.15);
-      else if (mode === 'reset') _setUmlZoom(1);
+      else if (mode === 'reset') { _setUmlZoom(1); if (canvas) { canvas.scrollLeft = 0; canvas.scrollTop = 0; } }
       else if (mode === 'fit') _fitUmlZoom();
+      else if (mode === 'fullscreen') _toggleUmlFullscreen();
     });
+  });
+  document.querySelectorAll('.uml-export-btn').forEach(btn => {
+    btn.addEventListener('click', _exportUmlSvg);
   });
 }
 
 function _setUmlZoom(value) {
-  umlZoom = Math.min(2.5, Math.max(0.35, value));
+  umlZoom = Math.min(5.0, Math.max(0.35, value));
   const stage = document.getElementById('uml-zoom-stage');
   const svg = stage && stage.querySelector('svg');
   if (stage && svg) {
@@ -318,6 +378,8 @@ function _fitUmlZoom() {
   const baseWidth = Number(stage.dataset.baseWidth || 1);
   const next = (target.clientWidth - 32) / baseWidth;
   _setUmlZoom(next);
+  target.scrollLeft = 0;
+  target.scrollTop = 0;
 }
 
 function _umlSource(type, screens, rows) {

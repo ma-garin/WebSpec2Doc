@@ -9,8 +9,10 @@ import pytest
 from crawler.link_extractor import (
     _to_field_data,
     _to_form_data,
+    compute_dom_signature,
     extract_buttons,
     extract_forms,
+    extract_forms_including_frames,
     extract_headings,
     extract_internal_links,
     extract_page_title,
@@ -302,3 +304,122 @@ class TestExtractButtons:
         page.eval_on_selector_all.return_value = []
         result = extract_buttons(page)
         assert result == []
+
+
+# ---------- compute_dom_signature ----------
+
+
+class TestComputeDomSignature:
+    def test_returns_default_for_plain_html(self) -> None:
+        html = "<html><body><p>Hello</p></body></html>"
+        assert compute_dom_signature(html) == "default"
+
+    def test_detects_open_dialog(self) -> None:
+        html = '<div role="dialog" id="modal1" aria-modal="true"><p>content</p></div>'
+        result = compute_dom_signature(html)
+        assert result != "default"
+        assert len(result) == 8
+
+    def test_same_elements_produce_same_hash(self) -> None:
+        html_a = '<div role="dialog" id="confirm-dlg"></div>'
+        html_b = '<section role="dialog" id="confirm-dlg"><p>Are you sure?</p></section>'
+        assert compute_dom_signature(html_a) == compute_dom_signature(html_b)
+
+    def test_different_state_produces_different_hash(self) -> None:
+        html_expanded = (
+            '<button aria-expanded="true" id="menu-toggle" aria-controls="nav-menu">'
+            "Menu</button>"
+        )
+        html_collapsed = (
+            '<button aria-expanded="false" id="menu-toggle" aria-controls="nav-menu">'
+            "Menu</button>"
+        )
+        assert compute_dom_signature(html_expanded) != compute_dom_signature(html_collapsed)
+
+    def test_tabpanel_id_is_detected(self) -> None:
+        html = '<div role="tabpanel" id="tab-content-1">Tab 1 content</div>'
+        result = compute_dom_signature(html)
+        assert result != "default"
+
+    def test_form_id_is_included(self) -> None:
+        html = '<form id="login-form" method="post"><input type="text"></form>'
+        result = compute_dom_signature(html)
+        assert result != "default"
+
+    def test_hash_length_is_eight(self) -> None:
+        html = '<div role="dialog" id="x"></div>'
+        result = compute_dom_signature(html)
+        assert len(result) == 8
+
+    def test_duplicate_identifiers_deduplicated(self) -> None:
+        # Same id appearing twice should produce same result as appearing once
+        html_once = '<div role="dialog" id="dlg1"></div>'
+        html_twice = '<div role="dialog" id="dlg1"></div>' '<span id="dlg1" role="dialog"></span>'
+        assert compute_dom_signature(html_once) == compute_dom_signature(html_twice)
+
+
+# ---------- extract_forms_including_frames ----------
+
+
+class TestExtractFormsIncludingFrames:
+    def _make_page(
+        self, forms_raw: list[dict], extra_frames: list[MagicMock] | None = None
+    ) -> MagicMock:
+        page = MagicMock()
+        # eval_on_selector_all used by extract_forms (main frame)
+        page.eval_on_selector_all.return_value = forms_raw
+        main_frame = MagicMock()
+        page.main_frame = main_frame
+        page.frames = [main_frame] + (extra_frames or [])
+        return page
+
+    def test_no_iframes_returns_main_forms(self) -> None:
+        raw = [{"action": "/search", "method": "get", "fields": []}]
+        page = self._make_page(raw)
+        result = extract_forms_including_frames(page)
+        assert len(result) == 1
+        assert result[0].action == "/search"
+
+    def test_empty_page_returns_empty(self) -> None:
+        page = self._make_page([])
+        result = extract_forms_including_frames(page)
+        assert result == []
+
+    def test_iframe_forms_appended(self) -> None:
+        frame = MagicMock()
+        frame.eval_on_selector_all.return_value = [
+            {"action": "/iframe-form", "method": "post", "fields": []}
+        ]
+        raw_main = [{"action": "/main-form", "method": "get", "fields": []}]
+        page = self._make_page(raw_main, extra_frames=[frame])
+        result = extract_forms_including_frames(page)
+        actions = [f.action for f in result]
+        assert "/main-form" in actions
+        assert "/iframe-form" in actions
+
+    def test_iframe_duplicate_action_not_duplicated(self) -> None:
+        frame = MagicMock()
+        frame.eval_on_selector_all.return_value = [
+            {"action": "/shared", "method": "post", "fields": []}
+        ]
+        raw_main = [{"action": "/shared", "method": "get", "fields": []}]
+        page = self._make_page(raw_main, extra_frames=[frame])
+        result = extract_forms_including_frames(page)
+        assert len([f for f in result if f.action == "/shared"]) == 1
+
+    def test_cross_origin_iframe_skipped_on_error(self) -> None:
+        from playwright.sync_api import Error as PlaywrightError
+
+        frame = MagicMock()
+        frame.eval_on_selector_all.side_effect = PlaywrightError("cross-origin")
+        raw_main = [{"action": "/main", "method": "get", "fields": []}]
+        page = self._make_page(raw_main, extra_frames=[frame])
+        result = extract_forms_including_frames(page)
+        # Only the main frame form is returned
+        assert len(result) == 1
+        assert result[0].action == "/main"
+
+    def test_returns_list_type(self) -> None:
+        page = self._make_page([])
+        result = extract_forms_including_frames(page)
+        assert isinstance(result, list)

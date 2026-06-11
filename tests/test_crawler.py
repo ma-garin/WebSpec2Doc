@@ -13,6 +13,7 @@ from crawler.page_crawler import (
     PageData,
     _discover_one,
     _format_page_id,
+    _is_spa_navigation,
     _next_urls,
     _should_skip,
     is_internal_link,
@@ -318,3 +319,215 @@ class TestSessionExpiry:
         ):
             pages = pc.crawl_urls(["https://example.com/dashboard"], auth_state=None)
         assert pages == []
+
+
+# ---------- _is_spa_navigation ----------
+
+
+class TestIsSpaNavigation:
+    def test_detects_path_change_same_host(self) -> None:
+        assert _is_spa_navigation("https://example.com/page1", "https://example.com/page2")
+
+    def test_different_host_returns_false(self) -> None:
+        assert not _is_spa_navigation("https://example.com/", "https://other.com/")
+
+    def test_same_url_returns_false(self) -> None:
+        assert not _is_spa_navigation("https://example.com/page", "https://example.com/page")
+
+    def test_hash_change_same_path_returns_true(self) -> None:
+        # normalize_url strips fragment, so hash-only change is treated as same URL
+        # The function compares after normalize_url which strips fragments:
+        # this documents the current (expected) behaviour
+        result = _is_spa_navigation(
+            "https://example.com/page#section1",
+            "https://example.com/page#section2",
+        )
+        # Both fragments are stripped by normalize_url → same path, no change → False
+        assert result is False
+
+    def test_subdomain_is_different_host(self) -> None:
+        assert not _is_spa_navigation("https://example.com/", "https://sub.example.com/")
+
+    def test_path_change_with_query_is_spa(self) -> None:
+        assert _is_spa_navigation(
+            "https://example.com/list",
+            "https://example.com/detail?id=1",
+        )
+
+
+# ---------- _dummy_value ----------
+
+
+def test_dummy_value_email():
+    from crawler.page_crawler import FieldData, _dummy_value
+
+    assert _dummy_value(FieldData("email", "email", "", False)) == "test@example.com"
+
+
+def test_dummy_value_password():
+    from crawler.page_crawler import FieldData, _dummy_value
+
+    assert _dummy_value(FieldData("password", "pwd", "", False)) == "Test1234!"
+
+
+def test_dummy_value_number_with_min():
+    from crawler.page_crawler import FieldData, _dummy_value
+
+    assert _dummy_value(FieldData("number", "qty", "", False, min_value="5")) == "5"
+
+
+def test_dummy_value_number_no_min():
+    from crawler.page_crawler import FieldData, _dummy_value
+
+    assert _dummy_value(FieldData("number", "qty", "", False)) == "1"
+
+
+def test_dummy_value_date():
+    from crawler.page_crawler import FieldData, _dummy_value
+
+    assert _dummy_value(FieldData("date", "dt", "", False)) == "2024-01-01"
+
+
+def test_dummy_value_checkbox():
+    from crawler.page_crawler import FieldData, _dummy_value
+
+    assert _dummy_value(FieldData("checkbox", "agree", "", False)) == "checked"
+
+
+def test_dummy_value_select_with_options():
+    from crawler.page_crawler import FieldData, _dummy_value
+
+    field = FieldData("select", "country", "", False, options=("jp", "us"))
+    assert _dummy_value(field) == "jp"
+
+
+def test_dummy_value_select_no_options():
+    from crawler.page_crawler import FieldData, _dummy_value
+
+    field = FieldData("select", "country", "", False)
+    assert _dummy_value(field) == ""
+
+
+def test_dummy_value_text():
+    from crawler.page_crawler import FieldData, _dummy_value
+
+    assert _dummy_value(FieldData("text", "name", "", False)) == "テスト入力値"
+
+
+def test_dummy_value_textarea():
+    from crawler.page_crawler import FieldData, _dummy_value
+
+    assert _dummy_value(FieldData("textarea", "body", "", False)) == "テスト入力値"
+
+
+def test_dummy_value_maxlength_truncates():
+    from crawler.page_crawler import FieldData, _dummy_value
+
+    v = _dummy_value(FieldData("text", "name", "", False, maxlength=3))
+    assert len(v) <= 3
+
+
+def test_dummy_value_maxlength_no_truncation_when_short():
+    from crawler.page_crawler import FieldData, _dummy_value
+
+    v = _dummy_value(FieldData("email", "em", "", False, maxlength=100))
+    assert v == "test@example.com"
+
+
+# ---------- _is_sensitive_form ----------
+
+
+def test_is_sensitive_form_payment():
+    from crawler.page_crawler import FormData, _is_sensitive_form
+
+    form = FormData(action="/payment/confirm", method="post", fields=())
+    assert _is_sensitive_form(form) is True
+
+
+def test_is_sensitive_form_checkout():
+    from crawler.page_crawler import FormData, _is_sensitive_form
+
+    form = FormData(action="/checkout", method="post", fields=())
+    assert _is_sensitive_form(form) is True
+
+
+def test_is_sensitive_form_billing():
+    from crawler.page_crawler import FormData, _is_sensitive_form
+
+    form = FormData(action="/billing/address", method="post", fields=())
+    assert _is_sensitive_form(form) is True
+
+
+def test_is_sensitive_form_personal():
+    from crawler.page_crawler import FormData, _is_sensitive_form
+
+    form = FormData(action="/personal/info", method="post", fields=())
+    assert _is_sensitive_form(form) is True
+
+
+def test_is_sensitive_form_private():
+    from crawler.page_crawler import FormData, _is_sensitive_form
+
+    form = FormData(action="/private/data", method="post", fields=())
+    assert _is_sensitive_form(form) is True
+
+
+def test_is_sensitive_form_general():
+    from crawler.page_crawler import FormData, _is_sensitive_form
+
+    form = FormData(action="/contact/submit", method="post", fields=())
+    assert _is_sensitive_form(form) is False
+
+
+def test_is_sensitive_form_empty_action():
+    from crawler.page_crawler import FormData, _is_sensitive_form
+
+    form = FormData(action="", method="post", fields=())
+    assert _is_sensitive_form(form) is False
+
+
+def test_is_sensitive_form_case_insensitive():
+    from crawler.page_crawler import FormData, _is_sensitive_form
+
+    form = FormData(action="/PAYMENT/confirm", method="post", fields=())
+    assert _is_sensitive_form(form) is True
+
+
+# ---------- PageData state_id field ----------
+
+
+class TestPageDataStateId:
+    def test_default_state_id(self) -> None:
+        page = PageData(
+            url="https://example.com/",
+            title="Home",
+            headings=(),
+            links=(),
+            forms=(),
+            screenshot_path=None,
+        )
+        assert page.state_id == "default"
+
+    def test_custom_state_id(self) -> None:
+        page = PageData(
+            url="https://example.com/",
+            title="Home",
+            headings=(),
+            links=(),
+            forms=(),
+            screenshot_path=None,
+            state_id="abc12345",
+        )
+        assert page.state_id == "abc12345"
+
+    def test_state_id_is_immutable(self) -> None:
+        page = PageData(
+            url="https://example.com/",
+            title="Home",
+            headings=(),
+            links=(),
+            forms=(),
+            screenshot_path=None,
+        )
+        with pytest.raises((AttributeError, TypeError)):
+            page.state_id = "other"  # type: ignore[misc]

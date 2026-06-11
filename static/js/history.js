@@ -12,8 +12,14 @@ async function loadHistory() {
     }
     body.innerHTML = _buildTable(data.items);
     body.querySelectorAll('.hist-open').forEach(b => b.addEventListener('click', () => openResultsForDomain(b.dataset.domain)));
-    body.querySelectorAll('.hist-recrawl').forEach(b => b.addEventListener('click', () => recrawlSite(b.dataset.domain)));
-    body.querySelectorAll('.hist-delete').forEach(b => b.addEventListener('click', () => deleteSite(b.dataset.domain)));
+    body.querySelectorAll('.hist-recrawl').forEach(b => b.addEventListener('click', async () => {
+      // 二重クリック防止 + ローディング表示
+      b.disabled = true;
+      const orig = b.textContent;
+      b.textContent = '読み込み中…';
+      try { await recrawlSite(b.dataset.domain); } finally { b.disabled = false; b.textContent = orig; }
+    }));
+    body.querySelectorAll('.hist-delete').forEach(b => b.addEventListener('click', () => deleteSite(b.dataset.domain, b)));
   } catch (e) {
     body.innerHTML = '<div class="empty">サイト一覧の読み込みに失敗しました。</div>';
   }
@@ -26,12 +32,19 @@ function _emptyState() {
       <div class="dashboard-empty-icon">🔍</div>
       <div class="dashboard-empty-title">まだサイトが登録されていません</div>
       <div class="dashboard-empty-desc">
-        クロール対象の URL を登録すると、画面一覧・入力項目・テスト条件を自動生成します。<br>
-        再クロールするたびに前回との差分（仕様ドリフト）を検知します。
+        対象システムの URL を登録すると、画面一覧・入力項目・テスト条件の文書を自動生成します。
+      </div>
+      <div class="onboard-steps">
+        <div class="onboard-step"><span class="onboard-num">1</span><strong>URLを入力</strong><span>対象システムのトップページURLを貼り付けて解析</span></div>
+        <div class="onboard-arrow">→</div>
+        <div class="onboard-step"><span class="onboard-num">2</span><strong>画面を選んで実行</strong><span>検出された画面一覧から対象を選び、生成を開始</span></div>
+        <div class="onboard-arrow">→</div>
+        <div class="onboard-step"><span class="onboard-num">3</span><strong>文書を確認</strong><span>画面仕様・テスト条件・遷移図のレポートが完成</span></div>
       </div>
       <button type="button" class="btn-primary empty-add-btn" style="height:44px;padding:0 28px;font-size:15px;margin-top:8px">
         + 最初のサイトを追加する
       </button>
+      <p style="font-size:12px;color:var(--text-muted);margin-top:4px">所要時間の目安: 10画面のサイトで約2〜3分</p>
     </div>`;
 }
 
@@ -72,7 +85,7 @@ function _buildTable(items) {
       : '';
 
     html += `
-      <tr>
+      <tr class="${it.has_diff ? 'has-drift' : ''}">
         <td>
           <div class="site-cell">
             <strong>${escHtml(it.domain)}</strong>
@@ -85,9 +98,9 @@ function _buildTable(items) {
         <td><span class="freshness ${fresh.cls}">${fresh.label}</span></td>
         <td>
           <div class="history-actions">
-            <button type="button" class="btn-outline-sm hist-delete" data-domain="${escHtml(it.domain)}">削除</button>
-            <button type="button" class="btn-outline-sm hist-recrawl" data-domain="${escHtml(it.domain)}">再クロール</button>
             <button type="button" class="btn-primary hist-open" data-domain="${escHtml(it.domain)}" style="height:36px;padding:0 14px;font-size:13px">開く</button>
+            <button type="button" class="btn-outline-sm hist-recrawl" data-domain="${escHtml(it.domain)}">再クロール</button>
+            <button type="button" class="btn-outline-sm hist-delete" data-domain="${escHtml(it.domain)}">削除</button>
           </div>
         </td>
       </tr>`;
@@ -96,11 +109,28 @@ function _buildTable(items) {
   return html;
 }
 
-async function deleteSite(domain) {
-  if (!confirm(`「${domain}」のクロール結果をすべて削除しますか？\nこの操作は取り消せません。`)) return;
-  const res = await fetch('/api/site/' + encodeURIComponent(domain), { method: 'DELETE' });
-  let data = {};
-  try { data = await res.json(); } catch (e) { data = {}; }
-  if (res.ok) { loadHistory(); return; }
-  alert('削除に失敗しました: ' + (data.error || res.status));
+async function deleteSite(domain, btn) {
+  const ok = await confirmDialog({
+    title: 'クロール結果の削除',
+    message: `「${domain}」の画面一覧・スナップショット・スクリーンショットをすべて削除します。この操作は取り消せません。`,
+    confirmLabel: '削除する',
+    danger: true,
+  });
+  if (!ok) return;
+  if (btn) { btn.disabled = true; btn.textContent = '削除中…'; }
+  try {
+    const res = await fetch('/api/site/' + encodeURIComponent(domain), { method: 'DELETE' });
+    let data = {};
+    try { data = await res.json(); } catch (e) { data = {}; }
+    if (res.ok) {
+      showToast(`「${domain}」を削除しました`, 'success');
+      loadHistory();
+      return;
+    }
+    showToast('削除に失敗しました: ' + (data.error || res.status), 'error');
+  } catch (e) {
+    showToast('削除に失敗しました: 通信エラー', 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '削除'; }
+  }
 }

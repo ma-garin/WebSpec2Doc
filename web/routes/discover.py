@@ -42,3 +42,54 @@ def api_discover() -> Response | tuple[dict, int] | dict:
     except json.JSONDecodeError:
         return {"pages": [], "error": "画面リストの解析に失敗しました"}, 500
     return {"pages": data.get("pages", [])}
+
+
+@bp.post("/api/discover-stream")
+def api_discover_stream() -> Response | tuple[dict, int]:
+    """発見ページを SSE（text/event-stream）でリアルタイム配信する。"""
+    url = request.form.get("url", "").strip()
+    depth = str(_clean_int(request.form.get("depth", "2"), 2, 1, MAX_DEPTH))
+    max_pages = str(_clean_int(request.form.get("max_pages", "30"), 30, 1, MAX_PAGES_LIMIT))
+    auth = _safe_auth_path(request.form.get("auth", "").strip())
+    if not url:
+        return {"error": "URLを入力してください"}, 400
+    cmd = [
+        sys.executable,
+        "src/main.py",
+        "--discover",
+        "--stream",
+        "--url",
+        url,
+        "--depth",
+        depth,
+        "--max-pages",
+        max_pages,
+    ]
+    if auth:
+        cmd += ["--auth", auth]
+
+    def generate():
+        try:
+            proc = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                text=True,
+                bufsize=1,
+            )
+            assert proc.stdout is not None
+            for raw_line in proc.stdout:
+                line = raw_line.strip()
+                if line:
+                    yield f"data: {line}\n\n"
+            proc.wait()
+            if proc.returncode != 0:
+                yield f"data: {json.dumps({'error': '画面リスト取得に失敗しました'})}\n\n"
+        except Exception as exc:
+            yield f"data: {json.dumps({'error': str(exc)})}\n\n"
+
+    return Response(
+        generate(),
+        mimetype="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )

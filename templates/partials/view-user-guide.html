@@ -81,6 +81,19 @@
             </div>
 
             <div class="qa-readable-section">
+              <h3>CI/CD 連携（仕様ドリフトの自動監視）</h3>
+              <p style="font-size:13px;color:var(--text-muted);margin-bottom:10px">
+                デプロイのたびに仕様ドリフトを自動検知できます。差分があると exit code 1 で終了するため、パイプラインで検知可能です。
+              </p>
+              <ul class="qa-check-list">
+                <li><strong>CLI:</strong> <code>python src/main.py --url https://staging.example.com --compare --fail-on-drift</code></li>
+                <li><strong>GitHub Actions:</strong> リポジトリ同梱の <code>.github/workflows/spec-drift.yml</code> をそのまま利用できます（毎週月曜の定期実行 + 手動実行）。リポジトリ変数 <code>WEBSPEC_TARGET_URL</code> に対象URLを設定してください。</li>
+                <li><strong>Slack通知:</strong> 設定 → 通知タブで Incoming Webhook URL を登録すると、ドリフト検知時に自動でSlackへ通知します。</li>
+                <li><strong>社内環境のクロール:</strong> ステージング等のプライベートアドレスを対象にする場合は環境変数 <code>WEBSPEC2DOC_ALLOW_LOCAL=1</code> を設定してください（既定では SSRF 保護のため拒否されます）。</li>
+              </ul>
+            </div>
+
+            <div class="qa-readable-section">
               <h3>よくある確認</h3>
               <ul class="qa-check-list qa-question-list">
                 <li>QAプロセスに対象サイトが出ない場合は、先にサイトを解析して report.json を生成してください。</li>

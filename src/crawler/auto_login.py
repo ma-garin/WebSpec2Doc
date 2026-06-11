@@ -108,15 +108,17 @@ def submit_login_form(
                 )
             )
             if not verdict.is_login_required:
-                auth_path.parent.mkdir(parents=True, exist_ok=True)
+                auth_path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
                 ctx.storage_state(path=str(auth_path))
+                if auth_path.exists():
+                    auth_path.chmod(0o600)
                 return SubmitResult(
                     success=True, needs_more_fields=False, fields=(), current_url=page.url
                 )
 
             new_fields = _visible_fields(page)
             if new_fields and temp_session_path is not None:
-                temp_session_path.parent.mkdir(parents=True, exist_ok=True)
+                temp_session_path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
                 ctx.storage_state(path=str(temp_session_path))
 
             if not new_fields:
@@ -173,8 +175,10 @@ def submit_login_simple(
                 )
             )
             if not verdict.is_login_required:
-                auth_path.parent.mkdir(parents=True, exist_ok=True)
+                auth_path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
                 ctx.storage_state(path=str(auth_path))
+                if auth_path.exists():
+                    auth_path.chmod(0o600)
                 return SubmitResult(
                     success=True, needs_more_fields=False, fields=(), current_url=page.url
                 )

@@ -37,6 +37,7 @@ async function recrawlSite(domain) {
   renderDiscovered();
   updateTargetPreview();
   showWizardStep(2);
+  showToast(`前回の対象画面（${discovered.length}件）を復元しました。条件を確認して実行してください`, 'info');
 }
 
 async function openResultsForDomain(domain) {
@@ -46,7 +47,23 @@ async function openResultsForDomain(domain) {
   appContent.classList.add('is-executing');
   resultPanel.classList.remove('hidden');
   resultHero.innerHTML = '<div class="hero-msg">読み込み中…</div>';
+  // ディープリンク: URLハッシュにレポート状態を保存（チーム共有用）
+  try { history.replaceState(null, '', '#report/' + encodeURIComponent(domain)); } catch (e) {}
   await showResults(domain);
 }
+
+// ページロード時にハッシュ #report/<domain> があればそのレポートを直接開く
+window.addEventListener('DOMContentLoaded', () => {
+  const m = location.hash.match(/^#report\/(.+)$/);
+  if (m) {
+    const domain = decodeURIComponent(m[1]);
+    setTimeout(() => {
+      openResultsForDomain(domain);
+      window._appBooted = true;
+    }, 300);
+  } else {
+    window._appBooted = true;
+  }
+});
 
 

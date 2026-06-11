@@ -5,8 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WebSpec2Doc</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+  <script>
+    // テーマの早期適用（描画前にフラッシュを防ぐ）。保存値がなければ OS 設定に追従。
+    (function () {
+      try {
+        var t = localStorage.getItem('webspec2doc.theme');
+        if (!t) t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', t);
+      } catch (e) { /* localStorage 不可環境では light のまま */ }
+    })();
+  </script>
 </head>
 <body class="app-page">
+<a href="#app-content" class="skip-link">本文へスキップ</a>
 <div class="app-shell">
 
   <aside class="app-sidebar">
@@ -32,7 +43,7 @@
   <div class="app-main">
 {% include 'partials/topbar.html' %}
 
-    <main class="app-content" id="app-content">
+    <main class="app-content" id="app-content" tabindex="-1">
       <div class="app-content-inner">
 
 {% include 'partials/view-generate.html' %}
@@ -87,28 +98,61 @@
     <img id="lightbox-img" src="" alt="拡大表示" />
   </div>
 
+  <!-- 確認モーダル（削除等の destructive アクション用） -->
+  <div id="confirm-overlay" class="confirm-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+    <div class="confirm-card">
+      <div class="confirm-icon" aria-hidden="true">⚠️</div>
+      <h2 class="confirm-title" id="confirm-title"></h2>
+      <p class="confirm-message" id="confirm-message"></p>
+      <div class="confirm-actions">
+        <button type="button" id="confirm-cancel-btn" class="btn-outline-sm" style="height:40px;padding:0 18px">キャンセル</button>
+        <button type="button" id="confirm-ok-btn" class="btn-primary"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- キーボードショートカット ヘルプ -->
+  <div id="shortcut-overlay" class="shortcut-overlay hidden" role="dialog" aria-modal="true" aria-label="キーボードショートカット">
+    <div class="shortcut-card">
+      <h2>⌨️ キーボードショートカット</h2>
+      <div class="shortcut-list">
+        <div class="shortcut-row"><span>このヘルプを表示 / 閉じる</span><span class="shortcut-keys"><kbd class="kbd">?</kbd></span></div>
+        <div class="shortcut-row"><span>ダッシュボードへ移動</span><span class="shortcut-keys"><kbd class="kbd">Alt</kbd><kbd class="kbd">D</kbd></span></div>
+        <div class="shortcut-row"><span>サイトを追加（新規ウィザード）</span><span class="shortcut-keys"><kbd class="kbd">Alt</kbd><kbd class="kbd">N</kbd></span></div>
+        <div class="shortcut-row"><span>レポートのタブを切替</span><span class="shortcut-keys"><kbd class="kbd">←</kbd><kbd class="kbd">→</kbd></span></div>
+        <div class="shortcut-row"><span>モーダル / 最大化を閉じる</span><span class="shortcut-keys"><kbd class="kbd">Esc</kbd></span></div>
+      </div>
+      <div class="shortcut-close-row">
+        <button type="button" id="shortcut-close-btn" class="btn-outline-sm">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- トースト通知コンテナ -->
+  <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="false"></div>
+
 {% include 'partials/modal-file-preview.html' %}
 {% include 'partials/modal-autorun-login.html' %}
 
-  <script src="{{ url_for('static', filename='js/core.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/settings.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/history.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/qa-process.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/qa-tools.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/file-preview.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/recrawl.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/wizard.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/execution.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/results.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/autorun.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/events.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/view-utils.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/view-overview.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/view-report.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/view-design.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/view-transition.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/view-shots.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/view-export-settings.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/core.js') }}?v={{ _ver }}"></script>
+  <script src="{{ url_for('static', filename='js/settings.js') }}?v={{ _ver }}"></script>
+  <script src="{{ url_for('static', filename='js/history.js') }}?v={{ _ver }}"></script>
+  <script src="{{ url_for('static', filename='js/qa-process.js') }}?v={{ _ver }}"></script>
+  <script src="{{ url_for('static', filename='js/qa-tools.js') }}?v={{ _ver }}"></script>
+  <script src="{{ url_for('static', filename='js/file-preview.js') }}?v={{ _ver }}"></script>
+  <script src="{{ url_for('static', filename='js/recrawl.js') }}?v={{ _ver }}"></script>
+  <script src="{{ url_for('static', filename='js/wizard.js') }}?v={{ _ver }}"></script>
+  <script src="{{ url_for('static', filename='js/execution.js') }}?v={{ _ver }}"></script>
+  <script src="{{ url_for('static', filename='js/results.js') }}?v={{ _ver }}"></script>
+  <script src="{{ url_for('static', filename='js/autorun.js') }}?v={{ _ver }}"></script>
+  <script src="{{ url_for('static', filename='js/events.js') }}?v={{ _ver }}"></script>
+  <script src="{{ url_for('static', filename='js/view-utils.js') }}?v={{ _ver }}"></script>
+  <script src="{{ url_for('static', filename='js/view-overview.js') }}?v={{ _ver }}"></script>
+  <script src="{{ url_for('static', filename='js/view-report.js') }}?v={{ _ver }}"></script>
+  <script src="{{ url_for('static', filename='js/view-design.js') }}?v={{ _ver }}"></script>
+  <script src="{{ url_for('static', filename='js/view-transition.js') }}?v={{ _ver }}"></script>
+  <script src="{{ url_for('static', filename='js/view-shots.js') }}?v={{ _ver }}"></script>
+  <script src="{{ url_for('static', filename='js/view-export-settings.js') }}?v={{ _ver }}"></script>
 
 </body>
 </html>

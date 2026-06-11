@@ -3,5 +3,16 @@
         <div class="app-breadcrumb" id="topbar-breadcrumb"><span>Dashboard</span></div>
         <h1 class="app-topbar-title" id="topbar-title">監視対象サイト</h1>
       </div>
-      <div class="app-topbar-actions" id="topbar-actions"></div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <div class="app-topbar-actions" id="topbar-actions"></div>
+        <div class="app-topbar-tools">
+          <button type="button" id="shortcut-help-btn" class="topbar-icon-btn" title="キーボードショートカット (?)" aria-label="キーボードショートカット一覧を表示">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h.01M18 14h.01M9 14h6"/></svg>
+          </button>
+          <button type="button" id="theme-toggle-btn" class="topbar-icon-btn" title="ダークモードに切替" aria-label="ライト / ダークモードを切り替え">
+            <svg class="icon-theme-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            <svg class="icon-theme-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+          </button>
+        </div>
+      </div>
     </header>

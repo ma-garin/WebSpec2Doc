@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -35,6 +35,13 @@ PAGE_ID_WIDTH = 3
 SCREENSHOTS_DIR_NAME = "screenshots"
 USER_AGENT = "WebSpec2Doc"
 NEXT_DEPTH_INCREMENT = 1
+
+_SENSITIVE_KEYWORDS = ("payment", "checkout", "billing", "personal", "private")
+_DUMMY_EMAIL = "test@example.com"
+_DUMMY_PASSWORD = "Test1234!"
+_DUMMY_DATE = "2024-01-01"
+_DUMMY_NUMBER = "1"
+_DUMMY_TEXT = "テスト入力値"
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +91,7 @@ class PageData:
     buttons: tuple[str, ...] = ()
     api_calls: tuple[ApiEndpoint, ...] = ()
     stack_info: StackInfo | None = None
+    state_id: str = "default"  # DOM シグネチャ由来の状態識別子
 
 
 @contextmanager
@@ -141,6 +149,7 @@ def discover_pages(
     depth: int = DEFAULT_DEPTH,
     max_pages: int = DEFAULT_MAX_PAGES,
     auth_state: Path | None = None,
+    on_page_found: Callable[[dict[str, object]], None] | None = None,
 ) -> list[dict[str, object]]:
     """Lightweight BFS listing reachable pages (url + title + login wall 判定)
     without screenshots or form extraction. Backs the GUI '画面リスト取得' step."""
@@ -152,11 +161,14 @@ def discover_pages(
 
     with _browser_page(auth_state) as page:
         while queue and len(found) < max_pages:
+            prev_count = len(found)
             current_url, current_depth = queue.pop(0)
             if _should_skip(current_url, current_depth, depth, visited, robots):
                 continue
             visited.add(current_url)
             links = _discover_one(page, current_url, found)
+            if on_page_found is not None and len(found) > prev_count:
+                on_page_found(found[-1])
             queue.extend(_next_urls(links, current_depth, visited, depth))
             time.sleep(CRAWL_DELAY_SEC)
 
@@ -248,8 +260,9 @@ def _discover_one(page: Page, url: str, found: list[dict[str, object]]) -> tuple
 def crawl_page(page: Page, url: str, output_dir: Path | None) -> PageData:
     from analyzer.stack_detector import detect_stack
     from crawler.link_extractor import (
+        compute_dom_signature,
         extract_buttons,
-        extract_forms,
+        extract_forms_including_frames,
         extract_headings,
         extract_internal_links,
         extract_page_title,
@@ -268,8 +281,10 @@ def crawl_page(page: Page, url: str, output_dir: Path | None) -> PageData:
         title = extract_page_title(page)
         headings = tuple(extract_headings(page))
         links = tuple(extract_internal_links(page, normalized_url))
-        forms = tuple(extract_forms(page))
+        forms = tuple(extract_forms_including_frames(page))
         buttons = tuple(extract_buttons(page))
+        page_html = page.content()
+        state_id = compute_dom_signature(page_html)
     finally:
         capture.detach()
 
@@ -283,6 +298,7 @@ def crawl_page(page: Page, url: str, output_dir: Path | None) -> PageData:
         buttons=buttons,
         api_calls=capture.finalize(),
         stack_info=stack,
+        state_id=state_id,
     )
 
 
@@ -308,7 +324,7 @@ def _crawl_page_with_id(
     output_dir: Path | None,
 ) -> PageData | None:
     try:
-        page._webspec2doc_page_id = page_id  # type: ignore[attr-defined]
+        page._webspec2doc_page_id = page_id  # type: ignore[attr-defined,unused-ignore]
         return crawl_page(page, url, output_dir)
     except PlaywrightError as exc:
         logger.warning("ページのクロールに失敗しました: %s (%s)", url, exc)
@@ -383,6 +399,190 @@ def _netloc_without_default_port(parsed: Any) -> str:
     ):
         return hostname
     return f"{hostname}:{port}" if port else hostname
+
+
+def _is_spa_navigation(prev_url: str, new_url: str) -> bool:
+    """pushState/hashchange による同一ドメイン内の URL 変化かどうかを判定する。
+
+    host が同一でパス or ハッシュが変化した場合に True を返す。
+    """
+    prev = urlparse(normalize_url(prev_url))
+    new = urlparse(normalize_url(new_url))
+    same_host = _netloc_without_default_port(prev) == _netloc_without_default_port(new)
+    path_changed = prev.path != new.path
+    hash_changed = prev.fragment != new.fragment
+    return same_host and (path_changed or hash_changed)
+
+
+def _is_sensitive_form(form_data: FormData) -> bool:
+    """決済・個人情報フォームか判定する（action URL にキーワードが含まれる場合）。"""
+    action_lower = form_data.action.lower()
+    return any(kw in action_lower for kw in _SENSITIVE_KEYWORDS)
+
+
+def _dummy_value(field: FieldData) -> str:
+    """フィールド種別に応じたダミー値を返す。maxlength がある場合は truncate する。"""
+    ftype = field.field_type.lower()
+    if ftype == "email":
+        value = _DUMMY_EMAIL
+    elif ftype == "password":
+        value = _DUMMY_PASSWORD
+    elif ftype in ("number", "range"):
+        value = field.min_value if field.min_value else _DUMMY_NUMBER
+    elif ftype == "date":
+        value = _DUMMY_DATE
+    elif ftype == "checkbox":
+        value = "checked"
+    elif ftype == "select":
+        value = field.options[0] if field.options else ""
+    else:
+        value = _DUMMY_TEXT
+    if field.maxlength is not None and len(value) > field.maxlength:
+        value = value[: field.maxlength]
+    return value
+
+
+def _fill_form_fields(page: Page, form_data: FormData) -> None:
+    """フォームの各フィールドにダミー値を入力する。"""
+    for field in form_data.fields:
+        if not field.name and not field.element_id:
+            continue
+        selector = f"#{field.element_id}" if field.element_id else f"[name='{field.name}']"
+        ftype = field.field_type.lower()
+        try:
+            if ftype == "checkbox":
+                page.check(selector)
+            elif ftype == "select":
+                val = field.options[0] if field.options else None
+                if val:
+                    page.select_option(selector, val)
+            else:
+                dummy = _dummy_value(field)
+                if dummy:
+                    page.fill(selector, dummy)
+        except PlaywrightError as exc:
+            logger.warning("フィールド入力をスキップしました: %s (%s)", selector, exc)
+
+
+def crawl_form_flow(
+    page: Page,
+    form_data: FormData,
+    output_dir: Path | None = None,
+    page_id_prefix: str = "F",
+    dry_run: bool = True,
+) -> list[PageData]:
+    """フォームにダミー値を入力し送信後の画面を取得する。
+
+    dry_run=True: submit をインターセプトしてキャンセルし、確認画面への遷移は試みない。
+    dry_run=False: 実際に送信（副作用あり・本番環境での使用禁止）。
+    決済/個人情報フォームは action URL に "payment"/"checkout"/"billing"/"personal"/"private"
+    が含まれる場合は dry_run=True を強制する。
+    """
+    if _is_sensitive_form(form_data):
+        dry_run = True
+
+    try:
+        _fill_form_fields(page, form_data)
+    except PlaywrightError as exc:
+        logger.warning("フォームへの入力に失敗しました: %s", exc)
+        return []
+
+    if dry_run:
+        return _crawl_form_dry_run(page, form_data, output_dir, page_id_prefix)
+    return _crawl_form_submit(page, form_data, output_dir, page_id_prefix)
+
+
+def _crawl_form_dry_run(
+    page: Page,
+    form_data: FormData,
+    output_dir: Path | None,
+    page_id_prefix: str,
+) -> list[PageData]:
+    """submit をインターセプトしてキャンセルし、現在ページの PageData を返す。"""
+    prev_url = page.url
+
+    def _abort(route: Any) -> None:
+        try:
+            route.abort()
+        except PlaywrightError:
+            pass
+
+    try:
+        page.route("**", _abort)
+        selector = (
+            f"form[action='{form_data.action}'] [type=submit]"
+            if form_data.action
+            else "[type=submit]"
+        )
+        page.click(selector, timeout=3_000)
+    except PlaywrightError as exc:
+        logger.warning("dry_run submit クリックをスキップしました: %s", exc)
+    finally:
+        try:
+            page.unroute("**")
+        except PlaywrightError:
+            pass
+
+    try:
+        page_id = f"{page_id_prefix}001"
+        screenshot_path = _save_screenshot(page, output_dir, page_id)
+        return [
+            PageData(
+                url=page.url or prev_url,
+                title=page.title(),
+                headings=(),
+                links=(),
+                forms=(),
+                screenshot_path=screenshot_path,
+            )
+        ]
+    except PlaywrightError as exc:
+        logger.warning("dry_run PageData 取得に失敗しました: %s", exc)
+        return []
+
+
+def _crawl_form_submit(
+    page: Page,
+    form_data: FormData,
+    output_dir: Path | None,
+    page_id_prefix: str,
+) -> list[PageData]:
+    """実際に submit して遷移先の PageData を返す。"""
+    from crawler.link_extractor import extract_page_title
+
+    prev_url = page.url
+    try:
+        selector = (
+            f"form[action='{form_data.action}'] [type=submit]"
+            if form_data.action
+            else "[type=submit]"
+        )
+        page.click(selector, timeout=DEFAULT_TIMEOUT_MS)
+        page.wait_for_load_state("networkidle", timeout=DEFAULT_TIMEOUT_MS)
+    except PlaywrightError as exc:
+        logger.warning("フォーム送信に失敗しました: %s", exc)
+        return []
+
+    new_url = page.url
+    if new_url == prev_url:
+        return []
+
+    try:
+        page_id = f"{page_id_prefix}001"
+        screenshot_path = _save_screenshot(page, output_dir, page_id)
+        return [
+            PageData(
+                url=new_url,
+                title=extract_page_title(page),
+                headings=(),
+                links=(),
+                forms=(),
+                screenshot_path=screenshot_path,
+            )
+        ]
+    except PlaywrightError as exc:
+        logger.warning("フォーム送信後の PageData 取得に失敗しました: %s", exc)
+        return []
 
 
 def _close_browser(browser: Browser) -> None:

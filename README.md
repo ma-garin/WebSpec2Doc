@@ -48,6 +48,8 @@ source venv/bin/activate   # Windows: venv\Scripts\activate
 
 pip install -r requirements.txt
 playwright install chromium
+make setup-hooks    # pre-commit フックをインストール（品質ゲート有効化）
+make test           # 動作確認
 ```
 
 ---
@@ -120,7 +122,7 @@ python src/main.py --url https://example.com --auth auth.json
 | 遷移図描画（GUI）| [Mermaid](https://mermaid.js.org/)（シーケンス図・コミュニケーション図・アクティビティ図） |
 | Excel 出力 | [openpyxl](https://openpyxl.readthedocs.io/) |
 | Web サーバ | [Flask](https://flask.palletsprojects.com/) |
-| テスト | pytest（349 件・コアカバレッジ 90%+） |
+| テスト | pytest（956 件・コアカバレッジ 90%+） |
 
 - Python 3.12（3.13 は greenlet ビルド失敗のため非対応）
 - GUI ポート: **8765**（macOS AirPlay との衝突回避）

@@ -24,6 +24,8 @@ def capture_auth_state(login_url: str, output_path: Path) -> Path:
             logger.info("ログインページを開きました: %s", login_url)
             input(LOGIN_PROMPT)
             context.storage_state(path=str(output_path))
+            if output_path.exists():
+                output_path.chmod(0o600)
             logger.info("セッションを保存しました: %s", output_path)
         finally:
             _close_browser(browser)
@@ -49,6 +51,8 @@ def capture_auth_state_via_signal(
                 logger.warning("ログイン完了シグナルを待機中にタイムアウトしました")
                 return None
             context.storage_state(path=str(output_path))
+            if output_path.exists():
+                output_path.chmod(0o600)
             logger.info("セッションを保存しました: %s", output_path)
         finally:
             _close_browser(browser)

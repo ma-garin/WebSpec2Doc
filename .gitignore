@@ -49,4 +49,9 @@ skills-lock.json
 # 実装済み作業計画書（実装完了後は不要）
 Plan_*.md
 plan_*.md
+# Playwright test config (machine-specific, auto-generated)
 _autorun_pw.config.js
+
+# E2E 実行アーティファクト（環境依存のためコミット禁止）
+tests/e2e/screenshots/
+tests/e2e/snapshots/*.png

@@ -2,7 +2,9 @@
 const resultPanel = document.getElementById('result-panel');
 const resultHero = document.getElementById('result-hero');
 const VIEW_MODE_KEY = 'wsd_view_mode';
-const SUMMARY_HIDE_TABS = new Set(['design', 'technique-detail', 'transition-table', 'history']);
+// テスト技法（設計・技法詳細）は本製品の中核成果物のため、概要モードでも常に表示する。
+// 概要モードで隠すのは補助的な詳細タブ（遷移表・履歴/差分）のみ。
+const SUMMARY_HIDE_TABS = new Set(['transition-table', 'history']);
 const EXPORT_DEFS = [
   { key: 'html', label: 'HTMLレポート', desc: 'テスト分析インプット文書（画面別カード＋テスト条件）' },
   { key: 'pdf', label: 'PDF', desc: '配布・印刷用（HTMLレポートのPDF版）' },

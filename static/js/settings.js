@@ -10,12 +10,16 @@ function loadSettingsForm() {
   document.getElementById('set-depth').value = s.depth || 2;
   document.getElementById('set-max').value = s.maxPages || 30;
   document.getElementById('set-auth').value = s.auth || '';
+  const caseEl = document.getElementById('set-case-minutes');
+  if (caseEl) caseEl.value = s.caseMinutes || 10;
 }
 document.getElementById('save-settings').addEventListener('click', () => {
+  const caseEl = document.getElementById('set-case-minutes');
   localStorage.setItem(SETTINGS_KEY, JSON.stringify({
     depth: document.getElementById('set-depth').value,
     maxPages: document.getElementById('set-max').value,
     auth: document.getElementById('set-auth').value.trim(),
+    caseMinutes: caseEl ? (Number(caseEl.value) || 10) : 10,
   }));
   applySettings();
   const msg = document.getElementById('settings-msg'); msg.classList.add('show');

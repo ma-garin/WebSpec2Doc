@@ -20,8 +20,9 @@ function _execSummary(allScreens) {
   // テストケース数の概算: 入力項目×3（有効/無効/境界） + 画面遷移×2（正常/異常）
   const transitions = screens.reduce((n, sc) => n + ((sc.transitions && sc.transitions.to) || []).length, 0);
   const estCases = totalFields * 3 + transitions * 2;
-  // 1ケース10分（設計+実施）として概算工数
-  const estHours = Math.ceil(estCases * 10 / 60);
+  // 1ケースあたりの想定分数は設定で変更可（既定10分）。設計+実施の概算工数。
+  const caseMinutes = (typeof getSettings === 'function' ? (Number(getSettings().caseMinutes) || 10) : 10);
+  const estHours = Math.ceil(estCases * caseMinutes / 60);
   const top3 = [...screens].sort((a, b) => _screenRiskScore(b) - _screenRiskScore(a)).slice(0, 3)
     .filter(sc => _screenRiskScore(sc) > 0);
 
@@ -34,14 +35,20 @@ function _execSummary(allScreens) {
     ? `<span style="color:var(--text-muted)">（${pageCount}ページ検出 → クエリ重複を統合）</span>`
     : '';
 
+  // 信頼性バッジ: メトリクスが重複統合済み・機械導出であることを明示（検証会社の監査用）。
+  const trustBreakdown = pageCount > screenCount
+    ? `${pageCount}ページ検出 → ${screenCount}画面（クエリ重複を統合）／入力項目は canonical 画面のみ集計／テスト条件は機械導出`
+    : `${screenCount}画面・${totalFields}項目を機械導出／クエリ重複は統合済み`;
+  const trustBadge = `<span class="trust-badge" title="${escHtml(trustBreakdown)}">✓ 重複統合済み・機械導出（監査可能）</span>`;
+
   return `
     <div class="exec-summary">
-      <div class="hero-section-title">エグゼクティブサマリー</div>
+      <div class="hero-section-title">エグゼクティブサマリー ${trustBadge}</div>
       <p style="font-size:13px;line-height:1.7;margin:0 0 10px">
         本システムは <strong>${screenCount}画面</strong>${dedupNote}（うち入力フォームあり ${formScreens}画面）で構成され、
         入力項目は <strong>${totalFields}項目</strong>（必須 ${totalRequired}項目）です。
         機械導出したテスト条件から、概算 <strong>${estCases}テストケース / 約${estHours}時間</strong>のテスト規模と推定されます
-        <span style="color:var(--text-muted)">（1ケース10分換算・参考値）</span>。
+        <span style="color:var(--text-muted)">（1ケース${caseMinutes}分換算・設定で変更可／概算＝入力項目×3＋遷移×2）</span>。
       </p>
       ${top3.length ? `<div style="font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:4px">優先テスト対象（リスク上位3画面）</div><ol style="margin:0 0 4px 20px;font-size:12.5px;line-height:1.8">${top3Html}</ol>` : ''}
     </div>`;

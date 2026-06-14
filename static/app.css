@@ -425,6 +425,10 @@ html[data-theme="dark"] .uml-canvas.is-fullscreen { background: var(--bg); }
     .tl-diff-frame { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; height: 60vh; background: var(--surface); }
     .tl-diff-frame iframe { width: 100%; height: 100%; border: 0; display: block; }
     .tl-diff-frame .hero-msg { height: 100%; }
+    .ci-guidance { margin-top: 18px; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-soft); }
+    .ci-guidance-title { font-size: 13px; font-weight: 800; color: var(--text); }
+    .ci-guidance-cmd { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .ci-guidance-cmd code { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; padding: 8px 10px; border-radius: 6px; background: var(--bg-panel, #0f172a0a); border: 1px solid var(--border); font-size: 12.5px; color: var(--text); }
     .r-shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
     .r-shots a { display: block; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
     .r-shots figure { margin: 0; }
@@ -530,6 +534,8 @@ html[data-theme="dark"] .uml-canvas.is-fullscreen { background: var(--bg); }
     .diff-badge { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 10px; background: #FFF3CD; border: 1px solid #FBBF24; color: #92400E; font-size: 11px; font-weight: 800; white-space: nowrap; }
     .snap-badge { display: inline-flex; align-items: center; height: 22px; padding: 0 10px; border-radius: 4px; background: var(--surface-soft); border: 1px solid var(--border); color: var(--text-muted); font-size: 12px; font-weight: 700; }
     .snap-badge-first { background: var(--info-bg); border-color: var(--info-border); color: var(--primary-dark); }
+    .trust-badge { display: inline-block; padding: 1px 9px; border-radius: 10px; background: var(--ok-bg); color: var(--ok); font-size: 11px; font-weight: 700; vertical-align: middle; cursor: help; white-space: nowrap; }
+    html[data-theme="dark"] .trust-badge { background: #0F2A1A; color: #4ADE80; }
     /* ── QAツール空状態 ── */
     .qa-empty-state { padding: 60px 32px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; }
     .qa-empty-icon { font-size: 42px; line-height: 1; opacity: .7; }

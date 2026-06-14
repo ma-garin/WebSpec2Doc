@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 
 import networkx as nx
@@ -10,6 +11,9 @@ from analyzer.test_conditions import derive_conditions
 from crawler.page_crawler import DEFAULT_DEPTH, DEFAULT_MAX_PAGES, FieldData, FormData
 
 JSON_INDENT = 2
+_PII_KEYWORDS: frozenset[str] = frozenset(
+    ("payment", "checkout", "billing", "personal", "private", "credit", "card", "ssn", "passport")
+)
 
 
 def generate_json_report(
@@ -22,6 +26,9 @@ def generate_json_report(
 ) -> str:
     """Serialize crawl results and derived test conditions to structured JSON."""
     canonical_screens = group_canonical_screens(pages)
+    screens_data = [_screen_dict(p, graph, canonical_screens[p.page_id]) for p in pages]
+    screens_canonical = json.dumps(screens_data, ensure_ascii=False, sort_keys=True)
+    report_hash = hashlib.sha256(screens_canonical.encode("utf-8")).hexdigest()
     return json.dumps(
         {
             "meta": {
@@ -31,8 +38,10 @@ def generate_json_report(
                 "crawled_at": crawled_at,
                 "page_count": len(pages),
                 "screen_count": sum(1 for info in canonical_screens.values() if info.is_canonical),
+                "report_hash": report_hash,
+                "pii_risk_screens": _find_pii_risk_screens(pages),
             },
-            "screens": [_screen_dict(p, graph, canonical_screens[p.page_id]) for p in pages],
+            "screens": screens_data,
         },
         ensure_ascii=False,
         indent=JSON_INDENT,
@@ -57,6 +66,7 @@ def _screen_dict(page: AnalyzedPage, graph: nx.DiGraph, canonical: CanonicalInfo
         "is_canonical": canonical.is_canonical,
         "variation_count": canonical.variation_count,
         "variation_urls": list(canonical.variation_urls),
+        "a11y_issues": list(pd.a11y_issues),
     }
 
 
@@ -84,6 +94,10 @@ def _field_dict(field: FieldData) -> dict:
         "options": list(field.options),
         "locators": _locator_candidates(field),
         "test_conditions": list(derive_conditions(field)),
+        "aria_label": field.aria_label,
+        "aria_required": field.aria_required,
+        "role": field.role,
+        "has_visible_label": field.has_visible_label,
     }
 
 
@@ -101,3 +115,18 @@ def _field_type_tag(field_type: str) -> str:
     if field_type in ("select", "textarea"):
         return field_type
     return "input"
+
+
+def _find_pii_risk_screens(pages: list[AnalyzedPage]) -> list[str]:
+    """URLまたはフォーム送信先に機密キーワードを含む画面IDを返す。"""
+    risk_ids: list[str] = []
+    for page in pages:
+        page_data = page.page_data
+        url_has_pii = any(keyword in page_data.url.lower() for keyword in _PII_KEYWORDS)
+        form_has_pii = any(
+            any(keyword in (form.action or "").lower() for keyword in _PII_KEYWORDS)
+            for form in page_data.forms
+        )
+        if url_has_pii or form_has_pii:
+            risk_ids.append(page.page_id)
+    return risk_ids

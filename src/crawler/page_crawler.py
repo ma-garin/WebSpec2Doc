@@ -60,6 +60,10 @@ class FieldData:
     default: str = ""
     options: tuple[str, ...] = ()
     element_id: str = ""
+    aria_label: str = ""
+    aria_required: bool = False
+    role: str = ""
+    has_visible_label: bool = False
 
 
 @dataclass(frozen=True)
@@ -92,6 +96,7 @@ class PageData:
     api_calls: tuple[ApiEndpoint, ...] = ()
     stack_info: StackInfo | None = None
     state_id: str = "default"  # DOM シグネチャ由来の状態識別子
+    a11y_issues: tuple[str, ...] = ()
 
 
 @contextmanager
@@ -261,6 +266,7 @@ def crawl_page(page: Page, url: str, output_dir: Path | None) -> PageData:
     from analyzer.stack_detector import detect_stack
     from crawler.link_extractor import (
         compute_dom_signature,
+        extract_a11y_issues,
         extract_buttons,
         extract_forms_including_frames,
         extract_headings,
@@ -283,6 +289,7 @@ def crawl_page(page: Page, url: str, output_dir: Path | None) -> PageData:
         links = tuple(extract_internal_links(page, normalized_url))
         forms = tuple(extract_forms_including_frames(page))
         buttons = tuple(extract_buttons(page))
+        a11y_issues = tuple(extract_a11y_issues(page))
         page_html = page.content()
         state_id = compute_dom_signature(page_html)
     finally:
@@ -299,6 +306,7 @@ def crawl_page(page: Page, url: str, output_dir: Path | None) -> PageData:
         api_calls=capture.finalize(),
         stack_info=stack,
         state_id=state_id,
+        a11y_issues=a11y_issues,
     )
 
 

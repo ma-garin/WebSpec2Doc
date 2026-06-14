@@ -1,0 +1,472 @@
+# タスク: Phase 6-C — .spec.ts 品質深化（role-based ロケータ＋Page Object 生成）
+
+## ゴール
+
+`web/services/spec_ts_generator.py` に2つの改善を加える:
+
+1. **role-based ロケータへの変換**: CSS セレクタ（`input[name="email"]`）を
+   `page.getByRole('textbox', { name: 'Email' })` / `page.getByLabel('Email')` に昇格させ、
+   テストの保守性を高める
+2. **Page Object ファイルの生成**: `{domain}.page.ts` を `{domain}.spec.ts` と並べて生成し、
+   重複ロケータを1箇所にまとめる
+
+**なぜ必要か**: 現状の `.spec.ts` はロケータが CSS/ID セレクタ中心で壊れやすい。
+フロントエンドエンジニアが「そのまま CI に組み込める」品質にする。
+
+---
+
+## 前提チェック（必ず実行してから始める）
+
+```bash
+source venv/bin/activate
+python --version   # 3.12.x であること
+python -m pytest tests/ -q 2>&1 | tail -5   # 全 PASS であること
+
+# 既存の spec_ts_generator を確認（必ず読むこと）
+cat web/services/spec_ts_generator.py
+```
+
+---
+
+## 触るファイル（これ以外は変更しない）
+
+| ファイル | 変更内容 |
+|---------|---------|
+| `web/services/spec_ts_generator.py` | role-based ロケータ関数 + Page Object 生成を追加 |
+| `tests/test_spec_ts_quality.py` | 新規作成（テスト） |
+
+**変更禁止**:
+- `web/routes/auto_run.py`（AutoRun の既存フロー）
+- `web/routes/report.py`（エクスポートエンドポイント）
+- `src/` 以下のすべてのファイル
+- `static/` / `templates/` 以下のすべてのファイル
+- git 操作（commit は Claude が行う）
+
+---
+
+## 既存コードの参照（必ず読んでから実装すること）
+
+```bash
+# spec_ts_generator.py の全体
+cat web/services/spec_ts_generator.py
+
+# 既存テスト（構造の参考）
+cat tests/test_spec_ts_generator.py
+
+# auto_run.py での generate_spec_ts 呼び出し（引数の確認）
+grep -n "generate_spec_ts\|spec_ts" web/routes/auto_run.py
+
+# playwright_candidates.json の構造例（あれば）
+find output -name "playwright_candidates.json" 2>/dev/null | head -1 | xargs cat 2>/dev/null | python3 -m json.tool | head -60
+```
+
+---
+
+## 実装指示
+
+### Step 1: `web/services/spec_ts_generator.py` — role-based ロケータ変換
+
+`_build_resilient_locator()` の直後に `_build_role_based_locator()` を追加する:
+
+```python
+def _build_role_based_locator(
+    locators: list[str],
+    field_name: str = "",
+    aria_label: str = "",
+    field_type: str = "text",
+) -> str:
+    """aria_label または field_name を使って role-based ロケータを優先生成する。
+
+    優先度:
+      1. aria_label がある → page.getByLabel(...)
+      2. field_type が select → page.getByRole('combobox', {name: ...})
+      3. field_type が textarea → page.getByRole('textbox', {name: ...})
+      4. field_type が checkbox/radio → page.getByRole(type, {name: ...})
+      5. field_type が submit/button → page.getByRole('button', {name: ...})
+      6. 上記いずれも使えない → 既存の _build_resilient_locator() にフォールバック
+    """
+    label = aria_label or field_name
+
+    if aria_label:
+        return f"page.getByLabel('{_esc(aria_label)}')"
+
+    if field_type == "select":
+        name_part = f", {{ name: '{_esc(label)}' }}" if label else ""
+        return f"page.getByRole('combobox'{name_part})"
+
+    if field_type == "textarea":
+        name_part = f", {{ name: '{_esc(label)}' }}" if label else ""
+        return f"page.getByRole('textbox'{name_part})"
+
+    if field_type in ("checkbox", "radio"):
+        name_part = f", {{ name: '{_esc(label)}' }}" if label else ""
+        return f"page.getByRole('{_esc(field_type)}'{name_part})"
+
+    if field_type in ("submit", "button", "reset"):
+        name_part = f", {{ name: '{_esc(label)}' }}" if label else ""
+        return f"page.getByRole('button'{name_part})"
+
+    if label:
+        return f"page.getByLabel('{_esc(label)}')"
+
+    return _build_resilient_locator(locators)
+```
+
+---
+
+### Step 2: `generate_spec_ts()` のシグネチャ変更
+
+既存の `generate_spec_ts()` に `generate_page_object: bool = False` を追加する。
+
+```python
+def generate_spec_ts(
+    domain: str,
+    candidates_path: Path,
+    output_path: Path,
+    filter_mode: str = "all",
+    enable_strong_assertions: bool = False,
+    enable_self_healing: bool = False,
+    generate_page_object: bool = False,   # ← 追加（既存デフォルト挙動を変えない）
+) -> Path:
+```
+
+`output_path.write_text(...)` の後に Page Object 生成を追記する:
+
+```python
+    output_path.write_text("\n".join(lines), encoding="utf-8")
+
+    # ↓ 追加
+    if generate_page_object:
+        po_path = output_path.with_name(output_path.stem + ".page.ts")
+        _generate_page_object(domain, filtered, po_path)
+
+    return output_path
+```
+
+---
+
+### Step 3: `_generate_page_object()` を追加
+
+```python
+def _generate_page_object(
+    domain: str,
+    candidates: list[dict[str, Any]],
+    output_path: Path,
+) -> None:
+    """画面ごとに Page Object class を生成し output_path に書き出す。
+
+    生成形式:
+      class LoginPage {
+        readonly page: Page;
+        constructor(page: Page) { this.page = page; }
+        // locator getter per field
+        get emailInput() { return this.page.getByLabel('Email'); }
+        async goto() { await this.page.goto('https://...'); }
+      }
+    """
+    # url→candidates のグルーピング
+    from collections import defaultdict
+
+    url_groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for c in candidates:
+        steps: list[Any] = c.get("steps") or []
+        url = _extract_url(steps) or "unknown"
+        url_groups[url].append(c)
+
+    lines = [
+        "import { Page } from '@playwright/test';",
+        "",
+        f"// Page Object generated by WebSpec2Doc — {domain}",
+        "",
+    ]
+
+    for url, items in url_groups.items():
+        class_name = _url_to_class_name(url)
+        lines.append(f"export class {class_name} {{")
+        lines.append("  readonly page: Page;")
+        lines.append("  constructor(page: Page) { this.page = page; }")
+        lines.append("")
+
+        # goto メソッド
+        if url != "unknown":
+            lines.append(f"  async goto() {{ await this.page.goto('{_esc(url)}'); }}")
+            lines.append("")
+
+        # フィールドのロケータ getter を収集（locators / title から）
+        seen_getters: set[str] = set()
+        for c in items:
+            locators: list[str] = c.get("locators") or []
+            title = _safe_str(c.get("title", ""))
+            for raw_loc in locators:
+                getter_name = _locator_to_getter_name(raw_loc)
+                if getter_name and getter_name not in seen_getters:
+                    seen_getters.add(getter_name)
+                    loc_expr = _raw_locator_to_playwright(raw_loc)
+                    lines.append(f"  get {getter_name}() {{ return {loc_expr}; }}")
+
+        lines.append("}")
+        lines.append("")
+
+    output_path.write_text("\n".join(lines), encoding="utf-8")
+
+
+def _url_to_class_name(url: str) -> str:
+    """URL パスの末尾からクラス名を生成する（例: /login → LoginPage）。"""
+    import re as _re
+    path = url.split("?")[0].rstrip("/").split("/")[-1] or "Index"
+    # キャメルケース化
+    words = _re.split(r"[-_.]", path)
+    name = "".join(w.capitalize() for w in words if w) or "Unknown"
+    return f"{name}Page"
+
+
+def _locator_to_getter_name(raw_loc: str) -> str:
+    """CSS セレクタから camelCase の getter 名を生成する。
+
+    例:
+      #email        → emailInput
+      input[name="password"] → passwordInput
+      [data-testid="submit-btn"] → submitBtnButton
+    """
+    import re as _re
+    # #id
+    m = _re.match(r"^#(.+)$", raw_loc.strip())
+    if m:
+        return _camel(m.group(1)) + "Input"
+    # input[name="..."] / select[name="..."] / textarea[name="..."]
+    m = _re.search(r'\[name=["\']([^"\']+)["\']', raw_loc)
+    if m:
+        return _camel(m.group(1)) + "Input"
+    # [data-testid="..."]
+    m = _re.search(r'data-testid=["\']([^"\']+)["\']', raw_loc)
+    if m:
+        return _camel(m.group(1)) + "Button"
+    return ""
+
+
+def _camel(s: str) -> str:
+    """snake-case / kebab-case → camelCase。"""
+    import re as _re
+    parts = _re.split(r"[-_\s]", s)
+    return parts[0].lower() + "".join(p.capitalize() for p in parts[1:])
+
+
+def _raw_locator_to_playwright(raw_loc: str) -> str:
+    """CSS セレクタを Playwright ロケータ式（文字列）に変換する。
+
+    aria-label があれば getByLabel を使う。なければ page.locator() にフォールバック。
+    """
+    import re as _re
+    m = _re.search(r'aria-label=["\']([^"\']+)["\']', raw_loc)
+    if m:
+        return f"this.page.getByLabel('{_esc(m.group(1))}')"
+    m = _re.search(r'data-testid=["\']([^"\']+)["\']', raw_loc)
+    if m:
+        return f"this.page.getByTestId('{_esc(m.group(1))}')"
+    return f"this.page.locator('{_esc(raw_loc)}')"
+```
+
+---
+
+## テストの実装（`tests/test_spec_ts_quality.py` を新規作成）
+
+```python
+from __future__ import annotations
+
+import json
+import re
+from pathlib import Path
+
+import pytest
+
+from web.services.spec_ts_generator import (
+    _build_role_based_locator,
+    _url_to_class_name,
+    _locator_to_getter_name,
+    generate_spec_ts,
+)
+
+
+# ── role-based ロケータ変換 ──────────────────────────────────────
+
+def test_role_based_locator_uses_get_by_label_when_aria_label() -> None:
+    result = _build_role_based_locator([], aria_label="メールアドレス", field_type="text")
+    assert result == "page.getByLabel('メールアドレス')"
+
+
+def test_role_based_locator_select_uses_combobox() -> None:
+    result = _build_role_based_locator([], field_name="prefecture", field_type="select")
+    assert "getByRole('combobox'" in result
+
+
+def test_role_based_locator_checkbox() -> None:
+    result = _build_role_based_locator([], field_name="agree", field_type="checkbox")
+    assert "getByRole('checkbox'" in result
+
+
+def test_role_based_locator_submit_uses_button() -> None:
+    result = _build_role_based_locator([], field_name="ログイン", field_type="submit")
+    assert "getByRole('button'" in result
+
+
+def test_role_based_locator_fallback_to_css() -> None:
+    """aria_label も field_name もない場合は既存ロケータにフォールバック。"""
+    result = _build_role_based_locator(['input[name="q"]'], field_type="text")
+    # フォールバック: _build_resilient_locator が返す page.locator(...)
+    assert "page.locator(" in result or "page.getByLabel(" in result
+
+
+# ── Page Object クラス名生成 ──────────────────────────────────────
+
+def test_url_to_class_name_login() -> None:
+    assert _url_to_class_name("https://example.com/login") == "LoginPage"
+
+
+def test_url_to_class_name_root() -> None:
+    assert _url_to_class_name("https://example.com/") == "IndexPage"
+
+
+def test_url_to_class_name_kebab() -> None:
+    assert _url_to_class_name("https://example.com/user-profile") == "UserProfilePage"
+
+
+# ── getter 名生成 ──────────────────────────────────────
+
+def test_locator_to_getter_name_id() -> None:
+    assert _locator_to_getter_name("#email") == "emailInput"
+
+
+def test_locator_to_getter_name_name_attr() -> None:
+    assert _locator_to_getter_name('input[name="password"]') == "passwordInput"
+
+
+def test_locator_to_getter_name_data_testid() -> None:
+    assert _locator_to_getter_name('[data-testid="submit-btn"]') == "submitBtnButton"
+
+
+def test_locator_to_getter_name_unknown() -> None:
+    assert _locator_to_getter_name("div.container") == ""
+
+
+# ── generate_spec_ts + generate_page_object ──────────────────────
+
+def _make_candidates(tmp_path: Path) -> Path:
+    candidates = {
+        "candidates": [
+            {
+                "id": "TC-001",
+                "title": "画面表示スモーク",
+                "trace_id": "TR-001",
+                "automation_status": "automatable",
+                "steps": ["page.goto('https://example.com/login')"],
+                "locators": ['#email', 'input[name="password"]'],
+                "expected": "ログイン画面が表示される",
+            }
+        ]
+    }
+    p = tmp_path / "playwright_candidates.json"
+    p.write_text(json.dumps(candidates), encoding="utf-8")
+    return p
+
+
+def test_generate_page_object_creates_page_ts(tmp_path: Path) -> None:
+    """generate_page_object=True で .page.ts が生成される。"""
+    candidates_path = _make_candidates(tmp_path)
+    spec_path = tmp_path / "example.com.spec.ts"
+    generate_spec_ts(
+        "example.com",
+        candidates_path,
+        spec_path,
+        generate_page_object=True,
+    )
+    page_ts = tmp_path / "example.com.page.ts"
+    assert page_ts.exists(), ".page.ts が生成されること"
+    content = page_ts.read_text(encoding="utf-8")
+    assert "import { Page } from '@playwright/test';" in content
+    assert "export class" in content
+    assert "LoginPage" in content  # /login → LoginPage
+
+
+def test_generate_page_object_false_no_page_ts(tmp_path: Path) -> None:
+    """generate_page_object=False（デフォルト）では .page.ts が生成されない。"""
+    candidates_path = _make_candidates(tmp_path)
+    spec_path = tmp_path / "example.com.spec.ts"
+    generate_spec_ts("example.com", candidates_path, spec_path)
+    assert not (tmp_path / "example.com.page.ts").exists()
+
+
+def test_page_ts_contains_locator_getters(tmp_path: Path) -> None:
+    """生成された .page.ts に emailInput / passwordInput getter が含まれる。"""
+    candidates_path = _make_candidates(tmp_path)
+    spec_path = tmp_path / "example.com.spec.ts"
+    generate_spec_ts("example.com", candidates_path, spec_path, generate_page_object=True)
+    content = (tmp_path / "example.com.page.ts").read_text(encoding="utf-8")
+    assert "emailInput" in content or "passwordInput" in content
+
+
+def test_existing_spec_ts_still_works(tmp_path: Path) -> None:
+    """既存の generate_spec_ts（generate_page_object 未指定）は影響を受けない。"""
+    candidates_path = _make_candidates(tmp_path)
+    spec_path = tmp_path / "example.com.spec.ts"
+    result = generate_spec_ts("example.com", candidates_path, spec_path)
+    assert result == spec_path
+    assert spec_path.exists()
+    content = spec_path.read_text(encoding="utf-8")
+    assert "import { test, expect }" in content
+```
+
+---
+
+## 完了条件
+
+- [ ] `_build_role_based_locator()` が `web/services/spec_ts_generator.py` に存在する
+- [ ] `generate_spec_ts(..., generate_page_object=True)` で `.page.ts` が生成される
+- [ ] 既存の `generate_spec_ts()` は引数なし（`generate_page_object=False`）で挙動が変わらない
+- [ ] `python -m pytest tests/test_spec_ts_quality.py -v` が全 PASS
+- [ ] `python -m pytest tests/ -q` が全 PASS（カバレッジ 80%+ を維持）
+- [ ] 変更したファイルは `web/services/spec_ts_generator.py` と `tests/test_spec_ts_quality.py` の2件のみ
+
+---
+
+## Claude への報告フォーマット
+
+実装完了後、以下を Claude に報告してください（git 操作は Claude が行う）:
+
+```
+## Phase 6-C 完了報告
+
+### テスト結果
+- test_role_based_locator_uses_get_by_label_when_aria_label: PASS / FAIL
+- test_role_based_locator_select_uses_combobox: PASS / FAIL
+- test_role_based_locator_checkbox: PASS / FAIL
+- test_role_based_locator_submit_uses_button: PASS / FAIL
+- test_role_based_locator_fallback_to_css: PASS / FAIL
+- test_url_to_class_name_login: PASS / FAIL
+- test_url_to_class_name_root: PASS / FAIL
+- test_url_to_class_name_kebab: PASS / FAIL
+- test_locator_to_getter_name_id: PASS / FAIL
+- test_locator_to_getter_name_name_attr: PASS / FAIL
+- test_locator_to_getter_name_data_testid: PASS / FAIL
+- test_locator_to_getter_name_unknown: PASS / FAIL
+- test_generate_page_object_creates_page_ts: PASS / FAIL
+- test_generate_page_object_false_no_page_ts: PASS / FAIL
+- test_page_ts_contains_locator_getters: PASS / FAIL
+- test_existing_spec_ts_still_works: PASS / FAIL
+- 全テスト: X PASS, Y FAIL
+- カバレッジ: XX%
+
+### 変更ファイル（git diff --name-only で確認）
+（ファイルリスト）
+
+### エラー・問題
+（あれば記載）
+```
+
+---
+
+## スコープ外（やらないこと）
+
+- `web/routes/auto_run.py` の変更（既存 AutoRun フロー）
+- TypeScript コンパイルチェック（tsc によるバリデーション）
+- GUI への Page Object ダウンロードボタン追加
+- git 操作

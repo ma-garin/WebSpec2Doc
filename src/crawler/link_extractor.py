@@ -176,6 +176,10 @@ def _to_field_data(raw_field: dict[str, Any]) -> FieldData:
         default=str(raw_field.get("default") or EMPTY_TEXT),
         options=tuple(str(opt) for opt in (raw_field.get("options") or [])),
         element_id=str(raw_field.get("id") or EMPTY_TEXT),
+        aria_label=str(raw_field.get("aria_label") or EMPTY_TEXT),
+        aria_required=bool(raw_field.get("aria_required", False)),
+        role=str(raw_field.get("role") or EMPTY_TEXT),
+        has_visible_label=bool(raw_field.get("has_visible_label", False)),
     )
 
 
@@ -210,6 +214,16 @@ _FORM_SCRIPT = """
       max: field.getAttribute('max') || '',
       pattern: field.getAttribute('pattern') || '',
       default: field.getAttribute('value') || '',
+      aria_label: field.getAttribute('aria-label') || '',
+      aria_required: field.getAttribute('aria-required') === 'true' || field.required,
+      role: field.getAttribute('role') || '',
+      has_visible_label: (() => {
+        const id = field.getAttribute('id');
+        if (id && document.querySelector('label[for="' + id + '"]')) return true;
+        if (field.getAttribute('aria-label')) return true;
+        if (field.getAttribute('aria-labelledby')) return true;
+        return false;
+      })(),
       options: options,
     };
   }),
@@ -222,3 +236,39 @@ _BUTTON_SCRIPT = """
   el.innerText || el.getAttribute('value') || el.getAttribute('aria-label') || ''
 ).trim()).filter(Boolean)
 """
+
+
+def extract_a11y_issues(page: Page) -> list[str]:
+    """ページ内の明白なアクセシビリティ問題を検出する。"""
+    issues: list[str] = []
+    try:
+        missing_alt: int = page.eval_on_selector_all(
+            "img",
+            "(imgs) => imgs.filter(img => !img.getAttribute('alt')).length",
+        )
+        if missing_alt:
+            issues.append(f"img[alt欠落]: {missing_alt}件")
+
+        unlabeled: int = page.eval_on_selector_all(
+            "input:not([type=hidden]):not([type=submit]):not([type=button]):not([type=reset]), "
+            "select, textarea",
+            """(els) => els.filter(el => {
+              const id = el.getAttribute('id');
+              if (id && document.querySelector('label[for="' + id + '"]')) return false;
+              if (el.getAttribute('aria-label')) return false;
+              if (el.getAttribute('aria-labelledby')) return false;
+              return true;
+            }).length""",
+        )
+        if unlabeled:
+            issues.append(f"ラベルなし入力: {unlabeled}件")
+
+        has_landmark: bool = page.eval_on_selector_all(
+            "main, [role='main'], nav, [role='navigation'], header, footer",
+            "(els) => els.length > 0",
+        )
+        if not has_landmark:
+            issues.append("landmark role なし（main/nav/header/footer が0件）")
+    except Exception as exc:
+        logger.warning("A11y チェックに失敗しました: %s", exc)
+    return issues

@@ -1,5 +1,7 @@
 // ---- 画面遷移図（UML 3タブ + テスト観点マップ）----
 let umlZoom = 1;
+let _currentUmlSource = '';
+let _currentUmlType = 'sequence';
 
 function _setupPan(canvas) {
   let dragging = false, startX = 0, startY = 0, startSL = 0, startST = 0;
@@ -42,7 +44,43 @@ function _exportUmlSvg() {
   if (!svg) return;
   const blob = new Blob([new XMLSerializer().serializeToString(svg)], { type: 'image/svg+xml' });
   const url = URL.createObjectURL(blob);
-  const a = Object.assign(document.createElement('a'), { href: url, download: 'diagram.svg' });
+  const a = Object.assign(document.createElement('a'), { href: url, download: `${_currentUmlType}.svg` });
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function _exportUmlPng() {
+  const stage = document.getElementById('uml-zoom-stage');
+  const svg = stage && stage.querySelector('svg');
+  if (!svg) return;
+  const svgStr = new XMLSerializer().serializeToString(svg);
+  const svgBlob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(svgBlob);
+  const img = new Image();
+  img.onload = () => {
+    const w = svg.viewBox.baseVal.width || img.naturalWidth || 800;
+    const h = svg.viewBox.baseVal.height || img.naturalHeight || 600;
+    const canvas = document.createElement('canvas');
+    canvas.width = w * 2;
+    canvas.height = h * 2;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(2, 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(img, 0, 0, w, h);
+    URL.revokeObjectURL(url);
+    const a = Object.assign(document.createElement('a'), { href: canvas.toDataURL('image/png'), download: `${_currentUmlType}.png` });
+    a.click();
+  };
+  img.onerror = () => URL.revokeObjectURL(url);
+  img.src = url;
+}
+
+function _exportUmlMmd() {
+  if (!_currentUmlSource) return;
+  const blob = new Blob([_currentUmlSource], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = Object.assign(document.createElement('a'), { href: url, download: `${_currentUmlType}.mmd` });
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -181,6 +219,7 @@ function _showUmlPanel(type, screens) {
     return;
   }
   const meta = _umlMeta(type);
+  _currentUmlType = type;
   umlZoom = 1;
   area.innerHTML =
     '<div class="uml-panel-head">' +
@@ -209,8 +248,11 @@ function _umlZoomControls() {
     '<button type="button" class="uml-zoom-btn" data-zoom="in" title="拡大 (ホイール↑)">＋</button>' +
     '<button type="button" class="uml-zoom-btn" data-zoom="fit" title="幅に合わせる">Fit</button>' +
     '<button type="button" class="uml-zoom-btn uml-zoom-sep" data-zoom="fullscreen" title="全画面 (Esc で解除)">⛶</button>' +
-    '</div>' +
-    '<button type="button" class="uml-export-btn" title="SVGをダウンロード">↓ SVG</button>'
+    '<span class="uml-zoom-divider"></span>' +
+    '<button type="button" class="uml-zoom-btn uml-dl-btn" data-dl="svg" title="SVGをダウンロード">↓ SVG</button>' +
+    '<button type="button" class="uml-zoom-btn uml-dl-btn" data-dl="png" title="PNGをダウンロード（2x高解像度）">↓ PNG</button>' +
+    '<button type="button" class="uml-zoom-btn uml-dl-btn" data-dl="mmd" title="Mermaidソースをダウンロード（編集・再利用用）">↓ MMD</button>' +
+    '</div>'
   );
 }
 
@@ -318,6 +360,7 @@ async function _renderUmlDiagram(type, screens, rows) {
   const target = document.getElementById('uml-render-target');
   if (!target) return;
   const source = _umlSource(type, screens, rows);
+  _currentUmlSource = source;
   if (!rows.length) {
     target.innerHTML = '<div class="hero-msg">遷移情報がありません（共通ナビのみ検出）。</div>';
     return;
@@ -354,8 +397,13 @@ function _prepareUmlZoom() {
       else if (mode === 'fullscreen') _toggleUmlFullscreen();
     });
   });
-  document.querySelectorAll('.uml-export-btn').forEach(btn => {
-    btn.addEventListener('click', _exportUmlSvg);
+  document.querySelectorAll('.uml-dl-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const fmt = btn.dataset.dl;
+      if (fmt === 'svg') _exportUmlSvg();
+      else if (fmt === 'png') _exportUmlPng();
+      else if (fmt === 'mmd') _exportUmlMmd();
+    });
   });
 }
 

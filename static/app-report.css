@@ -175,8 +175,9 @@
 .uml-canvas.is-fullscreen.is-panning { cursor:grabbing; }
 .uml-canvas svg { max-width:none; min-width:100%; height:auto; display:block; }
 .uml-zoom-sep { border-left:1px solid var(--border) !important; margin-left:2px; }
-.uml-export-btn { height:28px; padding:0 10px; border:1px solid var(--border); border-radius:3px; background:var(--surface-soft); color:var(--text); font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; }
-.uml-export-btn:hover { border-color:var(--info-border); background:var(--surface); color:var(--primary-dark); }
+.uml-zoom-divider { display:inline-block; width:1px; height:16px; background:var(--border); margin:0 4px; vertical-align:middle; flex-shrink:0; }
+.uml-dl-btn { font-weight:600; color:var(--primary-dark) !important; border-color:var(--info-border) !important; background:var(--surface-soft) !important; }
+.uml-dl-btn:hover { background:var(--surface) !important; }
 .uml-zoom-stage { display:inline-block; position:relative; min-width:1px; min-height:1px; }
 .uml-zoom-stage svg { transform-origin:top left; }
 .uml-source { margin:0; padding:12px; border:1px solid var(--border); border-radius:4px; background:var(--surface-soft); font-size:12px; white-space:pre; overflow:auto; }

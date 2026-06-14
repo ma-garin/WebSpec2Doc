@@ -10,6 +10,7 @@ const EXPORT_DEFS = [
   { key: 'pdf', label: 'PDF', desc: '配布・印刷用（HTMLレポートのPDF版）' },
   { key: 'screens_md', label: 'Markdown（画面一覧）', desc: 'screens.md' },
   { key: 'forms_md', label: 'Markdown（フォーム）', desc: 'forms.md' },
+  { key: 'techniques_md', label: 'Markdown（テスト技法）', desc: '技法マトリクス＋画面別ケース雛形' },
   { key: 'excel', label: 'Excel', desc: 'spec.xlsx（表計算で編集）' },
   { key: 'json', label: 'JSON（機械可読）', desc: '自動化・連携用の構造化データ' },
   { key: 'diff', label: '差分レポート', desc: '前回スナップショットとの差分' },
@@ -95,6 +96,7 @@ function _buildExportDropdown(data) {
     { key: 'excel', label: 'Excel' },
     { key: 'screens_md', label: 'Markdown（画面一覧）' },
     { key: 'forms_md', label: 'Markdown（フォーム）' },
+    { key: 'techniques_md', label: 'Markdown（テスト技法）' },
     { key: 'transition_mmd', label: '遷移図（Mermaid）' },
     { key: 'diff', label: '差分レポート' },
   ];

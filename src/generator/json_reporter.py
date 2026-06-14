@@ -26,8 +26,7 @@ def generate_json_report(
     crawled_at: str = "",
 ) -> str:
     """Serialize crawl results and derived test conditions to structured JSON."""
-    canonical_screens = group_canonical_screens(pages)
-    screens_data = [_screen_dict(p, graph, canonical_screens[p.page_id]) for p in pages]
+    screens_data = build_screens_data(pages, graph)
     screens_canonical = json.dumps(screens_data, ensure_ascii=False, sort_keys=True)
     report_hash = hashlib.sha256(screens_canonical.encode("utf-8")).hexdigest()
     return json.dumps(
@@ -38,7 +37,7 @@ def generate_json_report(
                 "max_pages": crawl_max_pages,
                 "crawled_at": crawled_at,
                 "page_count": len(pages),
-                "screen_count": sum(1 for info in canonical_screens.values() if info.is_canonical),
+                "screen_count": sum(1 for s in screens_data if s.get("is_canonical")),
                 "report_hash": report_hash,
                 "pii_risk_screens": _find_pii_risk_screens(pages),
             },
@@ -47,6 +46,12 @@ def generate_json_report(
         ensure_ascii=False,
         indent=JSON_INDENT,
     )
+
+
+def build_screens_data(pages: list[AnalyzedPage], graph: nx.DiGraph) -> list[dict]:
+    """report.json の screens 配列（技法埋め込み済み）を構築する共通関数。"""
+    canonical_screens = group_canonical_screens(pages)
+    return [_screen_dict(p, graph, canonical_screens[p.page_id]) for p in pages]
 
 
 def _screen_dict(page: AnalyzedPage, graph: nx.DiGraph, canonical: CanonicalInfo) -> dict:

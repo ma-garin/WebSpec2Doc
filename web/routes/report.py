@@ -108,6 +108,7 @@ def api_result() -> dict | tuple[dict, int]:
             "excel": path_of("spec.xlsx"),
             "screens_md": path_of("screens.md"),
             "forms_md": path_of("forms.md"),
+            "techniques_md": path_of("techniques.md"),
             "transition_mmd": path_of("transition.mmd"),
             "diff": path_of("diff_report.html"),
         },

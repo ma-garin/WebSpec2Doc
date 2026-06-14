@@ -521,11 +521,15 @@ def _save_markdown_outputs(
         merge_api_endpoints,
         merge_stack_infos,
     )
+    from generator.json_reporter import build_screens_data
+    from generator.technique_reporter import generate_techniques_markdown
 
     screens_md = generate_screens_markdown(pages, graph, target_url)
     forms_md = generate_forms_markdown(form_summary)
+    techniques_md = generate_techniques_markdown(build_screens_data(pages, graph))
     (output_dir / "screens.md").write_text(screens_md, encoding="utf-8")
     (output_dir / "forms.md").write_text(forms_md, encoding="utf-8")
+    (output_dir / "techniques.md").write_text(techniques_md, encoding="utf-8")
     (output_dir / "transition.mmd").write_text(transition_mmd, encoding="utf-8")
 
     stacks = [p.page_data.stack_info for p in pages if p.page_data.stack_info]

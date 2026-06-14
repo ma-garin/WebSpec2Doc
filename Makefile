@@ -2,11 +2,13 @@
 # Makefile — WebSpec2Doc 開発コマンド
 #
 # 使い方:
-#   make help          コマンド一覧
-#   make test          ユニット・統合テスト（L1/L2）
-#   make verify-ui     E2E テスト（L3）+ .ui-verified マーカー生成
-#   make setup-hooks   git フックのインストール
-#   make coverage      カバレッジレポート生成
+#   make help              コマンド一覧
+#   make test              ユニット・統合テスト（L1/L2）
+#   make verify-ui         E2E テスト（L3）+ .ui-verified マーカー生成
+#   make quality-harness   機能契約・実行パス・未実装UIを検査
+#   make verify-all        quality-harness + test + verify-ui
+#   make setup-hooks       git フックのインストール
+#   make coverage          カバレッジレポート生成
 # =============================================================================
 
 PYTHON     := venv/bin/python
@@ -16,7 +18,7 @@ E2E_DIR    := tests/e2e
 SHOT_DIR   := tests/e2e/screenshots
 MARKER     := .ui-verified
 
-.PHONY: help test verify-ui setup-hooks coverage lint clean check-venv
+.PHONY: help test verify-ui quality-harness verify-all setup-hooks coverage lint clean check-venv
 
 # デフォルトターゲット
 help:
@@ -24,15 +26,18 @@ help:
 	@echo "  WebSpec2Doc — 開発コマンド"
 	@echo "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	@echo ""
-	@echo "  make test          L1/L2: ユニット・統合テスト実行"
-	@echo "  make verify-ui     L3: E2E テスト実行（UI変更後は必須）"
-	@echo "  make coverage      カバレッジレポートを生成"
-	@echo "  make setup-hooks   pre-commit hook をインストール"
-	@echo "  make lint          ruff + mypy による静的解析"
-	@echo "  make clean         生成ファイルを削除"
+	@echo "  make quality-harness  L0: 機能契約・実行パス・未実装UI検査"
+	@echo "  make test             L1/L2: ユニット・統合テスト実行"
+	@echo "  make verify-ui        L3: E2E テスト実行（UI変更後は必須）"
+	@echo "  make verify-all       L0-L3: ハーネス + test + verify-ui"
+	@echo "  make coverage         カバレッジレポートを生成"
+	@echo "  make setup-hooks      pre-commit hook をインストール"
+	@echo "  make lint             ruff + mypy による静的解析"
+	@echo "  make clean            生成ファイルを削除"
 	@echo ""
-	@echo "  Definition of Done: docs/DEFINITION_OF_DONE.md"
-	@echo "  テスト戦略:         docs/TESTING_STRATEGY.md"
+	@echo "  Functional Integrity Gate: docs/process/functional-integrity-gate.md"
+	@echo "  Definition of Done:         docs/DEFINITION_OF_DONE.md"
+	@echo "  テスト戦略:                 docs/TESTING_STRATEGY.md"
 	@echo ""
 
 # =============================================================================
@@ -44,6 +49,20 @@ check-venv:
 		echo "  python3.12 -m venv venv && source venv/bin/activate && pip install -r requirements.txt"; \
 		exit 1; \
 	fi
+
+# =============================================================================
+# L0: 機能整合性ハーネス
+# =============================================================================
+quality-harness: check-venv
+	@echo ""
+	@echo "  ━━ L0: Functional Integrity Harness ━━━━━━━━━━━━━━━━━━━━━"
+	$(PYTHON) scripts/quality_harness.py
+	@echo ""
+
+verify-all: quality-harness test verify-ui
+	@echo ""
+	@echo "  ✅ verify-all PASS（quality-harness + test + verify-ui）"
+	@echo ""
 
 # =============================================================================
 # L1/L2: ユニット・統合テスト

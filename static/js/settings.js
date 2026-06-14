@@ -44,6 +44,7 @@ async function loadServerSettings() {
       const modelEl = document.getElementById('api-model');
       if (modelEl) modelEl.value = data.openai_model;
     }
+    await loadAllowLocalToggle();
   } catch (e) { /* 設定読み込み失敗は無視 */ }
 }
 
@@ -92,9 +93,34 @@ async function saveSlackWebhook() {
   } catch (e) { showToast('Slack設定の保存に失敗しました', 'error'); }
 }
 
+async function loadAllowLocalToggle() {
+  try {
+    const data = await fetch('/api/settings/allow-local').then(r => r.json());
+    const el = document.getElementById('allow-local-toggle');
+    if (el) el.checked = !!data.allow_local;
+  } catch (e) { /* トグル読み込み失敗は無視 */ }
+}
+
+async function saveAllowLocal() {
+  const enabled = document.getElementById('allow-local-toggle')?.checked ?? false;
+  try {
+    const res = await fetch('/api/settings/allow-local', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      const msg = document.getElementById('allow-local-msg');
+      if (msg) { msg.classList.add('show'); setTimeout(() => msg.classList.remove('show'), 2000); }
+    }
+  } catch (e) { showToast('ローカルクロール設定の保存に失敗しました', 'error'); }
+}
+
 document.getElementById('save-api')?.addEventListener('click', saveApiKey);
 document.getElementById('save-model')?.addEventListener('click', saveModel);
 document.getElementById('save-slack')?.addEventListener('click', saveSlackWebhook);
+document.getElementById('allow-local-toggle')?.addEventListener('change', saveAllowLocal);
 
 // 初期ロード
 loadSettingsForm();
@@ -102,4 +128,3 @@ loadSettingsForm();
 document.querySelector('.app-nav-item[data-view="settings"]')?.addEventListener('click', () => {
   setTimeout(loadServerSettings, 50);
 });
-

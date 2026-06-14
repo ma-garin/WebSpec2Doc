@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from flask import Blueprint, request
 
 from web.config import DEFAULT_OPENAI_MODEL
@@ -48,3 +50,23 @@ def post_settings() -> dict:
         "openai_key_set": bool(env.get("OPENAI_API_KEY")),
         "slack_webhook_set": bool(env.get("SLACK_WEBHOOK_URL")),
     }
+
+
+@bp.get("/api/settings/allow-local")
+def get_allow_local() -> dict:
+    env = _read_env()
+    return {"allow_local": env.get("WEBSPEC2DOC_ALLOW_LOCAL", "") == "1"}
+
+
+@bp.post("/api/settings/allow-local")
+def post_allow_local() -> tuple[dict, int] | dict:
+    payload = request.get_json(force=False, silent=True)
+    if not isinstance(payload, dict) or not isinstance(payload.get("enabled"), bool):
+        return {"error": "enabled must be a boolean"}, 400
+
+    enabled = payload["enabled"]
+    _write_env({"WEBSPEC2DOC_ALLOW_LOCAL": "1" if enabled else ""})
+    env = _read_env()
+    allow_local = env.get("WEBSPEC2DOC_ALLOW_LOCAL", "") == "1"
+    logging.warning("WEBSPEC2DOC_ALLOW_LOCAL changed to %s", allow_local)
+    return {"ok": True, "allow_local": allow_local}

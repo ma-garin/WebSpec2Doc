@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python scripts/quality_harness.py)",
+      "Bash(make test)",
+      "Bash(make verify-ui)",
+      "Bash(make verify-all)"
+    ]
+  }
+}

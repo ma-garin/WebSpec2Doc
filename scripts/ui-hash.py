@@ -17,14 +17,19 @@ EXCLUDE_DIRS = {".git", "venv", "node_modules", "output", "__pycache__"}
 
 
 def _ui_files_on_disk() -> list[str]:
-    root = Path(".")
-    paths: list[str] = []
-    for ext in UI_EXTENSIONS:
-        for p in root.rglob(f"*{ext}"):
-            parts = set(p.parts)
-            if not parts & EXCLUDE_DIRS:
-                paths.append(str(p))
-    return sorted(paths)
+    # git 管理対象（追跡済み＋未追跡だが .gitignore で無視されないもの）のみを対象にする。
+    # rglob だと _autorun_pw.config.js のような per-run 生成物（gitignore 対象）が混入し、
+    # E2E 実行のたびに hash が変動して検証マーカーが不安定になるため。
+    result = subprocess.run(
+        ["git", "ls-files", "--cached", "--others", "--exclude-standard"],
+        capture_output=True,
+        text=True,
+    )
+    return sorted(
+        f
+        for f in result.stdout.splitlines()
+        if Path(f).suffix in UI_EXTENSIONS and not set(Path(f).parts) & EXCLUDE_DIRS
+    )
 
 
 def _ui_files_staged() -> list[str]:

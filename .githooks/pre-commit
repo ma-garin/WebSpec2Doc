@@ -137,26 +137,30 @@ if $UI_CHANGED; then
   fi
 
   # ── UI コンテンツ hash 照合（偽造・変更後コミット防止）──
+  # マーカーは ui-hash.py disk（git管理対象UIファイル全体）を記録する。
+  # ここも同じ disk hash で照合し（disk↔disk）、E2E検証後にUIファイルが
+  # 変更されていないことを検知する。staged(変更分のみ)と比較すると集合が
+  # 異なり部分コミットで必ず不一致になるため disk に統一。
   VERIFIED_UI_HASH=$(awk '{print $2}' "$MARKER" 2>/dev/null || echo "")
 
   if [ -n "$VERIFIED_UI_HASH" ] && [ "$VERIFIED_UI_HASH" != "no-git" ]; then
     log_info "UI ファイル hash を照合中..."
-    STAGED_UI_HASH=$("${VENV_PYTHON}" "${ROOT}/scripts/ui-hash.py" staged 2>/dev/null || echo "error")
+    CURRENT_UI_HASH=$("${VENV_PYTHON}" "${ROOT}/scripts/ui-hash.py" disk 2>/dev/null || echo "error")
 
-    if [ "$STAGED_UI_HASH" = "error" ]; then
+    if [ "$CURRENT_UI_HASH" = "error" ]; then
       log_warn "hash 計算に失敗しました。タイムスタンプのみで判定します。"
-    elif [ "$STAGED_UI_HASH" != "$VERIFIED_UI_HASH" ]; then
+    elif [ "$CURRENT_UI_HASH" != "$VERIFIED_UI_HASH" ]; then
       log_blocked "E2E 検証後に UI ファイルが変更されています"
       echo ""
       echo "    検証時 hash: ${VERIFIED_UI_HASH}"
-      echo "    現在の hash: ${STAGED_UI_HASH}"
+      echo "    現在の hash: ${CURRENT_UI_HASH}"
       echo ""
       echo "    変更後に再度 E2E テストを実行してください:"
       echo "    make verify-ui"
       echo ""
       exit 1
     fi
-    log_ok "UI hash 一致（${STAGED_UI_HASH}）"
+    log_ok "UI hash 一致（${CURRENT_UI_HASH}）"
   fi
 
   log_ok "E2E 検証済み（${AGE}秒前）"

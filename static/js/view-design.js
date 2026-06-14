@@ -173,6 +173,27 @@ function _tcStub(key, sc) {
   return '';
 }
 
+// 技法推奨の単一参照点。
+// 新しい report.json は screen.techniques（サーバー側 technique_recommender が算出）を持つ。
+// 旧データは従来のフロント計算（_recommendFor/_tcStub）にフォールバックする。
+// いずれの場合も rationale は HTML 安全な文字列として返す。
+function _techniquesFor(sc) {
+  if (Array.isArray(sc.techniques)) {
+    return sc.techniques.map(t => ({
+      key: t.key,
+      label: t.label,
+      abbr: t.abbr,
+      rationale: (t.rationale || []).map(escHtml),
+      case_stub: t.case_stub || '',
+    }));
+  }
+  const rec = _recommendFor(sc);
+  return Object.keys(rec).map(k => {
+    const t = DESIGN_TECHNIQUES.find(x => x.key === k) || { label: k, abbr: k };
+    return { key: k, label: t.label, abbr: t.abbr, rationale: rec[k], case_stub: _tcStub(k, sc) };
+  });
+}
+
 function renderDesign() {
   if (!reportJson || !(reportJson.screens || []).length) {
     resultHero.innerHTML = '<div class="hero-msg"><p>設計データ（report.json）がありません。クロールを実行してください。</p></div>';
@@ -186,10 +207,10 @@ function renderDesign() {
     ct: '#198038', pw: '#B12704', uc: '#0043CE', comb: '#6E6E6E',
   };
   const matrixRows = screens.map(sc => {
-    const rec = _recommendFor(sc);
+    const recMap = Object.fromEntries(_techniquesFor(sc).map(r => [r.key, r]));
     const cells = DESIGN_TECHNIQUES.map(t => {
-      if (!rec[t.key]) return `<td class="tech-cell tech-miss" aria-label="非推奨">—</td>`;
-      const tip = rec[t.key].join(' / ').replace(/"/g, '&quot;').slice(0, 120);
+      if (!recMap[t.key]) return `<td class="tech-cell tech-miss" aria-label="非推奨">—</td>`;
+      const tip = recMap[t.key].rationale.join(' / ').replace(/"/g, '&quot;').slice(0, 120);
       const col = TECH_BADGE_COLORS[t.key] || '#444';
       return `<td class="tech-cell tech-hit" data-tip="${tip}"><span class="tech-badge" style="background:${col}">${escHtml(t.abbr)}</span></td>`;
     }).join('');
@@ -200,52 +221,11 @@ function renderDesign() {
     `<th><button type="button" class="tech-th-btn" data-tech-key="${t.key}" title="${escHtml(t.label)}のガイドを表示">${escHtml(t.abbr)}</button></th>`
   ).join('');
 
-  // ---- 画面別詳細 ----
+  // ---- 技法色（凡例で使用） ----
   const TECH_COLORS = {
     ep: '#0F62FE', bva: '#6929C4', dt: '#005D5D', st: '#9F1853',
     ct: '#198038', pw: '#B12704', uc: '#0043CE', comb: '#6E6E6E',
   };
-  const detailCards = screens.map(sc => {
-    const rec = _recommendFor(sc);
-    const keys = Object.keys(rec);
-    if (!keys.length) return `
-      <div style="border:1px solid var(--border);border-radius:6px;padding:14px 16px;margin-bottom:12px">
-        <div style="font-weight:600;margin-bottom:4px">${escHtml(sc.page_id)} <span style="color:var(--text-muted);font-weight:400">${escHtml(sc.title || '')}</span></div>
-        <p style="color:var(--text-muted);font-size:12px;margin:0">フォームも遷移もないページのため、技法の推奨なし</p>
-      </div>`;
-
-    const badges = keys.map(k => {
-      const t = DESIGN_TECHNIQUES.find(x => x.key === k);
-      const col = TECH_COLORS[k] || '#444';
-      return `<span style="display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;color:#fff;background:${col};margin:2px 3px 2px 0">${escHtml(t.label)}</span>`;
-    }).join('');
-
-    const rationale = keys.map(k => {
-      const t = DESIGN_TECHNIQUES.find(x => x.key === k);
-      const reasons = rec[k];
-      const col = TECH_COLORS[k] || '#444';
-      return `<div style="margin-bottom:8px">
-        <span style="font-size:12px;font-weight:700;color:${col}">${escHtml(t.label)}</span>
-        <ul style="margin:2px 0 0 0;padding-left:18px">
-          ${reasons.map(r => `<li style="font-size:12px;color:var(--text);margin-bottom:2px">${r}</li>`).join('')}
-        </ul>
-      </div>`;
-    }).join('');
-
-    return `
-      <div style="border:1px solid var(--border);border-radius:6px;padding:14px 16px;margin-bottom:12px">
-        <div style="font-weight:600;margin-bottom:6px">
-          ${escHtml(sc.page_id)}
-          <span style="color:var(--text-muted);font-weight:400"> ${escHtml(sc.title || '')}</span>
-          <code style="font-size:11px;color:var(--text-muted);margin-left:8px">${escHtml(sc.url || '')}</code>
-        </div>
-        <div style="margin-bottom:10px">${badges}</div>
-        <details style="font-size:12px">
-          <summary style="cursor:pointer;color:var(--text-muted);font-size:12px">根拠を表示</summary>
-          <div style="margin-top:8px;padding-left:4px">${rationale}</div>
-        </details>
-      </div>`;
-  }).join('');
 
   // ---- 技法凡例 ----
   const legend = DESIGN_TECHNIQUES.map(t => {
@@ -320,29 +300,25 @@ function renderTechniqueDetail() {
   };
 
   const detailCards = screens.map(sc => {
-    const rec = _recommendFor(sc);
-    const keys = Object.keys(rec);
-    if (!keys.length) return `
+    const recs = _techniquesFor(sc);
+    if (!recs.length) return `
       <div style="border:1px solid var(--border);border-radius:6px;padding:14px 16px;margin-bottom:12px">
         <div style="font-weight:600;margin-bottom:4px">${escHtml(sc.page_id)} <span style="color:var(--text-muted);font-weight:400">${escHtml(sc.title || '')}</span></div>
         <p style="color:var(--text-muted);font-size:12px;margin:0">フォームも遷移もないページのため、技法の推奨なし</p>
       </div>`;
 
-    const badges = keys.map(k => {
-      const t = DESIGN_TECHNIQUES.find(x => x.key === k);
-      const col = TECH_COLORS[k] || '#444';
-      return `<span style="display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;color:#fff;background:${col};margin:2px 3px 2px 0">${escHtml(t.label)}</span>`;
+    const badges = recs.map(r => {
+      const col = TECH_COLORS[r.key] || '#444';
+      return `<span style="display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;color:#fff;background:${col};margin:2px 3px 2px 0">${escHtml(r.label)}</span>`;
     }).join('');
 
-    const rationale = keys.map(k => {
-      const t = DESIGN_TECHNIQUES.find(x => x.key === k);
-      const reasons = rec[k];
-      const col = TECH_COLORS[k] || '#444';
-      const stub = _tcStub(k, sc);
+    const rationale = recs.map(r => {
+      const col = TECH_COLORS[r.key] || '#444';
+      const stub = r.case_stub;
       return `<div style="margin-bottom:12px">
-        <div style="font-size:12px;font-weight:700;color:${col};margin-bottom:4px">${escHtml(t.label)}</div>
+        <div style="font-size:12px;font-weight:700;color:${col};margin-bottom:4px">${escHtml(r.label)}</div>
         <ul style="margin:0 0 4px 0;padding-left:18px">
-          ${reasons.map(r => `<li style="font-size:12px;color:var(--text);margin-bottom:2px">${r}</li>`).join('')}
+          ${r.rationale.map(reason => `<li style="font-size:12px;color:var(--text);margin-bottom:2px">${reason}</li>`).join('')}
         </ul>
         ${stub ? `<div class="tc-stub-wrap"><div class="tc-stub-label">テストケース雛形</div><pre class="tc-stub">${escHtml(stub)}</pre><button type="button" class="tc-copy-btn" onclick="navigator.clipboard.writeText(this.previousElementSibling.textContent)" title="コピー">コピー</button></div>` : ''}
       </div>`;

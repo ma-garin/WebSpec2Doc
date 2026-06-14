@@ -7,6 +7,7 @@ import networkx as nx
 
 from analyzer.canonicalizer import CanonicalInfo, group_canonical_screens
 from analyzer.html_analyzer import AnalyzedPage
+from analyzer.technique_recommender import techniques_for_screen
 from analyzer.test_conditions import derive_conditions
 from crawler.page_crawler import DEFAULT_DEPTH, DEFAULT_MAX_PAGES, FieldData, FormData
 
@@ -51,7 +52,7 @@ def generate_json_report(
 def _screen_dict(page: AnalyzedPage, graph: nx.DiGraph, canonical: CanonicalInfo) -> dict:
     pd = page.page_data
     pid = page.page_id
-    return {
+    screen = {
         "page_id": pid,
         "url": pd.url,
         "title": pd.title,
@@ -68,6 +69,9 @@ def _screen_dict(page: AnalyzedPage, graph: nx.DiGraph, canonical: CanonicalInfo
         "variation_urls": list(canonical.variation_urls),
         "a11y_issues": list(pd.a11y_issues),
     }
+    # テスト設計技法の推奨を埋め込む（フロント・エクスポート共通の真実源）
+    screen["techniques"] = techniques_for_screen(screen)
+    return screen
 
 
 def _form_dict(form: FormData) -> dict:

@@ -168,12 +168,13 @@
 .uml-zoom-btn { height:28px; min-width:30px; padding:0 8px; border:1px solid transparent; border-radius:3px; background:transparent; color:var(--text); font-size:12px; font-weight:800; cursor:pointer; }
 .uml-zoom-btn:hover { border-color:var(--info-border); background:var(--surface); color:var(--primary-dark); }
 .uml-zoom-level { min-width:52px; color:var(--primary-dark); }
-.uml-layout { display:grid; grid-template-columns:minmax(420px,1.2fr) minmax(360px,.8fr); gap:0; min-height:520px; }
-.uml-canvas { min-width:0; overflow:auto; padding:16px; border-right:1px solid var(--border); background:#fff; cursor:grab; }
+/* 図を主役にするため単一カラムで全幅表示し、表は図の下に配置する。 */
+.uml-layout { display:grid; grid-template-columns:1fr; gap:0; }
+.uml-canvas { min-width:0; height:62vh; min-height:460px; max-height:780px; overflow:auto; padding:16px; border-bottom:1px solid var(--border); background:#fff; cursor:grab; }
 .uml-canvas.is-panning { cursor:grabbing; user-select:none; }
-.uml-canvas.is-fullscreen { position:fixed; inset:0; z-index:1900; background:var(--bg); padding:20px; overflow:auto; border:none !important; cursor:grab; }
+.uml-canvas.is-fullscreen { position:fixed; inset:0; z-index:1900; background:var(--bg); padding:20px; overflow:auto; border:none !important; cursor:grab; height:auto; max-height:none; }
 .uml-canvas.is-fullscreen.is-panning { cursor:grabbing; }
-.uml-canvas svg { max-width:none; min-width:100%; height:auto; display:block; }
+.uml-canvas svg { max-width:none; height:auto; display:block; }
 .uml-zoom-sep { border-left:1px solid var(--border) !important; margin-left:2px; }
 .uml-zoom-divider { display:inline-block; width:1px; height:16px; background:var(--border); margin:0 4px; vertical-align:middle; flex-shrink:0; }
 .uml-dl-btn { font-weight:600; color:var(--primary-dark) !important; border-color:var(--info-border) !important; background:var(--surface-soft) !important; }

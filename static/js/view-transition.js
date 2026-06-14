@@ -380,10 +380,19 @@ function _prepareUmlZoom() {
   const stage = document.getElementById('uml-zoom-stage');
   const svg = stage && stage.querySelector('svg');
   if (!stage || !svg) return;
+  // 実寸は viewBox から取得する。getBoundingClientRect は CSS（min-width:100% 等）や
+  // 描画中の transform の影響を受け、誤った基準寸法になり Fit が破綻するため使わない。
   svg.style.maxWidth = 'none';
-  const box = svg.getBoundingClientRect();
-  stage.dataset.baseWidth = String(Math.max(1, Math.ceil(box.width)));
-  stage.dataset.baseHeight = String(Math.max(1, Math.ceil(box.height)));
+  svg.style.minWidth = '0';
+  const vb = svg.viewBox && svg.viewBox.baseVal;
+  const rect = svg.getBoundingClientRect();
+  const baseW = Math.max(1, Math.ceil((vb && vb.width) || rect.width));
+  const baseH = Math.max(1, Math.ceil((vb && vb.height) || rect.height));
+  // stage のサイズ計算（base×zoom）と scale 変換を一致させるため、実寸を明示する。
+  svg.style.width = `${baseW}px`;
+  svg.style.height = `${baseH}px`;
+  stage.dataset.baseWidth = String(baseW);
+  stage.dataset.baseHeight = String(baseH);
   _setUmlZoom(umlZoom);
   const canvas = document.getElementById('uml-render-target');
   if (canvas) _setupPan(canvas);
@@ -408,7 +417,7 @@ function _prepareUmlZoom() {
 }
 
 function _setUmlZoom(value) {
-  umlZoom = Math.min(5.0, Math.max(0.35, value));
+  umlZoom = Math.min(5.0, Math.max(0.12, value));
   const stage = document.getElementById('uml-zoom-stage');
   const svg = stage && stage.querySelector('svg');
   if (stage && svg) {
@@ -428,8 +437,12 @@ function _fitUmlZoom() {
   const stage = document.getElementById('uml-zoom-stage');
   if (!target || !stage) return;
   const baseWidth = Number(stage.dataset.baseWidth || 1);
-  const next = (target.clientWidth - 32) / baseWidth;
-  _setUmlZoom(next);
+  const baseHeight = Number(stage.dataset.baseHeight || 1);
+  // 図全体が見切れず収まるよう、幅・高さ両方に合わせて小さい方の倍率を採用する。
+  const pad = 24;
+  const wScale = (target.clientWidth - pad) / baseWidth;
+  const hScale = (target.clientHeight - pad) / baseHeight;
+  _setUmlZoom(Math.min(wScale, hScale));
   target.scrollLeft = 0;
   target.scrollTop = 0;
 }

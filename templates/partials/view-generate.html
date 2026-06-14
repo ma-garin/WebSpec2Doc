@@ -37,6 +37,23 @@
                 <button type="button" id="discover-btn" class="btn-primary" style="height:40px;padding:0 18px;font-size:13px;white-space:nowrap">画面分析</button>
               </div>
               <div id="url-input-message" class="input-field-message"></div>
+              <!-- オンボーディングヒント -->
+              <div class="wizard-p1-hints" style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                  <span style="font-size:12px;color:var(--text-muted)">
+                    ⏱ 目安: 10画面のサイトで約2〜3分
+                  </span>
+                  <button type="button" id="sample-url-btn"
+                    style="font-size:12px;padding:2px 10px;border:1px solid var(--border);border-radius:12px;background:var(--surface);color:var(--primary);cursor:pointer;white-space:nowrap">
+                    サンプルURL（example.com）で試す
+                  </button>
+                </div>
+                <p style="font-size:12px;color:var(--text-muted);margin:0">
+                  💡 ログインが必要なサイトは「画面分析」後に認証情報を追加できます。
+                  <br>
+                  認証済みページもテスト設計対象にしたい場合は「上級設定」からログインURLを指定してください。
+                </p>
+              </div>
               <div id="discover-loading" class="discover-live-card" style="display:none;margin-top:10px">
                 <div class="discover-live-header">
                   <span class="spinner"></span>
@@ -204,10 +221,30 @@
                 <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="history">履歴・差分<span class="tab-count" id="tab-count-history"></span></button>
               </div>
               <div class="result-bar-actions">
+                <div class="view-mode-toggle" style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted)">
+                  <span>ビュー:</span>
+                  <button type="button" id="view-mode-summary" class="btn-outline-sm view-mode-btn is-active"
+                    style="font-size:11px;padding:2px 8px" title="概要・仕様・テスト条件・遷移図のみ">サマリー</button>
+                  <button type="button" id="view-mode-detail" class="btn-outline-sm view-mode-btn"
+                    style="font-size:11px;padding:2px 8px" title="全タブを表示">詳細</button>
+                </div>
                 <button type="button" id="r-maximize-btn" class="btn-outline-sm" title="最大化 (Esc で解除)">⛶ 最大化</button>
                 <button type="button" id="r-new-btn" class="btn-outline-sm">ダッシュボードへ</button>
               </div>
             </div>
             <div class="result-hero" id="result-hero" role="tabpanel" tabindex="0"></div>
           </div>
+          <script>
+          (function () {
+            const btn = document.getElementById('sample-url-btn');
+            if (!btn) return;
+            btn.addEventListener('click', function () {
+              const input = document.getElementById('url-input');
+              if (input) {
+                input.value = 'https://example.com';
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+              }
+            });
+          }());
+          </script>
         </section>

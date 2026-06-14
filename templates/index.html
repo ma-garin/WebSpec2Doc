@@ -3,8 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
   <title>WebSpec2Doc</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app-report.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app-components.css') }}">
   <script>
     // テーマの早期適用（描画前にフラッシュを防ぐ）。保存値がなければ OS 設定に追従。
     (function () {

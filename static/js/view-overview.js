@@ -8,7 +8,12 @@ function _screenRiskScore(sc) {
   return required * 2 + fields.length + to;
 }
 
-function _execSummary(screens) {
+function _execSummary(allScreens) {
+  // クエリ重複（reserve.html?plan-id=N 等）を統合した正規化済み画面のみで集計する。
+  // メトリクスの水増しを防ぐため、画面数・項目数・ケース数・工数はすべて canonical 基準。
+  const screens = canonicalScreens(reportJson);
+  const pageCount = (allScreens || []).length;
+  const screenCount = screens.length;
   const totalFields = screens.reduce((n, sc) => n + (sc.forms || []).reduce((m, fm) => m + (fm.fields || []).length, 0), 0);
   const totalRequired = screens.reduce((n, sc) => n + (sc.forms || []).reduce((m, fm) => m + (fm.fields || []).filter(f => f.required).length, 0), 0);
   const formScreens = screens.filter(sc => (sc.forms || []).some(fm => (fm.fields || []).length)).length;
@@ -24,11 +29,16 @@ function _execSummary(screens) {
     `<li><strong>${escHtml(sc.page_id)}</strong> ${escHtml(sc.title || '')}<span style="color:var(--text-muted)">（リスクスコア ${_screenRiskScore(sc)}：必須項目と遷移が多く、障害時の影響が大きい画面）</span></li>`
   ).join('');
 
+  // 到達ページ数 > 画面数 のとき、クエリ重複を統合した旨を明示（数値の信頼性）。
+  const dedupNote = pageCount > screenCount
+    ? `<span style="color:var(--text-muted)">（${pageCount}ページ検出 → クエリ重複を統合）</span>`
+    : '';
+
   return `
     <div class="exec-summary">
       <div class="hero-section-title">エグゼクティブサマリー</div>
       <p style="font-size:13px;line-height:1.7;margin:0 0 10px">
-        本システムは <strong>${screens.length}画面</strong>（うち入力フォームあり ${formScreens}画面）で構成され、
+        本システムは <strong>${screenCount}画面</strong>${dedupNote}（うち入力フォームあり ${formScreens}画面）で構成され、
         入力項目は <strong>${totalFields}項目</strong>（必須 ${totalRequired}項目）です。
         機械導出したテスト条件から、概算 <strong>${estCases}テストケース / 約${estHours}時間</strong>のテスト規模と推定されます
         <span style="color:var(--text-muted)">（1ケース10分換算・参考値）</span>。
@@ -46,17 +56,27 @@ function renderOverview() {
   }
   const screens = reportJson.screens || [];
   const meta = reportJson.meta || {};
+  // 到達URLは全件表示（第三者検証の網羅性証跡）。クエリ重複は淡色＋バリエーション注釈。
+  const screenCount = canonicalScreens(reportJson).length;
   const rows = screens.map(sc => {
+    const isCanon = sc.is_canonical !== false;
     const fields = (sc.forms || []).reduce((n, fm) => n + (fm.fields || []).length, 0);
     const to = (sc.transitions && sc.transitions.to || []).join(', ') || '—';
-    return `<tr><td class="c-screen">${escHtml(sc.page_id)}</td><td>${escHtml(sc.title || '')}</td>` +
+    const rowAttr = isCanon ? '' : ' style="opacity:.5" title="' + escHtml((sc.canonical_key || '') + ' と同一構造（クエリ違い）') + '"';
+    const titleCell = isCanon
+      ? escHtml(sc.title || '')
+      : `<span style="color:var(--text-muted)">↳ ${escHtml(sc.canonical_key || '')} のバリエーション</span>`;
+    return `<tr${rowAttr}><td class="c-screen">${escHtml(sc.page_id)}</td><td>${titleCell}</td>` +
       `<td><code style="font-size:.78rem;color:var(--text-muted)">${escHtml(sc.url || '')}</code></td>` +
       `<td class="num">${(sc.forms || []).length}</td><td class="num">${fields}</td><td>${escHtml(to)}</td></tr>`;
   }).join('');
+  const invNote = screens.length > screenCount
+    ? `<span style="font-weight:400;color:var(--text-muted);font-size:12px">（${screens.length}ページ検出・${screenCount}画面／重複は淡色）</span>`
+    : '';
   resultHero.innerHTML = '<div class="hero-pad">' +
     `<p style="color:var(--text-muted);font-size:13px;margin-bottom:12px">対象 ${escHtml(meta.target_url || '')} ／ クロール: 深さ${meta.crawl_depth ?? '-'} ・最大${meta.max_pages ?? '-'}ページ ／ ${escHtml(meta.crawled_at || '')}</p>` +
     _execSummary(screens) +
-    '<div class="hero-section-title">画面インベントリ</div>' +
+    '<div class="hero-section-title">画面インベントリ ' + invNote + '</div>' +
     '<table class="ov-screens"><thead><tr><th>画面ID</th><th>タイトル</th><th>URL</th><th>フォーム</th><th>入力項目</th><th>遷移先</th></tr></thead><tbody>' +
     (rows || '<tr><td colspan="6" style="color:var(--text-muted)">画面がありません</td></tr>') + '</tbody></table>' +
     '</div>';
@@ -65,7 +85,8 @@ function renderOverview() {
 // ---- 入力項目・テスト条件マトリクス ----
 function renderMatrix() {
   if (!reportJson) { resultHero.innerHTML = '<div class="hero-msg">マトリクスデータ（report.json）を読み込めませんでした。</div>'; return; }
-  const screens = (reportJson.screens || []).map(s => s.page_id);
+  // テスト設計対象は正規化済み画面のみ（クエリ重複は同一条件なので除外）。
+  const screens = canonicalScreens(reportJson).map(s => s.page_id);
   resultHero.innerHTML =
     '<div class="matrix-toolbar">' +
     '<select id="mx-screen"><option value="">全画面</option>' + screens.map(s => `<option value="${escHtml(s)}">${escHtml(s)}</option>`).join('') + '</select>' +

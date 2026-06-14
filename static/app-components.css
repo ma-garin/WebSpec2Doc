@@ -1,0 +1,110 @@
+/* ====================== UI/UX 改善コンポーネント ====================== */
+
+/* ── スキップリンク（キーボードユーザー向け） ── */
+.skip-link {
+  position: absolute; left: 8px; top: -52px; z-index: 3000;
+  background: var(--primary); color: #fff; padding: 10px 18px;
+  border-radius: var(--radius); font-weight: 700; font-size: 13px;
+  text-decoration: none; transition: top .15s ease;
+}
+.skip-link:focus { top: 8px; outline: 2px solid #fff; outline-offset: 2px; }
+
+/* ── トップバー ツールボタン（テーマ切替・ショートカットヘルプ） ── */
+.app-topbar-tools { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.topbar-icon-btn {
+  width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface); color: var(--text-muted); cursor: pointer;
+  transition: color .12s, background .12s, border-color .12s;
+}
+.topbar-icon-btn:hover { color: var(--primary-dark); background: var(--surface-subtle); border-color: var(--border-strong); }
+.topbar-icon-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.topbar-icon-btn svg { width: 17px; height: 17px; }
+.icon-theme-moon { display: block; }
+.icon-theme-sun { display: none; }
+html[data-theme="dark"] .icon-theme-moon { display: none; }
+html[data-theme="dark"] .icon-theme-sun { display: block; }
+
+/* ── トースト通知 ── */
+.toast-container {
+  position: fixed; bottom: 20px; right: 20px; z-index: 2500;
+  display: flex; flex-direction: column; gap: 8px; align-items: flex-end;
+  pointer-events: none;
+}
+.toast {
+  display: flex; align-items: flex-start; gap: 9px; max-width: 380px;
+  padding: 11px 16px; border-radius: var(--radius-lg);
+  background: var(--surface); border: 1px solid var(--border);
+  border-left: 3px solid var(--info); box-shadow: var(--shadow-pop);
+  font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.5;
+  opacity: 0; transform: translateY(8px);
+  transition: opacity .2s ease, transform .2s ease;
+  pointer-events: auto;
+}
+.toast.show { opacity: 1; transform: none; }
+.toast-icon { flex-shrink: 0; font-weight: 900; }
+.toast-success { border-left-color: var(--ok); }
+.toast-success .toast-icon { color: var(--ok); }
+.toast-error { border-left-color: var(--critical); }
+.toast-error .toast-icon { color: var(--critical); }
+.toast-info .toast-icon { color: var(--info); }
+
+/* ── 確認モーダル（destructive アクション用・confirm() 代替） ── */
+.confirm-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 2200;
+  display: flex; align-items: center; justify-content: center;
+  animation: fadeIn .15s ease;
+}
+.confirm-overlay.hidden { display: none; }
+.confirm-card {
+  background: var(--surface); border-radius: 12px; box-shadow: var(--shadow-pop);
+  padding: 28px 28px 22px; max-width: 440px; width: calc(100% - 40px);
+  animation: slideUp .18s ease;
+}
+.confirm-icon { font-size: 34px; margin-bottom: 8px; }
+.confirm-title { font-size: 18px; font-weight: 800; margin-bottom: 8px; }
+.confirm-message { font-size: 13.5px; color: var(--text-muted); line-height: 1.7; margin-bottom: 20px; word-break: break-all; }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.btn-danger { background: var(--critical); }
+.btn-danger:hover:not(:disabled) { background: #B91C1C; }
+html[data-theme="dark"] .btn-danger { background: #DC2626; color: #fff; }
+html[data-theme="dark"] .btn-danger:hover:not(:disabled) { background: #EF4444; }
+
+/* ── キーボードショートカット ヘルプモーダル ── */
+.shortcut-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 2100;
+  display: flex; align-items: center; justify-content: center;
+  animation: fadeIn .15s ease;
+}
+.shortcut-overlay.hidden { display: none; }
+.shortcut-card {
+  background: var(--surface); border-radius: 12px; box-shadow: var(--shadow-pop);
+  padding: 24px 28px; max-width: 460px; width: calc(100% - 40px);
+  animation: slideUp .18s ease;
+}
+.shortcut-card h2 { font-size: 17px; font-weight: 800; margin-bottom: 14px; }
+.shortcut-list { display: grid; gap: 8px; }
+.shortcut-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; font-size: 13px; color: var(--text); }
+.shortcut-keys { display: flex; gap: 4px; flex-shrink: 0; }
+kbd.kbd {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 26px; height: 24px; padding: 0 7px;
+  border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 5px;
+  background: var(--surface-soft); color: var(--text);
+  font-family: ui-monospace, monospace; font-size: 12px; font-weight: 700;
+}
+.shortcut-close-row { margin-top: 18px; text-align: right; }
+
+/* ── URL 入力リアルタイムバリデーション ── */
+.url-input.is-invalid { border-color: var(--critical); }
+.url-input.is-invalid:focus { border-color: var(--critical); box-shadow: 0 0 0 3px rgba(211,47,47,.14); }
+
+/* ── アニメーション抑制（前庭障害・OS設定の尊重） ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -73,6 +73,21 @@
 
                 <div class="field full"><label for="set-auth">認証セッション auth.json パス（任意）</label><input type="text" id="set-auth" placeholder="auth.json"></div>
               </div>
+              <div class="field full" style="margin-top:18px;padding-top:18px;border-top:1px solid var(--border)">
+                <label class="checkbox-chip" style="align-items:flex-start;gap:10px;height:auto;padding:10px 12px">
+                  <input type="checkbox" id="allow-local-toggle" style="margin-top:2px">
+                  <span>
+                    <strong>ローカル/ステージング環境のクロールを許可</strong>
+                    <br>
+                    <span style="font-size:12px;color:var(--text-muted)">
+                      <code>localhost</code>・<code>*.local</code>・プライベートIPへのクロールを有効にします。
+                      <br>
+                      <span style="color:var(--warn,#c08c00)">⚠️ 信頼できる環境でのみ使用してください（SSRF保護をバイパスします）。</span>
+                    </span>
+                  </span>
+                </label>
+                <div class="settings-msg" id="allow-local-msg" style="margin-top:8px">保存しました</div>
+              </div>
               <button class="btn-primary" id="save-settings" style="margin-top:18px">設定を保存</button>
               <div class="settings-msg" id="settings-msg">設定を保存しました</div>
             </div>

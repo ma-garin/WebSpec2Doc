@@ -7,7 +7,9 @@ from typing import Any
 
 from flask import Blueprint, request
 
+from llm.viewpoint_generator import make_provider
 from web.config import OUTPUT_DIR
+from web.env_store import _read_env
 from web.services.openai_qa import OpenAIQAError, generate_openai_qa, has_openai_api_key
 from web.services.qa.advanced_generator import _advanced_payload
 from web.services.qa.helpers import (
@@ -75,6 +77,11 @@ def api_qa_process_generate() -> dict | tuple[dict, int]:
     }
     ai_artifact = None
     if use_ai:
+        env = _read_env()
+        api_key = env.get("OPENAI_API_KEY", "").strip()
+        model = env.get("OPENAI_MODEL", "").strip()
+        provider = make_provider(api_key, model)
+        viewpoints = _load_qa_viewpoints(domain, report, provider=provider)
         if not ai_status["available"]:
             ai_status |= {
                 "fallback": True,
@@ -82,7 +89,7 @@ def api_qa_process_generate() -> dict | tuple[dict, int]:
             }
         else:
             try:
-                ai_artifact = generate_openai_qa(domain, report, _load_qa_viewpoints())
+                ai_artifact = generate_openai_qa(domain, report, viewpoints)
                 _ai_artifact_path(domain).write_text(
                     json.dumps(ai_artifact, ensure_ascii=False, indent=2), encoding="utf-8"
                 )

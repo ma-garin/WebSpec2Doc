@@ -27,7 +27,11 @@ let qaToolSitesLoaded = false;
 async function loadQaToolSites(viewName, force) {
   const cfg = QA_TOOL_CONFIG[viewName];
   if (!cfg) return;
-  if (qaToolSitesLoaded && !force) return;
+  if (qaToolSitesLoaded && !force) {
+    const selectEl = document.getElementById(cfg.select);
+    if (selectEl?.value) await loadQaToolData(viewName, selectEl.value);
+    return;
+  }
   setQaToolStatus(viewName, '解析済みサイトを読み込んでいます。');
   try {
     const res = await fetch('/api/history');
@@ -40,9 +44,38 @@ async function loadQaToolSites(viewName, force) {
       select.innerHTML = '<option value="">解析済みサイトを選択</option>' +
         items.map(it => `<option value="${escHtml(it.domain)}">${escHtml(it.domain)}</option>`).join('');
       if (previous && items.some(it => it.domain === previous)) select.value = previous;
+      if (!previous && items.length > 0) select.value = items[0].domain;
     }
     qaToolSitesLoaded = true;
-    setQaToolStatus(viewName, items.length ? '対象サイトを選択してください。' : '解析済みサイトがありません。先にサイトを追加してください。');
+    if (items.length > 0) {
+      const selectEl = document.getElementById(cfg.select);
+      if (selectEl?.value) await loadQaToolData(viewName, selectEl.value);
+      return;
+    }
+    setQaToolStatus(viewName, '解析済みサイトがありません。「+ サイトを追加」から最初のサイトを登録してください。');
+    for (const toolCfg of Object.values(QA_TOOL_CONFIG)) {
+      const contentEl = document.getElementById(toolCfg.content);
+      const outputsEl = document.getElementById(toolCfg.outputs);
+      if (contentEl) {
+        contentEl.innerHTML = `<div class="empty" style="text-align:center;padding:40px 20px">
+          <p style="font-size:15px;font-weight:700;margin-bottom:8px">まだ解析済みサイトがありません</p>
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px">
+            生成ウィザードでサイトを解析すると、ここにデータが表示されます。
+          </p>
+          <button type="button" class="btn-primary qa-empty-goto-wizard"
+            style="height:40px;padding:0 24px;font-size:14px">
+            生成ウィザードへ →
+          </button>
+        </div>`;
+      }
+      if (outputsEl) outputsEl.innerHTML = '';
+    }
+    document.querySelectorAll('.qa-empty-goto-wizard').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const addSiteButton = document.getElementById('add-site-btn');
+        if (addSiteButton) addSiteButton.click();
+      });
+    });
   } catch (e) {
     setQaToolStatus(viewName, 'サイト一覧の読み込みに失敗しました。', true);
   }
@@ -137,6 +170,13 @@ function renderQaToolOutputLinks(containerId, outputs, viewName) {
   }).join('');
 }
 
+function sourceBadge(source) {
+  if (source === 'openai') {
+    return '<span style="display:inline-block;padding:1px 7px;border-radius:10px;font-size:11px;font-weight:700;background:var(--info-bg,#e8f4fd);color:var(--primary-dark,#1a56db);white-space:nowrap">✨ AI補完</span>';
+  }
+  return '<span style="display:inline-block;padding:1px 7px;border-radius:10px;font-size:11px;font-weight:700;background:var(--surface,#f4f5f7);color:var(--text-muted,#666);white-space:nowrap">⚙️ 決定的</span>';
+}
+
 function renderQaModelTool(data) {
   const graph = data.transition_graph || {};
   const metrics = data.coverage_metrics || {};
@@ -154,17 +194,19 @@ function renderQaModelTool(data) {
     `<div class="qa-readable-section"><h3>レビューゲート</h3><div class="qa-card-grid">${gates || '<div class="empty">ゲートがありません。</div>'}</div></div>` +
     `<div class="qa-readable-section"><h3>画面ノード</h3><table class="data"><thead><tr><th>画面ID</th><th>画面</th><th>URL</th><th class="num">フォーム</th><th class="num">入力</th><th class="num">必須</th><th class="num">リスク</th></tr></thead><tbody>${nodeRows || '<tr><td colspan="7">画面がありません</td></tr>'}</tbody></table></div>` +
     `<div class="qa-readable-section"><h3>遷移エッジ</h3><table class="data"><thead><tr><th>Trace</th><th>From</th><th>To</th><th>種別</th></tr></thead><tbody>${edgeRows || '<tr><td colspan="4">遷移がありません</td></tr>'}</tbody></table></div>`;
+  if (typeof wrapTraceTerms === 'function') wrapTraceTerms(document.getElementById('qa-model-content'));
 }
 
 function renderQaAutomationTool(data) {
   const pw = data.playwright_candidates || {};
   const rows = (pw.candidates || []).map(item =>
-    `<tr><td class="qa-trace">${escHtml(item.id)}</td><td>${escHtml(item.title)}</td><td class="qa-trace">${escHtml(item.trace_id)}</td><td>${escHtml(item.automation_status)}</td><td>${escHtml(item.expected)}</td><td>${escHtml(item.locator_strategy)}</td></tr>`
+    `<tr><td class="qa-trace">${escHtml(item.id)}</td><td>${escHtml(item.title)} ${sourceBadge(item.source || 'rules')}</td><td class="qa-trace">${escHtml(item.trace_id)}</td><td>${escHtml(item.automation_status)}</td><td>${escHtml(item.expected)}</td><td>${escHtml(item.locator_strategy)}</td></tr>`
   ).join('');
   const policies = (pw.locator_policy || []).map(p => `<span class="fmt-badge">${escHtml(p)}</span>`).join('');
   document.getElementById('qa-auto-content').innerHTML =
     `<div class="qa-readable-section"><h3>ロケータ方針</h3><div class="fmt-badges">${policies}</div><p class="input-hint">${escHtml(pw.execution_policy || '')}</p></div>` +
     `<div class="qa-readable-section"><h3>候補一覧</h3><table class="data"><thead><tr><th>ID</th><th>タイトル</th><th>Trace</th><th>状態</th><th>期待結果</th><th>ロケータ方針</th></tr></thead><tbody>${rows || '<tr><td colspan="6">候補がありません</td></tr>'}</tbody></table></div>`;
+  if (typeof wrapTraceTerms === 'function') wrapTraceTerms(document.getElementById('qa-auto-content'));
 }
 
 function renderQaQualityTool(data) {
@@ -176,7 +218,7 @@ function renderQaQualityTool(data) {
     grouped[key].push(item);
   }
   const sections = Object.entries(grouped).map(([category, items]) => {
-    const rows = items.map(item => `<tr><td class="qa-trace">${escHtml(item.id)}</td><td>${escHtml(item.viewpoint)}</td><td>${escHtml(item.trigger)}</td><td>${escHtml(item.recommendation)}</td><td>${escHtml(item.automation)}</td><td class="qa-trace">${escHtml(item.trace_id)}</td></tr>`).join('');
+    const rows = items.map(item => `<tr><td class="qa-trace">${escHtml(item.id)}</td><td>${escHtml(item.viewpoint)} ${sourceBadge(item.source || 'rules')}</td><td>${escHtml(item.trigger)}</td><td>${escHtml(item.recommendation)}</td><td>${escHtml(item.automation)}</td><td class="qa-trace">${escHtml(item.trace_id)}</td></tr>`).join('');
     return `<div class="qa-readable-section"><h3>${escHtml(category)}</h3><table class="data"><thead><tr><th>ID</th><th>観点</th><th>発火条件</th><th>推奨確認</th><th>自動化</th><th>Trace</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   }).join('');
   const risks = (quality.screen_risks || []).map(risk => `<tr><td class="qa-trace">${escHtml(risk.screen_id)}</td><td>${escHtml(risk.title)}</td><td class="num">${escHtml(risk.risk_score)}</td><td>${escHtml((risk.reasons || []).join(' / '))}</td></tr>`).join('');
@@ -184,6 +226,7 @@ function renderQaQualityTool(data) {
     `<div class="qa-readable-section"><h3>画面リスク</h3><table class="data"><thead><tr><th>画面ID</th><th>画面</th><th class="num">リスク</th><th>理由</th></tr></thead><tbody>${risks || '<tr><td colspan="4">画面がありません</td></tr>'}</tbody></table></div>` +
     (sections || '<div class="empty">品質観点がありません。</div>') +
     `<div class="qa-readable-section"><h3>質問待ち</h3><ul class="qa-check-list qa-question-list">${qaList(quality.questions)}</ul></div>`;
+  if (typeof wrapTraceTerms === 'function') wrapTraceTerms(document.getElementById('qa-quality-content'));
 }
 
 function metricLabel(key) {
@@ -213,4 +256,3 @@ document.querySelectorAll('.qa-tool-reload').forEach(btn => {
 document.getElementById('qa-model-generate').addEventListener('click', () => generateQaAdvanced('qa-models'));
 document.getElementById('qa-auto-generate').addEventListener('click', () => generateQaAdvanced('qa-automation'));
 document.getElementById('qa-quality-generate').addEventListener('click', () => generateQaAdvanced('qa-quality'));
-

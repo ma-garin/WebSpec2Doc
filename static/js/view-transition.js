@@ -194,7 +194,11 @@ function _showUmlPanel(type, screens) {
     '<div class="uml-canvas" id="uml-render-target"><div class="hero-msg">図を描画しています…</div></div>' +
     `<div class="uml-table-wrap">${_umlTable(type, rows)}</div>` +
     '</div>';
-  _loadMermaid(() => _renderUmlDiagram(type, screens, rows));
+  _loadMermaid(() => {
+    _renderUmlDiagram(type, screens, rows).then(() => {
+      setTimeout(_fitUmlZoom, 100);
+    });
+  });
 }
 
 function _umlZoomControls() {

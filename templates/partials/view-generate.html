@@ -221,6 +221,13 @@
                 <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="history">履歴・差分<span class="tab-count" id="tab-count-history"></span></button>
               </div>
               <div class="result-bar-actions">
+                <div class="view-mode-toggle" style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted)">
+                  <span>ビュー:</span>
+                  <button type="button" id="view-mode-summary" class="btn-outline-sm view-mode-btn is-active"
+                    style="font-size:11px;padding:2px 8px" title="概要・仕様・テスト条件・遷移図のみ">サマリー</button>
+                  <button type="button" id="view-mode-detail" class="btn-outline-sm view-mode-btn"
+                    style="font-size:11px;padding:2px 8px" title="全タブを表示">詳細</button>
+                </div>
                 <button type="button" id="r-maximize-btn" class="btn-outline-sm" title="最大化 (Esc で解除)">⛶ 最大化</button>
                 <button type="button" id="r-new-btn" class="btn-outline-sm">ダッシュボードへ</button>
               </div>

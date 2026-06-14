@@ -170,6 +170,13 @@ function renderQaToolOutputLinks(containerId, outputs, viewName) {
   }).join('');
 }
 
+function sourceBadge(source) {
+  if (source === 'openai') {
+    return '<span style="display:inline-block;padding:1px 7px;border-radius:10px;font-size:11px;font-weight:700;background:var(--info-bg,#e8f4fd);color:var(--primary-dark,#1a56db);white-space:nowrap">✨ AI補完</span>';
+  }
+  return '<span style="display:inline-block;padding:1px 7px;border-radius:10px;font-size:11px;font-weight:700;background:var(--surface,#f4f5f7);color:var(--text-muted,#666);white-space:nowrap">⚙️ 決定的</span>';
+}
+
 function renderQaModelTool(data) {
   const graph = data.transition_graph || {};
   const metrics = data.coverage_metrics || {};
@@ -193,7 +200,7 @@ function renderQaModelTool(data) {
 function renderQaAutomationTool(data) {
   const pw = data.playwright_candidates || {};
   const rows = (pw.candidates || []).map(item =>
-    `<tr><td class="qa-trace">${escHtml(item.id)}</td><td>${escHtml(item.title)}</td><td class="qa-trace">${escHtml(item.trace_id)}</td><td>${escHtml(item.automation_status)}</td><td>${escHtml(item.expected)}</td><td>${escHtml(item.locator_strategy)}</td></tr>`
+    `<tr><td class="qa-trace">${escHtml(item.id)}</td><td>${escHtml(item.title)} ${sourceBadge(item.source || 'rules')}</td><td class="qa-trace">${escHtml(item.trace_id)}</td><td>${escHtml(item.automation_status)}</td><td>${escHtml(item.expected)}</td><td>${escHtml(item.locator_strategy)}</td></tr>`
   ).join('');
   const policies = (pw.locator_policy || []).map(p => `<span class="fmt-badge">${escHtml(p)}</span>`).join('');
   document.getElementById('qa-auto-content').innerHTML =
@@ -211,7 +218,7 @@ function renderQaQualityTool(data) {
     grouped[key].push(item);
   }
   const sections = Object.entries(grouped).map(([category, items]) => {
-    const rows = items.map(item => `<tr><td class="qa-trace">${escHtml(item.id)}</td><td>${escHtml(item.viewpoint)}</td><td>${escHtml(item.trigger)}</td><td>${escHtml(item.recommendation)}</td><td>${escHtml(item.automation)}</td><td class="qa-trace">${escHtml(item.trace_id)}</td></tr>`).join('');
+    const rows = items.map(item => `<tr><td class="qa-trace">${escHtml(item.id)}</td><td>${escHtml(item.viewpoint)} ${sourceBadge(item.source || 'rules')}</td><td>${escHtml(item.trigger)}</td><td>${escHtml(item.recommendation)}</td><td>${escHtml(item.automation)}</td><td class="qa-trace">${escHtml(item.trace_id)}</td></tr>`).join('');
     return `<div class="qa-readable-section"><h3>${escHtml(category)}</h3><table class="data"><thead><tr><th>ID</th><th>観点</th><th>発火条件</th><th>推奨確認</th><th>自動化</th><th>Trace</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   }).join('');
   const risks = (quality.screen_risks || []).map(risk => `<tr><td class="qa-trace">${escHtml(risk.screen_id)}</td><td>${escHtml(risk.title)}</td><td class="num">${escHtml(risk.risk_score)}</td><td>${escHtml((risk.reasons || []).join(' / '))}</td></tr>`).join('');

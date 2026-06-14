@@ -18,6 +18,44 @@ function renderExport() {
 }
 function resultData_domain() { return document.getElementById('r-domain').textContent || ''; }
 
+function ensureSpecTsExportItem() {
+  const menu = document.getElementById('export-dropdown-menu');
+  if (!menu || menu.querySelector('.spec-ts-export-item')) return;
+  const row = document.createElement('div');
+  row.className = 'export-dropdown-item spec-ts-export-item';
+  const label = document.createElement('span');
+  label.textContent = 'Playwright .spec.ts';
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'btn-outline-sm';
+  button.style.cssText = 'height:28px;padding:0 8px;font-size:12px';
+  button.textContent = 'DL';
+  button.addEventListener('click', async () => {
+    const domain = resultData_domain();
+    if (!domain) return;
+    try {
+      const response = await fetch(`/api/report/${encodeURIComponent(domain)}/spec-ts?filter=all`);
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Playwright候補が見つかりません');
+      }
+      const url = URL.createObjectURL(await response.blob());
+      const anchor = Object.assign(document.createElement('a'), {
+        href: url,
+        download: `${domain}.spec.ts`,
+      });
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      showToast(error.message || 'spec.ts の生成に失敗しました', 'error');
+    }
+  });
+  row.append(label, button);
+  menu.appendChild(row);
+}
+
+document.getElementById('export-dropdown-btn')?.addEventListener('click', ensureSpecTsExportItem);
+
 // ---- 設定サブタブ ----
 document.querySelectorAll('.set-tab').forEach(t => t.addEventListener('click', () => {
   document.querySelectorAll('.set-tab').forEach(x => x.classList.toggle('is-active', x === t));

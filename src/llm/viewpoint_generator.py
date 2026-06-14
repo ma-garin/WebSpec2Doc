@@ -11,7 +11,7 @@ import logging
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from llm.screen_classifier import (
     _LLM_MODEL,
@@ -25,6 +25,9 @@ from llm.screen_classifier import (
 )
 
 logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from llm.provider import LLMProvider
 
 _CATEGORIES = ("機能", "セキュリティ", "ユーザビリティ", "パフォーマンス", "アクセシビリティ")
 
@@ -563,3 +566,12 @@ def _call_llm_for_viewpoints(screen_info: dict, api_key: str) -> list[TestViewpo
         )
         for item in items
     ]
+
+
+def make_provider(api_key: str = "", model: str = "") -> LLMProvider:
+    """API キーの有無に応じて観点生成プロバイダを返す。"""
+    from llm.provider import LLMProvider, OpenAIProvider, RulesProvider  # noqa: F401
+
+    if api_key:
+        return OpenAIProvider(api_key, model)
+    return RulesProvider()

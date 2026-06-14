@@ -1,6 +1,8 @@
 // ====================== 結果ページ（QAビュー軸） ======================
 const resultPanel = document.getElementById('result-panel');
 const resultHero = document.getElementById('result-hero');
+const VIEW_MODE_KEY = 'wsd_view_mode';
+const SUMMARY_HIDE_TABS = new Set(['design', 'technique-detail', 'transition-table', 'history']);
 const EXPORT_DEFS = [
   { key: 'html', label: 'HTMLレポート', desc: 'テスト分析インプット文書（画面別カード＋テスト条件）' },
   { key: 'pdf', label: 'PDF', desc: '配布・印刷用（HTMLレポートのPDF版）' },
@@ -143,6 +145,20 @@ function selectResultTab(tab) {
   else if (tab === 'history') renderTimeline();
 }
 
+function applyViewMode(mode) {
+  const selectedMode = mode === 'detail' ? 'detail' : 'summary';
+  document.querySelectorAll('.result-tabs .result-tab[data-tab]').forEach(tab => {
+    const hide = selectedMode === 'summary' && SUMMARY_HIDE_TABS.has(tab.dataset.tab);
+    tab.style.display = hide ? 'none' : '';
+    if (hide && tab.classList.contains('is-active')) {
+      document.querySelector('.result-tab[data-tab="overview"]')?.click();
+    }
+  });
+  document.getElementById('view-mode-summary')?.classList.toggle('is-active', selectedMode === 'summary');
+  document.getElementById('view-mode-detail')?.classList.toggle('is-active', selectedMode === 'detail');
+  try { localStorage.setItem(VIEW_MODE_KEY, selectedMode); } catch (_) {}
+}
+
 // ---- 履歴・差分（クロール履歴タイムライン＋任意2点の仕様ドリフト比較）----
 let timelineDomain = '';
 async function renderTimeline() {
@@ -192,6 +208,8 @@ function _toggleMaximize() {
 }
 
 document.getElementById('r-maximize-btn')?.addEventListener('click', _toggleMaximize);
+document.getElementById('view-mode-summary')?.addEventListener('click', () => applyViewMode('summary'));
+document.getElementById('view-mode-detail')?.addEventListener('click', () => applyViewMode('detail'));
 document.getElementById('r-maximize-exit-btn')?.addEventListener('click', () => {
   document.body.classList.remove('result-maximized');
 });
@@ -223,3 +241,8 @@ document.getElementById('completion-overlay').addEventListener('click', (e) => {
   if (e.target === e.currentTarget) document.getElementById('completion-overlay').classList.add('hidden');
 });
 
+(function initViewMode() {
+  let saved = 'summary';
+  try { saved = localStorage.getItem(VIEW_MODE_KEY) || 'summary'; } catch (_) {}
+  applyViewMode(saved);
+}());

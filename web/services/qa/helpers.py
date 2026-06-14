@@ -109,7 +109,12 @@ def _qa_summary(report: dict[str, Any]) -> dict[str, int]:
     }
 
 
-def _load_qa_viewpoints() -> list[dict[str, Any]]:
+def _load_qa_viewpoints(
+    domain: str = "",
+    report: dict[str, Any] | None = None,
+    provider: Any = None,
+) -> list[dict[str, Any]]:
+    """CSV観点を返し、provider 指定時は対象画面から生成した観点も追加する。"""
     try:
         with QA_VIEWPOINTS_CSV.open("r", encoding="utf-8-sig", newline="") as handle:
             rows = list(csv.DictReader(handle))
@@ -126,6 +131,59 @@ def _load_qa_viewpoints() -> list[dict[str, Any]]:
         except ValueError:
             count = 0
         viewpoints.append({"summary_type": summary_type, "name": name, "count": count})
+    if provider is None or report is None:
+        return viewpoints
+
+    from llm.screen_classifier import classify_screen_by_rules
+
+    screens = _screens(report)[:5]
+    fields = [field for screen in screens for form in _forms(screen) for field in _fields(form)]
+    field_names = [
+        str(field.get("name") or field.get("element_id") or field.get("placeholder") or "")
+        for field in fields
+    ]
+    titles = [str(screen.get("title") or "") for screen in screens if screen.get("title")]
+    headings = [str(value) for screen in screens for value in screen.get("headings", []) if value]
+    classification = classify_screen_by_rules(
+        " / ".join(titles) or domain,
+        tuple(headings),
+        field_names,
+    )
+    screen_info = {
+        "domain": domain,
+        "screens": [
+            {
+                "page_id": screen.get("page_id", ""),
+                "title": screen.get("title", ""),
+                "url": screen.get("url", ""),
+            }
+            for screen in screens
+        ],
+        "screen_classification": classification,
+        "fields": fields,
+    }
+    generated: list[dict[str, Any]] = []
+    for item in provider.generate_viewpoints(screen_info):
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("viewpoint") or "").strip()
+        if not name:
+            continue
+        generated.append(
+            {
+                "summary_type": str(item.get("category") or "provider"),
+                "name": name,
+                "count": 1,
+                "source": str(item.get("source") or "rules"),
+            }
+        )
+
+    seen = {(item["summary_type"], item["name"]) for item in viewpoints}
+    for item in generated:
+        key = (item["summary_type"], item["name"])
+        if key not in seen:
+            viewpoints.append(item)
+            seen.add(key)
     return viewpoints
 
 

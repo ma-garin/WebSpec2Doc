@@ -355,7 +355,7 @@ function renderQaCases(data) {
   const artifact = qaArtifact();
   if (artifact && artifact.test_cases) {
     const c = artifact.test_cases;
-    const cases = (c.cases || []).map(item => `<tr><td class="qa-trace">${escHtml(item.case_id || '')}</td><td>${escHtml(item.title || '')}</td><td>${escHtml((item.steps || []).join(' / '))}</td><td>${escHtml(item.expected || '')}</td><td>${escHtml(item.execution_type || '')}</td><td>${escHtml(item.status || '')}</td><td class="qa-trace">${escHtml(item.trace_id || '')}</td></tr>`).join('');
+    const cases = (c.cases || []).map(item => `<tr><td class="qa-trace">${escHtml(item.case_id || '')}</td><td>${escHtml(item.title || '')} ${sourceBadge(item.source || (qaAiStatus.used ? 'openai' : 'rules'))}</td><td>${escHtml((item.steps || []).join(' / '))}</td><td>${escHtml(item.expected || '')}</td><td>${escHtml(item.execution_type || '')}</td><td>${escHtml(item.status || '')}</td><td class="qa-trace">${escHtml(item.trace_id || '')}</td></tr>`).join('');
     return renderAiBadge() +
       `<div class="qa-readable-section"><h3>Expected Case Yield</h3><p>${escHtml(c.expected_case_yield || '質問待ち')}</p></div>` +
       `<div class="qa-readable-section"><h3>Case Expansion Ledger</h3><ul class="qa-check-list">${qaList(c.case_expansion_ledger)}</ul></div>` +
@@ -379,7 +379,7 @@ function renderQaCases(data) {
 }
 
 function qaCaseRow(no, type, step, expected, trace) {
-  return `<tr><td class="qa-trace">TC-${String(no).padStart(4, '0')}</td><td>${escHtml(type)}</td><td>${escHtml(step)}</td><td>${escHtml(expected)}</td><td class="qa-trace">${escHtml(trace)}</td></tr>`;
+  return `<tr><td class="qa-trace">TC-${String(no).padStart(4, '0')}</td><td>${escHtml(type)} ${sourceBadge('rules')}</td><td>${escHtml(step)}</td><td>${escHtml(expected)}</td><td class="qa-trace">${escHtml(trace)}</td></tr>`;
 }
 
 function renderQaReview(data) {
@@ -430,4 +430,3 @@ document.getElementById('qa-next').addEventListener('click', () => {
   qaCurrentPage = Math.min(QA_PAGES.length - 1, qaCurrentPage + 1);
   updateQaWizard();
 });
-

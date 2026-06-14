@@ -37,7 +37,7 @@
       "ui_files": ["templates/partials/view-generate.html", "static/js/wizard.js"],
       "route_files": ["web/routes/login.py"],
       "core_files": ["src/crawler/auto_login.py", "src/analyzer/login_wall.py"],
-      "symbols": ["auto_login", "detect_login_wall"],
+      "symbols": ["submit_login_form", "detect_login_wall"],
       "outputs": ["auth.json", "login wall status"],
       "persistence": ["output/{domain}/auth.json"],
       "failure_modes": ["invalid_credentials", "mfa_required", "session_expired"],

@@ -172,7 +172,9 @@ async function renderTimeline() {
   } catch (e) {}
   if (snaps.length < 2) {
     resultHero.innerHTML = '<div class="hero-pad"><div class="hero-section-title">クロール履歴</div>' +
-      '<p style="color:var(--text-muted);font-size:13px">履歴が' + snaps.length + '件です。<strong>再クロール</strong>すると、前回との仕様ドリフト（追加/削除された画面・変更されたフォーム）を時系列で比較できます。</p></div>';
+      '<p style="color:var(--text-muted);font-size:13px">履歴が' + snaps.length + '件です。<strong>再クロール</strong>すると、前回との仕様ドリフト（追加/削除された画面・変更されたフォーム）を時系列で比較できます。</p>' +
+      _ciGuidanceCard(domain) + '</div>';
+    _bindCiCopy();
     return;
   }
   // 既定: to=最新(0), from=ひとつ前(1)
@@ -189,10 +191,36 @@ async function renderTimeline() {
     '<table class="ov-screens tl-table"><thead><tr><th>比較元</th><th>比較先</th><th>クロール日時</th><th>画面</th><th>フォーム</th><th>入力項目</th></tr></thead><tbody>' +
     rows + '</tbody></table>' +
     '<div style="margin:12px 0"><button type="button" class="btn-primary" id="tl-diff-btn">この2時点の差分を表示</button></div>' +
-    '<div class="tl-diff-frame" id="tl-diff"></div></div>';
+    '<div class="tl-diff-frame" id="tl-diff"></div>' +
+    _ciGuidanceCard(domain) + '</div>';
   document.getElementById('tl-diff-btn').addEventListener('click', showTimelineDiff);
+  _bindCiCopy();
   showTimelineDiff();
 }
+function _bindCiCopy() {
+  const btn = document.getElementById('ci-copy-btn');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    const cmd = document.getElementById('ci-cmd');
+    if (!cmd) return;
+    navigator.clipboard.writeText(cmd.textContent).then(() => {
+      const orig = btn.textContent;
+      btn.textContent = 'コピーしました';
+      setTimeout(() => { btn.textContent = orig; }, 1500);
+    }).catch(() => {});
+  });
+}
+function _ciGuidanceCard(domain) {
+  // CI連携先（Jenkins/GitHub Actions等）は顧客環境次第のため断定せず、中立的に提示する。
+  const cmd = `python src/main.py --url https://${domain}/ --compare --fail-on-drift`;
+  return '<div class="ci-guidance">' +
+    '<div class="ci-guidance-title">⚙️ CI/CD で自動ドリフト検知</div>' +
+    '<p style="font-size:12.5px;color:var(--text-muted);margin:4px 0 8px">' +
+    '定期実行ジョブに組み込むと、前回から仕様ドリフトが出たとき <code>exit code 1</code> で失敗し、パイプラインを止められます。お使いのCIのジョブに以下を追加してください。</p>' +
+    '<div class="ci-guidance-cmd"><code id="ci-cmd">' + escHtml(cmd) + '</code>' +
+    '<button type="button" class="btn-outline-sm" id="ci-copy-btn">コピー</button></div></div>';
+}
+
 function showTimelineDiff() {
   const from = (document.querySelector('input[name=snap-from]:checked') || {}).value;
   const to = (document.querySelector('input[name=snap-to]:checked') || {}).value;

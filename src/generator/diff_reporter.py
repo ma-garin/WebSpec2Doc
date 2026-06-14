@@ -7,7 +7,12 @@ from diff.differ import (
     CHANGE_ADDED,
     CHANGE_MODIFIED,
     CHANGE_REMOVED,
+    SEVERITY_BREAKING,
+    SEVERITY_INFO,
+    SEVERITY_WARNING,
+    ApiChange,
     DiffResult,
+    FieldAttributeDiff,
     FieldChange,
     LinkChange,
     PageChange,
@@ -25,6 +30,17 @@ ORANGE = "#8D6B00"
 NO_CHANGES_MESSAGE = "変更は検出されませんでした"
 EMPTY_TABLE_MESSAGE = "該当する変更はありません"
 
+SEVERITY_LABELS = {
+    SEVERITY_BREAKING: "重大",
+    SEVERITY_WARNING: "警告",
+    SEVERITY_INFO: "情報",
+}
+SEVERITY_CLASSES = {
+    SEVERITY_BREAKING: "sev-breaking",
+    SEVERITY_WARNING: "sev-warning",
+    SEVERITY_INFO: "sev-info",
+}
+
 
 def generate_diff_report(
     diff: DiffResult,
@@ -36,6 +52,8 @@ def generate_diff_report(
     sections = [
         _section("画面の追加/削除", _page_changes_table(diff)),
         _section("フォーム項目の変化", _field_changes_table(diff.field_changes)),
+        _section("属性レベル変更", _attribute_changes_table(diff.attribute_diffs)),
+        _section("API変更", _api_changes_table(diff.api_changes)),
         _section("リンク（遷移）の増減", _link_changes_table(diff.link_changes)),
         _section("タイトル変更", _title_changes_table(diff.title_changes)),
     ]
@@ -93,6 +111,11 @@ tr:nth-child(even) td{{background:#f9f9f9}}
 .removed{{color:var(--remove)}}
 .modified{{color:var(--modify)}}
 .empty{{color:#777}}
+.card-breaking{{border-color:var(--remove);background:#fff5f5}}
+.card-breaking .num{{color:var(--remove)}}
+.sev-breaking{{display:inline-block;padding:1px 8px;border-radius:10px;background:var(--remove);color:#fff;font-size:.8rem}}
+.sev-warning{{display:inline-block;padding:1px 8px;border-radius:10px;background:var(--modify);color:#fff;font-size:.8rem}}
+.sev-info{{display:inline-block;padding:1px 8px;border-radius:10px;background:#e0e0e0;color:#333;font-size:.8rem}}
 """
 
 
@@ -109,18 +132,21 @@ def _header(target_url: str, old_label: str, new_label: str, now: str) -> str:
 
 
 def _summary_cards(diff: DiffResult) -> str:
+    breaking = sum(1 for ad in diff.attribute_diffs if ad.severity == SEVERITY_BREAKING)
     return (
         '<div class="cards">'
         + _card(len(diff.added_pages), "追加画面数")
         + _card(len(diff.removed_pages), "削除画面数")
         + _card(len(diff.field_changes), "項目変更数")
         + _card(len(diff.link_changes), "リンク変更数")
+        + _card(breaking, "重大な変更", emphasize=breaking > 0)
         + "</div>"
     )
 
 
-def _card(num: int, label: str) -> str:
-    return f'<div class="card"><div class="num">{num}</div><div class="label">{html.escape(label)}</div></div>'
+def _card(num: int, label: str, emphasize: bool = False) -> str:
+    cls = "card card-breaking" if emphasize else "card"
+    return f'<div class="{cls}"><div class="num">{num}</div><div class="label">{html.escape(label)}</div></div>'
 
 
 def _notice() -> str:
@@ -172,6 +198,53 @@ def _field_change_row(change: FieldChange) -> str:
         f"<td>{html.escape(change.field_name)}</td>"
         f"<td>{_change_badge(change.change_type)}</td>"
         f"<td>{_field_value(change.before)} → {_field_value(change.after)}</td>"
+        "</tr>"
+    )
+
+
+def _attribute_changes_table(changes: tuple[FieldAttributeDiff, ...]) -> str:
+    if not changes:
+        return _empty()
+    rows = [_table_start(("画面URL", "フィールド名", "属性", "変更前 → 変更後", "重要度"))]
+    rows.extend(_attribute_change_row(change) for change in changes)
+    rows.append(_table_end())
+    return "\n".join(rows)
+
+
+def _attribute_change_row(change: FieldAttributeDiff) -> str:
+    return (
+        "<tr>"
+        f"<td>{html.escape(change.page_url)}</td>"
+        f"<td>{html.escape(change.field_name)}</td>"
+        f"<td>{html.escape(change.attribute)}</td>"
+        f"<td>{html.escape(change.before)} → {html.escape(change.after)}</td>"
+        f"<td>{_severity_badge(change.severity)}</td>"
+        "</tr>"
+    )
+
+
+def _severity_badge(severity: str) -> str:
+    label = SEVERITY_LABELS.get(severity, severity)
+    class_name = SEVERITY_CLASSES.get(severity, "sev-info")
+    return f'<span class="badge {class_name}">{html.escape(label)}</span>'
+
+
+def _api_changes_table(changes: tuple[ApiChange, ...]) -> str:
+    if not changes:
+        return _empty()
+    rows = [_table_start(("画面URL", "メソッド", "パス", "種別"))]
+    rows.extend(_api_change_row(change) for change in changes)
+    rows.append(_table_end())
+    return "\n".join(rows)
+
+
+def _api_change_row(change: ApiChange) -> str:
+    return (
+        "<tr>"
+        f"<td>{html.escape(change.page_url)}</td>"
+        f"<td>{html.escape(change.method)}</td>"
+        f"<td>{html.escape(change.path)}</td>"
+        f"<td>{_change_badge(change.change_type)}</td>"
         "</tr>"
     )
 

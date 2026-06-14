@@ -208,6 +208,14 @@
 /* ── エグゼクティブサマリー（概要タブ） ── */
 .exec-summary { border: 1px solid var(--info-border); border-left: 4px solid var(--primary); border-radius: 8px; background: var(--info-bg); padding: 16px 18px; margin-bottom: 18px; }
 
+/* ── 概要タブ「次のステップ」導線 ── */
+.next-steps-cta { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:20px; }
+.next-steps-label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em; margin-right:4px; }
+.next-step-btn { padding:6px 14px; border-radius:6px; border:1.5px solid var(--primary); background:var(--primary); color:#fff; font-size:12px; font-weight:600; cursor:pointer; transition:background .15s, opacity .15s; }
+.next-step-btn:hover { opacity:.85; }
+.next-step-btn--secondary { background:var(--surface); color:var(--primary-dark); border-color:var(--border); }
+.next-step-btn--secondary:hover { background:var(--info-bg); opacity:1; }
+
 /* ── 用語辞書ツールチップ（QA専門用語の平易な説明） ── */
 .term { border-bottom: 1px dotted var(--primary); cursor: help; position: relative; }
 .term:hover::after { content: attr(data-term); position: absolute; bottom: calc(100% + 6px); left: 0; background: #1a1a2e; color: #fff; font-size: 12px; font-weight: 400; border-radius: 5px; padding: 8px 12px; white-space: normal; width: 280px; max-width: 80vw; line-height: 1.6; z-index: 600; box-shadow: 0 4px 12px rgba(0,0,0,.25); }
@@ -218,7 +226,7 @@
 .tech-cell.tech-miss { color:var(--text-muted); font-size:12px; }
 .tech-cell.tech-hit { position:relative; cursor:help; }
 .tech-badge { display:inline-block; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:700; color:#fff; letter-spacing:.3px; }
-.tech-th-btn { background:none; border:none; cursor:pointer; font-size:11px; font-weight:700; color:var(--primary-dark); padding:4px 6px; border-radius:3px; writing-mode:vertical-lr; min-width:28px; line-height:1.3; }
+.tech-th-btn { background:none; border:none; cursor:pointer; font-size:11px; font-weight:700; color:var(--primary-dark); padding:4px 8px; border-radius:3px; white-space:nowrap; line-height:1.4; }
 .tech-th-btn:hover { background:var(--info-bg); }
 /* Tooltip on hover */
 .tech-cell.tech-hit::after { content:attr(data-tip); position:absolute; bottom:calc(100% + 6px); left:50%; transform:translateX(-50%); background:#1a1a2e; color:#fff; font-size:11px; font-weight:400; border-radius:5px; padding:6px 10px; white-space:normal; width:260px; max-width:90vw; text-align:left; line-height:1.5; z-index:500; pointer-events:none; opacity:0; transition:opacity .15s; box-shadow:0 4px 12px rgba(0,0,0,.25); }

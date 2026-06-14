@@ -13,6 +13,8 @@ SNAPSHOTS_DIR_NAME = "snapshots"
 SNAPSHOT_EXTENSION = ".json"
 SNAPSHOT_TIME_FORMAT = "%Y%m%d-%H%M%S"
 JSON_INDENT = 2
+WORK_DIR_NAME = "work"
+CHECKPOINT_FILE_NAME = "current-checkpoint.json"
 
 
 def save_snapshot(pages: list[PageData], output_dir: Path) -> Path:
@@ -27,6 +29,29 @@ def save_snapshot(pages: list[PageData], output_dir: Path) -> Path:
     return snapshot_path
 
 
+def save_partial_snapshot(
+    pages: list[PageData], output_dir: Path, *, finalized: bool = False
+) -> Path:
+    """完了済みページを原子的に保存し、停止時はpartial snapshotとして確定する。"""
+    payload = json.dumps([asdict(page) for page in pages], ensure_ascii=False, indent=JSON_INDENT)
+    work_dir = output_dir / WORK_DIR_NAME
+    work_dir.mkdir(parents=True, exist_ok=True)
+    checkpoint_path = work_dir / CHECKPOINT_FILE_NAME
+    temp_path = checkpoint_path.with_suffix(".tmp")
+    temp_path.write_text(payload, encoding="utf-8")
+    temp_path.replace(checkpoint_path)
+    if not finalized:
+        return checkpoint_path
+
+    snapshots_dir = output_dir / SNAPSHOTS_DIR_NAME
+    snapshots_dir.mkdir(parents=True, exist_ok=True)
+    partial_path = snapshots_dir / f"{_timestamp()}-partial{SNAPSHOT_EXTENSION}"
+    partial_temp = partial_path.with_suffix(".tmp")
+    partial_temp.write_text(payload, encoding="utf-8")
+    partial_temp.replace(partial_path)
+    return partial_path
+
+
 def load_snapshot(path: Path) -> list[PageData]:
     raw_pages = json.loads(path.read_text(encoding="utf-8"))
     return [_page_from_dict(item) for item in raw_pages]
@@ -36,7 +61,11 @@ def latest_snapshot(output_dir: Path) -> Path | None:
     snapshots_dir = output_dir / SNAPSHOTS_DIR_NAME
     if not snapshots_dir.is_dir():
         return None
-    snapshots = sorted(snapshots_dir.glob(f"*{SNAPSHOT_EXTENSION}"))
+    snapshots = sorted(
+        path
+        for path in snapshots_dir.glob(f"*{SNAPSHOT_EXTENSION}")
+        if not path.stem.endswith("-partial")
+    )
     return snapshots[-1] if snapshots else None
 
 
@@ -68,6 +97,7 @@ def _page_from_dict(data: dict[str, Any]) -> PageData:
         api_calls=tuple(_api_endpoint_from_dict(item) for item in data.get("api_calls", ())),
         stack_info=stack_info,
         state_id=str(data.get("state_id", "default")),
+        a11y_issues=tuple(str(item) for item in data.get("a11y_issues", ())),
     )
 
 
@@ -97,6 +127,10 @@ def _field_from_dict(data: dict[str, Any]) -> FieldData:
         default=str(data.get("default", "")),
         options=tuple(str(o) for o in (data.get("options") or [])),
         element_id=str(data.get("element_id", "")),
+        aria_label=str(data.get("aria_label", "")),
+        aria_required=bool(data.get("aria_required", False)),
+        role=str(data.get("role", "")),
+        has_visible_label=bool(data.get("has_visible_label", False)),
     )
 
 

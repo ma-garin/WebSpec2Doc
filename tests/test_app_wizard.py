@@ -121,6 +121,12 @@ def test_user_guide_view_is_present() -> None:
     assert "WebSpec2Doc ユーザーガイド" in html
 
 
+def test_execution_progress_details_are_present() -> None:
+    html = _index_html()
+    for element_id in ("exec-count", "exec-eta", "exec-skipped", "exec-saved"):
+        assert f'id="{element_id}"' in html
+
+
 def test_discover_to_crawl_flow(tmp_path: Path, monkeypatch) -> None:
     _patch_output_dirs(tmp_path, monkeypatch)
     _write_report_files(tmp_path)
@@ -154,6 +160,8 @@ def test_discover_to_crawl_flow(tmp_path: Path, monkeypatch) -> None:
     assert "REPORT_PATH:" in stream
     assert "--format" in popen_calls[0]
     assert "md,html,json" in popen_calls[0]
+    assert "--parallelism" in popen_calls[0]
+    assert popen_calls[0][popen_calls[0].index("--parallelism") + 1] == "2"
 
 
 def test_discover_no_login_to_result(tmp_path: Path, monkeypatch) -> None:

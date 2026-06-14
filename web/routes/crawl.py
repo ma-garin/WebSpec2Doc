@@ -44,6 +44,8 @@ def run() -> Response:
             depth,
             "--max-pages",
             max_pages,
+            "--parallelism",
+            "2",
             "--format",
             fmt,
         ]

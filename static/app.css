@@ -346,7 +346,7 @@ html[data-theme="dark"] .uml-canvas.is-fullscreen { background: var(--bg); }
     .execution-error-card { flex-shrink: 0; border: 1px solid var(--critical-border); background: var(--critical-bg); color: var(--critical); border-radius: var(--radius); padding: 12px 16px; font-size: 14px; font-weight: 700; }
     .execution-error-card.hidden { display: none; }
     .execution-bottombar { flex-shrink: 0; background: rgba(255,255,255,.96); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 16px; display: flex; align-items: center; gap: 12px; }
-    .execution-meta-list { display: flex; gap: 20px; flex: 1; min-width: 0; }
+    .execution-meta-list { display: flex; flex-wrap: wrap; gap: 10px 20px; flex: 1; min-width: 0; }
     .execution-meta-item { min-width: 0; }
     .execution-meta-item dt { font-size: 11px; font-weight: 800; color: var(--text-muted); letter-spacing: .06em; text-transform: uppercase; }
     .execution-meta-item dd { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 420px; }

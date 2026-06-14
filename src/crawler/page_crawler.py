@@ -19,15 +19,17 @@ from urllib.robotparser import RobotFileParser
 from playwright.sync_api import Browser, Page, sync_playwright
 from playwright.sync_api import Error as PlaywrightError
 
+from crawler.session_guard import SessionExpiredError
 from crawler.url_safety import is_safe_target
 
 if TYPE_CHECKING:
     from analyzer.stack_detector import StackInfo
 
-CRAWL_DELAY_SEC = 1
+CRAWL_DELAY_SEC = 0
 DEFAULT_DEPTH = 3
 DEFAULT_MAX_PAGES = 50
 DEFAULT_TIMEOUT_MS = 30_000
+STABILITY_TIMEOUT_MS = 3_000
 HTTP_DEFAULT_PORT = 80
 HTTPS_DEFAULT_PORT = 443
 PAGE_ID_PREFIX = "P"
@@ -44,6 +46,18 @@ _DUMMY_NUMBER = "1"
 _DUMMY_TEXT = "テスト入力値"
 
 logger = logging.getLogger(__name__)
+
+CrawlEventCallback = Callable[[dict[str, object]], None]
+CheckpointCallback = Callable[[list["PageData"]], None]
+StopRequested = Callable[[], bool]
+
+
+class LoginWallDetected(RuntimeError):
+    def __init__(self, url: str, login_url: str, reasons: tuple[str, ...]) -> None:
+        super().__init__(f"ログインウォールを検出しました: {url}")
+        self.url = url
+        self.login_url = login_url
+        self.reasons = reasons
 
 
 @dataclass(frozen=True)
@@ -122,30 +136,64 @@ def crawl_site(
     max_pages: int = DEFAULT_MAX_PAGES,
     output_dir: Path | None = None,
     auth_state: Path | None = None,
+    on_event: CrawlEventCallback | None = None,
+    on_checkpoint: CheckpointCallback | None = None,
+    stop_requested: StopRequested | None = None,
 ) -> list[PageData]:
     base_url = normalize_url(url)
     robots = _load_robots_parser(base_url)
     visited: set[str] = set()
     queue: list[tuple[str, int]] = [(base_url, 0)]
     pages: list[PageData] = []
+    _emit_event(on_event, "crawl_started", total=max_pages, parallelism=1)
 
     with _browser_page(auth_state) as page:
-        if max_pages > 0:
-            _guard_session(page, base_url, auth_state)
         while queue and len(pages) < max_pages:
+            if stop_requested and stop_requested():
+                break
             current_url, current_depth = queue.pop(0)
-            if _should_skip(current_url, current_depth, depth, visited, robots):
+            skip_reason = _skip_reason(current_url, current_depth, depth, visited, robots)
+            if skip_reason:
+                if skip_reason not in {"visited", "depth"}:
+                    _emit_event(on_event, "page_skipped", url=current_url, reason=skip_reason)
                 continue
             visited.add(current_url)
             page_id = _format_page_id(len(pages) + 1)
-            page_data = _crawl_page_with_id(page, current_url, page_id, output_dir)
+            started_at = time.monotonic()
+            _emit_event(
+                on_event,
+                "page_started",
+                url=current_url,
+                index=len(pages) + 1,
+                total=max_pages,
+            )
+            page_data = _crawl_page_with_id(
+                page,
+                current_url,
+                page_id,
+                output_dir,
+                auth_state=auth_state,
+                on_event=on_event,
+            )
             if page_data is None:
-                time.sleep(CRAWL_DELAY_SEC)
+                _polite_delay(page)
                 continue
             pages.append(page_data)
+            if on_checkpoint:
+                on_checkpoint(list(pages))
+            _emit_event(
+                on_event,
+                "page_completed",
+                url=current_url,
+                completed=len(pages),
+                total=max_pages,
+                elapsed_sec=round(time.monotonic() - started_at, 3),
+            )
             queue.extend(_next_urls(page_data.links, current_depth, visited, depth))
-            time.sleep(CRAWL_DELAY_SEC)
+            _polite_delay(page)
 
+    event = "crawl_cancelled" if stop_requested and stop_requested() else "crawl_completed"
+    _emit_event(on_event, event, completed=len(pages), total=max_pages)
     return pages
 
 
@@ -155,6 +203,7 @@ def discover_pages(
     max_pages: int = DEFAULT_MAX_PAGES,
     auth_state: Path | None = None,
     on_page_found: Callable[[dict[str, object]], None] | None = None,
+    on_event: CrawlEventCallback | None = None,
 ) -> list[dict[str, object]]:
     """Lightweight BFS listing reachable pages (url + title + login wall 判定)
     without screenshots or form extraction. Backs the GUI '画面リスト取得' step."""
@@ -168,14 +217,17 @@ def discover_pages(
         while queue and len(found) < max_pages:
             prev_count = len(found)
             current_url, current_depth = queue.pop(0)
-            if _should_skip(current_url, current_depth, depth, visited, robots):
+            skip_reason = _skip_reason(current_url, current_depth, depth, visited, robots)
+            if skip_reason:
+                if skip_reason not in {"visited", "depth"}:
+                    _emit_event(on_event, "page_skipped", url=current_url, reason=skip_reason)
                 continue
             visited.add(current_url)
             links = _discover_one(page, current_url, found)
             if on_page_found is not None and len(found) > prev_count:
                 on_page_found(found[-1])
             queue.extend(_next_urls(links, current_depth, visited, depth))
-            time.sleep(CRAWL_DELAY_SEC)
+            _polite_delay(page)
 
     return found
 
@@ -184,23 +236,83 @@ def crawl_urls(
     urls: list[str],
     output_dir: Path | None = None,
     auth_state: Path | None = None,
+    parallelism: int = 1,
+    respect_robots: bool = False,
+    on_event: CrawlEventCallback | None = None,
+    on_checkpoint: CheckpointCallback | None = None,
+    stop_requested: StopRequested | None = None,
 ) -> list[PageData]:
     """Crawl an explicit list of URLs (no link following). Backs the GUI
     'selected pages' / 'manual URL' modes."""
     targets = list(dict.fromkeys(normalize_url(u) for u in urls if u.strip()))
-    pages: list[PageData] = []
+    requested_total = len(targets)
+    worker_count = max(1, min(parallelism, requested_total or 1))
+    _emit_event(on_event, "crawl_started", total=requested_total, parallelism=worker_count)
+    if respect_robots:
+        targets = _filter_robots_targets(targets, on_event)
+    if not targets:
+        _emit_event(on_event, "crawl_completed", completed=0, total=requested_total)
+        return []
+    worker_count = max(1, min(parallelism, len(targets) or 1))
+    if worker_count > 1:
+        from crawler.parallel_crawler import crawl_urls_parallel
 
+        return crawl_urls_parallel(
+            targets,
+            output_dir,
+            auth_state,
+            worker_count,
+            on_event,
+            on_checkpoint,
+            stop_requested,
+        )
+
+    pages: list[PageData] = []
     with _browser_page(auth_state) as page:
-        if targets:
-            _guard_session(page, targets[0], auth_state)
-        for target in targets:
+        for index, target in enumerate(targets, 1):
+            if stop_requested and stop_requested():
+                break
             page_id = _format_page_id(len(pages) + 1)
-            page_data = _crawl_page_with_id(page, target, page_id, output_dir)
+            started_at = time.monotonic()
+            _emit_event(on_event, "page_started", url=target, index=index, total=len(targets))
+            if auth_state is None and on_event is None:
+                page_data = _crawl_page_with_id(page, target, page_id, output_dir)
+            else:
+                page_data = _crawl_page_with_id(
+                    page,
+                    target,
+                    page_id,
+                    output_dir,
+                    auth_state=auth_state,
+                    on_event=on_event,
+                )
             if page_data is not None:
                 pages.append(page_data)
-            time.sleep(CRAWL_DELAY_SEC)
+                if on_checkpoint:
+                    on_checkpoint(list(pages))
+                _emit_event(
+                    on_event,
+                    "page_completed",
+                    url=target,
+                    completed=len(pages),
+                    total=len(targets),
+                    elapsed_sec=round(time.monotonic() - started_at, 3),
+                )
+            _polite_delay(page)
 
+    event = "crawl_cancelled" if stop_requested and stop_requested() else "crawl_completed"
+    _emit_event(on_event, event, completed=len(pages), total=len(targets))
     return pages
+
+
+def _goto_stable(page: Page, url: str) -> Any:
+    """DOM構築を待って返し、networkidleは短時間だけ補助的に待つ。"""
+    response = page.goto(url, wait_until="domcontentloaded", timeout=DEFAULT_TIMEOUT_MS)
+    try:
+        page.wait_for_load_state("networkidle", timeout=STABILITY_TIMEOUT_MS)
+    except PlaywrightError:
+        logger.debug("networkidle待機を打ち切りました: %s", url)
+    return response
 
 
 def _guard_session(page: Page, url: str, auth_state: Path | None) -> None:
@@ -215,7 +327,7 @@ def _guard_session(page: Page, url: str, auth_state: Path | None) -> None:
         return
     normalized = normalize_url(url)
     try:
-        response = page.goto(normalized, wait_until="networkidle", timeout=DEFAULT_TIMEOUT_MS)
+        response = _goto_stable(page, normalized)
     except PlaywrightError as exc:
         logger.warning("セッション確認のためのアクセスに失敗しました: %s (%s)", url, exc)
         return
@@ -239,7 +351,7 @@ def _discover_one(page: Page, url: str, found: list[dict[str, object]]) -> tuple
 
     normalized = normalize_url(url)
     try:
-        response = page.goto(normalized, wait_until="networkidle", timeout=DEFAULT_TIMEOUT_MS)
+        response = _goto_stable(page, normalized)
     except PlaywrightError as exc:
         logger.warning("画面リスト取得に失敗しました: %s (%s)", url, exc)
         return ()
@@ -259,10 +371,18 @@ def _discover_one(page: Page, url: str, found: list[dict[str, object]]) -> tuple
             "login_url": signals.final_url if verdict.is_login_required else "",
         }
     )
+    if verdict.is_login_required:
+        return ()
     return tuple(extract_internal_links(page, normalized))
 
 
-def crawl_page(page: Page, url: str, output_dir: Path | None) -> PageData:
+def crawl_page(
+    page: Page,
+    url: str,
+    output_dir: Path | None,
+    auth_state: Path | None = None,
+) -> PageData:
+    from analyzer.login_wall import PageAuthSignals, detect_login_wall
     from analyzer.stack_detector import detect_stack
     from crawler.link_extractor import (
         compute_dom_signature,
@@ -272,6 +392,7 @@ def crawl_page(page: Page, url: str, output_dir: Path | None) -> PageData:
         extract_headings,
         extract_internal_links,
         extract_page_title,
+        has_password_field,
     )
     from crawler.network_interceptor import NetworkCapture
 
@@ -279,7 +400,18 @@ def crawl_page(page: Page, url: str, output_dir: Path | None) -> PageData:
     capture = NetworkCapture()
     capture.attach(page)
     try:
-        response = page.goto(normalized_url, wait_until="networkidle", timeout=DEFAULT_TIMEOUT_MS)
+        response = _goto_stable(page, normalized_url)
+        signals = PageAuthSignals(
+            requested_url=normalized_url,
+            final_url=page.url,
+            status=response.status if response else 0,
+            has_password_field=has_password_field(page),
+        )
+        verdict = detect_login_wall(signals)
+        if verdict.is_login_required:
+            if auth_state is not None:
+                raise SessionExpiredError(f"保存セッションが失効しています: {normalized_url}")
+            raise LoginWallDetected(normalized_url, signals.final_url, verdict.reasons)
         response_headers = dict(response.headers) if response else {}
         page_id = str(getattr(page, "_webspec2doc_page_id", _format_page_id(1)))
         screenshot_path = _save_screenshot(page, output_dir, page_id)
@@ -330,12 +462,25 @@ def _crawl_page_with_id(
     url: str,
     page_id: str,
     output_dir: Path | None,
+    auth_state: Path | None = None,
+    on_event: CrawlEventCallback | None = None,
 ) -> PageData | None:
     try:
         page._webspec2doc_page_id = page_id  # type: ignore[attr-defined,unused-ignore]
-        return crawl_page(page, url, output_dir)
+        return crawl_page(page, url, output_dir, auth_state)
+    except LoginWallDetected as exc:
+        logger.warning("ログインウォールによりスキップしました: %s", url)
+        _emit_event(
+            on_event,
+            "login_wall_detected",
+            url=exc.url,
+            login_url=exc.login_url,
+            reasons=list(exc.reasons),
+        )
+        return None
     except PlaywrightError as exc:
         logger.warning("ページのクロールに失敗しました: %s (%s)", url, exc)
+        _emit_event(on_event, "page_failed", url=url, reason="playwright", detail=str(exc))
         return None
 
 
@@ -358,15 +503,55 @@ def _should_skip(
     visited: set[str],
     robots: RobotFileParser,
 ) -> bool:
-    if current_depth > max_depth or url in visited:
-        return True
+    return _skip_reason(url, current_depth, max_depth, visited, robots) is not None
+
+
+def _skip_reason(
+    url: str,
+    current_depth: int,
+    max_depth: int,
+    visited: set[str],
+    robots: RobotFileParser,
+) -> str | None:
+    if current_depth > max_depth:
+        return "depth"
+    if url in visited:
+        return "visited"
     if not is_safe_target(url):
         logger.warning("安全でない URL をスキップしました: %s", url)
-        return True
+        return "unsafe_url"
     if not robots.can_fetch(USER_AGENT, url):
         logger.warning("robots.txt によりスキップしました: %s", url)
-        return True
-    return False
+        return "robots"
+    return None
+
+
+def _filter_robots_targets(targets: list[str], on_event: CrawlEventCallback | None) -> list[str]:
+    parsers: dict[str, RobotFileParser] = {}
+    allowed: list[str] = []
+    for target in targets:
+        parsed = urlparse(target)
+        origin = f"{parsed.scheme}://{parsed.netloc}"
+        parser = parsers.get(origin)
+        if parser is None:
+            parser = _load_robots_parser(origin)
+            parsers[origin] = parser
+        reason = _skip_reason(target, 0, 0, set(), parser)
+        if reason:
+            _emit_event(on_event, "page_skipped", url=target, reason=reason)
+        else:
+            allowed.append(target)
+    return allowed
+
+
+def _emit_event(callback: CrawlEventCallback | None, event: str, **details: object) -> None:
+    if callback is not None:
+        callback({"event": event, **details})
+
+
+def _polite_delay(page: Page) -> None:
+    if CRAWL_DELAY_SEC > 0:
+        page.wait_for_timeout(CRAWL_DELAY_SEC * 1000)
 
 
 def _next_urls(

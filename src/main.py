@@ -3,8 +3,10 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import signal
 import sys
-from collections.abc import Sequence
+import threading
+from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import urlparse
@@ -26,7 +28,7 @@ from crawler.page_crawler import (
 )
 from crawler.session_guard import SessionExpiredError
 from diff.differ import compute_diff
-from diff.snapshot import latest_snapshot, load_snapshot, save_snapshot
+from diff.snapshot import latest_snapshot, load_snapshot, save_partial_snapshot, save_snapshot
 from generator.diff_reporter import generate_diff_report
 from generator.markdown_generator import (
     generate_forms_markdown,
@@ -47,12 +49,20 @@ DIFF_REPORT_FILE_NAME = "diff_report.html"
 FIRST_SNAPSHOT_MESSAGE = "初回スナップショットを保存しました。次回実行から差分を検出できます"
 
 logger = logging.getLogger(__name__)
+_STOP_REQUESTED = threading.Event()
+_EVENT_WRITE_LOCK = threading.Lock()
 
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format=LOGGER_FORMAT)
     load_dotenv()
+    signal.signal(signal.SIGTERM, _request_stop)
+    signal.signal(signal.SIGINT, _request_stop)
     run(parse_args())
+
+
+def _request_stop(_signum: int, _frame: object) -> None:
+    _STOP_REQUESTED.set()
 
 
 def parse_args() -> argparse.Namespace:
@@ -107,6 +117,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--compare", action="store_true", help="前回スナップショットとの差分を出力")
     parser.add_argument(
+        "--parallelism",
+        type=int,
+        default=1,
+        help="明示URLクロールの並列数（GUI既定: 2、最大: 4）",
+    )
+    parser.add_argument(
         "--fail-on-drift",
         action="store_true",
         help="差分検知時に exit code 1 で終了（CI/CDパイプライン用）",
@@ -150,10 +166,47 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
     prior_snapshot = latest_snapshot(output_dir)
     crawled_at = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
     auth_state = Path(auth_path) if auth_path else None
+    _STOP_REQUESTED.clear()
+    checkpoint_pages: list[PageData] = []
+
+    def emit_event(event: dict[str, object]) -> None:
+        with _EVENT_WRITE_LOCK:
+            sys.stdout.write(f"CRAWL_EVENT:{json.dumps(event, ensure_ascii=False)}\n")
+            sys.stdout.flush()
+
+    def save_checkpoint(pages: list[PageData]) -> None:
+        nonlocal checkpoint_pages
+        checkpoint_pages = list(pages)
+        path = save_partial_snapshot(checkpoint_pages, output_dir)
+        emit_event(
+            {
+                "event": "checkpoint_saved",
+                "saved_count": len(checkpoint_pages),
+                "path": str(path),
+            }
+        )
 
     try:
-        pages = _do_crawl(args, url_list, primary_url, output_dir, auth_state)
+        pages = _do_crawl(
+            args,
+            url_list,
+            primary_url,
+            output_dir,
+            auth_state,
+            on_event=emit_event,
+            on_checkpoint=save_checkpoint,
+        )
     except SessionExpiredError as exc:
+        if checkpoint_pages:
+            partial = save_partial_snapshot(checkpoint_pages, output_dir, finalized=True)
+            emit_event(
+                {
+                    "event": "checkpoint_saved",
+                    "saved_count": len(checkpoint_pages),
+                    "path": str(partial),
+                    "finalized": True,
+                }
+            )
         logger.error("%s", exc)
         sys.stdout.write("SESSION_EXPIRED\n")
         sys.exit(2)
@@ -171,6 +224,19 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
         crawl_max_pages=int(args.max_pages),
         crawled_at=crawled_at,
     )
+    if _STOP_REQUESTED.is_set():
+        partial = save_partial_snapshot(pages, output_dir, finalized=True)
+        emit_event(
+            {
+                "event": "checkpoint_saved",
+                "saved_count": len(pages),
+                "path": str(partial),
+                "finalized": True,
+            }
+        )
+        sys.stdout.write("CRAWL_CANCELLED\n")
+        sys.stdout.flush()
+        return
     new_snapshot = save_snapshot(pages, output_dir)
     drift_detected = False
     if bool(getattr(args, "compare", False)):
@@ -191,16 +257,30 @@ def _do_crawl(
     primary_url: str,
     output_dir: Path,
     auth_state: Path | None,
+    on_event: Callable[[dict[str, object]], None] | None = None,
+    on_checkpoint: Callable[[list[PageData]], None] | None = None,
 ) -> list[PageData]:
     """URL リストまたは単一 URL をクロールして PageData リストを返す。"""
     if url_list:
-        return crawl_urls(url_list, output_dir=output_dir, auth_state=auth_state)
+        return crawl_urls(
+            url_list,
+            output_dir=output_dir,
+            auth_state=auth_state,
+            parallelism=max(1, min(int(getattr(args, "parallelism", 1)), 4)),
+            respect_robots=True,
+            on_event=on_event,
+            on_checkpoint=on_checkpoint,
+            stop_requested=_STOP_REQUESTED.is_set,
+        )
     return crawl_site(
         url=primary_url,
         depth=int(args.depth),
         max_pages=int(args.max_pages),
         output_dir=output_dir,
         auth_state=auth_state,
+        on_event=on_event,
+        on_checkpoint=on_checkpoint,
+        stop_requested=_STOP_REQUESTED.is_set,
     )
 
 
@@ -343,12 +423,17 @@ def _discover(args: argparse.Namespace, auth_path: Path | None) -> None:
             sys.stdout.write(json.dumps({"page": page}, ensure_ascii=False) + "\n")
             sys.stdout.flush()
 
+        def _emit_discover_event(event: dict[str, object]) -> None:
+            sys.stdout.write(json.dumps({"crawl_event": event}, ensure_ascii=False) + "\n")
+            sys.stdout.flush()
+
         pages = discover_pages(
             url=str(args.url),
             depth=int(args.depth),
             max_pages=int(args.max_pages),
             auth_state=Path(auth_path) if auth_path else None,
             on_page_found=_emit,
+            on_event=_emit_discover_event,
         )
         sys.stdout.write(json.dumps({"done": True, "total": len(pages)}, ensure_ascii=False) + "\n")
         sys.stdout.flush()

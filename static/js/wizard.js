@@ -1,6 +1,7 @@
 // ====================== ウィザード ======================
 let wizardStep = 1;
 let discovered = [];
+let discoverSkipped = [];
 const urlInput = document.getElementById('url-input');
 const crawlDiscoverySection = document.getElementById('crawl-discovery-section');
 const targetPreview = document.getElementById('target-preview');
@@ -198,6 +199,7 @@ async function discoverUrls(skipLoginSection) {
   if (feed) feed.innerHTML = '';
   if (countLabel) countLabel.textContent = '0画面を発見';
   discovered = [];
+  discoverSkipped = [];
   _startDiscoverTimer();
 
   let lastRow = null;
@@ -252,6 +254,13 @@ async function discoverUrls(skipLoginSection) {
           discovered.push(obj.page);
           if (countLabel) countLabel.textContent = `${discovered.length}画面を発見`;
           lastRow = _addRow(obj.page, true);
+        } else if (obj.crawl_event?.event === 'page_skipped') {
+          discoverSkipped.push(obj.crawl_event);
+          const skipped = obj.crawl_event;
+          const reason = skipped.reason === 'robots' ? 'robots.txtにより除外' : '安全制約により除外';
+          _markDone(lastRow); lastRow = null;
+          _addRow({ url: skipped.url || '', title: reason }, false);
+          if (countLabel) countLabel.textContent = `${discovered.length}画面 / ${discoverSkipped.length}件除外`;
         } else if (obj.done) {
           _markDone(lastRow);
           lastRow = null;
@@ -284,8 +293,11 @@ async function discoverUrls(skipLoginSection) {
         summary.style.display = '';
       }
       status.textContent = '';
+      if (discoverSkipped.length) status.textContent = `${discoverSkipped.length}件はrobots.txtまたは安全制約により除外されました。`;
     } else {
-      status.textContent = '画面が0件でした。URLを確認してください。';
+      status.textContent = discoverSkipped.length
+        ? `取得可能な画面は0件です。${discoverSkipped.length}件がrobots.txtまたは安全制約により除外されました。`
+        : '画面が0件でした。URLを確認してください。';
     }
   } catch (e) {
     clearDiscovered(); status.textContent = e.message; status.classList.add('discover-status-error');
@@ -303,7 +315,7 @@ async function discoverUrls(skipLoginSection) {
 function renderDiscovered() {
   const panel = document.getElementById('discovered-url-panel');
   const list = document.getElementById('discovered-url-list');
-  panel.style.display = discovered.length ? '' : 'none';
+  panel.style.display = (discovered.length || discoverSkipped.length) ? '' : 'none';
 
   const makeNormalItem = (it) => `
     <label class="discovered-url-item">
@@ -347,11 +359,19 @@ function renderDiscovered() {
     html += `<div class="disc-login-group-separator"><span>🔒 認証が必要なページ（${loginPages.length}件）— 各画面の認証情報を入力してください</span></div>`;
     html += loginPages.map(makeLoginItem).join('');
   }
+  if (discoverSkipped.length) {
+    html += `<div class="disc-login-group-separator"><span>取得対象外（${discoverSkipped.length}件）</span></div>`;
+    html += discoverSkipped.map(item => {
+      const reason = item.reason === 'robots' ? 'robots.txt' : '安全制約';
+      return `<div class="discovered-url-item" style="opacity:.72;cursor:default"><span aria-hidden="true"></span><span><strong>${escHtml(reason)}により除外</strong><code>${escHtml(item.url || '')}</code></span></div>`;
+    }).join('');
+  }
   list.innerHTML = html;
   list.querySelectorAll('.discovered-cb').forEach(cb => cb.addEventListener('change', updateTargetPreview));
 }
 function clearDiscovered() {
   discovered = [];
+  discoverSkipped = [];
   document.getElementById('discovered-url-panel').style.display = 'none';
   document.getElementById('discovered-url-list').innerHTML = '';
   document.getElementById('discover-status').textContent = '';
@@ -371,4 +391,3 @@ function updateTargetPreview() {
   }
   targetPreviewList.innerHTML = urls.map((u, i) => `<li><span>${i === 0 ? 'メイン' : '対象 ' + (i + 1)}</span><code>${escHtml(u)}</code></li>`).join('');
 }
-

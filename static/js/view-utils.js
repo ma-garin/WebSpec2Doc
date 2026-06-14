@@ -1,6 +1,11 @@
+// クエリ重複を統合した正規化済み画面のみを返す。
+// 旧 report.json（is_canonical 無し）は全画面を canonical 扱いにフォールバック。
+function canonicalScreens(rj) {
+  return (rj.screens || []).filter(sc => sc.is_canonical !== false);
+}
 function allFields(rj) {
   const rows = [];
-  for (const sc of (rj.screens || [])) {
+  for (const sc of canonicalScreens(rj)) {
     for (const fm of (sc.forms || [])) {
       for (const fld of (fm.fields || [])) rows.push({ screen: sc.page_id, title: sc.title || '', field: fld });
     }

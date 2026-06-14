@@ -27,13 +27,17 @@ def _summary_for_domain(domain: str) -> dict[str, int]:
         try:
             data = json.loads(report_json.read_text(encoding="utf-8"))
             screens = data.get("screens", [])
+            # クエリ重複を統合した「正規化済み画面」のみで集計する。
+            # 旧 report.json（is_canonical 無し）は全画面を canonical 扱いにフォールバック。
+            canonical = [s for s in screens if s.get("is_canonical", True)]
+            meta = data.get("meta", {})
             return {
-                "screens": len(screens),
-                "forms": sum(len(s.get("forms", [])) for s in screens),
+                "screens": meta.get("screen_count", len(canonical)),
+                "forms": sum(len(s.get("forms", [])) for s in canonical),
                 "fields": sum(
-                    len(f.get("fields", [])) for s in screens for f in s.get("forms", [])
+                    len(f.get("fields", [])) for s in canonical for f in s.get("forms", [])
                 ),
-                "buttons": sum(len(s.get("buttons", [])) for s in screens),
+                "buttons": sum(len(s.get("buttons", [])) for s in canonical),
             }
         except (OSError, json.JSONDecodeError):
             pass

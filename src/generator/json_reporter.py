@@ -4,6 +4,7 @@ import json
 
 import networkx as nx
 
+from analyzer.canonicalizer import CanonicalInfo, group_canonical_screens
 from analyzer.html_analyzer import AnalyzedPage
 from analyzer.test_conditions import derive_conditions
 from crawler.page_crawler import DEFAULT_DEPTH, DEFAULT_MAX_PAGES, FieldData, FormData
@@ -20,6 +21,7 @@ def generate_json_report(
     crawled_at: str = "",
 ) -> str:
     """Serialize crawl results and derived test conditions to structured JSON."""
+    canonical_screens = group_canonical_screens(pages)
     return json.dumps(
         {
             "meta": {
@@ -28,15 +30,16 @@ def generate_json_report(
                 "max_pages": crawl_max_pages,
                 "crawled_at": crawled_at,
                 "page_count": len(pages),
+                "screen_count": sum(1 for info in canonical_screens.values() if info.is_canonical),
             },
-            "screens": [_screen_dict(p, graph) for p in pages],
+            "screens": [_screen_dict(p, graph, canonical_screens[p.page_id]) for p in pages],
         },
         ensure_ascii=False,
         indent=JSON_INDENT,
     )
 
 
-def _screen_dict(page: AnalyzedPage, graph: nx.DiGraph) -> dict:
+def _screen_dict(page: AnalyzedPage, graph: nx.DiGraph, canonical: CanonicalInfo) -> dict:
     pd = page.page_data
     pid = page.page_id
     return {
@@ -50,6 +53,10 @@ def _screen_dict(page: AnalyzedPage, graph: nx.DiGraph) -> dict:
             "to": [s for s in graph.successors(pid) if s != pid],
             "from": [p for p in graph.predecessors(pid) if p != pid],
         },
+        "canonical_key": canonical.canonical_key,
+        "is_canonical": canonical.is_canonical,
+        "variation_count": canonical.variation_count,
+        "variation_urls": list(canonical.variation_urls),
     }
 
 

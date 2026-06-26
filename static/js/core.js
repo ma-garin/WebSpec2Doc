@@ -17,9 +17,6 @@ document.getElementById('sidebar-toggle-btn')?.addEventListener('click', () => {
 const VIEW_HEADER = {
   dashboard: { trail: ['ダッシュボード'], title: '監視対象サイト' },
   generate: { trail: ['ダッシュボード', 'サイトを追加'], title: 'サイトを追加 / 再クロール' },
-  'qa-process': { trail: ['ダッシュボード', 'QAプロセス'], title: 'QAプロセス' },
-  'qa-models': { trail: ['ダッシュボード', 'モデル/カバレッジ'], title: 'モデル/カバレッジ' },
-  'qa-automation': { trail: ['ダッシュボード', '自動テスト候補'], title: '自動テスト候補' },
   'qa-quality': { trail: ['ダッシュボード', '品質観点'], title: '品質観点' },
   'auto-run': { trail: ['ダッシュボード', 'AutoRun'], title: 'AutoRun — 全自動テスト実行' },
   'user-guide': { trail: ['ダッシュボード', 'ユーザーガイド'], title: 'ユーザーガイド' },
@@ -53,11 +50,10 @@ function switchView(name) {
       try { history.replaceState(null, '', location.pathname); } catch (e) {}
     }
   }
-  if (name === 'qa-process') loadQaProcessSites();
-  if (['qa-models', 'qa-automation', 'qa-quality'].includes(name)) loadQaToolSites(name);
+  if (name === 'qa-quality') loadQaToolSites(name);
   // A: 2ペインツール画面では全高モードに切り替え
   const appContentEl = document.getElementById('app-content');
-  if (appContentEl) appContentEl.classList.toggle('is-qa-tool', ['qa-models', 'qa-automation', 'qa-quality', 'auto-run'].includes(name));
+  if (appContentEl) appContentEl.classList.toggle('is-qa-tool', ['qa-quality', 'auto-run'].includes(name));
   // レポートモード解除（generate以外に遷移した時）
   if (name !== 'generate' && appContentEl) appContentEl.classList.remove('is-reporting');
 }
@@ -94,6 +90,40 @@ function openAddSite() {
 }
 document.getElementById('add-site-btn').addEventListener('click', openAddSite);
 document.getElementById('add-site-btn-2').addEventListener('click', openAddSite);
+
+// ---- ダッシュボード・ヒーロー（ゴールデンパス入口） ----
+function _heroStartGuided(prefillUrl) {
+  openAddSite();
+  const input = document.getElementById('url-input');
+  if (input && prefillUrl) {
+    input.value = prefillUrl;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+}
+document.getElementById('hero-start-btn')?.addEventListener('click', () => {
+  const v = (document.getElementById('hero-url')?.value || '').trim();
+  _heroStartGuided(v);
+  // URL があれば画面分析まで自動で進める（既存 discover フローを再利用）
+  if (v) document.getElementById('discover-btn')?.click();
+});
+document.getElementById('hero-url')?.addEventListener('keydown', (event) => {
+  if (event.key !== 'Enter') return;
+  event.preventDefault();
+  document.getElementById('hero-start-btn')?.click();
+});
+document.getElementById('hero-guided-btn')?.addEventListener('click', () => {
+  _heroStartGuided((document.getElementById('hero-url')?.value || '').trim());
+});
+document.getElementById('hero-auto-btn')?.addEventListener('click', () => {
+  const v = (document.getElementById('hero-url')?.value || '').trim();
+  switchView('auto-run');
+  const a = document.getElementById('autorun-url');
+  if (a && v) { a.value = v; a.dispatchEvent(new Event('input', { bubbles: true })); }
+});
+document.getElementById('hero-sample-btn')?.addEventListener('click', () => {
+  const input = document.getElementById('hero-url');
+  if (input) { input.value = 'https://example.com'; input.dispatchEvent(new Event('input', { bubbles: true })); }
+});
 
 // P1 → P2: 「次へ」ボタン
 document.getElementById('p1-next-btn').addEventListener('click', () => {
@@ -205,4 +235,3 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault(); openAddSite();
   }
 });
-

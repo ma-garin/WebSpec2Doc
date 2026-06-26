@@ -1,0 +1,923 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AIDD Kit 取り扱い説明書</title>
+  <style>
+    :root {
+      --qiita: #55c500;
+      --qiita-dark: #3f9b00;
+      --bg: #f6f7f8;
+      --surface: #ffffff;
+      --surface-soft: #f9fafb;
+      --text: #24292f;
+      --muted: #687076;
+      --border: #d8dee4;
+      --code-bg: #f3f6f8;
+      --note-bg: #eff8e8;
+      --warn-bg: #fff7e6;
+      --danger-bg: #fff0f0;
+      --blue-bg: #eef6ff;
+      --shadow: 0 8px 24px rgba(27, 31, 36, 0.08);
+      --radius: 8px;
+      --content-width: 920px;
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", "Noto Sans JP", Meiryo, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.8;
+      letter-spacing: 0;
+    }
+
+    a {
+      color: var(--qiita-dark);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      height: 56px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      gap: 16px;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    .brand-mark {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: var(--qiita);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+    }
+
+    .topbar-note {
+      color: var(--muted);
+      font-size: 13px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      gap: 28px;
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 28px 20px 56px;
+    }
+
+    .sidebar {
+      align-self: start;
+      position: sticky;
+      top: 80px;
+      max-height: calc(100vh - 96px);
+      overflow: auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    .sidebar h2 {
+      margin: 0 0 12px;
+      font-size: 14px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .nav-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 2px;
+    }
+
+    .nav-list a {
+      display: block;
+      padding: 8px 10px;
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .nav-list a:hover,
+    .nav-list a.is-active {
+      background: var(--note-bg);
+      color: var(--qiita-dark);
+      text-decoration: none;
+    }
+
+    .main {
+      min-width: 0;
+      max-width: var(--content-width);
+    }
+
+    .article {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 40px;
+    }
+
+    .hero-label {
+      color: var(--qiita-dark);
+      font-weight: 700;
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: 34px;
+      line-height: 1.35;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      color: var(--muted);
+      font-size: 17px;
+      margin: 0 0 24px;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 32px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 26px;
+      padding: 2px 10px;
+      border-radius: 999px;
+      background: var(--code-bg);
+      color: #4b5563;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    h2 {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+      margin: 44px 0 18px;
+      font-size: 25px;
+      line-height: 1.45;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 30px 0 12px;
+      font-size: 19px;
+      line-height: 1.5;
+      letter-spacing: 0;
+    }
+
+    p {
+      margin: 0 0 16px;
+    }
+
+    ul,
+    ol {
+      padding-left: 1.4em;
+      margin: 0 0 18px;
+    }
+
+    li {
+      margin: 4px 0;
+    }
+
+    code {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      background: var(--code-bg);
+      border: 1px solid #e7ecf0;
+      border-radius: 4px;
+      padding: 0.15em 0.35em;
+      font-size: 0.92em;
+    }
+
+    pre {
+      background: #1f2937;
+      color: #e5e7eb;
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      overflow: auto;
+      line-height: 1.6;
+      margin: 14px 0 22px;
+    }
+
+    pre code {
+      background: transparent;
+      border: 0;
+      padding: 0;
+      color: inherit;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0 24px;
+      font-size: 14px;
+    }
+
+    th,
+    td {
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--surface-soft);
+      text-align: left;
+    }
+
+    .callout {
+      border: 1px solid var(--border);
+      border-left: 5px solid var(--qiita);
+      background: var(--note-bg);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      margin: 18px 0 24px;
+    }
+
+    .callout.warn {
+      background: var(--warn-bg);
+      border-left-color: #f59e0b;
+    }
+
+    .callout.danger {
+      background: var(--danger-bg);
+      border-left-color: #e11d48;
+    }
+
+    .callout.info {
+      background: var(--blue-bg);
+      border-left-color: #2563eb;
+    }
+
+    .callout-title {
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+
+    .step-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      margin: 14px 0;
+      background: var(--surface-soft);
+    }
+
+    .step-card h3 {
+      margin-top: 0;
+    }
+
+    .checklist {
+      list-style: none;
+      padding-left: 0;
+    }
+
+    .checklist li {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      padding: 9px 12px;
+      margin-bottom: 8px;
+    }
+
+    .mobile-toc {
+      display: none;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 16px;
+      padding: 12px 14px;
+    }
+
+    .mobile-toc summary {
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .footer-note {
+      margin-top: 36px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 920px) {
+      .layout {
+        display: block;
+        padding: 18px 12px 40px;
+      }
+
+      .sidebar {
+        display: none;
+      }
+
+      .mobile-toc {
+        display: block;
+      }
+
+      .article {
+        padding: 24px 18px;
+      }
+
+      h1 {
+        font-size: 28px;
+      }
+
+      h2 {
+        font-size: 22px;
+      }
+
+      .topbar {
+        padding: 0 14px;
+      }
+
+      .topbar-note {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">Y</span>
+      <span>AIDD Kit</span>
+    </div>
+    <div class="topbar-note">Qiita風・サイドメニュー付き取り扱い説明書</div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar" aria-label="サイドメニュー">
+      <h2>目次</h2>
+      <nav>
+        <ol class="nav-list">
+          <li><a href="#start">はじめに</a></li>
+          <li><a href="#what">何をする道具か</a></li>
+          <li><a href="#first">最初にやること</a></li>
+          <li><a href="#daily">毎日の使い方</a></li>
+          <li><a href="#skills">スキルの選び方</a></li>
+          <li><a href="#commands">コマンド一覧</a></li>
+          <li><a href="#ecc">ECCとの関係</a></li>
+          <li><a href="#projects">プロジェクト別</a></li>
+          <li><a href="#quality">品質チェック</a></li>
+          <li><a href="#trouble">困った時</a></li>
+          <li><a href="#words">用語集</a></li>
+        </ol>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <details class="mobile-toc">
+        <summary>目次を開く</summary>
+        <ol>
+          <li><a href="#start">はじめに</a></li>
+          <li><a href="#what">何をする道具か</a></li>
+          <li><a href="#first">最初にやること</a></li>
+          <li><a href="#daily">毎日の使い方</a></li>
+          <li><a href="#skills">スキルの選び方</a></li>
+          <li><a href="#commands">コマンド一覧</a></li>
+          <li><a href="#ecc">ECCとの関係</a></li>
+          <li><a href="#projects">プロジェクト別</a></li>
+          <li><a href="#quality">品質チェック</a></li>
+          <li><a href="#trouble">困った時</a></li>
+          <li><a href="#words">用語集</a></li>
+        </ol>
+      </details>
+
+      <article class="article">
+        <div class="hero-label">取り扱い説明書</div>
+        <h1>AIDD Kitを迷わず使うためのガイド</h1>
+        <p class="lead">
+          このHTMLは、AI駆動開発に慣れていない新卒1年目の人でも、何を見て、何を実行し、どこで止まればよいかが分かるように書いた手順書です。
+        </p>
+        <div class="meta">
+          <span class="tag">AIDD</span>
+          <span class="tag">Claude Code</span>
+          <span class="tag">Codex</span>
+          <span class="tag">ECC</span>
+          <span class="tag">QA</span>
+          <span class="tag">Playwright</span>
+        </div>
+
+        <section id="start">
+          <h2>はじめに</h2>
+          <p>
+            AIDD Kitは、毎回ゼロから「どう進めるんだっけ」と悩まないための開発キットです。
+            AIに作業を頼む時のルール、品質チェック、よく使う開発パターン、ECCの使い分けをまとめています。
+          </p>
+          <div class="callout">
+            <div class="callout-title">まず覚えること</div>
+            <p>
+              このキットは「AIに全部丸投げする道具」ではありません。
+              仕様を決める、実装する、テストする、振り返る、という流れを崩さないための道具です。
+            </p>
+          </div>
+          <p>
+            使う時は、難しく考えずに次の一文から始めてください。
+          </p>
+          <pre><code>このプロジェクトに合うECCだけ選んで</code></pre>
+          <p>
+            すると、`ecc-daily-router` が対象プロジェクトを見て、毎回使うものと必要な時だけ使うものを分けます。
+          </p>
+        </section>
+
+        <section id="what">
+          <h2>AIDD Kitは何をする道具か</h2>
+          <p>
+            一言でいうと、利用者の開発スタイルに合わせた「AI開発の作業台」です。
+            とくに次のようなプロジェクトで力を出します。
+          </p>
+          <table>
+            <thead>
+              <tr>
+                <th>よくある開発</th>
+                <th>キットが助けること</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>QA document generatorのようなQA文書生成ツール</td>
+                <td>Python、Playwright、pytest、E2E、仕様ドリフト確認</td>
+              </tr>
+              <tr>
+                <td>UX audit toolのようなUX監査ツール</td>
+                <td>画面チェック、アクセシビリティ、ISO 25010、ISTQB severity</td>
+              </tr>
+              <tr>
+                <td>React finance PWAのような個人PWA</td>
+                <td>React、Vite、localStorage、GitHub Pages、スマホ対応</td>
+              </tr>
+              <tr>
+                <td>QA portalのような業務ポータル</td>
+                <td>Django、Pythonテスト、セキュリティ、業務導線レビュー</td>
+              </tr>
+              <tr>
+                <td>QA repository research toolのような調査・評価ツール</td>
+                <td>OSS調査、評価基準、LLM eval、レポート化</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="callout info">
+            <div class="callout-title">なぜECCを全部入れないのか</div>
+            <p>
+              ECCは大きな道具箱です。全部読むと便利そうに見えますが、作業ごとの読み込み量が増えます。
+              そのため、このキットでは「毎回使うDAILY」と「必要時だけ見るLIBRARY」に分けます。
+            </p>
+          </div>
+        </section>
+
+        <section id="first">
+          <h2>最初にやること</h2>
+          <p>
+            初回は、キットが正しく置かれているか確認します。
+            まだ中身を理解していなくても大丈夫です。まずはファイルの場所を確認します。
+          </p>
+          <div class="step-card">
+            <h3>1. キットの場所へ移動する</h3>
+            <pre><code>cd <YOUR_WORKSPACE>/yuki-aidd-kit</code></pre>
+          </div>
+          <div class="step-card">
+            <h3>2. 中身を見る</h3>
+            <pre><code>ls</code></pre>
+            <p>
+              `README.md`、`INDEX.md`、`skills/`、`docs/`、`scripts/` が見えれば基本はOKです。
+            </p>
+          </div>
+          <div class="step-card">
+            <h3>3. 配置確認をする</h3>
+            <pre><code>./scripts/verify.sh</code></pre>
+            <p>
+              これは「必要なファイルがあるか」を見るための確認です。
+              もし失敗したら、エラー文をそのままAIに渡して「原因だけ教えて」と聞きます。
+            </p>
+          </div>
+          <div class="callout warn">
+            <div class="callout-title">注意</div>
+            <p>
+              `npm ci`、ブラウザE2E、Playwrightのインストール、GitHub Pagesの配信確認は重くなりがちです。
+              必要な時だけ、理由を確認してから実行します。
+            </p>
+          </div>
+        </section>
+
+        <section id="daily">
+          <h2>毎日の使い方</h2>
+          <p>
+            普段の開発は、次の流れで進めます。
+          </p>
+          <ol>
+            <li>対象プロジェクトの `AGENTS.md` または `README.md` を読む</li>
+            <li>`ecc-daily-router` で、そのプロジェクトに合うECC資産を選ぶ</li>
+            <li>大きな変更なら `sdd-ecc-workflow` で仕様とタスクに分ける</li>
+            <li>実装する</li>
+            <li>`test-automation` で動作確認する</li>
+            <li>`done-gate` で完了判定する</li>
+            <li>学びがあれば `retro` で残す</li>
+          </ol>
+          <p>
+            AIに依頼する時は、次のように言うと安定します。
+          </p>
+          <pre><code>このプロジェクトのAGENTS.mdとREADME.mdだけ読んで、
+今回の変更に必要なECC DAILYを選んでください。
+まだ実装はしないで、方針だけ出してください。</code></pre>
+          <p>
+            これで、いきなり大きな調査や実装に入る事故を減らせます。
+          </p>
+        </section>
+
+        <section id="skills">
+          <h2>スキルの選び方</h2>
+          <p>
+            `skills/` は、AIが作業する時の専門メモです。
+            人間でいうと「この仕事ではこの手順で進める」というチェックリストに近いです。
+          </p>
+          <table>
+            <thead>
+              <tr>
+                <th>やりたいこと</th>
+                <th>使うスキル</th>
+                <th>一言でいうと</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>どのECCを使うか選びたい</td>
+                <td>`ecc-daily-router`</td>
+                <td>道具箱から必要な道具だけ選ぶ</td>
+              </tr>
+              <tr>
+                <td>仕様から作りたい</td>
+                <td>`sdd-ecc-workflow`</td>
+                <td>spec、plan、tasksに分ける</td>
+              </tr>
+              <tr>
+                <td>UIや品質をレビューしたい</td>
+                <td>`qa-review-standards`</td>
+                <td>ISO 25010とISTQBで見る</td>
+              </tr>
+              <tr>
+                <td>テストを書きたい</td>
+                <td>`test-automation`</td>
+                <td>Playwrightやpytestで確認する</td>
+              </tr>
+              <tr>
+                <td>完成と言ってよいか確認したい</td>
+                <td>`done-gate`</td>
+                <td>完了前の最終チェック</td>
+              </tr>
+              <tr>
+                <td>AI出力を評価したい</td>
+                <td>`agent-eval`</td>
+                <td>LLMの品質を測る</td>
+              </tr>
+              <tr>
+                <td>作業の学びを残したい</td>
+                <td>`retro`</td>
+                <td>次回のために改善点を残す</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="callout">
+            <div class="callout-title">初心者向けの考え方</div>
+            <p>
+              スキル名を全部覚える必要はありません。
+              「仕様」「レビュー」「テスト」「完成」「振り返り」の5語だけ覚えておけば、だいたい進められます。
+            </p>
+          </div>
+        </section>
+
+        <section id="commands">
+          <h2>スラッシュコマンド一覧</h2>
+          <p>
+            `claude-code/commands/` には、明示的に呼び出すための短い入口があります。
+            たとえば `/ecc-daily` と入力すると、今のプロジェクトに必要なECC資産を選ぶ流れになります。
+          </p>
+          <table>
+            <thead>
+              <tr>
+                <th>コマンド</th>
+                <th>使うタイミング</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>`/ecc-daily`</td>
+                <td>今のプロジェクトに合うECC資産を選びたい時</td>
+              </tr>
+              <tr>
+                <td>`/app-scan`</td>
+                <td>`<APP_WORKSPACE>` 全体の棚卸しを軽く更新したい時</td>
+              </tr>
+              <tr>
+                <td>`/sdd-start`</td>
+                <td>新機能を仕様から作りたい時</td>
+              </tr>
+              <tr>
+                <td>`/new-pwa`</td>
+                <td>個人用PWAを新しく作る時</td>
+              </tr>
+              <tr>
+                <td>`/qa-review`</td>
+                <td>UI、仕様、テスト観点をレビューしたい時</td>
+              </tr>
+              <tr>
+                <td>`/doc-search`</td>
+                <td>技術ドキュメントを調べたい時</td>
+              </tr>
+              <tr>
+                <td>`/eval`</td>
+                <td>AI出力やRAGの品質を評価したい時</td>
+              </tr>
+              <tr>
+                <td>`/retro`</td>
+                <td>作業の振り返りを残したい時</td>
+              </tr>
+              <tr>
+                <td>`/token-check`</td>
+                <td>読み込み過ぎやトークン消費を見直したい時</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="ecc">
+          <h2>ECCとの関係</h2>
+          <p>
+            ECCは、たくさんのスキル、ルール、エージェントを持つ大きな開発支援セットです。
+            AIDD Kitは、その中から利用者のプロジェクトでよく使うものを選びやすくするための薄い案内役です。
+          </p>
+          <h3>DAILYにするECC</h3>
+          <ul>
+            <li>`skills/e2e-testing`: PlaywrightやE2E確認</li>
+            <li>`skills/browser-qa`: ブラウザでの表示・操作確認</li>
+            <li>`skills/accessibility`: alt、label、コントラストなど</li>
+            <li>`skills/frontend-patterns`: HTML、CSS、React、画面実装</li>
+            <li>`skills/react-patterns`: React系アプリ</li>
+            <li>`skills/vite-patterns`: ViteとGitHub Pages</li>
+            <li>`skills/python-patterns`: Python実装</li>
+            <li>`skills/python-testing`: pytest、ruff、mypy</li>
+            <li>`skills/django-patterns`: Djangoポータル</li>
+            <li>`skills/security-review`: 秘密情報、XSS、入力検証</li>
+            <li>`skills/verification-loop`: 完了前の検証</li>
+            <li>`skills/deep-research`: 技術調査やOSS比較</li>
+            <li>`skills/eval-harness`: AI出力の評価</li>
+          </ul>
+          <h3>LIBRARYでよいECC</h3>
+          <p>
+            Swift、Go、Java、Rust、PHP、ブロックチェーン系などは、今の主要プロジェクトでは毎回読まなくて大丈夫です。
+            必要になった時だけ呼びます。
+          </p>
+          <pre><code>このプロジェクトはReact/Viteです。
+ECCはDAILYだけ使って、SwiftやDjango系はLIBRARY扱いにしてください。</code></pre>
+        </section>
+
+        <section id="projects">
+          <h2>プロジェクト別の使い方</h2>
+          <h3>QA document generator</h3>
+          <p>
+            Python、Flask、Playwright、pytestが中心です。
+            画面仕様書やテスト入力文書を作るので、E2EとQAレビューが重要です。
+          </p>
+          <ul>
+            <li>Kit: `test-automation`, `qa-review-standards`, `done-gate`</li>
+            <li>ECC: `python-patterns`, `python-testing`, `e2e-testing`, `browser-qa`</li>
+          </ul>
+
+          <h3>UX audit tool</h3>
+          <p>
+            PlaywrightでWebページを取得し、UI/UXを監査します。
+            アクセシビリティとブラウザ確認を強めに使います。
+          </p>
+          <ul>
+            <li>Kit: `qa-review-standards`, `design-system`, `test-automation`</li>
+            <li>ECC: `browser-qa`, `accessibility`, `frontend-patterns`, `e2e-testing`</li>
+          </ul>
+
+          <h3>React finance PWA / investment hypothesis PWA</h3>
+          <p>
+            React、Vite、localStorage、GitHub Pagesの系統です。
+            データ保存、スマホUI、export/importを必ず確認します。
+          </p>
+          <ul>
+            <li>Kit: `personal-pwa`, `nfr-standards`, `done-gate`</li>
+            <li>ECC: `react-patterns`, `vite-patterns`, `frontend-patterns`, `security-review`</li>
+          </ul>
+
+          <h3>QA portal</h3>
+          <p>
+            Django、HTMX、SQLiteの業務ポータルです。
+            権限、入力、データ境界、業務用語の分かりやすさを確認します。
+          </p>
+          <ul>
+            <li>Kit: `streamlit-rag-app`, `qa-review-standards`, `agent-eval`</li>
+            <li>ECC: `django-patterns`, `python-testing`, `backend-patterns`, `security-review`</li>
+          </ul>
+
+          <h3>QA repository research tool</h3>
+          <p>
+            QA会社向けにOSSリポジトリを発見・分類・評価します。
+            調査の根拠、評価基準、レポートの説明責任が大事です。
+          </p>
+          <ul>
+            <li>Kit: `agent-eval`, `code-doc-search`, `sdd-ecc-workflow`</li>
+            <li>ECC: `deep-research`, `eval-harness`, `security-review`, `verification-loop`</li>
+          </ul>
+        </section>
+
+        <section id="quality">
+          <h2>品質チェックの考え方</h2>
+          <p>
+            このキットでは、品質チェックを3つに分けます。
+            混ぜると判断がぼやけるので、別々に見ます。
+          </p>
+          <table>
+            <thead>
+              <tr>
+                <th>見るもの</th>
+                <th>使うもの</th>
+                <th>質問</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>コードが動くか</td>
+                <td>`test-automation`</td>
+                <td>テストは通るか</td>
+              </tr>
+              <tr>
+                <td>画面が使いやすいか</td>
+                <td>`qa-review-standards`</td>
+                <td>利用者が迷わないか</td>
+              </tr>
+              <tr>
+                <td>AI出力が正しいか</td>
+                <td>`agent-eval`</td>
+                <td>根拠に基づいているか</td>
+              </tr>
+              <tr>
+                <td>完成と言ってよいか</td>
+                <td>`done-gate`</td>
+                <td>未確認の項目は残っていないか</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="callout danger">
+            <div class="callout-title">一番大事なルール</div>
+            <p>
+              「手元で見た感じ大丈夫」は完了ではありません。
+              テスト、E2E、スクリーンショット、レビュー、完了ゲートのどれで確認したかを残します。
+            </p>
+          </div>
+          <ul class="checklist">
+            <li>ロジックを変えたら、単体テストまたはpytest/vitestを確認する</li>
+            <li>UIを変えたら、ブラウザまたはスクリーンショットで確認する</li>
+            <li>AI出力を変えたら、evalまたはゴールデンデータで確認する</li>
+            <li>APIキーや個人情報が絡む時は、security-reviewを通す</li>
+            <li>最後にdone-gateで「未完了項目なし」を確認する</li>
+          </ul>
+        </section>
+
+        <section id="trouble">
+          <h2>困った時の進め方</h2>
+          <h3>何から読めばいいか分からない</h3>
+          <pre><code>AGENTS.mdとREADME.mdだけ読んで、
+このプロジェクトの入口を3行で教えてください。</code></pre>
+
+          <h3>AIが広く読みすぎる</h3>
+          <pre><code>node_modules、venv、dist、output、test-resultsは読まないでください。
+変更対象に近いファイルだけ確認してください。</code></pre>
+
+          <h3>どのECCを使えばいいか分からない</h3>
+          <pre><code>/ecc-daily
+このプロジェクトに必要なECC資産をDAILYとLIBRARYに分類してください。</code></pre>
+
+          <h3>完成したか不安</h3>
+          <pre><code>done-gateで完了判定してください。
+未確認項目があれば、未完了として列挙してください。</code></pre>
+
+          <h3>次回に同じ失敗をしたくない</h3>
+          <pre><code>/retro
+今回のKeep / Problem / Tryを整理し、lessons.mdに残す内容を出してください。</code></pre>
+        </section>
+
+        <section id="words">
+          <h2>用語集</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>用語</th>
+                <th>意味</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>AIDD</td>
+                <td>AI Driven Development。AIを使って、仕様、実装、テスト、レビューを回す開発の進め方。</td>
+              </tr>
+              <tr>
+                <td>ECC</td>
+                <td>AI開発向けの大きな道具箱。skills、rules、agents、hooksなどを持つ。</td>
+              </tr>
+              <tr>
+                <td>DAILY</td>
+                <td>そのプロジェクトで毎回使うもの。最初から読ませてよい。</td>
+              </tr>
+              <tr>
+                <td>LIBRARY</td>
+                <td>必要になった時だけ読むもの。削除ではなく、参照用として残す。</td>
+              </tr>
+              <tr>
+                <td>Skill</td>
+                <td>AIに「この作業はこう進める」と教える手順書。</td>
+              </tr>
+              <tr>
+                <td>done-gate</td>
+                <td>完成と言ってよいかを確認する最終チェック。</td>
+              </tr>
+              <tr>
+                <td>eval</td>
+                <td>AIの出力品質を測ること。コードのテストとは別物。</td>
+              </tr>
+              <tr>
+                <td>E2E</td>
+                <td>End to End。ユーザー操作に近い形で、画面の流れ全体を確認するテスト。</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <div class="footer-note">
+          このHTMLは単体で開けるように外部CSS/JSへ依存していません。更新する時は、本文とサイドメニューのアンカーをそろえてください。
+        </div>
+      </article>
+    </main>
+  </div>
+
+  <script>
+    const links = Array.from(document.querySelectorAll(".nav-list a"));
+    const sections = links
+      .map((link) => document.querySelector(link.getAttribute("href")))
+      .filter(Boolean);
+
+    const setActive = () => {
+      const current = sections
+        .map((section) => ({ id: section.id, top: section.getBoundingClientRect().top }))
+        .filter((item) => item.top <= 120)
+        .pop();
+
+      links.forEach((link) => {
+        link.classList.toggle("is-active", current && link.getAttribute("href") === "#" + current.id);
+      });
+    };
+
+    document.addEventListener("scroll", setActive, { passive: true });
+    setActive();
+  </script>
+</body>
+</html>

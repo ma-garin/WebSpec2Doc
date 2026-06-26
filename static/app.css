@@ -1,73 +1,68 @@
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --primary:      #0F62FE;
-      --primary-dark: #0043CE;
-      --text:         #111827;
-      --text-muted:   #5B6472;  /* WCAG AA 4.5:1 以上 (on #FFF) */
-      --text-subtle:  #6A7282;  /* WCAG AA 4.5:1 以上 (on #FFF) — 旧 #9CA3AF は 2.54:1 で不合格 */
-      --bg:           #F7F8FA;
-      --surface:      #FFFFFF;
-      --surface-soft: #F9FAFB;
-      --surface-subtle:#F2F4F7;
-      --border:       #E5E7EB;
-      --border-strong:#D1D5DB;
-      --ok:           #1F8A4C;
-      --ok-bg:        #E7F4EC;
-      --ok-border:    #A7E0BD;
-      --warning:      #B45309;
-      --warning-bg:   #FEF6E7;
-      --warning-border:#FCD9A0;
-      --critical:     #D32F2F;
-      --critical-bg:  #FDECEC;
-      --critical-border: #F5B5B5;
-      --info:         #0F62FE;
-      --info-bg:      #EFF4FF;
-      --info-border:  #C7D7FE;
-      --primary-pale: #DCE7FB;
+      --primary:      var(--color-primary);
+      --primary-dark: var(--color-primary-dark);
+      --text:         var(--color-text);
+      --text-muted:   var(--color-text-secondary);
+      --text-subtle:  var(--color-text-disabled);
+      --bg:           var(--color-bg);
+      --surface:      var(--color-surface);
+      --surface-soft: var(--color-surface-3);
+      --surface-subtle:var(--color-surface-2);
+      --border:       var(--color-border);
+      --border-strong:var(--color-border-strong);
+      --ok:           var(--color-low);
+      --ok-bg:        var(--color-low-bg);
+      --ok-border:    var(--color-low-border);
+      --warning:      var(--color-high);
+      --warning-bg:   var(--color-high-bg);
+      --warning-border:var(--color-high-border);
+      --critical:     var(--color-critical);
+      --critical-bg:  var(--color-critical-bg);
+      --critical-border: var(--color-critical-border);
+      --info:         var(--color-info);
+      --info-bg:      var(--color-info-bg);
+      --info-border:  var(--color-info-border);
+      --primary-pale: var(--color-primary-light);
       --accent:       #6E56CF;
-      --focus-ring:   rgba(15, 98, 254, .16);
-      --radius:       6px;
-      --radius-lg:    8px;
-      --shadow-sm:    0 1px 2px rgba(16,24,40,.05);
-      --shadow:       0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.08);
-      --shadow-pop:   0 10px 24px rgba(16,24,40,.12), 0 2px 6px rgba(16,24,40,.08);
+      --focus-ring:   color-mix(in srgb, var(--primary) 18%, transparent);
+      --radius:       var(--radius-sm);
+      --radius-lg:    var(--radius-md);
+      --shadow:       var(--shadow-md);
       --sidebar-w:    256px;
-      --bg-panel:     #F9FAFB;
+      --bg-panel:     var(--color-surface-3);
       color-scheme: light;
     }
     /* ── ダークモード（トップバーの切替ボタン / 初回はOS設定に追従） ── */
     html[data-theme="dark"] {
-      --primary:      #4589FF;
-      --primary-dark: #78A9FF;
-      --text:         #E5E7EB;
-      --text-muted:   #9CA3AF;
-      --text-subtle:  #6B7280;
-      --bg:           #0F1623;
-      --surface:      #1B2433;
-      --surface-soft: #212C3D;
-      --surface-subtle:#273347;
-      --border:       #334155;
-      --border-strong:#475569;
-      --ok:           #4ADE80;
-      --ok-bg:        #0E2B1C;
-      --ok-border:    #1F5C3A;
-      --warning:      #FBBF24;
-      --warning-bg:   #2D2310;
-      --warning-border:#6B500F;
-      --critical:     #F87171;
-      --critical-bg:  #341A1C;
-      --critical-border:#7A2E31;
-      --info:         #4589FF;
-      --info-bg:      #16243F;
-      --info-border:  #2D4A7A;
-      --primary-pale: #1D2F52;
+      --primary:      var(--color-primary);
+      --primary-dark: var(--color-primary-dark);
+      --text:         var(--color-text);
+      --text-muted:   var(--color-text-secondary);
+      --text-subtle:  var(--color-text-disabled);
+      --bg:           var(--color-bg);
+      --surface:      var(--color-surface);
+      --surface-soft: var(--color-surface-2);
+      --surface-subtle:var(--color-surface-3);
+      --border:       var(--color-border);
+      --border-strong:var(--color-border-strong);
+      --ok:           var(--color-low);
+      --ok-bg:        var(--color-low-bg);
+      --ok-border:    var(--color-low-border);
+      --warning:      var(--color-high);
+      --warning-bg:   var(--color-high-bg);
+      --warning-border:var(--color-high-border);
+      --critical:     var(--color-critical);
+      --critical-bg:  var(--color-critical-bg);
+      --critical-border:var(--color-critical-border);
+      --info:         var(--color-info);
+      --info-bg:      var(--color-info-bg);
+      --info-border:  var(--color-info-border);
+      --primary-pale: var(--color-primary-light);
       --accent:       #A78BFA;
-      --focus-ring:   rgba(69,137,255,.3);
-      --shadow-sm:    0 1px 2px rgba(0,0,0,.3);
-      --shadow:       0 1px 2px rgba(0,0,0,.35), 0 1px 3px rgba(0,0,0,.4);
-      --shadow-pop:   0 10px 24px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.4);
-      --bg-panel:     #212C3D;
+      --focus-ring:   color-mix(in srgb, var(--primary) 30%, transparent);
+      --bg-panel:     var(--color-surface-2);
       color-scheme: dark;
     }
     html[data-theme="dark"] .execution-topbar,
@@ -89,7 +84,7 @@ html[data-theme="dark"] .uml-canvas.is-fullscreen { background: var(--bg); }
     html[data-theme="dark"] .fmt-mock-html { background: #2A3548; }
     html[data-theme="dark"] .fmt-mock-md { background: var(--surface-soft); border-color: var(--border); }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+      font-family: var(--font-main);
       background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.6;
       -webkit-font-smoothing: antialiased;
     }

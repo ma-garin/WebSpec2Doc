@@ -22,6 +22,75 @@ const AUTORUN_STEP_MAP = {
   cancelled:         null,
 };
 
+const AUTORUN_STATUS_META = {
+  idle: {
+    current: '待機中',
+    reason: 'URL解析を開始できます',
+    estimate: '10画面で約2〜3分',
+    next: '対象URLを入力して開始',
+  },
+  discovering: {
+    current: '画面分析中',
+    reason: 'ログイン壁や解析対象URLを確認しています',
+    estimate: '数十秒',
+    next: '解析結果を待機',
+  },
+  awaiting_input: {
+    current: '入力待ち',
+    reason: 'ログインが必要な画面を検出しました',
+    estimate: 'ユーザー入力後に再開',
+    next: 'ログイン情報を入力またはスキップ',
+  },
+  crawling: {
+    current: '仕様書生成中',
+    reason: '対象画面をクロールして画面構造を取得しています',
+    estimate: '画面数に応じて変動',
+    next: 'QA成果物生成へ進む',
+  },
+  generating_qa: {
+    current: 'QA成果物生成中',
+    reason: '仕様書からテスト計画・設計・ケースを作っています',
+    estimate: '1分前後',
+    next: 'スクリプト生成へ進む',
+  },
+  generating_scripts: {
+    current: 'スクリプト生成中',
+    reason: 'Playwright候補を実行可能なspecへ変換しています',
+    estimate: '数十秒',
+    next: '実行範囲の承認',
+  },
+  awaiting_approval: {
+    current: '承認待ち',
+    reason: 'スクリプト生成が完了しました',
+    estimate: '承認後にテスト開始',
+    next: 'モーダルで実行対象を選択',
+  },
+  running_tests: {
+    current: 'テスト実行中',
+    reason: '承認済みのPlaywrightテストを実行しています',
+    estimate: 'テスト件数とタイムアウト設定に応じて変動',
+    next: '実行結果を確認',
+  },
+  complete: {
+    current: '完了',
+    reason: '成果物と実行結果を生成しました',
+    estimate: '完了',
+    next: '結果と成果物を確認',
+  },
+  failed: {
+    current: '失敗',
+    reason: '処理中に復旧が必要なエラーが発生しました',
+    estimate: '復旧後に再実行',
+    next: '失敗の見立てを確認',
+  },
+  cancelled: {
+    current: '停止済み',
+    reason: 'ユーザー操作でAutoRunを停止しました',
+    estimate: '停止済み',
+    next: '必要なら新しく実行',
+  },
+};
+
 const AUTORUN_OUTPUT_LABELS = {
   report_json:             '仕様書 JSON',
   report_html:             '仕様書 HTML',
@@ -30,7 +99,7 @@ const AUTORUN_OUTPUT_LABELS = {
   test_design:             'テスト設計',
   test_cases:              'テストケース',
   cross_review:            '横断レビュー',
-  qa_process_report:       'QAプロセスレポート',
+  qa_process_report:       'QAレポート',
   model_graph:             'モデルグラフ',
   playwright_candidates_html: 'Playwright候補',
   spec_ts:                 'autorun.spec.ts',
@@ -50,6 +119,101 @@ function autorunFmtElapsed(sec) {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
   return `${m}:${String(s).padStart(2,'0')}`;
+}
+
+function _autorunSetText(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = value || '';
+}
+
+function _autorunOutputSummary(data) {
+  const outputs = data.outputs || {};
+  const labels = Object.keys(outputs)
+    .filter(key => outputs[key])
+    .map(key => AUTORUN_OUTPUT_LABELS[key] || key);
+  const result = data.test_results || {};
+  if (result.total != null) {
+    labels.push(`テスト結果 PASS:${result.passed || 0} FAIL:${result.failed || 0}`);
+  }
+  return labels.length ? labels.slice(0, 4).join(' / ') : 'まだありません';
+}
+
+function _autorunUpdateStatusPanel(data) {
+  const panel = document.getElementById('autorun-status-panel');
+  if (!panel) return;
+  panel.style.display = '';
+  const status = data.status || 'idle';
+  const meta = AUTORUN_STATUS_META[status] || AUTORUN_STATUS_META.idle;
+  _autorunSetText('autorun-current-step', data.step_label || meta.current);
+  _autorunSetText('autorun-current-reason', data.error || meta.reason);
+  _autorunSetText('autorun-estimate', meta.estimate);
+  _autorunSetText('autorun-next-action', meta.next);
+  _autorunSetText('autorun-partial-output', _autorunOutputSummary(data));
+}
+
+function _autorunFailureTypeLabel(type) {
+  const labels = {
+    app_change: '仕様変更の可能性',
+    test_rot: 'テストロケータの劣化',
+    env_issue: '環境・認証の問題',
+    unknown: '未分類',
+  };
+  return labels[type] || type || '未分類';
+}
+
+function _autorunRenderFailurePanel(data) {
+  const panel = document.getElementById('autorun-failure-panel');
+  const body = document.getElementById('autorun-failure-body');
+  if (!panel || !body) return;
+
+  const result = data.test_results || {};
+  const hasFailedTests = (result.failed || 0) > 0 || !!result.error;
+  const hasJobFailure = ['failed', 'cancelled'].includes(data.status || '');
+  if (!hasFailedTests && !hasJobFailure) {
+    panel.style.display = 'none';
+    body.innerHTML = '';
+    return;
+  }
+
+  panel.style.display = '';
+  const outputs = _autorunOutputSummary(data);
+  const classifications = data.failure_classifications || [];
+  const summary = data.failure_summary || {};
+  const summaryCards = Object.entries(summary)
+    .filter(([, count]) => count)
+    .map(([type, count]) => `
+      <div class="stat-card">
+        <span class="stat-card-label">${escHtml(_autorunFailureTypeLabel(type))}</span>
+        <strong class="stat-card-value status-critical">${escHtml(String(count))}</strong>
+      </div>
+    `).join('');
+
+  const fallbackReason = data.error || result.error || 'テスト実行結果に失敗が含まれています。';
+  const items = classifications.length
+    ? classifications.slice(0, 6).map(item => `
+      <div class="autorun-failure-item">
+        <strong>${escHtml(item.test_id || 'AutoRun')} / ${escHtml(_autorunFailureTypeLabel(item.failure_type))}</strong>
+        <span>${escHtml(item.reason || '')}</span>
+        <p>${escHtml(item.suggested_action || '')}</p>
+      </div>
+    `).join('')
+    : `<div class="autorun-failure-item">
+        <strong>${escHtml(data.status === 'cancelled' ? '停止済み' : 'AutoRunエラー')}</strong>
+        <span>${escHtml(fallbackReason)}</span>
+        <p>${escHtml(data.status === 'cancelled' ? '必要に応じて新しく実行してください。' : 'ログと部分成果を確認してから再実行してください。')}</p>
+      </div>`;
+
+  body.innerHTML = `
+    <div class="autorun-failure-summary">
+      ${summaryCards || '<div class="badge badge-muted">分類サマリーなし</div>'}
+    </div>
+    <div class="autorun-failure-item">
+      <strong>部分成果</strong>
+      <span>${escHtml(outputs)}</span>
+      <p>生成済みの成果物は左ペインから確認できます。</p>
+    </div>
+    <div class="autorun-failure-list">${items}</div>
+  `;
 }
 
 // ---- AutoRun: 開始 ----
@@ -88,8 +252,11 @@ function _autorunShowRunning() {
   document.getElementById('autorun-steps').style.display = '';
   document.getElementById('autorun-start-btn').disabled = true;
   document.getElementById('ar-log-section').style.display = '';
+  document.getElementById('autorun-status-panel').style.display = '';
   document.getElementById('autorun-idle-msg').style.display = 'none';
   document.getElementById('autorun-preview-panel').style.display = 'none';
+  document.getElementById('autorun-result-panel').style.display = 'none';
+  document.getElementById('autorun-failure-panel').style.display = 'none';
   document.getElementById('autorun-cancel-area').style.display = '';
 }
 
@@ -129,6 +296,7 @@ function _autorunStopElapsed() {
 function _autorunRender(data) {
   if (!data) return;
   const status = data.status || 'idle';
+  _autorunUpdateStatusPanel(data);
 
   // started_at を保存（経過時間計算用）
   if (data.started_at && !_autoRunStartedAt) {
@@ -199,6 +367,8 @@ function _autorunRender(data) {
 
   // ---- タイムラインカード更新 ----
   _autorunUpdateTimeline(data);
+  _autorunRenderResults(data.test_results || {}, data.outputs || {});
+  _autorunRenderFailurePanel(data);
 
   // ---- 承認ボタン（サイドバー） ----
   const approveArea = document.getElementById('autorun-approve-area');
@@ -239,7 +409,7 @@ function _autorunRender(data) {
           return `<div class="qa-output-item">
             <span class="qa-output-item-label">${escHtml(label)}</span>
             <div class="qa-output-item-actions">
-              <button class="btn-outline-sm qa-preview-btn" data-path="${escHtml(path)}" data-label="${escHtml(label)}" style="font-size:11px;height:26px;padding:0 8px">プレビュー</button>
+              <button class="btn-outline-sm qa-output-btn qa-preview-btn" data-path="${escHtml(path)}" data-label="${escHtml(label)}">プレビュー</button>
             </div></div>`;
         }).join('');
     }
@@ -272,7 +442,7 @@ function _autorunUpdateTimeline(data) {
     _arCards.qa = true;
     const qa = sd.qa || {};
     const meta = `テスト計画・分析・設計・ケース・横断レビュー${qa.count ? '（' + qa.count + '件）' : ''}`;
-    const btns = [{ label: 'QAレポートを見る', cls: 'btn-primary', path: outputs.qa_process_report, dataLabel: 'QAプロセスレポート' }];
+    const btns = [{ label: 'QAレポートを見る', cls: 'btn-primary', path: outputs.qa_process_report, dataLabel: 'QAレポート' }];
     _arAppendCard('qa', '✅', 'QA成果物生成完了', elapsed, meta, btns);
   }
 
@@ -306,12 +476,12 @@ function _autorunUpdateTimeline(data) {
       : `PASS: ${r.passed}　FAIL: ${r.failed}　SKIP: ${r.skipped}　TOTAL: ${r.total}`;
     const btns = [
       outputs.playwright_report_html ? { label: '実行レポートを見る', cls: 'btn-primary', path: outputs.playwright_report_html, dataLabel: 'テスト実行レポート' } : null,
-      outputs.qa_process_report ? { label: 'QAレポート', cls: 'btn-outline-sm', path: outputs.qa_process_report, dataLabel: 'QAプロセスレポート' } : null,
+      outputs.qa_process_report ? { label: 'QAレポート', cls: 'btn-outline-sm', path: outputs.qa_process_report, dataLabel: 'QAレポート' } : null,
     ].filter(Boolean);
     const card = _arAppendCard('tests', ok ? '✅' : '❌', ok ? 'テスト実行完了' : 'テスト実行失敗', elapsed, meta, btns);
     if (!ok && r.error && !r.unavailable && card) {
       const errDiv = document.createElement('div');
-      errDiv.style.cssText = 'margin-top:6px;font-size:11px;color:var(--critical);word-break:break-all';
+      errDiv.className = 'ar-card-error';
       errDiv.textContent = r.error;
       card.appendChild(errDiv);
     }
@@ -350,7 +520,7 @@ function _arAppendCard(id, icon, title, timeStr, meta, buttons) {
     for (const btn of buttons) {
       const b = document.createElement('button');
       b.className = (btn.cls || 'btn-outline-sm');
-      b.style.cssText = 'font-size:12px;height:30px;padding:0 12px';
+      b.classList.add('ar-card-button');
       b.textContent = btn.label;
       if (btn.path) {
         b.dataset.path = btn.path;
@@ -421,32 +591,32 @@ function _autorunRenderPreview(data) {
       .map(([t, c]) => `<span class="fmt-badge">${escHtml(t)}: ${c}</span>`)
       .join('');
     summaryEl.innerHTML = `
-      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px;font-size:12px">
+      <div class="autorun-preview-counts">
         <span><strong>${summary.total || 0}</strong> 件</span>
-        <span style="color:#16a34a">自動: ${autoCount}</span>
-        <span style="color:#9ca3af">スキップ: ${skipCount}</span>
+        <span class="status-low">自動: ${autoCount}</span>
+        <span class="status-muted">スキップ: ${skipCount}</span>
       </div>
-      <div class="fmt-badges" style="margin-bottom:10px">${titleBadges}</div>`;
+      <div class="fmt-badges autorun-preview-badges">${titleBadges}</div>`;
   }
 
   // テストケーステーブル
   if (tableWrap) {
     if (candidates.length) {
       const rows = candidates.map(c => {
-        const sClr = c.automation_status === 'auto' ? '#16a34a' : '#9ca3af';
+        const statusCls = c.automation_status === 'auto' ? 'status-low' : 'status-muted';
         return `<tr>
-          <td style="white-space:nowrap;font-size:11px">${escHtml(c.id || '')}</td>
-          <td style="font-size:12px">${escHtml(c.title || '')}</td>
-          <td style="font-size:11px;font-weight:600;color:${sClr}">${escHtml(c.automation_status || '')}</td>
-          <td style="font-size:11px;white-space:nowrap">${escHtml(c.trace_id || '')}</td>
-          <td style="font-size:11px;max-width:200px;word-break:break-word;color:var(--text-muted)">${escHtml((c.expected || '').substring(0, 60))}</td>
+          <td class="cell-id">${escHtml(c.id || '')}</td>
+          <td class="cell-title">${escHtml(c.title || '')}</td>
+          <td class="cell-status ${statusCls}">${escHtml(c.automation_status || '')}</td>
+          <td class="cell-id">${escHtml(c.trace_id || '')}</td>
+          <td class="cell-muted">${escHtml((c.expected || '').substring(0, 60))}</td>
         </tr>`;
       }).join('');
-      tableWrap.innerHTML = `<table class="data" style="font-size:12px;width:100%">
+      tableWrap.innerHTML = `<table class="data autorun-preview-table">
         <thead><tr><th>ID</th><th>タイトル</th><th>自動化</th><th>Trace</th><th>期待結果</th></tr></thead>
         <tbody>${rows}</tbody></table>`;
     } else {
-      tableWrap.innerHTML = '<div class="empty" style="padding:16px">テストケースなし</div>';
+      tableWrap.innerHTML = '<div class="empty arm-empty">テストケースなし</div>';
     }
   }
 
@@ -468,28 +638,28 @@ function _autorunRenderResults(results, outputs) {
   const cards      = document.getElementById('autorun-result-cards');
   const tableWrap  = document.getElementById('autorun-result-table-wrap');
   const reportLinks= document.getElementById('autorun-report-links');
-  if (!panel) return;
+  if (!panel || !cards || !tableWrap || !reportLinks || results.total == null) return;
   panel.style.display = '';
 
   cards.innerHTML = [
-    { label:'PASS',  val:results.passed,  color:'#16a34a' },
-    { label:'FAIL',  val:results.failed,  color:'#dc2626' },
-    { label:'SKIP',  val:results.skipped, color:'#9ca3af' },
-    { label:'TOTAL', val:results.total,   color:'#111827' },
-  ].map(c => `<div class="autorun-result-card"><div class="num" style="color:${c.color}">${c.val}</div><div class="lbl">${c.label}</div></div>`).join('');
+    { label:'PASS',  val:results.passed,  cls:'status-low' },
+    { label:'FAIL',  val:results.failed,  cls:'status-critical' },
+    { label:'SKIP',  val:results.skipped, cls:'status-muted' },
+    { label:'TOTAL', val:results.total,   cls:'status-default' },
+  ].map(c => `<div class="stat-card autorun-result-card"><div class="num ${c.cls}">${c.val ?? 0}</div><div class="lbl">${c.label}</div></div>`).join('');
 
   const tests = results.tests || [];
   if (tests.length) {
     const rows = tests.map(t => {
-      const clr = t.status==='passed' ? '#16a34a' : t.status==='skipped' ? '#9ca3af' : '#dc2626';
+      const cls = t.status==='passed' ? 'status-low' : t.status==='skipped' ? 'status-muted' : 'status-critical';
       return `<tr>
-        <td style="font-size:12px;word-break:break-all">${escHtml(t.title||'')}</td>
-        <td style="font-size:12px;font-weight:600;color:${clr}">${escHtml(t.status||'')}</td>
-        <td style="font-size:12px">${t.duration_ms||0}ms</td>
-        <td style="font-size:11px;color:var(--critical)">${escHtml((t.error||'').substring(0,100))}</td>
+        <td class="cell-title">${escHtml(t.title||'')}</td>
+        <td class="cell-status ${cls}">${escHtml(t.status||'')}</td>
+        <td class="cell-id">${t.duration_ms||0}ms</td>
+        <td class="cell-muted status-critical">${escHtml((t.error||'').substring(0,100))}</td>
       </tr>`;
     }).join('');
-    tableWrap.innerHTML = `<table class="data" style="font-size:12px">
+    tableWrap.innerHTML = `<table class="data autorun-result-table-data">
       <thead><tr><th>テスト</th><th>結果</th><th>時間</th><th>エラー</th></tr></thead>
       <tbody>${rows}</tbody></table>`;
   } else if (results.error) {
@@ -498,10 +668,10 @@ function _autorunRenderResults(results, outputs) {
 
   reportLinks.innerHTML = '';
   if (outputs.playwright_report_html) {
-    reportLinks.innerHTML += `<button class="btn-primary qa-preview-btn" data-path="${escHtml(outputs.playwright_report_html)}" data-label="テスト実行レポート" style="height:36px;padding:0 18px;font-size:13px">実行レポートを見る</button> `;
+    reportLinks.innerHTML += `<button class="btn-primary qa-preview-btn" data-path="${escHtml(outputs.playwright_report_html)}" data-label="テスト実行レポート">実行レポートを見る</button> `;
   }
   if (outputs.qa_process_report) {
-    reportLinks.innerHTML += `<button class="btn-outline-sm qa-preview-btn" data-path="${escHtml(outputs.qa_process_report)}" data-label="QAプロセスレポート" style="height:36px;padding:0 18px;font-size:13px">QAレポートを見る</button>`;
+    reportLinks.innerHTML += `<button class="btn-outline-sm qa-preview-btn" data-path="${escHtml(outputs.qa_process_report)}" data-label="QAレポート">QAレポートを見る</button>`;
   }
 }
 
@@ -588,17 +758,16 @@ function _autorunPopulateApprovalModal() {
     const skip  = (byStatus['manual-review'] || 0) + (byStatus.review || 0);
     summaryEl.textContent = '';
     [
-      { n: total, label: 'テストケース', color: 'var(--text)' },
-      { n: auto,  label: '自動実行',    color: '#16a34a' },
-      { n: skip,  label: 'スキップ',    color: '#9ca3af' },
-    ].forEach(({ n, label, color }) => {
+      { n: total, label: 'テストケース', cls: 'status-default' },
+      { n: auto,  label: '自動実行',    cls: 'status-low' },
+      { n: skip,  label: 'スキップ',    cls: 'status-muted' },
+    ].forEach(({ n, label, cls }) => {
       const wrap = document.createElement('div');
-      wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:1px';
+      wrap.className = 'arm-summary-stat';
       const num = document.createElement('strong');
-      num.style.cssText = `font-size:22px;font-weight:800;line-height:1.1;color:${color}`;
+      num.className = cls;
       num.textContent = String(n);
       const lbl = document.createElement('span');
-      lbl.style.cssText = 'font-size:10px;color:var(--text-muted)';
       lbl.textContent = label;
       wrap.appendChild(num); wrap.appendChild(lbl);
       summaryEl.appendChild(wrap);
@@ -617,18 +786,18 @@ function _autorunPopulateApprovalModal() {
   if (casesWrap) {
     if (candidates.length) {
       const rows = candidates.map(c => {
-        const clr = c.automation_status === 'auto' ? '#16a34a' : '#9ca3af';
+        const statusCls = c.automation_status === 'auto' ? 'status-low' : 'status-muted';
         return `<tr>
-          <td style="font-size:11px;white-space:nowrap;color:var(--text-muted)">${escHtml(c.id || '')}</td>
-          <td style="font-size:12px">${escHtml(c.title || '')}</td>
-          <td style="font-size:11px;font-weight:600;color:${clr}">${escHtml(c.automation_status || '')}</td>
+          <td class="cell-id">${escHtml(c.id || '')}</td>
+          <td class="cell-title">${escHtml(c.title || '')}</td>
+          <td class="cell-status ${statusCls}">${escHtml(c.automation_status || '')}</td>
         </tr>`;
       }).join('');
-      casesWrap.innerHTML = `<table class="data" style="width:100%">
+      casesWrap.innerHTML = `<table class="data autorun-preview-table">
         <thead><tr><th>ID</th><th>タイトル</th><th>自動化</th></tr></thead>
         <tbody>${rows}</tbody></table>`;
     } else {
-      casesWrap.innerHTML = '<div class="empty" style="padding:12px">テストケースなし</div>';
+      casesWrap.innerHTML = '<div class="empty arm-empty">テストケースなし</div>';
     }
   }
 
@@ -749,6 +918,9 @@ function autorunReset() {
   document.getElementById('autorun-steps').style.display          = 'none';
   document.getElementById('autorun-outputs-area').style.display   = 'none';
   document.getElementById('ar-log-section').style.display         = 'none';
+  document.getElementById('autorun-status-panel').style.display   = 'none';
+  document.getElementById('autorun-result-panel').style.display   = 'none';
+  document.getElementById('autorun-failure-panel').style.display  = 'none';
   document.getElementById('autorun-preview-panel').style.display  = 'none';
   document.getElementById('autorun-cancel-area').style.display    = 'none';
   document.getElementById('autorun-restart-area').style.display   = 'none';
@@ -759,10 +931,13 @@ function autorunReset() {
   document.getElementById('autorun-elapsed').textContent = '0:00';
   const timeline = document.getElementById('ar-timeline');
   if (timeline) timeline.innerHTML = '';
+  const resultCards = document.getElementById('autorun-result-cards');
+  if (resultCards) resultCards.innerHTML = '';
+  const failureBody = document.getElementById('autorun-failure-body');
+  if (failureBody) failureBody.innerHTML = '';
   const logPre = document.getElementById('autorun-log');
   if (logPre) logPre.textContent = '';
   const allRadio = document.querySelector('input[name="autorun-filter"][value="all"]');
   if (allRadio) allRadio.checked = true;
   autorunSetStartStatus('', false);
 }
-

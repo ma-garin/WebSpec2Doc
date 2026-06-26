@@ -6,7 +6,7 @@ import subprocess
 import sys
 import threading
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -15,6 +15,7 @@ from flask import Blueprint, request
 
 from web.config import DISCOVER_TIMEOUT_SEC, MAX_DEPTH, MAX_PAGES_LIMIT, OUTPUT_DIR
 from web.routes.qa_process import _generate_advanced_outputs, _generate_outputs, _load_report
+from web.services.failure_classifier import classify_failure, classify_failures, summarize_classifications
 from web.services.playwright_executor import run_playwright
 from web.services.spec_ts_generator import compute_filter_counts, generate_spec_ts
 from web.validation import _clean_int, _domain_of, _safe_auth_path
@@ -39,6 +40,8 @@ class AutoRunJob:
     log: list[str] = field(default_factory=list)
     outputs: dict[str, str] = field(default_factory=dict)
     test_results: dict[str, Any] = field(default_factory=dict)
+    failure_classifications: list[dict[str, Any]] = field(default_factory=list)
+    failure_summary: dict[str, int] = field(default_factory=dict)
     step_data: dict[str, Any] = field(default_factory=dict)
     error: str = ""
     started_at: str = ""
@@ -88,6 +91,8 @@ class AutoRunJob:
             "log": self.log[-200:],
             "outputs": self.outputs,
             "test_results": self.test_results,
+            "failure_classifications": self.failure_classifications,
+            "failure_summary": self.failure_summary,
             "error": self.error,
             "started_at": self.started_at,
             "finished_at": self.finished_at,
@@ -342,10 +347,8 @@ def _run_job(job: AutoRunJob, depth: int, max_pages: int) -> None:
     except Exception as exc:
         if job._cancelled:
             return
-        job.status = "failed"
-        job.error = str(exc)
+        _mark_job_failed(job, str(exc))
         job.add_log(f"予期しないエラー: {exc}")
-        job.finished_at = _now_iso()
 
 
 def _phase_discover(job: AutoRunJob, depth: int, max_pages: int) -> None:
@@ -483,14 +486,10 @@ def _phase_crawl(job: AutoRunJob, depth: int, max_pages: int) -> None:
     except subprocess.TimeoutExpired:
         if proc:
             proc.kill()
-        job.status = "failed"
-        job.error = "クロールタイムアウト"
-        job.finished_at = _now_iso()
+        _mark_job_failed(job, "クロールタイムアウト")
         return
     except Exception as exc:
-        job.status = "failed"
-        job.error = f"クロールエラー: {exc}"
-        job.finished_at = _now_iso()
+        _mark_job_failed(job, f"クロールエラー: {exc}")
         return
 
     if job._cancelled:
@@ -500,9 +499,7 @@ def _phase_crawl(job: AutoRunJob, depth: int, max_pages: int) -> None:
     job.domain = domain
     report_json = OUTPUT_DIR / domain / "report.json"
     if not report_json.is_file():
-        job.status = "failed"
-        job.error = "クロール完了後に report.json が見つかりません"
-        job.finished_at = _now_iso()
+        _mark_job_failed(job, "クロール完了後に report.json が見つかりません")
         return
 
     job.outputs["report_json"] = str(report_json.resolve())
@@ -532,18 +529,14 @@ def _phase_generate_qa(job: AutoRunJob) -> None:
     report_path = OUTPUT_DIR / job.domain / "report.json"
     report = _load_report(report_path)
     if report is None:
-        job.status = "failed"
-        job.error = "report.json の読み込みに失敗しました"
-        job.finished_at = _now_iso()
+        _mark_job_failed(job, "report.json の読み込みに失敗しました")
         return
 
     try:
         outputs = _generate_outputs(job.domain, report)
         outputs |= _generate_advanced_outputs(job.domain, report)
     except Exception as exc:
-        job.status = "failed"
-        job.error = f"QA成果物生成エラー: {exc}"
-        job.finished_at = _now_iso()
+        _mark_job_failed(job, f"QA成果物生成エラー: {exc}")
         return
 
     for key, path in outputs.items():
@@ -562,9 +555,7 @@ def _phase_generate_scripts(job: AutoRunJob) -> None:
 
     candidates_path = OUTPUT_DIR / job.domain / "qa_process" / "playwright_candidates.json"
     if not candidates_path.is_file():
-        job.status = "failed"
-        job.error = "playwright_candidates.json が見つかりません"
-        job.finished_at = _now_iso()
+        _mark_job_failed(job, "playwright_candidates.json が見つかりません")
         return
 
     spec_dir = OUTPUT_DIR / job.domain / "qa_process"
@@ -572,9 +563,7 @@ def _phase_generate_scripts(job: AutoRunJob) -> None:
     try:
         generate_spec_ts(job.domain, candidates_path, spec_path)
     except Exception as exc:
-        job.status = "failed"
-        job.error = f"スクリプト生成エラー: {exc}"
-        job.finished_at = _now_iso()
+        _mark_job_failed(job, f"スクリプト生成エラー: {exc}")
         return
 
     try:
@@ -595,9 +584,7 @@ def _execute_tests(job: AutoRunJob) -> None:
 
     spec_path_str = job.outputs.get("spec_ts", "")
     if not spec_path_str:
-        job.status = "failed"
-        job.error = "spec.ts が見つかりません"
-        job.finished_at = _now_iso()
+        _mark_job_failed(job, "spec.ts が見つかりません")
         return
 
     spec_path = Path(spec_path_str)
@@ -623,9 +610,7 @@ def _execute_tests(job: AutoRunJob) -> None:
             add_log=job.add_log,
         )
     except Exception as exc:
-        job.status = "failed"
-        job.error = f"テスト実行エラー: {exc}"
-        job.finished_at = _now_iso()
+        _mark_job_failed(job, f"テスト実行エラー: {exc}")
         return
 
     job.test_results = result
@@ -648,11 +633,58 @@ def _execute_tests(job: AutoRunJob) -> None:
     failed = result.get("failed", 0)
     total = result.get("total", 0)
     job.add_log(f"テスト実行完了: PASS={passed} FAIL={failed} TOTAL={total}")
+    _update_failure_classification(job, result)
     if result.get("unavailable"):
         job.add_log("※ @playwright/test 未セットアップのため実行をスキップしました。")
 
 
 # ─────────────────────────── ユーティリティ ───────────────────────────
+
+
+def _update_failure_classification(
+    job: AutoRunJob,
+    result: dict[str, Any] | None = None,
+) -> None:
+    """AutoRunの失敗要因をUI表示用に分類して保存する。"""
+    result = result or {}
+    failures: list[dict[str, Any]] = []
+    for idx, test in enumerate(result.get("tests") or [], start=1):
+        if test.get("status") != "failed":
+            continue
+        failures.append(
+            {
+                "test_id": test.get("id") or test.get("title") or f"TC{idx:03d}",
+                "status": "failed",
+                "error": test.get("error") or result.get("error") or result.get("stderr_snippet", ""),
+            }
+        )
+
+    if not failures and (result.get("error") or job.error):
+        failures.append(
+            {
+                "test_id": "AutoRun",
+                "status": "failed",
+                "error": result.get("error") or job.error,
+            }
+        )
+
+    if not failures:
+        job.failure_classifications = []
+        job.failure_summary = {}
+        return
+
+    classifications = classify_failures(failures)
+    job.failure_classifications = [asdict(item) for item in classifications]
+    job.failure_summary = summarize_classifications(classifications)
+
+
+def _mark_job_failed(job: AutoRunJob, error: str) -> None:
+    job.status = "failed"
+    job.error = error
+    job.finished_at = _now_iso()
+    classification = classify_failure("AutoRun", error)
+    job.failure_classifications = [asdict(classification)]
+    job.failure_summary = summarize_classifications([classification])
 
 
 def _report_html_path(job: AutoRunJob) -> str:

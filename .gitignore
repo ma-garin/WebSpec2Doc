@@ -43,6 +43,19 @@ htmlcov/
 # Claude Code / Codex ハーネス（リポジトリ管理不要）
 .agents/
 .claude/
+!.claude/
+!.claude/rules/
+!.claude/rules/**
+!.claude/skills/
+!.claude/skills/**
+!.claude/commands/
+!.claude/commands/**
+.claude/**/.DS_Store
+.claude/**/__pycache__/
+.claude/**/*.py[cod]
+yuki-aidd-kit/**/.DS_Store
+yuki-aidd-kit/**/__pycache__/
+yuki-aidd-kit/**/*.py[cod]
 .playwright-mcp/
 skills-lock.json
 

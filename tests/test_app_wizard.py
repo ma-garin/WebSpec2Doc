@@ -99,19 +99,17 @@ def test_manual_mode_is_removed() -> None:
     assert 'value="manual"' not in _index_html()
 
 
-def test_qa_process_view_is_present() -> None:
+def test_removed_qa_views_are_not_exposed() -> None:
     html = _index_html()
-    assert 'data-view="qa-process"' in html
-    assert 'id="view-qa-process"' in html
-    assert 'data-view="qa-models"' in html
-    assert 'id="view-qa-models"' in html
-    assert 'data-view="qa-automation"' in html
-    assert 'id="view-qa-automation"' in html
+    assert 'data-view="qa-process"' not in html
+    assert 'id="view-qa-process"' not in html
+    assert 'data-view="qa-models"' not in html
+    assert 'id="view-qa-models"' not in html
+    assert 'data-view="qa-automation"' not in html
+    assert 'id="view-qa-automation"' not in html
+    assert "qa-process.js" not in html
     assert 'data-view="qa-quality"' in html
     assert 'id="view-qa-quality"' in html
-    assert 'data-qa-page-panel="0"' in html
-    assert 'data-qa-page-panel="6"' in html
-    assert 'id="qa-use-ai"' in html
 
 
 def test_user_guide_view_is_present() -> None:

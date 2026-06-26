@@ -15,7 +15,11 @@ from flask import Blueprint, request
 
 from web.config import DISCOVER_TIMEOUT_SEC, MAX_DEPTH, MAX_PAGES_LIMIT, OUTPUT_DIR
 from web.routes.qa_process import _generate_advanced_outputs, _generate_outputs, _load_report
-from web.services.failure_classifier import classify_failure, classify_failures, summarize_classifications
+from web.services.failure_classifier import (
+    classify_failure,
+    classify_failures,
+    summarize_classifications,
+)
 from web.services.playwright_executor import run_playwright
 from web.services.spec_ts_generator import compute_filter_counts, generate_spec_ts
 from web.validation import _clean_int, _domain_of, _safe_auth_path

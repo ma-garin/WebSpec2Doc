@@ -26,7 +26,9 @@ def screen_fingerprint(page: AnalyzedPage) -> str:
     normalized_url = _normalize_url(page.page_data.url)
     structure_signature = _structure_signature(page.page_data.forms)
     raw_fingerprint = f"{normalized_url}\n{structure_signature}"
-    fingerprint = hashlib.sha1(raw_fingerprint.encode("utf-8"), usedforsecurity=False).hexdigest()[:16]  # noqa: S324
+    fingerprint = hashlib.sha1(raw_fingerprint.encode("utf-8"), usedforsecurity=False).hexdigest()[
+        :16
+    ]  # noqa: S324
     logger.debug("Computed fingerprint for %s: %s", page.page_id, fingerprint)
     return fingerprint
 

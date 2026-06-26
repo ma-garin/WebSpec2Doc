@@ -659,7 +659,9 @@ def _update_failure_classification(
             {
                 "test_id": test.get("id") or test.get("title") or f"TC{idx:03d}",
                 "status": "failed",
-                "error": test.get("error") or result.get("error") or result.get("stderr_snippet", ""),
+                "error": test.get("error")
+                or result.get("error")
+                or result.get("stderr_snippet", ""),
             }
         )
 

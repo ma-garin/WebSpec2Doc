@@ -1,67 +1,113 @@
-// ---- Delivery Backlog ----
-const DELIVERY_ITEMS = {
-  'WS2D-142': {
-    title: '認証画面を含むサイト解析を安定化する',
-    description: 'ログインが必要な Web システムでも、認証状態を維持したまま安定して画面を収集できるようにする。',
-    priority: 'High', priorityClass: 'priority-high',
-    status: 'In Progress', statusClass: 'status-progress',
-    assignee: 'Yuki M.', initials: 'YM', rich: true,
-  },
-  'WS2D-137': {
-    title: '画面仕様書の差分表示を追加する',
-    description: '前回クロールとの変更点を画面単位で比較し、追加・変更・削除をすぐに追跡できるようにする。',
-    priority: 'Medium', priorityClass: 'priority-medium',
-    status: 'To Do', statusClass: 'status-todo',
-    assignee: 'Akira S.', initials: 'AS', rich: false,
-  },
-  'WS2D-131': {
-    title: 'レポートの Excel エクスポートを改善する',
-    description: '大規模な画面一覧でも閲覧しやすいシート構成と列幅に整え、レビュー時間を短縮する。',
-    priority: 'High', priorityClass: 'priority-high',
-    status: 'In Review', statusClass: 'status-review',
-    assignee: 'Mina K.', initials: 'MK', rich: false,
-  },
-  'WS2D-126': {
-    title: '再クロール時の変更通知を整理する',
-    description: '仕様ドリフトの有無と影響範囲を簡潔に通知し、次に確認すべき画面を明確にする。',
-    priority: 'Medium', priorityClass: 'priority-medium',
-    status: 'Done', statusClass: 'status-done',
-    assignee: 'Yuki M.', initials: 'YM', rich: false,
-  },
-  'WS2D-118': {
-    title: '解析対象 URL の一括登録に対応する',
-    description: '複数の開始 URL を一度に登録し、共通設定で解析キューへ追加できるようにする。',
-    priority: 'Low', priorityClass: 'priority-low',
-    status: 'To Do', statusClass: 'status-todo',
-    assignee: 'Unassigned', initials: '—', rich: false,
-  },
-};
+// ---- 解析履歴 ----
+async function loadHistory() {
+  const body = document.getElementById('history-body');
+  if (!body) return;
+  body.innerHTML = '<div class="empty">読み込み中...</div>';
+  try {
+    const res = await fetch('/api/history');
+    const data = await res.json();
+    if (!data.items.length) {
+      body.innerHTML = _emptyState();
+      body.querySelector('.empty-add-btn')?.addEventListener('click', openAddSite);
+      return;
+    }
+    body.innerHTML = _buildTable(data.items);
+    body.querySelectorAll('.hist-open').forEach(b => b.addEventListener('click', () => openResultsForDomain(b.dataset.domain)));
+    body.querySelectorAll('.hist-recrawl').forEach(b => b.addEventListener('click', async () => {
+      b.disabled = true;
+      const orig = b.textContent;
+      b.textContent = '読み込み中…';
+      try { await recrawlSite(b.dataset.domain); } finally { b.disabled = false; b.textContent = orig; }
+    }));
+    body.querySelectorAll('.hist-delete').forEach(b => b.addEventListener('click', () => deleteSite(b.dataset.domain, b)));
+  } catch (e) {
+    body.innerHTML = '<div class="empty">解析履歴の読み込みに失敗しました。</div>';
+  }
+}
+document.getElementById('reload-history')?.addEventListener('click', loadHistory);
 
-function selectDeliveryItem(key, { focusDetail = false } = {}) {
-  const item = DELIVERY_ITEMS[key];
-  const detail = document.getElementById('issue-detail');
-  if (!item || !detail) return;
-
-  document.querySelectorAll('.backlog-row').forEach((row) => {
-    const selected = row.dataset.issueKey === key;
-    row.classList.toggle('is-selected', selected);
-    row.setAttribute('aria-selected', selected ? 'true' : 'false');
-  });
-  document.getElementById('issue-detail-key').textContent = key;
-  document.getElementById('issue-detail-title').textContent = item.title;
-  document.getElementById('issue-detail-description').textContent = item.description;
-  document.getElementById('issue-detail-priority').innerHTML = `<span class="priority ${item.priorityClass}"><i></i>${item.priority}</span>`;
-  document.getElementById('issue-detail-status').innerHTML = `<span class="status ${item.statusClass}">${item.status}</span>`;
-  document.getElementById('issue-detail-assignee').innerHTML = `<span class="assignee"><i>${item.initials}</i>${item.assignee}</span>`;
-  document.getElementById('issue-rich-detail').hidden = !item.rich;
-  if (focusDetail && window.matchMedia('(max-width: 1200px)').matches) detail.scrollIntoView({ behavior: 'smooth', block: 'start' });
+function _emptyState() {
+  return `
+    <div class="dashboard-empty">
+      <div class="dashboard-empty-icon">🔍</div>
+      <div class="dashboard-empty-title">まだ解析履歴がありません</div>
+      <div class="dashboard-empty-desc">
+        対象システムのURLを登録すると、画面仕様書・テスト設計・画面遷移図を自動生成します。
+      </div>
+      <div class="onboard-steps">
+        <div class="onboard-step"><span class="onboard-num">1</span><strong>URLを入力</strong><span>対象システムのURLを貼り付けて解析</span></div>
+        <div class="onboard-arrow">→</div>
+        <div class="onboard-step"><span class="onboard-num">2</span><strong>画面を選択</strong><span>検出された画面から生成対象を選択</span></div>
+        <div class="onboard-arrow">→</div>
+        <div class="onboard-step"><span class="onboard-num">3</span><strong>ドキュメントを確認</strong><span>生成された仕様書とテスト設計を確認</span></div>
+      </div>
+      <button type="button" class="btn-primary empty-add-btn" style="height:44px;padding:0 28px;font-size:15px;margin-top:8px">
+        最初の解析を始める
+      </button>
+      <p style="font-size:12px;color:var(--text-muted);margin-top:4px">所要時間の目安: 10画面のサイトで約2〜3分</p>
+    </div>`;
 }
 
-document.querySelectorAll('.backlog-row').forEach((row) => {
-  row.addEventListener('click', () => selectDeliveryItem(row.dataset.issueKey, { focusDetail: true }));
-  row.addEventListener('keydown', (event) => {
-    if (event.key !== 'Enter' && event.key !== ' ') return;
-    event.preventDefault();
-    selectDeliveryItem(row.dataset.issueKey, { focusDetail: true });
+function _freshnessLabel(updatedTs) {
+  const now = Date.now() / 1000;
+  const diff = now - updatedTs;
+  const days = Math.floor(diff / 86400);
+  if (days === 0) return { label: '今日', cls: 'fresh-today' };
+  if (days <= 7) return { label: `${days}日前`, cls: 'fresh-week' };
+  if (days <= 30) return { label: `${days}日前`, cls: 'fresh-month' };
+  return { label: `${days}日前`, cls: 'fresh-old' };
+}
+
+function _buildTable(items) {
+  let html = `
+    <table class="data dashboard-table">
+      <thead><tr><th>サイト</th><th class="num">画面</th><th class="num">項目</th><th>解析回数</th><th>最終解析</th><th>操作</th></tr></thead>
+      <tbody>`;
+
+  for (const it of items) {
+    const fresh = _freshnessLabel(it.updated_ts || 0);
+    const snapBadge = it.snapshot_count >= 2
+      ? `<span class="snap-badge">${it.snapshot_count}回</span>`
+      : it.snapshot_count === 1 ? '<span class="snap-badge snap-badge-first">初回</span>' : '';
+    const diffBadge = it.has_diff ? '<span class="diff-badge">差分あり</span>' : '';
+    html += `
+      <tr class="${it.has_diff ? 'has-drift' : ''}">
+        <td><div class="site-cell"><strong>${escHtml(it.domain)}</strong>${diffBadge}</div></td>
+        <td class="num">${it.screens}</td>
+        <td class="num">${it.fields}</td>
+        <td>${snapBadge}</td>
+        <td><span class="freshness ${fresh.cls}">${fresh.label}</span></td>
+        <td><div class="history-actions">
+          <button type="button" class="btn-primary hist-open" data-domain="${escHtml(it.domain)}" style="height:36px;padding:0 14px;font-size:13px">開く</button>
+          <button type="button" class="btn-outline-sm hist-recrawl" data-domain="${escHtml(it.domain)}">再クロール</button>
+          <button type="button" class="btn-outline-sm hist-delete" data-domain="${escHtml(it.domain)}">削除</button>
+        </div></td>
+      </tr>`;
+  }
+  return html + '</tbody></table>';
+}
+
+async function deleteSite(domain, btn) {
+  const ok = await confirmDialog({
+    title: '解析結果の削除',
+    message: `「${domain}」の画面一覧・スナップショット・スクリーンショットをすべて削除します。この操作は取り消せません。`,
+    confirmLabel: '削除する', danger: true,
   });
-});
+  if (!ok) return;
+  if (btn) { btn.disabled = true; btn.textContent = '削除中…'; }
+  try {
+    const res = await fetch('/api/site/' + encodeURIComponent(domain), { method: 'DELETE' });
+    let data = {};
+    try { data = await res.json(); } catch (e) { data = {}; }
+    if (res.ok) {
+      showToast(`「${domain}」を削除しました`, 'success');
+      loadHistory();
+      return;
+    }
+    showToast('削除に失敗しました: ' + (data.error || res.status), 'error');
+  } catch (e) {
+    showToast('削除に失敗しました: 通信エラー', 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '削除'; }
+  }
+}

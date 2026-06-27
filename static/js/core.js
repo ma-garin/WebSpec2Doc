@@ -15,7 +15,7 @@ document.getElementById('sidebar-toggle-btn')?.addEventListener('click', () => {
   localStorage.setItem(SIDEBAR_KEY, collapsed ? '1' : '0');
 });
 const VIEW_HEADER = {
-  dashboard: { trail: ['WebSpec2Doc', 'Delivery'], title: 'Delivery Backlog' },
+  dashboard: { trail: ['WebSpec2Doc', 'ホーム'], title: 'QAドキュメント生成' },
   generate: { trail: ['ダッシュボード', 'サイトを追加'], title: 'サイトを追加 / 再クロール' },
   'qa-quality': { trail: ['ダッシュボード', '品質観点'], title: '品質観点' },
   'auto-run': { trail: ['ダッシュボード', 'AutoRun'], title: 'AutoRun — 全自動テスト実行' },
@@ -33,11 +33,7 @@ function setHeader(trail, title) {
   const root = bc.querySelector('[data-bc-root]');
   if (root && trail.length > 1) root.addEventListener('click', () => switchView('dashboard'));
   document.getElementById('topbar-title').textContent = title;
-  const actions = document.getElementById('topbar-actions');
-  actions.innerHTML = title === 'Delivery Backlog'
-    ? '<button type="button" class="btn-primary topbar-new-analysis" id="topbar-new-analysis-btn">新規解析</button>'
-    : '';
-  _bindNewAnalysisButtons();
+  document.getElementById('topbar-actions').innerHTML = '';
 }
 
 // ---- ナビ切替 ----
@@ -45,10 +41,10 @@ document.querySelectorAll('.app-nav-item[data-view]').forEach(btn => btn.addEven
 function switchView(name) {
   document.querySelectorAll('.app-nav-item[data-view]').forEach(b => b.classList.toggle('is-active', b.dataset.view === name));
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('is-active', v.id === 'view-' + name));
-  document.body.classList.toggle('backlog-active', name === 'dashboard');
   const h = VIEW_HEADER[name];
   if (h) setHeader(h.trail, h.title);
   if (name === 'dashboard') {
+    loadHistory();
     // ディープリンクのハッシュをクリア（レポートから戻った時のみ。初期化時は保持）
     if (window._appBooted && location.hash.startsWith('#report/')) {
       try { history.replaceState(null, '', location.pathname); } catch (e) {}
@@ -92,12 +88,9 @@ function openAddSite() {
   document.getElementById('p1-summary').style.display = 'none';
   clearDiscovered(); updateTargetPreview(); showWizardStep(1);
 }
-function _bindNewAnalysisButtons() {
-  document.querySelectorAll('#add-site-btn, #topbar-new-analysis-btn').forEach((button) => {
-    button.onclick = openAddSite;
-  });
-}
-_bindNewAnalysisButtons();
+document.getElementById('add-site-btn').addEventListener('click', openAddSite);
+document.getElementById('add-site-btn-2').addEventListener('click', openAddSite);
+document.getElementById('nav-new-analysis-btn').addEventListener('click', openAddSite);
 
 // ---- ダッシュボード・ヒーロー（ゴールデンパス入口） ----
 function _heroStartGuided(prefillUrl) {

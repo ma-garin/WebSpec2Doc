@@ -75,31 +75,27 @@ class TestNavigation:
         assert len(nav_items) > 0, "ナビゲーションアイテムが見つかりません"
 
 
-class TestDeliveryBacklog:
-    """Delivery Backlog の一覧・詳細連動を検証する。"""
+class TestHome:
+    """ホームのURL解析導線とAutoRun導線を検証する。"""
 
-    def test_five_items_and_default_detail_are_visible(self, page: Page) -> None:
+    def test_home_explains_qa_document_generation(self, page: Page) -> None:
         page.goto(BASE_URL)
-        expect(page.locator(".backlog-row")).to_have_count(5)
-        expect(page.locator(".backlog-row.is-selected")).to_have_attribute(
-            "data-issue-key", "WS2D-142"
-        )
-        expect(page.locator("#issue-detail-key")).to_have_text("WS2D-142")
-        expect(page.locator("#issue-rich-detail")).to_contain_text("受け入れ条件")
-
-    def test_row_selection_updates_detail_and_aria(self, page: Page) -> None:
-        page.goto(BASE_URL)
-        target = page.locator('[data-issue-key="WS2D-131"]')
-        target.click()
-        expect(target).to_have_attribute("aria-selected", "true")
-        expect(page.locator("#issue-detail-key")).to_have_text("WS2D-131")
-        expect(page.locator("#issue-detail-title")).to_contain_text("Excel")
+        expect(page.locator("#hero-url")).to_be_visible()
+        expect(page.locator("#view-dashboard")).to_contain_text("QAドキュメント")
+        expect(page.locator("#view-dashboard")).to_contain_text("画面仕様書")
+        expect(page.locator("#history-body")).to_be_visible()
 
     def test_new_analysis_opens_existing_generate_flow(self, page: Page) -> None:
         page.goto(BASE_URL)
-        page.locator("#topbar-new-analysis-btn").click()
+        page.locator("#nav-new-analysis-btn").click()
         expect(page.locator("#view-generate")).to_be_visible()
-        expect(page.locator("body")).not_to_have_class(re.compile(r"backlog-active"))
+
+    def test_autorun_is_visible_and_opens(self, page: Page) -> None:
+        page.goto(BASE_URL)
+        autorun = page.locator('.app-nav-item[data-view="auto-run"]')
+        expect(autorun).to_be_visible()
+        autorun.click()
+        expect(page.locator("#view-auto-run")).to_be_visible()
 
 
 class TestResponsiveness:
@@ -129,24 +125,19 @@ class TestResponsiveness:
             scroll_width <= 1366 + 20
         ), f"水平スクロールが発生しています: scrollWidth={scroll_width}px"  # 20px の許容誤差
 
-    def test_tablet_places_detail_below_list(self, page: Page) -> None:
-        """1024×768 で詳細ペインが一覧の下段に配置される。"""
+    def test_tablet_home_layout(self, page: Page) -> None:
+        """1024×768 でURL入力と解析方式が表示される。"""
         page.set_viewport_size({"width": 1024, "height": 768})
         page.goto(BASE_URL)
         page.screenshot(path="tests/e2e/screenshots/layout_tablet_1024x768.png")
-        list_box = page.locator(".backlog-list-panel").bounding_box()
-        detail_box = page.locator(".issue-detail").bounding_box()
-        assert list_box and detail_box
-        assert detail_box["y"] >= list_box["y"] + list_box["height"] - 1
+        expect(page.locator("#hero-url")).to_be_visible()
+        expect(page.locator("#hero-auto-btn")).to_be_visible()
 
-    def test_mobile_is_single_column_with_scrollable_table(self, page: Page) -> None:
-        """390×844 で一カラム化し、一覧のみ水平スクロール可能になる。"""
+    def test_mobile_home_has_no_page_overflow(self, page: Page) -> None:
+        """390×844 で主要導線が縦並びになり、ページが横溢れしない。"""
         page.set_viewport_size({"width": 390, "height": 844})
         page.goto(BASE_URL)
         page.screenshot(path="tests/e2e/screenshots/layout_mobile_390x844.png")
-        expect(page.locator("aside.app-sidebar")).to_be_hidden()
-        dimensions = page.locator(".backlog-table-scroll").evaluate(
-            "el => ({client: el.clientWidth, scroll: el.scrollWidth})"
-        )
-        assert dimensions["scroll"] > dimensions["client"]
+        expect(page.locator("#hero-url")).to_be_visible()
+        expect(page.locator("#hero-auto-btn")).to_be_visible()
         assert page.evaluate("document.body.scrollWidth") <= 390

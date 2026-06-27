@@ -487,3 +487,13 @@ html[data-theme="dark"] .status-todo { background: #364152; color: #d8dee9; }
   .backlog-list-head { padding: 0 12px; }
   .issue-detail { padding: 18px 14px 26px; }
 }
+
+/* 日本語ホーム: AutoRun導線の強調と狭幅時のサイドバー整理 */
+.dash-mode-card-primary {
+  border-color: var(--info-border);
+  background: var(--info-bg);
+}
+
+@media (max-width: 860px) {
+  .app-sidebar-foot { display: none; }
+}

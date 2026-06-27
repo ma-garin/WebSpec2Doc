@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -14,7 +15,7 @@ def _contracts() -> dict:
 
 def test_quality_harness_passes() -> None:
     result = subprocess.run(
-        ["python", "scripts/quality_harness.py"],
+        [sys.executable, "scripts/quality_harness.py"],
         cwd=ROOT,
         text=True,
         capture_output=True,

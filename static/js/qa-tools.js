@@ -1,19 +1,5 @@
-// ---- QA拡張ビュー（モデル/自動テスト候補/品質観点）----
+// ---- QA拡張ビュー（品質観点）----
 const QA_TOOL_CONFIG = {
-  'qa-models': {
-    select: 'qa-model-domain-select',
-    status: 'qa-model-status',
-    content: 'qa-model-content',
-    outputs: 'qa-model-output-links',
-    render: renderQaModelTool,
-  },
-  'qa-automation': {
-    select: 'qa-auto-domain-select',
-    status: 'qa-auto-status',
-    content: 'qa-auto-content',
-    outputs: 'qa-auto-output-links',
-    render: renderQaAutomationTool,
-  },
   'qa-quality': {
     select: 'qa-quality-domain-select',
     status: 'qa-quality-status',
@@ -22,7 +8,17 @@ const QA_TOOL_CONFIG = {
     render: renderQaQualityTool,
   },
 };
+const QA_TOOL_LABELS = {
+  quality_viewpoints: '品質観点JSON',
+  quality_viewpoints_html: '品質観点HTML',
+};
 let qaToolSitesLoaded = false;
+
+function qaList(items) {
+  const values = Array.isArray(items) ? items : [];
+  if (values.length === 0) return '<li>なし</li>';
+  return values.map(item => `<li>${escHtml(item)}</li>`).join('');
+}
 
 async function loadQaToolSites(viewName, force) {
   const cfg = QA_TOOL_CONFIG[viewName];
@@ -86,8 +82,6 @@ async function loadQaToolData(viewName, domain) {
   if (!cfg) return;
   if (!domain) {
     const emptyMsgs = {
-      'qa-models': ['QAカバレッジ分析', 'リスクスコア・遷移エッジ・カバレッジ指標を一覧表示します'],
-      'qa-automation': ['Playwright自動テスト候補', 'Playwright化しやすい操作フローを自動抽出します\nロケータ候補・テスト種別・優先度スコアを表示'],
       'qa-quality': ['品質観点レポート', '境界値・アクセシビリティ・セキュリティ等6観点でテスト観点を整理します'],
     };
     const [title, desc] = emptyMsgs[viewName] || ['データなし', 'サイトを選択してください'];
@@ -145,16 +139,12 @@ function setQaToolStatus(viewName, message, isError) {
 
 function renderQaToolOutputLinks(containerId, outputs, viewName) {
   // B: サイドバー用コンパクト成果物リスト（プレビューボタン、別ウィンドウ廃止）
-  const keys = viewName === 'qa-models'
-    ? ['screen_transition_graph', 'model_graph', 'coverage_metrics']
-    : viewName === 'qa-automation'
-      ? ['playwright_candidates', 'playwright_candidates_html']
-      : ['quality_viewpoints', 'quality_viewpoints_html'];
+  const keys = ['quality_viewpoints', 'quality_viewpoints_html'];
   const el = document.getElementById(containerId);
   if (!el) return;
   el.innerHTML = keys.map(key => {
     const path = outputs[key];
-    const label = QA_STEP_LABELS[key] || key;
+    const label = QA_TOOL_LABELS[key] || key;
     if (!path) {
       return `<div class="qa-output-item is-missing">` +
         `<span class="qa-output-item-name" title="${escHtml(label)}">${escHtml(label)}</span>` +
@@ -249,10 +239,8 @@ document.querySelectorAll('.qa-tool-reload').forEach(btn => {
   btn.addEventListener('click', () => {
     qaToolSitesLoaded = false;
     const view = document.querySelector('.view.is-active');
-    const viewName = view ? view.id.replace('view-', '') : 'qa-models';
+    const viewName = view ? view.id.replace('view-', '') : 'qa-quality';
     loadQaToolSites(viewName, true);
   });
 });
-document.getElementById('qa-model-generate').addEventListener('click', () => generateQaAdvanced('qa-models'));
-document.getElementById('qa-auto-generate').addEventListener('click', () => generateQaAdvanced('qa-automation'));
 document.getElementById('qa-quality-generate').addEventListener('click', () => generateQaAdvanced('qa-quality'));

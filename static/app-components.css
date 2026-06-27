@@ -108,3 +108,186 @@ kbd.kbd {
     scroll-behavior: auto !important;
   }
 }
+
+/* ===== ゴールデンパス・ヒーロー (Phase 1-0) ===== */
+.dash-hero {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-6);
+  margin-bottom: var(--space-5);
+  box-shadow: var(--shadow-sm);
+}
+.dash-hero-title {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  line-height: 1.3;
+}
+.dash-hero-sub {
+  margin: 6px 0 14px;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: 1.7;
+}
+.dash-hero-form {
+  display: flex;
+  gap: 8px;
+  max-width: 640px;
+}
+.dash-hero-input {
+  flex: 1;
+  height: 44px;
+}
+.dash-hero-start {
+  height: 44px;
+  padding: 0 24px;
+}
+.dash-hero-steps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.dash-hero-step b {
+  color: var(--primary);
+}
+.dash-hero-sample {
+  min-height: 32px;
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.dash-hero-sample:hover {
+  border-color: var(--primary);
+  background: var(--surface-soft);
+}
+.dash-hero-sample:focus-visible,
+.dash-mode-card:focus-visible,
+.nav-group-summary:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.dash-hero-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+.dash-mode-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.dash-mode-card:hover {
+  border-color: var(--primary);
+}
+.dash-mode-icon {
+  flex: 0 0 auto;
+  color: var(--primary-dark);
+  font-size: 18px;
+  line-height: 1;
+}
+.dash-mode-body b {
+  display: block;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.dash-mode-body small {
+  display: block;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.dash-section-title {
+  margin: 4px 0 8px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+.dashboard-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.dashboard-section-copy {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+.dashboard-section-actions {
+  display: flex;
+  gap: 8px;
+}
+.dashboard-add-site-btn {
+  height: 36px;
+  padding: 0 16px;
+  font-size: var(--text-sm);
+}
+.nav-group {
+  display: grid;
+  gap: 2px;
+}
+.nav-group-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  list-style: none;
+  cursor: pointer;
+}
+.nav-group-summary::-webkit-details-marker {
+  display: none;
+}
+.nav-group-summary::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-right: 1px solid var(--text-muted);
+  border-bottom: 1px solid var(--text-muted);
+  transform: rotate(45deg);
+  transition: transform .12s ease;
+}
+.nav-group:not([open]) .nav-group-summary::after {
+  transform: rotate(-45deg);
+}
+
+@media (max-width: 640px) {
+  .dash-hero-form,
+  .dash-hero-modes,
+  .dashboard-section-head,
+  .dashboard-section-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .dash-mode-card {
+    width: 100%;
+  }
+}
+
+@media (max-width: 860px) {
+  .nav-group-summary {
+    display: none;
+  }
+}

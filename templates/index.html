@@ -5,9 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
   <title>WebSpec2Doc</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='app-report.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='app-components.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
   <script>
     // テーマの早期適用（描画前にフラッシュを防ぐ）。保存値がなければ OS 設定に追従。
     (function () {
@@ -52,12 +57,6 @@
 {% include 'partials/view-generate.html' %}
 
 {% include 'partials/view-dashboard.html' %}
-
-{% include 'partials/view-qa-process.html' %}
-
-{% include 'partials/view-qa-models.html' %}
-
-{% include 'partials/view-qa-automation.html' %}
 
 {% include 'partials/view-qa-quality.html' %}
 
@@ -140,7 +139,6 @@
   <script src="{{ url_for('static', filename='js/core.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/settings.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/history.js') }}?v={{ _ver }}"></script>
-  <script src="{{ url_for('static', filename='js/qa-process.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/qa-tools.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/file-preview.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/recrawl.js') }}?v={{ _ver }}"></script>

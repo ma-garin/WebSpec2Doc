@@ -37,7 +37,7 @@
       "ui_files": ["templates/partials/view-generate.html", "static/js/wizard.js"],
       "route_files": ["web/routes/login.py"],
       "core_files": ["src/crawler/auto_login.py", "src/analyzer/login_wall.py"],
-      "symbols": ["auto_login", "detect_login_wall"],
+      "symbols": ["submit_login_simple", "detect_login_wall"],
       "outputs": ["auth.json", "login wall status"],
       "persistence": ["output/{domain}/auth.json"],
       "failure_modes": ["invalid_credentials", "mfa_required", "session_expired"],
@@ -84,20 +84,6 @@
       "persistence": [".env"],
       "failure_modes": ["invalid_json", "invalid_type", "unsafe_option_enabled"],
       "required_tests": ["happy_path", "validation_path", "evidence"]
-    },
-    {
-      "feature_id": "qa_process",
-      "name": "QAプロセス生成",
-      "risk_level": "high",
-      "status": "implemented",
-      "ui_files": ["templates/partials/view-qa-process.html", "static/js/qa-process.js"],
-      "route_files": ["web/routes/qa_process.py"],
-      "core_files": ["web/services/qa"],
-      "symbols": [],
-      "outputs": ["test_plan.md", "test_analysis.md", "test_design.md", "test_cases.md", "cross_review.md"],
-      "persistence": ["output/{domain}/qa_process/"],
-      "failure_modes": ["missing_report_json", "generation_failure", "invalid_artifact"],
-      "required_tests": ["happy_path", "fallback_path", "artifact_path", "error_path"]
     }
   ]
 }

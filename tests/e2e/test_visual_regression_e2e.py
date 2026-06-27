@@ -40,7 +40,16 @@ def _assert_visual_match(page: Page, name: str, threshold: float = VISUAL_THRESH
     - pytest --update-snapshots フラグがある場合: ベースラインを強制更新
     """
     baseline_path = SNAPSHOTS_DIR / f"{name}.png"
-    current_bytes = page.screenshot(full_page=False)
+    page.add_style_tag(
+        content="""
+        *, *::before, *::after {
+            animation: none !important;
+            transition: none !important;
+            caret-color: transparent !important;
+        }
+        """
+    )
+    current_bytes = page.screenshot(full_page=False, animations="disabled", caret="hide")
 
     update_mode = "--update-snapshots" in str(
         pytest.ini_options if hasattr(pytest, "ini_options") else ""

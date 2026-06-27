@@ -53,9 +53,7 @@ class TestNavigation:
         page.goto(BASE_URL)
         # AutoRun ナビゲーションリンクをクリック
         autorun_link = (
-            page.locator("a, button")
-            .filter(has_text=re.compile(r"AutoRun|自動テスト", re.IGNORECASE))
-            .first
+            page.locator("a, button").filter(has_text=re.compile(r"AutoRun", re.IGNORECASE)).first
         )
         if autorun_link.count() > 0:
             autorun_link.click()

@@ -221,6 +221,47 @@ def api_import_viewpoint_set(set_id: str) -> dict[str, Any]:
     return {"result": get_viewpoint_store().import_csv(set_id, text)}
 
 
+@bp.get("/api/viewpoint-sets/<set_id>/tree")
+def api_viewpoint_tree(set_id: str) -> dict[str, Any]:
+    store = get_viewpoint_store()
+    version_arg = request.args.get("version")
+    return {
+        "nodes": store.get_tree(
+            set_id,
+            int(version_arg) if version_arg else None,
+            include_deleted=request.args.get("include_deleted") == "1",
+        ),
+        "version": store._preferred_version(set_id),
+    }
+
+
+@bp.post("/api/viewpoint-sets/<set_id>/folders")
+def api_create_viewpoint_folder(set_id: str) -> tuple[dict[str, Any], int]:
+    body = _body()
+    return {"item": get_viewpoint_store().create_folder(set_id, body)}, 201
+
+
+@bp.patch("/api/viewpoint-items/<item_id>/move")
+def api_move_viewpoint_item(item_id: str) -> dict[str, Any]:
+    body = _body()
+    parent_key = body.get("parent_key")
+    return {"item": get_viewpoint_store().move_item(item_id, parent_key)}
+
+
+@bp.patch("/api/viewpoint-sets/<set_id>/items/reorder")
+def api_reorder_viewpoint_items(set_id: str) -> dict[str, Any]:
+    body = _body()
+    orders = body.get("orders", [])
+    if not isinstance(orders, list):
+        orders = []
+    return get_viewpoint_store().reorder_items(set_id, orders)
+
+
+@bp.delete("/api/viewpoint-folders/<item_id>")
+def api_delete_viewpoint_folder(item_id: str) -> dict[str, Any]:
+    return {"item": get_viewpoint_store().delete_folder(item_id), "undo_available": True}
+
+
 @bp.get("/api/viewpoint-selection")
 def api_viewpoint_selection() -> dict[str, Any]:
     store = get_viewpoint_store()

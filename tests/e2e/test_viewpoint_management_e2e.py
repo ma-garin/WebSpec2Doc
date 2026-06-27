@@ -14,7 +14,7 @@ def _open_viewpoints(page: Page) -> None:
     page.locator('.app-nav-item[data-view="viewpoints"]').click()
     expect(page.locator("#view-viewpoints")).to_be_visible()
     page.wait_for_selector(".vp-set-row", state="attached")
-    page.wait_for_selector("#vp-list-content tr[data-vp-item-id]", state="attached")
+    page.wait_for_selector("#vp-table-body tr[data-vp-item-id]", state="attached")
 
 
 def test_viewpoint_initial_state_edit_save_and_focus_restore(page: Page) -> None:
@@ -23,7 +23,7 @@ def test_viewpoint_initial_state_edit_save_and_focus_restore(page: Page) -> None
     expect(page.locator("#vp-feedback")).to_be_hidden()
     expect(page.locator("#vp-bulkbar")).to_be_hidden()
 
-    first_row = page.locator("#vp-list-content tr[data-vp-item-id]").first
+    first_row = page.locator("#vp-table-body tr[data-vp-item-id]").first
     item_id = first_row.get_attribute("data-vp-item-id")
     first_row.press("Enter")
     expect(page.locator("#vp-editor-overlay")).to_be_visible()
@@ -43,7 +43,7 @@ def test_viewpoint_initial_state_edit_save_and_focus_restore(page: Page) -> None
 
 def test_viewpoint_dialog_focus_trap_escape_and_discard(page: Page) -> None:
     _open_viewpoints(page)
-    first_row = page.locator("#vp-list-content tr[data-vp-item-id]").first
+    first_row = page.locator("#vp-table-body tr[data-vp-item-id]").first
     item_id = first_row.get_attribute("data-vp-item-id")
     first_row.click()
     expect(page.locator("#vp-editor-overlay")).to_be_visible()
@@ -68,7 +68,7 @@ def test_viewpoint_dialog_focus_trap_escape_and_discard(page: Page) -> None:
 
 def test_viewpoint_validation_and_conflict_recovery(page: Page) -> None:
     _open_viewpoints(page)
-    page.locator("#vp-list-content tr[data-vp-item-id]").first.click()
+    page.locator("#vp-table-body tr[data-vp-item-id]").first.click()
     original_name = page.locator("#vp-item-name").input_value()
     page.locator("#vp-item-name").fill("")
     page.locator("#vp-save-item").click()
@@ -118,8 +118,8 @@ def test_viewpoint_validation_and_conflict_recovery(page: Page) -> None:
 def test_published_item_is_readonly_and_can_create_next_draft(page: Page) -> None:
     _open_viewpoints(page)
     page.locator('[data-vp-tab="published"]').click()
-    page.wait_for_selector("#vp-list-content tr[data-vp-item-id]", state="attached")
-    page.locator("#vp-list-content tr[data-vp-item-id]").first.click()
+    page.wait_for_selector("#vp-table-body tr[data-vp-item-id]", state="attached")
+    page.locator("#vp-table-body tr[data-vp-item-id]").first.click()
     expect(page.locator("#vp-item-name")).to_be_disabled()
     expect(page.locator("#vp-save-item")).to_be_hidden()
     expect(page.locator("#vp-create-next-draft")).to_be_visible()
@@ -133,7 +133,7 @@ def test_published_item_is_readonly_and_can_create_next_draft(page: Page) -> Non
 def test_viewpoint_create_delete_and_undo(page: Page) -> None:
     _open_viewpoints(page)
     name = f"E2E削除対象-{uuid.uuid4().hex[:8]}"
-    page.locator("#vp-new-item").click()
+    page.locator("#vp-add-viewpoint").click()
     expect(page.locator("#vp-item-name")).to_be_focused()
     page.locator("#vp-item-name").fill(name)
     page.locator("#vp-item-category").fill("E2E")
@@ -141,7 +141,7 @@ def test_viewpoint_create_delete_and_undo(page: Page) -> None:
     page.keyboard.press("Enter")
     expect(page.locator("#vp-editor-overlay")).to_be_hidden()
 
-    row = page.locator("#vp-list-content tr", has_text=name)
+    row = page.locator("#vp-table-body tr", has_text=name)
     expect(row).to_be_visible()
     row.press("Enter")
     page.locator("#vp-delete-item").focus()
@@ -154,7 +154,7 @@ def test_viewpoint_create_delete_and_undo(page: Page) -> None:
     page.locator("#vp-feedback-action").focus()
     page.keyboard.press("Enter")
     expect(page.locator("#vp-feedback")).to_contain_text("削除を取り消しました")
-    expect(page.locator("#vp-list-content tr", has_text=name)).to_be_visible()
+    expect(page.locator("#vp-table-body tr", has_text=name)).to_be_visible()
 
 
 def test_viewpoint_desktop_modal_screenshots(page: Page) -> None:
@@ -165,7 +165,7 @@ def test_viewpoint_desktop_modal_screenshots(page: Page) -> None:
     ]:
         page.set_viewport_size({"width": width, "height": height})
         _open_viewpoints(page)
-        page.locator("#vp-list-content tr[data-vp-item-id]").first.click()
+        page.locator("#vp-table-body tr[data-vp-item-id]").first.click()
         expect(page.locator("#vp-editor-overlay")).to_be_visible()
         page.screenshot(path=f"tests/e2e/screenshots/{name}", full_page=False)
         overflow = page.evaluate(

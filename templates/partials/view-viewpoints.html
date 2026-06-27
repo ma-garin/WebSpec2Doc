@@ -1,6 +1,7 @@
         <!-- ===== 観点管理ビュー ===== -->
         <section class="view" id="view-viewpoints">
-          <div class="vp-screen" id="vp-screen">
+          <div class="vp-shell" id="vp-screen">
+
             <div id="vp-feedback" class="vp-feedback" role="status" aria-live="polite" hidden>
               <span class="vp-feedback-icon" aria-hidden="true">✓</span>
               <span id="vp-feedback-text"></span>
@@ -8,6 +9,7 @@
               <button type="button" id="vp-feedback-close" class="vp-feedback-close" aria-label="通知を閉じる">×</button>
             </div>
 
+            <!-- タブバー -->
             <header class="vp-commandbar">
               <div class="vp-tabs" role="tablist" aria-label="観点管理の表示">
                 <button type="button" class="vp-tab is-active" data-vp-tab="draft" role="tab" aria-selected="true">下書き</button>
@@ -23,11 +25,14 @@
               </div>
             </header>
 
-            <div class="vp-workbench">
+            <!-- 3ペインワークスペース -->
+            <div class="vp-workspace">
+
+              <!-- ペイン1: セットパネル -->
               <aside class="vp-set-panel" aria-label="観点セット">
                 <div class="vp-panel-heading">
                   <h2>観点セット</h2>
-                  <button type="button" id="vp-new-set" class="btn-primary vp-new-set">＋ 新規セット</button>
+                  <button type="button" id="vp-new-set" class="btn-primary vp-new-set">＋ 新規</button>
                 </div>
                 <div id="vp-set-list" class="vp-set-list" aria-live="polite"></div>
                 <div class="vp-assignment-box">
@@ -46,37 +51,101 @@
                 </div>
               </aside>
 
-              <section class="vp-list-panel" aria-label="観点一覧">
-                <div class="vp-list-head">
-                  <div class="vp-list-title-row">
-                    <h2 id="vp-list-title">観点一覧</h2>
-                    <span id="vp-item-count" class="vp-count">0件</span>
-                    <button type="button" id="vp-new-item" class="btn-primary vp-new-item">＋ 観点を追加</button>
+              <!-- ペイン2: ツリーパネル -->
+              <nav class="vp-tree-panel" id="vp-tree-panel" aria-label="分類ツリー">
+                <div class="vp-tree-panel-head">
+                  <span class="vp-tree-panel-title">分類</span>
+                  <div class="vp-tree-head-actions">
+                    <button type="button" id="vp-add-folder" class="vp-icon-btn" title="フォルダを追加">＋</button>
+                    <button type="button" id="vp-tree-template-btn" class="vp-icon-btn" title="標準テンプレートを読み込む">📋</button>
                   </div>
-                  <div id="vp-standard-toolbar" class="vp-standard-toolbar">
+                </div>
+                <!-- 「すべて」選択 -->
+                <button type="button" class="vp-tree-all-btn is-selected" id="vp-tree-all-btn">
+                  📂 すべて
+                  <span id="vp-tree-all-count" class="vp-tree-count"></span>
+                </button>
+                <div id="vp-tree-root" class="vp-tree-root" role="tree"></div>
+
+                <!-- テンプレート選択ポップアップ -->
+                <div id="vp-template-menu" class="vp-template-menu" hidden role="menu">
+                  <div class="vp-template-menu-head">テンプレートを読み込む</div>
+                  <button type="button" class="vp-template-item" data-template="iso25010" role="menuitem">
+                    <strong>ISO/IEC 25010 品質特性</strong>
+                    <span>機能性・信頼性・使用性・効率性・保守性・移植性・セキュリティ・互換性</span>
+                  </button>
+                  <button type="button" class="vp-template-item" data-template="istqb" role="menuitem">
+                    <strong>ISTQB テストレベル</strong>
+                    <span>単体・結合・システム・受入テスト × 業界軸</span>
+                  </button>
+                  <button type="button" class="vp-template-item" data-template="industry" role="menuitem">
+                    <strong>業界別分類</strong>
+                    <span>EC・金融・医療・SaaS・共通</span>
+                  </button>
+                </div>
+              </nav>
+
+              <!-- ペイン3: 観点テーブル -->
+              <section class="vp-table-panel" aria-label="観点一覧">
+
+                <div id="vp-standard-toolbar" class="vp-standard-toolbar vp-table-toolbar">
+                  <nav class="vp-breadcrumb" id="vp-breadcrumb" aria-label="現在位置">
+                    <span class="vp-breadcrumb-root">すべて</span>
+                  </nav>
+                  <div class="vp-table-toolbar-actions">
                     <label class="vp-search">
                       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
                       <input type="search" id="vp-search" placeholder="観点を検索" autocomplete="off">
                     </label>
-                    <select id="vp-filter-category" aria-label="カテゴリで絞り込む"><option value="">カテゴリ</option></select>
                     <select id="vp-filter-risk" aria-label="リスクで絞り込む">
-                      <option value="">リスク</option><option value="5">5（高）</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1（低）</option>
+                      <option value="">リスク</option>
+                      <option value="5">5（高）</option><option value="4">4</option>
+                      <option value="3">3</option><option value="2">2</option><option value="1">1（低）</option>
                     </select>
                     <select id="vp-filter-automation" aria-label="自動化区分で絞り込む">
-                      <option value="">自動化</option><option value="automated">自動</option><option value="semi_automated">半自動</option><option value="human">手動</option>
+                      <option value="">自動化</option>
+                      <option value="automated">自動</option>
+                      <option value="semi_automated">半自動</option>
+                      <option value="manual">手動</option>
                     </select>
                     <select id="vp-filter-state" aria-label="状態で絞り込む">
-                      <option value="">状態</option><option value="enabled">有効</option><option value="disabled">無効</option>
+                      <option value="">状態</option>
+                      <option value="enabled">有効</option>
+                      <option value="disabled">無効</option>
                     </select>
-                  </div>
-                  <div id="vp-proposal-toolbar" class="vp-proposal-toolbar" hidden>
-                    <p>AIは提案だけを作成します。採用するまで下書きやAutoRunには反映されません。</p>
-                    <button type="button" id="vp-generate-proposals" class="btn-primary">AIに提案を依頼</button>
+                    <button type="button" id="vp-add-viewpoint" class="btn-primary">＋ 観点を追加</button>
                   </div>
                 </div>
 
-                <div id="vp-list-content" class="vp-list-content"></div>
+                <div id="vp-proposal-toolbar" class="vp-proposal-toolbar" hidden>
+                  <p>AIは提案だけを作成します。採用するまで下書きやAutoRunには反映されません。</p>
+                  <button type="button" id="vp-generate-proposals" class="btn-primary">AIに提案を依頼</button>
+                </div>
 
+                <!-- インライン編集テーブル -->
+                <div class="vp-inline-table-wrap">
+                  <table class="vp-inline-table" id="vp-inline-table" aria-label="観点一覧テーブル">
+                    <thead>
+                      <tr>
+                        <th class="vp-col-check" scope="col">
+                          <input type="checkbox" id="vp-check-all" aria-label="表示中の観点をすべて選択">
+                        </th>
+                        <th class="vp-col-name" scope="col">観点名</th>
+                        <th class="vp-col-category" scope="col">カテゴリ</th>
+                        <th class="vp-col-risk" scope="col">リスク</th>
+                        <th class="vp-col-auto" scope="col">自動化</th>
+                        <th class="vp-col-state" scope="col">状態</th>
+                        <th class="vp-col-actions" scope="col"></th>
+                      </tr>
+                    </thead>
+                    <tbody id="vp-table-body"></tbody>
+                  </table>
+                  <div id="vp-table-empty" class="vp-table-empty" hidden>
+                    <p>観点がありません。「＋ 観点を追加」で追加してください。</p>
+                  </div>
+                </div>
+
+                <!-- バルクバー -->
                 <div id="vp-bulkbar" class="vp-bulkbar" hidden>
                   <strong id="vp-selected-count">0件を選択</strong>
                   <button type="button" data-vp-bulk="enable">有効化</button>
@@ -86,10 +155,21 @@
                   <button type="button" data-vp-bulk="risk">リスク</button>
                   <button type="button" id="vp-clear-selection" aria-label="選択を解除">×</button>
                 </div>
-              </section>
-            </div>
-          </div>
 
+                <!-- 件数バー -->
+                <div class="vp-count-bar">
+                  <span id="vp-item-count" class="vp-count">0件</span>
+                </div>
+
+                <!-- 履歴/提案コンテンツ (tab切替で表示) -->
+                <div id="vp-list-content" class="vp-list-content" hidden></div>
+
+              </section>
+            </div><!-- /vp-workspace -->
+
+          </div><!-- /vp-shell -->
+
+          <!-- 詳細編集モーダル（既存viewpoint-editor.jsと連携） -->
           <div id="vp-editor-overlay" class="vp-editor-overlay" role="dialog" aria-modal="true" aria-labelledby="vp-editor-title" aria-describedby="vp-editor-state" hidden>
             <div class="vp-editor-modal">
               <header class="vp-editor-head">
@@ -212,5 +292,6 @@
                 <button type="submit" form="vp-editor-form" id="vp-save-item" class="btn-primary">下書きを保存</button>
               </footer>
             </div>
-          </div>
+          </div><!-- /vp-editor-overlay -->
+
         </section>

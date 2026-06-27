@@ -161,9 +161,10 @@ class ViewpointStoreOperations(ViewpointStoreBase):
             conn.execute(
                 """INSERT INTO viewpoint_items
                    (id,version_id,persistent_key,name,category,purpose,trigger_rule,recommended_checks,risk_weight,
-                    automation,standards,tags,enabled,revision,deleted_at,created_at,updated_at)
+                    automation,standards,tags,enabled,node_type,parent_key,sort_order,revision,deleted_at,created_at,updated_at)
                    SELECT lower(hex(randomblob(16))), ?, persistent_key,name,category,purpose,trigger_rule,
-                    recommended_checks,risk_weight,automation,standards,tags,enabled,1,deleted_at,?,?
+                    recommended_checks,risk_weight,automation,standards,tags,enabled,node_type,parent_key,sort_order,
+                    1,deleted_at,?,?
                    FROM viewpoint_items WHERE version_id=?""",
                 (version_id, now, now, source["id"]),
             )
@@ -533,9 +534,11 @@ class ViewpointStoreOperations(ViewpointStoreBase):
                         conn.execute(
                             """INSERT INTO viewpoint_items
                                (id,version_id,persistent_key,name,category,purpose,trigger_rule,recommended_checks,
-                                risk_weight,automation,standards,tags,enabled,revision,deleted_at,created_at,updated_at)
+                                risk_weight,automation,standards,tags,enabled,node_type,parent_key,sort_order,
+                                revision,deleted_at,created_at,updated_at)
                                SELECT lower(hex(randomblob(16))), ?, persistent_key,name,category,purpose,trigger_rule,
-                                recommended_checks,risk_weight,automation,standards,tags,enabled,1,deleted_at,?,?
+                                recommended_checks,risk_weight,automation,standards,tags,enabled,node_type,parent_key,sort_order,
+                                1,deleted_at,?,?
                                FROM viewpoint_items WHERE version_id=?""",
                             (version_id, now, now, source["id"]),
                         )
@@ -554,6 +557,184 @@ class ViewpointStoreOperations(ViewpointStoreBase):
                 "CSV内または既存下書きに同じ永続キーがあるため、1件も取り込みませんでした。"
             ) from exc
         return {"version": version_number, "imported": len(normalized)}
+
+    # ── Tree API ──────────────────────────────────────────────────────────────
+
+    def get_tree(
+        self, set_id: str, version_number: int | None = None, *, include_deleted: bool = False
+    ) -> list[dict[str, Any]]:
+        """Return all nodes (folder + viewpoint) for the tree UI."""
+        version = (
+            self.get_version(set_id, version_number)
+            if version_number is not None
+            else self._preferred_version(set_id)
+        )
+        where = "" if include_deleted else "AND deleted_at IS NULL"
+        with self._connect() as conn:
+            rows = conn.execute(
+                f"SELECT * FROM viewpoint_items WHERE version_id=? {where} ORDER BY sort_order,name",  # nosec B608
+                (version["id"],),
+            ).fetchall()
+        result = []
+        for row in rows:
+            node = self._item_dict(row, source_set_id=set_id, inherited=False)
+            if node["node_type"] == "folder":
+                node["children_count"] = sum(
+                    1
+                    for r in rows
+                    if dict(r).get("parent_key") == row["persistent_key"]
+                    and dict(r).get("node_type") == "viewpoint"
+                    and (not dict(r).get("deleted_at") or include_deleted)
+                )
+            result.append(node)
+        return result
+
+    def create_folder(
+        self, set_id: str, payload: dict[str, Any], *, version_number: int | None = None
+    ) -> dict[str, Any]:
+        version = (
+            self.get_version(set_id, version_number)
+            if version_number
+            else self.ensure_draft(set_id)
+        )
+        self._assert_mutable(version)
+        name = str(payload.get("name", "")).strip()
+        if not name:
+            raise ViewpointStoreError("フォルダ名は必須です。")
+        parent_key = str(payload.get("parent_key") or "") or None
+        # verify parent exists if provided
+        if parent_key:
+            exists = False
+            with self._connect() as conn:
+                row = conn.execute(
+                    "SELECT 1 FROM viewpoint_items WHERE version_id=? AND persistent_key=? AND node_type='folder'",
+                    (version["id"], parent_key),
+                ).fetchone()
+                exists = row is not None
+            if not exists:
+                raise ViewpointStoreError("親フォルダが見つかりません。")
+        folder_key = f"folder-{_key_for(name, uuid.uuid4().hex[:6])}"
+        now = _now()
+        with self._transaction() as conn:
+            # max sort_order among siblings
+            max_order_row = conn.execute(
+                "SELECT COALESCE(MAX(sort_order),0) FROM viewpoint_items WHERE version_id=? AND parent_key IS ?",
+                (version["id"], parent_key),
+            ).fetchone()
+            sort_order = int(max_order_row[0]) + 1
+            folder_id = uuid.uuid4().hex
+            try:
+                conn.execute(
+                    """INSERT INTO viewpoint_items
+                       (id,version_id,persistent_key,name,category,purpose,trigger_rule,
+                        recommended_checks,risk_weight,automation,standards,tags,enabled,
+                        node_type,parent_key,sort_order,created_at,updated_at)
+                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    (
+                        folder_id,
+                        version["id"],
+                        folder_key,
+                        name,
+                        "",
+                        "",
+                        "{}",
+                        "",
+                        3,
+                        "manual",
+                        "",
+                        "[]",
+                        1,
+                        "folder",
+                        parent_key,
+                        sort_order,
+                        now,
+                        now,
+                    ),
+                )
+                conn.execute(
+                    "UPDATE viewpoint_versions SET revision=revision+1,updated_at=? WHERE id=?",
+                    (now, version["id"]),
+                )
+            except Exception as exc:
+                raise ConflictError("フォルダの作成に失敗しました。") from exc
+        return self.get_item(folder_id)
+
+    def move_item(self, item_id: str, parent_key: str | None) -> dict[str, Any]:
+        current = self.get_item(item_id)
+        version = self.get_version(current["set_id"], current["version_number"])
+        self._assert_mutable(version)
+        if parent_key:
+            with self._connect() as conn:
+                row = conn.execute(
+                    "SELECT 1 FROM viewpoint_items WHERE version_id=? AND persistent_key=? AND node_type='folder'",
+                    (version["id"], parent_key),
+                ).fetchone()
+            if not row:
+                raise ViewpointStoreError("移動先フォルダが見つかりません。")
+        now = _now()
+        with self._transaction() as conn:
+            conn.execute(
+                "UPDATE viewpoint_items SET parent_key=?,updated_at=?,revision=revision+1 WHERE id=?",
+                (parent_key, now, item_id),
+            )
+            conn.execute(
+                "UPDATE viewpoint_versions SET revision=revision+1,updated_at=? WHERE id=?",
+                (now, version["id"]),
+            )
+        return self.get_item(item_id)
+
+    def reorder_items(self, set_id: str, orders: list[dict[str, Any]]) -> dict[str, Any]:
+        """Bulk-update sort_order. orders: [{item_id, sort_order}]"""
+        if not orders:
+            return {"updated": 0}
+        now = _now()
+        version_ids: set[str] = set()
+        with self._transaction() as conn:
+            for entry in orders:
+                item_id = str(entry.get("item_id", ""))
+                sort_order = int(entry.get("sort_order", 0))
+                row = conn.execute(
+                    "SELECT version_id FROM viewpoint_items WHERE id=?", (item_id,)
+                ).fetchone()
+                if row is None:
+                    continue
+                conn.execute(
+                    "UPDATE viewpoint_items SET sort_order=?,updated_at=? WHERE id=?",
+                    (sort_order, now, item_id),
+                )
+                version_ids.add(str(row[0]))
+            for vid in version_ids:
+                conn.execute(
+                    "UPDATE viewpoint_versions SET revision=revision+1,updated_at=? WHERE id=?",
+                    (now, vid),
+                )
+        return {"updated": len(orders)}
+
+    def delete_folder(self, item_id: str) -> dict[str, Any]:
+        """Delete a folder and soft-delete all child items recursively."""
+        current = self.get_item(item_id)
+        if current.get("node_type") != "folder":
+            raise ViewpointStoreError("フォルダ以外はこのエンドポイントで削除できません。")
+        version = self.get_version(current["set_id"], current["version_number"])
+        self._assert_mutable(version)
+        now = _now()
+        folder_key = current["persistent_key"]
+        with self._transaction() as conn:
+            # soft-delete all viewpoints under this folder
+            conn.execute(
+                "UPDATE viewpoint_items SET deleted_at=?,revision=revision+1,updated_at=? WHERE version_id=? AND parent_key=? AND node_type='viewpoint'",
+                (now, now, version["id"], folder_key),
+            )
+            # soft-delete the folder itself
+            conn.execute(
+                "UPDATE viewpoint_items SET deleted_at=?,revision=revision+1,updated_at=? WHERE id=?",
+                (now, now, item_id),
+            )
+            conn.execute(
+                "UPDATE viewpoint_versions SET revision=revision+1,updated_at=? WHERE id=?",
+                (now, version["id"]),
+            )
+        return self.get_item(item_id, include_deleted=True)
 
     def _normalize_import_row(self, row: dict[str, Any], *, index: int) -> dict[str, Any]:
         name = str(row.get("name") or "").strip()
@@ -584,8 +765,11 @@ class ViewpointStoreOperations(ViewpointStoreBase):
         self, payload: dict[str, Any], *, persistent_key: str | None = None
     ) -> dict[str, Any]:
         name = str(payload.get("name", "")).strip()
+        node_type = str(payload.get("node_type", "viewpoint"))
         category = str(payload.get("category", "")).strip()
-        if not name or not category:
+        if not name:
+            raise ViewpointStoreError("観点名は必須です。")
+        if node_type == "viewpoint" and not category:
             raise ViewpointStoreError("観点名とカテゴリは必須です。")
         try:
             risk = int(payload.get("risk_weight", 3))
@@ -603,9 +787,13 @@ class ViewpointStoreOperations(ViewpointStoreBase):
                 parsed if isinstance(parsed, list) else [part.strip() for part in tags.split(",")]
             )
         tags = list(dict.fromkeys(str(tag).strip() for tag in tags if str(tag).strip()))[:20]
+        default_pkey_prefix = "folder" if node_type == "folder" else "viewpoint"
         return {
             "persistent_key": persistent_key
-            or str(payload.get("persistent_key") or _key_for(name, uuid.uuid4().hex[:6])).strip(),
+            or str(
+                payload.get("persistent_key")
+                or f"{default_pkey_prefix}-{_key_for(name, uuid.uuid4().hex[:6])}"
+            ).strip(),
             "name": name,
             "category": category,
             "purpose": str(payload.get("purpose", "")).strip(),
@@ -616,6 +804,9 @@ class ViewpointStoreOperations(ViewpointStoreBase):
             "standards": str(payload.get("standards", "")).strip(),
             "tags": tags,
             "enabled": bool(payload.get("enabled", True)),
+            "node_type": node_type if node_type in {"folder", "viewpoint"} else "viewpoint",
+            "parent_key": str(payload.get("parent_key") or "") or None,
+            "sort_order": int(payload.get("sort_order", 0)),
         }
 
     def _insert_item(
@@ -625,8 +816,8 @@ class ViewpointStoreOperations(ViewpointStoreBase):
         conn.execute(
             """INSERT INTO viewpoint_items
                (id,version_id,persistent_key,name,category,purpose,trigger_rule,recommended_checks,risk_weight,
-                automation,standards,tags,enabled,created_at,updated_at)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                automation,standards,tags,enabled,node_type,parent_key,sort_order,created_at,updated_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 item_id,
                 version_id,
@@ -641,6 +832,9 @@ class ViewpointStoreOperations(ViewpointStoreBase):
                 item["standards"],
                 _canonical(item["tags"]),
                 int(item["enabled"]),
+                item.get("node_type", "viewpoint"),
+                item.get("parent_key"),
+                int(item.get("sort_order", 0)),
                 now,
                 now,
             ),
@@ -656,6 +850,9 @@ class ViewpointStoreOperations(ViewpointStoreBase):
         result["enabled"] = bool(result.get("enabled"))
         result["source_set_id"] = source_set_id
         result["inherited"] = inherited
+        result.setdefault("node_type", "viewpoint")
+        result.setdefault("parent_key", None)
+        result.setdefault("sort_order", 0)
         return result
 
     def _assignment_dict(self, row: sqlite3.Row) -> dict[str, Any]:

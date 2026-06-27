@@ -1,42 +1,42 @@
-        <!-- ===== ダッシュボード（監視対象サイト） ===== -->
+        <!-- ===== ホーム（URL解析と履歴） ===== -->
         <section class="view is-active" id="view-dashboard">
           <div class="dash-hero">
             <div class="dash-hero-main">
-              <h1 class="dash-hero-title">URL から QA テスト文書を自動生成</h1>
-              <p class="dash-hero-sub">稼働中の Web システムの URL を貼るだけ。画面解析 → 仕様書 → テスト設計までを自動で作ります。</p>
+              <h1 class="dash-hero-title">URLからQAドキュメントを自動生成</h1>
+              <p class="dash-hero-sub">稼働中のWebシステムを解析し、画面仕様書・テスト設計・画面遷移図をまとめて作成します。</p>
               <div class="dash-hero-form">
-                <input type="url" id="hero-url" class="url-input dash-hero-input" placeholder="https://example.com   解析したい URL を貼り付け" autocomplete="url" />
-                <button type="button" id="hero-start-btn" class="btn-primary dash-hero-start">始める</button>
+                <input type="url" id="hero-url" class="url-input dash-hero-input" placeholder="https://example.com　解析したいURLを入力" autocomplete="url" />
+                <button type="button" id="hero-start-btn" class="btn-primary dash-hero-start">解析を始める</button>
               </div>
-              <div class="dash-hero-steps">
-                <span class="dash-hero-step"><b>①</b> 画面を解析</span>
+              <div class="dash-hero-steps" aria-label="ドキュメント生成の流れ">
+                <span class="dash-hero-step"><b>1</b> 画面を解析</span>
                 <span class="dash-hero-arrow">→</span>
-                <span class="dash-hero-step"><b>②</b> 画面仕様書</span>
+                <span class="dash-hero-step"><b>2</b> 画面仕様書</span>
                 <span class="dash-hero-arrow">→</span>
-                <span class="dash-hero-step"><b>③</b> テスト設計</span>
+                <span class="dash-hero-step"><b>3</b> テスト設計</span>
                 <span class="dash-hero-note">目安: 10画面で約2〜3分</span>
-                <button type="button" id="hero-sample-btn" class="dash-hero-sample">サンプル(example.com)で試す</button>
+                <button type="button" id="hero-sample-btn" class="dash-hero-sample">サンプルURLで試す</button>
               </div>
               <div class="dash-hero-modes">
                 <button type="button" id="hero-guided-btn" class="dash-mode-card">
                   <span class="dash-mode-icon">✍</span>
-                  <span class="dash-mode-body"><b>ガイド付き</b><small>1画面ずつ確認しながら作る・おすすめ</small></span>
+                  <span class="dash-mode-body"><b>ガイド付き解析</b><small>画面を確認しながら生成条件を設定</small></span>
                 </button>
-                <button type="button" id="hero-auto-btn" class="dash-mode-card">
+                <button type="button" id="hero-auto-btn" class="dash-mode-card dash-mode-card-primary">
                   <span class="dash-mode-icon">⚡</span>
-                  <span class="dash-mode-body"><b>全自動 (AutoRun)</b><small>URL だけでテスト実行まで一括・最速</small></span>
+                  <span class="dash-mode-body"><b>AutoRun</b><small>URLからテスト実行まで全自動</small></span>
                 </button>
               </div>
             </div>
           </div>
           <div class="dashboard-section-head">
             <div>
-              <h2 class="dash-section-title">最近のサイト</h2>
-              <p class="dashboard-section-copy">監視対象サイト。<strong class="term" data-term="再クロール: 同じサイトをもう一度読み取って最新の画面構成を取得すること">再クロール</strong>で<span class="term" data-term="仕様ドリフト: 前回取得時から画面・入力項目・遷移が変わってしまっていること。テスト資産の陳腐化を意味します">仕様ドリフト</span>を検知できます。</p>
+              <h2 class="dash-section-title">解析履歴</h2>
+              <p class="dashboard-section-copy">過去に解析したサイトのドキュメント確認や再クロールができます。</p>
             </div>
             <div class="dashboard-section-actions">
               <button class="btn-outline-sm" id="reload-history">再読み込み</button>
-              <button class="btn-primary dashboard-add-site-btn" id="add-site-btn-2">+ サイトを追加</button>
+              <button class="btn-primary dashboard-add-site-btn" id="add-site-btn-2">+　新規解析</button>
             </div>
           </div>
           <div id="history-body"><div class="empty">読み込み中...</div></div>

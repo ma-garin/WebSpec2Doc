@@ -15,7 +15,7 @@ document.getElementById('sidebar-toggle-btn')?.addEventListener('click', () => {
   localStorage.setItem(SIDEBAR_KEY, collapsed ? '1' : '0');
 });
 const VIEW_HEADER = {
-  dashboard: { trail: ['ダッシュボード'], title: '監視対象サイト' },
+  dashboard: { trail: ['WebSpec2Doc', 'ホーム'], title: 'QAドキュメント生成' },
   generate: { trail: ['ダッシュボード', 'サイトを追加'], title: 'サイトを追加 / 再クロール' },
   'qa-quality': { trail: ['ダッシュボード', '品質観点'], title: '品質観点' },
   'auto-run': { trail: ['ダッシュボード', 'AutoRun'], title: 'AutoRun — 全自動テスト実行' },
@@ -37,9 +37,9 @@ function setHeader(trail, title) {
 }
 
 // ---- ナビ切替 ----
-document.querySelectorAll('.app-nav-item').forEach(btn => btn.addEventListener('click', () => switchView(btn.dataset.view)));
+document.querySelectorAll('.app-nav-item[data-view]').forEach(btn => btn.addEventListener('click', () => switchView(btn.dataset.view)));
 function switchView(name) {
-  document.querySelectorAll('.app-nav-item').forEach(b => b.classList.toggle('is-active', b.dataset.view === name));
+  document.querySelectorAll('.app-nav-item[data-view]').forEach(b => b.classList.toggle('is-active', b.dataset.view === name));
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('is-active', v.id === 'view-' + name));
   const h = VIEW_HEADER[name];
   if (h) setHeader(h.trail, h.title);
@@ -90,6 +90,7 @@ function openAddSite() {
 }
 document.getElementById('add-site-btn').addEventListener('click', openAddSite);
 document.getElementById('add-site-btn-2').addEventListener('click', openAddSite);
+document.getElementById('nav-new-analysis-btn').addEventListener('click', openAddSite);
 
 // ---- ダッシュボード・ヒーロー（ゴールデンパス入口） ----
 function _heroStartGuided(prefillUrl) {

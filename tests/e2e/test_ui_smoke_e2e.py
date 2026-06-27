@@ -75,6 +75,29 @@ class TestNavigation:
         assert len(nav_items) > 0, "ナビゲーションアイテムが見つかりません"
 
 
+class TestHome:
+    """ホームのURL解析導線とAutoRun導線を検証する。"""
+
+    def test_home_explains_qa_document_generation(self, page: Page) -> None:
+        page.goto(BASE_URL)
+        expect(page.locator("#hero-url")).to_be_visible()
+        expect(page.locator("#view-dashboard")).to_contain_text("QAドキュメント")
+        expect(page.locator("#view-dashboard")).to_contain_text("画面仕様書")
+        expect(page.locator("#history-body")).to_be_visible()
+
+    def test_new_analysis_opens_existing_generate_flow(self, page: Page) -> None:
+        page.goto(BASE_URL)
+        page.locator("#nav-new-analysis-btn").click()
+        expect(page.locator("#view-generate")).to_be_visible()
+
+    def test_autorun_is_visible_and_opens(self, page: Page) -> None:
+        page.goto(BASE_URL)
+        autorun = page.locator('.app-nav-item[data-view="auto-run"]')
+        expect(autorun).to_be_visible()
+        autorun.click()
+        expect(page.locator("#view-auto-run")).to_be_visible()
+
+
 class TestResponsiveness:
     """レスポンシブレイアウトの検証。"""
 
@@ -101,3 +124,20 @@ class TestResponsiveness:
         assert (
             scroll_width <= 1366 + 20
         ), f"水平スクロールが発生しています: scrollWidth={scroll_width}px"  # 20px の許容誤差
+
+    def test_tablet_home_layout(self, page: Page) -> None:
+        """1024×768 でURL入力と解析方式が表示される。"""
+        page.set_viewport_size({"width": 1024, "height": 768})
+        page.goto(BASE_URL)
+        page.screenshot(path="tests/e2e/screenshots/layout_tablet_1024x768.png")
+        expect(page.locator("#hero-url")).to_be_visible()
+        expect(page.locator("#hero-auto-btn")).to_be_visible()
+
+    def test_mobile_home_has_no_page_overflow(self, page: Page) -> None:
+        """390×844 で主要導線が縦並びになり、ページが横溢れしない。"""
+        page.set_viewport_size({"width": 390, "height": 844})
+        page.goto(BASE_URL)
+        page.screenshot(path="tests/e2e/screenshots/layout_mobile_390x844.png")
+        expect(page.locator("#hero-url")).to_be_visible()
+        expect(page.locator("#hero-auto-btn")).to_be_visible()
+        assert page.evaluate("document.body.scrollWidth") <= 390

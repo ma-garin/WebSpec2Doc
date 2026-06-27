@@ -1,6 +1,7 @@
-// ---- 履歴 ----
+// ---- 解析履歴 ----
 async function loadHistory() {
   const body = document.getElementById('history-body');
+  if (!body) return;
   body.innerHTML = '<div class="empty">読み込み中...</div>';
   try {
     const res = await fetch('/api/history');
@@ -13,7 +14,6 @@ async function loadHistory() {
     body.innerHTML = _buildTable(data.items);
     body.querySelectorAll('.hist-open').forEach(b => b.addEventListener('click', () => openResultsForDomain(b.dataset.domain)));
     body.querySelectorAll('.hist-recrawl').forEach(b => b.addEventListener('click', async () => {
-      // 二重クリック防止 + ローディング表示
       b.disabled = true;
       const orig = b.textContent;
       b.textContent = '読み込み中…';
@@ -21,28 +21,28 @@ async function loadHistory() {
     }));
     body.querySelectorAll('.hist-delete').forEach(b => b.addEventListener('click', () => deleteSite(b.dataset.domain, b)));
   } catch (e) {
-    body.innerHTML = '<div class="empty">サイト一覧の読み込みに失敗しました。</div>';
+    body.innerHTML = '<div class="empty">解析履歴の読み込みに失敗しました。</div>';
   }
 }
-document.getElementById('reload-history').addEventListener('click', loadHistory);
+document.getElementById('reload-history')?.addEventListener('click', loadHistory);
 
 function _emptyState() {
   return `
     <div class="dashboard-empty">
       <div class="dashboard-empty-icon">🔍</div>
-      <div class="dashboard-empty-title">まだサイトが登録されていません</div>
+      <div class="dashboard-empty-title">まだ解析履歴がありません</div>
       <div class="dashboard-empty-desc">
-        対象システムの URL を登録すると、画面一覧・入力項目・テスト条件の文書を自動生成します。
+        対象システムのURLを登録すると、画面仕様書・テスト設計・画面遷移図を自動生成します。
       </div>
       <div class="onboard-steps">
-        <div class="onboard-step"><span class="onboard-num">1</span><strong>URLを入力</strong><span>対象システムのトップページURLを貼り付けて解析</span></div>
+        <div class="onboard-step"><span class="onboard-num">1</span><strong>URLを入力</strong><span>対象システムのURLを貼り付けて解析</span></div>
         <div class="onboard-arrow">→</div>
-        <div class="onboard-step"><span class="onboard-num">2</span><strong>画面を選んで実行</strong><span>検出された画面一覧から対象を選び、生成を開始</span></div>
+        <div class="onboard-step"><span class="onboard-num">2</span><strong>画面を選択</strong><span>検出された画面から生成対象を選択</span></div>
         <div class="onboard-arrow">→</div>
-        <div class="onboard-step"><span class="onboard-num">3</span><strong>文書を確認</strong><span>画面仕様・テスト条件・遷移図のレポートが完成</span></div>
+        <div class="onboard-step"><span class="onboard-num">3</span><strong>ドキュメントを確認</strong><span>生成された仕様書とテスト設計を確認</span></div>
       </div>
       <button type="button" class="btn-primary empty-add-btn" style="height:44px;padding:0 28px;font-size:15px;margin-top:8px">
-        + 最初のサイトを追加する
+        最初の解析を始める
       </button>
       <p style="font-size:12px;color:var(--text-muted);margin-top:4px">所要時間の目安: 10画面のサイトで約2〜3分</p>
     </div>`;
@@ -53,7 +53,7 @@ function _freshnessLabel(updatedTs) {
   const diff = now - updatedTs;
   const days = Math.floor(diff / 86400);
   if (days === 0) return { label: '今日', cls: 'fresh-today' };
-  if (days <= 7)  return { label: `${days}日前`, cls: 'fresh-week' };
+  if (days <= 7) return { label: `${days}日前`, cls: 'fresh-week' };
   if (days <= 30) return { label: `${days}日前`, cls: 'fresh-month' };
   return { label: `${days}日前`, cls: 'fresh-old' };
 }
@@ -61,60 +61,37 @@ function _freshnessLabel(updatedTs) {
 function _buildTable(items) {
   let html = `
     <table class="data dashboard-table">
-      <thead>
-        <tr>
-          <th>サイト</th>
-          <th class="num">画面</th>
-          <th class="num">項目</th>
-          <th>クロール履歴</th>
-          <th>最終クロール</th>
-          <th>操作</th>
-        </tr>
-      </thead>
+      <thead><tr><th>サイト</th><th class="num">画面</th><th class="num">項目</th><th>解析回数</th><th>最終解析</th><th>操作</th></tr></thead>
       <tbody>`;
 
   for (const it of items) {
     const fresh = _freshnessLabel(it.updated_ts || 0);
     const snapBadge = it.snapshot_count >= 2
       ? `<span class="snap-badge">${it.snapshot_count}回</span>`
-      : it.snapshot_count === 1
-        ? `<span class="snap-badge snap-badge-first">初回</span>`
-        : '';
-    const diffBadge = it.has_diff
-      ? `<span class="diff-badge">差分あり</span>`
-      : '';
-
+      : it.snapshot_count === 1 ? '<span class="snap-badge snap-badge-first">初回</span>' : '';
+    const diffBadge = it.has_diff ? '<span class="diff-badge">差分あり</span>' : '';
     html += `
       <tr class="${it.has_diff ? 'has-drift' : ''}">
-        <td>
-          <div class="site-cell">
-            <strong>${escHtml(it.domain)}</strong>
-            ${diffBadge}
-          </div>
-        </td>
+        <td><div class="site-cell"><strong>${escHtml(it.domain)}</strong>${diffBadge}</div></td>
         <td class="num">${it.screens}</td>
         <td class="num">${it.fields}</td>
         <td>${snapBadge}</td>
         <td><span class="freshness ${fresh.cls}">${fresh.label}</span></td>
-        <td>
-          <div class="history-actions">
-            <button type="button" class="btn-primary hist-open" data-domain="${escHtml(it.domain)}" style="height:36px;padding:0 14px;font-size:13px">開く</button>
-            <button type="button" class="btn-outline-sm hist-recrawl" data-domain="${escHtml(it.domain)}">再クロール</button>
-            <button type="button" class="btn-outline-sm hist-delete" data-domain="${escHtml(it.domain)}">削除</button>
-          </div>
-        </td>
+        <td><div class="history-actions">
+          <button type="button" class="btn-primary hist-open" data-domain="${escHtml(it.domain)}" style="height:36px;padding:0 14px;font-size:13px">開く</button>
+          <button type="button" class="btn-outline-sm hist-recrawl" data-domain="${escHtml(it.domain)}">再クロール</button>
+          <button type="button" class="btn-outline-sm hist-delete" data-domain="${escHtml(it.domain)}">削除</button>
+        </div></td>
       </tr>`;
   }
-  html += '</tbody></table>';
-  return html;
+  return html + '</tbody></table>';
 }
 
 async function deleteSite(domain, btn) {
   const ok = await confirmDialog({
-    title: 'クロール結果の削除',
+    title: '解析結果の削除',
     message: `「${domain}」の画面一覧・スナップショット・スクリーンショットをすべて削除します。この操作は取り消せません。`,
-    confirmLabel: '削除する',
-    danger: true,
+    confirmLabel: '削除する', danger: true,
   });
   if (!ok) return;
   if (btn) { btn.disabled = true; btn.textContent = '削除中…'; }

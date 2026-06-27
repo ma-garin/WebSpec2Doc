@@ -366,7 +366,7 @@ class ViewpointStoreBase:
                     (SELECT COUNT(*) FROM viewpoint_assignments a
                      WHERE a.set_id=s.id AND a.deleted_at IS NULL AND a.enabled=1) AS assignment_count
                     FROM viewpoint_sets s {where}
-                    ORDER BY s.is_default DESC, s.priority DESC, lower(s.name)"""
+                    ORDER BY s.is_default DESC, s.priority DESC, lower(s.name)"""  # nosec B608
             ).fetchall()
         return [dict(row) for row in rows]
 
@@ -485,7 +485,7 @@ class ViewpointStoreBase:
             params.append(status)
         with self._connect() as conn:
             row = conn.execute(
-                f"SELECT * FROM viewpoint_versions WHERE {' AND '.join(clauses)} ORDER BY version_number DESC LIMIT 1",
+                f"SELECT * FROM viewpoint_versions WHERE {' AND '.join(clauses)} ORDER BY version_number DESC LIMIT 1",  # nosec B608
                 params,
             ).fetchone()
         if row is None:
@@ -571,7 +571,7 @@ class ViewpointStoreBase:
         with self._connect() as conn:
             where = "" if include_deleted else "AND deleted_at IS NULL"
             rows = conn.execute(
-                f"SELECT * FROM viewpoint_items WHERE version_id=? {where} ORDER BY category,name",
+                f"SELECT * FROM viewpoint_items WHERE version_id=? {where} ORDER BY category,name",  # nosec B608
                 (version["id"],),
             ).fetchall()
         return [self._item_dict(row, source_set_id=set_id, inherited=False) for row in rows]

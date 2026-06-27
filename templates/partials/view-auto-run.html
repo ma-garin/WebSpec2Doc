@@ -12,6 +12,15 @@
                   <label for="autorun-url">対象URL</label>
                   <input type="url" id="autorun-url" class="url-input input-compact" placeholder="https://example.com" autocomplete="url" list="url-history-list" />
                 </div>
+                <div class="control-field">
+                  <label for="autorun-viewpoint-set">観点セット</label>
+                  <select id="autorun-viewpoint-set" class="url-input select-compact">
+                    <option value="">自動選択</option>
+                  </select>
+                  <div id="autorun-viewpoint-recommendation" class="autorun-viewpoint-recommendation" aria-live="polite">
+                    公開済み観点セットを確認しています…
+                  </div>
+                </div>
                 <div class="control-grid-2">
                   <div class="control-field">
                     <label for="autorun-depth">深さ</label>
@@ -99,6 +108,10 @@
                   <div class="stat-card autorun-status-card autorun-status-wide">
                     <span class="stat-card-label">部分成果</span>
                     <strong id="autorun-partial-output" class="autorun-status-text">まだありません</strong>
+                  </div>
+                  <div class="stat-card autorun-status-card autorun-status-wide autorun-viewpoint-status-card">
+                    <span class="stat-card-label">適用観点</span>
+                    <strong id="autorun-applied-viewpoint" class="autorun-status-text">開始時に公開版を固定します</strong>
                   </div>
                 </div>
 

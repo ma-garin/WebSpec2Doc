@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='app-report.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='app-components.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='viewpoints.css') }}">
   <script>
     // テーマの早期適用（描画前にフラッシュを防ぐ）。保存値がなければ OS 設定に追従。
     (function () {
@@ -59,6 +60,8 @@
 {% include 'partials/view-dashboard.html' %}
 
 {% include 'partials/view-qa-quality.html' %}
+
+{% include 'partials/view-viewpoints.html' %}
 
 {% include 'partials/view-auto-run.html' %}
 
@@ -113,6 +116,24 @@
     </div>
   </div>
 
+  <!-- 入力モーダル（prompt() 代替） -->
+  <div id="input-dialog-overlay" class="confirm-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="input-dialog-title">
+    <div class="confirm-card input-dialog-card">
+      <h2 class="confirm-title" id="input-dialog-title"></h2>
+      <p class="confirm-message" id="input-dialog-message"></p>
+      <div class="input-dialog-field-wrap">
+        <input id="input-dialog-input" class="input-dialog-input" type="text" autocomplete="off">
+        <textarea id="input-dialog-textarea" class="input-dialog-input" rows="4" hidden></textarea>
+        <datalist id="input-dialog-datalist"></datalist>
+      </div>
+      <p id="input-dialog-error" class="input-dialog-error" hidden></p>
+      <div class="confirm-actions">
+        <button type="button" id="input-dialog-cancel-btn" class="btn-outline-sm" style="height:40px;padding:0 18px">キャンセル</button>
+        <button type="button" id="input-dialog-ok-btn" class="btn-primary"></button>
+      </div>
+    </div>
+  </div>
+
   <!-- キーボードショートカット ヘルプ -->
   <div id="shortcut-overlay" class="shortcut-overlay hidden" role="dialog" aria-modal="true" aria-label="キーボードショートカット">
     <div class="shortcut-card">
@@ -145,7 +166,10 @@
   <script src="{{ url_for('static', filename='js/wizard.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/execution.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/results.js') }}?v={{ _ver }}"></script>
+  <script src="{{ url_for('static', filename='js/autorun-approval.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/autorun.js') }}?v={{ _ver }}"></script>
+  <script src="{{ url_for('static', filename='js/viewpoint-editor.js') }}?v={{ _ver }}"></script>
+  <script src="{{ url_for('static', filename='js/viewpoints.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/events.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/view-utils.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/view-overview.js') }}?v={{ _ver }}"></script>

@@ -255,6 +255,27 @@
   margin-top: 0;
 }
 
+.autorun-viewpoint-recommendation {
+  margin-top: 2px;
+  padding: 8px 9px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface-soft);
+  color: var(--text-muted);
+  font-size: 10.5px;
+  line-height: 1.45;
+}
+
+.autorun-viewpoint-recommendation.is-error {
+  color: var(--critical);
+  background: var(--critical-bg);
+  border-color: var(--critical-border);
+}
+
+.autorun-viewpoint-status-card {
+  border-left: 3px solid var(--primary);
+}
+
 .autorun-progress-head,
 .autorun-panel-head {
   display: flex;

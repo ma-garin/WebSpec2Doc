@@ -7,6 +7,9 @@ let _autoRunPreviewLoaded = false;
 let _autoRunPreviewData = null;
 let _arCards = {};  // 生成済みカード管理: {crawl, qa, scripts, tests}
 let _autoRunApprovalModalShown = false;
+let _autorunViewpointSets = [];
+let _autorunViewpointRecommendation = null;
+let _autorunViewpointTimer = null;
 
 const AUTORUN_STEP_MAP = {
   idle:              null,
@@ -105,6 +108,7 @@ const AUTORUN_OUTPUT_LABELS = {
   spec_ts:                 'autorun.spec.ts',
   playwright_report_html:  'テスト実行レポート',
   playwright_report_json:  '実行結果 JSON',
+  viewpoint_snapshot:      '観点スナップショット',
 };
 
 // ---- AutoRun: ユーティリティ ----
@@ -149,6 +153,57 @@ function _autorunUpdateStatusPanel(data) {
   _autorunSetText('autorun-estimate', meta.estimate);
   _autorunSetText('autorun-next-action', meta.next);
   _autorunSetText('autorun-partial-output', _autorunOutputSummary(data));
+  const viewpoint = data.viewpoint || {};
+  _autorunSetText(
+    'autorun-applied-viewpoint',
+    viewpoint.set_name
+      ? `${viewpoint.set_name} v${viewpoint.version} / ${viewpoint.count}件 / ${viewpoint.selection_reason}`
+      : '開始時に公開版を固定します',
+  );
+}
+
+async function autorunLoadViewpointSelection() {
+  const url = (document.getElementById('autorun-url')?.value || '').trim();
+  const select = document.getElementById('autorun-viewpoint-set');
+  const note = document.getElementById('autorun-viewpoint-recommendation');
+  if (!select || !note) return;
+  const current = select.value;
+  note.textContent = '公開済み観点セットを確認しています…';
+  note.classList.remove('is-error');
+  try {
+    const response = await fetch(`/api/viewpoint-selection?url=${encodeURIComponent(url)}`);
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || '観点セットを読み込めません');
+    _autorunViewpointSets = data.sets || [];
+    _autorunViewpointRecommendation = data.recommended || null;
+    select.innerHTML = '<option value="">自動選択</option>' + _autorunViewpointSets.map((item) =>
+      `<option value="${escHtml(item.id)}">${escHtml(item.name)} v${Number(item.published_version || 0)}</option>`
+    ).join('');
+    if (_autorunViewpointSets.some((item) => item.id === current)) select.value = current;
+    _autorunRenderViewpointRecommendation();
+    document.getElementById('autorun-start-btn').disabled = false;
+  } catch (error) {
+    note.textContent = `観点セットを固定できません: ${error.message}。観点管理で既定公開版を確認してください。`;
+    note.classList.add('is-error');
+    document.getElementById('autorun-start-btn').disabled = true;
+  }
+}
+
+function _autorunRenderViewpointRecommendation() {
+  const select = document.getElementById('autorun-viewpoint-set');
+  const note = document.getElementById('autorun-viewpoint-recommendation');
+  if (!select || !note) return;
+  if (select.value) {
+    const selected = _autorunViewpointSets.find((item) => item.id === select.value);
+    note.textContent = selected
+      ? `${selected.name} v${selected.published_version}を手動選択 / ${Number(selected.item_count || 0)}件`
+      : '選択した公開版を開始時に固定します。';
+    return;
+  }
+  const recommended = _autorunViewpointRecommendation;
+  note.textContent = recommended
+    ? `推奨: ${recommended.set_name} v${recommended.version} / ${recommended.viewpoint_count}件 / ${recommended.selection_reason}`
+    : 'URLと適用ルールから公開版を自動選択します。';
 }
 
 function _autorunFailureTypeLabel(type) {
@@ -223,6 +278,7 @@ async function autorunStart() {
 
   const depth    = document.getElementById('autorun-depth')?.value || '2';
   const maxPages = document.getElementById('autorun-max-pages')?.value || '30';
+  const viewpointSetId = document.getElementById('autorun-viewpoint-set')?.value || '';
 
   const btn = document.getElementById('autorun-start-btn');
   if (btn) { btn.disabled = true; btn.textContent = '開始中…'; }
@@ -232,7 +288,12 @@ async function autorunStart() {
     const res = await fetch('/api/autorun/start', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, depth: parseInt(depth), max_pages: parseInt(maxPages) }),
+      body: JSON.stringify({
+        url,
+        depth: parseInt(depth),
+        max_pages: parseInt(maxPages),
+        viewpoint_set_id: viewpointSetId,
+      }),
     });
     const data = await res.json();
     if (!res.ok || !data.ok) throw new Error(data.error || '開始に失敗しました');
@@ -538,280 +599,6 @@ function _arAppendCard(id, icon, title, timeStr, meta, buttons) {
 }
 
 // ---- AutoRun: テストケースプレビューモーダル ----
-function arShowPreview() {
-  const panel = document.getElementById('autorun-preview-panel');
-  if (!panel) return;
-  const isOpen = panel.style.display === 'flex';
-  if (isOpen) {
-    panel.style.display = 'none';
-    return;
-  }
-  panel.style.display = 'flex';
-  if (!_autoRunPreviewLoaded) {
-    _autoRunPreviewLoaded = true;
-    _autorunLoadPreview();
-  }
-}
-
-function _autorunClosePreviewOnBackdrop(e) {
-  if (e.target === document.getElementById('autorun-preview-panel')) arShowPreview();
-}
-
-// ---- AutoRun: テストプレビュー ----
-async function _autorunLoadPreview() {
-  if (!_autoRunJobId) return;
-  const loadingEl = document.getElementById('autorun-preview-loading');
-  if (loadingEl) loadingEl.textContent = '読み込み中…';
-  try {
-    const data = await fetch('/api/autorun/preview?job_id=' + encodeURIComponent(_autoRunJobId)).then(r => r.json());
-    _autoRunPreviewData = data;
-    _autorunRenderPreview(data);
-    _autorunUpdateFilterCounts(data.summary?.filter_counts || {});
-    if (loadingEl) loadingEl.textContent = '';
-  } catch (e) {
-    if (loadingEl) loadingEl.textContent = '(読み込みエラー)';
-  }
-}
-
-function _autorunRenderPreview(data) {
-  const summaryEl = document.getElementById('autorun-preview-summary');
-  const tableWrap = document.getElementById('autorun-preview-table-wrap');
-  const specEl    = document.getElementById('autorun-preview-spec');
-
-  const summary    = data.summary || {};
-  const candidates = data.candidates || [];
-  const byStatus   = summary.by_status || {};
-  const byTitle    = summary.by_title || {};
-
-  // サマリーバー
-  if (summaryEl) {
-    const autoCount  = byStatus.auto || 0;
-    const skipCount  = (byStatus['manual-review'] || 0) + (byStatus.review || 0);
-    const titleBadges = Object.entries(byTitle)
-      .map(([t, c]) => `<span class="fmt-badge">${escHtml(t)}: ${c}</span>`)
-      .join('');
-    summaryEl.innerHTML = `
-      <div class="autorun-preview-counts">
-        <span><strong>${summary.total || 0}</strong> 件</span>
-        <span class="status-low">自動: ${autoCount}</span>
-        <span class="status-muted">スキップ: ${skipCount}</span>
-      </div>
-      <div class="fmt-badges autorun-preview-badges">${titleBadges}</div>`;
-  }
-
-  // テストケーステーブル
-  if (tableWrap) {
-    if (candidates.length) {
-      const rows = candidates.map(c => {
-        const statusCls = c.automation_status === 'auto' ? 'status-low' : 'status-muted';
-        return `<tr>
-          <td class="cell-id">${escHtml(c.id || '')}</td>
-          <td class="cell-title">${escHtml(c.title || '')}</td>
-          <td class="cell-status ${statusCls}">${escHtml(c.automation_status || '')}</td>
-          <td class="cell-id">${escHtml(c.trace_id || '')}</td>
-          <td class="cell-muted">${escHtml((c.expected || '').substring(0, 60))}</td>
-        </tr>`;
-      }).join('');
-      tableWrap.innerHTML = `<table class="data autorun-preview-table">
-        <thead><tr><th>ID</th><th>タイトル</th><th>自動化</th><th>Trace</th><th>期待結果</th></tr></thead>
-        <tbody>${rows}</tbody></table>`;
-    } else {
-      tableWrap.innerHTML = '<div class="empty arm-empty">テストケースなし</div>';
-    }
-  }
-
-  // スクリプト
-  if (specEl) specEl.textContent = data.spec_content || '(スクリプトなし)';
-}
-
-function _autorunUpdateFilterCounts(counts) {
-  const map = { all: '#afc-all', smoke: '#afc-smoke', transition: '#afc-transition', form: '#afc-form' };
-  Object.entries(map).forEach(([key, sel]) => {
-    const el = document.querySelector(sel);
-    if (el && counts[key] !== undefined) el.textContent = `(${counts[key]}件)`;
-  });
-}
-
-// ---- AutoRun: テスト結果 ----
-function _autorunRenderResults(results, outputs) {
-  const panel      = document.getElementById('autorun-result-panel');
-  const cards      = document.getElementById('autorun-result-cards');
-  const tableWrap  = document.getElementById('autorun-result-table-wrap');
-  const reportLinks= document.getElementById('autorun-report-links');
-  if (!panel || !cards || !tableWrap || !reportLinks || results.total == null) return;
-  panel.style.display = '';
-
-  cards.innerHTML = [
-    { label:'PASS',  val:results.passed,  cls:'status-low' },
-    { label:'FAIL',  val:results.failed,  cls:'status-critical' },
-    { label:'SKIP',  val:results.skipped, cls:'status-muted' },
-    { label:'TOTAL', val:results.total,   cls:'status-default' },
-  ].map(c => `<div class="stat-card autorun-result-card"><div class="num ${c.cls}">${c.val ?? 0}</div><div class="lbl">${c.label}</div></div>`).join('');
-
-  const tests = results.tests || [];
-  if (tests.length) {
-    const rows = tests.map(t => {
-      const cls = t.status==='passed' ? 'status-low' : t.status==='skipped' ? 'status-muted' : 'status-critical';
-      return `<tr>
-        <td class="cell-title">${escHtml(t.title||'')}</td>
-        <td class="cell-status ${cls}">${escHtml(t.status||'')}</td>
-        <td class="cell-id">${t.duration_ms||0}ms</td>
-        <td class="cell-muted status-critical">${escHtml((t.error||'').substring(0,100))}</td>
-      </tr>`;
-    }).join('');
-    tableWrap.innerHTML = `<table class="data autorun-result-table-data">
-      <thead><tr><th>テスト</th><th>結果</th><th>時間</th><th>エラー</th></tr></thead>
-      <tbody>${rows}</tbody></table>`;
-  } else if (results.error) {
-    tableWrap.innerHTML = `<div class="input-field-message input-field-message-error">${escHtml(results.error)}</div>`;
-  }
-
-  reportLinks.innerHTML = '';
-  if (outputs.playwright_report_html) {
-    reportLinks.innerHTML += `<button class="btn-primary qa-preview-btn" data-path="${escHtml(outputs.playwright_report_html)}" data-label="テスト実行レポート">実行レポートを見る</button> `;
-  }
-  if (outputs.qa_process_report) {
-    reportLinks.innerHTML += `<button class="btn-outline-sm qa-preview-btn" data-path="${escHtml(outputs.qa_process_report)}" data-label="QAレポート">QAレポートを見る</button>`;
-  }
-}
-
-// ---- AutoRun: 承認（共通ロジック） ----
-async function _autorunDoApprove(filterMode, perTestTimeoutSec) {
-  if (!_autoRunJobId) return false;
-  try {
-    const res = await fetch('/api/autorun/approve', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ job_id: _autoRunJobId, filter_mode: filterMode, per_test_timeout_sec: perTestTimeoutSec }),
-    });
-    const data = await res.json();
-    if (!res.ok || !data.ok) throw new Error(data.error || '承認に失敗しました');
-    _autorunHideApprovalModal();
-    _autorunStartPolling();
-    _autorunStartElapsed();
-    return true;
-  } catch (e) {
-    autorunSetStartStatus(String(e), true);
-    return false;
-  }
-}
-
-// サイドバーの承認ボタン
-async function autorunApprove() {
-  if (!_autoRunJobId) return;
-  const btn = document.getElementById('autorun-approve-btn');
-  if (btn) { btn.disabled = true; btn.textContent = '承認中…'; }
-  const filterMode = document.querySelector('input[name="autorun-filter"]:checked')?.value || 'all';
-  const perTestTimeoutSec = parseInt(document.getElementById('autorun-timeout')?.value || '30', 10);
-  await _autorunDoApprove(filterMode, perTestTimeoutSec);
-  if (btn) { btn.disabled = false; btn.textContent = 'テスト実行を承認'; }
-}
-
-// 承認モーダルの承認ボタン
-async function autorunApprovalModalApprove() {
-  const btn = document.getElementById('arm-approve-btn');
-  if (btn) { btn.disabled = true; btn.textContent = '開始中…'; }
-  const filterMode = document.querySelector('input[name="arm-filter"]:checked')?.value || 'all';
-  const perTestTimeoutSec = parseInt(document.getElementById('arm-timeout')?.value || '30', 10);
-  // サイドバーの値も同期（整合性保持）
-  const sbFilter = document.querySelector(`input[name="autorun-filter"][value="${filterMode}"]`);
-  if (sbFilter) sbFilter.checked = true;
-  const sbTimeout = document.getElementById('autorun-timeout');
-  if (sbTimeout) sbTimeout.value = String(perTestTimeoutSec);
-  await _autorunDoApprove(filterMode, perTestTimeoutSec);
-  if (btn) { btn.disabled = false; btn.textContent = 'テスト実行を開始'; }
-}
-
-// ---- AutoRun: 承認モーダル ----
-async function _autorunPrepareAndShowApprovalModal() {
-  if (!_autoRunPreviewLoaded) {
-    _autoRunPreviewLoaded = true;
-    await _autorunLoadPreview();
-  }
-  _autorunShowApprovalModal();
-}
-
-function _autorunShowApprovalModal() {
-  const modal = document.getElementById('autorun-approval-modal');
-  if (!modal) return;
-  _autorunPopulateApprovalModal();
-  modal.style.display = 'flex';
-}
-
-function _autorunHideApprovalModal() {
-  const modal = document.getElementById('autorun-approval-modal');
-  if (modal) modal.style.display = 'none';
-}
-
-function _autorunPopulateApprovalModal() {
-  if (!_autoRunPreviewData) return;
-  const summary = _autoRunPreviewData.summary || {};
-  const counts = summary.filter_counts || {};
-  const byStatus = summary.by_status || {};
-  const candidates = _autoRunPreviewData.candidates || [];
-
-  // サマリー数値ストリップ
-  const summaryEl = document.getElementById('arm-summary');
-  if (summaryEl) {
-    const total = summary.total || 0;
-    const auto  = byStatus.auto || 0;
-    const skip  = (byStatus['manual-review'] || 0) + (byStatus.review || 0);
-    summaryEl.textContent = '';
-    [
-      { n: total, label: 'テストケース', cls: 'status-default' },
-      { n: auto,  label: '自動実行',    cls: 'status-low' },
-      { n: skip,  label: 'スキップ',    cls: 'status-muted' },
-    ].forEach(({ n, label, cls }) => {
-      const wrap = document.createElement('div');
-      wrap.className = 'arm-summary-stat';
-      const num = document.createElement('strong');
-      num.className = cls;
-      num.textContent = String(n);
-      const lbl = document.createElement('span');
-      lbl.textContent = label;
-      wrap.appendChild(num); wrap.appendChild(lbl);
-      summaryEl.appendChild(wrap);
-    });
-  }
-
-  // フィルターカウントバッジ
-  const fcMap = { all: 'arm-fc-all', smoke: 'arm-fc-smoke', transition: 'arm-fc-transition', form: 'arm-fc-form' };
-  for (const [key, id] of Object.entries(fcMap)) {
-    const el = document.getElementById(id);
-    if (el) el.textContent = counts[key] != null ? `${counts[key]}件` : '';
-  }
-
-  // テストケース一覧
-  const casesWrap = document.getElementById('arm-cases-wrap');
-  if (casesWrap) {
-    if (candidates.length) {
-      const rows = candidates.map(c => {
-        const statusCls = c.automation_status === 'auto' ? 'status-low' : 'status-muted';
-        return `<tr>
-          <td class="cell-id">${escHtml(c.id || '')}</td>
-          <td class="cell-title">${escHtml(c.title || '')}</td>
-          <td class="cell-status ${statusCls}">${escHtml(c.automation_status || '')}</td>
-        </tr>`;
-      }).join('');
-      casesWrap.innerHTML = `<table class="data autorun-preview-table">
-        <thead><tr><th>ID</th><th>タイトル</th><th>自動化</th></tr></thead>
-        <tbody>${rows}</tbody></table>`;
-    } else {
-      casesWrap.innerHTML = '<div class="empty arm-empty">テストケースなし</div>';
-    }
-  }
-
-  // details toggle アイコン sync
-  const detail = document.getElementById('arm-cases-detail');
-  const icon = document.getElementById('arm-cases-toggle-icon');
-  if (detail && icon) {
-    detail.addEventListener('toggle', () => {
-      icon.textContent = detail.open ? '▼' : '▶';
-    }, { once: false });
-  }
-}
-
-// ---- AutoRun: 停止 ----
 async function autorunCancel() {
   if (!_autoRunJobId) return;
   const btn = document.getElementById('autorun-cancel-btn');
@@ -928,6 +715,9 @@ function autorunReset() {
   document.getElementById('autorun-start-btn').disabled = false;
   document.getElementById('autorun-start-btn').textContent = '開始';
   document.getElementById('autorun-url').value = '';
+  const viewpointSelect = document.getElementById('autorun-viewpoint-set');
+  if (viewpointSelect) viewpointSelect.value = '';
+  autorunLoadViewpointSelection();
   document.getElementById('autorun-elapsed').textContent = '0:00';
   const timeline = document.getElementById('ar-timeline');
   if (timeline) timeline.innerHTML = '';
@@ -941,3 +731,9 @@ function autorunReset() {
   if (allRadio) allRadio.checked = true;
   autorunSetStartStatus('', false);
 }
+
+document.getElementById('autorun-viewpoint-set')?.addEventListener('change', _autorunRenderViewpointRecommendation);
+document.getElementById('autorun-url')?.addEventListener('input', () => {
+  clearTimeout(_autorunViewpointTimer);
+  _autorunViewpointTimer = setTimeout(autorunLoadViewpointSelection, 350);
+});

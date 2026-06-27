@@ -28,6 +28,7 @@ def create_app() -> Flask:
         settings,
         site,
         traceability,
+        viewpoints,
     )
     from web.security import add_security_headers, csrf_guard
 
@@ -55,6 +56,11 @@ def create_app() -> Flask:
     app.register_blueprint(schedule.bp)
     app.register_blueprint(api_v1.bp)
     app.register_blueprint(traceability.traceability_bp)
+    app.register_blueprint(viewpoints.bp)
+
+    from web.services.viewpoint_store import get_viewpoint_store
+
+    get_viewpoint_store()
 
     from web.services.scheduler import start_scheduler
 

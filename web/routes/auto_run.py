@@ -22,7 +22,9 @@ from web.services.failure_classifier import (
     summarize_classifications,
 )
 from web.services.playwright_executor import run_playwright
+from web.services.qa.helpers import use_viewpoint_snapshot
 from web.services.spec_ts_generator import compute_filter_counts, generate_spec_ts
+from web.services.viewpoint_store import ViewpointStoreError, get_viewpoint_store
 from web.validation import _clean_int, _domain_of, _safe_auth_path
 
 bp = Blueprint("auto_run", __name__)
@@ -47,9 +49,40 @@ def api_autorun_start() -> dict | tuple[dict, int]:
         request.form.get("max_pages") or body.get("max_pages", "30"), 30, 1, MAX_PAGES_LIMIT
     )
     auth = _safe_auth_path((request.form.get("auth") or body.get("auth", "")).strip())
+    viewpoint_set_id = (
+        request.form.get("viewpoint_set_id") or body.get("viewpoint_set_id", "")
+    ).strip()
+    viewpoint_version_raw = request.form.get("viewpoint_version") or body.get("viewpoint_version")
+
+    try:
+        snapshot = get_viewpoint_store().select_snapshot(
+            {"url": url},
+            set_id=viewpoint_set_id or None,
+            version_number=int(viewpoint_version_raw) if viewpoint_version_raw else None,
+        )
+    except (ViewpointStoreError, ValueError) as exc:
+        return {
+            "error": f"観点セットを固定できません: {exc}",
+            "recovery": "既定公開版へ切り替えるか、観点DBを確認して再試行してください。",
+        }, getattr(exc, "status_code", 409)
 
     job_id = uuid.uuid4().hex
-    job = AutoRunJob(job_id=job_id, url=url, started_at=_now_iso())
+    job = AutoRunJob(
+        job_id=job_id,
+        url=url,
+        started_at=_now_iso(),
+        viewpoint_set_id=snapshot["set_id"],
+        viewpoint_set_name=snapshot["set_name"],
+        viewpoint_version=int(snapshot["version"]),
+        viewpoint_checksum=snapshot["checksum"],
+        viewpoint_selection_reason=snapshot["selection_reason"],
+        viewpoint_count=int(snapshot["viewpoint_count"]),
+    )
+    job._viewpoint_snapshot = snapshot
+    job.add_log(
+        f"観点セットを固定: {job.viewpoint_set_name} v{job.viewpoint_version} "
+        f"({job.viewpoint_count}件 / {job.viewpoint_selection_reason})"
+    )
     if auth:
         job.auth_path = auth
     with _JOBS_LOCK:
@@ -447,8 +480,26 @@ def _phase_generate_qa(job: AutoRunJob) -> None:
         return
 
     try:
-        outputs = _generate_outputs(job.domain, report)
-        outputs |= _generate_advanced_outputs(job.domain, report)
+        snapshot = get_viewpoint_store().apply_snapshot_to_report(job._viewpoint_snapshot, report)
+        job.viewpoint_count = int(snapshot["viewpoint_count"])
+        snapshot_path = OUTPUT_DIR / job.domain / "qa_process" / "viewpoint_snapshot.json"
+        snapshot_path.parent.mkdir(parents=True, exist_ok=True)
+        snapshot_path.write_text(
+            json.dumps(snapshot, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        job.outputs["viewpoint_snapshot"] = str(snapshot_path.resolve())
+        report_with_snapshot = report | {
+            "viewpoint_snapshot": {key: value for key, value in snapshot.items() if key != "items"}
+        }
+        with use_viewpoint_snapshot(snapshot["items"]):
+            outputs = _generate_outputs(job.domain, report_with_snapshot)
+            outputs |= _generate_advanced_outputs(job.domain, report_with_snapshot)
+    except (ViewpointStoreError, OSError, ValueError) as exc:
+        _mark_job_failed(
+            job,
+            f"観点スナップショット生成エラー: {exc}。既定公開版へ切り替えるか再試行してください。",
+        )
+        return
     except Exception as exc:
         _mark_job_failed(job, f"QA成果物生成エラー: {exc}")
         return
@@ -456,8 +507,16 @@ def _phase_generate_qa(job: AutoRunJob) -> None:
     for key, path in outputs.items():
         if path.is_file():
             job.outputs[key] = str(path.resolve())
-    job.step_data["qa"] = {"count": len(outputs)}
-    job.add_log(f"QA成果物生成完了: {len(outputs)}件")
+    job.step_data["qa"] = {
+        "count": len(outputs),
+        "viewpoint_set": job.viewpoint_set_name,
+        "viewpoint_version": job.viewpoint_version,
+        "viewpoint_count": job.viewpoint_count,
+    }
+    job.add_log(
+        f"QA成果物生成完了: {len(outputs)}件 / 適用観点: "
+        f"{job.viewpoint_set_name} v{job.viewpoint_version} ({job.viewpoint_count}件)"
+    )
 
 
 def _phase_generate_scripts(job: AutoRunJob) -> None:

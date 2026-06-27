@@ -329,9 +329,24 @@ class ViewpointStoreBase:
                             node_type,parent_key,sort_order,created_at,updated_at)
                            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                         (
-                            folder_id, version_id, folder_key, cat, "",
-                            "", "{}", "", 3, "manual", "", "[]", 1,
-                            "folder", None, idx, now, now,
+                            folder_id,
+                            version_id,
+                            folder_key,
+                            cat,
+                            "",
+                            "",
+                            "{}",
+                            "",
+                            3,
+                            "manual",
+                            "",
+                            "[]",
+                            1,
+                            "folder",
+                            None,
+                            idx,
+                            now,
+                            now,
                         ),
                     )
                 conn.execute(

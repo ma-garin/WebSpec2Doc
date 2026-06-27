@@ -580,7 +580,8 @@ class ViewpointStoreOperations(ViewpointStoreBase):
             node = self._item_dict(row, source_set_id=set_id, inherited=False)
             if node["node_type"] == "folder":
                 node["children_count"] = sum(
-                    1 for r in rows
+                    1
+                    for r in rows
                     if dict(r).get("parent_key") == row["persistent_key"]
                     and dict(r).get("node_type") == "viewpoint"
                     and (not dict(r).get("deleted_at") or include_deleted)
@@ -630,9 +631,24 @@ class ViewpointStoreOperations(ViewpointStoreBase):
                         node_type,parent_key,sort_order,created_at,updated_at)
                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                     (
-                        folder_id, version["id"], folder_key, name, "", "", "{}",
-                        "", 3, "manual", "", "[]", 1,
-                        "folder", parent_key, sort_order, now, now,
+                        folder_id,
+                        version["id"],
+                        folder_key,
+                        name,
+                        "",
+                        "",
+                        "{}",
+                        "",
+                        3,
+                        "manual",
+                        "",
+                        "[]",
+                        1,
+                        "folder",
+                        parent_key,
+                        sort_order,
+                        now,
+                        now,
                     ),
                 )
                 conn.execute(

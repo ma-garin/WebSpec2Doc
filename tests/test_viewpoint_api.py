@@ -76,3 +76,95 @@ def test_selection_endpoint_returns_published_snapshot(api) -> None:
     data = response.get_json()
     assert data["recommended"]["set_name"] == "WebSpec2Doc標準観点"
     assert data["recommended"]["viewpoint_count"] == 1
+
+
+def _new_set(client) -> str:
+    """テスト用に新規セット（下書き版付き）を作成してset_idを返す。"""
+    resp = client.post("/api/viewpoint-sets", json={"name": "テストセット"})
+    assert resp.status_code == 201
+    return resp.get_json()["set"]["id"]
+
+
+def test_tree_and_folder_crud(api) -> None:
+    client, store = api
+    set_id = _new_set(client)
+
+    # ツリー取得（初期状態：フォルダなし）
+    tree_resp = client.get(f"/api/viewpoint-sets/{set_id}/tree")
+    assert tree_resp.status_code == 200
+    nodes = tree_resp.get_json()["nodes"]
+    assert all(n["node_type"] != "folder" for n in nodes)
+
+    # フォルダ作成
+    folder_resp = client.post(
+        f"/api/viewpoint-sets/{set_id}/folders",
+        json={"name": "認証"},
+    )
+    assert folder_resp.status_code == 201
+    folder = folder_resp.get_json()["item"]
+    assert folder["node_type"] == "folder"
+    assert folder["name"] == "認証"
+
+    # ツリー再取得（フォルダが含まれる）
+    tree_resp2 = client.get(f"/api/viewpoint-sets/{set_id}/tree")
+    nodes2 = tree_resp2.get_json()["nodes"]
+    folder_nodes = [n for n in nodes2 if n["node_type"] == "folder"]
+    assert len(folder_nodes) == 1
+    assert folder_nodes[0]["name"] == "認証"
+
+    # 観点を作成してフォルダに移動
+    version = store.get_version(set_id, status="draft")
+    item_resp = client.post(
+        f"/api/viewpoint-sets/{set_id}/versions/{version['version_number']}/items",
+        json={"name": "ログインテスト", "category": "認証", "automation": "manual"},
+    )
+    assert item_resp.status_code == 201
+    item_id = item_resp.get_json()["item"]["id"]
+
+    move_resp = client.patch(
+        f"/api/viewpoint-items/{item_id}/move",
+        json={"parent_key": folder["persistent_key"]},
+    )
+    assert move_resp.status_code == 200
+    assert move_resp.get_json()["item"]["parent_key"] == folder["persistent_key"]
+
+    # フォルダ削除
+    del_resp = client.delete(f"/api/viewpoint-folders/{folder['id']}")
+    assert del_resp.status_code == 200
+    assert del_resp.get_json()["undo_available"] is True
+
+    # 削除後はフォルダが消える
+    tree_resp3 = client.get(f"/api/viewpoint-sets/{set_id}/tree")
+    nodes3 = tree_resp3.get_json()["nodes"]
+    assert all(n["node_type"] != "folder" for n in nodes3)
+
+
+def test_folder_name_is_required(api) -> None:
+    client, _store = api
+    set_id = _new_set(client)
+
+    resp = client.post(f"/api/viewpoint-sets/{set_id}/folders", json={"name": ""})
+    assert resp.status_code in {400, 409, 500}
+
+
+def test_reorder_items(api) -> None:
+    client, store = api
+    set_id = _new_set(client)
+    version = store.get_version(set_id, status="draft")
+
+    item1 = client.post(
+        f"/api/viewpoint-sets/{set_id}/versions/{version['version_number']}/items",
+        json={"name": "A観点", "category": "機能", "automation": "manual"},
+    ).get_json()["item"]
+    item2 = client.post(
+        f"/api/viewpoint-sets/{set_id}/versions/{version['version_number']}/items",
+        json={"name": "B観点", "category": "機能", "automation": "manual"},
+    ).get_json()["item"]
+
+    resp = client.patch(
+        f"/api/viewpoint-sets/{set_id}/items/reorder",
+        json={
+            "orders": [{"id": item1["id"], "sort_order": 2}, {"id": item2["id"], "sort_order": 1}]
+        },
+    )
+    assert resp.status_code == 200

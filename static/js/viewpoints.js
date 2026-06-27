@@ -17,6 +17,8 @@ const vpState = {
   editorOpener: null,
   listScrollTop: 0,
   conflict: null,
+  tree: [],
+  currentFolder: null, // null = "すべて"
 };
 
 const VP_AUTOMATION_LABELS = {
@@ -25,6 +27,13 @@ const VP_AUTOMATION_LABELS = {
   manual: '手動',
 };
 
+const VP_TEMPLATES = {
+  iso25010: { name: 'ISO/IEC 25010 品質特性', folders: ['機能適合性', '性能効率性', '互換性', '使用性', '信頼性', 'セキュリティ', '保守性', '移植性'] },
+  istqb:    { name: 'ISTQB テストレベル',     folders: ['単体テスト', '結合テスト', 'システムテスト', '受入テスト'] },
+  industry: { name: '業界別分類',             folders: ['EC・通販', '金融・決済', '医療・ヘルスケア', 'SaaS・業務システム', '共通'] },
+};
+
+/* ── API ── */
 async function vpApi(url, options = {}) {
   const headers = { ...(options.headers || {}) };
   if (options.body && !(options.body instanceof FormData)) headers['Content-Type'] = 'application/json';
@@ -40,6 +49,7 @@ async function vpApi(url, options = {}) {
   return data;
 }
 
+/* ── フィードバック ── */
 function vpFeedback(message, type = 'success', action = null) {
   const box = document.getElementById('vp-feedback');
   const text = document.getElementById('vp-feedback-text');
@@ -58,6 +68,7 @@ function vpClearFeedback() {
   if (box) box.hidden = true;
 }
 
+/* ── 起動・セット一覧 ── */
 async function loadViewpointManager() {
   if (vpState.loading) return;
   vpState.loading = true;
@@ -70,11 +81,11 @@ async function loadViewpointManager() {
       ? vpState.sets.find((item) => item.id === vpState.currentSet.id)
       : vpState.sets[0];
     if (selected) await vpSelectSet(selected.id, { skipDirtyCheck: true });
-    else vpRenderEmpty('観点セットがありません。「新規セット」から作成してください。');
+    else vpRenderTableEmpty('観点セットがありません。「新規セット」から作成してください。');
     vpState.booted = true;
   } catch (error) {
     vpFeedback(`観点管理を読み込めません: ${error.message}`, 'error');
-    vpRenderEmpty('観点DBを読み込めませんでした。再試行してください。');
+    vpRenderTableEmpty('観点DBを読み込めませんでした。再試行してください。');
   } finally {
     vpState.loading = false;
   }
@@ -109,7 +120,8 @@ function vpRenderSets() {
     button.addEventListener('click', () => vpSelectSet(button.dataset.vpSetId));
   });
   const total = vpState.sets.reduce((sum, item) => sum + Number(item.item_count || 0), 0);
-  document.getElementById('vp-set-summary').textContent = `アプリケーション合計 ${vpState.sets.length}セット / 観点 ${total}件`;
+  const summary = document.getElementById('vp-set-summary');
+  if (summary) summary.textContent = `${vpState.sets.length}セット / 観点 ${total}件`;
 }
 
 async function vpSelectSet(setId, { skipDirtyCheck = false } = {}) {
@@ -123,6 +135,7 @@ async function vpSelectSet(setId, { skipDirtyCheck = false } = {}) {
   vpState.selectedItem = null;
   vpState.selectedIds.clear();
   vpState.dirty = false;
+  vpState.currentFolder = null;
   vpRenderSets();
   try {
     const [detail, assignments] = await Promise.all([
@@ -138,13 +151,21 @@ async function vpSelectSet(setId, { skipDirtyCheck = false } = {}) {
   }
 }
 
+/* ── タブ ── */
 async function vpLoadCurrentTab() {
   const isProposal = vpState.tab === 'proposals';
   const isHistory = vpState.tab === 'history';
-  document.getElementById('vp-standard-toolbar').hidden = isProposal || isHistory;
+  const isTable = !isProposal && !isHistory;
+
+  document.getElementById('vp-standard-toolbar').hidden = !isTable;
   document.getElementById('vp-proposal-toolbar').hidden = !isProposal;
   document.getElementById('vp-publish').hidden = vpState.tab !== 'draft';
-  document.getElementById('vp-new-item').hidden = vpState.tab !== 'draft';
+  document.getElementById('vp-add-viewpoint').hidden = vpState.tab !== 'draft';
+  document.querySelector('.vp-inline-table-wrap').hidden = !isTable;
+  document.querySelector('.vp-count-bar').hidden = !isTable;
+  document.getElementById('vp-list-content').hidden = isTable;
+  document.getElementById('vp-tree-panel').hidden = !isTable;
+
   if (isProposal) return vpLoadProposals();
   if (isHistory) return vpRenderHistory();
 
@@ -162,15 +183,16 @@ async function vpLoadCurrentTab() {
   if (!version) {
     vpState.items = [];
     vpRenderItems();
-    vpRenderEmpty(vpState.tab === 'published' ? '公開版はまだありません。' : '下書きを作成できません。');
+    vpRenderTableEmpty(vpState.tab === 'published' ? '公開版はまだありません。' : '下書きを作成できません。');
     return;
   }
-  const data = await vpApi(
-    `/api/viewpoint-sets/${encodeURIComponent(vpState.currentSet.id)}/versions/${version.version_number}/items`,
-  );
-  vpState.currentVersion = data.version;
-  vpState.items = data.items || [];
-  vpPopulateCategoryFilter();
+  const [itemsData] = await Promise.all([
+    vpApi(`/api/viewpoint-sets/${encodeURIComponent(vpState.currentSet.id)}/versions/${version.version_number}/items`),
+    vpLoadTree(),
+  ]);
+  vpState.currentVersion = itemsData.version;
+  vpState.items = itemsData.items || [];
+  vpPopulateCategoryDatalist();
   vpRenderItems();
 }
 
@@ -181,71 +203,227 @@ async function vpRefreshSetsOnly() {
   vpRenderSets();
 }
 
+/* ── ツリー ── */
+async function vpLoadTree() {
+  if (!vpState.currentSet) return;
+  try {
+    const data = await vpApi(`/api/viewpoint-sets/${encodeURIComponent(vpState.currentSet.id)}/tree`);
+    vpState.tree = data.nodes || [];
+    vpRenderTree();
+  } catch (_) { /* ignore */ }
+}
+
+function vpRenderTree() {
+  const root = document.getElementById('vp-tree-root');
+  if (!root) return;
+  const folders = vpState.tree.filter((node) => node.node_type === 'folder');
+  const allCount = vpState.tree.filter((node) => node.node_type !== 'folder').length;
+
+  const allBtn = document.getElementById('vp-tree-all-btn');
+  if (allBtn) {
+    allBtn.classList.toggle('is-selected', vpState.currentFolder === null);
+    const allCountEl = document.getElementById('vp-tree-all-count');
+    if (allCountEl) allCountEl.textContent = allCount || '';
+  }
+
+  if (!folders.length) {
+    root.innerHTML = '<div style="padding:10px 12px;color:var(--text-muted);font-size:11px;">フォルダがありません</div>';
+    return;
+  }
+  root.innerHTML = folders.map((folder) => {
+    const selected = vpState.currentFolder === folder.persistent_key ? ' is-selected' : '';
+    const count = folder.children_count || 0;
+    const isDraft = vpState.tab === 'draft';
+    return `<div class="vp-tree-node${selected}" data-vp-folder="${escHtml(folder.persistent_key)}" role="treeitem" tabindex="0">
+      <span class="vp-tree-node-icon" aria-hidden="true">📁</span>
+      <span class="vp-tree-node-name">${escHtml(folder.name)}</span>
+      ${count ? `<span class="vp-tree-count">${count}</span>` : ''}
+      ${isDraft ? `<span class="vp-tree-node-actions">
+        <button type="button" class="vp-tree-action" data-vp-folder-delete="${escHtml(folder.id)}" title="フォルダを削除" aria-label="${escHtml(folder.name)}を削除">🗑</button>
+      </span>` : ''}
+    </div>`;
+  }).join('');
+
+  root.querySelectorAll('[data-vp-folder]').forEach((node) => {
+    node.addEventListener('click', (event) => {
+      if (event.target.closest('[data-vp-folder-delete]')) return;
+      vpSelectFolder(node.dataset.vpFolder);
+    });
+    node.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); vpSelectFolder(node.dataset.vpFolder); }
+    });
+  });
+  root.querySelectorAll('[data-vp-folder-delete]').forEach((button) => {
+    button.addEventListener('click', (event) => {
+      event.stopPropagation();
+      vpDeleteFolder(button.dataset.vpFolderDelete);
+    });
+  });
+}
+
+function vpSelectFolder(folderKey) {
+  vpState.currentFolder = folderKey === vpState.currentFolder ? null : folderKey;
+  vpRenderTree();
+  vpRenderItems();
+  vpUpdateBreadcrumb();
+}
+
+function vpUpdateBreadcrumb() {
+  const bc = document.getElementById('vp-breadcrumb');
+  if (!bc) return;
+  if (!vpState.currentFolder) {
+    bc.innerHTML = '<span class="vp-breadcrumb-root">すべて</span>';
+    return;
+  }
+  const folder = vpState.tree.find((n) => n.persistent_key === vpState.currentFolder);
+  bc.innerHTML = `<span class="vp-breadcrumb-root">すべて</span>
+    <span class="vp-breadcrumb-sep" aria-hidden="true">›</span>
+    <span class="vp-breadcrumb-item">${escHtml(folder?.name || vpState.currentFolder)}</span>`;
+}
+
+async function vpNewFolder() {
+  if (vpState.tab !== 'draft' || !vpState.currentSet) return;
+  const name = await inputDialog({
+    title: 'フォルダを作成',
+    message: '分類フォルダの名前を入力してください。',
+    placeholder: '例: 機能性 / 認証 / ログイン',
+    confirmLabel: '作成',
+    validate: (v) => v.trim() ? null : 'フォルダ名を入力してください。',
+  });
+  if (!name?.trim()) return;
+  try {
+    await vpApi(`/api/viewpoint-sets/${encodeURIComponent(vpState.currentSet.id)}/folders`, {
+      method: 'POST', body: JSON.stringify({ name: name.trim() }),
+    });
+    await vpLoadTree();
+    vpFeedback(`フォルダ「${name.trim()}」を作成しました。`);
+  } catch (error) { vpFeedback(error.message, 'error'); }
+}
+
+async function vpDeleteFolder(itemId) {
+  const folder = vpState.tree.find((n) => n.id === itemId);
+  const confirmed = await confirmDialog({
+    title: 'フォルダを削除しますか？',
+    message: `「${folder?.name || 'フォルダ'}」を削除します。フォルダ内の観点も一緒に削除されます。`,
+    confirmLabel: '削除', danger: true,
+  });
+  if (!confirmed) return;
+  try {
+    await vpApi(`/api/viewpoint-folders/${encodeURIComponent(itemId)}`, { method: 'DELETE' });
+    if (vpState.currentFolder === folder?.persistent_key) {
+      vpState.currentFolder = null;
+      vpUpdateBreadcrumb();
+    }
+    await Promise.all([vpLoadTree(), vpReloadItems()]);
+    vpFeedback('フォルダを削除しました。', 'success', { label: '元に戻す', handler: () => vpUndoDeleteFolder(itemId) });
+  } catch (error) { vpFeedback(error.message, 'error'); }
+}
+
+async function vpUndoDeleteFolder(itemId) {
+  try {
+    await vpApi(`/api/viewpoint-items/${encodeURIComponent(itemId)}/restore`, { method: 'POST', body: '{}' });
+    await Promise.all([vpLoadTree(), vpReloadItems()]);
+    vpFeedback('フォルダを元に戻しました。');
+  } catch (error) { vpFeedback(error.message, 'error'); }
+}
+
+async function vpLoadTemplate(templateKey) {
+  const template = VP_TEMPLATES[templateKey];
+  if (!template || !vpState.currentSet || vpState.tab !== 'draft') return;
+  const confirmed = await confirmDialog({
+    title: `「${template.name}」を読み込みますか？`,
+    message: `${template.folders.length}個のフォルダを追加します。既存のフォルダは変更されません。`,
+    confirmLabel: '読み込む',
+  });
+  if (!confirmed) return;
+  try {
+    await Promise.all(template.folders.map((name) =>
+      vpApi(`/api/viewpoint-sets/${encodeURIComponent(vpState.currentSet.id)}/folders`, {
+        method: 'POST', body: JSON.stringify({ name }),
+      })
+    ));
+    await vpLoadTree();
+    vpFeedback(`「${template.name}」のフォルダを追加しました。`);
+  } catch (error) { vpFeedback(error.message, 'error'); }
+}
+
+/* ── アイテム一覧 ── */
 function vpFilteredItems() {
   const query = (document.getElementById('vp-search')?.value || '').trim().toLowerCase();
-  const category = document.getElementById('vp-filter-category')?.value || '';
   const risk = document.getElementById('vp-filter-risk')?.value || '';
   const automation = document.getElementById('vp-filter-automation')?.value || '';
   const state = document.getElementById('vp-filter-state')?.value || '';
+
+  let folder = vpState.currentFolder;
   return vpState.items.filter((item) => {
+    if (item.node_type === 'folder') return false;
+    if (folder) {
+      if (item.parent_key !== folder) return false;
+    }
     const haystack = [item.name, item.category, item.purpose, ...(item.tags || [])].join(' ').toLowerCase();
     return (!query || haystack.includes(query))
-      && (!category || item.category === category)
       && (!risk || String(item.risk_weight) === risk)
-      && (!automation || item.automation === (automation === 'human' ? 'manual' : automation))
+      && (!automation || item.automation === automation)
       && (!state || (state === 'enabled') === !!item.enabled);
   });
 }
 
-function vpPopulateCategoryFilter() {
-  const select = document.getElementById('vp-filter-category');
-  if (!select) return;
-  const current = select.value;
-  const categories = [...new Set(vpState.items.map((item) => item.category).filter(Boolean))].sort();
-  select.innerHTML = '<option value="">カテゴリ</option>' + categories.map((value) => `<option value="${escHtml(value)}">${escHtml(value)}</option>`).join('');
-  if (categories.includes(current)) select.value = current;
+function vpPopulateCategoryDatalist() {
   const datalist = document.getElementById('vp-category-datalist');
-  if (datalist) {
-    while (datalist.firstChild) datalist.removeChild(datalist.firstChild);
-    categories.forEach((cat) => {
-      const opt = document.createElement('option');
-      opt.value = cat;
-      datalist.appendChild(opt);
-    });
-  }
+  if (!datalist) return;
+  const categories = [...new Set(vpState.items.map((item) => item.category).filter(Boolean))].sort();
+  while (datalist.firstChild) datalist.removeChild(datalist.firstChild);
+  categories.forEach((cat) => {
+    const opt = document.createElement('option');
+    opt.value = cat;
+    datalist.appendChild(opt);
+  });
+}
+
+// keep old name for compatibility with viewpoint-editor.js
+function vpPopulateCategoryFilter() {
+  vpPopulateCategoryDatalist();
 }
 
 function vpRenderItems() {
-  const container = document.getElementById('vp-list-content');
-  if (!container) return;
+  const tbody = document.getElementById('vp-table-body');
+  const emptyEl = document.getElementById('vp-table-empty');
+  if (!tbody) return;
+
   const items = vpFilteredItems();
-  document.getElementById('vp-item-count').textContent = `${items.length}件`;
-  document.getElementById('vp-list-title').textContent = vpState.tab === 'published' ? '公開中の観点' : '観点一覧';
+  const countEl = document.getElementById('vp-item-count');
+  if (countEl) countEl.textContent = `${items.length}件`;
+
   if (!items.length) {
-    vpRenderEmpty(vpState.items.length ? '条件に一致する観点がありません。' : 'この版には観点がありません。');
+    tbody.innerHTML = '';
+    if (emptyEl) emptyEl.hidden = false;
     vpUpdateBulkbar();
     return;
   }
-  const rows = items.map((item) => {
+  if (emptyEl) emptyEl.hidden = true;
+
+  tbody.innerHTML = items.map((item) => {
     const checked = vpState.selectedIds.has(item.id) ? ' checked' : '';
-    const active = vpState.selectedItem?.id === item.id ? ' class="is-active"' : '';
-    const inherited = item.inherited ? '<span class="vp-inherited">継承</span>' : '';
-    return `<tr${active} data-vp-item-id="${escHtml(item.id)}" tabindex="0" aria-label="${escHtml(item.name)}を編集">
-      <td class="vp-check-col"><input type="checkbox" data-vp-check="${escHtml(item.id)}" aria-label="${escHtml(item.name)}を選択"${checked}></td>
-      <td class="vp-name-col"><span class="vp-item-name">${escHtml(item.name)}${inherited}</span><span class="vp-item-tags">${escHtml((item.tags || []).join(' / '))}</span></td>
-      <td class="vp-category-col">${escHtml(item.category)}</td>
-      <td class="vp-risk-col"><span class="vp-risk" data-risk="${Number(item.risk_weight)}">${Number(item.risk_weight)}</span></td>
-      <td class="vp-auto-col"><span class="vp-automation" data-value="${escHtml(item.automation)}">${escHtml(VP_AUTOMATION_LABELS[item.automation] || item.automation)}</span></td>
-      <td class="vp-state-col"><span class="vp-status${item.enabled ? '' : ' is-disabled'}">${item.enabled ? '有効' : '無効'}</span></td>
+    const active = vpState.selectedItem?.id === item.id ? ' is-active' : '';
+    const disabled = item.enabled ? '' : ' is-disabled';
+    const inherited = item.inherited ? ' <span class="vp-inherited">継承</span>' : '';
+    return `<tr class="${active}${disabled}" data-vp-item-id="${escHtml(item.id)}" tabindex="0" aria-label="${escHtml(item.name)}">
+      <td class="vp-col-check"><input type="checkbox" data-vp-check="${escHtml(item.id)}" aria-label="${escHtml(item.name)}を選択"${checked}></td>
+      <td class="vp-col-name">
+        <span class="vp-cell-name">${escHtml(item.name)}${inherited}</span>
+        <span class="vp-cell-tags">${escHtml((item.tags || []).join(' / '))}</span>
+      </td>
+      <td class="vp-col-category">${escHtml(item.category)}</td>
+      <td class="vp-col-risk"><span class="vp-risk-badge" data-risk="${Number(item.risk_weight)}">${Number(item.risk_weight)}</span></td>
+      <td class="vp-col-auto"><span class="vp-auto-badge" data-value="${escHtml(item.automation)}">${escHtml(VP_AUTOMATION_LABELS[item.automation] || item.automation)}</span></td>
+      <td class="vp-col-state"><span class="vp-state-dot${item.enabled ? '' : ' is-disabled'}">${item.enabled ? '有効' : '無効'}</span></td>
+      <td class="vp-col-actions"><button type="button" class="vp-row-action" data-vp-edit="${escHtml(item.id)}" aria-label="${escHtml(item.name)}を編集">✏</button></td>
     </tr>`;
   }).join('');
-  container.innerHTML = `<table class="vp-table"><thead><tr>
-    <th class="vp-check-col"><input type="checkbox" id="vp-check-all" aria-label="表示中の観点をすべて選択"></th>
-    <th>観点</th><th class="vp-category-col">カテゴリ</th><th class="vp-risk-col">リスク</th><th class="vp-auto-col">自動化</th><th class="vp-state-col">状態</th>
-  </tr></thead><tbody>${rows}</tbody></table>`;
-  container.querySelectorAll('tr[data-vp-item-id]').forEach((row) => {
+
+  tbody.querySelectorAll('tr[data-vp-item-id]').forEach((row) => {
     row.addEventListener('click', (event) => {
-      if (event.target.matches('input[type="checkbox"]')) return;
+      if (event.target.matches('input[type="checkbox"]') || event.target.closest('[data-vp-edit]')) return;
       vpSelectItem(row.dataset.vpItemId, row);
     });
     row.addEventListener('keydown', (event) => {
@@ -254,7 +432,13 @@ function vpRenderItems() {
       vpSelectItem(row.dataset.vpItemId, row);
     });
   });
-  container.querySelectorAll('[data-vp-check]').forEach((checkbox) => {
+  tbody.querySelectorAll('[data-vp-edit]').forEach((button) => {
+    button.addEventListener('click', (event) => {
+      event.stopPropagation();
+      vpSelectItem(button.dataset.vpEdit, button.closest('tr'));
+    });
+  });
+  tbody.querySelectorAll('[data-vp-check]').forEach((checkbox) => {
     checkbox.addEventListener('change', () => vpToggleSelection(checkbox.dataset.vpCheck, checkbox.checked));
   });
   document.getElementById('vp-check-all')?.addEventListener('change', (event) => {
@@ -264,10 +448,21 @@ function vpRenderItems() {
   vpUpdateBulkbar();
 }
 
+function vpRenderTableEmpty(message) {
+  const tbody = document.getElementById('vp-table-body');
+  const emptyEl = document.getElementById('vp-table-empty');
+  if (tbody) tbody.innerHTML = '';
+  if (emptyEl) {
+    emptyEl.hidden = false;
+    emptyEl.innerHTML = `<p>${escHtml(message)}</p>`;
+  }
+  const countEl = document.getElementById('vp-item-count');
+  if (countEl) countEl.textContent = '0件';
+}
+
+// keep old name for viewpoint-editor.js
 function vpRenderEmpty(message) {
-  const container = document.getElementById('vp-list-content');
-  if (container) container.innerHTML = `<div class="vp-empty">${escHtml(message)}</div>`;
-  document.getElementById('vp-item-count').textContent = '0件';
+  vpRenderTableEmpty(message);
 }
 
 function vpToggleSelection(itemId, checked) {
@@ -280,10 +475,11 @@ function vpUpdateBulkbar() {
   const count = vpState.selectedIds.size;
   const bulkbar = document.getElementById('vp-bulkbar');
   if (bulkbar) bulkbar.hidden = !count || vpState.tab !== 'draft';
-  document.getElementById('vp-selected-count').textContent = `${count}件を選択`;
+  const countEl = document.getElementById('vp-selected-count');
+  if (countEl) countEl.textContent = `${count}件を選択`;
 }
 
-
+/* ── アンドゥ ── */
 async function vpUndoDelete() {
   if (!vpState.lastDeleted) return;
   const target = vpState.lastDeleted;
@@ -298,6 +494,7 @@ async function vpUndoDelete() {
   } catch (error) { vpFeedback(error.message, 'error'); }
 }
 
+/* ── 公開 ── */
 async function vpPublish() {
   if (!vpState.currentVersion || vpState.currentVersion.status !== 'draft') return;
   let diffText = '';
@@ -334,12 +531,13 @@ async function vpPublish() {
   } catch (error) { vpFeedback(error.message, 'error'); }
 }
 
+/* ── バルク操作 ── */
 async function vpBulkApply(action) {
   const changes = {};
   if (action === 'enable') changes.enabled = true;
   if (action === 'disable') changes.enabled = false;
   if (action === 'tag') {
-    const existingTags = [...new Set(vpState.items.flatMap(item => item.tags || []).filter(Boolean))].sort();
+    const existingTags = [...new Set(vpState.items.flatMap((item) => item.tags || []).filter(Boolean))].sort();
     const tag = await inputDialog({
       title: 'タグを設定',
       message: `選択した${vpState.selectedIds.size}件にタグを追加します。`,
@@ -351,7 +549,7 @@ async function vpBulkApply(action) {
     changes.tags = [tag.trim()];
   }
   if (action === 'category') {
-    const categories = [...new Set(vpState.items.map(item => item.category).filter(Boolean))].sort();
+    const categories = [...new Set(vpState.items.map((item) => item.category).filter(Boolean))].sort();
     const category = await inputDialog({
       title: 'カテゴリを変更',
       message: `選択した${vpState.selectedIds.size}件のカテゴリを変更します。`,
@@ -388,11 +586,13 @@ async function vpBulkApply(action) {
   } catch (error) { vpFeedback(error.message, 'error'); }
 }
 
+/* ── 履歴 ── */
 function vpRenderHistory() {
   const container = document.getElementById('vp-list-content');
-  document.getElementById('vp-list-title').textContent = '変更履歴';
-  document.getElementById('vp-item-count').textContent = `${vpState.versions.length}版`;
+  if (!container) return;
   const statusLabel = { draft: '下書き', published: '公開中', archived: 'アーカイブ' };
+  const countEl = document.getElementById('vp-item-count');
+  if (countEl) countEl.textContent = `${vpState.versions.length}版`;
   container.innerHTML = `<div class="vp-history-list">${vpState.versions.map((version) => `
     <article class="vp-history-row">
       <div class="vp-history-row-head"><strong>v${version.version_number}・${statusLabel[version.status] || version.status}</strong><span>${Number(version.item_count || 0)}件</span></div>
@@ -423,18 +623,22 @@ async function vpRollback(version) {
   } catch (error) { vpFeedback(error.message, 'error'); }
 }
 
+/* ── AI提案 ── */
 async function vpLoadProposals() {
-  document.getElementById('vp-list-title').textContent = 'AI提案';
   try {
     const data = await vpApi(`/api/viewpoint-sets/${encodeURIComponent(vpState.currentSet.id)}/proposals`);
     vpState.aiAvailable = !!data.ai_available;
-    document.getElementById('vp-generate-proposals').disabled = !vpState.aiAvailable;
-    document.getElementById('vp-generate-proposals').textContent = vpState.aiAvailable ? 'AIに提案を依頼' : 'OpenAI設定が必要';
+    const genBtn = document.getElementById('vp-generate-proposals');
+    if (genBtn) {
+      genBtn.disabled = !vpState.aiAvailable;
+      genBtn.textContent = vpState.aiAvailable ? 'AIに提案を依頼' : 'OpenAI設定が必要';
+    }
     const proposals = data.proposals || [];
-    document.getElementById('vp-item-count').textContent = `${proposals.length}件`;
+    const countEl = document.getElementById('vp-item-count');
+    if (countEl) countEl.textContent = `${proposals.length}件`;
     const container = document.getElementById('vp-list-content');
-    if (!proposals.length) return vpRenderEmpty('AI提案はまだありません。既存観点を確認したうえで提案を依頼できます。');
-    const itemsByKey = Object.fromEntries(vpState.items.map(i => [i.persistent_key, i.name]));
+    if (!proposals.length) return;
+    const itemsByKey = Object.fromEntries(vpState.items.map((i) => [i.persistent_key, i.name]));
     const pct = (c) => Math.round(Number(c || 0) * 100);
     const confClass = (c) => pct(c) >= 80 ? 'vp-conf-high' : pct(c) >= 50 ? 'vp-conf-mid' : 'vp-conf-low';
     container.innerHTML = `<div class="vp-proposal-list">${proposals.map((proposal) => {
@@ -492,6 +696,7 @@ async function vpDecideProposal(proposalId, decision) {
   } catch (error) { vpFeedback(error.message, 'error'); }
 }
 
+/* ── 適用ルール ── */
 function vpRenderAssignments() {
   const container = document.getElementById('vp-assignment-list');
   if (!container) return;
@@ -540,6 +745,7 @@ async function vpDeleteAssignment(assignmentId) {
   } catch (error) { vpFeedback(error.message, 'error'); }
 }
 
+/* ── セット CRUD ── */
 async function vpNewSet() {
   const name = await inputDialog({
     title: '観点セットを作成',
@@ -578,10 +784,9 @@ async function vpEditSet() {
     validate: (v) => Number.isFinite(Number(v)) ? null : '数値を入力してください。',
   });
   if (priorityStr === null) return;
-  const priority = Number(priorityStr) || 0;
   try {
     await vpApi(`/api/viewpoint-sets/${encodeURIComponent(vpState.currentSet.id)}`, {
-      method: 'PATCH', body: JSON.stringify({ revision: vpState.currentSet.revision, description, priority }),
+      method: 'PATCH', body: JSON.stringify({ revision: vpState.currentSet.revision, description, priority: Number(priorityStr) || 0 }),
     });
     await vpRefreshSetsOnly();
     vpFeedback('セット設定を保存しました。');
@@ -606,6 +811,7 @@ async function vpDeleteSet() {
   } catch (error) { vpFeedback(error.message, 'error'); }
 }
 
+/* ── CSV ── */
 function vpExportCsv() {
   if (!vpState.currentSet || !vpState.currentVersion) return;
   window.location.href = `/api/viewpoint-sets/${encodeURIComponent(vpState.currentSet.id)}/export?version=${vpState.currentVersion.version_number}`;
@@ -625,6 +831,7 @@ async function vpImportCsv(file) {
   finally { document.getElementById('vp-csv-import').value = ''; }
 }
 
+/* ── タブ同期 ── */
 function vpSyncTabs() {
   document.querySelectorAll('[data-vp-tab]').forEach((button) => {
     const active = button.dataset.vpTab === vpState.tab;
@@ -643,6 +850,7 @@ async function vpSwitchTab(tab) {
   await vpLoadCurrentTab();
 }
 
+/* ── ダーティ管理 ── */
 async function vpMaybeDiscard() {
   if (!vpState.dirty) return true;
   const discard = await confirmDialog({
@@ -662,18 +870,20 @@ function vpMarkDirty(event) {
     const fieldError = document.getElementById(`${event.target.id}-error`);
     if (fieldError) fieldError.hidden = true;
   }
-  document.getElementById('vp-conflict-panel').hidden = true;
+  const conflictPanel = document.getElementById('vp-conflict-panel');
+  if (conflictPanel) conflictPanel.hidden = true;
   vpState.conflict = null;
   vpSetEditorState('dirty', '未保存', '保存していない変更があります');
   vpUpdateSectionStates();
 }
 
+/* ── イベント登録 ── */
 document.getElementById('vp-feedback-close')?.addEventListener('click', vpClearFeedback);
 document.getElementById('vp-new-set')?.addEventListener('click', vpNewSet);
 document.getElementById('vp-edit-set')?.addEventListener('click', vpEditSet);
 document.getElementById('vp-delete-set')?.addEventListener('click', vpDeleteSet);
 document.getElementById('vp-new-assignment')?.addEventListener('click', vpNewAssignment);
-document.getElementById('vp-new-item')?.addEventListener('click', vpNewItem);
+document.getElementById('vp-add-viewpoint')?.addEventListener('click', () => vpNewItem());
 document.getElementById('vp-editor-form')?.addEventListener('submit', vpSaveItem);
 document.getElementById('vp-delete-item')?.addEventListener('click', vpDeleteItem);
 document.getElementById('vp-discard-item')?.addEventListener('click', () => {
@@ -691,12 +901,43 @@ document.getElementById('vp-generate-proposals')?.addEventListener('click', vpGe
 document.getElementById('vp-clear-selection')?.addEventListener('click', () => { vpState.selectedIds.clear(); vpRenderItems(); });
 document.querySelectorAll('[data-vp-bulk]').forEach((button) => button.addEventListener('click', () => vpBulkApply(button.dataset.vpBulk)));
 document.querySelectorAll('[data-vp-tab]').forEach((button) => button.addEventListener('click', () => vpSwitchTab(button.dataset.vpTab)));
-['vp-search', 'vp-filter-category', 'vp-filter-risk', 'vp-filter-automation', 'vp-filter-state'].forEach((id) => {
+
+// ツリーパネル
+document.getElementById('vp-add-folder')?.addEventListener('click', vpNewFolder);
+document.getElementById('vp-tree-all-btn')?.addEventListener('click', () => {
+  vpState.currentFolder = null;
+  vpRenderTree();
+  vpRenderItems();
+  vpUpdateBreadcrumb();
+});
+
+// テンプレートメニュー
+const templateMenu = document.getElementById('vp-template-menu');
+document.getElementById('vp-tree-template-btn')?.addEventListener('click', () => {
+  if (templateMenu) templateMenu.hidden = !templateMenu.hidden;
+});
+document.querySelectorAll('[data-template]').forEach((button) => {
+  button.addEventListener('click', () => {
+    if (templateMenu) templateMenu.hidden = true;
+    vpLoadTemplate(button.dataset.template);
+  });
+});
+document.addEventListener('click', (event) => {
+  if (templateMenu && !event.target.closest('#vp-tree-template-btn') && !event.target.closest('#vp-template-menu')) {
+    templateMenu.hidden = true;
+  }
+});
+
+// フィルター
+['vp-search', 'vp-filter-risk', 'vp-filter-automation', 'vp-filter-state'].forEach((id) => {
   document.getElementById(id)?.addEventListener(id === 'vp-search' ? 'input' : 'change', vpRenderItems);
 });
+
+// エディタ
 document.getElementById('vp-editor-form')?.addEventListener('input', vpMarkDirty);
 document.getElementById('vp-rule-operator')?.addEventListener('change', (event) => {
-  document.getElementById('vp-rule-value').disabled = event.target.value === 'present';
+  const valueInput = document.getElementById('vp-rule-value');
+  if (valueInput) valueInput.disabled = event.target.value === 'present';
   vpMarkDirty(event);
 });
 document.querySelectorAll('[data-vp-section]').forEach((button) => {

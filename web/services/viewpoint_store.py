@@ -14,7 +14,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 STANDARD_SET_NAME = "WebSpec2Doc標準観点"
 ALLOWED_RULE_FIELDS = {
     "url",
@@ -251,6 +251,9 @@ class ViewpointStoreBase:
                     standards TEXT NOT NULL DEFAULT '',
                     tags TEXT NOT NULL DEFAULT '[]',
                     enabled INTEGER NOT NULL DEFAULT 1,
+                    node_type TEXT NOT NULL DEFAULT 'viewpoint',
+                    parent_key TEXT DEFAULT NULL,
+                    sort_order INTEGER NOT NULL DEFAULT 0,
                     revision INTEGER NOT NULL DEFAULT 1,
                     deleted_at TEXT,
                     created_at TEXT NOT NULL,
@@ -287,6 +290,55 @@ class ViewpointStoreBase:
                 COMMIT;
                 """
             )
+        if version < 2:
+            self._migrate_v1_to_v2(conn)
+
+    def _migrate_v1_to_v2(self, conn: sqlite3.Connection) -> None:
+        """Add tree columns; build folder nodes from existing category values."""
+        for col_sql in [
+            "ALTER TABLE viewpoint_items ADD COLUMN node_type TEXT NOT NULL DEFAULT 'viewpoint'",
+            "ALTER TABLE viewpoint_items ADD COLUMN parent_key TEXT DEFAULT NULL",
+            "ALTER TABLE viewpoint_items ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0",
+        ]:
+            try:
+                conn.execute(col_sql)
+            except Exception:
+                pass  # column already added
+        now = _now()
+        version_ids = [r[0] for r in conn.execute("SELECT id FROM viewpoint_versions").fetchall()]
+        for version_id in version_ids:
+            cats = [
+                r[0]
+                for r in conn.execute(
+                    "SELECT DISTINCT category FROM viewpoint_items WHERE version_id=? AND category!=''",
+                    (version_id,),
+                ).fetchall()
+            ]
+            for idx, cat in enumerate(cats):
+                folder_key = f"folder-{_key_for(cat, 'cat')}"
+                exists = conn.execute(
+                    "SELECT 1 FROM viewpoint_items WHERE version_id=? AND persistent_key=?",
+                    (version_id, folder_key),
+                ).fetchone()
+                if not exists:
+                    folder_id = uuid.uuid4().hex
+                    conn.execute(
+                        """INSERT INTO viewpoint_items
+                           (id,version_id,persistent_key,name,category,purpose,trigger_rule,
+                            recommended_checks,risk_weight,automation,standards,tags,enabled,
+                            node_type,parent_key,sort_order,created_at,updated_at)
+                           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                        (
+                            folder_id, version_id, folder_key, cat, "",
+                            "", "{}", "", 3, "manual", "", "[]", 1,
+                            "folder", None, idx, now, now,
+                        ),
+                    )
+                conn.execute(
+                    "UPDATE viewpoint_items SET parent_key=? WHERE version_id=? AND category=? AND node_type='viewpoint'",
+                    (folder_key, version_id, cat),
+                )
+        conn.execute("PRAGMA user_version = 2")
 
     def _seed_standard_set(self) -> None:
         with self._transaction() as conn:
@@ -534,9 +586,11 @@ class ViewpointStoreBase:
                 conn.execute(
                     """INSERT INTO viewpoint_items
                        (id,version_id,persistent_key,name,category,purpose,trigger_rule,recommended_checks,
-                        risk_weight,automation,standards,tags,enabled,revision,deleted_at,created_at,updated_at)
+                        risk_weight,automation,standards,tags,enabled,node_type,parent_key,sort_order,
+                        revision,deleted_at,created_at,updated_at)
                        SELECT lower(hex(randomblob(16))), ?, persistent_key,name,category,purpose,trigger_rule,
-                        recommended_checks,risk_weight,automation,standards,tags,enabled,1,deleted_at,?,?
+                        recommended_checks,risk_weight,automation,standards,tags,enabled,node_type,parent_key,sort_order,
+                        1,deleted_at,?,?
                        FROM viewpoint_items WHERE version_id=?""",
                     (version_id, now, now, source["id"]),
                 )

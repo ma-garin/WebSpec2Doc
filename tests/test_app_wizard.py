@@ -96,7 +96,11 @@ def test_single_mode_is_removed() -> None:
 
 
 def test_manual_mode_is_removed() -> None:
-    assert 'value="manual"' not in _index_html()
+    # クロールウィザードのmanualモードが除去されていることを確認する。
+    # 観点管理フィルタの value="manual" は許容されるため、viewpoints セクション外を検査する。
+    html = _index_html()
+    wizard_section = html.split('id="view-viewpoints"')[0] if 'id="view-viewpoints"' in html else html
+    assert 'value="manual"' not in wizard_section
 
 
 def test_removed_qa_views_are_not_exposed() -> None:

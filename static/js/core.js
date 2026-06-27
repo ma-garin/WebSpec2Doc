@@ -18,6 +18,7 @@ const VIEW_HEADER = {
   dashboard: { trail: ['WebSpec2Doc', 'ホーム'], title: 'QAドキュメント生成' },
   generate: { trail: ['ダッシュボード', 'サイトを追加'], title: 'サイトを追加 / 再クロール' },
   'qa-quality': { trail: ['ダッシュボード', '品質観点'], title: '品質観点' },
+  viewpoints: { trail: ['ダッシュボード', '観点管理'], title: '観点管理' },
   'auto-run': { trail: ['ダッシュボード', 'AutoRun'], title: 'AutoRun — 全自動テスト実行' },
   'user-guide': { trail: ['ダッシュボード', 'ユーザーガイド'], title: 'ユーザーガイド' },
   settings: { trail: ['ダッシュボード', '設定'], title: '設定' },
@@ -39,6 +40,7 @@ function setHeader(trail, title) {
 // ---- ナビ切替 ----
 document.querySelectorAll('.app-nav-item[data-view]').forEach(btn => btn.addEventListener('click', () => switchView(btn.dataset.view)));
 function switchView(name) {
+  document.body.classList.toggle('viewpoints-active', name === 'viewpoints');
   document.querySelectorAll('.app-nav-item[data-view]').forEach(b => b.classList.toggle('is-active', b.dataset.view === name));
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('is-active', v.id === 'view-' + name));
   const h = VIEW_HEADER[name];
@@ -51,9 +53,11 @@ function switchView(name) {
     }
   }
   if (name === 'qa-quality') loadQaToolSites(name);
+  if (name === 'viewpoints' && typeof loadViewpointManager === 'function') loadViewpointManager();
+  if (name === 'auto-run' && typeof autorunLoadViewpointSelection === 'function') autorunLoadViewpointSelection();
   // A: 2ペインツール画面では全高モードに切り替え
   const appContentEl = document.getElementById('app-content');
-  if (appContentEl) appContentEl.classList.toggle('is-qa-tool', ['qa-quality', 'auto-run'].includes(name));
+  if (appContentEl) appContentEl.classList.toggle('is-qa-tool', ['qa-quality', 'auto-run', 'viewpoints'].includes(name));
   // レポートモード解除（generate以外に遷移した時）
   if (name !== 'generate' && appContentEl) appContentEl.classList.remove('is-reporting');
 }
@@ -178,7 +182,7 @@ function showToast(message, type = 'info', duration = 3500) {
 }
 
 // ---- 確認モーダル（confirm() 代替・Promise<boolean>）----
-function confirmDialog({ title = '確認', message = '', confirmLabel = 'OK', danger = false } = {}) {
+function confirmDialog({ title = '確認', message = '', confirmLabel = 'OK', cancelLabel = 'キャンセル', danger = false } = {}) {
   return new Promise((resolve) => {
     const ov = document.getElementById('confirm-overlay');
     const okBtn = document.getElementById('confirm-ok-btn');
@@ -187,6 +191,7 @@ function confirmDialog({ title = '確認', message = '', confirmLabel = 'OK', da
     document.getElementById('confirm-title').textContent = title;
     document.getElementById('confirm-message').textContent = message;
     okBtn.textContent = confirmLabel;
+    cancelBtn.textContent = cancelLabel;
     okBtn.classList.toggle('btn-danger', !!danger);
     ov.classList.remove('hidden');
     const prevFocus = document.activeElement;
@@ -203,11 +208,103 @@ function confirmDialog({ title = '確認', message = '', confirmLabel = 'OK', da
     const onOk = () => close(true);
     const onCancel = () => close(false);
     const onOverlay = (e) => { if (e.target === ov) close(false); };
-    const onKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); close(false); } };
+    const onKey = (e) => {
+      if (e.key === 'Escape') { e.stopPropagation(); close(false); return; }
+      if (e.key !== 'Tab') return;
+      const focusable = [...ov.querySelectorAll('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+        .filter(el => !el.hidden && el.offsetParent !== null);
+      if (!focusable.length) { e.preventDefault(); return; }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
     okBtn.addEventListener('click', onOk);
     cancelBtn.addEventListener('click', onCancel);
     ov.addEventListener('click', onOverlay);
     document.addEventListener('keydown', onKey);
+  });
+}
+
+// ---- 入力モーダル（prompt() 代替・Promise<string|null>）----
+function inputDialog({ title = '入力', message = '', placeholder = '', defaultValue = '', confirmLabel = 'OK', cancelLabel = 'キャンセル', type = 'text', validate = null, suggestions = [] } = {}) {
+  return new Promise((resolve) => {
+    const ov = document.getElementById('input-dialog-overlay');
+    if (!ov) { resolve(window.prompt(message, defaultValue)); return; }
+    const input = document.getElementById('input-dialog-input');
+    const textarea = document.getElementById('input-dialog-textarea');
+    const errorEl = document.getElementById('input-dialog-error');
+    const okBtn = document.getElementById('input-dialog-ok-btn');
+    const cancelBtn = document.getElementById('input-dialog-cancel-btn');
+    const datalist = document.getElementById('input-dialog-datalist');
+    const isTextarea = type === 'textarea';
+    const activeField = isTextarea ? textarea : input;
+    const inactiveField = isTextarea ? input : textarea;
+
+    document.getElementById('input-dialog-title').textContent = title;
+    const msgEl = document.getElementById('input-dialog-message');
+    msgEl.textContent = message;
+    msgEl.hidden = !message;
+
+    inactiveField.hidden = true;
+    activeField.hidden = false;
+    activeField.value = defaultValue;
+    activeField.placeholder = placeholder;
+    if (!isTextarea) activeField.type = type;
+    if (datalist) {
+      while (datalist.firstChild) datalist.removeChild(datalist.firstChild);
+      suggestions.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s;
+        datalist.appendChild(opt);
+      });
+      if (suggestions.length && !isTextarea) activeField.setAttribute('list', 'input-dialog-datalist');
+      else activeField.removeAttribute('list');
+    }
+    errorEl.hidden = true;
+    okBtn.textContent = confirmLabel;
+    cancelBtn.textContent = cancelLabel;
+    ov.classList.remove('hidden');
+    const prevFocus = document.activeElement;
+    activeField.focus();
+    if (activeField.select) activeField.select();
+
+    const close = (result) => {
+      ov.classList.add('hidden');
+      okBtn.removeEventListener('click', onOk);
+      cancelBtn.removeEventListener('click', onCancel);
+      ov.removeEventListener('click', onOverlay);
+      document.removeEventListener('keydown', onKey);
+      activeField.removeEventListener('keydown', onFieldKey);
+      if (prevFocus && typeof prevFocus.focus === 'function') prevFocus.focus();
+      resolve(result);
+    };
+    const onOk = () => {
+      const value = activeField.value.trim();
+      if (validate) {
+        const error = validate(value);
+        if (error) { errorEl.textContent = error; errorEl.hidden = false; activeField.focus(); return; }
+      }
+      close(value === '' ? null : value);
+    };
+    const onCancel = () => close(null);
+    const onOverlay = (e) => { if (e.target === ov) close(null); };
+    const onKey = (e) => {
+      if (e.key === 'Escape') { e.stopPropagation(); close(null); return; }
+      if (e.key !== 'Tab') return;
+      const focusable = [...ov.querySelectorAll('button:not([disabled]), input:not([hidden]), textarea:not([hidden])')].filter(el => el.offsetParent !== null);
+      if (!focusable.length) { e.preventDefault(); return; }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    const onFieldKey = (e) => { if (e.key === 'Enter' && !isTextarea) { e.preventDefault(); onOk(); } };
+    okBtn.addEventListener('click', onOk);
+    cancelBtn.addEventListener('click', onCancel);
+    ov.addEventListener('click', onOverlay);
+    document.addEventListener('keydown', onKey);
+    activeField.addEventListener('keydown', onFieldKey);
   });
 }
 

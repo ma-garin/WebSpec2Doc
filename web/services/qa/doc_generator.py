@@ -403,6 +403,22 @@ def _qa_process_report_html(
         for vp in _load_qa_viewpoints()
     )
     generation_mode = "OpenAI API補完 + 構造化JSON" if used_ai else "外部LLM API未使用"
+    snapshot = (
+        report.get("viewpoint_snapshot", {})
+        if isinstance(report.get("viewpoint_snapshot"), dict)
+        else {}
+    )
+    snapshot_html = ""
+    if snapshot:
+        snapshot_html = (
+            "<h2>適用観点セット</h2><ul>"
+            f"<li>セット: {html.escape(str(snapshot.get('set_name', '')))}</li>"
+            f"<li>版: v{html.escape(str(snapshot.get('version', '')))}</li>"
+            f"<li>選択理由: {html.escape(str(snapshot.get('selection_reason', '')))}</li>"
+            f"<li>観点件数: {html.escape(str(snapshot.get('viewpoint_count', '')))}</li>"
+            f"<li>チェックサム: <code>{html.escape(str(snapshot.get('checksum', '')))}</code></li>"
+            "</ul>"
+        )
     return f"""<!doctype html>
 <html lang="ja">
 <head>
@@ -432,9 +448,10 @@ def _qa_process_report_html(
     <div class="card"><div class="num">{summary['required']}</div><div>必須</div></div>
     <div class="card"><div class="num">{summary['buttons']}</div><div>操作要素</div></div>
   </div>
+  {snapshot_html}
   <h2>入力仕様サマリー</h2>
   <table><thead><tr><th>画面ID</th><th>画面</th><th>フォーム</th><th>入力</th><th>必須</th></tr></thead><tbody>{screen_rows}</tbody></table>
-  <h2>参考QA観点CSV</h2>
+  <h2>適用QA観点</h2>
   <table><thead><tr><th>種別</th><th>観点</th><th>件数</th></tr></thead><tbody>{viewpoint_rows}</tbody></table>
   {doc_sections}
 </body>

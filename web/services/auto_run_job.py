@@ -32,8 +32,17 @@ class AutoRunJob:
     auth_path: str = ""
     input_request: dict[str, Any] | None = None
     run_policy: dict[str, Any] = field(default_factory=dict)
+    viewpoint_set_id: str = ""
+    viewpoint_set_name: str = ""
+    viewpoint_version: int = 0
+    viewpoint_checksum: str = ""
+    viewpoint_selection_reason: str = ""
+    viewpoint_count: int = 0
 
     _proc: Any = field(default=None, init=False, repr=False, compare=False)
+    _viewpoint_snapshot: dict[str, Any] = field(
+        default_factory=dict, init=False, repr=False, compare=False
+    )
     _input_event: Any = field(
         default_factory=threading.Event, init=False, repr=False, compare=False
     )
@@ -81,6 +90,14 @@ class AutoRunJob:
             "input_request": self.input_request,
             "run_policy": self.run_policy,
             "step_data": self.step_data,
+            "viewpoint": {
+                "set_id": self.viewpoint_set_id,
+                "set_name": self.viewpoint_set_name,
+                "version": self.viewpoint_version,
+                "checksum": self.viewpoint_checksum,
+                "selection_reason": self.viewpoint_selection_reason,
+                "count": self.viewpoint_count,
+            },
         }
 
     def cancel(self) -> None:

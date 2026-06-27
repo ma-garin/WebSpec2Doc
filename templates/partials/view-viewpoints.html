@@ -1,0 +1,216 @@
+        <!-- ===== 観点管理ビュー ===== -->
+        <section class="view" id="view-viewpoints">
+          <div class="vp-screen" id="vp-screen">
+            <div id="vp-feedback" class="vp-feedback" role="status" aria-live="polite" hidden>
+              <span class="vp-feedback-icon" aria-hidden="true">✓</span>
+              <span id="vp-feedback-text"></span>
+              <button type="button" id="vp-feedback-action" class="vp-feedback-action" hidden></button>
+              <button type="button" id="vp-feedback-close" class="vp-feedback-close" aria-label="通知を閉じる">×</button>
+            </div>
+
+            <header class="vp-commandbar">
+              <div class="vp-tabs" role="tablist" aria-label="観点管理の表示">
+                <button type="button" class="vp-tab is-active" data-vp-tab="draft" role="tab" aria-selected="true">下書き</button>
+                <button type="button" class="vp-tab" data-vp-tab="published" role="tab" aria-selected="false">公開版</button>
+                <button type="button" class="vp-tab" data-vp-tab="proposals" role="tab" aria-selected="false">AI提案</button>
+                <button type="button" class="vp-tab" data-vp-tab="history" role="tab" aria-selected="false">変更履歴</button>
+              </div>
+              <div class="vp-command-actions">
+                <button type="button" id="vp-csv-export" class="btn-outline-sm">CSV出力</button>
+                <label class="btn-outline-sm vp-import-label" for="vp-csv-import">CSV取込</label>
+                <input type="file" id="vp-csv-import" accept=".csv,text/csv" hidden>
+                <button type="button" id="vp-publish" class="btn-primary">公開</button>
+              </div>
+            </header>
+
+            <div class="vp-workbench">
+              <aside class="vp-set-panel" aria-label="観点セット">
+                <div class="vp-panel-heading">
+                  <h2>観点セット</h2>
+                  <button type="button" id="vp-new-set" class="btn-primary vp-new-set">＋ 新規セット</button>
+                </div>
+                <div id="vp-set-list" class="vp-set-list" aria-live="polite"></div>
+                <div class="vp-assignment-box">
+                  <div class="vp-assignment-head">
+                    <strong>適用ルール</strong>
+                    <button type="button" id="vp-new-assignment" class="vp-link-button">＋ 追加</button>
+                  </div>
+                  <div id="vp-assignment-list" class="vp-assignment-list"></div>
+                </div>
+                <div class="vp-set-footer">
+                  <span id="vp-set-summary">読み込み中…</span>
+                  <div class="vp-set-footer-actions">
+                    <button type="button" id="vp-edit-set" class="vp-link-button">設定</button>
+                    <button type="button" id="vp-delete-set" class="vp-link-button vp-danger-link">削除</button>
+                  </div>
+                </div>
+              </aside>
+
+              <section class="vp-list-panel" aria-label="観点一覧">
+                <div class="vp-list-head">
+                  <div class="vp-list-title-row">
+                    <h2 id="vp-list-title">観点一覧</h2>
+                    <span id="vp-item-count" class="vp-count">0件</span>
+                    <button type="button" id="vp-new-item" class="btn-primary vp-new-item">＋ 観点を追加</button>
+                  </div>
+                  <div id="vp-standard-toolbar" class="vp-standard-toolbar">
+                    <label class="vp-search">
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+                      <input type="search" id="vp-search" placeholder="観点を検索" autocomplete="off">
+                    </label>
+                    <select id="vp-filter-category" aria-label="カテゴリで絞り込む"><option value="">カテゴリ</option></select>
+                    <select id="vp-filter-risk" aria-label="リスクで絞り込む">
+                      <option value="">リスク</option><option value="5">5（高）</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1（低）</option>
+                    </select>
+                    <select id="vp-filter-automation" aria-label="自動化区分で絞り込む">
+                      <option value="">自動化</option><option value="automated">自動</option><option value="semi_automated">半自動</option><option value="human">手動</option>
+                    </select>
+                    <select id="vp-filter-state" aria-label="状態で絞り込む">
+                      <option value="">状態</option><option value="enabled">有効</option><option value="disabled">無効</option>
+                    </select>
+                  </div>
+                  <div id="vp-proposal-toolbar" class="vp-proposal-toolbar" hidden>
+                    <p>AIは提案だけを作成します。採用するまで下書きやAutoRunには反映されません。</p>
+                    <button type="button" id="vp-generate-proposals" class="btn-primary">AIに提案を依頼</button>
+                  </div>
+                </div>
+
+                <div id="vp-list-content" class="vp-list-content"></div>
+
+                <div id="vp-bulkbar" class="vp-bulkbar" hidden>
+                  <strong id="vp-selected-count">0件を選択</strong>
+                  <button type="button" data-vp-bulk="enable">有効化</button>
+                  <button type="button" data-vp-bulk="disable">無効化</button>
+                  <button type="button" data-vp-bulk="tag">タグ</button>
+                  <button type="button" data-vp-bulk="category">カテゴリ</button>
+                  <button type="button" data-vp-bulk="risk">リスク</button>
+                  <button type="button" id="vp-clear-selection" aria-label="選択を解除">×</button>
+                </div>
+              </section>
+            </div>
+          </div>
+
+          <div id="vp-editor-overlay" class="vp-editor-overlay" role="dialog" aria-modal="true" aria-labelledby="vp-editor-title" aria-describedby="vp-editor-state" hidden>
+            <div class="vp-editor-modal">
+              <header class="vp-editor-head">
+                <div>
+                  <p id="vp-editor-context" class="vp-editor-context">観点セット</p>
+                  <h2 id="vp-editor-title" tabindex="-1">観点を編集</h2>
+                </div>
+                <div class="vp-editor-head-status">
+                  <span id="vp-editor-state" class="vp-editor-state">保存済み</span>
+                  <button type="button" id="vp-editor-close" class="vp-editor-close" aria-label="編集画面を閉じる">×</button>
+                </div>
+              </header>
+
+              <div class="vp-editor-layout">
+                <nav class="vp-section-nav" aria-label="編集セクション">
+                  <button type="button" class="vp-section-link is-active" data-vp-section="vp-section-basic" aria-current="true">
+                    <span class="vp-section-icon" aria-hidden="true">1</span><span>基本情報<small data-vp-section-state>未完了</small></span>
+                  </button>
+                  <button type="button" class="vp-section-link" data-vp-section="vp-section-conditions">
+                    <span class="vp-section-icon" aria-hidden="true">2</span><span>適用条件<small data-vp-section-state>完了</small></span>
+                  </button>
+                  <button type="button" class="vp-section-link" data-vp-section="vp-section-checks">
+                    <span class="vp-section-icon" aria-hidden="true">3</span><span>確認内容<small data-vp-section-state>未完了</small></span>
+                  </button>
+                  <button type="button" class="vp-section-link" data-vp-section="vp-section-evidence">
+                    <span class="vp-section-icon" aria-hidden="true">4</span><span>根拠・タグ<small data-vp-section-state>未完了</small></span>
+                  </button>
+                </nav>
+
+                <form id="vp-editor-form" class="vp-editor-form" novalidate>
+                  <input type="hidden" id="vp-item-id">
+                  <section id="vp-section-basic" class="vp-form-section" aria-labelledby="vp-section-basic-title">
+                    <div class="vp-form-section-head"><span>01</span><div><h3 id="vp-section-basic-title">基本情報</h3><p>観点を一覧で識別し、目的と優先度を定義します。</p></div></div>
+                    <div class="vp-field">
+                      <label for="vp-item-name">名称 <span aria-hidden="true">*</span></label>
+                      <input id="vp-item-name" required maxlength="200" aria-describedby="vp-item-name-error">
+                      <p id="vp-item-name-error" class="vp-field-error" hidden></p>
+                    </div>
+                    <div class="vp-field-grid">
+                      <div class="vp-field">
+                        <label for="vp-item-category">カテゴリ <span aria-hidden="true">*</span></label>
+                        <input id="vp-item-category" required maxlength="100" aria-describedby="vp-item-category-error" list="vp-category-datalist" autocomplete="off">
+                        <datalist id="vp-category-datalist"></datalist>
+                        <p id="vp-item-category-error" class="vp-field-error" hidden></p>
+                      </div>
+                      <div class="vp-field">
+                        <label for="vp-item-risk">リスク重み</label>
+                        <select id="vp-item-risk"><option value="5">5（高）</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1（低）</option></select>
+                      </div>
+                    </div>
+                    <div class="vp-field">
+                      <label for="vp-item-purpose">目的</label>
+                      <textarea id="vp-item-purpose" rows="4" maxlength="1000"></textarea>
+                    </div>
+                  </section>
+
+                  <section id="vp-section-conditions" class="vp-form-section" aria-labelledby="vp-section-conditions-title">
+                    <div class="vp-form-section-head"><span>02</span><div><h3 id="vp-section-conditions-title">適用条件</h3><p>この観点を適用する画面や要素を、安全な許可済み条件で指定します。</p></div></div>
+                    <div class="vp-condition-row">
+                      <select id="vp-rule-field" aria-label="条件フィールド">
+                        <option value="">すべてに適用</option><option value="url">URL</option><option value="industry">業種</option><option value="screen_type">画面種別</option><option value="input_type">入力種別</option><option value="method">HTTPメソッド</option><option value="has_forms">フォーム有無</option>
+                      </select>
+                      <select id="vp-rule-operator" aria-label="条件演算子">
+                        <option value="eq">が一致</option><option value="ne">が不一致</option><option value="contains">を含む</option><option value="starts_with">で始まる</option><option value="present">が存在</option>
+                      </select>
+                      <input id="vp-rule-value" aria-label="条件値" placeholder="値" aria-describedby="vp-rule-value-error">
+                    </div>
+                    <p id="vp-rule-value-error" class="vp-field-error" hidden></p>
+                    <p class="vp-field-help">任意コードは実行されません。許可済み条件だけを使用します。</p>
+                    <label class="vp-enabled-check"><input type="checkbox" id="vp-item-enabled" checked> この観点を有効にする</label>
+                  </section>
+
+                  <section id="vp-section-checks" class="vp-form-section" aria-labelledby="vp-section-checks-title">
+                    <div class="vp-form-section-head"><span>03</span><div><h3 id="vp-section-checks-title">確認内容</h3><p>担当者や自動テストが実施する具体的な確認を記録します。</p></div></div>
+                    <div class="vp-field">
+                      <label for="vp-item-checks">推奨確認</label>
+                      <textarea id="vp-item-checks" rows="5" maxlength="1000"></textarea>
+                    </div>
+                    <div class="vp-field">
+                      <label for="vp-item-automation">自動化区分</label>
+                      <select id="vp-item-automation"><option value="automated">自動</option><option value="semi_automated">半自動</option><option value="human">手動</option></select>
+                    </div>
+                  </section>
+
+                  <section id="vp-section-evidence" class="vp-form-section" aria-labelledby="vp-section-evidence-title">
+                    <div class="vp-form-section-head"><span>04</span><div><h3 id="vp-section-evidence-title">根拠・タグ</h3><p>判断根拠と検索用の分類語を紐づけます。</p></div></div>
+                    <div class="vp-field">
+                      <label for="vp-item-standards">標準・根拠</label>
+                      <input id="vp-item-standards" maxlength="500">
+                    </div>
+                    <div class="vp-field">
+                      <label for="vp-item-tags">タグ</label>
+                      <input id="vp-item-tags" placeholder="カンマ区切り" maxlength="500">
+                    </div>
+                  </section>
+                </form>
+
+                <aside class="vp-validation-rail" aria-label="版と入力の状態">
+                  <section><h3>現在の版</h3><strong id="vp-rail-version">下書き</strong><p id="vp-rail-version-detail">編集可能な版です</p></section>
+                  <section><h3>継承元</h3><strong id="vp-rail-inheritance">このセットで定義</strong><p id="vp-rail-inheritance-detail">上書きせず直接編集します</p></section>
+                  <section><h3>入力検証</h3><strong id="vp-rail-validation" class="vp-rail-ok">✓ 問題なし</strong><p id="vp-rail-validation-detail">必須項目を確認済み</p></section>
+                  <section><h3>保存状態</h3><strong id="vp-rail-save">保存済み</strong><p id="vp-rail-save-detail">変更はありません</p></section>
+                  <section><h3>適用情報</h3><strong id="vp-rail-applicability">適用ルール 0件</strong><p>公開後のAutoRunから適用されます</p></section>
+                  <button type="button" id="vp-create-next-draft" class="btn-primary vp-next-draft" hidden>次版の下書きを作成</button>
+                </aside>
+              </div>
+
+              <section id="vp-conflict-panel" class="vp-conflict-panel" role="alert" hidden>
+                <div><strong>他の操作による更新が見つかりました</strong><p id="vp-conflict-summary">サーバー版と編集中の内容を確認してください。</p></div>
+                <button type="button" id="vp-conflict-reload" class="btn-outline-sm">サーバー版を再読込</button>
+                <button type="button" id="vp-conflict-reapply" class="btn-primary">編集内容を再適用</button>
+              </section>
+
+              <footer class="vp-editor-footer">
+                <div class="vp-editor-footer-left">
+                  <button type="button" id="vp-discard-item" class="btn-outline-sm">変更を破棄</button>
+                  <button type="button" id="vp-delete-item" class="vp-delete-button">観点を削除</button>
+                </div>
+                <div id="vp-editor-error" class="vp-editor-error" role="alert"></div>
+                <button type="submit" form="vp-editor-form" id="vp-save-item" class="btn-primary">下書きを保存</button>
+              </footer>
+            </div>
+          </div>
+        </section>

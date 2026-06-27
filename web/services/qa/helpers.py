@@ -1,15 +1,30 @@
 from __future__ import annotations
 
-import csv
 import json
 import sys
+from contextlib import contextmanager
+from contextvars import ContextVar
 from pathlib import Path
 from typing import Any
 
-from web.config import OUTPUT_DIR, QA_VIEWPOINTS_CSV
+from web.config import OUTPUT_DIR
 from web.services.openai_qa import has_openai_api_key
 from web.summary import _summary_for_domain
 from web.validation import _valid_domain
+
+_VIEWPOINT_OVERRIDE: ContextVar[list[dict[str, Any]] | None] = ContextVar(
+    "viewpoint_override", default=None
+)
+
+
+@contextmanager
+def use_viewpoint_snapshot(viewpoints: list[dict[str, Any]]):
+    token = _VIEWPOINT_OVERRIDE.set(viewpoints)
+    try:
+        yield
+    finally:
+        _VIEWPOINT_OVERRIDE.reset(token)
+
 
 QA_STEPS = (
     ("test_plan", "テスト計画", "test_plan.md"),
@@ -114,23 +129,20 @@ def _load_qa_viewpoints(
     report: dict[str, Any] | None = None,
     provider: Any = None,
 ) -> list[dict[str, Any]]:
-    """CSV観点を返し、provider 指定時は対象画面から生成した観点も追加する。"""
-    try:
-        with QA_VIEWPOINTS_CSV.open("r", encoding="utf-8-sig", newline="") as handle:
-            rows = list(csv.DictReader(handle))
-    except OSError:
-        return []
-    viewpoints: list[dict[str, Any]] = []
-    for row in rows:
-        name = (row.get("name") or "").strip()
-        summary_type = (row.get("summary_type") or "").strip()
-        if not name or not summary_type:
-            continue
-        try:
-            count = int(row.get("count") or 0)
-        except ValueError:
-            count = 0
-        viewpoints.append({"summary_type": summary_type, "name": name, "count": count})
+    """公開済みDB観点を返し、AutoRun中は固定スナップショットだけを参照する。"""
+    override = _VIEWPOINT_OVERRIDE.get()
+    if override is not None:
+        viewpoints = [_legacy_viewpoint(item) for item in override]
+    else:
+        from web.services.viewpoint_store import get_viewpoint_store
+
+        snapshot = get_viewpoint_store().select_snapshot(
+            {"url": f"https://{domain}" if domain else ""}
+        )
+        viewpoints = [_legacy_viewpoint(item) for item in snapshot["items"]]
+
+    # 移行互換の環境変数 QA_VIEWPOINTS_CSV はDB初回投入元としてのみ利用する。
+    # 生成処理でCSVを再読込しないため、実行中の差し替えは反映されない。
     if provider is None or report is None:
         return viewpoints
 
@@ -185,6 +197,19 @@ def _load_qa_viewpoints(
             viewpoints.append(item)
             seen.add(key)
     return viewpoints
+
+
+def _legacy_viewpoint(item: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "persistent_key": str(item.get("persistent_key", "")),
+        "summary_type": str(item.get("category") or item.get("summary_type") or "一般"),
+        "name": str(item.get("name", "")),
+        "count": int(item.get("count", 1) or 1),
+        "risk_weight": int(item.get("risk_weight", 3) or 3),
+        "automation": str(item.get("automation", "manual")),
+        "standards": str(item.get("standards", "")),
+        "tags": item.get("tags", []),
+    }
 
 
 def _viewpoints_by_type(summary_type: str) -> list[dict[str, Any]]:

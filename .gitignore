@@ -69,3 +69,6 @@ _autorun_pw.config.js
 # E2E 実行アーティファクト（環境依存のためコミット禁止）
 tests/e2e/screenshots/
 tests/e2e/snapshots/*.png
+
+# ルート直下の検証スクリーンショット（一時アーティファクト）
+/*.png

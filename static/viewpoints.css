@@ -11,7 +11,8 @@
 
 .vp-screen [hidden],
 .vp-editor-overlay[hidden],
-.vp-editor-modal [hidden] { display: none !important; }
+.vp-editor-modal [hidden],
+.input-dialog-card [hidden] { display: none !important; }
 
 .vp-feedback {
   margin: 10px 16px 0;

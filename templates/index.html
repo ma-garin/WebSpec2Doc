@@ -24,18 +24,18 @@
     })();
   </script>
 </head>
-<body class="app-page">
+<body class="app-page backlog-active">
 <a href="#app-content" class="skip-link">本文へスキップ</a>
 <div class="app-shell">
 
   <aside class="app-sidebar">
     <a href="/" class="app-brand">
       <span class="app-brand-mark">W</span>
-      <span class="app-brand-text"><strong>WebSpec2Doc</strong><span>QA テスト分析インプット</span></span>
+      <span class="app-brand-text"><strong>WebSpec2Doc</strong><span>DELIVERY WORKSPACE</span></span>
     </a>
-    <button type="button" class="btn-primary" id="add-site-btn" style="width:100%;height:40px;gap:6px">
+    <button type="button" class="btn-primary sidebar-primary-action" id="add-site-btn">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="16" height="16"><path d="M12 5v14M5 12h14"/></svg>
-      <span class="add-site-label">サイトを追加</span>
+      <span class="add-site-label">新規解析</span>
     </button>
 {% include 'partials/nav.html' %}
     <button type="button" id="sidebar-toggle-btn" class="sidebar-toggle-btn" title="サイドバーを折りたたむ">
@@ -43,9 +43,7 @@
       <svg class="icon-expand"  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
       <span class="nav-label">折りたたむ</span>
     </button>
-    <div class="app-sidebar-foot">
-      稼働中のWebシステムから QA テスト分析インプットを生成し、<strong>再クロールで仕様ドリフトを検知</strong>します。
-    </div>
+    <div class="app-sidebar-foot"><span class="sidebar-avatar" aria-hidden="true">YM</span><span><strong>Delivery team</strong><small>WebSpec2Doc project</small></span></div>
   </aside>
 
   <div class="app-main">

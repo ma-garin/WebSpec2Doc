@@ -40,25 +40,28 @@ async function recrawlSite(domain) {
   showToast(`前回の対象画面（${discovered.length}件）を復元しました。条件を確認して実行してください`, 'info');
 }
 
-async function openResultsForDomain(domain) {
+async function openResultsForDomain(domain, tab, sub) {
   switchView('generate');
   genPanel.style.display = 'none';
   executionView.classList.add('hidden');
   appContent.classList.add('is-executing');
   resultPanel.classList.remove('hidden');
-  resultHero.innerHTML = '<div class="hero-msg">読み込み中…</div>';
+  uiSkeleton(document.getElementById('rp-overview'), 'table');
   // ディープリンク: URLハッシュにレポート状態を保存（チーム共有用）
   try { history.replaceState(null, '', '#report/' + encodeURIComponent(domain)); } catch (e) {}
-  await showResults(domain);
+  await showResults(domain, tab, sub);
 }
 
-// ページロード時にハッシュ #report/<domain> があればそのレポートを直接開く
+// ページロード時にハッシュ #report/<domain>[/<tab>[/<sub>]] があればそのレポートを直接開く
+// （旧8タブ時代のタブ名は results.js の互換マップで新タブへ解決される）
 window.addEventListener('DOMContentLoaded', () => {
-  const m = location.hash.match(/^#report\/(.+)$/);
+  const m = location.hash.match(/^#report\/([^/]+)(?:\/([^/]+))?(?:\/([^/]+))?$/);
   if (m) {
     const domain = decodeURIComponent(m[1]);
+    const tab = m[2] ? decodeURIComponent(m[2]) : undefined;
+    const sub = m[3] ? decodeURIComponent(m[3]) : undefined;
     setTimeout(() => {
-      openResultsForDomain(domain);
+      openResultsForDomain(domain, tab, sub);
       window._appBooted = true;
     }, 300);
   } else {

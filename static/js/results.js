@@ -1,20 +1,37 @@
 // ====================== 結果ページ（QAビュー軸） ======================
 const resultPanel = document.getElementById('result-panel');
-const resultHero = document.getElementById('result-hero');
-const VIEW_MODE_KEY = 'wsd_view_mode';
-const SUMMARY_HIDE_TABS = new Set(['design', 'technique-detail', 'transition-table', 'history']);
-const EXPORT_DEFS = [
-  { key: 'html', label: 'HTMLレポート', desc: 'テスト分析インプット文書（画面別カード＋テスト条件）' },
-  { key: 'pdf', label: 'PDF', desc: '配布・印刷用（HTMLレポートのPDF版）' },
-  { key: 'screens_md', label: 'Markdown（画面一覧）', desc: 'screens.md' },
-  { key: 'forms_md', label: 'Markdown（フォーム）', desc: 'forms.md' },
-  { key: 'excel', label: 'Excel', desc: 'spec.xlsx（表計算で編集）' },
-  { key: 'json', label: 'JSON（機械可読）', desc: '自動化・連携用の構造化データ' },
-  { key: 'diff', label: '差分レポート', desc: '前回スナップショットとの差分' },
-];
-let resultData = null, reportJson = null, activeResultTab = 'overview';
+// 描画先シム: selectResultTab がアクティブなパネル/サブパネル要素へ差し替える。
+// 各 view-*.js は resultHero へ描画するだけで、自分のパネルにだけ描かれ状態が保持される。
+let resultHero = document.getElementById('rp-overview');
 
-async function showResults(domain) {
+// タブレジストリ: パネルID・描画関数（グローバル名前解決）・サブタブ構成
+const TAB_DEFS = {
+  overview:      { panel: 'rp-overview', render: 'renderOverview' },
+  screens:       { panel: 'rp-screens', defaultSub: 'spec',
+                   subs: { spec: 'renderReport', gallery: 'renderShots' } },
+  'test-design': { panel: 'rp-test-design', defaultSub: 'matrix',
+                   subs: { matrix: 'renderMatrix', summary: 'renderDesign', detail: 'renderTechniqueDetail' } },
+  flow:          { panel: 'rp-flow', defaultSub: 'diagram',
+                   subs: { diagram: 'renderTransition', table: 'renderTransitionTable' } },
+  runs:          { panel: 'rp-runs', render: 'renderTestRuns' },
+  history:       { panel: 'rp-history', render: 'renderTimeline' },
+};
+
+// 旧8タブ時代のディープリンク互換（共有済みURLを壊さない）
+const LEGACY_TAB_MAP = {
+  report: ['screens', 'spec'],
+  matrix: ['test-design', 'matrix'],
+  design: ['test-design', 'summary'],
+  'technique-detail': ['test-design', 'detail'],
+  transition: ['flow', 'diagram'],
+  'transition-table': ['flow', 'table'],
+};
+
+let resultData = null, reportJson = null;
+let activeResultTab = 'overview', activeResultSub = '';
+const _renderedPanels = new Set(); // "tab/sub" 単位の描画済みフラグ（dirty 管理）
+
+async function showResults(domain, tab, sub) {
   let data;
   try {
     const res = await fetch('/api/result?domain=' + encodeURIComponent(domain));
@@ -25,7 +42,13 @@ async function showResults(domain) {
     executionView.classList.add('hidden'); resultPanel.classList.remove('hidden');
     appContent.classList.add('is-executing');
     setHeader(['ダッシュボード', domain], domain);
-    resultHero.innerHTML = `<div class="hero-msg"><p>結果の取得に失敗しました。</p><p style="font-size:13px;color:var(--text-muted)">${escHtml(e.message)}</p></div>`;
+    _renderedPanels.clear();
+    _switchPanels('overview', '');
+    uiError(document.getElementById('rp-overview'), {
+      title: '結果の取得に失敗しました',
+      message: e.message,
+      onRetry: () => showResults(domain, tab, sub),
+    });
     return;
   }
   resultData = data;
@@ -68,8 +91,8 @@ async function showResults(domain) {
   const fieldCount = s.fields || 0;
   const snapCount = data.snapshot_count || 0;
   const setTabCount = (id, n) => { const el = document.getElementById(id); if (el) el.textContent = n > 0 ? ` ${n}` : ''; };
-  setTabCount('tab-count-report', screenCount);
-  setTabCount('tab-count-matrix', fieldCount);
+  setTabCount('tab-count-screens', screenCount);
+  setTabCount('tab-count-test-design', fieldCount);
   setTabCount('tab-count-history', snapCount);
 
   setHeader(['ダッシュボード', domain], domain);
@@ -78,7 +101,8 @@ async function showResults(domain) {
   appContent.classList.add('is-reporting');
   _buildExportDropdown(data);
   showWizardStep(4);
-  selectResultTab('overview');
+  _renderedPanels.clear(); // データ更新 → 全パネル dirty 化（次回表示時に再描画）
+  selectResultTab(tab || 'overview', sub);
 }
 
 function _buildExportDropdown(data) {
@@ -116,62 +140,112 @@ document.addEventListener('click', () => {
   if (dd) dd.classList.remove('is-open');
 });
 
-document.querySelectorAll('.result-tab').forEach(t => {
+document.querySelectorAll('.result-tabs .result-tab').forEach(t => {
   t.addEventListener('click', () => selectResultTab(t.dataset.tab));
   t.addEventListener('keydown', e => {
     if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
     e.preventDefault();
-    const tabs = [...document.querySelectorAll('.result-tab')].filter(x => x.offsetParent !== null);
+    const tabs = [...document.querySelectorAll('.result-tabs .result-tab')].filter(x => x.offsetParent !== null);
     const i = tabs.indexOf(t);
     const next = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
     if (next) { selectResultTab(next.dataset.tab); next.focus(); }
   });
 });
-function selectResultTab(tab) {
+document.querySelectorAll('.result-subtabs .result-subtab').forEach(t => {
+  t.addEventListener('click', () => {
+    const tab = t.closest('.result-subtabs')?.dataset.tab;
+    if (tab) selectResultTab(tab, t.dataset.sub);
+  });
+});
+
+// タブ・サブタブ名を正規化（旧8タブ時代の名前も受け付ける）
+function _normalizeTab(tab, sub) {
+  if (LEGACY_TAB_MAP[tab]) return LEGACY_TAB_MAP[tab];
+  const def = TAB_DEFS[tab] ? tab : 'overview';
+  const d = TAB_DEFS[def];
+  const s = d.subs ? (d.subs[sub] ? sub : d.defaultSub) : '';
+  return [def, s];
+}
+
+// パネル・タブボタンの表示状態だけを切り替え、resultHero シムを差し替える（描画はしない）
+function _switchPanels(tab, sub) {
   activeResultTab = tab;
-  document.querySelectorAll('.result-tab').forEach(t => {
+  activeResultSub = sub;
+  document.querySelectorAll('.result-tabs .result-tab').forEach(t => {
     const on = t.dataset.tab === tab;
     t.classList.toggle('is-active', on);
     t.setAttribute('aria-selected', on ? 'true' : 'false');
     t.tabIndex = on ? 0 : -1;
   });
-  if (tab === 'overview') renderOverview();
-  else if (tab === 'matrix') renderMatrix();
-  else if (tab === 'report') renderReport();
-  else if (tab === 'design') renderDesign();
-  else if (tab === 'technique-detail') renderTechniqueDetail();
-  else if (tab === 'transition') renderTransition();
-  else if (tab === 'transition-table') renderTransitionTable();
-  else if (tab === 'history') renderTimeline();
+  for (const [name, def] of Object.entries(TAB_DEFS)) {
+    const panel = document.getElementById(def.panel);
+    if (panel) panel.hidden = name !== tab;
+  }
+  const def = TAB_DEFS[tab];
+  let target = document.getElementById(def.panel);
+  if (def.subs) {
+    const panel = target;
+    panel.querySelectorAll('.result-subtab').forEach(t => {
+      const on = t.dataset.sub === sub;
+      t.classList.toggle('is-active', on);
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    panel.querySelectorAll('.result-subpanel').forEach(p => {
+      p.hidden = p.id !== `${def.panel}-${sub}`;
+    });
+    target = document.getElementById(`${def.panel}-${sub}`) || panel;
+  }
+  resultHero = target;
+  return target;
 }
 
-function applyViewMode(mode) {
-  const selectedMode = mode === 'detail' ? 'detail' : 'summary';
-  document.querySelectorAll('.result-tabs .result-tab[data-tab]').forEach(tab => {
-    const hide = selectedMode === 'summary' && SUMMARY_HIDE_TABS.has(tab.dataset.tab);
-    tab.style.display = hide ? 'none' : '';
-    if (hide && tab.classList.contains('is-active')) {
-      document.querySelector('.result-tab[data-tab="overview"]')?.click();
-    }
+function _writeReportHash() {
+  const domain = (document.getElementById('r-domain') || {}).textContent || '';
+  if (!domain || domain === '-' || resultPanel.classList.contains('hidden')) return;
+  let hash = '#report/' + encodeURIComponent(domain) + '/' + activeResultTab;
+  if (activeResultSub) hash += '/' + activeResultSub;
+  try { history.replaceState(null, '', hash); } catch (_) {}
+}
+
+function selectResultTab(tab, sub) {
+  const [nTab, nSub] = _normalizeTab(tab, sub);
+  _switchPanels(nTab, nSub);
+  _writeReportHash();
+  const key = nTab + '/' + nSub;
+  if (_renderedPanels.has(key)) return; // 描画済み: 状態（検索条件・スクロール・ズーム）を保持
+  _renderedPanels.add(key);
+  const def = TAB_DEFS[nTab];
+  const fnName = def.subs ? def.subs[nSub] : def.render;
+  const fn = window[fnName];
+  if (typeof fn === 'function') fn();
+}
+
+// ---- テスト実行タブ（Phase 2 で view-test-runs.js が本実装を提供。ここは空状態のみ） ----
+function renderTestRuns() {
+  uiEmpty(resultHero, {
+    icon: '🧪',
+    title: 'テスト実行結果はまだありません',
+    desc: 'AutoRun でこのサイトの自動テストを実行すると、PASS/FAIL の結果と実行レポートがここに表示されます。',
+    actionLabel: 'AutoRun で自動テストを実行 →',
+    onAction: () => switchView('auto-run'),
   });
-  document.getElementById('view-mode-summary')?.classList.toggle('is-active', selectedMode === 'summary');
-  document.getElementById('view-mode-detail')?.classList.toggle('is-active', selectedMode === 'detail');
-  try { localStorage.setItem(VIEW_MODE_KEY, selectedMode); } catch (_) {}
 }
 
 // ---- 履歴・差分（クロール履歴タイムライン＋任意2点の仕様ドリフト比較）----
 let timelineDomain = '';
 async function renderTimeline() {
+  // await 中にタブ切替で resultHero シムが差し替わっても、自パネルへ描き続ける
+  const host = resultHero;
   const domain = document.getElementById('r-domain').textContent.trim();
   timelineDomain = domain;
-  resultHero.innerHTML = '<div class="hero-msg">クロール履歴を読み込み中…</div>';
+  uiSkeleton(host, 'table');
   let snaps = [];
   try {
     const data = await fetch('/api/snapshots?domain=' + encodeURIComponent(domain)).then(r => r.json());
     snaps = data.snapshots || [];
   } catch (e) {}
   if (snaps.length < 2) {
-    resultHero.innerHTML = '<div class="hero-pad"><div class="hero-section-title">クロール履歴</div>' +
+    host.innerHTML = '<div class="hero-pad"><div class="hero-section-title">クロール履歴</div>' +
       '<p style="color:var(--text-muted);font-size:13px">履歴が' + snaps.length + '件です。<strong>再クロール</strong>すると、前回との仕様ドリフト（追加/削除された画面・変更されたフォーム）を時系列で比較できます。</p>' +
       _ciGuidanceCard(domain) + '</div>';
     _bindCiCopy();
@@ -185,7 +259,7 @@ async function renderTimeline() {
       <td>${escHtml(s.label)}${i === 0 ? ' <span class="tl-latest">最新</span>' : ''}</td>
       <td class="num">${s.screens}</td><td class="num">${s.forms}</td><td class="num">${s.fields}</td>
     </tr>`).join('');
-  resultHero.innerHTML = '<div class="hero-pad">' +
+  host.innerHTML = '<div class="hero-pad">' +
     '<div class="hero-section-title">クロール履歴（' + snaps.length + '件）</div>' +
     '<p style="color:var(--text-muted);font-size:13px;margin-bottom:10px">比較する2時点を選び、仕様ドリフトを確認します（比較元＝古い／比較先＝新しい）。</p>' +
     '<table class="ov-screens tl-table"><thead><tr><th>比較元</th><th>比較先</th><th>クロール日時</th><th>画面</th><th>フォーム</th><th>入力項目</th></tr></thead><tbody>' +
@@ -236,8 +310,6 @@ function _toggleMaximize() {
 }
 
 document.getElementById('r-maximize-btn')?.addEventListener('click', _toggleMaximize);
-document.getElementById('view-mode-summary')?.addEventListener('click', () => applyViewMode('summary'));
-document.getElementById('view-mode-detail')?.addEventListener('click', () => applyViewMode('detail'));
 document.getElementById('r-maximize-exit-btn')?.addEventListener('click', () => {
   document.body.classList.remove('result-maximized');
 });
@@ -268,9 +340,3 @@ document.getElementById('popup-view-report-btn').addEventListener('click', () =>
 document.getElementById('completion-overlay').addEventListener('click', (e) => {
   if (e.target === e.currentTarget) document.getElementById('completion-overlay').classList.add('hidden');
 });
-
-(function initViewMode() {
-  let saved = 'summary';
-  try { saved = localStorage.getItem(VIEW_MODE_KEY) || 'summary'; } catch (_) {}
-  applyViewMode(saved);
-}());

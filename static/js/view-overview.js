@@ -85,9 +85,9 @@ function renderOverview() {
     _execSummary(screens) +
     `<div class="next-steps-cta">
       <span class="next-steps-label">次のステップ</span>
-      <button type="button" class="next-step-btn" onclick="document.querySelector('.result-tab[data-tab=matrix]')?.click()">テスト条件を確認する →</button>
-      <button type="button" class="next-step-btn" onclick="document.querySelector('.result-tab[data-tab=design]')?.click()">技法マトリクスを見る →</button>
-      <button type="button" class="next-step-btn next-step-btn--secondary" onclick="document.querySelector('.result-tab[data-tab=history]')?.click()">差分・履歴を確認する →</button>
+      <button type="button" class="next-step-btn" onclick="selectResultTab('test-design','matrix')">テスト条件を確認する →</button>
+      <button type="button" class="next-step-btn" onclick="selectResultTab('test-design','summary')">技法マトリクスを見る →</button>
+      <button type="button" class="next-step-btn next-step-btn--secondary" onclick="selectResultTab('history')">差分・履歴を確認する →</button>
     </div>` +
     '<div class="hero-section-title">画面インベントリ ' + invNote + '</div>' +
     '<table class="ov-screens"><thead><tr><th>画面ID</th><th>タイトル</th><th>URL</th><th>フォーム</th><th>入力項目</th><th>遷移先</th></tr></thead><tbody>' +

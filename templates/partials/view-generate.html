@@ -215,28 +215,49 @@
             </div>
             <div class="result-bar">
               <div class="result-tabs" role="tablist" aria-label="結果ビュー">
-                <button type="button" role="tab" aria-selected="true" class="result-tab is-active" data-tab="overview">概要</button>
-                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="report">画面別仕様<span class="tab-count" id="tab-count-report"></span></button>
-                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="matrix">テスト条件<span class="tab-count" id="tab-count-matrix"></span></button>
-                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="design">設計</button>
-                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="technique-detail">技法詳細</button>
-                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="transition">画面遷移図</button>
-                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="transition-table">遷移表</button>
-                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="history">履歴・差分<span class="tab-count" id="tab-count-history"></span></button>
+                <button type="button" role="tab" aria-selected="true" class="result-tab is-active" data-tab="overview" aria-controls="rp-overview">概要</button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="screens" aria-controls="rp-screens">画面と仕様<span class="tab-count" id="tab-count-screens"></span></button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="test-design" aria-controls="rp-test-design">テスト設計<span class="tab-count" id="tab-count-test-design"></span></button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="flow" aria-controls="rp-flow">画面遷移</button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="runs" aria-controls="rp-runs">テスト実行</button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="history" aria-controls="rp-history">履歴・差分<span class="tab-count" id="tab-count-history"></span></button>
               </div>
               <div class="result-bar-actions">
-                <div class="view-mode-toggle" style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted)">
-                  <span>ビュー:</span>
-                  <button type="button" id="view-mode-summary" class="btn-outline-sm view-mode-btn is-active"
-                    style="font-size:11px;padding:2px 8px" title="概要・仕様・テスト条件・遷移図のみ">サマリー</button>
-                  <button type="button" id="view-mode-detail" class="btn-outline-sm view-mode-btn"
-                    style="font-size:11px;padding:2px 8px" title="全タブを表示">詳細</button>
-                </div>
                 <button type="button" id="r-maximize-btn" class="btn-outline-sm" title="最大化 (Esc で解除)">⛶ 最大化</button>
                 <button type="button" id="r-new-btn" class="btn-outline-sm">ダッシュボードへ</button>
               </div>
             </div>
-            <div class="result-hero" id="result-hero" role="tabpanel" tabindex="0"></div>
+            <div class="result-hero" id="result-hero">
+              <div class="result-tab-panel rp-simple" id="rp-overview" role="tabpanel" tabindex="0" aria-label="概要"></div>
+              <div class="result-tab-panel" id="rp-screens" role="tabpanel" tabindex="0" aria-label="画面と仕様" hidden>
+                <div class="result-subtabs" role="tablist" aria-label="画面と仕様のビュー" data-tab="screens">
+                  <button type="button" role="tab" aria-selected="true" class="result-subtab is-active" data-sub="spec">画面仕様</button>
+                  <button type="button" role="tab" aria-selected="false" class="result-subtab" data-sub="gallery">ギャラリー</button>
+                </div>
+                <div class="result-subpanel" id="rp-screens-spec"></div>
+                <div class="result-subpanel" id="rp-screens-gallery" hidden></div>
+              </div>
+              <div class="result-tab-panel" id="rp-test-design" role="tabpanel" tabindex="0" aria-label="テスト設計" hidden>
+                <div class="result-subtabs" role="tablist" aria-label="テスト設計のビュー" data-tab="test-design">
+                  <button type="button" role="tab" aria-selected="true" class="result-subtab is-active" data-sub="matrix">条件マトリクス</button>
+                  <button type="button" role="tab" aria-selected="false" class="result-subtab" data-sub="summary">技法サマリー</button>
+                  <button type="button" role="tab" aria-selected="false" class="result-subtab" data-sub="detail">技法詳細</button>
+                </div>
+                <div class="result-subpanel" id="rp-test-design-matrix"></div>
+                <div class="result-subpanel" id="rp-test-design-summary" hidden></div>
+                <div class="result-subpanel" id="rp-test-design-detail" hidden></div>
+              </div>
+              <div class="result-tab-panel" id="rp-flow" role="tabpanel" tabindex="0" aria-label="画面遷移" hidden>
+                <div class="result-subtabs" role="tablist" aria-label="画面遷移のビュー" data-tab="flow">
+                  <button type="button" role="tab" aria-selected="true" class="result-subtab is-active" data-sub="diagram">遷移図</button>
+                  <button type="button" role="tab" aria-selected="false" class="result-subtab" data-sub="table">遷移表</button>
+                </div>
+                <div class="result-subpanel" id="rp-flow-diagram"></div>
+                <div class="result-subpanel" id="rp-flow-table" hidden></div>
+              </div>
+              <div class="result-tab-panel rp-simple" id="rp-runs" role="tabpanel" tabindex="0" aria-label="テスト実行" hidden></div>
+              <div class="result-tab-panel rp-simple" id="rp-history" role="tabpanel" tabindex="0" aria-label="履歴・差分" hidden></div>
+            </div>
           </div>
           <script>
           (function () {

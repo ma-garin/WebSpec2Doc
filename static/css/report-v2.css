@@ -1,0 +1,150 @@
+/* ==========================================================================
+   report-v2.css — 実行結果レポート画面の新描画基盤（永続パネル・サブタブ・UI状態）
+   デザイントークンは tokens.css（--color-*）→ app.css エイリアス（--primary 等）を参照する。
+   ========================================================================== */
+
+/* ---- パネルホスト（タブごとの永続パネル。innerHTML 全置換をやめ hidden 切替で状態保持） ---- */
+.result-hero {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* app.css の overflow:auto を上書き。スクロールは各パネルが持つ */
+  padding: 0;
+}
+.result-tab-panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+/* hidden 属性は表示種別の指定（.rp-simple 等）に常に勝つ必要がある */
+.result-tab-panel[hidden] { display: none !important; }
+/* 単純タブ: パネル自体がスクロールコンテナ */
+.result-tab-panel.rp-simple {
+  display: block;
+  overflow: auto;
+  position: relative;
+}
+/* 複合タブ: サブタブバー固定 + サブパネルがスクロール */
+.result-subtabs {
+  flex-shrink: 0;
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-soft);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.result-subtabs::-webkit-scrollbar { display: none; }
+.result-subtab {
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.result-subtab:hover { background: var(--surface-subtle); color: var(--text); }
+.result-subtab.is-active {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--primary-dark);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .06);
+}
+.result-subtab:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.result-subpanel {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  position: relative;
+}
+.result-subpanel[hidden] { display: none !important; }
+
+/* パネル内の全高メッセージ（.hero-msg の高さ計算をパネル基準に） */
+.result-tab-panel .hero-msg,
+.result-subpanel .hero-msg { min-height: 100%; height: auto; }
+
+/* ---- UI状態: スケルトンローディング ---- */
+.ui-skeleton { padding: 16px; display: grid; gap: 10px; }
+.ui-skeleton-row,
+.ui-skeleton-block {
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--surface-subtle) 25%,
+    color-mix(in srgb, var(--surface-subtle) 55%, var(--surface)) 37%,
+    var(--surface-subtle) 63%
+  );
+  background-size: 400% 100%;
+  animation: ui-skeleton-shimmer 1.4s ease infinite;
+}
+.ui-skeleton-row { height: 14px; }
+.ui-skeleton-row.is-wide { height: 22px; width: 45%; }
+.ui-skeleton-block { height: 180px; }
+.ui-skeleton-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; padding: 16px; }
+.ui-skeleton-cards .ui-skeleton-block { height: 120px; }
+@keyframes ui-skeleton-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: 0 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ui-skeleton-row, .ui-skeleton-block { animation: none; }
+}
+
+/* ---- UI状態: 空状態 ---- */
+.ui-empty {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 40px 24px;
+  text-align: center;
+}
+.ui-empty-icon {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--info-bg);
+  color: var(--primary);
+  font-size: 24px;
+}
+.ui-empty-icon svg { width: 26px; height: 26px; }
+.ui-empty-title { font-size: 15px; font-weight: 700; color: var(--text); margin: 0; }
+.ui-empty-desc { font-size: 13px; color: var(--text-muted); margin: 0; max-width: 460px; line-height: 1.7; }
+.ui-empty-action { margin-top: 6px; }
+
+/* ---- UI状態: エラー ---- */
+.ui-error {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 40px 24px;
+  text-align: center;
+}
+.ui-error-icon {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--critical-bg);
+  color: var(--critical);
+  font-size: 24px;
+}
+.ui-error-title { font-size: 15px; font-weight: 700; color: var(--text); margin: 0; }
+.ui-error-message { font-size: 13px; color: var(--text-muted); margin: 0; max-width: 520px; word-break: break-word; line-height: 1.7; }
+
+/* ---- スクリーンショットギャラリー（screens タブ配下で復活） ---- */
+.result-subpanel .shots-grid { padding: 16px; }

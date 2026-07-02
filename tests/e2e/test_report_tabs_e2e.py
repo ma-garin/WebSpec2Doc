@@ -175,6 +175,72 @@ class TestSubTabs:
         expect(page.locator("#rp-runs")).to_contain_text("AutoRun")
 
 
+class TestRunsTab:
+    """テスト実行タブ（AutoRun 結果の一元表示）。"""
+
+    def _write_playwright_report(self, payload: dict) -> Path:
+        qa_dir = FIXTURE_DIR / "qa_process"
+        qa_dir.mkdir(parents=True, exist_ok=True)
+        path = qa_dir / "playwright_report.json"
+        path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+        return qa_dir
+
+    def test_runs_tab_shows_results_and_pass_rate(self, page: Page) -> None:
+        qa_dir = self._write_playwright_report(
+            {
+                "ok": False,
+                "passed": 3,
+                "failed": 1,
+                "skipped": 0,
+                "total": 4,
+                "duration_ms": 12000,
+                "tests": [
+                    {"title": "トップ表示", "status": "passed", "duration_ms": 900, "error": ""},
+                    {
+                        "title": "フォーム送信",
+                        "status": "failed",
+                        "duration_ms": 2100,
+                        "error": "locator #submit not found",
+                    },
+                ],
+            }
+        )
+        try:
+            _open_report(page, "/runs")
+            expect(page.locator("#rp-runs")).to_contain_text("テスト実行結果")
+            expect(page.locator("#rp-runs .runs-passrate")).to_be_visible()
+            expect(page.locator("#rp-runs")).to_contain_text("75%")
+            expect(page.locator("#rp-runs .runs-table")).to_contain_text("フォーム送信")
+            # 失敗テストのエラーは折りたたみで確認できる
+            page.locator("#rp-runs .runs-error-detail summary").first.click()
+            expect(page.locator("#rp-runs")).to_contain_text("locator #submit not found")
+        finally:
+            shutil.rmtree(qa_dir, ignore_errors=True)
+
+    def test_runs_tab_unavailable_is_warning_not_success(self, page: Page) -> None:
+        """Playwright 未セットアップは PASS 0/FAIL 0 の成功表示ではなく警告として描画する。"""
+        qa_dir = self._write_playwright_report(
+            {
+                "ok": False,
+                "passed": 0,
+                "failed": 0,
+                "skipped": 0,
+                "total": 0,
+                "tests": [],
+                "error": "@playwright/test が見つかりません",
+                "unavailable": True,
+            }
+        )
+        try:
+            _open_report(page, "/runs")
+            expect(page.locator("#rp-runs .runs-unavailable-card")).to_be_visible()
+            expect(page.locator("#rp-runs")).to_contain_text("テストを実行できませんでした")
+            expect(page.locator("#rp-runs")).to_contain_text("セットアップ手順")
+            expect(page.locator("#rp-runs .runs-passrate")).not_to_be_visible()
+        finally:
+            shutil.rmtree(qa_dir, ignore_errors=True)
+
+
 class TestStatePreservation:
     """永続パネルによる状態保持の検証。"""
 

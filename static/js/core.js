@@ -54,7 +54,11 @@ function switchView(name) {
   }
   if (name === 'qa-quality') loadQaToolSites(name);
   if (name === 'viewpoints' && typeof loadViewpointManager === 'function') loadViewpointManager();
-  if (name === 'auto-run' && typeof autorunLoadViewpointSelection === 'function') autorunLoadViewpointSelection();
+  if (name === 'auto-run') {
+    if (typeof autorunLoadViewpointSelection === 'function') autorunLoadViewpointSelection();
+    // リロード後も実行中ジョブへ再接続し、「最近の実行」を表示する
+    if (typeof autorunResume === 'function') autorunResume();
+  }
   // A: 2ペインツール画面では全高モードに切り替え
   const appContentEl = document.getElementById('app-content');
   if (appContentEl) appContentEl.classList.toggle('is-qa-tool', ['qa-quality', 'auto-run', 'viewpoints'].includes(name));

@@ -271,3 +271,48 @@ def test_result_api_returns_expected_structure(tmp_path: Path, monkeypatch) -> N
     assert {"files", "summary", "screenshots"} <= set(data)
     assert data["summary"] == {"screens": 1, "forms": 0, "fields": 0, "buttons": 0}
     assert data["files"]["json"].endswith("report.json")
+
+
+def test_result_api_playwright_keys_empty_without_qa_process(tmp_path: Path, monkeypatch) -> None:
+    """qa_process/ 未生成のドメインでは playwright 系キーは空文字で返る。"""
+    _patch_output_dirs(tmp_path, monkeypatch)
+    _write_report_files(tmp_path)
+
+    data = _client().get("/api/result?domain=example.com").get_json()
+
+    assert data["files"]["playwright_json"] == ""
+    assert data["files"]["playwright_html"] == ""
+    assert data["files"]["spec_ts"] == ""
+    assert data["files"]["qa_process_report"] == ""
+    assert data["playwright_run_at"] == ""
+
+
+def test_result_api_returns_qa_process_outputs(tmp_path: Path, monkeypatch) -> None:
+    """AutoRun 実行後（qa_process/ あり）は「テスト実行」タブ用のパスと実行日時が返る。"""
+    _patch_output_dirs(tmp_path, monkeypatch)
+    domain_dir = _write_report_files(tmp_path)
+    qa_dir = domain_dir / "qa_process"
+    qa_dir.mkdir()
+    (qa_dir / "playwright_report.json").write_text(
+        json.dumps({"ok": True, "passed": 2, "failed": 0, "skipped": 0, "total": 2, "tests": []}),
+        encoding="utf-8",
+    )
+    (qa_dir / "playwright_report.html").write_text("<html>fallback</html>", encoding="utf-8")
+    (qa_dir / "autorun.spec.ts").write_text("// spec", encoding="utf-8")
+    (qa_dir / "qa_process_report.html").write_text("<html>qa</html>", encoding="utf-8")
+
+    data = _client().get("/api/result?domain=example.com").get_json()
+
+    assert data["files"]["playwright_json"].endswith("playwright_report.json")
+    # Playwright ネイティブレポートが無い場合は自前 HTML にフォールバック
+    assert data["files"]["playwright_html"].endswith("playwright_report.html")
+    assert data["files"]["spec_ts"].endswith("autorun.spec.ts")
+    assert data["files"]["qa_process_report"].endswith("qa_process_report.html")
+    assert data["playwright_run_at"] != ""
+
+    # ネイティブレポートがあればそちらを優先する
+    native = qa_dir / "playwright-report"
+    native.mkdir()
+    (native / "index.html").write_text("<html>native</html>", encoding="utf-8")
+    data = _client().get("/api/result?domain=example.com").get_json()
+    assert data["files"]["playwright_html"].endswith("playwright-report/index.html")

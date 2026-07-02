@@ -48,7 +48,7 @@
       "name": "AutoRun",
       "risk_level": "high",
       "status": "implemented",
-      "ui_files": ["templates/partials/view-auto-run.html", "static/js/autorun.js"],
+      "ui_files": ["templates/partials/view-auto-run.html", "static/js/autorun.js", "static/js/autorun-approval.js", "static/js/view-test-runs.js"],
       "route_files": ["web/routes/auto_run.py"],
       "core_files": ["web/services/spec_ts_generator.py", "web/services/playwright_executor.py"],
       "symbols": [],

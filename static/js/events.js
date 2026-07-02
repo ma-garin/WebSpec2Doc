@@ -1,6 +1,5 @@
 // ---- イベントリスナー ----
 document.getElementById('autorun-start-btn')?.addEventListener('click', autorunStart);
-document.getElementById('autorun-approve-btn')?.addEventListener('click', autorunApprove);
 document.getElementById('autorun-cancel-btn')?.addEventListener('click', autorunCancel);
 document.getElementById('autorun-restart-btn')?.addEventListener('click', autorunReset);
 // 承認モーダル
@@ -10,10 +9,10 @@ document.getElementById('arm-close')?.addEventListener('click', _autorunHideAppr
 document.getElementById('autorun-approval-modal')?.addEventListener('click', (e) => {
   if (e.target === e.currentTarget) _autorunHideApprovalModal();
 });
+// ログインモーダル: スキップは「スキップ」ボタンのみ。✕・背景クリックの誤操作でスキップさせない。
 document.getElementById('autorun-login-submit')?.addEventListener('click', () => _autorunSubmitLogin(false));
 document.getElementById('autorun-login-skip')?.addEventListener('click',   () => _autorunSubmitLogin(true));
-document.getElementById('autorun-login-close')?.addEventListener('click',  () => _autorunSubmitLogin(true));
-document.getElementById('autorun-login-overlay')?.addEventListener('click',() => _autorunSubmitLogin(true));
+document.getElementById('autorun-login-close')?.addEventListener('click',  autorunDismissLoginModal);
 document.getElementById('autorun-login-password')?.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') _autorunSubmitLogin(false);
 });

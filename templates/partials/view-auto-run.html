@@ -35,39 +35,6 @@
                 <div id="autorun-start-status" class="input-field-message autorun-start-status"></div>
               </div>
 
-              <div id="autorun-steps" class="card autorun-panel" style="display:none">
-                <div class="autorun-progress-head">
-                  <div class="section-kicker">進捗</div>
-                  <span id="autorun-elapsed" class="autorun-elapsed">0:00</span>
-                </div>
-                <div class="autorun-step-list stepper">
-                  <div class="autorun-step-item" id="ars-crawl">
-                    <span class="autorun-step-icon stepper-icon">○</span>
-                    <span>仕様書生成</span>
-                  </div>
-                  <div class="autorun-step-item" id="ars-qa">
-                    <span class="autorun-step-icon stepper-icon">○</span>
-                    <span>QA成果物</span>
-                  </div>
-                  <div class="autorun-step-item" id="ars-scripts">
-                    <span class="autorun-step-icon stepper-icon">○</span>
-                    <span>スクリプト生成</span>
-                  </div>
-                  <div class="autorun-step-item" id="ars-approval">
-                    <span class="autorun-step-icon stepper-icon">○</span>
-                    <span>承認待ち</span>
-                  </div>
-                  <div class="autorun-step-item" id="ars-running">
-                    <span class="autorun-step-icon stepper-icon">○</span>
-                    <span>テスト実行</span>
-                  </div>
-                  <div class="autorun-step-item" id="ars-done">
-                    <span class="autorun-step-icon stepper-icon">○</span>
-                    <span>完了</span>
-                  </div>
-                </div>
-              </div>
-
               <div id="autorun-cancel-area" class="autorun-inline-actions" style="display:none">
                 <button type="button" id="autorun-cancel-btn" class="btn-outline-sm btn-danger-outline">停止</button>
               </div>
@@ -82,59 +49,68 @@
                 </div>
                 <div id="autorun-output-links" class="qa-output-list"></div>
               </div>
+
+              <!-- 最近の実行（サーバープロセス生存中のジョブのみ。再起動で消えます） -->
+              <div id="autorun-recent-area" class="card autorun-panel" style="display:none">
+                <div class="autorun-panel-head">
+                  <div class="section-kicker">最近の実行</div>
+                </div>
+                <div id="autorun-recent-list" class="autorun-recent-list"></div>
+                <p class="autorun-recent-note">サーバー再起動前の実行はここに表示されません。結果は各サイトのレポート「テスト実行」タブに保存されています。</p>
+              </div>
             </div>
 
             <div class="qa-tool-main autorun-main">
               <div id="autorun-main-content" class="qa-readable autorun-main-content">
-                <div id="autorun-idle-msg" class="empty autorun-empty">URLを入力して「開始」を押すと、仕様書生成からテスト実行まで全自動で処理します。</div>
+                <div id="autorun-idle-msg" class="autorun-empty">URLを入力して「開始」を押すと、仕様書生成からテスト実行まで全自動で処理します。</div>
 
-                <div id="autorun-status-panel" class="autorun-status-grid" style="display:none">
-                  <div class="stat-card autorun-status-card">
-                    <span class="stat-card-label">現在処理</span>
-                    <strong id="autorun-current-step" class="stat-card-value autorun-status-value">待機中</strong>
+                <!-- コックピット: 横型ステッパー + 全体進捗バー（進捗表示はここに一本化） -->
+                <div id="autorun-steps" class="card autorun-cockpit" style="display:none">
+                  <div class="autorun-cockpit-head">
+                    <div class="section-kicker">進捗</div>
+                    <span id="autorun-phase-label" class="autorun-phase-label" aria-live="polite"></span>
+                    <span id="autorun-elapsed" class="autorun-elapsed">0:00</span>
                   </div>
-                  <div class="stat-card autorun-status-card">
-                    <span class="stat-card-label">理由</span>
-                    <strong id="autorun-current-reason" class="autorun-status-text">URL解析を開始します</strong>
+                  <div class="autorun-progressbar" role="progressbar" aria-label="全体進捗" aria-valuemin="0" aria-valuemax="100" id="autorun-progressbar">
+                    <div id="autorun-progress-fill" class="autorun-progressbar-fill"></div>
                   </div>
-                  <div class="stat-card autorun-status-card">
-                    <span class="stat-card-label">見込み</span>
-                    <strong id="autorun-estimate" class="autorun-status-text">10画面で約2〜3分</strong>
-                  </div>
-                  <div class="stat-card autorun-status-card">
-                    <span class="stat-card-label">次アクション</span>
-                    <strong id="autorun-next-action" class="autorun-status-text">開始を押してください</strong>
-                  </div>
-                  <div class="stat-card autorun-status-card autorun-status-wide">
-                    <span class="stat-card-label">部分成果</span>
-                    <strong id="autorun-partial-output" class="autorun-status-text">まだありません</strong>
-                  </div>
-                  <div class="stat-card autorun-status-card autorun-status-wide autorun-viewpoint-status-card">
-                    <span class="stat-card-label">適用観点</span>
-                    <strong id="autorun-applied-viewpoint" class="autorun-status-text">開始時に公開版を固定します</strong>
-                  </div>
-                </div>
-
-                <div id="ar-log-section" class="card autorun-log-card" style="display:none">
-                  <div class="autorun-panel-head">
-                    <span class="section-kicker">実行ログ</span>
-                  </div>
-                  <pre id="autorun-log" class="autorun-log"></pre>
-                </div>
-
-                <div id="ar-timeline" class="ar-timeline timeline"></div>
-
-                <div id="autorun-result-panel" class="card autorun-result-panel" style="display:none">
-                  <div class="autorun-panel-head">
-                    <div>
-                      <div class="section-kicker">実行結果</div>
-                      <p class="muted-copy">Playwright実行後のサマリーとレポート導線です。</p>
+                  <div class="autorun-step-row stepper">
+                    <div class="autorun-step-item" id="ars-crawl">
+                      <span class="autorun-step-icon stepper-icon" aria-hidden="true"></span>
+                      <span class="autorun-step-label">仕様書生成</span>
+                      <span class="autorun-step-meta" id="ars-crawl-meta"></span>
+                    </div>
+                    <div class="autorun-step-item" id="ars-qa">
+                      <span class="autorun-step-icon stepper-icon" aria-hidden="true"></span>
+                      <span class="autorun-step-label">QA成果物</span>
+                      <span class="autorun-step-meta" id="ars-qa-meta"></span>
+                    </div>
+                    <div class="autorun-step-item" id="ars-scripts">
+                      <span class="autorun-step-icon stepper-icon" aria-hidden="true"></span>
+                      <span class="autorun-step-label">スクリプト生成</span>
+                      <span class="autorun-step-meta" id="ars-scripts-meta"></span>
+                    </div>
+                    <div class="autorun-step-item" id="ars-approval">
+                      <span class="autorun-step-icon stepper-icon" aria-hidden="true"></span>
+                      <span class="autorun-step-label">承認</span>
+                      <span class="autorun-step-meta" id="ars-approval-meta"></span>
+                    </div>
+                    <div class="autorun-step-item" id="ars-running">
+                      <span class="autorun-step-icon stepper-icon" aria-hidden="true"></span>
+                      <span class="autorun-step-label">テスト実行</span>
+                      <span class="autorun-step-meta" id="ars-running-meta"></span>
+                    </div>
+                    <div class="autorun-step-item" id="ars-done">
+                      <span class="autorun-step-icon stepper-icon" aria-hidden="true"></span>
+                      <span class="autorun-step-label">完了</span>
+                      <span class="autorun-step-meta" id="ars-done-meta"></span>
                     </div>
                   </div>
-                  <div id="autorun-result-cards" class="autorun-result-grid"></div>
-                  <div id="autorun-report-links" class="autorun-result-actions"></div>
-                  <div id="autorun-result-table-wrap" class="autorun-result-table"></div>
+                  <div id="autorun-step-note" class="autorun-step-note" style="display:none"></div>
                 </div>
+
+                <!-- 完了カード（レポート「テスト実行」タブへの導線） -->
+                <div id="autorun-complete-card" class="card autorun-complete-card" style="display:none"></div>
 
                 <div id="autorun-failure-panel" class="card autorun-failure-panel" style="display:none">
                   <div class="autorun-panel-head">
@@ -144,6 +120,22 @@
                     </div>
                   </div>
                   <div id="autorun-failure-body" class="autorun-failure-body"></div>
+                </div>
+
+                <div id="ar-log-section" class="card autorun-log-card" style="display:none">
+                  <div class="autorun-panel-head autorun-log-head">
+                    <span class="section-kicker">実行ログ</span>
+                    <div class="autorun-log-tools">
+                      <div class="autorun-log-filter" role="group" aria-label="ログレベルフィルタ">
+                        <button type="button" class="autorun-log-filter-btn is-active" data-log-level="all">すべて</button>
+                        <button type="button" class="autorun-log-filter-btn" data-log-level="warn">警告以上</button>
+                        <button type="button" class="autorun-log-filter-btn" data-log-level="error">エラーのみ</button>
+                      </div>
+                      <label class="autorun-log-autoscroll"><input type="checkbox" id="autorun-log-autoscroll" checked> 自動スクロール</label>
+                      <button type="button" id="autorun-log-copy" class="btn-outline-sm autorun-log-copy">コピー</button>
+                    </div>
+                  </div>
+                  <pre id="autorun-log" class="autorun-log"></pre>
                 </div>
 
                 <div id="autorun-approval-modal" class="autorun-modal" role="dialog" aria-modal="true" aria-labelledby="arm-title" style="display:none">

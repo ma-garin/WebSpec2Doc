@@ -323,24 +323,6 @@
 .qa-output-row-name span { font-size: 11px; color: var(--text-muted); word-break: break-all; }
 .qa-output-row-actions { display: flex; gap: 6px; flex-shrink: 0; }
 
-/* ── AutoRun ステップリスト ── */
-.autorun-step-list { display: flex; flex-direction: column; gap: 6px; }
-.autorun-step-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted); padding: 6px 0; border-bottom: 1px solid var(--border); }
-.autorun-step-item:last-child { border-bottom: none; }
-.autorun-step-item .autorun-step-icon { font-size: 15px; width: 20px; text-align: center; flex-shrink: 0; }
-.autorun-step-item.is-active { color: var(--primary); font-weight: 600; }
-.autorun-step-item.is-active .autorun-step-icon { animation: spin 1.2s linear infinite; }
-.autorun-step-item.is-waiting { color: var(--primary-dark); font-weight: 700; background:var(--info-bg); border-radius:6px; padding-left:6px; margin-left:-6px; animation: step-pulse 1.6s ease-in-out infinite; }
-.autorun-step-item.is-waiting .autorun-step-icon { animation: none; }
-@keyframes step-pulse { 0%,100% { opacity:1; } 50% { opacity:.6; } }
-.autorun-step-item.is-done { color: var(--ok); }
-.autorun-step-item.is-done .autorun-step-icon { color: var(--ok); }
-.autorun-step-item.is-error { color: var(--critical); }
-@keyframes spin { to { transform: rotate(360deg); } }
-.autorun-result-card { border: 1px solid var(--border); border-radius: 8px; padding: 12px; text-align: center; background: var(--surface); }
-.autorun-result-card .num { font-size: 26px; font-weight: 800; }
-.autorun-result-card .lbl { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
-
 /* ── レスポンシブ（2ペイン）── */
 @media (max-width: 1020px) {
   .qa-tool-2pane { grid-template-columns: 240px 1fr; }
@@ -350,16 +332,6 @@
   .qa-tool-sidebar { border-right: none; border-bottom: 1px solid var(--border); overflow-y: visible; }
   .file-preview-panel { width: calc(100vw - 20px); height: calc(100vh - 20px); }
 }
-.ar-timeline { display:flex; flex-direction:column; gap:10px; }
-.ar-card { border:1px solid var(--border); border-radius:8px; padding:12px 14px; background:var(--surface); }
-.ar-card.is-approval { border-color:var(--primary); background:var(--info-bg); box-shadow:0 0 0 3px var(--primary-pale); animation: approval-pulse 2.4s ease-in-out infinite; }
-@keyframes approval-pulse { 0%,100% { box-shadow:0 0 0 3px var(--primary-pale); } 50% { box-shadow:0 0 0 5px rgba(15,98,254,.18); } }
-.ar-card-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
-.ar-card-title { font-size:13px; font-weight:700; color:var(--primary-dark); display:flex; align-items:center; gap:6px; }
-.ar-card-time { font-size:11px; color:var(--text-muted); font-variant-numeric:tabular-nums; white-space:nowrap; margin-left:8px; }
-.ar-card-meta { font-size:12px; color:var(--text-muted); margin:4px 0 6px; }
-.ar-card-actions { display:flex; gap:6px; flex-wrap:wrap; }
-.ar-log-toggle { font-size:11px; color:var(--primary); cursor:pointer; background:none; border:none; padding:0; text-decoration:underline; }
 #autorun-log .log-error { color:#EF4444; font-weight:700; }
 #autorun-log .log-warn  { color:#F59E0B; }
 #autorun-log .log-ok    { color:#22C55E; }

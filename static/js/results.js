@@ -220,17 +220,6 @@ function selectResultTab(tab, sub) {
   if (typeof fn === 'function') fn();
 }
 
-// ---- テスト実行タブ（Phase 2 で view-test-runs.js が本実装を提供。ここは空状態のみ） ----
-function renderTestRuns() {
-  uiEmpty(resultHero, {
-    icon: '🧪',
-    title: 'テスト実行結果はまだありません',
-    desc: 'AutoRun でこのサイトの自動テストを実行すると、PASS/FAIL の結果と実行レポートがここに表示されます。',
-    actionLabel: 'AutoRun で自動テストを実行 →',
-    onAction: () => switchView('auto-run'),
-  });
-}
-
 // ---- 履歴・差分（クロール履歴タイムライン＋任意2点の仕様ドリフト比較）----
 let timelineDomain = '';
 async function renderTimeline() {

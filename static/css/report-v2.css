@@ -148,3 +148,103 @@
 
 /* ---- スクリーンショットギャラリー（screens タブ配下で復活） ---- */
 .result-subpanel .shots-grid { padding: 16px; }
+
+/* ---- テスト実行タブ（runs） ---- */
+.runs-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.runs-header-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.runs-meta { margin: 4px 0 0; }
+.runs-stale-note {
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-border);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  margin-bottom: 14px;
+}
+.runs-summary-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.runs-passrate { position: relative; width: 108px; height: 108px; flex-shrink: 0; }
+.runs-passrate svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.runs-ring-bg { fill: none; stroke: var(--surface-subtle); stroke-width: 3.6; }
+.runs-ring-fill { fill: none; stroke-width: 3.6; stroke-linecap: round; }
+.runs-passrate.is-pass .runs-ring-fill { stroke: var(--ok); }
+.runs-passrate.is-fail .runs-ring-fill { stroke: var(--critical); }
+.runs-passrate-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+}
+.runs-passrate-label strong { font-size: 22px; font-weight: 800; color: var(--text); line-height: 1.1; }
+.runs-passrate-label span { font-size: 10.5px; color: var(--text-muted); }
+.runs-stat-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px;
+  min-width: 240px;
+}
+.runs-stat-card { text-align: center; padding: 12px 10px; }
+.runs-stat-card .num { font-size: 24px; font-weight: 800; }
+.runs-stat-card .lbl { font-size: 11px; color: var(--text-muted); font-weight: 700; }
+.runs-status-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+.runs-status-badge.status-low { background: var(--ok-bg); }
+.runs-status-badge.status-critical { background: var(--critical-bg); }
+.runs-status-badge.status-muted { background: var(--surface-subtle); }
+.runs-error-cell { max-width: 420px; }
+.runs-error-detail summary { cursor: pointer; font-size: 12px; color: var(--critical); }
+.runs-error-pre {
+  font-size: 11px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin: 6px 0 0;
+  max-height: 220px;
+  overflow: auto;
+}
+.runs-unavailable-card {
+  border: 1px solid var(--warning-border);
+  background: var(--warning-bg);
+  border-radius: 10px;
+  padding: 18px 20px;
+  max-width: 640px;
+}
+.runs-unavailable-title { font-size: 15px; font-weight: 800; color: var(--text); margin-bottom: 6px; }
+.runs-unavailable-reason { font-size: 13px; color: var(--text); margin: 0 0 12px; line-height: 1.7; word-break: break-word; }
+.runs-unavailable-help-title { font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; }
+.runs-setup-pre {
+  font-size: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin: 0 0 8px;
+  white-space: pre;
+  overflow-x: auto;
+}

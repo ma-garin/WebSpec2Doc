@@ -78,7 +78,7 @@ class AutoRunJob:
             "domain": self.domain,
             "status": self.status,
             "step_label": self.step_label,
-            "log": self.log[-200:],
+            "log": self.log[-1000:],
             "outputs": self.outputs,
             "test_results": self.test_results,
             "failure_classifications": self.failure_classifications,

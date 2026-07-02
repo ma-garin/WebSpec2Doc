@@ -4,7 +4,7 @@ import io
 import subprocess
 import tempfile
 import zipfile
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from flask import Blueprint, Response, make_response, redirect, request, send_file, url_for
@@ -88,12 +88,21 @@ def api_result() -> dict | tuple[dict, int]:
     if not _valid_domain(domain):
         return {"error": "not found"}, 404
     domain_dir = OUTPUT_DIR / domain
-    if not domain_dir.is_dir():
+    domain_root = domain_dir.resolve()
+    if not domain_dir.is_dir() or domain_dir.is_symlink():
         return {"error": "not found"}, 404
 
     def path_of(name: str) -> str:
-        f = domain_dir / name
-        return str(f.resolve()) if f.exists() else ""
+        candidate = domain_dir / name
+        resolved = candidate.resolve()
+        if (
+            resolved == domain_root
+            or domain_root not in resolved.parents
+            or candidate.is_symlink()
+            or not resolved.is_file()
+        ):
+            return ""
+        return str(resolved)
 
     shots_dir = domain_dir / "screenshots"
     shots = sorted(shots_dir.glob("*.png")) if shots_dir.is_dir() else []
@@ -104,11 +113,15 @@ def api_result() -> dict | tuple[dict, int]:
     pw_json = domain_dir / "qa_process" / "playwright_report.json"
     pw_html_native = domain_dir / "qa_process" / "playwright-report" / "index.html"
     pw_html_fallback = domain_dir / "qa_process" / "playwright_report.html"
-    pw_html = pw_html_native if pw_html_native.exists() else pw_html_fallback
+    pw_html = (
+        pw_html_native if path_of("qa_process/playwright-report/index.html") else pw_html_fallback
+    )
     playwright_run_at = ""
-    if pw_json.exists():
-        playwright_run_at = datetime.fromtimestamp(pw_json.stat().st_mtime).strftime(
-            "%Y-%m-%d %H:%M"
+    if path_of("qa_process/playwright_report.json"):
+        playwright_run_at = (
+            datetime.fromtimestamp(pw_json.stat().st_mtime, tz=UTC)
+            .isoformat()
+            .replace("+00:00", "Z")
         )
     return {
         "summary": _summary_for_domain(domain),
@@ -123,12 +136,12 @@ def api_result() -> dict | tuple[dict, int]:
             "transition_mmd": path_of("transition.mmd"),
             "diff": path_of("diff_report.html"),
             "playwright_json": path_of("qa_process/playwright_report.json"),
-            "playwright_html": str(pw_html.resolve()) if pw_html.exists() else "",
+            "playwright_html": path_of(str(pw_html.relative_to(domain_dir))),
             "spec_ts": path_of("qa_process/autorun.spec.ts"),
             "qa_process_report": path_of("qa_process/qa_process_report.html"),
         },
         "playwright_run_at": playwright_run_at,
-        "screenshots": [str(s.resolve()) for s in shots],
+        "screenshots": [path for s in shots if (path := path_of(str(s.relative_to(domain_dir))))],
     }
 
 

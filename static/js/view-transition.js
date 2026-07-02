@@ -105,11 +105,8 @@ function _shortVisLabel(sc) {
   return (sc.title || sc.page_id).replace(/\s*[|｜]\s*.*/g, '').replace(/['"]/g, '').slice(0, 24) || sc.page_id;
 }
 
-// セルフホスト版（static/vendor/、オフライン・閉域網対応）→ 失敗時のみ CDN フォールバック
-const _MERMAID_SOURCES = [
-  '/static/vendor/mermaid/mermaid.min.js',
-  'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js',
-];
+// セルフホスト版のみを使用し、外部ネットワークへコードを取得しない。
+const _MERMAID_SOURCE = '/static/vendor/mermaid/mermaid.min.js';
 
 function _loadMermaid(cb) {
   if (window.mermaid) {
@@ -121,26 +118,25 @@ function _loadMermaid(cb) {
     existing.addEventListener('load', cb, { once: true });
     return;
   }
-  const tryLoad = (idx) => {
-    if (idx >= _MERMAID_SOURCES.length) {
+  const tryLoad = () => {
+    const s = document.createElement('script');
+    s.src = _MERMAID_SOURCE;
+    s.dataset.lib = 'mermaid';
+    s.onload = cb;
+    s.onerror = () => {
+      s.remove();
       const target = document.getElementById('uml-render-target');
       if (target && typeof uiError === 'function') {
         uiError(target, {
           title: '遷移図ライブラリを読み込めませんでした',
-          message: 'ローカル版・CDN の両方に失敗しました。ページを再読み込みするか、遷移表タブをご利用ください。',
-          onRetry: () => tryLoad(0),
+          message: 'ローカル資産が見つかりません。遷移表タブをご利用ください。',
+          onRetry: tryLoad,
         });
       }
-      return;
-    }
-    const s = document.createElement('script');
-    s.src = _MERMAID_SOURCES[idx];
-    s.dataset.lib = 'mermaid';
-    s.onload = cb;
-    s.onerror = () => { s.remove(); tryLoad(idx + 1); };
+    };
     document.head.appendChild(s);
   };
-  tryLoad(0);
+  tryLoad();
 }
 
 function _umlAlias(value) {

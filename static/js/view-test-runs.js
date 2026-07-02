@@ -46,23 +46,29 @@ async function renderTestRuns() {
     return;
   }
 
-  const total = r.total || 0;
-  const passRate = total ? Math.round(((r.passed || 0) / total) * 100) : 0;
+  const safeNumber = value => Number.isFinite(Number(value)) ? Number(value) : 0;
+  const total = safeNumber(r.total);
+  const passed = safeNumber(r.passed);
+  const failed = safeNumber(r.failed);
+  const skipped = safeNumber(r.skipped);
+  const passRate = total ? Math.round((passed / total) * 100) : 0;
   const runAt = resultData.playwright_run_at || '';
   const crawledAt = (reportJson && reportJson.meta && reportJson.meta.crawled_at) || '';
   // 実行がクロールより古い場合、結果が現行仕様を反映していない可能性を注記する
-  const stale = runAt && crawledAt && runAt < crawledAt;
+  const runTime = Date.parse(runAt);
+  const crawlTime = Date.parse(crawledAt);
+  const stale = Number.isFinite(runTime) && Number.isFinite(crawlTime) && runTime < crawlTime;
 
   const cards = [
-    { label: 'PASS', val: r.passed || 0, cls: 'status-low' },
-    { label: 'FAIL', val: r.failed || 0, cls: 'status-critical' },
-    { label: 'SKIP', val: r.skipped || 0, cls: 'status-muted' },
+    { label: 'PASS', val: passed, cls: 'status-low' },
+    { label: 'FAIL', val: failed, cls: 'status-critical' },
+    { label: 'SKIP', val: skipped, cls: 'status-muted' },
     { label: 'TOTAL', val: total, cls: 'status-default' },
   ].map(c =>
     `<div class="stat-card runs-stat-card"><div class="num ${c.cls}">${c.val}</div><div class="lbl">${c.label}</div></div>`
   ).join('');
 
-  const ringCls = r.failed ? 'is-fail' : 'is-pass';
+  const ringCls = failed ? 'is-fail' : 'is-pass';
   const ring =
     `<div class="runs-passrate ${ringCls}" role="img" aria-label="PASS率 ${passRate}%">` +
     `<svg viewBox="0 0 36 36"><circle class="runs-ring-bg" cx="18" cy="18" r="15.9"></circle>` +
@@ -78,7 +84,7 @@ async function renderTestRuns() {
     return `<tr>
       <td class="cell-title">${escHtml(t.title || '')}</td>
       <td><span class="runs-status-badge ${cls}">${escHtml(t.status || '')}</span></td>
-      <td class="num">${t.duration_ms || 0}ms</td>
+      <td class="num">${safeNumber(t.duration_ms)}ms</td>
       <td class="runs-error-cell">${err}</td>
     </tr>`;
   }).join('');

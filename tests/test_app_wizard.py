@@ -308,7 +308,7 @@ def test_result_api_returns_qa_process_outputs(tmp_path: Path, monkeypatch) -> N
     assert data["files"]["playwright_html"].endswith("playwright_report.html")
     assert data["files"]["spec_ts"].endswith("autorun.spec.ts")
     assert data["files"]["qa_process_report"].endswith("qa_process_report.html")
-    assert data["playwright_run_at"] != ""
+    assert data["playwright_run_at"].endswith("Z")
 
     # ネイティブレポートがあればそちらを優先する
     native = qa_dir / "playwright-report"
@@ -316,3 +316,15 @@ def test_result_api_returns_qa_process_outputs(tmp_path: Path, monkeypatch) -> N
     (native / "index.html").write_text("<html>native</html>", encoding="utf-8")
     data = _client().get("/api/result?domain=example.com").get_json()
     assert data["files"]["playwright_html"].endswith("playwright-report/index.html")
+
+
+def test_result_api_rejects_external_symlink_outputs(tmp_path: Path, monkeypatch) -> None:
+    _patch_output_dirs(tmp_path, monkeypatch)
+    domain_dir = _write_report_files(tmp_path)
+    external = tmp_path / "external.html"
+    external.write_text("secret", encoding="utf-8")
+    (domain_dir / "diff_report.html").symlink_to(external)
+
+    data = _client().get("/api/result?domain=example.com").get_json()
+
+    assert data["files"]["diff"] == ""

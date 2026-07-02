@@ -8,7 +8,7 @@ from flask import Response, request
 # 'unsafe-inline' は生成済み report.html (Mermaid 初期化インラインスクリプト) のため必要。
 _CSP = (
     "default-src 'self'; "
-    "script-src 'self' cdn.jsdelivr.net 'unsafe-inline'; "
+    "script-src 'self' 'unsafe-inline'; "
     "style-src 'self' 'unsafe-inline'; "
     "img-src 'self' data: blob:; "
     "frame-src 'self'; "

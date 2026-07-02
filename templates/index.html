@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='app-report.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='app-components.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/report-v2.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='viewpoints.css') }}">
   <script>
     // テーマの早期適用（描画前にフラッシュを防ぐ）。保存値がなければ OS 設定に追従。
@@ -158,6 +159,7 @@
 {% include 'partials/modal-autorun-login.html' %}
 
   <script src="{{ url_for('static', filename='js/core.js') }}?v={{ _ver }}"></script>
+  <script src="{{ url_for('static', filename='js/ui-states.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/settings.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/history.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/qa-tools.js') }}?v={{ _ver }}"></script>
@@ -177,7 +179,7 @@
   <script src="{{ url_for('static', filename='js/view-design.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/view-transition.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/view-shots.js') }}?v={{ _ver }}"></script>
-  <script src="{{ url_for('static', filename='js/view-export-settings.js') }}?v={{ _ver }}"></script>
+  <script src="{{ url_for('static', filename='js/view-test-runs.js') }}?v={{ _ver }}"></script>
 
 </body>
 </html>

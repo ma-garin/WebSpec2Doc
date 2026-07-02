@@ -276,7 +276,6 @@
   border-left: 3px solid var(--primary);
 }
 
-.autorun-progress-head,
 .autorun-panel-head {
   display: flex;
   align-items: flex-start;
@@ -312,36 +311,242 @@
   place-items: center;
 }
 
-.autorun-status-grid {
+/* ---- コックピット（横型ステッパー + 全体進捗バー。進捗表示の一本化） ---- */
+.autorun-cockpit {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  gap: 12px;
+  margin-bottom: 14px;
 }
 
-.autorun-status-card {
-  min-height: 92px;
+.autorun-cockpit-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-.autorun-status-wide {
-  grid-column: 1 / -1;
-}
-
-.autorun-status-value {
-  font-size: var(--text-md);
-  line-height: var(--leading-tight);
-}
-
-.autorun-status-text {
+.autorun-phase-label {
+  flex: 1;
+  min-width: 0;
   color: var(--text);
   font-size: var(--text-sm);
   font-weight: 800;
-  line-height: var(--leading-tight);
-  word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.autorun-progressbar {
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--surface-subtle);
+  overflow: hidden;
+}
+
+.autorun-progressbar-fill {
+  height: 100%;
+  width: 0;
+  border-radius: 9999px;
+  background: var(--primary);
+  transition: width .5s ease;
+}
+
+.autorun-progressbar-fill.is-done { background: var(--ok); }
+.autorun-progressbar-fill.is-error { background: var(--critical); }
+
+.autorun-step-row {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.autorun-step-row .autorun-step-item {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  min-width: 0;
+}
+
+.autorun-step-row .autorun-step-item.is-active { border-color: var(--primary); background: var(--info-bg); }
+.autorun-step-row .autorun-step-item.is-waiting { border-color: var(--warning-border); background: var(--warning-bg); }
+.autorun-step-row .autorun-step-item.is-done { border-color: var(--ok-border); }
+.autorun-step-row .autorun-step-item.is-error { border-color: var(--critical-border); background: var(--critical-bg); }
+
+.autorun-step-label {
+  font-size: var(--text-xs);
+  font-weight: 800;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.autorun-step-meta {
+  grid-column: 2;
+  font-size: 10.5px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-height: 14px;
+}
+
+.autorun-icon-spin { animation: autorun-spin 1s linear infinite; transform-origin: center; }
+@keyframes autorun-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .autorun-icon-spin { animation: none; } }
+
+.autorun-step-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--warning-border);
+  border-radius: var(--radius-md);
+  background: var(--warning-bg);
+  font-size: var(--text-sm);
+  color: var(--text);
+}
+
+/* ---- 完了カード（レポート「テスト実行」タブへの導線） ---- */
+.autorun-complete-card {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.autorun-complete-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.autorun-complete-icon {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.autorun-complete-icon.is-ok { background: var(--ok-bg); color: var(--ok); }
+.autorun-complete-icon.is-fail { background: var(--critical-bg); color: var(--critical); }
+.autorun-complete-icon.is-warn { background: var(--warning-bg); color: var(--warning); }
+
+.autorun-complete-title {
+  font-size: var(--text-md);
+  font-weight: 800;
+  color: var(--text);
+}
+
+.autorun-complete-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ---- 最近の実行（サイドバー） ---- */
+.autorun-recent-list {
+  display: grid;
+  gap: 6px;
+}
+
+.autorun-recent-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.autorun-recent-info {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.autorun-recent-info strong {
+  font-size: var(--text-xs);
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.autorun-recent-status { font-size: 10.5px; color: var(--text-muted); }
+.autorun-recent-status.is-complete { color: var(--ok); }
+.autorun-recent-status.is-failed { color: var(--critical); }
+
+.autorun-recent-note {
+  margin: 8px 0 0;
+  font-size: 10.5px;
+  color: var(--text-muted);
+  line-height: 1.6;
 }
 
 .autorun-log-card {
   display: grid;
   gap: 10px;
+}
+
+.autorun-log-head {
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.autorun-log-tools {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.autorun-log-filter {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.autorun-log-filter-btn {
+  height: 26px;
+  padding: 0 10px;
+  border: 0;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.autorun-log-filter-btn + .autorun-log-filter-btn { border-left: 1px solid var(--border); }
+.autorun-log-filter-btn.is-active { background: var(--info-bg); color: var(--primary-dark); }
+
+.autorun-log-autoscroll {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.autorun-log-copy {
+  height: 26px;
+  min-height: 26px;
+  padding: 0 10px;
+  font-size: var(--text-xs);
 }
 
 .autorun-log {
@@ -359,31 +564,9 @@
   line-height: 1.55;
 }
 
-.autorun-result-panel,
 .autorun-failure-panel {
   display: grid;
   gap: 14px;
-}
-
-.autorun-result-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(120px, 1fr));
-  gap: 10px;
-}
-
-.autorun-result-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.autorun-result-table {
-  overflow-x: auto;
-}
-
-.autorun-result-table-data {
-  width: 100%;
-  font-size: var(--text-sm);
 }
 
 .qa-output-item-label {
@@ -683,65 +866,28 @@
   white-space: pre-wrap;
 }
 
-.autorun-step-item {
-  border-bottom: 0;
-  padding: 4px 0;
+/* ステッパーアイコン（SVG が形状を持つため、枠・背景は付けず色のみ状態で変える） */
+.autorun-step-row .stepper-icon {
+  width: 18px;
+  height: 18px;
+  border: 0;
+  background: none;
 }
 
 .autorun-step-item.is-active .stepper-icon,
-.autorun-step-item.is-waiting .stepper-icon {
-  border-color: var(--primary);
-  background: var(--info-bg);
-  color: var(--primary-dark);
-}
+.autorun-step-item.is-waiting .stepper-icon { color: var(--primary-dark); }
+.autorun-step-item.is-done .stepper-icon { color: var(--ok); }
+.autorun-step-item.is-error .stepper-icon { color: var(--critical); }
 
-.autorun-step-item.is-done .stepper-icon {
-  border-color: var(--ok);
-  background: var(--ok-bg);
-  color: var(--ok);
-}
-
-.autorun-step-item.is-error .stepper-icon {
-  border-color: var(--critical);
-  background: var(--critical-bg);
-  color: var(--critical);
-}
-
-.ar-card {
-  border-radius: var(--radius-md);
-}
-
-.ar-card-button {
-  min-height: 32px;
-  height: 32px;
-  padding: 0 12px;
-  font-size: var(--text-sm);
-}
-
-.ar-card-error {
-  margin-top: 6px;
-  color: var(--critical);
-  font-size: var(--text-xs);
-  word-break: break-all;
-}
-
-.ar-card-actions .btn-primary,
-.ar-card-actions .btn-outline-sm,
-.qa-output-item-actions .btn-outline-sm,
-.autorun-result-actions .btn-primary,
-.autorun-result-actions .btn-outline-sm {
+.qa-output-item-actions .btn-outline-sm {
   min-height: 32px;
   height: 32px;
   font-size: var(--text-sm);
 }
 
 @media (max-width: 1100px) {
-  .autorun-status-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .autorun-result-grid {
-    grid-template-columns: repeat(2, minmax(120px, 1fr));
+  .autorun-step-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -750,8 +896,7 @@
     padding: 16px;
   }
 
-  .autorun-status-grid,
-  .autorun-result-grid {
-    grid-template-columns: 1fr;
+  .autorun-step-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

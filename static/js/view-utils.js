@@ -28,6 +28,38 @@ function defaultOptionsText(f) {
   return f.default || '';
 }
 
+// テスト設計技法の唯一の定義（色は tokens.css の --tech-* を .badge-tech[data-tech] で参照）
+const TECH_META = [
+  { key: 'ep',   label: '同値分割',               abbr: '同値分割'  },
+  { key: 'bva',  label: '境界値分析',             abbr: '境界値分析' },
+  { key: 'dt',   label: 'デシジョンテーブル',     abbr: '決定表'    },
+  { key: 'st',   label: '状態遷移テスト',         abbr: '状態遷移'  },
+  { key: 'ct',   label: 'クラシフィケーションツリー', abbr: '分類木'  },
+  { key: 'pw',   label: 'ペアワイズ',             abbr: 'PW法'      },
+  { key: 'uc',   label: 'ユースケーステスト',     abbr: 'UCテスト'  },
+  { key: 'comb', label: '組み合わせ',             abbr: '組合せ'    },
+];
+
+function techBadgeHtml(key, text) {
+  return `<span class="badge-tech" data-tech="${escHtml(key)}">${escHtml(text)}</span>`;
+}
+
+// テスト規模の概算（概要タブ・KPIヒーローで共有する唯一の計算式）
+// ケース数 = 入力項目×3（有効/無効/境界） + 画面遷移×2（正常/異常）
+function estimateTestEffort(rj) {
+  const screens = canonicalScreens(rj);
+  const fields = screens.reduce((n, sc) => n + (sc.forms || []).reduce((m, fm) => m + (fm.fields || []).length, 0), 0);
+  const transitions = screens.reduce((n, sc) => n + ((sc.transitions && sc.transitions.to) || []).length, 0);
+  const cases = fields * 3 + transitions * 2;
+  const caseMinutes = (typeof getSettings === 'function' ? (Number(getSettings().caseMinutes) || 10) : 10);
+  return { cases, hours: Math.ceil(cases * caseMinutes / 60), caseMinutes };
+}
+
+// 導出済みテスト条件の総数
+function countTestConditions(rj) {
+  return allFields(rj).reduce((n, r) => n + ((r.field.test_conditions || []).length), 0);
+}
+
 // Trace ID プレフィックスと QA 用語にホバーツールチップを付与する。
 const TRACE_TERM_MAP = {
   'SCR': '画面（Screen）: クロールで検出した個々のページ。SCR-001 のように番号で識別します。',

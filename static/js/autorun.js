@@ -5,11 +5,13 @@ let _autoRunElapsedTimer = null;
 let _autoRunStartedAt = null;  // ISO string from server
 let _autoRunPreviewLoaded = false;
 let _autoRunPreviewData = null;
-let _arCards = {};  // 生成済みカード管理: {crawl, qa, scripts, tests}
 let _autoRunApprovalModalShown = false;
 let _autorunViewpointSets = [];
 let _autorunViewpointRecommendation = null;
 let _autorunViewpointTimer = null;
+let _autoRunLogLines = [];
+let _autoRunLogLevel = 'all';
+let _autoRunLoginSuppressed = false; // ✕で閉じた後、次のポーリングで再ポップさせない
 
 const AUTORUN_STEP_MAP = {
   idle:              null,
@@ -25,74 +27,24 @@ const AUTORUN_STEP_MAP = {
   cancelled:         null,
 };
 
-const AUTORUN_STATUS_META = {
-  idle: {
-    current: '待機中',
-    reason: 'URL解析を開始できます',
-    estimate: '10画面で約2〜3分',
-    next: '対象URLを入力して開始',
-  },
-  discovering: {
-    current: '画面分析中',
-    reason: 'ログイン壁や解析対象URLを確認しています',
-    estimate: '数十秒',
-    next: '解析結果を待機',
-  },
-  awaiting_input: {
-    current: '入力待ち',
-    reason: 'ログインが必要な画面を検出しました',
-    estimate: 'ユーザー入力後に再開',
-    next: 'ログイン情報を入力またはスキップ',
-  },
-  crawling: {
-    current: '仕様書生成中',
-    reason: '対象画面をクロールして画面構造を取得しています',
-    estimate: '画面数に応じて変動',
-    next: 'QA成果物生成へ進む',
-  },
-  generating_qa: {
-    current: 'QA成果物生成中',
-    reason: '仕様書からテスト計画・設計・ケースを作っています',
-    estimate: '1分前後',
-    next: 'スクリプト生成へ進む',
-  },
-  generating_scripts: {
-    current: 'スクリプト生成中',
-    reason: 'Playwright候補を実行可能なspecへ変換しています',
-    estimate: '数十秒',
-    next: '実行範囲の承認',
-  },
-  awaiting_approval: {
-    current: '承認待ち',
-    reason: 'スクリプト生成が完了しました',
-    estimate: '承認後にテスト開始',
-    next: 'モーダルで実行対象を選択',
-  },
-  running_tests: {
-    current: 'テスト実行中',
-    reason: '承認済みのPlaywrightテストを実行しています',
-    estimate: 'テスト件数とタイムアウト設定に応じて変動',
-    next: '実行結果を確認',
-  },
-  complete: {
-    current: '完了',
-    reason: '成果物と実行結果を生成しました',
-    estimate: '完了',
-    next: '結果と成果物を確認',
-  },
-  failed: {
-    current: '失敗',
-    reason: '処理中に復旧が必要なエラーが発生しました',
-    estimate: '復旧後に再実行',
-    next: '失敗の見立てを確認',
-  },
-  cancelled: {
-    current: '停止済み',
-    reason: 'ユーザー操作でAutoRunを停止しました',
-    estimate: '停止済み',
-    next: '必要なら新しく実行',
-  },
+// コックピット見出しのフェーズ表示（固定の見込み時間は出さない: 実測の経過時間のみ表示）
+const AUTORUN_PHASE_LABELS = {
+  idle: '待機中',
+  discovering: '画面分析中…',
+  awaiting_input: 'ログイン情報の入力待ち',
+  crawling: '仕様書生成中…',
+  generating_qa: 'QA成果物生成中…',
+  generating_scripts: 'スクリプト生成中…',
+  awaiting_approval: '承認待ち — 実行範囲を選択してください',
+  running_tests: 'テスト実行中…',
+  complete: '完了',
+  failed: '失敗',
+  cancelled: '停止済み',
 };
+
+// 全体進捗の重み（フェーズ完了ベース。実行中フェーズは半分進んだとみなす近似）
+const AUTORUN_PHASE_ORDER = ['discovering', 'crawling', 'generating_qa', 'generating_scripts', 'awaiting_approval', 'running_tests'];
+const AUTORUN_PHASE_WEIGHTS = { discovering: 10, crawling: 40, generating_qa: 20, generating_scripts: 10, awaiting_approval: 5, running_tests: 15 };
 
 const AUTORUN_OUTPUT_LABELS = {
   report_json:             '仕様書 JSON',
@@ -109,6 +61,15 @@ const AUTORUN_OUTPUT_LABELS = {
   playwright_report_html:  'テスト実行レポート',
   playwright_report_json:  '実行結果 JSON',
   viewpoint_snapshot:      '観点スナップショット',
+};
+
+// ステッパーアイコン（テキスト記号を廃止し SVG で状態表現）
+const AUTORUN_STEP_ICONS = {
+  pending: '<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6.2"/></svg>',
+  active:  '<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" class="autorun-icon-spin"><path d="M8 1.8a6.2 6.2 0 1 1-6.2 6.2" stroke-linecap="round"/></svg>',
+  done:    '<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.2" fill="currentColor" stroke="none" opacity=".15"/><path d="M5 8.2l2.1 2.1L11 6"/></svg>',
+  waiting: '<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="8" r="6.2"/><path d="M8 4.8V8l2.2 1.4"/></svg>',
+  error:   '<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="8" cy="8" r="6.2" stroke-width="1.6"/><path d="M5.8 5.8l4.4 4.4M10.2 5.8l-4.4 4.4"/></svg>',
 };
 
 // ---- AutoRun: ユーティリティ ----
@@ -128,38 +89,6 @@ function autorunFmtElapsed(sec) {
 function _autorunSetText(id, value) {
   const el = document.getElementById(id);
   if (el) el.textContent = value || '';
-}
-
-function _autorunOutputSummary(data) {
-  const outputs = data.outputs || {};
-  const labels = Object.keys(outputs)
-    .filter(key => outputs[key])
-    .map(key => AUTORUN_OUTPUT_LABELS[key] || key);
-  const result = data.test_results || {};
-  if (result.total != null) {
-    labels.push(`テスト結果 PASS:${result.passed || 0} FAIL:${result.failed || 0}`);
-  }
-  return labels.length ? labels.slice(0, 4).join(' / ') : 'まだありません';
-}
-
-function _autorunUpdateStatusPanel(data) {
-  const panel = document.getElementById('autorun-status-panel');
-  if (!panel) return;
-  panel.style.display = '';
-  const status = data.status || 'idle';
-  const meta = AUTORUN_STATUS_META[status] || AUTORUN_STATUS_META.idle;
-  _autorunSetText('autorun-current-step', data.step_label || meta.current);
-  _autorunSetText('autorun-current-reason', data.error || meta.reason);
-  _autorunSetText('autorun-estimate', meta.estimate);
-  _autorunSetText('autorun-next-action', meta.next);
-  _autorunSetText('autorun-partial-output', _autorunOutputSummary(data));
-  const viewpoint = data.viewpoint || {};
-  _autorunSetText(
-    'autorun-applied-viewpoint',
-    viewpoint.set_name
-      ? `${viewpoint.set_name} v${viewpoint.version} / ${viewpoint.count}件 / ${viewpoint.selection_reason}`
-      : '開始時に公開版を固定します',
-  );
 }
 
 async function autorunLoadViewpointSelection() {
@@ -214,6 +143,14 @@ function _autorunFailureTypeLabel(type) {
     unknown: '未分類',
   };
   return labels[type] || type || '未分類';
+}
+
+function _autorunOutputSummary(data) {
+  const outputs = data.outputs || {};
+  const labels = Object.keys(outputs)
+    .filter(key => outputs[key])
+    .map(key => AUTORUN_OUTPUT_LABELS[key] || key);
+  return labels.length ? labels.slice(0, 4).join(' / ') : 'まだありません';
 }
 
 function _autorunRenderFailurePanel(data) {
@@ -297,30 +234,85 @@ async function autorunStart() {
     });
     const data = await res.json();
     if (!res.ok || !data.ok) throw new Error(data.error || '開始に失敗しました');
-    _autoRunJobId  = data.job_id;
-    _autoRunStartedAt = null;
-    _autorunInitPreviewModal();
-    _autorunShowRunning();
-    _autorunStartPolling();
-    _autorunStartElapsed();
+    _autorunAttachJob(data.job_id);
   } catch (e) {
     autorunSetStartStatus(String(e), true);
     if (btn) { btn.disabled = false; btn.textContent = '開始'; }
   }
 }
 
+// ジョブへ接続（新規開始・リロード後の再接続で共通）
+function _autorunAttachJob(jobId) {
+  _autoRunJobId = jobId;
+  _autoRunStartedAt = null;
+  _autoRunPreviewLoaded = false;
+  _autoRunPreviewData = null;
+  _autoRunApprovalModalShown = false;
+  _autoRunLoginSuppressed = false;
+  _autorunInitPreviewModal();
+  _autorunShowRunning();
+  _autorunStartPolling();
+  _autorunStartElapsed();
+  _autorunPoll();
+}
+
 function _autorunShowRunning() {
   document.getElementById('autorun-steps').style.display = '';
   document.getElementById('autorun-start-btn').disabled = true;
   document.getElementById('ar-log-section').style.display = '';
-  document.getElementById('autorun-status-panel').style.display = '';
   document.getElementById('autorun-idle-msg').style.display = 'none';
   document.getElementById('autorun-preview-panel').style.display = 'none';
-  document.getElementById('autorun-result-panel').style.display = 'none';
+  document.getElementById('autorun-complete-card').style.display = 'none';
   document.getElementById('autorun-failure-panel').style.display = 'none';
   document.getElementById('autorun-cancel-area').style.display = '';
 }
 
+// ---- AutoRun: リロード後の再接続・最近の実行 ----
+async function autorunResume() {
+  let jobs = [];
+  try {
+    const data = await fetch('/api/autorun/jobs').then(r => r.json());
+    jobs = data.jobs || [];
+  } catch (e) { return; }
+
+  const activeStatuses = ['discovering', 'awaiting_input', 'crawling', 'generating_qa', 'generating_scripts', 'awaiting_approval', 'running_tests'];
+  const active = jobs.find(j => activeStatuses.includes(j.status));
+  if (active && !_autoRunJobId) {
+    _autorunAttachJob(active.job_id);
+    autorunSetStartStatus('実行中のジョブに再接続しました。', false);
+  }
+
+  const finished = jobs.filter(j => ['complete', 'failed', 'cancelled'].includes(j.status)).slice(0, 5);
+  const area = document.getElementById('autorun-recent-area');
+  const list = document.getElementById('autorun-recent-list');
+  if (!area || !list) return;
+  if (!finished.length) { area.style.display = 'none'; return; }
+  area.style.display = '';
+  list.replaceChildren();
+  const statusLabel = { complete: '完了', failed: '失敗', cancelled: '停止' };
+  for (const j of finished) {
+    const row = document.createElement('div');
+    row.className = 'autorun-recent-item';
+    const info = document.createElement('div');
+    info.className = 'autorun-recent-info';
+    const name = document.createElement('strong');
+    name.textContent = j.domain || j.url || '';
+    const meta = document.createElement('span');
+    meta.className = `autorun-recent-status is-${j.status}`;
+    meta.textContent = `${statusLabel[j.status] || j.status} / ${autorunFmtElapsed(j.elapsed_sec || 0)}`;
+    info.append(name, meta);
+    row.appendChild(info);
+    if (j.domain && j.status === 'complete') {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn-outline-sm';
+      btn.textContent = '結果を見る';
+      btn.addEventListener('click', () => openResultsForDomain(j.domain, 'runs'));
+      row.appendChild(btn);
+    }
+    list.appendChild(row);
+  }
+}
 
 // ---- AutoRun: ポーリング ----
 function _autorunStartPolling() {
@@ -353,11 +345,210 @@ function _autorunStopElapsed() {
   if (_autoRunElapsedTimer) { clearInterval(_autoRunElapsedTimer); _autoRunElapsedTimer = null; }
 }
 
-// ---- AutoRun: レンダリング ----
+// ---- AutoRun: 全体進捗（フェーズ完了ベースの近似。偽の残り時間は出さない） ----
+function _autorunProgressPercent(status) {
+  if (status === 'complete') return 100;
+  const idx = AUTORUN_PHASE_ORDER.indexOf(status === 'awaiting_input' ? 'discovering' : status);
+  if (idx < 0) return 0;
+  let pct = 0;
+  for (let i = 0; i < idx; i++) pct += AUTORUN_PHASE_WEIGHTS[AUTORUN_PHASE_ORDER[i]];
+  pct += AUTORUN_PHASE_WEIGHTS[AUTORUN_PHASE_ORDER[idx]] * 0.5;
+  return Math.round(pct);
+}
+
+// ---- AutoRun: ステッパー ----
+function _autorunStepMeta(data) {
+  const sd = data.step_data || {};
+  const meta = {};
+  if (sd.crawl && sd.crawl.screens != null) {
+    meta['ars-crawl'] = `${sd.crawl.screens}画面 / ${sd.crawl.forms || 0}フォーム`;
+  }
+  if (sd.qa && sd.qa.count) meta['ars-qa'] = `${sd.qa.count}件の成果物`;
+  if (sd.scripts && sd.scripts.all != null) meta['ars-scripts'] = `${sd.scripts.all}件のテストケース`;
+  const policy = data.run_policy || {};
+  if (policy.filter_mode) {
+    const labels = { all: '全テスト', smoke: 'スモーク', transition: '遷移', form: 'フォーム' };
+    meta['ars-approval'] = `${labels[policy.filter_mode] || policy.filter_mode}を承認済み`;
+  }
+  const r = data.test_results || {};
+  if (r.total != null) meta['ars-running'] = r.unavailable ? '実行不可' : `PASS ${r.passed || 0} / FAIL ${r.failed || 0}`;
+  return meta;
+}
+
+function _autorunUpdateStepper(data) {
+  const status = data.status || 'idle';
+  const activeStepId = AUTORUN_STEP_MAP[status];
+  const stepOrder = ['ars-crawl','ars-qa','ars-scripts','ars-approval','ars-running','ars-done'];
+  const activeIdx = stepOrder.indexOf(activeStepId);
+  const isError = ['failed','cancelled'].includes(status);
+  const isAwaiting = (status === 'awaiting_approval');
+  const metas = _autorunStepMeta(data);
+  stepOrder.forEach((sid, idx) => {
+    const el = document.getElementById(sid);
+    if (!el) return;
+    // e2e がクラス文字列の完全一致を検証するため、状態クラスの付け方は変えない
+    el.className = 'autorun-step-item';
+    const icon = el.querySelector('.autorun-step-icon');
+    let kind = 'pending';
+    if (sid === activeStepId && isError) { el.classList.add('is-error'); kind = 'error'; }
+    else if (sid === 'ars-approval' && isAwaiting) { el.classList.add('is-waiting'); kind = 'waiting'; }
+    else if (sid === activeStepId && status !== 'complete') { el.classList.add('is-active'); kind = 'active'; }
+    else if (idx < activeIdx || status === 'complete') { el.classList.add('is-done'); kind = 'done'; }
+    if (icon) icon.innerHTML = AUTORUN_STEP_ICONS[kind];
+    const metaEl = document.getElementById(sid + '-meta');
+    if (metaEl) metaEl.textContent = metas[sid] || '';
+  });
+
+  _autorunSetText('autorun-phase-label', AUTORUN_PHASE_LABELS[status] || '');
+  const pct = _autorunProgressPercent(status);
+  const fill = document.getElementById('autorun-progress-fill');
+  const bar = document.getElementById('autorun-progressbar');
+  if (fill) {
+    fill.style.width = pct + '%';
+    fill.classList.toggle('is-error', isError);
+    fill.classList.toggle('is-done', status === 'complete');
+  }
+  if (bar) bar.setAttribute('aria-valuenow', String(pct));
+
+  // ログイン入力を✕で閉じた場合の再開導線
+  const note = document.getElementById('autorun-step-note');
+  if (note) {
+    if (status === 'awaiting_input' && _autoRunLoginSuppressed) {
+      note.style.display = '';
+      note.replaceChildren();
+      const span = document.createElement('span');
+      span.textContent = 'ログイン情報の入力を待っています。';
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn-outline-sm';
+      btn.textContent = '入力を再開';
+      btn.addEventListener('click', () => {
+        _autoRunLoginSuppressed = false;
+        if (window._autoRunLastData) _autorunRender(window._autoRunLastData);
+      });
+      note.append(span, btn);
+    } else {
+      note.style.display = 'none';
+    }
+  }
+}
+
+// ---- AutoRun: ログ（レベルフィルタ + 自動スクロール） ----
+function _autorunLogLevelOf(line) {
+  if (/\[ERROR\]|エラー/.test(line)) return 'error';
+  if (/\[WARN\]|警告/.test(line)) return 'warn';
+  return 'info';
+}
+
+function _autorunRenderLog() {
+  const logEl = document.getElementById('autorun-log');
+  if (!logEl) return;
+  const lines = _autoRunLogLines.filter(line => {
+    const lv = _autorunLogLevelOf(line);
+    if (_autoRunLogLevel === 'error') return lv === 'error';
+    if (_autoRunLogLevel === 'warn') return lv !== 'info';
+    return true;
+  });
+  logEl.innerHTML = lines.map(line => {
+    const esc = escHtml(line);
+    const lv = _autorunLogLevelOf(line);
+    if (lv === 'error') return `<span class="log-error">${esc}</span>`;
+    if (lv === 'warn') return `<span class="log-warn">${esc}</span>`;
+    if (/\[OK\]|完了|成功|✓/.test(line)) return `<span class="log-ok">${esc}</span>`;
+    return esc;
+  }).join('\n');
+  if (document.getElementById('autorun-log-autoscroll')?.checked) {
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+}
+
+document.querySelectorAll('.autorun-log-filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    _autoRunLogLevel = btn.dataset.logLevel || 'all';
+    document.querySelectorAll('.autorun-log-filter-btn').forEach(b =>
+      b.classList.toggle('is-active', b === btn));
+    _autorunRenderLog();
+  });
+});
+document.getElementById('autorun-log-copy')?.addEventListener('click', () => {
+  navigator.clipboard.writeText(_autoRunLogLines.join('\n')).then(() => {
+    const btn = document.getElementById('autorun-log-copy');
+    if (!btn) return;
+    const orig = btn.textContent;
+    btn.textContent = 'コピーしました';
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  }).catch(() => {});
+});
+
+// ---- AutoRun: 完了カード（レポート「テスト実行」タブへの導線） ----
+function _autorunRenderComplete(data) {
+  const card = document.getElementById('autorun-complete-card');
+  if (!card) return;
+  if (data.status !== 'complete') { card.style.display = 'none'; return; }
+  card.style.display = '';
+  card.replaceChildren();
+
+  const r = data.test_results || {};
+  const unavailable = !!r.unavailable;
+  const ok = !unavailable && (r.failed || 0) === 0;
+
+  const head = document.createElement('div');
+  head.className = 'autorun-complete-head';
+  const icon = document.createElement('div');
+  icon.className = 'autorun-complete-icon ' + (unavailable ? 'is-warn' : ok ? 'is-ok' : 'is-fail');
+  icon.textContent = unavailable ? '⚠' : ok ? '✓' : '✕';
+  const titleWrap = document.createElement('div');
+  const title = document.createElement('div');
+  title.className = 'autorun-complete-title';
+  title.textContent = unavailable
+    ? 'AutoRun 完了（テストは実行できませんでした）'
+    : ok ? 'AutoRun 完了 — 全テスト成功' : 'AutoRun 完了 — 失敗したテストがあります';
+  const sub = document.createElement('p');
+  sub.className = 'muted-copy';
+  sub.textContent = unavailable
+    ? (r.error || 'Playwright 実行環境が未セットアップです。レポートの「テスト実行」タブにセットアップ手順があります。')
+    : `PASS ${r.passed || 0} ／ FAIL ${r.failed || 0} ／ SKIP ${r.skipped || 0} ／ 全${r.total || 0}件（所要 ${autorunFmtElapsed(data.elapsed_sec || 0)}）`;
+  titleWrap.append(title, sub);
+  head.append(icon, titleWrap);
+  card.appendChild(head);
+
+  const actions = document.createElement('div');
+  actions.className = 'autorun-complete-actions';
+  if (data.domain) {
+    const cta = document.createElement('button');
+    cta.type = 'button';
+    cta.className = 'btn-primary';
+    cta.textContent = 'レポートで結果を見る →';
+    cta.addEventListener('click', () => openResultsForDomain(data.domain, 'runs'));
+    actions.appendChild(cta);
+  }
+  const outputs = data.outputs || {};
+  if (outputs.playwright_report_html) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn-outline-sm qa-preview-btn';
+    b.dataset.path = outputs.playwright_report_html;
+    b.dataset.label = 'テスト実行レポート';
+    b.textContent = 'Playwright レポート';
+    actions.appendChild(b);
+  }
+  if (outputs.qa_process_report) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn-outline-sm qa-preview-btn';
+    b.dataset.path = outputs.qa_process_report;
+    b.dataset.label = 'QAレポート';
+    b.textContent = 'QAレポート';
+    actions.appendChild(b);
+  }
+  card.appendChild(actions);
+}
+
+// ---- AutoRun: レンダリング（status/outputs から冪等に導出） ----
 function _autorunRender(data) {
   if (!data) return;
+  window._autoRunLastData = data;
   const status = data.status || 'idle';
-  _autorunUpdateStatusPanel(data);
 
   // started_at を保存（経過時間計算用）
   if (data.started_at && !_autoRunStartedAt) {
@@ -366,56 +557,25 @@ function _autorunRender(data) {
 
   // 経過時間（サーバー値で最終確定）
   const elapsedEl = document.getElementById('autorun-elapsed');
-  if (elapsedEl) {
-    const sec = data.elapsed_sec || 0;
-    if (['complete','failed','cancelled'].includes(status)) {
-      elapsedEl.textContent = autorunFmtElapsed(sec);
-    }
+  if (elapsedEl && ['complete','failed','cancelled'].includes(status)) {
+    elapsedEl.textContent = autorunFmtElapsed(data.elapsed_sec || 0);
   }
 
-  // ---- ステップ進捗 ----
-  const activeStepId = AUTORUN_STEP_MAP[status];
-  const stepOrder = ['ars-crawl','ars-qa','ars-scripts','ars-approval','ars-running','ars-done'];
-  const activeIdx = stepOrder.indexOf(activeStepId);
-  const isError = ['failed','cancelled'].includes(status);
-  const isAwaiting = (status === 'awaiting_approval');
-  stepOrder.forEach((sid, idx) => {
-    const el = document.getElementById(sid);
-    if (!el) return;
-    el.className = 'autorun-step-item';
-    const icon = el.querySelector('.autorun-step-icon');
-    if (sid === activeStepId && isError) {
-      el.classList.add('is-error'); icon.textContent = '✕';
-    } else if (sid === 'ars-approval' && isAwaiting) {
-      el.classList.add('is-waiting'); icon.textContent = '⏳';
-    } else if (sid === activeStepId) {
-      el.classList.add('is-active'); icon.textContent = '↻';
-    } else if (idx < activeIdx || status === 'complete') {
-      el.classList.add('is-done'); icon.textContent = '✓';
-    } else {
-      icon.textContent = '○';
-    }
-  });
+  _autorunUpdateStepper(data);
 
   // ---- ログ ----
-  const logEl = document.getElementById('autorun-log');
-  if (logEl && data.log) {
-    logEl.innerHTML = data.log.map(line => {
-      const esc = escHtml(line);
-      if (/\[ERROR\]|エラー/.test(line)) return `<span class="log-error">${esc}</span>`;
-      if (/\[WARN\]|警告/.test(line)) return `<span class="log-warn">${esc}</span>`;
-      if (/\[OK\]|完了|成功|✓/.test(line)) return `<span class="log-ok">${esc}</span>`;
-      return esc;
-    }).join('\n');
-    logEl.scrollTop = logEl.scrollHeight;
+  if (data.log) {
+    _autoRunLogLines = data.log;
+    _autorunRenderLog();
   }
 
   // ---- ログイン入力ポップアップ ----
-  if (status === 'awaiting_input' && data.input_request?.type === 'login') {
+  if (status === 'awaiting_input' && data.input_request?.type === 'login' && !_autoRunLoginSuppressed) {
     _autorunShowLoginModal(data.input_request);
   } else {
     _autorunHideLoginModal();
   }
+  if (status !== 'awaiting_input') _autoRunLoginSuppressed = false;
 
   // ---- 承認モーダル自動表示 ----
   if (status === 'awaiting_approval' && !_autoRunApprovalModalShown) {
@@ -426,14 +586,8 @@ function _autorunRender(data) {
     _autorunHideApprovalModal();
   }
 
-  // ---- タイムラインカード更新 ----
-  _autorunUpdateTimeline(data);
-  _autorunRenderResults(data.test_results || {}, data.outputs || {});
+  _autorunRenderComplete(data);
   _autorunRenderFailurePanel(data);
-
-  // ---- 承認ボタン（サイドバー） ----
-  const approveArea = document.getElementById('autorun-approve-area');
-  if (approveArea) approveArea.style.display = (status === 'awaiting_approval') ? '' : 'none';
 
   // ---- 停止ボタン ----
   const cancelArea = document.getElementById('autorun-cancel-area');
@@ -450,6 +604,7 @@ function _autorunRender(data) {
     if (btn) { btn.disabled = false; btn.textContent = '開始'; }
     _autorunStopPolling();
     _autorunStopElapsed();
+    autorunResume(); // 最近の実行リストを更新
   }
 
   // ---- エラー表示 ----
@@ -477,128 +632,7 @@ function _autorunRender(data) {
   }
 }
 
-// ---- AutoRun: タイムラインカード管理 ----
-function _autorunUpdateTimeline(data) {
-  const outputs = data.outputs || {};
-  const sd = data.step_data || {};
-  const elapsed = autorunFmtElapsed(data.elapsed_sec || 0);
-  const status = data.status || 'idle';
-
-  // 仕様書生成完了カード
-  if (outputs.report_json && !_arCards.crawl) {
-    _arCards.crawl = true;
-    const crawl = sd.crawl || {};
-    const meta = crawl.screens != null
-      ? `${crawl.screens}画面 / ${crawl.forms || 0}フォーム を検出`
-      : `${crawl.domain || ''} クロール完了`;
-    const btns = [
-      outputs.report_html ? { label: 'HTMLレポート', cls: 'btn-primary', path: outputs.report_html, dataLabel: '仕様書 HTML' } : null,
-      outputs.report_json ? { label: 'JSON', cls: 'btn-outline-sm', path: outputs.report_json, dataLabel: '仕様書 JSON' } : null,
-    ].filter(Boolean);
-    _arAppendCard('crawl', '✅', '仕様書生成完了', elapsed, meta, btns);
-  }
-
-  // QA成果物完了カード
-  if (outputs.qa_process_report && !_arCards.qa) {
-    _arCards.qa = true;
-    const qa = sd.qa || {};
-    const meta = `テスト計画・分析・設計・ケース・横断レビュー${qa.count ? '（' + qa.count + '件）' : ''}`;
-    const btns = [{ label: 'QAレポートを見る', cls: 'btn-primary', path: outputs.qa_process_report, dataLabel: 'QAレポート' }];
-    _arAppendCard('qa', '✅', 'QA成果物生成完了', elapsed, meta, btns);
-  }
-
-  // テストスクリプトカード
-  if ((outputs.spec_ts || status === 'awaiting_approval') && !_arCards.scripts) {
-    _arCards.scripts = true;
-    const sc = sd.scripts || {};
-    const metaParts = [sc.all != null ? `${sc.all}件のテストケース` : 'テストケース生成完了'];
-    if (sc.smoke != null) metaParts.push(`スモーク:${sc.smoke}`);
-    if (sc.form != null) metaParts.push(`フォーム:${sc.form}`);
-    const btns = [{ label: 'テストケース確認', cls: 'btn-outline-sm', onclick: arShowPreview }];
-    if (status === 'awaiting_approval') {
-      btns.push({ label: '実行設定・承認', cls: 'btn-primary', onclick: _autorunPrepareAndShowApprovalModal });
-    }
-    const card = _arAppendCard('scripts',
-      status === 'awaiting_approval' ? '⏳' : '✅',
-      status === 'awaiting_approval' ? 'スクリプト生成完了 — 承認待ち' : 'テストスクリプト生成完了',
-      elapsed, metaParts.join(' / '), btns);
-    if (status === 'awaiting_approval' && card) {
-      card.classList.add('is-approval');
-    }
-  }
-
-  // テスト結果カード
-  if (data.test_results && data.test_results.total != null && !_arCards.tests) {
-    _arCards.tests = true;
-    const r = data.test_results;
-    const ok = r.ok;
-    const meta = r.unavailable
-      ? (r.error || '@playwright/test 未セットアップ')
-      : `PASS: ${r.passed}　FAIL: ${r.failed}　SKIP: ${r.skipped}　TOTAL: ${r.total}`;
-    const btns = [
-      outputs.playwright_report_html ? { label: '実行レポートを見る', cls: 'btn-primary', path: outputs.playwright_report_html, dataLabel: 'テスト実行レポート' } : null,
-      outputs.qa_process_report ? { label: 'QAレポート', cls: 'btn-outline-sm', path: outputs.qa_process_report, dataLabel: 'QAレポート' } : null,
-    ].filter(Boolean);
-    const card = _arAppendCard('tests', ok ? '✅' : '❌', ok ? 'テスト実行完了' : 'テスト実行失敗', elapsed, meta, btns);
-    if (!ok && r.error && !r.unavailable && card) {
-      const errDiv = document.createElement('div');
-      errDiv.className = 'ar-card-error';
-      errDiv.textContent = r.error;
-      card.appendChild(errDiv);
-    }
-  }
-}
-
-// ---- カード生成（DOM API のみ・innerHTML 不使用） ----
-function _arAppendCard(id, icon, title, timeStr, meta, buttons) {
-  const timeline = document.getElementById('ar-timeline');
-  if (!timeline) return null;
-
-  const card = document.createElement('div');
-  card.className = 'ar-card';
-  card.id = `ar-card-${id}`;
-
-  const head = document.createElement('div');
-  head.className = 'ar-card-head';
-  const titleEl = document.createElement('div');
-  titleEl.className = 'ar-card-title';
-  titleEl.textContent = `${icon} ${title}`;
-  const timeEl = document.createElement('span');
-  timeEl.className = 'ar-card-time';
-  timeEl.textContent = timeStr;
-  head.appendChild(titleEl);
-  head.appendChild(timeEl);
-  card.appendChild(head);
-
-  const metaEl = document.createElement('div');
-  metaEl.className = 'ar-card-meta';
-  metaEl.textContent = meta;
-  card.appendChild(metaEl);
-
-  if (buttons && buttons.length) {
-    const actionsEl = document.createElement('div');
-    actionsEl.className = 'ar-card-actions';
-    for (const btn of buttons) {
-      const b = document.createElement('button');
-      b.className = (btn.cls || 'btn-outline-sm');
-      b.classList.add('ar-card-button');
-      b.textContent = btn.label;
-      if (btn.path) {
-        b.dataset.path = btn.path;
-        b.dataset.label = btn.dataLabel || btn.label;
-        b.classList.add('qa-preview-btn');
-      }
-      if (btn.onclick) b.addEventListener('click', btn.onclick);
-      actionsEl.appendChild(b);
-    }
-    card.appendChild(actionsEl);
-  }
-
-  timeline.appendChild(card);
-  return card;
-}
-
-// ---- AutoRun: テストケースプレビューモーダル ----
+// ---- AutoRun: 停止 ----
 async function autorunCancel() {
   if (!_autoRunJobId) return;
   const btn = document.getElementById('autorun-cancel-btn');
@@ -641,6 +675,13 @@ function _autorunShowLoginModal(inputRequest) {
 
 function _autorunHideLoginModal() {
   document.getElementById('autorun-login-modal')?.classList.add('hidden');
+}
+
+// ✕で閉じる: スキップせず入力待ちのまま（誤操作でスキップさせない）。再開はステッパー下の導線から。
+function autorunDismissLoginModal() {
+  _autoRunLoginSuppressed = true;
+  _autorunHideLoginModal();
+  if (window._autoRunLastData) _autorunRender(window._autoRunLastData);
 }
 
 async function _autorunSubmitLogin(skip) {
@@ -696,8 +737,10 @@ function autorunReset() {
   _autoRunStartedAt           = null;
   _autoRunPreviewLoaded       = false;
   _autoRunPreviewData         = null;
-  _arCards                    = {};
   _autoRunApprovalModalShown  = false;
+  _autoRunLoginSuppressed     = false;
+  _autoRunLogLines            = [];
+  window._autoRunLastData     = null;
   _autorunStopPolling();
   _autorunStopElapsed();
   _autorunHideApprovalModal();
@@ -705,8 +748,7 @@ function autorunReset() {
   document.getElementById('autorun-steps').style.display          = 'none';
   document.getElementById('autorun-outputs-area').style.display   = 'none';
   document.getElementById('ar-log-section').style.display         = 'none';
-  document.getElementById('autorun-status-panel').style.display   = 'none';
-  document.getElementById('autorun-result-panel').style.display   = 'none';
+  document.getElementById('autorun-complete-card').style.display  = 'none';
   document.getElementById('autorun-failure-panel').style.display  = 'none';
   document.getElementById('autorun-preview-panel').style.display  = 'none';
   document.getElementById('autorun-cancel-area').style.display    = 'none';
@@ -719,16 +761,12 @@ function autorunReset() {
   if (viewpointSelect) viewpointSelect.value = '';
   autorunLoadViewpointSelection();
   document.getElementById('autorun-elapsed').textContent = '0:00';
-  const timeline = document.getElementById('ar-timeline');
-  if (timeline) timeline.innerHTML = '';
-  const resultCards = document.getElementById('autorun-result-cards');
-  if (resultCards) resultCards.innerHTML = '';
+  const completeCard = document.getElementById('autorun-complete-card');
+  if (completeCard) completeCard.replaceChildren();
   const failureBody = document.getElementById('autorun-failure-body');
   if (failureBody) failureBody.innerHTML = '';
   const logPre = document.getElementById('autorun-log');
   if (logPre) logPre.textContent = '';
-  const allRadio = document.querySelector('input[name="autorun-filter"][value="all"]');
-  if (allRadio) allRadio.checked = true;
   autorunSetStartStatus('', false);
 }
 

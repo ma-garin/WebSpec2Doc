@@ -1,20 +1,37 @@
 // ====================== 結果ページ（QAビュー軸） ======================
 const resultPanel = document.getElementById('result-panel');
-const resultHero = document.getElementById('result-hero');
-const VIEW_MODE_KEY = 'wsd_view_mode';
-const SUMMARY_HIDE_TABS = new Set(['design', 'technique-detail', 'transition-table', 'history']);
-const EXPORT_DEFS = [
-  { key: 'html', label: 'HTMLレポート', desc: 'テスト分析インプット文書（画面別カード＋テスト条件）' },
-  { key: 'pdf', label: 'PDF', desc: '配布・印刷用（HTMLレポートのPDF版）' },
-  { key: 'screens_md', label: 'Markdown（画面一覧）', desc: 'screens.md' },
-  { key: 'forms_md', label: 'Markdown（フォーム）', desc: 'forms.md' },
-  { key: 'excel', label: 'Excel', desc: 'spec.xlsx（表計算で編集）' },
-  { key: 'json', label: 'JSON（機械可読）', desc: '自動化・連携用の構造化データ' },
-  { key: 'diff', label: '差分レポート', desc: '前回スナップショットとの差分' },
-];
-let resultData = null, reportJson = null, activeResultTab = 'overview';
+// 描画先シム: selectResultTab がアクティブなパネル/サブパネル要素へ差し替える。
+// 各 view-*.js は resultHero へ描画するだけで、自分のパネルにだけ描かれ状態が保持される。
+let resultHero = document.getElementById('rp-overview');
 
-async function showResults(domain) {
+// タブレジストリ: パネルID・描画関数（グローバル名前解決）・サブタブ構成
+const TAB_DEFS = {
+  overview:      { panel: 'rp-overview', render: 'renderOverview' },
+  screens:       { panel: 'rp-screens', defaultSub: 'spec',
+                   subs: { spec: 'renderReport', gallery: 'renderShots' } },
+  'test-design': { panel: 'rp-test-design', defaultSub: 'matrix',
+                   subs: { matrix: 'renderMatrix', summary: 'renderDesign', detail: 'renderTechniqueDetail' } },
+  flow:          { panel: 'rp-flow', defaultSub: 'diagram',
+                   subs: { diagram: 'renderTransition', table: 'renderTransitionTable' } },
+  runs:          { panel: 'rp-runs', render: 'renderTestRuns' },
+  history:       { panel: 'rp-history', render: 'renderTimeline' },
+};
+
+// 旧8タブ時代のディープリンク互換（共有済みURLを壊さない）
+const LEGACY_TAB_MAP = {
+  report: ['screens', 'spec'],
+  matrix: ['test-design', 'matrix'],
+  design: ['test-design', 'summary'],
+  'technique-detail': ['test-design', 'detail'],
+  transition: ['flow', 'diagram'],
+  'transition-table': ['flow', 'table'],
+};
+
+let resultData = null, reportJson = null;
+let activeResultTab = 'overview', activeResultSub = '';
+const _renderedPanels = new Set(); // "tab/sub" 単位の描画済みフラグ（dirty 管理）
+
+async function showResults(domain, tab, sub) {
   let data;
   try {
     const res = await fetch('/api/result?domain=' + encodeURIComponent(domain));
@@ -25,7 +42,13 @@ async function showResults(domain) {
     executionView.classList.add('hidden'); resultPanel.classList.remove('hidden');
     appContent.classList.add('is-executing');
     setHeader(['ダッシュボード', domain], domain);
-    resultHero.innerHTML = `<div class="hero-msg"><p>結果の取得に失敗しました。</p><p style="font-size:13px;color:var(--text-muted)">${escHtml(e.message)}</p></div>`;
+    _renderedPanels.clear();
+    _switchPanels('overview', '');
+    uiError(document.getElementById('rp-overview'), {
+      title: '結果の取得に失敗しました',
+      message: e.message,
+      onRetry: () => showResults(domain, tab, sub),
+    });
     return;
   }
   resultData = data;
@@ -38,11 +61,7 @@ async function showResults(domain) {
   const crawledAt = reportJson && reportJson.meta ? reportJson.meta.crawled_at : '';
   document.getElementById('r-crawled').textContent = crawledAt ? ('最終クロール: ' + crawledAt) : '';
   document.getElementById('r-domain').textContent = domain;
-  document.getElementById('r-screens').textContent = s.screens || 0;
-  document.getElementById('r-forms').textContent = s.forms || 0;
-  document.getElementById('r-fields').textContent = s.fields || 0;
-  document.getElementById('r-required').textContent = required;
-  document.getElementById('r-buttons').textContent = s.buttons || 0;
+  _updateKpiHero(s, required, data);
 
   // 差分バッジ（DOM APIで構築 — innerHTML を使わない）
   const diffBadge = document.getElementById('r-diff-badge');
@@ -68,8 +87,8 @@ async function showResults(domain) {
   const fieldCount = s.fields || 0;
   const snapCount = data.snapshot_count || 0;
   const setTabCount = (id, n) => { const el = document.getElementById(id); if (el) el.textContent = n > 0 ? ` ${n}` : ''; };
-  setTabCount('tab-count-report', screenCount);
-  setTabCount('tab-count-matrix', fieldCount);
+  setTabCount('tab-count-screens', screenCount);
+  setTabCount('tab-count-test-design', fieldCount);
   setTabCount('tab-count-history', snapCount);
 
   setHeader(['ダッシュボード', domain], domain);
@@ -78,7 +97,55 @@ async function showResults(domain) {
   appContent.classList.add('is-reporting');
   _buildExportDropdown(data);
   showWizardStep(4);
-  selectResultTab('overview');
+  _renderedPanels.clear(); // データ更新 → 全パネル dirty 化（次回表示時に再描画）
+  selectResultTab(tab || 'overview', sub);
+}
+
+// KPIヒーロー: 生数値の羅列ではなく「テスト計画に効く」指標を出す
+function _updateKpiHero(s, required, data) {
+  const setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  const fields = s.fields || 0;
+  setText('k-screens', s.screens || 0);
+  setText('k-forms-sub', s.forms ? `フォーム ${s.forms}` : '');
+  setText('k-fields', fields);
+  setText('k-required-sub', fields ? `必須 ${required}（${Math.round(required / fields * 100)}%）` : '必須 0');
+  const bar = document.getElementById('k-required-bar');
+  if (bar) bar.style.width = fields ? Math.round(required / fields * 100) + '%' : '0%';
+
+  if (reportJson) {
+    const effort = estimateTestEffort(reportJson);
+    setText('k-conds', countTestConditions(reportJson));
+    setText('k-cases', effort.cases);
+    setText('k-hours-sub', effort.cases ? `約${effort.hours}時間（1件${effort.caseMinutes}分）` : '');
+  } else {
+    setText('k-conds', '—');
+    setText('k-cases', '—');
+    setText('k-hours-sub', '再クロールで算出');
+  }
+
+  // 直近テスト実行の PASS 率（playwright_report.json があれば非同期で反映）
+  const passEl = document.getElementById('k-passrate');
+  const subEl = document.getElementById('k-runs-sub');
+  const tile = document.getElementById('k-runs-tile');
+  if (passEl) { passEl.textContent = '—'; passEl.classList.remove('is-pass', 'is-fail'); }
+  if (subEl) subEl.textContent = '未実行';
+  const pwJson = data.files && data.files.playwright_json;
+  if (pwJson) {
+    fetch('/preview?path=' + encodeURIComponent(pwJson)).then(r => r.json()).then(r => {
+      if (!passEl || !subEl) return;
+      if (r.unavailable) { subEl.textContent = '実行不可（要セットアップ）'; return; }
+      const total = r.total || 0;
+      if (!total) return;
+      const rate = Math.round((r.passed || 0) / total * 100);
+      passEl.textContent = rate + '%';
+      passEl.classList.add((r.failed || 0) ? 'is-fail' : 'is-pass');
+      subEl.textContent = `PASS ${r.passed || 0} / FAIL ${r.failed || 0}` + (data.playwright_run_at ? ` ・ ${data.playwright_run_at}` : '');
+    }).catch(() => {});
+  }
+  if (tile && !tile._bound) {
+    tile._bound = true;
+    tile.addEventListener('click', () => selectResultTab('runs'));
+  }
 }
 
 function _buildExportDropdown(data) {
@@ -116,62 +183,101 @@ document.addEventListener('click', () => {
   if (dd) dd.classList.remove('is-open');
 });
 
-document.querySelectorAll('.result-tab').forEach(t => {
+document.querySelectorAll('.result-tabs .result-tab').forEach(t => {
   t.addEventListener('click', () => selectResultTab(t.dataset.tab));
   t.addEventListener('keydown', e => {
     if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
     e.preventDefault();
-    const tabs = [...document.querySelectorAll('.result-tab')].filter(x => x.offsetParent !== null);
+    const tabs = [...document.querySelectorAll('.result-tabs .result-tab')].filter(x => x.offsetParent !== null);
     const i = tabs.indexOf(t);
     const next = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
     if (next) { selectResultTab(next.dataset.tab); next.focus(); }
   });
 });
-function selectResultTab(tab) {
+document.querySelectorAll('.result-subtabs .result-subtab').forEach(t => {
+  t.addEventListener('click', () => {
+    const tab = t.closest('.result-subtabs')?.dataset.tab;
+    if (tab) selectResultTab(tab, t.dataset.sub);
+  });
+});
+
+// タブ・サブタブ名を正規化（旧8タブ時代の名前も受け付ける）
+function _normalizeTab(tab, sub) {
+  if (LEGACY_TAB_MAP[tab]) return LEGACY_TAB_MAP[tab];
+  const def = TAB_DEFS[tab] ? tab : 'overview';
+  const d = TAB_DEFS[def];
+  const s = d.subs ? (d.subs[sub] ? sub : d.defaultSub) : '';
+  return [def, s];
+}
+
+// パネル・タブボタンの表示状態だけを切り替え、resultHero シムを差し替える（描画はしない）
+function _switchPanels(tab, sub) {
   activeResultTab = tab;
-  document.querySelectorAll('.result-tab').forEach(t => {
+  activeResultSub = sub;
+  document.querySelectorAll('.result-tabs .result-tab').forEach(t => {
     const on = t.dataset.tab === tab;
     t.classList.toggle('is-active', on);
     t.setAttribute('aria-selected', on ? 'true' : 'false');
     t.tabIndex = on ? 0 : -1;
   });
-  if (tab === 'overview') renderOverview();
-  else if (tab === 'matrix') renderMatrix();
-  else if (tab === 'report') renderReport();
-  else if (tab === 'design') renderDesign();
-  else if (tab === 'technique-detail') renderTechniqueDetail();
-  else if (tab === 'transition') renderTransition();
-  else if (tab === 'transition-table') renderTransitionTable();
-  else if (tab === 'history') renderTimeline();
+  for (const [name, def] of Object.entries(TAB_DEFS)) {
+    const panel = document.getElementById(def.panel);
+    if (panel) panel.hidden = name !== tab;
+  }
+  const def = TAB_DEFS[tab];
+  let target = document.getElementById(def.panel);
+  if (def.subs) {
+    const panel = target;
+    panel.querySelectorAll('.result-subtab').forEach(t => {
+      const on = t.dataset.sub === sub;
+      t.classList.toggle('is-active', on);
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    panel.querySelectorAll('.result-subpanel').forEach(p => {
+      p.hidden = p.id !== `${def.panel}-${sub}`;
+    });
+    target = document.getElementById(`${def.panel}-${sub}`) || panel;
+  }
+  resultHero = target;
+  return target;
 }
 
-function applyViewMode(mode) {
-  const selectedMode = mode === 'detail' ? 'detail' : 'summary';
-  document.querySelectorAll('.result-tabs .result-tab[data-tab]').forEach(tab => {
-    const hide = selectedMode === 'summary' && SUMMARY_HIDE_TABS.has(tab.dataset.tab);
-    tab.style.display = hide ? 'none' : '';
-    if (hide && tab.classList.contains('is-active')) {
-      document.querySelector('.result-tab[data-tab="overview"]')?.click();
-    }
-  });
-  document.getElementById('view-mode-summary')?.classList.toggle('is-active', selectedMode === 'summary');
-  document.getElementById('view-mode-detail')?.classList.toggle('is-active', selectedMode === 'detail');
-  try { localStorage.setItem(VIEW_MODE_KEY, selectedMode); } catch (_) {}
+function _writeReportHash() {
+  const domain = (document.getElementById('r-domain') || {}).textContent || '';
+  if (!domain || domain === '-' || resultPanel.classList.contains('hidden')) return;
+  let hash = '#report/' + encodeURIComponent(domain) + '/' + activeResultTab;
+  if (activeResultSub) hash += '/' + activeResultSub;
+  try { history.replaceState(null, '', hash); } catch (_) {}
+}
+
+function selectResultTab(tab, sub) {
+  const [nTab, nSub] = _normalizeTab(tab, sub);
+  _switchPanels(nTab, nSub);
+  _writeReportHash();
+  const key = nTab + '/' + nSub;
+  if (_renderedPanels.has(key)) return; // 描画済み: 状態（検索条件・スクロール・ズーム）を保持
+  _renderedPanels.add(key);
+  const def = TAB_DEFS[nTab];
+  const fnName = def.subs ? def.subs[nSub] : def.render;
+  const fn = window[fnName];
+  if (typeof fn === 'function') fn();
 }
 
 // ---- 履歴・差分（クロール履歴タイムライン＋任意2点の仕様ドリフト比較）----
 let timelineDomain = '';
 async function renderTimeline() {
+  // await 中にタブ切替で resultHero シムが差し替わっても、自パネルへ描き続ける
+  const host = resultHero;
   const domain = document.getElementById('r-domain').textContent.trim();
   timelineDomain = domain;
-  resultHero.innerHTML = '<div class="hero-msg">クロール履歴を読み込み中…</div>';
+  uiSkeleton(host, 'table');
   let snaps = [];
   try {
     const data = await fetch('/api/snapshots?domain=' + encodeURIComponent(domain)).then(r => r.json());
     snaps = data.snapshots || [];
   } catch (e) {}
   if (snaps.length < 2) {
-    resultHero.innerHTML = '<div class="hero-pad"><div class="hero-section-title">クロール履歴</div>' +
+    host.innerHTML = '<div class="hero-pad"><div class="hero-section-title">クロール履歴</div>' +
       '<p style="color:var(--text-muted);font-size:13px">履歴が' + snaps.length + '件です。<strong>再クロール</strong>すると、前回との仕様ドリフト（追加/削除された画面・変更されたフォーム）を時系列で比較できます。</p>' +
       _ciGuidanceCard(domain) + '</div>';
     _bindCiCopy();
@@ -185,7 +291,7 @@ async function renderTimeline() {
       <td>${escHtml(s.label)}${i === 0 ? ' <span class="tl-latest">最新</span>' : ''}</td>
       <td class="num">${s.screens}</td><td class="num">${s.forms}</td><td class="num">${s.fields}</td>
     </tr>`).join('');
-  resultHero.innerHTML = '<div class="hero-pad">' +
+  host.innerHTML = '<div class="hero-pad">' +
     '<div class="hero-section-title">クロール履歴（' + snaps.length + '件）</div>' +
     '<p style="color:var(--text-muted);font-size:13px;margin-bottom:10px">比較する2時点を選び、仕様ドリフトを確認します（比較元＝古い／比較先＝新しい）。</p>' +
     '<table class="ov-screens tl-table"><thead><tr><th>比較元</th><th>比較先</th><th>クロール日時</th><th>画面</th><th>フォーム</th><th>入力項目</th></tr></thead><tbody>' +
@@ -230,14 +336,29 @@ function showTimelineDiff() {
   box.innerHTML = `<iframe src="/api/snapshot-diff?domain=${encodeURIComponent(timelineDomain)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}" title="仕様ドリフト差分"></iframe>`;
 }
 
+// ====================== 表の密度切替 ======================
+const TABLE_DENSITY_KEY = 'wsd_table_density';
+function _applyTableDensity(compact) {
+  resultPanel.classList.toggle('is-compact', compact);
+  const btn = document.getElementById('r-density-btn');
+  if (btn) btn.classList.toggle('is-active', compact);
+  try { localStorage.setItem(TABLE_DENSITY_KEY, compact ? 'compact' : 'comfortable'); } catch (_) {}
+}
+document.getElementById('r-density-btn')?.addEventListener('click', () => {
+  _applyTableDensity(!resultPanel.classList.contains('is-compact'));
+});
+(function initTableDensity() {
+  let saved = 'comfortable';
+  try { saved = localStorage.getItem(TABLE_DENSITY_KEY) || 'comfortable'; } catch (_) {}
+  if (saved === 'compact') _applyTableDensity(true);
+}());
+
 // ====================== タブ最大化 ======================
 function _toggleMaximize() {
   document.body.classList.toggle('result-maximized');
 }
 
 document.getElementById('r-maximize-btn')?.addEventListener('click', _toggleMaximize);
-document.getElementById('view-mode-summary')?.addEventListener('click', () => applyViewMode('summary'));
-document.getElementById('view-mode-detail')?.addEventListener('click', () => applyViewMode('detail'));
 document.getElementById('r-maximize-exit-btn')?.addEventListener('click', () => {
   document.body.classList.remove('result-maximized');
 });
@@ -268,9 +389,3 @@ document.getElementById('popup-view-report-btn').addEventListener('click', () =>
 document.getElementById('completion-overlay').addEventListener('click', (e) => {
   if (e.target === e.currentTarget) document.getElementById('completion-overlay').classList.add('hidden');
 });
-
-(function initViewMode() {
-  let saved = 'summary';
-  try { saved = localStorage.getItem(VIEW_MODE_KEY) || 'summary'; } catch (_) {}
-  applyViewMode(saved);
-}());

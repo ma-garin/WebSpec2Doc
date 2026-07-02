@@ -59,12 +59,21 @@ class TestAutoRunJob:
         }
         assert required.issubset(d.keys())
 
-    def test_to_dict_log_capped_at_200(self) -> None:
+    def test_to_dict_log_capped_at_1000(self) -> None:
+        """長時間クロールで先頭ログが早期に消えないよう、上限は1000行。"""
         job = _make_job()
-        for i in range(250):
+        for i in range(1050):
             job.add_log(f"msg {i}")
         d = job.to_dict()
-        assert len(d["log"]) == 200
+        assert len(d["log"]) == 1000
+        assert d["log"][0].endswith("msg 50")
+
+    def test_log_total_size_and_huge_line_are_capped(self) -> None:
+        job = AutoRunJob(job_id="test", url="https://example.com")
+        job.add_log("<img src=x onerror=alert(1)>" + "あ" * 200_000)
+        payload = job.to_dict()["log"]
+        assert len("".join(payload).encode("utf-8")) <= 256 * 1024
+        assert payload[0].startswith("[")
 
     def test_step_data_in_to_dict(self) -> None:
         job = _make_job()

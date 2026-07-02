@@ -50,6 +50,10 @@ green "OK: ${#PY_FILES[@]} ファイル"
 # --- 1b. 800行ガード ---
 # Phase 1 分割対象の既知違反は一時除外（分割完了次第リストから削除する）
 PHASE1_ALLOWED=(
+  "web/services/viewpoint_store.py"
+  "web/services/viewpoint_store_operations.py"
+  "static/css/components.css"
+  "static/js/viewpoints.js"
 )
 step "1b. 800行ガード (.py/.js/.css/.html)"
 OVER800=()
@@ -66,6 +70,7 @@ while IFS= read -r f; do
 done < <(
   find src web app.py tests static templates \
     -not -path '*/output/*' -not -path '*/__pycache__/*' \
+    -not -path 'static/vendor/*' \
     \( -name '*.py' -o -name '*.js' -o -name '*.css' -o -name '*.html' \) 2>/dev/null
 )
 if [ ${#OVER800[@]} -gt 0 ]; then

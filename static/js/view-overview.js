@@ -17,12 +17,8 @@ function _execSummary(allScreens) {
   const totalFields = screens.reduce((n, sc) => n + (sc.forms || []).reduce((m, fm) => m + (fm.fields || []).length, 0), 0);
   const totalRequired = screens.reduce((n, sc) => n + (sc.forms || []).reduce((m, fm) => m + (fm.fields || []).filter(f => f.required).length, 0), 0);
   const formScreens = screens.filter(sc => (sc.forms || []).some(fm => (fm.fields || []).length)).length;
-  // テストケース数の概算: 入力項目×3（有効/無効/境界） + 画面遷移×2（正常/異常）
-  const transitions = screens.reduce((n, sc) => n + ((sc.transitions && sc.transitions.to) || []).length, 0);
-  const estCases = totalFields * 3 + transitions * 2;
-  // 1ケースあたりの想定分数は設定で変更可（既定10分）。設計+実施の概算工数。
-  const caseMinutes = (typeof getSettings === 'function' ? (Number(getSettings().caseMinutes) || 10) : 10);
-  const estHours = Math.ceil(estCases * caseMinutes / 60);
+  // テスト規模の概算は KPI ヒーローと同じ計算式（view-utils.js estimateTestEffort）を使う
+  const { cases: estCases, hours: estHours, caseMinutes } = estimateTestEffort(reportJson);
   const top3 = [...screens].sort((a, b) => _screenRiskScore(b) - _screenRiskScore(a)).slice(0, 3)
     .filter(sc => _screenRiskScore(sc) > 0);
 
@@ -85,9 +81,9 @@ function renderOverview() {
     _execSummary(screens) +
     `<div class="next-steps-cta">
       <span class="next-steps-label">次のステップ</span>
-      <button type="button" class="next-step-btn" onclick="document.querySelector('.result-tab[data-tab=matrix]')?.click()">テスト条件を確認する →</button>
-      <button type="button" class="next-step-btn" onclick="document.querySelector('.result-tab[data-tab=design]')?.click()">技法マトリクスを見る →</button>
-      <button type="button" class="next-step-btn next-step-btn--secondary" onclick="document.querySelector('.result-tab[data-tab=history]')?.click()">差分・履歴を確認する →</button>
+      <button type="button" class="next-step-btn" onclick="selectResultTab('test-design','matrix')">テスト条件を確認する →</button>
+      <button type="button" class="next-step-btn" onclick="selectResultTab('test-design','summary')">技法マトリクスを見る →</button>
+      <button type="button" class="next-step-btn next-step-btn--secondary" onclick="selectResultTab('history')">差分・履歴を確認する →</button>
     </div>` +
     '<div class="hero-section-title">画面インベントリ ' + invNote + '</div>' +
     '<table class="ov-screens"><thead><tr><th>画面ID</th><th>タイトル</th><th>URL</th><th>フォーム</th><th>入力項目</th><th>遷移先</th></tr></thead><tbody>' +

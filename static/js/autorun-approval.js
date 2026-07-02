@@ -26,7 +26,6 @@ async function _autorunLoadPreview() {
     const data = await fetch('/api/autorun/preview?job_id=' + encodeURIComponent(_autoRunJobId)).then(r => r.json());
     _autoRunPreviewData = data;
     _autorunRenderPreview(data);
-    _autorunUpdateFilterCounts(data.summary?.filter_counts || {});
     if (loadingEl) loadingEl.textContent = '';
   } catch (e) {
     if (loadingEl) loadingEl.textContent = '(読み込みエラー)';
@@ -84,57 +83,6 @@ function _autorunRenderPreview(data) {
   if (specEl) specEl.textContent = data.spec_content || '(スクリプトなし)';
 }
 
-function _autorunUpdateFilterCounts(counts) {
-  const map = { all: '#afc-all', smoke: '#afc-smoke', transition: '#afc-transition', form: '#afc-form' };
-  Object.entries(map).forEach(([key, sel]) => {
-    const el = document.querySelector(sel);
-    if (el && counts[key] !== undefined) el.textContent = `(${counts[key]}件)`;
-  });
-}
-
-// ---- AutoRun: テスト結果 ----
-function _autorunRenderResults(results, outputs) {
-  const panel      = document.getElementById('autorun-result-panel');
-  const cards      = document.getElementById('autorun-result-cards');
-  const tableWrap  = document.getElementById('autorun-result-table-wrap');
-  const reportLinks= document.getElementById('autorun-report-links');
-  if (!panel || !cards || !tableWrap || !reportLinks || results.total == null) return;
-  panel.style.display = '';
-
-  cards.innerHTML = [
-    { label:'PASS',  val:results.passed,  cls:'status-low' },
-    { label:'FAIL',  val:results.failed,  cls:'status-critical' },
-    { label:'SKIP',  val:results.skipped, cls:'status-muted' },
-    { label:'TOTAL', val:results.total,   cls:'status-default' },
-  ].map(c => `<div class="stat-card autorun-result-card"><div class="num ${c.cls}">${c.val ?? 0}</div><div class="lbl">${c.label}</div></div>`).join('');
-
-  const tests = results.tests || [];
-  if (tests.length) {
-    const rows = tests.map(t => {
-      const cls = t.status==='passed' ? 'status-low' : t.status==='skipped' ? 'status-muted' : 'status-critical';
-      return `<tr>
-        <td class="cell-title">${escHtml(t.title||'')}</td>
-        <td class="cell-status ${cls}">${escHtml(t.status||'')}</td>
-        <td class="cell-id">${t.duration_ms||0}ms</td>
-        <td class="cell-muted status-critical">${escHtml((t.error||'').substring(0,100))}</td>
-      </tr>`;
-    }).join('');
-    tableWrap.innerHTML = `<table class="data autorun-result-table-data">
-      <thead><tr><th>テスト</th><th>結果</th><th>時間</th><th>エラー</th></tr></thead>
-      <tbody>${rows}</tbody></table>`;
-  } else if (results.error) {
-    tableWrap.innerHTML = `<div class="input-field-message input-field-message-error">${escHtml(results.error)}</div>`;
-  }
-
-  reportLinks.innerHTML = '';
-  if (outputs.playwright_report_html) {
-    reportLinks.innerHTML += `<button class="btn-primary qa-preview-btn" data-path="${escHtml(outputs.playwright_report_html)}" data-label="テスト実行レポート">実行レポートを見る</button> `;
-  }
-  if (outputs.qa_process_report) {
-    reportLinks.innerHTML += `<button class="btn-outline-sm qa-preview-btn" data-path="${escHtml(outputs.qa_process_report)}" data-label="QAレポート">QAレポートを見る</button>`;
-  }
-}
-
 // ---- AutoRun: 承認（共通ロジック） ----
 async function _autorunDoApprove(filterMode, perTestTimeoutSec) {
   if (!_autoRunJobId) return false;
@@ -156,28 +104,12 @@ async function _autorunDoApprove(filterMode, perTestTimeoutSec) {
   }
 }
 
-// サイドバーの承認ボタン
-async function autorunApprove() {
-  if (!_autoRunJobId) return;
-  const btn = document.getElementById('autorun-approve-btn');
-  if (btn) { btn.disabled = true; btn.textContent = '承認中…'; }
-  const filterMode = document.querySelector('input[name="autorun-filter"]:checked')?.value || 'all';
-  const perTestTimeoutSec = parseInt(document.getElementById('autorun-timeout')?.value || '30', 10);
-  await _autorunDoApprove(filterMode, perTestTimeoutSec);
-  if (btn) { btn.disabled = false; btn.textContent = 'テスト実行を承認'; }
-}
-
-// 承認モーダルの承認ボタン
+// 承認モーダルの承認ボタン（承認UIはこのモーダルに一本化）
 async function autorunApprovalModalApprove() {
   const btn = document.getElementById('arm-approve-btn');
   if (btn) { btn.disabled = true; btn.textContent = '開始中…'; }
   const filterMode = document.querySelector('input[name="arm-filter"]:checked')?.value || 'all';
   const perTestTimeoutSec = parseInt(document.getElementById('arm-timeout')?.value || '30', 10);
-  // サイドバーの値も同期（整合性保持）
-  const sbFilter = document.querySelector(`input[name="autorun-filter"][value="${filterMode}"]`);
-  if (sbFilter) sbFilter.checked = true;
-  const sbTimeout = document.getElementById('autorun-timeout');
-  if (sbTimeout) sbTimeout.value = String(perTestTimeoutSec);
   await _autorunDoApprove(filterMode, perTestTimeoutSec);
   if (btn) { btn.disabled = false; btn.textContent = 'テスト実行を開始'; }
 }

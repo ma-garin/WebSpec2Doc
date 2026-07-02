@@ -93,6 +93,11 @@ def test_csp_allows_self_scripts() -> None:
     assert "script-src" in csp
 
 
+def test_csp_does_not_allow_mermaid_cdn() -> None:
+    csp = _client().get("/").headers.get("Content-Security-Policy", "")
+    assert "cdn.jsdelivr.net" not in csp
+
+
 # ─────────────── site_url バリデーション (schedule API) ───────────────
 
 

@@ -105,6 +105,9 @@ function _shortVisLabel(sc) {
   return (sc.title || sc.page_id).replace(/\s*[|｜]\s*.*/g, '').replace(/['"]/g, '').slice(0, 24) || sc.page_id;
 }
 
+// セルフホスト版のみを使用し、外部ネットワークへコードを取得しない。
+const _MERMAID_SOURCE = '/static/vendor/mermaid/mermaid.min.js';
+
 function _loadMermaid(cb) {
   if (window.mermaid) {
     cb();
@@ -115,15 +118,25 @@ function _loadMermaid(cb) {
     existing.addEventListener('load', cb, { once: true });
     return;
   }
-  const s = document.createElement('script');
-  s.src = 'https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js';
-  s.dataset.lib = 'mermaid';
-  s.onload = cb;
-  s.onerror = () => {
-    const target = document.getElementById('uml-render-target');
-    if (target) target.innerHTML = '<div class="hero-msg">Mermaidを読み込めませんでした。ネットワーク接続を確認してください。</div>';
+  const tryLoad = () => {
+    const s = document.createElement('script');
+    s.src = _MERMAID_SOURCE;
+    s.dataset.lib = 'mermaid';
+    s.onload = cb;
+    s.onerror = () => {
+      s.remove();
+      const target = document.getElementById('uml-render-target');
+      if (target && typeof uiError === 'function') {
+        uiError(target, {
+          title: '遷移図ライブラリを読み込めませんでした',
+          message: 'ローカル資産が見つかりません。遷移表タブをご利用ください。',
+          onRetry: tryLoad,
+        });
+      }
+    };
+    document.head.appendChild(s);
   };
-  document.head.appendChild(s);
+  tryLoad();
 }
 
 function _umlAlias(value) {

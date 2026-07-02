@@ -8,6 +8,16 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+MAX_LOG_LINES = 1000
+MAX_LOG_BYTES = 256 * 1024
+
+
+def _truncate_utf8(value: str, limit: int) -> str:
+    encoded = value.encode("utf-8")
+    if len(encoded) <= limit:
+        return value
+    return encoded[:limit].decode("utf-8", errors="ignore")
+
 
 @dataclass
 class AutoRunJob:
@@ -50,8 +60,16 @@ class AutoRunJob:
     _cancelled: bool = field(default=False, init=False, repr=False, compare=False)
 
     def add_log(self, msg: str) -> None:
-        self.log.append(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
-        logger.info("autorun[%s] %s", self.job_id, msg)
+        prefix = f"[{datetime.now().strftime('%H:%M:%S')}] "
+        line = prefix + _truncate_utf8(str(msg), MAX_LOG_BYTES - len(prefix.encode("utf-8")))
+        self.log.append(line)
+        self.log = self.log[-MAX_LOG_LINES:]
+        total = sum(len(item.encode("utf-8")) for item in self.log)
+        while len(self.log) > 1 and total > MAX_LOG_BYTES:
+            total -= len(self.log.pop(0).encode("utf-8"))
+        if total > MAX_LOG_BYTES:
+            self.log[0] = _truncate_utf8(self.log[0], MAX_LOG_BYTES)
+        logger.info("autorun[%s] %s", self.job_id, line)
 
     def elapsed_sec(self) -> int:
         if not self.started_at:
@@ -78,7 +96,7 @@ class AutoRunJob:
             "domain": self.domain,
             "status": self.status,
             "step_label": self.step_label,
-            "log": self.log[-200:],
+            "log": self.log,
             "outputs": self.outputs,
             "test_results": self.test_results,
             "failure_classifications": self.failure_classifications,

@@ -24,6 +24,8 @@ _SECURITY_HEADERS: dict[str, str] = {
     "Content-Security-Policy": _CSP,
 }
 
+_LOCAL_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
+
 
 def add_security_headers(response: Response) -> Response:
     """全レスポンスにセキュリティヘッダーを付与する。"""
@@ -42,6 +44,17 @@ def _host_matches(header_val: str, expected_host: str) -> bool:
         return False
 
 
+def localhost_guard() -> Response | None:
+    """Hostヘッダーがローカルループバックを指すリクエストだけを許可する。"""
+    try:
+        hostname = urlparse(f"//{request.host}").hostname
+    except ValueError:
+        hostname = None
+    if hostname not in _LOCAL_HOSTS:
+        return Response(status=403)
+    return None
+
+
 def csrf_guard() -> Response | None:
     """状態変更リクエスト（POST/PUT/PATCH/DELETE）は同一オリジンのみ許可。
     Origin が存在する場合は Origin で検証、存在しない場合は Referer で検証する。
@@ -52,8 +65,7 @@ def csrf_guard() -> Response | None:
     referer = request.headers.get("Referer", "").strip()
     host = request.host
     if origin:
-        # "null" は file:// や opaque オリジンで発生する — このツールでは拒否しない
-        if origin != "null" and not _host_matches(origin, host):
+        if origin == "null" or not _host_matches(origin, host):
             return Response(status=403)
         return None
     if referer:

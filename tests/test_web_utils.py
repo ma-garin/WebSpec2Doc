@@ -60,11 +60,13 @@ class TestCsrfGuard:
         ):
             assert csrf_guard() is None
 
-    def test_post_with_null_origin_passes(self) -> None:
+    def test_post_with_null_origin_returns_403(self) -> None:
         from web.security import csrf_guard
 
         with appmod.app.test_request_context("/", method="POST", headers={"Origin": "null"}):
-            assert csrf_guard() is None
+            resp = csrf_guard()
+            assert resp is not None
+            assert resp.status_code == 403
 
     def test_post_with_mismatched_origin_returns_403(self) -> None:
         from web.security import csrf_guard
@@ -99,6 +101,20 @@ class TestCsrfGuard:
 
         with appmod.app.test_request_context("/", method="POST"):
             assert csrf_guard() is None
+
+
+class TestLocalhostGuard:
+    def test_loopback_hosts_pass(self) -> None:
+        from web.security import localhost_guard
+
+        for host in ("localhost", "localhost:8765", "127.0.0.1", "[::1]:8765"):
+            with appmod.app.test_request_context("/", headers={"Host": host}):
+                assert localhost_guard() is None
+
+    def test_non_local_hosts_return_403(self) -> None:
+        for host in ("example.com", "localhost.evil.test", "192.168.1.10", "127.0.0.2"):
+            response = _client().get("/", headers={"Host": host})
+            assert response.status_code == 403
 
 
 # ---------- web/env_store.py ----------

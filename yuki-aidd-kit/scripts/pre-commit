@@ -1,0 +1,21 @@
+#!/bin/bash
+# pre-commit — コミット前にローカルで秘密情報をスキャン
+# 配置: <project>/.git/hooks/pre-commit （chmod +x 必須）
+# gitleaksが入っていれば実行、なければ簡易パターンチェックにフォールバック
+
+if command -v gitleaks &>/dev/null; then
+  gitleaks protect --staged --verbose
+  if [ $? -ne 0 ]; then
+    echo "❌ 秘密情報を検出。コミットを中止しました。"
+    exit 1
+  fi
+else
+  # フォールバック: 簡易パターン検出
+  PATTERNS='(api[_-]?key|secret|password|token|AKfycb|sk-[a-zA-Z0-9]{20})'
+  if git diff --cached | grep -iE "$PATTERNS" | grep -v "localStorage" | grep -v "//" &>/dev/null; then
+    echo "⚠ 秘密情報らしき文字列を検出。確認してください（gitleaks未インストール）。"
+    echo "  問題なければ: git commit --no-verify"
+    exit 1
+  fi
+fi
+exit 0

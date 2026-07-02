@@ -1,0 +1,37 @@
+# AGENTS.md（Codex用グローバル設定）
+
+## 環境
+- 開発機: MacBook Air M1 / NEC Mate SFF Win11（常時稼働ローカルサーバ）
+- モバイル開発: Galaxy Z Fold5 → Tailscale + Microsoft Remote Desktop → M1 Mac
+- デプロイ先: GitHub Pages（ma-garin）が既定
+
+## 応答・出力スタイル
+- 日本語で応答。冗長な前置き禁止。専門用語（ISTQB/ISO/Scrum）は定義説明不要
+- 提案は「判断軸＋選択肢比較」。一般論より現場で即使える判断材料を優先
+
+## コード規約
+- 単一HTMLツールはCSS/JS外部分割禁止（明示指示がない限り）
+- APIキー・認証情報のハードコード禁止（localStorage保存パターンを使用）
+- コミット規約: Conventional Commits（feat/fix/docs/refactor/test/chore）
+- 1コミット＝1論理変更
+
+## トークン・スコープ規律
+- 作業前に対象ファイルを確認し、指定外ファイルは読まない
+- 「全体を読んでから」系の無差別探索をしない
+- 大規模タスクは設計・実装・テストに分割して提案する
+
+## QA観点（全プロジェクト共通）
+- 成果物はISO/IEC 25010の品質特性で自己レビューしてから提示
+- 不具合・指摘はISTQB準拠のseverity分類で報告
+- 判定はevidence-only（根拠のない指摘はしない）
+
+## プロジェクト別追記欄（プロジェクトルートのAGENTS.mdに記載）
+<!--
+## このプロジェクトの概要
+
+## 対象ファイル / 対象外ファイル
+
+## 使用技術・制約
+
+## 現在のタスク（tasks.mdを参照）
+-->

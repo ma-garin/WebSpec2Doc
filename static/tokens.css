@@ -70,6 +70,16 @@
 
   --motion-fast: .12s;
   --motion-normal: .2s;
+
+  /* テスト設計技法バッジ（white文字を載せる前提の濃色。light/dark 両テーマで定義） */
+  --tech-ep:   #0F62FE;
+  --tech-bva:  #6929C4;
+  --tech-dt:   #005D5D;
+  --tech-st:   #9F1853;
+  --tech-ct:   #198038;
+  --tech-pw:   #B12704;
+  --tech-uc:   #0043CE;
+  --tech-comb: #565656;
 }
 
 html[data-theme="dark"] {
@@ -111,4 +121,14 @@ html[data-theme="dark"] {
   --shadow-md: 0 1px 2px rgba(0,0,0,.35), 0 1px 3px rgba(0,0,0,.4);
   --shadow-lg: 0 4px 18px rgba(0,0,0,.48);
   --shadow-pop: 0 10px 24px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.4);
+
+  /* 技法バッジ: ダーク背景でも white 文字のコントラストを保つやや明るめの濃色 */
+  --tech-ep:   #2D6FDB;
+  --tech-bva:  #7C4DC4;
+  --tech-dt:   #0E7A7A;
+  --tech-st:   #B3376B;
+  --tech-ct:   #2E8B47;
+  --tech-pw:   #C24A24;
+  --tech-uc:   #3B5FCC;
+  --tech-comb: #6E6E6E;
 }

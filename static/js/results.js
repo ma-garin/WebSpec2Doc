@@ -61,11 +61,7 @@ async function showResults(domain, tab, sub) {
   const crawledAt = reportJson && reportJson.meta ? reportJson.meta.crawled_at : '';
   document.getElementById('r-crawled').textContent = crawledAt ? ('最終クロール: ' + crawledAt) : '';
   document.getElementById('r-domain').textContent = domain;
-  document.getElementById('r-screens').textContent = s.screens || 0;
-  document.getElementById('r-forms').textContent = s.forms || 0;
-  document.getElementById('r-fields').textContent = s.fields || 0;
-  document.getElementById('r-required').textContent = required;
-  document.getElementById('r-buttons').textContent = s.buttons || 0;
+  _updateKpiHero(s, required, data);
 
   // 差分バッジ（DOM APIで構築 — innerHTML を使わない）
   const diffBadge = document.getElementById('r-diff-badge');
@@ -103,6 +99,53 @@ async function showResults(domain, tab, sub) {
   showWizardStep(4);
   _renderedPanels.clear(); // データ更新 → 全パネル dirty 化（次回表示時に再描画）
   selectResultTab(tab || 'overview', sub);
+}
+
+// KPIヒーロー: 生数値の羅列ではなく「テスト計画に効く」指標を出す
+function _updateKpiHero(s, required, data) {
+  const setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  const fields = s.fields || 0;
+  setText('k-screens', s.screens || 0);
+  setText('k-forms-sub', s.forms ? `フォーム ${s.forms}` : '');
+  setText('k-fields', fields);
+  setText('k-required-sub', fields ? `必須 ${required}（${Math.round(required / fields * 100)}%）` : '必須 0');
+  const bar = document.getElementById('k-required-bar');
+  if (bar) bar.style.width = fields ? Math.round(required / fields * 100) + '%' : '0%';
+
+  if (reportJson) {
+    const effort = estimateTestEffort(reportJson);
+    setText('k-conds', countTestConditions(reportJson));
+    setText('k-cases', effort.cases);
+    setText('k-hours-sub', effort.cases ? `約${effort.hours}時間（1件${effort.caseMinutes}分）` : '');
+  } else {
+    setText('k-conds', '—');
+    setText('k-cases', '—');
+    setText('k-hours-sub', '再クロールで算出');
+  }
+
+  // 直近テスト実行の PASS 率（playwright_report.json があれば非同期で反映）
+  const passEl = document.getElementById('k-passrate');
+  const subEl = document.getElementById('k-runs-sub');
+  const tile = document.getElementById('k-runs-tile');
+  if (passEl) { passEl.textContent = '—'; passEl.classList.remove('is-pass', 'is-fail'); }
+  if (subEl) subEl.textContent = '未実行';
+  const pwJson = data.files && data.files.playwright_json;
+  if (pwJson) {
+    fetch('/preview?path=' + encodeURIComponent(pwJson)).then(r => r.json()).then(r => {
+      if (!passEl || !subEl) return;
+      if (r.unavailable) { subEl.textContent = '実行不可（要セットアップ）'; return; }
+      const total = r.total || 0;
+      if (!total) return;
+      const rate = Math.round((r.passed || 0) / total * 100);
+      passEl.textContent = rate + '%';
+      passEl.classList.add((r.failed || 0) ? 'is-fail' : 'is-pass');
+      subEl.textContent = `PASS ${r.passed || 0} / FAIL ${r.failed || 0}` + (data.playwright_run_at ? ` ・ ${data.playwright_run_at}` : '');
+    }).catch(() => {});
+  }
+  if (tile && !tile._bound) {
+    tile._bound = true;
+    tile.addEventListener('click', () => selectResultTab('runs'));
+  }
 }
 
 function _buildExportDropdown(data) {
@@ -292,6 +335,23 @@ function showTimelineDiff() {
   if (from === to) { box.innerHTML = '<div class="hero-msg">異なる2時点を選択してください。</div>'; return; }
   box.innerHTML = `<iframe src="/api/snapshot-diff?domain=${encodeURIComponent(timelineDomain)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}" title="仕様ドリフト差分"></iframe>`;
 }
+
+// ====================== 表の密度切替 ======================
+const TABLE_DENSITY_KEY = 'wsd_table_density';
+function _applyTableDensity(compact) {
+  resultPanel.classList.toggle('is-compact', compact);
+  const btn = document.getElementById('r-density-btn');
+  if (btn) btn.classList.toggle('is-active', compact);
+  try { localStorage.setItem(TABLE_DENSITY_KEY, compact ? 'compact' : 'comfortable'); } catch (_) {}
+}
+document.getElementById('r-density-btn')?.addEventListener('click', () => {
+  _applyTableDensity(!resultPanel.classList.contains('is-compact'));
+});
+(function initTableDensity() {
+  let saved = 'comfortable';
+  try { saved = localStorage.getItem(TABLE_DENSITY_KEY) || 'comfortable'; } catch (_) {}
+  if (saved === 'compact') _applyTableDensity(true);
+}());
 
 // ====================== タブ最大化 ======================
 function _toggleMaximize() {

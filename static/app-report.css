@@ -225,7 +225,6 @@
 .tech-cell { text-align:center; padding:6px 4px; white-space:nowrap; vertical-align:middle; }
 .tech-cell.tech-miss { color:var(--text-muted); font-size:12px; }
 .tech-cell.tech-hit { position:relative; cursor:help; }
-.tech-badge { display:inline-block; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:700; color:#fff; letter-spacing:.3px; }
 .tech-th-btn { background:none; border:none; cursor:pointer; font-size:11px; font-weight:700; color:var(--primary-dark); padding:4px 8px; border-radius:3px; white-space:nowrap; line-height:1.4; }
 .tech-th-btn:hover { background:var(--info-bg); }
 /* Tooltip on hover */

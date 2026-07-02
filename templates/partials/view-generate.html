@@ -205,12 +205,33 @@
                   <button type="button" id="r-recrawl-btn" class="btn-outline-sm">再クロール</button>
                 </div>
               </div>
-              <div class="result-stats">
-                <div><span class="num" id="r-screens">0</span><span>画面数</span></div>
-                <div><span class="num" id="r-forms">0</span><span>フォーム数</span></div>
-                <div><span class="num" id="r-fields">0</span><span>入力項目数</span></div>
-                <div><span class="num" id="r-required">0</span><span>必須項目数</span></div>
-                <div><span class="num" id="r-buttons">0</span><span>操作要素数</span></div>
+              <div class="kpi-hero">
+                <div class="kpi-tile">
+                  <span class="kpi-num" id="k-screens">0</span>
+                  <span class="kpi-label">画面</span>
+                  <span class="kpi-sub" id="k-forms-sub"></span>
+                </div>
+                <div class="kpi-tile">
+                  <span class="kpi-num" id="k-fields">0</span>
+                  <span class="kpi-label">入力項目</span>
+                  <div class="kpi-bar" aria-hidden="true"><div class="kpi-bar-fill" id="k-required-bar"></div></div>
+                  <span class="kpi-sub" id="k-required-sub"></span>
+                </div>
+                <div class="kpi-tile">
+                  <span class="kpi-num" id="k-conds">0</span>
+                  <span class="kpi-label">テスト条件</span>
+                  <span class="kpi-sub">機械導出</span>
+                </div>
+                <div class="kpi-tile">
+                  <span class="kpi-num" id="k-cases">0</span>
+                  <span class="kpi-label">概算ケース</span>
+                  <span class="kpi-sub" id="k-hours-sub"></span>
+                </div>
+                <button type="button" class="kpi-tile kpi-tile--action" id="k-runs-tile" title="テスト実行タブを開く">
+                  <span class="kpi-num" id="k-passrate">—</span>
+                  <span class="kpi-label">テスト実行</span>
+                  <span class="kpi-sub" id="k-runs-sub">未実行</span>
+                </button>
               </div>
             </div>
             <div class="result-bar">
@@ -223,6 +244,7 @@
                 <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="history" aria-controls="rp-history">履歴・差分<span class="tab-count" id="tab-count-history"></span></button>
               </div>
               <div class="result-bar-actions">
+                <button type="button" id="r-density-btn" class="btn-outline-sm" title="表の行間を切り替え">☰ 密度</button>
                 <button type="button" id="r-maximize-btn" class="btn-outline-sm" title="最大化 (Esc で解除)">⛶ 最大化</button>
                 <button type="button" id="r-new-btn" class="btn-outline-sm">ダッシュボードへ</button>
               </div>

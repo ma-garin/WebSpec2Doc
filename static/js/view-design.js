@@ -11,16 +11,7 @@ const TECHNIQUE_GUIDE = {
   comb: { name:'組み合わせテスト', when:'選択肢フィールドが2つ以上・全パラメータ数が5以下の画面（全数テストが現実的）', how:'1. 各選択肢の値を列挙し、全組み合わせを表に展開\n2. 全てのセルにテストケースを割り当て\n3. パラメータ数が多い場合はペアワイズに切り替え', example:'性別(2種) × 年齢区分(3種)\n→ 2×3=6パターンを全数テスト\n（男×10代, 男×20代, ... 女×40代以上）' },
 };
 
-const DESIGN_TECHNIQUES = [
-  { key: 'ep',   label: '同値分割',               abbr: '同値分割'  },
-  { key: 'bva',  label: '境界値分析',             abbr: '境界値分析' },
-  { key: 'dt',   label: 'デシジョンテーブル',     abbr: '決定表'    },
-  { key: 'st',   label: '状態遷移テスト',         abbr: '状態遷移'  },
-  { key: 'ct',   label: 'クラシフィケーションツリー', abbr: '分類木'  },
-  { key: 'pw',   label: 'ペアワイズ',             abbr: 'PW法'      },
-  { key: 'uc',   label: 'ユースケーステスト',     abbr: 'UCテスト'  },
-  { key: 'comb', label: '組み合わせ',             abbr: '組合せ'    },
-];
+// 技法の定義は view-utils.js の TECH_META に一元化（色は tokens.css の --tech-*）
 
 function _designInputFields(sc) {
   const SKIP = new Set(['hidden','submit','button','reset','image']);
@@ -181,35 +172,24 @@ function renderDesign() {
   const screens = reportJson.screens;
 
   // ---- マトリクス ----
-  const TECH_BADGE_COLORS = {
-    ep: '#0F62FE', bva: '#6929C4', dt: '#005D5D', st: '#9F1853',
-    ct: '#198038', pw: '#B12704', uc: '#0043CE', comb: '#6E6E6E',
-  };
   const matrixRows = screens.map(sc => {
     const rec = _recommendFor(sc);
-    const cells = DESIGN_TECHNIQUES.map(t => {
+    const cells = TECH_META.map(t => {
       if (!rec[t.key]) return `<td class="tech-cell tech-miss" aria-label="非推奨">—</td>`;
       const tip = rec[t.key].join(' / ').replace(/"/g, '&quot;').slice(0, 120);
-      const col = TECH_BADGE_COLORS[t.key] || '#444';
-      return `<td class="tech-cell tech-hit" data-tip="${tip}"><span class="tech-badge" style="background:${col}">${escHtml(t.abbr)}</span></td>`;
+      return `<td class="tech-cell tech-hit" data-tip="${tip}">${techBadgeHtml(t.key, t.abbr)}</td>`;
     }).join('');
-    return `<tr><td class="c-screen">${escHtml(sc.page_id)}</td><td style="font-size:12px;color:var(--text-muted)">${escHtml(sc.title || '')}</td>${cells}</tr>`;
+    return `<tr><td class="c-screen">${escHtml(sc.page_id)}</td><td class="design-title-cell">${escHtml(sc.title || '')}</td>${cells}</tr>`;
   }).join('');
 
-  const matrixHead = DESIGN_TECHNIQUES.map(t =>
+  const matrixHead = TECH_META.map(t =>
     `<th><button type="button" class="tech-th-btn" data-tech-key="${t.key}" title="${escHtml(t.label)}のガイドを表示">${escHtml(t.abbr)}</button></th>`
   ).join('');
 
   // ---- 技法凡例 ----
-  const TECH_COLORS = {
-    ep: '#0F62FE', bva: '#6929C4', dt: '#005D5D', st: '#9F1853',
-    ct: '#198038', pw: '#B12704', uc: '#0043CE', comb: '#6E6E6E',
-  };
-  const legend = DESIGN_TECHNIQUES.map(t => {
-    const col = TECH_COLORS[t.key] || '#444';
-    return `<span style="display:inline-flex;align-items:center;gap:4px;margin:2px 8px 2px 0;font-size:12px">
-      <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${col}"></span>${escHtml(t.abbr)} = ${escHtml(t.label)}
-    </span>`;
+  const legend = TECH_META.map(t => {
+    const text = t.abbr === t.label ? t.label : `${t.abbr} = ${t.label}`;
+    return `<span class="tech-legend-item"><span class="tech-legend-dot" data-tech="${t.key}"></span>${escHtml(text)}</span>`;
   }).join('');
 
   resultHero.innerHTML =
@@ -218,11 +198,11 @@ function renderDesign() {
     '<div id="tech-guide-body" class="tech-guide-body"></div>' +
     '</div>' +
     '<div class="hero-pad">' +
-    '<div class="hero-section-title" style="margin-bottom:4px">テスト設計技法マトリクス</div>' +
-    '<p style="color:var(--text-muted);font-size:12px;margin:0 0 8px">技法列ヘッダーをクリックすると使い方ガイドが表示されます。✓バッジにカーソルを当てると推奨理由が確認できます。</p>' +
-    `<div style="overflow-x:auto;margin-bottom:20px"><table class="ov-screens design-matrix" style="min-width:max-content"><thead><tr><th>画面</th><th>タイトル</th>${matrixHead}</tr></thead><tbody>${matrixRows}</tbody></table></div>` +
-    '<div class="hero-section-title" style="margin-top:4px">技法凡例</div>' +
-    `<div style="margin-bottom:12px;line-height:2">${legend}</div>` +
+    '<div class="hero-section-title design-section-title">テスト設計技法マトリクス</div>' +
+    '<p class="design-section-note">技法列ヘッダーをクリックすると使い方ガイドが表示されます。バッジにカーソルを当てると推奨理由が確認できます。</p>' +
+    `<div class="design-matrix-wrap"><table class="ov-screens design-matrix"><thead><tr><th>画面</th><th>タイトル</th>${matrixHead}</tr></thead><tbody>${matrixRows}</tbody></table></div>` +
+    '<div class="hero-section-title">技法凡例</div>' +
+    `<div class="tech-legend">${legend}</div>` +
     '</div>';
 
   _bindTechGuide();
@@ -263,56 +243,49 @@ function renderTechniqueDetail() {
   }
   const screens = reportJson.screens;
 
-  const TECH_COLORS = {
-    ep: '#0F62FE', bva: '#6929C4', dt: '#005D5D', st: '#9F1853',
-    ct: '#198038', pw: '#B12704', uc: '#0043CE', comb: '#6E6E6E',
-  };
-
   const detailCards = screens.map(sc => {
     const rec = _recommendFor(sc);
     const keys = Object.keys(rec);
     if (!keys.length) return `
-      <div style="border:1px solid var(--border);border-radius:6px;padding:14px 16px;margin-bottom:12px">
-        <div style="font-weight:600;margin-bottom:4px">${escHtml(sc.page_id)} <span style="color:var(--text-muted);font-weight:400">${escHtml(sc.title || '')}</span></div>
-        <p style="color:var(--text-muted);font-size:12px;margin:0">フォームも遷移もないページのため、技法の推奨なし</p>
+      <div class="design-card">
+        <div class="design-card-head">${escHtml(sc.page_id)} <span class="design-card-title">${escHtml(sc.title || '')}</span></div>
+        <p class="design-card-none">フォームも遷移もないページのため、技法の推奨なし</p>
       </div>`;
 
     const badges = keys.map(k => {
-      const t = DESIGN_TECHNIQUES.find(x => x.key === k);
-      const col = TECH_COLORS[k] || '#444';
-      return `<span style="display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;color:#fff;background:${col};margin:2px 3px 2px 0">${escHtml(t.label)}</span>`;
+      const t = TECH_META.find(x => x.key === k);
+      return techBadgeHtml(k, t.label);
     }).join('');
 
     const rationale = keys.map(k => {
-      const t = DESIGN_TECHNIQUES.find(x => x.key === k);
+      const t = TECH_META.find(x => x.key === k);
       const reasons = rec[k];
-      const col = TECH_COLORS[k] || '#444';
       const stub = _tcStub(k, sc);
-      return `<div style="margin-bottom:12px">
-        <div style="font-size:12px;font-weight:700;color:${col};margin-bottom:4px">${escHtml(t.label)}</div>
-        <ul style="margin:0 0 4px 0;padding-left:18px">
-          ${reasons.map(r => `<li style="font-size:12px;color:var(--text);margin-bottom:2px">${r}</li>`).join('')}
+      return `<div class="design-rationale">
+        <div class="design-rationale-title" data-tech="${k}">${escHtml(t.label)}</div>
+        <ul class="design-rationale-list">
+          ${reasons.map(r => `<li>${r}</li>`).join('')}
         </ul>
         ${stub ? `<div class="tc-stub-wrap"><div class="tc-stub-label">テストケース雛形</div><pre class="tc-stub">${escHtml(stub)}</pre><button type="button" class="tc-copy-btn" onclick="navigator.clipboard.writeText(this.previousElementSibling.textContent)" title="コピー">コピー</button></div>` : ''}
       </div>`;
     }).join('');
 
     return `
-      <div style="border:1px solid var(--border);border-radius:6px;padding:14px 16px;margin-bottom:12px">
-        <div style="font-weight:600;margin-bottom:6px">
+      <div class="design-card">
+        <div class="design-card-head">
           ${escHtml(sc.page_id)}
-          <span style="color:var(--text-muted);font-weight:400"> ${escHtml(sc.title || '')}</span>
-          <code style="font-size:11px;color:var(--text-muted);margin-left:8px">${escHtml(sc.url || '')}</code>
+          <span class="design-card-title"> ${escHtml(sc.title || '')}</span>
+          <code class="design-card-url">${escHtml(sc.url || '')}</code>
         </div>
-        <div style="margin-bottom:10px">${badges}</div>
-        <div style="font-size:12px">${rationale}</div>
+        <div class="design-card-badges">${badges}</div>
+        <div class="design-card-body">${rationale}</div>
       </div>`;
   }).join('');
 
   resultHero.innerHTML =
     '<div class="hero-pad">' +
     '<div class="hero-section-title">画面別 推奨技法と根拠</div>' +
-    '<p style="color:var(--text-muted);font-size:12px;margin:0 0 12px">各画面の要素（フィールド種別・制約・選択肢数・遷移構造）から動的に導出した推奨技法と根拠です。</p>' +
+    '<p class="design-section-note">各画面の要素（フィールド種別・制約・選択肢数・遷移構造）から動的に導出した推奨技法と根拠です。</p>' +
     detailCards +
     '</div>';
 }

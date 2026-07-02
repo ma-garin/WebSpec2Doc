@@ -262,24 +262,20 @@ class TestDeepLink:
     def test_hash_updates_on_tab_switch(self, page: Page) -> None:
         _open_report(page)
         page.locator('.result-tab[data-tab="test-design"]').click()
-        page.wait_for_function(
-            "() => location.hash.includes('/test-design/matrix')"
-        )
+        page.wait_for_function("() => location.hash.includes('/test-design/matrix')")
 
     def test_deep_link_opens_subtab(self, page: Page) -> None:
         _open_report(page, "/test-design/detail")
         expect(page.locator("#rp-test-design-detail")).to_be_visible()
-        expect(
-            page.locator('#rp-test-design .result-subtab[data-sub="detail"]')
-        ).to_have_class(re.compile(r"is-active"))
+        expect(page.locator('#rp-test-design .result-subtab[data-sub="detail"]')).to_have_class(
+            re.compile(r"is-active")
+        )
 
     def test_legacy_tab_names_redirect(self, page: Page) -> None:
         """旧8タブ時代の共有URL（#report/<domain>/matrix 等）が新タブへ解決される。"""
         _open_report(page, "/matrix")
         expect(page.locator("#rp-test-design-matrix")).to_be_visible()
-        page.wait_for_function(
-            "() => location.hash.includes('/test-design/matrix')"
-        )
+        page.wait_for_function("() => location.hash.includes('/test-design/matrix')")
 
     def test_legacy_transition_table_redirect(self, page: Page) -> None:
         _open_report(page, "/transition-table")

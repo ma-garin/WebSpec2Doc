@@ -30,7 +30,7 @@ def create_app() -> Flask:
         traceability,
         viewpoints,
     )
-    from web.security import add_security_headers, csrf_guard
+    from web.security import add_security_headers, csrf_guard, localhost_guard
 
     app = Flask(
         __name__,
@@ -40,6 +40,7 @@ def create_app() -> Flask:
     app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
     _ver = str(int(time.time()))
     app.jinja_env.globals["_ver"] = _ver
+    app.before_request(localhost_guard)
     app.before_request(csrf_guard)
     app.after_request(add_security_headers)
     app.register_blueprint(pages.bp)

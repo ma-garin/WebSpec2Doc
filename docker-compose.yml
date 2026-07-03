@@ -1,0 +1,24 @@
+# WebSpec2Doc 社内サーバ展開用 Compose 定義
+#
+#   docker compose up --build
+#
+# 既定ではローカルループバックのみ許可（現行のセキュリティ態勢を維持）。
+# 社内ネットワークからアクセスする場合は WEBSPEC2DOC_TRUSTED_HOSTS に
+# 到達に使うホスト名／IP をカンマ区切りで設定する（例: webspec2doc.internal,10.0.0.5）。
+services:
+  webspec2doc:
+    build: .
+    image: webspec2doc:latest
+    ports:
+      - "8765:8765"
+    environment:
+      # 社内展開時のみ許可ホストを追加（未設定なら localhost のみ）
+      WEBSPEC2DOC_TRUSTED_HOSTS: "${WEBSPEC2DOC_TRUSTED_HOSTS:-}"
+      # 破壊的リクエストの遮断解除は明示的な opt-in（既定は遮断）
+      WEBSPEC2DOC_ALLOW_MUTATION: "${WEBSPEC2DOC_ALLOW_MUTATION:-}"
+      # OpenAI キーはユーザー持ち込み（未設定ならルールベースで動作）
+      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+    volumes:
+      # 生成物・利用実績ログ・スナップショットを永続化
+      - ./output:/app/output
+    restart: unless-stopped

@@ -84,6 +84,20 @@
       "persistence": [".env"],
       "failure_modes": ["invalid_json", "invalid_type", "unsafe_option_enabled"],
       "required_tests": ["happy_path", "validation_path", "evidence"]
+    },
+    {
+      "feature_id": "usage_roi",
+      "name": "ROIダッシュボード / 利用実績",
+      "risk_level": "medium",
+      "status": "implemented",
+      "ui_files": ["templates/partials/view-usage.html"],
+      "route_files": ["web/routes/usage.py"],
+      "core_files": ["web/services/usage_tracker.py"],
+      "symbols": ["record_usage", "summarize_usage"],
+      "outputs": ["usage summary", "estimated saved hours"],
+      "persistence": ["output/usage_log.jsonl"],
+      "failure_modes": ["missing_log", "corrupt_log_line", "invalid_coefficient_env"],
+      "required_tests": ["happy_path", "empty_path", "evidence"]
     }
   ]
 }

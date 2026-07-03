@@ -117,6 +117,40 @@ class TestLocalhostGuard:
             assert response.status_code == 403
 
 
+class TestTrustedHostsExtension:
+    """社内サーバ展開用 WEBSPEC2DOC_TRUSTED_HOSTS の最小拡張。"""
+
+    def test_default_still_localhost_only(self, monkeypatch) -> None:
+        from web.security import localhost_guard
+
+        monkeypatch.delenv("WEBSPEC2DOC_TRUSTED_HOSTS", raising=False)
+        with appmod.app.test_request_context("/", headers={"Host": "webspec2doc.internal"}):
+            assert localhost_guard() is not None  # 未設定なら拒否
+
+    def test_trusted_host_allowed_when_configured(self, monkeypatch) -> None:
+        from web.security import localhost_guard
+
+        monkeypatch.setenv("WEBSPEC2DOC_TRUSTED_HOSTS", "webspec2doc.internal, 10.0.0.5")
+        with appmod.app.test_request_context("/", headers={"Host": "webspec2doc.internal"}):
+            assert localhost_guard() is None
+        with appmod.app.test_request_context("/", headers={"Host": "10.0.0.5:8765"}):
+            assert localhost_guard() is None
+
+    def test_untrusted_host_still_rejected_when_configured(self, monkeypatch) -> None:
+        from web.security import localhost_guard
+
+        monkeypatch.setenv("WEBSPEC2DOC_TRUSTED_HOSTS", "webspec2doc.internal")
+        with appmod.app.test_request_context("/", headers={"Host": "attacker.example.com"}):
+            assert localhost_guard() is not None
+
+    def test_loopback_always_allowed_even_with_trusted_hosts(self, monkeypatch) -> None:
+        from web.security import localhost_guard
+
+        monkeypatch.setenv("WEBSPEC2DOC_TRUSTED_HOSTS", "webspec2doc.internal")
+        with appmod.app.test_request_context("/", headers={"Host": "127.0.0.1:8765"}):
+            assert localhost_guard() is None
+
+
 # ---------- web/env_store.py ----------
 
 

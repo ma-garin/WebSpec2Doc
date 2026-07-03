@@ -55,8 +55,20 @@ def api_traceability_matrix() -> tuple[dict, int] | dict:
         candidates = list(candidates_raw)
 
     report_dict: dict = report_data if isinstance(report_data, dict) else {}
-    matrix = build_matrix(domain, report_dict, candidates)
+    matrix = build_matrix(domain, report_dict, candidates, _load_test_metadata(domain_dir))
     return matrix_to_dict(matrix)
+
+
+def _load_test_metadata(domain_dir) -> list[dict]:
+    """spec_ts_generator が併産したテストメタデータ JSON（tests リスト）を探索して返す。"""
+    meta_paths = sorted(domain_dir.glob("qa_process/*.meta.json")) + sorted(
+        domain_dir.glob("*.meta.json")
+    )
+    for meta_path in meta_paths:
+        data = _load_json_file(meta_path)
+        if isinstance(data, dict) and isinstance(data.get("tests"), list):
+            return list(data["tests"])
+    return []
 
 
 @traceability_bp.get("/traceability/view")

@@ -43,6 +43,9 @@ def generate_html_report(
     crawl_depth: int = DEFAULT_DEPTH,
     crawl_max_pages: int = DEFAULT_MAX_PAGES,
     crawled_at: str = "",
+    transition_coverage: dict | None = None,
+    business_flows: list[dict] | None = None,
+    impact_report: dict | None = None,
 ) -> str:
     from analyzer.stack_detector import StackInfo
     from generator.architecture_generator import (
@@ -78,6 +81,8 @@ def generate_html_report(
             _section("アーキテクチャ図", _mermaid_block(arch_mermaid), "architecture"),
             _tech_stack_section(merged_stack, merged_endpoints),
             _section("画面遷移図", _mermaid_block(mermaid_content), "transition"),
+            _coverage_section(transition_coverage, business_flows),
+            _impact_section(impact_report),
             _section("画面カタログ", _screen_cards(pages, graph, screenshots_dir), "screens"),
             _meta_section(target_url, crawl_depth, crawl_max_pages, crawled_at, len(pages)),
             _footer(now),
@@ -447,6 +452,94 @@ def _locator_candidates(field: FieldData) -> list[str]:
         )
         candidates.append(f'{tag}[name="{field.name}"]')
     return candidates
+
+
+def _coverage_section(
+    transition_coverage: dict | None,
+    business_flows: list[dict] | None,
+) -> str:
+    """遷移テストカバレッジ（29119-4 準拠）とビジネスフロー優先度を表示する。"""
+    if not transition_coverage and not business_flows:
+        return ""
+    parts: list[str] = []
+    if transition_coverage:
+        rows = []
+        definition_source = ""
+        for key in ("0-switch", "1-switch"):
+            item = transition_coverage.get(key)
+            if not isinstance(item, dict):
+                continue
+            definition_source = str(item.get("definition_source") or definition_source)
+            rate_pct = f"{float(item.get('rate', 0.0)) * 100:.1f}%"
+            rows.append(
+                f"<tr><td>{html.escape(key)} カバレッジ</td>"
+                f"<td>{item.get('covered', 0)} / {item.get('total', 0)}</td>"
+                f"<td>{rate_pct}</td></tr>"
+            )
+        if rows:
+            parts.append(
+                "<table><thead><tr><th>指標</th><th>達成 / 対象</th><th>達成率</th></tr></thead>"
+                f"<tbody>{''.join(rows)}</tbody></table>"
+            )
+            if definition_source:
+                parts.append(
+                    f'<div class="muted" style="margin-top:.5rem">定義出典: '
+                    f"{html.escape(definition_source)}</div>"
+                )
+    if business_flows:
+        flow_rows = "".join(
+            f"<tr><td>{html.escape(str(flow.get('flow_name', '')))}</td>"
+            f"<td>{html.escape(str(flow.get('path_id', '')))}</td>"
+            f'<td><span class="badge-yes">{html.escape(str(flow.get("priority", "高")))}</span></td></tr>'
+            for flow in business_flows
+        )
+        parts.append(
+            '<div class="subhead" style="margin-top:1rem">ビジネスフロー（優先度付け）</div>'
+            "<table><thead><tr><th>フロー名</th><th>テストパス</th><th>優先度</th></tr></thead>"
+            f"<tbody>{flow_rows}</tbody></table>"
+        )
+    return _section("遷移テストカバレッジ", "".join(parts), "coverage")
+
+
+def _impact_section(impact_report: dict | None) -> str:
+    """差分検出→影響テスト特定→再実行推奨リストを統合表示する。"""
+    if not impact_report:
+        return ""
+    total = int(impact_report.get("total", 0))
+    summary = (
+        f'<div class="cards">'
+        f'<div class="card"><div class="num">{int(impact_report.get("breaking", 0))}</div>'
+        f'<div class="label">breaking</div></div>'
+        f'<div class="card"><div class="num">{int(impact_report.get("warning", 0))}</div>'
+        f'<div class="label">warning</div></div>'
+        f'<div class="card"><div class="num">{int(impact_report.get("info", 0))}</div>'
+        f'<div class="label">info</div></div>'
+        f"</div>"
+    )
+    if total == 0:
+        body = summary + '<div class="muted" style="margin-top:.5rem">差分による影響テストはありません。</div>'
+        return _section("差分影響・再実行推奨", body, "impact")
+    rows = "".join(
+        f"<tr><td>{html.escape(str(t.get('test_id') or '-'))}</td>"
+        f"<td>{html.escape(str(t.get('reason', '')))}</td>"
+        f"<td>{html.escape(str(t.get('page_url', '')))}</td>"
+        f"<td>{html.escape(str(t.get('severity', '')))}</td></tr>"
+        for t in impact_report.get("tests", [])
+    )
+    table = (
+        '<table style="margin-top:1rem"><thead><tr>'
+        "<th>テストID</th><th>理由</th><th>画面URL</th><th>重大度</th>"
+        f"</tr></thead><tbody>{rows}</tbody></table>"
+    )
+    rerun = impact_report.get("rerun_recommended", [])
+    rerun_html = ""
+    if rerun:
+        chips = "".join(f'<span class="chip">{html.escape(str(t))}</span>' for t in rerun)
+        rerun_html = (
+            '<div class="subhead" style="margin-top:1rem">再実行推奨テスト</div>'
+            f'<div class="chips">{chips}</div>'
+        )
+    return _section("差分影響・再実行推奨", summary + table + rerun_html, "impact")
 
 
 def _meta_section(

@@ -34,24 +34,31 @@ def generate_json_report(
     crawl_depth: int = DEFAULT_DEPTH,
     crawl_max_pages: int = DEFAULT_MAX_PAGES,
     crawled_at: str = "",
+    transition_coverage: dict | None = None,
+    business_flows: list[dict] | None = None,
 ) -> str:
     """Serialize crawl results and derived test conditions to structured JSON."""
     canonical_screens = group_canonical_screens(pages)
     screens_data = [_screen_dict(p, graph, canonical_screens[p.page_id]) for p in pages]
     screens_canonical = json.dumps(screens_data, ensure_ascii=False, sort_keys=True)
     report_hash = hashlib.sha256(screens_canonical.encode("utf-8")).hexdigest()
+    meta: dict = {
+        "target_url": target_url,
+        "crawl_depth": crawl_depth,
+        "max_pages": crawl_max_pages,
+        "crawled_at": crawled_at,
+        "page_count": len(pages),
+        "screen_count": sum(1 for info in canonical_screens.values() if info.is_canonical),
+        "report_hash": report_hash,
+        "pii_risk_screens": _find_pii_risk_screens(pages),
+    }
+    if transition_coverage is not None:
+        meta["transition_coverage"] = transition_coverage
+    if business_flows is not None:
+        meta["business_flows"] = business_flows
     return json.dumps(
         {
-            "meta": {
-                "target_url": target_url,
-                "crawl_depth": crawl_depth,
-                "max_pages": crawl_max_pages,
-                "crawled_at": crawled_at,
-                "page_count": len(pages),
-                "screen_count": sum(1 for info in canonical_screens.values() if info.is_canonical),
-                "report_hash": report_hash,
-                "pii_risk_screens": _find_pii_risk_screens(pages),
-            },
+            "meta": meta,
             "screens": screens_data,
         },
         ensure_ascii=False,

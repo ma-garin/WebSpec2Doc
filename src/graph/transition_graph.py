@@ -13,6 +13,22 @@ _MAX_2SWITCH_PATHS = 50
 _TP_ID_PREFIX = "TP"
 _TP_ID_WIDTH = 3
 
+# ISO/IEC/IEEE 29119-4:2015 の Chow N-switch カバレッジ定義:
+#   0-switch カバレッジ = 全単一遷移（各遷移を 1 度以上通過）の達成率
+#   1-switch カバレッジ = 全連続 2 遷移ペアの達成率
+COVERAGE_DEFINITION_SOURCE = (
+    "ISO/IEC/IEEE 29119-4:2015 §5.2 状態遷移テスト"
+    "（Chow の N-switch カバレッジ: 0-switch=全単一遷移, 1-switch=全連続2遷移ペア）"
+)
+
+# ビジネスフロー優先度付けの対象となる画面分類（screen_classifier の分類と対応）
+BUSINESS_SCREEN_LABELS: dict[str, str] = {
+    "auth": "ログイン",
+    "payment": "決済",
+    "personal_info": "個人情報",
+}
+PRIORITY_HIGH = "高"
+
 logger = logging.getLogger(__name__)
 
 
@@ -25,6 +41,28 @@ class TransitionTestPath:
     edges: tuple[str, ...]
     coverage: str
     test_objective: str
+
+
+@dataclass(frozen=True)
+class SwitchCoverage:
+    """N-switch カバレッジの達成率（ISO/IEC/IEEE 29119-4 準拠）。"""
+
+    coverage_type: str  # "0-switch" / "1-switch"
+    covered: int
+    total: int
+    rate: float  # 0.0〜1.0（total=0 の場合は 1.0）
+    definition_source: str = COVERAGE_DEFINITION_SOURCE
+
+
+@dataclass(frozen=True)
+class BusinessFlow:
+    """業務クリティカル画面（認証・決済・個人情報）を通過するテストパス。"""
+
+    flow_name: str  # 例: "ログイン→決済"
+    path_id: str
+    nodes: tuple[str, ...]
+    screen_types: tuple[str, ...]
+    priority: str  # 常に "高"
 
 
 def build_graph(pages: list[AnalyzedPage]) -> nx.DiGraph:
@@ -176,6 +214,126 @@ def _build_test_objective(
         to_label = _short_label(node_list[2], url_to_title)
         return f"「{from_label}」→「{mid_label}」→「{to_label}」の連続遷移を確認"
     return "遷移を確認"
+
+
+def compute_switch_coverage(
+    pages: list[PageData],
+    paths: list[TransitionTestPath],
+) -> dict[str, SwitchCoverage]:
+    """生成済みテストパスの 0-switch / 1-switch カバレッジ達成率を算出する。
+
+    ISO/IEC/IEEE 29119-4:2015 の Chow N-switch カバレッジ定義に準拠:
+      0-switch = グラフの全単一遷移のうちパスが通過した割合
+      1-switch = 全連続 2 遷移ペア（u→v→w）のうちパスが通過した割合
+    """
+    graph = _build_graph_from_pages(pages)
+    single_transitions: set[tuple[str, str]] = set(graph.edges())
+    pair_transitions: set[tuple[str, str, str]] = {
+        (u, v, w) for u, v in graph.edges() for w in graph.successors(v)
+    }
+
+    covered_singles: set[tuple[str, str]] = set()
+    covered_pairs: set[tuple[str, str, str]] = set()
+    for path in paths:
+        nodes = path.nodes
+        for i in range(len(nodes) - 1):
+            covered_singles.add((nodes[i], nodes[i + 1]))
+        for i in range(len(nodes) - 2):
+            covered_pairs.add((nodes[i], nodes[i + 1], nodes[i + 2]))
+    covered_singles &= single_transitions
+    covered_pairs &= pair_transitions
+
+    def _rate(covered: int, total: int) -> float:
+        # 対象遷移が存在しない場合は「網羅すべきものがない」ため 1.0 とする
+        return covered / total if total > 0 else 1.0
+
+    return {
+        "0-switch": SwitchCoverage(
+            coverage_type="0-switch",
+            covered=len(covered_singles),
+            total=len(single_transitions),
+            rate=_rate(len(covered_singles), len(single_transitions)),
+        ),
+        "1-switch": SwitchCoverage(
+            coverage_type="1-switch",
+            covered=len(covered_pairs),
+            total=len(pair_transitions),
+            rate=_rate(len(covered_pairs), len(pair_transitions)),
+        ),
+    }
+
+
+def switch_coverage_to_dict(coverage: dict[str, SwitchCoverage]) -> dict[str, dict]:
+    """SwitchCoverage マップを JSON シリアライズ可能な dict に変換する。"""
+    return {
+        key: {
+            "coverage_type": value.coverage_type,
+            "covered": value.covered,
+            "total": value.total,
+            "rate": round(value.rate, 4),
+            "definition_source": value.definition_source,
+        }
+        for key, value in coverage.items()
+    }
+
+
+def classify_pages_for_flows(pages: list[PageData]) -> dict[str, str]:
+    """各ページ URL を screen_classifier のルール分類で画面種別にマップする。"""
+    from llm.screen_classifier import classify_screen_by_rules
+
+    url_types: dict[str, str] = {}
+    for page in pages:
+        field_names = [field.name for form in page.forms for field in form.fields if field.name]
+        classification = classify_screen_by_rules(page.title, page.headings, field_names)
+        url_types[page.url] = classification.screen_type
+    return url_types
+
+
+def prioritize_business_flows(
+    paths: list[TransitionTestPath],
+    url_screen_types: dict[str, str],
+) -> list[BusinessFlow]:
+    """業務クリティカル画面（認証・決済・個人情報）を通過するパスを抽出する。
+
+    通過画面の分類ラベルからフロー名（例: ログイン→決済）を自動命名し、
+    優先度「高」を付与する。
+    """
+    flows: list[BusinessFlow] = []
+    for path in paths:
+        business_types: list[str] = []
+        for node in path.nodes:
+            screen_type = url_screen_types.get(node, "")
+            if screen_type in BUSINESS_SCREEN_LABELS:
+                # 連続する同種画面は 1 つに畳む
+                if not business_types or business_types[-1] != screen_type:
+                    business_types.append(screen_type)
+        if not business_types:
+            continue
+        flow_name = "→".join(BUSINESS_SCREEN_LABELS[t] for t in business_types)
+        flows.append(
+            BusinessFlow(
+                flow_name=flow_name,
+                path_id=path.path_id,
+                nodes=path.nodes,
+                screen_types=tuple(business_types),
+                priority=PRIORITY_HIGH,
+            )
+        )
+    return flows
+
+
+def business_flows_to_dict(flows: list[BusinessFlow]) -> list[dict]:
+    """BusinessFlow リストを JSON シリアライズ可能な dict リストに変換する。"""
+    return [
+        {
+            "flow_name": flow.flow_name,
+            "path_id": flow.path_id,
+            "nodes": list(flow.nodes),
+            "screen_types": list(flow.screen_types),
+            "priority": flow.priority,
+        }
+        for flow in flows
+    ]
 
 
 def transition_tests_to_dict(paths: list[TransitionTestPath]) -> list[dict]:

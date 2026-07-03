@@ -19,6 +19,16 @@ from urllib.robotparser import RobotFileParser
 from playwright.sync_api import Browser, Page, sync_playwright
 from playwright.sync_api import Error as PlaywrightError
 
+from crawler.politeness import (
+    RETRYABLE_STATUS_CODES,
+    RetryableHTTPError,
+    TokenBucketLimiter,
+    append_audit_log,
+    backoff_delays,
+    build_user_agent,
+    crawl_interval_from_env,
+    robots_crawl_delay,
+)
 from crawler.session_guard import SessionExpiredError
 from crawler.url_safety import is_safe_target
 
@@ -35,7 +45,7 @@ HTTPS_DEFAULT_PORT = 443
 PAGE_ID_PREFIX = "P"
 PAGE_ID_WIDTH = 3
 SCREENSHOTS_DIR_NAME = "screenshots"
-USER_AGENT = "WebSpec2Doc"
+USER_AGENT = build_user_agent()
 NEXT_DEPTH_INCREMENT = 1
 
 _SENSITIVE_KEYWORDS = ("payment", "checkout", "billing", "personal", "private")
@@ -142,10 +152,25 @@ def crawl_site(
 ) -> list[PageData]:
     base_url = normalize_url(url)
     robots = _load_robots_parser(base_url)
+    limiter = _make_rate_limiter(robots)
     visited: set[str] = set()
     queue: list[tuple[str, int]] = [(base_url, 0)]
     pages: list[PageData] = []
     _emit_event(on_event, "crawl_started", total=max_pages, parallelism=1)
+    append_audit_log(
+        output_dir,
+        {
+            "event": "crawl_started",
+            "mode": "site",
+            "base_url": base_url,
+            "robots_allowed": robots.can_fetch(USER_AGENT, base_url),
+            "robots_crawl_delay_sec": robots_crawl_delay(robots, USER_AGENT),
+            "interval_sec": limiter.interval_sec,
+            "user_agent": USER_AGENT,
+            "depth": depth,
+            "max_pages": max_pages,
+        },
+    )
 
     with _browser_page(auth_state) as page:
         while queue and len(pages) < max_pages:
@@ -167,6 +192,7 @@ def crawl_site(
                 index=len(pages) + 1,
                 total=max_pages,
             )
+            limiter.acquire()
             page_data = _crawl_page_with_id(
                 page,
                 current_url,
@@ -237,7 +263,7 @@ def crawl_urls(
     output_dir: Path | None = None,
     auth_state: Path | None = None,
     parallelism: int = 1,
-    respect_robots: bool = False,
+    respect_robots: bool = True,
     on_event: CrawlEventCallback | None = None,
     on_checkpoint: CheckpointCallback | None = None,
     stop_requested: StopRequested | None = None,
@@ -248,8 +274,26 @@ def crawl_urls(
     requested_total = len(targets)
     worker_count = max(1, min(parallelism, requested_total or 1))
     _emit_event(on_event, "crawl_started", total=requested_total, parallelism=worker_count)
+    robots_skipped: list[str] = []
+    robots_delay: float | None = None
     if respect_robots:
-        targets = _filter_robots_targets(targets, on_event)
+        targets, robots_skipped, robots_delay = _filter_robots_targets(targets, on_event)
+    limiter = TokenBucketLimiter(crawl_interval_from_env())
+    limiter.apply_crawl_delay(robots_delay)
+    append_audit_log(
+        output_dir,
+        {
+            "event": "crawl_started",
+            "mode": "urls",
+            "target_urls": targets,
+            "respect_robots": respect_robots,
+            "robots_skipped_urls": robots_skipped,
+            "robots_crawl_delay_sec": robots_delay,
+            "interval_sec": limiter.interval_sec,
+            "user_agent": USER_AGENT,
+            "parallelism": worker_count,
+        },
+    )
     if not targets:
         _emit_event(on_event, "crawl_completed", completed=0, total=requested_total)
         return []
@@ -265,6 +309,7 @@ def crawl_urls(
             on_event,
             on_checkpoint,
             stop_requested,
+            limiter=limiter,
         )
 
     pages: list[PageData] = []
@@ -275,6 +320,7 @@ def crawl_urls(
             page_id = _format_page_id(len(pages) + 1)
             started_at = time.monotonic()
             _emit_event(on_event, "page_started", url=target, index=index, total=len(targets))
+            limiter.acquire()
             if auth_state is None and on_event is None:
                 page_data = _crawl_page_with_id(page, target, page_id, output_dir)
             else:
@@ -401,6 +447,8 @@ def crawl_page(
     capture.attach(page)
     try:
         response = _goto_stable(page, normalized_url)
+        if response is not None and response.status in RETRYABLE_STATUS_CODES:
+            raise RetryableHTTPError(normalized_url, response.status)
         signals = PageAuthSignals(
             requested_url=normalized_url,
             final_url=page.url,
@@ -467,7 +515,7 @@ def _crawl_page_with_id(
 ) -> PageData | None:
     try:
         page._webspec2doc_page_id = page_id  # type: ignore[attr-defined,unused-ignore]
-        return crawl_page(page, url, output_dir, auth_state)
+        return _crawl_page_with_backoff(page, url, output_dir, auth_state, on_event)
     except LoginWallDetected as exc:
         logger.warning("ログインウォールによりスキップしました: %s", url)
         _emit_event(
@@ -478,10 +526,50 @@ def _crawl_page_with_id(
             reasons=list(exc.reasons),
         )
         return None
+    except RetryableHTTPError as exc:
+        logger.warning("リトライ上限に達したためスキップしました: %s (HTTP %d)", url, exc.status)
+        _emit_event(
+            on_event, "page_failed", url=url, reason="retry_exhausted", detail=str(exc.status)
+        )
+        return None
     except PlaywrightError as exc:
         logger.warning("ページのクロールに失敗しました: %s (%s)", url, exc)
         _emit_event(on_event, "page_failed", url=url, reason="playwright", detail=str(exc))
         return None
+
+
+def _crawl_page_with_backoff(
+    page: Page,
+    url: str,
+    output_dir: Path | None,
+    auth_state: Path | None,
+    on_event: CrawlEventCallback | None,
+) -> PageData:
+    """HTTP 429/503 受信時に exponential backoff（初期2秒・最大60秒・最大5回）でリトライする。"""
+    delays = backoff_delays()
+    while True:
+        try:
+            return crawl_page(page, url, output_dir, auth_state)
+        except RetryableHTTPError as exc:
+            delay = next(delays, None)
+            if delay is None:
+                raise
+            logger.warning(
+                "HTTP %d を受信したため %.1f 秒待機してリトライします: %s",
+                exc.status,
+                delay,
+                url,
+            )
+            _emit_event(on_event, "page_retry", url=url, status=exc.status, wait_sec=delay)
+            time.sleep(delay)
+
+
+def _make_rate_limiter(robots: RobotFileParser | None) -> TokenBucketLimiter:
+    """環境変数の間隔設定と robots.txt の Crawl-Delay から rate limiter を構築する。"""
+    limiter = TokenBucketLimiter(crawl_interval_from_env())
+    if robots is not None:
+        limiter.apply_crawl_delay(robots_crawl_delay(robots, USER_AGENT))
+    return limiter
 
 
 def _load_robots_parser(base_url: str) -> RobotFileParser:
@@ -526,9 +614,15 @@ def _skip_reason(
     return None
 
 
-def _filter_robots_targets(targets: list[str], on_event: CrawlEventCallback | None) -> list[str]:
+def _filter_robots_targets(
+    targets: list[str],
+    on_event: CrawlEventCallback | None,
+) -> tuple[list[str], list[str], float | None]:
+    """robots.txt で許可された URL・スキップされた URL・最大 Crawl-Delay を返す。"""
     parsers: dict[str, RobotFileParser] = {}
     allowed: list[str] = []
+    skipped: list[str] = []
+    max_delay: float | None = None
     for target in targets:
         parsed = urlparse(target)
         origin = f"{parsed.scheme}://{parsed.netloc}"
@@ -536,12 +630,16 @@ def _filter_robots_targets(targets: list[str], on_event: CrawlEventCallback | No
         if parser is None:
             parser = _load_robots_parser(origin)
             parsers[origin] = parser
+            delay = robots_crawl_delay(parser, USER_AGENT)
+            if delay is not None and (max_delay is None or delay > max_delay):
+                max_delay = delay
         reason = _skip_reason(target, 0, 0, set(), parser)
         if reason:
+            skipped.append(target)
             _emit_event(on_event, "page_skipped", url=target, reason=reason)
         else:
             allowed.append(target)
-    return allowed
+    return allowed, skipped, max_delay
 
 
 def _emit_event(callback: CrawlEventCallback | None, event: str, **details: object) -> None:

@@ -1,0 +1,1119 @@
+{
+  "meta": {
+    "target_url": "http://127.0.0.1:8766/",
+    "crawl_depth": 3,
+    "max_pages": 50,
+    "crawled_at": "2026-07-03 06:20 UTC",
+    "page_count": 7,
+    "screen_count": 7,
+    "report_hash": "322282ee1f2521c419306fb826a068332b69db4c40a119c36b513726b8eabbc0",
+    "pii_risk_screens": [
+      "P004"
+    ],
+    "transition_coverage": {
+      "0-switch": {
+        "coverage_type": "0-switch",
+        "covered": 25,
+        "total": 25,
+        "rate": 1.0,
+        "definition_source": "ISO/IEC/IEEE 29119-4:2015 §5.2 状態遷移テスト（Chow の N-switch カバレッジ: 0-switch=全単一遷移, 1-switch=全連続2遷移ペア）"
+      },
+      "1-switch": {
+        "coverage_type": "1-switch",
+        "covered": 0,
+        "total": 89,
+        "rate": 0.0,
+        "definition_source": "ISO/IEC/IEEE 29119-4:2015 §5.2 状態遷移テスト（Chow の N-switch カバレッジ: 0-switch=全単一遷移, 1-switch=全連続2遷移ペア）"
+      }
+    },
+    "business_flows": [
+      {
+        "flow_name": "決済",
+        "path_id": "TP003",
+        "nodes": [
+          "http://127.0.0.1:8766/",
+          "http://127.0.0.1:8766/checkout.html"
+        ],
+        "screen_types": [
+          "payment"
+        ],
+        "priority": "高"
+      },
+      {
+        "flow_name": "決済",
+        "path_id": "TP009",
+        "nodes": [
+          "http://127.0.0.1:8766/index.html",
+          "http://127.0.0.1:8766/checkout.html"
+        ],
+        "screen_types": [
+          "payment"
+        ],
+        "priority": "高"
+      },
+      {
+        "flow_name": "決済",
+        "path_id": "TP014",
+        "nodes": [
+          "http://127.0.0.1:8766/products.html",
+          "http://127.0.0.1:8766/checkout.html"
+        ],
+        "screen_types": [
+          "payment"
+        ],
+        "priority": "高"
+      },
+      {
+        "flow_name": "決済",
+        "path_id": "TP016",
+        "nodes": [
+          "http://127.0.0.1:8766/checkout.html",
+          "http://127.0.0.1:8766/index.html"
+        ],
+        "screen_types": [
+          "payment"
+        ],
+        "priority": "高"
+      },
+      {
+        "flow_name": "決済",
+        "path_id": "TP017",
+        "nodes": [
+          "http://127.0.0.1:8766/checkout.html",
+          "http://127.0.0.1:8766/products.html"
+        ],
+        "screen_types": [
+          "payment"
+        ],
+        "priority": "高"
+      }
+    ]
+  },
+  "screens": [
+    {
+      "page_id": "P001",
+      "url": "http://127.0.0.1:8766/",
+      "title": "DemoMart - デモストア トップ",
+      "headings": [
+        "DemoMart デモストア",
+        "ようこそ DemoMart へ",
+        "本日のおすすめ"
+      ],
+      "buttons": [
+        "おすすめを見る"
+      ],
+      "forms": [],
+      "transitions": {
+        "to": [
+          "P002",
+          "P003",
+          "P004",
+          "P005",
+          "P006",
+          "P007"
+        ],
+        "from": []
+      },
+      "canonical_key": "P001",
+      "is_canonical": true,
+      "variation_count": 1,
+      "variation_urls": [],
+      "a11y_issues": [],
+      "state_id": "ac5f4686",
+      "fingerprint": "947077ef91dd8237",
+      "fingerprint_version": 2,
+      "page_states": [],
+      "spa_transitions": []
+    },
+    {
+      "page_id": "P002",
+      "url": "http://127.0.0.1:8766/index.html",
+      "title": "DemoMart - デモストア トップ",
+      "headings": [
+        "DemoMart デモストア",
+        "ようこそ DemoMart へ",
+        "本日のおすすめ"
+      ],
+      "buttons": [
+        "おすすめを見る"
+      ],
+      "forms": [],
+      "transitions": {
+        "to": [
+          "P003",
+          "P004",
+          "P005",
+          "P006",
+          "P007"
+        ],
+        "from": [
+          "P001",
+          "P003",
+          "P004",
+          "P005",
+          "P006",
+          "P007"
+        ]
+      },
+      "canonical_key": "P002",
+      "is_canonical": true,
+      "variation_count": 1,
+      "variation_urls": [],
+      "a11y_issues": [],
+      "state_id": "ac5f4686",
+      "fingerprint": "b894f9fa3d970f0d",
+      "fingerprint_version": 2,
+      "page_states": [],
+      "spa_transitions": []
+    },
+    {
+      "page_id": "P003",
+      "url": "http://127.0.0.1:8766/products.html",
+      "title": "DemoMart - 商品一覧",
+      "headings": [
+        "DemoMart デモストア",
+        "商品一覧",
+        "デモ商品ラインナップ"
+      ],
+      "buttons": [
+        "検索"
+      ],
+      "forms": [
+        {
+          "action": "/products",
+          "method": "get",
+          "fields": [
+            {
+              "name": "q",
+              "element_id": "q",
+              "field_type": "search",
+              "required": false,
+              "maxlength": 80,
+              "minlength": null,
+              "min_value": "",
+              "max_value": "",
+              "pattern": "",
+              "placeholder": "商品名で検索",
+              "default": "",
+              "options": [],
+              "locators": [
+                "#q",
+                "input[name=\"q\"]"
+              ],
+              "test_conditions": [
+                "最大長: 79/80/81文字"
+              ],
+              "test_conditions_detail": [
+                {
+                  "description": "最大長: 79/80/81文字",
+                  "source": "rules",
+                  "confidence": 1.0,
+                  "evidence": {
+                    "selector": "#q",
+                    "html_attribute": "id",
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P003.png",
+                    "bbox": [
+                      305,
+                      247,
+                      670,
+                      34
+                    ]
+                  },
+                  "observed_result": ""
+                }
+              ],
+              "aria_label": "",
+              "aria_required": false,
+              "role": "",
+              "has_visible_label": true,
+              "confidence": 1.0,
+              "evidence": {
+                "selector": "#q",
+                "html_attribute": "id",
+                "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P003.png",
+                "bbox": [
+                  305,
+                  247,
+                  670,
+                  34
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "transitions": {
+        "to": [
+          "P002",
+          "P004",
+          "P005"
+        ],
+        "from": [
+          "P001",
+          "P002",
+          "P004",
+          "P005",
+          "P006",
+          "P007"
+        ]
+      },
+      "canonical_key": "P003",
+      "is_canonical": true,
+      "variation_count": 1,
+      "variation_urls": [],
+      "a11y_issues": [],
+      "state_id": "ac5f4686",
+      "fingerprint": "f477b84c028df28e",
+      "fingerprint_version": 2,
+      "page_states": [],
+      "spa_transitions": []
+    },
+    {
+      "page_id": "P004",
+      "url": "http://127.0.0.1:8766/checkout.html",
+      "title": "DemoMart - お支払い・決済",
+      "headings": [
+        "DemoMart デモストア",
+        "お支払い・決済",
+        "クレジットカード情報"
+      ],
+      "buttons": [
+        "この内容で支払う"
+      ],
+      "forms": [
+        {
+          "action": "/payment/confirm",
+          "method": "post",
+          "fields": [
+            {
+              "name": "card_number",
+              "element_id": "card-number",
+              "field_type": "text",
+              "required": true,
+              "maxlength": 19,
+              "minlength": null,
+              "min_value": "",
+              "max_value": "",
+              "pattern": "[0-9 ]{13,19}",
+              "placeholder": "1111 2222 3333 4444",
+              "default": "",
+              "options": [],
+              "locators": [
+                "#card-number",
+                "input[name=\"card_number\"]"
+              ],
+              "test_conditions": [
+                "未入力で送信（必須チェック）",
+                "最大長: 18/19/20文字",
+                "パターン適合 / 不適合"
+              ],
+              "test_conditions_detail": [
+                {
+                  "description": "未入力で送信（必須チェック）",
+                  "source": "rules",
+                  "confidence": 1.0,
+                  "evidence": {
+                    "selector": "#card-number",
+                    "html_attribute": null,
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P004.png",
+                    "bbox": null
+                  },
+                  "observed_result": "Please fill out this field."
+                },
+                {
+                  "description": "最大長: 18/19/20文字",
+                  "source": "rules",
+                  "confidence": 1.0,
+                  "evidence": {
+                    "selector": "#card-number",
+                    "html_attribute": "id",
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P004.png",
+                    "bbox": [
+                      305,
+                      279,
+                      670,
+                      34
+                    ]
+                  },
+                  "observed_result": ""
+                },
+                {
+                  "description": "パターン適合 / 不適合",
+                  "source": "rules",
+                  "confidence": 1.0,
+                  "evidence": {
+                    "selector": "#card-number",
+                    "html_attribute": "id",
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P004.png",
+                    "bbox": [
+                      305,
+                      279,
+                      670,
+                      34
+                    ]
+                  },
+                  "observed_result": ""
+                }
+              ],
+              "aria_label": "",
+              "aria_required": true,
+              "role": "",
+              "has_visible_label": true,
+              "confidence": 1.0,
+              "evidence": {
+                "selector": "#card-number",
+                "html_attribute": "id",
+                "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P004.png",
+                "bbox": [
+                  305,
+                  279,
+                  670,
+                  34
+                ]
+              }
+            },
+            {
+              "name": "card_name",
+              "element_id": "card-name",
+              "field_type": "text",
+              "required": true,
+              "maxlength": 40,
+              "minlength": null,
+              "min_value": "",
+              "max_value": "",
+              "pattern": "",
+              "placeholder": "TARO YAMADA",
+              "default": "",
+              "options": [],
+              "locators": [
+                "#card-name",
+                "input[name=\"card_name\"]"
+              ],
+              "test_conditions": [
+                "未入力で送信（必須チェック）",
+                "最大長: 39/40/41文字"
+              ],
+              "test_conditions_detail": [
+                {
+                  "description": "未入力で送信（必須チェック）",
+                  "source": "rules",
+                  "confidence": 1.0,
+                  "evidence": {
+                    "selector": "#card-name",
+                    "html_attribute": null,
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P004.png",
+                    "bbox": null
+                  },
+                  "observed_result": "Please fill out this field."
+                },
+                {
+                  "description": "最大長: 39/40/41文字",
+                  "source": "rules",
+                  "confidence": 1.0,
+                  "evidence": {
+                    "selector": "#card-name",
+                    "html_attribute": "id",
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P004.png",
+                    "bbox": [
+                      305,
+                      353,
+                      670,
+                      34
+                    ]
+                  },
+                  "observed_result": ""
+                }
+              ],
+              "aria_label": "",
+              "aria_required": true,
+              "role": "",
+              "has_visible_label": true,
+              "confidence": 1.0,
+              "evidence": {
+                "selector": "#card-name",
+                "html_attribute": "id",
+                "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P004.png",
+                "bbox": [
+                  305,
+                  353,
+                  670,
+                  34
+                ]
+              }
+            },
+            {
+              "name": "expiry",
+              "element_id": "expiry",
+              "field_type": "text",
+              "required": true,
+              "maxlength": 5,
+              "minlength": null,
+              "min_value": "",
+              "max_value": "",
+              "pattern": "(0[1-9]|1[0-2])/[0-9]{2}",
+              "placeholder": "12/28",
+              "default": "",
+              "options": [],
+              "locators": [
+                "#expiry",
+                "input[name=\"expiry\"]"
+              ],
+              "test_conditions": [
+                "未入力で送信（必須チェック）",
+                "最大長: 4/5/6文字",
+                "パターン適合 / 不適合"
+              ],
+              "test_conditions_detail": [
+                {
+                  "description": "未入力で送信（必須チェック）",
+                  "source": "rules",
+                  "confidence": 1.0,
+                  "evidence": {
+                    "selector": "#expiry",
+                    "html_attribute": null,
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P004.png",
+                    "bbox": null
+                  },
+                  "observed_result": "Please fill out this field."
+                },
+                {
+                  "description": "最大長: 4/5/6文字",
+                  "source": "rules",
+                  "confidence": 1.0,
+                  "evidence": {
+                    "selector": "#expiry",
+                    "html_attribute": "id",
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P004.png",
+                    "bbox": [
+                      305,
+                      427,
+                      670,
+                      34
+                    ]
+                  },
+                  "observed_result": ""
+                },
+                {
+                  "description": "パターン適合 / 不適合",
+                  "source": "rules",
+                  "confidence": 1.0,
+                  "evidence": {
+                    "selector": "#expiry",
+                    "html_attribute": "id",
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P004.png",
+                    "bbox": [
+                      305,
+                      427,
+                      670,
+                      34
+                    ]
+                  },
+                  "observed_result": ""
+                }
+              ],
+              "aria_label": "",
+              "aria_required": true,
+              "role": "",
+              "has_visible_label": true,
+              "confidence": 1.0,
+              "evidence": {
+                "selector": "#expiry",
+                "html_attribute": "id",
+                "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P004.png",
+                "bbox": [
+                  305,
+                  427,
+                  670,
+                  34
+                ]
+              }
+            },
+            {
+              "name": "cvc",
+              "element_id": "cvc",
+              "field_type": "text",
+              "required": true,
+              "maxlength": 4,
+              "minlength": null,
+              "min_value": "",
+              "max_value": "",
+              "pattern": "[0-9]{3,4}",
+              "placeholder": "123",
+              "default": "",
+              "options": [],
+              "locators": [
+                "#cvc",
+                "input[name=\"cvc\"]"
+              ],
+              "test_conditions": [
+                "未入力で送信（必須チェック）",
+                "最大長: 3/4/5文字",
+                "パターン適合 / 不適合"
+              ],
+              "test_conditions_detail": [
+                {
+                  "description": "未入力で送信（必須チェック）",
+                  "source": "rules",
+                  "confidence": 1.0,
+                  "evidence": {
+                    "selector": "#cvc",
+                    "html_attribute": null,
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P004.png",
+                    "bbox": null
+                  },
+                  "observed_result": "Please fill out this field."
+                },
+                {
+                  "description": "最大長: 3/4/5文字",
+                  "source": "rules",
+                  "confidence": 1.0,
+                  "evidence": {
+                    "selector": "#cvc",
+                    "html_attribute": "id",
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P004.png",
+                    "bbox": [
+                      305,
+                      501,
+                      670,
+                      34
+                    ]
+                  },
+                  "observed_result": ""
+                },
+                {
+                  "description": "パターン適合 / 不適合",
+                  "source": "rules",
+                  "confidence": 1.0,
+                  "evidence": {
+                    "selector": "#cvc",
+                    "html_attribute": "id",
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P004.png",
+                    "bbox": [
+                      305,
+                      501,
+                      670,
+                      34
+                    ]
+                  },
+                  "observed_result": ""
+                }
+              ],
+              "aria_label": "",
+              "aria_required": true,
+              "role": "",
+              "has_visible_label": true,
+              "confidence": 1.0,
+              "evidence": {
+                "selector": "#cvc",
+                "html_attribute": "id",
+                "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P004.png",
+                "bbox": [
+                  305,
+                  501,
+                  670,
+                  34
+                ]
+              }
+            },
+            {
+              "name": "amount",
+              "element_id": "amount",
+              "field_type": "number",
+              "required": true,
+              "maxlength": null,
+              "minlength": null,
+              "min_value": "100",
+              "max_value": "1000000",
+              "pattern": "",
+              "placeholder": "",
+              "default": "4980",
+              "options": [],
+              "locators": [
+                "#amount",
+                "input[name=\"amount\"]"
+              ],
+              "test_conditions": [
+                "未入力で送信（必須チェック）",
+                "範囲 100〜1000000: 境界 / 範囲外"
+              ],
+              "test_conditions_detail": [
+                {
+                  "description": "未入力で送信（必須チェック）",
+                  "source": "rules",
+                  "confidence": 1.0,
+                  "evidence": {
+                    "selector": "#amount",
+                    "html_attribute": "id",
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P004.png",
+                    "bbox": [
+                      305,
+                      574,
+                      670,
+                      34
+                    ]
+                  },
+                  "observed_result": ""
+                },
+                {
+                  "description": "範囲 100〜1000000: 境界 / 範囲外",
+                  "source": "rules",
+                  "confidence": 1.0,
+                  "evidence": {
+                    "selector": "#amount",
+                    "html_attribute": "id",
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P004.png",
+                    "bbox": [
+                      305,
+                      574,
+                      670,
+                      34
+                    ]
+                  },
+                  "observed_result": ""
+                }
+              ],
+              "aria_label": "",
+              "aria_required": true,
+              "role": "",
+              "has_visible_label": true,
+              "confidence": 1.0,
+              "evidence": {
+                "selector": "#amount",
+                "html_attribute": "id",
+                "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P004.png",
+                "bbox": [
+                  305,
+                  574,
+                  670,
+                  34
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "transitions": {
+        "to": [
+          "P002",
+          "P003"
+        ],
+        "from": [
+          "P001",
+          "P002",
+          "P003"
+        ]
+      },
+      "canonical_key": "P004",
+      "is_canonical": true,
+      "variation_count": 1,
+      "variation_urls": [],
+      "a11y_issues": [],
+      "state_id": "ac5f4686",
+      "fingerprint": "0452f31307d501dd",
+      "fingerprint_version": 2,
+      "page_states": [],
+      "spa_transitions": []
+    },
+    {
+      "page_id": "P005",
+      "url": "http://127.0.0.1:8766/contact.html",
+      "title": "DemoMart - お問い合わせ",
+      "headings": [
+        "DemoMart デモストア",
+        "お問い合わせ"
+      ],
+      "buttons": [
+        "送信する"
+      ],
+      "forms": [
+        {
+          "action": "/contact/send",
+          "method": "post",
+          "fields": [
+            {
+              "name": "name",
+              "element_id": "name",
+              "field_type": "text",
+              "required": true,
+              "maxlength": 50,
+              "minlength": null,
+              "min_value": "",
+              "max_value": "",
+              "pattern": "",
+              "placeholder": "山田 太郎",
+              "default": "",
+              "options": [],
+              "locators": [
+                "#name",
+                "input[name=\"name\"]"
+              ],
+              "test_conditions": [
+                "未入力で送信（必須チェック）",
+                "最大長: 49/50/51文字"
+              ],
+              "test_conditions_detail": [
+                {
+                  "description": "未入力で送信（必須チェック）",
+                  "source": "rules",
+                  "confidence": 1.0,
+                  "evidence": {
+                    "selector": "#name",
+                    "html_attribute": null,
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P005.png",
+                    "bbox": null
+                  },
+                  "observed_result": "Please fill out this field."
+                },
+                {
+                  "description": "最大長: 49/50/51文字",
+                  "source": "rules",
+                  "confidence": 1.0,
+                  "evidence": {
+                    "selector": "#name",
+                    "html_attribute": "id",
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P005.png",
+                    "bbox": [
+                      305,
+                      247,
+                      670,
+                      34
+                    ]
+                  },
+                  "observed_result": ""
+                }
+              ],
+              "aria_label": "",
+              "aria_required": true,
+              "role": "",
+              "has_visible_label": true,
+              "confidence": 1.0,
+              "evidence": {
+                "selector": "#name",
+                "html_attribute": "id",
+                "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P005.png",
+                "bbox": [
+                  305,
+                  247,
+                  670,
+                  34
+                ]
+              }
+            },
+            {
+              "name": "email",
+              "element_id": "contact-email",
+              "field_type": "email",
+              "required": true,
+              "maxlength": null,
+              "minlength": null,
+              "min_value": "",
+              "max_value": "",
+              "pattern": "",
+              "placeholder": "user@example.com",
+              "default": "",
+              "options": [],
+              "locators": [
+                "#contact-email",
+                "input[name=\"email\"]"
+              ],
+              "test_conditions": [
+                "未入力で送信（必須チェック）",
+                "メール形式: 正常 / @なし / ドメインなし"
+              ],
+              "test_conditions_detail": [
+                {
+                  "description": "未入力で送信（必須チェック）",
+                  "source": "rules",
+                  "confidence": 1.0,
+                  "evidence": {
+                    "selector": "#contact-email",
+                    "html_attribute": null,
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P005.png",
+                    "bbox": null
+                  },
+                  "observed_result": "Please fill out this field."
+                },
+                {
+                  "description": "メール形式: 正常 / @なし / ドメインなし",
+                  "source": "rules",
+                  "confidence": 1.0,
+                  "evidence": {
+                    "selector": "#contact-email",
+                    "html_attribute": "id",
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P005.png",
+                    "bbox": [
+                      305,
+                      321,
+                      670,
+                      34
+                    ]
+                  },
+                  "observed_result": ""
+                }
+              ],
+              "aria_label": "",
+              "aria_required": true,
+              "role": "",
+              "has_visible_label": true,
+              "confidence": 1.0,
+              "evidence": {
+                "selector": "#contact-email",
+                "html_attribute": "id",
+                "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P005.png",
+                "bbox": [
+                  305,
+                  321,
+                  670,
+                  34
+                ]
+              }
+            },
+            {
+              "name": "category",
+              "element_id": "category",
+              "field_type": "select",
+              "required": false,
+              "maxlength": null,
+              "minlength": null,
+              "min_value": "",
+              "max_value": "",
+              "pattern": "",
+              "placeholder": "",
+              "default": "",
+              "options": [
+                "order",
+                "product",
+                "other"
+              ],
+              "locators": [
+                "#category",
+                "select[name=\"category\"]"
+              ],
+              "test_conditions": [
+                "選択肢3件の各値 / 未選択"
+              ],
+              "test_conditions_detail": [
+                {
+                  "description": "選択肢3件の各値 / 未選択",
+                  "source": "rules",
+                  "confidence": 1.0,
+                  "evidence": {
+                    "selector": "#category",
+                    "html_attribute": "id",
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P005.png",
+                    "bbox": [
+                      305,
+                      395,
+                      670,
+                      36
+                    ]
+                  },
+                  "observed_result": ""
+                }
+              ],
+              "aria_label": "",
+              "aria_required": false,
+              "role": "",
+              "has_visible_label": true,
+              "confidence": 1.0,
+              "evidence": {
+                "selector": "#category",
+                "html_attribute": "id",
+                "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P005.png",
+                "bbox": [
+                  305,
+                  395,
+                  670,
+                  36
+                ]
+              }
+            },
+            {
+              "name": "message",
+              "element_id": "message",
+              "field_type": "textarea",
+              "required": true,
+              "maxlength": 500,
+              "minlength": null,
+              "min_value": "",
+              "max_value": "",
+              "pattern": "",
+              "placeholder": "お問い合わせ内容をご記入ください",
+              "default": "",
+              "options": [],
+              "locators": [
+                "#message",
+                "textarea[name=\"message\"]"
+              ],
+              "test_conditions": [
+                "未入力で送信（必須チェック）",
+                "最大長: 499/500/501文字"
+              ],
+              "test_conditions_detail": [
+                {
+                  "description": "未入力で送信（必須チェック）",
+                  "source": "rules",
+                  "confidence": 1.0,
+                  "evidence": {
+                    "selector": "#message",
+                    "html_attribute": null,
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P005.png",
+                    "bbox": null
+                  },
+                  "observed_result": "Please fill out this field."
+                },
+                {
+                  "description": "最大長: 499/500/501文字",
+                  "source": "rules",
+                  "confidence": 1.0,
+                  "evidence": {
+                    "selector": "#message",
+                    "html_attribute": "id",
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P005.png",
+                    "bbox": [
+                      305,
+                      471,
+                      670,
+                      98
+                    ]
+                  },
+                  "observed_result": ""
+                }
+              ],
+              "aria_label": "",
+              "aria_required": true,
+              "role": "",
+              "has_visible_label": true,
+              "confidence": 1.0,
+              "evidence": {
+                "selector": "#message",
+                "html_attribute": "id",
+                "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P005.png",
+                "bbox": [
+                  305,
+                  471,
+                  670,
+                  98
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "transitions": {
+        "to": [
+          "P002",
+          "P003"
+        ],
+        "from": [
+          "P001",
+          "P002",
+          "P003",
+          "P006"
+        ]
+      },
+      "canonical_key": "P005",
+      "is_canonical": true,
+      "variation_count": 1,
+      "variation_urls": [],
+      "a11y_issues": [],
+      "state_id": "ac5f4686",
+      "fingerprint": "4c5eebe110dd8617",
+      "fingerprint_version": 2,
+      "page_states": [],
+      "spa_transitions": []
+    },
+    {
+      "page_id": "P006",
+      "url": "http://127.0.0.1:8766/dashboard.html",
+      "title": "DemoMart - マイページ",
+      "headings": [
+        "DemoMart デモストア",
+        "マイページ",
+        "会員情報",
+        "退会の確認",
+        "注文履歴",
+        "よくある質問"
+      ],
+      "buttons": [
+        "退会手続き",
+        "キャンセル",
+        "直近の注文",
+        "全期間"
+      ],
+      "forms": [],
+      "transitions": {
+        "to": [
+          "P002",
+          "P003",
+          "P005"
+        ],
+        "from": [
+          "P001",
+          "P002"
+        ]
+      },
+      "canonical_key": "P006",
+      "is_canonical": true,
+      "variation_count": 1,
+      "variation_urls": [],
+      "a11y_issues": [],
+      "state_id": "91dc2483",
+      "fingerprint": "ef5d6a977df14539",
+      "fingerprint_version": 2,
+      "page_states": [],
+      "spa_transitions": []
+    },
+    {
+      "page_id": "P007",
+      "url": "http://127.0.0.1:8766/spa.html",
+      "title": "DemoMart - キャンペーン",
+      "headings": [
+        "DemoMart デモストア",
+        "キャンペーン特集（SPA デモ）",
+        "開催中のキャンペーン"
+      ],
+      "buttons": [
+        "夏のセールを見る",
+        "商品一覧へ（SPA遷移）"
+      ],
+      "forms": [],
+      "transitions": {
+        "to": [
+          "P002",
+          "P003"
+        ],
+        "from": [
+          "P001",
+          "P002"
+        ]
+      },
+      "canonical_key": "P007",
+      "is_canonical": true,
+      "variation_count": 1,
+      "variation_urls": [],
+      "a11y_issues": [],
+      "state_id": "ac5f4686",
+      "fingerprint": "a4153854bdd8ab2a",
+      "fingerprint_version": 2,
+      "page_states": [],
+      "spa_transitions": [
+        {
+          "from_url": "http://127.0.0.1:8766/spa.html#summer-sale",
+          "to_url": "http://127.0.0.1:8766/spa.html#summer-sale",
+          "kind": "hashchange"
+        },
+        {
+          "from_url": "http://127.0.0.1:8766/spa.html#summer-sale",
+          "to_url": "http://127.0.0.1:8766/spa.html",
+          "kind": "hashchange"
+        },
+        {
+          "from_url": "http://127.0.0.1:8766/spa.html",
+          "to_url": "http://127.0.0.1:8766/products.html",
+          "kind": "pushstate"
+        }
+      ]
+    }
+  ]
+}

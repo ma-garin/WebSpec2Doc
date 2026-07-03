@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>DemoMart - キャンペーン</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>DemoMart デモストア</h1>
+  </header>
+  <nav aria-label="メイン">
+    <a href="/index.html">トップ</a>
+    <a href="/products.html">商品一覧</a>
+  </nav>
+  <main>
+    <h2>キャンペーン特集（SPA デモ）</h2>
+    <section>
+      <p>このページはページ遷移せずに URL とコンテンツが切り替わる SPA 風の実装です。</p>
+      <button type="button" id="show-summer">夏のセールを見る</button>
+      <button type="button" id="goto-products" class="secondary">商品一覧へ（SPA遷移）</button>
+      <div id="campaign-body">
+        <h3>開催中のキャンペーン</h3>
+        <p>ただいま 2 件のキャンペーンを開催中です。</p>
+      </div>
+    </section>
+  </main>
+  <footer>
+    <small>DemoMart — キャンペーン（pushState / hashchange 捕捉デモ）</small>
+  </footer>
+  <script>
+    // hashchange: URL のハッシュだけが変わる SPA 内タブ
+    document.getElementById('show-summer').addEventListener('click', () => {
+      location.hash = 'summer-sale';
+      document.getElementById('campaign-body').innerHTML =
+        '<h3>夏のセール</h3><p>対象商品が最大 30% OFF！</p>';
+    });
+    // pushState: フルリロードなしで別ページ URL へ切り替える SPA 遷移
+    document.getElementById('goto-products').addEventListener('click', () => {
+      history.pushState({}, '', '/products.html');
+      document.getElementById('campaign-body').innerHTML =
+        '<h3>商品一覧（SPA表示）</h3><p>ページ遷移なしで商品一覧の内容に切り替わりました。</p>';
+    });
+  </script>
+</body>
+</html>

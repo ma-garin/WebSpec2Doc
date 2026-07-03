@@ -46,6 +46,7 @@ PAGE_ID_PREFIX = "P"
 PAGE_ID_WIDTH = 3
 SCREENSHOTS_DIR_NAME = "screenshots"
 USER_AGENT = build_user_agent()
+BROWSER_LOCALE = "ja-JP"
 NEXT_DEPTH_INCREMENT = 1
 
 _SENSITIVE_KEYWORDS = ("payment", "checkout", "billing", "personal", "private")
@@ -212,11 +213,17 @@ class PageData:
 def _browser_page(auth_state: Path | None) -> Iterator[Page]:
     """Open a Playwright Chromium page with shared context settings."""
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(headless=True)
+        # --lang でブラウザ UI 言語を日本語にし、HTML5 バリデーション
+        # メッセージが日本語で得られるようにする（context の locale だけでは
+        # validationMessage の言語は変わらないため launch 引数で指定する）
+        browser = playwright.chromium.launch(headless=True, args=[f"--lang={BROWSER_LOCALE}"])
         try:
             context = browser.new_context(
                 user_agent=USER_AGENT,
                 storage_state=str(auth_state) if auth_state else None,
+                # 日本語ロケール: HTML5 バリデーションメッセージ実測を
+                # 日本のエンドユーザーが目にする文言（日本語）で取得する
+                locale=BROWSER_LOCALE,
             )
             page = context.new_page()
             page.set_default_timeout(DEFAULT_TIMEOUT_MS)

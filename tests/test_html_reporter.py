@@ -69,6 +69,59 @@ def test_html_reporter_creates_output_file(tmp_path: Path) -> None:
     assert out.stat().st_size > 0
 
 
+def test_sidebar_nav_shows_coverage_and_impact_when_present() -> None:
+    """カバレッジ・差分影響セクションがある場合、サイドバーにナビが追加される。"""
+    analyzed = [_make_analyzed_page()]
+    graph = _empty_graph()
+    graph.add_node("P001", url="https://example.com/", title="T", page_id="P001")
+    coverage = {
+        "0-switch": {
+            "coverage_type": "0-switch",
+            "covered": 1,
+            "total": 1,
+            "rate": 1.0,
+            "definition_source": "ISO/IEC/IEEE 29119-4",
+        }
+    }
+    impact = {
+        "total": 0,
+        "breaking": 0,
+        "warning": 0,
+        "info": 0,
+        "tests": [],
+        "rerun_recommended": [],
+    }
+
+    html_text = generate_html_report(
+        pages=analyzed,
+        graph=graph,
+        form_summary=[],
+        target_url="https://example.com/",
+        mermaid_content="graph LR\n P001\n",
+        transition_coverage=coverage,
+        impact_report=impact,
+    )
+    assert '<a href="#coverage" class="nav-item">遷移テストカバレッジ</a>' in html_text
+    assert '<a href="#impact" class="nav-item">差分影響・再実行推奨</a>' in html_text
+
+
+def test_sidebar_nav_omits_coverage_and_impact_when_absent() -> None:
+    """カバレッジ・差分影響が無い場合、サイドバーにナビは出ない。"""
+    analyzed = [_make_analyzed_page()]
+    graph = _empty_graph()
+    graph.add_node("P001", url="https://example.com/", title="T", page_id="P001")
+
+    html_text = generate_html_report(
+        pages=analyzed,
+        graph=graph,
+        form_summary=[],
+        target_url="https://example.com/",
+        mermaid_content="graph LR\n P001\n",
+    )
+    assert 'href="#coverage"' not in html_text
+    assert 'href="#impact"' not in html_text
+
+
 def test_html_reporter_returns_valid_html_structure(tmp_path: Path) -> None:
     """生成された HTML が基本的な構造タグを持つ。"""
     analyzed = [_make_analyzed_page()]

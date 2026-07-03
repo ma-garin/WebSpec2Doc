@@ -69,7 +69,11 @@ def generate_html_report(
         [
             _html_head(),
             '<body class="app-page"><div class="app-shell">',
-            _sidebar(pages),
+            _sidebar(
+                pages,
+                has_coverage=bool(transition_coverage or business_flows),
+                has_impact=bool(impact_report),
+            ),
             '<div class="app-main">',
             _topbar(target_url, now),
             '<main class="app-content">',
@@ -219,14 +223,22 @@ body.app-page{overflow:visible}
 """
 
 
-def _sidebar(pages: list[AnalyzedPage]) -> str:
+def _sidebar(
+    pages: list[AnalyzedPage],
+    has_coverage: bool = False,
+    has_impact: bool = False,
+) -> str:
     items = [
         '<a href="#summary" class="nav-item">サマリー</a>',
         '<a href="#architecture" class="nav-item">アーキテクチャ図</a>',
         '<a href="#techstack" class="nav-item">技術スタック</a>',
         '<a href="#transition" class="nav-item">画面遷移図</a>',
-        '<div class="nav-group">画面一覧</div>',
     ]
+    if has_coverage:
+        items.append('<a href="#coverage" class="nav-item">遷移テストカバレッジ</a>')
+    if has_impact:
+        items.append('<a href="#impact" class="nav-item">差分影響・再実行推奨</a>')
+    items.append('<div class="nav-group">画面一覧</div>')
     for page in pages:
         pid = html.escape(page.page_id)
         raw = page.page_data.title or _url_path(page.page_data.url)

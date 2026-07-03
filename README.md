@@ -54,6 +54,20 @@ make test           # 動作確認
 
 ---
 
+## すぐ試す（同梱デモ）
+
+外部サイトも OpenAI API キーも不要で、全機能を同梱デモサイトで体験できます。
+
+```bash
+make demo       # デモサイト(8766)と本体(8765)を同時起動
+# → 本体の URL 欄に http://127.0.0.1:8766/ を入力して「画面分析」
+```
+
+デモの流れは [docs/demo/DEMO_SCRIPT.md](docs/demo/DEMO_SCRIPT.md)、
+生成物のサンプルは [docs/demo/sample_output/](docs/demo/sample_output/) にあります。
+
+---
+
 ## GUI で使う（推奨）
 
 ```bash
@@ -106,10 +120,24 @@ python src/main.py --url https://example.com --auth auth.json
 
 ---
 
+## 社内サーバへ展開（Docker）
+
+```bash
+# 既定はローカルループバックのみ許可（外部からは 403）
+# 社内ネットワークから使う場合は許可ホストを明示的に指定する
+WEBSPEC2DOC_TRUSTED_HOSTS=webspec2doc.internal docker compose up --build
+```
+
+`WEBSPEC2DOC_TRUSTED_HOSTS` が未設定なら現行どおり localhost 限定で動作します。
+
+---
+
 ## ドキュメント
 
 - [クイックスタートガイド](docs/userguide.md)
 - [開発者向けハンドブック](docs/DEVELOPMENT.md)
+- [事業計画（統合版）](docs/09_事業計画_統合版.md)
+- [デモ台本](docs/demo/DEMO_SCRIPT.md) / [発表構成](docs/demo/PITCH_OUTLINE.md)
 
 ---
 

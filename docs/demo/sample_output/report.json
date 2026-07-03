@@ -3,10 +3,10 @@
     "target_url": "http://127.0.0.1:8766/",
     "crawl_depth": 3,
     "max_pages": 50,
-    "crawled_at": "2026-07-03 06:20 UTC",
+    "crawled_at": "2026-07-03 06:38 UTC",
     "page_count": 7,
     "screen_count": 7,
-    "report_hash": "322282ee1f2521c419306fb826a068332b69db4c40a119c36b513726b8eabbc0",
+    "report_hash": "77e7476c6186e4cabb4e4e1c738e82247533a6c3891f428d93181bf5a9438f02",
     "pii_risk_screens": [
       "P004"
     ],
@@ -211,7 +211,7 @@
                   "evidence": {
                     "selector": "#q",
                     "html_attribute": "id",
-                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P003.png",
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_regen/127.0.0.1:8766/screenshots/P003.png",
                     "bbox": [
                       305,
                       247,
@@ -230,7 +230,7 @@
               "evidence": {
                 "selector": "#q",
                 "html_attribute": "id",
-                "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P003.png",
+                "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_regen/127.0.0.1:8766/screenshots/P003.png",
                 "bbox": [
                   305,
                   247,
@@ -315,7 +315,7 @@
                   "evidence": {
                     "selector": "#card-number",
                     "html_attribute": null,
-                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P004.png",
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_regen/127.0.0.1:8766/screenshots/P004.png",
                     "bbox": null
                   },
                   "observed_result": "Please fill out this field."
@@ -327,7 +327,7 @@
                   "evidence": {
                     "selector": "#card-number",
                     "html_attribute": "id",
-                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P004.png",
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_regen/127.0.0.1:8766/screenshots/P004.png",
                     "bbox": [
                       305,
                       279,
@@ -344,7 +344,7 @@
                   "evidence": {
                     "selector": "#card-number",
                     "html_attribute": "id",
-                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P004.png",
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_regen/127.0.0.1:8766/screenshots/P004.png",
                     "bbox": [
                       305,
                       279,
@@ -363,7 +363,7 @@
               "evidence": {
                 "selector": "#card-number",
                 "html_attribute": "id",
-                "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P004.png",
+                "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_regen/127.0.0.1:8766/screenshots/P004.png",
                 "bbox": [
                   305,
                   279,
@@ -401,7 +401,7 @@
                   "evidence": {
                     "selector": "#card-name",
                     "html_attribute": null,
-                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P004.png",
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_regen/127.0.0.1:8766/screenshots/P004.png",
                     "bbox": null
                   },
                   "observed_result": "Please fill out this field."
@@ -413,7 +413,7 @@
                   "evidence": {
                     "selector": "#card-name",
                     "html_attribute": "id",
-                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P004.png",
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_regen/127.0.0.1:8766/screenshots/P004.png",
                     "bbox": [
                       305,
                       353,
@@ -432,7 +432,7 @@
               "evidence": {
                 "selector": "#card-name",
                 "html_attribute": "id",
-                "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P004.png",
+                "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_regen/127.0.0.1:8766/screenshots/P004.png",
                 "bbox": [
                   305,
                   353,
@@ -471,7 +471,7 @@
                   "evidence": {
                     "selector": "#expiry",
                     "html_attribute": null,
-                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P004.png",
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_regen/127.0.0.1:8766/screenshots/P004.png",
                     "bbox": null
                   },
                   "observed_result": "Please fill out this field."
@@ -483,7 +483,7 @@
                   "evidence": {
                     "selector": "#expiry",
                     "html_attribute": "id",
-                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P004.png",
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_regen/127.0.0.1:8766/screenshots/P004.png",
                     "bbox": [
                       305,
                       427,
@@ -500,7 +500,7 @@
                   "evidence": {
                     "selector": "#expiry",
                     "html_attribute": "id",
-                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P004.png",
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_regen/127.0.0.1:8766/screenshots/P004.png",
                     "bbox": [
                       305,
                       427,
@@ -519,7 +519,7 @@
               "evidence": {
                 "selector": "#expiry",
                 "html_attribute": "id",
-                "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P004.png",
+                "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_regen/127.0.0.1:8766/screenshots/P004.png",
                 "bbox": [
                   305,
                   427,
@@ -558,7 +558,7 @@
                   "evidence": {
                     "selector": "#cvc",
                     "html_attribute": null,
-                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P004.png",
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_regen/127.0.0.1:8766/screenshots/P004.png",
                     "bbox": null
                   },
                   "observed_result": "Please fill out this field."
@@ -570,7 +570,7 @@
                   "evidence": {
                     "selector": "#cvc",
                     "html_attribute": "id",
-                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P004.png",
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_regen/127.0.0.1:8766/screenshots/P004.png",
                     "bbox": [
                       305,
                       501,
@@ -587,7 +587,7 @@
                   "evidence": {
                     "selector": "#cvc",
                     "html_attribute": "id",
-                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P004.png",
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_regen/127.0.0.1:8766/screenshots/P004.png",
                     "bbox": [
                       305,
                       501,
@@ -606,7 +606,7 @@
               "evidence": {
                 "selector": "#cvc",
                 "html_attribute": "id",
-                "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P004.png",
+                "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_regen/127.0.0.1:8766/screenshots/P004.png",
                 "bbox": [
                   305,
                   501,
@@ -644,7 +644,7 @@
                   "evidence": {
                     "selector": "#amount",
                     "html_attribute": "id",
-                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P004.png",
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_regen/127.0.0.1:8766/screenshots/P004.png",
                     "bbox": [
                       305,
                       574,
@@ -661,7 +661,7 @@
                   "evidence": {
                     "selector": "#amount",
                     "html_attribute": "id",
-                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P004.png",
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_regen/127.0.0.1:8766/screenshots/P004.png",
                     "bbox": [
                       305,
                       574,
@@ -680,7 +680,7 @@
               "evidence": {
                 "selector": "#amount",
                 "html_attribute": "id",
-                "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P004.png",
+                "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_regen/127.0.0.1:8766/screenshots/P004.png",
                 "bbox": [
                   305,
                   574,
@@ -759,7 +759,7 @@
                   "evidence": {
                     "selector": "#name",
                     "html_attribute": null,
-                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P005.png",
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_regen/127.0.0.1:8766/screenshots/P005.png",
                     "bbox": null
                   },
                   "observed_result": "Please fill out this field."
@@ -771,7 +771,7 @@
                   "evidence": {
                     "selector": "#name",
                     "html_attribute": "id",
-                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P005.png",
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_regen/127.0.0.1:8766/screenshots/P005.png",
                     "bbox": [
                       305,
                       247,
@@ -790,7 +790,7 @@
               "evidence": {
                 "selector": "#name",
                 "html_attribute": "id",
-                "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P005.png",
+                "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_regen/127.0.0.1:8766/screenshots/P005.png",
                 "bbox": [
                   305,
                   247,
@@ -828,7 +828,7 @@
                   "evidence": {
                     "selector": "#contact-email",
                     "html_attribute": null,
-                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P005.png",
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_regen/127.0.0.1:8766/screenshots/P005.png",
                     "bbox": null
                   },
                   "observed_result": "Please fill out this field."
@@ -840,7 +840,7 @@
                   "evidence": {
                     "selector": "#contact-email",
                     "html_attribute": "id",
-                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P005.png",
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_regen/127.0.0.1:8766/screenshots/P005.png",
                     "bbox": [
                       305,
                       321,
@@ -859,7 +859,7 @@
               "evidence": {
                 "selector": "#contact-email",
                 "html_attribute": "id",
-                "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P005.png",
+                "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_regen/127.0.0.1:8766/screenshots/P005.png",
                 "bbox": [
                   305,
                   321,
@@ -900,7 +900,7 @@
                   "evidence": {
                     "selector": "#category",
                     "html_attribute": "id",
-                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P005.png",
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_regen/127.0.0.1:8766/screenshots/P005.png",
                     "bbox": [
                       305,
                       395,
@@ -919,7 +919,7 @@
               "evidence": {
                 "selector": "#category",
                 "html_attribute": "id",
-                "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P005.png",
+                "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_regen/127.0.0.1:8766/screenshots/P005.png",
                 "bbox": [
                   305,
                   395,
@@ -957,7 +957,7 @@
                   "evidence": {
                     "selector": "#message",
                     "html_attribute": null,
-                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P005.png",
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_regen/127.0.0.1:8766/screenshots/P005.png",
                     "bbox": null
                   },
                   "observed_result": "Please fill out this field."
@@ -969,7 +969,7 @@
                   "evidence": {
                     "selector": "#message",
                     "html_attribute": "id",
-                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P005.png",
+                    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_regen/127.0.0.1:8766/screenshots/P005.png",
                     "bbox": [
                       305,
                       471,
@@ -988,7 +988,7 @@
               "evidence": {
                 "selector": "#message",
                 "html_attribute": "id",
-                "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_final/127.0.0.1:8766/screenshots/P005.png",
+                "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/62f9b97d-2809-50ef-b2d6-9232b35314b2/scratchpad/demo_regen/127.0.0.1:8766/screenshots/P005.png",
                 "bbox": [
                   305,
                   471,

@@ -21,6 +21,7 @@ def generate_spec_ts(
     enable_strong_assertions: bool = False,
     enable_self_healing: bool = False,
     generate_page_object: bool = False,
+    report_path: Path | None = None,
 ) -> Path:
     """playwright_candidates.json から Playwright .spec.ts を生成する。
 
@@ -32,6 +33,10 @@ def generate_spec_ts(
 
     enable_strong_assertions: True の場合、expected フィールドに基づく強化アサーションを追加。
     enable_self_healing: True の場合、locators フィールドから resilient ロケータを生成。
+    report_path: report.json のパス。省略時は候補ファイルの近傍から探索する。
+
+    生成する各テストに対応する test_id・page_id・fingerprint を含む
+    メタデータ JSON（<basename>.meta.json）を併産する。
     """
     data: dict[str, Any] = {}
     try:
@@ -54,11 +59,89 @@ def generate_spec_ts(
         _append_test_block(lines, item, enable_strong_assertions, enable_self_healing)
 
     output_path.write_text("\n".join(lines), encoding="utf-8")
+    _write_test_metadata(domain, filtered, candidates_path, output_path, report_path)
     if generate_page_object:
         base_name = output_path.name.removesuffix(".spec.ts")
         page_object_path = output_path.with_name(f"{base_name}.page.ts")
         _generate_page_object(domain, filtered, page_object_path)
     return output_path
+
+
+def _find_report_path(candidates_path: Path, report_path: Path | None) -> Path | None:
+    """report.json のパスを解決する（明示指定 > 候補ファイル近傍の探索）。"""
+    if report_path is not None:
+        return report_path if report_path.is_file() else None
+    for parent in (candidates_path.parent, candidates_path.parent.parent):
+        candidate = parent / "report.json"
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def _screen_index_from_report(report_path: Path | None) -> dict[str, dict[str, str]]:
+    """report.json から page_id → {url, fingerprint} のインデックスを構築する。"""
+    if report_path is None:
+        return {}
+    try:
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    index: dict[str, dict[str, str]] = {}
+    for screen in report.get("screens", []):
+        page_id = str(screen.get("page_id") or "")
+        if page_id:
+            index[page_id] = {
+                "url": str(screen.get("url") or ""),
+                "fingerprint": str(screen.get("fingerprint") or ""),
+            }
+    return index
+
+
+_PAGE_ID_PATTERN = re.compile(r"^(P\d+)")
+
+
+def _page_id_from_trace(trace_id: str) -> str:
+    """trace_id（例: P001 / P001->P002 / P001-F01-I02）から先頭の page_id を抽出する。"""
+    match = _PAGE_ID_PATTERN.match(trace_id)
+    return match.group(1) if match else ""
+
+
+def metadata_file_path(output_path: Path) -> Path:
+    """spec.ts の出力パスに対応するメタデータ JSON のパスを返す。"""
+    base_name = output_path.name.removesuffix(".spec.ts").removesuffix(".ts")
+    return output_path.with_name(f"{base_name}.meta.json")
+
+
+def _write_test_metadata(
+    domain: str,
+    candidates: list[dict[str, Any]],
+    candidates_path: Path,
+    output_path: Path,
+    report_path: Path | None,
+) -> Path:
+    """各テストの test_id・page_id・fingerprint を含むメタデータ JSON を併産する。"""
+    screen_index = _screen_index_from_report(_find_report_path(candidates_path, report_path))
+    tests: list[dict[str, str]] = []
+    for item in candidates:
+        trace_id = _safe_str(item.get("trace_id", ""))
+        page_id = _page_id_from_trace(trace_id)
+        screen = screen_index.get(page_id, {})
+        tests.append(
+            {
+                "test_id": _safe_str(item.get("id", "")),
+                "title": _safe_str(item.get("title", "")),
+                "trace_id": trace_id,
+                "page_id": page_id,
+                "fingerprint": screen.get("fingerprint", ""),
+                "url": screen.get("url", ""),
+            }
+        )
+    metadata_path = metadata_file_path(output_path)
+    metadata_path.write_text(
+        json.dumps({"domain": domain, "tests": tests}, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    return metadata_path
 
 
 def _append_test_block(

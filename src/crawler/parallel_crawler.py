@@ -16,6 +16,7 @@ if TYPE_CHECKING:
         PageData,
         StopRequested,
     )
+    from crawler.politeness import TokenBucketLimiter
 
 
 def crawl_urls_parallel(
@@ -26,8 +27,12 @@ def crawl_urls_parallel(
     on_event: CrawlEventCallback | None,
     on_checkpoint: CheckpointCallback | None,
     stop_requested: StopRequested | None,
+    limiter: TokenBucketLimiter | None = None,
 ) -> list[PageData]:
-    """ワーカーごとに独立Playwrightを持ち、明示URLを安全に並列解析する。"""
+    """ワーカーごとに独立Playwrightを持ち、明示URLを安全に並列解析する。
+
+    limiter は全ワーカー共有の rate limiter（サイト全体のリクエスト間隔を保証）。
+    """
     from crawler.page_crawler import _browser_page, _crawl_page_with_id, _format_page_id
 
     task_queue: queue.Queue[tuple[int, str]] = queue.Queue()
@@ -58,6 +63,8 @@ def crawl_urls_parallel(
                         index=index + 1,
                         total=len(targets),
                     )
+                    if limiter is not None:
+                        limiter.acquire()
                     try:
                         page_data = _crawl_page_with_id(
                             page,

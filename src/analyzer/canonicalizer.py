@@ -14,29 +14,55 @@ from crawler.page_crawler import FieldData, FormData
 logger = logging.getLogger(__name__)
 
 
+# fingerprint バージョン:
+#   v1: 正規化URL＋フォーム構造
+#   v2: 正規化URL＋DOM状態シグネチャ（landmark構造＋開閉状態）＋フォーム構造
+FINGERPRINT_VERSION_STRUCTURE = 1
+FINGERPRINT_VERSION_STATE = 2
+DEFAULT_FINGERPRINT_VERSION = FINGERPRINT_VERSION_STATE
+
+
 @dataclass(frozen=True)
 class CanonicalInfo:
     canonical_key: str
     is_canonical: bool
     variation_count: int
     variation_urls: tuple[str, ...]
+    fingerprint: str = ""
+    fingerprint_version: int = DEFAULT_FINGERPRINT_VERSION
 
 
-def screen_fingerprint(page: AnalyzedPage) -> str:
+def screen_fingerprint(
+    page: AnalyzedPage,
+    version: int = DEFAULT_FINGERPRINT_VERSION,
+) -> str:
+    """画面同定用の fingerprint を計算する。
+
+    version=1 は旧来の「正規化URL＋フォーム構造」、version=2 は状態ベース
+    （DOM 状態シグネチャを追加）。既存スナップショット（state_id="default"）でも
+    v2 は v1 と同等の粒度に退化するため後方互換が保たれる。
+    """
     normalized_url = _normalize_url(page.page_data.url)
     structure_signature = _structure_signature(page.page_data.forms)
-    raw_fingerprint = f"{normalized_url}\n{structure_signature}"
+    if version == FINGERPRINT_VERSION_STRUCTURE:
+        raw_fingerprint = f"{normalized_url}\n{structure_signature}"
+    else:
+        state_id = page.page_data.state_id or "default"
+        raw_fingerprint = f"{normalized_url}\nstate:{state_id}\n{structure_signature}"
     fingerprint = hashlib.sha1(raw_fingerprint.encode("utf-8"), usedforsecurity=False).hexdigest()[
         :16
     ]  # noqa: S324
-    logger.debug("Computed fingerprint for %s: %s", page.page_id, fingerprint)
+    logger.debug("Computed fingerprint (v%d) for %s: %s", version, page.page_id, fingerprint)
     return fingerprint
 
 
-def group_canonical_screens(pages: Sequence[AnalyzedPage]) -> dict[str, CanonicalInfo]:
+def group_canonical_screens(
+    pages: Sequence[AnalyzedPage],
+    version: int = DEFAULT_FINGERPRINT_VERSION,
+) -> dict[str, CanonicalInfo]:
     grouped_pages: dict[str, list[AnalyzedPage]] = defaultdict(list)
     for page in pages:
-        grouped_pages[screen_fingerprint(page)].append(page)
+        grouped_pages[screen_fingerprint(page, version)].append(page)
 
     canonical_map: dict[str, CanonicalInfo] = {}
     for fingerprint, members in grouped_pages.items():
@@ -51,6 +77,8 @@ def group_canonical_screens(pages: Sequence[AnalyzedPage]) -> dict[str, Canonica
                 is_canonical=page.page_id == canonical_page.page_id,
                 variation_count=variation_count,
                 variation_urls=variation_urls if page.page_id == canonical_page.page_id else (),
+                fingerprint=fingerprint,
+                fingerprint_version=version,
             )
 
         logger.debug(

@@ -1,3 +1,5 @@
+"""impact_analyzer（メタデータ JSON 照合版）のユニット・受け入れテスト。"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -48,15 +50,20 @@ class _DiffResult:
     has_changes: bool = False
 
 
-def _candidate(
-    test_id: str = "TC001",
+def _metadata(
+    test_id: str = "PW-0001",
+    page_id: str = "P001",
+    fingerprint: str = "fp-login",
+    url: str = "https://example.com/login",
     title: str = "ログイン画面",
-    steps: list[str] | None = None,
 ) -> dict:
     return {
-        "id": test_id,
+        "test_id": test_id,
         "title": title,
-        "steps": steps or ["page.goto('https://example.com/login')"],
+        "trace_id": page_id,
+        "page_id": page_id,
+        "fingerprint": fingerprint,
+        "url": url,
     }
 
 
@@ -71,12 +78,12 @@ class TestAnalyzeImpactFieldChanges:
             change_type="modified",
         )
         diff = _DiffResult(field_changes=(fc,))
-        candidates = [_candidate("TC001", steps=["page.goto('https://example.com/login')"])]
+        metadata = [_metadata("PW-0001")]
 
-        results = analyze_impact(diff, candidates)
+        results = analyze_impact(diff, metadata)
 
         assert len(results) == 1
-        assert results[0].test_id == "TC001"
+        assert results[0].test_id == "PW-0001"
         assert "email" in results[0].reason
         assert results[0].page_url == "https://example.com/login"
         assert results[0].severity == "warning"
@@ -88,9 +95,9 @@ class TestAnalyzeImpactFieldChanges:
             change_type="removed",
         )
         diff = _DiffResult(field_changes=(fc,))
-        candidates = [_candidate("TC002", steps=["page.goto('https://example.com/form')"])]
+        metadata = [_metadata("PW-0002", url="https://example.com/form")]
 
-        results = analyze_impact(diff, candidates)
+        results = analyze_impact(diff, metadata)
 
         assert results[0].severity == "breaking"
 
@@ -101,11 +108,59 @@ class TestAnalyzeImpactFieldChanges:
             change_type="added",
         )
         diff = _DiffResult(field_changes=(fc,))
-        candidates = [_candidate("TC003", steps=["page.goto('https://example.com/form')"])]
+        metadata = [_metadata("PW-0003", url="https://example.com/form")]
 
-        results = analyze_impact(diff, candidates)
+        results = analyze_impact(diff, metadata)
 
         assert results[0].severity == "info"
+
+
+class TestFingerprintMatching:
+    """受け入れ条件: URL 文字列を変更しても fingerprint 一致で影響テストが特定される。"""
+
+    def test_url_changed_but_fingerprint_matches(self) -> None:
+        # テスト生成時の URL は /login、その後 /signin にリネームされたが
+        # 画面構造（fingerprint）は同一というシナリオ
+        fc = _FieldChange(
+            page_url="https://example.com/signin",
+            field_name="email",
+            change_type="modified",
+        )
+        diff = _DiffResult(field_changes=(fc,))
+        metadata = [_metadata("PW-0001", fingerprint="fp-login", url="https://example.com/login")]
+        url_fingerprints = {"https://example.com/signin": "fp-login"}
+
+        results = analyze_impact(diff, metadata, url_fingerprints)
+
+        assert len(results) == 1
+        assert results[0].test_id == "PW-0001"
+
+    def test_fingerprint_mismatch_falls_back_to_url(self) -> None:
+        fc = _FieldChange(
+            page_url="https://example.com/login",
+            field_name="email",
+            change_type="modified",
+        )
+        diff = _DiffResult(field_changes=(fc,))
+        metadata = [_metadata("PW-0001", fingerprint="fp-other", url="https://example.com/login")]
+        url_fingerprints = {"https://example.com/login": "fp-login"}
+
+        results = analyze_impact(diff, metadata, url_fingerprints)
+
+        # fingerprint は不一致だが URL 完全一致でフォールバックする
+        assert len(results) == 1
+        assert results[0].test_id == "PW-0001"
+
+    def test_no_match_when_neither_fingerprint_nor_url(self) -> None:
+        fc = _FieldChange(
+            page_url="https://example.com/other",
+            field_name="email",
+            change_type="modified",
+        )
+        diff = _DiffResult(field_changes=(fc,))
+        metadata = [_metadata("PW-0001")]
+
+        assert analyze_impact(diff, metadata, {}) == []
 
 
 class TestAnalyzeImpactEmptyWhenNoMatch:
@@ -116,21 +171,14 @@ class TestAnalyzeImpactEmptyWhenNoMatch:
             change_type="modified",
         )
         diff = _DiffResult(field_changes=(fc,))
-        candidates = [_candidate("TC001", steps=["page.goto('https://example.com/login')"])]
+        metadata = [_metadata("PW-0001")]
 
-        results = analyze_impact(diff, candidates)
-
-        assert results == []
+        assert analyze_impact(diff, metadata) == []
 
     def test_empty_when_no_diff(self) -> None:
-        diff = _DiffResult()
-        candidates = [_candidate("TC001")]
+        assert analyze_impact(_DiffResult(), [_metadata()]) == []
 
-        results = analyze_impact(diff, candidates)
-
-        assert results == []
-
-    def test_empty_when_no_candidates(self) -> None:
+    def test_empty_when_no_metadata(self) -> None:
         fc = _FieldChange(
             page_url="https://example.com/form",
             field_name="name",
@@ -138,9 +186,7 @@ class TestAnalyzeImpactEmptyWhenNoMatch:
         )
         diff = _DiffResult(field_changes=(fc,))
 
-        results = analyze_impact(diff, [])
-
-        assert results == []
+        assert analyze_impact(diff, []) == []
 
 
 class TestAnalyzeImpactPageChanges:
@@ -166,14 +212,14 @@ class TestAnalyzeImpactPageChanges:
             change_type="removed",
         )
         diff = _DiffResult(removed_pages=(page,))
-        candidates = [_candidate("TC001", steps=["page.goto('https://example.com/login')"])]
+        metadata = [_metadata("PW-0001")]
 
-        results = analyze_impact(diff, candidates)
+        results = analyze_impact(diff, metadata)
 
         assert len(results) == 1
         assert results[0].severity == "breaking"
         assert results[0].reason == "画面削除"
-        assert results[0].test_id == "TC001"
+        assert results[0].test_id == "PW-0001"
 
 
 class TestAnalyzeImpactAttributeDiffs:
@@ -187,9 +233,9 @@ class TestAnalyzeImpactAttributeDiffs:
             severity="breaking",
         )
         diff = _DiffResult(attribute_diffs=(ad,))
-        candidates = [_candidate("TC001", steps=["page.goto('https://example.com/login')"])]
+        metadata = [_metadata("PW-0001")]
 
-        results = analyze_impact(diff, candidates)
+        results = analyze_impact(diff, metadata)
 
         assert any(r.severity == "breaking" for r in results)
         assert any("required" in r.reason for r in results)
@@ -204,11 +250,10 @@ class TestAnalyzeImpactAttributeDiffs:
             severity="warning",
         )
         diff = _DiffResult(attribute_diffs=(ad,))
-        candidates = [_candidate("TC001", steps=["page.goto('https://example.com/form')"])]
+        metadata = [_metadata("PW-0001", url="https://example.com/form")]
 
         # attribute_diffs からは breaking のみが追加される
-        # field_changes なしなので field_changes 由来の impacts も 0
-        results = analyze_impact(diff, candidates)
+        results = analyze_impact(diff, metadata)
         attr_results = [r for r in results if "maxlength" in r.reason]
 
         assert attr_results == []
@@ -222,11 +267,27 @@ class TestAnalyzeImpactDeduplicate:
             change_type="modified",
         )
         diff = _DiffResult(field_changes=(fc, fc))  # 同じ変更が2回
-        candidates = [_candidate("TC001", steps=["page.goto('https://example.com/form')"])]
+        metadata = [_metadata("PW-0001", url="https://example.com/form")]
 
-        results = analyze_impact(diff, candidates)
+        results = analyze_impact(diff, metadata)
 
         assert len(results) == 1
+
+
+# ─────────────────────── 受け入れ条件: 正規表現照合コードの削除 ───────────────────────
+
+
+class TestRegexMatchingRemoved:
+    def test_page_goto_regex_matching_is_removed(self) -> None:
+        """impact_analyzer から page.goto 正規表現照合コードが削除されていること。"""
+        import inspect
+
+        import diff.impact_analyzer as module
+
+        source = inspect.getsource(module)
+        assert "page\\.goto" not in source
+        assert "_URL_PATTERN" not in source
+        assert "re.compile" not in source
 
 
 # ─────────────────────── テスト: format_impact_report ───────────────────────
@@ -248,6 +309,18 @@ class TestFormatImpactReport:
         assert report["warning"] == 1
         assert report["info"] == 1
 
+    def test_rerun_recommended_includes_breaking_and_warning(self) -> None:
+        impacted = [
+            ImpactedTest("TC001", "画面削除", "https://example.com/a", "breaking"),
+            ImpactedTest("TC002", "フィールド変更", "https://example.com/b", "warning"),
+            ImpactedTest("TC003", "新規画面追加", "https://example.com/c", "info"),
+            ImpactedTest("", "画面削除", "https://example.com/d", "breaking"),
+        ]
+
+        report = format_impact_report(impacted)
+
+        assert report["rerun_recommended"] == ["TC001", "TC002"]
+
     def test_empty_list_gives_zeros(self) -> None:
         report = format_impact_report([])
 
@@ -256,6 +329,7 @@ class TestFormatImpactReport:
         assert report["warning"] == 0
         assert report["info"] == 0
         assert report["tests"] == []
+        assert report["rerun_recommended"] == []
 
     def test_report_contains_test_details(self) -> None:
         impacted = [

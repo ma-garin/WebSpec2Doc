@@ -1,13 +1,83 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from itertools import product
 
-from crawler.page_crawler import FieldData, FormData
+from crawler.page_crawler import FieldData, FormData, SourceEvidence
 
 logger = logging.getLogger(__name__)
 
 _FALLBACK = "正常値 / 空値 / 特殊文字"
+
+SOURCE_RULES = "rules"
+SOURCE_LLM = "llm"
+# ルール由来のテスト条件は DOM 属性からの機械導出のため confidence は 1.0 固定
+RULES_CONFIDENCE = 1.0
+
+
+@dataclass(frozen=True)
+class TestCondition:
+    """根拠と確信度を持つテスト条件。"""
+
+    description: str
+    source: str  # "rules" / "llm"
+    confidence: float
+    evidence: SourceEvidence | None
+    observed_result: str = ""  # 期待結果（実測）: dry-run で観測されたメッセージ
+
+
+_REQUIRED_CONDITION_KEYWORD = "必須チェック"
+
+
+def derive_conditions_with_evidence(field: FieldData) -> tuple[TestCondition, ...]:
+    """フィールド属性からテスト条件を導出し、フィールドの根拠情報を付与して返す。"""
+    return tuple(
+        TestCondition(
+            description=description,
+            source=SOURCE_RULES,
+            confidence=RULES_CONFIDENCE,
+            evidence=field.evidence,
+        )
+        for description in derive_conditions(field)
+    )
+
+
+def attach_observed_validation(
+    conditions: tuple[TestCondition, ...],
+    field: FieldData,
+    observations: list,  # list[ValidationObservation]
+) -> tuple[TestCondition, ...]:
+    """必須チェック条件に、dry-run 実測のバリデーションメッセージを期待結果として転記する。
+
+    実測値のため confidence=1.0・観測時の evidence を付与する。
+    """
+    from dataclasses import replace
+
+    observation = next(
+        (
+            obs
+            for obs in observations
+            if getattr(obs, "field_name", "") and obs.field_name == field.name and obs.message
+        ),
+        None,
+    )
+    if observation is None:
+        return conditions
+    return tuple(
+        (
+            replace(
+                condition,
+                observed_result=observation.message,
+                confidence=1.0,
+                evidence=observation.evidence or condition.evidence,
+            )
+            if _REQUIRED_CONDITION_KEYWORD in condition.description
+            else condition
+        )
+        for condition in conditions
+    )
+
 
 _MAX_PAIRWISE_FIELDS = 8
 _MAX_PAIRWISE_CASES = 20

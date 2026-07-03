@@ -16,7 +16,7 @@ if TYPE_CHECKING:
         PageData,
         StopRequested,
     )
-    from crawler.politeness import TokenBucketLimiter
+    from crawler.politeness import OriginRateLimiter
 
 
 def crawl_urls_parallel(
@@ -27,7 +27,7 @@ def crawl_urls_parallel(
     on_event: CrawlEventCallback | None,
     on_checkpoint: CheckpointCallback | None,
     stop_requested: StopRequested | None,
-    limiter: TokenBucketLimiter | None = None,
+    limiter: OriginRateLimiter | None = None,
 ) -> list[PageData]:
     """ワーカーごとに独立Playwrightを持ち、明示URLを安全に並列解析する。
 
@@ -64,7 +64,7 @@ def crawl_urls_parallel(
                         total=len(targets),
                     )
                     if limiter is not None:
-                        limiter.acquire()
+                        limiter.acquire(target)
                     try:
                         page_data = _crawl_page_with_id(
                             page,

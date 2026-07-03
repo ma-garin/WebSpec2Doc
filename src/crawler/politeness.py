@@ -140,6 +140,67 @@ class TokenBucketLimiter:
             return waited
 
 
+class OriginRateLimiter:
+    """オリジン（scheme://netloc）ごとに独立した token bucket を持つレート制御。
+
+    複数サイトを跨ぐ明示 URL クロールで、あるサイトの Crawl-Delay 待ちに
+    別サイトのリクエストが巻き込まれないようにする。オリジンごとの間隔は
+    「既定間隔と robots.txt の Crawl-Delay の長い方」を採用する。
+    """
+
+    def __init__(
+        self,
+        default_interval_sec: float,
+        clock: Callable[[], float] | None = None,
+        sleeper: Callable[[float], None] | None = None,
+    ) -> None:
+        if default_interval_sec < 0:
+            raise ValueError("default_interval_sec は 0 以上を指定してください。")
+        self._default_interval_sec = default_interval_sec
+        self._clock = clock
+        self._sleeper = sleeper
+        self._limiters: dict[str, TokenBucketLimiter] = {}
+        self._crawl_delays: dict[str, float] = {}
+        self._lock = threading.Lock()
+
+    @property
+    def interval_sec(self) -> float:
+        """既定のリクエスト間隔（新規オリジンに適用される値）を返す。"""
+        return self._default_interval_sec
+
+    def set_crawl_delay(self, origin: str, crawl_delay: float | None) -> None:
+        """オリジンの robots Crawl-Delay を登録する（既定間隔より長い場合のみ有効）。"""
+        if crawl_delay is None:
+            return
+        with self._lock:
+            self._crawl_delays[origin] = float(crawl_delay)
+            # 既に生成済みの limiter にも反映する
+            limiter = self._limiters.get(origin)
+        if limiter is not None:
+            limiter.apply_crawl_delay(crawl_delay)
+
+    def _origin_of(self, url: str) -> str:
+        from urllib.parse import urlparse
+
+        parsed = urlparse(url)
+        return f"{parsed.scheme}://{parsed.netloc}"
+
+    def _limiter_for(self, origin: str) -> TokenBucketLimiter:
+        with self._lock:
+            limiter = self._limiters.get(origin)
+            if limiter is None:
+                limiter = TokenBucketLimiter(
+                    self._default_interval_sec, clock=self._clock, sleeper=self._sleeper
+                )
+                limiter.apply_crawl_delay(self._crawl_delays.get(origin))
+                self._limiters[origin] = limiter
+        return limiter
+
+    def acquire(self, url: str) -> float:
+        """URL のオリジンに対応する bucket からトークンを取得する（不足時は待機）。"""
+        return self._limiter_for(self._origin_of(url)).acquire()
+
+
 def backoff_delays(
     initial_sec: float = BACKOFF_INITIAL_SEC,
     max_sec: float = BACKOFF_MAX_SEC,

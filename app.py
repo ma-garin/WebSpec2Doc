@@ -19,7 +19,9 @@ def _bind_host() -> tuple[str, bool]:
     到達制御はガード側で担保される。未設定なら従来どおり 127.0.0.1 限定。
     """
     if os.environ.get(TRUSTED_HOSTS_ENV, "").strip():
-        return "0.0.0.0", False  # noqa: S104 — localhost_guard が到達を制御する
+        # localhost_guard が許可ホスト以外を 403 で拒否するため到達制御はガード側で担保する。
+        # 明示的な社内展開時（TRUSTED_HOSTS 設定時）のみ全 IF バインドする。
+        return "0.0.0.0", False  # nosec B104  # noqa: S104
     return "127.0.0.1", True
 
 

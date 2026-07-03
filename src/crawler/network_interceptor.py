@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from collections.abc import Callable
+from typing import Any
 from urllib.parse import urlparse
 
 from playwright.sync_api import Page, Response
@@ -39,7 +41,81 @@ STATIC_EXTENSIONS = frozenset(
 MAX_RESPONSE_BODY_BYTES = 32_768
 SAMPLE_FIELDS_LIMIT = 20
 
+# 破壊的操作（サーバ状態を変更しうる HTTP メソッド）
+MUTATION_METHODS = frozenset({"POST", "PUT", "DELETE", "PATCH"})
+ALLOW_MUTATION_ENV = "WEBSPEC2DOC_ALLOW_MUTATION"
+
 logger = logging.getLogger(__name__)
+
+
+def mutations_allowed() -> bool:
+    """破壊的リクエスト（POST/PUT/DELETE/PATCH）の送出を許可するか（opt-in）。
+
+    既定は遮断。環境変数 WEBSPEC2DOC_ALLOW_MUTATION=1 でのみ解除する。
+    """
+    return os.environ.get(ALLOW_MUTATION_ENV, "") == "1"
+
+
+class MutationBlocker:
+    """POST/PUT/DELETE/PATCH リクエストを既定で遮断するルートハンドラ。
+
+    Usage::
+
+        blocker = MutationBlocker()
+        blocker.attach(page)
+        try:
+            ...
+        finally:
+            blocker.detach()
+    """
+
+    def __init__(self, allow: bool | None = None) -> None:
+        self._allow = mutations_allowed() if allow is None else allow
+        self._page: Page | None = None
+        self.blocked: list[tuple[str, str]] = []
+
+    @property
+    def allow(self) -> bool:
+        """破壊的リクエストを許可しているかを返す。"""
+        return self._allow
+
+    def attach(self, page: Page) -> None:
+        """page の全リクエストルートにハンドラを登録する。"""
+        self._page = page
+        try:
+            page.route("**/*", self.handle_route)
+        except Exception as exc:
+            logger.warning("破壊的操作遮断のルート登録に失敗しました: %s", exc)
+            self._page = None
+
+    def detach(self) -> None:
+        """登録したルートハンドラを解除する。attach() 前に呼んでも安全。"""
+        if self._page is not None:
+            try:
+                self._page.unroute("**/*", self.handle_route)
+            except Exception as exc:
+                logger.warning("破壊的操作遮断のルート解除に失敗しました: %s", exc)
+        self._page = None
+
+    def handle_route(self, route: Any) -> None:
+        """破壊的メソッドのリクエストを abort し、それ以外は通過させる。"""
+        try:
+            method = str(route.request.method).upper()
+            url = str(route.request.url)
+        except Exception:
+            method, url = "GET", ""
+        if not self._allow and method in MUTATION_METHODS:
+            self.blocked.append((method, url))
+            logger.warning("破壊的リクエストを遮断しました: %s %s", method, url)
+            try:
+                route.abort()
+            except Exception as exc:
+                logger.debug("route.abort に失敗しました: %s", exc)
+            return
+        try:
+            route.continue_()
+        except Exception as exc:
+            logger.debug("route.continue_ に失敗しました: %s", exc)
 
 
 class NetworkCapture:

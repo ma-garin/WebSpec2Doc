@@ -161,6 +161,36 @@ class ApiEndpoint:
 
 
 @dataclass(frozen=True)
+class PageState:
+    """ページ内アクション（クリック等）で出現した画面状態。"""
+
+    state_id: str  # DOM 状態シグネチャ
+    trigger_selector: str  # 状態を出現させた要素のセレクタ
+    kind: str  # "modal" / "tabpanel" / "accordion" / "dom_change"
+    description: str = ""
+
+
+@dataclass(frozen=True)
+class ValidationObservation:
+    """バリデーション実測（dry-run 送信）で観測されたメッセージ。"""
+
+    field_name: str
+    message: str
+    evidence: SourceEvidence | None = None
+    # 実測値のため confidence は 1.0 固定
+    confidence: float = 1.0
+
+
+@dataclass(frozen=True)
+class SpaTransition:
+    """pushState / replaceState / hashchange による SPA 遷移の記録。"""
+
+    from_url: str
+    to_url: str
+    kind: str  # "pushstate" / "replacestate" / "hashchange" / "dom_change"
+
+
+@dataclass(frozen=True)
 class PageData:
     url: str
     title: str
@@ -173,6 +203,9 @@ class PageData:
     stack_info: StackInfo | None = None
     state_id: str = "default"  # DOM シグネチャ由来の状態識別子
     a11y_issues: tuple[str, ...] = ()
+    page_states: tuple[PageState, ...] = ()
+    validation_observations: tuple[ValidationObservation, ...] = ()
+    spa_transitions: tuple[SpaTransition, ...] = ()
 
 
 @contextmanager
@@ -221,6 +254,7 @@ def crawl_site(
             "user_agent": USER_AGENT,
             "depth": depth,
             "max_pages": max_pages,
+            "mutations_allowed": _mutations_allowed_with_warning(),
         },
     )
 
@@ -344,6 +378,7 @@ def crawl_urls(
             "interval_sec": limiter.interval_sec,
             "user_agent": USER_AGENT,
             "parallelism": worker_count,
+            "mutations_allowed": _mutations_allowed_with_warning(),
         },
     )
     if not targets:
@@ -482,8 +517,9 @@ def crawl_page(
 ) -> PageData:
     from analyzer.login_wall import PageAuthSignals, detect_login_wall
     from analyzer.stack_detector import detect_stack
+    from crawler.action_explorer import explore_page_actions, measure_required_validation
     from crawler.link_extractor import (
-        compute_dom_signature,
+        compute_state_signature,
         extract_a11y_issues,
         extract_buttons,
         extract_forms_including_frames,
@@ -492,11 +528,16 @@ def crawl_page(
         extract_page_title,
         has_password_field,
     )
-    from crawler.network_interceptor import NetworkCapture
+    from crawler.network_interceptor import MutationBlocker, NetworkCapture
+    from crawler.spa_monitor import SpaTransitionMonitor
 
     normalized_url = normalize_url(url)
     capture = NetworkCapture()
+    blocker = MutationBlocker()
+    spa_monitor = SpaTransitionMonitor()
+    spa_monitor.attach(page)
     capture.attach(page)
+    blocker.attach(page)
     try:
         response = _goto_stable(page, normalized_url)
         if response is not None and response.status in RETRYABLE_STATUS_CODES:
@@ -525,8 +566,13 @@ def crawl_page(
         buttons = tuple(extract_buttons(page))
         a11y_issues = tuple(extract_a11y_issues(page))
         page_html = page.content()
-        state_id = compute_dom_signature(page_html)
+        state_id = compute_state_signature(page_html)
+        # DOM を変更する探索・実測は静的抽出の完了後に行う
+        page_states = explore_page_actions(page)
+        validation_observations = measure_required_validation(page, forms, screenshot_path)
+        spa_transitions = spa_monitor.collect(page)
     finally:
+        blocker.detach()
         capture.detach()
 
     return PageData(
@@ -541,6 +587,9 @@ def crawl_page(
         stack_info=stack,
         state_id=state_id,
         a11y_issues=a11y_issues,
+        page_states=page_states,
+        validation_observations=validation_observations,
+        spa_transitions=spa_transitions,
     )
 
 
@@ -637,6 +686,19 @@ def _crawl_page_with_backoff(
             )
             _emit_event(on_event, "page_retry", url=url, status=exc.status, wait_sec=delay)
             time.sleep(delay)
+
+
+def _mutations_allowed_with_warning() -> bool:
+    """破壊的リクエスト許可状態を返し、許可時は警告ログを残す（監査ログ記録用）。"""
+    from crawler.network_interceptor import mutations_allowed
+
+    allowed = mutations_allowed()
+    if allowed:
+        logger.warning(
+            "WEBSPEC2DOC_ALLOW_MUTATION=1 が設定されています。"
+            "POST/PUT/DELETE/PATCH リクエストの遮断が解除されています。"
+        )
+    return allowed
 
 
 def _make_rate_limiter(robots: RobotFileParser | None) -> TokenBucketLimiter:

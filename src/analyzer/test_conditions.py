@@ -24,6 +24,10 @@ class TestCondition:
     source: str  # "rules" / "llm"
     confidence: float
     evidence: SourceEvidence | None
+    observed_result: str = ""  # 期待結果（実測）: dry-run で観測されたメッセージ
+
+
+_REQUIRED_CONDITION_KEYWORD = "必須チェック"
 
 
 def derive_conditions_with_evidence(field: FieldData) -> tuple[TestCondition, ...]:
@@ -36,6 +40,42 @@ def derive_conditions_with_evidence(field: FieldData) -> tuple[TestCondition, ..
             evidence=field.evidence,
         )
         for description in derive_conditions(field)
+    )
+
+
+def attach_observed_validation(
+    conditions: tuple[TestCondition, ...],
+    field: FieldData,
+    observations: list,  # list[ValidationObservation]
+) -> tuple[TestCondition, ...]:
+    """必須チェック条件に、dry-run 実測のバリデーションメッセージを期待結果として転記する。
+
+    実測値のため confidence=1.0・観測時の evidence を付与する。
+    """
+    from dataclasses import replace
+
+    observation = next(
+        (
+            obs
+            for obs in observations
+            if getattr(obs, "field_name", "") and obs.field_name == field.name and obs.message
+        ),
+        None,
+    )
+    if observation is None:
+        return conditions
+    return tuple(
+        (
+            replace(
+                condition,
+                observed_result=observation.message,
+                confidence=1.0,
+                evidence=observation.evidence or condition.evidence,
+            )
+            if _REQUIRED_CONDITION_KEYWORD in condition.description
+            else condition
+        )
+        for condition in conditions
     )
 
 _MAX_PAIRWISE_FIELDS = 8

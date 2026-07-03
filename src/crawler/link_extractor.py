@@ -60,6 +60,27 @@ def compute_dom_signature(html_content: str) -> str:
     return hashlib.sha1(key.encode(), usedforsecurity=False).hexdigest()[:8]  # noqa: S324
 
 
+_LANDMARK_TAG_PATTERN = re.compile(r"<(main|nav|header|footer|aside)\b", re.IGNORECASE)
+_LANDMARK_ROLE_PATTERN = re.compile(
+    r'role=["\'](main|navigation|banner|contentinfo|complementary|search)["\']'
+)
+
+
+def compute_state_signature(html_content: str) -> str:
+    """可視領域の主要 landmark 構造と開閉状態から DOM 状態シグネチャを計算する。
+
+    fingerprint v2（状態ベース画面同定）用。landmark 構造（main/nav/header 等）と
+    ``compute_dom_signature`` の開閉状態（モーダル・タブ・アコーディオン）を合成する。
+    """
+    landmarks = sorted({m.group(1).lower() for m in _LANDMARK_TAG_PATTERN.finditer(html_content)})
+    roles = sorted({m.group(1).lower() for m in _LANDMARK_ROLE_PATTERN.finditer(html_content)})
+    open_state = compute_dom_signature(html_content)
+    if not landmarks and not roles and open_state == "default":
+        return "default"
+    key = "|".join([*landmarks, *(f"role:{r}" for r in roles), f"open:{open_state}"])
+    return hashlib.sha1(key.encode(), usedforsecurity=False).hexdigest()[:8]  # noqa: S324
+
+
 def extract_internal_links(page: Page, base_url: str) -> list[str]:
     try:
         hrefs = cast(

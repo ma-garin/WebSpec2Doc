@@ -7,12 +7,17 @@ import networkx as nx
 
 from analyzer.canonicalizer import CanonicalInfo, group_canonical_screens
 from analyzer.html_analyzer import AnalyzedPage
-from analyzer.test_conditions import derive_conditions, derive_conditions_with_evidence
+from analyzer.test_conditions import (
+    attach_observed_validation,
+    derive_conditions,
+    derive_conditions_with_evidence,
+)
 from crawler.page_crawler import (
     DEFAULT_DEPTH,
     DEFAULT_MAX_PAGES,
     FieldData,
     FormData,
+    ValidationObservation,
     evidence_to_dict,
 )
 
@@ -57,13 +62,14 @@ def generate_json_report(
 def _screen_dict(page: AnalyzedPage, graph: nx.DiGraph, canonical: CanonicalInfo) -> dict:
     pd = page.page_data
     pid = page.page_id
+    observations = list(pd.validation_observations)
     return {
         "page_id": pid,
         "url": pd.url,
         "title": pd.title,
         "headings": list(pd.headings),
         "buttons": list(pd.buttons),
-        "forms": [_form_dict(f) for f in pd.forms],
+        "forms": [_form_dict(f, observations) for f in pd.forms],
         "transitions": {
             "to": [s for s in graph.successors(pid) if s != pid],
             "from": [p for p in graph.predecessors(pid) if p != pid],
@@ -73,18 +79,37 @@ def _screen_dict(page: AnalyzedPage, graph: nx.DiGraph, canonical: CanonicalInfo
         "variation_count": canonical.variation_count,
         "variation_urls": list(canonical.variation_urls),
         "a11y_issues": list(pd.a11y_issues),
+        "state_id": pd.state_id,
+        "fingerprint": canonical.fingerprint,
+        "fingerprint_version": canonical.fingerprint_version,
+        "page_states": [
+            {
+                "state_id": state.state_id,
+                "trigger_selector": state.trigger_selector,
+                "kind": state.kind,
+                "description": state.description,
+            }
+            for state in pd.page_states
+        ],
+        "spa_transitions": [
+            {"from_url": t.from_url, "to_url": t.to_url, "kind": t.kind}
+            for t in pd.spa_transitions
+        ],
     }
 
 
-def _form_dict(form: FormData) -> dict:
+def _form_dict(form: FormData, observations: list[ValidationObservation] | None = None) -> dict:
     return {
         "action": form.action,
         "method": form.method,
-        "fields": [_field_dict(f) for f in form.fields],
+        "fields": [_field_dict(f, observations) for f in form.fields],
     }
 
 
-def _field_dict(field: FieldData) -> dict:
+def _field_dict(
+    field: FieldData,
+    observations: list[ValidationObservation] | None = None,
+) -> dict:
     return {
         "name": field.name,
         "element_id": field.element_id,
@@ -106,8 +131,11 @@ def _field_dict(field: FieldData) -> dict:
                 "source": condition.source,
                 "confidence": condition.confidence,
                 "evidence": evidence_to_dict(condition.evidence),
+                "observed_result": condition.observed_result,
             }
-            for condition in derive_conditions_with_evidence(field)
+            for condition in attach_observed_validation(
+                derive_conditions_with_evidence(field), field, observations or []
+            )
         ],
         "aria_label": field.aria_label,
         "aria_required": field.aria_required,

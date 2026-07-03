@@ -98,6 +98,47 @@ def _page_from_dict(data: dict[str, Any]) -> PageData:
         stack_info=stack_info,
         state_id=str(data.get("state_id", "default")),
         a11y_issues=tuple(str(item) for item in data.get("a11y_issues", ())),
+        # 以下は Layer 2 で追加されたフィールド（旧スナップショットは空で復元）
+        page_states=tuple(_page_state_from_dict(item) for item in data.get("page_states", ())),
+        validation_observations=tuple(
+            _validation_observation_from_dict(item)
+            for item in data.get("validation_observations", ())
+        ),
+        spa_transitions=tuple(
+            _spa_transition_from_dict(item) for item in data.get("spa_transitions", ())
+        ),
+    )
+
+
+def _page_state_from_dict(data: dict[str, Any]) -> Any:
+    from crawler.page_crawler import PageState
+
+    return PageState(
+        state_id=str(data.get("state_id", "")),
+        trigger_selector=str(data.get("trigger_selector", "")),
+        kind=str(data.get("kind", "")),
+        description=str(data.get("description", "")),
+    )
+
+
+def _validation_observation_from_dict(data: dict[str, Any]) -> Any:
+    from crawler.page_crawler import ValidationObservation, evidence_from_dict
+
+    return ValidationObservation(
+        field_name=str(data.get("field_name", "")),
+        message=str(data.get("message", "")),
+        evidence=evidence_from_dict(data.get("evidence")),
+        confidence=_to_float(data.get("confidence"), default=1.0),
+    )
+
+
+def _spa_transition_from_dict(data: dict[str, Any]) -> Any:
+    from crawler.page_crawler import SpaTransition
+
+    return SpaTransition(
+        from_url=str(data.get("from_url", "")),
+        to_url=str(data.get("to_url", "")),
+        kind=str(data.get("kind", "")),
     )
 
 

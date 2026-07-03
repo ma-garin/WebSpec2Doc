@@ -50,8 +50,15 @@ def build_graph(pages: list[AnalyzedPage]) -> nx.DiGraph:
     return graph
 
 
+STATE_NODE_SEPARATOR = "#state="
+
+
 def _build_graph_from_pages(pages: list[PageData]) -> nx.DiGraph:
-    """PageData リストから URL をノードとする有向グラフを構築する。"""
+    """PageData リストから URL をノードとする有向グラフを構築する。
+
+    リンクに加え、SPA 遷移（pushState/replaceState/hashchange）と
+    ページ内アクションで出現した画面状態も遷移エッジとして供給する。
+    """
     graph = nx.DiGraph()
     url_set = {page.url for page in pages}
 
@@ -62,6 +69,16 @@ def _build_graph_from_pages(pages: list[PageData]) -> nx.DiGraph:
         for link in page.links:
             if link in url_set:
                 graph.add_edge(page.url, link)
+        # SPA 遷移エッジ（既知 URL 間のみ）
+        for transition in page.spa_transitions:
+            if transition.to_url in url_set:
+                source = transition.from_url if transition.from_url in url_set else page.url
+                graph.add_edge(source, transition.to_url, kind=transition.kind)
+        # ページ内アクションで出現した画面状態を状態ノードとして追加
+        for state in page.page_states:
+            state_node = f"{page.url}{STATE_NODE_SEPARATOR}{state.state_id}"
+            graph.add_node(state_node, title=f"{page.title}［{state.kind}］", is_state=True)
+            graph.add_edge(page.url, state_node, kind="state")
 
     return graph
 

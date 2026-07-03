@@ -140,8 +140,7 @@ def build_matrix(
     """
     screens: list[dict] = report_data.get("screens", [])
     requirements = tuple(
-        _build_requirement(i, screen, candidates, test_metadata)
-        for i, screen in enumerate(screens)
+        _build_requirement(i, screen, candidates, test_metadata) for i, screen in enumerate(screens)
     )
     total = len(requirements)
     covered_count = sum(1 for r in requirements if r.coverage != "uncovered")

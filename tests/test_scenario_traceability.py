@@ -106,7 +106,9 @@ class TestSwitchCoverage:
 
 class TestBusinessFlowPriority:
     def _auth_payment_pages(self) -> list[PageData]:
-        login_field = FieldData(field_type="password", name="password", placeholder="", required=True)
+        login_field = FieldData(
+            field_type="password", name="password", placeholder="", required=True
+        )
         login_form = FormData(action="/login", method="post", fields=(login_field,))
         return [
             PageData(

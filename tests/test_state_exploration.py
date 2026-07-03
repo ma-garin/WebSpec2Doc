@@ -143,7 +143,9 @@ class TestModalStateDetection:
 
         page = _FakePage(
             _PLAIN_HTML,
-            handles_factory=lambda p: [_CountingHandle(p, f"#b{i}", _PLAIN_HTML) for i in range(20)],
+            handles_factory=lambda p: [
+                _CountingHandle(p, f"#b{i}", _PLAIN_HTML) for i in range(20)
+            ],
         )
         explore_page_actions(page, max_actions=3)
         assert len(clicks) == 3
@@ -291,9 +293,7 @@ class TestValidationMeasurement:
             ),
         )
         analyzed = analyze_pages([page])
-        report = json.loads(
-            generate_json_report(analyzed, build_graph(analyzed), page.url)
-        )
+        report = json.loads(generate_json_report(analyzed, build_graph(analyzed), page.url))
         details = report["screens"][0]["forms"][0]["fields"][0]["test_conditions_detail"]
         required_detail = next(d for d in details if "必須チェック" in d["description"])
         assert required_detail["observed_result"] == _REQUIRED_MESSAGE
@@ -408,8 +408,16 @@ class TestSpaTransitions:
     def test_collect_parses_recorded_transitions(self) -> None:
         page = _FakePage(_PLAIN_HTML)
         page.evaluate_result = [
-            {"kind": "pushstate", "from": "https://example.com/", "to": "https://example.com/detail"},
-            {"kind": "hashchange", "from": "https://example.com/detail", "to": "https://example.com/detail#tab2"},
+            {
+                "kind": "pushstate",
+                "from": "https://example.com/",
+                "to": "https://example.com/detail",
+            },
+            {
+                "kind": "hashchange",
+                "from": "https://example.com/detail",
+                "to": "https://example.com/detail#tab2",
+            },
             {"kind": "invalid-kind", "from": "x", "to": "y"},
             "not-a-dict",
         ]
@@ -449,7 +457,9 @@ class TestSpaTransitions:
         )
         graph = _build_graph_from_pages([page_a, page_b])
         assert graph.has_edge("https://example.com/", "https://example.com/detail")
-        assert graph.edges["https://example.com/", "https://example.com/detail"]["kind"] == "pushstate"
+        assert (
+            graph.edges["https://example.com/", "https://example.com/detail"]["kind"] == "pushstate"
+        )
 
     def test_page_state_becomes_state_node(self) -> None:
         from crawler.page_crawler import PageState
@@ -461,9 +471,7 @@ class TestSpaTransitions:
             links=(),
             forms=(),
             screenshot_path=None,
-            page_states=(
-                PageState(state_id="modal123", trigger_selector="#open", kind="modal"),
-            ),
+            page_states=(PageState(state_id="modal123", trigger_selector="#open", kind="modal"),),
         )
         graph = _build_graph_from_pages([page])
         state_node = f"https://example.com/{STATE_NODE_SEPARATOR}modal123"
@@ -491,9 +499,7 @@ class TestLayer2SnapshotRoundtrip:
             validation_observations=(
                 ValidationObservation(field_name="email", message=_REQUIRED_MESSAGE),
             ),
-            spa_transitions=(
-                SpaTransition(from_url="a", to_url="b", kind="pushstate"),
-            ),
+            spa_transitions=(SpaTransition(from_url="a", to_url="b", kind="pushstate"),),
         )
         path = save_snapshot([page], tmp_path)
         loaded = load_snapshot(path)[0]

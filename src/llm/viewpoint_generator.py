@@ -661,9 +661,7 @@ def llm_viewpoint_confidence(item: dict[str, Any]) -> float:
     """
     cases = item.get("example_cases") or []
     bonus = (
-        LLM_EXAMPLE_CASES_BONUS
-        if _EXAMPLE_CASES_MIN <= len(cases) <= _EXAMPLE_CASES_MAX
-        else 0.0
+        LLM_EXAMPLE_CASES_BONUS if _EXAMPLE_CASES_MIN <= len(cases) <= _EXAMPLE_CASES_MAX else 0.0
     )
     return round(LLM_BASE_CONFIDENCE + bonus, 2)
 

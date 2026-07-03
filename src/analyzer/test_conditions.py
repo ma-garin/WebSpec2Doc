@@ -78,6 +78,7 @@ def attach_observed_validation(
         for condition in conditions
     )
 
+
 _MAX_PAIRWISE_FIELDS = 8
 _MAX_PAIRWISE_CASES = 20
 _MAX_REPRESENTATIVE_VALUES = 3

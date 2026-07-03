@@ -517,7 +517,10 @@ def _impact_section(impact_report: dict | None) -> str:
         f"</div>"
     )
     if total == 0:
-        body = summary + '<div class="muted" style="margin-top:.5rem">差分による影響テストはありません。</div>'
+        body = (
+            summary
+            + '<div class="muted" style="margin-top:.5rem">差分による影響テストはありません。</div>'
+        )
         return _section("差分影響・再実行推奨", body, "impact")
     rows = "".join(
         f"<tr><td>{html.escape(str(t.get('test_id') or '-'))}</td>"

@@ -104,11 +104,7 @@ def _tests_for_page(
     """
     fingerprint = url_fingerprints.get(page_url, "")
     if fingerprint:
-        matched = [
-            m
-            for m in test_metadata
-            if str(m.get("fingerprint") or "") == fingerprint
-        ]
+        matched = [m for m in test_metadata if str(m.get("fingerprint") or "") == fingerprint]
         if matched:
             return matched
     return [m for m in test_metadata if str(m.get("url") or "") == page_url]

@@ -127,9 +127,7 @@ class TestFingerprintMatching:
             change_type="modified",
         )
         diff = _DiffResult(field_changes=(fc,))
-        metadata = [
-            _metadata("PW-0001", fingerprint="fp-login", url="https://example.com/login")
-        ]
+        metadata = [_metadata("PW-0001", fingerprint="fp-login", url="https://example.com/login")]
         url_fingerprints = {"https://example.com/signin": "fp-login"}
 
         results = analyze_impact(diff, metadata, url_fingerprints)
@@ -144,9 +142,7 @@ class TestFingerprintMatching:
             change_type="modified",
         )
         diff = _DiffResult(field_changes=(fc,))
-        metadata = [
-            _metadata("PW-0001", fingerprint="fp-other", url="https://example.com/login")
-        ]
+        metadata = [_metadata("PW-0001", fingerprint="fp-other", url="https://example.com/login")]
         url_fingerprints = {"https://example.com/login": "fp-login"}
 
         results = analyze_impact(diff, metadata, url_fingerprints)

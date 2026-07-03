@@ -237,9 +237,7 @@ def _dry_run_form_validation(
         except Exception as exc:
             logger.debug("dry-run route.abort に失敗しました: %s", exc)
 
-    selector = (
-        f"form[action='{form.action}'] [type=submit]" if form.action else "[type=submit]"
-    )
+    selector = f"form[action='{form.action}'] [type=submit]" if form.action else "[type=submit]"
     raw_messages: Any = []
     try:
         page.route("**/*", _abort)

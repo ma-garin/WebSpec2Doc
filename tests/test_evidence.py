@@ -280,9 +280,7 @@ class TestEvidenceConsistencyAcrossFormats:
         form_summary = summarize_forms(pages)
 
         # JSON
-        report = json.loads(
-            generate_json_report(pages, graph, "https://example.com/contact")
-        )
+        report = json.loads(generate_json_report(pages, graph, "https://example.com/contact"))
         json_field = report["screens"][0]["forms"][0]["fields"][0]
         assert json_field["evidence"]["selector"] == "#email"
         assert json_field["confidence"] == 1.0
@@ -333,7 +331,12 @@ class TestSnapshotEvidenceCompat:
                         "action": "/send",
                         "method": "post",
                         "fields": [
-                            {"field_type": "text", "name": "q", "placeholder": "", "required": False}
+                            {
+                                "field_type": "text",
+                                "name": "q",
+                                "placeholder": "",
+                                "required": False,
+                            }
                         ],
                     }
                 ],

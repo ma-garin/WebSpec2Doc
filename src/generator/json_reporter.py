@@ -99,8 +99,7 @@ def _screen_dict(page: AnalyzedPage, graph: nx.DiGraph, canonical: CanonicalInfo
             for state in pd.page_states
         ],
         "spa_transitions": [
-            {"from_url": t.from_url, "to_url": t.to_url, "kind": t.kind}
-            for t in pd.spa_transitions
+            {"from_url": t.from_url, "to_url": t.to_url, "kind": t.kind} for t in pd.spa_transitions
         ],
     }
 

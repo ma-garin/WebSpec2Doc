@@ -637,7 +637,7 @@ def _write_forms_sheet(
     ws: openpyxl.worksheet.worksheet.Worksheet,
     form_summary: list[dict[str, object]],
 ) -> None:
-    ws.append(["画面ID", "URL", "フィールド名", "型", "必須", "placeholder"])
+    ws.append(["画面ID", "URL", "フィールド名", "型", "必須", "placeholder", "根拠", "確信度"])
     for item in form_summary:
         ws.append(
             [
@@ -647,8 +647,21 @@ def _write_forms_sheet(
                 item.get("field_type", ""),
                 item.get("required", False),
                 item.get("placeholder", ""),
+                _evidence_cell(item.get("evidence")),
+                item.get("confidence", ""),
             ]
         )
+
+
+def _evidence_cell(evidence: object) -> str:
+    """evidence dict を Excel セル向けの文字列（セレクタ + 属性）に変換する。"""
+    if not isinstance(evidence, dict):
+        return ""
+    selector = str(evidence.get("selector") or "")
+    attribute = evidence.get("html_attribute")
+    if attribute:
+        return f"{selector} ({attribute})"
+    return selector
 
 
 if __name__ == "__main__":

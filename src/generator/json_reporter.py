@@ -7,8 +7,14 @@ import networkx as nx
 
 from analyzer.canonicalizer import CanonicalInfo, group_canonical_screens
 from analyzer.html_analyzer import AnalyzedPage
-from analyzer.test_conditions import derive_conditions
-from crawler.page_crawler import DEFAULT_DEPTH, DEFAULT_MAX_PAGES, FieldData, FormData
+from analyzer.test_conditions import derive_conditions, derive_conditions_with_evidence
+from crawler.page_crawler import (
+    DEFAULT_DEPTH,
+    DEFAULT_MAX_PAGES,
+    FieldData,
+    FormData,
+    evidence_to_dict,
+)
 
 JSON_INDENT = 2
 _PII_KEYWORDS: frozenset[str] = frozenset(
@@ -94,10 +100,21 @@ def _field_dict(field: FieldData) -> dict:
         "options": list(field.options),
         "locators": _locator_candidates(field),
         "test_conditions": list(derive_conditions(field)),
+        "test_conditions_detail": [
+            {
+                "description": condition.description,
+                "source": condition.source,
+                "confidence": condition.confidence,
+                "evidence": evidence_to_dict(condition.evidence),
+            }
+            for condition in derive_conditions_with_evidence(field)
+        ],
         "aria_label": field.aria_label,
         "aria_required": field.aria_required,
         "role": field.role,
         "has_visible_label": field.has_visible_label,
+        "confidence": field.confidence,
+        "evidence": evidence_to_dict(field.evidence),
     }
 
 

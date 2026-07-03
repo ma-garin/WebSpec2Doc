@@ -1,13 +1,42 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from itertools import product
 
-from crawler.page_crawler import FieldData, FormData
+from crawler.page_crawler import FieldData, FormData, SourceEvidence
 
 logger = logging.getLogger(__name__)
 
 _FALLBACK = "正常値 / 空値 / 特殊文字"
+
+SOURCE_RULES = "rules"
+SOURCE_LLM = "llm"
+# ルール由来のテスト条件は DOM 属性からの機械導出のため confidence は 1.0 固定
+RULES_CONFIDENCE = 1.0
+
+
+@dataclass(frozen=True)
+class TestCondition:
+    """根拠と確信度を持つテスト条件。"""
+
+    description: str
+    source: str  # "rules" / "llm"
+    confidence: float
+    evidence: SourceEvidence | None
+
+
+def derive_conditions_with_evidence(field: FieldData) -> tuple[TestCondition, ...]:
+    """フィールド属性からテスト条件を導出し、フィールドの根拠情報を付与して返す。"""
+    return tuple(
+        TestCondition(
+            description=description,
+            source=SOURCE_RULES,
+            confidence=RULES_CONFIDENCE,
+            evidence=field.evidence,
+        )
+        for description in derive_conditions(field)
+    )
 
 _MAX_PAIRWISE_FIELDS = 8
 _MAX_PAIRWISE_CASES = 20

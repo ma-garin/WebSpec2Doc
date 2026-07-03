@@ -8,14 +8,12 @@ from __future__ import annotations
 
 import json
 import logging
-import urllib.error
-import urllib.request
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Any
 
+from crawler.page_crawler import SourceEvidence
 from llm.screen_classifier import (
     _LLM_MODEL,
-    _OPENAI_CHAT_URL,
     SCREEN_AUTH,
     SCREEN_FORM,
     SCREEN_GENERAL,
@@ -30,6 +28,15 @@ if TYPE_CHECKING:
     from llm.provider import LLMProvider
 
 _CATEGORIES = ("機能", "セキュリティ", "ユーザビリティ", "パフォーマンス", "アクセシビリティ")
+_RISK_LEVELS = ("高", "中", "低")
+
+# ルール由来の観点は DOM 実測・決定的ルールに基づくため confidence は 1.0 固定
+RULES_VIEWPOINT_CONFIDENCE = 1.0
+# LLM 由来の観点はスキーマ検証・ルール整合検証の通過で 0.7、example_cases が規定件数なら +0.2
+LLM_BASE_CONFIDENCE = 0.7
+LLM_EXAMPLE_CASES_BONUS = 0.2
+_EXAMPLE_CASES_MIN = 2
+_EXAMPLE_CASES_MAX = 3
 
 
 @dataclass(frozen=True)
@@ -38,6 +45,8 @@ class TestViewpoint:
     viewpoint: str
     risk_level: str  # "高" / "中" / "低"
     example_cases: tuple[str, ...]  # 2〜3 件
+    confidence: float = RULES_VIEWPOINT_CONFIDENCE
+    evidence: SourceEvidence | None = None
 
 
 @dataclass(frozen=True)
@@ -54,14 +63,45 @@ class AbnormalScenario:
 # ---------- ルールベース生成 ----------
 
 
+def _default_screen_evidence(screenshot_path: str | None = None) -> SourceEvidence:
+    """画面全体を根拠とする SourceEvidence を構築する（画面分類由来の観点用）。"""
+    return SourceEvidence(
+        selector="body",
+        html_attribute=None,
+        screenshot_path=screenshot_path,
+        bbox=None,
+    )
+
+
+def _evidence_of_field(field: Any, html_attribute: str | None = None) -> SourceEvidence | None:
+    """フィールドから根拠を取り出す。evidence がなければ name からセレクタを構築する。"""
+    evidence = getattr(field, "evidence", None)
+    if isinstance(evidence, SourceEvidence):
+        if html_attribute is not None:
+            return replace(evidence, html_attribute=html_attribute)
+        return evidence
+    name = str(getattr(field, "name", "") or "")
+    if name:
+        return SourceEvidence(selector=f"[name='{name}']", html_attribute=html_attribute)
+    return None
+
+
 def generate_viewpoints_by_rules(
     screen_classification: ScreenClassification,
     field_data_list: list,  # list[FieldData]
+    screen_evidence: SourceEvidence | None = None,
 ) -> list[TestViewpoint]:
-    """画面分類とフィールド情報からテスト観点を生成する（オフライン動作）。"""
+    """画面分類とフィールド情報からテスト観点を生成する（オフライン動作）。
+
+    ルール由来のため全観点 confidence=1.0 固定で、根拠（evidence）を必ず付与する。
+    """
+    screen_ev = screen_evidence or _default_screen_evidence()
     viewpoints: list[TestViewpoint] = []
 
-    viewpoints.extend(_screen_type_viewpoints(screen_classification.screen_type))
+    viewpoints.extend(
+        replace(v, confidence=RULES_VIEWPOINT_CONFIDENCE, evidence=screen_ev)
+        for v in _screen_type_viewpoints(screen_classification.screen_type)
+    )
     viewpoints.extend(_field_viewpoints(field_data_list))
 
     # 全画面共通: 正常系確認
@@ -71,6 +111,8 @@ def generate_viewpoints_by_rules(
             viewpoint="正常系の基本動作確認",
             risk_level="低",
             example_cases=("期待する入力で操作が正常に完了すること", "遷移先が正しいこと"),
+            confidence=RULES_VIEWPOINT_CONFIDENCE,
+            evidence=screen_ev,
         )
     )
 
@@ -170,12 +212,14 @@ def _screen_type_viewpoints(screen_type: str) -> list[TestViewpoint]:
 
 
 def _field_viewpoints(field_data_list: list) -> list[TestViewpoint]:
-    """フィールド属性から追加観点を生成する。"""
+    """フィールド属性から追加観点を生成する（根拠は該当フィールドの evidence）。"""
     viewpoints: list[TestViewpoint] = []
-    has_required = any(getattr(f, "required", False) for f in field_data_list)
-    has_maxlength = any(getattr(f, "maxlength", None) is not None for f in field_data_list)
+    required_field = next((f for f in field_data_list if getattr(f, "required", False)), None)
+    maxlength_field = next(
+        (f for f in field_data_list if getattr(f, "maxlength", None) is not None), None
+    )
 
-    if has_required:
+    if required_field is not None:
         viewpoints.append(
             TestViewpoint(
                 category="機能",
@@ -185,9 +229,11 @@ def _field_viewpoints(field_data_list: list) -> list[TestViewpoint]:
                     "必須項目を空で送信したときにエラーが表示されること",
                     "必須項目に値を入力すれば送信できること",
                 ),
+                confidence=RULES_VIEWPOINT_CONFIDENCE,
+                evidence=_evidence_of_field(required_field, html_attribute="required"),
             )
         )
-    if has_maxlength:
+    if maxlength_field is not None:
         viewpoints.append(
             TestViewpoint(
                 category="機能",
@@ -197,6 +243,8 @@ def _field_viewpoints(field_data_list: list) -> list[TestViewpoint]:
                     "最大文字数ちょうどで入力できること",
                     "最大文字数 +1 文字では入力または送信が拒否されること",
                 ),
+                confidence=RULES_VIEWPOINT_CONFIDENCE,
+                evidence=_evidence_of_field(maxlength_field, html_attribute="maxlength"),
             )
         )
     return viewpoints
@@ -439,6 +487,42 @@ def _field_abnormal_scenarios(field_data_list: list) -> list[AbnormalScenario]:
 # ---------- LLM 版（異常系シナリオ） ----------
 
 
+_ABNORMAL_SCENARIO_CATEGORIES = ("入力値異常", "認証", "ネットワーク", "業務フロー", "セキュリティ")
+
+ABNORMAL_SCENARIO_SCHEMA_NAME = "abnormal_scenarios"
+
+ABNORMAL_SCENARIO_JSON_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "scenarios": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "category": {"type": "string", "enum": list(_ABNORMAL_SCENARIO_CATEGORIES)},
+                    "title": {"type": "string"},
+                    "description": {"type": "string"},
+                    "affected_fields": {"type": "array", "items": {"type": "string"}},
+                    "risk_level": {"type": "string", "enum": list(_RISK_LEVELS)},
+                    "test_steps": {"type": "array", "items": {"type": "string"}},
+                },
+                "required": [
+                    "category",
+                    "title",
+                    "description",
+                    "affected_fields",
+                    "risk_level",
+                    "test_steps",
+                ],
+                "additionalProperties": False,
+            },
+        }
+    },
+    "required": ["scenarios"],
+    "additionalProperties": False,
+}
+
+
 def generate_abnormal_scenarios_with_llm(
     screen_classification: Any,
     field_data_list: list,
@@ -449,14 +533,12 @@ def generate_abnormal_scenarios_with_llm(
         logger.info("api_key が未設定のためルールベースにフォールバックします。")
         return generate_abnormal_scenarios_by_rules(screen_classification, field_data_list)
     try:
-        import openai  # noqa: F401
-    except ImportError:
-        logger.warning("openai パッケージが見つからないためルールベースにフォールバックします。")
-        return generate_abnormal_scenarios_by_rules(screen_classification, field_data_list)
-    try:
         return _call_llm_for_abnormal_scenarios(screen_classification, field_data_list, api_key)
     except Exception as exc:  # noqa: BLE001
-        logger.warning("LLM abnormal scenario generation failed, falling back to rules: %s", exc)
+        logger.warning(
+            "LLM 異常系シナリオ応答を棄却しました（理由: %s）。ルールベースにフォールバックします。",
+            exc,
+        )
         return generate_abnormal_scenarios_by_rules(screen_classification, field_data_list)
 
 
@@ -465,38 +547,31 @@ def _call_llm_for_abnormal_scenarios(
     field_data_list: list,
     api_key: str,
 ) -> list[AbnormalScenario]:
-    """OpenAI API を呼び出して異常系シナリオ JSON 配列を取得する。"""
+    """OpenAI API（Structured Outputs）で異常系シナリオを取得する。"""
+    from llm.openai_client import request_structured_json
+
     screen_info = {
         "screen_type": screen_classification.screen_type,
         "field_count": len(field_data_list),
     }
     prompt = (
-        "あなたは QA エンジニアです。以下の Web 画面情報に基づき異常系テストシナリオを JSON 配列で返してください。\n"
+        "あなたは QA エンジニアです。以下の Web 画面情報に基づき異常系テストシナリオを返してください。\n"
         f"画面情報: {json.dumps(screen_info, ensure_ascii=False)}\n\n"
-        "各要素は以下のキーを持つこと: "
+        "各シナリオは以下のキーを持つこと: "
         "category(入力値異常/認証/ネットワーク/業務フロー/セキュリティ), "
         "title(シナリオタイトル), description(詳細説明), "
         "affected_fields(影響フィールド名の配列), "
         "risk_level(高/中/低), test_steps(テストステップ配列 2〜4 件)"
     )
-    payload = {
-        "model": _LLM_MODEL,
-        "messages": [{"role": "user", "content": prompt}],
-        "response_format": {"type": "json_object"},
-        "temperature": 0,
-    }
-    request = urllib.request.Request(
-        _OPENAI_CHAT_URL,
-        data=json.dumps(payload).encode("utf-8"),
-        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-        method="POST",
+    parsed = request_structured_json(
+        api_key,
+        _LLM_MODEL,
+        prompt,
+        ABNORMAL_SCENARIO_SCHEMA_NAME,
+        ABNORMAL_SCENARIO_JSON_SCHEMA,
     )
-    with urllib.request.urlopen(request, timeout=30) as resp:  # nosec B310
-        data = json.loads(resp.read().decode("utf-8"))
-    text = data["choices"][0]["message"]["content"]
-    parsed = json.loads(text)
-    items = parsed if isinstance(parsed, list) else parsed.get("scenarios", [])
-    raw = [
+    items = parsed.get("scenarios", [])
+    return [
         AbnormalScenario(
             scenario_id=f"AS{i + 1:03d}",
             category=str(item["category"]),
@@ -508,64 +583,97 @@ def _call_llm_for_abnormal_scenarios(
         )
         for i, item in enumerate(items)
     ]
-    return raw
 
 
-# ---------- LLM 版 ----------
+# ---------- LLM 版（LLMProvider 抽象から利用されるスキーマ・検証ユーティリティ） ----------
+
+VIEWPOINT_SCHEMA_NAME = "test_viewpoints"
+
+# OpenAI Structured Outputs（strict）用 JSON Schema
+VIEWPOINT_JSON_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "viewpoints": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "category": {"type": "string", "enum": list(_CATEGORIES)},
+                    "viewpoint": {"type": "string"},
+                    "risk_level": {"type": "string", "enum": list(_RISK_LEVELS)},
+                    "example_cases": {"type": "array", "items": {"type": "string"}},
+                },
+                "required": ["category", "viewpoint", "risk_level", "example_cases"],
+                "additionalProperties": False,
+            },
+        }
+    },
+    "required": ["viewpoints"],
+    "additionalProperties": False,
+}
 
 
-def generate_viewpoints_with_llm(
-    screen_info: dict,
-    api_key: str,
-) -> list[TestViewpoint]:
-    """LLM でテスト観点を生成し、失敗時はルールベースへフォールバックする。"""
-    try:
-        return _call_llm_for_viewpoints(screen_info, api_key)
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("LLM viewpoint generation failed, falling back to rules: %s", exc)
-        sc_raw = screen_info.get("screen_classification")
-        if isinstance(sc_raw, ScreenClassification):
-            return generate_viewpoints_by_rules(sc_raw, screen_info.get("fields", []))
-        return generate_viewpoints_by_rules(
-            ScreenClassification(SCREEN_GENERAL, 0.5, (), "low"), []
-        )
+class ViewpointValidationError(ValueError):
+    """LLM 観点応答のスキーマ違反・カテゴリ不正を表す例外。"""
 
 
-def _call_llm_for_viewpoints(screen_info: dict, api_key: str) -> list[TestViewpoint]:
-    """OpenAI API を呼び出してテスト観点 JSON 配列を取得する。"""
-    prompt = (
-        "あなたは QA エンジニアです。以下の Web 画面情報に基づきテスト観点を JSON 配列で返してください。\n"
+def build_viewpoint_prompt(screen_info: dict) -> str:
+    """観点生成用プロンプトを構築する。"""
+    return (
+        "あなたは QA エンジニアです。以下の Web 画面情報に基づきテスト観点を返してください。\n"
         f"画面情報: {json.dumps(screen_info, ensure_ascii=False)}\n\n"
-        "各要素は以下のキーを持つこと: "
+        "各観点は以下のキーを持つこと: "
         "category(機能/セキュリティ/ユーザビリティ/パフォーマンス/アクセシビリティ), "
         "viewpoint(観点説明), risk_level(高/中/低), example_cases(文字列配列 2〜3 件)"
     )
-    payload = {
-        "model": _LLM_MODEL,
-        "messages": [{"role": "user", "content": prompt}],
-        "response_format": {"type": "json_object"},
-        "temperature": 0,
-    }
-    request = urllib.request.Request(
-        _OPENAI_CHAT_URL,
-        data=json.dumps(payload).encode("utf-8"),
-        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-        method="POST",
+
+
+def validate_viewpoint_payload(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """LLM 応答のスキーマ・カテゴリ整合を検証し、観点 dict のリストを返す。
+
+    違反があれば ``ViewpointValidationError`` を送出する（呼び出し側でルールへフォールバック）。
+    """
+    items = payload.get("viewpoints")
+    if not isinstance(items, list) or not items:
+        raise ViewpointValidationError("viewpoints 配列がありません。")
+    for index, item in enumerate(items):
+        if not isinstance(item, dict):
+            raise ViewpointValidationError(f"観点 {index} がオブジェクトではありません。")
+        category = item.get("category")
+        if category not in _CATEGORIES:
+            raise ViewpointValidationError(f"観点 {index} のカテゴリが不正です: {category!r}")
+        viewpoint = item.get("viewpoint")
+        if not isinstance(viewpoint, str) or not viewpoint.strip():
+            raise ViewpointValidationError(f"観点 {index} の viewpoint が不正です。")
+        risk_level = item.get("risk_level")
+        if risk_level not in _RISK_LEVELS:
+            raise ViewpointValidationError(f"観点 {index} の risk_level が不正です: {risk_level!r}")
+        cases = item.get("example_cases")
+        if not isinstance(cases, list) or not all(isinstance(c, str) for c in cases):
+            raise ViewpointValidationError(f"観点 {index} の example_cases が不正です。")
+    return items
+
+
+def llm_viewpoint_confidence(item: dict[str, Any]) -> float:
+    """スキーマ検証・ルール整合検証の通過状況から LLM 観点の確信度を算出する。
+
+    検証を通過した時点で 0.7、example_cases が規定の 2〜3 件であれば +0.2（最大 0.9）。
+    """
+    cases = item.get("example_cases") or []
+    bonus = (
+        LLM_EXAMPLE_CASES_BONUS
+        if _EXAMPLE_CASES_MIN <= len(cases) <= _EXAMPLE_CASES_MAX
+        else 0.0
     )
-    with urllib.request.urlopen(request, timeout=30) as resp:  # nosec B310
-        data = json.loads(resp.read().decode("utf-8"))
-    text = data["choices"][0]["message"]["content"]
-    parsed = json.loads(text)
-    items = parsed if isinstance(parsed, list) else parsed.get("viewpoints", [])
-    return [
-        TestViewpoint(
-            category=str(item["category"]),
-            viewpoint=str(item["viewpoint"]),
-            risk_level=str(item["risk_level"]),
-            example_cases=tuple(str(c) for c in item.get("example_cases", [])),
-        )
-        for item in items
-    ]
+    return round(LLM_BASE_CONFIDENCE + bonus, 2)
+
+
+def fallback_classification(screen_info: dict) -> ScreenClassification:
+    """screen_info から分類を取り出す。なければ general 分類を返す。"""
+    sc_raw = screen_info.get("screen_classification")
+    if isinstance(sc_raw, ScreenClassification):
+        return sc_raw
+    return ScreenClassification(SCREEN_GENERAL, 0.5, (), "low")
 
 
 def make_provider(api_key: str = "", model: str = "") -> LLMProvider:

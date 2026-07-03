@@ -17,7 +17,13 @@ import networkx as nx
 
 from analyzer.html_analyzer import AnalyzedPage
 from analyzer.test_conditions import derive_conditions
-from crawler.page_crawler import DEFAULT_DEPTH, DEFAULT_MAX_PAGES, ApiEndpoint, FieldData, FormData
+from crawler.page_crawler import (
+    DEFAULT_DEPTH,
+    DEFAULT_MAX_PAGES,
+    ApiEndpoint,
+    FieldData,
+    FormData,
+)
 
 REPORT_TITLE = "WebSpec2Doc テスト分析インプット"
 TOOL_NAME = "WebSpec2Doc"
@@ -77,6 +83,7 @@ def generate_html_report(
             _footer(now),
             "</main></div></div>",
             _scrollspy_script(),
+            _evidence_script(),
             _mermaid_script(),
             "</body></html>",
         ]
@@ -169,6 +176,13 @@ border-left:3px solid var(--primary);padding-left:.5rem}
 padding:.15rem .5rem;font-size:.78rem}
 .muted{color:var(--text-muted);font-size:.8rem}
 .cond{color:#0a6b3a;font-size:.78rem;white-space:pre-line}
+.ev-badge{display:inline-block;background:#e8f5e9;border:1px solid #66bb6a;border-radius:4px;
+padding:.1rem .4rem;font-size:.72rem;font-weight:600;color:#1b5e20;white-space:nowrap}
+.ev-badge.ev-llm{background:#fff8e1;border-color:#ffb300;color:#7a5200}
+button.ev-badge{cursor:pointer}
+.shot-wrap{position:relative}
+.shot-hl{position:absolute;border:2px solid var(--critical);background:rgba(218,30,40,.15);
+border-radius:3px;pointer-events:none;display:none}
 .locator{color:#5a3d8a;font-size:.72rem;font-family:monospace;word-break:break-all}
 .form-meta{font-size:.78rem;color:var(--text-muted);margin-bottom:.3rem}
 .site-footer{text-align:center;color:var(--text-muted);font-size:.78rem;padding:1rem 0 2rem}
@@ -269,7 +283,7 @@ def _screen_card(page: AnalyzedPage, graph: nx.DiGraph, screenshots_dir: Path | 
     url_path = html.escape(_url_path(page.page_data.url))
     info = (
         _headings_block(page.page_data.headings)
-        + _forms_block(page.page_data.forms)
+        + _forms_block(page.page_data.forms, page.page_id)
         + _buttons_block(page.page_data.buttons)
         + _transitions_block(page.page_id, graph)
     )
@@ -277,7 +291,8 @@ def _screen_card(page: AnalyzedPage, graph: nx.DiGraph, screenshots_dir: Path | 
         f'<div class="screen" id="{pid}">'
         f'<div class="screen-head"><span class="pid">{pid}</span>'
         f'<span class="title">{title}</span><span class="url">{url_path}</span></div>'
-        f'<div class="screen-body"><div class="screen-shot">{_screenshot_img(page, screenshots_dir)}</div>'
+        f'<div class="screen-body"><div class="screen-shot shot-wrap" id="shot-{pid}">'
+        f"{_screenshot_img(page, screenshots_dir)}</div>"
         f'<div class="screen-info">{info}</div></div>'
         "</div>"
     )
@@ -302,7 +317,7 @@ def _headings_block(headings: tuple[str, ...]) -> str:
     return f'<div class="subhead">画面構成（見出し）</div><div class="chips">{chips}</div>'
 
 
-def _forms_block(forms: tuple[FormData, ...]) -> str:
+def _forms_block(forms: tuple[FormData, ...], page_id: str) -> str:
     if not forms:
         return '<div class="subhead">入力項目</div><div class="muted">フォームなし</div>'
     blocks = ['<div class="subhead">入力項目・テスト条件</div>']
@@ -313,13 +328,13 @@ def _forms_block(forms: tuple[FormData, ...]) -> str:
         blocks.append(
             "<table><thead><tr>"
             "<th>項目名</th><th>型</th><th>必須</th><th>制約</th><th>既定/選択肢</th>"
-            "<th>ロケータ候補</th><th>導出テスト条件</th>"
-            "</tr></thead><tbody>" + _field_rows(form) + "</tbody></table>"
+            "<th>ロケータ候補</th><th>導出テスト条件</th><th>根拠</th>"
+            "</tr></thead><tbody>" + _field_rows(form, page_id) + "</tbody></table>"
         )
     return "".join(blocks)
 
 
-def _field_rows(form: FormData) -> str:
+def _field_rows(form: FormData, page_id: str) -> str:
     radio_values: dict[str, list[str]] = {}
     for field in form.fields:
         if field.field_type == "radio" and field.name:
@@ -332,11 +347,33 @@ def _field_rows(form: FormData) -> str:
                 continue
             rendered.add(field.name)
             field = replace(field, options=tuple(radio_values[field.name]))
-        rows.append(_field_row(field))
+        rows.append(_field_row(field, page_id))
     return "".join(rows)
 
 
-def _field_row(field: FieldData) -> str:
+def _evidence_badge(field: FieldData, page_id: str) -> str:
+    """根拠バッジ（由来 + confidence）を生成する。
+
+    bbox とスクリーンショットを持つ場合はクリックで該当位置をハイライトできる
+    button として、それ以外は静的な span として出力する。
+    """
+    if field.evidence is None:
+        return '<span class="muted">根拠なし</span>'
+    label = html.escape(f"rules {field.confidence:.1f}")
+    selector = html.escape(field.evidence.selector)
+    title = f"セレクタ: {selector}"
+    if field.evidence.html_attribute:
+        title += f" / 属性: {html.escape(field.evidence.html_attribute)}"
+    if field.evidence.bbox is not None and field.evidence.screenshot_path:
+        bbox_attr = ",".join(str(v) for v in field.evidence.bbox)
+        return (
+            f'<button type="button" class="ev-badge" data-shot="{html.escape(page_id)}" '
+            f'data-bbox="{bbox_attr}" data-selector="{selector}" title="{title}">{label}</button>'
+        )
+    return f'<span class="ev-badge" data-selector="{selector}" title="{title}">{label}</span>'
+
+
+def _field_row(field: FieldData, page_id: str) -> str:
     name = html.escape(field.name or "(無名)")
     ftype = html.escape(field.field_type)
     req = '<span class="badge-yes">必須</span>' if field.required else "-"
@@ -344,11 +381,13 @@ def _field_row(field: FieldData) -> str:
     default_opts = html.escape(_default_options_text(field)) or "-"
     locators = html.escape(" / ".join(_locator_candidates(field))) or "-"
     conditions = html.escape("\n".join(derive_conditions(field)))
+    badge = _evidence_badge(field, page_id)
     return (
         f"<tr><td>{name}</td><td>{ftype}</td><td>{req}</td>"
         f"<td>{constraints}</td><td>{default_opts}</td>"
         f'<td class="locator">{locators}</td>'
-        f'<td class="cond">{conditions}</td></tr>'
+        f'<td class="cond">{conditions}</td>'
+        f"<td>{badge}</td></tr>"
     )
 
 
@@ -445,6 +484,28 @@ def _scrollspy_script() -> str:
         "n.classList.toggle('is-active',n.getAttribute('href')==='#'+e.target.id));}});},"
         "{root:document.querySelector('.app-content'),rootMargin:'-35% 0px -60% 0px'});"
         "document.querySelectorAll('section.block,.screen').forEach(s=>{if(s.id)obs.observe(s);});"
+        "</script>"
+    )
+
+
+def _evidence_script() -> str:
+    """根拠バッジのクリックで該当スクリーンショットの bbox 位置をハイライトする。"""
+    return (
+        "<script>"
+        "document.querySelectorAll('button.ev-badge[data-shot]').forEach(b=>{"
+        "b.addEventListener('click',()=>{"
+        "const wrap=document.getElementById('shot-'+b.dataset.shot);if(!wrap)return;"
+        "const img=wrap.querySelector('img');if(!img)return;"
+        "let hl=wrap.querySelector('.shot-hl');"
+        "if(!hl){hl=document.createElement('div');hl.className='shot-hl';wrap.appendChild(hl);}"
+        "const p=b.dataset.bbox.split(',').map(Number);"
+        "if(p.length!==4||!img.naturalWidth)return;"
+        "const sx=img.clientWidth/img.naturalWidth,sy=img.clientHeight/img.naturalHeight;"
+        "hl.style.left=(p[0]*sx)+'px';hl.style.top=(p[1]*sy)+'px';"
+        "hl.style.width=(p[2]*sx)+'px';hl.style.height=(p[3]*sy)+'px';"
+        "hl.style.display='block';"
+        "wrap.scrollIntoView({behavior:'smooth',block:'center'});"
+        "});});"
         "</script>"
     )
 

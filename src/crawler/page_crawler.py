@@ -10,7 +10,7 @@ import logging
 import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urljoin, urlparse, urlunparse
@@ -71,6 +71,55 @@ class LoginWallDetected(RuntimeError):
 
 
 @dataclass(frozen=True)
+class SourceEvidence:
+    """フィールドや観点の出所を示す根拠情報。
+
+    selector: 対象要素の CSS セレクタ
+    html_attribute: 根拠となった HTML 属性名（属性由来でない場合は None）
+    screenshot_path: 該当画面のスクリーンショットパス
+    bbox: スクリーンショット上の要素位置 (x, y, width, height)
+    """
+
+    selector: str
+    html_attribute: str | None = None
+    screenshot_path: str | None = None
+    bbox: tuple[int, int, int, int] | None = None
+
+
+def evidence_to_dict(evidence: SourceEvidence | None) -> dict[str, object] | None:
+    """SourceEvidence を JSON シリアライズ可能な dict に変換する（None はそのまま）。"""
+    if evidence is None:
+        return None
+    return {
+        "selector": evidence.selector,
+        "html_attribute": evidence.html_attribute,
+        "screenshot_path": evidence.screenshot_path,
+        "bbox": list(evidence.bbox) if evidence.bbox is not None else None,
+    }
+
+
+def evidence_from_dict(data: object) -> SourceEvidence | None:
+    """dict（JSON 由来）から SourceEvidence を復元する。不正・欠落時は None を返す。"""
+    if not isinstance(data, dict):
+        return None
+    raw_bbox = data.get("bbox")
+    bbox: tuple[int, int, int, int] | None = None
+    if isinstance(raw_bbox, list | tuple) and len(raw_bbox) == 4:
+        try:
+            bbox = (int(raw_bbox[0]), int(raw_bbox[1]), int(raw_bbox[2]), int(raw_bbox[3]))
+        except (TypeError, ValueError):
+            bbox = None
+    raw_attr = data.get("html_attribute")
+    raw_shot = data.get("screenshot_path")
+    return SourceEvidence(
+        selector=str(data.get("selector") or ""),
+        html_attribute=str(raw_attr) if raw_attr else None,
+        screenshot_path=str(raw_shot) if raw_shot else None,
+        bbox=bbox,
+    )
+
+
+@dataclass(frozen=True)
 class FieldData:
     field_type: str
     name: str
@@ -88,6 +137,9 @@ class FieldData:
     aria_required: bool = False
     role: str = ""
     has_visible_label: bool = False
+    # DOM 実測由来のため confidence は 1.0 固定
+    evidence: SourceEvidence | None = None
+    confidence: float = 1.0
 
 
 @dataclass(frozen=True)
@@ -467,7 +519,9 @@ def crawl_page(
         title = extract_page_title(page)
         headings = tuple(extract_headings(page))
         links = tuple(extract_internal_links(page, normalized_url))
-        forms = tuple(extract_forms_including_frames(page))
+        forms = _attach_screenshot_evidence(
+            tuple(extract_forms_including_frames(page)), screenshot_path
+        )
         buttons = tuple(extract_buttons(page))
         a11y_issues = tuple(extract_a11y_issues(page))
         page_html = page.content()
@@ -488,6 +542,27 @@ def crawl_page(
         state_id=state_id,
         a11y_issues=a11y_issues,
     )
+
+
+def _attach_screenshot_evidence(
+    forms: tuple[FormData, ...],
+    screenshot_path: str | None,
+) -> tuple[FormData, ...]:
+    """抽出済みフォームの各フィールド evidence にスクリーンショットパスを補完する。"""
+    if screenshot_path is None:
+        return forms
+    updated_forms: list[FormData] = []
+    for form in forms:
+        fields = tuple(
+            (
+                replace(field, evidence=replace(field.evidence, screenshot_path=screenshot_path))
+                if field.evidence is not None
+                else field
+            )
+            for field in form.fields
+        )
+        updated_forms.append(replace(form, fields=fields))
+    return tuple(updated_forms)
 
 
 def is_internal_link(base_url: str, link_url: str) -> bool:

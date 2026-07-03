@@ -112,7 +112,7 @@ def _form_from_dict(data: dict[str, Any]) -> FormData:
 
 
 def _field_from_dict(data: dict[str, Any]) -> FieldData:
-    from crawler.page_crawler import FieldData
+    from crawler.page_crawler import FieldData, evidence_from_dict
 
     return FieldData(
         field_type=str(data.get("field_type", "")),
@@ -131,7 +131,17 @@ def _field_from_dict(data: dict[str, Any]) -> FieldData:
         aria_required=bool(data.get("aria_required", False)),
         role=str(data.get("role", "")),
         has_visible_label=bool(data.get("has_visible_label", False)),
+        # 旧スナップショット（evidence/confidence なし）とも後方互換
+        evidence=evidence_from_dict(data.get("evidence")),
+        confidence=_to_float(data.get("confidence"), default=1.0),
     )
+
+
+def _to_float(value: Any, default: float) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
 
 
 def _api_endpoint_from_dict(data: dict[str, Any]) -> Any:

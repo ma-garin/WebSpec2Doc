@@ -1,6 +1,7 @@
 """Office 文書（.docx/.pptx）からの表・見出し抽出。
 
-外部依存を増やさないため、OOXML（zip + XML）を標準ライブラリで直接読む。
+OOXML（zip + XML）を直接読む。XML のパースは defusedxml を使い、
+外部由来の文書に含まれ得る XML 攻撃（エンティティ展開等）を防ぐ。
 .doc / .ppt（旧バイナリ形式）は対象外（docx/pptx への変換を案内する）。
 """
 
@@ -9,6 +10,8 @@ from __future__ import annotations
 import zipfile
 from pathlib import Path
 from xml.etree import ElementTree
+
+from defusedxml.ElementTree import fromstring as safe_fromstring
 
 from ingest.tables import ExtractedRow, ExtractedTable, looks_like_header
 
@@ -23,7 +26,7 @@ def read_docx(path: Path) -> tuple[list[ExtractedTable], list[tuple[str, str]]]:
     """
     with zipfile.ZipFile(path) as archive:
         xml_bytes = archive.read("word/document.xml")
-    root = ElementTree.fromstring(xml_bytes)  # noqa: S314  # ローカル文書の解析
+    root = safe_fromstring(xml_bytes)
     tables: list[ExtractedTable] = []
     headings: list[tuple[str, str]] = []
     body = root.find(f"{_W_NS}body")
@@ -94,7 +97,7 @@ def read_pptx_lines(path: Path) -> list[tuple[str, str]]:
         )
         for slide_name in slide_names:
             slide_number = slide_name.removeprefix("ppt/slides/slide").removesuffix(".xml")
-            root = ElementTree.fromstring(archive.read(slide_name))  # noqa: S314
+            root = safe_fromstring(archive.read(slide_name))
             for node in root.iter(f"{_A_NS}t"):
                 text = (node.text or "").strip()
                 if text:

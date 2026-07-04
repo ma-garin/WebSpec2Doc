@@ -13,6 +13,7 @@ openpyxl==3.1.4
 # 参考文書取り込み（Doc Fusion）
 pypdf==6.14.2
 PyYAML==6.0.1
+defusedxml==0.7.1
 
 # テスト
 pytest==9.0.3

@@ -133,7 +133,7 @@ M3  連携          : TestRail/Jira へのエクスポート、AGENTS.md(machine
 ★ v1.1 以降 = LLM テスト観点（OpenAI）/ M3 連携。
 ```
 
-詳細な事業背景は `docs/05_事業戦略提案.html` / `plan.txt`。
+詳細な事業背景は `docs/09_事業計画_統合版.md`（正）を参照。過去の経緯は `docs/05_事業戦略提案.html` / `docs/archive/plan.txt`。
 
 ---
 

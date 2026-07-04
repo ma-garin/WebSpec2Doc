@@ -4,15 +4,26 @@ import json
 import subprocess
 import sys
 import uuid
+from pathlib import Path
 
 from flask import Blueprint, Response, request, send_file
 
 from web.config import MAX_DEPTH, MAX_PAGES_LIMIT, OUTPUT_DIR
 from web.process import _RUNNING_PROCS, _terminate_proc
 from web.summary import _summary_for_domain
-from web.validation import _clean_formats, _clean_int, _domain_of, _safe_auth_path, _valid_domain
+from web.validation import (
+    _clean_formats,
+    _clean_int,
+    _domain_of,
+    _safe_auth_path,
+    _safe_reference_doc_paths,
+    _valid_domain,
+)
 
 bp = Blueprint("crawl", __name__)
+
+_REFERENCE_DIR_NAME = "reference_docs"
+_MAX_REFERENCE_DOC_BYTES = 20 * 1024 * 1024  # 20MB/ファイル
 
 
 @bp.post("/run")
@@ -31,6 +42,7 @@ def run() -> Response:
     auth = _safe_auth_path(request.form.get("auth", "").strip())
     crawl_mode = request.form.get("crawl_mode", "").strip()
     domain = _domain_of(urls.split(",")[0]) if urls else ""
+    reference_docs = _safe_reference_doc_paths(request.form.get("reference_docs", ""), domain)
 
     run_id = uuid.uuid4().hex
 
@@ -53,6 +65,8 @@ def run() -> Response:
             cmd.append("--compare")
         if auth:
             cmd += ["--auth", auth]
+        for doc_path in reference_docs:
+            cmd += ["--reference-doc", doc_path]
         proc = subprocess.Popen(
             cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
         )
@@ -118,3 +132,61 @@ def live_screenshot() -> Response:
     resp = send_file(pngs[0].resolve(), mimetype="image/png")
     resp.headers["Cache-Control"] = "no-store"
     return resp
+
+
+@bp.post("/api/reference-docs")
+def upload_reference_docs() -> tuple[dict, int] | dict:
+    """参考文書のアップロード（multipart）。output/{domain}/reference_docs/ へ保存する。"""
+    from ingest.loader import _LEGACY_SUFFIXES, SUPPORTED_SUFFIXES
+
+    domain = request.form.get("domain", "")
+    if not _valid_domain(domain):
+        return {"ok": False, "error": "不正なドメインです"}, 400
+    uploaded = request.files.getlist("files")
+    if not uploaded:
+        return {"ok": False, "error": "ファイルが指定されていません"}, 400
+
+    target_dir = (OUTPUT_DIR / domain / _REFERENCE_DIR_NAME).resolve()
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    saved: list[dict[str, str]] = []
+    for file_storage in uploaded:
+        # secure_filename は非ASCIIを全て落とすため使わない。
+        # Path(...).name でディレクトリ部のみ剥がし、拡張子 allowlist で安全性を担保する。
+        name = Path(file_storage.filename or "").name
+        suffix = Path(name).suffix.lower()
+        if suffix in _LEGACY_SUFFIXES:
+            return {
+                "ok": False,
+                "error": f"旧バイナリ形式（{suffix}）は未対応です。{suffix}x 形式に変換してから指定してください: {name}",
+            }, 400
+        if suffix not in SUPPORTED_SUFFIXES:
+            return {
+                "ok": False,
+                "error": f"未対応の文書形式です: {name}（対応形式: {', '.join(SUPPORTED_SUFFIXES)}）",
+            }, 400
+        data = file_storage.read()
+        if len(data) > _MAX_REFERENCE_DOC_BYTES:
+            return {
+                "ok": False,
+                "error": f"ファイルサイズが上限（{_MAX_REFERENCE_DOC_BYTES // (1024 * 1024)}MB）を超えています: {name}",
+            }, 400
+        dest = target_dir / name
+        dest.write_bytes(data)
+        saved.append({"name": name, "path": str(dest.resolve())})
+    return {"ok": True, "saved": saved}
+
+
+@bp.get("/api/doc-fusion")
+def api_doc_fusion() -> tuple[dict, int]:
+    """output/{domain}/doc_fusion.json をそのまま返す（無ければ 404）。"""
+    domain = request.args.get("domain", "")
+    if not _valid_domain(domain):
+        return {"error": "not found"}, 404
+    path = OUTPUT_DIR / domain / "doc_fusion.json"
+    if not path.is_file():
+        return {"error": "doc_fusion.json not found"}, 404
+    try:
+        return json.loads(path.read_text(encoding="utf-8")), 200
+    except (OSError, json.JSONDecodeError):
+        return {"error": "doc_fusion.json を読み込めませんでした"}, 500

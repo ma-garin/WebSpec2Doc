@@ -104,13 +104,13 @@
       "name": "文書×実測突合（Doc Fusion）",
       "risk_level": "high",
       "status": "implemented",
-      "ui_files": [],
-      "route_files": [],
+      "ui_files": ["templates/partials/view-generate.html", "static/js/wizard.js", "static/js/execution.js", "static/js/results.js", "static/js/doc-fusion.js"],
+      "route_files": ["web/routes/crawl.py"],
       "core_files": ["src/ingest/loader.py", "src/ingest/matcher.py", "src/generator/fusion_reporter.py", "src/ingest/llm_extractor.py", "src/analyzer/rule_injector.py", "src/generator/json_reporter.py"],
       "symbols": ["load_reference_documents", "fuse", "save_fusion_outputs", "extract_semantics", "filter_hallucinations", "build_rule_conditions"],
       "outputs": ["doc_fusion.json", "doc_fusion.md", "official_name in report.json", "documented_rules in doc_fusion.json", "document_conditions/test_conditions_detail in report.json"],
-      "persistence": ["output/{domain}/doc_fusion.json"],
-      "failure_modes": ["unsupported_format", "missing_file", "legacy_binary_format", "no_match", "llm_schema_reject", "hallucinated_quote", "rule_unmatched", "rule_value_unparsable"],
+      "persistence": ["output/{domain}/doc_fusion.json", "output/{domain}/reference_docs/"],
+      "failure_modes": ["unsupported_format", "missing_file", "legacy_binary_format", "no_match", "llm_schema_reject", "hallucinated_quote", "rule_unmatched", "rule_value_unparsable", "upload_rejected", "path_traversal_attempt"],
       "required_tests": ["happy_path", "error_path", "mismatch_detection", "evidence"]
     },
     {

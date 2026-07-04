@@ -102,10 +102,11 @@ class TestTabStructure:
     """6タブ構成とパネルホストの検証。"""
 
     def test_seven_tabs_present(self, page: Page) -> None:
+        """既定表示は7タブ（文書突合タブは doc_fusion.json が無いため非表示）。"""
         _open_report(page)
-        tabs = page.locator(".result-tabs .result-tab")
-        expect(tabs).to_have_count(7)
-        keys = [tabs.nth(i).get_attribute("data-tab") for i in range(7)]
+        visible_tabs = page.locator(".result-tabs .result-tab:visible")
+        expect(visible_tabs).to_have_count(7)
+        keys = [visible_tabs.nth(i).get_attribute("data-tab") for i in range(7)]
         assert keys == [
             "overview",
             "screens",
@@ -115,6 +116,7 @@ class TestTabStructure:
             "coverage",
             "history",
         ]
+        expect(page.locator('.result-tab[data-tab="doc-fusion"]')).to_be_hidden()
 
     def test_no_javascript_errors_on_report(self, page: Page) -> None:
         js_errors: list[str] = []

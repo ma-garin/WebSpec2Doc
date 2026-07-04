@@ -15,6 +15,7 @@ const TAB_DEFS = {
                    subs: { diagram: 'renderTransition', table: 'renderTransitionTable' } },
   runs:          { panel: 'rp-runs', render: 'renderTestRuns' },
   coverage:      { panel: 'rp-coverage', render: 'renderCoverage' },
+  'doc-fusion':  { panel: 'rp-doc-fusion', render: 'renderDocFusion' },
   history:       { panel: 'rp-history', render: 'renderTimeline' },
 };
 
@@ -28,7 +29,7 @@ const LEGACY_TAB_MAP = {
   'transition-table': ['flow', 'table'],
 };
 
-let resultData = null, reportJson = null;
+let resultData = null, reportJson = null, docFusionData = null;
 let activeResultTab = 'overview', activeResultSub = '';
 const _renderedPanels = new Set(); // "tab/sub" 単位の描画済みフラグ（dirty 管理）
 
@@ -91,6 +92,18 @@ async function showResults(domain, tab, sub) {
   setTabCount('tab-count-screens', screenCount);
   setTabCount('tab-count-test-design', fieldCount);
   setTabCount('tab-count-history', snapCount);
+
+  // 文書突合タブ（doc_fusion.json 存在時のみ表示 — AC-4/AC-5）
+  docFusionData = null;
+  try {
+    const dfRes = await fetch('/api/doc-fusion?domain=' + encodeURIComponent(domain));
+    if (dfRes.ok) docFusionData = await dfRes.json();
+  } catch (e) { /* 突合結果なしとして扱う */ }
+  const docFusionTab = document.getElementById('tab-doc-fusion');
+  if (docFusionTab) docFusionTab.hidden = !docFusionData;
+  if (docFusionData) {
+    setTabCount('tab-count-doc-fusion', (docFusionData.meta && docFusionData.meta.field_gaps) || 0);
+  }
 
   setHeader(['ダッシュボード', domain], domain);
 

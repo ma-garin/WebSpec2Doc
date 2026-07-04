@@ -40,6 +40,30 @@ def _safe_auth_path(raw: str) -> str:
     return ""
 
 
+def _safe_reference_doc_paths(raw: str, domain: str) -> list[str]:
+    """カンマ区切りの参考文書パスを検証する。
+
+    resolve 後に OUTPUT_DIR/{domain}/reference_docs/ 配下の実在ファイルのみ
+    通す（_safe_auth_path と同じ resolve→parents 判定）。不正パスは黙って
+    除外する（クロール自体は続行させる）。
+    """
+    if not raw or not _valid_domain(domain):
+        return []
+    base = (OUTPUT_DIR / domain / "reference_docs").resolve()
+    result: list[str] = []
+    for candidate in raw.split(","):
+        candidate = candidate.strip()
+        if not candidate:
+            continue
+        try:
+            target = Path(candidate).resolve()
+        except (OSError, ValueError, RuntimeError):
+            continue
+        if base in target.parents and target.is_file():
+            result.append(str(target))
+    return result
+
+
 def _safe_output_path(raw: str) -> Path | None:
     """Resolve a path and ensure it stays inside OUTPUT_DIR (anti path-traversal)."""
     if not raw:

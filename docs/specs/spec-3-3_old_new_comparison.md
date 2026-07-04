@@ -188,8 +188,7 @@ def detect_dynamic_regions(page: Page, interval_sec: float = 1.0) -> tuple[tuple
 
 ## 7. 完了チェックリスト（DoD）
 
-- [ ] AC-1〜8 のテストが全て存在し PASS
-- [ ] CONVENTIONS §3 の全ゲート通過
+- [ ] AC-1〜8 のテストが全て存在し PASS。CONVENTIONS §3 の全ゲート通過
 - [ ] feature_contracts.yml に old_new_comparison 契約（core_files・failure_modes: one_side_empty / no_pairs / link_timeout / screenshot_missing・required_tests）
 - [ ] 実行パス確認: CLI で demo/site × demo/site_v2 を比較し、comparison.html の 4 分類と evidence（現新スクリーンショット）を目視確認
 - [ ] 動的マスクなしで実行した場合との誤検知件数差をデモ台本用に記録（Sprint D の入力）

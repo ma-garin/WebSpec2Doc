@@ -9,21 +9,22 @@
 <body>
   <header>
     <h1>DemoMart デモストア</h1>
-    <!-- 現新比較デモ（SPEC-3-3）: 時刻表示は撮影の度に変化するため動的領域マスクの対象になる -->
     <span id="clock"></span>
   </header>
   <nav aria-label="メイン">
     <a href="/index.html">トップ</a>
     <a href="/products.html">商品一覧</a>
+    <a href="/missing-campaign.html">キャンペーン詳細（現新比較デモ用の存在しないリンク）</a>
   </nav>
   <main>
     <h2>お問い合わせ</h2>
     <section>
+      <!-- 現新比較デモ: email の required が現行から消失している（breaking 属性差分） -->
       <form action="/contact/send" method="post">
         <label for="name">お名前（必須）</label>
         <input type="text" id="name" name="name" placeholder="山田 太郎" required maxlength="50">
-        <label for="contact-email">メールアドレス（必須）</label>
-        <input type="email" id="contact-email" name="email" placeholder="user@example.com" required>
+        <label for="contact-email">メールアドレス</label>
+        <input type="email" id="contact-email" name="email" placeholder="user@example.com" maxlength="120">
         <label for="category">お問い合わせ種別</label>
         <select id="category" name="category">
           <option value="order">注文について</option>
@@ -38,10 +39,10 @@
     </section>
   </main>
   <footer>
-    <small>DemoMart — お問い合わせ（必須バリデーション実測デモ）</small>
+    <small>DemoMart — お問い合わせ（現新比較デモ・新側）</small>
   </footer>
   <script>
-    // 現新比較デモ（SPEC-3-3）: 新側 site_v2/contact.html と同じ仕組みの時刻表示
+    // 現新比較デモ: 時刻表示は現行/新で常に異なるため、動的領域マスクの対象になる
     function tick() {
       var el = document.getElementById("clock");
       if (el) {

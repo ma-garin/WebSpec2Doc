@@ -103,6 +103,37 @@ def compute_diff(old: list[PageData], new: list[PageData]) -> DiffResult:
     )
 
 
+def compare_page_pair(old: PageData, new: PageData) -> DiffResult:
+    """現新比較用: 対応付け済みの単一ページペアの仕様差分を計算する。
+
+    ``compute_diff`` は URL 完全一致で突合するため、ドメインが異なる現新比較には
+    使えない（対応は呼び出し側の ``pair_matcher.match_page_pairs`` が既に決めている）。
+    本関数はその対応 1 組を受け取り、``old.url`` を仮キーとして既存の内部比較
+    ヘルパー（フィールド/属性/リンク/タイトル/API 差分）を再利用する。
+    ``compute_diff`` 自体の挙動・シグネチャは変更しない。
+    """
+    key = old.url
+    old_pages = {key: old}
+    new_pages = {key: new}
+    urls = (key,)
+    field_changes = _field_changes(urls, old_pages, new_pages)
+    link_changes = _link_changes(urls, old_pages, new_pages)
+    title_changes = _title_changes(urls, old_pages, new_pages)
+    attribute_diffs = _collect_attribute_diffs(urls, old_pages, new_pages)
+    api_changes = _api_changes(urls, old_pages, new_pages)
+    has_changes = any((field_changes, link_changes, title_changes, attribute_diffs, api_changes))
+    return DiffResult(
+        added_pages=(),
+        removed_pages=(),
+        field_changes=field_changes,
+        link_changes=link_changes,
+        title_changes=title_changes,
+        has_changes=has_changes,
+        attribute_diffs=attribute_diffs,
+        api_changes=api_changes,
+    )
+
+
 def _pages_by_url(pages: list[PageData]) -> dict[str, PageData]:
     return {page.url: page for page in pages}
 

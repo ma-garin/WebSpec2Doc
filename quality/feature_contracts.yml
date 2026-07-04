@@ -196,6 +196,48 @@
       "persistence": [],
       "failure_modes": ["collection_warning_regression", "pillow_deprecation_regression"],
       "required_tests": ["parity", "collection_guard", "static_guard"]
+    },
+    {
+      "feature_id": "old_new_comparison",
+      "name": "現新比較モード（移行検証支援）",
+      "risk_level": "high",
+      "status": "implemented",
+      "ui_files": [],
+      "route_files": [],
+      "core_files": [
+        "src/diff/pair_matcher.py",
+        "src/diff/comparison.py",
+        "src/diff/link_checker.py",
+        "src/diff/screenshot_diff.py",
+        "src/diff/differ.py",
+        "src/generator/comparison_reporter.py",
+        "src/analyzer/text_similarity.py",
+        "src/main.py"
+      ],
+      "symbols": [
+        "match_page_pairs",
+        "run_old_new_comparison",
+        "check_links",
+        "compare_screenshots_masked",
+        "detect_dynamic_regions",
+        "compare_page_pair",
+        "save_comparison_outputs"
+      ],
+      "outputs": ["comparison.json", "comparison.html", "old/dynamic_masks.json"],
+      "persistence": [
+        "output/{domain}/compare_*/old/",
+        "output/{domain}/compare_*/new/",
+        "output/{domain}/compare_*/comparison.json",
+        "output/{domain}/compare_*/comparison.html"
+      ],
+      "failure_modes": [
+        "one_side_empty",
+        "no_pairs",
+        "link_timeout",
+        "screenshot_missing",
+        "mask_detection_failed"
+      ],
+      "required_tests": ["happy_path", "error_path", "evidence", "unclassified_fallback"]
     }
   ]
 }

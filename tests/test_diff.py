@@ -9,6 +9,7 @@ from diff.differ import (
     CHANGE_REMOVED,
     SEVERITY_BREAKING,
     SEVERITY_WARNING,
+    compare_page_pair,
     compute_diff,
 )
 from diff.snapshot import latest_snapshot, load_snapshot, save_snapshot
@@ -201,6 +202,43 @@ def test_attribute_diffs_classify_severity() -> None:
     assert by_attr["required"].severity == SEVERITY_BREAKING
     assert by_attr["maxlength"].severity == SEVERITY_WARNING
     assert by_attr["pattern"].severity == SEVERITY_WARNING
+
+
+def test_compare_page_pair_detects_breaking_required_loss() -> None:
+    """現新比較用 compare_page_pair: ドメインが異なるページペアでも required 消失を検出する（AC-3・8-1 罠）。"""
+    old_field = FieldData("email", "email", "", required=True)
+    new_field = FieldData("email", "email", "", required=False)
+    old_page = _page("https://old.example.com/contact", "Contact", fields=(old_field,))
+    new_page = _page("https://new.example.com/contact", "Contact", fields=(new_field,))
+
+    result = compare_page_pair(old_page, new_page)
+
+    by_attr = {ad.attribute: ad for ad in result.attribute_diffs}
+    assert by_attr["required"].severity == SEVERITY_BREAKING
+    assert result.has_changes is True
+
+
+def test_compare_page_pair_does_not_mutate_compute_diff_behavior() -> None:
+    """compare_page_pair の追加後も既存 compute_diff の挙動は変わらない（AC-7 に相当）。"""
+    old = [_page("https://example.com/a", "A")]
+    new = [_page("https://example.com/b", "B")]
+
+    diff = compute_diff(old, new)
+
+    assert diff.added_pages[0].url == "https://example.com/b"
+    assert diff.removed_pages[0].url == "https://example.com/a"
+
+
+def test_compare_page_pair_no_changes() -> None:
+    """差分がなければ has_changes=False（compare_page_pair 単体でも既存ロジックを再利用する）。"""
+    field = FieldData("text", "name", "", required=True)
+    old_page = _page("https://old.example.com/form", "Form", fields=(field,))
+    new_page = _page("https://new.example.com/form", "Form", fields=(field,))
+
+    result = compare_page_pair(old_page, new_page)
+
+    assert result.attribute_diffs == ()
+    assert result.field_changes == ()
 
 
 def _page(

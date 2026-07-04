@@ -208,6 +208,32 @@ def parse_args() -> argparse.Namespace:
             "画面数×優先度の工数見積・スコープ表（test_plan.md / test_plan.xlsx）を生成する"
         ),
     )
+    parser.add_argument(
+        "--compare-old-urls",
+        help=("現新比較モード: 現行側 URL（カンマ区切り）。--compare-new-urls と併用する"),
+    )
+    parser.add_argument(
+        "--compare-new-urls",
+        help=("現新比較モード: 新側 URL（カンマ区切り）。--compare-old-urls と併用する"),
+    )
+    parser.add_argument(
+        "--compare-auth-old",
+        type=Path,
+        help="現新比較: 現行側の保存済みセッション(auth.json)",
+    )
+    parser.add_argument(
+        "--compare-auth-new",
+        type=Path,
+        help="現新比較: 新側の保存済みセッション(auth.json)",
+    )
+    parser.add_argument(
+        "--compare-mask-selector",
+        action="append",
+        help=(
+            "現新比較: 動的領域として画像差分から除外する CSS セレクタ"
+            "（広告枠など既知の動的領域）。複数指定可"
+        ),
+    )
     return parser.parse_args()
 
 
@@ -247,7 +273,57 @@ def run(args: argparse.Namespace) -> None:
     if bool(getattr(args, "test_plan", False)):
         _generate_test_plan(args)
         return
+    if getattr(args, "compare_old_urls", None) and getattr(args, "compare_new_urls", None):
+        _run_old_new_comparison(args)
+        return
     _run_crawl(args, auth_path)
+
+
+def _run_old_new_comparison(args: argparse.Namespace) -> None:
+    """現新比較モード: 2 ターゲットクロール→対応付け→三層比較→4 分類レポート出力。"""
+    from diff.comparison import ComparisonError, run_old_new_comparison
+    from generator.comparison_reporter import save_comparison_outputs
+
+    old_urls = _parse_url_list(getattr(args, "compare_old_urls", None))
+    new_urls = _parse_url_list(getattr(args, "compare_new_urls", None))
+    if not old_urls or not new_urls:
+        logger.error("--compare-old-urls と --compare-new-urls の両方を指定してください")
+        return
+
+    output_dir = (
+        Path(args.output) / f"compare_{_domain_name(old_urls[0])}_vs_{_domain_name(new_urls[0])}"
+    )
+    auth_old = getattr(args, "compare_auth_old", None)
+    auth_new = getattr(args, "compare_auth_new", None)
+    mask_selectors = tuple(getattr(args, "compare_mask_selector", None) or ())
+    _STOP_REQUESTED.clear()
+
+    try:
+        result = run_old_new_comparison(
+            old_urls,
+            new_urls,
+            output_dir,
+            auth_old=Path(auth_old) if auth_old else None,
+            auth_new=Path(auth_new) if auth_new else None,
+            mask_selectors=mask_selectors,
+            stop_requested=_STOP_REQUESTED.is_set,
+        )
+    except ComparisonError as exc:
+        logger.error("%s", exc)
+        sys.exit(1)
+
+    json_path, html_path = save_comparison_outputs(result, output_dir)
+    logger.info(
+        "現新比較が完了しました: 対応画面 %d 組・指摘 %d 件・新規追加 %d 件・削除 %d 件 — %s / %s",
+        len(result.pairs),
+        len(result.findings),
+        len(result.added_page_ids),
+        len(result.removed_page_ids),
+        json_path,
+        html_path,
+    )
+    if not result.pairs:
+        logger.warning("対応画面が見つかりません")
 
 
 def _record_session(args: argparse.Namespace) -> None:

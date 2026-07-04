@@ -11,11 +11,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from difflib import SequenceMatcher
-from urllib.parse import urlparse
 
 from analyzer.canonicalizer import group_canonical_screens
 from analyzer.html_analyzer import AnalyzedPage
+from analyzer.text_similarity import name_similarity as _name_similarity
+from analyzer.text_similarity import normalize_path as _normalize_path
 from crawler.page_crawler import FieldData
 from ingest.models import DocumentBundle, DocumentedField, DocumentedRule, DocumentedScreen
 from ingest.tables import parse_max_length
@@ -90,18 +90,6 @@ def fuse(pages: list[AnalyzedPage], bundle: DocumentBundle) -> FusionResult:
         field_gaps=tuple(gaps),
         official_names=official_names,
     )
-
-
-def _normalize_path(url_or_path: str) -> str:
-    parsed = urlparse(url_or_path)
-    path = parsed.path or url_or_path
-    return path.rstrip("/").lower() or "/"
-
-
-def _name_similarity(left: str, right: str) -> float:
-    if not left or not right:
-        return 0.0
-    return SequenceMatcher(None, left, right).ratio()
 
 
 def _screen_score(page: AnalyzedPage, screen: DocumentedScreen) -> tuple[float, str]:

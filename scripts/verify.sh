@@ -13,6 +13,7 @@ cd "$REPO_ROOT"
 
 VENV_PY="$REPO_ROOT/venv/bin/python"
 VENV_BIN="$REPO_ROOT/venv/bin"
+export PLAYWRIGHT_BROWSERS_PATH="${PLAYWRIGHT_BROWSERS_PATH:-$REPO_ROOT/.runtime/ms-playwright}"
 SMOKE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/ws2d_verify.XXXXXX")"
 SMOKE_URL="https://example.com"
 COVERAGE_MIN=80
@@ -35,10 +36,12 @@ step "0. 環境チェック (python3.12 venv)"
 PYVER="$("$VENV_PY" -c 'import sys;print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
 [ "$PYVER" = "3.12" ] || fail "venv が python$PYVER。3.12 で再構築が必要 (greenlet が 3.13 でビルド失敗するため)"
 "$VENV_PY" -c 'import playwright' 2>/dev/null || fail "playwright 未インストール。'pip install -r requirements.txt' を実行"
+"$VENV_PY" scripts/manage_playwright_runtime.py check >/dev/null \
+  || fail "Chromiumを起動できない。'$VENV_PY scripts/manage_playwright_runtime.py install' を実行"
 for tool in ruff black mypy; do
   [ -x "$VENV_BIN/$tool" ] || fail "$tool 未インストール。'pip install -r requirements-dev.txt' を実行"
 done
-green "OK: python$PYVER + playwright + ruff/black/mypy"
+green "OK: python$PYVER + Playwright Chromium実起動 + ruff/black/mypy"
 
 # --- 1. py_compile 全ソース ---
 step "1. py_compile (構文チェック)"

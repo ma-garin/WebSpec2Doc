@@ -52,11 +52,16 @@ cd WebSpec2Doc
 python3.12 -m venv venv
 source venv/bin/activate   # Windows: venv\Scripts\activate
 
-pip install -r requirements.txt
-playwright install chromium
+pip install -r requirements-dev.txt
+python scripts/manage_playwright_runtime.py install
 make setup-hooks    # pre-commit フックをインストール（品質ゲート有効化）
 make test           # 動作確認
 ```
+
+Chromium はユーザー共有キャッシュではなく、既定で
+`./.runtime/ms-playwright` に導入されます。Playwright 更新後も、必ず同じ仮想環境の
+`manage_playwright_runtime.py install` を再実行してください。`make check-runtime` は
+Chromiumを実際に起動して、パッケージとブラウザの組み合わせを検証します。
 
 ---
 
@@ -134,7 +139,8 @@ python src/main.py --url https://example.com --auth auth.json
 # Python 3.12 の venv を作成し依存をインストール
 python3.12 -m venv .venv
 .venv/bin/pip install -r requirements.txt
-.venv/bin/playwright install chromium --with-deps
+.venv/bin/python scripts/manage_playwright_runtime.py install --with-deps
+.venv/bin/python scripts/manage_playwright_runtime.py check
 
 # 既定はローカルループバックのみ許可（外部からは 403）
 # 社内ネットワークから使う場合は許可ホストを明示的に指定する
@@ -151,6 +157,7 @@ After=network.target
 [Service]
 WorkingDirectory=/opt/webspec2doc
 Environment=WEBSPEC2DOC_TRUSTED_HOSTS=webspec2doc.internal
+Environment=PLAYWRIGHT_BROWSERS_PATH=/opt/webspec2doc/.runtime/ms-playwright
 ExecStart=/opt/webspec2doc/.venv/bin/python app.py
 Restart=on-failure
 User=webspec2doc

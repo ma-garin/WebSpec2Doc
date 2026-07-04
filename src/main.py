@@ -127,6 +127,16 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="差分検知時に exit code 1 で終了（CI/CDパイプライン用）",
     )
+    parser.add_argument(
+        "--reference-doc",
+        type=Path,
+        action="append",
+        help=(
+            "参考文書（既存の画面一覧・項目定義書など）。実測結果と突合し"
+            "ギャップレポートと正式画面名の注入を行う。複数指定可。"
+            "対応形式: xlsx/docx/pptx/pdf/md/txt/yaml/json"
+        ),
+    )
     return parser.parse_args()
 
 
@@ -218,6 +228,9 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
     impact_report = None
     if bool(getattr(args, "compare", False)) and prior_snapshot is not None:
         impact_report = _compute_impact_report(prior_snapshot, analyzed_pages, output_dir)
+    official_names = _run_doc_fusion(
+        analyzed_pages, getattr(args, "reference_doc", None), output_dir
+    )
     save_outputs(
         analyzed_pages,
         graph,
@@ -230,6 +243,7 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
         transition_coverage=transition_coverage,
         business_flows=business_flows,
         impact_report=impact_report,
+        official_names=official_names,
     )
     if _STOP_REQUESTED.is_set():
         partial = save_partial_snapshot(pages, output_dir, finalized=True)
@@ -540,6 +554,37 @@ def _save_diff_report(
     return bool(getattr(diff, "has_changes", False))
 
 
+def _run_doc_fusion(
+    pages: list[AnalyzedPage],
+    reference_docs: list[Path] | None,
+    output_dir: Path,
+) -> dict[str, str] | None:
+    """参考文書があれば実測結果と突合し、正式画面名マップを返す。
+
+    突合結果は doc_fusion.json / doc_fusion.md として出力する。
+    文書の取り込み失敗はクロール成果を無駄にしないため警告に留める。
+    """
+    if not reference_docs:
+        return None
+    from generator.fusion_reporter import save_fusion_outputs
+    from ingest.loader import load_reference_documents
+    from ingest.matcher import fuse
+
+    try:
+        bundle = load_reference_documents(list(reference_docs))
+    except (FileNotFoundError, ValueError) as exc:
+        logger.warning("参考文書の取り込みに失敗しました（突合をスキップ）: %s", exc)
+        return None
+    result = fuse(pages, bundle)
+    save_fusion_outputs(result, bundle, output_dir)
+    logger.info(
+        "文書×実測の突合が完了しました: 画面対応 %d 件・ギャップ %d 件（doc_fusion.md）",
+        len(result.screen_matches),
+        len(result.field_gaps),
+    )
+    return result.official_names or None
+
+
 def save_outputs(
     pages: list[AnalyzedPage],
     graph: nx.DiGraph,
@@ -553,6 +598,7 @@ def save_outputs(
     transition_coverage: dict[str, dict] | None = None,
     business_flows: list[dict] | None = None,
     impact_report: dict | None = None,
+    official_names: dict[str, str] | None = None,
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     target_url = pages[0].page_data.url if pages else ""
@@ -585,6 +631,7 @@ def save_outputs(
             crawled_at,
             transition_coverage=transition_coverage,
             business_flows=business_flows,
+            official_names=official_names,
         )
     if "excel" in formats:
         _save_excel_output(output_dir, pages, form_summary)
@@ -670,6 +717,7 @@ def _save_json_output(
     crawled_at: str,
     transition_coverage: dict[str, dict] | None = None,
     business_flows: list[dict] | None = None,
+    official_names: dict[str, str] | None = None,
 ) -> None:
     from generator.json_reporter import generate_json_report
 
@@ -682,6 +730,7 @@ def _save_json_output(
         crawled_at=crawled_at,
         transition_coverage=transition_coverage,
         business_flows=business_flows,
+        official_names=official_names,
     )
     (output_dir / JSON_REPORT_FILE_NAME).write_text(report_json, encoding="utf-8")
 

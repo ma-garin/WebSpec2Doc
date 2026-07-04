@@ -74,6 +74,23 @@ class DocumentedRule:
 
 
 @dataclass(frozen=True)
+class DocumentedRequirement:
+    """文書に記載された要件（RFP・要件一覧の1行または1文）。
+
+    req_id は文書に記載が無い場合 "REQ-{連番}"（表由来）/
+    "REQ-LLM-{source_file}-{連番}"（LLM由来）を採番する。
+    """
+
+    req_id: str
+    title: str
+    description: str = ""
+    category: str = ""  # 機能 / 非機能 等（文書記載のまま。無ければ ""）
+    source: str = "table"  # "table" / "llm"
+    confidence: float = 1.0  # LLM 由来は SPEC-1-1 と同一規約で ≤0.9
+    evidence: DocumentEvidence | None = None
+
+
+@dataclass(frozen=True)
 class DocumentBundle:
     """取り込んだ文書一式の正規化結果。"""
 
@@ -81,6 +98,7 @@ class DocumentBundle:
     fields: tuple[DocumentedField, ...]
     source_files: tuple[str, ...]
     rules: tuple[DocumentedRule, ...] = ()
+    requirements: tuple[DocumentedRequirement, ...] = ()
 
 
 def document_evidence_to_dict(evidence: DocumentEvidence | None) -> dict[str, object] | None:

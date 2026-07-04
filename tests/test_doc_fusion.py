@@ -154,6 +154,91 @@ class TestMarkdownIngest:
         assert dept.max_length == 20
 
 
+# ---------- SPEC-1-3: 要件表（RFP / 要件一覧） ----------
+
+
+class TestRequirementTableIngest:
+    def test_requirement_table_extracted(self, tmp_path: Path) -> None:
+        """SPEC-1-3 AC-1: 要件ID・要件名列を持つ表から DocumentedRequirement が抽出される。"""
+        md = tmp_path / "rfp.md"
+        md.write_text(
+            "\n".join(
+                [
+                    "# RFP要件一覧",
+                    "",
+                    "| 要件ID | 要件名 | 区分 | 備考 |",
+                    "|---|---|---|---|",
+                    "| REQ-A01 | 商品検索ができること | 機能 | キーワード検索対応 |",
+                    "| REQ-A02 | 在庫確認ができること | 機能 | |",
+                ]
+            ),
+            encoding="utf-8",
+        )
+        bundle = load_reference_documents([md])
+        assert len(bundle.requirements) == 2
+        req = next(r for r in bundle.requirements if r.req_id == "REQ-A01")
+        assert req.title == "商品検索ができること"
+        assert req.category == "機能"
+        assert req.description == "キーワード検索対応"
+        assert req.source == "table"
+        assert req.confidence == 1.0
+        assert req.evidence is not None
+        assert req.evidence.file == "rfp.md"
+        assert req.evidence.location  # 行番号を含む位置情報
+
+    def test_requirement_table_auto_numbers_missing_id(self, tmp_path: Path) -> None:
+        """要件ID列があってもセルが空の行は "REQ-{連番}" を採番する。"""
+        md = tmp_path / "rfp.md"
+        md.write_text(
+            "\n".join(
+                [
+                    "| 要件ID | 要件名 | 備考 |",
+                    "|---|---|---|",
+                    "|  | ログインができること | |",
+                    "|  | ログアウトができること | |",
+                ]
+            ),
+            encoding="utf-8",
+        )
+        bundle = load_reference_documents([md])
+        ids = [r.req_id for r in bundle.requirements]
+        assert ids == ["REQ-001", "REQ-002"]
+
+    def test_field_table_not_misread_as_requirements(self, tmp_path: Path) -> None:
+        """5-1: 項目名＋必須列を持つ表は要件として誤読しない（既存 fields 解釈のまま）。"""
+        md = tmp_path / "spec.md"
+        md.write_text(
+            "\n".join(
+                [
+                    "| 項目名 | 必須 | 桁数 |",
+                    "|---|---|---|",
+                    "| 氏名 | ○ | 40 |",
+                ]
+            ),
+            encoding="utf-8",
+        )
+        bundle = load_reference_documents([md])
+        assert bundle.requirements == ()
+        assert len(bundle.fields) == 1
+
+    def test_screen_table_not_affected_by_requirement_synonyms(self, tmp_path: Path) -> None:
+        """回帰: 画面一覧表は要件シノニム追加後も従来通り画面として解釈される。"""
+        md = tmp_path / "screens.md"
+        md.write_text(
+            "\n".join(
+                [
+                    "| 画面ID | 画面名 | URL |",
+                    "|---|---|---|",
+                    "| GA-010 | ログイン画面 | /login.html |",
+                ]
+            ),
+            encoding="utf-8",
+        )
+        bundle = load_reference_documents([md])
+        assert bundle.requirements == ()
+        assert [s.name for s in bundle.screens] == ["ログイン画面"]
+
+
 # ---------- YAML / JSON ----------
 
 

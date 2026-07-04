@@ -17,10 +17,12 @@ from urllib.parse import urlparse
 from analyzer.canonicalizer import group_canonical_screens
 from analyzer.html_analyzer import AnalyzedPage
 from crawler.page_crawler import FieldData
-from ingest.models import DocumentBundle, DocumentedField, DocumentedScreen
+from ingest.models import DocumentBundle, DocumentedField, DocumentedRule, DocumentedScreen
+from ingest.tables import parse_max_length
 
 _SCREEN_NAME_THRESHOLD = 0.6
 _FIELD_NAME_THRESHOLD = 0.6
+_RULE_UNIT_WORDS = ("万", "千", "億")
 
 
 @dataclass(frozen=True)
@@ -75,6 +77,13 @@ def fuse(pages: list[AnalyzedPage], bundle: DocumentBundle) -> FusionResult:
         page = next(p for p in canonical_pages if p.page_id == match.page_id)
         doc_fields = _fields_for_screen(bundle, match.screen)
         gaps.extend(_match_fields(page, doc_fields))
+        if bundle.rules:
+            screen_rules = [
+                r
+                for r in bundle.rules
+                if r.screen_name in (match.screen.name, match.screen.screen_id)
+            ]
+            gaps.extend(_rule_mismatches(match.page_id, screen_rules, _crawled_fields(page)))
 
     official_names = {m.page_id: m.screen.name for m in matches}
     return FusionResult(
@@ -251,4 +260,62 @@ def _mismatches(page_id: str, doc_field: DocumentedField, crawled: FieldData) ->
                 crawl_selector=selector,
             )
         )
+    return gaps
+
+
+def _rule_mismatches(
+    page_id: str, rules: list[DocumentedRule], crawled: list[FieldData]
+) -> list[FieldGap]:
+    """limit ルールの数値と実測 maxlength/max_value の不一致を FieldGap(mismatch) にする。
+
+    単位語（万・千・億）を伴う expression は換算を推測せず比較対象から外す
+    （rule_injector.boundary_conditions_from_limit と同じ方針）。
+    """
+    gaps: list[FieldGap] = []
+    for rule in rules:
+        if rule.kind != "limit" or not rule.field_name:
+            continue
+        if any(unit in rule.expression for unit in _RULE_UNIT_WORDS):
+            continue
+        value = parse_max_length(rule.expression)
+        if value is None:
+            continue
+        best_field: FieldData | None = None
+        best_score = 0.0
+        for field_data in crawled:
+            score = max(
+                _name_similarity(rule.field_name, field_data.name),
+                _name_similarity(rule.field_name, field_data.aria_label),
+                _name_similarity(rule.field_name, field_data.placeholder),
+            )
+            if score > best_score:
+                best_score = score
+                best_field = field_data
+        if best_field is None or best_score < _FIELD_NAME_THRESHOLD:
+            continue
+        numeric_attrs: list[tuple[str, int]] = []
+        if best_field.maxlength is not None:
+            numeric_attrs.append(("maxlength", best_field.maxlength))
+        if best_field.max_value:
+            parsed_max_value = parse_max_length(best_field.max_value)
+            if parsed_max_value is not None:
+                numeric_attrs.append(("max_value", parsed_max_value))
+        for attr_name, attr_value in numeric_attrs:
+            if attr_value != value:
+                selector = best_field.evidence.selector if best_field.evidence else ""
+                gaps.append(
+                    FieldGap(
+                        kind="mismatch",
+                        page_id=page_id,
+                        field_name=rule.field_name,
+                        detail=(
+                            f"限度値が矛盾: 文書では {value}（{rule.expression}・"
+                            f"出所: {rule.evidence.file if rule.evidence else ''} "
+                            f"{rule.evidence.location if rule.evidence else ''}）、"
+                            f"実測 {attr_name}={attr_value}"
+                        ),
+                        doc_field=None,
+                        crawl_selector=selector,
+                    )
+                )
     return gaps

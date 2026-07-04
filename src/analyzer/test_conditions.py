@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from itertools import product
 
 from crawler.page_crawler import FieldData, FormData, SourceEvidence
+from ingest.models import DocumentEvidence
 
 logger = logging.getLogger(__name__)
 
@@ -12,6 +13,7 @@ _FALLBACK = "正常値 / 空値 / 特殊文字"
 
 SOURCE_RULES = "rules"
 SOURCE_LLM = "llm"
+SOURCE_DOCUMENT = "document"
 # ルール由来のテスト条件は DOM 属性からの機械導出のため confidence は 1.0 固定
 RULES_CONFIDENCE = 1.0
 
@@ -21,10 +23,11 @@ class TestCondition:
     """根拠と確信度を持つテスト条件。"""
 
     description: str
-    source: str  # "rules" / "llm"
+    source: str  # "rules" / "llm" / "document"
     confidence: float
     evidence: SourceEvidence | None
     observed_result: str = ""  # 期待結果（実測）: dry-run で観測されたメッセージ
+    doc_evidence: DocumentEvidence | None = None  # 文書由来条件（source="document"）の根拠
 
 
 _REQUIRED_CONDITION_KEYWORD = "必須チェック"

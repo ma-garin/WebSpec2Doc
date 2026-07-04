@@ -368,7 +368,7 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
     impact_report = None
     if bool(getattr(args, "compare", False)) and prior_snapshot is not None:
         impact_report = _compute_impact_report(prior_snapshot, analyzed_pages, output_dir)
-    official_names = _run_doc_fusion(
+    official_names, rule_conditions = _run_doc_fusion(
         analyzed_pages,
         getattr(args, "reference_doc", None),
         output_dir,
@@ -389,6 +389,7 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
         impact_report=impact_report,
         official_names=official_names,
         exploration_coverage=exploration_coverage,
+        rule_conditions=rule_conditions,
     )
     if _STOP_REQUESTED.is_set():
         partial = save_partial_snapshot(pages, output_dir, finalized=True)
@@ -704,15 +705,16 @@ def _run_doc_fusion(
     reference_docs: list[Path] | None,
     output_dir: Path,
     use_llm: bool = False,
-) -> dict[str, str] | None:
-    """参考文書があれば実測結果と突合し、正式画面名マップを返す。
+) -> tuple[dict[str, str] | None, dict[tuple[str, str], tuple] | None]:
+    """参考文書があれば実測結果と突合し、(正式画面名マップ, 文書由来ルール条件) を返す。
 
     突合結果は doc_fusion.json / doc_fusion.md として出力する。
     文書の取り込み失敗はクロール成果を無駄にしないため警告に留める。
     use_llm=True かつ OPENAI_API_KEY 未設定の場合は Phase 1 抽出のみで継続する。
     """
     if not reference_docs:
-        return None
+        return None, None
+    from analyzer.rule_injector import build_rule_conditions
     from generator.fusion_reporter import save_fusion_outputs
     from ingest.loader import load_reference_documents
     from ingest.matcher import fuse
@@ -722,7 +724,7 @@ def _run_doc_fusion(
         bundle = load_reference_documents(list(reference_docs), use_llm=use_llm, api_key=api_key)
     except (FileNotFoundError, ValueError) as exc:
         logger.warning("参考文書の取り込みに失敗しました（突合をスキップ）: %s", exc)
-        return None
+        return None, None
     result = fuse(pages, bundle)
     save_fusion_outputs(result, bundle, output_dir)
     logger.info(
@@ -730,7 +732,8 @@ def _run_doc_fusion(
         len(result.screen_matches),
         len(result.field_gaps),
     )
-    return result.official_names or None
+    rule_conditions = build_rule_conditions(result, bundle, pages) if bundle.rules else None
+    return result.official_names or None, rule_conditions or None
 
 
 def _load_exploration_coverage(output_dir: Path) -> dict[str, object] | None:
@@ -764,6 +767,7 @@ def save_outputs(
     impact_report: dict | None = None,
     official_names: dict[str, str] | None = None,
     exploration_coverage: dict[str, object] | None = None,
+    rule_conditions: dict[tuple[str, str], tuple] | None = None,
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     target_url = pages[0].page_data.url if pages else ""
@@ -798,6 +802,7 @@ def save_outputs(
             transition_coverage=transition_coverage,
             business_flows=business_flows,
             official_names=official_names,
+            rule_conditions=rule_conditions,
         )
     if "excel" in formats:
         _save_excel_output(output_dir, pages, form_summary)
@@ -886,6 +891,7 @@ def _save_json_output(
     transition_coverage: dict[str, dict] | None = None,
     business_flows: list[dict] | None = None,
     official_names: dict[str, str] | None = None,
+    rule_conditions: dict[tuple[str, str], tuple] | None = None,
 ) -> None:
     from generator.json_reporter import generate_json_report
 
@@ -899,6 +905,7 @@ def _save_json_output(
         transition_coverage=transition_coverage,
         business_flows=business_flows,
         official_names=official_names,
+        rule_conditions=rule_conditions,
     )
     (output_dir / JSON_REPORT_FILE_NAME).write_text(report_json, encoding="utf-8")
 

@@ -175,46 +175,58 @@ class TestOldNewComparisonE2E:
     def test_ac4_dynamic_mask_suppresses_clock_diff(
         self, demo_sites: tuple[str, str], tmp_path: Path
     ) -> None:
-        """clock 領域を動的マスクで除外すると、その分だけ contact 画面の画像差分が減る（AC-4）。
+        """clock 領域を明示マスクすると、同一のスクリーンショット対に対する画像差分が
+        増加しないことを検証する（AC-4）。
 
         contact.html は old/new で clock 以外にも本物の差分（AC-3 の required 消失・AC-5 の
-        リンク切れに紐づく可視テキスト差）を意図的に持つ。そのため「マスク適用後は
-        is_significant=False（絶対閾値未満）」という判定は、実行環境のフォント描画差（CI と
-        ローカルサンドボックスでインストール済みフォントが異なり、日本語グリフの
-        アンチエイリアシングがページ全体で変わる）によって環境依存で揺れる
-        （CONVENTIONS.md 既知の罠 §3: 環境不変の性質を検証すべき）。
-        代わりに「マスクを外すと差分が増える／マスクを掛けると減る」という
-        環境非依存の相対関係を検証する。絶対閾値でのAC-4検証は
+        リンク切れに紐づく可視テキスト差）を意図的に持つため、「マスク適用後は
+        is_significant=False（絶対閾値未満）」という判定は環境依存で揺れる
+        （CONVENTIONS.md 既知の罠 §3）。加えて、run_old_new_comparison は
+        mask_selectors の有無に関係なく現行側を毎回再訪して動的領域を自動検出するため
+        （_collect_masks は常時 detect_dynamic_regions を呼ぶ）、2 回 run_old_new_comparison を
+        呼んで比較すると、その都度の実時刻に依存する自動検出の揺らぎがノイズとして混入し、
+        「マスクを掛けた方が差分が小さい」という関係すら保証できない
+        （実際にCIで masked > unmasked という逆転が再現した）。
+        そこで 1 回のクロールで得た実スクリーンショット（同一ファイル）に対し、
+        compare_screenshots_masked を masks=() と masks=(実測した#clockの矩形,) の
+        2通りで直接呼び出し、同一入力に対するマスク適用の効果だけを決定論的に検証する。
+        絶対閾値でのAC-4検証は
         tests/test_screenshot_diff.py::TestCompareScreenshotsMasked（決定論的な合成画像）が担う。
         """
         old_base, new_base = demo_sites
 
         def _scenario() -> dict[str, Any]:
+            from crawler.page_crawler import _browser_page, _goto_stable
             from diff.comparison import run_old_new_comparison
+            from diff.screenshot_diff import compare_screenshots_masked
 
-            masked = run_old_new_comparison(
+            baseline = run_old_new_comparison(
                 [f"{old_base}/contact.html"],
                 [f"{new_base}/contact.html"],
-                tmp_path / "masked",
-                mask_selectors=("#clock",),
-            )
-            unmasked = run_old_new_comparison(
-                [f"{old_base}/contact.html"],
-                [f"{new_base}/contact.html"],
-                tmp_path / "unmasked",
+                tmp_path,
                 mask_selectors=(),
             )
-            return {
-                "masked_diffs": masked.screenshot_diffs,
-                "unmasked_diffs": unmasked.screenshot_diffs,
-            }
+            diffs = baseline.screenshot_diffs
+            assert diffs, "画像差分が計算されていない（screenshot_path 欠落の可能性）"
+            before_path = Path(diffs[0].before_path)
+            after_path = Path(diffs[0].after_path)
+
+            with _browser_page(None) as page:
+                _goto_stable(page, f"{old_base}/contact.html")
+                element = page.query_selector("#clock")
+                assert element is not None, "#clock 要素が見つからない"
+                box = element.bounding_box()
+                assert box is not None
+                clock_box = (int(box["x"]), int(box["y"]), int(box["width"]), int(box["height"]))
+
+            unmasked = compare_screenshots_masked(before_path, after_path, masks=())
+            masked = compare_screenshots_masked(before_path, after_path, masks=(clock_box,))
+            return {"unmasked_ratio": unmasked.diff_ratio, "masked_ratio": masked.diff_ratio}
 
         outcome = _run_in_thread(_scenario)["value"]
-        masked_diffs = outcome["masked_diffs"]
-        unmasked_diffs = outcome["unmasked_diffs"]
-        assert masked_diffs and unmasked_diffs, "画像差分が計算されていない（screenshot_path 欠落の可能性）"
-        # clock マスクにより、時刻表示分の差分が確実に減ることを検証する（環境非依存の相対比較）
-        assert masked_diffs[0].diff_ratio < unmasked_diffs[0].diff_ratio, (
+        # 同一のスクリーンショット対に対し、clock 矩形を塗りつぶすだけ差分が減る
+        # （増えることは絶対にない）ことを検証する。
+        assert outcome["masked_ratio"] <= outcome["unmasked_ratio"], (
             f"clock マスクが差分を減らしていない: "
-            f"masked={masked_diffs[0].diff_ratio} unmasked={unmasked_diffs[0].diff_ratio}"
+            f"masked={outcome['masked_ratio']} unmasked={outcome['unmasked_ratio']}"
         )

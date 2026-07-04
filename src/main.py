@@ -171,6 +171,14 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--export-findings",
+        action="store_true",
+        help=(
+            "気づき票エクスポートモード: 記録済みセッションの気づきマーク（finding イベント）を"
+            "再現手順付きバグ票として findings.json / findings.csv に出力する"
+        ),
+    )
+    parser.add_argument(
         "--doc-llm",
         action="store_true",
         help=(
@@ -207,6 +215,9 @@ def run(args: argparse.Namespace) -> None:
         return
     if bool(getattr(args, "reverse_assets", False)):
         _reverse_assets(args)
+        return
+    if bool(getattr(args, "export_findings", False)):
+        _export_findings(args)
         return
     _run_crawl(args, auth_path)
 
@@ -299,6 +310,28 @@ def _reverse_assets(args: argparse.Namespace) -> None:
         "（recorded_assets.json / recorded_candidates.json）",
         len(assets["test_cases"]),
         len(assets["flows"]),
+    )
+
+
+def _export_findings(args: argparse.Namespace) -> None:
+    """気づき票エクスポートモード（キャプチャ Phase 3: 気づき→バグ票自動起票）。"""
+    from capture.coverage import load_session_events
+    from capture.finding_reporter import build_finding_tickets, save_findings
+
+    url = str(args.url or "")
+    if not url:
+        logger.error("--export-findings には --url が必要です")
+        return
+    output_dir = Path(args.output) / _domain_name(url)
+    events = load_session_events(output_dir)
+    if not events:
+        logger.error("探索セッションがありません（先に --record-session で操作を記録してください）")
+        return
+    tickets = build_finding_tickets(events)
+    save_findings(tickets, output_dir)
+    logger.info(
+        "気づき票エクスポートが完了しました: %d 件（findings.json / findings.csv）",
+        len(tickets),
     )
 
 

@@ -154,6 +154,20 @@
       "persistence": ["output/{domain}/spec.xlsx"],
       "failure_modes": ["invalid_pattern", "unparsable_range", "no_evidence"],
       "required_tests": ["happy_path", "error_path", "evidence"]
+    },
+    {
+      "feature_id": "finding_ticket",
+      "name": "気づきマーク → 再現手順付きバグ票（JSON/CSV エクスポート）",
+      "risk_level": "medium",
+      "status": "implemented",
+      "ui_files": [],
+      "route_files": [],
+      "core_files": ["src/capture/finding_reporter.py", "src/capture/session_recorder.py", "src/main.py"],
+      "symbols": ["build_finding_tickets", "save_findings", "SessionRecorder"],
+      "outputs": ["findings.json", "findings.csv"],
+      "persistence": ["output/{domain}/findings.json", "output/{domain}/findings.csv"],
+      "failure_modes": ["widget_injection_failed", "no_sessions", "no_preceding_actions"],
+      "required_tests": ["happy_path", "error_path", "state_join_key", "evidence"]
     }
   ]
 }

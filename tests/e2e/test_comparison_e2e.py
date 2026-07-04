@@ -175,7 +175,14 @@ class TestOldNewComparisonE2E:
     def test_ac4_dynamic_mask_suppresses_clock_diff(
         self, demo_sites: tuple[str, str], tmp_path: Path
     ) -> None:
-        """clock 領域を動的マスクで除外すると contact 画面の画像差分が非有意になる（AC-4）。"""
+        """clock 領域を動的マスクで除外すると contact 画面の画像差分が非有意になる（AC-4）。
+
+        clock は ISO 8601 タイムスタンプ（ミリ秒まで）を表示するため、old/new の撮影間隔が
+        環境（CI 等の遅い実行環境）によって数秒〜数十秒に伸びると、時・分・秒の広い範囲が
+        変化しうる。1 秒間隔の同一ページ二重撮影で検出する自動動的領域検出（detect_dynamic_regions）
+        はその変化幅を捉えきれず環境依存で失敗しうるため、既知の動的要素として
+        --compare-mask-selector 相当の明示的セレクタマスクを使う（自動検出に依存しない）。
+        """
         old_base, new_base = demo_sites
 
         def _scenario() -> dict[str, Any]:
@@ -185,6 +192,7 @@ class TestOldNewComparisonE2E:
                 [f"{old_base}/contact.html"],
                 [f"{new_base}/contact.html"],
                 tmp_path,
+                mask_selectors=("#clock",),
             )
             return {"screenshot_diffs": result.screenshot_diffs}
 

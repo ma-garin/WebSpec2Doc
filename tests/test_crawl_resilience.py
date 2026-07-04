@@ -46,12 +46,20 @@ def test_crawl_urls_reports_robots_skip() -> None:
     )
 
 
+def _allow_all_robots() -> RobotFileParser:
+    parser = RobotFileParser()
+    parser.allow_all = True
+    return parser
+
+
 def test_parallel_crawl_preserves_input_order_and_checkpoints() -> None:
     events: list[dict[str, object]] = []
     checkpoints: list[list[str]] = []
     urls = ["https://example.com/a", "https://example.com/b", "https://example.com/c"]
     with (
         patch.object(crawler, "_browser_page", _browser),
+        patch.object(crawler, "_load_robots_parser", return_value=_allow_all_robots()),
+        patch.object(crawler.time, "sleep"),
         patch.object(
             crawler,
             "_crawl_page_with_id",
@@ -96,7 +104,10 @@ def test_login_wall_is_reported_and_not_recorded() -> None:
 
 def test_stop_before_next_page_emits_cancelled() -> None:
     events: list[dict[str, object]] = []
-    with patch.object(crawler, "_browser_page", _browser):
+    with (
+        patch.object(crawler, "_browser_page", _browser),
+        patch.object(crawler, "_load_robots_parser", return_value=_allow_all_robots()),
+    ):
         pages = crawler.crawl_urls(
             ["https://example.com/a"],
             on_event=events.append,

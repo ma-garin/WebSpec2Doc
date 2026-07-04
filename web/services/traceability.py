@@ -77,15 +77,48 @@ def _determine_coverage(
     return "uncovered", ()
 
 
-def _build_requirement(index: int, screen: dict, candidates: list[dict]) -> RequirementLink:
-    """1 画面分の RequirementLink を構築する。"""
+def _collect_test_ids_by_metadata(screen: dict, test_metadata: list[dict]) -> tuple[str, ...]:
+    """メタデータ JSON（test_id/page_id/fingerprint）で画面に紐づくテスト ID を返す。
+
+    fingerprint 一致を優先し、なければ page_id 一致で照合する。
+    """
+    fingerprint = str(screen.get("fingerprint") or "")
+    page_id = str(screen.get("page_id") or "")
+    ids: list[str] = []
+    for metadata in test_metadata:
+        test_id = str(metadata.get("test_id") or "")
+        if not test_id:
+            continue
+        matched = (fingerprint and str(metadata.get("fingerprint") or "") == fingerprint) or (
+            page_id and str(metadata.get("page_id") or "") == page_id
+        )
+        if matched and test_id not in ids:
+            ids.append(test_id)
+    return tuple(ids)
+
+
+def _build_requirement(
+    index: int,
+    screen: dict,
+    candidates: list[dict],
+    test_metadata: list[dict] | None = None,
+) -> RequirementLink:
+    """1 画面分の RequirementLink を構築する。
+
+    メタデータ JSON（fingerprint / page_id）照合を優先し、
+    メタデータがない場合は従来の URL 照合にフォールバックする。
+    """
     req_id = f"REQ-{index + 1:03d}"
     req_title = screen.get("title", screen.get("url", req_id))
     page_url = screen.get("url", "")
 
-    exact_ids = _collect_test_ids_for_url(page_url, candidates)
-    prefix_ids = _collect_test_ids_prefix(page_url, candidates)
-    coverage, test_ids = _determine_coverage(exact_ids, prefix_ids)
+    metadata_ids = _collect_test_ids_by_metadata(screen, test_metadata or [])
+    if metadata_ids:
+        coverage, test_ids = "covered", metadata_ids
+    else:
+        exact_ids = _collect_test_ids_for_url(page_url, candidates)
+        prefix_ids = _collect_test_ids_prefix(page_url, candidates)
+        coverage, test_ids = _determine_coverage(exact_ids, prefix_ids)
 
     return RequirementLink(
         req_id=req_id,
@@ -100,13 +133,14 @@ def build_matrix(
     domain: str,
     report_data: dict,
     candidates: list[dict],
+    test_metadata: list[dict] | None = None,
 ) -> TraceabilityMatrix:
     """report.json の各画面・フォームを「要件」として、
-    それをカバーするテストケース（candidates）を紐付ける。
+    それをカバーするテストケース（candidates / メタデータ JSON）を紐付ける。
     """
     screens: list[dict] = report_data.get("screens", [])
     requirements = tuple(
-        _build_requirement(i, screen, candidates) for i, screen in enumerate(screens)
+        _build_requirement(i, screen, candidates, test_metadata) for i, screen in enumerate(screens)
     )
     total = len(requirements)
     covered_count = sum(1 for r in requirements if r.coverage != "uncovered")

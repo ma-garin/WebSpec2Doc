@@ -8,7 +8,13 @@ from typing import Any, cast
 from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import Page
 
-from crawler.page_crawler import FieldData, FormData, is_internal_link, normalize_url
+from crawler.page_crawler import (
+    FieldData,
+    FormData,
+    SourceEvidence,
+    is_internal_link,
+    normalize_url,
+)
 
 DEFAULT_FORM_METHOD = "get"
 EMPTY_TEXT = ""
@@ -51,6 +57,27 @@ def compute_dom_signature(html_content: str) -> str:
         return "default"
 
     key = "|".join(sorted(set(identifiers)))
+    return hashlib.sha1(key.encode(), usedforsecurity=False).hexdigest()[:8]  # noqa: S324
+
+
+_LANDMARK_TAG_PATTERN = re.compile(r"<(main|nav|header|footer|aside)\b", re.IGNORECASE)
+_LANDMARK_ROLE_PATTERN = re.compile(
+    r'role=["\'](main|navigation|banner|contentinfo|complementary|search)["\']'
+)
+
+
+def compute_state_signature(html_content: str) -> str:
+    """可視領域の主要 landmark 構造と開閉状態から DOM 状態シグネチャを計算する。
+
+    fingerprint v2（状態ベース画面同定）用。landmark 構造（main/nav/header 等）と
+    ``compute_dom_signature`` の開閉状態（モーダル・タブ・アコーディオン）を合成する。
+    """
+    landmarks = sorted({m.group(1).lower() for m in _LANDMARK_TAG_PATTERN.finditer(html_content)})
+    roles = sorted({m.group(1).lower() for m in _LANDMARK_ROLE_PATTERN.finditer(html_content)})
+    open_state = compute_dom_signature(html_content)
+    if not landmarks and not roles and open_state == "default":
+        return "default"
+    key = "|".join([*landmarks, *(f"role:{r}" for r in roles), f"open:{open_state}"])
     return hashlib.sha1(key.encode(), usedforsecurity=False).hexdigest()[:8]  # noqa: S324
 
 
@@ -162,6 +189,34 @@ def _to_form_data(raw_form: dict[str, Any]) -> FormData:
     )
 
 
+def _field_evidence(raw_field: dict[str, Any]) -> SourceEvidence:
+    """抽出フィールドの DOM 上の出所（セレクタ・属性・位置）を根拠として構築する。"""
+    element_id = str(raw_field.get("id") or EMPTY_TEXT)
+    name = str(raw_field.get("name") or EMPTY_TEXT)
+    if element_id:
+        selector = f"#{element_id}"
+        html_attribute = "id"
+    elif name:
+        selector = f"[name='{name}']"
+        html_attribute = "name"
+    else:
+        selector = str(raw_field.get("field_type") or "input")
+        html_attribute = None
+    raw_bbox = raw_field.get("bbox")
+    bbox: tuple[int, int, int, int] | None = None
+    if isinstance(raw_bbox, list) and len(raw_bbox) == 4:
+        try:
+            bbox = (int(raw_bbox[0]), int(raw_bbox[1]), int(raw_bbox[2]), int(raw_bbox[3]))
+        except (TypeError, ValueError):
+            bbox = None
+    return SourceEvidence(
+        selector=selector,
+        html_attribute=html_attribute,
+        screenshot_path=None,
+        bbox=bbox,
+    )
+
+
 def _to_field_data(raw_field: dict[str, Any]) -> FieldData:
     return FieldData(
         field_type=str(raw_field.get("field_type") or EMPTY_TEXT),
@@ -180,6 +235,8 @@ def _to_field_data(raw_field: dict[str, Any]) -> FieldData:
         aria_required=bool(raw_field.get("aria_required", False)),
         role=str(raw_field.get("role") or EMPTY_TEXT),
         has_visible_label=bool(raw_field.get("has_visible_label", False)),
+        evidence=_field_evidence(raw_field),
+        confidence=1.0,
     )
 
 
@@ -225,6 +282,10 @@ _FORM_SCRIPT = """
         return false;
       })(),
       options: options,
+      bbox: (() => {
+        const r = field.getBoundingClientRect();
+        return [Math.round(r.x), Math.round(r.y), Math.round(r.width), Math.round(r.height)];
+      })(),
     };
   }),
 }))

@@ -214,6 +214,10 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
     analyzed_pages = analyze_pages(pages)
     graph = build_graph(analyzed_pages)
     form_summary = summarize_forms(analyzed_pages)
+    transition_coverage, business_flows = _compute_transition_quality(pages)
+    impact_report = None
+    if bool(getattr(args, "compare", False)) and prior_snapshot is not None:
+        impact_report = _compute_impact_report(prior_snapshot, analyzed_pages, output_dir)
     save_outputs(
         analyzed_pages,
         graph,
@@ -223,6 +227,9 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
         crawl_depth=int(args.depth),
         crawl_max_pages=int(args.max_pages),
         crawled_at=crawled_at,
+        transition_coverage=transition_coverage,
+        business_flows=business_flows,
+        impact_report=impact_report,
     )
     if _STOP_REQUESTED.is_set():
         partial = save_partial_snapshot(pages, output_dir, finalized=True)
@@ -447,6 +454,69 @@ def _discover(args: argparse.Namespace, auth_path: Path | None) -> None:
         sys.stdout.write(json.dumps({"pages": pages}, ensure_ascii=False))
 
 
+def _compute_transition_quality(
+    pages: list[PageData],
+) -> tuple[dict[str, dict], list[dict]]:
+    """遷移テストパスの N-switch カバレッジとビジネスフロー優先度を算出する。"""
+    from graph.transition_graph import (
+        business_flows_to_dict,
+        classify_pages_for_flows,
+        compute_switch_coverage,
+        generate_transition_tests,
+        prioritize_business_flows,
+        switch_coverage_to_dict,
+    )
+
+    paths = generate_transition_tests(pages, coverage="1-switch")
+    coverage = switch_coverage_to_dict(compute_switch_coverage(pages, paths))
+    flows = business_flows_to_dict(
+        prioritize_business_flows(paths, classify_pages_for_flows(pages))
+    )
+    return coverage, flows
+
+
+def _load_test_metadata(output_dir: Path) -> list[dict]:
+    """spec_ts_generator が併産したテストメタデータ JSON（tests リスト）を探索して返す。"""
+    candidates = sorted(output_dir.glob("qa_process/*.meta.json")) + sorted(
+        output_dir.glob("*.meta.json")
+    )
+    for meta_path in candidates:
+        try:
+            data = json.loads(meta_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            logger.warning("テストメタデータの読み込みに失敗しました: %s (%s)", meta_path, exc)
+            continue
+        tests = data.get("tests")
+        if isinstance(tests, list):
+            return tests
+    return []
+
+
+def _compute_impact_report(
+    prior_snapshot: Path,
+    analyzed_pages: list[AnalyzedPage],
+    output_dir: Path,
+) -> dict | None:
+    """差分検出→影響テスト特定→再実行推奨リストを report.html 統合表示用に算出する。"""
+    from diff.impact_analyzer import (
+        analyze_impact,
+        build_url_fingerprints,
+        format_impact_report,
+    )
+
+    try:
+        old_pages = load_snapshot(prior_snapshot)
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning("前回スナップショットの読み込みに失敗しました: %s", exc)
+        return None
+    diff = compute_diff(old_pages, [p.page_data for p in analyzed_pages])
+    test_metadata = _load_test_metadata(output_dir)
+    url_fingerprints = build_url_fingerprints(analyze_pages(old_pages))
+    url_fingerprints.update(build_url_fingerprints(analyzed_pages))
+    impacted = analyze_impact(diff, test_metadata, url_fingerprints)
+    return format_impact_report(impacted)
+
+
 def _save_diff_report(
     prior_snapshot: Path | None,
     new_snapshot: Path,
@@ -480,6 +550,9 @@ def save_outputs(
     crawl_depth: int = DEFAULT_DEPTH,
     crawl_max_pages: int = DEFAULT_MAX_PAGES,
     crawled_at: str = "",
+    transition_coverage: dict[str, dict] | None = None,
+    business_flows: list[dict] | None = None,
+    impact_report: dict | None = None,
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     target_url = pages[0].page_data.url if pages else ""
@@ -497,10 +570,21 @@ def save_outputs(
             crawl_depth,
             crawl_max_pages,
             crawled_at,
+            transition_coverage=transition_coverage,
+            business_flows=business_flows,
+            impact_report=impact_report,
         )
     if "json" in formats:
         _save_json_output(
-            pages, graph, output_dir, target_url, crawl_depth, crawl_max_pages, crawled_at
+            pages,
+            graph,
+            output_dir,
+            target_url,
+            crawl_depth,
+            crawl_max_pages,
+            crawled_at,
+            transition_coverage=transition_coverage,
+            business_flows=business_flows,
         )
     if "excel" in formats:
         _save_excel_output(output_dir, pages, form_summary)
@@ -547,6 +631,9 @@ def _save_html_outputs(
     crawl_depth: int,
     crawl_max_pages: int,
     crawled_at: str,
+    transition_coverage: dict[str, dict] | None = None,
+    business_flows: list[dict] | None = None,
+    impact_report: dict | None = None,
 ) -> None:
     from generator.html_reporter import generate_html_report
 
@@ -561,6 +648,9 @@ def _save_html_outputs(
         crawl_depth=crawl_depth,
         crawl_max_pages=crawl_max_pages,
         crawled_at=crawled_at,
+        transition_coverage=transition_coverage,
+        business_flows=business_flows,
+        impact_report=impact_report,
     )
     html_path = output_dir / "report.html"
     html_path.write_text(report_html, encoding="utf-8")
@@ -578,6 +668,8 @@ def _save_json_output(
     crawl_depth: int,
     crawl_max_pages: int,
     crawled_at: str,
+    transition_coverage: dict[str, dict] | None = None,
+    business_flows: list[dict] | None = None,
 ) -> None:
     from generator.json_reporter import generate_json_report
 
@@ -588,6 +680,8 @@ def _save_json_output(
         crawl_depth=crawl_depth,
         crawl_max_pages=crawl_max_pages,
         crawled_at=crawled_at,
+        transition_coverage=transition_coverage,
+        business_flows=business_flows,
     )
     (output_dir / JSON_REPORT_FILE_NAME).write_text(report_json, encoding="utf-8")
 
@@ -637,7 +731,7 @@ def _write_forms_sheet(
     ws: openpyxl.worksheet.worksheet.Worksheet,
     form_summary: list[dict[str, object]],
 ) -> None:
-    ws.append(["画面ID", "URL", "フィールド名", "型", "必須", "placeholder"])
+    ws.append(["画面ID", "URL", "フィールド名", "型", "必須", "placeholder", "根拠", "確信度"])
     for item in form_summary:
         ws.append(
             [
@@ -647,8 +741,21 @@ def _write_forms_sheet(
                 item.get("field_type", ""),
                 item.get("required", False),
                 item.get("placeholder", ""),
+                _evidence_cell(item.get("evidence")),
+                item.get("confidence", ""),
             ]
         )
+
+
+def _evidence_cell(evidence: object) -> str:
+    """evidence dict を Excel セル向けの文字列（セレクタ + 属性）に変換する。"""
+    if not isinstance(evidence, dict):
+        return ""
+    selector = str(evidence.get("selector") or "")
+    attribute = evidence.get("html_attribute")
+    if attribute:
+        return f"{selector} ({attribute})"
+    return selector
 
 
 if __name__ == "__main__":

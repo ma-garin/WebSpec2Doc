@@ -253,6 +253,7 @@ class TestCrawlUrls:
         with (
             patch.object(pc, "_browser_page", _fake_browser),
             patch.object(pc, "_crawl_page_with_id", side_effect=lambda p, u, i, o: self._page(u)),
+            patch.object(pc, "_load_robots_parser", return_value=_allow_all_robots()),
             patch.object(pc.time, "sleep"),
         ):
             pages = pc.crawl_urls(
@@ -268,6 +269,7 @@ class TestCrawlUrls:
         with (
             patch.object(pc, "_browser_page", _fake_browser),
             patch.object(pc, "_crawl_page_with_id", return_value=None),
+            patch.object(pc, "_load_robots_parser", return_value=_allow_all_robots()),
             patch.object(pc.time, "sleep"),
         ):
             pages = pc.crawl_urls(["https://example.com/"])
@@ -277,6 +279,7 @@ class TestCrawlUrls:
         with (
             patch.object(pc, "_browser_page", _fake_browser),
             patch.object(pc, "_crawl_page_with_id", side_effect=lambda p, u, i, o: self._page(u)),
+            patch.object(pc, "_load_robots_parser", return_value=_allow_all_robots()),
             patch.object(pc.time, "sleep"),
         ):
             pages = pc.crawl_urls(["", "  ", "https://example.com/"])
@@ -306,6 +309,7 @@ class TestSessionExpiry:
         auth.write_text("{}", encoding="utf-8")
         with (
             patch.object(pc, "_browser_page", self._login_wall_browser()),
+            patch.object(pc, "_load_robots_parser", return_value=_allow_all_robots()),
             patch.object(pc.time, "sleep"),
         ):
             with pytest.raises(SessionExpiredError):
@@ -315,6 +319,7 @@ class TestSessionExpiry:
         with (
             patch.object(pc, "_browser_page", self._login_wall_browser()),
             patch.object(pc, "_crawl_page_with_id", return_value=None),
+            patch.object(pc, "_load_robots_parser", return_value=_allow_all_robots()),
             patch.object(pc.time, "sleep"),
         ):
             pages = pc.crawl_urls(["https://example.com/dashboard"], auth_state=None)

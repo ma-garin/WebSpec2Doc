@@ -60,10 +60,40 @@ class TestMaxLengthCases:
         assert [c.expected for c in max_len_cases] == ["受理", "受理", "エラー（最大長超過）"]
         assert all(c.source_attribute == "maxlength" for c in max_len_cases)
 
+    def test_large_maxlength_does_not_embed_giant_literal(self) -> None:
+        """Excel セル上限（32,767文字）を超えるような値はリテラルを埋め込まない。"""
+        field = _field(maxlength=50000)
+        cases = [c for c in derive_boundary_cases(field) if c.kind == "max_length"]
+        assert len(cases) == 3
+        for case in cases:
+            assert len(case.value) < 32767
+        assert "50001" in cases[2].value
+
     def test_evidence_propagated(self) -> None:
         field = _field(maxlength=10)
         cases = derive_boundary_cases(field)
         assert all(c.evidence is field.evidence for c in cases)
+
+
+class TestMinLengthCases:
+    def test_minlength_two_cases(self) -> None:
+        field = _field(minlength=5)
+        cases = [c for c in derive_boundary_cases(field) if c.kind == "min_length"]
+        assert len(cases) == 2
+        assert [len(c.value) for c in cases] == [4, 5]
+        assert [c.expected for c in cases] == ["エラー（最小長未満）", "受理"]
+
+    def test_minlength_one_generates_no_case(self) -> None:
+        """minlength=1 では空値との比較になり validity.tooShort が発火しないため、
+        根拠のある「最小長未満」ケースを生成できない。"""
+        field = _field(minlength=1)
+        cases = [c for c in derive_boundary_cases(field) if c.kind == "min_length"]
+        assert cases == []
+
+    def test_minlength_zero_generates_no_case(self) -> None:
+        field = _field(minlength=0)
+        cases = [c for c in derive_boundary_cases(field) if c.kind == "min_length"]
+        assert cases == []
 
 
 class TestRangeCases:

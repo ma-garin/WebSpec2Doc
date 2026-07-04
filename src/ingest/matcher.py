@@ -78,11 +78,8 @@ def fuse(pages: list[AnalyzedPage], bundle: DocumentBundle) -> FusionResult:
         doc_fields = _fields_for_screen(bundle, match.screen)
         gaps.extend(_match_fields(page, doc_fields))
         if bundle.rules:
-            screen_rules = [
-                r
-                for r in bundle.rules
-                if r.screen_name in (match.screen.name, match.screen.screen_id)
-            ]
+            screen_keys = {match.screen.name, match.screen.screen_id} - {""}
+            screen_rules = [r for r in bundle.rules if r.screen_name in screen_keys]
             gaps.extend(_rule_mismatches(match.page_id, screen_rules, _crawled_fields(page)))
 
     official_names = {m.page_id: m.screen.name for m in matches}
@@ -293,13 +290,17 @@ def _rule_mismatches(
                 best_field = field_data
         if best_field is None or best_score < _FIELD_NAME_THRESHOLD:
             continue
+        # 数値の限度値ルールは max_value（値の上限）、文字数のルールは maxlength
+        # （桁数の上限）とのみ比較する。両方と無条件に比較すると、桁数制限と
+        # 値制限という異なる単位の数値を突き合わせて偽の矛盾を生む。
         numeric_attrs: list[tuple[str, int]] = []
-        if best_field.maxlength is not None:
+        if best_field.field_type in ("number", "range"):
+            if best_field.max_value:
+                parsed_max_value = parse_max_length(best_field.max_value)
+                if parsed_max_value is not None:
+                    numeric_attrs.append(("max_value", parsed_max_value))
+        elif best_field.maxlength is not None:
             numeric_attrs.append(("maxlength", best_field.maxlength))
-        if best_field.max_value:
-            parsed_max_value = parse_max_length(best_field.max_value)
-            if parsed_max_value is not None:
-                numeric_attrs.append(("max_value", parsed_max_value))
         for attr_name, attr_value in numeric_attrs:
             if attr_value != value:
                 selector = best_field.evidence.selector if best_field.evidence else ""

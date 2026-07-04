@@ -109,7 +109,10 @@ def _load_llm_semantics(
     lines = _free_text_lines(path)
     if lines is None:
         return [], [], []
-    llm_screens, llm_fields, llm_rules = extract_semantics(lines, path.name, provider)
+    known_screens = {s.name for s in table_screens}
+    llm_screens, llm_fields, llm_rules = extract_semantics(
+        lines, path.name, provider, known_screens=known_screens
+    )
     llm_screens = _dedup_screens(llm_screens, table_screens)
     return llm_screens, llm_fields, llm_rules
 

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import unicodedata
+from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
 from ingest.models import DocumentedField, DocumentedRule, DocumentedScreen, DocumentEvidence
@@ -126,11 +127,14 @@ def filter_hallucinations(
     payload: dict[str, Any],
     lines: list[tuple[str, str]],
     source_file: str,
+    known_screens: Iterable[str] = (),
 ) -> tuple[list[DocumentedScreen], list[DocumentedField], list[DocumentedRule]]:
     """quote を原文行から逆引きし、見つからない項目を破棄する。
 
     location は LLM 出力を信用せず、quote が最初に見つかった行の
-    location を採用する。
+    location を採用する。known_screens は同一文書内の表由来画面名
+    （呼び出し側が把握している既知画面）。LLM 抽出画面に加えてこれらの
+    名称も「確認できる画面参照」として扱う。
     """
     screens: list[DocumentedScreen] = []
     fields: list[DocumentedField] = []
@@ -154,7 +158,7 @@ def filter_hallucinations(
             )
         )
 
-    known_screen_names = {s.name for s in screens}
+    known_screen_names = {s.name for s in screens} | {str(name) for name in known_screens}
 
     for raw in payload.get("fields") or []:
         quote = str(raw.get("quote") or "")
@@ -214,10 +218,12 @@ def extract_semantics(
     lines: list[tuple[str, str]],
     source_file: str,
     provider: LLMProvider,
+    known_screens: Iterable[str] = (),
 ) -> tuple[list[DocumentedScreen], list[DocumentedField], list[DocumentedRule]]:
     """自由文行から LLM で画面・項目・ルールを抽出する。
 
     失敗・キーなし（RulesProvider の空応答）は空 3-tuple を返す。
+    known_screens は同一文書の表由来画面名（screen_name 検証に使う）。
     """
     if not lines:
         logger.info("テキストが抽出できないため LLM 抽出をスキップします: %s", source_file)
@@ -229,4 +235,4 @@ def extract_semantics(
         return [], [], []
     if not payload.get("screens") and not payload.get("fields") and not payload.get("rules"):
         return [], [], []
-    return filter_hallucinations(payload, lines, source_file)
+    return filter_hallucinations(payload, lines, source_file, known_screens)

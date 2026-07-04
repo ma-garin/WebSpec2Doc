@@ -24,9 +24,10 @@ def _field(
     aria_label: str = "",
     maxlength: int | None = None,
     max_value: str = "",
+    field_type: str = "text",
 ) -> FieldData:
     return FieldData(
-        field_type="text",
+        field_type=field_type,
         name=name,
         placeholder="",
         required=False,
@@ -171,6 +172,47 @@ class TestRuleMismatchDetection:
         )
         rule = _rule(kind="limit", expression="1000000", field_name="振込金額")
         _, _, result = _fuse_with(page, (rule,))
+        assert [g for g in result.field_gaps if g.kind == "mismatch"] == []
+
+
+class TestRuleMismatchUnitSelection:
+    """数値型フィールドは max_value、それ以外は maxlength とのみ比較する
+    （桁数と値という異なる単位を混同した偽の矛盾検出を防ぐ）。"""
+
+    def test_number_field_matches_via_max_value_ignores_maxlength(self) -> None:
+        page = _page(
+            "https://example.com/transfer",
+            "振込画面",
+            (_field("上限額", maxlength=4, max_value="9999", field_type="number"),),
+        )
+        rule = _rule(kind="limit", expression="9999", field_name="上限額")
+        _, _, result = _fuse_with(page, (rule,))
+        assert [g for g in result.field_gaps if g.kind == "mismatch"] == []
+
+    def test_number_field_max_value_mismatch_still_detected(self) -> None:
+        page = _page(
+            "https://example.com/transfer",
+            "振込画面",
+            (_field("上限額", max_value="5000", field_type="number"),),
+        )
+        rule = _rule(kind="limit", expression="9999", field_name="上限額")
+        _, _, result = _fuse_with(page, (rule,))
+        mismatches = [g for g in result.field_gaps if g.kind == "mismatch"]
+        assert len(mismatches) == 1
+        assert "max_value" in mismatches[0].detail
+
+
+class TestEmptyScreenNameNotWildcard:
+    def test_empty_screen_name_rule_not_matched_to_any_screen(self) -> None:
+        """screen_name が空のルールは、screen_id も空の画面へ誤マッチしない。"""
+        page = _page("https://example.com/transfer", "振込画面", (_field("振込金額", maxlength=7),))
+        screen = DocumentedScreen(screen_id="", name="振込画面", url_hint="/transfer")
+        analyzed = analyze_pages([page])
+        rule = _rule(kind="limit", expression="1000000", screen_name="", field_name="振込金額")
+        bundle = DocumentBundle(
+            screens=(screen,), fields=(), source_files=("spec.pdf",), rules=(rule,)
+        )
+        result = fuse(analyzed, bundle)
         assert [g for g in result.field_gaps if g.kind == "mismatch"] == []
 
 

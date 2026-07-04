@@ -15,6 +15,9 @@ from dataclasses import dataclass, replace
 from crawler.page_crawler import FieldData, SourceEvidence, ValidationObservation
 
 _UNPARSEABLE_NOTE = "（例生成不能・手動作成要）"
+# Excel セルの上限（32,767文字）に対して十分小さい安全値。これを超える
+# 長さは文字リテラルを埋め込まず、文字数のみの表記に落とす。
+_MAX_LITERAL_VALUE_LENGTH = 1000
 
 
 @dataclass(frozen=True)
@@ -70,25 +73,35 @@ def _case(
     )
 
 
+def _length_value(n: int) -> str:
+    """指定文字数の値を返す。Excel セル上限を超える長さはリテラルを埋め込まず、
+    文字数のみの表記に落とす（evidence は文字数そのものなので捏造ではない）。"""
+    if n <= _MAX_LITERAL_VALUE_LENGTH:
+        return "a" * n
+    return f"（a を {n} 文字・実値は長さのため省略）"
+
+
 def _max_length_cases(field: FieldData) -> list[BoundaryCase]:
     n = field.maxlength
     if n is None or n <= 0:
         return []
     return [
-        _case(field, "max_length", "a" * (n - 1), "受理"),
-        _case(field, "max_length", "a" * n, "受理"),
-        _case(field, "max_length", "a" * (n + 1), "エラー（最大長超過）"),
+        _case(field, "max_length", _length_value(n - 1), "受理"),
+        _case(field, "max_length", _length_value(n), "受理"),
+        _case(field, "max_length", _length_value(n + 1), "エラー（最大長超過）"),
     ]
 
 
 def _min_length_cases(field: FieldData) -> list[BoundaryCase]:
     m = field.minlength
-    if m is None or m <= 0:
+    # m<=1 の場合、「1文字未満」の非空文字列は存在せず、空値は minlength の
+    # 検証対象外（HTML の validity.tooShort は空値では発火しない）。よって
+    # m<=1 では「最小長未満」の境界ケースを生成できる根拠が無い。
+    if m is None or m <= 1:
         return []
-    below = max(m - 1, 0)
     return [
-        _case(field, "min_length", "a" * below, "エラー（最小長未満）"),
-        _case(field, "min_length", "a" * m, "受理"),
+        _case(field, "min_length", _length_value(m - 1), "エラー（最小長未満）"),
+        _case(field, "min_length", _length_value(m), "受理"),
     ]
 
 

@@ -136,6 +136,39 @@ class TestHallucinationFilter:
         assert fields[0].screen_name == ""
         assert "確認できず" in fields[0].note
 
+    def test_known_screens_from_table_not_blanked(self) -> None:
+        """known_screens（表由来の画面名）を参照するルール・項目は screen_name を保持する。"""
+        payload = {
+            "screens": [],
+            "fields": [
+                {
+                    "name": "パスワード",
+                    "screen_name": "ログイン画面",
+                    "field_type": "password",
+                    "required": True,
+                    "max_length": None,
+                    "quote": "振込限度額は1日100万円までとする。",
+                }
+            ],
+            "rules": [
+                {
+                    "kind": "limit",
+                    "description": "パスワード桁数",
+                    "screen_name": "ログイン画面",
+                    "field_name": "パスワード",
+                    "expression": "20",
+                    "quote": "振込限度額は1日100万円までとする。",
+                }
+            ],
+        }
+        _, fields, rules = filter_hallucinations(
+            payload, _LINES, "spec.pdf", known_screens=["ログイン画面"]
+        )
+        assert fields[0].screen_name == "ログイン画面"
+        assert fields[0].note == ""
+        assert rules[0].screen_name == "ログイン画面"
+        assert "確認できず" not in rules[0].description
+
 
 class TestExtractSemanticsErrorHandling:
     def test_no_lines_skips_llm(self) -> None:

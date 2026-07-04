@@ -1,5 +1,10 @@
 # WebSpec2Doc — 開発ガイド（エージェント向け）
 
+## 作業場所（重要）
+
+このリポジトリの正本は `/Users/fujimagariyuki/dev/active/webspec2doc`。セッションは必ずこのディレクトリで開く。
+旧コピー（`Desktop/app/014_WebSpec2Doc`・`Desktop/app/WebSpec2Doc`・`~/WebSpec2Doc`・`Desktop/app_開発/WebSpec2Doc`）は2026-07-03に統合済み・参照禁止。014の未マージ作業は `rescue/014-worktree-20260703` ブランチに保全されている。
+
 ## Functional Integrity Gate
 
 Before implementation, review, UX evaluation, persona evaluation, strategy review, or completion judgment, read:

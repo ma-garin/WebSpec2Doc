@@ -14,7 +14,9 @@ from __future__ import annotations
 import json
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
@@ -110,6 +112,7 @@ class SessionRecorder:
 
     page: Any
     session_path: Path
+    clock: Callable[[], datetime] = field(default=lambda: datetime.now(UTC))
     _records: list[dict[str, Any]] = field(default_factory=list)
     _last_url: str = ""
     _last_state_sig: str = "default"
@@ -209,6 +212,8 @@ class SessionRecorder:
         self._append({"kind": "visit", "url": url, "path": normalize_footprint_path(url)})
 
     def _append(self, record: dict[str, Any]) -> None:
+        # 日時ベースの推移集計（バーンダウン, SPEC-5-2）のために全レコードへ ts を付与する
+        record.setdefault("ts", self.clock().isoformat(timespec="seconds"))
         self._records.append(record)
 
 

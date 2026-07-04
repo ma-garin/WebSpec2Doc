@@ -120,11 +120,11 @@
       "status": "implemented",
       "ui_files": ["templates/partials/view-generate.html", "static/js/results.js", "static/js/view-coverage.js"],
       "route_files": ["web/routes/report.py"],
-      "core_files": ["src/capture/session_recorder.py", "src/capture/coverage.py", "src/generator/heatmap_reporter.py", "src/generator/html_reporter.py"],
-      "symbols": ["SessionRecorder", "compute_exploration_coverage", "propose_charters", "generate_heatmap_html"],
-      "outputs": ["sessions/session_*.jsonl", "exploration_coverage.json", "exploration_heatmap.html"],
+      "core_files": ["src/capture/session_recorder.py", "src/capture/coverage.py", "src/capture/burndown.py", "src/generator/heatmap_reporter.py", "src/generator/html_reporter.py", "src/generator/burndown_reporter.py"],
+      "symbols": ["SessionRecorder", "compute_exploration_coverage", "propose_charters", "generate_heatmap_html", "compute_exploration_burndown", "generate_burndown_html"],
+      "outputs": ["sessions/session_*.jsonl", "exploration_coverage.json", "exploration_heatmap.html", "exploration_burndown.json", "exploration_burndown.html"],
       "persistence": ["output/{domain}/sessions/"],
-      "failure_modes": ["no_inventory", "no_sessions", "browser_closed", "unmatched_footprint", "coverage_file_corrupt"],
+      "failure_modes": ["no_inventory", "no_sessions", "browser_closed", "unmatched_footprint", "coverage_file_corrupt", "missing_ts_mtime_fallback"],
       "required_tests": ["happy_path", "error_path", "state_join_key", "evidence"]
     },
     {

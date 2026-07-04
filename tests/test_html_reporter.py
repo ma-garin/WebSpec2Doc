@@ -13,6 +13,7 @@ import networkx as nx
 
 from analyzer.html_analyzer import AnalyzedPage, analyze_pages
 from crawler.page_crawler import FieldData, FormData, PageData
+from generator.coverage_gap import CoverageGap
 from generator.html_reporter import generate_html_report
 
 
@@ -67,6 +68,54 @@ def test_html_reporter_creates_output_file(tmp_path: Path) -> None:
     out.write_text(result, encoding="utf-8")
     assert out.exists()
     assert out.stat().st_size > 0
+
+
+class TestCoverageGapSection:
+    """「カバレッジと未確認領域」節（AC-5・AC-8）。"""
+
+    def _generate(self, coverage_gaps: tuple[CoverageGap, ...] = ()) -> str:
+        analyzed = [_make_analyzed_page()]
+        graph = _empty_graph()
+        graph.add_node(
+            "P001",
+            url="https://example.com/",
+            title="Test Page",
+            page_id="P001",
+            forms_count=0,
+            fields_count=0,
+        )
+        return generate_html_report(
+            pages=analyzed,
+            graph=graph,
+            form_summary=[],
+            target_url="https://example.com/",
+            mermaid_content="graph LR\n  P001\n",
+            coverage_gaps=coverage_gaps,
+        )
+
+    def test_gap_section_absent_when_empty(self) -> None:
+        """test_gap_section_absent_when_empty: ギャップ 0 件 → 既存出力と同一
+        （report.html に節が無い・AC-8）。"""
+        result = self._generate(())
+        assert 'id="coverage-gaps"' not in result
+        assert "カバレッジと未確認領域" not in result
+
+    def test_gap_section_present_with_gaps(self) -> None:
+        gaps = (
+            CoverageGap(
+                kind="robots_skipped",
+                subject="https://example.com/admin",
+                reason="robots.txt により対象外（未確認）",
+            ),
+        )
+        result = self._generate(gaps)
+        assert 'id="coverage-gaps"' in result
+        assert "カバレッジと未確認領域" in result
+        assert "https://example.com/admin" in result
+        assert "未確認" in result
+        # 「問題なし」と断定しないこと（evidence-only 原則）: 否定形でのみ言及可
+        assert "問題なし」を意味しません" in result
+        assert "<b>問題なし</b>" not in result
 
 
 def test_sidebar_nav_shows_coverage_and_impact_when_present() -> None:

@@ -631,6 +631,7 @@ def crawl_page(
     finally:
         blocker.detach()
         capture.detach()
+        _audit_mutation_blocked(output_dir, normalized_url, blocker.blocked)
 
     return PageData(
         url=normalized_url,
@@ -648,6 +649,37 @@ def crawl_page(
         validation_observations=validation_observations,
         spa_transitions=spa_transitions,
         embedded_frames=embedded_frames,
+    )
+
+
+def _strip_query_for_audit(url: str) -> str:
+    """監査ログ用にクエリ文字列を除去する（トークン等の秘匿情報を残さないため）。"""
+    parsed = urlparse(url)
+    return urlunparse(
+        (parsed.scheme, parsed.netloc, parsed.path, parsed.params, "", parsed.fragment)
+    )
+
+
+def _audit_mutation_blocked(
+    output_dir: Path | None, page_url: str, blocked: list[tuple[str, str]]
+) -> Path | None:
+    """MutationBlocker が遮断した破壊的リクエストを audit.jsonl に記録する（AC-4）。
+
+    遮断ゼロのページではレコードを追加しない。遮断 URL のクエリはトークン等の
+    秘匿情報を含み得るため落として記録する（§8）。
+    """
+    if not blocked:
+        return None
+    return append_audit_log(
+        output_dir,
+        {
+            "event": "mutation_blocked",
+            "page_url": page_url,
+            "blocked": [
+                {"method": method, "url": _strip_query_for_audit(blocked_url)}
+                for method, blocked_url in blocked
+            ],
+        },
     )
 
 
@@ -710,6 +742,17 @@ def _crawl_page_with_id(
             url=exc.url,
             login_url=exc.login_url,
             reasons=list(exc.reasons),
+        )
+        # 「どこまで見た/見ていない」の証跡として audit.jsonl にも残す
+        # （generator.coverage_gap がカバレッジギャップ節に統合する・AC-5）。
+        append_audit_log(
+            output_dir,
+            {
+                "event": "login_wall_detected",
+                "url": exc.url,
+                "login_url": exc.login_url,
+                "reasons": list(exc.reasons),
+            },
         )
         return None
     except RetryableHTTPError as exc:

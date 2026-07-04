@@ -32,6 +32,11 @@
   </div>
 
   <div class="usage-cards">
+    <div class="usage-card"><div class="num" id="usage-compare-screens">–</div><div class="label">現新比較・UX 対象画面</div></div>
+    <div class="usage-card"><div class="num" id="usage-findings">–</div><div class="label">比較/UX 検出指摘</div></div>
+  </div>
+
+  <div class="usage-cards">
     <div class="usage-card highlight">
       <div class="num" id="usage-hours">–</div><div class="label">推定削減工数（時間）</div>
     </div>
@@ -53,6 +58,8 @@
           document.getElementById('usage-screens').textContent = fmt(d.total_screens || 0);
           document.getElementById('usage-conditions').textContent = fmt(d.total_test_conditions || 0);
           document.getElementById('usage-documents').textContent = fmt(d.total_documents || 0);
+          document.getElementById('usage-compare-screens').textContent = fmt(d.total_compare_screens || 0);
+          document.getElementById('usage-findings').textContent = fmt(d.total_findings || 0);
           document.getElementById('usage-hours').textContent = fmt(d.estimated_saved_hours || 0);
           document.getElementById('usage-yen').textContent = '¥' + fmt(d.estimated_saved_yen || 0);
           document.getElementById('usage-disclaimer').textContent = d.disclaimer || '';
@@ -61,6 +68,8 @@
             '推定係数: 画面仕様1枚=<code>' + (c.minutes_per_screen ?? '-') + '分</code>' +
             ' / テスト条件1件=<code>' + (c.minutes_per_condition ?? '-') + '分</code>' +
             ' / 差分1回=<code>' + (c.minutes_per_diff ?? '-') + '分</code>' +
+            ' / 比較画面1組=<code>' + (c.minutes_per_compare_screen ?? '-') + '分</code>' +
+            ' / UX指摘1件=<code>' + (c.minutes_per_ux_finding ?? '-') + '分</code>' +
             ' / 時間単価=<code>¥' + (c.hourly_rate_yen ?? '-') + '</code>';
         })
         .catch(() => {

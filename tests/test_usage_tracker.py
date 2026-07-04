@@ -10,8 +10,10 @@ from web.services.usage_tracker import (
     SavingCoefficients,
     load_coefficients,
     load_usage,
+    record_comparison_from_report,
     record_crawl_from_report,
     record_usage,
+    record_ux_review_from_report,
     summarize_usage,
 )
 
@@ -87,6 +89,141 @@ class TestRecordCrawlFromReport:
         self._write_report(tmp_path / "example.com")
         record_crawl_from_report(tmp_path, "example.com", diff_run=True)
         assert load_usage(tmp_path)[0]["diff_run"] is True
+
+
+class TestRecordComparisonAndUxReviewEvents:
+    """AC-1・AC-2・AC-3: comparison / ux_review イベントの実績計上と後方互換。"""
+
+    def test_record_comparison_event(self, tmp_path: Path) -> None:
+        """test_record_comparison_event: event="comparison", pairs=5, findings=12
+        → JSONL に新キー付き 1 行（AC-1）。"""
+        record_usage(
+            tmp_path,
+            event="comparison",
+            domain="example.com",
+            compare_screen_count=5,
+            finding_count=12,
+        )
+        records = load_usage(tmp_path)
+        assert len(records) == 1
+        assert records[0]["event"] == "comparison"
+        assert records[0]["compare_screen_count"] == 5
+        assert records[0]["finding_count"] == 12
+
+    def test_record_ux_review_event(self, tmp_path: Path) -> None:
+        """AC-2: event="ux_review" で対象画面数・指摘数が計上される。"""
+        record_usage(
+            tmp_path,
+            event="ux_review",
+            domain="example.com",
+            compare_screen_count=3,
+            finding_count=7,
+        )
+        records = load_usage(tmp_path)
+        assert records[0]["event"] == "ux_review"
+        assert records[0]["compare_screen_count"] == 3
+        assert records[0]["finding_count"] == 7
+
+    def test_record_crawl_has_no_new_keys(self, tmp_path: Path) -> None:
+        """test_record_crawl_has_no_new_keys: event="crawl" → 行に
+        compare_screen_count キーが無い（AC-3・オプトイン）。"""
+        record_usage(tmp_path, event="crawl", domain="example.com", screen_count=3)
+        records = load_usage(tmp_path)
+        assert "compare_screen_count" not in records[0]
+        assert "finding_count" not in records[0]
+
+    def test_summarize_mixed_old_and_new_lines(self, tmp_path: Path) -> None:
+        """test_summarize_mixed_old_and_new_lines: 旧形式行＋新形式行が混在しても
+        例外なく集計され、旧集計値は不変・比較分が加算される（AC-3）。"""
+        log = tmp_path / "usage_log.jsonl"
+        log.write_text(
+            '{"event": "crawl", "screen_count": 4, "test_condition_count": 2}\n'
+            '{"event": "comparison", "compare_screen_count": 5, "finding_count": 12}\n',
+            encoding="utf-8",
+        )
+        summary = summarize_usage(load_usage(tmp_path))
+        assert summary["total_screens"] == 4
+        assert summary["total_test_conditions"] == 2
+        assert summary["total_compare_screens"] == 5
+        assert summary["total_findings"] == 12
+
+    def test_ux_coefficient_env_override(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """test_ux_coefficient_env_override: WEBSPEC2DOC_MIN_PER_UX_FINDING=30
+        → 係数反映・不正値は既定 15.0（AC-2）。"""
+        monkeypatch.setenv("WEBSPEC2DOC_MIN_PER_UX_FINDING", "30")
+        assert load_coefficients().minutes_per_ux_finding == 30.0
+        monkeypatch.setenv("WEBSPEC2DOC_MIN_PER_UX_FINDING", "not-a-number")
+        assert load_coefficients().minutes_per_ux_finding == 15.0
+
+    def test_compare_screen_coefficient_env_override(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("WEBSPEC2DOC_MIN_PER_COMPARE_SCREEN", "25")
+        assert load_coefficients().minutes_per_compare_screen == 25.0
+
+    def test_saved_hours_include_comparison_and_ux_terms(self) -> None:
+        """比較・UX 分の推定削減時間が既存の crawl 分に加算される。"""
+        records = [
+            {"event": "comparison", "compare_screen_count": 5, "finding_count": 12},
+        ]
+        coef = SavingCoefficients(minutes_per_compare_screen=20.0, minutes_per_ux_finding=15.0)
+        summary = summarize_usage(records, coef)
+        # 5*20 + 12*15 = 100 + 180 = 280分 = 4.7時間
+        assert summary["estimated_saved_hours"] == round(280 / 60.0, 1)
+
+
+class TestRecordComparisonFromReport:
+    def test_counts_pairs_and_findings(self, tmp_path: Path) -> None:
+        comparison_dir = tmp_path / "compare_a_vs_b"
+        comparison_dir.mkdir()
+        comparison_json = comparison_dir / "comparison.json"
+        comparison_json.write_text(
+            json.dumps(
+                {
+                    "pairs": [{"old_page_id": "P001", "new_page_id": "P001"}] * 5,
+                    "findings": [{"category": "unclassified", "detail": ""}] * 12,
+                },
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+        record_comparison_from_report(tmp_path, "example.com", comparison_json)
+        records = load_usage(tmp_path)
+        assert records[0]["event"] == "comparison"
+        assert records[0]["compare_screen_count"] == 5
+        assert records[0]["finding_count"] == 12
+
+    def test_missing_file_skips_recording(self, tmp_path: Path) -> None:
+        result = record_comparison_from_report(
+            tmp_path, "example.com", tmp_path / "not_found" / "comparison.json"
+        )
+        assert result is None
+        assert load_usage(tmp_path) == []
+
+
+class TestRecordUxReviewFromReport:
+    def test_counts_screens_and_findings(self, tmp_path: Path) -> None:
+        ux_review_json = tmp_path / "ux_review.json"
+        ux_review_json.write_text(
+            json.dumps(
+                {
+                    "screens": [
+                        {"axe_violations": [{"rule_id": "a"}], "ux_findings": [{"principle": "b"}]},
+                        {"axe_violations": [], "ux_findings": []},
+                    ]
+                },
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+        record_ux_review_from_report(tmp_path, "example.com", ux_review_json)
+        records = load_usage(tmp_path)
+        assert records[0]["event"] == "ux_review"
+        assert records[0]["compare_screen_count"] == 2
+        assert records[0]["finding_count"] == 2
+
+    def test_missing_file_skips_recording(self, tmp_path: Path) -> None:
+        result = record_ux_review_from_report(tmp_path, "example.com", tmp_path / "ux_review.json")
+        assert result is None
+        assert load_usage(tmp_path) == []
 
 
 class TestSummarizeUsage:

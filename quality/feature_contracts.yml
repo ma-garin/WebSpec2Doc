@@ -26,7 +26,7 @@
       "symbols": ["crawl_site", "crawl_urls_parallel", "extract_links_all_scopes", "collect_embedded_frames"],
       "outputs": ["report.html", "report.json", "screenshots", "snapshot", "audit.jsonl"],
       "persistence": ["output/{domain}/", "output/{domain}/snapshots/"],
-      "failure_modes": ["login_wall_during_crawl", "restricted_url", "timeout", "cancel", "partial_checkpoint", "robots_disallowed", "rate_limit_backoff", "mutation_blocked", "cross_origin_iframe", "closed_shadow_root"],
+      "failure_modes": ["login_wall_during_crawl", "restricted_url", "timeout", "cancel", "partial_checkpoint", "robots_disallowed", "rate_limit_backoff", "mutation_blocked", "mutation_blocked_audit", "cross_origin_iframe", "closed_shadow_root"],
       "required_tests": ["happy_path", "error_path", "cancel_path", "checkpoint_path", "evidence"]
     },
     {
@@ -93,10 +93,24 @@
       "ui_files": ["templates/partials/view-usage.html"],
       "route_files": ["web/routes/usage.py"],
       "core_files": ["web/services/usage_tracker.py"],
-      "symbols": ["record_usage", "summarize_usage"],
+      "symbols": ["record_usage", "summarize_usage", "record_comparison_from_report", "record_ux_review_from_report"],
       "outputs": ["usage summary", "estimated saved hours"],
       "persistence": ["output/usage_log.jsonl"],
-      "failure_modes": ["missing_log", "corrupt_log_line", "invalid_coefficient_env"],
+      "failure_modes": ["missing_log", "corrupt_log_line", "invalid_coefficient_env", "comparison_json_missing", "ux_review_json_missing"],
+      "required_tests": ["happy_path", "empty_path", "evidence"]
+    }
+    ,{
+      "feature_id": "coverage_gap_report",
+      "name": "カバレッジと未確認領域（網羅性証明）",
+      "risk_level": "medium",
+      "status": "implemented",
+      "ui_files": [],
+      "route_files": [],
+      "core_files": ["src/generator/coverage_gap.py", "src/generator/html_reporter.py", "src/crawler/page_crawler.py", "src/generator/comparison_reporter.py"],
+      "symbols": ["collect_coverage_gaps", "compute_coverage_summary"],
+      "outputs": ["report.html「カバレッジと未確認領域」節", "comparison.html「網羅性サマリ」節"],
+      "persistence": [],
+      "failure_modes": ["audit_log_missing", "audit_log_corrupt_line", "coverage_missing", "comparison_json_missing", "stale_crawl_started_records"],
       "required_tests": ["happy_path", "empty_path", "evidence"]
     }
     ,{
@@ -221,9 +235,10 @@
         "compare_screenshots_masked",
         "detect_dynamic_regions",
         "compare_page_pair",
-        "save_comparison_outputs"
+        "save_comparison_outputs",
+        "compute_coverage_summary"
       ],
-      "outputs": ["comparison.json", "comparison.html", "old/dynamic_masks.json"],
+      "outputs": ["comparison.json", "comparison.html", "old/dynamic_masks.json", "comparison.html「網羅性サマリ」節"],
       "persistence": [
         "output/{domain}/compare_*/old/",
         "output/{domain}/compare_*/new/",

@@ -24,6 +24,8 @@ USAGE_LOG_FILE_NAME = "usage_log.jsonl"
 MINUTES_PER_SCREEN_SPEC = 45.0  # 画面仕様1枚を手作業で起こす想定
 MINUTES_PER_TEST_CONDITION = 10.0  # テスト条件1件を手作業で設計する想定
 MINUTES_PER_DIFF_REVIEW = 30.0  # 仕様差分1回を手作業で突き合わせる想定
+MINUTES_PER_COMPARE_SCREEN = 20.0  # 現新比較: 画面ペア1組の手動突き合わせ想定
+MINUTES_PER_UX_FINDING = 15.0  # UX レビュー: 所見1件の手動レビュー想定
 
 # 時間単価（円）: 削減額換算用。実際の単価は組織により異なるため設定可能。
 DEFAULT_HOURLY_RATE_YEN = 5000.0
@@ -31,7 +33,16 @@ DEFAULT_HOURLY_RATE_YEN = 5000.0
 _ENV_MIN_SCREEN = "WEBSPEC2DOC_MIN_PER_SCREEN"
 _ENV_MIN_CONDITION = "WEBSPEC2DOC_MIN_PER_CONDITION"
 _ENV_MIN_DIFF = "WEBSPEC2DOC_MIN_PER_DIFF"
+_ENV_MIN_COMPARE_SCREEN = "WEBSPEC2DOC_MIN_PER_COMPARE_SCREEN"
+_ENV_MIN_UX_FINDING = "WEBSPEC2DOC_MIN_PER_UX_FINDING"
 _ENV_HOURLY_RATE = "WEBSPEC2DOC_HOURLY_RATE_YEN"
+
+# usage_log.jsonl の新キー（compare_screen_count/finding_count）を書き込む対象イベント。
+# CONVENTIONS §2 のオプトイン方針を usage_log にも適用し、既存イベント（crawl 等）の
+# 行は従来どおり 6 キーのまま保つ（既存行との diff・後方互換を壊さない）。
+_EVENT_COMPARISON = "comparison"
+_EVENT_UX_REVIEW = "ux_review"
+_EVENTS_WITH_EXTRA_KEYS = frozenset({_EVENT_COMPARISON, _EVENT_UX_REVIEW})
 
 
 @dataclass(frozen=True)
@@ -41,6 +52,8 @@ class SavingCoefficients:
     minutes_per_screen: float = MINUTES_PER_SCREEN_SPEC
     minutes_per_condition: float = MINUTES_PER_TEST_CONDITION
     minutes_per_diff: float = MINUTES_PER_DIFF_REVIEW
+    minutes_per_compare_screen: float = MINUTES_PER_COMPARE_SCREEN
+    minutes_per_ux_finding: float = MINUTES_PER_UX_FINDING
     hourly_rate_yen: float = DEFAULT_HOURLY_RATE_YEN
 
 
@@ -62,6 +75,8 @@ def load_coefficients() -> SavingCoefficients:
         minutes_per_screen=_env_float(_ENV_MIN_SCREEN, MINUTES_PER_SCREEN_SPEC),
         minutes_per_condition=_env_float(_ENV_MIN_CONDITION, MINUTES_PER_TEST_CONDITION),
         minutes_per_diff=_env_float(_ENV_MIN_DIFF, MINUTES_PER_DIFF_REVIEW),
+        minutes_per_compare_screen=_env_float(_ENV_MIN_COMPARE_SCREEN, MINUTES_PER_COMPARE_SCREEN),
+        minutes_per_ux_finding=_env_float(_ENV_MIN_UX_FINDING, MINUTES_PER_UX_FINDING),
         hourly_rate_yen=_env_float(_ENV_HOURLY_RATE, DEFAULT_HOURLY_RATE_YEN),
     )
 
@@ -75,12 +90,21 @@ def record_usage(
     test_condition_count: int = 0,
     document_count: int = 0,
     diff_run: bool = False,
+    compare_screen_count: int = 0,
+    finding_count: int = 0,
 ) -> Path | None:
     """利用実績を output_root/usage_log.jsonl に 1 行追記する。
 
+    compare_screen_count / finding_count は現新比較（event="comparison"）・
+    UX レビュー（event="ux_review"）専用の新キーで、該当イベントの時のみ
+    JSONL 行に書き込む（オプトイン。既存イベントの行は従来どおり 6 キーのまま
+    — CONVENTIONS §2 の方針を usage_log にも適用し、既存行との diff・
+    後方互換を壊さない）。compare_screen_count は現新比較の画面ペア数、
+    または UX レビューの対象画面数を表す（screen_count は crawl 専用のまま）。
+
     書き込み失敗はアプリ動作を妨げない（None を返す）。
     """
-    entry = {
+    entry: dict[str, object] = {
         "timestamp": datetime.now(UTC).isoformat(timespec="seconds"),
         "event": event,
         "domain": domain,
@@ -89,6 +113,9 @@ def record_usage(
         "document_count": int(document_count),
         "diff_run": bool(diff_run),
     }
+    if event in _EVENTS_WITH_EXTRA_KEYS:
+        entry["compare_screen_count"] = int(compare_screen_count)
+        entry["finding_count"] = int(finding_count)
     log_path = output_root / USAGE_LOG_FILE_NAME
     try:
         output_root.mkdir(parents=True, exist_ok=True)
@@ -145,6 +172,83 @@ def record_crawl_from_report(
     )
 
 
+def record_comparison_from_report(
+    output_root: Path,
+    domain: str,
+    comparison_json_path: Path,
+) -> Path | None:
+    """現新比較完了後、生成された comparison.json から実績を集計して記録する（AC-1）。
+
+    comparison.json（generator.comparison_reporter.save_comparison_outputs の出力）が
+    無い/壊れている場合は記録自体をスキップする（比較が実行されていない可能性が
+    高く、実績を捏造しないため）。呼び出し側（route / 出力フェーズ）は
+    ``web/routes/crawl.py::_record_usage_safely`` と同じベストエフォート方針で
+    呼ぶこと（記録失敗はクロール/比較結果の配信を妨げない）。
+    """
+    if not comparison_json_path.is_file():
+        logger.warning(
+            "comparison.json が見つかりません（実績記録をスキップ）: %s", comparison_json_path
+        )
+        return None
+    try:
+        data = json.loads(comparison_json_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning(
+            "comparison.json の読み込みに失敗しました（実績記録をスキップ）: %s (%s)",
+            comparison_json_path,
+            exc,
+        )
+        return None
+    pair_count = len(data.get("pairs") or [])
+    finding_count = len(data.get("findings") or [])
+    return record_usage(
+        output_root,
+        event="comparison",
+        domain=domain,
+        compare_screen_count=pair_count,
+        finding_count=finding_count,
+    )
+
+
+def record_ux_review_from_report(
+    output_root: Path,
+    domain: str,
+    ux_review_json_path: Path,
+) -> Path | None:
+    """UX レビュー完了後、生成された ux_review.json から実績を集計して記録する（AC-2）。
+
+    ux_review.json（generator.ux_reporter.save_ux_outputs の出力）が無い/壊れている
+    場合は記録自体をスキップする。指摘数は axe 違反とニールセン所見の合計。
+    """
+    if not ux_review_json_path.is_file():
+        logger.warning(
+            "ux_review.json が見つかりません（実績記録をスキップ）: %s", ux_review_json_path
+        )
+        return None
+    try:
+        data = json.loads(ux_review_json_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning(
+            "ux_review.json の読み込みに失敗しました（実績記録をスキップ）: %s (%s)",
+            ux_review_json_path,
+            exc,
+        )
+        return None
+    screens = data.get("screens") or []
+    screen_count = len(screens)
+    finding_count = sum(
+        len(screen.get("axe_violations") or []) + len(screen.get("ux_findings") or [])
+        for screen in screens
+    )
+    return record_usage(
+        output_root,
+        event="ux_review",
+        domain=domain,
+        compare_screen_count=screen_count,
+        finding_count=finding_count,
+    )
+
+
 def load_usage(output_root: Path) -> list[dict]:
     """usage_log.jsonl を読み込んでレコードのリストを返す（無ければ空）。"""
     log_path = output_root / USAGE_LOG_FILE_NAME
@@ -176,11 +280,17 @@ def summarize_usage(
     total_conditions = sum(int(r.get("test_condition_count", 0)) for r in records)
     total_documents = sum(int(r.get("document_count", 0)) for r in records)
     total_diffs = sum(1 for r in records if r.get("diff_run"))
+    # comparison / ux_review 専用の新キー。旧形式の行（キー無し）は get の既定値 0 で
+    # 例外なく集計され、既存イベントの集計値には一切影響しない（AC-3）。
+    total_compare_screens = sum(int(r.get("compare_screen_count", 0)) for r in records)
+    total_findings = sum(int(r.get("finding_count", 0)) for r in records)
 
     saved_minutes = (
         total_screens * coef.minutes_per_screen
         + total_conditions * coef.minutes_per_condition
         + total_diffs * coef.minutes_per_diff
+        + total_compare_screens * coef.minutes_per_compare_screen
+        + total_findings * coef.minutes_per_ux_finding
     )
     saved_hours = round(saved_minutes / 60.0, 1)
     saved_yen = int(saved_hours * coef.hourly_rate_yen)
@@ -191,12 +301,16 @@ def summarize_usage(
         "total_test_conditions": total_conditions,
         "total_documents": total_documents,
         "total_diff_runs": total_diffs,
+        "total_compare_screens": total_compare_screens,
+        "total_findings": total_findings,
         "estimated_saved_hours": saved_hours,
         "estimated_saved_yen": saved_yen,
         "coefficients": {
             "minutes_per_screen": coef.minutes_per_screen,
             "minutes_per_condition": coef.minutes_per_condition,
             "minutes_per_diff": coef.minutes_per_diff,
+            "minutes_per_compare_screen": coef.minutes_per_compare_screen,
+            "minutes_per_ux_finding": coef.minutes_per_ux_finding,
             "hourly_rate_yen": coef.hourly_rate_yen,
         },
         "disclaimer": (

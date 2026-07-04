@@ -606,6 +606,7 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
     ux_review = None
     if ux_review_enabled:
         ux_review = _build_and_save_ux_review(pages, analyzed_pages, ux_axe_results, output_dir)
+    coverage_gaps = _collect_coverage_gaps(output_dir, pages, exploration_coverage)
     save_outputs(
         analyzed_pages,
         graph,
@@ -622,6 +623,7 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
         exploration_coverage=exploration_coverage,
         rule_conditions=rule_conditions,
         ux_review=ux_review,
+        coverage_gaps=coverage_gaps,
     )
     if _STOP_REQUESTED.is_set():
         partial = save_partial_snapshot(pages, output_dir, finalized=True)
@@ -1096,6 +1098,25 @@ def _load_exploration_coverage(output_dir: Path) -> dict[str, object] | None:
         return None
 
 
+def _collect_coverage_gaps(
+    output_dir: Path,
+    pages: list[PageData],
+    exploration_coverage: dict[str, object] | None,
+) -> tuple:
+    """report.html の「カバレッジと未確認領域」節向けにギャップを集計する（AC-5）。
+
+    集計自体の失敗はレポート生成全体を止めない（既存出力へのフォールバック方針は
+    _load_exploration_coverage と同様）。
+    """
+    from generator.coverage_gap import collect_coverage_gaps
+
+    try:
+        return collect_coverage_gaps(output_dir, pages, exploration_coverage)
+    except Exception as exc:  # noqa: BLE001 - ギャップ集計失敗でレポート生成を止めない
+        logger.warning("カバレッジギャップの集計に失敗しました（セクション省略）: %s", exc)
+        return ()
+
+
 def save_outputs(
     pages: list[AnalyzedPage],
     graph: nx.DiGraph,
@@ -1113,6 +1134,7 @@ def save_outputs(
     exploration_coverage: dict[str, object] | None = None,
     rule_conditions: dict[tuple[str, str], tuple] | None = None,
     ux_review: dict[str, object] | None = None,
+    coverage_gaps: tuple = (),
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     target_url = pages[0].page_data.url if pages else ""
@@ -1135,6 +1157,7 @@ def save_outputs(
             impact_report=impact_report,
             exploration_coverage=exploration_coverage,
             ux_review=ux_review,
+            coverage_gaps=coverage_gaps,
         )
     if "json" in formats:
         _save_json_output(
@@ -1200,6 +1223,7 @@ def _save_html_outputs(
     impact_report: dict | None = None,
     exploration_coverage: dict[str, object] | None = None,
     ux_review: dict[str, object] | None = None,
+    coverage_gaps: tuple = (),
 ) -> None:
     from generator.html_reporter import generate_html_report
 
@@ -1219,6 +1243,7 @@ def _save_html_outputs(
         impact_report=impact_report,
         exploration_coverage=exploration_coverage,
         ux_review=ux_review,
+        coverage_gaps=coverage_gaps,
     )
     html_path = output_dir / "report.html"
     html_path.write_text(report_html, encoding="utf-8")

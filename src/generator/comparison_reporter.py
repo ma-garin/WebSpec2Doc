@@ -35,6 +35,31 @@ _CATEGORY_ORDER: tuple[str, ...] = (
     "unclassified",
 )
 
+# diff.link_checker.check_link が未確認（タイムアウト/接続失敗）リンクに
+# 付与する detail 文言の接頭辞（diff.comparison._check_new_side_links 参照）。
+_UNCHECKED_LINK_DETAIL_PREFIX = "未確認（タイムアウト）"
+
+
+def compute_coverage_summary(result: ComparisonResult) -> dict[str, int]:
+    """網羅性サマリ（AC-6）: 対応付け n 組・現行のみ m・新のみ k・検査できなかったリンク j 件。
+
+    j は ComparisonFinding（未分類・「未確認（タイムアウト）」で始まる detail）から
+    導出する。新たな計測は行わず、既に記録された finding のみを数える
+    （evidence-only 原則・二重計測を避ける）。
+    """
+    unchecked_links = sum(
+        1
+        for finding in result.findings
+        if finding.category == "unclassified"
+        and finding.detail.startswith(_UNCHECKED_LINK_DETAIL_PREFIX)
+    )
+    return {
+        "matched_pairs": len(result.pairs),
+        "old_only": len(result.removed_page_ids),
+        "new_only": len(result.added_page_ids),
+        "unchecked_links": unchecked_links,
+    }
+
 
 def _pair_to_dict(pair: Any) -> dict[str, object] | None:
     if pair is None:
@@ -66,6 +91,7 @@ def comparison_result_to_dict(result: ComparisonResult) -> dict[str, object]:
         "added_page_ids": list(result.added_page_ids),
         "removed_page_ids": list(result.removed_page_ids),
         "findings": [_finding_to_dict(f) for f in result.findings],
+        "coverage_summary": compute_coverage_summary(result),
         "screenshot_diffs": [
             {
                 "page_id": d.page_id,
@@ -87,6 +113,7 @@ def generate_comparison_json(result: ComparisonResult) -> str:
 def generate_comparison_html(result: ComparisonResult) -> str:
     """自己完結の comparison.html（4 分類×画面マトリクス）を生成する。"""
     summary_tiles = _render_summary_tiles(result)
+    coverage_summary_html = _render_coverage_summary(result)
     findings_by_category: dict[str, list[ComparisonFinding]] = {
         category: [] for category in _CATEGORY_ORDER
     }
@@ -139,11 +166,26 @@ code {{ background: transparent; border: 1px solid var(--line); border-radius: 4
 <p class="caption">現行 URL と新 URL を実測クロールし、画面対応付け・仕様差分・画像差分・
 リンク切れ検査から想定不具合 4 分類で報告します。分類できない差分は「未分類（要確認）」です。</p>
 {summary_tiles}
+{coverage_summary_html}
 {sections}
 {added_removed}
 </body>
 </html>
 """
+
+
+def _render_coverage_summary(result: ComparisonResult) -> str:
+    """網羅性サマリ（AC-6）: 「どこまで比較できたか」を明示する。"""
+    summary = compute_coverage_summary(result)
+    return (
+        "<h2>網羅性サマリ</h2>"
+        '<div class="tiles">'
+        f'<div class="tile"><b>{summary["matched_pairs"]}</b><span>対応付け（組）</span></div>'
+        f'<div class="tile"><b>{summary["old_only"]}</b><span>現行のみ</span></div>'
+        f'<div class="tile"><b>{summary["new_only"]}</b><span>新のみ</span></div>'
+        f'<div class="tile"><b>{summary["unchecked_links"]}</b><span>検査できなかったリンク</span></div>'
+        "</div>"
+    )
 
 
 def _render_summary_tiles(result: ComparisonResult) -> str:

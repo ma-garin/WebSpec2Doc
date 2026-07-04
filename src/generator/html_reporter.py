@@ -24,6 +24,7 @@ from crawler.page_crawler import (
     FieldData,
     FormData,
 )
+from generator.coverage_gap import CoverageGap
 
 REPORT_TITLE = "WebSpec2Doc テスト分析インプット"
 TOOL_NAME = "WebSpec2Doc"
@@ -48,6 +49,7 @@ def generate_html_report(
     impact_report: dict | None = None,
     exploration_coverage: dict | None = None,
     ux_review: dict | None = None,
+    coverage_gaps: tuple[CoverageGap, ...] = (),
 ) -> str:
     from analyzer.stack_detector import StackInfo
     from generator.architecture_generator import (
@@ -77,6 +79,7 @@ def generate_html_report(
                 has_impact=bool(impact_report),
                 has_exploration=bool(exploration_coverage),
                 has_ux_review=bool(ux_review),
+                has_coverage_gaps=bool(coverage_gaps),
             ),
             '<div class="app-main">',
             _topbar(target_url, now),
@@ -93,6 +96,7 @@ def generate_html_report(
             _impact_section(impact_report),
             _exploration_section(exploration_coverage),
             _ux_review_section(ux_review),
+            _coverage_gap_section(coverage_gaps),
             _section("画面カタログ", _screen_cards(pages, graph, screenshots_dir), "screens"),
             _meta_section(target_url, crawl_depth, crawl_max_pages, crawled_at, len(pages)),
             _footer(now),
@@ -235,6 +239,7 @@ def _sidebar(
     has_impact: bool = False,
     has_exploration: bool = False,
     has_ux_review: bool = False,
+    has_coverage_gaps: bool = False,
 ) -> str:
     items = [
         '<a href="#summary" class="nav-item">サマリー</a>',
@@ -250,6 +255,8 @@ def _sidebar(
         items.append('<a href="#exploration" class="nav-item">探索カバレッジ</a>')
     if has_ux_review:
         items.append('<a href="#ux-review" class="nav-item">UX 所見</a>')
+    if has_coverage_gaps:
+        items.append('<a href="#coverage-gaps" class="nav-item">カバレッジと未確認領域</a>')
     items.append('<div class="nav-group">画面一覧</div>')
     for page in pages:
         pid = html.escape(page.page_id)
@@ -738,6 +745,40 @@ def _ux_screen_detail(page_id: str, title: str, axe_violations: list, ux_finding
             f"<tbody>{finding_rows}</tbody></table>"
         )
     return axe_table + finding_table
+
+
+_COVERAGE_GAP_KIND_LABELS: dict[str, str] = {
+    "robots_skipped": "robots.txt により対象外",
+    "login_wall": "ログインウォール",
+    "unreadable_frame": "読み取り不可の iframe / shadow root",
+    "unexplored_screen": "未探索画面",
+    "unchecked_link": "検査できなかったリンク",
+}
+
+
+def _coverage_gap_section(coverage_gaps: tuple[CoverageGap, ...]) -> str:
+    """「カバレッジと未確認領域」節（AC-5）。
+
+    audit.jsonl・embedded_frames・探索カバレッジ・現新比較から集約した
+    CoverageGap（generator.coverage_gap.collect_coverage_gaps）を種別ごとに列挙する。
+    「未確認」と表現し「問題なし」とは断定しない（evidence-only 原則）。
+    ギャップが 0 件の場合は節自体を出力しない（オプトイン・AC-8: 既存出力は不変）。
+    """
+    if not coverage_gaps:
+        return ""
+    rows = "".join(
+        f"<tr><td>{html.escape(_COVERAGE_GAP_KIND_LABELS.get(gap.kind, gap.kind))}</td>"
+        f"<td>{html.escape(gap.subject)}</td>"
+        f"<td>{html.escape(gap.reason)}</td></tr>"
+        for gap in coverage_gaps
+    )
+    body = (
+        '<p class="disclaimer">クロール・比較・探索で確認できなかった領域です。'
+        "「未確認」であり「問題なし」を意味しません。</p>"
+        "<table><thead><tr><th>種別</th><th>対象</th><th>理由（未確認の根拠）</th></tr></thead>"
+        f"<tbody>{rows}</tbody></table>"
+    )
+    return _section("カバレッジと未確認領域", body, "coverage-gaps")
 
 
 def _meta_section(

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from contextlib import contextmanager
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -100,6 +101,30 @@ def test_login_wall_is_reported_and_not_recorded() -> None:
     assert result is None
     assert events[0]["event"] == "login_wall_detected"
     assert events[0]["login_url"] == "https://example.com/login"
+
+
+def test_login_wall_is_recorded_to_audit_log(tmp_path: Path) -> None:
+    """AC-5 の土台: ログインウォールも audit.jsonl に残す（coverage_gap の情報源）。"""
+    with patch.object(
+        crawler,
+        "crawl_page",
+        side_effect=LoginWallDetected(
+            "https://example.com/private", "https://example.com/login", ("password_field",)
+        ),
+    ):
+        crawler._crawl_page_with_id(
+            MagicMock(),
+            "https://example.com/private",
+            "P001",
+            tmp_path,
+        )
+
+    lines = (tmp_path / "audit.jsonl").read_text(encoding="utf-8").splitlines()
+    assert len(lines) == 1
+    record = json.loads(lines[0])
+    assert record["event"] == "login_wall_detected"
+    assert record["url"] == "https://example.com/private"
+    assert record["login_url"] == "https://example.com/login"
 
 
 def test_stop_before_next_page_emits_cancelled() -> None:

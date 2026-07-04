@@ -15,6 +15,7 @@ traceability_bp = Blueprint("traceability", __name__)
 
 _REPORT_JSON = "report.json"
 _CANDIDATES_JSON = "playwright_candidates.json"
+_REQUIREMENT_TRACE_JSON = "requirement_trace.json"
 
 
 def _load_json_file(path_obj) -> dict | list | None:
@@ -56,7 +57,18 @@ def api_traceability_matrix() -> tuple[dict, int] | dict:
 
     report_dict: dict = report_data if isinstance(report_data, dict) else {}
     matrix = build_matrix(domain, report_dict, candidates, _load_test_metadata(domain_dir))
-    return matrix_to_dict(matrix)
+    response = matrix_to_dict(matrix)
+
+    # requirement_trace.json（SPEC-1-3・src/ingest/req_tracer.py の出力）が存在する
+    # 場合のみ document_requirements を追加する。ファイルが無い場合は既存応答と
+    # 完全一致させる（オプトイン原則。AC-7）。build_matrix / RequirementLink（画面=要件と
+    # みなす暫定実装）はここでは一切変更しない。
+    trace_path = domain_dir / _REQUIREMENT_TRACE_JSON
+    if trace_path.is_file():
+        trace_data = _load_json_file(trace_path)
+        if isinstance(trace_data, dict):
+            response["document_requirements"] = trace_data
+    return response
 
 
 def _load_test_metadata(domain_dir) -> list[dict]:

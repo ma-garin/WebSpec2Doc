@@ -106,7 +106,7 @@ class RulesProvider:
         self, lines: list[tuple[str, str]], source_file: str
     ) -> dict[str, Any]:
         logger.info("LLM 抽出は無効です（Phase 1 抽出のみで継続）: %s", source_file)
-        return {"screens": [], "fields": [], "rules": []}
+        return {"screens": [], "fields": [], "rules": [], "requirements": []}
 
 
 class OpenAIProvider:
@@ -205,7 +205,8 @@ class OpenAIProvider:
             + "\n".join(f"[{location}] {text}" for location, text in lines)
             + "\n\n"
             "この文書に書かれている画面・入力項目・業務ルール（計算式・限度値・"
-            "権限条件）を抽出してください。"
+            "権限条件）・要件（RFP や要件一覧に記載された、実現すべき機能/非機能の"
+            "記述）を抽出してください。"
             "文書に書かれていないことを推測で補完しないこと。"
             "各項目には、抽出根拠となった原文をそのまま quote に含めること。"
         )
@@ -219,4 +220,4 @@ class OpenAIProvider:
             )
         except LLMResponseError as exc:
             logger.warning("LLM 抽出応答を棄却しました（理由: %s）", exc)
-            return {"screens": [], "fields": [], "rules": []}
+            return {"screens": [], "fields": [], "rules": [], "requirements": []}

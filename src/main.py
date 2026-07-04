@@ -855,8 +855,10 @@ def _run_doc_fusion(
         return None, None
     from analyzer.rule_injector import build_rule_conditions
     from generator.fusion_reporter import save_fusion_outputs
+    from generator.trace_reporter import save_trace_outputs
     from ingest.loader import load_reference_documents
     from ingest.matcher import fuse
+    from ingest.req_tracer import trace_requirements
 
     api_key = os.environ.get("OPENAI_API_KEY", "") if use_llm else ""
     try:
@@ -871,8 +873,38 @@ def _run_doc_fusion(
         len(result.screen_matches),
         len(result.field_gaps),
     )
+    if bundle.requirements:
+        candidates = _load_playwright_candidates(output_dir)
+        traces = trace_requirements(bundle, result, pages, candidates)
+        save_trace_outputs(traces, bundle, output_dir)
+        logger.info(
+            "RFP要件トレーサビリティを出力しました: 要件 %d 件（traceability_matrix.md）",
+            len(traces),
+        )
     rule_conditions = build_rule_conditions(result, bundle, pages) if bundle.rules else None
     return result.official_names or None, rule_conditions or None
+
+
+def _load_playwright_candidates(output_dir: Path) -> list[dict]:
+    """playwright_candidates.json を寛容に読み込む（不在/破損は空リストで継続）。
+
+    web/routes/traceability.py::_load_json_file と同じ寛容な読み方。
+    AutoRun 実行前は存在しないため、無いことを異常にしない（candidate_ids=() で継続）。
+    """
+    path = output_dir / "playwright_candidates.json"
+    if not path.exists():
+        logger.warning("テスト候補ファイルなし（条件件数のみで追跡）: %s", path)
+        return []
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning("テスト候補ファイルなし（条件件数のみで追跡）: %s", exc)
+        return []
+    if isinstance(data, dict):
+        return list(data.get("candidates", []))
+    if isinstance(data, list):
+        return list(data)
+    return []
 
 
 def _load_exploration_coverage(output_dir: Path) -> dict[str, object] | None:

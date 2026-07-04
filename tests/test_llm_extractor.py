@@ -1,4 +1,5 @@
 """SPEC-1-1: PDF/Word 自由文からの LLM 意味抽出（Doc Fusion Phase 2）のテスト。
+SPEC-1-3: 要件（requirements）抽出の追加分もここに含める。
 
 対象:
     - src/ingest/llm_extractor.py::extract_semantics / filter_hallucinations
@@ -26,7 +27,7 @@ class _FakeSemanticsProvider:
     """extract_document_semantics の応答を注入可能にするフェイク provider。"""
 
     def __init__(self, payload: dict[str, Any] | None = None, error: Exception | None = None):
-        self._payload = payload or {"screens": [], "fields": [], "rules": []}
+        self._payload = payload or {"screens": [], "fields": [], "rules": [], "requirements": []}
         self._error = error
 
     def generate_viewpoints(self, screen_info):  # pragma: no cover - 未使用
@@ -67,11 +68,13 @@ class TestExtractRulesFromLines:
                         "quote": "振込限度額は1日100万円までとする。",
                     }
                 ],
+                "requirements": [],
             }
         )
-        screens, fields, rules = extract_semantics(_LINES, "spec.pdf", provider)
+        screens, fields, rules, requirements = extract_semantics(_LINES, "spec.pdf", provider)
         assert screens == []
         assert fields == []
+        assert requirements == []
         assert len(rules) == 1
         assert rules[0].kind == "limit"
         assert rules[0].evidence is not None
@@ -88,9 +91,12 @@ class TestHallucinationFilter:
             ],
             "fields": [],
             "rules": [],
+            "requirements": [],
         }
         with caplog.at_level("WARNING"):
-            screens, fields, rules = filter_hallucinations(payload, _LINES, "spec.pdf")
+            screens, fields, rules, requirements = filter_hallucinations(
+                payload, _LINES, "spec.pdf"
+            )
         assert screens == []
         assert "存在しない画面" in caplog.text
 
@@ -107,8 +113,9 @@ class TestHallucinationFilter:
             ],
             "fields": [],
             "rules": [],
+            "requirements": [],
         }
-        screens, _, _ = filter_hallucinations(payload, _LINES, "spec.pdf")
+        screens, _, _, _ = filter_hallucinations(payload, _LINES, "spec.pdf")
         assert len(screens) == 2
         confidences = {s.name: s.confidence for s in screens}
         assert confidences["振込"] == 0.9
@@ -130,8 +137,9 @@ class TestHallucinationFilter:
                 }
             ],
             "rules": [],
+            "requirements": [],
         }
-        _, fields, _ = filter_hallucinations(payload, _LINES, "spec.pdf")
+        _, fields, _, _ = filter_hallucinations(payload, _LINES, "spec.pdf")
         assert len(fields) == 1
         assert fields[0].screen_name == ""
         assert "確認できず" in fields[0].note
@@ -160,8 +168,9 @@ class TestHallucinationFilter:
                     "quote": "振込限度額は1日100万円までとする。",
                 }
             ],
+            "requirements": [],
         }
-        _, fields, rules = filter_hallucinations(
+        _, fields, rules, _ = filter_hallucinations(
             payload, _LINES, "spec.pdf", known_screens=["ログイン画面"]
         )
         assert fields[0].screen_name == "ログイン画面"
@@ -169,23 +178,71 @@ class TestHallucinationFilter:
         assert rules[0].screen_name == "ログイン画面"
         assert "確認できず" not in rules[0].description
 
+    def test_requirement_extracted_with_quote_evidence(self) -> None:
+        """SPEC-1-3 AC-2: quote が原文に実在する要件は DocumentedRequirement として抽出される。"""
+        payload = {
+            "screens": [],
+            "fields": [],
+            "rules": [],
+            "requirements": [
+                {
+                    "title": "振込限度額を制御できること",
+                    "description": "1日の振込限度額を管理できる",
+                    "category": "非機能",
+                    "quote": "振込限度額は1日100万円までとする。",
+                }
+            ],
+        }
+        _, _, _, requirements = filter_hallucinations(payload, _LINES, "spec.pdf")
+        assert len(requirements) == 1
+        req = requirements[0]
+        assert req.title == "振込限度額を制御できること"
+        assert req.category == "非機能"
+        assert req.source == "llm"
+        assert req.confidence <= 0.9
+        assert req.evidence is not None
+        assert req.evidence.location == "line 2"
+        assert req.req_id.startswith("REQ-LLM-spec.pdf-")
+
+    def test_hallucinated_requirement_discarded(self, caplog: pytest.LogCaptureFixture) -> None:
+        """SPEC-1-3 AC-2: 原文に無い quote を持つ要件は幻覚として破棄される。"""
+        payload = {
+            "screens": [],
+            "fields": [],
+            "rules": [],
+            "requirements": [
+                {
+                    "title": "存在しない要件",
+                    "description": "",
+                    "category": "",
+                    "quote": "これは原文に無い文章です",
+                }
+            ],
+        }
+        with caplog.at_level("WARNING"):
+            _, _, _, requirements = filter_hallucinations(payload, _LINES, "spec.pdf")
+        assert requirements == []
+        assert "存在しない要件" in caplog.text
+
 
 class TestExtractSemanticsErrorHandling:
     def test_no_lines_skips_llm(self) -> None:
-        screens, fields, rules = extract_semantics([], "empty.pdf", RulesProvider())
-        assert (screens, fields, rules) == ([], [], [])
+        screens, fields, rules, requirements = extract_semantics([], "empty.pdf", RulesProvider())
+        assert (screens, fields, rules, requirements) == ([], [], [], [])
 
     def test_rules_provider_returns_empty(self) -> None:
-        """RulesProvider（キーなし）は常に空 3-tuple を返す。"""
-        screens, fields, rules = extract_semantics(_LINES, "spec.pdf", RulesProvider())
-        assert (screens, fields, rules) == ([], [], [])
+        """RulesProvider（キーなし）は常に空 4-tuple を返す。"""
+        screens, fields, rules, requirements = extract_semantics(
+            _LINES, "spec.pdf", RulesProvider()
+        )
+        assert (screens, fields, rules, requirements) == ([], [], [], [])
 
     def test_llm_error_falls_back(self, caplog: pytest.LogCaptureFixture) -> None:
         """provider が例外を投げても extract_semantics は例外を外に漏らさない。"""
         provider = _FakeSemanticsProvider(error=RuntimeError("network down"))
         with caplog.at_level("WARNING"):
-            screens, fields, rules = extract_semantics(_LINES, "spec.pdf", provider)
-        assert (screens, fields, rules) == ([], [], [])
+            screens, fields, rules, requirements = extract_semantics(_LINES, "spec.pdf", provider)
+        assert (screens, fields, rules, requirements) == ([], [], [], [])
         assert "棄却" in caplog.text
 
 
@@ -200,12 +257,14 @@ class TestLoadReferenceDocumentsWithLlm:
         assert phase1.screens == with_llm_no_key.screens
         assert phase1.fields == with_llm_no_key.fields
         assert phase1.rules == with_llm_no_key.rules == ()
+        assert phase1.requirements == with_llm_no_key.requirements == ()
 
     def test_use_llm_false_ignores_api_key(self, tmp_path: Path) -> None:
         doc_path = tmp_path / "spec.txt"
         doc_path.write_text("振込限度額は1日100万円までとする。\n", encoding="utf-8")
         bundle = load_reference_documents([doc_path], use_llm=False, api_key="sk-test")
         assert bundle.rules == ()
+        assert bundle.requirements == ()
 
 
 class TestFusionJsonOptIn:

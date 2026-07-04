@@ -20,6 +20,10 @@ class LLMProvider(Protocol):
         viewpoints: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]: ...
 
+    def extract_document_semantics(
+        self, lines: list[tuple[str, str]], source_file: str
+    ) -> dict[str, Any]: ...
+
 
 def _screen_evidence_from_info(screen_info: dict[str, Any]) -> Any:
     """screen_info から画面全体の根拠（SourceEvidence）を構築する。"""
@@ -97,6 +101,12 @@ class RulesProvider:
         viewpoints: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         raise NotImplementedError("QA プロセス生成には OpenAIProvider が必要です。")
+
+    def extract_document_semantics(
+        self, lines: list[tuple[str, str]], source_file: str
+    ) -> dict[str, Any]:
+        logger.info("LLM 抽出は無効です（Phase 1 抽出のみで継続）: %s", source_file)
+        return {"screens": [], "fields": [], "rules": []}
 
 
 class OpenAIProvider:
@@ -181,3 +191,32 @@ class OpenAIProvider:
         from web.services.openai_qa import generate_openai_qa
 
         return generate_openai_qa(domain, report, viewpoints)
+
+    def extract_document_semantics(
+        self, lines: list[tuple[str, str]], source_file: str
+    ) -> dict[str, Any]:
+        from ingest.llm_extractor import EXTRACTION_JSON_SCHEMA, EXTRACTION_SCHEMA_NAME
+        from llm.openai_client import LLMResponseError, request_structured_json
+
+        prompt = (
+            "あなたは文書解析の専門家です。以下は文書（"
+            f"{source_file}）から抽出したテキスト行です。各行は "
+            "[位置] テキスト の形式です。\n\n"
+            + "\n".join(f"[{location}] {text}" for location, text in lines)
+            + "\n\n"
+            "この文書に書かれている画面・入力項目・業務ルール（計算式・限度値・"
+            "権限条件）を抽出してください。"
+            "文書に書かれていないことを推測で補完しないこと。"
+            "各項目には、抽出根拠となった原文をそのまま quote に含めること。"
+        )
+        try:
+            return request_structured_json(
+                self._api_key,
+                self._model,
+                prompt,
+                EXTRACTION_SCHEMA_NAME,
+                EXTRACTION_JSON_SCHEMA,
+            )
+        except LLMResponseError as exc:
+            logger.warning("LLM 抽出応答を棄却しました（理由: %s）", exc)
+            return {"screens": [], "fields": [], "rules": []}

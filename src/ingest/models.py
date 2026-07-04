@@ -31,6 +31,8 @@ class DocumentedScreen:
     url_hint: str = ""
     note: str = ""
     evidence: DocumentEvidence | None = None
+    source: str = "table"
+    confidence: float = 1.0
 
 
 @dataclass(frozen=True)
@@ -48,6 +50,27 @@ class DocumentedField:
     max_length: int | None = None
     note: str = ""
     evidence: DocumentEvidence | None = None
+    source: str = "table"
+    confidence: float = 1.0
+
+
+@dataclass(frozen=True)
+class DocumentedRule:
+    """文書に記載された業務ルール（計算式・限度値・権限条件など）。
+
+    Phase 2（LLM 抽出）専用のモデル。source は常に "llm"、
+    confidence は幻覚フィルタでの quote 一致度から算出され 0.9 を超えない。
+    """
+
+    rule_id: str
+    kind: str
+    description: str
+    screen_name: str = ""
+    field_name: str = ""
+    expression: str = ""
+    source: str = "llm"
+    confidence: float = 0.7
+    evidence: DocumentEvidence | None = None
 
 
 @dataclass(frozen=True)
@@ -57,6 +80,7 @@ class DocumentBundle:
     screens: tuple[DocumentedScreen, ...]
     fields: tuple[DocumentedField, ...]
     source_files: tuple[str, ...]
+    rules: tuple[DocumentedRule, ...] = ()
 
 
 def document_evidence_to_dict(evidence: DocumentEvidence | None) -> dict[str, object] | None:

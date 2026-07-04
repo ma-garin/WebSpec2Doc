@@ -106,11 +106,11 @@
       "status": "implemented",
       "ui_files": [],
       "route_files": [],
-      "core_files": ["src/ingest/loader.py", "src/ingest/matcher.py", "src/generator/fusion_reporter.py"],
-      "symbols": ["load_reference_documents", "fuse", "save_fusion_outputs"],
-      "outputs": ["doc_fusion.json", "doc_fusion.md", "official_name in report.json"],
+      "core_files": ["src/ingest/loader.py", "src/ingest/matcher.py", "src/generator/fusion_reporter.py", "src/ingest/llm_extractor.py"],
+      "symbols": ["load_reference_documents", "fuse", "save_fusion_outputs", "extract_semantics", "filter_hallucinations"],
+      "outputs": ["doc_fusion.json", "doc_fusion.md", "official_name in report.json", "documented_rules in doc_fusion.json"],
       "persistence": ["output/{domain}/doc_fusion.json"],
-      "failure_modes": ["unsupported_format", "missing_file", "legacy_binary_format", "no_match"],
+      "failure_modes": ["unsupported_format", "missing_file", "legacy_binary_format", "no_match", "llm_schema_reject", "hallucinated_quote"],
       "required_tests": ["happy_path", "error_path", "mismatch_detection", "evidence"]
     },
     {

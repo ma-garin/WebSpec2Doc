@@ -169,6 +169,14 @@ def parse_args() -> argparse.Namespace:
             "逆生成する"
         ),
     )
+    parser.add_argument(
+        "--doc-llm",
+        action="store_true",
+        help=(
+            "--reference-doc の自由文形式（pdf/pptx/txt/docx 本文）から LLM で"
+            "画面・項目・業務ルールを追加抽出する（既定 OFF。OPENAI_API_KEY 必須）"
+        ),
+    )
     return parser.parse_args()
 
 
@@ -361,7 +369,10 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
     if bool(getattr(args, "compare", False)) and prior_snapshot is not None:
         impact_report = _compute_impact_report(prior_snapshot, analyzed_pages, output_dir)
     official_names = _run_doc_fusion(
-        analyzed_pages, getattr(args, "reference_doc", None), output_dir
+        analyzed_pages,
+        getattr(args, "reference_doc", None),
+        output_dir,
+        use_llm=bool(getattr(args, "doc_llm", False)),
     )
     exploration_coverage = _load_exploration_coverage(output_dir)
     save_outputs(
@@ -692,11 +703,13 @@ def _run_doc_fusion(
     pages: list[AnalyzedPage],
     reference_docs: list[Path] | None,
     output_dir: Path,
+    use_llm: bool = False,
 ) -> dict[str, str] | None:
     """参考文書があれば実測結果と突合し、正式画面名マップを返す。
 
     突合結果は doc_fusion.json / doc_fusion.md として出力する。
     文書の取り込み失敗はクロール成果を無駄にしないため警告に留める。
+    use_llm=True かつ OPENAI_API_KEY 未設定の場合は Phase 1 抽出のみで継続する。
     """
     if not reference_docs:
         return None
@@ -704,8 +717,9 @@ def _run_doc_fusion(
     from ingest.loader import load_reference_documents
     from ingest.matcher import fuse
 
+    api_key = os.environ.get("OPENAI_API_KEY", "") if use_llm else ""
     try:
-        bundle = load_reference_documents(list(reference_docs))
+        bundle = load_reference_documents(list(reference_docs), use_llm=use_llm, api_key=api_key)
     except (FileNotFoundError, ValueError) as exc:
         logger.warning("参考文書の取り込みに失敗しました（突合をスキップ）: %s", exc)
         return None

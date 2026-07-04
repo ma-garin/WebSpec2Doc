@@ -106,11 +106,11 @@
       "status": "implemented",
       "ui_files": ["templates/partials/view-generate.html", "static/js/wizard.js", "static/js/execution.js", "static/js/results.js", "static/js/doc-fusion.js"],
       "route_files": ["web/routes/crawl.py", "web/routes/traceability.py"],
-      "core_files": ["src/ingest/loader.py", "src/ingest/matcher.py", "src/generator/fusion_reporter.py", "src/ingest/llm_extractor.py", "src/analyzer/rule_injector.py", "src/generator/json_reporter.py", "src/ingest/req_tracer.py", "src/generator/trace_reporter.py", "src/ingest/tables.py"],
-      "symbols": ["load_reference_documents", "fuse", "save_fusion_outputs", "extract_semantics", "filter_hallucinations", "build_rule_conditions", "trace_requirements", "save_trace_outputs", "structure_requirement_table"],
-      "outputs": ["doc_fusion.json", "doc_fusion.md", "official_name in report.json", "documented_rules in doc_fusion.json", "document_conditions/test_conditions_detail in report.json", "requirement_trace.json", "traceability_matrix.md", "document_requirements in /traceability/matrix"],
-      "persistence": ["output/{domain}/doc_fusion.json", "output/{domain}/reference_docs/", "output/{domain}/requirement_trace.json", "output/{domain}/traceability_matrix.md"],
-      "failure_modes": ["unsupported_format", "missing_file", "legacy_binary_format", "no_match", "llm_schema_reject", "hallucinated_quote", "rule_unmatched", "rule_value_unparsable", "upload_rejected", "path_traversal_attempt", "requirement_unmatched", "duplicate_requirement_id", "candidates_file_missing_or_corrupt"],
+      "core_files": ["src/ingest/loader.py", "src/ingest/matcher.py", "src/generator/fusion_reporter.py", "src/ingest/llm_extractor.py", "src/analyzer/rule_injector.py", "src/generator/json_reporter.py", "src/ingest/req_tracer.py", "src/generator/trace_reporter.py", "src/ingest/tables.py", "src/generator/refresh_reporter.py"],
+      "symbols": ["load_reference_documents", "fuse", "save_fusion_outputs", "extract_semantics", "filter_hallucinations", "build_rule_conditions", "trace_requirements", "save_trace_outputs", "structure_requirement_table", "build_refresh_entries", "render_refreshed_markdown", "save_refresh_outputs"],
+      "outputs": ["doc_fusion.json", "doc_fusion.md", "official_name in report.json", "documented_rules in doc_fusion.json", "document_conditions/test_conditions_detail in report.json", "requirement_trace.json", "traceability_matrix.md", "document_requirements in /traceability/matrix", "refreshed_spec.md", "refresh_log.json"],
+      "persistence": ["output/{domain}/doc_fusion.json", "output/{domain}/reference_docs/", "output/{domain}/requirement_trace.json", "output/{domain}/traceability_matrix.md", "output/{domain}/refreshed_spec.md", "output/{domain}/refresh_log.json"],
+      "failure_modes": ["unsupported_format", "missing_file", "legacy_binary_format", "no_match", "llm_schema_reject", "hallucinated_quote", "rule_unmatched", "rule_value_unparsable", "upload_rejected", "path_traversal_attempt", "requirement_unmatched", "duplicate_requirement_id", "candidates_file_missing_or_corrupt", "refresh_selector_lookup_failed", "refresh_no_screens_skip", "refresh_flag_without_reference_doc"],
       "required_tests": ["happy_path", "error_path", "mismatch_detection", "evidence"]
     },
     {

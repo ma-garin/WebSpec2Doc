@@ -247,6 +247,15 @@ def parse_args() -> argparse.Namespace:
             "（OPENAI_API_KEY 未設定時は rules ベースの評価で完走する）"
         ),
     )
+    parser.add_argument(
+        "--refresh-doc",
+        action="store_true",
+        help=(
+            "文書の再生: 参考文書の構造を骨格として維持したまま実測値で更新した"
+            "新版仕様書（refreshed_spec.md）と変更ログ（refresh_log.json）を生成する"
+            "（既定 OFF。--reference-doc と併用必須。単独指定は警告して無視）"
+        ),
+    )
     return parser.parse_args()
 
 
@@ -591,6 +600,7 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
         getattr(args, "reference_doc", None),
         output_dir,
         use_llm=bool(getattr(args, "doc_llm", False)),
+        refresh_doc=bool(getattr(args, "refresh_doc", False)),
     )
     exploration_coverage = _load_exploration_coverage(output_dir)
     ux_review = None
@@ -964,17 +974,23 @@ def _run_doc_fusion(
     reference_docs: list[Path] | None,
     output_dir: Path,
     use_llm: bool = False,
+    refresh_doc: bool = False,
 ) -> tuple[dict[str, str] | None, dict[tuple[str, str], tuple] | None]:
     """参考文書があれば実測結果と突合し、(正式画面名マップ, 文書由来ルール条件) を返す。
 
     突合結果は doc_fusion.json / doc_fusion.md として出力する。
     文書の取り込み失敗はクロール成果を無駄にしないため警告に留める。
     use_llm=True かつ OPENAI_API_KEY 未設定の場合は Phase 1 抽出のみで継続する。
+    refresh_doc=True の場合、突合結果を骨格とした再生版仕様書
+    （refreshed_spec.md / refresh_log.json）も併せて出力する。
     """
     if not reference_docs:
+        if refresh_doc:
+            logger.warning("--refresh-doc は --reference-doc と併用が必須のため無視します")
         return None, None
     from analyzer.rule_injector import build_rule_conditions
     from generator.fusion_reporter import save_fusion_outputs
+    from generator.refresh_reporter import save_refresh_outputs
     from generator.trace_reporter import save_trace_outputs
     from ingest.loader import load_reference_documents
     from ingest.matcher import fuse
@@ -1001,6 +1017,9 @@ def _run_doc_fusion(
             "RFP要件トレーサビリティを出力しました: 要件 %d 件（traceability_matrix.md）",
             len(traces),
         )
+    if refresh_doc:
+        save_refresh_outputs(result, bundle, pages, output_dir)
+        logger.info("文書の再生が完了しました（refreshed_spec.md）")
     rule_conditions = build_rule_conditions(result, bundle, pages) if bundle.rules else None
     return result.official_names or None, rule_conditions or None
 

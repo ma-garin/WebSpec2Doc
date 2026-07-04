@@ -140,11 +140,11 @@ def detect_dynamic_regions(page: Page, interval_sec: float = 1.0) -> tuple[tuple
 | 分類 | 判定規則（実測差分由来のみ） |
 |---|---|
 | 操作不可 inoperable | リンク切れ（status ≥400/接続失敗）・フォーム action の消失・submit ボタン消失・field_type/required の breaking 差分 |
-| 文字化け・意味消失 text_garbled | title/headings に U+FFFD 等の化け文字を検出・現行にあった見出しテキストの消失 |
+| 文字化け・意味消失 text_garbled | title/headings に U+FFFD 等の化け文字・現行にあった見出しテキストの消失 |
 | 理解不可能 incomprehensible | `has_visible_label` true→false・aria_label 消失・a11y_issues の増加 |
-| 表示崩れ layout_broken | 仕様差分なし かつ 画像差分 is_significant（構造は同じで見た目だけ大きく違う） |
+| 表示崩れ layout_broken | 仕様差分なし かつ 画像差分 is_significant |
 
-上記に該当しない差分は `unclassified` として「分類できない差分（要人手確認）」と明示する（evidence-only 原則: 無理に分類しない）。
+該当しない差分は `unclassified`「分類できない差分（要人手確認）」と明示する（evidence-only 原則: 無理に分類しない）。
 
 ### 5-4. エラー処理表
 
@@ -158,8 +158,7 @@ def detect_dynamic_regions(page: Page, interval_sec: float = 1.0) -> tuple[tuple
 
 ### 5-5. 既存コードとの接続点
 
-- `crawl_urls`（output_dir を old/new で分ける。auth_state は現新で別指定可）・`save_snapshot`
-- `differ.py` の `_fields_by_name`・`_attribute_diffs_for_field`・`_ATTRIBUTE_SEVERITY` をペア比較関数から再利用（URL キー突合の `compute_diff` 自体は触らない）
+- `crawl_urls`（output_dir を old/new で分ける。auth_state は現新で別指定可）・`save_snapshot`。`differ.py` の `_fields_by_name`・`_attribute_diffs_for_field`・`_ATTRIBUTE_SEVERITY` をペア比較関数から再利用（URL キー突合の `compute_diff` 自体は触らない）
 - リンク検査は `OriginRateLimiter`＋`backoff_delays`（politeness.py）を使い、`append_audit_log` に検査対象と結果を記録する（比較の網羅性証明 — Sprint D で表示）
 - 出力は `comparison.json` / `comparison.html` の**別ファイル**とし、report.json にはキーを追加しない（AC-7。official_name 前例よりさらに安全側）
 
@@ -180,13 +179,12 @@ def detect_dynamic_regions(page: Page, interval_sec: float = 1.0) -> tuple[tuple
 
 ### 6-2. 実ブラウザ E2E（tests/e2e/test_comparison_e2e.py・専用スレッドパターン必須）
 
-- `demo/site`（現行）をポート 8902、`demo/site_v2`（新）をポート 8903 で配信（demo/demo_site.py の `--site-dir` 引数を追加）。site_v2 の contact.html は required 消失＋存在しないリンク＋時刻表示 `<span id="clock">` を持つ
+- `demo/site`（現行）をポート 8902、`demo/site_v2`（新）をポート 8903 で配信（demo/demo_site.py に `--site-dir` 引数を追加）。site_v2 の contact.html は required 消失＋存在しないリンク＋時刻表示 `<span id="clock">` を持つ
 - 検証: ペア生成（AC-2）・required 消失検出（AC-3）・clock マスクで画像差分非有意（AC-4）・リンク切れ（AC-5）・comparison.html 生成（AC-1）
 
 ### 6-3. 回帰確認
 
-- 既存 `tests/test_diff.py`・`test_screenshot_diff.py`・`test_doc_fusion.py`（matcher ヘルパー切り出しの影響確認）が無変更で PASS
-- `docs/demo/sample_output/report.json` とのスキーマ差分がないこと（AC-7）
+- 既存 `tests/test_diff.py`・`test_screenshot_diff.py`・`test_doc_fusion.py`（matcher ヘルパー切り出しの影響確認）が無変更で PASS。`docs/demo/sample_output/report.json` とのスキーマ差分がないこと（AC-7）
 
 ## 7. 完了チェックリスト（DoD）
 

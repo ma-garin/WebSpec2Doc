@@ -42,10 +42,20 @@ def page(name: str) -> Response:
 
 
 def main() -> None:
+    global SITE_DIR
     parser = argparse.ArgumentParser(description="WebSpec2Doc デモサイト（DemoMart）")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT, help="待受ポート")
+    parser.add_argument(
+        "--site-dir",
+        default="site",
+        help=(
+            "配信するサイトディレクトリ名（demo/ 配下）。既定は 'site'（現行）。"
+            "現新比較デモでは新側に 'site_v2' を指定する"
+        ),
+    )
     args = parser.parse_args()
-    print(f"DemoMart デモサイト: http://127.0.0.1:{args.port}/")
+    SITE_DIR = Path(__file__).parent / str(args.site_dir)
+    print(f"DemoMart デモサイト（{SITE_DIR.name}）: http://127.0.0.1:{args.port}/")
     app.run(host="127.0.0.1", port=args.port, debug=False)
 
 

@@ -1,0 +1,37 @@
+/* DemoMart 共通スタイル（視認性重視の最小構成） */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: "Hiragino Sans", "Noto Sans JP", sans-serif;
+  color: #1f2933; background: #f7f9fc; line-height: 1.7;
+}
+header { background: #0f62fe; color: #fff; padding: 14px 24px; }
+header h1 { font-size: 20px; }
+nav { display: flex; gap: 14px; flex-wrap: wrap; padding: 10px 24px; background: #e8f0fe; }
+nav a { color: #0043ce; text-decoration: none; font-size: 14px; }
+main { max-width: 760px; margin: 24px auto; padding: 0 24px 48px; }
+main h2 { margin-bottom: 12px; }
+section { background: #fff; border: 1px solid #d4ddea; border-radius: 8px;
+  padding: 18px 20px; margin-top: 18px; }
+label { display: block; margin-top: 12px; font-weight: 600; font-size: 14px; }
+input, select, textarea {
+  width: 100%; padding: 8px 10px; margin-top: 4px;
+  border: 1px solid #b6c2d4; border-radius: 6px; font-size: 14px;
+}
+button {
+  margin-top: 16px; padding: 9px 20px; border: 0; border-radius: 6px;
+  background: #0f62fe; color: #fff; font-size: 14px; cursor: pointer;
+}
+button.secondary { background: #5b6b7f; }
+footer { text-align: center; color: #5b6b7f; padding: 16px; font-size: 12px; }
+dialog, .modal {
+  border: 1px solid #b6c2d4; border-radius: 8px; padding: 20px;
+  background: #fff; box-shadow: 0 8px 24px rgba(0,0,0,.18);
+}
+.modal[hidden] { display: none; }
+.modal { position: fixed; top: 30%; left: 50%; transform: translateX(-50%);
+  min-width: 320px; z-index: 10; }
+[role="tablist"] { display: flex; gap: 8px; margin-top: 12px; }
+[role="tab"] { background: #e8f0fe; color: #0043ce; }
+[role="tab"][aria-selected="true"] { background: #0f62fe; color: #fff; }
+[role="tabpanel"][hidden] { display: none; }
+.error-message { color: #da1e28; font-size: 13px; margin-top: 6px; }

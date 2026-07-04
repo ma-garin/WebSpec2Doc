@@ -132,8 +132,7 @@ def detect_dynamic_regions(page: Page, interval_sec: float = 1.0) -> tuple[tuple
     時計・カルーセル等を自動マスク化する。撮影は現行側クロール中に行う（追加 1 枚）。"""
 ```
 
-- 加えて `--compare-mask-selector`（CSS セレクタ列）指定時は該当要素の bounding_box をマスクに追加（広告枠など人が知っている動的領域）
-- サイズ不一致は既存どおり縮小合わせ。既存 `compare_screenshots` のシグネチャ・戻り値は不変（AC-7）
+- 加えて `--compare-mask-selector`（CSS セレクタ列）指定時は該当要素の bounding_box をマスクに追加（広告枠など既知の動的領域）。サイズ不一致は既存どおり縮小合わせ。既存 `compare_screenshots` のシグネチャ・戻り値は不変（AC-7）
 
 ### 5-3. 不具合 4 分類（ルールベース・confidence 1.0）
 

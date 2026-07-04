@@ -140,6 +140,20 @@
       "persistence": ["output/{domain}/recorded_assets.json", "output/{domain}/recorded_candidates.json"],
       "failure_modes": ["no_sessions", "no_inventory", "no_visit_events"],
       "required_tests": ["happy_path", "error_path", "state_join_key", "evidence"]
+    },
+    {
+      "feature_id": "field_definition_bva",
+      "name": "項目定義書＋境界値分析（BVA）テストデータ自動生成",
+      "risk_level": "medium",
+      "status": "implemented",
+      "ui_files": [],
+      "route_files": [],
+      "core_files": ["src/analyzer/bva.py", "src/main.py"],
+      "symbols": ["derive_boundary_cases", "attach_observed_boundary_cases"],
+      "outputs": ["spec.xlsx（項目定義書シート・境界値データシート）"],
+      "persistence": ["output/{domain}/spec.xlsx"],
+      "failure_modes": ["invalid_pattern", "unparsable_range", "no_evidence"],
+      "required_tests": ["happy_path", "error_path", "evidence"]
     }
   ]
 }

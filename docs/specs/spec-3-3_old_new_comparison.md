@@ -199,7 +199,6 @@ def detect_dynamic_regions(page: Page, interval_sec: float = 1.0) -> tuple[tuple
 ## 8. このタスク固有の罠
 
 - **compute_diff を現新に流用しない**。突合キーが完全一致 URL のため、ドメインが違う現新では全画面が added/removed になる。必ず ScreenPair 経由でペア単位比較する
-- ピクセル差分の全画素走査（`_count_nonzero_pixels` は getdata() の Python ループ）はフルページ 2 枚×画面数で遅い。マスク適用後は既存実装を踏襲しつつ、**画像を RGB のまま比較し numpy を新規依存に追加しない**（requirements 追加は仕様外判断になる）
-- 動的領域の自動検出（2 枚撮影）は**現行側クロール中**にしか行えない。スナップショットからの再比較時はマスク情報を `old/dynamic_masks.json` に永続化しておくこと
-- demo/site_v2 のページに `login.html` を含めない（ログインウォール検出でスキップされ E2E が空振り — CONVENTIONS §4-5）
-- ローカル 2 ポート配信のため e2e fixture で `WEBSPEC2DOC_ALLOW_LOCAL=1` 設定（CONVENTIONS §4-6）とポート衝突回避（8902/8903 を新規予約）
+- ピクセル差分の全画素走査（`_count_nonzero_pixels` の getdata() ループ）はフルページ 2 枚×画面数で遅い。**RGB のまま比較し numpy を新規依存に追加しない**（依存追加は仕様外判断）
+- 動的領域の自動検出（2 枚撮影）は**現行側クロール中**にしか行えない。スナップショットからの再比較に備え、マスクを `old/dynamic_masks.json` へ永続化する
+- demo/site_v2 に `login.html` を含めない（ログインウォール検出で E2E が空振り — CONVENTIONS §4-5）。e2e fixture で `WEBSPEC2DOC_ALLOW_LOCAL=1` 設定（§4-6）・ポートは 8902/8903 を新規予約（§4-7）

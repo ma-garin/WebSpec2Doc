@@ -1,7 +1,7 @@
-"""PDF/Word 等の自由文からの LLM 意味抽出（Doc Fusion Phase 2）。
+"""PDF/Word 等の自由文からの LLM 意味抽出（Doc Fusion Phase 2 / SPEC-1-3 で要件を追加）。
 
 表構造からは読み取れない画面・項目の言及や業務ルール（計算式・限度値・
-権限条件）を LLM Structured Outputs で構造化する。すべての抽出項目は
+権限条件）・要件を LLM Structured Outputs で構造化する。すべての抽出項目は
 文書中の原文（quote）を伴い、quote が原文行に見つからない出力は
 幻覚とみなして破棄する（evidence-only 原則）。
 """
@@ -13,7 +13,13 @@ import unicodedata
 from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
-from ingest.models import DocumentedField, DocumentedRule, DocumentedScreen, DocumentEvidence
+from ingest.models import (
+    DocumentedField,
+    DocumentedRequirement,
+    DocumentedRule,
+    DocumentedScreen,
+    DocumentEvidence,
+)
 
 if TYPE_CHECKING:
     from llm.provider import LLMProvider
@@ -86,14 +92,32 @@ EXTRACTION_JSON_SCHEMA: dict[str, Any] = {
                 "additionalProperties": False,
             },
         },
+        "requirements": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string"},
+                    "description": {"type": "string"},
+                    "category": {"type": "string"},
+                    "quote": {"type": "string"},
+                },
+                "required": ["title", "description", "category", "quote"],
+                "additionalProperties": False,
+            },
+        },
     },
-    "required": ["screens", "fields", "rules"],
+    "required": ["screens", "fields", "rules", "requirements"],
     "additionalProperties": False,
 }
 
 _UNKNOWN_SCREEN_NOTE = "画面参照を文書内で確認できず"
 _CONFIDENCE_EXACT = 0.9
 _CONFIDENCE_NORMALIZED = 0.7
+
+ExtractedSemantics = tuple[
+    list[DocumentedScreen], list[DocumentedField], list[DocumentedRule], list[DocumentedRequirement]
+]
 
 
 def _normalize_quote(text: str) -> str:
@@ -128,7 +152,7 @@ def filter_hallucinations(
     lines: list[tuple[str, str]],
     source_file: str,
     known_screens: Iterable[str] = (),
-) -> tuple[list[DocumentedScreen], list[DocumentedField], list[DocumentedRule]]:
+) -> ExtractedSemantics:
     """quote を原文行から逆引きし、見つからない項目を破棄する。
 
     location は LLM 出力を信用せず、quote が最初に見つかった行の
@@ -139,6 +163,7 @@ def filter_hallucinations(
     screens: list[DocumentedScreen] = []
     fields: list[DocumentedField] = []
     rules: list[DocumentedRule] = []
+    requirements: list[DocumentedRequirement] = []
 
     for index, raw in enumerate(payload.get("screens") or []):
         quote = str(raw.get("quote") or "")
@@ -211,7 +236,26 @@ def filter_hallucinations(
             )
         )
 
-    return screens, fields, rules
+    for index, raw in enumerate(payload.get("requirements") or []):
+        quote = str(raw.get("quote") or "")
+        located = _locate_quote(quote, lines)
+        if located is None:
+            logger.warning("幻覚の疑いで破棄: %s / %s", raw.get("title"), quote[:40])
+            continue
+        location, confidence = located
+        requirements.append(
+            DocumentedRequirement(
+                req_id=f"REQ-LLM-{source_file}-{index + 1}",
+                title=str(raw.get("title") or ""),
+                description=str(raw.get("description") or ""),
+                category=str(raw.get("category") or ""),
+                source="llm",
+                confidence=confidence,
+                evidence=DocumentEvidence(file=source_file, location=location, quote=quote),
+            )
+        )
+
+    return screens, fields, rules, requirements
 
 
 def extract_semantics(
@@ -219,20 +263,25 @@ def extract_semantics(
     source_file: str,
     provider: LLMProvider,
     known_screens: Iterable[str] = (),
-) -> tuple[list[DocumentedScreen], list[DocumentedField], list[DocumentedRule]]:
-    """自由文行から LLM で画面・項目・ルールを抽出する。
+) -> ExtractedSemantics:
+    """自由文行から LLM で画面・項目・ルール・要件を抽出する。
 
-    失敗・キーなし（RulesProvider の空応答）は空 3-tuple を返す。
+    失敗・キーなし（RulesProvider の空応答）は空 4-tuple を返す。
     known_screens は同一文書の表由来画面名（screen_name 検証に使う）。
     """
     if not lines:
         logger.info("テキストが抽出できないため LLM 抽出をスキップします: %s", source_file)
-        return [], [], []
+        return [], [], [], []
     try:
         payload = provider.extract_document_semantics(lines, source_file)
     except Exception as exc:  # noqa: BLE001
         logger.warning("LLM 抽出応答を棄却しました（理由: %s）", exc)
-        return [], [], []
-    if not payload.get("screens") and not payload.get("fields") and not payload.get("rules"):
-        return [], [], []
+        return [], [], [], []
+    if (
+        not payload.get("screens")
+        and not payload.get("fields")
+        and not payload.get("rules")
+        and not payload.get("requirements")
+    ):
+        return [], [], [], []
     return filter_hallucinations(payload, lines, source_file, known_screens)

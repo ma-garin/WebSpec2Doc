@@ -24,6 +24,7 @@ from crawler.page_crawler import (
     FieldData,
     FormData,
 )
+from generator.coverage_gap import CoverageGap
 
 REPORT_TITLE = "WebSpec2Doc テスト分析インプット"
 TOOL_NAME = "WebSpec2Doc"
@@ -47,6 +48,8 @@ def generate_html_report(
     business_flows: list[dict] | None = None,
     impact_report: dict | None = None,
     exploration_coverage: dict | None = None,
+    ux_review: dict | None = None,
+    coverage_gaps: tuple[CoverageGap, ...] = (),
 ) -> str:
     from analyzer.stack_detector import StackInfo
     from generator.architecture_generator import (
@@ -75,6 +78,8 @@ def generate_html_report(
                 has_coverage=bool(transition_coverage or business_flows),
                 has_impact=bool(impact_report),
                 has_exploration=bool(exploration_coverage),
+                has_ux_review=bool(ux_review),
+                has_coverage_gaps=bool(coverage_gaps),
             ),
             '<div class="app-main">',
             _topbar(target_url, now),
@@ -90,6 +95,8 @@ def generate_html_report(
             _coverage_section(transition_coverage, business_flows),
             _impact_section(impact_report),
             _exploration_section(exploration_coverage),
+            _ux_review_section(ux_review),
+            _coverage_gap_section(coverage_gaps),
             _section("画面カタログ", _screen_cards(pages, graph, screenshots_dir), "screens"),
             _meta_section(target_url, crawl_depth, crawl_max_pages, crawled_at, len(pages)),
             _footer(now),
@@ -231,6 +238,8 @@ def _sidebar(
     has_coverage: bool = False,
     has_impact: bool = False,
     has_exploration: bool = False,
+    has_ux_review: bool = False,
+    has_coverage_gaps: bool = False,
 ) -> str:
     items = [
         '<a href="#summary" class="nav-item">サマリー</a>',
@@ -244,6 +253,10 @@ def _sidebar(
         items.append('<a href="#impact" class="nav-item">差分影響・再実行推奨</a>')
     if has_exploration:
         items.append('<a href="#exploration" class="nav-item">探索カバレッジ</a>')
+    if has_ux_review:
+        items.append('<a href="#ux-review" class="nav-item">UX 所見</a>')
+    if has_coverage_gaps:
+        items.append('<a href="#coverage-gaps" class="nav-item">カバレッジと未確認領域</a>')
     items.append('<div class="nav-group">画面一覧</div>')
     for page in pages:
         pid = html.escape(page.page_id)
@@ -622,6 +635,150 @@ def _exploration_section(exploration_coverage: dict | None) -> str:
             f"<tbody>{rows}</tbody></table>"
         )
     return _section("探索カバレッジ", cards + unexplored_html + charters_html, "exploration")
+
+
+def _ux_review_section(ux_review: dict | None) -> str:
+    """UX 所見（axe-core 違反＋ニールセン10原則所見）を重大度×画面マトリクスで表示する。
+
+    ux_review.json（generator.ux_reporter.build_ux_review の出力）が無い場合は
+    空文字を返す（オプトイン。既存出力は不変・AC-7）。
+    """
+    if not ux_review:
+        return ""
+    screens = ux_review.get("screens") or []
+    meta = ux_review.get("meta") or {}
+    disclaimer = html.escape(str(meta.get("disclaimer", "")))
+    dropped = int(meta.get("hallucination_dropped_count", 0) or 0)
+
+    severity_levels = ("high", "medium", "low")
+    severity_labels = {"high": "重大", "medium": "中", "low": "軽微"}
+
+    def bucket_for_axe_impact(impact: str) -> str:
+        if impact in ("critical", "serious"):
+            return "high"
+        if impact == "moderate":
+            return "medium"
+        return "low"
+
+    rows = []
+    detail_blocks = []
+    for screen in screens:
+        counts = dict.fromkeys(severity_levels, 0)
+        axe_violations = screen.get("axe_violations") or []
+        ux_findings = screen.get("ux_findings") or []
+        for v in axe_violations:
+            counts[bucket_for_axe_impact(str(v.get("impact", "")))] += 1
+        for f in ux_findings:
+            sev = str(f.get("severity", "low"))
+            counts[sev if sev in counts else "low"] += 1
+        page_id = html.escape(str(screen.get("page_id", "")))
+        title = html.escape(str(screen.get("title") or screen.get("url", "")))
+        if sum(counts.values()) == 0:
+            continue
+        rows.append(
+            f"<tr><td>{page_id}</td><td>{title}</td>"
+            + "".join(f"<td>{counts[level]}</td>" for level in severity_levels)
+            + "</tr>"
+        )
+        detail_blocks.append(_ux_screen_detail(page_id, title, axe_violations, ux_findings))
+
+    dropped_html = (
+        f'<p class="disclaimer">幻覚フィルタにより {dropped} 件の所見を破棄しました。</p>'
+        if dropped
+        else ""
+    )
+    if not rows:
+        body = f'<p class="disclaimer">{disclaimer}</p>{dropped_html}<p>検出された所見はありません。</p>'
+        return _section("UX 所見", body, "ux-review")
+
+    matrix = (
+        "<table><thead><tr><th>ID</th><th>画面</th>"
+        + "".join(f"<th>{severity_labels[level]}</th>" for level in severity_levels)
+        + "</tr></thead><tbody>"
+        + "".join(rows)
+        + "</tbody></table>"
+    )
+    body = (
+        f'<p class="disclaimer">{disclaimer}</p>'
+        + dropped_html
+        + '<div class="subhead" style="margin-top:1rem">重大度×画面マトリクス</div>'
+        + matrix
+        + "".join(detail_blocks)
+    )
+    return _section("UX 所見", body, "ux-review")
+
+
+def _ux_screen_detail(page_id: str, title: str, axe_violations: list, ux_findings: list) -> str:
+    """画面ごとの所見詳細（rule_id/principle・selector・confidence・source）を表示する。"""
+    if not axe_violations and not ux_findings:
+        return ""
+    axe_table = ""
+    if axe_violations:
+        axe_rows = "".join(
+            f"<tr><td>{html.escape(str(v.get('rule_id', '')))}</td>"
+            f"<td>{html.escape(str(v.get('impact', '')))}</td>"
+            f"<td>{html.escape(str((v.get('evidence') or {}).get('selector', '')))}</td>"
+            f"<td>{v.get('confidence', '')}</td></tr>"
+            for v in axe_violations
+        )
+        axe_table = (
+            f'<div class="subhead" style="margin-top:0.5rem">{page_id} {title} — axe 違反</div>'
+            "<table><thead><tr><th>ルール</th><th>影響度</th><th>セレクタ</th>"
+            "<th>confidence</th></tr></thead>"
+            f"<tbody>{axe_rows}</tbody></table>"
+        )
+    finding_table = ""
+    if ux_findings:
+        finding_rows = "".join(
+            f"<tr><td>{html.escape(str(f.get('principle', '')))}</td>"
+            f"<td>{html.escape(str(f.get('severity', '')))}</td>"
+            f"<td>{html.escape(str(f.get('finding', '')))}</td>"
+            f"<td>{html.escape(str((f.get('evidence') or {}).get('selector', '')))}</td>"
+            f"<td>{html.escape(str(f.get('source', '')))}</td>"
+            f"<td>{f.get('confidence', '')}</td></tr>"
+            for f in ux_findings
+        )
+        finding_table = (
+            f'<div class="subhead" style="margin-top:0.5rem">{page_id} {title} — ニールセン所見</div>'
+            "<table><thead><tr><th>原則</th><th>重大度</th><th>所見</th><th>セレクタ</th>"
+            "<th>出所</th><th>confidence</th></tr></thead>"
+            f"<tbody>{finding_rows}</tbody></table>"
+        )
+    return axe_table + finding_table
+
+
+_COVERAGE_GAP_KIND_LABELS: dict[str, str] = {
+    "robots_skipped": "robots.txt により対象外",
+    "login_wall": "ログインウォール",
+    "unreadable_frame": "読み取り不可の iframe / shadow root",
+    "unexplored_screen": "未探索画面",
+    "unchecked_link": "検査できなかったリンク",
+}
+
+
+def _coverage_gap_section(coverage_gaps: tuple[CoverageGap, ...]) -> str:
+    """「カバレッジと未確認領域」節（AC-5）。
+
+    audit.jsonl・embedded_frames・探索カバレッジ・現新比較から集約した
+    CoverageGap（generator.coverage_gap.collect_coverage_gaps）を種別ごとに列挙する。
+    「未確認」と表現し「問題なし」とは断定しない（evidence-only 原則）。
+    ギャップが 0 件の場合は節自体を出力しない（オプトイン・AC-8: 既存出力は不変）。
+    """
+    if not coverage_gaps:
+        return ""
+    rows = "".join(
+        f"<tr><td>{html.escape(_COVERAGE_GAP_KIND_LABELS.get(gap.kind, gap.kind))}</td>"
+        f"<td>{html.escape(gap.subject)}</td>"
+        f"<td>{html.escape(gap.reason)}</td></tr>"
+        for gap in coverage_gaps
+    )
+    body = (
+        '<p class="disclaimer">クロール・比較・探索で確認できなかった領域です。'
+        "「未確認」であり「問題なし」を意味しません。</p>"
+        "<table><thead><tr><th>種別</th><th>対象</th><th>理由（未確認の根拠）</th></tr></thead>"
+        f"<tbody>{rows}</tbody></table>"
+    )
+    return _section("カバレッジと未確認領域", body, "coverage-gaps")
 
 
 def _meta_section(

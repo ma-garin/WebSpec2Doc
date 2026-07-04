@@ -41,6 +41,7 @@ _EXAMPLE_CASES_MAX = 3
 
 @dataclass(frozen=True)
 class TestViewpoint:
+    __test__ = False  # pytest 収集対象外（テストクラスではなくドメインモデル）
     category: str
     viewpoint: str
     risk_level: str  # "高" / "中" / "低"

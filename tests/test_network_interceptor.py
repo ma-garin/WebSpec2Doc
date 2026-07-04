@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from unittest.mock import MagicMock
 
 from crawler.network_interceptor import (
     NetworkCapture,
     _extract_response_fields,
 )
+from crawler.page_crawler import _audit_mutation_blocked, _strip_query_for_audit
 
 
 def _make_response(
@@ -101,3 +103,51 @@ def test_attach_detach_no_error() -> None:
     capture.detach()
     page.on.assert_called_once()
     page.remove_listener.assert_called_once()
+
+
+# ---------- AC-4: MutationBlocker 遮断の監査ログ化 ----------
+
+
+def test_strip_query_for_audit_removes_query_but_keeps_path() -> None:
+    """遮断 URL のクエリ（トークン等の秘匿情報を含み得る）を落として記録する（§8）。"""
+    url = "https://example.com/reset-password?token=secret123&uid=42"
+    assert _strip_query_for_audit(url) == "https://example.com/reset-password"
+
+
+def test_strip_query_for_audit_no_query_is_unchanged() -> None:
+    url = "https://example.com/checkout"
+    assert _strip_query_for_audit(url) == url
+
+
+def test_blocked_mutation_written_to_audit(tmp_path: Path) -> None:
+    """test_blocked_mutation_written_to_audit: blocked=[("POST", url?token=x)] のフェイク
+    → audit に event=mutation_blocked・クエリ除去済み URL（AC-4）。"""
+    blocked = [("POST", "https://example.com/api/submit?token=secret")]
+    path = _audit_mutation_blocked(tmp_path, "https://example.com/form", blocked)
+    assert path is not None
+    lines = (tmp_path / "audit.jsonl").read_text(encoding="utf-8").splitlines()
+    assert len(lines) == 1
+    record = json.loads(lines[0])
+    assert record["event"] == "mutation_blocked"
+    assert record["page_url"] == "https://example.com/form"
+    assert record["blocked"] == [{"method": "POST", "url": "https://example.com/api/submit"}]
+
+
+def test_no_audit_record_when_nothing_blocked(tmp_path: Path) -> None:
+    """test_no_audit_record_when_nothing_blocked: blocked=[] → mutation_blocked
+    行なし（AC-4）。"""
+    result = _audit_mutation_blocked(tmp_path, "https://example.com/form", [])
+    assert result is None
+    assert not (tmp_path / "audit.jsonl").exists()
+
+
+def test_multiple_blocked_requests_recorded_in_one_entry(tmp_path: Path) -> None:
+    blocked = [
+        ("POST", "https://example.com/api/a?x=1"),
+        ("DELETE", "https://example.com/api/b"),
+    ]
+    _audit_mutation_blocked(tmp_path, "https://example.com/page", blocked)
+    lines = (tmp_path / "audit.jsonl").read_text(encoding="utf-8").splitlines()
+    assert len(lines) == 1
+    record = json.loads(lines[0])
+    assert len(record["blocked"]) == 2

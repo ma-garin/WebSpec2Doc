@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from ingest.models import DocumentedField, DocumentedScreen, DocumentEvidence
+from ingest.models import DocumentedField, DocumentedRequirement, DocumentedScreen, DocumentEvidence
 
 # 列名シノニム（正規化後の完全一致を優先し、次に部分一致で判定する）
 SCREEN_NAME_KEYS = ("画面名", "画面名称", "スクリーン名", "ページ名", "screen", "screenname")
@@ -22,6 +22,10 @@ REQUIRED_KEYS = ("必須", "必須区分", "必須有無", "required")
 LENGTH_KEYS = ("桁", "桁数", "最大桁数", "文字数", "最大文字数", "最大長", "maxlength")
 NOTE_KEYS = ("備考", "説明", "摘要", "note", "remarks")
 FIELD_SCREEN_REF_KEYS = ("画面名", "画面", "画面id")
+# SPEC-1-3: RFP/要件一覧の表から DocumentedRequirement を抽出するための列名シノニム
+REQUIREMENT_ID_KEYS = ("要件id", "要件no", "要求id", "req", "reqid", "要件番号")
+REQUIREMENT_NAME_KEYS = ("要件名", "要件", "要求事項", "要求", "requirement", "機能要件")
+REQUIREMENT_CATEGORY_KEYS = ("区分", "分類", "要件区分", "category")
 
 _TRUE_MARKS = frozenset({"○", "◯", "●", "✓", "レ", "必須", "yes", "y", "true", "1", "済"})
 _FALSE_MARKS = frozenset({"×", "✕", "－", "-", "任意", "no", "n", "false", "0", ""})
@@ -62,7 +66,12 @@ def find_column(headers: tuple[str, ...], keys: tuple[str, ...]) -> int | None:
 
 
 def looks_like_header(cells: tuple[str, ...]) -> bool:
-    """行がヘッダ行らしいか（既知シノニムに 2 列以上一致するか）を判定する。"""
+    """行がヘッダ行らしいか（既知シノニムに 2 列以上一致するか）を判定する。
+
+    REQUIREMENT_ID_KEYS / REQUIREMENT_NAME_KEYS も判定対象に含めるが、
+    従来通り「2 列以上一致」でのみヘッダと判定するため、要件表以外の
+    表判定の閾値・挙動は変わらない（回帰は tests/test_doc_fusion.py で確認）。
+    """
     all_keys = (
         SCREEN_NAME_KEYS
         + SCREEN_ID_KEYS
@@ -72,6 +81,8 @@ def looks_like_header(cells: tuple[str, ...]) -> bool:
         + TYPE_KEYS
         + REQUIRED_KEYS
         + LENGTH_KEYS
+        + REQUIREMENT_ID_KEYS
+        + REQUIREMENT_NAME_KEYS
     )
     hits = sum(1 for cell in cells if normalize_header(cell) in all_keys)
     return hits >= 2
@@ -178,6 +189,47 @@ def _structure_field_table(table: ExtractedTable, name_col: int) -> list[Documen
             )
         )
     return fields
+
+
+def structure_requirement_table(table: ExtractedTable) -> list[DocumentedRequirement]:
+    """要件名列を持つ表を要件一覧として解釈する（SPEC-1-3）。
+
+    項目定義・画面一覧と競合した場合は structure_table の判定を優先する
+    （項目名列 FIELD_NAME_KEYS を持つ表は対象外）。要件名列がありかつ
+    項目名列が無い表のみを要件表として扱う。要件ID列が無い/空セルの行は
+    "REQ-{行内連番}" を採番する（連番は表ごとにリセットされるため、
+    複数表にまたがる重複は req_tracer 側で検出・警告する）。
+    """
+    name_col = find_column(table.headers, REQUIREMENT_NAME_KEYS)
+    if name_col is None:
+        return []
+    if find_column(table.headers, FIELD_NAME_KEYS) is not None:
+        return []
+    id_col = find_column(table.headers, REQUIREMENT_ID_KEYS)
+    note_col = find_column(table.headers, NOTE_KEYS)
+    category_col = find_column(table.headers, REQUIREMENT_CATEGORY_KEYS)
+    requirements: list[DocumentedRequirement] = []
+    auto_seq = 0
+    for row in table.rows:
+        title = _cell(row, name_col)
+        if not title:
+            continue
+        req_id = _cell(row, id_col) if id_col is not None else ""
+        if not req_id:
+            auto_seq += 1
+            req_id = f"REQ-{auto_seq:03d}"
+        requirements.append(
+            DocumentedRequirement(
+                req_id=req_id,
+                title=title,
+                description=_cell(row, note_col),
+                category=_cell(row, category_col),
+                evidence=DocumentEvidence(
+                    file=table.source_file, location=row.location, quote=title
+                ),
+            )
+        )
+    return requirements
 
 
 _SCREEN_LINE_RE = re.compile(r"([^\s。、:：/｜|]{1,30}?(?:画面|ページ|スクリーン))")

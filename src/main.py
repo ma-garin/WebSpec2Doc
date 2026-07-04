@@ -10,6 +10,7 @@ import threading
 from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 
 import networkx as nx
@@ -38,6 +39,9 @@ from generator.markdown_generator import (
 )
 from generator.mermaid_generator import generate_mermaid
 from graph.transition_graph import build_graph
+
+if TYPE_CHECKING:
+    from ux.axe_runner import AxeViolation
 
 DEFAULT_OUTPUT_DIR = Path("output")
 DEFAULT_FORMATS = "md"
@@ -104,6 +108,20 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--login-current-url", help="--login-submit: フォーム送信先URL（MFA対応）")
     parser.add_argument("--login-temp-session", type=Path, help="MFA中間セッション保存パス")
+    parser.add_argument(
+        "--login-record",
+        action="store_true",
+        help=(
+            "認証フローレコーダー起動: 見えるブラウザでログインし、"
+            "シグナルファイル出現時にセッションを保存する（--login と --login-signal の統合入口）"
+        ),
+    )
+    parser.add_argument("--login-record-url", help="--login-record: ログインページURL")
+    parser.add_argument(
+        "--login-status",
+        type=Path,
+        help="--login-record: 進行状態(JSON)の出力先。Web UI が1秒間隔でポーリングする",
+    )
     parser.add_argument("--auth", type=Path, help="保存済みセッション(auth.json)を使ってクロール")
     parser.add_argument("--depth", type=int, default=DEFAULT_DEPTH, help="クロール深度")
     parser.add_argument(
@@ -171,11 +189,71 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--export-findings",
+        action="store_true",
+        help=(
+            "気づき票エクスポートモード: 記録済みセッションの気づきマーク（finding イベント）を"
+            "再現手順付きバグ票として findings.json / findings.csv に出力する"
+        ),
+    )
+    parser.add_argument(
         "--doc-llm",
         action="store_true",
         help=(
             "--reference-doc の自由文形式（pdf/pptx/txt/docx 本文）から LLM で"
             "画面・項目・業務ルールを追加抽出する（既定 OFF。OPENAI_API_KEY 必須）"
+        ),
+    )
+    parser.add_argument(
+        "--test-plan",
+        action="store_true",
+        help=(
+            "テスト計画ドラフト生成モード: クロール済み report.json から"
+            "画面数×優先度の工数見積・スコープ表（test_plan.md / test_plan.xlsx）を生成する"
+        ),
+    )
+    parser.add_argument(
+        "--compare-old-urls",
+        help=("現新比較モード: 現行側 URL（カンマ区切り）。--compare-new-urls と併用する"),
+    )
+    parser.add_argument(
+        "--compare-new-urls",
+        help=("現新比較モード: 新側 URL（カンマ区切り）。--compare-old-urls と併用する"),
+    )
+    parser.add_argument(
+        "--compare-auth-old",
+        type=Path,
+        help="現新比較: 現行側の保存済みセッション(auth.json)",
+    )
+    parser.add_argument(
+        "--compare-auth-new",
+        type=Path,
+        help="現新比較: 新側の保存済みセッション(auth.json)",
+    )
+    parser.add_argument(
+        "--compare-mask-selector",
+        action="append",
+        help=(
+            "現新比較: 動的領域として画像差分から除外する CSS セレクタ"
+            "（広告枠など既知の動的領域）。複数指定可"
+        ),
+    )
+    parser.add_argument(
+        "--ux-review",
+        action="store_true",
+        help=(
+            "UX自動エキスパートレビュー: axe-core によるWCAG違反検査とニールセン10原則の"
+            "ヒューリスティック評価を行い ux_review.json / report.html「UX所見」タブを生成する"
+            "（OPENAI_API_KEY 未設定時は rules ベースの評価で完走する）"
+        ),
+    )
+    parser.add_argument(
+        "--refresh-doc",
+        action="store_true",
+        help=(
+            "文書の再生: 参考文書の構造を骨格として維持したまま実測値で更新した"
+            "新版仕様書（refreshed_spec.md）と変更ログ（refresh_log.json）を生成する"
+            "（既定 OFF。--reference-doc と併用必須。単独指定は警告して無視）"
         ),
     )
     return parser.parse_args()
@@ -191,6 +269,9 @@ def run(args: argparse.Namespace) -> None:
         return
     if getattr(args, "login_submit", False):
         _submit_login(args)
+        return
+    if getattr(args, "login_record", False):
+        _record_login(args)
         return
     login_url = getattr(args, "login", None)
     if login_url:
@@ -208,7 +289,63 @@ def run(args: argparse.Namespace) -> None:
     if bool(getattr(args, "reverse_assets", False)):
         _reverse_assets(args)
         return
+    if bool(getattr(args, "export_findings", False)):
+        _export_findings(args)
+        return
+    if bool(getattr(args, "test_plan", False)):
+        _generate_test_plan(args)
+        return
+    if getattr(args, "compare_old_urls", None) and getattr(args, "compare_new_urls", None):
+        _run_old_new_comparison(args)
+        return
     _run_crawl(args, auth_path)
+
+
+def _run_old_new_comparison(args: argparse.Namespace) -> None:
+    """現新比較モード: 2 ターゲットクロール→対応付け→三層比較→4 分類レポート出力。"""
+    from diff.comparison import ComparisonError, run_old_new_comparison
+    from generator.comparison_reporter import save_comparison_outputs
+
+    old_urls = _parse_url_list(getattr(args, "compare_old_urls", None))
+    new_urls = _parse_url_list(getattr(args, "compare_new_urls", None))
+    if not old_urls or not new_urls:
+        logger.error("--compare-old-urls と --compare-new-urls の両方を指定してください")
+        return
+
+    output_dir = (
+        Path(args.output) / f"compare_{_domain_name(old_urls[0])}_vs_{_domain_name(new_urls[0])}"
+    )
+    auth_old = getattr(args, "compare_auth_old", None)
+    auth_new = getattr(args, "compare_auth_new", None)
+    mask_selectors = tuple(getattr(args, "compare_mask_selector", None) or ())
+    _STOP_REQUESTED.clear()
+
+    try:
+        result = run_old_new_comparison(
+            old_urls,
+            new_urls,
+            output_dir,
+            auth_old=Path(auth_old) if auth_old else None,
+            auth_new=Path(auth_new) if auth_new else None,
+            mask_selectors=mask_selectors,
+            stop_requested=_STOP_REQUESTED.is_set,
+        )
+    except ComparisonError as exc:
+        logger.error("%s", exc)
+        sys.exit(1)
+
+    json_path, html_path = save_comparison_outputs(result, output_dir)
+    logger.info(
+        "現新比較が完了しました: 対応画面 %d 組・指摘 %d 件・新規追加 %d 件・削除 %d 件 — %s / %s",
+        len(result.pairs),
+        len(result.findings),
+        len(result.added_page_ids),
+        len(result.removed_page_ids),
+        json_path,
+        html_path,
+    )
+    if not result.pairs:
+        logger.warning("対応画面が見つかりません")
 
 
 def _record_session(args: argparse.Namespace) -> None:
@@ -269,6 +406,16 @@ def _exploration_coverage(args: argparse.Namespace) -> None:
         summary["total_states"],
     )
 
+    from capture.burndown import compute_exploration_burndown, save_exploration_burndown
+    from capture.session_recorder import SESSIONS_DIR_NAME
+
+    burndown = compute_exploration_burndown(report, events, output_dir / SESSIONS_DIR_NAME)
+    save_exploration_burndown(burndown, output_dir)
+    logger.info(
+        "進捗バーンダウン: %d セッション分の系列を出力しました — exploration_burndown.html",
+        burndown["summary"]["session_count"],
+    )
+
 
 def _reverse_assets(args: argparse.Namespace) -> None:
     """リバース生成モード（キャプチャ Phase 2）。"""
@@ -302,6 +449,64 @@ def _reverse_assets(args: argparse.Namespace) -> None:
     )
 
 
+def _export_findings(args: argparse.Namespace) -> None:
+    """気づき票エクスポートモード（キャプチャ Phase 3: 気づき→バグ票自動起票）。"""
+    from capture.coverage import load_session_events
+    from capture.finding_reporter import build_finding_tickets, save_findings
+
+    url = str(args.url or "")
+    if not url:
+        logger.error("--export-findings には --url が必要です")
+        return
+    output_dir = Path(args.output) / _domain_name(url)
+    events = load_session_events(output_dir)
+    if not events:
+        logger.error("探索セッションがありません（先に --record-session で操作を記録してください）")
+        return
+    tickets = build_finding_tickets(events)
+    save_findings(tickets, output_dir)
+    logger.info(
+        "気づき票エクスポートが完了しました: %d 件（findings.json / findings.csv）",
+        len(tickets),
+    )
+
+
+def _generate_test_plan(args: argparse.Namespace) -> None:
+    """テスト計画ドラフト生成モード（計画 Phase 1）。"""
+    from generator.test_plan_generator import (
+        compute_test_plan,
+        load_plan_coefficients,
+        save_test_plan,
+    )
+
+    url = str(args.url or "")
+    if not url:
+        logger.error("--test-plan には --url が必要です")
+        return
+    output_dir = Path(args.output) / _domain_name(url)
+    report_path = output_dir / JSON_REPORT_FILE_NAME
+    if not report_path.exists():
+        logger.error(
+            "クロール済みインベントリがありません: %s（先に --format json でクロールしてください）",
+            report_path,
+        )
+        return
+    try:
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        logger.error("report.json を読み込めません: %s (%s)", report_path, exc)
+        return
+    coefficients = load_plan_coefficients()
+    plan = compute_test_plan(report, coefficients)
+    save_test_plan(plan, output_dir)
+    logger.info(
+        "テスト計画ドラフトを生成しました: 画面 %d 件・総見積 %.1f 時間"
+        "（test_plan.md / test_plan.xlsx）",
+        len(plan.rows),
+        plan.total_hours,
+    )
+
+
 def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
     """メインクロール・分析・出力フローを実行する。"""
     url_list = _parse_url_list(getattr(args, "urls", None))
@@ -312,6 +517,18 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
     if args.llm:
         logger.warning("--llm は未実装のため無視します")
 
+    ux_review_enabled = bool(getattr(args, "ux_review", False))
+    if ux_review_enabled:
+        from ux.axe_runner import AxeAssetError, verify_axe_asset
+
+        try:
+            verify_axe_asset()
+        except AxeAssetError as exc:
+            logger.error("%s", exc)
+            sys.stdout.write("UX_REVIEW_ASSET_ERROR\n")
+            sys.stdout.flush()
+            return
+
     formats = _parse_formats(str(args.format))
     output_dir = Path(args.output) / _domain_name(primary_url)
     prior_snapshot = latest_snapshot(output_dir)
@@ -319,6 +536,13 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
     auth_state = Path(auth_path) if auth_path else None
     _STOP_REQUESTED.clear()
     checkpoint_pages: list[PageData] = []
+    ux_axe_results: dict[str, tuple[AxeViolation, ...]] = {}
+    ux_axe_lock = threading.Lock()
+
+    def on_ux_result(url: str, violations: tuple[AxeViolation, ...]) -> None:
+        # 並列クロール時は複数ワーカースレッドから呼ばれるためロックする。
+        with ux_axe_lock:
+            ux_axe_results[url] = violations
 
     def emit_event(event: dict[str, object]) -> None:
         with _EVENT_WRITE_LOCK:
@@ -346,6 +570,8 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
             auth_state,
             on_event=emit_event,
             on_checkpoint=save_checkpoint,
+            ux_review=ux_review_enabled,
+            on_ux_result=on_ux_result if ux_review_enabled else None,
         )
     except SessionExpiredError as exc:
         if checkpoint_pages:
@@ -374,8 +600,13 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
         getattr(args, "reference_doc", None),
         output_dir,
         use_llm=bool(getattr(args, "doc_llm", False)),
+        refresh_doc=bool(getattr(args, "refresh_doc", False)),
     )
     exploration_coverage = _load_exploration_coverage(output_dir)
+    ux_review = None
+    if ux_review_enabled:
+        ux_review = _build_and_save_ux_review(pages, analyzed_pages, ux_axe_results, output_dir)
+    coverage_gaps = _collect_coverage_gaps(output_dir, pages, exploration_coverage)
     save_outputs(
         analyzed_pages,
         graph,
@@ -391,6 +622,8 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
         official_names=official_names,
         exploration_coverage=exploration_coverage,
         rule_conditions=rule_conditions,
+        ux_review=ux_review,
+        coverage_gaps=coverage_gaps,
     )
     if _STOP_REQUESTED.is_set():
         partial = save_partial_snapshot(pages, output_dir, finalized=True)
@@ -427,6 +660,8 @@ def _do_crawl(
     auth_state: Path | None,
     on_event: Callable[[dict[str, object]], None] | None = None,
     on_checkpoint: Callable[[list[PageData]], None] | None = None,
+    ux_review: bool = False,
+    on_ux_result: Callable[[str, tuple[AxeViolation, ...]], None] | None = None,
 ) -> list[PageData]:
     """URL リストまたは単一 URL をクロールして PageData リストを返す。"""
     if url_list:
@@ -439,6 +674,8 @@ def _do_crawl(
             on_event=on_event,
             on_checkpoint=on_checkpoint,
             stop_requested=_STOP_REQUESTED.is_set,
+            ux_review=ux_review,
+            on_ux_result=on_ux_result,
         )
     return crawl_site(
         url=primary_url,
@@ -449,6 +686,8 @@ def _do_crawl(
         on_event=on_event,
         on_checkpoint=on_checkpoint,
         stop_requested=_STOP_REQUESTED.is_set,
+        ux_review=ux_review,
+        on_ux_result=on_ux_result,
     )
 
 
@@ -579,6 +818,37 @@ def _capture_login(login_url: str, auth_path: Path | None, signal_path: Path | N
     )
 
 
+def _record_login(args: argparse.Namespace) -> None:
+    """認証フローレコーダー起動（--login-record、SPEC-3-2）。
+    Web UI からの「ブラウザでログインして保存」フローの実処理。"""
+    from crawler.auth_recorder import record_auth_session
+
+    login_url = str(getattr(args, "login_record_url", None) or "")
+    if not login_url:
+        logger.error("--login-record には --login-record-url が必要です")
+        sys.exit(1)
+    signal_path = getattr(args, "login_signal", None)
+    if signal_path is None:
+        logger.error("--login-record には --login-signal が必要です")
+        sys.exit(1)
+
+    auth_path = getattr(args, "auth", None)
+    output_path = Path(auth_path) if auth_path else Path(DEFAULT_AUTH_FILE)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    status_path = getattr(args, "login_status", None)
+    # CI・テスト用（実機の目視確認は DoD で別途行う。DISPLAY 前提の headful が既定）
+    headless = os.environ.get("WEBSPEC2DOC_RECORD_HEADLESS", "") == "1"
+
+    status = record_auth_session(
+        login_url,
+        output_path,
+        Path(signal_path),
+        status_file=Path(status_path) if status_path else None,
+        headless=headless,
+    )
+    logger.info("認証フローレコーダーが終了しました: phase=%s", status.phase)
+
+
 def _discover(args: argparse.Namespace, auth_path: Path | None) -> None:
     """画面リストを探索し、JSON を stdout に出力する（GUI の画面リスト取得用）。"""
     if not args.url:
@@ -706,19 +976,27 @@ def _run_doc_fusion(
     reference_docs: list[Path] | None,
     output_dir: Path,
     use_llm: bool = False,
+    refresh_doc: bool = False,
 ) -> tuple[dict[str, str] | None, dict[tuple[str, str], tuple] | None]:
     """参考文書があれば実測結果と突合し、(正式画面名マップ, 文書由来ルール条件) を返す。
 
     突合結果は doc_fusion.json / doc_fusion.md として出力する。
     文書の取り込み失敗はクロール成果を無駄にしないため警告に留める。
     use_llm=True かつ OPENAI_API_KEY 未設定の場合は Phase 1 抽出のみで継続する。
+    refresh_doc=True の場合、突合結果を骨格とした再生版仕様書
+    （refreshed_spec.md / refresh_log.json）も併せて出力する。
     """
     if not reference_docs:
+        if refresh_doc:
+            logger.warning("--refresh-doc は --reference-doc と併用が必須のため無視します")
         return None, None
     from analyzer.rule_injector import build_rule_conditions
     from generator.fusion_reporter import save_fusion_outputs
+    from generator.refresh_reporter import save_refresh_outputs
+    from generator.trace_reporter import save_trace_outputs
     from ingest.loader import load_reference_documents
     from ingest.matcher import fuse
+    from ingest.req_tracer import trace_requirements
 
     api_key = os.environ.get("OPENAI_API_KEY", "") if use_llm else ""
     try:
@@ -733,8 +1011,75 @@ def _run_doc_fusion(
         len(result.screen_matches),
         len(result.field_gaps),
     )
+    if bundle.requirements:
+        candidates = _load_playwright_candidates(output_dir)
+        traces = trace_requirements(bundle, result, pages, candidates)
+        save_trace_outputs(traces, bundle, output_dir)
+        logger.info(
+            "RFP要件トレーサビリティを出力しました: 要件 %d 件（traceability_matrix.md）",
+            len(traces),
+        )
+    if refresh_doc:
+        save_refresh_outputs(result, bundle, pages, output_dir)
+        logger.info("文書の再生が完了しました（refreshed_spec.md）")
     rule_conditions = build_rule_conditions(result, bundle, pages) if bundle.rules else None
     return result.official_names or None, rule_conditions or None
+
+
+def _load_playwright_candidates(output_dir: Path) -> list[dict]:
+    """playwright_candidates.json を寛容に読み込む（不在/破損は空リストで継続）。
+
+    web/routes/traceability.py::_load_json_file と同じ寛容な読み方。
+    AutoRun 実行前は存在しないため、無いことを異常にしない（candidate_ids=() で継続）。
+    """
+    path = output_dir / "playwright_candidates.json"
+    if not path.exists():
+        logger.warning("テスト候補ファイルなし（条件件数のみで追跡）: %s", path)
+        return []
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning("テスト候補ファイルなし（条件件数のみで追跡）: %s", exc)
+        return []
+    if isinstance(data, dict):
+        return list(data.get("candidates", []))
+    if isinstance(data, list):
+        return list(data)
+    return []
+
+
+def _build_and_save_ux_review(
+    pages: list[PageData],
+    analyzed_pages: list[AnalyzedPage],
+    ux_axe_results: dict[str, tuple[AxeViolation, ...]],
+    output_dir: Path,
+) -> dict[str, object]:
+    """画面ごとに UX 所見（axe 違反＋ニールセン10原則）を生成し ux_review.json を保存する。
+
+    OPENAI_API_KEY が設定されていれば OpenAIProvider、無ければ RulesProvider で
+    完走する（AC-5）。axe 検査結果はクロール中に収集済みの ux_axe_results を用いる
+    （axe はライブページが必要なため crawl_page 内でのみ実行できる）。
+    """
+    from generator.ux_reporter import build_ux_review, build_ux_screen_info, save_ux_outputs
+    from llm.provider import OpenAIProvider, RulesProvider
+
+    api_key = os.environ.get("OPENAI_API_KEY", "")
+    provider = OpenAIProvider(api_key) if api_key else RulesProvider()
+
+    page_ids = {page.page_data.url: page.page_id for page in analyzed_pages}
+    ux_findings: dict[str, list[dict[str, object]]] = {}
+    for page in pages:
+        axe_violations = ux_axe_results.get(page.url, ())
+        screen_info = build_ux_screen_info(page, axe_violations)
+        try:
+            ux_findings[page.url] = provider.generate_ux_review(screen_info)
+        except Exception as exc:  # noqa: BLE001 - UX所見生成の失敗でクロール成果を無駄にしない
+            logger.warning("UX 所見の生成に失敗しました（%s）: %s", page.url, exc)
+            ux_findings[page.url] = []
+
+    ux_review = build_ux_review(pages, page_ids, ux_axe_results, ux_findings)
+    save_ux_outputs(ux_review, output_dir)
+    return ux_review
 
 
 def _load_exploration_coverage(output_dir: Path) -> dict[str, object] | None:
@@ -753,6 +1098,25 @@ def _load_exploration_coverage(output_dir: Path) -> dict[str, object] | None:
         return None
 
 
+def _collect_coverage_gaps(
+    output_dir: Path,
+    pages: list[PageData],
+    exploration_coverage: dict[str, object] | None,
+) -> tuple:
+    """report.html の「カバレッジと未確認領域」節向けにギャップを集計する（AC-5）。
+
+    集計自体の失敗はレポート生成全体を止めない（既存出力へのフォールバック方針は
+    _load_exploration_coverage と同様）。
+    """
+    from generator.coverage_gap import collect_coverage_gaps
+
+    try:
+        return collect_coverage_gaps(output_dir, pages, exploration_coverage)
+    except Exception as exc:  # noqa: BLE001 - ギャップ集計失敗でレポート生成を止めない
+        logger.warning("カバレッジギャップの集計に失敗しました（セクション省略）: %s", exc)
+        return ()
+
+
 def save_outputs(
     pages: list[AnalyzedPage],
     graph: nx.DiGraph,
@@ -769,6 +1133,8 @@ def save_outputs(
     official_names: dict[str, str] | None = None,
     exploration_coverage: dict[str, object] | None = None,
     rule_conditions: dict[tuple[str, str], tuple] | None = None,
+    ux_review: dict[str, object] | None = None,
+    coverage_gaps: tuple = (),
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     target_url = pages[0].page_data.url if pages else ""
@@ -790,6 +1156,8 @@ def save_outputs(
             business_flows=business_flows,
             impact_report=impact_report,
             exploration_coverage=exploration_coverage,
+            ux_review=ux_review,
+            coverage_gaps=coverage_gaps,
         )
     if "json" in formats:
         _save_json_output(
@@ -854,6 +1222,8 @@ def _save_html_outputs(
     business_flows: list[dict] | None = None,
     impact_report: dict | None = None,
     exploration_coverage: dict[str, object] | None = None,
+    ux_review: dict[str, object] | None = None,
+    coverage_gaps: tuple = (),
 ) -> None:
     from generator.html_reporter import generate_html_report
 
@@ -872,6 +1242,8 @@ def _save_html_outputs(
         business_flows=business_flows,
         impact_report=impact_report,
         exploration_coverage=exploration_coverage,
+        ux_review=ux_review,
+        coverage_gaps=coverage_gaps,
     )
     html_path = output_dir / "report.html"
     html_path.write_text(report_html, encoding="utf-8")

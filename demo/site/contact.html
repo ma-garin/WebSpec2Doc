@@ -9,6 +9,8 @@
 <body>
   <header>
     <h1>DemoMart デモストア</h1>
+    <!-- 現新比較デモ（SPEC-3-3）: 時刻表示は撮影の度に変化するため動的領域マスクの対象になる -->
+    <span id="clock"></span>
   </header>
   <nav aria-label="メイン">
     <a href="/index.html">トップ</a>
@@ -38,5 +40,16 @@
   <footer>
     <small>DemoMart — お問い合わせ（必須バリデーション実測デモ）</small>
   </footer>
+  <script>
+    // 現新比較デモ（SPEC-3-3）: 新側 site_v2/contact.html と同じ仕組みの時刻表示
+    function tick() {
+      var el = document.getElementById("clock");
+      if (el) {
+        el.textContent = new Date().toISOString();
+      }
+    }
+    tick();
+    setInterval(tick, 100);
+  </script>
 </body>
 </html>

@@ -36,10 +36,13 @@ def generate_json_report(
     crawled_at: str = "",
     transition_coverage: dict | None = None,
     business_flows: list[dict] | None = None,
+    official_names: dict[str, str] | None = None,
 ) -> str:
     """Serialize crawl results and derived test conditions to structured JSON."""
     canonical_screens = group_canonical_screens(pages)
-    screens_data = [_screen_dict(p, graph, canonical_screens[p.page_id]) for p in pages]
+    screens_data = [
+        _screen_dict(p, graph, canonical_screens[p.page_id], official_names) for p in pages
+    ]
     screens_canonical = json.dumps(screens_data, ensure_ascii=False, sort_keys=True)
     report_hash = hashlib.sha256(screens_canonical.encode("utf-8")).hexdigest()
     meta: dict = {
@@ -66,11 +69,16 @@ def generate_json_report(
     )
 
 
-def _screen_dict(page: AnalyzedPage, graph: nx.DiGraph, canonical: CanonicalInfo) -> dict:
+def _screen_dict(
+    page: AnalyzedPage,
+    graph: nx.DiGraph,
+    canonical: CanonicalInfo,
+    official_names: dict[str, str] | None = None,
+) -> dict:
     pd = page.page_data
     pid = page.page_id
     observations = list(pd.validation_observations)
-    return {
+    screen: dict = {
         "page_id": pid,
         "url": pd.url,
         "title": pd.title,
@@ -102,6 +110,12 @@ def _screen_dict(page: AnalyzedPage, graph: nx.DiGraph, canonical: CanonicalInfo
             {"from_url": t.from_url, "to_url": t.to_url, "kind": t.kind} for t in pd.spa_transitions
         ],
     }
+    # 参考文書との突合で正式名称が判明した画面にのみ付与する
+    # （未指定時は既存のレポート構造・report_hash を変えない）
+    official = (official_names or {}).get(pid, "")
+    if official:
+        screen["official_name"] = official
+    return screen
 
 
 def _form_dict(form: FormData, observations: list[ValidationObservation] | None = None) -> dict:

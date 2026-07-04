@@ -198,6 +198,29 @@ WantedBy=multi-user.target
 
 ---
 
+## トラブルシュート — ローカルで取得に失敗する場合
+
+環境不一致（Python / Playwright / Chromium / 依存バージョン）が原因のことが
+ほとんどです。まず環境ドクターで一括診断してください:
+
+```bash
+make doctor
+```
+
+FAIL の項目に修正コマンドが表示されます。典型的な原因:
+
+| 症状 | 原因 | 対処 |
+|---|---|---|
+| pip install が失敗 / 起動時に greenlet エラー | Python 3.13 以降（playwright 1.44 の wheel なし） | Python 3.12 で venv を作り直す |
+| `Executable doesn't exist` 等でブラウザ起動失敗 | Chromium ランタイム不一致 | `make setup-runtime` |
+| 127.0.0.1 や社内 IP の取得が拒否される | SSRF 保護（既定で有効） | `WEBSPEC2DOC_ALLOW_LOCAL=1` を設定 |
+| 特定ページだけスキップされる | ログインウォール検出 / robots Disallow | ログで理由を確認（`audit.jsonl` に記録） |
+
+環境が正常（全 PASS）なのに失敗する場合は、対象サイト側の要因（認証・robots・
+レート制限）を `output/<domain>/audit.jsonl` と実行ログで確認してください。
+
+---
+
 ## ライセンス
 
 MIT

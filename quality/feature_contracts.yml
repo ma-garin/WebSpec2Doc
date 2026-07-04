@@ -99,5 +99,33 @@
       "failure_modes": ["missing_log", "corrupt_log_line", "invalid_coefficient_env"],
       "required_tests": ["happy_path", "empty_path", "evidence"]
     }
+    ,{
+      "feature_id": "doc_fusion",
+      "name": "文書×実測突合（Doc Fusion）",
+      "risk_level": "high",
+      "status": "implemented",
+      "ui_files": [],
+      "route_files": [],
+      "core_files": ["src/ingest/loader.py", "src/ingest/matcher.py", "src/generator/fusion_reporter.py"],
+      "symbols": ["load_reference_documents", "fuse", "save_fusion_outputs"],
+      "outputs": ["doc_fusion.json", "doc_fusion.md", "official_name in report.json"],
+      "persistence": ["output/{domain}/doc_fusion.json"],
+      "failure_modes": ["unsupported_format", "missing_file", "legacy_binary_format", "no_match"],
+      "required_tests": ["happy_path", "error_path", "mismatch_detection", "evidence"]
+    },
+    {
+      "feature_id": "exploration_capture",
+      "name": "探索セッション記録 / カバレッジヒートマップ",
+      "risk_level": "high",
+      "status": "implemented",
+      "ui_files": [],
+      "route_files": [],
+      "core_files": ["src/capture/session_recorder.py", "src/capture/coverage.py", "src/generator/heatmap_reporter.py"],
+      "symbols": ["SessionRecorder", "compute_exploration_coverage", "generate_heatmap_html"],
+      "outputs": ["sessions/session_*.jsonl", "exploration_coverage.json", "exploration_heatmap.html"],
+      "persistence": ["output/{domain}/sessions/"],
+      "failure_modes": ["no_inventory", "no_sessions", "browser_closed", "unmatched_footprint"],
+      "required_tests": ["happy_path", "error_path", "state_join_key", "evidence"]
+    }
   ]
 }

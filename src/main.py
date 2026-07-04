@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import signal
 import sys
 import threading
@@ -127,6 +128,38 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="差分検知時に exit code 1 で終了（CI/CDパイプライン用）",
     )
+    parser.add_argument(
+        "--reference-doc",
+        type=Path,
+        action="append",
+        help=(
+            "参考文書（既存の画面一覧・項目定義書など）。実測結果と突合し"
+            "ギャップレポートと正式画面名の注入を行う。複数指定可。"
+            "対応形式: xlsx/docx/pptx/pdf/md/txt/yaml/json"
+        ),
+    )
+    parser.add_argument(
+        "--record-session",
+        action="store_true",
+        help=(
+            "探索セッション記録モード: --url のページを記録用ブラウザで開き、"
+            "閉じられるまで操作（クリック・入力・遷移・画面状態）を記録する"
+        ),
+    )
+    parser.add_argument(
+        "--record-duration",
+        type=float,
+        default=None,
+        help="--record-session の最大記録時間（秒）。未指定はブラウザを閉じるまで",
+    )
+    parser.add_argument(
+        "--exploration-coverage",
+        action="store_true",
+        help=(
+            "探索カバレッジ集計モード: クロール済み report.json と記録済み"
+            "セッションから exploration_heatmap.html 等を生成する"
+        ),
+    )
     return parser.parse_args()
 
 
@@ -148,7 +181,71 @@ def run(args: argparse.Namespace) -> None:
     if bool(getattr(args, "discover", False)):
         _discover(args, auth_path)
         return
+    if bool(getattr(args, "record_session", False)):
+        _record_session(args)
+        return
+    if bool(getattr(args, "exploration_coverage", False)):
+        _exploration_coverage(args)
+        return
     _run_crawl(args, auth_path)
+
+
+def _record_session(args: argparse.Namespace) -> None:
+    """探索セッション記録モード（キャプチャ Phase 1）。"""
+    from capture.session_recorder import record_exploration_session
+
+    url = str(args.url or "")
+    if not url:
+        logger.error("--record-session には --url が必要です")
+        return
+    output_dir = Path(args.output) / _domain_name(url)
+    headless = os.environ.get("WEBSPEC2DOC_RECORD_HEADLESS", "") == "1"
+    logger.info("記録を開始します。ブラウザを閉じるとセッションを保存します: %s", url)
+    session_path = record_exploration_session(
+        url,
+        output_dir,
+        duration_sec=getattr(args, "record_duration", None),
+        headless=headless,
+    )
+    logger.info("探索セッションを保存しました: %s", session_path)
+
+
+def _exploration_coverage(args: argparse.Namespace) -> None:
+    """探索カバレッジ集計モード（ヒートマップ Phase 1）。"""
+    from capture.coverage import (
+        compute_exploration_coverage,
+        load_session_events,
+        save_exploration_coverage,
+    )
+
+    url = str(args.url or "")
+    if not url:
+        logger.error("--exploration-coverage には --url が必要です")
+        return
+    output_dir = Path(args.output) / _domain_name(url)
+    report_path = output_dir / JSON_REPORT_FILE_NAME
+    if not report_path.exists():
+        logger.error(
+            "クロール済みインベントリがありません: %s（先に --format json でクロールしてください）",
+            report_path,
+        )
+        return
+    events = load_session_events(output_dir)
+    if not events:
+        logger.error("探索セッションがありません（先に --record-session で操作を記録してください）")
+        return
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    coverage = compute_exploration_coverage(report, events)
+    save_exploration_coverage(coverage, output_dir)
+    summary = coverage["summary"]
+    logger.info(
+        "探索カバレッジ: %d/%d 画面（%.0f%%）・状態 %d/%d — exploration_heatmap.html を出力しました",
+        summary["explored_screens"],
+        summary["total_screens"],
+        summary["coverage_ratio"] * 100,
+        summary["touched_states"],
+        summary["total_states"],
+    )
 
 
 def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
@@ -218,6 +315,9 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
     impact_report = None
     if bool(getattr(args, "compare", False)) and prior_snapshot is not None:
         impact_report = _compute_impact_report(prior_snapshot, analyzed_pages, output_dir)
+    official_names = _run_doc_fusion(
+        analyzed_pages, getattr(args, "reference_doc", None), output_dir
+    )
     save_outputs(
         analyzed_pages,
         graph,
@@ -230,6 +330,7 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
         transition_coverage=transition_coverage,
         business_flows=business_flows,
         impact_report=impact_report,
+        official_names=official_names,
     )
     if _STOP_REQUESTED.is_set():
         partial = save_partial_snapshot(pages, output_dir, finalized=True)
@@ -540,6 +641,37 @@ def _save_diff_report(
     return bool(getattr(diff, "has_changes", False))
 
 
+def _run_doc_fusion(
+    pages: list[AnalyzedPage],
+    reference_docs: list[Path] | None,
+    output_dir: Path,
+) -> dict[str, str] | None:
+    """参考文書があれば実測結果と突合し、正式画面名マップを返す。
+
+    突合結果は doc_fusion.json / doc_fusion.md として出力する。
+    文書の取り込み失敗はクロール成果を無駄にしないため警告に留める。
+    """
+    if not reference_docs:
+        return None
+    from generator.fusion_reporter import save_fusion_outputs
+    from ingest.loader import load_reference_documents
+    from ingest.matcher import fuse
+
+    try:
+        bundle = load_reference_documents(list(reference_docs))
+    except (FileNotFoundError, ValueError) as exc:
+        logger.warning("参考文書の取り込みに失敗しました（突合をスキップ）: %s", exc)
+        return None
+    result = fuse(pages, bundle)
+    save_fusion_outputs(result, bundle, output_dir)
+    logger.info(
+        "文書×実測の突合が完了しました: 画面対応 %d 件・ギャップ %d 件（doc_fusion.md）",
+        len(result.screen_matches),
+        len(result.field_gaps),
+    )
+    return result.official_names or None
+
+
 def save_outputs(
     pages: list[AnalyzedPage],
     graph: nx.DiGraph,
@@ -553,6 +685,7 @@ def save_outputs(
     transition_coverage: dict[str, dict] | None = None,
     business_flows: list[dict] | None = None,
     impact_report: dict | None = None,
+    official_names: dict[str, str] | None = None,
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     target_url = pages[0].page_data.url if pages else ""
@@ -585,6 +718,7 @@ def save_outputs(
             crawled_at,
             transition_coverage=transition_coverage,
             business_flows=business_flows,
+            official_names=official_names,
         )
     if "excel" in formats:
         _save_excel_output(output_dir, pages, form_summary)
@@ -670,6 +804,7 @@ def _save_json_output(
     crawled_at: str,
     transition_coverage: dict[str, dict] | None = None,
     business_flows: list[dict] | None = None,
+    official_names: dict[str, str] | None = None,
 ) -> None:
     from generator.json_reporter import generate_json_report
 
@@ -682,6 +817,7 @@ def _save_json_output(
         crawled_at=crawled_at,
         transition_coverage=transition_coverage,
         business_flows=business_flows,
+        official_names=official_names,
     )
     (output_dir / JSON_REPORT_FILE_NAME).write_text(report_json, encoding="utf-8")
 

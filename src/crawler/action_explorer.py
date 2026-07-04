@@ -87,6 +87,20 @@ def _live_state(page: Page) -> tuple[str, ...]:
     return tuple(str(item) for item in raw)
 
 
+def state_signature(parts: tuple[str, ...]) -> str:
+    """ライブ状態パーツから画面状態のシグネチャを計算する。
+
+    クロール時（PageState.state_id）と操作記録時（探索カバレッジの接合キー）で
+    共用する。アルゴリズムを変える場合は両者を同時に更新すること。
+    """
+    import hashlib
+
+    if not parts:
+        return "default"
+    key = "|".join(sorted(parts))
+    return hashlib.sha1(key.encode(), usedforsecurity=False).hexdigest()[:8]  # noqa: S324
+
+
 def _state_kind_from_live(new_parts: set[str]) -> str:
     """新規に出現した状態パーツから画面状態の種別を判定する。"""
     if any(p.startswith("dialog:") for p in new_parts):
@@ -169,8 +183,6 @@ def explore_page_actions(page: Page, max_actions: int | None = None) -> tuple[Pa
     クリックはリクエスト遮断（MutationBlocker）下で行う前提。ページ遷移が
     発生した場合は元の URL に戻る。1 ページあたり最大 max_actions 回試行する。
     """
-    import hashlib
-
     limit = max_actions_from_env() if max_actions is None else max(0, max_actions)
     if limit == 0:
         return ()
@@ -186,12 +198,6 @@ def explore_page_actions(page: Page, max_actions: int | None = None) -> tuple[Pa
     states: list[PageState] = []
     seen_states: set[str] = set()
     attempts = 0
-
-    def _sig(parts: tuple[str, ...]) -> str:
-        if not parts:
-            return "default"
-        key = "|".join(parts)
-        return hashlib.sha1(key.encode(), usedforsecurity=False).hexdigest()[:8]  # noqa: S324
 
     for handle in handles:
         if attempts >= limit:
@@ -218,7 +224,7 @@ def explore_page_actions(page: Page, max_actions: int | None = None) -> tuple[Pa
             continue
         after_parts = set(_live_state(page))
         new_parts = after_parts - before_parts
-        after_sig = _sig(tuple(sorted(after_parts)))
+        after_sig = state_signature(tuple(after_parts))
         if not new_parts or after_sig in seen_states:
             continue
         seen_states.add(after_sig)

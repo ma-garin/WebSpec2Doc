@@ -20,7 +20,7 @@ E2E_DIR    := tests/e2e
 SHOT_DIR   := tests/e2e/screenshots
 MARKER     := .ui-verified
 
-.PHONY: help setup setup-runtime check-runtime test verify-ui quality-harness verify-all setup-hooks coverage lint clean check-venv demo
+.PHONY: help setup setup-runtime check-runtime doctor test verify-ui quality-harness verify-all setup-hooks coverage lint clean check-venv demo
 
 # デフォルトターゲット
 help:
@@ -32,6 +32,7 @@ help:
 	@echo "  make setup            Python依存・Chromium・git hookをセットアップ"
 	@echo "  make setup-runtime    対応Chromiumを導入して実起動確認"
 	@echo "  make check-runtime    Chromiumの実起動確認"
+	@echo "  make doctor           環境不一致の一括診断（取得に失敗する時に実行）"
 	@echo "  make test             L1/L2: ユニット・統合テスト実行"
 	@echo "  make verify-ui        L3: E2E テスト実行（UI変更後は必須）"
 	@echo "  make verify-all       L0-L3: ハーネス + test + verify-ui"
@@ -65,6 +66,9 @@ setup-runtime: check-venv
 
 check-runtime: check-venv
 	$(PYTHON) scripts/manage_playwright_runtime.py check
+
+doctor: check-venv
+	$(PYTHON) src/doctor.py
 
 # =============================================================================
 # L0: 機能整合性ハーネス

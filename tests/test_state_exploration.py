@@ -50,18 +50,23 @@ _MODAL_HTML = (
 
 
 class _FakeHandle:
-    """クリックで DOM を変化させるフェイク要素。"""
+    """クリックでライブ状態を変化させるフェイク要素。
 
-    def __init__(self, page: _FakePage, descriptor: str, after_html: str) -> None:
+    after_state はクリック後に page.evaluate(_LIVE_STATE_JS) が返す状態パーツ列。
+    """
+
+    def __init__(
+        self, page: _FakePage, descriptor: str, after_state: list[str] | None = None
+    ) -> None:
         self._page = page
         self._descriptor = descriptor
-        self._after_html = after_html
+        self._after_state = after_state if after_state is not None else []
 
     def evaluate(self, _js: str) -> str:
         return self._descriptor
 
     def click(self, timeout: int | None = None) -> None:
-        self._page.html = self._after_html
+        self._page.live_state = list(self._after_state)
 
 
 class _FakeKeyboard:
@@ -81,6 +86,8 @@ class _FakePage:
         self.unrouted: list[str] = []
         self.clicked: list[str] = []
         self.evaluate_result: Any = []
+        # explore_page_actions が読むライブ状態スナップショット
+        self.live_state: list[str] = []
 
     def query_selector_all(self, _selector: str) -> list[Any]:
         return self._handles_factory(self) if self._handles_factory else []
@@ -100,7 +107,10 @@ class _FakePage:
     def click(self, selector: str, timeout: int | None = None) -> None:
         self.clicked.append(selector)
 
-    def evaluate(self, _js: str) -> Any:
+    def evaluate(self, js: str) -> Any:
+        # _LIVE_STATE_JS 呼び出しにはライブ状態を返し、それ以外は evaluate_result
+        if "querySelectorAll" in js and "dialog" in js:
+            return list(self.live_state)
         return self.evaluate_result
 
 
@@ -112,7 +122,7 @@ class TestModalStateDetection:
         """モーダルを持つフィクスチャで、モーダル状態が別画面状態として検出される。"""
         page = _FakePage(
             _PLAIN_HTML,
-            handles_factory=lambda p: [_FakeHandle(p, "#open", _MODAL_HTML)],
+            handles_factory=lambda p: [_FakeHandle(p, "#open", ["dialog:confirm-modal"])],
         )
         states = explore_page_actions(page, max_actions=5)
         assert len(states) == 1
@@ -120,17 +130,37 @@ class TestModalStateDetection:
         assert states[0].trigger_selector == "#open"
         assert states[0].state_id != "default"
 
+    def test_tab_detected_as_tabpanel_state(self) -> None:
+        """タブ選択の変化がタブパネル状態として検出される。"""
+        page = _FakePage(
+            _PLAIN_HTML,
+            handles_factory=lambda p: [_FakeHandle(p, "#tab-all", ["tab:panel-all"])],
+        )
+        states = explore_page_actions(page, max_actions=5)
+        assert len(states) == 1
+        assert states[0].kind == "tabpanel"
+
+    def test_accordion_detected_from_details_open(self) -> None:
+        """details[open] の変化がアコーディオン状態として検出される。"""
+        page = _FakePage(
+            _PLAIN_HTML,
+            handles_factory=lambda p: [_FakeHandle(p, "#faq", ["details:faq"])],
+        )
+        states = explore_page_actions(page, max_actions=5)
+        assert len(states) == 1
+        assert states[0].kind == "accordion"
+
     def test_no_dom_change_records_no_state(self) -> None:
         page = _FakePage(
             _PLAIN_HTML,
-            handles_factory=lambda p: [_FakeHandle(p, "#open", _PLAIN_HTML)],
+            handles_factory=lambda p: [_FakeHandle(p, "#open", [])],
         )
         assert explore_page_actions(page, max_actions=5) == ()
 
     def test_max_actions_zero_disables_exploration(self) -> None:
         page = _FakePage(
             _PLAIN_HTML,
-            handles_factory=lambda p: [_FakeHandle(p, "#open", _MODAL_HTML)],
+            handles_factory=lambda p: [_FakeHandle(p, "#open", ["dialog:m"])],
         )
         assert explore_page_actions(page, max_actions=0) == ()
 
@@ -143,9 +173,7 @@ class TestModalStateDetection:
 
         page = _FakePage(
             _PLAIN_HTML,
-            handles_factory=lambda p: [
-                _CountingHandle(p, f"#b{i}", _PLAIN_HTML) for i in range(20)
-            ],
+            handles_factory=lambda p: [_CountingHandle(p, f"#b{i}", []) for i in range(20)],
         )
         explore_page_actions(page, max_actions=3)
         assert len(clicks) == 3

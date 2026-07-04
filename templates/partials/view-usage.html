@@ -1,0 +1,71 @@
+<!-- ===== ROI ダッシュボード（利用実績・推定削減工数）===== -->
+<section class="view" id="view-usage">
+  <style>
+    .usage-header { margin-bottom: 16px; }
+    .usage-header h2 { margin: 0 0 4px; font-size: 18px; }
+    .usage-sub { font-size: 13px; color: var(--text-muted, #555); }
+    .usage-cards { display: flex; flex-wrap: wrap; gap: 14px; margin: 18px 0; }
+    .usage-card {
+      flex: 1; min-width: 160px; background: #fff;
+      border: 1px solid #d4ddea; border-radius: 8px; padding: 16px; text-align: center;
+    }
+    .usage-card .num { font-size: 26px; font-weight: 700; color: #0043ce; }
+    .usage-card .label { font-size: 12px; color: #555; margin-top: 4px; }
+    .usage-card.highlight { background: #edf5ff; border-color: #0f62fe; }
+    .usage-note { font-size: 12px; color: #6b7787; margin-top: 8px; }
+    .usage-coef { font-size: 12px; color: #555; margin-top: 12px; }
+    .usage-coef code { background: #f0f4fa; padding: 1px 5px; border-radius: 4px; }
+  </style>
+
+  <div class="usage-header">
+    <h2>ROI ダッシュボード（利用実績・削減工数）</h2>
+    <div class="usage-sub">
+      本ツールの累計利用実績と、手作業なら要した工数の推定値です。採用後の効果測定レポートになります。
+    </div>
+  </div>
+
+  <div class="usage-cards">
+    <div class="usage-card"><div class="num" id="usage-crawls">–</div><div class="label">クロール回数</div></div>
+    <div class="usage-card"><div class="num" id="usage-screens">–</div><div class="label">生成した画面仕様</div></div>
+    <div class="usage-card"><div class="num" id="usage-conditions">–</div><div class="label">導出テスト条件</div></div>
+    <div class="usage-card"><div class="num" id="usage-documents">–</div><div class="label">生成文書</div></div>
+  </div>
+
+  <div class="usage-cards">
+    <div class="usage-card highlight">
+      <div class="num" id="usage-hours">–</div><div class="label">推定削減工数（時間）</div>
+    </div>
+    <div class="usage-card highlight">
+      <div class="num" id="usage-yen">–</div><div class="label">推定削減額（円）</div>
+    </div>
+  </div>
+
+  <div class="usage-note" id="usage-disclaimer"></div>
+  <div class="usage-coef" id="usage-coef"></div>
+
+  <script>
+    (function () {
+      const fmt = (n) => Number(n).toLocaleString('ja-JP');
+      fetch('/api/usage')
+        .then((r) => r.json())
+        .then((d) => {
+          document.getElementById('usage-crawls').textContent = fmt(d.total_crawls || 0);
+          document.getElementById('usage-screens').textContent = fmt(d.total_screens || 0);
+          document.getElementById('usage-conditions').textContent = fmt(d.total_test_conditions || 0);
+          document.getElementById('usage-documents').textContent = fmt(d.total_documents || 0);
+          document.getElementById('usage-hours').textContent = fmt(d.estimated_saved_hours || 0);
+          document.getElementById('usage-yen').textContent = '¥' + fmt(d.estimated_saved_yen || 0);
+          document.getElementById('usage-disclaimer').textContent = d.disclaimer || '';
+          const c = d.coefficients || {};
+          document.getElementById('usage-coef').innerHTML =
+            '推定係数: 画面仕様1枚=<code>' + (c.minutes_per_screen ?? '-') + '分</code>' +
+            ' / テスト条件1件=<code>' + (c.minutes_per_condition ?? '-') + '分</code>' +
+            ' / 差分1回=<code>' + (c.minutes_per_diff ?? '-') + '分</code>' +
+            ' / 時間単価=<code>¥' + (c.hourly_rate_yen ?? '-') + '</code>';
+        })
+        .catch(() => {
+          document.getElementById('usage-disclaimer').textContent = '利用実績を取得できませんでした。';
+        });
+    })();
+  </script>
+</section>

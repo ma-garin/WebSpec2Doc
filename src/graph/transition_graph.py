@@ -67,7 +67,10 @@ class BusinessFlow:
 
 def build_graph(pages: list[AnalyzedPage]) -> nx.DiGraph:
     graph = nx.DiGraph()
-    url_to_id = {page.page_data.url: page.page_id for page in pages}
+    # 同一 URL の別状態レコードがある場合、リンク解決は初出（正規ページ）を指す
+    url_to_id: dict[str, str] = {}
+    for page in pages:
+        url_to_id.setdefault(page.page_data.url, page.page_id)
 
     for page in pages:
         graph.add_node(

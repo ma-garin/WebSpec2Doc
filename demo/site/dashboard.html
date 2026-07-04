@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>DemoMart - マイページ</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>DemoMart デモストア</h1>
+  </header>
+  <nav aria-label="メイン">
+    <a href="/index.html">トップ</a>
+    <a href="/products.html">商品一覧</a>
+    <a href="/contact.html">お問い合わせ</a>
+  </nav>
+  <main>
+    <h2>マイページ</h2>
+
+    <section>
+      <h3>会員情報</h3>
+      <p>デモ 太郎 さん（ゴールド会員）</p>
+      <button type="button" id="open-withdraw-modal" aria-haspopup="dialog">退会手続き</button>
+      <div class="modal" id="withdraw-modal" role="dialog" aria-labelledby="withdraw-title" hidden>
+        <h3 id="withdraw-title">退会の確認</h3>
+        <p>退会するとポイント（1,240pt）は失効します。よろしいですか？</p>
+        <button type="button" id="withdraw-cancel" class="secondary">キャンセル</button>
+      </div>
+    </section>
+
+    <section>
+      <h3>注文履歴</h3>
+      <div role="tablist" aria-label="注文履歴の表示切替">
+        <button type="button" role="tab" id="tab-recent" aria-selected="true"
+                aria-controls="panel-recent">直近の注文</button>
+        <button type="button" role="tab" id="tab-all" aria-selected="false"
+                aria-controls="panel-all">全期間</button>
+      </div>
+      <div role="tabpanel" id="panel-recent" aria-labelledby="tab-recent">
+        <p>2026-06-28 デモコーヒー豆 200g — 配送済み</p>
+      </div>
+      <div role="tabpanel" id="panel-all" aria-labelledby="tab-all" hidden>
+        <p>2026-06-28 デモコーヒー豆 200g — 配送済み</p>
+        <p>2026-05-14 デモマグカップ — 配送済み</p>
+        <p>2026-04-02 デモトートバッグ — 配送済み</p>
+      </div>
+    </section>
+
+    <section>
+      <h3>よくある質問</h3>
+      <details id="faq-shipping">
+        <summary>配送日数はどのくらいですか？</summary>
+        <p>通常 2〜3 営業日でお届けします。</p>
+      </details>
+      <details id="faq-return">
+        <summary>返品はできますか？</summary>
+        <p>未開封の場合、到着後 8 日以内であれば返品可能です。</p>
+      </details>
+    </section>
+  </main>
+  <footer>
+    <small>DemoMart — マイページ（モーダル・タブ・アコーディオンの画面状態デモ）</small>
+  </footer>
+  <script>
+    // モーダル開閉（role=dialog の出現で DOM 状態シグネチャが変化する）
+    const modal = document.getElementById('withdraw-modal');
+    document.getElementById('open-withdraw-modal').addEventListener('click', () => {
+      modal.hidden = false;
+    });
+    document.getElementById('withdraw-cancel').addEventListener('click', () => {
+      modal.hidden = true;
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') modal.hidden = true;
+    });
+    // タブ切替（aria-selected と tabpanel の hidden が変化する）
+    const tabs = [
+      ['tab-recent', 'panel-recent'],
+      ['tab-all', 'panel-all'],
+    ];
+    tabs.forEach(([tabId, panelId]) => {
+      document.getElementById(tabId).addEventListener('click', () => {
+        tabs.forEach(([t, p]) => {
+          document.getElementById(t).setAttribute('aria-selected', t === tabId ? 'true' : 'false');
+          document.getElementById(p).hidden = p !== panelId;
+        });
+      });
+    });
+  </script>
+</body>
+</html>

@@ -74,6 +74,7 @@ def run() -> Response:
             yield f"SUMMARY:{json.dumps(_summary_for_domain(domain))}\n"
             if proc.returncode == 0 and domain:
                 save_site_config(domain, urls, crawl_mode, depth, max_pages, selected, auth)
+                _record_usage_safely(domain, compare)
             if proc.returncode != 0:
                 yield "\nエラーが発生しました。\n"
         finally:
@@ -81,6 +82,17 @@ def run() -> Response:
             _terminate_proc(proc)
 
     return Response(generate(), mimetype="text/plain")
+
+
+def _record_usage_safely(domain: str, compare: bool) -> None:
+    """利用実績の記録を行う。記録失敗はクロール結果配信を妨げない。"""
+    try:
+        from web.services.usage_tracker import record_crawl_from_report
+
+        record_crawl_from_report(OUTPUT_DIR, domain, diff_run=compare)
+    except Exception:  # noqa: BLE001
+        # 実績記録はベストエフォート。失敗してもクロール成功の応答は返す
+        pass
 
 
 @bp.post("/api/cancel")

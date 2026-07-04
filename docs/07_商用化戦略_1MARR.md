@@ -1,5 +1,9 @@
 # WebSpec2Doc 商用化戦略 — $1M ARR 達成プラン
 
+> **【ステータス】** 最新の事業計画は [docs/09_事業計画_統合版.md](09_事業計画_統合版.md)。
+> 本文書は SaaS 外販路線（Month 7 以降の拡張オプション）の背景資料として残す。
+> 価格帯（Team/Business）は docs/09 が継承する。
+
 > 文書番号: WSD-STR-007  
 > 版: 1.0  
 > 作成日: 2026-06-02  
@@ -243,7 +247,7 @@ PoC 期間: 6ヶ月 → 本格展開: 18ヶ月後に達成
 
 - SAML / SCIM SSO（Okta・Azure AD）
 - 監査ログ（誰がいつ何をクロールしたか）
-- オンプレ / VPC 内デプロイ（Docker Compose / Helm chart）
+- オンプレ / VPC 内デプロイ（venv + systemd / Ansible 等の社内標準構成管理。コンテナ非依存）
 - SOC2 Type II 取得
 - ホワイトラベル（検証会社が自社ブランドで顧客提供）
 - SLA 99.9%

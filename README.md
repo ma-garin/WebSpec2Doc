@@ -15,8 +15,14 @@
 | **画面仕様の自動生成** | 入力フィールド・制約・ロケータ候補・テスト条件を画面ごとに整理 |
 | **テスト設計技法の推奨** | 同値分割・境界値分析・デシジョンテーブル等を画面要素から自動判定 |
 | **画面遷移図・遷移表** | UML 遷移図（シーケンス図・コミュニケーション図・アクティビティ図・テスト観点マップ）＋ ISTQB 標準の画面遷移表 |
-| **仕様ドリフト検知** | 再クロールで前回との差分（追加/削除/変更）を自動検出 |
-| **自動ログイン** | ID/PASSWORD をGUIで入力し、認証が必要なサイトにも対応 |
+| **状態探索** | モーダル・タブ・アコーディオン等の操作で現れる「隠れた状態」を自動で開いて記録（SPA 対応） |
+| **根拠（evidence）付与** | 生成される仕様・テスト条件に、実測したセレクタ・スクリーンショット座標を紐づけ |
+| **観点管理** | テスト観点をツリー分類・インライン編集で管理（3ペイン UI・AI 提案） |
+| **仕様ドリフト検知** | 再クロールで前回との差分（追加/削除/変更）を自動検出し、影響画面を分析 |
+| **トレーサビリティ** | 画面 → テスト観点 → テストシナリオの対応関係を追跡 |
+| **自動ログイン** | ID/PASSWORD を GUI で入力し、認証が必要なサイトにも対応 |
+| **クロール礼儀** | robots.txt 尊重・per-origin レート制御・破壊的リクエスト遮断を既定で有効化 |
+| **ROI ダッシュボード** | 利用実績から削減工数（時間・円）を推定して表示（`/usage`） |
 | **スクリーンショット** | 全画面のキャプチャを仕様と並べて表示 |
 
 ---
@@ -27,7 +33,7 @@
 |---------|------|
 | `report.html` | 画面別仕様・テスト条件・スクリーンショット付きレポート |
 | `report.json` | 構造化 JSON（自動化・CI 連携用） |
-| `spec.xlsx` | Excel 仕様書（TestRail / Jira 転記用） |
+| `spec.xlsx` | Excel 仕様書（テスト管理表への転記用） |
 | `screens.md` / `forms.md` | Markdown 形式の画面・フォーム一覧 |
 | `transition.mmd` | 画面遷移図（Mermaid 形式） |
 | `report.pdf` | PDF 版レポート |
@@ -51,6 +57,20 @@ playwright install chromium
 make setup-hooks    # pre-commit フックをインストール（品質ゲート有効化）
 make test           # 動作確認
 ```
+
+---
+
+## すぐ試す（同梱デモ）
+
+外部サイトも OpenAI API キーも不要で、全機能を同梱デモサイトで体験できます。
+
+```bash
+make demo       # デモサイト(8766)と本体(8765)を同時起動
+# → 本体の URL 欄に http://127.0.0.1:8766/ を入力して「画面分析」
+```
+
+デモの流れは [docs/demo/DEMO_SCRIPT.md](docs/demo/DEMO_SCRIPT.md)、
+生成物のサンプルは [docs/demo/sample_output/](docs/demo/sample_output/) にあります。
 
 ---
 
@@ -106,10 +126,52 @@ python src/main.py --url https://example.com --auth auth.json
 
 ---
 
+## 社内サーバへ展開（venv + systemd）
+
+> **コンテナは使用しない方針。** 従業員 1,000 人超の組織では Docker Desktop が有償ライセンス対象となるため、本プロジェクトは Docker への依存を持たない（Dockerfile・compose 定義は置かない）。
+
+```bash
+# Python 3.12 の venv を作成し依存をインストール
+python3.12 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+.venv/bin/playwright install chromium --with-deps
+
+# 既定はローカルループバックのみ許可（外部からは 403）
+# 社内ネットワークから使う場合は許可ホストを明示的に指定する
+WEBSPEC2DOC_TRUSTED_HOSTS=webspec2doc.internal .venv/bin/python app.py
+```
+
+常駐運用する場合は systemd サービスにする（例: `/etc/systemd/system/webspec2doc.service`）:
+
+```ini
+[Unit]
+Description=WebSpec2Doc
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/webspec2doc
+Environment=WEBSPEC2DOC_TRUSTED_HOSTS=webspec2doc.internal
+ExecStart=/opt/webspec2doc/.venv/bin/python app.py
+Restart=on-failure
+User=webspec2doc
+
+[Install]
+WantedBy=multi-user.target
+```
+
+`WEBSPEC2DOC_TRUSTED_HOSTS` が未設定なら現行どおり localhost 限定で動作します。
+
+---
+
 ## ドキュメント
+
+**[docs/README.md](docs/README.md) が全文書のインデックス**（現行/歴史のステータス付き）。主要な入口:
 
 - [クイックスタートガイド](docs/userguide.md)
 - [開発者向けハンドブック](docs/DEVELOPMENT.md)
+- [事業計画（統合版）](docs/09_事業計画_統合版.md)
+- [機能拡張ロードマップ](docs/11_機能拡張ロードマップ_現新比較とUX検証.md)
+- [デモ台本](docs/demo/DEMO_SCRIPT.md) / [発表構成](docs/demo/PITCH_OUTLINE.md)
 
 ---
 
@@ -122,7 +184,7 @@ python src/main.py --url https://example.com --auth auth.json
 | 遷移図描画（GUI）| [Mermaid](https://mermaid.js.org/)（シーケンス図・コミュニケーション図・アクティビティ図） |
 | Excel 出力 | [openpyxl](https://openpyxl.readthedocs.io/) |
 | Web サーバ | [Flask](https://flask.palletsprojects.com/) |
-| テスト | pytest（956 件・コアカバレッジ 90%+） |
+| テスト | pytest（1,194 件・コアカバレッジ 90%+）＋ Playwright E2E（64 件） |
 
 - Python 3.12（3.13 は greenlet ビルド失敗のため非対応）
 - GUI ポート: **8765**（macOS AirPlay との衝突回避）

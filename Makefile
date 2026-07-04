@@ -18,7 +18,7 @@ E2E_DIR    := tests/e2e
 SHOT_DIR   := tests/e2e/screenshots
 MARKER     := .ui-verified
 
-.PHONY: help test verify-ui quality-harness verify-all setup-hooks coverage lint clean check-venv
+.PHONY: help test verify-ui quality-harness verify-all setup-hooks coverage lint clean check-venv demo
 
 # デフォルトターゲット
 help:
@@ -129,6 +129,12 @@ setup-hooks:
 	@echo "動作確認:"
 	@echo "  git commit でゲートが実行されます"
 	@echo "  UI ファイル変更時は make verify-ui が必要です"
+
+# =============================================================================
+# 実機デモ（同梱デモサイト + 本体の同時起動）
+# =============================================================================
+demo: check-venv
+	@bash scripts/demo.sh
 
 # =============================================================================
 # セキュリティスキャン

@@ -21,6 +21,7 @@ from playwright.sync_api import Error as PlaywrightError
 
 from crawler.politeness import (
     RETRYABLE_STATUS_CODES,
+    OriginRateLimiter,
     RetryableHTTPError,
     TokenBucketLimiter,
     append_audit_log,
@@ -46,6 +47,7 @@ PAGE_ID_PREFIX = "P"
 PAGE_ID_WIDTH = 3
 SCREENSHOTS_DIR_NAME = "screenshots"
 USER_AGENT = build_user_agent()
+BROWSER_LOCALE = "ja-JP"
 NEXT_DEPTH_INCREMENT = 1
 
 _SENSITIVE_KEYWORDS = ("payment", "checkout", "billing", "personal", "private")
@@ -212,11 +214,17 @@ class PageData:
 def _browser_page(auth_state: Path | None) -> Iterator[Page]:
     """Open a Playwright Chromium page with shared context settings."""
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(headless=True)
+        # --lang でブラウザ UI 言語を日本語にし、HTML5 バリデーション
+        # メッセージが日本語で得られるようにする（context の locale だけでは
+        # validationMessage の言語は変わらないため launch 引数で指定する）
+        browser = playwright.chromium.launch(headless=True, args=[f"--lang={BROWSER_LOCALE}"])
         try:
             context = browser.new_context(
                 user_agent=USER_AGENT,
                 storage_state=str(auth_state) if auth_state else None,
+                # 日本語ロケール: HTML5 バリデーションメッセージ実測を
+                # 日本のエンドユーザーが目にする文言（日本語）で取得する
+                locale=BROWSER_LOCALE,
             )
             page = context.new_page()
             page.set_default_timeout(DEFAULT_TIMEOUT_MS)
@@ -361,11 +369,14 @@ def crawl_urls(
     worker_count = max(1, min(parallelism, requested_total or 1))
     _emit_event(on_event, "crawl_started", total=requested_total, parallelism=worker_count)
     robots_skipped: list[str] = []
-    robots_delay: float | None = None
+    origin_delays: dict[str, float] = {}
     if respect_robots:
-        targets, robots_skipped, robots_delay = _filter_robots_targets(targets, on_event)
-    limiter = TokenBucketLimiter(crawl_interval_from_env())
-    limiter.apply_crawl_delay(robots_delay)
+        targets, robots_skipped, origin_delays = _filter_robots_targets(targets, on_event)
+    # オリジンごとに独立した間隔制御（別サイトの Crawl-Delay に巻き込まれない）
+    limiter = OriginRateLimiter(crawl_interval_from_env())
+    for origin, delay in origin_delays.items():
+        limiter.set_crawl_delay(origin, delay)
+    max_delay = max(origin_delays.values(), default=None) if origin_delays else None
     append_audit_log(
         output_dir,
         {
@@ -374,8 +385,9 @@ def crawl_urls(
             "target_urls": targets,
             "respect_robots": respect_robots,
             "robots_skipped_urls": robots_skipped,
-            "robots_crawl_delay_sec": robots_delay,
-            "interval_sec": limiter.interval_sec,
+            "robots_crawl_delay_sec": max_delay,
+            "interval_sec": max(limiter.interval_sec, max_delay or 0.0),
+            "per_origin_crawl_delays": origin_delays,
             "user_agent": USER_AGENT,
             "parallelism": worker_count,
             "mutations_allowed": _mutations_allowed_with_warning(),
@@ -407,7 +419,7 @@ def crawl_urls(
             page_id = _format_page_id(len(pages) + 1)
             started_at = time.monotonic()
             _emit_event(on_event, "page_started", url=target, index=index, total=len(targets))
-            limiter.acquire()
+            limiter.acquire(target)
             if auth_state is None and on_event is None:
                 page_data = _crawl_page_with_id(page, target, page_id, output_dir)
             else:
@@ -754,12 +766,12 @@ def _skip_reason(
 def _filter_robots_targets(
     targets: list[str],
     on_event: CrawlEventCallback | None,
-) -> tuple[list[str], list[str], float | None]:
-    """robots.txt で許可された URL・スキップされた URL・最大 Crawl-Delay を返す。"""
+) -> tuple[list[str], list[str], dict[str, float]]:
+    """robots.txt で許可された URL・スキップされた URL・オリジン別 Crawl-Delay を返す。"""
     parsers: dict[str, RobotFileParser] = {}
     allowed: list[str] = []
     skipped: list[str] = []
-    max_delay: float | None = None
+    origin_delays: dict[str, float] = {}
     for target in targets:
         parsed = urlparse(target)
         origin = f"{parsed.scheme}://{parsed.netloc}"
@@ -768,15 +780,15 @@ def _filter_robots_targets(
             parser = _load_robots_parser(origin)
             parsers[origin] = parser
             delay = robots_crawl_delay(parser, USER_AGENT)
-            if delay is not None and (max_delay is None or delay > max_delay):
-                max_delay = delay
+            if delay is not None:
+                origin_delays[origin] = delay
         reason = _skip_reason(target, 0, 0, set(), parser)
         if reason:
             skipped.append(target)
             _emit_event(on_event, "page_skipped", url=target, reason=reason)
         else:
             allowed.append(target)
-    return allowed, skipped, max_delay
+    return allowed, skipped, origin_delays
 
 
 def _emit_event(callback: CrawlEventCallback | None, event: str, **details: object) -> None:

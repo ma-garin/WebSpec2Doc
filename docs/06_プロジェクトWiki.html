@@ -240,7 +240,7 @@
           <tr><td><span class="wiki-path">README.md</span></td><td>プロジェクト概要、セットアップ、使い方、出力ファイル、制約事項</td><td>外部公開時の入口。実装変更時はここも更新。</td></tr>
           <tr><td><span class="wiki-path">CLAUDE.md</span></td><td>開発ガイド、構成、ルール、セキュリティ方針</td><td>LLM や共同作業者向けの作業規約。</td></tr>
           <tr><td><span class="wiki-path">CODEX_GUIDE.md</span></td><td>Claude と Codex の役割分担・運用知見</td><td>このプロジェクト固有の開発プロセス文書。</td></tr>
-          <tr><td><span class="wiki-path">plan.txt</span></td><td>商業化戦略ロードマップ</td><td>ドリフト検知、オンプレ、ログイン対応、LLM などの将来計画。</td></tr>
+          <tr><td><span class="wiki-path">docs/archive/plan.txt</span></td><td>商業化戦略ロードマップ（歴史文書）</td><td>ドリフト検知、オンプレ、ログイン対応、LLM などの将来計画。</td></tr>
           <tr><td><span class="wiki-path">requirements.txt</span></td><td>Python 依存ライブラリ定義</td><td>Playwright、networkx、openpyxl、Flask、pytest など。</td></tr>
           <tr><td><span class="wiki-path">app.py</span></td><td>Flask ベースの簡易 Web UI</td><td>フォーム入力から <span class="wiki-path">src/main.py</span> を subprocess 実行し、ログをストリーミング表示。</td></tr>
           <tr><td><span class="wiki-path">run.sh</span></td><td>CLI 実行用シェルスクリプト</td><td>venv を有効化し、既定で <span class="wiki-path">md,html</span> を出力。</td></tr>
@@ -301,7 +301,7 @@
           <tr><td><span class="wiki-path">docs/05_事業戦略提案.html</span></td><td>421</td><td>市場動向、差別化、収益化、GTM</td><td>事業責任者</td></tr>
           <tr><td><span class="wiki-path">docs/06_プロジェクトWiki.html</span></td><td>新規</td><td>このディレクトリ全体の Wiki 風整理</td><td>開発者・引き継ぎ担当</td></tr>
           <tr><td><span class="wiki-path">docs/userguide.md</span></td><td>80</td><td>クイックスタート</td><td>利用者</td></tr>
-          <tr><td><span class="wiki-path">docs/userManuel.md</span> / <span class="wiki-path">.html</span></td><td>333 / 390</td><td>詳細ユーザーマニュアル</td><td>利用者</td></tr>
+          <tr><td><span class="wiki-path">docs/archive/userManuel.md</span> / <span class="wiki-path">.html</span></td><td>333 / 390</td><td>詳細ユーザーマニュアル</td><td>利用者</td></tr>
           <tr><td><span class="wiki-path">docs/assets/veriserve.css</span></td><td>572</td><td>文書共通デザインシステム</td><td>文書作成者</td></tr>
           <tr><td><span class="wiki-path">docs/assets/common.js</span></td><td>53</td><td>目次 active 表示、スムーススクロール、日付表示</td><td>文書作成者</td></tr>
         </tbody>
@@ -404,7 +404,7 @@
           <tr><td>機能追加したい</td><td><span class="wiki-path">src/main.py</span></td><td>全体のデータフローと出力分岐がまとまっている。</td></tr>
           <tr><td>クロール精度を上げたい</td><td><span class="wiki-path">src/crawler/page_crawler.py</span> / <span class="wiki-path">link_extractor.py</span></td><td>URL制御、DOM抽出、スクリーンショット取得の中心。</td></tr>
           <tr><td>レポートを改善したい</td><td><span class="wiki-path">src/generator/html_reporter.py</span></td><td>提出物の見た目と内容を制御する。</td></tr>
-          <tr><td>仕様・事業方針を確認したい</td><td><span class="wiki-path">docs/05_事業戦略提案.html</span> / <span class="wiki-path">plan.txt</span></td><td>ドリフト検知、オンプレ、ログイン対応などの方向性がまとまっている。</td></tr>
+          <tr><td>仕様・事業方針を確認したい</td><td><span class="wiki-path">docs/09_事業計画_統合版.md</span>（正） / <span class="wiki-path">docs/archive/plan.txt</span></td><td>ドリフト検知、オンプレ、ログイン対応などの方向性がまとまっている。</td></tr>
           <tr><td>引き継ぎたい</td><td><span class="wiki-path">README.md</span> / <span class="wiki-path">CLAUDE.md</span> / 本Wiki</td><td>概要、開発ルール、実ファイル構成をまとめて確認できる。</td></tr>
         </tbody>
       </table>

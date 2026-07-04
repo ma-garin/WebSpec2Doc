@@ -41,6 +41,23 @@ class TestCrawlSiteAuthState:
         kwargs = browser.new_context.call_args.kwargs
         assert kwargs["storage_state"] is None
 
+    @patch("crawler.page_crawler._load_robots_parser")
+    @patch("crawler.page_crawler.sync_playwright")
+    def test_browser_uses_japanese_locale(
+        self, mock_sp: MagicMock, _mock_robots: MagicMock
+    ) -> None:
+        """日本語ロケール（validation メッセージ実測の日本語化）が配線されている。"""
+        from crawler.page_crawler import BROWSER_LOCALE
+
+        playwright = mock_sp.return_value.__enter__.return_value
+        browser = playwright.chromium.launch.return_value
+        crawl_site("https://example.com", max_pages=0)
+        # context に locale を渡している
+        assert browser.new_context.call_args.kwargs["locale"] == BROWSER_LOCALE
+        # launch 引数で UI 言語も指定している
+        launch_kwargs = playwright.chromium.launch.call_args.kwargs
+        assert any(BROWSER_LOCALE in str(arg) for arg in launch_kwargs.get("args", []))
+
 
 # ---------- capture_auth_state ----------
 

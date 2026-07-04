@@ -1,8 +1,13 @@
 from __future__ import annotations
 
+import os
 from urllib.parse import urlparse
 
 from flask import Response, request
+
+# 社内サーバ展開用: 追加で許可するホストをカンマ区切りで指定する。
+# 既定（未設定）はローカルループバックのみ許可＝現行のセキュリティ態勢を維持。
+TRUSTED_HOSTS_ENV = "WEBSPEC2DOC_TRUSTED_HOSTS"
 
 # localhost 専用ツールとして実用的な CSP。
 # 'unsafe-inline' は生成済み report.html (Mermaid 初期化インラインスクリプト) のため必要。
@@ -27,6 +32,17 @@ _SECURITY_HEADERS: dict[str, str] = {
 _LOCAL_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
 
 
+def _trusted_hosts() -> frozenset[str]:
+    """許可ホスト集合を返す（ローカルループバック ＋ 環境変数の追加ホスト）。
+
+    WEBSPEC2DOC_TRUSTED_HOSTS が未設定なら現行どおりローカルのみ許可する。
+    社内サーバへ展開する場合のみ、そのホスト名／IP をカンマ区切りで追加する。
+    """
+    raw = os.environ.get(TRUSTED_HOSTS_ENV, "")
+    extra = {host.strip().lower() for host in raw.split(",") if host.strip()}
+    return _LOCAL_HOSTS | extra
+
+
 def add_security_headers(response: Response) -> Response:
     """全レスポンスにセキュリティヘッダーを付与する。"""
     for key, value in _SECURITY_HEADERS.items():
@@ -45,12 +61,17 @@ def _host_matches(header_val: str, expected_host: str) -> bool:
 
 
 def localhost_guard() -> Response | None:
-    """Hostヘッダーがローカルループバックを指すリクエストだけを許可する。"""
+    """Host ヘッダーが許可ホスト（ローカル＋TRUSTED_HOSTS）を指す場合のみ許可する。
+
+    既定ではローカルループバックのみ許可。社内サーバ展開時は
+    WEBSPEC2DOC_TRUSTED_HOSTS で許可ホストを明示的に追加する。
+    """
     try:
         hostname = urlparse(f"//{request.host}").hostname
     except ValueError:
         hostname = None
-    if hostname not in _LOCAL_HOSTS:
+    allowed = _trusted_hosts()
+    if hostname is None or hostname.lower() not in allowed:
         return Response(status=403)
     return None
 

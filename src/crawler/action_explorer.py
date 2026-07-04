@@ -40,10 +40,63 @@ DEFAULT_MAX_ACTIONS = 10
 _CLICK_TIMEOUT_MS = 2_000
 _SETTLE_TIMEOUT_MS = 300
 
-# クリック後の DOM 差分から状態種別を判定するためのマーカー
-_MODAL_MARKERS = ('role="dialog"', "role='dialog'", "<dialog")
-_TABPANEL_MARKERS = ('role="tabpanel"', "role='tabpanel'")
-_EXPANDED_MARKERS = ('aria-expanded="true"', "aria-expanded='true'", "<details open")
+# ライブ DOM から「開閉・選択・可視」状態を読み取るスナップショット。
+# HTML 文字列の正規表現ではなく実際の DOM プロパティ（.open / aria-selected /
+# aria-expanded / 可視性）を見るため、表示/非表示トグル型のモーダルにも対応する。
+_LIVE_STATE_JS = """
+() => {
+  const isVisible = (el) => {
+    if (el.hidden) return false;
+    const s = window.getComputedStyle(el);
+    if (s.display === 'none' || s.visibility === 'hidden') return false;
+    const r = el.getBoundingClientRect();
+    return r.width > 0 && r.height > 0;
+  };
+  const key = (el, i) => el.id || (el.getAttribute('aria-controls') || '') || ('idx' + i);
+  const parts = [];
+  // モーダル/ダイアログの可視状態
+  document.querySelectorAll('[role=dialog], dialog').forEach((el, i) => {
+    if (isVisible(el)) parts.push('dialog:' + key(el, i));
+  });
+  // タブの選択状態
+  document.querySelectorAll('[role=tab][aria-selected=true]').forEach((el, i) => {
+    parts.push('tab:' + key(el, i));
+  });
+  // アコーディオン（details[open]）
+  document.querySelectorAll('details[open]').forEach((el, i) => {
+    parts.push('details:' + key(el, i));
+  });
+  // aria-expanded=true
+  document.querySelectorAll('[aria-expanded=true]').forEach((el, i) => {
+    parts.push('expanded:' + key(el, i));
+  });
+  return parts.sort();
+}
+"""
+
+
+def _live_state(page: Page) -> tuple[str, ...]:
+    """ライブ DOM から開閉・選択・可視状態のスナップショットを取得する。"""
+    try:
+        raw = page.evaluate(_LIVE_STATE_JS)
+    except Exception as exc:
+        logger.debug("ライブ状態の取得に失敗しました: %s", exc)
+        return ()
+    if not isinstance(raw, list):
+        return ()
+    return tuple(str(item) for item in raw)
+
+
+def _state_kind_from_live(new_parts: set[str]) -> str:
+    """新規に出現した状態パーツから画面状態の種別を判定する。"""
+    if any(p.startswith("dialog:") for p in new_parts):
+        return "modal"
+    if any(p.startswith("tab:") for p in new_parts):
+        return "tabpanel"
+    if any(p.startswith("details:") or p.startswith("expanded:") for p in new_parts):
+        return "accordion"
+    return "dom_change"
+
 
 _ELEMENT_DESCRIPTOR_JS = """
 (el) => {
@@ -100,25 +153,6 @@ def max_actions_from_env() -> int:
     return max(0, value)
 
 
-def _count_markers(html_content: str, markers: tuple[str, ...]) -> int:
-    return sum(html_content.count(marker) for marker in markers)
-
-
-def _detect_state_kind(before_html: str, after_html: str) -> str:
-    """クリック前後の DOM 差分からモーダル・タブパネル・アコーディオンの出現を判定する。"""
-    if _count_markers(after_html, _MODAL_MARKERS) > _count_markers(before_html, _MODAL_MARKERS):
-        return "modal"
-    if _count_markers(after_html, _TABPANEL_MARKERS) > _count_markers(
-        before_html, _TABPANEL_MARKERS
-    ):
-        return "tabpanel"
-    if _count_markers(after_html, _EXPANDED_MARKERS) > _count_markers(
-        before_html, _EXPANDED_MARKERS
-    ):
-        return "accordion"
-    return "dom_change"
-
-
 def _describe_element(handle: Any) -> str:
     """要素のセレクタ風の説明文字列を取得する。"""
     try:
@@ -135,7 +169,7 @@ def explore_page_actions(page: Page, max_actions: int | None = None) -> tuple[Pa
     クリックはリクエスト遮断（MutationBlocker）下で行う前提。ページ遷移が
     発生した場合は元の URL に戻る。1 ページあたり最大 max_actions 回試行する。
     """
-    from crawler.link_extractor import compute_state_signature
+    import hashlib
 
     limit = max_actions_from_env() if max_actions is None else max(0, max_actions)
     if limit == 0:
@@ -153,16 +187,17 @@ def explore_page_actions(page: Page, max_actions: int | None = None) -> tuple[Pa
     seen_states: set[str] = set()
     attempts = 0
 
+    def _sig(parts: tuple[str, ...]) -> str:
+        if not parts:
+            return "default"
+        key = "|".join(parts)
+        return hashlib.sha1(key.encode(), usedforsecurity=False).hexdigest()[:8]  # noqa: S324
+
     for handle in handles:
         if attempts >= limit:
             break
         attempts += 1
-        try:
-            before_html = page.content()
-        except PlaywrightError as exc:
-            logger.warning("アクション探索を中断しました（DOM 取得失敗）: %s", exc)
-            break
-        before_sig = compute_state_signature(before_html)
+        before_parts = set(_live_state(page))
         descriptor = _describe_element(handle)
         try:
             handle.click(timeout=_CLICK_TIMEOUT_MS)
@@ -181,15 +216,13 @@ def explore_page_actions(page: Page, max_actions: int | None = None) -> tuple[Pa
                 logger.warning("アクション探索中の遷移から戻れませんでした: %s", exc)
                 break
             continue
-        try:
-            after_html = page.content()
-        except PlaywrightError:
-            continue
-        after_sig = compute_state_signature(after_html)
-        if after_sig == before_sig or after_sig in seen_states:
+        after_parts = set(_live_state(page))
+        new_parts = after_parts - before_parts
+        after_sig = _sig(tuple(sorted(after_parts)))
+        if not new_parts or after_sig in seen_states:
             continue
         seen_states.add(after_sig)
-        kind = _detect_state_kind(before_html, after_html)
+        kind = _state_kind_from_live(new_parts)
         states.append(
             PageState(
                 state_id=after_sig,
@@ -224,6 +257,29 @@ def measure_required_validation(
     return tuple(observations)
 
 
+# JS フレームワーク（React Hook Form 等）の遅延表示エラーを待つセレクタと上限
+_FEEDBACK_SELECTOR = ":invalid, [role=alert], .error, .error-message, .invalid-feedback"
+_FEEDBACK_TIMEOUT_MS = 1_500
+
+
+def _wait_for_validation_feedback(page: Page) -> None:
+    """バリデーションフィードバックの出現を明示的に待つ。
+
+    固定 sleep ではなくエラー表示要素の出現を待つことで、JS フレームワークの
+    遅延表示エラーを取りこぼしにくくする。出現しなければ短い settle 待ちに
+    フォールバックする（HTML5 ネイティブ検証は :invalid で即時ヒットする）。
+    """
+    try:
+        page.wait_for_selector(_FEEDBACK_SELECTOR, timeout=_FEEDBACK_TIMEOUT_MS, state="attached")
+        return
+    except Exception as exc:
+        logger.debug("バリデーション表示の待機がタイムアウトしました: %s", exc)
+    try:
+        page.wait_for_timeout(_SETTLE_TIMEOUT_MS)
+    except PlaywrightError:
+        pass
+
+
 def _dry_run_form_validation(
     page: Page,
     form: FormData,
@@ -242,10 +298,7 @@ def _dry_run_form_validation(
     try:
         page.route("**/*", _abort)
         page.click(selector, timeout=_CLICK_TIMEOUT_MS)
-        try:
-            page.wait_for_timeout(_SETTLE_TIMEOUT_MS)
-        except PlaywrightError:
-            pass
+        _wait_for_validation_feedback(page)
         raw_messages = page.evaluate(_VALIDATION_MESSAGES_JS)
     except Exception as exc:
         logger.debug("バリデーション実測をスキップしました: %s (%s)", selector, exc)

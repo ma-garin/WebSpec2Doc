@@ -22,3 +22,7 @@ no_implicit_optional = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+filterwarnings = [
+    "error::pytest.PytestCollectionWarning",
+    "error:.*is deprecated and will be removed in Pillow.*:DeprecationWarning",
+]

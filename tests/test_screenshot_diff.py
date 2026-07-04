@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import struct
+import warnings
 import zlib
 from pathlib import Path
 
@@ -11,6 +12,21 @@ from diff.screenshot_diff import (
     compare_screenshots,
     compare_snapshot_screenshots,
 )
+
+# ─────────────────── 旧実装（getdata ベース）: パリティ比較用 ───────────────────
+
+
+def _legacy_count_nonzero_pixels(diff_img: object) -> int:
+    """SPEC-6-1 で置き換える前の実装（getdata + any(c != 0)）。パリティ検証専用。
+
+    getdata() は Pillow 14 で削除予定の非推奨 API のため、pyproject.toml の
+    filterwarnings（error 化）と衝突しないよう、この関数内でのみ意図的に無視する。
+    """
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+        data = diff_img.getdata()  # type: ignore[attr-defined]
+    return sum(1 for pixel in data if any(c != 0 for c in pixel))
+
 
 # ─────────────────────── PNG 生成ヘルパー ───────────────────────
 
@@ -247,3 +263,66 @@ class TestSizeFallback:
         ratio = _compute_size_diff_ratio(before, after)
 
         assert ratio == pytest.approx(0.5)
+
+
+# ─────────── _count_nonzero_pixels: 旧実装（getdata）とのパリティ（SPEC-6-1 AC-2） ───────────
+
+
+class TestCountNonzeroPixelsParity:
+    """getdata 非依存の新実装が旧実装と同一の値を返すことを検証する。"""
+
+    def test_identical_images_zero_diff(self) -> None:
+        """全一致画像なら新旧どちらも 0。"""
+        Image = pytest.importorskip("PIL.Image")
+        from diff.screenshot_diff import _count_nonzero_pixels
+
+        img_a = Image.new("RGB", (4, 4), (10, 20, 30))
+        img_b = Image.new("RGB", (4, 4), (10, 20, 30))
+        diff_img = _pil_difference(img_a, img_b)
+
+        assert _count_nonzero_pixels(diff_img) == _legacy_count_nonzero_pixels(diff_img) == 0
+
+    def test_full_diff_all_pixels_counted(self) -> None:
+        """全画素が反転していれば全ピクセルが数えられる。"""
+        Image = pytest.importorskip("PIL.Image")
+        from diff.screenshot_diff import _count_nonzero_pixels
+
+        img_a = Image.new("RGB", (3, 3), (0, 0, 0))
+        img_b = Image.new("RGB", (3, 3), (255, 255, 255))
+        diff_img = _pil_difference(img_a, img_b)
+
+        expected = 3 * 3
+        assert _count_nonzero_pixels(diff_img) == _legacy_count_nonzero_pixels(diff_img) == expected
+
+    def test_single_channel_single_pixel_diff(self) -> None:
+        """1 画素・1 チャンネルだけの僅差でもその画素が数えられる
+        （グレースケール変換による近似では丸めで潰れてしまうケース）。"""
+        Image = pytest.importorskip("PIL.Image")
+        from diff.screenshot_diff import _count_nonzero_pixels
+
+        img_a = Image.new("RGB", (3, 3), (100, 100, 100))
+        img_b = Image.new("RGB", (3, 3), (100, 100, 100))
+        img_b.putpixel((1, 1), (100, 100, 101))  # B チャンネルだけ +1
+        diff_img = _pil_difference(img_a, img_b)
+
+        assert _count_nonzero_pixels(diff_img) == _legacy_count_nonzero_pixels(diff_img) == 1
+
+    def test_rgba_alpha_only_diff_is_counted(self) -> None:
+        """RGBA で alpha チャンネルのみ差分がある場合もカウントされる
+        （旧 getdata の tuple 比較と同値であること）。"""
+        Image = pytest.importorskip("PIL.Image")
+        from diff.screenshot_diff import _count_nonzero_pixels
+
+        img_a = Image.new("RGBA", (2, 2), (50, 60, 70, 255))
+        img_b = Image.new("RGBA", (2, 2), (50, 60, 70, 255))
+        img_b.putpixel((0, 0), (50, 60, 70, 200))  # alpha のみ差分
+        diff_img = _pil_difference(img_a, img_b)
+
+        assert _count_nonzero_pixels(diff_img) == _legacy_count_nonzero_pixels(diff_img) == 1
+
+
+def _pil_difference(img_a: object, img_b: object) -> object:
+    """ImageChops.difference のラッパー（型チェッカー向けに object 経由で呼ぶ）。"""
+    from PIL import ImageChops
+
+    return ImageChops.difference(img_a, img_b)  # type: ignore[arg-type]

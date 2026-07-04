@@ -182,6 +182,20 @@
       "persistence": ["output/{domain}/test_plan.md", "output/{domain}/test_plan.xlsx"],
       "failure_modes": ["no_inventory", "report_corrupt", "empty_screens", "xlsx_write_failure", "invalid_env_override"],
       "required_tests": ["happy_path", "error_path", "evidence"]
+    },
+    {
+      "feature_id": "ci_warnings_cleanup",
+      "name": "CI警告一掃（pytest収集警告・Pillow非推奨警告の解消と再発防止）",
+      "risk_level": "low",
+      "status": "implemented",
+      "ui_files": [],
+      "route_files": [],
+      "core_files": ["src/diff/screenshot_diff.py", "src/llm/viewpoint_generator.py", "src/analyzer/test_conditions.py"],
+      "symbols": ["_count_nonzero_pixels"],
+      "outputs": ["pytest実行ログ（警告0件）"],
+      "persistence": [],
+      "failure_modes": ["collection_warning_regression", "pillow_deprecation_regression"],
+      "required_tests": ["parity", "collection_guard", "static_guard"]
     }
   ]
 }

@@ -22,6 +22,7 @@ RULES_CONFIDENCE = 1.0
 class TestCondition:
     """根拠と確信度を持つテスト条件。"""
 
+    __test__ = False  # pytest 収集対象外（テストクラスではなくドメインモデル）
     description: str
     source: str  # "rules" / "llm" / "document"
     confidence: float

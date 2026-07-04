@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from capture.coverage import (
@@ -99,6 +100,40 @@ class TestSessionRecorder:
         assert len(state_lines) == 1
 
 
+class _FakeDatetimeClock:
+    """datetime を返す注入用フェイク clock（SPEC-5-2 バーンダウンの ts 検証用）。"""
+
+    def __init__(self, start: datetime) -> None:
+        self.current = start
+
+    def __call__(self) -> datetime:
+        value = self.current
+        self.current += timedelta(seconds=1)
+        return value
+
+
+class TestSessionRecorderTimestamp:
+    def test_recorder_appends_timestamp(self, tmp_path: Path) -> None:
+        """AC-1: 全レコードに注入した clock 由来の ts（UTC ISO8601）が入る。"""
+        page = _FakeRecorderPage()
+        fake_clock = _FakeDatetimeClock(datetime(2026, 7, 1, 9, 0, 0, tzinfo=UTC))
+        recorder = SessionRecorder(
+            page=page, session_path=tmp_path / "session_001.jsonl", clock=fake_clock
+        )
+        recorder.start()
+        page.buffered.append({"type": "click", "selector": "#a"})
+        recorder.poll_once()
+        recorder.flush()
+
+        lines = [
+            json.loads(line)
+            for line in (tmp_path / "session_001.jsonl").read_text(encoding="utf-8").splitlines()
+        ]
+        assert all("ts" in line for line in lines)
+        assert lines[0]["ts"] == "2026-07-01T09:00:00+00:00"
+        assert lines[1]["ts"] == "2026-07-01T09:00:01+00:00"
+
+
 # ---------- カバレッジ集計 ----------
 
 
@@ -162,6 +197,13 @@ class TestCoverage:
     def test_empty_inventory(self) -> None:
         coverage = compute_exploration_coverage({"screens": []}, _events())
         assert coverage["summary"]["coverage_ratio"] == 0.0
+
+    def test_coverage_result_ignores_ts(self) -> None:
+        """AC-6: ts の有無で集計結果は変わらない（coverage は ts を参照しない）。"""
+        events_with_ts = [dict(e, ts="2026-07-01T09:00:00+00:00") for e in _events()]
+        assert compute_exploration_coverage(_inventory(), events_with_ts) == (
+            compute_exploration_coverage(_inventory(), _events())
+        )
 
 
 class TestSessionLoading:

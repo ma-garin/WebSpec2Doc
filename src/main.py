@@ -269,6 +269,16 @@ def _exploration_coverage(args: argparse.Namespace) -> None:
         summary["total_states"],
     )
 
+    from capture.burndown import compute_exploration_burndown, save_exploration_burndown
+    from capture.session_recorder import SESSIONS_DIR_NAME
+
+    burndown = compute_exploration_burndown(report, events, output_dir / SESSIONS_DIR_NAME)
+    save_exploration_burndown(burndown, output_dir)
+    logger.info(
+        "進捗バーンダウン: %d セッション分の系列を出力しました — exploration_burndown.html",
+        burndown["summary"]["session_count"],
+    )
+
 
 def _reverse_assets(args: argparse.Namespace) -> None:
     """リバース生成モード（キャプチャ Phase 2）。"""

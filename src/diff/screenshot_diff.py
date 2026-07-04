@@ -103,9 +103,18 @@ def _compute_pixel_diff_ratio(
 
 
 def _count_nonzero_pixels(diff_img: Any) -> int:  # PIL.Image instance
-    """差分イメージの非ゼロピクセル数を返す。"""
-    data = diff_img.getdata()
-    return sum(1 for pixel in data if any(c != 0 for c in pixel))
+    """差分イメージの非ゼロピクセル数を返す（getdata 非依存・Pillow 14 対応）。
+
+    帯（RGB/RGBA の各チャンネル）を ImageChops.lighter で畳み込み、
+    「いずれかのチャンネルが非ゼロのピクセル数」をヒストグラムで数える。
+    """
+    from PIL import ImageChops  # noqa: PLC0415
+
+    bands = diff_img.split()
+    mask = bands[0]
+    for band in bands[1:]:
+        mask = ImageChops.lighter(mask, band)
+    return sum(mask.histogram()[1:])
 
 
 def _compute_size_diff_ratio(before_path: Path, after_path: Path) -> float:

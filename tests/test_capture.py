@@ -163,6 +163,27 @@ class TestCoverage:
         coverage = compute_exploration_coverage({"screens": []}, _events())
         assert coverage["summary"]["coverage_ratio"] == 0.0
 
+    def test_coverage_ignores_finding_events(self) -> None:
+        """finding イベントが混在しても既存の集計結果は変わらない（AC-6・未知kind素通し）。"""
+        baseline = compute_exploration_coverage(_inventory(), _events())
+        with_finding = _events() + [
+            {
+                "kind": "finding",
+                "path": "/dashboard.html",
+                "url": "...",
+                "note": "気づき",
+                "state_id": "abc12345",
+            }
+        ]
+        mixed = compute_exploration_coverage(_inventory(), with_finding)
+        assert mixed["screens"] == baseline["screens"]
+        assert mixed["unmatched_footprints"] == baseline["unmatched_footprints"]
+        assert mixed["summary"]["explored_screens"] == baseline["summary"]["explored_screens"]
+        assert mixed["summary"]["coverage_ratio"] == baseline["summary"]["coverage_ratio"]
+        assert mixed["summary"]["touched_states"] == baseline["summary"]["touched_states"]
+        # finding イベント自体は件数に数えられるが、既存の探索集計には影響しない
+        assert mixed["summary"]["session_events"] == baseline["summary"]["session_events"] + 1
+
 
 class TestSessionLoading:
     def test_load_session_events_from_dir(self, tmp_path: Path) -> None:
@@ -197,6 +218,58 @@ class TestHeatmapHtml:
         assert "http://" not in html_text.replace("http://a.example.com", "")
         assert "<script src" not in html_text
         assert "<link" not in html_text
+
+
+class TestFindingEvent:
+    """気づきマーク（kind: "finding"）イベントの回収（SPEC-2-3）。"""
+
+    def test_finding_event_recorded_with_state(self, tmp_path: Path) -> None:
+        """finding イベントには気づき時点の画面状態シグネチャが転記される。"""
+        page = _FakeRecorderPage()
+        recorder = SessionRecorder(page=page, session_path=tmp_path / "session_001.jsonl")
+        recorder.start()
+
+        page.live_state = ["dialog:withdraw-modal"]
+        recorder.poll_once()  # 画面状態がモーダル状態に変化したことを記録させる
+
+        page.buffered.append({"type": "finding", "note": "残高がマイナス表示になる"})
+        recorder.poll_once()
+        recorder.flush()
+
+        lines = [
+            json.loads(line)
+            for line in (tmp_path / "session_001.jsonl").read_text(encoding="utf-8").splitlines()
+        ]
+        finding = next(line for line in lines if line["kind"] == "finding")
+        assert finding["note"] == "残高がマイナス表示になる"
+        assert finding["state_id"] == state_signature(("dialog:withdraw-modal",))
+        assert finding["url"] == page.url
+        assert finding["path"] == normalize_footprint_path(page.url)
+
+    def test_finding_event_default_state(self, tmp_path: Path) -> None:
+        """状態変化が無いまま気づきをマークした場合は state_id="default" が転記される。"""
+        page = _FakeRecorderPage()
+        recorder = SessionRecorder(page=page, session_path=tmp_path / "session_001.jsonl")
+        recorder.start()
+
+        page.buffered.append({"type": "finding", "note": ""})
+        recorder.poll_once()
+        recorder.flush()
+
+        lines = [
+            json.loads(line)
+            for line in (tmp_path / "session_001.jsonl").read_text(encoding="utf-8").splitlines()
+        ]
+        finding = next(line for line in lines if line["kind"] == "finding")
+        assert finding["state_id"] == "default"
+        assert finding["note"] == ""
+
+    def test_finding_widget_click_excluded_from_click_listener(self) -> None:
+        """気づきウィジェットのボタン id が click 除外ロジックに含まれている。"""
+        from capture.session_recorder import _RECORDER_JS
+
+        assert "__ws2d_finding_btn" in _RECORDER_JS
+        assert "if (el && el.id === FINDING_BTN_ID) return;" in _RECORDER_JS
 
 
 class TestAboutBlankSkipped:

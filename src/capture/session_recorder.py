@@ -12,6 +12,7 @@ page 操作を行うと再入で行き詰まるため。
 from __future__ import annotations
 
 import json
+import logging
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -23,15 +24,23 @@ from crawler.action_explorer import _live_state, state_signature
 if TYPE_CHECKING:
     pass
 
+logger = logging.getLogger(__name__)
+
 SESSIONS_DIR_NAME = "sessions"
 DEFAULT_POLL_INTERVAL_SEC = 0.5
 
-# クリック・変更イベントを window バッファへ溜める（ナビゲーションごとに再注入される）
+# 気づきマークウィジェットのボタン要素 id（click リスナーの二重記録除外にも使う）
+FINDING_WIDGET_ID = "__ws2d_finding_btn"
+
+# クリック・変更イベントを window バッファへ溜める（ナビゲーションごとに再注入される）。
+# 右下固定の「⚑ 気づき」ボタン（気づきマークウィジェット）も同スクリプトで注入する
+# （Shadow DOM は不使用・高 z-index。既存の add_init_script + evaluate 再注入機構に乗せる）。
 _RECORDER_JS = """
 (() => {
   if (window.__ws2dRecorderInit) return;
   window.__ws2dRecorderInit = true;
   window.__ws2dEvents = window.__ws2dEvents || [];
+  const FINDING_BTN_ID = '__ws2d_finding_btn';
   const describe = (el) => {
     if (!el || !el.tagName) return '';
     if (el.id) return '#' + el.id;
@@ -44,11 +53,36 @@ _RECORDER_JS = """
     'a, button, [role=button], input, select, textarea, summary, [role=tab], [aria-expanded]';
   document.addEventListener('click', (event) => {
     const el = (event.target.closest && event.target.closest(interactive)) || event.target;
+    // 気づきボタン自身のクリックは操作イベントとして二重記録しない（専用ハンドラで処理する）
+    if (el && el.id === FINDING_BTN_ID) return;
     window.__ws2dEvents.push({ type: 'click', selector: describe(el) });
   }, true);
   document.addEventListener('change', (event) => {
     window.__ws2dEvents.push({ type: 'input', selector: describe(event.target) });
   }, true);
+  const injectFindingWidget = () => {
+    if (document.getElementById(FINDING_BTN_ID) || !document.body) return;
+    const btn = document.createElement('button');
+    btn.id = FINDING_BTN_ID;
+    btn.type = 'button';
+    btn.textContent = '⚑ 気づき';
+    btn.style.cssText =
+      'position:fixed;right:12px;bottom:12px;z-index:2147483647;' +
+      'padding:8px 14px;background:#d93025;color:#fff;border:none;' +
+      'border-radius:4px;font-size:13px;cursor:pointer;' +
+      'box-shadow:0 1px 4px rgba(0,0,0,0.3);';
+    btn.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const note = window.prompt('気づきメモ（空でも可）', '') || '';
+      window.__ws2dEvents.push({ type: 'finding', note: note });
+    });
+    document.body.appendChild(btn);
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', injectFindingWidget);
+  } else {
+    injectFindingWidget();
+  }
 })()
 """
 
@@ -86,7 +120,7 @@ class SessionRecorder:
         try:
             self.page.evaluate(_RECORDER_JS)
         except Exception:  # noqa: BLE001  # 初期ページが about:blank 等でも継続する
-            pass
+            logger.warning("気づきウィジェットを注入できません（記録は継続）")
         self._record_visit(self.page.url)
 
     def poll_once(self) -> int:
@@ -105,10 +139,25 @@ class SessionRecorder:
             for event in raw_events:
                 if not isinstance(event, dict):
                     continue
+                event_type = str(event.get("type") or "")
+                if event_type == "finding":
+                    # 気づき時点の画面状態は self._last_state_sig をそのまま転記する
+                    # （再計算しない。AC-2: 独自ハッシュを作らず記録済みシグネチャを使う）
+                    self._append(
+                        {
+                            "kind": "finding",
+                            "note": str(event.get("note") or ""),
+                            "url": url,
+                            "path": normalize_footprint_path(url),
+                            "state_id": self._last_state_sig,
+                        }
+                    )
+                    recorded += 1
+                    continue
                 self._append(
                     {
                         "kind": "action",
-                        "action_type": str(event.get("type") or ""),
+                        "action_type": event_type,
                         "selector": str(event.get("selector") or ""),
                         "url": url,
                         "path": normalize_footprint_path(url),

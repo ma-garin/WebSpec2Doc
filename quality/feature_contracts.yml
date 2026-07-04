@@ -238,6 +238,41 @@
         "mask_detection_failed"
       ],
       "required_tests": ["happy_path", "error_path", "evidence", "unclassified_fallback"]
+    },
+    {
+      "feature_id": "ux_review",
+      "name": "UX自動エキスパートレビュー（axe-core＋ニールセン10原則ヒューリスティック）",
+      "risk_level": "medium",
+      "status": "implemented",
+      "ui_files": [],
+      "route_files": [],
+      "core_files": [
+        "src/ux/axe_runner.py",
+        "src/ux/heuristics.py",
+        "src/llm/provider.py",
+        "src/crawler/page_crawler.py",
+        "src/generator/ux_reporter.py",
+        "src/generator/html_reporter.py",
+        "src/main.py"
+      ],
+      "symbols": [
+        "run_axe",
+        "verify_axe_asset",
+        "generate_ux_findings_by_rules",
+        "validate_ux_payload",
+        "filter_hallucinated_findings",
+        "build_ux_review",
+        "save_ux_outputs"
+      ],
+      "outputs": ["ux_review.json", "report.html「UX 所見」タブ"],
+      "persistence": ["output/{domain}/ux_review.json"],
+      "failure_modes": [
+        "axe_missing_asset",
+        "axe_runtime_error",
+        "llm_hallucination",
+        "llm_unavailable"
+      ],
+      "required_tests": ["happy_path", "error_path", "evidence"]
     }
   ]
 }

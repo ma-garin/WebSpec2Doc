@@ -10,6 +10,7 @@ import threading
 from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 
 import networkx as nx
@@ -38,6 +39,9 @@ from generator.markdown_generator import (
 )
 from generator.mermaid_generator import generate_mermaid
 from graph.transition_graph import build_graph
+
+if TYPE_CHECKING:
+    from ux.axe_runner import AxeViolation
 
 DEFAULT_OUTPUT_DIR = Path("output")
 DEFAULT_FORMATS = "md"
@@ -232,6 +236,15 @@ def parse_args() -> argparse.Namespace:
         help=(
             "現新比較: 動的領域として画像差分から除外する CSS セレクタ"
             "（広告枠など既知の動的領域）。複数指定可"
+        ),
+    )
+    parser.add_argument(
+        "--ux-review",
+        action="store_true",
+        help=(
+            "UX自動エキスパートレビュー: axe-core によるWCAG違反検査とニールセン10原則の"
+            "ヒューリスティック評価を行い ux_review.json / report.html「UX所見」タブを生成する"
+            "（OPENAI_API_KEY 未設定時は rules ベースの評価で完走する）"
         ),
     )
     return parser.parse_args()
@@ -495,6 +508,18 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
     if args.llm:
         logger.warning("--llm は未実装のため無視します")
 
+    ux_review_enabled = bool(getattr(args, "ux_review", False))
+    if ux_review_enabled:
+        from ux.axe_runner import AxeAssetError, verify_axe_asset
+
+        try:
+            verify_axe_asset()
+        except AxeAssetError as exc:
+            logger.error("%s", exc)
+            sys.stdout.write("UX_REVIEW_ASSET_ERROR\n")
+            sys.stdout.flush()
+            return
+
     formats = _parse_formats(str(args.format))
     output_dir = Path(args.output) / _domain_name(primary_url)
     prior_snapshot = latest_snapshot(output_dir)
@@ -502,6 +527,13 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
     auth_state = Path(auth_path) if auth_path else None
     _STOP_REQUESTED.clear()
     checkpoint_pages: list[PageData] = []
+    ux_axe_results: dict[str, tuple[AxeViolation, ...]] = {}
+    ux_axe_lock = threading.Lock()
+
+    def on_ux_result(url: str, violations: tuple[AxeViolation, ...]) -> None:
+        # 並列クロール時は複数ワーカースレッドから呼ばれるためロックする。
+        with ux_axe_lock:
+            ux_axe_results[url] = violations
 
     def emit_event(event: dict[str, object]) -> None:
         with _EVENT_WRITE_LOCK:
@@ -529,6 +561,8 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
             auth_state,
             on_event=emit_event,
             on_checkpoint=save_checkpoint,
+            ux_review=ux_review_enabled,
+            on_ux_result=on_ux_result if ux_review_enabled else None,
         )
     except SessionExpiredError as exc:
         if checkpoint_pages:
@@ -559,6 +593,9 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
         use_llm=bool(getattr(args, "doc_llm", False)),
     )
     exploration_coverage = _load_exploration_coverage(output_dir)
+    ux_review = None
+    if ux_review_enabled:
+        ux_review = _build_and_save_ux_review(pages, analyzed_pages, ux_axe_results, output_dir)
     save_outputs(
         analyzed_pages,
         graph,
@@ -574,6 +611,7 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
         official_names=official_names,
         exploration_coverage=exploration_coverage,
         rule_conditions=rule_conditions,
+        ux_review=ux_review,
     )
     if _STOP_REQUESTED.is_set():
         partial = save_partial_snapshot(pages, output_dir, finalized=True)
@@ -610,6 +648,8 @@ def _do_crawl(
     auth_state: Path | None,
     on_event: Callable[[dict[str, object]], None] | None = None,
     on_checkpoint: Callable[[list[PageData]], None] | None = None,
+    ux_review: bool = False,
+    on_ux_result: Callable[[str, tuple[AxeViolation, ...]], None] | None = None,
 ) -> list[PageData]:
     """URL リストまたは単一 URL をクロールして PageData リストを返す。"""
     if url_list:
@@ -622,6 +662,8 @@ def _do_crawl(
             on_event=on_event,
             on_checkpoint=on_checkpoint,
             stop_requested=_STOP_REQUESTED.is_set,
+            ux_review=ux_review,
+            on_ux_result=on_ux_result,
         )
     return crawl_site(
         url=primary_url,
@@ -632,6 +674,8 @@ def _do_crawl(
         on_event=on_event,
         on_checkpoint=on_checkpoint,
         stop_requested=_STOP_REQUESTED.is_set,
+        ux_review=ux_review,
+        on_ux_result=on_ux_result,
     )
 
 
@@ -983,6 +1027,40 @@ def _load_playwright_candidates(output_dir: Path) -> list[dict]:
     return []
 
 
+def _build_and_save_ux_review(
+    pages: list[PageData],
+    analyzed_pages: list[AnalyzedPage],
+    ux_axe_results: dict[str, tuple[AxeViolation, ...]],
+    output_dir: Path,
+) -> dict[str, object]:
+    """画面ごとに UX 所見（axe 違反＋ニールセン10原則）を生成し ux_review.json を保存する。
+
+    OPENAI_API_KEY が設定されていれば OpenAIProvider、無ければ RulesProvider で
+    完走する（AC-5）。axe 検査結果はクロール中に収集済みの ux_axe_results を用いる
+    （axe はライブページが必要なため crawl_page 内でのみ実行できる）。
+    """
+    from generator.ux_reporter import build_ux_review, build_ux_screen_info, save_ux_outputs
+    from llm.provider import OpenAIProvider, RulesProvider
+
+    api_key = os.environ.get("OPENAI_API_KEY", "")
+    provider = OpenAIProvider(api_key) if api_key else RulesProvider()
+
+    page_ids = {page.page_data.url: page.page_id for page in analyzed_pages}
+    ux_findings: dict[str, list[dict[str, object]]] = {}
+    for page in pages:
+        axe_violations = ux_axe_results.get(page.url, ())
+        screen_info = build_ux_screen_info(page, axe_violations)
+        try:
+            ux_findings[page.url] = provider.generate_ux_review(screen_info)
+        except Exception as exc:  # noqa: BLE001 - UX所見生成の失敗でクロール成果を無駄にしない
+            logger.warning("UX 所見の生成に失敗しました（%s）: %s", page.url, exc)
+            ux_findings[page.url] = []
+
+    ux_review = build_ux_review(pages, page_ids, ux_axe_results, ux_findings)
+    save_ux_outputs(ux_review, output_dir)
+    return ux_review
+
+
 def _load_exploration_coverage(output_dir: Path) -> dict[str, object] | None:
     """既存の exploration_coverage.json を読み込む（無ければ None）。
 
@@ -1015,6 +1093,7 @@ def save_outputs(
     official_names: dict[str, str] | None = None,
     exploration_coverage: dict[str, object] | None = None,
     rule_conditions: dict[tuple[str, str], tuple] | None = None,
+    ux_review: dict[str, object] | None = None,
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     target_url = pages[0].page_data.url if pages else ""
@@ -1036,6 +1115,7 @@ def save_outputs(
             business_flows=business_flows,
             impact_report=impact_report,
             exploration_coverage=exploration_coverage,
+            ux_review=ux_review,
         )
     if "json" in formats:
         _save_json_output(
@@ -1100,6 +1180,7 @@ def _save_html_outputs(
     business_flows: list[dict] | None = None,
     impact_report: dict | None = None,
     exploration_coverage: dict[str, object] | None = None,
+    ux_review: dict[str, object] | None = None,
 ) -> None:
     from generator.html_reporter import generate_html_report
 
@@ -1118,6 +1199,7 @@ def _save_html_outputs(
         business_flows=business_flows,
         impact_report=impact_report,
         exploration_coverage=exploration_coverage,
+        ux_review=ux_review,
     )
     html_path = output_dir / "report.html"
     html_path.write_text(report_html, encoding="utf-8")

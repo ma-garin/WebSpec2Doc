@@ -24,6 +24,8 @@ class LLMProvider(Protocol):
         self, lines: list[tuple[str, str]], source_file: str
     ) -> dict[str, Any]: ...
 
+    def generate_ux_review(self, screen_info: dict[str, Any]) -> list[dict[str, Any]]: ...
+
 
 def _screen_evidence_from_info(screen_info: dict[str, Any]) -> Any:
     """screen_info から画面全体の根拠（SourceEvidence）を構築する。"""
@@ -107,6 +109,12 @@ class RulesProvider:
     ) -> dict[str, Any]:
         logger.info("LLM 抽出は無効です（Phase 1 抽出のみで継続）: %s", source_file)
         return {"screens": [], "fields": [], "rules": [], "requirements": []}
+
+    def generate_ux_review(self, screen_info: dict[str, Any]) -> list[dict[str, Any]]:
+        from ux.heuristics import generate_ux_findings_by_rules, ux_finding_to_dict
+
+        findings = generate_ux_findings_by_rules(screen_info)
+        return [ux_finding_to_dict(finding) for finding in findings]
 
 
 class OpenAIProvider:
@@ -221,3 +229,58 @@ class OpenAIProvider:
         except LLMResponseError as exc:
             logger.warning("LLM 抽出応答を棄却しました（理由: %s）", exc)
             return {"screens": [], "fields": [], "rules": [], "requirements": []}
+
+    def generate_ux_review(self, screen_info: dict[str, Any]) -> list[dict[str, Any]]:
+        from crawler.page_crawler import SourceEvidence, evidence_to_dict
+        from llm.openai_client import LLMResponseError, request_structured_json
+        from ux.heuristics import (
+            LLM_UX_CONFIDENCE,
+            UX_REVIEW_JSON_SCHEMA,
+            UX_REVIEW_SCHEMA_NAME,
+            UxReviewValidationError,
+            build_ux_review_prompt,
+            filter_hallucinated_findings,
+            validate_ux_payload,
+        )
+
+        known_selectors = {str(s) for s in screen_info.get("known_selectors", [])}
+        prompt = build_ux_review_prompt(screen_info)
+        try:
+            raw = request_structured_json(
+                self._api_key,
+                self._model,
+                prompt,
+                UX_REVIEW_SCHEMA_NAME,
+                UX_REVIEW_JSON_SCHEMA,
+            )
+            items = validate_ux_payload(raw)
+        except (UxReviewValidationError, LLMResponseError) as exc:
+            logger.warning(
+                "LLM UX 所見応答を棄却しました（理由: %s）。RulesProvider にフォールバックします。",
+                exc,
+            )
+            return RulesProvider().generate_ux_review(screen_info)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "LLM 呼び出しに失敗しました（%s）。RulesProvider にフォールバックします。", exc
+            )
+            return RulesProvider().generate_ux_review(screen_info)
+
+        kept = filter_hallucinated_findings(items, known_selectors)
+        screenshot_path = screen_info.get("screenshot_path")
+        return [
+            {
+                "principle": str(item["principle"]),
+                "severity": str(item["severity"]),
+                "finding": str(item["finding"]),
+                "evidence": evidence_to_dict(
+                    SourceEvidence(
+                        selector=str(item["selector"]),
+                        screenshot_path=str(screenshot_path) if screenshot_path else None,
+                    )
+                ),
+                "source": "openai",
+                "confidence": LLM_UX_CONFIDENCE,
+            }
+            for item in kept
+        ]

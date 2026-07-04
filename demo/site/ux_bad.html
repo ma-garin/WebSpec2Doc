@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>DemoMart - UX検査デモ（違反サンプル）</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* axe の color-contrast 検査対象: 背景と文字色のコントラスト比が低い */
+    .low-contrast { color: #cccccc; background-color: #ffffff; }
+    /* 極小タップ領域（20px 角）のボタン */
+    .tiny-button { width: 20px; height: 20px; padding: 0; font-size: 8px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>DemoMart デモストア</h1>
+  </header>
+  <nav aria-label="メイン">
+    <a href="/index.html">トップ</a>
+    <a href="/products.html">商品一覧</a>
+  </nav>
+  <main>
+    <h2>UX検査デモ（SPEC-3-4 axe-core / ニールセン評価用サンプル）</h2>
+    <section>
+      <!-- alt 欠落 img（axe: image-alt） -->
+      <img src="/style.css" width="80" height="60">
+
+      <!-- 低コントラストテキスト（axe: color-contrast） -->
+      <p class="low-contrast">この説明文は背景色との差が小さく読みにくい可能性があります。</p>
+
+      <!-- ラベルなし input（axe: label / ニールセン rules フォールバック対象） -->
+      <form action="/ux_bad/submit" method="post">
+        <input type="text" name="unlabeled" placeholder="ラベルのない入力欄">
+
+        <label for="ux-email">メールアドレス</label>
+        <input type="email" id="ux-email" name="email" required>
+
+        <button type="submit" class="tiny-button">送</button>
+      </form>
+    </section>
+  </main>
+  <footer>
+    <small>DemoMart — UX検査デモ（axe-core WCAG違反サンプル・実測用）</small>
+  </footer>
+</body>
+</html>

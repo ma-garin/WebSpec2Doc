@@ -14,11 +14,13 @@
 PYTHON     := venv/bin/python
 PIP        := venv/bin/pip
 PYTEST     := venv/bin/python -m pytest
+PLAYWRIGHT_BROWSERS_PATH ?= $(CURDIR)/.runtime/ms-playwright
+export PLAYWRIGHT_BROWSERS_PATH
 E2E_DIR    := tests/e2e
 SHOT_DIR   := tests/e2e/screenshots
 MARKER     := .ui-verified
 
-.PHONY: help test verify-ui quality-harness verify-all setup-hooks coverage lint clean check-venv demo
+.PHONY: help setup setup-runtime check-runtime test verify-ui quality-harness verify-all setup-hooks coverage lint clean check-venv demo
 
 # デフォルトターゲット
 help:
@@ -27,6 +29,9 @@ help:
 	@echo "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	@echo ""
 	@echo "  make quality-harness  L0: 機能契約・実行パス・未実装UI検査"
+	@echo "  make setup            Python依存・Chromium・git hookをセットアップ"
+	@echo "  make setup-runtime    対応Chromiumを導入して実起動確認"
+	@echo "  make check-runtime    Chromiumの実起動確認"
 	@echo "  make test             L1/L2: ユニット・統合テスト実行"
 	@echo "  make verify-ui        L3: E2E テスト実行（UI変更後は必須）"
 	@echo "  make verify-all       L0-L3: ハーネス + test + verify-ui"
@@ -49,6 +54,17 @@ check-venv:
 		echo "  python3.12 -m venv venv && source venv/bin/activate && pip install -r requirements.txt"; \
 		exit 1; \
 	fi
+
+setup: check-venv
+	$(PIP) install -r requirements-dev.txt
+	$(PYTHON) scripts/manage_playwright_runtime.py install
+	$(MAKE) setup-hooks
+
+setup-runtime: check-venv
+	$(PYTHON) scripts/manage_playwright_runtime.py install
+
+check-runtime: check-venv
+	$(PYTHON) scripts/manage_playwright_runtime.py check
 
 # =============================================================================
 # L0: 機能整合性ハーネス

@@ -1,5 +1,8 @@
 name: CI
 
+env:
+  PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.runtime/ms-playwright
+
 on:
   push:
     branches: [main]
@@ -63,7 +66,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Install Playwright browser
-        run: python -m playwright install --with-deps chromium
+        run: python scripts/manage_playwright_runtime.py install --with-deps
 
       - name: Smoke crawl (--compare x2)
         run: |
@@ -95,7 +98,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Install Playwright browser
-        run: python -m playwright install --with-deps chromium
+        run: python scripts/manage_playwright_runtime.py install --with-deps
 
       - name: Run E2E UI tests
         # サーバーは conftest.py の flask_server fixture が自動起動する

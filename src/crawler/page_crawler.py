@@ -19,6 +19,7 @@ from urllib.robotparser import RobotFileParser
 from playwright.sync_api import Browser, Page, sync_playwright
 from playwright.sync_api import Error as PlaywrightError
 
+from crawler.playwright_runtime import configure_playwright_browsers_path
 from crawler.politeness import (
     RETRYABLE_STATUS_CODES,
     OriginRateLimiter,
@@ -213,6 +214,7 @@ class PageData:
 @contextmanager
 def _browser_page(auth_state: Path | None) -> Iterator[Page]:
     """Open a Playwright Chromium page with shared context settings."""
+    configure_playwright_browsers_path()
     with sync_playwright() as playwright:
         # --lang でブラウザ UI 言語を日本語にし、HTML5 バリデーション
         # メッセージが日本語で得られるようにする（context の locale だけでは

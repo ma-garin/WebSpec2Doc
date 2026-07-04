@@ -33,6 +33,15 @@ def _open_browser() -> None:
 
 
 if __name__ == "__main__":
+    from crawler.playwright_runtime import PlaywrightRuntimeError, verify_playwright_runtime
+
+    try:
+        runtime = verify_playwright_runtime()
+    except PlaywrightRuntimeError as exc:
+        raise SystemExit(str(exc)) from exc
+    print(
+        f"Playwright Chromium {runtime.chromium_version} 起動確認済み " f"({runtime.browsers_path})"
+    )
     host, open_browser = _bind_host()
     if open_browser:
         threading.Thread(target=_open_browser, daemon=True).start()

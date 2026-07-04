@@ -200,6 +200,14 @@ def parse_args() -> argparse.Namespace:
             "画面・項目・業務ルールを追加抽出する（既定 OFF。OPENAI_API_KEY 必須）"
         ),
     )
+    parser.add_argument(
+        "--test-plan",
+        action="store_true",
+        help=(
+            "テスト計画ドラフト生成モード: クロール済み report.json から"
+            "画面数×優先度の工数見積・スコープ表（test_plan.md / test_plan.xlsx）を生成する"
+        ),
+    )
     return parser.parse_args()
 
 
@@ -235,6 +243,9 @@ def run(args: argparse.Namespace) -> None:
         return
     if bool(getattr(args, "export_findings", False)):
         _export_findings(args)
+        return
+    if bool(getattr(args, "test_plan", False)):
+        _generate_test_plan(args)
         return
     _run_crawl(args, auth_path)
 
@@ -349,6 +360,42 @@ def _export_findings(args: argparse.Namespace) -> None:
     logger.info(
         "気づき票エクスポートが完了しました: %d 件（findings.json / findings.csv）",
         len(tickets),
+    )
+
+
+def _generate_test_plan(args: argparse.Namespace) -> None:
+    """テスト計画ドラフト生成モード（計画 Phase 1）。"""
+    from generator.test_plan_generator import (
+        compute_test_plan,
+        load_plan_coefficients,
+        save_test_plan,
+    )
+
+    url = str(args.url or "")
+    if not url:
+        logger.error("--test-plan には --url が必要です")
+        return
+    output_dir = Path(args.output) / _domain_name(url)
+    report_path = output_dir / JSON_REPORT_FILE_NAME
+    if not report_path.exists():
+        logger.error(
+            "クロール済みインベントリがありません: %s（先に --format json でクロールしてください）",
+            report_path,
+        )
+        return
+    try:
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        logger.error("report.json を読み込めません: %s (%s)", report_path, exc)
+        return
+    coefficients = load_plan_coefficients()
+    plan = compute_test_plan(report, coefficients)
+    save_test_plan(plan, output_dir)
+    logger.info(
+        "テスト計画ドラフトを生成しました: 画面 %d 件・総見積 %.1f 時間"
+        "（test_plan.md / test_plan.xlsx）",
+        len(plan.rows),
+        plan.total_hours,
     )
 
 

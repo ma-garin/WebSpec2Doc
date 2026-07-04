@@ -139,6 +139,8 @@ def api_result() -> dict | tuple[dict, int]:
             "playwright_html": path_of(str(pw_html.relative_to(domain_dir))),
             "spec_ts": path_of("qa_process/autorun.spec.ts"),
             "qa_process_report": path_of("qa_process/qa_process_report.html"),
+            "exploration_heatmap": path_of("exploration_heatmap.html"),
+            "exploration_json": path_of("exploration_coverage.json"),
         },
         "playwright_run_at": playwright_run_at,
         "screenshots": [path for s in shots if (path := path_of(str(s.relative_to(domain_dir))))],

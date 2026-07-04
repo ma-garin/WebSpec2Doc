@@ -355,6 +355,13 @@ button.kpi-tile--action:focus-visible { outline: 2px solid var(--primary); outli
 }
 .runs-stat-card { text-align: center; padding: 12px 10px; }
 .runs-stat-card .num { font-size: 24px; font-weight: 800; }
+.coverage-heatmap-frame {
+  width: 100%;
+  min-height: 480px;
+  border: 1px solid var(--surface-subtle);
+  border-radius: 8px;
+  margin-top: 12px;
+}
 .runs-stat-card .lbl { font-size: 11px; color: var(--text-muted); font-weight: 700; }
 .runs-status-badge {
   display: inline-block;

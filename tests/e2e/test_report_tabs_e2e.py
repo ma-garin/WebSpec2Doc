@@ -1,7 +1,7 @@
-"""実行結果レポート画面 新タブ基盤（6タブ・永続パネル・ディープリンク）の E2E テスト。
+"""実行結果レポート画面 新タブ基盤（7タブ・永続パネル・ディープリンク）の E2E テスト。
 
 対象:
-    - 6タブ構成（overview / screens / test-design / flow / runs / history）
+    - 7タブ構成（overview / screens / test-design / flow / runs / coverage / history）
     - 複合タブのサブタブ切替（test-design: matrix/summary/detail 等）
     - 永続パネルによる状態保持（タブ切替でマトリクスの検索条件が消えない）
     - ディープリンク #report/<domain>/<tab>/<sub> と旧8タブ名の互換リダイレクト
@@ -101,12 +101,20 @@ def _open_report(page: Page, suffix: str = "") -> None:
 class TestTabStructure:
     """6タブ構成とパネルホストの検証。"""
 
-    def test_six_tabs_present(self, page: Page) -> None:
+    def test_seven_tabs_present(self, page: Page) -> None:
         _open_report(page)
         tabs = page.locator(".result-tabs .result-tab")
-        expect(tabs).to_have_count(6)
-        keys = [tabs.nth(i).get_attribute("data-tab") for i in range(6)]
-        assert keys == ["overview", "screens", "test-design", "flow", "runs", "history"]
+        expect(tabs).to_have_count(7)
+        keys = [tabs.nth(i).get_attribute("data-tab") for i in range(7)]
+        assert keys == [
+            "overview",
+            "screens",
+            "test-design",
+            "flow",
+            "runs",
+            "coverage",
+            "history",
+        ]
 
     def test_no_javascript_errors_on_report(self, page: Page) -> None:
         js_errors: list[str] = []

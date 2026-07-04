@@ -46,6 +46,7 @@ def generate_html_report(
     transition_coverage: dict | None = None,
     business_flows: list[dict] | None = None,
     impact_report: dict | None = None,
+    exploration_coverage: dict | None = None,
 ) -> str:
     from analyzer.stack_detector import StackInfo
     from generator.architecture_generator import (
@@ -73,6 +74,7 @@ def generate_html_report(
                 pages,
                 has_coverage=bool(transition_coverage or business_flows),
                 has_impact=bool(impact_report),
+                has_exploration=bool(exploration_coverage),
             ),
             '<div class="app-main">',
             _topbar(target_url, now),
@@ -87,6 +89,7 @@ def generate_html_report(
             _section("画面遷移図", _mermaid_block(mermaid_content), "transition"),
             _coverage_section(transition_coverage, business_flows),
             _impact_section(impact_report),
+            _exploration_section(exploration_coverage),
             _section("画面カタログ", _screen_cards(pages, graph, screenshots_dir), "screens"),
             _meta_section(target_url, crawl_depth, crawl_max_pages, crawled_at, len(pages)),
             _footer(now),
@@ -227,6 +230,7 @@ def _sidebar(
     pages: list[AnalyzedPage],
     has_coverage: bool = False,
     has_impact: bool = False,
+    has_exploration: bool = False,
 ) -> str:
     items = [
         '<a href="#summary" class="nav-item">サマリー</a>',
@@ -238,6 +242,8 @@ def _sidebar(
         items.append('<a href="#coverage" class="nav-item">遷移テストカバレッジ</a>')
     if has_impact:
         items.append('<a href="#impact" class="nav-item">差分影響・再実行推奨</a>')
+    if has_exploration:
+        items.append('<a href="#exploration" class="nav-item">探索カバレッジ</a>')
     items.append('<div class="nav-group">画面一覧</div>')
     for page in pages:
         pid = html.escape(page.page_id)
@@ -555,6 +561,67 @@ def _impact_section(impact_report: dict | None) -> str:
             f'<div class="chips">{chips}</div>'
         )
     return _section("差分影響・再実行推奨", summary + table + rerun_html, "impact")
+
+
+def _exploration_section(exploration_coverage: dict | None) -> str:
+    """探索カバレッジ（ヒートマップ集計）とチャーター提案を統合表示する。
+
+    exploration_coverage.json（capture.coverage.compute_exploration_coverage の
+    出力）が無い場合は空文字を返す（オプトイン。既存出力は不変）。
+    """
+    if not exploration_coverage:
+        return ""
+    summary = exploration_coverage.get("summary") or {}
+    ratio = float(summary.get("coverage_ratio") or 0.0)
+    cards = (
+        '<div class="cards">'
+        f'<div class="card"><div class="num">{int(summary.get("explored_screens", 0))}'
+        f'/{int(summary.get("total_screens", 0))}</div><div class="label">画面カバレッジ</div></div>'
+        f'<div class="card"><div class="num">{ratio * 100:.0f}%</div>'
+        f'<div class="label">カバレッジ率</div></div>'
+        f'<div class="card"><div class="num">{int(summary.get("touched_states", 0))}'
+        f'/{int(summary.get("total_states", 0))}</div><div class="label">画面状態カバー</div></div>'
+        "</div>"
+    )
+    unexplored = [s for s in exploration_coverage.get("screens") or [] if not s.get("explored")]
+    unexplored_html = ""
+    if unexplored:
+        rows = "".join(
+            f"<tr><td>{html.escape(str(s.get('page_id', '')))}</td>"
+            f"<td>{html.escape(str(s.get('title', '')))}</td>"
+            f"<td>{html.escape(str(s.get('url', '')))}</td></tr>"
+            for s in unexplored
+        )
+        unexplored_html = (
+            '<div class="subhead" style="margin-top:1rem">未探索画面</div>'
+            "<table><thead><tr><th>ID</th><th>画面</th><th>URL</th></tr></thead>"
+            f"<tbody>{rows}</tbody></table>"
+        )
+    charters = exploration_coverage.get("charters") or []
+    charters_html = ""
+    if charters:
+        rows = "".join(
+            f"<tr><td>{html.escape(str(c.get('page_id', '')))}</td>"
+            f"<td>{html.escape(str(c.get('title', '')))}</td>"
+            f"<td>{html.escape(str(c.get('reason', '')))}</td>"
+            "<td>"
+            + html.escape(
+                "、".join(
+                    f"{f.get('flow_name', '')}（{f.get('path_id', '')}）"
+                    for f in (c.get("flows") or [])
+                )
+            )
+            + "</td>"
+            f'<td><span class="badge-yes">{html.escape(str(c.get("priority", "")))}</span></td></tr>'
+            for c in charters
+        )
+        charters_html = (
+            '<div class="subhead" style="margin-top:1rem">次の探索チャーター（提案）</div>'
+            "<table><thead><tr><th>ID</th><th>画面</th><th>理由</th>"
+            "<th>根拠（フロー）</th><th>優先度</th></tr></thead>"
+            f"<tbody>{rows}</tbody></table>"
+        )
+    return _section("探索カバレッジ", cards + unexplored_html + charters_html, "exploration")
 
 
 def _meta_section(

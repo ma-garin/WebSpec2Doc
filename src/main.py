@@ -247,7 +247,8 @@ def _exploration_coverage(args: argparse.Namespace) -> None:
         logger.error("探索セッションがありません（先に --record-session で操作を記録してください）")
         return
     report = json.loads(report_path.read_text(encoding="utf-8"))
-    coverage = compute_exploration_coverage(report, events)
+    business_flows = report.get("meta", {}).get("business_flows")
+    coverage = compute_exploration_coverage(report, events, business_flows=business_flows)
     save_exploration_coverage(coverage, output_dir)
     summary = coverage["summary"]
     logger.info(
@@ -362,6 +363,7 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
     official_names = _run_doc_fusion(
         analyzed_pages, getattr(args, "reference_doc", None), output_dir
     )
+    exploration_coverage = _load_exploration_coverage(output_dir)
     save_outputs(
         analyzed_pages,
         graph,
@@ -375,6 +377,7 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
         business_flows=business_flows,
         impact_report=impact_report,
         official_names=official_names,
+        exploration_coverage=exploration_coverage,
     )
     if _STOP_REQUESTED.is_set():
         partial = save_partial_snapshot(pages, output_dir, finalized=True)
@@ -716,6 +719,22 @@ def _run_doc_fusion(
     return result.official_names or None
 
 
+def _load_exploration_coverage(output_dir: Path) -> dict[str, object] | None:
+    """既存の exploration_coverage.json を読み込む（無ければ None）。
+
+    破損 JSON は report.html を従来出力へフォールバックさせるため、
+    警告に留めて None を返す。
+    """
+    path = output_dir / "exploration_coverage.json"
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning("探索カバレッジの読込に失敗しました（セクション省略）: %s", exc)
+        return None
+
+
 def save_outputs(
     pages: list[AnalyzedPage],
     graph: nx.DiGraph,
@@ -730,6 +749,7 @@ def save_outputs(
     business_flows: list[dict] | None = None,
     impact_report: dict | None = None,
     official_names: dict[str, str] | None = None,
+    exploration_coverage: dict[str, object] | None = None,
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     target_url = pages[0].page_data.url if pages else ""
@@ -750,6 +770,7 @@ def save_outputs(
             transition_coverage=transition_coverage,
             business_flows=business_flows,
             impact_report=impact_report,
+            exploration_coverage=exploration_coverage,
         )
     if "json" in formats:
         _save_json_output(
@@ -812,6 +833,7 @@ def _save_html_outputs(
     transition_coverage: dict[str, dict] | None = None,
     business_flows: list[dict] | None = None,
     impact_report: dict | None = None,
+    exploration_coverage: dict[str, object] | None = None,
 ) -> None:
     from generator.html_reporter import generate_html_report
 
@@ -829,6 +851,7 @@ def _save_html_outputs(
         transition_coverage=transition_coverage,
         business_flows=business_flows,
         impact_report=impact_report,
+        exploration_coverage=exploration_coverage,
     )
     html_path = output_dir / "report.html"
     html_path.write_text(report_html, encoding="utf-8")

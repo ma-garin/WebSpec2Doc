@@ -22,11 +22,11 @@
       "status": "implemented",
       "ui_files": ["templates/partials/view-generate.html", "static/js/execution.js", "static/js/results.js", "static/js/ui-states.js"],
       "route_files": ["web/routes/crawl.py"],
-      "core_files": ["src/crawler/page_crawler.py", "src/crawler/parallel_crawler.py", "src/crawler/politeness.py", "src/crawler/action_explorer.py"],
-      "symbols": ["crawl_site", "crawl_urls_parallel"],
+      "core_files": ["src/crawler/page_crawler.py", "src/crawler/parallel_crawler.py", "src/crawler/politeness.py", "src/crawler/action_explorer.py", "src/crawler/link_extractor.py"],
+      "symbols": ["crawl_site", "crawl_urls_parallel", "extract_links_all_scopes", "collect_embedded_frames"],
       "outputs": ["report.html", "report.json", "screenshots", "snapshot", "audit.jsonl"],
       "persistence": ["output/{domain}/", "output/{domain}/snapshots/"],
-      "failure_modes": ["login_wall_during_crawl", "restricted_url", "timeout", "cancel", "partial_checkpoint", "robots_disallowed", "rate_limit_backoff", "mutation_blocked"],
+      "failure_modes": ["login_wall_during_crawl", "restricted_url", "timeout", "cancel", "partial_checkpoint", "robots_disallowed", "rate_limit_backoff", "mutation_blocked", "cross_origin_iframe", "closed_shadow_root"],
       "required_tests": ["happy_path", "error_path", "cancel_path", "checkpoint_path", "evidence"]
     },
     {

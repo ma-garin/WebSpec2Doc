@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>DemoMart - Web Components 画面</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    my-modal-widget, my-form-field, my-closed-widget { display: block; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>DemoMart デモストア</h1>
+  </header>
+  <nav aria-label="メイン">
+    <a href="/index.html">トップ</a>
+    <a href="/products.html">商品一覧</a>
+  </nav>
+  <main>
+    <h2>Web Components 画面</h2>
+    <p>open shadow DOM・closed shadow DOM を含む画面の再現ページです。</p>
+
+    <section>
+      <h3>会員登録フォーム（フィールドは open shadow 内）</h3>
+      <form action="/register" method="post">
+        <label for="shadow-email">メールアドレス</label>
+        <my-form-field></my-form-field>
+        <button type="submit">登録</button>
+      </form>
+    </section>
+
+    <section>
+      <h3>ヘルプ（モーダルは open shadow 内）</h3>
+      <my-modal-widget></my-modal-widget>
+    </section>
+
+    <section>
+      <h3>ウィジェット枠（closed shadow・中身は非公開）</h3>
+      <my-closed-widget></my-closed-widget>
+    </section>
+  </main>
+
+  <script>
+    customElements.define('my-form-field', class extends HTMLElement {
+      connectedCallback() {
+        const root = this.attachShadow({ mode: 'open' });
+        root.innerHTML = '<input type="email" id="shadow-email" name="shadow-field" required>';
+      }
+    });
+
+    customElements.define('my-modal-widget', class extends HTMLElement {
+      connectedCallback() {
+        const root = this.attachShadow({ mode: 'open' });
+        root.innerHTML = `
+          <button type="button" id="open-help-modal" aria-haspopup="dialog">ヘルプを開く</button>
+          <div role="dialog" id="help-modal" aria-labelledby="help-title" hidden>
+            <h4 id="help-title">ヘルプ</h4>
+            <p>Web Components 画面のデモです。</p>
+            <button type="button" id="help-close">閉じる</button>
+          </div>
+        `;
+        const modal = root.getElementById('help-modal');
+        root.getElementById('open-help-modal').addEventListener('click', () => {
+          modal.hidden = false;
+        });
+        root.getElementById('help-close').addEventListener('click', () => {
+          modal.hidden = true;
+        });
+      }
+    });
+
+    customElements.define('my-closed-widget', class extends HTMLElement {
+      connectedCallback() {
+        const root = this.attachShadow({ mode: 'closed' });
+        root.innerHTML = '<p>この内容は closed shadow root のため外部から参照できません。</p>';
+      }
+    });
+  </script>
+</body>
+</html>

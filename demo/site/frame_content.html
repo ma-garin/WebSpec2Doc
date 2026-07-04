@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>DemoMart - フレーム内お問い合わせ</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <h2>フレーム内お問い合わせ</h2>
+    <p>この内容は legacy_frame.html に埋め込まれた同一オリジン iframe です。</p>
+    <a href="/products.html">商品一覧へ</a>
+    <section>
+      <form action="/submit" method="post">
+        <label for="frame-name">お名前<input type="text" id="frame-name" name="name" required></label>
+        <button type="submit">送信</button>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

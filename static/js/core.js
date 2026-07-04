@@ -25,6 +25,30 @@ const VIEW_HEADER = {
 };
 const escHtml = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
+// ---- 画面別URL（ブックマーク・共有・リロード対応）----
+const VIEW_PATHS = {
+  dashboard: '/',
+  generate: '/generate',
+  'qa-quality': '/qa-quality',
+  viewpoints: '/viewpoints',
+  'auto-run': '/auto-run',
+  'user-guide': '/user-guide',
+  settings: '/settings',
+};
+const PATH_VIEWS = { '/home': 'dashboard', '/dashboard': 'dashboard' };
+Object.entries(VIEW_PATHS).forEach(([name, path]) => { PATH_VIEWS[path] = name; });
+function _viewFromPath(pathname) {
+  return PATH_VIEWS[pathname] || null;
+}
+window.addEventListener('popstate', () => {
+  const m = location.hash.match(/^#report\/([^/]+)(?:\/([^/]+))?(?:\/([^/]+))?$/);
+  if (m && typeof openResultsForDomain === 'function') {
+    openResultsForDomain(decodeURIComponent(m[1]), m[2] && decodeURIComponent(m[2]), m[3] && decodeURIComponent(m[3]));
+    return;
+  }
+  switchView(_viewFromPath(location.pathname) || 'dashboard', { skipHistory: true });
+});
+
 // ---- ヘッダー（パンくず＋タイトル）----
 function setHeader(trail, title) {
   const bc = document.getElementById('topbar-breadcrumb');
@@ -39,12 +63,21 @@ function setHeader(trail, title) {
 
 // ---- ナビ切替 ----
 document.querySelectorAll('.app-nav-item[data-view]').forEach(btn => btn.addEventListener('click', () => switchView(btn.dataset.view)));
-function switchView(name) {
+function switchView(name, opts = {}) {
   document.body.classList.toggle('viewpoints-active', name === 'viewpoints');
   document.querySelectorAll('.app-nav-item[data-view]').forEach(b => b.classList.toggle('is-active', b.dataset.view === name));
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('is-active', v.id === 'view-' + name));
   const h = VIEW_HEADER[name];
   if (h) setHeader(h.trail, h.title);
+  if (!opts.skipHistory) {
+    const path = VIEW_PATHS[name] || '/';
+    // レポートのディープリンク（#report/...）は generate 画面滞在中のみ維持する。
+    const keepHash = (name === 'generate' && location.hash.startsWith('#report/')) ? location.hash : '';
+    const target = path + keepHash;
+    if (location.pathname + location.hash !== target) {
+      try { history.pushState({ view: name }, '', target); } catch (e) {}
+    }
+  }
   if (name === 'dashboard') {
     loadHistory();
     // ディープリンクのハッシュをクリア（レポートから戻った時のみ。初期化時は保持）
@@ -336,4 +369,12 @@ document.addEventListener('keydown', (e) => {
   } else if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === 'n' || e.key === 'N')) {
     e.preventDefault(); openAddSite();
   }
+});
+
+// ---- 起動時: URL（/settings 等）に対応する画面を復元する ----
+// レポートのディープリンク（#report/...）は recrawl.js 側の起動処理に委ねる。
+window.addEventListener('DOMContentLoaded', () => {
+  if (location.hash.startsWith('#report/')) return;
+  const name = _viewFromPath(location.pathname);
+  if (name) switchView(name, { skipHistory: true });
 });

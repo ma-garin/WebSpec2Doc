@@ -12,7 +12,7 @@ LLM出力は非決定性なので pass/fail の単体テストでは測れない
 | 役割 | ツール | 配置 |
 |---|---|---|
 | eval本体（回帰ゲート） | **DeepEval**（pytest-native, MIT） | `evals/` |
-| トレース・観測・データセットUI | **Langfuse セルフホスト**（MIT） | 任意のローカルサーバにDocker |
+| トレース・観測・データセットUI | **Langfuse セルフホスト**（MIT） | 任意のローカルサーバにPodman（Docker不使用） |
 | judgeモデル（業務） | **OpenAI API**（GPT-4o系。会社利用可） | eval/トレース評価 |
 | judgeモデル（個人PWA） | **Gemini無料枠** or ローカルOllama | 課金ゼロ運用 |
 

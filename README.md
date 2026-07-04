@@ -120,12 +120,37 @@ python src/main.py --url https://example.com --auth auth.json
 
 ---
 
-## 社内サーバへ展開（Docker）
+## 社内サーバへ展開（venv + systemd）
+
+> **コンテナは使用しない方針。** 従業員 1,000 人超の組織では Docker Desktop が有償ライセンス対象となるため、本プロジェクトは Docker への依存を持たない（Dockerfile・compose 定義は置かない）。
 
 ```bash
+# Python 3.12 の venv を作成し依存をインストール
+python3.12 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+.venv/bin/playwright install chromium --with-deps
+
 # 既定はローカルループバックのみ許可（外部からは 403）
 # 社内ネットワークから使う場合は許可ホストを明示的に指定する
-WEBSPEC2DOC_TRUSTED_HOSTS=webspec2doc.internal docker compose up --build
+WEBSPEC2DOC_TRUSTED_HOSTS=webspec2doc.internal .venv/bin/python app.py
+```
+
+常駐運用する場合は systemd サービスにする（例: `/etc/systemd/system/webspec2doc.service`）:
+
+```ini
+[Unit]
+Description=WebSpec2Doc
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/webspec2doc
+Environment=WEBSPEC2DOC_TRUSTED_HOSTS=webspec2doc.internal
+ExecStart=/opt/webspec2doc/.venv/bin/python app.py
+Restart=on-failure
+User=webspec2doc
+
+[Install]
+WantedBy=multi-user.target
 ```
 
 `WEBSPEC2DOC_TRUSTED_HOSTS` が未設定なら現行どおり localhost 限定で動作します。

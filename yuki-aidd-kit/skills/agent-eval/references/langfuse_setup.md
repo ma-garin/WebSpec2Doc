@@ -3,8 +3,8 @@
 Weave相当のトレース・観測・データセット・LLM-as-judge UI を自前運用する。MITライセンス・課金ゼロ。
 
 ## 前提
-- 任意の常時稼働ローカルサーバにDocker
-- Langfuse v3はPostgres + ClickHouse + Redis + MinIOを含む（docker-composeで一括起動）
+- 任意の常時稼働ローカルサーバにPodman + podman-compose（Docker/Docker Desktopは使用しない — 従業員1,000人超の組織ではDocker Desktopが有償ライセンス対象のため）
+- Langfuse v3はPostgres + ClickHouse + Redis + MinIOを含む（compose定義で一括起動）
 - 全コンテナのタイムゾーンはUTCで動かす（公式要件）
 
 ## セットアップ
@@ -20,7 +20,7 @@ ENCRYPTION_KEY=<openssl rand -hex 32 の出力>
 NEXTAUTH_URL=http://localhost:3000
 EOF
 
-docker compose up -d
+podman compose up -d
 # → http://localhost:3000 でUI。初回にプロジェクト作成しAPIキー取得
 ```
 

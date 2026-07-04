@@ -247,7 +247,7 @@ PoC 期間: 6ヶ月 → 本格展開: 18ヶ月後に達成
 
 - SAML / SCIM SSO（Okta・Azure AD）
 - 監査ログ（誰がいつ何をクロールしたか）
-- オンプレ / VPC 内デプロイ（Docker Compose / Helm chart）
+- オンプレ / VPC 内デプロイ（venv + systemd / Ansible 等の社内標準構成管理。コンテナ非依存）
 - SOC2 Type II 取得
 - ホワイトラベル（検証会社が自社ブランドで顧客提供）
 - SLA 99.9%

@@ -391,3 +391,48 @@ function updateTargetPreview() {
   }
   targetPreviewList.innerHTML = urls.map((u, i) => `<li><span>${i === 0 ? 'メイン' : '対象 ' + (i + 1)}</span><code>${escHtml(u)}</code></li>`).join('');
 }
+
+// ---- 参考文書アップロード（Doc Fusion）----
+let referenceDocPaths = [];
+
+function setReferenceDocStatus(msg, isError) {
+  const el = document.getElementById('reference-doc-status');
+  el.textContent = msg;
+  el.classList.toggle('input-field-message-error', !!(msg && isError));
+}
+
+function renderReferenceDocList() {
+  const list = document.getElementById('reference-doc-list');
+  list.innerHTML = referenceDocPaths.map((doc, i) =>
+    `<li><span>${escHtml(doc.name)}</span> <button type="button" class="btn-outline-sm reference-doc-remove-btn" data-idx="${i}">削除</button></li>`
+  ).join('');
+  list.querySelectorAll('.reference-doc-remove-btn').forEach(btn => btn.addEventListener('click', () => {
+    referenceDocPaths.splice(Number(btn.dataset.idx), 1);
+    renderReferenceDocList();
+  }));
+}
+
+document.getElementById('reference-doc-input').addEventListener('change', async (e) => {
+  const files = [...e.target.files];
+  e.target.value = '';
+  if (!files.length) return;
+  const domain = domainOf(urlInput.value.trim());
+  if (!domain) {
+    setReferenceDocStatus('先に対象URLを入力してください', true);
+    return;
+  }
+  const formData = new FormData();
+  formData.append('domain', domain);
+  files.forEach(f => formData.append('files', f));
+  setReferenceDocStatus('アップロード中…', false);
+  try {
+    const res = await fetch('/api/reference-docs', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || 'アップロードに失敗しました');
+    referenceDocPaths.push(...data.saved);
+    renderReferenceDocList();
+    setReferenceDocStatus('', false);
+  } catch (err) {
+    setReferenceDocStatus(err.message, true);
+  }
+});

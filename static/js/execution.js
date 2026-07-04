@@ -115,6 +115,7 @@ document.getElementById('form').addEventListener('submit', (e) => {
     compare: document.getElementById('compare').checked ? 'true' : 'false',
     auth: document.getElementById('auth-path').value.trim() || getSettings().auth || '',
     crawl_mode: 'crawl',
+    reference_docs: referenceDocPaths.map(d => d.path).join(','),
   });
   const label = urls.length > 1 ? `${urls[0]} ほか ${urls.length - 1}件` : urls[0];
   runWith(body.toString(), domainOf(urls[0]), label, urls.length);

@@ -66,6 +66,8 @@ def generate_heatmap_html(coverage: dict[str, Any]) -> str:
             + "</tr>"
         )
 
+    charters_html = _render_charters(coverage.get("charters"))
+
     unmatched_html = ""
     if unmatched:
         items = "".join(
@@ -160,7 +162,45 @@ code {{ background: transparent; border: 1px solid var(--line); border-radius: 4
 {"".join(rows)}
 </tbody>
 </table>
+{charters_html}
 {unmatched_html}
 </body>
 </html>
 """
+
+
+def _render_charters(charters: object) -> str:
+    """探索チャーター提案セクションを描画する（charters 未指定時は空文字）。"""
+    if not isinstance(charters, list) or not charters:
+        return ""
+    rows = []
+    for charter in charters:
+        if not isinstance(charter, dict):
+            continue
+        flows = charter.get("flows") or []
+        flow_text = "、".join(
+            f"{f.get('flow_name', '')}（{f.get('path_id', '')}）"
+            for f in flows
+            if isinstance(f, dict)
+        )
+        priority = str(charter.get("priority") or "")
+        priority_class = "warn" if priority == "高" else "ok"
+        rows.append(
+            "<tr>"
+            f"<td class=\"pid\">{html.escape(str(charter.get('page_id') or ''))}</td>"
+            f"<td>{html.escape(str(charter.get('title') or ''))}"
+            f"<span class=\"url\">{html.escape(str(charter.get('url') or ''))}</span></td>"
+            f"<td>{html.escape(str(charter.get('reason') or ''))}</td>"
+            f"<td>{html.escape(flow_text) if flow_text else '—'}</td>"
+            f'<td class="status {priority_class}">{html.escape(priority)}</td>'
+            "</tr>"
+        )
+    if not rows:
+        return ""
+    return (
+        "<section><h2>次の探索チャーター（提案）</h2>"
+        "<p>未探索画面のうち、ビジネスフロー通過画面を優先度「高」として提案します。</p>"
+        "<table><thead><tr><th>ID</th><th>画面</th><th>理由</th>"
+        "<th>根拠（フロー）</th><th>優先度</th></tr></thead>"
+        f"<tbody>{''.join(rows)}</tbody></table></section>"
+    )

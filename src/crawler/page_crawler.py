@@ -194,6 +194,21 @@ class SpaTransition:
 
 
 @dataclass(frozen=True)
+class EmbeddedFrame:
+    """ページ内 iframe・closed shadow root の記録。
+
+    readable=False は「検出したが読めない」ことを示す（evidence-only 原則:
+    無いことにせず、確認できなかった旨を明示する）。
+    src は iframe の場合は絶対 URL、closed shadow root の場合は
+    "shadow:<タグ名>" 形式。
+    """
+
+    src: str
+    readable: bool
+    note: str = ""
+
+
+@dataclass(frozen=True)
 class PageData:
     url: str
     title: str
@@ -209,6 +224,7 @@ class PageData:
     page_states: tuple[PageState, ...] = ()
     validation_observations: tuple[ValidationObservation, ...] = ()
     spa_transitions: tuple[SpaTransition, ...] = ()
+    embedded_frames: tuple[EmbeddedFrame, ...] = ()
 
 
 @contextmanager
@@ -533,12 +549,13 @@ def crawl_page(
     from analyzer.stack_detector import detect_stack
     from crawler.action_explorer import explore_page_actions, measure_required_validation
     from crawler.link_extractor import (
+        collect_embedded_frames,
         compute_state_signature,
         extract_a11y_issues,
-        extract_buttons,
+        extract_buttons_all_scopes,
         extract_forms_including_frames,
-        extract_headings,
-        extract_internal_links,
+        extract_headings_all_scopes,
+        extract_links_all_scopes,
         extract_page_title,
         has_password_field,
     )
@@ -572,13 +589,14 @@ def crawl_page(
         screenshot_path = _save_screenshot(page, output_dir, page_id)
         stack = detect_stack(page, response_headers)
         title = extract_page_title(page)
-        headings = tuple(extract_headings(page))
-        links = tuple(extract_internal_links(page, normalized_url))
+        headings = tuple(extract_headings_all_scopes(page, normalized_url))
+        links = tuple(extract_links_all_scopes(page, normalized_url))
         forms = _attach_screenshot_evidence(
-            tuple(extract_forms_including_frames(page)), screenshot_path
+            tuple(extract_forms_including_frames(page, normalized_url)), screenshot_path
         )
-        buttons = tuple(extract_buttons(page))
+        buttons = tuple(extract_buttons_all_scopes(page, normalized_url))
         a11y_issues = tuple(extract_a11y_issues(page))
+        embedded_frames = tuple(collect_embedded_frames(page, normalized_url))
         page_html = page.content()
         state_id = compute_state_signature(page_html)
         # DOM を変更する探索・実測は静的抽出の完了後に行う
@@ -604,6 +622,7 @@ def crawl_page(
         page_states=page_states,
         validation_observations=validation_observations,
         spa_transitions=spa_transitions,
+        embedded_frames=embedded_frames,
     )
 
 

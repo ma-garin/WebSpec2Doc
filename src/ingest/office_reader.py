@@ -46,6 +46,30 @@ def read_docx(path: Path) -> tuple[list[ExtractedTable], list[tuple[str, str]]]:
     return tables, headings
 
 
+def read_docx_body_lines(path: Path) -> list[tuple[str, str]]:
+    """Word 文書の全段落テキストを (location, text) のリストで返す（見出し限定なし）。
+
+    LLM 意味抽出（自由文からの業務ルール抽出等）向け。read_docx の
+    見出しのみの戻り値とは別経路で、既存の呼び出し契約を変えない。
+    """
+    with zipfile.ZipFile(path) as archive:
+        xml_bytes = archive.read("word/document.xml")
+    root = safe_fromstring(xml_bytes)
+    lines: list[tuple[str, str]] = []
+    body = root.find(f"{_W_NS}body")
+    if body is None:
+        return lines
+    paragraph_number = 0
+    for element in body:
+        if element.tag != f"{_W_NS}p":
+            continue
+        paragraph_number += 1
+        text = _docx_paragraph_text(element)
+        if text:
+            lines.append((f"paragraph {paragraph_number}", text))
+    return lines
+
+
 def _docx_paragraph_text(paragraph: ElementTree.Element) -> str:
     return "".join(node.text or "" for node in paragraph.iter(f"{_W_NS}t")).strip()
 

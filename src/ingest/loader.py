@@ -13,13 +13,15 @@ from typing import TYPE_CHECKING
 
 from ingest.data_reader import read_structured_data
 from ingest.excel_reader import read_excel_tables
-from ingest.models import DocumentBundle, DocumentedField, DocumentedScreen
-from ingest.office_reader import read_docx, read_pptx_lines
+from ingest.llm_extractor import extract_semantics
+from ingest.models import DocumentBundle, DocumentedField, DocumentedRule, DocumentedScreen
+from ingest.office_reader import read_docx, read_docx_body_lines, read_pptx_lines
 from ingest.tables import screens_from_lines, structure_table
 from ingest.text_reader import read_markdown, read_pdf_lines, read_plain_text_lines
 
 if TYPE_CHECKING:
     from ingest.tables import ExtractedTable
+    from llm.provider import LLMProvider
 
 logger = logging.getLogger(__name__)
 
@@ -38,17 +40,32 @@ SUPPORTED_SUFFIXES = (
 _LEGACY_SUFFIXES = (".xls", ".doc", ".ppt")
 
 
-def load_reference_documents(paths: list[Path]) -> DocumentBundle:
-    """参考文書一式を読み込み、正規化された DocumentBundle を返す。"""
+def load_reference_documents(
+    paths: list[Path], use_llm: bool = False, api_key: str = ""
+) -> DocumentBundle:
+    """参考文書一式を読み込み、正規化された DocumentBundle を返す。
+
+    use_llm=True の場合、自由文形式（pdf/pptx/txt/docx 本文）から
+    LLM で画面・項目・業務ルールを追加抽出する（表由来の抽出は不変）。
+    api_key が空、または LLM 呼び出しが失敗した場合は Phase 1 抽出のみで
+    完走する（AC-4/AC-5）。
+    """
     screens: list[DocumentedScreen] = []
     fields: list[DocumentedField] = []
+    rules: list[DocumentedRule] = []
     source_files: list[str] = []
+    provider = _build_provider(use_llm, api_key) if use_llm else None
     for path in paths:
         if not path.exists():
             raise FileNotFoundError(f"参考文書が見つかりません: {path}")
         doc_screens, doc_fields = _load_one(path)
         screens.extend(doc_screens)
         fields.extend(doc_fields)
+        if provider is not None:
+            llm_screens, llm_fields, llm_rules = _load_llm_semantics(path, doc_screens, provider)
+            screens.extend(llm_screens)
+            fields.extend(llm_fields)
+            rules.extend(llm_rules)
         source_files.append(path.name)
         logger.info(
             "参考文書を取り込みました: %s（画面 %d 件・項目 %d 件）",
@@ -57,8 +74,47 @@ def load_reference_documents(paths: list[Path]) -> DocumentBundle:
             len(doc_fields),
         )
     return DocumentBundle(
-        screens=tuple(screens), fields=tuple(fields), source_files=tuple(source_files)
+        screens=tuple(screens),
+        fields=tuple(fields),
+        source_files=tuple(source_files),
+        rules=tuple(rules),
     )
+
+
+def _build_provider(use_llm: bool, api_key: str) -> LLMProvider:
+    from llm.provider import OpenAIProvider, RulesProvider
+
+    if not use_llm or not api_key:
+        return RulesProvider()
+    return OpenAIProvider(api_key)
+
+
+def _free_text_lines(path: Path) -> list[tuple[str, str]] | None:
+    """LLM 抽出向けの自由文行を返す（表構造中心の形式は None）。"""
+    suffix = path.suffix.lower()
+    if suffix == ".pdf":
+        return read_pdf_lines(path)
+    if suffix == ".pptx":
+        return read_pptx_lines(path)
+    if suffix == ".txt":
+        return read_plain_text_lines(path)
+    if suffix == ".docx":
+        return read_docx_body_lines(path)
+    return None
+
+
+def _load_llm_semantics(
+    path: Path, table_screens: list[DocumentedScreen], provider: LLMProvider
+) -> tuple[list[DocumentedScreen], list[DocumentedField], list[DocumentedRule]]:
+    lines = _free_text_lines(path)
+    if lines is None:
+        return [], [], []
+    known_screens = {s.name for s in table_screens}
+    llm_screens, llm_fields, llm_rules = extract_semantics(
+        lines, path.name, provider, known_screens=known_screens
+    )
+    llm_screens = _dedup_screens(llm_screens, table_screens)
+    return llm_screens, llm_fields, llm_rules
 
 
 def _load_one(path: Path) -> tuple[list[DocumentedScreen], list[DocumentedField]]:

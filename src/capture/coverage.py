@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
-from capture.session_recorder import SESSIONS_DIR_NAME
+from capture.session_recorder import SESSIONS_DIR_NAME, normalize_footprint_path
 
 
 def load_session_events(output_dir: Path) -> list[dict[str, Any]]:
@@ -43,9 +43,15 @@ def _screen_path(screen: dict[str, Any]) -> str:
 
 
 def compute_exploration_coverage(
-    report: dict[str, Any], events: list[dict[str, Any]]
+    report: dict[str, Any],
+    events: list[dict[str, Any]],
+    business_flows: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    """インベントリと足跡から探索カバレッジを計算する。"""
+    """インベントリと足跡から探索カバレッジを計算する。
+
+    business_flows 指定時のみ戻り値に "charters"（探索チャーター提案）を
+    追加する（オプトイン。既存 3 キーのスキーマは不変）。
+    """
     screens: list[dict[str, Any]] = list(report.get("screens") or [])
     path_index: dict[str, list[dict[str, Any]]] = {}
     for screen in screens:
@@ -120,7 +126,7 @@ def compute_exploration_coverage(
         )
 
     total = len(screens)
-    return {
+    result: dict[str, Any] = {
         "summary": {
             "total_screens": total,
             "explored_screens": visited_count,
@@ -135,6 +141,52 @@ def compute_exploration_coverage(
             {"path": path, "visits": count} for path, count in sorted(unmatched_paths.items())
         ],
     }
+    if business_flows is not None:
+        result["charters"] = propose_charters(result, business_flows)
+    return result
+
+
+def propose_charters(
+    coverage: dict[str, Any], business_flows: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """未探索画面とビジネスフロー（priority 高）通過画面の積集合からチャーター案を返す。
+
+    照合キーは normalize_footprint_path（CONVENTIONS §1-3: 独自ハッシュ禁止）。
+    flow の nodes には状態ノード（STATE_NODE_SEPARATOR 付き）が混ざり得るため
+    URL 部分のみ取り出してから正規化する。
+    並び順: フロー通過の未探索 → その他未探索（page_id 昇順）。
+    """
+    from graph.transition_graph import STATE_NODE_SEPARATOR
+
+    flow_index: dict[str, list[dict[str, str]]] = {}
+    for flow in business_flows:
+        flow_name = str(flow.get("flow_name") or "")
+        path_id = str(flow.get("path_id") or "")
+        for node in flow.get("nodes") or []:
+            node_url = str(node).split(STATE_NODE_SEPARATOR, 1)[0]
+            path = normalize_footprint_path(node_url)
+            flow_index.setdefault(path, []).append({"flow_name": flow_name, "path_id": path_id})
+
+    flow_matched: list[dict[str, Any]] = []
+    others: list[dict[str, Any]] = []
+    for screen in coverage.get("screens") or []:
+        if screen.get("explored"):
+            continue
+        path = normalize_footprint_path(str(screen.get("url") or ""))
+        matches = flow_index.get(path)
+        entry = {
+            "page_id": str(screen.get("page_id") or ""),
+            "url": str(screen.get("url") or ""),
+            "title": str(screen.get("title") or ""),
+            "reason": "未探索 × ビジネスフロー通過画面" if matches else "未探索",
+            "flows": matches or [],
+            "priority": "高" if matches else "中",
+        }
+        (flow_matched if matches else others).append(entry)
+
+    flow_matched.sort(key=lambda e: e["page_id"])
+    others.sort(key=lambda e: e["page_id"])
+    return flow_matched + others
 
 
 def save_exploration_coverage(coverage: dict[str, Any], output_dir: Path) -> None:

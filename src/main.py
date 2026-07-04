@@ -26,6 +26,7 @@ from crawler.page_crawler import (
     crawl_site,
     crawl_urls,
     discover_pages,
+    evidence_to_dict,
 )
 from crawler.session_guard import SessionExpiredError
 from diff.differ import compute_diff
@@ -160,6 +161,23 @@ def parse_args() -> argparse.Namespace:
             "セッションから exploration_heatmap.html 等を生成する"
         ),
     )
+    parser.add_argument(
+        "--reverse-assets",
+        action="store_true",
+        help=(
+            "リバース生成モード: クロール済み report.json と記録済みセッションから"
+            "テストケース・記録フロー（recorded_assets.json / recorded_candidates.json）を"
+            "逆生成する"
+        ),
+    )
+    parser.add_argument(
+        "--doc-llm",
+        action="store_true",
+        help=(
+            "--reference-doc の自由文形式（pdf/pptx/txt/docx 本文）から LLM で"
+            "画面・項目・業務ルールを追加抽出する（既定 OFF。OPENAI_API_KEY 必須）"
+        ),
+    )
     return parser.parse_args()
 
 
@@ -186,6 +204,9 @@ def run(args: argparse.Namespace) -> None:
         return
     if bool(getattr(args, "exploration_coverage", False)):
         _exploration_coverage(args)
+        return
+    if bool(getattr(args, "reverse_assets", False)):
+        _reverse_assets(args)
         return
     _run_crawl(args, auth_path)
 
@@ -235,7 +256,8 @@ def _exploration_coverage(args: argparse.Namespace) -> None:
         logger.error("探索セッションがありません（先に --record-session で操作を記録してください）")
         return
     report = json.loads(report_path.read_text(encoding="utf-8"))
-    coverage = compute_exploration_coverage(report, events)
+    business_flows = report.get("meta", {}).get("business_flows")
+    coverage = compute_exploration_coverage(report, events, business_flows=business_flows)
     save_exploration_coverage(coverage, output_dir)
     summary = coverage["summary"]
     logger.info(
@@ -245,6 +267,38 @@ def _exploration_coverage(args: argparse.Namespace) -> None:
         summary["coverage_ratio"] * 100,
         summary["touched_states"],
         summary["total_states"],
+    )
+
+
+def _reverse_assets(args: argparse.Namespace) -> None:
+    """リバース生成モード（キャプチャ Phase 2）。"""
+    from capture.coverage import load_session_events
+    from capture.reverse_generator import generate_recorded_assets, save_recorded_assets
+
+    url = str(args.url or "")
+    if not url:
+        logger.error("--reverse-assets には --url が必要です")
+        return
+    output_dir = Path(args.output) / _domain_name(url)
+    report_path = output_dir / JSON_REPORT_FILE_NAME
+    if not report_path.exists():
+        logger.error(
+            "クロール済みインベントリがありません: %s（先に --format json でクロールしてください）",
+            report_path,
+        )
+        return
+    events = load_session_events(output_dir)
+    if not events:
+        logger.error("探索セッションがありません（先に --record-session で操作を記録してください）")
+        return
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assets = generate_recorded_assets(report, events)
+    save_recorded_assets(assets, output_dir)
+    logger.info(
+        "リバース生成が完了しました: テストケース %d 件・記録フロー %d 件"
+        "（recorded_assets.json / recorded_candidates.json）",
+        len(assets["test_cases"]),
+        len(assets["flows"]),
     )
 
 
@@ -315,9 +369,13 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
     impact_report = None
     if bool(getattr(args, "compare", False)) and prior_snapshot is not None:
         impact_report = _compute_impact_report(prior_snapshot, analyzed_pages, output_dir)
-    official_names = _run_doc_fusion(
-        analyzed_pages, getattr(args, "reference_doc", None), output_dir
+    official_names, rule_conditions = _run_doc_fusion(
+        analyzed_pages,
+        getattr(args, "reference_doc", None),
+        output_dir,
+        use_llm=bool(getattr(args, "doc_llm", False)),
     )
+    exploration_coverage = _load_exploration_coverage(output_dir)
     save_outputs(
         analyzed_pages,
         graph,
@@ -331,6 +389,8 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
         business_flows=business_flows,
         impact_report=impact_report,
         official_names=official_names,
+        exploration_coverage=exploration_coverage,
+        rule_conditions=rule_conditions,
     )
     if _STOP_REQUESTED.is_set():
         partial = save_partial_snapshot(pages, output_dir, finalized=True)
@@ -645,23 +705,27 @@ def _run_doc_fusion(
     pages: list[AnalyzedPage],
     reference_docs: list[Path] | None,
     output_dir: Path,
-) -> dict[str, str] | None:
-    """参考文書があれば実測結果と突合し、正式画面名マップを返す。
+    use_llm: bool = False,
+) -> tuple[dict[str, str] | None, dict[tuple[str, str], tuple] | None]:
+    """参考文書があれば実測結果と突合し、(正式画面名マップ, 文書由来ルール条件) を返す。
 
     突合結果は doc_fusion.json / doc_fusion.md として出力する。
     文書の取り込み失敗はクロール成果を無駄にしないため警告に留める。
+    use_llm=True かつ OPENAI_API_KEY 未設定の場合は Phase 1 抽出のみで継続する。
     """
     if not reference_docs:
-        return None
+        return None, None
+    from analyzer.rule_injector import build_rule_conditions
     from generator.fusion_reporter import save_fusion_outputs
     from ingest.loader import load_reference_documents
     from ingest.matcher import fuse
 
+    api_key = os.environ.get("OPENAI_API_KEY", "") if use_llm else ""
     try:
-        bundle = load_reference_documents(list(reference_docs))
+        bundle = load_reference_documents(list(reference_docs), use_llm=use_llm, api_key=api_key)
     except (FileNotFoundError, ValueError) as exc:
         logger.warning("参考文書の取り込みに失敗しました（突合をスキップ）: %s", exc)
-        return None
+        return None, None
     result = fuse(pages, bundle)
     save_fusion_outputs(result, bundle, output_dir)
     logger.info(
@@ -669,7 +733,24 @@ def _run_doc_fusion(
         len(result.screen_matches),
         len(result.field_gaps),
     )
-    return result.official_names or None
+    rule_conditions = build_rule_conditions(result, bundle, pages) if bundle.rules else None
+    return result.official_names or None, rule_conditions or None
+
+
+def _load_exploration_coverage(output_dir: Path) -> dict[str, object] | None:
+    """既存の exploration_coverage.json を読み込む（無ければ None）。
+
+    破損 JSON は report.html を従来出力へフォールバックさせるため、
+    警告に留めて None を返す。
+    """
+    path = output_dir / "exploration_coverage.json"
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning("探索カバレッジの読込に失敗しました（セクション省略）: %s", exc)
+        return None
 
 
 def save_outputs(
@@ -686,6 +767,8 @@ def save_outputs(
     business_flows: list[dict] | None = None,
     impact_report: dict | None = None,
     official_names: dict[str, str] | None = None,
+    exploration_coverage: dict[str, object] | None = None,
+    rule_conditions: dict[tuple[str, str], tuple] | None = None,
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     target_url = pages[0].page_data.url if pages else ""
@@ -706,6 +789,7 @@ def save_outputs(
             transition_coverage=transition_coverage,
             business_flows=business_flows,
             impact_report=impact_report,
+            exploration_coverage=exploration_coverage,
         )
     if "json" in formats:
         _save_json_output(
@@ -719,9 +803,10 @@ def save_outputs(
             transition_coverage=transition_coverage,
             business_flows=business_flows,
             official_names=official_names,
+            rule_conditions=rule_conditions,
         )
     if "excel" in formats:
-        _save_excel_output(output_dir, pages, form_summary)
+        _save_excel_output(output_dir, pages, form_summary, official_names)
     if llm_insights is not None:
         logger.warning("llm_insights は現在保存対象外です")
 
@@ -768,6 +853,7 @@ def _save_html_outputs(
     transition_coverage: dict[str, dict] | None = None,
     business_flows: list[dict] | None = None,
     impact_report: dict | None = None,
+    exploration_coverage: dict[str, object] | None = None,
 ) -> None:
     from generator.html_reporter import generate_html_report
 
@@ -785,6 +871,7 @@ def _save_html_outputs(
         transition_coverage=transition_coverage,
         business_flows=business_flows,
         impact_report=impact_report,
+        exploration_coverage=exploration_coverage,
     )
     html_path = output_dir / "report.html"
     html_path.write_text(report_html, encoding="utf-8")
@@ -805,6 +892,7 @@ def _save_json_output(
     transition_coverage: dict[str, dict] | None = None,
     business_flows: list[dict] | None = None,
     official_names: dict[str, str] | None = None,
+    rule_conditions: dict[tuple[str, str], tuple] | None = None,
 ) -> None:
     from generator.json_reporter import generate_json_report
 
@@ -818,6 +906,7 @@ def _save_json_output(
         transition_coverage=transition_coverage,
         business_flows=business_flows,
         official_names=official_names,
+        rule_conditions=rule_conditions,
     )
     (output_dir / JSON_REPORT_FILE_NAME).write_text(report_json, encoding="utf-8")
 
@@ -841,6 +930,7 @@ def _save_excel_output(
     output_dir: Path,
     pages: list[AnalyzedPage],
     form_summary: list[dict[str, object]],
+    official_names: dict[str, str] | None = None,
 ) -> None:
     wb = openpyxl.Workbook()
 
@@ -849,6 +939,12 @@ def _save_excel_output(
 
     forms_sheet = wb.create_sheet("Forms")
     _write_forms_sheet(forms_sheet, form_summary)
+
+    field_def_sheet = wb.create_sheet("項目定義書")
+    _write_field_definitions_sheet(field_def_sheet, pages, official_names)
+
+    bva_sheet = wb.create_sheet("境界値データ")
+    _write_bva_sheet(bva_sheet, pages)
 
     wb.save(output_dir / XLSX_FILE_NAME)
 
@@ -881,6 +977,94 @@ def _write_forms_sheet(
                 item.get("confidence", ""),
             ]
         )
+
+
+def _write_field_definitions_sheet(
+    ws: openpyxl.worksheet.worksheet.Worksheet,
+    pages: list[AnalyzedPage],
+    official_names: dict[str, str] | None = None,
+) -> None:
+    """実測フィールド属性を SIer 標準の「項目定義書」形式で出力する。"""
+    ws.append(
+        [
+            "画面名",
+            "画面ID",
+            "URL",
+            "項目名",
+            "ラベル",
+            "型",
+            "必須",
+            "最小桁",
+            "最大桁",
+            "範囲",
+            "入力規則",
+            "選択肢",
+            "初期値",
+            "placeholder",
+            "根拠",
+            "確信度",
+        ]
+    )
+    names = official_names or {}
+    for page in pages:
+        screen_name = names.get(page.page_id) or page.page_data.title
+        for form in page.page_data.forms:
+            for field in form.fields:
+                range_text = (
+                    f"{field.min_value}〜{field.max_value}"
+                    if (field.min_value or field.max_value)
+                    else ""
+                )
+                ws.append(
+                    [
+                        screen_name,
+                        page.page_id,
+                        page.page_data.url,
+                        field.name,
+                        field.aria_label or "未確認",
+                        field.field_type,
+                        field.required,
+                        field.minlength if field.minlength is not None else "",
+                        field.maxlength if field.maxlength is not None else "",
+                        range_text,
+                        field.pattern,
+                        "、".join(field.options),
+                        field.default,
+                        field.placeholder,
+                        _evidence_cell(evidence_to_dict(field.evidence)),
+                        field.confidence,
+                    ]
+                )
+
+
+def _write_bva_sheet(ws: openpyxl.worksheet.worksheet.Worksheet, pages: list[AnalyzedPage]) -> None:
+    """実測属性から機械導出した境界値データを出力する。"""
+    from analyzer.bva import KIND_LABELS, attach_observed_boundary_cases, derive_boundary_cases
+
+    ws.append(
+        ["画面ID", "項目名", "観点", "入力値", "期待結果", "根拠属性", "根拠セレクタ", "確信度"]
+    )
+    for page in pages:
+        observations = list(page.page_data.validation_observations)
+        for form in page.page_data.forms:
+            for field in form.fields:
+                cases = attach_observed_boundary_cases(
+                    derive_boundary_cases(field), field, observations
+                )
+                for case in cases:
+                    value = case.value if case.generated else "（例生成不能 — 手動作成要）"
+                    ws.append(
+                        [
+                            page.page_id,
+                            case.field_name,
+                            KIND_LABELS.get(case.kind, case.kind),
+                            value,
+                            case.expected,
+                            case.source_attribute,
+                            _evidence_cell(evidence_to_dict(case.evidence)),
+                            case.confidence,
+                        ]
+                    )
 
 
 def _evidence_cell(evidence: object) -> str:

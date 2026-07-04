@@ -77,6 +77,12 @@ class TestValueParsing:
         assert parse_max_length("20") == 20
         assert parse_max_length("全角20") == 20
         assert parse_max_length("100桁") == 100
+
+    def test_max_length_comma_separated(self) -> None:
+        """3桁区切りのカンマ（"9,999"）は先頭桁のみでなく全体を数値として扱う。"""
+        assert parse_max_length("9,999") == 9999
+        assert parse_max_length("上限9,999円") == 9999
+        assert parse_max_length("1,000,000") == 1000000
         assert parse_max_length("なし") is None
 
 

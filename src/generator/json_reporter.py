@@ -8,6 +8,7 @@ import networkx as nx
 from analyzer.canonicalizer import CanonicalInfo, group_canonical_screens
 from analyzer.html_analyzer import AnalyzedPage
 from analyzer.test_conditions import (
+    TestCondition,
     attach_observed_validation,
     derive_conditions,
     derive_conditions_with_evidence,
@@ -20,6 +21,9 @@ from crawler.page_crawler import (
     ValidationObservation,
     evidence_to_dict,
 )
+from ingest.models import document_evidence_to_dict
+
+RuleConditions = dict[tuple[str, str], tuple[TestCondition, ...]]
 
 JSON_INDENT = 2
 _PII_KEYWORDS: frozenset[str] = frozenset(
@@ -37,11 +41,13 @@ def generate_json_report(
     transition_coverage: dict | None = None,
     business_flows: list[dict] | None = None,
     official_names: dict[str, str] | None = None,
+    rule_conditions: RuleConditions | None = None,
 ) -> str:
     """Serialize crawl results and derived test conditions to structured JSON."""
     canonical_screens = group_canonical_screens(pages)
     screens_data = [
-        _screen_dict(p, graph, canonical_screens[p.page_id], official_names) for p in pages
+        _screen_dict(p, graph, canonical_screens[p.page_id], official_names, rule_conditions)
+        for p in pages
     ]
     screens_canonical = json.dumps(screens_data, ensure_ascii=False, sort_keys=True)
     report_hash = hashlib.sha256(screens_canonical.encode("utf-8")).hexdigest()
@@ -74,6 +80,7 @@ def _screen_dict(
     graph: nx.DiGraph,
     canonical: CanonicalInfo,
     official_names: dict[str, str] | None = None,
+    rule_conditions: RuleConditions | None = None,
 ) -> dict:
     pd = page.page_data
     pid = page.page_id
@@ -84,7 +91,7 @@ def _screen_dict(
         "title": pd.title,
         "headings": list(pd.headings),
         "buttons": list(pd.buttons),
-        "forms": [_form_dict(f, observations) for f in pd.forms],
+        "forms": [_form_dict(f, observations, pid, rule_conditions) for f in pd.forms],
         "transitions": {
             "to": [s for s in graph.successors(pid) if s != pid],
             "from": [p for p in graph.predecessors(pid) if p != pid],
@@ -115,21 +122,64 @@ def _screen_dict(
     official = (official_names or {}).get(pid, "")
     if official:
         screen["official_name"] = official
+    # iframe・closed shadow root が検出された画面にのみ付与する
+    # （検出なし時は既存のレポート構造・report_hash を変えない）
+    if pd.embedded_frames:
+        screen["embedded_frames"] = [
+            {"src": ef.src, "readable": ef.readable, "note": ef.note} for ef in pd.embedded_frames
+        ]
+    # 文書由来ルールのうちフィールドに紐づかない画面レベル条件（フォームなし画面でも保持）
+    page_level = (rule_conditions or {}).get((pid, ""))
+    if page_level:
+        screen["document_conditions"] = [_rule_condition_dict(c) for c in page_level]
     return screen
 
 
-def _form_dict(form: FormData, observations: list[ValidationObservation] | None = None) -> dict:
+def _form_dict(
+    form: FormData,
+    observations: list[ValidationObservation] | None = None,
+    page_id: str = "",
+    rule_conditions: RuleConditions | None = None,
+) -> dict:
     return {
         "action": form.action,
         "method": form.method,
-        "fields": [_field_dict(f, observations) for f in form.fields],
+        "fields": [_field_dict(f, observations, page_id, rule_conditions) for f in form.fields],
+    }
+
+
+def _rule_condition_dict(condition: TestCondition) -> dict:
+    return {
+        "description": condition.description,
+        "source": condition.source,
+        "confidence": condition.confidence,
+        "evidence": evidence_to_dict(condition.evidence),
+        "observed_result": condition.observed_result,
+        "doc_evidence": document_evidence_to_dict(condition.doc_evidence),
     }
 
 
 def _field_dict(
     field: FieldData,
     observations: list[ValidationObservation] | None = None,
+    page_id: str = "",
+    rule_conditions: RuleConditions | None = None,
 ) -> dict:
+    conditions_detail = [
+        {
+            "description": condition.description,
+            "source": condition.source,
+            "confidence": condition.confidence,
+            "evidence": evidence_to_dict(condition.evidence),
+            "observed_result": condition.observed_result,
+        }
+        for condition in attach_observed_validation(
+            derive_conditions_with_evidence(field), field, observations or []
+        )
+    ]
+    conditions_detail.extend(
+        _rule_condition_dict(c) for c in (rule_conditions or {}).get((page_id, field.name), ())
+    )
     return {
         "name": field.name,
         "element_id": field.element_id,
@@ -145,18 +195,7 @@ def _field_dict(
         "options": list(field.options),
         "locators": _locator_candidates(field),
         "test_conditions": list(derive_conditions(field)),
-        "test_conditions_detail": [
-            {
-                "description": condition.description,
-                "source": condition.source,
-                "confidence": condition.confidence,
-                "evidence": evidence_to_dict(condition.evidence),
-                "observed_result": condition.observed_result,
-            }
-            for condition in attach_observed_validation(
-                derive_conditions_with_evidence(field), field, observations or []
-            )
-        ],
+        "test_conditions_detail": conditions_detail,
         "aria_label": field.aria_label,
         "aria_required": field.aria_required,
         "role": field.role,

@@ -9,6 +9,7 @@ from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import Page
 
 from crawler.page_crawler import (
+    EmbeddedFrame,
     FieldData,
     FormData,
     SourceEvidence,
@@ -154,18 +155,21 @@ def _frame_to_forms(frame: Any) -> list[FormData]:
     return [_to_form_data(raw_form) for raw_form in raw_forms]
 
 
-def extract_forms_including_frames(page: Page) -> list[FormData]:
-    """メインフレームおよびすべての子 iframe から FormData を収集する。
+def extract_forms_including_frames(page: Page, base_url: str | None = None) -> list[FormData]:
+    """メインフレームおよび同一オリジン iframe から FormData を収集する。
 
-    iframe は同一オリジンのみ対象（クロスオリジン iframe はアクセス不可のためスキップ）。
+    base_url を指定すると同一オリジン iframe のみを対象にする。クロスオリジン
+    iframe は Playwright の CDP 経由では例外を出さずに読めてしまうことが
+    実測で確認できているが、対象サイト自身が配信する内容のみを仕様として
+    扱う方針のため、オリジン比較で明示的に除外する（§8 参照）。
+    base_url 省略時は後方互換のため全 frame を試行する（既存呼び出し元向け）。
     重複 action を除去して返す。
     """
     all_forms: list[FormData] = extract_forms(page)
     seen_actions: set[str] = {f.action for f in all_forms}
 
-    for frame in page.frames:
-        if frame == page.main_frame:
-            continue
+    frames = _same_origin_child_frames(page, base_url) if base_url else _iter_child_frames(page)
+    for frame in frames:
         try:
             frame_forms = _frame_to_forms(frame)
         except PlaywrightError as exc:
@@ -177,6 +181,168 @@ def extract_forms_including_frames(page: Page) -> list[FormData]:
                 seen_actions.add(form.action)
 
     return all_forms
+
+
+def _iter_child_frames(page: Page) -> list[Any]:
+    """メインフレーム以外の子 iframe（page.frames）を返す。"""
+    return [frame for frame in page.frames if frame != page.main_frame]
+
+
+def _is_same_origin_frame(frame_url: str, base_url: str) -> bool:
+    """iframe が対象サイトと同一オリジンか判定する。
+
+    about:blank / about:srcdoc は親ページと同一のセキュリティコンテキストを
+    継承するため同一オリジン扱いとする。
+    """
+    if not frame_url or frame_url.startswith("about:"):
+        return True
+    return is_internal_link(base_url, frame_url)
+
+
+def _same_origin_child_frames(page: Page, base_url: str) -> list[Any]:
+    """メインフレーム以外の同一オリジン iframe のみを返す（クロスオリジンは除外）。
+
+    Playwright は CDP 経由でクロスオリジン iframe の内容も技術的には読める
+    （frame.evaluate / eval_on_selector_all は例外を出さない）。本関数は
+    「対象サイト自身が配信する内容のみを仕様として扱う」というポリシー上の
+    境界であり、技術的な読み取り可否の制約ではない。
+    """
+    return [
+        frame
+        for frame in _iter_child_frames(page)
+        if _is_same_origin_frame(frame.url or "", base_url)
+    ]
+
+
+def extract_links_all_scopes(page: Page, base_url: str) -> list[str]:
+    """メインフレームおよび同一オリジン iframe からリンクを収集する（重複除去）。
+
+    リンクのセレクタマッチング自体は open shadow root を貫通するため
+    （Playwright のセレクタエンジンによる。§8 参照）、shadow 内のリンクは
+    メインフレーム分ですでに収集済みである。ここでは iframe 境界のみを跨ぐ。
+    """
+    all_links: list[str] = list(extract_internal_links(page, base_url))
+    seen: set[str] = set(all_links)
+    for frame in _same_origin_child_frames(page, base_url):
+        try:
+            hrefs = cast(
+                list[str],
+                frame.eval_on_selector_all("a[href]", "(els) => els.map((a) => a.href)"),
+            )
+        except Exception as exc:
+            logger.warning("iframe のリンク抽出をスキップしました: %s", exc)
+            continue
+        for href in hrefs:
+            if not href or not is_internal_link(base_url, href):
+                continue
+            normalized = normalize_url(href)
+            if normalized not in seen:
+                seen.add(normalized)
+                all_links.append(normalized)
+    return all_links
+
+
+def extract_headings_all_scopes(page: Page, base_url: str) -> list[str]:
+    """メインフレームおよび同一オリジン iframe から見出しを収集する。"""
+    all_headings: list[str] = list(extract_headings(page))
+    for frame in _same_origin_child_frames(page, base_url):
+        try:
+            values = cast(
+                list[str],
+                frame.eval_on_selector_all(
+                    "h1, h2, h3",
+                    "(els) => els.map((el) => (el.innerText || '').trim()).filter(Boolean)",
+                ),
+            )
+        except Exception as exc:
+            logger.warning("iframe の見出し抽出をスキップしました: %s", exc)
+            continue
+        all_headings.extend(values)
+    return all_headings
+
+
+def extract_buttons_all_scopes(page: Page, base_url: str) -> list[str]:
+    """メインフレームおよび同一オリジン iframe からボタン文言を収集する（重複除去）。"""
+    all_buttons: list[str] = list(extract_buttons(page))
+    seen: set[str] = set(all_buttons)
+    for frame in _same_origin_child_frames(page, base_url):
+        try:
+            values = cast(list[str], frame.eval_on_selector_all(_BUTTON_SELECTOR, _BUTTON_SCRIPT))
+        except Exception as exc:
+            logger.warning("iframe のボタン抽出をスキップしました: %s", exc)
+            continue
+        for value in values:
+            if value and value not in seen:
+                seen.add(value)
+                all_buttons.append(value)
+    return all_buttons
+
+
+_CLOSED_SHADOW_SCAN_JS = """
+() => {
+  const hosts = new Set();
+  const scan = (root) => {
+    root.querySelectorAll('*').forEach((el) => {
+      if (el.shadowRoot) {
+        scan(el.shadowRoot);
+      } else if (
+        el.tagName &&
+        el.tagName.includes('-') &&
+        el.childElementCount === 0 &&
+        !(el.textContent || '').trim()
+      ) {
+        hosts.add(el.tagName.toLowerCase());
+      }
+    });
+  };
+  scan(document);
+  return Array.from(hosts);
+}
+"""
+
+
+def _detect_closed_shadow_hosts(page: Page) -> list[str]:
+    """closed shadow root を持つ可能性のあるカスタム要素のタグ名を検出する。
+
+    closed shadow root は外部から中身を一切参照できないため、正確な判定は
+    不可能。ここでは「カスタム要素タグ・光 DOM 上の子要素なし・テキストなし」
+    というヒューリスティックで近似する（過検出よりも取りこぼしを許容し、
+    呼び出し側では常に「の可能性」として記録し断定しない）。
+    """
+    try:
+        raw = page.evaluate(_CLOSED_SHADOW_SCAN_JS)
+    except Exception as exc:
+        logger.debug("closed shadow root の検出に失敗しました: %s", exc)
+        return []
+    if not isinstance(raw, list):
+        return []
+    return [str(item) for item in raw]
+
+
+def collect_embedded_frames(page: Page, base_url: str) -> list[EmbeddedFrame]:
+    """ページ内の iframe・closed shadow root の可能性がある要素を記録する。
+
+    iframe は同一オリジンなら readable=True、クロスオリジンなら readable=False
+    （クロスオリジンのため未読）とする。オリジン判定は URL 比較で行う
+    （frame.evaluate はクロスオリジンでも例外を出さず成功するため使えない。
+    §8 参照）。closed shadow root は常に readable=False とする。
+    """
+    embedded: list[EmbeddedFrame] = []
+    for frame in _iter_child_frames(page):
+        src = frame.url or ""
+        if _is_same_origin_frame(src, base_url):
+            embedded.append(EmbeddedFrame(src=src, readable=True))
+        else:
+            embedded.append(EmbeddedFrame(src=src, readable=False, note="クロスオリジンのため未読"))
+    for tag_name in _detect_closed_shadow_hosts(page):
+        embedded.append(
+            EmbeddedFrame(
+                src=f"shadow:{tag_name}",
+                readable=False,
+                note="closed shadow root の可能性（検出したが読めない）",
+            )
+        )
+    return embedded
 
 
 def _to_form_data(raw_form: dict[str, Any]) -> FormData:
@@ -248,10 +414,25 @@ def _to_int(value: Any) -> int | None:
 
 
 _FORM_SCRIPT = """
-(forms) => forms.map((form) => ({
+(forms) => {
+  // フォーム内に Web Components（open shadow root）でラップされた入力欄が
+  // あっても、native querySelectorAll はシャドウ境界を貫通できない。
+  // collectFields は open shadow root を再帰的に辿って入力欄を集める
+  // （Playwright 自体のセレクタエンジンは trailing のトップレベル一致で
+  // shadow を貫通するが、評価済み要素上での native 呼び出しは貫通しない）。
+  const collectFields = (root) => {
+    let fields = Array.from(root.querySelectorAll('input, select, textarea'));
+    root.querySelectorAll('*').forEach((el) => {
+      if (el.shadowRoot) {
+        fields = fields.concat(collectFields(el.shadowRoot));
+      }
+    });
+    return fields;
+  };
+  return forms.map((form) => ({
   action: form.getAttribute('action') || '',
   method: (form.getAttribute('method') || 'get').toLowerCase(),
-  fields: Array.from(form.querySelectorAll('input, select, textarea')).map((field) => {
+  fields: collectFields(form).map((field) => {
     const tag = field.tagName.toLowerCase();
     const type = tag === 'input'
       ? (field.getAttribute('type') || 'text').toLowerCase()
@@ -288,7 +469,8 @@ _FORM_SCRIPT = """
       })(),
     };
   }),
-}))
+  }));
+}
 """
 
 _BUTTON_SELECTOR = "button, input[type=button], input[type=submit], input[type=reset]"

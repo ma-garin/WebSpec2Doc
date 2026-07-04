@@ -19,7 +19,7 @@ _JSON_INDENT = 2
 
 def fusion_to_dict(result: FusionResult, bundle: DocumentBundle) -> dict:
     """突合結果を JSON シリアライズ可能な dict に変換する。"""
-    return {
+    data: dict = {
         "meta": {
             "source_files": list(bundle.source_files),
             "documented_screens": len(bundle.screens),
@@ -66,6 +66,22 @@ def fusion_to_dict(result: FusionResult, bundle: DocumentBundle) -> dict:
             for g in result.field_gaps
         ],
     }
+    if bundle.rules:
+        data["documented_rules"] = [
+            {
+                "rule_id": r.rule_id,
+                "kind": r.kind,
+                "description": r.description,
+                "screen_name": r.screen_name,
+                "field_name": r.field_name,
+                "expression": r.expression,
+                "source": r.source,
+                "confidence": r.confidence,
+                "doc_evidence": document_evidence_to_dict(r.evidence),
+            }
+            for r in bundle.rules
+        ]
+    return data
 
 
 def save_fusion_outputs(result: FusionResult, bundle: DocumentBundle, output_dir: Path) -> None:
@@ -131,6 +147,18 @@ def _render_markdown(data: dict) -> str:
             lines.append(
                 f"| {kind_labels.get(g['kind'], g['kind'])} | {g['page_id']} "
                 f"| {g['field_name']} | {g['detail']} | {location} | {g['crawl_selector']} |"
+            )
+        lines.append("")
+    rules = data.get("documented_rules")
+    if rules:
+        lines += ["## 文書由来の業務ルール（LLM 抽出）", ""]
+        lines += ["| ID | 種別 | 説明 | 画面/項目 | 出所 |", "|---|---|---|---|---|"]
+        for r in rules:
+            evidence = r["doc_evidence"] or {}
+            location = f"{evidence.get('file', '')} {evidence.get('location', '')}".strip()
+            target = " / ".join(v for v in (r["screen_name"], r["field_name"]) if v) or "-"
+            lines.append(
+                f"| {r['rule_id']} | {r['kind']} | {r['description']} | {target} | {location} |"
             )
         lines.append("")
     return "\n".join(lines)

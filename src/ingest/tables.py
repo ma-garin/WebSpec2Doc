@@ -88,11 +88,16 @@ def parse_required(value: str) -> bool | None:
 
 
 def parse_max_length(value: str) -> int | None:
-    """桁数欄の記載（"20"・"全角20"・"20桁" 等）から数値を抽出する。"""
-    match = re.search(r"(\d+)", value)
+    """桁数欄の記載（"20"・"全角20"・"20桁"・"9,999" 等）から数値を抽出する。
+
+    3桁区切りのカンマ（"9,999"）はカンマを除去した数値として扱う
+    （区切りを無視すると先頭の桁のみを誤って抽出してしまうため）。
+    """
+    match = re.search(r"\d[\d,]*", value)
     if not match:
         return None
-    return int(match.group(1))
+    digits = match.group(0).replace(",", "")
+    return int(digits) if digits else None
 
 
 def structure_table(

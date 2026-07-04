@@ -36,6 +36,7 @@ from crawler.url_safety import is_safe_target
 
 if TYPE_CHECKING:
     from analyzer.stack_detector import StackInfo
+    from ux.axe_runner import AxeViolation
 
 CRAWL_DELAY_SEC = 0
 DEFAULT_DEPTH = 3
@@ -63,6 +64,9 @@ logger = logging.getLogger(__name__)
 CrawlEventCallback = Callable[[dict[str, object]], None]
 CheckpointCallback = Callable[[list["PageData"]], None]
 StopRequested = Callable[[], bool]
+# --ux-review 時、画面ごとの axe 検査結果をサイドチャネルで受け取るコールバック。
+# PageData のスキーマは変更しない（report.json 互換保護。SPEC-3-4 §5-2）
+UxResultCallback = Callable[[str, tuple["AxeViolation", ...]], None]
 
 
 class LoginWallDetected(RuntimeError):
@@ -260,6 +264,8 @@ def crawl_site(
     on_event: CrawlEventCallback | None = None,
     on_checkpoint: CheckpointCallback | None = None,
     stop_requested: StopRequested | None = None,
+    ux_review: bool = False,
+    on_ux_result: UxResultCallback | None = None,
 ) -> list[PageData]:
     base_url = normalize_url(url)
     robots = _load_robots_parser(base_url)
@@ -312,6 +318,8 @@ def crawl_site(
                 output_dir,
                 auth_state=auth_state,
                 on_event=on_event,
+                ux_review=ux_review,
+                on_ux_result=on_ux_result,
             )
             if page_data is None:
                 _polite_delay(page)
@@ -379,6 +387,8 @@ def crawl_urls(
     on_event: CrawlEventCallback | None = None,
     on_checkpoint: CheckpointCallback | None = None,
     stop_requested: StopRequested | None = None,
+    ux_review: bool = False,
+    on_ux_result: UxResultCallback | None = None,
 ) -> list[PageData]:
     """Crawl an explicit list of URLs (no link following). Backs the GUI
     'selected pages' / 'manual URL' modes."""
@@ -427,6 +437,8 @@ def crawl_urls(
             on_checkpoint,
             stop_requested,
             limiter=limiter,
+            ux_review=ux_review,
+            on_ux_result=on_ux_result,
         )
 
     pages: list[PageData] = []
@@ -438,7 +450,7 @@ def crawl_urls(
             started_at = time.monotonic()
             _emit_event(on_event, "page_started", url=target, index=index, total=len(targets))
             limiter.acquire(target)
-            if auth_state is None and on_event is None:
+            if auth_state is None and on_event is None and not ux_review:
                 page_data = _crawl_page_with_id(page, target, page_id, output_dir)
             else:
                 page_data = _crawl_page_with_id(
@@ -448,6 +460,8 @@ def crawl_urls(
                     output_dir,
                     auth_state=auth_state,
                     on_event=on_event,
+                    ux_review=ux_review,
+                    on_ux_result=on_ux_result,
                 )
             if page_data is not None:
                 pages.append(page_data)
@@ -544,6 +558,8 @@ def crawl_page(
     url: str,
     output_dir: Path | None,
     auth_state: Path | None = None,
+    ux_review: bool = False,
+    on_ux_result: UxResultCallback | None = None,
 ) -> PageData:
     from analyzer.login_wall import PageAuthSignals, detect_login_wall
     from analyzer.stack_detector import detect_stack
@@ -597,6 +613,15 @@ def crawl_page(
         buttons = tuple(extract_buttons_all_scopes(page, normalized_url))
         a11y_issues = tuple(extract_a11y_issues(page))
         embedded_frames = tuple(collect_embedded_frames(page, normalized_url))
+        if ux_review:
+            # axe-core 検査は既存抽出の後に実行する（AC-1〜3）。
+            # 結果は PageData に追加せず（スキーマ互換保護 §5-2）、
+            # コールバック経由のサイドチャネルで収集する。
+            from ux.axe_runner import run_axe
+
+            axe_violations = run_axe(page, screenshot_path)
+            if on_ux_result is not None:
+                on_ux_result(normalized_url, axe_violations)
         page_html = page.content()
         state_id = compute_state_signature(page_html)
         # DOM を変更する探索・実測は静的抽出の完了後に行う
@@ -669,10 +694,14 @@ def _crawl_page_with_id(
     output_dir: Path | None,
     auth_state: Path | None = None,
     on_event: CrawlEventCallback | None = None,
+    ux_review: bool = False,
+    on_ux_result: UxResultCallback | None = None,
 ) -> PageData | None:
     try:
         page._webspec2doc_page_id = page_id  # type: ignore[attr-defined,unused-ignore]
-        return _crawl_page_with_backoff(page, url, output_dir, auth_state, on_event)
+        return _crawl_page_with_backoff(
+            page, url, output_dir, auth_state, on_event, ux_review, on_ux_result
+        )
     except LoginWallDetected as exc:
         logger.warning("ログインウォールによりスキップしました: %s", url)
         _emit_event(
@@ -701,12 +730,14 @@ def _crawl_page_with_backoff(
     output_dir: Path | None,
     auth_state: Path | None,
     on_event: CrawlEventCallback | None,
+    ux_review: bool = False,
+    on_ux_result: UxResultCallback | None = None,
 ) -> PageData:
     """HTTP 429/503 受信時に exponential backoff（初期2秒・最大60秒・最大5回）でリトライする。"""
     delays = backoff_delays()
     while True:
         try:
-            return crawl_page(page, url, output_dir, auth_state)
+            return crawl_page(page, url, output_dir, auth_state, ux_review, on_ux_result)
         except RetryableHTTPError as exc:
             delay = next(delays, None)
             if delay is None:

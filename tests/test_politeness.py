@@ -165,7 +165,14 @@ class TestRetryOn429:
         sleeps: list[float] = []
         results = iter(statuses)
 
-        def fake_crawl_page(page: object, url: str, output_dir: object, auth: object) -> str:
+        def fake_crawl_page(
+            page: object,
+            url: str,
+            output_dir: object,
+            auth: object,
+            ux_review: bool = False,
+            on_ux_result: object = None,
+        ) -> str:
             status = next(results)
             if status in (429, 503):
                 raise RetryableHTTPError(url, status)

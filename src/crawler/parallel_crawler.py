@@ -15,6 +15,7 @@ if TYPE_CHECKING:
         CrawlEventCallback,
         PageData,
         StopRequested,
+        UxResultCallback,
     )
     from crawler.politeness import OriginRateLimiter
 
@@ -28,6 +29,8 @@ def crawl_urls_parallel(
     on_checkpoint: CheckpointCallback | None,
     stop_requested: StopRequested | None,
     limiter: OriginRateLimiter | None = None,
+    ux_review: bool = False,
+    on_ux_result: UxResultCallback | None = None,
 ) -> list[PageData]:
     """ワーカーごとに独立Playwrightを持ち、明示URLを安全に並列解析する。
 
@@ -73,6 +76,8 @@ def crawl_urls_parallel(
                             output_dir,
                             auth_state=auth_state,
                             on_event=on_event,
+                            ux_review=ux_review,
+                            on_ux_result=on_ux_result,
                         )
                     except SessionExpiredError as exc:
                         with result_lock:

@@ -85,7 +85,7 @@ python app.py
 | HTML レポート | 画面別仕様・テスト条件・スクリーンショット付き |
 | PDF | HTML レポートの印刷・配布用 PDF 版 |
 | JSON | 全データの構造化 JSON（自動化・CI 連携用） |
-| Excel | spec.xlsx（TestRail/Jira 転記用） |
+| Excel | spec.xlsx（テスト管理表への転記用） |
 | Markdown（画面一覧） | screens.md |
 | Markdown（フォーム） | forms.md |
 | 遷移図（Mermaid） | transition.mmd |

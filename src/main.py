@@ -160,6 +160,15 @@ def parse_args() -> argparse.Namespace:
             "セッションから exploration_heatmap.html 等を生成する"
         ),
     )
+    parser.add_argument(
+        "--reverse-assets",
+        action="store_true",
+        help=(
+            "リバース生成モード: クロール済み report.json と記録済みセッションから"
+            "テストケース・記録フロー（recorded_assets.json / recorded_candidates.json）を"
+            "逆生成する"
+        ),
+    )
     return parser.parse_args()
 
 
@@ -186,6 +195,9 @@ def run(args: argparse.Namespace) -> None:
         return
     if bool(getattr(args, "exploration_coverage", False)):
         _exploration_coverage(args)
+        return
+    if bool(getattr(args, "reverse_assets", False)):
+        _reverse_assets(args)
         return
     _run_crawl(args, auth_path)
 
@@ -245,6 +257,38 @@ def _exploration_coverage(args: argparse.Namespace) -> None:
         summary["coverage_ratio"] * 100,
         summary["touched_states"],
         summary["total_states"],
+    )
+
+
+def _reverse_assets(args: argparse.Namespace) -> None:
+    """リバース生成モード（キャプチャ Phase 2）。"""
+    from capture.coverage import load_session_events
+    from capture.reverse_generator import generate_recorded_assets, save_recorded_assets
+
+    url = str(args.url or "")
+    if not url:
+        logger.error("--reverse-assets には --url が必要です")
+        return
+    output_dir = Path(args.output) / _domain_name(url)
+    report_path = output_dir / JSON_REPORT_FILE_NAME
+    if not report_path.exists():
+        logger.error(
+            "クロール済みインベントリがありません: %s（先に --format json でクロールしてください）",
+            report_path,
+        )
+        return
+    events = load_session_events(output_dir)
+    if not events:
+        logger.error("探索セッションがありません（先に --record-session で操作を記録してください）")
+        return
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assets = generate_recorded_assets(report, events)
+    save_recorded_assets(assets, output_dir)
+    logger.info(
+        "リバース生成が完了しました: テストケース %d 件・記録フロー %d 件"
+        "（recorded_assets.json / recorded_candidates.json）",
+        len(assets["test_cases"]),
+        len(assets["flows"]),
     )
 
 

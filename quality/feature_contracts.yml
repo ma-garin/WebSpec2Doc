@@ -126,6 +126,20 @@
       "persistence": ["output/{domain}/sessions/"],
       "failure_modes": ["no_inventory", "no_sessions", "browser_closed", "unmatched_footprint"],
       "required_tests": ["happy_path", "error_path", "state_join_key", "evidence"]
+    },
+    {
+      "feature_id": "reverse_assets",
+      "name": "リバース（記録セッション→テスト資産の逆生成）",
+      "risk_level": "medium",
+      "status": "implemented",
+      "ui_files": [],
+      "route_files": [],
+      "core_files": ["src/capture/reverse_generator.py"],
+      "symbols": ["generate_recorded_assets", "save_recorded_assets"],
+      "outputs": ["recorded_assets.json", "recorded_candidates.json"],
+      "persistence": ["output/{domain}/recorded_assets.json", "output/{domain}/recorded_candidates.json"],
+      "failure_modes": ["no_sessions", "no_inventory", "no_visit_events"],
+      "required_tests": ["happy_path", "error_path", "state_join_key", "evidence"]
     }
   ]
 }

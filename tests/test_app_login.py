@@ -251,6 +251,142 @@ def test_simple_login_rejects_missing_login_url(tmp_path: Path, monkeypatch) -> 
     assert res.status_code == 400
 
 
+# ---------- /api/login/record/* （認証フローレコーダー・SPEC-3-2） ----------
+
+
+def test_record_start_launches_subprocess_and_returns_pid(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(login_mod, "OUTPUT_DIR", tmp_path)
+    captured = {}
+
+    class _FakeProc:
+        pid = 4242
+
+    def fake_popen(cmd, **kwargs):
+        captured["cmd"] = cmd
+        return _FakeProc()
+
+    with patch.object(login_mod.subprocess, "Popen", side_effect=fake_popen):
+        res = _client().post(
+            "/api/login/record/start",
+            data={"domain": "example.com", "login_url": "https://example.com/login"},
+        )
+    data = res.get_json()
+    assert data["success"] is True
+    assert data["pid"] == 4242
+    assert "--login-record" in captured["cmd"]
+    assert "--login-record-url" in captured["cmd"]
+    assert str(tmp_path / "example.com" / "auth.json") in captured["cmd"]
+
+
+def test_record_start_rejects_missing_login_url(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(login_mod, "OUTPUT_DIR", tmp_path)
+    res = _client().post("/api/login/record/start", data={"domain": "example.com"})
+    assert res.status_code == 400
+
+
+def test_record_start_rejects_invalid_domain(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(login_mod, "OUTPUT_DIR", tmp_path)
+    res = _client().post(
+        "/api/login/record/start",
+        data={"domain": "../etc", "login_url": "https://example.com/login"},
+    )
+    assert res.status_code == 400
+
+
+def test_record_start_clears_stale_signal_and_status(tmp_path: Path, monkeypatch) -> None:
+    """前回セッションの残骸（シグナル・状態ファイル）を持ち越さない。"""
+    monkeypatch.setattr(login_mod, "OUTPUT_DIR", tmp_path)
+    domain_dir = tmp_path / "example.com"
+    domain_dir.mkdir(parents=True)
+    (domain_dir / ".login_signal").touch()
+    (domain_dir / ".login_status.json").write_text('{"phase": "saved"}', encoding="utf-8")
+
+    class _FakeProc:
+        pid = 1
+
+    with patch.object(login_mod.subprocess, "Popen", return_value=_FakeProc()):
+        _client().post(
+            "/api/login/record/start",
+            data={"domain": "example.com", "login_url": "https://example.com/login"},
+        )
+    assert not (domain_dir / ".login_signal").exists()
+    assert not (domain_dir / ".login_status.json").exists()
+
+
+def test_record_status_returns_waiting_when_no_status_file(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(login_mod, "OUTPUT_DIR", tmp_path)
+    res = _client().get("/api/login/record/status", query_string={"domain": "example.com"})
+    data = res.get_json()
+    assert data["success"] is True
+    assert data["phase"] == "waiting"
+    assert data["verified"] is None
+
+
+def test_record_status_reads_status_file_and_appends_auth_path(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(login_mod, "OUTPUT_DIR", tmp_path)
+    domain_dir = tmp_path / "example.com"
+    domain_dir.mkdir(parents=True)
+    (domain_dir / "auth.json").write_text("{}", encoding="utf-8")
+    (domain_dir / ".login_status.json").write_text(
+        json.dumps(
+            {
+                "phase": "saved",
+                "current_url": "https://example.com/",
+                "detail": "",
+                "verified": True,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    res = _client().get("/api/login/record/status", query_string={"domain": "example.com"})
+    data = res.get_json()
+    assert data["phase"] == "saved"
+    assert data["verified"] is True
+    assert data["auth_path"] == str((domain_dir / "auth.json").resolve())
+
+
+def test_record_status_rejects_invalid_domain(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(login_mod, "OUTPUT_DIR", tmp_path)
+    res = _client().get("/api/login/record/status", query_string={"domain": "../etc"})
+    assert res.status_code == 400
+
+
+def test_record_complete_touches_signal_file(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(login_mod, "OUTPUT_DIR", tmp_path)
+    res = _client().post("/api/login/record/complete", data={"domain": "example.com"})
+    assert res.get_json()["success"] is True
+    assert (tmp_path / "example.com" / ".login_signal").exists()
+
+
+def test_record_cancel_sends_sigterm_to_pid(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(login_mod, "OUTPUT_DIR", tmp_path)
+    captured = {}
+
+    def fake_kill(pid, sig):
+        captured["pid"] = pid
+        captured["sig"] = sig
+
+    with patch.object(login_mod.os, "kill", side_effect=fake_kill):
+        res = _client().post("/api/login/record/cancel", data={"pid": "1234"})
+    assert res.get_json()["success"] is True
+    assert captured["pid"] == 1234
+
+
+def test_record_cancel_missing_process_is_success(tmp_path: Path, monkeypatch) -> None:
+    """既に終了済みのプロセスへの cancel はエラーにしない。"""
+    monkeypatch.setattr(login_mod, "OUTPUT_DIR", tmp_path)
+    with patch.object(login_mod.os, "kill", side_effect=ProcessLookupError):
+        res = _client().post("/api/login/record/cancel", data={"pid": "999999"})
+    assert res.get_json()["success"] is True
+
+
+def test_record_cancel_rejects_missing_pid(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(login_mod, "OUTPUT_DIR", tmp_path)
+    res = _client().post("/api/login/record/cancel", data={})
+    assert res.status_code == 400
+
+
 def test_submit_fields_passed_via_stdin(tmp_path: Path, monkeypatch) -> None:
     """パスワード等のフィールド値はstdin経由で渡され、コマンドライン引数に含まれない。"""
     monkeypatch.setattr(login_mod, "OUTPUT_DIR", tmp_path)

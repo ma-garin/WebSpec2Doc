@@ -104,6 +104,20 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--login-current-url", help="--login-submit: フォーム送信先URL（MFA対応）")
     parser.add_argument("--login-temp-session", type=Path, help="MFA中間セッション保存パス")
+    parser.add_argument(
+        "--login-record",
+        action="store_true",
+        help=(
+            "認証フローレコーダー起動: 見えるブラウザでログインし、"
+            "シグナルファイル出現時にセッションを保存する（--login と --login-signal の統合入口）"
+        ),
+    )
+    parser.add_argument("--login-record-url", help="--login-record: ログインページURL")
+    parser.add_argument(
+        "--login-status",
+        type=Path,
+        help="--login-record: 進行状態(JSON)の出力先。Web UI が1秒間隔でポーリングする",
+    )
     parser.add_argument("--auth", type=Path, help="保存済みセッション(auth.json)を使ってクロール")
     parser.add_argument("--depth", type=int, default=DEFAULT_DEPTH, help="クロール深度")
     parser.add_argument(
@@ -191,6 +205,9 @@ def run(args: argparse.Namespace) -> None:
         return
     if getattr(args, "login_submit", False):
         _submit_login(args)
+        return
+    if getattr(args, "login_record", False):
+        _record_login(args)
         return
     login_url = getattr(args, "login", None)
     if login_url:
@@ -577,6 +594,37 @@ def _capture_login(login_url: str, auth_path: Path | None, signal_path: Path | N
     logger.info(
         "ログインセッションを保存しました: %s （--auth %s でクロールに利用できます）", saved, saved
     )
+
+
+def _record_login(args: argparse.Namespace) -> None:
+    """認証フローレコーダー起動（--login-record、SPEC-3-2）。
+    Web UI からの「ブラウザでログインして保存」フローの実処理。"""
+    from crawler.auth_recorder import record_auth_session
+
+    login_url = str(getattr(args, "login_record_url", None) or "")
+    if not login_url:
+        logger.error("--login-record には --login-record-url が必要です")
+        sys.exit(1)
+    signal_path = getattr(args, "login_signal", None)
+    if signal_path is None:
+        logger.error("--login-record には --login-signal が必要です")
+        sys.exit(1)
+
+    auth_path = getattr(args, "auth", None)
+    output_path = Path(auth_path) if auth_path else Path(DEFAULT_AUTH_FILE)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    status_path = getattr(args, "login_status", None)
+    # CI・テスト用（実機の目視確認は DoD で別途行う。DISPLAY 前提の headful が既定）
+    headless = os.environ.get("WEBSPEC2DOC_RECORD_HEADLESS", "") == "1"
+
+    status = record_auth_session(
+        login_url,
+        output_path,
+        Path(signal_path),
+        status_file=Path(status_path) if status_path else None,
+        headless=headless,
+    )
+    logger.info("認証フローレコーダーが終了しました: phase=%s", status.phase)
 
 
 def _discover(args: argparse.Namespace, auth_path: Path | None) -> None:

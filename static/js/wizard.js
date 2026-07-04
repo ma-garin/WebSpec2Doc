@@ -156,6 +156,101 @@ async function submitLogin() {
     if (b) b.disabled = false;
   }
 }
+// ---- 認証フローレコーダー（SPEC-3-2）: 見えるブラウザで人が普通にログインし、ボタン一つで保存する ----
+let loginRecordPid = null;
+let loginRecordTimer = null;
+
+const LOGIN_RECORD_PHASE_TEXT = {
+  waiting: 'ブラウザでログインしてください…',
+  login_detected: 'ログインを検知しました。完了したら「ログイン完了」を押してください。',
+  saved: '',
+  timeout: '時間切れです。もう一度お試しください。',
+  closed: 'ブラウザが閉じられました（保存されていません）',
+  error: '',
+};
+
+function loginRecordStatusEl() { return document.getElementById('login-record-status'); }
+
+function setLoginRecordUI(phase) {
+  const startBtn = document.getElementById('login-record-start-btn');
+  const completeBtn = document.getElementById('login-record-complete-btn');
+  const cancelBtn = document.getElementById('login-record-cancel-btn');
+  const running = phase === 'waiting' || phase === 'login_detected';
+  if (startBtn) startBtn.disabled = running;
+  if (completeBtn) completeBtn.style.display = running ? '' : 'none';
+  if (cancelBtn) cancelBtn.style.display = running ? '' : 'none';
+}
+
+function stopLoginRecordPolling() {
+  if (loginRecordTimer) { clearInterval(loginRecordTimer); loginRecordTimer = null; }
+}
+
+async function pollLoginRecordStatus(domain) {
+  const el = loginRecordStatusEl();
+  try {
+    const res = await fetch('/api/login/record/status?domain=' + encodeURIComponent(domain));
+    const data = await res.json();
+    if (!data.success) return;
+    let text = LOGIN_RECORD_PHASE_TEXT[data.phase] || '';
+    if (data.phase === 'saved') {
+      text = data.verified ? '保存しました（動作確認OK）' : '保存しました（動作確認は未確認）';
+    } else if (data.phase === 'error') {
+      text = data.detail || 'エラーが発生しました';
+    }
+    if (el) { el.textContent = text; el.classList.toggle('input-field-message-error', ['timeout', 'closed', 'error'].includes(data.phase)); }
+    setLoginRecordUI(data.phase);
+    if (data.phase === 'saved') {
+      stopLoginRecordPolling();
+      if (data.auth_path) document.getElementById('auth-path').value = data.auth_path;
+    } else if (data.phase === 'timeout' || data.phase === 'closed' || data.phase === 'error') {
+      stopLoginRecordPolling();
+    }
+  } catch (e) {
+    // ポーリング失敗は次回に任せる（ネットワーク瞬断等）
+  }
+}
+
+document.getElementById('login-record-start-btn').addEventListener('click', async () => {
+  const loginUrl = document.getElementById('login-url').value.trim();
+  const domain = loginDomain();
+  const el = loginRecordStatusEl();
+  if (!loginUrl) { el.textContent = 'ログインURLを入力してください。'; el.classList.add('input-field-message-error'); return; }
+  el.classList.remove('input-field-message-error');
+  el.textContent = 'ブラウザを起動しています…';
+  try {
+    const res = await fetch('/api/login/record/start', { method: 'POST', body: new URLSearchParams({
+      domain: domain || 'site', login_url: loginUrl,
+    }) });
+    const data = await res.json();
+    if (!data.success) { el.textContent = data.error || '起動に失敗しました'; el.classList.add('input-field-message-error'); return; }
+    loginRecordPid = data.pid;
+    setLoginRecordUI('waiting');
+    el.textContent = LOGIN_RECORD_PHASE_TEXT.waiting;
+    stopLoginRecordPolling();
+    loginRecordTimer = setInterval(() => pollLoginRecordStatus(domain || 'site'), 1000);
+  } catch (e) {
+    el.textContent = '起動に失敗しました';
+    el.classList.add('input-field-message-error');
+  }
+});
+
+document.getElementById('login-record-complete-btn').addEventListener('click', async () => {
+  const domain = loginDomain();
+  await fetch('/api/login/record/complete', { method: 'POST', body: new URLSearchParams({ domain: domain || 'site' }) });
+});
+
+document.getElementById('login-record-cancel-btn').addEventListener('click', async () => {
+  const domain = loginDomain();
+  stopLoginRecordPolling();
+  if (loginRecordPid) {
+    await fetch('/api/login/record/cancel', { method: 'POST', body: new URLSearchParams({ pid: String(loginRecordPid) }) });
+    loginRecordPid = null;
+  }
+  setLoginRecordUI('closed');
+  const el = loginRecordStatusEl();
+  if (el) { el.textContent = 'キャンセルしました'; el.classList.remove('input-field-message-error'); }
+});
+
 document.getElementById('select-all-btn').addEventListener('click', () => setAllDiscovered(true));
 document.getElementById('clear-all-btn').addEventListener('click', () => setAllDiscovered(false));
 

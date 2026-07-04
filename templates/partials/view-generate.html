@@ -137,6 +137,18 @@
                         <div id="login-loading" style="display:none" class="discover-loading"><span class="spinner"></span><span id="login-loading-msg">フォームを取得しています…</span></div>
                         <div id="login-fields-area"></div>
                         <div id="login-status" class="input-field-message" style="margin-top:6px"></div>
+
+                        <!-- 認証フローレコーダー（SPEC-3-2）: 見えるブラウザで人が普通にログインし、ボタン一つで保存する -->
+                        <div class="field" style="margin-top:10px;border-top:1px solid var(--border, #e5e5e5);padding-top:10px">
+                          <label>ブラウザでログインして保存（MFA・ソーシャルログインにも対応）</label>
+                          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+                            <button type="button" id="login-record-start-btn" class="btn-outline-sm">ブラウザでログインして保存</button>
+                            <button type="button" id="login-record-complete-btn" class="btn-primary" style="display:none;height:28px;padding:0 12px;font-size:12px">ログイン完了</button>
+                            <button type="button" id="login-record-cancel-btn" class="btn-outline-sm" style="display:none">キャンセル</button>
+                          </div>
+                          <div id="login-record-status" class="input-field-message" style="margin-top:6px"></div>
+                        </div>
+
                         <div class="field" style="margin-top:8px">
                           <label for="auth-path">auth.json パス（CLI保存済みの場合）</label>
                           <input type="text" id="auth-path" placeholder="output/example.com/auth.json" />

@@ -355,6 +355,77 @@ def test_capture_login_signal_timeout_exits(tmp_path: Path) -> None:
     assert exc_info.value.code == 1
 
 
+def test_record_login_calls_record_auth_session(tmp_path: Path) -> None:
+    """--login-record: record_auth_session に URL・auth・signal・status を渡す（SPEC-3-2）。"""
+    from crawler.auth_recorder import RecorderStatus
+    from main import _record_login
+
+    auth_path = tmp_path / "auth.json"
+    signal_path = tmp_path / ".login_signal"
+    status_path = tmp_path / ".login_status.json"
+    args = argparse.Namespace(
+        login_record_url="https://example.com/login",
+        login_signal=signal_path,
+        auth=auth_path,
+        login_status=status_path,
+    )
+    with patch(
+        "crawler.auth_recorder.record_auth_session",
+        return_value=RecorderStatus(phase="saved", current_url="https://example.com/"),
+    ) as record:
+        _record_login(args)
+
+    record.assert_called_once_with(
+        "https://example.com/login",
+        auth_path,
+        signal_path,
+        status_file=status_path,
+        headless=False,
+    )
+
+
+def test_record_login_without_url_exits(tmp_path: Path) -> None:
+    from main import _record_login
+
+    args = argparse.Namespace(
+        login_record_url=None,
+        login_signal=tmp_path / ".login_signal",
+        auth=tmp_path / "auth.json",
+        login_status=None,
+    )
+    with pytest.raises(SystemExit) as exc_info:
+        _record_login(args)
+    assert exc_info.value.code == 1
+
+
+def test_record_login_without_signal_exits(tmp_path: Path) -> None:
+    from main import _record_login
+
+    args = argparse.Namespace(
+        login_record_url="https://example.com/login",
+        login_signal=None,
+        auth=tmp_path / "auth.json",
+        login_status=None,
+    )
+    with pytest.raises(SystemExit) as exc_info:
+        _record_login(args)
+    assert exc_info.value.code == 1
+
+
+def test_run_dispatches_login_record(tmp_path: Path) -> None:
+    """run() は --login-record を他のログインモードと同様にディスパッチする。"""
+    args = argparse.Namespace(
+        auth=None,
+        login_simple=False,
+        login_scrape=None,
+        login_submit=False,
+        login_record=True,
+    )
+    with patch("main._record_login") as record_login:
+        run(args)
+    record_login.assert_called_once_with(args)
+
+
 def test_discover_without_url_outputs_error(capsys) -> None:
     import json
 

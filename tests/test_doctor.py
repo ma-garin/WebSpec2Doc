@@ -66,11 +66,18 @@ class TestRequirementPins:
 
 
 class TestRunAllChecks:
-    def test_all_checks_run_in_this_environment(self) -> None:
-        """この環境（正しくセットアップ済み）では致命 FAIL が出ない。"""
+    def test_all_checks_run_and_failures_carry_fixes(self) -> None:
+        """全検査が実行され、FAIL 項目には必ず対処コマンドが付く。
+
+        実行環境（ローカル venv / CI の素の Python / ブラウザ未導入）に
+        よって PASS/FAIL は変わるため、結果そのものは断定しない。
+        """
         results = run_all_checks()
         names = [r.name for r in results]
         assert "Python バージョン" in names
+        assert "仮想環境" in names
         assert "Chromium ランタイム" in names
         assert "ローカルURLガード" in names
-        assert all(r.ok for r in results), [r.detail for r in results if not r.ok]
+        for result in results:
+            if not result.ok:
+                assert result.fix, f"{result.name} の FAIL に対処が提示されていない"

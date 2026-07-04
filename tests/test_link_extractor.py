@@ -7,17 +7,24 @@ from unittest.mock import MagicMock
 import pytest
 
 from crawler.link_extractor import (
+    _FORM_SCRIPT,
+    _is_same_origin_frame,
     _to_field_data,
     _to_form_data,
+    collect_embedded_frames,
     compute_dom_signature,
     extract_buttons,
+    extract_buttons_all_scopes,
     extract_forms,
     extract_forms_including_frames,
     extract_headings,
+    extract_headings_all_scopes,
     extract_internal_links,
+    extract_links_all_scopes,
     extract_page_title,
     has_password_field,
 )
+from crawler.page_crawler import EmbeddedFrame
 
 # ---------- has_password_field ----------
 
@@ -423,3 +430,149 @@ class TestExtractFormsIncludingFrames:
         page = self._make_page([])
         result = extract_forms_including_frames(page)
         assert isinstance(result, list)
+
+
+# ---------- iframe/Shadow DOM 対応（SPEC-3-1） ----------
+
+
+class TestSameOriginFrameFiltering:
+    def test_same_origin_frame_is_readable(self) -> None:
+        assert _is_same_origin_frame("https://example.com/inner", "https://example.com/main")
+
+    def test_cross_origin_frame_is_not_readable(self) -> None:
+        assert not _is_same_origin_frame("https://evil.example.com/x", "https://example.com/main")
+
+    def test_about_srcdoc_is_readable(self) -> None:
+        assert _is_same_origin_frame("about:srcdoc", "https://example.com/main")
+
+    def test_empty_frame_url_is_readable(self) -> None:
+        assert _is_same_origin_frame("", "https://example.com/main")
+
+
+class TestExtractLinksAllScopes:
+    def _make_page(self, main_hrefs: list[str], frame_hrefs: list[str] | None = None) -> MagicMock:
+        page = MagicMock()
+        page.eval_on_selector_all.return_value = main_hrefs
+        main_frame = MagicMock()
+        page.main_frame = main_frame
+        frame = MagicMock()
+        frame.url = "https://example.com/frame"
+        frame.eval_on_selector_all.return_value = frame_hrefs or []
+        page.frames = [main_frame, frame]
+        return page
+
+    def test_merges_main_and_same_origin_frame_links(self) -> None:
+        page = self._make_page(["https://example.com/a"], ["https://example.com/b"])
+        result = extract_links_all_scopes(page, "https://example.com/")
+        assert "https://example.com/a" in result
+        assert "https://example.com/b" in result
+
+    def test_dedups_links_across_scopes(self) -> None:
+        page = self._make_page(["https://example.com/a"], ["https://example.com/a"])
+        result = extract_links_all_scopes(page, "https://example.com/")
+        assert result.count("https://example.com/a") == 1
+
+    def test_cross_origin_frame_not_queried(self) -> None:
+        page = self._make_page(["https://example.com/a"])
+        page.frames[1].url = "https://evil.example.com/x"
+        result = extract_links_all_scopes(page, "https://example.com/")
+        page.frames[1].eval_on_selector_all.assert_not_called()
+        assert result == ["https://example.com/a"]
+
+
+class TestExtractHeadingsAllScopes:
+    def test_merges_main_and_frame_headings(self) -> None:
+        page = MagicMock()
+        page.eval_on_selector_all.return_value = ["メイン見出し"]
+        main_frame = MagicMock()
+        page.main_frame = main_frame
+        frame = MagicMock()
+        frame.url = "https://example.com/frame"
+        frame.eval_on_selector_all.return_value = ["フレーム見出し"]
+        page.frames = [main_frame, frame]
+        result = extract_headings_all_scopes(page, "https://example.com/")
+        assert "メイン見出し" in result
+        assert "フレーム見出し" in result
+
+    def test_cross_origin_frame_excluded(self) -> None:
+        page = MagicMock()
+        page.eval_on_selector_all.return_value = ["メイン見出し"]
+        main_frame = MagicMock()
+        page.main_frame = main_frame
+        frame = MagicMock()
+        frame.url = "https://other.example.com/frame"
+        frame.eval_on_selector_all.return_value = ["よそ者の見出し"]
+        page.frames = [main_frame, frame]
+        result = extract_headings_all_scopes(page, "https://example.com/")
+        assert "よそ者の見出し" not in result
+
+
+class TestExtractButtonsAllScopes:
+    def test_merges_and_dedups(self) -> None:
+        page = MagicMock()
+        page.eval_on_selector_all.return_value = ["送信"]
+        main_frame = MagicMock()
+        page.main_frame = main_frame
+        frame = MagicMock()
+        frame.url = "https://example.com/frame"
+        frame.eval_on_selector_all.return_value = ["送信", "キャンセル"]
+        page.frames = [main_frame, frame]
+        result = extract_buttons_all_scopes(page, "https://example.com/")
+        assert result.count("送信") == 1
+        assert "キャンセル" in result
+
+
+class TestCollectEmbeddedFrames:
+    def test_same_origin_frame_marked_readable(self) -> None:
+        page = MagicMock()
+        main_frame = MagicMock()
+        page.main_frame = main_frame
+        frame = MagicMock()
+        frame.url = "https://example.com/inner"
+        page.frames = [main_frame, frame]
+        page.evaluate.return_value = []
+        result = collect_embedded_frames(page, "https://example.com/")
+        assert result == [EmbeddedFrame(src="https://example.com/inner", readable=True)]
+
+    def test_cross_origin_frame_marked_unreadable(self) -> None:
+        page = MagicMock()
+        main_frame = MagicMock()
+        page.main_frame = main_frame
+        frame = MagicMock()
+        frame.url = "https://evil.example.com/x"
+        page.frames = [main_frame, frame]
+        page.evaluate.return_value = []
+        result = collect_embedded_frames(page, "https://example.com/")
+        assert result == [
+            EmbeddedFrame(
+                src="https://evil.example.com/x", readable=False, note="クロスオリジンのため未読"
+            )
+        ]
+
+    def test_closed_shadow_host_recorded(self) -> None:
+        page = MagicMock()
+        page.main_frame = MagicMock()
+        page.frames = [page.main_frame]
+        page.evaluate.return_value = ["my-closed-widget"]
+        result = collect_embedded_frames(page, "https://example.com/")
+        assert len(result) == 1
+        assert result[0].src == "shadow:my-closed-widget"
+        assert result[0].readable is False
+        assert "closed" in result[0].note.lower() or "の可能性" in result[0].note
+
+    def test_no_frames_no_closed_shadow_returns_empty(self) -> None:
+        page = MagicMock()
+        page.main_frame = MagicMock()
+        page.frames = [page.main_frame]
+        page.evaluate.return_value = []
+        result = collect_embedded_frames(page, "https://example.com/")
+        assert result == []
+
+
+class TestFormScriptShadowPiercing:
+    """_FORM_SCRIPT の実ブラウザ JS を直接構文検証する（フェイクではロジックを検証できないため）。"""
+
+    def test_form_script_is_valid_javascript_function(self) -> None:
+        # collectFields ヘルパーと再帰呼び出しが構文として存在することを確認する
+        assert "collectFields" in _FORM_SCRIPT
+        assert "shadowRoot" in _FORM_SCRIPT

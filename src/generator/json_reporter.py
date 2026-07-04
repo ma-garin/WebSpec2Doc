@@ -115,6 +115,12 @@ def _screen_dict(
     official = (official_names or {}).get(pid, "")
     if official:
         screen["official_name"] = official
+    # iframe・closed shadow root が検出された画面にのみ付与する
+    # （検出なし時は既存のレポート構造・report_hash を変えない）
+    if pd.embedded_frames:
+        screen["embedded_frames"] = [
+            {"src": ef.src, "readable": ef.readable, "note": ef.note} for ef in pd.embedded_frames
+        ]
     return screen
 
 

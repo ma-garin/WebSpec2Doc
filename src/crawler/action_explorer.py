@@ -43,6 +43,9 @@ _SETTLE_TIMEOUT_MS = 300
 # ライブ DOM から「開閉・選択・可視」状態を読み取るスナップショット。
 # HTML 文字列の正規表現ではなく実際の DOM プロパティ（.open / aria-selected /
 # aria-expanded / 可視性）を見るため、表示/非表示トグル型のモーダルにも対応する。
+# document.querySelectorAll は native API のため open shadow root を貫通
+# できない。scan() が各 shadow root を再帰的に辿ることで、Web Components に
+# 包まれたモーダル・タブ・アコーディオンも検出できるようにする。
 _LIVE_STATE_JS = """
 () => {
   const isVisible = (el) => {
@@ -54,22 +57,30 @@ _LIVE_STATE_JS = """
   };
   const key = (el, i) => el.id || (el.getAttribute('aria-controls') || '') || ('idx' + i);
   const parts = [];
-  // モーダル/ダイアログの可視状態
-  document.querySelectorAll('[role=dialog], dialog').forEach((el, i) => {
-    if (isVisible(el)) parts.push('dialog:' + key(el, i));
-  });
-  // タブの選択状態
-  document.querySelectorAll('[role=tab][aria-selected=true]').forEach((el, i) => {
-    parts.push('tab:' + key(el, i));
-  });
-  // アコーディオン（details[open]）
-  document.querySelectorAll('details[open]').forEach((el, i) => {
-    parts.push('details:' + key(el, i));
-  });
-  // aria-expanded=true
-  document.querySelectorAll('[aria-expanded=true]').forEach((el, i) => {
-    parts.push('expanded:' + key(el, i));
-  });
+  let idx = 0;
+  const scan = (root) => {
+    // モーダル/ダイアログの可視状態
+    root.querySelectorAll('[role=dialog], dialog').forEach((el) => {
+      if (isVisible(el)) parts.push('dialog:' + key(el, idx++));
+    });
+    // タブの選択状態
+    root.querySelectorAll('[role=tab][aria-selected=true]').forEach((el) => {
+      parts.push('tab:' + key(el, idx++));
+    });
+    // アコーディオン（details[open]）
+    root.querySelectorAll('details[open]').forEach((el) => {
+      parts.push('details:' + key(el, idx++));
+    });
+    // aria-expanded=true
+    root.querySelectorAll('[aria-expanded=true]').forEach((el) => {
+      parts.push('expanded:' + key(el, idx++));
+    });
+    // open shadow root を再帰的に辿る
+    root.querySelectorAll('*').forEach((el) => {
+      if (el.shadowRoot) scan(el.shadowRoot);
+    });
+  };
+  scan(document);
   return parts.sort();
 }
 """

@@ -213,6 +213,7 @@ function renderTransition() {
     '<button class="uml-subtab is-active" data-uml="sequence">シーケンス図<span>操作順</span></button>' +
     '<button class="uml-subtab" data-uml="communication">コミュニケーション図<span>全体関係</span></button>' +
     '<button class="uml-subtab" data-uml="activity">アクティビティ図<span>テスト手順</span></button>' +
+    '<button class="uml-subtab" data-uml="flowchart">フローチャート<span>処理の流れ</span></button>' +
     '<button class="uml-subtab" data-uml="viewpoints">テスト観点マップ<span>設計観点</span></button>' +
     '</div>' +
     '<div id="uml-diagram-area" class="uml-diagram-area"></div>' +
@@ -280,6 +281,9 @@ function _umlMeta(type) {
   }
   if (type === 'activity') {
     return { title: 'アクティビティ図', desc: 'QAテスト手順として操作と期待結果を追います。' };
+  }
+  if (type === 'flowchart') {
+    return { title: 'フローチャート', desc: '入口画面から各画面への処理の流れを上から下へ追います。' };
   }
   return { title: 'シーケンス図', desc: '代表的な遷移を時系列で確認します。' };
 }
@@ -460,6 +464,7 @@ function _fitUmlZoom() {
 function _umlSource(type, screens, rows) {
   if (type === 'communication') return _communicationDiagram(screens, rows);
   if (type === 'activity') return _activityDiagram(rows);
+  if (type === 'flowchart') return _flowchartDiagram(rows);
   return _sequenceDiagram(screens, rows);
 }
 
@@ -490,6 +495,34 @@ function _communicationDiagram(screens, rows) {
     return `  ${_umlAlias(r.fromId)} ${arrow}|${r.no} ${_mermaidText(r.event)}| ${_umlAlias(r.toId)}`;
   }).join('\n');
   return `flowchart LR\n${nodes}\n${edges}`;
+}
+
+// R2-12: 遷移をトップダウンの処理フロー（フローチャート）として描画する。
+// コミュニケーション図(flowchart LR・関係俯瞰)とは向き・粒度が異なり、
+// 入口画面(START)から各画面への「処理の流れ」を上から下へ追える形にする。
+function _flowchartDiagram(rows) {
+  if (!rows.length) return 'flowchart TD\n  START([開始])';
+  const titleById = {};
+  const targets = new Set();
+  rows.forEach(r => {
+    titleById[r.fromId] = r.fromTitle;
+    titleById[r.toId] = r.toTitle;
+    targets.add(r.toId);
+  });
+  const nodes = Object.keys(titleById)
+    .map(id => `  ${_umlAlias(id)}["${_mermaidText(id)}<br/>${_mermaidText(titleById[id])}"]`)
+    .join('\n');
+  // 遷移先になっていない画面＝入口とみなし、START から接続する（無ければ先頭行のfrom）。
+  const entries = Object.keys(titleById).filter(id => !targets.has(id));
+  const starts = (entries.length ? entries : [rows[0].fromId])
+    .map(id => `  START([開始]) --> ${_umlAlias(id)}`)
+    .join('\n');
+  // フォーム送信は太線(==>)、リンクは通常線(-->)で区別する。
+  const edges = rows.map(r => {
+    const arrow = r.event === 'フォーム送信' ? '==>' : '-->';
+    return `  ${_umlAlias(r.fromId)} ${arrow}|${r.no} ${_mermaidText(r.eventDetail || r.event)}| ${_umlAlias(r.toId)}`;
+  }).join('\n');
+  return `flowchart TD\n  START([開始])\n${nodes}\n${starts}\n${edges}`;
 }
 
 function _activityDiagram(rows) {

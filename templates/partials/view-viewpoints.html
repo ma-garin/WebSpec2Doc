@@ -67,21 +67,10 @@
                 </button>
                 <div id="vp-tree-root" class="vp-tree-root" role="tree"></div>
 
-                <!-- テンプレート選択ポップアップ -->
+                <!-- テンプレート選択ポップアップ（一覧は /api/viewpoint-templates から動的取得） -->
                 <div id="vp-template-menu" class="vp-template-menu" hidden role="menu">
                   <div class="vp-template-menu-head">テンプレートを読み込む</div>
-                  <button type="button" class="vp-template-item" data-template="iso25010" role="menuitem">
-                    <strong>ISO/IEC 25010 品質特性</strong>
-                    <span>機能性・信頼性・使用性・効率性・保守性・移植性・セキュリティ・互換性</span>
-                  </button>
-                  <button type="button" class="vp-template-item" data-template="istqb" role="menuitem">
-                    <strong>ISTQB テストレベル</strong>
-                    <span>単体・結合・システム・受入テスト × 業界軸</span>
-                  </button>
-                  <button type="button" class="vp-template-item" data-template="industry" role="menuitem">
-                    <strong>業界別分類</strong>
-                    <span>EC・金融・医療・SaaS・共通</span>
-                  </button>
+                  <div id="vp-template-menu-items"></div>
                 </div>
               </nav>
 

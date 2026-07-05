@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 import web.routes.viewpoints as viewpoints_routes
+import web.services.viewpoint_templates as viewpoint_templates
 from flask import Flask
 from web.services.viewpoint_store import ViewpointStore
 
@@ -16,6 +17,7 @@ def api(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     store.initialize()
     monkeypatch.setattr(viewpoints_routes, "get_viewpoint_store", lambda: store)
     monkeypatch.setattr(viewpoints_routes, "has_openai_api_key", lambda: False)
+    monkeypatch.setattr(viewpoint_templates, "get_viewpoint_store", lambda: store)
     app = Flask(__name__)
     app.register_blueprint(viewpoints_routes.bp)
     return app.test_client(), store
@@ -168,3 +170,37 @@ def test_reorder_items(api) -> None:
         },
     )
     assert resp.status_code == 200
+
+
+def test_viewpoint_templates_listing_includes_real_presets(api) -> None:
+    """data/viewpoint_templates/*.json（ISTQB/ISO25010/非機能要求グレード2018/PMBOK）が
+    実際に一覧に出ること（R1-18: プリセットが空フォルダのみだった問題への対応）。"""
+    client, _store = api
+    resp = client.get("/api/viewpoint-templates")
+    assert resp.status_code == 200
+    keys = {t["key"] for t in resp.get_json()["templates"]}
+    assert {"istqb", "iso25010", "nfr2018", "pmbok"} <= keys
+    for template in resp.get_json()["templates"]:
+        assert template["item_count"] > 0, f"{template['key']} にはアイテムが必要"
+
+
+def test_apply_viewpoint_template_seeds_folders_and_items(api) -> None:
+    client, store = api
+    set_id = _new_set(client)
+
+    resp = client.post(f"/api/viewpoint-sets/{set_id}/templates/istqb/apply")
+    assert resp.status_code == 200
+    result = resp.get_json()["result"]
+    assert result["created_folders"] == 4
+    assert result["created_items"] > 0
+
+    tree = store.get_tree(set_id)
+    assert any(node["name"] == "単体テスト" and node["node_type"] == "folder" for node in tree)
+    assert any(node["name"] == "境界値分析" and node["node_type"] == "viewpoint" for node in tree)
+
+
+def test_apply_viewpoint_template_unknown_key_returns_404(api) -> None:
+    client, _store = api
+    set_id = _new_set(client)
+    resp = client.post(f"/api/viewpoint-sets/{set_id}/templates/does-not-exist/apply")
+    assert resp.status_code == 404

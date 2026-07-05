@@ -7,6 +7,7 @@ from flask import Blueprint, Response, request
 from web.services.openai_qa import OpenAIQAError, has_openai_api_key
 from web.services.viewpoint_proposals import generate_viewpoint_proposals
 from web.services.viewpoint_store import ViewpointStoreError, get_viewpoint_store
+from web.services.viewpoint_templates import apply_template, list_templates
 
 bp = Blueprint("viewpoints", __name__)
 
@@ -239,6 +240,16 @@ def api_viewpoint_tree(set_id: str) -> dict[str, Any]:
 def api_create_viewpoint_folder(set_id: str) -> tuple[dict[str, Any], int]:
     body = _body()
     return {"item": get_viewpoint_store().create_folder(set_id, body)}, 201
+
+
+@bp.get("/api/viewpoint-templates")
+def api_viewpoint_templates() -> dict[str, Any]:
+    return {"templates": list_templates()}
+
+
+@bp.post("/api/viewpoint-sets/<set_id>/templates/<template_key>/apply")
+def api_apply_viewpoint_template(set_id: str, template_key: str) -> dict[str, Any]:
+    return {"result": apply_template(set_id, template_key)}
 
 
 @bp.patch("/api/viewpoint-items/<item_id>/move")

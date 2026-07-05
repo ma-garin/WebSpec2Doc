@@ -27,11 +27,9 @@ const VP_AUTOMATION_LABELS = {
   manual: '手動',
 };
 
-const VP_TEMPLATES = {
-  iso25010: { name: 'ISO/IEC 25010 品質特性', folders: ['機能適合性', '性能効率性', '互換性', '使用性', '信頼性', 'セキュリティ', '保守性', '移植性'] },
-  istqb:    { name: 'ISTQB テストレベル',     folders: ['単体テスト', '結合テスト', 'システムテスト', '受入テスト'] },
-  industry: { name: '業界別分類',             folders: ['EC・通販', '金融・決済', '医療・ヘルスケア', 'SaaS・業務システム', '共通'] },
-};
+// テンプレート一覧は data/viewpoint_templates/*.json から /api/viewpoint-templates
+// 経由で動的取得する（フォルダ名だけでなく実際の観点アイテムを含む）。
+let vpTemplatesCache = null;
 
 /* ── API ── */
 async function vpApi(url, options = {}) {
@@ -327,23 +325,47 @@ async function vpUndoDeleteFolder(itemId) {
   } catch (error) { vpFeedback(error.message, 'error'); }
 }
 
+async function vpFetchTemplates() {
+  if (vpTemplatesCache) return vpTemplatesCache;
+  try {
+    const data = await vpApi('/api/viewpoint-templates');
+    vpTemplatesCache = data.templates || [];
+  } catch (error) {
+    vpTemplatesCache = [];
+    vpFeedback(error.message, 'error');
+  }
+  return vpTemplatesCache;
+}
+
+function vpRenderTemplateMenu(templates) {
+  const container = document.getElementById('vp-template-menu-items');
+  if (!container) return;
+  container.innerHTML = templates.length
+    ? templates.map((t) => `
+      <button type="button" class="vp-template-item" data-template="${escHtml(t.key)}" role="menuitem">
+        <strong>${escHtml(t.name)}</strong>
+        <span>${escHtml(t.description || '')}（${t.folder_count}フォルダ・${t.item_count}観点）</span>
+      </button>`).join('')
+    : '<div class="vp-template-menu-empty">利用可能なテンプレートがありません。</div>';
+}
+
 async function vpLoadTemplate(templateKey) {
-  const template = VP_TEMPLATES[templateKey];
+  const templates = await vpFetchTemplates();
+  const template = templates.find((t) => t.key === templateKey);
   if (!template || !vpState.currentSet || vpState.tab !== 'draft') return;
   const confirmed = await confirmDialog({
     title: `「${template.name}」を読み込みますか？`,
-    message: `${template.folders.length}個のフォルダを追加します。既存のフォルダは変更されません。`,
+    message: `${template.folder_count}個のフォルダと${template.item_count}件の観点アイテムを追加します。既存のフォルダ・観点は変更されません。`,
     confirmLabel: '読み込む',
   });
   if (!confirmed) return;
   try {
-    await Promise.all(template.folders.map((name) =>
-      vpApi(`/api/viewpoint-sets/${encodeURIComponent(vpState.currentSet.id)}/folders`, {
-        method: 'POST', body: JSON.stringify({ name }),
-      })
-    ));
-    await vpLoadTree();
-    vpFeedback(`「${template.name}」のフォルダを追加しました。`);
+    await vpApi(
+      `/api/viewpoint-sets/${encodeURIComponent(vpState.currentSet.id)}/templates/${encodeURIComponent(templateKey)}/apply`,
+      { method: 'POST' }
+    );
+    await vpLoadCurrentTab();
+    vpFeedback(`「${template.name}」を読み込みました（${template.folder_count}フォルダ・${template.item_count}観点）。`);
   } catch (error) { vpFeedback(error.message, 'error'); }
 }
 
@@ -911,16 +933,23 @@ document.getElementById('vp-tree-all-btn')?.addEventListener('click', () => {
   vpUpdateBreadcrumb();
 });
 
-// テンプレートメニュー
+// テンプレートメニュー（一覧は開いたタイミングで /api/viewpoint-templates から取得）
 const templateMenu = document.getElementById('vp-template-menu');
-document.getElementById('vp-tree-template-btn')?.addEventListener('click', () => {
-  if (templateMenu) templateMenu.hidden = !templateMenu.hidden;
+document.getElementById('vp-tree-template-btn')?.addEventListener('click', async () => {
+  if (!templateMenu) return;
+  const opening = templateMenu.hidden;
+  templateMenu.hidden = !templateMenu.hidden;
+  if (opening) {
+    vpRenderTemplateMenu(await vpFetchTemplates());
+  }
 });
-document.querySelectorAll('[data-template]').forEach((button) => {
-  button.addEventListener('click', () => {
-    if (templateMenu) templateMenu.hidden = true;
-    vpLoadTemplate(button.dataset.template);
-  });
+// テンプレート項目はメニュー開閉のたびに再生成されるため、静的な querySelectorAll
+// ではなくイベント委譲で拾う。
+templateMenu?.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-template]');
+  if (!button) return;
+  templateMenu.hidden = true;
+  vpLoadTemplate(button.dataset.template);
 });
 document.addEventListener('click', (event) => {
   if (templateMenu && !event.target.closest('#vp-tree-template-btn') && !event.target.closest('#vp-template-menu')) {

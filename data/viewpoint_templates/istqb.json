@@ -1,0 +1,106 @@
+{
+  "name": "ISTQB テストレベル",
+  "description": "ISTQB Foundation Level のテストレベル（単体/結合/システム/受入）に沿った観点セット。",
+  "folders": [
+    {
+      "name": "単体テスト",
+      "items": [
+        {
+          "name": "境界値分析",
+          "category": "入力検証",
+          "purpose": "各入力項目の最小値・最大値付近での挙動を確認する。",
+          "recommended_checks": "最小値、最大値、最小値-1、最大値+1 の4点を入力し、正常/エラー処理が仕様どおりであることを確認する。",
+          "risk_weight": 4,
+          "automation": "semi_automated",
+          "standards": "ISTQB Foundation Level",
+          "tags": ["境界値", "単体テスト"]
+        },
+        {
+          "name": "同値分割",
+          "category": "入力検証",
+          "purpose": "入力値を有効クラス・無効クラスに分割し、代表値で網羅的に検証する。",
+          "recommended_checks": "各同値クラスから代表値を1つ以上選び、期待結果が一致することを確認する。",
+          "risk_weight": 3,
+          "automation": "semi_automated",
+          "standards": "ISTQB Foundation Level",
+          "tags": ["同値分割", "単体テスト"]
+        }
+      ]
+    },
+    {
+      "name": "結合テスト",
+      "items": [
+        {
+          "name": "モジュール間インタフェース確認",
+          "category": "結合",
+          "purpose": "画面間・コンポーネント間で受け渡すデータの形式・欠落・不整合を確認する。",
+          "recommended_checks": "遷移元で入力した値が遷移先で正しく表示・利用されることを確認する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "ISTQB Foundation Level",
+          "tags": ["結合テスト", "画面遷移"]
+        },
+        {
+          "name": "外部API連携確認",
+          "category": "結合",
+          "purpose": "外部サービス（決済・認証等）との連携時のタイムアウト・エラー応答時の挙動を確認する。",
+          "recommended_checks": "外部APIがエラー・遅延を返した場合にユーザーへ適切なフィードバックがあることを確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "ISTQB Foundation Level",
+          "tags": ["結合テスト", "外部連携"]
+        }
+      ]
+    },
+    {
+      "name": "システムテスト",
+      "items": [
+        {
+          "name": "エンドツーエンドシナリオ確認",
+          "category": "業務シナリオ",
+          "purpose": "実際の業務フローに沿って一連の操作が完了することを確認する。",
+          "recommended_checks": "主要な業務シナリオ（会員登録〜購入完了等）を最初から最後まで通しで実行する。",
+          "risk_weight": 4,
+          "automation": "semi_automated",
+          "standards": "ISTQB Foundation Level",
+          "tags": ["システムテスト", "E2E"]
+        },
+        {
+          "name": "非機能要件（性能・負荷）確認",
+          "category": "非機能",
+          "purpose": "想定同時アクセス数・データ量における応答時間の劣化を確認する。",
+          "recommended_checks": "主要画面の応答時間が許容範囲内であることを計測する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISTQB Foundation Level",
+          "tags": ["システムテスト", "性能"]
+        }
+      ]
+    },
+    {
+      "name": "受入テスト",
+      "items": [
+        {
+          "name": "業務シナリオ受け入れ確認",
+          "category": "受入",
+          "purpose": "発注者・利用者の視点で業務要件を満たしていることを確認する。",
+          "recommended_checks": "要件定義書・仕様書に記載された業務シナリオがすべて実施できることを確認する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "ISTQB Foundation Level",
+          "tags": ["受入テスト"]
+        },
+        {
+          "name": "ユーザビリティ確認",
+          "category": "使用性",
+          "purpose": "実際の利用者が迷わず操作を完了できることを確認する。",
+          "recommended_checks": "初見の利用者が説明なしで主要タスクを完了できるかを確認する。",
+          "risk_weight": 2,
+          "automation": "manual",
+          "standards": "ISTQB Foundation Level",
+          "tags": ["受入テスト", "使用性"]
+        }
+      ]
+    }
+  ]
+}

@@ -175,6 +175,35 @@ def test_viewpoint_desktop_modal_screenshots(page: Page) -> None:
         page.locator("#vp-editor-close").click()
 
 
+def test_viewpoint_template_menu_lists_real_presets_with_items(page: Page) -> None:
+    """R1-18: ISTQB/ISO25010/非機能要求グレード2018/PMBOKプリセットが実アイテム入りで
+    提供されること（従来は空フォルダのみだった）を確認する。"""
+    _open_viewpoints(page)
+    page.locator("#vp-tree-template-btn").click()
+    menu = page.locator("#vp-template-menu")
+    expect(menu).to_be_visible()
+    items = menu.locator(".vp-template-item")
+    expect(items).to_have_count(4)
+    keys = items.evaluate_all("(els) => els.map((el) => el.dataset.template)")
+    assert set(keys) == {"istqb", "iso25010", "nfr2018", "pmbok"}
+    for item in items.all():
+        expect(item).to_contain_text("観点")  # "X観点" のカウント表記が出ていること
+
+
+def test_viewpoint_template_apply_seeds_folders_and_items_into_tree(page: Page) -> None:
+    _open_viewpoints(page)
+    page.locator("#vp-tree-template-btn").click()
+    page.locator('[data-template="istqb"]').click()
+    expect(page.locator("#confirm-overlay")).to_be_visible()
+    expect(page.locator("#confirm-overlay")).to_contain_text("フォルダ")
+    page.locator("#confirm-ok-btn").click()
+    expect(page.locator("#vp-feedback")).to_contain_text("ISTQB テストレベル")
+
+    tree = page.locator("#vp-tree-root")
+    expect(tree).to_contain_text("単体テスト")
+    expect(tree).to_contain_text("結合テスト")
+
+
 def test_autorun_has_viewpoint_selector(page: Page) -> None:
     page.goto(BASE_URL)
     page.wait_for_load_state("networkidle")

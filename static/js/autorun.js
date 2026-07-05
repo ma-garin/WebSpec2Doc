@@ -451,10 +451,19 @@ function _autorunLogLevelOf(line) {
   return 'info';
 }
 
+// クロールCLIの生出力（`[cli] ...`）は開発者向け。既定では非表示にし、
+// 「開発者向け詳細を表示」チェックで見られるようにする（生ログがそのまま
+// 表示され読みにくい、というドッグフーディング指摘への対応）。
+function _autorunIsRawCliLine(line) {
+  return /\[cli\]/.test(line);
+}
+
 function _autorunRenderLog() {
   const logEl = document.getElementById('autorun-log');
   if (!logEl) return;
+  const showRaw = document.getElementById('autorun-log-show-raw')?.checked;
   const lines = _autoRunLogLines.filter(line => {
+    if (!showRaw && _autorunIsRawCliLine(line)) return false;
     const lv = _autorunLogLevelOf(line);
     if (_autoRunLogLevel === 'error') return lv === 'error';
     if (_autoRunLogLevel === 'warn') return lv !== 'info';
@@ -481,6 +490,7 @@ document.querySelectorAll('.autorun-log-filter-btn').forEach(btn => {
     _autorunRenderLog();
   });
 });
+document.getElementById('autorun-log-show-raw')?.addEventListener('change', () => _autorunRenderLog());
 document.getElementById('autorun-log-copy')?.addEventListener('click', () => {
   navigator.clipboard.writeText(_autoRunLogLines.join('\n')).then(() => {
     const btn = document.getElementById('autorun-log-copy');

@@ -513,6 +513,33 @@ class TestPhaseDiscoverLoginConsolidation:
         assert "--auth" in popen_calls[0]
         assert popen_calls[0][popen_calls[0].index("--auth") + 1] == job.auth_path
 
+    def test_crawl_cli_stdout_tagged_as_developer_detail(self, tmp_path: Path) -> None:
+        """クロールCLIの生stdoutは `[cli]` タグ付きでログに追加される
+        （UIでは既定非表示・開発者向けトグルで表示。生ログがそのまま表示され
+        読みにくい、というドッグフーディング指摘への対応）。"""
+        job = _make_job(url="https://example.com/", domain="example.com")
+
+        def fake_popen(cmd, *args, **kwargs):
+            proc = MagicMock()
+            proc.stdout = iter(["Crawling https://example.com/...\n", "  found 3 links\n"])
+            proc.wait.return_value = 0
+            return proc
+
+        report_dir = tmp_path / "example.com"
+        report_dir.mkdir(parents=True, exist_ok=True)
+        (report_dir / "report.json").write_text('{"screens": []}', encoding="utf-8")
+
+        with (
+            patch("web.routes.auto_run.OUTPUT_DIR", tmp_path),
+            patch("web.routes.auto_run.subprocess.Popen", side_effect=fake_popen),
+        ):
+            _phase_crawl(job, depth=2, max_pages=30)
+
+        cli_lines = [line for line in job.log if "[cli]" in line]
+        assert len(cli_lines) == 2
+        assert "Crawling https://example.com/..." in cli_lines[0]
+        assert "found 3 links" in cli_lines[1]
+
 
 # ─────────────────────── _truthy ───────────────────────
 

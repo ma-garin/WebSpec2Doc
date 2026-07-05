@@ -195,7 +195,9 @@ class TestHistoryDiffFeedback:
 
         page.route("**/api/snapshot-diff**", _delayed_continue)
         page.locator("#tl-diff-btn").click()
-        expect(page.locator("#tl-diff-btn")).to_have_text("差分を取得中…")
+        # フルスイート実行時はCPU競合でクリック→再描画が遅延することがあるため、
+        # デフォルト5秒より長めに待つ（実際の遅延は0.6秒固定なので誤検知はしない）。
+        expect(page.locator("#tl-diff-btn")).to_have_text("差分を取得中…", timeout=15_000)
         # 遅延後にローディングが解除されることも確認する
         expect(page.locator("#tl-diff-btn")).to_have_text("この2時点の差分を表示", timeout=10_000)
 

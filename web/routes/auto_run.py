@@ -443,7 +443,9 @@ def _phase_crawl(job: AutoRunJob, depth: int, max_pages: int) -> None:
                 return
             line = line.rstrip()
             if line:
-                job.add_log(line)
+                # クロールCLIの生出力は開発者向け（UIでは既定非表示、トグルで表示）。
+                # 生ログがそのまま表示され読みにくい、というドッグフーディング指摘への対応。
+                job.add_log(f"[cli] {line}")
         proc.wait(timeout=600)
         job._proc = None
     except subprocess.TimeoutExpired:

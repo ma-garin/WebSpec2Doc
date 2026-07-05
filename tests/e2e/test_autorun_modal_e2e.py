@@ -320,6 +320,37 @@ class TestCaseDetailExpand:
         expect(detail_row).to_be_visible()
 
 
+class TestDeveloperLogToggle:
+    """クロールCLIの生ログは既定非表示・「開発者向け詳細を表示」で見える
+    （生ログがそのまま表示され読みにくい、というドッグフーディング指摘への
+    対応）。"""
+
+    def _render_log(self, page: Page) -> None:
+        page.evaluate(
+            """() => {
+                document.getElementById('ar-log-section').style.display = '';
+                _autoRunLogLines = [
+                    '[10:00:00] クロール開始: https://example.com/ (depth=2, max=30)',
+                    '[10:00:01] [cli] Crawling https://example.com/...',
+                    '[10:00:05] クロール完了: example.com',
+                ];
+                _autorunRenderLog();
+            }"""
+        )
+
+    def test_raw_cli_lines_hidden_by_default(self, autorun_page: Page) -> None:
+        self._render_log(autorun_page)
+        log = autorun_page.locator("#autorun-log")
+        expect(log).to_contain_text("クロール開始")
+        expect(log).not_to_contain_text("Crawling https://example.com/...")
+
+    def test_raw_cli_lines_shown_when_toggled(self, autorun_page: Page) -> None:
+        self._render_log(autorun_page)
+        autorun_page.locator("#autorun-log-show-raw").check()
+        log = autorun_page.locator("#autorun-log")
+        expect(log).to_contain_text("Crawling https://example.com/...")
+
+
 class TestApprovalModalViaRoute:
     """page.route() で API をモックし、実際の JS フロー経由でモーダルを検証する。
 

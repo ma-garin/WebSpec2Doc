@@ -25,6 +25,15 @@ from crawler.page_crawler import (
     FormData,
 )
 from generator.coverage_gap import CoverageGap
+from generator.test_design import (
+    EVIDENCE_MEASURED,
+    BvaCase,
+    BvaTable,
+    DecisionTable,
+    PairwiseTable,
+    StateTransitionSet,
+    TestDesign,
+)
 
 REPORT_TITLE = "WebSpec2Doc テスト分析インプット"
 TOOL_NAME = "WebSpec2Doc"
@@ -50,6 +59,7 @@ def generate_html_report(
     exploration_coverage: dict | None = None,
     ux_review: dict | None = None,
     coverage_gaps: tuple[CoverageGap, ...] = (),
+    test_design: TestDesign | None = None,
 ) -> str:
     from analyzer.stack_detector import StackInfo
     from generator.architecture_generator import (
@@ -68,6 +78,9 @@ def generate_html_report(
     merged_endpoints = merge_api_endpoints([p.page_data.api_calls for p in pages])
     domain = _url_domain(target_url)
     arch_mermaid = generate_architecture_mermaid(domain, merged_stack, merged_endpoints)
+    test_design_page_ids = (
+        frozenset(screen.page_id for screen in test_design.screens) if test_design else frozenset()
+    )
 
     return "\n".join(
         [
@@ -97,7 +110,12 @@ def generate_html_report(
             _exploration_section(exploration_coverage),
             _ux_review_section(ux_review),
             _coverage_gap_section(coverage_gaps),
-            _section("画面カタログ", _screen_cards(pages, graph, screenshots_dir), "screens"),
+            _section(
+                "画面カタログ",
+                _screen_cards(pages, graph, screenshots_dir, test_design_page_ids),
+                "screens",
+            ),
+            _section("テスト設計（技法別）", _test_design_block(test_design), "test-design"),
             _meta_section(target_url, crawl_depth, crawl_max_pages, crawled_at, len(pages)),
             _footer(now),
             "</main></div></div>",
@@ -214,6 +232,8 @@ letter-spacing:.05em}
 .stack-card .sk-value{font-size:.95rem;font-weight:600;color:var(--primary-dark);margin-top:.2rem}
 .api-badge{display:inline-block;background:#f3e8ff;border:1px solid #c084fc;border-radius:4px;
 padding:.1rem .4rem;font-size:.75rem;font-weight:600;color:#6b21a8;margin-right:.3rem}
+.dt-table td:first-child,.bva-table td:first-child{font-weight:600;white-space:nowrap}
+.st-list{margin:0 0 1rem 1.2rem;font-size:.85rem}
 @media(max-width:760px){.screen-body{grid-template-columns:1fr}}
 """
 
@@ -263,6 +283,7 @@ def _sidebar(
         raw = page.page_data.title or _url_path(page.page_data.url)
         title = html.escape(raw[:SIDEBAR_TITLE_LIMIT])
         items.append(f'<a href="#{pid}" class="nav-item nav-sub">{pid} {title}</a>')
+    items.append('<a href="#test-design" class="nav-item">テスト設計（技法別）</a>')
     items.append('<a href="#meta" class="nav-item">メタ情報</a>')
     return (
         '<aside class="app-sidebar"><div class="app-brand">WebSpec2Doc</div>'
@@ -308,12 +329,22 @@ def _mermaid_block(content: str) -> str:
 
 
 def _screen_cards(
-    pages: list[AnalyzedPage], graph: nx.DiGraph, screenshots_dir: Path | None
+    pages: list[AnalyzedPage],
+    graph: nx.DiGraph,
+    screenshots_dir: Path | None,
+    test_design_page_ids: frozenset[str] = frozenset(),
 ) -> str:
-    return "".join(_screen_card(page, graph, screenshots_dir) for page in pages)
+    return "".join(
+        _screen_card(page, graph, screenshots_dir, test_design_page_ids) for page in pages
+    )
 
 
-def _screen_card(page: AnalyzedPage, graph: nx.DiGraph, screenshots_dir: Path | None) -> str:
+def _screen_card(
+    page: AnalyzedPage,
+    graph: nx.DiGraph,
+    screenshots_dir: Path | None,
+    test_design_page_ids: frozenset[str] = frozenset(),
+) -> str:
     pid = html.escape(page.page_id)
     title = html.escape(page.page_data.title or "")
     url_path = html.escape(_url_path(page.page_data.url))
@@ -322,6 +353,7 @@ def _screen_card(page: AnalyzedPage, graph: nx.DiGraph, screenshots_dir: Path | 
         + _forms_block(page.page_data.forms, page.page_id)
         + _buttons_block(page.page_data.buttons)
         + _transitions_block(page.page_id, graph)
+        + _test_design_link_block(page.page_id, test_design_page_ids)
     )
     return (
         f'<div class="screen" id="{pid}">'
@@ -332,6 +364,18 @@ def _screen_card(page: AnalyzedPage, graph: nx.DiGraph, screenshots_dir: Path | 
         f'<div class="screen-info">{info}</div></div>'
         "</div>"
     )
+
+
+def _test_design_link_block(page_id: str, test_design_page_ids: frozenset[str]) -> str:
+    """画面カードから対応するテスト設計節への内部リンクを出す（B-2）。
+
+    実際にテスト設計が生成された画面にのみリンクする（存在しないアンカーへの
+    リンクを作らない＝捏造禁止・evidence-only 原則）。
+    """
+    if page_id not in test_design_page_ids:
+        return ""
+    pid = html.escape(page_id)
+    return f'<div class="subhead"><a href="#td-{pid}">テスト設計を見る</a></div>'
 
 
 def _screenshot_img(page: AnalyzedPage, screenshots_dir: Path | None) -> str:
@@ -781,6 +825,96 @@ def _coverage_gap_section(coverage_gaps: tuple[CoverageGap, ...]) -> str:
     return _section("カバレッジと未確認領域", body, "coverage-gaps")
 
 
+def _test_design_block(design: TestDesign | None) -> str:
+    """「テスト設計（技法別）」節（R3-18b）。
+
+    `build_test_design()` の出力を画面ごとに BVA/デシジョンテーブル/ペアワイズ/
+    状態遷移の具体的な表へ展開する。実測データがなく生成できない場合は
+    「テスト設計データなし」と明記する（捏造禁止・evidence-only 原則）。
+    """
+    if design is None or not design.screens:
+        return (
+            '<p class="muted">テスト設計データなし'
+            "（<code>--format json</code> を含めて再実行してください）</p>"
+        )
+    blocks: list[str] = []
+    for screen in design.screens:
+        pid = html.escape(screen.page_id)
+        title = html.escape(screen.title)
+        blocks.append(f'<h3 id="td-{pid}">{pid} {title}</h3>')
+        if screen.bva:
+            blocks.append('<div class="subhead">境界値分析（BVA）</div>')
+            blocks.extend(_bva_table_html(table) for table in screen.bva)
+        if screen.decision_table is not None:
+            blocks.append('<div class="subhead">デシジョンテーブル</div>')
+            blocks.append(_dt_table_html(screen.decision_table))
+        if screen.pairwise is not None:
+            blocks.append('<div class="subhead">ペアワイズ</div>')
+            blocks.append(_pairwise_table_html(screen.pairwise))
+        if screen.state_transitions is not None:
+            blocks.append('<div class="subhead">状態遷移（Nスイッチ）</div>')
+            blocks.append(_state_transitions_html(screen.state_transitions))
+        if not (screen.bva or screen.decision_table or screen.pairwise or screen.state_transitions):
+            # build_test_design() は空画面を除外するため通常到達しないが、
+            # 将来の呼び出し方変化に備えた防御的分岐（捏造せず理由を明記）。
+            blocks.append('<p class="muted">フォーム・遷移が無いため対象外</p>')
+    return "".join(blocks)
+
+
+def _bva_evidence_badge(case: BvaCase) -> str:
+    label = "実測" if case.confidence >= EVIDENCE_MEASURED else "カタログ"
+    return f'<span class="ev-badge">{html.escape(label)} 確信度{case.confidence:.1f}</span>'
+
+
+def _bva_table_html(table: BvaTable) -> str:
+    rows = "".join(
+        f"<tr><td>{html.escape(table.field_name)}</td><td>{html.escape(case.label)}</td>"
+        f"<td>{html.escape(case.value)}</td><td>{html.escape(case.expected)}</td>"
+        f"<td>{_bva_evidence_badge(case)}</td></tr>"
+        for case in table.cases
+    )
+    return (
+        '<table class="bva-table"><thead><tr>'
+        "<th>フィールド</th><th>観点</th><th>値</th><th>期待結果</th><th>根拠</th>"
+        f"</tr></thead><tbody>{rows}</tbody></table>"
+    )
+
+
+def _dt_table_html(dt: DecisionTable) -> str:
+    """デシジョンテーブルをルール＝列展開で表示する（ISTQB標準の真理値表と同じ向き）。"""
+    headers = "".join(f"<th>ルール{i + 1}</th>" for i in range(len(dt.rules)))
+    condition_rows = "".join(
+        "<tr><td>{}</td>{}</tr>".format(
+            html.escape(condition_label),
+            "".join(f"<td>{'Y' if rule.conditions[ci] else 'N'}</td>" for rule in dt.rules),
+        )
+        for ci, condition_label in enumerate(dt.conditions)
+    )
+    action_row = "<tr><td>期待アクション</td>{}</tr>".format(
+        "".join(f"<td>{html.escape(rule.action)}</td>" for rule in dt.rules)
+    )
+    return (
+        f'<table class="dt-table"><thead><tr><th>条件</th>{headers}</tr></thead>'
+        f"<tbody>{condition_rows}{action_row}</tbody></table>"
+    )
+
+
+def _pairwise_table_html(pw: PairwiseTable) -> str:
+    headers = "".join(f"<th>{html.escape(p.name)}</th>" for p in pw.params)
+    rows = "".join(
+        "<tr>" + "".join(f"<td>{html.escape(v)}</td>" for v in row) + "</tr>" for row in pw.rows
+    )
+    return (
+        f'<table class="pw-table"><thead><tr>{headers}</tr></thead>'
+        f"<tbody>{rows}</tbody></table>"
+    )
+
+
+def _state_transitions_html(st: StateTransitionSet) -> str:
+    items = "".join(f"<li>{html.escape(' → '.join(seq.steps))}</li>" for seq in st.sequences)
+    return f'<ol class="st-list">{items}</ol>'
+
+
 def _meta_section(
     target_url: str,
     crawl_depth: int,
@@ -843,9 +977,26 @@ def _evidence_script() -> str:
 
 
 def _mermaid_script() -> str:
+    """アプリ内(/preview、CSP script-src 'self' 配下)では同梱版を読み込む。
+
+    `static/vendor/mermaid/mermaid.min.js`（SHA-256 は同ディレクトリの ASSET.md に記録、
+    ライセンスは同梱の LICENSE）を `'self'` から読み込むため CSP 変更は不要（R3-18a）。
+    本レポートはダウンロードして単体で開かれることもあるため、その場合（Flask 非経由・
+    `/static/...` が解決できない）に限り `window.mermaid` が未定義かを確認したうえで
+    CDN からのフォールバック読み込みを試みる。`securityLevel:'strict'` を明示し
+    Mermaid 側の XSS 対策を有効化する。
+    """
     return (
-        '<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>'
-        "<script>mermaid.initialize({startOnLoad:true,theme:'default'});</script>"
+        '<script src="/static/vendor/mermaid/mermaid.min.js"></script>\n'
+        "<script>\n"
+        "(function boot(){\n"
+        "  if (window.mermaid) { mermaid.initialize({startOnLoad:true, securityLevel:'strict'}); return; }\n"
+        "  var s = document.createElement('script');\n"
+        "  s.src = 'https://cdn.jsdelivr.net/npm/mermaid@10.9.3/dist/mermaid.min.js';\n"
+        "  s.onload = function(){ mermaid.initialize({startOnLoad:true, securityLevel:'strict'}); };\n"
+        "  document.head.appendChild(s);\n"
+        "})();\n"
+        "</script>"
     )
 
 

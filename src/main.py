@@ -1232,6 +1232,16 @@ def _save_html_outputs(
     from generator.html_reporter import generate_html_report
 
     screenshots_dir = output_dir / "screenshots"
+    test_design = _build_test_design_for_report(
+        pages,
+        graph,
+        target_url,
+        crawl_depth,
+        crawl_max_pages,
+        crawled_at,
+        transition_coverage,
+        business_flows,
+    )
     report_html = generate_html_report(
         pages,
         graph,
@@ -1248,6 +1258,7 @@ def _save_html_outputs(
         exploration_coverage=exploration_coverage,
         ux_review=ux_review,
         coverage_gaps=coverage_gaps,
+        test_design=test_design,
     )
     html_path = output_dir / "report.html"
     html_path.write_text(report_html, encoding="utf-8")
@@ -1255,6 +1266,48 @@ def _save_html_outputs(
         from generator.pdf_reporter import generate_pdf
 
         generate_pdf(html_path, output_dir / PDF_FILE_NAME)
+
+
+_TEST_DESIGN_SETTINGS_PATH = Path("instance/test_design_settings.json")
+
+
+def _build_test_design_for_report(
+    pages: list[AnalyzedPage],
+    graph: nx.DiGraph,
+    target_url: str,
+    crawl_depth: int,
+    crawl_max_pages: int,
+    crawled_at: str,
+    transition_coverage: dict[str, dict] | None,
+    business_flows: list[dict] | None,
+):
+    """report.html の「テスト設計（技法別）」節向けに MBT エンジンの入力を組む（R3-18b）。
+
+    generate_json_report と同一の report dict を JSON 経由で組み立て、
+    instance/test_design_settings.json の設定を適用して build_test_design() を呼ぶ。
+    失敗してもテスト設計は付加機能のため、レポート生成全体は止めず test_design=None で
+    継続する（既存出力へのフォールバック方針は他セクションの集計処理と同様）。
+    """
+    try:
+        from generator.json_reporter import generate_json_report
+        from generator.test_design import build_test_design, load_params_from_file
+
+        report_json_str = generate_json_report(
+            pages,
+            graph,
+            target_url,
+            crawl_depth=crawl_depth,
+            crawl_max_pages=crawl_max_pages,
+            crawled_at=crawled_at,
+            transition_coverage=transition_coverage,
+            business_flows=business_flows,
+        )
+        report_dict = json.loads(report_json_str)
+        params = load_params_from_file(_TEST_DESIGN_SETTINGS_PATH)
+        return build_test_design(report_dict, params)
+    except Exception as exc:  # noqa: BLE001 - テスト設計生成の失敗でレポート生成全体を止めない
+        logger.warning("テスト設計（技法別）の生成に失敗しました（節を省略します）: %s", exc)
+        return None
 
 
 def _save_json_output(

@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from web.services.qa.advanced_html import _risk_reasons, _risk_score
 from web.services.qa.helpers import (
     QA_STEPS,
     _buttons,
@@ -23,6 +24,11 @@ from web.services.qa.helpers import (
     _viewpoints_by_type,
 )
 from web.services.qa.markdown_lite import render_markdown_lite
+
+# 箇条書きは「1画面で読み切れる」受け入れ基準（R3-06）のため3行に固定する。
+_EXEC_SUMMARY_BULLET_LIMIT = 3
+# エグゼクティブサマリーに載せるリスク上位画面数（数値カード用）。
+_EXEC_SUMMARY_TOP_RISK_COUNT = 3
 
 
 def _generate_outputs(
@@ -372,6 +378,102 @@ def _cross_review(domain: str, report: dict[str, Any]) -> str:
     )
 
 
+def _count_markdown_table_rows(markdown_text: str) -> int:
+    """自前Markdownテーブルのデータ行数を数える（ヘッダー行・区切り行を除く）。
+
+    `_test_cases()`（通常生成）と `_cases_table()`（AI補完生成）のどちらの
+    test_cases ドキュメントにも使える（両者ともヘッダーに「ケースID」を含む
+    テーブル1つのみを持つ形式のため）。生成ロジックを重複させず、実際に
+    出力されたテーブルをそのまま数える（evidence-only 原則）。
+    """
+    count = 0
+    for line in markdown_text.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            continue
+        inner = stripped.strip("|").strip()
+        if inner and set(inner) <= {"-", ":", "|", " "}:
+            continue  # 区切り行（|---|---|）
+        if "ケースID" in stripped:
+            continue  # ヘッダー行
+        count += 1
+    return count
+
+
+def _executive_summary_html(domain: str, report: dict[str, Any], docs: dict[str, str]) -> str:
+    """エグゼクティブサマリー（R3-06）。
+
+    「結論1行（最重要リスク）→数値カード（対象画面数/生成ケース数/検出リスク上位3）→
+    3行以内の箇条書き→詳細は各章リンク」の構造で、1画面（スクロールなし）で
+    読み切れることを狙う。すべて _qa_summary/_risk_score 由来の実測値であり、
+    対象サイト固有のリスク内容を捏造しない（evidence-only 原則）。
+    """
+    summary = _qa_summary(report)
+    ranked_screens = sorted(_screen_summaries(report), key=_risk_score, reverse=True)
+    top_risks = ranked_screens[:_EXEC_SUMMARY_TOP_RISK_COUNT]
+    # 生成ケース数は test_cases ドキュメントの実際のテーブル行数を数える
+    # （生成ロジックを重複実装せず、実際に出力された内容そのものを実測値として使う）。
+    case_count = _count_markdown_table_rows(docs.get("test_cases", ""))
+
+    if top_risks:
+        top = top_risks[0]
+        top_id = html.escape(str(top.get("page_id", "")))
+        top_title = html.escape(str(top.get("title") or top.get("page_id", "")))
+        top_reasons = html.escape("、".join(_risk_reasons(top)))
+        conclusion = (
+            f"最重要リスク: {top_id} {top_title}"
+            f"（リスクスコア {_risk_score(top)} / 根拠: {top_reasons}）"
+        )
+    else:
+        conclusion = "画面が抽出されていないため、最重要リスクを提示できません（未確認）。"
+
+    risk_cards = "".join(
+        f'<div class="card"><div class="num">{_risk_score(screen)}</div>'
+        f"<div>リスク{rank}位: {html.escape(str(screen.get('page_id', '')))}</div></div>"
+        for rank, screen in enumerate(top_risks, 1)
+    )
+    cards_html = (
+        '<div class="cards">'
+        f'<div class="card"><div class="num">{summary["screens"]}</div><div>対象画面数</div></div>'
+        f'<div class="card"><div class="num">{case_count}</div><div>生成ケース数</div></div>'
+        f"{risk_cards}"
+        "</div>"
+    )
+
+    bullets: list[str] = []
+    if top_risks:
+        names = "、".join(
+            f"{html.escape(str(s.get('page_id', '')))}（{_risk_score(s)}）" for s in top_risks
+        )
+        bullets.append(f"リスク上位{len(top_risks)}画面: {names}")
+    bullets.append(
+        f"必須入力項目: {summary['required']}/{summary['fields']} 件（未入力時のエラー確認が必要）"
+    )
+    bullets.append(
+        f"画面遷移: {summary['transitions']} 件検出（遷移先未検出の画面はリスク要因として計上）"
+    )
+    bullet_html = (
+        "<ul>" + "".join(f"<li>{b}</li>" for b in bullets[:_EXEC_SUMMARY_BULLET_LIMIT]) + "</ul>"
+    )
+
+    link_items = "".join(
+        f'<li><a href="#section-{key}">{html.escape(label)}</a></li>'
+        for key, label, _filename in QA_STEPS
+        if key in docs
+    )
+    links_html = f'<div class="exec-links">詳細: <ul>{link_items}</ul></div>' if link_items else ""
+
+    return (
+        '<section class="exec-summary" id="exec-summary">'
+        "<h2>エグゼクティブサマリー</h2>"
+        f'<p class="exec-conclusion"><strong>{conclusion}</strong></p>'
+        f"{cards_html}"
+        f"{bullet_html}"
+        f"{links_html}"
+        "</section>"
+    )
+
+
 def _qa_process_report_html(
     domain: str,
     report: dict[str, Any],
@@ -380,6 +482,7 @@ def _qa_process_report_html(
     used_ai: bool = False,
 ) -> str:
     summary = _qa_summary(report)
+    executive_summary_html = _executive_summary_html(domain, report, docs)
     screen_rows = "".join(
         "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>".format(
             html.escape(str(screen["page_id"])),
@@ -391,7 +494,8 @@ def _qa_process_report_html(
         for screen in _screen_summaries(report)
     )
     doc_sections = "".join(
-        f'<section><h2>{html.escape(label)}</h2><div class="md-doc">{render_markdown_lite(docs[key])}</div></section>'
+        f'<section id="section-{key}"><h2>{html.escape(label)}</h2>'
+        f'<div class="md-doc">{render_markdown_lite(docs[key])}</div></section>'
         for key, label, _filename in QA_STEPS
         if key in docs
     )
@@ -443,11 +547,18 @@ def _qa_process_report_html(
     .md-doc table.md-table th {{ background: #F3F4F6; }}
     .md-doc pre.md-code {{ background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 6px; padding: 12px; overflow: auto; }}
     .md-doc ul, .md-doc ol {{ padding-left: 22px; }}
+    .exec-summary {{ border: 1px solid #E5E7EB; border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; background: #F9FAFB; }}
+    .exec-summary h2 {{ margin-top: 0; }}
+    .exec-conclusion {{ font-size: 15px; margin: 4px 0 12px; }}
+    .exec-summary ul {{ margin: 8px 0; padding-left: 22px; font-size: 13px; }}
+    .exec-links ul {{ display: inline; padding: 0; margin: 0; list-style: none; }}
+    .exec-links li {{ display: inline; margin-right: 10px; }}
   </style>
 </head>
 <body>
   <h1>QAプロセスレポート</h1>
   <div class="meta">対象: {html.escape(domain)} / 生成日時: {html.escape(generated_at)} / {html.escape(generation_mode)}</div>
+  {executive_summary_html}
   <div class="cards">
     <div class="card"><div class="num">{summary['screens']}</div><div>画面</div></div>
     <div class="card"><div class="num">{summary['forms']}</div><div>フォーム</div></div>

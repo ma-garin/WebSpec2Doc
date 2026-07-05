@@ -145,29 +145,27 @@ class TestSettingsTabs:
         page.wait_for_load_state("networkidle")
         page.locator(".app-nav-item[data-view='settings']").click()
         expect(page.locator("#set-panel-api")).to_be_visible()
-        expect(page.locator("#set-panel-model")).to_be_hidden()
+        expect(page.locator("#set-panel-crawl")).to_be_hidden()
 
-    def test_click_switches_to_model_tab(self, page: Page) -> None:
+    def test_api_tab_includes_model_select(self, page: Page) -> None:
+        """モデルタブは廃止し、APIキータブに統合される（S1-6）。"""
         page.goto(BASE_URL)
         page.wait_for_load_state("networkidle")
         page.locator(".app-nav-item[data-view='settings']").click()
-        page.locator(".set-tab[data-tab='model']").click()
-        expect(page.locator("#set-panel-model")).to_be_visible()
-        expect(page.locator("#set-panel-api")).to_be_hidden()
-        expect(page.locator(".set-tab[data-tab='model']")).to_have_attribute(
-            "aria-selected", "true"
-        )
-        expect(page.locator(".set-tab[data-tab='api']")).to_have_attribute("aria-selected", "false")
+        expect(page.locator(".set-tab[data-tab='model']")).to_have_count(0)
+        expect(page.locator("#set-panel-model")).to_have_count(0)
+        expect(page.locator("#api-model")).to_be_visible()
+        expect(page.locator("#test-connection")).to_be_visible()
 
     def test_click_switches_through_all_tabs(self, page: Page) -> None:
-        """4タブすべてが押した順にパネル切替されること（クロール既定値・通知タブ含む）。"""
+        """3タブすべてが押した順にパネル切替されること（クロール既定値・通知タブ含む）。"""
         page.goto(BASE_URL)
         page.wait_for_load_state("networkidle")
         page.locator(".app-nav-item[data-view='settings']").click()
-        for tab in ("crawl", "notify", "model", "api"):
+        for tab in ("crawl", "notify", "api"):
             page.locator(f".set-tab[data-tab='{tab}']").click()
             expect(page.locator(f"#set-panel-{tab}")).to_be_visible()
-            others = [t for t in ("api", "model", "crawl", "notify") if t != tab]
+            others = [t for t in ("api", "crawl", "notify") if t != tab]
             for other in others:
                 expect(page.locator(f"#set-panel-{other}")).to_be_hidden()
 

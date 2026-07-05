@@ -6,6 +6,7 @@ from flask import Blueprint, request
 
 from web.config import DEFAULT_OPENAI_MODEL
 from web.env_store import _mask_key, _read_env, _write_env
+from web.services.openai_qa import test_openai_connection
 from web.services.test_design_settings import (
     get_test_design_settings,
     save_test_design_settings,
@@ -54,6 +55,12 @@ def post_settings() -> dict:
         "openai_key_set": bool(env.get("OPENAI_API_KEY")),
         "slack_webhook_set": bool(env.get("SLACK_WEBHOOK_URL")),
     }
+
+
+@bp.post("/api/settings/test-connection")
+def post_test_connection() -> dict:
+    ok, message = test_openai_connection()
+    return {"ok": ok, "message": message}
 
 
 @bp.get("/api/settings/test-design")

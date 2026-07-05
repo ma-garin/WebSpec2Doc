@@ -114,3 +114,36 @@ def test_post_test_design_settings_invalid_json_returns_400(test_design_file: Pa
     )
     assert response.status_code == 400
     assert not test_design_file.exists()
+
+
+# ─────────────────────── /api/settings/test-connection ───────────────────────
+
+from unittest.mock import patch  # noqa: E402
+
+
+def test_post_test_connection_no_key_returns_ok_false(env_file: Path) -> None:
+    response = _client().post("/api/settings/test-connection")
+    assert response.status_code == 200
+    body = response.get_json()
+    assert body["ok"] is False
+    assert "OPENAI_API_KEY" in body["message"]
+
+
+def test_post_test_connection_success(env_file: Path) -> None:
+    env_file.write_text("OPENAI_API_KEY=sk-test123\n", encoding="utf-8")
+
+    class _FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def read(self):
+            return b"{}"
+
+    with patch("urllib.request.urlopen", return_value=_FakeResponse()):
+        response = _client().post("/api/settings/test-connection")
+    assert response.status_code == 200
+    body = response.get_json()
+    assert body["ok"] is True

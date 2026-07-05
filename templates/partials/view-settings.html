@@ -2,14 +2,13 @@
         <section class="view" id="view-settings">
           <div class="set-tabs" role="tablist" aria-label="設定タブ">
             <button type="button" class="set-tab is-active" data-tab="api" role="tab" aria-selected="true" aria-controls="set-panel-api" id="set-tab-api" tabindex="0">APIキー</button>
-            <button type="button" class="set-tab" data-tab="model" role="tab" aria-selected="false" aria-controls="set-panel-model" id="set-tab-model" tabindex="-1">モデル</button>
             <button type="button" class="set-tab" data-tab="crawl" role="tab" aria-selected="false" aria-controls="set-panel-crawl" id="set-tab-crawl" tabindex="-1">クロール既定値</button>
             <button type="button" class="set-tab" data-tab="notify" role="tab" aria-selected="false" aria-controls="set-panel-notify" id="set-tab-notify" tabindex="-1">通知</button>
           </div>
 
           <div class="set-panel is-active" id="set-panel-api" role="tabpanel" aria-labelledby="set-tab-api">
             <div class="input-card">
-              <h2 class="set-card-title">OpenAI API キー</h2>
+              <h2 class="set-card-title">OpenAI API キー・モデル</h2>
               <p class="input-hint" style="margin-top:0;margin-bottom:14px">キーは <code>.env</code> に保存されます（ブラウザには保存しません）。空欄で保存すると既存キーを保持します。</p>
               <div class="field full" style="margin-bottom:14px">
                 <label>現在のキー</label>
@@ -19,30 +18,25 @@
                 <div class="field full"><label for="api-key">OPENAI_API_KEY</label><input type="password" id="api-key" placeholder="sk-..." autocomplete="off"></div>
                 <div class="field"><label for="api-org">OPENAI_ORG_ID（任意）</label><input type="text" id="api-org" placeholder="org-..."></div>
                 <div class="field"><label for="api-project">OPENAI_PROJECT_ID（任意）</label><input type="text" id="api-project" placeholder="proj_..."></div>
+                <div class="field full">
+                  <label for="api-model">OPENAI_MODEL</label>
+                  <select id="api-model" class="url-input" style="height:40px">
+                    <option value="gpt-5.4-mini">gpt-5.4-mini（コスト効率・推奨）</option>
+                    <option value="gpt-5.4-nano">gpt-5.4-nano（最安・最速）</option>
+                    <option value="gpt-5.4">gpt-5.4（標準）</option>
+                    <option value="gpt-5.5">gpt-5.5（高精度）</option>
+                    <option value="gpt-5.5-pro">gpt-5.5-pro（最高精度）</option>
+                    <option value="gpt-4.1">gpt-4.1（非推論・ツール呼び出し）</option>
+                  </select>
+                </div>
               </div>
-              <button class="btn-primary" id="save-api" style="margin-top:18px">APIキーを保存</button>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px">
+                <button class="btn-primary" id="save-api">APIキー・モデルを保存</button>
+                <button class="btn-outline-sm" id="test-connection" type="button">疎通確認</button>
+              </div>
               <div class="settings-msg" id="api-msg">保存しました</div>
               <div class="settings-msg" id="api-status-msg" style="display:none;margin-top:12px"></div>
-            </div>
-          </div>
-
-          <div class="set-panel" id="set-panel-model" role="tabpanel" aria-labelledby="set-tab-model">
-            <div class="input-card">
-              <h2 class="set-card-title">回答生成モデル</h2>
-              <p class="input-hint" style="margin-top:0;margin-bottom:14px">LLMテスト観点生成（今後実装）で使うモデルです。</p>
-              <div class="field full">
-                <label for="api-model">OPENAI_MODEL</label>
-                <select id="api-model" class="url-input" style="height:40px">
-                  <option value="gpt-5.4-mini">gpt-5.4-mini（コスト効率・推奨）</option>
-                  <option value="gpt-5.4-nano">gpt-5.4-nano（最安・最速）</option>
-                  <option value="gpt-5.4">gpt-5.4（標準）</option>
-                  <option value="gpt-5.5">gpt-5.5（高精度）</option>
-                  <option value="gpt-5.5-pro">gpt-5.5-pro（最高精度）</option>
-                  <option value="gpt-4.1">gpt-4.1（非推論・ツール呼び出し）</option>
-                </select>
-              </div>
-              <button class="btn-primary" id="save-model" style="margin-top:18px">モデルを保存</button>
-              <div class="settings-msg" id="model-msg">保存しました</div>
+              <div class="settings-msg" id="test-connection-msg" style="display:none;margin-top:12px"></div>
             </div>
           </div>
 

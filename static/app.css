@@ -559,6 +559,7 @@ html[data-theme="dark"] .uml-canvas.is-fullscreen { background: var(--bg); }
     .options-grid .full { grid-column: 1 / -1; }
     .settings-msg { margin-top: 14px; padding: 10px 14px; border-radius: var(--radius); background: var(--ok-bg); color: var(--ok); font-size: 13px; font-weight: 700; display: none; }
     .settings-msg.show { display: block; }
+    .settings-msg.is-error { background: var(--critical-bg); color: var(--critical); }
     .set-tabs { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-soft); margin-bottom: 16px; }
     .set-tab { height: 34px; padding: 0 16px; border: 0; border-radius: 4px; background: transparent; color: var(--text-muted); font-size: 13px; font-weight: 700; cursor: pointer; }
     .set-tab.is-active { background: var(--surface); color: var(--primary-dark); box-shadow: inset 0 -2px 0 var(--primary); }

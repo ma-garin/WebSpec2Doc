@@ -21,16 +21,19 @@
                     公開済み観点セットを確認しています…
                   </div>
                 </div>
-                <div class="control-grid-2">
-                  <div class="control-field">
-                    <label for="autorun-depth">深さ<span class="info-tip" tabindex="0" role="img" aria-label="トップページからリンクを何回辿るか。1ならトップ直下のリンク先まで、2ならその先のリンクまで対象になります。" data-tip="トップページからリンクを何回辿るか。1ならトップ直下のリンク先まで、2ならその先のリンクまで対象になります。">ⓘ</span></label>
-                    <input type="number" id="autorun-depth" class="url-input input-compact" value="2" min="1" max="5" />
+                <details class="autorun-advanced-options">
+                  <summary>詳細オプション（既定は全ページ対象）</summary>
+                  <div class="control-grid-2">
+                    <div class="control-field">
+                      <label for="autorun-depth">深さ<span class="info-tip" tabindex="0" role="img" aria-label="トップページからリンクを何回辿るか。既定は上限（5）で、サイト全体を対象にします。少なくすると対象範囲を絞れます。" data-tip="トップページからリンクを何回辿るか。既定は上限（5）で、サイト全体を対象にします。少なくすると対象範囲を絞れます。">ⓘ</span></label>
+                      <input type="number" id="autorun-depth" class="url-input input-compact" value="5" min="1" max="5" />
+                    </div>
+                    <div class="control-field">
+                      <label for="autorun-max-pages">最大ページ<span class="info-tip" tabindex="0" role="img" aria-label="解析・テスト対象にする画面数の上限。既定は上限（300）で、サイト全体を対象にします。この件数に達したらそれ以上のクロールを打ち切ります。" data-tip="解析・テスト対象にする画面数の上限。既定は上限（300）で、サイト全体を対象にします。この件数に達したらそれ以上のクロールを打ち切ります。">ⓘ</span></label>
+                      <input type="number" id="autorun-max-pages" class="url-input input-compact" value="300" min="1" max="300" />
+                    </div>
                   </div>
-                  <div class="control-field">
-                    <label for="autorun-max-pages">最大ページ<span class="info-tip" tabindex="0" role="img" aria-label="解析・テスト対象にする画面数の上限。この件数に達したらそれ以上のクロールを打ち切ります。" data-tip="解析・テスト対象にする画面数の上限。この件数に達したらそれ以上のクロールを打ち切ります。">ⓘ</span></label>
-                    <input type="number" id="autorun-max-pages" class="url-input input-compact" value="30" min="1" max="300" />
-                  </div>
-                </div>
+                </details>
                 <button type="button" id="autorun-start-btn" class="btn-primary btn-block">開始</button>
                 <div id="autorun-start-status" class="input-field-message autorun-start-status"></div>
               </div>

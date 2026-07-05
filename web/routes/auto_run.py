@@ -37,6 +37,23 @@ _JOBS_LOCK = threading.Lock()
 # ─────────────────────────── API ───────────────────────────
 
 
+def _resolve_crawl_limits(form: Any, body: dict[str, Any]) -> tuple[int, int]:
+    """AutoRunの深さ・最大ページを解決する。既定は上限（全対象）。
+    深さ・最大ページは「詳細オプション」に折りたたまれた任意項目であり、
+    未指定時にR1-08/R2-18が指摘した「一部しか取得されない」挙動にならない
+    よう、既定値自体を上限に合わせる。"""
+    depth = _clean_int(
+        form.get("depth") or body.get("depth", str(MAX_DEPTH)), MAX_DEPTH, 1, MAX_DEPTH
+    )
+    max_pages = _clean_int(
+        form.get("max_pages") or body.get("max_pages", str(MAX_PAGES_LIMIT)),
+        MAX_PAGES_LIMIT,
+        1,
+        MAX_PAGES_LIMIT,
+    )
+    return depth, max_pages
+
+
 @bp.post("/api/autorun/start")
 def api_autorun_start() -> dict | tuple[dict, int]:
     body = request.get_json(silent=True) or {}
@@ -44,10 +61,7 @@ def api_autorun_start() -> dict | tuple[dict, int]:
     if not url:
         return {"error": "url is required"}, 400
 
-    depth = _clean_int(request.form.get("depth") or body.get("depth", "2"), 2, 1, MAX_DEPTH)
-    max_pages = _clean_int(
-        request.form.get("max_pages") or body.get("max_pages", "30"), 30, 1, MAX_PAGES_LIMIT
-    )
+    depth, max_pages = _resolve_crawl_limits(request.form, body)
     auth = _safe_auth_path((request.form.get("auth") or body.get("auth", "")).strip())
     viewpoint_set_id = (
         request.form.get("viewpoint_set_id") or body.get("viewpoint_set_id", "")

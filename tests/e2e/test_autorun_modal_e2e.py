@@ -93,9 +93,20 @@ class TestAutoRunFormExists:
         expect(btn).to_be_enabled()
 
     def test_depth_and_max_pages_inputs_exist(self, autorun_page: Page) -> None:
-        """深さ・最大ページ数の入力フィールドが存在する。"""
+        """深さ・最大ページ数の入力フィールドは「詳細オプション」の折りたたみ内に
+        存在し（R1-08/R2-18: 既定は上限=全対象、詳細オプション化）、開くと見える。"""
+        expect(autorun_page.locator("#autorun-depth")).to_be_attached()
+        expect(autorun_page.locator("#autorun-max-pages")).to_be_attached()
+        expect(autorun_page.locator("#autorun-depth")).to_be_hidden()
+        autorun_page.locator(".autorun-advanced-options summary").click()
         expect(autorun_page.locator("#autorun-depth")).to_be_visible()
         expect(autorun_page.locator("#autorun-max-pages")).to_be_visible()
+
+    def test_depth_and_max_pages_default_to_max(self, autorun_page: Page) -> None:
+        """既定値は上限（深さ5・最大ページ300 = 全対象）。"""
+        autorun_page.locator(".autorun-advanced-options summary").click()
+        expect(autorun_page.locator("#autorun-depth")).to_have_value("5")
+        expect(autorun_page.locator("#autorun-max-pages")).to_have_value("300")
 
     def test_invalid_url_shows_error(self, autorun_page: Page) -> None:
         """URL 未入力で開始ボタンをクリックするとエラーが表示される。"""

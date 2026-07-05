@@ -226,8 +226,8 @@ async function autorunStart() {
   const url = (document.getElementById('autorun-url')?.value || '').trim();
   if (!url) { autorunSetStartStatus('URLを入力してください。', true); return; }
 
-  const depth    = document.getElementById('autorun-depth')?.value || '2';
-  const maxPages = document.getElementById('autorun-max-pages')?.value || '30';
+  const depth    = document.getElementById('autorun-depth')?.value || '5';
+  const maxPages = document.getElementById('autorun-max-pages')?.value || '300';
   const viewpointSetId = document.getElementById('autorun-viewpoint-set')?.value || '';
 
   const btn = document.getElementById('autorun-start-btn');

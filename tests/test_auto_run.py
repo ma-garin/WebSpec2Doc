@@ -6,6 +6,7 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
+from web.config import MAX_DEPTH, MAX_PAGES_LIMIT
 from web.routes.auto_run import (
     AutoRunJob,
     _current_test_progress,
@@ -15,6 +16,7 @@ from web.routes.auto_run import (
     _phase_crawl,
     _phase_discover,
     _phase_generate_scripts,
+    _resolve_crawl_limits,
     _truthy,
 )
 
@@ -561,3 +563,36 @@ def test_now_iso_returns_string() -> None:
     result = _now_iso()
     assert isinstance(result, str)
     assert "T" in result  # ISO 形式
+
+
+# ─────────────────────── _resolve_crawl_limits ───────────────────────
+
+
+class TestResolveCrawlLimits:
+    def test_defaults_to_max_when_omitted(self) -> None:
+        """R1-08/R2-18: 深さ・最大ページを省略した場合、既定=上限（全対象）になる。"""
+        depth, max_pages = _resolve_crawl_limits({}, {})
+        assert depth == MAX_DEPTH
+        assert max_pages == MAX_PAGES_LIMIT
+
+    def test_uses_form_values_when_provided(self) -> None:
+        depth, max_pages = _resolve_crawl_limits({"depth": "3", "max_pages": "50"}, {})
+        assert depth == 3
+        assert max_pages == 50
+
+    def test_uses_json_body_when_form_empty(self) -> None:
+        depth, max_pages = _resolve_crawl_limits({}, {"depth": "1", "max_pages": "10"})
+        assert depth == 1
+        assert max_pages == 10
+
+    def test_clamps_values_above_limit(self) -> None:
+        depth, max_pages = _resolve_crawl_limits(
+            {"depth": str(MAX_DEPTH + 10), "max_pages": str(MAX_PAGES_LIMIT + 10)}, {}
+        )
+        assert depth == MAX_DEPTH
+        assert max_pages == MAX_PAGES_LIMIT
+
+    def test_clamps_values_below_minimum(self) -> None:
+        depth, max_pages = _resolve_crawl_limits({"depth": "0", "max_pages": "0"}, {})
+        assert depth == 1
+        assert max_pages == 1

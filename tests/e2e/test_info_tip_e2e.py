@@ -105,7 +105,9 @@ class TestAutoRunFieldsInfoTip:
         """深さ・最大ページ・1テストあたりの制限時間の意味が分からない、
         というドッグフーディング指摘への対応。"""
         page.goto(f"{BASE_URL}/auto-run")
-        page.wait_for_selector("#autorun-depth")
+        page.wait_for_selector(".autorun-advanced-options summary")
+        page.locator(".autorun-advanced-options summary").click()
+        page.wait_for_selector("#autorun-depth", state="visible")
         depth_tip = page.locator("label[for='autorun-depth'] .info-tip")
         max_pages_tip = page.locator("label[for='autorun-max-pages'] .info-tip")
         expect(depth_tip).to_be_visible()

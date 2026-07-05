@@ -169,6 +169,27 @@ class TestClassifyPair:
 
         assert findings == []
 
+    def test_sibling_nonbreaking_diff_not_suppressed_by_breaking_diff(self) -> None:
+        """同じ項目に breaking な属性差分（required）と非 breaking な差分（maxlength）が
+        同居しても、後者が握り潰されず unclassified として報告される（回帰）。"""
+        # message: required True→False（breaking）かつ maxlength 500→100（非 breaking）
+        old_field = FieldData("text", "message", "", required=True, maxlength=500)
+        new_field = FieldData("text", "message", "", required=False, maxlength=100)
+        old_page_data = _page("https://old.example.com/contact", "Contact", fields=(old_field,))
+        new_page_data = _page("https://new.example.com/contact", "Contact", fields=(new_field,))
+        old_page = analyze_pages([old_page_data])[0]
+        new_page = analyze_pages([new_page_data])[0]
+        pair = _pair(old_page.page_id, new_page.page_id)
+        diff_result = compare_page_pair(old_page.page_data, new_page.page_data)
+
+        findings = _classify_pair(pair, diff_result, old_page, new_page, screenshot_diff=None)
+
+        # required の breaking 指摘（操作不可）が出る
+        assert any(f.category == CATEGORY_INOPERABLE for f in findings)
+        # maxlength の非 breaking 差分が unclassified として残る（消えない）
+        unclassified = [f for f in findings if f.category == CATEGORY_UNCLASSIFIED]
+        assert any("maxlength" in f.detail for f in unclassified), [f.detail for f in findings]
+
 
 class TestRunOldNewComparison:
     def test_raises_comparison_error_when_one_side_empty(
@@ -240,6 +261,9 @@ class TestRunOldNewComparison:
         assert any(
             f.category == CATEGORY_INOPERABLE and "必須属性" in f.detail for f in result.findings
         )
+        # 画像未取得（screenshot_path=None）のペアは「未確認」として明示され、
+        # 比較済み・問題なしと区別できる（黙って握り潰さない・evidence-only）
+        assert any("視覚比較を実施できませんでした（未確認）" in f.detail for f in result.findings)
 
 
 class TestReportJsonUnchangedWithoutCompare:

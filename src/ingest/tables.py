@@ -208,6 +208,11 @@ def structure_requirement_table(table: ExtractedTable) -> list[DocumentedRequire
     id_col = find_column(table.headers, REQUIREMENT_ID_KEYS)
     note_col = find_column(table.headers, NOTE_KEYS)
     category_col = find_column(table.headers, REQUIREMENT_CATEGORY_KEYS)
+    # "必須区分" は REQUIRED_KEYS の完全一致列だが、REQUIREMENT_CATEGORY_KEYS の
+    # 部分一致キー "区分" にも引っかかり、要件区分列として誤選択される。
+    # 必須フラグ列を要件区分（○/× 等）として取り込まないよう除外する。
+    if category_col is not None and normalize_header(table.headers[category_col]) in REQUIRED_KEYS:
+        category_col = None
     requirements: list[DocumentedRequirement] = []
     auto_seq = 0
     for row in table.rows:

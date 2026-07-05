@@ -368,6 +368,26 @@ def _record_session(args: argparse.Namespace) -> None:
     logger.info("探索セッションを保存しました: %s", session_path)
 
 
+def _load_report_json(report_path: Path) -> dict | None:
+    """クロール済み report.json を寛容に読み込む。
+
+    不在・破損（JSONDecodeError）・読み込み失敗（OSError）はエラーログを出して
+    None を返す。中断で切れた report.json でもスタックトレースを吐かず、各モードが
+    一様に「インベントリなし」として安全に中断できるようにする（全モード共通）。
+    """
+    if not report_path.exists():
+        logger.error(
+            "クロール済みインベントリがありません: %s（先に --format json でクロールしてください）",
+            report_path,
+        )
+        return None
+    try:
+        return json.loads(report_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.error("report.json を読み込めません: %s (%s)", report_path, exc)
+        return None
+
+
 def _exploration_coverage(args: argparse.Namespace) -> None:
     """探索カバレッジ集計モード（ヒートマップ Phase 1）。"""
     from capture.coverage import (
@@ -382,17 +402,13 @@ def _exploration_coverage(args: argparse.Namespace) -> None:
         return
     output_dir = Path(args.output) / _domain_name(url)
     report_path = output_dir / JSON_REPORT_FILE_NAME
-    if not report_path.exists():
-        logger.error(
-            "クロール済みインベントリがありません: %s（先に --format json でクロールしてください）",
-            report_path,
-        )
+    report = _load_report_json(report_path)
+    if report is None:
         return
     events = load_session_events(output_dir)
     if not events:
         logger.error("探索セッションがありません（先に --record-session で操作を記録してください）")
         return
-    report = json.loads(report_path.read_text(encoding="utf-8"))
     business_flows = report.get("meta", {}).get("business_flows")
     coverage = compute_exploration_coverage(report, events, business_flows=business_flows)
     save_exploration_coverage(coverage, output_dir)
@@ -428,17 +444,13 @@ def _reverse_assets(args: argparse.Namespace) -> None:
         return
     output_dir = Path(args.output) / _domain_name(url)
     report_path = output_dir / JSON_REPORT_FILE_NAME
-    if not report_path.exists():
-        logger.error(
-            "クロール済みインベントリがありません: %s（先に --format json でクロールしてください）",
-            report_path,
-        )
+    report = _load_report_json(report_path)
+    if report is None:
         return
     events = load_session_events(output_dir)
     if not events:
         logger.error("探索セッションがありません（先に --record-session で操作を記録してください）")
         return
-    report = json.loads(report_path.read_text(encoding="utf-8"))
     assets = generate_recorded_assets(report, events)
     save_recorded_assets(assets, output_dir)
     logger.info(
@@ -485,16 +497,8 @@ def _generate_test_plan(args: argparse.Namespace) -> None:
         return
     output_dir = Path(args.output) / _domain_name(url)
     report_path = output_dir / JSON_REPORT_FILE_NAME
-    if not report_path.exists():
-        logger.error(
-            "クロール済みインベントリがありません: %s（先に --format json でクロールしてください）",
-            report_path,
-        )
-        return
-    try:
-        report = json.loads(report_path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        logger.error("report.json を読み込めません: %s (%s)", report_path, exc)
+    report = _load_report_json(report_path)
+    if report is None:
         return
     coefficients = load_plan_coefficients()
     plan = compute_test_plan(report, coefficients)

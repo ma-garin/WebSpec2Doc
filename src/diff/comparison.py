@@ -137,6 +137,20 @@ def run_old_new_comparison(
         )
         if screenshot_diff is not None:
             screenshot_diffs.append(screenshot_diff)
+        else:
+            # 画像未取得で視覚比較を実施できなかったことを「未確認」として明示する。
+            # 黙って握り潰すと、比較済みで問題なしのペアと区別できず、
+            # 検証していない安全性を暗黙に主張してしまう（evidence-only）。
+            findings.append(
+                ComparisonFinding(
+                    category=CATEGORY_UNCLASSIFIED,
+                    page_pair=pair,
+                    detail="画像未取得のため視覚比較を実施できませんでした（未確認）",
+                    old_evidence=_page_evidence(old_page),
+                    new_evidence=_page_evidence(new_page),
+                    severity=SEVERITY_INFO,
+                )
+            )
 
         findings.extend(_classify_pair(pair, diff_result, old_page, new_page, screenshot_diff))
 
@@ -209,11 +223,14 @@ def _classify_pair(
     new_default_evidence = _page_evidence(new_page)
     old_field_evidence, new_field_evidence = _field_evidence_maps(diff_result)
 
-    covered_attributes: set[str] = set()
+    # (field_name, attribute) で覆済みを記録する。field_name だけで記録すると、
+    # 同じ項目に breaking な属性差分と非 breaking な属性差分が同居した場合に、
+    # 後者が _detect_unclassified で誤って握り潰され差分が報告されなくなる。
+    covered_attributes: set[tuple[str, str]] = set()
     for attr_diff in diff_result.attribute_diffs:
         if attr_diff.severity != SEVERITY_BREAKING:
             continue
-        covered_attributes.add(attr_diff.field_name)
+        covered_attributes.add((attr_diff.field_name, attr_diff.attribute))
         findings.append(
             ComparisonFinding(
                 category=CATEGORY_INOPERABLE,
@@ -373,14 +390,14 @@ def _detect_text_garbled(
 def _detect_unclassified(
     pair: ScreenPair,
     diff_result: DiffResult,
-    covered_attributes: set[str],
+    covered_attributes: set[tuple[str, str]],
     old_default_evidence: SourceEvidence,
     new_default_evidence: SourceEvidence,
 ) -> list[ComparisonFinding]:
     """4 分類のいずれのルールにも該当しない差分を「未分類（要確認）」として明示する。"""
     findings: list[ComparisonFinding] = []
     for attr_diff in diff_result.attribute_diffs:
-        if attr_diff.field_name in covered_attributes:
+        if (attr_diff.field_name, attr_diff.attribute) in covered_attributes:
             continue
         findings.append(
             ComparisonFinding(

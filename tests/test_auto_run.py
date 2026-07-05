@@ -8,8 +8,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 from web.routes.auto_run import (
     AutoRunJob,
+    _do_login,
     _execute_tests,
     _now_iso,
+    _phase_crawl,
+    _phase_discover,
     _phase_generate_scripts,
     _truthy,
 )
@@ -316,6 +319,112 @@ class TestPhaseGenerateScripts:
         with patch("web.routes.auto_run.generate_spec_ts", mock_gen):
             _phase_generate_scripts(job)
         mock_gen.assert_not_called()
+
+
+# ─────────────────────── _phase_discover / _do_login（ドメイン単位の認証統合）───────────────────────
+#
+# B-auth-ux #3: AutoRun は「ログインが必要なページ」を都度・画面ごとに尋ねるのではなく、
+# ドメイン単位で1回だけ入力を求め、取得した認証情報（auth.json）を後続のクロール全体で
+# 再利用しなければならない。この回帰を防ぐためのテスト。
+
+
+class TestPhaseDiscoverLoginConsolidation:
+    def _discover_proc(self, login_pages: list[dict]) -> MagicMock:
+        pages = [
+            {
+                "url": "https://example.com/",
+                "title": "Top",
+                "login_required": False,
+                "login_url": "",
+            },
+            *login_pages,
+        ]
+        proc = MagicMock()
+        proc.stdout = json.dumps({"pages": pages})
+        return proc
+
+    def test_multiple_login_pages_yield_single_input_request(self) -> None:
+        """同一ドメインに認証必須ページが複数あっても input_request は1回だけ生成される。"""
+        job = _make_job(url="https://example.com/", domain="example.com")
+        login_pages = [
+            {
+                "url": f"https://example.com/mypage{i}.html",
+                "title": f"マイページ{i}",
+                "login_required": True,
+                "login_url": "https://example.com/login.html",
+            }
+            for i in range(3)
+        ]
+        with patch(
+            "web.routes.auto_run.subprocess.run",
+            return_value=self._discover_proc(login_pages),
+        ):
+            _phase_discover(job, depth=2, max_pages=30)
+
+        assert job.status == "awaiting_input"
+        assert job.input_request is not None
+        assert job.input_request["type"] == "login"
+        assert job.input_request["login_url"] == "https://example.com/login.html"
+        # メッセージにドメイン内の認証必須件数（3件）がまとまって表示される
+        assert "3件" in job.input_request["message"]
+
+    def test_no_login_pages_skips_awaiting_input(self) -> None:
+        job = _make_job(url="https://example.com/", domain="example.com")
+        with patch(
+            "web.routes.auto_run.subprocess.run",
+            return_value=self._discover_proc([]),
+        ):
+            _phase_discover(job, depth=2, max_pages=30)
+
+        assert job.status != "awaiting_input"
+        assert job.input_request is None
+
+    def test_do_login_success_sets_auth_path_for_whole_domain(self, tmp_path: Path) -> None:
+        """一度だけ入力した認証情報の auth_path が job に保存され、後続クロール全体に
+        再利用される（画面ごとに再入力を求めない）ことを検証する。"""
+        job = _make_job(url="https://example.com/", domain="example.com")
+        job.input_request = {"login_url": "https://example.com/login.html"}
+        job._input_data = {"username": "user", "password": "pass"}
+
+        login_proc = MagicMock()
+        login_proc.stdout = json.dumps({"success": True})
+
+        with (
+            patch("web.routes.auto_run.OUTPUT_DIR", tmp_path),
+            patch("web.routes.auto_run.subprocess.run", return_value=login_proc) as mock_run,
+        ):
+            _do_login(job)
+
+        assert job.status != "failed"
+        assert job.auth_path
+        assert job.auth_path.endswith("auth.json")
+        # ログイン試行は1回だけ（画面ごとに繰り返し呼ばれない）
+        assert mock_run.call_count == 1
+
+        # 取得した auth_path が後続のクロールフェーズにそのまま渡され、
+        # 同一ドメインの他画面のために再度ログインを求めない。
+        popen_calls: list[list[str]] = []
+
+        def fake_popen(cmd, *args, **kwargs):
+            popen_calls.append(cmd)
+            proc = MagicMock()
+            proc.stdout = iter(["ok\n"])
+            proc.wait.return_value = 0
+            return proc
+
+        report_dir = tmp_path / "example.com"
+        report_dir.mkdir(parents=True, exist_ok=True)
+        (report_dir / "report.json").write_text('{"screens": []}', encoding="utf-8")
+
+        with (
+            patch("web.routes.auto_run.OUTPUT_DIR", tmp_path),
+            patch("web.routes.auto_run.subprocess.Popen", side_effect=fake_popen),
+        ):
+            _phase_crawl(job, depth=2, max_pages=30)
+
+        assert popen_calls, "クロールサブプロセスが起動していない"
+        assert "--auth" in popen_calls[0]
+        assert popen_calls[0][popen_calls[0].index("--auth") + 1] == job.auth_path
 
 
 # ─────────────────────── _truthy ───────────────────────

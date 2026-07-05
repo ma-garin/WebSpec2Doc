@@ -107,6 +107,11 @@ document.getElementById('form').addEventListener('submit', (e) => {
     setUrlMessage(discovered.length ? 'ドキュメント化する画面を1件以上選択してください' : '先に「画面分析」を実行してください', true);
     return;
   }
+  // 認証が必要な画面（再クロール時にログインバナー・フォームを復元するため site.json に保存する）
+  const loginUrlSet = new Set(urls);
+  const loginUrls = discovered.filter(p => p.login_required && loginUrlSet.has(p.url)).map(p => p.url);
+  const loginLandingUrl = discovered.find(p => p.login_required && p.login_url)?.login_url
+    || document.getElementById('login-url').value.trim();
   const body = new URLSearchParams({
     urls: urls.join(','),
     depth: document.getElementById('crawl-depth').value,
@@ -116,6 +121,8 @@ document.getElementById('form').addEventListener('submit', (e) => {
     auth: document.getElementById('auth-path').value.trim() || getSettings().auth || '',
     crawl_mode: 'crawl',
     reference_docs: referenceDocPaths.map(d => d.path).join(','),
+    login_urls: loginUrls.join(','),
+    login_landing_url: loginLandingUrl,
   });
   const label = urls.length > 1 ? `${urls[0]} ほか ${urls.length - 1}件` : urls[0];
   runWith(body.toString(), domainOf(urls[0]), label, urls.length);

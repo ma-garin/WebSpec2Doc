@@ -31,6 +31,13 @@ def run() -> Response:
     from web.routes.site import save_site_config
 
     urls = request.form.get("urls", "").strip()
+    # 認証が必要と判定された画面（urls の部分集合）。再クロール時にログイン必須の
+    # バナー・フォームを復元するため site.json に持ち回る（save_site_config 参照）。
+    url_set = {u for u in urls.split(",") if u}
+    login_urls = ",".join(
+        u for u in (request.form.get("login_urls", "").strip().split(",")) if u and u in url_set
+    )
+    login_landing_url = request.form.get("login_landing_url", "").strip()
     depth = str(_clean_int(request.form.get("depth", "2"), 2, 1, MAX_DEPTH))
     max_pages = str(_clean_int(request.form.get("max_pages", "30"), 30, 1, MAX_PAGES_LIMIT))
     # 出力形式は許可リストで検証。report.json は結果ページのデータ源なので常に生成する
@@ -87,7 +94,17 @@ def run() -> Response:
                 yield f"PDF_PATH:{pdf.resolve()}\n"
             yield f"SUMMARY:{json.dumps(_summary_for_domain(domain))}\n"
             if proc.returncode == 0 and domain:
-                save_site_config(domain, urls, crawl_mode, depth, max_pages, selected, auth)
+                save_site_config(
+                    domain,
+                    urls,
+                    crawl_mode,
+                    depth,
+                    max_pages,
+                    selected,
+                    auth,
+                    login_urls,
+                    login_landing_url,
+                )
                 _record_usage_safely(domain, compare)
             if proc.returncode != 0:
                 yield "\nエラーが発生しました。\n"

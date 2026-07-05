@@ -150,11 +150,21 @@ function _updateKpiHero(s, required, data) {
       if (!passEl || !subEl) return;
       if (r.unavailable) { subEl.textContent = '実行不可（要セットアップ）'; return; }
       const total = r.total || 0;
+      if (r.error && !total) {
+        // evidence-only: 実行が解析不能・未実行だった場合を「未実行」のまま放置しない
+        // （0/0/0が無言で「未実行」表示され続けた不具合の再発防止）。
+        passEl.textContent = '!';
+        passEl.classList.add('is-fail');
+        subEl.textContent = '実行エラー（テスト実行タブを確認）';
+        return;
+      }
       if (!total) return;
       const rate = Math.round((r.passed || 0) / total * 100);
       passEl.textContent = rate + '%';
-      passEl.classList.add((r.failed || 0) ? 'is-fail' : 'is-pass');
-      subEl.textContent = `PASS ${r.passed || 0} / FAIL ${r.failed || 0}` + (data.playwright_run_at ? ` ・ ${data.playwright_run_at}` : '');
+      passEl.classList.add((r.failed || 0 || r.interrupted) ? 'is-fail' : 'is-pass');
+      const suffix = data.playwright_run_at ? ` ・ ${data.playwright_run_at}` : '';
+      subEl.textContent = (r.interrupted ? '（中断・部分結果）' : '') +
+        `PASS ${r.passed || 0} / FAIL ${r.failed || 0}` + suffix;
     }).catch(() => {});
   }
   if (tile && !tile._bound) {

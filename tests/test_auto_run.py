@@ -153,7 +153,9 @@ class TestExecuteTests:
         assert job.finished_at != ""
 
     def test_failure_test_sets_complete_not_failed(self, tmp_path: Path) -> None:
-        """テスト自体が失敗しても job.status は 'complete'（テスト実行完了）。"""
+        """個々のテストが失敗しても（実行自体は正常完走）job.status は 'complete'。
+        実行結果に error/interrupted が無いのが「正常完走・一部失敗」の実データ形状
+        （_parse_results は parse 不能時のみ error を載せる）。"""
         spec_path = tmp_path / "autorun.spec.ts"
         spec_path.write_text("", encoding="utf-8")
         job = _make_job(domain="example.com")
@@ -167,13 +169,64 @@ class TestExecuteTests:
             "skipped": 0,
             "total": 3,
             "tests": [],
-            "error": "タイムアウト",
         }
         with patch("web.routes.auto_run.run_playwright", return_value=mock_result):
             _execute_tests(job)
 
         assert job.status == "complete"
         assert job.test_results["ok"] is False
+
+    def test_result_error_with_zero_total_sets_job_failed(self, tmp_path: Path) -> None:
+        """実行結果が解析不能・未セットアップ等で error を伴う場合、'complete' を
+        偽装せず job.status='failed' にする（AutoRunで188件実行して0/0/0が
+        無言で成功表示された致命的UX破綻の再発防止）。"""
+        spec_path = tmp_path / "autorun.spec.ts"
+        spec_path.write_text("", encoding="utf-8")
+        job = _make_job(domain="example.com")
+        job.outputs = {"spec_ts": str(spec_path)}
+        job.run_policy = {"filter_mode": "all", "per_test_timeout_sec": 30}
+
+        mock_result = {
+            "ok": False,
+            "passed": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+            "tests": [],
+            "error": "実行結果を解析できませんでした（終了コード 1）",
+        }
+        with patch("web.routes.auto_run.run_playwright", return_value=mock_result):
+            _execute_tests(job)
+
+        assert job.status == "failed"
+        assert "解析できませんでした" in job.error
+        assert job.test_results["total"] == 0
+
+    def test_interrupted_with_partial_results_sets_job_failed(self, tmp_path: Path) -> None:
+        """全体タイムアウトで中断され部分結果が回収された場合も 'complete' を
+        偽装せず job.status='failed' とし、部分結果件数をログに残す。"""
+        spec_path = tmp_path / "autorun.spec.ts"
+        spec_path.write_text("", encoding="utf-8")
+        job = _make_job(domain="example.com")
+        job.outputs = {"spec_ts": str(spec_path)}
+        job.run_policy = {"filter_mode": "all", "per_test_timeout_sec": 30}
+
+        mock_result = {
+            "ok": False,
+            "passed": 40,
+            "failed": 2,
+            "skipped": 0,
+            "total": 42,
+            "tests": [],
+            "error": "テスト実行が制限時間 600秒 に達したため中断しました。188件中42件まで実行済み",
+            "interrupted": True,
+        }
+        with patch("web.routes.auto_run.run_playwright", return_value=mock_result):
+            _execute_tests(job)
+
+        assert job.status == "failed"
+        assert any("中断されました（部分結果を回収）" in line for line in job.log)
+        assert job.test_results["total"] == 42
 
     def test_run_playwright_exception_sets_failed(self, tmp_path: Path) -> None:
         spec_path = tmp_path / "autorun.spec.ts"

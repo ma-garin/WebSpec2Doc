@@ -599,16 +599,32 @@ def _execute_tests(job: AutoRunJob) -> None:
     elif fallback_html.is_file():
         job.outputs["playwright_report_html"] = str(fallback_html.resolve())
 
-    job.status = "complete"
-    job.step_label = "完了"
-    job.finished_at = _now_iso()
     passed = result.get("passed", 0)
     failed = result.get("failed", 0)
     total = result.get("total", 0)
+    result_error = result.get("error", "")
+    interrupted = bool(result.get("interrupted"))
+
+    if result_error or interrupted:
+        # evidence-only: 実行が異常終了（解析失敗・タイムアウト中断・未セットアップ等）した
+        # 場合に「完了」を偽装しない。0/0/0 を無言で成功扱いにしていた過去の実装が、
+        # AutoRun で188件承認・実行したのに結果が全件0で表示される致命的UX破綻の原因だった。
+        if interrupted and total > 0:
+            job.add_log(
+                f"テスト実行が中断されました（部分結果を回収）: "
+                f"PASS={passed} FAIL={failed} TOTAL={total}"
+            )
+        else:
+            job.add_log(f"テスト実行が異常終了しました: {result_error or '中断されました'}")
+        _mark_job_failed(job, result_error or "テスト実行が中断されました（部分結果なし）")
+        _update_failure_classification(job, result)
+        return
+
+    job.status = "complete"
+    job.step_label = "完了"
+    job.finished_at = _now_iso()
     job.add_log(f"テスト実行完了: PASS={passed} FAIL={failed} TOTAL={total}")
     _update_failure_classification(job, result)
-    if result.get("unavailable"):
-        job.add_log("※ @playwright/test 未セットアップのため実行をスキップしました。")
 
 
 # ─────────────────────────── ユーティリティ ───────────────────────────

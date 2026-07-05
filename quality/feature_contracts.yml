@@ -54,8 +54,8 @@
       "symbols": [],
       "outputs": ["QA artifacts", "Playwright candidates", "execution logs"],
       "persistence": ["output/{domain}/qa_process/"],
-      "failure_modes": ["approval_timeout", "login_wait_timeout", "dependency_missing", "cancel"],
-      "required_tests": ["happy_path", "approval_path", "cancel_path", "error_path"]
+      "failure_modes": ["approval_timeout", "login_wait_timeout", "dependency_missing", "cancel", "execution_timeout_partial_result", "result_parse_failure"],
+      "required_tests": ["happy_path", "approval_path", "cancel_path", "error_path", "timeout_path", "evidence"]
     },
     {
       "feature_id": "diff_history",

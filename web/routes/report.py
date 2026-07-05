@@ -113,9 +113,9 @@ def api_result() -> dict | tuple[dict, int]:
     pw_json = domain_dir / "qa_process" / "playwright_report.json"
     pw_html_native = domain_dir / "qa_process" / "playwright-report" / "index.html"
     pw_html_fallback = domain_dir / "qa_process" / "playwright_report.html"
-    pw_html = (
-        pw_html_native if path_of("qa_process/playwright-report/index.html") else pw_html_fallback
-    )
+    # 既定は日本語サマリ（playwright_report.html）。開発者向けの Playwright
+    # ネイティブレポート（スクショ・トレース付き）は playwright_native_html で別途提供する。
+    pw_html = pw_html_fallback if path_of("qa_process/playwright_report.html") else pw_html_native
     playwright_run_at = ""
     if path_of("qa_process/playwright_report.json"):
         playwright_run_at = (
@@ -137,6 +137,7 @@ def api_result() -> dict | tuple[dict, int]:
             "diff": path_of("diff_report.html"),
             "playwright_json": path_of("qa_process/playwright_report.json"),
             "playwright_html": path_of(str(pw_html.relative_to(domain_dir))),
+            "playwright_native_html": path_of("qa_process/playwright-report/index.html"),
             "spec_ts": path_of("qa_process/autorun.spec.ts"),
             "qa_process_report": path_of("qa_process/qa_process_report.html"),
             "exploration_heatmap": path_of("exploration_heatmap.html"),

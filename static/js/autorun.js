@@ -490,18 +490,22 @@ function _autorunRenderComplete(data) {
 
   const r = data.test_results || {};
   const unavailable = !!r.unavailable;
-  const ok = !unavailable && (r.failed || 0) === 0;
+  const noTests = !unavailable && (r.total || 0) === 0;
+  // evidence-only: 0件は「成功」ではない。実行対象が無かった旨を中立に伝える
+  // （0/0/0が無言で「全テスト成功」と表示された致命的UX破綻の再発防止）。
+  const ok = !unavailable && !noTests && (r.failed || 0) === 0;
 
   const head = document.createElement('div');
   head.className = 'autorun-complete-head';
   const icon = document.createElement('div');
-  icon.className = 'autorun-complete-icon ' + (unavailable ? 'is-warn' : ok ? 'is-ok' : 'is-fail');
-  icon.textContent = unavailable ? '⚠' : ok ? '✓' : '✕';
+  icon.className = 'autorun-complete-icon ' + (unavailable ? 'is-warn' : noTests ? 'is-warn' : ok ? 'is-ok' : 'is-fail');
+  icon.textContent = unavailable ? '⚠' : noTests ? '⚠' : ok ? '✓' : '✕';
   const titleWrap = document.createElement('div');
   const title = document.createElement('div');
   title.className = 'autorun-complete-title';
   title.textContent = unavailable
     ? 'AutoRun 完了（テストは実行できませんでした）'
+    : noTests ? 'AutoRun 完了 — 実行対象のテストがありませんでした'
     : ok ? 'AutoRun 完了 — 全テスト成功' : 'AutoRun 完了 — 失敗したテストがあります';
   const sub = document.createElement('p');
   sub.className = 'muted-copy';

@@ -66,6 +66,9 @@ Plan_*.md
 plan_*.md
 # Playwright test config (machine-specific, auto-generated)
 _autorun_pw.config.js
+_autorun_pw.progress_reporter.js
+playwright_raw.json
+playwright_progress.ndjson
 
 # E2E 実行アーティファクト（環境依存のためコミット禁止）
 tests/e2e/screenshots/

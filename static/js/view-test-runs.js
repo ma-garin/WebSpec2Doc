@@ -51,6 +51,20 @@ async function renderTestRuns() {
   const passed = safeNumber(r.passed);
   const failed = safeNumber(r.failed);
   const skipped = safeNumber(r.skipped);
+
+  // evidence-only: エラーがあり、かつ回収できた結果が1件も無い場合は「実行エラー」を
+  // 明示する（PASS率リングや0/0/0のカードを描画しない）。AutoRunで188件実行したのに
+  // 結果が全件0で「成功したかのように」表示され続けた致命的UX破綻の再発防止。
+  if (r.error && total === 0) {
+    host.innerHTML =
+      '<div class="hero-pad">' +
+      '<div class="runs-unavailable-card">' +
+      '<div class="runs-unavailable-title">⚠ 実行エラー（結果は0件です）</div>' +
+      `<p class="runs-unavailable-reason">${escHtml(r.error)}</p>` +
+      '</div></div>';
+    return;
+  }
+
   const passRate = total ? Math.round((passed / total) * 100) : 0;
   const runAt = resultData.playwright_run_at || '';
   const crawledAt = (reportJson && reportJson.meta && reportJson.meta.crawled_at) || '';
@@ -68,7 +82,7 @@ async function renderTestRuns() {
     `<div class="stat-card runs-stat-card"><div class="num ${c.cls}">${c.val}</div><div class="lbl">${c.label}</div></div>`
   ).join('');
 
-  const ringCls = failed ? 'is-fail' : 'is-pass';
+  const ringCls = (failed || r.error || r.interrupted) ? 'is-fail' : 'is-pass';
   const ring =
     `<div class="runs-passrate ${ringCls}" role="img" aria-label="PASS率 ${passRate}%">` +
     `<svg viewBox="0 0 36 36"><circle class="runs-ring-bg" cx="18" cy="18" r="15.9"></circle>` +
@@ -95,14 +109,16 @@ async function renderTestRuns() {
   const dlSpec = files.spec_ts
     ? `<a class="btn-outline-sm" href="/download?path=${encodeURIComponent(files.spec_ts)}" download>spec.ts をダウンロード</a>`
     : '';
+  const devLink = linkBtn(files.playwright_native_html, '詳細（開発者向け）', false);
 
   host.innerHTML =
     '<div class="hero-pad">' +
     '<div class="runs-header">' +
     '<div><div class="hero-section-title" style="margin:0">テスト実行結果</div>' +
     `<p class="muted-copy runs-meta">実行日時: ${escHtml(runAt || '不明')}${r.duration_ms ? ' ／ 所要 ' + Math.round(r.duration_ms / 1000) + '秒' : ''}</p></div>` +
-    `<div class="runs-header-actions">${linkBtn(files.playwright_html, '実行レポートを開く', true)} ${linkBtn(files.qa_process_report, 'QAレポート', false)} ${dlSpec}</div>` +
+    `<div class="runs-header-actions">${linkBtn(files.playwright_html, '実行レポートを開く', true)} ${devLink} ${linkBtn(files.qa_process_report, 'QAレポート', false)} ${dlSpec}</div>` +
     '</div>' +
+    (r.interrupted ? `<div class="runs-stale-note">⚠ ${escHtml(r.error || '実行が途中で中断されました。')}</div>` : '') +
     (stale ? '<div class="runs-stale-note">⚠ この実行結果は最終クロール（' + escHtml(crawledAt) + '）より前のものです。仕様が更新されている可能性があるため、AutoRun での再実行を推奨します。</div>' : '') +
     `<div class="runs-summary-row">${ring}<div class="runs-stat-grid">${cards}</div></div>` +
     (tests.length

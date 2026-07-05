@@ -346,6 +346,7 @@ def test_result_api_playwright_keys_empty_without_qa_process(tmp_path: Path, mon
 
     assert data["files"]["playwright_json"] == ""
     assert data["files"]["playwright_html"] == ""
+    assert data["files"]["playwright_native_html"] == ""
     assert data["files"]["spec_ts"] == ""
     assert data["files"]["qa_process_report"] == ""
     assert data["playwright_run_at"] == ""
@@ -368,18 +369,22 @@ def test_result_api_returns_qa_process_outputs(tmp_path: Path, monkeypatch) -> N
     data = _client().get("/api/result?domain=example.com").get_json()
 
     assert data["files"]["playwright_json"].endswith("playwright_report.json")
-    # Playwright ネイティブレポートが無い場合は自前 HTML にフォールバック
     assert data["files"]["playwright_html"].endswith("playwright_report.html")
     assert data["files"]["spec_ts"].endswith("autorun.spec.ts")
     assert data["files"]["qa_process_report"].endswith("qa_process_report.html")
     assert data["playwright_run_at"].endswith("Z")
+    # Playwright ネイティブレポート（スクショ・トレース付き）が無い間は空文字
+    assert data["files"]["playwright_native_html"] == ""
 
-    # ネイティブレポートがあればそちらを優先する
+    # 自前の日本語サマリ HTML を既定として使い続ける（開発者向けネイティブ
+    # レポートが後から生成されても playwright_html は切り替わらない）。
+    # ネイティブレポートは playwright_native_html で別途参照する。
     native = qa_dir / "playwright-report"
     native.mkdir()
     (native / "index.html").write_text("<html>native</html>", encoding="utf-8")
     data = _client().get("/api/result?domain=example.com").get_json()
-    assert data["files"]["playwright_html"].endswith("playwright-report/index.html")
+    assert data["files"]["playwright_html"].endswith("playwright_report.html")
+    assert data["files"]["playwright_native_html"].endswith("playwright-report/index.html")
 
 
 def test_result_api_rejects_external_symlink_outputs(tmp_path: Path, monkeypatch) -> None:

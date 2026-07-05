@@ -212,8 +212,24 @@ function renderQaQualityTool(data) {
     return `<div class="qa-readable-section"><h3>${escHtml(category)}</h3><table class="data"><thead><tr><th>ID</th><th>観点</th><th>発火条件${infoTip('この観点をテストで確認すべきタイミング・状況（例: 必須項目が未入力のとき）。')}</th><th>推奨確認${infoTip('確認すべき挙動・表示内容の推奨事項。')}</th><th>自動化${infoTip('自動テスト化しやすいか（自動）／人手での確認が必要か（手動）の目安。')}</th><th>Trace${infoTip('この観点が根拠とする画面・要件のID。')}</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   }).join('');
   const risks = (quality.screen_risks || []).map(risk => `<tr><td class="qa-trace">${escHtml(risk.screen_id)}</td><td>${escHtml(risk.title)}</td><td class="num">${escHtml(risk.risk_score)}</td><td>${escHtml((risk.reasons || []).join(' / '))}</td></tr>`).join('');
+  const explainBlock = `<div class="qa-explain-block">` +
+    `<h3>この画面の目的と見方</h3>` +
+    `<p>「画面リスク」は report.json から機械的に算出したリスクスコアをもとに、QAで優先的に確認すべき画面の順位を示します。スコアが高いほど入力項目・必須項目・操作要素が多い、またはログイン/管理/決済など重要度の高いキーワードを含む画面です。下の「品質観点」の各表は、画面ごとに確認すべき具体的な観点（発火条件・推奨確認・自動化可否）を示します。</p>` +
+    `<ul class="qa-term-list">` +
+    `<li><strong>リスク（0〜100）</strong>入力項目数・必須項目数・操作要素数と、ログイン/管理/決済等のキーワード一致から機械的に算出したスコア。数値が大きいほど優先確認を推奨します。</li>` +
+    `<li><strong>入力項目あり／必須項目あり</strong>その画面にフォーム入力項目／必須入力項目が存在すること。</li>` +
+    `<li><strong>操作要素あり</strong>ボタン・リンクなどクリック可能な要素が存在すること。</li>` +
+    `<li><strong>遷移先未検出</strong>クロールで次画面への遷移が確認できなかったこと（要確認）。</li>` +
+    `<li><strong>低リスク</strong>上記のいずれにも該当しない画面。</li>` +
+    `</ul></div>`;
   document.getElementById('qa-quality-content').innerHTML =
-    `<div class="qa-readable-section"><h3>画面リスク</h3><table class="data"><thead><tr><th>画面ID</th><th>画面</th><th class="num">リスク</th><th>理由</th></tr></thead><tbody>${risks || '<tr><td colspan="4">画面がありません</td></tr>'}</tbody></table></div>` +
+    explainBlock +
+    `<div class="qa-readable-section"><h3>画面リスク</h3><table class="data"><thead><tr>` +
+    `<th>画面ID${infoTip('report.json 上の画面の識別子。画面別仕様タブの同じIDと対応します。')}</th>` +
+    `<th>画面${infoTip('画面のタイトル（<title> または見出しから取得）。')}</th>` +
+    `<th class="num">リスク${infoTip('0〜100の機械算出スコア。入力項目数・必須項目数・操作要素数・重要キーワード一致から算出。数値が大きいほど優先確認を推奨。')}</th>` +
+    `<th>理由${infoTip('スコアが加算された根拠タグ（入力項目あり/必須項目あり/操作要素あり/遷移先未検出/低リスク）。')}</th>` +
+    `</tr></thead><tbody>${risks || '<tr><td colspan="4">画面がありません</td></tr>'}</tbody></table></div>` +
     (sections || '<div class="empty">品質観点がありません。</div>') +
     `<div class="qa-readable-section"><h3>質問待ち</h3><ul class="qa-check-list qa-question-list">${qaList(quality.questions)}</ul></div>`;
   if (typeof wrapTraceTerms === 'function') wrapTraceTerms(document.getElementById('qa-quality-content'));

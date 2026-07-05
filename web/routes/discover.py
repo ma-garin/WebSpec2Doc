@@ -3,10 +3,12 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import uuid
 
 from flask import Blueprint, Response, request
 
 from web.config import DISCOVER_TIMEOUT_SEC, MAX_DEPTH, MAX_PAGES_LIMIT
+from web.process import _RUNNING_PROCS, _terminate_proc
 from web.validation import _clean_int, _safe_auth_path
 
 bp = Blueprint("discover", __name__)
@@ -68,7 +70,10 @@ def api_discover_stream() -> Response | tuple[dict, int]:
     if auth:
         cmd += ["--auth", auth]
 
+    run_id = uuid.uuid4().hex
+
     def generate():
+        proc = None
         try:
             proc = subprocess.Popen(
                 cmd,
@@ -77,16 +82,26 @@ def api_discover_stream() -> Response | tuple[dict, int]:
                 text=True,
                 bufsize=1,
             )
+            # 中断ボタンから /api/cancel 経由でこのプロセスを止められるよう登録する
+            # （画面分析フェーズには停止手段が無い、というドッグフーディング要望への対応）。
+            _RUNNING_PROCS[run_id] = proc
+            yield f"data: {json.dumps({'run_id': run_id})}\n\n"
             assert proc.stdout is not None
             for raw_line in proc.stdout:
                 line = raw_line.strip()
                 if line:
                     yield f"data: {line}\n\n"
             proc.wait()
-            if proc.returncode != 0:
+            if proc.returncode is not None and proc.returncode < 0:
+                yield f"data: {json.dumps({'cancelled': True})}\n\n"
+            elif proc.returncode != 0:
                 yield f"data: {json.dumps({'error': '画面リスト取得に失敗しました'})}\n\n"
         except Exception as exc:
             yield f"data: {json.dumps({'error': str(exc)})}\n\n"
+        finally:
+            _RUNNING_PROCS.pop(run_id, None)
+            if proc is not None:
+                _terminate_proc(proc)
 
     return Response(
         generate(),

@@ -196,6 +196,66 @@ def test_run_parallelism_is_configurable_within_1_to_4(tmp_path: Path, monkeypat
     assert cmd2[cmd2.index("--parallelism") + 1] == "4"  # 上限4にクランプ
 
 
+def test_discover_stream_emits_run_id_and_registers_cancellable_process(monkeypatch) -> None:
+    """画面分析（discover）フェーズにも中断ボタンから停止できる手段を用意する
+    （ドッグフーディング要望: 途中停止も欲しい、への対応）。
+    ストリームの先頭で run_id を配信し、/api/cancel からそのプロセスを
+    停止できるよう web.process._RUNNING_PROCS に登録する。"""
+    from web.process import _RUNNING_PROCS
+
+    captured_proc = {}
+
+    def fake_popen(cmd, *args, **kwargs):
+        proc = _Popen(cmd, *args, **kwargs)
+        proc.stdout = iter(
+            [json.dumps({"page": {"url": "https://example.com/", "title": "Top"}}) + "\n"]
+        )
+        captured_proc["proc"] = proc
+        return proc
+
+    monkeypatch.setattr(discover_mod.subprocess, "Popen", fake_popen)
+
+    res = _client().post(
+        "/api/discover-stream", data={"url": "https://example.com", "depth": "2", "max_pages": "30"}
+    )
+    body = res.get_data(as_text=True)
+
+    assert '"run_id"' in body.split("\n\n")[0]
+    # ストリーム消費完了後は後始末で _RUNNING_PROCS から取り除かれている
+    assert not _RUNNING_PROCS
+
+
+def test_api_cancel_terminates_registered_discover_process(monkeypatch) -> None:
+    """/api/cancel は crawl.py の run_id と同じ仕組みで discover のプロセスも
+    停止できる（discover.py と crawl.py は web.process._RUNNING_PROCS を共有）。"""
+    from web.process import _RUNNING_PROCS
+
+    class _StillRunningProc:
+        def __init__(self) -> None:
+            self.terminated = False
+
+        def poll(self):
+            return None if not self.terminated else 0
+
+        def terminate(self) -> None:
+            self.terminated = True
+
+        def wait(self, timeout=None) -> int:
+            return 0
+
+        def kill(self) -> None:
+            self.terminated = True
+
+    proc = _StillRunningProc()
+    _RUNNING_PROCS["test-run-id"] = proc
+    try:
+        res = _client().post("/api/cancel", data={"run_id": "test-run-id"})
+        assert res.get_json() == {"ok": True}
+        assert proc.terminated is True
+    finally:
+        _RUNNING_PROCS.pop("test-run-id", None)
+
+
 def test_run_default_mode_uses_urls_flag_no_link_following(tmp_path: Path, monkeypatch) -> None:
     """crawl_mode 未指定（既定）は、選択した固定URL一覧のみをクロールする
     --urls を使う（従来どおりリンクを辿らない）。"""

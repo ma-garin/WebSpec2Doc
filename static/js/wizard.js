@@ -277,6 +277,22 @@ function _stopDiscoverTimer() {
 }
 
 // skipLoginSection=true のとき（ログイン後の再解析）はログインセクションを再展開しない
+// 画面分析（discover）フェーズの中断用状態。クロール実行フェーズには停止ボタンが
+// あるのに画面分析フェーズには無い、というドッグフーディング要望への対応。
+let _discoverRunId = null;
+let _discoverReader = null;
+let _discoverCancelledByUser = false;
+
+document.getElementById('discover-cancel-btn')?.addEventListener('click', async () => {
+  _discoverCancelledByUser = true;
+  if (_discoverRunId) {
+    try {
+      await fetch('/api/cancel', { method: 'POST', body: new URLSearchParams({ run_id: _discoverRunId }) });
+    } catch (e) {}
+  }
+  if (_discoverReader) { try { await _discoverReader.cancel(); } catch (e) {} }
+});
+
 async function discoverUrls(skipLoginSection) {
   const url = urlInput.value.trim();
   if (!url) { setUrlMessage('URLを入力してから画面分析を実行してください', true); return; }
@@ -295,6 +311,9 @@ async function discoverUrls(skipLoginSection) {
   if (countLabel) countLabel.textContent = '0画面を発見';
   discovered = [];
   discoverSkipped = [];
+  _discoverRunId = null;
+  _discoverReader = null;
+  _discoverCancelledByUser = false;
   _startDiscoverTimer();
 
   let lastRow = null;
@@ -331,6 +350,7 @@ async function discoverUrls(skipLoginSection) {
     }
 
     const reader = res.body.getReader();
+    _discoverReader = reader;
     const decoder = new TextDecoder();
     let buf = '';
     while (true) {
@@ -344,7 +364,9 @@ async function discoverUrls(skipLoginSection) {
         if (!line) continue;
         let obj;
         try { obj = JSON.parse(line); } catch (e) { continue; }
-        if (obj.page) {
+        if (obj.run_id) {
+          _discoverRunId = obj.run_id;
+        } else if (obj.page) {
           _markDone(lastRow);
           discovered.push(obj.page);
           if (countLabel) countLabel.textContent = `${discovered.length}画面を発見`;
@@ -356,7 +378,7 @@ async function discoverUrls(skipLoginSection) {
           _markDone(lastRow); lastRow = null;
           _addRow({ url: skipped.url || '', title: reason }, false);
           if (countLabel) countLabel.textContent = `${discovered.length}画面 / ${discoverSkipped.length}件除外`;
-        } else if (obj.done) {
+        } else if (obj.done || obj.cancelled) {
           _markDone(lastRow);
           lastRow = null;
         } else if (obj.error) {
@@ -364,7 +386,8 @@ async function discoverUrls(skipLoginSection) {
         }
       }
     }
-
+    // ユーザーが中断ボタンで停止した場合も、それまでに見つかった画面は捨てずに使う
+    // （途中結果を保存するクロール実行フェーズの挙動と揃える）。
     discovered = discovered.filter(p => p && p.url);
     renderDiscovered();
     // ログインURLを上級設定フィールドに反映（参考表示）
@@ -387,14 +410,25 @@ async function discoverUrls(skipLoginSection) {
         if (loginNum) loginNum.textContent = loginCount;
         summary.style.display = '';
       }
-      status.textContent = '';
-      if (discoverSkipped.length) status.textContent = `${discoverSkipped.length}件はrobots.txtまたは安全制約により除外されました。`;
+      if (_discoverCancelledByUser) {
+        status.textContent = `中断しました（${discovered.length}画面を取得済み）。このまま条件設定に進むか、再実行してください。`;
+      } else {
+        status.textContent = '';
+        if (discoverSkipped.length) status.textContent = `${discoverSkipped.length}件はrobots.txtまたは安全制約により除外されました。`;
+      }
+    } else if (_discoverCancelledByUser) {
+      status.textContent = '中断しました（画面が見つかる前に停止しました）。';
     } else {
       status.textContent = discoverSkipped.length
         ? `取得可能な画面は0件です。${discoverSkipped.length}件がrobots.txtまたは安全制約により除外されました。`
         : '画面が0件でした。URLを確認してください。';
     }
   } catch (e) {
+    if (_discoverCancelledByUser) {
+      // 中断操作によって reader.cancel() が例外化する実装もあるため、その場合も
+      // エラー扱いにせず静かに終了する（discovered は既に保持済み）。
+      return;
+    }
     clearDiscovered(); status.textContent = e.message; status.classList.add('discover-status-error');
   } finally {
     const elapsed = _stopDiscoverTimer();

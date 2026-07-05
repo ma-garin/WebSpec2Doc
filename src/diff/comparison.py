@@ -115,9 +115,45 @@ def run_old_new_comparison(
 
     old_analyzed = analyze_pages(old_pages)
     new_analyzed = analyze_pages(new_pages)
-    pairs, removed_ids, added_ids = match_page_pairs(old_analyzed, new_analyzed)
 
+    # 動的領域マスクは現行側クロール直後（実ブラウザが生きている間）にしか収集できない。
+    # 収集は比較コア（compare_analyzed_pages）の外に置き、コアはクロール非依存に保つ。
     dynamic_masks = _collect_masks(old_analyzed, auth_old, mask_selectors, old_dir)
+
+    return compare_analyzed_pages(
+        old_analyzed,
+        new_analyzed,
+        dynamic_masks=dynamic_masks,
+        check_links=True,
+        link_opener=link_opener,
+        new_dir=new_dir,
+    )
+
+
+def compare_analyzed_pages(
+    old_analyzed: list[AnalyzedPage],
+    new_analyzed: list[AnalyzedPage],
+    *,
+    dynamic_masks: dict[str, tuple[tuple[int, int, int, int], ...]] | None = None,
+    check_links: bool = False,
+    link_opener: LinkOpener | None = None,
+    new_dir: Path | None = None,
+) -> ComparisonResult:
+    """解析済みページ同士を対応付け→三層比較→4 分類する純粋な比較コア。
+
+    クロール・実ブラウザ・動的マスク検出を含まないため、ライブ比較
+    （`run_old_new_comparison`）とスナップショットからの再比較
+    （`GET /api/snapshot-comparison`）の両方から呼べる。挙動は従来の
+    ライブ経路とバイト同一（同じ順序で findings を積み、同じ ComparisonResult を返す）。
+
+    Args:
+        dynamic_masks: 現行 page_id → マスク矩形群。未指定なら空（マスクなし）。
+        check_links: True のとき新側リンク切れ検査を行う。`new_dir` が必須。
+        link_opener: リンク検査に使う開き手（テスト差し替え用）。
+        new_dir: リンク検査のキャッシュ／出力先。`check_links=True` のとき必須。
+    """
+    masks = dynamic_masks or {}
+    pairs, removed_ids, added_ids = match_page_pairs(old_analyzed, new_analyzed)
 
     old_by_id = {p.page_id: p for p in old_analyzed}
     new_by_id = {p.page_id: p for p in new_analyzed}
@@ -133,7 +169,7 @@ def run_old_new_comparison(
         diff_result = compare_page_pair(old_page.page_data, new_page.page_data)
 
         screenshot_diff = _compare_pair_screenshots(
-            pair, old_page, new_page, dynamic_masks, threshold, tolerance
+            pair, old_page, new_page, masks, threshold, tolerance
         )
         if screenshot_diff is not None:
             screenshot_diffs.append(screenshot_diff)
@@ -154,8 +190,10 @@ def run_old_new_comparison(
 
         findings.extend(_classify_pair(pair, diff_result, old_page, new_page, screenshot_diff))
 
-    link_findings = _check_new_side_links(new_analyzed, pairs, new_dir, link_opener)
-    findings.extend(link_findings)
+    if check_links:
+        if new_dir is None:
+            raise ValueError("check_links=True のときは new_dir が必須です")
+        findings.extend(_check_new_side_links(new_analyzed, pairs, new_dir, link_opener))
 
     return ComparisonResult(
         pairs=tuple(pairs),

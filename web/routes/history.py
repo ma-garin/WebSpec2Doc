@@ -140,3 +140,59 @@ def api_snapshot_diff() -> Response:
     resp = Response(report_html, mimetype="text/html")
     resp.headers["Cache-Control"] = "no-store"
     return resp
+
+
+def _snapshot_not_found() -> Response:
+    return Response(
+        "<p style='font-family:sans-serif;padding:16px'>指定されたスナップショットが見つかりません。</p>",
+        mimetype="text/html",
+    )
+
+
+@bp.get("/api/snapshot-comparison")
+def api_snapshot_comparison() -> Response:
+    """2つのスナップショット間を「現新比較（4分類）」でHTML化して返す。
+
+    旧 `/api/snapshot-diff`（簡易ドリフト差分）は非破壊のため残置する。こちらは
+    表示崩れ/文字化け/理解不可/操作不可の 4 分類レポート（現新比較ツール相当）。
+    """
+    domain = request.args.get("domain", "")
+    if not _valid_domain(domain):
+        return Response(status=404)
+    snaps_dir = OUTPUT_DIR / domain / "snapshots"
+    from_path = _safe_output_path(str(snaps_dir / (request.args.get("from", "") + ".json")))
+    to_path = _safe_output_path(str(snaps_dir / (request.args.get("to", "") + ".json")))
+    if from_path is None or to_path is None or not from_path.exists() or not to_path.exists():
+        return _snapshot_not_found()
+    if str(Path("src").resolve()) not in sys.path:
+        sys.path.insert(0, str(Path("src").resolve()))
+    try:
+        from analyzer.html_analyzer import analyze_pages
+        from diff.comparison import compare_analyzed_pages, load_dynamic_masks
+        from diff.snapshot import load_snapshot
+        from generator.comparison_reporter import generate_comparison_html
+    except ImportError:
+        logger.exception("現新比較モジュールの読み込みに失敗しました")
+        return Response(status=500)
+    try:
+        old_pages = load_snapshot(from_path)
+        new_pages = load_snapshot(to_path)
+    except (OSError, json.JSONDecodeError):
+        logger.exception("スナップショットの読み込みに失敗しました: domain=%s", domain)
+        return Response(
+            "<p style='font-family:sans-serif;padding:16px'>スナップショットの読み込みに失敗しました。</p>",
+            mimetype="text/html",
+        )
+    old_analyzed = analyze_pages(old_pages)
+    new_analyzed = analyze_pages(new_pages)
+    # 現行側クロール時に永続化された動的マスク（あれば）を再利用する。無ければマスクなし。
+    masks = load_dynamic_masks(OUTPUT_DIR / domain / "old")
+    result = compare_analyzed_pages(
+        old_analyzed,
+        new_analyzed,
+        dynamic_masks=masks,
+        check_links=False,
+    )
+    resp = Response(generate_comparison_html(result), mimetype="text/html")
+    resp.headers["Cache-Control"] = "no-store"
+    return resp

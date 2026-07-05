@@ -11,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from flask import Blueprint, request
+from flask import Blueprint, Response, request, send_file
 
 from web.config import DISCOVER_TIMEOUT_SEC, MAX_DEPTH, MAX_PAGES_LIMIT, OUTPUT_DIR
 from web.routes.qa_process import _generate_advanced_outputs, _generate_outputs, _load_report
@@ -25,7 +25,7 @@ from web.services.playwright_executor import _read_progress_ndjson, run_playwrig
 from web.services.qa.helpers import use_viewpoint_snapshot
 from web.services.spec_ts_generator import compute_filter_counts, generate_spec_ts
 from web.services.viewpoint_store import ViewpointStoreError, get_viewpoint_store
-from web.validation import _clean_int, _domain_of, _safe_auth_path
+from web.validation import _clean_int, _domain_of, _safe_auth_path, _valid_domain
 
 bp = Blueprint("auto_run", __name__)
 logger = logging.getLogger(__name__)
@@ -251,6 +251,25 @@ def api_autorun_report() -> dict | tuple[dict, int]:
     if job is None:
         return {"error": "not found"}, 404
     return {**job.to_dict(), "report_html": _report_html_path(job)}
+
+
+@bp.get("/api/autorun/live-screenshot")
+def api_autorun_live_screenshot() -> Response:
+    """テスト実行中の最新スクリーンショットを返す（screenshot:'on' 設定済みの
+    Playwright実行が qa_process/test-results/ 配下に生成するPNGを配信する）。
+    実行中のライブプレビュー表示用。クロール側の /api/live-screenshot と同じパターン。"""
+    domain = request.args.get("domain", "")
+    if not _valid_domain(domain):
+        return Response(status=404)
+    results_dir = OUTPUT_DIR / domain / "qa_process" / "test-results"
+    if not results_dir.is_dir():
+        return Response(status=404)
+    pngs = sorted(results_dir.rglob("*.png"), key=lambda p: p.stat().st_mtime, reverse=True)
+    if not pngs:
+        return Response(status=404)
+    resp = send_file(pngs[0].resolve(), mimetype="image/png")
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
 
 
 @bp.get("/api/autorun/jobs")

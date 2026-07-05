@@ -342,6 +342,13 @@
   overflow: hidden;
 }
 
+/* ---- テスト実行中のライブプレビュー ---- */
+#autorun-preview-frame.execution-preview-frame {
+  flex: none;
+  height: 280px;
+  margin-bottom: 14px;
+}
+
 .autorun-progressbar-fill {
   height: 100%;
   width: 0;

@@ -267,6 +267,57 @@ class TestRunningTestsProgressLabel:
         expect(autorun_page.locator("#autorun-phase-label")).to_have_text("テスト実行中…")
 
 
+class TestAutoRunLivePreview:
+    """R2-07/R2-23: AutoRunのテスト実行中にライブプレビュー画面が見えないという
+    指摘への対応。running_tests ステータスの間だけプレビュー枠を表示する。"""
+
+    def test_preview_frame_shown_during_running_tests(self, autorun_page: Page) -> None:
+        autorun_page.evaluate(
+            """() => _autorunRender({
+                status: 'running_tests',
+                job_id: 'test-job-e2e',
+                domain: 'example.com',
+                log: [], outputs: {}, test_results: null,
+                started_at: '2026-06-03T10:00:00', elapsed_sec: 1,
+                error: null, finished_at: null, input_request: null, run_policy: {},
+            })"""
+        )
+        expect(autorun_page.locator("#autorun-preview-frame")).to_be_visible()
+
+    def test_preview_frame_hidden_outside_running_tests(self, autorun_page: Page) -> None:
+        autorun_page.evaluate(
+            """() => _autorunRender({
+                status: 'generating_scripts',
+                job_id: 'test-job-e2e',
+                domain: 'example.com',
+                log: [], outputs: {}, test_results: null,
+                started_at: '2026-06-03T10:00:00', elapsed_sec: 1,
+                error: null, finished_at: null, input_request: null, run_policy: {},
+            })"""
+        )
+        expect(autorun_page.locator("#autorun-preview-frame")).to_be_hidden()
+
+    def test_preview_frame_hidden_after_completion(self, autorun_page: Page) -> None:
+        autorun_page.evaluate(
+            """() => _autorunRender({
+                status: 'running_tests', job_id: 'j', domain: 'example.com',
+                log: [], outputs: {}, test_results: null,
+                started_at: '2026-06-03T10:00:00', elapsed_sec: 1,
+                error: null, finished_at: null, input_request: null, run_policy: {},
+            })"""
+        )
+        expect(autorun_page.locator("#autorun-preview-frame")).to_be_visible()
+        autorun_page.evaluate(
+            """() => _autorunRender({
+                status: 'complete', job_id: 'j', domain: 'example.com',
+                log: [], outputs: {}, test_results: {passed: 1, failed: 0, total: 1},
+                started_at: '2026-06-03T10:00:00', finished_at: '2026-06-03T10:01:00', elapsed_sec: 60,
+                error: null, input_request: null, run_policy: {},
+            })"""
+        )
+        expect(autorun_page.locator("#autorun-preview-frame")).to_be_hidden()
+
+
 class TestCaseDetailExpand:
     """テストケース一覧の行クリックで手順・期待結果の全文を確認できる
     （ドッグフーディング指摘: テストケースの詳細が見えない、への対応）。"""

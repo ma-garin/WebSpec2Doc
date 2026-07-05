@@ -11,7 +11,6 @@ from generator.heatmap_reporter import (
     generate_autorun_coverage_html,
 )
 
-
 # --- 解析カバレッジの 3 分類 -------------------------------------------------
 
 

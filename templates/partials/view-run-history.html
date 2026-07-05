@@ -1,0 +1,83 @@
+        <!-- ===== 実行履歴ビュー（種別を問わない一般化・R2-27） ===== -->
+        <section class="view" id="view-run-history">
+          <style>
+            .rh-toolbar {
+              display: flex;
+              gap: 8px;
+              align-items: center;
+              margin-bottom: 14px;
+              flex-wrap: wrap;
+            }
+            .rh-table {
+              width: 100%;
+              border-collapse: collapse;
+              font-size: 13px;
+            }
+            .rh-table th, .rh-table td {
+              padding: 8px 10px;
+              border-bottom: 1px solid var(--border, #e0e0e0);
+              text-align: left;
+              vertical-align: middle;
+            }
+            .rh-table th {
+              background: var(--surface-muted, #f5f5f5);
+              font-weight: 600;
+              color: var(--text-muted, #555);
+              white-space: nowrap;
+            }
+            .rh-type-badge {
+              display: inline-block;
+              padding: 2px 8px;
+              border-radius: 12px;
+              font-size: 11px;
+              font-weight: 700;
+              color: #fff;
+              white-space: nowrap;
+            }
+            .rh-type-crawl { background: #2980b9; }
+            .rh-type-autorun { background: #8e44ad; }
+            .rh-type-comparison { background: #16a085; }
+            .rh-type-ux_review { background: #d35400; }
+            .rh-status-badge {
+              display: inline-block;
+              padding: 2px 8px;
+              border-radius: 12px;
+              font-size: 11px;
+              font-weight: 700;
+              white-space: nowrap;
+            }
+            .rh-status-complete { background: #27ae60; color: #fff; }
+            .rh-status-failed { background: #c0392b; color: #fff; }
+            .rh-status-cancelled { background: #888; color: #fff; }
+            .rh-status-running { background: #f39c12; color: #fff; }
+            #rh-empty { padding: 32px; text-align: center; color: var(--text-muted, #888); font-size: 14px; }
+          </style>
+
+          <div class="rh-toolbar">
+            <select id="rh-type-filter" class="btn-outline-sm" style="height:36px;padding:0 10px;font-size:13px">
+              <option value="all">全種別</option>
+              <option value="autorun">AutoRun</option>
+              <option value="crawl">解析</option>
+              <option value="comparison">現新比較</option>
+              <option value="ux_review">UXレビュー</option>
+            </select>
+            <button type="button" id="rh-reload-btn" class="btn-outline-sm">↺ 再読み込み</button>
+          </div>
+
+          <div id="rh-container">
+            <table class="rh-table">
+              <thead>
+                <tr>
+                  <th>種別</th>
+                  <th>サイト</th>
+                  <th>日時</th>
+                  <th>状態</th>
+                  <th>主要数値</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="rh-tbody"></tbody>
+            </table>
+            <div id="rh-empty" style="display:none">実行履歴がありません。</div>
+          </div>
+        </section>

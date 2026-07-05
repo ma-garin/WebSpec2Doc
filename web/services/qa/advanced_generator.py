@@ -29,6 +29,7 @@ from web.services.qa.helpers import (
     _screen_summaries,
     _screens,
 )
+from web.services.qa.testcase_docs import build_low_level_cases, generate_testcases_html
 
 
 def _advanced_payload(domain: str, report: dict[str, Any]) -> dict[str, Any]:
@@ -40,6 +41,33 @@ def _advanced_payload(domain: str, report: dict[str, Any]) -> dict[str, Any]:
         "playwright_candidates": _playwright_candidates(domain, report),
         "quality_viewpoints": _quality_viewpoints(report),
     }
+
+
+def _testcases_payload(domain: str, report: dict[str, Any]) -> dict[str, Any]:
+    candidates = _playwright_candidates(domain, report)["candidates"]
+    cases = build_low_level_cases(candidates)
+    return {
+        "domain": domain,
+        "count": len(cases),
+        "cases": [
+            {
+                "test_id": case.test_id,
+                "title": case.title,
+                "trace_id": case.trace_id,
+                "automation_status": case.automation_status,
+                "preconditions": list(case.preconditions),
+                "steps": list(case.steps),
+                "expected_result": case.expected_result,
+            }
+            for case in cases
+        ],
+        "html_path": _existing_testcases_html_path(domain),
+    }
+
+
+def _existing_testcases_html_path(domain: str) -> str:
+    path = _output_dir() / domain / "qa_process" / "testcases.html"
+    return str(path.resolve()) if path.is_file() else ""
 
 
 def _generate_advanced_outputs(domain: str, report: dict[str, Any]) -> dict[str, Path]:
@@ -73,6 +101,9 @@ def _generate_advanced_outputs(domain: str, report: dict[str, Any]) -> dict[str,
             path.write_text(
                 _quality_viewpoints_html(domain, quality_viewpoints, generated_at), encoding="utf-8"
             )
+        elif key == "testcases_html":
+            cases = build_low_level_cases(playwright_candidates.get("candidates", []))
+            path.write_text(generate_testcases_html(domain, cases, generated_at), encoding="utf-8")
         else:
             path.write_text(
                 json.dumps(payloads[key], ensure_ascii=False, indent=2), encoding="utf-8"

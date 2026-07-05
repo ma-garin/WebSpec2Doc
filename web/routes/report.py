@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import json
 import subprocess
 import tempfile
 import zipfile
@@ -39,21 +40,39 @@ def download() -> Response:
 
 @bp.get("/download-zip")
 def download_zip() -> Response:
+    """ドメイン配下をZIP化する。`paths`（複数値・カンマ区切りいずれも可）を指定した場合は
+    そのファイルのみをZIP化する（ギャラリー一括エクスポート等の選択ダウンロード用）。
+    未指定時は従来通りドメイン配下全件。"""
     domain = request.args.get("domain", "")
     if not _valid_domain(domain):
         return Response(status=404)
     base = (OUTPUT_DIR / domain).resolve()
     if OUTPUT_DIR.resolve() not in base.parents or not base.is_dir():
         return Response(status=404)
+    selected = _selected_zip_paths(base, request.args.getlist("paths"))
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-        for f in base.rglob("*"):
-            if f.is_file():
-                zf.write(f, f.relative_to(base.parent))
+        files = selected if selected is not None else (f for f in base.rglob("*") if f.is_file())
+        for f in files:
+            zf.write(f, f.relative_to(base.parent))
     buf.seek(0)
     return send_file(
         buf, as_attachment=True, download_name=f"{domain}.zip", mimetype="application/zip"
     )
+
+
+def _selected_zip_paths(base: Path, raw_values: list[str]) -> list[Path] | None:
+    """`paths` クエリ（配列またはカンマ区切り）を実在・ドメイン配下検証済みの絶対パスへ変換する。
+
+    `paths` が一切指定されていない場合は None を返し、呼び出し側でドメイン全体の
+    ZIP化にフォールバックさせる。指定された値のうち検証を通らないものは無視する
+    （path traversal・他ドメインのファイル指定を許さない）。
+    """
+    if not raw_values:
+        return None
+    candidates = [part for value in raw_values for part in value.split(",") if part.strip()]
+    resolved = (_safe_output_path(candidate) for candidate in candidates)
+    return [path for path in resolved if path is not None and base in path.parents]
 
 
 @bp.get("/api/report/<domain>/spec-ts")
@@ -82,6 +101,35 @@ def download_spec_ts(domain: str) -> Response | tuple[dict, int]:
     )
 
 
+def _generate_features_md_if_missing(domain_dir: Path) -> None:
+    """report.jsonから機能一覧（features.md）を導出し、未生成なら書き出す。
+
+    新規クロールを要求せず既存 report.json のみから導出するため、過去に生成済みの
+    ドメインでも初回アクセス時に自動生成される。生成失敗は結果表示を妨げない。
+    """
+    features_path = domain_dir / "features.md"
+    if features_path.is_file():
+        return
+    report_json = domain_dir / "report.json"
+    if not report_json.is_file():
+        return
+    try:
+        data = json.loads(report_json.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return
+    screens = [
+        screen
+        for screen in data.get("screens", [])
+        if isinstance(screen, dict) and screen.get("is_canonical", True)
+    ]
+    from generator.feature_catalog import generate_features_markdown
+
+    try:
+        features_path.write_text(generate_features_markdown(screens), encoding="utf-8")
+    except OSError:
+        pass
+
+
 @bp.get("/api/result")
 def api_result() -> dict | tuple[dict, int]:
     domain = request.args.get("domain", "")
@@ -108,6 +156,7 @@ def api_result() -> dict | tuple[dict, int]:
     shots = sorted(shots_dir.glob("*.png")) if shots_dir.is_dir() else []
     snap_dir = domain_dir / "snapshots"
     snapshot_count = len(list(snap_dir.glob("*.json"))) if snap_dir.is_dir() else 0
+    _generate_features_md_if_missing(domain_dir)
 
     # AutoRun / QAプロセスの成果物（qa_process/ 配下）。「テスト実行」タブのデータソース。
     pw_json = domain_dir / "qa_process" / "playwright_report.json"
@@ -133,6 +182,7 @@ def api_result() -> dict | tuple[dict, int]:
             "excel": path_of("spec.xlsx"),
             "screens_md": path_of("screens.md"),
             "forms_md": path_of("forms.md"),
+            "features_md": path_of("features.md"),
             "transition_mmd": path_of("transition.mmd"),
             "diff": path_of("diff_report.html"),
             "playwright_json": path_of("qa_process/playwright_report.json"),

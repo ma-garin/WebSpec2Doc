@@ -596,3 +596,39 @@ class TestResolveCrawlLimits:
         depth, max_pages = _resolve_crawl_limits({"depth": "0", "max_pages": "0"}, {})
         assert depth == 1
         assert max_pages == 1
+
+
+class TestHistoryRunsRoute:
+    """GET /api/history/runs — 一般化された実行履歴（R2-27）。"""
+
+    def _client(self):
+        import sys
+
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+        import app as appmod
+
+        return appmod.app.test_client()
+
+    def test_returns_empty_list_when_no_history(self, tmp_path: Path) -> None:
+        with patch("web.routes.auto_run.OUTPUT_DIR", tmp_path):
+            res = self._client().get("/api/history/runs")
+        assert res.status_code == 200
+        assert res.get_json() == {"runs": []}
+
+    def test_includes_logged_autorun_and_running_job(self, tmp_path: Path) -> None:
+        from web.services.usage_tracker import record_autorun
+
+        record_autorun(tmp_path, "example.com", status="complete", passed=2, failed=0, total=2)
+        job = _make_job(domain="other.com", status="running_tests")
+        with (
+            patch("web.routes.auto_run.OUTPUT_DIR", tmp_path),
+            patch("web.routes.auto_run._JOBS", {job.job_id: job}),
+        ):
+            res = self._client().get("/api/history/runs")
+        data = res.get_json()
+        assert res.status_code == 200
+        domains = {run["domain"] for run in data["runs"]}
+        assert domains == {"example.com", "other.com"}
+        running = next(run for run in data["runs"] if run["domain"] == "other.com")
+        assert running["source"] == "running"
+        assert running["status"] == "running_tests"

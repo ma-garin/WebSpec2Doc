@@ -6,7 +6,15 @@ function renderReport() {
   }
   const screens = reportJson.screens;
   const pageIds = new Set(screens.map(s => s.page_id));
-  const allShots = (resultData.screenshots || []).filter(p => pageIds.has(p.split('/').pop().replace(/\.png$/, '')));
+  const allScreenshots = resultData.screenshots || [];
+  const allShots = allScreenshots.filter(p => pageIds.has(p.split('/').pop().replace(/\.png$/, '')));
+  // ライトボックス拡大表示は全体スクリーンショット（{page_id}_full.png）があればそちらを使う
+  // （ビューポートのみの画像を拡大すると画面が見切れる不具合の修正。view-shots.js と同じ方式）。
+  const fullByPageId = {};
+  allScreenshots.forEach(p => {
+    const m = p.split('/').pop().match(/^(.+)_full\.png$/);
+    if (m) fullByPageId[m[1]] = p;
+  });
   // 遷移先/遷移元を「P003」等の内部IDのまま出さず画面名で表示するためのマップ
   const idToScreen = {};
   screens.forEach(s => { idToScreen[s.page_id] = s; });
@@ -30,21 +38,23 @@ function renderReport() {
     item.addEventListener('click', () => {
       list.querySelectorAll('.rpt-list-item').forEach(el => el.classList.remove('is-active'));
       item.classList.add('is-active');
-      renderReportDetail(sc, allShots, idToScreen);
+      renderReportDetail(sc, allShots, idToScreen, fullByPageId);
     });
     list.appendChild(item);
   });
-  renderReportDetail(screens[0], allShots, idToScreen);
+  renderReportDetail(screens[0], allShots, idToScreen, fullByPageId);
 }
 
-function renderReportDetail(sc, allShots, idToScreen) {
+function renderReportDetail(sc, allShots, idToScreen, fullByPageId) {
   const detail = document.getElementById('rpt-detail');
   if (!detail) return;
 
   const shotPath = allShots.find(p => p.split('/').pop().replace(/\.png$/, '') === sc.page_id);
   const shotSrc = shotPath ? `/preview?path=${encodeURIComponent(shotPath)}` : '';
+  const fullPath = (fullByPageId || {})[sc.page_id];
+  const lightboxSrc = fullPath ? `/preview?path=${encodeURIComponent(fullPath)}` : shotSrc;
   const shotHtml = shotPath
-    ? `<img src="${escHtml(shotSrc)}" class="rpt-screenshot" loading="lazy" alt="${escHtml(sc.page_id)}" onclick="openLightbox('${escHtml(shotSrc)}')" /><p class="rpt-screenshot-caption">クリックで全画面表示</p>`
+    ? `<img src="${escHtml(shotSrc)}" class="rpt-screenshot" loading="lazy" alt="${escHtml(sc.page_id)}" onclick="openLightbox('${escHtml(lightboxSrc)}')" /><p class="rpt-screenshot-caption">クリックで全画面表示</p>`
     : '';
 
   // 「P003」等の内部IDのままでは分かりにくいため、可能な限り画面名で表示する

@@ -76,6 +76,16 @@ function renderOverview() {
   const invNote = screens.length > screenCount
     ? `<span style="font-weight:400;color:var(--text-muted);font-size:12px">（${screens.length}ページ検出・${screenCount}画面／重複は淡色）</span>`
     : '';
+  const screensMdPath = resultData?.files?.screens_md || '';
+  const screensMdLink = screensMdPath
+    ? `<button type="button" class="qa-output-btn qa-preview-btn" data-path="${escHtml(screensMdPath)}" data-label="画面一覧 (screens.md)" style="margin-left:8px">screens.md を開く</button>`
+    : '';
+  const featuresMdPath = resultData?.files?.features_md || '';
+  const featuresSection = featuresMdPath
+    ? '<div class="hero-section-title">機能一覧</div>' +
+      '<p style="color:var(--text-muted);font-size:13px;margin:0 0 8px">画面・フォーム・遷移から導出したシステム機能の一覧です。</p>' +
+      `<button type="button" class="qa-output-btn qa-preview-btn" data-path="${escHtml(featuresMdPath)}" data-label="機能一覧 (features.md)">features.md を開く</button>`
+    : '';
   resultHero.innerHTML = '<div class="hero-pad">' +
     `<p style="color:var(--text-muted);font-size:13px;margin-bottom:12px">対象 ${escHtml(meta.target_url || '')} ／ クロール: 深さ${meta.crawl_depth ?? '-'} ・最大${meta.max_pages ?? '-'}ページ ／ ${escHtml(meta.crawled_at || '')}</p>` +
     _execSummary(screens) +
@@ -85,9 +95,10 @@ function renderOverview() {
       <button type="button" class="next-step-btn" onclick="selectResultTab('test-design','summary')">技法マトリクスを見る →</button>
       <button type="button" class="next-step-btn next-step-btn--secondary" onclick="selectResultTab('history')">差分・履歴を確認する →</button>
     </div>` +
-    '<div class="hero-section-title">画面インベントリ ' + invNote + '</div>' +
+    '<div class="hero-section-title">画面インベントリ ' + invNote + screensMdLink + '</div>' +
     '<table class="ov-screens"><thead><tr><th>画面ID</th><th>タイトル</th><th>URL</th><th>フォーム</th><th>入力項目</th><th>遷移先</th></tr></thead><tbody>' +
     (rows || '<tr><td colspan="6" style="color:var(--text-muted)">画面がありません</td></tr>') + '</tbody></table>' +
+    featuresSection +
     '</div>';
 }
 

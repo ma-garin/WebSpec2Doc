@@ -218,10 +218,10 @@ class TestApprovalModalStructure:
                 autorun_page.locator(f"input[name='arm-filter'][value='{value}']")
             ).to_be_checked()
 
-    def test_cases_detail_element_exists(self, autorun_page: Page) -> None:
-        """テストケース一覧の details 要素が存在する。"""
+    def test_view_testcases_button_exists(self, autorun_page: Page) -> None:
+        """テストケース専用画面へ遷移するボタンが存在する。"""
         self._open_modal(autorun_page)
-        expect(autorun_page.locator("#arm-cases-detail")).to_be_attached()
+        expect(autorun_page.locator("#arm-view-testcases-btn")).to_be_attached()
 
     def test_modal_screenshot_for_visual_review(self, autorun_page: Page) -> None:
         """モーダルのスクリーンショットを保存（目視確認用）。"""
@@ -342,6 +342,27 @@ class TestAutoRunLivePreview:
             })"""
         )
         expect(autorun_page.locator("#autorun-preview-frame")).to_be_hidden()
+
+
+class TestOutputCategorization:
+    """成果物一覧のSDLC分類（R2-22: 計画/分析/設計/実装/実行/レポート）。"""
+
+    def test_outputs_grouped_by_sdlc_category_in_order(self, autorun_page: Page) -> None:
+        autorun_page.evaluate(
+            """() => _autorunRender({
+                status: 'complete', job_id: 'j', domain: 'example.com',
+                log: [], test_results: {passed: 1, failed: 0, total: 1},
+                outputs: {
+                    test_plan: '/out/example.com/qa_process/test_plan.md',
+                    spec_ts: '/out/example.com/qa_process/autorun.spec.ts',
+                    playwright_report_html: '/out/example.com/qa_process/playwright_report.html',
+                },
+                started_at: '2026-06-03T10:00:00', finished_at: '2026-06-03T10:01:00', elapsed_sec: 60,
+                error: null, input_request: null, run_policy: {},
+            })"""
+        )
+        titles = autorun_page.locator("#autorun-output-links .qa-output-category-title")
+        expect(titles).to_have_text(["計画", "実装", "実行"])
 
 
 class TestCaseDetailExpand:

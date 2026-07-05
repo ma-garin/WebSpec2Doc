@@ -145,7 +145,23 @@ def api_autorun_cancel() -> dict | tuple[dict, int]:
     job.step_label = "キャンセルしました"
     job.finished_at = _now_iso()
     job.add_log("ユーザーによってキャンセルされました。")
+    _record_autorun_usage_safely(job)
     return {"ok": True}
+
+
+@bp.get("/api/history/runs")
+def api_history_runs() -> dict:
+    """種別を問わない一般化された実行履歴（R2-27）。
+
+    usage_log.jsonl の実績と実行中（未終端）のAutoRunジョブをマージして返す。
+    リンクは実在するファイルのみ（実在検証・捏造しない）。
+    """
+    from web.services.usage_tracker import build_run_history
+
+    with _JOBS_LOCK:
+        running_jobs = [job.to_dict() for job in _JOBS.values()]
+    runs = build_run_history(OUTPUT_DIR, running_jobs)
+    return {"runs": runs}
 
 
 @bp.post("/api/autorun/submit-input")
@@ -190,7 +206,7 @@ def api_autorun_preview() -> dict | tuple[dict, int]:
     candidates_path = OUTPUT_DIR / job.domain / "qa_process" / "playwright_candidates.json"
     spec_path_str = job.outputs.get("spec_ts", "")
 
-    result: dict[str, Any] = {"job_id": job.job_id}
+    result: dict[str, Any] = {"job_id": job.job_id, "domain": job.domain}
 
     # 候補一覧
     if candidates_path.is_file():
@@ -676,6 +692,7 @@ def _execute_tests(job: AutoRunJob) -> None:
     job.finished_at = _now_iso()
     job.add_log(f"テスト実行完了: PASS={passed} FAIL={failed} TOTAL={total}")
     _update_failure_classification(job, result)
+    _record_autorun_usage_safely(job)
 
 
 # ─────────────────────────── ユーティリティ ───────────────────────────
@@ -727,6 +744,26 @@ def _mark_job_failed(job: AutoRunJob, error: str) -> None:
     classification = classify_failure("AutoRun", error)
     job.failure_classifications = [asdict(classification)]
     job.failure_summary = summarize_classifications([classification])
+    _record_autorun_usage_safely(job)
+
+
+def _record_autorun_usage_safely(job: AutoRunJob) -> None:
+    """実行履歴（usage_log.jsonl）へのAutoRun実績記録。記録失敗は応答を妨げない。"""
+    try:
+        from web.services.usage_tracker import record_autorun
+
+        test_results = job.test_results or {}
+        record_autorun(
+            OUTPUT_DIR,
+            job.domain,
+            status=job.status,
+            passed=int(test_results.get("passed", 0)),
+            failed=int(test_results.get("failed", 0)),
+            total=int(test_results.get("total", 0)),
+            duration_sec=job.elapsed_sec(),
+        )
+    except Exception:  # noqa: BLE001
+        logger.warning("AutoRun実績の記録に失敗しました（応答は継続）", exc_info=True)
 
 
 def _report_html_path(job: AutoRunJob) -> str:

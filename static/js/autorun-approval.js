@@ -167,7 +167,6 @@ function _autorunPopulateApprovalModal() {
   const summary = _autoRunPreviewData.summary || {};
   const counts = summary.filter_counts || {};
   const byStatus = summary.by_status || {};
-  const candidates = _autoRunPreviewData.candidates || [];
 
   // サマリー数値ストリップ
   const summaryEl = document.getElementById('arm-summary');
@@ -200,34 +199,12 @@ function _autorunPopulateApprovalModal() {
     if (el) el.textContent = counts[key] != null ? `${counts[key]}件` : '';
   }
 
-  // テストケース一覧
-  const casesWrap = document.getElementById('arm-cases-wrap');
-  if (casesWrap) {
-    if (candidates.length) {
-      const rows = candidates.map(c => {
-        const statusCls = c.automation_status === 'auto' ? 'status-low' : 'status-muted';
-        return `<tr>
-          <td class="cell-id">${escHtml(c.id || '')}</td>
-          <td class="cell-title">${escHtml(c.title || '')}</td>
-          <td class="cell-status ${statusCls}">${escHtml(c.automation_status || '')}</td>
-        </tr>`;
-      }).join('');
-      casesWrap.innerHTML = `<table class="data autorun-preview-table">
-        <thead><tr><th>ID</th><th>タイトル</th><th>自動化</th></tr></thead>
-        <tbody>${rows}</tbody></table>`;
-    } else {
-      casesWrap.innerHTML = '<div class="empty arm-empty">テストケースなし</div>';
-    }
-  }
-
-  // details toggle アイコン sync
-  const detail = document.getElementById('arm-cases-detail');
-  const icon = document.getElementById('arm-cases-toggle-icon');
-  if (detail && icon) {
-    detail.addEventListener('toggle', () => {
-      icon.textContent = detail.open ? '▼' : '▶';
-    }, { once: false });
-  }
 }
+
+// テストケース一覧: 専用ビュー（テストケース画面）へ遷移する
+document.getElementById('arm-view-testcases-btn')?.addEventListener('click', () => {
+  const domain = _autoRunPreviewData?.domain || '';
+  if (typeof tcNavigateFromApproval === 'function') tcNavigateFromApproval(domain);
+});
 
 // ---- AutoRun: 停止 ----

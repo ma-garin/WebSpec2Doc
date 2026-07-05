@@ -8,8 +8,10 @@ from pathlib import Path
 import pytest
 from web.services.usage_tracker import (
     SavingCoefficients,
+    build_run_history,
     load_coefficients,
     load_usage,
+    record_autorun,
     record_comparison_from_report,
     record_crawl_from_report,
     record_usage,
@@ -224,6 +226,84 @@ class TestRecordUxReviewFromReport:
         result = record_ux_review_from_report(tmp_path, "example.com", tmp_path / "ux_review.json")
         assert result is None
         assert load_usage(tmp_path) == []
+
+
+class TestRecordAutorun:
+    def test_appends_autorun_event(self, tmp_path: Path) -> None:
+        path = record_autorun(
+            tmp_path,
+            "example.com",
+            status="complete",
+            passed=3,
+            failed=1,
+            total=4,
+            duration_sec=120,
+        )
+        assert path is not None
+        records = load_usage(tmp_path)
+        assert len(records) == 1
+        assert records[0]["event"] == "autorun"
+        assert records[0]["domain"] == "example.com"
+        assert records[0]["status"] == "complete"
+        assert records[0]["passed"] == 3
+        assert records[0]["failed"] == 1
+        assert records[0]["total"] == 4
+        assert records[0]["duration_sec"] == 120
+
+    def test_records_failed_status(self, tmp_path: Path) -> None:
+        record_autorun(tmp_path, "example.com", status="failed")
+        records = load_usage(tmp_path)
+        assert records[0]["status"] == "failed"
+        assert records[0]["passed"] == 0
+
+
+class TestBuildRunHistory:
+    def test_merges_log_and_running_jobs_newest_first(self, tmp_path: Path) -> None:
+        record_usage(tmp_path, event="crawl", domain="a.com", screen_count=5)
+        record_autorun(tmp_path, "b.com", status="complete", passed=2, failed=0, total=2)
+        running = [
+            {
+                "job_id": "job-1",
+                "domain": "c.com",
+                "status": "running_tests",
+                "started_at": "2099-01-01T00:00:00+00:00",
+                "test_results": {},
+                "elapsed_sec": 10,
+            }
+        ]
+        runs = build_run_history(tmp_path, running)
+        assert len(runs) == 3
+        # 実行中ジョブは未来日時のためソート後の先頭に来る
+        assert runs[0]["source"] == "running"
+        assert runs[0]["domain"] == "c.com"
+        assert runs[0]["status"] == "running_tests"
+        types = {run["type"] for run in runs}
+        assert types == {"crawl", "autorun"}
+
+    def test_terminal_running_jobs_excluded_to_avoid_duplication(self, tmp_path: Path) -> None:
+        """終端状態のジョブはusage_log側に記録済みのため、実行中一覧からは除外する。"""
+        running = [
+            {
+                "job_id": "job-1",
+                "domain": "c.com",
+                "status": "complete",
+                "started_at": "2026-01-01T00:00:00+00:00",
+            }
+        ]
+        runs = build_run_history(tmp_path, running)
+        assert runs == []
+
+    def test_link_only_included_when_file_exists(self, tmp_path: Path) -> None:
+        record_usage(tmp_path, event="crawl", domain="example.com", screen_count=1)
+        runs = build_run_history(tmp_path)
+        assert runs[0]["link"] == ""
+        (tmp_path / "example.com").mkdir(parents=True)
+        (tmp_path / "example.com" / "report.html").write_text("<html></html>", encoding="utf-8")
+        runs = build_run_history(tmp_path)
+        assert runs[0]["link"].endswith("report.html")
+
+    def test_empty_when_no_records_or_jobs(self, tmp_path: Path) -> None:
+        assert build_run_history(tmp_path) == []
 
 
 class TestSummarizeUsage:

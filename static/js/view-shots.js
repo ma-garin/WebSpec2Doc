@@ -23,9 +23,47 @@ function renderShots() {
     const pageId = name.replace(/\.png$/, '');
     const src = `/preview?path=${encodeURIComponent(p)}`;
     const fullSrc = fullByPageId[pageId] ? `/preview?path=${encodeURIComponent(fullByPageId[pageId])}` : src;
-    return `<figure class="shots-item"><img src="${escHtml(src)}" loading="lazy" alt="${escHtml(name)}" class="shots-thumb" onclick="openLightbox('${escHtml(fullSrc)}')" /><figcaption>${escHtml(name)}</figcaption></figure>`;
+    const exportPath = fullByPageId[pageId] || p;
+    return `<figure class="shots-item">
+      <label class="shots-select"><input type="checkbox" class="shots-select-cb" data-path="${escHtml(exportPath)}"></label>
+      <img src="${escHtml(src)}" loading="lazy" alt="${escHtml(name)}" class="shots-thumb" onclick="openLightbox('${escHtml(fullSrc)}')" />
+      <figcaption>${escHtml(name)}</figcaption>
+    </figure>`;
   }).join('');
-  resultHero.innerHTML = '<div class="shots-grid">' + items + '</div>';
+  resultHero.innerHTML =
+    '<div class="shots-toolbar">' +
+    '<button type="button" id="shots-select-all-btn" class="btn-outline-sm">全選択</button>' +
+    '<button type="button" id="shots-select-none-btn" class="btn-outline-sm">全解除</button>' +
+    '<button type="button" id="shots-export-btn" class="btn-outline-sm">選択をエクスポート (<span id="shots-select-count">0</span>)</button>' +
+    '</div>' +
+    '<div class="shots-grid">' + items + '</div>';
+  _shotsWireToolbar();
+}
+
+// ---- ギャラリー一括エクスポート（チェックボックス選択→/download-zip） ----
+function _shotsWireToolbar() {
+  const checkboxes = () => Array.from(document.querySelectorAll('.shots-select-cb'));
+  const countEl = document.getElementById('shots-select-count');
+  const updateCount = () => {
+    if (countEl) countEl.textContent = String(checkboxes().filter(cb => cb.checked).length);
+  };
+  checkboxes().forEach(cb => cb.addEventListener('change', updateCount));
+  document.getElementById('shots-select-all-btn')?.addEventListener('click', () => {
+    checkboxes().forEach(cb => { cb.checked = true; });
+    updateCount();
+  });
+  document.getElementById('shots-select-none-btn')?.addEventListener('click', () => {
+    checkboxes().forEach(cb => { cb.checked = false; });
+    updateCount();
+  });
+  document.getElementById('shots-export-btn')?.addEventListener('click', () => {
+    const paths = checkboxes().filter(cb => cb.checked).map(cb => cb.dataset.path);
+    if (!paths.length || !activeDomain) return;
+    const params = new URLSearchParams({ domain: activeDomain });
+    paths.forEach(p => params.append('paths', p));
+    window.open(`/download-zip?${params.toString()}`, '_blank');
+  });
+  updateCount();
 }
 
 // ---- ライトボックス ----

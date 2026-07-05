@@ -65,6 +65,8 @@
 {% include 'partials/view-viewpoints.html' %}
 
 {% include 'partials/view-auto-run.html' %}
+{% include 'partials/view-testcases.html' %}
+{% include 'partials/view-run-history.html' %}
 
 {% include 'partials/view-user-guide.html' %}
 
@@ -138,7 +140,11 @@
         <div class="shortcut-row"><span>このヘルプを表示 / 閉じる</span><span class="shortcut-keys"><kbd class="kbd">?</kbd></span></div>
         <div class="shortcut-row"><span>ダッシュボードへ移動</span><span class="shortcut-keys"><kbd class="kbd">Alt</kbd><kbd class="kbd">D</kbd></span></div>
         <div class="shortcut-row"><span>サイトを追加（新規ウィザード）</span><span class="shortcut-keys"><kbd class="kbd">Alt</kbd><kbd class="kbd">N</kbd></span></div>
+        <div class="shortcut-row"><span>AutoRunへ移動</span><span class="shortcut-keys"><kbd class="kbd">Alt</kbd><kbd class="kbd">A</kbd></span></div>
+        <div class="shortcut-row"><span>実行履歴へ移動</span><span class="shortcut-keys"><kbd class="kbd">Alt</kbd><kbd class="kbd">H</kbd></span></div>
         <div class="shortcut-row"><span>レポートのタブを切替</span><span class="shortcut-keys"><kbd class="kbd">←</kbd><kbd class="kbd">→</kbd></span></div>
+        <div class="shortcut-row"><span>レポートのタブへ直接移動（1〜9番目）</span><span class="shortcut-keys"><kbd class="kbd">1</kbd>〜<kbd class="kbd">9</kbd></span></div>
+        <div class="shortcut-row"><span>検索欄にフォーカス（条件マトリクス・観点管理）</span><span class="shortcut-keys"><kbd class="kbd">/</kbd></span></div>
         <div class="shortcut-row"><span>モーダル / 最大化を閉じる</span><span class="shortcut-keys"><kbd class="kbd">Esc</kbd></span></div>
       </div>
       <div class="shortcut-close-row">
@@ -166,6 +172,8 @@
   <script src="{{ url_for('static', filename='js/results.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/autorun-approval.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/autorun.js') }}?v={{ _ver }}"></script>
+  <script src="{{ url_for('static', filename='js/view-testcases.js') }}?v={{ _ver }}"></script>
+  <script src="{{ url_for('static', filename='js/view-run-history.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/viewpoint-editor.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/viewpoints.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/events.js') }}?v={{ _ver }}"></script>
@@ -176,7 +184,6 @@
   <script src="{{ url_for('static', filename='js/view-transition.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/view-shots.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/view-test-runs.js') }}?v={{ _ver }}"></script>
-  <script src="{{ url_for('static', filename='js/view-coverage.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/doc-fusion.js') }}?v={{ _ver }}"></script>
 
 </body>

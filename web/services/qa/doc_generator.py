@@ -22,6 +22,7 @@ from web.services.qa.helpers import (
     _viewpoint_names,
     _viewpoints_by_type,
 )
+from web.services.qa.markdown_lite import render_markdown_lite
 
 
 def _generate_outputs(
@@ -390,7 +391,7 @@ def _qa_process_report_html(
         for screen in _screen_summaries(report)
     )
     doc_sections = "".join(
-        f"<section><h2>{html.escape(label)}</h2><pre>{html.escape(docs[key])}</pre></section>"
+        f'<section><h2>{html.escape(label)}</h2><div class="md-doc">{render_markdown_lite(docs[key])}</div></section>'
         for key, label, _filename in QA_STEPS
         if key in docs
     )
@@ -436,6 +437,12 @@ def _qa_process_report_html(
     th, td {{ border: 1px solid #E5E7EB; padding: 8px; text-align: left; font-size: 13px; }}
     th {{ background: #F3F4F6; }}
     pre {{ white-space: pre-wrap; background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 6px; padding: 14px; font-size: 12px; }}
+    .md-doc h1, .md-doc h2, .md-doc h3, .md-doc h4, .md-doc h5, .md-doc h6 {{ margin: 18px 0 8px; }}
+    .md-doc table.md-table {{ border-collapse: collapse; width: 100%; margin: 0 0 16px; font-size: 12px; }}
+    .md-doc table.md-table th, .md-doc table.md-table td {{ border: 1px solid #E5E7EB; padding: 6px 10px; text-align: left; }}
+    .md-doc table.md-table th {{ background: #F3F4F6; }}
+    .md-doc pre.md-code {{ background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 6px; padding: 12px; overflow: auto; }}
+    .md-doc ul, .md-doc ol {{ padding-left: 22px; }}
   </style>
 </head>
 <body>

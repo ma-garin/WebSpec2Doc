@@ -20,6 +20,8 @@ const VIEW_HEADER = {
   'qa-quality': { trail: ['ダッシュボード', '品質観点'], title: '品質観点' },
   viewpoints: { trail: ['ダッシュボード', '観点管理'], title: '観点管理' },
   'auto-run': { trail: ['ダッシュボード', 'AutoRun'], title: 'AutoRun — 全自動テスト実行' },
+  testcases: { trail: ['ダッシュボード', 'テストケース'], title: 'テストケース一覧' },
+  'run-history': { trail: ['ダッシュボード', '実行履歴'], title: '実行履歴' },
   'user-guide': { trail: ['ダッシュボード', 'ユーザーガイド'], title: 'ユーザーガイド' },
   settings: { trail: ['ダッシュボード', '設定'], title: '設定' },
 };
@@ -38,6 +40,8 @@ const VIEW_PATHS = {
   'qa-quality': '/qa-quality',
   viewpoints: '/viewpoints',
   'auto-run': '/auto-run',
+  testcases: '/testcases',
+  'run-history': '/run-history',
   'user-guide': '/user-guide',
   settings: '/settings',
 };
@@ -92,6 +96,8 @@ function switchView(name, opts = {}) {
     }
   }
   if (name === 'qa-quality') loadQaToolSites(name);
+  if (name === 'testcases' && typeof tcOnEnterView === 'function') tcOnEnterView();
+  if (name === 'run-history' && typeof loadRunHistory === 'function') loadRunHistory();
   if (name === 'viewpoints' && typeof loadViewpointManager === 'function') loadViewpointManager();
   if (name === 'auto-run') {
     if (typeof autorunLoadViewpointSelection === 'function') autorunLoadViewpointSelection();
@@ -152,13 +158,9 @@ document.getElementById('add-site-btn').addEventListener('click', openAddSite);
 document.getElementById('add-site-btn-2').addEventListener('click', openAddSite);
 document.getElementById('nav-new-analysis-btn').addEventListener('click', openAddSite);
 
-// ---- ナビ「実行履歴」: AutoRun 画面の「最近の実行」一覧へ直接遷移する ----
-// （AutoRunの実行結果を確認するにはAutoRun画面を開くしかなく、履歴の存在に
-// 気づきにくい、というドッグフーディング指摘への対応）
+// ---- ナビ「実行履歴」: 種別を問わない一般化された実行履歴ビューへ遷移する（R2-27）----
 document.getElementById('nav-run-history-btn')?.addEventListener('click', () => {
-  switchView('auto-run');
-  const area = document.getElementById('autorun-recent-area');
-  if (area) setTimeout(() => area.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  switchView('run-history');
 });
 
 // ---- ダッシュボード・ヒーロー（ゴールデンパス入口） ----
@@ -396,6 +398,22 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault(); switchView('dashboard');
   } else if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === 'n' || e.key === 'N')) {
     e.preventDefault(); openAddSite();
+  } else if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === 'a' || e.key === 'A')) {
+    e.preventDefault(); switchView('auto-run');
+  } else if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === 'h' || e.key === 'H')) {
+    e.preventDefault(); switchView('run-history');
+  } else if (!typing && !e.altKey && !e.ctrlKey && !e.metaKey && /^[1-9]$/.test(e.key)) {
+    const tabs = document.querySelectorAll('.result-tabs .result-tab:not([hidden])');
+    const tab = tabs[Number(e.key) - 1];
+    if (tab) { e.preventDefault(); tab.click(); }
+  } else if (!typing && e.key === '/' && !e.altKey && !e.ctrlKey && !e.metaKey) {
+    let target = null;
+    for (const sel of ['#mx-search', '#vp-search']) {
+      const el = document.querySelector(sel);
+      if (el && el.offsetParent !== null) { target = el; break; }
+    }
+    if (!target) target = document.querySelector('input[type="search"]:not([hidden])');
+    if (target) { e.preventDefault(); target.focus(); }
   }
 });
 

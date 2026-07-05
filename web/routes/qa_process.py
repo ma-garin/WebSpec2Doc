@@ -11,7 +11,7 @@ from llm.viewpoint_generator import make_provider
 from web.config import OUTPUT_DIR
 from web.env_store import _read_env
 from web.services.openai_qa import OpenAIQAError, generate_openai_qa, has_openai_api_key
-from web.services.qa.advanced_generator import _advanced_payload
+from web.services.qa.advanced_generator import _advanced_payload, _testcases_payload
 from web.services.qa.helpers import (
     _ai_artifact_path,
     _input_payload,
@@ -121,6 +121,18 @@ def api_qa_process_result() -> dict | tuple[dict, int]:
     if not (OUTPUT_DIR / domain).is_dir():
         return {"error": "not found"}, 404
     return {"domain": domain, "outputs": _output_payload(domain)}
+
+
+@bp.get("/api/testcases")
+def api_testcases() -> dict | tuple[dict, int]:
+    domain = request.args.get("domain", "")
+    report_path, error = _report_json_path(domain)
+    if error:
+        return {"error": error}, 404
+    report = _load_report(report_path)
+    if report is None:
+        return {"error": "invalid report.json"}, 400
+    return _testcases_payload(domain, report)
 
 
 @bp.get("/api/qa-process/advanced")

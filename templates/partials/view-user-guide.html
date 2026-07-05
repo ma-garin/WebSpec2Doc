@@ -96,6 +96,35 @@
             </div>
 
             <div class="qa-readable-section">
+              <h3>CLIの使い方（画面を使わずコマンドで実行する）</h3>
+              <p style="font-size:13px;color:var(--text-muted);margin-bottom:10px">
+                画面と同じ処理は <code>python src/main.py</code> からコマンドラインでも実行できます。バッチ処理・自動化・CI連携に使います。
+              </p>
+              <table class="data">
+                <thead><tr><th>オプション</th><th>役割</th><th>例</th></tr></thead>
+                <tbody>
+                  <tr><td><code>--url</code></td><td>解析対象のURL（クロールの起点）</td><td><code>--url https://example.com/</code></td></tr>
+                  <tr><td><code>--format</code></td><td>出力形式（指定可能: md,html,excel,pdf,json。既定は md のみ）。カンマ区切りで複数指定可</td><td><code>--format html,pdf,excel,json,md</code></td></tr>
+                  <tr><td><code>--compare</code></td><td>前回のクロール結果（スナップショット）と比較し、仕様ドリフトを検出する</td><td><code>--compare</code></td></tr>
+                  <tr><td><code>--fail-on-drift</code></td><td>ドリフト検出時に exit code 1 で終了する（CIでの失敗判定に使う）</td><td><code>--compare --fail-on-drift</code></td></tr>
+                  <tr><td><code>--login-record</code></td><td>見えるブラウザでログイン操作を記録し、認証セッション（<code>auth.json</code>）を保存する。<code>--login-record-url</code>（ログインページ）と <code>--login-signal</code>（完了シグナルファイル）を併用する</td><td><code>--login-record --login-record-url https://example.com/login --login-signal .signal</code></td></tr>
+                  <tr><td><code>--auth</code></td><td>保存済みの認証セッションファイル（auth.json）を指定してクロールする</td><td><code>--auth auth.json</code></td></tr>
+                  <tr><td><code>--depth</code></td><td>リンクをたどる階層数（既定 2）</td><td><code>--depth 3</code></td></tr>
+                  <tr><td><code>--max-pages</code></td><td>取得する最大ページ数（既定 30）</td><td><code>--max-pages 50</code></td></tr>
+                </tbody>
+              </table>
+              <p style="font-size:13px;color:var(--text-muted);margin:10px 0 4px">代表的な使い方の流れ:</p>
+              <ol class="qa-check-list" style="padding-left:18px;list-style:decimal">
+                <li>初回クロール（仕様書一式を生成）: <code>python src/main.py --url https://example.com/ --format html,pdf,excel,json,md</code></li>
+                <li>ログインが必要なサイトは、画面の「ログイン情報の設定」またはCLIの <code>--login-record</code> で先にセッションを記録する</li>
+                <li>記録した認証情報でクロール: <code>python src/main.py --url https://example.com/mypage --auth auth.json</code></li>
+                <li>リリース後の再クロールで仕様ドリフトを検知: <code>python src/main.py --url https://example.com/ --compare</code></li>
+                <li>CIパイプラインでドリフトを失敗判定にする: <code>python src/main.py --url https://example.com/ --compare --fail-on-drift</code></li>
+              </ol>
+              <p class="input-hint" style="margin-top:8px">全オプション一覧は <code>python src/main.py --help</code> で確認できます。ログイン記録CLIの詳細フラグは複雑なため、通常は画面（設定 →「ログイン情報の設定」）からの記録を推奨します。</p>
+            </div>
+
+            <div class="qa-readable-section">
               <h3>CI/CD 連携（仕様ドリフトの自動監視）</h3>
               <p style="font-size:13px;color:var(--text-muted);margin-bottom:10px">
                 デプロイのたびに仕様ドリフトを自動検知できます。差分があると exit code 1 で終了するため、パイプラインで検知可能です。

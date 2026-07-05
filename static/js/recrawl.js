@@ -44,7 +44,10 @@ async function openResultsForDomain(domain, tab, sub) {
   switchView('generate');
   genPanel.style.display = 'none';
   executionView.classList.add('hidden');
-  appContent.classList.add('is-executing');
+  // レポート表示は is-reporting を使う（is-executing はクロール実行中専用の状態フラグ）。
+  // 誤って is-executing を付けると、他画面へ移動しても解除されずスクロール不能になる不具合の温床だった。
+  appContent.classList.remove('is-executing');
+  appContent.classList.add('is-reporting');
   resultPanel.classList.remove('hidden');
   uiSkeleton(document.getElementById('rp-overview'), 'table');
   // ディープリンク: URLハッシュにレポート状態を保存（チーム共有用）

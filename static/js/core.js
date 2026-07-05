@@ -95,8 +95,21 @@ function switchView(name, opts = {}) {
   // A: 2ペインツール画面では全高モードに切り替え
   const appContentEl = document.getElementById('app-content');
   if (appContentEl) appContentEl.classList.toggle('is-qa-tool', ['qa-quality', 'auto-run', 'viewpoints'].includes(name));
-  // レポートモード解除（generate以外に遷移した時）
-  if (name !== 'generate' && appContentEl) appContentEl.classList.remove('is-reporting');
+  // is-executing / is-reporting は「サイトを追加」画面（generate）専用の全高モードフラグ。
+  // 付けっぱなしで他画面に移動すると #app-content が overflow:hidden のまま固定され、
+  // ユーザーガイド等の画面がスクロール不能になる不具合が実際に発生していた（再発防止のため
+  // switchView 側で必ず後始末する。個別のボタンハンドラの消し忘れに依存しない）。
+  if (appContentEl) {
+    if (name !== 'generate') {
+      appContentEl.classList.remove('is-executing', 'is-reporting');
+    } else {
+      // generate へ戻った場合のみ、実行中/レポート表示中の全高モードを復元する
+      const execVisible = executionView && !executionView.classList.contains('hidden');
+      const resultVisible = resultPanel && !resultPanel.classList.contains('hidden');
+      appContentEl.classList.toggle('is-executing', !!execVisible);
+      appContentEl.classList.toggle('is-reporting', !execVisible && !!resultVisible);
+    }
+  }
 }
 // ---- ウィザード ステップ管理 ----
 function showWizardStep(n) {

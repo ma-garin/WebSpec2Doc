@@ -42,7 +42,8 @@ async function showResults(domain, tab, sub) {
   } catch (e) {
     // 実行ビューが隠れている（履歴から開いた）場合は結果領域にエラーを表示
     executionView.classList.add('hidden'); resultPanel.classList.remove('hidden');
-    appContent.classList.add('is-executing');
+    appContent.classList.remove('is-executing');
+    appContent.classList.add('is-reporting');
     setHeader(['ダッシュボード', domain], domain);
     _renderedPanels.clear();
     _switchPanels('overview', '');
@@ -279,6 +280,7 @@ function selectResultTab(tab, sub) {
 
 // ---- 履歴・差分（クロール履歴タイムライン＋任意2点の仕様ドリフト比較）----
 let timelineDomain = '';
+let _tlDiffToken = 0; // 選択変更・連打時、古い応答の描画を破棄するためのトークン
 async function renderTimeline() {
   // await 中にタブ切替で resultHero シムが差し替わっても、自パネルへ描き続ける
   const host = resultHero;
@@ -341,13 +343,50 @@ function _ciGuidanceCard(domain) {
     '<button type="button" class="btn-outline-sm" id="ci-copy-btn">コピー</button></div></div>';
 }
 
-function showTimelineDiff() {
+// 「この2時点の差分を表示」ボタンの応答が「押しても反応がわからない」と報告された不具合の修正。
+// 従来は <iframe src=...> を innerHTML で差し替えるだけで、ローディング表示が無く、
+// 選択を変えずに連打すると src が同一文字列のままブラウザが再読込しない場合があり
+// 「何も起きていないように見える」状態になっていた。fetch で明示的に取得し、
+// 読み込み中・成功・失敗（理由つき）を必ず画面に反映する（evidence-only 原則）。
+async function showTimelineDiff() {
   const from = (document.querySelector('input[name=snap-from]:checked') || {}).value;
   const to = (document.querySelector('input[name=snap-to]:checked') || {}).value;
   const box = document.getElementById('tl-diff');
+  const btn = document.getElementById('tl-diff-btn');
+  if (!box) return;
   if (!from || !to) { box.innerHTML = '<div class="hero-msg">2時点を選択してください。</div>'; return; }
   if (from === to) { box.innerHTML = '<div class="hero-msg">異なる2時点を選択してください。</div>'; return; }
-  box.innerHTML = `<iframe src="/api/snapshot-diff?domain=${encodeURIComponent(timelineDomain)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}" title="仕様ドリフト差分"></iframe>`;
+
+  const myToken = ++_tlDiffToken; // 選択変更・連打時、古い応答の描画を破棄する
+  const origLabel = 'この2時点の差分を表示';
+  if (btn) { btn.disabled = true; btn.textContent = '差分を取得中…'; }
+  uiSkeleton(box, 'table');
+
+  let html = '';
+  try {
+    const res = await fetch(
+      `/api/snapshot-diff?domain=${encodeURIComponent(timelineDomain)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`
+    );
+    html = await res.text();
+    if (!res.ok) throw new Error(`サーバーエラー（HTTP ${res.status}）`);
+  } catch (e) {
+    if (myToken !== _tlDiffToken) return; // 選択が変わった後の古い失敗応答は無視
+    uiError(box, {
+      title: '差分の取得に失敗しました',
+      message: e && e.message ? e.message : '通信エラー',
+      onRetry: showTimelineDiff,
+    });
+    if (btn) { btn.disabled = false; btn.textContent = origLabel; }
+    return;
+  }
+  if (myToken !== _tlDiffToken) return; // 選択が変わった後の古い成功応答は無視
+
+  box.replaceChildren();
+  const iframe = document.createElement('iframe');
+  iframe.title = '仕様ドリフト差分';
+  iframe.srcdoc = html; // src の使い回しでは同一URL時にブラウザが再読込しないことがあるため必ず更新される srcdoc を使う
+  box.appendChild(iframe);
+  if (btn) { btn.disabled = false; btn.textContent = origLabel; }
 }
 
 // ====================== 表の密度切替 ======================

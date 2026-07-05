@@ -135,6 +135,39 @@ def api_testcases() -> dict | tuple[dict, int]:
     return _testcases_payload(domain, report)
 
 
+def _test_design_params(settings: dict[str, Any]) -> Any:
+    """設定 dict から TestDesignParams を構築する（value_catalog と技法パラメータ）。"""
+    from generator.test_design import TestDesignParams
+
+    kwargs: dict[str, Any] = {"value_catalog": settings.get("value_catalog") or {}}
+    if isinstance(settings.get("enabled_techniques"), list):
+        kwargs["enabled_techniques"] = tuple(settings["enabled_techniques"])
+    for key in ("bva_offset", "pairwise_strength", "n_switch", "max_dt_conditions"):
+        if isinstance(settings.get(key), int):
+            kwargs[key] = settings[key]
+    return TestDesignParams(**kwargs)
+
+
+@bp.get("/api/test-design")
+def api_test_design() -> dict | tuple[dict, int]:
+    """MBT テスト設計（BVA/DT/PW/ST）を画面ごとに生成して JSON で返す。"""
+    domain = request.args.get("domain", "")
+    report_path, error = _report_json_path(domain)
+    if error:
+        return {"error": error}, 404
+    report = _load_report(report_path)
+    if report is None:
+        return {"error": "invalid report.json"}, 400
+    from dataclasses import asdict
+
+    from generator.test_design import build_test_design
+    from web.services.test_design_settings import get_test_design_settings
+
+    params = _test_design_params(get_test_design_settings())
+    design = build_test_design(report, params)
+    return asdict(design)
+
+
 @bp.get("/api/qa-process/advanced")
 def api_qa_process_advanced() -> dict | tuple[dict, int]:
     domain = request.args.get("domain", "")

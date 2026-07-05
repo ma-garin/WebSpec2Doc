@@ -4,6 +4,7 @@
             <button type="button" class="set-tab is-active" data-tab="api" role="tab" aria-selected="true" aria-controls="set-panel-api" id="set-tab-api" tabindex="0">APIキー</button>
             <button type="button" class="set-tab" data-tab="crawl" role="tab" aria-selected="false" aria-controls="set-panel-crawl" id="set-tab-crawl" tabindex="-1">クロール既定値</button>
             <button type="button" class="set-tab" data-tab="notify" role="tab" aria-selected="false" aria-controls="set-panel-notify" id="set-tab-notify" tabindex="-1">通知</button>
+            <button type="button" class="set-tab" data-tab="test-design" role="tab" aria-selected="false" aria-controls="set-panel-test-design" id="set-tab-test-design" tabindex="-1">テスト設計</button>
           </div>
 
           <div class="set-panel is-active" id="set-panel-api" role="tabpanel" aria-labelledby="set-tab-api">
@@ -85,6 +86,41 @@
               </div>
               <button class="btn-primary" id="save-settings" style="margin-top:18px">設定を保存</button>
               <div class="settings-msg" id="settings-msg">設定を保存しました</div>
+            </div>
+          </div>
+
+          <div class="set-panel" id="set-panel-test-design" role="tabpanel" aria-labelledby="set-tab-test-design">
+            <div class="input-card">
+              <h2 class="set-card-title">テスト設計（MBT）</h2>
+              <p class="input-hint" style="margin-top:0;margin-bottom:14px">レポートの「テスト設計 → 技法別設計（MBT）」で使う技法・パラメータと、境界値テストの値カタログを調整します。<code>instance/test_design_settings.json</code> に保存されます。</p>
+
+              <div class="field full" style="margin-bottom:14px">
+                <label>使用する技法</label>
+                <div style="display:flex;flex-wrap:wrap;gap:14px;font-size:13px">
+                  <label><input type="checkbox" id="td-tech-bva" checked> 境界値分析(BVA)</label>
+                  <label><input type="checkbox" id="td-tech-dt" checked> デシジョンテーブル(DT)</label>
+                  <label><input type="checkbox" id="td-tech-pw" checked> ペアワイズ(PW)</label>
+                  <label><input type="checkbox" id="td-tech-st" checked> 状態遷移(ST)</label>
+                </div>
+              </div>
+
+              <div class="options-grid">
+                <div class="field"><label for="td-bva-offset">境界値オフセット</label><input type="number" id="td-bva-offset" min="1" max="5" value="1"></div>
+                <div class="field"><label for="td-pw-strength">ペアワイズ強度</label>
+                  <select id="td-pw-strength" class="url-input" style="height:40px"><option value="2">2-way</option><option value="3">3-way</option></select></div>
+                <div class="field"><label for="td-n-switch">状態遷移 Nスイッチ</label>
+                  <select id="td-n-switch" class="url-input" style="height:40px"><option value="0">0-switch</option><option value="1">1-switch</option></select></div>
+                <div class="field"><label for="td-max-dt">DT 最大条件数</label><input type="number" id="td-max-dt" min="1" max="6" value="4"></div>
+              </div>
+
+              <div class="field full" style="margin-top:18px">
+                <label for="td-value-catalog">テスト値カタログ（JSON・カテゴリ→ラベル/値/備考）</label>
+                <textarea id="td-value-catalog" spellcheck="false" style="width:100%;min-height:220px;font-family:ui-monospace,monospace;font-size:12.5px"></textarea>
+                <p class="input-hint" style="margin-top:6px">既知境界値の一般知識（メール上限値/RFC違反/空白 等）。解析対象サイト固有のデータではありません。</p>
+              </div>
+
+              <button class="btn-primary" id="save-test-design" style="margin-top:18px">テスト設計設定を保存</button>
+              <div class="settings-msg" id="test-design-msg" style="display:none;margin-top:12px"></div>
             </div>
           </div>
         </section>

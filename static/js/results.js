@@ -8,9 +8,9 @@ let resultHero = document.getElementById('rp-overview');
 const TAB_DEFS = {
   overview:      { panel: 'rp-overview', render: 'renderOverview' },
   screens:       { panel: 'rp-screens', defaultSub: 'spec',
-                   subs: { spec: 'renderReport', gallery: 'renderShots' } },
+                   subs: { spec: 'renderReport', gallery: 'renderShots', coverage: 'renderCoverageHeatmap' } },
   'test-design': { panel: 'rp-test-design', defaultSub: 'matrix',
-                   subs: { matrix: 'renderMatrix', summary: 'renderDesign', detail: 'renderTechniqueDetail' } },
+                   subs: { matrix: 'renderMatrix', summary: 'renderDesign', detail: 'renderTechniqueDetail', mbt: 'renderMbtDesign' } },
   flow:          { panel: 'rp-flow', defaultSub: 'diagram',
                    subs: { diagram: 'renderTransition', table: 'renderTransitionTable' } },
   runs:          { panel: 'rp-runs', render: 'renderTestRuns' },
@@ -321,10 +321,14 @@ async function renderTimeline() {
     '<p style="color:var(--text-muted);font-size:13px;margin-bottom:10px">比較する2時点を選び、仕様ドリフトを確認します（比較元＝古い／比較先＝新しい）。</p>' +
     '<table class="ov-screens tl-table"><thead><tr><th>比較元</th><th>比較先</th><th>クロール日時</th><th>画面</th><th>フォーム</th><th>入力項目</th></tr></thead><tbody>' +
     rows + '</tbody></table>' +
-    '<div style="margin:12px 0"><button type="button" class="btn-primary" id="tl-diff-btn">この2時点の差分を表示</button></div>' +
+    '<div class="tl-mode" style="margin:10px 0;font-size:13px">比較モード: ' +
+    '<label style="margin-right:14px"><input type="radio" name="tl-mode" value="comparison" checked> 現新比較（4分類・既定）</label>' +
+    '<label><input type="radio" name="tl-mode" value="diff"> 簡易ドリフト差分</label></div>' +
+    '<div style="margin:12px 0"><button type="button" class="btn-primary" id="tl-diff-btn">この2時点を比較する</button></div>' +
     '<div class="tl-diff-frame" id="tl-diff"></div>' +
     _ciGuidanceCard(domain) + '</div>';
   document.getElementById('tl-diff-btn').addEventListener('click', showTimelineDiff);
+  document.querySelectorAll('input[name=tl-mode]').forEach(el => el.addEventListener('change', showTimelineDiff));
   _bindCiCopy();
   showTimelineDiff();
 }
@@ -366,22 +370,25 @@ async function showTimelineDiff() {
   if (!from || !to) { box.innerHTML = '<div class="hero-msg">2時点を選択してください。</div>'; return; }
   if (from === to) { box.innerHTML = '<div class="hero-msg">異なる2時点を選択してください。</div>'; return; }
 
+  const mode = (document.querySelector('input[name=tl-mode]:checked') || {}).value || 'comparison';
+  const endpoint = mode === 'diff' ? 'snapshot-diff' : 'snapshot-comparison';
+  const frameTitle = mode === 'diff' ? '仕様ドリフト差分' : '現新比較（4分類）';
   const myToken = ++_tlDiffToken; // 選択変更・連打時、古い応答の描画を破棄する
-  const origLabel = 'この2時点の差分を表示';
-  if (btn) { btn.disabled = true; btn.textContent = '差分を取得中…'; }
+  const origLabel = 'この2時点を比較する';
+  if (btn) { btn.disabled = true; btn.textContent = mode === 'diff' ? '差分を取得中…' : '現新比較を実行中…'; }
   uiSkeleton(box, 'table');
 
   let html = '';
   try {
     const res = await fetch(
-      `/api/snapshot-diff?domain=${encodeURIComponent(timelineDomain)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`
+      `/api/${endpoint}?domain=${encodeURIComponent(timelineDomain)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`
     );
     html = await res.text();
     if (!res.ok) throw new Error(`サーバーエラー（HTTP ${res.status}）`);
   } catch (e) {
     if (myToken !== _tlDiffToken) return; // 選択が変わった後の古い失敗応答は無視
     uiError(box, {
-      title: '差分の取得に失敗しました',
+      title: (mode === 'diff' ? '差分' : '現新比較') + 'の取得に失敗しました',
       message: e && e.message ? e.message : '通信エラー',
       onRetry: showTimelineDiff,
     });
@@ -392,7 +399,7 @@ async function showTimelineDiff() {
 
   box.replaceChildren();
   const iframe = document.createElement('iframe');
-  iframe.title = '仕様ドリフト差分';
+  iframe.title = frameTitle;
   iframe.srcdoc = html; // src の使い回しでは同一URL時にブラウザが再読込しないことがあるため必ず更新される srcdoc を使う
   box.appendChild(iframe);
   if (btn) { btn.disabled = false; btn.textContent = origLabel; }

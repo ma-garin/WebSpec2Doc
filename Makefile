@@ -20,7 +20,7 @@ E2E_DIR    := tests/e2e
 SHOT_DIR   := tests/e2e/screenshots
 MARKER     := .ui-verified
 
-.PHONY: help setup setup-runtime check-runtime doctor test verify-ui quality-harness verify-all setup-hooks coverage lint clean check-venv demo
+.PHONY: help setup setup-runtime check-runtime doctor test verify-ui quality-harness verify-all setup-hooks coverage lint clean check-venv demo security audit
 
 # デフォルトターゲット
 help:
@@ -166,6 +166,16 @@ security: check-venv
 	venv/bin/python -m bandit -r src web app.py -ll -q
 	venv/bin/python -m pip_audit --requirement requirements.txt -q
 	@echo "  ✅ セキュリティスキャン完了"
+
+# =============================================================================
+# 依存脆弱性監査（R3-21）
+# =============================================================================
+audit: check-venv ## 依存脆弱性監査（Python + AutoRun npm env）
+	venv/bin/python -m pip_audit -r requirements.txt -r requirements-dev.txt || true
+	@if [ -d output/.playwright_env/node_modules ]; then \
+	  cd output/.playwright_env && npm audit --audit-level=high || true; \
+	fi
+	@echo "audit done（critical/high は docs/security/ の記録に従い対応）"
 
 # =============================================================================
 # 静的解析

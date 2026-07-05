@@ -926,7 +926,9 @@ def _save_screenshot(page: Page, output_dir: Path | None, page_id: str) -> str |
     try:
         page.screenshot(path=str(full_screenshot_path), full_page=True)
     except PlaywrightError as exc:
-        logger.warning("全体スクリーンショット保存に失敗しました: %s (%s)", full_screenshot_path, exc)
+        logger.warning(
+            "全体スクリーンショット保存に失敗しました: %s (%s)", full_screenshot_path, exc
+        )
     return str(screenshot_path)
 
 

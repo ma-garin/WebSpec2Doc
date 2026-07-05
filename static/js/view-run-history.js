@@ -1,7 +1,28 @@
 // ---- 実行履歴ビュー（種別を問わない一般化・R2-27） ----
 const RH_TYPE_LABELS = { crawl: '解析', autorun: 'AutoRun', comparison: '現新比較', ux_review: 'UXレビュー' };
 const RH_TERMINAL_STATUSES = new Set(['complete', 'failed', 'cancelled']);
+const RH_TYPE_KEY = 'wsd_rh_type';
+const RH_VALID_TYPES = ['crawl', 'autorun', 'comparison', 'ux_review', 'all'];
 let _rhRuns = [];
+
+// 履歴の種別タブ（R3-16: 従来の全種別混在selectをタブ分離。既定は「解析」）
+function _rhCurrentType() {
+  let stored = '';
+  try { stored = localStorage.getItem(RH_TYPE_KEY) || ''; } catch (_) { stored = ''; }
+  return RH_VALID_TYPES.includes(stored) ? stored : 'crawl';
+}
+function _rhSyncTypeTabsUI(type) {
+  document.querySelectorAll('.rh-type-tab').forEach(btn => {
+    const active = btn.dataset.type === type;
+    btn.classList.toggle('is-active', active);
+    btn.setAttribute('aria-selected', active ? 'true' : 'false');
+  });
+}
+function _rhSetType(type) {
+  try { localStorage.setItem(RH_TYPE_KEY, type); } catch (_) { /* 保存失敗時はUIのみ切替（機能は継続） */ }
+  _rhSyncTypeTabsUI(type);
+  _rhRenderTable();
+}
 
 function _rhStatusClass(status) {
   if (status === 'complete') return 'rh-status-complete';
@@ -32,6 +53,7 @@ async function loadRunHistory() {
   const tbody = document.getElementById('rh-tbody');
   const empty = document.getElementById('rh-empty');
   if (!tbody) return;
+  _rhSyncTypeTabsUI(_rhCurrentType());
   tbody.innerHTML = '<tr><td colspan="6">読み込んでいます…</td></tr>';
   try {
     const res = await fetch('/api/history/runs');
@@ -49,7 +71,7 @@ function _rhRenderTable() {
   const tbody = document.getElementById('rh-tbody');
   const empty = document.getElementById('rh-empty');
   if (!tbody) return;
-  const filter = document.getElementById('rh-type-filter')?.value || 'all';
+  const filter = _rhCurrentType();
   const runs = filter === 'all' ? _rhRuns : _rhRuns.filter(r => r.type === filter);
   if (!runs.length) {
     tbody.innerHTML = '';
@@ -73,5 +95,7 @@ function _rhRenderTable() {
   }).join('');
 }
 
-document.getElementById('rh-type-filter')?.addEventListener('change', _rhRenderTable);
+document.querySelectorAll('.rh-type-tab').forEach(btn => {
+  btn.addEventListener('click', () => _rhSetType(btn.dataset.type));
+});
 document.getElementById('rh-reload-btn')?.addEventListener('click', loadRunHistory);

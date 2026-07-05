@@ -40,15 +40,23 @@ function loadSettingsForm() {
   document.getElementById('set-auth').value = s.auth || '';
   const caseEl = document.getElementById('set-case-minutes');
   if (caseEl) caseEl.value = s.caseMinutes || 10;
+  const urlHistEl = document.getElementById('set-url-history-limit');
+  if (urlHistEl) urlHistEl.value = String(s.urlHistoryLimit ?? 10);
 }
 document.getElementById('save-settings').addEventListener('click', () => {
   const caseEl = document.getElementById('set-case-minutes');
+  const urlHistEl = document.getElementById('set-url-history-limit');
+  const urlHistoryLimit = urlHistEl ? (Number(urlHistEl.value) || 0) : 10;
   localStorage.setItem(SETTINGS_KEY, JSON.stringify({
     depth: document.getElementById('set-depth').value,
     maxPages: document.getElementById('set-max').value,
     auth: document.getElementById('set-auth').value.trim(),
     caseMinutes: caseEl ? (Number(caseEl.value) || 10) : 10,
+    urlHistoryLimit,
   }));
+  if (urlHistEl && urlHistoryLimit === 0) {
+    try { localStorage.removeItem('wsd_url_history'); } catch (_) {}
+  }
   applySettings();
   const msg = document.getElementById('settings-msg'); msg.classList.add('show');
   setTimeout(() => msg.classList.remove('show'), 2000);

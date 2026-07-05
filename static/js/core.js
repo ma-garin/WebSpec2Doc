@@ -423,4 +423,11 @@ window.addEventListener('DOMContentLoaded', () => {
   if (location.hash.startsWith('#report/')) return;
   const name = _viewFromPath(location.pathname);
   if (name) switchView(name, { skipHistory: true });
+  // switchView 内の後始末（:114-124）と二重で防御する。ディープリンク経路は
+  // is-executing/is-reporting が残留してガイド等がスクロール不能になる不具合の
+  // 再発を確実に防ぐため、ここでも明示的に解除する（R3-12）。
+  const appContentEl = document.getElementById('app-content');
+  if (appContentEl && name !== 'generate') {
+    appContentEl.classList.remove('is-executing', 'is-reporting');
+  }
 });

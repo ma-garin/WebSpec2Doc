@@ -158,6 +158,20 @@ class TestSubTabs:
         expect(page.locator("#rp-test-design-detail")).to_be_visible()
         expect(page.locator("#rp-test-design-detail")).to_contain_text("画面別 推奨技法と根拠")
 
+    def test_all_four_design_subtabs_visible_at_900px(self, page: Page) -> None:
+        """R3-14: 技法タブの視認性。幅900pxでも4つ目（技法別設計 MBT）が
+        overflow-x スクロールの陰に隠れず、折返し表示で常に視認できること。"""
+        page.set_viewport_size({"width": 900, "height": 700})
+        _open_report(page)
+        page.locator('.result-tab[data-tab="test-design"]').click()
+        tabs = page.locator("#rp-test-design .result-subtabs .result-subtab")
+        expect(tabs).to_have_count(4)
+        for i in range(4):
+            box = tabs.nth(i).bounding_box()
+            assert box is not None, f"サブタブ{i}のbounding_boxが取得できない"
+            assert box["x"] + box["width"] <= 900, f"サブタブ{i}が画面外にはみ出している: {box}"
+        expect(tabs.nth(3)).to_have_text(re.compile("技法別設計"))
+
     def test_screens_gallery_subtab(self, page: Page) -> None:
         """スクリーンショットギャラリーが配線されている（旧デッドコードの復活）。"""
         _open_report(page)

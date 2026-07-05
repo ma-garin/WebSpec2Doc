@@ -26,6 +26,12 @@ class SiteConfig:
     max_pages: int
     formats: tuple[str, ...]
     auth_path: str = ""
+    # 認証が必要と判定された画面の URL（urls の部分集合）。再クロール時に
+    # 「認証が必要なページ」バナー・ログインフォームを正しく復元するための情報。
+    # 既存 site.json にはキーが存在しないため既定値は空タプル（オプトイン・後方互換）。
+    login_urls: tuple[str, ...] = ()
+    # 認証が必要な画面が最終的にリダイレクトされたログインページ URL（判明していれば）。
+    login_landing_url: str = ""
 
 
 def save_site(config: SiteConfig, base_dir: Path) -> Path:
@@ -63,4 +69,6 @@ def _to_config(data: dict[str, object]) -> SiteConfig:
         max_pages=int(str(data.get("max_pages", 0))),
         formats=tuple(data.get("formats", ()) or ()),  # type: ignore[arg-type]
         auth_path=str(data.get("auth_path", "")),
+        login_urls=tuple(data.get("login_urls", ()) or ()),  # type: ignore[arg-type]
+        login_landing_url=str(data.get("login_landing_url", "")),
     )

@@ -446,20 +446,32 @@ function renderDiscovered() {
     </div>`;
   };
 
+  // evidence-only: 1件の描画失敗が全体を空白にしてはならない（過去に再発した障害クラス）。
+  // banner（件数表示）は実データから生成される一方、各項目の HTML 生成は個別に
+  // try/catch で保護し、失敗した項目だけを可視のフォールバック表示に落とす。
+  const safeMap = (items, fn, fallbackLabel) => items.map((it) => {
+    try {
+      return fn(it);
+    } catch (e) {
+      console.error(`${fallbackLabel}の表示に失敗しました:`, it, e);
+      return `<div class="discovered-url-item" style="opacity:.72"><span aria-hidden="true"></span><span><strong class="input-field-message-error">⚠ ${escHtml(fallbackLabel)}の表示に失敗しました（詳細はコンソール参照）</strong><code>${escHtml(String(it && it.url || ''))}</code></span></div>`;
+    }
+  });
+
   const normalPages = discovered.filter(p => !p.login_required);
   const loginPages = discovered.filter(p => p.login_required);
 
-  let html = normalPages.map(makeNormalItem).join('');
+  let html = safeMap(normalPages, makeNormalItem, '画面').join('');
   if (loginPages.length) {
     html += `<div class="disc-login-group-separator"><span>🔒 認証が必要なページ（${loginPages.length}件）— 各画面の認証情報を入力してください</span></div>`;
-    html += loginPages.map(makeLoginItem).join('');
+    html += safeMap(loginPages, makeLoginItem, '認証必須画面').join('');
   }
   if (discoverSkipped.length) {
     html += `<div class="disc-login-group-separator"><span>取得対象外（${discoverSkipped.length}件）</span></div>`;
-    html += discoverSkipped.map(item => {
+    html += safeMap(discoverSkipped, (item) => {
       const reason = item.reason === 'robots' ? 'robots.txt' : '安全制約';
       return `<div class="discovered-url-item" style="opacity:.72;cursor:default"><span aria-hidden="true"></span><span><strong>${escHtml(reason)}により除外</strong><code>${escHtml(item.url || '')}</code></span></div>`;
-    }).join('');
+    }, '除外画面').join('');
   }
   list.innerHTML = html;
   list.querySelectorAll('.discovered-cb').forEach(cb => cb.addEventListener('change', updateTargetPreview));

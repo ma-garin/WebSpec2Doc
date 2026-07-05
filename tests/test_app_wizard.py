@@ -260,6 +260,70 @@ def test_discover_with_login_to_crawl(tmp_path: Path, monkeypatch) -> None:
     assert str(auth_path) in popen_calls[0]
 
 
+def test_run_persists_login_urls_for_recrawl(tmp_path: Path, monkeypatch) -> None:
+    """/run が login_urls / login_landing_url を site.json へ保存し、再クロール
+    （/api/site 経由で recrawl.js が読む値）でも認証必須フラグが復元できることを保証する。
+
+    再発防止対象: 過去、再クロールは常に login_required=false 扱いになり、
+    「認証が必要なページ」バナー直下のログインフォームが消えていた。
+    """
+    monkeypatch.chdir(tmp_path)
+    _patch_output_dirs(tmp_path, monkeypatch)
+    _write_report_files(tmp_path)
+    popen_calls = []
+
+    def fake_popen(cmd, *args, **kwargs):
+        proc = _Popen(cmd, *args, **kwargs)
+        popen_calls.append(cmd)
+        return proc
+
+    monkeypatch.setattr(crawl_mod.subprocess, "Popen", fake_popen)
+
+    urls = "https://example.com/,https://example.com/mypage.html,https://example.com/edit.html"
+    run_res = _client().post(
+        "/run",
+        data={
+            "urls": urls,
+            "format": "md,html",
+            "login_urls": "https://example.com/mypage.html,https://example.com/edit.html",
+            "login_landing_url": "https://example.com/login.html",
+        },
+    )
+    assert "RUN_ID:" in run_res.get_data(as_text=True)
+    assert popen_calls, "クロールサブプロセスが起動していない"
+
+    site_data = _client().get("/api/site?domain=example.com").get_json()["site"]
+    assert site_data is not None
+    assert set(site_data["login_urls"]) == {
+        "https://example.com/mypage.html",
+        "https://example.com/edit.html",
+    }
+    assert site_data["login_landing_url"] == "https://example.com/login.html"
+    # urls に含まれない値は無視される（不正な混入の防止）
+    assert "https://not-in-urls.example/" not in site_data["login_urls"]
+
+
+def test_run_ignores_login_urls_outside_selected_urls(tmp_path: Path, monkeypatch) -> None:
+    """login_urls は選択済み urls の部分集合に絞り込まれる（フォーム改ざん・不整合対策）。"""
+    monkeypatch.chdir(tmp_path)
+    _patch_output_dirs(tmp_path, monkeypatch)
+    _write_report_files(tmp_path)
+    monkeypatch.setattr(crawl_mod.subprocess, "Popen", _Popen)
+
+    run_res = _client().post(
+        "/run",
+        data={
+            "urls": "https://example.com/",
+            "format": "md,html",
+            "login_urls": "https://example.com/,https://evil.example/not-selected",
+        },
+    )
+    run_res.get_data()  # ストリーミングレスポンスを消費し、generate() 内の保存処理を実行させる
+
+    site_data = _client().get("/api/site?domain=example.com").get_json()["site"]
+    assert site_data["login_urls"] == ["https://example.com/"]
+
+
 def test_result_api_returns_expected_structure(tmp_path: Path, monkeypatch) -> None:
     _patch_output_dirs(tmp_path, monkeypatch)
     _write_report_files(tmp_path)

@@ -57,6 +57,7 @@ function updateCrawlProgress() {
   if (!crawlProgress) return;
   const p = crawlProgress;
   execCount.textContent = `${p.finished} / ${p.total || '?'}`;
+  execTitle.textContent = `クロール中…（${p.finished}/${p.total || '?'}）`;
   execSkipped.textContent = `${p.skipped + p.login + p.failed}件`;
   execSkipped.title = `制約: ${p.skipped} / ログイン必須: ${p.login} / 失敗: ${p.failed}`;
   execSaved.textContent = `${p.saved}件`;
@@ -98,6 +99,30 @@ function handleCrawlEvent(event) {
   updateCrawlProgress();
 }
 
+// ---- URL履歴サジェスト（R3-15）: 実行済みURLを localStorage に保存し datalist へ反映する ----
+const URL_HISTORY_KEY = 'wsd_url_history';
+function _urlHistoryLimit() { return Number(getSettings().urlHistoryLimit ?? 10); }
+function saveUrlHistory(url) {
+  const limit = _urlHistoryLimit();
+  if (!limit) { try { localStorage.removeItem(URL_HISTORY_KEY); } catch (_) {} return; }
+  try {
+    const cur = JSON.parse(localStorage.getItem(URL_HISTORY_KEY) || '[]');
+    const next = [url, ...cur.filter(u => u !== url)].slice(0, limit);
+    localStorage.setItem(URL_HISTORY_KEY, JSON.stringify(next));
+  } catch (_) {}
+}
+function populateUrlHistory() {
+  const list = document.getElementById('url-history-list');
+  if (!list) return;
+  let items = [];
+  try { items = JSON.parse(localStorage.getItem(URL_HISTORY_KEY) || '[]'); } catch (_) {}
+  list.replaceChildren(...items.slice(0, _urlHistoryLimit()).map(u => {
+    const o = document.createElement('option'); o.value = u; return o;
+  }));
+}
+populateUrlHistory();
+document.getElementById('url-input')?.addEventListener('focus', populateUrlHistory);
+
 document.getElementById('form').addEventListener('submit', (e) => {
   e.preventDefault();
   const url = urlInput.value.trim();
@@ -130,6 +155,7 @@ document.getElementById('form').addEventListener('submit', (e) => {
     login_landing_url: loginLandingUrl,
   });
   const label = urls.length > 1 ? `${urls[0]} ほか ${urls.length - 1}件` : urls[0];
+  saveUrlHistory(url);
   runWith(body.toString(), domainOf(urls[0]), label, urls.length);
 });
 

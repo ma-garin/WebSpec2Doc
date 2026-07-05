@@ -33,16 +33,22 @@
 .result-subtabs {
   flex-shrink: 0;
   display: inline-flex;
+  flex-wrap: wrap;
+  row-gap: 4px;
   gap: 2px;
   margin: 8px 12px;
   padding: 3px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface-soft);
-  overflow-x: auto;
-  scrollbar-width: none;
 }
-.result-subtabs::-webkit-scrollbar { display: none; }
+.result-subtab[data-sub="mbt"]::after {
+  content: "NEW";
+  font-size: 9px;
+  margin-left: 4px;
+  color: var(--accent, #4c8dff);
+  font-weight: 700;
+}
 .result-subtab {
   height: 26px;
   padding: 0 12px;

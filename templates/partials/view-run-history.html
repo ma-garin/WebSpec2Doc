@@ -51,16 +51,20 @@
             .rh-status-cancelled { background: #888; color: #fff; }
             .rh-status-running { background: #f39c12; color: #fff; }
             #rh-empty { padding: 32px; text-align: center; color: var(--text-muted, #888); font-size: 14px; }
+            /* 種別タブ（.set-tab と同スタイルを流用。実行履歴の種別select→タブ化 R3-16） */
+            .rh-type-tabs { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-soft); flex-wrap: wrap; }
+            .rh-type-tab { height: 34px; padding: 0 16px; border: 0; border-radius: 4px; background: transparent; color: var(--text-muted); font-size: 13px; font-weight: 700; cursor: pointer; }
+            .rh-type-tab.is-active { background: var(--surface); color: var(--primary-dark); box-shadow: inset 0 -2px 0 var(--primary); }
           </style>
 
           <div class="rh-toolbar">
-            <select id="rh-type-filter" class="btn-outline-sm" style="height:36px;padding:0 10px;font-size:13px">
-              <option value="all">全種別</option>
-              <option value="autorun">AutoRun</option>
-              <option value="crawl">解析</option>
-              <option value="comparison">現新比較</option>
-              <option value="ux_review">UXレビュー</option>
-            </select>
+            <div class="rh-type-tabs" role="tablist" aria-label="履歴の種別">
+              <button type="button" class="rh-type-tab" data-type="crawl" role="tab">解析</button>
+              <button type="button" class="rh-type-tab" data-type="autorun" role="tab">AutoRun</button>
+              <button type="button" class="rh-type-tab" data-type="comparison" role="tab">現新比較</button>
+              <button type="button" class="rh-type-tab" data-type="ux_review" role="tab">UXレビュー</button>
+              <button type="button" class="rh-type-tab" data-type="all" role="tab">すべて</button>
+            </div>
             <button type="button" id="rh-reload-btn" class="btn-outline-sm">↺ 再読み込み</button>
           </div>
 

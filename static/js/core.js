@@ -25,6 +25,12 @@ const VIEW_HEADER = {
 };
 const escHtml = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
+// ---- 情報アイコン（用語説明のツールチップ。列見出し・設定項目ラベル等で共通利用） ----
+function infoTip(text) {
+  const t = escHtml(text || '');
+  return `<span class="info-tip" tabindex="0" role="img" aria-label="${t}" data-tip="${t}">ⓘ</span>`;
+}
+
 // ---- 画面別URL（ブックマーク・共有・リロード対応）----
 const VIEW_PATHS = {
   dashboard: '/',

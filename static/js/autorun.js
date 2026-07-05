@@ -42,6 +42,17 @@ const AUTORUN_PHASE_LABELS = {
   cancelled: '停止済み',
 };
 
+// テスト実行中の「n/188件目」進捗表示。承認188件を実行したのに進捗が
+// 全く見えない、というドッグフーディング指摘への対応。progress ndjson から
+// 読んだ実測件数のみを表示し、不明な場合は捏造せず既定ラベルのままにする。
+function _autorunPhaseLabelWithProgress(status, data) {
+  const base = AUTORUN_PHASE_LABELS[status] || '';
+  if (status !== 'running_tests') return base;
+  const progress = data.test_progress;
+  if (!progress || !progress.total) return base;
+  return `テスト実行中…（${progress.completed || 0}/${progress.total}件目）`;
+}
+
 // 全体進捗の重み（フェーズ完了ベース。実行中フェーズは半分進んだとみなす近似）
 const AUTORUN_PHASE_ORDER = ['discovering', 'crawling', 'generating_qa', 'generating_scripts', 'awaiting_approval', 'running_tests'];
 const AUTORUN_PHASE_WEIGHTS = { discovering: 10, crawling: 40, generating_qa: 20, generating_scripts: 10, awaiting_approval: 5, running_tests: 15 };
@@ -399,7 +410,7 @@ function _autorunUpdateStepper(data) {
     if (metaEl) metaEl.textContent = metas[sid] || '';
   });
 
-  _autorunSetText('autorun-phase-label', AUTORUN_PHASE_LABELS[status] || '');
+  _autorunSetText('autorun-phase-label', _autorunPhaseLabelWithProgress(status, data));
   const pct = _autorunProgressPercent(status);
   const fill = document.getElementById('autorun-progress-fill');
   const bar = document.getElementById('autorun-progressbar');

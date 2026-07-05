@@ -222,6 +222,55 @@ class TestApprovalModalStructure:
         assert True
 
 
+class TestRunningTestsProgressLabel:
+    """テスト実行中の「n/188件目」進捗表示（ドッグフーディング指摘: 188件承認・
+    実行しても進捗が全く見えない、への対応）。"""
+
+    def test_shows_completed_over_total_when_progress_available(
+        self, autorun_page: Page
+    ) -> None:
+        autorun_page.evaluate(
+            """() => _autorunRender({
+                status: 'running_tests',
+                job_id: 'test-job-e2e',
+                log: [],
+                outputs: {},
+                test_results: null,
+                test_progress: {completed: 42, total: 188},
+                started_at: '2026-06-03T10:00:00',
+                elapsed_sec: 60,
+                error: null,
+                finished_at: null,
+                input_request: null,
+                run_policy: {},
+            })"""
+        )
+        expect(autorun_page.locator("#autorun-phase-label")).to_have_text(
+            "テスト実行中…（42/188件目）"
+        )
+
+    def test_falls_back_to_default_label_when_progress_unknown(
+        self, autorun_page: Page
+    ) -> None:
+        """進捗ファイルがまだ書かれていない間は捏造せず既定ラベルのまま。"""
+        autorun_page.evaluate(
+            """() => _autorunRender({
+                status: 'running_tests',
+                job_id: 'test-job-e2e',
+                log: [],
+                outputs: {},
+                test_results: null,
+                started_at: '2026-06-03T10:00:00',
+                elapsed_sec: 1,
+                error: null,
+                finished_at: null,
+                input_request: null,
+                run_policy: {},
+            })"""
+        )
+        expect(autorun_page.locator("#autorun-phase-label")).to_have_text("テスト実行中…")
+
+
 class TestApprovalModalViaRoute:
     """page.route() で API をモックし、実際の JS フロー経由でモーダルを検証する。
 

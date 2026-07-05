@@ -195,7 +195,7 @@ function renderQaAutomationTool(data) {
   const policies = (pw.locator_policy || []).map(p => `<span class="fmt-badge">${escHtml(p)}</span>`).join('');
   document.getElementById('qa-auto-content').innerHTML =
     `<div class="qa-readable-section"><h3>ロケータ方針</h3><div class="fmt-badges">${policies}</div><p class="input-hint">${escHtml(pw.execution_policy || '')}</p></div>` +
-    `<div class="qa-readable-section"><h3>候補一覧</h3><table class="data"><thead><tr><th>ID</th><th>タイトル</th><th>Trace</th><th>状態</th><th>期待結果</th><th>ロケータ方針</th></tr></thead><tbody>${rows || '<tr><td colspan="6">候補がありません</td></tr>'}</tbody></table></div>`;
+    `<div class="qa-readable-section"><h3>候補一覧</h3><table class="data"><thead><tr><th>ID</th><th>タイトル</th><th>Trace${infoTip('この候補が根拠とする画面・遷移のID。画面遷移タブの同じIDと対応します。')}</th><th>状態${infoTip('自動テストとして実行可能か（auto）／人手確認が必要か（manual）を示します。')}</th><th>期待結果</th><th>ロケータ方針${infoTip('要素をどう特定してテストを組み立てるかの方針（例: data-testid優先）。')}</th></tr></thead><tbody>${rows || '<tr><td colspan="6">候補がありません</td></tr>'}</tbody></table></div>`;
   if (typeof wrapTraceTerms === 'function') wrapTraceTerms(document.getElementById('qa-auto-content'));
 }
 
@@ -209,7 +209,7 @@ function renderQaQualityTool(data) {
   }
   const sections = Object.entries(grouped).map(([category, items]) => {
     const rows = items.map(item => `<tr><td class="qa-trace">${escHtml(item.id)}</td><td>${escHtml(item.viewpoint)} ${sourceBadge(item.source || 'rules')}</td><td>${escHtml(item.trigger)}</td><td>${escHtml(item.recommendation)}</td><td>${escHtml(item.automation)}</td><td class="qa-trace">${escHtml(item.trace_id)}</td></tr>`).join('');
-    return `<div class="qa-readable-section"><h3>${escHtml(category)}</h3><table class="data"><thead><tr><th>ID</th><th>観点</th><th>発火条件</th><th>推奨確認</th><th>自動化</th><th>Trace</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    return `<div class="qa-readable-section"><h3>${escHtml(category)}</h3><table class="data"><thead><tr><th>ID</th><th>観点</th><th>発火条件${infoTip('この観点をテストで確認すべきタイミング・状況（例: 必須項目が未入力のとき）。')}</th><th>推奨確認${infoTip('確認すべき挙動・表示内容の推奨事項。')}</th><th>自動化${infoTip('自動テスト化しやすいか（自動）／人手での確認が必要か（手動）の目安。')}</th><th>Trace${infoTip('この観点が根拠とする画面・要件のID。')}</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   }).join('');
   const risks = (quality.screen_risks || []).map(risk => `<tr><td class="qa-trace">${escHtml(risk.screen_id)}</td><td>${escHtml(risk.title)}</td><td class="num">${escHtml(risk.risk_score)}</td><td>${escHtml((risk.reasons || []).join(' / '))}</td></tr>`).join('');
   document.getElementById('qa-quality-content').innerHTML =

@@ -21,7 +21,7 @@ from web.services.failure_classifier import (
     classify_failures,
     summarize_classifications,
 )
-from web.services.playwright_executor import run_playwright
+from web.services.playwright_executor import _read_progress_ndjson, run_playwright
 from web.services.qa.helpers import use_viewpoint_snapshot
 from web.services.spec_ts_generator import compute_filter_counts, generate_spec_ts
 from web.services.viewpoint_store import ViewpointStoreError, get_viewpoint_store
@@ -99,7 +99,23 @@ def api_autorun_status() -> dict | tuple[dict, int]:
         job = _JOBS.get(request.args.get("job_id", ""))
     if job is None:
         return {"error": "not found"}, 404
-    return job.to_dict()
+    data = job.to_dict()
+    if job.status == "running_tests":
+        data["test_progress"] = _current_test_progress(job)
+    return data
+
+
+def _current_test_progress(job: AutoRunJob) -> dict[str, int | None]:
+    """実行中（running_tests）の進捗を進捗NDJSONから読む（読み取り専用・非破壊）。
+
+    「n/188件目」のような実行中進捗表示のためのもの。テストの完走・失敗時の
+    結果集計（test_results）は run_playwright() の戻り値がそのまま正なので、
+    ここでは一切書き換えない。ファイルが無い・空の間は 0/不明 として返す
+    （捏造しない）。
+    """
+    progress_path = OUTPUT_DIR / job.domain / "qa_process" / "playwright_progress.ndjson"
+    expected_total, tests = _read_progress_ndjson(progress_path)
+    return {"completed": len(tests), "total": expected_total}
 
 
 @bp.post("/api/autorun/cancel")

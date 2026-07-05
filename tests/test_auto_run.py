@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from web.routes.auto_run import (
     AutoRunJob,
+    _current_test_progress,
     _do_login,
     _execute_tests,
     _now_iso,
@@ -339,6 +340,39 @@ class TestExecuteTests:
         # outputs に playwright_report_html が登録されているか確認
         # (ディレクトリ構造によっては登録されない場合もあるが，is_file チェックがあれば登録される)
         assert job.status == "complete"
+
+
+# ─────────────────────── _current_test_progress ───────────────────────
+#
+# AutoRunで188件承認・実行しても実行中に進捗が全く見えない、というドッグ
+# フーディング指摘への対応。進捗NDJSON（playwright_executorがonTestEndで
+# 逐次追記するもの）を読み取り専用で覗き見て「n/188件目」表示用データを返す。
+
+
+class TestCurrentTestProgress:
+    def test_no_progress_file_returns_zero_and_none_total(self, tmp_path: Path) -> None:
+        job = _make_job(domain="example.com")
+        with patch("web.routes.auto_run.OUTPUT_DIR", tmp_path):
+            progress = _current_test_progress(job)
+        assert progress == {"completed": 0, "total": None}
+
+    def test_reads_partial_progress_from_ndjson(self, tmp_path: Path) -> None:
+        job = _make_job(domain="example.com")
+        qa_dir = tmp_path / "example.com" / "qa_process"
+        qa_dir.mkdir(parents=True)
+        ndjson_path = qa_dir / "playwright_progress.ndjson"
+        lines = [
+            json.dumps({"event": "begin", "total": 188}),
+            json.dumps({"event": "test", "title": "t1", "status": "passed"}),
+            json.dumps({"event": "test", "title": "t2", "status": "passed"}),
+            json.dumps({"event": "test", "title": "t3", "status": "failed"}),
+        ]
+        ndjson_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+        with patch("web.routes.auto_run.OUTPUT_DIR", tmp_path):
+            progress = _current_test_progress(job)
+
+        assert progress == {"completed": 3, "total": 188}
 
 
 # ─────────────────────── _phase_generate_scripts ───────────────────────

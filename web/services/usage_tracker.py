@@ -249,6 +249,134 @@ def record_ux_review_from_report(
     )
 
 
+def record_autorun(
+    output_root: Path,
+    domain: str,
+    *,
+    status: str,
+    passed: int = 0,
+    failed: int = 0,
+    total: int = 0,
+    duration_sec: int = 0,
+) -> Path | None:
+    """AutoRunの終端状態（complete/failed/cancelled）で実行結果を1行追記する。
+
+    実行履歴（GET /api/history/runs）の一般化（R2-27）のため、AutoRun専用の
+    キー（status/passed/failed/total/duration_sec）を持つ独立イベントとして記録する。
+    書き込み失敗はAutoRunの完了応答を妨げない（None を返す）。
+    """
+    entry: dict[str, object] = {
+        "timestamp": datetime.now(UTC).isoformat(timespec="seconds"),
+        "event": "autorun",
+        "domain": domain,
+        "status": status,
+        "passed": int(passed),
+        "failed": int(failed),
+        "total": int(total),
+        "duration_sec": int(duration_sec),
+    }
+    log_path = output_root / USAGE_LOG_FILE_NAME
+    try:
+        output_root.mkdir(parents=True, exist_ok=True)
+        with log_path.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    except OSError as exc:
+        logger.warning("AutoRun実績の記録に失敗しました: %s (%s)", log_path, exc)
+        return None
+    return log_path
+
+
+_RUN_TYPE_LABELS = {
+    "crawl": "解析",
+    "comparison": "現新比較",
+    "ux_review": "UXレビュー",
+    "autorun": "AutoRun",
+}
+
+
+def _existing_path(path: Path) -> str:
+    return str(path.resolve()) if path.is_file() else ""
+
+
+def _run_from_record(output_root: Path, record: dict) -> dict:
+    """usage_log.jsonl の1行を実行履歴エントリへ正規化する。"""
+    event = str(record.get("event", "crawl"))
+    domain = str(record.get("domain", ""))
+    domain_dir = output_root / domain
+    if event == "autorun":
+        status = str(record.get("status") or "complete")
+        summary = {
+            "passed": int(record.get("passed", 0)),
+            "failed": int(record.get("failed", 0)),
+            "total": int(record.get("total", 0)),
+            "duration_sec": int(record.get("duration_sec", 0)),
+        }
+        link = _existing_path(domain_dir / "qa_process" / "playwright_report.html") or (
+            _existing_path(domain_dir / "qa_process" / "qa_process_report.html")
+        )
+    elif event in ("comparison", "ux_review"):
+        status = "complete"
+        summary = {
+            "compare_screen_count": int(record.get("compare_screen_count", 0)),
+            "finding_count": int(record.get("finding_count", 0)),
+        }
+        filename = "comparison.html" if event == "comparison" else "ux_review.html"
+        link = _existing_path(domain_dir / filename)
+    else:
+        status = "complete"
+        summary = {
+            "screen_count": int(record.get("screen_count", 0)),
+            "test_condition_count": int(record.get("test_condition_count", 0)),
+            "document_count": int(record.get("document_count", 0)),
+        }
+        link = _existing_path(domain_dir / "report.html")
+    return {
+        "type": event,
+        "type_label": _RUN_TYPE_LABELS.get(event, event),
+        "domain": domain,
+        "timestamp": str(record.get("timestamp", "")),
+        "status": status,
+        "summary": summary,
+        "link": link,
+        "source": "log",
+    }
+
+
+def _run_from_job(job: dict) -> dict:
+    """実行中（未終端）AutoRunジョブを実行履歴エントリへ正規化する。"""
+    test_results = job.get("test_results") or {}
+    return {
+        "type": "autorun",
+        "type_label": _RUN_TYPE_LABELS["autorun"],
+        "domain": str(job.get("domain", "")),
+        "timestamp": str(job.get("started_at", "")),
+        "status": str(job.get("status", "")),
+        "summary": {
+            "passed": int(test_results.get("passed", 0)),
+            "failed": int(test_results.get("failed", 0)),
+            "total": int(test_results.get("total", 0)),
+            "duration_sec": int(job.get("elapsed_sec", 0)),
+        },
+        "link": "",
+        "source": "running",
+        "job_id": str(job.get("job_id", "")),
+    }
+
+
+def build_run_history(output_root: Path, running_jobs: list[dict] | None = None) -> list[dict]:
+    """usage_log.jsonl の実績と実行中ジョブをマージし、新しい順の実行履歴を返す。
+
+    種別（crawl/comparison/ux_review/autorun）を問わず一般化して扱う（R2-27）。
+    リンクはファイルの実在を確認できたものだけを含める（実在検証・捏造しない）。
+    """
+    runs = [_run_from_record(output_root, record) for record in load_usage(output_root)]
+    for job in running_jobs or []:
+        if str(job.get("status", "")) not in ("complete", "failed", "cancelled"):
+            runs.append(_run_from_job(job))
+    runs.sort(key=lambda run: str(run.get("timestamp", "")), reverse=True)
+    return runs
+
+
 def load_usage(output_root: Path) -> list[dict]:
     """usage_log.jsonl を読み込んでレコードのリストを返す（無ければ空）。"""
     log_path = output_root / USAGE_LOG_FILE_NAME

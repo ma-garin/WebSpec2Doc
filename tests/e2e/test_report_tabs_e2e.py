@@ -1,7 +1,7 @@
-"""実行結果レポート画面 新タブ基盤（7タブ・永続パネル・ディープリンク）の E2E テスト。
+"""実行結果レポート画面 新タブ基盤（6タブ・永続パネル・ディープリンク）の E2E テスト。
 
 対象:
-    - 7タブ構成（overview / screens / test-design / flow / runs / coverage / history）
+    - 6タブ構成（overview / screens / test-design / flow / runs / history）
     - 複合タブのサブタブ切替（test-design: matrix/summary/detail 等）
     - 永続パネルによる状態保持（タブ切替でマトリクスの検索条件が消えない）
     - ディープリンク #report/<domain>/<tab>/<sub> と旧8タブ名の互換リダイレクト
@@ -101,19 +101,18 @@ def _open_report(page: Page, suffix: str = "") -> None:
 class TestTabStructure:
     """6タブ構成とパネルホストの検証。"""
 
-    def test_seven_tabs_present(self, page: Page) -> None:
-        """既定表示は7タブ（文書突合タブは doc_fusion.json が無いため非表示）。"""
+    def test_six_tabs_present(self, page: Page) -> None:
+        """既定表示は6タブ（文書突合タブは doc_fusion.json が無いため非表示）。"""
         _open_report(page)
         visible_tabs = page.locator(".result-tabs .result-tab:visible")
-        expect(visible_tabs).to_have_count(7)
-        keys = [visible_tabs.nth(i).get_attribute("data-tab") for i in range(7)]
+        expect(visible_tabs).to_have_count(6)
+        keys = [visible_tabs.nth(i).get_attribute("data-tab") for i in range(6)]
         assert keys == [
             "overview",
             "screens",
             "test-design",
             "flow",
             "runs",
-            "coverage",
             "history",
         ]
         expect(page.locator('.result-tab[data-tab="doc-fusion"]')).to_be_hidden()

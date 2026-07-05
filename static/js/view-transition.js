@@ -164,16 +164,21 @@ function _transitionRows(screens) {
     const key = `${row.fromId}:${row.toId}:${row.event}:${row.eventDetail}`;
     if (keys.has(key)) return;
     keys.add(key);
+    const toTitle = idToScreen[row.toId].title || row.toId;
+    const eventDetail = row.eventDetail || '';
     rows.push({
       no: `T${String(rows.length + 1).padStart(2, '0')}`,
       fromId: row.fromId,
       fromTitle: idToScreen[row.fromId].title || row.fromId,
       event: row.event,
-      eventDetail: row.eventDetail || '',
+      eventDetail,
       toId: row.toId,
-      toTitle: idToScreen[row.toId].title || row.toId,
+      toTitle,
       action: row.action || '',
-      viewpoint: row.event === 'フォーム送信' ? '入力後に期待画面へ到達する' : 'リンク操作で期待画面へ到達する',
+      // R2-11: 固定文言ではなく実データ（操作内容・遷移先画面名）で具体化する
+      viewpoint: row.event === 'フォーム送信'
+        ? `${eventDetail}を実行すると「${toTitle}」へ到達する`
+        : `${eventDetail}を押すと「${toTitle}」へ遷移する`,
     });
   };
 
@@ -282,11 +287,16 @@ function _umlMeta(type) {
 function _showViewpointMap(area, rows) {
   const groups = _viewpointGroups(rows);
   const totalChecks = groups.reduce((sum, g) => sum + g.rows.length, 0);
+  // R1-05: 「見方がわかりにくい」への対応。各観点カテゴリの意味を凡例として明示する。
+  const legend = groups.map(g =>
+    `<span class="vp-legend-item"><strong>${escHtml(g.label)}</strong>: ${escHtml(g.desc)}</span>`
+  ).join('');
   area.innerHTML =
     '<div class="uml-panel-head">' +
     '<div><strong>テスト観点マップ</strong><span>遷移をQA観点へ分類し、テスト設計の入口にします。</span></div>' +
     `<p>${rows.length}件の遷移から${totalChecks}件の観点候補を抽出しています。</p>` +
     '</div>' +
+    `<div class="viewpoint-legend" aria-label="観点カテゴリの見方">${legend}</div>` +
     '<div class="viewpoint-map">' +
     `<div class="viewpoint-summary">${groups.map(_viewpointCard).join('')}</div>` +
     `<div class="viewpoint-table-wrap">${_viewpointTable(groups)}</div>` +

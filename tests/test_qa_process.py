@@ -107,6 +107,7 @@ def test_generate_creates_all_qa_process_files(tmp_path: Path, monkeypatch) -> N
         "playwright_candidates.html",
         "quality_viewpoints.json",
         "quality_viewpoints.html",
+        "testcases.html",
     ):
         assert (qa_dir / filename).exists()
     assert "P001-F01-I01" in (qa_dir / "test_cases.md").read_text(encoding="utf-8")
@@ -154,6 +155,53 @@ def test_generate_advanced_creates_preview_files(tmp_path: Path, monkeypatch) ->
     assert (qa_dir / "model_graph.html").exists()
     assert (qa_dir / "coverage_metrics.json").exists()
     assert data["outputs"]["model_graph"].endswith("model_graph.html")
+
+
+def test_testcases_endpoint_returns_low_level_cases(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(qa_mod, "OUTPUT_DIR", tmp_path)
+    _write_report(tmp_path)
+
+    res = _client().get("/api/testcases?domain=example.com")
+    data = res.get_json()
+
+    assert res.status_code == 200
+    assert data["domain"] == "example.com"
+    assert data["count"] == len(data["cases"])
+    assert data["count"] > 0
+    smoke_case = next(c for c in data["cases"] if c["trace_id"] == "P001")
+    assert smoke_case["preconditions"][0].startswith("ブラウザで")
+    assert "page.goto(" not in smoke_case["preconditions"][0]
+    assert smoke_case["expected_result"]
+    # HTML成果物が未生成の状態では空文字（生成後は generate-advanced 経由でパスが入る）
+    assert data["html_path"] == ""
+
+
+def test_testcases_endpoint_requires_report_json(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(qa_mod, "OUTPUT_DIR", tmp_path)
+
+    res = _client().get("/api/testcases?domain=no-such-domain.example")
+
+    assert res.status_code == 404
+
+
+def test_generate_advanced_creates_testcases_html(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(qa_mod, "OUTPUT_DIR", tmp_path)
+    domain_dir = _write_report(tmp_path)
+
+    res = _client().post("/api/qa-process/generate-advanced", data={"domain": "example.com"})
+    data = res.get_json()
+
+    assert res.status_code == 200
+    qa_dir = domain_dir / "qa_process"
+    assert (qa_dir / "testcases.html").exists()
+    html_content = (qa_dir / "testcases.html").read_text(encoding="utf-8")
+    assert "テストケース一覧" in html_content
+    assert "page.goto(" not in html_content
+    assert data["outputs"]["testcases_html"].endswith("testcases.html")
+
+    # 生成後は /api/testcases のレスポンスにも html_path が入る
+    res2 = _client().get("/api/testcases?domain=example.com")
+    assert res2.get_json()["html_path"].endswith("testcases.html")
 
 
 def test_generate_with_ai_requested_without_key_falls_back(tmp_path: Path, monkeypatch) -> None:

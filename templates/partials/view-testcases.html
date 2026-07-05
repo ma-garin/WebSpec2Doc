@@ -1,0 +1,63 @@
+        <!-- ===== テストケース専用ビュー ===== -->
+        <section class="view" id="view-testcases">
+          <style>
+            .tc-back-banner {
+              margin-bottom: 12px;
+            }
+            .tc-case-card {
+              border: 1px solid var(--border, #e5e7eb);
+              border-radius: var(--radius-md, 8px);
+              padding: 14px 18px;
+              margin: 0 0 12px;
+            }
+            .tc-case-card h3 {
+              margin: 0 0 4px;
+              font-size: 14px;
+            }
+            .tc-case-trace {
+              color: var(--text-muted, #64748b);
+              font-size: 12px;
+              margin: 0 0 8px;
+            }
+            .tc-case-card dt {
+              font-weight: 700;
+              margin-top: 8px;
+              font-size: 12px;
+            }
+            .tc-case-card dd {
+              margin: 4px 0 0;
+            }
+            .tc-case-card ol {
+              margin: 2px 0 0;
+              padding-left: 20px;
+              font-size: 13px;
+            }
+          </style>
+          <div class="qa-tool-2pane">
+            <div class="qa-tool-sidebar">
+              <div>
+                <h2 class="qa-tool-sidebar-title">テストケース一覧</h2>
+                <p class="qa-tool-sidebar-desc">解析済みサイトのテストケースを前提条件・手順・期待結果のローレベル形式で確認します。</p>
+              </div>
+              <div>
+                <label for="tc-domain-select" class="form-label" style="font-size:12px;margin-bottom:6px">対象サイト</label>
+                <select id="tc-domain-select" class="url-input qa-tool-domain" style="height:36px;width:100%;margin-bottom:8px;font-size:13px">
+                  <option value="">解析済みサイトを選択</option>
+                </select>
+                <div id="tc-status" class="input-field-message" style="margin-top:6px;min-height:16px"></div>
+              </div>
+              <div>
+                <div class="hero-section-title" style="margin:0 0 8px">成果物</div>
+                <div id="tc-output-links" class="qa-output-list"></div>
+              </div>
+            </div>
+            <div class="qa-tool-main">
+              <div id="tc-back-banner" class="tc-back-banner" hidden>
+                <button type="button" id="tc-back-btn" class="btn-outline-sm">← AutoRunの設定に戻る</button>
+              </div>
+              <div id="tc-content" class="qa-readable">
+                <div class="empty">対象サイトを選択してください。</div>
+              </div>
+            </div>
+          </div>
+        </section>

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io as _io
 import json
 import subprocess
 import sys
@@ -580,6 +581,33 @@ class TestApiResult:
         assert "files" in data
         assert "summary" in data
 
+    def test_generates_features_md_from_report_json(self, tmp_path: Path, monkeypatch) -> None:
+        """機能一覧（features.md）はreport.jsonから初回アクセス時に自動生成される。"""
+        monkeypatch.setattr(report_mod, "OUTPUT_DIR", tmp_path)
+        monkeypatch.setattr(summary_mod, "OUTPUT_DIR", tmp_path)
+        d = tmp_path / "example.com"
+        d.mkdir()
+        report = {
+            "screens": [
+                {
+                    "page_id": "P001",
+                    "title": "トップ",
+                    "is_canonical": True,
+                    "forms": [{"action": "/search", "method": "get", "fields": [{"name": "q"}]}],
+                    "buttons": ["検索"],
+                    "transitions": {"to": ["P002"], "from": []},
+                }
+            ]
+        }
+        (d / "report.json").write_text(json.dumps(report), encoding="utf-8")
+        data = _client().get("/api/result?domain=example.com").get_json()
+        assert data["files"]["features_md"].endswith("features.md")
+        content = (d / "features.md").read_text(encoding="utf-8")
+        assert "# 機能一覧" in content
+        assert "フォーム機能" in content
+        assert "操作機能" in content
+        assert "遷移機能" in content
+
 
 class TestDownloadZip:
     def test_invalid_domain_returns_404(self) -> None:
@@ -599,3 +627,37 @@ class TestDownloadZip:
         res = _client().get("/download-zip?domain=example.com")
         assert res.status_code == 200
         assert res.content_type == "application/zip"
+
+    def test_paths_param_zips_only_selected_files(self, tmp_path: Path, monkeypatch) -> None:
+        """ギャラリー一括エクスポート: paths指定時は選択ファイルのみZIP化する。"""
+        monkeypatch.setattr(report_mod, "OUTPUT_DIR", tmp_path)
+        monkeypatch.setattr(validation_mod, "OUTPUT_DIR", tmp_path)
+        d = tmp_path / "example.com"
+        d.mkdir()
+        keep = d / "P001_full.png"
+        keep.write_bytes(b"fake-png")
+        (d / "P002_full.png").write_bytes(b"fake-png-2")
+        res = _client().get(f"/download-zip?domain=example.com&paths={keep.resolve()}")
+        assert res.status_code == 200
+        import zipfile
+
+        with zipfile.ZipFile(_io.BytesIO(res.data)) as zf:
+            names = zf.namelist()
+        assert any("P001_full.png" in n for n in names)
+        assert not any("P002_full.png" in n for n in names)
+
+    def test_paths_outside_domain_are_ignored(self, tmp_path: Path, monkeypatch) -> None:
+        """他ドメインのファイルをpathsで指定してもZIPに含めない（実在検証・越境禁止）。"""
+        monkeypatch.setattr(report_mod, "OUTPUT_DIR", tmp_path)
+        monkeypatch.setattr(validation_mod, "OUTPUT_DIR", tmp_path)
+        (tmp_path / "example.com").mkdir()
+        other = tmp_path / "other.com"
+        other.mkdir()
+        other_file = other / "secret.png"
+        other_file.write_bytes(b"secret")
+        res = _client().get(f"/download-zip?domain=example.com&paths={other_file.resolve()}")
+        assert res.status_code == 200
+        import zipfile
+
+        with zipfile.ZipFile(_io.BytesIO(res.data)) as zf:
+            assert zf.namelist() == []

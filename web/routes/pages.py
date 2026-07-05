@@ -13,6 +13,8 @@ _VIEW_NAMES = frozenset(
         "qa-quality",
         "viewpoints",
         "auto-run",
+        "testcases",
+        "run-history",
         "user-guide",
         "settings",
     }

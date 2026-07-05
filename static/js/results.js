@@ -14,7 +14,6 @@ const TAB_DEFS = {
   flow:          { panel: 'rp-flow', defaultSub: 'diagram',
                    subs: { diagram: 'renderTransition', table: 'renderTransitionTable' } },
   runs:          { panel: 'rp-runs', render: 'renderTestRuns' },
-  coverage:      { panel: 'rp-coverage', render: 'renderCoverage' },
   'doc-fusion':  { panel: 'rp-doc-fusion', render: 'renderDocFusion' },
   history:       { panel: 'rp-history', render: 'renderTimeline' },
 };

@@ -43,6 +43,7 @@ QA_ADVANCED_OUTPUTS = (
     ("playwright_candidates_html", "Playwright候補HTML", "playwright_candidates.html"),
     ("quality_viewpoints", "品質観点JSON", "quality_viewpoints.json"),
     ("quality_viewpoints_html", "品質観点HTML", "quality_viewpoints.html"),
+    ("testcases_html", "テストケースHTML", "testcases.html"),
 )
 
 

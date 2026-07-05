@@ -76,6 +76,25 @@ const AUTORUN_OUTPUT_LABELS = {
   viewpoint_snapshot:      '観点スナップショット',
 };
 
+// SDLC（計画/分析/設計/実装/実行/レポート）思想での成果物カテゴライズ（R2-22対応）
+const AUTORUN_OUTPUT_CATEGORY_ORDER = ['計画', '分析', '設計', '実装', '実行', 'レポート'];
+const AUTORUN_OUTPUT_CATEGORIES = {
+  test_plan:               '計画',
+  viewpoint_snapshot:      '計画',
+  report_json:             '分析',
+  report_html:             '分析',
+  test_analysis:           '分析',
+  cross_review:            '分析',
+  test_design:             '設計',
+  test_cases:              '設計',
+  model_graph:             '設計',
+  playwright_candidates_html: '設計',
+  spec_ts:                 '実装',
+  playwright_report_html:  '実行',
+  playwright_report_json:  '実行',
+  qa_process_report:       'レポート',
+};
+
 // ステッパーアイコン（テキスト記号を廃止し SVG で状態表現）
 const AUTORUN_STEP_ICONS = {
   pending: '<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6.2"/></svg>',
@@ -104,6 +123,21 @@ function _autorunSetText(id, value) {
   if (el) el.textContent = value || '';
 }
 
+// R1-09: 観点セットを目的別（推奨/その他）にグルーピング表示する。
+// is_default はアプリ全体で「自動選択される推奨セット」を表す実データであり、
+// 存在しないカテゴリを捏造せず、この実フラグに基づいて分類する。
+function _autorunViewpointOptionsHtml(sets) {
+  const optionHtml = (item) =>
+    `<option value="${escHtml(item.id)}">${escHtml(item.name)} v${Number(item.published_version || 0)}</option>`;
+  const defaults = sets.filter((item) => item.is_default);
+  const others = sets.filter((item) => !item.is_default);
+  if (defaults.length && others.length) {
+    return `<optgroup label="推奨セット">${defaults.map(optionHtml).join('')}</optgroup>` +
+      `<optgroup label="その他のセット">${others.map(optionHtml).join('')}</optgroup>`;
+  }
+  return sets.map(optionHtml).join('');
+}
+
 async function autorunLoadViewpointSelection() {
   const url = (document.getElementById('autorun-url')?.value || '').trim();
   const select = document.getElementById('autorun-viewpoint-set');
@@ -118,9 +152,7 @@ async function autorunLoadViewpointSelection() {
     if (!response.ok) throw new Error(data.error || '観点セットを読み込めません');
     _autorunViewpointSets = data.sets || [];
     _autorunViewpointRecommendation = data.recommended || null;
-    select.innerHTML = '<option value="">自動選択</option>' + _autorunViewpointSets.map((item) =>
-      `<option value="${escHtml(item.id)}">${escHtml(item.name)} v${Number(item.published_version || 0)}</option>`
-    ).join('');
+    select.innerHTML = '<option value="">自動選択</option>' + _autorunViewpointOptionsHtml(_autorunViewpointSets);
     if (_autorunViewpointSets.some((item) => item.id === current)) select.value = current;
     _autorunRenderViewpointRecommendation();
     document.getElementById('autorun-start-btn').disabled = false;
@@ -678,22 +710,30 @@ function _autorunRender(data) {
     autorunSetStartStatus(data.error, true);
   }
 
-  // ---- 成果物リンク（左サイドバー） ----
+  // ---- 成果物リンク（左サイドバー・SDLCフェーズ別グルーピング） ----
   if (data.outputs && Object.keys(data.outputs).length) {
     const linksEl = document.getElementById('autorun-output-links');
     const area    = document.getElementById('autorun-outputs-area');
     if (linksEl && area) {
       area.style.display = '';
-      linksEl.innerHTML = Object.entries(data.outputs)
-        .filter(([,p]) => p)
-        .map(([key, path]) => {
+      const grouped = {};
+      Object.entries(data.outputs).filter(([,p]) => p).forEach(([key, path]) => {
+        const category = AUTORUN_OUTPUT_CATEGORIES[key] || 'その他';
+        (grouped[category] = grouped[category] || []).push([key, path]);
+      });
+      const categories = AUTORUN_OUTPUT_CATEGORY_ORDER.filter(c => grouped[c])
+        .concat(Object.keys(grouped).filter(c => !AUTORUN_OUTPUT_CATEGORY_ORDER.includes(c)));
+      linksEl.innerHTML = categories.map(category => {
+        const items = grouped[category].map(([key, path]) => {
           const label = AUTORUN_OUTPUT_LABELS[key] || key;
           return `<div class="qa-output-item">
-            <span class="qa-output-item-label">${escHtml(label)}</span>
+            <span class="qa-output-item-label" title="${escHtml(label)}">${escHtml(label)}</span>
             <div class="qa-output-item-actions">
               <button class="btn-outline-sm qa-output-btn qa-preview-btn" data-path="${escHtml(path)}" data-label="${escHtml(label)}">プレビュー</button>
             </div></div>`;
         }).join('');
+        return `<div class="qa-output-category"><div class="qa-output-category-title">${escHtml(category)}</div>${items}</div>`;
+      }).join('');
     }
   }
 }

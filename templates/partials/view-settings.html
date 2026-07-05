@@ -1,13 +1,13 @@
         <!-- ===== 設定ビュー ===== -->
         <section class="view" id="view-settings">
-          <div class="set-tabs">
-            <button class="set-tab is-active" data-tab="api">APIキー</button>
-            <button class="set-tab" data-tab="model">モデル</button>
-            <button class="set-tab" data-tab="crawl">クロール既定値</button>
-            <button class="set-tab" data-tab="notify">通知</button>
+          <div class="set-tabs" role="tablist" aria-label="設定タブ">
+            <button type="button" class="set-tab is-active" data-tab="api" role="tab" aria-selected="true" aria-controls="set-panel-api" id="set-tab-api" tabindex="0">APIキー</button>
+            <button type="button" class="set-tab" data-tab="model" role="tab" aria-selected="false" aria-controls="set-panel-model" id="set-tab-model" tabindex="-1">モデル</button>
+            <button type="button" class="set-tab" data-tab="crawl" role="tab" aria-selected="false" aria-controls="set-panel-crawl" id="set-tab-crawl" tabindex="-1">クロール既定値</button>
+            <button type="button" class="set-tab" data-tab="notify" role="tab" aria-selected="false" aria-controls="set-panel-notify" id="set-tab-notify" tabindex="-1">通知</button>
           </div>
 
-          <div class="set-panel is-active" id="set-panel-api">
+          <div class="set-panel is-active" id="set-panel-api" role="tabpanel" aria-labelledby="set-tab-api">
             <div class="input-card">
               <h2 class="set-card-title">OpenAI API キー</h2>
               <p class="input-hint" style="margin-top:0;margin-bottom:14px">キーは <code>.env</code> に保存されます（ブラウザには保存しません）。空欄で保存すると既存キーを保持します。</p>
@@ -26,7 +26,7 @@
             </div>
           </div>
 
-          <div class="set-panel" id="set-panel-model">
+          <div class="set-panel" id="set-panel-model" role="tabpanel" aria-labelledby="set-tab-model">
             <div class="input-card">
               <h2 class="set-card-title">回答生成モデル</h2>
               <p class="input-hint" style="margin-top:0;margin-bottom:14px">LLMテスト観点生成（今後実装）で使うモデルです。</p>
@@ -46,7 +46,7 @@
             </div>
           </div>
 
-          <div class="set-panel" id="set-panel-notify">
+          <div class="set-panel" id="set-panel-notify" role="tabpanel" aria-labelledby="set-tab-notify">
             <div class="input-card">
               <h2 class="set-card-title">Slack 通知</h2>
               <p class="input-hint" style="margin-top:0;margin-bottom:14px">仕様ドリフト（再クロール後の差分）を検知した際に Slack チャンネルへ通知します。<br>Incoming Webhook URL は <a href="https://api.slack.com/messaging/webhooks" target="_blank" rel="noopener">Slack API</a> で取得してください。</p>
@@ -63,7 +63,7 @@
             </div>
           </div>
 
-          <div class="set-panel" id="set-panel-crawl">
+          <div class="set-panel" id="set-panel-crawl" role="tabpanel" aria-labelledby="set-tab-crawl">
             <div class="input-card">
               <h2 class="set-card-title">クロール既定値</h2>
               <p class="input-hint" style="margin-top:0;margin-bottom:14px">このブラウザに保存され、生成ウィザードの初期値に反映されます。</p>

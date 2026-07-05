@@ -7,6 +7,9 @@ function renderReport() {
   const screens = reportJson.screens;
   const pageIds = new Set(screens.map(s => s.page_id));
   const allShots = (resultData.screenshots || []).filter(p => pageIds.has(p.split('/').pop().replace(/\.png$/, '')));
+  // 遷移先/遷移元を「P003」等の内部IDのまま出さず画面名で表示するためのマップ
+  const idToScreen = {};
+  screens.forEach(s => { idToScreen[s.page_id] = s; });
 
   resultHero.innerHTML =
     '<div class="rpt-pane-wrap">' +
@@ -27,14 +30,14 @@ function renderReport() {
     item.addEventListener('click', () => {
       list.querySelectorAll('.rpt-list-item').forEach(el => el.classList.remove('is-active'));
       item.classList.add('is-active');
-      renderReportDetail(sc, allShots);
+      renderReportDetail(sc, allShots, idToScreen);
     });
     list.appendChild(item);
   });
-  renderReportDetail(screens[0], allShots);
+  renderReportDetail(screens[0], allShots, idToScreen);
 }
 
-function renderReportDetail(sc, allShots) {
+function renderReportDetail(sc, allShots, idToScreen) {
   const detail = document.getElementById('rpt-detail');
   if (!detail) return;
 
@@ -44,10 +47,12 @@ function renderReportDetail(sc, allShots) {
     ? `<img src="${escHtml(shotSrc)}" class="rpt-screenshot" loading="lazy" alt="${escHtml(sc.page_id)}" onclick="openLightbox('${escHtml(shotSrc)}')" /><p class="rpt-screenshot-caption">クリックで全画面表示</p>`
     : '';
 
+  // 「P003」等の内部IDのままでは分かりにくいため、可能な限り画面名で表示する
+  const screenLabel = id => (idToScreen && idToScreen[id] && idToScreen[id].title) || id;
   const transTo = (sc.transitions && sc.transitions.to) || [];
   const transFrom = (sc.transitions && sc.transitions.from) || [];
   const transHtml = (transTo.length || transFrom.length)
-    ? `<div class="rpt-transitions">遷移先: ${transTo.length ? transTo.map(escHtml).join('、') : '—'} ／ 遷移元: ${transFrom.length ? transFrom.map(escHtml).join('、') : '—'}</div>`
+    ? `<div class="rpt-transitions">遷移先: ${transTo.length ? transTo.map(id => escHtml(screenLabel(id))).join('、') : '—'} ／ 遷移元: ${transFrom.length ? transFrom.map(id => escHtml(screenLabel(id))).join('、') : '—'}</div>`
     : '';
 
   const nonEmptyForms = (sc.forms || []).filter(f => (f.fields || []).length > 0);

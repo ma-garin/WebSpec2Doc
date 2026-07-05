@@ -277,6 +277,22 @@ function _stopDiscoverTimer() {
 }
 
 // skipLoginSection=true のとき（ログイン後の再解析）はログインセクションを再展開しない
+// 画面分析（discover）フェーズの中断用状態。クロール実行フェーズには停止ボタンが
+// あるのに画面分析フェーズには無い、というドッグフーディング要望への対応。
+let _discoverRunId = null;
+let _discoverReader = null;
+let _discoverCancelledByUser = false;
+
+document.getElementById('discover-cancel-btn')?.addEventListener('click', async () => {
+  _discoverCancelledByUser = true;
+  if (_discoverRunId) {
+    try {
+      await fetch('/api/cancel', { method: 'POST', body: new URLSearchParams({ run_id: _discoverRunId }) });
+    } catch (e) {}
+  }
+  if (_discoverReader) { try { await _discoverReader.cancel(); } catch (e) {} }
+});
+
 async function discoverUrls(skipLoginSection) {
   const url = urlInput.value.trim();
   if (!url) { setUrlMessage('URLを入力してから画面分析を実行してください', true); return; }
@@ -295,6 +311,9 @@ async function discoverUrls(skipLoginSection) {
   if (countLabel) countLabel.textContent = '0画面を発見';
   discovered = [];
   discoverSkipped = [];
+  _discoverRunId = null;
+  _discoverReader = null;
+  _discoverCancelledByUser = false;
   _startDiscoverTimer();
 
   let lastRow = null;
@@ -331,6 +350,7 @@ async function discoverUrls(skipLoginSection) {
     }
 
     const reader = res.body.getReader();
+    _discoverReader = reader;
     const decoder = new TextDecoder();
     let buf = '';
     while (true) {
@@ -344,7 +364,9 @@ async function discoverUrls(skipLoginSection) {
         if (!line) continue;
         let obj;
         try { obj = JSON.parse(line); } catch (e) { continue; }
-        if (obj.page) {
+        if (obj.run_id) {
+          _discoverRunId = obj.run_id;
+        } else if (obj.page) {
           _markDone(lastRow);
           discovered.push(obj.page);
           if (countLabel) countLabel.textContent = `${discovered.length}画面を発見`;
@@ -356,7 +378,7 @@ async function discoverUrls(skipLoginSection) {
           _markDone(lastRow); lastRow = null;
           _addRow({ url: skipped.url || '', title: reason }, false);
           if (countLabel) countLabel.textContent = `${discovered.length}画面 / ${discoverSkipped.length}件除外`;
-        } else if (obj.done) {
+        } else if (obj.done || obj.cancelled) {
           _markDone(lastRow);
           lastRow = null;
         } else if (obj.error) {
@@ -364,7 +386,8 @@ async function discoverUrls(skipLoginSection) {
         }
       }
     }
-
+    // ユーザーが中断ボタンで停止した場合も、それまでに見つかった画面は捨てずに使う
+    // （途中結果を保存するクロール実行フェーズの挙動と揃える）。
     discovered = discovered.filter(p => p && p.url);
     renderDiscovered();
     // ログインURLを上級設定フィールドに反映（参考表示）
@@ -387,14 +410,25 @@ async function discoverUrls(skipLoginSection) {
         if (loginNum) loginNum.textContent = loginCount;
         summary.style.display = '';
       }
-      status.textContent = '';
-      if (discoverSkipped.length) status.textContent = `${discoverSkipped.length}件はrobots.txtまたは安全制約により除外されました。`;
+      if (_discoverCancelledByUser) {
+        status.textContent = `中断しました（${discovered.length}画面を取得済み）。このまま条件設定に進むか、再実行してください。`;
+      } else {
+        status.textContent = '';
+        if (discoverSkipped.length) status.textContent = `${discoverSkipped.length}件はrobots.txtまたは安全制約により除外されました。`;
+      }
+    } else if (_discoverCancelledByUser) {
+      status.textContent = '中断しました（画面が見つかる前に停止しました）。';
     } else {
       status.textContent = discoverSkipped.length
         ? `取得可能な画面は0件です。${discoverSkipped.length}件がrobots.txtまたは安全制約により除外されました。`
         : '画面が0件でした。URLを確認してください。';
     }
   } catch (e) {
+    if (_discoverCancelledByUser) {
+      // 中断操作によって reader.cancel() が例外化する実装もあるため、その場合も
+      // エラー扱いにせず静かに終了する（discovered は既に保持済み）。
+      return;
+    }
     clearDiscovered(); status.textContent = e.message; status.classList.add('discover-status-error');
   } finally {
     const elapsed = _stopDiscoverTimer();
@@ -446,20 +480,32 @@ function renderDiscovered() {
     </div>`;
   };
 
+  // evidence-only: 1件の描画失敗が全体を空白にしてはならない（過去に再発した障害クラス）。
+  // banner（件数表示）は実データから生成される一方、各項目の HTML 生成は個別に
+  // try/catch で保護し、失敗した項目だけを可視のフォールバック表示に落とす。
+  const safeMap = (items, fn, fallbackLabel) => items.map((it) => {
+    try {
+      return fn(it);
+    } catch (e) {
+      console.error(`${fallbackLabel}の表示に失敗しました:`, it, e);
+      return `<div class="discovered-url-item" style="opacity:.72"><span aria-hidden="true"></span><span><strong class="input-field-message-error">⚠ ${escHtml(fallbackLabel)}の表示に失敗しました（詳細はコンソール参照）</strong><code>${escHtml(String(it && it.url || ''))}</code></span></div>`;
+    }
+  });
+
   const normalPages = discovered.filter(p => !p.login_required);
   const loginPages = discovered.filter(p => p.login_required);
 
-  let html = normalPages.map(makeNormalItem).join('');
+  let html = safeMap(normalPages, makeNormalItem, '画面').join('');
   if (loginPages.length) {
     html += `<div class="disc-login-group-separator"><span>🔒 認証が必要なページ（${loginPages.length}件）— 各画面の認証情報を入力してください</span></div>`;
-    html += loginPages.map(makeLoginItem).join('');
+    html += safeMap(loginPages, makeLoginItem, '認証必須画面').join('');
   }
   if (discoverSkipped.length) {
     html += `<div class="disc-login-group-separator"><span>取得対象外（${discoverSkipped.length}件）</span></div>`;
-    html += discoverSkipped.map(item => {
+    html += safeMap(discoverSkipped, (item) => {
       const reason = item.reason === 'robots' ? 'robots.txt' : '安全制約';
       return `<div class="discovered-url-item" style="opacity:.72;cursor:default"><span aria-hidden="true"></span><span><strong>${escHtml(reason)}により除外</strong><code>${escHtml(item.url || '')}</code></span></div>`;
-    }).join('');
+    }, '除外画面').join('');
   }
   list.innerHTML = html;
   list.querySelectorAll('.discovered-cb').forEach(cb => cb.addEventListener('change', updateTargetPreview));
@@ -470,22 +516,72 @@ function clearDiscovered() {
   document.getElementById('discovered-url-panel').style.display = 'none';
   document.getElementById('discovered-url-list').innerHTML = '';
   document.getElementById('discover-status').textContent = '';
+  setCrawlTargetMode('selected');
 }
 function setAllDiscovered(v) { document.querySelectorAll('.discovered-cb').forEach(cb => { cb.checked = v; }); updateTargetPreview(); }
 function selectedDiscovered() { return [...document.querySelectorAll('.discovered-cb:checked')].map(cb => cb.value); }
 
+// ---- クロール方法（自動クロール／選択したURLのみ）----
+// 「画面分析で見つけたURLだけをクロールするか、そこからリンクを辿って
+// 自動的にクロール範囲を広げるかを選びたい」というドッグフーディング要望への対応。
+function crawlTargetMode() {
+  return document.querySelector('input[name="crawl-target-mode"]:checked')?.value || 'selected';
+}
+function setCrawlTargetMode(mode) {
+  const radio = document.getElementById(mode === 'auto' ? 'crawl-mode-auto' : 'crawl-mode-selected');
+  if (radio) radio.checked = true;
+  _syncCrawlModeFields();
+}
+function _syncCrawlModeFields() {
+  const isAuto = crawlTargetMode() === 'auto';
+  const autoFields = document.getElementById('crawl-mode-auto-fields');
+  const discoveredPanel = document.getElementById('discovered-url-panel');
+  if (autoFields) autoFields.style.display = isAuto ? 'flex' : 'none';
+  if (discoveredPanel) discoveredPanel.style.display = (isAuto || !discovered.length) ? 'none' : '';
+  updateTargetPreview();
+}
+document.querySelectorAll('input[name="crawl-target-mode"]').forEach(radio =>
+  radio.addEventListener('change', _syncCrawlModeFields));
+
 // ---- 対象URLの確定 ----
-function buildTargetUrls() { return selectedDiscovered(); }
+function buildTargetUrls() {
+  if (crawlTargetMode() === 'auto') {
+    const u = urlInput.value.trim();
+    return u ? [u] : [];
+  }
+  return selectedDiscovered();
+}
 function updateTargetPreview() {
   const urls = buildTargetUrls();
-  targetPreview.querySelector('strong').textContent = `チェック対象 ${urls.length}件`;
+  const isAuto = crawlTargetMode() === 'auto';
+  targetPreview.querySelector('strong').textContent = isAuto
+    ? '自動クロール（起点URLからリンクを辿ります）'
+    : `チェック対象 ${urls.length}件`;
+  const etaEl = document.getElementById('target-preview-eta');
   if (!urls.length) {
     const msg = urlInput.value.trim() ? '画面リスト取得を実行してください' : 'URLを入力してください';
     targetPreviewList.innerHTML = `<li><span>未確定</span><code>${msg}</code></li>`;
+    if (etaEl) etaEl.textContent = '';
     return;
   }
-  targetPreviewList.innerHTML = urls.map((u, i) => `<li><span>${i === 0 ? 'メイン' : '対象 ' + (i + 1)}</span><code>${escHtml(u)}</code></li>`).join('');
+  targetPreviewList.innerHTML = urls.map((u, i) => `<li><span>${isAuto ? '起点URL' : (i === 0 ? 'メイン' : '対象 ' + (i + 1))}</span><code>${escHtml(u)}</code></li>`).join('');
+  if (etaEl) {
+    const pageCount = isAuto ? Number(document.getElementById('max-pages').value) || 30 : urls.length;
+    etaEl.textContent = '⏱ 所要目安: ' + estimateCrawlEta(pageCount) + (isAuto ? '（最大ページ数の場合）' : '');
+  }
 }
+
+// ---- 所要時間の目安（並列数を考慮した粗い見積り。捏造せず「目安」であることを明示） ----
+function estimateCrawlEta(pageCount) {
+  const SEC_PER_PAGE = 15;
+  const parallelism = Number(document.getElementById('crawl-parallelism')?.value) || 2;
+  const seconds = Math.max(30, Math.ceil((pageCount * SEC_PER_PAGE) / parallelism));
+  const minutes = Math.ceil(seconds / 60);
+  return minutes <= 1 ? '約1分' : `約${minutes}分`;
+}
+document.getElementById('crawl-parallelism')?.addEventListener('change', updateTargetPreview);
+document.getElementById('crawl-depth')?.addEventListener('input', updateTargetPreview);
+document.getElementById('max-pages')?.addEventListener('input', updateTargetPreview);
 
 // ---- 参考文書アップロード（Doc Fusion）----
 let referenceDocPaths = [];

@@ -15,6 +15,7 @@ from crawler.page_crawler import (
     _format_page_id,
     _is_spa_navigation,
     _next_urls,
+    _save_screenshot,
     _should_skip,
     is_internal_link,
     normalize_url,
@@ -149,6 +150,52 @@ class TestNextUrls:
 
     def test_empty_links(self) -> None:
         assert _next_urls((), 0, set(), 3) == []
+
+
+# ---------- _save_screenshot ----------
+
+
+class _FakeScreenshotPage:
+    def __init__(self) -> None:
+        self.calls: list[dict] = []
+
+    def screenshot(self, path: str, full_page: bool) -> None:
+        self.calls.append({"path": path, "full_page": full_page})
+        with open(path, "wb") as f:
+            f.write(b"fake-png")
+
+
+class TestSaveScreenshot:
+    """ギャラリー拡大表示が見切れる不具合の修正: ビューポート版に加え全体版も保存する。"""
+
+    def test_saves_both_viewport_and_full_page_versions(self, tmp_path) -> None:
+        page = _FakeScreenshotPage()
+        result = _save_screenshot(page, tmp_path, "P001")
+
+        assert result == str(tmp_path / "screenshots" / "P001.png")
+        assert (tmp_path / "screenshots" / "P001.png").is_file()
+        assert (tmp_path / "screenshots" / "P001_full.png").is_file()
+        full_page_flags = {call["full_page"] for call in page.calls}
+        assert full_page_flags == {False, True}
+
+    def test_full_page_screenshot_failure_does_not_break_viewport_result(self, tmp_path) -> None:
+        """全体版の保存に失敗しても、ビューポート版（evidence用）は既に保存済みなので致命的ではない。"""
+
+        class _FlakyPage:
+            def screenshot(self, path: str, full_page: bool) -> None:
+                if full_page:
+                    raise pc.PlaywrightError("boom")
+                with open(path, "wb") as f:
+                    f.write(b"fake-png")
+
+        result = _save_screenshot(_FlakyPage(), tmp_path, "P002")
+
+        assert result == str(tmp_path / "screenshots" / "P002.png")
+        assert (tmp_path / "screenshots" / "P002.png").is_file()
+        assert not (tmp_path / "screenshots" / "P002_full.png").exists()
+
+    def test_none_output_dir_returns_none(self) -> None:
+        assert _save_screenshot(_FakeScreenshotPage(), None, "P001") is None
 
 
 # ---------- _discover_one ----------

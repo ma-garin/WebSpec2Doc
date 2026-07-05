@@ -169,6 +169,14 @@ class TestSubTabs:
         # スクショ未生成のフィクスチャなので空メッセージが出る（未配線なら何も描画されない）
         expect(page.locator("#rp-screens-gallery")).to_contain_text("スクリーンショット")
 
+    def test_screens_spec_transitions_show_screen_titles_not_raw_ids(self, page: Page) -> None:
+        """遷移先/遷移元は「P002」等の内部IDのままではなく画面名で表示する。"""
+        _open_report(page)
+        page.locator('.result-tab[data-tab="screens"]').click()
+        page.locator("#rpt-list .rpt-list-item").first.click()
+        expect(page.locator("#rpt-detail .rpt-transitions")).to_contain_text("お問い合わせ")
+        expect(page.locator("#rpt-detail .rpt-transitions")).not_to_contain_text("P002")
+
     def test_flow_subtabs(self, page: Page) -> None:
         _open_report(page)
         page.locator('.result-tab[data-tab="flow"]').click()
@@ -247,6 +255,74 @@ class TestRunsTab:
             expect(page.locator("#rp-runs")).to_contain_text("テストを実行できませんでした")
             expect(page.locator("#rp-runs")).to_contain_text("セットアップ手順")
             expect(page.locator("#rp-runs .runs-passrate")).not_to_be_visible()
+        finally:
+            shutil.rmtree(qa_dir, ignore_errors=True)
+
+    def test_runs_tab_zero_result_with_error_shows_error_not_success(self, page: Page) -> None:
+        """AutoRunで188件実行したのに結果が0/0/0で表示された致命的UX破綻の再発防止。
+        解析失敗などで error があり total==0 の場合、PASS率リングやカードではなく
+        「実行エラー」を明示する。"""
+        qa_dir = self._write_playwright_report(
+            {
+                "ok": False,
+                "passed": 0,
+                "failed": 0,
+                "skipped": 0,
+                "total": 0,
+                "tests": [],
+                "error": "実行結果を解析できませんでした（終了コード 1）",
+            }
+        )
+        try:
+            _open_report(page, "/runs")
+            expect(page.locator("#rp-runs")).to_contain_text("実行エラー")
+            expect(page.locator("#rp-runs")).to_contain_text("実行結果を解析できませんでした")
+            expect(page.locator("#rp-runs .runs-passrate")).not_to_be_visible()
+        finally:
+            shutil.rmtree(qa_dir, ignore_errors=True)
+
+    def test_runs_tab_interrupted_shows_partial_banner(self, page: Page) -> None:
+        """全体タイムアウトで中断され部分結果が回収された場合、中断バナーと
+        回収できた分の結果（PASS率・テーブル）の両方を表示する。"""
+        qa_dir = self._write_playwright_report(
+            {
+                "ok": False,
+                "passed": 2,
+                "failed": 0,
+                "skipped": 0,
+                "total": 2,
+                "tests": [
+                    {"title": "トップ表示", "status": "passed", "duration_ms": 900, "error": ""},
+                    {"title": "検索", "status": "passed", "duration_ms": 800, "error": ""},
+                ],
+                "error": "テスト実行が制限時間 600秒 に達したため中断しました。188件中2件まで実行済みです。",
+                "interrupted": True,
+            }
+        )
+        try:
+            _open_report(page, "/runs")
+            expect(page.locator("#rp-runs")).to_contain_text("中断しました")
+            expect(page.locator("#rp-runs .runs-passrate")).to_be_visible()
+            expect(page.locator("#rp-runs .runs-table")).to_contain_text("トップ表示")
+        finally:
+            shutil.rmtree(qa_dir, ignore_errors=True)
+
+    def test_overview_kpi_tile_shows_error_not_never_run(self, page: Page) -> None:
+        """概要タブのKPIタイルは、error付き0/0/0結果を「未実行」のまま放置しない。"""
+        qa_dir = self._write_playwright_report(
+            {
+                "ok": False,
+                "passed": 0,
+                "failed": 0,
+                "skipped": 0,
+                "total": 0,
+                "tests": [],
+                "error": "実行結果を解析できませんでした（終了コード 1）",
+            }
+        )
+        try:
+            _open_report(page)
+            expect(page.locator("#k-runs-sub")).to_contain_text("実行エラー")
         finally:
             shutil.rmtree(qa_dir, ignore_errors=True)
 

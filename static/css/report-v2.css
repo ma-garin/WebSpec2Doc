@@ -25,22 +25,28 @@
   overflow: auto;
   position: relative;
 }
-/* 複合タブ: サブタブバー固定 + サブパネルがスクロール */
+/* 複合タブの下位ビュー切替はセグメントコントロール（一体型のピル群）にする。
+   主タブ行と同じ「個別ボーダー付きボタンの並び」にすると「タブの中にタブがある」
+   ように見えて分かりにくい、というドッグフーディング指摘への対応。
+   外枠1本＋内部はパディングのみのピル切替＝タブではなく「表示モード切替」だと
+   一目で区別できる見た目にする。 */
 .result-subtabs {
   flex-shrink: 0;
-  display: flex;
-  gap: 4px;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border);
+  display: inline-flex;
+  gap: 2px;
+  margin: 8px 12px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
   background: var(--surface-soft);
   overflow-x: auto;
   scrollbar-width: none;
 }
 .result-subtabs::-webkit-scrollbar { display: none; }
 .result-subtab {
-  height: 30px;
+  height: 26px;
   padding: 0 12px;
-  border: 1px solid transparent;
+  border: none;
   border-radius: 6px;
   background: none;
   color: var(--text-muted);
@@ -49,12 +55,11 @@
   cursor: pointer;
   white-space: nowrap;
 }
-.result-subtab:hover { background: var(--surface-subtle); color: var(--text); }
+.result-subtab:hover { color: var(--text); }
 .result-subtab.is-active {
   background: var(--surface);
-  border-color: var(--border);
   color: var(--primary-dark);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, .06);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .1);
 }
 .result-subtab:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
 .result-subpanel {

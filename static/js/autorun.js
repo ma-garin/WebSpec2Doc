@@ -42,6 +42,17 @@ const AUTORUN_PHASE_LABELS = {
   cancelled: '停止済み',
 };
 
+// テスト実行中の「n/188件目」進捗表示。承認188件を実行したのに進捗が
+// 全く見えない、というドッグフーディング指摘への対応。progress ndjson から
+// 読んだ実測件数のみを表示し、不明な場合は捏造せず既定ラベルのままにする。
+function _autorunPhaseLabelWithProgress(status, data) {
+  const base = AUTORUN_PHASE_LABELS[status] || '';
+  if (status !== 'running_tests') return base;
+  const progress = data.test_progress;
+  if (!progress || !progress.total) return base;
+  return `テスト実行中…（${progress.completed || 0}/${progress.total}件目）`;
+}
+
 // 全体進捗の重み（フェーズ完了ベース。実行中フェーズは半分進んだとみなす近似）
 const AUTORUN_PHASE_ORDER = ['discovering', 'crawling', 'generating_qa', 'generating_scripts', 'awaiting_approval', 'running_tests'];
 const AUTORUN_PHASE_WEIGHTS = { discovering: 10, crawling: 40, generating_qa: 20, generating_scripts: 10, awaiting_approval: 5, running_tests: 15 };
@@ -399,7 +410,7 @@ function _autorunUpdateStepper(data) {
     if (metaEl) metaEl.textContent = metas[sid] || '';
   });
 
-  _autorunSetText('autorun-phase-label', AUTORUN_PHASE_LABELS[status] || '');
+  _autorunSetText('autorun-phase-label', _autorunPhaseLabelWithProgress(status, data));
   const pct = _autorunProgressPercent(status);
   const fill = document.getElementById('autorun-progress-fill');
   const bar = document.getElementById('autorun-progressbar');
@@ -440,10 +451,19 @@ function _autorunLogLevelOf(line) {
   return 'info';
 }
 
+// クロールCLIの生出力（`[cli] ...`）は開発者向け。既定では非表示にし、
+// 「開発者向け詳細を表示」チェックで見られるようにする（生ログがそのまま
+// 表示され読みにくい、というドッグフーディング指摘への対応）。
+function _autorunIsRawCliLine(line) {
+  return /\[cli\]/.test(line);
+}
+
 function _autorunRenderLog() {
   const logEl = document.getElementById('autorun-log');
   if (!logEl) return;
+  const showRaw = document.getElementById('autorun-log-show-raw')?.checked;
   const lines = _autoRunLogLines.filter(line => {
+    if (!showRaw && _autorunIsRawCliLine(line)) return false;
     const lv = _autorunLogLevelOf(line);
     if (_autoRunLogLevel === 'error') return lv === 'error';
     if (_autoRunLogLevel === 'warn') return lv !== 'info';
@@ -470,6 +490,7 @@ document.querySelectorAll('.autorun-log-filter-btn').forEach(btn => {
     _autorunRenderLog();
   });
 });
+document.getElementById('autorun-log-show-raw')?.addEventListener('change', () => _autorunRenderLog());
 document.getElementById('autorun-log-copy')?.addEventListener('click', () => {
   navigator.clipboard.writeText(_autoRunLogLines.join('\n')).then(() => {
     const btn = document.getElementById('autorun-log-copy');
@@ -490,18 +511,22 @@ function _autorunRenderComplete(data) {
 
   const r = data.test_results || {};
   const unavailable = !!r.unavailable;
-  const ok = !unavailable && (r.failed || 0) === 0;
+  const noTests = !unavailable && (r.total || 0) === 0;
+  // evidence-only: 0件は「成功」ではない。実行対象が無かった旨を中立に伝える
+  // （0/0/0が無言で「全テスト成功」と表示された致命的UX破綻の再発防止）。
+  const ok = !unavailable && !noTests && (r.failed || 0) === 0;
 
   const head = document.createElement('div');
   head.className = 'autorun-complete-head';
   const icon = document.createElement('div');
-  icon.className = 'autorun-complete-icon ' + (unavailable ? 'is-warn' : ok ? 'is-ok' : 'is-fail');
-  icon.textContent = unavailable ? '⚠' : ok ? '✓' : '✕';
+  icon.className = 'autorun-complete-icon ' + (unavailable ? 'is-warn' : noTests ? 'is-warn' : ok ? 'is-ok' : 'is-fail');
+  icon.textContent = unavailable ? '⚠' : noTests ? '⚠' : ok ? '✓' : '✕';
   const titleWrap = document.createElement('div');
   const title = document.createElement('div');
   title.className = 'autorun-complete-title';
   title.textContent = unavailable
     ? 'AutoRun 完了（テストは実行できませんでした）'
+    : noTests ? 'AutoRun 完了 — 実行対象のテストがありませんでした'
     : ok ? 'AutoRun 完了 — 全テスト成功' : 'AutoRun 完了 — 失敗したテストがあります';
   const sub = document.createElement('p');
   sub.className = 'muted-copy';

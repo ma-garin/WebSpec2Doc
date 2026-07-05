@@ -222,6 +222,135 @@ class TestApprovalModalStructure:
         assert True
 
 
+class TestRunningTestsProgressLabel:
+    """テスト実行中の「n/188件目」進捗表示（ドッグフーディング指摘: 188件承認・
+    実行しても進捗が全く見えない、への対応）。"""
+
+    def test_shows_completed_over_total_when_progress_available(self, autorun_page: Page) -> None:
+        autorun_page.evaluate(
+            """() => _autorunRender({
+                status: 'running_tests',
+                job_id: 'test-job-e2e',
+                log: [],
+                outputs: {},
+                test_results: null,
+                test_progress: {completed: 42, total: 188},
+                started_at: '2026-06-03T10:00:00',
+                elapsed_sec: 60,
+                error: null,
+                finished_at: null,
+                input_request: null,
+                run_policy: {},
+            })"""
+        )
+        expect(autorun_page.locator("#autorun-phase-label")).to_have_text(
+            "テスト実行中…（42/188件目）"
+        )
+
+    def test_falls_back_to_default_label_when_progress_unknown(self, autorun_page: Page) -> None:
+        """進捗ファイルがまだ書かれていない間は捏造せず既定ラベルのまま。"""
+        autorun_page.evaluate(
+            """() => _autorunRender({
+                status: 'running_tests',
+                job_id: 'test-job-e2e',
+                log: [],
+                outputs: {},
+                test_results: null,
+                started_at: '2026-06-03T10:00:00',
+                elapsed_sec: 1,
+                error: null,
+                finished_at: null,
+                input_request: null,
+                run_policy: {},
+            })"""
+        )
+        expect(autorun_page.locator("#autorun-phase-label")).to_have_text("テスト実行中…")
+
+
+class TestCaseDetailExpand:
+    """テストケース一覧の行クリックで手順・期待結果の全文を確認できる
+    （ドッグフーディング指摘: テストケースの詳細が見えない、への対応）。"""
+
+    _CANDIDATE = {
+        "id": "PW-001",
+        "title": "ログインフォーム送信",
+        "automation_status": "auto",
+        "trace_id": "P002",
+        "steps": ["page.goto('https://example.com/login')", "page.click('#submit')"],
+        "expected": "ダッシュボード画面に遷移し、ようこそメッセージが表示される。" * 2,
+    }
+
+    def _render(self, page: Page) -> None:
+        page.evaluate(
+            """(candidate) => {
+                document.getElementById('autorun-preview-panel').style.display = 'flex';
+                _autorunRenderPreview({
+                    summary: {total: 1, by_status: {auto: 1}, by_title: {}},
+                    candidates: [candidate],
+                    spec_content: '',
+                });
+            }""",
+            self._CANDIDATE,
+        )
+
+    def test_detail_row_hidden_until_clicked(self, autorun_page: Page) -> None:
+        self._render(autorun_page)
+        detail_row = autorun_page.locator('[data-case-detail="0"]')
+        expect(detail_row).to_be_hidden()
+        autorun_page.locator(".autorun-case-row").first.click()
+        expect(detail_row).to_be_visible()
+        expect(detail_row).to_contain_text("page.click('#submit')")
+        expect(detail_row).to_contain_text("ダッシュボード画面に遷移し")
+
+    def test_detail_row_collapses_on_second_click(self, autorun_page: Page) -> None:
+        self._render(autorun_page)
+        row = autorun_page.locator(".autorun-case-row").first
+        detail_row = autorun_page.locator('[data-case-detail="0"]')
+        row.click()
+        expect(detail_row).to_be_visible()
+        row.click()
+        expect(detail_row).to_be_hidden()
+
+    def test_detail_row_toggles_via_keyboard(self, autorun_page: Page) -> None:
+        self._render(autorun_page)
+        row = autorun_page.locator(".autorun-case-row").first
+        detail_row = autorun_page.locator('[data-case-detail="0"]')
+        row.focus()
+        row.press("Enter")
+        expect(detail_row).to_be_visible()
+
+
+class TestDeveloperLogToggle:
+    """クロールCLIの生ログは既定非表示・「開発者向け詳細を表示」で見える
+    （生ログがそのまま表示され読みにくい、というドッグフーディング指摘への
+    対応）。"""
+
+    def _render_log(self, page: Page) -> None:
+        page.evaluate(
+            """() => {
+                document.getElementById('ar-log-section').style.display = '';
+                _autoRunLogLines = [
+                    '[10:00:00] クロール開始: https://example.com/ (depth=2, max=30)',
+                    '[10:00:01] [cli] Crawling https://example.com/...',
+                    '[10:00:05] クロール完了: example.com',
+                ];
+                _autorunRenderLog();
+            }"""
+        )
+
+    def test_raw_cli_lines_hidden_by_default(self, autorun_page: Page) -> None:
+        self._render_log(autorun_page)
+        log = autorun_page.locator("#autorun-log")
+        expect(log).to_contain_text("クロール開始")
+        expect(log).not_to_contain_text("Crawling https://example.com/...")
+
+    def test_raw_cli_lines_shown_when_toggled(self, autorun_page: Page) -> None:
+        self._render_log(autorun_page)
+        autorun_page.locator("#autorun-log-show-raw").check()
+        log = autorun_page.locator("#autorun-log")
+        expect(log).to_contain_text("Crawling https://example.com/...")
+
+
 class TestApprovalModalViaRoute:
     """page.route() で API をモックし、実際の JS フロー経由でモーダルを検証する。
 

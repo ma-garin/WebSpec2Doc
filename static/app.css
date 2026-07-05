@@ -480,6 +480,19 @@ html[data-theme="dark"] .uml-canvas.is-fullscreen { background: var(--bg); }
     .qa-check-list li::before { content: "✓"; color: var(--ok); font-weight: 900; flex-shrink: 0; }
     .qa-question-list li::before { content: "?"; color: var(--warning); }
     .qa-trace { font-family: ui-monospace, monospace; font-size: 12px; color: var(--accent); white-space: nowrap; }
+    /* 情報アイコン（用語説明のツールチップ）。列見出しや設定ラベルの隣に置く。 */
+    .info-tip { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; margin-left: 4px; border-radius: 50%; background: var(--surface-subtle); color: var(--text-muted); font-size: 10px; font-weight: 700; line-height: 1; cursor: help; vertical-align: middle; }
+    .info-tip:hover, .info-tip:focus-visible { background: var(--info-bg); color: var(--primary-dark); outline: none; }
+    .info-tip:hover::after, .info-tip:focus-visible::after {
+      content: attr(data-tip); position: absolute; bottom: 130%; left: 50%; transform: translateX(-50%);
+      background: var(--text); color: var(--surface); padding: 6px 10px; border-radius: 6px;
+      font-size: 11px; font-weight: 500; white-space: normal; width: max-content; max-width: 240px;
+      z-index: 60; box-shadow: var(--shadow-pop); line-height: 1.4; text-align: left;
+    }
+    .info-tip:hover::before, .info-tip:focus-visible::before {
+      content: ''; position: absolute; bottom: 118%; left: 50%; transform: translateX(-50%);
+      border: 5px solid transparent; border-top-color: var(--text);
+    }
     .qa-card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
     .qa-mini-card { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-soft); padding: 12px; display: grid; gap: 4px; }
     .qa-mini-card strong { color: var(--text); }
@@ -494,7 +507,6 @@ html[data-theme="dark"] .uml-canvas.is-fullscreen { background: var(--bg); }
     .user-guide-panel { display: grid; gap: 16px; }
     .user-guide-panel .qa-readable-section { margin: 0; }
 
-    .app-footer { display: flex; align-items: center; justify-content: space-between; padding: 14px 30px; border-top: 1px solid var(--border); background: var(--surface); color: var(--text-muted); font-size: 12px; flex-shrink: 0; }
     table.data { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
     table.data th { background: var(--surface-soft); color: var(--text-muted); font-size: 12px; font-weight: 800; text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--border); white-space: nowrap; }
     table.data td { padding: 12px 14px; border-bottom: 1px solid var(--border); font-size: 14px; }

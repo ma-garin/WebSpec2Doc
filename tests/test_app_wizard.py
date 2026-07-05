@@ -168,6 +168,155 @@ def test_discover_to_crawl_flow(tmp_path: Path, monkeypatch) -> None:
     assert popen_calls[0][popen_calls[0].index("--parallelism") + 1] == "2"
 
 
+def test_run_parallelism_is_configurable_within_1_to_4(tmp_path: Path, monkeypatch) -> None:
+    """並列数はUIから指定でき（既定2）、1〜4の範囲にクランプされる
+    （ドッグフーディング要望: 分析時間を短縮したい、への対応）。"""
+    _patch_output_dirs(tmp_path, monkeypatch)
+    _write_report_files(tmp_path)
+    popen_calls = []
+
+    def fake_popen(cmd, *args, **kwargs):
+        popen_calls.append(cmd)
+        return _Popen(cmd, *args, **kwargs)
+
+    monkeypatch.setattr(crawl_mod.subprocess, "Popen", fake_popen)
+
+    _client().post(
+        "/run",
+        data={"urls": "https://example.com/", "format": "md,html", "parallelism": "4"},
+    )
+    cmd = popen_calls[0]
+    assert cmd[cmd.index("--parallelism") + 1] == "4"
+
+    _client().post(
+        "/run",
+        data={"urls": "https://example.com/", "format": "md,html", "parallelism": "99"},
+    )
+    cmd2 = popen_calls[1]
+    assert cmd2[cmd2.index("--parallelism") + 1] == "4"  # 上限4にクランプ
+
+
+def test_discover_stream_emits_run_id_and_registers_cancellable_process(monkeypatch) -> None:
+    """画面分析（discover）フェーズにも中断ボタンから停止できる手段を用意する
+    （ドッグフーディング要望: 途中停止も欲しい、への対応）。
+    ストリームの先頭で run_id を配信し、/api/cancel からそのプロセスを
+    停止できるよう web.process._RUNNING_PROCS に登録する。"""
+    from web.process import _RUNNING_PROCS
+
+    captured_proc = {}
+
+    def fake_popen(cmd, *args, **kwargs):
+        proc = _Popen(cmd, *args, **kwargs)
+        proc.stdout = iter(
+            [json.dumps({"page": {"url": "https://example.com/", "title": "Top"}}) + "\n"]
+        )
+        captured_proc["proc"] = proc
+        return proc
+
+    monkeypatch.setattr(discover_mod.subprocess, "Popen", fake_popen)
+
+    res = _client().post(
+        "/api/discover-stream", data={"url": "https://example.com", "depth": "2", "max_pages": "30"}
+    )
+    body = res.get_data(as_text=True)
+
+    assert '"run_id"' in body.split("\n\n")[0]
+    # ストリーム消費完了後は後始末で _RUNNING_PROCS から取り除かれている
+    assert not _RUNNING_PROCS
+
+
+def test_api_cancel_terminates_registered_discover_process(monkeypatch) -> None:
+    """/api/cancel は crawl.py の run_id と同じ仕組みで discover のプロセスも
+    停止できる（discover.py と crawl.py は web.process._RUNNING_PROCS を共有）。"""
+    from web.process import _RUNNING_PROCS
+
+    class _StillRunningProc:
+        def __init__(self) -> None:
+            self.terminated = False
+
+        def poll(self):
+            return None if not self.terminated else 0
+
+        def terminate(self) -> None:
+            self.terminated = True
+
+        def wait(self, timeout=None) -> int:
+            return 0
+
+        def kill(self) -> None:
+            self.terminated = True
+
+    proc = _StillRunningProc()
+    _RUNNING_PROCS["test-run-id"] = proc
+    try:
+        res = _client().post("/api/cancel", data={"run_id": "test-run-id"})
+        assert res.get_json() == {"ok": True}
+        assert proc.terminated is True
+    finally:
+        _RUNNING_PROCS.pop("test-run-id", None)
+
+
+def test_run_default_mode_uses_urls_flag_no_link_following(tmp_path: Path, monkeypatch) -> None:
+    """crawl_mode 未指定（既定）は、選択した固定URL一覧のみをクロールする
+    --urls を使う（従来どおりリンクを辿らない）。"""
+    _patch_output_dirs(tmp_path, monkeypatch)
+    _write_report_files(tmp_path)
+    popen_calls = []
+
+    def fake_popen(cmd, *args, **kwargs):
+        popen_calls.append(cmd)
+        return _Popen(cmd, *args, **kwargs)
+
+    monkeypatch.setattr(crawl_mod.subprocess, "Popen", fake_popen)
+
+    _client().post(
+        "/run",
+        data={"urls": "https://example.com/,https://example.com/about", "format": "md,html"},
+    )
+
+    cmd = popen_calls[0]
+    assert "--urls" in cmd
+    assert cmd[cmd.index("--urls") + 1] == "https://example.com/,https://example.com/about"
+    assert "--url" not in cmd[: cmd.index("--urls")]
+
+
+def test_run_auto_mode_uses_url_flag_with_depth_and_follows_links(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """クロールモード「自動クロール（リンクを辿る）」が選択された場合、
+    起点URL1件のみを --url + --depth/--max-pages で渡し、リンク追跡させる
+    （ドッグフーディング要望: オートクロールか選択URLのみか選べるようにしたい）。"""
+    _patch_output_dirs(tmp_path, monkeypatch)
+    _write_report_files(tmp_path)
+    popen_calls = []
+
+    def fake_popen(cmd, *args, **kwargs):
+        popen_calls.append(cmd)
+        return _Popen(cmd, *args, **kwargs)
+
+    monkeypatch.setattr(crawl_mod.subprocess, "Popen", fake_popen)
+
+    _client().post(
+        "/run",
+        data={
+            "urls": "https://example.com/",
+            "depth": "3",
+            "max_pages": "50",
+            "format": "md,html",
+            "crawl_mode": "auto",
+        },
+    )
+
+    cmd = popen_calls[0]
+    assert "--url" in cmd
+    assert cmd[cmd.index("--url") + 1] == "https://example.com/"
+    assert "--urls" not in cmd
+    assert "--depth" in cmd
+    assert cmd[cmd.index("--depth") + 1] == "3"
+    assert "--max-pages" in cmd
+    assert cmd[cmd.index("--max-pages") + 1] == "50"
+
+
 def test_discover_no_login_to_result(tmp_path: Path, monkeypatch) -> None:
     _patch_output_dirs(tmp_path, monkeypatch)
     _write_report_files(tmp_path)
@@ -260,6 +409,70 @@ def test_discover_with_login_to_crawl(tmp_path: Path, monkeypatch) -> None:
     assert str(auth_path) in popen_calls[0]
 
 
+def test_run_persists_login_urls_for_recrawl(tmp_path: Path, monkeypatch) -> None:
+    """/run が login_urls / login_landing_url を site.json へ保存し、再クロール
+    （/api/site 経由で recrawl.js が読む値）でも認証必須フラグが復元できることを保証する。
+
+    再発防止対象: 過去、再クロールは常に login_required=false 扱いになり、
+    「認証が必要なページ」バナー直下のログインフォームが消えていた。
+    """
+    monkeypatch.chdir(tmp_path)
+    _patch_output_dirs(tmp_path, monkeypatch)
+    _write_report_files(tmp_path)
+    popen_calls = []
+
+    def fake_popen(cmd, *args, **kwargs):
+        proc = _Popen(cmd, *args, **kwargs)
+        popen_calls.append(cmd)
+        return proc
+
+    monkeypatch.setattr(crawl_mod.subprocess, "Popen", fake_popen)
+
+    urls = "https://example.com/,https://example.com/mypage.html,https://example.com/edit.html"
+    run_res = _client().post(
+        "/run",
+        data={
+            "urls": urls,
+            "format": "md,html",
+            "login_urls": "https://example.com/mypage.html,https://example.com/edit.html",
+            "login_landing_url": "https://example.com/login.html",
+        },
+    )
+    assert "RUN_ID:" in run_res.get_data(as_text=True)
+    assert popen_calls, "クロールサブプロセスが起動していない"
+
+    site_data = _client().get("/api/site?domain=example.com").get_json()["site"]
+    assert site_data is not None
+    assert set(site_data["login_urls"]) == {
+        "https://example.com/mypage.html",
+        "https://example.com/edit.html",
+    }
+    assert site_data["login_landing_url"] == "https://example.com/login.html"
+    # urls に含まれない値は無視される（不正な混入の防止）
+    assert "https://not-in-urls.example/" not in site_data["login_urls"]
+
+
+def test_run_ignores_login_urls_outside_selected_urls(tmp_path: Path, monkeypatch) -> None:
+    """login_urls は選択済み urls の部分集合に絞り込まれる（フォーム改ざん・不整合対策）。"""
+    monkeypatch.chdir(tmp_path)
+    _patch_output_dirs(tmp_path, monkeypatch)
+    _write_report_files(tmp_path)
+    monkeypatch.setattr(crawl_mod.subprocess, "Popen", _Popen)
+
+    run_res = _client().post(
+        "/run",
+        data={
+            "urls": "https://example.com/",
+            "format": "md,html",
+            "login_urls": "https://example.com/,https://evil.example/not-selected",
+        },
+    )
+    run_res.get_data()  # ストリーミングレスポンスを消費し、generate() 内の保存処理を実行させる
+
+    site_data = _client().get("/api/site?domain=example.com").get_json()["site"]
+    assert site_data["login_urls"] == ["https://example.com/"]
+
+
 def test_result_api_returns_expected_structure(tmp_path: Path, monkeypatch) -> None:
     _patch_output_dirs(tmp_path, monkeypatch)
     _write_report_files(tmp_path)
@@ -282,6 +495,7 @@ def test_result_api_playwright_keys_empty_without_qa_process(tmp_path: Path, mon
 
     assert data["files"]["playwright_json"] == ""
     assert data["files"]["playwright_html"] == ""
+    assert data["files"]["playwright_native_html"] == ""
     assert data["files"]["spec_ts"] == ""
     assert data["files"]["qa_process_report"] == ""
     assert data["playwright_run_at"] == ""
@@ -304,18 +518,22 @@ def test_result_api_returns_qa_process_outputs(tmp_path: Path, monkeypatch) -> N
     data = _client().get("/api/result?domain=example.com").get_json()
 
     assert data["files"]["playwright_json"].endswith("playwright_report.json")
-    # Playwright ネイティブレポートが無い場合は自前 HTML にフォールバック
     assert data["files"]["playwright_html"].endswith("playwright_report.html")
     assert data["files"]["spec_ts"].endswith("autorun.spec.ts")
     assert data["files"]["qa_process_report"].endswith("qa_process_report.html")
     assert data["playwright_run_at"].endswith("Z")
+    # Playwright ネイティブレポート（スクショ・トレース付き）が無い間は空文字
+    assert data["files"]["playwright_native_html"] == ""
 
-    # ネイティブレポートがあればそちらを優先する
+    # 自前の日本語サマリ HTML を既定として使い続ける（開発者向けネイティブ
+    # レポートが後から生成されても playwright_html は切り替わらない）。
+    # ネイティブレポートは playwright_native_html で別途参照する。
     native = qa_dir / "playwright-report"
     native.mkdir()
     (native / "index.html").write_text("<html>native</html>", encoding="utf-8")
     data = _client().get("/api/result?domain=example.com").get_json()
-    assert data["files"]["playwright_html"].endswith("playwright-report/index.html")
+    assert data["files"]["playwright_html"].endswith("playwright_report.html")
+    assert data["files"]["playwright_native_html"].endswith("playwright-report/index.html")
 
 
 def test_result_api_rejects_external_symlink_outputs(tmp_path: Path, monkeypatch) -> None:

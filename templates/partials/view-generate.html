@@ -32,8 +32,6 @@
               <div class="input-row" style="gap:8px">
                 <input type="url" id="url-input" class="url-input" placeholder="https://example.com" autocomplete="url" list="url-history-list" style="flex:1" />
                 <datalist id="url-history-list"></datalist>
-                <input type="hidden" id="crawl-depth" value="5" />
-                <input type="hidden" id="max-pages" value="300" />
                 <button type="button" id="discover-btn" class="btn-primary" style="height:40px;padding:0 18px;font-size:13px;white-space:nowrap">画面分析</button>
               </div>
               <div id="url-input-message" class="input-field-message"></div>
@@ -61,6 +59,7 @@
                   <span id="discover-count-label" class="discover-live-count">0画面を発見</span>
                   <span class="discover-live-elapsed-label">経過:</span>
                   <span id="discover-elapsed" class="discover-live-elapsed"></span>
+                  <button type="button" id="discover-cancel-btn" class="btn-outline-sm btn-danger-outline" style="margin-left:auto">中断</button>
                 </div>
                 <div id="discover-live-feed" class="discover-live-feed"></div>
               </div>
@@ -95,6 +94,40 @@
                     <button type="button" id="p2-back-btn" class="btn-outline-sm">← 解析に戻る</button>
                   </div>
 
+                  <!-- クロール方法（自動クロール／選択したURLのみ） -->
+                  <div class="field" id="crawl-mode-field" style="margin-bottom:14px">
+                    <label class="form-label" style="margin-bottom:6px">クロール方法</label>
+                    <div style="display:flex;gap:16px;flex-wrap:wrap">
+                      <label class="checkbox-chip">
+                        <input type="radio" name="crawl-target-mode" id="crawl-mode-selected" value="selected" checked>
+                        選択したURLのみ
+                      </label>
+                      <label class="checkbox-chip">
+                        <input type="radio" name="crawl-target-mode" id="crawl-mode-auto" value="auto">
+                        自動クロール（リンクを辿る）
+                      </label>
+                    </div>
+                    <div id="crawl-mode-auto-fields" style="display:none;margin-top:10px;gap:16px;flex-wrap:wrap" class="control-grid-2">
+                      <div class="control-field">
+                        <label for="crawl-depth">深さ</label>
+                        <input type="number" id="crawl-depth" class="url-input input-compact" value="2" min="1" max="5" />
+                      </div>
+                      <div class="control-field">
+                        <label for="max-pages">最大ページ</label>
+                        <input type="number" id="max-pages" class="url-input input-compact" value="30" min="1" max="300" />
+                      </div>
+                    </div>
+                    <div class="control-field" style="margin-top:10px;max-width:180px">
+                      <label for="crawl-parallelism">並列数<span class="info-tip" tabindex="0" role="img" aria-label="同時にアクセスする画面数。増やすと解析時間は短くなりますが、対象サイトへの負荷が増えます。" data-tip="同時にアクセスする画面数。増やすと解析時間は短くなりますが、対象サイトへの負荷が増えます。">ⓘ</span></label>
+                      <select id="crawl-parallelism" class="url-input select-compact">
+                        <option value="1">1（順次）</option>
+                        <option value="2" selected>2（既定）</option>
+                        <option value="3">3</option>
+                        <option value="4">4（最大）</option>
+                      </select>
+                    </div>
+                  </div>
+
                   <!-- 画面リスト + ログイン入力（ログイン必要時はリスト直下に表示） -->
                   <div id="discovered-url-panel" class="discovered-url-panel" style="display:none;margin-bottom:14px">
                     <div class="section-head">
@@ -110,6 +143,7 @@
                   <div id="target-preview" class="target-preview">
                     <strong>チェック対象 0件</strong>
                     <ol id="target-preview-list"></ol>
+                    <p id="target-preview-eta" class="input-field-message" style="margin-top:6px"></p>
                   </div>
 
                   <!-- 参考文書（任意） -->

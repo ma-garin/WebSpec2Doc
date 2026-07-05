@@ -913,12 +913,22 @@ def _save_screenshot(page: Page, output_dir: Path | None, page_id: str) -> str |
         return None
     screenshots_dir = output_dir / SCREENSHOTS_DIR_NAME
     screenshots_dir.mkdir(parents=True, exist_ok=True)
+    # 表示用（レポート本文・画面詳細の evidence）はビューポートのみ（現状維持）。
     screenshot_path = screenshots_dir / f"{page_id}.png"
     try:
         page.screenshot(path=str(screenshot_path), full_page=False)
     except PlaywrightError as exc:
         logger.warning("スクリーンショット保存に失敗しました: %s (%s)", screenshot_path, exc)
         return None
+    # ギャラリーの拡大表示で画面が見切れる不具合の修正: 全体スクリーンショットを
+    # 別ファイルで追加保存する（失敗してもビューポート版は既に保存済みなので致命的ではない）。
+    full_screenshot_path = screenshots_dir / f"{page_id}_full.png"
+    try:
+        page.screenshot(path=str(full_screenshot_path), full_page=True)
+    except PlaywrightError as exc:
+        logger.warning(
+            "全体スクリーンショット保存に失敗しました: %s (%s)", full_screenshot_path, exc
+        )
     return str(screenshot_path)
 
 

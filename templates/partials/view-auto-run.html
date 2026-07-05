@@ -23,11 +23,11 @@
                 </div>
                 <div class="control-grid-2">
                   <div class="control-field">
-                    <label for="autorun-depth">深さ</label>
+                    <label for="autorun-depth">深さ<span class="info-tip" tabindex="0" role="img" aria-label="トップページからリンクを何回辿るか。1ならトップ直下のリンク先まで、2ならその先のリンクまで対象になります。" data-tip="トップページからリンクを何回辿るか。1ならトップ直下のリンク先まで、2ならその先のリンクまで対象になります。">ⓘ</span></label>
                     <input type="number" id="autorun-depth" class="url-input input-compact" value="2" min="1" max="5" />
                   </div>
                   <div class="control-field">
-                    <label for="autorun-max-pages">最大ページ</label>
+                    <label for="autorun-max-pages">最大ページ<span class="info-tip" tabindex="0" role="img" aria-label="解析・テスト対象にする画面数の上限。この件数に達したらそれ以上のクロールを打ち切ります。" data-tip="解析・テスト対象にする画面数の上限。この件数に達したらそれ以上のクロールを打ち切ります。">ⓘ</span></label>
                     <input type="number" id="autorun-max-pages" class="url-input input-compact" value="30" min="1" max="300" />
                   </div>
                 </div>
@@ -132,6 +132,7 @@
                         <button type="button" class="autorun-log-filter-btn" data-log-level="error">エラーのみ</button>
                       </div>
                       <label class="autorun-log-autoscroll"><input type="checkbox" id="autorun-log-autoscroll" checked> 自動スクロール</label>
+                      <label class="autorun-log-autoscroll"><input type="checkbox" id="autorun-log-show-raw"> 開発者向け詳細を表示</label>
                       <button type="button" id="autorun-log-copy" class="btn-outline-sm autorun-log-copy">コピー</button>
                     </div>
                   </div>
@@ -180,7 +181,7 @@
                       </section>
 
                       <section class="arm-section">
-                        <label for="arm-timeout" class="control-label">1テストあたりの制限時間</label>
+                        <label for="arm-timeout" class="control-label">1テストあたりの制限時間<span class="info-tip" tabindex="0" role="img" aria-label="1件のテストがこの時間内に終わらない場合、そのテストは失敗として打ち切られます。テスト件数が多い場合は短めにすると全体の完了が早まります。" data-tip="1件のテストがこの時間内に終わらない場合、そのテストは失敗として打ち切られます。テスト件数が多い場合は短めにすると全体の完了が早まります。">ⓘ</span></label>
                         <select id="arm-timeout" class="url-input select-compact">
                           <option value="10">10秒</option>
                           <option value="30" selected>30秒（推奨）</option>

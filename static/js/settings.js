@@ -1,8 +1,36 @@
+// ---- 設定タブ切替（APIキー/モデル/クロール既定値/通知）----
+// 従来 .set-tab ボタンに click ハンドラが未実装で「タブ操作ができない」不具合があったため追加。
+function selectSettingsTab(tab) {
+  const tabs = [...document.querySelectorAll('.set-tabs .set-tab')];
+  if (!tabs.some(t => t.dataset.tab === tab)) return;
+  tabs.forEach(t => {
+    const on = t.dataset.tab === tab;
+    t.classList.toggle('is-active', on);
+    t.setAttribute('aria-selected', on ? 'true' : 'false');
+    t.tabIndex = on ? 0 : -1;
+  });
+  document.querySelectorAll('.set-panel').forEach(p => {
+    p.classList.toggle('is-active', p.id === 'set-panel-' + tab);
+  });
+}
+document.querySelectorAll('.set-tabs .set-tab').forEach(t => {
+  t.addEventListener('click', () => selectSettingsTab(t.dataset.tab));
+  t.addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    e.preventDefault();
+    const tabs = [...document.querySelectorAll('.set-tabs .set-tab')];
+    const i = tabs.indexOf(t);
+    const next = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+    if (next) { selectSettingsTab(next.dataset.tab); next.focus(); }
+  });
+});
+
 // ---- 設定（localStorage）----
 function getSettings() { try { return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}; } catch { return {}; } }
 function applySettings() {
   const s = getSettings();
-  // crawl-depth / max-pages は MAX 固定（hidden input）のため上書きしない
+  // crawl-depth / max-pages はウィザードの自動クロールモードでのみ使う値のため
+  // ここでは上書きしない（既定値のまま）。
   if (s.auth) document.getElementById('auth-path').value = s.auth;
 }
 function loadSettingsForm() {

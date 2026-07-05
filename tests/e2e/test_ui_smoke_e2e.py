@@ -90,6 +90,14 @@ class TestHome:
         page.locator("#nav-new-analysis-btn").click()
         expect(page.locator("#view-generate")).to_be_visible()
 
+    def test_run_history_nav_opens_autorun_recent_runs(self, page: Page) -> None:
+        """ナビの「実行履歴」からAutoRunの「最近の実行」一覧に直接遷移できる。
+        AutoRunの実行結果を確認するにはAutoRun画面を開くしかなく履歴に気づき
+        にくい、というドッグフーディング指摘への対応。"""
+        page.goto(BASE_URL)
+        page.locator("#nav-run-history-btn").click()
+        expect(page.locator("#view-auto-run")).to_be_visible()
+
     def test_autorun_is_visible_and_opens(self, page: Page) -> None:
         page.goto(BASE_URL)
         autorun = page.locator('.app-nav-item[data-view="auto-run"]')

@@ -25,6 +25,12 @@ const VIEW_HEADER = {
 };
 const escHtml = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
+// ---- 情報アイコン（用語説明のツールチップ。列見出し・設定項目ラベル等で共通利用） ----
+function infoTip(text) {
+  const t = escHtml(text || '');
+  return `<span class="info-tip" tabindex="0" role="img" aria-label="${t}" data-tip="${t}">ⓘ</span>`;
+}
+
 // ---- 画面別URL（ブックマーク・共有・リロード対応）----
 const VIEW_PATHS = {
   dashboard: '/',
@@ -95,8 +101,21 @@ function switchView(name, opts = {}) {
   // A: 2ペインツール画面では全高モードに切り替え
   const appContentEl = document.getElementById('app-content');
   if (appContentEl) appContentEl.classList.toggle('is-qa-tool', ['qa-quality', 'auto-run', 'viewpoints'].includes(name));
-  // レポートモード解除（generate以外に遷移した時）
-  if (name !== 'generate' && appContentEl) appContentEl.classList.remove('is-reporting');
+  // is-executing / is-reporting は「サイトを追加」画面（generate）専用の全高モードフラグ。
+  // 付けっぱなしで他画面に移動すると #app-content が overflow:hidden のまま固定され、
+  // ユーザーガイド等の画面がスクロール不能になる不具合が実際に発生していた（再発防止のため
+  // switchView 側で必ず後始末する。個別のボタンハンドラの消し忘れに依存しない）。
+  if (appContentEl) {
+    if (name !== 'generate') {
+      appContentEl.classList.remove('is-executing', 'is-reporting');
+    } else {
+      // generate へ戻った場合のみ、実行中/レポート表示中の全高モードを復元する
+      const execVisible = executionView && !executionView.classList.contains('hidden');
+      const resultVisible = resultPanel && !resultPanel.classList.contains('hidden');
+      appContentEl.classList.toggle('is-executing', !!execVisible);
+      appContentEl.classList.toggle('is-reporting', !execVisible && !!resultVisible);
+    }
+  }
 }
 // ---- ウィザード ステップ管理 ----
 function showWizardStep(n) {
@@ -132,6 +151,15 @@ function openAddSite() {
 document.getElementById('add-site-btn').addEventListener('click', openAddSite);
 document.getElementById('add-site-btn-2').addEventListener('click', openAddSite);
 document.getElementById('nav-new-analysis-btn').addEventListener('click', openAddSite);
+
+// ---- ナビ「実行履歴」: AutoRun 画面の「最近の実行」一覧へ直接遷移する ----
+// （AutoRunの実行結果を確認するにはAutoRun画面を開くしかなく、履歴の存在に
+// 気づきにくい、というドッグフーディング指摘への対応）
+document.getElementById('nav-run-history-btn')?.addEventListener('click', () => {
+  switchView('auto-run');
+  const area = document.getElementById('autorun-recent-area');
+  if (area) setTimeout(() => area.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+});
 
 // ---- ダッシュボード・ヒーロー（ゴールデンパス入口） ----
 function _heroStartGuided(prefillUrl) {

@@ -21,7 +21,7 @@ from web.services.failure_classifier import (
     classify_failures,
     summarize_classifications,
 )
-from web.services.playwright_executor import run_playwright
+from web.services.playwright_executor import _read_progress_ndjson, run_playwright
 from web.services.qa.helpers import use_viewpoint_snapshot
 from web.services.spec_ts_generator import compute_filter_counts, generate_spec_ts
 from web.services.viewpoint_store import ViewpointStoreError, get_viewpoint_store
@@ -99,7 +99,23 @@ def api_autorun_status() -> dict | tuple[dict, int]:
         job = _JOBS.get(request.args.get("job_id", ""))
     if job is None:
         return {"error": "not found"}, 404
-    return job.to_dict()
+    data = job.to_dict()
+    if job.status == "running_tests":
+        data["test_progress"] = _current_test_progress(job)
+    return data
+
+
+def _current_test_progress(job: AutoRunJob) -> dict[str, int | None]:
+    """実行中（running_tests）の進捗を進捗NDJSONから読む（読み取り専用・非破壊）。
+
+    「n/188件目」のような実行中進捗表示のためのもの。テストの完走・失敗時の
+    結果集計（test_results）は run_playwright() の戻り値がそのまま正なので、
+    ここでは一切書き換えない。ファイルが無い・空の間は 0/不明 として返す
+    （捏造しない）。
+    """
+    progress_path = OUTPUT_DIR / job.domain / "qa_process" / "playwright_progress.ndjson"
+    expected_total, tests = _read_progress_ndjson(progress_path)
+    return {"completed": len(tests), "total": expected_total}
 
 
 @bp.post("/api/autorun/cancel")
@@ -427,7 +443,9 @@ def _phase_crawl(job: AutoRunJob, depth: int, max_pages: int) -> None:
                 return
             line = line.rstrip()
             if line:
-                job.add_log(line)
+                # クロールCLIの生出力は開発者向け（UIでは既定非表示、トグルで表示）。
+                # 生ログがそのまま表示され読みにくい、というドッグフーディング指摘への対応。
+                job.add_log(f"[cli] {line}")
         proc.wait(timeout=600)
         job._proc = None
     except subprocess.TimeoutExpired:
@@ -599,16 +617,32 @@ def _execute_tests(job: AutoRunJob) -> None:
     elif fallback_html.is_file():
         job.outputs["playwright_report_html"] = str(fallback_html.resolve())
 
-    job.status = "complete"
-    job.step_label = "完了"
-    job.finished_at = _now_iso()
     passed = result.get("passed", 0)
     failed = result.get("failed", 0)
     total = result.get("total", 0)
+    result_error = result.get("error", "")
+    interrupted = bool(result.get("interrupted"))
+
+    if result_error or interrupted:
+        # evidence-only: 実行が異常終了（解析失敗・タイムアウト中断・未セットアップ等）した
+        # 場合に「完了」を偽装しない。0/0/0 を無言で成功扱いにしていた過去の実装が、
+        # AutoRun で188件承認・実行したのに結果が全件0で表示される致命的UX破綻の原因だった。
+        if interrupted and total > 0:
+            job.add_log(
+                f"テスト実行が中断されました（部分結果を回収）: "
+                f"PASS={passed} FAIL={failed} TOTAL={total}"
+            )
+        else:
+            job.add_log(f"テスト実行が異常終了しました: {result_error or '中断されました'}")
+        _mark_job_failed(job, result_error or "テスト実行が中断されました（部分結果なし）")
+        _update_failure_classification(job, result)
+        return
+
+    job.status = "complete"
+    job.step_label = "完了"
+    job.finished_at = _now_iso()
     job.add_log(f"テスト実行完了: PASS={passed} FAIL={failed} TOTAL={total}")
     _update_failure_classification(job, result)
-    if result.get("unavailable"):
-        job.add_log("※ @playwright/test 未セットアップのため実行をスキップしました。")
 
 
 # ─────────────────────────── ユーティリティ ───────────────────────────

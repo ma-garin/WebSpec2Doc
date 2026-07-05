@@ -58,22 +58,49 @@ function _autorunRenderPreview(data) {
       <div class="fmt-badges autorun-preview-badges">${titleBadges}</div>`;
   }
 
-  // テストケーステーブル
+  // テストケーステーブル（行クリックで手順・期待結果の全文を別行に展開する。
+  // 従来は steps がどこにも表示されず、期待結果も60文字で打ち切られていた。）
   if (tableWrap) {
     if (candidates.length) {
-      const rows = candidates.map(c => {
+      const rows = candidates.map((c, i) => {
         const statusCls = c.automation_status === 'auto' ? 'status-low' : 'status-muted';
-        return `<tr>
+        const steps = Array.isArray(c.steps) ? c.steps : [];
+        const stepsHtml = steps.length
+          ? '<ol class="autorun-case-steps">' + steps.map(s => `<li>${escHtml(String(s))}</li>`).join('') + '</ol>'
+          : '<p class="muted-copy">手順の記録なし</p>';
+        return `<tr class="autorun-case-row" data-case-idx="${i}" tabindex="0" role="button" aria-expanded="false">
           <td class="cell-id">${escHtml(c.id || '')}</td>
-          <td class="cell-title">${escHtml(c.title || '')}</td>
+          <td class="cell-title">${escHtml(c.title || '')} <span class="autorun-case-detail-toggle">詳細 ▶</span></td>
           <td class="cell-status ${statusCls}">${escHtml(c.automation_status || '')}</td>
           <td class="cell-id">${escHtml(c.trace_id || '')}</td>
           <td class="cell-muted">${escHtml((c.expected || '').substring(0, 60))}</td>
+        </tr>
+        <tr class="autorun-case-detail-row" data-case-detail="${i}" hidden>
+          <td colspan="5">
+            <div class="autorun-case-detail-body">
+              <div><strong>手順</strong>${stepsHtml}</div>
+              <div><strong>期待結果</strong><p>${escHtml(c.expected || '(記録なし)')}</p></div>
+            </div>
+          </td>
         </tr>`;
       }).join('');
       tableWrap.innerHTML = `<table class="data autorun-preview-table">
         <thead><tr><th>ID</th><th>タイトル</th><th>自動化</th><th>Trace</th><th>期待結果</th></tr></thead>
         <tbody>${rows}</tbody></table>`;
+      tableWrap.querySelectorAll('.autorun-case-row').forEach(row => {
+        const toggle = () => {
+          const idx = row.dataset.caseIdx;
+          const detailRow = tableWrap.querySelector(`[data-case-detail="${idx}"]`);
+          const toggleLabel = row.querySelector('.autorun-case-detail-toggle');
+          if (!detailRow) return;
+          const nowOpen = detailRow.hasAttribute('hidden');
+          if (nowOpen) detailRow.removeAttribute('hidden'); else detailRow.setAttribute('hidden', '');
+          row.setAttribute('aria-expanded', String(nowOpen));
+          if (toggleLabel) toggleLabel.textContent = nowOpen ? '詳細 ▼' : '詳細 ▶';
+        };
+        row.addEventListener('click', toggle);
+        row.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+      });
     } else {
       tableWrap.innerHTML = '<div class="empty arm-empty">テストケースなし</div>';
     }

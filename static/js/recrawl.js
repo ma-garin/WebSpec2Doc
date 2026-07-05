@@ -3,10 +3,16 @@
 
 async function recrawlSite(domain) {
   let site = null, urls = [], auth = getSettings().auth || '';
+  // 前回クロールで「認証が必要」と判定された画面の URL 集合とログインページ URL。
+  // これを使わず一律 login_required:false で復元すると、再クロールのたびに
+  // 「認証が必要なページ」バナー直下のログインフォームが消える再発バグになる。
+  let loginUrlSet = new Set(), loginLandingUrl = '';
   try { site = (await fetch('/api/site?domain=' + encodeURIComponent(domain)).then(r => r.json())).site; } catch (e) {}
   if (site) {
     urls = site.urls || [];
     auth = site.auth_path || auth;
+    loginUrlSet = new Set(site.login_urls || []);
+    loginLandingUrl = site.login_landing_url || '';
   } else {
     try {
       const data = await fetch('/api/result?domain=' + encodeURIComponent(domain)).then(r => r.json());
@@ -25,17 +31,27 @@ async function recrawlSite(domain) {
 
   document.getElementById('url-input').value = 'https://' + domain + '/';
   if (auth) document.getElementById('auth-path').value = auth;
+  if (loginLandingUrl) document.getElementById('login-url').value = loginLandingUrl;
   document.getElementById('compare').checked = true;
   document.getElementById('p1-summary').style.display = 'none';
 
-  // 前回の画面リストを復元
-  discovered = (Array.isArray(urls) ? urls : []).map(u =>
-    typeof u === 'string'
-      ? { url: u, title: u, login_required: false, login_reasons: [], login_url: '' }
-      : { url: u.url, title: u.title || u.url, login_required: false, login_reasons: [], login_url: '' }
-  );
+  // 前回の画面リストを復元（認証必須フラグも site.json から復元する）
+  discovered = (Array.isArray(urls) ? urls : []).map(u => {
+    const url = typeof u === 'string' ? u : u.url;
+    const title = typeof u === 'string' ? u : (u.title || u.url);
+    const loginRequired = loginUrlSet.has(url);
+    return {
+      url,
+      title,
+      login_required: loginRequired,
+      login_reasons: [],
+      login_url: loginRequired ? loginLandingUrl : '',
+    };
+  });
   renderDiscovered();
-  updateTargetPreview();
+  // クロール方法（自動クロール／選択したURLのみ）も前回設定から復元する。
+  // renderDiscovered() が画面リストパネルの表示状態を上書きするため、その後に呼ぶ。
+  setCrawlTargetMode(site && site.crawl_mode === 'auto' ? 'auto' : 'selected');
   showWizardStep(2);
   showToast(`前回の対象画面（${discovered.length}件）を復元しました。条件を確認して実行してください`, 'info');
 }
@@ -44,7 +60,10 @@ async function openResultsForDomain(domain, tab, sub) {
   switchView('generate');
   genPanel.style.display = 'none';
   executionView.classList.add('hidden');
-  appContent.classList.add('is-executing');
+  // レポート表示は is-reporting を使う（is-executing はクロール実行中専用の状態フラグ）。
+  // 誤って is-executing を付けると、他画面へ移動しても解除されずスクロール不能になる不具合の温床だった。
+  appContent.classList.remove('is-executing');
+  appContent.classList.add('is-reporting');
   resultPanel.classList.remove('hidden');
   uiSkeleton(document.getElementById('rp-overview'), 'table');
   // ディープリンク: URLハッシュにレポート状態を保存（チーム共有用）

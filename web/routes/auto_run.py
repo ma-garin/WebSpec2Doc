@@ -119,17 +119,36 @@ def api_autorun_status() -> dict | tuple[dict, int]:
     return data
 
 
-def _current_test_progress(job: AutoRunJob) -> dict[str, int | None]:
+_LIVE_TESTS_LIMIT = 50  # ポーリング応答の肥大防止（負荷予算: 応答JSON<64KB。D-3でテスト固定）
+
+
+def _current_test_progress(job: AutoRunJob) -> dict[str, object]:
     """実行中（running_tests）の進捗を進捗NDJSONから読む（読み取り専用・非破壊）。
 
-    「n/188件目」のような実行中進捗表示のためのもの。テストの完走・失敗時の
+    「n/188件目」のような実行中進捗表示に加え、per-test の実況（title/status/
+    error）も返す（R3-01: リアルタイムOK/NG表示）。テストの完走・失敗時の
     結果集計（test_results）は run_playwright() の戻り値がそのまま正なので、
     ここでは一切書き換えない。ファイルが無い・空の間は 0/不明 として返す
     （捏造しない）。
     """
     progress_path = OUTPUT_DIR / job.domain / "qa_process" / "playwright_progress.ndjson"
     expected_total, tests = _read_progress_ndjson(progress_path)
-    return {"completed": len(tests), "total": expected_total}
+    recent = tests[-_LIVE_TESTS_LIMIT:]
+    return {
+        "completed": len(tests),
+        "total": expected_total,
+        "passed": sum(1 for t in tests if t.get("status") == "passed"),
+        "failed": sum(1 for t in tests if t.get("status") == "failed"),
+        "tests": [
+            {
+                "title": str(t.get("title", ""))[:200],
+                "status": t.get("status", ""),
+                "duration_ms": t.get("duration_ms"),
+                "error": (str(t.get("error", "")) or "")[:300],
+            }
+            for t in reversed(recent)  # 新しい順
+        ],
+    }
 
 
 @bp.post("/api/autorun/cancel")
@@ -266,8 +285,18 @@ def api_autorun_approve() -> dict | tuple[dict, int]:
         5,
         120,
     )
-    job.run_policy = {"filter_mode": filter_mode, "per_test_timeout_sec": per_test_timeout_sec}
-    job.add_log(f"実行方針: {filter_mode} / 1テストあたり {per_test_timeout_sec}秒")
+    device = (request.form.get("device") or body.get("device", "pc")).strip()
+    if device not in ("pc", "mobile"):
+        device = "pc"
+    job.run_policy = {
+        "filter_mode": filter_mode,
+        "per_test_timeout_sec": per_test_timeout_sec,
+        "device": device,
+    }
+    job.add_log(
+        f"実行方針: {filter_mode} / 1テストあたり {per_test_timeout_sec}秒 / "
+        f"デバイス: {'モバイル' if device == 'mobile' else 'PC'}"
+    )
 
     job.approved = True
     threading.Thread(target=_execute_tests, args=(job,), daemon=True).start()
@@ -633,6 +662,9 @@ def _execute_tests(job: AutoRunJob) -> None:
     # ポリシーに基づいてスクリプトを再生成（フィルター適用）
     filter_mode = job.run_policy.get("filter_mode", "all")
     per_test_timeout_sec = int(job.run_policy.get("per_test_timeout_sec", 30))
+    device = job.run_policy.get("device", "pc")
+    if device not in ("pc", "mobile"):
+        device = "pc"
     if filter_mode != "all":
         candidates_path = OUTPUT_DIR / job.domain / "qa_process" / "playwright_candidates.json"
         if candidates_path.is_file():
@@ -648,6 +680,7 @@ def _execute_tests(job: AutoRunJob) -> None:
             report_dir,
             per_test_timeout_sec=per_test_timeout_sec,
             add_log=job.add_log,
+            device=device,
         )
     except Exception as exc:
         _mark_job_failed(job, f"テスト実行エラー: {exc}")
@@ -658,13 +691,15 @@ def _execute_tests(job: AutoRunJob) -> None:
         job.outputs["playwright_report_json"] = str(
             (report_dir / "playwright_report.json").resolve()
         )
-    # Playwright ネイティブ HTML レポート（スクショ・トレース付き）を優先
-    pw_html = report_dir / "playwright-report" / "index.html"
-    fallback_html = report_dir / "playwright_report.html"
-    if pw_html.is_file():
-        job.outputs["playwright_report_html"] = str(pw_html.resolve())
-    elif fallback_html.is_file():
-        job.outputs["playwright_report_html"] = str(fallback_html.resolve())
+    # 既定は自前の日本語サマリレポート（非エンジニアにも読める・ライト基調）。
+    # Playwright ネイティブ HTML レポート（英語・スクショ/トレース付き）は
+    # 開発者向けの副導線として playwright_native_html に別キーで残す（R3-03/04/05）。
+    ja_report = report_dir / "playwright_report.html"
+    native_report = report_dir / "playwright-report" / "index.html"
+    if ja_report.is_file():
+        job.outputs["playwright_report_html"] = str(ja_report.resolve())
+    if native_report.is_file():
+        job.outputs["playwright_native_html"] = str(native_report.resolve())
 
     passed = result.get("passed", 0)
     failed = result.get("failed", 0)

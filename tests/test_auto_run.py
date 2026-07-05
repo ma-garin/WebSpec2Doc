@@ -343,6 +343,58 @@ class TestExecuteTests:
         # (ディレクトリ構造によっては登録されない場合もあるが，is_file チェックがあれば登録される)
         assert job.status == "complete"
 
+    def test_report_outputs_prefers_ja_report(self, tmp_path: Path) -> None:
+        """R3-03/04/05: 主導線 playwright_report_html は自前の日本語サマリを指し、
+        Playwright ネイティブ（英語）は playwright_native_html に分離される。"""
+        spec_path = tmp_path / "autorun.spec.ts"
+        spec_path.write_text("", encoding="utf-8")
+        job = _make_job(domain="example.com")
+        job.outputs = {"spec_ts": str(spec_path)}
+        job.run_policy = {"filter_mode": "all", "per_test_timeout_sec": 30}
+
+        qa_dir = tmp_path / "example.com" / "qa_process"
+        qa_dir.mkdir(parents=True)
+        ja_html = qa_dir / "playwright_report.html"
+        ja_html.write_text("<html lang='ja'>成功</html>", encoding="utf-8")
+        native_html = qa_dir / "playwright-report" / "index.html"
+        native_html.parent.mkdir(parents=True)
+        native_html.write_text("<html>native</html>", encoding="utf-8")
+
+        mock_result = {"ok": True, "passed": 1, "failed": 0, "skipped": 0, "total": 1, "tests": []}
+        with (
+            patch("web.routes.auto_run.run_playwright", return_value=mock_result),
+            patch("web.routes.auto_run.OUTPUT_DIR", tmp_path),
+        ):
+            _execute_tests(job)
+
+        assert job.outputs["playwright_report_html"] == str(ja_html.resolve())
+        assert job.outputs["playwright_native_html"] == str(native_html.resolve())
+
+    def test_report_outputs_native_only_does_not_become_primary(self, tmp_path: Path) -> None:
+        """自前の日本語レポートが無くネイティブのみ存在する場合、主キーには
+        昇格させない（開発者向けの副導線のみ提供する）。"""
+        spec_path = tmp_path / "autorun.spec.ts"
+        spec_path.write_text("", encoding="utf-8")
+        job = _make_job(domain="example.com")
+        job.outputs = {"spec_ts": str(spec_path)}
+        job.run_policy = {"filter_mode": "all", "per_test_timeout_sec": 30}
+
+        qa_dir = tmp_path / "example.com" / "qa_process"
+        qa_dir.mkdir(parents=True)
+        native_html = qa_dir / "playwright-report" / "index.html"
+        native_html.parent.mkdir(parents=True)
+        native_html.write_text("<html>native</html>", encoding="utf-8")
+
+        mock_result = {"ok": True, "passed": 1, "failed": 0, "skipped": 0, "total": 1, "tests": []}
+        with (
+            patch("web.routes.auto_run.run_playwright", return_value=mock_result),
+            patch("web.routes.auto_run.OUTPUT_DIR", tmp_path),
+        ):
+            _execute_tests(job)
+
+        assert "playwright_report_html" not in job.outputs
+        assert job.outputs["playwright_native_html"] == str(native_html.resolve())
+
 
 # ─────────────────────── _current_test_progress ───────────────────────
 #
@@ -356,7 +408,11 @@ class TestCurrentTestProgress:
         job = _make_job(domain="example.com")
         with patch("web.routes.auto_run.OUTPUT_DIR", tmp_path):
             progress = _current_test_progress(job)
-        assert progress == {"completed": 0, "total": None}
+        assert progress["completed"] == 0
+        assert progress["total"] is None
+        assert progress["passed"] == 0
+        assert progress["failed"] == 0
+        assert progress["tests"] == []
 
     def test_reads_partial_progress_from_ndjson(self, tmp_path: Path) -> None:
         job = _make_job(domain="example.com")
@@ -374,7 +430,139 @@ class TestCurrentTestProgress:
         with patch("web.routes.auto_run.OUTPUT_DIR", tmp_path):
             progress = _current_test_progress(job)
 
-        assert progress == {"completed": 3, "total": 188}
+        assert progress["completed"] == 3
+        assert progress["total"] == 188
+        assert progress["passed"] == 2
+        assert progress["failed"] == 1
+
+    def test_current_test_progress_includes_tests(self, tmp_path: Path) -> None:
+        """R3-01: リアルタイムOK/NG表示のための per-test 実況（title/status/error）。
+        新しい順（reversed）で返り、passed/failed が正しく集計されること。"""
+        job = _make_job(domain="example.com")
+        qa_dir = tmp_path / "example.com" / "qa_process"
+        qa_dir.mkdir(parents=True)
+        ndjson_path = qa_dir / "playwright_progress.ndjson"
+        lines = [
+            json.dumps({"event": "begin", "total": 3}),
+            json.dumps({"event": "test", "title": "t1", "status": "passed", "duration": 100}),
+            json.dumps({"event": "test", "title": "t2", "status": "failed", "error": "boom"}),
+            json.dumps({"event": "test", "title": "t3", "status": "passed", "duration": 50}),
+        ]
+        ndjson_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+        with patch("web.routes.auto_run.OUTPUT_DIR", tmp_path):
+            progress = _current_test_progress(job)
+
+        assert len(progress["tests"]) == 3
+        assert progress["passed"] == 2
+        assert progress["failed"] == 1
+        # 新しい順（最後に実行された t3 が先頭）
+        assert progress["tests"][0]["title"] == "t3"
+        assert progress["tests"][1]["title"] == "t2"
+        assert progress["tests"][1]["status"] == "failed"
+        assert progress["tests"][1]["error"] == "boom"
+        assert progress["tests"][2]["title"] == "t1"
+
+    def test_current_test_progress_caps_at_50(self, tmp_path: Path) -> None:
+        """応答肥大防止（負荷予算・D-3でテスト固定）: 実況は直近50件までに丸める。"""
+        job = _make_job(domain="example.com")
+        qa_dir = tmp_path / "example.com" / "qa_process"
+        qa_dir.mkdir(parents=True)
+        ndjson_path = qa_dir / "playwright_progress.ndjson"
+        lines = [json.dumps({"event": "begin", "total": 60})]
+        for i in range(60):
+            lines.append(json.dumps({"event": "test", "title": f"t{i}", "status": "passed"}))
+        ndjson_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+        with patch("web.routes.auto_run.OUTPUT_DIR", tmp_path):
+            progress = _current_test_progress(job)
+
+        assert progress["completed"] == 60
+        assert len(progress["tests"]) == 50
+        # 新しい順なので先頭は最後に実行された t59
+        assert progress["tests"][0]["title"] == "t59"
+
+    def test_title_and_error_are_truncated(self, tmp_path: Path) -> None:
+        """負荷・ログ漏えい対策（D-1と連動）: title は200字・error は300字で切る。"""
+        job = _make_job(domain="example.com")
+        qa_dir = tmp_path / "example.com" / "qa_process"
+        qa_dir.mkdir(parents=True)
+        ndjson_path = qa_dir / "playwright_progress.ndjson"
+        long_title = "T" * 500
+        long_error = "E" * 500
+        lines = [
+            json.dumps({"event": "begin", "total": 1}),
+            json.dumps(
+                {"event": "test", "title": long_title, "status": "failed", "error": long_error}
+            ),
+        ]
+        ndjson_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+        with patch("web.routes.auto_run.OUTPUT_DIR", tmp_path):
+            progress = _current_test_progress(job)
+
+        assert len(progress["tests"][0]["title"]) == 200
+        assert len(progress["tests"][0]["error"]) == 300
+
+
+# ─────────────────────── POST /api/autorun/approve（R3-02: device） ───────────────────────
+
+
+class TestApproveRoute:
+    def _client(self):
+        import sys
+
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+        import app as appmod
+
+        return appmod.app.test_client()
+
+    def test_approve_rejects_unknown_device_falls_back_pc(self) -> None:
+        job = _make_job(status="awaiting_approval")
+        with (
+            patch("web.routes.auto_run._JOBS", {job.job_id: job}),
+            patch("web.routes.auto_run.threading.Thread") as mock_thread,
+        ):
+            res = self._client().post(
+                "/api/autorun/approve",
+                data={"job_id": job.job_id, "device": "__proto__"},
+            )
+        assert res.status_code == 200
+        assert job.run_policy["device"] == "pc"
+        # _execute_tests をバックグラウンドスレッドで起動していること
+        # （アプリ起動時のスケジューラスレッド等、他のThread呼び出しと混在しうるため
+        # target で絞り込む）
+        assert any(
+            call.kwargs.get("target") is not None
+            and call.kwargs["target"].__name__ == "_execute_tests"
+            for call in mock_thread.call_args_list
+        )
+
+    def test_approve_accepts_mobile_device(self) -> None:
+        job = _make_job(status="awaiting_approval")
+        with (
+            patch("web.routes.auto_run._JOBS", {job.job_id: job}),
+            patch("web.routes.auto_run.threading.Thread"),
+        ):
+            res = self._client().post(
+                "/api/autorun/approve",
+                data={"job_id": job.job_id, "device": "mobile"},
+            )
+        assert res.status_code == 200
+        assert job.run_policy["device"] == "mobile"
+
+    def test_approve_defaults_to_pc_when_omitted(self) -> None:
+        job = _make_job(status="awaiting_approval")
+        with (
+            patch("web.routes.auto_run._JOBS", {job.job_id: job}),
+            patch("web.routes.auto_run.threading.Thread"),
+        ):
+            res = self._client().post(
+                "/api/autorun/approve",
+                data={"job_id": job.job_id},
+            )
+        assert res.status_code == 200
+        assert job.run_policy["device"] == "pc"
 
 
 # ─────────────────────── _phase_generate_scripts ───────────────────────

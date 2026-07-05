@@ -77,6 +77,7 @@ def run_playwright(
     per_test_timeout_sec: int = 30,
     timeout_sec: int | None = None,
     add_log: Callable[[str], None] | None = None,
+    device: str = "pc",
 ) -> dict[str, Any]:
     """
     ローカル @playwright/test CLI でスペックを実行し、結果を返す。
@@ -87,7 +88,11 @@ def run_playwright(
         per_test_timeout_sec: 1テストあたりの制限時間（Playwright config の timeout）
         timeout_sec: subprocess 全体の最大待機時間。None なら
             spec 内のテスト件数から自動算出する（既定の挙動）。
+        device: "pc"（既定）または "mobile"（iPhone 13相当のビューポート/UA）。
+            ホワイトリスト外の値は "pc" として扱う。
     """
+    if device not in ("pc", "mobile"):
+        device = "pc"
     output_dir.mkdir(parents=True, exist_ok=True)
     json_report_path = output_dir / "playwright_report.json"
     fallback_html_path = output_dir / "playwright_report.html"
@@ -130,6 +135,7 @@ def run_playwright(
         per_test_timeout_ms=per_test_timeout_sec * 1000,
         json_output_path=raw_json_path,
         progress_path=progress_path,
+        device=device,
     )
 
     resolved_timeout_sec = _resolve_timeout_sec(spec_path, per_test_timeout_sec, timeout_sec)
@@ -253,8 +259,15 @@ def _write_pw_config(
     per_test_timeout_ms: int = 30_000,
     json_output_path: Path | None = None,
     progress_path: Path | None = None,
+    device: str = "pc",
 ) -> Path:
-    """JS 形式の playwright config を生成する（TypeScript import 不要）。"""
+    """JS 形式の playwright config を生成する（TypeScript import 不要）。
+
+    device="mobile" 時のみ use ブロックに iPhone 13 相当のビューポート/UA を
+    追記する（R3-02: PC/モバイル選択）。ホワイトリスト外の値は "pc" として扱う。
+    """
+    if device not in ("pc", "mobile"):
+        device = "pc"
     config_path = spec_path.parent / _PW_CONFIG_NAME
     reporter_path = spec_path.parent / _PW_PROGRESS_REPORTER_NAME
     spec_dir_abs = str(spec_path.parent.resolve())
@@ -286,6 +299,19 @@ def _write_pw_config(
             + "],"
         )
 
+    mobile_use = (
+        (
+            "    viewport: { width: 390, height: 844 },\n"
+            "    isMobile: true,\n"
+            "    hasTouch: true,\n"
+            "    deviceScaleFactor: 3,\n"
+            "    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) "
+            "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',\n"
+        )
+        if device == "mobile"
+        else ""
+    )
+
     config_js = (
         "module.exports = {\n"
         f"  testDir: {json.dumps(spec_dir_abs)},\n"
@@ -298,6 +324,7 @@ def _write_pw_config(
         "    trace: 'retain-on-failure',\n"
         f"    actionTimeout: {action_timeout_ms},\n"
         f"    navigationTimeout: {nav_timeout_ms},\n"
+        f"{mobile_use}"
         "  },\n"
         "  reporter: [\n" + "\n".join(reporters) + "\n"
         "  ],\n"
@@ -325,7 +352,7 @@ def _pw_test_available() -> bool:
         installed_ver = _installed_pw_test_version(_PW_ENV_DIR)
         if target_ver and installed_ver and installed_ver != target_ver:
             return False
-        if not _browsers_present(_configured_browsers_path()):
+        if not _browsers_present(_configured_browsers_path(), target_ver):
             return False
         return True
     try:
@@ -399,21 +426,43 @@ def _configured_browsers_path() -> Path:
     return configure_playwright_browsers_path()
 
 
-def _browsers_present(browsers_path: Path) -> bool:
-    """chromium ブラウザ本体が導入済みかを粗く確認する（厳密なバージョン一致は問わない）。
+def _required_browser_globs(pw_test_version: str) -> tuple[str, ...]:
+    """@playwright/test の版が実行時に要求するブラウザディレクトリの glob を返す。
 
-    完全に空（新規チェックアウト・ボリューム未マウント等）の場合のみ検出できれば
-    十分（自動修復のトリガー用）。npm 側と Python 側のバージョンを揃えていれば
-    ビルド不一致は起きないため、ここでは「何も入っていない」ケースだけを見る。
+    1.49 以降は headless 実行の既定が chromium_headless_shell-<build> の別バイナリに
+    変わったため、chromium-* だけでは 'Executable doesn't exist' で全滅する
+    （R3-08: chromium-1117 のみ導入済みで chromium_headless_shell-1217 が無い環境で再発）。
+    """
+    try:
+        major, minor = (int(x) for x in pw_test_version.split(".")[:2])
+    except (ValueError, AttributeError):
+        return ("chromium-*", "chromium_headless_shell-*")  # 不明時は両方要求（安全側）
+    if (major, minor) >= (1, 49):
+        return ("chromium-*", "chromium_headless_shell-*")
+    return ("chromium-*",)
+
+
+def _browsers_present(browsers_path: Path, pw_test_version: str) -> bool:
+    """必要ブラウザが全て導入済みか（版対応・AND判定）。実行ファイル実在まで確認する。
+
+    ディレクトリだけ残って中身が空のケース（インストール強制終了・ボリューム
+    破損等）も「欠落」として扱う。version 不一致のまま OR 判定していた旧実装は、
+    chromium-* だけ残っていて chromium_headless_shell-* が無い環境を
+    「導入済み」と誤判定し、自動修復をスキップしてテスト全滅を招いていた。
     """
     if not browsers_path.is_dir():
         return False
-    return any(browsers_path.glob("chromium-*")) or any(
-        browsers_path.glob("chromium_headless_shell-*")
-    )
+    for pattern in _required_browser_globs(pw_test_version):
+        dirs = list(browsers_path.glob(pattern))
+        if not dirs:
+            return False
+        # ディレクトリだけ残って中身が空のケース（強制終了等）も欠落として扱う
+        if not any(p.is_file() for d in dirs for p in d.rglob("*")):
+            return False
+    return True
 
 
-def _ensure_browsers_installed() -> tuple[bool, str]:
+def _ensure_browsers_installed(pw_test_version: str) -> tuple[bool, str]:
     """chromium ブラウザ本体の実在を確認し、無ければ自動導入する。
 
     npm @playwright/test を Python 版と同一バージョンにピン止めしても、
@@ -422,7 +471,7 @@ def _ensure_browsers_installed() -> tuple[bool, str]:
     'browserType.launch: Executable doesn't exist' で全滅する。
     """
     browsers_path = _configured_browsers_path()
-    if _browsers_present(browsers_path):
+    if _browsers_present(browsers_path, pw_test_version):
         return True, ""
     if not shutil.which("npx"):
         return False, "npx が見つからず Playwright ブラウザを自動導入できません。"
@@ -437,9 +486,19 @@ def _ensure_browsers_installed() -> tuple[bool, str]:
             cwd=str(_PW_ENV_DIR),
             env=env,
         )
-        if proc.returncode == 0:
-            return True, "Playwright ブラウザ（chromium）を自動導入しました。"
-        return False, f"Playwright ブラウザの自動導入に失敗しました: {proc.stderr[:300]}"
+        if proc.returncode != 0:
+            return False, f"Playwright ブラウザの自動導入に失敗しました: {proc.stderr[:300]}"
+        # 自動導入後も再検証する（導入コマンドが chromium_headless_shell を
+        # 含んでいない版・部分的に失敗した場合を見逃さないため）。
+        if not _browsers_present(browsers_path, pw_test_version):
+            missing = [
+                pattern
+                for pattern in _required_browser_globs(pw_test_version)
+                if not any(browsers_path.glob(pattern))
+            ]
+            missing_desc = ", ".join(missing) if missing else "実行ファイル"
+            return False, f"自動導入後もブラウザが不足しています: {missing_desc}"
+        return True, "Playwright ブラウザ（chromium）を自動導入しました。"
     except subprocess.TimeoutExpired:
         return False, "Playwright ブラウザの自動導入がタイムアウトしました。"
     except Exception as exc:
@@ -457,8 +516,14 @@ def _ensure_pw_env(env_dir: Path) -> tuple[bool, str]:
     pkg_json = env_dir / "package.json"
 
     target_ver = _python_playwright_version()
+    if not target_ver:
+        return False, (
+            "Python側 playwright のバージョンを特定できないため実行を中止しました"
+            "（latest の暗黙インストールはブラウザ不一致全滅の原因になるため行いません）。"
+            "venv を有効化し `pip show playwright` で確認してください。"
+        )
     installed_ver = _installed_pw_test_version(env_dir)
-    version_mismatch = bool(installed_ver) and bool(target_ver) and installed_ver != target_ver
+    version_mismatch = bool(installed_ver) and installed_ver != target_ver
 
     if version_mismatch:
         # 既存envがPython側と異なるバージョンでインストールされている
@@ -467,7 +532,7 @@ def _ensure_pw_env(env_dir: Path) -> tuple[bool, str]:
 
     already_installed = (env_dir / "node_modules/@playwright/test").is_dir()
     if already_installed and not version_mismatch:
-        ok, msg = _ensure_browsers_installed()
+        ok, msg = _ensure_browsers_installed(target_ver)
         if not ok:
             return False, msg
         return True, "@playwright/test は既にセットアップ済みです。"
@@ -475,7 +540,7 @@ def _ensure_pw_env(env_dir: Path) -> tuple[bool, str]:
     if not shutil.which("npm"):
         return False, "npm が見つかりません。Node.js をインストールしてください。"
 
-    dep_spec = target_ver or "latest"
+    dep_spec = target_ver
     pkg_json.write_text(
         json.dumps(
             {
@@ -487,7 +552,7 @@ def _ensure_pw_env(env_dir: Path) -> tuple[bool, str]:
         encoding="utf-8",
     )
 
-    pkg = f"@playwright/test@{target_ver}" if target_ver else "@playwright/test"
+    pkg = f"@playwright/test@{target_ver}"
 
     try:
         proc = subprocess.run(
@@ -503,7 +568,7 @@ def _ensure_pw_env(env_dir: Path) -> tuple[bool, str]:
     except Exception as exc:
         return False, f"npm install エラー: {exc}"
 
-    ok, msg = _ensure_browsers_installed()
+    ok, msg = _ensure_browsers_installed(target_ver)
     if not ok:
         return False, msg
     return True, f"@playwright/test {target_ver or ''} のインストールが完了しました。"
@@ -727,13 +792,27 @@ def _error_result(error: str, json_path: Path, html_path: Path) -> dict[str, Any
     return result
 
 
+def _format_duration_ms(duration_ms: Any) -> str:
+    """ミリ秒を「分秒」表記（例: 2分5秒／45秒）に整形する。evidence-only:
+    値が無い・不正な場合は「不明」と明示する（0秒等の捏造をしない）。"""
+    try:
+        total_sec = int(duration_ms) // 1000
+    except (TypeError, ValueError):
+        return "不明"
+    if total_sec < 0:
+        return "不明"
+    minutes, seconds = divmod(total_sec, 60)
+    return f"{minutes}分{seconds}秒" if minutes else f"{seconds}秒"
+
+
 def _build_html_report(result: dict[str, Any]) -> str:
-    """日本語の実行サマリレポート（ライト/ダーク両対応）を組み立てる。
+    """日本語の実行サマリレポート（ライト/ダーク両対応・非エンジニア向け）を組み立てる。
 
     Playwright ネイティブレポート（英語・ダークモード固定）は
-    「詳細（開発者向け）」として別途参照できるよう web/routes/report.py 側で
+    「詳細（開発者向け）」として別途参照できるよう web/routes/auto_run.py 側で
     playwright_native_html キーに残す。ここでは非エンジニアにも読める
-    日本語サマリを既定のレポートとする。
+    日本語サマリを既定のレポートとする（R3-03/04/05）。自己完結（外部
+    script/link を読み込まない）で CSP を変更せずに単体表示できる。
     """
     interrupted = bool(result.get("interrupted"))
     unavailable = bool(result.get("unavailable"))
@@ -754,10 +833,15 @@ def _build_html_report(result: dict[str, Any]) -> str:
             f"{html_mod.escape(str(result['error']))}</div>"
         )
 
-    status_labels = {"passed": "成功", "failed": "失敗", "skipped": "スキップ", "unknown": "不明"}
+    status_labels = {
+        "passed": "✅ 成功",
+        "failed": "❌ 失敗",
+        "skipped": "⏭ スキップ",
+        "unknown": "❔ 不明",
+    }
     rows = "".join(
         "<tr class='{cls}'><td>{title}</td><td>{status}</td>"
-        "<td>{dur}ms</td><td>{err}</td></tr>".format(
+        "<td>{dur}</td><td>{err}</td></tr>".format(
             cls=(
                 "pass"
                 if t["status"] == "passed"
@@ -767,11 +851,18 @@ def _build_html_report(result: dict[str, Any]) -> str:
             status=html_mod.escape(
                 status_labels.get(str(t.get("status", "")), str(t.get("status", "")))
             ),
-            dur=t.get("duration_ms", 0),
-            err=html_mod.escape(str(t.get("error") or "")[:120]),
+            dur=_format_duration_ms(t.get("duration_ms")),
+            err=(
+                "<details><summary>エラー詳細</summary><pre>"
+                f"{html_mod.escape(str(t.get('error') or ''))}</pre></details>"
+                if t.get("error")
+                else ""
+            ),
         )
         for t in result.get("tests", [])
     )
+
+    total_duration = _format_duration_ms(result.get("duration_ms"))
 
     return f"""<!doctype html>
 <html lang="ja"><head><meta charset="utf-8"><title>テスト実行レポート</title>
@@ -779,17 +870,19 @@ def _build_html_report(result: dict[str, Any]) -> str:
 :root {{
   --bg:#ffffff; --fg:#111827; --border:#e5e7eb; --th-bg:#f1f5f9; --pre-bg:#f9fafb;
   --ok:#16a34a; --fail:#dc2626; --warn:#d97706; --skip:#9ca3af; --err-bg:#fef2f2; --err-border:#fecaca;
+  --muted:#6b7280;
 }}
 @media (prefers-color-scheme: dark) {{
   :root {{
     --bg:#0f172a; --fg:#e5e7eb; --border:#334155; --th-bg:#1e293b; --pre-bg:#111827;
-    --err-bg:#3f1d1d; --err-border:#7f1d1d;
+    --err-bg:#3f1d1d; --err-border:#7f1d1d; --muted:#9ca3af;
   }}
 }}
 body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;margin:28px;color:var(--fg);background:var(--bg)}}
+.intro{{color:var(--muted);font-size:14px;margin:6px 0 18px}}
 .badge{{display:inline-block;padding:4px 14px;border-radius:20px;font-weight:700;color:#fff;
   background:var(--{status_cls if status_cls != 'warn' else 'warn'});font-size:18px}}
-.cards{{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:18px 0}}
+.cards{{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin:18px 0}}
 .card{{border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center}}
 .num{{font-size:28px;font-weight:800}}
 table{{border-collapse:collapse;width:100%;margin-top:14px}}
@@ -800,15 +893,19 @@ tr.fail td:nth-child(2){{color:var(--fail);font-weight:600}}
 tr.skip td:nth-child(2){{color:var(--skip)}}
 .err{{background:var(--err-bg);border:1px solid var(--err-border);border-radius:6px;padding:12px;margin:14px 0;color:var(--fail);font-size:13px}}
 pre{{background:var(--pre-bg);border:1px solid var(--border);border-radius:6px;padding:12px;font-size:11px;white-space:pre-wrap;overflow-x:auto}}
+details summary{{cursor:pointer;color:var(--fail);font-size:12px}}
+@media print {{ body{{margin:8mm}} .card{{break-inside:avoid}} }}
 </style></head>
 <body>
 <h1>テスト実行レポート</h1>
+<p class="intro">このレポートは自動テストの実行結果です。❌の行から確認してください。</p>
 <span class="badge">{status_text}</span>
 <div class="cards">
   <div class="card"><div class="num" style="color:var(--ok)">{result.get('passed',0)}</div><div>成功</div></div>
   <div class="card"><div class="num" style="color:var(--fail)">{result.get('failed',0)}</div><div>失敗</div></div>
   <div class="card"><div class="num" style="color:var(--skip)">{result.get('skipped',0)}</div><div>スキップ</div></div>
   <div class="card"><div class="num">{result.get('total',0)}</div><div>合計</div></div>
+  <div class="card"><div class="num">{total_duration}</div><div>実行時間</div></div>
 </div>
 {error_section}
 <table><thead><tr><th>テスト</th><th>結果</th><th>時間</th><th>エラー</th></tr></thead>

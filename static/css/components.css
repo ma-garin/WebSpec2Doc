@@ -441,6 +441,44 @@
   color: var(--text);
 }
 
+/* ---- テスト実行中の実況（OK/NGがリアルタイムで流れる。R3-01） ---- */
+.autorun-live-tests {
+  margin-bottom: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  overflow: hidden;
+}
+.autorun-live-tests-head {
+  padding: 8px 12px;
+  font-size: var(--text-sm, 13px);
+  font-weight: 700;
+  color: var(--text);
+  background: var(--surface-subtle);
+  border-bottom: 1px solid var(--border);
+}
+.autorun-live-tests-head b { font-weight: 800; }
+.autorun-live-tests table.ov-screens {
+  width: 100%;
+  max-height: 260px;
+  display: block;
+  overflow-y: auto;
+}
+.autorun-live-tests table.ov-screens tbody {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+.autorun-live-tests td {
+  padding: 6px 10px;
+  font-size: var(--text-xs);
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.autorun-live-tests td.num { text-align: right; color: var(--text-muted); }
+
 /* ---- 完了カード（レポート「テスト実行」タブへの導線） ---- */
 .autorun-complete-card {
   display: grid;
@@ -928,3 +966,10 @@
 .mbt-badge.is-measured { background: #d7f0dd; color: #17512c; }
 .mbt-badge.is-catalog { background: #fdeecd; color: #6b4e12; }
 #cov-frame iframe, .tl-diff-frame iframe { width: 100%; min-height: 460px; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+
+/* ---- R3-13: ログインモーダル×ショートカットヘルプのz-index競合 ----
+   ログインモーダルは .file-preview-modal（static/app-report.css, z-index:2000）を
+   流用しているが、ヘルプオーバーレイ（static/app-components.css .shortcut-overlay,
+   z-index:2100）の方が手前に来てしまい、ログイン入力欄がクリック不能になっていた。
+   ID セレクタでヘルプより前面に固定する（JS側で表示時にヘルプを閉じる処理と併用）。 */
+#autorun-login-modal { z-index: 2300; }

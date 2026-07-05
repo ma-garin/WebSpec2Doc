@@ -168,7 +168,6 @@
 }
 
 .btn-danger-outline {
-  width: 100%;
   color: var(--critical);
   border-color: var(--critical);
 }
@@ -294,6 +293,12 @@
 .autorun-inline-actions {
   display: grid;
   gap: 8px;
+}
+
+/* 中断/停止ボタンは既定のgrid stretchで全幅の目立つ赤帯にならないよう、
+   内容幅に収めて控えめに配置する（R2-05: 中断ボタンをスタイリッシュに）。 */
+#autorun-cancel-btn {
+  justify-self: start;
 }
 
 .autorun-main {

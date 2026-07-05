@@ -278,6 +278,21 @@ class TestRunningTestsProgressLabel:
         expect(autorun_page.locator("#autorun-phase-label")).to_have_text("テスト実行中…")
 
 
+class TestAutoRunCancelButtonStyle:
+    """R2-05/S1-8: 中断ボタンをスタイリッシュに。.btn-danger-outline の
+    width:100% で全幅の目立つ赤帯になっていた不具合の再発防止。"""
+
+    def test_cancel_button_is_compact_not_full_width(self, autorun_page: Page) -> None:
+        autorun_page.evaluate(
+            """() => {
+                document.getElementById('autorun-cancel-area').style.display = '';
+            }"""
+        )
+        box = autorun_page.locator("#autorun-cancel-btn").bounding_box()
+        assert box is not None
+        assert box["width"] < 150, f"停止ボタンが横に広がりすぎている: {box['width']}px"
+
+
 class TestAutoRunLivePreview:
     """R2-07/R2-23: AutoRunのテスト実行中にライブプレビュー画面が見えないという
     指摘への対応。running_tests ステータスの間だけプレビュー枠を表示する。"""

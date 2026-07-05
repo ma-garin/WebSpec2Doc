@@ -31,6 +31,18 @@ class TestDiscoverCancelButton:
         _open_generate(page)
         expect(page.locator("#discover-cancel-btn")).to_be_attached()
 
+    def test_cancel_button_is_compact_not_full_width(self, page: Page) -> None:
+        """R2-05: 中断ボタンをスタイリッシュに。.btn-danger-outline の
+        width:100% により、行全体に広がる目立つ赤帯になっていた不具合の
+        再発防止（中断ボタンは内容幅に収まる小型ボタンであること）。"""
+        _open_generate(page)
+        page.evaluate(
+            """() => { document.getElementById('discover-loading').style.display = ''; }"""
+        )
+        box = page.locator("#discover-cancel-btn").bounding_box()
+        assert box is not None
+        assert box["width"] < 150, f"中断ボタンが横に広がりすぎている: {box['width']}px"
+
     def test_clicking_cancel_posts_captured_run_id_to_api_cancel(self, page: Page) -> None:
         """中断ボタンは discover-stream の先頭で受け取った run_id を
         /api/cancel に送る（バックエンドプロセスを実際に止めるための仕組み）。"""

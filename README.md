@@ -6,6 +6,8 @@
 
 > 「ドキュメントがないので、まず触って覚えてください」という現場でも、初日からテスト設計を始められる状態を実現します。
 
+> **はじめての方へ（非エンジニアの方も歓迎）**: 専門用語なしの入門ガイドを用意しています → **[docs/GUIDE_ja.md](docs/GUIDE_ja.md)**（日本語）／ [docs/GUIDE_en.md](docs/GUIDE_en.md)（English）。英語版 README は [README_en.md](README_en.md)。
+
 ---
 
 ## 主な機能
@@ -174,11 +176,11 @@ WantedBy=multi-user.target
 
 **[docs/README.md](docs/README.md) が全文書のインデックス**（現行/歴史のステータス付き）。主要な入口:
 
+- [はじめての方へ（非エンジニア向けガイド）](docs/GUIDE_ja.md) / [English](docs/GUIDE_en.md)
 - [クイックスタートガイド](docs/userguide.md)
 - [開発者向けハンドブック](docs/DEVELOPMENT.md)
-- [事業計画（統合版）](docs/09_事業計画_統合版.md)
 - [機能拡張ロードマップ](docs/11_機能拡張ロードマップ_現新比較とUX検証.md)
-- [デモ台本](docs/demo/DEMO_SCRIPT.md) / [発表構成](docs/demo/PITCH_OUTLINE.md)
+- [デモ台本](docs/demo/DEMO_SCRIPT.md)
 
 ---
 

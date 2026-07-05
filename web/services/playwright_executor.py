@@ -6,7 +6,10 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 from collections.abc import Callable
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _pkg_version
 from pathlib import Path
 from typing import Any
 
@@ -102,9 +105,13 @@ def run_playwright(
             fallback_html_path,
         )
 
-    # @playwright/test パッケージを確認・インストール（playwright CLI の有無とは独立）
+    # @playwright/test パッケージを確認・インストール（playwright CLI の有無とは独立）。
+    # _pw_test_available() は単なる存在確認ではなく、Python側 playwright との
+    # バージョン一致・ブラウザ実在まで確認する（そうしないと、異なるバージョンで
+    # 既にインストール済み・ブラウザ未導入のケースを見逃し、実行時に
+    # browserType.launch: Executable doesn't exist で全滅する）。
     if not _pw_test_available():
-        _log("@playwright/test をセットアップしています…")
+        _log("実行環境をセットアップしています…")
         ok, msg = _ensure_pw_env(_PW_ENV_DIR)
         _log(msg)
         if not ok:
@@ -301,10 +308,25 @@ def _write_pw_config(
 
 
 def _pw_test_available() -> bool:
-    """ローカルまたは共有 env に @playwright/test があるか確認。"""
+    """ローカルまたは共有 env に @playwright/test があり、実行可能な状態かを確認する。
+
+    共有 env（_PW_ENV_DIR）については、単に存在するかだけでなく Python 側
+    playwright とのバージョン一致・ブラウザ実在まで確認する。どちらか欠けて
+    いれば False を返し、呼び出し側で _ensure_pw_env()（再構築・自動導入）
+    を実行させる（バージョン不一致のまま「セットアップ済み」と誤判定すると、
+    実行時に browserType.launch: Executable doesn't exist で全滅する）。
+    """
     local = Path("node_modules/@playwright/test")
+    if local.is_dir():
+        return True
     shared = _PW_ENV_DIR / "node_modules/@playwright/test"
-    if local.is_dir() or shared.is_dir():
+    if shared.is_dir():
+        target_ver = _python_playwright_version()
+        installed_ver = _installed_pw_test_version(_PW_ENV_DIR)
+        if target_ver and installed_ver and installed_ver != target_ver:
+            return False
+        if not _browsers_present(_configured_browsers_path()):
+            return False
         return True
     try:
         result = subprocess.run(
@@ -318,7 +340,12 @@ def _pw_test_available() -> bool:
 
 
 def _get_cli_version() -> str:
-    """npx playwright の version 文字列を返す（例: '1.59.1'）。"""
+    """npx playwright の version 文字列を返す（例: '1.59.1'）。
+
+    diagnostics 表示専用。npm パッケージのバージョン決定には使わない
+    （_python_playwright_version 参照 — npx解決の最新版に追従すると
+    Python 側 playwright パッケージの導入済み Chromium と食い違う）。
+    """
     try:
         proc = subprocess.run(
             ["npx", "playwright", "--version"],
@@ -335,23 +362,132 @@ def _get_cli_version() -> str:
     return ""
 
 
+def _python_playwright_version() -> str:
+    """この Python 環境にインストールされている playwright パッケージのバージョンを返す。
+
+    AutoRun が使う npm @playwright/test は、このバージョンに必ずピン止めする。
+    `npx playwright --version` で決めていた旧実装は、npx が解決する最新版
+    （Python 側より新しいことが多い）を拾ってしまい、Python 側の playwright が
+    .runtime/ms-playwright に導入した Chromium ビルドと一致しない
+    バージョンの @playwright/test がテストを実行しようとして
+    'browserType.launch: Executable doesn't exist' で全滅する不具合の原因だった。
+    """
+    try:
+        return _pkg_version("playwright")
+    except PackageNotFoundError:
+        return ""
+
+
+def _installed_pw_test_version(env_dir: Path) -> str:
+    """env_dir に既にインストールされている @playwright/test のバージョンを返す。"""
+    pkg_json = env_dir / "node_modules" / "@playwright" / "test" / "package.json"
+    if not pkg_json.is_file():
+        return ""
+    try:
+        data = json.loads(pkg_json.read_text(encoding="utf-8"))
+        return str(data.get("version", ""))
+    except (OSError, json.JSONDecodeError):
+        return ""
+
+
+def _configured_browsers_path() -> Path:
+    """PLAYWRIGHT_BROWSERS_PATH を解決する（未設定ならリポジトリ既定へ固定）。"""
+    if str(Path("src").resolve()) not in sys.path:
+        sys.path.insert(0, str(Path("src").resolve()))
+    from crawler.playwright_runtime import configure_playwright_browsers_path
+
+    return configure_playwright_browsers_path()
+
+
+def _browsers_present(browsers_path: Path) -> bool:
+    """chromium ブラウザ本体が導入済みかを粗く確認する（厳密なバージョン一致は問わない）。
+
+    完全に空（新規チェックアウト・ボリューム未マウント等）の場合のみ検出できれば
+    十分（自動修復のトリガー用）。npm 側と Python 側のバージョンを揃えていれば
+    ビルド不一致は起きないため、ここでは「何も入っていない」ケースだけを見る。
+    """
+    if not browsers_path.is_dir():
+        return False
+    return any(browsers_path.glob("chromium-*")) or any(
+        browsers_path.glob("chromium_headless_shell-*")
+    )
+
+
+def _ensure_browsers_installed() -> tuple[bool, str]:
+    """chromium ブラウザ本体の実在を確認し、無ければ自動導入する。
+
+    npm @playwright/test を Python 版と同一バージョンにピン止めしても、
+    .runtime/ms-playwright にブラウザが一度も導入されていない環境
+    （新規チェックアウト・コンテナ再作成直後等）では、実行時に
+    'browserType.launch: Executable doesn't exist' で全滅する。
+    """
+    browsers_path = _configured_browsers_path()
+    if _browsers_present(browsers_path):
+        return True, ""
+    if not shutil.which("npx"):
+        return False, "npx が見つからず Playwright ブラウザを自動導入できません。"
+    env = os.environ.copy()
+    env["PLAYWRIGHT_BROWSERS_PATH"] = str(browsers_path)
+    try:
+        proc = subprocess.run(
+            ["npx", "playwright", "install", "chromium"],
+            capture_output=True,
+            text=True,
+            timeout=300,
+            cwd=str(_PW_ENV_DIR),
+            env=env,
+        )
+        if proc.returncode == 0:
+            return True, "Playwright ブラウザ（chromium）を自動導入しました。"
+        return False, f"Playwright ブラウザの自動導入に失敗しました: {proc.stderr[:300]}"
+    except subprocess.TimeoutExpired:
+        return False, "Playwright ブラウザの自動導入がタイムアウトしました。"
+    except Exception as exc:
+        return False, f"Playwright ブラウザの自動導入エラー: {exc}"
+
+
 def _ensure_pw_env(env_dir: Path) -> tuple[bool, str]:
-    """@playwright/test を env_dir にインストールする（CLI と同バージョン）。"""
+    """@playwright/test を env_dir にインストールする（Python側 playwright と同バージョン）。
+
+    バージョン不一致（既存インストール済みの @playwright/test が Python 側と
+    異なる場合。過去は npx 解決の最新版でインストールしていたため必ず発生していた）
+    を検出した場合は node_modules を破棄して再構築する。
+    """
     env_dir.mkdir(parents=True, exist_ok=True)
     pkg_json = env_dir / "package.json"
-    if not pkg_json.exists():
-        pkg_json.write_text('{"name":"autorun-env","private":true}', encoding="utf-8")
 
-    pw_test_dir = env_dir / "node_modules/@playwright/test"
-    if pw_test_dir.is_dir():
+    target_ver = _python_playwright_version()
+    installed_ver = _installed_pw_test_version(env_dir)
+    version_mismatch = bool(installed_ver) and bool(target_ver) and installed_ver != target_ver
+
+    if version_mismatch:
+        # 既存envがPython側と異なるバージョンでインストールされている
+        # （旧実装のnpx最新版インストール等）→ ブラウザ実行不能を防ぐため再構築する
+        shutil.rmtree(env_dir / "node_modules", ignore_errors=True)
+
+    already_installed = (env_dir / "node_modules/@playwright/test").is_dir()
+    if already_installed and not version_mismatch:
+        ok, msg = _ensure_browsers_installed()
+        if not ok:
+            return False, msg
         return True, "@playwright/test は既にセットアップ済みです。"
 
     if not shutil.which("npm"):
         return False, "npm が見つかりません。Node.js をインストールしてください。"
 
-    # CLI と同バージョンをインストールして version mismatch を防ぐ
-    cli_ver = _get_cli_version()
-    pkg = f"@playwright/test@{cli_ver}" if cli_ver else "@playwright/test"
+    dep_spec = target_ver or "latest"
+    pkg_json.write_text(
+        json.dumps(
+            {
+                "name": "autorun-env",
+                "private": True,
+                "dependencies": {"@playwright/test": dep_spec},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    pkg = f"@playwright/test@{target_ver}" if target_ver else "@playwright/test"
 
     try:
         proc = subprocess.run(
@@ -360,13 +496,17 @@ def _ensure_pw_env(env_dir: Path) -> tuple[bool, str]:
             text=True,
             timeout=180,
         )
-        if proc.returncode == 0:
-            return True, f"@playwright/test {cli_ver or ''} のインストールが完了しました。"
-        return False, f"npm install 失敗: {proc.stderr[:300]}"
+        if proc.returncode != 0:
+            return False, f"npm install 失敗: {proc.stderr[:300]}"
     except subprocess.TimeoutExpired:
         return False, "npm install タイムアウト"
     except Exception as exc:
         return False, f"npm install エラー: {exc}"
+
+    ok, msg = _ensure_browsers_installed()
+    if not ok:
+        return False, msg
+    return True, f"@playwright/test {target_ver or ''} のインストールが完了しました。"
 
 
 def _parse_results(

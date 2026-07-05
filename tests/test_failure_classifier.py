@@ -76,6 +76,23 @@ def test_classify_failure_env_issue_auth_japanese() -> None:
     assert result.failure_type == FAILURE_ENV_ISSUE
 
 
+def test_classify_failure_env_setup_browser_launch() -> None:
+    result = classify_failure(
+        "TC001",
+        "Error: browserType.launch: Executable doesn't exist at "
+        "/app/.runtime/ms-playwright/chromium_headless_shell-1217/chrome-headless-shell",
+    )
+    assert result.failure_type == FAILURE_ENV_ISSUE
+    assert result.confidence == 0.95
+    assert "npx playwright install chromium" in result.suggested_action
+
+
+def test_classify_failure_env_setup_executable_not_exist_only() -> None:
+    result = classify_failure("TC001", "Executable doesn't exist at /some/path")
+    assert result.failure_type == FAILURE_ENV_ISSUE
+    assert result.confidence == 0.95
+
+
 def test_classify_failure_test_rot_locator_not_found() -> None:
     result = classify_failure("TC002", "locator not found: '#submit-btn'")
     assert result.failure_type == FAILURE_TEST_ROT
@@ -220,6 +237,34 @@ def test_classify_failures_multiple_failures() -> None:
     assert types[0] == FAILURE_ENV_ISSUE
     assert types[1] == FAILURE_TEST_ROT
     assert types[2] == FAILURE_UNKNOWN
+
+
+def test_classify_failures_collapses_identical_env_setup_errors() -> None:
+    """同一メッセージで大量に失敗する環境エラーは1件に集約される。"""
+    error = (
+        "Error: browserType.launch: Executable doesn't exist at "
+        "/app/.runtime/ms-playwright/chromium_headless_shell-1217/chrome-headless-shell"
+    )
+    results = [
+        {"test_id": f"TC{idx:03d}", "status": "failed", "error": error} for idx in range(1, 335)
+    ]
+    classifications = classify_failures(results)
+    assert len(classifications) == 1
+    collapsed = classifications[0]
+    assert collapsed.failure_type == FAILURE_ENV_ISSUE
+    assert collapsed.count == 334
+    assert len(collapsed.affected_test_ids) == 334
+    assert "ほか333件" in collapsed.test_id
+
+
+def test_classify_failures_does_not_collapse_distinct_errors() -> None:
+    results = [
+        {"test_id": "TC001", "status": "failed", "error": "net::ERR_CONNECTION_REFUSED"},
+        {"test_id": "TC002", "status": "failed", "error": "502 Bad Gateway"},
+    ]
+    classifications = classify_failures(results)
+    assert len(classifications) == 2
+    assert all(c.count == 1 for c in classifications)
 
 
 def test_classify_failures_passes_diff_result() -> None:

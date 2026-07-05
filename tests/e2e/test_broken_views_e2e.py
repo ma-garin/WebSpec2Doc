@@ -192,18 +192,22 @@ class TestHistoryDiffFeedback:
             route.continue_()
 
         page.route("**/api/snapshot-diff**", _delayed_continue)
+        # 既定は現新比較モード。本テストは「簡易ドリフト差分」ボタンの即時フィードバックを
+        # 検証するため diff モードを明示選択する（モード切替は Sprint 3 レーンDで追加）。
+        page.locator("input[name='tl-mode'][value='diff']").check()
         page.locator("#tl-diff-btn").click()
         # フルスイート実行時はCPU競合でクリック→再描画が遅延することがあるため、
         # デフォルト5秒より長めに待つ（実際の遅延は0.6秒固定なので誤検知はしない）。
         expect(page.locator("#tl-diff-btn")).to_have_text("差分を取得中…", timeout=15_000)
         # 遅延後にローディングが解除されることも確認する
-        expect(page.locator("#tl-diff-btn")).to_have_text("この2時点の差分を表示", timeout=10_000)
+        expect(page.locator("#tl-diff-btn")).to_have_text("この2時点を比較する", timeout=10_000)
 
     def test_button_shows_result_after_success(self, page: Page) -> None:
         """成功時、ローディング解除後に差分内容（iframe）が表示され、ボタンが元のラベルに戻る。"""
         self._open_history_tab(page)
+        page.locator("input[name='tl-mode'][value='diff']").check()
         page.locator("#tl-diff-btn").click()
-        expect(page.locator("#tl-diff-btn")).to_have_text("この2時点の差分を表示", timeout=10_000)
+        expect(page.locator("#tl-diff-btn")).to_have_text("この2時点を比較する", timeout=10_000)
         expect(page.locator("#tl-diff iframe")).to_have_count(1)
         frame = page.frame_locator("#tl-diff iframe")
         expect(frame.locator("body")).to_contain_text("仕様ドリフトレポート")
@@ -213,9 +217,10 @@ class TestHistoryDiffFeedback:
         """通信エラー時、無言で失敗せず理由付きのエラー表示になり、ボタンが再操作可能に戻る。"""
         self._open_history_tab(page)
         page.route("**/api/snapshot-diff**", lambda route: route.abort())
+        page.locator("input[name='tl-mode'][value='diff']").check()
         page.locator("#tl-diff-btn").click()
         expect(page.locator("#tl-diff")).to_contain_text("差分の取得に失敗しました", timeout=10_000)
-        expect(page.locator("#tl-diff-btn")).to_have_text("この2時点の差分を表示")
+        expect(page.locator("#tl-diff-btn")).to_have_text("この2時点を比較する")
         expect(page.locator("#tl-diff-btn")).to_be_enabled()
 
     def test_no_javascript_errors(self, page: Page) -> None:

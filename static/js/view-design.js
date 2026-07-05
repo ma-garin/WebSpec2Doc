@@ -290,3 +290,171 @@ function renderTechniqueDetail() {
     '</div>';
 }
 
+// ============================================================
+// カバレッジヒートマップ（解析＝取得状況3色 / AutoRun＝実行回数×成否）
+// ============================================================
+let _covHeatToken = 0;
+function renderCoverageHeatmap() {
+  const host = resultHero;
+  const domain = (document.getElementById('r-domain') || {}).textContent.trim();
+  host.innerHTML =
+    '<div class="hero-pad">' +
+    '<div class="hero-section-title">カバレッジヒートマップ</div>' +
+    '<p class="design-section-note">解析＝画面の取得状況（取得済み／要ログイン／未取得）、AutoRun＝画面ごとの実行回数×成否。</p>' +
+    '<div class="cov-mode" style="margin:6px 0 12px;font-size:13px">' +
+    '<label style="margin-right:14px"><input type="radio" name="cov-kind" value="analysis" checked> 解析カバレッジ</label>' +
+    '<label><input type="radio" name="cov-kind" value="autorun"> AutoRunカバレッジ</label></div>' +
+    '<div class="tl-diff-frame" id="cov-frame"></div>' +
+    '</div>';
+  const load = () => _loadCoverageHeatmap(domain);
+  document.querySelectorAll('input[name=cov-kind]').forEach(el => el.addEventListener('change', load));
+  load();
+}
+async function _loadCoverageHeatmap(domain) {
+  const box = document.getElementById('cov-frame');
+  if (!box) return;
+  const kind = (document.querySelector('input[name=cov-kind]:checked') || {}).value || 'analysis';
+  const myToken = ++_covHeatToken;
+  uiSkeleton(box, 'table');
+  let html = '';
+  try {
+    const res = await fetch(`/api/coverage-heatmap?domain=${encodeURIComponent(domain)}&kind=${kind}`);
+    html = await res.text();
+    if (!res.ok) throw new Error(`サーバーエラー（HTTP ${res.status}）`);
+  } catch (e) {
+    if (myToken !== _covHeatToken) return;
+    uiError(box, {
+      title: 'ヒートマップの取得に失敗しました',
+      message: e && e.message ? e.message : '通信エラー',
+      onRetry: () => _loadCoverageHeatmap(domain),
+    });
+    return;
+  }
+  if (myToken !== _covHeatToken) return;
+  box.replaceChildren();
+  const iframe = document.createElement('iframe');
+  iframe.title = kind === 'autorun' ? 'AutoRunカバレッジヒートマップ' : '解析カバレッジヒートマップ';
+  iframe.srcdoc = html;
+  box.appendChild(iframe);
+}
+
+// ============================================================
+// 技法別設計（MBT）: 技法チップ → 対象画面 → モーダル（BVA/DT/PW/ST＋根拠）
+// ============================================================
+const MBT_TECH_META = [
+  { key: 'bva', label: '境界値分析' },
+  { key: 'dt', label: 'デシジョンテーブル' },
+  { key: 'pw', label: 'ペアワイズ' },
+  { key: 'st', label: '状態遷移' },
+];
+let _mbtDesign = null;
+async function renderMbtDesign() {
+  const host = resultHero;
+  const domain = (document.getElementById('r-domain') || {}).textContent.trim();
+  host.innerHTML =
+    '<div class="hero-pad">' +
+    '<div class="hero-section-title">技法別設計（MBT）</div>' +
+    '<p class="design-section-note">設定「テスト設計」タブのパラメータで、各画面の境界値／デシジョンテーブル／ペアワイズ／状態遷移を機械生成します（実測＝確信度1.0、値カタログ＝0.9）。</p>' +
+    '<div id="mbt-body"></div></div>';
+  const body = document.getElementById('mbt-body');
+  uiSkeleton(body, 'table');
+  try {
+    const res = await fetch('/api/test-design?domain=' + encodeURIComponent(domain));
+    if (!res.ok) throw new Error(`サーバーエラー（HTTP ${res.status}）`);
+    _mbtDesign = await res.json();
+  } catch (e) {
+    uiError(body, {
+      title: 'テスト設計の生成に失敗しました',
+      message: e && e.message ? e.message : '通信エラー',
+      onRetry: renderMbtDesign,
+    });
+    return;
+  }
+  _renderMbtChips('bva');
+}
+function _mbtScreensWith(tech) {
+  const screens = (_mbtDesign && _mbtDesign.screens) || [];
+  return screens.filter(sc => {
+    if (tech === 'bva') return (sc.bva || []).length > 0;
+    if (tech === 'dt') return !!sc.decision_table;
+    if (tech === 'pw') return !!sc.pairwise;
+    if (tech === 'st') return !!sc.state_transitions;
+    return false;
+  });
+}
+function _renderMbtChips(active) {
+  const body = document.getElementById('mbt-body');
+  if (!body) return;
+  const p = (_mbtDesign && _mbtDesign.params) || {};
+  const chips = MBT_TECH_META.map(t => {
+    const n = _mbtScreensWith(t.key).length;
+    const on = t.key === active ? ' is-active' : '';
+    return `<button type="button" class="mbt-chip${on}" data-tech="${t.key}">${escHtml(t.label)} <span class="mbt-chip-n">${n}</span></button>`;
+  }).join('');
+  const list = _mbtScreensWith(active).map(sc =>
+    `<button type="button" class="mbt-screen-row" data-pid="${escHtml(sc.page_id)}" data-tech="${active}"><code>${escHtml(sc.page_id)}</code> ${escHtml(sc.title || '')}</button>`
+  ).join('') || '<p class="design-card-none">この技法の対象画面はありません（該当する要素・制約・遷移が検出されませんでした）。</p>';
+  body.innerHTML =
+    `<div class="mbt-params">パラメータ: 境界オフセット=${escHtml(String(p.bva_offset ?? 1))} / ペアワイズ強度=${escHtml(String(p.pairwise_strength ?? 2))}-way / Nスイッチ=${escHtml(String(p.n_switch ?? 0))} / DT最大条件=${escHtml(String(p.max_dt_conditions ?? 4))}</div>` +
+    `<div class="mbt-chips">${chips}</div>` +
+    `<div class="mbt-screen-list">${list}</div>`;
+  body.querySelectorAll('.mbt-chip').forEach(b => b.addEventListener('click', () => _renderMbtChips(b.dataset.tech)));
+  body.querySelectorAll('.mbt-screen-row').forEach(b => b.addEventListener('click', () => _openMbtModal(b.dataset.pid, b.dataset.tech)));
+}
+function _mbtConfBadge(conf) {
+  const measured = Number(conf) >= 1.0;
+  return `<span class="mbt-badge ${measured ? 'is-measured' : 'is-catalog'}">${measured ? '実測 1.0' : 'カタログ ' + conf}</span>`;
+}
+function _mbtModalBody(sc, tech) {
+  if (tech === 'bva') {
+    return (sc.bva || []).map(tb => {
+      const rows = tb.cases.map(c =>
+        `<tr><td>${escHtml(c.label)}</td><td><code>${escHtml(c.value || '（空）')}</code></td><td>${escHtml(c.expected)}</td><td>${_mbtConfBadge(c.confidence)}</td></tr>`
+      ).join('');
+      return `<h4 class="mbt-h4">${escHtml(tb.field_name)} <small>(${escHtml(tb.field_type)})</small></h4>` +
+        `<table class="ov-screens mbt-table"><thead><tr><th>ラベル</th><th>値</th><th>期待</th><th>根拠</th></tr></thead><tbody>${rows}</tbody></table>`;
+    }).join('');
+  }
+  if (tech === 'dt') {
+    const dt = sc.decision_table; if (!dt) return '';
+    const head = dt.conditions.map(c => `<th>${escHtml(c)}</th>`).join('');
+    const rows = dt.rules.map(r => `<tr>${r.conditions.map(b => `<td>${b ? '○' : '✗'}</td>`).join('')}<td>${escHtml(r.action)}</td></tr>`).join('');
+    return `<p class="mbt-note">必須条件の全組み合わせ ${_mbtConfBadge(dt.confidence)}</p>` +
+      `<table class="ov-screens mbt-table"><thead><tr>${head}<th>アクション（期待）</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }
+  if (tech === 'pw') {
+    const pw = sc.pairwise; if (!pw) return '';
+    const head = pw.params.map(p => `<th>${escHtml(p.name)}</th>`).join('');
+    const rows = pw.rows.map(row => `<tr>${row.map(v => `<td>${escHtml(v)}</td>`).join('')}</tr>`).join('');
+    return `<p class="mbt-note">${pw.strength}-way 網羅・${pw.rows.length}行 ${_mbtConfBadge(pw.confidence)}</p>` +
+      `<table class="ov-screens mbt-table"><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table>`;
+  }
+  if (tech === 'st') {
+    const st = sc.state_transitions; if (!st) return '';
+    const seqs = st.sequences.map(s => `<li>${s.steps.map(x => escHtml(x)).join(' → ')}</li>`).join('');
+    return `<p class="mbt-note">${st.n_switch}-スイッチ・${st.sequences.length}系列 ${_mbtConfBadge(st.confidence)}</p><ol class="mbt-seq">${seqs}</ol>`;
+  }
+  return '';
+}
+function _openMbtModal(pid, tech) {
+  const sc = ((_mbtDesign && _mbtDesign.screens) || []).find(s => s.page_id === pid);
+  if (!sc) return;
+  const label = (MBT_TECH_META.find(t => t.key === tech) || {}).label || tech;
+  const overlay = document.createElement('div');
+  overlay.className = 'mbt-modal-overlay';
+  overlay.setAttribute('style', 'position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px');
+  overlay.innerHTML =
+    '<div class="mbt-modal" role="dialog" aria-modal="true" aria-label="' + escHtml(label) + ' 設計" ' +
+    'style="background:var(--surface,#fff);color:var(--text,#1b2027);max-width:760px;width:100%;max-height:85vh;overflow:auto;border-radius:12px;padding:20px;box-shadow:0 12px 40px rgba(0,0,0,.4)">' +
+    '<div class="mbt-modal-head" style="display:flex;justify-content:space-between;align-items:center;gap:12px">' +
+    '<strong>' + escHtml(sc.page_id) + ' — ' + escHtml(label) + '</strong>' +
+    '<button type="button" class="mbt-modal-close" aria-label="閉じる" style="border:0;background:transparent;font-size:20px;cursor:pointer;color:inherit">✕</button></div>' +
+    '<div class="mbt-modal-title" style="color:var(--text-muted,#5c6773);font-size:13px;margin:2px 0 12px">' + escHtml(sc.title || '') + '</div>' +
+    '<div class="mbt-modal-body">' + _mbtModalBody(sc, tech) + '</div></div>';
+  const close = () => overlay.remove();
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+  overlay.querySelector('.mbt-modal-close').addEventListener('click', close);
+  document.addEventListener('keydown', function onKey(e) { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onKey); } });
+  document.body.appendChild(overlay);
+}
+

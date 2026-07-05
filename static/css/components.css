@@ -907,3 +907,24 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* ---- MBT 技法別設計（S3-1 D）＋ カバレッジヒートマップ（S3-4 D） ---- */
+.mbt-params { font-size: 12.5px; color: var(--text-muted); margin: 4px 0 12px; }
+.mbt-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.mbt-chip { border: 1px solid var(--border); background: var(--surface-2, #f0f3f7); color: inherit;
+  border-radius: 999px; padding: 5px 12px; font-size: 13px; cursor: pointer; }
+.mbt-chip.is-active { background: var(--accent, #4c8dff); color: #fff; border-color: transparent; }
+.mbt-chip-n { opacity: .75; font-size: 11px; }
+.mbt-screen-list { display: flex; flex-direction: column; gap: 6px; }
+.mbt-screen-row { text-align: left; border: 1px solid var(--border); background: var(--surface, #fff);
+  color: inherit; border-radius: 8px; padding: 8px 12px; cursor: pointer; font-size: 13px; }
+.mbt-screen-row:hover { border-color: var(--accent, #4c8dff); }
+.mbt-screen-row code { margin-right: 8px; color: var(--text-muted); }
+.mbt-table { width: 100%; margin: 6px 0 14px; font-size: 13px; }
+.mbt-h4 { margin: 12px 0 4px; font-size: 14px; }
+.mbt-note { font-size: 12.5px; color: var(--text-muted); }
+.mbt-seq { padding-left: 20px; font-size: 13px; }
+.mbt-badge { display: inline-block; border-radius: 6px; padding: 1px 7px; font-size: 11px; }
+.mbt-badge.is-measured { background: #d7f0dd; color: #17512c; }
+.mbt-badge.is-catalog { background: #fdeecd; color: #6b4e12; }
+#cov-frame iframe, .tl-diff-frame iframe { width: 100%; min-height: 460px; border: 1px solid var(--border); border-radius: 8px; background: #fff; }

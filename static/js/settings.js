@@ -160,14 +160,72 @@ async function saveAllowLocal() {
   } catch (e) { showToast('ローカルクロール設定の保存に失敗しました', 'error'); }
 }
 
+// ---- テスト設計（MBT）設定タブ ----
+async function loadTestDesignSettings() {
+  try {
+    const d = await fetch('/api/settings/test-design').then(r => r.json());
+    const techs = Array.isArray(d.enabled_techniques) ? d.enabled_techniques : ['bva', 'dt', 'pw', 'st'];
+    ['bva', 'dt', 'pw', 'st'].forEach(k => {
+      const el = document.getElementById('td-tech-' + k);
+      if (el) el.checked = techs.includes(k);
+    });
+    const setVal = (id, v) => { const el = document.getElementById(id); if (el && v != null) el.value = v; };
+    setVal('td-bva-offset', d.bva_offset ?? 1);
+    setVal('td-pw-strength', String(d.pairwise_strength ?? 2));
+    setVal('td-n-switch', String(d.n_switch ?? 0));
+    setVal('td-max-dt', d.max_dt_conditions ?? 4);
+    const ta = document.getElementById('td-value-catalog');
+    if (ta) ta.value = JSON.stringify(d.value_catalog || {}, null, 2);
+  } catch (e) { /* 読み込み失敗は既定値のまま */ }
+}
+
+async function saveTestDesignSettings() {
+  const msg = document.getElementById('test-design-msg');
+  const show = (text, isErr) => {
+    if (!msg) return;
+    msg.textContent = text; msg.style.display = 'block';
+    msg.classList.toggle('is-error', !!isErr); msg.classList.add('show');
+  };
+  let valueCatalog;
+  try {
+    valueCatalog = JSON.parse(document.getElementById('td-value-catalog')?.value || '{}');
+  } catch (e) {
+    show('値カタログのJSONが不正です: ' + e.message, true);
+    return;
+  }
+  const techs = ['bva', 'dt', 'pw', 'st'].filter(k => document.getElementById('td-tech-' + k)?.checked);
+  const payload = {
+    enabled_techniques: techs,
+    bva_offset: parseInt(document.getElementById('td-bva-offset')?.value || '1', 10),
+    pairwise_strength: parseInt(document.getElementById('td-pw-strength')?.value || '2', 10),
+    n_switch: parseInt(document.getElementById('td-n-switch')?.value || '0', 10),
+    max_dt_conditions: parseInt(document.getElementById('td-max-dt')?.value || '4', 10),
+    value_catalog: valueCatalog,
+  };
+  try {
+    const res = await fetch('/api/settings/test-design', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    show('テスト設計設定を保存しました。', false);
+    setTimeout(() => msg && msg.classList.remove('show'), 2500);
+  } catch (e) {
+    show('保存に失敗しました: ' + e.message, true);
+  }
+}
+
 document.getElementById('save-api')?.addEventListener('click', saveApiKey);
 document.getElementById('test-connection')?.addEventListener('click', testConnection);
 document.getElementById('save-slack')?.addEventListener('click', saveSlackWebhook);
 document.getElementById('allow-local-toggle')?.addEventListener('change', saveAllowLocal);
+document.getElementById('save-test-design')?.addEventListener('click', saveTestDesignSettings);
 
 // 初期ロード
 loadSettingsForm();
 // settings ビューに遷移した時にサーバー設定を読む
 document.querySelector('.app-nav-item[data-view="settings"]')?.addEventListener('click', () => {
   setTimeout(loadServerSettings, 50);
+  setTimeout(loadTestDesignSettings, 50);
 });

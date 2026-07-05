@@ -198,6 +198,103 @@ def api_result() -> dict | tuple[dict, int]:
     }
 
 
+def _analysis_coverage_screens(shots_dir: Path, screens_meta: list[dict]) -> list[dict]:
+    """report.json の画面 + スクショ実在から解析カバレッジ用の画面 dict を組む。"""
+    result: list[dict] = []
+    for sc in screens_meta:
+        pid = str(sc.get("page_id") or "")
+        captured = bool(pid) and (shots_dir / f"{pid}.png").is_file()
+        result.append(
+            {
+                "page_id": pid,
+                "title": sc.get("title") or "",
+                "url": sc.get("url") or "",
+                "captured": captured,
+                "requires_login": bool(sc.get("requires_login") or sc.get("is_login_required")),
+            }
+        )
+    return result
+
+
+def _autorun_coverage_screens(domain_dir: Path, screens_meta: list[dict]) -> list[dict]:
+    """playwright_report.json のテスト結果を画面へ決定的にマッピングする（捏造しない）。
+
+    テスト title/name/file に page_id またはタイトルが含まれる場合のみ計上する。
+    対応が取れない画面は runs=0（未実行）として正直に扱う。
+    """
+    pw_path = domain_dir / "qa_process" / "playwright_report.json"
+    tests: list[dict] = []
+    if pw_path.is_file():
+        try:
+            data = json.loads(pw_path.read_text(encoding="utf-8"))
+            tests = data.get("tests") or []
+        except (OSError, json.JSONDecodeError):
+            tests = []
+    result: list[dict] = []
+    for sc in screens_meta:
+        pid = str(sc.get("page_id") or "")
+        title = str(sc.get("title") or "")
+        runs = passed = failed = 0
+        for t in tests:
+            hay = f"{t.get('title', '')} {t.get('name', '')} {t.get('file', '')}"
+            if (pid and pid in hay) or (len(title) >= 4 and title in hay):
+                runs += 1
+                status = str(t.get("status") or t.get("outcome") or "").lower()
+                if status in ("passed", "expected", "ok"):
+                    passed += 1
+                elif status:
+                    failed += 1
+        result.append(
+            {
+                "page_id": pid,
+                "title": title,
+                "url": sc.get("url") or "",
+                "runs": runs,
+                "passed": passed,
+                "failed": failed,
+            }
+        )
+    return result
+
+
+@bp.get("/api/coverage-heatmap")
+def api_coverage_heatmap() -> Response:
+    """カバレッジヒートマップ（kind=analysis: 取得状況3色 / kind=autorun: 実行回数×成否）をHTMLで返す。"""
+    domain = request.args.get("domain", "")
+    kind = request.args.get("kind", "analysis")
+    if not _valid_domain(domain):
+        return Response(status=404)
+    domain_dir = OUTPUT_DIR / domain
+    if not domain_dir.is_dir() or domain_dir.is_symlink():
+        return Response(status=404)
+    report_path = domain_dir / "report.json"
+    if not report_path.is_file():
+        return Response(
+            "<p style='font-family:sans-serif;padding:16px'>レポートが見つかりません。クロールを実行してください。</p>",
+            mimetype="text/html",
+        )
+    try:
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return Response(status=500)
+    screens_meta = report.get("screens") or []
+    if kind == "autorun":
+        from generator.heatmap_reporter import generate_autorun_coverage_html
+
+        html_out = generate_autorun_coverage_html(
+            _autorun_coverage_screens(domain_dir, screens_meta)
+        )
+    else:
+        from generator.heatmap_reporter import generate_analysis_coverage_html
+
+        html_out = generate_analysis_coverage_html(
+            _analysis_coverage_screens(domain_dir / "screenshots", screens_meta)
+        )
+    resp = Response(html_out, mimetype="text/html")
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
 @bp.get("/open")
 def open_file() -> Response:
     target = _safe_output_path(request.args.get("path", ""))

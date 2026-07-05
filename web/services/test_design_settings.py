@@ -111,7 +111,15 @@ def save_test_design_settings(settings: dict[str, Any]) -> dict[str, Any]:
     value_catalog = settings.get("value_catalog")
     if not isinstance(value_catalog, dict):
         value_catalog = _default_settings()["value_catalog"]
-    normalized = {"value_catalog": value_catalog}
+    normalized: dict[str, Any] = {"value_catalog": value_catalog}
+    # 技法パラメータ（MBT設定タブ）。存在する項目のみ保持（後方互換）。
+    if isinstance(settings.get("enabled_techniques"), list):
+        normalized["enabled_techniques"] = [
+            str(t) for t in settings["enabled_techniques"] if isinstance(t, str)
+        ]
+    for key in ("bva_offset", "pairwise_strength", "n_switch", "max_dt_conditions"):
+        if isinstance(settings.get(key), int) and not isinstance(settings.get(key), bool):
+            normalized[key] = settings[key]
     path = TEST_DESIGN_SETTINGS_FILE
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(

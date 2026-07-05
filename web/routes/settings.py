@@ -6,6 +6,11 @@ from flask import Blueprint, request
 
 from web.config import DEFAULT_OPENAI_MODEL
 from web.env_store import _mask_key, _read_env, _write_env
+from web.services.openai_qa import test_openai_connection
+from web.services.test_design_settings import (
+    get_test_design_settings,
+    save_test_design_settings,
+)
 from web.validation import _sanitize
 
 bp = Blueprint("settings", __name__)
@@ -50,6 +55,25 @@ def post_settings() -> dict:
         "openai_key_set": bool(env.get("OPENAI_API_KEY")),
         "slack_webhook_set": bool(env.get("SLACK_WEBHOOK_URL")),
     }
+
+
+@bp.post("/api/settings/test-connection")
+def post_test_connection() -> dict:
+    ok, message = test_openai_connection()
+    return {"ok": ok, "message": message}
+
+
+@bp.get("/api/settings/test-design")
+def get_test_design() -> dict:
+    return get_test_design_settings()
+
+
+@bp.post("/api/settings/test-design")
+def post_test_design() -> tuple[dict, int] | dict:
+    payload = request.get_json(force=False, silent=True)
+    if not isinstance(payload, dict):
+        return {"error": "リクエスト形式が不正です。"}, 400
+    return save_test_design_settings(payload)
 
 
 @bp.get("/api/settings/allow-local")

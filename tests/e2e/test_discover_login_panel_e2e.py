@@ -118,6 +118,17 @@ class TestDiscoverLoginPanelVisibility:
         panel = page.locator(".disc-item-login-panel").first
         expect(panel).to_be_visible()
 
+        # to_be_visible() は非ゼロの bounding box であれば真になるため、
+        # 「技術的には visible だが数px に潰れている」再発（R2-06 オレンジ縞の潰れ）を
+        # 見逃す。実際の描画高を計測し、フォーム一式が収まる最低限の高さを
+        # 下回っていないことを直接アサートする。
+        box = panel.bounding_box()
+        assert box is not None, "ログインパネルの bounding box が取得できません"
+        assert box["height"] >= 60, (
+            f"ログインパネルの描画高が異常に小さい（{box['height']}px）。"
+            "overflow:hidden によるクリップ潰れが再発している可能性がある。"
+        )
+
         username_input = panel.locator(".disc-item-login-user")
         password_input = panel.locator(".disc-item-login-pass")
         login_btn = panel.locator(".disc-item-login-btn")

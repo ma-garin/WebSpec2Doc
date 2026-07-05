@@ -11,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from flask import Blueprint, request
+from flask import Blueprint, Response, request, send_file
 
 from web.config import DISCOVER_TIMEOUT_SEC, MAX_DEPTH, MAX_PAGES_LIMIT, OUTPUT_DIR
 from web.routes.qa_process import _generate_advanced_outputs, _generate_outputs, _load_report
@@ -25,7 +25,7 @@ from web.services.playwright_executor import _read_progress_ndjson, run_playwrig
 from web.services.qa.helpers import use_viewpoint_snapshot
 from web.services.spec_ts_generator import compute_filter_counts, generate_spec_ts
 from web.services.viewpoint_store import ViewpointStoreError, get_viewpoint_store
-from web.validation import _clean_int, _domain_of, _safe_auth_path
+from web.validation import _clean_int, _domain_of, _safe_auth_path, _valid_domain
 
 bp = Blueprint("auto_run", __name__)
 logger = logging.getLogger(__name__)
@@ -37,6 +37,23 @@ _JOBS_LOCK = threading.Lock()
 # ─────────────────────────── API ───────────────────────────
 
 
+def _resolve_crawl_limits(form: Any, body: dict[str, Any]) -> tuple[int, int]:
+    """AutoRunの深さ・最大ページを解決する。既定は上限（全対象）。
+    深さ・最大ページは「詳細オプション」に折りたたまれた任意項目であり、
+    未指定時にR1-08/R2-18が指摘した「一部しか取得されない」挙動にならない
+    よう、既定値自体を上限に合わせる。"""
+    depth = _clean_int(
+        form.get("depth") or body.get("depth", str(MAX_DEPTH)), MAX_DEPTH, 1, MAX_DEPTH
+    )
+    max_pages = _clean_int(
+        form.get("max_pages") or body.get("max_pages", str(MAX_PAGES_LIMIT)),
+        MAX_PAGES_LIMIT,
+        1,
+        MAX_PAGES_LIMIT,
+    )
+    return depth, max_pages
+
+
 @bp.post("/api/autorun/start")
 def api_autorun_start() -> dict | tuple[dict, int]:
     body = request.get_json(silent=True) or {}
@@ -44,10 +61,7 @@ def api_autorun_start() -> dict | tuple[dict, int]:
     if not url:
         return {"error": "url is required"}, 400
 
-    depth = _clean_int(request.form.get("depth") or body.get("depth", "2"), 2, 1, MAX_DEPTH)
-    max_pages = _clean_int(
-        request.form.get("max_pages") or body.get("max_pages", "30"), 30, 1, MAX_PAGES_LIMIT
-    )
+    depth, max_pages = _resolve_crawl_limits(request.form, body)
     auth = _safe_auth_path((request.form.get("auth") or body.get("auth", "")).strip())
     viewpoint_set_id = (
         request.form.get("viewpoint_set_id") or body.get("viewpoint_set_id", "")
@@ -251,6 +265,25 @@ def api_autorun_report() -> dict | tuple[dict, int]:
     if job is None:
         return {"error": "not found"}, 404
     return {**job.to_dict(), "report_html": _report_html_path(job)}
+
+
+@bp.get("/api/autorun/live-screenshot")
+def api_autorun_live_screenshot() -> Response:
+    """テスト実行中の最新スクリーンショットを返す（screenshot:'on' 設定済みの
+    Playwright実行が qa_process/test-results/ 配下に生成するPNGを配信する）。
+    実行中のライブプレビュー表示用。クロール側の /api/live-screenshot と同じパターン。"""
+    domain = request.args.get("domain", "")
+    if not _valid_domain(domain):
+        return Response(status=404)
+    results_dir = OUTPUT_DIR / domain / "qa_process" / "test-results"
+    if not results_dir.is_dir():
+        return Response(status=404)
+    pngs = sorted(results_dir.rglob("*.png"), key=lambda p: p.stat().st_mtime, reverse=True)
+    if not pngs:
+        return Response(status=404)
+    resp = send_file(pngs[0].resolve(), mimetype="image/png")
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
 
 
 @bp.get("/api/autorun/jobs")

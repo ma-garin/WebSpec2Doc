@@ -9,6 +9,7 @@ from web.config import DEFAULT_OPENAI_MODEL
 from web.env_store import _read_env
 
 OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
+OPENAI_MODELS_URL = "https://api.openai.com/v1/models"
 QA_ARTIFACT_VERSION = "qa-process-v1"
 
 
@@ -18,6 +19,31 @@ class OpenAIQAError(RuntimeError):
 
 def has_openai_api_key() -> bool:
     return bool(_read_env().get("OPENAI_API_KEY", "").strip())
+
+
+def test_openai_connection() -> tuple[bool, str]:
+    """設定済みのAPIキー・組織/プロジェクトIDで疎通確認する。
+    トークン課金を避けるため軽量な /v1/models 一覧取得のみ行い、実際の
+    生成は行わない。"""
+    env = _read_env()
+    api_key = env.get("OPENAI_API_KEY", "").strip()
+    if not api_key:
+        return False, "OPENAI_API_KEY が設定されていません。"
+
+    request = urllib.request.Request(
+        OPENAI_MODELS_URL,
+        headers=_openai_headers(api_key, env),
+        method="GET",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:  # nosec B310
+            response.read()
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace")
+        return False, f"接続に失敗しました（HTTP {exc.code}）: {body[:200]}"
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        return False, f"接続に失敗しました: {exc}"
+    return True, "接続に成功しました。"
 
 
 def generate_openai_qa(

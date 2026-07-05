@@ -1,0 +1,81 @@
+{
+  "name": "PMBOK 品質・リスク管理",
+  "description": "PMBOK（プロジェクトマネジメント知識体系）の品質・リスク・ステークホルダー管理の観点をQA観点として整理したセット。",
+  "folders": [
+    {
+      "name": "スコープ管理",
+      "items": [
+        {
+          "name": "要件トレーサビリティ確認",
+          "category": "スコープ管理",
+          "purpose": "要件定義書に記載された項目がすべてテスト対象に含まれていることを確認する。",
+          "recommended_checks": "要件一覧とテスト観点・テストケースの対応関係（トレース）に漏れがないことを確認する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "PMBOK",
+          "tags": ["スコープ管理", "トレーサビリティ"]
+        }
+      ]
+    },
+    {
+      "name": "品質管理",
+      "items": [
+        {
+          "name": "品質基準の合意確認",
+          "category": "品質管理",
+          "purpose": "受け入れ基準・完了の定義（Definition of Done）が関係者間で合意されていることを確認する。",
+          "recommended_checks": "テスト完了基準（合格率・既知不具合の許容度等）が事前に合意されていることを確認する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "PMBOK",
+          "tags": ["品質管理"]
+        }
+      ]
+    },
+    {
+      "name": "リスク管理",
+      "items": [
+        {
+          "name": "リスク登録簿の反映確認",
+          "category": "リスク管理",
+          "purpose": "プロジェクトのリスク登録簿に記載された技術的リスクがテスト観点に反映されていることを確認する。",
+          "recommended_checks": "高リスク項目（外部連携・新技術採用箇所等）に重点的なテストが計画されていることを確認する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "PMBOK",
+          "tags": ["リスク管理"]
+        }
+      ]
+    },
+    {
+      "name": "ステークホルダー管理",
+      "items": [
+        {
+          "name": "関係者レビュー実施確認",
+          "category": "ステークホルダー管理",
+          "purpose": "業務部門・発注者によるテスト結果レビューが計画・実施されていることを確認する。",
+          "recommended_checks": "受入テスト結果を関係者がレビューし承認した記録があることを確認する。",
+          "risk_weight": 2,
+          "automation": "manual",
+          "standards": "PMBOK",
+          "tags": ["ステークホルダー管理"]
+        }
+      ]
+    },
+    {
+      "name": "変更管理",
+      "items": [
+        {
+          "name": "変更管理プロセス確認",
+          "category": "変更管理",
+          "purpose": "仕様変更が発生した際にテスト観点・テストケースへ反映するプロセスがあることを確認する。",
+          "recommended_checks": "仕様変更履歴とテスト観点の更新履歴が対応していることを確認する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "PMBOK",
+          "tags": ["変更管理"]
+        }
+      ]
+    }
+  ]
+}

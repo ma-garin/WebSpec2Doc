@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+import re
+from dataclasses import dataclass, replace
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -35,7 +36,17 @@ _AUTH_KEYWORDS = (
     "認証",
 )
 
+_ENV_SETUP_KEYWORDS = (
+    "browserType.launch",
+    "Executable doesn't exist",
+)
+
 _ACTION_ENV = "環境・認証状態を確認してください"
+_ACTION_ENV_SETUP = (
+    "Playwrightのブラウザ実行環境が未セットアップまたはバージョン不一致です。"
+    "次回のAutoRun実行時に自動修復を試みます。改善しない場合は "
+    "`npx playwright install chromium` を手動実行してください。"
+)
 _ACTION_ROT = "ロケータを更新してください（self-healing ロケータ候補を確認）"
 _ACTION_APP = "差分レポートを確認してください（仕様変更の可能性）"
 _ACTION_UNKNOWN = "テストログを詳細確認してください"
@@ -48,6 +59,13 @@ class FailureClassification:
     confidence: float
     reason: str
     suggested_action: str
+    count: int = 1
+    affected_test_ids: tuple[str, ...] = ()
+
+
+def _is_env_setup_error(error_message: str) -> bool:
+    """Playwrightブラウザ未インストール・バージョン不一致による起動失敗かどうかを判定する。"""
+    return any(kw in error_message for kw in _ENV_SETUP_KEYWORDS)
 
 
 def _is_env_issue(error_message: str) -> bool:
@@ -97,6 +115,14 @@ def classify_failure(
     diff_result: Any = None,
 ) -> FailureClassification:
     """Playwright テスト失敗のエラーメッセージとドリフト情報から失敗を分類する。"""
+    if _is_env_setup_error(error_message):
+        return FailureClassification(
+            test_id=test_id,
+            failure_type=FAILURE_ENV_ISSUE,
+            confidence=0.95,
+            reason="Playwrightのブラウザ実行環境が未セットアップまたはバージョン不一致です",
+            suggested_action=_ACTION_ENV_SETUP,
+        )
     if _is_env_issue(error_message):
         return FailureClassification(
             test_id=test_id,
@@ -131,32 +157,71 @@ def classify_failure(
     )
 
 
+def _normalize_error(error_message: str) -> str:
+    """行番号・一時パス等の可変部分を除いた、重複判定用のキー文字列を作る。"""
+    return re.sub(r"\d+", "#", error_message).strip()
+
+
+def _collapse_duplicate_failures(
+    items: list[tuple[FailureClassification, str]],
+) -> list[FailureClassification]:
+    """同一原因（同じ failure_type ＋ 同じエラー文言）で大量発生した失敗を1件に集約する。
+    Playwrightのブラウザ未セットアップ等、根本原因が1つなのに数百件のテストが
+    同一メッセージで失敗するケースで、UI上に意味のある単位で表示するための集約。"""
+    groups: dict[tuple[str, str], list[tuple[FailureClassification, str]]] = {}
+    order: list[tuple[str, str]] = []
+    for classification, error in items:
+        key = (classification.failure_type, _normalize_error(error))
+        if key not in groups:
+            groups[key] = []
+            order.append(key)
+        groups[key].append((classification, error))
+
+    collapsed: list[FailureClassification] = []
+    for key in order:
+        group = groups[key]
+        if len(group) == 1:
+            collapsed.append(group[0][0])
+            continue
+        first = group[0][0]
+        test_ids = tuple(c.test_id for c, _ in group)
+        collapsed.append(
+            replace(
+                first,
+                test_id=f"{first.test_id} ほか{len(group) - 1}件",
+                count=len(group),
+                affected_test_ids=test_ids,
+            )
+        )
+    return collapsed
+
+
 def classify_failures(
     results: list[dict],
     diff_result: Any = None,
 ) -> list[FailureClassification]:
     """複数のテスト結果をまとめて分類する。
     results の各要素: {"test_id": str, "status": "failed"/"passed", "error": str}
-    status が "failed" のもののみ処理する。"""
-    classifications: list[FailureClassification] = []
+    status が "failed" のもののみ処理する。同一原因の大量重複は1件に集約する。"""
+    raw: list[tuple[FailureClassification, str]] = []
     for item in results:
         if item.get("status") != "failed":
             continue
         test_id = item.get("test_id", "")
         error = item.get("error", "")
-        classifications.append(classify_failure(test_id, error, diff_result))
-    return classifications
+        raw.append((classify_failure(test_id, error, diff_result), error))
+    return _collapse_duplicate_failures(raw)
 
 
 def summarize_classifications(
     classifications: list[FailureClassification],
 ) -> dict[str, int]:
-    """分類結果をカテゴリ別件数でまとめる。
+    """分類結果をカテゴリ別件数でまとめる（集約済みエントリは count 分で加算）。
     戻り値例: {"app_change": 3, "test_rot": 1, "env_issue": 0, "unknown": 0}"""
     summary: dict[str, int] = {ft: 0 for ft in _ALL_FAILURE_TYPES}
     for c in classifications:
         if c.failure_type in summary:
-            summary[c.failure_type] += 1
+            summary[c.failure_type] += c.count
         else:
             logger.warning("未知の failure_type: %s", c.failure_type)
     return summary

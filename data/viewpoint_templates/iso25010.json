@@ -1,0 +1,126 @@
+{
+  "name": "ISO/IEC 25010 品質特性",
+  "description": "ISO/IEC 25010 のソフトウェア製品品質モデル8特性に沿った観点セット。",
+  "folders": [
+    {
+      "name": "機能適合性",
+      "items": [
+        {
+          "name": "機能の網羅性確認",
+          "category": "機能適合性",
+          "purpose": "仕様に定義された機能がすべて実装され、意図どおりに動作することを確認する。",
+          "recommended_checks": "画面一覧・フォーム一覧の各機能が仕様書の記載と一致することを確認する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010",
+          "tags": ["機能適合性"]
+        }
+      ]
+    },
+    {
+      "name": "性能効率性",
+      "items": [
+        {
+          "name": "応答時間確認",
+          "category": "性能効率性",
+          "purpose": "主要画面の応答時間が許容範囲内であることを確認する。",
+          "recommended_checks": "初回表示・遷移・検索結果表示の応答時間を計測する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010",
+          "tags": ["性能効率性"]
+        }
+      ]
+    },
+    {
+      "name": "互換性",
+      "items": [
+        {
+          "name": "ブラウザ・デバイス互換性確認",
+          "category": "互換性",
+          "purpose": "主要ブラウザ・画面サイズで表示崩れや機能不全がないことを確認する。",
+          "recommended_checks": "対象ブラウザ（Chrome/Safari/Edge等）・レスポンシブ幅で主要画面を確認する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010",
+          "tags": ["互換性"]
+        }
+      ]
+    },
+    {
+      "name": "使用性",
+      "items": [
+        {
+          "name": "操作のわかりやすさ確認",
+          "category": "使用性",
+          "purpose": "初見の利用者が迷わず主要タスクを完了できることを確認する。",
+          "recommended_checks": "ラベル・エラーメッセージ・導線が業務知識なしでも理解できるかを確認する。",
+          "risk_weight": 2,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010",
+          "tags": ["使用性"]
+        }
+      ]
+    },
+    {
+      "name": "信頼性",
+      "items": [
+        {
+          "name": "異常終了時の回復性確認",
+          "category": "信頼性",
+          "purpose": "通信断・タイムアウト・サーバーエラー時に安全に復帰できることを確認する。",
+          "recommended_checks": "通信断や5xxエラー発生時にデータ不整合やクラッシュが起きないことを確認する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010",
+          "tags": ["信頼性"]
+        }
+      ]
+    },
+    {
+      "name": "セキュリティ",
+      "items": [
+        {
+          "name": "認可・入力検証確認",
+          "category": "セキュリティ",
+          "purpose": "権限のない操作の拒否、不正入力（XSS/SQLi等）の無害化を確認する。",
+          "recommended_checks": "未認証・権限外アクセスの拒否、代表的な不正入力に対するエラーハンドリングを確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010",
+          "tags": ["セキュリティ"]
+        }
+      ]
+    },
+    {
+      "name": "保守性",
+      "items": [
+        {
+          "name": "ログ・トレーサビリティ確認",
+          "category": "保守性",
+          "purpose": "障害調査に必要なログ・エラー情報が残ることを確認する。",
+          "recommended_checks": "エラー発生時に原因特定可能なログが出力されることを確認する。",
+          "risk_weight": 2,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010",
+          "tags": ["保守性"]
+        }
+      ]
+    },
+    {
+      "name": "移植性",
+      "items": [
+        {
+          "name": "環境依存性確認",
+          "category": "移植性",
+          "purpose": "OS・ブラウザバージョン・解像度に依存した不具合がないことを確認する。",
+          "recommended_checks": "異なる環境（OS/ブラウザ/画面解像度）で同一の挙動になることを確認する。",
+          "risk_weight": 2,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010",
+          "tags": ["移植性"]
+        }
+      ]
+    }
+  ]
+}

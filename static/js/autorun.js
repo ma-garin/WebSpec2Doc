@@ -12,6 +12,8 @@ let _autorunViewpointTimer = null;
 let _autoRunLogLines = [];
 let _autoRunLogLevel = 'all';
 let _autoRunLoginSuppressed = false; // ✕で閉じた後、次のポーリングで再ポップさせない
+let _autoRunLivePreviewTimer = null;
+let _autoRunLivePreviewDomain = '';
 
 const AUTORUN_STEP_MAP = {
   idle:              null,
@@ -224,8 +226,8 @@ async function autorunStart() {
   const url = (document.getElementById('autorun-url')?.value || '').trim();
   if (!url) { autorunSetStartStatus('URLを入力してください。', true); return; }
 
-  const depth    = document.getElementById('autorun-depth')?.value || '2';
-  const maxPages = document.getElementById('autorun-max-pages')?.value || '30';
+  const depth    = document.getElementById('autorun-depth')?.value || '5';
+  const maxPages = document.getElementById('autorun-max-pages')?.value || '300';
   const viewpointSetId = document.getElementById('autorun-viewpoint-set')?.value || '';
 
   const btn = document.getElementById('autorun-start-btn');
@@ -339,6 +341,38 @@ async function _autorunPoll() {
     const data = await fetch('/api/autorun/status?job_id=' + encodeURIComponent(_autoRunJobId)).then(r => r.json());
     _autorunRender(data);
   } catch (e) {}
+}
+
+// ---- AutoRun: テスト実行中のライブプレビュー ----
+function _autorunStartLivePreview(domain) {
+  if (!domain) return;
+  _autoRunLivePreviewDomain = domain;
+  const frame = document.getElementById('autorun-preview-frame');
+  if (frame) frame.style.display = '';
+  if (_autoRunLivePreviewTimer) return; // 既にポーリング中
+  const poll = () => {
+    const image = document.getElementById('autorun-preview-image');
+    const placeholder = document.getElementById('autorun-preview-placeholder');
+    if (!image || !placeholder) return;
+    const probe = new Image();
+    probe.onload = () => {
+      image.src = probe.src;
+      image.classList.add('show');
+      placeholder.classList.add('hidden');
+    };
+    probe.src = `/api/autorun/live-screenshot?domain=${encodeURIComponent(_autoRunLivePreviewDomain)}&t=${Date.now()}`;
+  };
+  poll();
+  _autoRunLivePreviewTimer = setInterval(poll, 1500);
+}
+function _autorunStopLivePreview() {
+  if (_autoRunLivePreviewTimer) { clearInterval(_autoRunLivePreviewTimer); _autoRunLivePreviewTimer = null; }
+  const frame = document.getElementById('autorun-preview-frame');
+  if (frame) frame.style.display = 'none';
+  const image = document.getElementById('autorun-preview-image');
+  const placeholder = document.getElementById('autorun-preview-placeholder');
+  if (image) image.classList.remove('show');
+  if (placeholder) placeholder.classList.remove('hidden');
 }
 
 // ---- AutoRun: 経過時間タイマー ----
@@ -614,6 +648,13 @@ function _autorunRender(data) {
   _autorunRenderComplete(data);
   _autorunRenderFailurePanel(data);
 
+  // ---- テスト実行中のライブプレビュー ----
+  if (status === 'running_tests' && data.domain) {
+    _autorunStartLivePreview(data.domain);
+  } else {
+    _autorunStopLivePreview();
+  }
+
   // ---- 停止ボタン ----
   const cancelArea = document.getElementById('autorun-cancel-area');
   const activeStatuses = ['discovering','awaiting_input','crawling','generating_qa','generating_scripts','running_tests'];
@@ -768,6 +809,7 @@ function autorunReset() {
   window._autoRunLastData     = null;
   _autorunStopPolling();
   _autorunStopElapsed();
+  _autorunStopLivePreview();
   _autorunHideApprovalModal();
   _autorunHideLoginModal();
   document.getElementById('autorun-steps').style.display          = 'none';

@@ -7,16 +7,20 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from web.services.playwright_executor import (
+    _browsers_present,
     _build_html_report,
     _count_tests_in_spec,
+    _ensure_browsers_installed,
     _ensure_pw_env,
     _error_result,
     _first_error,
     _get_cli_version,
+    _installed_pw_test_version,
     _map_status,
     _parse_results,
     _parse_stdout_json,
     _pw_test_available,
+    _python_playwright_version,
     _read_progress_ndjson,
     _resolve_timeout_sec,
     _unavailable_result,
@@ -741,6 +745,224 @@ class TestEnsurePwEnv:
         ):
             _ensure_pw_env(env_dir)
         assert (env_dir / "package.json").exists()
+
+    def test_version_mismatch_rebuilds_env(self, tmp_path: Path) -> None:
+        """既存envがPython側と異なるバージョンの @playwright/test で入っている場合
+        （旧実装がnpx解決の最新版をインストールしていたケースの再発防止）、
+        node_modules を破棄して同バージョンで再インストールする。"""
+        pw_test_dir = tmp_path / "node_modules" / "@playwright" / "test"
+        pw_test_dir.mkdir(parents=True)
+        (pw_test_dir / "package.json").write_text(
+            json.dumps({"name": "@playwright/test", "version": "1.56.1"}), encoding="utf-8"
+        )
+        install_calls: list[list[str]] = []
+
+        def fake_run(cmd: list[str], **_: object) -> MagicMock:
+            install_calls.append(cmd)
+            return _mock_proc(returncode=0)
+
+        with (
+            patch(
+                "web.services.playwright_executor._python_playwright_version",
+                return_value="1.44.0",
+            ),
+            patch("web.services.playwright_executor.shutil.which", return_value="/usr/bin/npm"),
+            patch("web.services.playwright_executor.subprocess.run", side_effect=fake_run),
+            patch(
+                "web.services.playwright_executor._ensure_browsers_installed",
+                return_value=(True, ""),
+            ),
+        ):
+            ok, msg = _ensure_pw_env(tmp_path)
+
+        assert ok is True
+        assert "1.44.0" in msg
+        # 旧バージョンの node_modules は破棄され、新バージョンで npm install し直された
+        assert not pw_test_dir.is_dir()
+        assert install_calls, "npm install が実行されていない"
+        assert any("@playwright/test@1.44.0" in arg for arg in install_calls[0])
+
+    def test_matching_version_skips_reinstall_but_checks_browsers(self, tmp_path: Path) -> None:
+        """バージョンが一致していれば再インストールしないが、ブラウザ実在は毎回確認する。"""
+        pw_test_dir = tmp_path / "node_modules" / "@playwright" / "test"
+        pw_test_dir.mkdir(parents=True)
+        (pw_test_dir / "package.json").write_text(
+            json.dumps({"name": "@playwright/test", "version": "1.44.0"}), encoding="utf-8"
+        )
+        with (
+            patch(
+                "web.services.playwright_executor._python_playwright_version",
+                return_value="1.44.0",
+            ),
+            patch(
+                "web.services.playwright_executor._ensure_browsers_installed",
+                return_value=(True, ""),
+            ) as mock_browsers,
+            patch("web.services.playwright_executor.subprocess.run") as mock_run,
+        ):
+            ok, msg = _ensure_pw_env(tmp_path)
+
+        assert ok is True
+        assert "既にセットアップ済み" in msg
+        mock_browsers.assert_called_once()
+        mock_run.assert_not_called()  # npm install は走らない
+
+    def test_browsers_missing_after_reinstall_fails(self, tmp_path: Path) -> None:
+        """npm install自体は成功しても、ブラウザ自動導入に失敗すればセットアップ全体を失敗にする。"""
+        with (
+            patch(
+                "web.services.playwright_executor._python_playwright_version",
+                return_value="1.44.0",
+            ),
+            patch("web.services.playwright_executor.shutil.which", return_value="/usr/bin/npm"),
+            patch(
+                "web.services.playwright_executor.subprocess.run",
+                return_value=_mock_proc(returncode=0),
+            ),
+            patch(
+                "web.services.playwright_executor._ensure_browsers_installed",
+                return_value=(False, "ブラウザの自動導入に失敗しました"),
+            ),
+        ):
+            ok, msg = _ensure_pw_env(tmp_path)
+        assert ok is False
+        assert "ブラウザ" in msg
+
+
+# ─────────────────────── _python_playwright_version / _installed_pw_test_version ───────────────────────
+
+
+class TestPythonPlaywrightVersion:
+    def test_returns_installed_version(self) -> None:
+        # requirements.txt で playwright==1.44.0 に固定されている
+        assert _python_playwright_version() == "1.44.0"
+
+    def test_returns_empty_when_package_missing(self) -> None:
+        from importlib.metadata import PackageNotFoundError
+
+        with patch(
+            "web.services.playwright_executor._pkg_version",
+            side_effect=PackageNotFoundError,
+        ):
+            assert _python_playwright_version() == ""
+
+
+class TestInstalledPwTestVersion:
+    def test_reads_version_from_package_json(self, tmp_path: Path) -> None:
+        pkg_dir = tmp_path / "node_modules" / "@playwright" / "test"
+        pkg_dir.mkdir(parents=True)
+        (pkg_dir / "package.json").write_text(json.dumps({"version": "1.56.1"}), encoding="utf-8")
+        assert _installed_pw_test_version(tmp_path) == "1.56.1"
+
+    def test_missing_file_returns_empty(self, tmp_path: Path) -> None:
+        assert _installed_pw_test_version(tmp_path) == ""
+
+    def test_corrupt_json_returns_empty(self, tmp_path: Path) -> None:
+        pkg_dir = tmp_path / "node_modules" / "@playwright" / "test"
+        pkg_dir.mkdir(parents=True)
+        (pkg_dir / "package.json").write_text("{not json", encoding="utf-8")
+        assert _installed_pw_test_version(tmp_path) == ""
+
+
+# ─────────────────────── _browsers_present / _ensure_browsers_installed ───────────────────────
+
+
+class TestBrowsersPresent:
+    def test_true_when_chromium_dir_exists(self, tmp_path: Path) -> None:
+        (tmp_path / "chromium-1148").mkdir()
+        assert _browsers_present(tmp_path) is True
+
+    def test_true_when_headless_shell_dir_exists(self, tmp_path: Path) -> None:
+        (tmp_path / "chromium_headless_shell-1217").mkdir()
+        assert _browsers_present(tmp_path) is True
+
+    def test_false_when_dir_empty(self, tmp_path: Path) -> None:
+        assert _browsers_present(tmp_path) is False
+
+    def test_false_when_dir_missing(self, tmp_path: Path) -> None:
+        assert _browsers_present(tmp_path / "does-not-exist") is False
+
+
+class TestEnsureBrowsersInstalled:
+    def test_already_present_skips_install(self, tmp_path: Path) -> None:
+        with (
+            patch(
+                "web.services.playwright_executor._configured_browsers_path",
+                return_value=tmp_path,
+            ),
+            patch("web.services.playwright_executor._browsers_present", return_value=True),
+            patch("web.services.playwright_executor.subprocess.run") as mock_run,
+        ):
+            ok, msg = _ensure_browsers_installed()
+        assert ok is True
+        assert msg == ""
+        mock_run.assert_not_called()
+
+    def test_missing_and_no_npx(self, tmp_path: Path) -> None:
+        with (
+            patch(
+                "web.services.playwright_executor._configured_browsers_path",
+                return_value=tmp_path,
+            ),
+            patch("web.services.playwright_executor._browsers_present", return_value=False),
+            patch("web.services.playwright_executor.shutil.which", return_value=None),
+        ):
+            ok, msg = _ensure_browsers_installed()
+        assert ok is False
+        assert "npx" in msg
+
+    def test_missing_installs_successfully(self, tmp_path: Path) -> None:
+        with (
+            patch(
+                "web.services.playwright_executor._configured_browsers_path",
+                return_value=tmp_path,
+            ),
+            patch("web.services.playwright_executor._browsers_present", return_value=False),
+            patch("web.services.playwright_executor.shutil.which", return_value="/usr/bin/npx"),
+            patch(
+                "web.services.playwright_executor.subprocess.run",
+                return_value=_mock_proc(returncode=0),
+            ) as mock_run,
+        ):
+            ok, msg = _ensure_browsers_installed()
+        assert ok is True
+        assert "自動導入" in msg
+        cmd = mock_run.call_args[0][0]
+        assert cmd == ["npx", "playwright", "install", "chromium"]
+
+    def test_install_failure(self, tmp_path: Path) -> None:
+        with (
+            patch(
+                "web.services.playwright_executor._configured_browsers_path",
+                return_value=tmp_path,
+            ),
+            patch("web.services.playwright_executor._browsers_present", return_value=False),
+            patch("web.services.playwright_executor.shutil.which", return_value="/usr/bin/npx"),
+            patch(
+                "web.services.playwright_executor.subprocess.run",
+                return_value=_mock_proc(stderr="network error", returncode=1),
+            ),
+        ):
+            ok, msg = _ensure_browsers_installed()
+        assert ok is False
+        assert "失敗" in msg
+
+    def test_install_timeout(self, tmp_path: Path) -> None:
+        with (
+            patch(
+                "web.services.playwright_executor._configured_browsers_path",
+                return_value=tmp_path,
+            ),
+            patch("web.services.playwright_executor._browsers_present", return_value=False),
+            patch("web.services.playwright_executor.shutil.which", return_value="/usr/bin/npx"),
+            patch(
+                "web.services.playwright_executor.subprocess.run",
+                side_effect=subprocess.TimeoutExpired("npx", 300),
+            ),
+        ):
+            ok, msg = _ensure_browsers_installed()
+        assert ok is False
+        assert "タイムアウト" in msg
 
 
 # ─────────────────────── _unavailable_result / _error_result ───────────────────────

@@ -168,7 +168,6 @@
 }
 
 .btn-danger-outline {
-  width: 100%;
   color: var(--critical);
   border-color: var(--critical);
 }
@@ -296,6 +295,12 @@
   gap: 8px;
 }
 
+/* 中断/停止ボタンは既定のgrid stretchで全幅の目立つ赤帯にならないよう、
+   内容幅に収めて控えめに配置する（R2-05: 中断ボタンをスタイリッシュに）。 */
+#autorun-cancel-btn {
+  justify-self: start;
+}
+
 .autorun-main {
   padding: 20px;
 }
@@ -340,6 +345,30 @@
   border-radius: 9999px;
   background: var(--surface-subtle);
   overflow: hidden;
+}
+
+/* ---- テスト実行中のライブプレビュー ---- */
+#autorun-preview-frame.execution-preview-frame {
+  flex: none;
+  height: 280px;
+  margin-bottom: 14px;
+}
+
+/* ---- AutoRun: 深さ・最大ページの詳細オプション（既定は折りたたみ） ---- */
+.autorun-advanced-options {
+  margin-top: 4px;
+}
+.autorun-advanced-options summary {
+  cursor: pointer;
+  color: var(--primary-dark);
+  font-size: var(--text-sm, 13px);
+  font-weight: 700;
+  list-style: none;
+  user-select: none;
+}
+.autorun-advanced-options summary::-webkit-details-marker { display: none; }
+.autorun-advanced-options .control-grid-2 {
+  margin-top: 10px;
 }
 
 .autorun-progressbar-fill {

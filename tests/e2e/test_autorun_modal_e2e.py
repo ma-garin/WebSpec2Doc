@@ -93,9 +93,20 @@ class TestAutoRunFormExists:
         expect(btn).to_be_enabled()
 
     def test_depth_and_max_pages_inputs_exist(self, autorun_page: Page) -> None:
-        """深さ・最大ページ数の入力フィールドが存在する。"""
+        """深さ・最大ページ数の入力フィールドは「詳細オプション」の折りたたみ内に
+        存在し（R1-08/R2-18: 既定は上限=全対象、詳細オプション化）、開くと見える。"""
+        expect(autorun_page.locator("#autorun-depth")).to_be_attached()
+        expect(autorun_page.locator("#autorun-max-pages")).to_be_attached()
+        expect(autorun_page.locator("#autorun-depth")).to_be_hidden()
+        autorun_page.locator(".autorun-advanced-options summary").click()
         expect(autorun_page.locator("#autorun-depth")).to_be_visible()
         expect(autorun_page.locator("#autorun-max-pages")).to_be_visible()
+
+    def test_depth_and_max_pages_default_to_max(self, autorun_page: Page) -> None:
+        """既定値は上限（深さ5・最大ページ300 = 全対象）。"""
+        autorun_page.locator(".autorun-advanced-options summary").click()
+        expect(autorun_page.locator("#autorun-depth")).to_have_value("5")
+        expect(autorun_page.locator("#autorun-max-pages")).to_have_value("300")
 
     def test_invalid_url_shows_error(self, autorun_page: Page) -> None:
         """URL 未入力で開始ボタンをクリックするとエラーが表示される。"""
@@ -265,6 +276,72 @@ class TestRunningTestsProgressLabel:
             })"""
         )
         expect(autorun_page.locator("#autorun-phase-label")).to_have_text("テスト実行中…")
+
+
+class TestAutoRunCancelButtonStyle:
+    """R2-05/S1-8: 中断ボタンをスタイリッシュに。.btn-danger-outline の
+    width:100% で全幅の目立つ赤帯になっていた不具合の再発防止。"""
+
+    def test_cancel_button_is_compact_not_full_width(self, autorun_page: Page) -> None:
+        autorun_page.evaluate(
+            """() => {
+                document.getElementById('autorun-cancel-area').style.display = '';
+            }"""
+        )
+        box = autorun_page.locator("#autorun-cancel-btn").bounding_box()
+        assert box is not None
+        assert box["width"] < 150, f"停止ボタンが横に広がりすぎている: {box['width']}px"
+
+
+class TestAutoRunLivePreview:
+    """R2-07/R2-23: AutoRunのテスト実行中にライブプレビュー画面が見えないという
+    指摘への対応。running_tests ステータスの間だけプレビュー枠を表示する。"""
+
+    def test_preview_frame_shown_during_running_tests(self, autorun_page: Page) -> None:
+        autorun_page.evaluate(
+            """() => _autorunRender({
+                status: 'running_tests',
+                job_id: 'test-job-e2e',
+                domain: 'example.com',
+                log: [], outputs: {}, test_results: null,
+                started_at: '2026-06-03T10:00:00', elapsed_sec: 1,
+                error: null, finished_at: null, input_request: null, run_policy: {},
+            })"""
+        )
+        expect(autorun_page.locator("#autorun-preview-frame")).to_be_visible()
+
+    def test_preview_frame_hidden_outside_running_tests(self, autorun_page: Page) -> None:
+        autorun_page.evaluate(
+            """() => _autorunRender({
+                status: 'generating_scripts',
+                job_id: 'test-job-e2e',
+                domain: 'example.com',
+                log: [], outputs: {}, test_results: null,
+                started_at: '2026-06-03T10:00:00', elapsed_sec: 1,
+                error: null, finished_at: null, input_request: null, run_policy: {},
+            })"""
+        )
+        expect(autorun_page.locator("#autorun-preview-frame")).to_be_hidden()
+
+    def test_preview_frame_hidden_after_completion(self, autorun_page: Page) -> None:
+        autorun_page.evaluate(
+            """() => _autorunRender({
+                status: 'running_tests', job_id: 'j', domain: 'example.com',
+                log: [], outputs: {}, test_results: null,
+                started_at: '2026-06-03T10:00:00', elapsed_sec: 1,
+                error: null, finished_at: null, input_request: null, run_policy: {},
+            })"""
+        )
+        expect(autorun_page.locator("#autorun-preview-frame")).to_be_visible()
+        autorun_page.evaluate(
+            """() => _autorunRender({
+                status: 'complete', job_id: 'j', domain: 'example.com',
+                log: [], outputs: {}, test_results: {passed: 1, failed: 0, total: 1},
+                started_at: '2026-06-03T10:00:00', finished_at: '2026-06-03T10:01:00', elapsed_sec: 60,
+                error: null, input_request: null, run_policy: {},
+            })"""
+        )
+        expect(autorun_page.locator("#autorun-preview-frame")).to_be_hidden()
 
 
 class TestCaseDetailExpand:

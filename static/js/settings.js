@@ -1,4 +1,4 @@
-// ---- 設定タブ切替（APIキー/モデル/クロール既定値/通知）----
+// ---- 設定タブ切替（APIキー・モデル/クロール既定値/通知）----
 // 従来 .set-tab ボタンに click ハンドラが未実装で「タブ操作ができない」不具合があったため追加。
 function selectSettingsTab(tab) {
   const tabs = [...document.querySelectorAll('.set-tabs .set-tab')];
@@ -84,10 +84,12 @@ async function saveApiKey() {
   const key = document.getElementById('api-key')?.value?.trim() || '';
   const org = document.getElementById('api-org')?.value?.trim() || '';
   const proj = document.getElementById('api-project')?.value?.trim() || '';
+  const model = document.getElementById('api-model')?.value || '';
   const form = new FormData();
   if (key) form.append('api_key', key);
   if (org) form.append('org_id', org);
   if (proj) form.append('project_id', proj);
+  form.append('model', model);
   try {
     const res = await fetch('/api/settings', { method: 'POST', body: form });
     const data = await res.json();
@@ -99,15 +101,24 @@ async function saveApiKey() {
   } catch (e) { showToast('設定の保存に失敗しました', 'error'); }
 }
 
-async function saveModel() {
-  const model = document.getElementById('api-model')?.value || '';
-  const form = new FormData();
-  form.append('model', model);
+async function testConnection() {
+  const btn = document.getElementById('test-connection');
+  const msg = document.getElementById('test-connection-msg');
+  if (!msg) return;
+  if (btn) { btn.disabled = true; btn.textContent = '疎通確認中…'; }
+  msg.classList.remove('show', 'is-error');
   try {
-    await fetch('/api/settings', { method: 'POST', body: form });
-    const msg = document.getElementById('model-msg'); msg.classList.add('show');
-    setTimeout(() => msg.classList.remove('show'), 2500);
-  } catch (e) { showToast('モデル設定の保存に失敗しました', 'error'); }
+    const res = await fetch('/api/settings/test-connection', { method: 'POST' });
+    const data = await res.json();
+    msg.textContent = data.message || (data.ok ? '接続に成功しました。' : '接続に失敗しました。');
+    msg.classList.toggle('is-error', !data.ok);
+    msg.classList.add('show');
+  } catch (e) {
+    msg.textContent = '疎通確認リクエストに失敗しました。';
+    msg.classList.add('show', 'is-error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '疎通確認'; }
+  }
 }
 
 async function saveSlackWebhook() {
@@ -150,7 +161,7 @@ async function saveAllowLocal() {
 }
 
 document.getElementById('save-api')?.addEventListener('click', saveApiKey);
-document.getElementById('save-model')?.addEventListener('click', saveModel);
+document.getElementById('test-connection')?.addEventListener('click', testConnection);
 document.getElementById('save-slack')?.addEventListener('click', saveSlackWebhook);
 document.getElementById('allow-local-toggle')?.addEventListener('change', saveAllowLocal);
 

@@ -297,6 +297,7 @@
 .vp-template-item:hover { background: var(--surface-subtle); }
 .vp-template-item strong { font-size: 12px; }
 .vp-template-item span { color: var(--text-muted); font-size: 10.5px; }
+.vp-template-menu-empty { padding: 12px 14px; font-size: 11px; color: var(--text-muted); }
 
 /* ── テーブルパネル ── */
 .vp-table-panel { background: var(--surface); }

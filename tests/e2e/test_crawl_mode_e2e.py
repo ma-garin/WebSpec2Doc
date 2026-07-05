@@ -66,3 +66,22 @@ class TestCrawlModeSelection:
         page.locator("#crawl-mode-selected").check()
         expect(page.locator("#discovered-url-panel")).to_be_visible()
         expect(page.locator("#crawl-mode-auto-fields")).to_be_hidden()
+
+
+class TestParallelismAndEtaEstimate:
+    """並列数選択と所要時間目安の表示（ドッグフーディング要望: 分析時間を
+    短縮したい、への対応）。"""
+
+    def test_eta_estimate_shown_for_selected_urls(self, page: Page) -> None:
+        _enter_step2_with_discovered(page, ["https://example.com/", "https://example.com/about"])
+        expect(page.locator("#target-preview-eta")).to_contain_text("所要目安")
+        expect(page.locator("#target-preview-eta")).to_contain_text("分")
+
+    def test_increasing_parallelism_shortens_eta_estimate(self, page: Page) -> None:
+        urls = [f"https://example.com/page{i}" for i in range(20)]
+        _enter_step2_with_discovered(page, urls)
+        page.locator("#crawl-parallelism").select_option("1")
+        eta_slow = page.locator("#target-preview-eta").inner_text()
+        page.locator("#crawl-parallelism").select_option("4")
+        eta_fast = page.locator("#target-preview-eta").inner_text()
+        assert eta_slow != eta_fast, "並列数を上げても目安時間の表示が変化していない"

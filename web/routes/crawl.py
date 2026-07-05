@@ -48,6 +48,7 @@ def run() -> Response:
     compare = request.form.get("compare", "false") == "true"
     auth = _safe_auth_path(request.form.get("auth", "").strip())
     crawl_mode = request.form.get("crawl_mode", "").strip()
+    parallelism = str(_clean_int(request.form.get("parallelism", "2"), 2, 1, 4))
     domain = _domain_of(urls.split(",")[0]) if urls else ""
     reference_docs = _safe_reference_doc_paths(request.form.get("reference_docs", ""), domain)
 
@@ -67,7 +68,7 @@ def run() -> Response:
             "src/main.py",
             *target_args,
             "--parallelism",
-            "2",
+            parallelism,
             "--format",
             fmt,
         ]

@@ -116,6 +116,15 @@
                         <input type="number" id="max-pages" class="url-input input-compact" value="30" min="1" max="300" />
                       </div>
                     </div>
+                    <div class="control-field" style="margin-top:10px;max-width:180px">
+                      <label for="crawl-parallelism">並列数<span class="info-tip" tabindex="0" role="img" aria-label="同時にアクセスする画面数。増やすと解析時間は短くなりますが、対象サイトへの負荷が増えます。" data-tip="同時にアクセスする画面数。増やすと解析時間は短くなりますが、対象サイトへの負荷が増えます。">ⓘ</span></label>
+                      <select id="crawl-parallelism" class="url-input select-compact">
+                        <option value="1">1（順次）</option>
+                        <option value="2" selected>2（既定）</option>
+                        <option value="3">3</option>
+                        <option value="4">4（最大）</option>
+                      </select>
+                    </div>
                   </div>
 
                   <!-- 画面リスト + ログイン入力（ログイン必要時はリスト直下に表示） -->
@@ -133,6 +142,7 @@
                   <div id="target-preview" class="target-preview">
                     <strong>チェック対象 0件</strong>
                     <ol id="target-preview-list"></ol>
+                    <p id="target-preview-eta" class="input-field-message" style="margin-top:6px"></p>
                   </div>
 
                   <!-- 参考文書（任意） -->

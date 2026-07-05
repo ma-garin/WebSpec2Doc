@@ -120,6 +120,7 @@ document.getElementById('form').addEventListener('submit', (e) => {
     urls: urls.join(','),
     depth: document.getElementById('crawl-depth').value,
     max_pages: document.getElementById('max-pages').value,
+    parallelism: document.getElementById('crawl-parallelism')?.value || '2',
     format: 'html,pdf,md,excel,json',
     compare: document.getElementById('compare').checked ? 'true' : 'false',
     auth: document.getElementById('auth-path').value.trim() || getSettings().auth || '',

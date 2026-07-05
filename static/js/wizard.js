@@ -523,13 +523,31 @@ function updateTargetPreview() {
   targetPreview.querySelector('strong').textContent = isAuto
     ? '自動クロール（起点URLからリンクを辿ります）'
     : `チェック対象 ${urls.length}件`;
+  const etaEl = document.getElementById('target-preview-eta');
   if (!urls.length) {
     const msg = urlInput.value.trim() ? '画面リスト取得を実行してください' : 'URLを入力してください';
     targetPreviewList.innerHTML = `<li><span>未確定</span><code>${msg}</code></li>`;
+    if (etaEl) etaEl.textContent = '';
     return;
   }
   targetPreviewList.innerHTML = urls.map((u, i) => `<li><span>${isAuto ? '起点URL' : (i === 0 ? 'メイン' : '対象 ' + (i + 1))}</span><code>${escHtml(u)}</code></li>`).join('');
+  if (etaEl) {
+    const pageCount = isAuto ? Number(document.getElementById('max-pages').value) || 30 : urls.length;
+    etaEl.textContent = '⏱ 所要目安: ' + estimateCrawlEta(pageCount) + (isAuto ? '（最大ページ数の場合）' : '');
+  }
 }
+
+// ---- 所要時間の目安（並列数を考慮した粗い見積り。捏造せず「目安」であることを明示） ----
+function estimateCrawlEta(pageCount) {
+  const SEC_PER_PAGE = 15;
+  const parallelism = Number(document.getElementById('crawl-parallelism')?.value) || 2;
+  const seconds = Math.max(30, Math.ceil((pageCount * SEC_PER_PAGE) / parallelism));
+  const minutes = Math.ceil(seconds / 60);
+  return minutes <= 1 ? '約1分' : `約${minutes}分`;
+}
+document.getElementById('crawl-parallelism')?.addEventListener('change', updateTargetPreview);
+document.getElementById('crawl-depth')?.addEventListener('input', updateTargetPreview);
+document.getElementById('max-pages')?.addEventListener('input', updateTargetPreview);
 
 // ---- 参考文書アップロード（Doc Fusion）----
 let referenceDocPaths = [];

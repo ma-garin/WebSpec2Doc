@@ -168,6 +168,34 @@ def test_discover_to_crawl_flow(tmp_path: Path, monkeypatch) -> None:
     assert popen_calls[0][popen_calls[0].index("--parallelism") + 1] == "2"
 
 
+def test_run_parallelism_is_configurable_within_1_to_4(tmp_path: Path, monkeypatch) -> None:
+    """並列数はUIから指定でき（既定2）、1〜4の範囲にクランプされる
+    （ドッグフーディング要望: 分析時間を短縮したい、への対応）。"""
+    _patch_output_dirs(tmp_path, monkeypatch)
+    _write_report_files(tmp_path)
+    popen_calls = []
+
+    def fake_popen(cmd, *args, **kwargs):
+        popen_calls.append(cmd)
+        return _Popen(cmd, *args, **kwargs)
+
+    monkeypatch.setattr(crawl_mod.subprocess, "Popen", fake_popen)
+
+    _client().post(
+        "/run",
+        data={"urls": "https://example.com/", "format": "md,html", "parallelism": "4"},
+    )
+    cmd = popen_calls[0]
+    assert cmd[cmd.index("--parallelism") + 1] == "4"
+
+    _client().post(
+        "/run",
+        data={"urls": "https://example.com/", "format": "md,html", "parallelism": "99"},
+    )
+    cmd2 = popen_calls[1]
+    assert cmd2[cmd2.index("--parallelism") + 1] == "4"  # 上限4にクランプ
+
+
 def test_run_default_mode_uses_urls_flag_no_link_following(tmp_path: Path, monkeypatch) -> None:
     """crawl_mode 未指定（既定）は、選択した固定URL一覧のみをクロールする
     --urls を使う（従来どおりリンクを辿らない）。"""

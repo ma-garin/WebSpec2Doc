@@ -18,9 +18,11 @@ evidence-only 原則:
 
 from __future__ import annotations
 
+import json
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from itertools import combinations, product
+from pathlib import Path
 from typing import Any
 
 # ---- 確信度バッジ ----
@@ -84,6 +86,34 @@ class TestDesignParams:
 
     def enabled(self, technique: str) -> bool:
         return technique in self.enabled_techniques
+
+
+def load_params_from_file(path: Path) -> TestDesignParams:
+    """instance/test_design_settings.json から TestDesignParams を復元する。
+
+    ファイル欠損・壊れ・型不正はすべて既定値で継続する（解析全体を止めない）。
+    本モジュールは web/services へ依存しない（純関数・CLI からも呼べる）。
+    """
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return TestDesignParams()
+    if not isinstance(data, dict):
+        return TestDesignParams()
+    try:
+        raw_strength = int(data.get("pairwise_strength", 2))
+        return TestDesignParams(
+            enabled_techniques=tuple(data.get("enabled_techniques", ("bva", "dt", "pw", "st"))),
+            bva_offset=int(data.get("bva_offset", 1)),
+            pairwise_strength=raw_strength if raw_strength in (2, 3) else 2,
+            n_switch=1 if int(data.get("n_switch", 0)) == 1 else 0,
+            max_dt_conditions=min(
+                int(data.get("max_dt_conditions", 4)), 6
+            ),  # 2^6=64ルール上限（負荷予算）
+            value_catalog={k: list(v) for k, v in dict(data.get("value_catalog", {})).items()},
+        )
+    except (TypeError, ValueError, AttributeError):
+        return TestDesignParams()
 
 
 # =========================================================================

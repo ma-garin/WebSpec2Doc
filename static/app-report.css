@@ -263,12 +263,18 @@
 .disc-login-group-separator::before,.disc-login-group-separator::after { content:''; flex:1; height:1px; background:var(--warning-border); }
 
 /* ── 各「要ログイン」ページの個別ログインフォーム ── */
-.disc-login-item-wrap { border:1px solid var(--warning-border); border-radius:var(--radius); overflow:hidden; margin-bottom:4px; }
-.disc-login-item-wrap .discovered-url-item { border-bottom:1px solid var(--warning-border); border-radius:0; background:var(--warning-bg); }
-.disc-item-login-panel { padding:10px 12px 8px; background:var(--surface); }
+/* overflow:hidden はここでは使わない: パネルの実高さがレイアウト計算タイミングで
+   一時的に0になった場合、外枠が中身ごとクリップして「オレンジ縞に潰れた」ように
+   見えてしまう不具合があったため。角丸は子要素側の border-radius で再現する。 */
+.disc-login-item-wrap { border:1px solid var(--warning-border); border-radius:var(--radius); margin-bottom:4px; }
+.disc-login-item-wrap .discovered-url-item { border-bottom:1px solid var(--warning-border); border-radius:var(--radius) var(--radius) 0 0; background:var(--warning-bg); }
+.disc-item-login-panel { padding:10px 12px 8px; background:var(--surface); border-radius:0 0 var(--radius) var(--radius); }
 .disc-item-login-header { font-size:12px; font-weight:700; color:var(--warning); margin-bottom:8px; display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
 .disc-item-login-urlpath { font-size:11px; font-weight:400; color:var(--text-muted); font-family:monospace; }
-.disc-item-login-body { }
+.disc-item-login-body { display:flex; flex-direction:column; gap:6px; min-height:34px; }
+.disc-item-login-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; min-height:34px; }
+.disc-item-login-input { flex:1; min-width:140px; height:34px; margin:0; }
+.disc-item-login-btn { height:34px; padding:0 16px; font-size:13px; flex-shrink:0; }
 .disc-item-login-status { font-size:12px; }
 
 /* ── 画面別仕様 ページ要素（フォームなし画面） ── */

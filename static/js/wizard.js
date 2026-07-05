@@ -468,10 +468,10 @@ function renderDiscovered() {
       <div class="disc-item-login-panel" data-login-url="${escHtml(loginUrl)}">
         <div class="disc-item-login-header">🔒 この画面へのアクセスに認証が必要です <span class="disc-item-login-urlpath">ログインURL: ${escHtml(loginUrlDisplay)}</span></div>
         <div class="disc-item-login-body">
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <input type="text" class="disc-item-login-user url-input" placeholder="ID / メールアドレス" autocomplete="username" style="flex:1;min-width:140px;height:34px;margin:0" />
-            <input type="password" class="disc-item-login-pass url-input" placeholder="パスワード" autocomplete="current-password" style="flex:1;min-width:140px;height:34px;margin:0" />
-            <button type="button" class="btn-primary disc-item-login-btn" style="height:34px;padding:0 16px;font-size:13px;flex-shrink:0">ログイン</button>
+          <div class="disc-item-login-row">
+            <input type="text" class="disc-item-login-user url-input disc-item-login-input" placeholder="ID / メールアドレス" autocomplete="username" />
+            <input type="password" class="disc-item-login-pass url-input disc-item-login-input" placeholder="パスワード" autocomplete="current-password" />
+            <button type="button" class="btn-primary disc-item-login-btn">ログイン</button>
           </div>
           <div class="disc-item-login-loading discover-loading" style="display:none;margin-top:6px"><span class="spinner"></span><span>ログインしています…</span></div>
           <div class="disc-item-login-status input-field-message" style="margin-top:4px"></div>

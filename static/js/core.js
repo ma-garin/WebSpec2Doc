@@ -152,6 +152,15 @@ document.getElementById('add-site-btn').addEventListener('click', openAddSite);
 document.getElementById('add-site-btn-2').addEventListener('click', openAddSite);
 document.getElementById('nav-new-analysis-btn').addEventListener('click', openAddSite);
 
+// ---- ナビ「実行履歴」: AutoRun 画面の「最近の実行」一覧へ直接遷移する ----
+// （AutoRunの実行結果を確認するにはAutoRun画面を開くしかなく、履歴の存在に
+// 気づきにくい、というドッグフーディング指摘への対応）
+document.getElementById('nav-run-history-btn')?.addEventListener('click', () => {
+  switchView('auto-run');
+  const area = document.getElementById('autorun-recent-area');
+  if (area) setTimeout(() => area.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+});
+
 // ---- ダッシュボード・ヒーロー（ゴールデンパス入口） ----
 function _heroStartGuided(prefillUrl) {
   openAddSite();

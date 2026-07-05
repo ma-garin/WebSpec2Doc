@@ -111,13 +111,18 @@ function _autorunRenderPreview(data) {
 }
 
 // ---- AutoRun: 承認（共通ロジック） ----
-async function _autorunDoApprove(filterMode, perTestTimeoutSec) {
+async function _autorunDoApprove(filterMode, perTestTimeoutSec, device) {
   if (!_autoRunJobId) return false;
   try {
     const res = await fetch('/api/autorun/approve', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ job_id: _autoRunJobId, filter_mode: filterMode, per_test_timeout_sec: perTestTimeoutSec }),
+      body: JSON.stringify({
+        job_id: _autoRunJobId,
+        filter_mode: filterMode,
+        per_test_timeout_sec: perTestTimeoutSec,
+        device: device || 'pc',
+      }),
     });
     const data = await res.json();
     if (!res.ok || !data.ok) throw new Error(data.error || '承認に失敗しました');
@@ -137,7 +142,8 @@ async function autorunApprovalModalApprove() {
   if (btn) { btn.disabled = true; btn.textContent = '開始中…'; }
   const filterMode = document.querySelector('input[name="arm-filter"]:checked')?.value || 'all';
   const perTestTimeoutSec = parseInt(document.getElementById('arm-timeout')?.value || '30', 10);
-  await _autorunDoApprove(filterMode, perTestTimeoutSec);
+  const device = document.querySelector('input[name="arm-device"]:checked')?.value || 'pc';
+  await _autorunDoApprove(filterMode, perTestTimeoutSec, device);
   if (btn) { btn.disabled = false; btn.textContent = 'テスト実行を開始'; }
 }
 

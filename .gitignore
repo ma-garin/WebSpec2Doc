@@ -10,7 +10,7 @@ auth.json
 
 # 生成物（クライアント情報が含まれる可能性）
 output/
-instance/*.db*
+instance/
 
 # Codex 実行ログ（codex-task.sh の最終メッセージ）
 .codex-runs/
@@ -21,6 +21,7 @@ __pycache__/
 *$py.class
 *.so
 .Python
+venv
 venv/
 .venv/
 env/
@@ -55,6 +56,7 @@ htmlcov/
 .claude/**/.DS_Store
 .claude/**/__pycache__/
 .claude/**/*.py[cod]
+.claude/worktrees/
 yuki-aidd-kit/**/.DS_Store
 yuki-aidd-kit/**/__pycache__/
 yuki-aidd-kit/**/*.py[cod]

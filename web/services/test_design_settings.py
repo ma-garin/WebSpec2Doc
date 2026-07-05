@@ -34,6 +34,11 @@ DEFAULT_VALUE_CATALOG: dict[str, list[dict[str, str]]] = {
             "value": "withdrawn-user@example.com",
             "note": "退会・解約済みアカウントのアドレス",
         },
+        {
+            "label": "SQLインジェクション",
+            "value": "' OR '1'='1",
+            "note": "入力バリデーション確認用（システムからの攻撃実行はしない・値の提示のみ）",
+        },
     ],
     "phone_jp": [
         {"label": "上限値", "value": "090-9999-9999", "note": "携帯電話番号の標準桁数"},
@@ -53,6 +58,11 @@ DEFAULT_VALUE_CATALOG: dict[str, list[dict[str, str]]] = {
             "label": "特殊文字混入",
             "value": "<script>alert(1)</script>",
             "note": "XSSペイロードとしての入力",
+        },
+        {
+            "label": "SQLインジェクション",
+            "value": "' OR '1'='1",
+            "note": "入力バリデーション確認用（システムからの攻撃実行はしない・値の提示のみ）",
         },
     ],
     "date": [

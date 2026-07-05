@@ -15,6 +15,8 @@ from analyzer.html_analyzer import AnalyzedPage, analyze_pages
 from crawler.page_crawler import FieldData, FormData, PageData
 from generator.coverage_gap import CoverageGap
 from generator.html_reporter import generate_html_report
+from generator.test_design import TestDesignParams as DesignParams
+from generator.test_design import build_test_design
 
 
 def _make_analyzed_page(
@@ -306,3 +308,158 @@ def test_html_reporter_multiple_pages(tmp_path: Path) -> None:
 
     assert "P001" in result
     assert "P002" in result
+
+
+# =========================================================================
+# B-1: Mermaid をアプリ内で描画（R3-18a）
+# =========================================================================
+def test_mermaid_script_uses_local_vendor() -> None:
+    """`_mermaid_script()` はアプリ内では同梱版 static/vendor/mermaid/mermaid.min.js を
+    'self' から読み込み、securityLevel:'strict' で初期化する。
+    static/vendor/mermaid.min.js 本体の有無に依存しないよう、生成HTML文字列自体を
+    検証する（ネットワーク遮断環境でも実行可能なテスト）。"""
+    analyzed = [_make_analyzed_page()]
+    graph = _empty_graph()
+    graph.add_node("P001", url="https://example.com/", title="T", page_id="P001")
+
+    result = generate_html_report(
+        pages=analyzed,
+        graph=graph,
+        form_summary=[],
+        target_url="https://example.com/",
+        mermaid_content="graph LR\n  P001\n",
+    )
+
+    assert '<script src="/static/vendor/mermaid/mermaid.min.js"></script>' in result
+    assert "securityLevel:'strict'" in result
+    # CSP 変更禁止（規約0-6）: cdn.jsdelivr.net への直接 <script src> 埋め込みは行わない
+    # （フォールバックは window.mermaid 未定義時のみ動的に document.head へ追加する）。
+    assert '<script src="https://cdn.jsdelivr.net' not in result
+
+
+# =========================================================================
+# B-2: 具体的テスト設計の注入（R3-18b）
+# =========================================================================
+def _bva_field(name: str, **kw: object) -> dict:
+    base: dict = {
+        "name": name,
+        "field_type": "text",
+        "required": False,
+        "maxlength": None,
+        "minlength": None,
+        "min_value": None,
+        "max_value": None,
+        "pattern": None,
+        "options": [],
+    }
+    base.update(kw)
+    return base
+
+
+def _td_screen(
+    page_id: str, *, fields: list[dict] | None = None, to: list[str] | None = None
+) -> dict:
+    forms = [{"action": "/submit", "method": "post", "fields": fields}] if fields else []
+    return {
+        "page_id": page_id,
+        "title": f"画面 {page_id}",
+        "buttons": [],
+        "forms": forms,
+        "transitions": {"to": to or [], "from": []},
+    }
+
+
+def _generate_with_test_design(test_design) -> str:
+    analyzed = [_make_analyzed_page()]
+    graph = _empty_graph()
+    graph.add_node("P001", url="https://example.com/", title="T", page_id="P001")
+    return generate_html_report(
+        pages=analyzed,
+        graph=graph,
+        form_summary=[],
+        target_url="https://example.com/",
+        mermaid_content="graph LR\n  P001\n",
+        test_design=test_design,
+    )
+
+
+class TestTestDesignSection:
+    def test_test_design_section_renders_dt_truth_table(self) -> None:
+        """必須2条件の合成reportでY/N表とルール4列（2^2）が出ること。"""
+        report = {
+            "screens": [
+                _td_screen(
+                    "P001",
+                    fields=[
+                        _bva_field("card", required=True),
+                        _bva_field("cvv", required=True),
+                    ],
+                )
+            ]
+        }
+        design = build_test_design(report, DesignParams(enabled_techniques=("dt",)))
+        result = _generate_with_test_design(design)
+
+        assert 'id="test-design"' in result
+        assert "デシジョンテーブル" in result
+        for i in range(1, 5):
+            assert f"ルール{i}" in result
+        assert "期待アクション" in result
+        assert "<td>Y</td>" in result
+        assert "<td>N</td>" in result
+        assert "送信成功" in result
+
+    def test_test_design_section_renders_bva_with_evidence_badge(self) -> None:
+        """maxlength=100 のフィールドで境界値と確信度1.0バッジが出ること。"""
+        report = {
+            "screens": [
+                _td_screen("P001", fields=[_bva_field("comment", maxlength=100)]),
+            ]
+        }
+        design = build_test_design(report, DesignParams(enabled_techniques=("bva",)))
+        result = _generate_with_test_design(design)
+
+        assert "境界値分析（BVA）" in result
+        assert "100文字" in result
+        assert "101文字" in result
+        assert "確信度1.0" in result
+
+    def test_test_design_none_keeps_backward_compat(self) -> None:
+        """test_design=None（既定）でも既存セクション構成は不変で、
+        テスト設計節には「データなし」の明記のみが追加される。"""
+        analyzed = [_make_analyzed_page()]
+        graph = _empty_graph()
+        graph.add_node("P001", url="https://example.com/", title="T", page_id="P001")
+
+        result = generate_html_report(
+            pages=analyzed,
+            graph=graph,
+            form_summary=[],
+            target_url="https://example.com/",
+            mermaid_content="graph LR\n  P001\n",
+        )
+
+        # 既存セクション・ナビは従来どおり存在する
+        assert '<a href="#summary" class="nav-item">サマリー</a>' in result
+        assert '<section class="block" id="screens">' in result
+        # 新設のテスト設計節は「データなし」で明記される（捏造しない）
+        assert 'id="test-design"' in result
+        assert "テスト設計データなし" in result
+        assert "--format json" in result
+
+    def test_screen_card_links_to_test_design_only_when_present(self) -> None:
+        """テスト設計が生成された画面にのみ「テスト設計を見る」リンクを出す
+        （存在しないアンカーへリンクしない＝捏造禁止）。"""
+        report = {
+            "screens": [
+                _td_screen(
+                    "P001", fields=[_bva_field("a", required=True), _bva_field("b", required=True)]
+                ),
+            ]
+        }
+        design = build_test_design(report, DesignParams(enabled_techniques=("dt",)))
+        result = _generate_with_test_design(design)
+        assert '<a href="#td-P001">テスト設計を見る</a>' in result
+
+        result_none = _generate_with_test_design(None)
+        assert "テスト設計を見る" not in result_none

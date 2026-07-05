@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 from itertools import combinations
 from pathlib import Path
@@ -13,6 +14,7 @@ from generator.test_design import (  # noqa: E501
     EVIDENCE_MEASURED,
     SUPPORTED_TECHNIQUES,
     build_test_design,
+    load_params_from_file,
 )
 from generator.test_design import TestDesignParams as DesignParams
 
@@ -336,3 +338,63 @@ class TestTechniqueGating:
         assert sc.decision_table is not None
         assert sc.bva == ()
         assert sc.state_transitions is None
+
+
+# =========================================================================
+# load_params_from_file（B-2: web/services 非依存のローダ）
+# =========================================================================
+class TestLoadParamsFromFile:
+    def test_load_params_from_file_defaults_on_missing(self, tmp_path: Path) -> None:
+        """ファイルが存在しない場合は既定値の TestDesignParams を返す（解析を止めない）。"""
+        missing = tmp_path / "does_not_exist.json"
+        params = load_params_from_file(missing)
+        assert params == DesignParams()
+
+    def test_load_params_from_file_defaults_on_corrupt_json(self, tmp_path: Path) -> None:
+        broken = tmp_path / "broken.json"
+        broken.write_text("{not json", encoding="utf-8")
+        params = load_params_from_file(broken)
+        assert params == DesignParams()
+
+    def test_load_params_from_file_defaults_on_non_dict_json(self, tmp_path: Path) -> None:
+        not_dict = tmp_path / "list.json"
+        not_dict.write_text("[1, 2, 3]", encoding="utf-8")
+        params = load_params_from_file(not_dict)
+        assert params == DesignParams()
+
+    def test_load_params_from_file_round_trips_valid_settings(self, tmp_path: Path) -> None:
+        path = tmp_path / "settings.json"
+        path.write_text(
+            json.dumps(
+                {
+                    "enabled_techniques": ["bva", "dt"],
+                    "bva_offset": 2,
+                    "pairwise_strength": 3,
+                    "n_switch": 1,
+                    "max_dt_conditions": 5,
+                    "value_catalog": {"email": [{"label": "上限値", "value": "a@b.com"}]},
+                }
+            ),
+            encoding="utf-8",
+        )
+        params = load_params_from_file(path)
+        assert params.enabled_techniques == ("bva", "dt")
+        assert params.bva_offset == 2
+        assert params.pairwise_strength == 3
+        assert params.n_switch == 1
+        assert params.max_dt_conditions == 5
+        assert params.value_catalog["email"][0]["label"] == "上限値"
+
+    def test_load_params_from_file_caps_max_dt_conditions_at_six(self, tmp_path: Path) -> None:
+        """max_dt_conditions は 2^6=64 ルール上限のガード（負荷予算・D-3で固定）。"""
+        path = tmp_path / "settings.json"
+        path.write_text(json.dumps({"max_dt_conditions": 20}), encoding="utf-8")
+        params = load_params_from_file(path)
+        assert params.max_dt_conditions == 6
+
+    def test_load_params_from_file_defaults_on_type_error(self, tmp_path: Path) -> None:
+        """フィールドの型が不正でも例外を投げず既定値へフォールバックする。"""
+        path = tmp_path / "settings.json"
+        path.write_text(json.dumps({"bva_offset": "not-an-int"}), encoding="utf-8")
+        params = load_params_from_file(path)
+        assert params == DesignParams()

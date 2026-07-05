@@ -22,6 +22,7 @@ from web.services.playwright_executor import (
     _pw_test_available,
     _python_playwright_version,
     _read_progress_ndjson,
+    _required_browser_globs,
     _resolve_timeout_sec,
     _unavailable_result,
     _write_pw_config,
@@ -642,10 +643,10 @@ class TestBuildHtmlReport:
         assert "&lt;script&gt;" in html
 
     def test_test_rows_rendered(self) -> None:
-        tests = [{"title": "ログイン", "status": "passed", "duration_ms": 150, "error": ""}]
+        tests = [{"title": "ログイン", "status": "passed", "duration_ms": 125_000, "error": ""}]
         html = _build_html_report({"ok": True, "tests": tests})
         assert "ログイン" in html
-        assert "150ms" in html
+        assert "2分5秒" in html
 
     def test_dark_mode_media_query_present(self) -> None:
         """ライト/ダーク両対応（ユーザー報告: 実行レポートがダークモード固定だった）。"""
@@ -659,6 +660,51 @@ class TestBuildHtmlReport:
         )
         assert 'lang="ja"' in html
         assert "PASS" not in html.split("<body>")[0].split("<style>")[0]  # title に PASS が無い
+
+    def test_build_html_report_is_japanese_light(self) -> None:
+        """R3-03/04/05: 実行レポートは自己完結の日本語ライト基調レポート
+        （外部scriptを読み込まず、ダークモードにも追随する）。"""
+        html = _build_html_report(
+            {"ok": True, "passed": 1, "failed": 0, "skipped": 0, "total": 1, "tests": []}
+        )
+        assert 'lang="ja"' in html
+        assert "成功" in html
+        assert "prefers-color-scheme" in html
+        assert "<script src=" not in html
+
+    def test_status_badges_use_emoji(self) -> None:
+        tests = [
+            {"title": "t1", "status": "passed", "duration_ms": 100, "error": ""},
+            {"title": "t2", "status": "failed", "duration_ms": 100, "error": "boom"},
+            {"title": "t3", "status": "skipped", "duration_ms": 0, "error": ""},
+        ]
+        html = _build_html_report({"ok": False, "tests": tests})
+        assert "✅" in html
+        assert "❌" in html
+        assert "⏭" in html
+
+    def test_error_detail_collapsed_and_escaped(self) -> None:
+        tests = [
+            {
+                "title": "t1",
+                "status": "failed",
+                "duration_ms": 0,
+                "error": "<script>alert(1)</script>",
+            }
+        ]
+        html = _build_html_report({"ok": False, "tests": tests})
+        assert "<details>" in html
+        assert "エラー詳細" in html
+        assert "<script>alert(1)</script>" not in html
+        assert "&lt;script&gt;" in html
+
+    def test_intro_sentence_present(self) -> None:
+        html = _build_html_report({"ok": True, "tests": []})
+        assert "❌の行から確認してください" in html
+
+    def test_total_duration_shown_as_minutes_seconds(self) -> None:
+        html = _build_html_report({"ok": True, "tests": [], "duration_ms": 65_000})
+        assert "1分5秒" in html
 
 
 # ─────────────────────── _pw_test_available ───────────────────────
@@ -828,6 +874,21 @@ class TestEnsurePwEnv:
         assert ok is False
         assert "ブラウザ" in msg
 
+    def test_ensure_pw_env_fails_without_python_version(self, tmp_path: Path) -> None:
+        """Python側 playwright のバージョンを特定できない場合は latest への
+        暗黙フォールバックをせず実行を中止する（R3-08: npx解決の新版
+        @playwright/test が混入しブラウザ不一致で全滅する不具合の再発防止）。"""
+        with patch(
+            "web.services.playwright_executor._python_playwright_version",
+            return_value="",
+        ):
+            ok, msg = _ensure_pw_env(tmp_path)
+        assert ok is False
+        assert "特定できない" in msg
+        # package.json は生成されず、"latest" もどこにも書かれない
+        pkg_json = tmp_path / "package.json"
+        assert not pkg_json.exists()
+
 
 # ─────────────────────── _python_playwright_version / _installed_pw_test_version ───────────────────────
 
@@ -864,23 +925,64 @@ class TestInstalledPwTestVersion:
         assert _installed_pw_test_version(tmp_path) == ""
 
 
+# ─────────────────────── _required_browser_globs ───────────────────────
+
+
+class TestRequiredBrowserGlobs:
+    def test_required_globs_144_needs_chromium_only(self) -> None:
+        assert _required_browser_globs("1.44.0") == ("chromium-*",)
+
+    def test_required_globs_149plus_needs_headless_shell(self) -> None:
+        assert "chromium_headless_shell-*" in _required_browser_globs("1.56.1")
+
+    def test_required_globs_exactly_149_needs_headless_shell(self) -> None:
+        assert _required_browser_globs("1.49.0") == ("chromium-*", "chromium_headless_shell-*")
+
+    def test_required_globs_unknown_version_requires_both(self) -> None:
+        # バージョンが特定できない場合は安全側（両方必須）に倒す
+        assert _required_browser_globs("") == ("chromium-*", "chromium_headless_shell-*")
+        assert _required_browser_globs("not-a-version") == (
+            "chromium-*",
+            "chromium_headless_shell-*",
+        )
+
+
 # ─────────────────────── _browsers_present / _ensure_browsers_installed ───────────────────────
 
 
+def _make_browser_dir(root: Path, name: str) -> None:
+    """本物のブラウザディレクトリを模す（実行ファイルを1つ持つ）。"""
+    bin_dir = root / name / "chrome-linux"
+    bin_dir.mkdir(parents=True)
+    (bin_dir / "chrome").write_text("dummy-binary", encoding="utf-8")
+
+
 class TestBrowsersPresent:
-    def test_true_when_chromium_dir_exists(self, tmp_path: Path) -> None:
+    def test_true_when_chromium_present_for_pre_149(self, tmp_path: Path) -> None:
+        _make_browser_dir(tmp_path, "chromium-1148")
+        assert _browsers_present(tmp_path, "1.44.0") is True
+
+    def test_browsers_present_false_when_headless_shell_missing_on_149(
+        self, tmp_path: Path
+    ) -> None:
+        """R3-08の実際の再発状態: chromium-* のみ導入済みで
+        chromium_headless_shell-* が無い環境は 1.49 以降で不足として検出される
+        （旧OR判定では見逃してテスト全滅を招いていた）。"""
+        _make_browser_dir(tmp_path, "chromium-1117")
+        assert _browsers_present(tmp_path, "1.56.1") is False
+
+    def test_true_when_both_present_for_149plus(self, tmp_path: Path) -> None:
+        _make_browser_dir(tmp_path, "chromium-1148")
+        _make_browser_dir(tmp_path, "chromium_headless_shell-1217")
+        assert _browsers_present(tmp_path, "1.56.1") is True
+
+    def test_browsers_present_false_when_dir_empty(self, tmp_path: Path) -> None:
+        """ディレクトリだけ残って中身が空（強制終了・破損等）は欠落として扱う。"""
         (tmp_path / "chromium-1148").mkdir()
-        assert _browsers_present(tmp_path) is True
-
-    def test_true_when_headless_shell_dir_exists(self, tmp_path: Path) -> None:
-        (tmp_path / "chromium_headless_shell-1217").mkdir()
-        assert _browsers_present(tmp_path) is True
-
-    def test_false_when_dir_empty(self, tmp_path: Path) -> None:
-        assert _browsers_present(tmp_path) is False
+        assert _browsers_present(tmp_path, "1.44.0") is False
 
     def test_false_when_dir_missing(self, tmp_path: Path) -> None:
-        assert _browsers_present(tmp_path / "does-not-exist") is False
+        assert _browsers_present(tmp_path / "does-not-exist", "1.44.0") is False
 
 
 class TestEnsureBrowsersInstalled:
@@ -893,7 +995,7 @@ class TestEnsureBrowsersInstalled:
             patch("web.services.playwright_executor._browsers_present", return_value=True),
             patch("web.services.playwright_executor.subprocess.run") as mock_run,
         ):
-            ok, msg = _ensure_browsers_installed()
+            ok, msg = _ensure_browsers_installed("1.44.0")
         assert ok is True
         assert msg == ""
         mock_run.assert_not_called()
@@ -907,11 +1009,36 @@ class TestEnsureBrowsersInstalled:
             patch("web.services.playwright_executor._browsers_present", return_value=False),
             patch("web.services.playwright_executor.shutil.which", return_value=None),
         ):
-            ok, msg = _ensure_browsers_installed()
+            ok, msg = _ensure_browsers_installed("1.44.0")
         assert ok is False
         assert "npx" in msg
 
     def test_missing_installs_successfully(self, tmp_path: Path) -> None:
+        with (
+            patch(
+                "web.services.playwright_executor._configured_browsers_path",
+                return_value=tmp_path,
+            ),
+            patch(
+                "web.services.playwright_executor._browsers_present",
+                side_effect=[False, True],
+            ),
+            patch("web.services.playwright_executor.shutil.which", return_value="/usr/bin/npx"),
+            patch(
+                "web.services.playwright_executor.subprocess.run",
+                return_value=_mock_proc(returncode=0),
+            ) as mock_run,
+        ):
+            ok, msg = _ensure_browsers_installed("1.44.0")
+        assert ok is True
+        assert "自動導入" in msg
+        cmd = mock_run.call_args[0][0]
+        assert cmd == ["npx", "playwright", "install", "chromium"]
+
+    def test_ensure_browsers_installed_reverifies_after_install(self, tmp_path: Path) -> None:
+        """npm/npx install コマンドが returncode=0 で終わっても、再検証で
+        依然としてブラウザが揃っていなければ成功と偽装せず失敗を返す
+        （インストールが一部のみ成功したケースを見逃さないため）。"""
         with (
             patch(
                 "web.services.playwright_executor._configured_browsers_path",
@@ -922,13 +1049,11 @@ class TestEnsureBrowsersInstalled:
             patch(
                 "web.services.playwright_executor.subprocess.run",
                 return_value=_mock_proc(returncode=0),
-            ) as mock_run,
+            ),
         ):
-            ok, msg = _ensure_browsers_installed()
-        assert ok is True
-        assert "自動導入" in msg
-        cmd = mock_run.call_args[0][0]
-        assert cmd == ["npx", "playwright", "install", "chromium"]
+            ok, msg = _ensure_browsers_installed("1.56.1")
+        assert ok is False
+        assert "不足" in msg
 
     def test_install_failure(self, tmp_path: Path) -> None:
         with (
@@ -943,7 +1068,7 @@ class TestEnsureBrowsersInstalled:
                 return_value=_mock_proc(stderr="network error", returncode=1),
             ),
         ):
-            ok, msg = _ensure_browsers_installed()
+            ok, msg = _ensure_browsers_installed("1.44.0")
         assert ok is False
         assert "失敗" in msg
 
@@ -960,7 +1085,7 @@ class TestEnsureBrowsersInstalled:
                 side_effect=subprocess.TimeoutExpired("npx", 300),
             ),
         ):
-            ok, msg = _ensure_browsers_installed()
+            ok, msg = _ensure_browsers_installed("1.44.0")
         assert ok is False
         assert "タイムアウト" in msg
 
@@ -1055,6 +1180,27 @@ class TestWritePwConfig:
         reporter_file = spec.parent / "_autorun_pw.progress_reporter.js"
         assert reporter_file.exists()
         assert "onTestEnd" in reporter_file.read_text(encoding="utf-8")
+
+    def test_write_pw_config_mobile_injects_viewport(self, tmp_path: Path) -> None:
+        spec = tmp_path / "autorun.spec.ts"
+        spec.write_text("", encoding="utf-8")
+        content = _write_pw_config(spec, tmp_path / "out", device="mobile").read_text()
+        assert "isMobile: true" in content
+        assert "viewport: { width: 390, height: 844 }" in content
+        assert "iPhone" in content
+
+    def test_write_pw_config_pc_has_no_viewport(self, tmp_path: Path) -> None:
+        spec = tmp_path / "autorun.spec.ts"
+        spec.write_text("", encoding="utf-8")
+        content = _write_pw_config(spec, tmp_path / "out", device="pc").read_text()
+        assert "isMobile" not in content
+        assert "viewport" not in content
+
+    def test_write_pw_config_unknown_device_falls_back_to_pc(self, tmp_path: Path) -> None:
+        spec = tmp_path / "autorun.spec.ts"
+        spec.write_text("", encoding="utf-8")
+        content = _write_pw_config(spec, tmp_path / "out", device="__proto__").read_text()
+        assert "isMobile" not in content
 
 
 # ─────────────────────── _get_cli_version ───────────────────────

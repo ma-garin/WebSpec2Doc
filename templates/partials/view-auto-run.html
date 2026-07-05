@@ -121,6 +121,9 @@
                   </div>
                 </div>
 
+                <!-- テスト実行中の実況（OK/NGがリアルタイムで流れる。R3-01） -->
+                <div id="autorun-live-tests-area"></div>
+
                 <!-- 完了カード（レポート「テスト実行」タブへの導線） -->
                 <div id="autorun-complete-card" class="card autorun-complete-card" style="display:none"></div>
 
@@ -188,6 +191,20 @@
                             <input type="radio" name="arm-filter" value="form">
                             <div class="arm-filter-text"><span>フォームテスト</span><span class="arm-filter-hint">スモーク＋フォーム入力検証</span></div>
                             <span id="arm-fc-form" class="arm-fc"></span>
+                          </label>
+                        </div>
+                      </section>
+
+                      <section class="arm-section">
+                        <div class="control-label">実行デバイス</div>
+                        <div class="arm-filter-list">
+                          <label class="arm-filter-opt">
+                            <input type="radio" name="arm-device" value="pc" checked>
+                            <div class="arm-filter-text"><span>PC（既定）</span><span class="arm-filter-hint">デスクトップの画面サイズで実行</span></div>
+                          </label>
+                          <label class="arm-filter-opt">
+                            <input type="radio" name="arm-device" value="mobile">
+                            <div class="arm-filter-text"><span>モバイル（iPhone 13相当）</span><span class="arm-filter-hint">スマートフォンの画面サイズ・タッチ操作で実行</span></div>
                           </label>
                         </div>
                       </section>

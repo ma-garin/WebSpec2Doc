@@ -17,11 +17,12 @@
 from __future__ import annotations
 
 import json
+import os
 
 import pytest
 from playwright.sync_api import Page, expect
 
-BASE_URL = "http://127.0.0.1:8765"
+BASE_URL = os.environ.get("WEBSPEC2DOC_E2E_URL", "http://127.0.0.1:8765")
 
 _MOCK_STATUS_AWAITING = {
     "status": "awaiting_approval",
@@ -539,7 +540,9 @@ class TestApprovalModalVisibility:
     def test_filter_labels_are_visible(self, autorun_page: Page) -> None:
         """フィルターオプションのラベルテキストが見える。"""
         self._open_modal(autorun_page)
-        filter_opts = autorun_page.locator(".arm-filter-opt").all()
+        # .arm-filter-opt はデバイス選択（R3-02）でも再利用しているため、
+        # 実行対象フィルター（name="arm-filter"）に絞って件数を確認する。
+        filter_opts = autorun_page.locator(".arm-filter-opt:has(input[name='arm-filter'])").all()
         assert len(filter_opts) == 4, f"フィルターオプションが4件ではありません: {len(filter_opts)}"
         for opt in filter_opts:
             expect(opt).to_be_visible()
@@ -564,3 +567,125 @@ class TestApprovalModalVisibility:
         """タイムアウトドロップダウンが視認可能な位置にある。"""
         self._open_modal(autorun_page)
         expect(autorun_page.locator("#arm-timeout")).to_be_in_viewport()
+
+
+class TestLiveTestResults:
+    """R3-01: テスト実行中に per-test の実況（OK/NG）がリアルタイムで流れる。"""
+
+    def test_live_rows_render_during_running_tests(self, autorun_page: Page) -> None:
+        autorun_page.evaluate(
+            """() => _autorunRender({
+                status: 'running_tests',
+                job_id: 'test-job-e2e',
+                domain: 'example.com',
+                log: [], outputs: {}, test_results: null,
+                test_progress: {
+                    completed: 2, total: 3, passed: 1, failed: 1,
+                    tests: [
+                        {title: 'ログイン画面表示', status: 'passed', duration_ms: 1200, error: ''},
+                        {title: '<b>予約フォーム送信</b>', status: 'failed', duration_ms: 800, error: 'timeout'},
+                    ],
+                },
+                started_at: '2026-06-03T10:00:00', elapsed_sec: 5,
+                error: null, finished_at: null, input_request: null, run_policy: {},
+            })"""
+        )
+        area = autorun_page.locator("#autorun-live-tests-area")
+        expect(area.locator(".autorun-live-tests")).to_be_visible()
+        expect(area).to_contain_text("OK 1")
+        expect(area).to_contain_text("NG 1")
+        expect(area).to_contain_text("ログイン画面表示")
+        # XSS: タイトルはエスケープされ、タグとして解釈されない（規約0-1）
+        expect(area.locator("b").filter(has_text="予約フォーム送信")).to_have_count(0)
+        expect(area).to_contain_text("予約フォーム送信")
+
+    def test_live_rows_absent_outside_running_tests(self, autorun_page: Page) -> None:
+        autorun_page.evaluate(
+            """() => _autorunRender({
+                status: 'complete', job_id: 'j', domain: 'example.com',
+                log: [], outputs: {}, test_results: {passed: 1, failed: 0, total: 1},
+                started_at: '2026-06-03T10:00:00', finished_at: '2026-06-03T10:01:00', elapsed_sec: 60,
+                error: null, input_request: null, run_policy: {},
+            })"""
+        )
+        expect(autorun_page.locator("#autorun-live-tests-area")).to_be_empty()
+
+
+class TestApprovalModalDeviceSelection:
+    """R3-02: 承認モーダルでPC/モバイル実行を選択できる。"""
+
+    def _open_modal(self, page: Page) -> None:
+        page.evaluate(
+            """() => {
+            const modal = document.getElementById('autorun-approval-modal');
+            if (modal) modal.style.display = 'flex';
+        }"""
+        )
+        page.wait_for_selector("#autorun-approval-modal", state="visible")
+
+    def test_device_radios_present(self, autorun_page: Page) -> None:
+        self._open_modal(autorun_page)
+        for value in ["pc", "mobile"]:
+            radio = autorun_page.locator(f"input[name='arm-device'][value='{value}']")
+            expect(radio).to_be_attached()
+
+    def test_pc_is_selected_by_default(self, autorun_page: Page) -> None:
+        self._open_modal(autorun_page)
+        expect(autorun_page.locator("input[name='arm-device'][value='pc']")).to_be_checked()
+        expect(autorun_page.locator("input[name='arm-device'][value='mobile']")).not_to_be_checked()
+
+    def test_device_radio_is_selectable(self, autorun_page: Page) -> None:
+        self._open_modal(autorun_page)
+        autorun_page.locator("input[name='arm-device'][value='mobile']").check()
+        expect(autorun_page.locator("input[name='arm-device'][value='mobile']")).to_be_checked()
+
+
+class TestLoginModalVsShortcutHelp:
+    """R3-13: ショートカットヘルプ表示中にログイン要求が来ても、入力・Esc閉じが
+    全て可能であること（ヘルプのz-index競合・不可視要素へのfocus・Esc分裂の
+    再発防止）。"""
+
+    def _show_login_modal(self, page: Page) -> None:
+        page.evaluate(
+            """() => _autorunShowLoginModal({
+                message: 'ログインが必要です。',
+                login_url: 'https://example.com/login',
+            })"""
+        )
+
+    def test_help_closes_when_login_modal_opens(self, autorun_page: Page) -> None:
+        """ヘルプを開いた状態でログイン要求が来ると、ヘルプが自動的に閉じる。"""
+        autorun_page.locator("#shortcut-help-btn").click()
+        expect(autorun_page.locator("#shortcut-overlay")).to_be_visible()
+
+        self._show_login_modal(autorun_page)
+
+        expect(autorun_page.locator("#shortcut-overlay")).to_be_hidden()
+        expect(autorun_page.locator("#autorun-login-modal")).to_be_visible()
+
+    def test_login_input_is_clickable_after_help_was_open(self, autorun_page: Page) -> None:
+        """ヘルプ表示状態からのログイン要求でも入力欄がクリック・入力可能。"""
+        autorun_page.locator("#shortcut-help-btn").click()
+        expect(autorun_page.locator("#shortcut-overlay")).to_be_visible()
+
+        self._show_login_modal(autorun_page)
+        username = autorun_page.locator("#autorun-login-username")
+        expect(username).to_be_in_viewport()
+        username.click()
+        username.fill("qa-user@example.com")
+        expect(username).to_have_value("qa-user@example.com")
+
+    def test_escape_closes_login_modal(self, autorun_page: Page) -> None:
+        """Escキーでログインモーダルが閉じる（ヘルプだけが閉じて終わらない）。"""
+        self._show_login_modal(autorun_page)
+        expect(autorun_page.locator("#autorun-login-modal")).to_be_visible()
+        autorun_page.keyboard.press("Escape")
+        expect(autorun_page.locator("#autorun-login-modal")).to_be_hidden()
+
+    def test_login_modal_z_index_above_help_overlay(self, autorun_page: Page) -> None:
+        """ログインモーダルのz-indexがヘルプオーバーレイ(2100)より前面である回帰確認。"""
+        self._show_login_modal(autorun_page)
+        z_index = autorun_page.evaluate(
+            """() => getComputedStyle(document.getElementById('autorun-login-modal')).zIndex"""
+        )
+        assert int(z_index) > 2100, f"ログインモーダルのz-indexがヘルプ以下: {z_index}"

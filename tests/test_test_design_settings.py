@@ -66,3 +66,28 @@ def test_get_returns_defaults_when_value_catalog_missing_key(settings_file: Path
     settings_file.write_text(json.dumps({"other": 1}), encoding="utf-8")
     settings = get_test_design_settings()
     assert "value_catalog" in settings
+
+
+def test_default_catalog_includes_sqli_label(settings_file: Path) -> None:
+    """R3-22: SQLi値カタログ追加。email/name カテゴリに提示のみの SQLi 値を追加し、
+    既存7カテゴリ構造は不変であること。"""
+    settings = get_test_design_settings()
+    catalog = settings["value_catalog"]
+
+    assert set(catalog.keys()) == {
+        "email",
+        "phone_jp",
+        "name",
+        "date",
+        "price",
+        "quantity",
+        "password",
+    }
+
+    for category in ("email", "name"):
+        entries = {entry["label"]: entry for entry in catalog[category]}
+        assert "SQLインジェクション" in entries
+        sqli_entry = entries["SQLインジェクション"]
+        assert sqli_entry["value"] == "' OR '1'='1"
+        # 攻撃実行はしない・値の提示のみであることを明記した note を持つこと
+        assert "値の提示のみ" in sqli_entry["note"]

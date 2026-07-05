@@ -66,6 +66,12 @@
                 <div class="field"><label for="set-depth">階層数（既定）</label><input type="number" id="set-depth" min="1" max="5"></div>
                 <div class="field"><label for="set-max">最大ページ数（既定）</label><input type="number" id="set-max" min="1" max="300"></div>
                 <div class="field"><label for="set-case-minutes">1テストケースあたりの想定分数</label><input type="number" id="set-case-minutes" min="1" max="120" placeholder="10"></div>
+                <div class="field"><label for="set-url-history-limit">URL履歴の保持件数</label>
+                  <select id="set-url-history-limit">
+                    <option value="0">0（無効）</option><option value="5">5</option>
+                    <option value="10" selected>10</option><option value="30">30</option>
+                    <option value="50">50</option><option value="100">100</option>
+                  </select></div>
 
                 <div class="field full"><label for="set-auth">認証セッション auth.json パス（任意）</label><input type="text" id="set-auth" placeholder="auth.json"></div>
               </div>

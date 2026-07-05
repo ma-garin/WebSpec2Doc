@@ -72,18 +72,21 @@ function renderTestcases(data) {
   const cases = data.cases || [];
   const content = document.getElementById('tc-content');
   if (content) {
-    content.innerHTML = cases.length
-      ? cases.map(c => `
-        <div class="tc-case-card">
-          <h3>${escHtml(c.test_id)} ${escHtml(c.title)}</h3>
-          <p class="tc-case-trace">Trace: ${escHtml(c.trace_id)} ／ 状態: ${escHtml(c.automation_status)}</p>
-          <dl>
-            <dt>前提条件</dt><dd><ol>${(c.preconditions || []).map(p => `<li>${escHtml(p)}</li>`).join('')}</ol></dd>
-            <dt>手順</dt><dd><ol>${(c.steps || []).map(s => `<li>${escHtml(s)}</li>`).join('')}</ol></dd>
-            <dt>期待結果</dt><dd><p>${escHtml(c.expected_result || '(記録なし)')}</p></dd>
-          </dl>
-        </div>`).join('')
-      : '<div class="empty">テストケースがありません。</div>';
+    if (cases.length) {
+      const rows = cases.map(c => `<tr>
+        <td class="tc-id">${escHtml(c.test_id)}</td>
+        <td>${escHtml(c.title)}</td>
+        <td><ol class="tc-cell-list">${(c.preconditions || []).map(p => `<li>${escHtml(p)}</li>`).join('')}</ol></td>
+        <td><ol class="tc-cell-list">${(c.steps || []).map(s => `<li>${escHtml(s)}</li>`).join('')}</ol></td>
+        <td>${escHtml(c.expected_result || '')}</td>
+        <td>${escHtml(c.automation_status || '')}</td>
+      </tr>`).join('');
+      content.innerHTML = `<table class="ov-screens tc-table"><thead><tr>
+        <th>ID</th><th>タイトル</th><th>前提条件</th><th>手順</th><th>期待結果</th><th>自動化</th>
+      </tr></thead><tbody>${rows}</tbody></table>`;
+    } else {
+      content.innerHTML = '<div class="empty">テストケースがありません。</div>';
+    }
   }
   const outputsEl = document.getElementById('tc-output-links');
   if (outputsEl) {

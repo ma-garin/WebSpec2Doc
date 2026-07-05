@@ -72,6 +72,7 @@ const AUTORUN_OUTPUT_LABELS = {
   playwright_candidates_html: 'Playwright候補',
   spec_ts:                 'autorun.spec.ts',
   playwright_report_html:  'テスト実行レポート',
+  playwright_native_html:  'テスト実行レポート（開発者向け）',
   playwright_report_json:  '実行結果 JSON',
   viewpoint_snapshot:      '観点スナップショット',
 };
@@ -91,6 +92,7 @@ const AUTORUN_OUTPUT_CATEGORIES = {
   playwright_candidates_html: '設計',
   spec_ts:                 '実装',
   playwright_report_html:  '実行',
+  playwright_native_html:  '実行',
   playwright_report_json:  '実行',
   qa_process_report:       'レポート',
 };
@@ -407,6 +409,32 @@ function _autorunStopLivePreview() {
   if (placeholder) placeholder.classList.remove('hidden');
 }
 
+// ---- AutoRun: 実行中の実況（title/status/error を新しい順に表示。R3-01） ----
+function _autorunLiveTestRows(tp) {
+  if (!tp || !Array.isArray(tp.tests) || !tp.tests.length) return '';
+  const badge = s => s === 'passed' ? '<span class="status-low">✅ OK</span>'
+    : s === 'failed' ? '<span class="status-critical">❌ NG</span>'
+    : '<span class="status-muted">⏭ スキップ</span>';
+  const rows = tp.tests.map(t =>
+    `<tr><td>${badge(t.status)}</td><td>${escHtml(t.title)}</td>` +
+    `<td class="num">${t.duration_ms != null ? Math.round(t.duration_ms / 1000) + '秒' : '—'}</td></tr>`
+  ).join('');
+  return `<div class="autorun-live-tests"><div class="autorun-live-tests-head">` +
+    `実行結果（実況・最新${tp.tests.length}件） <b class="status-low">OK ${tp.passed || 0}</b> / ` +
+    `<b class="status-critical">NG ${tp.failed || 0}</b></div>` +
+    `<table class="ov-screens"><tbody>${rows}</tbody></table></div>`;
+}
+
+function _autorunRenderLiveTests(data) {
+  const area = document.getElementById('autorun-live-tests-area');
+  if (!area) return;
+  if (data.status !== 'running_tests') {
+    area.innerHTML = '';
+    return;
+  }
+  area.innerHTML = _autorunLiveTestRows(data.test_progress);
+}
+
 // ---- AutoRun: 経過時間タイマー ----
 function _autorunStartElapsed() {
   if (_autoRunElapsedTimer) clearInterval(_autoRunElapsedTimer);
@@ -448,7 +476,13 @@ function _autorunStepMeta(data) {
     meta['ars-approval'] = `${labels[policy.filter_mode] || policy.filter_mode}を承認済み`;
   }
   const r = data.test_results || {};
-  if (r.total != null) meta['ars-running'] = r.unavailable ? '実行不可' : `PASS ${r.passed || 0} / FAIL ${r.failed || 0}`;
+  const tp = data.test_progress;
+  if (data.status === 'running_tests' && tp && (tp.passed || tp.failed)) {
+    // 実行中の実況（R3-01）: 完了集計を待たず途中経過を出す
+    meta['ars-running'] = `PASS ${tp.passed || 0} / FAIL ${tp.failed || 0}（実行中）`;
+  } else if (r.total != null) {
+    meta['ars-running'] = r.unavailable ? '実行不可' : `PASS ${r.passed || 0} / FAIL ${r.failed || 0}`;
+  }
   return meta;
 }
 
@@ -614,14 +648,25 @@ function _autorunRenderComplete(data) {
     actions.appendChild(cta);
   }
   const outputs = data.outputs || {};
+  // 主導線: 自前の日本語実行レポート（R3-03/04/05）。Playwright ネイティブ
+  // （英語・開発者向け）は playwright_native_html があれば副導線として併置する。
   if (outputs.playwright_report_html) {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'btn-outline-sm qa-preview-btn';
     b.dataset.path = outputs.playwright_report_html;
     b.dataset.label = 'テスト実行レポート';
-    b.textContent = 'Playwright レポート';
+    b.textContent = '実行レポート';
     actions.appendChild(b);
+  }
+  if (outputs.playwright_native_html) {
+    const nb = document.createElement('button');
+    nb.type = 'button';
+    nb.className = 'btn-outline-sm qa-preview-btn';
+    nb.dataset.path = outputs.playwright_native_html;
+    nb.dataset.label = 'テスト実行レポート（開発者向け）';
+    nb.textContent = '詳細（開発者向け・英語）';
+    actions.appendChild(nb);
   }
   if (outputs.qa_process_report) {
     const b = document.createElement('button');
@@ -686,6 +731,9 @@ function _autorunRender(data) {
   } else {
     _autorunStopLivePreview();
   }
+
+  // ---- テスト実行中の実況（OK/NGリスト。R3-01） ----
+  _autorunRenderLiveTests(data);
 
   // ---- 停止ボタン ----
   const cancelArea = document.getElementById('autorun-cancel-area');
@@ -768,6 +816,18 @@ async function autorunCancel() {
 }
 
 // ---- AutoRun: ログインポップアップ ----
+// R3-13: ヘルプオーバーレイを開いたままログイン要求が来ると、ヘルプが前面に
+// 重なって入力欄がクリック不能になる（z-index競合）＋ Esc がヘルプ側だけに
+// 奪われる（core.jsのグローバルkeydownはヘルプしか閉じない）という競合があった。
+// core.js は編集せず、(1) 表示時にヘルプを明示的に閉じる、(2) ログインモーダル
+// 表示中だけ有効なEscハンドラを登録する、(3) z-indexをヘルプより前面にする
+// （static/css/components.css の #autorun-login-modal）ことで解消する。
+function _autorunLoginEscHandler(e) {
+  if (e.key !== 'Escape') return;
+  e.stopPropagation();
+  autorunDismissLoginModal();
+}
+
 function _autorunShowLoginModal(inputRequest) {
   const modal = document.getElementById('autorun-login-modal');
   if (!modal || !modal.classList.contains('hidden')) return; // 既に表示中
@@ -775,12 +835,16 @@ function _autorunShowLoginModal(inputRequest) {
   const urlEl  = document.getElementById('autorun-login-url');
   if (msgEl) msgEl.textContent = inputRequest.message || 'ログインが必要です。';
   if (urlEl) urlEl.value = inputRequest.login_url || '';
-  document.getElementById('autorun-login-username')?.focus();
+  if (typeof toggleShortcutHelp === 'function') toggleShortcutHelp(false);
+  // 先に hidden を外してから focus する（非表示要素への focus は効かないため）
   modal.classList.remove('hidden');
+  document.getElementById('autorun-login-username')?.focus();
+  document.addEventListener('keydown', _autorunLoginEscHandler);
 }
 
 function _autorunHideLoginModal() {
   document.getElementById('autorun-login-modal')?.classList.add('hidden');
+  document.removeEventListener('keydown', _autorunLoginEscHandler);
 }
 
 // ✕で閉じる: スキップせず入力待ちのまま（誤操作でスキップさせない）。再開はステッパー下の導線から。
@@ -874,6 +938,8 @@ function autorunReset() {
   if (failureBody) failureBody.innerHTML = '';
   const logPre = document.getElementById('autorun-log');
   if (logPre) logPre.textContent = '';
+  const liveTestsArea = document.getElementById('autorun-live-tests-area');
+  if (liveTestsArea) liveTestsArea.innerHTML = '';
   autorunSetStartStatus('', false);
 }
 

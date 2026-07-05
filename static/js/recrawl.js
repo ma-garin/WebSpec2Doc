@@ -49,7 +49,9 @@ async function recrawlSite(domain) {
     };
   });
   renderDiscovered();
-  updateTargetPreview();
+  // クロール方法（自動クロール／選択したURLのみ）も前回設定から復元する。
+  // renderDiscovered() が画面リストパネルの表示状態を上書きするため、その後に呼ぶ。
+  setCrawlTargetMode(site && site.crawl_mode === 'auto' ? 'auto' : 'selected');
   showWizardStep(2);
   showToast(`前回の対象画面（${discovered.length}件）を復元しました。条件を確認して実行してください`, 'info');
 }

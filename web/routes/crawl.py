@@ -54,15 +54,18 @@ def run() -> Response:
     run_id = uuid.uuid4().hex
 
     def generate():
+        # crawl_mode == "auto": 起点URLからリンクを辿って自動探索する（--url + depth）。
+        # それ以外（既定）: 画面分析で選択された固定URL一覧のみをクロールする（--urls）。
+        # 選択したURLのみモードでは depth/max_pages はリンク追跡をしないため無関係。
+        if crawl_mode == "auto":
+            root_url = urls.split(",")[0] if urls else ""
+            target_args = ["--url", root_url, "--depth", depth, "--max-pages", max_pages]
+        else:
+            target_args = ["--urls", urls]
         cmd = [
             sys.executable,
             "src/main.py",
-            "--urls",
-            urls,
-            "--depth",
-            depth,
-            "--max-pages",
-            max_pages,
+            *target_args,
             "--parallelism",
             "2",
             "--format",

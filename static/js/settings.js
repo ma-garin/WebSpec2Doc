@@ -29,7 +29,8 @@ document.querySelectorAll('.set-tabs .set-tab').forEach(t => {
 function getSettings() { try { return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}; } catch { return {}; } }
 function applySettings() {
   const s = getSettings();
-  // crawl-depth / max-pages は MAX 固定（hidden input）のため上書きしない
+  // crawl-depth / max-pages はウィザードの自動クロールモードでのみ使う値のため
+  // ここでは上書きしない（既定値のまま）。
   if (s.auth) document.getElementById('auth-path').value = s.auth;
 }
 function loadSettingsForm() {

@@ -102,9 +102,13 @@ document.getElementById('form').addEventListener('submit', (e) => {
   e.preventDefault();
   const url = urlInput.value.trim();
   if (!url) { setUrlMessage('URL を入力してください', true); return; }
+  const mode = crawlTargetMode();
   const urls = buildTargetUrls();
   if (!urls.length) {
-    setUrlMessage(discovered.length ? 'ドキュメント化する画面を1件以上選択してください' : '先に「画面分析」を実行してください', true);
+    const msg = mode === 'auto'
+      ? 'URL を入力してください'
+      : (discovered.length ? 'ドキュメント化する画面を1件以上選択してください' : '先に「画面分析」を実行してください');
+    setUrlMessage(msg, true);
     return;
   }
   // 認証が必要な画面（再クロール時にログインバナー・フォームを復元するため site.json に保存する）
@@ -119,7 +123,7 @@ document.getElementById('form').addEventListener('submit', (e) => {
     format: 'html,pdf,md,excel,json',
     compare: document.getElementById('compare').checked ? 'true' : 'false',
     auth: document.getElementById('auth-path').value.trim() || getSettings().auth || '',
-    crawl_mode: 'crawl',
+    crawl_mode: mode,
     reference_docs: referenceDocPaths.map(d => d.path).join(','),
     login_urls: loginUrls.join(','),
     login_landing_url: loginLandingUrl,

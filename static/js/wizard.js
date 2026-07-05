@@ -482,21 +482,53 @@ function clearDiscovered() {
   document.getElementById('discovered-url-panel').style.display = 'none';
   document.getElementById('discovered-url-list').innerHTML = '';
   document.getElementById('discover-status').textContent = '';
+  setCrawlTargetMode('selected');
 }
 function setAllDiscovered(v) { document.querySelectorAll('.discovered-cb').forEach(cb => { cb.checked = v; }); updateTargetPreview(); }
 function selectedDiscovered() { return [...document.querySelectorAll('.discovered-cb:checked')].map(cb => cb.value); }
 
+// ---- クロール方法（自動クロール／選択したURLのみ）----
+// 「画面分析で見つけたURLだけをクロールするか、そこからリンクを辿って
+// 自動的にクロール範囲を広げるかを選びたい」というドッグフーディング要望への対応。
+function crawlTargetMode() {
+  return document.querySelector('input[name="crawl-target-mode"]:checked')?.value || 'selected';
+}
+function setCrawlTargetMode(mode) {
+  const radio = document.getElementById(mode === 'auto' ? 'crawl-mode-auto' : 'crawl-mode-selected');
+  if (radio) radio.checked = true;
+  _syncCrawlModeFields();
+}
+function _syncCrawlModeFields() {
+  const isAuto = crawlTargetMode() === 'auto';
+  const autoFields = document.getElementById('crawl-mode-auto-fields');
+  const discoveredPanel = document.getElementById('discovered-url-panel');
+  if (autoFields) autoFields.style.display = isAuto ? 'flex' : 'none';
+  if (discoveredPanel) discoveredPanel.style.display = (isAuto || !discovered.length) ? 'none' : '';
+  updateTargetPreview();
+}
+document.querySelectorAll('input[name="crawl-target-mode"]').forEach(radio =>
+  radio.addEventListener('change', _syncCrawlModeFields));
+
 // ---- 対象URLの確定 ----
-function buildTargetUrls() { return selectedDiscovered(); }
+function buildTargetUrls() {
+  if (crawlTargetMode() === 'auto') {
+    const u = urlInput.value.trim();
+    return u ? [u] : [];
+  }
+  return selectedDiscovered();
+}
 function updateTargetPreview() {
   const urls = buildTargetUrls();
-  targetPreview.querySelector('strong').textContent = `チェック対象 ${urls.length}件`;
+  const isAuto = crawlTargetMode() === 'auto';
+  targetPreview.querySelector('strong').textContent = isAuto
+    ? '自動クロール（起点URLからリンクを辿ります）'
+    : `チェック対象 ${urls.length}件`;
   if (!urls.length) {
     const msg = urlInput.value.trim() ? '画面リスト取得を実行してください' : 'URLを入力してください';
     targetPreviewList.innerHTML = `<li><span>未確定</span><code>${msg}</code></li>`;
     return;
   }
-  targetPreviewList.innerHTML = urls.map((u, i) => `<li><span>${i === 0 ? 'メイン' : '対象 ' + (i + 1)}</span><code>${escHtml(u)}</code></li>`).join('');
+  targetPreviewList.innerHTML = urls.map((u, i) => `<li><span>${isAuto ? '起点URL' : (i === 0 ? 'メイン' : '対象 ' + (i + 1))}</span><code>${escHtml(u)}</code></li>`).join('');
 }
 
 // ---- 参考文書アップロード（Doc Fusion）----

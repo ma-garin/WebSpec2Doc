@@ -168,6 +168,67 @@ def test_discover_to_crawl_flow(tmp_path: Path, monkeypatch) -> None:
     assert popen_calls[0][popen_calls[0].index("--parallelism") + 1] == "2"
 
 
+def test_run_default_mode_uses_urls_flag_no_link_following(tmp_path: Path, monkeypatch) -> None:
+    """crawl_mode 未指定（既定）は、選択した固定URL一覧のみをクロールする
+    --urls を使う（従来どおりリンクを辿らない）。"""
+    _patch_output_dirs(tmp_path, monkeypatch)
+    _write_report_files(tmp_path)
+    popen_calls = []
+
+    def fake_popen(cmd, *args, **kwargs):
+        popen_calls.append(cmd)
+        return _Popen(cmd, *args, **kwargs)
+
+    monkeypatch.setattr(crawl_mod.subprocess, "Popen", fake_popen)
+
+    _client().post(
+        "/run",
+        data={"urls": "https://example.com/,https://example.com/about", "format": "md,html"},
+    )
+
+    cmd = popen_calls[0]
+    assert "--urls" in cmd
+    assert cmd[cmd.index("--urls") + 1] == "https://example.com/,https://example.com/about"
+    assert "--url" not in cmd[: cmd.index("--urls")]
+
+
+def test_run_auto_mode_uses_url_flag_with_depth_and_follows_links(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """クロールモード「自動クロール（リンクを辿る）」が選択された場合、
+    起点URL1件のみを --url + --depth/--max-pages で渡し、リンク追跡させる
+    （ドッグフーディング要望: オートクロールか選択URLのみか選べるようにしたい）。"""
+    _patch_output_dirs(tmp_path, monkeypatch)
+    _write_report_files(tmp_path)
+    popen_calls = []
+
+    def fake_popen(cmd, *args, **kwargs):
+        popen_calls.append(cmd)
+        return _Popen(cmd, *args, **kwargs)
+
+    monkeypatch.setattr(crawl_mod.subprocess, "Popen", fake_popen)
+
+    _client().post(
+        "/run",
+        data={
+            "urls": "https://example.com/",
+            "depth": "3",
+            "max_pages": "50",
+            "format": "md,html",
+            "crawl_mode": "auto",
+        },
+    )
+
+    cmd = popen_calls[0]
+    assert "--url" in cmd
+    assert cmd[cmd.index("--url") + 1] == "https://example.com/"
+    assert "--urls" not in cmd
+    assert "--depth" in cmd
+    assert cmd[cmd.index("--depth") + 1] == "3"
+    assert "--max-pages" in cmd
+    assert cmd[cmd.index("--max-pages") + 1] == "50"
+
+
 def test_discover_no_login_to_result(tmp_path: Path, monkeypatch) -> None:
     _patch_output_dirs(tmp_path, monkeypatch)
     _write_report_files(tmp_path)

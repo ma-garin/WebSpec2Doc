@@ -169,6 +169,14 @@ class TestSubTabs:
         # スクショ未生成のフィクスチャなので空メッセージが出る（未配線なら何も描画されない）
         expect(page.locator("#rp-screens-gallery")).to_contain_text("スクリーンショット")
 
+    def test_screens_spec_transitions_show_screen_titles_not_raw_ids(self, page: Page) -> None:
+        """遷移先/遷移元は「P002」等の内部IDのままではなく画面名で表示する。"""
+        _open_report(page)
+        page.locator('.result-tab[data-tab="screens"]').click()
+        page.locator("#rpt-list .rpt-list-item").first.click()
+        expect(page.locator("#rpt-detail .rpt-transitions")).to_contain_text("お問い合わせ")
+        expect(page.locator("#rpt-detail .rpt-transitions")).not_to_contain_text("P002")
+
     def test_flow_subtabs(self, page: Page) -> None:
         _open_report(page)
         page.locator('.result-tab[data-tab="flow"]').click()

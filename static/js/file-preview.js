@@ -15,8 +15,21 @@ function openFilePreview(path, label) {
   if (ext === 'html' || ext === 'htm') {
     // HTMLはiframeでサンドボックス表示
     body.innerHTML = `<iframe src="${escHtml(previewUrl)}" title="${escHtml(label || 'プレビュー')}" sandbox="allow-scripts allow-same-origin"></iframe>`;
+  } else if (ext === 'md') {
+    // Markdown はレンダリングして表示する（記号だらけの生テキスト表示を解消）
+    fetch(previewUrl)
+      .then(r => { if (!r.ok) throw new Error('読み込み失敗'); return r.text(); })
+      .then(text => {
+        body.innerHTML = '<div class="md-preview">' + renderMarkdownLite(text) + '</div>';
+      })
+      .catch(() => {
+        const pre = document.createElement('pre');
+        pre.textContent = 'ファイルの読み込みに失敗しました。';
+        body.innerHTML = '';
+        body.appendChild(pre);
+      });
   } else {
-    // JSON / MD / テキストはコードブロックで表示
+    // JSON / テキストはコードブロックで表示
     fetch(previewUrl)
       .then(r => { if (!r.ok) throw new Error('読み込み失敗'); return r.text(); })
       .then(text => {

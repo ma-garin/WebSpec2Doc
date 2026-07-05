@@ -314,6 +314,23 @@
 .file-preview-body pre { flex: 1; padding: 16px; font-size: 12px; font-family: ui-monospace, monospace; white-space: pre-wrap; word-break: break-word; background: var(--surface-soft); margin: 0; overflow: auto; }
 .file-preview-loading { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--text-muted); gap: 10px; }
 
+/* ── Markdown プレビュー（軽量レンダラ出力）── */
+.md-preview { flex: 1; padding: 20px 24px; overflow: auto; background: var(--surface); color: var(--text); line-height: 1.7; }
+.md-preview h1, .md-preview h2, .md-preview h3, .md-preview h4, .md-preview h5, .md-preview h6 { margin: 20px 0 10px; font-weight: 800; color: var(--text); }
+.md-preview h1 { font-size: 22px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+.md-preview h2 { font-size: 18px; }
+.md-preview h3 { font-size: 15px; }
+.md-preview p { margin: 0 0 12px; font-size: 13px; }
+.md-preview ul, .md-preview ol { margin: 0 0 12px; padding-left: 24px; font-size: 13px; }
+.md-preview li { margin: 4px 0; }
+.md-preview code { font-family: ui-monospace, monospace; background: var(--surface-soft); padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+.md-preview pre.md-code { background: var(--surface-soft); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; overflow: auto; margin: 0 0 12px; }
+.md-preview pre.md-code code { background: none; padding: 0; }
+.md-preview table.md-table { border-collapse: collapse; margin: 0 0 16px; font-size: 12px; width: 100%; }
+.md-preview table.md-table th, .md-preview table.md-table td { border: 1px solid var(--border); padding: 6px 10px; text-align: left; }
+.md-preview table.md-table th { background: var(--surface-soft); font-weight: 700; }
+.md-preview a { color: var(--primary); }
+
 /* ── QAウィザード 成果物行（wizardステップ7用）── */
 .qa-output-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-soft); }
 .qa-output-row.is-ready { background: var(--surface); }

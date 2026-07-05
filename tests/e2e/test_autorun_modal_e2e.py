@@ -226,9 +226,7 @@ class TestRunningTestsProgressLabel:
     """テスト実行中の「n/188件目」進捗表示（ドッグフーディング指摘: 188件承認・
     実行しても進捗が全く見えない、への対応）。"""
 
-    def test_shows_completed_over_total_when_progress_available(
-        self, autorun_page: Page
-    ) -> None:
+    def test_shows_completed_over_total_when_progress_available(self, autorun_page: Page) -> None:
         autorun_page.evaluate(
             """() => _autorunRender({
                 status: 'running_tests',
@@ -249,9 +247,7 @@ class TestRunningTestsProgressLabel:
             "テスト実行中…（42/188件目）"
         )
 
-    def test_falls_back_to_default_label_when_progress_unknown(
-        self, autorun_page: Page
-    ) -> None:
+    def test_falls_back_to_default_label_when_progress_unknown(self, autorun_page: Page) -> None:
         """進捗ファイルがまだ書かれていない間は捏造せず既定ラベルのまま。"""
         autorun_page.evaluate(
             """() => _autorunRender({

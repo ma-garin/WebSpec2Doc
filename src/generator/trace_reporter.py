@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from generator.markdown_util import escape_table_cell
 from ingest.models import DocumentBundle, document_evidence_to_dict
 from ingest.req_tracer import STATUS_UNIMPLEMENTED_SUSPECT, RequirementTrace
 
@@ -119,9 +120,10 @@ def _render_markdown(data: dict) -> str:
         tests = str(test_count) if req["page_id"] else "-"
         req_id_label = req["req_id"] + ("（ID重複）" if req["duplicate_req_id"] else "")
         status_label = _STATUS_LABELS.get(req["status"], req["status"])
-        lines.append(
-            f"| {req_id_label} | {req['title']} | {page} | {tests} | {status_label} | {location} |"
-        )
+        # 要件名・文書出所はユーザー文書由来で | を含みうるため、
+        # 表崩れを防ぐため全セルをエスケープする（refresh_reporter と共通処理）。
+        cells = (req_id_label, req["title"], page, tests, status_label, location)
+        lines.append("| " + " | ".join(escape_table_cell(str(c)) for c in cells) + " |")
     lines.append("")
 
     suspects = [r for r in data["requirements"] if r["status"] == STATUS_UNIMPLEMENTED_SUSPECT]

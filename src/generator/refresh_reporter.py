@@ -20,6 +20,7 @@ from pathlib import Path
 
 from analyzer.html_analyzer import AnalyzedPage
 from crawler.page_crawler import FieldData
+from generator.markdown_util import escape_table_cell
 from ingest.matcher import FusionResult
 from ingest.models import (
     DocumentBundle,
@@ -36,7 +37,7 @@ _JSON_INDENT = 2
 _NOTE_UPDATED = "実測により更新（旧: {old} → 実測: {new}）"
 _NOTE_UNCONFIRMED = "実測で確認できず（未確認 — 廃止/権限/未探索の可能性）"
 _NOTE_UNDOCUMENTED = "文書未記載（実測で検出）"
-_NOTE_LOOKUP_FAILED = "実測値の特定に失敗（doc_fusion.md 参照）"
+_NOTE_LOOKUP_FAILED = "矛盾は検出したが実測値を特定できず（未確認・doc_fusion.md 参照）"
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +46,7 @@ logger = logging.getLogger(__name__)
 class RefreshEntry:
     """新版生成時の 1 変更（変更ログの行）。"""
 
-    kind: str  # "updated" / "doc_only" / "new" / "unchanged"
+    kind: str  # "updated" / "unconfirmed" / "doc_only" / "new" / "unchanged"
     screen_name: str  # 文書上の画面名（new は実測タイトル）
     subject: str  # 対象（項目名・"画面" 等）
     attribute: str = ""  # 変わった属性（"必須区分" / "桁数" / ""）
@@ -86,23 +87,26 @@ def _fields_for_screen(bundle: DocumentBundle, screen: DocumentedScreen) -> list
     return fields
 
 
-def _diff_attribute(doc_field: DocumentedField, crawled: FieldData) -> tuple[str, str, str]:
-    """doc_field と実測 crawled の間で矛盾している属性を 1 つ特定する。
+def _diff_attributes(doc_field: DocumentedField, crawled: FieldData) -> list[tuple[str, str, str]]:
+    """doc_field と実測 crawled の間で矛盾している属性を **すべて** 列挙する。
 
-    (attribute, old_value, new_value) を返す。矛盾が特定できない場合は
-    ("", "", "") を返す（呼び出し側は特定失敗として扱う）。
+    (attribute, old_value, new_value) のリストを返す。矛盾が無い（または比較できない）
+    場合は空リスト。matcher は属性ごとに mismatch FieldGap を出すため、必須区分と桁数が
+    同時に食い違う項目では両方を返さないと片方の更新が欠落する（過去は最初の 1 件のみ
+    返していたため桁数変更が捨てられ、旧値が確定値として描画される不具合があった）。
     """
+    diffs: list[tuple[str, str, str]] = []
     if doc_field.required is not None and doc_field.required != crawled.required:
         old = "必須" if doc_field.required else "任意"
         new = "必須" if crawled.required else "任意"
-        return "必須区分", old, new
+        diffs.append(("必須区分", old, new))
     if (
         doc_field.max_length is not None
         and crawled.maxlength is not None
         and doc_field.max_length != crawled.maxlength
     ):
-        return "桁数", str(doc_field.max_length), str(crawled.maxlength)
-    return "", "", ""
+        diffs.append(("桁数", str(doc_field.max_length), str(crawled.maxlength)))
+    return diffs
 
 
 def _official_screen_name(result: FusionResult, page_id: str, fallback: str) -> str:
@@ -131,27 +135,49 @@ def build_refresh_entries(
     pages_by_id = {p.page_id: p for p in pages}
     entries: list[RefreshEntry] = []
 
+    # matcher は 1 属性につき 1 つの mismatch FieldGap を出すため、同一項目に
+    # 複数属性の食い違いがあると gap が複数来る。項目単位で 1 度だけ処理し、
+    # 実測から特定できた全属性を updated として個別に記録する（重複計上と欠落を防ぐ）。
+    processed_mismatch: set[tuple[str, str]] = set()
+
     for gap in result.field_gaps:
         if gap.kind == "mismatch":
             if gap.doc_field is None:
                 continue
+            field_key = (gap.page_id, gap.doc_field.name)
+            if field_key in processed_mismatch:
+                continue
+            processed_mismatch.add(field_key)
             screen_name = _official_screen_name(result, gap.page_id, gap.doc_field.screen_name)
             crawled = _lookup_crawled_field(pages_by_id.get(gap.page_id), gap.crawl_selector)
-            attribute, old_value, new_value = ("", "", "")
-            if crawled is not None:
-                attribute, old_value, new_value = _diff_attribute(gap.doc_field, crawled)
-            entries.append(
-                RefreshEntry(
-                    kind="updated",
-                    screen_name=screen_name,
-                    subject=gap.doc_field.name,
-                    attribute=attribute,
-                    old_value=old_value,
-                    new_value=new_value,
-                    doc_evidence=gap.doc_field.evidence,
-                    crawl_selector=gap.crawl_selector,
+            diffs = _diff_attributes(gap.doc_field, crawled) if crawled is not None else []
+            if diffs:
+                for attribute, old_value, new_value in diffs:
+                    entries.append(
+                        RefreshEntry(
+                            kind="updated",
+                            screen_name=screen_name,
+                            subject=gap.doc_field.name,
+                            attribute=attribute,
+                            old_value=old_value,
+                            new_value=new_value,
+                            doc_evidence=gap.doc_field.evidence,
+                            crawl_selector=gap.crawl_selector,
+                        )
+                    )
+            else:
+                # 矛盾は報告されたが実測値を特定できなかった（selector 逆引き失敗等）。
+                # 空値の "updated" を出すと未確認の変更を確定更新として偽計上するため、
+                # 別 kind "unconfirmed" で honest に記録する（evidence-only）。
+                entries.append(
+                    RefreshEntry(
+                        kind="unconfirmed",
+                        screen_name=screen_name,
+                        subject=gap.doc_field.name,
+                        doc_evidence=gap.doc_field.evidence,
+                        crawl_selector=gap.crawl_selector,
+                    )
                 )
-            )
         elif gap.kind == "doc_only":
             if gap.doc_field is None:
                 continue
@@ -229,10 +255,6 @@ def _length_mark(value: int | None) -> str:
     return "" if value is None else str(value)
 
 
-def _escape_cell(value: str) -> str:
-    return value.replace("|", "\\|")
-
-
 def _field_row(
     doc_field: DocumentedField,
     required_display: bool | None,
@@ -249,7 +271,7 @@ def _field_row(
         _length_mark(length_display),
         note,
     )
-    return "| " + " | ".join(_escape_cell(c) for c in cells) + " |"
+    return "| " + " | ".join(escape_table_cell(c) for c in cells) + " |"
 
 
 def _render_matched_screen(
@@ -275,22 +297,25 @@ def _render_matched_screen(
             required_display = doc_field.required
             length_display = doc_field.max_length
             notes: list[str] = []
-            failed = False
-            for gap in mismatches:
-                crawled = _lookup_crawled_field(page, gap.crawl_selector)
-                if crawled is None:
-                    failed = True
-                    continue
-                attribute, old_value, new_value = _diff_attribute(doc_field, crawled)
-                if attribute == "必須区分":
-                    required_display = crawled.required
+            # matcher は属性ごとに gap を出すが、実測 FieldData は項目単位で 1 つ。
+            # 最初に逆引きできた実測項目から全属性差分をまとめて適用する
+            # （属性ごとに _diff_attribute を呼ぶと必須区分が常に先に返り桁数が欠落した）。
+            crawled = next(
+                (
+                    c
+                    for c in (_lookup_crawled_field(page, g.crawl_selector) for g in mismatches)
+                    if c
+                ),
+                None,
+            )
+            if crawled is not None:
+                for attribute, old_value, new_value in _diff_attributes(doc_field, crawled):
+                    if attribute == "必須区分":
+                        required_display = crawled.required
+                    elif attribute == "桁数":
+                        length_display = crawled.maxlength
                     notes.append(_NOTE_UPDATED.format(old=old_value, new=new_value))
-                elif attribute == "桁数":
-                    length_display = crawled.maxlength
-                    notes.append(_NOTE_UPDATED.format(old=old_value, new=new_value))
-                else:
-                    failed = True
-            if failed and not notes:
+            if not notes:
                 notes.append(_NOTE_LOOKUP_FAILED)
             lines.append(_field_row(doc_field, required_display, length_display, "；".join(notes)))
         elif doc_only:
@@ -380,6 +405,7 @@ def render_refreshed_markdown(
         "## サマリ",
         "",
         f"- 更新（実測で値を修正）: {counts.get('updated', 0)} 件",
+        f"- 実測値未確認（矛盾は検出したが実測値を特定できず）: {counts.get('unconfirmed', 0)} 件",
         f"- 未確認（文書のみ・実測で見つからず）: {counts.get('doc_only', 0)} 件",
         f"- 新規（文書未記載・実測のみ）: {counts.get('new', 0)} 件",
         f"- 変更なし（文書と実測が一致）: {counts.get('unchanged', 0)} 件",
@@ -419,6 +445,7 @@ def _refresh_log_to_dict(entries: tuple[RefreshEntry, ...]) -> dict:
     return {
         "meta": {
             "updated": counts.get("updated", 0),
+            "unconfirmed": counts.get("unconfirmed", 0),
             "doc_only": counts.get("doc_only", 0),
             "new": counts.get("new", 0),
             "unchanged": counts.get("unchanged", 0),

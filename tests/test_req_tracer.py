@@ -191,6 +191,25 @@ class TestUnimplementedSuspect:
         assert "断定" in markdown
         assert "ポイント履歴" in markdown
 
+    def test_md_escapes_pipe_in_requirement_title(self, tmp_path: Path) -> None:
+        """要件名に | が含まれてもマトリクス表が崩れない（セルをエスケープする・回帰）。"""
+        pages = analyze_pages([_page("https://example.com/x", "X画面", fields=())])
+        # 文書由来の要件名に区切り文字 | を含む
+        requirement = _requirement("REQ-001", "ログイン|会員登録画面が使えること")
+        bundle = _empty_bundle((requirement,))
+        result = fuse(pages, bundle)
+        traces = trace_requirements(bundle, result, pages, [])
+
+        save_trace_outputs(traces, bundle, tmp_path)
+
+        markdown = (tmp_path / TRACE_MD_NAME).read_text(encoding="utf-8")
+        # 生の | ではなくエスケープされた \| で埋め込まれる（列ずれを防ぐ）
+        assert "ログイン\\|会員登録画面が使えること" in markdown
+        # マトリクス表の各データ行は列数（6 列 = 7 本の |）を保つ
+        matrix_rows = [line for line in markdown.splitlines() if line.startswith("| REQ-001")]
+        assert matrix_rows
+        assert all(row.count("|") - row.count("\\|") == 7 for row in matrix_rows)
+
 
 # ---------- AC-6: 要件が無い場合はオプトイン（出力しない） ----------
 

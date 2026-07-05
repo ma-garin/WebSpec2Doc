@@ -108,6 +108,34 @@ class TestUpdatedAnnotation:
         # 新版の桁数欄は実測値の 40 が採用されている
         assert "| パスワード | 文字列 | ○ | 40 |" in markdown
 
+    def test_required_and_length_both_mismatch_are_both_updated(self) -> None:
+        """必須区分と桁数が同時に食い違う項目で、両方の変更が記録され、
+        桁数が実測値に更新される（旧値を確定値として描画しない・回帰）。"""
+        bundle = _login_bundle(max_length=20)  # doc: required=True, max_length=20
+        pages = analyze_pages(
+            [
+                _page(
+                    "https://example.com/login.html",
+                    "ログイン",
+                    # 実測: 必須=False・桁数=40（doc と両方食い違う）
+                    fields=(_field("password", required=False, maxlength=40),),
+                )
+            ]
+        )
+        result = fuse(pages, bundle)
+        entries = build_refresh_entries(result, bundle, pages)
+        updated = [e for e in entries if e.kind == "updated"]
+        attrs = {e.attribute for e in updated}
+        # 必須区分・桁数の両方が updated として記録される（片方が捨てられない）
+        assert attrs == {"必須区分", "桁数"}
+        length_entry = next(e for e in updated if e.attribute == "桁数")
+        assert (length_entry.old_value, length_entry.new_value) == ("20", "40")
+
+        markdown = render_refreshed_markdown(entries, result, bundle, pages)
+        # 桁数は実測 40 に更新される（旧値 20 のまま確定値として描画しない）
+        assert "| パスワード | 文字列 | × | 40 |" in markdown
+        assert "| パスワード | 文字列 | × | 20 |" not in markdown
+
 
 # ---------- AC-2: doc_only は削除せず未確認注記付きで残る ----------
 
@@ -350,14 +378,18 @@ class TestSelectorLookupFailure:
         )
 
         entries = build_refresh_entries(result, bundle, pages)
-        updated = [e for e in entries if e.kind == "updated"]
-        assert len(updated) == 1
-        assert updated[0].attribute == ""
-        assert updated[0].old_value == ""
+        # 実測値を特定できなかった矛盾は "updated" として空値で偽計上せず、
+        # "unconfirmed"（未確認）として honest に記録する（evidence-only）
+        assert [e for e in entries if e.kind == "updated"] == []
+        unconfirmed = [e for e in entries if e.kind == "unconfirmed"]
+        assert len(unconfirmed) == 1
+        assert unconfirmed[0].attribute == ""
+        assert unconfirmed[0].old_value == ""
+        assert unconfirmed[0].new_value == ""
 
         # 例外を出さずに描画でき、文書値のまま(20)で残る
         markdown = render_refreshed_markdown(entries, result, bundle, pages)
-        assert "実測値の特定に失敗（doc_fusion.md 参照）" in markdown
+        assert "矛盾は検出したが実測値を特定できず（未確認" in markdown
         assert "| パスワード | 文字列 | ○ | 20 |" in markdown
 
 

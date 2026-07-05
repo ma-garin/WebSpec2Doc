@@ -186,6 +186,25 @@ class TestRequirementTableIngest:
         assert req.evidence.file == "rfp.md"
         assert req.evidence.location  # 行番号を含む位置情報
 
+    def test_required_flag_column_not_used_as_requirement_category(self, tmp_path: Path) -> None:
+        """ "必須区分" 列（REQUIRED_KEYS 完全一致）が "区分" の部分一致で要件区分列に
+        誤選択されないこと。要件区分に ○/× の必須フラグが混入しない（回帰）。"""
+        md = tmp_path / "rfp.md"
+        md.write_text(
+            "\n".join(
+                [
+                    "| 要件ID | 要件名 | 必須区分 | 備考 |",
+                    "|---|---|---|---|",
+                    "| REQ-B01 | ログインできること | ○ | 認証必須 |",
+                ]
+            ),
+            encoding="utf-8",
+        )
+        bundle = load_reference_documents([md])
+        assert len(bundle.requirements) == 1
+        # 必須区分（○）を要件区分として取り込まない
+        assert bundle.requirements[0].category == ""
+
     def test_requirement_table_auto_numbers_missing_id(self, tmp_path: Path) -> None:
         """要件ID列があってもセルが空の行は "REQ-{連番}" を採番する。"""
         md = tmp_path / "rfp.md"

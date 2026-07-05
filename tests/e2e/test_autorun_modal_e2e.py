@@ -267,6 +267,59 @@ class TestRunningTestsProgressLabel:
         expect(autorun_page.locator("#autorun-phase-label")).to_have_text("テスト実行中…")
 
 
+class TestCaseDetailExpand:
+    """テストケース一覧の行クリックで手順・期待結果の全文を確認できる
+    （ドッグフーディング指摘: テストケースの詳細が見えない、への対応）。"""
+
+    _CANDIDATE = {
+        "id": "PW-001",
+        "title": "ログインフォーム送信",
+        "automation_status": "auto",
+        "trace_id": "P002",
+        "steps": ["page.goto('https://example.com/login')", "page.click('#submit')"],
+        "expected": "ダッシュボード画面に遷移し、ようこそメッセージが表示される。" * 2,
+    }
+
+    def _render(self, page: Page) -> None:
+        page.evaluate(
+            """(candidate) => {
+                document.getElementById('autorun-preview-panel').style.display = 'flex';
+                _autorunRenderPreview({
+                    summary: {total: 1, by_status: {auto: 1}, by_title: {}},
+                    candidates: [candidate],
+                    spec_content: '',
+                });
+            }""",
+            self._CANDIDATE,
+        )
+
+    def test_detail_row_hidden_until_clicked(self, autorun_page: Page) -> None:
+        self._render(autorun_page)
+        detail_row = autorun_page.locator('[data-case-detail="0"]')
+        expect(detail_row).to_be_hidden()
+        autorun_page.locator(".autorun-case-row").first.click()
+        expect(detail_row).to_be_visible()
+        expect(detail_row).to_contain_text("page.click('#submit')")
+        expect(detail_row).to_contain_text("ダッシュボード画面に遷移し")
+
+    def test_detail_row_collapses_on_second_click(self, autorun_page: Page) -> None:
+        self._render(autorun_page)
+        row = autorun_page.locator(".autorun-case-row").first
+        detail_row = autorun_page.locator('[data-case-detail="0"]')
+        row.click()
+        expect(detail_row).to_be_visible()
+        row.click()
+        expect(detail_row).to_be_hidden()
+
+    def test_detail_row_toggles_via_keyboard(self, autorun_page: Page) -> None:
+        self._render(autorun_page)
+        row = autorun_page.locator(".autorun-case-row").first
+        detail_row = autorun_page.locator('[data-case-detail="0"]')
+        row.focus()
+        row.press("Enter")
+        expect(detail_row).to_be_visible()
+
+
 class TestApprovalModalViaRoute:
     """page.route() で API をモックし、実際の JS フロー経由でモーダルを検証する。
 

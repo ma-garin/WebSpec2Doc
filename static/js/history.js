@@ -58,7 +58,22 @@ function _freshnessLabel(updatedTs) {
   return { label: `${days}日前`, cls: 'fresh-old' };
 }
 
+// 直近2スナップショット間の規模差分（スペックドリフト）をバッジ表示する。
+// 差分ゼロ・スナップショット不足時は非表示（捏造しない）。
+function _driftBadge(delta) {
+  if (!delta) return '';
+  const parts = [];
+  const labels = { screens: '画面', forms: 'フォーム', fields: '項目', buttons: 'ボタン' };
+  for (const key of Object.keys(labels)) {
+    const v = Number(delta[key] || 0);
+    if (v !== 0) parts.push(`${labels[key]}${v > 0 ? '+' : ''}${v}`);
+  }
+  if (!parts.length) return '';
+  return `<span class="diff-badge" title="直近スナップショット間の変化">ドリフト ${escHtml(parts.join(' / '))}</span>`;
+}
+
 function _buildTable(items) {
+
   let html = `
     <table class="data dashboard-table">
       <thead><tr><th>サイト</th><th class="num">画面</th><th class="num">項目</th><th>解析回数</th><th>最終解析</th><th>操作</th></tr></thead>
@@ -70,9 +85,10 @@ function _buildTable(items) {
       ? `<span class="snap-badge">${it.snapshot_count}回</span>`
       : it.snapshot_count === 1 ? '<span class="snap-badge snap-badge-first">初回</span>' : '';
     const diffBadge = it.has_diff ? '<span class="diff-badge">差分あり</span>' : '';
+    const driftBadge = _driftBadge(it.drift_delta);
     html += `
       <tr class="${it.has_diff ? 'has-drift' : ''}">
-        <td><div class="site-cell"><strong>${escHtml(it.domain)}</strong>${diffBadge}</div></td>
+        <td><div class="site-cell"><strong>${escHtml(it.domain)}</strong>${diffBadge}${driftBadge}</div></td>
         <td class="num">${it.screens}</td>
         <td class="num">${it.fields}</td>
         <td>${snapBadge}</td>

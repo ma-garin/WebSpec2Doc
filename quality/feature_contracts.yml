@@ -243,6 +243,121 @@
       ]
     },
     {
+      "feature_id": "usage_governance",
+      "name": "利用ガバナンス（レートリミット・月次クォータ・同時実行制限・プラン）",
+      "risk_level": "critical",
+      "status": "implemented",
+      "ui_files": [
+        "templates/auth/account.html"
+      ],
+      "route_files": [
+        "web/routes/account.py",
+        "web/routes/crawl.py",
+        "web/routes/auto_run.py",
+        "web/routes/api_v1.py"
+      ],
+      "core_files": [
+        "web/services/governance.py",
+        "web/auth.py",
+        "web/services/auth_store.py"
+      ],
+      "symbols": [
+        "effective_limits",
+        "check_crawl_allowed",
+        "rate_guard",
+        "update_tenant_plan",
+        "monthly_crawl_usage"
+      ],
+      "outputs": [
+        "429 rate_limited / quota_exceeded JSON",
+        "usage snapshot (/api/auth/usage)",
+        "使用量と上限カード"
+      ],
+      "persistence": [
+        "instance/auth.db (tenants.plan / limits_json)"
+      ],
+      "failure_modes": [
+        "rate_limited_returns_429_with_retry_after",
+        "quota_exhausted_blocks_crawl_start",
+        "concurrent_limit_blocks_new_jobs",
+        "auth_disabled_bypasses_all_limits",
+        "invalid_plan_or_limits_rejected"
+      ],
+      "required_tests": [
+        "happy_path",
+        "limit_path",
+        "error_path",
+        "evidence"
+      ]
+    },
+    {
+      "feature_id": "deploy_webhook",
+      "name": "デプロイ連動Webhook（CI/CDからの再クロール起動）",
+      "risk_level": "high",
+      "status": "implemented",
+      "ui_files": [],
+      "route_files": [
+        "web/routes/api_v1.py"
+      ],
+      "core_files": [
+        "web/services/job_queue.py"
+      ],
+      "symbols": [
+        "start_crawl_job"
+      ],
+      "outputs": [
+        "202 + job_id",
+        "diff crawl (compare=True)",
+        "Slack drift notification (既存)"
+      ],
+      "persistence": [
+        "output/{tenant}/{domain}/ (crawl artifacts)"
+      ],
+      "failure_modes": [
+        "missing_or_invalid_url_400",
+        "unauthenticated_401",
+        "quota_or_concurrency_429"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "auth_path",
+        "evidence"
+      ]
+    },
+    {
+      "feature_id": "drift_trend",
+      "name": "スペックドリフト時系列トレンド",
+      "risk_level": "medium",
+      "status": "implemented",
+      "ui_files": [
+        "static/js/history.js"
+      ],
+      "route_files": [
+        "web/routes/history.py"
+      ],
+      "core_files": [
+        "web/services/drift_trend.py"
+      ],
+      "symbols": [
+        "snapshot_trend",
+        "trend_summary"
+      ],
+      "outputs": [
+        "GET /api/drift-trend JSON",
+        "履歴カードのドリフトバッジ"
+      ],
+      "persistence": [],
+      "failure_modes": [
+        "corrupt_snapshot_skipped",
+        "insufficient_snapshots_no_badge"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path"
+      ]
+    },
+    {
       "feature_id": "autorun",
       "name": "AutoRun",
       "risk_level": "high",

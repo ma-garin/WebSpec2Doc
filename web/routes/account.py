@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+import json
+
 from flask import Blueprint, g, jsonify, redirect, render_template, request
 from werkzeug.wrappers import Response as BaseResponse
 
@@ -114,11 +116,16 @@ def account_page() -> BaseResponse | str:
     store = get_auth_store()
     is_admin = user.get("role") in ("owner", "admin")
     tenant = getattr(g, "tenant", None) or {}
+    from web.config import OUTPUT_DIR
+    from web.services.governance import usage_snapshot
+    from web.tenancy import scoped_output_dir
+
     return render_template(
         "auth/account.html",
         user=user,
         tenant=tenant,
         is_admin=is_admin,
+        usage=usage_snapshot(tenant or None, scoped_output_dir(OUTPUT_DIR)),
         users=store.list_users(tenant.get("id", "")) if is_admin else [],
         api_tokens=store.list_api_tokens(tenant.get("id", "")) if is_admin else [],
     )
@@ -152,6 +159,46 @@ def _require_login_json() -> tuple[BaseResponse, bool]:
         resp.status_code = 401
         return resp, False
     return jsonify({}), True
+
+
+@bp.get("/api/auth/usage")
+def api_auth_usage() -> BaseResponse | dict:
+    """現在のテナントの使用量と実効上限（レート・月次クォータ・同時実行）。"""
+    resp, ok = _require_login_json()
+    if not ok:
+        return resp
+    from web.config import OUTPUT_DIR
+    from web.services.governance import usage_snapshot
+    from web.tenancy import scoped_output_dir
+
+    return usage_snapshot(getattr(g, "tenant", None), scoped_output_dir(OUTPUT_DIR))
+
+
+@bp.patch("/api/auth/tenant")
+def api_update_tenant() -> BaseResponse | tuple[dict, int] | dict:
+    """テナントのプラン・個別上限の変更（オーナー専用）。"""
+    resp, ok = _require_login_json()
+    if not ok:
+        return resp
+    if g.auth_user.get("role") != "owner":
+        return {"error": "プラン変更はオーナーのみ可能です。", "code": "forbidden"}, 403
+    payload = request.get_json(silent=True) or {}
+    plan = payload.get("plan")
+    limits = payload.get("limits")
+    try:
+        tenant = get_auth_store().update_tenant_plan(
+            g.tenant["id"],
+            plan=str(plan) if plan is not None else None,
+            limits_json=(
+                None
+                if limits is None
+                else limits if isinstance(limits, str) else json.dumps(limits)
+            ),
+            actor_id=g.auth_user["id"],
+        )
+    except AuthError as exc:
+        return {"error": str(exc), "code": exc.code}, 400
+    return {"ok": True, "tenant": tenant}
 
 
 @bp.post("/api/auth/password")

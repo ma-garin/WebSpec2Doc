@@ -37,6 +37,8 @@ class CrawlJob:
     finished_at: str | None = None
     exit_code: int | None = None
     log_tail: str = field(default="", repr=False)
+    # テナントスコープ済み出力先（同時実行数の集計に使う）。空文字は共有 output/
+    output_dir: str = ""
 
 
 def start_crawl_job(
@@ -58,7 +60,14 @@ def start_crawl_job(
 
     job_id = uuid.uuid4().hex
     now = datetime.now().isoformat(timespec="seconds")
-    job = CrawlJob(job_id=job_id, domain=domain, site_url=site_url, status="queued", started_at=now)
+    job = CrawlJob(
+        job_id=job_id,
+        domain=domain,
+        site_url=site_url,
+        status="queued",
+        started_at=now,
+        output_dir=str(output_dir) if output_dir is not None else "",
+    )
 
     with _JOBS_LOCK:
         _JOBS[job_id] = job

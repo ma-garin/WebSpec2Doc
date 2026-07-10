@@ -63,6 +63,19 @@ def run() -> Response:
     # テナントスコープ済みの出力先はここ（リクエスト処理中）で解決して閉じ込める。
     out_dir = _out()
 
+    # 利用ガバナンス: クォータ・同時実行数（認証無効時は常に許可）
+    from web.services.governance import (
+        check_crawl_allowed,
+        register_stream_crawl,
+        unregister_stream_crawl,
+    )
+    from web.tenancy import current_tenant
+
+    allowed, deny_reason, _usage = check_crawl_allowed(current_tenant(), out_dir)
+    if not allowed:
+        return Response(f"エラー: {deny_reason}\n", status=429, mimetype="text/plain")
+    register_stream_crawl(run_id, out_dir)
+
     def generate():
         # crawl_mode == "auto": 起点URLからリンクを辿って自動探索する（--url + depth）。
         # それ以外（既定）: 画面分析で選択された固定URL一覧のみをクロールする（--urls）。
@@ -126,6 +139,7 @@ def run() -> Response:
                 yield "\nエラーが発生しました。\n"
         finally:
             _RUNNING_PROCS.pop(run_id, None)
+            unregister_stream_crawl(run_id)
             _terminate_proc(proc)
 
     return Response(generate(), mimetype="text/plain")

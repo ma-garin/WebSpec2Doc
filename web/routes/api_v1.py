@@ -43,6 +43,17 @@ def _ensure_src_in_path() -> None:
         sys.path.insert(0, src)
 
 
+def _crawl_governance_check() -> tuple[dict, int] | None:
+    """クロール起動系エンドポイント共通のクォータ・同時実行数チェック。"""
+    from web.services.governance import check_crawl_allowed
+    from web.tenancy import current_tenant
+
+    allowed, deny_reason, _usage = check_crawl_allowed(current_tenant(), _out())
+    if not allowed:
+        return {"error": deny_reason, "code": "quota_exceeded"}, 429
+    return None
+
+
 def _snapshot_ts_to_iso(stem: str) -> str:
     """スナップショットファイル名 YYYYMMDD-HHMMSS から ISO 8601 文字列を返す。"""
     m = _SNAPSHOT_TS_RE.search(stem)
@@ -190,6 +201,10 @@ def api_crawl(domain: str) -> tuple[dict, int] | dict:
     max_pages = _clean_int(str(body.get("max_pages", 30)), default=30, lo=1, hi=MAX_PAGES_LIMIT)
     compare = bool(body.get("compare", True))
 
+    denied = _crawl_governance_check()
+    if denied is not None:
+        return denied
+
     from web.services.job_queue import start_crawl_job
 
     job_id = start_crawl_job(
@@ -203,6 +218,50 @@ def api_crawl(domain: str) -> tuple[dict, int] | dict:
     )
     logger.info("crawl job queued: domain=%s job_id=%s url=%s", domain, job_id, site_url)
     return {"job_id": job_id, "status": "queued", "domain": domain}, 202
+
+
+# ─────────────────────────── POST /api/v1/hooks/deploy ───────────────────────────
+
+
+@bp.post("/hooks/deploy")
+def api_deploy_hook() -> tuple[dict, int] | dict:
+    """CI/CD デプロイ完了時の再クロールWebhook。
+
+    デプロイパイプラインから Bearer APIトークン付きで呼ぶと、対象サイトを
+    再クロールして前回スナップショットとの差分を検出する（compare=True 固定。
+    差分があれば既存の Slack 通知が発火する）。202 と job_id を返し、進捗は
+    GET /api/v1/jobs/{job_id} で追跡できる。
+    """
+    body = request.get_json(silent=True) or {}
+    site_url = str(body.get("url", "")).strip()
+    if not site_url or not _valid_url(site_url):
+        return {"error": "url は必須です（http/https のみ対応）"}, 400
+    from web.validation import _domain_of
+
+    domain = _domain_of(site_url)
+    if not _valid_domain(domain):
+        return {"error": "invalid url: ドメインを解決できません"}, 400
+
+    denied = _crawl_governance_check()
+    if denied is not None:
+        return denied
+
+    depth = _clean_int(str(body.get("depth", 2)), default=2, lo=1, hi=MAX_DEPTH)
+    max_pages = _clean_int(str(body.get("max_pages", 30)), default=30, lo=1, hi=MAX_PAGES_LIMIT)
+
+    from web.services.job_queue import start_crawl_job
+
+    job_id = start_crawl_job(
+        domain=domain,
+        site_url=site_url,
+        depth=depth,
+        max_pages=max_pages,
+        formats=_DEFAULT_FORMATS,
+        compare=True,
+        output_dir=_out(),
+    )
+    logger.info("deploy hook crawl queued: domain=%s job_id=%s", domain, job_id)
+    return {"job_id": job_id, "status": "queued", "domain": domain, "compare": True}, 202
 
 
 # ─────────────────────────── GET /api/v1/jobs/<job_id> ───────────────────────────

@@ -130,6 +130,36 @@ def _unauthorized_json(message: str) -> Response:
     return resp
 
 
+def rate_guard() -> Response | None:
+    """before_request: 認証有効時、プリンシパル単位のレートリミットを適用する。
+
+    auth_guard の後（g.auth_user / g.tenant 設定後）に登録すること。
+    キーはユーザーID → テナントID（APIトークン）→ 接続元IP の順で解決する。
+    """
+    if not auth_enabled():
+        return None
+    if _is_exempt(request.path):
+        return None
+    from web.services.governance import effective_limits, rate_limiter
+
+    user = getattr(g, "auth_user", None)
+    tenant = getattr(g, "tenant", None)
+    key = (user or {}).get("id") or (tenant or {}).get("id") or (request.remote_addr or "unknown")
+    per_minute = int(effective_limits(tenant)["rate_per_minute"])
+    retry_after = rate_limiter.check(str(key), per_minute)
+    if retry_after is None:
+        return None
+    resp = jsonify(
+        {
+            "error": "リクエストが多すぎます。しばらく待ってから再試行してください。",
+            "code": "rate_limited",
+        }
+    )
+    resp.status_code = 429
+    resp.headers["Retry-After"] = str(int(retry_after) + 1)
+    return resp
+
+
 def require_admin() -> BaseResponse | None:
     """管理者（owner/admin）専用エンドポイント用のチェック。認証オフ時は制限しない。"""
     if not auth_enabled():

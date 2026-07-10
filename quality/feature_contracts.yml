@@ -6,126 +6,530 @@
       "name": "URL解析 / 画面発見",
       "risk_level": "critical",
       "status": "implemented",
-      "ui_files": ["templates/partials/view-generate.html", "static/js/wizard.js"],
-      "route_files": ["web/routes/discover.py"],
-      "core_files": ["src/crawler/page_crawler.py"],
-      "symbols": ["discover_pages"],
-      "outputs": ["screen candidates", "status messages"],
+      "ui_files": [
+        "templates/partials/view-generate.html",
+        "static/js/wizard.js"
+      ],
+      "route_files": [
+        "web/routes/discover.py"
+      ],
+      "core_files": [
+        "src/crawler/page_crawler.py"
+      ],
+      "symbols": [
+        "discover_pages"
+      ],
+      "outputs": [
+        "screen candidates",
+        "status messages"
+      ],
       "persistence": [],
-      "failure_modes": ["invalid_url", "timeout", "login_wall", "restricted_url"],
-      "required_tests": ["happy_path", "error_path", "evidence"]
+      "failure_modes": [
+        "invalid_url",
+        "timeout",
+        "login_wall",
+        "restricted_url"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "evidence"
+      ]
     },
     {
       "feature_id": "crawl",
       "name": "クロール / レポート生成",
       "risk_level": "critical",
       "status": "implemented",
-      "ui_files": ["templates/partials/view-generate.html", "static/js/execution.js", "static/js/results.js", "static/js/ui-states.js"],
-      "route_files": ["web/routes/crawl.py"],
-      "core_files": ["src/crawler/page_crawler.py", "src/crawler/parallel_crawler.py", "src/crawler/politeness.py", "src/crawler/action_explorer.py", "src/crawler/link_extractor.py"],
-      "symbols": ["crawl_site", "crawl_urls_parallel", "extract_links_all_scopes", "collect_embedded_frames"],
-      "outputs": ["report.html", "report.json", "screenshots", "snapshot", "audit.jsonl"],
-      "persistence": ["output/{domain}/", "output/{domain}/snapshots/"],
-      "failure_modes": ["login_wall_during_crawl", "restricted_url", "timeout", "cancel", "partial_checkpoint", "robots_disallowed", "rate_limit_backoff", "mutation_blocked", "mutation_blocked_audit", "cross_origin_iframe", "closed_shadow_root"],
-      "required_tests": ["happy_path", "error_path", "cancel_path", "checkpoint_path", "evidence"]
+      "ui_files": [
+        "templates/partials/view-generate.html",
+        "static/js/execution.js",
+        "static/js/results.js",
+        "static/js/ui-states.js"
+      ],
+      "route_files": [
+        "web/routes/crawl.py"
+      ],
+      "core_files": [
+        "src/crawler/page_crawler.py",
+        "src/crawler/parallel_crawler.py",
+        "src/crawler/politeness.py",
+        "src/crawler/action_explorer.py",
+        "src/crawler/link_extractor.py"
+      ],
+      "symbols": [
+        "crawl_site",
+        "crawl_urls_parallel",
+        "extract_links_all_scopes",
+        "collect_embedded_frames"
+      ],
+      "outputs": [
+        "report.html",
+        "report.json",
+        "screenshots",
+        "snapshot",
+        "audit.jsonl"
+      ],
+      "persistence": [
+        "output/{domain}/",
+        "output/{domain}/snapshots/"
+      ],
+      "failure_modes": [
+        "login_wall_during_crawl",
+        "restricted_url",
+        "timeout",
+        "cancel",
+        "partial_checkpoint",
+        "robots_disallowed",
+        "rate_limit_backoff",
+        "mutation_blocked",
+        "mutation_blocked_audit",
+        "cross_origin_iframe",
+        "closed_shadow_root"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "cancel_path",
+        "checkpoint_path",
+        "evidence"
+      ]
     },
     {
       "feature_id": "login",
       "name": "ログイン / セッション",
       "risk_level": "critical",
       "status": "implemented",
-      "ui_files": ["templates/partials/view-generate.html", "static/js/wizard.js"],
-      "route_files": ["web/routes/login.py"],
-      "core_files": ["src/crawler/auto_login.py", "src/analyzer/login_wall.py", "src/crawler/auth_recorder.py", "src/crawler/auth.py"],
-      "symbols": ["submit_login_simple", "detect_login_wall", "record_auth_session", "verify_auth_state"],
-      "outputs": ["auth.json", "login wall status", "login record status (.login_status.json)"],
-      "persistence": ["output/{domain}/auth.json", "output/{domain}/.login_signal", "output/{domain}/.login_status.json"],
-      "failure_modes": ["invalid_credentials", "mfa_required", "session_expired", "display_missing", "recorder_timeout", "browser_closed"],
-      "required_tests": ["happy_path", "error_path", "session_expiry_path", "evidence", "timeout_path", "cancel_path"]
+      "ui_files": [
+        "templates/partials/view-generate.html",
+        "static/js/wizard.js"
+      ],
+      "route_files": [
+        "web/routes/login.py"
+      ],
+      "core_files": [
+        "src/crawler/auto_login.py",
+        "src/analyzer/login_wall.py",
+        "src/crawler/auth_recorder.py",
+        "src/crawler/auth.py"
+      ],
+      "symbols": [
+        "submit_login_simple",
+        "detect_login_wall",
+        "record_auth_session",
+        "verify_auth_state"
+      ],
+      "outputs": [
+        "auth.json",
+        "login wall status",
+        "login record status (.login_status.json)"
+      ],
+      "persistence": [
+        "output/{domain}/auth.json",
+        "output/{domain}/.login_signal",
+        "output/{domain}/.login_status.json"
+      ],
+      "failure_modes": [
+        "invalid_credentials",
+        "mfa_required",
+        "session_expired",
+        "display_missing",
+        "recorder_timeout",
+        "browser_closed"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "session_expiry_path",
+        "evidence",
+        "timeout_path",
+        "cancel_path"
+      ]
+    },
+    {
+      "feature_id": "account_auth",
+      "name": "アプリ利用者認証（ログイン/セッション/アカウント管理）",
+      "risk_level": "critical",
+      "status": "implemented",
+      "ui_files": [
+        "templates/auth/login.html",
+        "templates/auth/setup.html",
+        "templates/auth/account.html",
+        "static/css/auth.css"
+      ],
+      "route_files": [
+        "web/routes/account.py"
+      ],
+      "core_files": [
+        "web/services/auth_store.py",
+        "web/auth.py"
+      ],
+      "symbols": [
+        "authenticate",
+        "resolve_session",
+        "auth_guard",
+        "setup_initial",
+        "create_api_token"
+      ],
+      "outputs": [
+        "session cookie (ws2d_session)",
+        "login/setup/account pages",
+        "/api/auth/* JSON",
+        "audit_log"
+      ],
+      "persistence": [
+        "instance/auth.db",
+        "instance/secret_key"
+      ],
+      "failure_modes": [
+        "invalid_credentials",
+        "account_locked_after_repeated_failures",
+        "inactive_account",
+        "session_expired_or_revoked",
+        "weak_password_rejected",
+        "open_redirect_blocked",
+        "last_owner_protection"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "lockout_path",
+        "session_expiry_path",
+        "evidence"
+      ]
+    },
+    {
+      "feature_id": "tenant_isolation",
+      "name": "テナント分離（出力・観点DB・APIトークンのワークスペース分離）",
+      "risk_level": "critical",
+      "status": "implemented",
+      "ui_files": [
+        "templates/auth/account.html"
+      ],
+      "route_files": [
+        "web/routes/account.py"
+      ],
+      "core_files": [
+        "web/tenancy.py",
+        "web/services/auth_store.py",
+        "web/services/viewpoint_store.py"
+      ],
+      "symbols": [
+        "scoped_output_dir",
+        "scoped_instance_path",
+        "create_tenant",
+        "get_viewpoint_store"
+      ],
+      "outputs": [
+        "tenant-scoped output tree",
+        "tenant-scoped viewpoints.db",
+        "tenant API tokens"
+      ],
+      "persistence": [
+        "output/tenants/{slug}/",
+        "instance/tenants/{slug}/viewpoints.db"
+      ],
+      "failure_modes": [
+        "invalid_tenant_slug_rejected",
+        "cross_tenant_path_traversal_blocked",
+        "background_job_without_request_context",
+        "shared_mode_lists_exclude_tenant_dirs"
+      ],
+      "required_tests": [
+        "happy_path",
+        "isolation_path",
+        "error_path",
+        "evidence"
+      ]
     },
     {
       "feature_id": "autorun",
       "name": "AutoRun",
       "risk_level": "high",
       "status": "implemented",
-      "ui_files": ["templates/partials/view-auto-run.html", "static/js/autorun.js", "static/js/autorun-approval.js", "static/js/view-test-runs.js"],
-      "route_files": ["web/routes/auto_run.py"],
-      "core_files": ["web/services/spec_ts_generator.py", "web/services/playwright_executor.py"],
+      "ui_files": [
+        "templates/partials/view-auto-run.html",
+        "static/js/autorun.js",
+        "static/js/autorun-approval.js",
+        "static/js/view-test-runs.js"
+      ],
+      "route_files": [
+        "web/routes/auto_run.py"
+      ],
+      "core_files": [
+        "web/services/spec_ts_generator.py",
+        "web/services/playwright_executor.py"
+      ],
       "symbols": [],
-      "outputs": ["QA artifacts", "Playwright candidates", "execution logs"],
-      "persistence": ["output/{domain}/qa_process/"],
-      "failure_modes": ["approval_timeout", "login_wait_timeout", "dependency_missing", "cancel", "execution_timeout_partial_result", "result_parse_failure"],
-      "required_tests": ["happy_path", "approval_path", "cancel_path", "error_path", "timeout_path", "evidence"]
+      "outputs": [
+        "QA artifacts",
+        "Playwright candidates",
+        "execution logs"
+      ],
+      "persistence": [
+        "output/{domain}/qa_process/"
+      ],
+      "failure_modes": [
+        "approval_timeout",
+        "login_wait_timeout",
+        "dependency_missing",
+        "cancel",
+        "execution_timeout_partial_result",
+        "result_parse_failure"
+      ],
+      "required_tests": [
+        "happy_path",
+        "approval_path",
+        "cancel_path",
+        "error_path",
+        "timeout_path",
+        "evidence"
+      ]
     },
     {
       "feature_id": "diff_history",
       "name": "差分 / 履歴 / 再クロール",
       "risk_level": "critical",
       "status": "implemented",
-      "ui_files": ["static/js/history.js", "static/js/recrawl.js", "static/js/results.js"],
-      "route_files": ["web/routes/history.py", "web/routes/site.py"],
-      "core_files": ["src/diff/snapshot.py", "src/diff/differ.py", "src/registry/site_registry.py"],
-      "symbols": ["save_snapshot", "compute_diff", "save_site", "load_site"],
-      "outputs": ["snapshots", "diff_report.html", "site.json"],
-      "persistence": ["output/{domain}/snapshots/", "output/{domain}/site.json"],
-      "failure_modes": ["missing_snapshot", "session_expired_false_diff", "snapshot_overwrite", "login_required_flags_lost_on_recrawl"],
-      "required_tests": ["happy_path", "breaking_change_path", "error_path", "evidence"]
+      "ui_files": [
+        "static/js/history.js",
+        "static/js/recrawl.js",
+        "static/js/results.js"
+      ],
+      "route_files": [
+        "web/routes/history.py",
+        "web/routes/site.py"
+      ],
+      "core_files": [
+        "src/diff/snapshot.py",
+        "src/diff/differ.py",
+        "src/registry/site_registry.py"
+      ],
+      "symbols": [
+        "save_snapshot",
+        "compute_diff",
+        "save_site",
+        "load_site"
+      ],
+      "outputs": [
+        "snapshots",
+        "diff_report.html",
+        "site.json"
+      ],
+      "persistence": [
+        "output/{domain}/snapshots/",
+        "output/{domain}/site.json"
+      ],
+      "failure_modes": [
+        "missing_snapshot",
+        "session_expired_false_diff",
+        "snapshot_overwrite",
+        "login_required_flags_lost_on_recrawl"
+      ],
+      "required_tests": [
+        "happy_path",
+        "breaking_change_path",
+        "error_path",
+        "evidence"
+      ]
     },
     {
       "feature_id": "settings",
       "name": "設定",
       "risk_level": "high",
       "status": "implemented",
-      "ui_files": ["templates/partials/view-settings.html", "static/js/settings.js"],
-      "route_files": ["web/routes/settings.py"],
-      "core_files": ["web/env_store.py"],
-      "symbols": ["_write_env"],
-      "outputs": ["settings state", ".env update"],
-      "persistence": [".env"],
-      "failure_modes": ["invalid_json", "invalid_type", "unsafe_option_enabled"],
-      "required_tests": ["happy_path", "validation_path", "evidence"]
+      "ui_files": [
+        "templates/partials/view-settings.html",
+        "static/js/settings.js"
+      ],
+      "route_files": [
+        "web/routes/settings.py"
+      ],
+      "core_files": [
+        "web/env_store.py"
+      ],
+      "symbols": [
+        "_write_env"
+      ],
+      "outputs": [
+        "settings state",
+        ".env update"
+      ],
+      "persistence": [
+        ".env"
+      ],
+      "failure_modes": [
+        "invalid_json",
+        "invalid_type",
+        "unsafe_option_enabled"
+      ],
+      "required_tests": [
+        "happy_path",
+        "validation_path",
+        "evidence"
+      ]
     },
     {
       "feature_id": "usage_roi",
       "name": "ROIダッシュボード / 利用実績",
       "risk_level": "medium",
       "status": "implemented",
-      "ui_files": ["templates/partials/view-usage.html"],
-      "route_files": ["web/routes/usage.py"],
-      "core_files": ["web/services/usage_tracker.py"],
-      "symbols": ["record_usage", "summarize_usage", "record_comparison_from_report", "record_ux_review_from_report"],
-      "outputs": ["usage summary", "estimated saved hours"],
-      "persistence": ["output/usage_log.jsonl"],
-      "failure_modes": ["missing_log", "corrupt_log_line", "invalid_coefficient_env", "comparison_json_missing", "ux_review_json_missing"],
-      "required_tests": ["happy_path", "empty_path", "evidence"]
-    }
-    ,{
+      "ui_files": [
+        "templates/partials/view-usage.html"
+      ],
+      "route_files": [
+        "web/routes/usage.py"
+      ],
+      "core_files": [
+        "web/services/usage_tracker.py"
+      ],
+      "symbols": [
+        "record_usage",
+        "summarize_usage",
+        "record_comparison_from_report",
+        "record_ux_review_from_report"
+      ],
+      "outputs": [
+        "usage summary",
+        "estimated saved hours"
+      ],
+      "persistence": [
+        "output/usage_log.jsonl"
+      ],
+      "failure_modes": [
+        "missing_log",
+        "corrupt_log_line",
+        "invalid_coefficient_env",
+        "comparison_json_missing",
+        "ux_review_json_missing"
+      ],
+      "required_tests": [
+        "happy_path",
+        "empty_path",
+        "evidence"
+      ]
+    },
+    {
       "feature_id": "coverage_gap_report",
       "name": "カバレッジと未確認領域（網羅性証明）",
       "risk_level": "medium",
       "status": "implemented",
       "ui_files": [],
       "route_files": [],
-      "core_files": ["src/generator/coverage_gap.py", "src/generator/html_reporter.py", "src/crawler/page_crawler.py", "src/generator/comparison_reporter.py"],
-      "symbols": ["collect_coverage_gaps", "compute_coverage_summary"],
-      "outputs": ["report.html「カバレッジと未確認領域」節", "comparison.html「網羅性サマリ」節"],
+      "core_files": [
+        "src/generator/coverage_gap.py",
+        "src/generator/html_reporter.py",
+        "src/crawler/page_crawler.py",
+        "src/generator/comparison_reporter.py"
+      ],
+      "symbols": [
+        "collect_coverage_gaps",
+        "compute_coverage_summary"
+      ],
+      "outputs": [
+        "report.html「カバレッジと未確認領域」節",
+        "comparison.html「網羅性サマリ」節"
+      ],
       "persistence": [],
-      "failure_modes": ["audit_log_missing", "audit_log_corrupt_line", "coverage_missing", "comparison_json_missing", "stale_crawl_started_records"],
-      "required_tests": ["happy_path", "empty_path", "evidence"]
-    }
-    ,{
+      "failure_modes": [
+        "audit_log_missing",
+        "audit_log_corrupt_line",
+        "coverage_missing",
+        "comparison_json_missing",
+        "stale_crawl_started_records"
+      ],
+      "required_tests": [
+        "happy_path",
+        "empty_path",
+        "evidence"
+      ]
+    },
+    {
       "feature_id": "doc_fusion",
       "name": "文書×実測突合（Doc Fusion）",
       "risk_level": "high",
       "status": "implemented",
-      "ui_files": ["templates/partials/view-generate.html", "static/js/wizard.js", "static/js/execution.js", "static/js/results.js", "static/js/doc-fusion.js"],
-      "route_files": ["web/routes/crawl.py", "web/routes/traceability.py"],
-      "core_files": ["src/ingest/loader.py", "src/ingest/matcher.py", "src/generator/fusion_reporter.py", "src/ingest/llm_extractor.py", "src/analyzer/rule_injector.py", "src/generator/json_reporter.py", "src/ingest/req_tracer.py", "src/generator/trace_reporter.py", "src/ingest/tables.py", "src/generator/refresh_reporter.py"],
-      "symbols": ["load_reference_documents", "fuse", "save_fusion_outputs", "extract_semantics", "filter_hallucinations", "build_rule_conditions", "trace_requirements", "save_trace_outputs", "structure_requirement_table", "build_refresh_entries", "render_refreshed_markdown", "save_refresh_outputs"],
-      "outputs": ["doc_fusion.json", "doc_fusion.md", "official_name in report.json", "documented_rules in doc_fusion.json", "document_conditions/test_conditions_detail in report.json", "requirement_trace.json", "traceability_matrix.md", "document_requirements in /traceability/matrix", "refreshed_spec.md", "refresh_log.json"],
-      "persistence": ["output/{domain}/doc_fusion.json", "output/{domain}/reference_docs/", "output/{domain}/requirement_trace.json", "output/{domain}/traceability_matrix.md", "output/{domain}/refreshed_spec.md", "output/{domain}/refresh_log.json"],
-      "failure_modes": ["unsupported_format", "missing_file", "legacy_binary_format", "no_match", "llm_schema_reject", "hallucinated_quote", "rule_unmatched", "rule_value_unparsable", "upload_rejected", "path_traversal_attempt", "requirement_unmatched", "duplicate_requirement_id", "candidates_file_missing_or_corrupt", "refresh_selector_lookup_failed", "refresh_no_screens_skip", "refresh_flag_without_reference_doc"],
-      "required_tests": ["happy_path", "error_path", "mismatch_detection", "evidence"]
+      "ui_files": [
+        "templates/partials/view-generate.html",
+        "static/js/wizard.js",
+        "static/js/execution.js",
+        "static/js/results.js",
+        "static/js/doc-fusion.js"
+      ],
+      "route_files": [
+        "web/routes/crawl.py",
+        "web/routes/traceability.py"
+      ],
+      "core_files": [
+        "src/ingest/loader.py",
+        "src/ingest/matcher.py",
+        "src/generator/fusion_reporter.py",
+        "src/ingest/llm_extractor.py",
+        "src/analyzer/rule_injector.py",
+        "src/generator/json_reporter.py",
+        "src/ingest/req_tracer.py",
+        "src/generator/trace_reporter.py",
+        "src/ingest/tables.py",
+        "src/generator/refresh_reporter.py"
+      ],
+      "symbols": [
+        "load_reference_documents",
+        "fuse",
+        "save_fusion_outputs",
+        "extract_semantics",
+        "filter_hallucinations",
+        "build_rule_conditions",
+        "trace_requirements",
+        "save_trace_outputs",
+        "structure_requirement_table",
+        "build_refresh_entries",
+        "render_refreshed_markdown",
+        "save_refresh_outputs"
+      ],
+      "outputs": [
+        "doc_fusion.json",
+        "doc_fusion.md",
+        "official_name in report.json",
+        "documented_rules in doc_fusion.json",
+        "document_conditions/test_conditions_detail in report.json",
+        "requirement_trace.json",
+        "traceability_matrix.md",
+        "document_requirements in /traceability/matrix",
+        "refreshed_spec.md",
+        "refresh_log.json"
+      ],
+      "persistence": [
+        "output/{domain}/doc_fusion.json",
+        "output/{domain}/reference_docs/",
+        "output/{domain}/requirement_trace.json",
+        "output/{domain}/traceability_matrix.md",
+        "output/{domain}/refreshed_spec.md",
+        "output/{domain}/refresh_log.json"
+      ],
+      "failure_modes": [
+        "unsupported_format",
+        "missing_file",
+        "legacy_binary_format",
+        "no_match",
+        "llm_schema_reject",
+        "hallucinated_quote",
+        "rule_unmatched",
+        "rule_value_unparsable",
+        "upload_rejected",
+        "path_traversal_attempt",
+        "requirement_unmatched",
+        "duplicate_requirement_id",
+        "candidates_file_missing_or_corrupt",
+        "refresh_selector_lookup_failed",
+        "refresh_no_screens_skip",
+        "refresh_flag_without_reference_doc"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "mismatch_detection",
+        "evidence"
+      ]
     },
     {
       "feature_id": "exploration_capture",
@@ -133,13 +537,49 @@
       "risk_level": "high",
       "status": "implemented",
       "ui_files": [],
-      "route_files": ["web/routes/report.py"],
-      "core_files": ["src/capture/session_recorder.py", "src/capture/coverage.py", "src/capture/burndown.py", "src/generator/heatmap_reporter.py", "src/generator/html_reporter.py", "src/generator/burndown_reporter.py"],
-      "symbols": ["SessionRecorder", "compute_exploration_coverage", "propose_charters", "generate_heatmap_html", "compute_exploration_burndown", "generate_burndown_html"],
-      "outputs": ["sessions/session_*.jsonl", "exploration_coverage.json", "exploration_heatmap.html", "exploration_burndown.json", "exploration_burndown.html"],
-      "persistence": ["output/{domain}/sessions/"],
-      "failure_modes": ["no_inventory", "no_sessions", "browser_closed", "unmatched_footprint", "coverage_file_corrupt", "missing_ts_mtime_fallback"],
-      "required_tests": ["happy_path", "error_path", "state_join_key", "evidence"]
+      "route_files": [
+        "web/routes/report.py"
+      ],
+      "core_files": [
+        "src/capture/session_recorder.py",
+        "src/capture/coverage.py",
+        "src/capture/burndown.py",
+        "src/generator/heatmap_reporter.py",
+        "src/generator/html_reporter.py",
+        "src/generator/burndown_reporter.py"
+      ],
+      "symbols": [
+        "SessionRecorder",
+        "compute_exploration_coverage",
+        "propose_charters",
+        "generate_heatmap_html",
+        "compute_exploration_burndown",
+        "generate_burndown_html"
+      ],
+      "outputs": [
+        "sessions/session_*.jsonl",
+        "exploration_coverage.json",
+        "exploration_heatmap.html",
+        "exploration_burndown.json",
+        "exploration_burndown.html"
+      ],
+      "persistence": [
+        "output/{domain}/sessions/"
+      ],
+      "failure_modes": [
+        "no_inventory",
+        "no_sessions",
+        "browser_closed",
+        "unmatched_footprint",
+        "coverage_file_corrupt",
+        "missing_ts_mtime_fallback"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "state_join_key",
+        "evidence"
+      ]
     },
     {
       "feature_id": "reverse_assets",
@@ -148,12 +588,32 @@
       "status": "implemented",
       "ui_files": [],
       "route_files": [],
-      "core_files": ["src/capture/reverse_generator.py"],
-      "symbols": ["generate_recorded_assets", "save_recorded_assets"],
-      "outputs": ["recorded_assets.json", "recorded_candidates.json"],
-      "persistence": ["output/{domain}/recorded_assets.json", "output/{domain}/recorded_candidates.json"],
-      "failure_modes": ["no_sessions", "no_inventory", "no_visit_events"],
-      "required_tests": ["happy_path", "error_path", "state_join_key", "evidence"]
+      "core_files": [
+        "src/capture/reverse_generator.py"
+      ],
+      "symbols": [
+        "generate_recorded_assets",
+        "save_recorded_assets"
+      ],
+      "outputs": [
+        "recorded_assets.json",
+        "recorded_candidates.json"
+      ],
+      "persistence": [
+        "output/{domain}/recorded_assets.json",
+        "output/{domain}/recorded_candidates.json"
+      ],
+      "failure_modes": [
+        "no_sessions",
+        "no_inventory",
+        "no_visit_events"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "state_join_key",
+        "evidence"
+      ]
     },
     {
       "feature_id": "field_definition_bva",
@@ -162,12 +622,30 @@
       "status": "implemented",
       "ui_files": [],
       "route_files": [],
-      "core_files": ["src/analyzer/bva.py", "src/main.py"],
-      "symbols": ["derive_boundary_cases", "attach_observed_boundary_cases"],
-      "outputs": ["spec.xlsx（項目定義書シート・境界値データシート）"],
-      "persistence": ["output/{domain}/spec.xlsx"],
-      "failure_modes": ["invalid_pattern", "unparsable_range", "no_evidence"],
-      "required_tests": ["happy_path", "error_path", "evidence"]
+      "core_files": [
+        "src/analyzer/bva.py",
+        "src/main.py"
+      ],
+      "symbols": [
+        "derive_boundary_cases",
+        "attach_observed_boundary_cases"
+      ],
+      "outputs": [
+        "spec.xlsx（項目定義書シート・境界値データシート）"
+      ],
+      "persistence": [
+        "output/{domain}/spec.xlsx"
+      ],
+      "failure_modes": [
+        "invalid_pattern",
+        "unparsable_range",
+        "no_evidence"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "evidence"
+      ]
     },
     {
       "feature_id": "finding_ticket",
@@ -176,12 +654,35 @@
       "status": "implemented",
       "ui_files": [],
       "route_files": [],
-      "core_files": ["src/capture/finding_reporter.py", "src/capture/session_recorder.py", "src/main.py"],
-      "symbols": ["build_finding_tickets", "save_findings", "SessionRecorder"],
-      "outputs": ["findings.json", "findings.csv"],
-      "persistence": ["output/{domain}/findings.json", "output/{domain}/findings.csv"],
-      "failure_modes": ["widget_injection_failed", "no_sessions", "no_preceding_actions"],
-      "required_tests": ["happy_path", "error_path", "state_join_key", "evidence"]
+      "core_files": [
+        "src/capture/finding_reporter.py",
+        "src/capture/session_recorder.py",
+        "src/main.py"
+      ],
+      "symbols": [
+        "build_finding_tickets",
+        "save_findings",
+        "SessionRecorder"
+      ],
+      "outputs": [
+        "findings.json",
+        "findings.csv"
+      ],
+      "persistence": [
+        "output/{domain}/findings.json",
+        "output/{domain}/findings.csv"
+      ],
+      "failure_modes": [
+        "widget_injection_failed",
+        "no_sessions",
+        "no_preceding_actions"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "state_join_key",
+        "evidence"
+      ]
     },
     {
       "feature_id": "test_plan",
@@ -190,12 +691,36 @@
       "status": "implemented",
       "ui_files": [],
       "route_files": [],
-      "core_files": ["src/generator/test_plan_generator.py", "src/main.py"],
-      "symbols": ["compute_test_plan", "load_plan_coefficients", "save_test_plan", "_generate_test_plan"],
-      "outputs": ["test_plan.md", "test_plan.xlsx"],
-      "persistence": ["output/{domain}/test_plan.md", "output/{domain}/test_plan.xlsx"],
-      "failure_modes": ["no_inventory", "report_corrupt", "empty_screens", "xlsx_write_failure", "invalid_env_override"],
-      "required_tests": ["happy_path", "error_path", "evidence"]
+      "core_files": [
+        "src/generator/test_plan_generator.py",
+        "src/main.py"
+      ],
+      "symbols": [
+        "compute_test_plan",
+        "load_plan_coefficients",
+        "save_test_plan",
+        "_generate_test_plan"
+      ],
+      "outputs": [
+        "test_plan.md",
+        "test_plan.xlsx"
+      ],
+      "persistence": [
+        "output/{domain}/test_plan.md",
+        "output/{domain}/test_plan.xlsx"
+      ],
+      "failure_modes": [
+        "no_inventory",
+        "report_corrupt",
+        "empty_screens",
+        "xlsx_write_failure",
+        "invalid_env_override"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "evidence"
+      ]
     },
     {
       "feature_id": "ci_warnings_cleanup",
@@ -204,12 +729,27 @@
       "status": "implemented",
       "ui_files": [],
       "route_files": [],
-      "core_files": ["src/diff/screenshot_diff.py", "src/llm/viewpoint_generator.py", "src/analyzer/test_conditions.py"],
-      "symbols": ["_count_nonzero_pixels"],
-      "outputs": ["pytest実行ログ（警告0件）"],
+      "core_files": [
+        "src/diff/screenshot_diff.py",
+        "src/llm/viewpoint_generator.py",
+        "src/analyzer/test_conditions.py"
+      ],
+      "symbols": [
+        "_count_nonzero_pixels"
+      ],
+      "outputs": [
+        "pytest実行ログ（警告0件）"
+      ],
       "persistence": [],
-      "failure_modes": ["collection_warning_regression", "pillow_deprecation_regression"],
-      "required_tests": ["parity", "collection_guard", "static_guard"]
+      "failure_modes": [
+        "collection_warning_regression",
+        "pillow_deprecation_regression"
+      ],
+      "required_tests": [
+        "parity",
+        "collection_guard",
+        "static_guard"
+      ]
     },
     {
       "feature_id": "old_new_comparison",
@@ -238,7 +778,12 @@
         "save_comparison_outputs",
         "compute_coverage_summary"
       ],
-      "outputs": ["comparison.json", "comparison.html", "old/dynamic_masks.json", "comparison.html「網羅性サマリ」節"],
+      "outputs": [
+        "comparison.json",
+        "comparison.html",
+        "old/dynamic_masks.json",
+        "comparison.html「網羅性サマリ」節"
+      ],
       "persistence": [
         "output/{domain}/compare_*/old/",
         "output/{domain}/compare_*/new/",
@@ -252,7 +797,12 @@
         "screenshot_missing",
         "mask_detection_failed"
       ],
-      "required_tests": ["happy_path", "error_path", "evidence", "unclassified_fallback"]
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "evidence",
+        "unclassified_fallback"
+      ]
     },
     {
       "feature_id": "ux_review",
@@ -279,15 +829,24 @@
         "build_ux_review",
         "save_ux_outputs"
       ],
-      "outputs": ["ux_review.json", "report.html「UX 所見」タブ"],
-      "persistence": ["output/{domain}/ux_review.json"],
+      "outputs": [
+        "ux_review.json",
+        "report.html「UX 所見」タブ"
+      ],
+      "persistence": [
+        "output/{domain}/ux_review.json"
+      ],
       "failure_modes": [
         "axe_missing_asset",
         "axe_runtime_error",
         "llm_hallucination",
         "llm_unavailable"
       ],
-      "required_tests": ["happy_path", "error_path", "evidence"]
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "evidence"
+      ]
     }
   ]
 }

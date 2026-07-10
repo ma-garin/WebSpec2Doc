@@ -16,6 +16,19 @@ from web.validation import _sanitize
 bp = Blueprint("settings", __name__)
 
 
+@bp.before_request
+def _settings_admin_guard():
+    """設定の変更（APIキー・Slack・許可設定など）は管理者のみ。
+
+    認証が無効な場合（ローカル単独利用）は従来どおり制限しない。
+    """
+    from web.auth import require_admin
+
+    if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+        return require_admin()
+    return None
+
+
 @bp.get("/api/settings")
 def get_settings() -> dict:
     env = _read_env()

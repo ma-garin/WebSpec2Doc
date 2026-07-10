@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <title>初期セットアップ - WebSpec2Doc</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('webspec2doc.theme');
+        if (!t) t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', t);
+      } catch (e) { /* noop */ }
+    })();
+  </script>
+</head>
+<body class="auth-body">
+<div class="auth-split">
+
+  <aside class="auth-brand-pane" aria-hidden="true">
+    <div class="auth-brand-logo">
+      <span class="auth-brand-mark">W</span>
+      <span>WebSpec2Doc</span>
+    </div>
+    <div class="auth-brand-copy">
+      <h2>ようこそ。<br>ワークスペースを作成しましょう。</h2>
+      <p>最初の管理者アカウント（オーナー）とワークスペースを作成します。作成後はメンバーの招待・権限管理・APIトークンの発行ができます。</p>
+    </div>
+    <div></div>
+  </aside>
+
+  <main class="auth-form-pane">
+    <div class="auth-form-box">
+      <h1>初期セットアップ</h1>
+      <p class="auth-form-lead">ワークスペースとオーナーアカウントを作成します。</p>
+
+      {% if error %}
+      <div class="auth-error" role="alert">
+        <b>作成できませんでした</b>
+        <span>{{ error }}</span>
+      </div>
+      {% endif %}
+
+      <form method="post" action="/auth/setup" novalidate>
+        <div class="auth-field">
+          <label for="tenant_name">ワークスペース名（組織・チーム名）</label>
+          <input type="text" id="tenant_name" name="tenant_name"
+                 value="{{ form.get('tenant_name', '') }}" placeholder="例: QA Team" required autofocus>
+        </div>
+        <div class="auth-field">
+          <label for="name">表示名</label>
+          <input type="text" id="name" name="name" value="{{ form.get('name', '') }}"
+                 autocomplete="name" required>
+        </div>
+        <div class="auth-field">
+          <label for="email">メールアドレス</label>
+          <input type="email" id="email" name="email" value="{{ form.get('email', '') }}"
+                 autocomplete="username" required>
+        </div>
+        <div class="auth-field">
+          <label for="password">パスワード</label>
+          <input type="password" id="password" name="password" autocomplete="new-password" required>
+          <div class="hint">10文字以上。メールアドレスと同一のものは使用できません。</div>
+        </div>
+        <div class="auth-field">
+          <label for="password_confirm">パスワード（確認）</label>
+          <input type="password" id="password_confirm" name="password_confirm"
+                 autocomplete="new-password" required>
+        </div>
+        <button type="submit" class="auth-submit">ワークスペースを作成</button>
+      </form>
+    </div>
+  </main>
+
+</div>
+</body>
+</html>

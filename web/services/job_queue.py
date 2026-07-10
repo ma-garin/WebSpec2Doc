@@ -47,8 +47,13 @@ def start_crawl_job(
     formats: list[str] | None = None,
     compare: bool = True,
     auth_path: str = "",
+    output_dir: Path | None = None,
 ) -> str:
-    """バックグラウンドスレッドでクロールを開始し、job_id を返す。"""
+    """バックグラウンドスレッドでクロールを開始し、job_id を返す。
+
+    output_dir: テナントスコープ済み出力先。スレッド内ではリクエスト
+    コンテキストを参照できないため、呼び出し元（ルート）が解決して渡す。
+    """
     import uuid
 
     job_id = uuid.uuid4().hex
@@ -61,7 +66,15 @@ def start_crawl_job(
 
     thread = threading.Thread(
         target=_run_job,
-        args=(job, depth, max_pages, formats or ["md", "html", "json"], compare, auth_path),
+        args=(
+            job,
+            depth,
+            max_pages,
+            formats or ["md", "html", "json"],
+            compare,
+            auth_path,
+            output_dir,
+        ),
         daemon=True,
         name=f"CrawlJob-{job_id[:8]}",
     )
@@ -98,6 +111,7 @@ def _run_job(
     formats: list[str],
     compare: bool,
     auth_path: str,
+    output_dir: Path | None = None,
 ) -> None:
     cmd = [
         sys.executable,
@@ -111,6 +125,8 @@ def _run_job(
         "--format",
         ",".join(formats),
     ]
+    if output_dir is not None:
+        cmd += ["--output", str(output_dir)]
     if compare:
         cmd.append("--compare")
     if auth_path:
@@ -131,13 +147,13 @@ def _run_job(
         status: JobStatus = "completed" if proc.returncode == 0 else "failed"
         _update(job, status=status, exit_code=proc.returncode, log_tail=log_text)
         if status == "completed" and compare:
-            _try_slack_notify(job)
+            _try_slack_notify(job, output_dir)
     except OSError as exc:
         logger.error("クロールジョブ起動失敗: job_id=%s, %s", job.job_id, exc)
         _update(job, status="failed", exit_code=-1, log_tail=str(exc))
 
 
-def _try_slack_notify(job: CrawlJob) -> None:
+def _try_slack_notify(job: CrawlJob, output_dir: Path | None = None) -> None:
     """ドリフトがあればSlack通知を試みる（失敗しても例外を伝播させない）。"""
     try:
         from dotenv import dotenv_values
@@ -146,7 +162,8 @@ def _try_slack_notify(job: CrawlJob) -> None:
         webhook_url = env.get("SLACK_WEBHOOK_URL", "") or os.environ.get("SLACK_WEBHOOK_URL", "")
         if not webhook_url:
             return
-        diff_report = Path("output") / job.domain / "diff_report.html"
+        base_dir = output_dir if output_dir is not None else Path("output")
+        diff_report = base_dir / job.domain / "diff_report.html"
         if not diff_report.exists():
             return
         from web.services.notifier import (

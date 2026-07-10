@@ -9,11 +9,17 @@ from pathlib import Path
 from flask import Blueprint, request
 
 from web.config import OUTPUT_DIR
+from web.tenancy import scoped_output_dir
 from web.validation import _valid_domain
 
 logger = logging.getLogger(__name__)
 
 bp = Blueprint("review", __name__)
+
+
+def _out() -> Path:
+    """テナントスコープ済みの出力ディレクトリ（リクエスト毎に解決）。"""
+    return scoped_output_dir(OUTPUT_DIR)
 
 _REVIEW_LOCKS: dict[str, threading.Lock] = {}
 _REVIEW_LOCKS_GUARD = threading.Lock()
@@ -30,11 +36,11 @@ _VALID_STATUSES = frozenset({"draft", "reviewing", "approved", "frozen"})
 
 
 def _review_state_path(domain: str) -> Path:
-    return OUTPUT_DIR / domain / "review_state.json"
+    return _out() / domain / "review_state.json"
 
 
 def _candidates_path(domain: str) -> Path:
-    return OUTPUT_DIR / domain / "playwright_candidates.json"
+    return _out() / domain / "playwright_candidates.json"
 
 
 def _load_review_state(domain: str) -> dict:

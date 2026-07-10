@@ -11,10 +11,19 @@ from pathlib import Path
 from flask import Blueprint, request
 
 from web.config import MAX_DEPTH, MAX_PAGES_LIMIT, OUTPUT_DIR
+from web.tenancy import scoped_output_dir
 from web.validation import _clean_int, _valid_domain, _valid_url
 
 bp = Blueprint("api_v1", __name__, url_prefix="/api/v1")
 logger = logging.getLogger(__name__)
+
+
+def _out() -> Path:
+    """テナントスコープ済みの出力ディレクトリ（リクエスト毎に解決）。
+
+    /api/v1 は Bearer APIトークンでもテナントが解決される（web/auth.py）。
+    """
+    return scoped_output_dir(OUTPUT_DIR)
 
 # スナップショットファイル名の日時パターン: YYYYMMDD-HHMMSS
 _SNAPSHOT_TS_RE = re.compile(r"(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})")
@@ -72,7 +81,7 @@ def api_sites() -> tuple[dict, int] | dict:
     try:
         from registry.site_registry import list_sites
 
-        configs = list_sites(OUTPUT_DIR)
+        configs = list_sites(_out())
         sites = [dataclasses.asdict(c) for c in configs]
         for site in sites:
             for key in ("urls", "formats"):
@@ -92,7 +101,7 @@ def api_report(domain: str) -> tuple[dict, int] | dict:
     """指定ドメインの最新 report.json を返す。"""
     if not _valid_domain(domain):
         return {"error": "invalid domain"}, 400
-    report_path = OUTPUT_DIR / domain / "report.json"
+    report_path = _out() / domain / "report.json"
     if not report_path.is_file():
         return {"error": "report not found"}, 404
     try:
@@ -111,7 +120,7 @@ def api_snapshots(domain: str) -> tuple[dict, int] | dict:
     """スナップショット一覧（ファイル名・タイムスタンプ）を返す。"""
     if not _valid_domain(domain):
         return {"error": "invalid domain"}, 400
-    snaps_dir = OUTPUT_DIR / domain / "snapshots"
+    snaps_dir = _out() / domain / "snapshots"
     items: list[dict] = []
     if snaps_dir.is_dir():
         for f in sorted(snaps_dir.glob("*.json")):
@@ -128,7 +137,7 @@ def api_diff(domain: str) -> tuple[dict, int] | dict:
     if not _valid_domain(domain):
         return {"error": "invalid domain"}, 400
     _ensure_src_in_path()
-    domain_dir = OUTPUT_DIR / domain
+    domain_dir = _out() / domain
     snaps_dir = domain_dir / "snapshots"
     if not snaps_dir.is_dir():
         return {"error": "need at least 2 snapshots"}, 404
@@ -166,7 +175,7 @@ def api_crawl(domain: str) -> tuple[dict, int] | dict:
         try:
             from registry.site_registry import load_site
 
-            config = load_site(domain, OUTPUT_DIR)
+            config = load_site(domain, _out())
             if config and config.urls:
                 site_url = config.urls[0]
         except Exception:
@@ -189,6 +198,7 @@ def api_crawl(domain: str) -> tuple[dict, int] | dict:
         max_pages=max_pages,
         formats=_DEFAULT_FORMATS,
         compare=compare,
+        output_dir=_out(),
     )
     logger.info("crawl job queued: domain=%s job_id=%s url=%s", domain, job_id, site_url)
     return {"job_id": job_id, "status": "queued", "domain": domain}, 202
@@ -230,7 +240,7 @@ def api_test_cases(domain: str) -> tuple[dict, int] | dict:
     """最新の playwright_candidates.json のテストケース一覧を返す。"""
     if not _valid_domain(domain):
         return {"error": "invalid domain"}, 400
-    candidates_path = OUTPUT_DIR / domain / "playwright_candidates.json"
+    candidates_path = _out() / domain / "playwright_candidates.json"
     if not candidates_path.is_file():
         return {"domain": domain, "total": 0, "candidates": []}
     try:

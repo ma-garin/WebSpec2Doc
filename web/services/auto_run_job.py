@@ -50,6 +50,10 @@ class AutoRunJob:
     viewpoint_count: int = 0
 
     _proc: Any = field(default=None, init=False, repr=False, compare=False)
+    # ジョブ開始リクエスト時に解決したテナントスコープ済み出力先（Path）。
+    # ジョブ本体はバックグラウンドスレッドで動きリクエストコンテキストを
+    # 参照できないため、ここに保持して持ち回る。None なら共有 output/。
+    _output_dir: Any = field(default=None, init=False, repr=False, compare=False)
     _viewpoint_snapshot: dict[str, Any] = field(
         default_factory=dict, init=False, repr=False, compare=False
     )

@@ -817,21 +817,30 @@ from web.services.viewpoint_store_operations import ViewpointStoreOperations  # 
 
 ViewpointStore = ViewpointStoreOperations
 
-_STORE: ViewpointStore | None = None
-_STORE_KEY: tuple[str, str] | None = None
+_STORES: dict[tuple[str, str], ViewpointStore] = {}
 _STORE_LOCK = threading.Lock()
 
 
 def get_viewpoint_store() -> ViewpointStore:
-    from web.config import QA_VIEWPOINTS_CSV, VIEWPOINTS_DB
+    """観点DBストアを返す（テナント別 DB-per-tenant 方式）。
 
-    global _STORE, _STORE_KEY
-    key = (str(VIEWPOINTS_DB), str(QA_VIEWPOINTS_CSV))
-    if _STORE is not None and _STORE_KEY == key:
-        return _STORE
+    テナントコンテキストがある場合は instance/tenants/{slug}/viewpoints.db、
+    無い場合（ローカル単独利用・起動時初期化・テスト）は従来の
+    instance/viewpoints.db を使う。テナントごとに独立した観点DBを持つことで
+    スキーマにテナント列を持ち込まずにデータを完全分離する。
+    """
+    from web.config import QA_VIEWPOINTS_CSV, VIEWPOINTS_DB
+    from web.tenancy import scoped_instance_path
+
+    db_path = scoped_instance_path(VIEWPOINTS_DB)
+    key = (str(db_path), str(QA_VIEWPOINTS_CSV))
+    store = _STORES.get(key)
+    if store is not None:
+        return store
     with _STORE_LOCK:
-        if _STORE is None or _STORE_KEY != key:
-            _STORE = ViewpointStore(VIEWPOINTS_DB, QA_VIEWPOINTS_CSV)
-            _STORE.initialize()
-            _STORE_KEY = key
-    return _STORE
+        store = _STORES.get(key)
+        if store is None:
+            store = ViewpointStore(db_path, QA_VIEWPOINTS_CSV)
+            store.initialize()
+            _STORES[key] = store
+    return store

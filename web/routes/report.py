@@ -13,9 +13,15 @@ from flask import Blueprint, Response, make_response, redirect, request, send_fi
 from web.config import _PREVIEW_MIME, OUTPUT_DIR
 from web.services.spec_ts_generator import generate_spec_ts
 from web.summary import _summary_for_domain
+from web.tenancy import scoped_output_dir
 from web.validation import _safe_output_path, _valid_domain
 
 bp = Blueprint("report", __name__)
+
+
+def _out() -> Path:
+    """テナントスコープ済みの出力ディレクトリ（リクエスト毎に解決）。"""
+    return scoped_output_dir(OUTPUT_DIR)
 
 
 @bp.get("/preview")
@@ -46,8 +52,9 @@ def download_zip() -> Response:
     domain = request.args.get("domain", "")
     if not _valid_domain(domain):
         return Response(status=404)
-    base = (OUTPUT_DIR / domain).resolve()
-    if OUTPUT_DIR.resolve() not in base.parents or not base.is_dir():
+    out_dir = _out()
+    base = (out_dir / domain).resolve()
+    if out_dir.resolve() not in base.parents or not base.is_dir():
         return Response(status=404)
     selected = _selected_zip_paths(base, request.args.getlist("paths"))
     buf = io.BytesIO()
@@ -79,9 +86,10 @@ def _selected_zip_paths(base: Path, raw_values: list[str]) -> list[Path] | None:
 def download_spec_ts(domain: str) -> Response | tuple[dict, int]:
     if not _valid_domain(domain):
         return {"error": "invalid domain"}, 400
-    candidates_path = OUTPUT_DIR / domain / "qa_process" / "playwright_candidates.json"
+    out_dir = _out()
+    candidates_path = out_dir / domain / "qa_process" / "playwright_candidates.json"
     if not candidates_path.exists():
-        candidates_path = OUTPUT_DIR / domain / "qa" / "playwright_candidates.json"
+        candidates_path = out_dir / domain / "qa" / "playwright_candidates.json"
     if not candidates_path.exists():
         return {"error": "playwright_candidates.json が見つかりません"}, 404
     filter_mode = request.args.get("filter", "all")
@@ -135,7 +143,7 @@ def api_result() -> dict | tuple[dict, int]:
     domain = request.args.get("domain", "")
     if not _valid_domain(domain):
         return {"error": "not found"}, 404
-    domain_dir = OUTPUT_DIR / domain
+    domain_dir = _out() / domain
     domain_root = domain_dir.resolve()
     if not domain_dir.is_dir() or domain_dir.is_symlink():
         return {"error": "not found"}, 404
@@ -173,7 +181,7 @@ def api_result() -> dict | tuple[dict, int]:
             .replace("+00:00", "Z")
         )
     return {
-        "summary": _summary_for_domain(domain),
+        "summary": _summary_for_domain(domain, _out()),
         "snapshot_count": snapshot_count,
         "files": {
             "html": path_of("report.html"),
@@ -264,7 +272,7 @@ def api_coverage_heatmap() -> Response:
     kind = request.args.get("kind", "analysis")
     if not _valid_domain(domain):
         return Response(status=404)
-    domain_dir = OUTPUT_DIR / domain
+    domain_dir = _out() / domain
     if not domain_dir.is_dir() or domain_dir.is_symlink():
         return Response(status=404)
     report_path = domain_dir / "report.json"

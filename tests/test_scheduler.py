@@ -131,7 +131,7 @@ def test_maybe_run_fires_when_due(tmp_path: Path) -> None:
     )
     with patch("web.services.scheduler._run_crawl") as mock_crawl:
         _maybe_run("example.com", p, datetime.now())
-    mock_crawl.assert_called_once_with("https://example.com")
+    mock_crawl.assert_called_once_with("https://example.com", None)
 
 
 def test_maybe_run_updates_timestamps_when_due(tmp_path: Path) -> None:
@@ -198,7 +198,7 @@ def test_check_and_run_due_runs_multiple_domains(tmp_path: Path) -> None:
         )
 
     fired: list[str] = []
-    with patch("web.services.scheduler._run_crawl", side_effect=lambda url: fired.append(url)):
+    with patch("web.services.scheduler._run_crawl", side_effect=lambda url, crawl_output=None: fired.append(url)):
         _check_and_run_due(tmp_path)
 
     assert len(fired) == 2

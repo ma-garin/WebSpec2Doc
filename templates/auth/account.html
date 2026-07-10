@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <title>アカウント - WebSpec2Doc</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+JP:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('webspec2doc.theme');
+        if (!t) t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', t);
+      } catch (e) { /* noop */ }
+    })();
+  </script>
+</head>
+<body class="auth-body">
+
+<header class="account-topbar">
+  <div class="auth-brand-logo">
+    <span class="auth-brand-mark">W</span>
+    <span>WebSpec2Doc</span>
+  </div>
+  <div style="display:flex;gap:16px;align-items:center">
+    <a href="/">← アプリに戻る</a>
+    <form method="post" action="/auth/logout" style="margin:0">
+      <button type="submit" class="btn-ghost">ログアウト</button>
+    </form>
+  </div>
+</header>
+
+<main class="account-main">
+
+  <section class="account-card">
+    <h2>プロフィール</h2>
+    <dl class="account-meta">
+      <dt>表示名</dt><dd>{{ user.name }}</dd>
+      <dt>メールアドレス</dt><dd>{{ user.email }}</dd>
+      <dt>ロール</dt><dd><span class="badge-role">{{ user.role }}</span></dd>
+      <dt>ワークスペース</dt><dd>{{ tenant.name }}（{{ tenant.slug }}）</dd>
+      <dt>最終ログイン</dt><dd>{{ user.last_login_at or '—' }}</dd>
+    </dl>
+  </section>
+
+  <section class="account-card">
+    <h2>パスワード変更</h2>
+    <form id="password-form" class="account-inline-form">
+      <div class="auth-field">
+        <label for="pw-current">現在のパスワード</label>
+        <input type="password" id="pw-current" autocomplete="current-password" required>
+      </div>
+      <div class="auth-field">
+        <label for="pw-new">新しいパスワード</label>
+        <input type="password" id="pw-new" autocomplete="new-password" required>
+      </div>
+      <button type="submit" class="auth-submit">変更する</button>
+    </form>
+    <div id="password-status" class="account-status" aria-live="polite"></div>
+  </section>
+
+  {% if is_admin %}
+  <section class="account-card">
+    <h2>メンバー管理</h2>
+    <table class="account-table">
+      <thead>
+        <tr><th>名前</th><th>メール</th><th>ロール</th><th>状態</th><th>最終ログイン</th><th></th></tr>
+      </thead>
+      <tbody id="member-rows">
+        {% for member in users %}
+        <tr data-user-id="{{ member.id }}">
+          <td>{{ member.name }}</td>
+          <td>{{ member.email }}</td>
+          <td><span class="badge-role">{{ member.role }}</span></td>
+          <td>
+            {% if member.is_active %}<span class="badge-role">有効</span>
+            {% else %}<span class="badge-role badge-inactive">無効</span>{% endif %}
+          </td>
+          <td>{{ member.last_login_at or '—' }}</td>
+          <td>
+            {% if member.id != user.id %}
+            <button type="button" class="btn-ghost toggle-active-btn"
+                    data-active="{{ 1 if member.is_active else 0 }}">
+              {{ '無効化' if member.is_active else '有効化' }}
+            </button>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <h2 style="margin-top:24px">メンバーを追加</h2>
+    <form id="invite-form" class="account-inline-form">
+      <div class="auth-field">
+        <label for="inv-name">表示名</label>
+        <input type="text" id="inv-name" required>
+      </div>
+      <div class="auth-field">
+        <label for="inv-email">メールアドレス</label>
+        <input type="email" id="inv-email" required>
+      </div>
+      <div class="auth-field">
+        <label for="inv-password">初期パスワード</label>
+        <input type="text" id="inv-password" required>
+      </div>
+      <div class="auth-field" style="flex:0 0 130px">
+        <label for="inv-role">ロール</label>
+        <select id="inv-role" style="width:100%;min-height:44px;border:1px solid var(--color-border-strong);border-radius:var(--radius-md);background:var(--color-surface);color:var(--color-text);font-family:inherit">
+          <option value="member">member</option>
+          <option value="admin">admin</option>
+          {% if user.role == 'owner' %}<option value="owner">owner</option>{% endif %}
+        </select>
+      </div>
+      <button type="submit" class="auth-submit">追加</button>
+    </form>
+    <div id="invite-status" class="account-status" aria-live="polite"></div>
+  </section>
+
+  <section class="account-card">
+    <h2>APIトークン（/api/v1 用）</h2>
+    <p style="margin:0 0 12px;color:var(--color-text-secondary);font-size:var(--text-sm)">
+      CI/CD などから REST API を呼び出すためのワークスペース単位のトークンです。
+      <code>Authorization: Bearer &lt;token&gt;</code> で送信してください。
+    </p>
+    <table class="account-table">
+      <thead><tr><th>名前</th><th>作成日</th><th>最終使用</th><th>状態</th><th></th></tr></thead>
+      <tbody id="token-rows">
+        {% for token in api_tokens %}
+        <tr data-token-id="{{ token.id }}">
+          <td>{{ token.name }}</td>
+          <td>{{ token.created_at }}</td>
+          <td>{{ token.last_used_at or '—' }}</td>
+          <td>
+            {% if token.revoked_at %}<span class="badge-role badge-inactive">失効</span>
+            {% else %}<span class="badge-role">有効</span>{% endif %}
+          </td>
+          <td>
+            {% if not token.revoked_at %}
+            <button type="button" class="btn-ghost revoke-token-btn">失効させる</button>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <form id="token-form" class="account-inline-form" style="margin-top:16px">
+      <div class="auth-field">
+        <label for="token-name">トークン名</label>
+        <input type="text" id="token-name" placeholder="例: ci-pipeline" required>
+      </div>
+      <button type="submit" class="auth-submit">発行する</button>
+    </form>
+    <div id="token-once" class="token-once" hidden></div>
+    <div id="token-status" class="account-status" aria-live="polite"></div>
+  </section>
+  {% endif %}
+
+</main>
+
+<script>
+  // アカウント画面の操作は同一オリジンの JSON API を fetch で呼ぶ。
+  async function postJSON(url, method, body) {
+    const res = await fetch(url, {
+      method: method,
+      headers: { 'Content-Type': 'application/json' },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    let data = {};
+    try { data = await res.json(); } catch (e) { /* 非JSONレスポンス */ }
+    if (!res.ok) throw new Error(data.error || ('エラーが発生しました (' + res.status + ')'));
+    return data;
+  }
+  function setStatus(id, message, ok) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = message;
+    el.className = 'account-status ' + (ok ? 'ok' : 'err');
+  }
+
+  document.getElementById('password-form').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    try {
+      await postJSON('/api/auth/password', 'POST', {
+        current: document.getElementById('pw-current').value,
+        new: document.getElementById('pw-new').value,
+      });
+      setStatus('password-status', '変更しました。再ログインしてください… ✓', true);
+      setTimeout(() => { window.location.href = '/auth/login'; }, 1200);
+    } catch (err) {
+      setStatus('password-status', err.message, false);
+    }
+  });
+
+  const inviteForm = document.getElementById('invite-form');
+  if (inviteForm) {
+    inviteForm.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      try {
+        await postJSON('/api/auth/users', 'POST', {
+          name: document.getElementById('inv-name').value,
+          email: document.getElementById('inv-email').value,
+          password: document.getElementById('inv-password').value,
+          role: document.getElementById('inv-role').value,
+        });
+        setStatus('invite-status', '追加しました ✓', true);
+        setTimeout(() => window.location.reload(), 800);
+      } catch (err) {
+        setStatus('invite-status', err.message, false);
+      }
+    });
+  }
+
+  document.querySelectorAll('.toggle-active-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const row = btn.closest('tr');
+      const active = btn.dataset.active === '1';
+      if (active && !window.confirm('このメンバーを無効化しますか？既存のセッションも失効します。')) return;
+      try {
+        await postJSON('/api/auth/users/' + row.dataset.userId, 'PATCH', { is_active: !active });
+        window.location.reload();
+      } catch (err) {
+        setStatus('invite-status', err.message, false);
+      }
+    });
+  });
+
+  const tokenForm = document.getElementById('token-form');
+  if (tokenForm) {
+    tokenForm.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      try {
+        const data = await postJSON('/api/auth/api-tokens', 'POST', {
+          name: document.getElementById('token-name').value,
+        });
+        const box = document.getElementById('token-once');
+        box.hidden = false;
+        box.textContent = 'このトークンは今だけ表示されます。安全な場所に保存してください: ' + data.token.token;
+        setStatus('token-status', '発行しました ✓（一覧はリロードで更新されます）', true);
+      } catch (err) {
+        setStatus('token-status', err.message, false);
+      }
+    });
+  }
+
+  document.querySelectorAll('.revoke-token-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (!window.confirm('このAPIトークンを失効させますか？この操作は取り消せません。')) return;
+      const row = btn.closest('tr');
+      try {
+        await postJSON('/api/auth/api-tokens/' + row.dataset.tokenId, 'DELETE');
+        window.location.reload();
+      } catch (err) {
+        setStatus('token-status', err.message, false);
+      }
+    });
+  });
+</script>
+
+</body>
+</html>

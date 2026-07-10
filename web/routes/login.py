@@ -21,6 +21,7 @@ def _out() -> Path:
     """テナントスコープ済みの出力ディレクトリ（リクエスト毎に解決）。"""
     return scoped_output_dir(OUTPUT_DIR)
 
+
 SCRAPE_TIMEOUT_SEC = 30
 SUBMIT_TIMEOUT_SEC = 60
 

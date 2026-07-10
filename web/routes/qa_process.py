@@ -8,6 +8,7 @@ from typing import Any
 from flask import Blueprint, request
 
 from llm.viewpoint_generator import make_provider
+
 # OUTPUT_DIR はテストが monkeypatch する互換ポイント（helpers._output_dir が参照）
 from web.config import OUTPUT_DIR  # noqa: F401
 from web.env_store import _read_env

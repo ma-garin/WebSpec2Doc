@@ -20,6 +20,7 @@ def _out() -> Path:
     """テナントスコープ済みの出力ディレクトリ（リクエスト毎に解決）。"""
     return scoped_output_dir(OUTPUT_DIR)
 
+
 _VALID_INTERVALS = frozenset({"daily", "weekly", "monthly", "disabled"})
 _VALID_NOTIFY_TYPES = frozenset({"slack", "email", "webhook", "none"})
 _VALID_SEVERITY_FILTERS = frozenset({"breaking", "warning", "all"})

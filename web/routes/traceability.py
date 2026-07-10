@@ -20,6 +20,7 @@ def _out() -> Path:
     """テナントスコープ済みの出力ディレクトリ（リクエスト毎に解決）。"""
     return scoped_output_dir(OUTPUT_DIR)
 
+
 _REPORT_JSON = "report.json"
 _CANDIDATES_JSON = "playwright_candidates.json"
 _REQUIREMENT_TRACE_JSON = "requirement_trace.json"

@@ -364,8 +364,9 @@ class AuthStore:
             updates.append("updated_at = ?")
             params.append(_iso(_now()))
             params.extend([user_id, tenant_id])
+            # updates はこの関数内のリテラル断片のみ・値は全てプレースホルダ渡し
             conn.execute(
-                f"UPDATE users SET {', '.join(updates)} WHERE id = ? AND tenant_id = ?",
+                f"UPDATE users SET {', '.join(updates)} WHERE id = ? AND tenant_id = ?",  # nosec B608
                 params,
             )
             if is_active is False:
@@ -425,10 +426,12 @@ class AuthStore:
                     (failed, lock_expr, _iso(now), row["id"]),
                 )
                 error = AuthError(
-                    "ログイン失敗が続いたため一時的にロックされています。"
-                    "しばらく待ってから再試行してください。"
-                    if lock_expr
-                    else "メールアドレスまたはパスワードが正しくありません。",
+                    (
+                        "ログイン失敗が続いたため一時的にロックされています。"
+                        "しばらく待ってから再試行してください。"
+                        if lock_expr
+                        else "メールアドレスまたはパスワードが正しくありません。"
+                    ),
                     "locked" if lock_expr else "invalid_credentials",
                 )
             else:

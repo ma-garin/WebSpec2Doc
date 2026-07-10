@@ -21,6 +21,7 @@ def _out() -> Path:
     """テナントスコープ済みの出力ディレクトリ（リクエスト毎に解決）。"""
     return scoped_output_dir(OUTPUT_DIR)
 
+
 _REVIEW_LOCKS: dict[str, threading.Lock] = {}
 _REVIEW_LOCKS_GUARD = threading.Lock()
 

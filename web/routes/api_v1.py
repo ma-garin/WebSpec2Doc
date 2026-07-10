@@ -25,6 +25,7 @@ def _out() -> Path:
     """
     return scoped_output_dir(OUTPUT_DIR)
 
+
 # スナップショットファイル名の日時パターン: YYYYMMDD-HHMMSS
 _SNAPSHOT_TS_RE = re.compile(r"(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})")
 

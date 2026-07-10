@@ -78,6 +78,14 @@ def api_autorun_start() -> dict | tuple[dict, int]:
     if not url:
         return {"error": "url is required"}, 400
 
+    # 利用ガバナンス: クォータ・同時実行数（認証無効時は常に許可）
+    from web.services.governance import check_crawl_allowed
+    from web.tenancy import current_tenant
+
+    allowed, deny_reason, _usage = check_crawl_allowed(current_tenant(), _out())
+    if not allowed:
+        return {"error": deny_reason, "code": "quota_exceeded"}, 429
+
     depth, max_pages = _resolve_crawl_limits(request.form, body)
     auth = _safe_auth_path((request.form.get("auth") or body.get("auth", "")).strip())
     viewpoint_set_id = (

@@ -69,3 +69,37 @@ WebSpec2Doc を「1人のローカルツール」から「チーム/商用で共
 - SSO（OAuth/OIDC）、パスワードリセットメール、監査ログのUI表示は未実装
 - 既存データの移行: 認証導入前の `output/{domain}/` はテナントからは見えない。
   必要なら `output/tenants/{slug}/` へ手動で移動する
+
+## 利用ガバナンス（Phase 2）
+
+| 制限 | 単位 | 既定（standard） | pro | unlimited |
+|---|---|---|---|---|
+| APIレート | ユーザー/APIトークン毎分 | 120 | 300 | 無制限 |
+| 月次クロール | テナント/月 | 100 | 1000 | 無制限 |
+| 同時実行ジョブ | テナント | 2 | 5 | 無制限 |
+
+- 解決順序: プラン既定値 → テナント個別上書き（`tenants.limits_json`）→ 環境変数（`WEBSPEC2DOC_RATE_PER_MINUTE` 等）。値 0 は無制限
+- 超過時は 429（`rate_limited` / `quota_exceeded`）。レート超過は `Retry-After` ヘッダー付き
+- クォータは**成功した**クロール/AutoRunのみ消費（usage_log.jsonl 集計。失敗は数えない）
+- 認証オフ（ローカル単独利用）では一切制限しない
+- プラン変更はオーナーのみ: `PATCH /api/auth/tenant {"plan": "pro", "limits": {...}}`
+- 使用量確認: `GET /api/auth/usage` またはアカウント画面の「使用量と上限」カード
+- 制約: レートリミットはプロセス内実装（現行の単一プロセス運用前提。マルチワーカー化時は共有ストアに要置換）
+
+## デプロイ連動Webhook
+
+```bash
+curl -X POST https://<host>/api/v1/hooks/deploy \
+  -H "Authorization: Bearer ws2d_..." \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://your-app.example.com"}'
+```
+
+- 202 と `job_id` を返し、`compare=True` で再クロール（進捗は `GET /api/v1/jobs/{job_id}`）
+- 差分検出時は既存のSlack通知が発火する
+- クォータ・同時実行制限の対象
+
+## スペックドリフト トレンド
+
+- `GET /api/drift-trend?domain=<domain>` — スナップショットごとの画面/フォーム/フィールド/ボタン数の時系列（直近60点）
+- ダッシュボードの解析履歴カードに直近2スナップショット間の変化を「ドリフト」バッジで表示

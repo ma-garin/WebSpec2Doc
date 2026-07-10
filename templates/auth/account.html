@@ -49,6 +49,29 @@
   </section>
 
   <section class="account-card">
+    <h2>使用量と上限（{{ usage.limits.plan }} プラン）</h2>
+    <dl class="account-meta">
+      <dt>今月のクロール</dt>
+      <dd>
+        {{ usage.monthly_crawls }} 回
+        {% if usage.limits.monthly_crawls %} / 上限 {{ usage.limits.monthly_crawls }} 回
+        {% else %}（無制限）{% endif %}
+      </dd>
+      <dt>実行中ジョブ</dt>
+      <dd>
+        {{ usage.running_jobs }} 件
+        {% if usage.limits.concurrent_jobs %} / 同時上限 {{ usage.limits.concurrent_jobs }} 件
+        {% else %}（無制限）{% endif %}
+      </dd>
+      <dt>APIレート</dt>
+      <dd>
+        {% if usage.limits.rate_per_minute %}{{ usage.limits.rate_per_minute }} リクエスト/分
+        {% else %}無制限{% endif %}
+      </dd>
+    </dl>
+  </section>
+
+  <section class="account-card">
     <h2>パスワード変更</h2>
     <form id="password-form" class="account-inline-form">
       <div class="auth-field">

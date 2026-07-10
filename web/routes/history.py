@@ -64,9 +64,41 @@ def api_history() -> dict:
                     "formats": formats,
                     "snapshot_count": snapshot_count,
                     "has_diff": (d / "diff_report.html").exists(),
+                    "drift_delta": _latest_drift_delta(d, snapshot_count),
                 }
             )
     return {"items": items}
+
+
+def _latest_drift_delta(domain_dir: Path, snapshot_count: int) -> dict | None:
+    """直近2スナップショットの規模差分（履歴カードのドリフトバッジ用）。
+
+    スナップショットが2つ未満、または読み取り失敗時は None（バッジ非表示）。
+    """
+    if snapshot_count < 2:
+        return None
+    try:
+        from web.services.drift_trend import snapshot_trend, trend_summary
+
+        summary = trend_summary(snapshot_trend(domain_dir, limit=2))
+        return summary.get("delta")
+    except Exception:  # noqa: BLE001 - バッジは補助情報。失敗しても履歴一覧は返す
+        logger.warning("ドリフト差分の集計に失敗しました: %s", domain_dir, exc_info=True)
+        return None
+
+
+@bp.get("/api/drift-trend")
+def api_drift_trend() -> dict | tuple[dict, int]:
+    """ドメインのスペックドリフト時系列（画面・フォーム・フィールド・ボタン数の推移）。"""
+    from web.validation import _valid_domain
+
+    domain = request.args.get("domain", "")
+    if not _valid_domain(domain):
+        return {"error": "not found"}, 404
+    from web.services.drift_trend import snapshot_trend, trend_summary
+
+    points = snapshot_trend(_out() / domain)
+    return {"domain": domain, "points": points, "summary": trend_summary(points)}
 
 
 @bp.delete("/api/site/<domain>")

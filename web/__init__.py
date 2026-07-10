@@ -13,7 +13,7 @@ if str(_SRC) not in sys.path:
 
 
 def create_app() -> Flask:
-    from web.auth import auth_guard, ensure_secret_key
+    from web.auth import auth_guard, ensure_secret_key, rate_guard
     from web.routes import (
         account,
         api_v1,
@@ -47,6 +47,7 @@ def create_app() -> Flask:
     app.before_request(localhost_guard)
     app.before_request(csrf_guard)
     app.before_request(auth_guard)
+    app.before_request(rate_guard)
     app.after_request(add_security_headers)
 
     @app.context_processor

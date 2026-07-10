@@ -11,6 +11,7 @@ from flask import Blueprint, Response, request, send_file
 from web.config import MAX_DEPTH, MAX_PAGES_LIMIT, OUTPUT_DIR
 from web.process import _RUNNING_PROCS, _terminate_proc
 from web.summary import _summary_for_domain
+from web.tenancy import scoped_output_dir
 from web.validation import (
     _clean_formats,
     _clean_int,
@@ -24,6 +25,11 @@ bp = Blueprint("crawl", __name__)
 
 _REFERENCE_DIR_NAME = "reference_docs"
 _MAX_REFERENCE_DOC_BYTES = 20 * 1024 * 1024  # 20MB/ファイル
+
+
+def _out() -> Path:
+    """テナントスコープ済みの出力ディレクトリ（リクエスト毎に解決）。"""
+    return scoped_output_dir(OUTPUT_DIR)
 
 
 @bp.post("/run")
@@ -53,6 +59,9 @@ def run() -> Response:
     reference_docs = _safe_reference_doc_paths(request.form.get("reference_docs", ""), domain)
 
     run_id = uuid.uuid4().hex
+    # ストリーミング応答のジェネレータはリクエストコンテキスト外で実行されるため、
+    # テナントスコープ済みの出力先はここ（リクエスト処理中）で解決して閉じ込める。
+    out_dir = _out()
 
     def generate():
         # crawl_mode == "auto": 起点URLからリンクを辿って自動探索する（--url + depth）。
@@ -71,6 +80,8 @@ def run() -> Response:
             parallelism,
             "--format",
             fmt,
+            "--output",
+            str(out_dir),
         ]
         if compare:
             cmd.append("--compare")
@@ -89,14 +100,14 @@ def run() -> Response:
             if proc.returncode is not None and proc.returncode < 0:
                 yield "\n停止しました。\n"
                 return
-            domain_dir = OUTPUT_DIR / domain
+            domain_dir = out_dir / domain
             report = domain_dir / "report.html"
             pdf = domain_dir / "report.pdf"
             if report.exists():
                 yield f"REPORT_PATH:{report.resolve()}\n"
             if pdf.exists():
                 yield f"PDF_PATH:{pdf.resolve()}\n"
-            yield f"SUMMARY:{json.dumps(_summary_for_domain(domain))}\n"
+            yield f"SUMMARY:{json.dumps(_summary_for_domain(domain, out_dir))}\n"
             if proc.returncode == 0 and domain:
                 save_site_config(
                     domain,
@@ -108,8 +119,9 @@ def run() -> Response:
                     auth,
                     login_urls,
                     login_landing_url,
+                    base_dir=out_dir,
                 )
-                _record_usage_safely(domain, compare)
+                _record_usage_safely(domain, compare, out_dir)
             if proc.returncode != 0:
                 yield "\nエラーが発生しました。\n"
         finally:
@@ -119,12 +131,14 @@ def run() -> Response:
     return Response(generate(), mimetype="text/plain")
 
 
-def _record_usage_safely(domain: str, compare: bool) -> None:
+def _record_usage_safely(domain: str, compare: bool, out_dir: Path | None = None) -> None:
     """利用実績の記録を行う。記録失敗はクロール結果配信を妨げない。"""
     try:
         from web.services.usage_tracker import record_crawl_from_report
 
-        record_crawl_from_report(OUTPUT_DIR, domain, diff_run=compare)
+        record_crawl_from_report(
+            out_dir if out_dir is not None else OUTPUT_DIR, domain, diff_run=compare
+        )
     except Exception:  # noqa: BLE001
         # 実績記録はベストエフォート。失敗してもクロール成功の応答は返す
         pass
@@ -144,7 +158,7 @@ def live_screenshot() -> Response:
     domain = request.args.get("domain", "")
     if not _valid_domain(domain):
         return Response(status=404)
-    shots_dir = OUTPUT_DIR / domain / "screenshots"
+    shots_dir = _out() / domain / "screenshots"
     if not shots_dir.is_dir():
         return Response(status=404)
     pngs = sorted(shots_dir.glob("*.png"), key=lambda p: p.stat().st_mtime, reverse=True)
@@ -167,7 +181,7 @@ def upload_reference_docs() -> tuple[dict, int] | dict:
     if not uploaded:
         return {"ok": False, "error": "ファイルが指定されていません"}, 400
 
-    target_dir = (OUTPUT_DIR / domain / _REFERENCE_DIR_NAME).resolve()
+    target_dir = (_out() / domain / _REFERENCE_DIR_NAME).resolve()
     target_dir.mkdir(parents=True, exist_ok=True)
 
     saved: list[dict[str, str]] = []
@@ -204,7 +218,7 @@ def api_doc_fusion() -> tuple[dict, int]:
     domain = request.args.get("domain", "")
     if not _valid_domain(domain):
         return {"error": "not found"}, 404
-    path = OUTPUT_DIR / domain / "doc_fusion.json"
+    path = _out() / domain / "doc_fusion.json"
     if not path.is_file():
         return {"error": "doc_fusion.json not found"}, 404
     try:

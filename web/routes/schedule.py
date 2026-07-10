@@ -8,11 +8,18 @@ from pathlib import Path
 from flask import Blueprint, request
 
 from web.config import OUTPUT_DIR
+from web.tenancy import scoped_output_dir
 from web.validation import _valid_domain, _valid_url
 
 logger = logging.getLogger(__name__)
 
 bp = Blueprint("schedule", __name__)
+
+
+def _out() -> Path:
+    """テナントスコープ済みの出力ディレクトリ（リクエスト毎に解決）。"""
+    return scoped_output_dir(OUTPUT_DIR)
+
 
 _VALID_INTERVALS = frozenset({"daily", "weekly", "monthly", "disabled"})
 _VALID_NOTIFY_TYPES = frozenset({"slack", "email", "webhook", "none"})
@@ -20,7 +27,7 @@ _VALID_SEVERITY_FILTERS = frozenset({"breaking", "warning", "all"})
 
 
 def _schedule_path(domain: str) -> Path:
-    return OUTPUT_DIR / domain / "schedule.json"
+    return _out() / domain / "schedule.json"
 
 
 def _default_config(domain: str) -> dict:

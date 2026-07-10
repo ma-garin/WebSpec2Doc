@@ -2,16 +2,24 @@ from __future__ import annotations
 
 import json
 import logging
+from pathlib import Path
 
 from flask import Blueprint, render_template, request
 
 from web.config import OUTPUT_DIR
 from web.services.traceability import build_matrix, matrix_to_dict
+from web.tenancy import scoped_output_dir
 from web.validation import _valid_domain
 
 logger = logging.getLogger(__name__)
 
 traceability_bp = Blueprint("traceability", __name__)
+
+
+def _out() -> Path:
+    """テナントスコープ済みの出力ディレクトリ（リクエスト毎に解決）。"""
+    return scoped_output_dir(OUTPUT_DIR)
+
 
 _REPORT_JSON = "report.json"
 _CANDIDATES_JSON = "playwright_candidates.json"
@@ -34,7 +42,7 @@ def api_traceability_matrix() -> tuple[dict, int] | dict:
     if not _valid_domain(domain):
         return {"error": "invalid domain"}, 400
 
-    domain_dir = OUTPUT_DIR / domain
+    domain_dir = _out() / domain
     report_path = domain_dir / _REPORT_JSON
     candidates_path = domain_dir / _CANDIDATES_JSON
 

@@ -22,9 +22,10 @@ from web.services.failure_classifier import (
     summarize_classifications,
 )
 from web.services.playwright_executor import _read_progress_ndjson, run_playwright
-from web.services.qa.helpers import use_viewpoint_snapshot
+from web.services.qa.helpers import use_output_dir, use_viewpoint_snapshot
 from web.services.spec_ts_generator import compute_filter_counts, generate_spec_ts
 from web.services.viewpoint_store import ViewpointStoreError, get_viewpoint_store
+from web.tenancy import scoped_output_dir
 from web.validation import _clean_int, _domain_of, _safe_auth_path, _valid_domain
 
 bp = Blueprint("auto_run", __name__)
@@ -32,6 +33,22 @@ logger = logging.getLogger(__name__)
 
 _JOBS: dict[str, AutoRunJob] = {}
 _JOBS_LOCK = threading.Lock()
+
+
+def _out() -> Path:
+    """テナントスコープ済みの出力ディレクトリ（リクエスト毎に解決）。"""
+    return scoped_output_dir(OUTPUT_DIR)
+
+
+def _job_out(job: AutoRunJob) -> Path:
+    """ジョブに紐づく出力ディレクトリ。
+
+    ジョブ開始リクエスト時に解決した値（job._output_dir）を優先する。
+    バックグラウンドスレッドからはリクエストコンテキストが見えないため、
+    ここで OUTPUT_DIR を直接使うとテナント分離が破れる。
+    """
+    stored = getattr(job, "_output_dir", None)
+    return stored if isinstance(stored, Path) else OUTPUT_DIR
 
 
 # ─────────────────────────── API ───────────────────────────
@@ -93,6 +110,7 @@ def api_autorun_start() -> dict | tuple[dict, int]:
         viewpoint_count=int(snapshot["viewpoint_count"]),
     )
     job._viewpoint_snapshot = snapshot
+    job._output_dir = _out()
     job.add_log(
         f"観点セットを固定: {job.viewpoint_set_name} v{job.viewpoint_version} "
         f"({job.viewpoint_count}件 / {job.viewpoint_selection_reason})"
@@ -131,7 +149,7 @@ def _current_test_progress(job: AutoRunJob) -> dict[str, object]:
     ここでは一切書き換えない。ファイルが無い・空の間は 0/不明 として返す
     （捏造しない）。
     """
-    progress_path = OUTPUT_DIR / job.domain / "qa_process" / "playwright_progress.ndjson"
+    progress_path = _job_out(job) / job.domain / "qa_process" / "playwright_progress.ndjson"
     expected_total, tests = _read_progress_ndjson(progress_path)
     recent = tests[-_LIVE_TESTS_LIMIT:]
     return {
@@ -179,7 +197,7 @@ def api_history_runs() -> dict:
 
     with _JOBS_LOCK:
         running_jobs = [job.to_dict() for job in _JOBS.values()]
-    runs = build_run_history(OUTPUT_DIR, running_jobs)
+    runs = build_run_history(_out(), running_jobs)
     return {"runs": runs}
 
 
@@ -222,7 +240,7 @@ def api_autorun_preview() -> dict | tuple[dict, int]:
     if job is None:
         return {"error": "not found"}, 404
 
-    candidates_path = OUTPUT_DIR / job.domain / "qa_process" / "playwright_candidates.json"
+    candidates_path = _job_out(job) / job.domain / "qa_process" / "playwright_candidates.json"
     spec_path_str = job.outputs.get("spec_ts", "")
 
     result: dict[str, Any] = {"job_id": job.job_id, "domain": job.domain}
@@ -320,7 +338,7 @@ def api_autorun_live_screenshot() -> Response:
     domain = request.args.get("domain", "")
     if not _valid_domain(domain):
         return Response(status=404)
-    results_dir = OUTPUT_DIR / domain / "qa_process" / "test-results"
+    results_dir = _out() / domain / "qa_process" / "test-results"
     if not results_dir.is_dir():
         return Response(status=404)
     pngs = sorted(results_dir.rglob("*.png"), key=lambda p: p.stat().st_mtime, reverse=True)
@@ -456,7 +474,7 @@ def _do_login(job: AutoRunJob) -> None:
 
     job.add_log(f"ログイン試行: {login_url}")
 
-    auth_path = OUTPUT_DIR / domain / "auth.json"
+    auth_path = _job_out(job) / domain / "auth.json"
     auth_path.parent.mkdir(parents=True, exist_ok=True)
     creds_json = json.dumps({"username": username, "password": password})
     cmd = [
@@ -506,6 +524,8 @@ def _phase_crawl(job: AutoRunJob, depth: int, max_pages: int) -> None:
         str(max_pages),
         "--format",
         "json,md,html",
+        "--output",
+        str(_job_out(job)),
     ]
     if job.auth_path:
         cmd += ["--auth", job.auth_path]
@@ -540,13 +560,13 @@ def _phase_crawl(job: AutoRunJob, depth: int, max_pages: int) -> None:
 
     domain = _domain_of(job.url)
     job.domain = domain
-    report_json = OUTPUT_DIR / domain / "report.json"
+    report_json = _job_out(job) / domain / "report.json"
     if not report_json.is_file():
         _mark_job_failed(job, "クロール完了後に report.json が見つかりません")
         return
 
     job.outputs["report_json"] = str(report_json.resolve())
-    report_html = OUTPUT_DIR / domain / "report.html"
+    report_html = _job_out(job) / domain / "report.html"
     if report_html.is_file():
         job.outputs["report_html"] = str(report_html.resolve())
     try:
@@ -569,7 +589,8 @@ def _phase_generate_qa(job: AutoRunJob) -> None:
     job.step_label = "QA成果物を生成中"
     job.add_log("QAプロセス成果物を生成しています…")
 
-    report_path = OUTPUT_DIR / job.domain / "report.json"
+    out_dir = _job_out(job)
+    report_path = out_dir / job.domain / "report.json"
     report = _load_report(report_path)
     if report is None:
         _mark_job_failed(job, "report.json の読み込みに失敗しました")
@@ -578,7 +599,7 @@ def _phase_generate_qa(job: AutoRunJob) -> None:
     try:
         snapshot = get_viewpoint_store().apply_snapshot_to_report(job._viewpoint_snapshot, report)
         job.viewpoint_count = int(snapshot["viewpoint_count"])
-        snapshot_path = OUTPUT_DIR / job.domain / "qa_process" / "viewpoint_snapshot.json"
+        snapshot_path = out_dir / job.domain / "qa_process" / "viewpoint_snapshot.json"
         snapshot_path.parent.mkdir(parents=True, exist_ok=True)
         snapshot_path.write_text(
             json.dumps(snapshot, ensure_ascii=False, indent=2), encoding="utf-8"
@@ -587,7 +608,8 @@ def _phase_generate_qa(job: AutoRunJob) -> None:
         report_with_snapshot = report | {
             "viewpoint_snapshot": {key: value for key, value in snapshot.items() if key != "items"}
         }
-        with use_viewpoint_snapshot(snapshot["items"]):
+        # スレッド内はリクエストコンテキストが無いため、出力先を明示的に固定する
+        with use_output_dir(out_dir), use_viewpoint_snapshot(snapshot["items"]):
             outputs = _generate_outputs(job.domain, report_with_snapshot)
             outputs |= _generate_advanced_outputs(job.domain, report_with_snapshot)
     except (ViewpointStoreError, OSError, ValueError) as exc:
@@ -622,12 +644,12 @@ def _phase_generate_scripts(job: AutoRunJob) -> None:
     job.step_label = "Playwright スクリプトを生成中"
     job.add_log("Playwright .spec.ts を生成しています…")
 
-    candidates_path = OUTPUT_DIR / job.domain / "qa_process" / "playwright_candidates.json"
+    candidates_path = _job_out(job) / job.domain / "qa_process" / "playwright_candidates.json"
     if not candidates_path.is_file():
         _mark_job_failed(job, "playwright_candidates.json が見つかりません")
         return
 
-    spec_dir = OUTPUT_DIR / job.domain / "qa_process"
+    spec_dir = _job_out(job) / job.domain / "qa_process"
     spec_path = spec_dir / "autorun.spec.ts"
     try:
         generate_spec_ts(job.domain, candidates_path, spec_path)
@@ -657,7 +679,7 @@ def _execute_tests(job: AutoRunJob) -> None:
         return
 
     spec_path = Path(spec_path_str)
-    report_dir = OUTPUT_DIR / job.domain / "qa_process"
+    report_dir = _job_out(job) / job.domain / "qa_process"
 
     # ポリシーに基づいてスクリプトを再生成（フィルター適用）
     filter_mode = job.run_policy.get("filter_mode", "all")
@@ -666,7 +688,7 @@ def _execute_tests(job: AutoRunJob) -> None:
     if device not in ("pc", "mobile"):
         device = "pc"
     if filter_mode != "all":
-        candidates_path = OUTPUT_DIR / job.domain / "qa_process" / "playwright_candidates.json"
+        candidates_path = _job_out(job) / job.domain / "qa_process" / "playwright_candidates.json"
         if candidates_path.is_file():
             try:
                 generate_spec_ts(job.domain, candidates_path, spec_path, filter_mode=filter_mode)
@@ -789,7 +811,7 @@ def _record_autorun_usage_safely(job: AutoRunJob) -> None:
 
         test_results = job.test_results or {}
         record_autorun(
-            OUTPUT_DIR,
+            _job_out(job),
             job.domain,
             status=job.status,
             passed=int(test_results.get("passed", 0)),

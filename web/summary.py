@@ -17,11 +17,14 @@ def _count_screens(screens_md: Path) -> int:
     )
 
 
-def _summary_for_domain(domain: str) -> dict[str, int]:
+def _summary_for_domain(domain: str, base_dir: Path | None = None) -> dict[str, int]:
     """最新の生成結果（report.json）を唯一の真実源として集計する。
     結果ページのサマリー／概要／マトリクス／履歴をすべて一致させるため。
-    report.json が無い旧データのみ snapshot → screens.md にフォールバック。"""
-    domain_dir = OUTPUT_DIR / domain
+    report.json が無い旧データのみ snapshot → screens.md にフォールバック。
+
+    base_dir: テナントスコープ済み出力ディレクトリ。リクエストコンテキスト外
+    （ストリーミング応答・バックグラウンド処理）から呼ぶ場合に明示的に渡す。"""
+    domain_dir = (base_dir if base_dir is not None else OUTPUT_DIR) / domain
     report_json = domain_dir / "report.json"
     if report_json.exists():
         try:

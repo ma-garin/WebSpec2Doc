@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+from pathlib import Path
 
 from flask import Blueprint, current_app, request
 
 from web.config import OUTPUT_DIR
+from web.tenancy import scoped_output_dir
 from web.validation import _valid_domain
 
 bp = Blueprint("site", __name__)
@@ -20,6 +22,7 @@ def save_site_config(
     auth: str,
     login_urls: str = "",
     login_landing_url: str = "",
+    base_dir: Path | None = None,
 ) -> None:
     """クロール成功時に再クロール用の設定を site.json へ保存する。
 
@@ -42,7 +45,7 @@ def save_site_config(
                 login_urls=tuple(u for u in login_urls.split(",") if u),
                 login_landing_url=login_landing_url,
             ),
-            OUTPUT_DIR,
+            base_dir if base_dir is not None else OUTPUT_DIR,
         )
     except (OSError, ValueError) as exc:
         current_app.logger.warning("site.json の保存に失敗しました: %s (%s)", domain, exc)
@@ -55,5 +58,5 @@ def api_site() -> dict:
     domain = request.args.get("domain", "").strip()
     if not domain or not _valid_domain(domain):
         return {"site": None}
-    config = load_site(domain, OUTPUT_DIR)
+    config = load_site(domain, scoped_output_dir(OUTPUT_DIR))
     return {"site": asdict(config) if config else None}

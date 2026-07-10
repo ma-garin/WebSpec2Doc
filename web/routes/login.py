@@ -5,14 +5,22 @@ import os
 import signal as signal_module
 import subprocess
 import sys
+from pathlib import Path
 from typing import Any
 
 from flask import Blueprint, request
 
 from web.config import OUTPUT_DIR
+from web.tenancy import scoped_output_dir
 from web.validation import _valid_domain
 
 bp = Blueprint("login", __name__)
+
+
+def _out() -> Path:
+    """テナントスコープ済みの出力ディレクトリ（リクエスト毎に解決）。"""
+    return scoped_output_dir(OUTPUT_DIR)
+
 
 SCRAPE_TIMEOUT_SEC = 30
 SUBMIT_TIMEOUT_SEC = 60
@@ -40,7 +48,7 @@ def api_login_simple() -> tuple[dict, int] | dict:
     if not domain or not _valid_domain(domain) or not login_url:
         return {"success": False, "error": "ドメインとログインURLを指定してください"}, 400
 
-    auth_path = OUTPUT_DIR / domain / "auth.json"
+    auth_path = _out() / domain / "auth.json"
     auth_path.parent.mkdir(parents=True, exist_ok=True)
 
     creds_json = json.dumps({"username": username, "password": password})
@@ -107,8 +115,9 @@ def api_login_submit() -> tuple[dict, int] | dict:
     except json.JSONDecodeError:
         return {"success": False, "error": "フィールドデータが不正です"}, 400
 
-    auth_path = OUTPUT_DIR / domain / "auth.json"
-    temp_path = OUTPUT_DIR / domain / ".login_temp.json"
+    out_dir = _out()
+    auth_path = out_dir / domain / "auth.json"
+    temp_path = out_dir / domain / ".login_temp.json"
     auth_path.parent.mkdir(parents=True, exist_ok=True)
 
     cmd = [
@@ -157,7 +166,7 @@ def api_login_record_start() -> tuple[dict, int] | dict:
     if not domain or not _valid_domain(domain) or not login_url:
         return {"success": False, "error": "ドメインとログインURLを指定してください"}, 400
 
-    domain_dir = OUTPUT_DIR / domain
+    domain_dir = _out() / domain
     domain_dir.mkdir(parents=True, exist_ok=True)
     auth_path = domain_dir / "auth.json"
     signal_path = domain_dir / LOGIN_SIGNAL_FILE_NAME
@@ -196,7 +205,8 @@ def api_login_record_status() -> tuple[dict, int] | dict:
     if not domain or not _valid_domain(domain):
         return {"success": False, "error": "ドメインを指定してください"}, 400
 
-    status_path = OUTPUT_DIR / domain / LOGIN_STATUS_FILE_NAME
+    out_dir = _out()
+    status_path = out_dir / domain / LOGIN_STATUS_FILE_NAME
     data: dict[str, Any]
     if not status_path.exists():
         data = dict(DEFAULT_RECORD_STATUS)
@@ -209,7 +219,7 @@ def api_login_record_status() -> tuple[dict, int] | dict:
 
     data["success"] = True
     if data.get("phase") == "saved":
-        auth_path = OUTPUT_DIR / domain / "auth.json"
+        auth_path = out_dir / domain / "auth.json"
         if auth_path.exists():
             data["auth_path"] = str(auth_path.resolve())
     return data
@@ -221,7 +231,7 @@ def api_login_record_complete() -> tuple[dict, int] | dict:
     domain = request.form.get("domain", "").strip()
     if not domain or not _valid_domain(domain):
         return {"success": False, "error": "ドメインを指定してください"}, 400
-    signal_path = OUTPUT_DIR / domain / LOGIN_SIGNAL_FILE_NAME
+    signal_path = _out() / domain / LOGIN_SIGNAL_FILE_NAME
     signal_path.parent.mkdir(parents=True, exist_ok=True)
     signal_path.touch()
     return {"success": True}

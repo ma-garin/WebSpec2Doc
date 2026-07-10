@@ -13,7 +13,9 @@ if str(_SRC) not in sys.path:
 
 
 def create_app() -> Flask:
+    from web.auth import auth_guard, ensure_secret_key
     from web.routes import (
+        account,
         api_v1,
         auto_run,
         crawl,
@@ -39,11 +41,21 @@ def create_app() -> Flask:
         static_folder=str(_ROOT / "static"),
     )
     app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
+    ensure_secret_key(app, _ROOT / "instance")
     _ver = str(int(time.time()))
     app.jinja_env.globals["_ver"] = _ver
     app.before_request(localhost_guard)
     app.before_request(csrf_guard)
+    app.before_request(auth_guard)
     app.after_request(add_security_headers)
+
+    @app.context_processor
+    def _auth_template_context() -> dict:
+        from flask import g
+
+        return {"auth_user": getattr(g, "auth_user", None)}
+
+    app.register_blueprint(account.bp)
     app.register_blueprint(pages.bp)
     app.register_blueprint(discover.bp)
     app.register_blueprint(site.bp)

@@ -1,0 +1,139 @@
+/* 利用者認証（ログイン / テナント選択）画面。
+   Downloads/login_tenant.html モック準拠。外部依存なし・CSP セーフ。 */
+:root {
+  --auth-primary: #1976D2;
+  --auth-primary-deep: #0D47A1;
+  --auth-grad-a: #1E88E5;
+  --auth-grad-b: #1256A8;
+  --auth-ground: #F4F6F9;
+  --auth-surface: #FFFFFF;
+  --auth-border: #E3E8EE;
+  --auth-border-strong: #CBD5E1;
+  --auth-ink: #1A212B;
+  --auth-ink-2: #56616F;
+  --auth-ink-3: #8A95A3;
+  --auth-ring: rgba(25, 118, 210, .16);
+  --auth-radius: 10px;
+  --auth-shadow-sm: 0 1px 2px rgba(20, 32, 50, .06);
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--auth-ground);
+  color: var(--auth-ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", "Noto Sans JP", Meiryo, sans-serif;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+.stage { display: flex; min-height: 100vh; }
+.brand {
+  position: relative;
+  flex: 0 0 46%;
+  max-width: 620px;
+  overflow: hidden;
+  color: #fff;
+  background: linear-gradient(150deg, var(--auth-grad-a) 0%, var(--auth-grad-b) 100%);
+  padding: 44px 52px;
+  display: flex;
+  flex-direction: column;
+}
+.brand .blob { position: absolute; border-radius: 50%; background: rgba(255,255,255,.10); pointer-events: none; }
+.brand .blob.b1 { width: 340px; height: 340px; top: -90px; right: -70px; }
+.brand .blob.b2 { width: 220px; height: 220px; bottom: 40px; left: -80px; background: rgba(255,255,255,.07); }
+.brand .blob.b3 { width: 120px; height: 120px; bottom: 160px; right: 60px; background: rgba(255,255,255,.06); }
+
+.logo { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 20px; position: relative; z-index: 1; }
+.logo .mark {
+  width: 40px; height: 40px; border-radius: 11px;
+  background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.25);
+  display: grid; place-items: center;
+}
+.logo .mark svg { width: 22px; height: 22px; }
+
+.brand .pitch { margin-top: auto; position: relative; z-index: 1; }
+.brand .pitch h2 { font-size: 30px; line-height: 1.35; margin: 0 0 14px; font-weight: 700; letter-spacing: .2px; }
+.brand .pitch p { margin: 0; color: rgba(255,255,255,.82); font-size: 14.5px; max-width: 34ch; }
+.stats { display: flex; gap: 34px; margin-top: 34px; position: relative; z-index: 1; }
+.stats .n { font-size: 26px; font-weight: 700; line-height: 1.1; }
+.stats .k { font-size: 12.5px; color: rgba(255,255,255,.78); margin-top: 2px; }
+
+.panel { flex: 1; display: grid; place-items: center; padding: 40px 24px; background: var(--auth-surface); }
+.form { width: 100%; max-width: 372px; }
+.form h1 { font-size: 27px; margin: 0 0 8px; font-weight: 700; letter-spacing: .2px; }
+.form .sub { color: var(--auth-ink-2); font-size: 14px; margin: 0 0 30px; }
+
+.field { margin-bottom: 18px; }
+.field label { display: block; font-size: 12.5px; color: var(--auth-ink-2); margin-bottom: 7px; font-weight: 600; }
+.field input {
+  width: 100%; height: 46px;
+  border: 1px solid var(--auth-border); border-radius: var(--auth-radius);
+  padding: 0 14px; font-size: 14.5px; color: var(--auth-ink); background: #fff;
+  transition: border-color .15s, box-shadow .15s; font-family: inherit;
+}
+.field input::placeholder { color: var(--auth-ink-3); }
+.field input:focus { outline: none; border-color: var(--auth-primary); box-shadow: 0 0 0 4px var(--auth-ring); }
+.field .hint { font-size: 12px; color: var(--auth-ink-3); margin-top: 7px; }
+.field.err input { border-color: #E5484D; box-shadow: 0 0 0 4px rgba(229,72,77,.14); }
+.field .msg { font-size: 12px; color: #E5484D; margin-top: 7px; }
+
+.btn {
+  width: 100%; height: 47px; border: none; border-radius: var(--auth-radius);
+  font-size: 14.5px; font-weight: 700; cursor: pointer; font-family: inherit;
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  transition: background .15s, box-shadow .15s, transform .05s, border-color .15s;
+}
+.btn.primary { background: var(--auth-primary); color: #fff; box-shadow: var(--auth-shadow-sm); }
+.btn.primary:hover { background: var(--auth-primary-deep); }
+.btn.primary:active { transform: translateY(1px); }
+.btn.ghost { background: #fff; color: var(--auth-ink); border: 1px solid var(--auth-border); }
+.btn.ghost:hover { border-color: var(--auth-border-strong); background: #FAFBFC; }
+
+.divider { display: flex; align-items: center; gap: 14px; color: var(--auth-ink-3); font-size: 12.5px; margin: 22px 0; }
+.divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--auth-border); }
+
+.foot { text-align: center; margin-top: 26px; font-size: 13px; color: var(--auth-ink-2); }
+.foot a { color: var(--auth-primary-deep); font-weight: 600; text-decoration: none; }
+.foot a:hover { text-decoration: underline; }
+
+/* テナント選択 */
+.back { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--auth-ink-2); text-decoration: none; margin-bottom: 22px; background: none; border: none; cursor: pointer; padding: 0; font-family: inherit; }
+.back:hover { color: var(--auth-ink); }
+.tenant-list { display: flex; flex-direction: column; gap: 10px; }
+.tenant {
+  display: flex; align-items: center; gap: 14px; width: 100%; text-align: left;
+  border: 1px solid var(--auth-border); border-radius: var(--auth-radius);
+  background: #fff; padding: 13px 15px; cursor: pointer;
+  transition: border-color .15s, box-shadow .15s, background .15s; font-family: inherit;
+}
+.tenant:hover { border-color: var(--auth-primary); box-shadow: 0 0 0 4px var(--auth-ring); }
+.tenant .ava { width: 42px; height: 42px; border-radius: 11px; flex: 0 0 auto; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 16px; }
+.tenant .meta { flex: 1; min-width: 0; }
+.tenant .meta .nm { font-size: 14.5px; font-weight: 700; color: var(--auth-ink); }
+.tenant .meta .dt { font-size: 12.5px; color: var(--auth-ink-2); }
+.tenant .chev { color: var(--auth-ink-3); flex: 0 0 auto; }
+.tenant .badge { font-size: 11px; font-weight: 700; color: var(--auth-primary-deep); background: #EAF3FD; border-radius: 999px; padding: 2px 9px; }
+
+.as-user { display: flex; align-items: center; gap: 10px; margin: 4px 0 26px; font-size: 13px; color: var(--auth-ink-2); }
+.as-user .u-ava { width: 26px; height: 26px; border-radius: 50%; background: var(--auth-primary); color: #fff; display: grid; place-items: center; font-size: 11px; font-weight: 700; }
+.as-user .logout { margin-left: auto; }
+.as-user .logout button { background: none; border: none; color: var(--auth-primary-deep); text-decoration: none; font-weight: 600; cursor: pointer; font-size: 13px; font-family: inherit; }
+.as-user .logout button:hover { text-decoration: underline; }
+
+.tenant-form { margin: 0; }
+.empty { color: var(--auth-ink-2); font-size: 14px; padding: 16px; border: 1px dashed var(--auth-border); border-radius: var(--auth-radius); }
+
+@media (max-width: 860px) {
+  .brand { display: none; }
+  .panel { padding: 40px 20px; }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --auth-ground: #0E1420; --auth-surface: #131A26; --auth-border: #26313F; --auth-border-strong: #33404F;
+    --auth-ink: #EAEFF5; --auth-ink-2: #9AA7B6; --auth-ink-3: #6B7787; --auth-ring: rgba(64,150,255,.22);
+  }
+  .btn.ghost:hover { background: #1A2432; }
+  .tenant .badge { background: rgba(64,150,255,.14); color: #8CC2FF; }
+}

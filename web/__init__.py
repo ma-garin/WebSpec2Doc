@@ -15,6 +15,7 @@ if str(_SRC) not in sys.path:
 def create_app() -> Flask:
     from web.routes import (
         api_v1,
+        auth,
         auto_run,
         crawl,
         discover,
@@ -41,9 +42,22 @@ def create_app() -> Flask:
     app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
     _ver = str(int(time.time()))
     app.jinja_env.globals["_ver"] = _ver
+
+    # 利用者認証（メール自己申告 ＋ テナント選択）。既定 OFF で現行挙動を維持。
+    from pathlib import Path as _Path
+
+    from web.auth import auth_enabled
+    from web.auth.guard import auth_guard
+    from web.auth.store import load_or_create_secret_key
+
+    app.secret_key = load_or_create_secret_key(_Path(app.instance_path) / "auth")
+
     app.before_request(localhost_guard)
     app.before_request(csrf_guard)
+    if auth_enabled():
+        app.before_request(auth_guard)
     app.after_request(add_security_headers)
+    app.register_blueprint(auth.bp)
     app.register_blueprint(pages.bp)
     app.register_blueprint(discover.bp)
     app.register_blueprint(site.bp)

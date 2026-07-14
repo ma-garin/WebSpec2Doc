@@ -58,8 +58,38 @@ function _freshnessLabel(updatedTs) {
   return { label: `${days}日前`, cls: 'fresh-old' };
 }
 
+function _buildStats(items) {
+  // 履歴データ（既取得）から KPI を導出する。空配列は呼び出し側で除外済み。
+  const sites = items.length;
+  const screens = items.reduce((s, it) => s + (it.screens || 0), 0);
+  const fields = items.reduce((s, it) => s + (it.fields || 0), 0);
+  const drift = items.reduce((s, it) => s + (it.has_diff ? 1 : 0), 0);
+  const icon = (p) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+  const driftClass = drift > 0 ? 'is-warn' : 'is-ok';
+  const driftSub = drift > 0 ? '要確認' : '変化なし';
+  return `
+    <div class="stat-cards" aria-label="解析サマリ">
+      <div class="stat-card">
+        <div class="stat-card-head"><span class="stat-card-icon">${icon('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>')}</span><span class="stat-card-label">解析サイト</span></div>
+        <div class="stat-card-num">${sites}</div><div class="stat-card-sub">登録済みのサイト数</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-head"><span class="stat-card-icon">${icon('<rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/>')}</span><span class="stat-card-label">総画面数</span></div>
+        <div class="stat-card-num">${screens}</div><div class="stat-card-sub">解析済みの画面の合計</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-head"><span class="stat-card-icon">${icon('<path d="M4 6h16M4 12h16M4 18h10"/>')}</span><span class="stat-card-label">総項目数</span></div>
+        <div class="stat-card-num">${fields}</div><div class="stat-card-sub">抽出された入力項目の合計</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-head"><span class="stat-card-icon ${driftClass}">${icon('<path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>')}</span><span class="stat-card-label">差分あり</span></div>
+        <div class="stat-card-num">${drift}</div><div class="stat-card-sub">${driftSub}</div>
+      </div>
+    </div>`;
+}
+
 function _buildTable(items) {
-  let html = `
+  let html = _buildStats(items) + `
     <table class="data dashboard-table">
       <thead><tr><th>サイト</th><th class="num">画面</th><th class="num">項目</th><th>解析回数</th><th>最終解析</th><th>操作</th></tr></thead>
       <tbody>`;

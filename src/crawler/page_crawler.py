@@ -50,6 +50,11 @@ PAGE_ID_WIDTH = 3
 SCREENSHOTS_DIR_NAME = "screenshots"
 USER_AGENT = build_user_agent()
 BROWSER_LOCALE = "ja-JP"
+# Chromium の HTML5 バリデーションメッセージ（validationMessage）は、UI 言語バンドルを
+# 基底言語コードで解決する。地域付き "ja-JP" では該当バンドルが存在せず validationMessage が
+# 空文字になり、必須未入力の実測が全滅する（en-US は存在するため機能するが ja-JP は不可）。
+# そのため --lang には基底サブタグ（"ja"）を渡す。context locale は "ja-JP" のまま維持する。
+BROWSER_UI_LANG = BROWSER_LOCALE.split("-", 1)[0]
 NEXT_DEPTH_INCREMENT = 1
 
 _SENSITIVE_KEYWORDS = ("payment", "checkout", "billing", "personal", "private")
@@ -238,8 +243,9 @@ def _browser_page(auth_state: Path | None) -> Iterator[Page]:
     with sync_playwright() as playwright:
         # --lang でブラウザ UI 言語を日本語にし、HTML5 バリデーション
         # メッセージが日本語で得られるようにする（context の locale だけでは
-        # validationMessage の言語は変わらないため launch 引数で指定する）
-        browser = playwright.chromium.launch(headless=True, args=[f"--lang={BROWSER_LOCALE}"])
+        # validationMessage の言語は変わらないため launch 引数で指定する）。
+        # 基底言語コード（BROWSER_UI_LANG="ja"）を渡す点に注意（"ja-JP" は不可）。
+        browser = playwright.chromium.launch(headless=True, args=[f"--lang={BROWSER_UI_LANG}"])
         try:
             context = browser.new_context(
                 user_agent=USER_AGENT,

@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import json
 import shutil
-import time
 from collections.abc import Generator
 from pathlib import Path
 
@@ -187,19 +186,25 @@ class TestHistoryDiffFeedback:
         """
         self._open_history_tab(page)
 
-        def _delayed_continue(route):  # type: ignore[no-untyped-def]
-            time.sleep(0.6)
-            route.continue_()
-
-        page.route("**/api/snapshot-diff**", _delayed_continue)
         # 既定は現新比較モード。本テストは「簡易ドリフト差分」ボタンの即時フィードバックを
-        # 検証するため diff モードを明示選択する（モード切替は Sprint 3 レーンDで追加）。
-        page.locator("input[name='tl-mode'][value='diff']").check()
-        page.locator("#tl-diff-btn").click()
-        # フルスイート実行時はCPU競合でクリック→再描画が遅延することがあるため、
-        # デフォルト5秒より長めに待つ（実際の遅延は0.6秒固定なので誤検知はしない）。
-        expect(page.locator("#tl-diff-btn")).to_have_text("差分を取得中…", timeout=15_000)
-        # 遅延後にローディングが解除されることも確認する
+        # 検証するため diff モードを選択する（change を発火させないよう JS で checked を立てる）。
+        page.evaluate(
+            "document.querySelector(\"input[name='tl-mode'][value='diff']\").checked = true"
+        )
+        # showTimelineDiff は fetch の await より前で disabled とラベルを同期設定する。
+        # ネットワーク遅延を人工挿入して観測する方式は Playwright sync API では
+        # route ハンドラの sleep が driver スレッドをブロックし中間状態を取り逃すため不安定。
+        # 代わりに同一 JS 実行内で click 直後（await 到達前）の状態を捕捉し、決定的に検証する。
+        state = page.evaluate(
+            """() => {
+              const btn = document.getElementById('tl-diff-btn');
+              btn.click();
+              return { disabled: btn.disabled, text: (btn.textContent || '').trim() };
+            }"""
+        )
+        assert state["disabled"] is True, f"クリック直後にボタンが無効化されていない: {state}"
+        assert state["text"] == "差分を取得中…", f"クリック直後のラベルが取得中でない: {state}"
+        # 応答後にローディングが解除され、元のラベルに戻る（無反応でなく完結する）。
         expect(page.locator("#tl-diff-btn")).to_have_text("この2時点を比較する", timeout=10_000)
 
     def test_button_shows_result_after_success(self, page: Page) -> None:

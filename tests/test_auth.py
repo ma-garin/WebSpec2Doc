@@ -47,16 +47,21 @@ class TestCrawlSiteAuthState:
         self, mock_sp: MagicMock, _mock_robots: MagicMock
     ) -> None:
         """日本語ロケール（validation メッセージ実測の日本語化）が配線されている。"""
-        from crawler.page_crawler import BROWSER_LOCALE
+        from crawler.page_crawler import BROWSER_LOCALE, BROWSER_UI_LANG
 
         playwright = mock_sp.return_value.__enter__.return_value
         browser = playwright.chromium.launch.return_value
         crawl_site("https://example.com", max_pages=0)
-        # context に locale を渡している
+        # context には地域付きロケール（ja-JP）を渡す
         assert browser.new_context.call_args.kwargs["locale"] == BROWSER_LOCALE
-        # launch 引数で UI 言語も指定している
+        # launch の --lang には基底言語コード（ja）を渡す。
+        # Chromium は validationMessage を UI 言語バンドルの基底コードで解決するため、
+        # 地域付き "ja-JP" では空文字になり実測が全滅する（回帰防止）。
         launch_kwargs = playwright.chromium.launch.call_args.kwargs
-        assert any(BROWSER_LOCALE in str(arg) for arg in launch_kwargs.get("args", []))
+        lang_args = [str(arg) for arg in launch_kwargs.get("args", [])]
+        assert f"--lang={BROWSER_UI_LANG}" in lang_args
+        assert BROWSER_UI_LANG == "ja"
+        assert all("--lang=ja-JP" != a for a in lang_args)
 
 
 # ---------- capture_auth_state ----------

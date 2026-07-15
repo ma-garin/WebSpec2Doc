@@ -9,6 +9,61 @@
 }
 .skip-link:focus { top: 8px; outline: 2px solid #fff; outline-offset: 2px; }
 
+/* ── トップバー クイック検索（画面・解析済みサイト横断） ── */
+.app-topbar-lead { flex: 0 1 auto; }
+.topbar-search { position: relative; flex: 1 1 auto; max-width: 440px; display: flex; align-items: center; }
+.topbar-search-icon { position: absolute; left: 12px; width: 16px; height: 16px; color: var(--text-subtle); pointer-events: none; }
+.topbar-search-input {
+  width: 100%; height: 38px; padding: 0 44px 0 36px;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface-soft); color: var(--text); font-size: var(--text-sm); font-family: inherit;
+  outline: none; transition: border-color .12s, box-shadow .12s, background .12s;
+}
+.topbar-search-input::placeholder { color: var(--text-subtle); }
+.topbar-search-input:focus { border-color: var(--primary); background: var(--surface); box-shadow: 0 0 0 3px var(--focus-ring); }
+.topbar-search-kbd {
+  position: absolute; right: 10px; font-size: 11px; font-weight: 700; color: var(--text-subtle);
+  background: var(--surface); border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; pointer-events: none;
+}
+.topbar-search-input:focus ~ .topbar-search-kbd { display: none; }
+.topbar-search-results {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 120;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-pop); padding: 6px; max-height: 60vh; overflow-y: auto;
+}
+.topbar-search-item {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  padding: 8px 10px; border: 0; border-radius: var(--radius); background: transparent; cursor: pointer;
+  color: var(--text); font-family: inherit; font-size: var(--text-sm);
+}
+.topbar-search-item:hover, .topbar-search-item.is-active { background: var(--info-bg); }
+.topbar-search-item-icon { flex: 0 0 auto; width: 20px; height: 20px; color: var(--text-muted); display: inline-flex; }
+.topbar-search-item-icon svg { width: 18px; height: 18px; }
+.topbar-search-item.is-active .topbar-search-item-icon { color: var(--primary-dark); }
+.topbar-search-item-label { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topbar-search-item-sub { flex: 0 0 auto; font-size: 11px; color: var(--text-subtle); }
+
+/* ── アカウントアバター（認証 ON 時のみ描画） ── */
+.topbar-avatar-wrap { position: relative; }
+.topbar-avatar-btn { width: 34px; height: 34px; border-radius: 50%; border: 0; cursor: pointer; padding: 0;
+  background: var(--primary); color: #fff; display: inline-flex; align-items: center; justify-content: center; }
+.topbar-avatar-btn:hover { background: var(--primary-dark); }
+.topbar-avatar-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.topbar-avatar-initial { font-size: 13px; font-weight: 800; }
+.topbar-avatar-menu {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 120; min-width: 200px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-pop); padding: 6px;
+}
+.topbar-avatar-email { padding: 8px 10px; font-size: 12px; color: var(--text-muted); border-bottom: 1px solid var(--divider);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topbar-avatar-form { margin: 6px 0 0; }
+.topbar-avatar-logout { width: 100%; text-align: left; padding: 8px 10px; border: 0; border-radius: var(--radius);
+  background: transparent; color: var(--text); font-size: var(--text-sm); font-family: inherit; cursor: pointer; font-weight: 600; }
+.topbar-avatar-logout:hover { background: var(--critical-bg); color: var(--critical); }
+
+@media (max-width: 900px) { .topbar-search { display: none; } }
+
 /* ── トップバー ツールボタン（テーマ切替・ショートカットヘルプ） ── */
 .app-topbar-tools { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .topbar-icon-btn {

@@ -1,7 +1,16 @@
     <header class="app-topbar">
-      <div style="min-width:0">
+      <div class="app-topbar-lead" style="min-width:0">
         <div class="app-breadcrumb" id="topbar-breadcrumb"><span>WebSpec2Doc</span><span class="sep">/</span><span>ホーム</span></div>
         <h1 class="app-topbar-title" id="topbar-title">QAドキュメント生成</h1>
+      </div>
+      <div class="topbar-search" role="search">
+        <svg class="topbar-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input type="search" id="topbar-search-input" class="topbar-search-input"
+               placeholder="画面・サイトを検索（⌘K）" autocomplete="off" spellcheck="false"
+               role="combobox" aria-expanded="false" aria-controls="topbar-search-results"
+               aria-label="画面・解析済みサイトを検索">
+        <kbd class="topbar-search-kbd" aria-hidden="true">⌘K</kbd>
+        <div class="topbar-search-results" id="topbar-search-results" role="listbox" aria-label="検索候補" hidden></div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
         <div class="app-topbar-actions" id="topbar-actions"></div>
@@ -14,5 +23,18 @@
             <svg class="icon-theme-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
           </button>
         </div>
+        {% if auth_enabled and current_user_email %}
+        <div class="topbar-avatar-wrap" id="topbar-avatar">
+          <button type="button" id="topbar-avatar-btn" class="topbar-avatar-btn" aria-haspopup="menu" aria-expanded="false" aria-label="アカウントメニュー">
+            <span class="topbar-avatar-initial">{{ current_user_email[0]|upper }}</span>
+          </button>
+          <div class="topbar-avatar-menu" id="topbar-avatar-menu" role="menu" hidden>
+            <div class="topbar-avatar-email" title="{{ current_user_email|e }}">{{ current_user_email|e }}</div>
+            <form method="post" action="{{ url_for('auth.logout_action') }}" class="topbar-avatar-form">
+              <button type="submit" class="topbar-avatar-logout" role="menuitem">ログアウト</button>
+            </form>
+          </div>
+        </div>
+        {% endif %}
       </div>
     </header>

@@ -121,7 +121,7 @@ function _applyFilter(cases) {
 
 async function loadReviewCases(domain) {
   const tbody = document.getElementById('review-cases-tbody');
-  if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888">読み込み中...</td></tr>';
+  if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted)">読み込み中...</td></tr>';
 
   try {
     const res = await fetch('/review/cases?domain=' + encodeURIComponent(domain));
@@ -129,7 +129,7 @@ async function loadReviewCases(domain) {
     _reviewCases = data.cases || [];
     _renderTable(_applyFilter(_reviewCases));
   } catch (e) {
-    if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#c00">読み込みに失敗しました</td></tr>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--color-critical)">読み込みに失敗しました</td></tr>';
   }
 }
 

@@ -9,26 +9,19 @@ const _COVERAGE_LABELS = {
   uncovered: '未カバー',
 };
 
-const _COVERAGE_COLORS = {
-  covered:   '#27ae60',
-  partial:   '#e67e22',
-  uncovered: '#e74c3c',
-};
-
 function renderTraceabilityRow(req) {
   const coverage = req.coverage || 'uncovered';
   const label = _COVERAGE_LABELS[coverage] || coverage;
-  const color = _COVERAGE_COLORS[coverage] || '#888';
-  const badge = `<span class="coverage-badge coverage-${escHtml(coverage)}"
-    style="background:${color}">${escHtml(label)}</span>`;
+  // 色は CSS クラス（.coverage-${coverage}）で付与する（ダーク対応・生 hex を持たない）。
+  const badge = `<span class="coverage-badge coverage-${escHtml(coverage)}">${escHtml(label)}</span>`;
 
   const testIdsHtml = req.test_ids && req.test_ids.length
     ? `<span class="test-ids-cell">${req.test_ids.map(escHtml).join(', ')}</span>`
-    : '<span style="color:#bbb">—</span>';
+    : '<span class="tc-dash">—</span>';
 
   return `
     <tr>
-      <td style="white-space:nowrap;font-weight:600">${escHtml(req.req_id)}</td>
+      <td class="req-id-cell">${escHtml(req.req_id)}</td>
       <td>${escHtml(req.req_title)}</td>
       <td class="url-cell">${escHtml(req.page_url)}</td>
       <td>${testIdsHtml}</td>
@@ -75,7 +68,7 @@ function _renderTable(reqs) {
   const tbody = document.getElementById('traceability-tbody');
   if (!tbody) return;
   if (!reqs || reqs.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#888">要件データがありません</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="traceability-msg">要件データがありません</td></tr>';
     return;
   }
   tbody.innerHTML = reqs.map(renderTraceabilityRow).join('');
@@ -92,8 +85,7 @@ async function loadTraceabilityMatrix(domain) {
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       if (tbody) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#c00">
-          エラー: ${escHtml(err.error || String(res.status))}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="traceability-msg is-error">エラー: ${escHtml(err.error || String(res.status))}</td></tr>`;
       }
       return;
     }
@@ -104,7 +96,7 @@ async function loadTraceabilityMatrix(domain) {
     _renderTable(matrix.requirements || []);
   } catch (e) {
     if (tbody) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#c00">読み込みに失敗しました</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" class="traceability-msg is-error">読み込みに失敗しました</td></tr>';
     }
   } finally {
     if (loading) loading.style.display = 'none';

@@ -973,3 +973,91 @@
    z-index:2100）の方が手前に来てしまい、ログイン入力欄がクリック不能になっていた。
    ID セレクタでヘルプより前面に固定する（JS側で表示時にヘルプを閉じる処理と併用）。 */
 #autorun-login-modal { z-index: 2300; }
+
+/* ==================== 実行履歴（run-history）データテーブル ==================== */
+.rh-toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+.rh-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.rh-table th, .rh-table td { padding: 9px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: middle; }
+.rh-table th { background: var(--surface-soft); font-weight: 700; color: var(--text-muted); white-space: nowrap; }
+.rh-table tbody tr:hover td { background: var(--surface-soft); }
+#rh-empty { padding: 32px; text-align: center; color: var(--text-muted); font-size: 14px; }
+/* 種別タブ（.set-tab と同スタイル） */
+.rh-type-tabs { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-soft); flex-wrap: wrap; }
+.rh-type-tab { height: 34px; padding: 0 16px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-muted); font-size: 13px; font-weight: 700; cursor: pointer; }
+.rh-type-tab.is-active { background: var(--surface); color: var(--primary-dark); box-shadow: inset 0 -2px 0 var(--primary); }
+.rh-type-tab:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+
+/* 種別・状態バッジ（soft パターン。--c を基準色に color-mix でライト/ダーク自動追従） */
+.rh-type-badge, .rh-status-badge {
+  display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 700;
+  white-space: nowrap; border: 1px solid;
+  color: var(--c); background: color-mix(in srgb, var(--c) 14%, var(--surface));
+  border-color: color-mix(in srgb, var(--c) 32%, transparent);
+}
+.rh-type-crawl { --c: var(--info); }
+.rh-type-autorun { --c: var(--accent); }
+.rh-type-comparison { --c: var(--tech-dt); }
+.rh-type-ux_review { --c: var(--color-high); }
+.rh-status-complete { --c: var(--color-low); }
+.rh-status-failed { --c: var(--color-critical); }
+.rh-status-cancelled { --c: var(--text-muted); }
+.rh-status-running { --c: var(--color-high); }
+
+/* ==================== 共通ページャ（table-utils.js） ==================== */
+.pager-wrap { margin-top: 12px; }
+.pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.pager-info { font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.pager-controls { display: flex; align-items: center; gap: 4px; }
+.pager-btn {
+  min-width: 32px; height: 32px; padding: 0 8px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface); color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer;
+  font-variant-numeric: tabular-nums; transition: border-color .12s, background .12s, color .12s;
+}
+.pager-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary-dark); background: var(--surface-subtle); }
+.pager-btn.is-active { border-color: var(--primary); background: var(--info-bg); color: var(--primary-dark); }
+.pager-btn:disabled { opacity: .45; cursor: not-allowed; }
+.pager-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.pager-gap { padding: 0 4px; color: var(--text-subtle); }
+
+/* ==================== テストケース フィルタツールバー ==================== */
+.tc-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.tc-search { position: relative; display: flex; align-items: center; flex: 1 1 240px; max-width: 320px; }
+.tc-search svg { position: absolute; left: 10px; width: 15px; height: 15px; color: var(--text-subtle); pointer-events: none; }
+.tc-search input {
+  width: 100%; height: 36px; padding: 0 10px 0 32px; border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface-soft); color: var(--text); font-size: var(--text-sm); font-family: inherit; outline: none;
+  transition: border-color .12s, box-shadow .12s, background .12s;
+}
+.tc-search input:focus { border-color: var(--primary); background: var(--surface); box-shadow: 0 0 0 3px var(--focus-ring); }
+.tc-count { font-size: 12px; color: var(--text-muted); margin-left: auto; font-variant-numeric: tabular-nums; }
+
+/* ==================== トレーサビリティマトリクス ==================== */
+.traceability-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; }
+.traceability-header h2 { margin: 0; font-size: 18px; }
+#traceability-summary { font-size: 13px; color: var(--text-muted); }
+#traceability-coverage-bar { display: flex; height: 16px; border-radius: 8px; overflow: hidden; margin-bottom: 16px; background: var(--border); }
+.coverage-bar-covered { background: var(--color-low); transition: width .3s ease; }
+.coverage-bar-partial { background: var(--color-high); transition: width .3s ease; }
+.coverage-bar-uncovered { background: var(--color-critical); transition: width .3s ease; }
+.traceability-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.traceability-table th, .traceability-table td { padding: 9px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: middle; }
+.traceability-table th { background: var(--surface-soft); font-weight: 700; color: var(--text-muted); white-space: nowrap; }
+.traceability-table tbody tr:hover td { background: var(--surface-soft); }
+.traceability-table td.url-cell { font-size: 11px; color: var(--text-muted); word-break: break-all; max-width: 200px; }
+.traceability-table td.req-id-cell { white-space: nowrap; font-weight: 600; }
+.traceability-msg { padding: 20px; }
+.test-ids-cell { font-size: 11px; color: var(--text-muted); }
+.tc-dash { color: var(--text-subtle); }
+#traceability-loading { padding: 32px; text-align: center; color: var(--text-muted); font-size: 14px; }
+.traceability-msg { text-align: center; color: var(--text-muted); }
+.traceability-msg.is-error { color: var(--color-critical); }
+/* カバレッジバッジ（soft パターン。run-history と同方式で --c 基準色から color-mix） */
+.coverage-badge {
+  display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 700;
+  white-space: nowrap; border: 1px solid;
+  color: var(--c); background: color-mix(in srgb, var(--c) 14%, var(--surface));
+  border-color: color-mix(in srgb, var(--c) 32%, transparent);
+}
+.coverage-covered { --c: var(--color-low); }
+.coverage-partial { --c: var(--color-high); }
+.coverage-uncovered { --c: var(--color-critical); }

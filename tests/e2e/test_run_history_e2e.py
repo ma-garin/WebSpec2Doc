@@ -105,3 +105,52 @@ class TestRunHistoryTypeTabs:
         expect(page.locator('.rh-type-tab[data-type="autorun"]')).to_have_class(
             re.compile(r"is-active")
         )
+
+
+class TestRunHistoryPagination:
+    """C-1: 21件以上でページャが表示され、ページ遷移で行が切り替わる。"""
+
+    @staticmethod
+    def _mock_many(page: Page, count: int = 25) -> None:
+        runs = [
+            {
+                "type": "crawl",
+                "domain": f"site-{i:02d}.example.com",
+                "timestamp": "2026-07-01 10:00",
+                "status": "complete",
+                "summary": {"screen_count": i, "test_condition_count": 0, "document_count": 0},
+                "link": "",
+            }
+            for i in range(count)
+        ]
+        page.route(
+            "**/api/history/runs",
+            lambda route: route.fulfill(
+                status=200, content_type="application/json", body=json.dumps({"runs": runs})
+            ),
+        )
+
+    def test_pager_shows_and_second_page_navigates(self, page: Page) -> None:
+        page.goto(BASE_URL)
+        self._mock_many(page, 25)
+        page.locator("#nav-run-history-btn").click()
+        page.wait_for_selector("#rh-tbody tr")
+
+        # 1ページ目は既定サイズ（20件）
+        expect(page.locator("#rh-tbody tr")).to_have_count(20)
+        # ページャが表示され、件数表示を持つ
+        expect(page.locator("#rh-pager .pager-info")).to_contain_text("25件")
+        # ページ2の番号ボタンで残り5件へ遷移
+        page.locator('#rh-pager .pager-num[data-page="2"]').click()
+        expect(page.locator("#rh-tbody tr")).to_have_count(5)
+        # 先頭行が2ページ目の先頭サイト（site-20）になっている
+        expect(page.locator("#rh-tbody tr").first).to_contain_text("site-20.example.com")
+
+    def test_no_pager_controls_when_single_page(self, page: Page) -> None:
+        page.goto(BASE_URL)
+        self._mock_many(page, 8)
+        page.locator("#nav-run-history-btn").click()
+        page.wait_for_selector("#rh-tbody tr")
+        expect(page.locator("#rh-tbody tr")).to_have_count(8)
+        # 1ページに収まる場合はページ番号ボタンを出さない
+        assert page.locator("#rh-pager .pager-num").count() == 0

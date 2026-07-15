@@ -35,7 +35,9 @@
 
 | 文書 | 役割 |
 |------|------|
-| [adr/](adr/) | アーキテクチャ意思決定記録（ADR 0001〜0003） |
+| [sdlc/](sdlc/) | **SDLC 文書体系**（要件定義〜テストサマリ。V字・as-built・実測。入口は sdlc/README.md） |
+| [adr/](adr/) | アーキテクチャ意思決定記録（ADR 0001〜0004） |
+| [design/](design/) | 方式・設計ドキュメント（auth-tenant / ui-redesign / workspace-data-separation） |
 | [INCIDENT_POSTMORTEM.md](INCIDENT_POSTMORTEM.md) | インシデント記録（現役の記録フォーマット） |
 | [ux-audit/](ux-audit/) | UX 監査・インシデント調査の記録 |
 | [tasks/](tasks/) | 過去の実装タスク指示書（Codex 向け・完了済み） |

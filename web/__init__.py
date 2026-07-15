@@ -52,6 +52,22 @@ def create_app() -> Flask:
 
     app.secret_key = load_or_create_secret_key(_Path(app.instance_path) / "auth")
 
+    @app.context_processor
+    def _inject_auth_context() -> dict[str, object]:
+        """テンプレートへ認証状態を注入する（アバター表示制御に使用）。
+
+        認証 OFF（既定）では current_user_email=None となり、topbar のアバターは
+        テンプレート側で描画されない（現行の見た目を維持）。
+        """
+        from web.auth import auth_enabled as _enabled
+        from web.auth.session import current_user_email
+
+        enabled = _enabled()
+        return {
+            "auth_enabled": enabled,
+            "current_user_email": current_user_email() if enabled else None,
+        }
+
     app.before_request(localhost_guard)
     app.before_request(csrf_guard)
     if auth_enabled():

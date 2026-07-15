@@ -52,9 +52,9 @@ class TestQuickSearch:
     def test_enter_navigates_to_first_result(self, app_page: Page) -> None:
         """Enter で先頭候補へ遷移する。"""
         app_page.locator("#topbar-search-input").fill("実行履歴")
-        expect(
-            app_page.locator("#topbar-search-results .topbar-search-item").first
-        ).to_be_visible(timeout=5_000)
+        expect(app_page.locator("#topbar-search-results .topbar-search-item").first).to_be_visible(
+            timeout=5_000
+        )
         app_page.locator("#topbar-search-input").press("Enter")
         expect(app_page.locator("#view-run-history")).to_have_class(_ACTIVE, timeout=5_000)
 
@@ -70,9 +70,9 @@ class TestQuickSearch:
     def test_escape_closes_results(self, app_page: Page) -> None:
         """Escape で検索結果が閉じる。"""
         app_page.locator("#topbar-search-input").fill("設定")
-        expect(
-            app_page.locator("#topbar-search-results .topbar-search-item").first
-        ).to_be_visible(timeout=5_000)
+        expect(app_page.locator("#topbar-search-results .topbar-search-item").first).to_be_visible(
+            timeout=5_000
+        )
         app_page.locator("#topbar-search-input").press("Escape")
         expect(app_page.locator("#topbar-search-results")).to_be_hidden()
 

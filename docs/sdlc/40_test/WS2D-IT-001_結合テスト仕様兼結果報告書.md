@@ -6,9 +6,10 @@
 
 ## 1. 対象と方針
 
-- 対象: `web/routes/*`（17 Blueprint・112 EP）と `web/services/*`、`web/auth/*` の結合。
-- 観点: 入力検証・正常/異常応答（JSON エラー整形）・CSRF/ガード・永続化副作用・
-  ジョブ制御（AutoRun のキュー/承認/キャンセル）。
+- 対象: `web/routes/*`（17 Blueprint・121 EP）と `web/services/*`、`web/auth.py` /
+  `web/services/auth_store.py` / `web/tenancy.py` の結合。
+- 観点: 入力検証・正常/異常応答（JSON エラー整形）・CSRF/認証ガード・永続化副作用・
+  ジョブ制御（AutoRun のキュー/承認/キャンセル）・テナント分離。
 
 ## 2. 実施結果（実測）
 
@@ -20,24 +21,26 @@
 
 ## 3. 代表的な結合テスト（抜粋）
 
-- 認証: `test_auth_app.py` — ログイン/テナント選択/ガード/ログアウト/認証 OFF 非破壊
-  （happy/failure/guard/logout）。
+- 認証: `test_app_account.py` / `test_auth_store.py` — ログイン・セッション・パスワード・
+  ロックアウト・ロール・アカウント管理・APIトークン。
+- テナント分離: `test_tenancy.py` — 出力/観点DBのワークスペース分離・slug 検証。
 - QA プロセス: `test_qa_process.py` — 生成・結果取得の経路。
 - サイト/履歴/設定: `test_app_site.py` / `test_app_login.py` / `test_app_wizard.py` /
   各 `test_*` が route 経由の結合を検証。
-- API v1: `test_api_v1.py` — 外部公開 API（`/sites/...`, `/healthz`）。
+- API v1: `test_api_v1.py` — 外部公開 API（`/sites/...`, `/healthz`・Bearer トークン）。
 
-## 4. 認証結合の代表シナリオ（`WEBSPEC2DOC_AUTH=1`）
+## 4. 認証結合の代表シナリオ（`WEBSPEC2DOC_AUTH_MODE`。詳細 `docs/AUTH_TENANCY.md`）
 
 | # | シナリオ | 期待 |
 |---|---|---|
-| IT-A1 | 正当メールでログイン | 既定 WS 自動作成→`/auth/tenants` |
-| IT-A2 | 不正メール | 400＋エラー表示・非遷移 |
-| IT-A3 | 未ログインで保護 route | `/auth/login` へリダイレクト |
-| IT-A4 | ログイン済・WS 未選択 | `/auth/tenants` へ |
-| IT-A5 | 非会員 WS を選択 | 拒否・`/auth/tenants` へ |
-| IT-A6 | ログアウト | セッション破棄→保護 route 再リダイレクト |
-| IT-A7 | 認証 OFF（既定） | `/` が無認証で開く（非破壊） |
+| IT-A1 | 既定 `auto`・ユーザー0人 | 認証なしで `/` が開く（現行ローカル利用を維持） |
+| IT-A2 | `/auth/setup` で初期作成 | ワークスペース＋オーナー作成後、全 route がログイン必須に |
+| IT-A3 | 正しい資格でログイン | セッション確立（`ws2d_session`）→ 保護 route 到達 |
+| IT-A4 | 5 回連続失敗 | 15 分ロックアウト（正しい PW でも拒否） |
+| IT-A5 | 未ログインで保護 route | `/auth/login` へリダイレクト（`next` は相対のみ） |
+| IT-A6 | パスワード変更 | 該当ユーザーの全セッション即時失効 |
+| IT-A7 | テナント有効時のクロール | 成果物が `output/tenants/{slug}/` に分離保存 |
+| IT-A8 | 権限（member が設定変更） | owner/admin 以外は拒否 |
 
 ## 5. 再現方法
 ```bash

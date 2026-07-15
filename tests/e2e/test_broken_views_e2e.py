@@ -180,14 +180,21 @@ class TestHistoryDiffFeedback:
     def test_button_shows_loading_state_immediately(self, page: Page) -> None:
         """クリック直後にボタンのラベルが「取得中」に変わる（無反応に見えない）。
 
-        ローカル環境では /api/snapshot-diff の応答が速すぎて一瞬でラベルが
-        元に戻ってしまうため、レスポンスに人工的な遅延を挟んでローディング状態を
-        確実に観測する。
+        showTimelineDiff は fetch の await より前で disabled とラベルを同期設定するため、
+        click 直後の状態を同一 JS 実行内で捕捉すれば決定的に検証できる（ネットワーク遅延に
+        非依存）。ただし履歴タブ描画時の初回 showTimelineDiff（既定=現新比較）が進行中だと
+        そのローディングラベルを拾ってしまうため、先に初回描画の完了を待つ。
         """
         self._open_history_tab(page)
 
-        # 既定は現新比較モード。本テストは「簡易ドリフト差分」ボタンの即時フィードバックを
-        # 検証するため diff モードを選択する（change を発火させないよう JS で checked を立てる）。
+        # 初回描画（既定=現新比較）が落ち着き、ボタンが待機ラベルへ戻るまで待つ。
+        # これを待たないと初回ローディング中の評価で mode=comparison のラベルを拾い、
+        # CI の遅い環境でフレークする（現新比較を実行中… ≠ 差分を取得中…）。
+        expect(page.locator("#tl-diff-btn")).to_have_text("この2時点を比較する", timeout=15_000)
+
+        # 本テストは「簡易ドリフト差分」ボタンの即時フィードバックを検証するため diff モードを
+        # 選択する（change を発火させないよう JS で checked を立てる。ラジオ同名グループなので
+        # comparison は自動的に外れる）。
         page.evaluate(
             "document.querySelector(\"input[name='tl-mode'][value='diff']\").checked = true"
         )

@@ -64,23 +64,42 @@ def _scheduler_loop() -> None:
 
 
 def _check_and_run_due(output_dir: Path) -> None:
-    """output_dir 配下の全 schedule.json を検査し、期限到来分を実行する。"""
+    """output_dir 配下の全 schedule.json を検査し、期限到来分を実行する。
+
+    テナント分離後は output/tenants/{slug}/{domain}/ にもスケジュールが
+    存在するため、共有領域とテナント領域の両方を走査する。
+    """
     if not output_dir.is_dir():
         return
     now = datetime.now()
-    for domain_dir in output_dir.iterdir():
-        if not domain_dir.is_dir():
+    _scan_schedule_base(output_dir, now, crawl_output=None)
+    from web.tenancy import TENANTS_DIR_NAME
+
+    tenants_root = output_dir / TENANTS_DIR_NAME
+    if tenants_root.is_dir():
+        for tenant_dir in tenants_root.iterdir():
+            if tenant_dir.is_dir():
+                _scan_schedule_base(tenant_dir, now, crawl_output=tenant_dir)
+
+
+def _scan_schedule_base(base_dir: Path, now: datetime, crawl_output: Path | None) -> None:
+    from web.tenancy import TENANTS_DIR_NAME
+
+    for domain_dir in base_dir.iterdir():
+        if not domain_dir.is_dir() or domain_dir.name == TENANTS_DIR_NAME:
             continue
         schedule_path = domain_dir / "schedule.json"
         if not schedule_path.is_file():
             continue
         try:
-            _maybe_run(domain_dir.name, schedule_path, now)
+            _maybe_run(domain_dir.name, schedule_path, now, crawl_output=crawl_output)
         except Exception:
             logger.exception("スケジュール実行エラー: domain=%s", domain_dir.name)
 
 
-def _maybe_run(domain: str, schedule_path: Path, now: datetime) -> None:
+def _maybe_run(
+    domain: str, schedule_path: Path, now: datetime, crawl_output: Path | None = None
+) -> None:
     """schedule.json を読み、期限到来時にクロールを起動して timestamps を更新する。"""
     try:
         config: dict[str, Any] = json.loads(schedule_path.read_text(encoding="utf-8"))
@@ -113,7 +132,7 @@ def _maybe_run(domain: str, schedule_path: Path, now: datetime) -> None:
 
     # 先にタイムスタンプを更新して二重実行を防止する
     _persist_timestamps(schedule_path, config, now)
-    _run_crawl(site_url)
+    _run_crawl(site_url, crawl_output)
 
     logger.info("スケジュールクロール完了: domain=%s", domain)
 
@@ -146,7 +165,7 @@ def _calc_next_run_at(interval: str, base: datetime) -> str | None:
     return (base + delta).isoformat(timespec="seconds")
 
 
-def _run_crawl(site_url: str) -> None:
+def _run_crawl(site_url: str, crawl_output: Path | None = None) -> None:
     """src/main.py を子プロセスとして実行する。失敗してもログに記録するのみ。"""
     cmd = [
         sys.executable,
@@ -157,6 +176,8 @@ def _run_crawl(site_url: str) -> None:
         "md,html,json",
         "--compare",
     ]
+    if crawl_output is not None:
+        cmd += ["--output", str(crawl_output)]
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)  # nosec B603
         if result.returncode != 0:

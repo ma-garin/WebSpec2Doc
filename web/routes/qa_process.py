@@ -8,7 +8,9 @@ from typing import Any
 from flask import Blueprint, request
 
 from llm.viewpoint_generator import make_provider
-from web.config import OUTPUT_DIR
+
+# OUTPUT_DIR はテストが monkeypatch する互換ポイント（helpers._output_dir が参照）
+from web.config import OUTPUT_DIR  # noqa: F401
 from web.env_store import _read_env
 from web.services.openai_qa import OpenAIQAError, generate_openai_qa, has_openai_api_key
 from web.services.qa.advanced_generator import _advanced_payload, _testcases_payload
@@ -118,7 +120,9 @@ def api_qa_process_result() -> dict | tuple[dict, int]:
     domain = request.args.get("domain", "")
     if not _valid_domain(domain):
         return {"error": "not found"}, 404
-    if not (OUTPUT_DIR / domain).is_dir():
+    from web.services.qa.helpers import _output_dir
+
+    if not (_output_dir() / domain).is_dir():
         return {"error": "not found"}, 404
     return {"domain": domain, "outputs": _output_payload(domain)}
 

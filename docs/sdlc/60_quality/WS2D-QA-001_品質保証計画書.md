@@ -32,10 +32,10 @@
 
 | メトリクス | 目標 | 実測（2026-07-16） |
 |---|---|---|
-| 機能契約検証 | PASS | validated_features=17 |
-| L1/L2 テスト | 全 green | 1,794 passed |
+| 機能契約検証 | PASS | validated_features=19 |
+| L1/L2 テスト | 全 green | 1,831 passed |
 | L3 E2E | 全 green・skip 0 | 200 passed / 0 skipped |
-| カバレッジ | ≥80% | 84.32% |
+| カバレッジ | ≥80% | 84.30% |
 | トレーサビリティ GAP | 0 | 0（`WS2D-TM-001`） |
 | quarantine | 0 | 0 |
 

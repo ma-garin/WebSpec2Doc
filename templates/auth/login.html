@@ -1,47 +1,77 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ログイン — WebSpec2Doc</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}?v={{ _ver }}">
+  <title>ログイン - WebSpec2Doc</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+  <script>
+    // テーマの早期適用（描画前にフラッシュを防ぐ）。保存値がなければ OS 設定に追従。
+    (function () {
+      try {
+        var t = localStorage.getItem('webspec2doc.theme');
+        if (!t) t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', t);
+      } catch (e) { /* localStorage 不可環境では light のまま */ }
+    })();
+  </script>
 </head>
-<body>
-<div class="stage">
-  <aside class="brand">
-    <span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span>
-    <div class="logo">
-      <span class="mark">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
-      </span>
-      WebSpec2Doc
+<body class="auth-body">
+<div class="auth-split">
+
+  <aside class="auth-brand-pane" aria-hidden="true">
+    <div class="auth-brand-logo">
+      <span class="auth-brand-mark">W</span>
+      <span>WebSpec2Doc</span>
     </div>
-    <div class="pitch">
-      <h2>サイトの仕様を、<br>ドキュメントへ。</h2>
-      <p>クロールした Web サイトから仕様・テスト観点・成果物を自動生成するワークスペース。</p>
+    <div class="auth-brand-copy">
+      <h2>Webサイトの仕様を、<br>そのままドキュメントに。</h2>
+      <p>URLを入力するだけで、画面仕様書・テスト観点・テストケース・画面遷移図を自動生成。QAチームのドキュメント作成を一つの土台で。</p>
+      <div class="auth-brand-stats">
+        <div class="stat"><b>5+</b><span>出力フォーマット</span></div>
+        <div class="stat"><b>ISO/ISTQB</b><span>準拠テスト観点</span></div>
+        <div class="stat"><b>AutoRun</b><span>テスト自動実行</span></div>
+      </div>
     </div>
+    <div></div>
   </aside>
 
-  <main class="panel">
-    <form class="form" method="post" action="{{ url_for('auth.login_submit') }}" novalidate>
-      <h1>ログイン</h1>
-      <p class="sub">メールアドレスを入力してワークスペースへ進みます。</p>
+  <main class="auth-form-pane">
+    <div class="auth-form-box">
+      <h1>おかえりなさい</h1>
+      <p class="auth-form-lead">アカウントにログインして続けます。</p>
 
-      <div class="field {% if error %}err{% endif %}">
-        <label for="email">メールアドレス</label>
-        <input type="email" id="email" name="email" inputmode="email" autocomplete="email"
-               placeholder="you@example.com" value="{{ email|e }}" required autofocus>
-        {% if error %}
-          <p class="msg">{{ error }}</p>
-        {% else %}
-          <p class="hint">パスワードは不要です。入力したメールで識別します。</p>
-        {% endif %}
+      {% if error %}
+      <div class="auth-error" role="alert">
+        <b>ログインできませんでした</b>
+        <span>{{ error }}</span>
       </div>
+      {% endif %}
 
-      <button type="submit" class="btn primary">続ける</button>
-    </form>
+      <form method="post" action="/auth/login" novalidate>
+        <input type="hidden" name="next" value="{{ next_path }}">
+        <div class="auth-field">
+          <label for="email">メールアドレス</label>
+          <input type="email" id="email" name="email" value="{{ email }}"
+                 autocomplete="username" required autofocus>
+        </div>
+        <div class="auth-field">
+          <label for="password">パスワード</label>
+          <input type="password" id="password" name="password"
+                 autocomplete="current-password" required>
+        </div>
+        <button type="submit" class="auth-submit">ログイン</button>
+      </form>
+
+      <p class="auth-foot">アカウントは管理者から発行されます。<br>お困りの場合はワークスペースの管理者にお問い合わせください。</p>
+    </div>
   </main>
+
 </div>
 </body>
 </html>

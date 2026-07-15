@@ -13,9 +13,10 @@ if str(_SRC) not in sys.path:
 
 
 def create_app() -> Flask:
+    from web.auth import auth_guard, ensure_secret_key
     from web.routes import (
+        account,
         api_v1,
-        auth,
         auto_run,
         crawl,
         discover,
@@ -40,40 +41,21 @@ def create_app() -> Flask:
         static_folder=str(_ROOT / "static"),
     )
     app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
+    ensure_secret_key(app, _ROOT / "instance")
     _ver = str(int(time.time()))
     app.jinja_env.globals["_ver"] = _ver
-
-    # 利用者認証（メール自己申告 ＋ テナント選択）。既定 OFF で現行挙動を維持。
-    from pathlib import Path as _Path
-
-    from web.auth import auth_enabled
-    from web.auth.guard import auth_guard
-    from web.auth.store import load_or_create_secret_key
-
-    app.secret_key = load_or_create_secret_key(_Path(app.instance_path) / "auth")
-
-    @app.context_processor
-    def _inject_auth_context() -> dict[str, object]:
-        """テンプレートへ認証状態を注入する（アバター表示制御に使用）。
-
-        認証 OFF（既定）では current_user_email=None となり、topbar のアバターは
-        テンプレート側で描画されない（現行の見た目を維持）。
-        """
-        from web.auth import auth_enabled as _enabled
-        from web.auth.session import current_user_email
-
-        enabled = _enabled()
-        return {
-            "auth_enabled": enabled,
-            "current_user_email": current_user_email() if enabled else None,
-        }
-
     app.before_request(localhost_guard)
     app.before_request(csrf_guard)
-    if auth_enabled():
-        app.before_request(auth_guard)
+    app.before_request(auth_guard)
     app.after_request(add_security_headers)
-    app.register_blueprint(auth.bp)
+
+    @app.context_processor
+    def _auth_template_context() -> dict:
+        from flask import g
+
+        return {"auth_user": getattr(g, "auth_user", None)}
+
+    app.register_blueprint(account.bp)
     app.register_blueprint(pages.bp)
     app.register_blueprint(discover.bp)
     app.register_blueprint(site.bp)

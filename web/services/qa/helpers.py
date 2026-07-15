@@ -16,6 +16,8 @@ _VIEWPOINT_OVERRIDE: ContextVar[list[dict[str, Any]] | None] = ContextVar(
     "viewpoint_override", default=None
 )
 
+_OUTPUT_DIR_OVERRIDE: ContextVar[Path | None] = ContextVar("qa_output_dir_override", default=None)
+
 
 @contextmanager
 def use_viewpoint_snapshot(viewpoints: list[dict[str, Any]]):
@@ -24,6 +26,21 @@ def use_viewpoint_snapshot(viewpoints: list[dict[str, Any]]):
         yield
     finally:
         _VIEWPOINT_OVERRIDE.reset(token)
+
+
+@contextmanager
+def use_output_dir(path: Path):
+    """出力先を明示的に固定する（AutoRun 等、リクエストコンテキスト外の生成処理用）。
+
+    リクエスト処理中はテナントスコープを scoped_output_dir が自動解決するが、
+    バックグラウンドスレッドではコンテキストが無いため、呼び出し側が
+    リクエスト時に解決した出力先をこのコンテキストで指定する。
+    """
+    token = _OUTPUT_DIR_OVERRIDE.set(path)
+    try:
+        yield
+    finally:
+        _OUTPUT_DIR_OVERRIDE.reset(token)
 
 
 QA_STEPS = (
@@ -48,9 +65,15 @@ QA_ADVANCED_OUTPUTS = (
 
 
 def _output_dir() -> Path:
+    from web.tenancy import scoped_output_dir
+
+    override = _OUTPUT_DIR_OVERRIDE.get()
+    if override is not None:
+        return override
     route_mod = sys.modules.get("web.routes.qa_process")
     value = getattr(route_mod, "OUTPUT_DIR", OUTPUT_DIR)
-    return value if isinstance(value, Path) else Path(value)
+    base = value if isinstance(value, Path) else Path(value)
+    return scoped_output_dir(base)
 
 
 def _has_openai_api_key() -> bool:
@@ -82,10 +105,11 @@ def _load_report(path: Path | None) -> dict[str, Any] | None:
 
 
 def _input_payload(domain: str, report: dict[str, Any]) -> dict[str, Any]:
-    domain_dir = _output_dir() / domain
+    out_dir = _output_dir()
+    domain_dir = out_dir / domain
     return {
         "domain": domain,
-        "summary": _summary_for_domain(domain) | _qa_summary(report),
+        "summary": _summary_for_domain(domain, out_dir) | _qa_summary(report),
         "input_files": {
             "report_json": _existing_path(domain_dir / "report.json"),
             "spec_excel": _existing_path(domain_dir / "spec.xlsx"),

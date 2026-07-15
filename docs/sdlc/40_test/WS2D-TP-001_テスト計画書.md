@@ -8,7 +8,7 @@
 
 ## 1. テスト目的・範囲
 
-- 対象: WebSpec2Doc 全 17 機能（`quality/feature_contracts.yml`）。
+- 対象: WebSpec2Doc 全 19 機能（`quality/feature_contracts.yml`）。
 - 目的: 機能適合性・信頼性（異常系網羅）・使用性（a11y/ダーク）・保守性（カバレッジ）の担保。
 
 ## 2. テストレベル（多層ゲート）
@@ -16,17 +16,17 @@
 | レベル | 内容 | 実体 | 実行 |
 |---|---|---|---|
 | L0 契約 | 機能契約の機械検証（UI-only 禁止・シンボル実在・異常系必須） | `feature_contracts.yml` | `python scripts/quality_harness.py` |
-| L1 単体 | ドメイン中核（`src/`）の関数/クラス | tests/ 84 ファイル | `make test` |
-| L2 結合 | Flask ルート統合（test_client） | tests/ 22 ファイル | `make test` |
+| L1 単体 | ドメイン中核（`src/`）の関数/クラス | tests/ 85 ファイル | `make test` |
+| L2 結合 | Flask ルート統合（test_client） | tests/ 23 ファイル | `make test` |
 | L3 システム | 実ブラウザ E2E（Playwright） | tests/e2e/ 32 ファイル | `make verify-ui` |
 | 受入 | UAT シナリオ | `WS2D-AT-001` | 手動 |
 
 ## 3. 合格基準（リリースゲート）
 
-- L0: `validated_features=17` PASS。
-- L1/L2: 全 green（現状 **1,794 passed**）。
+- L0: `validated_features=19` PASS。
+- L1/L2: 全 green（現状 **1,831 passed**）。
 - L3: 全 green・**skip 0**（現状 **200 passed**）。quarantine 0 件。
-- カバレッジ: ≥80%（現状 **84.32%**）。
+- カバレッジ: ≥80%（現状 **84.30%**）。
 - ビジュアル回帰: ベースライン一致（意図変更時のみ再取得＋目視）。
 - Console error ゼロ・全 11 ビュー × light/dark 表示崩れなし。
 

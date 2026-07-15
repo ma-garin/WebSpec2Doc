@@ -5,18 +5,18 @@
 
 ## 1. テスト範囲
 
-- 対象: WebSpec2Doc 全 17 機能（`quality/feature_contracts.yml`）。
+- 対象: WebSpec2Doc 全 19 機能（`quality/feature_contracts.yml`）。
 - レベル: L0 契約 / L1 単体 / L2 結合 / L3 システム（E2E）/ 受入（手動）。
 
 ## 2. 実施結果サマリ（最終計測: 2026-07-16）
 
 | 指標 | 目標 | 実測 | 判定 |
 |---|---|---|---|
-| L0 機能契約検証 | PASS | validated_features=17 | ✅ |
-| L1/L2（`make test`） | 全 green | **1,794 passed** | ✅ |
+| L0 機能契約検証 | PASS | validated_features=19 | ✅ |
+| L1/L2（`make test`） | 全 green | **1,831 passed** | ✅ |
 | L3 E2E（`make verify-ui`） | 全 green・skip 0 | **200 passed / 0 skipped** | ✅ |
-| カバレッジ（`make coverage`） | ≥80% | **84.32%** | ✅ |
-| トレーサビリティ GAP | 0 | **0**（17/17 紐付け） | ✅ |
+| カバレッジ（`make coverage`） | ≥80% | **84.30%** | ✅ |
+| トレーサビリティ GAP | 0 | **0**（19/19 紐付け） | ✅ |
 | quarantine | 0 | **0** | ✅ |
 
 ## 3. 品質改善の要点（本一連の作業）
@@ -43,15 +43,15 @@
 
 ## 6. 品質評価とリリース推奨
 
-全ゲート green・GAP ゼロ・カバレッジ 84.32%・表示崩れなし・Console error ゼロ。
+全ゲート green・GAP ゼロ・カバレッジ 84.30%・表示崩れなし・Console error ゼロ。
 **リリース可**と評価する（受入テストは配布先での実施を推奨）。
 
 ## 7. 再現方法（監査者向け）
 
 ```bash
-python scripts/quality_harness.py            # validated_features=17
-make test                                    # 1,794 passed
+python scripts/quality_harness.py            # validated_features=19
+make test                                    # 1,831 passed
 make verify-ui                               # 200 passed / 0 skipped
-make coverage                                # Total coverage 84.32%
-python scripts/generate_traceability_doc.py  # 要件17/GAP 0
+make coverage                                # Total coverage 84.30%
+python scripts/generate_traceability_doc.py  # 要件19/GAP 0
 ```

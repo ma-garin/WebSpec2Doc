@@ -14,6 +14,13 @@
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
         <div class="app-topbar-actions" id="topbar-actions"></div>
+        {% if auth_user %}
+        <a href="/auth/account" title="アカウント（{{ auth_user.email }}）"
+           style="display:inline-flex;align-items:center;gap:8px;padding:4px 12px 4px 4px;border:1px solid var(--color-border);border-radius:var(--radius-full);text-decoration:none;color:var(--color-text);font-size:var(--text-sm);background:var(--color-surface)">
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--color-primary);color:#fff;font-weight:700;font-size:var(--text-xs)">{{ auth_user.name[:1] | upper }}</span>
+          <span>{{ auth_user.name }}</span>
+        </a>
+        {% endif %}
         <div class="app-topbar-tools">
           <button type="button" id="shortcut-help-btn" class="topbar-icon-btn" title="キーボードショートカット (?)" aria-label="キーボードショートカット一覧を表示">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h.01M18 14h.01M9 14h6"/></svg>
@@ -23,18 +30,5 @@
             <svg class="icon-theme-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
           </button>
         </div>
-        {% if auth_enabled and current_user_email %}
-        <div class="topbar-avatar-wrap" id="topbar-avatar">
-          <button type="button" id="topbar-avatar-btn" class="topbar-avatar-btn" aria-haspopup="menu" aria-expanded="false" aria-label="アカウントメニュー">
-            <span class="topbar-avatar-initial">{{ current_user_email[0]|upper }}</span>
-          </button>
-          <div class="topbar-avatar-menu" id="topbar-avatar-menu" role="menu" hidden>
-            <div class="topbar-avatar-email" title="{{ current_user_email|e }}">{{ current_user_email|e }}</div>
-            <form method="post" action="{{ url_for('auth.logout_action') }}" class="topbar-avatar-form">
-              <button type="submit" class="topbar-avatar-logout" role="menuitem">ログアウト</button>
-            </form>
-          </div>
-        </div>
-        {% endif %}
       </div>
     </header>

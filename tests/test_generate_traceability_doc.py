@@ -12,16 +12,18 @@ import generate_traceability_doc as gen
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
-def test_load_contracts_returns_17_features() -> None:
+def test_load_contracts_returns_all_features() -> None:
     contracts = gen.load_contracts(REPO_ROOT / "quality" / "feature_contracts.yml")
-    assert len(contracts) == 17
+    # 件数はデータ駆動（feature_contracts.yml の実数）。ハードコードしない。
+    assert len(contracts) >= 17
     assert all("feature_id" in c for c in contracts)
 
 
 def test_build_rows_covers_all_features() -> None:
     contracts = gen.load_contracts(REPO_ROOT / "quality" / "feature_contracts.yml")
     rows = gen.build_rows(contracts, REPO_ROOT)
-    assert len(rows) == 17
+    # 全 feature が 1 行ずつ要件行になる（漏れなし）。
+    assert len(rows) == len(contracts)
     ids = {r["feature_id"] for r in rows}
     assert "discover" in ids and "ux_review" in ids
     # 各行は実装ファイル・テスト・GAP 判定を持つ

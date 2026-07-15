@@ -16,13 +16,15 @@
 - 運用: ローカル単一利用者（既定）。社内サーバ展開時のみ `WEBSPEC2DOC_TRUSTED_HOSTS`＋
   `WEBSPEC2DOC_AUTH` で利用者ログイン＋ワークスペースを有効化（ADR-0004）。
 
-## 3. 機能要件一覧（17件）
+## 3. 機能要件一覧（19件）
 
 | 要件ID | 名称 | 優先度 | 受入基準（必須テスト種別） |
 |---|---|---|---|
 | `discover` | URL解析 / 画面発見 | critical | happy_path, error_path, evidence |
 | `crawl` | クロール / レポート生成 | critical | happy_path, error_path, cancel_path, checkpoint_path, evidence |
 | `login` | サイト認証 / セッション | critical | happy_path, error_path, session_expiry_path, evidence, timeout_path, cancel_path |
+| `account_auth` | アプリ利用者認証（ログイン/セッション/アカウント管理） | critical | happy_path, error_path, lockout_path, session_expiry_path, evidence |
+| `tenant_isolation` | テナント分離（出力・観点DB・APIトークンのワークスペース分離） | critical | happy_path, isolation_path, error_path, evidence |
 | `autorun` | AutoRun（全自動テスト実行） | high | happy_path, approval_path, cancel_path, error_path, timeout_path, evidence |
 | `diff_history` | 差分 / 履歴 / 再クロール | critical | happy_path, breaking_change_path, error_path, evidence |
 | `settings` | 設定 | high | happy_path, validation_path, evidence |
@@ -50,12 +52,16 @@
   （`src/crawler/politeness.py`）。
 - **ローカル安全性**: 既定 127.0.0.1 バインド、localhost_guard / CSRF ガード。
 
-## 5. 利用者・ワークスペース要件（オプトイン）
+## 5. 利用者認証・テナント分離要件（`account_auth` / `tenant_isolation`）
 
-`WEBSPEC2DOC_AUTH` 有効時のみ。詳細は `docs/design/auth-tenant-integration.md`。
-- 利用者ログイン（メール自己申告・パスワードなし）／ワークスペース選択。
-- **将来要件**: 外部 IdP（Google 等）連携、ワークスペース別データ物理分離
-  （設計は `docs/design/workspace-data-separation.md`、実装は次期）。
+商用/共有サーバ運用向けの認証・テナント分離を実装（詳細は `docs/AUTH_TENANCY.md`）。
+- 利用者ログイン・セッション・アカウント管理（パスワード・ロックアウト・API トークン）。
+- テナント分離: 出力・観点DB・API トークンをワークスペース単位で分離。
+- 実装: `web/auth.py` / `web/services/auth_store.py` / `web/tenancy.py` /
+  `web/routes/account.py`。有効化は環境変数（`docs/AUTH_TENANCY.md`）。
+
+> 注: 初期に検討した軽量版（メール自己申告＋WS選択、`docs/design/auth-tenant-integration.md` /
+> ADR-0004）は本商用実装に統合・置換された（履歴として design/adr を保持）。
 
 ## 6. 非機能要件
 

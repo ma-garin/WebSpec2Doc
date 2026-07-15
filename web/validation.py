@@ -5,8 +5,14 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from web.config import ALLOWED_FORMATS, DOMAIN_RE, OUTPUT_DIR
+from web.tenancy import scoped_output_dir
 
 _HTTP_URL_RE = re.compile(r"^https?://.{3,}", re.IGNORECASE)
+
+
+def _out() -> Path:
+    """テナントスコープ済みの出力ディレクトリ（リクエスト毎に解決）。"""
+    return scoped_output_dir(OUTPUT_DIR)
 
 
 def _clean_int(value: str, default: int, lo: int, hi: int) -> int:
@@ -27,12 +33,23 @@ def _valid_domain(domain: str) -> bool:
 
 
 def _safe_auth_path(raw: str) -> str:
-    """auth.json はプロジェクト配下のファイルのみ許可（任意ファイル読み取りを防ぐ）。"""
+    """auth.json はプロジェクト配下のファイルのみ許可（任意ファイル読み取りを防ぐ）。
+
+    テナントコンテキストがある場合は、他テナントのセッションを指せないよう
+    自テナントの出力ディレクトリ配下に限定する。
+    """
     if not raw:
         return ""
     try:
         target = Path(raw).resolve()
     except (OSError, ValueError, RuntimeError):
+        return ""
+    from web.tenancy import current_tenant
+
+    if current_tenant() is not None:
+        base = _out().resolve()
+        if base in target.parents and target.is_file():
+            return str(target)
         return ""
     base = Path.cwd().resolve()
     if (target == base or base in target.parents) and target.is_file():
@@ -49,7 +66,7 @@ def _safe_reference_doc_paths(raw: str, domain: str) -> list[str]:
     """
     if not raw or not _valid_domain(domain):
         return []
-    base = (OUTPUT_DIR / domain / "reference_docs").resolve()
+    base = (_out() / domain / "reference_docs").resolve()
     result: list[str] = []
     for candidate in raw.split(","):
         candidate = candidate.strip()
@@ -65,14 +82,14 @@ def _safe_reference_doc_paths(raw: str, domain: str) -> list[str]:
 
 
 def _safe_output_path(raw: str) -> Path | None:
-    """Resolve a path and ensure it stays inside OUTPUT_DIR (anti path-traversal)."""
+    """Resolve a path and ensure it stays inside the (tenant-scoped) output dir."""
     if not raw:
         return None
     try:
         target = Path(raw).resolve()
     except (OSError, ValueError, RuntimeError):
         return None
-    base = OUTPUT_DIR.resolve()
+    base = _out().resolve()
     if target != base and base not in target.parents:
         return None
     return target if target.is_file() else None

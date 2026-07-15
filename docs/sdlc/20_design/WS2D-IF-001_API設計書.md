@@ -2,7 +2,7 @@
 
 - 版数: 1.0 / 作成日: 2026-07-16 / 準拠: IPA 共通フレーム（外部設計）
 - **as-built**: 本一覧は `web/routes/*.py` から機械抽出（再生成コマンド末尾）。
-- 総 Blueprint 17・総エンドポイント 112。全て同一オリジン（既定 127.0.0.1:8765）。
+- 総 Blueprint 17・総エンドポイント 121。全て同一オリジン（既定 127.0.0.1:8765）。
 
 ## 1. 共通仕様
 
@@ -20,8 +20,10 @@
   `POST /sites/<domain>/crawl` / `GET /jobs/<job_id>` /
   `GET /sites/<domain>/jobs` / `GET /sites/<domain>/test-cases`
 
-### 利用者認証 `auth`（5）
-- `GET/POST /auth/login` / `GET /auth/tenants` / `POST /auth/tenants/select` / `POST /auth/logout`
+### 利用者認証 `account`（商用/共有サーバ対応）
+- `GET/POST /auth/login`, `POST /auth/logout`, `GET/POST /auth/setup`, `GET /auth/account`,
+  `GET /api/auth/me`, `POST /api/auth/password`, `GET/POST /api/auth/users`,
+  `GET/POST /api/auth/api-tokens`（テナント分離・API トークン。詳細は `docs/AUTH_TENANCY.md`）
 
 ### 解析・クロール
 - `discover`（2）: `POST /api/discover`, `POST /api/discover-stream`

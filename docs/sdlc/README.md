@@ -8,7 +8,7 @@
 - **MECE**: 既に充実している既存文書は複製せず**リンク参照**する（下表「既存」）。
   不足分のみ本体系で新設する（下表「新設」）。
 - **文書ID**: `WS2D-{種別}-{連番}`。要件IDは `quality/feature_contracts.yml` の
-  `feature_id`（17 件）を主キーとする。
+  `feature_id`（19 件）を主キーとする。
 - **規格ハイブリッド**: 文書体系は SIer/IPA 共通フレーム流、テスト文書の中身は
   ISTQB / ISO・IEC・IEEE 29119 / ISO・IEC 25010 準拠。
 
@@ -16,14 +16,14 @@
 
 | 指標 | 値 | 取得コマンド |
 |---|---|---|
-| 機能契約（要件） | 17 | `python scripts/quality_harness.py` → validated_features=17 |
-| 非E2Eテストファイル | 106 | `ls tests/test_*.py \| wc -l` |
+| 機能契約（要件） | 19 | `python scripts/quality_harness.py` → validated_features=19 |
+| 非E2Eテストファイル | 108 | `ls tests/test_*.py \| wc -l` |
 | E2Eテストファイル | 32 | `ls tests/e2e/test_*.py \| wc -l` |
-| テスト関数総数 | 1,948 | `grep -rhE '^\s*def test_' tests/ \| wc -l` |
-| L1/L2 テスト | 1,794 passed | `make test` |
+| テスト関数総数 | 1985 | `grep -rhE '^\s*def test_' tests/ \| wc -l` |
+| L1/L2 テスト | 1,831 passed | `make test` |
 | L3 E2E テスト | 200 passed / 0 skipped | `make verify-ui` |
-| カバレッジ | 84.32%（閾値80%） | `make coverage` |
-| Blueprint / エンドポイント | 17 / 112 | `grep -rhE '@.*\.(route\|get\|post…)' web/routes/*.py` |
+| カバレッジ | 84.30%（閾値80%） | `make coverage` |
+| Blueprint / エンドポイント | 17 / 121 | `grep -rhE '@.*\.(route\|get\|post…)' web/routes/*.py` |
 | 品質ハーネス | PASS | `python scripts/quality_harness.py` |
 
 ## 文書一覧と既存資産マッピング

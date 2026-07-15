@@ -16,9 +16,9 @@
 
 | 指標 | 値 |
 |---|---|
-| 単体テストファイル | 84 |
-| L1/L2 合計（`make test`） | **1,794 passed** |
-| カバレッジ（`src` + `web`） | **84.32%**（閾値 80%） |
+| 単体テストファイル | 85 |
+| L1/L2 合計（`make test`） | **1,831 passed** |
+| カバレッジ（`src` + `web`） | **84.30%**（閾値 80%） |
 | 実行コマンド | `make test` / `make coverage` |
 | 収集/実行時の警告 | 0（pyproject で error 昇格） |
 
@@ -36,6 +36,6 @@
 ## 4. 再現方法
 
 ```bash
-make test        # 1,794 passed
-make coverage    # Total coverage 84.32%（term-missing）
+make test        # 1,831 passed
+make coverage    # Total coverage 84.30%（term-missing）
 ```

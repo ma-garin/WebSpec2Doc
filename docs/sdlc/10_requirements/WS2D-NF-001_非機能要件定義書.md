@@ -7,7 +7,7 @@ ISO/IEC 25010 の 8 品質特性ごとに要件と現状（as-built の実測・
 
 ## 1. 機能適合性（Functional Suitability）
 - 生成物は evidence-only 原則で実測根拠に紐づく（根拠なきものは破棄）。
-- 要件 17 件が実装・テストまで追跡可能（`WS2D-TM-001`）。GAP は台帳で可視化。
+- 要件 19 件が実装・テストまで追跡可能（`WS2D-TM-001`）。GAP は台帳で可視化。
 
 ## 2. 性能効率性（Performance Efficiency）
 - クロール目安: 10 画面で約 2〜3 分（`view-dashboard` の表示、`CONTEXT.md`）。
@@ -29,7 +29,7 @@ ISO/IEC 25010 の 8 品質特性ごとに要件と現状（as-built の実測・
 - 異常系網羅: critical/high 機能は `failure_modes` と `required_tests` を契約で必須化
   （`quality_harness` が検証）。happy/failure/timeout/cancel/session-expiry を規定。
 - 回復性: クロールのチェックポイント／履歴からの再開、部分結果の保全。
-- 品質ゲート: L1/L2 1,794・L3 E2E 200（skip 0）green（`WS2D-TR-001` 実測）。
+- 品質ゲート: L1/L2 1,831・L3 E2E 200（skip 0）green（`WS2D-TR-001` 実測）。
 
 ## 6. セキュリティ（Security）
 - 既定 127.0.0.1 バインド、`localhost_guard`＋CSRF（Origin/Referer）ガード。
@@ -40,7 +40,7 @@ ISO/IEC 25010 の 8 品質特性ごとに要件と現状（as-built の実測・
 
 ## 7. 保守性（Maintainability）
 - コード規約: 1 ファイル 800 行以内・多数小ファイル・イミュータブル（`WS2D-CS-001`）。
-- カバレッジ: **84.32%**（閾値 80%、`make coverage`）。
+- カバレッジ: **84.30%**（閾値 80%、`make coverage`）。
 - 機能契約による構造検証（`quality_harness`：UI-only 実装の禁止・シンボル実在）。
 
 ## 8. 移植性（Portability）
@@ -51,8 +51,8 @@ ISO/IEC 25010 の 8 品質特性ごとに要件と現状（as-built の実測・
 
 | NFR 指標 | 目標 | 実測 |
 |---|---|---|
-| カバレッジ | ≥80% | 84.32% |
-| L1/L2 テスト | 全 green | 1,794 passed |
+| カバレッジ | ≥80% | 84.30% |
+| L1/L2 テスト | 全 green | 1,831 passed |
 | L3 E2E | 全 green・skip 0 | 200 passed / 0 skipped |
-| 機能契約検証 | PASS | validated_features=17 |
+| 機能契約検証 | PASS | validated_features=19 |
 | a11y 検査 | 統合済み | axe-core（ux_review） |

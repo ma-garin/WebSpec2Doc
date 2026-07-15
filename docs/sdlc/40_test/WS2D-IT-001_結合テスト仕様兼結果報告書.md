@@ -14,8 +14,8 @@
 
 | 指標 | 値 |
 |---|---|
-| 結合テストファイル（test_client/create_app 使用） | 22 |
-| L1/L2 合計（`make test`） | **1,794 passed** |
+| 結合テストファイル（test_client/create_app 使用） | 23 |
+| L1/L2 合計（`make test`） | **1,831 passed** |
 | 実行コマンド | `make test` |
 
 ## 3. 代表的な結合テスト（抜粋）
@@ -41,5 +41,5 @@
 
 ## 5. 再現方法
 ```bash
-make test    # 1,794 passed（L1 と合算）
+make test    # 1,831 passed（L1 と合算）
 ```

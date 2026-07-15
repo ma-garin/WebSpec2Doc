@@ -11,20 +11,34 @@ from flask import Blueprint, Response, request
 
 from web.config import OUTPUT_DIR
 from web.summary import _fmt_snap_ts, _summary_for_domain
+from web.tenancy import scoped_output_dir
 from web.validation import _safe_output_path, _valid_domain
 
 bp = Blueprint("history", __name__)
 logger = logging.getLogger(__name__)
 
 
+def _out() -> Path:
+    """テナントスコープ済みの出力ディレクトリ（リクエスト毎に解決）。"""
+    return scoped_output_dir(OUTPUT_DIR)
+
+
 @bp.get("/api/history")
 def api_history() -> dict:
     items: list[dict] = []
-    if OUTPUT_DIR.is_dir():
-        # ドット始まり（.playwright_env 等の隠しディレクトリ）はサイトではないため除外
-        domains = [d for d in OUTPUT_DIR.iterdir() if d.is_dir() and not d.name.startswith(".")]
+    out_dir = _out()
+    if out_dir.is_dir():
+        from web.tenancy import TENANTS_DIR_NAME
+
+        # ドット始まり（.playwright_env 等の隠しディレクトリ）と
+        # テナント領域（tenants/）はサイトではないため除外
+        domains = [
+            d
+            for d in out_dir.iterdir()
+            if d.is_dir() and not d.name.startswith(".") and d.name != TENANTS_DIR_NAME
+        ]
         for d in sorted(domains, key=lambda p: p.stat().st_mtime, reverse=True):
-            summary = _summary_for_domain(d.name)
+            summary = _summary_for_domain(d.name, out_dir)
             formats = [
                 name
                 for name, fname in (
@@ -59,11 +73,13 @@ def api_history() -> dict:
 def api_delete_site(domain: str) -> dict | tuple[dict, int]:
     if not _valid_domain(domain):
         return {"error": "invalid domain"}, 400
-    target_dir = OUTPUT_DIR / domain
-    # OUTPUT_DIR の外に出ないことをローカル参照で確認（_safe_output_path はモジュールレベルの定数を使うため）
+    out_dir = _out()
+    target_dir = out_dir / domain
+    # テナントスコープ済み出力ディレクトリの外に出ないことをローカル参照で確認
+    # （_safe_output_path はモジュールレベルの定数を使うため、ここでは _out() 基準で検証する）
     try:
         resolved = target_dir.resolve()
-        base = OUTPUT_DIR.resolve()
+        base = out_dir.resolve()
     except (OSError, ValueError):
         return {"error": "invalid path"}, 400
     if base not in resolved.parents:
@@ -84,7 +100,7 @@ def api_snapshots() -> dict | tuple[dict, int]:
     domain = request.args.get("domain", "")
     if not _valid_domain(domain):
         return {"error": "not found"}, 404
-    snaps_dir = OUTPUT_DIR / domain / "snapshots"
+    snaps_dir = _out() / domain / "snapshots"
     items: list[dict] = []
     if snaps_dir.is_dir():
         for f in sorted(snaps_dir.glob("*.json"), reverse=True):
@@ -112,7 +128,7 @@ def api_snapshot_diff() -> Response:
     domain = request.args.get("domain", "")
     if not _valid_domain(domain):
         return Response(status=404)
-    snaps_dir = OUTPUT_DIR / domain / "snapshots"
+    snaps_dir = _out() / domain / "snapshots"
     from_path = _safe_output_path(str(snaps_dir / (request.args.get("from", "") + ".json")))
     to_path = _safe_output_path(str(snaps_dir / (request.args.get("to", "") + ".json")))
     if from_path is None or to_path is None:
@@ -159,7 +175,8 @@ def api_snapshot_comparison() -> Response:
     domain = request.args.get("domain", "")
     if not _valid_domain(domain):
         return Response(status=404)
-    snaps_dir = OUTPUT_DIR / domain / "snapshots"
+    out_dir = _out()
+    snaps_dir = out_dir / domain / "snapshots"
     from_path = _safe_output_path(str(snaps_dir / (request.args.get("from", "") + ".json")))
     to_path = _safe_output_path(str(snaps_dir / (request.args.get("to", "") + ".json")))
     if from_path is None or to_path is None or not from_path.exists() or not to_path.exists():
@@ -186,7 +203,7 @@ def api_snapshot_comparison() -> Response:
     old_analyzed = analyze_pages(old_pages)
     new_analyzed = analyze_pages(new_pages)
     # 現行側クロール時に永続化された動的マスク（あれば）を再利用する。無ければマスクなし。
-    masks = load_dynamic_masks(OUTPUT_DIR / domain / "old")
+    masks = load_dynamic_masks(out_dir / domain / "old")
     result = compare_analyzed_pages(
         old_analyzed,
         new_analyzed,

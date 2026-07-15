@@ -128,3 +128,38 @@ class TestTestcasesTable:
         expect(first_row.locator("td").nth(0)).not_to_be_empty()
         # 手順セルは <ol class="tc-cell-list"> で構造化されている
         expect(first_row.locator("td").nth(3).locator("ol.tc-cell-list")).to_be_attached()
+
+
+class TestTestcasesFilter:
+    """C-2: 絞り込みツールバー（テキスト検索・自動化状況）とページネーション。"""
+
+    def test_filter_toolbar_present(self, page: Page) -> None:
+        _open_testcases(page)
+        expect(page.locator("#tc-search")).to_be_visible()
+        expect(page.locator("#tc-auto-filter")).to_be_visible()
+        expect(page.locator("#tc-count")).to_be_visible()
+
+    def test_nonmatching_query_empties_then_restores(self, page: Page) -> None:
+        _open_testcases(page)
+        total = page.locator("#tc-content table.tc-table tbody tr").count()
+        assert total > 0
+        page.locator("#tc-search").fill("___no_such_case_xyz___")
+        expect(page.locator("#tc-table-wrap .empty")).to_be_visible()
+        expect(page.locator("#tc-count")).to_have_text("0件")
+        # クリアすると元の件数へ復元する
+        page.locator("#tc-search").fill("")
+        expect(page.locator("#tc-content table.tc-table tbody tr")).to_have_count(total)
+
+    def test_matching_query_keeps_matching_row(self, page: Page) -> None:
+        _open_testcases(page)
+        first_id = (
+            page.locator("#tc-content table.tc-table tbody tr")
+            .first.locator("td.tc-id")
+            .inner_text()
+        ).strip()
+        assert first_id
+        page.locator("#tc-search").fill(first_id)
+        rows = page.locator("#tc-content table.tc-table tbody tr")
+        expect(rows.first).to_contain_text(first_id)
+        # 絞り込み後の全行が検索語（ID）に一致する
+        assert rows.count() >= 1

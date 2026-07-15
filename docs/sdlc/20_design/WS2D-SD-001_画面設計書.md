@@ -1,0 +1,53 @@
+# WS2D-SD-001 画面設計書
+
+- 版数: 1.0 / 作成日: 2026-07-16 / 準拠: IPA 共通フレーム（画面設計）
+- UI フローの用語は `CONTEXT.md`、刷新方針は `docs/design/ui-redesign-plan.md`。
+
+## 1. 画面構成（シェル）
+
+サイドバー（`nav.html`）＋トップバー（`topbar.html`）＋コンテンツ（SPA ビュー切替）。
+クライアント側 `switchView(name)`（`static/js/core.js`）でビューを出し分ける。
+
+- トップバー: パンくず・タイトル・**クイック検索**（⌘K・画面/サイト横断）・
+  テーマ切替・ショートカット・**アバター**（認証 ON 時のみ）。
+- 状態表示は `ui-states.js`（空 / ローディング / エラー＋再試行）に統一。
+
+## 2. 画面一覧（SPA ビュー）
+
+| ビューID (`data-view`) | 名称 | パス | 主な機能 |
+|---|---|---|---|
+| dashboard | ホーム | `/` | KPI カード＋解析履歴（`history.js`）／新規解析導線 |
+| generate | サイトを追加 / 再クロール | `/generate` | 4 ステップウィザード（解析→条件→実行→レポート） |
+| auto-run | AutoRun | `/auto-run` | URL→全自動テスト。承認モーダル（実行対象/デバイス/制限時間） |
+| run-history | 実行履歴 | `/run-history` | 種別タブ＋データテーブル＋ページネーション |
+| testcases | テストケース | `/testcases` | 6 列表＋テキスト/自動化フィルタ＋ページネーション |
+| qa-quality | 品質観点 | `/qa-quality` | ISTQB ベースの観点カード |
+| viewpoints | 観点管理 | `/viewpoints` | 3 ペイン（ツリー＋フィルタ＋インライン表） |
+| user-guide | ユーザーガイド | `/user-guide` | 使い方（`GUIDE_ja.md` と分担） |
+| settings | 設定 | `/settings` | API キー・接続・ローカル許可・テスト設計設定 |
+| traceability | トレーサビリティ | `/traceability/view` | 要件⇔テストのマトリクス（単独描画） |
+| usage | ROIダッシュボード | `/usage` | 利用実績→削減工数の推定表示 |
+
+レポートは generate 内のタブ構成（概要 / 画面別仕様 / テスト条件 / 設計 / 技法詳細 /
+画面遷移図 / 遷移表 / 履歴・差分＝計 8 タブ、`CONTEXT.md`）。
+
+## 3. 認証画面（`WEBSPEC2DOC_AUTH` 有効時）
+
+| 画面 | パス | 項目 |
+|---|---|---|
+| ログイン | `/auth/login` | メールアドレス（自己申告・パスワードなし） |
+| ワークスペース選択 | `/auth/tenants` | 所属ワークスペース一覧・既定選択・別アカウント |
+
+`templates/auth/*` ＋ `static/css/auth.css`（モックデザイン準拠）。
+
+## 4. デザインシステム
+
+- トークン: `static/tokens.css`（色・間隔・角丸・影・ライト/ダーク）。
+- 主色 `#1976D2` / `#0D47A1`、地色 `#F4F6F9`。バッジは `--c` 基準色＋`color-mix`
+  の soft パターンでダーク自動追従。
+- 生 hex はエクスポート下地の白のみ（テーマ非依存）。UI のダーク gap ゼロ。
+
+## 5. 付録: ドッグフーディング証跡
+
+WebSpec2Doc 自身を WebSpec2Doc でクロールした生成物（画面仕様・遷移図）を
+`WS2D-ST-001` のシステムテスト証跡として採用する（自製品での自己検証）。

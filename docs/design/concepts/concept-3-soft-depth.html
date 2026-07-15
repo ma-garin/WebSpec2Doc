@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WebSpec2Doc デザイン候補 — 案3 Soft Depth（レイヤード）</title>
+<style>
+
+*{margin:0;padding:0;box-sizing:border-box}
+button{font:inherit;cursor:pointer;background:none;border:none;color:inherit}
+body{font-family:'Noto Sans JP','Noto Sans CJK JP','Hiragino Sans','Yu Gothic',sans-serif;
+  font-size:var(--fs,14px);color:var(--text);background:var(--bg);line-height:1.6;
+  -webkit-font-smoothing:antialiased}
+svg{display:block}
+.shell{display:grid;grid-template-columns:var(--sidebar-w,256px) minmax(0,1fr);min-height:100vh}
+.sidebar{background:var(--sidebar-bg,var(--surface));border-right:1px solid var(--sidebar-border,var(--border));
+  padding:20px 14px 16px;display:flex;flex-direction:column;gap:14px}
+.brand{display:flex;align-items:center;gap:10px;padding:2px 6px}
+.brand-mark{width:30px;height:30px;border-radius:var(--radius-brand,var(--radius-ctl));display:flex;align-items:center;
+  justify-content:center;font-weight:800;color:#fff;font-size:15px;flex:none;
+  background:var(--brand-mark-bg,var(--primary))}
+.brand-text{display:flex;flex-direction:column;line-height:1.3}
+.brand-text strong{font-size:14px;color:var(--sidebar-text,var(--text))}
+.brand-text span{font-size:10.5px;color:var(--sidebar-text-2,var(--text-3))}
+.sidebar-cta{height:40px}
+.sidebar-cta svg{width:15px;height:15px}
+.nav{display:flex;flex-direction:column;gap:2px;flex:1}
+.nav-group{font-size:10.5px;font-weight:600;letter-spacing:.07em;color:var(--sidebar-text-2,var(--text-3));
+  margin:14px 10px 5px}
+.nav > .nav-group:first-child{margin-top:2px}
+.nav-item{display:flex;align-items:center;gap:10px;height:36px;padding:0 10px;
+  border-radius:var(--radius-ctl);color:var(--sidebar-text-2,var(--text-2));font-size:13px;text-align:left}
+.nav-item svg{width:17px;height:17px;flex:none}
+.nav-item.is-active{background:var(--nav-active-bg);color:var(--nav-active-text);font-weight:600}
+.sidebar-foot{font-size:11px;color:var(--sidebar-text-2,var(--text-3));line-height:1.6;
+  padding:12px 8px 2px;border-top:1px solid var(--sidebar-foot-border,var(--divider))}
+.main{display:flex;flex-direction:column;min-width:0}
+.topbar{display:flex;align-items:center;gap:18px;padding:0 26px;height:var(--topbar-h,60px);
+  background:var(--topbar-bg,var(--surface));border-bottom:1px solid var(--topbar-border,var(--border))}
+.topbar-lead{min-width:0;flex:none}
+.breadcrumb{font-size:11px;color:var(--text-3);display:flex;gap:6px;line-height:1.4}
+.topbar-title{font-size:14.5px;font-weight:700;line-height:1.4}
+.search{flex:1;max-width:400px;margin:0 auto;display:flex;align-items:center;gap:9px;height:36px;
+  padding:0 12px;background:var(--search-bg,var(--surface-2));border:1px solid var(--search-border,var(--border));
+  border-radius:var(--radius-search,var(--radius-ctl));color:var(--text-3);font-size:12.5px}
+.search svg{width:14px;height:14px;flex:none}
+.search kbd{margin-left:auto;font-family:inherit;font-size:10.5px;border:1px solid var(--border);
+  border-radius:5px;padding:0 6px;color:var(--text-3);background:var(--surface)}
+.topbar-right{display:flex;align-items:center;gap:8px;flex:none;margin-left:auto}
+.user-chip{display:flex;align-items:center;gap:8px;padding:3px 12px 3px 4px;border:1px solid var(--border);
+  border-radius:var(--radius-chip,999px);font-size:12.5px;background:var(--surface)}
+.avatar{width:26px;height:26px;border-radius:50%;background:var(--primary);color:var(--on-primary,#fff);
+  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.icon-btn{width:34px;height:34px;border-radius:var(--radius-ctl);display:flex;align-items:center;
+  justify-content:center;color:var(--text-2);background:var(--icon-btn-bg,transparent)}
+.icon-btn svg{width:17px;height:17px}
+.content{flex:1;padding:28px 32px 44px}
+.content-inner{max-width:var(--content-w,900px);margin:0 auto;display:flex;flex-direction:column;
+  gap:var(--section-gap,22px)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:38px;padding:0 16px;
+  border-radius:var(--radius-btn,var(--radius-ctl));font-size:13px;font-weight:600;letter-spacing:.01em}
+.btn-primary{background:var(--primary);color:var(--on-primary,#fff)}
+.btn-ghost{border:1px solid var(--border-strong,var(--border));background:var(--surface);color:var(--text-2)}
+.hero{background:var(--hero-bg,var(--surface));border:var(--hero-border,1px solid var(--border));
+  border-radius:var(--radius-hero,var(--radius-card));padding:var(--hero-pad,30px 32px 26px);
+  box-shadow:var(--shadow-hero,var(--shadow-card,none))}
+.hero-title{font-size:var(--hero-title-size,25px);font-weight:700;letter-spacing:-.01em;line-height:1.4}
+.hero-sub{color:var(--text-2);font-size:13.5px;margin-top:6px}
+.hero-form{display:flex;gap:10px;margin-top:18px}
+.url-input{flex:1;display:flex;align-items:center;height:46px;padding:0 16px;
+  background:var(--input-bg,var(--surface-2));border:1px solid var(--input-border,var(--border));
+  border-radius:var(--radius-input,var(--radius-ctl));color:var(--text-3);font-size:13.5px;
+  box-shadow:var(--input-shadow,none)}
+.hero-start{height:46px;padding:0 24px;font-size:14px}
+.hero-steps{display:flex;align-items:center;gap:10px;margin-top:16px;font-size:12.5px;
+  color:var(--text-2);flex-wrap:wrap}
+.hero-steps .step{display:inline-flex;align-items:center;gap:6px}
+.hero-steps .step b{display:inline-flex;width:19px;height:19px;border-radius:50%;
+  background:var(--step-bg,var(--primary-bg));color:var(--step-text,var(--primary-ink));
+  align-items:center;justify-content:center;font-size:10.5px;flex:none}
+.hero-steps .arrow{color:var(--text-3)}
+.hero-steps .note{color:var(--text-3);margin-left:4px}
+.sample-btn{margin-left:auto;font-size:12.5px;color:var(--link,var(--primary));font-weight:600;
+  text-decoration:underline;text-underline-offset:3px}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}
+.mode-card{display:flex;align-items:center;gap:12px;padding:13px 16px;border:1px solid var(--border);
+  border-radius:var(--radius-mode,var(--radius-ctl));background:var(--mode-bg,var(--surface));text-align:left;
+  box-shadow:var(--shadow-mode,none)}
+.mode-icon{width:36px;height:36px;border-radius:var(--radius-ctl);background:var(--surface-2);
+  display:flex;align-items:center;justify-content:center;font-size:17px;flex:none}
+.mode-body{display:flex;flex-direction:column;line-height:1.45}
+.mode-body b{font-size:13.5px}
+.mode-body small{font-size:12px;color:var(--text-2)}
+.mode-primary{border-color:var(--mode-primary-border,var(--primary));
+  background:var(--mode-primary-bg,var(--primary-bg))}
+.section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px}
+.section-title{font-size:16.5px;font-weight:700;line-height:1.4}
+.section-copy{font-size:12.5px;color:var(--text-2);margin-top:2px}
+.section-actions{display:flex;gap:8px;flex:none}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--stats-gap,12px)}
+.stat-card{background:var(--surface);border:var(--card-border,1px solid var(--border));
+  border-radius:var(--radius-card);padding:14px 16px 13px;box-shadow:var(--shadow-card,none)}
+.stat-head{display:flex;align-items:center;gap:8px;color:var(--text-2);font-size:12px}
+.stat-icon{width:27px;height:27px;border-radius:var(--radius-stat-icon,var(--radius-ctl));display:flex;
+  align-items:center;justify-content:center;background:var(--stat-icon-bg,var(--surface-2));
+  color:var(--stat-icon-color,var(--text-2));flex:none}
+.stat-icon svg{width:15px;height:15px}
+.stat-num{font-size:26px;font-weight:700;letter-spacing:-.02em;margin-top:7px;line-height:1.15;
+  font-variant-numeric:tabular-nums}
+.stat-sub{font-size:11.5px;color:var(--text-3);margin-top:2px}
+.stat-warn .stat-icon{background:var(--warn-bg);color:var(--warn)}
+.table-card{background:var(--surface);border:var(--card-border,1px solid var(--border));
+  border-radius:var(--radius-card);box-shadow:var(--shadow-card,none);overflow:hidden}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{text-align:left;font-size:11.5px;font-weight:600;color:var(--thead-text,var(--text-3));
+  padding:10px 16px;border-bottom:1px solid var(--border);background:var(--thead-bg,transparent);
+  letter-spacing:.04em;white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid var(--divider);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+th.num,td.num{text-align:right;font-variant-numeric:tabular-nums}
+th.th-actions{text-align:right}
+.site-name{font-weight:600;font-size:13.5px}
+.site-url{font-size:11.5px;color:var(--text-3);font-family:'JetBrains Mono',ui-monospace,'SFMono-Regular',Consolas,monospace;margin-top:1px}
+.pill{display:inline-flex;align-items:center;padding:2px 9px;border-radius:999px;font-size:11px;
+  font-weight:600;background:var(--pill-bg,var(--surface-2));color:var(--pill-text,var(--text-2));white-space:nowrap}
+.pill-first{background:var(--primary-bg);color:var(--primary-ink)}
+.pill-diff{background:var(--warn-bg);color:var(--warn);margin-left:6px}
+.fresh{font-size:12.5px;color:var(--text-2)}
+.fresh-today{color:var(--ok,#2E7D32);font-weight:600}
+.row-actions{display:flex;gap:6px;justify-content:flex-end}
+.btn-xs{height:28px;padding:0 12px;font-size:12px;border-radius:var(--radius-btn-xs,var(--radius-ctl));
+  border:1px solid var(--border-strong,var(--border));background:var(--surface);color:var(--text-2);
+  font-weight:600;display:inline-flex;align-items:center}
+.btn-xs.primary{border-color:transparent;background:var(--primary-bg);color:var(--primary-ink)}
+
+
+:root{
+  --fs:14px;--content-w:900px;--section-gap:24px;
+  --bg:#E7EDF6;--surface:#FFFFFF;--surface-2:#F1F5FA;
+  --border:#E2E9F3;--divider:#ECF1F8;--border-strong:#CFDCEC;
+  --text:#1C2A3A;--text-2:#4E617A;--text-3:#8494AB;
+  --primary:#1D6FE0;--on-primary:#fff;--primary-bg:#E2EEFC;--primary-ink:#1356B4;--link:#1D6FE0;
+  --ok:#2E7D32;--warn:#C05717;--warn-bg:#FBEAD8;
+  --radius-card:16px;--radius-ctl:10px;--radius-hero:20px;--radius-input:12px;--radius-search:12px;
+  --radius-brand:9px;
+  --shadow-card:0 1px 2px rgba(23,43,77,.05),0 10px 30px rgba(23,43,77,.08);
+  --card-border:1px solid rgba(255,255,255,.9);--hero-border:1px solid rgba(255,255,255,.9);
+  --sidebar-bg:rgba(255,255,255,.62);--sidebar-border:rgba(255,255,255,.95);
+  --topbar-bg:rgba(255,255,255,.72);--topbar-border:rgba(255,255,255,.95);
+  --nav-active-bg:#FFFFFF;--nav-active-text:#1356B4;
+  --hero-bg:linear-gradient(180deg,#FFFFFF 0%,#F5F9FE 100%);--hero-pad:32px 34px 28px;
+  --hero-title-size:26px;
+  --search-bg:rgba(255,255,255,.85);--search-border:rgba(255,255,255,.9);
+  --input-bg:#F3F7FC;--input-border:transparent;
+  --input-shadow:inset 0 1px 3px rgba(23,43,77,.07);
+  --stat-icon-bg:linear-gradient(135deg,#E2EEFC,#F3F8FE);--stat-icon-color:#1D6FE0;
+  --mode-bg:#FFFFFF;--mode-primary-bg:linear-gradient(135deg,#E9F2FE,#F7FAFF);
+  --mode-primary-border:rgba(29,111,224,.35);
+  --shadow-mode:0 1px 2px rgba(23,43,77,.04),0 6px 18px rgba(23,43,77,.05);
+  --brand-mark-bg:linear-gradient(135deg,#1D6FE0,#53A0F4);
+  --thead-text:#7788A0;
+}
+body{background:linear-gradient(160deg,#EAF0F8 0%,#E4EBF5 55%,#EDF1F8 100%)}
+.sidebar{backdrop-filter:blur(14px)}
+.topbar{backdrop-filter:blur(14px)}
+.nav-item.is-active{box-shadow:0 1px 4px rgba(23,43,77,.10)}
+.hero-start{box-shadow:0 6px 16px rgba(29,111,224,.30)}
+.sidebar-cta{box-shadow:0 5px 14px rgba(29,111,224,.26)}
+.mode-card{border:1px solid rgba(255,255,255,.9)}
+.user-chip{background:rgba(255,255,255,.85);border-color:rgba(255,255,255,.9)}
+.search kbd{border-color:var(--border)}
+.btn-ghost{border-color:transparent;background:rgba(255,255,255,.85);
+  box-shadow:0 1px 3px rgba(23,43,77,.08)}
+.btn-xs{border-color:transparent;box-shadow:0 1px 2px rgba(23,43,77,.10)}
+
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-mark">W</span>
+      <span class="brand-text"><strong>WebSpec2Doc</strong><span>QAドキュメント生成</span></span></div>
+    <button class="btn btn-primary sidebar-cta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg><span>新規解析</span></button>
+    <nav class="nav">
+      <div class="nav-group">メイン</div>
+      <button class="nav-item is-active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11.5L12 4l9 7.5"/><path d="M5.5 10v10h13V10M9.5 20v-6h5v6"/></svg><span>ホーム</span></button>
+      <button class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg><span>新規解析</span></button>
+      <button class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2L4 14h8l-1 8 9-12h-8z"/></svg><span>AutoRun</span></button>
+      <button class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 8v5l3 2"/><circle cx="12" cy="12" r="9"/></svg><span>実行履歴</span></button>
+      <button class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 4h9v16H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1z"/><path d="M9 3v3h6V3M9 11l2 2 4-4"/></svg><span>テストケース</span></button>
+      <div class="nav-group">ツール</div>
+      <button class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6l7-3z"/><path d="M9 12l2 2 4-5"/></svg><span>品質観点</span></button>
+      <button class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h8M8 16h5"/><circle cx="18" cy="17" r="3" fill="currentColor" stroke="none"/></svg><span>観点管理</span></button>
+      <div class="nav-group">サポート</div>
+      <button class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h7v16H4zM13 4h7v16h-7z"/></svg><span>ユーザーガイド</span></button>
+      <button class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6L7 7M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/></svg><span>設定</span></button>
+    </nav>
+    <div class="sidebar-foot">URLから画面仕様書・テスト設計・画面遷移図を生成します。</div>
+  </aside>
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-lead">
+        <div class="breadcrumb"><span>WebSpec2Doc</span><span class="sep">/</span><span>ホーム</span></div>
+        <div class="topbar-title">QAドキュメント生成</div>
+      </div>
+      <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><span class="search-ph">画面・サイトを検索</span><kbd>⌘K</kbd></div>
+      <div class="topbar-right">
+        <div class="user-chip"><span class="avatar">Y</span><span>Yuki</span></div>
+        <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h.01M18 14h.01M9 14h6"/></svg></button>
+        <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
+      </div>
+    </header>
+    <main class="content"><div class="content-inner">
+
+      <section class="hero">
+        <h1 class="hero-title">URLからQAドキュメントを自動生成</h1>
+        <p class="hero-sub">稼働中のWebシステムを解析し、画面仕様書・テスト設計・画面遷移図をまとめて作成します。</p>
+        <div class="hero-form">
+          <div class="url-input"><span>https://example.com&#12288;解析したいURLを入力</span></div>
+          <button class="btn btn-primary hero-start">解析を始める</button>
+        </div>
+        <div class="hero-steps">
+          <span class="step"><b>1</b>画面を解析</span><span class="arrow">→</span>
+          <span class="step"><b>2</b>画面仕様書</span><span class="arrow">→</span>
+          <span class="step"><b>3</b>テスト設計</span>
+          <span class="note">目安: 10画面で約2〜3分</span>
+          <button class="sample-btn">サンプルURLで試す</button>
+        </div>
+        <div class="modes">
+          <button class="mode-card"><span class="mode-icon">✍</span>
+            <span class="mode-body"><b>Test Design</b><small>画面を確認しながら生成条件を設定</small></span></button>
+          <button class="mode-card mode-primary"><span class="mode-icon">⚡</span>
+            <span class="mode-body"><b>AutoRun</b><small>URLからテスト実行まで全自動</small></span></button>
+        </div>
+      </section>
+
+      <div class="section-head">
+        <div><h2 class="section-title">解析履歴</h2>
+          <p class="section-copy">過去に解析したサイトのドキュメント確認や再クロールができます。</p></div>
+        <div class="section-actions">
+          <button class="btn btn-ghost">再読み込み</button>
+          <button class="btn btn-primary">＋ 新規解析</button>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat-card"><div class="stat-head"><span class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></span><span>解析サイト</span></div><div class="stat-num">4</div><div class="stat-sub">登録済みのサイト数</div></div>
+        <div class="stat-card"><div class="stat-head"><span class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg></span><span>総画面数</span></div><div class="stat-num">63</div><div class="stat-sub">解析済みの画面の合計</div></div>
+        <div class="stat-card"><div class="stat-head"><span class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span><span>総項目数</span></div><div class="stat-num">339</div><div class="stat-sub">抽出された入力項目の合計</div></div>
+        <div class="stat-card stat-warn"><div class="stat-head"><span class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg></span><span>差分あり</span></div><div class="stat-num">1</div><div class="stat-sub">要確認</div></div>
+      </div>
+
+      <div class="table-card">
+        <table>
+          <thead><tr><th>サイト</th><th class="num">画面</th><th class="num">項目</th>
+            <th>解析回数</th><th>最終解析</th><th class="th-actions">操作</th></tr></thead>
+          <tbody>
+            <tr><td><div class="site-name">社内ポータル</div><div class="site-url">https://portal.example.co.jp</div></td><td class="num">24</td><td class="num">138</td><td><span class="pill">5回</span></td><td><span class="fresh fresh-today">今日</span></td><td><div class="row-actions"><button class="btn-xs primary">開く</button><button class="btn-xs">再解析</button></div></td></tr>
+            <tr class="has-drift"><td><div class="site-name">会員向けECサイト</div><div class="site-url">https://shop.example.com</div></td><td class="num">18</td><td class="num">96</td><td><span class="pill">3回</span></td><td><span class="fresh">2日前</span><span class="pill pill-diff">差分あり</span></td><td><div class="row-actions"><button class="btn-xs primary">開く</button><button class="btn-xs">再解析</button></div></td></tr>
+            <tr><td><div class="site-name">予約管理システム</div><div class="site-url">https://booking.example.jp</div></td><td class="num">12</td><td class="num">64</td><td><span class="pill">8回</span></td><td><span class="fresh">5日前</span></td><td><div class="row-actions"><button class="btn-xs primary">開く</button><button class="btn-xs">再解析</button></div></td></tr>
+            <tr><td><div class="site-name">勤怠管理システム</div><div class="site-url">https://kintai.example.co.jp</div></td><td class="num">9</td><td class="num">41</td><td><span class="pill pill-first">初回</span></td><td><span class="fresh">12日前</span></td><td><div class="row-actions"><button class="btn-xs primary">開く</button><button class="btn-xs">再解析</button></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div></main>
+  </div>
+</div>
+
+</body>
+</html>

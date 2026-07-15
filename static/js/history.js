@@ -21,7 +21,12 @@ async function loadHistory() {
     }));
     body.querySelectorAll('.hist-delete').forEach(b => b.addEventListener('click', () => deleteSite(b.dataset.domain, b)));
   } catch (e) {
-    body.innerHTML = '<div class="empty">解析履歴の読み込みに失敗しました。</div>';
+    // 空状態・エラー状態は ui-states.js に統一（再試行導線つき）。
+    uiError(body, {
+      title: '解析履歴の読み込みに失敗しました',
+      message: '通信状態を確認して、もう一度お試しください。',
+      onRetry: loadHistory,
+    });
   }
 }
 document.getElementById('reload-history')?.addEventListener('click', loadHistory);

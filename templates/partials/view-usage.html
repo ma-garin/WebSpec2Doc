@@ -1,20 +1,22 @@
 <!-- ===== ROI ダッシュボード（利用実績・推定削減工数）===== -->
 <section class="view" id="view-usage">
   <style>
+    /* 色はすべて tokens 参照でライト/ダーク自動追従（生 hex を持たない） */
     .usage-header { margin-bottom: 16px; }
     .usage-header h2 { margin: 0 0 4px; font-size: 18px; }
-    .usage-sub { font-size: 13px; color: var(--text-muted, #555); }
+    .usage-sub { font-size: 13px; color: var(--text-muted); }
     .usage-cards { display: flex; flex-wrap: wrap; gap: 14px; margin: 18px 0; }
     .usage-card {
-      flex: 1; min-width: 160px; background: #fff;
-      border: 1px solid #d4ddea; border-radius: 8px; padding: 16px; text-align: center;
+      flex: 1; min-width: 160px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; text-align: center;
+      box-shadow: var(--shadow-sm);
     }
-    .usage-card .num { font-size: 26px; font-weight: 700; color: #0043ce; }
-    .usage-card .label { font-size: 12px; color: #555; margin-top: 4px; }
-    .usage-card.highlight { background: #edf5ff; border-color: #0f62fe; }
-    .usage-note { font-size: 12px; color: #6b7787; margin-top: 8px; }
-    .usage-coef { font-size: 12px; color: #555; margin-top: 12px; }
-    .usage-coef code { background: #f0f4fa; padding: 1px 5px; border-radius: 4px; }
+    .usage-card .num { font-size: 26px; font-weight: 800; color: var(--primary); font-variant-numeric: tabular-nums; }
+    .usage-card .label { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+    .usage-card.highlight { background: var(--info-bg); border-color: var(--primary); }
+    .usage-note { font-size: 12px; color: var(--text-subtle); margin-top: 8px; }
+    .usage-coef { font-size: 12px; color: var(--text-muted); margin-top: 12px; }
+    .usage-coef code { background: var(--surface-subtle); padding: 1px 5px; border-radius: var(--radius-sm); }
   </style>
 
   <div class="usage-header">

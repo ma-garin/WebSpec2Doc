@@ -65,6 +65,7 @@ function _exportUmlPng() {
     canvas.height = h * 2;
     const ctx = canvas.getContext('2d');
     ctx.scale(2, 2);
+    // エクスポート PNG の下地は常に白（文書貼付・印刷用途。UI テーマに依存させない）
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, w, h);
     ctx.drawImage(img, 0, 0, w, h);

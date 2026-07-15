@@ -54,24 +54,27 @@
               gap: 4px;
               white-space: nowrap;
             }
-            /* ステータスバッジ */
+            /* ステータスバッジ（soft パターン。--c 基準色から color-mix でダーク追従） */
             .status-badge {
               display: inline-block;
-              padding: 2px 8px;
-              border-radius: 12px;
+              padding: 2px 9px;
+              border-radius: 999px;
               font-size: 11px;
-              font-weight: 600;
-              color: #fff;
+              font-weight: 700;
               white-space: nowrap;
+              border: 1px solid;
+              color: var(--c);
+              background: color-mix(in srgb, var(--c) 14%, var(--surface));
+              border-color: color-mix(in srgb, var(--c) 32%, transparent);
             }
-            .status-draft    { background: #888; }
-            .status-reviewing { background: #e67e22; }
-            .status-approved  { background: #27ae60; }
-            .status-frozen    { background: #2980b9; }
+            .status-draft    { --c: var(--text-muted); }
+            .status-reviewing { --c: var(--color-high); }
+            .status-approved  { --c: var(--color-low); }
+            .status-frozen    { --c: var(--info); }
             #review-empty {
               padding: 32px;
               text-align: center;
-              color: var(--text-muted, #888);
+              color: var(--text-muted);
               font-size: 14px;
             }
           </style>

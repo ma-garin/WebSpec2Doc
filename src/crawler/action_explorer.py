@@ -297,6 +297,27 @@ def _wait_for_validation_feedback(page: Page) -> None:
         pass
 
 
+def _try_click_submit(page: Page, form: FormData) -> bool:
+    """フォームの submit を best-effort でクリックする（失敗は致命ではない）。
+
+    submit クリックは JS フレームワーク（React Hook Form 等）の遅延バリデーションを
+    誘発するために行う。ただし HTML5 ネイティブの :invalid は未 submit でも
+    validationMessage を保持するため、クリックできなくても後段の収集は成立する。
+    複合セレクタ（action 指定）が一致しない場合はフォームスコープにフォールバックする。
+    """
+    candidates: list[str] = []
+    if form.action:
+        candidates.append(f"form[action='{form.action}'] [type=submit]")
+    candidates.append("[type=submit]")
+    for selector in candidates:
+        try:
+            page.click(selector, timeout=_CLICK_TIMEOUT_MS)
+            return True
+        except Exception as exc:
+            logger.debug("submit クリック試行に失敗しました: %s (%s)", selector, exc)
+    return False
+
+
 def _dry_run_form_validation(
     page: Page,
     form: FormData,
@@ -310,15 +331,17 @@ def _dry_run_form_validation(
         except Exception as exc:
             logger.debug("dry-run route.abort に失敗しました: %s", exc)
 
-    selector = f"form[action='{form.action}'] [type=submit]" if form.action else "[type=submit]"
     raw_messages: Any = []
     try:
         page.route("**/*", _abort)
-        page.click(selector, timeout=_CLICK_TIMEOUT_MS)
+        # submit を試行して遅延バリデーションも誘発するが、クリック成否に関わらず
+        # 後段で :invalid を収集する（クリック失敗で観測を落とさない）。
+        _try_click_submit(page, form)
         _wait_for_validation_feedback(page)
         raw_messages = page.evaluate(_VALIDATION_MESSAGES_JS)
     except Exception as exc:
-        logger.debug("バリデーション実測をスキップしました: %s (%s)", selector, exc)
+        # 収集自体が失敗した場合は黙殺せず warning で可視化する（原因究明のため）。
+        logger.warning("バリデーション実測に失敗しました（action=%s）: %s", form.action, exc)
     finally:
         try:
             page.unroute("**/*", _abort)

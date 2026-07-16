@@ -84,6 +84,38 @@ def _index_html() -> str:
     return appmod.app.test_client().get("/").get_data(as_text=True)
 
 
+def test_first_wave_operations_controls_are_wired() -> None:
+    html = _index_html()
+    for element_id in (
+        "set-tab-operations",
+        "set-panel-operations",
+        "ops-site",
+        "ops-timezone",
+        "ops-save",
+        "ops-test-notify",
+    ):
+        assert f'id="{element_id}"' in html
+    assert 'data-type="schedule"' in html
+
+
+def test_first_wave_onboarding_is_local_and_replayable() -> None:
+    html = _index_html()
+    assert '<section class="onboarding-checklist" id="onboarding-checklist" hidden' in html
+    for element_id in (
+        "onboarding-checklist",
+        "onboarding-site-registered",
+        "onboarding-first-crawl",
+        "onboarding-report-viewed",
+        "onboarding-demo-btn",
+        "restart-tour",
+    ):
+        assert f'id="{element_id}"' in html
+    assert "vendor/driver.js/driver.css" in html
+    assert "vendor/driver.js/driver.js.iife.js" in html
+    assert "js/onboarding.js" in html
+    assert "cdn.jsdelivr.net/npm/driver.js" not in html
+
+
 def test_discover_btn_is_in_url_row() -> None:
     html = _index_html()
     assert 'id="discover-btn"' in html

@@ -4,6 +4,7 @@
             <button type="button" class="set-tab is-active" data-tab="api" role="tab" aria-selected="true" aria-controls="set-panel-api" id="set-tab-api" tabindex="0">APIキー</button>
             <button type="button" class="set-tab" data-tab="crawl" role="tab" aria-selected="false" aria-controls="set-panel-crawl" id="set-tab-crawl" tabindex="-1">クロール既定値</button>
             <button type="button" class="set-tab" data-tab="notify" role="tab" aria-selected="false" aria-controls="set-panel-notify" id="set-tab-notify" tabindex="-1">通知</button>
+            <button type="button" class="set-tab" data-tab="operations" role="tab" aria-selected="false" aria-controls="set-panel-operations" id="set-tab-operations" tabindex="-1">運用監視</button>
             <button type="button" class="set-tab" data-tab="test-design" role="tab" aria-selected="false" aria-controls="set-panel-test-design" id="set-tab-test-design" tabindex="-1">テスト設計</button>
           </div>
 
@@ -92,6 +93,57 @@
               </div>
               <button class="btn-primary" id="save-settings" style="margin-top:18px">設定を保存</button>
               <div class="settings-msg" id="settings-msg">設定を保存しました</div>
+            </div>
+          </div>
+
+          <div class="set-panel" id="set-panel-operations" role="tabpanel" aria-labelledby="set-tab-operations">
+            <div class="input-card">
+              <h2 class="set-card-title">スケジュール・通知</h2>
+              <p class="input-hint" style="margin-top:0;margin-bottom:14px">サイトごとに実行可能な曜日・時間帯、失敗時の再試行、通知先を設定します。時間帯の終了が開始より前の場合は日跨ぎとして扱います。</p>
+
+              <div class="options-grid ops-grid">
+                <div class="field full">
+                  <label for="ops-site">対象サイト</label>
+                  <select id="ops-site" class="url-input"><option value="">サイトを選択してください</option></select>
+                </div>
+                <div class="field full"><label for="ops-site-url">サイトURL</label><input type="url" id="ops-site-url" placeholder="https://example.com"></div>
+                <div class="field"><label for="ops-interval">実行周期</label><select id="ops-interval"><option value="disabled">無効</option><option value="daily">毎日</option><option value="weekly">毎週</option><option value="monthly">毎月（30日）</option></select></div>
+                <div class="field"><label for="ops-timezone">タイムゾーン</label><select id="ops-timezone"><option value="Asia/Tokyo">Asia/Tokyo</option><option value="UTC">UTC</option><option value="America/New_York">America/New_York</option><option value="Europe/London">Europe/London</option></select></div>
+                <div class="field"><label for="ops-window-start">開始時刻（任意）</label><input type="time" id="ops-window-start"></div>
+                <div class="field"><label for="ops-window-end">終了時刻（任意）</label><input type="time" id="ops-window-end"></div>
+                <div class="field"><label for="ops-retry-max">再試行回数</label><input type="number" id="ops-retry-max" min="0" max="5" value="2"></div>
+                <div class="field"><label for="ops-backoff">初回バックオフ（秒）</label><input type="number" id="ops-backoff" min="1" max="3600" value="60"></div>
+                <fieldset class="field full ops-weekdays">
+                  <legend>実行曜日（未選択は毎日）</legend>
+                  <label><input type="checkbox" value="0">月</label><label><input type="checkbox" value="1">火</label><label><input type="checkbox" value="2">水</label><label><input type="checkbox" value="3">木</label><label><input type="checkbox" value="4">金</label><label><input type="checkbox" value="5">土</label><label><input type="checkbox" value="6">日</label>
+                </fieldset>
+              </div>
+
+              <div class="ops-divider"></div>
+              <div class="options-grid ops-grid">
+                <div class="field"><label for="ops-notify-type">通知チャネル</label><select id="ops-notify-type"><option value="none">通知しない</option><option value="slack">Slack</option><option value="teams">Microsoft Teams Workflows</option><option value="webhook">Webhook</option><option value="email">Email（SMTP環境設定）</option></select></div>
+                <div class="field"><label for="ops-summary-limit">差分表示件数</label><input type="number" id="ops-summary-limit" min="1" max="20" value="5"></div>
+                <div class="field full"><label for="ops-endpoint">Webhook URL / SMTPホスト</label><input type="password" id="ops-endpoint" autocomplete="off" placeholder="https://..."></div>
+                <div class="field full"><label for="ops-template">通知テンプレート（Jinja2・任意）</label><textarea id="ops-template" rows="5" placeholder="{{ site_url }} で変更を検知しました"></textarea><p class="input-hint">利用可能: site_url / added_pages / removed_pages / field_changes / api_changes / added_page_names / removed_page_names</p></div>
+              </div>
+
+              <div class="ops-actions">
+                <button type="button" class="btn-primary" id="ops-save">運用設定を保存</button>
+                <button type="button" class="btn-outline-sm" id="ops-test-notify">テスト通知</button>
+              </div>
+              <div class="settings-msg" id="ops-msg" role="status"></div>
+
+              <div class="ops-history-card">
+                <h3>最近のスケジュール実行</h3>
+                <div id="ops-history"><p class="input-hint">サイトを選択すると表示します。</p></div>
+              </div>
+            </div>
+            <div class="input-card onboarding-replay-card">
+              <div>
+                <h2 class="set-card-title">操作ツアー</h2>
+                <p class="input-hint">初回に表示される4ステップの案内を、いつでも再表示できます。</p>
+              </div>
+              <button type="button" class="btn-outline-sm" id="restart-tour">操作ツアーを再表示</button>
             </div>
           </div>
 

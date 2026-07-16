@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from flask import Blueprint, g, jsonify, redirect, render_template, request
+from flask import Blueprint, current_app, g, jsonify, redirect, render_template, request
 from werkzeug.wrappers import Response as BaseResponse
 
 from web.auth import (
@@ -137,6 +137,54 @@ def api_me() -> dict:
         "user": user,
         "tenant": tenant,
     }
+
+
+def _onboarding_checklist() -> dict[str, bool]:
+    from web.config import OUTPUT_DIR
+    from web.tenancy import TENANTS_DIR_NAME, scoped_output_dir
+
+    output_dir = scoped_output_dir(OUTPUT_DIR)
+    domains = []
+    if output_dir.is_dir():
+        domains = [
+            item
+            for item in output_dir.iterdir()
+            if item.is_dir() and not item.name.startswith(".") and item.name != TENANTS_DIR_NAME
+        ]
+    return {
+        "site_registered": bool(domains),
+        "first_crawl": any((domain / "snapshots").is_dir() for domain in domains),
+        "report_available": any((domain / "report.html").is_file() for domain in domains),
+    }
+
+
+@bp.get("/api/onboarding")
+def api_onboarding() -> dict:
+    user = getattr(g, "auth_user", None)
+    server_storage = auth_enabled() and user is not None
+    tour_completed = bool(user.get("tour_completed_at")) if user is not None else None
+    return {
+        "storage": "server" if server_storage else "client",
+        "tour_completed": tour_completed if server_storage else None,
+        # 既存E2Eの操作を初回ツアーが遮らないよう、自動起動のみ抑止する。
+        # 設定画面の「操作ツアーを再表示」はテストモードでも利用できる。
+        "auto_start": not current_app.testing,
+        "checklist": _onboarding_checklist(),
+    }
+
+
+@bp.post("/api/onboarding/complete")
+def api_onboarding_complete() -> dict | tuple[dict, int]:
+    user = getattr(g, "auth_user", None)
+    if auth_enabled():
+        if user is None:
+            return {"error": "ログインが必要です。", "code": "unauthorized"}, 401
+        try:
+            completed = get_auth_store().complete_tour(user["id"])
+        except AuthError as exc:
+            return {"error": str(exc), "code": exc.code}, 400
+        return {"ok": True, "storage": "server", "tour_completed": True, "user": completed}
+    return {"ok": True, "storage": "client", "tour_completed": True}
 
 
 def _require_login_json() -> tuple[BaseResponse, bool]:

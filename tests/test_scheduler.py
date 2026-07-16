@@ -6,8 +6,10 @@ import json
 from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import patch
+from zoneinfo import ZoneInfo
 
 from web.services.scheduler import (
+    CrawlRunResult,
     _calc_next_run_at,
     _check_and_run_due,
     _maybe_run,
@@ -46,6 +48,45 @@ def test_calc_next_run_at_monthly() -> None:
 def test_calc_next_run_at_disabled_returns_none() -> None:
     base = datetime(2026, 6, 10, 0, 0, 0)
     assert _calc_next_run_at("disabled", base) is None
+
+
+def test_calc_next_run_at_applies_timezone_weekdays_and_window() -> None:
+    base = datetime(2026, 7, 17, 3, 0, tzinfo=ZoneInfo("Asia/Tokyo"))  # Friday
+    result = _calc_next_run_at(
+        "daily",
+        base,
+        timezone_name="Asia/Tokyo",
+        weekdays=(0, 1, 2, 3, 4),
+        window_start="02:00",
+        window_end="05:00",
+    )
+    assert result == "2026-07-20T02:00:00+09:00"
+
+
+def test_calc_next_run_at_moves_before_window_to_window_start() -> None:
+    base = datetime(2026, 7, 13, 0, 0, tzinfo=ZoneInfo("Asia/Tokyo"))
+    result = _calc_next_run_at(
+        "daily",
+        base,
+        timezone_name="Asia/Tokyo",
+        window_start="02:00",
+        window_end="05:00",
+    )
+    assert result == "2026-07-14T02:00:00+09:00"
+
+
+def test_calc_next_run_at_supports_overnight_window() -> None:
+    base = datetime(2026, 7, 13, 0, 0, tzinfo=ZoneInfo("Asia/Tokyo"))
+    result = _calc_next_run_at(
+        "daily",
+        base,
+        timezone_name="Asia/Tokyo",
+        weekdays=(0,),
+        window_start="22:00",
+        window_end="02:00",
+    )
+    # Tuesday 00:00 belongs to the window that started on Monday 22:00.
+    assert result == "2026-07-14T00:00:00+09:00"
 
 
 # ─────────────── _persist_timestamps ───────────────
@@ -172,6 +213,206 @@ def test_maybe_run_handles_invalid_json(tmp_path: Path) -> None:
     p.write_text("not json", encoding="utf-8")
     # 例外なく終了すること
     _maybe_run("example.com", p, datetime.now())
+
+
+def test_maybe_run_accepts_legacy_naive_next_run_with_aware_now(tmp_path: Path) -> None:
+    p = _write_schedule(
+        tmp_path / "example.com",
+        {
+            "domain": "example.com",
+            "interval": "daily",
+            "timezone": "Asia/Tokyo",
+            "next_run_at": "2026-07-16T02:00:00",
+            "site_url": "https://example.com",
+            "retry_max": 0,
+        },
+    )
+    with patch(
+        "web.services.scheduler._run_crawl", return_value=CrawlRunResult(True)
+    ) as mock_crawl:
+        _maybe_run(
+            "example.com",
+            p,
+            datetime(2026, 7, 16, 3, 0, tzinfo=ZoneInfo("Asia/Tokyo")),
+        )
+    mock_crawl.assert_called_once()
+
+
+def test_maybe_run_reschedules_without_running_outside_window(tmp_path: Path) -> None:
+    p = _write_schedule(
+        tmp_path / "example.com",
+        {
+            "domain": "example.com",
+            "interval": "daily",
+            "timezone": "Asia/Tokyo",
+            "weekdays": [],
+            "window_start": "02:00",
+            "window_end": "05:00",
+            "next_run_at": "2026-07-16T02:00:00+09:00",
+            "site_url": "https://example.com",
+            "last_run_at": None,
+        },
+    )
+    with patch("web.services.scheduler._run_crawl") as mock_crawl:
+        _maybe_run(
+            "example.com",
+            p,
+            datetime(2026, 7, 16, 6, 0, tzinfo=ZoneInfo("Asia/Tokyo")),
+        )
+    mock_crawl.assert_not_called()
+    saved = json.loads(p.read_text(encoding="utf-8"))
+    assert saved["last_run_at"] is None
+    assert saved["next_run_at"] == "2026-07-17T02:00:00+09:00"
+
+
+def test_maybe_run_retries_with_backoff_and_records_success(tmp_path: Path) -> None:
+    p = _write_schedule(
+        tmp_path / "example.com",
+        {
+            "domain": "example.com",
+            "interval": "daily",
+            "next_run_at": "2026-07-15T00:00:00",
+            "site_url": "https://example.com",
+            "retry_max": 2,
+            "retry_backoff_seconds": 10,
+        },
+    )
+    results = (
+        CrawlRunResult(False, "temporary-1", 1.0),
+        CrawlRunResult(False, "temporary-2", 2.0),
+        CrawlRunResult(True, "", 3.0),
+    )
+    sleeps: list[float] = []
+    with patch("web.services.scheduler._run_crawl", side_effect=results) as mock_crawl:
+        _maybe_run(
+            "example.com",
+            p,
+            datetime(2026, 7, 16, 0, 0),
+            sleeper=sleeps.append,
+        )
+
+    assert mock_crawl.call_count == 3
+    assert sleeps == [10, 20]
+    records = [
+        json.loads(line)
+        for line in (p.parent / "schedule_history.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    assert len(records) == 1
+    assert records[0]["status"] == "complete"
+    assert records[0]["attempts"] == 3
+    assert records[0]["duration_sec"] == 6.0
+    assert records[0]["error"] == ""
+
+
+def test_maybe_run_records_final_failure_without_secret_output(tmp_path: Path) -> None:
+    p = _write_schedule(
+        tmp_path / "example.com",
+        {
+            "domain": "example.com",
+            "interval": "daily",
+            "next_run_at": "2026-07-15T00:00:00",
+            "site_url": "https://example.com",
+            "retry_max": 1,
+            "retry_backoff_seconds": 1,
+        },
+    )
+    with patch(
+        "web.services.scheduler._run_crawl",
+        side_effect=(
+            CrawlRunResult(False, "first failure", 1.5),
+            CrawlRunResult(False, "final\nfailure", 2.5),
+        ),
+    ):
+        _maybe_run(
+            "example.com",
+            p,
+            datetime(2026, 7, 16, 0, 0),
+            sleeper=lambda _seconds: None,
+        )
+
+    record = json.loads(
+        (p.parent / "schedule_history.jsonl").read_text(encoding="utf-8").splitlines()[0]
+    )
+    assert record["status"] == "failed"
+    assert record["attempts"] == 2
+    assert record["duration_sec"] == 4.0
+    assert record["error"] == "final failure"
+
+
+def test_maybe_run_sends_notification_after_final_failure(tmp_path: Path) -> None:
+    p = _write_schedule(
+        tmp_path / "example.com",
+        {
+            "domain": "example.com",
+            "interval": "daily",
+            "next_run_at": "2026-07-15T00:00:00",
+            "site_url": "https://example.com",
+            "retry_max": 0,
+            "notify_type": "teams",
+            "notify_endpoint": "https://prod.example.logic.azure.com/workflows/example",
+            "notify_template": "",
+        },
+    )
+    with (
+        patch(
+            "web.services.scheduler._run_crawl",
+            return_value=CrawlRunResult(False, "timeout", 2.0),
+        ),
+        patch("web.services.notifier.send_crawl_failure_notification") as mock_notify,
+    ):
+        _maybe_run("example.com", p, datetime(2026, 7, 16, 0, 0))
+
+    mock_notify.assert_called_once()
+    notifier_config, notification = mock_notify.call_args.args
+    assert notifier_config.notifier_type == "teams"
+    assert notification.site_url == "https://example.com"
+    assert notification.attempts == 1
+    assert notification.error == "timeout"
+
+
+def test_maybe_run_sends_drift_summary_after_success(tmp_path: Path) -> None:
+    domain_dir = tmp_path / "example.com"
+    p = _write_schedule(
+        domain_dir,
+        {
+            "domain": "example.com",
+            "interval": "daily",
+            "next_run_at": "2026-07-15T00:00:00",
+            "site_url": "https://example.com",
+            "retry_max": 0,
+            "notify_type": "teams",
+            "notify_endpoint": "https://prod.example.logic.azure.com/workflows/example",
+            "diff_summary_limit": 2,
+        },
+    )
+    (domain_dir / "diff_summary.json").write_text(
+        json.dumps(
+            {
+                "added_pages": [
+                    {"title": "A", "url": "/a"},
+                    {"title": "B", "url": "/b"},
+                    {"title": "C", "url": "/c"},
+                ],
+                "removed_pages": [{"title": "Old", "url": "/old"}],
+                "field_changes": 3,
+                "api_changes": 1,
+            }
+        ),
+        encoding="utf-8",
+    )
+    with (
+        patch("web.services.scheduler._run_crawl", return_value=CrawlRunResult(True, "", 1.0)),
+        patch("web.services.notifier.send_drift_notification") as mock_notify,
+    ):
+        _maybe_run("example.com", p, datetime(2026, 7, 16, 0, 0))
+
+    mock_notify.assert_called_once()
+    _config, notification = mock_notify.call_args.args
+    assert notification.added_pages == 3
+    assert notification.added_page_names == ("A", "B")
+    assert notification.removed_page_names == ("Old",)
+    assert notification.field_changes == 3
+    assert notification.api_changes == 1
 
 
 # ─────────────── _check_and_run_due ───────────────

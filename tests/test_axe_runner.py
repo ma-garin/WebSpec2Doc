@@ -140,6 +140,7 @@ class TestRunAxe:
                         "id": "image-alt",
                         "impact": "critical",
                         "description": "Images must have alternate text",
+                        "helpUrl": "https://dequeuniversity.com/rules/axe/image-alt",
                         "tags": ["wcag2a", "wcag111", "cat.text-alternatives"],
                         "nodes": [{"target": ["img.hero"]}],
                     }
@@ -160,6 +161,7 @@ class TestRunAxe:
         assert "wcag2a" in violation.wcag_tags
         assert "wcag111" in violation.wcag_tags
         assert "cat.text-alternatives" not in violation.wcag_tags
+        assert violation.help_url == "https://dequeuniversity.com/rules/axe/image-alt"
         assert violation.confidence == 1.0
 
     def test_axe_violation_bbox_none_when_unavailable(self) -> None:
@@ -215,6 +217,7 @@ class TestAxeViolationToDict:
                         "id": "image-alt",
                         "impact": "critical",
                         "description": "desc",
+                        "helpUrl": "https://dequeuniversity.com/rules/axe/image-alt",
                         "tags": ["wcag2a"],
                         "nodes": [{"target": ["img"]}],
                     }
@@ -226,5 +229,6 @@ class TestAxeViolationToDict:
         data = axe_violation_to_dict(violation)
 
         assert data["rule_id"] == "image-alt"
+        assert data["help_url"] == "https://dequeuniversity.com/rules/axe/image-alt"
         assert data["confidence"] == 1.0
         assert data["evidence"]["selector"] == "img"

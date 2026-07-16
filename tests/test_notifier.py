@@ -8,10 +8,14 @@ import pytest
 from web.services.notifier import (
     NOTIFIER_EMAIL,
     NOTIFIER_SLACK,
+    NOTIFIER_TEAMS,
     NOTIFIER_WEBHOOK,
+    CrawlFailureNotification,
     DriftNotification,
     NotifierConfig,
     build_notification,
+    render_notification_text,
+    send_crawl_failure_notification,
     send_drift_notification,
 )
 
@@ -57,6 +61,41 @@ def test_build_notification_from_diff_result() -> None:
     assert notif.report_url == "output/diff_report.html"
 
 
+def test_build_notification_includes_top_page_names() -> None:
+    @dataclass(frozen=True)
+    class _Page:
+        title: str
+        url: str
+
+    diff = _DummyDiffResult(
+        added_pages=(_Page("追加A", "/a"), _Page("追加B", "/b"), _Page("追加C", "/c")),
+        removed_pages=(_Page("削除A", "/old"),),
+        field_changes=(),
+        api_changes=(),
+    )
+    notification = build_notification(diff, "https://example.com", "diff.html", summary_limit=2)
+    assert notification.added_page_names == ("追加A", "追加B")
+    assert notification.removed_page_names == ("削除A",)
+
+
+def test_render_notification_text_uses_sandboxed_template() -> None:
+    config = NotifierConfig(
+        notifier_type=NOTIFIER_SLACK,
+        endpoint="https://example.com/hook",
+        template="{{ site_url }} 追加={{ added_page_names | join(',') }}",
+    )
+    notification = DriftNotification(
+        site_url="https://example.com",
+        added_pages=2,
+        removed_pages=0,
+        field_changes=0,
+        api_changes=0,
+        report_url="diff.html",
+        added_page_names=("A", "B"),
+    )
+    assert render_notification_text(config, notification) == "https://example.com 追加=A,B"
+
+
 # ─────────────────────── Slack ───────────────────────
 
 
@@ -100,6 +139,62 @@ def test_send_drift_notification_slack_failure(monkeypatch: pytest.MonkeyPatch) 
     assert result is False
 
 
+# ─────────────────────── Teams / crawl failure ───────────────────────
+
+
+def test_send_drift_notification_teams_posts_workflow_text(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: list[dict] = []
+
+    def _fake_urlopen(req: object, timeout: int = 10) -> MagicMock:
+        import json as _json
+
+        captured.append(_json.loads(req.data))  # type: ignore[attr-defined]
+        cm = MagicMock()
+        cm.__enter__ = MagicMock(return_value=cm)
+        cm.__exit__ = MagicMock(return_value=False)
+        return cm
+
+    monkeypatch.setattr("urllib.request.urlopen", _fake_urlopen)
+    config = NotifierConfig(
+        notifier_type=NOTIFIER_TEAMS,
+        endpoint="https://prod.example.logic.azure.com/workflows/example",
+    )
+    assert send_drift_notification(config, _sample_notification()) is True
+    assert captured[0]["text"].startswith("⚠️ 仕様ドリフト検知")
+
+
+def test_send_crawl_failure_notification_uses_failure_event(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: list[dict] = []
+
+    def _fake_urlopen(req: object, timeout: int = 10) -> MagicMock:
+        import json as _json
+
+        captured.append(_json.loads(req.data))  # type: ignore[attr-defined]
+        cm = MagicMock()
+        cm.__enter__ = MagicMock(return_value=cm)
+        cm.__exit__ = MagicMock(return_value=False)
+        return cm
+
+    monkeypatch.setattr("urllib.request.urlopen", _fake_urlopen)
+    config = NotifierConfig(
+        notifier_type=NOTIFIER_WEBHOOK,
+        endpoint="https://api.example.com/webhook",
+    )
+    notification = CrawlFailureNotification(
+        site_url="https://example.com",
+        attempts=3,
+        error="timeout",
+        started_at="2026-07-16T02:00:00+09:00",
+    )
+    assert send_crawl_failure_notification(config, notification) is True
+    assert captured[0]["type"] == "crawl_failed"
+    assert captured[0]["attempts"] == 3
+
+
 # ─────────────────────── Webhook ───────────────────────
 
 
@@ -137,7 +232,7 @@ def test_send_drift_notification_webhook_success(monkeypatch: pytest.MonkeyPatch
 
 
 def test_send_drift_notification_email_empty_to(monkeypatch: pytest.MonkeyPatch) -> None:
-    # to_addresses が空なら smtplib に触れずに True を返す
+    # 宛先が空なら実送信していないため、成功を返してはいけない
     smtp_called = []
 
     def _fake_smtp_ssl(*args: object, **kwargs: object) -> MagicMock:
@@ -157,5 +252,5 @@ def test_send_drift_notification_email_empty_to(monkeypatch: pytest.MonkeyPatch)
     )
     result = send_drift_notification(config, _sample_notification())
 
-    assert result is True
+    assert result is False
     assert smtp_called == [], "to_addresses が空のとき SMTP 接続は不要"

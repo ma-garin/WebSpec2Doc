@@ -305,6 +305,35 @@ class TestBuildRunHistory:
     def test_empty_when_no_records_or_jobs(self, tmp_path: Path) -> None:
         assert build_run_history(tmp_path) == []
 
+    def test_includes_persisted_schedule_history(self, tmp_path: Path) -> None:
+        domain_dir = tmp_path / "example.com"
+        domain_dir.mkdir(parents=True)
+        (domain_dir / "schedule_history.jsonl").write_text(
+            json.dumps(
+                {
+                    "run_id": "run-1",
+                    "domain": "example.com",
+                    "started_at": "2026-07-16T02:00:00+09:00",
+                    "status": "failed",
+                    "attempts": 3,
+                    "duration_sec": 12.5,
+                    "error": "timeout",
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        runs = build_run_history(tmp_path)
+        assert len(runs) == 1
+        assert runs[0]["type"] == "schedule"
+        assert runs[0]["type_label"] == "スケジュール"
+        assert runs[0]["status"] == "failed"
+        assert runs[0]["summary"] == {
+            "attempts": 3,
+            "duration_sec": 12.5,
+            "error": "timeout",
+        }
+
 
 class TestSummarizeUsage:
     def test_computes_saved_hours_from_coefficients(self) -> None:

@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -76,6 +78,8 @@ def test_save_outputs_md_format_creates_markdown_files(tmp_path: Path) -> None:
     assert (tmp_path / "screens.md").exists()
     assert (tmp_path / "forms.md").exists()
     assert (tmp_path / "transition.mmd").exists()
+    technical = json.loads((tmp_path / "technical_health.json").read_text(encoding="utf-8"))
+    assert technical["claim_boundary"] == "クロール中に到達・観測できた対象のみ"
 
 
 def test_save_outputs_html_format_creates_report(tmp_path: Path) -> None:
@@ -469,15 +473,27 @@ def test_save_diff_report_writes_html(tmp_path: Path) -> None:
 
     prior = tmp_path / "old.json"
     new = tmp_path / "new.json"
+    diff = SimpleNamespace(
+        added_pages=(SimpleNamespace(title="追加画面", url="https://example.com/new"),),
+        removed_pages=(SimpleNamespace(title="削除画面", url="https://example.com/old"),),
+        field_changes=(object(), object()),
+        api_changes=(object(),),
+        has_changes=True,
+    )
     with (
         patch("main.load_snapshot", return_value=[]),
-        patch("main.compute_diff", return_value={"changed": []}),
+        patch("main.compute_diff", return_value=diff),
         patch("main.generate_diff_report", return_value="<html>diff</html>") as generate,
     ):
         _save_diff_report(prior, new, _fake_pages(), tmp_path, "https://example.com")
 
     generate.assert_called_once()
     assert (tmp_path / "diff_report.html").read_text(encoding="utf-8") == "<html>diff</html>"
+    summary = json.loads((tmp_path / "diff_summary.json").read_text(encoding="utf-8"))
+    assert summary["added_pages"] == [{"title": "追加画面", "url": "https://example.com/new"}]
+    assert summary["removed_pages"] == [{"title": "削除画面", "url": "https://example.com/old"}]
+    assert summary["field_changes"] == 2
+    assert summary["api_changes"] == 1
 
 
 def test_save_outputs_pdf_format_invokes_pdf_generator(tmp_path: Path) -> None:

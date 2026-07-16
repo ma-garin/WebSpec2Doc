@@ -7,7 +7,7 @@ import os
 import signal
 import sys
 import threading
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -246,6 +246,11 @@ def parse_args() -> argparse.Namespace:
             "ヒューリスティック評価を行い ux_review.json / report.html「UX所見」タブを生成する"
             "（OPENAI_API_KEY 未設定時は rules ベースの評価で完走する）"
         ),
+    )
+    parser.add_argument(
+        "--no-a11y-audit",
+        action="store_true",
+        help="標準の axe-core アクセシビリティ監査を明示的に無効化する",
     )
     parser.add_argument(
         "--refresh-doc",
@@ -522,16 +527,20 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
         logger.warning("--llm は未実装のため無視します")
 
     ux_review_enabled = bool(getattr(args, "ux_review", False))
-    if ux_review_enabled:
+    accessibility_audit_enabled = not bool(getattr(args, "no_a11y_audit", False))
+    axe_capture_enabled = ux_review_enabled or accessibility_audit_enabled
+    if axe_capture_enabled:
         from ux.axe_runner import AxeAssetError, verify_axe_asset
 
         try:
             verify_axe_asset()
         except AxeAssetError as exc:
             logger.error("%s", exc)
-            sys.stdout.write("UX_REVIEW_ASSET_ERROR\n")
+            sys.stdout.write(
+                "UX_REVIEW_ASSET_ERROR\n" if ux_review_enabled else "A11Y_AUDIT_ASSET_ERROR\n"
+            )
             sys.stdout.flush()
-            return
+            sys.exit(2)
 
     formats = _parse_formats(str(args.format))
     output_dir = Path(args.output) / _domain_name(primary_url)
@@ -574,8 +583,8 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
             auth_state,
             on_event=emit_event,
             on_checkpoint=save_checkpoint,
-            ux_review=ux_review_enabled,
-            on_ux_result=on_ux_result if ux_review_enabled else None,
+            ux_review=axe_capture_enabled,
+            on_ux_result=on_ux_result if axe_capture_enabled else None,
         )
     except SessionExpiredError as exc:
         if checkpoint_pages:
@@ -591,6 +600,10 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
         logger.error("%s", exc)
         sys.stdout.write("SESSION_EXPIRED\n")
         sys.exit(2)
+
+    if not pages and not _STOP_REQUESTED.is_set():
+        logger.error("クロール対象ページを1件も取得できませんでした")
+        sys.exit(1)
 
     analyzed_pages = analyze_pages(pages)
     graph = build_graph(analyzed_pages)
@@ -610,6 +623,16 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
     ux_review = None
     if ux_review_enabled:
         ux_review = _build_and_save_ux_review(pages, analyzed_pages, ux_axe_results, output_dir)
+    accessibility_audit = None
+    if accessibility_audit_enabled:
+        from generator.accessibility_reporter import (
+            build_accessibility_audit,
+            save_accessibility_audit,
+        )
+
+        page_ids = {page.page_data.url: page.page_id for page in analyzed_pages}
+        accessibility_audit = build_accessibility_audit(pages, page_ids, ux_axe_results)
+        save_accessibility_audit(accessibility_audit, output_dir)
     coverage_gaps = _collect_coverage_gaps(output_dir, pages, exploration_coverage)
     save_outputs(
         analyzed_pages,
@@ -627,6 +650,7 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
         exploration_coverage=exploration_coverage,
         rule_conditions=rule_conditions,
         ux_review=ux_review,
+        accessibility_audit=accessibility_audit,
         coverage_gaps=coverage_gaps,
     )
     if _STOP_REQUESTED.is_set():
@@ -972,7 +996,36 @@ def _save_diff_report(
         target_url=target_url,
     )
     (output_dir / DIFF_REPORT_FILE_NAME).write_text(report_html, encoding="utf-8")
+    _save_diff_summary(diff, output_dir)
     return bool(getattr(diff, "has_changes", False))
+
+
+def _save_diff_summary(diff: object, output_dir: Path) -> None:
+    """通知本文用の最小差分を機械可読JSONとして保存する。"""
+
+    def page_items(changes: object) -> list[dict[str, str]]:
+        iterable = (
+            changes
+            if isinstance(changes, Iterable) and not isinstance(changes, str | bytes)
+            else ()
+        )
+        return [
+            {
+                "title": str(getattr(change, "title", "")),
+                "url": str(getattr(change, "url", "")),
+            }
+            for change in iterable
+        ]
+
+    payload = {
+        "added_pages": page_items(getattr(diff, "added_pages", ())),
+        "removed_pages": page_items(getattr(diff, "removed_pages", ())),
+        "field_changes": len(getattr(diff, "field_changes", ()) or ()),
+        "api_changes": len(getattr(diff, "api_changes", ()) or ()),
+    }
+    (output_dir / "diff_summary.json").write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
 
 
 def _run_doc_fusion(
@@ -1138,9 +1191,14 @@ def save_outputs(
     exploration_coverage: dict[str, object] | None = None,
     rule_conditions: dict[tuple[str, str], tuple] | None = None,
     ux_review: dict[str, object] | None = None,
+    accessibility_audit: dict[str, object] | None = None,
     coverage_gaps: tuple = (),
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
+    from health.technical_health import build_technical_health, save_technical_health
+
+    technical_health = build_technical_health([page.page_data for page in pages])
+    save_technical_health(technical_health, output_dir)
     target_url = pages[0].page_data.url if pages else ""
     transition_mmd = generate_mermaid(graph, pages)
     _save_markdown_outputs(pages, graph, form_summary, output_dir, target_url, transition_mmd)
@@ -1160,7 +1218,9 @@ def save_outputs(
             business_flows=business_flows,
             impact_report=impact_report,
             exploration_coverage=exploration_coverage,
+            technical_health=technical_health,
             ux_review=ux_review,
+            accessibility_audit=accessibility_audit,
             coverage_gaps=coverage_gaps,
         )
     if "json" in formats:
@@ -1226,7 +1286,9 @@ def _save_html_outputs(
     business_flows: list[dict] | None = None,
     impact_report: dict | None = None,
     exploration_coverage: dict[str, object] | None = None,
+    technical_health: dict[str, object] | None = None,
     ux_review: dict[str, object] | None = None,
+    accessibility_audit: dict[str, object] | None = None,
     coverage_gaps: tuple = (),
 ) -> None:
     from generator.html_reporter import generate_html_report
@@ -1256,7 +1318,9 @@ def _save_html_outputs(
         business_flows=business_flows,
         impact_report=impact_report,
         exploration_coverage=exploration_coverage,
+        technical_health=technical_health,
         ux_review=ux_review,
+        accessibility_audit=accessibility_audit,
         coverage_gaps=coverage_gaps,
         test_design=test_design,
     )

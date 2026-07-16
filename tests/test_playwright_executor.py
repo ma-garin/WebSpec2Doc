@@ -895,8 +895,8 @@ class TestEnsurePwEnv:
 
 class TestPythonPlaywrightVersion:
     def test_returns_installed_version(self) -> None:
-        # requirements.txt で playwright==1.44.0 に固定されている
-        assert _python_playwright_version() == "1.44.0"
+        # requirements.txt の固定版と実環境が一致する
+        assert _python_playwright_version() == "1.61.0"
 
     def test_returns_empty_when_package_missing(self) -> None:
         from importlib.metadata import PackageNotFoundError

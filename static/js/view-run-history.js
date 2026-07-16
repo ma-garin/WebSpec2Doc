@@ -1,8 +1,8 @@
 // ---- 実行履歴ビュー（種別を問わない一般化・R2-27） ----
-const RH_TYPE_LABELS = { crawl: '解析', autorun: 'AutoRun', comparison: '現新比較', ux_review: 'UXレビュー' };
+const RH_TYPE_LABELS = { crawl: '解析', autorun: 'AutoRun', comparison: '現新比較', ux_review: 'UXレビュー', schedule: 'スケジュール' };
 const RH_TERMINAL_STATUSES = new Set(['complete', 'failed', 'cancelled']);
 const RH_TYPE_KEY = 'wsd_rh_type';
-const RH_VALID_TYPES = ['crawl', 'autorun', 'comparison', 'ux_review', 'all'];
+const RH_VALID_TYPES = ['crawl', 'autorun', 'comparison', 'ux_review', 'schedule', 'all'];
 const RH_PAGE_SIZE = 20;
 let _rhRuns = [];
 let _rhPage = 1;
@@ -48,6 +48,10 @@ function _rhSummaryText(run) {
   }
   if (run.type === 'comparison' || run.type === 'ux_review') {
     return `画面 ${s.compare_screen_count || 0} / 指摘 ${s.finding_count || 0}件`;
+  }
+  if (run.type === 'schedule') {
+    const error = s.error ? ` / ${s.error}` : '';
+    return `試行 ${s.attempts || 0}回 / ${s.duration_sec || 0}秒${error}`;
   }
   return `画面 ${s.screen_count || 0} / フォーム ${s.test_condition_count || 0} / 成果物 ${s.document_count || 0}`;
 }

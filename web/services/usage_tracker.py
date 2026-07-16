@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+from collections import deque
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -291,6 +292,7 @@ _RUN_TYPE_LABELS = {
     "comparison": "現新比較",
     "ux_review": "UXレビュー",
     "autorun": "AutoRun",
+    "schedule": "スケジュール",
 }
 
 
@@ -363,6 +365,55 @@ def _run_from_job(job: dict) -> dict:
     }
 
 
+def _schedule_runs(output_root: Path) -> list[dict]:
+    runs: list[dict] = []
+    if not output_root.is_dir():
+        return runs
+    for domain_dir in output_root.iterdir():
+        if (
+            not domain_dir.is_dir()
+            or domain_dir.name.startswith(".")
+            or domain_dir.name == "tenants"
+        ):
+            continue
+        history_path = domain_dir / "schedule_history.jsonl"
+        if not history_path.is_file():
+            continue
+        recent: deque[dict] = deque(maxlen=100)
+        try:
+            with history_path.open(encoding="utf-8") as stream:
+                for line in stream:
+                    try:
+                        record = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    if isinstance(record, dict):
+                        recent.append(record)
+        except OSError as exc:
+            logger.warning("スケジュール履歴を読み込めませんでした: %s (%s)", history_path, exc)
+            continue
+        for record in recent:
+            domain = str(record.get("domain") or domain_dir.name)
+            runs.append(
+                {
+                    "type": "schedule",
+                    "type_label": _RUN_TYPE_LABELS["schedule"],
+                    "domain": domain,
+                    "timestamp": str(record.get("started_at", "")),
+                    "status": str(record.get("status", "failed")),
+                    "summary": {
+                        "attempts": int(record.get("attempts", 0)),
+                        "duration_sec": float(record.get("duration_sec", 0)),
+                        "error": str(record.get("error", "")),
+                    },
+                    "link": _existing_path(domain_dir / "report.html"),
+                    "source": "schedule",
+                    "run_id": str(record.get("run_id", "")),
+                }
+            )
+    return runs
+
+
 def build_run_history(output_root: Path, running_jobs: list[dict] | None = None) -> list[dict]:
     """usage_log.jsonl の実績と実行中ジョブをマージし、新しい順の実行履歴を返す。
 
@@ -370,6 +421,7 @@ def build_run_history(output_root: Path, running_jobs: list[dict] | None = None)
     リンクはファイルの実在を確認できたものだけを含める（実在検証・捏造しない）。
     """
     runs = [_run_from_record(output_root, record) for record in load_usage(output_root)]
+    runs.extend(_schedule_runs(output_root))
     for job in running_jobs or []:
         if str(job.get("status", "")) not in ("complete", "failed", "cancelled"):
             runs.append(_run_from_job(job))

@@ -107,6 +107,9 @@ def _page_from_dict(data: dict[str, Any]) -> PageData:
         spa_transitions=tuple(
             _spa_transition_from_dict(item) for item in data.get("spa_transitions", ())
         ),
+        http_status=int(data.get("http_status", 0)),
+        console_errors=tuple(str(item) for item in data.get("console_errors", ())),
+        mixed_content=tuple(str(item) for item in data.get("mixed_content", ())),
     )
 
 

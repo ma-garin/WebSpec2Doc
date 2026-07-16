@@ -234,6 +234,10 @@ class PageData:
     validation_observations: tuple[ValidationObservation, ...] = ()
     spa_transitions: tuple[SpaTransition, ...] = ()
     embedded_frames: tuple[EmbeddedFrame, ...] = ()
+    # 技術ヘルスはクロール中の実測だけを保持する。未観測は 0 / 空タプル。
+    http_status: int = 0
+    console_errors: tuple[str, ...] = ()
+    mixed_content: tuple[str, ...] = ()
 
 
 @contextmanager
@@ -585,14 +589,38 @@ def crawl_page(
     from crawler.spa_monitor import SpaTransitionMonitor
 
     normalized_url = normalize_url(url)
+    console_errors: list[str] = []
+    mixed_content: list[str] = []
+    status_code = 0
+
+    def on_console(message: Any) -> None:
+        if str(getattr(message, "type", "")) != "error" or len(console_errors) >= 50:
+            return
+        text_value = " ".join(str(getattr(message, "text", "")).split())[:500]
+        if text_value and text_value not in console_errors:
+            console_errors.append(text_value)
+
+    def on_request(request: Any) -> None:
+        if len(mixed_content) >= 50 or urlparse(normalized_url).scheme != "https":
+            return
+        request_url = str(getattr(request, "url", ""))
+        if urlparse(request_url).scheme != "http":
+            return
+        sanitized = _strip_query_for_audit(request_url)
+        if sanitized not in mixed_content:
+            mixed_content.append(sanitized)
+
     capture = NetworkCapture()
     blocker = MutationBlocker()
     spa_monitor = SpaTransitionMonitor()
     spa_monitor.attach(page)
+    page.on("console", on_console)
+    page.on("request", on_request)
     capture.attach(page)
     blocker.attach(page)
     try:
         response = _goto_stable(page, normalized_url)
+        status_code = int(response.status) if response is not None else 0
         if response is not None and response.status in RETRYABLE_STATUS_CODES:
             raise RetryableHTTPError(normalized_url, response.status)
         signals = PageAuthSignals(
@@ -635,6 +663,8 @@ def crawl_page(
         validation_observations = measure_required_validation(page, forms, screenshot_path)
         spa_transitions = spa_monitor.collect(page)
     finally:
+        page.remove_listener("console", on_console)
+        page.remove_listener("request", on_request)
         blocker.detach()
         capture.detach()
         _audit_mutation_blocked(output_dir, normalized_url, blocker.blocked)
@@ -655,6 +685,9 @@ def crawl_page(
         validation_observations=validation_observations,
         spa_transitions=spa_transitions,
         embedded_frames=embedded_frames,
+        http_status=status_code,
+        console_errors=tuple(console_errors),
+        mixed_content=tuple(mixed_content),
     )
 
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sys
 import time
 from pathlib import Path
@@ -40,6 +41,7 @@ def create_app() -> Flask:
         template_folder=str(_ROOT / "templates"),
         static_folder=str(_ROOT / "static"),
     )
+    app.config["TESTING"] = os.environ.get("FLASK_TESTING", "").strip() == "1"
     app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
     ensure_secret_key(app, _ROOT / "instance")
     _ver = str(int(time.time()))

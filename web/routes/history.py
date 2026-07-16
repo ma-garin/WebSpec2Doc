@@ -38,7 +38,11 @@ def api_history() -> dict:
             if d.is_dir() and not d.name.startswith(".") and d.name != TENANTS_DIR_NAME
         ]
         for d in sorted(domains, key=lambda p: p.stat().st_mtime, reverse=True):
+            from registry.site_registry import load_site
+
             summary = _summary_for_domain(d.name, out_dir)
+            site = load_site(d.name, out_dir)
+            site_url = site.urls[0] if site and site.urls else ""
             formats = [
                 name
                 for name, fname in (
@@ -57,6 +61,7 @@ def api_history() -> dict:
             items.append(
                 {
                     "domain": d.name,
+                    "site_url": site_url,
                     "screens": summary.get("screens", 0),
                     "fields": summary.get("fields", 0),
                     "updated": datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M"),

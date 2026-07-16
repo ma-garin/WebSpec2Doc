@@ -72,6 +72,45 @@ class TestCrawlPageIntegration:
         assert result.url == "https://example.com/"
         assert result.title == "Test Page"
 
+    def test_crawl_page_captures_observed_technical_health(self, tmp_path: Path) -> None:
+        from crawler.page_crawler import crawl_page
+
+        page = self._make_mock_page("https://example.com/")
+        handlers: dict[str, object] = {}
+        page.on.side_effect = lambda event, callback: handlers.__setitem__(event, callback)
+        response = MagicMock(status=404, headers={})
+
+        def goto(*_args, **_kwargs):
+            console = MagicMock()
+            console.type = "error"
+            console.text = "Uncaught TypeError: failed"
+            handlers["console"](console)  # type: ignore[operator]
+            request = MagicMock()
+            request.url = "http://example.com/insecure.js?token=secret"
+            handlers["request"](request)  # type: ignore[operator]
+            return response
+
+        page.goto.side_effect = goto
+        with (
+            patch("crawler.link_extractor.extract_forms_including_frames", return_value=[]),
+            patch("crawler.link_extractor.extract_internal_links", return_value=[]),
+            patch("crawler.link_extractor.extract_headings", return_value=["Test"]),
+            patch("crawler.link_extractor.extract_buttons", return_value=[]),
+            patch("crawler.link_extractor.extract_page_title", return_value="Test Page"),
+            patch("crawler.link_extractor.compute_dom_signature", return_value="sig001"),
+            patch("analyzer.stack_detector.detect_stack", return_value=None),
+            patch("crawler.network_interceptor.NetworkCapture.attach"),
+            patch("crawler.network_interceptor.NetworkCapture.detach"),
+            patch("crawler.network_interceptor.NetworkCapture.finalize", return_value=()),
+        ):
+            result = crawl_page(page, "https://example.com/", tmp_path)
+
+        assert result.http_status == 404
+        assert result.console_errors == ("Uncaught TypeError: failed",)
+        assert result.mixed_content == ("http://example.com/insecure.js",)
+        page.remove_listener.assert_any_call("console", handlers["console"])
+        page.remove_listener.assert_any_call("request", handlers["request"])
+
     def test_crawl_page_with_form(self, tmp_path: Path) -> None:
         """crawl_page() がフォームを含む PageData を返す。"""
         from crawler.page_crawler import crawl_page

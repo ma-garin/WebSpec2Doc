@@ -21,6 +21,12 @@ def _client():
     return appmod.app.test_client()
 
 
+def test_e2e_server_does_not_open_a_browser_tab(monkeypatch) -> None:
+    monkeypatch.setenv("FLASK_TESTING", "1")
+    monkeypatch.delenv("WEBSPEC2DOC_TRUSTED_HOSTS", raising=False)
+    assert appmod._bind_host() == ("127.0.0.1", False)
+
+
 # ---------- web/security.py ----------
 
 
@@ -530,6 +536,30 @@ class TestApiHistory:
         data = _client().get("/api/history").get_json()
         item = next(i for i in data["items"] if i["domain"] == "example.com")
         assert item["snapshot_count"] == 1
+
+    def test_returns_exact_registered_site_url(self, tmp_path: Path, monkeypatch) -> None:
+        monkeypatch.setattr(history_mod, "OUTPUT_DIR", tmp_path)
+        monkeypatch.setattr(summary_mod, "OUTPUT_DIR", tmp_path)
+        site_dir = tmp_path / "127.0.0.1_8766"
+        site_dir.mkdir()
+        (site_dir / "site.json").write_text(
+            json.dumps(
+                {
+                    "domain": "127.0.0.1_8766",
+                    "urls": ["http://127.0.0.1:8766/catalog?mode=demo"],
+                    "crawl_mode": "selected",
+                    "depth": 1,
+                    "max_pages": 10,
+                    "formats": ["html"],
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        data = _client().get("/api/history").get_json()
+
+        item = next(i for i in data["items"] if i["domain"] == "127.0.0.1_8766")
+        assert item["site_url"] == "http://127.0.0.1:8766/catalog?mode=demo"
 
 
 class TestApiSnapshots:

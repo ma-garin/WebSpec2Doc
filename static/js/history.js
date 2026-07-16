@@ -12,7 +12,10 @@ async function loadHistory() {
       return;
     }
     body.innerHTML = _buildTable(data.items);
-    body.querySelectorAll('.hist-open').forEach(b => b.addEventListener('click', () => openResultsForDomain(b.dataset.domain)));
+    body.querySelectorAll('.hist-open').forEach(b => b.addEventListener('click', () => {
+      document.dispatchEvent(new CustomEvent('webspec2doc:report-viewed'));
+      openResultsForDomain(b.dataset.domain);
+    }));
     body.querySelectorAll('.hist-recrawl').forEach(b => b.addEventListener('click', async () => {
       b.disabled = true;
       const orig = b.textContent;
@@ -48,6 +51,9 @@ function _emptyState() {
       </div>
       <button type="button" class="btn-primary empty-add-btn" style="height:44px;padding:0 28px;font-size:15px;margin-top:8px">
         最初の解析を始める
+      </button>
+      <button type="button" class="btn-outline-sm empty-demo-btn" data-onboarding-demo>
+        同梱デモサイトのURLを使う
       </button>
       <p style="font-size:12px;color:var(--text-muted);margin-top:4px">所要時間の目安: 10画面のサイトで約2〜3分</p>
     </div>`;

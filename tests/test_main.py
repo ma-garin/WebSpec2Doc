@@ -8,6 +8,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import networkx as nx
+import pytest
 
 from analyzer.form_analyzer import summarize_forms
 from analyzer.html_analyzer import analyze_pages
@@ -307,11 +308,32 @@ class TestRun:
             llm=False,
             format="md",
         )
-        with patch("main.crawl_site", return_value=[]):
+        with patch("main.crawl_site", return_value=[]), pytest.raises(SystemExit) as exc:
             run(args)
 
-        output_dir = tmp_path / "example.com"
-        assert (output_dir / "screens.md").exists()
+        assert exc.value.code == 1
+
+    def test_run_axe_asset_failure_is_nonzero(self, tmp_path: Path) -> None:
+        from ux.axe_runner import AxeAssetError
+
+        args = argparse.Namespace(
+            url="https://example.com/",
+            depth=1,
+            max_pages=5,
+            output=tmp_path,
+            llm=False,
+            format="md",
+        )
+        with (
+            patch(
+                "ux.axe_runner.verify_axe_asset",
+                side_effect=AxeAssetError("asset missing"),
+            ),
+            pytest.raises(SystemExit) as exc,
+        ):
+            run(args)
+
+        assert exc.value.code == 2
 
 
 # ----------追加カバレッジ: main.py 主要パス ----------

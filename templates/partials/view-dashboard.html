@@ -29,6 +29,30 @@
               </div>
             </div>
           </div>
+          <section class="onboarding-checklist" id="onboarding-checklist" hidden aria-labelledby="onboarding-checklist-title">
+            <div class="onboarding-checklist-head">
+              <div>
+                <p class="onboarding-eyebrow">はじめての WebSpec2Doc</p>
+                <h2 id="onboarding-checklist-title">最初のレポートまで、あと3ステップ</h2>
+              </div>
+              <button type="button" class="btn-outline-sm" id="onboarding-demo-btn" data-onboarding-demo>同梱デモで試す</button>
+            </div>
+            <ol class="onboarding-checklist-steps">
+              <li id="onboarding-site-registered" data-onboarding-state="site_registered">
+                <span class="onboarding-check" aria-hidden="true">1</span>
+                <span><strong>サイトを登録</strong><small>解析したいURLを入力します</small></span>
+              </li>
+              <li id="onboarding-first-crawl" data-onboarding-state="first_crawl">
+                <span class="onboarding-check" aria-hidden="true">2</span>
+                <span><strong>初回クロール</strong><small>画面と入力項目を収集します</small></span>
+              </li>
+              <li id="onboarding-report-viewed" data-onboarding-state="report_viewed">
+                <span class="onboarding-check" aria-hidden="true">3</span>
+                <span><strong>レポートを確認</strong><small>仕様書とテスト設計を開きます</small></span>
+              </li>
+            </ol>
+            <p class="onboarding-demo-hint">デモ利用時は、ターミナルで <code>make demo</code> を実行してください。APIキーなしでも試せます。</p>
+          </section>
           <div class="dashboard-section-head">
             <div>
               <h2 class="dash-section-title">解析履歴</h2>

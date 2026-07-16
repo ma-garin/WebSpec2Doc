@@ -67,6 +67,7 @@ class AxeViolation:
     description: str
     wcag_tags: tuple[str, ...]
     evidence: SourceEvidence
+    help_url: str = ""
     confidence: float = 1.0
 
 
@@ -80,6 +81,7 @@ def axe_violation_to_dict(violation: AxeViolation) -> dict[str, Any]:
         "description": violation.description,
         "wcag_tags": list(violation.wcag_tags),
         "evidence": evidence_to_dict(violation.evidence),
+        "help_url": violation.help_url,
         "confidence": violation.confidence,
     }
 
@@ -131,6 +133,7 @@ def run_axe(page: Page, screenshot_path: str | None = None) -> tuple[AxeViolatio
         rule_id = str(violation.get("id") or "")
         impact = str(violation.get("impact") or "")
         description = str(violation.get("description") or "")
+        help_url = str(violation.get("helpUrl") or "")
         wcag_tags = tuple(
             str(tag) for tag in (violation.get("tags") or []) if str(tag).startswith("wcag")
         )
@@ -152,6 +155,7 @@ def run_axe(page: Page, screenshot_path: str | None = None) -> tuple[AxeViolatio
                         screenshot_path=screenshot_path,
                         bbox=bbox,
                     ),
+                    help_url=help_url,
                 )
             )
     return tuple(collected)

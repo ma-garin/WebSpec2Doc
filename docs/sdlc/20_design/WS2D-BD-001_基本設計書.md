@@ -32,13 +32,14 @@ flowchart TD
 | プレゼンテーション | `templates/`, `static/js/*`, `static/css/*` | SPA・クライアント側ビュー切替・状態表示（`ui-states.js`）・共通部品（`core.js`, `table-utils.js`） |
 | アプリケーション | `web/routes/*`（薄いルート）＋`web/services/*` | 入力検証・ジョブ制御・永続化・LLM 連携（任意） |
 | ドメイン中核 | `src/*` | クロール・解析・差分・生成・グラフ・探索記録（Flask 非依存） |
-| 認証（任意） | `web/auth/*` | 利用者ログイン・ワークスペース選択（既定 OFF） |
+| 認証・テナント（任意） | `web/auth.py` / `web/services/auth_store.py` / `web/tenancy.py` / `web/routes/account.py` | 利用者認証（PW・ロール・APIトークン）＋テナント分離。既定 `auto`（`docs/AUTH_TENANCY.md`） |
 
 ## 3. 主要な設計判断（ADR）
 
 - ADR-0001 → 0002: サイト認証をサブプロセス手渡し方式から GUI 内自動ログインへ。
 - ADR-0003: 画面遷移図を Mermaid UML 4 タブ構成に。
-- ADR-0004: 利用者ログイン（メール自己申告）＋ワークスペース導入（データ分離は先送り）。
+- ADR-0004: 利用者ログイン＋ワークスペース導入（初期の軽量版。現在は商用/共有サーバ向け
+  実装 `docs/AUTH_TENANCY.md`＝`account_auth`/`tenant_isolation` に統合・置換）。
 
 ## 4. 品質・安全の方式
 

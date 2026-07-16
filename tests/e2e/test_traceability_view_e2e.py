@@ -83,9 +83,9 @@ class TestTraceabilityView:
             style = (
                 page.locator(f".coverage-badge.coverage-{cov}").first.get_attribute("style") or ""
             )
-            assert "background" not in style and "#" not in style, (
-                f"coverage-{cov} バッジに生の背景色が残っている: {style!r}"
-            )
+            assert (
+                "background" not in style and "#" not in style
+            ), f"coverage-{cov} バッジに生の背景色が残っている: {style!r}"
 
     def test_coverage_bar_segments_present(self, page: Page) -> None:
         _open(page)

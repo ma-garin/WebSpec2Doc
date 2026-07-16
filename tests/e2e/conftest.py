@@ -49,9 +49,7 @@ SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
 _QUARANTINED_TESTS: frozenset[str] = frozenset()
 
 
-def pytest_collection_modifyitems(
-    config: pytest.Config, items: list[pytest.Item]
-) -> None:
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
     """隔離指定のテストをスキップする（環境変数で無効化可能）。現在は 0 件。"""
     if not _QUARANTINED_TESTS or os.environ.get("WEBSPEC2DOC_E2E_NO_QUARANTINE") == "1":
         return

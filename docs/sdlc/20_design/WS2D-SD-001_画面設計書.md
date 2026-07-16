@@ -31,14 +31,17 @@
 レポートは generate 内のタブ構成（概要 / 画面別仕様 / テスト条件 / 設計 / 技法詳細 /
 画面遷移図 / 遷移表 / 履歴・差分＝計 8 タブ、`CONTEXT.md`）。
 
-## 3. 認証画面（`WEBSPEC2DOC_AUTH` 有効時）
+## 3. 認証画面（商用/共有サーバ向け・`WEBSPEC2DOC_AUTH_MODE` が `auto`/`required`）
 
 | 画面 | パス | 項目 |
 |---|---|---|
-| ログイン | `/auth/login` | メールアドレス（自己申告・パスワードなし） |
-| ワークスペース選択 | `/auth/tenants` | 所属ワークスペース一覧・既定選択・別アカウント |
+| 初期セットアップ | `/auth/setup` | 最初のワークスペース＋オーナー作成（ユーザー0人時のみ） |
+| ログイン | `/auth/login` | メールアドレス＋パスワード（ロックアウトあり） |
+| マイページ | `/auth/account` | プロフィール・パスワード変更、管理者はメンバー管理・APIトークン |
 
-`templates/auth/*` ＋ `static/css/auth.css`（モックデザイン準拠）。
+`templates/auth/{login,setup,account}.html` ＋ `static/css/auth.css`。
+既定 `auto` はユーザー未作成の間は認証なし（現行のローカル利用を維持）。詳細は `docs/AUTH_TENANCY.md`。
+topbar のアバターはログイン時に `auth_user` として表示。
 
 ## 4. デザインシステム
 

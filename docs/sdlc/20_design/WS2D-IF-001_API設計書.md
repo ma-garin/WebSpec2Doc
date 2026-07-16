@@ -6,8 +6,9 @@
 
 ## 1. 共通仕様
 
-- 認証: 既定は認証なし（localhost）。`WEBSPEC2DOC_AUTH` 有効時は `/auth/*` 以外に
-  ガード（未ログイン→`/auth/login`、未選択→`/auth/tenants`）。
+- 認証: `WEBSPEC2DOC_AUTH_MODE`（既定 `auto`）。`auto` はユーザー0人の間は認証なし、
+  `/auth/setup` で初期作成後は保護 route に認証ガード（未ログイン→`/auth/login`）。
+  `/api/v1` は `Authorization: Bearer <token>` でも認証可。詳細 `docs/AUTH_TENANCY.md`。
 - 状態変更（POST/PUT/PATCH/DELETE）は Origin/Referer による CSRF ガード（同一オリジン）。
 - 応答: 主に JSON。プレビュー/ダウンロードはファイル。エラーは `{"error": "..."}`。
 - 外部公開 API は `api_v1`（`/sites/...`, `/healthz`）。

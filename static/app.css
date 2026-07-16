@@ -26,9 +26,8 @@
       --info-border:  var(--color-info-border);
       --primary-pale: var(--color-primary-light);
       --accent:       #6E56CF;
-      --focus-ring:   color-mix(in srgb, var(--primary) 18%, transparent);
-      --radius:       var(--radius-md);
-      --radius-lg:    var(--radius-lg);
+      --focus-ring:   color-mix(in srgb, var(--primary) 24%, transparent);
+      --radius:       var(--radius-ctl);
       --shadow:       var(--shadow-md);
       --sidebar-w:    256px;
       --bg-panel:     var(--color-surface-3);

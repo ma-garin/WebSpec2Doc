@@ -203,6 +203,7 @@ def test_review_update_rejects_invalid_domain(tmp_path: Path, monkeypatch) -> No
 
 def test_review_export_filters_approved(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(review_mod, "OUTPUT_DIR", tmp_path)
+    monkeypatch.setattr(review_mod, "INSTANCE_DIR", tmp_path / "instance")
     candidates = [
         {"id": "TC001", "title": "テスト1"},
         {"id": "TC002", "title": "テスト2"},
@@ -243,6 +244,12 @@ def test_review_export_filters_approved(tmp_path: Path, monkeypatch) -> None:
     assert ids == {"TC001", "TC002"}
     # draft は含まれない
     assert "TC003" not in ids
+    from web.services.admin_audit import read_admin_audit
+
+    events = read_admin_audit(tmp_path / "instance" / "admin_audit.jsonl")
+    assert events[0].action == "review.exported"
+    assert events[0].target_id == "example.com"
+    assert events[0].detail == {"filter": "approved", "exported_count": 2}
 
 
 def test_review_export_all_returns_all_cases(tmp_path: Path, monkeypatch) -> None:

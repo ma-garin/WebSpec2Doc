@@ -220,20 +220,20 @@ def _maybe_run(
     if last_result.success:
         logger.info("スケジュールクロール完了: domain=%s attempts=%d", domain, attempts)
         if retention_path is not None:
-            from web.services.retention import load_retention_policy, prune_snapshots
+            try:
+                from web.services.retention import load_retention_policy, prune_snapshots
 
-            output_scope = crawl_output or schedule_path.parent.parent
-            policy = load_retention_policy(retention_path)
-            pruned = prune_snapshots(output_scope, policy)
-            if pruned.deleted_count:
-                logger.info(
-                    "保持ポリシーによりスナップショットを削除: count=%d bytes=%d",
-                    pruned.deleted_count,
-                    pruned.deleted_bytes,
-                )
-                from web.services.admin_audit import append_admin_audit
+                output_scope = crawl_output or schedule_path.parent.parent
+                policy = load_retention_policy(retention_path)
+                pruned = prune_snapshots(output_scope, policy)
+                if pruned.deleted_count:
+                    logger.info(
+                        "保持ポリシーによりスナップショットを削除: count=%d bytes=%d",
+                        pruned.deleted_count,
+                        pruned.deleted_bytes,
+                    )
+                    from web.services.admin_audit import append_admin_audit
 
-                try:
                     append_admin_audit(
                         retention_path.parent / "admin_audit.jsonl",
                         action="retention.snapshots_pruned",
@@ -247,8 +247,8 @@ def _maybe_run(
                             "deleted_paths": list(pruned.deleted_paths),
                         },
                     )
-                except OSError as exc:
-                    logger.warning("保持GCの監査ログ保存に失敗しました: %s", exc)
+            except Exception as exc:
+                logger.warning("保持GCを完了できませんでした（クロール成功は維持）: %s", exc)
         _notify_drift_summary(config, schedule_path, site_url)
     else:
         logger.error("スケジュールクロール失敗: domain=%s attempts=%d", domain, attempts)

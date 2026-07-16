@@ -466,26 +466,32 @@ const _auditActionLabels = {
   'user.created': 'メンバー追加',
   'user.updated': 'メンバー変更',
   'schedule.settings_updated': 'スケジュール・通知設定',
+  'settings.updated': 'システム設定',
+  'notification.tested': '通知テスト',
   'retention.settings_updated': '保持設定',
   'retention.snapshots_pruned': '保持GC',
   'report.exported': 'レポート出力',
+  'review.exported': 'レビュー出力',
+  'viewpoint.exported': '観点出力',
 };
+let _auditNextOffset = null;
 
-async function loadAdminAudit() {
+async function loadAdminAudit({append = false} = {}) {
   const body = document.getElementById('admin-audit-events');
   if (!body) return;
   const params = new URLSearchParams({ limit: '100' });
+  if (append && _auditNextOffset != null) params.set('offset', String(_auditNextOffset));
   const action = document.getElementById('audit-action')?.value || '';
   const outcome = document.getElementById('audit-outcome')?.value || '';
   const query = document.getElementById('audit-query')?.value?.trim() || '';
   if (action) params.set('action', action);
   if (outcome) params.set('outcome', outcome);
   if (query) params.set('query', query);
-  body.innerHTML = '<tr><td colspan="6">読み込み中...</td></tr>';
+  if (!append) body.innerHTML = '<tr><td colspan="6">読み込み中...</td></tr>';
   try {
     const data = await _adminRequest(`/api/admin/audit?${params.toString()}`);
     const events = Array.isArray(data.events) ? data.events : [];
-    body.innerHTML = events.length ? events.map(event => {
+    const rows = events.map(event => {
       const target = [event.target_type, event.target_id].filter(Boolean).join(': ') || '—';
       const detail = event.detail && Object.keys(event.detail).length
         ? JSON.stringify(event.detail)
@@ -499,7 +505,14 @@ async function loadAdminAudit() {
         <td><span class="audit-outcome ${success ? 'is-success' : 'is-failure'}">${success ? '成功' : '失敗'}</span></td>
         <td class="audit-detail">${escHtml(detail)}</td>
       </tr>`;
-    }).join('') : '<tr><td colspan="6">条件に一致する監査ログはありません。</td></tr>';
+    }).join('');
+    if (append && rows) body.insertAdjacentHTML('beforeend', rows);
+    else body.innerHTML = rows || '<tr><td colspan="6">条件に一致する監査ログはありません。</td></tr>';
+    _auditNextOffset = data.has_more && Number.isInteger(data.next_offset)
+      ? data.next_offset
+      : null;
+    const more = document.getElementById('audit-load-more');
+    if (more) more.hidden = _auditNextOffset == null;
   } catch (error) {
     body.innerHTML = '<tr><td colspan="6">監査ログを取得できませんでした。</td></tr>';
     _adminMessage('audit-msg', error.message || '監査ログを取得できませんでした。', true);
@@ -517,8 +530,9 @@ document.getElementById('ops-test-notify')?.addEventListener('click', testOperat
 document.getElementById('data-refresh')?.addEventListener('click', loadDataManagement);
 document.getElementById('retention-mode')?.addEventListener('change', updateRetentionFields);
 document.getElementById('retention-save')?.addEventListener('click', saveRetentionPolicy);
-document.getElementById('audit-refresh')?.addEventListener('click', loadAdminAudit);
-document.getElementById('audit-search')?.addEventListener('click', loadAdminAudit);
+document.getElementById('audit-refresh')?.addEventListener('click', () => loadAdminAudit());
+document.getElementById('audit-search')?.addEventListener('click', () => loadAdminAudit());
+document.getElementById('audit-load-more')?.addEventListener('click', () => loadAdminAudit({append: true}));
 document.getElementById('audit-query')?.addEventListener('keydown', (event) => {
   if (event.key === 'Enter') loadAdminAudit();
 });

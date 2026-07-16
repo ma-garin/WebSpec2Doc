@@ -78,23 +78,32 @@ def test_data_retention_and_admin_audit_flow(page: Page) -> None:
 
     def audit(route: Route) -> None:
         audit_queries.append(route.request.url)
+        next_page = "offset=1" in route.request.url
         _json(
             route,
             {
                 "events": [
                     {
                         "version": 1,
-                        "id": "event-1",
+                        "id": "event-2" if next_page else "event-1",
                         "at": "2026-07-17T10:00:00+00:00",
                         "actor_id": "admin-1",
                         "actor_email": "admin@example.com",
-                        "action": "retention.settings_updated",
+                        "action": (
+                            "notification.tested" if next_page else "retention.settings_updated"
+                        ),
                         "target_type": "workspace",
                         "target_id": "current",
                         "outcome": "success",
-                        "detail": {"changed_fields": ["mode", "generations"]},
+                        "detail": (
+                            {"channel": "slack"}
+                            if next_page
+                            else {"changed_fields": ["mode", "generations"]}
+                        ),
                     }
-                ]
+                ],
+                "has_more": not next_page,
+                "next_offset": None if next_page else 1,
             },
         )
 
@@ -117,11 +126,19 @@ def test_data_retention_and_admin_audit_flow(page: Page) -> None:
     page.screenshot(path="tests/e2e/screenshots/second-wave-data-1366x768.png")
 
     page.locator("#set-tab-audit").click()
+    expect(page.locator("#audit-action option[value='notification.tested']")).to_have_text(
+        "通知テスト"
+    )
     expect(page.locator("#admin-audit-events")).to_contain_text("admin@example.com")
     expect(page.locator("#admin-audit-events")).to_contain_text("保持設定")
     page.locator("#audit-query").fill("admin@example.com")
     page.locator("#audit-search").click()
     expect(page.locator("#admin-audit-events")).to_contain_text("成功")
+    expect(page.locator("#audit-load-more")).to_be_visible()
+    page.locator("#audit-load-more").click()
+    expect(page.locator("#admin-audit-events")).to_contain_text("通知テスト")
+    expect(page.locator("#audit-load-more")).to_be_hidden()
     assert any("query=admin%40example.com" in url for url in audit_queries)
+    assert any("offset=1" in url for url in audit_queries)
     page.set_viewport_size({"width": 1920, "height": 1080})
     page.screenshot(path="tests/e2e/screenshots/second-wave-audit-1920x1080.png")

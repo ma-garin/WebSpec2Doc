@@ -15,6 +15,7 @@ import app as appmod
 import web.env_store as env_store_mod
 import web.routes.history as history_mod
 import web.routes.report as report_mod
+import web.routes.settings as settings_mod
 import web.summary as summary_mod
 import web.validation as validation_mod
 
@@ -498,9 +499,18 @@ class TestSettingsRoute:
     def test_post_settings_saves_key(self, tmp_path: Path, monkeypatch) -> None:
         env_file = tmp_path / ".env"
         monkeypatch.setattr(env_store_mod, "ENV_FILE", env_file)
+        monkeypatch.setattr(settings_mod, "INSTANCE_DIR", tmp_path / "instance")
         res = _client().post("/api/settings", data={"api_key": "test-placeholder-key-for-ci"})
         assert res.status_code == 200
         assert res.get_json()["ok"] is True
+        from web.services.admin_audit import read_admin_audit
+
+        events = read_admin_audit(tmp_path / "instance" / "admin_audit.jsonl")
+        assert events[0].action == "settings.updated"
+        assert events[0].detail == {"changed_fields": ["OPENAI_API_KEY"]}
+        assert "test-placeholder-key-for-ci" not in (
+            tmp_path / "instance" / "admin_audit.jsonl"
+        ).read_text(encoding="utf-8")
 
     def test_post_settings_saves_model(self, tmp_path: Path, monkeypatch) -> None:
         env_file = tmp_path / ".env"

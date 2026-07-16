@@ -3,8 +3,10 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
 from web.services.retention import (
     RetentionPolicy,
+    RetentionPolicyError,
     collect_storage_usage,
     load_retention_policy,
     prune_snapshots,
@@ -63,6 +65,25 @@ def test_generation_policy_keeps_newest_snapshots_per_site(tmp_path: Path) -> No
     assert newest.is_file()
 
 
+def test_generation_policy_never_follows_symlinked_snapshots_directory(tmp_path: Path) -> None:
+    external = tmp_path / "outside"
+    external.mkdir()
+    protected = _snapshot(external, "20260715-000000.json")
+    newest = _snapshot(external, "20260717-000000.json")
+    target = external / "snapshots"
+    site = tmp_path / "output" / "example.com"
+    site.mkdir(parents=True)
+    (site / "snapshots").symlink_to(target, target_is_directory=True)
+
+    result = prune_snapshots(
+        tmp_path / "output", RetentionPolicy(mode="generations", generations=1)
+    )
+
+    assert result.deleted_count == 0
+    assert protected.is_file()
+    assert newest.is_file()
+
+
 def test_days_policy_deletes_only_snapshots_older_than_cutoff(tmp_path: Path) -> None:
     site = tmp_path / "output" / "example.com"
     expired = _snapshot(site, "20260701-000000.json")
@@ -99,6 +120,15 @@ def test_save_policy_validates_and_roundtrips_generation_limit(tmp_path: Path) -
         updated_by="admin-1",
     )
     assert load_retention_policy(path) == saved
+
+
+@pytest.mark.parametrize("value", [1.1, "1.1", b"1"])
+def test_save_policy_rejects_non_integer_generation_values(tmp_path: Path, value: object) -> None:
+    with pytest.raises(RetentionPolicyError):
+        save_retention_policy(
+            tmp_path / "retention.json",
+            {"mode": "generations", "generations": value},
+        )
 
 
 def test_storage_usage_reports_output_instance_and_site_snapshots(tmp_path: Path) -> None:

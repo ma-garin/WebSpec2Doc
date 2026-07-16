@@ -57,17 +57,26 @@ def get_backup_guide() -> Response:
 @bp.get("/audit")
 def get_audit() -> dict:
     try:
-        limit = int(request.args.get("limit", "100"))
+        limit = max(1, min(int(request.args.get("limit", "100")), 100))
+        offset = max(0, int(request.args.get("offset", "0")))
     except ValueError:
         limit = 100
+        offset = 0
     events = read_admin_audit(
         _audit_path(),
-        limit=limit,
+        limit=limit + 1,
+        offset=offset,
         action=request.args.get("action", ""),
         outcome=request.args.get("outcome", ""),
         query=request.args.get("query", ""),
     )
-    return {"events": [asdict(event) for event in events]}
+    has_more = len(events) > limit
+    page = events[:limit]
+    return {
+        "events": [asdict(event) for event in page],
+        "has_more": has_more,
+        "next_offset": offset + limit if has_more else None,
+    }
 
 
 @bp.get("/retention")

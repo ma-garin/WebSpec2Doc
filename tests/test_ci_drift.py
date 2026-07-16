@@ -138,5 +138,73 @@ def test_ci_session_expired_emits_execution_error_summary(tmp_path: Path, capsys
     summary = json.loads(next(line for line in lines if line.startswith("CI_SUMMARY:"))[11:])
     assert exc_info.value.code == 2
     assert "SESSION_EXPIRED" in lines
+    assert lines[-1].startswith("CI_SUMMARY:")
     assert summary["error"] == "session_expired"
     assert summary["exit_code"] == 2
+
+
+def test_ci_missing_target_is_execution_error(tmp_path: Path, capsys) -> None:
+    args = _ci_args(tmp_path)
+    args.url = None
+
+    with pytest.raises(SystemExit) as exc_info:
+        run(args)
+
+    assert exc_info.value.code == 2
+    summary = _ci_summary(capsys)
+    assert summary["error"] == "missing_target"
+    assert summary["exit_code"] == 2
+
+
+def test_ci_axe_asset_error_ends_with_machine_summary(tmp_path: Path, capsys) -> None:
+    from ux.axe_runner import AxeAssetError
+
+    args = _ci_args(tmp_path)
+    args.no_a11y_audit = False
+    with (
+        patch("ux.axe_runner.verify_axe_asset", side_effect=AxeAssetError("missing")),
+        pytest.raises(SystemExit) as exc_info,
+    ):
+        run(args)
+
+    lines = capsys.readouterr().out.splitlines()
+    assert exc_info.value.code == 2
+    assert "A11Y_AUDIT_ASSET_ERROR" in lines
+    assert lines[-1].startswith("CI_SUMMARY:")
+    assert json.loads(lines[-1][11:])["error"] == "accessibility_asset_error"
+
+
+def test_ci_unexpected_exception_is_normalized_to_exit_two(capsys) -> None:
+    import main as main_module
+
+    args = argparse.Namespace(ci=True)
+    with (
+        patch("main.parse_args", return_value=args),
+        patch("main.signal.signal"),
+        patch("main.run", side_effect=RuntimeError("secret internal detail")),
+        pytest.raises(SystemExit) as exc_info,
+    ):
+        main_module.main()
+
+    assert exc_info.value.code == 2
+    summary = _ci_summary(capsys)
+    assert summary["error"] == "execution_error"
+
+
+def test_ci_persists_drift_summary_before_report_generation_can_fail(tmp_path: Path) -> None:
+    output_dir = tmp_path / "example.com"
+    prior = output_dir / "snapshots" / "old.json"
+    prior.parent.mkdir(parents=True)
+    prior.write_text("[]", encoding="utf-8")
+
+    with (
+        patch("main.latest_snapshot", return_value=prior),
+        patch("main.crawl_site", return_value=_fake_pages()),
+        patch("main.save_outputs", side_effect=RuntimeError("report failed")),
+        pytest.raises(RuntimeError),
+    ):
+        run(_ci_args(tmp_path))
+
+    summary = json.loads((output_dir / "drift_summary.json").read_text(encoding="utf-8"))
+    assert summary["first_run"] is False
+    assert summary["has_changes"] is True

@@ -64,6 +64,8 @@ def append_admin_audit(
         line = json.dumps(asdict(event), ensure_ascii=False, separators=(",", ":"))
     path.parent.mkdir(parents=True, exist_ok=True)
     with _path_lock(path):
+        path.touch(mode=0o600, exist_ok=True)
+        path.chmod(0o600)
         with path.open("a", encoding="utf-8") as stream:
             stream.write(line + "\n")
     return event
@@ -73,6 +75,7 @@ def read_admin_audit(
     path: Path,
     *,
     limit: int = 100,
+    offset: int = 0,
     action: str = "",
     outcome: str = "",
     query: str = "",
@@ -80,38 +83,86 @@ def read_admin_audit(
     if not path.is_file():
         return []
     events: list[AdminAuditEvent] = []
-    try:
-        lines = path.read_text(encoding="utf-8").splitlines()
-    except OSError:
-        return []
     normalized_query = query.casefold().strip()
-    for line in reversed(lines):
-        try:
-            data = json.loads(line)
-            event = AdminAuditEvent(**data)
-        except (json.JSONDecodeError, TypeError):
-            continue
-        if action and event.action != action:
-            continue
-        if outcome and event.outcome != outcome:
-            continue
-        if normalized_query:
-            searchable = " ".join(
-                (
-                    event.actor_id,
-                    event.actor_email,
-                    event.action,
-                    event.target_type,
-                    event.target_id,
-                    json.dumps(event.detail, ensure_ascii=False),
-                )
-            ).casefold()
-            if normalized_query not in searchable:
+    skipped = 0
+    try:
+        for line in _reverse_lines(path):
+            try:
+                data = json.loads(line)
+            except json.JSONDecodeError:
                 continue
-        events.append(event)
-        if len(events) >= max(1, min(limit, 100)):
-            break
+            event = _event_from_data(data)
+            if event is None:
+                continue
+            if action and event.action != action:
+                continue
+            if outcome and event.outcome != outcome:
+                continue
+            if normalized_query:
+                searchable = " ".join(
+                    (
+                        event.actor_id,
+                        event.actor_email,
+                        event.action,
+                        event.target_type,
+                        event.target_id,
+                        json.dumps(event.detail, ensure_ascii=False),
+                    )
+                ).casefold()
+                if normalized_query not in searchable:
+                    continue
+            if skipped < max(0, offset):
+                skipped += 1
+                continue
+            events.append(event)
+            if len(events) >= max(1, min(limit, 101)):
+                break
+    except OSError:
+        return events
     return events
+
+
+def _event_from_data(data: object) -> AdminAuditEvent | None:
+    if not isinstance(data, dict) or data.get("version") != 1:
+        return None
+    string_fields = (
+        "id",
+        "at",
+        "actor_id",
+        "actor_email",
+        "action",
+        "target_type",
+        "target_id",
+        "outcome",
+    )
+    if any(not isinstance(data.get(field), str) for field in string_fields):
+        return None
+    if data["outcome"] not in {"success", "failure"} or not isinstance(data.get("detail"), dict):
+        return None
+    try:
+        return AdminAuditEvent(**data)
+    except TypeError:
+        return None
+
+
+def _reverse_lines(path: Path, *, chunk_size: int = 8192):
+    """監査ファイルを全体展開せず末尾から1行ずつ返す。"""
+    with path.open("rb") as stream:
+        stream.seek(0, 2)
+        position = stream.tell()
+        buffer = b""
+        while position > 0:
+            size = min(chunk_size, position)
+            position -= size
+            stream.seek(position)
+            buffer = stream.read(size) + buffer
+            parts = buffer.split(b"\n")
+            buffer = parts[0]
+            for raw_line in reversed(parts[1:]):
+                if raw_line:
+                    yield raw_line.decode("utf-8", errors="replace")
+        if buffer:
+            yield buffer.decode("utf-8", errors="replace")
 
 
 def _sanitize_detail(value: Any, *, key: str = "") -> Any:

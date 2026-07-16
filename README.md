@@ -155,6 +155,17 @@ python scripts/notify_drift.py output/example.com/drift_summary.json
 
 GitLab CI や CircleCI でも同じ2コマンドと exit code を利用できます。キャッシュ対象は `output/**/snapshots` のみにし、スクリーンショットやレポート全体をキャッシュしないでください。
 
+### 生成済み spec.ts を Actions で実行する
+
+AutoRun が生成した `output/<domain>/qa_process/autorun.spec.ts` を、たとえば
+`tests/generated/autorun.spec.ts` として対象リポジトリへ保存します。同梱の
+[`.github/workflows/generated-spec.yml`](.github/workflows/generated-spec.yml) を手動実行し、
+`spec_path` にそのリポジトリ内パスを指定してください。ワークフローは固定バージョンの
+PlaywrightとChromiumを準備してテストを実行し、HTMLレポートをActions artifactへ保存します。
+
+生成されたテストは対象サイトへ実アクセスします。認証情報が必要な場合はリポジトリへ
+直接保存せず、GitHub Actions secretsから対象サイトのログイン処理へ渡してください。
+
 ---
 
 ## 社内サーバへ展開（venv + systemd）

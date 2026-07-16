@@ -39,6 +39,7 @@
   align-items: end; gap: 12px; margin-top: 18px;
 }
 .audit-filters > .btn-primary { min-height: 40px; }
+#audit-load-more[hidden] { display: none !important; }
 .audit-outcome { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; }
 .audit-outcome.is-success { background: var(--ok-bg); color: var(--ok); }
 .audit-outcome.is-failure { background: color-mix(in srgb, var(--color-critical) 12%, var(--surface)); color: var(--color-critical); }

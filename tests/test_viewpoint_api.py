@@ -17,6 +17,7 @@ def api(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     store.initialize()
     monkeypatch.setattr(viewpoints_routes, "get_viewpoint_store", lambda: store)
     monkeypatch.setattr(viewpoints_routes, "has_openai_api_key", lambda: False)
+    monkeypatch.setattr(viewpoints_routes, "INSTANCE_DIR", tmp_path / "instance")
     monkeypatch.setattr(viewpoint_templates, "get_viewpoint_store", lambda: store)
     app = Flask(__name__)
     app.register_blueprint(viewpoints_routes.bp)
@@ -78,6 +79,21 @@ def test_selection_endpoint_returns_published_snapshot(api) -> None:
     data = response.get_json()
     assert data["recommended"]["set_name"] == "WebSpec2Doc標準観点"
     assert data["recommended"]["viewpoint_count"] == 1
+
+
+def test_viewpoint_csv_export_is_recorded_in_admin_audit(api, tmp_path: Path) -> None:
+    client, store = api
+    set_id = store.list_sets()[0]["id"]
+
+    response = client.get(f"/api/viewpoint-sets/{set_id}/export")
+
+    assert response.status_code == 200
+    from web.services.admin_audit import read_admin_audit
+
+    events = read_admin_audit(tmp_path / "instance" / "admin_audit.jsonl")
+    assert events[0].action == "viewpoint.exported"
+    assert events[0].target_id == set_id
+    assert events[0].detail == {"format": "csv", "version": None}
 
 
 def _new_set(client) -> str:

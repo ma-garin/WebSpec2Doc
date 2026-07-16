@@ -63,7 +63,17 @@ def main() -> None:
     load_dotenv()
     signal.signal(signal.SIGTERM, _request_stop)
     signal.signal(signal.SIGINT, _request_stop)
-    run(parse_args())
+    args = parse_args()
+    try:
+        run(args)
+    except SystemExit:
+        raise
+    except Exception:
+        if not bool(getattr(args, "ci", False)):
+            raise
+        logger.error("CI実行中に予期しないエラーが発生しました")
+        emit_ci_error("execution_error")
+        sys.exit(2)
 
 
 def _request_stop(_signum: int, _frame: object) -> None:
@@ -530,6 +540,9 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
     primary_url = url_list[0] if url_list else (args.url or "")
     if not primary_url:
         logger.error("--url / --urls / --login のいずれかを指定してください")
+        if bool(getattr(args, "ci", False)):
+            emit_ci_error("missing_target")
+            sys.exit(2)
         return
     if args.llm:
         logger.warning("--llm は未実装のため無視します")
@@ -548,6 +561,8 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
                 "UX_REVIEW_ASSET_ERROR\n" if ux_review_enabled else "A11Y_AUDIT_ASSET_ERROR\n"
             )
             sys.stdout.flush()
+            if bool(getattr(args, "ci", False)):
+                emit_ci_error("accessibility_asset_error")
             sys.exit(2)
 
     formats = _parse_formats(str(args.format))
@@ -606,9 +621,10 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
                 }
             )
         logger.error("%s", exc)
+        sys.stdout.write("SESSION_EXPIRED\n")
+        sys.stdout.flush()
         if bool(getattr(args, "ci", False)):
             emit_ci_error("session_expired")
-        sys.stdout.write("SESSION_EXPIRED\n")
         sys.exit(2)
 
     if not pages and not _STOP_REQUESTED.is_set():
@@ -647,6 +663,28 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
         accessibility_audit = build_accessibility_audit(pages, page_ids, ux_axe_results)
         save_accessibility_audit(accessibility_audit, output_dir)
     coverage_gaps = _collect_coverage_gaps(output_dir, pages, exploration_coverage)
+    if _STOP_REQUESTED.is_set():
+        partial = save_partial_snapshot(pages, output_dir, finalized=True)
+        emit_event(
+            {
+                "event": "checkpoint_saved",
+                "saved_count": len(pages),
+                "path": str(partial),
+                "finalized": True,
+            }
+        )
+        sys.stdout.write("CRAWL_CANCELLED\n")
+        sys.stdout.flush()
+        return
+
+    # CIがレポート生成途中で失敗しても比較事実を失わないよう、差分サマリを先に確定する。
+    output_dir.mkdir(parents=True, exist_ok=True)
+    new_snapshot = save_snapshot(pages, output_dir)
+    drift_detected = False
+    if bool(getattr(args, "compare", False)):
+        drift_detected = _save_diff_report(
+            prior_snapshot, new_snapshot, pages, output_dir, primary_url
+        )
     save_outputs(
         analyzed_pages,
         graph,
@@ -666,25 +704,6 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
         accessibility_audit=accessibility_audit,
         coverage_gaps=coverage_gaps,
     )
-    if _STOP_REQUESTED.is_set():
-        partial = save_partial_snapshot(pages, output_dir, finalized=True)
-        emit_event(
-            {
-                "event": "checkpoint_saved",
-                "saved_count": len(pages),
-                "path": str(partial),
-                "finalized": True,
-            }
-        )
-        sys.stdout.write("CRAWL_CANCELLED\n")
-        sys.stdout.flush()
-        return
-    new_snapshot = save_snapshot(pages, output_dir)
-    drift_detected = False
-    if bool(getattr(args, "compare", False)):
-        drift_detected = _save_diff_report(
-            prior_snapshot, new_snapshot, pages, output_dir, primary_url
-        )
     if bool(getattr(args, "ci", False)):
         emit_ci_summary(output_dir, exit_code=1 if drift_detected else 0)
     logger.info("出力が完了しました: %s", output_dir)

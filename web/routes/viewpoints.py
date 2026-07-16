@@ -1,15 +1,18 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from flask import Blueprint, Response, request
 
+from web.audit_context import record_admin_event
 from web.services.openai_qa import OpenAIQAError, has_openai_api_key
 from web.services.viewpoint_proposals import generate_viewpoint_proposals
 from web.services.viewpoint_store import ViewpointStoreError, get_viewpoint_store
 from web.services.viewpoint_templates import apply_template, list_templates
 
 bp = Blueprint("viewpoints", __name__)
+INSTANCE_DIR = Path("instance")
 
 
 @bp.errorhandler(ViewpointStoreError)
@@ -209,6 +212,13 @@ def api_export_viewpoint_set(set_id: str) -> Response:
     text = get_viewpoint_store().export_csv(set_id, int(version_value) if version_value else None)
     response = Response(text, content_type="text/csv; charset=utf-8")
     response.headers["Content-Disposition"] = 'attachment; filename="viewpoints.csv"'
+    record_admin_event(
+        INSTANCE_DIR,
+        action="viewpoint.exported",
+        target_type="viewpoint_set",
+        target_id=set_id,
+        detail={"format": "csv", "version": int(version_value) if version_value else None},
+    )
     return response
 
 

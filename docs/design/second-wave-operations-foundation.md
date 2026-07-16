@@ -1,6 +1,6 @@
 # 第2弾「運用基盤」実装設計
 
-- 対象: P0-4 データ保持・バックアップ / P0-5 管理監査ログ / P1-1 Drift Check as Code
+- 対象: P0-4 データ保持・バックアップ / P0-5 管理監査ログ / P1-6 Drift Check as Code
 - 作成日: 2026-07-17
 - 根拠: `docs/research/2026-07-16_実務レベル引き上げ調査.md`
 - 既存設計の統合: `docs/specs/spec-4-4_ci_drift_monitor.md`
@@ -108,7 +108,7 @@
 
 - `web/services/admin_audit.py` が append/read/filter を担当する。
 - 記録点: 利用者ログイン成功/失敗、利用者作成・ロール/有効状態変更、schedule設定変更、通知テスト、保持設定変更、保持GC、report/review/viewpoint/spec.tsのサーバー側エクスポート。
-- 読み取りAPIは新しい順、最大100件、action/outcome/queryフィルタを提供する。
+- 読み取りAPIは新しい順、1ページ最大100件、offsetページングとaction/outcome/queryフィルタを提供する。
 
 ### 3.3 CIモード
 

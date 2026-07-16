@@ -67,7 +67,7 @@ jobs:
           exit 0
 
       - name: Save current snapshots
-        if: always()
+        if: env.DRIFT_EXIT_CODE == '0' || env.DRIFT_EXIT_CODE == '1'
         uses: actions/cache/save@v4
         with:
           path: output/**/snapshots

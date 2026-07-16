@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from flask import Blueprint, request
 
+from web.audit_context import record_admin_event
 from web.config import OUTPUT_DIR
 from web.services.admin_audit import append_admin_audit
 from web.tenancy import current_auth_user, scoped_instance_path, scoped_output_dir
@@ -33,6 +34,17 @@ def _schedule_admin_guard():
 def _out() -> Path:
     """テナントスコープ済みの出力ディレクトリ（リクエスト毎に解決）。"""
     return scoped_output_dir(OUTPUT_DIR)
+
+
+def _record_notification_test(domain: str, channel: str, *, outcome: str) -> None:
+    record_admin_event(
+        INSTANCE_DIR,
+        action="notification.tested",
+        target_type="site",
+        target_id=domain,
+        outcome=outcome,
+        detail={"channel": channel},
+    )
 
 
 _VALID_INTERVALS = frozenset({"daily", "weekly", "monthly", "disabled"})
@@ -350,6 +362,12 @@ def api_schedule_notify_test() -> tuple[dict, int] | dict:
         report_url="テスト通知（レポートは生成されません）",
         added_page_names=("テスト画面",),
     )
-    if not send_drift_notification(notifier_config, notification):
+    sent = send_drift_notification(notifier_config, notification)
+    _record_notification_test(
+        domain,
+        notifier_type,
+        outcome="success" if sent else "failure",
+    )
+    if not sent:
         return {"error": "テスト通知を送信できませんでした"}, 502
     return {"ok": True, "message": "テスト通知を送信しました"}

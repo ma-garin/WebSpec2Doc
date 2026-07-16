@@ -326,9 +326,13 @@ class TestApiAdditiveKey:
         data_with = resp_with.get_json()
 
         assert data_with["document_requirements"] == trace_payload
-        # 既存キーは変わらない（オプトイン追加のみ）
-        for key in data_without:
+        # 既存の業務データは変わらない（オプトイン追加のみ）。generated_at は
+        # リクエストごとの生成時刻なので、秒境界をまたいでも同一とは限らない。
+        stable_keys = set(data_without) - {"generated_at"}
+        for key in stable_keys:
             assert data_with[key] == data_without[key]
+        assert isinstance(data_without["generated_at"], str)
+        assert isinstance(data_with["generated_at"], str)
 
     def test_api_no_trace_file_matches_current_response(self, tmp_path: Path, monkeypatch) -> None:
         """requirement_trace.json が無い場合は現行応答と完全一致する（AC-7）。"""

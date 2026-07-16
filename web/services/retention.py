@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta, tzinfo
 from pathlib import Path
@@ -107,11 +108,11 @@ def save_retention_policy(
 def _bounded_int(value: object, minimum: int, maximum: int) -> int | None:
     if isinstance(value, bool) or value is None:
         return None
-    if not isinstance(value, str | int | float | bytes | bytearray):
-        return None
-    try:
+    if isinstance(value, int):
+        parsed = value
+    elif isinstance(value, str) and re.fullmatch(r"[0-9]+", value.strip()):
         parsed = int(value)
-    except (TypeError, ValueError):
+    else:
         return None
     return parsed if minimum <= parsed <= maximum else None
 
@@ -171,13 +172,17 @@ def prune_snapshots(
         return PruneResult()
     for site_dir in sorted(output_dir.iterdir()):
         snapshots_dir = site_dir / "snapshots"
-        if site_dir.is_symlink() or not snapshots_dir.is_dir():
+        if site_dir.is_symlink() or snapshots_dir.is_symlink() or not snapshots_dir.is_dir():
+            continue
+        try:
+            snapshots_root = snapshots_dir.resolve(strict=True)
+        except OSError:
             continue
         snapshots = sorted(
             (
                 path
                 for path in snapshots_dir.glob("*.json")
-                if path.is_file() and not path.is_symlink()
+                if path.is_file() and not path.is_symlink() and _is_within(path, snapshots_root)
             ),
             key=lambda path: path.name,
             reverse=True,
@@ -204,6 +209,14 @@ def prune_snapshots(
             deleted_bytes += size
             deleted_paths.append(str(path.relative_to(output_dir)))
     return PruneResult(deleted_count, deleted_bytes, tuple(deleted_paths))
+
+
+def _is_within(path: Path, root: Path) -> bool:
+    try:
+        path.resolve(strict=True).relative_to(root)
+    except (OSError, ValueError):
+        return False
+    return True
 
 
 def _snapshot_time(path: Path, zone: tzinfo | None) -> datetime | None:

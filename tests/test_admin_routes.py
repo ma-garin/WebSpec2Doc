@@ -117,6 +117,30 @@ def test_retention_update_is_visible_in_filtered_admin_audit() -> None:
     assert events[0]["detail"] == {"changed_fields": ["days", "mode"]}
 
 
+def test_admin_audit_supports_stable_offset_pagination() -> None:
+    client = appmod.app.test_client()
+    for days in (10, 20, 30):
+        response = client.put(
+            "/api/admin/retention",
+            json={"mode": "days", "days": days},
+            headers=H,
+        )
+        assert response.status_code == 200
+
+    first = client.get("/api/admin/audit?limit=2&offset=0", headers=H).get_json()
+    second = client.get("/api/admin/audit?limit=2&offset=2", headers=H).get_json()
+
+    assert len(first["events"]) == 2
+    assert first["has_more"] is True
+    assert first["next_offset"] == 2
+    assert len(second["events"]) == 1
+    assert second["has_more"] is False
+    assert second["next_offset"] is None
+    assert {event["id"] for event in first["events"]}.isdisjoint(
+        {event["id"] for event in second["events"]}
+    )
+
+
 def test_member_cannot_read_admin_operations_data(monkeypatch) -> None:
     monkeypatch.delenv("WEBSPEC2DOC_AUTH_MODE")
     owner = appmod.app.test_client()
@@ -143,6 +167,88 @@ def test_member_cannot_read_admin_operations_data(monkeypatch) -> None:
     assert 'id="set-tab-data"' not in member_settings
     assert 'id="set-tab-audit"' not in member_settings
     assert owner.get("/api/admin/storage", headers=H).status_code == 200
+
+
+def test_two_tenants_keep_storage_retention_audit_and_gc_isolated(
+    monkeypatch, tmp_path: Path
+) -> None:
+    monkeypatch.delenv("WEBSPEC2DOC_AUTH_MODE")
+    owner_a = appmod.app.test_client()
+    _setup_owner(owner_a)
+
+    from web.services.auth_store import get_auth_store
+    from web.services.retention import (
+        load_retention_policy,
+        prune_snapshots,
+    )
+
+    store = get_auth_store()
+    user_a = store.authenticate("owner@example.com", "secret-pass-123")
+    tenant_a = store.get_tenant(user_a["tenant_id"])
+    assert tenant_a is not None
+    tenant_b = store.create_tenant("Other Team")
+    store.create_user(
+        tenant_b["id"],
+        "owner-b@example.com",
+        "Owner B",
+        "secret-pass-456",
+        role="owner",
+    )
+    owner_b = appmod.app.test_client()
+    _login(owner_b, "owner-b@example.com", "secret-pass-456")
+
+    scope_a = admin.OUTPUT_DIR / "tenants" / tenant_a["slug"]
+    scope_b = admin.OUTPUT_DIR / "tenants" / tenant_b["slug"]
+    for scope, size in ((scope_a, 3), (scope_b, 7)):
+        snapshots = scope / "example.com" / "snapshots"
+        snapshots.mkdir(parents=True)
+        (snapshots / "20260715-000000.json").write_bytes(b"x" * size)
+        (snapshots / "20260717-000000.json").write_bytes(b"y" * size)
+
+    assert (
+        owner_a.put(
+            "/api/admin/retention",
+            json={"mode": "generations", "generations": 1},
+            headers=H,
+        ).status_code
+        == 200
+    )
+    assert (
+        owner_b.put(
+            "/api/admin/retention",
+            json={"mode": "days", "days": 30},
+            headers=H,
+        ).status_code
+        == 200
+    )
+
+    storage_a = owner_a.get("/api/admin/storage", headers=H).get_json()["storage"]
+    storage_b = owner_b.get("/api/admin/storage", headers=H).get_json()["storage"]
+    assert storage_a["output_bytes"] == 6
+    assert storage_b["output_bytes"] == 14
+    assert owner_a.get("/api/admin/retention", headers=H).get_json()["policy"] == {
+        "mode": "generations",
+        "generations": 1,
+        "days": None,
+        "updated_at": owner_a.get("/api/admin/retention", headers=H).get_json()["policy"][
+            "updated_at"
+        ],
+        "updated_by": "owner@example.com",
+    }
+    assert owner_b.get("/api/admin/retention", headers=H).get_json()["policy"]["mode"] == "days"
+    audit_a = owner_a.get(
+        "/api/admin/audit?action=retention.settings_updated", headers=H
+    ).get_json()["events"]
+    audit_b = owner_b.get(
+        "/api/admin/audit?action=retention.settings_updated", headers=H
+    ).get_json()["events"]
+    assert [event["actor_email"] for event in audit_a] == ["owner@example.com"]
+    assert [event["actor_email"] for event in audit_b] == ["owner-b@example.com"]
+
+    policy_a_path = admin.INSTANCE_DIR / "tenants" / tenant_a["slug"] / "retention.json"
+    prune_snapshots(scope_a, load_retention_policy(policy_a_path))
+    assert len(list((scope_a / "example.com" / "snapshots").glob("*.json"))) == 1
+    assert len(list((scope_b / "example.com" / "snapshots").glob("*.json"))) == 2
 
 
 def test_schedule_settings_update_is_recorded_without_endpoint_secret(monkeypatch) -> None:

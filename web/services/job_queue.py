@@ -6,7 +6,6 @@ REST API (/api/v1/sites/<domain>/crawl) から呼び出され、
 
 from __future__ import annotations
 
-import json
 import logging
 import os
 import subprocess
@@ -16,6 +15,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Literal
+
+from web.services.drift_summary import drift_count, load_drift_summary, should_notify_drift
 
 _JOBS: dict[str, CrawlJob] = {}
 _JOBS_LOCK = threading.Lock()
@@ -165,27 +166,11 @@ def _try_slack_notify(job: CrawlJob, output_dir: Path | None = None) -> None:
             return
         base_dir = output_dir if output_dir is not None else Path("output")
         summary_path = base_dir / job.domain / "drift_summary.json"
-        try:
-            summary = json.loads(summary_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
+        summary = load_drift_summary(summary_path)
+        if summary is None:
             return
-        if (
-            not isinstance(summary, dict)
-            or bool(summary.get("first_run"))
-            or not bool(summary.get("has_changes"))
-        ):
+        if not should_notify_drift(summary):
             return
-        counts = summary.get("counts")
-        if not isinstance(counts, dict):
-            counts = {}
-
-        def count(name: str) -> int:
-            value = counts.get(name, 0)
-            return (
-                value
-                if isinstance(value, int) and not isinstance(value, bool) and value >= 0
-                else 0
-            )
 
         from web.services.notifier import (
             NOTIFIER_SLACK,
@@ -196,10 +181,10 @@ def _try_slack_notify(job: CrawlJob, output_dir: Path | None = None) -> None:
 
         notification = DriftNotification(
             site_url=str(summary.get("site_url") or job.site_url),
-            added_pages=count("added_pages"),
-            removed_pages=count("removed_pages"),
-            field_changes=count("field_changes"),
-            api_changes=count("api_changes"),
+            added_pages=drift_count(summary, "added_pages"),
+            removed_pages=drift_count(summary, "removed_pages"),
+            field_changes=drift_count(summary, "field_changes"),
+            api_changes=drift_count(summary, "api_changes"),
             report_url=str(summary.get("report_url") or f"output/{job.domain}/diff_report.html"),
         )
         config = NotifierConfig(notifier_type=NOTIFIER_SLACK, endpoint=webhook_url)

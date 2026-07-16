@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import yaml
 from scripts import notify_drift
 
 
@@ -90,12 +91,37 @@ def test_notify_drift_failure_is_exit_zero_and_does_not_print_secret(
 
 
 def test_spec_drift_workflow_persists_snapshots_and_preserves_exit_code() -> None:
-    workflow = Path(".github/workflows/spec-drift.yml").read_text(encoding="utf-8")
+    workflow = yaml.safe_load(Path(".github/workflows/spec-drift.yml").read_text(encoding="utf-8"))
+    steps = workflow["jobs"]["detect-drift"]["steps"]
+    by_name = {step["name"]: step for step in steps}
 
-    assert "actions/cache/restore@v4" in workflow
-    assert "actions/cache/save@v4" in workflow
-    assert "output/**/snapshots" in workflow
-    assert "--ci" in workflow
-    assert "python scripts/notify_drift.py" in workflow
-    assert "DRIFT_EXIT_CODE" in workflow
-    assert 'exit "$DRIFT_EXIT_CODE"' in workflow
+    assert by_name["Restore prior snapshots"]["uses"] == "actions/cache/restore@v4"
+    assert by_name["Restore prior snapshots"]["with"]["path"] == "output/**/snapshots"
+    assert "restore-keys" in by_name["Restore prior snapshots"]["with"]
+    assert by_name["Save current snapshots"]["uses"] == "actions/cache/save@v4"
+    assert by_name["Save current snapshots"]["with"]["path"] == "output/**/snapshots"
+    assert by_name["Save current snapshots"]["if"] == (
+        "env.DRIFT_EXIT_CODE == '0' || env.DRIFT_EXIT_CODE == '1'"
+    )
+    assert "--ci" in by_name["Run spec drift detection"]["run"]
+    assert "DRIFT_EXIT_CODE" in by_name["Run spec drift detection"]["run"]
+    assert "python scripts/notify_drift.py" in by_name["Notify drift (Slack)"]["run"]
+    assert by_name["Notify drift (Slack)"]["if"] == "env.DRIFT_EXIT_CODE == '1'"
+    assert (
+        'exit "$DRIFT_EXIT_CODE"' in by_name["Preserve drift or execution failure exit code"]["run"]
+    )
+
+
+def test_generated_spec_workflow_runs_exported_playwright_spec() -> None:
+    workflow = yaml.safe_load(
+        Path(".github/workflows/generated-spec.yml").read_text(encoding="utf-8")
+    )
+    job = workflow["jobs"]["run-generated-spec"]
+    steps = {step["name"]: step for step in job["steps"]}
+
+    assert job["env"]["SPEC_PATH"] == "${{ inputs.spec_path }}"
+    assert steps["Checkout repository"]["uses"] == "actions/checkout@v4"
+    assert steps["Set up Node.js"]["uses"] == "actions/setup-node@v4"
+    assert "@playwright/test@1.61.0" in steps["Install Playwright"]["run"]
+    assert 'playwright test "$SPEC_PATH"' in steps["Run generated spec"]["run"]
+    assert steps["Upload Playwright report"]["uses"] == "actions/upload-artifact@v4"

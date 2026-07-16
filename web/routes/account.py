@@ -250,6 +250,7 @@ def api_create_user() -> BaseResponse | tuple[dict, int] | dict:
             str(payload.get("name", "")),
             str(payload.get("password", "")),
             role=role,
+            actor_id=g.auth_user["id"],
         )
     except AuthError as exc:
         return {"error": str(exc), "code": exc.code}, 400

@@ -847,6 +847,53 @@
         "error_path",
         "evidence"
       ]
+    },
+    {
+      "feature_id": "ci_drift_monitor",
+      "name": "Drift Check as Code（CI組み込みドリフト監視）",
+      "risk_level": "high",
+      "status": "implemented",
+      "ui_files": [],
+      "route_files": [],
+      "core_files": [
+        "src/main.py",
+        "src/ci_drift.py",
+        "scripts/notify_drift.py",
+        "web/services/notifier.py",
+        "web/services/job_queue.py",
+        ".github/workflows/spec-drift.yml"
+      ],
+      "symbols": [
+        "save_drift_summary",
+        "emit_ci_summary",
+        "send_drift_notification",
+        "_try_slack_notify"
+      ],
+      "outputs": [
+        "drift_summary.json",
+        "CI_SUMMARY stdout record",
+        "Slack drift notification"
+      ],
+      "persistence": [
+        "output/{domain}/snapshots/",
+        "output/{domain}/drift_summary.json",
+        "GitHub Actions snapshot cache"
+      ],
+      "failure_modes": [
+        "missing_webhook",
+        "notify_http_error",
+        "missing_summary",
+        "first_run",
+        "session_expired",
+        "crawl_execution_failure"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "no_change_path",
+        "exit_code_contract",
+        "evidence"
+      ]
     }
   ]
 }

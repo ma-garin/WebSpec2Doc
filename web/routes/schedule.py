@@ -11,12 +11,23 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from flask import Blueprint, request
 
 from web.config import OUTPUT_DIR
-from web.tenancy import scoped_output_dir
+from web.services.admin_audit import append_admin_audit
+from web.tenancy import current_auth_user, scoped_instance_path, scoped_output_dir
 from web.validation import _valid_domain, _valid_url
 
 logger = logging.getLogger(__name__)
 
 bp = Blueprint("schedule", __name__)
+INSTANCE_DIR = Path("instance")
+
+
+@bp.before_request
+def _schedule_admin_guard():
+    if request.method in {"POST", "PUT", "PATCH", "DELETE"}:
+        from web.auth import require_admin
+
+        return require_admin()
+    return None
 
 
 def _out() -> Path:
@@ -221,6 +232,16 @@ def api_schedule_config_post() -> tuple[dict, int] | dict:
         config["created_at"] = datetime.now().isoformat(timespec="seconds")
 
     _save_config(domain, config)
+    actor = current_auth_user() or {}
+    append_admin_audit(
+        scoped_instance_path(INSTANCE_DIR / "admin_audit.jsonl"),
+        action="schedule.settings_updated",
+        actor_id=str(actor.get("id", "")),
+        actor_email=str(actor.get("email", "local-admin")),
+        target_type="site",
+        target_id=domain,
+        detail={"changed_fields": sorted(body)},
+    )
     logger.info("schedule config saved: domain=%s interval=%s", domain, interval)
     return {"ok": True, "domain": domain, "next_run_at": next_run_at}
 

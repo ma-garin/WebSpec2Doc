@@ -5,6 +5,10 @@
             <button type="button" class="set-tab" data-tab="crawl" role="tab" aria-selected="false" aria-controls="set-panel-crawl" id="set-tab-crawl" tabindex="-1">クロール既定値</button>
             <button type="button" class="set-tab" data-tab="notify" role="tab" aria-selected="false" aria-controls="set-panel-notify" id="set-tab-notify" tabindex="-1">通知</button>
             <button type="button" class="set-tab" data-tab="operations" role="tab" aria-selected="false" aria-controls="set-panel-operations" id="set-tab-operations" tabindex="-1">運用監視</button>
+            {% if not auth_user or auth_user.role in ('owner', 'admin') %}
+            <button type="button" class="set-tab" data-tab="data" role="tab" aria-selected="false" aria-controls="set-panel-data" id="set-tab-data" tabindex="-1">データ管理</button>
+            <button type="button" class="set-tab" data-tab="audit" role="tab" aria-selected="false" aria-controls="set-panel-audit" id="set-tab-audit" tabindex="-1">監査ログ</button>
+            {% endif %}
             <button type="button" class="set-tab" data-tab="test-design" role="tab" aria-selected="false" aria-controls="set-panel-test-design" id="set-tab-test-design" tabindex="-1">テスト設計</button>
           </div>
 
@@ -138,6 +142,19 @@
                 <div id="ops-history"><p class="input-hint">サイトを選択すると表示します。</p></div>
               </div>
             </div>
+            <div class="input-card ci-drift-card">
+              <div>
+                <h2 class="set-card-title">CIで仕様ドリフトをゲート</h2>
+                <p class="input-hint">前回スナップショットをCIキャッシュへ保存し、差分をリリース条件にできます。</p>
+              </div>
+              <code id="ci-drift-command">python src/main.py --url https://example.com --ci --format json,html</code>
+              <dl class="ci-exit-codes" aria-label="CI終了コード">
+                <div><dt>0</dt><dd>初回・差分なし</dd></div>
+                <div><dt>1</dt><dd>仕様ドリフトあり</dd></div>
+                <div><dt>2</dt><dd>取得・認証エラー</dd></div>
+              </dl>
+              <p class="input-hint">同梱テンプレート: <code>.github/workflows/spec-drift.yml</code></p>
+            </div>
             <div class="input-card onboarding-replay-card">
               <div>
                 <h2 class="set-card-title">操作ツアー</h2>
@@ -146,6 +163,83 @@
               <button type="button" class="btn-outline-sm" id="restart-tour">操作ツアーを再表示</button>
             </div>
           </div>
+
+          {% if not auth_user or auth_user.role in ('owner', 'admin') %}
+          <div class="set-panel" id="set-panel-data" role="tabpanel" aria-labelledby="set-tab-data">
+            <div class="input-card">
+              <div class="admin-panel-head">
+                <div>
+                  <h2 class="set-card-title">データ容量と保持</h2>
+                  <p class="input-hint">既定は無制限です。世代数または期間を指定すると、成功したスケジュール実行後に古いスナップショットを削除します。</p>
+                </div>
+                <button type="button" class="btn-outline-sm" id="data-refresh">再読み込み</button>
+              </div>
+              <div class="storage-stats" aria-live="polite">
+                <div class="storage-stat"><span>出力データ</span><strong id="storage-output">—</strong></div>
+                <div class="storage-stat"><span>運用データ</span><strong id="storage-instance">—</strong></div>
+                <div class="storage-stat"><span>合計</span><strong id="storage-total">—</strong></div>
+              </div>
+              <div class="retention-editor">
+                <div class="field">
+                  <label for="retention-mode">保持方式</label>
+                  <select id="retention-mode">
+                    <option value="unlimited">無制限（既定）</option>
+                    <option value="generations">世代数</option>
+                    <option value="days">期間（日）</option>
+                  </select>
+                </div>
+                <div class="field" id="retention-generations-field" hidden>
+                  <label for="retention-generations">保持する世代数</label>
+                  <input type="number" id="retention-generations" min="1" max="10000" value="30">
+                </div>
+                <div class="field" id="retention-days-field" hidden>
+                  <label for="retention-days">保持日数</label>
+                  <input type="number" id="retention-days" min="1" max="3650" value="365">
+                </div>
+                <button type="button" class="btn-primary" id="retention-save">保持設定を保存</button>
+              </div>
+              <div class="settings-msg" id="retention-msg" role="status"></div>
+              <div class="admin-table-wrap">
+                <table class="admin-data-table" aria-label="サイト別データ容量">
+                  <thead><tr><th>サイト</th><th>スナップショット</th><th>スナップショット容量</th><th>合計容量</th><th>更新日時</th></tr></thead>
+                  <tbody id="storage-sites"><tr><td colspan="5">読み込み前です。</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="input-card backup-guide-card">
+              <div>
+                <h2 class="set-card-title">バックアップ／リストア</h2>
+                <p class="input-hint"><code>output/</code> と <code>instance/</code> は、必ず同じ時点の対として保存・復旧します。</p>
+              </div>
+              <a class="btn-outline-sm" href="/api/admin/backup-guide" target="_blank" rel="noopener">運用手順を開く</a>
+            </div>
+          </div>
+
+          <div class="set-panel" id="set-panel-audit" role="tabpanel" aria-labelledby="set-tab-audit">
+            <div class="input-card">
+              <div class="admin-panel-head">
+                <div>
+                  <h2 class="set-card-title">管理操作の監査ログ</h2>
+                  <p class="input-hint">ログイン成否、メンバー変更、設定変更、保持GC、レポート出力をワークスペース単位で表示します。</p>
+                </div>
+                <button type="button" class="btn-outline-sm" id="audit-refresh">再読み込み</button>
+              </div>
+              <div class="audit-filters">
+                <div class="field"><label for="audit-action">操作</label><select id="audit-action"><option value="">すべて</option><option value="user.login">ログイン</option><option value="user.created">メンバー追加</option><option value="user.updated">メンバー変更</option><option value="schedule.settings_updated">スケジュール・通知設定</option><option value="retention.settings_updated">保持設定</option><option value="retention.snapshots_pruned">保持GC</option><option value="report.exported">レポート出力</option></select></div>
+                <div class="field"><label for="audit-outcome">結果</label><select id="audit-outcome"><option value="">すべて</option><option value="success">成功</option><option value="failure">失敗</option></select></div>
+                <div class="field audit-query"><label for="audit-query">検索</label><input type="search" id="audit-query" placeholder="メール・対象・操作"></div>
+                <button type="button" class="btn-primary" id="audit-search">絞り込む</button>
+              </div>
+              <div class="settings-msg" id="audit-msg" role="status"></div>
+              <div class="admin-table-wrap">
+                <table class="admin-data-table" id="admin-audit-table" aria-label="管理操作の監査ログ">
+                  <thead><tr><th>日時</th><th>実行者</th><th>操作</th><th>対象</th><th>結果</th><th>詳細</th></tr></thead>
+                  <tbody id="admin-audit-events"><tr><td colspan="6">読み込み前です。</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          {% endif %}
 
           <div class="set-panel" id="set-panel-test-design" role="tabpanel" aria-labelledby="set-tab-test-design">
             <div class="input-card">

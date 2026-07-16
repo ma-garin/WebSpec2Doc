@@ -7,6 +7,8 @@ import sys
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 import app as appmod
@@ -15,6 +17,11 @@ import web.routes.history as history_mod
 import web.routes.report as report_mod
 import web.summary as summary_mod
 import web.validation as validation_mod
+
+
+@pytest.fixture(autouse=True)
+def _isolated_report_audit(tmp_path: Path, monkeypatch):
+    monkeypatch.setattr(report_mod, "INSTANCE_DIR", tmp_path / "instance")
 
 
 def _client():

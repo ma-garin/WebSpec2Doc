@@ -17,6 +17,7 @@ def create_app() -> Flask:
     from web.auth import auth_guard, ensure_secret_key
     from web.routes import (
         account,
+        admin,
         api_v1,
         auto_run,
         crawl,
@@ -58,6 +59,7 @@ def create_app() -> Flask:
         return {"auth_user": getattr(g, "auth_user", None)}
 
     app.register_blueprint(account.bp)
+    app.register_blueprint(admin.bp)
     app.register_blueprint(pages.bp)
     app.register_blueprint(discover.bp)
     app.register_blueprint(site.bp)

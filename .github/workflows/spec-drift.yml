@@ -26,22 +26,58 @@ jobs:
           python-version: '3.12'
           cache: 'pip'
 
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          playwright install chromium --with-deps
-
-      - name: Run spec drift detection
+      - name: Resolve target cache namespace
+        id: target
         env:
           TARGET_URL: ${{ inputs.target_url || vars.WEBSPEC_TARGET_URL }}
         run: |
+          if [ -z "$TARGET_URL" ]; then
+            echo "WEBSPEC_TARGET_URL または target_url を設定してください。" >&2
+            exit 2
+          fi
+          target_hash=$(printf '%s' "$TARGET_URL" | sha256sum | cut -c1-16)
+          echo "hash=$target_hash" >> "$GITHUB_OUTPUT"
+
+      - name: Restore prior snapshots
+        uses: actions/cache/restore@v4
+        with:
+          path: output/**/snapshots
+          key: spec-drift-snapshots-${{ steps.target.outputs.hash }}-${{ github.run_id }}
+          restore-keys: |
+            spec-drift-snapshots-${{ steps.target.outputs.hash }}-
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          python scripts/manage_playwright_runtime.py install
+
+      - name: Run spec drift detection
+        id: drift
+        env:
+          TARGET_URL: ${{ inputs.target_url || vars.WEBSPEC_TARGET_URL }}
+        run: |
+          set +e
           python src/main.py \
             --url "$TARGET_URL" \
-            --compare \
-            --fail-on-drift \
+            --ci \
             --format json,html
-        continue-on-error: true
-        id: drift
+          DRIFT_EXIT_CODE=$?
+          echo "DRIFT_EXIT_CODE=$DRIFT_EXIT_CODE" >> "$GITHUB_ENV"
+          echo "exit_code=$DRIFT_EXIT_CODE" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Save current snapshots
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: output/**/snapshots
+          key: spec-drift-snapshots-${{ steps.target.outputs.hash }}-${{ github.run_id }}
+
+      - name: Notify drift (Slack)
+        if: env.DRIFT_EXIT_CODE == '1'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: python scripts/notify_drift.py output/*/drift_summary.json
 
       - name: Upload drift report
         if: always()
@@ -51,8 +87,9 @@ jobs:
           path: output/
           retention-days: 30
 
-      - name: Report drift result
-        if: steps.drift.outcome == 'failure'
-        run: |
-          echo "::warning::仕様ドリフトを検知しました。アーティファクトの diff_report.html を確認してください。"
-          exit 1
+      - name: Preserve drift or execution failure exit code
+        if: always() && env.DRIFT_EXIT_CODE != '0'
+        run: exit "$DRIFT_EXIT_CODE"
+
+      # PRコメントが必要な場合は、pull_request権限を設計したうえで
+      # `gh api repos/$GITHUB_REPOSITORY/issues/<PR>/comments` を追加してください。

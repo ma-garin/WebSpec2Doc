@@ -13,10 +13,15 @@ function selectSettingsTab(tab) {
     p.classList.toggle('is-active', p.id === 'set-panel-' + tab);
   });
 }
+function loadSettingsTabData(tab) {
+  if (tab === 'operations') loadOperationalSites();
+  if (tab === 'data') loadDataManagement();
+  if (tab === 'audit') loadAdminAudit();
+}
 document.querySelectorAll('.set-tabs .set-tab').forEach(t => {
   t.addEventListener('click', () => {
     selectSettingsTab(t.dataset.tab);
-    if (t.dataset.tab === 'operations') loadOperationalSites();
+    loadSettingsTabData(t.dataset.tab);
   });
   t.addEventListener('keydown', (e) => {
     if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
@@ -24,7 +29,7 @@ document.querySelectorAll('.set-tabs .set-tab').forEach(t => {
     const tabs = [...document.querySelectorAll('.set-tabs .set-tab')];
     const i = tabs.indexOf(t);
     const next = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
-    if (next) { selectSettingsTab(next.dataset.tab); next.focus(); }
+    if (next) { selectSettingsTab(next.dataset.tab); loadSettingsTabData(next.dataset.tab); next.focus(); }
   });
 });
 
@@ -363,6 +368,144 @@ async function loadOperationalHistory(domain) {
   }
 }
 
+// ---- データ管理（容量・保持）----
+function _formatBytes(value) {
+  const bytes = Number(value || 0);
+  if (bytes < 1024) return `${bytes} B`;
+  const units = ['KB', 'MB', 'GB', 'TB'];
+  let size = bytes / 1024;
+  let unit = units[0];
+  for (let i = 1; i < units.length && size >= 1024; i += 1) {
+    size /= 1024;
+    unit = units[i];
+  }
+  return `${size.toFixed(size >= 10 ? 1 : 2)} ${unit}`;
+}
+
+function _adminMessage(id, text, isError = false) {
+  const message = document.getElementById(id);
+  if (!message) return;
+  message.textContent = text;
+  message.classList.toggle('is-error', isError);
+  message.classList.add('show');
+}
+
+async function _adminRequest(url, options) {
+  const response = await fetch(url, options);
+  let data = {};
+  try { data = await response.json(); } catch (_) { data = {}; }
+  if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+  return data;
+}
+
+function updateRetentionFields() {
+  const mode = document.getElementById('retention-mode')?.value || 'unlimited';
+  const generations = document.getElementById('retention-generations-field');
+  const days = document.getElementById('retention-days-field');
+  if (generations) generations.hidden = mode !== 'generations';
+  if (days) days.hidden = mode !== 'days';
+}
+
+async function loadDataManagement() {
+  if (!document.getElementById('set-panel-data')) return;
+  try {
+    const [storageData, retentionData] = await Promise.all([
+      _adminRequest('/api/admin/storage'),
+      _adminRequest('/api/admin/retention'),
+    ]);
+    const storage = storageData.storage || {};
+    const value = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+    value('storage-output', _formatBytes(storage.output_bytes));
+    value('storage-instance', _formatBytes(storage.instance_bytes));
+    value('storage-total', _formatBytes(storage.total_bytes));
+    const sites = Array.isArray(storage.sites) ? storage.sites : [];
+    const body = document.getElementById('storage-sites');
+    if (body) {
+      body.innerHTML = sites.length ? sites.map(site => `<tr>
+        <td>${escHtml(site.domain || '')}</td>
+        <td>${Number(site.snapshot_count || 0).toLocaleString('ja-JP')}件</td>
+        <td>${_formatBytes(site.snapshot_bytes)}</td>
+        <td>${_formatBytes(site.total_bytes)}</td>
+        <td>${escHtml(site.updated_at || '—')}</td>
+      </tr>`).join('') : '<tr><td colspan="5">保存済みサイトはありません。</td></tr>';
+    }
+    const policy = retentionData.policy || {};
+    const mode = document.getElementById('retention-mode');
+    if (mode) mode.value = policy.mode || 'unlimited';
+    const generations = document.getElementById('retention-generations');
+    if (generations && policy.generations != null) generations.value = policy.generations;
+    const days = document.getElementById('retention-days');
+    if (days && policy.days != null) days.value = policy.days;
+    updateRetentionFields();
+  } catch (error) {
+    _adminMessage('retention-msg', error.message || 'データ管理情報を取得できませんでした。', true);
+  }
+}
+
+async function saveRetentionPolicy() {
+  const mode = document.getElementById('retention-mode')?.value || 'unlimited';
+  const payload = { mode };
+  if (mode === 'generations') payload.generations = Number(document.getElementById('retention-generations')?.value || 0);
+  if (mode === 'days') payload.days = Number(document.getElementById('retention-days')?.value || 0);
+  try {
+    await _adminRequest('/api/admin/retention', {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload),
+    });
+    _adminMessage('retention-msg', '保持設定を保存しました。');
+    await loadDataManagement();
+  } catch (error) {
+    _adminMessage('retention-msg', error.message || '保持設定を保存できませんでした。', true);
+  }
+}
+
+// ---- 管理操作の監査ログ ----
+const _auditActionLabels = {
+  'user.login': 'ログイン',
+  'user.created': 'メンバー追加',
+  'user.updated': 'メンバー変更',
+  'schedule.settings_updated': 'スケジュール・通知設定',
+  'retention.settings_updated': '保持設定',
+  'retention.snapshots_pruned': '保持GC',
+  'report.exported': 'レポート出力',
+};
+
+async function loadAdminAudit() {
+  const body = document.getElementById('admin-audit-events');
+  if (!body) return;
+  const params = new URLSearchParams({ limit: '100' });
+  const action = document.getElementById('audit-action')?.value || '';
+  const outcome = document.getElementById('audit-outcome')?.value || '';
+  const query = document.getElementById('audit-query')?.value?.trim() || '';
+  if (action) params.set('action', action);
+  if (outcome) params.set('outcome', outcome);
+  if (query) params.set('query', query);
+  body.innerHTML = '<tr><td colspan="6">読み込み中...</td></tr>';
+  try {
+    const data = await _adminRequest(`/api/admin/audit?${params.toString()}`);
+    const events = Array.isArray(data.events) ? data.events : [];
+    body.innerHTML = events.length ? events.map(event => {
+      const target = [event.target_type, event.target_id].filter(Boolean).join(': ') || '—';
+      const detail = event.detail && Object.keys(event.detail).length
+        ? JSON.stringify(event.detail)
+        : '—';
+      const success = event.outcome === 'success';
+      return `<tr>
+        <td>${escHtml(event.at || '')}</td>
+        <td>${escHtml(event.actor_email || event.actor_id || 'system')}</td>
+        <td>${escHtml(_auditActionLabels[event.action] || event.action || '')}</td>
+        <td>${escHtml(target)}</td>
+        <td><span class="audit-outcome ${success ? 'is-success' : 'is-failure'}">${success ? '成功' : '失敗'}</span></td>
+        <td class="audit-detail">${escHtml(detail)}</td>
+      </tr>`;
+    }).join('') : '<tr><td colspan="6">条件に一致する監査ログはありません。</td></tr>';
+  } catch (error) {
+    body.innerHTML = '<tr><td colspan="6">監査ログを取得できませんでした。</td></tr>';
+    _adminMessage('audit-msg', error.message || '監査ログを取得できませんでした。', true);
+  }
+}
+
 document.getElementById('save-api')?.addEventListener('click', saveApiKey);
 document.getElementById('test-connection')?.addEventListener('click', testConnection);
 document.getElementById('save-slack')?.addEventListener('click', saveSlackWebhook);
@@ -371,6 +514,14 @@ document.getElementById('save-test-design')?.addEventListener('click', saveTestD
 document.getElementById('ops-site')?.addEventListener('change', (e) => loadOperationalConfig(e.target.value));
 document.getElementById('ops-save')?.addEventListener('click', saveOperationalConfig);
 document.getElementById('ops-test-notify')?.addEventListener('click', testOperationalNotification);
+document.getElementById('data-refresh')?.addEventListener('click', loadDataManagement);
+document.getElementById('retention-mode')?.addEventListener('change', updateRetentionFields);
+document.getElementById('retention-save')?.addEventListener('click', saveRetentionPolicy);
+document.getElementById('audit-refresh')?.addEventListener('click', loadAdminAudit);
+document.getElementById('audit-search')?.addEventListener('click', loadAdminAudit);
+document.getElementById('audit-query')?.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') loadAdminAudit();
+});
 
 // 初期ロード
 loadSettingsForm();

@@ -14,11 +14,11 @@ from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 
 import networkx as nx
-import openpyxl
 from dotenv import load_dotenv
 
 from analyzer.form_analyzer import summarize_forms
 from analyzer.html_analyzer import AnalyzedPage, analyze_pages
+from ci_drift import emit_ci_error, emit_ci_summary, save_drift_summary
 from crawler.auth import DEFAULT_AUTH_FILE, capture_auth_state
 from crawler.page_crawler import (
     DEFAULT_DEPTH,
@@ -27,12 +27,12 @@ from crawler.page_crawler import (
     crawl_site,
     crawl_urls,
     discover_pages,
-    evidence_to_dict,
 )
 from crawler.session_guard import SessionExpiredError
 from diff.differ import compute_diff
 from diff.snapshot import latest_snapshot, load_snapshot, save_partial_snapshot, save_snapshot
 from generator.diff_reporter import generate_diff_report
+from generator.excel_reporter import save_excel_output as _save_excel_output
 from generator.markdown_generator import (
     generate_forms_markdown,
     generate_screens_markdown,
@@ -48,7 +48,6 @@ DEFAULT_FORMATS = "md"
 FORMAT_SEPARATOR = ","
 LOGGER_FORMAT = "%(levelname)s:%(name)s:%(message)s"
 SUPPORTED_FORMATS = frozenset({"md", "html", "excel", "pdf", "json"})
-XLSX_FILE_NAME = "spec.xlsx"
 PDF_FILE_NAME = "report.pdf"
 JSON_REPORT_FILE_NAME = "report.json"
 DIFF_REPORT_FILE_NAME = "diff_report.html"
@@ -146,6 +145,11 @@ def parse_args() -> argparse.Namespace:
         "--fail-on-drift",
         action="store_true",
         help="差分検知時に exit code 1 で終了（CI/CDパイプライン用）",
+    )
+    parser.add_argument(
+        "--ci",
+        action="store_true",
+        help="CI向け比較モード（--compare --fail-on-driftを含み、機械可読サマリをstdoutへ出力）",
     )
     parser.add_argument(
         "--reference-doc",
@@ -261,7 +265,11 @@ def parse_args() -> argparse.Namespace:
             "（既定 OFF。--reference-doc と併用必須。単独指定は警告して無視）"
         ),
     )
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.ci:
+        args.compare = True
+        args.fail_on_drift = True
+    return args
 
 
 def run(args: argparse.Namespace) -> None:
@@ -598,11 +606,16 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
                 }
             )
         logger.error("%s", exc)
+        if bool(getattr(args, "ci", False)):
+            emit_ci_error("session_expired")
         sys.stdout.write("SESSION_EXPIRED\n")
         sys.exit(2)
 
     if not pages and not _STOP_REQUESTED.is_set():
         logger.error("クロール対象ページを1件も取得できませんでした")
+        if bool(getattr(args, "ci", False)):
+            emit_ci_error("no_pages_crawled")
+            sys.exit(2)
         sys.exit(1)
 
     analyzed_pages = analyze_pages(pages)
@@ -672,6 +685,8 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
         drift_detected = _save_diff_report(
             prior_snapshot, new_snapshot, pages, output_dir, primary_url
         )
+    if bool(getattr(args, "ci", False)):
+        emit_ci_summary(output_dir, exit_code=1 if drift_detected else 0)
     logger.info("出力が完了しました: %s", output_dir)
     if drift_detected and bool(getattr(args, "fail_on_drift", False)):
         logger.warning(
@@ -985,10 +1000,24 @@ def _save_diff_report(
 ) -> bool:
     """差分レポートを生成して保存する。差分がある場合は True を返す。"""
     if prior_snapshot is None:
+        save_drift_summary(
+            None,
+            output_dir,
+            target_url,
+            first_run=True,
+            report_file_name=DIFF_REPORT_FILE_NAME,
+        )
         logger.info(FIRST_SNAPSHOT_MESSAGE)
         return False
     old_pages = load_snapshot(prior_snapshot)
     diff = compute_diff(old_pages, pages)
+    drift_detected = save_drift_summary(
+        diff,
+        output_dir,
+        target_url,
+        first_run=False,
+        report_file_name=DIFF_REPORT_FILE_NAME,
+    )
     report_html = generate_diff_report(
         diff=diff,
         old_label=prior_snapshot.name,
@@ -997,7 +1026,7 @@ def _save_diff_report(
     )
     (output_dir / DIFF_REPORT_FILE_NAME).write_text(report_html, encoding="utf-8")
     _save_diff_summary(diff, output_dir)
-    return bool(getattr(diff, "has_changes", False))
+    return drift_detected
 
 
 def _save_diff_summary(diff: object, output_dir: Path) -> None:
@@ -1417,158 +1446,6 @@ def _parse_formats(raw_formats: str) -> tuple[str, ...]:
 def _domain_name(url: str) -> str:
     parsed = urlparse(url)
     return parsed.netloc or parsed.path.replace("/", "_") or "site"
-
-
-def _save_excel_output(
-    output_dir: Path,
-    pages: list[AnalyzedPage],
-    form_summary: list[dict[str, object]],
-    official_names: dict[str, str] | None = None,
-) -> None:
-    wb = openpyxl.Workbook()
-
-    _write_screens_sheet(wb.active, pages)
-    wb.active.title = "Screens"
-
-    forms_sheet = wb.create_sheet("Forms")
-    _write_forms_sheet(forms_sheet, form_summary)
-
-    field_def_sheet = wb.create_sheet("項目定義書")
-    _write_field_definitions_sheet(field_def_sheet, pages, official_names)
-
-    bva_sheet = wb.create_sheet("境界値データ")
-    _write_bva_sheet(bva_sheet, pages)
-
-    wb.save(output_dir / XLSX_FILE_NAME)
-
-
-def _write_screens_sheet(
-    ws: openpyxl.worksheet.worksheet.Worksheet, pages: list[AnalyzedPage]
-) -> None:
-    ws.append(["画面ID", "URL", "タイトル", "フォーム数"])
-    for page in pages:
-        ws.append(
-            [page.page_id, page.page_data.url, page.page_data.title, len(page.page_data.forms)]
-        )
-
-
-def _write_forms_sheet(
-    ws: openpyxl.worksheet.worksheet.Worksheet,
-    form_summary: list[dict[str, object]],
-) -> None:
-    ws.append(["画面ID", "URL", "フィールド名", "型", "必須", "placeholder", "根拠", "確信度"])
-    for item in form_summary:
-        ws.append(
-            [
-                item.get("page_id", ""),
-                item.get("url", ""),
-                item.get("name", ""),
-                item.get("field_type", ""),
-                item.get("required", False),
-                item.get("placeholder", ""),
-                _evidence_cell(item.get("evidence")),
-                item.get("confidence", ""),
-            ]
-        )
-
-
-def _write_field_definitions_sheet(
-    ws: openpyxl.worksheet.worksheet.Worksheet,
-    pages: list[AnalyzedPage],
-    official_names: dict[str, str] | None = None,
-) -> None:
-    """実測フィールド属性を SIer 標準の「項目定義書」形式で出力する。"""
-    ws.append(
-        [
-            "画面名",
-            "画面ID",
-            "URL",
-            "項目名",
-            "ラベル",
-            "型",
-            "必須",
-            "最小桁",
-            "最大桁",
-            "範囲",
-            "入力規則",
-            "選択肢",
-            "初期値",
-            "placeholder",
-            "根拠",
-            "確信度",
-        ]
-    )
-    names = official_names or {}
-    for page in pages:
-        screen_name = names.get(page.page_id) or page.page_data.title
-        for form in page.page_data.forms:
-            for field in form.fields:
-                range_text = (
-                    f"{field.min_value}〜{field.max_value}"
-                    if (field.min_value or field.max_value)
-                    else ""
-                )
-                ws.append(
-                    [
-                        screen_name,
-                        page.page_id,
-                        page.page_data.url,
-                        field.name,
-                        field.aria_label or "未確認",
-                        field.field_type,
-                        field.required,
-                        field.minlength if field.minlength is not None else "",
-                        field.maxlength if field.maxlength is not None else "",
-                        range_text,
-                        field.pattern,
-                        "、".join(field.options),
-                        field.default,
-                        field.placeholder,
-                        _evidence_cell(evidence_to_dict(field.evidence)),
-                        field.confidence,
-                    ]
-                )
-
-
-def _write_bva_sheet(ws: openpyxl.worksheet.worksheet.Worksheet, pages: list[AnalyzedPage]) -> None:
-    """実測属性から機械導出した境界値データを出力する。"""
-    from analyzer.bva import KIND_LABELS, attach_observed_boundary_cases, derive_boundary_cases
-
-    ws.append(
-        ["画面ID", "項目名", "観点", "入力値", "期待結果", "根拠属性", "根拠セレクタ", "確信度"]
-    )
-    for page in pages:
-        observations = list(page.page_data.validation_observations)
-        for form in page.page_data.forms:
-            for field in form.fields:
-                cases = attach_observed_boundary_cases(
-                    derive_boundary_cases(field), field, observations
-                )
-                for case in cases:
-                    value = case.value if case.generated else "（例生成不能 — 手動作成要）"
-                    ws.append(
-                        [
-                            page.page_id,
-                            case.field_name,
-                            KIND_LABELS.get(case.kind, case.kind),
-                            value,
-                            case.expected,
-                            case.source_attribute,
-                            _evidence_cell(evidence_to_dict(case.evidence)),
-                            case.confidence,
-                        ]
-                    )
-
-
-def _evidence_cell(evidence: object) -> str:
-    """evidence dict を Excel セル向けの文字列（セレクタ + 属性）に変換する。"""
-    if not isinstance(evidence, dict):
-        return ""
-    selector = str(evidence.get("selector") or "")
-    attribute = evidence.get("html_attribute")
-    if attribute:
-        return f"{selector} ({attribute})"
-    return selector
 
 
 if __name__ == "__main__":

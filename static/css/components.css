@@ -1014,7 +1014,6 @@
 .ops-history-card h3 { margin: 0 0 12px; font-size: 15px; }
 .ops-history-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 .ops-history-table th, .ops-history-table td { padding: 8px; border-bottom: 1px solid var(--border); text-align: left; }
-
 /* ==================== 共通ページャ（table-utils.js） ==================== */
 .pager-wrap { margin-top: 12px; }
 .pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }

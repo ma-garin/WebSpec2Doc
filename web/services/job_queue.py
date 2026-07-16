@@ -6,6 +6,7 @@ REST API (/api/v1/sites/<domain>/crawl) から呼び出され、
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import subprocess
@@ -163,9 +164,29 @@ def _try_slack_notify(job: CrawlJob, output_dir: Path | None = None) -> None:
         if not webhook_url:
             return
         base_dir = output_dir if output_dir is not None else Path("output")
-        diff_report = base_dir / job.domain / "diff_report.html"
-        if not diff_report.exists():
+        summary_path = base_dir / job.domain / "drift_summary.json"
+        try:
+            summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
             return
+        if (
+            not isinstance(summary, dict)
+            or bool(summary.get("first_run"))
+            or not bool(summary.get("has_changes"))
+        ):
+            return
+        counts = summary.get("counts")
+        if not isinstance(counts, dict):
+            counts = {}
+
+        def count(name: str) -> int:
+            value = counts.get(name, 0)
+            return (
+                value
+                if isinstance(value, int) and not isinstance(value, bool) and value >= 0
+                else 0
+            )
+
         from web.services.notifier import (
             NOTIFIER_SLACK,
             DriftNotification,
@@ -174,12 +195,12 @@ def _try_slack_notify(job: CrawlJob, output_dir: Path | None = None) -> None:
         )
 
         notification = DriftNotification(
-            site_url=job.site_url,
-            added_pages=0,
-            removed_pages=0,
-            field_changes=0,
-            api_changes=0,
-            report_url=f"output/{job.domain}/diff_report.html",
+            site_url=str(summary.get("site_url") or job.site_url),
+            added_pages=count("added_pages"),
+            removed_pages=count("removed_pages"),
+            field_changes=count("field_changes"),
+            api_changes=count("api_changes"),
+            report_url=str(summary.get("report_url") or f"output/{job.domain}/diff_report.html"),
         )
         config = NotifierConfig(notifier_type=NOTIFIER_SLACK, endpoint=webhook_url)
         send_drift_notification(config, notification)

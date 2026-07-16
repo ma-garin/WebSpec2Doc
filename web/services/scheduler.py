@@ -23,6 +23,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from web.config import OUTPUT_DIR
 
 SCHEDULER_POLL_INTERVAL = 60  # seconds
+INSTANCE_DIR = Path("instance")
 
 _stop_event = threading.Event()
 _started_lock = threading.Lock()
@@ -84,17 +85,34 @@ def _check_and_run_due(output_dir: Path) -> None:
     if not output_dir.is_dir():
         return
     now = datetime.now().astimezone()
-    _scan_schedule_base(output_dir, now, crawl_output=None)
+    _scan_schedule_base(
+        output_dir,
+        now,
+        crawl_output=None,
+        retention_path=INSTANCE_DIR / "retention.json",
+    )
     from web.tenancy import TENANTS_DIR_NAME
 
     tenants_root = output_dir / TENANTS_DIR_NAME
     if tenants_root.is_dir():
         for tenant_dir in tenants_root.iterdir():
             if tenant_dir.is_dir():
-                _scan_schedule_base(tenant_dir, now, crawl_output=tenant_dir)
+                _scan_schedule_base(
+                    tenant_dir,
+                    now,
+                    crawl_output=tenant_dir,
+                    retention_path=(
+                        INSTANCE_DIR / TENANTS_DIR_NAME / tenant_dir.name / "retention.json"
+                    ),
+                )
 
 
-def _scan_schedule_base(base_dir: Path, now: datetime, crawl_output: Path | None) -> None:
+def _scan_schedule_base(
+    base_dir: Path,
+    now: datetime,
+    crawl_output: Path | None,
+    retention_path: Path,
+) -> None:
     from web.tenancy import TENANTS_DIR_NAME
 
     for domain_dir in base_dir.iterdir():
@@ -104,7 +122,13 @@ def _scan_schedule_base(base_dir: Path, now: datetime, crawl_output: Path | None
         if not schedule_path.is_file():
             continue
         try:
-            _maybe_run(domain_dir.name, schedule_path, now, crawl_output=crawl_output)
+            _maybe_run(
+                domain_dir.name,
+                schedule_path,
+                now,
+                crawl_output=crawl_output,
+                retention_path=retention_path,
+            )
         except Exception:
             logger.exception("スケジュール実行エラー: domain=%s", domain_dir.name)
 
@@ -116,6 +140,7 @@ def _maybe_run(
     crawl_output: Path | None = None,
     *,
     sleeper: Callable[[float], None] | None = None,
+    retention_path: Path | None = None,
 ) -> None:
     """schedule.json を読み、期限到来時にクロールを起動して timestamps を更新する。"""
     try:
@@ -194,6 +219,36 @@ def _maybe_run(
 
     if last_result.success:
         logger.info("スケジュールクロール完了: domain=%s attempts=%d", domain, attempts)
+        if retention_path is not None:
+            from web.services.retention import load_retention_policy, prune_snapshots
+
+            output_scope = crawl_output or schedule_path.parent.parent
+            policy = load_retention_policy(retention_path)
+            pruned = prune_snapshots(output_scope, policy)
+            if pruned.deleted_count:
+                logger.info(
+                    "保持ポリシーによりスナップショットを削除: count=%d bytes=%d",
+                    pruned.deleted_count,
+                    pruned.deleted_bytes,
+                )
+                from web.services.admin_audit import append_admin_audit
+
+                try:
+                    append_admin_audit(
+                        retention_path.parent / "admin_audit.jsonl",
+                        action="retention.snapshots_pruned",
+                        actor_id="scheduler",
+                        actor_email="system",
+                        target_type="workspace",
+                        target_id="current",
+                        detail={
+                            "deleted_count": pruned.deleted_count,
+                            "deleted_bytes": pruned.deleted_bytes,
+                            "deleted_paths": list(pruned.deleted_paths),
+                        },
+                    )
+                except OSError as exc:
+                    logger.warning("保持GCの監査ログ保存に失敗しました: %s", exc)
         _notify_drift_summary(config, schedule_path, site_url)
     else:
         logger.error("スケジュールクロール失敗: domain=%s attempts=%d", domain, attempts)

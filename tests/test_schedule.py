@@ -8,10 +8,17 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 import app as appmod
 import web.routes.schedule as schedule_mod
+
+
+@pytest.fixture(autouse=True)
+def _isolated_schedule_audit(tmp_path: Path, monkeypatch):
+    monkeypatch.setattr(schedule_mod, "INSTANCE_DIR", tmp_path / "instance")
 
 
 def _client():

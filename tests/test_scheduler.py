@@ -8,6 +8,8 @@ from pathlib import Path
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
+from web.services.admin_audit import read_admin_audit
+from web.services.retention import save_retention_policy
 from web.services.scheduler import (
     CrawlRunResult,
     _calc_next_run_at,
@@ -413,6 +415,54 @@ def test_maybe_run_sends_drift_summary_after_success(tmp_path: Path) -> None:
     assert notification.removed_page_names == ("Old",)
     assert notification.field_changes == 3
     assert notification.api_changes == 1
+
+
+def test_maybe_run_prunes_expired_snapshots_only_after_success(tmp_path: Path) -> None:
+    domain_dir = tmp_path / "output" / "example.com"
+    p = _write_schedule(
+        domain_dir,
+        {
+            "domain": "example.com",
+            "interval": "daily",
+            "next_run_at": "2026-07-15T00:00:00",
+            "site_url": "https://example.com",
+            "retry_max": 0,
+        },
+    )
+    snapshots = domain_dir / "snapshots"
+    snapshots.mkdir()
+    for name in (
+        "20260715-000000.json",
+        "20260716-000000.json",
+        "20260717-000000.json",
+    ):
+        (snapshots / name).write_text("[]", encoding="utf-8")
+    retention_path = tmp_path / "instance" / "retention.json"
+    save_retention_policy(
+        retention_path,
+        {"mode": "generations", "generations": 2},
+    )
+
+    with patch(
+        "web.services.scheduler._run_crawl",
+        return_value=CrawlRunResult(True, "", 1.0),
+    ):
+        _maybe_run(
+            "example.com",
+            p,
+            datetime(2026, 7, 16, 0, 0),
+            retention_path=retention_path,
+        )
+
+    assert sorted(path.name for path in snapshots.glob("*.json")) == [
+        "20260716-000000.json",
+        "20260717-000000.json",
+    ]
+    audit = read_admin_audit(tmp_path / "instance" / "admin_audit.jsonl")
+    assert len(audit) == 1
+    assert audit[0].action == "retention.snapshots_pruned"
+    assert audit[0].detail["deleted_count"] == 1
+    assert audit[0].detail["deleted_paths"] == ["example.com/snapshots/20260715-000000.json"]
 
 
 # ─────────────── _check_and_run_due ───────────────

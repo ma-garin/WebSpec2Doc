@@ -199,7 +199,11 @@ def _post_json(url: str, payload: dict[str, Any]) -> bool:
         with urllib.request.urlopen(req, timeout=_TIMEOUT_SECONDS):  # nosec B310
             return True
     except (urllib.error.HTTPError, urllib.error.URLError) as exc:
-        logger.error("HTTP/URL error posting to %s: %s", url, exc)
+        logger.error(
+            "Notification HTTP request failed: kind=%s status=%s",
+            type(exc).__name__,
+            getattr(exc, "code", "network_error"),
+        )
         return False
 
 

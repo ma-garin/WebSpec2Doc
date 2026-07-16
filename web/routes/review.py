@@ -8,6 +8,7 @@ from pathlib import Path
 
 from flask import Blueprint, request
 
+from web.audit_context import record_admin_event
 from web.config import OUTPUT_DIR
 from web.tenancy import scoped_output_dir
 from web.validation import _valid_domain
@@ -15,6 +16,7 @@ from web.validation import _valid_domain
 logger = logging.getLogger(__name__)
 
 bp = Blueprint("review", __name__)
+INSTANCE_DIR = Path("instance")
 
 
 def _out() -> Path:
@@ -150,6 +152,13 @@ def api_review_export() -> tuple[dict, int] | dict:
 
     candidates_path = _candidates_path(domain)
     if not candidates_path.is_file():
+        record_admin_event(
+            INSTANCE_DIR,
+            action="review.exported",
+            target_type="review",
+            target_id=domain,
+            detail={"filter": filter_mode, "exported_count": 0},
+        )
         return {"domain": domain, "exported_count": 0, "cases": []}
 
     try:
@@ -167,4 +176,11 @@ def api_review_export() -> tuple[dict, int] | dict:
     else:
         filtered = all_cases
 
+    record_admin_event(
+        INSTANCE_DIR,
+        action="review.exported",
+        target_type="review",
+        target_id=domain,
+        detail={"filter": filter_mode, "exported_count": len(filtered)},
+    )
     return {"domain": domain, "exported_count": len(filtered), "cases": filtered}

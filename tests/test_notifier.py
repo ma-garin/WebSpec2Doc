@@ -128,7 +128,9 @@ def test_send_drift_notification_slack_success(monkeypatch: pytest.MonkeyPatch) 
     assert result is True
 
 
-def test_send_drift_notification_slack_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_send_drift_notification_slack_failure_hides_webhook_secret(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
     def _raise(*args: object, **kwargs: object) -> None:
         raise urllib.error.URLError("connection refused")
 
@@ -137,6 +139,8 @@ def test_send_drift_notification_slack_failure(monkeypatch: pytest.MonkeyPatch) 
     result = send_drift_notification(_make_slack_config(), _sample_notification())
 
     assert result is False
+    assert "TXXXXXXXX" not in caplog.text
+    assert "Notification HTTP request failed" in caplog.text
 
 
 # ─────────────────────── Teams / crawl failure ───────────────────────

@@ -10,18 +10,41 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from flask import Blueprint, request
 
+from web.audit_context import record_admin_event
 from web.config import OUTPUT_DIR
-from web.tenancy import scoped_output_dir
+from web.services.admin_audit import append_admin_audit
+from web.tenancy import current_auth_user, scoped_instance_path, scoped_output_dir
 from web.validation import _valid_domain, _valid_url
 
 logger = logging.getLogger(__name__)
 
 bp = Blueprint("schedule", __name__)
+INSTANCE_DIR = Path("instance")
+
+
+@bp.before_request
+def _schedule_admin_guard():
+    if request.method in {"POST", "PUT", "PATCH", "DELETE"}:
+        from web.auth import require_admin
+
+        return require_admin()
+    return None
 
 
 def _out() -> Path:
     """テナントスコープ済みの出力ディレクトリ（リクエスト毎に解決）。"""
     return scoped_output_dir(OUTPUT_DIR)
+
+
+def _record_notification_test(domain: str, channel: str, *, outcome: str) -> None:
+    record_admin_event(
+        INSTANCE_DIR,
+        action="notification.tested",
+        target_type="site",
+        target_id=domain,
+        outcome=outcome,
+        detail={"channel": channel},
+    )
 
 
 _VALID_INTERVALS = frozenset({"daily", "weekly", "monthly", "disabled"})
@@ -221,6 +244,16 @@ def api_schedule_config_post() -> tuple[dict, int] | dict:
         config["created_at"] = datetime.now().isoformat(timespec="seconds")
 
     _save_config(domain, config)
+    actor = current_auth_user() or {}
+    append_admin_audit(
+        scoped_instance_path(INSTANCE_DIR / "admin_audit.jsonl"),
+        action="schedule.settings_updated",
+        actor_id=str(actor.get("id", "")),
+        actor_email=str(actor.get("email", "local-admin")),
+        target_type="site",
+        target_id=domain,
+        detail={"changed_fields": sorted(body)},
+    )
     logger.info("schedule config saved: domain=%s interval=%s", domain, interval)
     return {"ok": True, "domain": domain, "next_run_at": next_run_at}
 
@@ -329,6 +362,12 @@ def api_schedule_notify_test() -> tuple[dict, int] | dict:
         report_url="テスト通知（レポートは生成されません）",
         added_page_names=("テスト画面",),
     )
-    if not send_drift_notification(notifier_config, notification):
+    sent = send_drift_notification(notifier_config, notification)
+    _record_notification_test(
+        domain,
+        notifier_type,
+        outcome="success" if sent else "failure",
+    )
+    if not sent:
         return {"error": "テスト通知を送信できませんでした"}, 502
     return {"ok": True, "message": "テスト通知を送信しました"}

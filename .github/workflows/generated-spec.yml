@@ -1,0 +1,47 @@
+name: Run Generated Playwright Spec
+
+on:
+  workflow_dispatch:
+    inputs:
+      spec_path:
+        description: Repository path to an exported WebSpec2Doc .spec.ts file
+        required: true
+        default: tests/generated/autorun.spec.ts
+
+permissions:
+  contents: read
+
+jobs:
+  run-generated-spec:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      SPEC_PATH: ${{ inputs.spec_path }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Validate generated spec path
+        run: test -f "$SPEC_PATH"
+
+      - name: Install Playwright
+        run: |
+          npm install --no-save @playwright/test@1.61.0
+          npx playwright install --with-deps chromium
+
+      - name: Run generated spec
+        run: npx playwright test "$SPEC_PATH" --reporter=line,html
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-spec-playwright-report-${{ github.run_number }}
+          path: playwright-report/
+          if-no-files-found: ignore
+          retention-days: 14

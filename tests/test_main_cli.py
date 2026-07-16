@@ -466,6 +466,20 @@ def test_save_diff_report_without_prior_logs_only(tmp_path: Path) -> None:
     _save_diff_report(None, tmp_path / "new.json", _fake_pages(), tmp_path, "https://example.com")
 
     assert not (tmp_path / "diff_report.html").exists()
+    summary = json.loads((tmp_path / "drift_summary.json").read_text(encoding="utf-8"))
+    assert summary["version"] == 1
+    assert summary["site_url"] == "https://example.com"
+    assert summary["first_run"] is True
+    assert summary["has_changes"] is False
+    assert summary["counts"] == {
+        "added_pages": 0,
+        "removed_pages": 0,
+        "field_changes": 0,
+        "link_changes": 0,
+        "title_changes": 0,
+        "api_changes": 0,
+    }
+    assert summary["severity_counts"] == {"breaking": 0, "warning": 0, "info": 0}
 
 
 def test_save_diff_report_writes_html(tmp_path: Path) -> None:
@@ -494,6 +508,54 @@ def test_save_diff_report_writes_html(tmp_path: Path) -> None:
     assert summary["removed_pages"] == [{"title": "削除画面", "url": "https://example.com/old"}]
     assert summary["field_changes"] == 2
     assert summary["api_changes"] == 1
+
+
+def test_drift_summary_counts_all_change_types_and_severities(tmp_path: Path) -> None:
+    from main import _save_diff_report
+
+    prior = tmp_path / "old.json"
+    new = tmp_path / "new.json"
+    diff = SimpleNamespace(
+        added_pages=(object(),),
+        removed_pages=(object(), object()),
+        field_changes=(object(), object(), object()),
+        link_changes=(object(),),
+        title_changes=(object(), object()),
+        api_changes=(object(),),
+        attribute_diffs=(
+            SimpleNamespace(severity="breaking"),
+            SimpleNamespace(severity="warning"),
+            SimpleNamespace(severity="warning"),
+            SimpleNamespace(severity="info"),
+        ),
+        has_changes=True,
+    )
+    with (
+        patch("main.load_snapshot", return_value=[]),
+        patch("main.compute_diff", return_value=diff),
+        patch("main.generate_diff_report", return_value="<html>diff</html>"),
+    ):
+        detected = _save_diff_report(
+            prior,
+            new,
+            _fake_pages(),
+            tmp_path,
+            "https://example.com",
+        )
+
+    summary = json.loads((tmp_path / "drift_summary.json").read_text(encoding="utf-8"))
+    assert detected is True
+    assert summary["first_run"] is False
+    assert summary["has_changes"] is True
+    assert summary["counts"] == {
+        "added_pages": 1,
+        "removed_pages": 2,
+        "field_changes": 3,
+        "link_changes": 1,
+        "title_changes": 2,
+        "api_changes": 1,
+    }
+    assert summary["severity_counts"] == {"breaking": 1, "warning": 2, "info": 1}
 
 
 def test_save_outputs_pdf_format_invokes_pdf_generator(tmp_path: Path) -> None:

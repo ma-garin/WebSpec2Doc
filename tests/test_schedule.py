@@ -8,10 +8,17 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 import app as appmod
 import web.routes.schedule as schedule_mod
+
+
+@pytest.fixture(autouse=True)
+def _isolated_schedule_audit(tmp_path: Path, monkeypatch):
+    monkeypatch.setattr(schedule_mod, "INSTANCE_DIR", tmp_path / "instance")
 
 
 def _client():
@@ -440,7 +447,8 @@ def test_schedule_history_rejects_invalid_limit(tmp_path: Path, monkeypatch) -> 
 
 
 def test_schedule_notify_test_sends_without_echoing_endpoint(tmp_path: Path, monkeypatch) -> None:
-    monkeypatch.setattr(schedule_mod, "OUTPUT_DIR", tmp_path)
+    monkeypatch.setattr(schedule_mod, "OUTPUT_DIR", tmp_path / "output")
+    monkeypatch.setattr(schedule_mod, "INSTANCE_DIR", tmp_path / "instance")
     with patch("web.services.notifier.send_drift_notification", return_value=True) as mock_send:
         resp = _client().post(
             "/schedule/notify/test",
@@ -457,6 +465,35 @@ def test_schedule_notify_test_sends_without_echoing_endpoint(tmp_path: Path, mon
     config, notification = mock_send.call_args.args
     assert config.notifier_type == "teams"
     assert notification.site_url == "https://example.com"
+    from web.services.admin_audit import read_admin_audit
+
+    events = read_admin_audit(tmp_path / "instance" / "admin_audit.jsonl")
+    assert events[0].action == "notification.tested"
+    assert events[0].outcome == "success"
+    assert events[0].detail == {"channel": "teams"}
+
+
+def test_schedule_notify_test_failure_is_audited(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(schedule_mod, "OUTPUT_DIR", tmp_path / "output")
+    monkeypatch.setattr(schedule_mod, "INSTANCE_DIR", tmp_path / "instance")
+    with patch("web.services.notifier.send_drift_notification", return_value=False):
+        resp = _client().post(
+            "/schedule/notify/test",
+            json={
+                "domain": "example.com",
+                "site_url": "https://example.com",
+                "notify_type": "slack",
+                "notify_endpoint": "https://example.invalid/webhook-secret",
+            },
+        )
+
+    assert resp.status_code == 502
+    from web.services.admin_audit import read_admin_audit
+
+    events = read_admin_audit(tmp_path / "instance" / "admin_audit.jsonl")
+    assert events[0].action == "notification.tested"
+    assert events[0].outcome == "failure"
+    assert events[0].detail == {"channel": "slack"}
 
 
 def test_schedule_notify_test_uses_saved_endpoint_when_browser_sends_blank(

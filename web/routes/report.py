@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+import logging
 import subprocess
 import tempfile
 import zipfile
@@ -11,17 +12,36 @@ from pathlib import Path
 from flask import Blueprint, Response, make_response, redirect, request, send_file, url_for
 
 from web.config import _PREVIEW_MIME, OUTPUT_DIR
+from web.services.admin_audit import append_admin_audit
 from web.services.spec_ts_generator import generate_spec_ts
 from web.summary import _summary_for_domain
-from web.tenancy import scoped_output_dir
+from web.tenancy import current_auth_user, scoped_instance_path, scoped_output_dir
 from web.validation import _safe_output_path, _valid_domain
 
 bp = Blueprint("report", __name__)
+INSTANCE_DIR = Path("instance")
+logger = logging.getLogger(__name__)
 
 
 def _out() -> Path:
     """テナントスコープ済みの出力ディレクトリ（リクエスト毎に解決）。"""
     return scoped_output_dir(OUTPUT_DIR)
+
+
+def _record_export(target_id: str, detail: dict[str, object] | None = None) -> None:
+    actor = current_auth_user() or {}
+    try:
+        append_admin_audit(
+            scoped_instance_path(INSTANCE_DIR / "admin_audit.jsonl"),
+            action="report.exported",
+            actor_id=str(actor.get("id", "")),
+            actor_email=str(actor.get("email", "local-admin")),
+            target_type="report",
+            target_id=target_id,
+            detail=detail,
+        )
+    except OSError as exc:
+        logger.warning("レポート出力の監査ログ保存に失敗しました: %s", exc)
 
 
 @bp.get("/preview")
@@ -41,6 +61,11 @@ def download() -> Response:
     target = _safe_output_path(request.args.get("path", ""))
     if target is None:
         return Response(status=404)
+    try:
+        target_id = str(target.resolve().relative_to(_out().resolve()))
+    except ValueError:
+        target_id = target.name
+    _record_export(target_id, {"format": target.suffix.lower().lstrip(".")})
     return send_file(target, as_attachment=True, download_name=target.name)
 
 
@@ -63,6 +88,7 @@ def download_zip() -> Response:
         for f in files:
             zf.write(f, f.relative_to(base.parent))
     buf.seek(0)
+    _record_export(f"{domain}/{domain}.zip", {"format": "zip", "selected": selected is not None})
     return send_file(
         buf, as_attachment=True, download_name=f"{domain}.zip", mimetype="application/zip"
     )
@@ -101,6 +127,7 @@ def download_spec_ts(domain: str) -> Response | tuple[dict, int]:
         content = output_path.read_bytes()
     buffer = io.BytesIO(content)
     buffer.seek(0)
+    _record_export(f"{domain}/{domain}.spec.ts", {"format": "typescript"})
     return send_file(
         buffer,
         as_attachment=True,

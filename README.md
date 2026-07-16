@@ -129,7 +129,42 @@ python src/main.py --url https://example.com --auth auth.json
 | `--output` | `./output` | 出力先ディレクトリ |
 | `--format` | `md` | 出力形式（`md,html,excel,pdf,json` をカンマ区切り） |
 | `--compare` | off | 前回スナップショットとの差分を出力 |
+| `--ci` | off | `--compare --fail-on-drift` を有効化し、`CI_SUMMARY:` JSONをstdoutへ出力 |
 | `--auth` | — | 保存済みセッション（auth.json）を使ってクロール |
+
+### CI で仕様ドリフトをゲートする
+
+同梱の [`.github/workflows/spec-drift.yml`](.github/workflows/spec-drift.yml) は、前回スナップショットだけを GitHub Actions cache に保存し、2回目以降の実行で実際の差分を検出します。
+
+1. Repository variable `WEBSPEC_TARGET_URL` に監視URLを設定します（手動実行時は `target_url` 入力で上書き可能）。
+2. Slack通知を使う場合だけ Repository secret `SLACK_WEBHOOK_URL` を設定します。未設定・送信失敗でもドリフト判定結果は変わりません。
+3. Actions の `Spec Drift Detection` を実行します。初回はベースライン保存、2回目以降は差分ありでジョブが失敗します。
+
+ローカルまたは他のCIでは次を実行し、`output/<domain>/snapshots/` を実行間で永続化してください。
+
+```bash
+python src/main.py --url https://example.com --ci --format json,html
+python scripts/notify_drift.py output/example.com/drift_summary.json
+```
+
+| exit code | 意味 |
+|---:|---|
+| `0` | 初回ベースライン、または差分なし |
+| `1` | 仕様ドリフトあり |
+| `2` | セッション失効、取得不能などの実行エラー |
+
+GitLab CI や CircleCI でも同じ2コマンドと exit code を利用できます。キャッシュ対象は `output/**/snapshots` のみにし、スクリーンショットやレポート全体をキャッシュしないでください。
+
+### 生成済み spec.ts を Actions で実行する
+
+AutoRun が生成した `output/<domain>/qa_process/autorun.spec.ts` を、たとえば
+`tests/generated/autorun.spec.ts` として対象リポジトリへ保存します。同梱の
+[`.github/workflows/generated-spec.yml`](.github/workflows/generated-spec.yml) を手動実行し、
+`spec_path` にそのリポジトリ内パスを指定してください。ワークフローは固定バージョンの
+PlaywrightとChromiumを準備してテストを実行し、HTMLレポートをActions artifactへ保存します。
+
+生成されたテストは対象サイトへ実アクセスします。認証情報が必要な場合はリポジトリへ
+直接保存せず、GitHub Actions secretsから対象サイトのログイン処理へ渡してください。
 
 ---
 

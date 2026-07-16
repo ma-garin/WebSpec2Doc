@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
 from flask import Blueprint, request
 
+from web.audit_context import record_admin_event
 from web.config import DEFAULT_OPENAI_MODEL
 from web.env_store import _mask_key, _read_env, _write_env
 from web.services.openai_qa import test_openai_connection
@@ -14,6 +16,7 @@ from web.services.test_design_settings import (
 from web.validation import _sanitize
 
 bp = Blueprint("settings", __name__)
+INSTANCE_DIR = Path("instance")
 
 
 @bp.before_request
@@ -62,6 +65,13 @@ def post_settings() -> dict:
         updates["SLACK_WEBHOOK_URL"] = slack_url
     if updates:
         _write_env(updates)
+        record_admin_event(
+            INSTANCE_DIR,
+            action="settings.updated",
+            target_type="workspace",
+            target_id="current",
+            detail={"changed_fields": sorted(updates)},
+        )
     env = _read_env()
     return {
         "ok": True,
@@ -86,7 +96,16 @@ def post_test_design() -> tuple[dict, int] | dict:
     payload = request.get_json(force=False, silent=True)
     if not isinstance(payload, dict):
         return {"error": "リクエスト形式が不正です。"}, 400
-    return save_test_design_settings(payload)
+    result = save_test_design_settings(payload)
+    if not isinstance(result, tuple) or result[1] < 400:
+        record_admin_event(
+            INSTANCE_DIR,
+            action="settings.updated",
+            target_type="test_design",
+            target_id="current",
+            detail={"changed_fields": sorted(payload)},
+        )
+    return result
 
 
 @bp.get("/api/settings/allow-local")
@@ -106,4 +125,11 @@ def post_allow_local() -> tuple[dict, int] | dict:
     env = _read_env()
     allow_local = env.get("WEBSPEC2DOC_ALLOW_LOCAL", "") == "1"
     logging.warning("WEBSPEC2DOC_ALLOW_LOCAL changed to %s", allow_local)
+    record_admin_event(
+        INSTANCE_DIR,
+        action="settings.updated",
+        target_type="security",
+        target_id="allow_local",
+        detail={"changed_fields": ["enabled"]},
+    )
     return {"ok": True, "allow_local": allow_local}

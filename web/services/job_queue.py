@@ -16,6 +16,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Literal
 
+from web.services.drift_summary import drift_count, load_drift_summary, should_notify_drift
+
 _JOBS: dict[str, CrawlJob] = {}
 _JOBS_LOCK = threading.Lock()
 
@@ -163,9 +165,13 @@ def _try_slack_notify(job: CrawlJob, output_dir: Path | None = None) -> None:
         if not webhook_url:
             return
         base_dir = output_dir if output_dir is not None else Path("output")
-        diff_report = base_dir / job.domain / "diff_report.html"
-        if not diff_report.exists():
+        summary_path = base_dir / job.domain / "drift_summary.json"
+        summary = load_drift_summary(summary_path)
+        if summary is None:
             return
+        if not should_notify_drift(summary):
+            return
+
         from web.services.notifier import (
             NOTIFIER_SLACK,
             DriftNotification,
@@ -174,12 +180,12 @@ def _try_slack_notify(job: CrawlJob, output_dir: Path | None = None) -> None:
         )
 
         notification = DriftNotification(
-            site_url=job.site_url,
-            added_pages=0,
-            removed_pages=0,
-            field_changes=0,
-            api_changes=0,
-            report_url=f"output/{job.domain}/diff_report.html",
+            site_url=str(summary.get("site_url") or job.site_url),
+            added_pages=drift_count(summary, "added_pages"),
+            removed_pages=drift_count(summary, "removed_pages"),
+            field_changes=drift_count(summary, "field_changes"),
+            api_changes=drift_count(summary, "api_changes"),
+            report_url=str(summary.get("report_url") or f"output/{job.domain}/diff_report.html"),
         )
         config = NotifierConfig(notifier_type=NOTIFIER_SLACK, endpoint=webhook_url)
         send_drift_notification(config, notification)

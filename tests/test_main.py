@@ -191,6 +191,13 @@ class TestParseArgs:
             args = parse_args()
             assert args.llm is True
 
+    def test_ci_flag_enables_compare_and_drift_exit_contract(self) -> None:
+        with patch("sys.argv", ["main.py", "--url", "https://example.com", "--ci"]):
+            args = parse_args()
+            assert args.ci is True
+            assert args.compare is True
+            assert args.fail_on_drift is True
+
 
 # ---------- save_outputs ----------
 

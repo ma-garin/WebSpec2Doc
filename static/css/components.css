@@ -1,8 +1,8 @@
 /* AIDD MD3-aligned reusable components */
 .card {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--color-card-border);
+  border-radius: var(--radius-card);
   box-shadow: var(--shadow-sm);
   padding: var(--space-4);
 }
@@ -42,6 +42,8 @@
 .badge-new { background: var(--info-bg); border-color: var(--info-border); color: var(--primary-dark); }
 .badge-muted { background: var(--surface-subtle); border-color: var(--border); color: var(--text-muted); }
 
+/* 汎用 .stat-card（report/AutoRun 内の密集スタット用・控えめ）。
+   dashboard の KPI カードは app.css の `.stat-cards > .stat-card` が優先される */
 .score-card,
 .stat-card {
   display: grid;

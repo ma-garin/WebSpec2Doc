@@ -1,20 +1,20 @@
 :root {
-  --color-primary: #1976D2;
-  --color-primary-light: #E3F2FD;
-  --color-primary-dark: #0D47A1;
+  --color-primary: #1D6FE0;
+  --color-primary-light: #E2EEFC;
+  --color-primary-dark: #1356B4;
 
-  --color-bg: #F4F6F9;
+  --color-bg: #E7EDF6;
   --color-surface: #FFFFFF;
-  --color-surface-2: #F1F4F8;
-  --color-surface-3: #FAFBFC;
+  --color-surface-2: #F1F5FA;
+  --color-surface-3: #F3F7FC;
 
-  --color-border: #E3E8EE;
-  --color-border-strong: #CBD5E1;
-  --color-divider: #EEF1F5;
+  --color-border: #E2E9F3;
+  --color-border-strong: #CFDCEC;
+  --color-divider: #ECF1F8;
 
-  --color-text: #212121;
-  --color-text-secondary: #616161;
-  --color-text-disabled: #9E9E9E;
+  --color-text: #1C2A3A;
+  --color-text-secondary: #4E617A;
+  --color-text-disabled: #8494AB;
 
   --color-critical: #D32F2F;
   --color-high: #F57C00;
@@ -30,8 +30,8 @@
   --color-medium-border: #F4E48E;
   --color-low-bg: #E8F5E9;
   --color-low-border: #A5D6A7;
-  --color-info-bg: #E1F5FE;
-  --color-info-border: #A9DDF5;
+  --color-info-bg: #E2EEFC;
+  --color-info-border: #B9D5F5;
 
   --font-main: 'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', 'Consolas', 'SFMono-Regular', ui-monospace, monospace;
@@ -63,11 +63,35 @@
   --radius-xl: 16px;
   --radius-full: 9999px;
 
-  /* 柔らかく青みを帯びたエレベーション（モック galleryinline.html 準拠） */
-  --shadow-sm: 0 1px 2px rgba(20,32,50,.06);
-  --shadow-md: 0 1px 2px rgba(20,32,50,.06), 0 4px 12px rgba(20,32,50,.06);
-  --shadow-lg: 0 6px 24px rgba(20,32,50,.10);
-  --shadow-pop: 0 12px 32px rgba(20,32,50,.14), 0 3px 8px rgba(20,32,50,.08);
+  /* Soft Depth: 多層ソフトシャドウ（docs/design/concepts/concept-3-soft-depth.html 準拠） */
+  --shadow-sm: 0 1px 2px rgba(23,43,77,.06);
+  --shadow-md: 0 1px 2px rgba(23,43,77,.05), 0 10px 30px rgba(23,43,77,.08);
+  --shadow-lg: 0 6px 24px rgba(23,43,77,.10);
+  --shadow-pop: 0 12px 32px rgba(23,43,77,.15), 0 3px 8px rgba(23,43,77,.08);
+
+  /* Soft Depth: ガラス面・カード枠 */
+  --color-surface-glass: rgba(255,255,255,.62);        /* サイドバー */
+  --color-surface-glass-strong: rgba(255,255,255,.72); /* トップバー・実行バー */
+  --color-border-glass: rgba(255,255,255,.95);
+  --color-card-border: rgba(255,255,255,.90);
+  --color-nav-active-bg: #FFFFFF;
+
+  /* Soft Depth: 用途別シャドウ */
+  --shadow-nav-active: 0 1px 4px rgba(23,43,77,.10);
+  --shadow-primary-btn: 0 6px 16px rgba(29,111,224,.30);
+  --shadow-inset-input: inset 0 1px 3px rgba(23,43,77,.07);
+  --shadow-ctl: 0 1px 3px rgba(23,43,77,.08);
+
+  /* Soft Depth: 静的グラデーション（装飾アニメーションなし） */
+  --gradient-page: linear-gradient(160deg,#EAF0F8 0%,#E4EBF5 55%,#EDF1F8 100%);
+  --gradient-hero: linear-gradient(180deg,#FFFFFF 0%,#F5F9FE 100%);
+  --gradient-chip: linear-gradient(135deg,#E2EEFC 0%,#F3F8FE 100%);
+
+  /* Soft Depth: 意味付き角丸（テーマ不変） */
+  --radius-ctl: 10px;
+  --radius-input: 12px;
+  --radius-card: 16px;
+  --radius-hero: 20px;
 
   --motion-fast: .12s;
   --motion-normal: .2s;
@@ -88,7 +112,7 @@ html[data-theme="dark"] {
   --color-primary-light: #16243F;
   --color-primary-dark: #A6C8FF;
 
-  --color-bg: #0F1623;
+  --color-bg: #0D1420;
   --color-surface: #1B2433;
   --color-surface-2: #212C3D;
   --color-surface-3: #273347;
@@ -122,6 +146,24 @@ html[data-theme="dark"] {
   --shadow-md: 0 1px 2px rgba(0,0,0,.35), 0 1px 3px rgba(0,0,0,.4);
   --shadow-lg: 0 4px 18px rgba(0,0,0,.48);
   --shadow-pop: 0 10px 24px rgba(0,0,0,.5), 0 2px 6px rgba(0,0,0,.4);
+
+  /* Soft Depth: 暗ガラス面（surface #1B2433 基準） */
+  --color-surface-glass: rgba(27,36,51,.62);
+  --color-surface-glass-strong: rgba(27,36,51,.78);
+  --color-border-glass: rgba(255,255,255,.06);
+  --color-card-border: rgba(255,255,255,.06);
+  --color-nav-active-bg: #273347;
+
+  /* Soft Depth: 用途別シャドウ（暗所ではカラーグローを黒へ減光。ctl はボーダーをエミュレート） */
+  --shadow-nav-active: 0 1px 4px rgba(0,0,0,.45);
+  --shadow-primary-btn: 0 6px 16px rgba(0,0,0,.45);
+  --shadow-inset-input: inset 0 1px 3px rgba(0,0,0,.35);
+  --shadow-ctl: inset 0 0 0 1px #334155;
+
+  /* Soft Depth: 静的グラデーション */
+  --gradient-page: linear-gradient(160deg,#111A2B 0%,#0C121D 55%,#121C2E 100%);
+  --gradient-hero: linear-gradient(180deg,#1B2433 0%,#1D2A3F 100%);
+  --gradient-chip: linear-gradient(135deg,#16243F 0%,#1D3050 100%);
 
   /* 技法バッジ: ダーク背景でも white 文字のコントラストを保つやや明るめの濃色 */
   --tech-ep:   #2D6FDB;

@@ -65,7 +65,7 @@
 .result-subtab.is-active {
   background: var(--surface);
   color: var(--primary-dark);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, .1);
+  box-shadow: var(--shadow-ctl);
 }
 .result-subtab:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
 .result-subpanel {

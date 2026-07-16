@@ -18,7 +18,7 @@ class TestPythonVersionCheck:
         assert check_python_version((3, 12, 13)).ok is True
 
     def test_too_new_fails_with_fix(self) -> None:
-        """playwright 1.44 の wheel が無い 3.13+ は FAIL と修正手順を出す。"""
+        """プロジェクトの検証対象外である 3.13+ は FAIL と修正手順を出す。"""
         result = check_python_version((3, 13, 0))
         assert result.ok is False
         assert "3.12" in result.fix
@@ -26,7 +26,7 @@ class TestPythonVersionCheck:
     def test_too_old_fails(self) -> None:
         assert check_python_version((3, 10, 0)).ok is False
 
-    def test_bounds_are_playwright_144_range(self) -> None:
+    def test_bounds_match_supported_project_range(self) -> None:
         assert SUPPORTED_PYTHON_MIN == (3, 11)
         assert SUPPORTED_PYTHON_MAX_EXCLUSIVE == (3, 13)
 
@@ -48,7 +48,7 @@ class TestRequirementPins:
 
     def test_installed_pin_match_passes(self) -> None:
         """この環境に導入済みの playwright はピンと一致して PASS になる。"""
-        results = check_dependency_pins({"playwright": "1.44.0"})
+        results = check_dependency_pins({"playwright": "1.61.0"})
         assert len(results) == 1
         assert results[0].ok is True
 

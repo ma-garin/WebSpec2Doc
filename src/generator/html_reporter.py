@@ -57,6 +57,8 @@ def generate_html_report(
     business_flows: list[dict] | None = None,
     impact_report: dict | None = None,
     exploration_coverage: dict | None = None,
+    technical_health: dict | None = None,
+    accessibility_audit: dict | None = None,
     ux_review: dict | None = None,
     coverage_gaps: tuple[CoverageGap, ...] = (),
     test_design: TestDesign | None = None,
@@ -91,6 +93,8 @@ def generate_html_report(
                 has_coverage=bool(transition_coverage or business_flows),
                 has_impact=bool(impact_report),
                 has_exploration=bool(exploration_coverage),
+                has_technical_health=bool(technical_health),
+                has_accessibility_audit=bool(accessibility_audit),
                 has_ux_review=bool(ux_review),
                 has_coverage_gaps=bool(coverage_gaps),
             ),
@@ -108,6 +112,8 @@ def generate_html_report(
             _coverage_section(transition_coverage, business_flows),
             _impact_section(impact_report),
             _exploration_section(exploration_coverage),
+            _technical_health_section(technical_health),
+            _accessibility_audit_section(accessibility_audit),
             _ux_review_section(ux_review),
             _coverage_gap_section(coverage_gaps),
             _section(
@@ -258,6 +264,8 @@ def _sidebar(
     has_coverage: bool = False,
     has_impact: bool = False,
     has_exploration: bool = False,
+    has_technical_health: bool = False,
+    has_accessibility_audit: bool = False,
     has_ux_review: bool = False,
     has_coverage_gaps: bool = False,
 ) -> str:
@@ -273,6 +281,10 @@ def _sidebar(
         items.append('<a href="#impact" class="nav-item">差分影響・再実行推奨</a>')
     if has_exploration:
         items.append('<a href="#exploration" class="nav-item">探索カバレッジ</a>')
+    if has_technical_health:
+        items.append('<a href="#technical-health" class="nav-item">技術ヘルス</a>')
+    if has_accessibility_audit:
+        items.append('<a href="#accessibility-audit" class="nav-item">アクセシビリティ</a>')
     if has_ux_review:
         items.append('<a href="#ux-review" class="nav-item">UX 所見</a>')
     if has_coverage_gaps:
@@ -290,6 +302,124 @@ def _sidebar(
         '<div class="brand-sub">テスト分析インプット</div>'
         '<nav class="app-nav">' + "".join(items) + "</nav></aside>"
     )
+
+
+def _technical_health_section(technical_health: dict | None) -> str:
+    if not technical_health:
+        return ""
+    summary = technical_health.get("summary") or {}
+    labels = (
+        ("HTTPエラー", "page_http_errors"),
+        ("リンク切れ", "broken_links"),
+        ("JSエラー", "console_errors"),
+        ("混在コンテンツ", "mixed_content"),
+    )
+    cards = "".join(
+        f'<div class="summary-card"><div class="summary-value">{int(summary.get(key, 0))}</div>'
+        f'<div class="summary-label">{label}</div></div>'
+        for label, key in labels
+    )
+    details: list[str] = []
+    for screen in technical_health.get("screens") or []:
+        issues: list[str] = []
+        status = int(screen.get("status_code") or 0)
+        if bool(screen.get("http_error")):
+            issues.append(f"HTTP {status}")
+        for broken in screen.get("broken_links") or []:
+            issues.append(
+                f"リンク切れ HTTP {int(broken.get('status_code') or 0)}: "
+                f"{html.escape(str(broken.get('url') or ''))}"
+            )
+        issues.extend(
+            f"JS: {html.escape(str(message))}" for message in screen.get("console_errors") or []
+        )
+        issues.extend(
+            f"混在コンテンツ: {html.escape(str(url))}" for url in screen.get("mixed_content") or []
+        )
+        if not issues:
+            continue
+        title = html.escape(str(screen.get("title") or screen.get("url") or ""))
+        url = html.escape(str(screen.get("url") or ""))
+        details.append(
+            '<details class="screen"><summary>'
+            f"{title} <code>{url}</code> — {len(issues)}件"
+            "</summary><ul>" + "".join(f"<li>{issue}</li>" for issue in issues) + "</ul></details>"
+        )
+    boundary = html.escape(
+        str(technical_health.get("claim_boundary") or "クロール中に観測できた対象のみ")
+    )
+    body = (
+        '<p class="note">判定範囲: '
+        + boundary
+        + "。未到達・外部リンクについて問題がないことを意味しません。</p>"
+        + f'<div class="summary-grid">{cards}</div>'
+        + ("".join(details) or '<p class="note">観測範囲内で記録対象はありませんでした。</p>')
+    )
+    return _section("技術ヘルス", body, "technical-health")
+
+
+def _accessibility_audit_section(accessibility_audit: dict | None) -> str:
+    if not accessibility_audit:
+        return ""
+    meta = accessibility_audit.get("meta") or {}
+    summary = accessibility_audit.get("summary") or {}
+    cards = "".join(
+        f'<div class="summary-card"><div class="summary-value">{int(summary.get(key, 0))}</div>'
+        f'<div class="summary-label">{label}</div></div>'
+        for label, key in (
+            ("違反ノード", "violations"),
+            ("Critical", "critical"),
+            ("Serious", "serious"),
+            ("Moderate", "moderate"),
+            ("Minor", "minor"),
+        )
+    )
+    details: list[str] = []
+    for screen in accessibility_audit.get("screens") or []:
+        violations = screen.get("violations") or []
+        if not violations:
+            continue
+        rows: list[str] = []
+        for violation in violations:
+            evidence = violation.get("evidence") or {}
+            tags = ", ".join(str(tag) for tag in violation.get("wcag_tags") or [])
+            help_url = str(violation.get("help_url") or "")
+            help_link = (
+                f'<a href="{html.escape(help_url, quote=True)}" target="_blank" '
+                'rel="noopener noreferrer">解説</a>'
+                if help_url.startswith(("https://", "http://"))
+                else "-"
+            )
+            rows.append(
+                "<tr>"
+                f"<td><code>{html.escape(str(violation.get('rule_id') or ''))}</code></td>"
+                f"<td>{html.escape(str(violation.get('impact') or ''))}</td>"
+                f"<td>{html.escape(str(violation.get('description') or ''))}</td>"
+                f"<td><code>{html.escape(str(evidence.get('selector') or ''))}</code></td>"
+                f"<td>{html.escape(tags)}</td>"
+                f"<td>{help_link}</td>"
+                "</tr>"
+            )
+        title = html.escape(str(screen.get("title") or screen.get("url") or ""))
+        page_id = html.escape(str(screen.get("page_id") or ""))
+        details.append(
+            f'<div class="subhead">{page_id} {title}</div>'
+            '<div class="table-wrap"><table><thead><tr><th>ルール</th><th>影響</th>'
+            "<th>説明</th><th>実測セレクタ</th><th>WCAGタグ</th><th>ヘルプ</th>"
+            "</tr></thead><tbody>" + "".join(rows) + "</tbody></table></div>"
+        )
+    disclaimer = html.escape(str(meta.get("disclaimer") or "手動確認が必要です。"))
+    body = (
+        f'<p class="note"><b>{html.escape(str(meta.get("engine") or "axe-core"))}</b>: '
+        + disclaimer
+        + "</p>"
+        + f'<div class="summary-grid">{cards}</div>'
+        + (
+            "".join(details)
+            or '<p class="note">機械判定で違反ノードは記録されませんでした。手動確認は必要です。</p>'
+        )
+    )
+    return _section("アクセシビリティ監査", body, "accessibility-audit")
 
 
 def _topbar(target_url: str, now: str) -> str:

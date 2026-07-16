@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import os
 import sys
+from collections.abc import Iterator
 from pathlib import Path
 
 # src/ をパスに追加してモジュールを import できるようにする
@@ -11,6 +13,19 @@ import pytest
 from crawler.page_crawler import FieldData, FormData, PageData
 
 SAMPLE_SITE_DIR = Path(__file__).parent / "fixtures" / "sample_site"
+
+
+@pytest.fixture(autouse=True)
+def isolate_allow_local_environment() -> Iterator[None]:
+    """ローカルクロール許可が別テストへ漏れてSSRF前提を変えないよう隔離する。"""
+    key = "WEBSPEC2DOC_ALLOW_LOCAL"
+    previous = os.environ.pop(key, None)
+    try:
+        yield
+    finally:
+        os.environ.pop(key, None)
+        if previous is not None:
+            os.environ[key] = previous
 
 
 @pytest.fixture()

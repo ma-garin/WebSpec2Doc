@@ -145,6 +145,41 @@ def test_off_mode_disables_auth_even_with_users(monkeypatch) -> None:
     assert res.status_code == 302 and res.headers["Location"] == "/"
 
 
+# ---------- 初回オンボーディング ----------
+
+
+def test_onboarding_uses_client_storage_when_auth_is_off(monkeypatch) -> None:
+    monkeypatch.setenv("WEBSPEC2DOC_AUTH_MODE", "off")
+    c = _client()
+    data = c.get("/api/onboarding", headers=H).get_json()
+    assert data["storage"] == "client"
+    assert data["tour_completed"] is None
+    assert set(data["checklist"]) == {"site_registered", "first_crawl", "report_available"}
+
+
+def test_onboarding_auto_tour_is_suppressed_in_e2e_mode(monkeypatch) -> None:
+    monkeypatch.setenv("WEBSPEC2DOC_AUTH_MODE", "off")
+    previous = appmod.app.config.get("TESTING", False)
+    appmod.app.config["TESTING"] = True
+    try:
+        data = _client().get("/api/onboarding", headers=H).get_json()
+    finally:
+        appmod.app.config["TESTING"] = previous
+    assert data["auto_start"] is False
+
+
+def test_onboarding_completion_is_persisted_for_logged_in_user() -> None:
+    c = _client()
+    _setup_owner(c)
+    before = c.get("/api/onboarding", headers=H).get_json()
+    assert before["storage"] == "server"
+    assert before["tour_completed"] is False
+    completed = c.post("/api/onboarding/complete", headers=H)
+    assert completed.status_code == 200
+    after = c.get("/api/onboarding", headers=H).get_json()
+    assert after["tour_completed"] is True
+
+
 # ---------- アカウント管理 API ----------
 
 

@@ -998,10 +998,22 @@
 .rh-type-autorun { --c: var(--accent); }
 .rh-type-comparison { --c: var(--tech-dt); }
 .rh-type-ux_review { --c: var(--color-high); }
+.rh-type-schedule { --c: var(--primary); }
 .rh-status-complete { --c: var(--color-low); }
 .rh-status-failed { --c: var(--color-critical); }
 .rh-status-cancelled { --c: var(--text-muted); }
 .rh-status-running { --c: var(--color-high); }
+
+/* ==================== 運用監視設定 ==================== */
+.ops-weekdays { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; }
+.ops-weekdays legend { padding: 0 6px; color: var(--text-muted); font-size: 12px; font-weight: 700; }
+.ops-weekdays label { display: inline-flex; align-items: center; gap: 5px; margin: 4px 14px 4px 0; font-size: 13px; }
+.ops-divider { height: 1px; background: var(--border); margin: 22px 0; }
+.ops-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+.ops-history-card { margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--border); }
+.ops-history-card h3 { margin: 0 0 12px; font-size: 15px; }
+.ops-history-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.ops-history-table th, .ops-history-table td { padding: 8px; border-bottom: 1px solid var(--border); text-align: left; }
 
 /* ==================== 共通ページャ（table-utils.js） ==================== */
 .pager-wrap { margin-top: 12px; }
@@ -1061,3 +1073,66 @@
 .coverage-covered { --c: var(--color-low); }
 .coverage-partial { --c: var(--color-high); }
 .coverage-uncovered { --c: var(--color-critical); }
+
+/* ==================== 初回オンボーディング ==================== */
+.onboarding-checklist {
+  margin: 0 0 28px;
+  padding: 22px 24px;
+  border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--border));
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--primary) 5%, var(--surface));
+}
+.onboarding-checklist-head, .onboarding-replay-card {
+  display: flex; align-items: center; justify-content: space-between; gap: 18px;
+}
+.onboarding-checklist-head h2 { margin: 2px 0 0; color: var(--text); font-size: 18px; line-height: 1.4; }
+.onboarding-eyebrow { margin: 0; color: var(--primary); font-size: 12px; font-weight: 700; letter-spacing: .06em; }
+.onboarding-checklist-steps {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px;
+  margin: 18px 0 0; padding: 0; list-style: none;
+}
+.onboarding-checklist-steps li {
+  display: flex; align-items: center; gap: 11px; min-width: 0; padding: 13px;
+  border: 1px solid var(--border); border-radius: 12px; background: var(--surface);
+}
+.onboarding-check {
+  display: grid; flex: 0 0 30px; width: 30px; height: 30px; place-items: center;
+  border-radius: 50%; background: var(--surface-soft); color: var(--text-muted);
+  font-size: 13px; font-weight: 700;
+}
+.onboarding-checklist-steps strong, .onboarding-checklist-steps small { display: block; }
+.onboarding-checklist-steps strong { color: var(--text); font-size: 13px; }
+.onboarding-checklist-steps small { margin-top: 3px; color: var(--text-muted); font-size: 11px; line-height: 1.35; }
+.onboarding-checklist-steps li.is-complete {
+  border-color: color-mix(in srgb, var(--color-low) 45%, var(--border));
+  background: color-mix(in srgb, var(--color-low) 7%, var(--surface));
+}
+.onboarding-checklist-steps li.is-complete .onboarding-check { background: var(--color-low); color: #fff; }
+.onboarding-demo-hint { margin: 12px 0 0; color: var(--text-muted); font-size: 11px; }
+.empty-demo-btn { display: block; margin: 4px auto 0; }
+.onboarding-replay-card { margin-top: 16px; }
+.onboarding-replay-card .input-hint { margin: 4px 0 0; }
+
+.driver-popover.wsd-onboarding-popover {
+  max-width: 360px; border: 1px solid var(--border); border-radius: 14px;
+  background: var(--surface); color: var(--text); box-shadow: 0 18px 50px rgb(0 0 0 / 22%);
+}
+.driver-popover.wsd-onboarding-popover .driver-popover-title { color: var(--text); font-size: 17px; }
+.driver-popover.wsd-onboarding-popover .driver-popover-description,
+.driver-popover.wsd-onboarding-popover .driver-popover-progress-text { color: var(--text-muted); }
+.driver-popover.wsd-onboarding-popover .driver-popover-next-btn,
+.driver-popover.wsd-onboarding-popover .driver-popover-prev-btn,
+.driver-popover.wsd-onboarding-popover .wsd-tour-skip {
+  min-height: 34px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface-soft); color: var(--text); text-shadow: none;
+}
+.driver-popover.wsd-onboarding-popover .driver-popover-next-btn {
+  border-color: var(--primary); background: var(--primary); color: #fff;
+}
+.driver-popover.wsd-onboarding-popover .wsd-tour-skip {
+  margin-right: auto; padding: 6px 10px; cursor: pointer;
+}
+@media (max-width: 820px) {
+  .onboarding-checklist-steps { grid-template-columns: 1fr; }
+  .onboarding-checklist-head, .onboarding-replay-card { align-items: flex-start; flex-direction: column; }
+}

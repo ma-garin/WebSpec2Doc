@@ -10,8 +10,16 @@ class ScheduleConfig(TypedDict, total=False):
 
     domain: str
     interval: str  # "daily" | "weekly" | "monthly" | "disabled"
-    notify_type: str  # "slack" | "email" | "webhook" | "none"
+    timezone: str
+    weekdays: list[int]
+    window_start: str
+    window_end: str
+    retry_max: int
+    retry_backoff_seconds: int
+    notify_type: str  # "slack" | "teams" | "email" | "webhook" | "none"
     notify_endpoint: str
+    notify_template: str
+    diff_summary_limit: int
     severity_filter: str  # "breaking" | "warning" | "all"
     site_url: str
     last_run_at: str | None

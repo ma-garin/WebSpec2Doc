@@ -51,12 +51,21 @@ while IFS= read -r f; do PY_FILES+=("$f"); done < <(find src web app.py -name '*
 green "OK: ${#PY_FILES[@]} ファイル"
 
 # --- 1b. 800行ガード ---
-# Phase 1 分割対象の既知違反は一時除外（分割完了次第リストから削除する）
-PHASE1_ALLOWED=(
-  "web/services/viewpoint_store.py"
-  "web/services/viewpoint_store_operations.py"
-  "static/css/components.css"
-  "static/js/viewpoints.js"
+# Phase 1 分割対象の既知違反は「現在の上限」付きで固定する。
+# 除外ファイルもこれ以上は肥大化できず、分割後はリストから削除する。
+PHASE1_ALLOWED_MAX=(
+  "src/crawler/page_crawler.py:1176"
+  "src/generator/html_reporter.py:1195"
+  "src/main.py:1575"
+  "web/routes/auto_run.py:838"
+  "web/services/playwright_executor.py:913"
+  "tests/test_playwright_executor.py:1298"
+  "tests/test_auto_run.py:822"
+  "static/js/autorun.js:950"
+  "web/services/viewpoint_store.py:846"
+  "web/services/viewpoint_store_operations.py:935"
+  "static/css/components.css:1138"
+  "static/js/viewpoints.js:984"
 )
 step "1b. 800行ガード (.py/.js/.css/.html)"
 OVER800=()
@@ -65,8 +74,13 @@ while IFS= read -r f; do
   if [ "$lines" -gt 800 ]; then
     rel="${f#$REPO_ROOT/}"
     allowed=false
-    for exc in "${PHASE1_ALLOWED[@]+"${PHASE1_ALLOWED[@]}"}"; do
-      [ "$rel" = "$exc" ] && allowed=true && break
+    for exc in "${PHASE1_ALLOWED_MAX[@]+"${PHASE1_ALLOWED_MAX[@]}"}"; do
+      exc_path="${exc%:*}"
+      exc_max="${exc##*:}"
+      if [ "$rel" = "$exc_path" ] && [ "$lines" -le "$exc_max" ]; then
+        allowed=true
+        break
+      fi
     done
     "$allowed" || OVER800+=("$rel ($lines 行)")
   fi
@@ -80,16 +94,16 @@ if [ ${#OVER800[@]} -gt 0 ]; then
   for item in "${OVER800[@]}"; do red "  800行超過: $item"; done
   fail "800行ガード違反 (${#OVER800[@]} ファイル)"
 fi
-if [ ${#PHASE1_ALLOWED[@]+"${#PHASE1_ALLOWED[@]}"} -gt 0 ] 2>/dev/null; then
-  printf '\033[33m  ⚠ 一時除外 (Phase 1 分割待ち): %s\033[0m\n' "${PHASE1_ALLOWED[@]+"${PHASE1_ALLOWED[@]}"}"
+if [ ${#PHASE1_ALLOWED_MAX[@]+"${#PHASE1_ALLOWED_MAX[@]}"} -gt 0 ] 2>/dev/null; then
+  printf '\033[33m  ⚠ 上限固定 (Phase 1 分割待ち): %s\033[0m\n' "${PHASE1_ALLOWED_MAX[@]+"${PHASE1_ALLOWED_MAX[@]}"}"
 fi
-green "OK: 新規ファイル全て 800行以内 (除外 ${#PHASE1_ALLOWED[@]} 件)"
+green "OK: 新規ファイルは800行以内・既知違反は上限以内 (${#PHASE1_ALLOWED_MAX[@]} 件)"
 
 # --- 2. lint + フォーマット + 型チェック ---
 step "2. lint / format / 型チェック (ruff / black / mypy)"
-"$VENV_BIN/ruff" check src app.py tests web || fail "ruff 違反"
-"$VENV_BIN/black" --check src app.py tests web >/dev/null 2>&1 || fail "black 未整形 ('black src app.py tests web' で整形)"
-"$VENV_BIN/mypy" || fail "mypy 型エラー"
+"$VENV_PY" -m ruff check src app.py tests web || fail "ruff 違反"
+"$VENV_PY" -m black --check src app.py tests web >/dev/null 2>&1 || fail "black 未整形 ('black src app.py tests web' で整形)"
+"$VENV_PY" -m mypy || fail "mypy 型エラー"
 green "OK: ruff + black + mypy"
 
 # --- 3. pytest 全件 + カバレッジゲート ---

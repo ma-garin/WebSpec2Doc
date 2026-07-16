@@ -22,7 +22,8 @@ def _bind_host() -> tuple[str, bool]:
         # localhost_guard が許可ホスト以外を 403 で拒否するため到達制御はガード側で担保する。
         # 明示的な社内展開時（TRUSTED_HOSTS 設定時）のみ全 IF バインドする。
         return "0.0.0.0", False  # nosec B104  # noqa: S104
-    return "127.0.0.1", True
+    testing = os.environ.get("FLASK_TESTING", "").strip() == "1"
+    return "127.0.0.1", not testing
 
 
 def _open_browser() -> None:

@@ -27,7 +27,7 @@ from pathlib import Path
 
 from werkzeug.security import check_password_hash, generate_password_hash
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 ROLES = ("owner", "admin", "member")
 _ADMIN_ROLES = frozenset({"owner", "admin"})
@@ -199,6 +199,11 @@ class AuthStore:
                 COMMIT;
                 """
             )
+        if version < 2:
+            columns = {str(row[1]) for row in conn.execute("PRAGMA table_info(users)").fetchall()}
+            if "tour_completed_at" not in columns:
+                conn.execute("ALTER TABLE users ADD COLUMN tour_completed_at TEXT")
+            conn.execute("PRAGMA user_version = 2")
 
     # --- 監査ログ -----------------------------------------------------
 
@@ -309,6 +314,19 @@ class AuthStore:
                 "SELECT * FROM users WHERE tenant_id = ? ORDER BY created_at", (tenant_id,)
             ).fetchall()
             return [self._public_user(r) for r in rows]
+
+    def complete_tour(self, user_id: str) -> dict:
+        """本人の初回ツアー完了時刻を冪等に記録する。"""
+        with self._transaction() as conn:
+            row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+            if row is None:
+                raise AuthError("ユーザーが存在しません。", "user_not_found")
+            completed_at = row["tour_completed_at"] or _iso(_now())
+            conn.execute(
+                "UPDATE users SET tour_completed_at = ?, updated_at = ? WHERE id = ?",
+                (completed_at, _iso(_now()), user_id),
+            )
+        return self.get_user(user_id) or {}
 
     @staticmethod
     def _public_user(row: sqlite3.Row) -> dict:

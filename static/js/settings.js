@@ -14,7 +14,10 @@ function selectSettingsTab(tab) {
   });
 }
 document.querySelectorAll('.set-tabs .set-tab').forEach(t => {
-  t.addEventListener('click', () => selectSettingsTab(t.dataset.tab));
+  t.addEventListener('click', () => {
+    selectSettingsTab(t.dataset.tab);
+    if (t.dataset.tab === 'operations') loadOperationalSites();
+  });
   t.addEventListener('keydown', (e) => {
     if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
     e.preventDefault();
@@ -224,11 +227,150 @@ async function saveTestDesignSettings() {
   }
 }
 
+// ---- 運用監視（スケジュール・通知）----
+let _operationsSitesLoaded = false;
+const _operationsSiteUrls = new Map();
+
+function _opsMessage(text, isError = false) {
+  const msg = document.getElementById('ops-msg');
+  if (!msg) return;
+  msg.textContent = text;
+  msg.classList.toggle('is-error', isError);
+  msg.classList.add('show');
+}
+
+async function loadOperationalSites(force = false) {
+  if (_operationsSitesLoaded && !force) return;
+  const select = document.getElementById('ops-site');
+  if (!select) return;
+  const previous = select.value;
+  try {
+    const res = await fetch('/api/history');
+    const data = await res.json();
+    const items = data.items || [];
+    _operationsSiteUrls.clear();
+    items.forEach(item => _operationsSiteUrls.set(item.domain, item.site_url || ''));
+    select.innerHTML = items.length
+      ? items.map(item => `<option value="${escHtml(item.domain)}">${escHtml(item.domain)}</option>`).join('')
+      : '<option value="">解析済みサイトがありません</option>';
+    if (items.some(item => item.domain === previous)) select.value = previous;
+    _operationsSitesLoaded = true;
+    if (select.value) await loadOperationalConfig(select.value);
+  } catch (e) {
+    _opsMessage('サイト一覧を取得できませんでした。', true);
+  }
+}
+
+async function loadOperationalConfig(domain) {
+  if (!domain) return;
+  try {
+    const res = await fetch(`/schedule/config?domain=${encodeURIComponent(domain)}`);
+    const config = await res.json();
+    if (!res.ok) throw new Error(config.error || '設定を取得できませんでした');
+    const set = (id, value) => { const el = document.getElementById(id); if (el) el.value = value ?? ''; };
+    set('ops-site-url', config.site_url || _operationsSiteUrls.get(domain) || '');
+    set('ops-interval', config.interval || 'disabled');
+    set('ops-timezone', config.timezone || 'Asia/Tokyo');
+    set('ops-window-start', config.window_start || '');
+    set('ops-window-end', config.window_end || '');
+    set('ops-retry-max', config.retry_max ?? 2);
+    set('ops-backoff', config.retry_backoff_seconds ?? 60);
+    set('ops-notify-type', config.notify_type || 'none');
+    set('ops-summary-limit', config.diff_summary_limit ?? 5);
+    set('ops-endpoint', '');
+    const endpoint = document.getElementById('ops-endpoint');
+    if (endpoint) endpoint.placeholder = config.notify_endpoint_set
+      ? '設定済み（変更時のみ入力）'
+      : 'https://...';
+    set('ops-template', config.notify_template || '');
+    const selectedDays = new Set(config.weekdays || []);
+    document.querySelectorAll('.ops-weekdays input[type="checkbox"]').forEach(input => {
+      input.checked = selectedDays.has(Number(input.value));
+    });
+    await loadOperationalHistory(domain);
+  } catch (e) {
+    _opsMessage(e.message || '運用設定を取得できませんでした。', true);
+  }
+}
+
+function _operationalPayload() {
+  const domain = document.getElementById('ops-site')?.value || '';
+  return {
+    domain,
+    site_url: document.getElementById('ops-site-url')?.value?.trim() || '',
+    interval: document.getElementById('ops-interval')?.value || 'disabled',
+    timezone: document.getElementById('ops-timezone')?.value || 'Asia/Tokyo',
+    weekdays: [...document.querySelectorAll('.ops-weekdays input:checked')].map(el => Number(el.value)),
+    window_start: document.getElementById('ops-window-start')?.value || '',
+    window_end: document.getElementById('ops-window-end')?.value || '',
+    retry_max: Number(document.getElementById('ops-retry-max')?.value || 0),
+    retry_backoff_seconds: Number(document.getElementById('ops-backoff')?.value || 60),
+    notify_type: document.getElementById('ops-notify-type')?.value || 'none',
+    notify_endpoint: document.getElementById('ops-endpoint')?.value?.trim() || '',
+    notify_template: document.getElementById('ops-template')?.value || '',
+    diff_summary_limit: Number(document.getElementById('ops-summary-limit')?.value || 5),
+    severity_filter: 'all',
+  };
+}
+
+async function saveOperationalConfig() {
+  const payload = _operationalPayload();
+  if (!payload.domain) { _opsMessage('対象サイトを選択してください。', true); return; }
+  try {
+    const res = await fetch('/schedule/config', {
+      method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '保存できませんでした');
+    _opsMessage(`運用設定を保存しました。次回: ${data.next_run_at || '無効'}`);
+    await loadOperationalConfig(payload.domain);
+  } catch (e) {
+    _opsMessage(e.message || '運用設定を保存できませんでした。', true);
+  }
+}
+
+async function testOperationalNotification() {
+  const payload = _operationalPayload();
+  const button = document.getElementById('ops-test-notify');
+  if (button) button.disabled = true;
+  try {
+    const res = await fetch('/schedule/notify/test', {
+      method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '送信できませんでした');
+    _opsMessage(data.message || 'テスト通知を送信しました。');
+  } catch (e) {
+    _opsMessage(e.message || 'テスト通知を送信できませんでした。', true);
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+async function loadOperationalHistory(domain) {
+  const container = document.getElementById('ops-history');
+  if (!container || !domain) return;
+  container.innerHTML = '<p class="input-hint">読み込み中...</p>';
+  try {
+    const res = await fetch(`/schedule/history?domain=${encodeURIComponent(domain)}&limit=5`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '履歴を取得できませんでした');
+    const items = data.items || [];
+    if (!items.length) { container.innerHTML = '<p class="input-hint">実行履歴はまだありません。</p>'; return; }
+    container.innerHTML = `<table class="ops-history-table"><thead><tr><th>開始</th><th>状態</th><th>試行</th><th>所要時間</th></tr></thead><tbody>${items.map(item => `<tr><td>${escHtml(item.started_at || '')}</td><td><span class="rh-status-badge ${item.status === 'complete' ? 'rh-status-complete' : 'rh-status-failed'}">${item.status === 'complete' ? '完了' : '失敗'}</span></td><td>${Number(item.attempts || 0)}回</td><td>${Number(item.duration_sec || 0).toFixed(1)}秒</td></tr>`).join('')}</tbody></table>`;
+  } catch (e) {
+    container.innerHTML = `<p class="input-hint">${escHtml(e.message || '履歴を取得できませんでした。')}</p>`;
+  }
+}
+
 document.getElementById('save-api')?.addEventListener('click', saveApiKey);
 document.getElementById('test-connection')?.addEventListener('click', testConnection);
 document.getElementById('save-slack')?.addEventListener('click', saveSlackWebhook);
 document.getElementById('allow-local-toggle')?.addEventListener('change', saveAllowLocal);
 document.getElementById('save-test-design')?.addEventListener('click', saveTestDesignSettings);
+document.getElementById('ops-site')?.addEventListener('change', (e) => loadOperationalConfig(e.target.value));
+document.getElementById('ops-save')?.addEventListener('click', saveOperationalConfig);
+document.getElementById('ops-test-notify')?.addEventListener('click', testOperationalNotification);
 
 // 初期ロード
 loadSettingsForm();

@@ -90,6 +90,15 @@ def test_public_user_never_contains_password_hash(store: AuthStore) -> None:
     assert "password_hash" not in (store.get_user(result["user"]["id"]) or {})
 
 
+def test_complete_tour_persists_per_user(store: AuthStore) -> None:
+    result = _setup(store)
+    user_id = result["user"]["id"]
+    assert result["user"]["tour_completed_at"] is None
+    completed = store.complete_tour(user_id)
+    assert completed["tour_completed_at"] is not None
+    assert store.get_user(user_id)["tour_completed_at"] == completed["tour_completed_at"]
+
+
 # ---------- 認証・ロックアウト ----------
 
 

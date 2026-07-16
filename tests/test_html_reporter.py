@@ -72,6 +72,91 @@ def test_html_reporter_creates_output_file(tmp_path: Path) -> None:
     assert out.stat().st_size > 0
 
 
+def test_html_reporter_renders_technical_health_with_claim_boundary() -> None:
+    analyzed = [_make_analyzed_page()]
+    graph = _empty_graph()
+    graph.add_node("P001", url="https://example.com/", title="Test Page", page_id="P001")
+    technical_health = {
+        "claim_boundary": "クロール中に到達・観測できた対象のみ",
+        "summary": {
+            "page_http_errors": 1,
+            "broken_links": 1,
+            "console_errors": 1,
+            "mixed_content": 1,
+        },
+        "screens": [
+            {
+                "url": "https://example.com/",
+                "title": "Test Page",
+                "status_code": 500,
+                "http_error": True,
+                "broken_links": [{"url": "https://example.com/missing", "status_code": 404}],
+                "console_errors": ["Uncaught TypeError"],
+                "mixed_content": ["http://example.com/legacy.js"],
+            }
+        ],
+    }
+    result = generate_html_report(
+        pages=analyzed,
+        graph=graph,
+        form_summary=[],
+        target_url="https://example.com/",
+        mermaid_content="graph LR\n  P001\n",
+        technical_health=technical_health,
+    )
+    assert 'id="technical-health"' in result
+    assert "技術ヘルス" in result
+    assert "到達・観測できた対象のみ" in result
+    assert "Uncaught TypeError" in result
+    assert "http://example.com/legacy.js" in result
+
+
+def test_html_reporter_renders_accessibility_audit_separately_from_ux() -> None:
+    analyzed = [_make_analyzed_page()]
+    graph = _empty_graph()
+    graph.add_node("P001", url="https://example.com/", title="Test Page", page_id="P001")
+    audit = {
+        "meta": {
+            "engine": "axe-core",
+            "disclaimer": "機械判定のみで、手動確認が必要です。",
+            "manual_review_required": True,
+        },
+        "summary": {"violations": 1, "critical": 1, "serious": 0, "moderate": 0, "minor": 0},
+        "screens": [
+            {
+                "page_id": "P001",
+                "url": "https://example.com/",
+                "title": "Test Page",
+                "violations": [
+                    {
+                        "rule_id": "image-alt",
+                        "impact": "critical",
+                        "description": "Images need alternate text",
+                        "help_url": "https://dequeuniversity.com/rules/axe/image-alt",
+                        "wcag_tags": ["wcag2a", "wcag111"],
+                        "evidence": {"selector": "img.hero"},
+                        "confidence": 1.0,
+                    }
+                ],
+            }
+        ],
+    }
+    result = generate_html_report(
+        pages=analyzed,
+        graph=graph,
+        form_summary=[],
+        target_url="https://example.com/",
+        mermaid_content="graph LR\n  P001\n",
+        accessibility_audit=audit,
+    )
+    assert 'id="accessibility-audit"' in result
+    assert "アクセシビリティ" in result
+    assert "手動確認が必要" in result
+    assert "image-alt" in result
+    assert "img.hero" in result
+    assert 'href="https://dequeuniversity.com/rules/axe/image-alt"' in result
+
+
 class TestCoverageGapSection:
     """「カバレッジと未確認領域」節（AC-5・AC-8）。"""
 

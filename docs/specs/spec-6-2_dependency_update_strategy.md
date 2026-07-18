@@ -2,10 +2,10 @@
 
 | 項目 | 値 |
 |---|---|
-| WBS | 6-2（docs/0703-01_plan.md） |
+| WBS | 6-2 |
 | 優先度 / 見積 | P2 / 1sp |
 | 依存 | なし |
-| 背景 | docs/0703-01_plan.md §1-2 動作環境（Python 3.11〜3.12 のみ = playwright 1.44.0 の wheel 制約） |
+| 背景 | 動作環境（Python 3.11〜3.12 のみ = playwright 1.44.0 の wheel 制約、`docs/specs/CONVENTIONS.md §2`） |
 
 ## 1. 目的と背景
 
@@ -14,7 +14,7 @@
 - `src/doctor.py`: `SUPPORTED_PYTHON_MIN = (3, 11)` / `SUPPORTED_PYTHON_MAX_EXCLUSIVE = (3, 13)` と、「playwright 1.44」のハードコード文言 3 箇所（docstring 6 行目・コメント 27 行目・エラーメッセージ 65 行目）
 - `src/crawler/playwright_runtime.py`: Chromium をリポジトリ配下 `.runtime/ms-playwright` に固定（`configure_playwright_browsers_path` / `verify_playwright_runtime`。導入は `scripts/manage_playwright_runtime.py install` = CONVENTIONS §4 罠 8）
 - `.github/workflows/ci.yml`: smoke / e2e-ui ジョブが **ubuntu-22.04 固定**（コメント「Playwright 1.44 の OS 依存は 24.04 と非互換のため固定」）、`PLAYWRIGHT_BROWSERS_PATH` を workspace 配下へ指定
-- `docs/specs/CONVENTIONS.md §2`・`docs/0703-01_plan.md §1-2`: 「Python 3.11〜3.12（3.13 は不可）」の文書制約
+- `docs/specs/CONVENTIONS.md §2`: 「Python 3.11〜3.12（3.13 は不可）」の文書制約
 - 関連ピン: `pytest-playwright==0.8.0`（playwright 本体とバージョン整合が必要）
 
 放置リスク: Python 3.13 以降の環境に導入不可（新規顧客環境・開発機の OS 更新で詰む）、Ubuntu ランナー EOL 追随不可、Chromium/playwright の脆弱性対応が遅れる（pip-audit は CI 済みだが検出後の更新手順が未整備）。
@@ -72,7 +72,7 @@
                 ＋ smoke 相当（src/main.py --url https://example.com --compare を 2 回）
                 ＋ make verify-ui ＋ make demo で DemoMart を目視
 5. 新 Python  : 移行動機が 3.13 の場合、3.13 venv でも 2〜4 を繰り返す
-6. 文書更新   : doctor 対応表・CONVENTIONS §2・docs/0703-01_plan.md §1-2・
+6. 文書更新   : doctor 対応表・CONVENTIONS §2・
                 ci.yml のランナー固定（22.04→24.04 可否を e2e 実測で判断）を同一 PR で
 7. ロールバック: git revert → venv/bin/pip install -r requirements-dev.txt
                 → make setup-runtime → make doctor → make verify-all

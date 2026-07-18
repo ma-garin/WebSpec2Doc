@@ -2,7 +2,7 @@
 
 | 項目 | 値 |
 |---|---|
-| WBS | 6-1（docs/0703-01_plan.md） |
+| WBS | 6-1 |
 | 優先度 / 見積 | P3 / 0.5sp |
 | 依存 | なし |
 | 背景 | WBS-6 品質・保守（常設）。警告の放置は「本物の警告」を埋もれさせる |
@@ -23,7 +23,7 @@ venv/bin/python -m pytest tests/ -q --ignore=tests/e2e
 
 補足（実測に基づく現状整理）:
 
-- 計画（docs/0703-01_plan.md WBS-6-1）は collection warning を複数想定していたが、**実測は 1 件のみ**。同構造の `src/analyzer/test_conditions.py:20::TestCondition`（Test 接頭辞の frozen dataclass）は現状どのテストモジュールにも直接 import されていないため未発火 — 将来テストが import した瞬間に再発するので**予防対象に含める**
+- 計画は collection warning を複数想定していたが、**実測は 1 件のみ**。同構造の `src/analyzer/test_conditions.py:20::TestCondition`（Test 接頭辞の frozen dataclass）は現状どのテストモジュールにも直接 import されていないため未発火 — 将来テストが import した瞬間に再発するので**予防対象に含める**
 - Pillow はランタイム依存ではない（requirements.txt に無し・requirements-dev.txt に `Pillow>=11.0.0`、実測導入 12.3.0）。`screenshot_diff.py` は Pillow 不在時にサイズ比較へフォールバックする設計（`_compute_size_diff_ratio`）
 
 ## 2. 受け入れ条件（全て自動テストで検証すること）

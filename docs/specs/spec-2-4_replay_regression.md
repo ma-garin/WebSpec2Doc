@@ -2,7 +2,7 @@
 
 | 項目 | 値 |
 |---|---|
-| WBS | 2-4（docs/0703-01_plan.md） |
+| WBS | 2-4 |
 | 優先度 / 見積 | P2 / 2sp |
 | 依存 | 2-1（recorded_candidates.json / recorded_assets.json が入力） |
 | 背景 | docs/11 §7-2 ④リプレイ・§7-3 保守フェーズ「ドリフト×記録フローの影響提案」 |

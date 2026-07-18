@@ -255,39 +255,6 @@ function _autorunRenderFailurePanel(data) {
   `;
 }
 
-// ---- AutoRun: 開始 ----
-async function autorunStart() {
-  const url = (document.getElementById('autorun-url')?.value || '').trim();
-  if (!url) { autorunSetStartStatus('URLを入力してください。', true); return; }
-
-  const depth    = document.getElementById('autorun-depth')?.value || '5';
-  const maxPages = document.getElementById('autorun-max-pages')?.value || '300';
-  const viewpointSetId = document.getElementById('autorun-viewpoint-set')?.value || '';
-
-  const btn = document.getElementById('autorun-start-btn');
-  if (btn) { btn.disabled = true; btn.textContent = '開始中…'; }
-  autorunSetStartStatus('', false);
-
-  try {
-    const res = await fetch('/api/autorun/start', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        url,
-        depth: parseInt(depth),
-        max_pages: parseInt(maxPages),
-        viewpoint_set_id: viewpointSetId,
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok || !data.ok) throw new Error(data.error || '開始に失敗しました');
-    _autorunAttachJob(data.job_id);
-  } catch (e) {
-    autorunSetStartStatus(String(e), true);
-    if (btn) { btn.disabled = false; btn.textContent = '開始'; }
-  }
-}
-
 // ジョブへ接続（新規開始・リロード後の再接続で共通）
 function _autorunAttachJob(jobId) {
   _autoRunJobId = jobId;
@@ -322,7 +289,7 @@ async function autorunResume() {
     jobs = data.jobs || [];
   } catch (e) { return; }
 
-  const activeStatuses = ['discovering', 'awaiting_input', 'crawling', 'generating_qa', 'generating_scripts', 'awaiting_approval', 'running_tests'];
+  const activeStatuses = ['discovering', 'awaiting_input', 'crawling', 'generating_qa', 'generating_document_mbt', 'generating_scripts', 'awaiting_approval', 'running_tests'];
   const active = jobs.find(j => activeStatuses.includes(j.status));
   if (active && !_autoRunJobId) {
     _autorunAttachJob(active.job_id);
@@ -453,7 +420,10 @@ function _autorunStopElapsed() {
 // ---- AutoRun: 全体進捗（フェーズ完了ベースの近似。偽の残り時間は出さない） ----
 function _autorunProgressPercent(status) {
   if (status === 'complete') return 100;
-  const idx = AUTORUN_PHASE_ORDER.indexOf(status === 'awaiting_input' ? 'discovering' : status);
+  const normalizedStatus = status === 'awaiting_input' ? 'discovering'
+    : status === 'generating_document_mbt' ? 'generating_qa'
+    : status;
+  const idx = AUTORUN_PHASE_ORDER.indexOf(normalizedStatus);
   if (idx < 0) return 0;
   let pct = 0;
   for (let i = 0; i < idx; i++) pct += AUTORUN_PHASE_WEIGHTS[AUTORUN_PHASE_ORDER[i]];
@@ -469,6 +439,10 @@ function _autorunStepMeta(data) {
     meta['ars-crawl'] = `${sd.crawl.screens}画面 / ${sd.crawl.forms || 0}フォーム`;
   }
   if (sd.qa && sd.qa.count) meta['ars-qa'] = `${sd.qa.count}件の成果物`;
+  if (sd.document_mbt) {
+    const rate = Math.round(Number(sd.document_mbt.coverage_rate || 0) * 100);
+    meta['ars-qa'] = `要件${sd.document_mbt.requirements || 0}件 / パス${sd.document_mbt.paths || 0}件 / カバー${rate}%`;
+  }
   if (sd.scripts && sd.scripts.all != null) meta['ars-scripts'] = `${sd.scripts.all}件のテストケース`;
   const policy = data.run_policy || {};
   if (policy.filter_mode) {
@@ -737,7 +711,7 @@ function _autorunRender(data) {
 
   // ---- 停止ボタン ----
   const cancelArea = document.getElementById('autorun-cancel-area');
-  const activeStatuses = ['discovering','awaiting_input','crawling','generating_qa','generating_scripts','running_tests'];
+  const activeStatuses = ['discovering','awaiting_input','crawling','generating_qa','generating_document_mbt','generating_scripts','running_tests'];
   if (cancelArea) cancelArea.style.display = activeStatuses.includes(status) ? '' : 'none';
 
   // ---- 再実行ボタン ----
@@ -928,6 +902,7 @@ function autorunReset() {
   document.getElementById('autorun-start-btn').disabled = false;
   document.getElementById('autorun-start-btn').textContent = '開始';
   document.getElementById('autorun-url').value = '';
+  _autorunResetDocumentMode();
   const viewpointSelect = document.getElementById('autorun-viewpoint-set');
   if (viewpointSelect) viewpointSelect.value = '';
   autorunLoadViewpointSelection();

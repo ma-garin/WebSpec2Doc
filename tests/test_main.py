@@ -91,6 +91,10 @@ class TestDomainName:
     def test_url_with_port(self) -> None:
         assert _domain_name("https://example.com:8080/") == "example.com:8080"
 
+    def test_domain_key_matches_browser_url_host_normalization(self) -> None:
+        assert _domain_name("https://EXAMPLE.COM:443/path") == "example.com"
+        assert _domain_name("http://[::1]:8080/path") == "[::1]:8080"
+
     def test_empty_url_fallback(self) -> None:
         assert _domain_name("") == "site"
 

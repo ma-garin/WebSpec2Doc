@@ -29,9 +29,10 @@ except ImportError:
     PLAYWRIGHT_AVAILABLE = False
 
 try:
-    from playwright.sync_api import Page
+    from playwright.sync_api import Page, expect
 except ImportError:
     Page = object  # type: ignore[assignment,misc]
+    expect = None  # type: ignore[assignment]
 
 # プロジェクトルートを sys.path に追加
 ROOT = Path(__file__).parent.parent.parent
@@ -127,6 +128,23 @@ def browser_context_args() -> dict:
 @pytest.fixture(scope="session")
 def playwright_timeout() -> int:
     return 45_000  # 45 秒
+
+
+@pytest.fixture(scope="session", autouse=True)
+def configure_expect_timeout() -> None:
+    """非同期UIの期待値待機を、連続E2E向けに明示設定する。"""
+    if expect is not None:
+        expect.set_options(timeout=15_000)
+
+
+@pytest.fixture(autouse=True)
+def configure_page_timeouts(request: pytest.FixtureRequest) -> None:
+    """page を使うテストに、長い連続実行向けの実タイムアウトを適用する。"""
+    if "page" not in request.fixturenames:
+        return
+    page = request.getfixturevalue("page")
+    page.set_default_timeout(45_000)
+    page.set_default_navigation_timeout(60_000)
 
 
 @pytest.fixture()

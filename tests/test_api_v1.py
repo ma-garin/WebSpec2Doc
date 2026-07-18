@@ -276,6 +276,7 @@ def test_validate_domain_valid() -> None:
 
     assert _valid_domain("example.com") is True
     assert _valid_domain("localhost:8765") is True
+    assert _valid_domain("[::1]:8765") is True
     assert _valid_domain("sub.domain.co.jp") is True
 
 

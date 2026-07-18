@@ -383,3 +383,44 @@ class TestDeepLink:
     def test_unknown_tab_falls_back_to_overview(self, page: Page) -> None:
         _open_report(page, "/no-such-tab")
         expect(page.locator("#rp-overview")).to_be_visible()
+
+
+class TestKpiHeroCollapse:
+    """KPI指標バンドのコンパクト化と折りたたみトグル（下の詳細を広げる）。"""
+
+    def test_kpi_hero_visible_by_default(self, page: Page) -> None:
+        _open_report(page)
+        expect(page.locator("#result-kpi-hero")).to_be_visible()
+        toggle = page.locator("#r-kpi-toggle")
+        expect(toggle).to_be_visible()
+        expect(toggle).to_have_text("▾ 指標")
+        expect(toggle).to_have_attribute("aria-expanded", "true")
+
+    def test_toggle_collapses_and_expands_kpi(self, page: Page) -> None:
+        _open_report(page)
+        toggle = page.locator("#r-kpi-toggle")
+        hero = page.locator("#result-kpi-hero")
+        # 折りたたむ → 指標バンドが隠れ、詳細エリアが上に詰まる
+        toggle.click()
+        expect(hero).to_be_hidden()
+        expect(toggle).to_have_text("▸ 指標")
+        expect(toggle).to_have_attribute("aria-expanded", "false")
+        # 概要タブの詳細は折りたたみ後も表示され続ける
+        expect(page.locator("#rp-overview")).to_be_visible()
+        # もう一度押すと元に戻る
+        toggle.click()
+        expect(hero).to_be_visible()
+        expect(toggle).to_have_text("▾ 指標")
+
+    def test_collapsed_state_persists_across_reload(self, page: Page) -> None:
+        _open_report(page)
+        page.locator("#r-kpi-toggle").click()
+        expect(page.locator("#result-kpi-hero")).to_be_hidden()
+        # リロードしても折りたたみ状態が保持される（localStorage）
+        page.reload()
+        expect(page.locator("#result-panel")).to_be_visible()
+        expect(page.locator("#result-kpi-hero")).to_be_hidden()
+        expect(page.locator("#r-kpi-toggle")).to_have_text("▸ 指標")
+        # 後片付け: 既定（展開）へ戻して他テストへ影響させない
+        page.locator("#r-kpi-toggle").click()
+        expect(page.locator("#result-kpi-hero")).to_be_visible()

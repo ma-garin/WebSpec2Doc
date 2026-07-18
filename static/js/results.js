@@ -422,6 +422,30 @@ document.getElementById('r-density-btn')?.addEventListener('click', () => {
   if (saved === 'compact') _applyTableDensity(true);
 }());
 
+// ====================== KPI指標バンドの折りたたみ ======================
+// 指標カードを完全に隠し、下の解析結果詳細を最大化できるようにする（状態は保存）。
+const KPI_COLLAPSED_KEY = 'wsd_kpi_collapsed';
+function _applyKpiCollapsed(collapsed) {
+  const summary = document.querySelector('#result-panel .result-summary');
+  if (summary) summary.classList.toggle('is-kpi-collapsed', collapsed);
+  const btn = document.getElementById('r-kpi-toggle');
+  if (btn) {
+    btn.classList.toggle('is-active', collapsed);
+    btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    btn.textContent = collapsed ? '▸ 指標' : '▾ 指標';
+  }
+  try { localStorage.setItem(KPI_COLLAPSED_KEY, collapsed ? '1' : '0'); } catch (_) {}
+}
+document.getElementById('r-kpi-toggle')?.addEventListener('click', () => {
+  const summary = document.querySelector('#result-panel .result-summary');
+  _applyKpiCollapsed(!(summary && summary.classList.contains('is-kpi-collapsed')));
+});
+(function initKpiCollapsed() {
+  let saved = '0';
+  try { saved = localStorage.getItem(KPI_COLLAPSED_KEY) || '0'; } catch (_) {}
+  if (saved === '1') _applyKpiCollapsed(true);
+}());
+
 // ====================== タブ最大化 ======================
 function _toggleMaximize() {
   document.body.classList.toggle('result-maximized');

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from urllib.parse import urlparse
 
+from crawler.url_safety import domain_key_from_url
 from web.config import ALLOWED_FORMATS, DOMAIN_RE, OUTPUT_DIR
 from web.tenancy import scoped_output_dir
 
@@ -57,8 +57,8 @@ def _safe_auth_path(raw: str) -> str:
     return ""
 
 
-def _safe_reference_doc_paths(raw: str, domain: str) -> list[str]:
-    """カンマ区切りの参考文書パスを検証する。
+def _safe_reference_doc_paths(raw: str | list[str], domain: str) -> list[str]:
+    """参考文書パスを検証する（フォーム文字列またはJSON配列）。
 
     resolve 後に OUTPUT_DIR/{domain}/reference_docs/ 配下の実在ファイルのみ
     通す（_safe_auth_path と同じ resolve→parents 判定）。不正パスは黙って
@@ -68,7 +68,8 @@ def _safe_reference_doc_paths(raw: str, domain: str) -> list[str]:
         return []
     base = (_out() / domain / "reference_docs").resolve()
     result: list[str] = []
-    for candidate in raw.split(","):
+    candidates = raw if isinstance(raw, list) else raw.split(",")
+    for candidate in candidates:
         candidate = candidate.strip()
         if not candidate:
             continue
@@ -110,5 +111,4 @@ def _sanitize(value: str) -> str:
 
 
 def _domain_of(url: str) -> str:
-    parsed = urlparse(url.strip())
-    return parsed.netloc or "site"
+    return domain_key_from_url(url)

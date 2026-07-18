@@ -13,9 +13,16 @@ from typing import Any
 
 from flask import Blueprint, Response, request, send_file
 
-from web.config import DISCOVER_TIMEOUT_SEC, MAX_DEPTH, MAX_PAGES_LIMIT, OUTPUT_DIR
+from web.config import DISCOVER_TIMEOUT_SEC, OUTPUT_DIR
 from web.routes.qa_process import _generate_advanced_outputs, _generate_outputs, _load_report
-from web.services.auto_run_job import AutoRunJob
+from web.services.auto_run_config import resolve_crawl_limits as _resolve_crawl_limits
+from web.services.auto_run_job import AutoRunJob, job_output_dir
+from web.services.auto_run_preview import build_autorun_preview
+from web.services.document_autorun import (
+    candidate_filename,
+    parse_document_autorun_config,
+    run_document_autorun_phase,
+)
 from web.services.failure_classifier import (
     classify_failure,
     classify_failures,
@@ -26,7 +33,12 @@ from web.services.qa.helpers import use_output_dir, use_viewpoint_snapshot
 from web.services.spec_ts_generator import compute_filter_counts, generate_spec_ts
 from web.services.viewpoint_store import ViewpointStoreError, get_viewpoint_store
 from web.tenancy import scoped_output_dir
-from web.validation import _clean_int, _domain_of, _safe_auth_path, _valid_domain
+from web.validation import (
+    _clean_int,
+    _domain_of,
+    _safe_auth_path,
+    _valid_domain,
+)
 
 bp = Blueprint("auto_run", __name__)
 logger = logging.getLogger(__name__)
@@ -41,34 +53,10 @@ def _out() -> Path:
 
 
 def _job_out(job: AutoRunJob) -> Path:
-    """ジョブに紐づく出力ディレクトリ。
-
-    ジョブ開始リクエスト時に解決した値（job._output_dir）を優先する。
-    バックグラウンドスレッドからはリクエストコンテキストが見えないため、
-    ここで OUTPUT_DIR を直接使うとテナント分離が破れる。
-    """
-    stored = getattr(job, "_output_dir", None)
-    return stored if isinstance(stored, Path) else OUTPUT_DIR
+    return job_output_dir(job, OUTPUT_DIR)
 
 
 # ─────────────────────────── API ───────────────────────────
-
-
-def _resolve_crawl_limits(form: Any, body: dict[str, Any]) -> tuple[int, int]:
-    """AutoRunの深さ・最大ページを解決する。既定は上限（全対象）。
-    深さ・最大ページは「詳細オプション」に折りたたまれた任意項目であり、
-    未指定時にR1-08/R2-18が指摘した「一部しか取得されない」挙動にならない
-    よう、既定値自体を上限に合わせる。"""
-    depth = _clean_int(
-        form.get("depth") or body.get("depth", str(MAX_DEPTH)), MAX_DEPTH, 1, MAX_DEPTH
-    )
-    max_pages = _clean_int(
-        form.get("max_pages") or body.get("max_pages", str(MAX_PAGES_LIMIT)),
-        MAX_PAGES_LIMIT,
-        1,
-        MAX_PAGES_LIMIT,
-    )
-    return depth, max_pages
 
 
 @bp.post("/api/autorun/start")
@@ -80,6 +68,10 @@ def api_autorun_start() -> dict | tuple[dict, int]:
 
     depth, max_pages = _resolve_crawl_limits(request.form, body)
     auth = _safe_auth_path((request.form.get("auth") or body.get("auth", "")).strip())
+    try:
+        document_config = parse_document_autorun_config(request.form, body, url)
+    except ValueError as exc:
+        return {"error": str(exc)}, 400
     viewpoint_set_id = (
         request.form.get("viewpoint_set_id") or body.get("viewpoint_set_id", "")
     ).strip()
@@ -108,9 +100,14 @@ def api_autorun_start() -> dict | tuple[dict, int]:
         viewpoint_checksum=snapshot["checksum"],
         viewpoint_selection_reason=snapshot["selection_reason"],
         viewpoint_count=int(snapshot["viewpoint_count"]),
+        mode=document_config.mode,
+        selection_criterion=document_config.selection_criterion,
+        target_page_id=document_config.target_page_id,
+        observe_validation=document_config.observe_validation,
     )
     job._viewpoint_snapshot = snapshot
     job._output_dir = _out()
+    job._reference_docs = document_config.reference_docs
     job.add_log(
         f"観点セットを固定: {job.viewpoint_set_name} v{job.viewpoint_version} "
         f"({job.viewpoint_count}件 / {job.viewpoint_selection_reason})"
@@ -239,48 +236,7 @@ def api_autorun_preview() -> dict | tuple[dict, int]:
         job = _JOBS.get(request.args.get("job_id", ""))
     if job is None:
         return {"error": "not found"}, 404
-
-    candidates_path = _job_out(job) / job.domain / "qa_process" / "playwright_candidates.json"
-    spec_path_str = job.outputs.get("spec_ts", "")
-
-    result: dict[str, Any] = {"job_id": job.job_id, "domain": job.domain}
-
-    # 候補一覧
-    if candidates_path.is_file():
-        try:
-            data = json.loads(candidates_path.read_text(encoding="utf-8"))
-            candidates: list[dict[str, Any]] = data.get("candidates", [])
-            by_status: dict[str, int] = {}
-            by_title: dict[str, int] = {}
-            for c in candidates:
-                s = c.get("automation_status", "")
-                t = c.get("title", "")
-                by_status[s] = by_status.get(s, 0) + 1
-                by_title[t] = by_title.get(t, 0) + 1
-            result["candidates"] = candidates
-            result["summary"] = {
-                "total": len(candidates),
-                "by_status": by_status,
-                "by_title": by_title,
-                "filter_counts": compute_filter_counts(candidates),
-            }
-        except Exception as exc:
-            result["candidates"] = []
-            result["summary"] = {"error": str(exc)}
-    else:
-        result["candidates"] = []
-        result["summary"] = {}
-
-    # スクリプト内容
-    if spec_path_str and Path(spec_path_str).is_file():
-        try:
-            result["spec_content"] = Path(spec_path_str).read_text(encoding="utf-8")
-        except Exception:
-            result["spec_content"] = ""
-    else:
-        result["spec_content"] = ""
-
-    return result
+    return build_autorun_preview(job, _job_out(job))
 
 
 @bp.post("/api/autorun/approve")
@@ -397,6 +353,10 @@ def _run_job(job: AutoRunJob, depth: int, max_pages: int) -> None:
         _phase_generate_qa(job)
         if job.status in ("failed", "cancelled"):
             return
+        if job.mode == "document":
+            _phase_generate_document_mbt(job)
+            if job.status in ("failed", "cancelled"):
+                return
         _phase_generate_scripts(job)
         if job.status in ("failed", "cancelled"):
             return
@@ -529,6 +489,9 @@ def _phase_crawl(job: AutoRunJob, depth: int, max_pages: int) -> None:
     ]
     if job.auth_path:
         cmd += ["--auth", job.auth_path]
+    if job.mode == "document":
+        for doc_path in job._reference_docs:
+            cmd += ["--reference-doc", doc_path]
 
     try:
         proc = subprocess.Popen(
@@ -637,6 +600,10 @@ def _phase_generate_qa(job: AutoRunJob) -> None:
     )
 
 
+def _phase_generate_document_mbt(job: AutoRunJob) -> None:
+    run_document_autorun_phase(job, _job_out(job), _mark_job_failed)
+
+
 def _phase_generate_scripts(job: AutoRunJob) -> None:
     if job._cancelled:
         return
@@ -644,9 +611,10 @@ def _phase_generate_scripts(job: AutoRunJob) -> None:
     job.step_label = "Playwright スクリプトを生成中"
     job.add_log("Playwright .spec.ts を生成しています…")
 
-    candidates_path = _job_out(job) / job.domain / "qa_process" / "playwright_candidates.json"
+    candidates_filename = candidate_filename(job.mode)
+    candidates_path = _job_out(job) / job.domain / "qa_process" / candidates_filename
     if not candidates_path.is_file():
-        _mark_job_failed(job, "playwright_candidates.json が見つかりません")
+        _mark_job_failed(job, f"{candidates_filename} が見つかりません")
         return
 
     spec_dir = _job_out(job) / job.domain / "qa_process"
@@ -688,7 +656,7 @@ def _execute_tests(job: AutoRunJob) -> None:
     if device not in ("pc", "mobile"):
         device = "pc"
     if filter_mode != "all":
-        candidates_path = _job_out(job) / job.domain / "qa_process" / "playwright_candidates.json"
+        candidates_path = _job_out(job) / job.domain / "qa_process" / candidate_filename(job.mode)
         if candidates_path.is_file():
             try:
                 generate_spec_ts(job.domain, candidates_path, spec_path, filter_mode=filter_mode)

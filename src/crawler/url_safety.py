@@ -14,6 +14,22 @@ class UnsafeUrlError(ValueError):
     """クロール対象として許可されない URL。"""
 
 
+def domain_key_from_url(url: str) -> str:
+    """JS の ``URL.host`` と一致する、出力ディレクトリ用のホストキーを返す。"""
+    parsed = urlparse(url.strip())
+    host = (parsed.hostname or "").lower()
+    if not host:
+        return parsed.path.replace("/", "_") or "site"
+    if ":" in host:
+        host = f"[{host}]"
+    try:
+        port = parsed.port
+    except ValueError:
+        port = None
+    default_port = (parsed.scheme.lower(), port) in {("http", 80), ("https", 443)}
+    return f"{host}:{port}" if port is not None and not default_port else host
+
+
 def _local_targets_allowed() -> bool:
     """ローカル/プライベートアドレスのクロールを許可するか（opt-in）。
 

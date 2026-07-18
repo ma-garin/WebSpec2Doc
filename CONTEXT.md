@@ -92,8 +92,20 @@ _Avoid_: QAドキュメント生成、テスト文書自動作成
 QAプロセスの拡張機能として生成する3種の追加成果物。①モデルグラフ（画面間遷移と状態をHTML可視化）②Playwright候補（自動テスト対象フォーム・ボタンのJSON/HTML）③品質観点（ISTQBに基づく観点カード）。`/api/qa-process/generate-advanced` で一括生成。
 
 **AutoRun**:
-URLを入力するだけでページ解析→クロール→QA生成→Playwright spec.ts 生成→テスト実行を全自動で行うビュー。ジョブ単位で状態管理（idle/discovering/crawling/generating_qa/generating_scripts/running_tests/complete）し、ポーリング方式でフロントに進捗を配信する。実装: `web/routes/auto_run.py`＋`web/services/spec_ts_generator.py`＋`web/services/playwright_executor.py`。
+URL駆動または文書駆動で、ページ解析→クロール→QA生成→Playwright spec.ts 生成→テスト実行を一つのフローで行うビュー。ジョブ単位で状態管理（idle/discovering/crawling/generating_qa/generating_document_mbt/generating_scripts/running_tests/complete）し、ポーリング方式でフロントに進捗を配信する。実装: `web/routes/auto_run.py`＋`src/mbt/`＋`web/services/spec_ts_generator.py`＋`web/services/playwright_executor.py`。
 _Avoid_: 全自動テスト、ワンクリックテスト
+
+**URL駆動**:
+対象URLの実測を起点にテスト候補を生成する、AutoRunの既定モード。
+
+**文書駆動**:
+参考文書から抽出・追跡した要件を起点に、実測済みの画面・遷移と突合してMBTモデルとテスト成果物を生成するAutoRunモード。文書だけから未観測の画面や遷移は補わない。
+
+**テスト選択基準**:
+文書駆動で実行パスを選ぶ規則。頂点網羅（全画面）・エッジ網羅（全遷移）・到達目標（指定画面まで）のいずれかを選ぶ。
+
+**実測バリデーション**:
+実測ロケータへ根拠付きテストデータを入力し、クライアント側の検証状態だけを観測する工程。フォーム送信・クリック・Enterは行わず、POST/PUT/PATCH/DELETEも遮断する。
 
 **実行方針**:
 AutoRun でテストを実行する前にユーザーが選択するテスト実行の方針。全件実行・スモークのみ・重要画面のみ等の粒度を指定できる。承認ステップ（awaiting_approval）でユーザーが確認してから実行に進む。

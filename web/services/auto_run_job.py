@@ -4,12 +4,19 @@ import logging
 import threading
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 MAX_LOG_LINES = 1000
 MAX_LOG_BYTES = 256 * 1024
+
+
+def job_output_dir(job: AutoRunJob, default: Path) -> Path:
+    """バックグラウンドジョブに固定済みのテナント出力先を返す。"""
+    stored = getattr(job, "_output_dir", None)
+    return stored if isinstance(stored, Path) else default
 
 
 def _truncate_utf8(value: str, limit: int) -> str:
@@ -26,7 +33,7 @@ class AutoRunJob:
     domain: str = ""
     status: str = "idle"
     # idle | discovering | awaiting_input | crawling | generating_qa
-    # generating_scripts | awaiting_approval | running_tests | complete
+    # generating_document_mbt | generating_scripts | awaiting_approval | running_tests | complete
     # cancelled | failed
     step_label: str = ""
     log: list[str] = field(default_factory=list)
@@ -48,6 +55,10 @@ class AutoRunJob:
     viewpoint_checksum: str = ""
     viewpoint_selection_reason: str = ""
     viewpoint_count: int = 0
+    mode: str = "url"
+    selection_criterion: str = "vertex_coverage"
+    target_page_id: str = ""
+    observe_validation: bool = False
 
     _proc: Any = field(default=None, init=False, repr=False, compare=False)
     # ジョブ開始リクエスト時に解決したテナントスコープ済み出力先（Path）。
@@ -57,6 +68,7 @@ class AutoRunJob:
     _viewpoint_snapshot: dict[str, Any] = field(
         default_factory=dict, init=False, repr=False, compare=False
     )
+    _reference_docs: list[str] = field(default_factory=list, init=False, repr=False, compare=False)
     _input_event: Any = field(
         default_factory=threading.Event, init=False, repr=False, compare=False
     )
@@ -120,6 +132,11 @@ class AutoRunJob:
                 "selection_reason": self.viewpoint_selection_reason,
                 "count": self.viewpoint_count,
             },
+            "mode": self.mode,
+            "selection_criterion": self.selection_criterion,
+            "target_page_id": self.target_page_id,
+            "observe_validation": self.observe_validation,
+            "reference_doc_count": len(self._reference_docs),
         }
 
     def cancel(self) -> None:

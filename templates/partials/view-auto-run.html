@@ -8,9 +8,47 @@
               </header>
 
               <div id="autorun-form-area" class="card autorun-form">
+                <fieldset class="autorun-mode-switch">
+                  <legend>生成モード</legend>
+                  <div class="autorun-mode-options">
+                    <label for="autorun-mode-url" class="autorun-mode-option">
+                      <input type="radio" id="autorun-mode-url" name="autorun-mode" value="url" checked>
+                      <span><strong>URL駆動</strong><small>実測した画面からテストを生成</small></span>
+                    </label>
+                    <label for="autorun-mode-document" class="autorun-mode-option">
+                      <input type="radio" id="autorun-mode-document" name="autorun-mode" value="document">
+                      <span><strong>文書駆動</strong><small>要件文書と実測画面を結合</small></span>
+                    </label>
+                  </div>
+                </fieldset>
                 <div class="control-field">
                   <label for="autorun-url">対象URL</label>
                   <input type="url" id="autorun-url" class="url-input input-compact" placeholder="https://example.com" autocomplete="url" list="url-history-list" />
+                </div>
+                <div id="autorun-document-options" class="autorun-document-options" hidden>
+                  <div class="control-field">
+                    <label for="autorun-reference-doc-input">要件・仕様文書</label>
+                    <input type="file" id="autorun-reference-doc-input" multiple
+                           accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.md,.txt,.html,.htm,.json">
+                    <ul id="autorun-reference-doc-list" class="autorun-reference-doc-list"></ul>
+                    <div id="autorun-reference-doc-status" class="input-field-message" aria-live="polite"></div>
+                  </div>
+                  <div class="control-field">
+                    <label for="autorun-selection-criterion">パス選定基準</label>
+                    <select id="autorun-selection-criterion" class="url-input select-compact">
+                      <option value="vertex_coverage">全画面を通る</option>
+                      <option value="edge_coverage">全遷移を通る</option>
+                      <option value="reached_target">指定画面へ到達する</option>
+                    </select>
+                  </div>
+                  <div id="autorun-target-page-field" class="control-field" hidden>
+                    <label for="autorun-target-page-id">到達する画面ID</label>
+                    <input type="text" id="autorun-target-page-id" class="url-input input-compact" placeholder="例: checkout_complete">
+                  </div>
+                  <label class="autorun-validation-option" for="autorun-observe-validation">
+                    <input type="checkbox" id="autorun-observe-validation">
+                    <span><strong>入力検証も観測する</strong><small id="autorun-validation-safety-note">フォームへ入力のみ・送信しません</small></span>
+                  </label>
                 </div>
                 <div class="control-field">
                   <label for="autorun-viewpoint-set">観点セット</label>

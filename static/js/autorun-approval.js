@@ -181,11 +181,22 @@ function _autorunPopulateApprovalModal() {
     const auto  = byStatus.auto || 0;
     const skip  = (byStatus['manual-review'] || 0) + (byStatus.review || 0);
     summaryEl.textContent = '';
-    [
+    const stats = [
       { n: total, label: 'テストケース', cls: 'status-default' },
       { n: auto,  label: '自動実行',    cls: 'status-low' },
       { n: skip,  label: 'スキップ',    cls: 'status-muted' },
-    ].forEach(({ n, label, cls }) => {
+    ];
+    const stepData = window._autoRunLastData?.step_data || {};
+    const documentMbt = stepData.document_mbt;
+    if (documentMbt) {
+      stats.push(
+        { n: documentMbt.requirements || 0, label: '文書要件', cls: 'status-default' },
+        { n: documentMbt.matched_screens || 0, label: '対応画面', cls: 'status-default' },
+        { n: documentMbt.paths || 0, label: '選定パス', cls: 'status-default' },
+        { n: `${Math.round(Number(documentMbt.coverage_rate || 0) * 100)}%`, label: 'カバー率', cls: 'status-low' },
+      );
+    }
+    stats.forEach(({ n, label, cls }) => {
       const wrap = document.createElement('div');
       wrap.className = 'arm-summary-stat';
       const num = document.createElement('strong');

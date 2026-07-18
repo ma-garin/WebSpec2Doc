@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import pytest
 
-from crawler.url_safety import UnsafeUrlError, is_safe_target, validate_target_url
+from crawler.url_safety import (
+    UnsafeUrlError,
+    domain_key_from_url,
+    is_safe_target,
+    validate_target_url,
+)
 
 SAFE_URLS = [
     "https://example.com",
@@ -63,3 +68,15 @@ def test_local_rejected_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("WEBSPEC2DOC_ALLOW_LOCAL", raising=False)
     with pytest.raises(UnsafeUrlError):
         validate_target_url("http://127.0.0.1:8899/")
+
+
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        ("https://EXAMPLE.COM:443/path", "example.com"),
+        ("http://example.com:8080/path", "example.com:8080"),
+        ("http://[::1]:8080/path", "[::1]:8080"),
+    ],
+)
+def test_domain_key_matches_browser_url_host(url: str, expected: str) -> None:
+    assert domain_key_from_url(url) == expected

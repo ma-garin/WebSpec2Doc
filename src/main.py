@@ -11,7 +11,6 @@ from collections.abc import Callable, Iterable, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
-from urllib.parse import urlparse
 
 import networkx as nx
 from dotenv import load_dotenv
@@ -29,6 +28,7 @@ from crawler.page_crawler import (
     discover_pages,
 )
 from crawler.session_guard import SessionExpiredError
+from crawler.url_safety import domain_key_from_url
 from diff.differ import compute_diff
 from diff.snapshot import latest_snapshot, load_snapshot, save_partial_snapshot, save_snapshot
 from generator.diff_reporter import generate_diff_report
@@ -1463,8 +1463,7 @@ def _parse_formats(raw_formats: str) -> tuple[str, ...]:
 
 
 def _domain_name(url: str) -> str:
-    parsed = urlparse(url)
-    return parsed.netloc or parsed.path.replace("/", "_") or "site"
+    return domain_key_from_url(url)
 
 
 if __name__ == "__main__":

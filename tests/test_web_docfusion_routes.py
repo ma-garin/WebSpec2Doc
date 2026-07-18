@@ -233,3 +233,13 @@ class TestSafeReferenceDocPaths:
 
     def test_invalid_domain_returns_empty(self, tmp_path: Path) -> None:
         assert _safe_reference_doc_paths(str(tmp_path / "a.txt"), "../etc") == []
+
+    def test_list_payload_preserves_comma_in_valid_filename(
+        self, tmp_path: Path, monkeypatch
+    ) -> None:
+        monkeypatch.setattr("web.validation.OUTPUT_DIR", tmp_path)
+        doc = tmp_path / "example.com" / "reference_docs" / "要件,補足.md"
+        doc.parent.mkdir(parents=True)
+        doc.write_text("# 要件", encoding="utf-8")
+
+        assert _safe_reference_doc_paths([str(doc)], "example.com") == [str(doc.resolve())]

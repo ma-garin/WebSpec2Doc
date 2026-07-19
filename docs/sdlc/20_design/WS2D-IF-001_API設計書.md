@@ -1,6 +1,6 @@
 # WS2D-IF-001 API / インターフェース設計書
 
-- 版数: 1.0 / 作成日: 2026-07-16 / 準拠: IPA 共通フレーム（外部設計）
+- 版数: 2.0 / 作成日: 2026-07-16 / 最終更新: 2026-07-19 / 準拠: IPA 共通フレーム（外部設計）
 - **as-built**: 本一覧は `web/routes/*.py` から機械抽出（再生成コマンド末尾）。
 - 総 Blueprint 17・総エンドポイント 121。全て同一オリジン（既定 127.0.0.1:8765）。
 
@@ -15,11 +15,24 @@
 
 ## 2. エンドポイント一覧（Blueprint 別）
 
-### 外部公開 API `api_v1`（9）
-- `GET /healthz` / `GET /sites` / `GET /sites/<domain>/report` /
+### 外部公開 API `api_v1`（16）
+- 参照系: `GET /healthz` / `GET /sites` / `GET /sites/<domain>/report` /
   `GET /sites/<domain>/snapshots` / `GET /sites/<domain>/diff` /
-  `POST /sites/<domain>/crawl` / `GET /jobs/<job_id>` /
-  `GET /sites/<domain>/jobs` / `GET /sites/<domain>/test-cases`
+  `GET /jobs/<job_id>` / `GET /sites/<domain>/jobs` / `GET /sites/<domain>/test-cases`
+- 実行系: `POST /sites/<domain>/crawl`
+- スケジュール/通知（`api_v1_schedule`。変更系は管理者のみ・監査ログ記録）:
+  `GET/PUT/DELETE /sites/<domain>/schedule` / `GET/PUT /sites/<domain>/notifications`
+- 仕様公開: `GET /openapi.json`（実装済みルートのみ列挙）/ `GET /docs`（自己完結HTML・JS不使用）
+
+APIトークンは **スコープ**（`read` / `full`）を持つ。`read` トークンは
+GET/HEAD/OPTIONS のみ許可し、変更操作は 403 `forbidden_scope` を返す。
+
+### 監視 `metrics`（1）
+- `GET /metrics`（Prometheus 形式。Prometheus の慣行に合わせルート直下に配置）
+
+### SSO `oidc`（2）
+- `GET /auth/oidc/login` / `GET /auth/oidc/callback`
+  （`WEBSPEC2DOC_OIDC_PROVIDER` 未設定時は無効。既存のID/パスワード認証には非干渉）
 
 ### 利用者認証 `account`（商用/共有サーバ対応）
 - `GET/POST /auth/login`, `POST /auth/logout`, `GET/POST /auth/setup`, `GET /auth/account`,

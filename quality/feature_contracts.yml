@@ -993,6 +993,425 @@
         "exit_code_contract",
         "evidence"
       ]
+    },
+    {
+      "feature_id": "document_mbt",
+      "name": "文書駆動MBT（要件×実測からのテスト設計）",
+      "risk_level": "critical",
+      "status": "implemented",
+      "ui_files": [
+        "templates/partials/view-auto-run.html",
+        "static/js/autorun-document.js",
+        "static/css/autorun-document.css"
+      ],
+      "route_files": [
+        "web/routes/auto_run.py"
+      ],
+      "core_files": [
+        "src/mbt/document_model.py",
+        "src/mbt/manual_procedures.py",
+        "src/mbt/test_data.py",
+        "src/mbt/validation_observer.py",
+        "web/services/document_autorun.py"
+      ],
+      "symbols": [
+        "build_document_mbt",
+        "build_manual_procedures",
+        "generate_test_data",
+        "run_validation_observation",
+        "generate_document_autorun_artifacts"
+      ],
+      "outputs": [
+        "document_mbt.json",
+        "manual_procedures.md/xlsx",
+        "test_data.json/csv",
+        "validation_observations.json"
+      ],
+      "persistence": [
+        "output/{domain}/qa_process/"
+      ],
+      "failure_modes": [
+        "missing_reference_docs",
+        "unmatched_requirements",
+        "no_reachable_path",
+        "path_limit_truncation",
+        "validation_browser_failure",
+        "empty_measured_graph"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "coverage_path",
+        "no_submit_guarantee",
+        "evidence"
+      ]
+    },
+    {
+      "feature_id": "evidence_pack",
+      "name": "検収・監査向けテスト実施証跡パック",
+      "risk_level": "high",
+      "status": "implemented",
+      "ui_files": [
+        "static/js/autorun.js"
+      ],
+      "route_files": [
+        "web/routes/auto_run.py"
+      ],
+      "core_files": [
+        "src/evidence/pack_model.py",
+        "src/evidence/pack_reporter.py",
+        "web/services/evidence_pack_service.py"
+      ],
+      "symbols": [
+        "build_evidence_pack",
+        "save_evidence_pack",
+        "attach_evidence_pack"
+      ],
+      "outputs": [
+        "evidence_pack.md",
+        "evidence_pack.html"
+      ],
+      "persistence": [
+        "output/{domain}/qa_process/evidence_pack.*"
+      ],
+      "failure_modes": [
+        "missing_report",
+        "missing_viewpoints",
+        "missing_screenshots",
+        "interrupted_run",
+        "generation_failure"
+      ],
+      "required_tests": [
+        "happy_path",
+        "missing_input_path",
+        "claim_scope",
+        "evidence"
+      ]
+    },
+    {
+      "feature_id": "diff_severity",
+      "name": "差分の重要度判定と誤検知フィルタ",
+      "risk_level": "high",
+      "status": "implemented",
+      "ui_files": [],
+      "route_files": [],
+      "core_files": [
+        "src/diff/severity.py",
+        "src/diff/ignore_rules.py",
+        "src/generator/diff_reporter.py"
+      ],
+      "symbols": [
+        "score_changes",
+        "summarize_severity",
+        "apply_ignore_rules",
+        "load_ignore_rules",
+        "summarize_exclusions"
+      ],
+      "outputs": [
+        "diff_report.html（重要度・除外内訳・画像比較）"
+      ],
+      "persistence": [
+        "output/{domain}/diff_ignore.json"
+      ],
+      "failure_modes": [
+        "invalid_regex_rule",
+        "broken_rule_file",
+        "all_changes_excluded",
+        "missing_screenshot"
+      ],
+      "required_tests": [
+        "happy_path",
+        "determinism",
+        "immutability",
+        "exclusion_disclosure",
+        "evidence"
+      ]
+    },
+    {
+      "feature_id": "api_v1_openapi",
+      "name": "REST API拡充とOpenAPI公開",
+      "risk_level": "high",
+      "status": "implemented",
+      "ui_files": [],
+      "route_files": [
+        "web/routes/api_v1.py",
+        "web/routes/api_v1_schedule.py"
+      ],
+      "core_files": [
+        "web/services/openapi_spec.py",
+        "web/services/openapi_docs.py"
+      ],
+      "symbols": [
+        "build_openapi_spec",
+        "render_openapi_docs"
+      ],
+      "outputs": [
+        "/api/v1/openapi.json",
+        "/api/v1/docs"
+      ],
+      "persistence": [
+        "output/{domain}/schedule.json"
+      ],
+      "failure_modes": [
+        "invalid_domain",
+        "forbidden_non_admin",
+        "invalid_interval",
+        "invalid_notify_type",
+        "cross_tenant_access"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "authorization_path",
+        "implemented_paths_only",
+        "evidence"
+      ]
+    },
+    {
+      "feature_id": "multi_viewport",
+      "name": "マルチビューポート仕様書",
+      "risk_level": "medium",
+      "status": "implemented",
+      "ui_files": [],
+      "route_files": [],
+      "core_files": [
+        "src/viewport/profiles.py",
+        "src/viewport/comparison.py",
+        "src/viewport/reporter.py",
+        "src/viewport/runner.py"
+      ],
+      "symbols": [
+        "resolve_profiles",
+        "compare_viewports",
+        "save_viewport_report",
+        "run_multi_viewport"
+      ],
+      "outputs": [
+        "viewport_report.md/html/json"
+      ],
+      "persistence": [
+        "output/{domain}/viewports/"
+      ],
+      "failure_modes": [
+        "unknown_viewport",
+        "baseline_not_observed",
+        "viewport_crawl_failure"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "evidence"
+      ]
+    },
+    {
+      "feature_id": "sso_oidc",
+      "name": "SSO（OIDC）とAPIトークンスコープ",
+      "risk_level": "critical",
+      "status": "implemented",
+      "ui_files": [],
+      "route_files": [
+        "web/routes/oidc.py"
+      ],
+      "core_files": [
+        "web/services/oidc.py",
+        "web/services/auth_store.py",
+        "web/auth.py"
+      ],
+      "symbols": [
+        "build_authorization_url",
+        "extract_identity",
+        "verify_state",
+        "find_active_user_by_email"
+      ],
+      "outputs": [
+        "SSOセッション",
+        "APIトークン（スコープ付き）"
+      ],
+      "persistence": [
+        "instance/auth.db"
+      ],
+      "failure_modes": [
+        "state_mismatch",
+        "issuer_mismatch",
+        "audience_mismatch",
+        "nonce_mismatch",
+        "unregistered_user",
+        "domain_not_allowed",
+        "readonly_token_mutation"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "authorization_path",
+        "token_validation",
+        "evidence"
+      ]
+    },
+    {
+      "feature_id": "observability",
+      "name": "可観測性（メトリクス・構造化ログ）",
+      "risk_level": "medium",
+      "status": "implemented",
+      "ui_files": [],
+      "route_files": [
+        "web/routes/metrics.py"
+      ],
+      "core_files": [
+        "web/services/metrics.py",
+        "web/services/scheduler.py",
+        "web/services/notifier.py",
+        "web/services/job_queue.py"
+      ],
+      "symbols": [
+        "render_metrics",
+        "record_crawl",
+        "record_notification",
+        "set_schedule_delay",
+        "set_job_queue_depth"
+      ],
+      "outputs": [
+        "/metrics（Prometheus形式）",
+        "JSON構造化ログ"
+      ],
+      "persistence": [],
+      "failure_modes": [
+        "metric_record_failure",
+        "negative_value"
+      ],
+      "required_tests": [
+        "happy_path",
+        "failure_observable",
+        "evidence"
+      ]
+    },
+    {
+      "feature_id": "api_spec_recovery",
+      "name": "API仕様の逆生成",
+      "risk_level": "medium",
+      "status": "implemented",
+      "ui_files": [],
+      "route_files": [],
+      "core_files": [
+        "src/apispec/recovery.py"
+      ],
+      "symbols": [
+        "build_screen_api_map",
+        "build_openapi_draft",
+        "templatize_path"
+      ],
+      "outputs": [
+        "画面↔API対応表",
+        "OpenAPI雛形"
+      ],
+      "persistence": [],
+      "failure_modes": [
+        "no_observed_calls",
+        "unparseable_path"
+      ],
+      "required_tests": [
+        "happy_path",
+        "no_invention",
+        "evidence"
+      ]
+    },
+    {
+      "feature_id": "screen_coverage_map",
+      "name": "画面カバレッジマップ",
+      "risk_level": "medium",
+      "status": "implemented",
+      "ui_files": [],
+      "route_files": [],
+      "core_files": [
+        "src/apispec/coverage_map.py"
+      ],
+      "symbols": [
+        "build_coverage_map",
+        "executed_pages_from_meta",
+        "save_coverage_map"
+      ],
+      "outputs": [
+        "coverage_map.json",
+        "coverage_map.html"
+      ],
+      "persistence": [
+        "output/{domain}/qa_process/coverage_map.*"
+      ],
+      "failure_modes": [
+        "empty_graph",
+        "missing_meta",
+        "skipped_tests"
+      ],
+      "required_tests": [
+        "happy_path",
+        "no_rate_claim",
+        "evidence"
+      ]
+    },
+    {
+      "feature_id": "wording_consistency",
+      "name": "文言一貫性・表記ゆれチェック",
+      "risk_level": "low",
+      "status": "implemented",
+      "ui_files": [],
+      "route_files": [],
+      "core_files": [
+        "src/wording/consistency.py"
+      ],
+      "symbols": [
+        "check_wording",
+        "load_dictionary",
+        "texts_from_pages"
+      ],
+      "outputs": [
+        "表記ゆれ検出結果"
+      ],
+      "persistence": [
+        "output/{domain}/wording_dictionary.json"
+      ],
+      "failure_modes": [
+        "broken_dictionary",
+        "empty_texts"
+      ],
+      "required_tests": [
+        "happy_path",
+        "dictionary_scope"
+      ]
+    },
+    {
+      "feature_id": "full_archive",
+      "name": "完全アーカイブと外形監視（sitemap/PDF）",
+      "risk_level": "medium",
+      "status": "implemented",
+      "ui_files": [],
+      "route_files": [],
+      "core_files": [
+        "src/archive/full_archive.py",
+        "src/archive/external_monitor.py"
+      ],
+      "symbols": [
+        "create_full_archive",
+        "verify_archive",
+        "parse_sitemap",
+        "diff_documents"
+      ],
+      "outputs": [
+        "archive_*.zip（MANIFEST.json同梱）",
+        "sitemap/文書の差分"
+      ],
+      "persistence": [
+        "output/{domain}/archives/"
+      ],
+      "failure_modes": [
+        "missing_source",
+        "tampered_archive",
+        "broken_sitemap"
+      ],
+      "required_tests": [
+        "happy_path",
+        "tamper_detection",
+        "source_preserved",
+        "evidence"
+      ]
     }
   ]
 }

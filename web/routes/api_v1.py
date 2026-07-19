@@ -8,7 +8,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from flask import Blueprint, request
+from flask import Blueprint, Response, request
 
 from web.config import MAX_DEPTH, MAX_PAGES_LIMIT, OUTPUT_DIR
 from web.tenancy import scoped_output_dir
@@ -251,3 +251,28 @@ def api_test_cases(domain: str) -> tuple[dict, int] | dict:
         logger.exception("playwright_candidates.json の読み込みに失敗しました: %s", exc)
         return {"domain": domain, "total": 0, "candidates": []}
     return {"domain": domain, "total": len(candidates), "candidates": candidates}
+
+
+# ─────────────────── GET /api/v1/openapi.json ・ /api/v1/docs ───────────────────
+
+
+@bp.get("/openapi.json")
+def api_openapi_spec() -> dict:
+    """実装済みエンドポイントの OpenAPI 3.0 仕様を返す。"""
+    from flask import current_app
+
+    from web.services.openapi_spec import build_openapi_spec
+
+    return build_openapi_spec(current_app)
+
+
+@bp.get("/docs")
+def api_docs() -> Response:
+    """APIリファレンス（自己完結HTML・外部ホスト非依存）。"""
+    from flask import current_app
+
+    from web.services.openapi_docs import render_openapi_docs
+    from web.services.openapi_spec import build_openapi_spec
+
+    document = render_openapi_docs(build_openapi_spec(current_app))
+    return Response(document, mimetype="text/html; charset=utf-8")

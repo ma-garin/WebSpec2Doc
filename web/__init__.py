@@ -36,6 +36,9 @@ def create_app() -> Flask:
         usage,
         viewpoints,
     )
+    from web.routes import (
+        metrics as metrics_routes,
+    )
     from web.security import add_security_headers, csrf_guard, localhost_guard
 
     app = Flask(
@@ -75,6 +78,7 @@ def create_app() -> Flask:
     app.register_blueprint(schedule.bp)
     app.register_blueprint(api_v1.bp)
     app.register_blueprint(api_v1_schedule.bp)
+    app.register_blueprint(metrics_routes.bp)
     app.register_blueprint(traceability.traceability_bp)
     app.register_blueprint(usage.bp)
     app.register_blueprint(viewpoints.bp)

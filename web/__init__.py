@@ -19,6 +19,7 @@ def create_app() -> Flask:
         account,
         admin,
         api_v1,
+        api_v1_schedule,
         auto_run,
         crawl,
         discover,
@@ -73,6 +74,7 @@ def create_app() -> Flask:
     app.register_blueprint(review.bp)
     app.register_blueprint(schedule.bp)
     app.register_blueprint(api_v1.bp)
+    app.register_blueprint(api_v1_schedule.bp)
     app.register_blueprint(traceability.traceability_bp)
     app.register_blueprint(usage.bp)
     app.register_blueprint(viewpoints.bp)

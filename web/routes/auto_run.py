@@ -23,6 +23,7 @@ from web.services.document_autorun import (
     parse_document_autorun_config,
     run_document_autorun_phase,
 )
+from web.services.evidence_pack_service import attach_evidence_pack
 from web.services.failure_classifier import (
     classify_failure,
     classify_failures,
@@ -710,6 +711,8 @@ def _execute_tests(job: AutoRunJob) -> None:
             job.add_log(f"テスト実行が異常終了しました: {result_error or '中断されました'}")
         _mark_job_failed(job, result_error or "テスト実行が中断されました（部分結果なし）")
         _update_failure_classification(job, result)
+        # 中断でも「どこまで実行したか」は検収上の証跡になるため生成する。
+        attach_evidence_pack(job, _job_out(job))
         return
 
     job.status = "complete"
@@ -717,6 +720,7 @@ def _execute_tests(job: AutoRunJob) -> None:
     job.finished_at = _now_iso()
     job.add_log(f"テスト実行完了: PASS={passed} FAIL={failed} TOTAL={total}")
     _update_failure_classification(job, result)
+    attach_evidence_pack(job, _job_out(job))
     _record_autorun_usage_safely(job)
 
 

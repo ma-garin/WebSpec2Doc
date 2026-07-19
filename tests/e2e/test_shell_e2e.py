@@ -10,6 +10,7 @@ Phase B（UIシェル刷新）の受入テスト。
 
 from __future__ import annotations
 
+import os
 import re
 import sys
 from pathlib import Path
@@ -21,7 +22,7 @@ _ACTIVE = re.compile(r"\bis-active\b")
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-BASE_URL = "http://127.0.0.1:8765"
+BASE_URL = os.environ.get("WEBSPEC2DOC_E2E_URL", "http://127.0.0.1:8765")
 
 
 @pytest.fixture()

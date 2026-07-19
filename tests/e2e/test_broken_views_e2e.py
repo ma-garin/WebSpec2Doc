@@ -23,6 +23,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 from collections.abc import Generator
 from pathlib import Path
@@ -30,7 +31,7 @@ from pathlib import Path
 import pytest
 from playwright.sync_api import Page, expect
 
-BASE_URL = "http://127.0.0.1:8765"
+BASE_URL = os.environ.get("WEBSPEC2DOC_E2E_URL", "http://127.0.0.1:8765")
 DIFF_DOMAIN = "e2e-broken-views-diff.example.com"
 ROOT = Path(__file__).parent.parent.parent
 DIFF_FIXTURE_DIR = ROOT / "output" / DIFF_DOMAIN

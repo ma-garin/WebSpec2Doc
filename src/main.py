@@ -146,6 +146,18 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--compare", action="store_true", help="前回スナップショットとの差分を出力")
     parser.add_argument(
+        "--viewports",
+        help=(
+            "マルチビューポート観測（カンマ区切り: desktop,tablet,mobile）。"
+            "指定すると各画面幅でクロールし、ビューポート間差分を文書化する"
+        ),
+    )
+    parser.add_argument(
+        "--viewport-baseline",
+        default="desktop",
+        help="ビューポート差分の基準（既定: desktop）",
+    )
+    parser.add_argument(
         "--parallelism",
         type=int,
         default=1,
@@ -308,6 +320,9 @@ def run(args: argparse.Namespace) -> None:
         return
     if bool(getattr(args, "exploration_coverage", False)):
         _exploration_coverage(args)
+        return
+    if viewports_arg := getattr(args, "viewports", None):
+        _multi_viewport(args, str(viewports_arg), auth_path)
         return
     if bool(getattr(args, "reverse_assets", False)):
         _reverse_assets(args)
@@ -1468,3 +1483,32 @@ def _domain_name(url: str) -> str:
 
 if __name__ == "__main__":
     main()
+
+
+def _multi_viewport(args: argparse.Namespace, viewports_arg: str, auth_path: Path | None) -> None:
+    """複数ビューポートで観測し、ビューポート間差分を文書化する。"""
+    from viewport.runner import run_multi_viewport
+
+    names = [name.strip() for name in viewports_arg.split(",") if name.strip()]
+    domain = _domain_name(str(args.url))
+    out_dir = Path(args.output) / domain
+    report = run_multi_viewport(
+        str(args.url),
+        out_dir,
+        viewports=names,
+        baseline=str(getattr(args, "viewport_baseline", "desktop")),
+        depth=int(getattr(args, "depth", 2)),
+        max_pages=int(getattr(args, "max_pages", 30)),
+        auth_state=auth_path,
+    )
+    summary = report.get("summary", {})
+    print(f"マルチビューポート観測が完了しました: {out_dir}")
+    print(
+        "  差分: "
+        f"非表示画面 {summary.get('hidden_pages', 0)}件 / "
+        f"非表示項目 {summary.get('hidden_fields', 0)}件 / "
+        f"専用遷移 {summary.get('viewport_only_links', 0)}件"
+    )
+    failed = report.get("meta", {}).get("failed_viewports", {})
+    if failed:
+        print(f"  観測できなかったビューポート: {', '.join(failed)}")

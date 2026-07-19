@@ -241,8 +241,12 @@ class PageData:
 
 
 @contextmanager
-def _browser_page(auth_state: Path | None) -> Iterator[Page]:
-    """Open a Playwright Chromium page with shared context settings."""
+def _browser_page(auth_state: Path | None, viewport: Any | None = None) -> Iterator[Page]:
+    """Open a Playwright Chromium page with shared context settings.
+
+    viewport に ViewportProfile を渡すと、その画面幅・UA で観測する
+    （マルチビューポート観測用。未指定なら従来どおりブラウザ既定）。
+    """
     configure_playwright_browsers_path()
     with sync_playwright() as playwright:
         # --lang でブラウザ UI 言語を日本語にし、HTML5 バリデーション
@@ -251,13 +255,19 @@ def _browser_page(auth_state: Path | None) -> Iterator[Page]:
         # 基底言語コード（BROWSER_UI_LANG="ja"）を渡す点に注意（"ja-JP" は不可）。
         browser = playwright.chromium.launch(headless=True, args=[f"--lang={BROWSER_UI_LANG}"])
         try:
-            context = browser.new_context(
-                user_agent=USER_AGENT,
-                storage_state=str(auth_state) if auth_state else None,
+            context_options: dict[str, Any] = {
+                "user_agent": USER_AGENT,
+                "storage_state": str(auth_state) if auth_state else None,
                 # 日本語ロケール: HTML5 バリデーションメッセージ実測を
                 # 日本のエンドユーザーが目にする文言（日本語）で取得する
-                locale=BROWSER_LOCALE,
-            )
+                "locale": BROWSER_LOCALE,
+            }
+            if viewport is not None:
+                context_options["viewport"] = viewport.size
+                context_options["user_agent"] = viewport.user_agent
+                context_options["is_mobile"] = viewport.is_mobile
+                context_options["has_touch"] = viewport.is_mobile
+            context = browser.new_context(**context_options)
             page = context.new_page()
             page.set_default_timeout(DEFAULT_TIMEOUT_MS)
             yield page
@@ -276,6 +286,7 @@ def crawl_site(
     stop_requested: StopRequested | None = None,
     ux_review: bool = False,
     on_ux_result: UxResultCallback | None = None,
+    viewport: Any | None = None,
 ) -> list[PageData]:
     base_url = normalize_url(url)
     robots = _load_robots_parser(base_url)
@@ -300,7 +311,7 @@ def crawl_site(
         },
     )
 
-    with _browser_page(auth_state) as page:
+    with _browser_page(auth_state, viewport) as page:
         while queue and len(pages) < max_pages:
             if stop_requested and stop_requested():
                 break

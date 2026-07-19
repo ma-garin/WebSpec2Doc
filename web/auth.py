@@ -110,6 +110,11 @@ def auth_guard() -> BaseResponse | None:
                 return _unauthorized_json("APIトークンが無効です。")
             g.tenant = tenant
             g.auth_via = "api_token"
+            g.token_scope = str(tenant.get("token_scope", "full"))
+            if g.token_scope == "read" and request.method not in _READ_METHODS:
+                return _forbidden_json(
+                    "このAPIトークンは読み取り専用です。変更操作には全権トークンが必要です。"
+                )
             return None
 
     session = store.resolve_session(request.cookies.get(SESSION_COOKIE_NAME, ""))
@@ -122,6 +127,15 @@ def auth_guard() -> BaseResponse | None:
     if _wants_login_redirect():
         return redirect(f"/auth/login?next={request.full_path.rstrip('?')}")
     return _unauthorized_json("ログインが必要です。")
+
+
+_READ_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
+
+
+def _forbidden_json(message: str) -> Response:
+    resp = jsonify({"error": message, "code": "forbidden_scope"})
+    resp.status_code = 403
+    return resp
 
 
 def _unauthorized_json(message: str) -> Response:

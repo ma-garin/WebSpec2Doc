@@ -1057,20 +1057,26 @@
         "src/mbt/manual_procedures.py",
         "src/mbt/test_data.py",
         "src/mbt/validation_observer.py",
-        "web/services/document_autorun.py"
+        "web/services/document_autorun.py",
+        "src/mbt/pairwise.py",
+        "src/mbt/metamorphic.py"
       ],
       "symbols": [
         "build_document_mbt",
         "build_manual_procedures",
         "generate_test_data",
         "run_validation_observation",
-        "generate_document_autorun_artifacts"
+        "generate_document_autorun_artifacts",
+        "build_pairwise_cases",
+        "build_metamorphic_candidates"
       ],
       "outputs": [
         "document_mbt.json",
         "manual_procedures.md/xlsx",
         "test_data.json/csv",
-        "validation_observations.json"
+        "validation_observations.json",
+        "pairwise_cases.json",
+        "metamorphic_checks.json"
       ],
       "persistence": [
         "output/{domain}/qa_process/"

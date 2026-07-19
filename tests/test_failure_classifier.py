@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 from web.services.failure_classifier import (
     FAILURE_APP_CHANGE,
+    FAILURE_ASYNC_WAIT,
     FAILURE_ENV_ISSUE,
     FAILURE_TEST_ROT,
     FAILURE_UNKNOWN,
@@ -304,6 +305,7 @@ def test_summarize_classifications_empty() -> None:
         FAILURE_APP_CHANGE: 0,
         FAILURE_TEST_ROT: 0,
         FAILURE_ENV_ISSUE: 0,
+        FAILURE_ASYNC_WAIT: 0,
         FAILURE_UNKNOWN: 0,
     }
 
@@ -335,3 +337,34 @@ def test_summarize_classifications_returns_all_keys_even_if_zero() -> None:
     assert FAILURE_UNKNOWN in summary
     assert summary[FAILURE_UNKNOWN] == 1
     assert summary[FAILURE_APP_CHANGE] == 0
+
+
+# ─────────────────── async_wait（タイミング起因） ───────────────────
+
+
+def test_visibility_wait_timeout_is_async_wait_not_test_rot() -> None:
+    """要素は存在するが表示待ちで時間切れ → ロケータ張替えではなく待機見直しへ導く。"""
+    result = classify_failure(
+        "PW-0001",
+        "Timeout 30000ms exceeded. waiting for element to be visible, enabled and stable",
+    )
+
+    assert result.failure_type == FAILURE_ASYNC_WAIT
+    assert "再実行" in result.suggested_action
+
+
+def test_network_response_wait_timeout_is_async_wait() -> None:
+    result = classify_failure(
+        "PW-0002", "Timeout 15000ms exceeded while waiting for response to /api/items"
+    )
+
+    assert result.failure_type == FAILURE_ASYNC_WAIT
+
+
+def test_missing_locator_stays_test_rot() -> None:
+    """ロケータ自体が見つからないのは従来どおり test_rot。"""
+    result = classify_failure(
+        "PW-0003", 'Timeout 30000ms exceeded. waiting for locator("#old-button")'
+    )
+
+    assert result.failure_type == FAILURE_TEST_ROT

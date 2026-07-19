@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -9,6 +10,8 @@ from typing import Any
 
 from mbt.document_model import build_document_mbt, save_document_mbt
 from mbt.manual_procedures import build_manual_procedures, save_manual_procedures
+from mbt.metamorphic import build_metamorphic_candidates, save_metamorphic_candidates
+from mbt.pairwise import build_pairwise_cases
 from mbt.test_data import generate_test_data, save_test_data
 from mbt.validation_observer import run_validation_observation
 from web.routes.qa_process import _load_report
@@ -106,6 +109,23 @@ def generate_document_autorun_artifacts(
     }
     test_data = generate_test_data(report, requirement_ids_by_page)
     outputs |= save_test_data(test_data, qa_dir)
+    # ペアワイズ組合せ（実測選択肢のみ・2因子網羅）と
+    # メタモルフィック検証候補（オラクル不在でも成り立つべき関係）を併産する。
+    pairwise_cases = build_pairwise_cases(report)
+    if pairwise_cases:
+        pairwise_path = qa_dir / "pairwise_cases.json"
+        pairwise_path.write_text(
+            json.dumps(
+                {"claim_scope": "measured_options_only", "cases": pairwise_cases},
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+        outputs["pairwise_cases_json"] = pairwise_path
+    metamorphic = build_metamorphic_candidates(report)
+    if metamorphic["candidates"]:
+        outputs |= save_metamorphic_candidates(metamorphic, qa_dir)
 
     observation_count = 0
     if job.observe_validation:

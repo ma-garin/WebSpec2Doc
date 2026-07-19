@@ -52,7 +52,11 @@ class ScreenshotDiff:
     before_path: str
     after_path: str
     diff_ratio: float  # 変化したピクセルの割合 0.0〜1.0
-    is_significant: bool  # diff_ratio > threshold
+    is_significant: bool  # 画素・構造の両方で有意（下記参照）
+    structural_similarity: float = 1.0  # SSIM 0.0〜1.0（1.0=同一）
+
+
+SSIM_SIGNIFICANT_BELOW = 0.98  # 経験値: AA/フォント差はほぼ 0.99 以上に収まる
 
 
 def compare_screenshots(
@@ -61,15 +65,25 @@ def compare_screenshots(
     page_id: str = "",
     threshold: float = DEFAULT_THRESHOLD,
 ) -> ScreenshotDiff:
-    """2 枚の PNG を比較して変化率を返す。
-    Pillow が利用できない場合はファイルサイズ比較でフォールバックする。"""
+    """2 枚の PNG を比較して変化率と構造的類似度（SSIM）を返す。
+
+    画素差分率のみだとアンチエイリアス・フォントレンダリング差で恒常的に
+    偽陽性が出る（ビジュアルリグレッション研究の定説）。SSIM は人間の知覚と
+    相関が高いため、有意判定は「画素で閾値超過 かつ SSIMでも構造変化あり」の
+    両条件にする。numpy が無い環境では従来の画素判定のみで動く。
+    """
     diff_ratio = _compute_diff_ratio(before_path, after_path)
+    ssim = _compute_ssim(before_path, after_path)
+    pixel_significant = diff_ratio > threshold
+    structurally_changed = ssim < SSIM_SIGNIFICANT_BELOW
     return ScreenshotDiff(
         page_id=page_id,
         before_path=str(before_path),
         after_path=str(after_path),
         diff_ratio=diff_ratio,
-        is_significant=diff_ratio > threshold,
+        # ssim==1.0 はフォールバック（numpy無し）か完全同一。前者では画素判定のみに従う。
+        is_significant=pixel_significant and (structurally_changed or ssim >= 1.0),
+        structural_similarity=ssim,
     )
 
 
@@ -316,3 +330,44 @@ def _diff_grid_blocks(first_png: bytes, second_png: bytes) -> tuple[tuple[int, i
             if _count_nonzero_pixels(block) > 0:
                 regions.append((left, top, right - left, bottom - top))
     return tuple(regions)
+
+
+def _compute_ssim(before_path: Path, after_path: Path) -> float:
+    """グレースケール・グローバル SSIM を計算する。
+
+    scikit-image を増やさず numpy のみで、標準的な SSIM の定義
+    （輝度・コントラスト・構造の積、C1=(0.01L)^2, C2=(0.03L)^2）を
+    画像全体に対して求める。局所窓方式より粗いが、AA・フォント差のような
+    微小変化と本物のレイアウト変化の弁別には十分効く。
+    numpy / Pillow が無い・読めない場合は 1.0（判定に影響させない）を返す。
+    """
+    try:
+        import numpy as np
+        from PIL import Image
+    except ImportError:
+        return 1.0
+    if not before_path.exists() or not after_path.exists():
+        return 0.0
+    try:
+        before_img = Image.open(before_path).convert("L")
+        after_img = Image.open(after_path).convert("L")
+    except OSError:
+        return 1.0
+    target = _smaller_size(before_img.size, after_img.size)
+    if target[0] == 0 or target[1] == 0:
+        return 0.0
+    if before_img.size != target:
+        before_img = before_img.resize(target)
+    if after_img.size != target:
+        after_img = after_img.resize(target)
+    x = np.asarray(before_img, dtype=np.float64)
+    y = np.asarray(after_img, dtype=np.float64)
+    c1, c2 = (0.01 * 255) ** 2, (0.03 * 255) ** 2
+    mx, my = x.mean(), y.mean()
+    vx, vy = x.var(), y.var()
+    cov = ((x - mx) * (y - my)).mean()
+    numerator = (2 * mx * my + c1) * (2 * cov + c2)
+    denominator = (mx**2 + my**2 + c1) * (vx + vy + c2)
+    if denominator == 0:
+        return 1.0
+    return float(max(0.0, min(1.0, numerator / denominator)))

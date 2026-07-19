@@ -26,7 +26,12 @@ UX_REVIEW_FILE_NAME = "ux_review.json"
 JSON_INDENT = 2
 
 # docs/11 §3 Sprint C の免責文言（一次スクリーニングであることを明示する）
-UX_REVIEW_DISCLAIMER = "自動検査は a11y 問題の 30〜40% を捕捉する一次スクリーニングです。"
+UX_CLAIM_SCOPE = "automated_detectable_subset_only"
+UX_REVIEW_DISCLAIMER = (
+    "本結果は自動検出可能な範囲の観測です。自動ツールが検出できるのは WCAG 基準の"
+    "一部であり、キーボード操作・スクリーンリーダー・代替テキストの妥当性など"
+    "人の判断を要する検査の代替にはなりません。"
+)
 
 
 def build_ux_review(
@@ -57,6 +62,7 @@ def build_ux_review(
         )
     return {
         "meta": {
+            "claim_scope": UX_CLAIM_SCOPE,
             "disclaimer": UX_REVIEW_DISCLAIMER,
             "hallucination_dropped_count": pop_hallucination_drop_count(),
         },

@@ -46,6 +46,7 @@ def build_accessibility_audit(
     return {
         "meta": {
             "engine": "axe-core",
+            "claim_scope": "automated_detectable_subset_only",
             "disclaimer": DISCLAIMER,
             "manual_review_required": True,
         },

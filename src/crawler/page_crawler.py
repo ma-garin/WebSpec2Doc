@@ -238,6 +238,7 @@ class PageData:
     http_status: int = 0
     console_errors: tuple[str, ...] = ()
     mixed_content: tuple[str, ...] = ()
+    performance: Any | None = None  # PerformanceSample（欠測時 None）
 
 
 @contextmanager
@@ -597,9 +598,12 @@ def crawl_page(
         has_password_field,
     )
     from crawler.network_interceptor import MutationBlocker, NetworkCapture
+    from crawler.performance_probe import collect_performance, install_performance_observers
     from crawler.spa_monitor import SpaTransitionMonitor
 
     normalized_url = normalize_url(url)
+    # 性能観測（LCP/CLS）はナビゲーション前の登録が必要
+    install_performance_observers(page)
     console_errors: list[str] = []
     mixed_content: list[str] = []
     status_code = 0
@@ -680,6 +684,7 @@ def crawl_page(
         capture.detach()
         _audit_mutation_blocked(output_dir, normalized_url, blocker.blocked)
 
+    performance_sample = collect_performance(page)
     return PageData(
         url=normalized_url,
         title=title,
@@ -699,6 +704,7 @@ def crawl_page(
         http_status=status_code,
         console_errors=tuple(console_errors),
         mixed_content=tuple(mixed_content),
+        performance=performance_sample,
     )
 
 

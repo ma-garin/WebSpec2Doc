@@ -46,7 +46,12 @@ def parse_document_autorun_config(
     selection_criterion = str(
         form.get("selection_criterion") or body.get("selection_criterion", "vertex_coverage")
     ).strip()
-    if selection_criterion not in {"vertex_coverage", "edge_coverage", "reached_target"}:
+    if selection_criterion not in {
+        "vertex_coverage",
+        "edge_coverage",
+        "reached_target",
+        "prime_path",
+    }:
         raise ValueError("invalid selection_criterion")
     target_page_id = str(form.get("target_page_id") or body.get("target_page_id", "")).strip()
     if mode == "document" and not reference_docs:

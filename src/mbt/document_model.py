@@ -13,6 +13,11 @@ MAX_PATHS = 100
 VERTEX_COVERAGE = "vertex_coverage"
 EDGE_COVERAGE = "edge_coverage"
 REACHED_TARGET = "reached_target"
+PRIME_PATH_COVERAGE = "prime_path"
+
+# プライムパス列挙の安全弁（組合せ爆発対策）。到達時は summary へ明示する。
+MAX_PRIME_PATH_LENGTH = 30
+MAX_PRIME_ENUMERATION = 5000
 
 
 def save_document_mbt(
@@ -53,14 +58,27 @@ def build_document_mbt(
     candidates_data: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """実測グラフと文書要件の追跡結果からMBTモデルを構築する。"""
-    if criterion not in {VERTEX_COVERAGE, EDGE_COVERAGE, REACHED_TARGET}:
+    if criterion not in {VERTEX_COVERAGE, EDGE_COVERAGE, REACHED_TARGET, PRIME_PATH_COVERAGE}:
         raise ValueError(f"unsupported selection criterion: {criterion}")
 
     graph = _to_graph(graph_data)
     entries, entry_strategy = _entry_nodes(graph_data, graph)
     reachable = _reachable_nodes(graph, entries)
     requirement_ids = _requirement_ids_by_page(requirement_data)
-    if criterion == VERTEX_COVERAGE:
+    prime_extra: dict[str, Any] = {}
+    if criterion == PRIME_PATH_COVERAGE:
+        primes, enumeration_truncated = _prime_paths(graph)
+        paths, unreachable_primes = _prime_path_test_paths(graph, entries, primes)
+        covered_prime_set = {
+            prime for prime in primes if any(_is_subpath(prime, path) for path in paths)
+        }
+        covered, total = len(covered_prime_set), len(primes)
+        available_path_count = len(primes)
+        prime_extra = {
+            "unreachable_prime_paths": [list(prime) for prime in unreachable_primes],
+            "enumeration_truncated": enumeration_truncated,
+        }
+    elif criterion == VERTEX_COVERAGE:
         paths = _vertex_paths(graph, entries)
         covered, total = len({node_id for path in paths for node_id in path}), len(graph.nodes)
         available_path_count = len(reachable)
@@ -123,6 +141,7 @@ def build_document_mbt(
                 "max_paths_exceeded" if available_path_count > len(paths) else ""
             ),
             "omitted_path_count": max(0, available_path_count - len(paths)),
+            **prime_extra,
         },
         "unmatched_requirements": _unmatched_requirements(requirement_data, graph),
         "source_files": [
@@ -215,6 +234,88 @@ def _target_paths(graph: nx.DiGraph, entries: list[str], target: str) -> list[li
     if not candidates:
         return []
     return [min(candidates, key=lambda path: (len(path), path))]
+
+
+def _prime_paths(graph: nx.DiGraph) -> tuple[list[tuple[str, ...]], bool]:
+    """全プライムパスを列挙する（決定的・辞書順）。
+
+    プライムパス = 単純パス（頂点重複なし。ただし先頭=末尾のサイクル1周は許す）で
+    あり、他のいかなる単純パスの真部分パスでもないもの。全頂点起点のDFSで
+    「これ以上伸ばせない単純パス」と「単純サイクル」を集め、極大のみ残す。
+
+    戻り値の bool は列挙上限（MAX_PRIME_ENUMERATION）に達したか。
+    """
+    nodes = sorted(str(node_id) for node_id in graph.nodes)
+    simple_maximal: set[tuple[str, ...]] = set()
+    truncated = False
+
+    for start in nodes:
+        stack: list[tuple[str, ...]] = [(start,)]
+        while stack:
+            path = stack.pop()
+            if len(simple_maximal) >= MAX_PRIME_ENUMERATION:
+                truncated = True
+                break
+            extended = False
+            if len(path) <= MAX_PRIME_PATH_LENGTH:
+                for nxt in sorted(str(n) for n in graph.successors(path[-1])):
+                    if nxt == path[0]:
+                        # 先頭へ戻るサイクル（自己ループ含む）: 1周として確定
+                        simple_maximal.add((*path, nxt))
+                        extended = True
+                    elif nxt not in path:
+                        stack.append((*path, nxt))
+                        extended = True
+            if not extended:
+                simple_maximal.add(path)
+        if truncated:
+            break
+
+    # 真部分パスに含まれるものを除き、極大（＝プライム）のみ残す
+    ordered = sorted(simple_maximal, key=lambda p: (-len(p), p))
+    primes: list[tuple[str, ...]] = []
+    for path in ordered:
+        if not any(_is_strict_subpath(path, longer) for longer in primes):
+            primes.append(path)
+    return sorted(primes, key=lambda p: (len(p), p)), truncated
+
+
+def _prime_path_test_paths(
+    graph: nx.DiGraph, entries: list[str], primes: list[tuple[str, ...]]
+) -> tuple[list[list[str]], list[tuple[str, ...]]]:
+    """各プライムパスを entry からのプレフィクスで実行可能パスへ延長する。"""
+    test_paths: list[list[str]] = []
+    unreachable: list[tuple[str, ...]] = []
+    for prime in primes:
+        prefixes: list[list[str]] = []
+        for entry in entries:
+            if entry == prime[0]:
+                prefixes.append([])
+                continue
+            try:
+                shortest = list(nx.shortest_path(graph, entry, prime[0]))
+                prefixes.append(shortest[:-1])
+            except nx.NetworkXNoPath:
+                continue
+        if not prefixes:
+            unreachable.append(prime)
+            continue
+        prefix = min(prefixes, key=lambda p: (len(p), p))
+        test_paths.append([*prefix, *prime])
+    return sorted(test_paths, key=lambda p: (len(p), p))[:MAX_PATHS], unreachable
+
+
+def _is_subpath(needle: tuple[str, ...], haystack: list[str]) -> bool:
+    """needle が haystack の連続部分列か。"""
+    n = len(needle)
+    return any(tuple(haystack[i : i + n]) == needle for i in range(len(haystack) - n + 1))
+
+
+def _is_strict_subpath(needle: tuple[str, ...], haystack: tuple[str, ...]) -> bool:
+    if len(needle) >= len(haystack):
+        return False
+    n = len(needle)
+    return any(haystack[i : i + n] == needle for i in range(len(haystack) - n + 1))
 
 
 def _reachable_nodes(graph: nx.DiGraph, entries: list[str]) -> set[str]:

@@ -132,6 +132,11 @@ def _screen_dict(
     page_level = (rule_conditions or {}).get((pid, ""))
     if page_level:
         screen["document_conditions"] = [_rule_condition_dict(c) for c in page_level]
+    # 性能観測（LCP/CLS 等）は取得できた画面にのみ付与する
+    # （未取得時は既存のレポート構造・report_hash を変えない）
+    sample = getattr(pd, "performance", None)
+    if sample is not None:
+        screen["performance"] = sample.to_dict()
     return screen
 
 

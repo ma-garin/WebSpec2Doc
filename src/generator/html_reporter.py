@@ -113,6 +113,7 @@ def generate_html_report(
             _impact_section(impact_report),
             _exploration_section(exploration_coverage),
             _technical_health_section(technical_health),
+            _performance_section(pages),
             _accessibility_audit_section(accessibility_audit),
             _ux_review_section(ux_review),
             _coverage_gap_section(coverage_gaps),
@@ -302,6 +303,40 @@ def _sidebar(
         '<div class="brand-sub">テスト分析インプット</div>'
         '<nav class="app-nav">' + "".join(items) + "</nav></aside>"
     )
+
+
+def _performance_section(pages: list[AnalyzedPage]) -> str:
+    """性能観測（Core Web Vitals ラボ計測）の画面別表。合否バッジは付けない。"""
+    rows = []
+    for page in pages:
+        sample = getattr(page.page_data, "performance", None)
+        if sample is None:
+            continue
+        data = sample.to_dict()
+        rows.append(
+            "<tr>"
+            f"<td>{html.escape(page.page_id)}</td>"
+            f'<td class="num">{data["lcp_ms"]:.0f}</td>'
+            f'<td class="num">{data["cls"]:.3f}</td>'
+            f'<td class="num">{data["ttfb_ms"]:.0f}</td>'
+            f'<td class="num">{data["load_ms"]:.0f}</td>'
+            "</tr>"
+        )
+    if not rows:
+        return ""
+    notice = (
+        "この実行環境での単一試行のラボ観測値です。実利用者の体感や検索評価の値"
+        "（フィールドデータ）とは異なり、試行間で変動します。画面間の相対比較と"
+        "悪化の検知に用いてください。INP は実ユーザー入力が必要なため計測対象外です。"
+        "参考目安: LCP 2500ms / CLS 0.1（Google 公表の good 閾値）。"
+    )
+    body = (
+        f'<p class="note">{notice}</p>'
+        '<table class="data-table"><thead><tr>'
+        "<th>画面ID</th><th>LCP(ms)</th><th>CLS</th><th>TTFB(ms)</th><th>Load(ms)</th>"
+        "</tr></thead><tbody>" + "".join(rows) + "</tbody></table>"
+    )
+    return _section("性能観測（ラボ計測）", body, "performance")
 
 
 def _technical_health_section(technical_health: dict | None) -> str:

@@ -24,6 +24,7 @@ python app.py                    # 127.0.0.1:8765 で起動しブラウザを自
 | `WEBSPEC2DOC_SECURE_COOKIES` | OFF | HTTPS 終端の背後では 1 を設定（Secure クッキー） |
 | `WEBSPEC2DOC_SECRET_KEY` | 自動生成 | セッション署名鍵（未設定時 `instance/secret_key`・0600） |
 | `WEBSPEC2DOC_ALLOW_LOCAL` | OFF | ローカル URL クロールの許可（SSRF 保護のバイパス。信頼環境のみ） |
+| `WEBSPEC2DOC_ALLOW_FORM_SUBMIT` | OFF | **フォーム到達クロール（送信を伴う）の解禁**。二重オプトインの片方で、明示フラグとホスト許可リストも必須。**テスト環境限定**。破壊的文言ボタン（削除/購入/決済等）は自動スキップし、全送信を値なしで監査ログへ記録する |
 | `VIEWPOINTS_DB` / `OUTPUT_DIR` 他 | `web/config.py` 参照 | データ配置の上書き |
 | `OPENAI_API_KEY` | （未設定） | LLM 補完（未設定時はルールベース） |
 | `WEBSPEC2DOC_OIDC_PROVIDER` | （未設定） | SSO を使う場合のみ `entra` / `google`。**未設定なら SSO は完全に無効**で、既存のID/パスワード認証に影響しない |

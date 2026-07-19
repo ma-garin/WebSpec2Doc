@@ -287,7 +287,13 @@ class TestExecuteTests:
         mock_result = {"ok": True, "passed": 1, "failed": 0, "skipped": 0, "total": 1, "tests": []}
         captured_filter: list[str] = []
 
-        def fake_gen(domain: str, path: Path, out: Path, filter_mode: str = "all") -> None:
+        def fake_gen(
+            domain: str,
+            path: Path,
+            out: Path,
+            filter_mode: str = "all",
+            generate_page_object: bool = False,
+        ) -> None:
             captured_filter.append(filter_mode)
 
         with (

@@ -285,13 +285,20 @@
         "web/services/auto_run_config.py",
         "web/services/auto_run_job.py",
         "web/services/auto_run_preview.py",
-        "web/services/failure_classifier.py"
+        "web/services/failure_classifier.py",
+        "src/crawler/data_flow.py",
+        "src/crawler/form_navigator.py"
       ],
-      "symbols": [],
+      "symbols": [
+        "track_reflections",
+        "form_submit_enabled"
+      ],
       "outputs": [
         "QA artifacts",
         "Playwright candidates",
-        "execution logs"
+        "execution logs",
+        "data reflection flows",
+        "page object spec.ts"
       ],
       "persistence": [
         "output/{domain}/qa_process/"
@@ -302,7 +309,8 @@
         "dependency_missing",
         "cancel",
         "execution_timeout_partial_result",
-        "result_parse_failure"
+        "result_parse_failure",
+        "form_submit_disabled_by_default"
       ],
       "required_tests": [
         "happy_path",
@@ -869,7 +877,8 @@
         "src/generator/ux_reporter.py",
         "src/generator/html_reporter.py",
         "src/main.py",
-        "src/generator/accessibility_reporter.py"
+        "src/generator/accessibility_reporter.py",
+        "src/ux/usability_smells.py"
       ],
       "symbols": [
         "run_axe",
@@ -878,11 +887,13 @@
         "validate_ux_payload",
         "filter_hallucinated_findings",
         "build_ux_review",
-        "save_ux_outputs"
+        "save_ux_outputs",
+        "detect_smells"
       ],
       "outputs": [
         "ux_review.json",
-        "report.html「UX 所見」タブ"
+        "report.html「UX 所見」タブ",
+        "usability smells"
       ],
       "persistence": [
         "output/{domain}/ux_review.json"

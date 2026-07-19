@@ -263,10 +263,12 @@ def api_autorun_approve() -> dict | tuple[dict, int]:
     device = (request.form.get("device") or body.get("device", "pc")).strip()
     if device not in ("pc", "mobile"):
         device = "pc"
+    page_object = _truthy(request.form.get("page_object") or body.get("page_object", False))
     job.run_policy = {
         "filter_mode": filter_mode,
         "per_test_timeout_sec": per_test_timeout_sec,
         "device": device,
+        "page_object": page_object,
     }
     job.add_log(
         f"実行方針: {filter_mode} / 1テストあたり {per_test_timeout_sec}秒 / "
@@ -656,14 +658,25 @@ def _execute_tests(job: AutoRunJob) -> None:
     device = job.run_policy.get("device", "pc")
     if device not in ("pc", "mobile"):
         device = "pc"
-    if filter_mode != "all":
+    # 出力形式（フラット / Page Object）。既定はフラットで後方互換。
+    page_object = bool(job.run_policy.get("page_object", False))
+    if filter_mode != "all" or page_object:
         candidates_path = _job_out(job) / job.domain / "qa_process" / candidate_filename(job.mode)
         if candidates_path.is_file():
             try:
-                generate_spec_ts(job.domain, candidates_path, spec_path, filter_mode=filter_mode)
-                job.add_log(f"フィルター '{filter_mode}' を適用したスクリプトを再生成しました。")
+                generate_spec_ts(
+                    job.domain,
+                    candidates_path,
+                    spec_path,
+                    filter_mode=filter_mode,
+                    generate_page_object=page_object,
+                )
+                detail = f"フィルター '{filter_mode}'" + (
+                    "・Page Object形式" if page_object else ""
+                )
+                job.add_log(f"{detail} を適用したスクリプトを再生成しました。")
             except Exception as exc:
-                job.add_log(f"フィルター適用時エラー（元スクリプトで続行）: {exc}")
+                job.add_log(f"スクリプト再生成時エラー（元スクリプトで続行）: {exc}")
 
     try:
         result = run_playwright(

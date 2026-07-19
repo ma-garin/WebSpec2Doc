@@ -14,7 +14,8 @@
         "web/routes/discover.py"
       ],
       "core_files": [
-        "src/crawler/page_crawler.py"
+        "src/crawler/page_crawler.py",
+        "src/crawler/url_safety.py"
       ],
       "symbols": [
         "discover_pages"
@@ -55,7 +56,23 @@
         "src/crawler/parallel_crawler.py",
         "src/crawler/politeness.py",
         "src/crawler/action_explorer.py",
-        "src/crawler/link_extractor.py"
+        "src/crawler/link_extractor.py",
+        "src/analyzer/canonicalizer.py",
+        "src/analyzer/form_analyzer.py",
+        "src/analyzer/html_analyzer.py",
+        "src/analyzer/stack_detector.py",
+        "src/crawler/network_interceptor.py",
+        "src/crawler/spa_monitor.py",
+        "src/graph/transition_graph.py",
+        "src/generator/markdown_generator.py",
+        "src/generator/markdown_util.py",
+        "src/generator/mermaid_generator.py",
+        "src/generator/excel_reporter.py",
+        "src/generator/csv_reporter.py",
+        "src/generator/pdf_reporter.py",
+        "src/generator/architecture_generator.py",
+        "src/generator/feature_catalog.py",
+        "src/generator/test_design.py"
       ],
       "symbols": [
         "crawl_site",
@@ -111,7 +128,9 @@
         "src/crawler/auto_login.py",
         "src/analyzer/login_wall.py",
         "src/crawler/auth_recorder.py",
-        "src/crawler/auth.py"
+        "src/crawler/auth.py",
+        "src/crawler/login_signal.py",
+        "src/crawler/session_guard.py"
       ],
       "symbols": [
         "submit_login_simple",
@@ -258,7 +277,11 @@
       ],
       "core_files": [
         "web/services/spec_ts_generator.py",
-        "web/services/playwright_executor.py"
+        "web/services/playwright_executor.py",
+        "web/services/auto_run_config.py",
+        "web/services/auto_run_job.py",
+        "web/services/auto_run_preview.py",
+        "web/services/failure_classifier.py"
       ],
       "symbols": [],
       "outputs": [
@@ -303,7 +326,8 @@
       "core_files": [
         "src/diff/snapshot.py",
         "src/diff/differ.py",
-        "src/registry/site_registry.py"
+        "src/registry/site_registry.py",
+        "src/diff/impact_analyzer.py"
       ],
       "symbols": [
         "save_snapshot",
@@ -346,7 +370,10 @@
         "web/routes/settings.py"
       ],
       "core_files": [
-        "web/env_store.py"
+        "web/env_store.py",
+        "web/services/viewpoint_proposals.py",
+        "web/services/viewpoint_store_operations.py",
+        "web/services/viewpoint_templates.py"
       ],
       "symbols": [
         "_write_env"
@@ -420,7 +447,9 @@
         "src/generator/coverage_gap.py",
         "src/generator/html_reporter.py",
         "src/crawler/page_crawler.py",
-        "src/generator/comparison_reporter.py"
+        "src/generator/comparison_reporter.py",
+        "web/services/traceability.py",
+        "src/health/technical_health.py"
       ],
       "symbols": [
         "collect_coverage_gaps",
@@ -470,7 +499,12 @@
         "src/ingest/req_tracer.py",
         "src/generator/trace_reporter.py",
         "src/ingest/tables.py",
-        "src/generator/refresh_reporter.py"
+        "src/generator/refresh_reporter.py",
+        "src/ingest/models.py",
+        "src/ingest/office_reader.py",
+        "src/ingest/text_reader.py",
+        "src/ingest/data_reader.py",
+        "src/ingest/excel_reader.py"
       ],
       "symbols": [
         "load_reference_documents",
@@ -546,7 +580,8 @@
         "src/capture/burndown.py",
         "src/generator/heatmap_reporter.py",
         "src/generator/html_reporter.py",
-        "src/generator/burndown_reporter.py"
+        "src/generator/burndown_reporter.py",
+        "src/registry/session_store.py"
       ],
       "symbols": [
         "SessionRecorder",
@@ -690,10 +725,19 @@
       "risk_level": "medium",
       "status": "implemented",
       "ui_files": [],
-      "route_files": [],
+      "route_files": [
+        "web/routes/qa_process.py"
+      ],
       "core_files": [
         "src/generator/test_plan_generator.py",
-        "src/main.py"
+        "src/main.py",
+        "web/services/qa/doc_generator.py",
+        "web/services/qa/advanced_generator.py",
+        "web/services/qa/advanced_html.py",
+        "web/services/qa/helpers.py",
+        "web/services/qa/markdown_lite.py",
+        "web/services/qa/testcase_docs.py",
+        "web/services/test_design_settings.py"
       ],
       "symbols": [
         "compute_test_plan",
@@ -818,7 +862,8 @@
         "src/crawler/page_crawler.py",
         "src/generator/ux_reporter.py",
         "src/generator/html_reporter.py",
-        "src/main.py"
+        "src/main.py",
+        "src/generator/accessibility_reporter.py"
       ],
       "symbols": [
         "run_axe",

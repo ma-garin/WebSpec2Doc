@@ -72,20 +72,24 @@
         "src/generator/pdf_reporter.py",
         "src/generator/architecture_generator.py",
         "src/generator/feature_catalog.py",
-        "src/generator/test_design.py"
+        "src/generator/test_design.py",
+        "src/crawler/performance_probe.py"
       ],
       "symbols": [
         "crawl_site",
         "crawl_urls_parallel",
         "extract_links_all_scopes",
-        "collect_embedded_frames"
+        "collect_embedded_frames",
+        "collect_performance",
+        "install_performance_observers"
       ],
       "outputs": [
         "report.html",
         "report.json",
         "screenshots",
         "snapshot",
-        "audit.jsonl"
+        "audit.jsonl",
+        "performance samples (LCP/CLS/TTFB)"
       ],
       "persistence": [
         "output/{domain}/",
@@ -1068,7 +1072,8 @@
         "run_validation_observation",
         "generate_document_autorun_artifacts",
         "build_pairwise_cases",
-        "build_metamorphic_candidates"
+        "build_metamorphic_candidates",
+        "build_document_mbt"
       ],
       "outputs": [
         "document_mbt.json",
@@ -1076,7 +1081,8 @@
         "test_data.json/csv",
         "validation_observations.json",
         "pairwise_cases.json",
-        "metamorphic_checks.json"
+        "metamorphic_checks.json",
+        "prime_path selection criterion"
       ],
       "persistence": [
         "output/{domain}/qa_process/"

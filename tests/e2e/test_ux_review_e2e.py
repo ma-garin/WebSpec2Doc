@@ -159,7 +159,8 @@ class TestUxReviewReportOutputs:
         )
 
         assert "UX 所見" in report_html
-        assert "30" in report_html and "40" in report_html  # 免責文言（捕捉率30〜40%）
+        # 免責は「自動検出可能な範囲の観測」であることを示す（捕捉率の数値は載せない）
+        assert "自動検出可能な範囲" in report_html or "人の判断を要する" in report_html
         assert "image-alt" in report_html or "label" in report_html
 
 

@@ -30,7 +30,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from web.services.admin_audit import append_admin_audit
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 ROLES = ("owner", "admin", "member")
 _ADMIN_ROLES = frozenset({"owner", "admin"})
@@ -65,6 +65,11 @@ def _now() -> datetime:
 
 def _iso(dt: datetime) -> str:
     return dt.replace(microsecond=0).isoformat()
+
+
+SCOPE_READ = "read"
+SCOPE_FULL = "full"
+API_TOKEN_SCOPES = (SCOPE_READ, SCOPE_FULL)
 
 
 def _hash_token(raw: str) -> str:
@@ -209,6 +214,16 @@ class AuthStore:
             if "tour_completed_at" not in columns:
                 conn.execute("ALTER TABLE users ADD COLUMN tour_completed_at TEXT")
             conn.execute("PRAGMA user_version = 2")
+        if version < 3:
+            columns = {
+                str(row[1]) for row in conn.execute("PRAGMA table_info(api_tokens)").fetchall()
+            }
+            if "scope" not in columns:
+                # 既存トークンは従来どおり全操作可（後方互換）。新規は明示指定させる。
+                conn.execute(
+                    f"ALTER TABLE api_tokens ADD COLUMN scope TEXT NOT NULL DEFAULT '{SCOPE_FULL}'"
+                )
+            conn.execute("PRAGMA user_version = 3")
 
     # --- 監査ログ -----------------------------------------------------
 
@@ -550,6 +565,19 @@ class AuthStore:
 
     # --- セッション ---------------------------------------------------
 
+    def find_active_user_by_email(self, email: str) -> dict | None:
+        """SSOログイン用の利用者照合。無効化済みの利用者は返さない。"""
+        self.initialize()
+        normalized = email.strip().lower()
+        if not normalized:
+            return None
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT * FROM users WHERE lower(email) = ? AND is_active = 1",
+                (normalized,),
+            ).fetchone()
+        return self._public_user(row) if row is not None else None
+
     def create_session(self, user_id: str) -> str:
         raw = secrets.token_urlsafe(32)
         now = _now()
@@ -610,8 +638,15 @@ class AuthStore:
 
     # --- API トークン（/api/v1 用） ------------------------------------
 
-    def create_api_token(self, tenant_id: str, name: str, created_by: str = "") -> dict:
+    def create_api_token(
+        self, tenant_id: str, name: str, created_by: str = "", scope: str = SCOPE_FULL
+    ) -> dict:
         name = name.strip() or "api-token"
+        if scope not in API_TOKEN_SCOPES:
+            raise AuthError(
+                f"不正なスコープです: {scope}（利用可能: {', '.join(API_TOKEN_SCOPES)}）",
+                "invalid_scope",
+            )
         raw = f"ws2d_{secrets.token_urlsafe(32)}"
         now = _iso(_now())
         token_id = uuid.uuid4().hex
@@ -619,15 +654,16 @@ class AuthStore:
             if conn.execute("SELECT 1 FROM tenants WHERE id = ?", (tenant_id,)).fetchone() is None:
                 raise AuthError("テナントが存在しません。", "tenant_not_found")
             conn.execute(
-                "INSERT INTO api_tokens (id, tenant_id, name, token_hash, created_by, created_at)"
-                " VALUES (?, ?, ?, ?, ?, ?)",
-                (token_id, tenant_id, name, _hash_token(raw), created_by or None, now),
+                "INSERT INTO api_tokens"
+                " (id, tenant_id, name, token_hash, created_by, created_at, scope)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (token_id, tenant_id, name, _hash_token(raw), created_by or None, now, scope),
             )
         self.audit(
             "api_token.created", user_id=created_by or None, tenant_id=tenant_id, detail=name
         )
         # 平文トークンはこの戻り値でのみ返す（保存しない）
-        return {"id": token_id, "name": name, "token": raw, "created_at": now}
+        return {"id": token_id, "name": name, "token": raw, "created_at": now, "scope": scope}
 
     def resolve_api_token(self, raw_token: str) -> dict | None:
         if not raw_token:
@@ -635,7 +671,7 @@ class AuthStore:
         self.initialize()
         with self._connect() as conn:
             row = conn.execute(
-                "SELECT t.id AS token_id, t.revoked_at, ten.*"
+                "SELECT t.id AS token_id, t.revoked_at, t.scope AS token_scope, ten.*"
                 " FROM api_tokens t JOIN tenants ten ON ten.id = t.tenant_id"
                 " WHERE t.token_hash = ?",
                 (_hash_token(raw_token),),
@@ -649,13 +685,14 @@ class AuthStore:
             tenant = dict(row)
             tenant.pop("token_id", None)
             tenant.pop("revoked_at", None)
+            tenant["token_scope"] = str(tenant.pop("token_scope", SCOPE_FULL) or SCOPE_FULL)
             return tenant
 
     def list_api_tokens(self, tenant_id: str) -> list[dict]:
         self.initialize()
         with self._connect() as conn:
             rows = conn.execute(
-                "SELECT id, name, created_by, created_at, last_used_at, revoked_at"
+                "SELECT id, name, created_by, created_at, last_used_at, revoked_at, scope"
                 " FROM api_tokens WHERE tenant_id = ? ORDER BY created_at",
                 (tenant_id,),
             ).fetchall()

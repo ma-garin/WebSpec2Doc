@@ -10,12 +10,17 @@ logger = logging.getLogger(__name__)
 FAILURE_APP_CHANGE = "app_change"
 FAILURE_TEST_ROT = "test_rot"
 FAILURE_ENV_ISSUE = "env_issue"
+# タイミング起因（非同期待ちの不足・遅延）。Luo et al.(FSE 2014) がフレイキーの
+# 最大要因を Async Wait と特定しており、test_rot（ロケータ消失）と分けることで
+# 「ロケータを直す」でなく「待ち方を直す/再実行する」という正しい対処に導く。
+FAILURE_ASYNC_WAIT = "async_wait"
 FAILURE_UNKNOWN = "unknown"
 
 _ALL_FAILURE_TYPES = (
     FAILURE_APP_CHANGE,
     FAILURE_TEST_ROT,
     FAILURE_ENV_ISSUE,
+    FAILURE_ASYNC_WAIT,
     FAILURE_UNKNOWN,
 )
 
@@ -48,6 +53,10 @@ _ACTION_ENV_SETUP = (
     "`npx playwright install chromium` を手動実行してください。"
 )
 _ACTION_ROT = "ロケータを更新してください（self-healing ロケータ候補を確認）"
+_ACTION_ASYNC = (
+    "タイミング起因の可能性が高い失敗です。単発なら再実行で解消するか確認し、"
+    "再発するなら該当ステップの待機条件（表示待ち・通信完了待ち）を見直してください"
+)
 _ACTION_APP = "差分レポートを確認してください（仕様変更の可能性）"
 _ACTION_UNKNOWN = "テストログを詳細確認してください"
 
@@ -96,6 +105,30 @@ def _is_test_rot(error_message: str) -> bool:
     return False
 
 
+def _is_async_wait(error_message: str) -> bool:
+    """非同期待ちの不足・遅延（タイミング起因）かどうかを判定する。
+
+    「locator が見つからない」(test_rot) と違い、要素や条件の**状態待ちで
+    時間切れ**になったものを拾う。
+    """
+    msg = error_message
+    if "Timeout" not in msg and "timeout" not in msg:
+        return False
+    state_waits = (
+        "waiting for element to be visible",
+        "waiting for element to be enabled",
+        "waiting for element to be stable",
+        "waiting for navigation",
+        "waiting for load state",
+        "waiting for response",
+        "waiting for request",
+        "waiting for event",
+        "waiting for function",
+        "networkidle",
+    )
+    return any(kw in msg for kw in state_waits)
+
+
 def _is_app_change(error_message: str, diff_result: Any) -> bool:
     """アプリの仕様変更が原因かどうかを判定する。"""
     msg = error_message
@@ -130,6 +163,14 @@ def classify_failure(
             confidence=0.9,
             reason="ネットワーク・サーバーエラーまたは認証切れと判定しました",
             suggested_action=_ACTION_ENV,
+        )
+    if _is_async_wait(error_message):
+        return FailureClassification(
+            test_id=test_id,
+            failure_type=FAILURE_ASYNC_WAIT,
+            confidence=0.8,
+            reason="非同期処理の待ち時間切れ（タイミング起因）と判定しました",
+            suggested_action=_ACTION_ASYNC,
         )
     if _is_test_rot(error_message):
         return FailureClassification(

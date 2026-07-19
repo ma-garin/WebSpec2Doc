@@ -19,6 +19,7 @@ from typing import Literal
 from web.services.drift_summary import drift_count, load_drift_summary, should_notify_drift
 
 _JOBS: dict[str, CrawlJob] = {}
+_FINISHED_STATUSES = frozenset({"completed", "failed"})
 _JOBS_LOCK = threading.Lock()
 
 MAX_LOG_BYTES = 4096
@@ -64,6 +65,7 @@ def start_crawl_job(
 
     with _JOBS_LOCK:
         _JOBS[job_id] = job
+        _publish_queue_depth()
         _evict_old_jobs(domain)
 
     thread = threading.Thread(
@@ -208,3 +210,12 @@ def _update(
             job.log_tail = log_tail
         if status in ("completed", "failed"):
             job.finished_at = datetime.now().isoformat(timespec="seconds")
+        _publish_queue_depth()
+
+
+def _publish_queue_depth() -> None:
+    """未終了ジョブ数をメトリクスへ反映する（_JOBS_LOCK 保持中に呼ぶこと）。"""
+    from web.services.metrics import set_job_queue_depth
+
+    unfinished = sum(1 for job in _JOBS.values() if job.status not in _FINISHED_STATUSES)
+    set_job_queue_depth(unfinished)

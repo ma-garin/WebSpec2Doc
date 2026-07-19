@@ -17,6 +17,8 @@ from jinja2.sandbox import SandboxedEnvironment
 if TYPE_CHECKING:
     pass
 
+from web.services.metrics import record_notification
+
 logger = logging.getLogger(__name__)
 
 NOTIFIER_SLACK = "slack"
@@ -122,12 +124,16 @@ def _send_notification(
     handler = dispatch.get(config.notifier_type)
     if handler is None:
         logger.error("Unknown notifier_type: %s", config.notifier_type)
+        record_notification(success=False, channel=str(config.notifier_type))
         return False
     try:
-        return handler(config, notification, event_type)
+        sent = handler(config, notification, event_type)
     except Exception:
         logger.error("Unexpected error sending notification", exc_info=True)
+        record_notification(success=False, channel=str(config.notifier_type))
         return False
+    record_notification(success=bool(sent), channel=str(config.notifier_type))
+    return sent
 
 
 def render_notification_text(

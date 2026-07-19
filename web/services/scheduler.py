@@ -21,6 +21,7 @@ from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from web.config import OUTPUT_DIR
+from web.services.metrics import record_crawl, set_schedule_delay
 
 SCHEDULER_POLL_INTERVAL = 60  # seconds
 INSTANCE_DIR = Path("instance")
@@ -175,6 +176,8 @@ def _maybe_run(
         logger.warning("site_url が未設定のためスキップ: domain=%s", domain)
         return
 
+    # 予定時刻からの遅延を公開する（滞留・詰まりの検知用）
+    set_schedule_delay((now - next_run).total_seconds())
     logger.info("スケジュールクロール開始: domain=%s url=%s", domain, site_url)
 
     # 先にタイムスタンプを更新して二重実行を防止する
@@ -198,6 +201,10 @@ def _maybe_run(
             logger.exception("スケジュールクロールで予期しない例外: domain=%s", domain)
             last_result = CrawlRunResult(False, str(exc), 0.0)
         total_duration += max(0.0, float(last_result.duration_sec))
+        record_crawl(
+            success=bool(last_result.success),
+            duration_sec=max(0.0, float(last_result.duration_sec)),
+        )
         if last_result.success:
             break
 

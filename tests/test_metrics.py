@@ -11,7 +11,6 @@ import logging
 
 import pytest
 from prometheus_client import CollectorRegistry
-
 from web.services import metrics as metrics_module
 
 
@@ -25,9 +24,7 @@ def fresh_registry(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(
         metrics_module,
         "crawl_total",
-        Counter(
-            "webspec2doc_crawl_total", "t", labelnames=("result",), registry=registry
-        ),
+        Counter("webspec2doc_crawl_total", "t", labelnames=("result",), registry=registry),
     )
     monkeypatch.setattr(
         metrics_module,
@@ -98,7 +95,9 @@ def test_crawl_duration_is_recorded_as_histogram() -> None:
 def test_notification_failures_are_counted_per_channel() -> None:
     metrics_module.record_notification(success=False, channel="slack")
 
-    assert _value(_text(), 'webspec2doc_notification_total{channel="slack",result="failure"}') == 1.0
+    assert (
+        _value(_text(), 'webspec2doc_notification_total{channel="slack",result="failure"}') == 1.0
+    )
 
 
 def test_unknown_channel_is_labelled_not_dropped() -> None:
@@ -150,8 +149,13 @@ def test_measure_crawl_records_success_by_default() -> None:
 
 def test_json_formatter_emits_one_json_object_per_line() -> None:
     record = logging.LogRecord(
-        name="web.test", level=logging.INFO, pathname=__file__, lineno=1,
-        msg="クロール完了 %s", args=("example.com",), exc_info=None,
+        name="web.test",
+        level=logging.INFO,
+        pathname=__file__,
+        lineno=1,
+        msg="クロール完了 %s",
+        args=("example.com",),
+        exc_info=None,
     )
 
     payload = json.loads(metrics_module.JsonLogFormatter().format(record))
@@ -169,8 +173,13 @@ def test_json_formatter_includes_exception_text() -> None:
         import sys
 
         record = logging.LogRecord(
-            name="web.test", level=logging.ERROR, pathname=__file__, lineno=1,
-            msg="エラー", args=(), exc_info=sys.exc_info(),
+            name="web.test",
+            level=logging.ERROR,
+            pathname=__file__,
+            lineno=1,
+            msg="エラー",
+            args=(),
+            exc_info=sys.exc_info(),
         )
 
     payload = json.loads(metrics_module.JsonLogFormatter().format(record))

@@ -13,6 +13,34 @@ REQUIRED_DOCS = [
     CONTRACT_FILE,
 ]
 RISK_LEVELS_REQUIRING_FAILURE_TESTS = {"critical", "high"}
+
+# 機能実装が置かれるディレクトリ。ここに新設したモジュールは、いずれかの
+# feature contract の core_files / route_files に現れなければならない。
+FEATURE_SOURCE_ROOTS = ("src", "web/routes", "web/services")
+
+# 機能ではなく基盤・共通部品のため、契約への登録を求めないもの。
+# 追加する場合は「なぜ機能ではないか」を必ずコメントで残すこと。
+UNREGISTERED_ALLOWLIST = {
+    "web/config.py",  # 設定値の集約
+    "web/auth.py",  # 認証基盤（各機能から利用される横断部品）
+    "web/tenancy.py",  # テナント解決の横断部品
+    "web/types.py",
+    "web/security.py",
+    "web/validation.py",
+    "web/summary.py",
+    "web/process.py",
+    "web/env_store.py",
+    "web/audit_context.py",
+    "web/routes/pages.py",  # SPAシェルの配信のみ（機能ロジックを持たない）
+    # LLM 補完は任意経路。未設定時はルールベースで全機能が成立するため、
+    # 単独の機能ではなく差し替え可能なアダプタとして扱う。
+    "src/llm/openai_client.py",
+    "src/llm/screen_classifier.py",
+    "src/llm/industry_template.py",
+    "web/services/openai_qa.py",
+    "src/doctor.py",  # 環境診断CLI（製品機能ではない）
+    "src/crawler/playwright_runtime.py",  # ブラウザ実行環境の解決（全機能の土台）
+}
 ALLOWED_STATUS = {"implemented", "partial", "planned"}
 FORBIDDEN_STATUS = {"ui-only"}
 
@@ -98,7 +126,40 @@ def _validate_no_unimplemented_user_paths(errors: list[str]) -> None:
             text = path.read_text(encoding="utf-8", errors="ignore")
             for term in suspicious_terms:
                 if term in text:
-                    errors.append(f"suspicious incomplete user path: {_rel(path)} contains {term!r}")
+                    errors.append(
+                        f"suspicious incomplete user path: {_rel(path)} contains {term!r}"
+                    )
+
+
+def _validate_all_modules_registered(features: list[dict[str, Any]], errors: list[str]) -> None:
+    """機能ディレクトリの実装モジュールが、必ずどれかの契約に紐づくことを確認する。
+
+    これが無いと「機能を足したが契約に登録し忘れる」を人の注意力に頼ることになり、
+    ハーネスが素通しで PASS を返してしまう（2026-07-19 に実際に発生した）。
+    """
+    registered: set[str] = set()
+    for feature in features:
+        if not isinstance(feature, dict):
+            continue
+        for key in ("core_files", "route_files", "ui_files"):
+            for path_text in feature.get(key, []):
+                registered.add(str(path_text))
+
+    for root_text in FEATURE_SOURCE_ROOTS:
+        root = ROOT / root_text
+        if not root.is_dir():
+            continue
+        for path in sorted(root.rglob("*.py")):
+            if path.name == "__init__.py" or "__pycache__" in path.parts:
+                continue
+            rel = _rel(path)
+            if rel in registered or rel in UNREGISTERED_ALLOWLIST:
+                continue
+            errors.append(
+                f"unregistered feature module: {rel} "
+                "(quality/feature_contracts.yml のいずれかの機能へ登録するか、"
+                "基盤部品なら UNREGISTERED_ALLOWLIST へ理由付きで追加すること)"
+            )
 
 
 def main() -> int:
@@ -115,6 +176,8 @@ def main() -> int:
                 continue
             _validate_feature(feature, errors)
 
+    if isinstance(features, list):
+        _validate_all_modules_registered(features, errors)
     _validate_no_unimplemented_user_paths(errors)
 
     if errors:

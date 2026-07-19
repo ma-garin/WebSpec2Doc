@@ -32,7 +32,9 @@ jobs:
             exit 0
           fi
           git fetch --no-tags --depth=200 origin "$BASE_REF"
-          if git diff --name-only "origin/${BASE_REF}...HEAD" \
+          # core.quotepath=false: 日本語ファイル名が \"docs/...\" と引用符付きで
+          # 出力されると ^docs/ にマッチせず、docs変更でもE2Eが走ってしまう
+          if git -c core.quotepath=false diff --name-only "origin/${BASE_REF}...HEAD" \
               | grep -vE '^docs/|\.md$' | grep -q .; then
             echo "code=true" >> "$GITHUB_OUTPUT"
           else

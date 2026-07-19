@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import html
 from datetime import UTC, datetime
+from typing import Any
 
 from diff.differ import (
     CHANGE_ADDED,
@@ -18,6 +19,7 @@ from diff.differ import (
     PageChange,
     TitleChange,
 )
+from diff.severity import summarize_severity
 
 REPORT_TITLE = "仕様ドリフトレポート"
 NAVY = "#00285E"
@@ -47,7 +49,17 @@ def generate_diff_report(
     old_label: str,
     new_label: str,
     target_url: str,
+    *,
+    scored: list[dict[str, Any]] | None = None,
+    exclusions: list[dict[str, Any]] | None = None,
+    summary_text: str = "",
+    screenshot_diffs: list[Any] | None = None,
 ) -> str:
+    """差分レポートHTMLを組み立てる。
+
+    scored / exclusions / screenshot_diffs は任意。渡された場合のみ該当セクションを出す
+    （既存の呼び出し側はそのまま動く）。
+    """
     now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
     sections = [
         _section("画面の追加/削除", _page_changes_table(diff)),
@@ -57,6 +69,10 @@ def generate_diff_report(
         _section("リンク（遷移）の増減", _link_changes_table(diff.link_changes)),
         _section("タイトル変更", _title_changes_table(diff.title_changes)),
     ]
+    if screenshot_diffs:
+        sections.append(_section("スクリーンショット比較", _screenshot_table(screenshot_diffs)))
+    if exclusions:
+        sections.append(_section("無視ルールで除外した変更", _exclusions_table(exclusions)))
     notice = _notice() if not diff.has_changes else ""
     return "\n".join(
         [
@@ -65,12 +81,98 @@ def generate_diff_report(
             _header(target_url, old_label, new_label, now),
             '<main class="container">',
             _summary_cards(diff),
+            _severity_overview(scored, summary_text),
             notice,
             *sections,
             "</main>",
             "</body></html>",
         ]
     )
+
+
+def _severity_overview(scored: list[dict[str, Any]] | None, summary_text: str) -> str:
+    """重要度の内訳と変更要約。根拠を必ず併記し、価値判断に見せない。"""
+    if not scored and not summary_text:
+        return ""
+    parts = ['<div class="overview">']
+    if summary_text:
+        parts.append(f'<p class="overview-text">{html.escape(summary_text)}</p>')
+    if scored:
+        counts = summarize_severity(scored)
+        badges = "".join(
+            f'<span class="sev-{level}">{SEVERITY_LABELS[level]} {counts[level]}</span>'
+            for level in ("breaking", "warning", "info")
+            if counts.get(level)
+        )
+        parts.append(f'<p class="overview-badges">{badges}</p>')
+        top = [item for item in scored if str(item.get("severity")) == "breaking"][:5]
+        if top:
+            rows = "".join(
+                f"<li><b>{html.escape(str(item.get('label', '')))}</b>"
+                f" — {html.escape(str(item.get('reason', '')))}</li>"
+                for item in top
+            )
+            parts.append(f'<ul class="overview-top">{rows}</ul>')
+    parts.append(
+        '<p class="overview-note">重要度はルールによる分類であり、'
+        "変更が安全か危険かの判断ではない。</p></div>"
+    )
+    return "".join(parts)
+
+
+def _exclusions_table(exclusions: list[dict[str, Any]]) -> str:
+    """除外した変更の内訳。黙って消さず件数と根拠ルールを必ず出す。"""
+    rows = "".join(
+        "<tr>"
+        f"<td>{html.escape(str(item.get('rule_kind', '')))}</td>"
+        f"<td><code>{html.escape(str(item.get('rule_pattern', '')))}</code></td>"
+        f"<td>{html.escape(str(item.get('rule_note', '')))}</td>"
+        f"<td>{int(item.get('count', 0))}</td>"
+        "</tr>"
+        for item in exclusions
+    )
+    total = sum(int(item.get("count", 0)) for item in exclusions)
+    head = _table_start(("ルール種別", "パターン", "メモ", "除外件数"))
+    return (
+        f'<p class="overview-text">除外 {total} 件。'
+        "除外分は差分本文には出していない（下表が全内訳）。</p>"
+        f"{head}{rows}{_table_end()}"
+    )
+
+
+def _screenshot_table(screenshot_diffs: list[Any]) -> str:
+    """画面ごとの画像差分率。しきい値超過を先頭に並べる。"""
+    items = sorted(
+        screenshot_diffs,
+        key=lambda d: (not _attr(d, "is_significant", False), -float(_attr(d, "diff_ratio", 0.0))),
+    )
+    rows = "".join(
+        "<tr>"
+        f"<td>{html.escape(str(_attr(item, 'page_id', '')))}</td>"
+        f"<td class=\"num\">{float(_attr(item, 'diff_ratio', 0.0)) * 100:.2f}%</td>"
+        f"<td>{'<span class=\"sev-breaking\">しきい値超過</span>' if _attr(item, 'is_significant', False) else '<span class=\"sev-info\">範囲内</span>'}</td>"
+        f"<td>{_image_cell(str(_attr(item, 'before_path', '')))}</td>"
+        f"<td>{_image_cell(str(_attr(item, 'after_path', '')))}</td>"
+        "</tr>"
+        for item in items
+    )
+    if not rows:
+        return _empty()
+    head = _table_start(("画面", "差分率", "判定", "変更前", "変更後"))
+    return f"{head}{rows}{_table_end()}"
+
+
+def _image_cell(path: str) -> str:
+    if not path:
+        return '<span class="empty">未取得</span>'
+    src = html.escape(path)
+    return f'<a href="{src}"><img class="shot" src="{src}" alt=""></a>'
+
+
+def _attr(obj: Any, name: str, default: Any) -> Any:
+    if isinstance(obj, dict):
+        return obj.get(name, default)
+    return getattr(obj, name, default)
 
 
 def _html_head() -> str:
@@ -116,6 +218,13 @@ tr:nth-child(even) td{{background:#f9f9f9}}
 .sev-breaking{{display:inline-block;padding:1px 8px;border-radius:10px;background:var(--remove);color:#fff;font-size:.8rem}}
 .sev-warning{{display:inline-block;padding:1px 8px;border-radius:10px;background:var(--modify);color:#fff;font-size:.8rem}}
 .sev-info{{display:inline-block;padding:1px 8px;border-radius:10px;background:#e0e0e0;color:#333;font-size:.8rem}}
+.overview{{background:#fff;border-radius:8px;margin-bottom:2rem;padding:1.2rem;box-shadow:0 1px 3px rgba(0,0,0,.08)}}
+.overview-text{{font-size:1rem;font-weight:700;line-height:1.7}}
+.overview-badges{{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.7rem}}
+.overview-top{{margin:.9rem 0 0 1.2rem;font-size:.9rem;line-height:1.8}}
+.overview-note{{margin-top:.9rem;font-size:.8rem;color:#666}}
+td.num{{font-variant-numeric:tabular-nums;white-space:nowrap}}
+img.shot{{max-width:180px;height:auto;border:1px solid #ddd;border-radius:4px;display:block}}
 """
 
 

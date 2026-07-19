@@ -18,12 +18,13 @@ from __future__ import annotations
 
 import hashlib
 import io
+import os
 from pathlib import Path
 
 import pytest
 from playwright.sync_api import Page
 
-BASE_URL = "http://127.0.0.1:8765"
+BASE_URL = os.environ.get("WEBSPEC2DOC_E2E_URL", "http://127.0.0.1:8765")
 SNAPSHOTS_DIR = Path(__file__).parent / "snapshots"
 SNAPSHOTS_DIR.mkdir(parents=True, exist_ok=True)
 

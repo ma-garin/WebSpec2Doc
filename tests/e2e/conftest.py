@@ -65,11 +65,27 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
 
 
 def _server_is_up(url: str, timeout: float = 0.5) -> bool:
+    """WebSpec2Doc 自身が応答しているかを確認する。
+
+    生存確認だけでは、同じポートを別アプリが握っていても True になり、
+    E2E が「別アプリを検証して緑」という偽陽性を出す。健全性エンドポイントの
+    中身まで見て、WebSpec2Doc であることを確かめる。
+    """
     try:
-        requests.get(url, timeout=timeout)
-        return True
+        response = requests.get(f"{url.rstrip('/')}/api/v1/healthz", timeout=timeout)
+        payload = response.json()
     except Exception:
         return False
+    return isinstance(payload, dict) and "scheduler" in payload
+
+
+def _port_is_taken_by_other_app(url: str, timeout: float = 0.5) -> bool:
+    """ポートは埋まっているが WebSpec2Doc ではない、という状態を検出する。"""
+    try:
+        requests.get(url, timeout=timeout)
+    except Exception:
+        return False
+    return not _server_is_up(url, timeout)
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -89,6 +105,13 @@ def flask_server() -> Generator[None, None, None]:
     if os.environ.get("WEBSPEC2DOC_E2E_EXTERNAL") == "1" or _server_is_up(BASE_URL):
         yield
         return
+
+    if _port_is_taken_by_other_app(BASE_URL):
+        pytest.fail(
+            f"{BASE_URL} で WebSpec2Doc 以外のアプリが応答しています。"
+            "そのまま実行すると別アプリを検証して緑になるため中止しました。"
+            "該当プロセスを止めるか、WEBSPEC2DOC_E2E_URL で別ポートを指定してください。"
+        )
 
     env = {**os.environ, "FLASK_TESTING": "1", "PYTHONPATH": str(ROOT)}
     proc = subprocess.Popen(

@@ -508,7 +508,8 @@
         "src/ingest/office_reader.py",
         "src/ingest/text_reader.py",
         "src/ingest/data_reader.py",
-        "src/ingest/excel_reader.py"
+        "src/ingest/excel_reader.py",
+        "src/ingest/gherkin_reader.py"
       ],
       "symbols": [
         "load_reference_documents",
@@ -522,7 +523,8 @@
         "structure_requirement_table",
         "build_refresh_entries",
         "render_refreshed_markdown",
-        "save_refresh_outputs"
+        "save_refresh_outputs",
+        "parse_gherkin"
       ],
       "outputs": [
         "doc_fusion.json",
@@ -1063,7 +1065,8 @@
         "src/mbt/validation_observer.py",
         "web/services/document_autorun.py",
         "src/mbt/pairwise.py",
-        "src/mbt/metamorphic.py"
+        "src/mbt/metamorphic.py",
+        "src/mbt/trace_suggestions.py"
       ],
       "symbols": [
         "build_document_mbt",
@@ -1073,7 +1076,8 @@
         "generate_document_autorun_artifacts",
         "build_pairwise_cases",
         "build_metamorphic_candidates",
-        "build_document_mbt"
+        "build_document_mbt",
+        "suggest_matches"
       ],
       "outputs": [
         "document_mbt.json",
@@ -1082,7 +1086,8 @@
         "validation_observations.json",
         "pairwise_cases.json",
         "metamorphic_checks.json",
-        "prime_path selection criterion"
+        "prime_path selection criterion",
+        "unmatched_requirement_suggestions"
       ],
       "persistence": [
         "output/{domain}/qa_process/"
@@ -1235,16 +1240,19 @@
         "src/viewport/profiles.py",
         "src/viewport/comparison.py",
         "src/viewport/reporter.py",
-        "src/viewport/runner.py"
+        "src/viewport/runner.py",
+        "src/viewport/layout_failures.py"
       ],
       "symbols": [
         "resolve_profiles",
         "compare_viewports",
         "save_viewport_report",
-        "run_multi_viewport"
+        "run_multi_viewport",
+        "build_layout_failure_report"
       ],
       "outputs": [
-        "viewport_report.md/html/json"
+        "viewport_report.md/html/json",
+        "layout failure observations"
       ],
       "persistence": [
         "output/{domain}/viewports/"

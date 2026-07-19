@@ -72,11 +72,18 @@
 
 .autorun-document-options {
   display: grid;
-  gap: 10px;
-  padding: 10px;
+  gap: 7px;
+  padding: 9px;
   border: 1px solid var(--primary-border, var(--border));
   border-radius: 6px;
   background: var(--surface-soft);
+}
+
+.autorun-document-options .input-field-hint {
+  margin: 2px 0 0;
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: var(--text-muted);
 }
 
 .autorun-document-options[hidden],

@@ -95,6 +95,7 @@ def render_html(report: dict[str, Any]) -> str:
         for key, label in SECTION_LABELS.items()
     )
     sections = "".join(_html_section(c) for c in report.get("comparisons", []))
+    sections += _layout_failures_html(report.get("layout_failures"))
     viewports = ", ".join(_label(v) for v in meta.get("viewports", []))
     return f"""<!doctype html><html lang="ja"><head>
 <meta charset="utf-8">
@@ -114,6 +115,35 @@ def render_html(report: dict[str, Any]) -> str:
 <tbody>{summary_rows}</tbody></table></div></section>
 {sections}
 </main></body></html>"""
+
+
+def _layout_failures_html(layout: dict[str, Any] | None) -> str:
+    """レイアウト観測（はみ出し・重なり）。観測に留めバグ断定はしない。"""
+    if not layout:
+        return ""
+    summary = layout.get("summary", {})
+    if not summary.get("protrusions") and not summary.get("collisions"):
+        return ""
+    rows = []
+    for vp in layout.get("viewports", []):
+        for p in vp.get("protrusions", []):
+            rows.append(
+                f"<li>{html.escape(_label(str(vp.get('viewport', ''))))}: "
+                f"<code>{html.escape(str(p.get('selector', '')))}</code> が "
+                f"{p.get('overflow_px', 0):.0f}px はみ出して観測された</li>"
+            )
+        for c in vp.get("collisions", []):
+            rows.append(
+                f"<li>{html.escape(_label(str(vp.get('viewport', ''))))}: "
+                f"<code>{html.escape(str(c.get('selector_a', '')))}</code> と "
+                f"<code>{html.escape(str(c.get('selector_b', '')))}</code> が"
+                "重なって観測された</li>"
+            )
+    note = html.escape(str(layout.get("meta", {}).get("claim_notice", "")))
+    return (
+        "<section><h2>レイアウト観測</h2>"
+        f'<div class="body"><p class="muted">{note}</p><ul>{"".join(rows)}</ul></div></section>'
+    )
 
 
 def _html_section(comparison: dict[str, Any]) -> str:

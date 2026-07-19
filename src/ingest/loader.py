@@ -39,6 +39,7 @@ SUPPORTED_SUFFIXES = (
     ".pdf",
     ".md",
     ".txt",
+    ".feature",
     ".yaml",
     ".yml",
     ".json",
@@ -162,7 +163,16 @@ def _load_one(
             _dedup_screens(screens_from_lines(headings, path.name, headings_only=True), screens)
         )
         return screens, fields, requirements
+    if suffix == ".feature":
+        from ingest.gherkin_reader import read_gherkin
+
+        return [], [], read_gherkin(path)
     if suffix == ".txt":
+        text = path.read_text(encoding="utf-8")
+        from ingest.gherkin_reader import is_gherkin, parse_gherkin
+
+        if is_gherkin(text, path.name):
+            return [], [], parse_gherkin(text)
         return screens_from_lines(read_plain_text_lines(path), path.name), [], []
     if suffix in (".yaml", ".yml", ".json"):
         doc_screens, doc_fields = read_structured_data(path)

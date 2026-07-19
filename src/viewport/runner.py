@@ -44,14 +44,19 @@ def run_multi_viewport(
     observations: dict[str, list[Any]] = {}
     failures: dict[str, str] = {}
 
-    for profile in profiles:
-        try:
-            observations[profile.name] = _crawl_one(
-                crawler, url, profile, depth, max_pages, auth_state, out_dir
-            )
-        except Exception as exc:  # noqa: BLE001 - 1ビューポートの失敗で全体を捨てない
-            logger.warning("ビューポート %s の観測に失敗: %s", profile.name, exc)
-            failures[profile.name] = str(exc)
+    # レイアウト故障検知のため、観測中のみ幾何採取を有効化する。
+    _set_geometry_default(True)
+    try:
+        for profile in profiles:
+            try:
+                observations[profile.name] = _crawl_one(
+                    crawler, url, profile, depth, max_pages, auth_state, out_dir
+                )
+            except Exception as exc:  # noqa: BLE001 - 1ビューポートの失敗で全体を捨てない
+                logger.warning("ビューポート %s の観測に失敗: %s", profile.name, exc)
+                failures[profile.name] = str(exc)
+    finally:
+        _set_geometry_default(False)
 
     if baseline not in observations:
         raise RuntimeError(
@@ -62,9 +67,39 @@ def run_multi_viewport(
     report = compare_viewports(observations, baseline=baseline)
     # 失敗したビューポートを黙って無かったことにしない。
     report["meta"]["failed_viewports"] = failures
+    report["layout_failures"] = _build_layout_failures(observations, profiles)
     outputs = save_viewport_report(report, out_dir)
     report["outputs"] = {key: str(path) for key, path in outputs.items()}
     return report
+
+
+def _set_geometry_default(enabled: bool) -> None:
+    try:
+        from crawler.page_crawler import set_capture_geometry_default
+
+        set_capture_geometry_default(enabled)
+    except Exception:  # noqa: BLE001 - 幾何採取は観測の付加機能
+        logger.debug("幾何採取フラグの切替に失敗", exc_info=True)
+
+
+def _build_layout_failures(
+    observations: dict[str, list[Any]], profiles: list[ViewportProfile]
+) -> dict[str, Any]:
+    """各ビューポートの先頭ページ幾何からレイアウト故障を検出する。"""
+    from viewport.layout_failures import build_layout_failure_report
+
+    width_by_name = {p.name: p.width for p in profiles}
+    geo: dict[str, dict[str, Any]] = {}
+    for name, pages in observations.items():
+        if not pages:
+            continue
+        first = pages[0]
+        geo[name] = {
+            "viewport_width": width_by_name.get(name, 0),
+            "horizontal_overflow": bool(getattr(first, "horizontal_overflow", False)),
+            "boxes": [dict(b) for b in getattr(first, "element_boxes", ())],
+        }
+    return build_layout_failure_report(geo)
 
 
 def _crawl_one(

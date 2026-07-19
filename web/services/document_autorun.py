@@ -13,6 +13,7 @@ from mbt.manual_procedures import build_manual_procedures, save_manual_procedure
 from mbt.metamorphic import build_metamorphic_candidates, save_metamorphic_candidates
 from mbt.pairwise import build_pairwise_cases
 from mbt.test_data import generate_test_data, save_test_data
+from mbt.trace_suggestions import suggest_matches
 from mbt.validation_observer import run_validation_observation
 from web.routes.qa_process import _load_report
 from web.services.auto_run_job import AutoRunJob
@@ -100,6 +101,10 @@ def generate_document_autorun_artifacts(
         target_page_id=job.target_page_id,
         candidates_data=candidates,
     )
+    # 未突合要件へテキスト類似の候補を提示する（自動リンクはしない・確定は人）
+    unmatched = model.get("unmatched_requirements", [])
+    if unmatched and report is not None:
+        model["unmatched_requirement_suggestions"] = suggest_matches(unmatched, report)
     outputs = save_document_mbt(model, candidates, qa_dir)
     procedures = build_manual_procedures(model, _attach_measured_screenshots(report, domain_dir))
     outputs |= save_manual_procedures(procedures, qa_dir)

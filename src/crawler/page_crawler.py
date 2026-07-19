@@ -239,6 +239,8 @@ class PageData:
     console_errors: tuple[str, ...] = ()
     mixed_content: tuple[str, ...] = ()
     performance: Any | None = None  # PerformanceSample（欠測時 None）
+    element_boxes: tuple[dict[str, Any], ...] = ()  # レイアウト観測用（既定は空）
+    horizontal_overflow: bool = False
 
 
 @contextmanager
@@ -575,6 +577,53 @@ def _discover_one(page: Page, url: str, found: list[dict[str, object]]) -> tuple
     return tuple(extract_internal_links(page, normalized))
 
 
+_GEOMETRY_SCRIPT = """
+(() => {
+  const sel = 'a, button, input, select, textarea, h1, h2, h3, [role=button]';
+  const els = Array.from(document.querySelectorAll(sel)).slice(0, 200);
+  const boxes = els.map((el) => {
+    const r = el.getBoundingClientRect();
+    const interactive = ['A','BUTTON','INPUT','SELECT','TEXTAREA'].includes(el.tagName)
+      || el.getAttribute('role') === 'button';
+    return {
+      selector: el.id ? ('#' + el.id) : (el.tagName.toLowerCase()
+        + (el.className && typeof el.className === 'string'
+           ? '.' + el.className.trim().split(/\\s+/)[0] : '')),
+      x: r.x, y: r.y, w: r.width, h: r.height, interactive,
+    };
+  });
+  return {
+    boxes,
+    horizontal_overflow:
+      document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  };
+})()
+"""
+
+
+# マルチビューポート観測時のみ幾何採取を有効化するモジュールスコープの既定。
+# 通常クロールでは False のままで PageData は不変（回帰なし）。
+_CAPTURE_GEOMETRY_DEFAULT = False
+
+
+def set_capture_geometry_default(enabled: bool) -> None:
+    """幾何採取の既定を切り替える（viewport.runner が観測中のみ True にする）。"""
+    global _CAPTURE_GEOMETRY_DEFAULT
+    _CAPTURE_GEOMETRY_DEFAULT = bool(enabled)
+
+
+def _capture_geometry(page: Page) -> tuple[tuple[dict[str, Any], ...], bool]:
+    """主要要素のバウンディングボックスと横はみ出しを採取する。失敗時は空。"""
+    try:
+        result = page.evaluate(_GEOMETRY_SCRIPT)
+    except Exception:  # noqa: BLE001 - 観測はクロール本体を妨げない
+        return ((), False)
+    if not isinstance(result, dict):
+        return ((), False)
+    boxes = tuple(b for b in result.get("boxes", []) if isinstance(b, dict))
+    return boxes, bool(result.get("horizontal_overflow"))
+
+
 def crawl_page(
     page: Page,
     url: str,
@@ -582,6 +631,7 @@ def crawl_page(
     auth_state: Path | None = None,
     ux_review: bool = False,
     on_ux_result: UxResultCallback | None = None,
+    capture_geometry: bool = False,
 ) -> PageData:
     from analyzer.login_wall import PageAuthSignals, detect_login_wall
     from analyzer.stack_detector import detect_stack
@@ -685,6 +735,9 @@ def crawl_page(
         _audit_mutation_blocked(output_dir, normalized_url, blocker.blocked)
 
     performance_sample = collect_performance(page)
+    element_boxes, horizontal_overflow = (
+        _capture_geometry(page) if (capture_geometry or _CAPTURE_GEOMETRY_DEFAULT) else ((), False)
+    )
     return PageData(
         url=normalized_url,
         title=title,
@@ -705,6 +758,8 @@ def crawl_page(
         console_errors=tuple(console_errors),
         mixed_content=tuple(mixed_content),
         performance=performance_sample,
+        element_boxes=element_boxes,
+        horizontal_overflow=horizontal_overflow,
     )
 
 

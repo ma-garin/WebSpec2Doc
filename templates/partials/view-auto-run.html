@@ -19,6 +19,8 @@
               <div id="autorun-form-area" class="card autorun-form">
                 <fieldset class="autorun-mode-switch">
                   <legend>生成モード</legend>
+                  <!-- 仕様3: いま何を選んでいるかを明示する -->
+                  <p class="autorun-mode-current" id="autorun-mode-current" aria-live="polite"></p>
                   <div class="autorun-mode-options">
                     <label for="autorun-mode-url" class="autorun-mode-option">
                       <input type="radio" id="autorun-mode-url" name="autorun-mode" value="url" checked>

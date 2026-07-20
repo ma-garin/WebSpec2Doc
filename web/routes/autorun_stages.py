@@ -10,6 +10,8 @@ from __future__ import annotations
 import json
 import logging
 import sys
+import uuid
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -26,10 +28,12 @@ from autorun.stages import (  # noqa: E402
     STATUS_APPROVED,
     STATUS_SKIPPED,
     Pipeline,
+    StageItem,
     build_stage,
     observation_from_report,
     test_case_rows,
 )
+from autorun.suggest import suggest_additions  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -222,6 +226,69 @@ def api_reset_stages() -> tuple[dict, int] | dict:
     if error:
         return error
     pipeline = Pipeline.initial(is_rerun=_has_previous_snapshot(domain))
+    _save_pipeline(domain, pipeline)
+    return {"domain": domain, **pipeline.to_dict()}
+
+
+@bp.post("/api/autorun/stages/suggest")
+def api_suggest() -> tuple[dict, int] | dict:
+    """段階に対する追加候補を LLM に問い合わせる（補助）。
+
+    ルールベースの内容は変更しない。採否は人間が判断する。
+    """
+    payload = request.get_json(silent=True) or {}
+    domain, error = _require_domain(str(payload.get("domain", "")))
+    if error:
+        return error
+    stage_id = str(payload.get("stage_id", ""))
+
+    pipeline = _load_pipeline(domain)
+    stage = pipeline.get(stage_id)
+    if stage is None:
+        return {"error": f"未知の段階です: {stage_id}"}, 400
+
+    obs = _observation(domain, str(payload.get("url", "")), payload)
+    context = (
+        f"対象: {obs.url or domain}\n"
+        f"画面 {obs.screen_count} / フォーム {len(obs.forms)} / "
+        f"入力項目 {obs.input_count}（必須 {obs.required_input_count}）/ "
+        f"遷移 {obs.transition_count}"
+    )
+    result = suggest_additions(
+        stage_name=stage.definition.name,
+        purpose=stage.definition.purpose,
+        context=context,
+        existing_titles=[item.title for item in stage.items],
+    )
+    return {"domain": domain, "stage_id": stage_id, **result.to_dict()}
+
+
+@bp.post("/api/autorun/stages/adopt")
+def api_adopt_suggestion() -> tuple[dict, int] | dict:
+    """LLM の提案を項目として採用する。出所は llm として残す。"""
+    payload = request.get_json(silent=True) or {}
+    domain, error = _require_domain(str(payload.get("domain", "")))
+    if error:
+        return error
+    stage_id = str(payload.get("stage_id", ""))
+    title = str(payload.get("title", "")).strip()
+    detail = str(payload.get("detail", "")).strip()
+
+    if not title:
+        return {"error": "採用する項目の見出しが空です"}, 400
+
+    pipeline = _load_pipeline(domain)
+    stage = pipeline.get(stage_id)
+    if stage is None:
+        return {"error": f"未知の段階です: {stage_id}"}, 400
+
+    item = StageItem(
+        item_id=f"llm-{uuid.uuid4().hex[:10]}",
+        title=title,
+        detail=detail,
+        source="llm",
+    )
+    pipeline = pipeline.replaced(replace(stage, items=stage.items + (item,)))
     _save_pipeline(domain, pipeline)
     return {"domain": domain, **pipeline.to_dict()}
 

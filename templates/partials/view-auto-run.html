@@ -35,7 +35,9 @@
                 <div class="control-field">
                   <label for="autorun-url">対象URL</label>
                   <div class="autorun-url-row">
-                    <input type="url" id="autorun-url" class="url-input input-compact" placeholder="https://example.com" autocomplete="url" list="url-history-list" />
+                    <!-- 仕様4: 過去に解析したサイトから選べるようにする（AutoRun専用の候補） -->
+                    <input type="url" id="autorun-url" class="url-input input-compact" placeholder="https://example.com" autocomplete="url" list="autorun-url-suggestions" />
+                    <datalist id="autorun-url-suggestions"></datalist>
                     <!-- 事前確認は明示操作でのみ実行する。URLを打っただけで対象サイトへ
                          アクセスしないこと（相手先への無断アクセスを避ける）。 -->
                     <button type="button" id="autorun-preflight-btn" class="btn-outline-sm autorun-preflight-btn">事前確認</button>

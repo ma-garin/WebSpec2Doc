@@ -310,6 +310,18 @@
       bar.appendChild(skip);
     }
 
+    // 仕様12-13: テストケースは QualityForward と連携できるようにする。
+    // API は QF のカラム構成で CSV を返すので、そのまま取り込める形で渡す。
+    if (stage.items.length &&
+        (stage.stage_id === 'test_cases' || stage.stage_id === 'detail_design')) {
+      var qf = button('QualityForward用CSVを取得', function () {
+        window.location.href =
+          '/api/autorun/stages/testcases?format=csv&domain=' + encodeURIComponent(state.domain);
+      });
+      qf.disabled = state.busy;
+      bar.appendChild(qf);
+    }
+
     var status = document.createElement('span');
     status.className = 'autorun-stage-actions-note';
     if (stage.status === 'approved') {

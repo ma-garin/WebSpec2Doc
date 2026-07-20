@@ -57,11 +57,16 @@ def render_markdown(pack: dict[str, Any]) -> str:
         "",
         "## 実行サマリー",
         "",
-        "| 総数 | 合格 | 不合格 | スキップ | 所要 |",
-        "|---:|---:|---:|---:|---:|",
+        "| 総数 | 合格 | 不合格 | スキップ | 所要 | 検証実行率 |",
+        "|---:|---:|---:|---:|---:|---:|",
         f"| {summary.get('total', 0)} | {summary.get('passed', 0)} |"
         f" {summary.get('failed', 0)} | {summary.get('skipped', 0)} |"
-        f" {summary.get('duration_sec', 0)} 秒 |",
+        f" {summary.get('duration_sec', 0)} 秒 |"
+        f" {summary.get('verification_rate', 0)}% ({summary.get('verified_cases', 0)}件) |",
+        "",
+        "> 検証実行率 = 値の受理／拒否・実在確認など、有意なアサーションを伴うテストの割合。"
+        "「合格」件数は、対象が壊れていても body 要素が存在するだけで合格しうるため、"
+        "この率と併せて読むこと。",
         "",
         "## 実行環境",
         "",
@@ -141,7 +146,11 @@ def render_html(pack: dict[str, Any]) -> str:
 <div class="card ok"><div class="num">{summary.get('passed', 0)}</div><div>合格</div></div>
 <div class="card ng"><div class="num">{summary.get('failed', 0)}</div><div>不合格</div></div>
 <div class="card"><div class="num">{summary.get('skipped', 0)}</div><div>スキップ</div></div>
+<div class="card verif"><div class="num">{summary.get('verification_rate', 0)}%</div><div>検証実行率</div></div>
 </div>
+<p class="verif-note">検証実行率 = 値の受理／拒否・実在確認など、有意なアサーションを伴うテストの割合
+（{summary.get('verified_cases', 0)} / {summary.get('total', 0)} 件）。
+「合格」件数は対象が壊れていても body 要素が存在するだけで合格しうるため、この率と併せて読むこと。</p>
 </section>
 <section><h2>実行環境</h2><ul>{env_rows}</ul></section>
 <section><h2>テストケース別の実施記録</h2>
@@ -193,6 +202,8 @@ section>ul{list-style:none;display:flex;flex-direction:column;gap:.3rem;font-siz
 .card{flex:1;min-width:120px;border:2px solid #d8e0e6;border-radius:8px;padding:.9rem;text-align:center}
 .card .num{font-size:1.8rem;font-weight:700}
 .card.ok{border-color:#198038}.card.ng{border-color:#DA1E28}
+.card.verif{border-color:#8D6B00}.card.verif .num{color:#8D6B00}
+.verif-note{margin:0 1.2rem 1.2rem;font-size:.82rem;color:#5A6572}
 .scroll{overflow-x:auto}
 table{border-collapse:collapse;width:100%;font-size:.88rem;min-width:760px}
 th{background:#00285E;color:#fff;padding:.55rem .7rem;text-align:left;white-space:nowrap}

@@ -72,6 +72,7 @@ def build_evidence_pack(
         page_id = str(info.get("page_id", ""))
         screenshot = (screenshots or {}).get(page_id, "")
         status = str(raw.get("status", ""))
+        has_real_assertion = bool(info.get("has_real_assertion", False))
         cases.append(
             {
                 "case_id": test_id,
@@ -84,8 +85,13 @@ def build_evidence_pack(
                 "screenshot_path": screenshot,
                 "failure_category": category_by_test.get(test_id, "") if status == "failed" else "",
                 "error_excerpt": _excerpt(str(raw.get("error", ""))),
+                "has_real_assertion": has_real_assertion,
             }
         )
+
+    total_cases = len(cases)
+    verified_cases = sum(1 for case in cases if case["has_real_assertion"])
+    verification_rate = round(100 * verified_cases / total_cases, 1) if total_cases else 0.0
 
     return {
         "meta": {
@@ -101,6 +107,11 @@ def build_evidence_pack(
             "failed": int(report.get("failed", 0) or 0),
             "skipped": int(report.get("skipped", 0) or 0),
             "duration_sec": round(float(report.get("duration_ms", 0) or 0) / 1000, 3),
+            # 「合格」件数だけでは、そのテストが実質的な検証をしていたか判定できない
+            # （2026-07-20 の監査で発覚：body可視性だけの合格が334件検出0件だった）。
+            # 有意なアサーション（値の受理／拒否・実在確認）を伴うテストの割合を明示する。
+            "verified_cases": verified_cases,
+            "verification_rate": verification_rate,
         },
         "cases": cases,
         "environment": _environment(),

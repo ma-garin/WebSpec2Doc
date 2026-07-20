@@ -6,7 +6,17 @@
 (function () {
   'use strict';
 
-  var state = { domain: '', pipeline: null, selected: '', busy: false };
+  // editing: 修正エディタを開いている項目のキー（stageId:itemId）。開いている間に
+  // 別フェーズ・別画面へ移動しようとすると、破棄してよいか確認する
+  // （監査で発覚: 以前は警告なく黙って破棄されていた）。
+  var state = { domain: '', pipeline: null, selected: '', busy: false, editing: null };
+
+  function confirmDiscardEdit() {
+    if (!state.editing) return true;
+    var ok = window.confirm('編集中の内容がまだ保存されていません。破棄して移動しますか？');
+    if (ok) state.editing = null;
+    return ok;
+  }
 
   function $(id) { return document.getElementById(id); }
   function root() { return $('autorun-stages'); }
@@ -92,6 +102,7 @@
       btn.appendChild(label);
 
       btn.addEventListener('click', function () {
+        if (!confirmDiscardEdit()) return;
         state.selected = stage.stage_id;
         render();
       });
@@ -177,6 +188,8 @@
   }
 
   function startEdit(row, stage, item) {
+    state.editing = stage.stage_id + ':' + item.item_id;
+
     var editor = document.createElement('div');
     editor.className = 'autorun-stage-editor';
 
@@ -193,11 +206,15 @@
     var buttons = document.createElement('div');
     buttons.className = 'autorun-stage-editor-actions';
     buttons.appendChild(button('保存', function () {
+      state.editing = null;
       updateItem(stage.stage_id, item.item_id, {
         title: titleInput.value, detail: detailInput.value,
       });
     }, 'btn-primary'));
-    buttons.appendChild(button('やめる', render));
+    buttons.appendChild(button('やめる', function () {
+      state.editing = null;
+      render();
+    }));
 
     editor.appendChild(titleInput);
     editor.appendChild(detailInput);
@@ -553,7 +570,10 @@
   function boot() {
     // サイドの「受付」を押したら受付画面へ戻す
     var intakeNav = document.querySelector('.app-nav-item[data-view="auto-run"]');
-    if (intakeNav) intakeNav.addEventListener('click', showIntake);
+    if (intakeNav) intakeNav.addEventListener('click', function (e) {
+      if (!confirmDiscardEdit()) { e.preventDefault(); e.stopImmediatePropagation(); return; }
+      showIntake();
+    });
   }
 
   if (document.readyState === 'loading') {

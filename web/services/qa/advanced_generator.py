@@ -253,6 +253,8 @@ def _playwright_candidates(domain: str, report: dict[str, Any]) -> dict[str, Any
                 )
             )
             case_no += 1
+        # ページの主要ボタン（送信操作の対象）。厳密な対応付けは無いため先頭を採用する。
+        submit_label = next(iter(screen.get("raw_buttons") or []), "")
         for row in _field_rows_for_screen(screen):
             trace = row["trace_id"]
             field = row["field"]
@@ -273,6 +275,10 @@ def _playwright_candidates(domain: str, report: dict[str, Any]) -> dict[str, Any
                     form_goto_step + [f"`{label}` に代表値を入力", "送信または次操作を実行"],
                     "入力値が受理される、または仕様通りのエラーが出る",
                     "getByLabel / getByPlaceholder / data-testid を優先",
+                    field=field,
+                    form_action=row["form_action"],
+                    required_siblings=row["required_siblings"],
+                    submit_label=submit_label,
                 )
             )
             case_no += 1
@@ -286,6 +292,10 @@ def _playwright_candidates(domain: str, report: dict[str, Any]) -> dict[str, Any
                         form_goto_step + [f"`{label}` を空にする", "送信操作を実行"],
                         "必須エラーが表示され、送信されない",
                         "エラー文言は仕様不明の場合は質問待ち",
+                        field=field,
+                        form_action=row["form_action"],
+                        required_siblings=row["required_siblings"],
+                        submit_label=submit_label,
                     )
                 )
                 case_no += 1
@@ -295,7 +305,8 @@ def _playwright_candidates(domain: str, report: dict[str, Any]) -> dict[str, Any
                 case_no,
                 "アクセシビリティ自動確認",
                 "A11Y-ALL",
-                "review",
+                "manual-review",  # axe-core等の実検査エンジン未導入のため、実装するまでは自動化候補として提示するに留め、
+                # 生成スペックでは test.skip とする（body 可視性だけを合格させ「実施」と誤認させないため）
                 ["主要画面を開く", "axe-core相当のルールで自動検査する"],
                 "重大なWCAG A/AA違反がない、またはレビュー対象として記録される",
                 "axe-core/playwright導入時に実行候補化",

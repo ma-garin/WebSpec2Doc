@@ -101,10 +101,13 @@ def _dashboard(domain: str, report: dict | None, results: dict | None) -> dict[s
     forms = [f for s in screens for f in (s.get("forms") or [])]
     inputs = sum(len(f.get("fields") or f.get("inputs") or []) for f in forms)
 
-    summary = (results or {}).get("summary") or {}
-    passed = summary.get("passed")
-    failed = summary.get("failed")
-    total = summary.get("total")
+    # playwright_report.json は total/passed/failed をトップレベルに持つ（{"summary": {...}} ではない）。
+    # 従来はこのキー不一致により、実行済みでも「未実行」と表示されていた（監査で発覚・要修正）。
+    results = results or {}
+    summary = results.get("summary") or {}
+    passed = summary.get("passed", results.get("passed"))
+    failed = summary.get("failed", results.get("failed"))
+    total = summary.get("total", results.get("total"))
     if total is None and isinstance(passed, int) and isinstance(failed, int):
         total = passed + failed
 

@@ -27,6 +27,18 @@ function _rhSetType(type) {
   _rhRenderTable();
 }
 
+// ISO形式（例: 2026-07-05T16:08:11+00:00）のまま出すと読みにくいため、
+// ローカル時刻の読みやすい形式に整形する（監査で発覚・修正）。
+// 解析に失敗した場合は元の文字列をそのまま返す（未加工の値を握りつぶさない）。
+function _rhFormatTimestamp(raw) {
+  if (!raw) return '';
+  const d = new Date(raw);
+  if (isNaN(d.getTime())) return raw;
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} `
+    + `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 function _rhStatusClass(status) {
   if (status === 'complete') return 'rh-status-complete';
   if (status === 'failed') return 'rh-status-failed';
@@ -116,7 +128,7 @@ function _rhRenderTable() {
     return `<tr>
       <td><span class="rh-type-badge rh-type-${escHtml(run.type)}">${escHtml(typeLabel)}</span></td>
       <td>${escHtml(run.domain)}</td>
-      <td>${escHtml(run.timestamp || '')}</td>
+      <td title="${escHtml(run.timestamp || '')}">${escHtml(_rhFormatTimestamp(run.timestamp))}</td>
       <td><span class="rh-status-badge ${_rhStatusClass(run.status)}">${escHtml(_rhStatusLabel(run.status))}</span></td>
       <td>${_rhApprovalCell(run)}</td>
       <td>${escHtml(_rhSummaryText(run))}</td>

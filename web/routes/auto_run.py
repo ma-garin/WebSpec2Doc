@@ -489,12 +489,16 @@ def _run_job(job: AutoRunJob, depth: int, max_pages: int) -> None:
 
         # 関門2: 段階8（Playwright 自動化）。生成したスクリプトと未自動化を
         # 提示し、承認を得るまでテストを実行しない。
+        #
+        # 以前はこの後さらに「テスト実行の承認」という第3の関門（awaiting_approval /
+        # /api/autorun/approve）があった。8フェーズすべてを承認し切った直後に
+        # もう一度確認を挟む理由が画面から読み取れず、実際の検証でも3回停止することが
+        # 確認された（監査で発覚・是正）。段階8の承認＝実行方針の承認として統合し、
+        # ここで直接テスト実行へ進む。実行方針のカスタマイズは既定値（全件・PC・30秒）を使う。
         _await_stage_approval(job, "playwright")
         if job.status in ("failed", "cancelled"):
             return
-        job.status = "awaiting_approval"
-        job.step_label = "テスト実行の承認待ち"
-        job.add_log("自動生成完了。「テスト実行を承認」ボタンで Playwright を実行できます。")
+        _execute_tests(job)
     except Exception as exc:
         if job._cancelled:
             return

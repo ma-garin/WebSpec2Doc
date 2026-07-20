@@ -273,6 +273,34 @@ class TestTestCases:
             for key in COLUMN_KEYS:
                 assert key in data
 
+    def test_precondition_is_concrete_not_tautological(self, obs) -> None:
+        """前提条件は「どの画面か」「認証状態」を具体的に書く。
+
+        「対象画面へ到達できる状態」のような同義反復は前提条件として機能しない。
+        """
+        pipeline = _run_through(obs, STAGE_DETAIL_DESIGN)
+        pipeline = pipeline.replaced(build_stage(STAGE_TEST_CASES, obs, pipeline))
+        rows = collect_test_case_rows(pipeline)
+        assert rows
+        for row in rows:
+            assert "到達できる状態" not in row.precondition
+            # 対象URL か画面名のいずれかが具体的に入っていること
+            assert ("対象URL:" in row.precondition) or ("対象画面:" in row.precondition)
+            assert "未認証" in row.precondition
+
+    def test_steps_reference_the_observed_url(self, obs) -> None:
+        pipeline = _run_through(obs, STAGE_DETAIL_DESIGN)
+        pipeline = pipeline.replaced(build_stage(STAGE_TEST_CASES, obs, pipeline))
+        rows = collect_test_case_rows(pipeline)
+        assert any("https://example.com" in row.steps for row in rows)
+
+    def test_steps_name_actual_input_fields(self, obs) -> None:
+        """入力項目がある画面では、手順に実際の項目名を出す。"""
+        pipeline = _run_through(obs, STAGE_DETAIL_DESIGN)
+        pipeline = pipeline.replaced(build_stage(STAGE_TEST_CASES, obs, pipeline))
+        rows = collect_test_case_rows(pipeline)
+        assert any("date" in row.steps or "nights" in row.steps for row in rows)
+
     def test_numbers_are_sequential_from_one(self, obs) -> None:
         pipeline = _run_through(obs, STAGE_DETAIL_DESIGN)
         pipeline = pipeline.replaced(build_stage(STAGE_TEST_CASES, obs, pipeline))

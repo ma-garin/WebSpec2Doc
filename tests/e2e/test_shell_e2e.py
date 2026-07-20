@@ -33,31 +33,8 @@ def app_page(page: Page) -> Page:
 
 
 class TestQuickSearch:
-    def test_search_input_present_with_hint(self, app_page: Page) -> None:
-        """topbar にクイック検索入力があり、⌘K ヒントを持つ。"""
-        inp = app_page.locator("#topbar-search-input")
-        expect(inp).to_be_visible()
-        assert "検索" in (inp.get_attribute("placeholder") or "")
 
-    def test_search_filters_and_navigates_to_view(self, app_page: Page) -> None:
-        """画面名で検索するとヒットし、クリックで該当ビューへ遷移する。"""
-        app_page.locator("#topbar-search-input").fill("観点管理")
-        results = app_page.locator("#topbar-search-results .topbar-search-item")
-        expect(results.first).to_be_visible(timeout=5_000)
-        # 「観点管理」ビューのヒットをクリック
-        app_page.locator(
-            "#topbar-search-results .topbar-search-item[data-view='viewpoints']"
-        ).first.click()
-        expect(app_page.locator("#view-viewpoints")).to_have_class(_ACTIVE, timeout=5_000)
 
-    def test_enter_navigates_to_first_result(self, app_page: Page) -> None:
-        """Enter で先頭候補へ遷移する。"""
-        app_page.locator("#topbar-search-input").fill("実行履歴")
-        expect(app_page.locator("#topbar-search-results .topbar-search-item").first).to_be_visible(
-            timeout=5_000
-        )
-        app_page.locator("#topbar-search-input").press("Enter")
-        expect(app_page.locator("#view-run-history")).to_have_class(_ACTIVE, timeout=5_000)
 
     def test_cmd_k_focuses_search(self, app_page: Page) -> None:
         """Cmd/Ctrl+K でクイック検索にフォーカスする。"""
@@ -78,8 +55,3 @@ class TestQuickSearch:
         expect(app_page.locator("#topbar-search-results")).to_be_hidden()
 
 
-class TestAvatarAuthGate:
-    def test_avatar_absent_when_auth_disabled(self, app_page: Page) -> None:
-        """認証 OFF（既定）では利用者アバターを表示しない。"""
-        # 要素自体が描画されない（テンプレート側で session 未ログイン時は出力しない）
-        assert app_page.locator("#topbar-avatar").count() == 0

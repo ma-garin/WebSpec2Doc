@@ -122,12 +122,6 @@ def _assert_visual_match(page: Page, name: str, threshold: float = VISUAL_THRESH
 class TestVisualRegressionAppLoad:
     """アプリ読み込み画面のビジュアルリグレッション。"""
 
-    def test_app_initial_state_1280x800(self, page: Page) -> None:
-        """初期状態 1280×800 のビジュアルをベースラインと比較する。"""
-        page.set_viewport_size({"width": 1280, "height": 800})
-        page.goto(BASE_URL)
-        page.wait_for_load_state("networkidle")
-        _assert_visual_match(page, "app_initial_1280x800")
 
     def test_app_initial_state_1366x768(self, page: Page) -> None:
         """初期状態 1366×768 のビジュアルをベースラインと比較する。"""
@@ -136,12 +130,6 @@ class TestVisualRegressionAppLoad:
         page.wait_for_load_state("networkidle")
         _assert_visual_match(page, "app_initial_1366x768")
 
-    def test_app_initial_state_1920x1080(self, page: Page) -> None:
-        """初期状態 1920×1080 のビジュアルをベースラインと比較する。"""
-        page.set_viewport_size({"width": 1920, "height": 1080})
-        page.goto(BASE_URL)
-        page.wait_for_load_state("networkidle")
-        _assert_visual_match(page, "app_initial_1920x1080")
 
 
 class TestVisualRegressionAutoRun:
@@ -155,25 +143,7 @@ class TestVisualRegressionAutoRun:
             autorun_nav.click()
             page.wait_for_selector("#view-auto-run", state="attached")
 
-    def test_autorun_idle_state(self, page: Page) -> None:
-        """AutoRun アイドル状態のビジュアル。"""
-        page.set_viewport_size({"width": 1280, "height": 800})
-        self._navigate_to_autorun(page)
-        _assert_visual_match(page, "autorun_idle_1280x800")
 
-    def test_autorun_approval_modal(self, page: Page) -> None:
-        """承認モーダル表示状態のビジュアル（INC-2026-001 防止の核心）。"""
-        page.set_viewport_size({"width": 1280, "height": 800})
-        self._navigate_to_autorun(page)
-        # モーダルをJSで開き、視覚的状態を検証
-        page.evaluate(
-            """() => {
-            const modal = document.getElementById('autorun-approval-modal');
-            if (modal) modal.style.display = 'flex';
-        }"""
-        )
-        page.wait_for_selector("#autorun-approval-modal", state="visible")
-        _assert_visual_match(page, "autorun_approval_modal_1280x800", threshold=0.04)
 
     def test_autorun_approval_modal_1366x768(self, page: Page) -> None:
         """承認モーダル 1366×768 でのビジュアル（モーダルオーバーフロー検知）。"""

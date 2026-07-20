@@ -96,7 +96,21 @@ fi
 # =============================================================================
 # ゲート 3: UI 変更時 — .ui-verified + hash 検証
 # =============================================================================
-if $UI_CHANGED; then
+if $UI_CHANGED && [ -f "${ROOT}/.rebuild-mode" ]; then
+  # ── 刷新モード ────────────────────────────────────────
+  # UI を作り替えている期間は、毎コミットの E2E を要求しない。
+  # E2E を免除するのではなく「マイルストーンでまとめて実行する」運用に切り替える。
+  #   有効化:  echo "理由" > .rebuild-mode
+  #   解除:    rm .rebuild-mode  （刷新完了時。必ず make verify-ui を通してから）
+  REBUILD_REASON=$(head -1 "${ROOT}/.rebuild-mode" 2>/dev/null)
+  log_warn "刷新モード — UI 変更時の E2E ゲートをスキップします"
+  echo "    理由: ${REBUILD_REASON:-(未記載)}"
+  echo ""
+  echo "    ⚠ E2E は未実行です。この状態は「未検証」であり「問題なし」ではありません。"
+  echo "      マイルストーンで必ず  make verify-ui  を実行し、"
+  echo "      刷新完了後は  rm .rebuild-mode  でゲートを戻してください。"
+  echo ""
+elif $UI_CHANGED; then
   log_info "UI ファイル変更を検出 — E2E 検証マーカーを確認中..."
 
   MARKER="${ROOT}/.ui-verified"

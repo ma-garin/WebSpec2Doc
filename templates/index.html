@@ -37,7 +37,12 @@
       <span class="app-brand-mark">W</span>
       <span class="app-brand-text"><strong>WebSpec2Doc</strong><span>QAドキュメント生成</span></span>
     </a>
-    <button type="button" class="btn-primary sidebar-primary-action" id="add-site-btn">
+    <a href="/systems" class="sys-switcher" id="sys-switcher-link" title="システムを切り替える">
+      <span class="sys-switcher-label">システム</span>
+      <span class="sys-switcher-cur" id="sys-current-name">ドキュメント作成</span>
+      <span class="sys-switcher-swap">切替</span>
+    </a>
+    <button type="button" class="btn-primary sidebar-primary-action" id="add-site-btn" data-system="docs">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="16" height="16"><path d="M12 5v14M5 12h14"/></svg>
       <span class="add-site-label">新規解析</span>
     </button>
@@ -71,6 +76,7 @@
 {% include 'partials/view-run-history.html' %}
 
 {% include 'partials/view-user-guide.html' %}
+{% include 'partials/view-references.html' %}
 
 {% include 'partials/view-settings.html' %}
 
@@ -190,6 +196,7 @@
   <script src="{{ url_for('static', filename='js/view-test-runs.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/doc-fusion.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/quick-search.js') }}?v={{ _ver }}"></script>
+  <script src="{{ url_for('static', filename='js/system-scope.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='vendor/driver.js/driver.js.iife.js') }}"></script>
   <script src="{{ url_for('static', filename='js/onboarding.js') }}?v={{ _ver }}"></script>
 

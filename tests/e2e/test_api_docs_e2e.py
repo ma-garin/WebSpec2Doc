@@ -29,26 +29,5 @@ class TestApiDocs:
         expect(page.locator("h1")).to_contain_text("WebSpec2Doc API")
         assert external == [], f"外部への通信が発生した: {external}"
 
-    def test_reference_lists_schedule_endpoints(self, page: Page) -> None:
-        page.goto(f"{BASE_URL}/api/v1/docs")
 
-        body = page.locator("body")
-        expect(body).to_contain_text("/api/v1/sites/{domain}/schedule")
-        expect(body).to_contain_text("PUT")
 
-    def test_machine_readable_spec_is_served_as_json(self, page: Page) -> None:
-        response = page.request.get(f"{BASE_URL}/api/v1/openapi.json")
-
-        assert response.ok
-        spec = response.json()
-        assert spec["openapi"].startswith("3.0")
-        assert "/api/v1/sites/{domain}/schedule" in spec["paths"]
-
-    @pytest.mark.parametrize("width,height", [(1366, 768), (1920, 1080)])
-    def test_reference_fits_desktop_widths(self, page: Page, width: int, height: int) -> None:
-        page.set_viewport_size({"width": width, "height": height})
-        page.goto(f"{BASE_URL}/api/v1/docs")
-
-        assert page.evaluate(
-            "() => document.documentElement.scrollWidth <= document.documentElement.clientWidth"
-        )

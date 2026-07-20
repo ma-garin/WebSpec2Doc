@@ -1,0 +1,226 @@
+        <!-- ===== 参考（依拠した標準・先行研究・事例） ===== -->
+        <section class="view" id="view-references">
+          <div class="refs-page qa-readable">
+
+            <div class="refs-intro card">
+              <div class="section-kicker">参考</div>
+              <p class="refs-intro-lead">WebSpec2Doc の設計・実装が依拠している国際標準と先行研究、および参考にした事例の一覧です。</p>
+              <p class="refs-intro-note">
+                <span class="refs-badge refs-badge-applied">実装に反映</span> は本製品の生成物・判定ロジックに直接反映しているもの、
+                <span class="refs-badge refs-badge-ref">参考</span> は設計判断の裏付けとして参照したものです。
+                本製品は<strong>検出できた範囲のみを証跡付きで報告</strong>し、欠陥が無いことの証明はしません。標準への準拠を主張するものではなく、観点の網羅の拠り所として用いています。
+              </p>
+            </div>
+
+            <!-- 1. 標準・規格 -->
+            <div class="refs-group card">
+              <h3 class="refs-group-title">標準・規格</h3>
+              <ul class="refs-list">
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">ISO/IEC/IEEE 29119 — ソフトウェアテスト標準</span>
+                    <span class="refs-badge refs-badge-applied">実装に反映</span>
+                  </div>
+                  <p class="refs-desc">テスト方針・戦略・計画・設計・実行の文書体系。AutoRun が生成する <code>test_plan.md</code> / <code>test_analysis.md</code> / <code>test_design.md</code> / <code>test_cases.md</code> の構成はこの体系に沿っています。</p>
+                  <a class="refs-link" href="http://www.softwaretestingstandard.org/" target="_blank" rel="noopener">softwaretestingstandard.org ↗</a>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">ISTQB — テスト目的・テストタイプ・テスト設計技法</span>
+                    <span class="refs-badge refs-badge-applied">実装に反映</span>
+                  </div>
+                  <p class="refs-desc">同値分割・境界値分析・デシジョンテーブル・状態遷移テストなどの技法体系。実測した入力項目・画面遷移からのテスト設計生成の基礎です。</p>
+                  <a class="refs-link" href="https://www.istqb.org/" target="_blank" rel="noopener">istqb.org ↗</a>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">ISO/IEC 25010 — システム・ソフトウェア製品品質モデル（SQuaRE）</span>
+                    <span class="refs-badge refs-badge-applied">実装に反映</span>
+                  </div>
+                  <p class="refs-desc">機能適合性・性能効率・互換性・使用性・信頼性・セキュリティ・保守性・移植性。品質観点マップの分類軸として使用しています。</p>
+                  <a class="refs-link" href="https://iso25000.com/index.php/en/iso-25000-standards/iso-25010" target="_blank" rel="noopener">iso25000.com / 25010 ↗</a>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">ISO/IEC 25012 — データ品質モデル</span>
+                    <span class="refs-badge refs-badge-ref">参考</span>
+                  </div>
+                  <p class="refs-desc">正確性・完全性・一貫性などのデータ品質特性。データ品質観点の裏付けとして参照。</p>
+                  <a class="refs-link" href="https://iso25000.com/index.php/en/iso-25000-standards/iso-25012" target="_blank" rel="noopener">iso25000.com / 25012 ↗</a>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">WCAG 2.2 — Web Content Accessibility Guidelines（W3C）</span>
+                    <span class="refs-badge refs-badge-applied">実装に反映</span>
+                  </div>
+                  <p class="refs-desc">アクセシビリティ検査の基準。ただし自動検出できるのは達成基準の一部であり、未検証領域は「未検証」と明記します。</p>
+                  <a class="refs-link" href="https://www.w3.org/TR/WCAG22/" target="_blank" rel="noopener">w3.org / WCAG 2.2 ↗</a>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">OWASP Top 10 / ASVS</span>
+                    <span class="refs-badge refs-badge-ref">参考</span>
+                  </div>
+                  <p class="refs-desc">セキュリティ観点（セッション・CSRF・CORS など）の分類の拠り所。本製品は脆弱性診断ツールではなく、観点の提示にとどめています。</p>
+                  <a class="refs-link" href="https://owasp.org/Top10/" target="_blank" rel="noopener">owasp.org / Top 10 ↗</a>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">IPA 非機能要求グレード</span>
+                    <span class="refs-badge refs-badge-ref">参考</span>
+                  </div>
+                  <p class="refs-desc">情報処理推進機構（IPA）による非機能要求の体系。非機能観点の粒度設計に参照。</p>
+                  <a class="refs-link" href="https://www.ipa.go.jp/" target="_blank" rel="noopener">ipa.go.jp ↗</a>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">ISO 9241-11 — 使用性（ユーザビリティ）の定義</span>
+                    <span class="refs-badge refs-badge-ref">参考</span>
+                  </div>
+                  <p class="refs-desc">有効さ・効率・満足度としての使用性の定義。ユーザビリティ観点の枠組みとして参照。</p>
+                </li>
+              </ul>
+            </div>
+
+            <!-- 2. 先行研究 -->
+            <div class="refs-group card">
+              <h3 class="refs-group-title">先行研究</h3>
+              <ul class="refs-list">
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">P. Ammann, J. Offutt — <em>Introduction to Software Testing</em>（2nd ed., 2016）</span>
+                    <span class="refs-badge refs-badge-applied">実装に反映</span>
+                  </div>
+                  <p class="refs-desc">プライムパス網羅をはじめとするグラフ網羅基準。画面遷移モデル上のパス選定（全画面／全遷移／プライムパス）の理論的裏付けです。</p>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">D. R. Kuhn, R. N. Kacker, Y. Lei — 組合せ（ペアワイズ）テスト</span>
+                    <span class="refs-badge refs-badge-applied">実装に反映</span>
+                  </div>
+                  <p class="refs-desc">NIST による組合せテストの実務研究。入力項目の組合せ爆発を抑えるペアワイズ生成に反映。</p>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">T. Y. Chen ほか — メタモルフィックテスティング</span>
+                    <span class="refs-badge refs-badge-applied">実装に反映</span>
+                  </div>
+                  <p class="refs-desc">期待結果が確定できない場合に、入力間の関係性（メタモルフィック関係）で検証する手法。オラクル問題への対処として候補生成に利用。</p>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">G. Antoniol ほか — Recovering Traceability Links between Code and Documentation（IEEE TSE, 2002）</span>
+                    <span class="refs-badge refs-badge-applied">実装に反映</span>
+                  </div>
+                  <p class="refs-desc">情報検索（TF-IDF）による成果物間トレーサビリティ復元。要件文書と実測画面の突合候補の提示に反映。</p>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">T. Walsh, P. McMinn, G. Kapfhammer — ReDeCheck: レイアウト故障の自動検出（ISSTA, 2017）</span>
+                    <span class="refs-badge refs-badge-applied">実装に反映</span>
+                  </div>
+                  <p class="refs-desc">要素の重なり・はみ出しなどレイアウト故障の検出手法。表示崩れ検知の判定ロジックの基礎です。</p>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">Q. Luo, F. Hariri, L. Eloussi, D. Marinov — An Empirical Analysis of Flaky Tests（FSE, 2014）</span>
+                    <span class="refs-badge refs-badge-applied">実装に反映</span>
+                  </div>
+                  <p class="refs-desc">不安定テスト（flaky）の原因分類。非同期待ち（async wait）に起因する失敗の分類・提示に反映。</p>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">A. Stocco, M. Leotta, F. Ricca, P. Tonella — APOGEN: Page Object の自動生成</span>
+                    <span class="refs-badge refs-badge-applied">実装に反映</span>
+                  </div>
+                  <p class="refs-desc">Web テストの保守性を高める Page Object パターンの自動生成。生成スクリプトの構造化に反映。</p>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">J. Grigera, A. Garrido, J. M. Rivero, G. Rossi — ユーザビリティ・スメルの自動検出</span>
+                    <span class="refs-badge refs-badge-applied">実装に反映</span>
+                  </div>
+                  <p class="refs-desc">操作ログ・UI 構造から使いにくさの兆候（usability smell）を検出する研究。ユーザビリティ観点の自動検出に反映。</p>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">B. Eriksson, G. Pellegrino, A. Sabelfeld — Black Widow: Blackbox Data-driven Web Scanning（IEEE S&amp;P, 2021）</span>
+                    <span class="refs-badge refs-badge-applied">実装に反映</span>
+                  </div>
+                  <p class="refs-desc">画面をまたぐデータフローを辿る深いクロール手法。データフロー追跡とフォーム到達の設計に反映。</p>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">LLM によるWebテスト自動生成の動向</span>
+                    <span class="refs-badge refs-badge-ref">参考</span>
+                  </div>
+                  <p class="refs-desc">画面グラフ探索＋LLM によるテスト生成は近年急速にコモディティ化しています。本製品の差別化は<strong>文書駆動の入力</strong>・<strong>証跡と主張範囲の明示</strong>・<strong>ドリフト検知</strong>にあると位置づけています。</p>
+                </li>
+              </ul>
+            </div>
+
+            <!-- 3. 公式ドキュメント -->
+            <div class="refs-group card">
+              <h3 class="refs-group-title">公式ドキュメント・実務資料</h3>
+              <ul class="refs-list">
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">Playwright</span>
+                    <span class="refs-badge refs-badge-applied">実装に反映</span>
+                  </div>
+                  <p class="refs-desc">テスト実行基盤。生成したテストスクリプトの実行と証跡（スクリーンショット・トレース）の取得に使用。</p>
+                  <a class="refs-link" href="https://playwright.dev/" target="_blank" rel="noopener">playwright.dev ↗</a>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">Core Web Vitals（web.dev）</span>
+                    <span class="refs-badge refs-badge-applied">実装に反映</span>
+                  </div>
+                  <p class="refs-desc">LCP / CLS / INP などの性能指標。ラボ計測としての性能観測に使用（実ユーザー計測ではない点を明記して報告します）。</p>
+                  <a class="refs-link" href="https://web.dev/articles/vitals" target="_blank" rel="noopener">web.dev / vitals ↗</a>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">Gherkin / Cucumber</span>
+                    <span class="refs-badge refs-badge-applied">実装に反映</span>
+                  </div>
+                  <p class="refs-desc">要件記述の構文。文書駆動モードで <code>.feature</code> を取り込む際の解釈基準です。</p>
+                  <a class="refs-link" href="https://cucumber.io/docs/gherkin/" target="_blank" rel="noopener">cucumber.io / gherkin ↗</a>
+                </li>
+              </ul>
+            </div>
+
+            <!-- 4. 事例 -->
+            <div class="refs-group card">
+              <h3 class="refs-group-title">参考にした事例（UI/UX）</h3>
+              <ul class="refs-list">
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">Nielsen Norman Group — Designing Empty States</span>
+                    <span class="refs-badge refs-badge-ref">参考</span>
+                  </div>
+                  <p class="refs-desc">空状態を最初のオンボーディング面として扱う設計原則。AutoRun の受付画面で「何が納品されるか」を先に示す構成の根拠です。</p>
+                  <a class="refs-link" href="https://www.nngroup.com/articles/empty-state-interface-design/" target="_blank" rel="noopener">nngroup.com ↗</a>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">Netlify Deploy Previews / Vercel Deployment Checks</span>
+                    <span class="refs-badge refs-badge-ref">参考</span>
+                  </div>
+                  <p class="refs-desc">実行前後で自動更新されるステータスと、進行に沿ってストリーミングされるログ。待ち時間を体験に変える設計として参照。</p>
+                  <a class="refs-link" href="https://www.netlify.com/platform/core/deploy-previews/" target="_blank" rel="noopener">netlify.com ↗</a>
+                  <a class="refs-link" href="https://vercel.com/docs/deployment-checks" target="_blank" rel="noopener">vercel.com ↗</a>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">UX Auto Reviewer</span>
+                    <span class="refs-badge refs-badge-ref">参考</span>
+                  </div>
+                  <p class="refs-desc">ルールベースで段階的に実行する UI/UX 監査ツール。プリセットとステップで判断コストを下げる構成を参照しました。</p>
+                  <a class="refs-link" href="https://github.com/ma-garin/UX_Auto_Reviewer" target="_blank" rel="noopener">github.com / UX_Auto_Reviewer ↗</a>
+                </li>
+              </ul>
+            </div>
+
+          </div>
+        </section>

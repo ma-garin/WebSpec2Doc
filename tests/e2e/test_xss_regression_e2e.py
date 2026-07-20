@@ -17,11 +17,10 @@ BASE_URL = os.environ.get("WEBSPEC2DOC_E2E_URL", "http://127.0.0.1:8765")
 
 @pytest.fixture()
 def autorun_page(page: Page) -> Page:
-    page.goto(BASE_URL)
+    # AutoRun は独立システム。`/` は「ドキュメント作成」系と判定され
+    # AutoRun のナビ項目は非表示になるため、直接開く。
+    page.goto(f"{BASE_URL}/auto-run")
     page.wait_for_load_state("networkidle")
-    autorun_nav = page.locator(".app-nav-item").filter(has_text="AutoRun").first
-    if autorun_nav.count() > 0:
-        autorun_nav.click()
     page.wait_for_selector("#view-auto-run", state="attached")
     return page
 

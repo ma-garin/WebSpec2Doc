@@ -1,6 +1,7 @@
         <!-- ===== AutoRun ビュー（単一フロー: 受付→実行→納品が同じ列で変身） ===== -->
         <section class="view" id="view-auto-run">
-          <div class="autorun-single">
+          <div class="autorun-workspace">
+          <div class="autorun-work">
 
             <!-- 実行中のみ表示: 停止 -->
             <div id="autorun-cancel-area" class="autorun-inline-actions" style="display:none">
@@ -134,6 +135,12 @@
               <div class="autorun-intake-scope" role="note">
                 <strong>報告の範囲について：</strong>検出できた範囲を証跡付きで報告します。検証できなかった領域は「未検証」と明記し、<em>欠陥が無いことの証明はしません</em>。現新比較は前回スナップショットがある場合のみ成立し、初回は基準確立のみです。
               </div>
+            </div>
+
+            <!-- 段階承認パイプライン（仕様7〜13）: 提示 → 個別修正 → 承認 -->
+            <div id="autorun-stages" class="autorun-stages" style="display:none">
+              <div class="autorun-stages-rail" id="autorun-stages-rail"></div>
+              <div class="autorun-stage-panel" id="autorun-stage-panel"></div>
             </div>
 
             <!-- コックピット: 横型ステッパー + 全体進捗バー（進捗表示はここに一本化） -->
@@ -346,5 +353,39 @@
               </div>
             </div>
 
-          </div>
+          </div><!-- /.autorun-work -->
+
+            <!-- 右: LLM チャット。各段階の成果物について相談・修正するための常設パネル -->
+            <aside class="autorun-chat" id="autorun-chat" aria-label="QAアシスタント">
+              <header class="autorun-chat-head">
+                <div>
+                  <div class="section-kicker">QAアシスタント</div>
+                  <p class="autorun-chat-sub" id="autorun-chat-context">受付</p>
+                </div>
+                <span class="autorun-chat-status" id="autorun-chat-status" aria-live="polite"></span>
+              </header>
+
+              <div class="autorun-chat-log" id="autorun-chat-log" role="log" aria-live="polite">
+                <div class="autorun-chat-empty" id="autorun-chat-empty">
+                  <p><strong>この画面の内容について相談できます。</strong></p>
+                  <p class="muted-copy">テスト目的・観点・設計・ケースの各段階で、提示された内容の修正や追加を依頼してください。</p>
+                  <div class="autorun-chat-suggestions">
+                    <button type="button" class="autorun-chat-chip" data-chat-preset="この対象に適したテスト目的を提案して">テスト目的を提案</button>
+                    <button type="button" class="autorun-chat-chip" data-chat-preset="この画面で漏れやすいテスト観点を挙げて">観点の漏れを指摘</button>
+                    <button type="button" class="autorun-chat-chip" data-chat-preset="境界値テストの候補を挙げて">境界値の候補</button>
+                  </div>
+                </div>
+              </div>
+
+              <form class="autorun-chat-form" id="autorun-chat-form">
+                <textarea id="autorun-chat-input" class="autorun-chat-input" rows="2"
+                          placeholder="相談内容を入力（Enterで送信 / Shift+Enterで改行）"></textarea>
+                <div class="autorun-chat-actions">
+                  <span class="autorun-chat-note" id="autorun-chat-note">LLMの提案は補助です。採用の判断は人間が行います。</span>
+                  <button type="submit" id="autorun-chat-send" class="btn-primary autorun-chat-send">送信</button>
+                </div>
+              </form>
+            </aside>
+
+          </div><!-- /.autorun-workspace -->
         </section>

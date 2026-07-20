@@ -33,12 +33,12 @@ def login_page() -> BaseResponse | str:
     if not store.has_any_user():
         return redirect("/auth/setup")
     if getattr(g, "auth_user", None):
-        return redirect(safe_next_path(request.args.get("next", "/")))
+        return redirect(safe_next_path(request.args.get("next", "/systems")))
     return render_template(
         "auth/login.html",
         error=None,
         email="",
-        next_path=safe_next_path(request.args.get("next", "/")),
+        next_path=safe_next_path(request.args.get("next", "/systems")),
     )
 
 
@@ -47,7 +47,7 @@ def login_submit() -> BaseResponse | tuple[str, int]:
     store = get_auth_store()
     email = request.form.get("email", "").strip()
     password = request.form.get("password", "")
-    next_path = safe_next_path(request.form.get("next", "/"))
+    next_path = safe_next_path(request.form.get("next", "/systems"))
     try:
         user = store.authenticate(email, password)
     except AuthError as exc:

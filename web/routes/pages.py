@@ -16,6 +16,7 @@ _VIEW_NAMES = frozenset(
         "testcases",
         "run-history",
         "user-guide",
+        "references",
         "settings",
     }
 )
@@ -25,6 +26,12 @@ _VIEW_ALIASES = {"home": "dashboard"}
 @bp.route("/")
 def index() -> str:
     return render_template("index.html")
+
+
+@bp.route("/systems")
+def systems() -> str:
+    """ログイン後のシステム選択ハブ。ドキュメント作成 / AutoRun を選ぶ。"""
+    return render_template("system-select.html")
 
 
 @bp.route("/<view_name>")

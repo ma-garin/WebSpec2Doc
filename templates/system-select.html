@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <title>システム選択 - WebSpec2Doc</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/system-select.css') }}">
+  <script>
+    // テーマの早期適用（描画前フラッシュ防止）。保存値がなければ OS 設定に追従。
+    (function () {
+      try {
+        var t = localStorage.getItem('webspec2doc.theme');
+        if (!t) t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', t);
+      } catch (e) { /* localStorage 不可環境では light のまま */ }
+    })();
+  </script>
+</head>
+<body class="sysselect-body">
+
+  <header class="sysselect-topbar">
+    <div class="sysselect-brand">
+      <span class="sysselect-brand-mark">W</span>
+      <span class="sysselect-brand-name">WebSpec2Doc</span>
+      <span class="sysselect-brand-tag">プラットフォーム</span>
+    </div>
+    <div class="sysselect-account">
+      {% if auth_user %}<span class="sysselect-who">{{ auth_user.email }}</span>{% endif %}
+      <button type="button" id="sysselect-theme" class="sysselect-icon-btn" aria-label="テーマ切替" title="テーマ切替">◐</button>
+      {% if auth_user %}
+      <form method="post" action="/auth/logout" class="sysselect-logout-form">
+        <button type="submit" class="sysselect-text-btn">ログアウト</button>
+      </form>
+      {% endif %}
+    </div>
+  </header>
+
+  <main class="sysselect-stage">
+    <div class="sysselect-head">
+      <div class="sysselect-kicker">システム選択</div>
+      <h1>どのシステムを使いますか？</h1>
+      <p>使うシステムを選んでください。ドキュメント作成と AutoRun は独立したシステムです。</p>
+    </div>
+
+    <div class="sysselect-grid">
+
+      <a class="syscard syscard-doc" href="/generate">
+        <span class="syscard-accent" aria-hidden="true"></span>
+        <span class="syscard-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h6"/>
+          </svg>
+        </span>
+        <span class="syscard-no">System 01</span>
+        <span class="syscard-title">ドキュメント作成</span>
+        <span class="syscard-desc">URL を渡すと、画面仕様書・遷移図・項目定義を生成します。認証・対象範囲・前回差分にも対応。既存サイトの仕様化に。</span>
+        <span class="syscard-chips">
+          <span class="syscard-chip">画面仕様書</span><span class="syscard-chip">遷移図</span>
+          <span class="syscard-chip">フォーム定義</span><span class="syscard-chip">差分</span>
+        </span>
+        <span class="syscard-open">ドキュメント作成を開く →</span>
+      </a>
+
+      <a class="syscard syscard-run" href="/auto-run">
+        <span class="syscard-accent" aria-hidden="true"></span>
+        <span class="syscard-badge">独立システム</span>
+        <span class="syscard-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 3h6M10 3v5.5L5.5 17a2 2 0 0 0 1.8 3h9.4a2 2 0 0 0 1.8-3L14 8.5V3"/><path d="M8 14h8"/>
+          </svg>
+        </span>
+        <span class="syscard-no">System 02</span>
+        <span class="syscard-title">AutoRun</span>
+        <span class="syscard-desc">ベテラン QA として、受領から実行完了レポートの納品まで。フル QA を止めずに回し、未検証は明記・不在は証明しません。</span>
+        <span class="syscard-chips">
+          <span class="syscard-chip">テスト計画</span><span class="syscard-chip">設計・ケース</span>
+          <span class="syscard-chip">実行・証跡</span><span class="syscard-chip">カバレッジ</span>
+        </span>
+        <span class="syscard-open">AutoRun を開く →</span>
+      </a>
+
+    </div>
+
+    <p class="sysselect-note">2 つは別システムです。入口・世界観・ナビは独立し、共通はログインとアカウントだけ。いつでもこの画面に戻って切り替えられます。</p>
+  </main>
+
+  <script>
+    (function () {
+      var btn = document.getElementById('sysselect-theme');
+      if (!btn) return;
+      btn.addEventListener('click', function () {
+        var cur = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', cur);
+        try { localStorage.setItem('webspec2doc.theme', cur); } catch (e) {}
+      });
+    })();
+  </script>
+</body>
+</html>

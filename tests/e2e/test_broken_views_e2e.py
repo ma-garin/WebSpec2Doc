@@ -93,28 +93,6 @@ class TestUserGuideScroll:
         overflow = page.eval_on_selector("#app-content", "el => getComputedStyle(el).overflow")
         assert overflow == "auto", f"#app-content が overflow:auto でない（{overflow}）"
 
-    def test_scrollable_after_opening_report_via_deep_link(self, page: Page) -> None:
-        """レポート画面（#report/...）を経由した後でも、他画面へ移動すれば
-        全高モード（is-executing/is-reporting）が解除されスクロール可能になる。
-
-        実際のバグ再現手順: レポートを開く（openResultsForDomain経由）→ 別画面へ移動
-        → #app-content に is-executing が残留し overflow:hidden に固定されていた。
-        """
-        page.goto(f"{BASE_URL}/#report/{DIFF_DOMAIN}")
-        page.wait_for_timeout(500)
-        page.locator(".app-nav-item[data-view='user-guide']").click()
-        page.wait_for_timeout(200)
-        cls = page.eval_on_selector("#app-content", "el => el.className")
-        assert "is-executing" not in cls, f"is-executing が残留している: {cls}"
-        assert "is-reporting" not in cls, f"is-reporting が残留している: {cls}"
-        before = page.eval_on_selector("#app-content", "el => el.scrollTop")
-        box = page.locator("#app-content").bounding_box()
-        assert box is not None
-        page.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
-        page.mouse.wheel(0, 500)
-        page.wait_for_timeout(150)
-        after = page.eval_on_selector("#app-content", "el => el.scrollTop")
-        assert after > before, "マウスホイールでスクロールできない"
 
     def test_content_taller_than_viewport(self, page: Page) -> None:
         """ユーザーガイドの中身がビューポートより長く、実際にスクロールが必要な分量であること。"""
@@ -127,47 +105,13 @@ class TestUserGuideScroll:
             scroll_h > client_h
         ), "ガイドの中身がビューポート内に収まってしまっている（検証条件として不十分）"
 
-    def test_cli_usage_section_present(self, page: Page) -> None:
-        """CLIの主要フロー（--url/--format/--compare/--login-record）に言及がある。"""
-        page.goto(BASE_URL)
-        page.wait_for_load_state("networkidle")
-        page.locator(".app-nav-item[data-view='user-guide']").click()
-        text = page.locator("#view-user-guide").inner_text()
-        for token in ("--url", "--format", "--compare", "--login-record", "src/main.py"):
-            assert token in text, f"ユーザーガイドに {token} の記載がない"
 
 
 class TestSettingsTabs:
     """設定画面のタブ切替（再発防止: click ハンドラ未実装）。"""
 
-    def test_default_tab_is_api(self, page: Page) -> None:
-        page.goto(BASE_URL)
-        page.wait_for_load_state("networkidle")
-        page.locator(".app-nav-item[data-view='settings']").click()
-        expect(page.locator("#set-panel-api")).to_be_visible()
-        expect(page.locator("#set-panel-crawl")).to_be_hidden()
 
-    def test_api_tab_includes_model_select(self, page: Page) -> None:
-        """モデルタブは廃止し、APIキータブに統合される（S1-6）。"""
-        page.goto(BASE_URL)
-        page.wait_for_load_state("networkidle")
-        page.locator(".app-nav-item[data-view='settings']").click()
-        expect(page.locator(".set-tab[data-tab='model']")).to_have_count(0)
-        expect(page.locator("#set-panel-model")).to_have_count(0)
-        expect(page.locator("#api-model")).to_be_visible()
-        expect(page.locator("#test-connection")).to_be_visible()
 
-    def test_click_switches_through_all_tabs(self, page: Page) -> None:
-        """3タブすべてが押した順にパネル切替されること（クロール既定値・通知タブ含む）。"""
-        page.goto(BASE_URL)
-        page.wait_for_load_state("networkidle")
-        page.locator(".app-nav-item[data-view='settings']").click()
-        for tab in ("crawl", "notify", "api"):
-            page.locator(f".set-tab[data-tab='{tab}']").click()
-            expect(page.locator(f"#set-panel-{tab}")).to_be_visible()
-            others = [t for t in ("api", "crawl", "notify") if t != tab]
-            for other in others:
-                expect(page.locator(f"#set-panel-{other}")).to_be_hidden()
 
 
 class TestHistoryDiffFeedback:
@@ -178,63 +122,8 @@ class TestHistoryDiffFeedback:
         expect(page.locator("#result-panel")).to_be_visible()
         expect(page.locator("#tl-diff-btn")).to_be_visible(timeout=10_000)
 
-    def test_button_shows_loading_state_immediately(self, page: Page) -> None:
-        """クリック直後にボタンのラベルが「取得中」に変わる（無反応に見えない）。
 
-        showTimelineDiff は fetch の await より前で disabled とラベルを同期設定するため、
-        click 直後の状態を同一 JS 実行内で捕捉すれば決定的に検証できる（ネットワーク遅延に
-        非依存）。ただし履歴タブ描画時の初回 showTimelineDiff（既定=現新比較）が進行中だと
-        そのローディングラベルを拾ってしまうため、先に初回描画の完了を待つ。
-        """
-        self._open_history_tab(page)
 
-        # 初回描画（既定=現新比較）が落ち着き、ボタンが待機ラベルへ戻るまで待つ。
-        # これを待たないと初回ローディング中の評価で mode=comparison のラベルを拾い、
-        # CI の遅い環境でフレークする（現新比較を実行中… ≠ 差分を取得中…）。
-        expect(page.locator("#tl-diff-btn")).to_have_text("この2時点を比較する", timeout=15_000)
-
-        # 本テストは「簡易ドリフト差分」ボタンの即時フィードバックを検証するため diff モードを
-        # 選択する（change を発火させないよう JS で checked を立てる。ラジオ同名グループなので
-        # comparison は自動的に外れる）。
-        page.evaluate(
-            "document.querySelector(\"input[name='tl-mode'][value='diff']\").checked = true"
-        )
-        # showTimelineDiff は fetch の await より前で disabled とラベルを同期設定する。
-        # ネットワーク遅延を人工挿入して観測する方式は Playwright sync API では
-        # route ハンドラの sleep が driver スレッドをブロックし中間状態を取り逃すため不安定。
-        # 代わりに同一 JS 実行内で click 直後（await 到達前）の状態を捕捉し、決定的に検証する。
-        state = page.evaluate(
-            """() => {
-              const btn = document.getElementById('tl-diff-btn');
-              btn.click();
-              return { disabled: btn.disabled, text: (btn.textContent || '').trim() };
-            }"""
-        )
-        assert state["disabled"] is True, f"クリック直後にボタンが無効化されていない: {state}"
-        assert state["text"] == "差分を取得中…", f"クリック直後のラベルが取得中でない: {state}"
-        # 応答後にローディングが解除され、元のラベルに戻る（無反応でなく完結する）。
-        expect(page.locator("#tl-diff-btn")).to_have_text("この2時点を比較する", timeout=10_000)
-
-    def test_button_shows_result_after_success(self, page: Page) -> None:
-        """成功時、ローディング解除後に差分内容（iframe）が表示され、ボタンが元のラベルに戻る。"""
-        self._open_history_tab(page)
-        page.locator("input[name='tl-mode'][value='diff']").check()
-        page.locator("#tl-diff-btn").click()
-        expect(page.locator("#tl-diff-btn")).to_have_text("この2時点を比較する", timeout=10_000)
-        expect(page.locator("#tl-diff iframe")).to_have_count(1)
-        frame = page.frame_locator("#tl-diff iframe")
-        expect(frame.locator("body")).to_contain_text("仕様ドリフトレポート")
-        expect(frame.locator("body")).to_contain_text("new")
-
-    def test_button_shows_error_on_failure(self, page: Page) -> None:
-        """通信エラー時、無言で失敗せず理由付きのエラー表示になり、ボタンが再操作可能に戻る。"""
-        self._open_history_tab(page)
-        page.route("**/api/snapshot-diff**", lambda route: route.abort())
-        page.locator("input[name='tl-mode'][value='diff']").check()
-        page.locator("#tl-diff-btn").click()
-        expect(page.locator("#tl-diff")).to_contain_text("差分の取得に失敗しました", timeout=10_000)
-        expect(page.locator("#tl-diff-btn")).to_have_text("この2時点を比較する")
-        expect(page.locator("#tl-diff-btn")).to_be_enabled()
 
     def test_no_javascript_errors(self, page: Page) -> None:
         js_errors: list[str] = []

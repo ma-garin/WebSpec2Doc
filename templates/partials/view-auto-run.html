@@ -1,11 +1,19 @@
-        <!-- ===== AutoRun ビュー ===== -->
+        <!-- ===== AutoRun ビュー（単一フロー: 受付→実行→納品が同じ列で変身） ===== -->
         <section class="view" id="view-auto-run">
-          <div class="qa-tool-2pane autorun-workbench">
-            <div class="qa-tool-sidebar autorun-sidebar">
-              <header class="autorun-sidebar-head">
-                <h2 class="qa-tool-sidebar-title">AutoRun</h2>
-                <p class="qa-tool-sidebar-desc">URLを入力するだけで、仕様書生成、QA設計、Playwright実行、レポート作成までを自動化します。</p>
-              </header>
+          <div class="autorun-single">
+
+            <!-- 実行中のみ表示: 停止 -->
+            <div id="autorun-cancel-area" class="autorun-inline-actions" style="display:none">
+              <button type="button" id="autorun-cancel-btn" class="btn-outline-sm btn-danger-outline">停止</button>
+            </div>
+
+            <!-- 受付（idle）: フォームと説明を内包。実行開始で丸ごと切り替わる -->
+            <div id="autorun-idle-msg" class="autorun-intake">
+              <div class="autorun-intake-lead">
+                <div class="section-kicker">受付</div>
+                <h3 class="autorun-intake-title">URLか仕様書を渡すだけ。あとはベテランQAとして回します。</h3>
+                <p class="autorun-intake-sub">受領から実行完了レポートの納品まで、フルスペクトラムのQAを一貫して実施します。範囲は絞りません。技法・観点はシステム側が判断します。</p>
+              </div>
 
               <div id="autorun-form-area" class="card autorun-form">
                 <fieldset class="autorun-mode-switch">
@@ -78,224 +86,263 @@
                 <div id="autorun-start-status" class="input-field-message autorun-start-status"></div>
               </div>
 
-              <div id="autorun-cancel-area" class="autorun-inline-actions" style="display:none">
-                <button type="button" id="autorun-cancel-btn" class="btn-outline-sm btn-danger-outline">停止</button>
-              </div>
-
-              <div id="autorun-restart-area" class="autorun-inline-actions" style="display:none">
-                <button type="button" id="autorun-restart-btn" class="btn-outline-sm btn-block">新しく実行</button>
-              </div>
-
-              <div id="autorun-outputs-area" class="card autorun-panel" style="display:none">
-                <div class="autorun-panel-head">
-                  <div class="section-kicker">成果物</div>
+              <div class="autorun-intake-flow">
+                <div class="autorun-intake-phase">
+                  <div class="autorun-intake-phase-head">見立て</div>
+                  <ol class="autorun-intake-steps">
+                    <li><span class="ai-n">1</span>受領（URL / 仕様書）</li>
+                    <li><span class="ai-n">2</span>悉皆観測（全画面・入力・遷移・データフロー）</li>
+                    <li><span class="ai-n">3</span>テスト分析（リスク源の外在化）</li>
+                    <li><span class="ai-n">4</span>テスト計画・方針（止めずに前提化）</li>
+                  </ol>
                 </div>
-                <div id="autorun-output-links" class="qa-output-list"></div>
+                <div class="autorun-intake-phase">
+                  <div class="autorun-intake-phase-head">設計</div>
+                  <ol class="autorun-intake-steps" start="5">
+                    <li><span class="ai-n">5</span>テスト設計（技法を絞らず全面適用）</li>
+                    <li><span class="ai-n">6</span>テストケース生成（手順・データ・期待結果）</li>
+                    <li><span class="ai-n">7</span>スクリプト生成（実行可能候補）</li>
+                  </ol>
+                </div>
+                <div class="autorun-intake-phase">
+                  <div class="autorun-intake-phase-head">実行・納品</div>
+                  <ol class="autorun-intake-steps" start="8">
+                    <li><span class="ai-n">8</span>テスト実行（Playwright）</li>
+                    <li><span class="ai-n">9</span>ユーザビリティ・現新比較（ビジュアル回帰）</li>
+                    <li><span class="ai-n">10</span>評価（観測事実と品質判断を分離）</li>
+                    <li><span class="ai-n">11</span>レポート納品＋回帰・ドリフト検知</li>
+                  </ol>
+                </div>
               </div>
 
-              <!-- 最近の実行（サーバープロセス生存中のジョブのみ。再起動で消えます） -->
-              <div id="autorun-recent-area" class="card autorun-panel" style="display:none">
-                <div class="autorun-panel-head">
-                  <div class="section-kicker">最近の実行</div>
+              <div class="autorun-intake-deliverables">
+                <div class="section-kicker">納品物</div>
+                <div class="autorun-intake-chips">
+                  <span class="autorun-deliverable-chip">テスト計画</span>
+                  <span class="autorun-deliverable-chip">テスト分析</span>
+                  <span class="autorun-deliverable-chip">テスト設計</span>
+                  <span class="autorun-deliverable-chip">テストケース</span>
+                  <span class="autorun-deliverable-chip">Playwright実行結果</span>
+                  <span class="autorun-deliverable-chip">証跡パック</span>
+                  <span class="autorun-deliverable-chip">カバレッジ指標</span>
+                  <span class="autorun-deliverable-chip">品質観点マップ</span>
                 </div>
-                <div id="autorun-recent-list" class="autorun-recent-list"></div>
-                <p class="autorun-recent-note">サーバー再起動前の実行はここに表示されません。結果は各サイトのレポート「テスト実行」タブに保存されています。</p>
+              </div>
+
+              <div class="autorun-intake-scope" role="note">
+                <strong>報告の範囲について：</strong>検出できた範囲を証跡付きで報告します。検証できなかった領域は「未検証」と明記し、<em>欠陥が無いことの証明はしません</em>。現新比較は前回スナップショットがある場合のみ成立し、初回は基準確立のみです。
+              </div>
+            </div>
+
+            <!-- コックピット: 横型ステッパー + 全体進捗バー（進捗表示はここに一本化） -->
+            <div id="autorun-steps" class="card autorun-cockpit" style="display:none">
+              <div class="autorun-cockpit-head">
+                <div class="section-kicker">進捗</div>
+                <span id="autorun-phase-label" class="autorun-phase-label" aria-live="polite"></span>
+                <span id="autorun-elapsed" class="autorun-elapsed">0:00</span>
+              </div>
+              <div class="autorun-progressbar" role="progressbar" aria-label="全体進捗" aria-valuemin="0" aria-valuemax="100" id="autorun-progressbar">
+                <div id="autorun-progress-fill" class="autorun-progressbar-fill"></div>
+              </div>
+              <div class="autorun-step-row stepper">
+                <div class="autorun-step-item" id="ars-crawl">
+                  <span class="autorun-step-icon stepper-icon" aria-hidden="true"></span>
+                  <span class="autorun-step-label">仕様書生成</span>
+                  <span class="autorun-step-meta" id="ars-crawl-meta"></span>
+                </div>
+                <div class="autorun-step-item" id="ars-qa">
+                  <span class="autorun-step-icon stepper-icon" aria-hidden="true"></span>
+                  <span class="autorun-step-label">QA成果物</span>
+                  <span class="autorun-step-meta" id="ars-qa-meta"></span>
+                </div>
+                <div class="autorun-step-item" id="ars-scripts">
+                  <span class="autorun-step-icon stepper-icon" aria-hidden="true"></span>
+                  <span class="autorun-step-label">スクリプト生成</span>
+                  <span class="autorun-step-meta" id="ars-scripts-meta"></span>
+                </div>
+                <div class="autorun-step-item" id="ars-approval">
+                  <span class="autorun-step-icon stepper-icon" aria-hidden="true"></span>
+                  <span class="autorun-step-label">承認</span>
+                  <span class="autorun-step-meta" id="ars-approval-meta"></span>
+                </div>
+                <div class="autorun-step-item" id="ars-running">
+                  <span class="autorun-step-icon stepper-icon" aria-hidden="true"></span>
+                  <span class="autorun-step-label">テスト実行</span>
+                  <span class="autorun-step-meta" id="ars-running-meta"></span>
+                </div>
+                <div class="autorun-step-item" id="ars-done">
+                  <span class="autorun-step-icon stepper-icon" aria-hidden="true"></span>
+                  <span class="autorun-step-label">完了</span>
+                  <span class="autorun-step-meta" id="ars-done-meta"></span>
+                </div>
+              </div>
+              <div id="autorun-step-note" class="autorun-step-note" style="display:none"></div>
+            </div>
+
+            <!-- テスト実行中のライブプレビュー（screenshot:'on' で生成される最新PNGをポーリング表示） -->
+            <div id="autorun-preview-frame" class="execution-preview-frame" style="display:none">
+              <img id="autorun-preview-image" class="execution-preview-image" alt="テスト実行中のライブプレビュー" />
+              <div id="autorun-preview-placeholder" class="execution-preview-placeholder">
+                <div class="spinner"></div>
+                <p>ライブプレビューを準備しています…</p>
               </div>
             </div>
 
-            <div class="qa-tool-main autorun-main">
-              <div id="autorun-main-content" class="qa-readable autorun-main-content">
-                <div id="autorun-idle-msg" class="autorun-empty">URLを入力して「開始」を押すと、仕様書生成からテスト実行まで全自動で処理します。</div>
+            <!-- テスト実行中の実況（OK/NGがリアルタイムで流れる。R3-01） -->
+            <div id="autorun-live-tests-area"></div>
 
-                <!-- コックピット: 横型ステッパー + 全体進捗バー（進捗表示はここに一本化） -->
-                <div id="autorun-steps" class="card autorun-cockpit" style="display:none">
-                  <div class="autorun-cockpit-head">
-                    <div class="section-kicker">進捗</div>
-                    <span id="autorun-phase-label" class="autorun-phase-label" aria-live="polite"></span>
-                    <span id="autorun-elapsed" class="autorun-elapsed">0:00</span>
+            <!-- 完了カード（レポート「テスト実行」タブへの導線） -->
+            <div id="autorun-complete-card" class="card autorun-complete-card" style="display:none"></div>
+
+            <div id="autorun-failure-panel" class="card autorun-failure-panel" style="display:none">
+              <div class="autorun-panel-head">
+                <div>
+                  <div class="section-kicker">失敗の見立て</div>
+                  <p class="muted-copy">原因、部分成果、復旧アクションを確認できます。</p>
+                </div>
+              </div>
+              <div id="autorun-failure-body" class="autorun-failure-body"></div>
+            </div>
+
+            <div id="ar-log-section" class="card autorun-log-card" style="display:none">
+              <div class="autorun-panel-head autorun-log-head">
+                <span class="section-kicker">実行ログ</span>
+                <div class="autorun-log-tools">
+                  <div class="autorun-log-filter" role="group" aria-label="ログレベルフィルタ">
+                    <button type="button" class="autorun-log-filter-btn is-active" data-log-level="all">すべて</button>
+                    <button type="button" class="autorun-log-filter-btn" data-log-level="warn">警告以上</button>
+                    <button type="button" class="autorun-log-filter-btn" data-log-level="error">エラーのみ</button>
                   </div>
-                  <div class="autorun-progressbar" role="progressbar" aria-label="全体進捗" aria-valuemin="0" aria-valuemax="100" id="autorun-progressbar">
-                    <div id="autorun-progress-fill" class="autorun-progressbar-fill"></div>
+                  <label class="autorun-log-autoscroll"><input type="checkbox" id="autorun-log-autoscroll" checked> 自動スクロール</label>
+                  <label class="autorun-log-autoscroll"><input type="checkbox" id="autorun-log-show-raw"> 開発者向け詳細を表示</label>
+                  <button type="button" id="autorun-log-copy" class="btn-outline-sm autorun-log-copy">コピー</button>
+                </div>
+              </div>
+              <pre id="autorun-log" class="autorun-log"></pre>
+            </div>
+
+            <!-- 実行後: 新しく実行 / 成果物 / 最近の実行 -->
+            <div id="autorun-restart-area" class="autorun-inline-actions" style="display:none">
+              <button type="button" id="autorun-restart-btn" class="btn-outline-sm btn-block">新しく実行</button>
+            </div>
+
+            <div id="autorun-outputs-area" class="card autorun-panel" style="display:none">
+              <div class="autorun-panel-head">
+                <div class="section-kicker">成果物</div>
+              </div>
+              <div id="autorun-output-links" class="qa-output-list"></div>
+            </div>
+
+            <!-- 最近の実行（サーバープロセス生存中のジョブのみ。再起動で消えます） -->
+            <div id="autorun-recent-area" class="card autorun-panel" style="display:none">
+              <div class="autorun-panel-head">
+                <div class="section-kicker">最近の実行</div>
+              </div>
+              <div id="autorun-recent-list" class="autorun-recent-list"></div>
+              <p class="autorun-recent-note">サーバー再起動前の実行はここに表示されません。結果は各サイトのレポート「テスト実行」タブに保存されています。</p>
+            </div>
+
+            <div id="autorun-approval-modal" class="autorun-modal" role="dialog" aria-modal="true" aria-labelledby="arm-title" style="display:none">
+              <div class="autorun-modal-panel autorun-approval-panel">
+                <header class="autorun-modal-head">
+                  <div>
+                    <div id="arm-title" class="autorun-modal-title">テスト実行の設定</div>
+                    <div class="autorun-modal-subtitle">スクリプト生成が完了しました。実行範囲を選択して開始してください。</div>
                   </div>
-                  <div class="autorun-step-row stepper">
-                    <div class="autorun-step-item" id="ars-crawl">
-                      <span class="autorun-step-icon stepper-icon" aria-hidden="true"></span>
-                      <span class="autorun-step-label">仕様書生成</span>
-                      <span class="autorun-step-meta" id="ars-crawl-meta"></span>
-                    </div>
-                    <div class="autorun-step-item" id="ars-qa">
-                      <span class="autorun-step-icon stepper-icon" aria-hidden="true"></span>
-                      <span class="autorun-step-label">QA成果物</span>
-                      <span class="autorun-step-meta" id="ars-qa-meta"></span>
-                    </div>
-                    <div class="autorun-step-item" id="ars-scripts">
-                      <span class="autorun-step-icon stepper-icon" aria-hidden="true"></span>
-                      <span class="autorun-step-label">スクリプト生成</span>
-                      <span class="autorun-step-meta" id="ars-scripts-meta"></span>
-                    </div>
-                    <div class="autorun-step-item" id="ars-approval">
-                      <span class="autorun-step-icon stepper-icon" aria-hidden="true"></span>
-                      <span class="autorun-step-label">承認</span>
-                      <span class="autorun-step-meta" id="ars-approval-meta"></span>
-                    </div>
-                    <div class="autorun-step-item" id="ars-running">
-                      <span class="autorun-step-icon stepper-icon" aria-hidden="true"></span>
-                      <span class="autorun-step-label">テスト実行</span>
-                      <span class="autorun-step-meta" id="ars-running-meta"></span>
-                    </div>
-                    <div class="autorun-step-item" id="ars-done">
-                      <span class="autorun-step-icon stepper-icon" aria-hidden="true"></span>
-                      <span class="autorun-step-label">完了</span>
-                      <span class="autorun-step-meta" id="ars-done-meta"></span>
-                    </div>
+                  <button type="button" id="arm-close" class="autorun-modal-close" aria-label="閉じる">×</button>
+                </header>
+
+                <div class="autorun-modal-body">
+                  <div id="arm-summary" class="arm-summary">
+                    <span class="muted-copy">読み込み中...</span>
                   </div>
-                  <div id="autorun-step-note" class="autorun-step-note" style="display:none"></div>
+
+                  <section class="arm-section">
+                    <div class="control-label">実行対象</div>
+                    <div class="arm-filter-list">
+                      <label class="arm-filter-opt">
+                        <input type="radio" name="arm-filter" value="all" checked>
+                        <div class="arm-filter-text"><span>全テスト</span><span class="arm-filter-hint">すべての自動化テスト</span></div>
+                        <span id="arm-fc-all" class="arm-fc"></span>
+                      </label>
+                      <label class="arm-filter-opt">
+                        <input type="radio" name="arm-filter" value="smoke">
+                        <div class="arm-filter-text"><span>スモークのみ</span><span class="arm-filter-hint">主要画面の表示確認・最速</span></div>
+                        <span id="arm-fc-smoke" class="arm-fc"></span>
+                      </label>
+                      <label class="arm-filter-opt">
+                        <input type="radio" name="arm-filter" value="transition">
+                        <div class="arm-filter-text"><span>遷移テスト</span><span class="arm-filter-hint">スモーク＋画面間遷移確認</span></div>
+                        <span id="arm-fc-transition" class="arm-fc"></span>
+                      </label>
+                      <label class="arm-filter-opt">
+                        <input type="radio" name="arm-filter" value="form">
+                        <div class="arm-filter-text"><span>フォームテスト</span><span class="arm-filter-hint">スモーク＋フォーム入力検証</span></div>
+                        <span id="arm-fc-form" class="arm-fc"></span>
+                      </label>
+                    </div>
+                  </section>
+
+                  <section class="arm-section">
+                    <div class="control-label">実行デバイス</div>
+                    <div class="arm-filter-list">
+                      <label class="arm-filter-opt">
+                        <input type="radio" name="arm-device" value="pc" checked>
+                        <div class="arm-filter-text"><span>PC（既定）</span><span class="arm-filter-hint">デスクトップの画面サイズで実行</span></div>
+                      </label>
+                      <label class="arm-filter-opt">
+                        <input type="radio" name="arm-device" value="mobile">
+                        <div class="arm-filter-text"><span>モバイル（iPhone 13相当）</span><span class="arm-filter-hint">スマートフォンの画面サイズ・タッチ操作で実行</span></div>
+                      </label>
+                    </div>
+                  </section>
+
+                  <section class="arm-section">
+                    <label for="arm-timeout" class="control-label">1テストあたりの制限時間<span class="info-tip" tabindex="0" role="img" aria-label="1件のテストがこの時間内に終わらない場合、そのテストは失敗として打ち切られます。テスト件数が多い場合は短めにすると全体の完了が早まります。" data-tip="1件のテストがこの時間内に終わらない場合、そのテストは失敗として打ち切られます。テスト件数が多い場合は短めにすると全体の完了が早まります。">ⓘ</span></label>
+                    <select id="arm-timeout" class="url-input select-compact">
+                      <option value="10">10秒</option>
+                      <option value="30" selected>30秒（推奨）</option>
+                      <option value="60">60秒</option>
+                      <option value="120">120秒</option>
+                    </select>
+                  </section>
+
+                  <section class="arm-section">
+                    <button type="button" id="arm-view-testcases-btn" class="btn-outline-sm">テストケース一覧を確認する →</button>
+                  </section>
                 </div>
 
-                <!-- テスト実行中のライブプレビュー（screenshot:'on' で生成される最新PNGをポーリング表示） -->
-                <div id="autorun-preview-frame" class="execution-preview-frame" style="display:none">
-                  <img id="autorun-preview-image" class="execution-preview-image" alt="テスト実行中のライブプレビュー" />
-                  <div id="autorun-preview-placeholder" class="execution-preview-placeholder">
-                    <div class="spinner"></div>
-                    <p>ライブプレビューを準備しています…</p>
+                <footer class="autorun-modal-actions">
+                  <button type="button" id="arm-later-btn" class="btn-outline-sm">後で設定</button>
+                  <button type="button" id="arm-approve-btn" class="btn-primary">テスト実行を開始</button>
+                </footer>
+              </div>
+            </div>
+
+            <div id="autorun-preview-panel" class="autorun-modal autorun-preview-modal" style="display:none">
+              <div class="autorun-modal-panel autorun-preview-panel">
+                <header class="autorun-modal-head">
+                  <span class="autorun-modal-title">テストケース・スクリプト確認</span>
+                  <div class="autorun-preview-head-actions">
+                    <span id="autorun-preview-loading" class="muted-copy"></span>
+                    <button type="button" onclick="arShowPreview()" class="autorun-modal-close" aria-label="閉じる">×</button>
                   </div>
+                </header>
+                <div class="autorun-preview-tabs">
+                  <button class="result-tab is-active autorun-preview-tab" data-ptab="cases">テストケース一覧</button>
+                  <button class="result-tab autorun-preview-tab" data-ptab="script">スクリプト (.spec.ts)</button>
                 </div>
-
-                <!-- テスト実行中の実況（OK/NGがリアルタイムで流れる。R3-01） -->
-                <div id="autorun-live-tests-area"></div>
-
-                <!-- 完了カード（レポート「テスト実行」タブへの導線） -->
-                <div id="autorun-complete-card" class="card autorun-complete-card" style="display:none"></div>
-
-                <div id="autorun-failure-panel" class="card autorun-failure-panel" style="display:none">
-                  <div class="autorun-panel-head">
-                    <div>
-                      <div class="section-kicker">失敗の見立て</div>
-                      <p class="muted-copy">原因、部分成果、復旧アクションを確認できます。</p>
-                    </div>
+                <div class="autorun-preview-body">
+                  <div id="autorun-ptab-cases">
+                    <div id="autorun-preview-summary" class="autorun-preview-summary"></div>
+                    <div id="autorun-preview-table-wrap" class="autorun-preview-table-wrap"></div>
                   </div>
-                  <div id="autorun-failure-body" class="autorun-failure-body"></div>
-                </div>
-
-                <div id="ar-log-section" class="card autorun-log-card" style="display:none">
-                  <div class="autorun-panel-head autorun-log-head">
-                    <span class="section-kicker">実行ログ</span>
-                    <div class="autorun-log-tools">
-                      <div class="autorun-log-filter" role="group" aria-label="ログレベルフィルタ">
-                        <button type="button" class="autorun-log-filter-btn is-active" data-log-level="all">すべて</button>
-                        <button type="button" class="autorun-log-filter-btn" data-log-level="warn">警告以上</button>
-                        <button type="button" class="autorun-log-filter-btn" data-log-level="error">エラーのみ</button>
-                      </div>
-                      <label class="autorun-log-autoscroll"><input type="checkbox" id="autorun-log-autoscroll" checked> 自動スクロール</label>
-                      <label class="autorun-log-autoscroll"><input type="checkbox" id="autorun-log-show-raw"> 開発者向け詳細を表示</label>
-                      <button type="button" id="autorun-log-copy" class="btn-outline-sm autorun-log-copy">コピー</button>
-                    </div>
-                  </div>
-                  <pre id="autorun-log" class="autorun-log"></pre>
-                </div>
-
-                <div id="autorun-approval-modal" class="autorun-modal" role="dialog" aria-modal="true" aria-labelledby="arm-title" style="display:none">
-                  <div class="autorun-modal-panel autorun-approval-panel">
-                    <header class="autorun-modal-head">
-                      <div>
-                        <div id="arm-title" class="autorun-modal-title">テスト実行の設定</div>
-                        <div class="autorun-modal-subtitle">スクリプト生成が完了しました。実行範囲を選択して開始してください。</div>
-                      </div>
-                      <button type="button" id="arm-close" class="autorun-modal-close" aria-label="閉じる">×</button>
-                    </header>
-
-                    <div class="autorun-modal-body">
-                      <div id="arm-summary" class="arm-summary">
-                        <span class="muted-copy">読み込み中...</span>
-                      </div>
-
-                      <section class="arm-section">
-                        <div class="control-label">実行対象</div>
-                        <div class="arm-filter-list">
-                          <label class="arm-filter-opt">
-                            <input type="radio" name="arm-filter" value="all" checked>
-                            <div class="arm-filter-text"><span>全テスト</span><span class="arm-filter-hint">すべての自動化テスト</span></div>
-                            <span id="arm-fc-all" class="arm-fc"></span>
-                          </label>
-                          <label class="arm-filter-opt">
-                            <input type="radio" name="arm-filter" value="smoke">
-                            <div class="arm-filter-text"><span>スモークのみ</span><span class="arm-filter-hint">主要画面の表示確認・最速</span></div>
-                            <span id="arm-fc-smoke" class="arm-fc"></span>
-                          </label>
-                          <label class="arm-filter-opt">
-                            <input type="radio" name="arm-filter" value="transition">
-                            <div class="arm-filter-text"><span>遷移テスト</span><span class="arm-filter-hint">スモーク＋画面間遷移確認</span></div>
-                            <span id="arm-fc-transition" class="arm-fc"></span>
-                          </label>
-                          <label class="arm-filter-opt">
-                            <input type="radio" name="arm-filter" value="form">
-                            <div class="arm-filter-text"><span>フォームテスト</span><span class="arm-filter-hint">スモーク＋フォーム入力検証</span></div>
-                            <span id="arm-fc-form" class="arm-fc"></span>
-                          </label>
-                        </div>
-                      </section>
-
-                      <section class="arm-section">
-                        <div class="control-label">実行デバイス</div>
-                        <div class="arm-filter-list">
-                          <label class="arm-filter-opt">
-                            <input type="radio" name="arm-device" value="pc" checked>
-                            <div class="arm-filter-text"><span>PC（既定）</span><span class="arm-filter-hint">デスクトップの画面サイズで実行</span></div>
-                          </label>
-                          <label class="arm-filter-opt">
-                            <input type="radio" name="arm-device" value="mobile">
-                            <div class="arm-filter-text"><span>モバイル（iPhone 13相当）</span><span class="arm-filter-hint">スマートフォンの画面サイズ・タッチ操作で実行</span></div>
-                          </label>
-                        </div>
-                      </section>
-
-                      <section class="arm-section">
-                        <label for="arm-timeout" class="control-label">1テストあたりの制限時間<span class="info-tip" tabindex="0" role="img" aria-label="1件のテストがこの時間内に終わらない場合、そのテストは失敗として打ち切られます。テスト件数が多い場合は短めにすると全体の完了が早まります。" data-tip="1件のテストがこの時間内に終わらない場合、そのテストは失敗として打ち切られます。テスト件数が多い場合は短めにすると全体の完了が早まります。">ⓘ</span></label>
-                        <select id="arm-timeout" class="url-input select-compact">
-                          <option value="10">10秒</option>
-                          <option value="30" selected>30秒（推奨）</option>
-                          <option value="60">60秒</option>
-                          <option value="120">120秒</option>
-                        </select>
-                      </section>
-
-                      <section class="arm-section">
-                        <button type="button" id="arm-view-testcases-btn" class="btn-outline-sm">テストケース一覧を確認する →</button>
-                      </section>
-                    </div>
-
-                    <footer class="autorun-modal-actions">
-                      <button type="button" id="arm-later-btn" class="btn-outline-sm">後で設定</button>
-                      <button type="button" id="arm-approve-btn" class="btn-primary">テスト実行を開始</button>
-                    </footer>
-                  </div>
-                </div>
-
-                <div id="autorun-preview-panel" class="autorun-modal autorun-preview-modal" style="display:none">
-                  <div class="autorun-modal-panel autorun-preview-panel">
-                    <header class="autorun-modal-head">
-                      <span class="autorun-modal-title">テストケース・スクリプト確認</span>
-                      <div class="autorun-preview-head-actions">
-                        <span id="autorun-preview-loading" class="muted-copy"></span>
-                        <button type="button" onclick="arShowPreview()" class="autorun-modal-close" aria-label="閉じる">×</button>
-                      </div>
-                    </header>
-                    <div class="autorun-preview-tabs">
-                      <button class="result-tab is-active autorun-preview-tab" data-ptab="cases">テストケース一覧</button>
-                      <button class="result-tab autorun-preview-tab" data-ptab="script">スクリプト (.spec.ts)</button>
-                    </div>
-                    <div class="autorun-preview-body">
-                      <div id="autorun-ptab-cases">
-                        <div id="autorun-preview-summary" class="autorun-preview-summary"></div>
-                        <div id="autorun-preview-table-wrap" class="autorun-preview-table-wrap"></div>
-                      </div>
-                      <div id="autorun-ptab-script" style="display:none">
-                        <pre id="autorun-preview-spec" class="autorun-preview-spec"></pre>
-                      </div>
-                    </div>
+                  <div id="autorun-ptab-script" style="display:none">
+                    <pre id="autorun-preview-spec" class="autorun-preview-spec"></pre>
                   </div>
                 </div>
               </div>
             </div>
+
           </div>
         </section>

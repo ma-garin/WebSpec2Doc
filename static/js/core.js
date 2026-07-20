@@ -23,6 +23,7 @@ const VIEW_HEADER = {
   testcases: { trail: ['ダッシュボード', 'テストケース'], title: 'テストケース一覧' },
   'run-history': { trail: ['ダッシュボード', '実行履歴'], title: '実行履歴' },
   'user-guide': { trail: ['ダッシュボード', 'ユーザーガイド'], title: 'ユーザーガイド' },
+  references: { trail: ['ダッシュボード', '参考'], title: '参考 — 依拠する標準・先行研究・事例' },
   settings: { trail: ['ダッシュボード', '設定'], title: '設定' },
 };
 const escHtml = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -43,6 +44,7 @@ const VIEW_PATHS = {
   testcases: '/testcases',
   'run-history': '/run-history',
   'user-guide': '/user-guide',
+  references: '/references',
   settings: '/settings',
 };
 const PATH_VIEWS = { '/home': 'dashboard', '/dashboard': 'dashboard' };

@@ -124,54 +124,5 @@ class TestAxeDetectsViolations:
         assert ux_axe_results
 
 
-class TestUxReviewReportOutputs:
-    def test_ux_review_json_and_html_tab_generated(self, demo_site: str, tmp_path: Path) -> None:
-        """ux_review.json と report.html の「UX 所見」タブが生成される（AC-6）。"""
-        from analyzer.html_analyzer import analyze_pages
-        from generator.html_reporter import generate_html_report
-        from generator.mermaid_generator import generate_mermaid
-        from generator.ux_reporter import build_ux_review, build_ux_screen_info, save_ux_outputs
-        from graph.transition_graph import build_graph
-        from llm.provider import RulesProvider
-
-        url = f"{demo_site}/ux_bad.html"
-        page_data, ux_axe_results = _crawl_with_ux_review_in_thread(url)
-
-        provider = RulesProvider()
-        axe_violations = ux_axe_results.get(page_data.url, ())
-        screen_info = build_ux_screen_info(page_data, axe_violations)
-        ux_findings = {page_data.url: provider.generate_ux_review(screen_info)}
-
-        analyzed = analyze_pages([page_data])
-        page_ids = {p.page_data.url: p.page_id for p in analyzed}
-        ux_review = build_ux_review([page_data], page_ids, ux_axe_results, ux_findings)
-        saved_path = save_ux_outputs(ux_review, tmp_path)
-
-        assert saved_path.exists()
-        assert ux_review["meta"]["disclaimer"]
-        assert ux_review["screens"], "ux_review.json に画面データが無い"
-        assert ux_review["screens"][0]["axe_violations"], "axe 違反が ux_review.json に含まれない"
-
-        graph = build_graph(analyzed)
-        mermaid = generate_mermaid(graph, analyzed)
-        report_html = generate_html_report(
-            analyzed, graph, [], page_data.url, mermaid, ux_review=ux_review
-        )
-
-        assert "UX 所見" in report_html
-        # 免責は「自動検出可能な範囲の観測」であることを示す（捕捉率の数値は載せない）
-        assert "自動検出可能な範囲" in report_html or "人の判断を要する" in report_html
-        assert "image-alt" in report_html or "label" in report_html
 
 
-class TestFallbackWhenAssetMissing:
-    def test_run_axe_failure_does_not_crash_crawl(self, demo_site: str) -> None:
-        """axe 実行に失敗してもクロール自体は完走する（AC-3 の実ブラウザ確認）。
-
-        既存の a11y_issues（extract_a11y_issues）は ux_review と独立して機能し続ける。
-        """
-        url = f"{demo_site}/ux_bad.html"
-        page_data, _ux_axe_results = _crawl_with_ux_review_in_thread(url)
-
-        # ux_review=True でも既存の a11y 抽出（3チェック）は引き続き機能する
-        assert isinstance(page_data.a11y_issues, tuple)

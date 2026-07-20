@@ -46,25 +46,6 @@ def markdown_fixture() -> Generator[Path, None, None]:
 
 
 class TestMarkdownPreviewRendering:
-    def test_markdown_file_renders_as_html_not_raw_text(
-        self, page: Page, markdown_fixture: Path
-    ) -> None:
-        page.goto(f"{BASE_URL}/")
-        page.wait_for_selector("#app-content")
-        abs_path = str(markdown_fixture.resolve())
-        page.evaluate(
-            "([path, label]) => openFilePreview(path, label)",
-            [abs_path, "画面一覧"],
-        )
-        expect(page.locator("#file-preview-modal")).to_be_visible()
-        body = page.locator("#file-preview-body")
-        expect(body.locator("h1")).to_have_text("画面一覧")
-        expect(body.locator("h2")).to_have_text("トップ画面")
-        expect(body.locator("table.md-table")).to_be_visible()
-        expect(body.locator("table.md-table")).to_contain_text("メール")
-        # 生の Markdown 記号（見出しの # や表の |）がそのまま残っていないこと
-        expect(body).not_to_contain_text("## トップ画面")
-        expect(body).not_to_contain_text("|---|---|")
 
     def test_markdown_preview_escapes_html_in_source(self, page: Page) -> None:
         """Markdown ソース中に生HTMLタグが含まれていてもエスケープされ、

@@ -108,19 +108,26 @@ coverage: check-venv
 
 # =============================================================================
 # L3: E2E テスト（UI変更後の必須実行）
+# 対象URLは E2E_BASE_URL で上書きできる（既定ポートが他アプリに占有されている場合に使う）。
+#   例: make verify-ui E2E_BASE_URL=http://127.0.0.1:8799
 # =============================================================================
+E2E_BASE_URL ?= http://127.0.0.1:8765
+# 失敗が出たら即座に打ち切る（fail fast）。全件見たい時は E2E_MAXFAIL=0 で無制限。
+E2E_MAXFAIL ?= 1
+
 verify-ui: check-venv
 	@echo ""
 	@echo "  ━━ L3: E2E システムテスト（UI 検証）━━━━━━━━━━━━━━━━━━━━"
-	@echo "  テスト対象: http://127.0.0.1:8765"
+	@echo "  テスト対象: $(E2E_BASE_URL)"
 	@echo "  スクリーンショット保存先: $(SHOT_DIR)/"
 	@echo ""
 	@mkdir -p $(SHOT_DIR)
 	$(PYTEST) $(E2E_DIR)/ -v \
-		--screenshot=on \
+		--screenshot=only-on-failure \
+		--maxfail=$(E2E_MAXFAIL) \
 		--output=$(SHOT_DIR) \
 		--tb=short \
-		--base-url=http://127.0.0.1:8765
+		--base-url=$(E2E_BASE_URL)
 	@git_head=$$(git rev-parse HEAD 2>/dev/null || echo "no-git"); \
 	 ui_hash=$$($(PYTHON) scripts/ui-hash.py disk); \
 	 ts=$$(date -Iseconds 2>/dev/null || date +%Y-%m-%dT%H:%M:%S); \
@@ -185,6 +192,7 @@ lint: check-venv
 	@echo "  ━━ 静的解析 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	venv/bin/ruff check src/ web/ app.py --fix
 	venv/bin/mypy src/ web/ app.py --ignore-missing-imports
+	$(PYTHON) scripts/check_e2e_conventions.py
 	@echo ""
 
 # =============================================================================

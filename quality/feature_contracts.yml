@@ -1537,12 +1537,14 @@
         "web/routes/autorun_stages.py"
       ],
       "core_files": [
+        "src/autorun/qf_schema.py",
         "src/autorun/stages.py",
-        "src/autorun/qf_schema.py"
+        "src/autorun/suggest.py"
       ],
       "symbols": [
-        "build_stage",
         "Pipeline",
+        "build_stage",
+        "suggest_additions",
         "test_case_rows",
         "to_csv"
       ],

@@ -38,6 +38,14 @@ function _autorunUpdateMode() {
   const documentMode = _autorunMode() === 'document';
   if (options) options.hidden = !documentMode;
   if (form) form.classList.toggle('is-document-mode', documentMode);
+  // 仕様3: どちらを選択したかを明示する
+  const current = document.getElementById('autorun-mode-current');
+  if (current) {
+    current.textContent = documentMode
+      ? '文書駆動を選択中 — 要件・仕様文書と実測画面を突き合わせます。'
+      : 'URL駆動を選択中 — 実測した画面からテストを生成します。';
+    current.classList.toggle('is-document', documentMode);
+  }
   _autorunUpdateTargetField();
 }
 

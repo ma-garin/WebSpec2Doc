@@ -243,6 +243,16 @@
     generate.addEventListener('click', function () { generateStage(stage.stage_id); });
     bar.appendChild(generate);
 
+    if (stage.items.length) {
+      var suggest = document.createElement('button');
+      suggest.type = 'button';
+      suggest.className = 'btn-outline-sm';
+      suggest.textContent = '抜けをLLMに聞く';
+      suggest.disabled = state.busy;
+      suggest.addEventListener('click', function () { suggestFor(stage.stage_id); });
+      bar.appendChild(suggest);
+    }
+
     if (stage.skippable_on_rerun && state.pipeline.is_rerun && stage.status !== 'skipped') {
       var skip = document.createElement('button');
       skip.type = 'button';
@@ -344,6 +354,84 @@
         domain: state.domain, stage_id: stageId,
       }));
       state.selected = state.pipeline.current_stage_id || stageId;
+    });
+  }
+
+  function renderSuggestions(stageId, result) {
+    var panel = $('autorun-stage-panel');
+    if (!panel) return;
+
+    var box = document.createElement('div');
+    box.className = 'autorun-suggest';
+
+    var head = document.createElement('div');
+    head.className = 'autorun-suggest-head';
+    head.textContent = result.available
+      ? 'LLM からの追加候補（採用は人が判断します）'
+      : 'LLM の提案は利用できません';
+    box.appendChild(head);
+
+    if (result.message) {
+      var msg = document.createElement('p');
+      msg.className = 'autorun-suggest-msg';
+      msg.textContent = result.message;
+      box.appendChild(msg);
+    }
+
+    (result.suggestions || []).forEach(function (s) {
+      var row = document.createElement('div');
+      row.className = 'autorun-suggest-item';
+
+      var title = document.createElement('div');
+      title.className = 'autorun-suggest-title';
+      title.textContent = s.title;
+      row.appendChild(title);
+
+      if (s.detail) {
+        var detail = document.createElement('p');
+        detail.className = 'autorun-suggest-detail';
+        detail.textContent = s.detail;
+        row.appendChild(detail);
+      }
+      if (s.reason) {
+        var reason = document.createElement('p');
+        reason.className = 'autorun-suggest-reason';
+        reason.textContent = '理由: ' + s.reason;
+        row.appendChild(reason);
+      }
+
+      var adopt = document.createElement('button');
+      adopt.type = 'button';
+      adopt.className = 'btn-outline-sm';
+      adopt.textContent = '項目として採用';
+      adopt.addEventListener('click', function () {
+        adoptSuggestion(stageId, s.title, s.detail);
+      });
+      row.appendChild(adopt);
+      box.appendChild(row);
+    });
+
+    panel.appendChild(box);
+  }
+
+  function suggestFor(stageId) {
+    return withBusy(async function () {
+      var urlInput = $('autorun-url');
+      var result = await call('/api/autorun/stages/suggest', json({
+        domain: state.domain,
+        stage_id: stageId,
+        url: urlInput ? urlInput.value : '',
+      }));
+      // render() で消えないよう、描画後に追記する
+      setTimeout(function () { renderSuggestions(stageId, result); }, 0);
+    });
+  }
+
+  function adoptSuggestion(stageId, title, detail) {
+    return withBusy(async function () {
+      state.pipeline = await call('/api/autorun/stages/adopt', json({
+        domain: state.domain, stage_id: stageId, title: title, detail: detail,
+      }));
     });
   }
 

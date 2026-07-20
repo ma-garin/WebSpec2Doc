@@ -192,6 +192,54 @@ class TestItemEditing:
         assert res.status_code == 404
 
 
+class TestSuggestAndAdopt:
+    """LLM 提案は補助。段階の内容を壊さないこと。"""
+
+    def test_suggest_without_llm_is_not_an_error(self, client, monkeypatch) -> None:
+        """LLM 未設定でも 200 で返し、利用不可であることを伝える。"""
+        import autorun.suggest as suggest_mod
+
+        class _NoKey:
+            api_key = ""
+            model = "m"
+            base_url = "http://127.0.0.1:11434/v1"
+
+        monkeypatch.setattr(suggest_mod, "resolve_endpoint", lambda: _NoKey())
+        _post(client, "/api/autorun/stages/generate",
+              {"domain": DOMAIN, "stage_id": "test_objective"})
+        res = _post(client, "/api/autorun/stages/suggest",
+                    {"domain": DOMAIN, "stage_id": "test_objective"})
+        assert res.status_code == 200
+        assert res.get_json()["available"] is False
+
+    def test_suggest_rejects_unknown_stage(self, client) -> None:
+        res = _post(client, "/api/autorun/stages/suggest",
+                    {"domain": DOMAIN, "stage_id": "nope"})
+        assert res.status_code == 400
+
+    def test_adopting_appends_item_marked_as_llm(self, client) -> None:
+        _post(client, "/api/autorun/stages/generate",
+              {"domain": DOMAIN, "stage_id": "test_objective"})
+        before = client.get(f"/api/autorun/stages?domain={DOMAIN}").get_json()
+        count = len(next(s for s in before["stages"] if s["stage_id"] == "test_objective")["items"])
+
+        res = _post(client, "/api/autorun/stages/adopt", {
+            "domain": DOMAIN, "stage_id": "test_objective",
+            "title": "セッション期限切れの確認", "detail": "期限切れ後の操作",
+        })
+        assert res.status_code == 200
+        stage = next(s for s in res.get_json()["stages"] if s["stage_id"] == "test_objective")
+        assert len(stage["items"]) == count + 1
+        adopted = stage["items"][-1]
+        assert adopted["title"] == "セッション期限切れの確認"
+        assert adopted["source"] == "llm"
+
+    def test_adopt_rejects_empty_title(self, client) -> None:
+        res = _post(client, "/api/autorun/stages/adopt",
+                    {"domain": DOMAIN, "stage_id": "test_objective", "title": "  "})
+        assert res.status_code == 400
+
+
 class TestTestCaseExport:
     """仕様13: QualityForward のカラム構成で取り出せる。"""
 

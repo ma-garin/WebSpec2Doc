@@ -84,15 +84,21 @@ def run_self_check(
             "note": "実操作を持つテストが無いため、自己検証の対象がありません。",
         }
 
-    # 変異体は対象へ一切アクセスしない（ローカルの合成応答のみ）ため、
-    # 通常実行のような「対象への配慮」は不要。並列数を上げて自己検証の
-    # 所要時間を抑える。
+    # 変異体は対象へ一切アクセスしない（ローカルの合成応答のみ）。
+    # これは従来「そうなっているはず」という**未証明の主張**だった（自己レッドチーミング #9）。
+    # K1 送信ゲートウェイを block_all で動かすことで、
+    #   1. 万一の送信を機構として遮断し
+    #   2. 送信が 0 件であることを記録で実証する
+    # 並列数を上げてよいのは、対象へ触れないことがこれで保証されるため。
+    from web.services.egress_gateway import EgressPolicy
+
     result = run_playwright(
         mutant_spec,
         mutation_dir,
         per_test_timeout_sec=per_test_timeout_sec,
         add_log=add_log,
         workers=8,
+        egress_policy=EgressPolicy(workers=8, block_all=True),
     )
 
     if not result.get("tests") and result.get("error"):
@@ -108,6 +114,7 @@ def run_self_check(
     detected = sum(1 for t in tests if t["status"] == "failed")
     score = round(100 * detected / total, 1) if total else 0.0
 
+    egress = result.get("egress") or {}
     return {
         "ok": True,
         "applicable": True,
@@ -117,4 +124,7 @@ def run_self_check(
         "survivor_count": len(survivors),
         "score": score,
         "duration_ms": result.get("duration_ms", 0),
+        # 「対象へ一切アクセスしない」の実証（allowed が 0 であること）
+        "egress": egress,
+        "no_egress_proven": egress.get("allowed") == 0,
     }

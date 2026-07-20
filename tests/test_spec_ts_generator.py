@@ -57,7 +57,10 @@ class TestGenerateSpecTs:
         generate_spec_ts("example.com", src, out)
 
         content = out.read_text()
-        assert "import { test, expect } from '@playwright/test';" in content
+        # K1 送信ゲートウェイ（設計計画 rev.3）を必ず経由させるため、
+        # @playwright/test を直接 import しない。迂回不能性の担保。
+        assert "import { test, expect } from './_autorun_egress';" in content
+        assert "from '@playwright/test'" not in content
         assert "example.com" in content
 
     def test_normal_candidate_generates_test_block(self, tmp_path: Path) -> None:

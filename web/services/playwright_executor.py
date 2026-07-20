@@ -79,6 +79,7 @@ def run_playwright(
     add_log: Callable[[str], None] | None = None,
     device: str = "pc",
     workers: int = 1,
+    egress_policy: Any = None,
 ) -> dict[str, Any]:
     """
     ローカル @playwright/test CLI でスペックを実行し、結果を返す。
@@ -94,6 +95,9 @@ def run_playwright(
         workers: 並列実行数。既定は1（対象サイトへ同時多数アクセスしないための配慮）。
             対象へ一切アクセスしない自己検証（mutation_verifier）等、外部への
             配慮が不要な用途でのみ増やすこと。
+        egress_policy: K1 送信ゲートウェイの方針（`EgressPolicy`）。
+            省略時は既定方針を使う。生成テストは必ずゲートウェイを経由するため、
+            ここで SSRF 遮断・予算上限・全件記録が強制される。
     """
     if device not in ("pc", "mobile"):
         device = "pc"
@@ -131,6 +135,21 @@ def run_playwright(
     local_cli = _PW_ENV_DIR / "node_modules" / ".bin" / "playwright"
     cli_cmd = str(local_cli) if local_cli.is_file() else "npx"
 
+    # K1 送信ゲートウェイのフィクスチャを spec の隣へ生成する。
+    # 生成 spec は `./_autorun_egress` から test を import するため、
+    # これが無いと実行できない＝ゲートウェイの迂回が構造的に不可能。
+    from web.services.egress_gateway import (
+        EGRESS_LOG_NAME,
+        EgressPolicy,
+        write_egress_fixture,
+    )
+
+    policy = egress_policy if egress_policy is not None else EgressPolicy(workers=workers)
+    egress_log_path = output_dir / EGRESS_LOG_NAME
+    if egress_log_path.exists():
+        egress_log_path.unlink()
+    write_egress_fixture(spec_path.parent, egress_log_path)
+
     raw_json_path = output_dir / "playwright_raw.json"
     # JS コンフィグを spec ファイルの隣に生成（レポーター含め全設定を記述）
     config_path = _write_pw_config(
@@ -163,6 +182,10 @@ def run_playwright(
         env = os.environ.copy()
         existing = env.get("NODE_PATH", "")
         env["NODE_PATH"] = f"{env_node_modules}:{existing}" if existing else env_node_modules
+        # K1: 送信方針をフィクスチャへ渡す（SSRF遮断・予算・全件記録）
+        from web.services.egress_gateway import POLICY_ENV
+
+        env[POLICY_ENV] = policy.to_json()
         proc = subprocess.run(
             cmd,
             capture_output=True,
@@ -185,6 +208,11 @@ def run_playwright(
 
     raw_json = _read_raw_json(raw_json_path, proc.stdout)
     result = _parse_results(raw_json, proc.stdout, proc.stderr, proc.returncode)
+    # K1: 実際に何が送信され、何が遮断されたかの記録。
+    # 「送信0」を主張する用途（自己検証）では、これが唯一の証拠になる。
+    from web.services.egress_gateway import read_egress_report
+
+    result["egress"] = read_egress_report(egress_log_path).to_dict()
     json_report_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     fallback_html_path.write_text(_build_html_report(result), encoding="utf-8")
     return result

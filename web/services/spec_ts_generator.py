@@ -53,11 +53,15 @@ def generate_spec_ts(
     filtered = _apply_filter(candidates, filter_mode)
     screen_index = _screen_index_from_report(_find_report_path(candidates_path, report_path))
 
+    # K1 送信ゲートウェイ（設計計画 rev.3）を必ず経由させる。
+    # `@playwright/test` から直接 test を取らず、auto-use フィクスチャ経由にすることで、
+    # テスト側から無効化できない形で SSRF 遮断・予算強制・全件記録を効かせる。
     lines = [
-        "import { test, expect } from '@playwright/test';",
+        "import { test, expect } from './_autorun_egress';",
         "",
         f"// AutoRun generated spec — {domain}",
         f"// filter: {filter_mode}  candidates: {len(filtered)}/{len(candidates)}",
+        "// 送信は K1 ゲートウェイ（_autorun_egress.ts）を必ず経由する。",
         "",
     ]
 

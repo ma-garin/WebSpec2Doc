@@ -1619,6 +1619,47 @@
       ]
     },
     {
+      "feature_id": "autorun_security_kernel",
+      "name": "AutoRun セキュリティカーネル（送信ゲートウェイ・非信頼コンテンツ境界）",
+      "risk_level": "critical",
+      "status": "implemented",
+      "ui_files": [],
+      "route_files": [],
+      "core_files": [
+        "web/services/egress_gateway.py",
+        "web/services/untrusted_content.py"
+      ],
+      "symbols": [
+        "assert_target_allowed",
+        "write_egress_fixture",
+        "read_egress_report",
+        "build_llm_observation",
+        "scan_for_secrets",
+        "escape_untrusted"
+      ],
+      "outputs": [
+        "egress_log.ndjson",
+        "送信レポート（allowed/denied/予算切れ）",
+        "秘匿化済みの秘密検出結果"
+      ],
+      "persistence": [
+        "output/{domain}/qa_process/egress_log.ndjson"
+      ],
+      "failure_modes": [
+        "ssrf_attempt_denied",
+        "dns_rebinding_denied",
+        "self_origin_denied",
+        "budget_exhausted",
+        "prompt_injection_neutralized",
+        "secret_redacted"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "evidence"
+      ]
+    },
+    {
       "feature_id": "autorun_self_check",
       "name": "AutoRun 自己検証（ミューテーションテスト）",
       "risk_level": "high",

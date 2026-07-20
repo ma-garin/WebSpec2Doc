@@ -822,15 +822,58 @@ def _phase_generate_scripts(job: AutoRunJob) -> None:
         job.step_data["scripts"] = {}
     job.outputs["spec_ts"] = str(spec_path.resolve())
     job.add_log(f"スクリプト生成完了: {spec_path.name}")
+    _run_mutation_self_check(job, spec_path, spec_dir)
     _publish_playwright_stage(job, spec_dir)
+
+
+def _run_mutation_self_check(job: AutoRunJob, spec_path: Path, spec_dir: Path) -> None:
+    """生成したテストが実際に欠陥を検出できるかを自己検証する（ミューテーションテスト）。
+
+    対象サイトへは一切アクセスしない（page.route で全リクエストをローカルの
+    壊れた応答に差し替える）。以前は、生成テストが expect(body).toBeVisible() のみで
+    実質的な検証をしておらず、対象を完全に破壊してもテストが全件PASSする
+    （ミューテーションスコア0%）欠陥を、人が別途スクリプトを書いて初めて発見していた。
+    この自己検証により、AutoRun自身がそれを毎回の実行で確認する。
+    """
+    from web.services.mutation_verifier import run_self_check
+
+    job.add_log("自己検証（ミューテーションテスト）を実行しています…")
+    try:
+        result = run_self_check(spec_path, spec_dir, add_log=job.add_log)
+    except Exception as exc:
+        job.add_log(f"自己検証を実行できませんでした: {exc}")
+        return
+
+    result_path = spec_dir / "mutation_verification.json"
+    result_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    if not result.get("applicable", True):
+        job.add_log(f"自己検証: {result.get('note', '対象がありません')}")
+        return
+    if not result.get("ok"):
+        job.add_log(f"自己検証を実行できませんでした: {result.get('error', '')}")
+        return
+
+    score = result.get("score", 0)
+    survivor_count = result.get("survivor_count", 0)
+    if survivor_count:
+        job.add_log(
+            f"自己検証: スコア {score}%（{survivor_count}件が、対象を破壊しても"
+            "合格してしまう弱いテストとして検出されました。承認前にご確認ください）"
+        )
+    else:
+        job.add_log(f"自己検証: スコア {score}%（全テストが対象の破壊を正しく検出）")
 
 
 def _publish_playwright_stage(job: AutoRunJob, spec_dir: Path) -> None:
     """段階8（Playwright 自動化）の内容を生成して保存する。
 
     生成結果を人が確認できるようにするため、関門2で待つ前に用意しておく。
+    自己検証（ミューテーションテスト）の結果があれば、承認前に見える形で提示する。
     """
-    from autorun.stages import STAGE_PLAYWRIGHT, Observation, Pipeline, build_stage
+    from dataclasses import replace
+
+    from autorun.stages import STAGE_PLAYWRIGHT, Observation, Pipeline, StageItem, build_stage
 
     stages_path = spec_dir / "stages.json"
     if not stages_path.is_file():
@@ -844,6 +887,32 @@ def _publish_playwright_stage(job: AutoRunJob, spec_dir: Path) -> None:
             else None
         )
         stage = build_stage(STAGE_PLAYWRIGHT, Observation(), pipeline, automation)
+
+        mutation_path = spec_dir / "mutation_verification.json"
+        if mutation_path.is_file():
+            mutation = json.loads(mutation_path.read_text(encoding="utf-8"))
+            if mutation.get("applicable", True) and mutation.get("ok"):
+                score = mutation.get("score", 0)
+                survivors = mutation.get("survivors") or []
+                detail = (
+                    f"対象を完全に破壊しても検出できるかを自己検証しました。\n"
+                    f"スコア: {score}%（{mutation.get('detected', 0)}"
+                    f"/{mutation.get('total', 0)}件が正しく検出）"
+                )
+                if survivors:
+                    listed = "\n".join(f"・{title}" for title in survivors[:20])
+                    detail += (
+                        f"\n\n以下 {len(survivors)} 件は、対象を破壊しても合格して"
+                        f"しまう弱いテストです。承認前にご確認ください。\n{listed}"
+                    )
+                mutation_item = StageItem(
+                    item_id="pw-self-check",
+                    title=f"自己検証（ミューテーションテスト）: {score}%",
+                    detail=detail,
+                    assumed=bool(survivors),
+                )
+                stage = replace(stage, items=stage.items + (mutation_item,))
+
         pipeline = pipeline.replaced(stage).recorded(
             "generate", STAGE_PLAYWRIGHT, f"{len(stage.items)}項目を生成"
         )

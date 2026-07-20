@@ -34,6 +34,7 @@ def generate_evidence_pack(job: AutoRunJob, output_dir: Path) -> dict[str, Path]
         screenshots=_screenshots_by_page(domain_dir),
         manual_procedures=_read_text(qa_dir / "manual_procedures.md"),
         audit_entries=_read_audit_tail(domain_dir / "audit.jsonl"),
+        mutation_check=_read_json(qa_dir / "mutation_verification.json"),
     )
     return save_evidence_pack(pack, qa_dir)
 

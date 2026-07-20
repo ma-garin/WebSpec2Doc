@@ -1617,6 +1617,42 @@
         "happy_path",
         "error_path"
       ]
+    },
+    {
+      "feature_id": "autorun_self_check",
+      "name": "AutoRun 自己検証（ミューテーションテスト）",
+      "risk_level": "high",
+      "status": "implemented",
+      "ui_files": [
+        "static/js/autorun-report.js"
+      ],
+      "route_files": [
+        "web/routes/auto_run.py"
+      ],
+      "core_files": [
+        "web/services/mutation_verifier.py"
+      ],
+      "symbols": [
+        "run_self_check",
+        "build_mutant_spec"
+      ],
+      "outputs": [
+        "mutation_verification.json",
+        "自己検証スコア",
+        "弱いテストの一覧"
+      ],
+      "persistence": [
+        "output/{domain}/qa_process/mutation_check/"
+      ],
+      "failure_modes": [
+        "self_check_not_applicable",
+        "self_check_execution_error"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "evidence"
+      ]
     }
   ]
 }

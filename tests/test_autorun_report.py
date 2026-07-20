@@ -127,6 +127,33 @@ class TestReportApi:
         assert data["test_failed"] == 1
         assert "証明ではありません" in data["claim_scope"]
 
+    def test_dashboard_shows_self_check_score_when_available(
+        self, client, workspace
+    ) -> None:
+        """AutoRun自身のミューテーションテスト自己検証スコアをダッシュボードに表示する。"""
+        qa = workspace / DOMAIN / "qa_process"
+        (qa / "mutation_verification.json").write_text(
+            json.dumps(
+                {
+                    "ok": True,
+                    "applicable": True,
+                    "total": 10,
+                    "detected": 9,
+                    "survivors": ["PW-0005 x [P001]"],
+                    "survivor_count": 1,
+                    "score": 90.0,
+                }
+            ),
+            encoding="utf-8",
+        )
+        data = client.get(f"/api/autorun/report/{DOMAIN}?section=dashboard").get_json()["data"]
+        assert data["self_check_score"] == 90.0
+        assert data["self_check_survivor_count"] == 1
+
+    def test_dashboard_self_check_is_none_when_not_yet_run(self, client) -> None:
+        data = client.get(f"/api/autorun/report/{DOMAIN}?section=dashboard").get_json()["data"]
+        assert data["self_check_score"] is None
+
     def test_plan_section_returns_generated_document(self, client) -> None:
         body = client.get(f"/api/autorun/report/{DOMAIN}?section=plan").get_json()
         assert body["kind"] == "markdown"

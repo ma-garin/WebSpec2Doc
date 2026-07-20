@@ -58,6 +58,15 @@
     grid.appendChild(tile('成功', passed == null ? '—' : passed));
     grid.appendChild(tile('失敗', failed == null ? '—' : failed,
       failed ? '内容は「実行結果」を参照' : ''));
+
+    // AutoRun自身が実行した自己検証（ミューテーションテスト）のスコア。
+    // 生成テストが対象の破壊を実際に検出できるかを毎回確認する。
+    var scScore = data.self_check_score, scSurvivors = data.self_check_survivor_count;
+    grid.appendChild(tile(
+      '自己検証スコア',
+      scScore == null ? '未実施' : scScore + '%',
+      scSurvivors ? scSurvivors + '件、弱いテストあり' : (scScore != null ? '対象の破壊を正しく検出' : '')
+    ));
     nodes.push(grid);
 
     var scope = el('div', 'arep-scope');

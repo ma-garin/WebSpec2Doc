@@ -572,6 +572,24 @@
   color: var(--color-text-secondary);
 }
 
+/* 全段階の承認が済んだら、後続へ進む導線を出す */
+.autorun-stages-proceed {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  border-top: 1px solid var(--color-divider);
+  padding-top: 10px;
+  margin-top: 2px;
+}
+.autorun-stages-proceed-msg {
+  flex: 1;
+  min-width: 200px;
+  font-size: var(--text-sm);
+  color: var(--color-low);
+  font-weight: 700;
+}
+
 /* ---- 承認待ちの案内（モーダルを強制表示しない） ---- */
 .autorun-review-gate {
   display: grid;

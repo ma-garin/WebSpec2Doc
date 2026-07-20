@@ -286,11 +286,55 @@
     return bar;
   }
 
+  function renderProceed() {
+    var host = $('autorun-stages');
+    if (!host) return;
+    var old = host.querySelector('.autorun-stages-proceed');
+    if (old) old.remove();
+    if (!state.pipeline || !state.pipeline.all_approved) return;
+
+    var bar = document.createElement('div');
+    bar.className = 'autorun-stages-proceed';
+
+    var msg = document.createElement('span');
+    msg.className = 'autorun-stages-proceed-msg';
+    msg.textContent = '全ての段階を承認しました。Playwright 化へ進めます。';
+    bar.appendChild(msg);
+
+    var go = document.createElement('button');
+    go.type = 'button';
+    go.className = 'btn-primary';
+    go.textContent = '承認を確定して次へ進む';
+    go.disabled = state.busy;
+    go.addEventListener('click', proceed);
+    bar.appendChild(go);
+
+    host.appendChild(bar);
+  }
+
+  function proceed() {
+    return withBusy(async function () {
+      var jobId = (window._autoRunLastData && window._autoRunLastData.job_id) || '';
+      var res = await call('/api/autorun/stages/proceed', json({
+        domain: state.domain, job_id: jobId,
+      }));
+      state.pipeline = res;
+      var host = $('autorun-stages');
+      if (host && res.detail) {
+        var note = document.createElement('div');
+        note.className = 'autorun-stages-proceed-msg';
+        note.textContent = res.detail;
+        host.appendChild(note);
+      }
+    });
+  }
+
   function render() {
     if (!state.pipeline) { show(false); return; }
     show(true);
     renderRail();
     renderPanel();
+    renderProceed();
   }
 
   // ---------------------------------------------------------------- 操作

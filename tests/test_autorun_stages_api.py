@@ -240,6 +240,48 @@ class TestSuggestAndAdopt:
         assert res.status_code == 400
 
 
+class TestExecutionGate:
+    """仕様7〜13: 全段階の承認が済むまで後続へ進ませない。"""
+
+    def _approve_all(self, client) -> None:
+        order = ["test_objective", "test_plan", "features", "viewpoints",
+                 "basic_design", "detail_design", "test_cases"]
+        for stage_id in order:
+            body = _post(client, "/api/autorun/stages/generate",
+                         {"domain": DOMAIN, "stage_id": stage_id}).get_json()
+            stage = next(s for s in body["stages"] if s["stage_id"] == stage_id)
+            if stage["requires_item_approval"]:
+                for item in stage["items"]:
+                    _post(client, "/api/autorun/stages/item", {
+                        "domain": DOMAIN, "stage_id": stage_id,
+                        "item_id": item["item_id"], "approved": True,
+                    })
+            _post(client, "/api/autorun/stages/approve",
+                  {"domain": DOMAIN, "stage_id": stage_id})
+
+    def test_blocks_proceed_while_stages_remain(self, client) -> None:
+        _post(client, "/api/autorun/stages/generate",
+              {"domain": DOMAIN, "stage_id": "test_objective"})
+        res = _post(client, "/api/autorun/stages/proceed", {"domain": DOMAIN})
+        assert res.status_code == 409
+        body = res.get_json()
+        assert body["remaining"], "未承認の段階名が返ること"
+        assert "テスト計画" in body["detail"]
+
+    def test_allows_proceed_after_all_stages_approved(self, client) -> None:
+        self._approve_all(client)
+        res = _post(client, "/api/autorun/stages/proceed", {"domain": DOMAIN})
+        assert res.status_code == 200
+        assert res.get_json()["all_approved"] is True
+
+    def test_proceed_reports_when_no_job_is_waiting(self, client) -> None:
+        """承認待ちのジョブが無ければ、解除できなかったことを正直に返す。"""
+        self._approve_all(client)
+        body = _post(client, "/api/autorun/stages/proceed", {"domain": DOMAIN}).get_json()
+        assert body["released"] is False
+        assert "承認待ちではありません" in body["detail"]
+
+
 class TestTestCaseExport:
     """仕様13: QualityForward のカラム構成で取り出せる。"""
 

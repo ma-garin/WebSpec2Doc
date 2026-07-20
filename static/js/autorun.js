@@ -22,6 +22,7 @@ const AUTORUN_STEP_MAP = {
   awaiting_input:    'ars-crawl',
   crawling:          'ars-crawl',
   generating_qa:     'ars-qa',
+  awaiting_stages:   'ars-qa',
   generating_scripts:'ars-scripts',
   awaiting_approval: 'ars-approval',
   running_tests:     'ars-running',
@@ -37,6 +38,7 @@ const AUTORUN_PHASE_LABELS = {
   awaiting_input: 'ログイン情報の入力待ち',
   crawling: '仕様書生成中…',
   generating_qa: 'QA成果物生成中…',
+  awaiting_stages: '承認待ち — テスト目的〜ケースを確認してください',
   generating_scripts: 'スクリプト生成中…',
   awaiting_approval: '承認待ち — 実行範囲を選択してください',
   running_tests: 'テスト実行中…',
@@ -57,8 +59,8 @@ function _autorunPhaseLabelWithProgress(status, data) {
 }
 
 // 全体進捗の重み（フェーズ完了ベース。実行中フェーズは半分進んだとみなす近似）
-const AUTORUN_PHASE_ORDER = ['discovering', 'crawling', 'generating_qa', 'generating_scripts', 'awaiting_approval', 'running_tests'];
-const AUTORUN_PHASE_WEIGHTS = { discovering: 10, crawling: 40, generating_qa: 20, generating_scripts: 10, awaiting_approval: 5, running_tests: 15 };
+const AUTORUN_PHASE_ORDER = ['discovering', 'crawling', 'generating_qa', 'awaiting_stages', 'generating_scripts', 'awaiting_approval', 'running_tests'];
+const AUTORUN_PHASE_WEIGHTS = { discovering: 10, crawling: 40, generating_qa: 15, awaiting_stages: 5, generating_scripts: 10, awaiting_approval: 5, running_tests: 15 };
 
 const AUTORUN_OUTPUT_LABELS = {
   report_json:             '仕様書 JSON',
@@ -290,7 +292,7 @@ async function autorunResume() {
     jobs = data.jobs || [];
   } catch (e) { return; }
 
-  const activeStatuses = ['discovering', 'awaiting_input', 'crawling', 'generating_qa', 'generating_document_mbt', 'generating_scripts', 'awaiting_approval', 'running_tests'];
+  const activeStatuses = ['discovering', 'awaiting_input', 'crawling', 'generating_qa', 'awaiting_stages', 'generating_document_mbt', 'generating_scripts', 'awaiting_approval', 'running_tests'];
   const active = jobs.find(j => activeStatuses.includes(j.status));
   if (active && !_autoRunJobId) {
     _autorunAttachJob(active.job_id);

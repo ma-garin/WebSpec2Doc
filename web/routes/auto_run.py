@@ -377,6 +377,54 @@ def api_autorun_jobs() -> dict:
 STAGE_APPROVAL_TIMEOUT_SEC = 7200
 
 
+def _ensure_stage_content(job: AutoRunJob, stage_id: str) -> None:
+    """関門到達時に、その段階の内容を生成して保存する（提示のための準備）。
+
+    仕様は「テスト目的の**提示**・承認」であり、利用者に「内容を生成」を
+    押させることではない。また、同一ドメインの過去実行で保存された
+    stages.json が残っていると古い内容がそのまま提示されるため、
+    実行のたびに生成し直す。
+
+    失敗しても実行は止めない（利用者が手動生成できる余地を残す）。
+    """
+    from autorun.stages import Observation, Pipeline, build_stage, observation_from_report
+
+    qa_dir = _job_out(job) / job.domain / "qa_process"
+    stages_path = qa_dir / "stages.json"
+    try:
+        pipeline = (
+            Pipeline.from_dict(json.loads(stages_path.read_text(encoding="utf-8")))
+            if stages_path.is_file()
+            else Pipeline.initial()
+        )
+        if pipeline.get(stage_id) is None:
+            return
+
+        report = _read_json_file(_job_out(job) / job.domain / "report.json")
+        obs = (
+            observation_from_report(
+                report,
+                url=job.url,
+                document_driven=job.mode == "document",
+                viewpoint_set_name=job.viewpoint_set_name,
+            )
+            if report
+            else Observation(url=job.url)
+        )
+        automation = _read_json_file(qa_dir / "automation_coverage.json")
+        stage = build_stage(stage_id, obs, pipeline, automation)
+        pipeline = pipeline.replaced(stage).recorded(
+            "generate", stage_id, f"{len(stage.items)}項目を提示", "system"
+        )
+        qa_dir.mkdir(parents=True, exist_ok=True)
+        stages_path.write_text(
+            json.dumps(pipeline.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        job.add_log(f"{stage.definition.name}: {len(stage.items)}項目を提示しました。")
+    except Exception as exc:
+        job.add_log(f"{stage_id} の内容を用意できませんでした（手動生成は可能）: {exc}")
+
+
 def current_awaiting_stage(job_id: str, domain: str) -> str:
     """いま承認待ちの段階IDを返す（無ければ空文字）。
 
@@ -498,6 +546,12 @@ def _await_stage_approval(job: AutoRunJob, gate: str) -> None:
             f"段階承認をスキップしました（自動実行）。この実行の{subject}は人の確認を経ていません。"
         )
         return
+
+    # 仕様7〜14は「提示・承認」。利用者に「内容を生成」を押させるのではなく、
+    # 関門に到達した時点で内容を用意して提示する。
+    # （過去の実行で保存された古い stages.json が残っていると、新しい生成規則が
+    #  反映されないまま提示される問題もここで解消する。）
+    _ensure_stage_content(job, gate)
 
     job._stages_event.clear()
     job.status = "awaiting_stages"

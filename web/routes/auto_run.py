@@ -377,6 +377,28 @@ def api_autorun_jobs() -> dict:
 STAGE_APPROVAL_TIMEOUT_SEC = 7200
 
 
+def current_awaiting_stage(job_id: str, domain: str) -> str:
+    """いま承認待ちの段階IDを返す（無ければ空文字）。
+
+    仕様7〜14では各段階が独立した承認点なので、「どの段階を承認すれば
+    先へ進むのか」を API 側が知る必要がある。
+    """
+    with _JOBS_LOCK:
+        job = _JOBS.get(job_id) if job_id else None
+        if job is None:
+            job = next(
+                (
+                    candidate
+                    for candidate in _JOBS.values()
+                    if candidate.domain == domain and candidate.status == "awaiting_stages"
+                ),
+                None,
+            )
+        if job is None or job.status != "awaiting_stages":
+            return ""
+        return job.awaiting_stage_id
+
+
 def release_stage_gate(job_id: str, domain: str) -> bool:
     """段階承認の関門を解除する。解除できたら True。
 
@@ -396,17 +418,62 @@ def release_stage_gate(job_id: str, domain: str) -> bool:
             )
         if job is None or job.status != "awaiting_stages":
             return False
-        job.add_log("段階承認が完了しました。Playwright 化へ進みます。")
+        # 1段階ずつ進むため、どの段階の承認で解除されたのかを記録する。
+        gate = job.awaiting_stage_id
+        label = _GATE_MESSAGES.get(gate, ("", "", "この段階"))[2]
+        job.add_log(f"{label}を承認しました。次の段階へ進みます。")
         job._stages_event.set()
         return True
 
 
+#: 段階ごとの関門メッセージ（仕様7〜14: 各段階で個別に提示・承認する）。
+#
+# 以前は設計段階1〜7を "design" という単一の関門でまとめて承認させていた。
+# しかし仕様では各段階が独立した提示・承認点であり、開始した途端に
+# 1〜7の内容が一度に出てしまう問題があった（利用者の操作で発覚）。
+# ここでは段階IDごとに関門を持ち、1段階ずつ止まる。
 _GATE_MESSAGES = {
-    "design": (
-        "テスト目的〜テストケースの承認待ち",
-        "実測が揃いました。テスト目的・計画・フィーチャー・観点・設計・ケースを"
-        "確認し、承認すると Playwright 化へ進みます。",
-        "設計内容",
+    "test_objective": (
+        "テスト目的の承認待ち",
+        "この対象に対するテスト目的・方針を提示しました。確認し、承認すると"
+        "テスト計画へ進みます。",
+        "テスト目的",
+    ),
+    "test_plan": (
+        "テスト計画の承認待ち",
+        "テスト目的に対する進め方・範囲・前提を提示しました。確認し、承認すると"
+        "フィーチャー分析へ進みます。",
+        "テスト計画",
+    ),
+    "features": (
+        "テストフィーチャー分析の承認待ち",
+        "実測した画面からフィーチャーを切り出しました。すべてのフィーチャーを"
+        "確認・承認すると観点分析へ進みます。",
+        "フィーチャー",
+    ),
+    "viewpoints": (
+        "テスト観点分析の承認待ち",
+        "フィーチャーごとのテスト観点を提示しました。確認し、承認すると"
+        "テスト基本設計へ進みます。",
+        "テスト観点",
+    ),
+    "basic_design": (
+        "テスト基本設計の承認待ち",
+        "観点へ適用する技法と、実測項目へ技法を適用した具体値を提示しました。"
+        "確認し、承認すると詳細設計へ進みます。",
+        "テスト基本設計",
+    ),
+    "detail_design": (
+        "テスト詳細設計の承認待ち",
+        "ハイレベルテストケースを提示しました。確認し、承認すると"
+        "テストケース作成へ進みます。",
+        "テスト詳細設計",
+    ),
+    "test_cases": (
+        "テストケースの承認待ち",
+        "ローレベルテストケースを提示しました。確認し、承認すると"
+        "Playwright 化へ進みます。",
+        "テストケース",
     ),
     "playwright": (
         "Playwright 自動化の承認待ち",
@@ -435,9 +502,12 @@ def _await_stage_approval(job: AutoRunJob, gate: str) -> None:
     job._stages_event.clear()
     job.status = "awaiting_stages"
     job.step_label = label
+    # いまどの段階で待っているかをUIへ伝える（1段階ずつ提示するために必須）。
+    job.awaiting_stage_id = gate
     job.add_log(message)
 
     approved = job._stages_event.wait(timeout=STAGE_APPROVAL_TIMEOUT_SEC)
+    job.awaiting_stage_id = ""
     if job._cancelled:
         return
     if not approved:
@@ -477,11 +547,15 @@ def _run_job(job: AutoRunJob, depth: int, max_pages: int) -> None:
             if job.status in ("failed", "cancelled"):
                 return
 
-        # 関門1: 設計段階（1〜7）。実測が揃ったこの時点で、テスト目的から
-        # テストケースまでを提示し、承認を得るまでスクリプト生成へ進まない。
-        _await_stage_approval(job, "design")
-        if job.status in ("failed", "cancelled"):
-            return
+        # 仕様7〜13: 設計段階を**1段階ずつ**提示し、それぞれ承認を得る。
+        # 以前は1〜7を1つの関門でまとめて承認させており、開始した途端に
+        # 全段階の内容が一度に出てしまっていた（利用者の操作で発覚した重大な乖離）。
+        from autorun.stages import DESIGN_STAGE_IDS
+
+        for stage_gate in DESIGN_STAGE_IDS:
+            _await_stage_approval(job, stage_gate)
+            if job.status in ("failed", "cancelled"):
+                return
 
         _phase_generate_scripts(job)
         if job.status in ("failed", "cancelled"):

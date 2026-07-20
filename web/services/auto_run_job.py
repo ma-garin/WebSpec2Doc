@@ -63,6 +63,8 @@ class AutoRunJob:
     # 画面から始めた実行は True。自動実行など人が承認できない文脈では False にし、
     # 「承認を経ていない」ことをログへ必ず残す（黙って飛ばさない）。
     require_stage_approval: bool = True
+    #: 承認待ちの段階ID（仕様7〜14: 1段階ずつ提示するためUIへ渡す）
+    awaiting_stage_id: str = ""
 
     _proc: Any = field(default=None, init=False, repr=False, compare=False)
     # ジョブ開始リクエスト時に解決したテナントスコープ済み出力先（Path）。
@@ -120,6 +122,7 @@ class AutoRunJob:
             "domain": self.domain,
             "status": self.status,
             "step_label": self.step_label,
+            "awaiting_stage_id": self.awaiting_stage_id,
             "log": self.log,
             "outputs": self.outputs,
             "test_results": self.test_results,

@@ -674,6 +674,55 @@ def _phase_generate_document_mbt(job: AutoRunJob) -> None:
     run_document_autorun_phase(job, _job_out(job), _mark_job_failed)
 
 
+def _apply_automation_plan(job: AutoRunJob, candidates_path: Path, spec_dir: Path) -> Path:
+    """承認済みテストケースで自動化対象を絞り、使用する候補ファイルのパスを返す。
+
+    承認済みケースが無い / 突合できない場合は元の候補をそのまま使う
+    （段階承認を使わない実行を壊さない）。判断はログと成果物に残す。
+    """
+    from autorun.automation_plan import build_plan
+    from autorun.stages import Pipeline
+
+    stages_path = spec_dir / "stages.json"
+    if not stages_path.is_file():
+        return candidates_path
+
+    try:
+        pipeline = Pipeline.from_dict(json.loads(stages_path.read_text(encoding="utf-8")))
+        raw = json.loads(candidates_path.read_text(encoding="utf-8"))
+        plan = build_plan(pipeline, list(raw.get("candidates") or []))
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        job.add_log(f"自動化対象の絞り込みをスキップしました（{exc}）。全候補を使います。")
+        return candidates_path
+
+    for line in plan.summary_lines():
+        job.add_log(line)
+
+    # 対応関係を成果物として残す（未自動化のケースを追跡できるようにする）
+    coverage_path = spec_dir / "automation_coverage.json"
+    try:
+        coverage_path.write_text(
+            json.dumps(plan.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        job.outputs["automation_coverage"] = str(coverage_path.resolve())
+    except OSError as exc:
+        job.add_log(f"自動化カバレッジを保存できませんでした: {exc}")
+
+    if plan.unfiltered:
+        return candidates_path
+
+    selected_path = spec_dir / "approved_candidates.json"
+    try:
+        selected_path.write_text(
+            json.dumps({"candidates": list(plan.selected)}, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+    except OSError as exc:
+        job.add_log(f"絞り込んだ候補を保存できませんでした（{exc}）。全候補を使います。")
+        return candidates_path
+    return selected_path
+
+
 def _phase_generate_scripts(job: AutoRunJob) -> None:
     if job._cancelled:
         return
@@ -689,8 +738,13 @@ def _phase_generate_scripts(job: AutoRunJob) -> None:
 
     spec_dir = _job_out(job) / job.domain / "qa_process"
     spec_path = spec_dir / "autorun.spec.ts"
+
+    # 仕様14: 承認済みのローレベルテストケースを自動化の入力にする。
+    # 対応づく候補だけを対象にし、対応の無いケースは「未自動化」として残す。
+    source_path = _apply_automation_plan(job, candidates_path, spec_dir)
+
     try:
-        generate_spec_ts(job.domain, candidates_path, spec_path)
+        generate_spec_ts(job.domain, source_path, spec_path)
     except Exception as exc:
         _mark_job_failed(job, f"スクリプト生成エラー: {exc}")
         return

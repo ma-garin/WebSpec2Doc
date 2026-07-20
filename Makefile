@@ -114,6 +114,9 @@ coverage: check-venv
 E2E_BASE_URL ?= http://127.0.0.1:8765
 # 失敗が出たら即座に打ち切る（fail fast）。全件見たい時は E2E_MAXFAIL=0 で無制限。
 E2E_MAXFAIL ?= 1
+# conftest の flask_server は WEBSPEC2DOC_E2E_URL を見る。--base-url だけ変えても
+# サーバ判定が既定ポートのままになるため、両方を同じ値に揃える。
+export WEBSPEC2DOC_E2E_URL = $(E2E_BASE_URL)
 
 verify-ui: check-venv
 	@echo ""

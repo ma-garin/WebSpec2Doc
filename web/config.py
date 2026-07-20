@@ -22,8 +22,8 @@ LOGIN_FINISH_TIMEOUT_SEC = 60
 ALLOWED_FORMATS = ("md", "html", "excel", "pdf", "json")
 DOMAIN_RE = re.compile(r"^[A-Za-z0-9._:\[\]-]{1,253}$")
 ENV_KEY_RE = re.compile(r"^[A-Z_][A-Z0-9_]*$")
-MAX_DEPTH = 5
-MAX_PAGES_LIMIT = 300
+MAX_DEPTH = 10
+MAX_PAGES_LIMIT = 500
 
 _PREVIEW_MIME = {
     ".html": "text/html; charset=utf-8",

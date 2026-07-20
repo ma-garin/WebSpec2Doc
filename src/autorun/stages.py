@@ -23,6 +23,7 @@ from __future__ import annotations
 import hashlib
 import re
 from dataclasses import dataclass, field, replace
+from datetime import UTC
 from typing import Any, Final
 
 from autorun.qf_schema import CASE_TYPE_ABNORMAL, CASE_TYPE_NORMAL, TestCaseRow, renumber
@@ -193,15 +194,71 @@ class Stage:
 
 
 @dataclass(frozen=True)
+class AuditEntry:
+    """承認・修正の記録。
+
+    承認フローを持つ以上、「いつ・何を・誰が」承認したかを残さないと
+    後から検証できない。状態だけでなく経緯を保持する。
+    """
+
+    at: str
+    action: str
+    stage_id: str
+    detail: str = ""
+    actor: str = ""
+    item_id: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "at": self.at,
+            "action": self.action,
+            "stage_id": self.stage_id,
+            "detail": self.detail,
+            "actor": self.actor,
+            "item_id": self.item_id,
+        }
+
+
+def _now() -> str:
+    from datetime import datetime
+
+    return datetime.now(UTC).astimezone().isoformat(timespec="seconds")
+
+
+@dataclass(frozen=True)
 class Pipeline:
-    """7段階の状態。"""
+    """7段階の状態と、承認・修正の記録。"""
 
     stages: tuple[Stage, ...]
     is_rerun: bool = False
+    audit: tuple[AuditEntry, ...] = ()
 
     @classmethod
     def initial(cls, is_rerun: bool = False) -> Pipeline:
         return cls(stages=tuple(Stage(stage_id=sid) for sid in STAGE_ORDER), is_rerun=is_rerun)
+
+    def recorded(
+        self,
+        action: str,
+        stage_id: str,
+        detail: str = "",
+        actor: str = "",
+        item_id: str = "",
+    ) -> Pipeline:
+        """記録を1件追加した新しい Pipeline を返す。"""
+        entry = AuditEntry(
+            at=_now(),
+            action=action,
+            stage_id=stage_id,
+            detail=detail,
+            actor=actor,
+            item_id=item_id,
+        )
+        return replace(self, audit=self.audit + (entry,))
+
+    @property
+    def approved_stage_count(self) -> int:
+        return sum(1 for s in self.stages if s.status in (STATUS_APPROVED, STATUS_SKIPPED))
 
     def get(self, stage_id: str) -> Stage | None:
         for stage in self.stages:
@@ -231,6 +288,9 @@ class Pipeline:
             "current_stage_id": self.current_stage_id,
             "all_approved": self.all_approved,
             "is_rerun": self.is_rerun,
+            "approved_stage_count": self.approved_stage_count,
+            "stage_total": len(self.stages),
+            "audit": [entry.to_dict() for entry in self.audit],
         }
 
     @classmethod
@@ -259,7 +319,23 @@ class Pipeline:
                     note=str(raw.get("note", "")),
                 )
             )
-        return cls(stages=tuple(stages), is_rerun=bool(data.get("is_rerun", False)))
+        audit = tuple(
+            AuditEntry(
+                at=str(e.get("at", "")),
+                action=str(e.get("action", "")),
+                stage_id=str(e.get("stage_id", "")),
+                detail=str(e.get("detail", "")),
+                actor=str(e.get("actor", "")),
+                item_id=str(e.get("item_id", "")),
+            )
+            for e in (data.get("audit") or [])
+            if isinstance(e, dict)
+        )
+        return cls(
+            stages=tuple(stages),
+            is_rerun=bool(data.get("is_rerun", False)),
+            audit=audit,
+        )
 
 
 # ---------------------------------------------------------------- 観測の読み取り

@@ -1,19 +1,30 @@
 // AutoRun 着手前プレフライト。
 //
-// URL を入力した時点で「浅い探索」を走らせ、開始を押す前に
-// 到達可否 / ログイン要否の気配 / 発見画面数の概算 を提示する。
+// 「事前確認」を押した時だけ、開始前に
+// 到達可否 / ログイン要否の気配 / 発見画面数 を提示する。
 //
 // 重要な前提:
-// - これは **参考値** であり、本実行の観測結果ではない。claim_scope を汚さない。
+// - 範囲は **本実行と同じ**。独自に浅い上限を設けない（対象範囲を過小に見せないため）。
+// - URL を打っただけでは対象サイトへアクセスしない（無断アクセスを避ける）。
 // - 発見 0 件は「サイトが壊れている」ことを意味しない。到達できなかった事実のみを述べる。
+// - 到達できた画面数は「到達できない画面が無いこと」の証明ではない。
 // - 開始を妨げない。プレフライトが失敗しても本実行は可能。
 (function () {
   'use strict';
 
-  var PREFLIGHT_DEPTH = '1';
-  var PREFLIGHT_MAX_PAGES = '8';
-  var DEBOUNCE_MS = 600;
-  var SAMPLE_SHOWN = 3;
+  var SAMPLE_SHOWN = 5;
+
+  // 事前確認は **本実行と同じ範囲** を見る。
+  // 独自に浅い上限を設けると「N画面を確認」が実態より小さく出て、
+  // 対象範囲を過小に見せてしまう（範囲を絞らないという方針にも反する）。
+  function runScope() {
+    var depth = document.getElementById('autorun-depth');
+    var maxPages = document.getElementById('autorun-max-pages');
+    return {
+      depth: (depth && depth.value) || '',
+      max_pages: (maxPages && maxPages.value) || '',
+    };
+  }
 
   var timer = null;
   var reader = null;
@@ -109,28 +120,38 @@
     });
 
     var count = truncated ? pages.length + '画面以上' : pages.length + '画面';
+    var more = pages.length > SAMPLE_SHOWN
+      ? '<small>ほか ' + (pages.length - SAMPLE_SHOWN) + ' 画面</small>'
+      : '';
+    var caveat = truncated
+      ? '<small>上限に達したため、これ以上の画面は数えていません。</small>'
+      : '<small>この時点で自動的に辿れた画面数です。到達できなかった画面が無いことの証明ではありません。</small>';
+
     return {
       state: 'ok',
       items: sample,
       html:
         '<strong>到達できました。' + count + 'を確認。</strong>' +
-        '<div data-preflight-list></div>' +
-        '<small>浅い事前確認（深さ ' + PREFLIGHT_DEPTH + ' / 最大 ' + PREFLIGHT_MAX_PAGES +
-        '画面）の参考値です。本実行の対象範囲とは異なります。</small>',
+        '<div data-preflight-list></div>' + more + caveat,
     };
   }
 
   async function runPreflight(url) {
     var mySeq = ++seq;
-    render('<span class="autorun-preflight-spin"></span>到達できるか確認しています…', 'busy');
+    render(
+      '<span class="autorun-preflight-spin"></span>到達できるか確認しています…' +
+      '<small>本実行と同じ範囲を辿るため、サイトの規模によっては時間がかかります。</small>',
+      'busy'
+    );
 
     var pages = [];
+    var scope = runScope();
     try {
-      var body = new URLSearchParams({
-        url: url,
-        depth: PREFLIGHT_DEPTH,
-        max_pages: PREFLIGHT_MAX_PAGES,
-      });
+      var params = { url: url };
+      // 空なら送らない。サーバ側の既定に委ね、こちらで勝手に絞らない。
+      if (scope.depth) params.depth = scope.depth;
+      if (scope.max_pages) params.max_pages = scope.max_pages;
+      var body = new URLSearchParams(params);
       var res = await fetch('/api/discover-stream', { method: 'POST', body: body });
       if (!res.ok || !res.body) throw new Error('事前確認を実行できませんでした');
 
@@ -159,7 +180,8 @@
         }
       }
       if (mySeq !== seq) return;
-      var truncated = pages.length >= Number(PREFLIGHT_MAX_PAGES);
+      var limit = Number(scope.max_pages);
+      var truncated = !!limit && pages.length >= limit;
       var out = summarize(pages, url, truncated);
       render(out.html, out.state, out.items);
     } catch (e) {

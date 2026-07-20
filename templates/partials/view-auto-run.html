@@ -40,7 +40,7 @@
                          アクセスしないこと（相手先への無断アクセスを避ける）。 -->
                     <button type="button" id="autorun-preflight-btn" class="btn-outline-sm autorun-preflight-btn">事前確認</button>
                   </div>
-                  <p class="input-field-hint">「事前確認」を押すと、対象サイトへ<strong>浅くアクセス</strong>して到達可否と画面数の概算を確認します（深さ1・最大8画面）。押すまで対象サイトには一切アクセスしません。</p>
+                  <p class="input-field-hint">「事前確認」を押すと、対象サイトへアクセスして到達可否と画面数を確認します。範囲は<strong>本実行と同じ</strong>（既定は全ページ対象）なので、規模によっては時間がかかります。押すまで対象サイトには一切アクセスしません。</p>
                   <div id="autorun-preflight" class="autorun-preflight" aria-live="polite" hidden></div>
                 </div>
                 <div id="autorun-document-options" class="autorun-document-options" hidden>
@@ -83,12 +83,12 @@
                   <summary>詳細オプション（既定は全ページ対象）</summary>
                   <div class="control-grid-2">
                     <div class="control-field">
-                      <label for="autorun-depth">深さ<span class="info-tip" tabindex="0" role="img" aria-label="トップページからリンクを何回辿るか。既定は上限（5）で、サイト全体を対象にします。少なくすると対象範囲を絞れます。" data-tip="トップページからリンクを何回辿るか。既定は上限（5）で、サイト全体を対象にします。少なくすると対象範囲を絞れます。">ⓘ</span></label>
-                      <input type="number" id="autorun-depth" class="url-input input-compact" value="5" min="1" max="5" />
+                      <label for="autorun-depth">深さ<span class="info-tip" tabindex="0" role="img" aria-label="トップページからリンクを何回辿るか。既定は上限（10）で、サイト全体を対象にします。少なくすると対象範囲を絞れます。" data-tip="トップページからリンクを何回辿るか。既定は上限（10）で、サイト全体を対象にします。少なくすると対象範囲を絞れます。">ⓘ</span></label>
+                      <input type="number" id="autorun-depth" class="url-input input-compact" value="10" min="1" max="10" />
                     </div>
                     <div class="control-field">
-                      <label for="autorun-max-pages">最大ページ<span class="info-tip" tabindex="0" role="img" aria-label="解析・テスト対象にする画面数の上限。既定は上限（300）で、サイト全体を対象にします。この件数に達したらそれ以上のクロールを打ち切ります。" data-tip="解析・テスト対象にする画面数の上限。既定は上限（300）で、サイト全体を対象にします。この件数に達したらそれ以上のクロールを打ち切ります。">ⓘ</span></label>
-                      <input type="number" id="autorun-max-pages" class="url-input input-compact" value="300" min="1" max="300" />
+                      <label for="autorun-max-pages">最大ページ<span class="info-tip" tabindex="0" role="img" aria-label="解析・テスト対象にする画面数の上限。既定は上限（500）で、サイト全体を対象にします。この件数に達したらそれ以上のクロールを打ち切ります。" data-tip="解析・テスト対象にする画面数の上限。既定は上限（500）で、サイト全体を対象にします。この件数に達したらそれ以上のクロールを打ち切ります。">ⓘ</span></label>
+                      <input type="number" id="autorun-max-pages" class="url-input input-compact" value="500" min="1" max="500" />
                     </div>
                   </div>
                 </details>

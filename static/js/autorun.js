@@ -144,6 +144,27 @@ function _autorunViewpointOptionsHtml(sets) {
   return sets.map(optionHtml).join('');
 }
 
+// 仕様4: 過去に解析したサイトをURL入力の候補として出す。
+// AutoRun の受付には独自の datalist を持たせる（別画面の url-history-list は
+// ドキュメント作成側のもので、AutoRun からは埋まらなかった）。
+async function autorunLoadUrlSuggestions() {
+  const list = document.getElementById('autorun-url-suggestions');
+  if (!list) return;
+  try {
+    const data = await fetch('/api/history').then(r => r.json());
+    const urls = (data.items || [])
+      .map(item => String(item.site_url || '').trim())
+      .filter(Boolean);
+    list.replaceChildren(...urls.map(url => {
+      const option = document.createElement('option');
+      option.value = url;
+      return option;
+    }));
+  } catch (e) {
+    // 候補が出せなくても入力自体は妨げない
+  }
+}
+
 async function autorunLoadViewpointSelection() {
   const url = (document.getElementById('autorun-url')?.value || '').trim();
   const select = document.getElementById('autorun-viewpoint-set');

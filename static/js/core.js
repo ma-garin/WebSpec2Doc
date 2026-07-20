@@ -103,6 +103,8 @@ function switchView(name, opts = {}) {
   if (name === 'viewpoints' && typeof loadViewpointManager === 'function') loadViewpointManager();
   if (name === 'auto-run') {
     if (typeof autorunLoadViewpointSelection === 'function') autorunLoadViewpointSelection();
+    // 仕様4: 過去に解析したサイトをURL候補として提示する
+    if (typeof autorunLoadUrlSuggestions === 'function') autorunLoadUrlSuggestions();
     // リロード後も実行中ジョブへ再接続し、「最近の実行」を表示する
     if (typeof autorunResume === 'function') autorunResume();
   }

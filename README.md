@@ -132,6 +132,66 @@ python src/main.py --url https://example.com --auth auth.json
 | `--ci` | off | `--compare --fail-on-drift` を有効化し、`CI_SUMMARY:` JSONをstdoutへ出力 |
 | `--auth` | — | 保存済みセッション（auth.json）を使ってクロール |
 
+### AutoRun 全自動パイプラインを CLI で回す（GUI 機能の CLI 化）
+
+GUI の AutoRun（discover→crawl→QA成果物生成→段階設計→spec.ts生成→Playwright実行→
+非機能/失敗分析）を、ブラウザを開かずに端末から非対話で実行できます。
+
+```bash
+# 全工程を自動承認で実行（段階設計の成果物も生成）
+python src/main.py --autorun --url https://example.com
+
+# 承認関門を素通りして最速実行（成果物は簡素）
+python src/main.py --autorun --url https://example.com --autorun-approve skip
+
+# 認証が必要なサイト（ログイン壁を検知したら投入）
+python src/main.py --autorun --url https://example.com --login-user alice --login-pass secret
+
+# 文書駆動モード（参考文書と実測を突合してモデルベースで生成）
+python src/main.py --autorun --url https://example.com --mode document --reference-doc spec.xlsx
+```
+
+終了コード: `0`=テスト完走かつ失敗ゼロ / `1`=テスト失敗あり / `2`=実行エラー / `130`=キャンセル。
+成果物は `output/<domain>/qa_process/` 配下（`autorun.spec.ts` / `playwright_report.html` /
+`stages.json` 等）に生成され、最終行に `AUTORUN_RESULT:{...}` を機械可読で出力します。
+
+各工程を個別に実行することもできます（CI で工程を分割したい場合）:
+
+```bash
+python src/main.py --qa-process --url https://example.com   # report.json → QA成果物一式
+python src/main.py --gen-spec   --url https://example.com   # QA候補 → autorun.spec.ts
+python src/main.py --run-tests  --url https://example.com   # spec.ts → Playwright実行
+```
+
+> **前提**: これらは web 層のロジックを使うため `requirements.txt`（Flask 等）と Node/@playwright/test
+> 環境が必要です。カレントディレクトリはリポジトリルートで実行してください。通常のクロール CLI
+> （`--url` のみ）は従来どおり web 非依存で動きます。
+
+### 観点セット管理・レビューを CLI で操作する
+
+GUI でしか行えなかった観点セットのライフサイクル操作とテストケースレビューを、
+サブコマンド CLI（`src/cli_manage.py`）から実行できます。
+
+```bash
+# 観点セット管理
+python src/cli_manage.py viewpoints sets                       # 一覧
+python src/cli_manage.py viewpoints export <set_id> -o vp.csv  # CSV エクスポート
+python src/cli_manage.py viewpoints import <set_id> vp.csv     # CSV インポート（新 draft 版）
+python src/cli_manage.py viewpoints publish <set_id> <version> --reason "定例更新"
+python src/cli_manage.py viewpoints rollback <set_id> <version>
+python src/cli_manage.py viewpoints diff <set_id> --from 1 --to 2
+python src/cli_manage.py viewpoints templates                  # テンプレート一覧
+python src/cli_manage.py viewpoints apply-template <set_id> <template_key>
+
+# テストケースレビュー
+python src/cli_manage.py review cases <domain>                 # レビュー対象一覧
+python src/cli_manage.py review update <domain> <case_id> --status approved --comment "OK"
+python src/cli_manage.py review export <domain> --filter approved -o cases.json
+```
+
+`--json` で機械可読出力になります。観点 DB は `instance/viewpoints.db`
+（env `VIEWPOINTS_DB` で上書き可）、レビュー状態は `output/<domain>/review_state.json` に保存されます。
+
 ### CI で仕様ドリフトをゲートする
 
 同梱の [`.github/workflows/spec-drift.yml`](.github/workflows/spec-drift.yml) は、前回スナップショットだけを GitHub Actions cache に保存し、2回目以降の実行で実際の差分を検出します。

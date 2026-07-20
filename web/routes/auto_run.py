@@ -331,6 +331,66 @@ def api_autorun_jobs() -> dict:
 # ─────────────────────────── ジョブ実行 ───────────────────────────
 
 
+#: 段階承認の待機上限。人の確認を待つので長め（無期限にはしない）。
+STAGE_APPROVAL_TIMEOUT_SEC = 7200
+
+
+def release_stage_gate(job_id: str, domain: str) -> bool:
+    """段階承認の関門を解除する。解除できたら True。
+
+    job_id 指定があればそのジョブを、無ければ同一ドメインで承認待ちの
+    ジョブを対象にする（画面をリロードして job_id を失った場合の救済）。
+    """
+    with _JOBS_LOCK:
+        job = _JOBS.get(job_id) if job_id else None
+        if job is None:
+            job = next(
+                (
+                    candidate
+                    for candidate in _JOBS.values()
+                    if candidate.domain == domain and candidate.status == "awaiting_stages"
+                ),
+                None,
+            )
+        if job is None or job.status != "awaiting_stages":
+            return False
+        job.add_log("段階承認が完了しました。Playwright 化へ進みます。")
+        job._stages_event.set()
+        return True
+
+
+def _await_stage_approval(job: AutoRunJob) -> None:
+    """段階承認（仕様7〜13）が済むまで待つ。
+
+    実行は対象サイトへ実際に操作を行うため、テスト目的からテストケースまでを
+    人が確認・承認するまで進めない。タイムアウト時は「未承認のまま進めた」
+    ことを記録し、黙って進んだように見せない。
+    """
+    if not job.require_stage_approval:
+        # 人が承認できない文脈（自動実行など）。飛ばした事実を必ず残す。
+        job.add_log(
+            "段階承認をスキップしました（自動実行）。"
+            "この実行の設計内容は人の確認を経ていません。"
+        )
+        return
+
+    job.status = "awaiting_stages"
+    job.step_label = "テスト目的〜テストケースの承認待ち"
+    job.add_log(
+        "実測が揃いました。テスト目的・計画・フィーチャー・観点・設計・ケースを"
+        "確認し、承認すると Playwright 化へ進みます。"
+    )
+
+    approved = job._stages_event.wait(timeout=STAGE_APPROVAL_TIMEOUT_SEC)
+    if job._cancelled:
+        return
+    if not approved:
+        job.add_log(
+            "承認待ちがタイムアウトしました。未承認のまま後続へ進みます"
+            "（この実行の設計内容は人の確認を経ていません）。"
+        )
+
+
 def _run_job(job: AutoRunJob, depth: int, max_pages: int) -> None:
     try:
         _phase_discover(job, depth, max_pages)
@@ -360,6 +420,13 @@ def _run_job(job: AutoRunJob, depth: int, max_pages: int) -> None:
             _phase_generate_document_mbt(job)
             if job.status in ("failed", "cancelled"):
                 return
+
+        # 段階承認の関門（仕様7〜13）。実測が揃ったこの時点で、テスト目的から
+        # テストケースまでを提示し、承認を得るまでスクリプト生成へ進まない。
+        _await_stage_approval(job)
+        if job.status in ("failed", "cancelled"):
+            return
+
         _phase_generate_scripts(job)
         if job.status in ("failed", "cancelled"):
             return

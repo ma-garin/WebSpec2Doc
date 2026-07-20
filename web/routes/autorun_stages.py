@@ -293,6 +293,47 @@ def api_adopt_suggestion() -> tuple[dict, int] | dict:
     return {"domain": domain, **pipeline.to_dict()}
 
 
+@bp.post("/api/autorun/stages/proceed")
+def api_proceed() -> tuple[dict, int] | dict:
+    """段階承認を終えて、後続（Playwright化・実行）へ進む。
+
+    全段階が承認（またはスキップ）されていなければ進ませない。
+    実行は対象サイトへ実際に操作を行うため、ここは実質的な関門になる。
+    """
+    payload = request.get_json(silent=True) or {}
+    domain, error = _require_domain(str(payload.get("domain", "")))
+    if error:
+        return error
+    job_id = str(payload.get("job_id", "")).strip()
+
+    pipeline = _load_pipeline(domain)
+    if not pipeline.all_approved:
+        remaining = [
+            s.definition.name
+            for s in pipeline.stages
+            if s.status not in (STATUS_APPROVED, STATUS_SKIPPED)
+        ]
+        return {
+            "error": "まだ承認されていない段階があります。",
+            "detail": "未承認: " + " / ".join(remaining),
+            "remaining": remaining,
+        }, 409
+
+    from web.routes.auto_run import release_stage_gate
+
+    released = release_stage_gate(job_id, domain)
+    return {
+        "domain": domain,
+        "released": released,
+        "detail": (
+            "後続の Playwright 化へ進みます。"
+            if released
+            else "対象のジョブが承認待ちではありません（すでに進行済み、または別のジョブです）。"
+        ),
+        **pipeline.to_dict(),
+    }
+
+
 @bp.get("/api/autorun/stages/testcases")
 def api_test_cases() -> tuple[dict, int] | dict | Response:
     """テストケースを QualityForward のカラム構成で返す（表 / CSV）。"""

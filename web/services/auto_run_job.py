@@ -59,6 +59,10 @@ class AutoRunJob:
     selection_criterion: str = "vertex_coverage"
     target_page_id: str = ""
     observe_validation: bool = False
+    # 段階承認（仕様7〜13）を実行の関門にするか。
+    # 画面から始めた実行は True。自動実行など人が承認できない文脈では False にし、
+    # 「承認を経ていない」ことをログへ必ず残す（黙って飛ばさない）。
+    require_stage_approval: bool = True
 
     _proc: Any = field(default=None, init=False, repr=False, compare=False)
     # ジョブ開始リクエスト時に解決したテナントスコープ済み出力先（Path）。
@@ -73,6 +77,10 @@ class AutoRunJob:
         default_factory=threading.Event, init=False, repr=False, compare=False
     )
     _input_data: dict[str, Any] = field(default_factory=dict, init=False, repr=False, compare=False)
+    # 段階承認（仕様7〜13）の完了待ち。全段階が承認されるまでスクリプト生成へ進まない。
+    _stages_event: Any = field(
+        default_factory=threading.Event, init=False, repr=False, compare=False
+    )
     _cancelled: bool = field(default=False, init=False, repr=False, compare=False)
 
     def add_log(self, msg: str) -> None:
@@ -152,3 +160,5 @@ class AutoRunJob:
                 except Exception:
                     pass
         self._input_event.set()
+        # 段階承認の待機も解除しないと、停止しても待ち続けてしまう
+        self._stages_event.set()

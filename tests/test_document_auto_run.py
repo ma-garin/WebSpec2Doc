@@ -168,6 +168,9 @@ def test_preview_uses_document_candidates(tmp_path: Path) -> None:
 
 def test_document_phase_runs_before_script_generation() -> None:
     job = _make_job(mode="document")
+    # このテストはフェーズ順序の検証。段階承認の関門は別テスト
+    # （tests/test_autorun_gate_integration.py）で検証するため、ここでは外す。
+    job.require_stage_approval = False
     order: list[str] = []
 
     def phase(name: str):

@@ -140,8 +140,8 @@ class TestAutoRunIntake:
 
     def test_depth_and_max_pages_default_to_full_site(self, spa: str) -> None:
         """既定は「サイト全体」。範囲を絞らないという方針の表れ。"""
-        assert re.search(r'id="autorun-depth"[^>]*value="5"', spa)
-        assert re.search(r'id="autorun-max-pages"[^>]*value="300"', spa)
+        assert re.search(r'id="autorun-depth"[^>]*value="10"', spa)
+        assert re.search(r'id="autorun-max-pages"[^>]*value="500"', spa)
 
     def test_form_is_inside_intake_so_it_hides_on_run(self, spa: str) -> None:
         """受付ごと実行ビューへ切り替わる構成（単一フロー）の前提。
@@ -168,6 +168,15 @@ class TestAutoRunIntake:
         """
         assert 'id="autorun-preflight-btn"' in spa
         assert "押すまで対象サイトには一切アクセスしません" in spa
+
+    def test_preflight_uses_the_same_scope_as_the_run(self, spa: str) -> None:
+        """事前確認が独自に範囲を絞らないこと。
+
+        浅い上限を設けると発見画面数が実態より小さく出て、対象範囲を
+        過小に見せてしまう（「範囲を絞らない」方針にも反する）。
+        """
+        assert "本実行と同じ" in spa
+        assert "深さ1・最大8画面" not in spa
 
     def test_review_gate_exists_before_execution(self, spa: str) -> None:
         """生成物を確認する前に実行設定モーダルを突きつけないこと。"""

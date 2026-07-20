@@ -492,7 +492,11 @@
     state.domain = domain;
     try {
       state.pipeline = await call('/api/autorun/stages?domain=' + encodeURIComponent(domain));
-      state.selected = state.pipeline.current_stage_id || '';
+      // 全段階が承認済みだと current_stage_id は null になる。
+      // その場合に空パネルを見せないよう、最後の段階を選んでおく。
+      var stages = state.pipeline.stages || [];
+      state.selected = state.pipeline.current_stage_id
+        || (stages.length ? stages[stages.length - 1].stage_id : '');
       render();
     } catch (e) {
       show(false);

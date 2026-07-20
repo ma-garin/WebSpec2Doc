@@ -15,7 +15,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
-from flask import Blueprint, Response, request
+from flask import Blueprint, Response, g, request
 
 from web.config import OUTPUT_DIR
 from web.tenancy import scoped_output_dir
@@ -40,6 +40,14 @@ logger = logging.getLogger(__name__)
 bp = Blueprint("autorun_stages", __name__)
 
 STAGES_FILE = "stages.json"
+
+
+def _actor() -> str:
+    """記録に残す実行者。認証が無効なら空にし、偽の名前を作らない。"""
+    user = getattr(g, "auth_user", None)
+    if isinstance(user, dict):
+        return str(user.get("email") or user.get("id") or "")
+    return ""
 
 
 def _domain_dir(domain: str) -> Path:
@@ -130,7 +138,9 @@ def api_generate_stage() -> tuple[dict, int] | dict:
     except ValueError as exc:
         return {"error": str(exc)}, 400
 
-    pipeline = pipeline.replaced(stage)
+    pipeline = pipeline.replaced(stage).recorded(
+        "generate", stage_id, f"{len(stage.items)}項目を生成", _actor()
+    )
     _save_pipeline(domain, pipeline)
     return {"domain": domain, **pipeline.to_dict()}
 
@@ -154,7 +164,13 @@ def api_approve_stage() -> tuple[dict, int] | dict:
             "detail": "全ての項目を承認してから、段階を承認してください。",
         }, 409
 
-    pipeline = pipeline.replaced(stage.with_status(STATUS_APPROVED))
+    assumed = sum(1 for i in stage.items if i.assumed)
+    detail = f"{len(stage.items)}項目を承認"
+    if assumed:
+        detail += f"（前提 {assumed} 件を含む）"
+    pipeline = pipeline.replaced(stage.with_status(STATUS_APPROVED)).recorded(
+        "approve", stage_id, detail, _actor()
+    )
     _save_pipeline(domain, pipeline)
     return {"domain": domain, **pipeline.to_dict()}
 
@@ -180,7 +196,9 @@ def api_skip_stage() -> tuple[dict, int] | dict:
             "detail": "同一URLの2回目以降のみスキップできます。",
         }, 409
 
-    pipeline = pipeline.replaced(stage.with_status(STATUS_SKIPPED))
+    pipeline = pipeline.replaced(stage.with_status(STATUS_SKIPPED)).recorded(
+        "skip", stage_id, "2回目以降のためスキップ", _actor()
+    )
     _save_pipeline(domain, pipeline)
     return {"domain": domain, **pipeline.to_dict()}
 
@@ -213,7 +231,15 @@ def api_update_item() -> tuple[dict, int] | dict:
     if "approved" in payload:
         updated = updated.with_approval(bool(payload.get("approved")))
 
-    pipeline = pipeline.replaced(stage.with_item(updated))
+    if "approved" in payload:
+        action = "item_approve" if updated.approved else "item_unapprove"
+        detail = ("項目を承認: " if updated.approved else "項目の承認を取消: ") + updated.title
+    else:
+        action = "item_edit"
+        detail = "項目を修正: " + updated.title
+    pipeline = pipeline.replaced(stage.with_item(updated)).recorded(
+        action, stage_id, detail, _actor(), item_id
+    )
     _save_pipeline(domain, pipeline)
     return {"domain": domain, **pipeline.to_dict()}
 
@@ -288,7 +314,9 @@ def api_adopt_suggestion() -> tuple[dict, int] | dict:
         detail=detail,
         source="llm",
     )
-    pipeline = pipeline.replaced(replace(stage, items=stage.items + (item,)))
+    pipeline = pipeline.replaced(replace(stage, items=stage.items + (item,))).recorded(
+        "adopt_llm", stage_id, "LLM提案を採用: " + title, _actor(), item.item_id
+    )
     _save_pipeline(domain, pipeline)
     return {"domain": domain, **pipeline.to_dict()}
 
@@ -322,6 +350,9 @@ def api_proceed() -> tuple[dict, int] | dict:
     from web.routes.auto_run import release_stage_gate
 
     released = release_stage_gate(job_id, domain)
+    if released:
+        pipeline = pipeline.recorded("proceed", "", "全段階の承認を確定し後続へ進行", _actor())
+        _save_pipeline(domain, pipeline)
     return {
         "domain": domain,
         "released": released,

@@ -353,11 +353,20 @@ def api_proceed() -> tuple[dict, int] | dict:
 
     pipeline = _load_pipeline(domain)
 
-    # 関門1（設計段階1〜7）と関門2（段階8）で必要な承認範囲が違う。
-    # 段階8がまだ生成されていない＝関門1の手前、と判断する。
-    playwright = pipeline.get(STAGE_PLAYWRIGHT)
-    at_design_gate = playwright is None or playwright.status == STATUS_PENDING
-    required = DESIGN_STAGE_IDS if at_design_gate else STAGE_ORDER
+    # 仕様7〜14: 各段階で個別に提示・承認する。
+    # ジョブが「いまどの段階で待っているか」を持つので、その段階だけを検査する。
+    # 以前は設計段階1〜7を一括で要求していたため、開始した途端に全段階の
+    # 内容が出てしまっていた（利用者の操作で発覚した重大な乖離）。
+    from web.routes.auto_run import current_awaiting_stage, release_stage_gate
+
+    awaiting = current_awaiting_stage(job_id, domain)
+    if awaiting:
+        required = (awaiting,)
+    else:
+        # 待機段階が特定できない場合（リロード等）は従来どおりの範囲で判定する。
+        playwright = pipeline.get(STAGE_PLAYWRIGHT)
+        at_design_gate = playwright is None or playwright.status == STATUS_PENDING
+        required = DESIGN_STAGE_IDS if at_design_gate else STAGE_ORDER
 
     remaining = [
         s.definition.name
@@ -371,11 +380,10 @@ def api_proceed() -> tuple[dict, int] | dict:
             "remaining": remaining,
         }, 409
 
-    from web.routes.auto_run import release_stage_gate
-
     released = release_stage_gate(job_id, domain)
     if released:
-        pipeline = pipeline.recorded("proceed", "", "全段階の承認を確定し後続へ進行", _actor())
+        detail = f"{awaiting} を承認し次段階へ進行" if awaiting else "全段階の承認を確定し後続へ進行"
+        pipeline = pipeline.recorded("proceed", awaiting or "", detail, _actor())
         _save_pipeline(domain, pipeline)
     return {
         "domain": domain,

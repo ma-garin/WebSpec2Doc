@@ -18,6 +18,17 @@
     try { return localStorage.getItem(key) === '1'; } catch (e) { return false; }
   }
 
+  // このツアーはドキュメント作成システムのダッシュボード（#hero-url 等）専用。
+  // 以前は auto_start 時に無条件で switchView('dashboard') を呼んでいたため、
+  // 初回ブラウザで /auto-run 等へ直接アクセス（/systems の「AutoRun」カード経由を含む）
+  // しても強制的にダッシュボードへ差し戻され、AutoRun に到達できなかった
+  // （監査で発覚・修正）。ダッシュボード（ドキュメント作成システムのホーム）に
+  // いる時だけ自動起動する。
+  const _DASHBOARD_PATHS = { '/': 1, '/home': 1, '/dashboard': 1 };
+  function isOnDashboardPath() {
+    return Boolean(_DASHBOARD_PATHS[location.pathname]);
+  }
+
   function writeLocal(key) {
     try { localStorage.setItem(key, '1'); } catch (e) { /* private modeなどでは保存しない */ }
   }
@@ -185,6 +196,6 @@
 
   void loadOnboarding().then((state) => {
     const completed = state.storage === 'server' ? Boolean(state.tour_completed) : readLocal(TOUR_KEY);
-    if (state.auto_start !== false && !completed) startTour();
+    if (state.auto_start !== false && !completed && isOnDashboardPath()) startTour();
   });
 })();

@@ -160,6 +160,9 @@
                 <span id="autorun-phase-label" class="autorun-phase-label" aria-live="polite"></span>
                 <span id="autorun-elapsed" class="autorun-elapsed">0:00</span>
               </div>
+              <!-- 監査で判明: 実行中は受付が隠れ、なぜ別サイトを開始できないか説明が無かった -->
+              <p class="autorun-running-note">このジョブの実行中は、別サイトを同時に開始できません。
+                完了・停止後に受付が表示されます。</p>
               <div class="autorun-progressbar" role="progressbar" aria-label="全体進捗" aria-valuemin="0" aria-valuemax="100" id="autorun-progressbar">
                 <div id="autorun-progress-fill" class="autorun-progressbar-fill"></div>
               </div>

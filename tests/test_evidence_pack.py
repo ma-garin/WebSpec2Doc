@@ -49,12 +49,14 @@ def _meta() -> dict:
                 "title": "画面表示スモーク",
                 "page_id": "P001",
                 "url": "https://example.com/",
+                "has_real_assertion": True,
             },
             {
                 "test_id": "PW-0002",
                 "title": "画面遷移",
                 "page_id": "P002",
                 "url": "https://example.com/search",
+                "has_real_assertion": False,
             },
         ],
     }
@@ -143,7 +145,19 @@ def test_summary_and_duration_come_from_report() -> None:
         "failed": 1,
         "skipped": 0,
         "duration_sec": 4.2,
+        "verified_cases": 0,
+        "verification_rate": 0.0,
     }
+
+
+def test_verification_rate_reflects_real_assertion_flag_from_meta() -> None:
+    """「合格」件数とは独立に、実質的な検証を伴うテストの割合を表示する（虚偽の高評価を防ぐ）。"""
+    pack = build_evidence_pack(_report(), _viewpoints(), _meta(), generated_at=FIXED_TIME)
+
+    assert pack["summary"]["verified_cases"] == 1
+    assert pack["summary"]["verification_rate"] == 50.0
+    assert pack["cases"][0]["has_real_assertion"] is True
+    assert pack["cases"][1]["has_real_assertion"] is False
 
 
 def test_claim_scope_is_always_present() -> None:

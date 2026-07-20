@@ -260,6 +260,7 @@ def _screen_summaries(report: dict[str, Any]) -> list[dict[str, Any]]:
                 "buttons": len(_buttons(screen)),
                 "transitions_to": _transitions_to(screen),
                 "raw_forms": _forms(screen),
+                "raw_buttons": _buttons(screen),
             }
         )
     return rows

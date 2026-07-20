@@ -182,11 +182,14 @@ def test_document_phase_runs_before_script_generation() -> None:
         patch("web.routes.auto_run._phase_generate_qa", side_effect=phase("qa")),
         patch("web.routes.auto_run._phase_generate_document_mbt", side_effect=phase("mbt")),
         patch("web.routes.auto_run._phase_generate_scripts", side_effect=phase("scripts")),
+        patch("web.routes.auto_run._execute_tests", side_effect=phase("execute")),
     ):
         _run_job(job, depth=5, max_pages=300)
 
-    assert order == ["discover", "crawl", "qa", "mbt", "scripts"]
-    assert job.status == "awaiting_approval"
+    # 段階8の承認後、以前は「テスト実行の承認」という第3の関門
+    # （awaiting_approval）で止まっていたが、これを統合し直接実行へ進むようにした
+    # （監査で発覚した「承認が3か所ある」問題の是正）。
+    assert order == ["discover", "crawl", "qa", "mbt", "scripts", "execute"]
 
 
 def test_filter_keeps_document_candidates(tmp_path: Path) -> None:

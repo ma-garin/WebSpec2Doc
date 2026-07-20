@@ -151,13 +151,22 @@ def _advanced_questions(report: dict[str, Any]) -> list[str]:
 
 
 def _field_rows_for_screen(screen_summary: dict[str, Any]) -> list[dict[str, Any]]:
+    """フォームの各入力項目を、同一フォーム内の他の必須項目（siblings）付きで返す。
+
+    siblings は「対象項目だけを検証するため、他の必須項目には代表値を埋めて
+    フォーム送信を成立させる」実操作テスト生成（spec_ts_generator）で使う。
+    """
     rows = []
     for form_idx, form in enumerate(screen_summary.get("raw_forms") or [], 1):
-        for field_idx, field in enumerate(_fields(form), 1):
+        fields = _fields(form)
+        for field_idx, field in enumerate(fields, 1):
+            siblings = [f for f in fields if f is not field and f.get("required")]
             rows.append(
                 {
                     "field": field,
                     "trace_id": f"{screen_summary['page_id']}-F{form_idx:02d}-I{field_idx:02d}",
+                    "form_action": form.get("action", ""),
+                    "required_siblings": siblings,
                 }
             )
     return rows
@@ -171,8 +180,13 @@ def _pw_candidate(
     steps: list[str],
     expected: str,
     locator_strategy: str,
+    *,
+    field: dict[str, Any] | None = None,
+    form_action: str = "",
+    required_siblings: list[dict[str, Any]] | None = None,
+    submit_label: str = "",
 ) -> dict[str, Any]:
-    return {
+    candidate: dict[str, Any] = {
         "id": f"PW-{no:04d}",
         "title": title,
         "trace_id": trace_id,
@@ -182,6 +196,35 @@ def _pw_candidate(
         "locator_strategy": locator_strategy,
         "review_status": "レビュー待ち",
     }
+    # 実操作・実アサーション生成に使う具体データ（無ければ従来どおりコメントのみで生成される）
+    if field is not None:
+        candidate["field"] = {
+            "name": field.get("name", ""),
+            "field_type": field.get("field_type", "text"),
+            "required": bool(field.get("required")),
+            "locators": list(field.get("locators") or []),
+            "options": list(field.get("options") or []),
+            "min_value": field.get("min_value", ""),
+            "max_value": field.get("max_value", ""),
+            "pattern": field.get("pattern", ""),
+        }
+        candidate["form_action"] = form_action
+        candidate["required_siblings"] = [
+            {
+                "name": sib.get("name", ""),
+                "field_type": sib.get("field_type", "text"),
+                "locators": list(sib.get("locators") or []),
+                "options": list(sib.get("options") or []),
+                # min/max を落とすと、プラン別に異なる制約（例: 特定プランは
+                # 人数・泊数が2固定）を汎用フォールバック値が侵害し、対象フィールドとは
+                # 無関係の兄弟項目のせいでテストが失敗する（実サイト検証で発覚・修正）。
+                "min_value": sib.get("min_value", ""),
+                "max_value": sib.get("max_value", ""),
+            }
+            for sib in (required_siblings or [])
+        ]
+        candidate["submit_label"] = submit_label
+    return candidate
 
 
 def _quality_item(

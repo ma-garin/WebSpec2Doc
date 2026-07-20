@@ -46,8 +46,11 @@ def workspace(tmp_path, monkeypatch):
     (qa / "test_analysis.md").write_text("# テスト分析", encoding="utf-8")
     (qa / "test_design.md").write_text("# テスト設計", encoding="utf-8")
     (qa / "autorun.spec.ts").write_text("import { test } from '@playwright/test';", encoding="utf-8")
+    # playwright_executor.py の実際の出力形式（total/passed/failed はトップレベル。
+    # {"summary": {...}} ではない）に合わせる。過去このズレにより、実行済みでも
+    # ダッシュボードが「未実行」と表示される不具合があった（監査で発覚・修正済み）。
     (qa / "playwright_report.json").write_text(
-        json.dumps({"summary": {"total": 3, "passed": 2, "failed": 1},
+        json.dumps({"total": 3, "passed": 2, "failed": 1,
                     "tests": [{"title": "予約フォーム", "status": "failed", "error": "timeout"}]}),
         encoding="utf-8",
     )
@@ -107,6 +110,21 @@ class TestReportApi:
         """数値だけを見て「問題なし」と読まれないようにする。"""
         data = client.get(f"/api/autorun/report/{DOMAIN}?section=dashboard").get_json()["data"]
         assert "未検証" in data["claim_scope"]
+
+    def test_dashboard_does_not_show_not_executed_when_tests_ran(
+        self, client, workspace
+    ) -> None:
+        """回帰テスト：実行済みなのに「未実行」（test_total が None）と表示される不具合の再発防止。
+
+        playwright_report.json の実際の形式（total/passed/failed がトップレベル）に対し、
+        以前は {"summary": {...}} を前提に読んでいたため test_total が常に None になり、
+        フロントで「未実行」と表示されていた。
+        """
+        data = client.get(f"/api/autorun/report/{DOMAIN}?section=dashboard").get_json()["data"]
+        assert data["test_total"] is not None
+        assert data["test_total"] == 3
+        assert data["test_passed"] == 2
+        assert data["test_failed"] == 1
         assert "証明ではありません" in data["claim_scope"]
 
     def test_plan_section_returns_generated_document(self, client) -> None:
@@ -122,7 +140,8 @@ class TestReportApi:
     def test_results_section_returns_execution_detail(self, client) -> None:
         body = client.get(f"/api/autorun/report/{DOMAIN}?section=results").get_json()
         assert body["kind"] == "results"
-        assert body["data"]["summary"]["failed"] == 1
+        # results セクションは playwright_report.json をそのまま返す（total/passed/failed はトップレベル）。
+        assert body["data"]["failed"] == 1
 
     def test_large_report_json_is_not_truncated(self, client, workspace) -> None:
         """表示用の文字数上限を JSON 読み取りに適用してはいけない。

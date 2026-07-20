@@ -1035,6 +1035,12 @@
   gap: 12px;
 }
 
+.autorun-running-note {
+  margin: 4px 0 0;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
 .autorun-phase-label {
   flex: 1;
   min-width: 0;

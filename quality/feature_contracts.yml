@@ -1694,6 +1694,48 @@
         "error_path",
         "evidence"
       ]
+    },
+    {
+      "feature_id": "autorun_nonfunctional_judge",
+      "name": "AutoRun 非機能判定・観測完全性",
+      "risk_level": "high",
+      "status": "implemented",
+      "ui_files": [
+        "static/js/autorun-report.js"
+      ],
+      "route_files": [
+        "web/routes/auto_run.py"
+      ],
+      "core_files": [
+        "web/services/nonfunctional_judge.py",
+        "web/services/observation_coverage.py"
+      ],
+      "symbols": [
+        "judge_all",
+        "judge_accessibility",
+        "analyze",
+        "scope_statement"
+      ],
+      "outputs": [
+        "nonfunctional_judgement.json",
+        "observation_coverage.json",
+        "基準線比の合否",
+        "未観測領域の明示"
+      ],
+      "persistence": [
+        "output/{domain}/qa_process/nonfunctional_judgement.json"
+      ],
+      "failure_modes": [
+        "no_baseline_first_run",
+        "missing_measurement_data",
+        "login_wall_unobserved",
+        "page_limit_truncated"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "evidence"
+      ]
     }
   ]
 }

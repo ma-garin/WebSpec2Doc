@@ -499,6 +499,9 @@ def _run_job(job: AutoRunJob, depth: int, max_pages: int) -> None:
         if job.status in ("failed", "cancelled"):
             return
         _execute_tests(job)
+        # L0/L4: 観測の完全性と非機能の合否判定。既存成果物のみを読むため
+        # 対象サイトへの追加アクセスは発生しない。失敗しても本体結果は壊さない。
+        _run_nonfunctional_analysis(job)
     except Exception as exc:
         if job._cancelled:
             return
@@ -824,6 +827,63 @@ def _phase_generate_scripts(job: AutoRunJob) -> None:
     job.add_log(f"スクリプト生成完了: {spec_path.name}")
     _run_mutation_self_check(job, spec_path, spec_dir)
     _publish_playwright_stage(job, spec_dir)
+
+
+def _run_nonfunctional_analysis(job: AutoRunJob) -> None:
+    """L0 観測の完全性 ＋ L4 非機能の合否判定（設計計画 rev.3 / Phase 1）。
+
+    どちらも既存の成果物のみを読む。**対象サイトへの追加アクセスはゼロ**。
+
+    背景: a11y 違反は既に 635 件観測されていたのに、実行結果には
+    「アクセシビリティ自動確認 1件 skipped」としか出ていなかった。
+    観測はしているが判定へ接続していない、という欠落を埋める。
+    """
+    from web.services import nonfunctional_judge, observation_coverage
+
+    base = _job_out(job) / job.domain
+    qa = base / "qa_process"
+    try:
+        report = _read_json_file(base / "report.json")
+
+        coverage = observation_coverage.analyze(report, job_log=list(job.log))
+        (qa / "observation_coverage.json").write_text(
+            json.dumps(coverage.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        job.outputs["observation_coverage"] = str((qa / "observation_coverage.json").resolve())
+        if coverage.gaps:
+            job.add_log(
+                f"観測範囲: {coverage.observed_pages}ページ。"
+                f"未観測の領域が {len(coverage.gaps)} 種類あります（未検証として記録）。"
+            )
+        else:
+            job.add_log(f"観測範囲: {coverage.observed_pages}ページ。未観測の領域は検出されず。")
+
+        judged_path = qa / "nonfunctional_judgement.json"
+        baseline = _read_json_file(judged_path)  # 前回の判定＝基準線
+        judgement = nonfunctional_judge.judge_all(
+            report=report,
+            accessibility=_read_json_file(base / "accessibility_audit.json"),
+            technical_health=_read_json_file(base / "technical_health.json"),
+            baseline=baseline,
+        )
+        judged_path.write_text(
+            json.dumps(judgement, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        job.outputs["nonfunctional_judgement"] = str(judged_path.resolve())
+        for item in judgement["judgements"]:
+            job.add_log(f"非機能[{item['area']}] {item['verdict']}: {item['summary']}")
+    except Exception as exc:  # 付加価値であり、本体結果を壊さない
+        job.add_log(f"非機能判定・観測範囲の分析に失敗しました（実行結果は保持）: {exc}")
+
+
+def _read_json_file(path: Path) -> dict | None:
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return data if isinstance(data, dict) else None
 
 
 def _run_mutation_self_check(job: AutoRunJob, spec_path: Path, spec_dir: Path) -> None:

@@ -101,6 +101,8 @@ def _dashboard(
     report: dict | None,
     results: dict | None,
     mutation_check: dict | None = None,
+    nonfunctional: dict | None = None,
+    coverage: dict | None = None,
 ) -> dict[str, Any]:
     screens = (report or {}).get("screens") or []
     forms = [f for s in screens for f in (s.get("forms") or [])]
@@ -137,6 +139,12 @@ def _dashboard(
         # 生成テストが実際に欠陥を検出できるかを、毎回の実行で確認する。
         "self_check_score": self_check_score,
         "self_check_survivor_count": mutation_check.get("survivor_count"),
+        # L4 非機能の合否判定（既存観測データの接続）。未実行なら None。
+        "nonfunctional_overall": (nonfunctional or {}).get("overall"),
+        "nonfunctional_judgements": (nonfunctional or {}).get("judgements") or [],
+        # L0 観測の完全性。「どの範囲についての結論か」を必ず併記する。
+        "observation_scope": (coverage or {}).get("scope_statement"),
+        "observation_gaps": (coverage or {}).get("gaps") or [],
         # この製品の原則。数値だけを見て「問題なし」と読まれないようにする。
         "claim_scope": (
             "ここに示すのは自動で検出できた範囲の観測結果です。"
@@ -157,6 +165,8 @@ def _section_payload(domain: str, key: str) -> dict[str, Any]:
                 _read_json(base / "report.json"),
                 _read_json(qa / "playwright_report.json"),
                 _read_json(qa / "mutation_verification.json"),
+                _read_json(qa / "nonfunctional_judgement.json"),
+                _read_json(qa / "observation_coverage.json"),
             ),
         }
     if key == "spec":

@@ -615,11 +615,11 @@ function _autorunRenderComplete(data) {
   const actions = document.createElement('div');
   actions.className = 'autorun-complete-actions';
   if (data.domain) {
-    const cta = document.createElement('button');
-    cta.type = 'button';
+    // 仕様16: AutoRun の結果は専用ページで開く（SPA のタブではない）
+    const cta = document.createElement('a');
     cta.className = 'btn-primary';
-    cta.textContent = 'レポートで結果を見る →';
-    cta.addEventListener('click', () => openResultsForDomain(data.domain, 'runs'));
+    cta.textContent = '実行結果レポートを開く →';
+    cta.href = `/autorun/report/${encodeURIComponent(data.domain)}`;
     actions.appendChild(cta);
   }
   const outputs = data.outputs || {};

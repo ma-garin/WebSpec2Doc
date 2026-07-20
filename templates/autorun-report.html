@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <title>実行結果レポート {{ domain }} - AutoRun</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/autorun-report.css') }}">
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('webspec2doc.theme');
+        if (!t) t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', t);
+      } catch (e) { /* localStorage 不可環境では light のまま */ }
+    })();
+  </script>
+</head>
+<body class="arep-body" data-domain="{{ domain }}">
+
+  <header class="arep-topbar">
+    <a class="arep-back" href="/auto-run">← AutoRun へ戻る</a>
+    <div class="arep-title">
+      <span class="arep-kicker">実行結果レポート</span>
+      <h1>{{ domain }}</h1>
+    </div>
+    <div class="arep-actions">
+      <a class="arep-btn" href="/api/autorun/stages/testcases?domain={{ domain }}&format=csv">テストケースCSV</a>
+      <button type="button" id="arep-theme" class="arep-icon-btn" aria-label="テーマ切替" title="テーマ切替">◐</button>
+    </div>
+  </header>
+
+  <div class="arep-shell">
+    <nav class="arep-nav" aria-label="レポートセクション">
+      {% for s in sections %}
+      <button type="button" class="arep-nav-item" data-section="{{ s.key }}">
+        <span class="arep-nav-label">{{ s.label }}</span>
+        <span class="arep-nav-desc">{{ s.description }}</span>
+      </button>
+      {% endfor %}
+    </nav>
+
+    <main class="arep-main" id="arep-main" tabindex="-1">
+      <div id="arep-content" class="arep-content" aria-live="polite">
+        <p class="arep-loading">読み込んでいます…</p>
+      </div>
+    </main>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/autorun-report.js') }}"></script>
+</body>
+</html>

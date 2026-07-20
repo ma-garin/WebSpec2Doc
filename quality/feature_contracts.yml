@@ -1569,6 +1569,48 @@
         "error_path",
         "persistence"
       ]
+    },
+    {
+      "feature_id": "autorun_result_report",
+      "name": "AutoRun 実行結果レポート専用ページ",
+      "risk_level": "high",
+      "status": "implemented",
+      "ui_files": [
+        "templates/autorun-report.html",
+        "static/js/autorun-report.js",
+        "static/css/autorun-report.css"
+      ],
+      "route_files": [
+        "web/routes/autorun_report.py"
+      ],
+      "core_files": [
+        "src/autorun/qf_schema.py",
+        "src/autorun/stages.py"
+      ],
+      "symbols": [
+        "to_table",
+        "test_case_rows"
+      ],
+      "outputs": [
+        "dashboard",
+        "QA spec",
+        "plan",
+        "analysis",
+        "design",
+        "test cases",
+        "script",
+        "execution results"
+      ],
+      "persistence": [],
+      "failure_modes": [
+        "unknown_domain",
+        "missing_artifact",
+        "invalid_section"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path"
+      ]
     }
   ]
 }

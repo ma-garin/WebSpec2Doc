@@ -175,20 +175,33 @@
     }
   }
 
-  function onInput(value) {
-    var url = (value || '').trim();
-    cancelInFlight();
-    seq++; // 走行中の応答を無効化
-    if (!url) { hide(); return; }
-    if (!looksLikeUrl(url)) { hide(); return; }
-    timer = setTimeout(function () { runPreflight(url); }, DEBOUNCE_MS);
-  }
-
   function boot() {
     var input = document.getElementById('autorun-url');
-    if (!input) return;
-    input.addEventListener('input', function () { onInput(input.value); });
-    input.addEventListener('change', function () { onInput(input.value); });
+    var button = document.getElementById('autorun-preflight-btn');
+    if (!input || !button) return;
+
+    // URL を打っただけでは対象サイトへアクセスしない。明示操作でのみ実行する。
+    button.addEventListener('click', function () {
+      var url = (input.value || '').trim();
+      cancelInFlight();
+      seq++;
+      if (!url) {
+        render('<strong>URL を入力してください。</strong>', 'warn');
+        return;
+      }
+      if (!looksLikeUrl(url)) {
+        render('<strong>URL の形式が正しくありません。</strong>http:// または https:// で始まる URL を入力してください。', 'warn');
+        return;
+      }
+      runPreflight(url);
+    });
+
+    // URL を書き換えたら、前の確認結果は当てにならないので取り下げる
+    input.addEventListener('input', function () {
+      cancelInFlight();
+      seq++;
+      hide();
+    });
   }
 
   if (document.readyState === 'loading') {

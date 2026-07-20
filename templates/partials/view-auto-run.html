@@ -34,8 +34,13 @@
                 </fieldset>
                 <div class="control-field">
                   <label for="autorun-url">対象URL</label>
-                  <input type="url" id="autorun-url" class="url-input input-compact" placeholder="https://example.com" autocomplete="url" list="url-history-list" />
-                  <!-- 着手前プレフライト: 浅い探索で到達可否・ログイン要否・画面数の概算を先に出す -->
+                  <div class="autorun-url-row">
+                    <input type="url" id="autorun-url" class="url-input input-compact" placeholder="https://example.com" autocomplete="url" list="url-history-list" />
+                    <!-- 事前確認は明示操作でのみ実行する。URLを打っただけで対象サイトへ
+                         アクセスしないこと（相手先への無断アクセスを避ける）。 -->
+                    <button type="button" id="autorun-preflight-btn" class="btn-outline-sm autorun-preflight-btn">事前確認</button>
+                  </div>
+                  <p class="input-field-hint">「事前確認」を押すと、対象サイトへ<strong>浅くアクセス</strong>して到達可否と画面数の概算を確認します（深さ1・最大8画面）。押すまで対象サイトには一切アクセスしません。</p>
                   <div id="autorun-preflight" class="autorun-preflight" aria-live="polite" hidden></div>
                 </div>
                 <div id="autorun-document-options" class="autorun-document-options" hidden>
@@ -138,6 +143,9 @@
                 <strong>報告の範囲について：</strong>検出できた範囲を証跡付きで報告します。検証できなかった領域は「未検証」と明記し、<em>欠陥が無いことの証明はしません</em>。現新比較は前回スナップショットがある場合のみ成立し、初回は基準確立のみです。
               </div>
             </div>
+
+            <!-- 承認待ちの案内。モーダルを勝手に出さず、確認を促してから実行へ進む -->
+            <div id="autorun-review-gate" class="card autorun-review-gate" style="display:none"></div>
 
             <!-- 段階承認パイプライン（仕様7〜13）: 提示 → 個別修正 → 承認 -->
             <div id="autorun-stages" class="autorun-stages" style="display:none">

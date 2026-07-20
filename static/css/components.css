@@ -572,6 +572,34 @@
   color: var(--color-text-secondary);
 }
 
+/* ---- 承認待ちの案内（モーダルを強制表示しない） ---- */
+.autorun-review-gate {
+  display: grid;
+  gap: 8px;
+  border-left: 3px solid var(--color-primary);
+}
+.autorun-review-title { margin: 0; font-size: var(--text-md); font-weight: 800; }
+.autorun-review-note {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--leading-normal);
+}
+.autorun-review-links { display: flex; flex-wrap: wrap; gap: 6px; }
+.autorun-review-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+.autorun-review-later { font-size: var(--text-xs); color: var(--color-text-secondary); }
+
+/* URL入力と事前確認ボタン */
+.autorun-url-row { display: flex; gap: 8px; align-items: center; }
+.autorun-url-row .url-input { flex: 1; min-width: 0; }
+.autorun-preflight-btn { flex: 0 0 auto; white-space: nowrap; }
+
 /* 仕様3: 選択中の生成モードを明示する */
 .autorun-mode-current {
   margin: 0 0 8px;

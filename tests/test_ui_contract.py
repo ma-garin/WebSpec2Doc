@@ -161,6 +161,18 @@ class TestAutoRunIntake:
         assert "未検証" in intake
         assert "欠陥が無いことの証明はしません" in intake
 
+    def test_preflight_requires_explicit_click(self, spa: str) -> None:
+        """URL を打っただけで対象サイトへアクセスしないこと。
+
+        事前確認は明示操作（ボタン）でのみ実行する。相手先への無断アクセスを避ける。
+        """
+        assert 'id="autorun-preflight-btn"' in spa
+        assert "押すまで対象サイトには一切アクセスしません" in spa
+
+    def test_review_gate_exists_before_execution(self, spa: str) -> None:
+        """生成物を確認する前に実行設定モーダルを突きつけないこと。"""
+        assert 'id="autorun-review-gate"' in spa
+
     def test_generation_modes_offered(self, spa: str) -> None:
         assert 'id="autorun-mode-url"' in spa
         assert 'id="autorun-mode-document"' in spa

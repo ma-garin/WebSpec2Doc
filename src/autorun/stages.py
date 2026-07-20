@@ -641,10 +641,37 @@ def _build_detail_design(basic: Stage | None) -> tuple[tuple[StageItem, ...], st
     return tuple(items), note
 
 
+def _entry_screen(obs: Observation, screen_ids: list[str]) -> dict[str, Any] | None:
+    """フィーチャーの代表画面（最初に観測された画面）を返す。"""
+    if not screen_ids:
+        return None
+    by_id = {str(s.get("page_id") or ""): s for s in obs.screens}
+    for sid in screen_ids:
+        screen = by_id.get(str(sid))
+        if screen is not None:
+            return screen
+    return None
+
+
+def _field_names(screen: dict[str, Any] | None, limit: int = 4) -> list[str]:
+    """画面の入力項目名を返す（手順の具体化に使う）。"""
+    if not screen:
+        return []
+    names: list[str] = []
+    for form in screen.get("forms") or []:
+        for field_ in form_fields(form):
+            name = str(field_.get("label") or field_.get("name") or "").strip()
+            if name and name not in names:
+                names.append(name)
+            if len(names) >= limit:
+                return names
+    return names
+
+
 def _build_test_cases(
     obs: Observation, detail: Stage | None, features: Stage | None
 ) -> tuple[tuple[StageItem, ...], str]:
-    feature_titles = {f.item_id: f.title for f in (features.items if features else ())}
+    feature_items = {f.item_id: f for f in (features.items if features else ())}
 
     rows: list[TestCaseRow] = []
     for hl in detail.items if detail else ():
@@ -652,28 +679,62 @@ def _build_test_cases(
         technique = str(hl.data.get("technique") or "")
         case_type = str(hl.data.get("case_type") or CASE_TYPE_NORMAL)
         feature_id = str(hl.data.get("feature_id") or "")
-        screen = feature_titles.get(feature_id, "")
+
+        feature = feature_items.get(feature_id)
+        screen_name = feature.title if feature else ""
+        screen_ids = list((feature.data.get("screen_ids") if feature else []) or [])
+        entry = _entry_screen(obs, screen_ids)
+        url = str((entry or {}).get("url") or "")
+        fields = _field_names(entry)
+
+        # 前提条件は「どの画面か」「どうやって開くか」「認証状態」を具体的に書く。
+        # 「到達できる状態」のような同義反復は前提条件として機能しない。
+        precondition_parts = [
+            f"対象URL: {url}" if url else f"対象画面: {screen_name or '(未特定)'}",
+            "未認証状態で直接URLを開く（認証ロールの指定が無いため）",
+        ]
+        precondition = "\n".join(precondition_parts)
+
+        open_step = f"1. {url} を開く" if url else "1. 対象画面を開く"
+        if fields:
+            listed = "・".join(fields)
+            if case_type == CASE_TYPE_NORMAL:
+                input_step = f"2. {listed} に有効な値を入力する"
+            else:
+                input_step = f"2. {listed} のいずれかに無効値または境界値を入力する"
+        else:
+            input_step = (
+                "2. 画面の表示内容を確認する"
+                if case_type == CASE_TYPE_NORMAL
+                else "2. 想定外の操作（直接URL遷移・連続操作など）を行う"
+            )
 
         if case_type == CASE_TYPE_NORMAL:
-            steps = "1. 対象画面を開く\n2. 有効な値を入力する\n3. 実行する操作を行う"
+            steps = f"{open_step}\n{input_step}\n3. 実行する操作を行う"
             expected = "期待どおりに処理され、後続の画面・表示が正しいこと"
         else:
-            steps = "1. 対象画面を開く\n2. 無効値または境界値を入力する\n3. 実行する操作を行う"
+            steps = f"{open_step}\n{input_step}\n3. 実行する操作を行う"
             expected = "処理が拒否され、原因が分かるメッセージが表示されること"
+
+        note = (
+            "入力値の具体値は未確定です。実データに合わせて確定してください。"
+            if fields
+            else "この画面には観測された入力項目がありません。表示・遷移の確認が主になります。"
+        )
 
         rows.append(
             TestCaseRow(
                 no=0,
-                screen=screen,
+                screen=screen_name,
                 case_type=case_type,
                 viewpoint=viewpoint,
-                category_large=screen or "対象機能",
+                category_large=screen_name or "対象機能",
                 category_medium=viewpoint,
                 category_small=technique,
-                precondition="対象画面へ到達できる状態",
+                precondition=precondition,
                 steps=steps,
                 expected=expected,
-                note="手順・データはひな形です。実データに合わせて具体化してください。",
+                note=note,
             )
         )
 

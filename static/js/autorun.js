@@ -655,6 +655,80 @@ function _autorunRenderComplete(data) {
   card.appendChild(actions);
 }
 
+// ---- 承認待ちの案内（モーダルを強制表示しない）----
+// 仕様7〜13の段階承認と整合させる: まず生成物を確認し、納得してから実行する。
+function _autorunRenderReviewGate(data, status) {
+  const host = document.getElementById('autorun-review-gate');
+  if (!host) return;
+
+  if (status !== 'awaiting_approval') {
+    host.style.display = 'none';
+    host.replaceChildren();
+    return;
+  }
+
+  if (host.dataset.renderedFor === data.job_id) {
+    host.style.display = '';
+    return;
+  }
+  host.dataset.renderedFor = data.job_id || '';
+  host.replaceChildren();
+
+  const head = document.createElement('div');
+  head.className = 'section-kicker';
+  head.textContent = '確認待ち';
+  host.appendChild(head);
+
+  const title = document.createElement('h4');
+  title.className = 'autorun-review-title';
+  title.textContent = '生成物ができました。内容を確認してから実行してください。';
+  host.appendChild(title);
+
+  const note = document.createElement('p');
+  note.className = 'autorun-review-note';
+  note.textContent =
+    'テストを実行すると対象サイトへ実際に操作が行われます。'
+    + '仕様書・計画・設計・テストケースを確認し、必要なら段階ごとに修正してから開始してください。';
+  host.appendChild(note);
+
+  // 生成済みドキュメントへの導線（実在する成果物のみ出す）
+  const outputs = data.outputs || {};
+  const docKeys = ['report_html', 'test_plan', 'test_analysis', 'test_design', 'test_cases'];
+  const links = document.createElement('div');
+  links.className = 'autorun-review-links';
+  docKeys.forEach((key) => {
+    if (!outputs[key]) return;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn-outline-sm';
+    b.textContent = AUTORUN_OUTPUT_LABELS[key] || key;
+    b.addEventListener('click', () => qaPreviewFile(outputs[key]));
+    links.appendChild(b);
+  });
+  if (links.childNodes.length) host.appendChild(links);
+
+  const actions = document.createElement('div');
+  actions.className = 'autorun-review-actions';
+
+  const open = document.createElement('button');
+  open.type = 'button';
+  open.className = 'btn-primary';
+  open.textContent = '確認した — 実行設定を開く';
+  open.addEventListener('click', () => {
+    _autoRunApprovalModalShown = true;
+    _autorunPrepareAndShowApprovalModal();
+  });
+  actions.appendChild(open);
+
+  const later = document.createElement('span');
+  later.className = 'autorun-review-later';
+  later.textContent = '急がなくて構いません。確認を終えるまで実行は始まりません。';
+  actions.appendChild(later);
+
+  host.appendChild(actions);
+  host.style.display = '';
+}
+
 // ---- AutoRun: レンダリング（status/outputs から冪等に導出） ----
 function _autorunRender(data) {
   if (!data) return;
@@ -695,11 +769,10 @@ function _autorunRender(data) {
   }
   if (status !== 'awaiting_input') _autoRunLoginSuppressed = false;
 
-  // ---- 承認モーダル自動表示 ----
-  if (status === 'awaiting_approval' && !_autoRunApprovalModalShown) {
-    _autoRunApprovalModalShown = true;
-    _autorunPrepareAndShowApprovalModal();
-  }
+  // ---- 承認待ち: モーダルを勝手に出さない ----
+  // 生成した仕様書・計画・設計・ケースを確認する前に実行設定を突きつけるのは
+  // この製品の性格に反する。確認を促す案内を出し、ユーザーが明示的に開く。
+  _autorunRenderReviewGate(data, status);
   if (status !== 'awaiting_approval') {
     _autorunHideApprovalModal();
   }

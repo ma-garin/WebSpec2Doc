@@ -375,17 +375,10 @@
                 <span class="autorun-chat-status" id="autorun-chat-status" aria-live="polite"></span>
               </header>
 
-              <div class="autorun-chat-log" id="autorun-chat-log" role="log" aria-live="polite">
-                <div class="autorun-chat-empty" id="autorun-chat-empty">
-                  <p><strong>この画面の内容について相談できます。</strong></p>
-                  <p class="muted-copy">テスト目的・観点・設計・ケースの各段階で、提示された内容の修正や追加を依頼してください。</p>
-                  <div class="autorun-chat-suggestions">
-                    <button type="button" class="autorun-chat-chip" data-chat-preset="この対象に適したテスト目的を提案して">テスト目的を提案</button>
-                    <button type="button" class="autorun-chat-chip" data-chat-preset="この画面で漏れやすいテスト観点を挙げて">観点の漏れを指摘</button>
-                    <button type="button" class="autorun-chat-chip" data-chat-preset="境界値テストの候補を挙げて">境界値の候補</button>
-                  </div>
-                </div>
-              </div>
+              <!-- フェーズ別の定型チップ（autorun-chat.js が差し替える） -->
+              <div class="autorun-chat-suggestions" id="autorun-chat-presets"></div>
+
+              <div class="autorun-chat-log" id="autorun-chat-log" role="log" aria-live="polite"></div>
 
               <form class="autorun-chat-form" id="autorun-chat-form">
                 <textarea id="autorun-chat-input" class="autorun-chat-input" rows="2"

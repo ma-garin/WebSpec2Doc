@@ -196,7 +196,49 @@ def api_history_runs() -> dict:
     with _JOBS_LOCK:
         running_jobs = [job.to_dict() for job in _JOBS.values()]
     runs = build_run_history(_out(), running_jobs)
+    _attach_stage_approval(runs)
     return {"runs": runs}
+
+
+def _attach_stage_approval(runs: list[dict]) -> None:
+    """各実行に段階承認の状況を添える（過去履歴画面で表示するため）。
+
+    承認状態はドメイン単位で保存しているので、同一ドメインの実行には
+    同じ状態が付く。「未承認のまま実行された」ことを隠さないのが目的。
+    """
+    from autorun.stages import Pipeline
+
+    cache: dict[str, dict[str, Any] | None] = {}
+    out_root = _out()
+
+    for run in runs:
+        domain = str(run.get("domain") or "")
+        if not domain:
+            continue
+        if domain not in cache:
+            path = out_root / domain / "qa_process" / "stages.json"
+            summary: dict[str, Any] | None = None
+            if path.is_file():
+                try:
+                    pipeline = Pipeline.from_dict(
+                        json.loads(path.read_text(encoding="utf-8"))
+                    )
+                    skipped = [
+                        s.definition.name for s in pipeline.stages if s.status == "skipped"
+                    ]
+                    summary = {
+                        "approved": pipeline.approved_stage_count,
+                        "total": len(pipeline.stages),
+                        "all_approved": pipeline.all_approved,
+                        "skipped": skipped,
+                        "audit_count": len(pipeline.audit),
+                    }
+                except (OSError, json.JSONDecodeError, ValueError) as exc:
+                    logger.warning("段階承認の状況を読めません（%s）: %s", domain, exc)
+            cache[domain] = summary
+        if cache[domain] is not None:
+            run["stage_approval"] = cache[domain]
+            run["report_url"] = f"/autorun/report/{domain}"
 
 
 @bp.post("/api/autorun/submit-input")
@@ -359,27 +401,41 @@ def release_stage_gate(job_id: str, domain: str) -> bool:
         return True
 
 
-def _await_stage_approval(job: AutoRunJob) -> None:
-    """段階承認（仕様7〜13）が済むまで待つ。
+_GATE_MESSAGES = {
+    "design": (
+        "テスト目的〜テストケースの承認待ち",
+        "実測が揃いました。テスト目的・計画・フィーチャー・観点・設計・ケースを"
+        "確認し、承認すると Playwright 化へ進みます。",
+        "設計内容",
+    ),
+    "playwright": (
+        "Playwright 自動化の承認待ち",
+        "スクリプトを生成しました。承認済みケースとの対応・未自動化のケースを"
+        "確認し、承認するとテストを実行します。",
+        "自動化の内容",
+    ),
+}
 
-    実行は対象サイトへ実際に操作を行うため、テスト目的からテストケースまでを
-    人が確認・承認するまで進めない。タイムアウト時は「未承認のまま進めた」
-    ことを記録し、黙って進んだように見せない。
+
+def _await_stage_approval(job: AutoRunJob, gate: str) -> None:
+    """段階承認（仕様7〜14）が済むまで待つ。
+
+    実行は対象サイトへ実際に操作を行うため、人が確認・承認するまで進めない。
+    タイムアウト時は「未承認のまま進めた」ことを記録し、黙って進んだように見せない。
     """
+    label, message, subject = _GATE_MESSAGES[gate]
+
     if not job.require_stage_approval:
         # 人が承認できない文脈（自動実行など）。飛ばした事実を必ず残す。
         job.add_log(
-            "段階承認をスキップしました（自動実行）。"
-            "この実行の設計内容は人の確認を経ていません。"
+            f"段階承認をスキップしました（自動実行）。この実行の{subject}は人の確認を経ていません。"
         )
         return
 
+    job._stages_event.clear()
     job.status = "awaiting_stages"
-    job.step_label = "テスト目的〜テストケースの承認待ち"
-    job.add_log(
-        "実測が揃いました。テスト目的・計画・フィーチャー・観点・設計・ケースを"
-        "確認し、承認すると Playwright 化へ進みます。"
-    )
+    job.step_label = label
+    job.add_log(message)
 
     approved = job._stages_event.wait(timeout=STAGE_APPROVAL_TIMEOUT_SEC)
     if job._cancelled:
@@ -387,7 +443,7 @@ def _await_stage_approval(job: AutoRunJob) -> None:
     if not approved:
         job.add_log(
             "承認待ちがタイムアウトしました。未承認のまま後続へ進みます"
-            "（この実行の設計内容は人の確認を経ていません）。"
+            f"（この実行の{subject}は人の確認を経ていません）。"
         )
 
 
@@ -421,13 +477,19 @@ def _run_job(job: AutoRunJob, depth: int, max_pages: int) -> None:
             if job.status in ("failed", "cancelled"):
                 return
 
-        # 段階承認の関門（仕様7〜13）。実測が揃ったこの時点で、テスト目的から
+        # 関門1: 設計段階（1〜7）。実測が揃ったこの時点で、テスト目的から
         # テストケースまでを提示し、承認を得るまでスクリプト生成へ進まない。
-        _await_stage_approval(job)
+        _await_stage_approval(job, "design")
         if job.status in ("failed", "cancelled"):
             return
 
         _phase_generate_scripts(job)
+        if job.status in ("failed", "cancelled"):
+            return
+
+        # 関門2: 段階8（Playwright 自動化）。生成したスクリプトと未自動化を
+        # 提示し、承認を得るまでテストを実行しない。
+        _await_stage_approval(job, "playwright")
         if job.status in ("failed", "cancelled"):
             return
         job.status = "awaiting_approval"
@@ -756,6 +818,36 @@ def _phase_generate_scripts(job: AutoRunJob) -> None:
         job.step_data["scripts"] = {}
     job.outputs["spec_ts"] = str(spec_path.resolve())
     job.add_log(f"スクリプト生成完了: {spec_path.name}")
+    _publish_playwright_stage(job, spec_dir)
+
+
+def _publish_playwright_stage(job: AutoRunJob, spec_dir: Path) -> None:
+    """段階8（Playwright 自動化）の内容を生成して保存する。
+
+    生成結果を人が確認できるようにするため、関門2で待つ前に用意しておく。
+    """
+    from autorun.stages import STAGE_PLAYWRIGHT, Observation, Pipeline, build_stage
+
+    stages_path = spec_dir / "stages.json"
+    if not stages_path.is_file():
+        return
+    try:
+        pipeline = Pipeline.from_dict(json.loads(stages_path.read_text(encoding="utf-8")))
+        coverage_path = spec_dir / "automation_coverage.json"
+        automation = (
+            json.loads(coverage_path.read_text(encoding="utf-8"))
+            if coverage_path.is_file()
+            else None
+        )
+        stage = build_stage(STAGE_PLAYWRIGHT, Observation(), pipeline, automation)
+        pipeline = pipeline.replaced(stage).recorded(
+            "generate", STAGE_PLAYWRIGHT, f"{len(stage.items)}項目を生成"
+        )
+        stages_path.write_text(
+            json.dumps(pipeline.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        job.add_log(f"段階8の内容を用意できませんでした: {exc}")
 
 
 def _execute_tests(job: AutoRunJob) -> None:

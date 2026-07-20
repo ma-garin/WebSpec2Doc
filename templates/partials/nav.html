@@ -11,12 +11,16 @@
       <div class="app-nav-group" data-system="autorun">メイン</div>
       <button class="app-nav-item" data-view="auto-run" data-system="autorun">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2L4 14h8l-1 8 9-12h-8z"/></svg>
-        <span class="nav-label">AutoRun</span>
+        <span class="nav-label">受付</span>
       </button>
       <button class="app-nav-item" id="nav-run-history-btn" type="button" data-system="autorun">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 8v5l3 2"/><circle cx="12" cy="12" r="9"/></svg>
-        <span class="nav-label">実行履歴</span>
+        <span class="nav-label">過去履歴</span>
       </button>
+
+      <!-- 進捗フェーズ（1〜8）。段階承認の状態に応じて JS が出し入れする -->
+      <div class="app-nav-group" data-system="autorun" id="autorun-phase-group" style="display:none">進捗</div>
+      <div class="autorun-phase-nav" data-system="autorun" id="autorun-phase-nav" style="display:none"></div>
       <button class="app-nav-item" data-view="testcases" data-system="docs">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 4h9v16H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1z"/><path d="M9 3v3h6V3M9 11l2 2 4-4"/></svg>
         <span class="nav-label">テストケース</span>

@@ -4,6 +4,7 @@ let _autoRunPollTimer = null;
 let _autoRunElapsedTimer = null;
 let _autoRunStartedAt = null;  // ISO string from server
 let _autoRunStagesDomain = null;  // 段階承認パイプラインを読み込み済みのドメイン
+let _autoRunStagesOpened = false; // 承認待ちでフェーズ画面を開いたか
 let _autoRunPreviewLoaded = false;
 let _autoRunPreviewData = null;
 let _autoRunApprovalModalShown = false;
@@ -737,11 +738,16 @@ function _autorunRender(data) {
   window._autoRunLastData = data;
   const status = data.status || 'idle';
 
-  // 段階承認パイプライン（仕様7〜13）: ドメインが確定した時点で読み込む。
-  // クロールで実測が揃うと、各段階の内容を生成できるようになる。
-  if (data.domain && window.autorunStages && _autoRunStagesDomain !== data.domain) {
-    _autoRunStagesDomain = data.domain;
-    window.autorunStages.load(data.domain);
+  // 段階承認パイプライン（仕様7〜14）: ドメインが確定した時点で読み込む。
+  // 承認待ちに入ったらフェーズ画面を開く（それ以外では画面を奪わない）。
+  if (data.domain && window.autorunStages) {
+    const atGate = status === 'awaiting_stages';
+    if (_autoRunStagesDomain !== data.domain || (atGate && !_autoRunStagesOpened)) {
+      _autoRunStagesDomain = data.domain;
+      _autoRunStagesOpened = atGate;
+      window.autorunStages.load(data.domain, { open: atGate });
+    }
+    if (!atGate) _autoRunStagesOpened = false;
   }
 
   // started_at を保存（経過時間計算用）
@@ -969,6 +975,7 @@ function autorunReset() {
   _autoRunLogLines            = [];
   window._autoRunLastData     = null;
   _autoRunStagesDomain        = null;
+  _autoRunStagesOpened        = false;
   _autorunStopPolling();
   _autorunStopElapsed();
   _autorunStopLivePreview();

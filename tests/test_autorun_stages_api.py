@@ -57,11 +57,11 @@ def _post(client, path, payload):
 
 
 class TestStageListing:
-    def test_returns_seven_stages_pending(self, client) -> None:
+    def test_returns_eight_stages_pending(self, client) -> None:
         res = client.get(f"/api/autorun/stages?domain={DOMAIN}")
         assert res.status_code == 200
         body = res.get_json()
-        assert len(body["stages"]) == 7
+        assert len(body["stages"]) == 8
         assert body["current_stage_id"] == "test_objective"
         assert body["all_approved"] is False
 
@@ -245,7 +245,7 @@ class TestExecutionGate:
 
     def _approve_all(self, client) -> None:
         order = ["test_objective", "test_plan", "features", "viewpoints",
-                 "basic_design", "detail_design", "test_cases"]
+                 "basic_design", "detail_design", "test_cases", "playwright_automation"]
         for stage_id in order:
             body = _post(client, "/api/autorun/stages/generate",
                          {"domain": DOMAIN, "stage_id": stage_id}).get_json()
@@ -287,7 +287,7 @@ class TestTestCaseExport:
 
     def _run_all_stages(self, client) -> None:
         order = ["test_objective", "test_plan", "features", "viewpoints",
-                 "basic_design", "detail_design", "test_cases"]
+                 "basic_design", "detail_design", "test_cases", "playwright_automation"]
         for stage_id in order:
             body = _post(client, "/api/autorun/stages/generate",
                          {"domain": DOMAIN, "stage_id": stage_id}).get_json()

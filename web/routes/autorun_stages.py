@@ -25,7 +25,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 from autorun.qf_schema import to_csv, to_table  # noqa: E402
 from autorun.stages import (  # noqa: E402
+    DESIGN_STAGE_IDS,
+    STAGE_ORDER,
+    STAGE_PLAYWRIGHT,
     STATUS_APPROVED,
+    STATUS_PENDING,
     STATUS_SKIPPED,
     Pipeline,
     StageItem,
@@ -56,6 +60,18 @@ def _domain_dir(domain: str) -> Path:
 
 def _stages_path(domain: str) -> Path:
     return _domain_dir(domain) / "qa_process" / STAGES_FILE
+
+
+def _read_json_file(path: Path) -> dict[str, Any] | None:
+    """JSON を読む。無ければ None（無いことを「空」と混同しない）。"""
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning("読み込めません %s: %s", path, exc)
+        return None
+    return data if isinstance(data, dict) else None
 
 
 def _load_report(domain: str) -> dict[str, Any] | None:
@@ -133,8 +149,9 @@ def api_generate_stage() -> tuple[dict, int] | dict:
         return {"error": f"未知の段階です: {stage_id}"}, 400
 
     obs = _observation(domain, str(payload.get("url", "")), payload)
+    automation = _read_json_file(_domain_dir(domain) / "qa_process" / "automation_coverage.json")
     try:
-        stage = build_stage(stage_id, obs, pipeline)
+        stage = build_stage(stage_id, obs, pipeline, automation)
     except ValueError as exc:
         return {"error": str(exc)}, 400
 
@@ -335,12 +352,19 @@ def api_proceed() -> tuple[dict, int] | dict:
     job_id = str(payload.get("job_id", "")).strip()
 
     pipeline = _load_pipeline(domain)
-    if not pipeline.all_approved:
-        remaining = [
-            s.definition.name
-            for s in pipeline.stages
-            if s.status not in (STATUS_APPROVED, STATUS_SKIPPED)
-        ]
+
+    # 関門1（設計段階1〜7）と関門2（段階8）で必要な承認範囲が違う。
+    # 段階8がまだ生成されていない＝関門1の手前、と判断する。
+    playwright = pipeline.get(STAGE_PLAYWRIGHT)
+    at_design_gate = playwright is None or playwright.status == STATUS_PENDING
+    required = DESIGN_STAGE_IDS if at_design_gate else STAGE_ORDER
+
+    remaining = [
+        s.definition.name
+        for s in pipeline.stages
+        if s.stage_id in required and s.status not in (STATUS_APPROVED, STATUS_SKIPPED)
+    ]
+    if remaining:
         return {
             "error": "まだ承認されていない段階があります。",
             "detail": "未承認: " + " / ".join(remaining),

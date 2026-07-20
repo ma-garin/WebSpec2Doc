@@ -1,8 +1,8 @@
-// AutoRun 段階承認パイプライン（仕様7〜13）のUI。
+// AutoRun 段階承認パイプライン（仕様7〜14 / 画面上は1〜8）のUI。
 //
-// 提示 → 項目単位の修正/承認 → 段階の承認、で進む。
-// フィーチャー分析は全項目の承認が必要（仕様9）。
-// テスト計画は同一URLの2回目以降のみスキップできる（仕様8）。
+// **1フェーズ＝1画面**。フェーズの一覧はサイドメニューに置き、
+// 中央にはそのフェーズの内容だけを出す。
+// 承認済みフェーズへは戻って修正できる。
 (function () {
   'use strict';
 
@@ -11,9 +11,34 @@
   function $(id) { return document.getElementById(id); }
   function root() { return $('autorun-stages'); }
 
+  // 1フェーズ＝1画面。フェーズ表示中は受付を隠し、中央をそのフェーズだけにする。
   function show(visible) {
     var el = root();
     if (el) el.style.display = visible ? '' : 'none';
+    var intake = $('autorun-idle-msg');
+    if (intake) intake.style.display = visible ? 'none' : '';
+    setNavVisible(!!state.pipeline);
+  }
+
+  function setNavVisible(visible) {
+    var group = $('autorun-phase-group');
+    var nav = $('autorun-phase-nav');
+    if (group) group.style.display = visible ? '' : 'none';
+    if (nav) nav.style.display = visible ? '' : 'none';
+  }
+
+  // サイドの「受付」に戻る。段階の状態は保持したまま画面だけ切り替える。
+  function showIntake() {
+    var el = root();
+    if (el) el.style.display = 'none';
+    var intake = $('autorun-idle-msg');
+    if (intake) intake.style.display = '';
+    state.selected = '';
+    renderNav();
+    setNavVisible(!!state.pipeline);
+    if (window.autorunChat) {
+      window.autorunChat.setPhase({ key: 'intake', label: '受付' });
+    }
   }
 
   async function call(path, options) {
@@ -23,47 +48,58 @@
     return data;
   }
 
+  function stages() { return (state.pipeline && state.pipeline.stages) || []; }
+
   function stageById(id) {
-    if (!state.pipeline) return null;
-    return state.pipeline.stages.filter(function (s) { return s.stage_id === id; })[0] || null;
+    return stages().filter(function (s) { return s.stage_id === id; })[0] || null;
   }
 
-  // ---------------------------------------------------------------- 描画
+  function indexOf(id) {
+    var list = stages();
+    for (var i = 0; i < list.length; i++) if (list[i].stage_id === id) return i;
+    return -1;
+  }
 
-  function renderRail() {
-    var rail = $('autorun-stages-rail');
-    if (!rail || !state.pipeline) return;
-    rail.replaceChildren();
+  // 到達済み＝承認済み、または「次に進むべき段階」。未到達は薄く表示する。
+  function isReachable(stage) {
+    if (stage.status !== 'pending') return true;
+    return stage.stage_id === state.pipeline.current_stage_id;
+  }
 
-    state.pipeline.stages.forEach(function (stage) {
+  // ---------------------------------------------------------------- サイドメニュー
+
+  function renderNav() {
+    var nav = $('autorun-phase-nav');
+    if (!nav || !state.pipeline) return;
+    nav.replaceChildren();
+
+    stages().forEach(function (stage) {
       var btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'autorun-stage-tab is-' + stage.status;
+      btn.className = 'autorun-phase-item is-' + stage.status;
       if (stage.stage_id === state.selected) btn.classList.add('is-selected');
+      if (!isReachable(stage)) btn.classList.add('is-locked');
 
       var no = document.createElement('span');
-      no.className = 'autorun-stage-no';
-      no.textContent = String(stage.step_no);
+      no.className = 'autorun-phase-no';
+      no.textContent = stage.status === 'approved' ? '✓'
+        : stage.status === 'skipped' ? '—' : String(stage.step_no);
       btn.appendChild(no);
 
-      var name = document.createElement('span');
-      name.className = 'autorun-stage-name';
-      name.textContent = stage.name;
-      btn.appendChild(name);
-
-      var mark = document.createElement('span');
-      mark.className = 'autorun-stage-mark';
-      mark.textContent =
-        stage.status === 'approved' ? '✓' : stage.status === 'skipped' ? '—' : '';
-      btn.appendChild(mark);
+      var label = document.createElement('span');
+      label.className = 'autorun-phase-label';
+      label.textContent = stage.name;
+      btn.appendChild(label);
 
       btn.addEventListener('click', function () {
         state.selected = stage.stage_id;
         render();
       });
-      rail.appendChild(btn);
+      nav.appendChild(btn);
     });
   }
+
+  // ---------------------------------------------------------------- 項目
 
   function itemRow(stage, item) {
     var row = document.createElement('div');
@@ -85,10 +121,13 @@
       head.appendChild(badge);
     }
     if (item.source === 'user') {
-      var edited = document.createElement('span');
-      edited.className = 'autorun-stage-badge is-edited';
-      edited.textContent = '修正済';
-      head.appendChild(edited);
+      head.appendChild(makeBadge('is-edited', '修正済'));
+    }
+    if (item.source === 'llm') {
+      head.appendChild(makeBadge('is-llm', 'LLM提案'));
+    }
+    if (item.approved) {
+      head.appendChild(makeBadge('is-ok', '承認済み'));
     }
     row.appendChild(head);
 
@@ -101,39 +140,40 @@
     actions.className = 'autorun-stage-item-actions';
 
     if (stage.requires_item_approval) {
-      var approve = document.createElement('button');
-      approve.type = 'button';
-      approve.className = 'btn-outline-sm';
-      approve.textContent = item.approved ? '承認済み（取消）' : '承認';
-      approve.addEventListener('click', function () {
+      actions.appendChild(button(item.approved ? '承認済み（取消）' : '承認', function () {
         updateItem(stage.stage_id, item.item_id, { approved: !item.approved });
-      });
-      actions.appendChild(approve);
+      }));
     }
-
-    var edit = document.createElement('button');
-    edit.type = 'button';
-    edit.className = 'btn-outline-sm';
-    edit.textContent = '修正';
-    edit.addEventListener('click', function () {
-      startEdit(row, stage, item);
-    });
-    actions.appendChild(edit);
-
-    var ask = document.createElement('button');
-    ask.type = 'button';
-    ask.className = 'btn-outline-sm';
-    ask.textContent = 'アシスタントに相談';
-    ask.addEventListener('click', function () {
-      var input = $('autorun-chat-input');
-      if (!input) return;
-      input.value = '次の項目について改善案を出してください:\n' + item.title + '\n' + item.detail;
-      input.focus();
-    });
-    actions.appendChild(ask);
+    actions.appendChild(button('修正', function () { startEdit(row, stage, item); }));
+    actions.appendChild(button('アシスタントに相談', function () {
+      askAssistant('次の項目について改善案を出してください:\n' + item.title + '\n' + item.detail);
+    }));
 
     row.appendChild(actions);
     return row;
+  }
+
+  function makeBadge(cls, text) {
+    var b = document.createElement('span');
+    b.className = 'autorun-stage-badge ' + cls;
+    b.textContent = text;
+    return b;
+  }
+
+  function button(text, onClick, cls) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = cls || 'btn-outline-sm';
+    b.textContent = text;
+    b.addEventListener('click', onClick);
+    return b;
+  }
+
+  function askAssistant(text) {
+    var input = $('autorun-chat-input');
+    if (!input) return;
+    input.value = text;
+    input.focus();
   }
 
   function startEdit(row, stage, item) {
@@ -150,27 +190,14 @@
     detailInput.rows = 4;
     detailInput.value = item.detail;
 
-    var save = document.createElement('button');
-    save.type = 'button';
-    save.className = 'btn-primary';
-    save.textContent = '保存';
-    save.addEventListener('click', function () {
-      updateItem(stage.stage_id, item.item_id, {
-        title: titleInput.value,
-        detail: detailInput.value,
-      });
-    });
-
-    var cancel = document.createElement('button');
-    cancel.type = 'button';
-    cancel.className = 'btn-outline-sm';
-    cancel.textContent = 'やめる';
-    cancel.addEventListener('click', render);
-
     var buttons = document.createElement('div');
     buttons.className = 'autorun-stage-editor-actions';
-    buttons.appendChild(save);
-    buttons.appendChild(cancel);
+    buttons.appendChild(button('保存', function () {
+      updateItem(stage.stage_id, item.item_id, {
+        title: titleInput.value, detail: detailInput.value,
+      });
+    }, 'btn-primary'));
+    buttons.appendChild(button('やめる', render));
 
     editor.appendChild(titleInput);
     editor.appendChild(detailInput);
@@ -179,22 +206,28 @@
     titleInput.focus();
   }
 
+  // ---------------------------------------------------------------- 本文
+
   function renderPanel() {
     var panel = $('autorun-stage-panel');
     if (!panel || !state.pipeline) return;
     panel.replaceChildren();
 
-    var stage = stageById(state.selected) || stageById(state.pipeline.current_stage_id);
+    var stage = stageById(state.selected);
     if (!stage) return;
-    state.selected = stage.stage_id;
 
     var head = document.createElement('header');
     head.className = 'autorun-stage-head';
 
     var kicker = document.createElement('div');
     kicker.className = 'section-kicker';
-    kicker.textContent = 'STEP ' + stage.step_no + ' / ' + stage.name;
+    kicker.textContent = 'STEP ' + stage.step_no + ' / ' + stages().length;
     head.appendChild(kicker);
+
+    var title = document.createElement('h3');
+    title.className = 'autorun-stage-title';
+    title.textContent = stage.name;
+    head.appendChild(title);
 
     var purpose = document.createElement('p');
     purpose.className = 'autorun-stage-purpose';
@@ -210,134 +243,105 @@
     }
 
     if (stage.status === 'skipped') {
-      var skipped = document.createElement('p');
-      skipped.className = 'autorun-stage-empty';
-      skipped.textContent = 'この段階はスキップされました（2回目以降のため）。';
-      panel.appendChild(skipped);
+      panel.appendChild(message('この段階はスキップされました（2回目以降のため）。'));
     } else if (!stage.items.length) {
-      var empty = document.createElement('p');
-      empty.className = 'autorun-stage-empty';
-      empty.textContent = 'まだ生成されていません。「内容を生成」を押してください。';
-      panel.appendChild(empty);
+      panel.appendChild(message('まだ生成されていません。「内容を生成」を押してください。'));
     } else {
       var list = document.createElement('div');
       list.className = 'autorun-stage-items';
-      stage.items.forEach(function (item) {
-        list.appendChild(itemRow(stage, item));
-      });
+      stage.items.forEach(function (item) { list.appendChild(itemRow(stage, item)); });
       panel.appendChild(list);
     }
 
     panel.appendChild(renderActions(stage));
   }
 
+  function message(text) {
+    var p = document.createElement('p');
+    p.className = 'autorun-stage-empty';
+    p.textContent = text;
+    return p;
+  }
+
   function renderActions(stage) {
     var bar = document.createElement('div');
     bar.className = 'autorun-stage-actions';
 
-    var generate = document.createElement('button');
-    generate.type = 'button';
-    generate.className = 'btn-outline-sm';
-    generate.textContent = stage.items.length ? '作り直す' : '内容を生成';
-    generate.disabled = state.busy;
-    generate.addEventListener('click', function () { generateStage(stage.stage_id); });
-    bar.appendChild(generate);
+    var idx = indexOf(stage.stage_id);
+    var prev = button('← 前へ', function () {
+      state.selected = stages()[idx - 1].stage_id;
+      render();
+    });
+    prev.disabled = idx <= 0;
+    bar.appendChild(prev);
+
+    var gen = button(stage.items.length ? '作り直す' : '内容を生成', function () {
+      generateStage(stage.stage_id);
+    });
+    gen.disabled = state.busy;
+    bar.appendChild(gen);
 
     if (stage.items.length) {
-      var suggest = document.createElement('button');
-      suggest.type = 'button';
-      suggest.className = 'btn-outline-sm';
-      suggest.textContent = '抜けをLLMに聞く';
+      var suggest = button('抜けをLLMに聞く', function () { suggestFor(stage.stage_id); });
       suggest.disabled = state.busy;
-      suggest.addEventListener('click', function () { suggestFor(stage.stage_id); });
       bar.appendChild(suggest);
     }
 
     if (stage.skippable_on_rerun && state.pipeline.is_rerun && stage.status !== 'skipped') {
-      var skip = document.createElement('button');
-      skip.type = 'button';
-      skip.className = 'btn-outline-sm';
-      skip.textContent = 'スキップ（2回目以降）';
+      var skip = button('スキップ（2回目以降）', function () { skipStage(stage.stage_id); });
       skip.disabled = state.busy;
-      skip.addEventListener('click', function () { skipStage(stage.stage_id); });
       bar.appendChild(skip);
     }
 
     var status = document.createElement('span');
     status.className = 'autorun-stage-actions-note';
     if (stage.status === 'approved') {
-      status.textContent = 'この段階は承認済みです。';
-    } else if (stage.requires_item_approval && !stage.can_approve) {
+      status.textContent = 'この段階は承認済みです。修正すると再承認が必要です。';
+    } else if (stage.requires_item_approval && !stage.can_approve && stage.items.length) {
       var pending = stage.items.filter(function (i) { return !i.approved; }).length;
-      status.textContent = stage.items.length
-        ? '未承認の項目が ' + pending + ' 件あります。全て承認すると次へ進めます。'
-        : '';
+      status.textContent = '未承認の項目が ' + pending + ' 件あります。全て承認すると次へ進めます。';
     }
     bar.appendChild(status);
 
-    var approve = document.createElement('button');
-    approve.type = 'button';
-    approve.className = 'btn-primary';
-    approve.textContent = '承認して次へ';
+    var approve = button('承認して次へ', function () { approveStage(stage.stage_id); }, 'btn-primary');
     approve.disabled = state.busy || !stage.can_approve || stage.status === 'approved';
-    approve.addEventListener('click', function () { approveStage(stage.stage_id); });
     bar.appendChild(approve);
 
     return bar;
   }
 
+  // ---------------------------------------------------------------- 進行
+
   function renderProceed() {
-    var host = $('autorun-stages');
+    var host = root();
     if (!host) return;
     var old = host.querySelector('.autorun-stages-proceed');
     if (old) old.remove();
-    if (!state.pipeline || !state.pipeline.all_approved) return;
+    if (!state.pipeline) return;
+
+    // 設計段階（1〜7）が揃った時点と、全段階が揃った時点で進める
+    var designDone = stages().slice(0, 7).every(function (s) {
+      return s.status === 'approved' || s.status === 'skipped';
+    });
+    var allDone = state.pipeline.all_approved;
+    if (!designDone) return;
 
     var bar = document.createElement('div');
     bar.className = 'autorun-stages-proceed';
 
     var msg = document.createElement('span');
     msg.className = 'autorun-stages-proceed-msg';
-    msg.textContent = '全ての段階を承認しました。Playwright 化へ進めます。';
+    msg.textContent = allDone
+      ? '全ての段階を承認しました。テストを実行できます。'
+      : '設計段階（1〜7）を承認しました。Playwright 化へ進めます。';
     bar.appendChild(msg);
 
-    var go = document.createElement('button');
-    go.type = 'button';
-    go.className = 'btn-primary';
-    go.textContent = '承認を確定して次へ進む';
+    var go = button(allDone ? '承認を確定して実行する' : '承認を確定して次へ進む', proceed, 'btn-primary');
     go.disabled = state.busy;
-    go.addEventListener('click', proceed);
     bar.appendChild(go);
 
     host.appendChild(bar);
   }
-
-  function proceed() {
-    return withBusy(async function () {
-      var jobId = (window._autoRunLastData && window._autoRunLastData.job_id) || '';
-      var res = await call('/api/autorun/stages/proceed', json({
-        domain: state.domain, job_id: jobId,
-      }));
-      state.pipeline = res;
-      var host = $('autorun-stages');
-      if (host && res.detail) {
-        var note = document.createElement('div');
-        note.className = 'autorun-stages-proceed-msg';
-        note.textContent = res.detail;
-        host.appendChild(note);
-      }
-    });
-  }
-
-  function render() {
-    if (!state.pipeline) { show(false); return; }
-    show(true);
-    renderRail();
-    renderPanel();
-    renderProceed();
-  }
-
-  // ---------------------------------------------------------------- 操作
 
   function json(body) {
     return {
@@ -377,7 +381,8 @@
         stage_id: stageId,
         url: urlInput ? urlInput.value : '',
         document_driven: !!(modeDoc && modeDoc.checked),
-        viewpoint_set_name: vpSelect ? (vpSelect.options[vpSelect.selectedIndex] || {}).text || '' : '',
+        viewpoint_set_name: vpSelect
+          ? ((vpSelect.options[vpSelect.selectedIndex] || {}).text || '') : '',
       }));
       state.selected = stageId;
     });
@@ -388,6 +393,7 @@
       state.pipeline = await call('/api/autorun/stages/approve', json({
         domain: state.domain, stage_id: stageId,
       }));
+      // 承認したら次の未承認フェーズへ自動で進む
       state.selected = state.pipeline.current_stage_id || stageId;
     });
   }
@@ -400,6 +406,35 @@
       state.selected = state.pipeline.current_stage_id || stageId;
     });
   }
+
+  function updateItem(stageId, itemId, changes) {
+    return withBusy(async function () {
+      var body = { domain: state.domain, stage_id: stageId, item_id: itemId };
+      Object.keys(changes).forEach(function (k) { body[k] = changes[k]; });
+      state.pipeline = await call('/api/autorun/stages/item', json(body));
+    });
+  }
+
+  function proceed() {
+    return withBusy(async function () {
+      var jobId = (window._autoRunLastData && window._autoRunLastData.job_id) || '';
+      var res = await call('/api/autorun/stages/proceed', json({
+        domain: state.domain, job_id: jobId,
+      }));
+      state.pipeline = res;
+      if (res.detail) {
+        var host = root();
+        if (host) {
+          var note = document.createElement('div');
+          note.className = 'autorun-stages-proceed-msg';
+          note.textContent = res.detail;
+          host.appendChild(note);
+        }
+      }
+    });
+  }
+
+  // ---------------------------------------------------------------- LLM 提案
 
   function renderSuggestions(stageId, result) {
     var panel = $('autorun-stage-panel');
@@ -432,26 +467,20 @@
       row.appendChild(title);
 
       if (s.detail) {
-        var detail = document.createElement('p');
-        detail.className = 'autorun-suggest-detail';
-        detail.textContent = s.detail;
-        row.appendChild(detail);
+        var d = document.createElement('p');
+        d.className = 'autorun-suggest-detail';
+        d.textContent = s.detail;
+        row.appendChild(d);
       }
       if (s.reason) {
-        var reason = document.createElement('p');
-        reason.className = 'autorun-suggest-reason';
-        reason.textContent = '理由: ' + s.reason;
-        row.appendChild(reason);
+        var r = document.createElement('p');
+        r.className = 'autorun-suggest-reason';
+        r.textContent = '理由: ' + s.reason;
+        row.appendChild(r);
       }
-
-      var adopt = document.createElement('button');
-      adopt.type = 'button';
-      adopt.className = 'btn-outline-sm';
-      adopt.textContent = '項目として採用';
-      adopt.addEventListener('click', function () {
+      row.appendChild(button('項目として採用', function () {
         adoptSuggestion(stageId, s.title, s.detail);
-      });
-      row.appendChild(adopt);
+      }));
       box.appendChild(row);
     });
 
@@ -462,11 +491,9 @@
     return withBusy(async function () {
       var urlInput = $('autorun-url');
       var result = await call('/api/autorun/stages/suggest', json({
-        domain: state.domain,
-        stage_id: stageId,
+        domain: state.domain, stage_id: stageId,
         url: urlInput ? urlInput.value : '',
       }));
-      // render() で消えないよう、描画後に追記する
       setTimeout(function () { renderSuggestions(stageId, result); }, 0);
     });
   }
@@ -479,30 +506,66 @@
     });
   }
 
-  function updateItem(stageId, itemId, changes) {
-    return withBusy(async function () {
-      var body = { domain: state.domain, stage_id: stageId, item_id: itemId };
-      Object.keys(changes).forEach(function (k) { body[k] = changes[k]; });
-      state.pipeline = await call('/api/autorun/stages/item', json(body));
-    });
+  // ---------------------------------------------------------------- 全体
+
+  function render() {
+    if (!state.pipeline) { show(false); return; }
+    show(true);
+    renderNav();
+    renderPanel();
+    renderProceed();
+    notifyPhase();
   }
 
-  async function load(domain) {
+  // 右のアシスタントへ、現在のフェーズを伝える
+  function notifyPhase() {
+    var stage = stageById(state.selected);
+    if (window.autorunChat && stage) {
+      window.autorunChat.setPhase({
+        key: stage.stage_id,
+        label: 'STEP ' + stage.step_no + ' ' + stage.name,
+      });
+    }
+  }
+
+  async function load(domain, opts) {
     if (!domain) return;
     state.domain = domain;
     try {
       state.pipeline = await call('/api/autorun/stages?domain=' + encodeURIComponent(domain));
-      // 全段階が承認済みだと current_stage_id は null になる。
-      // その場合に空パネルを見せないよう、最後の段階を選んでおく。
-      var stages = state.pipeline.stages || [];
+      var list = state.pipeline.stages || [];
       state.selected = state.pipeline.current_stage_id
-        || (stages.length ? stages[stages.length - 1].stage_id : '');
-      render();
+        || (list.length ? list[list.length - 1].stage_id : '');
+      // 読み込んだだけでは画面を奪わない。フェーズを開くのは利用者の操作か、
+      // ジョブが承認待ちに入った時だけ。
+      if (opts && opts.open) {
+        render();
+      } else {
+        renderNav();
+        setNavVisible(true);
+      }
     } catch (e) {
-      show(false);
+      state.pipeline = null;
+      setNavVisible(false);
     }
   }
 
-  // 外部（autorun.js のジョブ進行）から呼べるようにする
-  window.autorunStages = { load: load, render: render, hide: function () { show(false); } };
+  function boot() {
+    // サイドの「受付」を押したら受付画面へ戻す
+    var intakeNav = document.querySelector('.app-nav-item[data-view="auto-run"]');
+    if (intakeNav) intakeNav.addEventListener('click', showIntake);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+
+  window.autorunStages = {
+    load: load,
+    render: render,
+    showIntake: showIntake,
+    hide: function () { show(false); },
+  };
 })();

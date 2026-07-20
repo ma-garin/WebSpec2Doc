@@ -420,7 +420,67 @@
   color: var(--color-text-secondary);
 }
 
-/* ---- 段階承認パイプライン（仕様7〜13） ---- */
+/* ---- サイドメニューの進捗フェーズ（1〜8） ---- */
+.autorun-phase-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border-left: 2px solid var(--color-border);
+  margin: 2px 0 2px 14px;
+  padding-left: 6px;
+}
+.autorun-phase-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: var(--radius-md);
+  padding: 6px 9px;
+  font-size: var(--text-xs);
+  font-family: var(--font-main);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  text-align: left;
+}
+.autorun-phase-item:hover { background: var(--color-surface-2); }
+.autorun-phase-no {
+  flex: 0 0 auto;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  font-weight: 800;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-disabled);
+}
+.autorun-phase-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.autorun-phase-item.is-approved { color: var(--color-low); }
+.autorun-phase-item.is-approved .autorun-phase-no {
+  background: var(--color-low-bg);
+  border-color: var(--color-low-border);
+  color: var(--color-low);
+}
+.autorun-phase-item.is-skipped { opacity: .65; }
+.autorun-phase-item.is-locked { opacity: .45; }
+.autorun-phase-item.is-selected {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+  font-weight: 700;
+}
+.autorun-phase-item.is-selected .autorun-phase-no {
+  background: #fff;
+  border-color: #fff;
+  color: var(--color-primary);
+}
+/* サイドバー折りたたみ時はラベルを隠す */
+.app-sidebar.is-collapsed .autorun-phase-label { display: none; }
+
+/* ---- 段階承認パイプライン（仕様7〜14 / 画面上は1〜8） ---- */
 .autorun-stages {
   display: grid;
   gap: 12px;
@@ -431,40 +491,8 @@
   box-shadow: var(--shadow-sm);
 }
 
-.autorun-stages-rail {
-  display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-}
-.autorun-stage-tab {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  border-radius: var(--radius-full);
-  padding: 5px 12px;
-  font-size: var(--text-xs);
-  font-family: var(--font-main);
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  white-space: nowrap;
-}
-.autorun-stage-tab:hover { border-color: var(--color-primary); }
-.autorun-stage-tab.is-selected {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-  color: #fff;
-}
-.autorun-stage-tab.is-approved { border-color: var(--color-low-border); background: var(--color-low-bg); color: var(--color-low); }
-.autorun-stage-tab.is-approved.is-selected { background: var(--color-primary); color: #fff; }
-.autorun-stage-tab.is-skipped { opacity: .6; }
-.autorun-stage-no { font-weight: 800; font-variant-numeric: tabular-nums; }
-.autorun-stage-mark { font-weight: 800; }
-
 .autorun-stage-head { display: grid; gap: 3px; }
+.autorun-stage-title { margin: 0; font-size: var(--text-lg); font-weight: 800; }
 .autorun-stage-purpose {
   margin: 0;
   font-size: var(--text-sm);
@@ -783,8 +811,19 @@
   gap: 10px;
 }
 
-.autorun-chat-empty p { margin: 0 0 6px; font-size: var(--text-sm); }
-.autorun-chat-suggestions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.autorun-chat-lead {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--leading-normal);
+}
+/* フェーズ別チップは入力欄の上ではなくログの上に置き、常に見えるようにする */
+.autorun-chat-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 14px 0;
+}
 .autorun-chat-chip {
   border: 1px solid var(--color-border);
   background: var(--color-surface);
@@ -1801,4 +1840,31 @@
 @media (max-width: 820px) {
   .onboarding-checklist-steps { grid-template-columns: 1fr; }
   .onboarding-checklist-head, .onboarding-replay-card { align-items: flex-start; flex-direction: column; }
+}
+
+/* ---- 過去履歴: 段階承認の状況 ---- */
+.rh-approval {
+  display: inline-block;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: var(--radius-full);
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.rh-approval.is-ok {
+  background: var(--color-low-bg);
+  border-color: var(--color-low-border);
+  color: var(--color-low);
+}
+.rh-approval.is-partial {
+  background: var(--color-high-bg);
+  border-color: var(--color-high-border);
+  color: var(--color-high);
+}
+.rh-approval-note {
+  display: block;
+  margin-top: 2px;
+  font-size: 10.5px;
+  color: var(--color-text-secondary);
 }

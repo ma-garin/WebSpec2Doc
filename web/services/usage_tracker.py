@@ -316,6 +316,11 @@ def _run_from_record(output_root: Path, record: dict) -> dict:
         link = _existing_path(domain_dir / "qa_process" / "playwright_report.html") or (
             _existing_path(domain_dir / "qa_process" / "qa_process_report.html")
         )
+        # 履歴から入ったときも、受付から見るのと同じ成果物へ辿れるようにする。
+        # 従来は単一HTMLへのリンクしか持たず、専用レポート画面（ダッシュボード・
+        # QA仕様書・計画・分析・設計・ケース・スクリプト・実行結果の8セクション）へ
+        # 繋がっていなかったため、受付経由と履歴経由で見える成果物が食い違っていた。
+        report_url = _autorun_report_url(domain, domain_dir)
     elif event in ("comparison", "ux_review"):
         status = "complete"
         summary = {
@@ -332,7 +337,8 @@ def _run_from_record(output_root: Path, record: dict) -> dict:
             "document_count": int(record.get("document_count", 0)),
         }
         link = _existing_path(domain_dir / "report.html")
-    return {
+        report_url = ""
+    entry = {
         "type": event,
         "type_label": _RUN_TYPE_LABELS.get(event, event),
         "domain": domain,
@@ -342,6 +348,23 @@ def _run_from_record(output_root: Path, record: dict) -> dict:
         "link": link,
         "source": "log",
     }
+    if report_url:
+        entry["report_url"] = report_url
+    return entry
+
+
+def _autorun_report_url(domain: str, domain_dir: Path) -> str:
+    """AutoRun 実行結果の専用レポート画面へのURL。
+
+    成果物が実在するときだけ返す（実在検証・捏造しない）。
+    受付経由と履歴経由で見える成果物が食い違わないようにするための接続。
+    """
+    if not domain:
+        return ""
+    qa_dir = domain_dir / "qa_process"
+    # 専用レポートが意味を持つ最低条件: 実測かQA成果物のいずれかが存在すること
+    has_artifacts = (domain_dir / "report.json").is_file() or qa_dir.is_dir()
+    return f"/autorun/report/{domain}" if has_artifacts else ""
 
 
 def _run_from_job(job: dict) -> dict:

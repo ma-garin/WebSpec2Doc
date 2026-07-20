@@ -502,6 +502,8 @@ def _run_job(job: AutoRunJob, depth: int, max_pages: int) -> None:
         # L0/L4: 観測の完全性と非機能の合否判定。既存成果物のみを読むため
         # 対象サイトへの追加アクセスは発生しない。失敗しても本体結果は壊さない。
         _run_nonfunctional_analysis(job)
+        # L3: 失敗の原因特定。失敗が無ければ何もしない。
+        _run_failure_triage(job)
     except Exception as exc:
         if job._cancelled:
             return
@@ -874,6 +876,37 @@ def _run_nonfunctional_analysis(job: AutoRunJob) -> None:
             job.add_log(f"非機能[{item['area']}] {item['verdict']}: {item['summary']}")
     except Exception as exc:  # 付加価値であり、本体結果を壊さない
         job.add_log(f"非機能判定・観測範囲の分析に失敗しました（実行結果は保持）: {exc}")
+
+
+def _run_failure_triage(job: AutoRunJob) -> None:
+    """L3 失敗の原因特定（設計計画 rev.3 / Phase 2）。
+
+    「Timeout」「expected true, received false」で終わらせず、原因候補を示す。
+    仮説カタログは、本セッションで人が実サイト検証で突き止めた実在の原因
+    （既存値連結・ロケール書式・オーバーレイ遮断・条件付きdisabled・
+    兄弟項目の制約違反）を知識化したもの。
+    """
+    from web.services import failure_hypothesis
+
+    qa = _job_out(job) / job.domain / "qa_process"
+    try:
+        report = _read_json_file(qa / "playwright_report.json") or {}
+        failures = [t for t in (report.get("tests") or []) if t.get("status") == "failed"]
+        if not failures:
+            return
+        result = failure_hypothesis.triage(failures)
+        (qa / "failure_hypotheses.json").write_text(
+            json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        job.outputs["failure_hypotheses"] = str((qa / "failure_hypotheses.json").resolve())
+        explained = len(result["triaged"])
+        unexplained = result["unexplained_count"]
+        job.add_log(
+            f"失敗の原因特定: {explained}件に原因候補を提示、{unexplained}件は未特定"
+            "（未特定＝原因が無いという意味ではありません）"
+        )
+    except Exception as exc:  # 付加価値であり、本体結果を壊さない
+        job.add_log(f"失敗の原因特定に失敗しました（実行結果は保持）: {exc}")
 
 
 def _read_json_file(path: Path) -> dict | None:

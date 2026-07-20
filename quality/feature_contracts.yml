@@ -1736,6 +1736,46 @@
         "error_path",
         "evidence"
       ]
+    },
+    {
+      "feature_id": "autorun_failure_triage",
+      "name": "AutoRun 失敗の原因特定・部分変異体",
+      "risk_level": "high",
+      "status": "implemented",
+      "ui_files": [],
+      "route_files": [
+        "web/routes/auto_run.py"
+      ],
+      "core_files": [
+        "web/services/failure_hypothesis.py",
+        "src/autorun/techniques.py"
+      ],
+      "symbols": [
+        "triage",
+        "match_hypotheses",
+        "equivalence_classes",
+        "boundary_values",
+        "decision_table"
+      ],
+      "outputs": [
+        "failure_hypotheses.json",
+        "原因候補",
+        "説明できない失敗の明示",
+        "技法適用結果"
+      ],
+      "persistence": [
+        "output/{domain}/qa_process/failure_hypotheses.json"
+      ],
+      "failure_modes": [
+        "unexplained_failure",
+        "environment_error",
+        "budget_exhausted"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "evidence"
+      ]
     }
   ]
 }

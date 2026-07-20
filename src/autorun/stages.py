@@ -699,7 +699,15 @@ _TECHNIQUE_BY_VIEWPOINT: Final[dict[str, tuple[str, str]]] = {
 }
 
 
-def _build_basic_design(viewpoints: Stage | None) -> tuple[tuple[StageItem, ...], str]:
+def _build_basic_design(
+    viewpoints: Stage | None, obs: Observation | None = None
+) -> tuple[tuple[StageItem, ...], str]:
+    """段階11: テスト基本設計。
+
+    技法の**名前を割り当てるだけ**では設計として不十分（従来の欠陥）。
+    実測した入力項目へ技法を**実際に適用**し、具体的な値・境界・規則を
+    人が読める表として提示する。
+    """
     items: list[StageItem] = []
     seen: set[str] = set()
     for vp in viewpoints.items if viewpoints else ():
@@ -722,8 +730,108 @@ def _build_basic_design(viewpoints: Stage | None) -> tuple[tuple[StageItem, ...]
                 },
             )
         )
-    note = "観点ごとに適用する技法を割り当てました。技法が合わない箇所は修正してください。"
+
+    # 技法の実適用。実測項目から具体的な値・境界・規則を導出して表で示す。
+    items.extend(_technique_items(obs))
+
+    note = (
+        "観点ごとに技法を割り当て、実測した入力項目へ技法を適用した具体値を提示しました。"
+        "技法や値が合わない箇所は修正してください。"
+    )
     return tuple(items), note
+
+
+def _technique_items(obs: Observation | None) -> list[StageItem]:
+    """実測項目へテスト技法を適用し、人が読める表として項目化する。"""
+    if obs is None or not obs.screens:
+        return []
+    from autorun.techniques import apply_all
+
+    items: list[StageItem] = []
+    for screen in obs.screens:
+        applied = apply_all(screen)
+        if not applied["fields"] and not applied["decision_table"].get("applicable"):
+            continue
+        page_id = applied["page_id"]
+        title = str(screen.get("title") or page_id)
+
+        if applied["fields"]:
+            items.append(
+                StageItem(
+                    item_id=f"tech-values-{page_id}",
+                    title=f"{title}: 同値分割・境界値（{applied['total_cases']}件）",
+                    detail=_format_value_table(applied["fields"]),
+                    data={"page_id": page_id, "technique": "同値分割・境界値分析"},
+                )
+            )
+        table = applied["decision_table"]
+        if table.get("applicable"):
+            items.append(
+                StageItem(
+                    item_id=f"tech-decision-{page_id}",
+                    title=f"{title}: デシジョンテーブル（{len(table['rules'])}規則）",
+                    detail=_format_decision_table(table),
+                    data={"page_id": page_id, "technique": "デシジョンテーブル"},
+                )
+            )
+        pairwise = applied["pairwise"]
+        if pairwise.get("applicable"):
+            items.append(
+                StageItem(
+                    item_id=f"tech-pairwise-{page_id}",
+                    title=f"{title}: ペアワイズ（{pairwise['required_pairs']}組）",
+                    detail=_format_pairwise(pairwise),
+                    data={"page_id": page_id, "technique": "ペアワイズ"},
+                )
+            )
+    return items
+
+
+def _format_value_table(fields: list[dict[str, Any]]) -> str:
+    """同値クラス・境界値を、人が読める表として整形する。"""
+    lines: list[str] = []
+    for field in fields:
+        lines.append(f"■ {field['field']}（{field['field_type']}）")
+        lines.append("  値 / 分類 / 期待結果 / 根拠")
+        for row in [*field["equivalence"], *field["boundary"]]:
+            mark = "受理" if row["valid"] else "拒否"
+            lines.append(
+                f"  {_short(row['value'])} / {row['label']} / {mark} / {row['rationale']}"
+            )
+        lines.append("")
+    return "\n".join(lines).rstrip()
+
+
+def _format_decision_table(table: dict[str, Any]) -> str:
+    """デシジョンテーブルを表として整形する。"""
+    conditions = table["conditions"]
+    header = "規則 | " + " | ".join(conditions) + " | 期待動作"
+    lines = [header, "-" * len(header)]
+    for rule in table["rules"]:
+        cells = " | ".join(rule["conditions"][name] for name in conditions)
+        lines.append(f"{rule['rule']} | {cells} | {rule['action']}")
+    lines.append("")
+    lines.append(f"被覆: {table['coverage']}")
+    return "\n".join(lines)
+
+
+def _format_pairwise(pairwise: dict[str, Any]) -> str:
+    lines = ["因子と水準:"]
+    for name, levels in pairwise["factors"].items():
+        lines.append(f"  {name}: {' / '.join(levels)}")
+    lines.append("")
+    lines.append(f"必要な組: {pairwise['required_pairs']}（{pairwise['coverage']}）")
+    lines.append("代表例:")
+    for pair in pairwise["sample_pairs"][:8]:
+        lines.append("  " + ", ".join(f"{k}={v}" for k, v in pair.items()))
+    return "\n".join(lines)
+
+
+def _short(value: str, limit: int = 24) -> str:
+    text = str(value)
+    if text == "":
+        return "（空）"
+    return text if len(text) <= limit else text[: limit - 1] + "…"
 
 
 def _build_detail_design(basic: Stage | None) -> tuple[tuple[StageItem, ...], str]:
@@ -973,7 +1081,7 @@ def build_stage(
     elif stage_id == STAGE_VIEWPOINTS:
         items, note = _build_viewpoints(obs, pipeline.get(STAGE_FEATURES))
     elif stage_id == STAGE_BASIC_DESIGN:
-        items, note = _build_basic_design(pipeline.get(STAGE_VIEWPOINTS))
+        items, note = _build_basic_design(pipeline.get(STAGE_VIEWPOINTS), obs)
     elif stage_id == STAGE_DETAIL_DESIGN:
         items, note = _build_detail_design(pipeline.get(STAGE_BASIC_DESIGN))
     elif stage_id == STAGE_TEST_CASES:

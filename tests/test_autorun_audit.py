@@ -158,7 +158,7 @@ class TestProgressSummary:
         """過去履歴で「8段階中いくつ承認済みか」を出すための集計。"""
         body = client.get(f"/api/autorun/stages?domain={DOMAIN}").get_json()
         assert body["approved_stage_count"] == 0
-        assert body["stage_total"] == 7
+        assert body["stage_total"] == 8
 
         _post(client, "/api/autorun/stages/generate",
               {"domain": DOMAIN, "stage_id": "test_objective"})

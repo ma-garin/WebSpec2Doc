@@ -1,16 +1,22 @@
 """AutoRun の段階承認パイプライン。
 
-仕様7〜13に対応する7段階。各段階は**提示 → 承認**で進み、項目単位で
+仕様7〜14に対応する8段階。各段階は**提示 → 承認**で進み、項目単位で
 修正できる。生成はルールベース（実測データから確定的に作る）を基本とし、
 LLM は補助（言い回しの具体化・追加候補の提案）に限る。
 
-    7  test_objective  テスト目的の提示・承認
-    8  test_plan       テスト計画の提示・承認（同一URLの2回目以降はSKIP可）
-    9  features        テストフィーチャー分析（全項目の承認が必要）
-    10 viewpoints      テスト観点分析
-    11 basic_design    テスト基本設計（テスト技法）
-    12 detail_design   テスト詳細設計（ハイレベルテストケース）
-    13 test_cases      テストケース（ローレベル / QualityForward カラム）
+画面上は 1〜8 で表示する（7〜14 は仕様書の行番号であり、利用者から見た番号ではない）。
+
+    1 test_objective        テスト目的の提示・承認
+    2 test_plan             テスト計画の提示・承認（同一URLの2回目以降はSKIP可）
+    3 features              テストフィーチャー分析（全項目の承認が必要）
+    4 viewpoints            テスト観点分析
+    5 basic_design          テスト基本設計（テスト技法）
+    6 detail_design         テスト詳細設計（ハイレベルテストケース）
+    7 test_cases            テストケース（ローレベル / QualityForward カラム）
+    8 playwright_automation Playwright 自動化（未自動化の明示を含む）
+
+設計段階（1〜7）が揃うとスクリプトを生成し、その結果を 8 で提示して
+承認を得てから実行する。
 
 **設計方針**
 - 不変データ。更新は必ず新しいオブジェクトを返す。
@@ -37,6 +43,7 @@ STAGE_VIEWPOINTS: Final = "viewpoints"
 STAGE_BASIC_DESIGN: Final = "basic_design"
 STAGE_DETAIL_DESIGN: Final = "detail_design"
 STAGE_TEST_CASES: Final = "test_cases"
+STAGE_PLAYWRIGHT: Final = "playwright_automation"
 
 STATUS_PENDING: Final = "pending"
 STATUS_GENERATED: Final = "generated"
@@ -59,48 +66,66 @@ class StageDefinition:
 STAGE_DEFINITIONS: Final[tuple[StageDefinition, ...]] = (
     StageDefinition(
         STAGE_TEST_OBJECTIVE,
-        7,
+        1,
         "テスト目的",
         "この対象に対して、どのような目的・方針でテストするのかを定める（ISTQB のテスト目的）。",
     ),
     StageDefinition(
         STAGE_TEST_PLAN,
-        8,
+        2,
         "テスト計画",
         "テスト目的に対して、この後の進め方・範囲・前提を定める。",
         skippable_on_rerun=True,
     ),
     StageDefinition(
         STAGE_FEATURES,
-        9,
+        3,
         "テストフィーチャー分析",
         "実測した画面から、テスト対象のフィーチャー（機能のまとまり）を切り出す。",
         requires_item_approval=True,
     ),
     StageDefinition(
         STAGE_VIEWPOINTS,
-        10,
+        4,
         "テスト観点分析",
         "フィーチャーごとにテスト観点を洗い出す（既存の観点セット＋実測からの補完）。",
     ),
     StageDefinition(
         STAGE_BASIC_DESIGN,
-        11,
+        5,
         "テスト基本設計",
         "観点に対して適用するテスト技法を決める（同値分割・境界値・デシジョンテーブル・状態遷移・組合せ）。",
     ),
     StageDefinition(
         STAGE_DETAIL_DESIGN,
-        12,
+        6,
         "テスト詳細設計",
         "ハイレベルテストケース（何を確かめるか）を全量作る。",
     ),
     StageDefinition(
         STAGE_TEST_CASES,
-        13,
+        7,
         "テストケース",
         "ローレベルテストケース（手順・データ・期待結果）を全量作る。QualityForward のカラム構成。",
     ),
+    StageDefinition(
+        STAGE_PLAYWRIGHT,
+        8,
+        "Playwright 自動化",
+        "承認済みのローレベルテストケースを基に、自動化パイプラインを作成する。"
+        "自動化できなかったケースは「未自動化」として明示する。",
+    ),
+)
+
+#: 設計の段階（1〜7）。これらが揃うとスクリプト生成へ進める。
+DESIGN_STAGE_IDS: Final[tuple[str, ...]] = (
+    STAGE_TEST_OBJECTIVE,
+    STAGE_TEST_PLAN,
+    STAGE_FEATURES,
+    STAGE_VIEWPOINTS,
+    STAGE_BASIC_DESIGN,
+    STAGE_DETAIL_DESIGN,
+    STAGE_TEST_CASES,
 )
 
 STAGE_BY_ID: Final[dict[str, StageDefinition]] = {d.stage_id: d for d in STAGE_DEFINITIONS}
@@ -227,7 +252,7 @@ def _now() -> str:
 
 @dataclass(frozen=True)
 class Pipeline:
-    """7段階の状態と、承認・修正の記録。"""
+    """8段階の状態と、承認・修正の記録。"""
 
     stages: tuple[Stage, ...]
     is_rerun: bool = False
@@ -259,6 +284,18 @@ class Pipeline:
     @property
     def approved_stage_count(self) -> int:
         return sum(1 for s in self.stages if s.status in (STATUS_APPROVED, STATUS_SKIPPED))
+
+    @property
+    def design_stages_approved(self) -> bool:
+        """設計段階（1〜7）が全て承認・スキップ済みか。
+
+        これが揃うとスクリプトを生成し、その結果を段階8で提示する。
+        """
+        return all(
+            stage.status in (STATUS_APPROVED, STATUS_SKIPPED)
+            for stage in self.stages
+            if stage.stage_id in DESIGN_STAGE_IDS
+        )
 
     def get(self, stage_id: str) -> Stage | None:
         for stage in self.stages:
@@ -836,7 +873,92 @@ def _build_test_cases(
     return items, note
 
 
-def build_stage(stage_id: str, obs: Observation, pipeline: Pipeline) -> Stage:
+def _build_playwright(automation: dict[str, Any] | None) -> tuple[tuple[StageItem, ...], str]:
+    """段階8: 自動化パイプラインの提示。
+
+    `automation` は automation_plan.AutomationPlan.to_dict()。まだ生成されて
+    いない場合は、その事実を示す（作られたように見せない）。
+    """
+    if not automation:
+        return (
+            (
+                StageItem(
+                    item_id="pw-pending",
+                    title="スクリプトはまだ生成されていません",
+                    detail=(
+                        "設計段階（1〜7）を承認すると、承認済みテストケースを基に"
+                        "Playwright スクリプトを生成し、ここに結果を提示します。"
+                    ),
+                ),
+            ),
+            "設計段階の承認後に生成されます。",
+        )
+
+    approved = int(automation.get("approved_case_count") or 0)
+    automated = int(automation.get("automated_case_count") or 0)
+    unautomated = int(automation.get("unautomated_case_count") or 0)
+    selected = int(automation.get("selected_candidate_count") or 0)
+    unfiltered = bool(automation.get("unfiltered"))
+
+    items: list[StageItem] = [
+        StageItem(
+            item_id="pw-coverage",
+            title="承認済みケースと自動化の対応",
+            detail=(
+                f"承認済みテストケース: {approved} 件\n"
+                f"自動化対象にした候補: {selected} 件\n"
+                f"自動化できたケース: {automated} 件\n"
+                f"未自動化のケース: {unautomated} 件"
+            ),
+        )
+    ]
+
+    if unfiltered:
+        items.append(
+            StageItem(
+                item_id="pw-unfiltered",
+                title="絞り込みは適用していません",
+                detail=(
+                    str(automation.get("reason") or "")
+                    + "\n全ての候補を自動化対象にしています。"
+                ),
+                assumed=True,
+            )
+        )
+
+    if unautomated:
+        rows = [
+            c for c in (automation.get("coverage") or []) if not c.get("automated")
+        ][:20]
+        listed = "\n".join(
+            f"・No.{c.get('case_no')} {c.get('screen', '')} / {c.get('title', '')}"
+            for c in rows
+        )
+        items.append(
+            StageItem(
+                item_id="pw-unautomated",
+                title=f"未自動化のケース {unautomated} 件",
+                detail=(
+                    "これは「確認不要」ではなく「自動では確認していない」という意味です。"
+                    "手動での確認要否を判断してください。\n" + listed
+                ),
+                assumed=True,
+            )
+        )
+
+    note = (
+        "承認済みテストケースを基に自動化対象を決めました。"
+        "自動化できた件数は、欠陥が無いことの証明ではありません。"
+    )
+    return tuple(items), note
+
+
+def build_stage(
+    stage_id: str,
+    obs: Observation,
+    pipeline: Pipeline,
+    automation: dict[str, Any] | None = None,
+) -> Stage:
     """指定段階の内容をルールベースで生成し、生成済みの Stage を返す。"""
     stage = pipeline.get(stage_id)
     if stage is None:
@@ -858,6 +980,8 @@ def build_stage(stage_id: str, obs: Observation, pipeline: Pipeline) -> Stage:
         items, note = _build_test_cases(
             obs, pipeline.get(STAGE_DETAIL_DESIGN), pipeline.get(STAGE_FEATURES)
         )
+    elif stage_id == STAGE_PLAYWRIGHT:
+        items, note = _build_playwright(automation)
     else:  # pragma: no cover - STAGE_ORDER で網羅済み
         raise ValueError(f"未実装の段階です: {stage_id}")
 

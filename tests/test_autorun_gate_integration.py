@@ -37,7 +37,7 @@ class TestStageGateBlocks:
         finished = threading.Event()
 
         def run() -> None:
-            auto_run._await_stage_approval(job)
+            auto_run._await_stage_approval(job, "design")
             finished.set()
 
         worker = threading.Thread(target=run, daemon=True)
@@ -54,7 +54,7 @@ class TestStageGateBlocks:
     def test_gate_can_be_released_by_domain_without_job_id(self, job: AutoRunJob, monkeypatch) -> None:
         """画面をリロードして job_id を失っても、ドメインで解除できる。"""
         monkeypatch.setattr(auto_run, "STAGE_APPROVAL_TIMEOUT_SEC", 5)
-        worker = threading.Thread(target=lambda: auto_run._await_stage_approval(job), daemon=True)
+        worker = threading.Thread(target=lambda: auto_run._await_stage_approval(job, "design"), daemon=True)
         worker.start()
         time.sleep(0.2)
 
@@ -69,7 +69,7 @@ class TestStageGateBlocks:
     def test_cancel_releases_the_gate(self, job: AutoRunJob, monkeypatch) -> None:
         """停止したのに承認待ちで固まらないこと。"""
         monkeypatch.setattr(auto_run, "STAGE_APPROVAL_TIMEOUT_SEC", 30)
-        worker = threading.Thread(target=lambda: auto_run._await_stage_approval(job), daemon=True)
+        worker = threading.Thread(target=lambda: auto_run._await_stage_approval(job, "design"), daemon=True)
         worker.start()
         time.sleep(0.2)
 
@@ -80,7 +80,7 @@ class TestStageGateBlocks:
     def test_timeout_is_logged_as_unapproved(self, job: AutoRunJob, monkeypatch) -> None:
         """タイムアウトで進む場合、未承認であることを記録に残す。"""
         monkeypatch.setattr(auto_run, "STAGE_APPROVAL_TIMEOUT_SEC", 0.2)
-        auto_run._await_stage_approval(job)
+        auto_run._await_stage_approval(job, "design")
         joined = "\n".join(job.log)
         assert "タイムアウト" in joined
         assert "未承認" in joined
@@ -91,12 +91,12 @@ class TestAutomationBypass:
 
     def test_bypass_does_not_block(self, job: AutoRunJob) -> None:
         job.require_stage_approval = False
-        auto_run._await_stage_approval(job)  # ブロックしないこと
+        auto_run._await_stage_approval(job, "design")  # ブロックしないこと
         assert job.status != "awaiting_stages"
 
     def test_bypass_is_recorded_in_the_log(self, job: AutoRunJob) -> None:
         job.require_stage_approval = False
-        auto_run._await_stage_approval(job)
+        auto_run._await_stage_approval(job, "design")
         joined = "\n".join(job.log)
         assert "スキップ" in joined
         assert "人の確認を経ていません" in joined
@@ -112,7 +112,7 @@ class TestRunJobOrder:
         import inspect
 
         source = inspect.getsource(auto_run._run_job)
-        gate_at = source.index("_await_stage_approval")
+        gate_at = source.index('_await_stage_approval(job, "design")')
         scripts_at = source.index("_phase_generate_scripts")
         qa_at = source.index("_phase_generate_qa")
         assert qa_at < gate_at < scripts_at

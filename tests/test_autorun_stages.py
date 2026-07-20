@@ -11,11 +11,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from autorun.qf_schema import COLUMN_KEYS, COLUMN_LABELS, TestCaseRow, renumber, to_csv
 from autorun.stages import (
+    DESIGN_STAGE_IDS,
     STAGE_BASIC_DESIGN,
     STAGE_DETAIL_DESIGN,
     STAGE_FEATURES,
     STAGE_ORDER,
     STAGE_TEST_CASES,
+    STAGE_PLAYWRIGHT,
     STAGE_TEST_OBJECTIVE,
     STAGE_TEST_PLAN,
     STAGE_VIEWPOINTS,
@@ -79,7 +81,7 @@ def _approve_all_items(pipeline: Pipeline, stage_id: str) -> Pipeline:
 def _run_through(obs, upto: str) -> Pipeline:
     """指定段階まで生成・承認して進める。"""
     pipeline = Pipeline.initial()
-    for stage_id in STAGE_ORDER:
+    for stage_id in DESIGN_STAGE_IDS:
         pipeline = pipeline.replaced(build_stage(stage_id, obs, pipeline))
         stage = pipeline.get(stage_id)
         assert stage is not None
@@ -149,10 +151,25 @@ class TestPipelineBasics:
         assert not pipeline.all_approved
         assert all(s.status == STATUS_PENDING for s in pipeline.stages)
 
-    def test_has_seven_stages_in_spec_order(self) -> None:
-        assert len(STAGE_ORDER) == 7
+    def test_has_eight_stages_in_spec_order(self) -> None:
+        """仕様7〜14の8段階。最後は Playwright 自動化。"""
+        assert len(STAGE_ORDER) == 8
         assert STAGE_ORDER[0] == STAGE_TEST_OBJECTIVE
-        assert STAGE_ORDER[-1] == STAGE_TEST_CASES
+        assert STAGE_ORDER[-2] == STAGE_TEST_CASES
+        assert STAGE_ORDER[-1] == STAGE_PLAYWRIGHT
+
+    def test_step_numbers_are_one_to_eight(self) -> None:
+        """画面上の番号は1〜8。7〜14は仕様書の行番号であって利用者の番号ではない。"""
+        from autorun.stages import STAGE_DEFINITIONS
+
+        assert [d.step_no for d in STAGE_DEFINITIONS] == [1, 2, 3, 4, 5, 6, 7, 8]
+
+    def test_design_stages_exclude_playwright(self) -> None:
+        """設計段階（1〜7）が揃うとスクリプト生成へ進む。8はその後。"""
+        from autorun.stages import DESIGN_STAGE_IDS
+
+        assert len(DESIGN_STAGE_IDS) == 7
+        assert STAGE_PLAYWRIGHT not in DESIGN_STAGE_IDS
 
     def test_round_trips_through_dict(self, obs) -> None:
         pipeline = _run_through(obs, STAGE_FEATURES)

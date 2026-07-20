@@ -81,8 +81,8 @@ class TestSystemScoping:
             ("テストケース", "docs"),
             ("品質観点", "docs"),
             ("観点管理", "docs"),
-            ("AutoRun", "autorun"),
-            ("実行履歴", "autorun"),
+            ("受付", "autorun"),
+            ("過去履歴", "autorun"),
             ("ユーザーガイド", "common"),
             ("参考", "common"),
             ("設定", "common"),
@@ -181,6 +181,16 @@ class TestAutoRunIntake:
     def test_review_gate_exists_before_execution(self, spa: str) -> None:
         """生成物を確認する前に実行設定モーダルを突きつけないこと。"""
         assert 'id="autorun-review-gate"' in spa
+
+    def test_phase_navigation_lives_in_the_sidebar(self, spa: str) -> None:
+        """フェーズはサイドメニューに置く（上部のタブ列にしない）。"""
+        assert 'id="autorun-phase-nav"' in spa
+        assert 'id="autorun-phase-group"' in spa
+
+    def test_assistant_presets_are_phase_scoped(self, spa: str) -> None:
+        """定型チップはフェーズごとに差し替える（固定の3つを埋め込まない）。"""
+        assert 'id="autorun-chat-presets"' in spa
+        assert "data-chat-preset" not in spa
 
     def test_generation_modes_offered(self, spa: str) -> None:
         assert 'id="autorun-mode-url"' in spa

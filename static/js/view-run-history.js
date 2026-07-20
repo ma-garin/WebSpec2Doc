@@ -74,6 +74,21 @@ async function loadRunHistory() {
   }
 }
 
+// 段階承認の状況。「未承認のまま実行された」ことを隠さない。
+function _rhApprovalCell(run) {
+  const a = run.stage_approval;
+  if (!a) return '<span class="muted-copy">—</span>';
+  const label = `${a.approved} / ${a.total}`;
+  if (a.all_approved) {
+    const note = a.skipped && a.skipped.length
+      ? `（${a.skipped.join('・')}をスキップ）` : '';
+    return `<span class="rh-approval is-ok">${escHtml(label)} 承認済み</span>`
+      + (note ? `<span class="rh-approval-note">${escHtml(note)}</span>` : '');
+  }
+  return `<span class="rh-approval is-partial">${escHtml(label)}</span>`
+    + '<span class="rh-approval-note">未承認の段階があります</span>';
+}
+
 function _rhRenderTable() {
   const tbody = document.getElementById('rh-tbody');
   const empty = document.getElementById('rh-empty');
@@ -93,14 +108,17 @@ function _rhRenderTable() {
   if (pager) pager.innerHTML = TableUtils.pagerHtml(info);
   tbody.innerHTML = info.items.map(run => {
     const typeLabel = run.type_label || RH_TYPE_LABELS[run.type] || run.type;
-    const linkCell = run.link
-      ? `<button class="qa-output-btn qa-preview-btn" data-path="${escHtml(run.link)}" data-label="${escHtml(typeLabel)} - ${escHtml(run.domain)}">開く</button>`
-      : '<span class="muted-copy">—</span>';
+    const linkCell = run.report_url
+      ? `<a class="qa-output-btn" href="${escHtml(run.report_url)}">結果を見る →</a>`
+      : (run.link
+        ? `<button class="qa-output-btn qa-preview-btn" data-path="${escHtml(run.link)}" data-label="${escHtml(typeLabel)} - ${escHtml(run.domain)}">開く</button>`
+        : '<span class="muted-copy">—</span>');
     return `<tr>
       <td><span class="rh-type-badge rh-type-${escHtml(run.type)}">${escHtml(typeLabel)}</span></td>
       <td>${escHtml(run.domain)}</td>
       <td>${escHtml(run.timestamp || '')}</td>
       <td><span class="rh-status-badge ${_rhStatusClass(run.status)}">${escHtml(_rhStatusLabel(run.status))}</span></td>
+      <td>${_rhApprovalCell(run)}</td>
       <td>${escHtml(_rhSummaryText(run))}</td>
       <td>${linkCell}</td>
     </tr>`;

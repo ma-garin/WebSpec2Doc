@@ -87,3 +87,4 @@ demo/video/
 # 刷新モード（ローカル判断。E2Eゲートを一時的に警告へ落とす）
 .rebuild-mode
 _autorun_egress.ts
+.ui-verified

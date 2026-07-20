@@ -17,6 +17,7 @@ import sys
 import time
 from collections.abc import Generator
 from pathlib import Path
+from urllib.parse import urlparse
 
 import pytest
 import requests
@@ -113,7 +114,18 @@ def flask_server() -> Generator[None, None, None]:
             "該当プロセスを止めるか、WEBSPEC2DOC_E2E_URL で別ポートを指定してください。"
         )
 
-    env = {**os.environ, "FLASK_TESTING": "1", "PYTHONPATH": str(ROOT)}
+    # app.py は WEBSPEC2DOC_PORT を見て待ち受けポートを決める。
+    # BASE_URL（= WEBSPEC2DOC_E2E_URL）で別ポートを指定しても、起動側へ
+    # そのポートを渡さないと既定 8765 で起動して疎通せず、全テストが
+    # スキップ→「緑」になってしまう（E2E ゲートが形骸化する）。
+    # BASE_URL のポートを起動側にも必ず渡す。
+    base_port = urlparse(BASE_URL).port or 8765
+    env = {
+        **os.environ,
+        "FLASK_TESTING": "1",
+        "PYTHONPATH": str(ROOT),
+        "WEBSPEC2DOC_PORT": str(base_port),
+    }
     proc = subprocess.Popen(
         [sys.executable, "app.py"],
         cwd=str(ROOT),
@@ -129,8 +141,11 @@ def flask_server() -> Generator[None, None, None]:
         time.sleep(0.5)
     else:
         proc.terminate()
-        pytest.skip(
-            f"Flask サーバーが {BASE_URL} で起動しませんでした — E2E テストをスキップします。"
+        # ここを skip にすると「サーバーが起動しなかった＝未検証」を「緑」と
+        # 誤認させる。E2E を要求した以上、起動できないのは失敗として扱う。
+        pytest.fail(
+            f"Flask サーバーが {BASE_URL} で起動しませんでした。E2E は未実行です"
+            "（この状態を PASS 扱いにしない）。"
         )
 
     yield

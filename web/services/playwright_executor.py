@@ -78,6 +78,7 @@ def run_playwright(
     timeout_sec: int | None = None,
     add_log: Callable[[str], None] | None = None,
     device: str = "pc",
+    workers: int = 1,
 ) -> dict[str, Any]:
     """
     ローカル @playwright/test CLI でスペックを実行し、結果を返す。
@@ -90,6 +91,9 @@ def run_playwright(
             spec 内のテスト件数から自動算出する（既定の挙動）。
         device: "pc"（既定）または "mobile"（iPhone 13相当のビューポート/UA）。
             ホワイトリスト外の値は "pc" として扱う。
+        workers: 並列実行数。既定は1（対象サイトへ同時多数アクセスしないための配慮）。
+            対象へ一切アクセスしない自己検証（mutation_verifier）等、外部への
+            配慮が不要な用途でのみ増やすこと。
     """
     if device not in ("pc", "mobile"):
         device = "pc"
@@ -136,6 +140,7 @@ def run_playwright(
         json_output_path=raw_json_path,
         progress_path=progress_path,
         device=device,
+        workers=workers,
     )
 
     resolved_timeout_sec = _resolve_timeout_sec(spec_path, per_test_timeout_sec, timeout_sec)
@@ -260,6 +265,7 @@ def _write_pw_config(
     json_output_path: Path | None = None,
     progress_path: Path | None = None,
     device: str = "pc",
+    workers: int = 1,
 ) -> Path:
     """JS 形式の playwright config を生成する（TypeScript import 不要）。
 
@@ -317,7 +323,7 @@ def _write_pw_config(
         f"  testDir: {json.dumps(spec_dir_abs)},\n"
         f"  testMatch: {json.dumps(spec_path.name)},\n"
         f"  timeout: {per_test_timeout_ms},\n"
-        "  workers: 1,\n"
+        f"  workers: {int(workers) if workers and workers > 0 else 1},\n"
         f"  outputDir: {json.dumps(artifacts_dir_abs)},\n"
         "  use: {\n"
         "    screenshot: 'on',\n"

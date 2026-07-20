@@ -96,7 +96,12 @@ def _pipeline(domain: str) -> Pipeline:
     return Pipeline.initial()
 
 
-def _dashboard(domain: str, report: dict | None, results: dict | None) -> dict[str, Any]:
+def _dashboard(
+    domain: str,
+    report: dict | None,
+    results: dict | None,
+    mutation_check: dict | None = None,
+) -> dict[str, Any]:
     screens = (report or {}).get("screens") or []
     forms = [f for s in screens for f in (s.get("forms") or [])]
     inputs = sum(len(f.get("fields") or f.get("inputs") or []) for f in forms)
@@ -114,6 +119,11 @@ def _dashboard(domain: str, report: dict | None, results: dict | None) -> dict[s
     pipeline = _pipeline(domain)
     approved = sum(1 for s in pipeline.stages if s.status in ("approved", "skipped"))
 
+    mutation_check = mutation_check or {}
+    self_check_score = (
+        mutation_check.get("score") if mutation_check.get("applicable", True) else None
+    )
+
     return {
         "screen_count": len(screens),
         "form_count": len(forms),
@@ -123,6 +133,10 @@ def _dashboard(domain: str, report: dict | None, results: dict | None) -> dict[s
         "test_failed": failed,
         "stages_approved": approved,
         "stages_total": len(pipeline.stages),
+        # AutoRun自身が実行した自己検証（ミューテーションテスト）のスコア。
+        # 生成テストが実際に欠陥を検出できるかを、毎回の実行で確認する。
+        "self_check_score": self_check_score,
+        "self_check_survivor_count": mutation_check.get("survivor_count"),
         # この製品の原則。数値だけを見て「問題なし」と読まれないようにする。
         "claim_scope": (
             "ここに示すのは自動で検出できた範囲の観測結果です。"
@@ -138,7 +152,12 @@ def _section_payload(domain: str, key: str) -> dict[str, Any]:
     if key == "dashboard":
         return {
             "kind": "dashboard",
-            "data": _dashboard(domain, _read_json(base / "report.json"), _read_json(qa / "playwright_report.json")),
+            "data": _dashboard(
+                domain,
+                _read_json(base / "report.json"),
+                _read_json(qa / "playwright_report.json"),
+                _read_json(qa / "mutation_verification.json"),
+            ),
         }
     if key == "spec":
         return {"kind": "markdown", "text": _read_text(base / "screens.md"), "source": "screens.md"}

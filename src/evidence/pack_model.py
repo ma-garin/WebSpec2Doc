@@ -25,6 +25,7 @@ INPUT_META = "autorun_meta"
 INPUT_CLASSIFICATIONS = "failure_classifications"
 INPUT_SCREENSHOTS = "screenshots"
 INPUT_MANUAL = "manual_procedures"
+INPUT_MUTATION_CHECK = "mutation_self_check"
 
 _TEST_ID_PATTERN = re.compile(r"^([A-Z]+-\d+)")
 
@@ -38,10 +39,13 @@ def build_evidence_pack(
     manual_procedures: str | None = None,
     audit_entries: list[dict[str, Any]] | None = None,
     generated_at: datetime | None = None,
+    mutation_check: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """検収提出用の証跡パックを組み立てる。
 
     report が無い場合でも例外にせず、空の実行記録として返す（欠落は明示する）。
+    mutation_check は AutoRun 自身が実行した自己検証（ミューテーションテスト）の
+    結果（mutation_verifier.run_self_check の戻り値）。無い場合も欠落として明示する。
     """
     missing: list[str] = []
     if not report:
@@ -56,6 +60,8 @@ def build_evidence_pack(
         missing.append(INPUT_SCREENSHOTS)
     if not manual_procedures:
         missing.append(INPUT_MANUAL)
+    if not mutation_check or not mutation_check.get("applicable", True):
+        missing.append(INPUT_MUTATION_CHECK)
 
     report = report or {}
     meta_by_test = _meta_by_test_id(meta)
@@ -112,6 +118,19 @@ def build_evidence_pack(
             # 有意なアサーション（値の受理／拒否・実在確認）を伴うテストの割合を明示する。
             "verified_cases": verified_cases,
             "verification_rate": verification_rate,
+            # AutoRun自身が実行した自己検証（対象を破壊しても検出できるか）のスコア。
+            # 「検証実行率」は静的な判定（アサーションの有無）だが、こちらは動的に
+            # 実測した検出力であり、より強い裏付けになる。
+            "self_check_score": (
+                mutation_check.get("score")
+                if mutation_check and mutation_check.get("applicable", True)
+                else None
+            ),
+            "self_check_survivor_count": (
+                mutation_check.get("survivor_count")
+                if mutation_check and mutation_check.get("applicable", True)
+                else None
+            ),
         },
         "cases": cases,
         "environment": _environment(),

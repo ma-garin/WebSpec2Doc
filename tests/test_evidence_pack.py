@@ -147,6 +147,8 @@ def test_summary_and_duration_come_from_report() -> None:
         "duration_sec": 4.2,
         "verified_cases": 0,
         "verification_rate": 0.0,
+        "self_check_score": None,
+        "self_check_survivor_count": None,
     }
 
 
@@ -158,6 +160,33 @@ def test_verification_rate_reflects_real_assertion_flag_from_meta() -> None:
     assert pack["summary"]["verification_rate"] == 50.0
     assert pack["cases"][0]["has_real_assertion"] is True
     assert pack["cases"][1]["has_real_assertion"] is False
+
+
+def test_self_check_score_is_surfaced_when_provided() -> None:
+    """AutoRun自身の自己検証（ミューテーションテスト）結果を証跡パックに反映する。"""
+    mutation_check = {
+        "ok": True,
+        "applicable": True,
+        "total": 335,
+        "detected": 333,
+        "survivors": ["PW-0100 x [P010]"],
+        "survivor_count": 1,
+        "score": 99.4,
+    }
+    pack = build_evidence_pack(
+        _report(), generated_at=FIXED_TIME, mutation_check=mutation_check
+    )
+
+    assert pack["summary"]["self_check_score"] == 99.4
+    assert pack["summary"]["self_check_survivor_count"] == 1
+    assert "mutation_self_check" not in pack["meta"]["missing_inputs"]
+
+
+def test_self_check_missing_is_declared_not_invented() -> None:
+    pack = build_evidence_pack(_report(), generated_at=FIXED_TIME)
+
+    assert pack["summary"]["self_check_score"] is None
+    assert "mutation_self_check" in pack["meta"]["missing_inputs"]
 
 
 def test_claim_scope_is_always_present() -> None:

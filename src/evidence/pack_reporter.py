@@ -57,16 +57,18 @@ def render_markdown(pack: dict[str, Any]) -> str:
         "",
         "## 実行サマリー",
         "",
-        "| 総数 | 合格 | 不合格 | スキップ | 所要 | 検証実行率 |",
-        "|---:|---:|---:|---:|---:|---:|",
+        "| 総数 | 合格 | 不合格 | スキップ | 所要 | 検証実行率 | 自己検証スコア |",
+        "|---:|---:|---:|---:|---:|---:|---:|",
         f"| {summary.get('total', 0)} | {summary.get('passed', 0)} |"
         f" {summary.get('failed', 0)} | {summary.get('skipped', 0)} |"
         f" {summary.get('duration_sec', 0)} 秒 |"
-        f" {summary.get('verification_rate', 0)}% ({summary.get('verified_cases', 0)}件) |",
+        f" {summary.get('verification_rate', 0)}% ({summary.get('verified_cases', 0)}件) |"
+        f" {_self_check_cell_md(summary)} |",
         "",
         "> 検証実行率 = 値の受理／拒否・実在確認など、有意なアサーションを伴うテストの割合。"
         "「合格」件数は、対象が壊れていても body 要素が存在するだけで合格しうるため、"
-        "この率と併せて読むこと。",
+        "この率と併せて読むこと。自己検証スコア = 対象を実際に破壊した変異体に対し、"
+        "テストが正しく失敗（＝検出）できた割合。AutoRun自身が毎回の実行で測定する。",
         "",
         "## 実行環境",
         "",
@@ -147,10 +149,13 @@ def render_html(pack: dict[str, Any]) -> str:
 <div class="card ng"><div class="num">{summary.get('failed', 0)}</div><div>不合格</div></div>
 <div class="card"><div class="num">{summary.get('skipped', 0)}</div><div>スキップ</div></div>
 <div class="card verif"><div class="num">{summary.get('verification_rate', 0)}%</div><div>検証実行率</div></div>
+<div class="card self-check"><div class="num">{_self_check_cell_html(summary)}</div><div>自己検証スコア</div></div>
 </div>
 <p class="verif-note">検証実行率 = 値の受理／拒否・実在確認など、有意なアサーションを伴うテストの割合
 （{summary.get('verified_cases', 0)} / {summary.get('total', 0)} 件）。
-「合格」件数は対象が壊れていても body 要素が存在するだけで合格しうるため、この率と併せて読むこと。</p>
+「合格」件数は対象が壊れていても body 要素が存在するだけで合格しうるため、この率と併せて読むこと。
+自己検証スコア = 対象を実際に破壊した変異体に対し、テストが正しく失敗（＝検出）できた割合。
+AutoRun自身が毎回の実行で測定する（未実施の場合は「—」）。</p>
 </section>
 <section><h2>実行環境</h2><ul>{env_rows}</ul></section>
 <section><h2>テストケース別の実施記録</h2>
@@ -160,6 +165,19 @@ def render_html(pack: dict[str, Any]) -> str:
 <tbody>{rows}</tbody></table></div></section>
 {_manual_section(pack)}
 </main></body></html>"""
+
+
+def _self_check_cell_md(summary: dict[str, Any]) -> str:
+    score = summary.get("self_check_score")
+    if score is None:
+        return "未実施"
+    survivors = summary.get("self_check_survivor_count") or 0
+    return f"{score}%" + (f"（弱いテスト{survivors}件）" if survivors else "")
+
+
+def _self_check_cell_html(summary: dict[str, Any]) -> str:
+    score = summary.get("self_check_score")
+    return "—" if score is None else f"{score}%"
 
 
 def _manual_section(pack: dict[str, Any]) -> str:
@@ -203,6 +221,7 @@ section>ul{list-style:none;display:flex;flex-direction:column;gap:.3rem;font-siz
 .card .num{font-size:1.8rem;font-weight:700}
 .card.ok{border-color:#198038}.card.ng{border-color:#DA1E28}
 .card.verif{border-color:#8D6B00}.card.verif .num{color:#8D6B00}
+.card.self-check{border-color:#4C6EF5}.card.self-check .num{color:#4C6EF5}
 .verif-note{margin:0 1.2rem 1.2rem;font-size:.82rem;color:#5A6572}
 .scroll{overflow-x:auto}
 table{border-collapse:collapse;width:100%;font-size:.88rem;min-width:760px}

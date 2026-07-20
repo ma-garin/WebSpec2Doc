@@ -420,6 +420,55 @@
   color: var(--color-text-secondary);
 }
 
+/* ---- 着手前プレフライト（URL入力時の到達可否・画面数の概算） ---- */
+.autorun-preflight {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  color: var(--color-text-secondary);
+  display: grid;
+  gap: 4px;
+}
+/* hidden 属性を尊重する（.autorun-preflight の display 指定に負けないよう明示） */
+.autorun-preflight[hidden] { display: none; }
+.autorun-preflight strong { color: var(--color-text); font-size: var(--text-sm); }
+.autorun-preflight small { color: var(--color-text-disabled); }
+.autorun-preflight.is-ok { border-color: var(--color-low-border); background: var(--color-low-bg); }
+.autorun-preflight.is-warn { border-color: var(--color-high-border); background: var(--color-high-bg); }
+
+.autorun-preflight-list {
+  margin: 2px 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 2px;
+}
+.autorun-preflight-list li {
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.autorun-preflight-spin {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  margin-right: 7px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: autorun-preflight-rotate 0.8s linear infinite;
+  vertical-align: -1px;
+}
+@keyframes autorun-preflight-rotate { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .autorun-preflight-spin { animation: none; }
+}
+
 /* ---- AutoRun 単一フロー: 受付→実行→納品を1列で。中央寄せ ---- */
 .autorun-single {
   max-width: 780px;

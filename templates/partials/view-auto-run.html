@@ -32,6 +32,8 @@
                 <div class="control-field">
                   <label for="autorun-url">対象URL</label>
                   <input type="url" id="autorun-url" class="url-input input-compact" placeholder="https://example.com" autocomplete="url" list="url-history-list" />
+                  <!-- 着手前プレフライト: 浅い探索で到達可否・ログイン要否・画面数の概算を先に出す -->
+                  <div id="autorun-preflight" class="autorun-preflight" aria-live="polite" hidden></div>
                 </div>
                 <div id="autorun-document-options" class="autorun-document-options" hidden>
                   <div class="control-field">

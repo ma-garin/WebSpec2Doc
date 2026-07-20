@@ -70,12 +70,14 @@ _MOCK_PREVIEW = {
 
 @pytest.fixture()
 def autorun_page(page: Page) -> Page:
-    """AutoRun ビューを開いた状態のページを返す。"""
-    page.goto(BASE_URL)
+    """AutoRun ビューを開いた状態のページを返す。
+
+    AutoRun は独立したシステムなので、`/` から辿るのではなく直接開く。
+    `/` は「ドキュメント作成」系と判定され、AutoRun のナビ項目は
+    system-scope.js によって非表示になるためクリックできない。
+    """
+    page.goto(f"{BASE_URL}/auto-run")
     page.wait_for_load_state("networkidle")
-    autorun_nav = page.locator(".app-nav-item").filter(has_text="AutoRun").first
-    if autorun_nav.count() > 0:
-        autorun_nav.click()
     page.wait_for_selector("#view-auto-run", state="attached")
     return page
 

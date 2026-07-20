@@ -674,6 +674,8 @@ def _build_test_cases(
     feature_items = {f.item_id: f for f in (features.items if features else ())}
 
     rows: list[TestCaseRow] = []
+    #: 各行がどの画面(page_id)に由来するか。自動化候補との突合に使う。
+    trace: list[list[str]] = []
     for hl in detail.items if detail else ():
         viewpoint = str(hl.data.get("viewpoint") or "")
         technique = str(hl.data.get("technique") or "")
@@ -737,6 +739,7 @@ def _build_test_cases(
                 note=note,
             )
         )
+        trace.append([str(sid) for sid in screen_ids])
 
     numbered = renumber(rows)
     items = tuple(
@@ -744,9 +747,11 @@ def _build_test_cases(
             item_id=f"tc-{row.no}",
             title=f"No.{row.no} {row.screen} / {row.viewpoint}（{row.case_type}）",
             detail=f"{row.steps}\n期待結果: {row.expected}",
-            data=row.to_dict(),
+            # QualityForward のカラムに加え、自動化との突合に使う追跡情報を持たせる。
+            # `_` 始まりのキーは QF スキーマ側では無視される。
+            data={**row.to_dict(), "_screen_ids": trace[index]},
         )
-        for row in numbered
+        for index, row in enumerate(numbered)
     )
     note = (
         f"ローレベルテストケース {len(items)} 件。QualityForward のカラム構成で出力します。"

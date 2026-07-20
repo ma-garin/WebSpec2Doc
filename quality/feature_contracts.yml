@@ -1537,27 +1537,31 @@
         "web/routes/autorun_stages.py"
       ],
       "core_files": [
+        "src/autorun/automation_plan.py",
         "src/autorun/qf_schema.py",
         "src/autorun/stages.py",
         "src/autorun/suggest.py"
       ],
       "symbols": [
         "Pipeline",
+        "build_plan",
         "build_stage",
         "suggest_additions",
         "test_case_rows",
         "to_csv"
       ],
       "outputs": [
-        "test objective",
-        "test plan",
-        "features",
-        "viewpoints",
+        "automation coverage (unautomated cases)",
         "basic design",
         "detail design",
-        "test cases (QualityForward columns)"
+        "features",
+        "test cases (QualityForward columns)",
+        "test objective",
+        "test plan",
+        "viewpoints"
       ],
       "persistence": [
+        "output/<domain>/qa_process/automation_coverage.json",
         "output/<domain>/qa_process/stages.json"
       ],
       "failure_modes": [

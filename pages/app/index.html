@@ -1,0 +1,2199 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<script src="fixtures/manifest.js"></script>
+<script src="mock-backend.js"></script>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="static/favicon.svg">
+  <title>WebSpec2Doc</title>
+  <!-- Google Fonts はローカル専用の CSP（style-src 'self'）でブロックされ読み込まれないため撤去。
+       描画は --font-main / --font-mono のシステムフォント・フォールバックで確定する。 -->
+  <link rel="stylesheet" href="static/tokens.css">
+  <link rel="stylesheet" href="static/app.css">
+  <link rel="stylesheet" href="static/app-report.css">
+  <link rel="stylesheet" href="static/app-components.css">
+  <link rel="stylesheet" href="static/css/components.css">
+  <link rel="stylesheet" href="static/css/autorun-document.css?v=1784816712">
+  <link rel="stylesheet" href="static/css/settings-admin.css?v=1784816712">
+  <link rel="stylesheet" href="static/css/report-v2.css">
+  <link rel="stylesheet" href="static/viewpoints.css">
+  <link rel="stylesheet" href="static/vendor/driver.js/driver.css">
+  <script>
+    // テーマの早期適用（描画前にフラッシュを防ぐ）。保存値がなければ OS 設定に追従。
+    (function () {
+      try {
+        var t = localStorage.getItem('webspec2doc.theme');
+        if (!t) t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', t);
+      } catch (e) { /* localStorage 不可環境では light のまま */ }
+    })();
+  </script>
+</head>
+<body class="app-page">
+<a href="#app-content" class="skip-link">本文へスキップ</a>
+<div class="app-shell">
+
+  <aside class="app-sidebar">
+    <a href="/" class="app-brand">
+      <span class="app-brand-mark">W</span>
+      <span class="app-brand-text"><strong>WebSpec2Doc</strong><span>QAドキュメント生成</span></span>
+    </a>
+    <a href="/systems" class="sys-switcher" id="sys-switcher-link" title="システムを切り替える">
+      <span class="sys-switcher-label">システム</span>
+      <span class="sys-switcher-cur" id="sys-current-name">ドキュメント作成</span>
+      <span class="sys-switcher-swap">切替</span>
+    </a>
+    <button type="button" class="btn-primary sidebar-primary-action" id="add-site-btn" data-system="docs">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="16" height="16"><path d="M12 5v14M5 12h14"/></svg>
+      <span class="add-site-label">新規解析</span>
+    </button>
+    <nav class="app-nav" aria-label="メインナビゲーション">
+      <div class="app-nav-group" data-system="docs">メイン</div>
+      <button class="app-nav-item is-active" data-view="dashboard" data-system="docs">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11.5L12 4l9 7.5"/><path d="M5.5 10v10h13V10M9.5 20v-6h5v6"/></svg>
+        <span class="nav-label">ホーム</span>
+      </button>
+      <button class="app-nav-item" id="nav-new-analysis-btn" type="button" data-system="docs">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>
+        <span class="nav-label">新規解析</span>
+      </button>
+      <div class="app-nav-group" data-system="autorun">メイン</div>
+      <button class="app-nav-item" data-view="auto-run" data-system="autorun">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2L4 14h8l-1 8 9-12h-8z"/></svg>
+        <span class="nav-label">受付</span>
+      </button>
+      <button class="app-nav-item" id="nav-run-history-btn" type="button" data-system="autorun">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 8v5l3 2"/><circle cx="12" cy="12" r="9"/></svg>
+        <span class="nav-label">過去履歴</span>
+      </button>
+
+      <!-- 進捗フェーズ（1〜8）。段階承認の状態に応じて JS が出し入れする -->
+      <div class="app-nav-group" data-system="autorun" id="autorun-phase-group" style="display:none">進捗</div>
+      <div class="autorun-phase-nav" data-system="autorun" id="autorun-phase-nav" style="display:none"></div>
+      <button class="app-nav-item" data-view="testcases" data-system="docs">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 4h9v16H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1z"/><path d="M9 3v3h6V3M9 11l2 2 4-4"/></svg>
+        <span class="nav-label">テストケース</span>
+      </button>
+      <div class="app-nav-group" data-system="docs">ツール</div>
+      <button class="app-nav-item" data-view="qa-quality" data-system="docs">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6l7-3z"/><path d="M9 12l2 2 4-5"/></svg>
+        <span class="nav-label">品質観点</span>
+      </button>
+      <button class="app-nav-item" data-view="viewpoints" data-system="docs">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h8M8 16h5"/><circle cx="18" cy="17" r="3" fill="currentColor" stroke="none"/></svg>
+        <span class="nav-label">観点管理</span>
+      </button>
+      <div class="app-nav-group" data-system="common">サポート</div>
+      <button class="app-nav-item" data-view="user-guide" data-system="common">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h7v16H4zM13 4h7v16h-7z"/></svg>
+        <span class="nav-label">ユーザーガイド</span>
+      </button>
+      <button class="app-nav-item" data-view="references" data-system="common">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5a2 2 0 0 1 2-2h5v18H6a2 2 0 0 1-2-2z"/><path d="M11 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7"/><path d="M14 8h4M14 12h4"/></svg>
+        <span class="nav-label">参考</span>
+      </button>
+      <button class="app-nav-item" data-view="settings" data-system="common">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6L7 7M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/></svg>
+        <span class="nav-label">設定</span>
+      </button>
+    </nav>
+    <button type="button" id="sidebar-toggle-btn" class="sidebar-toggle-btn" title="サイドバーを折りたたむ">
+      <svg class="icon-collapse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      <svg class="icon-expand"  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+      <span class="nav-label">折りたたむ</span>
+    </button>
+    <div class="app-sidebar-foot">
+      URLから画面仕様書・テスト設計・画面遷移図を生成します。
+    </div>
+  </aside>
+
+  <div class="app-main">
+    <header class="app-topbar">
+      <div class="app-topbar-lead" style="min-width:0">
+        <div class="app-breadcrumb" id="topbar-breadcrumb"><span>WebSpec2Doc</span><span class="sep">/</span><span>ホーム</span></div>
+        <h1 class="app-topbar-title" id="topbar-title">QAドキュメント生成</h1>
+      </div>
+      <div class="topbar-search" role="search">
+        <svg class="topbar-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input type="search" id="topbar-search-input" class="topbar-search-input"
+               placeholder="画面・サイトを検索（⌘K）" autocomplete="off" spellcheck="false"
+               role="combobox" aria-expanded="false" aria-controls="topbar-search-results"
+               aria-label="画面・解析済みサイトを検索">
+        <kbd class="topbar-search-kbd" aria-hidden="true">⌘K</kbd>
+        <div class="topbar-search-results" id="topbar-search-results" role="listbox" aria-label="検索候補" hidden></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <div class="app-topbar-actions" id="topbar-actions"></div>
+        
+        <div class="app-topbar-tools">
+          <button type="button" id="shortcut-help-btn" class="topbar-icon-btn" title="キーボードショートカット (?)" aria-label="キーボードショートカット一覧を表示">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h.01M18 14h.01M9 14h6"/></svg>
+          </button>
+          <button type="button" id="theme-toggle-btn" class="topbar-icon-btn" title="ダークモードに切替" aria-label="ライト / ダークモードを切り替え">
+            <svg class="icon-theme-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            <svg class="icon-theme-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="app-content" id="app-content" tabindex="-1">
+      <div class="app-content-inner">
+
+        <!-- ===== 生成ビュー（4ステップウィザード） ===== -->
+        <section class="view" id="view-generate">
+
+          <!-- ウィザードステップインジケーター -->
+          <div class="wizard-progress" id="wizard-progress-bar" style="margin-bottom:16px;display:none">
+            <div class="wizard-step-node is-active" id="ws-1">
+              <div class="wizard-step-circle">1</div>
+              <span class="wizard-step-label">解析</span>
+            </div>
+            <div class="wizard-step-line" id="wl-1"></div>
+            <div class="wizard-step-node" id="ws-2">
+              <div class="wizard-step-circle">2</div>
+              <span class="wizard-step-label">条件設定</span>
+            </div>
+            <div class="wizard-step-line" id="wl-2"></div>
+            <div class="wizard-step-node" id="ws-3">
+              <div class="wizard-step-circle">3</div>
+              <span class="wizard-step-label">実行</span>
+            </div>
+            <div class="wizard-step-line" id="wl-3"></div>
+            <div class="wizard-step-node" id="ws-4">
+              <div class="wizard-step-circle">4</div>
+              <span class="wizard-step-label">レポート</span>
+            </div>
+          </div>
+
+          <div id="gen-panel">
+
+            <!-- ステップ1: URL入力・解析 -->
+            <div id="wizard-p1" class="input-card">
+              <label for="url-input" class="form-label">クロール対象 URL <span style="color:var(--color-critical)">*</span></label>
+              <div class="input-row" style="gap:8px">
+                <input type="url" id="url-input" class="url-input" placeholder="https://example.com" autocomplete="url" list="url-history-list" style="flex:1" />
+                <datalist id="url-history-list"></datalist>
+                <button type="button" id="discover-btn" class="btn-primary" style="height:40px;padding:0 18px;font-size:13px;white-space:nowrap">画面分析</button>
+              </div>
+              <div id="url-input-message" class="input-field-message"></div>
+              <!-- オンボーディングヒント -->
+              <div class="wizard-p1-hints" style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                  <span style="font-size:12px;color:var(--text-muted)">
+                    ⏱ 目安: 10画面のサイトで約2〜3分
+                  </span>
+                  <button type="button" id="sample-url-btn"
+                    style="font-size:12px;padding:2px 10px;border:1px solid var(--border);border-radius:12px;background:var(--surface);color:var(--primary);cursor:pointer;white-space:nowrap">
+                    サンプルURL（example.com）で試す
+                  </button>
+                </div>
+                <p style="font-size:12px;color:var(--text-muted);margin:0">
+                  💡 ログインが必要なサイトは「画面分析」後に認証情報を追加できます。
+                  <br>
+                  認証済みページもテスト設計対象にしたい場合は「上級設定」からログインURLを指定してください。
+                </p>
+              </div>
+              <div id="discover-loading" class="discover-live-card" style="display:none;margin-top:10px">
+                <div class="discover-live-header">
+                  <span class="spinner"></span>
+                  <span>画面を分析しています...</span>
+                  <span id="discover-count-label" class="discover-live-count">0画面を発見</span>
+                  <span class="discover-live-elapsed-label">経過:</span>
+                  <span id="discover-elapsed" class="discover-live-elapsed"></span>
+                  <button type="button" id="discover-cancel-btn" class="btn-outline-sm btn-danger-outline" style="margin-left:auto">中断</button>
+                </div>
+                <div id="discover-live-feed" class="discover-live-feed"></div>
+              </div>
+              <div id="discover-status" class="discover-status"></div>
+              <!-- 解析完了サマリー -->
+              <div id="p1-summary" class="wizard-p1-summary" style="display:none">
+                <div class="p1-result-cards">
+                  <div class="p1-result-card p1-result-card--screens">
+                    <span class="p1-result-num" id="p1-screens-num">0</span>
+                    <span class="p1-result-label">画面を検出</span>
+                  </div>
+                  <div class="p1-result-card p1-result-card--login" id="p1-login-card" style="display:none">
+                    <span class="p1-result-num" id="p1-login-num">0</span>
+                    <span class="p1-result-label">ログイン必要</span>
+                  </div>
+                  <div class="p1-result-card p1-result-card--time" id="p1-time-card" style="display:none">
+                    <span class="p1-result-num" id="p1-elapsed-num">-</span>
+                    <span class="p1-result-label">解析時間</span>
+                  </div>
+                </div>
+                <span class="wizard-p1-summary-hint" id="p1-login-hint" style="display:none"></span>
+                <button type="button" id="p1-next-btn" class="btn-primary" style="height:44px;padding:0 28px;font-size:14px;margin-top:4px">条件設定へ →</button>
+              </div>
+            </div>
+
+            <!-- ステップ2: 条件設定 -->
+            <div id="wizard-p2" style="display:none">
+              <form id="form">
+                <div class="input-card">
+                  <div class="wizard-p2-header">
+                    <h2>条件設定</h2>
+                    <button type="button" id="p2-back-btn" class="btn-outline-sm">← 解析に戻る</button>
+                  </div>
+
+                  <!-- クロール方法（自動クロール／選択したURLのみ） -->
+                  <div class="field" id="crawl-mode-field" style="margin-bottom:14px">
+                    <label class="form-label" style="margin-bottom:6px">クロール方法</label>
+                    <div style="display:flex;gap:16px;flex-wrap:wrap">
+                      <label class="checkbox-chip">
+                        <input type="radio" name="crawl-target-mode" id="crawl-mode-selected" value="selected" checked>
+                        選択したURLのみ
+                      </label>
+                      <label class="checkbox-chip">
+                        <input type="radio" name="crawl-target-mode" id="crawl-mode-auto" value="auto">
+                        自動クロール（リンクを辿る）
+                      </label>
+                    </div>
+                    <div id="crawl-mode-auto-fields" style="display:none;margin-top:10px;gap:16px;flex-wrap:wrap" class="control-grid-2">
+                      <div class="control-field">
+                        <label for="crawl-depth">深さ</label>
+                        <input type="number" id="crawl-depth" class="url-input input-compact" value="2" min="1" max="10" />
+                      </div>
+                      <div class="control-field">
+                        <label for="max-pages">最大ページ</label>
+                        <input type="number" id="max-pages" class="url-input input-compact" value="30" min="1" max="500" />
+                      </div>
+                    </div>
+                    <div class="control-field" style="margin-top:10px;max-width:180px">
+                      <label for="crawl-parallelism">並列数<span class="info-tip" tabindex="0" role="img" aria-label="同時にアクセスする画面数。増やすと解析時間は短くなりますが、対象サイトへの負荷が増えます。" data-tip="同時にアクセスする画面数。増やすと解析時間は短くなりますが、対象サイトへの負荷が増えます。">ⓘ</span></label>
+                      <select id="crawl-parallelism" class="url-input select-compact">
+                        <option value="1">1（順次）</option>
+                        <option value="2" selected>2（既定）</option>
+                        <option value="3">3</option>
+                        <option value="4">4（最大）</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <!-- 画面リスト + ログイン入力（ログイン必要時はリスト直下に表示） -->
+                  <div id="discovered-url-panel" class="discovered-url-panel" style="display:none;margin-bottom:14px">
+                    <div class="section-head">
+                      <p class="app-sidebar-section" style="padding:0">取得対象の画面</p>
+                      <div class="discovered-url-actions">
+                        <button type="button" id="select-all-btn" class="btn-outline-sm">全選択</button>
+                        <button type="button" id="clear-all-btn" class="btn-outline-sm">全解除</button>
+                      </div>
+                    </div>
+                    <div id="discovered-url-list" class="discovered-url-list"></div>
+                  </div>
+
+                  <div id="target-preview" class="target-preview">
+                    <strong>チェック対象 0件</strong>
+                    <ol id="target-preview-list"></ol>
+                    <p id="target-preview-eta" class="input-field-message" style="margin-top:6px"></p>
+                  </div>
+
+                  <!-- 参考文書（任意） -->
+                  <div class="field" id="reference-doc-block" style="margin-top:10px">
+                    <label for="reference-doc-input">参考文書（任意 — 既存の画面一覧・項目定義書など）</label>
+                    <input type="file" id="reference-doc-input" multiple
+                           accept=".xlsx,.xlsm,.docx,.pptx,.pdf,.md,.txt,.yaml,.yml,.json" />
+                    <ul id="reference-doc-list"></ul>
+                    <div id="reference-doc-status" class="input-field-message"></div>
+                  </div>
+
+                  <!-- オプション -->
+                  <div style="margin-top:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+                    <label class="checkbox-chip"><input type="checkbox" id="compare"> 前回との差分を出力</label>
+                    <details id="login-setup-section" style="flex:1">
+                      <summary style="cursor:pointer;font-size:12px;color:var(--text-muted);padding:4px 0;user-select:none">上級設定（カスタムログインURL・auth.json）</summary>
+                      <div style="padding:10px 0 4px">
+                        <div class="field" style="margin-bottom:8px">
+                          <label for="login-url">ログインURL（カスタム）</label>
+                          <div style="display:flex;gap:6px;align-items:center">
+                            <input type="url" id="login-url" class="url-input" style="flex:1" placeholder="https://example.com/login" />
+                            <button type="button" id="login-scrape-btn" class="btn-outline-sm">フォームを取得</button>
+                          </div>
+                        </div>
+                        <div id="login-loading" style="display:none" class="discover-loading"><span class="spinner"></span><span id="login-loading-msg">フォームを取得しています…</span></div>
+                        <div id="login-fields-area"></div>
+                        <div id="login-status" class="input-field-message" style="margin-top:6px"></div>
+
+                        <!-- 認証フローレコーダー（SPEC-3-2）: 見えるブラウザで人が普通にログインし、ボタン一つで保存する -->
+                        <div class="field" style="margin-top:10px;border-top:1px solid var(--border, #e5e5e5);padding-top:10px">
+                          <label>ブラウザでログインして保存（MFA・ソーシャルログインにも対応）</label>
+                          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+                            <button type="button" id="login-record-start-btn" class="btn-outline-sm">ブラウザでログインして保存</button>
+                            <button type="button" id="login-record-complete-btn" class="btn-primary" style="display:none;height:28px;padding:0 12px;font-size:12px">ログイン完了</button>
+                            <button type="button" id="login-record-cancel-btn" class="btn-outline-sm" style="display:none">キャンセル</button>
+                          </div>
+                          <div id="login-record-status" class="input-field-message" style="margin-top:6px"></div>
+                        </div>
+
+                        <div class="field" style="margin-top:8px">
+                          <label for="auth-path">auth.json パス（CLI保存済みの場合）</label>
+                          <input type="text" id="auth-path" placeholder="output/example.com/auth.json" />
+                        </div>
+                      </div>
+                    </details>
+                  </div>
+
+                  <div class="wizard-footer" style="justify-content:flex-end">
+                    <button type="submit" class="btn-primary" id="submit-btn" style="height:44px;padding:0 28px;font-size:15px">解析開始</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- ステップ3: 実行 -->
+          <div id="execution-view" class="execution-view hidden">
+            <div class="execution-topbar">
+              <div class="execution-topbar-head">
+                <h2 class="execution-title" id="exec-title">クロール中…</h2>
+                <span class="execution-elapsed" id="exec-elapsed">00:00</span>
+              </div>
+              <p class="execution-message" id="exec-message">対象を受け付けて、クロールの準備を進めています。</p>
+              <div class="execution-progress"><div class="execution-progress-bar" id="exec-progress-bar"></div></div>
+              <div class="execution-steps">
+                <div class="execution-step is-active" id="estep-0">1. 受付</div>
+                <div class="execution-step" id="estep-1">2. ページ取得</div>
+                <div class="execution-step" id="estep-2">3. 解析</div>
+                <div class="execution-step" id="estep-3">4. 結果整理</div>
+              </div>
+            </div>
+            <div class="execution-preview-frame">
+              <img id="exec-preview-image" class="execution-preview-image" alt="クロール中のライブプレビュー" />
+              <div id="exec-preview-placeholder" class="execution-preview-placeholder">
+                <div class="spinner"></div>
+                <p>ライブプレビューを準備しています…</p>
+              </div>
+            </div>
+            <pre class="execution-log" id="exec-log"></pre>
+            <div class="execution-error-card hidden" id="exec-error">エラーが発生しました。ログを確認してください。</div>
+            <div class="execution-bottombar">
+              <dl class="execution-meta-list">
+                <div class="execution-meta-item"><dt>対象</dt><dd id="exec-target">-</dd></div>
+                <div class="execution-meta-item"><dt>状態</dt><dd id="exec-phase">準備中</dd></div>
+                <div class="execution-meta-item"><dt>進捗</dt><dd id="exec-count">0 / 0</dd></div>
+                <div class="execution-meta-item"><dt>残り時間</dt><dd id="exec-eta">算出中</dd></div>
+                <div class="execution-meta-item"><dt>除外</dt><dd id="exec-skipped">0件</dd></div>
+                <div class="execution-meta-item"><dt>保存済み</dt><dd id="exec-saved">0件</dd></div>
+              </dl>
+              <div class="execution-bottombar-actions" id="exec-running-actions">
+                <button type="button" id="exec-stop-btn" class="btn-outline-sm">停止</button>
+              </div>
+              <div class="execution-bottombar-actions hidden" id="exec-actions">
+                <button type="button" id="exec-new-btn" class="btn-outline-sm">条件設定に戻る</button>
+                <button type="button" id="btn-view-report" class="btn-primary" style="display:none">レポートを見る →</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ステップ4: レポート -->
+          <div id="result-panel" class="result-panel hidden">
+            <div class="result-summary">
+              <div class="result-summary-head">
+                <div style="display:flex;align-items:center;gap:10px;min-width:0;flex-wrap:wrap">
+                  <strong id="r-domain">-</strong>
+                  <span id="r-diff-badge" style="display:none"></span>
+                  <span id="r-crawled" style="font-size:12px;color:var(--text-muted)"></span>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center">
+                  <div class="export-dropdown" id="export-dropdown">
+                    <button type="button" class="btn-outline-sm" id="export-dropdown-btn">↓ エクスポート</button>
+                    <div class="export-dropdown-menu" id="export-dropdown-menu"></div>
+                  </div>
+                  <button type="button" id="r-recrawl-btn" class="btn-outline-sm">再クロール</button>
+                </div>
+              </div>
+              <div class="kpi-hero">
+                <div class="kpi-tile">
+                  <span class="kpi-num" id="k-screens">0</span>
+                  <span class="kpi-label">画面</span>
+                  <span class="kpi-sub" id="k-forms-sub"></span>
+                </div>
+                <div class="kpi-tile">
+                  <span class="kpi-num" id="k-fields">0</span>
+                  <span class="kpi-label">入力項目</span>
+                  <div class="kpi-bar" aria-hidden="true"><div class="kpi-bar-fill" id="k-required-bar"></div></div>
+                  <span class="kpi-sub" id="k-required-sub"></span>
+                </div>
+                <div class="kpi-tile">
+                  <span class="kpi-num" id="k-conds">0</span>
+                  <span class="kpi-label">テスト条件</span>
+                  <span class="kpi-sub">機械導出</span>
+                </div>
+                <div class="kpi-tile">
+                  <span class="kpi-num" id="k-cases">0</span>
+                  <span class="kpi-label">概算ケース</span>
+                  <span class="kpi-sub" id="k-hours-sub"></span>
+                </div>
+                <button type="button" class="kpi-tile kpi-tile--action" id="k-runs-tile" title="テスト実行タブを開く">
+                  <span class="kpi-num" id="k-passrate">—</span>
+                  <span class="kpi-label">テスト実行</span>
+                  <span class="kpi-sub" id="k-runs-sub">未実行</span>
+                </button>
+              </div>
+            </div>
+            <div class="result-bar">
+              <div class="result-tabs" role="tablist" aria-label="結果ビュー">
+                <button type="button" role="tab" aria-selected="true" class="result-tab is-active" data-tab="overview" aria-controls="rp-overview">概要</button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="screens" aria-controls="rp-screens">画面と仕様<span class="tab-count" id="tab-count-screens"></span></button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="test-design" aria-controls="rp-test-design">テスト設計<span class="tab-count" id="tab-count-test-design"></span></button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="flow" aria-controls="rp-flow">画面遷移</button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="runs" aria-controls="rp-runs">テスト実行</button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="doc-fusion" aria-controls="rp-doc-fusion" id="tab-doc-fusion" hidden>文書突合<span class="tab-count" id="tab-count-doc-fusion"></span></button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="history" aria-controls="rp-history">履歴・差分<span class="tab-count" id="tab-count-history"></span></button>
+              </div>
+              <div class="result-bar-actions">
+                <button type="button" id="r-density-btn" class="btn-outline-sm" title="表の行間を切り替え">☰ 密度</button>
+                <button type="button" id="r-maximize-btn" class="btn-outline-sm" title="最大化 (Esc で解除)">⛶ 最大化</button>
+                <button type="button" id="r-new-btn" class="btn-outline-sm">ダッシュボードへ</button>
+              </div>
+            </div>
+            <div class="result-hero" id="result-hero">
+              <div class="result-tab-panel rp-simple" id="rp-overview" role="tabpanel" tabindex="0" aria-label="概要"></div>
+              <div class="result-tab-panel" id="rp-screens" role="tabpanel" tabindex="0" aria-label="画面と仕様" hidden>
+                <div class="result-subtabs" role="tablist" aria-label="画面と仕様のビュー" data-tab="screens">
+                  <button type="button" role="tab" aria-selected="true" class="result-subtab is-active" data-sub="spec">画面仕様</button>
+                  <button type="button" role="tab" aria-selected="false" class="result-subtab" data-sub="gallery">ギャラリー</button>
+                  <button type="button" role="tab" aria-selected="false" class="result-subtab" data-sub="coverage">カバレッジ</button>
+                </div>
+                <div class="result-subpanel" id="rp-screens-spec"></div>
+                <div class="result-subpanel" id="rp-screens-gallery" hidden></div>
+                <div class="result-subpanel" id="rp-screens-coverage" hidden></div>
+              </div>
+              <div class="result-tab-panel" id="rp-test-design" role="tabpanel" tabindex="0" aria-label="テスト設計" hidden>
+                <div class="result-subtabs" role="tablist" aria-label="テスト設計のビュー" data-tab="test-design">
+                  <button type="button" role="tab" aria-selected="true" class="result-subtab is-active" data-sub="matrix">条件マトリクス</button>
+                  <button type="button" role="tab" aria-selected="false" class="result-subtab" data-sub="summary">技法サマリー</button>
+                  <button type="button" role="tab" aria-selected="false" class="result-subtab" data-sub="detail">技法詳細</button>
+                  <button type="button" role="tab" aria-selected="false" class="result-subtab" data-sub="mbt">技法別設計（MBT）</button>
+                </div>
+                <div class="result-subpanel" id="rp-test-design-matrix"></div>
+                <div class="result-subpanel" id="rp-test-design-summary" hidden></div>
+                <div class="result-subpanel" id="rp-test-design-detail" hidden></div>
+                <div class="result-subpanel" id="rp-test-design-mbt" hidden></div>
+              </div>
+              <div class="result-tab-panel" id="rp-flow" role="tabpanel" tabindex="0" aria-label="画面遷移" hidden>
+                <div class="result-subtabs" role="tablist" aria-label="画面遷移のビュー" data-tab="flow">
+                  <button type="button" role="tab" aria-selected="true" class="result-subtab is-active" data-sub="diagram">遷移図</button>
+                  <button type="button" role="tab" aria-selected="false" class="result-subtab" data-sub="table">遷移表</button>
+                </div>
+                <div class="result-subpanel" id="rp-flow-diagram"></div>
+                <div class="result-subpanel" id="rp-flow-table" hidden></div>
+              </div>
+              <div class="result-tab-panel rp-simple" id="rp-runs" role="tabpanel" tabindex="0" aria-label="テスト実行" hidden></div>
+              <div class="result-tab-panel rp-simple" id="rp-doc-fusion" role="tabpanel" tabindex="0" aria-label="文書突合" hidden></div>
+              <div class="result-tab-panel rp-simple" id="rp-history" role="tabpanel" tabindex="0" aria-label="履歴・差分" hidden></div>
+            </div>
+          </div>
+          <script>
+          (function () {
+            const btn = document.getElementById('sample-url-btn');
+            if (!btn) return;
+            btn.addEventListener('click', function () {
+              const input = document.getElementById('url-input');
+              if (input) {
+                input.value = 'https://example.com';
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+              }
+            });
+          }());
+          </script>
+        </section>
+
+        <!-- ===== ホーム（URL解析と履歴） ===== -->
+        <section class="view is-active" id="view-dashboard">
+          <div class="dash-hero">
+            <div class="dash-hero-main">
+              <h1 class="dash-hero-title">URLからQAドキュメントを自動生成</h1>
+              <p class="dash-hero-sub">稼働中のWebシステムを解析し、画面仕様書・テスト設計・画面遷移図をまとめて作成します。</p>
+              <div class="dash-hero-form">
+                <input type="url" id="hero-url" class="url-input dash-hero-input" placeholder="https://example.com　解析したいURLを入力" autocomplete="url" list="url-history-list" />
+                <button type="button" id="hero-start-btn" class="btn-primary dash-hero-start">解析を始める</button>
+              </div>
+              <div class="dash-hero-steps" aria-label="ドキュメント生成の流れ">
+                <span class="dash-hero-step"><b>1</b> 画面を解析</span>
+                <span class="dash-hero-arrow">→</span>
+                <span class="dash-hero-step"><b>2</b> 画面仕様書</span>
+                <span class="dash-hero-arrow">→</span>
+                <span class="dash-hero-step"><b>3</b> テスト設計</span>
+                <span class="dash-hero-note">目安: 10画面で約2〜3分</span>
+                <button type="button" id="hero-sample-btn" class="dash-hero-sample">サンプルURLで試す</button>
+              </div>
+              <div class="dash-hero-modes">
+                <button type="button" id="hero-guided-btn" class="dash-mode-card">
+                  <span class="dash-mode-icon">✍</span>
+                  <span class="dash-mode-body"><b>Test Design</b><small>画面を確認しながら生成条件を設定</small></span>
+                </button>
+                <button type="button" id="hero-auto-btn" class="dash-mode-card dash-mode-card-primary">
+                  <span class="dash-mode-icon">⚡</span>
+                  <span class="dash-mode-body"><b>AutoRun</b><small>URLからテスト実行まで全自動</small></span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <section class="onboarding-checklist" id="onboarding-checklist" hidden aria-labelledby="onboarding-checklist-title">
+            <div class="onboarding-checklist-head">
+              <div>
+                <p class="onboarding-eyebrow">はじめての WebSpec2Doc</p>
+                <h2 id="onboarding-checklist-title">最初のレポートまで、あと3ステップ</h2>
+              </div>
+              <button type="button" class="btn-outline-sm" id="onboarding-demo-btn" data-onboarding-demo>同梱デモで試す</button>
+            </div>
+            <ol class="onboarding-checklist-steps">
+              <li id="onboarding-site-registered" data-onboarding-state="site_registered">
+                <span class="onboarding-check" aria-hidden="true">1</span>
+                <span><strong>サイトを登録</strong><small>解析したいURLを入力します</small></span>
+              </li>
+              <li id="onboarding-first-crawl" data-onboarding-state="first_crawl">
+                <span class="onboarding-check" aria-hidden="true">2</span>
+                <span><strong>初回クロール</strong><small>画面と入力項目を収集します</small></span>
+              </li>
+              <li id="onboarding-report-viewed" data-onboarding-state="report_viewed">
+                <span class="onboarding-check" aria-hidden="true">3</span>
+                <span><strong>レポートを確認</strong><small>仕様書とテスト設計を開きます</small></span>
+              </li>
+            </ol>
+            <p class="onboarding-demo-hint">デモ利用時は、ターミナルで <code>make demo</code> を実行してください。APIキーなしでも試せます。</p>
+          </section>
+          <div class="dashboard-section-head">
+            <div>
+              <h2 class="dash-section-title">解析履歴</h2>
+              <p class="dashboard-section-copy">過去に解析したサイトのドキュメント確認や再クロールができます。</p>
+            </div>
+            <div class="dashboard-section-actions">
+              <button class="btn-outline-sm" id="reload-history">再読み込み</button>
+              <button class="btn-primary dashboard-add-site-btn" id="add-site-btn-2">+　新規解析</button>
+            </div>
+          </div>
+          <div id="history-body"><div class="empty">読み込み中...</div></div>
+        </section>
+
+        <!-- ===== 品質観点ビュー ===== -->
+        <section class="view" id="view-qa-quality">
+          <div class="qa-tool-2pane">
+            <div class="qa-tool-sidebar">
+              <div>
+                <h2 class="qa-tool-sidebar-title">品質観点</h2>
+                <p class="qa-tool-sidebar-desc">CSV観点、アクセシビリティ、OWASP、境界値、API契約、ビジュアル回帰候補を確認します。</p>
+              </div>
+              <div>
+                <label for="qa-quality-domain-select" class="form-label" style="font-size:12px;margin-bottom:6px">対象サイト</label>
+                <select id="qa-quality-domain-select" class="url-input qa-tool-domain" style="height:36px;width:100%;margin-bottom:8px;font-size:13px">
+                  <option value="">解析済みサイトを選択</option>
+                </select>
+                <div style="display:flex;gap:6px">
+                  <button type="button" id="qa-quality-generate" class="btn-primary" style="flex:1;height:36px;font-size:13px">観点を生成</button>
+                  <button type="button" class="btn-outline-sm qa-tool-reload" title="サイト一覧を再読み込み" style="padding:0 10px">↺</button>
+                </div>
+                <div id="qa-quality-status" class="input-field-message" style="margin-top:6px;min-height:16px"></div>
+              </div>
+              <div>
+                <div class="hero-section-title" style="margin:0 0 8px">成果物</div>
+                <div id="qa-quality-output-links" class="qa-output-list"></div>
+              </div>
+            </div>
+            <div class="qa-tool-main">
+              <div id="qa-quality-content" class="qa-readable">
+                <div class="empty">対象サイトを選択して「観点を生成」を押してください。</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== 観点管理ビュー ===== -->
+        <section class="view" id="view-viewpoints">
+          <div class="vp-shell" id="vp-screen">
+
+            <div id="vp-feedback" class="vp-feedback" role="status" aria-live="polite" hidden>
+              <span class="vp-feedback-icon" aria-hidden="true">✓</span>
+              <span id="vp-feedback-text"></span>
+              <button type="button" id="vp-feedback-action" class="vp-feedback-action" hidden></button>
+              <button type="button" id="vp-feedback-close" class="vp-feedback-close" aria-label="通知を閉じる">×</button>
+            </div>
+
+            <!-- タブバー -->
+            <header class="vp-commandbar">
+              <div class="vp-tabs" role="tablist" aria-label="観点管理の表示">
+                <button type="button" class="vp-tab is-active" data-vp-tab="draft" role="tab" aria-selected="true">下書き</button>
+                <button type="button" class="vp-tab" data-vp-tab="published" role="tab" aria-selected="false">公開版</button>
+                <button type="button" class="vp-tab" data-vp-tab="proposals" role="tab" aria-selected="false">AI提案</button>
+                <button type="button" class="vp-tab" data-vp-tab="history" role="tab" aria-selected="false">変更履歴</button>
+              </div>
+              <div class="vp-command-actions">
+                <button type="button" id="vp-csv-export" class="btn-outline-sm">CSV出力</button>
+                <label class="btn-outline-sm vp-import-label" for="vp-csv-import">CSV取込</label>
+                <input type="file" id="vp-csv-import" accept=".csv,text/csv" hidden>
+                <button type="button" id="vp-publish" class="btn-primary">公開</button>
+              </div>
+            </header>
+
+            <!-- 3ペインワークスペース -->
+            <div class="vp-workspace">
+
+              <!-- ペイン1: セットパネル -->
+              <aside class="vp-set-panel" aria-label="観点セット">
+                <div class="vp-panel-heading">
+                  <h2>観点セット</h2>
+                  <button type="button" id="vp-new-set" class="btn-primary vp-new-set">＋ 新規</button>
+                </div>
+                <div id="vp-set-list" class="vp-set-list" aria-live="polite"></div>
+                <div class="vp-assignment-box">
+                  <div class="vp-assignment-head">
+                    <strong>適用ルール</strong>
+                    <button type="button" id="vp-new-assignment" class="vp-link-button">＋ 追加</button>
+                  </div>
+                  <div id="vp-assignment-list" class="vp-assignment-list"></div>
+                </div>
+                <div class="vp-set-footer">
+                  <span id="vp-set-summary">読み込み中…</span>
+                  <div class="vp-set-footer-actions">
+                    <button type="button" id="vp-edit-set" class="vp-link-button">設定</button>
+                    <button type="button" id="vp-delete-set" class="vp-link-button vp-danger-link">削除</button>
+                  </div>
+                </div>
+              </aside>
+
+              <!-- ペイン2: ツリーパネル -->
+              <nav class="vp-tree-panel" id="vp-tree-panel" aria-label="分類ツリー">
+                <div class="vp-tree-panel-head">
+                  <span class="vp-tree-panel-title">分類</span>
+                  <div class="vp-tree-head-actions">
+                    <button type="button" id="vp-add-folder" class="vp-icon-btn" title="フォルダを追加">＋</button>
+                    <button type="button" id="vp-tree-template-btn" class="vp-icon-btn" title="標準テンプレートを読み込む">📋</button>
+                  </div>
+                </div>
+                <!-- 「すべて」選択 -->
+                <button type="button" class="vp-tree-all-btn is-selected" id="vp-tree-all-btn">
+                  📂 すべて
+                  <span id="vp-tree-all-count" class="vp-tree-count"></span>
+                </button>
+                <div id="vp-tree-root" class="vp-tree-root" role="tree"></div>
+
+                <!-- テンプレート選択ポップアップ（一覧は /api/viewpoint-templates から動的取得） -->
+                <div id="vp-template-menu" class="vp-template-menu" hidden role="menu">
+                  <div class="vp-template-menu-head">テンプレートを読み込む</div>
+                  <div id="vp-template-menu-items"></div>
+                </div>
+              </nav>
+
+              <!-- ペイン3: 観点テーブル -->
+              <section class="vp-table-panel" aria-label="観点一覧">
+
+                <div id="vp-standard-toolbar" class="vp-standard-toolbar vp-table-toolbar">
+                  <nav class="vp-breadcrumb" id="vp-breadcrumb" aria-label="現在位置">
+                    <span class="vp-breadcrumb-root">すべて</span>
+                  </nav>
+                  <div class="vp-table-toolbar-actions">
+                    <label class="vp-search">
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+                      <input type="search" id="vp-search" placeholder="観点を検索" autocomplete="off">
+                    </label>
+                    <select id="vp-filter-risk" aria-label="リスクで絞り込む">
+                      <option value="">リスク</option>
+                      <option value="5">5（高）</option><option value="4">4</option>
+                      <option value="3">3</option><option value="2">2</option><option value="1">1（低）</option>
+                    </select>
+                    <select id="vp-filter-automation" aria-label="自動化区分で絞り込む">
+                      <option value="">自動化</option>
+                      <option value="automated">自動</option>
+                      <option value="semi_automated">半自動</option>
+                      <option value="manual">手動</option>
+                    </select>
+                    <select id="vp-filter-state" aria-label="状態で絞り込む">
+                      <option value="">状態</option>
+                      <option value="enabled">有効</option>
+                      <option value="disabled">無効</option>
+                    </select>
+                    <button type="button" id="vp-add-viewpoint" class="btn-primary">＋ 観点を追加</button>
+                  </div>
+                </div>
+
+                <div id="vp-proposal-toolbar" class="vp-proposal-toolbar" hidden>
+                  <p>AIは提案だけを作成します。採用するまで下書きやAutoRunには反映されません。</p>
+                  <button type="button" id="vp-generate-proposals" class="btn-primary">AIに提案を依頼</button>
+                </div>
+
+                <!-- インライン編集テーブル -->
+                <div class="vp-inline-table-wrap">
+                  <table class="vp-inline-table" id="vp-inline-table" aria-label="観点一覧テーブル">
+                    <thead>
+                      <tr>
+                        <th class="vp-col-check" scope="col">
+                          <input type="checkbox" id="vp-check-all" aria-label="表示中の観点をすべて選択">
+                        </th>
+                        <th class="vp-col-name" scope="col">観点名</th>
+                        <th class="vp-col-category" scope="col">カテゴリ</th>
+                        <th class="vp-col-risk" scope="col">リスク</th>
+                        <th class="vp-col-auto" scope="col">自動化</th>
+                        <th class="vp-col-state" scope="col">状態</th>
+                        <th class="vp-col-actions" scope="col"></th>
+                      </tr>
+                    </thead>
+                    <tbody id="vp-table-body"></tbody>
+                  </table>
+                  <div id="vp-table-empty" class="vp-table-empty" hidden>
+                    <p>観点がありません。「＋ 観点を追加」で追加してください。</p>
+                  </div>
+                </div>
+
+                <!-- バルクバー -->
+                <div id="vp-bulkbar" class="vp-bulkbar" hidden>
+                  <strong id="vp-selected-count">0件を選択</strong>
+                  <button type="button" data-vp-bulk="enable">有効化</button>
+                  <button type="button" data-vp-bulk="disable">無効化</button>
+                  <button type="button" data-vp-bulk="tag">タグ</button>
+                  <button type="button" data-vp-bulk="category">カテゴリ</button>
+                  <button type="button" data-vp-bulk="risk">リスク</button>
+                  <button type="button" id="vp-clear-selection" aria-label="選択を解除">×</button>
+                </div>
+
+                <!-- 件数バー -->
+                <div class="vp-count-bar">
+                  <span id="vp-item-count" class="vp-count">0件</span>
+                </div>
+
+                <!-- 履歴/提案コンテンツ (tab切替で表示) -->
+                <div id="vp-list-content" class="vp-list-content" hidden></div>
+
+              </section>
+            </div><!-- /vp-workspace -->
+
+          </div><!-- /vp-shell -->
+
+          <!-- 詳細編集モーダル（既存viewpoint-editor.jsと連携） -->
+          <div id="vp-editor-overlay" class="vp-editor-overlay" role="dialog" aria-modal="true" aria-labelledby="vp-editor-title" aria-describedby="vp-editor-state" hidden>
+            <div class="vp-editor-modal">
+              <header class="vp-editor-head">
+                <div>
+                  <p id="vp-editor-context" class="vp-editor-context">観点セット</p>
+                  <h2 id="vp-editor-title" tabindex="-1">観点を編集</h2>
+                </div>
+                <div class="vp-editor-head-status">
+                  <span id="vp-editor-state" class="vp-editor-state">保存済み</span>
+                  <button type="button" id="vp-editor-close" class="vp-editor-close" aria-label="編集画面を閉じる">×</button>
+                </div>
+              </header>
+
+              <div class="vp-editor-layout">
+                <nav class="vp-section-nav" aria-label="編集セクション">
+                  <button type="button" class="vp-section-link is-active" data-vp-section="vp-section-basic" aria-current="true">
+                    <span class="vp-section-icon" aria-hidden="true">1</span><span>基本情報<small data-vp-section-state>未完了</small></span>
+                  </button>
+                  <button type="button" class="vp-section-link" data-vp-section="vp-section-conditions">
+                    <span class="vp-section-icon" aria-hidden="true">2</span><span>適用条件<small data-vp-section-state>完了</small></span>
+                  </button>
+                  <button type="button" class="vp-section-link" data-vp-section="vp-section-checks">
+                    <span class="vp-section-icon" aria-hidden="true">3</span><span>確認内容<small data-vp-section-state>未完了</small></span>
+                  </button>
+                  <button type="button" class="vp-section-link" data-vp-section="vp-section-evidence">
+                    <span class="vp-section-icon" aria-hidden="true">4</span><span>根拠・タグ<small data-vp-section-state>未完了</small></span>
+                  </button>
+                </nav>
+
+                <form id="vp-editor-form" class="vp-editor-form" novalidate>
+                  <input type="hidden" id="vp-item-id">
+                  <section id="vp-section-basic" class="vp-form-section" aria-labelledby="vp-section-basic-title">
+                    <div class="vp-form-section-head"><span>01</span><div><h3 id="vp-section-basic-title">基本情報</h3><p>観点を一覧で識別し、目的と優先度を定義します。</p></div></div>
+                    <div class="vp-field">
+                      <label for="vp-item-name">名称 <span aria-hidden="true">*</span></label>
+                      <input id="vp-item-name" required maxlength="200" aria-describedby="vp-item-name-error">
+                      <p id="vp-item-name-error" class="vp-field-error" hidden></p>
+                    </div>
+                    <div class="vp-field-grid">
+                      <div class="vp-field">
+                        <label for="vp-item-category">カテゴリ <span aria-hidden="true">*</span></label>
+                        <input id="vp-item-category" required maxlength="100" aria-describedby="vp-item-category-error" list="vp-category-datalist" autocomplete="off">
+                        <datalist id="vp-category-datalist"></datalist>
+                        <p id="vp-item-category-error" class="vp-field-error" hidden></p>
+                      </div>
+                      <div class="vp-field">
+                        <label for="vp-item-risk">リスク重み</label>
+                        <select id="vp-item-risk"><option value="5">5（高）</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1（低）</option></select>
+                      </div>
+                    </div>
+                    <div class="vp-field">
+                      <label for="vp-item-purpose">目的</label>
+                      <textarea id="vp-item-purpose" rows="4" maxlength="1000"></textarea>
+                    </div>
+                  </section>
+
+                  <section id="vp-section-conditions" class="vp-form-section" aria-labelledby="vp-section-conditions-title">
+                    <div class="vp-form-section-head"><span>02</span><div><h3 id="vp-section-conditions-title">適用条件</h3><p>この観点を適用する画面や要素を、安全な許可済み条件で指定します。</p></div></div>
+                    <div class="vp-condition-row">
+                      <select id="vp-rule-field" aria-label="条件フィールド">
+                        <option value="">すべてに適用</option><option value="url">URL</option><option value="industry">業種</option><option value="screen_type">画面種別</option><option value="input_type">入力種別</option><option value="method">HTTPメソッド</option><option value="has_forms">フォーム有無</option>
+                      </select>
+                      <select id="vp-rule-operator" aria-label="条件演算子">
+                        <option value="eq">が一致</option><option value="ne">が不一致</option><option value="contains">を含む</option><option value="starts_with">で始まる</option><option value="present">が存在</option>
+                      </select>
+                      <input id="vp-rule-value" aria-label="条件値" placeholder="値" aria-describedby="vp-rule-value-error">
+                    </div>
+                    <p id="vp-rule-value-error" class="vp-field-error" hidden></p>
+                    <p class="vp-field-help">任意コードは実行されません。許可済み条件だけを使用します。</p>
+                    <label class="vp-enabled-check"><input type="checkbox" id="vp-item-enabled" checked> この観点を有効にする</label>
+                  </section>
+
+                  <section id="vp-section-checks" class="vp-form-section" aria-labelledby="vp-section-checks-title">
+                    <div class="vp-form-section-head"><span>03</span><div><h3 id="vp-section-checks-title">確認内容</h3><p>担当者や自動テストが実施する具体的な確認を記録します。</p></div></div>
+                    <div class="vp-field">
+                      <label for="vp-item-checks">推奨確認</label>
+                      <textarea id="vp-item-checks" rows="5" maxlength="1000"></textarea>
+                    </div>
+                    <div class="vp-field">
+                      <label for="vp-item-automation">自動化区分</label>
+                      <select id="vp-item-automation"><option value="automated">自動</option><option value="semi_automated">半自動</option><option value="human">手動</option></select>
+                    </div>
+                  </section>
+
+                  <section id="vp-section-evidence" class="vp-form-section" aria-labelledby="vp-section-evidence-title">
+                    <div class="vp-form-section-head"><span>04</span><div><h3 id="vp-section-evidence-title">根拠・タグ</h3><p>判断根拠と検索用の分類語を紐づけます。</p></div></div>
+                    <div class="vp-field">
+                      <label for="vp-item-standards">標準・根拠</label>
+                      <input id="vp-item-standards" maxlength="500">
+                    </div>
+                    <div class="vp-field">
+                      <label for="vp-item-tags">タグ</label>
+                      <input id="vp-item-tags" placeholder="カンマ区切り" maxlength="500">
+                    </div>
+                  </section>
+                </form>
+
+                <aside class="vp-validation-rail" aria-label="版と入力の状態">
+                  <section><h3>現在の版</h3><strong id="vp-rail-version">下書き</strong><p id="vp-rail-version-detail">編集可能な版です</p></section>
+                  <section><h3>継承元</h3><strong id="vp-rail-inheritance">このセットで定義</strong><p id="vp-rail-inheritance-detail">上書きせず直接編集します</p></section>
+                  <section><h3>入力検証</h3><strong id="vp-rail-validation" class="vp-rail-ok">✓ 問題なし</strong><p id="vp-rail-validation-detail">必須項目を確認済み</p></section>
+                  <section><h3>保存状態</h3><strong id="vp-rail-save">保存済み</strong><p id="vp-rail-save-detail">変更はありません</p></section>
+                  <section><h3>適用情報</h3><strong id="vp-rail-applicability">適用ルール 0件</strong><p>公開後のAutoRunから適用されます</p></section>
+                  <button type="button" id="vp-create-next-draft" class="btn-primary vp-next-draft" hidden>次版の下書きを作成</button>
+                </aside>
+              </div>
+
+              <section id="vp-conflict-panel" class="vp-conflict-panel" role="alert" hidden>
+                <div><strong>他の操作による更新が見つかりました</strong><p id="vp-conflict-summary">サーバー版と編集中の内容を確認してください。</p></div>
+                <button type="button" id="vp-conflict-reload" class="btn-outline-sm">サーバー版を再読込</button>
+                <button type="button" id="vp-conflict-reapply" class="btn-primary">編集内容を再適用</button>
+              </section>
+
+              <footer class="vp-editor-footer">
+                <div class="vp-editor-footer-left">
+                  <button type="button" id="vp-discard-item" class="btn-outline-sm">変更を破棄</button>
+                  <button type="button" id="vp-delete-item" class="vp-delete-button">観点を削除</button>
+                </div>
+                <div id="vp-editor-error" class="vp-editor-error" role="alert"></div>
+                <button type="submit" form="vp-editor-form" id="vp-save-item" class="btn-primary">下書きを保存</button>
+              </footer>
+            </div>
+          </div><!-- /vp-editor-overlay -->
+
+        </section>
+
+        <!-- ===== AutoRun ビュー（単一フロー: 受付→実行→納品が同じ列で変身） ===== -->
+        <section class="view" id="view-auto-run">
+          <div class="autorun-workspace">
+          <div class="autorun-work">
+
+            <!-- 実行中のみ表示: 停止 -->
+            <div id="autorun-cancel-area" class="autorun-inline-actions" style="display:none">
+              <button type="button" id="autorun-cancel-btn" class="btn-outline-sm btn-danger-outline">停止</button>
+            </div>
+
+            <!-- 受付（idle）: フォームと説明を内包。実行開始で丸ごと切り替わる -->
+            <div id="autorun-idle-msg" class="autorun-intake">
+              <div class="autorun-intake-lead">
+                <div class="section-kicker">受付</div>
+                <h3 class="autorun-intake-title">URLか仕様書を渡すだけ。あとはベテランQAとして回します。</h3>
+                <p class="autorun-intake-sub">受領から実行完了レポートの納品まで、フルスペクトラムのQAを一貫して実施します。範囲は絞りません。技法・観点はシステム側が判断します。</p>
+              </div>
+
+              <div id="autorun-form-area" class="card autorun-form">
+                <fieldset class="autorun-mode-switch">
+                  <legend>生成モード</legend>
+                  <!-- 仕様3: いま何を選んでいるかを明示する -->
+                  <p class="autorun-mode-current" id="autorun-mode-current" aria-live="polite"></p>
+                  <div class="autorun-mode-options">
+                    <label for="autorun-mode-url" class="autorun-mode-option">
+                      <input type="radio" id="autorun-mode-url" name="autorun-mode" value="url" checked>
+                      <span><strong>URL駆動</strong><small>実測した画面からテストを生成</small></span>
+                    </label>
+                    <label for="autorun-mode-document" class="autorun-mode-option">
+                      <input type="radio" id="autorun-mode-document" name="autorun-mode" value="document">
+                      <span><strong>文書駆動</strong><small>要件文書と実測画面を結合</small></span>
+                    </label>
+                  </div>
+                </fieldset>
+                <div class="control-field">
+                  <label for="autorun-url">対象URL</label>
+                  <div class="autorun-url-row">
+                    <!-- 仕様4: 過去に解析したサイトから選べるようにする（AutoRun専用の候補） -->
+                    <input type="url" id="autorun-url" class="url-input input-compact" placeholder="https://example.com" autocomplete="url" list="autorun-url-suggestions" />
+                    <datalist id="autorun-url-suggestions"></datalist>
+                    <!-- 事前確認は明示操作でのみ実行する。URLを打っただけで対象サイトへ
+                         アクセスしないこと（相手先への無断アクセスを避ける）。 -->
+                    <button type="button" id="autorun-preflight-btn" class="btn-outline-sm autorun-preflight-btn">事前確認</button>
+                  </div>
+                  <p class="input-field-hint">「事前確認」を押すと、対象サイトへアクセスして到達可否と画面数を確認します。範囲は<strong>本実行と同じ</strong>（既定は全ページ対象）なので、規模によっては時間がかかります。押すまで対象サイトには一切アクセスしません。</p>
+                  <div id="autorun-preflight" class="autorun-preflight" aria-live="polite" hidden></div>
+                </div>
+                <div id="autorun-document-options" class="autorun-document-options" hidden>
+                  <div class="control-field">
+                    <label for="autorun-reference-doc-input">要件・仕様文書</label>
+                    <input type="file" id="autorun-reference-doc-input" multiple
+                           accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.md,.txt,.html,.htm,.json,.feature">
+                    <p class="input-field-hint">Gherkin（.feature）形式で書くと要件の抽出精度が上がります。</p>
+                    <ul id="autorun-reference-doc-list" class="autorun-reference-doc-list"></ul>
+                    <div id="autorun-reference-doc-status" class="input-field-message" aria-live="polite"></div>
+                  </div>
+                  <div class="control-field">
+                    <label for="autorun-selection-criterion">パス選定基準</label>
+                    <select id="autorun-selection-criterion" class="url-input select-compact">
+                      <option value="vertex_coverage">全画面を通る</option>
+                      <option value="edge_coverage">全遷移を通る</option>
+                      <option value="prime_path">全経路パターンを通る（プライムパス）</option>
+                      <option value="reached_target">指定画面へ到達する</option>
+                    </select>
+                  </div>
+                  <div id="autorun-target-page-field" class="control-field" hidden>
+                    <label for="autorun-target-page-id">到達する画面ID</label>
+                    <input type="text" id="autorun-target-page-id" class="url-input input-compact" placeholder="例: checkout_complete">
+                  </div>
+                  <label class="autorun-validation-option" for="autorun-observe-validation">
+                    <input type="checkbox" id="autorun-observe-validation">
+                    <span><strong>入力検証も観測する</strong><small id="autorun-validation-safety-note">フォームへ入力のみ・送信しません</small></span>
+                  </label>
+                </div>
+                <div class="control-field">
+                  <label for="autorun-viewpoint-set">観点セット</label>
+                  <select id="autorun-viewpoint-set" class="url-input select-compact">
+                    <option value="">自動選択</option>
+                  </select>
+                  <div id="autorun-viewpoint-recommendation" class="autorun-viewpoint-recommendation" aria-live="polite">
+                    公開済み観点セットを確認しています…
+                  </div>
+                </div>
+                <details class="autorun-advanced-options">
+                  <summary>詳細オプション（既定は全ページ対象）</summary>
+                  <div class="control-grid-2">
+                    <div class="control-field">
+                      <label for="autorun-depth">深さ<span class="info-tip" tabindex="0" role="img" aria-label="トップページからリンクを何回辿るか。既定は上限（10）で、サイト全体を対象にします。少なくすると対象範囲を絞れます。" data-tip="トップページからリンクを何回辿るか。既定は上限（10）で、サイト全体を対象にします。少なくすると対象範囲を絞れます。">ⓘ</span></label>
+                      <input type="number" id="autorun-depth" class="url-input input-compact" value="10" min="1" max="10" />
+                    </div>
+                    <div class="control-field">
+                      <label for="autorun-max-pages">最大ページ<span class="info-tip" tabindex="0" role="img" aria-label="解析・テスト対象にする画面数の上限。既定は上限（500）で、サイト全体を対象にします。この件数に達したらそれ以上のクロールを打ち切ります。" data-tip="解析・テスト対象にする画面数の上限。既定は上限（500）で、サイト全体を対象にします。この件数に達したらそれ以上のクロールを打ち切ります。">ⓘ</span></label>
+                      <input type="number" id="autorun-max-pages" class="url-input input-compact" value="500" min="1" max="500" />
+                    </div>
+                  </div>
+                </details>
+                <button type="button" id="autorun-start-btn" class="btn-primary btn-block">開始</button>
+                <div id="autorun-start-status" class="input-field-message autorun-start-status"></div>
+              </div>
+
+              <div class="autorun-intake-flow">
+                <div class="autorun-intake-phase">
+                  <div class="autorun-intake-phase-head">見立て</div>
+                  <ol class="autorun-intake-steps">
+                    <li><span class="ai-n">1</span>受領（URL / 仕様書）</li>
+                    <li><span class="ai-n">2</span>悉皆観測（全画面・入力・遷移・データフロー）</li>
+                    <li><span class="ai-n">3</span>テスト分析（リスク源の外在化）</li>
+                    <li><span class="ai-n">4</span>テスト計画・方針（止めずに前提化）</li>
+                  </ol>
+                </div>
+                <div class="autorun-intake-phase">
+                  <div class="autorun-intake-phase-head">設計</div>
+                  <ol class="autorun-intake-steps" start="5">
+                    <li><span class="ai-n">5</span>テスト設計（技法を絞らず全面適用）</li>
+                    <li><span class="ai-n">6</span>テストケース生成（手順・データ・期待結果）</li>
+                    <li><span class="ai-n">7</span>スクリプト生成（実行可能候補）</li>
+                  </ol>
+                </div>
+                <div class="autorun-intake-phase">
+                  <div class="autorun-intake-phase-head">実行・納品</div>
+                  <ol class="autorun-intake-steps" start="8">
+                    <li><span class="ai-n">8</span>テスト実行（Playwright）</li>
+                    <li><span class="ai-n">9</span>ユーザビリティ・現新比較（ビジュアル回帰）</li>
+                    <li><span class="ai-n">10</span>評価（観測事実と品質判断を分離）</li>
+                    <li><span class="ai-n">11</span>レポート納品＋回帰・ドリフト検知</li>
+                  </ol>
+                </div>
+              </div>
+
+              <div class="autorun-intake-deliverables">
+                <div class="section-kicker">納品物</div>
+                <div class="autorun-intake-chips">
+                  <span class="autorun-deliverable-chip">テスト計画</span>
+                  <span class="autorun-deliverable-chip">テスト分析</span>
+                  <span class="autorun-deliverable-chip">テスト設計</span>
+                  <span class="autorun-deliverable-chip">テストケース</span>
+                  <span class="autorun-deliverable-chip">Playwright実行結果</span>
+                  <span class="autorun-deliverable-chip">証跡パック</span>
+                  <span class="autorun-deliverable-chip">カバレッジ指標</span>
+                  <span class="autorun-deliverable-chip">品質観点マップ</span>
+                </div>
+              </div>
+
+              <div class="autorun-intake-scope" role="note">
+                <strong>報告の範囲について：</strong>検出できた範囲を証跡付きで報告します。検証できなかった領域は「未検証」と明記し、<em>欠陥が無いことの証明はしません</em>。現新比較は前回スナップショットがある場合のみ成立し、初回は基準確立のみです。
+              </div>
+            </div>
+
+            <!-- 承認待ちの案内。モーダルを勝手に出さず、確認を促してから実行へ進む -->
+            <div id="autorun-review-gate" class="card autorun-review-gate" style="display:none"></div>
+
+            <!-- 段階承認パイプライン（仕様7〜13）: 提示 → 個別修正 → 承認 -->
+            <div id="autorun-stages" class="autorun-stages" style="display:none">
+              <div class="autorun-stages-rail" id="autorun-stages-rail"></div>
+              <div class="autorun-stage-panel" id="autorun-stage-panel"></div>
+            </div>
+
+            <!-- コックピット: 横型ステッパー + 全体進捗バー（進捗表示はここに一本化） -->
+            <div id="autorun-steps" class="card autorun-cockpit" style="display:none">
+              <div class="autorun-cockpit-head">
+                <div class="section-kicker">進捗</div>
+                <span id="autorun-phase-label" class="autorun-phase-label" aria-live="polite"></span>
+                <span id="autorun-elapsed" class="autorun-elapsed">0:00</span>
+              </div>
+              <!-- 監査で判明: 実行中は受付が隠れ、なぜ別サイトを開始できないか説明が無かった -->
+              <p class="autorun-running-note">このジョブの実行中は、別サイトを同時に開始できません。
+                完了・停止後に受付が表示されます。</p>
+              <div class="autorun-progressbar" role="progressbar" aria-label="全体進捗" aria-valuemin="0" aria-valuemax="100" id="autorun-progressbar">
+                <div id="autorun-progress-fill" class="autorun-progressbar-fill"></div>
+              </div>
+              <div class="autorun-step-row stepper">
+                <div class="autorun-step-item" id="ars-crawl">
+                  <span class="autorun-step-icon stepper-icon" aria-hidden="true"></span>
+                  <span class="autorun-step-label">仕様書生成</span>
+                  <span class="autorun-step-meta" id="ars-crawl-meta"></span>
+                </div>
+                <div class="autorun-step-item" id="ars-qa">
+                  <span class="autorun-step-icon stepper-icon" aria-hidden="true"></span>
+                  <span class="autorun-step-label">QA成果物</span>
+                  <span class="autorun-step-meta" id="ars-qa-meta"></span>
+                </div>
+                <div class="autorun-step-item" id="ars-scripts">
+                  <span class="autorun-step-icon stepper-icon" aria-hidden="true"></span>
+                  <span class="autorun-step-label">スクリプト生成</span>
+                  <span class="autorun-step-meta" id="ars-scripts-meta"></span>
+                </div>
+                <div class="autorun-step-item" id="ars-approval">
+                  <span class="autorun-step-icon stepper-icon" aria-hidden="true"></span>
+                  <span class="autorun-step-label">承認</span>
+                  <span class="autorun-step-meta" id="ars-approval-meta"></span>
+                </div>
+                <div class="autorun-step-item" id="ars-running">
+                  <span class="autorun-step-icon stepper-icon" aria-hidden="true"></span>
+                  <span class="autorun-step-label">テスト実行</span>
+                  <span class="autorun-step-meta" id="ars-running-meta"></span>
+                </div>
+                <div class="autorun-step-item" id="ars-done">
+                  <span class="autorun-step-icon stepper-icon" aria-hidden="true"></span>
+                  <span class="autorun-step-label">完了</span>
+                  <span class="autorun-step-meta" id="ars-done-meta"></span>
+                </div>
+              </div>
+              <div id="autorun-step-note" class="autorun-step-note" style="display:none"></div>
+            </div>
+
+            <!-- テスト実行中のライブプレビュー（screenshot:'on' で生成される最新PNGをポーリング表示） -->
+            <div id="autorun-preview-frame" class="execution-preview-frame" style="display:none">
+              <img id="autorun-preview-image" class="execution-preview-image" alt="テスト実行中のライブプレビュー" />
+              <div id="autorun-preview-placeholder" class="execution-preview-placeholder">
+                <div class="spinner"></div>
+                <p>ライブプレビューを準備しています…</p>
+              </div>
+            </div>
+
+            <!-- テスト実行中の実況（OK/NGがリアルタイムで流れる。R3-01） -->
+            <div id="autorun-live-tests-area"></div>
+
+            <!-- 完了カード（レポート「テスト実行」タブへの導線） -->
+            <div id="autorun-complete-card" class="card autorun-complete-card" style="display:none"></div>
+
+            <div id="autorun-failure-panel" class="card autorun-failure-panel" style="display:none">
+              <div class="autorun-panel-head">
+                <div>
+                  <div class="section-kicker">失敗の見立て</div>
+                  <p class="muted-copy">原因、部分成果、復旧アクションを確認できます。</p>
+                </div>
+              </div>
+              <div id="autorun-failure-body" class="autorun-failure-body"></div>
+            </div>
+
+            <div id="ar-log-section" class="card autorun-log-card" style="display:none">
+              <div class="autorun-panel-head autorun-log-head">
+                <span class="section-kicker">実行ログ</span>
+                <div class="autorun-log-tools">
+                  <div class="autorun-log-filter" role="group" aria-label="ログレベルフィルタ">
+                    <button type="button" class="autorun-log-filter-btn is-active" data-log-level="all">すべて</button>
+                    <button type="button" class="autorun-log-filter-btn" data-log-level="warn">警告以上</button>
+                    <button type="button" class="autorun-log-filter-btn" data-log-level="error">エラーのみ</button>
+                  </div>
+                  <label class="autorun-log-autoscroll"><input type="checkbox" id="autorun-log-autoscroll" checked> 自動スクロール</label>
+                  <label class="autorun-log-autoscroll"><input type="checkbox" id="autorun-log-show-raw"> 開発者向け詳細を表示</label>
+                  <button type="button" id="autorun-log-copy" class="btn-outline-sm autorun-log-copy">コピー</button>
+                </div>
+              </div>
+              <pre id="autorun-log" class="autorun-log"></pre>
+            </div>
+
+            <!-- 実行後: 新しく実行 / 成果物 / 最近の実行 -->
+            <div id="autorun-restart-area" class="autorun-inline-actions" style="display:none">
+              <button type="button" id="autorun-restart-btn" class="btn-outline-sm btn-block">新しく実行</button>
+            </div>
+
+            <div id="autorun-outputs-area" class="card autorun-panel" style="display:none">
+              <div class="autorun-panel-head">
+                <div class="section-kicker">成果物</div>
+              </div>
+              <div id="autorun-output-links" class="qa-output-list"></div>
+            </div>
+
+            <!-- 最近の実行（サーバープロセス生存中のジョブのみ。再起動で消えます） -->
+            <div id="autorun-recent-area" class="card autorun-panel" style="display:none">
+              <div class="autorun-panel-head">
+                <div class="section-kicker">最近の実行</div>
+              </div>
+              <div id="autorun-recent-list" class="autorun-recent-list"></div>
+              <p class="autorun-recent-note">サーバー再起動前の実行はここに表示されません。結果は各サイトのレポート「テスト実行」タブに保存されています。</p>
+            </div>
+
+            <div id="autorun-approval-modal" class="autorun-modal" role="dialog" aria-modal="true" aria-labelledby="arm-title" style="display:none">
+              <div class="autorun-modal-panel autorun-approval-panel">
+                <header class="autorun-modal-head">
+                  <div>
+                    <div id="arm-title" class="autorun-modal-title">テスト実行の設定</div>
+                    <div class="autorun-modal-subtitle">スクリプト生成が完了しました。実行範囲を選択して開始してください。</div>
+                  </div>
+                  <button type="button" id="arm-close" class="autorun-modal-close" aria-label="閉じる">×</button>
+                </header>
+
+                <div class="autorun-modal-body">
+                  <div id="arm-summary" class="arm-summary">
+                    <span class="muted-copy">読み込み中...</span>
+                  </div>
+
+                  <section class="arm-section">
+                    <div class="control-label">実行対象</div>
+                    <div class="arm-filter-list">
+                      <label class="arm-filter-opt">
+                        <input type="radio" name="arm-filter" value="all" checked>
+                        <div class="arm-filter-text"><span>全テスト</span><span class="arm-filter-hint">すべての自動化テスト</span></div>
+                        <span id="arm-fc-all" class="arm-fc"></span>
+                      </label>
+                      <label class="arm-filter-opt">
+                        <input type="radio" name="arm-filter" value="smoke">
+                        <div class="arm-filter-text"><span>スモークのみ</span><span class="arm-filter-hint">主要画面の表示確認・最速</span></div>
+                        <span id="arm-fc-smoke" class="arm-fc"></span>
+                      </label>
+                      <label class="arm-filter-opt">
+                        <input type="radio" name="arm-filter" value="transition">
+                        <div class="arm-filter-text"><span>遷移テスト</span><span class="arm-filter-hint">スモーク＋画面間遷移確認</span></div>
+                        <span id="arm-fc-transition" class="arm-fc"></span>
+                      </label>
+                      <label class="arm-filter-opt">
+                        <input type="radio" name="arm-filter" value="form">
+                        <div class="arm-filter-text"><span>フォームテスト</span><span class="arm-filter-hint">スモーク＋フォーム入力検証</span></div>
+                        <span id="arm-fc-form" class="arm-fc"></span>
+                      </label>
+                    </div>
+                  </section>
+
+                  <section class="arm-section">
+                    <div class="control-label">実行デバイス</div>
+                    <div class="arm-filter-list">
+                      <label class="arm-filter-opt">
+                        <input type="radio" name="arm-device" value="pc" checked>
+                        <div class="arm-filter-text"><span>PC（既定）</span><span class="arm-filter-hint">デスクトップの画面サイズで実行</span></div>
+                      </label>
+                      <label class="arm-filter-opt">
+                        <input type="radio" name="arm-device" value="mobile">
+                        <div class="arm-filter-text"><span>モバイル（iPhone 13相当）</span><span class="arm-filter-hint">スマートフォンの画面サイズ・タッチ操作で実行</span></div>
+                      </label>
+                    </div>
+                  </section>
+
+                  <section class="arm-section">
+                    <label for="arm-timeout" class="control-label">1テストあたりの制限時間<span class="info-tip" tabindex="0" role="img" aria-label="1件のテストがこの時間内に終わらない場合、そのテストは失敗として打ち切られます。テスト件数が多い場合は短めにすると全体の完了が早まります。" data-tip="1件のテストがこの時間内に終わらない場合、そのテストは失敗として打ち切られます。テスト件数が多い場合は短めにすると全体の完了が早まります。">ⓘ</span></label>
+                    <select id="arm-timeout" class="url-input select-compact">
+                      <option value="10">10秒</option>
+                      <option value="30" selected>30秒（推奨）</option>
+                      <option value="60">60秒</option>
+                      <option value="120">120秒</option>
+                    </select>
+                  </section>
+
+                  <section class="arm-section">
+                    <button type="button" id="arm-view-testcases-btn" class="btn-outline-sm">テストケース一覧を確認する →</button>
+                  </section>
+                </div>
+
+                <footer class="autorun-modal-actions">
+                  <button type="button" id="arm-later-btn" class="btn-outline-sm">後で設定</button>
+                  <button type="button" id="arm-approve-btn" class="btn-primary">テスト実行を開始</button>
+                </footer>
+              </div>
+            </div>
+
+            <div id="autorun-preview-panel" class="autorun-modal autorun-preview-modal" style="display:none">
+              <div class="autorun-modal-panel autorun-preview-panel">
+                <header class="autorun-modal-head">
+                  <span class="autorun-modal-title">テストケース・スクリプト確認</span>
+                  <div class="autorun-preview-head-actions">
+                    <span id="autorun-preview-loading" class="muted-copy"></span>
+                    <button type="button" onclick="arShowPreview()" class="autorun-modal-close" aria-label="閉じる">×</button>
+                  </div>
+                </header>
+                <div class="autorun-preview-tabs">
+                  <button class="result-tab is-active autorun-preview-tab" data-ptab="cases">テストケース一覧</button>
+                  <button class="result-tab autorun-preview-tab" data-ptab="script">スクリプト (.spec.ts)</button>
+                </div>
+                <div class="autorun-preview-body">
+                  <div id="autorun-ptab-cases">
+                    <div id="autorun-preview-summary" class="autorun-preview-summary"></div>
+                    <div id="autorun-preview-table-wrap" class="autorun-preview-table-wrap"></div>
+                  </div>
+                  <div id="autorun-ptab-script" style="display:none">
+                    <pre id="autorun-preview-spec" class="autorun-preview-spec"></pre>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div><!-- /.autorun-work -->
+
+            <!-- 右: LLM チャット。各段階の成果物について相談・修正するための常設パネル -->
+            <aside class="autorun-chat" id="autorun-chat" aria-label="QAアシスタント">
+              <header class="autorun-chat-head">
+                <div>
+                  <div class="section-kicker">QAアシスタント</div>
+                  <p class="autorun-chat-sub" id="autorun-chat-context">受付</p>
+                </div>
+                <span class="autorun-chat-status" id="autorun-chat-status" aria-live="polite"></span>
+              </header>
+
+              <!-- フェーズ別の定型チップ（autorun-chat.js が差し替える） -->
+              <div class="autorun-chat-suggestions" id="autorun-chat-presets"></div>
+
+              <div class="autorun-chat-log" id="autorun-chat-log" role="log" aria-live="polite"></div>
+
+              <form class="autorun-chat-form" id="autorun-chat-form">
+                <textarea id="autorun-chat-input" class="autorun-chat-input" rows="2"
+                          placeholder="相談内容を入力（Enterで送信 / Shift+Enterで改行）"></textarea>
+                <div class="autorun-chat-actions">
+                  <span class="autorun-chat-note" id="autorun-chat-note">LLMの提案は補助です。採用の判断は人間が行います。</span>
+                  <button type="submit" id="autorun-chat-send" class="btn-primary autorun-chat-send">送信</button>
+                </div>
+              </form>
+            </aside>
+
+          </div><!-- /.autorun-workspace -->
+        </section>
+        <!-- ===== テストケース専用ビュー ===== -->
+        <section class="view" id="view-testcases">
+          <style>
+            .tc-back-banner {
+              margin-bottom: 12px;
+            }
+            .tc-table td {
+              vertical-align: top;
+              max-width: 320px;
+              overflow-wrap: break-word;
+            }
+            .tc-table td.tc-id {
+              max-width: none;
+              white-space: nowrap;
+              font-weight: 700;
+            }
+            .tc-cell-list {
+              margin: 0;
+              padding-left: 18px;
+            }
+          </style>
+          <div class="qa-tool-2pane">
+            <div class="qa-tool-sidebar">
+              <div>
+                <h2 class="qa-tool-sidebar-title">テストケース一覧</h2>
+                <p class="qa-tool-sidebar-desc">解析済みサイトのテストケースを前提条件・手順・期待結果のローレベル形式で確認します。</p>
+              </div>
+              <div>
+                <label for="tc-domain-select" class="form-label" style="font-size:12px;margin-bottom:6px">対象サイト</label>
+                <select id="tc-domain-select" class="url-input qa-tool-domain" style="height:36px;width:100%;margin-bottom:8px;font-size:13px">
+                  <option value="">解析済みサイトを選択</option>
+                </select>
+                <div id="tc-status" class="input-field-message" style="margin-top:6px;min-height:16px"></div>
+              </div>
+              <div>
+                <div class="hero-section-title" style="margin:0 0 8px">成果物</div>
+                <div id="tc-output-links" class="qa-output-list"></div>
+              </div>
+            </div>
+            <div class="qa-tool-main">
+              <div id="tc-back-banner" class="tc-back-banner" hidden>
+                <button type="button" id="tc-back-btn" class="btn-outline-sm">← AutoRunの設定に戻る</button>
+              </div>
+              <div id="tc-content" class="qa-readable">
+                <div class="empty">対象サイトを選択してください。</div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <!-- ===== 実行履歴ビュー（種別を問わない一般化・R2-27） ===== -->
+        <section class="view" id="view-run-history">
+          <div class="rh-toolbar">
+            <div class="rh-type-tabs" role="tablist" aria-label="履歴の種別">
+              <button type="button" class="rh-type-tab" data-type="crawl" role="tab">解析</button>
+              <button type="button" class="rh-type-tab" data-type="autorun" role="tab">AutoRun</button>
+              <button type="button" class="rh-type-tab" data-type="comparison" role="tab">現新比較</button>
+              <button type="button" class="rh-type-tab" data-type="ux_review" role="tab">UXレビュー</button>
+              <button type="button" class="rh-type-tab" data-type="schedule" role="tab">スケジュール</button>
+              <button type="button" class="rh-type-tab" data-type="all" role="tab">すべて</button>
+            </div>
+            <button type="button" id="rh-reload-btn" class="btn-outline-sm">↺ 再読み込み</button>
+          </div>
+
+          <div id="rh-container">
+            <table class="rh-table">
+              <thead>
+                <tr>
+                  <th>種別</th>
+                  <th>サイト</th>
+                  <th>日時</th>
+                  <th>状態</th>
+                  <th>段階承認</th>
+                      <th>主要数値</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="rh-tbody"></tbody>
+            </table>
+            <div id="rh-empty" style="display:none">実行履歴がありません。</div>
+            <div id="rh-pager" class="pager-wrap"></div>
+          </div>
+        </section>
+
+        <!-- ===== ユーザーガイドビュー ===== -->
+        <section class="view" id="view-user-guide">
+          <div class="input-card user-guide-panel">
+            <div class="wizard-page-header">
+              <h2>WebSpec2Doc ユーザーガイド</h2>
+              <p>URL解析からレポート確認、品質観点レビューまで、画面上で確認できる操作ガイドです。</p>
+            </div>
+
+            <div class="qa-card-grid">
+              <div class="qa-mini-card"><strong>1. サイトを追加</strong><span>左上の「サイトを追加」から対象URLを入力します。</span></div>
+              <div class="qa-mini-card"><strong>2. 画面分析</strong><span>「画面分析」で取得対象ページを検出します。</span></div>
+              <div class="qa-mini-card"><strong>3. 条件設定</strong><span>対象画面、ログイン、差分出力を確認します。</span></div>
+              <div class="qa-mini-card"><strong>4. レポート確認</strong><span>概要、画面別仕様、入力項目、遷移、履歴差分を確認します。</span></div>
+              <div class="qa-mini-card"><strong>5. 品質観点</strong><span>CSV、a11y、OWASP、境界値、API契約の観点を確認します。</span></div>
+            </div>
+
+            <div class="qa-readable-section">
+              <h3>レポートの読み方 — どのタブで何が分かるか</h3>
+              <table class="data">
+                <thead><tr><th>タブ</th><th>何が分かるか</th><th>使い方のポイント</th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td><strong>テスト条件</strong></td>
+                    <td>画面・項目ごとに機械導出したテスト条件（必須チェック・境界値・選択肢・形式）を一覧表示</td>
+                    <td>「必須のみ」フィルターで最小テストケース候補を絞り込む。CSVで書き出してテストケース設計のたたき台に使う</td>
+                  </tr>
+                  <tr>
+                    <td><strong>設計</strong></td>
+                    <td>各画面へのテスト技法推奨マトリクス（同値分割・境界値・状態遷移・決定表など8技法）</td>
+                    <td>バッジをホバーすると推奨理由が出る。技法名をクリックすると技法ガイドパネルが開く</td>
+                  </tr>
+                  <tr>
+                    <td><strong>技法詳細</strong></td>
+                    <td>画面別に推奨した技法の根拠（遷移先数・フィールド種別・制約）を文章で説明</td>
+                    <td>「なぜこの技法が推奨されたか」を説明する資料として設計レビューに使える</td>
+                  </tr>
+                  <tr>
+                    <td><strong>画面遷移図</strong></td>
+                    <td>シーケンス図・コミュニケーション図・アクティビティ図・テスト観点マップの4形式</td>
+                    <td>↓SVG / ↓PNG / ↓MMD ボタンで図をダウンロードし、設計書・報告書に貼り付けられる</td>
+                  </tr>
+                  <tr>
+                    <td><strong>履歴・差分</strong></td>
+                    <td>再クロール前後の画面追加・削除・フィールド変更を検知</td>
+                    <td>リリース後にリクロールすると仕様ドリフトが可視化される。バッジの数字が差分件数</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="qa-readable-section">
+              <h3>テスト技法が推奨されたら — 実際の作業フロー</h3>
+              <table class="data">
+                <thead><tr><th>推奨技法</th><th>典型的な状況</th><th>次のアクション</th></tr></thead>
+                <tbody>
+                  <tr><td>同値分割</td><td>入力項目に型・形式制約あり（例: メール形式、数値のみ）</td><td>有効クラス1件＋無効クラス1件以上をテストケース化</td></tr>
+                  <tr><td>境界値分析</td><td>min/max 制約あり（例: 1〜9泊、0〜99人）</td><td>最小値・最大値・境界±1 の計4〜6ケースを作成</td></tr>
+                  <tr><td>状態遷移</td><td>ページに複数の遷移先（予約→確認→完了など）</td><td>有効遷移＋戻り遷移＋エラー経路をテスト</td></tr>
+                  <tr><td>決定表</td><td>複数条件の組み合わせ（例: ログイン有無×会員種別）</td><td>条件の真偽組み合わせを表で整理してケース化</td></tr>
+                  <tr><td>ペアワイズ</td><td>独立した選択肢が3種以上（例: 朝食×禁煙×部屋タイプ）</td><td>全組み合わせではなくペアを網羅する最小セットで実施</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="qa-readable-section">
+              <h3>4ステップURL解析</h3>
+              <table class="data">
+                <thead><tr><th>Step</th><th>画面</th><th>操作</th></tr></thead>
+                <tbody>
+                  <tr><td>1</td><td>URL入力・解析</td><td>クロール対象URLを入力し、「画面分析」を押します。</td></tr>
+                  <tr><td>2</td><td>条件設定</td><td>取得対象画面、ログイン、差分出力を確認します。</td></tr>
+                  <tr><td>3</td><td>実行</td><td>受付、ページ取得、解析、結果整理の進捗を確認します。</td></tr>
+                  <tr><td>4</td><td>レポート</td><td>生成された仕様、入力項目、遷移、差分、出力形式を確認します。</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="qa-readable-section">
+              <h3>品質観点</h3>
+              <table class="data">
+                <thead><tr><th>メニュー</th><th>内容</th><th>外部API</th></tr></thead>
+                <tbody>
+                  <tr><td>品質観点</td><td>CSV観点、アクセシビリティ、OWASP WSTG/ASVS、境界値、ペアワイズ、API契約、ビジュアル回帰候補を表示します。</td><td>呼び出しません</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="qa-readable-section">
+              <h3>出力ファイル</h3>
+              <ul class="qa-check-list">
+                <li><strong>通常レポート:</strong> report.html / report.json / spec.xlsx / report.pdf / screens.md / forms.md</li>
+                <li><strong>差分:</strong> diff_report.html / snapshots/</li>
+                <li><strong>品質観点:</strong> qa_process/quality_viewpoints.json / quality_viewpoints.html</li>
+                <li><strong>追加料金:</strong> OpenAI補完OFFでは発生しません。ONの場合のみOpenAI API利用料金が発生します。</li>
+              </ul>
+            </div>
+
+            <div class="qa-readable-section">
+              <h3>CLIの使い方（画面を使わずコマンドで実行する）</h3>
+              <p style="font-size:13px;color:var(--text-muted);margin-bottom:10px">
+                画面と同じ処理は <code>python src/main.py</code> からコマンドラインでも実行できます。バッチ処理・自動化・CI連携に使います。
+              </p>
+              <table class="data">
+                <thead><tr><th>オプション</th><th>役割</th><th>例</th></tr></thead>
+                <tbody>
+                  <tr><td><code>--url</code></td><td>解析対象のURL（クロールの起点）</td><td><code>--url https://example.com/</code></td></tr>
+                  <tr><td><code>--format</code></td><td>出力形式（指定可能: md,html,excel,pdf,json。既定は md のみ）。カンマ区切りで複数指定可</td><td><code>--format html,pdf,excel,json,md</code></td></tr>
+                  <tr><td><code>--compare</code></td><td>前回のクロール結果（スナップショット）と比較し、仕様ドリフトを検出する</td><td><code>--compare</code></td></tr>
+                  <tr><td><code>--fail-on-drift</code></td><td>ドリフト検出時に exit code 1 で終了する（CIでの失敗判定に使う）</td><td><code>--compare --fail-on-drift</code></td></tr>
+                  <tr><td><code>--login-record</code></td><td>見えるブラウザでログイン操作を記録し、認証セッション（<code>auth.json</code>）を保存する。<code>--login-record-url</code>（ログインページ）と <code>--login-signal</code>（完了シグナルファイル）を併用する</td><td><code>--login-record --login-record-url https://example.com/login --login-signal .signal</code></td></tr>
+                  <tr><td><code>--auth</code></td><td>保存済みの認証セッションファイル（auth.json）を指定してクロールする</td><td><code>--auth auth.json</code></td></tr>
+                  <tr><td><code>--depth</code></td><td>リンクをたどる階層数（既定 2）</td><td><code>--depth 3</code></td></tr>
+                  <tr><td><code>--max-pages</code></td><td>取得する最大ページ数（既定 30）</td><td><code>--max-pages 50</code></td></tr>
+                </tbody>
+              </table>
+              <p style="font-size:13px;color:var(--text-muted);margin:10px 0 4px">代表的な使い方の流れ:</p>
+              <ol class="qa-check-list" style="padding-left:18px;list-style:decimal">
+                <li>初回クロール（仕様書一式を生成）: <code>python src/main.py --url https://example.com/ --format html,pdf,excel,json,md</code></li>
+                <li>ログインが必要なサイトは、画面の「ログイン情報の設定」またはCLIの <code>--login-record</code> で先にセッションを記録する</li>
+                <li>記録した認証情報でクロール: <code>python src/main.py --url https://example.com/mypage --auth auth.json</code></li>
+                <li>リリース後の再クロールで仕様ドリフトを検知: <code>python src/main.py --url https://example.com/ --compare</code></li>
+                <li>CIパイプラインでドリフトを失敗判定にする: <code>python src/main.py --url https://example.com/ --compare --fail-on-drift</code></li>
+              </ol>
+              <p class="input-hint" style="margin-top:8px">全オプション一覧は <code>python src/main.py --help</code> で確認できます。ログイン記録CLIの詳細フラグは複雑なため、通常は画面（設定 →「ログイン情報の設定」）からの記録を推奨します。</p>
+            </div>
+
+            <div class="qa-readable-section">
+              <h3>CI/CD 連携（仕様ドリフトの自動監視）</h3>
+              <p style="font-size:13px;color:var(--text-muted);margin-bottom:10px">
+                デプロイのたびに仕様ドリフトを自動検知できます。差分があると exit code 1 で終了するため、パイプラインで検知可能です。
+              </p>
+              <ul class="qa-check-list">
+                <li><strong>CLI:</strong> <code>python src/main.py --url https://staging.example.com --compare --fail-on-drift</code></li>
+                <li><strong>GitHub Actions:</strong> リポジトリ同梱の <code>.github/workflows/spec-drift.yml</code> をそのまま利用できます（毎週月曜の定期実行 + 手動実行）。リポジトリ変数 <code>WEBSPEC_TARGET_URL</code> に対象URLを設定してください。</li>
+                <li><strong>Slack通知:</strong> 設定 → 通知タブで Incoming Webhook URL を登録すると、ドリフト検知時に自動でSlackへ通知します。</li>
+                <li><strong>社内環境のクロール:</strong> ステージング等のプライベートアドレスを対象にする場合は環境変数 <code>WEBSPEC2DOC_ALLOW_LOCAL=1</code> を設定してください（既定では SSRF 保護のため拒否されます）。</li>
+              </ul>
+            </div>
+
+            <div class="qa-readable-section">
+              <h3>よくある確認</h3>
+              <ul class="qa-check-list qa-question-list">
+                <li>品質観点に対象サイトが出ない場合は、先にサイトを解析して report.json を生成してください。</li>
+                <li>ログインが必要な画面は、条件設定で認証情報を入力してから解析してください。</li>
+                <li>前回との差分は「再クロール」後、レポートの「履歴・差分」タブで確認できます。</li>
+              </ul>
+            </div>
+
+            <p class="input-hint">詳細なMarkdown版は <code>docs/userguide.md</code> にあります。</p>
+          </div>
+        </section>
+        <!-- ===== 参考（依拠した標準・先行研究・事例） ===== -->
+        <section class="view" id="view-references">
+          <div class="refs-page qa-readable">
+
+            <div class="refs-intro card">
+              <div class="section-kicker">参考</div>
+              <p class="refs-intro-lead">WebSpec2Doc の設計・実装が依拠している国際標準と先行研究、および参考にした事例の一覧です。</p>
+              <p class="refs-intro-note">
+                <span class="refs-badge refs-badge-applied">実装に反映</span> は本製品の生成物・判定ロジックに直接反映しているもの、
+                <span class="refs-badge refs-badge-ref">参考</span> は設計判断の裏付けとして参照したものです。
+                本製品は<strong>検出できた範囲のみを証跡付きで報告</strong>し、欠陥が無いことの証明はしません。標準への準拠を主張するものではなく、観点の網羅の拠り所として用いています。
+              </p>
+            </div>
+
+            <!-- 1. 標準・規格 -->
+            <div class="refs-group card">
+              <h3 class="refs-group-title">標準・規格</h3>
+              <ul class="refs-list">
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">ISO/IEC/IEEE 29119 — ソフトウェアテスト標準</span>
+                    <span class="refs-badge refs-badge-applied">実装に反映</span>
+                  </div>
+                  <p class="refs-desc">テスト方針・戦略・計画・設計・実行の文書体系。AutoRun が生成する <code>test_plan.md</code> / <code>test_analysis.md</code> / <code>test_design.md</code> / <code>test_cases.md</code> の構成はこの体系に沿っています。</p>
+                  <a class="refs-link" href="http://www.softwaretestingstandard.org/" target="_blank" rel="noopener">softwaretestingstandard.org ↗</a>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">ISTQB — テスト目的・テストタイプ・テスト設計技法</span>
+                    <span class="refs-badge refs-badge-applied">実装に反映</span>
+                  </div>
+                  <p class="refs-desc">同値分割・境界値分析・デシジョンテーブル・状態遷移テストなどの技法体系。実測した入力項目・画面遷移からのテスト設計生成の基礎です。</p>
+                  <a class="refs-link" href="https://www.istqb.org/" target="_blank" rel="noopener">istqb.org ↗</a>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">ISO/IEC 25010 — システム・ソフトウェア製品品質モデル（SQuaRE）</span>
+                    <span class="refs-badge refs-badge-applied">実装に反映</span>
+                  </div>
+                  <p class="refs-desc">機能適合性・性能効率・互換性・使用性・信頼性・セキュリティ・保守性・移植性。品質観点マップの分類軸として使用しています。</p>
+                  <a class="refs-link" href="https://iso25000.com/index.php/en/iso-25000-standards/iso-25010" target="_blank" rel="noopener">iso25000.com / 25010 ↗</a>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">ISO/IEC 25012 — データ品質モデル</span>
+                    <span class="refs-badge refs-badge-ref">参考</span>
+                  </div>
+                  <p class="refs-desc">正確性・完全性・一貫性などのデータ品質特性。データ品質観点の裏付けとして参照。</p>
+                  <a class="refs-link" href="https://iso25000.com/index.php/en/iso-25000-standards/iso-25012" target="_blank" rel="noopener">iso25000.com / 25012 ↗</a>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">WCAG 2.2 — Web Content Accessibility Guidelines（W3C）</span>
+                    <span class="refs-badge refs-badge-applied">実装に反映</span>
+                  </div>
+                  <p class="refs-desc">アクセシビリティ検査の基準。ただし自動検出できるのは達成基準の一部であり、未検証領域は「未検証」と明記します。</p>
+                  <a class="refs-link" href="https://www.w3.org/TR/WCAG22/" target="_blank" rel="noopener">w3.org / WCAG 2.2 ↗</a>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">OWASP Top 10 / ASVS</span>
+                    <span class="refs-badge refs-badge-ref">参考</span>
+                  </div>
+                  <p class="refs-desc">セキュリティ観点（セッション・CSRF・CORS など）の分類の拠り所。本製品は脆弱性診断ツールではなく、観点の提示にとどめています。</p>
+                  <a class="refs-link" href="https://owasp.org/Top10/" target="_blank" rel="noopener">owasp.org / Top 10 ↗</a>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">IPA 非機能要求グレード</span>
+                    <span class="refs-badge refs-badge-ref">参考</span>
+                  </div>
+                  <p class="refs-desc">情報処理推進機構（IPA）による非機能要求の体系。非機能観点の粒度設計に参照。</p>
+                  <a class="refs-link" href="https://www.ipa.go.jp/" target="_blank" rel="noopener">ipa.go.jp ↗</a>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">ISO 9241-11 — 使用性（ユーザビリティ）の定義</span>
+                    <span class="refs-badge refs-badge-ref">参考</span>
+                  </div>
+                  <p class="refs-desc">有効さ・効率・満足度としての使用性の定義。ユーザビリティ観点の枠組みとして参照。</p>
+                </li>
+              </ul>
+            </div>
+
+            <!-- 2. 先行研究 -->
+            <div class="refs-group card">
+              <h3 class="refs-group-title">先行研究</h3>
+              <ul class="refs-list">
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">P. Ammann, J. Offutt — <em>Introduction to Software Testing</em>（2nd ed., 2016）</span>
+                    <span class="refs-badge refs-badge-applied">実装に反映</span>
+                  </div>
+                  <p class="refs-desc">プライムパス網羅をはじめとするグラフ網羅基準。画面遷移モデル上のパス選定（全画面／全遷移／プライムパス）の理論的裏付けです。</p>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">D. R. Kuhn, R. N. Kacker, Y. Lei — 組合せ（ペアワイズ）テスト</span>
+                    <span class="refs-badge refs-badge-applied">実装に反映</span>
+                  </div>
+                  <p class="refs-desc">NIST による組合せテストの実務研究。入力項目の組合せ爆発を抑えるペアワイズ生成に反映。</p>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">T. Y. Chen ほか — メタモルフィックテスティング</span>
+                    <span class="refs-badge refs-badge-applied">実装に反映</span>
+                  </div>
+                  <p class="refs-desc">期待結果が確定できない場合に、入力間の関係性（メタモルフィック関係）で検証する手法。オラクル問題への対処として候補生成に利用。</p>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">G. Antoniol ほか — Recovering Traceability Links between Code and Documentation（IEEE TSE, 2002）</span>
+                    <span class="refs-badge refs-badge-applied">実装に反映</span>
+                  </div>
+                  <p class="refs-desc">情報検索（TF-IDF）による成果物間トレーサビリティ復元。要件文書と実測画面の突合候補の提示に反映。</p>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">T. Walsh, P. McMinn, G. Kapfhammer — ReDeCheck: レイアウト故障の自動検出（ISSTA, 2017）</span>
+                    <span class="refs-badge refs-badge-applied">実装に反映</span>
+                  </div>
+                  <p class="refs-desc">要素の重なり・はみ出しなどレイアウト故障の検出手法。表示崩れ検知の判定ロジックの基礎です。</p>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">Q. Luo, F. Hariri, L. Eloussi, D. Marinov — An Empirical Analysis of Flaky Tests（FSE, 2014）</span>
+                    <span class="refs-badge refs-badge-applied">実装に反映</span>
+                  </div>
+                  <p class="refs-desc">不安定テスト（flaky）の原因分類。非同期待ち（async wait）に起因する失敗の分類・提示に反映。</p>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">A. Stocco, M. Leotta, F. Ricca, P. Tonella — APOGEN: Page Object の自動生成</span>
+                    <span class="refs-badge refs-badge-applied">実装に反映</span>
+                  </div>
+                  <p class="refs-desc">Web テストの保守性を高める Page Object パターンの自動生成。生成スクリプトの構造化に反映。</p>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">J. Grigera, A. Garrido, J. M. Rivero, G. Rossi — ユーザビリティ・スメルの自動検出</span>
+                    <span class="refs-badge refs-badge-applied">実装に反映</span>
+                  </div>
+                  <p class="refs-desc">操作ログ・UI 構造から使いにくさの兆候（usability smell）を検出する研究。ユーザビリティ観点の自動検出に反映。</p>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">B. Eriksson, G. Pellegrino, A. Sabelfeld — Black Widow: Blackbox Data-driven Web Scanning（IEEE S&amp;P, 2021）</span>
+                    <span class="refs-badge refs-badge-applied">実装に反映</span>
+                  </div>
+                  <p class="refs-desc">画面をまたぐデータフローを辿る深いクロール手法。データフロー追跡とフォーム到達の設計に反映。</p>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">LLM によるWebテスト自動生成の動向</span>
+                    <span class="refs-badge refs-badge-ref">参考</span>
+                  </div>
+                  <p class="refs-desc">画面グラフ探索＋LLM によるテスト生成は近年急速にコモディティ化しています。本製品の差別化は<strong>文書駆動の入力</strong>・<strong>証跡と主張範囲の明示</strong>・<strong>ドリフト検知</strong>にあると位置づけています。</p>
+                </li>
+              </ul>
+            </div>
+
+            <!-- 3. 公式ドキュメント -->
+            <div class="refs-group card">
+              <h3 class="refs-group-title">公式ドキュメント・実務資料</h3>
+              <ul class="refs-list">
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">Playwright</span>
+                    <span class="refs-badge refs-badge-applied">実装に反映</span>
+                  </div>
+                  <p class="refs-desc">テスト実行基盤。生成したテストスクリプトの実行と証跡（スクリーンショット・トレース）の取得に使用。</p>
+                  <a class="refs-link" href="https://playwright.dev/" target="_blank" rel="noopener">playwright.dev ↗</a>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">Core Web Vitals（web.dev）</span>
+                    <span class="refs-badge refs-badge-applied">実装に反映</span>
+                  </div>
+                  <p class="refs-desc">LCP / CLS / INP などの性能指標。ラボ計測としての性能観測に使用（実ユーザー計測ではない点を明記して報告します）。</p>
+                  <a class="refs-link" href="https://web.dev/articles/vitals" target="_blank" rel="noopener">web.dev / vitals ↗</a>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">Gherkin / Cucumber</span>
+                    <span class="refs-badge refs-badge-applied">実装に反映</span>
+                  </div>
+                  <p class="refs-desc">要件記述の構文。文書駆動モードで <code>.feature</code> を取り込む際の解釈基準です。</p>
+                  <a class="refs-link" href="https://cucumber.io/docs/gherkin/" target="_blank" rel="noopener">cucumber.io / gherkin ↗</a>
+                </li>
+              </ul>
+            </div>
+
+            <!-- 4. 事例 -->
+            <div class="refs-group card">
+              <h3 class="refs-group-title">参考にした事例（UI/UX）</h3>
+              <ul class="refs-list">
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">Nielsen Norman Group — Designing Empty States</span>
+                    <span class="refs-badge refs-badge-ref">参考</span>
+                  </div>
+                  <p class="refs-desc">空状態を最初のオンボーディング面として扱う設計原則。AutoRun の受付画面で「何が納品されるか」を先に示す構成の根拠です。</p>
+                  <a class="refs-link" href="https://www.nngroup.com/articles/empty-state-interface-design/" target="_blank" rel="noopener">nngroup.com ↗</a>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">Netlify Deploy Previews / Vercel Deployment Checks</span>
+                    <span class="refs-badge refs-badge-ref">参考</span>
+                  </div>
+                  <p class="refs-desc">実行前後で自動更新されるステータスと、進行に沿ってストリーミングされるログ。待ち時間を体験に変える設計として参照。</p>
+                  <a class="refs-link" href="https://www.netlify.com/platform/core/deploy-previews/" target="_blank" rel="noopener">netlify.com ↗</a>
+                  <a class="refs-link" href="https://vercel.com/docs/deployment-checks" target="_blank" rel="noopener">vercel.com ↗</a>
+                </li>
+                <li class="refs-item">
+                  <div class="refs-item-head">
+                    <span class="refs-title">UX Auto Reviewer</span>
+                    <span class="refs-badge refs-badge-ref">参考</span>
+                  </div>
+                  <p class="refs-desc">ルールベースで段階的に実行する UI/UX 監査ツール。プリセットとステップで判断コストを下げる構成を参照しました。</p>
+                  <a class="refs-link" href="https://github.com/ma-garin/UX_Auto_Reviewer" target="_blank" rel="noopener">github.com / UX_Auto_Reviewer ↗</a>
+                </li>
+              </ul>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- ===== 設定ビュー ===== -->
+        <section class="view" id="view-settings">
+          <div class="set-tabs" role="tablist" aria-label="設定タブ">
+            <button type="button" class="set-tab is-active" data-tab="api" role="tab" aria-selected="true" aria-controls="set-panel-api" id="set-tab-api" tabindex="0">APIキー</button>
+            <button type="button" class="set-tab" data-tab="crawl" role="tab" aria-selected="false" aria-controls="set-panel-crawl" id="set-tab-crawl" tabindex="-1">クロール既定値</button>
+            <button type="button" class="set-tab" data-tab="notify" role="tab" aria-selected="false" aria-controls="set-panel-notify" id="set-tab-notify" tabindex="-1">通知</button>
+            <button type="button" class="set-tab" data-tab="operations" role="tab" aria-selected="false" aria-controls="set-panel-operations" id="set-tab-operations" tabindex="-1">運用監視</button>
+            
+            <button type="button" class="set-tab" data-tab="data" role="tab" aria-selected="false" aria-controls="set-panel-data" id="set-tab-data" tabindex="-1">データ管理</button>
+            <button type="button" class="set-tab" data-tab="audit" role="tab" aria-selected="false" aria-controls="set-panel-audit" id="set-tab-audit" tabindex="-1">監査ログ</button>
+            
+            <button type="button" class="set-tab" data-tab="test-design" role="tab" aria-selected="false" aria-controls="set-panel-test-design" id="set-tab-test-design" tabindex="-1">テスト設計</button>
+          </div>
+
+          <div class="set-panel is-active" id="set-panel-api" role="tabpanel" aria-labelledby="set-tab-api">
+            <div class="input-card">
+              <h2 class="set-card-title">OpenAI API キー・モデル</h2>
+              <p class="input-hint" style="margin-top:0;margin-bottom:14px">キーは <code>.env</code> に保存されます（ブラウザには保存しません）。空欄で保存すると既存キーを保持します。</p>
+              <div class="field full" style="margin-bottom:14px">
+                <label>現在のキー</label>
+                <div class="key-current" id="api-key-current">未設定</div>
+              </div>
+              <div class="options-grid">
+                <div class="field full"><label for="api-key">OPENAI_API_KEY</label><input type="password" id="api-key" placeholder="sk-..." autocomplete="off"></div>
+                <div class="field"><label for="api-org">OPENAI_ORG_ID（任意）</label><input type="text" id="api-org" placeholder="org-..."></div>
+                <div class="field"><label for="api-project">OPENAI_PROJECT_ID（任意）</label><input type="text" id="api-project" placeholder="proj_..."></div>
+                <div class="field full">
+                  <label for="api-model">OPENAI_MODEL</label>
+                  <select id="api-model" class="url-input" style="height:40px">
+                    <option value="gpt-5.4-mini">gpt-5.4-mini（コスト効率・推奨）</option>
+                    <option value="gpt-5.4-nano">gpt-5.4-nano（最安・最速）</option>
+                    <option value="gpt-5.4">gpt-5.4（標準）</option>
+                    <option value="gpt-5.5">gpt-5.5（高精度）</option>
+                    <option value="gpt-5.5-pro">gpt-5.5-pro（最高精度）</option>
+                    <option value="gpt-4.1">gpt-4.1（非推論・ツール呼び出し）</option>
+                  </select>
+                </div>
+              </div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px">
+                <button class="btn-primary" id="save-api">APIキー・モデルを保存</button>
+                <button class="btn-outline-sm" id="test-connection" type="button">疎通確認</button>
+              </div>
+              <div class="settings-msg" id="api-msg">保存しました</div>
+              <div class="settings-msg" id="api-status-msg" style="display:none;margin-top:12px"></div>
+              <div class="settings-msg" id="test-connection-msg" style="display:none;margin-top:12px"></div>
+            </div>
+          </div>
+
+          <div class="set-panel" id="set-panel-notify" role="tabpanel" aria-labelledby="set-tab-notify">
+            <div class="input-card">
+              <h2 class="set-card-title">Slack 通知</h2>
+              <p class="input-hint" style="margin-top:0;margin-bottom:14px">仕様ドリフト（再クロール後の差分）を検知した際に Slack チャンネルへ通知します。<br>Incoming Webhook URL は <a href="https://api.slack.com/messaging/webhooks" target="_blank" rel="noopener">Slack API</a> で取得してください。</p>
+              <div class="field full" style="margin-bottom:14px">
+                <label>現在の設定</label>
+                <div class="key-current" id="slack-webhook-current">未設定</div>
+              </div>
+              <div class="field full">
+                <label for="slack-webhook-url">SLACK_WEBHOOK_URL</label>
+                <input type="password" id="slack-webhook-url" placeholder="https://hooks.slack.com/services/..." autocomplete="off" style="width:100%">
+              </div>
+              <button class="btn-primary" id="save-slack" style="margin-top:18px">Webhook URLを保存</button>
+              <div class="settings-msg" id="slack-msg">保存しました</div>
+            </div>
+          </div>
+
+          <div class="set-panel" id="set-panel-crawl" role="tabpanel" aria-labelledby="set-tab-crawl">
+            <div class="input-card">
+              <h2 class="set-card-title">クロール既定値</h2>
+              <p class="input-hint" style="margin-top:0;margin-bottom:14px">このブラウザに保存され、生成ウィザードの初期値に反映されます。</p>
+              <div class="options-grid">
+                <div class="field"><label for="set-depth">階層数（既定）</label><input type="number" id="set-depth" min="1" max="5"></div>
+                <div class="field"><label for="set-max">最大ページ数（既定）</label><input type="number" id="set-max" min="1" max="300"></div>
+                <div class="field"><label for="set-case-minutes">1テストケースあたりの想定分数</label><input type="number" id="set-case-minutes" min="1" max="120" placeholder="10"></div>
+                <div class="field"><label for="set-url-history-limit">URL履歴の保持件数</label>
+                  <select id="set-url-history-limit">
+                    <option value="0">0（無効）</option><option value="5">5</option>
+                    <option value="10" selected>10</option><option value="30">30</option>
+                    <option value="50">50</option><option value="100">100</option>
+                  </select></div>
+
+                <div class="field full"><label for="set-auth">認証セッション auth.json パス（任意）</label><input type="text" id="set-auth" placeholder="auth.json"></div>
+              </div>
+              <div class="field full" style="margin-top:18px;padding-top:18px;border-top:1px solid var(--border)">
+                <label class="checkbox-chip" style="align-items:flex-start;gap:10px;height:auto;padding:10px 12px">
+                  <input type="checkbox" id="allow-local-toggle" style="margin-top:2px">
+                  <span>
+                    <strong>ローカル/ステージング環境のクロールを許可</strong>
+                    <br>
+                    <span style="font-size:12px;color:var(--text-muted)">
+                      <code>localhost</code>・<code>*.local</code>・プライベートIPへのクロールを有効にします。
+                      <br>
+                      <span style="color:var(--color-high)">⚠️ 信頼できる環境でのみ使用してください（SSRF保護をバイパスします）。</span>
+                    </span>
+                  </span>
+                </label>
+                <div class="settings-msg" id="allow-local-msg" style="margin-top:8px">保存しました</div>
+              </div>
+              <button class="btn-primary" id="save-settings" style="margin-top:18px">設定を保存</button>
+              <div class="settings-msg" id="settings-msg">設定を保存しました</div>
+            </div>
+          </div>
+
+          <div class="set-panel" id="set-panel-operations" role="tabpanel" aria-labelledby="set-tab-operations">
+            <div class="input-card">
+              <h2 class="set-card-title">スケジュール・通知</h2>
+              <p class="input-hint" style="margin-top:0;margin-bottom:14px">サイトごとに実行可能な曜日・時間帯、失敗時の再試行、通知先を設定します。時間帯の終了が開始より前の場合は日跨ぎとして扱います。</p>
+
+              <div class="options-grid ops-grid">
+                <div class="field full">
+                  <label for="ops-site">対象サイト</label>
+                  <select id="ops-site" class="url-input"><option value="">サイトを選択してください</option></select>
+                </div>
+                <div class="field full"><label for="ops-site-url">サイトURL</label><input type="url" id="ops-site-url" placeholder="https://example.com"></div>
+                <div class="field"><label for="ops-interval">実行周期</label><select id="ops-interval"><option value="disabled">無効</option><option value="daily">毎日</option><option value="weekly">毎週</option><option value="monthly">毎月（30日）</option></select></div>
+                <div class="field"><label for="ops-timezone">タイムゾーン</label><select id="ops-timezone"><option value="Asia/Tokyo">Asia/Tokyo</option><option value="UTC">UTC</option><option value="America/New_York">America/New_York</option><option value="Europe/London">Europe/London</option></select></div>
+                <div class="field"><label for="ops-window-start">開始時刻（任意）</label><input type="time" id="ops-window-start"></div>
+                <div class="field"><label for="ops-window-end">終了時刻（任意）</label><input type="time" id="ops-window-end"></div>
+                <div class="field"><label for="ops-retry-max">再試行回数</label><input type="number" id="ops-retry-max" min="0" max="5" value="2"></div>
+                <div class="field"><label for="ops-backoff">初回バックオフ（秒）</label><input type="number" id="ops-backoff" min="1" max="3600" value="60"></div>
+                <fieldset class="field full ops-weekdays">
+                  <legend>実行曜日（未選択は毎日）</legend>
+                  <label><input type="checkbox" value="0">月</label><label><input type="checkbox" value="1">火</label><label><input type="checkbox" value="2">水</label><label><input type="checkbox" value="3">木</label><label><input type="checkbox" value="4">金</label><label><input type="checkbox" value="5">土</label><label><input type="checkbox" value="6">日</label>
+                </fieldset>
+              </div>
+
+              <div class="ops-divider"></div>
+              <div class="options-grid ops-grid">
+                <div class="field"><label for="ops-notify-type">通知チャネル</label><select id="ops-notify-type"><option value="none">通知しない</option><option value="slack">Slack</option><option value="teams">Microsoft Teams Workflows</option><option value="webhook">Webhook</option><option value="email">Email（SMTP環境設定）</option></select></div>
+                <div class="field"><label for="ops-summary-limit">差分表示件数</label><input type="number" id="ops-summary-limit" min="1" max="20" value="5"></div>
+                <div class="field full"><label for="ops-endpoint">Webhook URL / SMTPホスト</label><input type="password" id="ops-endpoint" autocomplete="off" placeholder="https://..."></div>
+                <div class="field full"><label for="ops-template">通知テンプレート（Jinja2・任意）</label><textarea id="ops-template" rows="5" placeholder=" で変更を検知しました"></textarea><p class="input-hint">利用可能: site_url / added_pages / removed_pages / field_changes / api_changes / added_page_names / removed_page_names</p></div>
+              </div>
+
+              <div class="ops-actions">
+                <button type="button" class="btn-primary" id="ops-save">運用設定を保存</button>
+                <button type="button" class="btn-outline-sm" id="ops-test-notify">テスト通知</button>
+              </div>
+              <div class="settings-msg" id="ops-msg" role="status"></div>
+
+              <div class="ops-history-card">
+                <h3>最近のスケジュール実行</h3>
+                <div id="ops-history"><p class="input-hint">サイトを選択すると表示します。</p></div>
+              </div>
+            </div>
+            <div class="input-card ci-drift-card">
+              <div>
+                <h2 class="set-card-title">CIで仕様ドリフトをゲート</h2>
+                <p class="input-hint">前回スナップショットをCIキャッシュへ保存し、差分をリリース条件にできます。</p>
+              </div>
+              <code id="ci-drift-command">python src/main.py --url https://example.com --ci --format json,html</code>
+              <dl class="ci-exit-codes" aria-label="CI終了コード">
+                <div><dt>0</dt><dd>初回・差分なし</dd></div>
+                <div><dt>1</dt><dd>仕様ドリフトあり</dd></div>
+                <div><dt>2</dt><dd>取得・認証エラー</dd></div>
+              </dl>
+              <p class="input-hint">同梱テンプレート: <code>.github/workflows/spec-drift.yml</code></p>
+            </div>
+            <div class="input-card onboarding-replay-card">
+              <div>
+                <h2 class="set-card-title">操作ツアー</h2>
+                <p class="input-hint">初回に表示される4ステップの案内を、いつでも再表示できます。</p>
+              </div>
+              <button type="button" class="btn-outline-sm" id="restart-tour">操作ツアーを再表示</button>
+            </div>
+          </div>
+
+          
+          <div class="set-panel" id="set-panel-data" role="tabpanel" aria-labelledby="set-tab-data">
+            <div class="input-card">
+              <div class="admin-panel-head">
+                <div>
+                  <h2 class="set-card-title">データ容量と保持</h2>
+                  <p class="input-hint">既定は無制限です。世代数または期間を指定すると、成功したスケジュール実行後に古いスナップショットを削除します。</p>
+                </div>
+                <button type="button" class="btn-outline-sm" id="data-refresh">再読み込み</button>
+              </div>
+              <div class="storage-stats" aria-live="polite">
+                <div class="storage-stat"><span>出力データ</span><strong id="storage-output">—</strong></div>
+                <div class="storage-stat"><span>運用データ</span><strong id="storage-instance">—</strong></div>
+                <div class="storage-stat"><span>合計</span><strong id="storage-total">—</strong></div>
+              </div>
+              <div class="retention-editor">
+                <div class="field">
+                  <label for="retention-mode">保持方式</label>
+                  <select id="retention-mode">
+                    <option value="unlimited">無制限（既定）</option>
+                    <option value="generations">世代数</option>
+                    <option value="days">期間（日）</option>
+                  </select>
+                </div>
+                <div class="field" id="retention-generations-field" hidden>
+                  <label for="retention-generations">保持する世代数</label>
+                  <input type="number" id="retention-generations" min="1" max="10000" value="30">
+                </div>
+                <div class="field" id="retention-days-field" hidden>
+                  <label for="retention-days">保持日数</label>
+                  <input type="number" id="retention-days" min="1" max="3650" value="365">
+                </div>
+                <button type="button" class="btn-primary" id="retention-save">保持設定を保存</button>
+              </div>
+              <div class="settings-msg" id="retention-msg" role="status"></div>
+              <div class="admin-table-wrap">
+                <table class="admin-data-table" aria-label="サイト別データ容量">
+                  <thead><tr><th>サイト</th><th>スナップショット</th><th>スナップショット容量</th><th>合計容量</th><th>更新日時</th></tr></thead>
+                  <tbody id="storage-sites"><tr><td colspan="5">読み込み前です。</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="input-card backup-guide-card">
+              <div>
+                <h2 class="set-card-title">バックアップ／リストア</h2>
+                <p class="input-hint"><code>output/</code> と <code>instance/</code> は、必ず同じ時点の対として保存・復旧します。</p>
+              </div>
+              <a class="btn-outline-sm" href="/api/admin/backup-guide" target="_blank" rel="noopener">運用手順を開く</a>
+            </div>
+          </div>
+
+          <div class="set-panel" id="set-panel-audit" role="tabpanel" aria-labelledby="set-tab-audit">
+            <div class="input-card">
+              <div class="admin-panel-head">
+                <div>
+                  <h2 class="set-card-title">管理操作の監査ログ</h2>
+                  <p class="input-hint">ログイン成否、メンバー変更、設定変更、保持GC、レポート出力をワークスペース単位で表示します。</p>
+                </div>
+                <button type="button" class="btn-outline-sm" id="audit-refresh">再読み込み</button>
+              </div>
+              <div class="audit-filters">
+                <div class="field"><label for="audit-action">操作</label><select id="audit-action"><option value="">すべて</option><option value="user.login">ログイン</option><option value="user.created">メンバー追加</option><option value="user.updated">メンバー変更</option><option value="schedule.settings_updated">スケジュール・通知設定</option><option value="settings.updated">システム設定</option><option value="notification.tested">通知テスト</option><option value="retention.settings_updated">保持設定</option><option value="retention.snapshots_pruned">保持GC</option><option value="report.exported">レポート出力</option><option value="review.exported">レビュー出力</option><option value="viewpoint.exported">観点出力</option></select></div>
+                <div class="field"><label for="audit-outcome">結果</label><select id="audit-outcome"><option value="">すべて</option><option value="success">成功</option><option value="failure">失敗</option></select></div>
+                <div class="field audit-query"><label for="audit-query">検索</label><input type="search" id="audit-query" placeholder="メール・対象・操作"></div>
+                <button type="button" class="btn-primary" id="audit-search">絞り込む</button>
+              </div>
+              <div class="settings-msg" id="audit-msg" role="status"></div>
+              <div class="admin-table-wrap">
+                <table class="admin-data-table" id="admin-audit-table" aria-label="管理操作の監査ログ">
+                  <thead><tr><th>日時</th><th>実行者</th><th>操作</th><th>対象</th><th>結果</th><th>詳細</th></tr></thead>
+                  <tbody id="admin-audit-events"><tr><td colspan="6">読み込み前です。</td></tr></tbody>
+                </table>
+              </div>
+              <button type="button" class="btn-outline-sm" id="audit-load-more" hidden style="margin-top:12px">さらに読み込む</button>
+            </div>
+          </div>
+          
+
+          <div class="set-panel" id="set-panel-test-design" role="tabpanel" aria-labelledby="set-tab-test-design">
+            <div class="input-card">
+              <h2 class="set-card-title">テスト設計（MBT）</h2>
+              <p class="input-hint" style="margin-top:0;margin-bottom:14px">レポートの「テスト設計 → 技法別設計（MBT）」で使う技法・パラメータと、境界値テストの値カタログを調整します。<code>instance/test_design_settings.json</code> に保存されます。</p>
+
+              <div class="field full" style="margin-bottom:14px">
+                <label>使用する技法</label>
+                <div style="display:flex;flex-wrap:wrap;gap:14px;font-size:13px">
+                  <label><input type="checkbox" id="td-tech-bva" checked> 境界値分析(BVA)</label>
+                  <label><input type="checkbox" id="td-tech-dt" checked> デシジョンテーブル(DT)</label>
+                  <label><input type="checkbox" id="td-tech-pw" checked> ペアワイズ(PW)</label>
+                  <label><input type="checkbox" id="td-tech-st" checked> 状態遷移(ST)</label>
+                </div>
+              </div>
+
+              <div class="options-grid">
+                <div class="field"><label for="td-bva-offset">境界値オフセット</label><input type="number" id="td-bva-offset" min="1" max="5" value="1"></div>
+                <div class="field"><label for="td-pw-strength">ペアワイズ強度</label>
+                  <select id="td-pw-strength" class="url-input" style="height:40px"><option value="2">2-way</option><option value="3">3-way</option></select></div>
+                <div class="field"><label for="td-n-switch">状態遷移 Nスイッチ</label>
+                  <select id="td-n-switch" class="url-input" style="height:40px"><option value="0">0-switch</option><option value="1">1-switch</option></select></div>
+                <div class="field"><label for="td-max-dt">DT 最大条件数</label><input type="number" id="td-max-dt" min="1" max="6" value="4"></div>
+              </div>
+
+              <div class="field full" style="margin-top:18px">
+                <label for="td-value-catalog">テスト値カタログ（JSON・カテゴリ→ラベル/値/備考）</label>
+                <textarea id="td-value-catalog" spellcheck="false" style="width:100%;min-height:220px;font-family:ui-monospace,monospace;font-size:12.5px"></textarea>
+                <p class="input-hint" style="margin-top:6px">既知境界値の一般知識（メール上限値/RFC違反/空白 等）。解析対象サイト固有のデータではありません。</p>
+              </div>
+
+              <button class="btn-primary" id="save-test-design" style="margin-top:18px">テスト設計設定を保存</button>
+              <div class="settings-msg" id="test-design-msg" style="display:none;margin-top:12px"></div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+</div>
+  <!-- 実行完了ポップアップ -->
+  <div id="completion-overlay" class="completion-overlay hidden" role="dialog" aria-modal="true" aria-label="生成完了">
+    <div class="completion-card">
+      <div class="completion-icon">✅</div>
+      <div class="completion-title">生成完了</div>
+      <div class="completion-time">
+        <strong id="popup-elapsed">0:00</strong>
+        実行時間
+      </div>
+      <button type="button" id="popup-view-report-btn" class="btn-primary" style="width:100%;height:46px;font-size:15px">レポートを見る →</button>
+      <button type="button" id="popup-close-btn" style="margin-top:12px;background:none;border:none;color:var(--text-muted);font-size:13px;cursor:pointer;width:100%">閉じる</button>
+    </div>
+  </div>
+
+  <!-- 最大化モード退出ボタン（全タブ共通・常時 fixed 表示） -->
+  <button type="button" id="r-maximize-exit-btn" class="maximize-exit-btn" title="最大化解除 (Esc)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="15" height="15"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    最大化解除
+  </button>
+
+  <div id="lightbox" class="lightbox" style="display:none" role="dialog" aria-modal="true">
+    <button class="lightbox-close" id="lightbox-close" aria-label="閉じる">✕</button>
+    <img id="lightbox-img" src="" alt="拡大表示" />
+  </div>
+
+  <!-- 確認モーダル（削除等の destructive アクション用） -->
+  <div id="confirm-overlay" class="confirm-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+    <div class="confirm-card">
+      <div class="confirm-icon" aria-hidden="true">⚠️</div>
+      <h2 class="confirm-title" id="confirm-title"></h2>
+      <p class="confirm-message" id="confirm-message"></p>
+      <div class="confirm-actions">
+        <button type="button" id="confirm-cancel-btn" class="btn-outline-sm" style="height:40px;padding:0 18px">キャンセル</button>
+        <button type="button" id="confirm-ok-btn" class="btn-primary"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 入力モーダル（prompt() 代替） -->
+  <div id="input-dialog-overlay" class="confirm-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="input-dialog-title">
+    <div class="confirm-card input-dialog-card">
+      <h2 class="confirm-title" id="input-dialog-title"></h2>
+      <p class="confirm-message" id="input-dialog-message"></p>
+      <div class="input-dialog-field-wrap">
+        <input id="input-dialog-input" class="input-dialog-input" type="text" autocomplete="off">
+        <textarea id="input-dialog-textarea" class="input-dialog-input" rows="4" hidden></textarea>
+        <datalist id="input-dialog-datalist"></datalist>
+      </div>
+      <p id="input-dialog-error" class="input-dialog-error" hidden></p>
+      <div class="confirm-actions">
+        <button type="button" id="input-dialog-cancel-btn" class="btn-outline-sm" style="height:40px;padding:0 18px">キャンセル</button>
+        <button type="button" id="input-dialog-ok-btn" class="btn-primary"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- キーボードショートカット ヘルプ -->
+  <div id="shortcut-overlay" class="shortcut-overlay hidden" role="dialog" aria-modal="true" aria-label="キーボードショートカット">
+    <div class="shortcut-card">
+      <h2>⌨️ キーボードショートカット</h2>
+      <div class="shortcut-list">
+        <div class="shortcut-row"><span>このヘルプを表示 / 閉じる</span><span class="shortcut-keys"><kbd class="kbd">?</kbd></span></div>
+        <div class="shortcut-row"><span>ダッシュボードへ移動</span><span class="shortcut-keys"><kbd class="kbd">Alt</kbd><kbd class="kbd">D</kbd></span></div>
+        <div class="shortcut-row"><span>サイトを追加（新規ウィザード）</span><span class="shortcut-keys"><kbd class="kbd">Alt</kbd><kbd class="kbd">N</kbd></span></div>
+        <div class="shortcut-row"><span>AutoRunへ移動</span><span class="shortcut-keys"><kbd class="kbd">Alt</kbd><kbd class="kbd">A</kbd></span></div>
+        <div class="shortcut-row"><span>実行履歴へ移動</span><span class="shortcut-keys"><kbd class="kbd">Alt</kbd><kbd class="kbd">H</kbd></span></div>
+        <div class="shortcut-row"><span>レポートのタブを切替</span><span class="shortcut-keys"><kbd class="kbd">←</kbd><kbd class="kbd">→</kbd></span></div>
+        <div class="shortcut-row"><span>レポートのタブへ直接移動（1〜9番目）</span><span class="shortcut-keys"><kbd class="kbd">1</kbd>〜<kbd class="kbd">9</kbd></span></div>
+        <div class="shortcut-row"><span>検索欄にフォーカス（条件マトリクス・観点管理）</span><span class="shortcut-keys"><kbd class="kbd">/</kbd></span></div>
+        <div class="shortcut-row"><span>モーダル / 最大化を閉じる</span><span class="shortcut-keys"><kbd class="kbd">Esc</kbd></span></div>
+      </div>
+      <div class="shortcut-close-row">
+        <button type="button" id="shortcut-close-btn" class="btn-outline-sm">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- トースト通知コンテナ -->
+  <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="false"></div>
+
+  <!-- ===== ファイルプレビューモーダル ===== -->
+  <div id="file-preview-modal" class="file-preview-modal hidden" role="dialog" aria-modal="true" aria-label="ファイルプレビュー">
+    <div class="file-preview-overlay" id="file-preview-overlay"></div>
+    <div class="file-preview-panel">
+      <div class="file-preview-header">
+        <span id="file-preview-title" class="file-preview-title">プレビュー</span>
+        <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
+          <a id="file-preview-newtab" href="#" target="_blank" rel="noopener" class="btn-outline-sm" style="font-size:12px;height:30px">↗ 新規タブ</a>
+          <button type="button" id="file-preview-close" class="btn-outline-sm" style="font-size:12px;height:30px">✕ 閉じる</button>
+        </div>
+      </div>
+      <div class="file-preview-body" id="file-preview-body">
+        <div class="file-preview-loading"><span class="spinner"></span><span>読み込み中…</span></div>
+      </div>
+    </div>
+  </div>
+  <!-- ===== AutoRun ログインポップアップ ===== -->
+  <div id="autorun-login-modal" class="file-preview-modal hidden" role="dialog" aria-modal="true" aria-label="ログイン情報の入力">
+    <div class="file-preview-overlay" id="autorun-login-overlay"></div>
+    <div class="file-preview-panel" style="max-width:480px;height:auto;max-height:90vh">
+      <div class="file-preview-header">
+        <span class="file-preview-title">ログイン情報の入力</span>
+        <button type="button" id="autorun-login-close" class="btn-outline-sm" style="font-size:12px;height:30px">✕ 閉じる</button>
+      </div>
+      <div style="padding:20px;overflow-y:auto">
+        <p id="autorun-login-msg" style="font-size:13px;color:var(--text-muted);margin-bottom:16px"></p>
+        <div class="field" style="margin-bottom:12px">
+          <label class="form-label">ログインURL</label>
+          <input type="url" id="autorun-login-url" class="url-input" style="height:38px;font-size:13px" readonly />
+        </div>
+        <div class="field" style="margin-bottom:12px">
+          <label class="form-label">ユーザー名 / メールアドレス</label>
+          <input type="text" id="autorun-login-username" class="url-input" style="height:38px;font-size:13px" autocomplete="username" placeholder="user@example.com" />
+        </div>
+        <div class="field" style="margin-bottom:16px">
+          <label class="form-label">パスワード</label>
+          <input type="password" id="autorun-login-password" class="url-input" style="height:38px;font-size:13px" autocomplete="current-password" />
+        </div>
+        <div id="autorun-login-status" class="input-field-message" style="min-height:14px;margin-bottom:10px"></div>
+        <div style="display:flex;gap:8px">
+          <button type="button" id="autorun-login-submit" class="btn-primary" style="flex:1;height:42px;font-size:14px">ログインして続行</button>
+          <button type="button" id="autorun-login-skip" class="btn-outline-sm" style="height:42px;padding:0 16px;font-size:13px">スキップ</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="static/js/core.js?v=1784816712"></script>
+  <script src="static/js/table-utils.js?v=1784816712"></script>
+  <script src="static/js/ui-states.js?v=1784816712"></script>
+  <script src="static/js/settings.js?v=1784816712"></script>
+  <script src="static/js/history.js?v=1784816712"></script>
+  <script src="static/js/qa-tools.js?v=1784816712"></script>
+  <script src="static/js/markdown-lite.js?v=1784816712"></script>
+  <script src="static/js/file-preview.js?v=1784816712"></script>
+  <script src="static/js/recrawl.js?v=1784816712"></script>
+  <script src="static/js/wizard.js?v=1784816712"></script>
+  <script src="static/js/execution.js?v=1784816712"></script>
+  <script src="static/js/results.js?v=1784816712"></script>
+  <script src="static/js/autorun-approval.js?v=1784816712"></script>
+  <script src="static/js/autorun.js?v=1784816712"></script>
+  <script src="static/js/autorun-document.js?v=1784816712"></script>
+  <script src="static/js/view-testcases.js?v=1784816712"></script>
+  <script src="static/js/view-run-history.js?v=1784816712"></script>
+  <script src="static/js/viewpoint-editor.js?v=1784816712"></script>
+  <script src="static/js/viewpoints.js?v=1784816712"></script>
+  <script src="static/js/events.js?v=1784816712"></script>
+  <script src="static/js/view-utils.js?v=1784816712"></script>
+  <script src="static/js/view-overview.js?v=1784816712"></script>
+  <script src="static/js/view-report.js?v=1784816712"></script>
+  <script src="static/js/view-design.js?v=1784816712"></script>
+  <script src="static/js/view-transition.js?v=1784816712"></script>
+  <script src="static/js/view-shots.js?v=1784816712"></script>
+  <script src="static/js/view-test-runs.js?v=1784816712"></script>
+  <script src="static/js/doc-fusion.js?v=1784816712"></script>
+  <script src="static/js/quick-search.js?v=1784816712"></script>
+  <script src="static/js/system-scope.js?v=1784816712"></script>
+  <script src="static/js/autorun-preflight.js?v=1784816712"></script>
+  <script src="static/js/autorun-chat.js?v=1784816712"></script>
+  <script src="static/js/autorun-stages.js?v=1784816712"></script>
+  <script src="static/vendor/driver.js/driver.js.iife.js"></script>
+  <script src="static/js/onboarding.js?v=1784816712"></script>
+
+</body>
+</html>

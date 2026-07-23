@@ -96,14 +96,29 @@ footer .container{display:grid;gap:var(--space-2)}
     </div>
     <h1>稼働中システムのURLを渡すだけで、<br>テスト設計を始められる文書一式を自動生成。</h1>
     <p class="tagline">画面仕様・テスト条件・画面遷移図・Excel仕様書までワンクリック。ドキュメントのない現場でも、初日からテスト設計に入れます。</p>
-    <span class="note">📱 このページは実機UIのキャプチャで構成されたショーケースです。ツール本体はPC上で動作します（<a href="#run" style="color:#fff;text-decoration:underline">動かし方</a>）。</span>
+    <span class="note">📱 <strong>本物のUIをスマホで実際に操作できます</strong>（同梱デモ DemoMart のサンプルデータで動作）。解析実行はサーバが必要なため、ここでは記録済みの実測データを再生します。</span>
     <div class="cta-row">
-      <a class="btn btn-white" href="#video">▶ 操作の流れを動画で見る</a>
-      <a class="btn btn-ghost" href="sample/report.html">生成レポートのサンプルを開く</a>
+      <a class="btn btn-white" href="app/">▶ 実際に触ってみる（サンプルデータ）</a>
+      <a class="btn btn-ghost" href="#video">操作の流れを動画で見る</a>
+      <a class="btn btn-ghost" href="sample/report.html">レポートのサンプル</a>
       <a class="btn btn-ghost" href="https://github.com/ma-garin/WebSpec2Doc">GitHub</a>
     </div>
   </div>
 </header>
+
+<section id="try">
+  <div class="container">
+    <h2 class="section-title">ブラウザで実際に操作する <span class="badge badge-live">インタラクティブ</span></h2>
+    <p class="section-lead">録画ではありません。<strong>本物のWebSpec2DocのUIそのもの</strong>を、同梱デモ DemoMart を解析した実測データ（サンプル値）で駆動します。URL入力 → 画面分析 → 条件設定 → 解析（ライブ進捗）→ レポート全タブまで、スマホからそのままクリック操作できます。</p>
+    <div class="run-card" style="display:flex;flex-wrap:wrap;gap:var(--space-4);align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-weight:700;font-size:var(--text-lg)">▶ サンプルで動かしてみる</div>
+        <p style="font-size:var(--text-sm);color:var(--color-text-secondary);margin-top:4px">URL欄はデモ用に <code>http://127.0.0.1:8766/</code> を入れて「解析を始める」。数秒で発見→解析→レポートまで進みます。</p>
+      </div>
+      <a class="btn btn-white" style="background:var(--color-primary);color:#fff" href="app/">アプリを開く →</a>
+    </div>
+  </div>
+</section>
 
 <section id="video">
   <div class="container">
@@ -192,7 +207,7 @@ footer .container{display:grid;gap:var(--space-2)}
 <section>
   <div class="container">
     <h2 class="section-title">スマホからの閲覧 <span class="badge badge-info">レポート閲覧はモバイル対応</span></h2>
-    <p class="section-lead">解析の実行はPCで行いますが、生成されたレポートやこのショーケースはスマホからそのまま閲覧できます。</p>
+    <p class="section-lead">上の<a href="app/">インタラクティブデモ</a>も、生成レポートも、このショーケースも、すべてスマホからそのまま操作・閲覧できます。</p>
     <div class="mobile-row">
       <figure class="mobile-shot">
         <a href="assets/shots/m-home.png"><img src="assets/shots/m-home.png" alt="モバイル表示のホーム画面" loading="lazy"></a>

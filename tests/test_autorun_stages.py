@@ -16,8 +16,8 @@ from autorun.stages import (
     STAGE_DETAIL_DESIGN,
     STAGE_FEATURES,
     STAGE_ORDER,
-    STAGE_TEST_CASES,
     STAGE_PLAYWRIGHT,
+    STAGE_TEST_CASES,
     STAGE_TEST_OBJECTIVE,
     STAGE_TEST_PLAN,
     STAGE_VIEWPOINTS,
@@ -27,6 +27,7 @@ from autorun.stages import (
     build_stage,
     observation_from_report,
 )
+
 # pytest が `test_` 始まりの関数をテストとして収集しないよう別名で取り込む
 from autorun.stages import test_case_rows as collect_test_case_rows
 
@@ -199,7 +200,9 @@ class TestTestObjective:
         assert "次回以降" in baseline.detail
 
     def test_rerun_offers_regression_objective(self) -> None:
-        obs = observation_from_report(REPORT, url="https://example.com/", has_previous_snapshot=True)
+        obs = observation_from_report(
+            REPORT, url="https://example.com/", has_previous_snapshot=True
+        )
         stage = build_stage(STAGE_TEST_OBJECTIVE, obs, Pipeline.initial())
         assert any(i.item_id == "obj-regression" for i in stage.items)
 
@@ -359,8 +362,12 @@ class TestQualityForwardSchema:
 
     def test_renumber_does_not_mutate_original(self) -> None:
         original = TestCaseRow(
-            no=99, screen="s", case_type="正常系", viewpoint="v",
-            category_large="l", category_medium="m",
+            no=99,
+            screen="s",
+            case_type="正常系",
+            viewpoint="v",
+            category_large="l",
+            category_medium="m",
         )
         renumbered = original.renumbered(1)
         assert original.no == 99

@@ -51,10 +51,14 @@ class TestStageGateBlocks:
         assert finished.wait(timeout=3), "承認後は先へ進むこと"
         worker.join(timeout=3)
 
-    def test_gate_can_be_released_by_domain_without_job_id(self, job: AutoRunJob, monkeypatch) -> None:
+    def test_gate_can_be_released_by_domain_without_job_id(
+        self, job: AutoRunJob, monkeypatch
+    ) -> None:
         """画面をリロードして job_id を失っても、ドメインで解除できる。"""
         monkeypatch.setattr(auto_run, "STAGE_APPROVAL_TIMEOUT_SEC", 5)
-        worker = threading.Thread(target=lambda: auto_run._await_stage_approval(job, "test_objective"), daemon=True)
+        worker = threading.Thread(
+            target=lambda: auto_run._await_stage_approval(job, "test_objective"), daemon=True
+        )
         worker.start()
         time.sleep(0.2)
 
@@ -69,7 +73,9 @@ class TestStageGateBlocks:
     def test_cancel_releases_the_gate(self, job: AutoRunJob, monkeypatch) -> None:
         """停止したのに承認待ちで固まらないこと。"""
         monkeypatch.setattr(auto_run, "STAGE_APPROVAL_TIMEOUT_SEC", 30)
-        worker = threading.Thread(target=lambda: auto_run._await_stage_approval(job, "test_objective"), daemon=True)
+        worker = threading.Thread(
+            target=lambda: auto_run._await_stage_approval(job, "test_objective"), daemon=True
+        )
         worker.start()
         time.sleep(0.2)
 

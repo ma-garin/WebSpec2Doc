@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import os
 
-import pytest
 from playwright.sync_api import Page, expect
 
 BASE_URL = os.environ.get("WEBSPEC2DOC_E2E_URL", "http://127.0.0.1:8765")
@@ -28,6 +27,3 @@ class TestApiDocs:
 
         expect(page.locator("h1")).to_contain_text("WebSpec2Doc API")
         assert external == [], f"外部への通信が発生した: {external}"
-
-
-

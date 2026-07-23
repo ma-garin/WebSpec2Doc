@@ -45,13 +45,21 @@ def workspace(tmp_path, monkeypatch):
     (qa / "test_plan.md").write_text("# テスト計画\n\nスコープ: 1画面", encoding="utf-8")
     (qa / "test_analysis.md").write_text("# テスト分析", encoding="utf-8")
     (qa / "test_design.md").write_text("# テスト設計", encoding="utf-8")
-    (qa / "autorun.spec.ts").write_text("import { test } from '@playwright/test';", encoding="utf-8")
+    (qa / "autorun.spec.ts").write_text(
+        "import { test } from '@playwright/test';", encoding="utf-8"
+    )
     # playwright_executor.py の実際の出力形式（total/passed/failed はトップレベル。
     # {"summary": {...}} ではない）に合わせる。過去このズレにより、実行済みでも
     # ダッシュボードが「未実行」と表示される不具合があった（監査で発覚・修正済み）。
     (qa / "playwright_report.json").write_text(
-        json.dumps({"total": 3, "passed": 2, "failed": 1,
-                    "tests": [{"title": "予約フォーム", "status": "failed", "error": "timeout"}]}),
+        json.dumps(
+            {
+                "total": 3,
+                "passed": 2,
+                "failed": 1,
+                "tests": [{"title": "予約フォーム", "status": "failed", "error": "timeout"}],
+            }
+        ),
         encoding="utf-8",
     )
     monkeypatch.setattr(report_mod, "scoped_output_dir", lambda _root: tmp_path)
@@ -75,8 +83,16 @@ class TestReportPage:
     def test_page_lists_all_eight_sections(self, client) -> None:
         """仕様17: ダッシュボード/QA仕様書/計画/分析/設計/ケース/スクリプト/実行結果。"""
         html = client.get(f"/autorun/report/{DOMAIN}").get_data(as_text=True)
-        for label in ("ダッシュボード", "QA仕様書", "計画", "分析", "設計",
-                      "ケース", "スクリプト", "実行結果"):
+        for label in (
+            "ダッシュボード",
+            "QA仕様書",
+            "計画",
+            "分析",
+            "設計",
+            "ケース",
+            "スクリプト",
+            "実行結果",
+        ):
             assert label in html
 
     def test_unknown_domain_is_404(self, client) -> None:
@@ -111,9 +127,7 @@ class TestReportApi:
         data = client.get(f"/api/autorun/report/{DOMAIN}?section=dashboard").get_json()["data"]
         assert "未検証" in data["claim_scope"]
 
-    def test_dashboard_does_not_show_not_executed_when_tests_ran(
-        self, client, workspace
-    ) -> None:
+    def test_dashboard_does_not_show_not_executed_when_tests_ran(self, client, workspace) -> None:
         """回帰テスト：実行済みなのに「未実行」（test_total が None）と表示される不具合の再発防止。
 
         playwright_report.json の実際の形式（total/passed/failed がトップレベル）に対し、
@@ -127,9 +141,7 @@ class TestReportApi:
         assert data["test_failed"] == 1
         assert "証明ではありません" in data["claim_scope"]
 
-    def test_dashboard_shows_self_check_score_when_available(
-        self, client, workspace
-    ) -> None:
+    def test_dashboard_shows_self_check_score_when_available(self, client, workspace) -> None:
         """AutoRun自身のミューテーションテスト自己検証スコアをダッシュボードに表示する。"""
         qa = workspace / DOMAIN / "qa_process"
         (qa / "mutation_verification.json").write_text(
@@ -223,11 +235,17 @@ class TestTestCaseSection:
                             "title": "No.1",
                             "detail": "",
                             "data": {
-                                "no": 1, "screen": "トップ", "case_type": "正常系",
-                                "viewpoint": "表示・レイアウト", "category_large": "トップ",
-                                "category_medium": "表示・レイアウト", "category_small": "実測比較",
-                                "precondition": "", "steps": "1. 開く",
-                                "expected": "表示される", "note": "",
+                                "no": 1,
+                                "screen": "トップ",
+                                "case_type": "正常系",
+                                "viewpoint": "表示・レイアウト",
+                                "category_large": "トップ",
+                                "category_medium": "表示・レイアウト",
+                                "category_small": "実測比較",
+                                "precondition": "",
+                                "steps": "1. 開く",
+                                "expected": "表示される",
+                                "note": "",
                             },
                         }
                     ],
@@ -239,5 +257,10 @@ class TestTestCaseSection:
         )
         body = client.get(f"/api/autorun/report/{DOMAIN}?section=cases").get_json()
         assert body["kind"] == "table"
-        assert [c["label"] for c in body["columns"]][:4] == ["No", "画面", "正常系/異常系", "観点名"]
+        assert [c["label"] for c in body["columns"]][:4] == [
+            "No",
+            "画面",
+            "正常系/異常系",
+            "観点名",
+        ]
         assert body["rows"][0]["screen"] == "トップ"

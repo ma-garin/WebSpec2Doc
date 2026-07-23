@@ -19,8 +19,9 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 import web.routes.auto_run as auto_run
-from autorun.stages import STAGE_BASIC_DESIGN, STAGE_TEST_OBJECTIVE, Pipeline
 from web.services.auto_run_job import AutoRunJob
+
+from autorun.stages import STAGE_BASIC_DESIGN, STAGE_TEST_OBJECTIVE, Pipeline
 
 DOMAIN = "example.com"
 
@@ -36,8 +37,13 @@ _REPORT = {
                     "action": "./confirm",
                     "method": "get",
                     "fields": [
-                        {"name": "term", "field_type": "number", "required": True,
-                         "min_value": "1", "max_value": "9"},
+                        {
+                            "name": "term",
+                            "field_type": "number",
+                            "required": True,
+                            "min_value": "1",
+                            "max_value": "9",
+                        },
                         {"name": "username", "field_type": "text", "required": True},
                     ],
                 }

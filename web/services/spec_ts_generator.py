@@ -266,7 +266,7 @@ def _append_form_operations(
 ) -> None:
     siblings: list[dict[str, Any]] = item.get("required_siblings") or []
     form_action = _safe_str(item.get("form_action", ""))
-    form_selector = f"form[action=\"{_esc(form_action)}\"]" if form_action else ""
+    form_selector = f'form[action="{_esc(form_action)}"]' if form_action else ""
     # 日付フィールドの表記（MM/DD/YYYY か YYYY/MM/DD か）はサイトのロケールで異なる
     # （実サイト検証で確認：/en-US/ は MM/DD/YYYY、/ja/ は YYYY/MM/DD）。
     # ISO形式で入力すると blur 時にサイト側の customValidity で弾かれるため、
@@ -457,7 +457,7 @@ def _append_fill_statement(
     elif value.startswith(_JS_EXPR_PREFIX):
         # 実行時に評価する JS 式（例: 相対日付）。固定の未来日付を埋め込むと、
         # 実行日によって「予約可能期間外」等の業務ルールで失敗するため。
-        date_expr = value[len(_JS_EXPR_PREFIX):]
+        date_expr = value[len(_JS_EXPR_PREFIX) :]
         # jQuery UI 等の datepicker が既定値（例: 今日の日付）を先に入れていることがあり、
         # fill() が新旧の値を連結してしまう競合が実サイト検証で低頻度（335件中3件）に
         # 再現した。先に空にしてから入れることで解消する。
@@ -465,7 +465,9 @@ def _append_fill_statement(
         lines.append(f"{inner}await {locator_expr}.fill({date_expr});")
         # datepicker はフォーカスで開き、以降の要素へのクリックを遮ることも判明した。
         # body への強制クリックでフォーカスを外し、ポップアップを閉じる。
-        lines.append(f"{inner}await page.locator('body').click({{ position: {{ x: 2, y: 2 }}, force: true }});")
+        lines.append(
+            f"{inner}await page.locator('body').click({{ position: {{ x: 2, y: 2 }}, force: true }});"
+        )
     else:
         lines.append(f"{inner}await {locator_expr}.fill('{_esc(value)}');")
     lines.append(f"{indent}}}")

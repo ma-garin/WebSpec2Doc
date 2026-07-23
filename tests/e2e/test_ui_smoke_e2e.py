@@ -11,7 +11,6 @@
 from __future__ import annotations
 
 import os
-import re
 
 from playwright.sync_api import Page, expect
 
@@ -20,8 +19,6 @@ BASE_URL = os.environ.get("WEBSPEC2DOC_E2E_URL", "http://127.0.0.1:8765")
 
 class TestAppLoad:
     """アプリケーション起動・ページロードの検証。"""
-
-
 
     def test_no_javascript_errors_on_load(self, page: Page) -> None:
         """ページロード時に JavaScript エラーが発生しない。"""
@@ -32,20 +29,12 @@ class TestAppLoad:
         assert js_errors == [], f"JavaScript エラー: {js_errors}"
 
 
-
 class TestNavigation:
     """画面間ナビゲーションの検証。"""
 
 
-
-
-
 class TestHome:
     """ホームのURL解析導線とAutoRun導線を検証する。"""
-
-
-
-
 
 
 class TestResponsiveness:
@@ -74,5 +63,3 @@ class TestResponsiveness:
         assert (
             scroll_width <= 1366 + 20
         ), f"水平スクロールが発生しています: scrollWidth={scroll_width}px"  # 20px の許容誤差
-
-

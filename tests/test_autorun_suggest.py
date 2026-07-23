@@ -87,8 +87,12 @@ class TestSuggestions:
         monkeypatch.setattr(
             suggest_mod,
             "request_structured_json",
-            lambda **_k: {"suggestions": [{"title": "  ", "detail": "x", "reason": ""},
-                                          {"title": "有効", "detail": "", "reason": ""}]},
+            lambda **_k: {
+                "suggestions": [
+                    {"title": "  ", "detail": "x", "reason": ""},
+                    {"title": "有効", "detail": "", "reason": ""},
+                ]
+            },
         )
         result = suggest_additions("観点", "洗い出す", "画面 3", [])
         assert [s.title for s in result.suggestions] == ["有効"]
@@ -102,7 +106,9 @@ class TestSuggestions:
         assert result.available is True
         assert "証明ではありません" in result.message
 
-    def test_prompt_includes_existing_titles_to_avoid_duplicates(self, endpoint, monkeypatch) -> None:
+    def test_prompt_includes_existing_titles_to_avoid_duplicates(
+        self, endpoint, monkeypatch
+    ) -> None:
         captured = {}
 
         def capture(**kwargs):

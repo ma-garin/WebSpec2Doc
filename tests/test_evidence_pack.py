@@ -173,9 +173,7 @@ def test_self_check_score_is_surfaced_when_provided() -> None:
         "survivor_count": 1,
         "score": 99.4,
     }
-    pack = build_evidence_pack(
-        _report(), generated_at=FIXED_TIME, mutation_check=mutation_check
-    )
+    pack = build_evidence_pack(_report(), generated_at=FIXED_TIME, mutation_check=mutation_check)
 
     assert pack["summary"]["self_check_score"] == 99.4
     assert pack["summary"]["self_check_survivor_count"] == 1

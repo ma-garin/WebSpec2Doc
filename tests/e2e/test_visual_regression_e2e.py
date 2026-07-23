@@ -122,14 +122,12 @@ def _assert_visual_match(page: Page, name: str, threshold: float = VISUAL_THRESH
 class TestVisualRegressionAppLoad:
     """アプリ読み込み画面のビジュアルリグレッション。"""
 
-
     def test_app_initial_state_1366x768(self, page: Page) -> None:
         """初期状態 1366×768 のビジュアルをベースラインと比較する。"""
         page.set_viewport_size({"width": 1366, "height": 768})
         page.goto(BASE_URL)
         page.wait_for_load_state("networkidle")
         _assert_visual_match(page, "app_initial_1366x768")
-
 
 
 class TestVisualRegressionAutoRun:
@@ -141,8 +139,6 @@ class TestVisualRegressionAutoRun:
         page.goto(f"{BASE_URL}/auto-run")
         page.wait_for_load_state("networkidle")
         page.wait_for_selector("#view-auto-run", state="attached")
-
-
 
     def test_autorun_approval_modal_1366x768(self, page: Page) -> None:
         """承認モーダル 1366×768 でのビジュアル（モーダルオーバーフロー検知）。"""

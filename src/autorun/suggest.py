@@ -148,5 +148,7 @@ def suggest_additions(
                 )
             )
 
-    message = "" if items else "追加の候補は挙がりませんでした（抜けが無いという証明ではありません）。"
+    message = (
+        "" if items else "追加の候補は挙がりませんでした（抜けが無いという証明ではありません）。"
+    )
     return SuggestionResult(suggestions=tuple(items), message=message)

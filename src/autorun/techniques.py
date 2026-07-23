@@ -68,7 +68,13 @@ def equivalence_classes(field: dict[str, Any]) -> tuple[TestValue, ...]:
     if field_type == "email":
         values += [
             _v("user@example.com", "正しい形式", True, TECHNIQUE_EQUIVALENCE, "有効同値クラス"),
-            _v("userexample.com", "@なし", False, TECHNIQUE_EQUIVALENCE, "無効同値クラス（形式違反）"),
+            _v(
+                "userexample.com",
+                "@なし",
+                False,
+                TECHNIQUE_EQUIVALENCE,
+                "無効同値クラス（形式違反）",
+            ),
             _v("user@", "ドメインなし", False, TECHNIQUE_EQUIVALENCE, "無効同値クラス（形式違反）"),
         ]
     elif field_type == "tel":
@@ -83,7 +89,13 @@ def equivalence_classes(field: dict[str, Any]) -> tuple[TestValue, ...]:
         options = [str(o) for o in (field.get("options") or [])]
         for option in options:
             values.append(
-                _v(option, f"選択肢「{option}」", True, TECHNIQUE_EQUIVALENCE, "各選択肢は個別の同値クラス")
+                _v(
+                    option,
+                    f"選択肢「{option}」",
+                    True,
+                    TECHNIQUE_EQUIVALENCE,
+                    "各選択肢は個別の同値クラス",
+                )
             )
     elif field_type in ("checkbox", "radio"):
         values += [
@@ -93,8 +105,13 @@ def equivalence_classes(field: dict[str, Any]) -> tuple[TestValue, ...]:
     else:
         values += [
             _v("通常の入力値", "通常値", True, TECHNIQUE_EQUIVALENCE, "有効同値クラス"),
-            _v("<script>alert(1)</script>", "特殊文字", False, TECHNIQUE_EQUIVALENCE,
-               "無効同値クラス（エスケープ・拒否のいずれかが必要）"),
+            _v(
+                "<script>alert(1)</script>",
+                "特殊文字",
+                False,
+                TECHNIQUE_EQUIVALENCE,
+                "無効同値クラス（エスケープ・拒否のいずれかが必要）",
+            ),
         ]
     return tuple(values)
 
@@ -106,7 +123,9 @@ def _number_equivalence(field: dict[str, Any]) -> list[TestValue]:
     values = []
     if low is not None and high is not None:
         mid = (low + high) // 2
-        values.append(_v(str(mid), "範囲内", True, TECHNIQUE_EQUIVALENCE, f"有効同値クラス（{low}〜{high}）"))
+        values.append(
+            _v(str(mid), "範囲内", True, TECHNIQUE_EQUIVALENCE, f"有効同値クラス（{low}〜{high}）")
+        )
     if low is not None:
         values.append(_v(str(low - 1), "下限未満", False, TECHNIQUE_EQUIVALENCE, "無効同値クラス"))
     if high is not None:
@@ -132,20 +151,43 @@ def boundary_values(field: dict[str, Any]) -> tuple[TestValue, ...]:
         ]
     if high is not None:
         values += [
-            _v(str(high - 1), f"上限-1（{high - 1}）", True, TECHNIQUE_BOUNDARY, "上限の直前は有効"),
+            _v(
+                str(high - 1), f"上限-1（{high - 1}）", True, TECHNIQUE_BOUNDARY, "上限の直前は有効"
+            ),
             _v(str(high), f"上限（{high}）", True, TECHNIQUE_BOUNDARY, "上限そのものは有効"),
-            _v(str(high + 1), f"上限+1（{high + 1}）", False, TECHNIQUE_BOUNDARY, "上限の直後は無効"),
+            _v(
+                str(high + 1),
+                f"上限+1（{high + 1}）",
+                False,
+                TECHNIQUE_BOUNDARY,
+                "上限の直後は無効",
+            ),
         ]
 
     maxlength = _int_or_none(field.get("maxlength"))
     if maxlength:
         values += [
-            _v("x" * (maxlength - 1), f"最大長-1（{maxlength - 1}文字）", True,
-               TECHNIQUE_BOUNDARY, "最大長の直前は有効"),
-            _v("x" * maxlength, f"最大長（{maxlength}文字）", True,
-               TECHNIQUE_BOUNDARY, "最大長そのものは有効"),
-            _v("x" * (maxlength + 1), f"最大長+1（{maxlength + 1}文字）", False,
-               TECHNIQUE_BOUNDARY, "最大長の直後は無効"),
+            _v(
+                "x" * (maxlength - 1),
+                f"最大長-1（{maxlength - 1}文字）",
+                True,
+                TECHNIQUE_BOUNDARY,
+                "最大長の直前は有効",
+            ),
+            _v(
+                "x" * maxlength,
+                f"最大長（{maxlength}文字）",
+                True,
+                TECHNIQUE_BOUNDARY,
+                "最大長そのものは有効",
+            ),
+            _v(
+                "x" * (maxlength + 1),
+                f"最大長+1（{maxlength + 1}文字）",
+                False,
+                TECHNIQUE_BOUNDARY,
+                "最大長の直後は無効",
+            ),
         ]
     return tuple(values)
 
@@ -224,11 +266,7 @@ def pairwise_pairs(fields: list[dict[str, Any]]) -> dict[str, Any]:
     全組合せは爆発するため、任意の2項目間で全ての値の組が
     少なくとも1回現れることを保証する。
     """
-    factors = [
-        (str(f.get("name", "")), _factor_levels(f))
-        for f in fields
-        if _factor_levels(f)
-    ]
+    factors = [(str(f.get("name", "")), _factor_levels(f)) for f in fields if _factor_levels(f)]
     if len(factors) < 2:
         return {"applicable": False, "reason": "組合せ対象の選択式項目が2つ未満です。"}
 
@@ -298,7 +336,9 @@ def apply_all(screen: dict[str, Any]) -> dict[str, Any]:
 
 
 def _v(value: str, label: str, valid: bool, technique: str, rationale: str) -> TestValue:
-    return TestValue(value=value, label=label, valid=valid, technique=technique, rationale=rationale)
+    return TestValue(
+        value=value, label=label, valid=valid, technique=technique, rationale=rationale
+    )
 
 
 def _range_of(field: dict[str, Any]) -> tuple[int | None, int | None]:

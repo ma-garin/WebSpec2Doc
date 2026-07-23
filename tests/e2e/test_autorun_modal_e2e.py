@@ -86,11 +86,6 @@ class TestAutoRunFormExists:
     """AutoRun フォームの基本要素が存在する。"""
 
 
-
-
-
-
-
 class TestApprovalModalStructure:
     """承認モーダルの構造的完全性（INC-2026-001 防止チェック）。"""
 
@@ -106,26 +101,9 @@ class TestApprovalModalStructure:
         page.wait_for_selector("#autorun-approval-modal", state="visible")
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 class TestRunningTestsProgressLabel:
     """テスト実行中の「n/188件目」進捗表示（ドッグフーディング指摘: 188件承認・
     実行しても進捗が全く見えない、への対応）。"""
-
-
 
 
 class TestAutoRunCancelButtonStyle:
@@ -133,18 +111,13 @@ class TestAutoRunCancelButtonStyle:
     width:100% で全幅の目立つ赤帯になっていた不具合の再発防止。"""
 
 
-
 class TestAutoRunLivePreview:
     """R2-07/R2-23: AutoRunのテスト実行中にライブプレビュー画面が見えないという
     指摘への対応。running_tests ステータスの間だけプレビュー枠を表示する。"""
 
 
-
-
-
 class TestOutputCategorization:
     """成果物一覧のSDLC分類（R2-22: 計画/分析/設計/実装/実行/レポート）。"""
-
 
 
 class TestCaseDetailExpand:
@@ -173,8 +146,6 @@ class TestCaseDetailExpand:
             self._CANDIDATE,
         )
 
-
-
     def test_detail_row_toggles_via_keyboard(self, autorun_page: Page) -> None:
         self._render(autorun_page)
         row = autorun_page.locator(".autorun-case-row").first
@@ -201,8 +172,6 @@ class TestDeveloperLogToggle:
                 _autorunRenderLog();
             }"""
         )
-
-
 
 
 class TestApprovalModalViaRoute:
@@ -241,9 +210,6 @@ class TestApprovalModalViaRoute:
         )
 
 
-
-
-
 class TestApprovalModalVisibility:
     """承認モーダルの視認性チェック（INC-2026-001 で発覚した問題の防止）。"""
 
@@ -255,7 +221,6 @@ class TestApprovalModalVisibility:
         }"""
         )
         page.wait_for_selector("#autorun-approval-modal", state="visible")
-
 
     def test_approve_button_is_not_obscured(self, autorun_page: Page) -> None:
         """承認ボタンが他の要素に隠れていない（クリック可能な位置にある）。"""
@@ -283,8 +248,6 @@ class TestLiveTestResults:
     """R3-01: テスト実行中に per-test の実況（OK/NG）がリアルタイムで流れる。"""
 
 
-
-
 class TestApprovalModalDeviceSelection:
     """R3-02: 承認モーダルでPC/モバイル実行を選択できる。"""
 
@@ -296,9 +259,6 @@ class TestApprovalModalDeviceSelection:
         }"""
         )
         page.wait_for_selector("#autorun-approval-modal", state="visible")
-
-
-
 
 
 class TestLoginModalVsShortcutHelp:
@@ -313,8 +273,6 @@ class TestLoginModalVsShortcutHelp:
                 login_url: 'https://example.com/login',
             })"""
         )
-
-
 
     def test_escape_closes_login_modal(self, autorun_page: Page) -> None:
         """Escキーでログインモーダルが閉じる（ヘルプだけが閉じて終わらない）。"""

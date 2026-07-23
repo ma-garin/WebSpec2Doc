@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import json
 import os
-import uuid
 
-from playwright.sync_api import Page, Route, expect
+from playwright.sync_api import Page, expect
 
 BASE_URL = os.environ.get("WEBSPEC2DOC_E2E_URL", "http://127.0.0.1:8765")
 
@@ -16,8 +14,6 @@ def _open_viewpoints(page: Page) -> None:
     expect(page.locator("#view-viewpoints")).to_be_visible()
     page.wait_for_selector(".vp-set-row", state="attached")
     page.wait_for_selector("#vp-table-body tr[data-vp-item-id]", state="attached")
-
-
 
 
 def test_viewpoint_dialog_focus_trap_escape_and_discard(page: Page) -> None:
@@ -43,17 +39,3 @@ def test_viewpoint_dialog_focus_trap_escape_and_discard(page: Page) -> None:
     page.locator("#confirm-ok-btn").click()
     expect(page.locator("#vp-editor-overlay")).to_be_hidden()
     expect(page.locator(f'[data-vp-item-id="{item_id}"]')).to_be_focused()
-
-
-
-
-
-
-
-
-
-
-
-
-
-

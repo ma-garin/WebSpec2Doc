@@ -16,8 +16,9 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 import web.routes.auto_run as auto_run
-from autorun.stages import STAGE_PLAYWRIGHT, Pipeline
 from web.services.auto_run_job import AutoRunJob
+
+from autorun.stages import STAGE_PLAYWRIGHT, Pipeline
 
 
 @pytest.fixture()
@@ -78,9 +79,7 @@ class TestMutationSelfCheckPhase:
 
 
 class TestPublishPlaywrightStageSurfacesSelfCheck:
-    def test_appends_self_check_item_with_survivors(
-        self, job: AutoRunJob, tmp_path: Path
-    ) -> None:
+    def test_appends_self_check_item_with_survivors(self, job: AutoRunJob, tmp_path: Path) -> None:
         (tmp_path / "stages.json").write_text(
             json.dumps(Pipeline.initial().to_dict(), ensure_ascii=False), encoding="utf-8"
         )

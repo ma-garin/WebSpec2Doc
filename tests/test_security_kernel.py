@@ -11,7 +11,6 @@ import json
 from pathlib import Path
 
 import pytest
-
 from web.services.egress_gateway import (
     EGRESS_FIXTURE_NAME,
     EgressDenied,
@@ -28,7 +27,6 @@ from web.services.untrusted_content import (
     scan_for_secrets,
     shannon_entropy,
 )
-
 
 # ─────────────────── K1 / 攻撃 #3: SSRF ───────────────────
 

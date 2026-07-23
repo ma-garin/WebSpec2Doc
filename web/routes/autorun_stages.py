@@ -103,9 +103,7 @@ def _load_pipeline(domain: str) -> Pipeline:
 def _save_pipeline(domain: str, pipeline: Pipeline) -> None:
     path = _stages_path(domain)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(pipeline.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8"
-    )
+    path.write_text(json.dumps(pipeline.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def _observation(domain: str, url: str, payload: dict[str, Any]):
@@ -382,7 +380,9 @@ def api_proceed() -> tuple[dict, int] | dict:
 
     released = release_stage_gate(job_id, domain)
     if released:
-        detail = f"{awaiting} を承認し次段階へ進行" if awaiting else "全段階の承認を確定し後続へ進行"
+        detail = (
+            f"{awaiting} を承認し次段階へ進行" if awaiting else "全段階の承認を確定し後続へ進行"
+        )
         pipeline = pipeline.recorded("proceed", awaiting or "", detail, _actor())
         _save_pipeline(domain, pipeline)
     return {
@@ -409,8 +409,6 @@ def api_test_cases() -> tuple[dict, int] | dict | Response:
         return Response(
             to_csv(rows),
             mimetype="text/csv; charset=utf-8",
-            headers={
-                "Content-Disposition": f'attachment; filename="{domain}_testcases.csv"'
-            },
+            headers={"Content-Disposition": f'attachment; filename="{domain}_testcases.csv"'},
         )
     return {"domain": domain, **to_table(rows)}

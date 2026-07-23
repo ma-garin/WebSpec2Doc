@@ -102,7 +102,6 @@ def _open_report(page: Page, suffix: str = "") -> None:
 class TestTabStructure:
     """6タブ構成とパネルホストの検証。"""
 
-
     def test_no_javascript_errors_on_report(self, page: Page) -> None:
         js_errors: list[str] = []
         page.on("pageerror", lambda exc: js_errors.append(str(exc)))
@@ -111,11 +110,8 @@ class TestTabStructure:
         assert js_errors == [], f"JavaScript エラー: {js_errors}"
 
 
-
-
 class TestSubTabs:
     """複合タブのサブタブ切替の検証。"""
-
 
     def test_all_four_design_subtabs_visible_at_900px(self, page: Page) -> None:
         """R3-14: 技法タブの視認性。幅900pxでも4つ目（技法別設計 MBT）が
@@ -132,10 +128,6 @@ class TestSubTabs:
         expect(tabs.nth(3)).to_have_text(re.compile("技法別設計"))
 
 
-
-
-
-
 class TestRunsTab:
     """テスト実行タブ（AutoRun 結果の一元表示）。"""
 
@@ -147,20 +139,9 @@ class TestRunsTab:
         return qa_dir
 
 
-
-
-
-
-
 class TestStatePreservation:
     """永続パネルによる状態保持の検証。"""
 
 
-
 class TestDeepLink:
     """ディープリンクと旧タブ名互換の検証。"""
-
-
-
-
-

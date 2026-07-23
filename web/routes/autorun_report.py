@@ -172,19 +172,39 @@ def _section_payload(domain: str, key: str) -> dict[str, Any]:
     if key == "spec":
         return {"kind": "markdown", "text": _read_text(base / "screens.md"), "source": "screens.md"}
     if key == "plan":
-        return {"kind": "markdown", "text": _read_text(qa / "test_plan.md"), "source": "test_plan.md"}
+        return {
+            "kind": "markdown",
+            "text": _read_text(qa / "test_plan.md"),
+            "source": "test_plan.md",
+        }
     if key == "analysis":
-        return {"kind": "markdown", "text": _read_text(qa / "test_analysis.md"), "source": "test_analysis.md"}
+        return {
+            "kind": "markdown",
+            "text": _read_text(qa / "test_analysis.md"),
+            "source": "test_analysis.md",
+        }
     if key == "design":
-        return {"kind": "markdown", "text": _read_text(qa / "test_design.md"), "source": "test_design.md"}
+        return {
+            "kind": "markdown",
+            "text": _read_text(qa / "test_design.md"),
+            "source": "test_design.md",
+        }
     if key == "cases":
         rows = test_case_rows(_pipeline(domain))
         if rows:
             return {"kind": "table", "source": "stages.json", **to_table(rows)}
         # 段階パイプライン未実施なら、従来の生成物を出す
-        return {"kind": "markdown", "text": _read_text(qa / "test_cases.md"), "source": "test_cases.md"}
+        return {
+            "kind": "markdown",
+            "text": _read_text(qa / "test_cases.md"),
+            "source": "test_cases.md",
+        }
     if key == "script":
-        return {"kind": "code", "text": _read_text(qa / "autorun.spec.ts"), "source": "autorun.spec.ts"}
+        return {
+            "kind": "code",
+            "text": _read_text(qa / "autorun.spec.ts"),
+            "source": "autorun.spec.ts",
+        }
     if key == "results":
         return {
             "kind": "results",

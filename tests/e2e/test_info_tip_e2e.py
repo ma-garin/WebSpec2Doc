@@ -41,7 +41,3 @@ class TestQualityViewpointsInfoTip:
         first_tip = page.locator("#qa-quality-content .info-tip").first
         first_tip.focus()
         expect(first_tip).to_be_focused()
-
-
-
-

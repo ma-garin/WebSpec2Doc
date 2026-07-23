@@ -66,7 +66,9 @@ class TestMatching:
         assert matched[0].hypothesis_id == "H7"
 
     def test_validity_failure_matches_value_hypotheses(self) -> None:
-        ids = {h.hypothesis_id for h in match_hypotheses("expected true, received false checkValidity")}
+        ids = {
+            h.hypothesis_id for h in match_hypotheses("expected true, received false checkValidity")
+        }
         assert ids & {"H1", "H2", "H5"}
 
     def test_hypotheses_are_capped(self) -> None:
@@ -80,9 +82,7 @@ class TestMatching:
 
 class TestTriage:
     def test_explains_known_failures(self) -> None:
-        result = triage(
-            [{"title": "PW-0061 フォーム入力", "error": "intercepts pointer events"}]
-        )
+        result = triage([{"title": "PW-0061 フォーム入力", "error": "intercepts pointer events"}])
         assert result["triaged"][0]["explained"] is True
         assert result["triaged"][0]["candidates"][0]["hypothesis_id"] == "H3"
 

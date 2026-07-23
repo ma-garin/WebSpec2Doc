@@ -171,8 +171,9 @@ def write_egress_fixture(target_dir: Path, log_path: Path) -> Path:
     """
     target_dir.mkdir(parents=True, exist_ok=True)
     fixture_path = target_dir / EGRESS_FIXTURE_NAME
-    fixture_path.write_text(_FIXTURE_TS.replace("__LOG_PATH__", str(log_path.resolve())),
-                            encoding="utf-8")
+    fixture_path.write_text(
+        _FIXTURE_TS.replace("__LOG_PATH__", str(log_path.resolve())), encoding="utf-8"
+    )
     return fixture_path
 
 

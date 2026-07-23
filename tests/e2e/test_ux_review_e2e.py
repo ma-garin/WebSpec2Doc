@@ -122,7 +122,3 @@ class TestAxeDetectsViolations:
 
         assert page_data is not None
         assert ux_axe_results
-
-
-
-

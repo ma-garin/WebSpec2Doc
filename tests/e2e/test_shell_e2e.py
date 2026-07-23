@@ -34,8 +34,6 @@ def app_page(page: Page) -> Page:
 
 class TestQuickSearch:
 
-
-
     def test_cmd_k_focuses_search(self, app_page: Page) -> None:
         """Cmd/Ctrl+K でクイック検索にフォーカスする。"""
         # 一旦別要素へフォーカス
@@ -53,5 +51,3 @@ class TestQuickSearch:
         )
         app_page.locator("#topbar-search-input").press("Escape")
         expect(app_page.locator("#topbar-search-results")).to_be_hidden()
-
-

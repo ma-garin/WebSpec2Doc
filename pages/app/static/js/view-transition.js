@@ -1,0 +1,603 @@
+// ---- 画面遷移図（UML 3タブ + テスト観点マップ）----
+let umlZoom = 1;
+let _currentUmlSource = '';
+let _currentUmlType = 'sequence';
+
+function _setupPan(canvas) {
+  let dragging = false, startX = 0, startY = 0, startSL = 0, startST = 0;
+  canvas.addEventListener('pointerdown', e => {
+    if (e.button !== 0) return;
+    dragging = true;
+    startX = e.clientX; startY = e.clientY;
+    startSL = canvas.scrollLeft; startST = canvas.scrollTop;
+    canvas.classList.add('is-panning');
+    canvas.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  canvas.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    canvas.scrollLeft = startSL - (e.clientX - startX);
+    canvas.scrollTop = startST - (e.clientY - startY);
+  });
+  canvas.addEventListener('pointerup', () => { dragging = false; canvas.classList.remove('is-panning'); });
+  canvas.addEventListener('pointercancel', () => { dragging = false; canvas.classList.remove('is-panning'); });
+  canvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    _setUmlZoom(umlZoom + (e.deltaY < 0 ? 0.1 : -0.1));
+  }, { passive: false });
+}
+
+function _toggleUmlFullscreen() {
+  const canvas = document.getElementById('uml-render-target');
+  if (!canvas) return;
+  const isFs = canvas.classList.toggle('is-fullscreen');
+  document.querySelectorAll('[data-zoom="fullscreen"]').forEach(btn => {
+    btn.title = isFs ? '全画面を解除 (Esc)' : '全画面 (Esc で解除)';
+    btn.textContent = isFs ? '✕' : '⛶';
+  });
+  if (isFs) setTimeout(() => _fitUmlZoom(), 50);
+}
+
+function _exportUmlSvg() {
+  const stage = document.getElementById('uml-zoom-stage');
+  const svg = stage && stage.querySelector('svg');
+  if (!svg) return;
+  const blob = new Blob([new XMLSerializer().serializeToString(svg)], { type: 'image/svg+xml' });
+  const url = URL.createObjectURL(blob);
+  const a = Object.assign(document.createElement('a'), { href: url, download: `${_currentUmlType}.svg` });
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function _exportUmlPng() {
+  const stage = document.getElementById('uml-zoom-stage');
+  const svg = stage && stage.querySelector('svg');
+  if (!svg) return;
+  const svgStr = new XMLSerializer().serializeToString(svg);
+  const svgBlob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(svgBlob);
+  const img = new Image();
+  img.onload = () => {
+    const w = svg.viewBox.baseVal.width || img.naturalWidth || 800;
+    const h = svg.viewBox.baseVal.height || img.naturalHeight || 600;
+    const canvas = document.createElement('canvas');
+    canvas.width = w * 2;
+    canvas.height = h * 2;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(2, 2);
+    // エクスポート PNG の下地は常に白（文書貼付・印刷用途。UI テーマに依存させない）
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(img, 0, 0, w, h);
+    URL.revokeObjectURL(url);
+    const a = Object.assign(document.createElement('a'), { href: canvas.toDataURL('image/png'), download: `${_currentUmlType}.png` });
+    a.click();
+  };
+  img.onerror = () => URL.revokeObjectURL(url);
+  img.src = url;
+}
+
+function _exportUmlMmd() {
+  if (!_currentUmlSource) return;
+  const blob = new Blob([_currentUmlSource], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = Object.assign(document.createElement('a'), { href: url, download: `${_currentUmlType}.mmd` });
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  const canvas = document.getElementById('uml-render-target');
+  if (canvas && canvas.classList.contains('is-fullscreen')) _toggleUmlFullscreen();
+});
+
+function _commonNavTargets(screens) {
+  const n = screens.length;
+  const count = {};
+  screens.forEach(sc => {
+    (sc.transitions && sc.transitions.to || []).forEach(to => { count[to] = (count[to] || 0) + 1; });
+  });
+  const threshold = Math.max(2, Math.floor(n * 0.5));
+  return new Set(Object.entries(count).filter(([, c]) => c >= threshold).map(([k]) => k));
+}
+
+function _shortVisLabel(sc) {
+  return (sc.title || sc.page_id).replace(/\s*[|｜]\s*.*/g, '').replace(/['"]/g, '').slice(0, 24) || sc.page_id;
+}
+
+// セルフホスト版のみを使用し、外部ネットワークへコードを取得しない。
+const _MERMAID_SOURCE = '/static/vendor/mermaid/mermaid.min.js';
+
+function _loadMermaid(cb) {
+  if (window.mermaid) {
+    cb();
+    return;
+  }
+  const existing = document.querySelector('script[data-lib="mermaid"]');
+  if (existing) {
+    existing.addEventListener('load', cb, { once: true });
+    return;
+  }
+  const tryLoad = () => {
+    const s = document.createElement('script');
+    s.src = _MERMAID_SOURCE;
+    s.dataset.lib = 'mermaid';
+    s.onload = cb;
+    s.onerror = () => {
+      s.remove();
+      const target = document.getElementById('uml-render-target');
+      if (target && typeof uiError === 'function') {
+        uiError(target, {
+          title: '遷移図ライブラリを読み込めませんでした',
+          message: 'ローカル資産が見つかりません。遷移表タブをご利用ください。',
+          onRetry: tryLoad,
+        });
+      }
+    };
+    document.head.appendChild(s);
+  };
+  tryLoad();
+}
+
+function _umlAlias(value) {
+  return `N${String(value || '').replace(/[^a-zA-Z0-9_]/g, '_')}`;
+}
+
+function _mermaidText(value) {
+  return String(value || '').replace(/[<>{}"'`]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function _transitionRows(screens) {
+  const common = _commonNavTargets(screens);
+  const idToScreen = {};
+  const urlToId = {};
+  screens.forEach(sc => {
+    idToScreen[sc.page_id] = sc;
+    urlToId[sc.url] = sc.page_id;
+  });
+
+  const rows = [];
+  const keys = new Set();
+  const addRow = row => {
+    if (!row.fromId || !row.toId || row.fromId === row.toId) return;
+    if (!idToScreen[row.fromId] || !idToScreen[row.toId] || common.has(row.toId)) return;
+    const key = `${row.fromId}:${row.toId}:${row.event}:${row.eventDetail}`;
+    if (keys.has(key)) return;
+    keys.add(key);
+    const toTitle = idToScreen[row.toId].title || row.toId;
+    const eventDetail = row.eventDetail || '';
+    rows.push({
+      no: `T${String(rows.length + 1).padStart(2, '0')}`,
+      fromId: row.fromId,
+      fromTitle: idToScreen[row.fromId].title || row.fromId,
+      event: row.event,
+      eventDetail,
+      toId: row.toId,
+      toTitle,
+      action: row.action || '',
+      // R2-11: 固定文言ではなく実データ（操作内容・遷移先画面名）で具体化する
+      viewpoint: row.event === 'フォーム送信'
+        ? `${eventDetail}を実行すると「${toTitle}」へ到達する`
+        : `${eventDetail}を押すと「${toTitle}」へ遷移する`,
+    });
+  };
+
+  screens.forEach(sc => {
+    (sc.transitions && sc.transitions.to || []).forEach(to => {
+      addRow({ fromId: sc.page_id, event: 'リンク', eventDetail: 'リンククリック', toId: to, action: '' });
+    });
+    (sc.forms || []).forEach(f => {
+      const toId = f.action ? urlToId[f.action] : '';
+      addRow({
+        fromId: sc.page_id,
+        event: 'フォーム送信',
+        eventDetail: `${(f.method || 'GET').toUpperCase()} submit`,
+        toId,
+        action: f.action || '',
+      });
+    });
+  });
+  return rows;
+}
+
+function renderTransition() {
+  const screens = reportJson && reportJson.screens || [];
+  if (!screens.length) {
+    resultHero.innerHTML = '<div class="hero-msg">遷移データがありません。クロールを実行してください。</div>';
+    return;
+  }
+
+  resultHero.innerHTML =
+    '<div class="uml-view">' +
+    '<div class="uml-subtabs" id="uml-subtabs">' +
+    '<button class="uml-subtab is-active" data-uml="sequence">シーケンス図<span>操作順</span></button>' +
+    '<button class="uml-subtab" data-uml="communication">コミュニケーション図<span>全体関係</span></button>' +
+    '<button class="uml-subtab" data-uml="activity">アクティビティ図<span>テスト手順</span></button>' +
+    '<button class="uml-subtab" data-uml="flowchart">フローチャート<span>処理の流れ</span></button>' +
+    '<button class="uml-subtab" data-uml="viewpoints">テスト観点マップ<span>設計観点</span></button>' +
+    '</div>' +
+    '<div id="uml-diagram-area" class="uml-diagram-area"></div>' +
+    '</div>';
+
+  document.querySelectorAll('.uml-subtab').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.uml-subtab').forEach(x => x.classList.toggle('is-active', x === t));
+      _showUmlPanel(t.dataset.uml, screens);
+    });
+  });
+
+  _showUmlPanel('sequence', screens);
+}
+
+function _showUmlPanel(type, screens) {
+  const area = document.getElementById('uml-diagram-area');
+  if (!area) return;
+  const rows = _transitionRows(screens);
+  if (type === 'viewpoints') {
+    _showViewpointMap(area, rows);
+    return;
+  }
+  const meta = _umlMeta(type);
+  _currentUmlType = type;
+  umlZoom = 1;
+  area.innerHTML =
+    '<div class="uml-panel-head">' +
+    `<div><strong>${escHtml(meta.title)}</strong><span>${escHtml(meta.desc)}</span></div>` +
+    '<div class="uml-panel-actions">' +
+    `<p>${rows.length}件の遷移。共通ナビゲーション（全ページの50%以上から発生する遷移）は除外しています。</p>` +
+    _umlZoomControls() +
+    '</div>' +
+    '</div>' +
+    '<div class="uml-layout">' +
+    '<div class="uml-canvas" id="uml-render-target"><div class="hero-msg">図を描画しています…</div></div>' +
+    `<div class="uml-table-wrap">${_umlTable(type, rows)}</div>` +
+    '</div>';
+  _loadMermaid(() => {
+    _renderUmlDiagram(type, screens, rows).then(() => {
+      setTimeout(_fitUmlZoom, 100);
+    });
+  });
+}
+
+function _umlZoomControls() {
+  return (
+    '<div class="uml-zoom-controls" aria-label="図のズーム">' +
+    '<button type="button" class="uml-zoom-btn" data-zoom="out" title="縮小 (ホイール↓)">−</button>' +
+    '<button type="button" class="uml-zoom-btn uml-zoom-level" data-zoom="reset" title="100%に戻す">100%</button>' +
+    '<button type="button" class="uml-zoom-btn" data-zoom="in" title="拡大 (ホイール↑)">＋</button>' +
+    '<button type="button" class="uml-zoom-btn" data-zoom="fit" title="幅に合わせる">Fit</button>' +
+    '<button type="button" class="uml-zoom-btn uml-zoom-sep" data-zoom="fullscreen" title="全画面 (Esc で解除)">⛶</button>' +
+    '<span class="uml-zoom-divider"></span>' +
+    '<button type="button" class="uml-zoom-btn uml-dl-btn" data-dl="svg" title="SVGをダウンロード">↓ SVG</button>' +
+    '<button type="button" class="uml-zoom-btn uml-dl-btn" data-dl="png" title="PNGをダウンロード（2x高解像度）">↓ PNG</button>' +
+    '<button type="button" class="uml-zoom-btn uml-dl-btn" data-dl="mmd" title="Mermaidソースをダウンロード（編集・再利用用）">↓ MMD</button>' +
+    '</div>'
+  );
+}
+
+function _umlMeta(type) {
+  if (type === 'communication') {
+    return { title: 'コミュニケーション図', desc: '画面間の関係をエッジ番号で俯瞰します。' };
+  }
+  if (type === 'activity') {
+    return { title: 'アクティビティ図', desc: 'QAテスト手順として操作と期待結果を追います。' };
+  }
+  if (type === 'flowchart') {
+    return { title: 'フローチャート', desc: '入口画面から各画面への処理の流れを上から下へ追います。' };
+  }
+  return { title: 'シーケンス図', desc: '代表的な遷移を時系列で確認します。' };
+}
+
+function _showViewpointMap(area, rows) {
+  const groups = _viewpointGroups(rows);
+  const totalChecks = groups.reduce((sum, g) => sum + g.rows.length, 0);
+  // R1-05: 「見方がわかりにくい」への対応。各観点カテゴリの意味を凡例として明示する。
+  const legend = groups.map(g =>
+    `<span class="vp-legend-item"><strong>${escHtml(g.label)}</strong>: ${escHtml(g.desc)}</span>`
+  ).join('');
+  area.innerHTML =
+    '<div class="uml-panel-head">' +
+    '<div><strong>テスト観点マップ</strong><span>遷移をQA観点へ分類し、テスト設計の入口にします。</span></div>' +
+    `<p>${rows.length}件の遷移から${totalChecks}件の観点候補を抽出しています。</p>` +
+    '</div>' +
+    `<div class="viewpoint-legend" aria-label="観点カテゴリの見方">${legend}</div>` +
+    '<div class="viewpoint-map">' +
+    `<div class="viewpoint-summary">${groups.map(_viewpointCard).join('')}</div>` +
+    `<div class="viewpoint-table-wrap">${_viewpointTable(groups)}</div>` +
+    '</div>';
+}
+
+function _viewpointGroups(rows) {
+  const defs = [
+    {
+      key: 'reachability',
+      label: '到達性',
+      desc: 'リンク操作で期待画面へ到達できるか',
+      match: r => r.event === 'リンク',
+      check: r => `${r.fromId}から${r.toId}へリンク操作で到達する`,
+    },
+    {
+      key: 'form',
+      label: '入力後遷移',
+      desc: 'フォーム送信後に期待画面へ進むか',
+      match: r => r.event === 'フォーム送信',
+      check: r => `${r.fromId}の入力送信後に${r.toId}へ進む`,
+    },
+    {
+      key: 'auth',
+      label: '認証・会員導線',
+      desc: 'ログイン、会員登録、認証前後の導線が妥当か',
+      match: r => _rowText(r).match(/login|sign in|sign up|ログイン|会員|登録/i),
+      check: r => `${r.fromId}から${r.toId}への認証関連導線を確認する`,
+    },
+    {
+      key: 'critical',
+      label: '業務クリティカル導線',
+      desc: '予約、申込、完了など主要業務の導線が途切れないか',
+      match: r => _rowText(r).match(/予約|reservation|reserve|plans|plan|宿泊|完了|confirm|complete/i),
+      check: r => `${r.fromId}から${r.toId}への主要業務導線を確認する`,
+    },
+  ];
+  return defs.map(def => {
+    const matched = rows.filter(def.match);
+    return {
+      ...def,
+      rows: matched.map(r => ({ ...r, check: def.check(r) })),
+    };
+  });
+}
+
+function _rowText(row) {
+  return [row.fromId, row.fromTitle, row.event, row.eventDetail, row.toId, row.toTitle, row.action].join(' ');
+}
+
+function _viewpointCard(group) {
+  return (
+    '<div class="viewpoint-card">' +
+    `<strong>${escHtml(group.label)}</strong>` +
+    `<span class="viewpoint-count">${group.rows.length}</span>` +
+    `<p>${escHtml(group.desc)}</p>` +
+    '</div>'
+  );
+}
+
+function _viewpointTable(groups) {
+  const rows = groups.flatMap(group => group.rows.map(row => ({ group, row })));
+  if (!rows.length) return '<div class="hero-msg">観点候補がありません。</div>';
+  const tableRows = rows.map(({ group, row }) => `
+    <tr>
+      <td><span class="viewpoint-pill">${escHtml(group.label)}</span></td>
+      <td class="c-screen">${escHtml(row.no)}</td>
+      <td><strong>${escHtml(row.fromId)}</strong><span>${escHtml(row.fromTitle)}</span></td>
+      <td><strong>${escHtml(row.toId)}</strong><span>${escHtml(row.toTitle)}</span></td>
+      <td>${escHtml(row.check)}</td>
+      <td>${escHtml(group.desc)}</td>
+    </tr>
+  `).join('');
+  return (
+    '<div class="uml-table-title">観点別テスト候補</div>' +
+    '<table class="trans-table uml-linked-table viewpoint-table">' +
+    '<thead><tr><th>観点</th><th>No</th><th>From</th><th>To</th><th>確認内容</th><th>狙い</th></tr></thead>' +
+    `<tbody>${tableRows}</tbody>` +
+    '</table>'
+  );
+}
+
+async function _renderUmlDiagram(type, screens, rows) {
+  const target = document.getElementById('uml-render-target');
+  if (!target) return;
+  const source = _umlSource(type, screens, rows);
+  _currentUmlSource = source;
+  if (!rows.length) {
+    target.innerHTML = '<div class="hero-msg">遷移情報がありません（共通ナビのみ検出）。</div>';
+    return;
+  }
+  try {
+    window.mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'strict' });
+    const id = `uml-${type}-${Date.now()}`;
+    const rendered = await window.mermaid.render(id, source);
+    target.innerHTML = `<div class="uml-zoom-stage" id="uml-zoom-stage">${rendered.svg || rendered}</div>`;
+    _prepareUmlZoom();
+  } catch (e) {
+    target.innerHTML = `<pre class="uml-source">${escHtml(source)}</pre>`;
+  }
+}
+
+function _prepareUmlZoom() {
+  const stage = document.getElementById('uml-zoom-stage');
+  const svg = stage && stage.querySelector('svg');
+  if (!stage || !svg) return;
+  svg.style.maxWidth = 'none';
+  const box = svg.getBoundingClientRect();
+  stage.dataset.baseWidth = String(Math.max(1, Math.ceil(box.width)));
+  stage.dataset.baseHeight = String(Math.max(1, Math.ceil(box.height)));
+  _setUmlZoom(umlZoom);
+  const canvas = document.getElementById('uml-render-target');
+  if (canvas) _setupPan(canvas);
+  document.querySelectorAll('.uml-zoom-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const mode = btn.dataset.zoom;
+      if (mode === 'in') _setUmlZoom(umlZoom + 0.15);
+      else if (mode === 'out') _setUmlZoom(umlZoom - 0.15);
+      else if (mode === 'reset') { _setUmlZoom(1); if (canvas) { canvas.scrollLeft = 0; canvas.scrollTop = 0; } }
+      else if (mode === 'fit') _fitUmlZoom();
+      else if (mode === 'fullscreen') _toggleUmlFullscreen();
+    });
+  });
+  document.querySelectorAll('.uml-dl-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const fmt = btn.dataset.dl;
+      if (fmt === 'svg') _exportUmlSvg();
+      else if (fmt === 'png') _exportUmlPng();
+      else if (fmt === 'mmd') _exportUmlMmd();
+    });
+  });
+}
+
+function _setUmlZoom(value) {
+  umlZoom = Math.min(5.0, Math.max(0.35, value));
+  const stage = document.getElementById('uml-zoom-stage');
+  const svg = stage && stage.querySelector('svg');
+  if (stage && svg) {
+    const baseWidth = Number(stage.dataset.baseWidth || 1);
+    const baseHeight = Number(stage.dataset.baseHeight || 1);
+    stage.style.width = `${Math.ceil(baseWidth * umlZoom)}px`;
+    stage.style.height = `${Math.ceil(baseHeight * umlZoom)}px`;
+    svg.style.transformOrigin = 'top left';
+    svg.style.transform = `scale(${umlZoom})`;
+  }
+  const level = document.querySelector('.uml-zoom-level');
+  if (level) level.textContent = `${Math.round(umlZoom * 100)}%`;
+}
+
+function _fitUmlZoom() {
+  const target = document.getElementById('uml-render-target');
+  const stage = document.getElementById('uml-zoom-stage');
+  if (!target || !stage) return;
+  const baseWidth = Number(stage.dataset.baseWidth || 1);
+  const next = (target.clientWidth - 32) / baseWidth;
+  _setUmlZoom(next);
+  target.scrollLeft = 0;
+  target.scrollTop = 0;
+}
+
+function _umlSource(type, screens, rows) {
+  if (type === 'communication') return _communicationDiagram(screens, rows);
+  if (type === 'activity') return _activityDiagram(rows);
+  if (type === 'flowchart') return _flowchartDiagram(rows);
+  return _sequenceDiagram(screens, rows);
+}
+
+function _sequenceDiagram(screens, rows) {
+  const diagramRows = rows.slice(0, 12);
+  const used = new Set();
+  diagramRows.forEach(r => { used.add(r.fromId); used.add(r.toId); });
+  const participants = screens
+    .filter(sc => used.has(sc.page_id))
+    .map(sc => `  participant ${_umlAlias(sc.page_id)} as ${_mermaidText(sc.page_id)} ${_mermaidText(_shortVisLabel(sc))}`)
+    .join('\n');
+  const messages = diagramRows.map(r => {
+    const arrow = r.event === 'フォーム送信' ? '->>' : '-->>';
+    return `  ${_umlAlias(r.fromId)}${arrow}${_umlAlias(r.toId)}: ${r.no} ${_mermaidText(r.event)}`;
+  }).join('\n');
+  return `sequenceDiagram\n  autonumber\n${participants}\n${messages}`;
+}
+
+function _communicationDiagram(screens, rows) {
+  const used = new Set();
+  rows.forEach(r => { used.add(r.fromId); used.add(r.toId); });
+  const nodes = screens
+    .filter(sc => used.has(sc.page_id))
+    .map(sc => `  ${_umlAlias(sc.page_id)}["${_mermaidText(sc.page_id)}<br/>${_mermaidText(_shortVisLabel(sc))}"]`)
+    .join('\n');
+  const edges = rows.map(r => {
+    const arrow = r.event === 'フォーム送信' ? '-.->' : '-->';
+    return `  ${_umlAlias(r.fromId)} ${arrow}|${r.no} ${_mermaidText(r.event)}| ${_umlAlias(r.toId)}`;
+  }).join('\n');
+  return `flowchart LR\n${nodes}\n${edges}`;
+}
+
+// R2-12: 遷移をトップダウンの処理フロー（フローチャート）として描画する。
+// コミュニケーション図(flowchart LR・関係俯瞰)とは向き・粒度が異なり、
+// 入口画面(START)から各画面への「処理の流れ」を上から下へ追える形にする。
+function _flowchartDiagram(rows) {
+  if (!rows.length) return 'flowchart TD\n  START([開始])';
+  const titleById = {};
+  const targets = new Set();
+  rows.forEach(r => {
+    titleById[r.fromId] = r.fromTitle;
+    titleById[r.toId] = r.toTitle;
+    targets.add(r.toId);
+  });
+  const nodes = Object.keys(titleById)
+    .map(id => `  ${_umlAlias(id)}["${_mermaidText(id)}<br/>${_mermaidText(titleById[id])}"]`)
+    .join('\n');
+  // 遷移先になっていない画面＝入口とみなし、START から接続する（無ければ先頭行のfrom）。
+  const entries = Object.keys(titleById).filter(id => !targets.has(id));
+  const starts = (entries.length ? entries : [rows[0].fromId])
+    .map(id => `  START([開始]) --> ${_umlAlias(id)}`)
+    .join('\n');
+  // フォーム送信は太線(==>)、リンクは通常線(-->)で区別する。
+  const edges = rows.map(r => {
+    const arrow = r.event === 'フォーム送信' ? '==>' : '-->';
+    return `  ${_umlAlias(r.fromId)} ${arrow}|${r.no} ${_mermaidText(r.eventDetail || r.event)}| ${_umlAlias(r.toId)}`;
+  }).join('\n');
+  return `flowchart TD\n  START([開始])\n${nodes}\n${starts}\n${edges}`;
+}
+
+function _activityDiagram(rows) {
+  const lines = ['flowchart TD', '  START([開始])'];
+  rows.slice(0, 30).forEach((r, i) => {
+    const prev = i === 0 ? 'START' : `CHECK${i - 1}`;
+    lines.push(`  ${prev} --> S${i}["${_mermaidText(r.fromId)}を表示"]`);
+    lines.push(`  S${i} --> A${i}["${r.no} ${_mermaidText(r.eventDetail || r.event)}"]`);
+    lines.push(`  A${i} --> CHECK${i}{"${_mermaidText(r.toId)}へ到達?"}`);
+    lines.push(`  CHECK${i} -->|OK| T${i}["${_mermaidText(r.toId)}を確認"]`);
+    lines.push(`  CHECK${i} -->|NG| R${i}["遷移条件・リンク・入力値を確認"]`);
+  });
+  lines.push(`  CHECK${Math.min(rows.length, 30) - 1} --> END([終了])`);
+  return lines.join('\n');
+}
+
+function _umlTable(type, rows) {
+  if (!rows.length) return '<div class="hero-msg">表にできる遷移がありません。</div>';
+  const title = type === 'activity' ? 'テスト手順表' : type === 'sequence' ? 'シナリオ表' : '遷移サマリー表';
+  const tableRows = rows.map(r => `
+    <tr>
+      <td class="c-screen">${escHtml(r.no)}</td>
+      <td><strong>${escHtml(r.fromId)}</strong><span>${escHtml(r.fromTitle)}</span></td>
+      <td><span class="cond-pill ${r.event === 'フォーム送信' ? 'cc-format trans-event-form' : 'cc-other trans-event-link'}">${escHtml(r.event)}</span><span class="trans-link-detail">${escHtml(r.eventDetail)}</span></td>
+      <td><strong>${escHtml(r.toId)}</strong><span>${escHtml(r.toTitle)}</span></td>
+      <td>${escHtml(r.viewpoint)}</td>
+    </tr>
+  `).join('');
+  return (
+    `<div class="uml-table-title">${escHtml(title)}</div>` +
+    '<table class="trans-table uml-linked-table">' +
+    '<thead><tr><th>No</th><th>From</th><th>操作</th><th>To</th><th>QA観点</th></tr></thead>' +
+    `<tbody>${tableRows}</tbody>` +
+    '</table>'
+  );
+}
+
+// ---- 画面遷移表（ISTQB 状態遷移テスト標準フォーマット）----
+function renderTransitionTable() {
+  if (!reportJson || !(reportJson.screens || []).length) {
+    resultHero.innerHTML = '<div class="hero-msg">遷移データがありません。</div>';
+    return;
+  }
+  const screens = reportJson.screens;
+  const idToUrl = {};
+  screens.forEach(s => { idToUrl[s.page_id] = s.url; });
+  const rows = _transitionRows(screens);
+
+  if (!rows.length) { resultHero.innerHTML = '<div class="hero-msg">遷移情報がありません（共通ナビのみ検出）。</div>'; return; }
+
+  const tableRows = rows.map(r => {
+    const destUrl = idToUrl[r.toId] || r.action || '';
+    let linkPath = destUrl;
+    try { linkPath = new URL(destUrl).pathname; } catch (e) {}
+    return `<tr>
+      <td class="c-screen">${escHtml(r.fromId)}</td>
+      <td>${escHtml(r.fromTitle)}</td>
+      <td>
+        <span class="cond-pill ${r.event === 'フォーム送信' ? 'cc-format trans-event-form' : 'cc-other trans-event-link'}">${escHtml(r.event)}</span>
+        <span class="trans-link-detail">${escHtml(r.event === 'フォーム送信' ? r.eventDetail : linkPath)}</span>
+      </td>
+      <td class="c-screen">${escHtml(r.toId)}</td>
+      <td>${escHtml(r.toTitle)}</td>
+      <td style="font-size:11px;font-family:monospace;color:var(--text-muted);word-break:break-all">${escHtml(destUrl)}</td>
+    </tr>`;
+  }).join('');
+
+  resultHero.innerHTML =
+    '<div class="hero-pad">' +
+    '<div class="hero-section-title">画面遷移表 — ISTQB 状態遷移テスト</div>' +
+    `<p style="color:var(--text-muted);font-size:12px;margin:0 0 12px">${rows.length}件の遷移。共通ナビ（${Math.floor(screens.length * 0.5)}件以上から発生）は除外しています。</p>` +
+    '<div style="overflow-x:auto">' +
+    '<table class="trans-table">' +
+    '<thead><tr><th>現在の画面</th><th>タイトル</th><th>イベント</th><th>遷移先</th><th>遷移先タイトル</th><th>アクション</th></tr></thead>' +
+    `<tbody>${tableRows}</tbody>` +
+    '</table></div></div>';
+}

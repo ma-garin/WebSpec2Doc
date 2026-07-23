@@ -1,0 +1,91 @@
+
+// ---- 再クロール（ドリフト検知）: 既知のサイトを同じ画面構成で取り直す ----
+
+async function recrawlSite(domain) {
+  let site = null, urls = [], auth = getSettings().auth || '';
+  // 前回クロールで「認証が必要」と判定された画面の URL 集合とログインページ URL。
+  // これを使わず一律 login_required:false で復元すると、再クロールのたびに
+  // 「認証が必要なページ」バナー直下のログインフォームが消える再発バグになる。
+  let loginUrlSet = new Set(), loginLandingUrl = '';
+  try { site = (await fetch('/api/site?domain=' + encodeURIComponent(domain)).then(r => r.json())).site; } catch (e) {}
+  if (site) {
+    urls = site.urls || [];
+    auth = site.auth_path || auth;
+    loginUrlSet = new Set(site.login_urls || []);
+    loginLandingUrl = site.login_landing_url || '';
+  } else {
+    try {
+      const data = await fetch('/api/result?domain=' + encodeURIComponent(domain)).then(r => r.json());
+      if (data.files && data.files.json) {
+        const rj = await fetch('/preview?path=' + encodeURIComponent(data.files.json)).then(r => r.json());
+        urls = (rj.screens || []).map(s => ({ url: s.url, title: s.title || s.url }));
+      }
+    } catch (e) {}
+  }
+  if (!urls.length) urls = [{ url: 'https://' + domain + '/', title: domain }];
+
+  // P2へ遷移して前回設定を復元
+  switchView('generate');
+  executionView.classList.add('hidden'); resultPanel.classList.add('hidden');
+  appContent.classList.remove('is-executing'); genPanel.style.display = '';
+
+  document.getElementById('url-input').value = 'https://' + domain + '/';
+  if (auth) document.getElementById('auth-path').value = auth;
+  if (loginLandingUrl) document.getElementById('login-url').value = loginLandingUrl;
+  document.getElementById('compare').checked = true;
+  document.getElementById('p1-summary').style.display = 'none';
+
+  // 前回の画面リストを復元（認証必須フラグも site.json から復元する）
+  discovered = (Array.isArray(urls) ? urls : []).map(u => {
+    const url = typeof u === 'string' ? u : u.url;
+    const title = typeof u === 'string' ? u : (u.title || u.url);
+    const loginRequired = loginUrlSet.has(url);
+    return {
+      url,
+      title,
+      login_required: loginRequired,
+      login_reasons: [],
+      login_url: loginRequired ? loginLandingUrl : '',
+    };
+  });
+  renderDiscovered();
+  // クロール方法（自動クロール／選択したURLのみ）も前回設定から復元する。
+  // renderDiscovered() が画面リストパネルの表示状態を上書きするため、その後に呼ぶ。
+  setCrawlTargetMode(site && site.crawl_mode === 'auto' ? 'auto' : 'selected');
+  showWizardStep(2);
+  showToast(`前回の対象画面（${discovered.length}件）を復元しました。条件を確認して実行してください`, 'info');
+}
+
+async function openResultsForDomain(domain, tab, sub) {
+  switchView('generate');
+  genPanel.style.display = 'none';
+  executionView.classList.add('hidden');
+  // レポート表示は is-reporting を使う（is-executing はクロール実行中専用の状態フラグ）。
+  // 誤って is-executing を付けると、他画面へ移動しても解除されずスクロール不能になる不具合の温床だった。
+  appContent.classList.remove('is-executing');
+  appContent.classList.add('is-reporting');
+  resultPanel.classList.remove('hidden');
+  uiSkeleton(document.getElementById('rp-overview'), 'table');
+  // ディープリンク: URLハッシュにレポート状態を保存（チーム共有用）
+  try { history.replaceState(null, '', '#report/' + encodeURIComponent(domain)); } catch (e) {}
+  await showResults(domain, tab, sub);
+}
+
+// ページロード時にハッシュ #report/<domain>[/<tab>[/<sub>]] があればそのレポートを直接開く
+// （旧8タブ時代のタブ名は results.js の互換マップで新タブへ解決される）
+window.addEventListener('DOMContentLoaded', () => {
+  const m = location.hash.match(/^#report\/([^/]+)(?:\/([^/]+))?(?:\/([^/]+))?$/);
+  if (m) {
+    const domain = decodeURIComponent(m[1]);
+    const tab = m[2] ? decodeURIComponent(m[2]) : undefined;
+    const sub = m[3] ? decodeURIComponent(m[3]) : undefined;
+    setTimeout(() => {
+      openResultsForDomain(domain, tab, sub);
+      window._appBooted = true;
+    }, 300);
+  } else {
+    window._appBooted = true;
+  }
+});
+
+

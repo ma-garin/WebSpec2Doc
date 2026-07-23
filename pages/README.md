@@ -31,3 +31,24 @@ UIが変わったら、ローカルで `make demo` を起動した状態で Play
 
 - ここは**閲覧専用のショーケース**です。解析の実行はできません（本体は Flask + Playwright のためサーバ実行が必要）。
 - `sample/report.html` は生成物のコピーに `<style>` を1ブロック追記しています（モバイル閲覧補正）。生成物本体（`docs/demo/sample_output/`）は無改変です。
+
+## app/ — インタラクティブ・サンプルデモ（バックエンド不要）
+
+`app/` は **本物の WebSpec2Doc フロントエンド**（`static/` の実資産＋サーバ描画済みHTML）を
+GitHub Pages 上でそのまま動かすための静的バンドル。バックエンド（Flask + Playwright）は
+使わず、`mock-backend.js` が `fetch` / `<img>.src` / `innerHTML` を横取りして、実サーバから
+採取済みの応答（`fixtures/`）を**サンプル値として再生**する。
+
+- 対象データ: 同梱デモ DemoMart を実際に解析した実測記録（`_build/harvest.py` で採取）
+- 再生範囲: URL入力 → 画面分析(SSE) → 条件設定 → 解析(ライブ進捗・プレビュー) → レポート全タブ
+- 公開URL: `https://ma-garin.github.io/WebSpec2Doc/app/`
+
+### 再生成（UI変更時）
+
+```bash
+make demo   # 本体(8765)+デモ(8766)を起動した状態で
+python pages/app/_build/harvest.py <capture_dir>     # 実通信を採取
+python pages/app/_build/build.py <capture_dir>       # pages/app/ を再生成
+```
+
+`mock-backend.js` は手書き（採取に依存しない）。`static/` は実資産の無改変コピー。

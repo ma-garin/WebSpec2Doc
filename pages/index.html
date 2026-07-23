@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WebSpec2Doc — 実機デモ・ショーケース</title>
+<meta name="description" content="URLを渡すだけでQAテストインプット文書を自動生成するWebSpec2Docの実機UIと生成レポートのサンプル。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%231976D2'/%3E%3Ctext x='50' y='68' font-size='52' font-weight='bold' fill='white' text-anchor='middle' font-family='sans-serif'%3EW%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --color-primary:#1976D2;--color-primary-light:#E3F2FD;--color-primary-dark:#0D47A1;
+  --color-bg:#F8F9FA;--color-surface:#FFFFFF;--color-surface-2:#F1F3F4;
+  --color-border:#E0E0E0;--color-divider:#F0F0F0;
+  --color-text:#212121;--color-text-secondary:#616161;--color-text-disabled:#9E9E9E;
+  --color-low:#388E3C;--color-low-bg:#E8F5E9;--color-info:#0288D1;--color-info-bg:#E1F5FE;
+  --font-main:'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif;
+  --font-mono:'JetBrains Mono','Consolas',monospace;
+  --text-xs:11px;--text-sm:13px;--text-base:14px;--text-md:16px;--text-lg:18px;--text-xl:22px;--text-2xl:28px;
+  --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-6:24px;--space-8:32px;--space-12:48px;
+  --radius-sm:4px;--radius-md:8px;--radius-lg:12px;--radius-full:9999px;
+  --shadow-sm:0 1px 3px rgba(0,0,0,.08);--shadow-md:0 2px 8px rgba(0,0,0,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-main);font-size:var(--text-base);line-height:1.7;color:var(--color-text);background:var(--color-bg)}
+a{color:var(--color-primary)}
+img,video{max-width:100%;height:auto;display:block}
+.container{max-width:960px;margin:0 auto;padding:0 var(--space-4)}
+
+header.hero{background:linear-gradient(160deg,#0D47A1 0%,#1976D2 60%,#2196F3 100%);color:#fff;padding:var(--space-12) 0 var(--space-8)}
+.hero .brand{display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-6)}
+.brand-mark{width:44px;height:44px;border-radius:10px;background:#fff;color:var(--color-primary);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:22px;flex-shrink:0}
+.hero h1{font-size:var(--text-2xl);line-height:1.4}
+.hero .tagline{font-size:var(--text-md);opacity:.92;margin-top:var(--space-2)}
+.hero .note{display:inline-block;margin-top:var(--space-4);padding:var(--space-2) var(--space-3);background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);border-radius:var(--radius-md);font-size:var(--text-sm)}
+.cta-row{display:flex;flex-wrap:wrap;gap:var(--space-3);margin-top:var(--space-6)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-2);min-height:44px;padding:0 var(--space-6);border-radius:var(--radius-md);font-size:var(--text-base);font-weight:600;text-decoration:none;transition:filter .15s}
+.btn:hover{filter:brightness(1.08)}
+.btn-white{background:#fff;color:var(--color-primary-dark)}
+.btn-ghost{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.7)}
+
+section{padding:var(--space-12) 0 0}
+section:last-of-type{padding-bottom:var(--space-12)}
+.section-title{font-size:var(--text-xl);font-weight:700;margin-bottom:var(--space-2)}
+.section-lead{color:var(--color-text-secondary);margin-bottom:var(--space-6)}
+.badge{display:inline-flex;align-items:center;padding:2px 10px;border-radius:var(--radius-full);font-size:var(--text-xs);font-weight:600}
+.badge-live{background:var(--color-low-bg);color:var(--color-low)}
+.badge-info{background:var(--color-info-bg);color:var(--color-info)}
+
+.video-card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4);box-shadow:var(--shadow-sm)}
+.video-card video{border-radius:var(--radius-md);width:100%}
+.video-caption{font-size:var(--text-sm);color:var(--color-text-secondary);margin-top:var(--space-3)}
+
+.steps{display:grid;gap:var(--space-6);counter-reset:step}
+.step{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);box-shadow:var(--shadow-sm);overflow:hidden}
+.step-head{display:flex;gap:var(--space-3);align-items:flex-start;padding:var(--space-4) var(--space-4) var(--space-3)}
+.step-num{counter-increment:step;flex-shrink:0;width:32px;height:32px;border-radius:50%;background:var(--color-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:var(--text-md)}
+.step-num::before{content:counter(step)}
+.step h3{font-size:var(--text-lg);line-height:1.4}
+.step p{font-size:var(--text-sm);color:var(--color-text-secondary);margin-top:2px}
+.step a.shot{display:block;border-top:1px solid var(--color-divider)}
+.step img{width:100%}
+
+.grid-2{display:grid;gap:var(--space-6);grid-template-columns:1fr}
+@media(min-width:768px){.grid-2{grid-template-columns:1fr 1fr}}
+
+.mobile-row{display:flex;gap:var(--space-4);justify-content:center;flex-wrap:wrap}
+.mobile-shot{width:min(280px,80vw);border:1px solid var(--color-border);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);overflow:hidden;background:#fff}
+.mobile-shot figcaption{padding:var(--space-2) var(--space-3);font-size:var(--text-xs);color:var(--color-text-secondary);border-top:1px solid var(--color-divider)}
+
+.artifact-list{display:grid;gap:var(--space-3);grid-template-columns:1fr}
+@media(min-width:640px){.artifact-list{grid-template-columns:1fr 1fr}}
+.artifact{display:flex;gap:var(--space-3);align-items:center;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--space-3) var(--space-4);text-decoration:none;color:var(--color-text);min-height:44px}
+.artifact:hover{background:var(--color-primary-light)}
+.artifact .ext{flex-shrink:0;font-family:var(--font-mono);font-size:var(--text-xs);font-weight:700;background:var(--color-surface-2);border-radius:var(--radius-sm);padding:2px 8px;color:var(--color-primary-dark)}
+.artifact .desc{font-size:var(--text-sm);color:var(--color-text-secondary)}
+
+.run-card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--space-6);box-shadow:var(--shadow-sm)}
+pre.code{background:#263238;color:#ECEFF1;font-family:var(--font-mono);font-size:var(--text-sm);line-height:1.7;padding:var(--space-4);border-radius:var(--radius-md);overflow-x:auto;margin-top:var(--space-3)}
+
+footer{margin-top:var(--space-12);padding:var(--space-8) 0;background:var(--color-surface-2);border-top:1px solid var(--color-border);color:var(--color-text-secondary);font-size:var(--text-sm)}
+footer .container{display:grid;gap:var(--space-2)}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="container">
+    <div class="brand">
+      <div class="brand-mark">W</div>
+      <div>
+        <div style="font-weight:700;font-size:var(--text-lg)">WebSpec2Doc</div>
+        <div style="font-size:var(--text-xs);opacity:.85">URL → QA テストインプット文書 自動生成</div>
+      </div>
+    </div>
+    <h1>稼働中システムのURLを渡すだけで、<br>テスト設計を始められる文書一式を自動生成。</h1>
+    <p class="tagline">画面仕様・テスト条件・画面遷移図・Excel仕様書までワンクリック。ドキュメントのない現場でも、初日からテスト設計に入れます。</p>
+    <span class="note">📱 このページは実機UIのキャプチャで構成されたショーケースです。ツール本体はPC上で動作します（<a href="#run" style="color:#fff;text-decoration:underline">動かし方</a>）。</span>
+    <div class="cta-row">
+      <a class="btn btn-white" href="#video">▶ 操作の流れを動画で見る</a>
+      <a class="btn btn-ghost" href="sample/report.html">生成レポートのサンプルを開く</a>
+      <a class="btn btn-ghost" href="https://github.com/ma-garin/WebSpec2Doc">GitHub</a>
+    </div>
+  </div>
+</header>
+
+<section id="video">
+  <div class="container">
+    <h2 class="section-title">操作の流れ（実機・36秒） <span class="badge badge-live">実機キャプチャ</span></h2>
+    <p class="section-lead">同梱デモサイト DemoMart を実際に解析したときの記録です。URL入力 → 画面分析 → 条件設定 → 解析 → レポート表示まで、ノーカットの実速度。</p>
+    <div class="video-card">
+      <video src="assets/flow-desktop.mp4" poster="assets/shots/01-home.png" controls muted playsinline preload="metadata"></video>
+      <p class="video-caption">音声はありません。全画面表示でご覧いただくのがおすすめです。</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <h2 class="section-title">5ステップの操作ウォークスルー</h2>
+    <p class="section-lead">画像はすべて実際のUIのスクリーンショットです。タップすると原寸で開きます。</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-head"><span class="step-num"></span>
+          <div><h3>URLを入力して「解析を始める」</h3>
+          <p>ホーム画面のURL欄に対象システムのURLを入れるだけ。過去の解析履歴からの再クロールもできます。</p></div>
+        </div>
+        <a class="shot" href="assets/shots/01-home.png"><img src="assets/shots/01-home.png" alt="ホーム画面。URL入力欄と解析を始めるボタン" loading="lazy"></a>
+      </div>
+      <div class="step">
+        <div class="step-head"><span class="step-num"></span>
+          <div><h3>画面分析 — 何画面あるかを自動発見</h3>
+          <p>リンクをたどって画面を自動発見し、ライブフィードに逐次表示。ログインが必要な画面も検出します。</p></div>
+        </div>
+        <a class="shot" href="assets/shots/02-discover.png"><img src="assets/shots/02-discover.png" alt="画面分析中のライブフィード。発見された画面が逐次表示される" loading="lazy"></a>
+      </div>
+      <div class="step">
+        <div class="step-head"><span class="step-num"></span>
+          <div><h3>条件設定 — 対象画面と深さを選ぶ</h3>
+          <p>発見された画面から解析対象を選択。クロール深度・並列数・認証情報もここで設定できます。</p></div>
+        </div>
+        <a class="shot" href="assets/shots/03-conditions.png"><img src="assets/shots/03-conditions.png" alt="条件設定画面。対象画面の選択とクロール設定" loading="lazy"></a>
+      </div>
+      <div class="step">
+        <div class="step-head"><span class="step-num"></span>
+          <div><h3>解析実行 — ライブプレビュー付き</h3>
+          <p>解析中の画面がリアルタイムで見えます。robots.txt の Crawl-Delay を尊重するなど、クロール礼儀は既定で有効。進捗・残り時間・ログも表示されます。</p></div>
+        </div>
+        <a class="shot" href="assets/shots/04-crawl-live.png"><img src="assets/shots/04-crawl-live.png" alt="解析実行中。ライブプレビューと進捗バー、robots.txt尊重のログ" loading="lazy"></a>
+      </div>
+      <div class="step">
+        <div class="step-head"><span class="step-num"></span>
+          <div><h3>生成完了 → レポートへ</h3>
+          <p>数分で画面仕様書・テスト設計・遷移図が揃います（10画面で約2〜3分が目安）。</p></div>
+        </div>
+        <a class="shot" href="assets/shots/05-complete.png"><img src="assets/shots/05-complete.png" alt="生成完了ダイアログ" loading="lazy"></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <h2 class="section-title">生成されるレポート</h2>
+    <p class="section-lead">エグゼクティブサマリーからテスト設計技法の推奨まで。<a href="sample/report.html">サンプルレポート本体はこちら</a>（スマホでもそのまま読めます）。</p>
+    <div class="grid-2">
+      <div class="step">
+        <div class="step-head"><div><h3>概要 — リスク上位画面を提示</h3>
+          <p>画面数・入力項目・概算テストケース数を集計し、優先テスト対象をリスクスコア順に提案します。</p></div></div>
+        <a class="shot" href="assets/shots/06-report-overview.png"><img src="assets/shots/06-report-overview.png" alt="レポート概要タブ。エグゼクティブサマリーとリスク上位画面" loading="lazy"></a>
+      </div>
+      <div class="step">
+        <div class="step-head"><div><h3>画面と仕様 — 実測ベースの画面カタログ</h3>
+          <p>入力フィールド・制約・ロケータ候補を画面ごとに整理。根拠（実測セレクタ・スクショ座標）付きです。</p></div></div>
+        <a class="shot" href="assets/shots/07-report-screens.png"><img src="assets/shots/07-report-screens.png" alt="画面と仕様タブ。画面カタログ" loading="lazy"></a>
+      </div>
+      <div class="step">
+        <div class="step-head"><div><h3>テスト設計 — 技法の自動推奨</h3>
+          <p>同値分割・境界値分析・デシジョンテーブル等を画面要素から自動判定し、テスト条件に展開します。</p></div></div>
+        <a class="shot" href="assets/shots/08-report-testdesign.png"><img src="assets/shots/08-report-testdesign.png" alt="テスト設計タブ。テスト条件と技法マトリクス" loading="lazy"></a>
+      </div>
+      <div class="step">
+        <div class="step-head"><div><h3>画面遷移 — UML図と遷移表</h3>
+          <p>シーケンス図・アクティビティ図・テスト観点マップと、ISTQB標準の画面遷移表を自動生成。SVG/PNG/Mermaidでエクスポートできます。</p></div></div>
+        <a class="shot" href="assets/shots/09-report-flow.png"><img src="assets/shots/09-report-flow.png" alt="画面遷移タブ。シーケンス図" loading="lazy"></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <h2 class="section-title">スマホからの閲覧 <span class="badge badge-info">レポート閲覧はモバイル対応</span></h2>
+    <p class="section-lead">解析の実行はPCで行いますが、生成されたレポートやこのショーケースはスマホからそのまま閲覧できます。</p>
+    <div class="mobile-row">
+      <figure class="mobile-shot">
+        <a href="assets/shots/m-home.png"><img src="assets/shots/m-home.png" alt="モバイル表示のホーム画面" loading="lazy"></a>
+        <figcaption>本体UI（モバイル表示）</figcaption>
+      </figure>
+      <figure class="mobile-shot">
+        <a href="assets/shots/m-report.png"><img src="assets/shots/m-report.png" alt="モバイル表示のレポート画面" loading="lazy"></a>
+        <figcaption>レポート（モバイル表示）</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <h2 class="section-title">成果物サンプル一式</h2>
+    <p class="section-lead">1回の解析で以下がまとめて生成されます。すべて実際の生成物です。</p>
+    <div class="artifact-list">
+      <a class="artifact" href="sample/report.html"><span class="ext">HTML</span><span>report.html<br><span class="desc">画面別仕様・テスト条件・スクショ付きレポート</span></span></a>
+      <a class="artifact" href="sample/spec.xlsx"><span class="ext">XLSX</span><span>spec.xlsx<br><span class="desc">Excel仕様書（テスト管理表への転記用）</span></span></a>
+      <a class="artifact" href="sample/report.json"><span class="ext">JSON</span><span>report.json<br><span class="desc">構造化JSON（自動化・CI連携用）</span></span></a>
+      <a class="artifact" href="sample/screens.md"><span class="ext">MD</span><span>screens.md<br><span class="desc">Markdown形式の画面一覧</span></span></a>
+      <a class="artifact" href="sample/forms.md"><span class="ext">MD</span><span>forms.md<br><span class="desc">Markdown形式のフォーム一覧</span></span></a>
+      <a class="artifact" href="sample/transition.mmd"><span class="ext">MMD</span><span>transition.mmd<br><span class="desc">画面遷移図（Mermaid形式）</span></span></a>
+    </div>
+  </div>
+</section>
+
+<section id="run">
+  <div class="container">
+    <h2 class="section-title">自分の環境で動かすには</h2>
+    <div class="run-card">
+      <p>本体はローカルPC（またはサーバ）で動作します。外部ネットワークもAPIキーも不要で、同梱デモサイトを対象にすべての機能を試せます。</p>
+      <pre class="code">git clone https://github.com/ma-garin/WebSpec2Doc.git
+cd WebSpec2Doc
+python3.12 -m venv venv &amp;&amp; source venv/bin/activate
+pip install -r requirements-dev.txt
+python scripts/manage_playwright_runtime.py install
+make demo   # デモサイトと本体を同時起動</pre>
+      <p style="margin-top:var(--space-3);font-size:var(--text-sm);color:var(--color-text-secondary)">詳しくは <a href="https://github.com/ma-garin/WebSpec2Doc#readme">README</a> と、専門用語なしの<a href="https://github.com/ma-garin/WebSpec2Doc/blob/main/docs/GUIDE_ja.md">入門ガイド</a>をどうぞ。</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <div>本ページの画像・動画は、同梱デモサイト「DemoMart」を WebSpec2Doc で実際に解析した際の実機キャプチャです。</div>
+    <div>© WebSpec2Doc — <a href="https://github.com/ma-garin/WebSpec2Doc">github.com/ma-garin/WebSpec2Doc</a></div>
+  </div>
+</footer>
+
+</body>
+</html>

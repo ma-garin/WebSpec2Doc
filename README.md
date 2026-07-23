@@ -8,6 +8,8 @@
 
 > **はじめての方へ（非エンジニアの方も歓迎）**: 専門用語なしの入門ガイドを用意しています → **[docs/GUIDE_ja.md](docs/GUIDE_ja.md)**（日本語）／ [docs/GUIDE_en.md](docs/GUIDE_en.md)（English）。英語版 README は [README_en.md](README_en.md)。
 
+> **📱 オンラインショーケース（スマホ対応）**: インストール不要で画面と動きを確認できます → **https://ma-garin.github.io/WebSpec2Doc/**（実機UIの操作動画・スクリーンショット・生成レポートのサンプル。ソースは [`pages/`](pages/)、公開手順は [pages/README.md](pages/README.md)）。
+
 ---
 
 ## 主な機能

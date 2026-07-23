@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 import app as appmod
 import web.routes.autorun_stages as stages_mod
+
 from autorun.stages import Pipeline
 
 DOMAIN = "example.com"
@@ -81,17 +82,20 @@ class TestPipelineAudit:
 
 class TestApiRecordsHistory:
     def test_generate_is_recorded(self, client) -> None:
-        _post(client, "/api/autorun/stages/generate",
-              {"domain": DOMAIN, "stage_id": "test_objective"})
+        _post(
+            client, "/api/autorun/stages/generate", {"domain": DOMAIN, "stage_id": "test_objective"}
+        )
         entries = _audit(client)
         assert entries and entries[0]["action"] == "generate"
         assert "項目を生成" in entries[0]["detail"]
 
     def test_approval_is_recorded(self, client) -> None:
-        _post(client, "/api/autorun/stages/generate",
-              {"domain": DOMAIN, "stage_id": "test_objective"})
-        _post(client, "/api/autorun/stages/approve",
-              {"domain": DOMAIN, "stage_id": "test_objective"})
+        _post(
+            client, "/api/autorun/stages/generate", {"domain": DOMAIN, "stage_id": "test_objective"}
+        )
+        _post(
+            client, "/api/autorun/stages/approve", {"domain": DOMAIN, "stage_id": "test_objective"}
+        )
         actions = [e["action"] for e in _audit(client)]
         assert "approve" in actions
 
@@ -103,49 +107,69 @@ class TestApiRecordsHistory:
         assert "前提" in approve["detail"]
 
     def test_item_approval_and_edit_are_distinguished(self, client) -> None:
-        body = _post(client, "/api/autorun/stages/generate",
-                     {"domain": DOMAIN, "stage_id": "features"}).get_json()
+        body = _post(
+            client, "/api/autorun/stages/generate", {"domain": DOMAIN, "stage_id": "features"}
+        ).get_json()
         stage = next(s for s in body["stages"] if s["stage_id"] == "features")
         item_id = stage["items"][0]["item_id"]
 
-        _post(client, "/api/autorun/stages/item",
-              {"domain": DOMAIN, "stage_id": "features", "item_id": item_id, "approved": True})
-        _post(client, "/api/autorun/stages/item",
-              {"domain": DOMAIN, "stage_id": "features", "item_id": item_id, "title": "書換"})
+        _post(
+            client,
+            "/api/autorun/stages/item",
+            {"domain": DOMAIN, "stage_id": "features", "item_id": item_id, "approved": True},
+        )
+        _post(
+            client,
+            "/api/autorun/stages/item",
+            {"domain": DOMAIN, "stage_id": "features", "item_id": item_id, "title": "書換"},
+        )
 
         actions = [e["action"] for e in _audit(client)]
         assert "item_approve" in actions
         assert "item_edit" in actions
 
     def test_unapproval_is_recorded(self, client) -> None:
-        body = _post(client, "/api/autorun/stages/generate",
-                     {"domain": DOMAIN, "stage_id": "features"}).get_json()
-        item_id = next(s for s in body["stages"]
-                       if s["stage_id"] == "features")["items"][0]["item_id"]
-        _post(client, "/api/autorun/stages/item",
-              {"domain": DOMAIN, "stage_id": "features", "item_id": item_id, "approved": True})
-        _post(client, "/api/autorun/stages/item",
-              {"domain": DOMAIN, "stage_id": "features", "item_id": item_id, "approved": False})
+        body = _post(
+            client, "/api/autorun/stages/generate", {"domain": DOMAIN, "stage_id": "features"}
+        ).get_json()
+        item_id = next(s for s in body["stages"] if s["stage_id"] == "features")["items"][0][
+            "item_id"
+        ]
+        _post(
+            client,
+            "/api/autorun/stages/item",
+            {"domain": DOMAIN, "stage_id": "features", "item_id": item_id, "approved": True},
+        )
+        _post(
+            client,
+            "/api/autorun/stages/item",
+            {"domain": DOMAIN, "stage_id": "features", "item_id": item_id, "approved": False},
+        )
         assert "item_unapprove" in [e["action"] for e in _audit(client)]
 
     def test_adopting_llm_suggestion_is_recorded(self, client) -> None:
-        _post(client, "/api/autorun/stages/generate",
-              {"domain": DOMAIN, "stage_id": "test_objective"})
-        _post(client, "/api/autorun/stages/adopt",
-              {"domain": DOMAIN, "stage_id": "test_objective", "title": "セキュリティ観点"})
+        _post(
+            client, "/api/autorun/stages/generate", {"domain": DOMAIN, "stage_id": "test_objective"}
+        )
+        _post(
+            client,
+            "/api/autorun/stages/adopt",
+            {"domain": DOMAIN, "stage_id": "test_objective", "title": "セキュリティ観点"},
+        )
         adopt = [e for e in _audit(client) if e["action"] == "adopt_llm"]
         assert adopt and "セキュリティ観点" in adopt[0]["detail"]
 
     def test_history_is_ordered_and_persisted(self, client, workspace) -> None:
         for stage_id in ("test_objective", "test_plan"):
-            _post(client, "/api/autorun/stages/generate",
-                  {"domain": DOMAIN, "stage_id": stage_id})
-            _post(client, "/api/autorun/stages/approve",
-                  {"domain": DOMAIN, "stage_id": stage_id})
+            _post(client, "/api/autorun/stages/generate", {"domain": DOMAIN, "stage_id": stage_id})
+            _post(client, "/api/autorun/stages/approve", {"domain": DOMAIN, "stage_id": stage_id})
 
         entries = _audit(client)
         assert [e["action"] for e in entries] == [
-            "generate", "approve", "generate", "approve",
+            "generate",
+            "approve",
+            "generate",
+            "approve",
         ]
         saved = json.loads(
             (workspace / DOMAIN / "qa_process" / "stages.json").read_text(encoding="utf-8")
@@ -160,10 +184,13 @@ class TestProgressSummary:
         assert body["approved_stage_count"] == 0
         assert body["stage_total"] == 8
 
-        _post(client, "/api/autorun/stages/generate",
-              {"domain": DOMAIN, "stage_id": "test_objective"})
-        _post(client, "/api/autorun/stages/approve",
-              {"domain": DOMAIN, "stage_id": "test_objective"})
-        assert client.get(
-            f"/api/autorun/stages?domain={DOMAIN}"
-        ).get_json()["approved_stage_count"] == 1
+        _post(
+            client, "/api/autorun/stages/generate", {"domain": DOMAIN, "stage_id": "test_objective"}
+        )
+        _post(
+            client, "/api/autorun/stages/approve", {"domain": DOMAIN, "stage_id": "test_objective"}
+        )
+        assert (
+            client.get(f"/api/autorun/stages?domain={DOMAIN}").get_json()["approved_stage_count"]
+            == 1
+        )

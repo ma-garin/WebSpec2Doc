@@ -93,7 +93,6 @@ class TestUserGuideScroll:
         overflow = page.eval_on_selector("#app-content", "el => getComputedStyle(el).overflow")
         assert overflow == "auto", f"#app-content が overflow:auto でない（{overflow}）"
 
-
     def test_content_taller_than_viewport(self, page: Page) -> None:
         """ユーザーガイドの中身がビューポートより長く、実際にスクロールが必要な分量であること。"""
         page.goto(BASE_URL)
@@ -106,12 +105,8 @@ class TestUserGuideScroll:
         ), "ガイドの中身がビューポート内に収まってしまっている（検証条件として不十分）"
 
 
-
 class TestSettingsTabs:
     """設定画面のタブ切替（再発防止: click ハンドラ未実装）。"""
-
-
-
 
 
 class TestHistoryDiffFeedback:
@@ -121,9 +116,6 @@ class TestHistoryDiffFeedback:
         page.goto(f"{BASE_URL}/#report/{DIFF_DOMAIN}/history")
         expect(page.locator("#result-panel")).to_be_visible()
         expect(page.locator("#tl-diff-btn")).to_be_visible(timeout=10_000)
-
-
-
 
     def test_no_javascript_errors(self, page: Page) -> None:
         js_errors: list[str] = []

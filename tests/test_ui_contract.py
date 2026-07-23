@@ -94,7 +94,7 @@ class TestSystemScoping:
             r'<button[^>]*data-system="' + system + r'"[^>]*>.*?' + re.escape(label) + r"</span>",
             re.DOTALL,
         )
-        assert pattern.search(spa), f"ナビ「{label}」に data-system=\"{system}\" がありません"
+        assert pattern.search(spa), f'ナビ「{label}」に data-system="{system}" がありません'
 
     def test_new_analysis_button_is_docs_only(self, spa: str) -> None:
         """サイドバーの「新規解析」ボタンは AutoRun 側で隠れる必要がある。"""

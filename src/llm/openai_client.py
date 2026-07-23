@@ -78,10 +78,9 @@ def resolve_endpoint(model: str | None = None) -> LLMEndpoint:
     ベース URL がローカル（Ollama 等）の場合、API キーは不要なので置き値を使う。
     """
     base_url = os.environ.get(ENV_BASE_URL, "").strip() or DEFAULT_BASE_URL
-    resolved_model = (model or os.environ.get(ENV_MODEL, "").strip() or "gpt-4o-mini")
+    resolved_model = model or os.environ.get(ENV_MODEL, "").strip() or "gpt-4o-mini"
     api_key = (
-        os.environ.get(ENV_API_KEY, "").strip()
-        or os.environ.get("OPENAI_API_KEY", "").strip()
+        os.environ.get(ENV_API_KEY, "").strip() or os.environ.get("OPENAI_API_KEY", "").strip()
     )
     is_local = "127.0.0.1" in base_url or "localhost" in base_url
     if not api_key and is_local:

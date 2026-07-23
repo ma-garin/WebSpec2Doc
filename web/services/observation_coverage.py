@@ -65,7 +65,10 @@ class ObservationCoverage:
         """
         base = f"本実行が観測できたのは {self.observed_pages} ページ（正規化後 {self.canonical_screens} 画面）です。"
         if not self.gaps:
-            return base + "観測範囲外として検出された領域はありません（ただし観測手段の限界は残ります）。"
+            return (
+                base
+                + "観測範囲外として検出された領域はありません（ただし観測手段の限界は残ります）。"
+            )
         listed = "、".join(f"{g.kind}（{g.count}）" for g in self.gaps)
         return (
             base
@@ -101,7 +104,7 @@ def analyze(
 
 def _int_or_none(value: object) -> int | None:
     try:
-        return int(value)  # type: ignore[arg-type]
+        return int(value)  # type: ignore[call-overload]
     except (TypeError, ValueError):
         return None
 

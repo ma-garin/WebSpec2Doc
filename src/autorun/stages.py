@@ -199,7 +199,9 @@ class Stage:
         return replace(self, status=status)
 
     def with_item(self, item: StageItem) -> Stage:
-        items = tuple(item if existing.item_id == item.item_id else existing for existing in self.items)
+        items = tuple(
+            item if existing.item_id == item.item_id else existing for existing in self.items
+        )
         return replace(self, items=items)
 
     def to_dict(self) -> dict[str, Any]:
@@ -420,10 +422,7 @@ class Observation:
     @property
     def required_input_count(self) -> int:
         return sum(
-            1
-            for _, form in self.forms
-            for field_ in form_fields(form)
-            if field_.get("required")
+            1 for _, form in self.forms for field_ in form_fields(form) if field_.get("required")
         )
 
     @property
@@ -662,7 +661,9 @@ _VIEWPOINT_RULES: Final[tuple[tuple[str, str], ...]] = (
 )
 
 
-def _build_viewpoints(obs: Observation, features: Stage | None) -> tuple[tuple[StageItem, ...], str]:
+def _build_viewpoints(
+    obs: Observation, features: Stage | None
+) -> tuple[tuple[StageItem, ...], str]:
     approved_features = [i for i in (features.items if features else ()) if i.approved]
     targets = approved_features or list(features.items if features else ())
 
@@ -690,7 +691,10 @@ def _build_viewpoints(obs: Observation, features: Stage | None) -> tuple[tuple[S
 
 
 _TECHNIQUE_BY_VIEWPOINT: Final[dict[str, tuple[str, str]]] = {
-    "入力検証": ("同値分割・境界値分析", "入力項目ごとに有効／無効の同値クラスと境界値を洗い出す。"),
+    "入力検証": (
+        "同値分割・境界値分析",
+        "入力項目ごとに有効／無効の同値クラスと境界値を洗い出す。",
+    ),
     "エラー処理": ("デシジョンテーブル", "エラー条件の組合せと期待する応答を表で網羅する。"),
     "画面遷移": ("状態遷移テスト", "画面を状態、操作を遷移とみなし、遷移網羅の基準で経路を選ぶ。"),
     "データ整合": ("組合せ（ペアワイズ）", "画面をまたぐ入力の組合せを2因子間で網羅する。"),
@@ -712,7 +716,9 @@ def _build_basic_design(
     seen: set[str] = set()
     for vp in viewpoints.items if viewpoints else ():
         name = str(vp.data.get("viewpoint") or "")
-        technique, how = _TECHNIQUE_BY_VIEWPOINT.get(name, ("シナリオテスト", "利用シナリオに沿って確認する。"))
+        technique, how = _TECHNIQUE_BY_VIEWPOINT.get(
+            name, ("シナリオテスト", "利用シナリオに沿って確認する。")
+        )
         item_id = f"bd-{vp.item_id}"
         if item_id in seen:
             continue
@@ -790,14 +796,12 @@ def _technique_items(obs: Observation | None) -> list[StageItem]:
 def _format_value_table(fields: list[dict[str, Any]]) -> str:
     """同値クラス・境界値を、人が読める表として整形する。"""
     lines: list[str] = []
-    for field in fields:
-        lines.append(f"■ {field['field']}（{field['field_type']}）")
+    for field_def in fields:
+        lines.append(f"■ {field_def['field']}（{field_def['field_type']}）")
         lines.append("  値 / 分類 / 期待結果 / 根拠")
-        for row in [*field["equivalence"], *field["boundary"]]:
+        for row in [*field_def["equivalence"], *field_def["boundary"]]:
             mark = "受理" if row["valid"] else "拒否"
-            lines.append(
-                f"  {_short(row['value'])} / {row['label']} / {mark} / {row['rationale']}"
-            )
+            lines.append(f"  {_short(row['value'])} / {row['label']} / {mark} / {row['rationale']}")
         lines.append("")
     return "\n".join(lines).rstrip()
 
@@ -1027,20 +1031,16 @@ def _build_playwright(automation: dict[str, Any] | None) -> tuple[tuple[StageIte
                 item_id="pw-unfiltered",
                 title="絞り込みは適用していません",
                 detail=(
-                    str(automation.get("reason") or "")
-                    + "\n全ての候補を自動化対象にしています。"
+                    str(automation.get("reason") or "") + "\n全ての候補を自動化対象にしています。"
                 ),
                 assumed=True,
             )
         )
 
     if unautomated:
-        rows = [
-            c for c in (automation.get("coverage") or []) if not c.get("automated")
-        ][:20]
+        rows = [c for c in (automation.get("coverage") or []) if not c.get("automated")][:20]
         listed = "\n".join(
-            f"・No.{c.get('case_no')} {c.get('screen', '')} / {c.get('title', '')}"
-            for c in rows
+            f"・No.{c.get('case_no')} {c.get('screen', '')} / {c.get('title', '')}" for c in rows
         )
         items.append(
             StageItem(

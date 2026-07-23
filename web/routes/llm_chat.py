@@ -84,9 +84,7 @@ def api_llm_chat() -> tuple[dict, int] | dict:
 
     messages: list[dict[str, str]] = [{"role": "system", "content": SYSTEM_PROMPT}]
     if context:
-        messages.append(
-            {"role": "system", "content": f"現在ユーザーが見ている段階: {context}"}
-        )
+        messages.append({"role": "system", "content": f"現在ユーザーが見ている段階: {context}"})
 
     if isinstance(history, list):
         for turn in history[-MAX_HISTORY_TURNS:]:

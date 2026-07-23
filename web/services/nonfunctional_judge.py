@@ -236,8 +236,10 @@ def _previous_a11y(baseline: dict[str, Any] | None) -> int | None:
             if isinstance(detail, dict) and "current" in detail:
                 return int(detail["current"])
             if isinstance(detail, dict) and "critical" in detail:
-                return int(detail.get("critical", 0)) + int(detail.get("serious", 0)) + int(
-                    detail.get("moderate", 0)
+                return (
+                    int(detail.get("critical", 0))
+                    + int(detail.get("serious", 0))
+                    + int(detail.get("moderate", 0))
                 )
     return None
 

@@ -9,8 +9,6 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-import pytest
-
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from autorun.automation_plan import build_plan
@@ -48,22 +46,41 @@ class TestWithoutApprovedCases:
 
 class TestSelection:
     def test_selects_only_candidates_traced_to_approved_cases(self) -> None:
-        pipeline = _pipeline_with_cases([
-            {"no": 1, "screen": "トップ", "case_type": "正常系",
-             "viewpoint": "表示", "_screen_ids": ["P001"]},
-        ])
+        pipeline = _pipeline_with_cases(
+            [
+                {
+                    "no": 1,
+                    "screen": "トップ",
+                    "case_type": "正常系",
+                    "viewpoint": "表示",
+                    "_screen_ids": ["P001"],
+                },
+            ]
+        )
         plan = build_plan(pipeline, CANDIDATES)
         assert plan.unfiltered is False
         ids = [c["id"] for c in plan.selected]
         assert ids == ["PW-0001", "PW-0002"], "P001 の候補だけが選ばれること"
 
     def test_does_not_duplicate_shared_candidates(self) -> None:
-        pipeline = _pipeline_with_cases([
-            {"no": 1, "screen": "トップ", "case_type": "正常系",
-             "viewpoint": "表示", "_screen_ids": ["P001"]},
-            {"no": 2, "screen": "トップ", "case_type": "異常系",
-             "viewpoint": "表示", "_screen_ids": ["P001"]},
-        ])
+        pipeline = _pipeline_with_cases(
+            [
+                {
+                    "no": 1,
+                    "screen": "トップ",
+                    "case_type": "正常系",
+                    "viewpoint": "表示",
+                    "_screen_ids": ["P001"],
+                },
+                {
+                    "no": 2,
+                    "screen": "トップ",
+                    "case_type": "異常系",
+                    "viewpoint": "表示",
+                    "_screen_ids": ["P001"],
+                },
+            ]
+        )
         plan = build_plan(pipeline, CANDIDATES)
         ids = [c["id"] for c in plan.selected]
         assert ids == ["PW-0001", "PW-0002"], "同じ候補を重複させない"
@@ -73,32 +90,63 @@ class TestUnautomatedIsReported:
     """自動化できなかったケースを必ず報告する。"""
 
     def test_case_without_candidate_is_marked_unautomated(self) -> None:
-        pipeline = _pipeline_with_cases([
-            {"no": 1, "screen": "トップ", "case_type": "正常系",
-             "viewpoint": "表示", "_screen_ids": ["P001"]},
-            {"no": 2, "screen": "問い合わせ", "case_type": "正常系",
-             "viewpoint": "入力検証", "_screen_ids": ["P500"]},
-        ])
+        pipeline = _pipeline_with_cases(
+            [
+                {
+                    "no": 1,
+                    "screen": "トップ",
+                    "case_type": "正常系",
+                    "viewpoint": "表示",
+                    "_screen_ids": ["P001"],
+                },
+                {
+                    "no": 2,
+                    "screen": "問い合わせ",
+                    "case_type": "正常系",
+                    "viewpoint": "入力検証",
+                    "_screen_ids": ["P500"],
+                },
+            ]
+        )
         plan = build_plan(pipeline, CANDIDATES)
         assert plan.automated_count == 1
         assert [c.case_no for c in plan.unautomated] == [2]
 
     def test_summary_states_unautomated_is_not_verified(self) -> None:
-        pipeline = _pipeline_with_cases([
-            {"no": 1, "screen": "トップ", "case_type": "正常系",
-             "viewpoint": "表示", "_screen_ids": ["P001"]},
-            {"no": 2, "screen": "他", "case_type": "正常系",
-             "viewpoint": "表示", "_screen_ids": ["P500"]},
-        ])
+        pipeline = _pipeline_with_cases(
+            [
+                {
+                    "no": 1,
+                    "screen": "トップ",
+                    "case_type": "正常系",
+                    "viewpoint": "表示",
+                    "_screen_ids": ["P001"],
+                },
+                {
+                    "no": 2,
+                    "screen": "他",
+                    "case_type": "正常系",
+                    "viewpoint": "表示",
+                    "_screen_ids": ["P500"],
+                },
+            ]
+        )
         text = "\n".join(build_plan(pipeline, CANDIDATES).summary_lines())
         assert "自動化できなかったケース" in text
         assert "自動では確認していない" in text
 
     def test_coverage_is_serialisable_for_the_report(self) -> None:
-        pipeline = _pipeline_with_cases([
-            {"no": 1, "screen": "トップ", "case_type": "正常系",
-             "viewpoint": "表示", "_screen_ids": ["P001"]},
-        ])
+        pipeline = _pipeline_with_cases(
+            [
+                {
+                    "no": 1,
+                    "screen": "トップ",
+                    "case_type": "正常系",
+                    "viewpoint": "表示",
+                    "_screen_ids": ["P001"],
+                },
+            ]
+        )
         data = build_plan(pipeline, CANDIDATES).to_dict()
         assert data["approved_case_count"] == 1
         assert data["automated_case_count"] == 1
@@ -108,18 +156,27 @@ class TestUnautomatedIsReported:
 class TestFallbackSafety:
     def test_falls_back_when_nothing_matches(self) -> None:
         """突合が全く成立しないなら、実行不能にするより全候補を使う。"""
-        pipeline = _pipeline_with_cases([
-            {"no": 1, "screen": "他", "case_type": "正常系",
-             "viewpoint": "表示", "_screen_ids": ["P900"]},
-        ])
+        pipeline = _pipeline_with_cases(
+            [
+                {
+                    "no": 1,
+                    "screen": "他",
+                    "case_type": "正常系",
+                    "viewpoint": "表示",
+                    "_screen_ids": ["P900"],
+                },
+            ]
+        )
         plan = build_plan(pipeline, CANDIDATES)
         assert plan.unfiltered is True
         assert len(plan.selected) == len(CANDIDATES)
         assert plan.unautomated, "未自動化の事実は残ること"
 
     def test_handles_cases_without_trace(self) -> None:
-        pipeline = _pipeline_with_cases([
-            {"no": 1, "screen": "不明", "case_type": "正常系", "viewpoint": "表示"},
-        ])
+        pipeline = _pipeline_with_cases(
+            [
+                {"no": 1, "screen": "不明", "case_type": "正常系", "viewpoint": "表示"},
+            ]
+        )
         plan = build_plan(pipeline, CANDIDATES)
         assert plan.unfiltered is True

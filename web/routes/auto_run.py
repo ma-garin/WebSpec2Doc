@@ -220,12 +220,8 @@ def _attach_stage_approval(runs: list[dict]) -> None:
             summary: dict[str, Any] | None = None
             if path.is_file():
                 try:
-                    pipeline = Pipeline.from_dict(
-                        json.loads(path.read_text(encoding="utf-8"))
-                    )
-                    skipped = [
-                        s.definition.name for s in pipeline.stages if s.status == "skipped"
-                    ]
+                    pipeline = Pipeline.from_dict(json.loads(path.read_text(encoding="utf-8")))
+                    skipped = [s.definition.name for s in pipeline.stages if s.status == "skipped"]
                     summary = {
                         "approved": pipeline.approved_stage_count,
                         "total": len(pipeline.stages),
@@ -513,14 +509,12 @@ _GATE_MESSAGES = {
     ),
     "detail_design": (
         "テスト詳細設計の承認待ち",
-        "ハイレベルテストケースを提示しました。確認し、承認すると"
-        "テストケース作成へ進みます。",
+        "ハイレベルテストケースを提示しました。確認し、承認すると" "テストケース作成へ進みます。",
         "テスト詳細設計",
     ),
     "test_cases": (
         "テストケースの承認待ち",
-        "ローレベルテストケースを提示しました。確認し、承認すると"
-        "Playwright 化へ進みます。",
+        "ローレベルテストケースを提示しました。確認し、承認すると" "Playwright 化へ進みます。",
         "テストケース",
     ),
     "playwright": (

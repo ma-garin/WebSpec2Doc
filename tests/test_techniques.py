@@ -36,17 +36,13 @@ class TestEquivalencePartitioning:
         assert "ドメインなし" in labels
 
     def test_number_range_yields_in_and_out_of_range(self) -> None:
-        values = equivalence_classes(
-            {"field_type": "number", "min_value": "1", "max_value": "9"}
-        )
+        values = equivalence_classes({"field_type": "number", "min_value": "1", "max_value": "9"})
         assert any(v.valid and v.label == "範囲内" for v in values)
         assert any(not v.valid and "下限未満" in v.label for v in values)
         assert any(not v.valid and "上限超過" in v.label for v in values)
 
     def test_select_treats_each_option_as_a_class(self) -> None:
-        values = equivalence_classes(
-            {"field_type": "select", "options": ["no", "email", "tel"]}
-        )
+        values = equivalence_classes({"field_type": "select", "options": ["no", "email", "tel"]})
         assert {v.value for v in values} >= {"no", "email", "tel"}
 
 

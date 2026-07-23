@@ -76,6 +76,7 @@ def mutant_kinds() -> tuple[str, ...]:
     """利用可能な変異体の種類（テスト・レビュー用に公開）。"""
     return (MUTANT_TOTAL, *sorted(_PARTIAL_MUTANT_SNIPPETS))
 
+
 _TEST_OPEN_PATTERN = re.compile(
     r"(test(?:\.skip)?\('[^']*',\s*async\s*\(\{\s*page\s*\}\)\s*=>\s*\{\n)"
 )

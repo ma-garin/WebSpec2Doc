@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 import app as appmod
 import web.routes.autorun_stages as stages_mod
+
 from autorun.stages import STAGE_TEST_PLAN, STATUS_SKIPPED, Pipeline
 
 DOMAIN = "example.com"

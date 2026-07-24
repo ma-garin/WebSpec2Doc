@@ -133,6 +133,19 @@ python src/main.py --url https://example.com --auth auth.json
 | `--compare` | off | 前回スナップショットとの差分を出力 |
 | `--ci` | off | `--compare --fail-on-drift` を有効化し、`CI_SUMMARY:` JSONをstdoutへ出力 |
 | `--auth` | — | 保存済みセッション（auth.json）を使ってクロール |
+| `--parallelism` | `1` | クロールの並列ワーカー数（1〜4、GUI 既定は 2）。オートクローリング・明示 URL の両モードで有効 |
+
+### クロール速度のチューニング
+
+並列化してもサイトへの礼儀は変わりません（robots.txt の Crawl-Delay と per-origin レート制御は
+全ワーカー共有で維持されます）。速度と観測の深さは次の環境変数で調整できます。
+
+| 環境変数 | デフォルト | 説明 |
+|---|---|---|
+| `WEBSPEC2DOC_CRAWL_INTERVAL_SEC` | `1.0` | リクエスト間隔の下限（秒）。robots の Crawl-Delay が長い場合はそちらを採用 |
+| `WEBSPEC2DOC_STABILITY_TIMEOUT_MS` | `3000` | ページ読み込み後の networkidle 安定待ち上限（ms）。`0` で待機なし |
+| `WEBSPEC2DOC_FULL_SCREENSHOT` | `1` | `0` で全体スクリーンショット（`{id}_full.png`）を省略し、ビューポート版のみ保存 |
+| `WEBSPEC2DOC_MAX_ACTIONS_PER_PAGE` | `10` | ページ内アクション探索（モーダル・タブ等）の最大クリック数 |
 
 ### CI で仕様ドリフトをゲートする
 

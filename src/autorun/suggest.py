@@ -117,6 +117,7 @@ def suggest_additions(
             json_schema=SUGGESTION_SCHEMA,
             timeout_sec=TIMEOUT_SEC,
             base_url=endpoint.base_url,
+            purpose="stage_suggest",
         )
     except LLMUnavailableError as exc:
         logger.info("LLM 提案に到達できません: %s", exc)

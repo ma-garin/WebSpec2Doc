@@ -295,12 +295,21 @@ def api_suggest() -> tuple[dict, int] | dict:
         f"入力項目 {obs.input_count}（必須 {obs.required_input_count}）/ "
         f"遷移 {obs.transition_count}"
     )
-    result = suggest_additions(
-        stage_name=stage.definition.name,
-        purpose=stage.definition.purpose,
-        context=context,
-        existing_titles=[item.title for item in stage.items],
-    )
+    # アクティビティログをサイトの出力ディレクトリへ残す（LLM 利用は必ず記録する）
+    from llm.activity_log import llm_activity_context
+
+    with llm_activity_context(
+        purpose="stage_suggest",
+        domain=domain,
+        stage_id=stage_id,
+        output_dir=_domain_dir(domain),
+    ):
+        result = suggest_additions(
+            stage_name=stage.definition.name,
+            purpose=stage.definition.purpose,
+            context=context,
+            existing_titles=[item.title for item in stage.items],
+        )
     return {"domain": domain, "stage_id": stage_id, **result.to_dict()}
 
 

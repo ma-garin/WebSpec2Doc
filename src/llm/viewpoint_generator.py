@@ -570,6 +570,7 @@ def _call_llm_for_abnormal_scenarios(
         prompt,
         ABNORMAL_SCENARIO_SCHEMA_NAME,
         ABNORMAL_SCENARIO_JSON_SCHEMA,
+        purpose="abnormal_scenarios",
     )
     items = parsed.get("scenarios", [])
     return [

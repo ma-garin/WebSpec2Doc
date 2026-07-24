@@ -23,10 +23,13 @@ from __future__ import annotations
 import json
 import logging
 import os
+import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from typing import Any
+
+from llm.activity_log import record_llm_activity
 
 logger = logging.getLogger(__name__)
 
@@ -121,18 +124,58 @@ def request_structured_json(
     json_schema: dict[str, Any],
     timeout_sec: int = DEFAULT_TIMEOUT_SEC,
     base_url: str | None = None,
+    purpose: str = "",
 ) -> dict[str, Any]:
     """Structured Outputs で LLM を呼び出し、応答 JSON を返す。
 
     `json_schema` 非対応のサーバでは `json_object` ＋プロンプト内スキーマへ退避する。
     接続できない場合は ``LLMUnavailableError`` を送出するので、呼び出し側は
     ルールベースのフォールバックへ切り替えること。
+
+    全ての呼び出し（成功・退避・失敗）をアクティビティログへ記録する。
+    purpose はログの用途識別子（未指定時は llm_activity_context の値）。
     """
-    endpoint = LLMEndpoint(
-        base_url=(base_url or os.environ.get(ENV_BASE_URL, "").strip() or DEFAULT_BASE_URL),
-        api_key=api_key,
-        model=model,
-    )
+    started_at = time.monotonic()
+    outcome = "ok"
+    detail = ""
+    resolved_base = base_url or os.environ.get(ENV_BASE_URL, "").strip() or DEFAULT_BASE_URL
+    try:
+        result, mode = _request_structured_json_impl(
+            api_key, model, prompt, schema_name, json_schema, timeout_sec, resolved_base
+        )
+        detail = mode
+        return result
+    except LLMUnavailableError as exc:
+        outcome, detail = "unavailable", str(exc)
+        raise
+    except LLMResponseError as exc:
+        outcome, detail = "invalid_response", str(exc)
+        raise
+    except urllib.error.HTTPError as exc:
+        outcome, detail = "http_error", str(exc)
+        raise
+    finally:
+        record_llm_activity(
+            purpose=purpose,
+            endpoint_url=f"{resolved_base.rstrip('/')}/chat/completions",
+            model=model,
+            outcome=outcome,
+            detail=detail,
+            prompt_chars=len(prompt),
+            duration_ms=int((time.monotonic() - started_at) * 1000),
+        )
+
+
+def _request_structured_json_impl(
+    api_key: str,
+    model: str,
+    prompt: str,
+    schema_name: str,
+    json_schema: dict[str, Any],
+    timeout_sec: int,
+    base_url: str,
+) -> tuple[dict[str, Any], str]:
+    endpoint = LLMEndpoint(base_url=base_url, api_key=api_key, model=model)
 
     strict_payload: dict[str, Any] = {
         "model": endpoint.model,
@@ -145,7 +188,8 @@ def request_structured_json(
     }
 
     try:
-        return _extract_json(_post_json(endpoint.chat_url, api_key, strict_payload, timeout_sec))
+        parsed = _extract_json(_post_json(endpoint.chat_url, api_key, strict_payload, timeout_sec))
+        return parsed, "json_schema"
     except urllib.error.HTTPError as exc:
         if exc.code not in (400, 404, 422, 501):
             raise LLMUnavailableError(f"LLM 呼び出しに失敗しました: {exc}") from exc
@@ -169,7 +213,10 @@ def request_structured_json(
         "temperature": 0,
     }
     try:
-        return _extract_json(_post_json(endpoint.chat_url, api_key, fallback_payload, timeout_sec))
+        parsed = _extract_json(
+            _post_json(endpoint.chat_url, api_key, fallback_payload, timeout_sec)
+        )
+        return parsed, "json_object_fallback"
     except urllib.error.URLError as exc:
         raise LLMUnavailableError(f"LLM エンドポイントへ到達できません: {exc.reason}") from exc
     except (TimeoutError, OSError) as exc:

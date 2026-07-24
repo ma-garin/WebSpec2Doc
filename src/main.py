@@ -287,11 +287,93 @@ def parse_args() -> argparse.Namespace:
             "（既定 OFF。--reference-doc と併用必須。単独指定は警告して無視）"
         ),
     )
+    _add_autorun_arguments(parser)
     args = parser.parse_args()
     if args.ci:
         args.compare = True
         args.fail_on_drift = True
     return args
+
+
+def _add_autorun_arguments(parser: argparse.ArgumentParser) -> None:
+    """AutoRun とその各工程を CLI から実行するための引数群（GUI 機能の CLI 化）。
+
+    これらのフラグ使用時のみ web 層を遅延 import する。通常のクロール CLI は
+    従来どおり web 非依存で動く。
+    """
+    group = parser.add_argument_group("AutoRun / QA パイプライン（GUI 機能の CLI 化）")
+    group.add_argument(
+        "--autorun",
+        action="store_true",
+        help=(
+            "AutoRun 全自動パイプラインを実行: discover→crawl→QA生成→(段階設計)→"
+            "spec.ts生成→Playwright実行→非機能/失敗分析。GUI と同じ全工程を非対話で回す"
+        ),
+    )
+    group.add_argument(
+        "--autorun-approve",
+        choices=("auto", "skip"),
+        default="auto",
+        help=(
+            "AutoRun の段階承認の扱い: auto=各段階の内容を生成・提示して自動承認"
+            "（設計成果物も生成／既定）, skip=関門を素通り（最速・成果物は簡素）"
+        ),
+    )
+    group.add_argument("--login-user", help="AutoRun: ログイン壁検知時のユーザー名")
+    group.add_argument("--login-pass", help="AutoRun: ログイン壁検知時のパスワード")
+    group.add_argument(
+        "--qa-process",
+        action="store_true",
+        help="クロール済み report.json から QA プロセス成果物一式を生成（AutoRun の QA 工程のみ）",
+    )
+    group.add_argument(
+        "--gen-spec",
+        action="store_true",
+        help="QA 生成済みの候補 JSON から Playwright .spec.ts を生成（AutoRun のスクリプト工程のみ）",
+    )
+    group.add_argument(
+        "--run-tests",
+        action="store_true",
+        help="生成済み .spec.ts を Playwright で実行（AutoRun のテスト実行工程のみ）",
+    )
+    group.add_argument(
+        "--mode",
+        choices=("url", "document"),
+        default="url",
+        help="AutoRun/工程のモード: url（既定）または document（--reference-doc 必須）",
+    )
+    group.add_argument(
+        "--selection-criterion",
+        default="vertex_coverage",
+        help="document モードのモデル網羅基準（vertex_coverage/edge_coverage/reached_target/prime_path）",
+    )
+    group.add_argument("--target-page-id", help="document モード reached_target 用の到達目標ページ ID")
+    group.add_argument(
+        "--observe-validation", action="store_true", help="document モード: 観測検証を有効化"
+    )
+    group.add_argument("--viewpoint-set-id", help="固定する観点セット ID（未指定は既定公開版）")
+    group.add_argument("--viewpoint-version", type=int, help="固定する観点セットの版番号")
+    group.add_argument(
+        "--filter-mode",
+        default="all",
+        choices=("all", "smoke", "transition", "form"),
+        help="--gen-spec/--run-tests: 生成/実行対象の絞り込み（既定 all）",
+    )
+    group.add_argument(
+        "--page-object", action="store_true", help="--gen-spec: Page Object 形式で生成"
+    )
+    group.add_argument(
+        "--device",
+        choices=("pc", "mobile"),
+        default="pc",
+        help="--run-tests: 実行デバイス（既定 pc）",
+    )
+    group.add_argument(
+        "--per-test-timeout",
+        type=int,
+        default=30,
+        help="--run-tests: テストごとのタイムアウト秒（既定 30）",
+    )
 
 
 def run(args: argparse.Namespace) -> None:
@@ -311,6 +393,18 @@ def run(args: argparse.Namespace) -> None:
     login_url = getattr(args, "login", None)
     if login_url:
         _capture_login(str(login_url), auth_path, getattr(args, "login_signal", None))
+        return
+    if bool(getattr(args, "autorun", False)):
+        _run_autorun(args)
+        return
+    if bool(getattr(args, "qa_process", False)):
+        _run_qa_process_step(args)
+        return
+    if bool(getattr(args, "gen_spec", False)):
+        _run_gen_spec_step(args)
+        return
+    if bool(getattr(args, "run_tests", False)):
+        _run_tests_step(args)
         return
     if bool(getattr(args, "discover", False)):
         _discover(args, auth_path)
@@ -1479,6 +1573,196 @@ def _parse_formats(raw_formats: str) -> tuple[str, ...]:
 
 def _domain_name(url: str) -> str:
     return domain_key_from_url(url)
+
+
+def _ensure_web_importable() -> None:
+    """`python src/main.py` 実行時は sys.path[0] が src/ のため、web パッケージを
+    import できるようリポジトリルートを sys.path に追加する。
+
+    AutoRun 等 GUI 由来の機能を CLI 化する経路でのみ呼ぶ。通常のクロール CLI は
+    web に依存しないため、この関数は呼ばれない（レイヤリングを保つ）。
+    """
+    repo_root = str(Path(__file__).resolve().parent.parent)
+    if repo_root not in sys.path:
+        sys.path.insert(0, repo_root)
+
+
+def _print_line(line: str) -> None:
+    print(line, flush=True)
+
+
+def _run_autorun(args: argparse.Namespace) -> None:
+    """AutoRun 全自動パイプラインを CLI から実行する（GUI と同じ全工程）。"""
+    url = str(args.url or "")
+    if not url:
+        logger.error("--autorun には --url が必要です")
+        sys.exit(2)
+
+    _ensure_web_importable()
+    from web.services.autorun_runner import (
+        autorun_exit_code,
+        build_autorun_job,
+        run_autorun_job,
+    )
+
+    mode = str(getattr(args, "mode", "url") or "url")
+    reference_docs: list[str] = []
+    selection_criterion = str(getattr(args, "selection_criterion", "vertex_coverage"))
+    target_page_id = str(getattr(args, "target_page_id", "") or "")
+    observe_validation = bool(getattr(args, "observe_validation", False))
+    if mode == "document":
+        from web.services.document_autorun import parse_document_autorun_config
+
+        raw_docs = [str(p) for p in (getattr(args, "reference_doc", None) or [])]
+        try:
+            config = parse_document_autorun_config(
+                {},
+                {
+                    "mode": "document",
+                    "reference_docs": raw_docs,
+                    "selection_criterion": selection_criterion,
+                    "target_page_id": target_page_id,
+                    "observe_validation": observe_validation,
+                },
+                url,
+            )
+        except ValueError as exc:
+            logger.error("document モードの設定が不正です: %s", exc)
+            sys.exit(2)
+        reference_docs = config.reference_docs
+        selection_criterion = config.selection_criterion
+        target_page_id = config.target_page_id
+        observe_validation = config.observe_validation
+
+    auth_path = getattr(args, "auth", None)
+    try:
+        job = build_autorun_job(
+            url,
+            output_dir=Path(args.output),
+            auth_path=str(auth_path) if auth_path else "",
+            mode=mode,
+            reference_docs=reference_docs,
+            selection_criterion=selection_criterion,
+            target_page_id=target_page_id,
+            observe_validation=observe_validation,
+            viewpoint_set_id=str(getattr(args, "viewpoint_set_id", "") or ""),
+            viewpoint_version=getattr(args, "viewpoint_version", None),
+            require_stage_approval=(str(getattr(args, "autorun_approve", "auto")) == "auto"),
+        )
+    except Exception as exc:  # noqa: BLE001 - 観点固定の失敗は明確なエラーで終了する
+        logger.error("AutoRun の初期化に失敗しました: %s", exc)
+        sys.exit(2)
+
+    login = None
+    if getattr(args, "login_user", None):
+        login = {
+            "username": str(args.login_user),
+            "password": str(getattr(args, "login_pass", "") or ""),
+        }
+
+    run_autorun_job(
+        job,
+        int(args.depth),
+        int(args.max_pages),
+        login=login,
+        on_log=_print_line,
+    )
+
+    summary = {
+        "status": job.status,
+        "domain": job.domain,
+        "outputs": job.outputs,
+        "test_results": {
+            key: job.test_results.get(key)
+            for key in ("passed", "failed", "skipped", "total")
+            if key in (job.test_results or {})
+        },
+        "error": job.error,
+    }
+    print(f"AUTORUN_RESULT:{json.dumps(summary, ensure_ascii=False)}", flush=True)
+    logger.info("AutoRun 終了: status=%s domain=%s", job.status, job.domain)
+    sys.exit(autorun_exit_code(job))
+
+
+def _run_qa_process_step(args: argparse.Namespace) -> None:
+    """クロール済み report.json から QA プロセス成果物を生成する（工程単体）。"""
+    url = str(args.url or "")
+    if not url:
+        logger.error("--qa-process には --url が必要です")
+        sys.exit(2)
+    _ensure_web_importable()
+    from web.services.cli_steps import CliStepError, run_qa_process
+
+    domain = _domain_name(url)
+    try:
+        outputs = run_qa_process(
+            domain,
+            Path(args.output),
+            viewpoint_set_id=str(getattr(args, "viewpoint_set_id", "") or ""),
+            viewpoint_version=getattr(args, "viewpoint_version", None),
+        )
+    except CliStepError as exc:
+        logger.error("%s", exc)
+        sys.exit(1)
+    for key, path in outputs.items():
+        logger.info("QA成果物: %s -> %s", key, path)
+    logger.info("QAプロセス成果物を生成しました: %d件（%s/%s）", len(outputs), args.output, domain)
+
+
+def _run_gen_spec_step(args: argparse.Namespace) -> None:
+    """QA 候補 JSON から Playwright .spec.ts を生成する（工程単体）。"""
+    url = str(args.url or "")
+    if not url:
+        logger.error("--gen-spec には --url が必要です")
+        sys.exit(2)
+    _ensure_web_importable()
+    from web.services.cli_steps import CliStepError, run_gen_spec
+
+    domain = _domain_name(url)
+    try:
+        spec_path = run_gen_spec(
+            domain,
+            Path(args.output),
+            mode=str(getattr(args, "mode", "url") or "url"),
+            filter_mode=str(getattr(args, "filter_mode", "all")),
+            page_object=bool(getattr(args, "page_object", False)),
+        )
+    except CliStepError as exc:
+        logger.error("%s", exc)
+        sys.exit(1)
+    logger.info("Playwright スクリプトを生成しました: %s", spec_path)
+
+
+def _run_tests_step(args: argparse.Namespace) -> None:
+    """生成済み .spec.ts を Playwright で実行する（工程単体）。"""
+    url = str(args.url or "")
+    if not url:
+        logger.error("--run-tests には --url が必要です")
+        sys.exit(2)
+    _ensure_web_importable()
+    from web.services.cli_steps import CliStepError, run_tests
+
+    domain = _domain_name(url)
+    try:
+        result = run_tests(
+            domain,
+            Path(args.output),
+            per_test_timeout_sec=int(getattr(args, "per_test_timeout", 30)),
+            device=str(getattr(args, "device", "pc")),
+            on_log=_print_line,
+        )
+    except CliStepError as exc:
+        logger.error("%s", exc)
+        sys.exit(1)
+    passed = int(result.get("passed", 0) or 0)
+    failed = int(result.get("failed", 0) or 0)
+    total = int(result.get("total", 0) or 0)
+    print(f"TEST_RESULT:{json.dumps(result.get('tests', []), ensure_ascii=False)}", flush=True)
+    logger.info("テスト実行完了: PASS=%d FAIL=%d TOTAL=%d", passed, failed, total)
+    if result.get("error") or result.get("interrupted") or result.get("unavailable"):
+        logger.error("テスト実行が正常完了しませんでした: %s", result.get("error", "中断"))
+        sys.exit(2)
+    sys.exit(1 if failed > 0 else 0)
 
 
 if __name__ == "__main__":

@@ -9,7 +9,25 @@
   // editing: 修正エディタを開いている項目のキー（stageId:itemId）。開いている間に
   // 別フェーズ・別画面へ移動しようとすると、破棄してよいか確認する
   // （監査で発覚: 以前は警告なく黙って破棄されていた）。
-  var state = { domain: '', pipeline: null, selected: '', busy: false, editing: null };
+  // lastRendered: 直前に表示していたフェーズ。切り替え方向（進む/戻る）を
+  // 判定してスライドアニメーションの向きを決めるために保持する。
+  var state = {
+    domain: '', pipeline: null, selected: '', busy: false, editing: null,
+    lastRendered: '',
+  };
+
+  // フェーズごとの代表 HTML 成果物（ジョブの outputs キー）。JSON は削除せず
+  // LLM 入力・アクティビティログとして保持し、画面では HTML 版を見せる。
+  var STAGE_ARTIFACT_KEYS = {
+    test_objective: ['report_html'],
+    test_plan: ['test_plan'],
+    features: ['report_html'],
+    viewpoints: ['test_analysis'],
+    basic_design: ['test_design'],
+    detail_design: ['test_design'],
+    test_cases: ['test_cases'],
+    playwright_automation: ['playwright_candidates_html'],
+  };
 
   function confirmDiscardEdit() {
     if (!state.editing) return true;
@@ -225,6 +243,65 @@
 
   // ---------------------------------------------------------------- 本文
 
+  // フェーズ切替時に、進む/戻るの向きに応じたスライドで新しい画面を入れる。
+  // prefers-reduced-motion はCSS側で無効化される。
+  function applySlide(panel, fromId, toId) {
+    if (!fromId || fromId === toId) return;
+    var direction = indexOf(toId) >= indexOf(fromId) ? 'fwd' : 'back';
+    var cls = 'is-slide-' + direction;
+    panel.classList.remove('is-slide-fwd', 'is-slide-back');
+    // 再スタイル計算を挟んで同じクラスの付け直しでもアニメーションを再生させる
+    void panel.offsetWidth;
+    panel.classList.add(cls);
+    panel.addEventListener('animationend', function handler() {
+      panel.classList.remove(cls);
+      panel.removeEventListener('animationend', handler);
+    });
+  }
+
+  // フェーズに対応する HTML 中間成果物をインラインで表示する。
+  // これまで成果物はプレビューボタンの先にしか無く、JSON/HTML のファイル名の
+  // 羅列では価値が伝わりにくかった。1フェーズ＝1画面の中に成果物そのものを出す。
+  function renderArtifact(stage) {
+    var outputs = (window._autoRunLastData && window._autoRunLastData.outputs) || {};
+    var keys = STAGE_ARTIFACT_KEYS[stage.stage_id] || [];
+    var path = '';
+    var key = '';
+    for (var i = 0; i < keys.length; i++) {
+      if (outputs[keys[i]]) { key = keys[i]; path = outputs[keys[i]]; break; }
+    }
+    if (!path || !/\.html?$/i.test(path)) return null;
+
+    var box = document.createElement('section');
+    box.className = 'autorun-stage-artifact';
+
+    var head = document.createElement('div');
+    head.className = 'autorun-stage-artifact-head';
+
+    var label = document.createElement('span');
+    label.className = 'autorun-stage-artifact-label';
+    label.textContent = 'この段階の成果物プレビュー';
+    head.appendChild(label);
+
+    var open = document.createElement('button');
+    open.type = 'button';
+    open.className = 'btn-outline-sm qa-preview-btn';
+    open.dataset.path = path;
+    open.dataset.label = stage.name + ' の成果物';
+    open.textContent = '拡大して開く';
+    head.appendChild(open);
+    box.appendChild(head);
+
+    var frame = document.createElement('iframe');
+    frame.className = 'autorun-stage-artifact-frame';
+    frame.src = '/preview?path=' + encodeURIComponent(path);
+    frame.title = stage.name + ' の成果物プレビュー';
+    frame.setAttribute('sandbox', 'allow-scripts allow-same-origin');
+    frame.setAttribute('loading', 'lazy');
+    box.appendChild(frame);
+    return box;
+  }
+
   function renderPanel() {
     var panel = $('autorun-stage-panel');
     if (!panel || !state.pipeline) return;
@@ -232,6 +309,8 @@
 
     var stage = stageById(state.selected);
     if (!stage) return;
+    applySlide(panel, state.lastRendered, stage.stage_id);
+    state.lastRendered = stage.stage_id;
 
     var head = document.createElement('header');
     head.className = 'autorun-stage-head';
@@ -269,6 +348,9 @@
       stage.items.forEach(function (item) { list.appendChild(itemRow(stage, item)); });
       panel.appendChild(list);
     }
+
+    var artifact = renderArtifact(stage);
+    if (artifact) panel.appendChild(artifact);
 
     panel.appendChild(renderActions(stage));
   }

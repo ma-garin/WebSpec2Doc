@@ -35,6 +35,7 @@ UNREGISTERED_ALLOWLIST = {
     # LLM 補完は任意経路。未設定時はルールベースで全機能が成立するため、
     # 単独の機能ではなく差し替え可能なアダプタとして扱う。
     "src/llm/openai_client.py",
+    "src/llm/activity_log.py",  # LLM 呼び出しの横断アクティビティログ（best-effort）
     "src/llm/screen_classifier.py",
     "src/llm/industry_template.py",
     "web/services/openai_qa.py",

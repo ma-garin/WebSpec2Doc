@@ -21,6 +21,7 @@ from flask import Blueprint, request
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
+from llm.activity_log import record_llm_activity  # noqa: E402
 from llm.openai_client import LLMUnavailableError, resolve_endpoint  # noqa: E402
 
 logger = logging.getLogger(__name__)
@@ -98,7 +99,21 @@ def api_llm_chat() -> tuple[dict, int] | dict:
     messages.append({"role": "user", "content": message})
 
     endpoint = resolve_endpoint()
+    prompt_chars = sum(len(m.get("content", "")) for m in messages)
+
+    def _record(outcome: str, detail: str = "") -> None:
+        # 生成AIを使う経路は成功・失敗を問わず必ずアクティビティログに残す
+        record_llm_activity(
+            purpose="qa_chat",
+            endpoint_url=endpoint.chat_url,
+            model=endpoint.model,
+            outcome=outcome,
+            detail=detail,
+            prompt_chars=prompt_chars,
+        )
+
     if not endpoint.api_key:
+        _record("not_configured")
         return {
             "error": "LLM の接続先が設定されていません。",
             "detail": "OPENAI_API_KEY もしくは WEBSPEC2DOC_LLM_BASE_URL を設定してください。",
@@ -106,14 +121,17 @@ def api_llm_chat() -> tuple[dict, int] | dict:
 
     try:
         reply = _chat(endpoint, messages)
+    except urllib.error.HTTPError as exc:
+        logger.info("LLM チャットが失敗しました: %s", exc)
+        _record("http_error", str(exc))
+        return {"error": f"QAアシスタントの呼び出しに失敗しました（HTTP {exc.code}）"}, 502
     except (LLMUnavailableError, urllib.error.URLError, TimeoutError, OSError) as exc:
         logger.info("LLM チャットに到達できません: %s", exc)
+        _record("unavailable", str(exc))
         return {
             "error": "QAアシスタントに接続できませんでした。",
             "detail": "この機能は補助であり、AutoRun の実行自体には影響しません。",
         }, 503
-    except urllib.error.HTTPError as exc:
-        logger.info("LLM チャットが失敗しました: %s", exc)
-        return {"error": f"QAアシスタントの呼び出しに失敗しました（HTTP {exc.code}）"}, 502
 
+    _record("ok")
     return {"reply": reply, "model": endpoint.model}

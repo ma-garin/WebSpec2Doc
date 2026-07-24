@@ -161,7 +161,7 @@ def parse_args() -> argparse.Namespace:
         "--parallelism",
         type=int,
         default=1,
-        help="明示URLクロールの並列数（GUI既定: 2、最大: 4）",
+        help="クロールの並列数（明示URL・オートクローリング共通。GUI既定: 2、最大: 4）",
     )
     parser.add_argument(
         "--fail-on-drift",
@@ -765,6 +765,7 @@ def _do_crawl(
         stop_requested=_STOP_REQUESTED.is_set,
         ux_review=ux_review,
         on_ux_result=on_ux_result,
+        parallelism=max(1, min(int(getattr(args, "parallelism", 1)), 4)),
     )
 
 

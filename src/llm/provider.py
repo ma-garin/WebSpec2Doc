@@ -162,6 +162,7 @@ class OpenAIProvider:
                 prompt,
                 VIEWPOINT_SCHEMA_NAME,
                 VIEWPOINT_JSON_SCHEMA,
+                purpose="viewpoints",
             )
             items = validate_viewpoint_payload(raw)
         except (ViewpointValidationError, LLMResponseError) as exc:
@@ -225,6 +226,7 @@ class OpenAIProvider:
                 prompt,
                 EXTRACTION_SCHEMA_NAME,
                 EXTRACTION_JSON_SCHEMA,
+                purpose="document_extract",
             )
         except LLMResponseError as exc:
             logger.warning("LLM 抽出応答を棄却しました（理由: %s）", exc)
@@ -252,6 +254,7 @@ class OpenAIProvider:
                 prompt,
                 UX_REVIEW_SCHEMA_NAME,
                 UX_REVIEW_JSON_SCHEMA,
+                purpose="ux_review",
             )
             items = validate_ux_payload(raw)
         except (UxReviewValidationError, LLMResponseError) as exc:

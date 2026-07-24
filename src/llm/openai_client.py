@@ -188,9 +188,7 @@ def _request_structured_json_impl(
     }
 
     try:
-        parsed = _extract_json(
-            _post_json(endpoint.chat_url, api_key, strict_payload, timeout_sec)
-        )
+        parsed = _extract_json(_post_json(endpoint.chat_url, api_key, strict_payload, timeout_sec))
         return parsed, "json_schema"
     except urllib.error.HTTPError as exc:
         if exc.code not in (400, 404, 422, 501):

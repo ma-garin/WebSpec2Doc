@@ -101,9 +101,7 @@ class TestRequestStructuredJsonAlwaysLogged:
             oc, "_post_json", side_effect=urllib.error.URLError("connection refused")
         ):
             with pytest.raises(oc.LLMUnavailableError):
-                oc.request_structured_json(
-                    "key", "model-x", "prompt", "schema", {"type": "object"}
-                )
+                oc.request_structured_json("key", "model-x", "prompt", "schema", {"type": "object"})
         entries = _read_entries(tmp_path)
         assert len(entries) == 1
         assert entries[0]["outcome"] == "unavailable"
@@ -131,9 +129,7 @@ class TestRequestStructuredJsonAlwaysLogged:
             oc, "_post_json", return_value={"choices": [{"message": {"content": "not-json"}}]}
         ):
             with pytest.raises(oc.LLMResponseError):
-                oc.request_structured_json(
-                    "key", "model-x", "prompt", "schema", {"type": "object"}
-                )
+                oc.request_structured_json("key", "model-x", "prompt", "schema", {"type": "object"})
         entries = _read_entries(tmp_path)
         assert len(entries) == 1
         assert entries[0]["outcome"] == "invalid_response"

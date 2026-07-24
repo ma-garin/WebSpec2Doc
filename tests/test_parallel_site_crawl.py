@@ -33,9 +33,7 @@ def _fake_browser(_auth, _viewport=None):
 
 
 def _page(url: str, links: tuple[str, ...] = ()) -> PageData:
-    return PageData(
-        url=url, title="t", headings=(), links=links, forms=(), screenshot_path=None
-    )
+    return PageData(url=url, title="t", headings=(), links=links, forms=(), screenshot_path=None)
 
 
 def _no_wait_limiter() -> TokenBucketLimiter:
@@ -92,9 +90,7 @@ class TestCrawlSiteParallel:
         ]
 
     def test_respects_max_pages(self) -> None:
-        links = {
-            f"https://example.com/{i}": (f"https://example.com/{i + 1}",) for i in range(20)
-        }
+        links = {f"https://example.com/{i}": (f"https://example.com/{i + 1}",) for i in range(20)}
         links["https://example.com/"] = ("https://example.com/0",)
         pages = self._run(links, max_pages=5, depth=30)
         assert len(pages) == 5

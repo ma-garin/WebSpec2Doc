@@ -343,22 +343,181 @@
     return wrap;
   }
 
+  // 段階の証跡サマリ文字列（タイムラインカードの折り畳み時に一目で分かる指標）。
+  function evidenceSummary(stage) {
+    var total = stage.items.length;
+    if (!total) return '';
+    var parts = ['項目 ' + total];
+    if (stage.requires_item_approval) {
+      var ap = stage.items.filter(function (i) { return i.approved; }).length;
+      parts.push('承認 ' + ap + '/' + total);
+    }
+    var llm = stage.items.filter(function (i) { return i.source === 'llm'; }).length;
+    if (llm) parts.push('LLM ' + llm);
+    return parts.join(' · ');
+  }
+
+  var _SOURCE_BADGE = { llm: ['is-llm', 'LLM提案'], user: ['is-edited', '修正済'] };
+
   // 右カラムの成果物キャンバス（案B: 決定は左・成果物は右で常に画面に在り続ける）。
+  // 実 HTML 成果物があれば iframe、無ければ段階データから読み取り用の文書を生成する。
   function renderCanvas(stage) {
     var canvas = document.createElement('aside');
     canvas.className = 'autorun-stage-canvas';
     var artifact = renderArtifact(stage);
     if (artifact) {
       canvas.appendChild(artifact);
-    } else {
+      return canvas;
+    }
+    canvas.appendChild(renderDocView(stage));
+    return canvas;
+  }
+
+  // 段階データから「成果物文書」を組み立てて右キャンバスに描画する（実データ由来）。
+  function renderDocView(stage) {
+    var doc = document.createElement('section');
+    doc.className = 'autorun-doc';
+
+    var bar = document.createElement('div');
+    bar.className = 'autorun-doc-bar';
+    var label = document.createElement('span');
+    label.className = 'autorun-doc-label';
+    label.textContent = '成果物プレビュー';
+    bar.appendChild(label);
+    doc.appendChild(bar);
+
+    var sheet = document.createElement('article');
+    sheet.className = 'autorun-doc-sheet';
+
+    var h = document.createElement('h4');
+    h.className = 'autorun-doc-title';
+    h.textContent = stage.name;
+    sheet.appendChild(h);
+
+    var meta = document.createElement('div');
+    meta.className = 'autorun-doc-meta';
+    var sum = evidenceSummary(stage);
+    meta.textContent = 'STEP ' + stage.step_no + ' / ' + stages().length + (sum ? ' · ' + sum : '');
+    sheet.appendChild(meta);
+
+    var lead = document.createElement('p');
+    lead.className = 'autorun-doc-lead';
+    lead.textContent = stage.purpose;
+    sheet.appendChild(lead);
+
+    if (!stage.items.length) {
       var empty = document.createElement('div');
       empty.className = 'autorun-stage-canvas-empty';
-      empty.textContent = stage.items.length
-        ? 'この段階の HTML 成果物は、後続の生成で作成されます。'
-        : 'まだ成果物はありません。左で内容を生成すると、ここにプレビューが出ます。';
-      canvas.appendChild(empty);
+      empty.textContent = '左で「内容を生成」すると、ここに成果物の文書が表示されます。';
+      sheet.appendChild(empty);
+    } else {
+      var table = document.createElement('table');
+      table.className = 'autorun-doc-table';
+      table.innerHTML =
+        '<thead><tr><th class="c-no">#</th><th>内容</th>'
+        + '<th class="c-src">種別</th></tr></thead>';
+      var tbody = document.createElement('tbody');
+      stage.items.forEach(function (item, i) {
+        var tr = document.createElement('tr');
+        var td0 = document.createElement('td');
+        td0.className = 'c-no';
+        td0.textContent = String(i + 1);
+        var td1 = document.createElement('td');
+        var t = document.createElement('div');
+        t.className = 'autorun-doc-itemtitle';
+        t.textContent = item.title;
+        td1.appendChild(t);
+        if (item.detail) {
+          var d = document.createElement('div');
+          d.className = 'autorun-doc-itemdetail';
+          d.textContent = item.detail;
+          td1.appendChild(d);
+        }
+        var td2 = document.createElement('td');
+        td2.className = 'c-src';
+        var badge = _SOURCE_BADGE[item.source];
+        if (item.assumed) td2.appendChild(makeBadge('is-assumed', '前提'));
+        if (badge) td2.appendChild(makeBadge(badge[0], badge[1]));
+        if (item.approved) td2.appendChild(makeBadge('is-ok', '承認'));
+        tr.append(td0, td1, td2);
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      var scroll = document.createElement('div');
+      scroll.className = 'autorun-doc-scroll';
+      scroll.appendChild(table);
+      sheet.appendChild(scroll);
     }
-    return canvas;
+    doc.appendChild(sheet);
+    return doc;
+  }
+
+  // 中央の縦タイムライン（案A）。全段階を連結線付きカードで並べ、選択段階を展開する。
+  function renderTimeline() {
+    var tl = document.createElement('div');
+    tl.className = 'autorun-timeline';
+    stages().forEach(function (stage) {
+      var selected = stage.stage_id === state.selected;
+      var node = document.createElement('div');
+      node.className = 'artl-node is-' + stage.status + (selected ? ' is-selected' : '');
+      if (!isReachable(stage)) node.classList.add('is-locked');
+
+      var dot = document.createElement('span');
+      dot.className = 'artl-dot';
+      dot.textContent = stage.status === 'approved' ? '✓'
+        : stage.status === 'skipped' ? '—' : String(stage.step_no);
+      node.appendChild(dot);
+
+      var card = document.createElement('div');
+      card.className = 'artl-card';
+
+      var head = document.createElement('button');
+      head.type = 'button';
+      head.className = 'artl-card-head';
+      var name = document.createElement('span');
+      name.className = 'artl-card-name';
+      name.textContent = stage.name;
+      head.appendChild(name);
+      head.appendChild(statusChip(stage));
+      var sum = evidenceSummary(stage);
+      if (sum) {
+        var s = document.createElement('span');
+        s.className = 'artl-card-ev';
+        s.textContent = sum;
+        head.appendChild(s);
+      }
+      head.addEventListener('click', function () {
+        if (!confirmDiscardEdit()) return;
+        state.selected = stage.stage_id;
+        render();
+      });
+      card.appendChild(head);
+
+      if (selected) {
+        var body = document.createElement('div');
+        body.className = 'artl-card-body';
+        if (stage.note) {
+          var note = document.createElement('div');
+          note.className = 'autorun-stage-note';
+          note.textContent = stage.note;
+          body.appendChild(note);
+        }
+        if (stage.status === 'skipped') {
+          body.appendChild(message('この段階はスキップされました（2回目以降のため）。'));
+        } else if (!stage.items.length) {
+          body.appendChild(message('まだ生成されていません。「内容を生成」を押してください。'));
+        } else {
+          var list = document.createElement('div');
+          list.className = 'autorun-stage-items';
+          stage.items.forEach(function (item) { list.appendChild(itemRow(stage, item)); });
+          body.appendChild(list);
+        }
+        card.appendChild(body);
+      }
+      node.appendChild(card);
+      tl.appendChild(node);
+    });
+    return tl;
   }
 
   // アクティビティログ（案A: JSON を型付きイベントのタイムラインで見せる）。
@@ -438,6 +597,35 @@
     panel.appendChild(foot);
   }
 
+  // 進行の全体サマリ（承認済み数 / 総数）。タイムライン上部の一目インジケータ。
+  function progressHeader() {
+    var head = document.createElement('div');
+    head.className = 'autorun-progress-head';
+    var lhs = document.createElement('div');
+    lhs.className = 'autorun-progress-lhs';
+    var t = document.createElement('span');
+    t.className = 'autorun-progress-title';
+    t.textContent = '実行の進行';
+    lhs.appendChild(t);
+    var approved = stages().filter(function (s) {
+      return s.status === 'approved' || s.status === 'skipped';
+    }).length;
+    var chip = document.createElement('span');
+    chip.className = 'autorun-ev-chip';
+    var b = document.createElement('b');
+    b.textContent = approved + '/' + stages().length;
+    chip.append(b, document.createTextNode(' 完了'));
+    lhs.appendChild(chip);
+    head.appendChild(lhs);
+    var logBtn = button('アクティビティログ', function () {
+      state.showActivity = true;
+      render();
+    });
+    logBtn.classList.add('autorun-stage-logbtn');
+    head.appendChild(logBtn);
+    return head;
+  }
+
   function renderPanel() {
     if (state.showActivity) { renderActivityLog(); return; }
     var panel = $('autorun-stage-panel');
@@ -449,63 +637,12 @@
     applySlide(panel, state.lastRendered, stage.stage_id);
     state.lastRendered = stage.stage_id;
 
-    var head = document.createElement('header');
-    head.className = 'autorun-stage-head';
+    panel.appendChild(progressHeader());
 
-    var kickerRow = document.createElement('div');
-    kickerRow.className = 'autorun-stage-kicker-row';
-    var kicker = document.createElement('div');
-    kicker.className = 'section-kicker';
-    kicker.textContent = 'STEP ' + stage.step_no + ' / ' + stages().length;
-    kickerRow.appendChild(kicker);
-    kickerRow.appendChild(statusChip(stage));
-    var logBtn = button('アクティビティログ', function () {
-      state.showActivity = true;
-      render();
-    });
-    logBtn.classList.add('autorun-stage-logbtn');
-    kickerRow.appendChild(logBtn);
-    head.appendChild(kickerRow);
-
-    var title = document.createElement('h3');
-    title.className = 'autorun-stage-title';
-    title.textContent = stage.name;
-    head.appendChild(title);
-
-    var purpose = document.createElement('p');
-    purpose.className = 'autorun-stage-purpose';
-    purpose.textContent = stage.purpose;
-    head.appendChild(purpose);
-
-    var evidence = evidenceChips(stage);
-    if (evidence.childNodes.length) head.appendChild(evidence);
-    panel.appendChild(head);
-
-    // 案B: 左（決定＝項目・操作）／右（成果物キャンバス）の分割。狭幅では縦積み。
+    // 案A（中央の縦タイムライン）＋ 案B（右の成果物キャンバス）。狭幅では縦積み。
     var split = document.createElement('div');
     split.className = 'autorun-stage-split';
-    var mainCol = document.createElement('div');
-    mainCol.className = 'autorun-stage-main';
-
-    if (stage.note) {
-      var note = document.createElement('div');
-      note.className = 'autorun-stage-note';
-      note.textContent = stage.note;
-      mainCol.appendChild(note);
-    }
-
-    if (stage.status === 'skipped') {
-      mainCol.appendChild(message('この段階はスキップされました（2回目以降のため）。'));
-    } else if (!stage.items.length) {
-      mainCol.appendChild(message('まだ生成されていません。「内容を生成」を押してください。'));
-    } else {
-      var list = document.createElement('div');
-      list.className = 'autorun-stage-items';
-      stage.items.forEach(function (item) { list.appendChild(itemRow(stage, item)); });
-      mainCol.appendChild(list);
-    }
-
-    split.appendChild(mainCol);
+    split.appendChild(renderTimeline());
     split.appendChild(renderCanvas(stage));
     panel.appendChild(split);
 

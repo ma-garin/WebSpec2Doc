@@ -24,6 +24,11 @@ from web.validation import _valid_domain
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 from autorun.qf_schema import to_csv, to_table  # noqa: E402
+from autorun.review_queue import (  # noqa: E402
+    build_review_queue,
+    page_urls_from_report,
+    summarize,
+)
 from autorun.stages import (  # noqa: E402
     DESIGN_STAGE_IDS,
     STAGE_ORDER,
@@ -131,6 +136,78 @@ def api_stages() -> tuple[dict, int] | dict:
         return error
     pipeline = _load_pipeline(domain)
     return {"domain": domain, **pipeline.to_dict()}
+
+
+@bp.get("/api/autorun/review-queue")
+def api_review_queue() -> tuple[dict, int] | dict:
+    """要確認キューを返す。
+
+    AI 由来（LLM 提案・前提）または高リスクの項目だけを人が見る前提で、
+    全段階の項目を横断して 1 本のリストにして返す。
+    """
+    domain, error = _require_domain(request.args.get("domain", ""))
+    if error:
+        return error
+    pipeline = _load_pipeline(domain)
+    page_urls = page_urls_from_report(_load_report(domain))
+    entries = build_review_queue(pipeline, page_urls)
+    return {
+        "domain": domain,
+        "entries": [e.to_dict() for e in entries],
+        "counts": summarize(entries),
+        "signed_off": pipeline.all_approved,
+    }
+
+
+@bp.post("/api/autorun/review-queue/auto-approve")
+def api_auto_approve() -> tuple[dict, int] | dict:
+    """自動承認の対象（実測 × 低〜中リスク）をまとめて承認する。
+
+    誰が通したかを曖昧にしないため、監査には実行者と「自動承認」である旨を残す。
+    """
+    payload = request.get_json(silent=True) or {}
+    domain, error = _require_domain(str(payload.get("domain", "")))
+    if error:
+        return error
+
+    pipeline = _load_pipeline(domain)
+    page_urls = page_urls_from_report(_load_report(domain))
+    targets = {
+        (e.stage_id, e.item_id)
+        for e in build_review_queue(pipeline, page_urls)
+        if not e.needs_review and not e.approved
+    }
+    if not targets:
+        entries = build_review_queue(pipeline, page_urls)
+        return {
+            "domain": domain,
+            "approved": 0,
+            "entries": [e.to_dict() for e in entries],
+            "counts": summarize(entries),
+        }
+
+    for stage in pipeline.stages:
+        if not any((stage.stage_id, item.item_id) in targets for item in stage.items):
+            continue
+        updated = stage
+        for item in stage.items:
+            if (stage.stage_id, item.item_id) in targets:
+                updated = updated.with_item(item.with_approval(True))
+        pipeline = pipeline.replaced(updated)
+    pipeline = pipeline.recorded(
+        "item_approve",
+        "",
+        f"自動承認: 実測・低リスクの{len(targets)}項目",
+        _actor(),
+    )
+    _save_pipeline(domain, pipeline)
+    entries = build_review_queue(pipeline, page_urls)
+    return {
+        "domain": domain,
+        "approved": len(targets),
+        "entries": [e.to_dict() for e in entries],
+        "counts": summarize(entries),
+    }
 
 
 @bp.post("/api/autorun/stages/generate")

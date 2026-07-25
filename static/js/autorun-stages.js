@@ -13,7 +13,7 @@
   // 判定してスライドアニメーションの向きを決めるために保持する。
   var state = {
     domain: '', pipeline: null, selected: '', busy: false, editing: null,
-    lastRendered: '',
+    lastRendered: '', showActivity: false,
   };
 
   // フェーズごとの代表 HTML 成果物（ジョブの outputs キー）。JSON は削除せず
@@ -62,6 +62,7 @@
     var intake = $('autorun-idle-msg');
     if (intake) intake.style.display = '';
     state.selected = '';
+    state.showActivity = false;
     renderNav();
     setNavVisible(!!state.pipeline);
     if (window.autorunChat) {
@@ -122,6 +123,7 @@
       btn.addEventListener('click', function () {
         if (!confirmDiscardEdit()) return;
         state.selected = stage.stage_id;
+        state.showActivity = false;
         render();
       });
       nav.appendChild(btn);
@@ -302,7 +304,142 @@
     return box;
   }
 
+  // 段階の状態タグ（縦タイムライン証跡フィード＝案A）。状態は実データの status 由来。
+  var _STATUS_CHIP = {
+    approved: ['is-ok', '承認済み'],
+    generated: ['is-active', '生成済み'],
+    skipped: ['is-skip', 'スキップ'],
+    pending: ['is-pending', '未着手'],
+  };
+  function statusChip(stage) {
+    var meta = _STATUS_CHIP[stage.status] || _STATUS_CHIP.pending;
+    var s = document.createElement('span');
+    s.className = 'autorun-stage-statuschip ' + meta[0];
+    s.textContent = meta[1];
+    return s;
+  }
+
+  // 証跡チップ（案A: 「リンクの塊」を件数で価値の分かる情報へ）。すべて実データ由来。
+  function evidenceChips(stage) {
+    var wrap = document.createElement('div');
+    wrap.className = 'autorun-stage-evidence';
+    var total = stage.items.length;
+    if (!total) return wrap;
+    function chip(label, value) {
+      var c = document.createElement('span');
+      c.className = 'autorun-ev-chip';
+      var b = document.createElement('b');
+      b.textContent = String(value);
+      c.append(document.createTextNode(label + ' '), b);
+      return c;
+    }
+    wrap.appendChild(chip('項目', total));
+    if (stage.requires_item_approval) {
+      var approved = stage.items.filter(function (i) { return i.approved; }).length;
+      wrap.appendChild(chip('承認', approved + '/' + total));
+    }
+    var llm = stage.items.filter(function (i) { return i.source === 'llm'; }).length;
+    if (llm) wrap.appendChild(chip('LLM提案', llm));
+    return wrap;
+  }
+
+  // 右カラムの成果物キャンバス（案B: 決定は左・成果物は右で常に画面に在り続ける）。
+  function renderCanvas(stage) {
+    var canvas = document.createElement('aside');
+    canvas.className = 'autorun-stage-canvas';
+    var artifact = renderArtifact(stage);
+    if (artifact) {
+      canvas.appendChild(artifact);
+    } else {
+      var empty = document.createElement('div');
+      empty.className = 'autorun-stage-canvas-empty';
+      empty.textContent = stage.items.length
+        ? 'この段階の HTML 成果物は、後続の生成で作成されます。'
+        : 'まだ成果物はありません。左で内容を生成すると、ここにプレビューが出ます。';
+      canvas.appendChild(empty);
+    }
+    return canvas;
+  }
+
+  // アクティビティログ（案A: JSON を型付きイベントのタイムラインで見せる）。
+  // 監査は state.pipeline.audit（実データ）。生成AIの記録は llm_activity.jsonl に別途保存。
+  var _ACTION_LABEL = {
+    generate: '生成', approve: '承認', skip: 'スキップ', proceed: '確定して進む',
+    item_approve: '項目を承認', item_unapprove: '承認取消', item_edit: '項目を修正',
+    adopt_llm: 'LLM提案を採用',
+  };
+  function renderActivityLog() {
+    var panel = $('autorun-stage-panel');
+    if (!panel || !state.pipeline) return;
+    panel.replaceChildren();
+
+    var head = document.createElement('header');
+    head.className = 'autorun-stage-head autorun-stage-head-row';
+    var title = document.createElement('h3');
+    title.className = 'autorun-stage-title';
+    title.textContent = 'アクティビティログ';
+    head.appendChild(title);
+    head.appendChild(button('← 段階へ戻る', function () {
+      state.showActivity = false;
+      render();
+    }));
+    panel.appendChild(head);
+
+    var audit = (state.pipeline.audit || []).slice().reverse();
+    if (!audit.length) {
+      panel.appendChild(message('まだ記録がありません。生成・承認を行うとここに残ります。'));
+    } else {
+      var feed = document.createElement('div');
+      feed.className = 'autorun-activity';
+      audit.forEach(function (e) {
+        var row = document.createElement('div');
+        row.className = 'autorun-activity-row';
+        var when = document.createElement('span');
+        when.className = 'autorun-activity-when';
+        when.textContent = (e.at || '').replace('T', ' ').slice(0, 19);
+        var body = document.createElement('span');
+        body.className = 'autorun-activity-body';
+        var act = document.createElement('b');
+        act.textContent = _ACTION_LABEL[e.action] || e.action;
+        body.appendChild(act);
+        var stageName = (stageById(e.stage_id) || {}).name || e.stage_id;
+        if (stageName) {
+          var sp = document.createElement('span');
+          sp.className = 'autorun-activity-stage';
+          sp.textContent = stageName;
+          body.appendChild(sp);
+        }
+        if (e.action === 'adopt_llm') {
+          body.appendChild(makeBadge('is-llm', 'LLM'));
+        }
+        if (e.detail) {
+          var d = document.createElement('span');
+          d.className = 'autorun-activity-detail';
+          d.textContent = e.detail;
+          body.appendChild(d);
+        }
+        row.append(when, body);
+        if (e.actor) {
+          var who = document.createElement('span');
+          who.className = 'autorun-activity-actor';
+          who.textContent = e.actor;
+          row.appendChild(who);
+        }
+        feed.appendChild(row);
+      });
+      panel.appendChild(feed);
+    }
+
+    var foot = document.createElement('p');
+    foot.className = 'autorun-activity-note';
+    foot.textContent =
+      'JSON は削除せず保持しています（LLM 入力・監査証跡）。生成 AI の呼び出しは'
+      + '成功・退避・失敗を問わず llm_activity.jsonl に記録されます。';
+    panel.appendChild(foot);
+  }
+
   function renderPanel() {
+    if (state.showActivity) { renderActivityLog(); return; }
     var panel = $('autorun-stage-panel');
     if (!panel || !state.pipeline) return;
     panel.replaceChildren();
@@ -315,10 +452,20 @@
     var head = document.createElement('header');
     head.className = 'autorun-stage-head';
 
+    var kickerRow = document.createElement('div');
+    kickerRow.className = 'autorun-stage-kicker-row';
     var kicker = document.createElement('div');
     kicker.className = 'section-kicker';
     kicker.textContent = 'STEP ' + stage.step_no + ' / ' + stages().length;
-    head.appendChild(kicker);
+    kickerRow.appendChild(kicker);
+    kickerRow.appendChild(statusChip(stage));
+    var logBtn = button('アクティビティログ', function () {
+      state.showActivity = true;
+      render();
+    });
+    logBtn.classList.add('autorun-stage-logbtn');
+    kickerRow.appendChild(logBtn);
+    head.appendChild(kickerRow);
 
     var title = document.createElement('h3');
     title.className = 'autorun-stage-title';
@@ -329,28 +476,38 @@
     purpose.className = 'autorun-stage-purpose';
     purpose.textContent = stage.purpose;
     head.appendChild(purpose);
+
+    var evidence = evidenceChips(stage);
+    if (evidence.childNodes.length) head.appendChild(evidence);
     panel.appendChild(head);
+
+    // 案B: 左（決定＝項目・操作）／右（成果物キャンバス）の分割。狭幅では縦積み。
+    var split = document.createElement('div');
+    split.className = 'autorun-stage-split';
+    var mainCol = document.createElement('div');
+    mainCol.className = 'autorun-stage-main';
 
     if (stage.note) {
       var note = document.createElement('div');
       note.className = 'autorun-stage-note';
       note.textContent = stage.note;
-      panel.appendChild(note);
+      mainCol.appendChild(note);
     }
 
     if (stage.status === 'skipped') {
-      panel.appendChild(message('この段階はスキップされました（2回目以降のため）。'));
+      mainCol.appendChild(message('この段階はスキップされました（2回目以降のため）。'));
     } else if (!stage.items.length) {
-      panel.appendChild(message('まだ生成されていません。「内容を生成」を押してください。'));
+      mainCol.appendChild(message('まだ生成されていません。「内容を生成」を押してください。'));
     } else {
       var list = document.createElement('div');
       list.className = 'autorun-stage-items';
       stage.items.forEach(function (item) { list.appendChild(itemRow(stage, item)); });
-      panel.appendChild(list);
+      mainCol.appendChild(list);
     }
 
-    var artifact = renderArtifact(stage);
-    if (artifact) panel.appendChild(artifact);
+    split.appendChild(mainCol);
+    split.appendChild(renderCanvas(stage));
+    panel.appendChild(split);
 
     panel.appendChild(renderActions(stage));
   }

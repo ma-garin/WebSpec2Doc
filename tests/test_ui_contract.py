@@ -57,7 +57,6 @@ class TestViewsExist:
             "view-dashboard",
             "view-generate",
             "view-auto-run",
-            "view-testcases",
             "view-run-history",
             "view-qa-quality",
             "view-viewpoints",
@@ -249,12 +248,15 @@ class TestAutoRunExecutionGate:
 class TestOtherViewStructures:
     """旧 test_testcases_view / test_run_history / test_report_tabs の構造検証。"""
 
-    @pytest.mark.parametrize(
-        "element_id",
-        ["tc-domain-select", "tc-status", "tc-content", "tc-output-links"],
-    )
-    def test_testcases_view_structure(self, spa: str, element_id: str) -> None:
-        assert f'id="{element_id}"' in spa
+    def test_testcases_view_removed(self, spa: str) -> None:
+        """テストケース一覧は廃止した（実行履歴へ置き換え）。
+
+        観測前は「report.json not found」しか出せず、単独では判断材料に
+        ならなかった。セレクタだけ残すと死んだ導線が再び生える。
+        """
+        for element_id in ("tc-domain-select", "tc-status", "tc-content", "tc-output-links"):
+            assert f'id="{element_id}"' not in spa
+        assert 'id="view-testcases"' not in spa
 
     @pytest.mark.parametrize("element_id", ["rh-container", "rh-tbody", "rh-empty", "rh-pager"])
     def test_run_history_view_structure(self, spa: str, element_id: str) -> None:

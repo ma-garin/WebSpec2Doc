@@ -6,8 +6,7 @@
     視覚的変化を自動で検知する。
 
 ベースライン管理:
-    初回実行: pytest tests/e2e/test_visual_regression_e2e.py --update-snapshots
-    更新時:   pytest tests/e2e/test_visual_regression_e2e.py --update-snapshots
+    初回実行/更新時: WEBSPEC2DOC_UPDATE_SNAPSHOTS=1 make verify-ui
     通常実行: pytest tests/e2e/test_visual_regression_e2e.py (比較モード)
 
 実行方法:
@@ -52,9 +51,10 @@ def _assert_visual_match(page: Page, name: str, threshold: float = VISUAL_THRESH
     )
     current_bytes = page.screenshot(full_page=False, animations="disabled", caret="hide")
 
-    update_mode = "--update-snapshots" in str(
-        pytest.ini_options if hasattr(pytest, "ini_options") else ""
-    )
+    # 以前は pytest.ini_options（存在しない属性）を見ており、更新モードに
+    # 一度も入れなかった。UI を変えるたびにベースライン更新の手段が無く、
+    # 手で png を消すしかなかったため、環境変数で明示する方式にする。
+    update_mode = os.environ.get("WEBSPEC2DOC_UPDATE_SNAPSHOTS", "") == "1"
 
     if not baseline_path.exists() or update_mode:
         baseline_path.write_bytes(current_bytes)

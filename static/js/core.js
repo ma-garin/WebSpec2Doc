@@ -98,7 +98,6 @@ function switchView(name, opts = {}) {
     }
   }
   if (name === 'qa-quality') loadQaToolSites(name);
-  if (name === 'testcases' && typeof tcOnEnterView === 'function') tcOnEnterView();
   if (name === 'run-history' && typeof loadRunHistory === 'function') loadRunHistory();
   if (name === 'viewpoints' && typeof loadViewpointManager === 'function') loadViewpointManager();
   if (name === 'auto-run') {
@@ -165,6 +164,9 @@ document.getElementById('add-site-btn-2').addEventListener('click', openAddSite)
 document.getElementById('nav-run-history-btn')?.addEventListener('click', () => {
   switchView('run-history');
 });
+document.getElementById('nav-docs-run-history-btn')?.addEventListener('click', () => {
+  switchView('run-history');
+});
 
 // ---- ダッシュボード・ヒーロー（ゴールデンパス入口） ----
 function _heroStartGuided(prefillUrl) {
@@ -185,9 +187,6 @@ document.getElementById('hero-url')?.addEventListener('keydown', (event) => {
   if (event.key !== 'Enter') return;
   event.preventDefault();
   document.getElementById('hero-start-btn')?.click();
-});
-document.getElementById('hero-guided-btn')?.addEventListener('click', () => {
-  _heroStartGuided((document.getElementById('hero-url')?.value || '').trim());
 });
 document.getElementById('hero-sample-btn')?.addEventListener('click', () => {
   const input = document.getElementById('hero-url');

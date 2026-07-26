@@ -21,9 +21,11 @@
            常時 display:none にされ、段階詳細を描く関数も存在しないため到達できなかった。
            非表示のまま残すとセレクタだけが生き、旧承認モーダルと同じ事故になる。
            確認の導線は要確認キュー（#autorun-review）に一本化する。 -->
-      <button class="app-nav-item" data-view="testcases" data-system="docs">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 4h9v16H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1z"/><path d="M9 3v3h6V3M9 11l2 2 4-4"/></svg>
-        <span class="nav-label">テストケース</span>
+      <!-- テストケース一覧は、観測前は「report.json not found」しか出せず
+           単独では判断材料にならなかったため廃止。実行履歴へ置き換える。 -->
+      <button class="app-nav-item" id="nav-docs-run-history-btn" type="button" data-system="docs">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 8v5l3 2"/><circle cx="12" cy="12" r="9"/></svg>
+        <span class="nav-label">実行履歴</span>
       </button>
       <div class="app-nav-group" data-system="docs">ツール</div>
       <button class="app-nav-item" data-view="qa-quality" data-system="docs">

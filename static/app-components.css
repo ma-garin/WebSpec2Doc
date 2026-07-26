@@ -222,51 +222,9 @@ kbd.kbd {
   background: var(--surface-soft);
 }
 .dash-hero-sample:focus-visible,
-.dash-mode-card:focus-visible,
 .nav-group-summary:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
-}
-.dash-hero-modes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 16px;
-}
-.dash-mode-card {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 44px;
-  padding: 12px 16px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface-soft);
-  color: var(--text);
-  text-align: left;
-  cursor: pointer;
-}
-.dash-mode-card:hover {
-  border-color: var(--primary);
-}
-.dash-mode-icon {
-  flex: 0 0 auto;
-  color: var(--primary-dark);
-  font-size: 18px;
-  line-height: 1;
-}
-.dash-mode-body b {
-  display: block;
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1.4;
-}
-.dash-mode-body small {
-  display: block;
-  color: var(--text-muted);
-  font-size: 11px;
-  line-height: 1.45;
 }
 .dash-section-title {
   margin: 4px 0 8px;
@@ -329,9 +287,6 @@ kbd.kbd {
   .dashboard-section-actions {
     flex-direction: column;
     align-items: stretch;
-  }
-  .dash-mode-card {
-    width: 100%;
   }
 }
 
@@ -530,12 +485,7 @@ kbd.kbd {
   .issue-detail { padding: 18px 14px 26px; }
 }
 
-/* 日本語ホーム: AutoRun導線の強調と狭幅時のサイドバー整理 */
-.dash-mode-card-primary {
-  border-color: var(--info-border);
-  background: var(--info-bg);
-}
-
+/* 日本語ホーム: 狭幅時のサイドバー整理 */
 @media (max-width: 860px) {
   .app-sidebar-foot { display: none; }
 }

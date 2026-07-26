@@ -440,7 +440,6 @@ function _autorunShowRunning() {
   document.getElementById('autorun-preview-panel').style.display = 'none';
   document.getElementById('autorun-complete-card').style.display = 'none';
   document.getElementById('autorun-failure-panel').style.display = 'none';
-  document.getElementById('autorun-cancel-area').style.display = '';
 }
 
 // ---- AutoRun: リロード後の再接続・最近の実行 ----
@@ -675,27 +674,10 @@ function _autorunUpdateStepper(data) {
   }
   if (bar) bar.setAttribute('aria-valuenow', String(pct));
 
-  // ログイン入力を✕で閉じた場合の再開導線
+  // 入力待ちの案内と再開操作は主導線バーが持つ。ここに同じものを出すと、
+  // 同一画面で「入力待ちです」が3箇所、再開操作が2箇所に増える（利用者の指摘）。
   const note = document.getElementById('autorun-step-note');
-  if (note) {
-    if (status === 'awaiting_input' && _autoRunLoginSuppressed) {
-      note.style.display = '';
-      note.replaceChildren();
-      const span = document.createElement('span');
-      span.textContent = 'ログイン情報の入力を待っています。';
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'btn-outline-sm';
-      btn.textContent = '入力を再開';
-      btn.addEventListener('click', () => {
-        _autoRunLoginSuppressed = false;
-        if (window._autoRunLastData) _autorunRender(window._autoRunLastData);
-      });
-      note.append(span, btn);
-    } else {
-      note.style.display = 'none';
-    }
-  }
+  if (note) note.style.display = 'none';
 }
 
 // ---- AutoRun: ログ（レベルフィルタ + 自動スクロール） ----
@@ -851,16 +833,12 @@ function _autorunRenderLoginStop(data) {
   host.style.display = '';
   host.replaceChildren();
 
+  // 「ログインが必要です」は主導線バーが既に言っている。ここで繰り返さず、
+  // バーが持てない情報（何を根拠に判定したか・どこまで取れたか）だけを担う。
   const title = document.createElement('div');
   title.className = 'autorun-stop-title';
-  title.textContent = 'このサイトはログインが必要です';
+  title.textContent = 'ここまでに分かっていること';
   host.appendChild(title);
-
-  const body = document.createElement('p');
-  body.className = 'autorun-stop-body';
-  body.textContent = req.message
-    || '未ログインで到達できる範囲まで取得しました。この先へ進むには認証が必要です。';
-  host.appendChild(body);
 
   const fact = document.createElement('div');
   fact.className = 'autorun-stop-fact';
@@ -922,6 +900,9 @@ function _autorunRenderLeadBar(data, status) {
       meta: remain
         ? `あなたの選択を待っています（あと${remain}で未ログインのまま続行）`
         : 'あなたの選択を待っています',
+      // 待機中でも実行そのものをやめられるようにする。
+      // 以前は「設定して続ける／未ログインのまま進む」しか無く、
+      // 止めたい人に出口が無かった（利用者の指摘）。
       actions: modalOpen ? [] : [
         {
           label: 'ログイン情報を設定して続ける',
@@ -932,6 +913,7 @@ function _autorunRenderLeadBar(data, status) {
           kind: 'ghost',
           onClick: () => _autorunSkipLogin(data.job_id),
         },
+        { label: '中止する', kind: 'danger', onClick: autorunCancel },
       ],
     });
     _autorunRenderLoginStop(data);
@@ -1037,10 +1019,9 @@ function _autorunRender(data) {
   // ---- テスト実行中の実況（OK/NGリスト。R3-01） ----
   _autorunRenderLiveTests(data);
 
-  // ---- 停止ボタン ----
-  const cancelArea = document.getElementById('autorun-cancel-area');
-  const activeStatuses = ['discovering','awaiting_input','crawling','generating_qa','generating_document_mbt','generating_scripts','running_tests'];
-  if (cancelArea) cancelArea.style.display = activeStatuses.includes(status) ? '' : 'none';
+  // 停止操作は主導線バーの「中止する」に一本化する。
+  // 以前はここで独立した「停止」ボタンを表示し直しており、テンプレート側で
+  // 隠していたにもかかわらず画面に2つ目の停止が出ていた（利用者の指摘）。
 
   // ---- 再実行ボタン ----
   const restartArea = document.getElementById('autorun-restart-area');
@@ -1103,6 +1084,7 @@ function _autorunRender(data) {
 }
 
 // ---- AutoRun: 停止 ----
+// 段階側モジュールからも呼べるように公開する（中止の実装は1箇所に保つ）。
 async function autorunCancel() {
   if (!_autoRunJobId) return;
   // 中止はやり直しが効かない（再開手段が無く、最初からになる）。
@@ -1113,8 +1095,6 @@ async function autorunCancel() {
     + 'もう一度最初から実行し直す必要があります。\n\n中止しますか？'
   );
   if (!ok) return;
-  const btn = document.getElementById('autorun-cancel-btn');
-  if (btn) { btn.disabled = true; btn.textContent = '停止中…'; }
   try {
     const res = await fetch('/api/autorun/cancel', {
       method: 'POST',
@@ -1125,12 +1105,9 @@ async function autorunCancel() {
     if (!res.ok || !data.ok) throw new Error(data.error || '停止に失敗しました');
     _autorunStopPolling();
     _autorunStopElapsed();
-    autorunSetStartStatus('停止しました。', false);
-    if (btn) { btn.disabled = false; btn.textContent = '停止'; }
+    autorunSetStartStatus('中止しました。', false);
     const restartArea = document.getElementById('autorun-restart-area');
     if (restartArea) restartArea.style.display = '';
-    const cancelArea = document.getElementById('autorun-cancel-area');
-    if (cancelArea) cancelArea.style.display = 'none';
     const startBtn = document.getElementById('autorun-start-btn');
     if (startBtn) { startBtn.disabled = false; startBtn.textContent = '開始'; }
   } catch (e) {
@@ -1253,7 +1230,6 @@ function autorunReset() {
   document.getElementById('autorun-complete-card').style.display  = 'none';
   document.getElementById('autorun-failure-panel').style.display  = 'none';
   document.getElementById('autorun-preview-panel').style.display  = 'none';
-  document.getElementById('autorun-cancel-area').style.display    = 'none';
   document.getElementById('autorun-restart-area').style.display   = 'none';
   document.getElementById('autorun-idle-msg').style.display       = '';
   document.getElementById('autorun-start-btn').textContent = '開始';
@@ -1281,3 +1257,6 @@ document.getElementById('autorun-url')?.addEventListener('input', () => {
   clearTimeout(_autorunViewpointTimer);
   _autorunViewpointTimer = setTimeout(autorunLoadViewpointSelection, 350);
 });
+
+// 中止は autorun-stages.js の主導線バーからも呼ばれる。
+window.autorunCancel = autorunCancel;

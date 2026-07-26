@@ -120,6 +120,11 @@
   // 常時非表示にされ、段階詳細を描く関数も既に無いため到達できなかった。
   // 非表示のまま DOM に残すと、旧承認モーダルと同じ「押せない・見えないのに
   // セレクタだけ生きている」状態になるため、描画そのものを行わない。
+  // 実行の中止。確認ダイアログと後始末は autorun.js 側に一本化する。
+  function cancelRun() {
+    if (typeof window.autorunCancel === 'function') window.autorunCancel();
+  }
+
   function renderNav() {}
 
   // ---------------------------------------------------------------- 項目
@@ -538,7 +543,11 @@
         title: '実行条件は確定済みです',
         meta: 'テストを実行できます',
         reason: state.error || '',
-        actions: [{ label: 'テストを実行する', onClick: proceed, disabled: state.busy }],
+        // 実行前でも中止できるようにする（確認の途中で止めたい人の出口）。
+        actions: [
+          { label: 'テストを実行する', onClick: proceed, disabled: state.busy },
+          { label: '中止する', kind: 'danger', onClick: cancelRun, disabled: state.busy },
+        ],
       });
       return;
     }
@@ -549,11 +558,10 @@
       title: '生成が完了しました',
       meta: counts.total + '件の内容を確認できます',
       reason: state.error || '',
-      actions: [{
-        label: '実行する',
-        onClick: openDecisions,
-        disabled: state.busy,
-      }],
+      actions: [
+        { label: '実行する', onClick: openDecisions, disabled: state.busy },
+        { label: '中止する', kind: 'danger', onClick: cancelRun, disabled: state.busy },
+      ],
     });
   }
 

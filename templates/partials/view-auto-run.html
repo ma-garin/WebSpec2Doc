@@ -9,11 +9,9 @@
           <div class="autorun-work">
 
             <!-- 停止操作は主導線バーの「中止する」に一本化した。
-                 同じ操作が2箇所にあると、どちらを押すか迷わせる（利用者の指摘）。
-                 要素は既存JSの参照先として残すが、画面には出さない。 -->
-            <div id="autorun-cancel-area" class="autorun-inline-actions" hidden style="display:none">
-              <button type="button" id="autorun-cancel-btn" class="btn-outline-sm btn-danger-outline">停止</button>
-            </div>
+                 「画面に出さないが要素は残す」を続けた結果、JS 側が
+                 display を戻して2つ目の停止ボタンが実際に表示されていた
+                 （利用者の指摘）。要素ごと削除する。 -->
 
             <!-- 受付（idle）: フォームと説明を内包。実行開始で丸ごと切り替わる -->
             <div id="autorun-idle-msg" class="autorun-intake">
@@ -182,26 +180,28 @@
             <!-- コックピット: 横型ステッパー + 全体進捗バー（進捗表示はここに一本化） -->
             <div id="autorun-steps" class="card autorun-cockpit" style="display:none">
               <!-- 概要は1行に圧縮する。器を横に伸ばしただけで情報が増えない状態を避け、
-                   空いた縦をすべて実行ログへ渡す（利用者の指摘）。 -->
+                   空いた縦をすべて実行ログへ渡す（利用者の指摘）。
+                   名称は受付の工程表と一致させる。ここだけ別の呼び方をすると
+                   「受付で見た工程」と「いま進んでいる工程」が突き合わせられない。 -->
               <div class="autorun-step-row stepper">
                 <div class="autorun-step-item" id="ars-crawl">
                   <span class="autorun-step-icon stepper-icon" aria-hidden="true"></span>
-                  <span class="autorun-step-label">仕様書生成</span>
+                  <span class="autorun-step-label">観測</span>
                   <span class="autorun-step-meta" id="ars-crawl-meta"></span>
                 </div>
                 <div class="autorun-step-item" id="ars-qa">
                   <span class="autorun-step-icon stepper-icon" aria-hidden="true"></span>
-                  <span class="autorun-step-label">成果物</span>
+                  <span class="autorun-step-label">設計（8段階）</span>
                   <span class="autorun-step-meta" id="ars-qa-meta"></span>
                 </div>
                 <div class="autorun-step-item" id="ars-scripts">
                   <span class="autorun-step-icon stepper-icon" aria-hidden="true"></span>
-                  <span class="autorun-step-label">スクリプト生成</span>
+                  <span class="autorun-step-label">スクリプト</span>
                   <span class="autorun-step-meta" id="ars-scripts-meta"></span>
                 </div>
                 <div class="autorun-step-item" id="ars-approval">
                   <span class="autorun-step-icon stepper-icon" aria-hidden="true"></span>
-                  <span class="autorun-step-label">承認</span>
+                  <span class="autorun-step-label">確認</span>
                   <span class="autorun-step-meta" id="ars-approval-meta"></span>
                 </div>
                 <div class="autorun-step-item" id="ars-running">

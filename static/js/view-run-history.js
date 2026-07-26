@@ -8,10 +8,29 @@ let _rhRuns = [];
 let _rhPage = 1;
 
 // 履歴の種別タブ（R3-16: 従来の全種別混在selectをタブ分離。既定は「解析」）
+// 選択中のシステムで表示される種別だけを扱う。
+// 隠れているタブ（別システムの種別）が選ばれたままだと、
+// どのタブも選択されていないのに空の一覧が出る。
+function _rhVisibleTypes() {
+  const sys = document.body.getAttribute('data-system') || 'docs';
+  const visible = [];
+  document.querySelectorAll('.rh-type-tab').forEach((btn) => {
+    const owner = btn.getAttribute('data-system');
+    if (!owner || owner === 'common' || owner === sys) visible.push(btn.dataset.type);
+  });
+  return visible.length ? visible : RH_VALID_TYPES;
+}
+
 function _rhCurrentType() {
   let stored = '';
   try { stored = localStorage.getItem(RH_TYPE_KEY) || ''; } catch (_) { stored = ''; }
-  return RH_VALID_TYPES.includes(stored) ? stored : 'crawl';
+  const visible = _rhVisibleTypes();
+  if (visible.includes(stored)) return stored;
+  // 既定はそのシステムの主種別。無ければ「すべて」に落とす。
+  const sys = document.body.getAttribute('data-system') || 'docs';
+  const preferred = sys === 'autorun' ? 'autorun' : 'crawl';
+  if (visible.includes(preferred)) return preferred;
+  return visible.includes('all') ? 'all' : visible[0];
 }
 function _rhSyncTypeTabsUI(type) {
   document.querySelectorAll('.rh-type-tab').forEach(btn => {

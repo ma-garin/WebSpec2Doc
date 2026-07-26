@@ -5,11 +5,11 @@
               <!-- 他のタブは機能名なのに、ここだけ動詞（解析）だった。
                    AutoRun 側は「観測」に統一したため、動詞のままだと
                    同じ行為を2語で呼ぶことになる。システム名に揃える。 -->
-              <button type="button" class="rh-type-tab" data-type="crawl" role="tab">ドキュメント作成</button>
-              <button type="button" class="rh-type-tab" data-type="autorun" role="tab">AutoRun</button>
-              <button type="button" class="rh-type-tab" data-type="comparison" role="tab">現新比較</button>
-              <button type="button" class="rh-type-tab" data-type="ux_review" role="tab">UXレビュー</button>
-              <button type="button" class="rh-type-tab" data-type="schedule" role="tab">スケジュール</button>
+              <button type="button" class="rh-type-tab" data-type="crawl" data-system="docs" role="tab">ドキュメント作成</button>
+              <button type="button" class="rh-type-tab" data-type="autorun" data-system="autorun" role="tab">AutoRun</button>
+              <button type="button" class="rh-type-tab" data-type="comparison" data-system="docs" role="tab">現新比較</button>
+              <button type="button" class="rh-type-tab" data-type="ux_review" data-system="docs" role="tab">UXレビュー</button>
+              <button type="button" class="rh-type-tab" data-type="schedule" data-system="docs" role="tab">スケジュール</button>
               <button type="button" class="rh-type-tab" data-type="all" role="tab">すべて</button>
             </div>
             <button type="button" id="rh-reload-btn" class="btn-outline-sm">↺ 再読み込み</button>

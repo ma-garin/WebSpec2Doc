@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import threading
+import time
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -73,6 +74,12 @@ class AutoRunJob:
     decisions: dict[str, Any] = field(default_factory=dict)
     # 利用者の自由記述による追加指示。実行方針として証跡に残す。
     decisions_note: str = ""
+    #: 人の確認を経ていない事項。空でないなら「全部確認した」と言ってはならない。
+    #: 「不在は証明しない」方針の実装。ログに流すだけでは消えるため状態として持つ。
+    unverified: list[str] = field(default_factory=list)
+    #: 承認・入力の待機期限（epoch秒）。0 なら待機していない。
+    #: 「いつ切れるか」を画面に出せないと、時間切れは黙って起きたのと同じになる。
+    awaiting_deadline_epoch: float = 0.0
 
     _proc: Any = field(default=None, init=False, repr=False, compare=False)
     # ジョブ開始リクエスト時に解決したテナントスコープ済み出力先（Path）。
@@ -105,6 +112,24 @@ class AutoRunJob:
             self.log[0] = _truncate_utf8(self.log[0], MAX_LOG_BYTES)
         logger.info("autorun[%s] %s", self.job_id, line)
 
+    def add_unverified(self, note: str) -> None:
+        """人の確認を経ていない事項を記録する。
+
+        ログに1行流すだけでは、後からレポートを見た人には届かない。
+        「確認していない」ことは成果物に残さないと、確認済みと誤読される。
+        """
+        text = str(note).strip()
+        if not text or text in self.unverified:
+            return
+        self.unverified = [*self.unverified, text]
+        self.add_log(f"未確認として記録: {text}")
+
+    def awaiting_remaining_sec(self) -> int:
+        """待機期限までの残り秒。待機していなければ 0。"""
+        if not self.awaiting_deadline_epoch:
+            return 0
+        return max(0, int(self.awaiting_deadline_epoch - time.time()))
+
     def elapsed_sec(self) -> int:
         if not self.started_at:
             return 0
@@ -131,6 +156,9 @@ class AutoRunJob:
             "status": self.status,
             "step_label": self.step_label,
             "awaiting_stage_id": self.awaiting_stage_id,
+            # 待機の期限と未確認事項は、画面と成果物の両方で必要。
+            "awaiting_remaining_sec": self.awaiting_remaining_sec(),
+            "unverified": self.unverified,
             "log": self.log,
             "outputs": self.outputs,
             "test_results": self.test_results,

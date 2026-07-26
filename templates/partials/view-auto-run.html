@@ -20,7 +20,9 @@
               <div class="autorun-intake-lead">
                 <div class="section-kicker">受付</div>
                 <h3 class="autorun-intake-title">URLか仕様書を渡すだけ。あとはベテランQAとして回します。</h3>
-                <p class="autorun-intake-sub">受領から実行完了レポートの納品まで、フルスペクトラムのQAを一貫して実施します。範囲は絞りません。技法・観点はシステム側が判断します。</p>
+                <!-- 「全自動」とだけ書くと、途中で確認を求められた時点で期待を裏切る。
+                     人が関わる点（要確認の提示・実行条件の確認）を先に言う。 -->
+                <p class="autorun-intake-sub">受領から実行完了レポートの納品まで、フルスペクトラムのQAを一貫して実施します。範囲は絞りません。技法・観点はシステム側が判断します。<strong>途中2回だけ止まります</strong>（ログインが必要なとき／実行条件の確認）。根拠が弱い項目は「要確認」として提示します。</p>
               </div>
 
               <div id="autorun-form-area" class="card autorun-form">
@@ -49,7 +51,7 @@
                          アクセスしないこと（相手先への無断アクセスを避ける）。 -->
                     <button type="button" id="autorun-preflight-btn" class="btn-outline-sm autorun-preflight-btn">事前確認</button>
                   </div>
-                  <p class="input-field-hint">「事前確認」を押すと、対象サイトへアクセスして到達可否と画面数を確認します。範囲は<strong>本実行と同じ</strong>（既定は全ページ対象）なので、規模によっては時間がかかります。押すまで対象サイトには一切アクセスしません。</p>
+                  <p class="input-field-hint"><strong>そのまま「開始」で構いません。</strong>「事前確認」は任意です（到達可否と画面数だけを先に見たいとき。範囲は本実行と同じため、規模によっては時間がかかります）。押すまで対象サイトには一切アクセスしません。</p>
                   <div id="autorun-preflight" class="autorun-preflight" aria-live="polite" hidden></div>
                 </div>
                 <div id="autorun-document-options" class="autorun-document-options" hidden>
@@ -105,31 +107,36 @@
                 <div id="autorun-start-status" class="input-field-message autorun-start-status"></div>
               </div>
 
+              <!-- 工程の数え方は1つに統一する。ここで独自に 11 段に割ると、
+                   実行中に見える 8 段階と一致せず、進捗を推定できなくなる。
+                   番号と名称は src/autorun/stages.py の STAGE_DEFINITIONS が正。 -->
               <div class="autorun-intake-flow">
                 <div class="autorun-intake-phase">
-                  <div class="autorun-intake-phase-head">見立て</div>
+                  <div class="autorun-intake-phase-head">観測</div>
                   <ol class="autorun-intake-steps">
-                    <li><span class="ai-n">1</span>受領（URL / 仕様書）</li>
-                    <li><span class="ai-n">2</span>悉皆観測（全画面・入力・遷移・データフロー）</li>
-                    <li><span class="ai-n">3</span>テスト分析（リスク源の外在化）</li>
-                    <li><span class="ai-n">4</span>テスト計画・方針（止めずに前提化）</li>
+                    <li><span class="ai-n">–</span>受領（URL / 仕様書）</li>
+                    <li><span class="ai-n">–</span>悉皆観測（全画面・入力・遷移・データフロー）</li>
                   </ol>
                 </div>
                 <div class="autorun-intake-phase">
-                  <div class="autorun-intake-phase-head">設計</div>
-                  <ol class="autorun-intake-steps" start="5">
-                    <li><span class="ai-n">5</span>テスト設計（技法を絞らず全面適用）</li>
-                    <li><span class="ai-n">6</span>テストケース生成（手順・データ・期待結果）</li>
-                    <li><span class="ai-n">7</span>スクリプト生成（実行可能候補）</li>
+                  <div class="autorun-intake-phase-head">設計（8段階）</div>
+                  <ol class="autorun-intake-steps">
+                    <li><span class="ai-n">1</span>テスト目的</li>
+                    <li><span class="ai-n">2</span>テスト計画</li>
+                    <li><span class="ai-n">3</span>テストフィーチャー分析</li>
+                    <li><span class="ai-n">4</span>テスト観点分析</li>
+                    <li><span class="ai-n">5</span>テスト基本設計</li>
+                    <li><span class="ai-n">6</span>テスト詳細設計</li>
+                    <li><span class="ai-n">7</span>テストケース</li>
+                    <li><span class="ai-n">8</span>Playwright 自動化</li>
                   </ol>
                 </div>
                 <div class="autorun-intake-phase">
                   <div class="autorun-intake-phase-head">実行・納品</div>
-                  <ol class="autorun-intake-steps" start="8">
-                    <li><span class="ai-n">8</span>テスト実行（Playwright）</li>
-                    <li><span class="ai-n">9</span>ユーザビリティ・現新比較（ビジュアル回帰）</li>
-                    <li><span class="ai-n">10</span>評価（観測事実と品質判断を分離）</li>
-                    <li><span class="ai-n">11</span>レポート納品＋回帰・ドリフト検知</li>
+                  <ol class="autorun-intake-steps">
+                    <li><span class="ai-n">–</span>テスト実行（Playwright）</li>
+                    <li><span class="ai-n">–</span>評価（観測事実と品質判断を分離）</li>
+                    <li><span class="ai-n">–</span>レポート納品＋回帰・ドリフト検知</li>
                   </ol>
                 </div>
               </div>
@@ -158,7 +165,6 @@
             <div id="autorun-login-stop" class="autorun-stop-card" style="display:none"></div>
 
             <!-- 承認待ちの案内。モーダルを勝手に出さず、確認を促してから実行へ進む -->
-            <div id="autorun-review-gate" class="card autorun-review-gate" style="display:none"></div>
 
             <!-- 要確認チェックリスト: AI 由来・高リスクの項目だけを人が確認する -->
             <div id="autorun-review" class="autorun-review" style="display:none"></div>
@@ -263,82 +269,6 @@
               <button type="button" id="autorun-restart-btn" class="btn-outline-sm btn-block">新しく実行</button>
             </div>
 
-            <div id="autorun-approval-modal" class="autorun-modal" role="dialog" aria-modal="true" aria-labelledby="arm-title" style="display:none">
-              <div class="autorun-modal-panel autorun-approval-panel">
-                <header class="autorun-modal-head">
-                  <div>
-                    <div id="arm-title" class="autorun-modal-title">テスト実行の設定</div>
-                    <div class="autorun-modal-subtitle">スクリプト生成が完了しました。実行範囲を選択して開始してください。</div>
-                  </div>
-                  <button type="button" id="arm-close" class="autorun-modal-close" aria-label="閉じる">×</button>
-                </header>
-
-                <div class="autorun-modal-body">
-                  <div id="arm-summary" class="arm-summary">
-                    <span class="muted-copy">読み込み中...</span>
-                  </div>
-
-                  <section class="arm-section">
-                    <div class="control-label">実行対象</div>
-                    <div class="arm-filter-list">
-                      <label class="arm-filter-opt">
-                        <input type="radio" name="arm-filter" value="all" checked>
-                        <div class="arm-filter-text"><span>全テスト</span><span class="arm-filter-hint">すべての自動化テスト</span></div>
-                        <span id="arm-fc-all" class="arm-fc"></span>
-                      </label>
-                      <label class="arm-filter-opt">
-                        <input type="radio" name="arm-filter" value="smoke">
-                        <div class="arm-filter-text"><span>スモークのみ</span><span class="arm-filter-hint">主要画面の表示確認・最速</span></div>
-                        <span id="arm-fc-smoke" class="arm-fc"></span>
-                      </label>
-                      <label class="arm-filter-opt">
-                        <input type="radio" name="arm-filter" value="transition">
-                        <div class="arm-filter-text"><span>遷移テスト</span><span class="arm-filter-hint">スモーク＋画面間遷移確認</span></div>
-                        <span id="arm-fc-transition" class="arm-fc"></span>
-                      </label>
-                      <label class="arm-filter-opt">
-                        <input type="radio" name="arm-filter" value="form">
-                        <div class="arm-filter-text"><span>フォームテスト</span><span class="arm-filter-hint">スモーク＋フォーム入力検証</span></div>
-                        <span id="arm-fc-form" class="arm-fc"></span>
-                      </label>
-                    </div>
-                  </section>
-
-                  <section class="arm-section">
-                    <div class="control-label">実行デバイス</div>
-                    <div class="arm-filter-list">
-                      <label class="arm-filter-opt">
-                        <input type="radio" name="arm-device" value="pc" checked>
-                        <div class="arm-filter-text"><span>PC（既定）</span><span class="arm-filter-hint">デスクトップの画面サイズで実行</span></div>
-                      </label>
-                      <label class="arm-filter-opt">
-                        <input type="radio" name="arm-device" value="mobile">
-                        <div class="arm-filter-text"><span>モバイル（iPhone 13相当）</span><span class="arm-filter-hint">スマートフォンの画面サイズ・タッチ操作で実行</span></div>
-                      </label>
-                    </div>
-                  </section>
-
-                  <section class="arm-section">
-                    <label for="arm-timeout" class="control-label">1テストあたりの制限時間<span class="info-tip" tabindex="0" role="img" aria-label="1件のテストがこの時間内に終わらない場合、そのテストは失敗として打ち切られます。テスト件数が多い場合は短めにすると全体の完了が早まります。" data-tip="1件のテストがこの時間内に終わらない場合、そのテストは失敗として打ち切られます。テスト件数が多い場合は短めにすると全体の完了が早まります。">ⓘ</span></label>
-                    <select id="arm-timeout" class="url-input select-compact">
-                      <option value="10">10秒</option>
-                      <option value="30" selected>30秒（推奨）</option>
-                      <option value="60">60秒</option>
-                      <option value="120">120秒</option>
-                    </select>
-                  </section>
-
-                  <section class="arm-section">
-                    <button type="button" id="arm-view-testcases-btn" class="btn-outline-sm">テストケース一覧を確認する →</button>
-                  </section>
-                </div>
-
-                <footer class="autorun-modal-actions">
-                  <button type="button" id="arm-later-btn" class="btn-outline-sm">後で設定</button>
-                  <button type="button" id="arm-approve-btn" class="btn-primary">テスト実行を開始</button>
-                </footer>
-              </div>
-            </div>
 
             <div id="autorun-preview-panel" class="autorun-modal autorun-preview-modal" style="display:none">
               <div class="autorun-modal-panel autorun-preview-panel">

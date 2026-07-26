@@ -138,10 +138,12 @@
     body.appendChild(reason);
     el.appendChild(body);
 
+    // 同一機能のボタンを行数ぶん並べると、主要導線（実行する）と重さが並んで
+    // 視線誘導が壊れる。副次操作はテキストリンクに落とす。
     var actions = document.createElement('div');
     actions.className = 'arv-actions';
     actions.appendChild(
-      button('アシスタントに相談', function () { askAssistant(entry); }, 'btn-outline-sm')
+      button('相談する', function () { askAssistant(entry); }, 'arv-link-btn')
     );
     el.appendChild(actions);
     return el;
@@ -230,7 +232,7 @@
     lead.className = 'arv-lead';
     lead.textContent =
       'AI が作った下書きのうち、根拠が弱い項目と影響の大きい項目だけを確認します。'
-      + 'チェックすると承認され、確定版に含まれます。';
+      + 'チェックは承認の記録です。実行の前提条件ではありません。';
     head.appendChild(lead);
     host.appendChild(head);
 
@@ -257,12 +259,17 @@
 
     var note = document.createElement('span');
     note.className = 'arv-foot-note';
+    // ここは実行の関門ではない（未確認のままでも「実行する」から実行できる）。
+    // 「すべて確認すると確定できます」はゲートだと誤読させるため使わない。
     note.textContent = counts.review_pending
-      ? '未確認が ' + counts.review_pending + ' 件あります。すべて確認すると確定できます。'
-      : 'すべて確認済みです。確定できます。';
+      ? '未確認が ' + counts.review_pending + ' 件あります。'
+        + 'このまま実行することもできますが、その場合は「人の確認を経ていない」と成果物に記録されます。'
+      : 'すべて確認済みです。確認した事実が成果物に記録されます。';
     bar.appendChild(note);
 
-    var confirm = button('確定する', signOff, 'btn-primary');
+    // ラベルは実際の効果に合わせる。押すと「確認済み」を記録するだけで、
+    // 実行は別導線（主導線バーの「実行する」）から始まる。
+    var confirm = button('確認済みとして記録する', signOff, 'btn-outline-sm');
     confirm.disabled = state.busy || !!counts.review_pending;
     bar.appendChild(confirm);
     return bar;
@@ -390,6 +397,10 @@
   window.autorunReview = {
     load: load,
     render: render,
+    // 実行直前の警告に使う。件数の正は常にこのモジュールが持つ状態。
+    pendingCount: function () {
+      return Number((state.counts || {}).review_pending || 0);
+    },
     hide: function () {
       var host = root();
       if (host) host.style.display = 'none';

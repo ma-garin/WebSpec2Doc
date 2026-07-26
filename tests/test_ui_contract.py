@@ -178,9 +178,14 @@ class TestAutoRunIntake:
         assert "本実行と同じ" in spa
         assert "深さ1・最大8画面" not in spa
 
-    def test_review_gate_exists_before_execution(self, spa: str) -> None:
-        """生成物を確認する前に実行設定モーダルを突きつけないこと。"""
-        assert 'id="autorun-review-gate"' in spa
+    def test_review_queue_exists_before_execution(self, spa: str) -> None:
+        """生成物を確認する導線が実行前にあること。
+
+        旧 autorun-review-gate は awaiting_approval 専用の描画で、当該
+        ステータスが廃止された時点で到達不能になっていた。現行は要確認
+        キュー（autorun-review）が同じ役割を担う。
+        """
+        assert 'id="autorun-review"' in spa
 
     def test_phase_navigation_lives_in_the_sidebar(self, spa: str) -> None:
         """フェーズはサイドメニューに置く（上部のタブ列にしない）。"""
@@ -200,8 +205,21 @@ class TestAutoRunIntake:
         assert re.search(r'id="autorun-mode-url"[^>]*checked', spa)
 
 
-class TestAutoRunApprovalModal:
-    """テスト実行設定モーダル（旧 E2E の存在・既定値チェック）。"""
+class TestAutoRunExecutionGate:
+    """実行前の関門は「実行条件の確認」ダイアログ1本であること。
+
+    旧「テスト実行の設定」モーダル（awaiting_approval の第3関門）は廃止済み。
+    バックエンドが当該ステータスを設定しなくなった後も非表示のまま DOM に
+    残り、同名セレクタの衝突と「実行を始めるボタンが2種類ある」状態を
+    生んでいたため、マークアップごと削除した。復活させない。
+    """
+
+    @pytest.mark.parametrize(
+        "element_id",
+        ["autorun-decisions", "autorun-decisions-go", "autorun-decisions-back"],
+    )
+    def test_decisions_dialog_present(self, spa: str, element_id: str) -> None:
+        assert f'id="{element_id}"' in spa
 
     @pytest.mark.parametrize(
         "element_id",
@@ -211,28 +229,11 @@ class TestAutoRunApprovalModal:
             "arm-close",
             "arm-later-btn",
             "arm-approve-btn",
-            "arm-view-testcases-btn",
             "arm-timeout",
         ],
     )
-    def test_element_present(self, spa: str, element_id: str) -> None:
-        assert f'id="{element_id}"' in spa
-
-    @pytest.mark.parametrize("value", ["all", "smoke", "transition", "form"])
-    def test_all_four_filters_offered(self, spa: str, value: str) -> None:
-        assert re.search(r'name="arm-filter"[^>]*value="' + value + r'"', spa)
-
-    def test_all_tests_selected_by_default(self, spa: str) -> None:
-        assert re.search(r'name="arm-filter"[^>]*value="all"[^>]*checked', spa)
-
-    def test_timeout_options_and_default(self, spa: str) -> None:
-        for seconds in ("10", "30", "60", "120"):
-            assert f'value="{seconds}"' in spa
-        assert re.search(r'value="30"[^>]*selected', spa)
-
-    def test_pc_device_is_default(self, spa: str) -> None:
-        """PC 専用方針。PC が既定で選択されていること。"""
-        assert re.search(r'name="arm-device"[^>]*value="pc"[^>]*checked', spa)
+    def test_legacy_approval_modal_removed(self, spa: str, element_id: str) -> None:
+        assert f'id="{element_id}"' not in spa
 
 
 # ---------------------------------------------------------------- 他ビューの骨格
@@ -253,7 +254,7 @@ class TestOtherViewStructures:
         assert f'id="{element_id}"' in spa
 
     @pytest.mark.parametrize(
-        "tab", ["overview", "screens", "test-design", "flow", "runs", "history"]
+        "tab", ["overview", "screens", "test-design", "testcases", "flow", "runs", "history"]
     )
     def test_report_tabs_present(self, spa: str, tab: str) -> None:
         assert f'data-tab="{tab}"' in spa

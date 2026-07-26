@@ -202,6 +202,25 @@
       body.appendChild(facts);
     }
 
+    // 未確認のまま実行できる以上、実行直前に「何が未確認のまま残るか」を出す。
+    // ここで黙ると、成果物を見た人は「全部確認済み」と読む。
+    var pending = _pendingReviewCount();
+    if (pending > 0) {
+      var warn = document.createElement('section');
+      warn.className = 'ard-unverified';
+      warn.setAttribute('role', 'note');
+      var wh = document.createElement('div');
+      wh.className = 'ard-facts-head';
+      wh.textContent = '未確認のまま実行されます';
+      warn.appendChild(wh);
+      var wp = document.createElement('p');
+      wp.className = 'ard-fact';
+      wp.textContent = '要確認 ' + pending + ' 件が未チェックです。'
+        + 'このまま実行すると「人の確認を経ていない」と成果物に記録されます。';
+      warn.appendChild(wp);
+      body.appendChild(warn);
+    }
+
     var err = $('autorun-decisions-error');
     if (err) {
       err.textContent = state.error || '';
@@ -209,6 +228,13 @@
     }
     var go = $('autorun-decisions-go');
     if (go) go.disabled = state.busy;
+  }
+
+  // 要確認の残件数。レビューモジュールが未初期化なら 0 として扱う（警告を出さない）。
+  function _pendingReviewCount() {
+    var r = window.autorunReview;
+    if (!r || typeof r.pendingCount !== 'function') return 0;
+    try { return Number(r.pendingCount() || 0); } catch (e) { return 0; }
   }
 
   // ---------------------------------------------------------------- 確定

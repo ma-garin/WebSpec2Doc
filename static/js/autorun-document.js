@@ -120,6 +120,37 @@ async function _autorunUploadReferenceDocs(event) {
   }
 }
 
+// 開始できない理由を1つだけ返す（無ければ空文字）。
+// 押してから叱るのではなく、押す前に理由を見せるための判定。
+function autorunStartBlockReason() {
+  const url = (document.getElementById('autorun-url')?.value || '').trim();
+  if (!url) return 'URLを入力すると開始できます。';
+  const mode = _autorunMode();
+  if (mode === 'document' && !_autorunReferenceDocs.length) {
+    return '文書駆動では要件・仕様文書を1件以上追加してください。';
+  }
+  const criterion = document.getElementById('autorun-selection-criterion')?.value || '';
+  const targetPageId = (document.getElementById('autorun-target-page-id')?.value || '').trim();
+  if (mode === 'document' && criterion === 'reached_target' && !targetPageId) {
+    return '到達する画面IDを入力してください。';
+  }
+  return '';
+}
+
+// 開始ボタンの活性と、その理由表示を同期する。
+// 「押せるのに押すと失敗する」状態を作らない。
+function autorunSyncStartButton() {
+  const btn = document.getElementById('autorun-start-btn');
+  if (!btn || btn.dataset.busy === '1') return;
+  const reason = autorunStartBlockReason();
+  btn.disabled = !!reason;
+  const hint = document.getElementById('autorun-start-status');
+  if (hint && !hint.dataset.sticky) {
+    hint.textContent = reason;
+    hint.classList.remove('input-field-message-error');
+  }
+}
+
 async function autorunStart() {
   const url = (document.getElementById('autorun-url')?.value || '').trim();
   if (!url) { autorunSetStartStatus('URLを入力してください。', true); return; }
@@ -140,7 +171,7 @@ async function autorunStart() {
   const maxPages = document.getElementById('autorun-max-pages')?.value || '300';
   const viewpointSetId = document.getElementById('autorun-viewpoint-set')?.value || '';
   const btn = document.getElementById('autorun-start-btn');
-  if (btn) { btn.disabled = true; btn.textContent = '開始中…'; }
+  if (btn) { btn.dataset.busy = '1'; btn.disabled = true; btn.textContent = '開始中…'; }
   autorunSetStartStatus('', false);
 
   try {
@@ -169,7 +200,8 @@ async function autorunStart() {
     _autorunAttachJob(data.job_id);
   } catch (error) {
     autorunSetStartStatus(String(error), true);
-    if (btn) { btn.disabled = false; btn.textContent = '開始'; }
+    if (btn) { delete btn.dataset.busy; btn.textContent = '開始'; }
+    autorunSyncStartButton();
   }
 }
 

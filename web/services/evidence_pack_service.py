@@ -59,6 +59,9 @@ def _run_conditions(job: AutoRunJob) -> dict[str, Any]:
         "auth_scope": str(policy.get("auth_scope", "") or "public_only"),
         "browser_request": str(policy.get("browser_request", "") or ""),
         "note": str(policy.get("note", "") or ""),
+        # 「確認していない」を証跡に載せる。ここが空でない限り、
+        # この実行を「人が全て確認した」と説明してはならない。
+        "unverified": list(job.unverified),
     }
 
 

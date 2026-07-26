@@ -5,6 +5,7 @@ import logging
 import subprocess
 import sys
 import threading
+import time
 import uuid
 from dataclasses import asdict, replace
 from datetime import datetime
@@ -370,7 +371,19 @@ def api_autorun_jobs() -> dict:
 
 
 #: 段階承認の待機上限。人の確認を待つので長め（無期限にはしない）。
+#: 時間切れでも実行は止めないが、job.unverified に必ず記録して成果物へ出す。
 STAGE_APPROVAL_TIMEOUT_SEC = 7200
+#: ログイン情報入力の待機上限。
+LOGIN_INPUT_TIMEOUT_SEC = 1800
+
+
+def _fmt_timeout(seconds: float) -> str:
+    """待機上限を人が読める単位で返す（テストで短縮値を差し込めるよう秒も扱う）。"""
+    if seconds >= 3600:
+        return f"{seconds / 3600:.0f}時間"
+    if seconds >= 60:
+        return f"{seconds / 60:.0f}分"
+    return f"{seconds:g}秒"
 
 
 def _ensure_stage_content(job: AutoRunJob, stage_id: str) -> None:
@@ -485,7 +498,11 @@ def release_stage_gate(job_id: str, domain: str) -> bool:
 
 
 def release_all_stage_gates(
-    job_id: str, domain: str, decisions: dict[str, Any] | None = None, note: str = ""
+    job_id: str,
+    domain: str,
+    decisions: dict[str, Any] | None = None,
+    note: str = "",
+    unverified: list[str] | None = None,
 ) -> bool:
     """実行条件の確定により、以降すべての段階の関門を解除する。
 
@@ -514,6 +531,9 @@ def release_all_stage_gates(
         _apply_decisions_to_policy(job)
 
         job.add_log("実行条件を確定しました。以降の段階は承認済みとして進みます。")
+        # 人が見ていない項目は「確認済み」に数えない。成果物へ持ち越す。
+        for item in unverified or []:
+            job.add_unverified(f"人の確認を経ずに実行へ進みました — {item}")
         # 待機中なら起こす。待機していなければフラグだけが効く。
         job._stages_event.set()
         return True
@@ -767,8 +787,8 @@ def _await_stage_approval(job: AutoRunJob, gate: str) -> None:
 
     if not job.require_stage_approval:
         # 人が承認できない文脈（自動実行など）。飛ばした事実を必ず残す。
-        job.add_log(
-            f"段階承認をスキップしました（自動実行）。この実行の{subject}は人の確認を経ていません。"
+        job.add_unverified(
+            f"{subject}: 自動実行のため段階承認を行わず、人の確認を経ていません。"
         )
         return
 
@@ -789,16 +809,20 @@ def _await_stage_approval(job: AutoRunJob, gate: str) -> None:
     job.step_label = label
     # いまどの段階で待っているかをUIへ伝える（1段階ずつ提示するために必須）。
     job.awaiting_stage_id = gate
+    # 期限を状態として持つ。画面に残り時間を出さないと、時間切れは
+    # 「黙って承認された」のと区別がつかない。
+    job.awaiting_deadline_epoch = time.time() + STAGE_APPROVAL_TIMEOUT_SEC
     job.add_log(message)
 
     approved = job._stages_event.wait(timeout=STAGE_APPROVAL_TIMEOUT_SEC)
     job.awaiting_stage_id = ""
+    job.awaiting_deadline_epoch = 0.0
     if job._cancelled:
         return
     if not approved:
-        job.add_log(
-            "承認待ちがタイムアウトしました。未承認のまま後続へ進みます"
-            f"（この実行の{subject}は人の確認を経ていません）。"
+        job.add_unverified(
+            f"{subject}: 承認待ちがタイムアウト（{_fmt_timeout(STAGE_APPROVAL_TIMEOUT_SEC)}）し、"
+            "人の確認を経ないまま後続へ進みました。"
         )
 
 
@@ -810,11 +834,17 @@ def _run_job(job: AutoRunJob, depth: int, max_pages: int) -> None:
 
         # ログイン入力待ち（最大 30 分）
         if job.status == "awaiting_input":
-            job._input_event.wait(timeout=1800)
+            job.awaiting_deadline_epoch = time.time() + LOGIN_INPUT_TIMEOUT_SEC
+            job._input_event.wait(timeout=LOGIN_INPUT_TIMEOUT_SEC)
+            job.awaiting_deadline_epoch = 0.0
             if job._cancelled:
                 return
             if not job._input_data:
-                job.add_log("入力タイムアウト。スキップしてクロールを続行します。")
+                job.add_unverified(
+                    "ログイン情報の入力がタイムアウト"
+                    f"（{_fmt_timeout(LOGIN_INPUT_TIMEOUT_SEC)}）し、"
+                    "未ログインで到達できる範囲だけを対象にしました。"
+                )
 
             if job._input_data.get("type") == "login" and not job._input_data.get("skip"):
                 _do_login(job)
@@ -1048,7 +1078,18 @@ def _phase_crawl(job: AutoRunJob, depth: int, max_pages: int) -> None:
         }
     except Exception:
         job.step_data["crawl"] = {"domain": domain}
-    job.add_log(f"クロール完了: {domain}")
+        screens = []
+
+    # 1画面も観測できていないなら、以降の成果物はすべて中身の無い雛形になる。
+    # 「完了」として進めると、空のテスト設計が正常な成果物に見えてしまう。
+    if not screens:
+        _mark_job_failed(
+            job,
+            "1画面も観測できませんでした。URL・到達可否・robots制限・ログイン要否を確認してください。",
+        )
+        return
+
+    job.add_log(f"クロール完了: {domain}（{len(screens)}画面）")
 
 
 def _phase_generate_qa(job: AutoRunJob) -> None:
@@ -1228,6 +1269,10 @@ def _run_nonfunctional_analysis(job: AutoRunJob) -> None:
                 f"観測範囲: {coverage.observed_pages}ページ。"
                 f"未観測の領域が {len(coverage.gaps)} 種類あります（未検証として記録）。"
             )
+            # 未観測は「問題なし」ではない。承認まわりの未確認と同じ一覧へ集約し、
+            # レポートを見た人が「確認済み」と誤読しないようにする。
+            for gap in coverage.gaps:
+                job.add_unverified(f"未観測の領域: {gap.kind}（{gap.count}件） — {gap.reason}")
         else:
             job.add_log(f"観測範囲: {coverage.observed_pages}ページ。未観測の領域は検出されず。")
 

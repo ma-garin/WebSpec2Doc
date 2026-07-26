@@ -156,11 +156,10 @@ function openAddSite() {
   genPanel.style.display = '';
   document.getElementById('url-input').value = '';
   document.getElementById('p1-summary').style.display = 'none';
-  clearDiscovered(); updateTargetPreview(); showWizardStep(1);
+  clearDiscovered(); showWizardStep(1);
 }
 document.getElementById('add-site-btn').addEventListener('click', openAddSite);
 document.getElementById('add-site-btn-2').addEventListener('click', openAddSite);
-document.getElementById('nav-new-analysis-btn').addEventListener('click', openAddSite);
 
 // ---- ナビ「実行履歴」: 種別を問わない一般化された実行履歴ビューへ遷移する（R2-27）----
 document.getElementById('nav-run-history-btn')?.addEventListener('click', () => {
@@ -201,7 +200,6 @@ document.getElementById('p1-next-btn').addEventListener('click', () => {
   // 画面リストと必要なら認証パネルを表示
   if (discovered.length) {
     document.getElementById('discovered-url-panel').style.display = '';
-    updateTargetPreview();
   }
 });
 
@@ -209,6 +207,14 @@ document.getElementById('p1-next-btn').addEventListener('click', () => {
 document.getElementById('p2-back-btn').addEventListener('click', () => {
   showWizardStep(1);
 });
+
+// ---- ダークモード撤去の後始末 ----
+// 以前のバージョンが <html data-theme="dark"> と localStorage を書いていた。
+// 古いタブ・古いキャッシュから復活しないよう、起動時に必ず消す（ライト固定）。
+(function removeLegacyTheme() {
+  document.documentElement.removeAttribute('data-theme');
+  try { localStorage.removeItem('webspec2doc.theme'); } catch (e) { /* 非対応環境 */ }
+}());
 
 // ---- トースト通知 ----
 const TOAST_ICONS = { success: '✓', error: '⚠', info: 'ℹ' };

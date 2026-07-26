@@ -40,12 +40,17 @@ function applySettings() {
   // crawl-depth / max-pages はウィザードの自動観測モードでのみ使う値のため
   // ここでは上書きしない（既定値のまま）。
   if (s.auth) document.getElementById('auth-path').value = s.auth;
+  // 並列数はウィザードの上級設定にあり、既定値をここで反映する。
+  const par = document.getElementById('crawl-parallelism');
+  if (par && s.parallelism) par.value = String(s.parallelism);
 }
 function loadSettingsForm() {
   const s = getSettings();
   document.getElementById('set-depth').value = s.depth || 2;
   document.getElementById('set-max').value = s.maxPages || 30;
   document.getElementById('set-auth').value = s.auth || '';
+  const parEl = document.getElementById('set-parallelism');
+  if (parEl) parEl.value = String(s.parallelism || 4);
   const caseEl = document.getElementById('set-case-minutes');
   if (caseEl) caseEl.value = s.caseMinutes || 10;
   const urlHistEl = document.getElementById('set-url-history-limit');
@@ -55,9 +60,11 @@ document.getElementById('save-settings').addEventListener('click', () => {
   const caseEl = document.getElementById('set-case-minutes');
   const urlHistEl = document.getElementById('set-url-history-limit');
   const urlHistoryLimit = urlHistEl ? (Number(urlHistEl.value) || 0) : 10;
+  const parEl = document.getElementById('set-parallelism');
   localStorage.setItem(SETTINGS_KEY, JSON.stringify({
     depth: document.getElementById('set-depth').value,
     maxPages: document.getElementById('set-max').value,
+    parallelism: parEl ? (Number(parEl.value) || 4) : 4,
     auth: document.getElementById('set-auth').value.trim(),
     caseMinutes: caseEl ? (Number(caseEl.value) || 10) : 10,
     urlHistoryLimit,

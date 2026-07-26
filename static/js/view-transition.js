@@ -255,7 +255,7 @@ function _showUmlPanel(type, screens) {
     '</div>';
   _loadMermaid(() => {
     _renderUmlDiagram(type, screens, rows).then(() => {
-      setTimeout(_fitUmlZoom, 100);
+      setTimeout(_initUmlZoom, 100);
     });
   });
 }
@@ -452,12 +452,22 @@ function _setUmlZoom(value) {
 }
 
 function _fitUmlZoom() {
+  _applyUmlFit(false);
+}
+
+// 初期表示は等倍。Fit をそのまま使うと小さい図が 250% 超まで引き伸ばされ、
+// 線と文字だけが太った読みにくい絵になる。画面より広い図のときだけ縮める。
+function _initUmlZoom() {
+  _applyUmlFit(true);
+}
+
+function _applyUmlFit(capToActualSize) {
   const target = document.getElementById('uml-render-target');
   const stage = document.getElementById('uml-zoom-stage');
   if (!target || !stage) return;
   const baseWidth = Number(stage.dataset.baseWidth || 1);
-  const next = (target.clientWidth - 32) / baseWidth;
-  _setUmlZoom(next);
+  const fit = (target.clientWidth - 32) / baseWidth;
+  _setUmlZoom(capToActualSize ? Math.min(1, fit) : fit);
   target.scrollLeft = 0;
   target.scrollTop = 0;
 }

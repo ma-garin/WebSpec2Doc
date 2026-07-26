@@ -4,8 +4,6 @@ let discovered = [];
 let discoverSkipped = [];
 const urlInput = document.getElementById('url-input');
 const crawlDiscoverySection = document.getElementById('crawl-discovery-section');
-const targetPreview = document.getElementById('target-preview');
-const targetPreviewList = document.getElementById('target-preview-list');
 
 function showStep(n) { wizardStep = n; }
 
@@ -19,7 +17,7 @@ function validateUrlInput() {
   setUrlMessage(ok ? '' : 'URL は https://example.com の形式で入力してください', true);
   return ok;
 }
-urlInput.addEventListener('input', () => { clearDiscovered(); updateTargetPreview(); validateUrlInput(); });
+urlInput.addEventListener('input', () => { clearDiscovered(); validateUrlInput(); });
 
 
 function setUrlMessage(msg, isError) {
@@ -432,7 +430,7 @@ async function discoverUrls(skipLoginSection) {
     clearDiscovered(); status.textContent = e.message; status.classList.add('discover-status-error');
   } finally {
     const elapsed = _stopDiscoverTimer();
-    loading.style.display = 'none'; btn.disabled = false; updateTargetPreview();
+    loading.style.display = 'none'; btn.disabled = false;
     if (elapsed) {
       const timeCard = document.getElementById('p1-time-card');
       const elapsedNum = document.getElementById('p1-elapsed-num');
@@ -508,7 +506,6 @@ function renderDiscovered() {
     }, '除外画面').join('');
   }
   list.innerHTML = html;
-  list.querySelectorAll('.discovered-cb').forEach(cb => cb.addEventListener('change', updateTargetPreview));
 }
 function clearDiscovered() {
   discovered = [];
@@ -518,7 +515,7 @@ function clearDiscovered() {
   document.getElementById('discover-status').textContent = '';
   setCrawlTargetMode('selected');
 }
-function setAllDiscovered(v) { document.querySelectorAll('.discovered-cb').forEach(cb => { cb.checked = v; }); updateTargetPreview(); }
+function setAllDiscovered(v) { document.querySelectorAll('.discovered-cb').forEach(cb => { cb.checked = v; }); }
 function selectedDiscovered() { return [...document.querySelectorAll('.discovered-cb:checked')].map(cb => cb.value); }
 
 // ---- 観測方法（自動観測／選択したURLのみ）----
@@ -538,7 +535,6 @@ function _syncCrawlModeFields() {
   const discoveredPanel = document.getElementById('discovered-url-panel');
   if (autoFields) autoFields.style.display = isAuto ? 'flex' : 'none';
   if (discoveredPanel) discoveredPanel.style.display = (isAuto || !discovered.length) ? 'none' : '';
-  updateTargetPreview();
 }
 document.querySelectorAll('input[name="crawl-target-mode"]').forEach(radio =>
   radio.addEventListener('change', _syncCrawlModeFields));
@@ -551,37 +547,8 @@ function buildTargetUrls() {
   }
   return selectedDiscovered();
 }
-function updateTargetPreview() {
-  const urls = buildTargetUrls();
-  const isAuto = crawlTargetMode() === 'auto';
-  targetPreview.querySelector('strong').textContent = isAuto
-    ? '自動観測（起点URLからリンクを辿ります）'
-    : `チェック対象 ${urls.length}件`;
-  const etaEl = document.getElementById('target-preview-eta');
-  if (!urls.length) {
-    const msg = urlInput.value.trim() ? '画面リスト取得を実行してください' : 'URLを入力してください';
-    targetPreviewList.innerHTML = `<li><span>未確定</span><code>${msg}</code></li>`;
-    if (etaEl) etaEl.textContent = '';
-    return;
-  }
-  targetPreviewList.innerHTML = urls.map((u, i) => `<li><span>${isAuto ? '起点URL' : (i === 0 ? 'メイン' : '対象 ' + (i + 1))}</span><code>${escHtml(u)}</code></li>`).join('');
-  if (etaEl) {
-    const pageCount = isAuto ? Number(document.getElementById('max-pages').value) || 30 : urls.length;
-    etaEl.textContent = '⏱ 所要目安: ' + estimateCrawlEta(pageCount) + (isAuto ? '（最大ページ数の場合）' : '');
-  }
-}
-
-// ---- 所要時間の目安（並列数を考慮した粗い見積り。捏造せず「目安」であることを明示） ----
-function estimateCrawlEta(pageCount) {
-  const SEC_PER_PAGE = 15;
-  const parallelism = Number(document.getElementById('crawl-parallelism')?.value) || 2;
-  const seconds = Math.max(30, Math.ceil((pageCount * SEC_PER_PAGE) / parallelism));
-  const minutes = Math.ceil(seconds / 60);
-  return minutes <= 1 ? '約1分' : `約${minutes}分`;
-}
-document.getElementById('crawl-parallelism')?.addEventListener('change', updateTargetPreview);
-document.getElementById('crawl-depth')?.addEventListener('input', updateTargetPreview);
-document.getElementById('max-pages')?.addEventListener('input', updateTargetPreview);
+// 「チェック対象 N件」の確認ブロックは廃止した。直上の「取得対象の画面」リストと
+// 同じ内容を二重に見せていただけで、選択結果の確認はリスト側で足りる。
 
 // ---- 参考文書アップロード（Doc Fusion）----
 let referenceDocPaths = [];

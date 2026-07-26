@@ -7,18 +7,18 @@
   <title>WebSpec2Doc</title>
   <!-- Google Fonts はローカル専用の CSP（style-src 'self'）でブロックされ読み込まれないため撤去。
        描画は --font-main / --font-mono のシステムフォント・フォールバックで確定する。 -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='app-report.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='app-components.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app-report.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app-components.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/autorun-document.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/autorun-review.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/settings-admin.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/report-v2.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/report-v2.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/testcase-grid.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='viewpoints.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/driver.js/driver.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='viewpoints.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/driver.js/driver.css') }}?v={{ _ver }}">
 </head>
 <body class="app-page">
 <a href="#app-content" class="skip-link">本文へスキップ</a>

@@ -70,6 +70,13 @@
               <div class="options-grid">
                 <div class="field"><label for="set-depth">階層数（既定）</label><input type="number" id="set-depth" min="1" max="5"></div>
                 <div class="field"><label for="set-max">最大ページ数（既定）</label><input type="number" id="set-max" min="1" max="300"></div>
+                <div class="field"><label for="set-parallelism">並列数（既定）</label>
+                  <select id="set-parallelism">
+                    <option value="1">1（順次）</option><option value="2">2</option>
+                    <option value="3">3</option><option value="4" selected>4（推奨）</option>
+                  </select>
+                  <p class="input-hint" style="margin:4px 0 0">同時にアクセスする画面数。多いほど速いが、対象サイトへの負荷が増えます。</p>
+                </div>
                 <div class="field"><label for="set-case-minutes">1テストケースあたりの想定分数</label><input type="number" id="set-case-minutes" min="1" max="120" placeholder="10"></div>
                 <div class="field"><label for="set-url-history-limit">URL履歴の保持件数</label>
                   <select id="set-url-history-limit">

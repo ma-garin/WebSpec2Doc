@@ -197,11 +197,11 @@ def test_discover_to_crawl_flow(tmp_path: Path, monkeypatch) -> None:
     assert "--format" in popen_calls[0]
     assert "md,html,json" in popen_calls[0]
     assert "--parallelism" in popen_calls[0]
-    assert popen_calls[0][popen_calls[0].index("--parallelism") + 1] == "2"
+    assert popen_calls[0][popen_calls[0].index("--parallelism") + 1] == "4"
 
 
 def test_run_parallelism_is_configurable_within_1_to_4(tmp_path: Path, monkeypatch) -> None:
-    """並列数はUIから指定でき（既定2）、1〜4の範囲にクランプされる
+    """並列数はUIから指定でき（既定4）、1〜4の範囲にクランプされる
     （ドッグフーディング要望: 分析時間を短縮したい、への対応）。"""
     _patch_output_dirs(tmp_path, monkeypatch)
     _write_report_files(tmp_path)

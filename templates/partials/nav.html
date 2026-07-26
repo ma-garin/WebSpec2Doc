@@ -4,10 +4,8 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11.5L12 4l9 7.5"/><path d="M5.5 10v10h13V10M9.5 20v-6h5v6"/></svg>
         <span class="nav-label">ホーム</span>
       </button>
-      <button class="app-nav-item" id="nav-new-analysis-btn" type="button" data-system="docs">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>
-        <span class="nav-label">新規観測</span>
-      </button>
+      <!-- 「新規観測」はサイドバー上部の主要アクションボタン（#add-site-btn）が持つ。
+           ナビにも同じ項目を置くと同じ導線が 2 つ並ぶため、ここには置かない。 -->
       <div class="app-nav-group" data-system="autorun">メイン</div>
       <button class="app-nav-item" data-view="auto-run" data-system="autorun">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2L4 14h8l-1 8 9-12h-8z"/></svg>

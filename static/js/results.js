@@ -204,11 +204,14 @@ document.addEventListener('click', () => {
 document.querySelectorAll('.result-tabs .result-tab').forEach(t => {
   t.addEventListener('click', () => selectResultTab(t.dataset.tab));
   t.addEventListener('keydown', e => {
-    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    // 縦ナビなので上下が主。横向きに慣れた操作も残すため左右も受ける。
+    const FWD = e.key === 'ArrowDown' || e.key === 'ArrowRight';
+    const BACK = e.key === 'ArrowUp' || e.key === 'ArrowLeft';
+    if (!FWD && !BACK) return;
     e.preventDefault();
     const tabs = [...document.querySelectorAll('.result-tabs .result-tab')].filter(x => x.offsetParent !== null);
     const i = tabs.indexOf(t);
-    const next = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+    const next = tabs[(i + (FWD ? 1 : tabs.length - 1)) % tabs.length];
     if (next) { selectResultTab(next.dataset.tab); next.focus(); }
   });
 });

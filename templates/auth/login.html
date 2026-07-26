@@ -7,8 +7,8 @@
   <title>ログイン - WebSpec2Doc</title>
   <!-- Google Fonts はローカル専用の CSP（style-src 'self'）でブロックされ読み込まれないため撤去。
        描画は --font-main / --font-mono のシステムフォント・フォールバックで確定する。 -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}?v={{ _ver }}">
 </head>
 <body class="auth-body">
 <div class="auth-split">

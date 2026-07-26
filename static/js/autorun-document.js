@@ -1,5 +1,7 @@
 // ====================== AutoRun: 文書駆動モード ======================
 let _autorunReferenceDocs = [];
+// 直近の実行条件。失敗・停止からのやり直しに使う。
+let _autoRunLastPayload = null;
 
 AUTORUN_STEP_MAP.generating_document_mbt = 'ars-qa';
 AUTORUN_PHASE_LABELS.generating_document_mbt = '文書要件からテスト設計中…';
@@ -190,6 +192,9 @@ async function autorunStart() {
         observe_validation: !!document.getElementById('autorun-observe-validation')?.checked,
       });
     }
+    // 失敗しても「最初から入力し直す」しか手が無かった。
+    // 同じ条件で再実行できるよう、送った内容を保持する。
+    _autoRunLastPayload = payload;
     const response = await fetch('/api/autorun/start', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -226,3 +231,27 @@ document.querySelectorAll('input[name="autorun-mode"]').forEach(input => {
 document.getElementById('autorun-selection-criterion')?.addEventListener('change', _autorunUpdateTargetField);
 document.getElementById('autorun-reference-doc-input')?.addEventListener('change', _autorunUploadReferenceDocs);
 _autorunUpdateMode();
+
+// 失敗・停止した実行を、同じ条件でやり直す。
+// これが無いと復旧手段が「受付へ戻って全部入力し直す」しかなくなる。
+async function autorunRetryLastRun() {
+  if (!_autoRunLastPayload) {
+    // 条件が分からないなら受付へ戻す（黙って何もしないより良い）。
+    autorunReset();
+    return;
+  }
+  const payload = _autoRunLastPayload;
+  try {
+    const response = await fetch('/api/autorun/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.ok) throw new Error(data.error || '再実行に失敗しました');
+    _autorunAttachJob(data.job_id);
+  } catch (error) {
+    autorunReset();
+    autorunSetStartStatus(String(error), true);
+  }
+}

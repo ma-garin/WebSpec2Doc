@@ -64,8 +64,10 @@
 
     var label = document.createElement('span');
     label.className = 'arv-progress-label';
+    // 語は「要確認（人が見る対象）」と「確認済み」の2つに固定する。
+    // 以前は要確認・未確認・確定が同じ画面に並び、進捗の読み方が定まらなかった。
     label.textContent = counts.review
-      ? '要確認 ' + counts.review_done + ' / ' + counts.review + ' 件'
+      ? '要確認 ' + counts.review + ' 件中 ' + counts.review_done + ' 件を確認済み'
       : '要確認はありません';
     head.appendChild(label);
 
@@ -262,7 +264,7 @@
     // ここは実行の関門ではない（未確認のままでも「実行する」から実行できる）。
     // 「すべて確認すると確定できます」はゲートだと誤読させるため使わない。
     note.textContent = counts.review_pending
-      ? '未確認が ' + counts.review_pending + ' 件あります。'
+      ? '未確認の要確認項目が ' + counts.review_pending + ' 件あります。'
         + 'このまま実行することもできますが、その場合は「人の確認を経ていない」と成果物に記録されます。'
       : 'すべて確認済みです。確認した事実が成果物に記録されます。';
     bar.appendChild(note);
@@ -363,7 +365,7 @@
     var box = document.createElement('div');
     box.className = 'arv-confirmed';
     box.textContent =
-      '確定しました。確認 ' + (counts.review || 0) + ' 件 / 自動承認 '
+      '確認済みとして記録しました。要確認 ' + (counts.review || 0) + ' 件 / 自動承認 '
       + (counts.auto || 0) + ' 件。記録はアクティビティログに残ります。';
     host.appendChild(box);
   }

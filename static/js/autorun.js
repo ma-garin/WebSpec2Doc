@@ -34,11 +34,11 @@ const AUTORUN_STEP_MAP = {
 // コックピット見出しのフェーズ表示（固定の見込み時間は出さない: 実測の経過時間のみ表示）
 const AUTORUN_PHASE_LABELS = {
   idle: '待機中',
-  discovering: '画面分析中…',
+  discovering: '到達確認中…',
   awaiting_input: 'ログイン情報の入力待ち',
-  crawling: '仕様書生成中…',
-  generating_qa: 'QA成果物生成中…',
-  awaiting_stages: '承認待ち — テスト目的〜ケースを確認してください',
+  crawling: '観測中…（仕様書を作成）',
+  generating_qa: '成果物を生成中…',
+  awaiting_stages: '確認待ち — 要確認の項目を確認してください',
   generating_scripts: 'スクリプト生成中…',
   awaiting_approval: '承認待ち — 実行範囲を選択してください',
   running_tests: 'テスト実行中…',
@@ -944,11 +944,16 @@ function _autorunRenderLeadBar(data, status) {
     const label = status === 'complete'
       ? (failed ? `完了 — 失敗 ${failed} 件` : '完了')
       : (status === 'cancelled' ? '停止しました' : '失敗しました');
+    // 終了状態でも「次に何をするか」を必ず1つ出す。原因だけ出して手を止めさせない。
+    const terminalActions = status === 'complete'
+      ? []
+      : [{ label: '同じ条件でやり直す', onClick: autorunRetryLastRun }];
     bar.set({
       tone: status === 'complete' && !failed ? 'done' : (status === 'complete' ? 'blocked' : 'stop'),
       title: label,
       meta: autorunFmtElapsed(data.elapsed_sec || 0),
-      actions: [],
+      reason: status === 'failed' ? (data.error || '') : '',
+      actions: terminalActions,
     });
     return;
   }
@@ -1051,7 +1056,10 @@ function _autorunRender(data) {
   }
 
   // ---- エラー表示 ----
-  if (data.error) {
+  // 宛先の #autorun-start-status は受付ブロック（#autorun-idle-msg）の内側にあり、
+  // 実行開始時に親ごと display:none になる。実行中に書いても画面には出ない。
+  // 受付に戻っている間だけそこへ出し、実行中は失敗パネルと主導線バーへ任せる。
+  if (data.error && (status === 'idle' || !status)) {
     autorunSetStartStatus(data.error, true);
   }
 

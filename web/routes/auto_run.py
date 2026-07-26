@@ -445,7 +445,11 @@ def _ensure_stage_content(job: AutoRunJob, stage_id: str) -> None:
         )
         job.add_log(f"{stage.definition.name}: {len(stage.items)}項目を提示しました。")
     except Exception as exc:
-        job.add_log(f"{stage_id} の内容を用意できませんでした（手動生成は可能）: {exc}")
+        # 失敗を黙って空にすると、画面では「まだ生成されていない」未着手と
+        # 区別がつかない。失敗した事実を未確認事項として残す。
+        job.add_unverified(
+            f"{stage_id} の内容を生成できませんでした（この段階は人の確認も経ていません）: {exc}"
+        )
 
 
 def current_awaiting_stage(job_id: str, domain: str) -> str:
@@ -559,7 +563,7 @@ def _format_crawl_event(line: str) -> str:
     path = _short_path(url)
 
     if kind == "crawl_started":
-        return f"クロール開始: 最大 {event.get('total', '?')} ページ / 並列 {event.get('parallelism', 1)}"
+        return f"観測開始: 最大 {event.get('total', '?')} 画面 / 並列 {event.get('parallelism', 1)}"
     if kind == "page_started":
         return f"取得中  {path}（{event.get('index', '?')} / {event.get('total', '?')}）"
     if kind == "page_completed":
@@ -577,7 +581,7 @@ def _format_crawl_event(line: str) -> str:
     if kind == "checkpoint_saved":
         return f"途中保存: {event.get('saved_count', 0)}件"
     if kind == "crawl_completed":
-        return f"クロール完了: {event.get('completed', 0)} / {event.get('total', '?')} ページ"
+        return f"観測完了: {event.get('completed', 0)} / {event.get('total', '?')} 画面"
     return ""
 
 
@@ -903,8 +907,10 @@ def _run_job(job: AutoRunJob, depth: int, max_pages: int) -> None:
 def _phase_discover(job: AutoRunJob, depth: int, max_pages: int) -> None:
     """画面リスト取得 + ログイン壁検知。"""
     job.status = "discovering"
-    job.step_label = "画面を分析中"
-    job.add_log(f"画面分析開始: {job.url}")
+    job.step_label = "到達確認中"
+    # 語彙は「到達確認 → 観測」に統一する。以前は「画面分析」「クロール」「解析」が
+    # 混在し、別工程なのか言い換えなのかログから判別できなかった。
+    job.add_log(f"到達確認開始: {job.url}")
 
     cmd = [
         sys.executable,
@@ -930,15 +936,18 @@ def _phase_discover(job: AutoRunJob, depth: int, max_pages: int) -> None:
         data = json.loads(proc.stdout.strip() or "{}")
         pages: list[dict[str, Any]] = data.get("pages", [])
     except subprocess.TimeoutExpired:
-        job.add_log("画面分析タイムアウト。そのままクロールを続行します。")
+        job.add_log("到達確認タイムアウト。そのまま観測を続行します。")
         return
     except Exception as exc:
-        job.add_log(f"画面分析エラー: {exc}。そのままクロールを続行します。")
+        job.add_log(f"到達確認エラー: {exc}。そのまま観測を続行します。")
         return
 
     login_pages = [p for p in pages if p.get("login_required")]
     job.step_data["discover"] = {"pages": len(pages), "login_required": len(login_pages)}
-    job.add_log(f"画面分析完了: {len(pages)}件 (要ログイン: {len(login_pages)}件)")
+    job.add_log(
+        f"到達確認完了: {len(pages)}画面を検出"
+        + (f"（うち要ログイン {len(login_pages)}画面。認証しなければ観測対象外）" if login_pages else "")
+    )
 
     if login_pages:
         login_url = login_pages[0].get("login_url") or job.url
@@ -1001,7 +1010,7 @@ def _do_login(job: AutoRunJob) -> None:
 def _phase_crawl(job: AutoRunJob, depth: int, max_pages: int) -> None:
     job.status = "crawling"
     job.step_label = "仕様書を生成中"
-    job.add_log(f"クロール開始: {job.url} (depth={depth}, max={max_pages})")
+    job.add_log(f"観測開始: {job.url}（深さ{depth} / 最大{max_pages}画面）")
 
     cmd = [
         sys.executable,
@@ -1048,10 +1057,10 @@ def _phase_crawl(job: AutoRunJob, depth: int, max_pages: int) -> None:
     except subprocess.TimeoutExpired:
         if proc:
             proc.kill()
-        _mark_job_failed(job, "クロールタイムアウト")
+        _mark_job_failed(job, "観測タイムアウト")
         return
     except Exception as exc:
-        _mark_job_failed(job, f"クロールエラー: {exc}")
+        _mark_job_failed(job, f"観測エラー: {exc}")
         return
 
     if job._cancelled:
@@ -1061,7 +1070,7 @@ def _phase_crawl(job: AutoRunJob, depth: int, max_pages: int) -> None:
     job.domain = domain
     report_json = _job_out(job) / domain / "report.json"
     if not report_json.is_file():
-        _mark_job_failed(job, "クロール完了後に report.json が見つかりません")
+        _mark_job_failed(job, "観測完了後に report.json が見つかりません")
         return
 
     job.outputs["report_json"] = str(report_json.resolve())
@@ -1089,7 +1098,14 @@ def _phase_crawl(job: AutoRunJob, depth: int, max_pages: int) -> None:
         )
         return
 
-    job.add_log(f"クロール完了: {domain}（{len(screens)}画面）")
+    # 到達確認の件数と観測できた画面数がずれるのは正常（要ログイン等で対象外になる）。
+    # 差を書かないと、どちらが対象範囲の真の値か分からず、カバレッジを誤読する。
+    detected = int((job.step_data.get("discover") or {}).get("pages") or 0)
+    gap = detected - len(screens)
+    job.add_log(
+        f"観測完了: {domain} {len(screens)}画面"
+        + (f"（到達確認 {detected}画面のうち {gap}画面は対象外）" if gap > 0 else "")
+    )
 
 
 def _phase_generate_qa(job: AutoRunJob) -> None:

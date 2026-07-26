@@ -465,7 +465,8 @@
   color: var(--color-low);
 }
 .autorun-phase-item.is-skipped { opacity: .65; }
-.autorun-phase-item.is-locked { opacity: .45; }
+/* 無効表示は opacity で薄めない（本文が 4.5:1 を割る）。色で示す。 */
+.autorun-phase-item.is-locked { color: var(--color-text-secondary); cursor: not-allowed; }
 .autorun-phase-item.is-selected {
   background: var(--color-primary);
   border-color: var(--color-primary);
@@ -2023,7 +2024,7 @@
 }
 .pager-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary-dark); background: var(--surface-subtle); }
 .pager-btn.is-active { border-color: var(--primary); background: var(--info-bg); color: var(--primary-dark); }
-.pager-btn:disabled { opacity: .45; cursor: not-allowed; }
+.pager-btn:disabled { color: var(--color-text-secondary); background: var(--color-surface-muted, transparent); cursor: not-allowed; }
 .pager-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
 .pager-gap { padding: 0 4px; color: var(--text-subtle); }
 
@@ -2284,6 +2285,26 @@
   margin: 8px 0 0;
   font-size: var(--text-xs);
   color: var(--color-critical);
+}
+
+/* 画面には出さないが支援技術へは伝える（状態変化の読み上げ用）。 */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* 既定の観測範囲。折りたたみに隠すと規模の見当がつかない。 */
+.autorun-scope-default {
+  margin: 10px 0 4px;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
 }
 
 /* 未確認のまま実行する場合の注意。実行直前に、何が確認されないかを出す。 */

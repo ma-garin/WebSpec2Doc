@@ -175,7 +175,10 @@
     }
     actions.appendChild(button('修正', function () { startEdit(row, stage, item); }));
     actions.appendChild(button('アシスタントに相談', function () {
-      askAssistant('次の項目について改善案を出してください:\n' + item.title + '\n' + item.detail);
+      askAssistant(
+        '次の項目について改善案を出してください:\n' + item.title + '\n' + item.detail,
+        { title: item.title, detail: item.detail }
+      );
     }));
 
     row.appendChild(actions);
@@ -198,7 +201,11 @@
     return b;
   }
 
-  function askAssistant(text) {
+  function askAssistant(text, target) {
+    // アシスタントは常駐しないので、相談対象を渡して開く
+    if (window.autorunChat && window.autorunChat.open) {
+      window.autorunChat.open(target || null);
+    }
     var input = $('autorun-chat-input');
     if (!input) return;
     input.value = text;
@@ -414,48 +421,66 @@
     }
     bar.appendChild(status);
 
-    var approve = button('承認して次へ', function () { approveStage(stage.stage_id); }, 'btn-primary');
-    approve.disabled = state.busy || !stage.can_approve || stage.status === 'approved';
-    bar.appendChild(approve);
-
+    // 承認操作は主導線バー（最上部固定）に一本化する。ここに置くと
+    // 同じボタンが2箇所に出て、どちらを押すか迷わせる。
     return bar;
   }
 
   // ---------------------------------------------------------------- 進行
 
+  // 進行操作は主導線バー（最上部固定）に一本化する。
+  // 以前は一覧の最下部に置いていたため、自動承認が3桁になると画面外へ出て
+  // 「先に進めない」状態になっていた（利用者の操作で発覚）。
   function renderProceed() {
     var host = root();
-    if (!host) return;
-    var old = host.querySelector('.autorun-stages-proceed');
-    if (old) old.remove();
-    if (!state.pipeline) return;
+    if (host) {
+      var old = host.querySelector('.autorun-stages-proceed');
+      if (old) old.remove();
+    }
+    var leadBar = window.autorunLeadBar;
+    if (!leadBar) return;
+    if (!state.pipeline) { leadBar.hide(); return; }
 
-    // 設計段階（1〜7）が揃った時点と、全段階が揃った時点で進める
+    var stage = stageById(state.selected) || stageById(state.pipeline.current_stage_id);
     var designDone = stages().slice(0, 7).every(function (s) {
       return s.status === 'approved' || s.status === 'skipped';
     });
     var allDone = state.pipeline.all_approved;
-    if (!designDone) return;
 
-    var bar = document.createElement('div');
-    bar.className = 'autorun-stages-proceed';
+    if (designDone) {
+      leadBar.set({
+        tone: state.error ? 'blocked' : 'ready',
+        title: allDone ? '全ての段階を承認しました' : '設計段階（1〜7）を承認しました',
+        meta: allDone ? 'テストを実行できます' : 'Playwright 化へ進めます',
+        reason: state.error || '',
+        actions: [{
+          label: allDone ? '承認を確定して実行する' : '承認を確定して次へ進む',
+          onClick: proceed,
+          disabled: state.busy,
+        }],
+      });
+      return;
+    }
 
-    var msg = document.createElement('span');
-    msg.className = 'autorun-stages-proceed-msg';
-    msg.textContent = allDone
-      ? '全ての段階を承認しました。テストを実行できます。'
-      : '設計段階（1〜7）を承認しました。Playwright 化へ進めます。';
-    bar.appendChild(msg);
+    if (!stage) { leadBar.hide(); return; }
 
-    var go = button(allDone ? '承認を確定して実行する' : '承認を確定して次へ進む', proceed, 'btn-primary');
-    go.disabled = state.busy;
-    bar.appendChild(go);
+    var pending = (stage.items || []).filter(function (i) { return !i.approved; }).length;
+    var blocked = state.busy || !stage.can_approve || stage.status === 'approved';
+    var reason = state.error
+      || (pending ? '未確認が ' + pending + ' 件あります' : '')
+      || (stage.status === 'approved' ? 'この段階は承認済みです' : '');
 
-    host.appendChild(bar);
-
-    // 進めなかった理由は、押したボタンのすぐ下に出す。
-    var err = errorNode();
-    if (err) host.appendChild(err);
+    leadBar.set({
+      tone: (state.error || pending) ? 'blocked' : 'ready',
+      title: 'STEP ' + stage.step_no + ' ' + stage.name,
+      meta: pending ? '未確認 ' + pending + ' 件' : '未確認 0 件',
+      reason: reason,
+      actions: [{
+        label: '承認して次へ',
+        onClick: function () { approveStage(stage.stage_id); },
+        disabled: blocked,
+      }],
+    });
   }
 
   function json(body) {

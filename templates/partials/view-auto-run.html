@@ -1,6 +1,11 @@
         <!-- ===== AutoRun ビュー（単一フロー: 受付→実行→納品が同じ列で変身） ===== -->
         <section class="view" id="view-auto-run">
           <div class="autorun-workspace">
+
+          <!-- 主導線バー: 現在地と次の操作を1箇所に常設する（autorun-leadbar.js が描画） -->
+          <div id="autorun-leadbar" class="autorun-leadbar" role="status" aria-live="polite" style="display:none"></div>
+
+          <div class="autorun-body">
           <div class="autorun-work">
 
             <!-- 実行中のみ表示: 停止 -->
@@ -253,22 +258,6 @@
               <button type="button" id="autorun-restart-btn" class="btn-outline-sm btn-block">新しく実行</button>
             </div>
 
-            <div id="autorun-outputs-area" class="card autorun-panel" style="display:none">
-              <div class="autorun-panel-head">
-                <div class="section-kicker">成果物</div>
-              </div>
-              <div id="autorun-output-links" class="qa-output-list"></div>
-            </div>
-
-            <!-- 最近の実行（サーバープロセス生存中のジョブのみ。再起動で消えます） -->
-            <div id="autorun-recent-area" class="card autorun-panel" style="display:none">
-              <div class="autorun-panel-head">
-                <div class="section-kicker">最近の実行</div>
-              </div>
-              <div id="autorun-recent-list" class="autorun-recent-list"></div>
-              <p class="autorun-recent-note">サーバー再起動前の実行はここに表示されません。結果は各サイトのレポート「テスト実行」タブに保存されています。</p>
-            </div>
-
             <div id="autorun-approval-modal" class="autorun-modal" role="dialog" aria-modal="true" aria-labelledby="arm-title" style="display:none">
               <div class="autorun-modal-panel autorun-approval-panel">
                 <header class="autorun-modal-head">
@@ -373,15 +362,45 @@
 
           </div><!-- /.autorun-work -->
 
-            <!-- 右: LLM チャット。各段階の成果物について相談・修正するための常設パネル -->
-            <aside class="autorun-chat" id="autorun-chat" aria-label="QAアシスタント">
+          <!-- 右レール: 成果物と最近の実行。作業列の右の空きを使う -->
+          <aside class="autorun-rail" aria-label="成果物">
+            <div id="autorun-outputs-area" class="card autorun-panel" style="display:none">
+              <div class="autorun-panel-head">
+                <div class="section-kicker">成果物</div>
+              </div>
+              <div id="autorun-output-links" class="qa-output-list"></div>
+            </div>
+
+            <!-- 最近の実行（サーバープロセス生存中のジョブのみ。再起動で消えます） -->
+            <div id="autorun-recent-area" class="card autorun-panel" style="display:none">
+              <div class="autorun-panel-head">
+                <div class="section-kicker">最近の実行</div>
+              </div>
+              <div id="autorun-recent-list" class="autorun-recent-list"></div>
+              <p class="autorun-recent-note">サーバー再起動前の実行はここに表示されません。結果は各サイトのレポート「テスト実行」タブに保存されています。</p>
+            </div>
+
+          </aside>
+
+          </div><!-- /.autorun-body -->
+
+            <!-- QAアシスタント。常駐せず、呼び出したときだけ右から出るドロワー -->
+            <button type="button" id="autorun-chat-fab" class="autorun-chat-fab"
+                    aria-controls="autorun-chat" aria-expanded="false">QAアシスタント</button>
+            <div id="autorun-chat-scrim" class="autorun-chat-scrim" hidden></div>
+
+            <aside class="autorun-chat" id="autorun-chat" aria-label="QAアシスタント" aria-hidden="true">
               <header class="autorun-chat-head">
                 <div>
                   <div class="section-kicker">QAアシスタント</div>
                   <p class="autorun-chat-sub" id="autorun-chat-context">受付</p>
                 </div>
                 <span class="autorun-chat-status" id="autorun-chat-status" aria-live="polite"></span>
+                <button type="button" id="autorun-chat-close" class="autorun-chat-close" aria-label="閉じる">×</button>
               </header>
+
+              <!-- 何について相談しているかを見失わせないための固定表示 -->
+              <div id="autorun-chat-target" class="autorun-chat-target" style="display:none"></div>
 
               <!-- フェーズ別の定型チップ（autorun-chat.js が差し替える） -->
               <div class="autorun-chat-suggestions" id="autorun-chat-presets"></div>

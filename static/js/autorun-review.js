@@ -148,6 +148,10 @@
   }
 
   function askAssistant(entry) {
+    // アシスタントは常駐しないので、相談対象を渡して開く
+    if (window.autorunChat && window.autorunChat.open) {
+      window.autorunChat.open({ title: entry.title, detail: entry.detail });
+    }
     var input = $('autorun-chat-input');
     if (!input) return;
     input.value =

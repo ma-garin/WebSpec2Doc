@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AutoRun 入力後画面の再設計（案）</title>
+<style>
+  :root {
+    --ink: #1c2430;
+    --muted: #667080;
+    --line: #dfe4ea;
+    --brand: #1b6ac9;
+    --bg: #f5f7f9;
+    --warn-bg: #fff8e6;
+    --warn-line: #e0a800;
+    --bad-bg: #fdf0ee;
+    --bad-line: #c0392b;
+    --ok-bg: #eef7f0;
+    --ok-line: #2f8f4e;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Hiragino Sans", "Noto Sans JP", sans-serif;
+    line-height: 1.85;
+    font-size: 15px;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 32px 24px 80px; }
+  header.doc {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 24px 28px;
+    margin-bottom: 24px;
+  }
+  h1 { font-size: 26px; margin: 0 0 12px; letter-spacing: -.01em; }
+  .meta { font-size: 13px; color: var(--muted); margin: 0; }
+  .meta strong { color: var(--ink); }
+  .status {
+    display: inline-block;
+    margin-top: 12px;
+    background: var(--warn-bg);
+    border: 1px solid var(--warn-line);
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  section {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 24px 28px;
+    margin-bottom: 20px;
+  }
+  h2 {
+    font-size: 19px;
+    margin: 0 0 16px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--brand);
+  }
+  h3 { font-size: 16px; margin: 26px 0 8px; }
+  h3:first-of-type { margin-top: 8px; }
+  p { margin: 0 0 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 12px 0 16px; }
+  th, td { border: 1px solid var(--line); padding: 9px 11px; text-align: left; vertical-align: top; }
+  th { background: #eef2f6; font-weight: 700; white-space: nowrap; }
+  td code, p code, li code { background: #eef2f6; padding: 1px 5px; border-radius: 3px; font-size: 13px; }
+  ul, ol { margin: 0 0 12px; padding-left: 22px; }
+  li { margin-bottom: 5px; }
+  pre {
+    background: #1c2430;
+    color: #e8edf3;
+    padding: 14px 16px;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .callout {
+    border-left: 4px solid var(--bad-line);
+    background: var(--bad-bg);
+    padding: 12px 16px;
+    border-radius: 0 6px 6px 0;
+    margin: 14px 0;
+  }
+  .callout.ok { border-left-color: var(--ok-line); background: var(--ok-bg); }
+  .callout.warn { border-left-color: var(--warn-line); background: var(--warn-bg); }
+  .callout p:last-child { margin-bottom: 0; }
+  .fixed { color: var(--ok-line); font-weight: 700; }
+  .decide {
+    counter-reset: q;
+    list-style: none;
+    padding-left: 0;
+  }
+  .decide li {
+    background: var(--warn-bg);
+    border: 1px solid var(--warn-line);
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-bottom: 10px;
+  }
+  .decide li strong { display: block; margin-bottom: 2px; }
+  footer.doc { color: var(--muted); font-size: 13px; text-align: center; padding: 20px; }
+  .decided {
+    background: var(--ok-bg);
+    border: 1px solid var(--ok-line);
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-bottom: 10px;
+  }
+  .decided strong { display: block; margin-bottom: 2px; }
+  .decided .tag {
+    display: inline-block;
+    background: var(--ok-line);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 3px;
+    padding: 1px 7px;
+    margin-right: 8px;
+    vertical-align: 2px;
+  }
+  .opt {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+  }
+  .opt h4 { margin: 0 0 8px; font-size: 15px; }
+  .opt .pro { color: var(--ok-line); }
+  .opt .con { color: var(--bad-line); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+  <h1>AutoRun 入力後画面の再設計（案）</h1>
+  <p class="meta"><strong>対象:</strong> URL入力／文書駆動の<strong>次の画面から実行結果まで</strong>すべて</p>
+  <p class="meta"><strong>起点:</strong> 2026-07-26 のFB（アシスタント常駐・仕様書作成の不可視性・成果物一覧のデザイン・進行不能）</p>
+  <span class="status">レビュー待ち — 承認前に実装へ進みません</span>
+</header>
+
+<section>
+  <h2>1. 何が壊れているか（診断）</h2>
+  <p>FBを症状ではなく原因で分類する。</p>
+  <table>
+    <thead>
+      <tr><th>#</th><th>症状（FB）</th><th>原因</th><th>種別</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>F1</td><td>右のQAアシスタントが常駐して邪魔</td><td>使用頻度の低い機能に画面幅の1/3を常時割り当てている</td><td>レイアウト</td></tr>
+      <tr><td>F2</td><td>「仕様書作成」で何をしているか見えない</td><td>進捗が「ステップ名＋スピナー」のみ。<strong>取得中URL・検出結果・遭遇した障害が一切出ない</strong></td><td>可視性</td></tr>
+      <tr><td>F3</td><td>ログインが必要でも何も聞かれない</td><td>ログイン壁を検出しても停止せず、無言で「取得できた範囲」で進む</td><td>制御フロー</td></tr>
+      <tr><td>F4</td><td>成果物一覧のデザインが受け入れられない</td><td>12件を均質な縦積みリスト＋同一の「プレビュー」ボタンで並べており、<strong>どれが重要か・何が分かるかの情報が0</strong></td><td>情報設計</td></tr>
+      <tr><td>F5</td><td>この画面から先に進めない</td><td>「確定する」がリスト最下部。要確認5件＋自動承認149件の下で画面外</td><td>導線 <span class="fixed">（修正済み）</span></td></tr>
+    </tbody>
+  </table>
+  <div class="callout">
+    <p>共通する根本原因は1つ。</p>
+    <p><strong>「AutoRunが今なにをしていて、人は次に何をすればよいか」が画面のどこにも常設されていない。</strong></p>
+    <p>個々の部品は揃っているが、進行の主導線が無いため、人は毎回スクロールして探すことになる。</p>
+  </div>
+</section>
+
+<section>
+  <h2>2. 設計方針</h2>
+  <ol>
+    <li><strong>主導線を1本にする</strong> — 画面上部に「現在地」と「次の一手」を固定表示する。人が探す状態を作らない</li>
+    <li><strong>常駐は主導線だけ</strong> — アシスタントも成果物も、必要になったとき呼び出す</li>
+    <li><strong>黒箱を作らない</strong> — 待ち時間のある処理は、いま何を取得しているかを逐次見せる</li>
+    <li><strong>止まるべきときは止まる</strong> — ログイン壁・robots制限・タイムアウトは「無言で継続」せず、人に判断を返す</li>
+    <li><strong>一覧は数字で語らせる</strong> — ファイル名の羅列ではなく、その成果物で何が分かったかを1行と主要数値で示す</li>
+  </ol>
+</section>
+
+<section>
+  <h2>3. 個別の設計</h2>
+
+  <h3>3.1 QAアシスタント（F1）</h3>
+  <ul>
+    <li>右カラム常駐を<strong>廃止</strong>。メインカラムを全幅に戻す</li>
+    <li>呼び出し口は2つに限定する
+      <ul>
+        <li>各項目の「アシスタントに相談」ボタン（現状どおり）</li>
+        <li>画面右下の常設FAB（1つだけ）</li>
+      </ul>
+    </li>
+    <li>開くと<strong>右からのドロワー</strong>（幅420px・オーバーレイ）。閉じると完全に消える</li>
+    <li>相談対象の項目タイトルをドロワー先頭に固定表示し、何について話しているかを見失わせない</li>
+  </ul>
+
+  <h3>3.2 仕様書作成の可視化（F2）</h3>
+  <p>「仕様書生成」ステップ実行中、以下を<strong>ライブ表示</strong>する。</p>
+<pre>仕様書を作成しています（3/9ページ）
+├ 取得済み  /index.html        フォーム0件・リンク6件
+├ 取得済み  /login.html        フォーム1件（必須2）
+└ 取得中    /mypage.html       …</pre>
+  <ul>
+    <li>現在取得中のURLを必ず出す</li>
+    <li>各ページで検出したもの（フォーム数・必須項目数・リンク数）をその場で出す</li>
+    <li>スキップしたURLは理由つきで出す（robots Disallow ／ 404 ／ タイムアウト ／ 対象外ドメイン）</li>
+    <li><strong>「取得できなかった」を隠さない。</strong>空欄で通さない</li>
+  </ul>
+
+  <h3>3.3 ログイン壁の扱い（F3）<span class="tag" style="background:var(--ok-line);color:#fff;font-size:11px;font-weight:700;border-radius:3px;padding:1px 7px;margin-left:8px;vertical-align:3px">決定</span></h3>
+  <p>ログインが必要と判定した時点で、<strong>進行を止めて</strong>人に返す。</p>
+  <p>判定条件（いずれか）:</p>
+  <ul>
+    <li>ログインフォーム（<code>password</code>型input）を持つページへリダイレクトされた</li>
+    <li>401 / 403 が返った</li>
+    <li>対象URLに到達したが、指定した継続条件を満たさない</li>
+  </ul>
+  <p>提示するもの:</p>
+<pre>このサイトはログインが必要です。
+取得できた範囲: 3画面（未ログインで到達可能な範囲のみ）
+[ ログイン情報を設定して続ける ]  [ 未ログインのまま進む ]</pre>
+  <ul>
+    <li>既定は<strong>どちらも選ばせる</strong>。勝手に片方へ倒さない</li>
+    <li>「未ログインのまま進む」を選んだ場合、成果物に「未ログイン範囲のみ」を明記する</li>
+  </ul>
+
+  <h3>3.4 成果物一覧（F4）</h3>
+  <p>現状の縦積みリストを廃止し、<strong>3つの束</strong>に再編する。</p>
+  <table>
+    <thead><tr><th>束</th><th>何のための束か</th><th>含めるもの</th></tr></thead>
+    <tbody>
+      <tr><td>いま見るべきもの</td><td>結論と判断材料</td><td>テスト結果レポート・横断レビュー・仕様ドリフト</td></tr>
+      <tr><td>中身を確かめるもの</td><td>根拠の確認</td><td>仕様書HTML・テストケース・テスト設計・モデルグラフ</td></tr>
+      <tr><td>持ち出すもの</td><td>提出・再利用</td><td>Excel・JSON・Playwright候補・証跡パック</td></tr>
+    </tbody>
+  </table>
+  <p>各項目は「名前＋プレビューボタン」ではなく、次を持つ。</p>
+<pre>テストケース                                    47件
+ うち要確認 5件 / 自動承認 42件・文書要件の94%をカバー</pre>
+  <ul>
+    <li>カード全体をクリックでプレビュー（ボタンの繰り返しを廃止）</li>
+    <li>主要数値を必ず1つ出す。数値が出せないものは「未生成」と明示する</li>
+    <li>中身が空の成果物は<strong>灰色にして最後尾へ</strong>（並びを固定して空箱を上位に置かない）</li>
+  </ul>
+
+  <h3>3.5 進行の主導線（F5・全体）<span style="background:#e0a800;color:#fff;font-size:11px;font-weight:700;border-radius:3px;padding:1px 7px;margin-left:8px;vertical-align:3px">未決 B</span></h3>
+  <p>以下は「バーを置く」案の内容。<strong>置くかどうかは §5 未決B で判断していただきます。</strong></p>
+  <p>画面最上部に固定バーを置く。スクロール位置に関係なく常に見える。</p>
+<pre>STEP 1 テスト目的  ─  未確認 0件  ─  [ 確定して次へ ]</pre>
+  <ul>
+    <li>現在のステップ名／残タスク数／次の操作の3つだけ</li>
+    <li>次の操作ボタンは、押せない場合<strong>理由をボタン脇に出す</strong>（「未確認が2件あります」）</li>
+    <li>左サイドの進捗リストは現在地の表示に徹し、操作は主導線に集約する</li>
+  </ul>
+</section>
+
+<section>
+  <h2>4. 影響範囲</h2>
+  <table>
+    <thead><tr><th>ファイル</th><th>変更内容</th></tr></thead>
+    <tbody>
+      <tr><td><code>templates/partials/view-auto-run.html</code></td><td>右カラム廃止・固定主導線の追加・成果物セクションの再構成</td></tr>
+      <tr><td><code>static/js/autorun-chat.js</code></td><td>常駐パネル → ドロワー化</td></tr>
+      <tr><td><code>static/js/autorun-review.js</code></td><td>確定操作を主導線へ移設</td></tr>
+      <tr><td><code>static/js/autorun-stages.js</code></td><td>各段階の残タスク数を主導線へ供給</td></tr>
+      <tr><td><code>static/js/autorun.js</code></td><td>クロール進捗のライブ表示・ログイン壁の停止処理</td></tr>
+      <tr><td><code>web/routes/auto_run.py</code></td><td>ページ単位の進捗イベント送出・ログイン壁検出時の停止と再開API</td></tr>
+      <tr><td><code>static/css/components.css</code> ほか</td><td>レイアウト変更に伴う調整</td></tr>
+      <tr><td><code>tests/e2e/snapshots/*</code></td><td>画面変更に伴う再取得が必要</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>5. 決定事項と未決事項</h2>
+
+  <h3>決定済み（2026-07-26）</h3>
+  <div class="decided">
+    <span class="tag">決定</span><strong>ログイン壁を検出したら、止めて聞く</strong>
+    無言で「取得できた範囲」を進めない。§3.3 のとおり実装する。
+  </div>
+  <div class="decided">
+    <span class="tag">決定</span><strong>F1〜F4 は同時並行で進める</strong>
+    可視性・制御フロー（F2/F3）とレイアウト・情報設計（F1/F4）を分けて出さない。
+  </div>
+
+  <h3>未決 A — 成果物一覧のまとめ方</h3>
+  <p>現状は SDLC の工程名（計画／分析／設計／レポート）で並べている。
+     これは<strong>作った側の都合の並び</strong>で、見る人の「いま何を開けばいいか」には答えていない。
+     そこで <strong>「いつ開くか」</strong> で分け直すのが 3束案。中身は次のとおり。</p>
+  <table>
+    <thead>
+      <tr><th>束</th><th>いつ開くか</th><th>入るもの（現状の成果物名）</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>1. 結果を見る</strong></td>
+        <td>実行が終わった直後。まずここだけ見れば判断できる</td>
+        <td>テスト結果レポート／横断レビュー／仕様ドリフト差分</td>
+      </tr>
+      <tr>
+        <td><strong>2. 根拠を確かめる</strong></td>
+        <td>結果に納得できないとき、中身を追う</td>
+        <td>仕様書HTML／テストケース／テスト設計／テスト分析／モデルグラフ／観点スナップショット／テスト計画</td>
+      </tr>
+      <tr>
+        <td><strong>3. 持ち出す</strong></td>
+        <td>報告・提出・再利用するとき</td>
+        <td>仕様書JSON／spec.xlsx／Playwright候補／証跡パック</td>
+      </tr>
+    </tbody>
+  </table>
+  <p><strong>決めていただきたいのはここです。</strong></p>
+  <div class="opt">
+    <h4>案A: 3束案（「いつ開くか」で分ける）</h4>
+    <p class="pro">利点: 実行直後に開くべきものが1つ目の束に絞られる。12件を毎回見比べなくてよい</p>
+    <p class="con">難点: QA工程の呼び名（分析・設計）と一致しないため、工程名で探す人には見つけにくい</p>
+  </div>
+  <div class="opt">
+    <h4>案B: 現状どおり工程順（計画／分析／設計／レポート）のまま、見せ方だけ直す</h4>
+    <p class="pro">利点: 呼び名が変わらない。学習コストゼロ。カードの情報量改善（数値の表示）だけで効果は出る</p>
+    <p class="con">難点: 「まず何を開くか」は相変わらず人が判断することになる</p>
+  </div>
+
+  <h3>未決 B — 主導線バー（§3.5）をそもそも置くか</h3>
+  <p>「次に何をすればよいか」を常設する手段として上部固定バーを挙げたが、置かない選択もある。</p>
+  <div class="opt">
+    <h4>案A: 上部に固定バーを置く</h4>
+<pre>STEP 1 テスト目的  ─  未確認 0件  ─  [ 確定して次へ ]</pre>
+    <p class="pro">利点: スクロール位置に関係なく、現在地と次の操作が必ず見える</p>
+    <p class="con">難点: 画面上部を常時占有する。左サイドの進捗リストと役割が重なり、<strong>「現在地の表示が2箇所」になる</strong></p>
+  </div>
+  <div class="opt">
+    <h4>案B: バーは置かず、各段階パネルの下端に確定操作を貼り付ける（sticky）</h4>
+    <p class="pro">利点: 常時占有が無い。現在地の表示は左サイドに一本化される。<strong>今回の緊急修正と同じ方式で、すでに効果を確認済み</strong></p>
+    <p class="con">難点: 「次に何をすればよいか」の文言を出す場所が段階ごとに分散する</p>
+  </div>
+  <p class="meta" style="margin-top:12px">
+    <strong>補足:</strong> F5（進めない）の直接原因は「確定ボタンが画面外」であり、これは案Bの方式で解消済みです。
+    バーは<em>それ以上の改善</em>を狙うもので、置かなくてもF5は再発しません。
+  </p>
+</section>
+
+<section>
+  <h2>6. この案の弱点</h2>
+  <div class="callout">
+    <ul style="margin-bottom:0">
+      <li><strong>F2/F3はバックエンドの進捗イベント設計を伴うため、見た目の変更より重い。</strong>影響範囲の見積もりが <code>web/routes/auto_run.py</code> の実装確認前であり、粗い</li>
+      <li>成果物カードに出す「主要数値」は、成果物ごとに算出元が異なる。<strong>すべての成果物で数値を出せるかは未確認</strong></li>
+      <li>E2Eスナップショットの再取得が必須になるため、UI変更ゲート（<code>.ui-verified</code>）の通過コストを織り込んでいない</li>
+    </ul>
+  </div>
+</section>
+
+<footer class="doc">WebSpec2Doc — AutoRun 入力後画面 再設計案 / 2026-07-26</footer>
+
+</div>
+</body>
+</html>

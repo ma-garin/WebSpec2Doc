@@ -158,10 +158,73 @@
     }
   }
 
+  // ---------------------------------------------------------------- 開閉
+  // 常駐をやめ、呼び出したときだけ開くドロワーにする。
+  function setOpen(open, target) {
+    var panel = $('autorun-chat');
+    var scrim = $('autorun-chat-scrim');
+    var fab = $('autorun-chat-fab');
+    if (!panel) return;
+    panel.classList.toggle('is-open', !!open);
+    panel.setAttribute('aria-hidden', open ? 'false' : 'true');
+    if (scrim) {
+      scrim.classList.toggle('is-open', !!open);
+      scrim.hidden = !open;
+    }
+    if (fab) {
+      fab.setAttribute('aria-expanded', open ? 'true' : 'false');
+      fab.hidden = !!open;
+    }
+    renderTarget(open ? target : null);
+    if (open) {
+      var input = $('autorun-chat-input');
+      if (input) input.focus();
+    } else if (fab && fab.focus) {
+      fab.focus();
+    }
+  }
+
+  // 何について相談しているかを先頭に固定表示する（見失わせない）
+  function renderTarget(target) {
+    var host = $('autorun-chat-target');
+    if (!host) return;
+    if (!target || !target.title) {
+      host.style.display = 'none';
+      host.replaceChildren();
+      return;
+    }
+    host.style.display = '';
+    host.replaceChildren();
+    var head = document.createElement('strong');
+    head.textContent = '相談中: ' + target.title;
+    host.appendChild(head);
+    if (target.detail) {
+      var detail = document.createElement('span');
+      detail.textContent = target.detail;
+      host.appendChild(detail);
+    }
+  }
+
+  function open(target) { setOpen(true, target); }
+  function close() { setOpen(false); }
+
   function boot() {
     var form = $('autorun-chat-form');
     var input = $('autorun-chat-input');
     if (!form || !input) return;
+
+    var fab = $('autorun-chat-fab');
+    if (fab) fab.addEventListener('click', function () { open(); });
+    var closeBtn = $('autorun-chat-close');
+    if (closeBtn) closeBtn.addEventListener('click', close);
+    var scrim = $('autorun-chat-scrim');
+    if (scrim) scrim.addEventListener('click', close);
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        var panel = $('autorun-chat');
+        if (panel && panel.classList.contains('is-open')) close();
+      }
+    });
 
     form.addEventListener('submit', function (e) {
       e.preventDefault();
@@ -181,7 +244,7 @@
     renderHistory();
   }
 
-  window.autorunChat = { setPhase: setPhase };
+  window.autorunChat = { setPhase: setPhase, open: open, close: close };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot);

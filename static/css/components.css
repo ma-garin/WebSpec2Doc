@@ -533,9 +533,11 @@
   font-weight: 700;
   color: var(--color-text-secondary);
 }
+/* 成果物プレビューは判断の材料そのもの。固定 360px では中身が読めず
+   「ちゃんと見えないと困る」との指摘を受けたため、画面高に追従させる。 */
 .autorun-stage-artifact-frame {
   width: 100%;
-  height: 360px;
+  height: clamp(360px, 58vh, 760px);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface);
@@ -794,22 +796,80 @@
 /* ---- AutoRun ワークスペース: 左=作業（受付→実行→納品） / 右=LLMチャット ---- */
 /* .app-content は overflow:hidden なので、ここが自前のスクロール領域を持つ。
    持たないと段階承認や納品物が伸びたときに内容が切れてスクロールできない。 */
+/* アシスタントは常駐させない。使用頻度の低い機能に画面幅の1/3を常時
+   割り当てていたため、作業領域が狭く読みづらかった（利用者の指摘）。
+   呼び出したときだけドロワーとして重ねる。 */
 .autorun-workspace {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) var(--autorun-chat-width, 380px);
-  gap: 20px;
-  padding: 20px;
-  align-items: stretch;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
   height: 100%;
   min-height: 0;
   overflow: hidden;
+  position: relative;
+}
+
+/* ---- 主導線バー（最上部フル幅・固定） ---- */
+.autorun-leadbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+  font-size: var(--text-sm);
+}
+.autorun-leadbar-title { font-weight: 700; }
+.autorun-leadbar-sep { color: var(--color-text-secondary); opacity: .5; }
+.autorun-leadbar-meta { color: var(--color-text-secondary); }
+.autorun-leadbar-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+/* 押せない理由はボタンの手前に必ず出す */
+.autorun-leadbar-reason {
+  font-size: var(--text-xs);
+  color: var(--color-critical);
+}
+.autorun-leadbar.is-ready,
+.autorun-leadbar.is-blocked {
+  background: var(--color-primary-bg, #eaf2fc);
+  border-bottom-color: var(--color-primary);
+}
+.autorun-leadbar.is-ready .autorun-leadbar-title,
+.autorun-leadbar.is-blocked .autorun-leadbar-title { color: var(--color-primary); }
+.autorun-leadbar.is-busy {
+  background: var(--color-medium-bg, #fff8e6);
+  border-bottom-color: var(--color-medium, #e0c268);
+}
+.autorun-leadbar.is-stop {
+  background: var(--color-critical-bg);
+  border-bottom-color: var(--color-critical);
+}
+.autorun-leadbar.is-stop .autorun-leadbar-title { color: var(--color-critical); }
+.autorun-leadbar.is-done {
+  background: var(--color-low-bg, #eef7f0);
+  border-bottom-color: var(--color-low, #2f8f4e);
 }
 
 /* 作業エリアは左寄せ。中央寄せの余白を作らない。縦は自分でスクロールする */
+/* 作業列と右レールを横に並べる。作業列の右に大きな余白を残さない。 */
+.autorun-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  gap: 16px;
+  padding: 16px 20px 20px;
+  overflow: hidden;
+}
+
 .autorun-work {
   min-width: 0;
   min-height: 0;
-  max-width: 860px;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -817,20 +877,102 @@
   overscroll-behavior: contain;
   padding-right: 6px;
 }
-.autorun-work #autorun-cancel-area { justify-content: flex-end; display: flex; }
 
-/* ---- LLM チャットパネル（右） ---- */
-.autorun-chat {
-  height: 100%;
+/* 右レール: 成果物・最近の実行。中身が無いときは幅を取らない */
+.autorun-rail {
+  flex: 0 0 auto;
+  width: 320px;
   min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-sm);
+  gap: 14px;
+}
+.autorun-rail:not(:has(> :not([style*="display:none"]))) {
+  width: 0;
   overflow: hidden;
 }
+@media (max-width: 1280px) {
+  .autorun-body { flex-direction: column; overflow-y: auto; }
+  .autorun-work, .autorun-rail { overflow: visible; width: auto; }
+}
+.autorun-work #autorun-cancel-area { justify-content: flex-end; display: flex; }
+
+/* ---- QAアシスタント（右からのドロワー。既定は非表示） ---- */
+.autorun-chat {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: var(--autorun-chat-width, 420px);
+  max-width: 92vw;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  border: 0;
+  border-left: 1px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: -4px 0 18px rgba(0, 0, 0, .16);
+  overflow: hidden;
+  transform: translateX(100%);
+  transition: transform .18s ease;
+  visibility: hidden;
+}
+.autorun-chat.is-open {
+  transform: translateX(0);
+  visibility: visible;
+}
+
+/* ドロワーの背面。閉じるための当たり判定を兼ねる */
+.autorun-chat-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 59;
+  background: rgba(20, 28, 38, .35);
+  display: none;
+}
+.autorun-chat-scrim.is-open { display: block; }
+
+/* 呼び出しボタン。常設はこれ1つだけ */
+.autorun-chat-fab {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 58;
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 18px;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, .22);
+}
+.autorun-chat-fab:hover { filter: brightness(1.05); }
+
+.autorun-chat-close {
+  margin-left: auto;
+  border: 0;
+  background: none;
+  color: var(--color-text-secondary);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+/* 相談対象を見失わせないため、先頭に固定表示する */
+.autorun-chat-target {
+  border-left: 3px solid var(--color-primary);
+  background: var(--color-surface-2);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  padding: 7px 10px;
+  margin: 0 14px 8px;
+  font-size: var(--text-xs);
+}
+.autorun-chat-target strong { display: block; }
 
 .autorun-chat-head {
   display: flex;
@@ -1408,6 +1550,62 @@
   white-space: normal;
   word-break: break-word;
 }
+
+/* ---- 成果物「3束」表示（いつ開くかで分ける） ---- */
+.qa-output-category { margin-bottom: 14px; }
+.qa-output-category-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-weight: 700;
+  font-size: var(--text-sm);
+  margin-bottom: 6px;
+}
+.qa-output-bundle-no {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  line-height: 18px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: #fff;
+  text-align: center;
+  font-size: 11px;
+}
+.qa-output-bundle-when {
+  font-weight: 400;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+/* カード全体が押せる。同じ「プレビュー」ボタンを繰り返さない */
+.qa-output-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  text-align: left;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  padding: 9px 12px;
+  margin-bottom: 6px;
+  cursor: pointer;
+}
+.qa-output-item:hover { border-color: var(--color-primary); }
+.qa-output-item-text { display: flex; flex-direction: column; min-width: 0; }
+.qa-output-item-sub {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  font-weight: 400;
+}
+.qa-output-item-num {
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--color-primary);
+  white-space: nowrap;
+}
+.qa-output-item-num.is-alert { color: var(--color-critical); }
 
 .autorun-failure-body {
   display: grid;

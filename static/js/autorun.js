@@ -81,25 +81,79 @@ const AUTORUN_OUTPUT_LABELS = {
   viewpoint_snapshot:      '観点スナップショット',
 };
 
-// SDLC（計画/分析/設計/実装/実行/レポート）思想での成果物カテゴライズ（R2-22対応）
-const AUTORUN_OUTPUT_CATEGORY_ORDER = ['計画', '分析', '設計', '実装', '実行', 'レポート'];
-const AUTORUN_OUTPUT_CATEGORIES = {
-  test_plan:               '計画',
-  viewpoint_snapshot:      '計画',
-  report_json:             '分析',
-  report_html:             '分析',
-  test_analysis:           '分析',
-  cross_review:            '分析',
-  test_design:             '設計',
-  test_cases:              '設計',
-  model_graph:             '設計',
-  playwright_candidates_html: '設計',
-  spec_ts:                 '実装',
-  playwright_report_html:  '実行',
-  playwright_native_html:  '実行',
-  playwright_report_json:  '実行',
-  qa_process_report:       'レポート',
+// 成果物のまとめ方は「いつ開くか」で分ける（3束）。
+// 以前は SDLC の工程名（計画/分析/設計/実装/実行/レポート）で並べていたが、
+// これは作った側の都合の並びで、「まず何を開けばよいか」に答えていなかった。
+const AUTORUN_OUTPUT_CATEGORY_ORDER = ['結果を見る', '根拠を確かめる', '持ち出す'];
+const AUTORUN_OUTPUT_CATEGORY_HINTS = {
+  '結果を見る':     'まずここだけ見れば判断できる',
+  '根拠を確かめる': '結果に納得できないとき',
+  '持ち出す':       '報告・提出・再利用',
 };
+const AUTORUN_OUTPUT_CATEGORIES = {
+  // 1. 結果を見る — 実行直後に開く、結論と判断材料
+  playwright_report_html:  '結果を見る',
+  qa_process_report:       '結果を見る',
+  cross_review:            '結果を見る',
+  // 2. 根拠を確かめる — 結論を追うときに開く
+  report_html:             '根拠を確かめる',
+  test_cases:              '根拠を確かめる',
+  test_design:             '根拠を確かめる',
+  test_analysis:           '根拠を確かめる',
+  model_graph:             '根拠を確かめる',
+  viewpoint_snapshot:      '根拠を確かめる',
+  test_plan:               '根拠を確かめる',
+  playwright_native_html:  '根拠を確かめる',
+  // 3. 持ち出す — 提出・再利用のために取り出す
+  report_json:             '持ち出す',
+  playwright_candidates_html: '持ち出す',
+  spec_ts:                 '持ち出す',
+  playwright_report_json:  '持ち出す',
+};
+
+// 成果物カードに出す主要数値。「その成果物で何が分かったか」を1つだけ示す。
+// 実測値が無いものは数を捏造せず、動作（開く）を出す。
+function _autorunOutputMetric(key, data) {
+  const step = (data && data.step_data) || {};
+  const crawl = step.crawl || {};
+  const qa = step.qa || {};
+  const scripts = step.scripts || {};
+  const result = (data && data.test_results) || {};
+
+  switch (key) {
+    case 'playwright_report_html':
+    case 'playwright_report_json': {
+      const failed = Number(result.failed || 0);
+      const passed = Number(result.passed || 0);
+      const total = failed + passed;
+      if (!total) return { num: '開く', sub: '', alert: false };
+      return {
+        num: total + '件',
+        sub: failed ? `失敗${failed} / 成功${passed}` : `全${total}件成功`,
+        alert: failed > 0,
+      };
+    }
+    case 'report_html':
+    case 'report_json':
+      return crawl.screens
+        ? { num: crawl.screens + '画面', sub: crawl.forms ? `フォーム${crawl.forms}件` : '', alert: false }
+        : { num: '開く', sub: '', alert: false };
+    case 'test_cases':
+      return scripts.count
+        ? { num: scripts.count + '件', sub: '', alert: false }
+        : { num: '開く', sub: '', alert: false };
+    case 'viewpoint_snapshot':
+      return qa.viewpoint_count
+        ? { num: qa.viewpoint_count + '観点', sub: qa.viewpoint_set || '', alert: false }
+        : { num: '開く', sub: '', alert: false };
+    case 'qa_process_report':
+      return qa.count
+        ? { num: qa.count + '件', sub: '成果物', alert: false }
+        : { num: '開く', sub: '', alert: false };
+    default:
+      return { num: '開く', sub: '', alert: false };
+  }
+}
 
 // ステッパーアイコン（テキスト記号を廃止し SVG で状態表現）
 const AUTORUN_STEP_ICONS = {
@@ -754,6 +808,73 @@ function _autorunRenderReviewGate(data, status) {
 }
 
 // ---- AutoRun: レンダリング（status/outputs から冪等に導出） ----
+// 主導線バー: いま何が起きていて、次に何を押すかを最上部に常設する。
+// 段階承認中は autorun-stages.js が上書きするので、ここでは扱わない。
+function _autorunRenderLeadBar(data, status) {
+  const bar = window.autorunLeadBar;
+  if (!bar) return;
+
+  if (status === 'awaiting_stages') return;
+
+  if (status === 'idle' || !status) { bar.hide(); return; }
+
+  if (status === 'awaiting_input') {
+    bar.set({
+      tone: 'stop',
+      title: '停止中 — ログインが必要です',
+      meta: 'あなたの選択を待っています',
+      actions: [{
+        label: 'ログイン情報を設定',
+        onClick: () => { _autoRunLoginSuppressed = false; _autorunShowLoginModal(data.input_request); },
+      }],
+    });
+    return;
+  }
+
+  if (['complete', 'failed', 'cancelled'].includes(status)) {
+    const result = data.test_results || {};
+    const failed = Number(result.failed || 0);
+    const label = status === 'complete'
+      ? (failed ? `完了 — 失敗 ${failed} 件` : '完了')
+      : (status === 'cancelled' ? '停止しました' : '失敗しました');
+    bar.set({
+      tone: status === 'complete' && !failed ? 'done' : (status === 'complete' ? 'blocked' : 'stop'),
+      title: label,
+      meta: autorunFmtElapsed(data.elapsed_sec || 0),
+      actions: [],
+    });
+    return;
+  }
+
+  if (status === 'awaiting_approval') {
+    bar.set({
+      tone: 'ready',
+      title: '承認待ち — 実行設定を確認してください',
+      meta: data.step_label || '',
+      actions: [{ label: '実行設定を開く', onClick: () => _autorunPrepareAndShowApprovalModal() }],
+    });
+    return;
+  }
+
+  // 処理中: 何をしているか＋進捗を出す。操作は中止のみ。
+  bar.set({
+    tone: 'busy',
+    title: data.step_label || '実行中',
+    meta: _autorunLeadBarProgress(data),
+    actions: [{ label: '中止する', onClick: autorunCancel, kind: 'danger' }],
+  });
+}
+
+// バーに出す進捗。実測できている数だけを出し、無ければ経過時間だけにする。
+function _autorunLeadBarProgress(data) {
+  const step = data.step_data || {};
+  const parts = [];
+  if (step.crawl && step.crawl.screens) parts.push(`${step.crawl.screens}画面`);
+  if (step.qa && step.qa.count) parts.push(`成果物${step.qa.count}件`);
+  parts.push(`経過 ${autorunFmtElapsed(data.elapsed_sec || 0)}`);
+  return parts.join(' ・ ');
+}
+
 function _autorunRender(data) {
   if (!data) return;
   window._autoRunLastData = data;
@@ -785,6 +906,7 @@ function _autorunRender(data) {
   }
 
   _autorunUpdateStepper(data);
+  _autorunRenderLeadBar(data, status);
 
   // ---- ログ ----
   if (data.log) {
@@ -857,16 +979,27 @@ function _autorunRender(data) {
       });
       const categories = AUTORUN_OUTPUT_CATEGORY_ORDER.filter(c => grouped[c])
         .concat(Object.keys(grouped).filter(c => !AUTORUN_OUTPUT_CATEGORY_ORDER.includes(c)));
-      linksEl.innerHTML = categories.map(category => {
+      linksEl.innerHTML = categories.map((category, index) => {
         const items = grouped[category].map(([key, path]) => {
           const label = AUTORUN_OUTPUT_LABELS[key] || key;
-          return `<div class="qa-output-item">
-            <span class="qa-output-item-label" title="${escHtml(label)}">${escHtml(label)}</span>
-            <div class="qa-output-item-actions">
-              <button class="btn-outline-sm qa-output-btn qa-preview-btn" data-path="${escHtml(path)}" data-label="${escHtml(label)}">プレビュー</button>
-            </div></div>`;
+          const summary = _autorunOutputMetric(key, data);
+          // カード全体を押せるようにし、同じ「プレビュー」ボタンの繰り返しを廃止する
+          return `<button type="button" class="qa-output-item qa-preview-btn"
+              data-path="${escHtml(path)}" data-label="${escHtml(label)}">
+            <span class="qa-output-item-text">
+              <span class="qa-output-item-label">${escHtml(label)}</span>
+              ${summary.sub ? `<span class="qa-output-item-sub">${escHtml(summary.sub)}</span>` : ''}
+            </span>
+            <span class="qa-output-item-num${summary.alert ? ' is-alert' : ''}">${escHtml(summary.num)}</span>
+          </button>`;
         }).join('');
-        return `<div class="qa-output-category"><div class="qa-output-category-title">${escHtml(category)}</div>${items}</div>`;
+        const hint = AUTORUN_OUTPUT_CATEGORY_HINTS[category] || '';
+        return `<div class="qa-output-category">
+          <div class="qa-output-category-title">
+            <span class="qa-output-bundle-no">${index + 1}</span>
+            <span>${escHtml(category)}</span>
+            ${hint ? `<span class="qa-output-bundle-when">${escHtml(hint)}</span>` : ''}
+          </div>${items}</div>`;
       }).join('');
     }
   }

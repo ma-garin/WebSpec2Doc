@@ -83,13 +83,16 @@ class TestStageGateBlocks:
         worker.join(timeout=3)
         assert not worker.is_alive(), "cancel() で待機が解除されること"
 
-    def test_timeout_is_logged_as_unapproved(self, job: AutoRunJob, monkeypatch) -> None:
-        """タイムアウトで進む場合、未承認であることを記録に残す。"""
+    def test_timeout_is_recorded_as_unverified(self, job: AutoRunJob, monkeypatch) -> None:
+        """タイムアウトで進む場合、未確認として状態に残す。
+
+        ログ1行だけでは成果物を見た人に届かないため、job.unverified に載せる。
+        """
         monkeypatch.setattr(auto_run, "STAGE_APPROVAL_TIMEOUT_SEC", 0.2)
         auto_run._await_stage_approval(job, "test_objective")
         joined = "\n".join(job.log)
         assert "タイムアウト" in joined
-        assert "未承認" in joined
+        assert any("人の確認を経ないまま" in note for note in job.unverified)
 
 
 class TestAutomationBypass:
@@ -100,12 +103,12 @@ class TestAutomationBypass:
         auto_run._await_stage_approval(job, "test_objective")  # ブロックしないこと
         assert job.status != "awaiting_stages"
 
-    def test_bypass_is_recorded_in_the_log(self, job: AutoRunJob) -> None:
+    def test_bypass_is_recorded_as_unverified(self, job: AutoRunJob) -> None:
         job.require_stage_approval = False
         auto_run._await_stage_approval(job, "test_objective")
         joined = "\n".join(job.log)
-        assert "スキップ" in joined
         assert "人の確認を経ていません" in joined
+        assert any("人の確認を経ていません" in note for note in job.unverified)
 
     def test_ui_started_jobs_require_approval_by_default(self) -> None:
         """既定は承認必須。黙って飛ばさない。"""
@@ -135,3 +138,35 @@ class TestRunJobOrder:
             assert stage_id in auto_run._GATE_MESSAGES, f"{stage_id} の関門メッセージが無い"
         # 旧来の一括関門は廃止されていること
         assert "design" not in auto_run._GATE_MESSAGES
+
+
+class TestUnverifiedIsCarriedToOutputs:
+    """「確認していない」は状態として残し、成果物まで運ぶ。
+
+    ログに1行流すだけでは、レポートを見た人には届かない。届かない記録は
+    「全部確認済み」と誤読される。
+    """
+
+    def test_add_unverified_is_deduplicated(self, job: AutoRunJob) -> None:
+        job.add_unverified("同じ事項")
+        job.add_unverified("同じ事項")
+        assert job.unverified == ["同じ事項"]
+
+    def test_add_unverified_ignores_blank(self, job: AutoRunJob) -> None:
+        job.add_unverified("   ")
+        assert job.unverified == []
+
+    def test_status_payload_exposes_unverified(self, job: AutoRunJob) -> None:
+        job.add_unverified("未観測の領域: ログイン後")
+        payload = job.to_dict()
+        assert payload["unverified"] == ["未観測の領域: ログイン後"]
+        assert "awaiting_remaining_sec" in payload
+
+    def test_awaiting_deadline_is_exposed_while_waiting(self, job: AutoRunJob) -> None:
+        """期限を出せないと、時間切れは黙って承認されたのと区別がつかない。"""
+        import time as _time
+
+        job.awaiting_deadline_epoch = _time.time() + 120
+        assert 0 < job.awaiting_remaining_sec() <= 120
+        job.awaiting_deadline_epoch = 0.0
+        assert job.awaiting_remaining_sec() == 0

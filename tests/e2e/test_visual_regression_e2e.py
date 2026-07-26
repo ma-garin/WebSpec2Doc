@@ -140,15 +140,14 @@ class TestVisualRegressionAutoRun:
         page.wait_for_load_state("networkidle")
         page.wait_for_selector("#view-auto-run", state="attached")
 
-    def test_autorun_approval_modal_1366x768(self, page: Page) -> None:
-        """承認モーダル 1366×768 でのビジュアル（モーダルオーバーフロー検知）。"""
+    def test_autorun_intake_1366x768(self, page: Page) -> None:
+        """受付画面 1366×768 でのビジュアル（レイアウト崩れ・要素重なり検知）。
+
+        旧「テスト実行の設定」モーダルを対象にしていたが、当該モーダルは
+        awaiting_approval の廃止に伴い到達不能となり削除済み。実行前の
+        関門は「実行条件の確認」ダイアログ1本に統一されている。
+        """
         page.set_viewport_size({"width": 1366, "height": 768})
         self._navigate_to_autorun(page)
-        page.evaluate(
-            """() => {
-            const modal = document.getElementById('autorun-approval-modal');
-            if (modal) modal.style.display = 'flex';
-        }"""
-        )
-        page.wait_for_selector("#autorun-approval-modal", state="visible")
-        _assert_visual_match(page, "autorun_approval_modal_1366x768", threshold=0.04)
+        page.wait_for_selector("#autorun-start-btn", state="visible")
+        _assert_visual_match(page, "autorun_intake_1366x768", threshold=0.04)

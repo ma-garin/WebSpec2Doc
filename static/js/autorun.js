@@ -7,7 +7,6 @@ let _autoRunStagesDomain = null;  // 段階承認パイプラインを読み込�
 let _autoRunStagesOpened = false; // 承認待ちでフェーズ画面を開いたか
 let _autoRunPreviewLoaded = false;
 let _autoRunPreviewData = null;
-let _autoRunApprovalModalShown = false;
 let _autorunViewpointSets = [];
 let _autorunViewpointRecommendation = null;
 let _autorunViewpointTimer = null;
@@ -196,12 +195,68 @@ function autorunSetStartStatus(msg, isError) {
   if (!el) return;
   el.textContent = msg;
   el.classList.toggle('input-field-message-error', !!isError);
+  // 明示的なエラー・通知は、入力のたびに走る活性判定に上書きさせない。
+  if (isError && msg) el.dataset.sticky = '1';
+  else delete el.dataset.sticky;
 }
 
 function autorunFmtElapsed(sec) {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
   return `${m}:${String(s).padStart(2,'0')}`;
+}
+
+// 待機の残り時間を人に読める粒度で返す。秒単位のカウントダウンは急かすだけなので出さない。
+function autorunFmtRemaining(sec) {
+  const n = Number(sec || 0);
+  if (n <= 0) return '';
+  if (n >= 3600) {
+    const h = Math.floor(n / 3600);
+    const m = Math.round((n % 3600) / 60);
+    return m ? `約${h}時間${m}分` : `約${h}時間`;
+  }
+  if (n >= 60) return `約${Math.round(n / 60)}分`;
+  return '1分未満';
+}
+
+// 未確認事項パネル。空なら何も描かない（無いものを大げさに出さない）。
+// 「実行した」と「確認できた」は別物。この区別が消えると成果物が過大に読まれる。
+function _autorunUnverifiedPanel(data) {
+  const frag = document.createDocumentFragment();
+  const items = (data && data.unverified) || [];
+  if (!items.length) return frag;
+  const box = document.createElement('section');
+  box.className = 'autorun-unverified';
+  box.setAttribute('role', 'note');
+  const head = document.createElement('div');
+  head.className = 'autorun-unverified-head';
+  head.textContent = `未確認のまま残った事項 ${items.length} 件`;
+  box.appendChild(head);
+  const lead = document.createElement('p');
+  lead.className = 'muted-copy';
+  lead.textContent = 'これらは「問題なし」ではなく「確認していない」という意味です。';
+  box.appendChild(lead);
+  const ul = document.createElement('ul');
+  ul.className = 'autorun-unverified-list';
+  items.forEach((text) => {
+    const li = document.createElement('li');
+    li.textContent = String(text);
+    ul.appendChild(li);
+  });
+  box.appendChild(ul);
+  frag.appendChild(box);
+  return frag;
+}
+
+// 待機に期限があることを、期限そのものと「切れたら何が起きるか」まで含めて説明する。
+// 期限を隠すと、時間切れは「黙って承認された」のと区別がつかなくなる。
+function _autorunDeadlineNote(data) {
+  const remain = autorunFmtRemaining((data || {}).awaiting_remaining_sec);
+  if (!remain) {
+    return '確認せずに実行することもできます。その場合は「人の確認を経ていない」と成果物に記録されます。';
+  }
+  return `確認の期限はあと${remain}です。過ぎた場合は未確認のまま後続へ進み、`
+    + '「人の確認を経ていない」と成果物に記録されます。';
 }
 
 function _autorunSetText(id, value) {
@@ -262,11 +317,14 @@ async function autorunLoadViewpointSelection() {
     select.innerHTML = '<option value="">自動選択</option>' + _autorunViewpointOptionsHtml(_autorunViewpointSets);
     if (_autorunViewpointSets.some((item) => item.id === current)) select.value = current;
     _autorunRenderViewpointRecommendation();
-    document.getElementById('autorun-start-btn').disabled = false;
+    // 観点セットが読めたことは「開始できる」ことを意味しない。
+    // URL 未入力などの理由が残っていれば無効のままにする（判定は1箇所に集約）。
+    autorunSyncStartButton();
   } catch (error) {
     note.textContent = `観点セットを固定できません: ${error.message}。観点管理で既定公開版を確認してください。`;
     note.classList.add('is-error');
     document.getElementById('autorun-start-btn').disabled = true;
+    autorunSetStartStatus('観点セットを読み込めないため開始できません。', true);
   }
 }
 
@@ -366,7 +424,6 @@ function _autorunAttachJob(jobId) {
   _autoRunStartedAt = null;
   _autoRunPreviewLoaded = false;
   _autoRunPreviewData = null;
-  _autoRunApprovalModalShown = false;
   _autoRunLoginSuppressed = false;
   _autorunInitPreviewModal();
   _autorunShowRunning();
@@ -456,17 +513,28 @@ function _autorunStartLivePreview(domain) {
   const frame = document.getElementById('autorun-preview-frame');
   if (frame) frame.style.display = '';
   if (_autoRunLivePreviewTimer) return; // 既にポーリング中
-  const poll = () => {
+  // スクリーンショットは「まだ無い」のが正常な状態。img へ直接 404 を踏ませると
+  // 実行中ずっとコンソールにエラーが出続け、本物の異常が埋もれる。
+  // 取得できたときだけ表示する。
+  const poll = async () => {
     const image = document.getElementById('autorun-preview-image');
     const placeholder = document.getElementById('autorun-preview-placeholder');
     if (!image || !placeholder) return;
-    const probe = new Image();
-    probe.onload = () => {
-      image.src = probe.src;
+    const url = `/api/autorun/live-screenshot?domain=${encodeURIComponent(_autoRunLivePreviewDomain)}&t=${Date.now()}`;
+    try {
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) return; // 未生成。次のポーリングを待つ
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const previous = image.dataset.objectUrl;
+      image.src = objectUrl;
+      image.dataset.objectUrl = objectUrl;
+      if (previous) URL.revokeObjectURL(previous);
       image.classList.add('show');
       placeholder.classList.add('hidden');
-    };
-    probe.src = `/api/autorun/live-screenshot?domain=${encodeURIComponent(_autoRunLivePreviewDomain)}&t=${Date.now()}`;
+    } catch (_e) {
+      // 取得失敗は表示を変えない（前回の画面を残す）
+    }
   };
   poll();
   _autoRunLivePreviewTimer = setInterval(poll, 1500);
@@ -477,7 +545,14 @@ function _autorunStopLivePreview() {
   if (frame) frame.style.display = 'none';
   const image = document.getElementById('autorun-preview-image');
   const placeholder = document.getElementById('autorun-preview-placeholder');
-  if (image) image.classList.remove('show');
+  if (image) {
+    image.classList.remove('show');
+    // blob URL は明示的に解放しないとタブが持ち続ける。
+    if (image.dataset.objectUrl) {
+      URL.revokeObjectURL(image.dataset.objectUrl);
+      delete image.dataset.objectUrl;
+    }
+  }
   if (placeholder) placeholder.classList.remove('hidden');
 }
 
@@ -716,6 +791,10 @@ function _autorunRenderComplete(data) {
   head.append(icon, titleWrap);
   card.appendChild(head);
 
+  // 「成功」の隣に「確認していない範囲」を必ず置く。
+  // 未確認を黙ると、全テスト成功が「全部問題なし」と読まれる。
+  card.appendChild(_autorunUnverifiedPanel(data));
+
   const actions = document.createElement('div');
   actions.className = 'autorun-complete-actions';
   if (data.domain) {
@@ -759,79 +838,6 @@ function _autorunRenderComplete(data) {
   card.appendChild(actions);
 }
 
-// ---- 承認待ちの案内（モーダルを強制表示しない）----
-// 仕様7〜13の段階承認と整合させる: まず生成物を確認し、納得してから実行する。
-function _autorunRenderReviewGate(data, status) {
-  const host = document.getElementById('autorun-review-gate');
-  if (!host) return;
-
-  if (status !== 'awaiting_approval') {
-    host.style.display = 'none';
-    host.replaceChildren();
-    return;
-  }
-
-  if (host.dataset.renderedFor === data.job_id) {
-    host.style.display = '';
-    return;
-  }
-  host.dataset.renderedFor = data.job_id || '';
-  host.replaceChildren();
-
-  const head = document.createElement('div');
-  head.className = 'section-kicker';
-  head.textContent = '確認待ち';
-  host.appendChild(head);
-
-  const title = document.createElement('h4');
-  title.className = 'autorun-review-title';
-  title.textContent = '生成物ができました。内容を確認してから実行してください。';
-  host.appendChild(title);
-
-  const note = document.createElement('p');
-  note.className = 'autorun-review-note';
-  note.textContent =
-    'テストを実行すると対象サイトへ実際に操作が行われます。'
-    + '仕様書・計画・設計・テストケースを確認し、必要なら段階ごとに修正してから開始してください。';
-  host.appendChild(note);
-
-  // 生成済みドキュメントへの導線（実在する成果物のみ出す）
-  const outputs = data.outputs || {};
-  const docKeys = ['report_html', 'test_plan', 'test_analysis', 'test_design', 'test_cases'];
-  const links = document.createElement('div');
-  links.className = 'autorun-review-links';
-  docKeys.forEach((key) => {
-    if (!outputs[key]) return;
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'btn-outline-sm';
-    b.textContent = AUTORUN_OUTPUT_LABELS[key] || key;
-    b.addEventListener('click', () => qaPreviewFile(outputs[key]));
-    links.appendChild(b);
-  });
-  if (links.childNodes.length) host.appendChild(links);
-
-  const actions = document.createElement('div');
-  actions.className = 'autorun-review-actions';
-
-  const open = document.createElement('button');
-  open.type = 'button';
-  open.className = 'btn-primary';
-  open.textContent = '確認した — 実行設定を開く';
-  open.addEventListener('click', () => {
-    _autoRunApprovalModalShown = true;
-    _autorunPrepareAndShowApprovalModal();
-  });
-  actions.appendChild(open);
-
-  const later = document.createElement('span');
-  later.className = 'autorun-review-later';
-  later.textContent = '急がなくて構いません。確認を終えるまで実行は始まりません。';
-  actions.appendChild(later);
-
-  host.appendChild(actions);
-  host.style.display = '';
-}
 
 // ---- AutoRun: レンダリング（status/outputs から冪等に導出） ----
 // ログイン壁で止まったときの説明。判定根拠と取得できた範囲を示す。
@@ -905,11 +911,18 @@ function _autorunRenderLeadBar(data, status) {
 
   if (status === 'awaiting_input') {
     // 無言で「取得できた範囲」を進めない。止めて、判定根拠と選択肢を出す。
+    // ログインモーダルを開いている間は、バー側の操作はオーバーレイに遮られて
+    // 押せない（実測）。押せないボタンを出さないため、操作はモーダルへ一本化する。
+    const modalOpen = _autorunLoginModalIsOpen();
+    const remain = autorunFmtRemaining(data.awaiting_remaining_sec);
     bar.set({
       tone: 'stop',
-      title: '停止中 — ログインが必要です',
-      meta: 'あなたの選択を待っています',
-      actions: [
+      // 「停止中」は中止操作の結果と紛らわしい。ここは人の入力を待っている状態。
+      title: '入力待ち — ログインが必要です',
+      meta: remain
+        ? `あなたの選択を待っています（あと${remain}で未ログインのまま続行）`
+        : 'あなたの選択を待っています',
+      actions: modalOpen ? [] : [
         {
           label: 'ログイン情報を設定して続ける',
           onClick: () => { _autoRunLoginSuppressed = false; _autorunShowLoginModal(data.input_request); },
@@ -936,16 +949,6 @@ function _autorunRenderLeadBar(data, status) {
       title: label,
       meta: autorunFmtElapsed(data.elapsed_sec || 0),
       actions: [],
-    });
-    return;
-  }
-
-  if (status === 'awaiting_approval') {
-    bar.set({
-      tone: 'ready',
-      title: '承認待ち — 実行設定を確認してください',
-      meta: data.step_label || '',
-      actions: [{ label: '実行設定を開く', onClick: () => _autorunPrepareAndShowApprovalModal() }],
     });
     return;
   }
@@ -1015,14 +1018,6 @@ function _autorunRender(data) {
     _autorunHideLoginModal();
   }
   if (status !== 'awaiting_input') _autoRunLoginSuppressed = false;
-
-  // ---- 承認待ち: モーダルを勝手に出さない ----
-  // 生成した仕様書・計画・設計・ケースを確認する前に実行設定を突きつけるのは
-  // この製品の性格に反する。確認を促す案内を出し、ユーザーが明示的に開く。
-  _autorunRenderReviewGate(data, status);
-  if (status !== 'awaiting_approval') {
-    _autorunHideApprovalModal();
-  }
 
   _autorunRenderComplete(data);
   _autorunRenderFailurePanel(data);
@@ -1102,6 +1097,14 @@ function _autorunRender(data) {
 // ---- AutoRun: 停止 ----
 async function autorunCancel() {
   if (!_autoRunJobId) return;
+  // 中止はやり直しが効かない（再開手段が無く、最初からになる）。
+  // 押した瞬間に破棄せず、失うものを示してから確認する。
+  const ok = window.confirm(
+    'この実行を中止します。\n\n'
+    + '中止すると、ここまでの生成物は残りますが実行は再開できません。'
+    + 'もう一度最初から実行し直す必要があります。\n\n中止しますか？'
+  );
+  if (!ok) return;
   const btn = document.getElementById('autorun-cancel-btn');
   if (btn) { btn.disabled = true; btn.textContent = '停止中…'; }
   try {
@@ -1158,6 +1161,13 @@ function _autorunShowLoginModal(inputRequest) {
 function _autorunHideLoginModal() {
   document.getElementById('autorun-login-modal')?.classList.add('hidden');
   document.removeEventListener('keydown', _autorunLoginEscHandler);
+}
+
+// モーダル表示中はオーバーレイが背面の操作を奪う。バー側に押せないボタンを
+// 出さないための判定（見えているのに押せない状態を作らない）。
+function _autorunLoginModalIsOpen() {
+  const modal = document.getElementById('autorun-login-modal');
+  return !!modal && !modal.classList.contains('hidden');
 }
 
 // ✕で閉じる: スキップせず入力待ちのまま（誤操作でスキップさせない）。再開はステッパー下の導線から。
@@ -1220,7 +1230,6 @@ function autorunReset() {
   _autoRunStartedAt           = null;
   _autoRunPreviewLoaded       = false;
   _autoRunPreviewData         = null;
-  _autoRunApprovalModalShown  = false;
   _autoRunLoginSuppressed     = false;
   _autoRunLogLines            = [];
   window._autoRunLastData     = null;
@@ -1229,7 +1238,6 @@ function autorunReset() {
   _autorunStopPolling();
   _autorunStopElapsed();
   _autorunStopLivePreview();
-  _autorunHideApprovalModal();
   _autorunHideLoginModal();
   document.getElementById('autorun-steps').style.display          = 'none';
   document.getElementById('autorun-outputs-area').style.display   = 'none';
@@ -1240,13 +1248,14 @@ function autorunReset() {
   document.getElementById('autorun-cancel-area').style.display    = 'none';
   document.getElementById('autorun-restart-area').style.display   = 'none';
   document.getElementById('autorun-idle-msg').style.display       = '';
-  document.getElementById('autorun-start-btn').disabled = false;
   document.getElementById('autorun-start-btn').textContent = '開始';
   document.getElementById('autorun-url').value = '';
   _autorunResetDocumentMode();
   const viewpointSelect = document.getElementById('autorun-viewpoint-set');
   if (viewpointSelect) viewpointSelect.value = '';
   autorunLoadViewpointSelection();
+  // URL を空に戻した以上、開始ボタンは再び「押せない」が正しい状態。
+  autorunSyncStartButton();
   document.getElementById('autorun-elapsed').textContent = '0:00';
   const completeCard = document.getElementById('autorun-complete-card');
   if (completeCard) completeCard.replaceChildren();

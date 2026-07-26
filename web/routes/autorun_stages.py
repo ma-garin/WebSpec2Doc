@@ -196,25 +196,37 @@ def api_submit_decisions() -> tuple[dict, int] | dict:
     actor = _actor()
 
     # 項目 → 段階の順に承認する。個別項目の承認が必要な段階は先に項目を通す。
+    # ただし「人が見ていない項目」を承認済みに書き換えてはならない。
+    # 実行条件の確定は段階の関門を開けるだけで、人の確認の代わりにはならない。
+    # 未確認の判定は、画面が「要確認」として出したキューと同じ基準を使う。
+    # requires_item_approval は段階側の都合であり、人が見るべき項目の集合とは一致しない。
+    unverified = [
+        f"{entry.stage_name}: {entry.title}"
+        for entry in build_review_queue(pipeline, page_urls_from_report(_load_report(domain)))
+        if entry.needs_review and not entry.approved
+    ]
     for stage in pipeline.stages:
         if stage.status in (STATUS_APPROVED, STATUS_SKIPPED):
             continue
-        updated = stage
-        if stage.definition.requires_item_approval:
-            for item in stage.items:
-                if not item.approved:
-                    updated = updated.with_item(replace(item, approved=True))
-        pipeline = pipeline.replaced(updated.with_status(STATUS_APPROVED)).recorded(
+        pipeline = pipeline.replaced(stage.with_status(STATUS_APPROVED)).recorded(
             "approve", stage.stage_id, f"実行条件の確定により承認（{detail}）", actor
         )
 
     pipeline = pipeline.recorded("decisions", "", detail, actor)
+    if unverified:
+        # 「誰も見ていない」ことを証跡に残す。ここで黙ると承認済みと誤読される。
+        pipeline = pipeline.recorded(
+            "unverified",
+            "",
+            f"人の確認を経ずに実行へ進んだ項目 {len(unverified)} 件: " + " / ".join(unverified[:20]),
+            actor,
+        )
     _save_pipeline(domain, pipeline)
 
     from web.routes.auto_run import release_all_stage_gates
 
     note = str(payload.get("note", "")).strip()
-    released = release_all_stage_gates(job_id, domain, normalized, note)
+    released = release_all_stage_gates(job_id, domain, normalized, note, unverified)
     return {
         "domain": domain,
         "answers": normalized,

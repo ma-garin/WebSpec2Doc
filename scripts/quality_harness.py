@@ -36,6 +36,7 @@ UNREGISTERED_ALLOWLIST = {
     # 単独の機能ではなく差し替え可能なアダプタとして扱う。
     "src/llm/openai_client.py",
     "src/llm/activity_log.py",  # LLM 呼び出しの横断アクティビティログ（best-effort）
+    "src/llm/prompt_guard.py",  # 全LLM経路共有の原則＋injection対策（横断部品）
     "src/llm/screen_classifier.py",
     "src/llm/industry_template.py",
     "web/services/openai_qa.py",

@@ -73,13 +73,20 @@ class SuggestionResult:
 
 
 def _prompt(stage_name: str, purpose: str, context: str, existing: list[str]) -> str:
+    from llm.prompt_guard import QA_PRINCIPLES, untrusted_block
+
     listed = "\n".join(f"- {t}" for t in existing[:MAX_EXISTING_SHOWN]) or "（まだ無し）"
+    # 観測結果（対象サイト由来の URL・件数）と既存項目（LLM/人の編集を含む）は
+    # 外部由来テキストなので、指示と混ざらないよう区切って渡す。
     return (
-        "あなたはベテランQAエンジニアです。日本語で答えてください。\n\n"
-        f"# 現在の段階\n{stage_name}: {purpose}\n\n"
-        f"# 対象の観測結果\n{context}\n\n"
-        f"# すでに挙がっている項目\n{listed}\n\n"
-        "# 依頼\n"
+        "あなたはベテランQAエンジニアです。\n"
+        + QA_PRINCIPLES
+        + f"\n# 現在の段階\n{stage_name}: {purpose}\n\n"
+        "# 対象の観測結果\n"
+        + untrusted_block(context, label="observation", source="クロール対象サイト")
+        + "\n\n# すでに挙がっている項目\n"
+        + untrusted_block(listed, label="existing_items", source="これまでの生成・編集")
+        + "\n\n# 依頼\n"
         f"すでに挙がっている項目に**含まれていない**追加候補を、最大 {MAX_SUGGESTIONS} 件挙げてください。\n"
         "制約:\n"
         "- 既存項目の言い換えは出さない。本当に抜けているものだけを出す。\n"

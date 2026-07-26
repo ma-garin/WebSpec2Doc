@@ -287,14 +287,18 @@ class TestExecuteTests:
         mock_result = {"ok": True, "passed": 1, "failed": 0, "skipped": 0, "total": 1, "tests": []}
         captured_filter: list[str] = []
 
+        captured_submit: list[bool] = []
+
         def fake_gen(
             domain: str,
             path: Path,
             out: Path,
             filter_mode: str = "all",
             generate_page_object: bool = False,
+            allow_submit: bool = False,
         ) -> None:
             captured_filter.append(filter_mode)
+            captured_submit.append(allow_submit)
 
         with (
             patch("web.routes.auto_run.run_playwright", return_value=mock_result),
@@ -305,6 +309,8 @@ class TestExecuteTests:
 
         # smoke フィルターで再生成が呼ばれた
         assert "smoke" in captured_filter
+        # 実行条件で送信を選んでいないので、送信手順は生成しない
+        assert captured_submit == [False]
 
     def test_per_test_timeout_passed_to_run_playwright(self, tmp_path: Path) -> None:
         spec_path = tmp_path / "autorun.spec.ts"

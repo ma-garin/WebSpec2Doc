@@ -1084,7 +1084,13 @@ def _phase_generate_scripts(job: AutoRunJob) -> None:
     source_path = _apply_automation_plan(job, candidates_path, spec_dir)
 
     try:
-        generate_spec_ts(job.domain, source_path, spec_path)
+        # 実行条件で「送信まで実行」が選ばれた場合のみ、送信手順を生成する。
+        generate_spec_ts(
+            job.domain,
+            source_path,
+            spec_path,
+            allow_submit=bool(job.run_policy.get("allow_submit")),
+        )
     except Exception as exc:
         _mark_job_failed(job, f"スクリプト生成エラー: {exc}")
         return
@@ -1318,6 +1324,7 @@ def _execute_tests(job: AutoRunJob) -> None:
                     spec_path,
                     filter_mode=filter_mode,
                     generate_page_object=page_object,
+                    allow_submit=bool(job.run_policy.get("allow_submit")),
                 )
                 detail = f"フィルター '{filter_mode}'" + (
                     "・Page Object形式" if page_object else ""

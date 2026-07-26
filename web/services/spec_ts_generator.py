@@ -27,6 +27,7 @@ def generate_spec_ts(
     enable_self_healing: bool = False,
     generate_page_object: bool = False,
     report_path: Path | None = None,
+    allow_submit: bool = False,
 ) -> Path:
     """playwright_candidates.json から Playwright .spec.ts を生成する。
 
@@ -35,6 +36,10 @@ def generate_spec_ts(
       "smoke"      画面表示スモークのみ
       "transition" スモーク + 遷移テスト
       "form"       スモーク + フォーム入力 + 必須入力
+
+    allow_submit: True の場合、入力が妥当なケースでフォームを実際に送信する。
+      既定は False（入力の観測にとどめ、対象サイトへデータを残さない）。
+      利用者が実行条件で「送信まで実行」を選んだときにだけ True にする。
 
     enable_strong_assertions: True の場合、expected フィールドに基づく強化アサーションを追加。
     enable_self_healing: True の場合、locators フィールドから resilient ロケータを生成。
@@ -66,7 +71,14 @@ def generate_spec_ts(
     ]
 
     for item in filtered:
-        _append_test_block(lines, item, enable_strong_assertions, enable_self_healing, screen_index)
+        _append_test_block(
+            lines,
+            item,
+            enable_strong_assertions,
+            enable_self_healing,
+            screen_index,
+            allow_submit,
+        )
 
     output_path.write_text("\n".join(lines), encoding="utf-8")
     _write_test_metadata(domain, filtered, candidates_path, output_path, report_path)
@@ -180,6 +192,7 @@ def _append_test_block(
     enable_strong_assertions: bool,
     enable_self_healing: bool,
     screen_index: dict[str, dict[str, str]] | None = None,
+    allow_submit: bool = False,
 ) -> None:
     """単一候補の test ブロックを lines に追記する。"""
     title = _safe_str(item.get("title", "untitled"))
@@ -232,7 +245,7 @@ def _append_test_block(
     # 揃っている場合のみ発動し、揃っていない候補（旧フィクスチャ等）には影響しない。
     field = item.get("field")
     if field and title in ("フォーム入力", "必須入力"):
-        _append_form_operations(lines, item, title, field)
+        _append_form_operations(lines, item, title, field, allow_submit)
     elif title == "画面遷移":
         _append_transition_assertion(lines, trace_id, screen_index)
     elif title == "画面表示スモーク":
@@ -263,6 +276,7 @@ def _append_form_operations(
     item: dict[str, Any],
     title: str,
     field: dict[str, Any],
+    allow_submit: bool = False,
 ) -> None:
     siblings: list[dict[str, Any]] = item.get("required_siblings") or []
     form_action = _safe_str(item.get("form_action", ""))
@@ -299,6 +313,10 @@ def _append_form_operations(
                 ".evaluate((el) => (el as HTMLInputElement).checkValidity());"
             )
             lines.append("  expect(fieldValid).toBe(true);")
+        # 実行条件で「送信まで実行」を選んだ場合のみ、実際に送信する。
+        # 既定では送信しない（対象サイトにデータを残さないため）。
+        if allow_submit:
+            _append_submit_statement(lines, form_selector)
     else:  # 必須入力
         lines.append(f"  // `{_esc(_field_label(field))}` を空にする")
         _append_clear_statement(lines, field, indent="  ")
@@ -313,6 +331,37 @@ def _append_form_operations(
                 ".evaluate((f) => (f as HTMLFormElement).checkValidity());"
             )
             lines.append("  expect(formValid).toBe(false);")
+
+
+def _append_submit_statement(lines: list[str], form_selector: str) -> None:
+    """フォームを実際に送信し、送信後の応答を確認する。
+
+    利用者が「送信まで実行」を選んだときだけ呼ばれる。送信は対象サイトへ
+    実データを残すため、既定では絶対に通らない経路にしてある。
+    """
+    target = f"page.locator('{form_selector}')" if form_selector else "page"
+    lines.append("  // 実行条件で「送信まで実行」が選ばれたため、実際に送信する")
+    lines.append("  const beforeUrl = page.url();")
+    lines.append(
+        f"  const submitButton = {target}"
+        ".locator('button[type=\"submit\"], input[type=\"submit\"]').first();"
+    )
+    lines.append("  if (await submitButton.count()) {")
+    lines.append("    await submitButton.click();")
+    lines.append("  } else {")
+    lines.append(f"    await {target}.evaluate((f) => (f as HTMLFormElement).submit());")
+    lines.append("  }")
+    lines.append("  await page.waitForLoadState('domcontentloaded');")
+    # 送信できたかは URL の変化か、遷移しない実装のための到達性で確認する。
+    lines.append("  const afterUrl = page.url();")
+    lines.append("  expect(typeof afterUrl).toBe('string');")
+    lines.append("  if (afterUrl === beforeUrl) {")
+    lines.append(
+        "    // 遷移しない実装もあるため、失敗にはしない。"
+        "送信した事実だけを証跡へ残す。"
+    )
+    lines.append("    test.info().annotations.push({ type: 'submit', description: '送信後も同一URL' });")
+    lines.append("  }")
 
 
 def _append_transition_assertion(

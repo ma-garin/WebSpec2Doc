@@ -187,10 +187,17 @@ class TestAutoRunIntake:
         """
         assert 'id="autorun-review"' in spa
 
-    def test_phase_navigation_lives_in_the_sidebar(self, spa: str) -> None:
-        """フェーズはサイドメニューに置く（上部のタブ列にしない）。"""
-        assert 'id="autorun-phase-nav"' in spa
-        assert 'id="autorun-phase-group"' in spa
+    def test_stage_navigation_is_not_reintroduced(self, spa: str) -> None:
+        """段階ナビは復活させない。
+
+        「生成済みのものを段階ごとに順番へ承認させない」方針で常時非表示に
+        されており、段階詳細を描く関数も存在しないため到達できなかった。
+        非表示のまま残すと、旧承認モーダルと同じ「見えないのにセレクタだけ
+        生きている」状態になる。確認の導線は要確認キューに一本化する。
+        """
+        assert 'id="autorun-phase-nav"' not in spa
+        assert 'id="autorun-phase-group"' not in spa
+        assert 'id="autorun-review"' in spa
 
     def test_assistant_presets_are_phase_scoped(self, spa: str) -> None:
         """定型チップはフェーズごとに差し替える（固定の3つを埋め込まない）。"""

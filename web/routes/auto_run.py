@@ -1070,7 +1070,12 @@ def _phase_crawl(job: AutoRunJob, depth: int, max_pages: int) -> None:
     job.domain = domain
     report_json = _job_out(job) / domain / "report.json"
     if not report_json.is_file():
-        _mark_job_failed(job, "観測完了後に report.json が見つかりません")
+        # 内部ファイル名をそのまま出しても、利用者は次に何をすればよいか分からない。
+        _mark_job_failed(
+            job,
+            "観測結果を保存できませんでした。対象サイトへ到達できているか、"
+            "出力先の書き込み権限があるかを確認してください。",
+        )
         return
 
     job.outputs["report_json"] = str(report_json.resolve())

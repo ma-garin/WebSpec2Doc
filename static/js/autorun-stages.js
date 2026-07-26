@@ -116,37 +116,11 @@
 
   // ---------------------------------------------------------------- サイドメニュー
 
-  function renderNav() {
-    var nav = $('autorun-phase-nav');
-    if (!nav || !state.pipeline) return;
-    nav.replaceChildren();
-
-    stages().forEach(function (stage) {
-      var btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'autorun-phase-item is-' + stage.status;
-      if (stage.stage_id === state.selected) btn.classList.add('is-selected');
-      if (!isReachable(stage)) btn.classList.add('is-locked');
-
-      var no = document.createElement('span');
-      no.className = 'autorun-phase-no';
-      no.textContent = stage.status === 'approved' ? '✓'
-        : stage.status === 'skipped' ? '—' : String(stage.step_no);
-      btn.appendChild(no);
-
-      var label = document.createElement('span');
-      label.className = 'autorun-phase-label';
-      label.textContent = stage.name;
-      btn.appendChild(label);
-
-      btn.addEventListener('click', function () {
-        if (!confirmDiscardEdit()) return;
-        state.selected = stage.stage_id;
-        render();
-      });
-      nav.appendChild(btn);
-    });
-  }
+  // 段階ナビは廃止した。段階ごとに順番へ承認させる導線を作らない方針の下で
+  // 常時非表示にされ、段階詳細を描く関数も既に無いため到達できなかった。
+  // 非表示のまま DOM に残すと、旧承認モーダルと同じ「押せない・見えないのに
+  // セレクタだけ生きている」状態になるため、描画そのものを行わない。
+  function renderNav() {}
 
   // ---------------------------------------------------------------- 項目
 

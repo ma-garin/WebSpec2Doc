@@ -155,6 +155,48 @@ class TestRunPlaywright:
         assert len(result["tests"]) == 1
         assert result["tests"][0]["title"] == "ログイン画面表示"
 
+    def test_headless_by_default(self, tmp_out: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """既定はヘッドレス。--headed を勝手に付けない（サーバ運用で画面が開かない）。"""
+        seen = self._capture_cmd(monkeypatch)
+        with (
+            patch("web.services.playwright_executor.shutil.which", return_value="/usr/bin/npx"),
+            patch("web.services.playwright_executor._pw_test_available", return_value=True),
+        ):
+            run_playwright(Path("spec.ts"), tmp_out)
+
+        assert seen and "--headed" not in seen[0]
+
+    def test_headed_option_adds_flag(self, tmp_out: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """headed=True のときだけブラウザ画面を出す（実行中の様子を人が見る用途）。"""
+        seen = self._capture_cmd(monkeypatch)
+        with (
+            patch("web.services.playwright_executor.shutil.which", return_value="/usr/bin/npx"),
+            patch("web.services.playwright_executor._pw_test_available", return_value=True),
+        ):
+            run_playwright(Path("spec.ts"), tmp_out, headed=True)
+
+        assert seen and "--headed" in seen[0]
+
+    @staticmethod
+    def _capture_cmd(monkeypatch: pytest.MonkeyPatch) -> list[list[str]]:
+        """subprocess.run に渡るコマンドを記録しつつ、結果 JSON も書かせる。"""
+        seen: list[list[str]] = []
+
+        def fake_run(cmd: list[str], **_: object) -> MagicMock:
+            seen.append(list(cmd))
+            idx = cmd.index("--config") + 1 if "--config" in cmd else -1
+            if idx > 0:
+                import re
+
+                config_text = Path(cmd[idx]).read_text(encoding="utf-8")
+                m = re.search(r"outputFile[\"']?:\s*[\"']([^\"']+)[\"']", config_text)
+                if m:
+                    Path(m.group(1)).write_text(_VALID_JSON, encoding="utf-8")
+            return _mock_proc(_VALID_JSON)
+
+        monkeypatch.setattr("web.services.playwright_executor.subprocess.run", fake_run)
+        return seen
+
     def test_success_writes_json_report(
         self, tmp_out: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

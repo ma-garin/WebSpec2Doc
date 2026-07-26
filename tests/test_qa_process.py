@@ -353,3 +353,78 @@ def test_generate_rejects_invalid_report_json(tmp_path: Path, monkeypatch) -> No
     (domain_dir / "report.json").write_text("{", encoding="utf-8")
     res = _client().post("/api/qa-process/generate", data={"domain": "example.com"})
     assert res.status_code == 400
+
+
+# ─────────────── 実行中のライブ表示（進捗・スクリーンショット）───────────────
+# 実行 API は完了までレスポンスを返さないため、実行中の状態はこの 2 本から取る。
+
+
+def _write_progress(base: Path, domain: str, lines: list[dict]) -> None:
+    d = base / domain / "testcases"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "playwright_progress.ndjson").write_text(
+        "\n".join(json.dumps(x, ensure_ascii=False) for x in lines) + "\n", encoding="utf-8"
+    )
+
+
+def test_live_progress_reads_partial_ndjson(tmp_path: Path, monkeypatch) -> None:
+    """完了を待たず、その時点までに終わったテストを返す。"""
+    monkeypatch.setattr(qa_mod, "OUTPUT_DIR", tmp_path)
+    _write_progress(
+        tmp_path,
+        "example.com",
+        [
+            {"event": "begin", "total": 5},
+            {"event": "test", "title": "TC-001", "status": "passed", "duration": 120},
+            {"event": "test", "title": "TC-002", "status": "failed", "duration": 90, "error": "NG"},
+        ],
+    )
+    data = _client().get("/api/testcases/live-progress?domain=example.com").get_json()
+
+    assert data["total"] == 5
+    assert data["done"] == 2
+    assert data["passed"] == 1
+    assert data["failed"] == 1
+    assert [t["title"] for t in data["tests"]] == ["TC-001", "TC-002"]
+
+
+def test_live_progress_without_run_returns_zero(tmp_path: Path, monkeypatch) -> None:
+    """未実行のサイトで件数を推測して埋めない（0 件として返す）。"""
+    monkeypatch.setattr(qa_mod, "OUTPUT_DIR", tmp_path)
+    (tmp_path / "example.com").mkdir()
+    data = _client().get("/api/testcases/live-progress?domain=example.com").get_json()
+
+    assert data == {"total": 0, "done": 0, "passed": 0, "failed": 0, "tests": []}
+
+
+def test_live_progress_rejects_invalid_domain(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(qa_mod, "OUTPUT_DIR", tmp_path)
+    res = _client().get("/api/testcases/live-progress?domain=../etc")
+    assert res.status_code == 400
+
+
+def test_live_screenshot_returns_newest_png(tmp_path: Path, monkeypatch) -> None:
+    """test-results 配下で最終更新が最も新しい PNG を返す。"""
+    import os
+
+    monkeypatch.setattr(qa_mod, "OUTPUT_DIR", tmp_path)
+    shots = tmp_path / "example.com" / "testcases" / "test-results" / "tc-001"
+    shots.mkdir(parents=True)
+    old, new = shots / "old.png", shots / "new.png"
+    old.write_bytes(b"\x89PNG\r\n\x1a\nOLD")
+    new.write_bytes(b"\x89PNG\r\n\x1a\nNEW")
+    os.utime(old, (1_600_000_000, 1_600_000_000))
+    os.utime(new, (1_700_000_000, 1_700_000_000))
+
+    res = _client().get("/api/testcases/live-screenshot?domain=example.com")
+
+    assert res.status_code == 200
+    assert res.mimetype == "image/png"
+    assert res.data.endswith(b"NEW")
+    assert res.headers["Cache-Control"] == "no-store"
+
+
+def test_live_screenshot_without_results_returns_404(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(qa_mod, "OUTPUT_DIR", tmp_path)
+    (tmp_path / "example.com").mkdir()
+    assert _client().get("/api/testcases/live-screenshot?domain=example.com").status_code == 404

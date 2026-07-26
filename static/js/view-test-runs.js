@@ -9,14 +9,15 @@ async function renderTestRuns() {
   const domain = (document.getElementById('r-domain') || {}).textContent || '';
 
   if (!files.playwright_json) {
-    uiEmpty(host, {
-      icon: '🧪',
-      title: 'まだ実行していません',
-      desc: '「自動化可」のテストケースを実行すると、ケースごとの PASS/FAIL がここに表示されます。'
-        + '対象を絞って実行したい場合はテストケースタブから実行してください。',
-      actionLabel: '▶ テストを実行する',
-      onAction: () => runTestsFromRunsTab(),
-    });
+    host.innerHTML =
+      '<div class="hero-pad"><div class="runs-empty">' +
+      '<div class="runs-empty-icon" aria-hidden="true">🧪</div>' +
+      '<div class="hero-section-title" style="margin:0">まだ実行していません</div>' +
+      '<p class="muted-copy">「自動化可」のテストケースを実行すると、ケースごとの PASS/FAIL が' +
+      'ここに表示されます。対象を絞って実行したい場合はテストケースタブから実行してください。</p>' +
+      _runsControlsHtml() +
+      '</div></div>';
+    _bindRunsControls(host);
     return;
   }
 
@@ -129,7 +130,7 @@ async function renderTestRuns() {
     '<div><div class="hero-section-title" style="margin:0">テスト実行結果</div>' +
     `<p class="muted-copy runs-meta">実行日時: ${escHtml(runAt || '不明')}${r.duration_ms ? ' ／ 所要 ' + Math.round(r.duration_ms / 1000) + '秒' : ''}</p></div>` +
     '<div class="runs-header-actions">' +
-    '<button type="button" class="btn-outline-sm" id="runs-rerun-btn">▶ 再実行</button>' +
+    _runsControlsHtml() +
     `${linkBtn(files.playwright_html, '実行レポートを開く', true)} ${devLink} ${dlSpec}</div>` +
     '</div>' +
     (r.interrupted ? `<div class="runs-stale-note">⚠ ${escHtml(r.error || '実行が途中で中断されました。')}</div>` : '') +
@@ -139,42 +140,132 @@ async function renderTestRuns() {
       ? '<table class="ov-screens runs-table"><thead><tr><th>テストケースID</th><th>結果</th><th>時間</th><th>エラー</th></tr></thead><tbody>' + rows + '</tbody></table>'
       : (r.error ? `<div class="runs-unavailable-card"><div class="runs-unavailable-title">⚠ 実行エラー</div><p class="runs-unavailable-reason">${escHtml(r.error)}</p></div>` : '')) +
     '</div>';
-  host.querySelector('#runs-rerun-btn')?.addEventListener('click', () => runTestsFromRunsTab());
+  _bindRunsControls(host);
 }
 
 // ---- このタブから直接テストを実行する ----
 // 起動導線がテストケースタブにしか無く、「テスト実行」タブを開いても実行できなかった。
 // 対象は「自動化可」の全ケース（絞り込んで実行したい場合はテストケースタブを使う）。
+const RUNS_HEADED_KEY = 'webspec2doc.runs.headed';
+
 function _runsDomain() {
   return (document.getElementById('r-domain') || {}).textContent || '';
+}
+function _runsHeadedPref() {
+  try { return localStorage.getItem(RUNS_HEADED_KEY) === '1'; } catch (e) { return false; }
+}
+
+// 実行ボタンとヘッド表示トグル。未実行の空状態と実行済みヘッダの両方で使う。
+function _runsControlsHtml() {
+  const checked = _runsHeadedPref() ? ' checked' : '';
+  return '<span class="runs-controls">' +
+    '<label class="checkbox-chip" title="ブラウザ画面を表示して実行します（このアプリが動くマシンに開きます）">' +
+    `<input type="checkbox" id="runs-headed"${checked}> ブラウザを表示</label>` +
+    '<button type="button" class="btn-primary btn-run" id="runs-run-btn">▶ テストを実行</button>' +
+    '</span>';
+}
+
+function _bindRunsControls(host) {
+  host.querySelector('#runs-run-btn')?.addEventListener('click', () => runTestsFromRunsTab());
+  host.querySelector('#runs-headed')?.addEventListener('change', e => {
+    try { localStorage.setItem(RUNS_HEADED_KEY, e.target.checked ? '1' : '0'); } catch (err) {}
+  });
+}
+
+// 実行中の画面。進捗 NDJSON（onTestEnd ごとに追記される）とスクショを一定間隔で読む。
+// 実行 API は完了までレスポンスを返さないため、進捗は別 API から取る。
+function _renderRunsLive(host, headed) {
+  host.innerHTML =
+    '<div class="hero-pad"><div class="runs-live">' +
+    '<div class="runs-live-head">' +
+    '<span class="spinner"></span>' +
+    '<strong id="runs-live-title">実行を準備しています…</strong>' +
+    `<span class="muted-copy">${headed ? 'ブラウザ表示あり' : 'ヘッドレス'}／完了までこのタブを開いたままにしてください</span>` +
+    '</div>' +
+    '<div class="runs-live-body">' +
+    '<figure class="runs-live-shot">' +
+    '<img id="runs-live-img" alt="実行中の画面">' +
+    '<figcaption id="runs-live-cap" class="muted-copy">スクリーンショットを待っています…</figcaption>' +
+    '</figure>' +
+    '<ol class="runs-live-list" id="runs-live-list"></ol>' +
+    '</div></div></div>';
+}
+
+function _startRunsPolling(domain, started) {
+  const STATUS_MARK = { passed: '✓', failed: '✗', skipped: '−' };
+  let lastShotAt = 0;
+
+  return setInterval(async () => {
+    const elapsed = Math.round((Date.now() - started) / 1000);
+    let p = null;
+    try {
+      p = await fetch('/api/testcases/live-progress?domain=' + encodeURIComponent(domain))
+        .then(r => r.ok ? r.json() : null);
+    } catch (e) { /* 実行中の一時的な失敗は次の周期で拾う */ }
+
+    const title = document.getElementById('runs-live-title');
+    if (title) {
+      title.textContent = p && p.total
+        ? `実行中 ${p.done} / ${p.total} 件　PASS ${p.passed} ／ FAIL ${p.failed}　経過 ${elapsed}秒`
+        : `実行中… 経過 ${elapsed}秒`;
+    }
+
+    const list = document.getElementById('runs-live-list');
+    if (list && p && p.tests) {
+      // 直近が上に来るよう反転して出す（長い実行でも今どこかが分かる）
+      list.replaceChildren(...[...p.tests].reverse().map(t => {
+        const li = document.createElement('li');
+        li.className = 'runs-live-item is-' + (t.status || 'unknown');
+        const mark = document.createElement('span');
+        mark.className = 'runs-live-mark';
+        mark.textContent = STATUS_MARK[t.status] || '?';
+        const name = document.createElement('span');
+        name.className = 'runs-live-name';
+        name.textContent = t.title || '(名称なし)';
+        const ms = document.createElement('span');
+        ms.className = 'runs-live-ms';
+        ms.textContent = t.duration_ms ? `${(t.duration_ms / 1000).toFixed(1)}s` : '';
+        li.append(mark, name, ms);
+        return li;
+      }));
+    }
+
+    // スクショはファイル書き出しが追いつかないので、進捗より粗い間隔で更新する
+    if (Date.now() - lastShotAt > 1500) {
+      lastShotAt = Date.now();
+      const img = document.getElementById('runs-live-img');
+      const cap = document.getElementById('runs-live-cap');
+      if (img) {
+        img.onload = () => { if (cap) cap.textContent = '実行中の画面（自動更新）'; };
+        img.src = '/api/testcases/live-screenshot?domain=' + encodeURIComponent(domain)
+          + '&t=' + Date.now();
+      }
+    }
+  }, 1000);
 }
 
 async function runTestsFromRunsTab() {
   const domain = _runsDomain();
   if (!domain) { showToast('対象サイトを特定できませんでした', 'error'); return; }
+  const headed = !!document.getElementById('runs-headed')?.checked;
   const ok = await confirmDialog({
     title: 'テストを実行',
-    message: '自動化可のテストケースを実行します。対象サイトへ実際にアクセスします。',
+    message: '自動化可のテストケースを実行します。対象サイトへ実際にアクセスします。'
+      + (headed ? '\nブラウザ画面を表示して実行します。' : ''),
     confirmLabel: '実行する',
   });
   if (!ok) return;
 
   const host = resultHero;
   const started = Date.now();
-  host.innerHTML =
-    '<div class="hero-msg"><span class="spinner"></span>' +
-    '<span id="runs-progress">実行中…</span>' +
-    '<span class="muted-copy">完了するまでこのタブを開いたままにしてください。</span></div>';
-  const tick = setInterval(() => {
-    const el = document.getElementById('runs-progress');
-    if (el) el.textContent = `実行中… 経過 ${Math.round((Date.now() - started) / 1000)}秒`;
-  }, 1000);
+  _renderRunsLive(host, headed);
+  const tick = _startRunsPolling(domain, started);
 
   try {
     const res = await fetch('/api/testcases/run', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ domain }),
+      body: JSON.stringify({ domain, headed }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '実行に失敗しました');
@@ -182,8 +273,10 @@ async function runTestsFromRunsTab() {
     showToast(
       `実行完了: PASS ${s.passed || 0} / FAIL ${s.failed || 0} / 全${s.total || 0}件`,
       data.ok ? 'success' : 'error');
+    clearInterval(tick);
     await showResults(domain, 'runs');
   } catch (e) {
+    clearInterval(tick);
     uiError(host, {
       title: 'テストを実行できませんでした',
       message: e.message,

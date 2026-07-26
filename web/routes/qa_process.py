@@ -249,12 +249,20 @@ def api_testcases_run() -> dict | tuple[dict, int]:
     except SpecGenerationError as exc:
         return {"error": str(exc)}, 400
 
+    # 前回の進捗を先に消す。残したままだと、実行開始からレポーターがファイルを
+    # 作り直すまでの数秒間、/api/testcases/live-progress が前回の完了状態を
+    # 「今の進捗」として返してしまう。
+    stale_progress = Path(out_dir) / "playwright_progress.ndjson"
+    if stale_progress.is_file():
+        stale_progress.unlink()
+
     # ローカル対象の許可は運用者の明示設定（WEBSPEC2DOC_ALLOW_LOCAL=1）にのみ従う
     result = run_playwright(
         Path(gen["spec_path"]),
         Path(out_dir),
         per_test_timeout_sec=int(body.get("per_test_timeout_sec") or 20),
         egress_policy=EgressPolicy(allow_local=_local_targets_allowed()),
+        headed=bool(body.get("headed")),
     )
     saved = save_run_result(domain, result, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     return {
@@ -263,6 +271,59 @@ def api_testcases_run() -> dict | tuple[dict, int]:
         "run": saved,
         "error": str(result.get("error") or ""),
     }
+
+
+@bp.get("/api/testcases/live-progress")
+def api_testcases_live_progress() -> dict | tuple[dict, int]:
+    """実行中のテスト進捗を返す。実行完了を待たずに、その時点までの結果を読む。
+
+    Playwright の進捗レポーターが onTestEnd ごとに追記する NDJSON をそのまま読むため、
+    /api/testcases/run が応答を返す前でも「今どこまで終わったか」が分かる。
+    ファイルが無い（まだ実行していない）場合は total=0 / tests=[] を返す。
+    ここで件数を推測して埋めることはしない。
+    """
+    from web.services.playwright_executor import _read_progress_ndjson
+    from web.services.testcase_table_store import run_dir
+
+    domain = request.args.get("domain", "")
+    if not _valid_domain(domain):
+        return {"error": "domain が不正です"}, 400
+
+    total, tests = _read_progress_ndjson(run_dir(domain) / "playwright_progress.ndjson")
+    return {
+        "total": total or 0,
+        "done": len(tests),
+        "passed": sum(1 for t in tests if t.get("status") == "passed"),
+        "failed": sum(1 for t in tests if t.get("status") == "failed"),
+        # 画面に出すのは直近分だけでよい（全件は完了後の run_result.json が持つ）
+        "tests": tests[-40:],
+    }
+
+
+@bp.get("/api/testcases/live-screenshot")
+def api_testcases_live_screenshot() -> Any:
+    """実行中の最新スクリーンショットを返す（config の screenshot:'on' が
+    testcases/test-results/ 配下に生成する PNG のうち、最終更新が新しいもの）。
+
+    AutoRun 側の /api/autorun/live-screenshot と同じパターン。
+    """
+    from flask import Response, send_file
+
+    from web.services.testcase_table_store import run_dir
+
+    domain = request.args.get("domain", "")
+    if not _valid_domain(domain):
+        return Response(status=404)
+
+    results_dir = run_dir(domain) / "test-results"
+    if not results_dir.is_dir():
+        return Response(status=404)
+    pngs = sorted(results_dir.rglob("*.png"), key=lambda p: p.stat().st_mtime, reverse=True)
+    if not pngs:
+        return Response(status=404)
+    resp = send_file(pngs[0].resolve(), mimetype="image/png")
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
 
 
 @bp.post("/api/testcases/row")

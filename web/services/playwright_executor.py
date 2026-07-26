@@ -81,6 +81,7 @@ def run_playwright(
     workers: int = 1,
     egress_policy: Any = None,
     browser: str = "chromium",
+    headed: bool = False,
 ) -> dict[str, Any]:
     """
     ローカル @playwright/test CLI でスペックを実行し、結果を返す。
@@ -99,6 +100,9 @@ def run_playwright(
         egress_policy: K1 送信ゲートウェイの方針（`EgressPolicy`）。
             省略時は既定方針を使う。生成テストは必ずゲートウェイを経由するため、
             ここで SSRF 遮断・予算上限・全件記録が強制される。
+        headed: True でブラウザ画面を表示して実行する（`--headed`）。既定はヘッドレス。
+            画面はこのプロセスが動くマシンに開くため、実行中の様子を人が直接見たい
+            ローカル運用でのみ意味を持つ。
     """
     if device not in ("pc", "mobile"):
         device = "pc"
@@ -173,6 +177,8 @@ def run_playwright(
         cmd = ["npx", "playwright", "test", "--config", str(config_path.resolve())]
     else:
         cmd = [cli_cmd, "test", "--config", str(config_path.resolve())]
+    if headed:
+        cmd.append("--headed")
 
     expected_total = _count_tests_in_spec(spec_path)
     _log(

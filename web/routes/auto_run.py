@@ -6,7 +6,7 @@ import subprocess
 import sys
 import threading
 import uuid
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -412,6 +412,20 @@ def _ensure_stage_content(job: AutoRunJob, stage_id: str) -> None:
         pipeline = pipeline.replaced(stage).recorded(
             "generate", stage_id, f"{len(stage.items)}項目を提示", "system"
         )
+        # 実行条件を確定済みなら、生成し直した内容もその確定に含める。
+        # 再生成が承認済みステータスを上書きし、一括承認したのに
+        # 「承認済み 1 / 8」と表示される食い違いが起きていた（実測で発覚）。
+        if job.stages_all_released:
+            from autorun.stages import STATUS_APPROVED
+
+            approved = stage
+            if stage.definition.requires_item_approval:
+                for item in stage.items:
+                    if not item.approved:
+                        approved = approved.with_item(replace(item, approved=True))
+            pipeline = pipeline.replaced(approved.with_status(STATUS_APPROVED)).recorded(
+                "approve", stage_id, "実行条件の確定により承認", "system"
+            )
         qa_dir.mkdir(parents=True, exist_ok=True)
         stages_path.write_text(
             json.dumps(pipeline.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8"
@@ -1349,6 +1363,15 @@ def _publish_playwright_stage(job: AutoRunJob, spec_dir: Path) -> None:
         pipeline = pipeline.replaced(stage).recorded(
             "generate", STAGE_PLAYWRIGHT, f"{len(stage.items)}項目を生成"
         )
+        # 段階8も、実行条件を確定済みならその確定に含める。
+        # ここだけ別経路で生成しているため、承認が反映されず
+        # 「承認済み 7 / 8」と表示される食い違いが残っていた。
+        if job.stages_all_released:
+            from autorun.stages import STATUS_APPROVED
+
+            pipeline = pipeline.replaced(
+                pipeline.get(STAGE_PLAYWRIGHT).with_status(STATUS_APPROVED)
+            ).recorded("approve", STAGE_PLAYWRIGHT, "実行条件の確定により承認", "system")
         stages_path.write_text(
             json.dumps(pipeline.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8"
         )

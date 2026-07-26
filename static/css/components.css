@@ -1503,8 +1503,9 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  flex: 1 1 auto;
-  min-height: 260px;
+  /* ログ本文が内容に応じて縮むため、器も引き伸ばさない。 */
+  flex: 0 1 auto;
+  min-height: 0;
 }
 
 .autorun-log-head {
@@ -1558,8 +1559,11 @@
 }
 
 .autorun-log {
-  flex: 1 1 auto;
-  min-height: 180px;
+  /* 内容が4行しか無いのに画面の6割を占めていた（利用者の指摘）。
+     行数に応じて縮み、多いときだけ伸ばす。 */
+  flex: 0 1 auto;
+  min-height: 120px;
+  max-height: 42vh;
   overflow-y: auto;
   white-space: pre-wrap;
   margin: 0;

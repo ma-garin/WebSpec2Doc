@@ -8,7 +8,6 @@ document.getElementById('autorun-start-btn')?.addEventListener('click', autorunS
   el.addEventListener('change', autorunSyncStartButton);
 });
 if (typeof autorunSyncStartButton === 'function') autorunSyncStartButton();
-document.getElementById('autorun-cancel-btn')?.addEventListener('click', autorunCancel);
 document.getElementById('autorun-restart-btn')?.addEventListener('click', autorunReset);
 // 旧「テスト実行の設定」モーダル（awaiting_approval の第3関門）は廃止済み。
 // バックエンドが当該ステータスを設定しなくなり到達不能となった一方、非表示のまま

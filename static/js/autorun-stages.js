@@ -13,7 +13,7 @@
   // 判定してスライドアニメーションの向きを決めるために保持する。
   var state = {
     domain: '', pipeline: null, selected: '', busy: false, editing: null,
-    lastRendered: '',
+    lastRendered: '', error: '',
   };
 
   // フェーズごとの代表 HTML 成果物（ジョブの outputs キー）。JSON は削除せず
@@ -452,6 +452,10 @@
     bar.appendChild(go);
 
     host.appendChild(bar);
+
+    // 進めなかった理由は、押したボタンのすぐ下に出す。
+    var err = errorNode();
+    if (err) host.appendChild(err);
   }
 
   function json(body) {
@@ -465,21 +469,37 @@
   async function withBusy(fn) {
     if (state.busy) return;
     state.busy = true;
+    // 失敗の理由は state に持たせる。DOM へ直接足すと、直後の render() で
+    // 消えてしまい「押しても何も起きない」ように見えていた（実測で発覚）。
+    state.error = '';
     render();
     try {
       await fn();
     } catch (e) {
-      var panel = $('autorun-stage-panel');
-      if (panel) {
-        var err = document.createElement('div');
-        err.className = 'autorun-stage-error';
-        err.textContent = e && e.message ? e.message : '操作に失敗しました';
-        panel.appendChild(err);
-      }
+      state.error = (e && e.message) ? e.message : '操作に失敗しました';
     } finally {
       state.busy = false;
       render();
+      focusError();
     }
+  }
+
+  // 失敗理由は操作した場所の近くに出し、画面外なら自分で見える位置へ運ぶ。
+  function focusError() {
+    if (!state.error) return;
+    var node = document.querySelector('.autorun-stage-error');
+    if (node && node.scrollIntoView) {
+      node.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+  }
+
+  function errorNode() {
+    if (!state.error) return null;
+    var err = document.createElement('div');
+    err.className = 'autorun-stage-error';
+    err.setAttribute('role', 'alert');
+    err.textContent = state.error;
+    return err;
   }
 
   function generateStage(stageId) {
@@ -625,6 +645,12 @@
     renderNav();
     renderPanel();
     renderProceed();
+    // 進行バーが出ない段階（設計未完了時）でも失敗理由を必ず見せる。
+    if (state.error && !document.querySelector('.autorun-stage-error')) {
+      var panel = $('autorun-stage-panel');
+      var node = errorNode();
+      if (panel && node) panel.insertBefore(node, panel.firstChild);
+    }
     notifyPhase();
   }
 

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>商品一覧 | QAストア会員注文システム</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header>
+  <span class="logo">QAストア</span>
+  <nav>
+    <a href="/index.html">トップ</a>
+    <a href="/mypage.html">マイページ</a>
+  </nav>
+</header>
+<main>
+  <p class="screen-id">P004</p>
+  <h1>商品一覧</h1>
+  <div class="card">
+    <form action="/products.html" method="get">
+      <div class="field">
+        <label for="keyword">キーワード <span class="hint">50文字以内</span></label>
+        <input type="text" id="keyword" name="keyword" maxlength="50">
+      </div>
+      <div class="field">
+        <label for="category">カテゴリ</label>
+        <select id="category" name="category">
+          <option value="">すべて</option>
+          <option value="stationery">文具</option>
+          <option value="book">書籍</option>
+          <option value="gadget">ガジェット</option>
+        </select>
+      </div>
+      <button type="submit">検索</button>
+    </form>
+  </div>
+  <div class="card">
+    <table>
+      <tr><th>商品コード</th><th>商品名</th><th>価格</th><th></th></tr>
+      <tr><td>SKU-1001</td><td>QAノート A5</td><td>780円</td>
+          <td><a href="/product_detail.html">詳細</a></td></tr>
+      <tr><td>SKU-1002</td><td>テスト設計の教科書</td><td>3,200円</td>
+          <td><a href="/product_detail.html">詳細</a></td></tr>
+      <tr><td>SKU-1003</td><td>USBハブ 4ポート</td><td>2,480円</td>
+          <td><a href="/product_detail.html">詳細</a></td></tr>
+    </table>
+  </div>
+</main>
+<footer>QAストア（AutoRun動作検証用ダミーサイト）</footer>
+</body>
+</html>

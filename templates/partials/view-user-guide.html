@@ -96,6 +96,35 @@
             </div>
 
             <div class="qa-readable-section">
+              <h3>動作検証用のサンプルサイトと仕様書（同梱）</h3>
+              <p style="font-size:13px;color:var(--text-muted);margin-bottom:10px">
+                本ツールの挙動を自分の目で確かめるための、<strong>ローカル完結</strong>のサンプル一式を同梱しています。
+                外部サイトに迷惑をかけずに、AutoRun・文書駆動・仕様ドリフト検知を一通り試せます。
+              </p>
+              <table class="data">
+                <thead><tr><th>もの</th><th>場所</th><th>内容</th></tr></thead>
+                <tbody>
+                  <tr><td>サンプルサイト</td><td><code>demo/verify_site/</code></td><td>会員注文システム（9画面）。ログイン・検索・注文入力・確認・完了の一連の流れと、必須／桁数／数値範囲などの入力検証を持つ</td></tr>
+                  <tr><td>サンプル仕様書</td><td><code>demo/verify_docs/画面仕様書.md</code></td><td>画面一覧・画面遷移・項目定義（画面名／項目名／物理名／型／必須／桁数）</td></tr>
+                  <tr><td>サンプル要件一覧</td><td><code>demo/verify_docs/要件一覧.md</code></td><td>機能要件11件・非機能要件3件（要件IDつき）</td></tr>
+                  <tr><td>検証手順と答え合わせ</td><td><code>demo/verify_docs/README_検証手順.md</code></td><td>仕込んである仕様乖離6件の一覧。<strong>検出できたかの答え合わせに使う</strong></td></tr>
+                </tbody>
+              </table>
+              <p style="font-size:13px;color:var(--text-muted);margin:10px 0 4px">使い方:</p>
+              <ol class="qa-check-list" style="padding-left:18px;list-style:decimal">
+                <li>サンプルサイトを起動する: <code>python demo/demo_site.py --site-dir verify_site --port 8767</code></li>
+                <li>設定で「ローカル/プライベートアドレスの許可」をONにする（未設定だと 127.0.0.1 はSSRF保護で拒否されます）</li>
+                <li>AutoRun の対象URLに <code>http://127.0.0.1:8767/</code> を指定する</li>
+                <li>文書駆動を試す場合は、参考文書として <code>画面仕様書.md</code> と <code>要件一覧.md</code> をアップロードする</li>
+                <li>実行後、<code>README_検証手順.md</code> の「仕込んだ仕様乖離」と結果を突き合わせる</li>
+              </ol>
+              <p class="input-hint" style="margin-top:8px">
+                サンプル仕様書には、実装とわざと食い違う箇所（必須指定の欠落・桁数不一致・文書にしかない画面・文書に無い画面など）が
+                仕込んであります。検出できた／できなかったを確認する用途に使ってください。
+              </p>
+            </div>
+
+            <div class="qa-readable-section">
               <h3>CLIの使い方（画面を使わずコマンドで実行する）</h3>
               <p style="font-size:13px;color:var(--text-muted);margin-bottom:10px">
                 画面と同じ処理は <code>python src/main.py</code> からコマンドラインでも実行できます。バッチ処理・自動化・CI連携に使います。

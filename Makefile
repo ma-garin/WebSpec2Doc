@@ -111,7 +111,13 @@ coverage: check-venv
 # 対象URLは E2E_BASE_URL で上書きできる（既定ポートが他アプリに占有されている場合に使う）。
 #   例: make verify-ui E2E_BASE_URL=http://127.0.0.1:8799
 # =============================================================================
-E2E_BASE_URL ?= http://127.0.0.1:8765
+# Makefile 変数は環境変数より優先されるため、そのままだと
+# `WEBSPEC2DOC_E2E_URL=... make verify-ui` が既定値で上書きされ、
+# 指定したはずのポートが無視される（実測で発覚）。環境変数があれば拾う。
+# 環境変数の値をここで確定させる（下の export で同名変数を上書きするため、
+# 遅延展開のままだと自己参照になる）。
+E2E_URL_FROM_ENV := $(WEBSPEC2DOC_E2E_URL)
+E2E_BASE_URL ?= $(if $(E2E_URL_FROM_ENV),$(E2E_URL_FROM_ENV),http://127.0.0.1:8765)
 # 失敗が出たら即座に打ち切る（fail fast）。全件見たい時は E2E_MAXFAIL=0 で無制限。
 E2E_MAXFAIL ?= 1
 # conftest の flask_server は WEBSPEC2DOC_E2E_URL を見る。--base-url だけ変えても

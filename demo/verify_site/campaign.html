@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>キャンペーン | QAストア会員注文システム</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header>
+  <span class="logo">QAストア</span>
+  <nav>
+    <a href="/index.html">トップ</a>
+    <a href="/products.html">商品一覧</a>
+  </nav>
+</header>
+<main>
+  <p class="screen-id">（画面IDなし）</p>
+  <h1>夏のキャンペーン</h1>
+  <div class="card">
+    <p>期間中のご注文でポイント2倍。</p>
+    <form action="/campaign.html" method="get">
+      <div class="field">
+        <label for="coupon_code">クーポンコード</label>
+        <input type="text" id="coupon_code" name="coupon_code" maxlength="12">
+      </div>
+      <button type="submit">クーポンを適用</button>
+    </form>
+  </div>
+</main>
+<footer>QAストア（AutoRun動作検証用ダミーサイト）</footer>
+</body>
+</html>

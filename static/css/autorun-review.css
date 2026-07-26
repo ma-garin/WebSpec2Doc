@@ -186,13 +186,21 @@
   color: var(--color-text-secondary);
   font-size: var(--text-sm);
 }
+/* 確定操作は常に手の届く位置に置く。
+   要確認が数件でも自動承認が3桁になると、最下部の確定ボタンは画面外に出て
+   「先に進めない」と受け取られる。リスト長に関係なく到達できるよう固定する。 */
 .arv-foot {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
   border-top: 1px solid var(--color-divider);
-  padding-top: 11px;
+  padding: 11px 0 4px;
+  margin-top: 4px;
+  background: var(--color-surface, #fff);
 }
 .arv-foot-note {
   flex: 1;

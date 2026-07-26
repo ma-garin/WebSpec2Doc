@@ -269,8 +269,11 @@
     if (!host) return;
     var err = document.createElement('div');
     err.className = 'arv-error';
+    err.setAttribute('role', 'alert');
     err.textContent = messageText;
     host.appendChild(err);
+    // 一覧が長いと失敗理由が画面外に出る。見える位置まで運ぶ。
+    if (err.scrollIntoView) err.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }
 
   // ---------------------------------------------------------------- 操作
@@ -304,9 +307,39 @@
 
   function signOff() {
     return withBusy(async function () {
-      // 確定は段階承認 API に委ねる（監査記録・後続処理の起点を一本化するため）
-      if (window.autorunStages && window.autorunStages.render) {
+      // 「確定する」は、対象になっている段階そのものを承認する。
+      // 以前はここで表示を更新するだけで承認 API を呼んでおらず、項目は承認済み
+      // なのに段階は未承認のまま残っていた。その結果、後段の
+      // 「承認を確定して実行する」が 409（未承認の段階があります）で弾かれ、
+      // 利用者からは「押しても何も起きない」状態になっていた（実測で発覚）。
+      var seen = {};
+      var stageIds = [];
+      state.entries.forEach(function (e) {
+        if (e.stage_id && !seen[e.stage_id]) { seen[e.stage_id] = true; stageIds.push(e.stage_id); }
+      });
+
+      var failed = [];
+      for (var i = 0; i < stageIds.length; i++) {
+        try {
+          await call('/api/autorun/stages/approve', json({
+            domain: state.domain,
+            stage_id: stageIds[i],
+          }));
+        } catch (e) {
+          // 承認できない段階（項目未承認など）は握り潰さず、理由を残す
+          failed.push(stageIds[i] + '（' + (e && e.message ? e.message : '失敗') + '）');
+        }
+      }
+
+      // 段階の状態はサーバが正。承認後は必ず読み直し、画面と乖離させない。
+      if (window.autorunStages && window.autorunStages.load) {
+        await window.autorunStages.load(state.domain);
+      } else if (window.autorunStages && window.autorunStages.render) {
         window.autorunStages.render();
+      }
+
+      if (failed.length) {
+        throw new Error('承認できなかった段階があります: ' + failed.join(' / '));
       }
       var counts = state.counts || {};
       renderConfirmed(counts);

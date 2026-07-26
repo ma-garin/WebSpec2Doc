@@ -978,6 +978,21 @@ function _autorunRender(data) {
     if (!atGate) _autoRunStagesOpened = false;
   }
 
+  // 受付フォームの出し入れは「実行開始時に1回隠す」だけでは足りない。
+  // リロードして実行中のジョブへ再接続した場合など、隠す処理を通らない経路が
+  // あり、実行中なのに入力欄が出たままになる。状態から毎回導出する。
+  const running = !['idle', 'complete', 'failed', 'cancelled'].includes(status);
+  const intake = document.getElementById('autorun-idle-msg');
+  if (intake) intake.style.display = (status === 'idle' || !status) ? '' : 'none';
+
+  // 実行が終わったら要確認リストは畳む。
+  // 確認は実行前の作業であり、終了後は完了カード（結果と未確認事項）が主役。
+  // 3,000px近いチェックリストを残すと、完了カードがその下に埋もれる。
+  if (!running && status !== 'idle') {
+    if (window.autorunReview && window.autorunReview.hide) window.autorunReview.hide();
+    if (window.autorunStages && window.autorunStages.hide) window.autorunStages.hide();
+  }
+
   // started_at を保存（経過時間計算用）
   if (data.started_at && !_autoRunStartedAt) {
     _autoRunStartedAt = data.started_at;

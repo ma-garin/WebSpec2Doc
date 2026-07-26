@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AutoRun 進捗名称の見直し — デザイン案</title>
+<style>
+  :root{--ink:#1c2430;--muted:#6b7684;--line:#dfe4ea;--brand:#1b6ac9;
+    --bg:#f5f7f9;--ok:#2f8f4e;--bad:#c0392b;--warn:#b8860b}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Hiragino Sans","Noto Sans JP",sans-serif;line-height:1.8;font-size:15px}
+  .wrap{max-width:1180px;margin:0 auto;padding:32px 24px 80px}
+  header.doc,section{background:#fff;border:1px solid var(--line);border-radius:10px;
+    padding:24px 28px;margin-bottom:22px}
+  h1{font-size:25px;margin:0 0 10px}
+  h2{font-size:19px;margin:0 0 6px;padding-bottom:10px;border-bottom:2px solid var(--brand)}
+  .lead{font-size:13px;color:var(--muted);margin:0 0 14px}
+  p{margin:0 0 10px}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:8px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:#eef2f6;white-space:nowrap}
+  .note{font-size:13.5px;margin-top:12px}
+  .note b{color:var(--brand)}
+  .old{color:var(--muted);text-decoration:line-through}
+  .new{font-weight:700}
+  .bad-list li{margin-bottom:6px}
+  .bad-list b{color:var(--bad)}
+
+  /* ブラウザ枠 */
+  .frame{border:1px solid #c9d1da;border-radius:8px;overflow:hidden;background:#fff;
+    margin:14px 0 0;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+  .frame-bar{background:#eceff3;border-bottom:1px solid #c9d1da;padding:6px 10px;
+    display:flex;gap:5px;align-items:center}
+  .dot{width:9px;height:9px;border-radius:50%;background:#c3cad3}
+  .frame-title{font-size:11px;color:var(--muted);margin-left:8px}
+  .app{display:flex;height:430px;font-size:12px}
+  .side{width:186px;flex:0 0 186px;border-right:1px solid var(--line);background:#fbfcfd;padding:10px 9px;overflow:hidden}
+  .side-kicker{font-size:9.5px;color:var(--muted);letter-spacing:.08em;margin:9px 0 4px 4px;font-weight:700}
+  .side-lead{font-size:9.5px;color:var(--muted);margin:0 4px 6px;line-height:1.6}
+  .side-item{padding:3px 7px;border-radius:4px;color:#46505e;display:flex;gap:5px;
+    font-size:11.5px;align-items:center}
+  .side-item.on{background:var(--brand);color:#fff;font-weight:700}
+  .side-item .ck{color:var(--ok);font-size:10px;width:12px;flex:0 0 12px}
+  .side-item.on .ck{color:#fff}
+  .side-item .n{width:12px;flex:0 0 12px;font-size:10px;color:#98a2b0;text-align:center}
+  .side-sep{border-top:1px solid var(--line);margin:8px 4px 6px;padding-top:6px;
+    font-size:9.5px;color:var(--muted);line-height:1.5}
+  .side-item.pend{color:#98a2b0}
+
+  .main{flex:1;display:flex;flex-direction:column;min-width:0}
+  .leadbar{display:flex;align-items:center;gap:10px;padding:8px 16px;
+    background:#eaf2fc;border-bottom:1px solid #b9d3f0;flex:0 0 auto}
+  .leadbar .t{font-weight:700;color:var(--brand)}
+  .leadbar .sep{color:#9db8d6}
+  .leadbar .m{color:var(--muted)}
+  .leadbar .acts{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .btn{background:var(--brand);color:#fff;border-radius:4px;padding:5px 12px;
+    font-size:11.5px;font-weight:700;display:inline-block;white-space:nowrap}
+  .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line);font-weight:400}
+  .pane{padding:11px 14px;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+  .kick{font-size:9.5px;color:var(--brand);letter-spacing:.08em;font-weight:700}
+  .h3{font-size:15px;font-weight:700;margin:1px 0 3px}
+  .sub{font-size:11px;color:var(--muted);margin-bottom:8px}
+  .banner{background:#eef7f0;border-left:3px solid var(--ok);border-radius:0 4px 4px 0;
+    padding:6px 10px;font-size:10.5px;margin-bottom:9px}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+  .item{border:1px solid var(--line);border-radius:5px;padding:6px 9px;background:#fff}
+  .item.ok{border-color:#cfe3d4;background:#f3faf5}
+  .item .t{font-weight:700;font-size:11px}
+  .item .d{font-size:10px;color:var(--muted)}
+  .tabs{display:flex;gap:5px;margin:10px 0 6px;align-items:center}
+  .tab{border:1px solid var(--line);border-radius:999px;padding:2px 11px;font-size:10.5px;background:#fff}
+  .tab.on{background:var(--brand);color:#fff;border-color:var(--brand);font-weight:700}
+  .prev{flex:1;min-height:0;border:1px solid var(--line);border-radius:6px;background:#fff;
+    display:flex;flex-direction:column;overflow:hidden}
+  .prev-head{background:#eef2f6;border-bottom:1px solid var(--line);padding:4px 9px;
+    font-size:10px;color:var(--muted);display:flex;align-items:center}
+  .prev-body{flex:1;padding:9px 11px;font-size:10.5px;overflow:hidden}
+  .prev-body h4{margin:0 0 5px;font-size:12px}
+  .prev-body table{margin:0;font-size:10px}
+  .prev-body th,.prev-body td{padding:3px 6px}
+  .lock{background:#f4f6f8;border:1px dashed var(--line);border-radius:6px;
+    padding:14px;font-size:11px;color:var(--muted);text-align:center}
+  footer.doc{color:var(--muted);font-size:13px;text-align:center;padding:16px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+  <h1>進捗名称の見直し — デザイン案</h1>
+  <p class="lead">
+    テスト目的〜テストケースは<strong>承認前にすでに生成済み</strong>です。
+    それなのに ISTQB の工程名（テスト目的・テスト計画・テストフィーチャー分析…）を出すと、
+    <strong>これから作業するように読めます</strong>。実際にユーザーがやるのは確認だけです。
+  </p>
+  <p class="lead" style="margin-bottom:0">
+    あわせて <strong>ダークモードは製品から外す</strong>前提で、以下はすべてライトのみです。
+  </p>
+</header>
+
+<section>
+  <h2>1. 何がずれているか</h2>
+  <ul class="bad-list">
+    <li><b>工程名が「作業予定」に見える</b> — 実体は「生成済みの成果物を確認する」であって、テスト設計をこれからやるわけではない</li>
+    <li><b>見出しが「進捗」</b> — 進行中の作業に見えるが、1〜7は全部でき上がっている</li>
+    <li><b>1〜7 と 8 が同列</b> — 8（Playwright自動化）だけは<strong>承認後に生成</strong>される。意味が違うのに並べている</li>
+    <li><b>用語が専門的すぎる</b> — 「テストフィーチャー分析」「テスト基本設計」は、QA専任でない人には中身が推測できない</li>
+  </ul>
+</section>
+
+<section>
+  <h2>2. 改名案</h2>
+  <table>
+    <thead><tr><th>#</th><th>現在</th><th>案</th><th>中身（実際に確認するもの）</th></tr></thead>
+    <tbody>
+      <tr><td>—</td><td class="old">進捗</td><td class="new">確認する内容</td><td>見出し。進行ではなく確認対象の一覧</td></tr>
+      <tr><td>1</td><td class="old">テスト目的</td><td class="new">目的・方針</td><td>何のためにテストするか（欠陥の摘出・カバレッジ確保など）</td></tr>
+      <tr><td>2</td><td class="old">テスト計画</td><td class="new">前提・合否基準</td><td>対象ブラウザ・認証の扱い・副作用の扱い・合否の決め方</td></tr>
+      <tr><td>3</td><td class="old">テストフィーチャー分析</td><td class="new">対象機能</td><td>実測画面をまとめた機能の単位</td></tr>
+      <tr><td>4</td><td class="old">テスト観点分析</td><td class="new">品質観点</td><td>どの観点で見るか（入力検証・遷移・データ整合など）</td></tr>
+      <tr><td>5</td><td class="old">テスト基本設計</td><td class="new">技法の割当</td><td>観点にどのテスト技法を当てるか</td></tr>
+      <tr><td>6</td><td class="old">テスト詳細設計</td><td class="new">確認手順</td><td>何を操作して何を見るか</td></tr>
+      <tr><td>7</td><td class="old">テストケース</td><td class="new">テストケース</td><td>変更なし</td></tr>
+      <tr><td>8</td><td class="old">Playwright 自動化</td><td class="new">自動化スクリプト</td><td><strong>ここだけ承認後に生成</strong>。区切って明示する</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>案A. 改名のみ（構造は変えない）</h2>
+  <p class="lead">名前を変え、見出しに一文を足す。8 は区切り線で分ける。最小の変更。</p>
+  <div class="frame">
+    <div class="frame-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      <span class="frame-title">AutoRun — 目的・方針</span></div>
+    <div class="app">
+      <div class="side">
+        <div class="side-kicker">確認する内容</div>
+        <p class="side-lead">すべて生成済みです。内容を確認して承認してください。</p>
+        <div class="side-item on"><span class="ck">●</span>目的・方針</div>
+        <div class="side-item"><span class="n">2</span>前提・合否基準</div>
+        <div class="side-item"><span class="n">3</span>対象機能</div>
+        <div class="side-item"><span class="n">4</span>品質観点</div>
+        <div class="side-item"><span class="n">5</span>技法の割当</div>
+        <div class="side-item"><span class="n">6</span>確認手順</div>
+        <div class="side-item"><span class="n">7</span>テストケース</div>
+        <div class="side-sep">承認後に生成されます</div>
+        <div class="side-item pend"><span class="n">8</span>自動化スクリプト</div>
+      </div>
+      <div class="main">
+        <div class="leadbar">
+          <span class="t">1 / 7 目的・方針</span>
+          <span class="sep">—</span><span class="m">要確認 0 件</span>
+          <span class="acts"><span class="btn">承認して次へ</span></span>
+        </div>
+        <div class="pane">
+          <div class="kick">1 / 7</div>
+          <div class="h3">目的・方針</div>
+          <div class="sub">この対象に対して、どのような目的でテストするのかを定めたものです。</div>
+          <div class="banner">生成済み — 内容を確認して承認してください。修正すると再承認が必要です。</div>
+          <div class="grid">
+            <div class="item ok"><div class="t">欠陥の摘出</div>
+              <div class="d">24画面・196入力項目に対して故障を誘発して欠陥を見つける</div></div>
+            <div class="item ok"><div class="t">カバレッジの確保</div>
+              <div class="d">画面24 / 遷移43 を網羅基準に沿って通す</div></div>
+            <div class="item ok"><div class="t">リスクの低減</div>
+              <div class="d">必須入力70項目は誤入力・未入力の影響が大きい</div></div>
+          </div>
+          <div class="tabs">
+            <span style="font-size:10.5px;color:var(--muted);font-weight:700">この段階の成果物</span>
+            <span class="tab on">仕様書</span><span class="tab">横断レビュー</span>
+            <span class="btn ghost" style="margin-left:auto">拡大して開く</span>
+          </div>
+          <div class="prev">
+            <div class="prev-head">仕様書 HTML</div>
+            <div class="prev-body">
+              <h4>画面一覧</h4>
+              <table><tr><th>ID</th><th>画面名</th><th>フォーム</th><th>必須項目</th></tr>
+                <tr><td>P001</td><td>トップ</td><td>0</td><td>0</td></tr>
+                <tr><td>P002</td><td>ログイン</td><td>1</td><td>2</td></tr>
+                <tr><td>P006</td><td>注文入力</td><td>1</td><td>7</td></tr></table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="note"><b>利点:</b> 変更が最小。既存の8段階の構造をそのまま使える<br>
+    <b>難点:</b> 「1 / 7」と番号が残るため、まだ順番に作業する印象が残る</p>
+</section>
+
+<section>
+  <h2>案B. 「確認」と「これから作る」を完全に分離</h2>
+  <p class="lead">1〜7を「確認するもの」、8を「このあと作るもの」として、サイドを2グループに割る。番号は通し番号をやめる。</p>
+  <div class="frame">
+    <div class="frame-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      <span class="frame-title">AutoRun — 目的・方針</span></div>
+    <div class="app">
+      <div class="side">
+        <div class="side-kicker">確認するもの<span style="font-weight:400;color:#98a2b0"> 生成済み 7件</span></div>
+        <div class="side-item on"><span class="ck">●</span>目的・方針</div>
+        <div class="side-item"><span class="ck">✓</span>前提・合否基準</div>
+        <div class="side-item"><span class="ck">✓</span>対象機能</div>
+        <div class="side-item"><span class="ck">✓</span>品質観点</div>
+        <div class="side-item"><span class="ck">✓</span>技法の割当</div>
+        <div class="side-item"><span class="ck">✓</span>確認手順</div>
+        <div class="side-item"><span class="ck">✓</span>テストケース</div>
+        <div class="side-kicker" style="margin-top:12px">このあと作るもの</div>
+        <p class="side-lead">上の7件を承認すると生成が始まります。</p>
+        <div class="side-item pend"><span class="n">▸</span>自動化スクリプト</div>
+        <div class="side-item pend"><span class="n">▸</span>テスト実行・レポート</div>
+      </div>
+      <div class="main">
+        <div class="leadbar">
+          <span class="t">目的・方針</span>
+          <span class="sep">—</span><span class="m">確認済み 1 / 7</span>
+          <span class="acts"><span class="btn">承認して次へ</span></span>
+        </div>
+        <div class="pane">
+          <div class="kick">確認するもの</div>
+          <div class="h3">目的・方針</div>
+          <div class="sub">この対象に対して、どのような目的でテストするのかを定めたものです。</div>
+          <div class="banner">生成済み — 内容を確認して承認してください。修正すると再承認が必要です。</div>
+          <div class="grid">
+            <div class="item ok"><div class="t">欠陥の摘出</div>
+              <div class="d">24画面・196入力項目に対して故障を誘発して欠陥を見つける</div></div>
+            <div class="item ok"><div class="t">カバレッジの確保</div>
+              <div class="d">画面24 / 遷移43 を網羅基準に沿って通す</div></div>
+            <div class="item ok"><div class="t">リスクの低減</div>
+              <div class="d">必須入力70項目は誤入力・未入力の影響が大きい</div></div>
+          </div>
+          <div class="tabs">
+            <span style="font-size:10.5px;color:var(--muted);font-weight:700">この内容の根拠</span>
+            <span class="tab on">仕様書</span><span class="tab">横断レビュー</span>
+            <span class="btn ghost" style="margin-left:auto">拡大して開く</span>
+          </div>
+          <div class="prev">
+            <div class="prev-head">仕様書 HTML</div>
+            <div class="prev-body">
+              <h4>画面一覧</h4>
+              <table><tr><th>ID</th><th>画面名</th><th>フォーム</th><th>必須項目</th></tr>
+                <tr><td>P001</td><td>トップ</td><td>0</td><td>0</td></tr>
+                <tr><td>P002</td><td>ログイン</td><td>1</td><td>2</td></tr>
+                <tr><td>P006</td><td>注文入力</td><td>1</td><td>7</td></tr></table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="note"><b>利点:</b> <strong>生成済みと未生成が構造で分かれる</strong>。「これから7工程やる」という誤解が消える。
+      テスト実行まで見通せる<br>
+    <b>難点:</b> 段階の順序が見えにくくなる。実装は既存の step_no 表示を変える必要がある</p>
+</section>
+
+<section>
+  <h2>案C. 用語は残し、括弧で言い換えを添える</h2>
+  <p class="lead">ISTQB用語を検収資料と揃えたい場合向け。正式名称を残しつつ、意味を添えて分かるようにする。</p>
+  <div class="frame">
+    <div class="frame-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      <span class="frame-title">AutoRun — テスト目的</span></div>
+    <div class="app">
+      <div class="side">
+        <div class="side-kicker">確認する内容</div>
+        <p class="side-lead">すべて生成済みです。内容を確認して承認してください。</p>
+        <div class="side-item on"><span class="ck">●</span><span>テスト目的<br>
+          <span style="font-size:9px;opacity:.85">目的・方針</span></span></div>
+        <div class="side-item"><span class="n">2</span><span>テスト計画<br>
+          <span style="font-size:9px;color:#98a2b0">前提・合否基準</span></span></div>
+        <div class="side-item"><span class="n">3</span><span>フィーチャー分析<br>
+          <span style="font-size:9px;color:#98a2b0">対象機能</span></span></div>
+        <div class="side-item"><span class="n">4</span><span>テスト観点分析<br>
+          <span style="font-size:9px;color:#98a2b0">品質観点</span></span></div>
+        <div class="side-item"><span class="n">5</span><span>テスト基本設計<br>
+          <span style="font-size:9px;color:#98a2b0">技法の割当</span></span></div>
+        <div class="side-sep">承認後に生成されます</div>
+        <div class="side-item pend"><span class="n">8</span>Playwright 自動化</div>
+      </div>
+      <div class="main">
+        <div class="leadbar">
+          <span class="t">テスト目的</span>
+          <span class="sep">—</span><span class="m">目的・方針 ・ 要確認 0 件</span>
+          <span class="acts"><span class="btn">承認して次へ</span></span>
+        </div>
+        <div class="pane">
+          <div class="kick">確認する内容 1 / 7</div>
+          <div class="h3">テスト目的 <span style="font-size:11px;color:var(--muted);font-weight:400">— 目的・方針</span></div>
+          <div class="sub">この対象に対して、どのような目的でテストするのかを定めたものです（ISTQB のテスト目的）。</div>
+          <div class="banner">生成済み — 内容を確認して承認してください。</div>
+          <div class="grid">
+            <div class="item ok"><div class="t">欠陥の摘出</div>
+              <div class="d">24画面・196入力項目に対して故障を誘発する</div></div>
+            <div class="item ok"><div class="t">カバレッジの確保</div>
+              <div class="d">画面24 / 遷移43 を網羅基準に沿って通す</div></div>
+            <div class="item ok"><div class="t">リスクの低減</div>
+              <div class="d">必須入力70項目は影響が大きい</div></div>
+          </div>
+          <div class="tabs">
+            <span style="font-size:10.5px;color:var(--muted);font-weight:700">この段階の成果物</span>
+            <span class="tab on">仕様書</span><span class="tab">横断レビュー</span>
+            <span class="btn ghost" style="margin-left:auto">拡大して開く</span>
+          </div>
+          <div class="prev">
+            <div class="prev-head">仕様書 HTML</div>
+            <div class="prev-body">
+              <h4>画面一覧</h4>
+              <table><tr><th>ID</th><th>画面名</th><th>フォーム</th><th>必須項目</th></tr>
+                <tr><td>P001</td><td>トップ</td><td>0</td><td>0</td></tr>
+                <tr><td>P002</td><td>ログイン</td><td>1</td><td>2</td></tr></table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="note"><b>利点:</b> <strong>検収資料・社内標準との用語対応が崩れない</strong>。ISTQB準拠を売りにする場合はこれ<br>
+    <b>難点:</b> サイドの1項目が2行になり縦に伸びる。情報量が増えて読む負荷は上がる</p>
+</section>
+
+<section>
+  <h2>3. 比較</h2>
+  <table>
+    <thead><tr><th>案</th><th>誤解の解消</th><th>用語の互換性</th><th>実装量</th><th>向く相手</th></tr></thead>
+    <tbody>
+      <tr><td><b>案A</b> 改名のみ</td><td>○</td><td>×（用語が変わる）</td><td>小</td><td>QA専任でない利用者</td></tr>
+      <tr><td><b>案B</b> 完全分離</td><td>◎</td><td>×（用語が変わる）</td><td>中</td><td>初見の利用者・経営層</td></tr>
+      <tr><td><b>案C</b> 併記</td><td>△</td><td>◎（正式名称が残る）</td><td>小</td><td>ISTQB準拠を求める現場</td></tr>
+    </tbody>
+  </table>
+  <p class="note">
+    <b>弱点:</b> 改名は画面表示だけで、<strong>成果物ファイル名（<code>test_plan.md</code> 等）とAPIの
+    <code>stage_id</code> は変えない前提</strong>です。画面とファイルで呼び名が食い違うため、
+    ダウンロードした成果物を見たときに対応が取りにくくなります。
+    また「ダークモードを外す」は <code>static/tokens.css</code> のダーク定義とテーマ切替ボタンの
+    削除を伴い、<strong>この案の範囲外</strong>です（別途対応します）。
+  </p>
+</section>
+
+<footer class="doc">WebSpec2Doc — 進捗名称の見直し / 2026-07-26</footer>
+
+</div>
+</body>
+</html>

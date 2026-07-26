@@ -1539,6 +1539,7 @@
       ],
       "core_files": [
         "src/autorun/automation_plan.py",
+        "src/autorun/decisions.py",
         "src/autorun/qf_schema.py",
         "src/autorun/review_queue.py",
         "src/autorun/stages.py",
@@ -1546,12 +1547,14 @@
       ],
       "symbols": [
         "Pipeline",
+        "build_decisions",
         "build_plan",
         "build_review_queue",
         "build_stage",
         "suggest_additions",
         "test_case_rows",
-        "to_csv"
+        "to_csv",
+        "validate_answers"
       ],
       "outputs": [
         "automation coverage (unautomated cases)",
@@ -1773,6 +1776,53 @@
         "unexplained_failure",
         "environment_error",
         "budget_exhausted"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "evidence"
+      ]
+    },
+    {
+      "feature_id": "testcase_table",
+      "name": "ローレベルテストケース表（9列生成・Excel風編集・編集履歴）",
+      "risk_level": "high",
+      "status": "implemented",
+      "ui_files": [
+        "templates/partials/view-generate.html",
+        "static/js/view-testcase-grid.js",
+        "static/js/testcase-grid-edit.js"
+      ],
+      "route_files": [
+        "web/routes/qa_process.py"
+      ],
+      "core_files": [
+        "src/generator/testcase_table.py",
+        "web/services/testcase_table_store.py"
+      ],
+      "symbols": [
+        "build_testcase_table",
+        "compose",
+        "update_cell",
+        "reset_cell",
+        "add_row",
+        "delete_row",
+        "load_history"
+      ],
+      "outputs": [
+        "9列テストケース表（ID/名称/画面/機能/観点/前提条件/手順/期待結果/自動化判定）",
+        "編集履歴（変更前後の値）"
+      ],
+      "persistence": [
+        "output/{domain}/testcases/edits.json",
+        "output/{domain}/testcases/history.jsonl"
+      ],
+      "failure_modes": [
+        "report_corrupt",
+        "uneditable_column",
+        "unknown_case_id",
+        "concurrent_edit_overwrite",
+        "save_failure"
       ],
       "required_tests": [
         "happy_path",

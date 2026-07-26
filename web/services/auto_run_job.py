@@ -65,6 +65,9 @@ class AutoRunJob:
     require_stage_approval: bool = True
     #: 承認待ちの段階ID（仕様7〜14: 1段階ずつ提示するためUIへ渡す）
     awaiting_stage_id: str = ""
+    # 実行条件を一括で確定した場合に True。以降の段階では止まらない。
+    # 生成済みの内容を段階ごとに承認させないため（利用者の指摘）。
+    stages_all_released: bool = False
 
     _proc: Any = field(default=None, init=False, repr=False, compare=False)
     # ジョブ開始リクエスト時に解決したテナントスコープ済み出力先（Path）。

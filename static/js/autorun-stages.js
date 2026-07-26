@@ -13,20 +13,34 @@
   // 判定してスライドアニメーションの向きを決めるために保持する。
   var state = {
     domain: '', pipeline: null, selected: '', busy: false, editing: null,
-    lastRendered: '', error: '',
+    lastRendered: '', error: '', artifactKey: '', showContents: false,
   };
 
   // フェーズごとの代表 HTML 成果物（ジョブの outputs キー）。JSON は削除せず
   // LLM 入力・アクティビティログとして保持し、画面では HTML 版を見せる。
+  // 段階と無関係な成果物は出さない。テスト目的を見ている人に
+  // テストケースやPlaywright候補を並べても判断の助けにならない（利用者の指摘）。
   var STAGE_ARTIFACT_KEYS = {
-    test_objective: ['report_html'],
-    test_plan: ['test_plan'],
-    features: ['report_html'],
-    viewpoints: ['test_analysis'],
-    basic_design: ['test_design'],
-    detail_design: ['test_design'],
-    test_cases: ['test_cases'],
-    playwright_automation: ['playwright_candidates_html'],
+    test_objective: ['report_html', 'cross_review'],
+    test_plan: ['test_plan', 'viewpoint_snapshot'],
+    features: ['report_html', 'model_graph'],
+    viewpoints: ['test_analysis', 'viewpoint_snapshot'],
+    basic_design: ['test_design', 'model_graph'],
+    detail_design: ['test_design', 'test_cases'],
+    test_cases: ['test_cases', 'test_design'],
+    playwright_automation: ['playwright_candidates_html', 'test_cases'],
+  };
+
+  var ARTIFACT_LABELS = {
+    report_html: '仕様書',
+    cross_review: '横断レビュー',
+    test_plan: 'テスト計画',
+    viewpoint_snapshot: '観点スナップショット',
+    model_graph: 'モデルグラフ',
+    test_analysis: 'テスト分析',
+    test_design: 'テスト設計',
+    test_cases: 'テストケース',
+    playwright_candidates_html: 'Playwright候補',
   };
 
   function confirmDiscardEdit() {
@@ -43,16 +57,22 @@
   function show(visible) {
     var el = root();
     if (el) el.style.display = visible ? '' : 'none';
+    // 段階承認中は右レール（成果物一覧）を出さない。段階と無関係な成果物を
+    // 並べず、その段階の成果物だけをパネル内のタブで見せる。
+    var ws = document.querySelector('.autorun-workspace');
+    if (ws) ws.classList.toggle('is-staging', !!visible);
     var intake = $('autorun-idle-msg');
     if (intake) intake.style.display = visible ? 'none' : '';
     setNavVisible(!!state.pipeline);
   }
 
-  function setNavVisible(visible) {
+  // 段階リストは出さない。生成済みのものを順番に承認させる導線を作らないため
+  // （利用者の指摘: 「いちいち順番にやるのはいやです」）。
+  function setNavVisible() {
     var group = $('autorun-phase-group');
     var nav = $('autorun-phase-nav');
-    if (group) group.style.display = visible ? '' : 'none';
-    if (nav) nav.style.display = visible ? '' : 'none';
+    if (group) group.style.display = 'none';
+    if (nav) nav.style.display = 'none';
   }
 
   // サイドの「受付」に戻る。段階の状態は保持したまま画面だけ切り替える。
@@ -272,12 +292,14 @@
   function renderArtifact(stage) {
     var outputs = (window._autoRunLastData && window._autoRunLastData.outputs) || {};
     var keys = STAGE_ARTIFACT_KEYS[stage.stage_id] || [];
-    var path = '';
-    var key = '';
-    for (var i = 0; i < keys.length; i++) {
-      if (outputs[keys[i]]) { key = keys[i]; path = outputs[keys[i]]; break; }
-    }
-    if (!path || !/\.html?$/i.test(path)) return null;
+    // この段階に対応する成果物だけを候補にする
+    var available = keys.filter(function (k) {
+      return outputs[k] && /\.html?$/i.test(outputs[k]);
+    });
+    if (!available.length) return null;
+
+    var selected = available.indexOf(state.artifactKey) >= 0 ? state.artifactKey : available[0];
+    var path = outputs[selected];
 
     var box = document.createElement('section');
     box.className = 'autorun-stage-artifact';
@@ -287,14 +309,32 @@
 
     var label = document.createElement('span');
     label.className = 'autorun-stage-artifact-label';
-    label.textContent = 'この段階の成果物プレビュー';
+    label.textContent = 'この段階の成果物';
     head.appendChild(label);
+
+    // 複数ある場合だけタブを出す。1件のときにタブを見せても選ぶものが無い。
+    if (available.length > 1) {
+      var tabs = document.createElement('div');
+      tabs.className = 'autorun-artifact-tabs';
+      available.forEach(function (k) {
+        var tab = document.createElement('button');
+        tab.type = 'button';
+        tab.className = 'autorun-artifact-tab' + (k === selected ? ' is-on' : '');
+        tab.textContent = ARTIFACT_LABELS[k] || k;
+        tab.addEventListener('click', function () {
+          state.artifactKey = k;
+          renderPanel();
+        });
+        tabs.appendChild(tab);
+      });
+      head.appendChild(tabs);
+    }
 
     var open = document.createElement('button');
     open.type = 'button';
     open.className = 'btn-outline-sm qa-preview-btn';
     open.dataset.path = path;
-    open.dataset.label = stage.name + ' の成果物';
+    open.dataset.label = (ARTIFACT_LABELS[selected] || stage.name) + ' の成果物';
     open.textContent = '拡大して開く';
     head.appendChild(open);
     box.appendChild(head);
@@ -302,7 +342,59 @@
     var frame = document.createElement('iframe');
     frame.className = 'autorun-stage-artifact-frame';
     frame.src = '/preview?path=' + encodeURIComponent(path);
-    frame.title = stage.name + ' の成果物プレビュー';
+    frame.title = (ARTIFACT_LABELS[selected] || stage.name) + ' のプレビュー';
+    frame.setAttribute('sandbox', 'allow-scripts allow-same-origin');
+    frame.setAttribute('loading', 'lazy');
+    box.appendChild(frame);
+    return box;
+  }
+
+  // 段階ごとの画面をやめ、1枚の成果物ビューにする。
+  // 生成物はすべて出来上がっているので、見たいものをタブで選んで読む。
+  function renderArtifactView() {
+    var outputs = (window._autoRunLastData && window._autoRunLastData.outputs) || {};
+    var keys = Object.keys(ARTIFACT_LABELS).filter(function (k) {
+      return outputs[k] && /\.html?$/i.test(outputs[k]);
+    });
+    if (!keys.length) return null;
+
+    var selected = keys.indexOf(state.artifactKey) >= 0 ? state.artifactKey : keys[0];
+    var path = outputs[selected];
+
+    var box = document.createElement('section');
+    box.className = 'autorun-stage-artifact';
+
+    var head = document.createElement('div');
+    head.className = 'autorun-stage-artifact-head';
+
+    var tabs = document.createElement('div');
+    tabs.className = 'autorun-artifact-tabs';
+    keys.forEach(function (k) {
+      var tab = document.createElement('button');
+      tab.type = 'button';
+      tab.className = 'autorun-artifact-tab' + (k === selected ? ' is-on' : '');
+      tab.textContent = ARTIFACT_LABELS[k] || k;
+      tab.addEventListener('click', function () {
+        state.artifactKey = k;
+        renderPanel();
+      });
+      tabs.appendChild(tab);
+    });
+    head.appendChild(tabs);
+
+    var open = document.createElement('button');
+    open.type = 'button';
+    open.className = 'btn-outline-sm qa-preview-btn';
+    open.dataset.path = path;
+    open.dataset.label = ARTIFACT_LABELS[selected] || selected;
+    open.textContent = '拡大して開く';
+    head.appendChild(open);
+    box.appendChild(head);
+
+    var frame = document.createElement('iframe');
+    frame.className = 'autorun-stage-artifact-frame';
+    frame.src = '/preview?path=' + encodeURIComponent(path);
+    frame.title = (ARTIFACT_LABELS[selected] || selected) + ' のプレビュー';
     frame.setAttribute('sandbox', 'allow-scripts allow-same-origin');
     frame.setAttribute('loading', 'lazy');
     box.appendChild(frame);
@@ -314,52 +406,74 @@
     if (!panel || !state.pipeline) return;
     panel.replaceChildren();
 
-    var stage = stageById(state.selected);
-    if (!stage) return;
-    applySlide(panel, state.lastRendered, stage.stage_id);
-    state.lastRendered = stage.stage_id;
-
     var head = document.createElement('header');
     head.className = 'autorun-stage-head';
 
     var kicker = document.createElement('div');
     kicker.className = 'section-kicker';
-    kicker.textContent = 'STEP ' + stage.step_no + ' / ' + stages().length;
+    kicker.textContent = '生成が完了しました';
     head.appendChild(kicker);
 
     var title = document.createElement('h3');
     title.className = 'autorun-stage-title';
-    title.textContent = stage.name;
+    title.textContent = '成果物';
     head.appendChild(title);
 
     var purpose = document.createElement('p');
     purpose.className = 'autorun-stage-purpose';
-    purpose.textContent = stage.purpose;
+    purpose.textContent =
+      'テスト計画からテストケースまで生成済みです。内容を確認したうえで実行してください。';
     head.appendChild(purpose);
     panel.appendChild(head);
 
-    if (stage.note) {
-      var note = document.createElement('div');
-      note.className = 'autorun-stage-note';
-      note.textContent = stage.note;
-      panel.appendChild(note);
+    var artifact = renderArtifactView();
+    if (artifact) {
+      panel.appendChild(artifact);
+    } else {
+      panel.appendChild(message('プレビューできる成果物がまだありません。'));
     }
 
-    if (stage.status === 'skipped') {
-      panel.appendChild(message('この段階はスキップされました（2回目以降のため）。'));
-    } else if (!stage.items.length) {
-      panel.appendChild(message('まだ生成されていません。「内容を生成」を押してください。'));
-    } else {
+    panel.appendChild(renderGeneratedContents());
+  }
+
+  // 生成された内容は既定で畳む。読みたい人だけ開けばよい。
+  function renderGeneratedContents() {
+    var box = document.createElement('section');
+    box.className = 'autorun-generated';
+
+    var total = 0;
+    stages().forEach(function (s) { total += (s.items || []).length; });
+
+    var toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'autorun-generated-toggle';
+    toggle.textContent =
+      (state.showContents ? '▾ ' : '▸ ') + '生成された内容 ' + total + '件';
+    toggle.addEventListener('click', function () {
+      state.showContents = !state.showContents;
+      renderPanel();
+    });
+    box.appendChild(toggle);
+
+    if (!state.showContents) return box;
+
+    stages().forEach(function (stage) {
+      if (!stage.items || !stage.items.length) return;
+      var group = document.createElement('div');
+      group.className = 'autorun-generated-group';
+
+      var name = document.createElement('div');
+      name.className = 'autorun-generated-name';
+      name.textContent = stage.name + '（' + stage.items.length + '件）';
+      group.appendChild(name);
+
       var list = document.createElement('div');
       list.className = 'autorun-stage-items';
       stage.items.forEach(function (item) { list.appendChild(itemRow(stage, item)); });
-      panel.appendChild(list);
-    }
-
-    var artifact = renderArtifact(stage);
-    if (artifact) panel.appendChild(artifact);
-
-    panel.appendChild(renderActions(stage));
+      group.appendChild(list);
+      box.appendChild(group);
+    });
+    return box;
   }
 
   function message(text) {
@@ -431,6 +545,9 @@
   // 進行操作は主導線バー（最上部固定）に一本化する。
   // 以前は一覧の最下部に置いていたため、自動承認が3桁になると画面外へ出て
   // 「先に進めない」状態になっていた（利用者の操作で発覚）。
+  // 進行操作は主導線バーに一本化し、承認は段階ごとに行わせない。
+  // 生成済みのものを7回に分けて承認させる理由がないため、実行条件を
+  // まとめて確定するダイアログ（案C）へ集約する。
   function renderProceed() {
     var host = root();
     if (host) {
@@ -441,46 +558,42 @@
     if (!leadBar) return;
     if (!state.pipeline) { leadBar.hide(); return; }
 
-    var stage = stageById(state.selected) || stageById(state.pipeline.current_stage_id);
-    var designDone = stages().slice(0, 7).every(function (s) {
-      return s.status === 'approved' || s.status === 'skipped';
-    });
-    var allDone = state.pipeline.all_approved;
-
-    if (designDone) {
+    if (state.pipeline.all_approved) {
       leadBar.set({
         tone: state.error ? 'blocked' : 'ready',
-        title: allDone ? '全ての段階を承認しました' : '設計段階（1〜7）を承認しました',
-        meta: allDone ? 'テストを実行できます' : 'Playwright 化へ進めます',
+        title: '実行条件は確定済みです',
+        meta: 'テストを実行できます',
         reason: state.error || '',
-        actions: [{
-          label: allDone ? '承認を確定して実行する' : '承認を確定して次へ進む',
-          onClick: proceed,
-          disabled: state.busy,
-        }],
+        actions: [{ label: 'テストを実行する', onClick: proceed, disabled: state.busy }],
       });
       return;
     }
 
-    if (!stage) { leadBar.hide(); return; }
-
-    var pending = (stage.items || []).filter(function (i) { return !i.approved; }).length;
-    var blocked = state.busy || !stage.can_approve || stage.status === 'approved';
-    var reason = state.error
-      || (pending ? '未確認が ' + pending + ' 件あります' : '')
-      || (stage.status === 'approved' ? 'この段階は承認済みです' : '');
-
+    var counts = itemCounts();
     leadBar.set({
-      tone: (state.error || pending) ? 'blocked' : 'ready',
-      title: 'STEP ' + stage.step_no + ' ' + stage.name,
-      meta: pending ? '未確認 ' + pending + ' 件' : '未確認 0 件',
-      reason: reason,
+      tone: state.error ? 'blocked' : 'ready',
+      title: '生成が完了しました',
+      meta: counts.total + '件の内容を確認できます',
+      reason: state.error || '',
       actions: [{
-        label: '承認して次へ',
-        onClick: function () { approveStage(stage.stage_id); },
-        disabled: blocked,
+        label: '実行する',
+        onClick: openDecisions,
+        disabled: state.busy,
       }],
     });
+  }
+
+  function itemCounts() {
+    var total = 0;
+    stages().forEach(function (s) { total += (s.items || []).length; });
+    return { total: total };
+  }
+
+  // 実行条件の確定ダイアログを開く。ここで初めて人に判断を求める。
+  function openDecisions() {
+    if (!window.autorunDecisions || !window.autorunDecisions.open) return;
+    var jobId = (window._autoRunLastData && window._autoRunLastData.job_id) || '';
+    window.autorunDecisions.open(state.domain, jobId);
   }
 
   function json(body) {

@@ -138,6 +138,91 @@ def api_stages() -> tuple[dict, int] | dict:
     return {"domain": domain, **pipeline.to_dict()}
 
 
+@bp.get("/api/autorun/decisions")
+def api_decisions() -> tuple[dict, int] | dict:
+    """実行条件の質問を返す。
+
+    置かれた前提のうち「人が決めるべきもの」だけを2択の質問に変換し、
+    推奨を選択済みの状態で返す。決めようがない前提は facts として別に返す
+    （隠さないが、答えようのない問いにはしない）。
+    """
+    from autorun.decisions import build_decisions, facts_from_assumptions
+
+    domain, error = _require_domain(request.args.get("domain", ""))
+    if error:
+        return error
+
+    pipeline = _load_pipeline(domain)
+    assumed: list[tuple[str, str, str]] = []
+    for stage in pipeline.stages:
+        for item in stage.items:
+            if item.assumed:
+                assumed.append((item.item_id, item.title, item.detail))
+
+    decisions = build_decisions([item_id for item_id, _, _ in assumed])
+    return {
+        "domain": domain,
+        "decisions": [d.to_dict() for d in decisions],
+        "facts": facts_from_assumptions(assumed),
+    }
+
+
+@bp.post("/api/autorun/decisions")
+def api_submit_decisions() -> tuple[dict, int] | dict:
+    """実行条件を確定し、全段階を承認して後続へ進む。
+
+    段階ごとに承認 API を呼ぶのをやめ、ここで一括して確定する。
+    ただし監査記録は段階単位で残す（誰がいつ何を通したかを失わないため）。
+    """
+    from autorun.decisions import build_decisions, summarize, validate_answers
+
+    payload = request.get_json(silent=True) or {}
+    domain, error = _require_domain(str(payload.get("domain", "")))
+    if error:
+        return error
+    job_id = str(payload.get("job_id", "")).strip()
+
+    pipeline = _load_pipeline(domain)
+    assumed_ids = [
+        item.item_id for stage in pipeline.stages for item in stage.items if item.assumed
+    ]
+    decisions = build_decisions(assumed_ids)
+    answers = payload.get("answers")
+    normalized, errors = validate_answers(decisions, answers if isinstance(answers, dict) else {})
+    if errors:
+        return {"error": "実行条件を確定できません。", "detail": " / ".join(errors)}, 400
+
+    detail = summarize(normalized)
+    actor = _actor()
+
+    # 項目 → 段階の順に承認する。個別項目の承認が必要な段階は先に項目を通す。
+    for stage in pipeline.stages:
+        if stage.status in (STATUS_APPROVED, STATUS_SKIPPED):
+            continue
+        updated = stage
+        if stage.definition.requires_item_approval:
+            for item in stage.items:
+                if not item.approved:
+                    updated = updated.with_item(replace(item, approved=True))
+        pipeline = pipeline.replaced(updated.with_status(STATUS_APPROVED)).recorded(
+            "approve", stage.stage_id, f"実行条件の確定により承認（{detail}）", actor
+        )
+
+    pipeline = pipeline.recorded("decisions", "", detail, actor)
+    _save_pipeline(domain, pipeline)
+
+    from web.routes.auto_run import release_all_stage_gates
+
+    released = release_all_stage_gates(job_id, domain)
+    return {
+        "domain": domain,
+        "answers": normalized,
+        "released": released,
+        "detail": "実行条件を確定しました。テストを実行します。",
+        **pipeline.to_dict(),
+    }
+
+
 @bp.get("/api/autorun/review-queue")
 def api_review_queue() -> tuple[dict, int] | dict:
     """要確認キューを返す。

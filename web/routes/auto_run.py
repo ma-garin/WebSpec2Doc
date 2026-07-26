@@ -470,6 +470,33 @@ def release_stage_gate(job_id: str, domain: str) -> bool:
         return True
 
 
+def release_all_stage_gates(job_id: str, domain: str) -> bool:
+    """実行条件の確定により、以降すべての段階の関門を解除する。
+
+    段階ごとに承認させるのをやめたため、ここで一度に解除する。
+    いま待機中の関門も同時に解除し、後続の段階では止まらないようにする。
+    """
+    with _JOBS_LOCK:
+        job = _JOBS.get(job_id) if job_id else None
+        if job is None:
+            job = next(
+                (
+                    candidate
+                    for candidate in _JOBS.values()
+                    if candidate.domain == domain
+                    and candidate.status in ("awaiting_stages", "generating_qa")
+                ),
+                None,
+            )
+        if job is None:
+            return False
+        job.stages_all_released = True
+        job.add_log("実行条件を確定しました。以降の段階は承認済みとして進みます。")
+        # 待機中なら起こす。待機していなければフラグだけが効く。
+        job._stages_event.set()
+        return True
+
+
 #: 段階ごとの関門メッセージ（仕様7〜14: 各段階で個別に提示・承認する）。
 #
 # 以前は設計段階1〜7を "design" という単一の関門でまとめて承認させていた。
@@ -546,6 +573,12 @@ def _await_stage_approval(job: AutoRunJob, gate: str) -> None:
     # （過去の実行で保存された古い stages.json が残っていると、新しい生成規則が
     #  反映されないまま提示される問題もここで解消する。）
     _ensure_stage_content(job, gate)
+
+    # 実行条件を一括確定済みなら、以降の段階では止めない。
+    # 生成済みのものを7回に分けて承認させる理由がないため（利用者の指摘）。
+    if job.stages_all_released:
+        job.add_log(f"{subject}は実行条件の確定により承認済みです。")
+        return
 
     job._stages_event.clear()
     job.status = "awaiting_stages"

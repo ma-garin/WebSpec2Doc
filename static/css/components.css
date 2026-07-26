@@ -1215,16 +1215,37 @@
 .autorun-intake-scope em { font-style: normal; font-weight: 700; color: var(--text); }
 
 /* ---- コックピット（横型ステッパー + 全体進捗バー。進捗表示の一本化） ---- */
+/* 概要は1行に圧縮する。箱を横に間延びさせず、余った縦を実行ログへ渡す。 */
 .autorun-cockpit {
-  display: grid;
-  gap: 12px;
-  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 7px 12px;
+  margin-bottom: 12px;
+  flex: 0 0 auto;
 }
 
 .autorun-cockpit-head {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+/* 進捗バー・フェーズ名・経過は概要行の右端にまとめる */
+.autorun-cockpit-tail {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+.autorun-cockpit-tail .autorun-progressbar { width: 120px; flex: 0 0 120px; }
+.autorun-cockpit-tail .autorun-phase-label {
+  flex: 0 0 auto;
+  font-weight: 400;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  max-width: 260px;
 }
 
 .autorun-running-note {
@@ -1286,29 +1307,39 @@
 .autorun-progressbar-fill.is-done { background: var(--ok); }
 .autorun-progressbar-fill.is-error { background: var(--critical); }
 
+/* 6個の箱を全幅に引き伸ばすのをやめ、1行のチェーン表示にする。
+   「›」は擬似要素で足すので、マークアップは変えない。 */
 .autorun-step-row {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .autorun-step-row .autorun-step-item {
-  display: grid;
-  grid-template-columns: 18px 1fr;
-  grid-template-rows: auto auto;
+  display: flex;
   align-items: center;
-  column-gap: 6px;
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface);
+  gap: 5px;
+  padding: 2px 4px;
+  border: 0;
+  background: none;
   min-width: 0;
+  white-space: nowrap;
+  color: var(--text-muted);
+}
+.autorun-step-row .autorun-step-item + .autorun-step-item::before {
+  content: "\203A";
+  color: var(--border);
+  margin-right: 3px;
 }
 
-.autorun-step-row .autorun-step-item.is-active { border-color: var(--primary); background: var(--info-bg); }
-.autorun-step-row .autorun-step-item.is-waiting { border-color: var(--warning-border); background: var(--warning-bg); }
-.autorun-step-row .autorun-step-item.is-done { border-color: var(--ok-border); }
-.autorun-step-row .autorun-step-item.is-error { border-color: var(--critical-border); background: var(--critical-bg); }
+.autorun-step-row .autorun-step-item.is-active { color: var(--primary); }
+.autorun-step-row .autorun-step-item.is-active .autorun-step-label { font-weight: 800; }
+.autorun-step-row .autorun-step-item.is-waiting { color: var(--warning-border); }
+.autorun-step-row .autorun-step-item.is-done { color: var(--ok); }
+.autorun-step-row .autorun-step-item.is-error { color: var(--critical); }
+.autorun-step-row .autorun-step-meta { display: none; }
 
 .autorun-step-label {
   font-size: var(--text-xs);
@@ -1465,9 +1496,14 @@
   line-height: 1.6;
 }
 
+/* 実行ログは実行中画面の主役。最下部に押し込めず、残りの高さを与える。
+   下半分が空白のまま、一番見たい情報が画面外にある状態を作らない。 */
 .autorun-log-card {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 10px;
+  flex: 1 1 auto;
+  min-height: 260px;
 }
 
 .autorun-log-head {
@@ -1521,7 +1557,8 @@
 }
 
 .autorun-log {
-  max-height: 220px;
+  flex: 1 1 auto;
+  min-height: 180px;
   overflow-y: auto;
   white-space: pre-wrap;
   margin: 0;
@@ -2002,6 +2039,7 @@
 .tc-search input:focus { border-color: var(--primary); background: var(--surface); box-shadow: 0 0 0 3px var(--focus-ring); }
 .tc-count { font-size: 12px; color: var(--text-muted); margin-left: auto; font-variant-numeric: tabular-nums; }
 
+
 /* ==================== トレーサビリティマトリクス ==================== */
 .traceability-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; }
 .traceability-header h2 { margin: 0; font-size: 18px; }
@@ -2121,4 +2159,151 @@
   margin-top: 2px;
   font-size: 10.5px;
   color: var(--color-text-secondary);
+}
+
+/* ---- 段階承認: 上に承認・下に大きな成果物プレビュー（案3 上下分割） ---- */
+/* 承認項目は3列に圧縮し、横幅をフルに使ってプレビューへ高さを渡す。 */
+.autorun-stage-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 8px;
+}
+.autorun-stage-artifact {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+.autorun-artifact-tabs {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-left: 10px;
+}
+.autorun-artifact-tab {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  border-radius: 999px;
+  padding: 2px 11px;
+  font-size: var(--text-xs);
+  cursor: pointer;
+  color: var(--color-text);
+}
+.autorun-artifact-tab.is-on {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+  font-weight: 700;
+}
+
+/* 段階承認中は右レールを出さない。段階と無関係な成果物を並べないため
+   （テスト目的を見ているのにテストケースが右に出る状態を避ける）。 */
+.autorun-workspace.is-staging .autorun-rail { display: none; }
+
+/* ---- 実行条件の確定ダイアログ（案C） ----
+   段階ごとの承認と「要確認」チェックリストの代替。人が決めるべきことだけを
+   2択で問い、推奨を選択済みで出す。そのまま押せば実行できる。 */
+.ard { position: fixed; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center; }
+.ard-scrim { position: absolute; inset: 0; background: rgba(20, 28, 38, .38); }
+.ard-card {
+  position: relative;
+  width: min(760px, 92vw);
+  max-height: 88vh;
+  overflow-y: auto;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 10px 34px rgba(0, 0, 0, .28);
+  padding: 20px 24px 18px;
+}
+.ard-title { margin: 0 0 2px; font-size: var(--text-lg); }
+.ard-subtitle { margin: 0 0 14px; font-size: var(--text-xs); color: var(--color-text-secondary); }
+.ard-decision {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 11px 13px;
+  margin-bottom: 9px;
+}
+.ard-question { margin: 0 0 2px; font-size: var(--text-sm); font-weight: 700; }
+.ard-context { margin: 0 0 8px; font-size: var(--text-xs); color: var(--color-text-secondary); }
+.ard-choices { display: flex; gap: 8px; }
+/* 2択は必ず同じ幅で並べる。推奨だけ大きく見せて誘導しない。 */
+.ard-choice {
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: left;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  padding: 8px 11px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ard-choice.is-selected {
+  border-color: var(--color-primary);
+  border-width: 2px;
+  padding: 7px 10px;
+  background: var(--color-primary-bg, #f2f7fd);
+}
+.ard-choice-label { display: flex; align-items: center; gap: 7px; font-weight: 700; font-size: var(--text-sm); }
+.ard-choice-detail { font-size: var(--text-xs); color: var(--color-text-secondary); line-height: 1.55; }
+.ard-radio {
+  width: 13px; height: 13px; flex: 0 0 13px;
+  border: 1.5px solid var(--color-border-strong, #b6c0cc);
+  border-radius: 50%;
+}
+.ard-choice.is-selected .ard-radio { border-color: var(--color-primary); border-width: 4px; }
+.ard-tag {
+  margin-left: auto;
+  background: var(--color-low, #2f8f4e);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 3px;
+  padding: 1px 7px;
+}
+.ard-text {
+  width: 100%;
+  margin-top: 7px;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  padding: 6px 9px;
+  font-size: var(--text-xs);
+  font-family: inherit;
+}
+/* 決めようがない前提は隠さない。ただし質問にはしない。 */
+.ard-facts {
+  border-left: 3px solid var(--color-border);
+  padding: 6px 0 6px 11px;
+  margin-top: 6px;
+}
+.ard-facts-head { font-size: var(--text-xs); font-weight: 700; color: var(--color-text-secondary); }
+.ard-fact { margin: 2px 0 0; font-size: var(--text-xs); color: var(--color-text-secondary); }
+.ard-error {
+  margin: 8px 0 0;
+  font-size: var(--text-xs);
+  color: var(--color-critical);
+}
+.ard-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+
+/* ---- 生成された内容（既定は畳む） ---- */
+.autorun-generated { margin-top: 14px; }
+.autorun-generated-toggle {
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+  padding: 7px 11px;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+.autorun-generated-group { margin-top: 10px; }
+.autorun-generated-name {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  margin-bottom: 5px;
 }

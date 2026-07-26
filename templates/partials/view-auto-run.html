@@ -8,8 +8,10 @@
           <div class="autorun-body">
           <div class="autorun-work">
 
-            <!-- 実行中のみ表示: 停止 -->
-            <div id="autorun-cancel-area" class="autorun-inline-actions" style="display:none">
+            <!-- 停止操作は主導線バーの「中止する」に一本化した。
+                 同じ操作が2箇所にあると、どちらを押すか迷わせる（利用者の指摘）。
+                 要素は既存JSの参照先として残すが、画面には出さない。 -->
+            <div id="autorun-cancel-area" class="autorun-inline-actions" hidden style="display:none">
               <button type="button" id="autorun-cancel-btn" class="btn-outline-sm btn-danger-outline">停止</button>
             </div>
 
@@ -165,17 +167,8 @@
 
             <!-- コックピット: 横型ステッパー + 全体進捗バー（進捗表示はここに一本化） -->
             <div id="autorun-steps" class="card autorun-cockpit" style="display:none">
-              <div class="autorun-cockpit-head">
-                <div class="section-kicker">進捗</div>
-                <span id="autorun-phase-label" class="autorun-phase-label" aria-live="polite"></span>
-                <span id="autorun-elapsed" class="autorun-elapsed">0:00</span>
-              </div>
-              <!-- 監査で判明: 実行中は受付が隠れ、なぜ別サイトを開始できないか説明が無かった -->
-              <p class="autorun-running-note">このジョブの実行中は、別サイトを同時に開始できません。
-                完了・停止後に受付が表示されます。</p>
-              <div class="autorun-progressbar" role="progressbar" aria-label="全体進捗" aria-valuemin="0" aria-valuemax="100" id="autorun-progressbar">
-                <div id="autorun-progress-fill" class="autorun-progressbar-fill"></div>
-              </div>
+              <!-- 概要は1行に圧縮する。器を横に伸ばしただけで情報が増えない状態を避け、
+                   空いた縦をすべて実行ログへ渡す（利用者の指摘）。 -->
               <div class="autorun-step-row stepper">
                 <div class="autorun-step-item" id="ars-crawl">
                   <span class="autorun-step-icon stepper-icon" aria-hidden="true"></span>
@@ -207,6 +200,14 @@
                   <span class="autorun-step-label">完了</span>
                   <span class="autorun-step-meta" id="ars-done-meta"></span>
                 </div>
+              </div>
+              <div class="autorun-cockpit-tail">
+                <div class="autorun-progressbar" role="progressbar" aria-label="全体進捗"
+                     aria-valuemin="0" aria-valuemax="100" id="autorun-progressbar">
+                  <div id="autorun-progress-fill" class="autorun-progressbar-fill"></div>
+                </div>
+                <span id="autorun-phase-label" class="autorun-phase-label" aria-live="polite"></span>
+                <span id="autorun-elapsed" class="autorun-elapsed">0:00</span>
               </div>
               <div id="autorun-step-note" class="autorun-step-note" style="display:none"></div>
             </div>
@@ -383,6 +384,23 @@
           </aside>
 
           </div><!-- /.autorun-body -->
+
+            <!-- 実行条件の確定（案C）。実行を押した時点で、人が決めるべきことだけを問う。
+                 段階ごとの承認と「要確認」チェックリストの代替。 -->
+            <div id="autorun-decisions" class="ard" style="display:none" role="dialog"
+                 aria-modal="true" aria-labelledby="autorun-decisions-title">
+              <div id="autorun-decisions-scrim" class="ard-scrim"></div>
+              <div class="ard-card">
+                <h3 id="autorun-decisions-title" class="ard-title">実行条件の確認</h3>
+                <p class="ard-subtitle">推奨のままで問題なければ、そのまま実行できます。</p>
+                <div id="autorun-decisions-body" class="ard-body"></div>
+                <p id="autorun-decisions-error" class="ard-error" role="alert" style="display:none"></p>
+                <div class="ard-actions">
+                  <button type="button" id="autorun-decisions-back" class="btn-outline-sm">戻る</button>
+                  <button type="button" id="autorun-decisions-go" class="btn-primary">この条件で実行する</button>
+                </div>
+              </div>
+            </div>
 
             <!-- QAアシスタント。常駐せず、呼び出したときだけ右から出るドロワー -->
             <button type="button" id="autorun-chat-fab" class="autorun-chat-fab"

@@ -103,7 +103,7 @@
           html:
             '<strong>ログインが必要な可能性があります。</strong>' +
             '画面を検出できませんでした。認証が要る場合は「詳細オプション」で設定してください。' +
-            '<small>この結果は浅い事前確認によるものです。開始は可能です。</small>',
+            '<small>この結果は浅い到達確認によるものです。開始は可能です。</small>',
         };
       }
       return {
@@ -153,7 +153,7 @@
       if (scope.max_pages) params.max_pages = scope.max_pages;
       var body = new URLSearchParams(params);
       var res = await fetch('/api/discover-stream', { method: 'POST', body: body });
-      if (!res.ok || !res.body) throw new Error('事前確認を実行できませんでした');
+      if (!res.ok || !res.body) throw new Error('到達確認を実行できませんでした');
 
       reader = res.body.getReader();
       var decoder = new TextDecoder();
@@ -187,7 +187,7 @@
     } catch (e) {
       if (mySeq !== seq) return;
       render(
-        '<strong>事前確認できませんでした。</strong>' + esc(e && e.message ? e.message : '') +
+        '<strong>到達確認できませんでした。</strong>' + esc(e && e.message ? e.message : '') +
         '<small>事前確認の失敗であり、対象サイトの不具合を意味しません。開始は可能です。</small>',
         'warn'
       );

@@ -309,7 +309,7 @@
 
     var label = document.createElement('span');
     label.className = 'autorun-stage-artifact-label';
-    label.textContent = 'この段階の成果物';
+    label.textContent = '成果物';
     head.appendChild(label);
 
     // 複数ある場合だけタブを出す。1件のときにタブを見せても選ぶものが無い。

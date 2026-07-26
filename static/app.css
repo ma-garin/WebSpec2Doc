@@ -34,55 +34,6 @@
       --bg-panel:     var(--color-surface-3);
       color-scheme: light;
     }
-    /* ── ダークモード（トップバーの切替ボタン / 初回はOS設定に追従） ── */
-    html[data-theme="dark"] {
-      --primary:      var(--color-primary);
-      --primary-dark: var(--color-primary-dark);
-      --text:         var(--color-text);
-      --text-muted:   var(--color-text-secondary);
-      --text-subtle:  var(--color-text-disabled);
-      --bg:           var(--color-bg);
-      --surface:      var(--color-surface);
-      --surface-soft: var(--color-surface-2);
-      --surface-subtle:var(--color-surface-3);
-      --border:       var(--color-border);
-      --border-strong:var(--color-border-strong);
-      --ok:           var(--color-low);
-      --ok-bg:        var(--color-low-bg);
-      --ok-border:    var(--color-low-border);
-      --warning:      var(--color-high);
-      --warning-bg:   var(--color-high-bg);
-      --warning-border:var(--color-high-border);
-      --critical:     var(--color-critical);
-      --critical-bg:  var(--color-critical-bg);
-      --critical-border:var(--color-critical-border);
-      --info:         var(--color-info);
-      --info-bg:      var(--color-info-bg);
-      --info-border:  var(--color-info-border);
-      --primary-pale: var(--color-primary-light);
-      --accent:       #A78BFA;
-      --focus-ring:   color-mix(in srgb, var(--primary) 30%, transparent);
-      --bg-panel:     var(--color-surface-2);
-      color-scheme: dark;
-    }
-    html[data-theme="dark"] .execution-topbar,
-    html[data-theme="dark"] .execution-bottombar { background: rgba(27,36,51,.96); }
-    html[data-theme="dark"] .fresh-today { color: #4ADE80; }
-    html[data-theme="dark"] .fresh-month { color: #FBBF24; }
-    html[data-theme="dark"] .fresh-old   { color: #F87171; }
-    html[data-theme="dark"] .diff-badge { background: #3A2E0A; border-color: #92670B; color: #FCD34D; }
-    html[data-theme="dark"] .disc-login-badge { background: #3A2A10; border-color: #8A5A1A; color: #FDBA74; }
-    html[data-theme="dark"] .cc-bound { background: #332B0D; border-color: #8A7414; color: #FCD34D; }
-    html[data-theme="dark"] .cc-req { background: var(--critical-bg); border-color: var(--critical-border); color: var(--critical); }
-    html[data-theme="dark"] .cc-other { background: var(--surface-subtle); border-color: var(--border); color: var(--text-muted); }
-    html[data-theme="dark"] .p1-result-card--login { background: #2D2310; border-color: #6B500F; }
-    html[data-theme="dark"] .p1-result-card--login .p1-result-num { color: #FBBF24; }
-    html[data-theme="dark"] .disc-item-login-panel { background: var(--surface); }
-    html[data-theme="dark"] .uml-canvas { background: var(--surface); }
-html[data-theme="dark"] .uml-canvas.is-fullscreen { background: var(--bg); }
-    html[data-theme="dark"] .trans-event-link { background: var(--surface-subtle); border-color: var(--border-strong); }
-    html[data-theme="dark"] .fmt-mock-html { background: #2A3548; }
-    html[data-theme="dark"] .fmt-mock-md { background: var(--surface-soft); border-color: var(--border); }
     body {
       font-family: var(--font-main);
       background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.6;
@@ -566,7 +517,6 @@ html[data-theme="dark"] .uml-canvas.is-fullscreen { background: var(--bg); }
     .snap-badge { display: inline-flex; align-items: center; height: 22px; padding: 0 10px; border-radius: 4px; background: var(--surface-soft); border: 1px solid var(--border); color: var(--text-muted); font-size: 12px; font-weight: 700; }
     .snap-badge-first { background: var(--info-bg); border-color: var(--info-border); color: var(--primary-dark); }
     .trust-badge { display: inline-block; padding: 1px 9px; border-radius: 10px; background: var(--ok-bg); color: var(--ok); font-size: 11px; font-weight: 700; vertical-align: middle; cursor: help; white-space: nowrap; }
-    html[data-theme="dark"] .trust-badge { background: #0F2A1A; color: #4ADE80; }
     /* ── QAツール空状態 ── */
     .qa-empty-state { padding: 60px 32px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; }
     .qa-empty-icon { font-size: 42px; line-height: 1; opacity: .7; }

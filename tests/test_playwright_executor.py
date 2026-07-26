@@ -648,10 +648,11 @@ class TestBuildHtmlReport:
         assert "ログイン" in html
         assert "2分5秒" in html
 
-    def test_dark_mode_media_query_present(self) -> None:
-        """ライト/ダーク両対応（ユーザー報告: 実行レポートがダークモード固定だった）。"""
+    def test_no_dark_mode(self) -> None:
+        """ダークモードは製品から削除済み（ライト固定）。OS 設定にも追従しないこと。"""
         html = _build_html_report({"ok": True, "tests": []})
-        assert "prefers-color-scheme: dark" in html
+        assert "prefers-color-scheme" not in html
+        assert "data-theme" not in html
 
     def test_html_is_japanese(self) -> None:
         """ユーザー報告: 実行レポートが全て英語で読みにくい。"""
@@ -663,13 +664,12 @@ class TestBuildHtmlReport:
 
     def test_build_html_report_is_japanese_light(self) -> None:
         """R3-03/04/05: 実行レポートは自己完結の日本語ライト基調レポート
-        （外部scriptを読み込まず、ダークモードにも追随する）。"""
+        （外部scriptを読み込まない・ライト固定）。"""
         html = _build_html_report(
             {"ok": True, "passed": 1, "failed": 0, "skipped": 0, "total": 1, "tests": []}
         )
         assert 'lang="ja"' in html
         assert "成功" in html
-        assert "prefers-color-scheme" in html
         assert "<script src=" not in html
 
     def test_status_badges_use_emoji(self) -> None:

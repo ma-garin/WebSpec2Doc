@@ -530,7 +530,7 @@ async function vpPublish() {
   }
   const confirmed = await confirmDialog({
     title: `v${vpState.currentVersion.version_number} を公開しますか？`,
-    message: `${diffText} 公開後はこの版を変更できず、AutoRunの選択対象になります。`,
+    message: `${diffText} 公開後はこの版を変更できず、テスト設計の選択対象になります。`,
     confirmLabel: '公開',
   });
   if (!confirmed) return;
@@ -799,7 +799,7 @@ async function vpEditSet() {
   if (description === null) return;
   const priorityStr = await inputDialog({
     title: '適用優先度',
-    message: '数値が大きいほど優先してAutoRunで選択されます（既定: 0）。',
+    message: '数値が大きいほど優先してテスト設計で選択されます（既定: 0）。',
     placeholder: '0',
     defaultValue: String(vpState.currentSet.priority || 0),
     confirmLabel: '保存',

@@ -401,6 +401,7 @@ def _to_field_data(raw_field: dict[str, Any]) -> FieldData:
         aria_required=bool(raw_field.get("aria_required", False)),
         role=str(raw_field.get("role") or EMPTY_TEXT),
         has_visible_label=bool(raw_field.get("has_visible_label", False)),
+        label_text=str(raw_field.get("label_text") or EMPTY_TEXT),
         evidence=_field_evidence(raw_field),
         confidence=1.0,
     )
@@ -461,6 +462,23 @@ _FORM_SCRIPT = """
         if (field.getAttribute('aria-label')) return true;
         if (field.getAttribute('aria-labelledby')) return true;
         return false;
+      })(),
+      // 画面上に見えているラベル文言。テスト手順を「氏名 欄に入力」と書くために使う
+      // （HTML の name 属性だけでは、実行者が画面上でその欄を特定できない）。
+      label_text: (() => {
+        const id = field.getAttribute('id');
+        if (id) {
+          const forLabel = document.querySelector('label[for="' + id + '"]');
+          if (forLabel && forLabel.innerText.trim()) return forLabel.innerText.trim();
+        }
+        const wrapping = field.closest('label');
+        if (wrapping && wrapping.innerText.trim()) return wrapping.innerText.trim();
+        const labelledBy = field.getAttribute('aria-labelledby');
+        if (labelledBy) {
+          const target = document.getElementById(labelledBy);
+          if (target && target.innerText.trim()) return target.innerText.trim();
+        }
+        return field.getAttribute('aria-label') || '';
       })(),
       options: options,
       bbox: (() => {

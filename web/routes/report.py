@@ -6,7 +6,6 @@ import logging
 import subprocess
 import tempfile
 import zipfile
-from datetime import UTC, datetime
 from pathlib import Path
 
 from flask import Blueprint, Response, make_response, redirect, request, send_file, url_for
@@ -193,20 +192,14 @@ def api_result() -> dict | tuple[dict, int]:
     snapshot_count = len(list(snap_dir.glob("*.json"))) if snap_dir.is_dir() else 0
     _generate_features_md_if_missing(domain_dir)
 
-    # AutoRun / QAプロセスの成果物（qa_process/ 配下）。「テスト実行」タブのデータソース。
-    pw_json = domain_dir / "qa_process" / "playwright_report.json"
-    pw_html_native = domain_dir / "qa_process" / "playwright-report" / "index.html"
-    pw_html_fallback = domain_dir / "qa_process" / "playwright_report.html"
-    # 既定は日本語サマリ（playwright_report.html）。開発者向けの Playwright
-    # ネイティブレポート（スクショ・トレース付き）は playwright_native_html で別途提供する。
-    pw_html = pw_html_fallback if path_of("qa_process/playwright_report.html") else pw_html_native
-    playwright_run_at = ""
-    if path_of("qa_process/playwright_report.json"):
-        playwright_run_at = (
-            datetime.fromtimestamp(pw_json.stat().st_mtime, tz=UTC)
-            .isoformat()
-            .replace("+00:00", "Z")
-        )
+    # 「テスト実行」タブのデータソースは、テストケース表から実行した結果
+    # （testcases/run_result.json）だけを使う。qa_process/ 配下は AutoRun が残した
+    # 別系統の成果物で、自分が実行していない結果を docs 側に出さないため参照しない。
+    run_result = _testcase_run_summary(domain_dir)
+    pw_html_native = domain_dir / "testcases" / "playwright-report" / "index.html"
+    pw_html_fallback = domain_dir / "testcases" / "playwright_report.html"
+    pw_html = pw_html_fallback if path_of("testcases/playwright_report.html") else pw_html_native
+    playwright_run_at = run_result.get("ran_at", "")
     return {
         "summary": _summary_for_domain(domain, _out()),
         "snapshot_count": snapshot_count,
@@ -220,16 +213,36 @@ def api_result() -> dict | tuple[dict, int]:
             "features_md": path_of("features.md"),
             "transition_mmd": path_of("transition.mmd"),
             "diff": path_of("diff_report.html"),
-            "playwright_json": path_of("qa_process/playwright_report.json"),
+            "playwright_json": path_of("testcases/run_result.json"),
             "playwright_html": path_of(str(pw_html.relative_to(domain_dir))),
-            "playwright_native_html": path_of("qa_process/playwright-report/index.html"),
-            "spec_ts": path_of("qa_process/autorun.spec.ts"),
+            "playwright_native_html": path_of("testcases/playwright-report/index.html"),
+            "spec_ts": path_of("testcases/testcases.spec.ts"),
             "qa_process_report": path_of("qa_process/qa_process_report.html"),
             "exploration_heatmap": path_of("exploration_heatmap.html"),
             "exploration_json": path_of("exploration_coverage.json"),
         },
         "playwright_run_at": playwright_run_at,
+        "testcase_run": run_result,
         "screenshots": [path for s in shots if (path := path_of(str(s.relative_to(domain_dir))))],
+    }
+
+
+def _testcase_run_summary(domain_dir: Path) -> dict:
+    """テストケース表から実行した結果の要約（無ければ空 dict＝未実行）。"""
+    path = domain_dir / "testcases" / "run_result.json"
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    summary = data.get("summary") or {}
+    return {
+        "ran_at": str(data.get("ran_at") or ""),
+        "summary": summary if isinstance(summary, dict) else {},
+        "case_count": len(data.get("cases") or {}),
     }
 
 

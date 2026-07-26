@@ -205,6 +205,8 @@ def _field_dict(
         "aria_required": field.aria_required,
         "role": field.role,
         "has_visible_label": field.has_visible_label,
+        # 画面に見えているラベル文言。テストケースの手順で欄を特定するために使う
+        "label_text": field.label_text,
         "confidence": field.confidence,
         "evidence": evidence_to_dict(field.evidence),
     }

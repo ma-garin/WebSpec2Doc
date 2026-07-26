@@ -11,6 +11,7 @@ const TAB_DEFS = {
                    subs: { spec: 'renderReport', gallery: 'renderShots', coverage: 'renderCoverageHeatmap' } },
   'test-design': { panel: 'rp-test-design', defaultSub: 'matrix',
                    subs: { matrix: 'renderMatrix', summary: 'renderDesign', detail: 'renderTechniqueDetail', mbt: 'renderMbtDesign' } },
+  testcases:     { panel: 'rp-testcases', render: 'renderResultTestcases' },
   flow:          { panel: 'rp-flow', defaultSub: 'diagram',
                    subs: { diagram: 'renderTransition', table: 'renderTransitionTable' } },
   runs:          { panel: 'rp-runs', render: 'renderTestRuns' },
@@ -61,7 +62,7 @@ async function showResults(domain, tab, sub) {
   const s = data.summary || {};
   const required = reportJson ? countRequired(reportJson) : 0;
   const crawledAt = reportJson && reportJson.meta ? reportJson.meta.crawled_at : '';
-  document.getElementById('r-crawled').textContent = crawledAt ? ('最終クロール: ' + crawledAt) : '';
+  document.getElementById('r-crawled').textContent = crawledAt ? ('クロール ' + crawledAt) : '';
   document.getElementById('r-domain').textContent = domain;
   _updateKpiHero(s, required, data);
 
@@ -134,37 +135,30 @@ function _updateKpiHero(s, required, data) {
   } else {
     setText('k-conds', '—');
     setText('k-cases', '—');
-    setText('k-hours-sub', '再クロールで算出');
+    setText('k-hours-sub', '再観測で算出');
   }
 
-  // 直近テスト実行の PASS 率（playwright_report.json があれば非同期で反映）
+  // テストケース表から実行した結果の PASS 率（/api/result の testcase_run）
   const passEl = document.getElementById('k-passrate');
   const subEl = document.getElementById('k-runs-sub');
   const tile = document.getElementById('k-runs-tile');
   if (passEl) { passEl.textContent = '—'; passEl.classList.remove('is-pass', 'is-fail'); }
   if (subEl) subEl.textContent = '未実行';
-  const pwJson = data.files && data.files.playwright_json;
-  if (pwJson) {
-    fetch('/preview?path=' + encodeURIComponent(pwJson)).then(r => r.json()).then(r => {
-      if (!passEl || !subEl) return;
-      if (r.unavailable) { subEl.textContent = '実行不可（要セットアップ）'; return; }
-      const total = r.total || 0;
-      if (r.error && !total) {
-        // evidence-only: 実行が解析不能・未実行だった場合を「未実行」のまま放置しない
-        // （0/0/0が無言で「未実行」表示され続けた不具合の再発防止）。
-        passEl.textContent = '!';
-        passEl.classList.add('is-fail');
-        subEl.textContent = '実行エラー（テスト実行タブを確認）';
-        return;
-      }
-      if (!total) return;
-      const rate = Math.round((r.passed || 0) / total * 100);
+  const run = (data.testcase_run && data.testcase_run.summary) || null;
+  if (run && passEl && subEl) {
+    const total = run.total || 0;
+    if (run.error && !total) {
+      // 実行が失敗した場合を「未実行」と誤表示しない
+      passEl.textContent = '!';
+      passEl.classList.add('is-fail');
+      subEl.textContent = '実行エラー（テスト実行タブを確認）';
+    } else if (total) {
+      const rate = Math.round((run.passed || 0) / total * 100);
       passEl.textContent = rate + '%';
-      passEl.classList.add((r.failed || 0 || r.interrupted) ? 'is-fail' : 'is-pass');
-      const suffix = data.playwright_run_at ? ` ・ ${data.playwright_run_at}` : '';
-      subEl.textContent = (r.interrupted ? '（中断・部分結果）' : '') +
-        `PASS ${r.passed || 0} / FAIL ${r.failed || 0}` + suffix;
-    }).catch(() => {});
+      passEl.classList.add(run.failed ? 'is-fail' : 'is-pass');
+      const at = data.playwright_run_at ? ` ・ ${data.playwright_run_at}` : '';
+      subEl.textContent = `PASS ${run.passed || 0} / FAIL ${run.failed || 0}` + at;
+    }
   }
   if (tile && !tile._bound) {
     tile._bound = true;
@@ -238,6 +232,9 @@ function _normalizeTab(tab, sub) {
 function _switchPanels(tab, sub) {
   activeResultTab = tab;
   activeResultSub = sub;
+  // KPI は概要タブの内容。他タブでは隠し、表・図の縦の表示領域を広く使う。
+  const kpi = document.getElementById('kpi-hero-wrap');
+  if (kpi) kpi.hidden = tab !== 'overview';
   document.querySelectorAll('.result-tabs .result-tab').forEach(t => {
     const on = t.dataset.tab === tab;
     t.classList.toggle('is-active', on);
@@ -303,7 +300,7 @@ async function renderTimeline() {
   } catch (e) {}
   if (snaps.length < 2) {
     host.innerHTML = '<div class="hero-pad"><div class="hero-section-title">クロール履歴</div>' +
-      '<p style="color:var(--text-muted);font-size:13px">履歴が' + snaps.length + '件です。<strong>再クロール</strong>すると、前回との仕様ドリフト（追加/削除された画面・変更されたフォーム）を時系列で比較できます。</p>' +
+      '<p style="color:var(--text-muted);font-size:13px">履歴が' + snaps.length + '件です。<strong>再観測</strong>すると、前回との仕様ドリフト（追加/削除された画面・変更されたフォーム）を時系列で比較できます。</p>' +
       _ciGuidanceCard(domain) + '</div>';
     _bindCiCopy();
     return;

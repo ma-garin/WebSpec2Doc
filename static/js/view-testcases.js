@@ -29,13 +29,13 @@ async function loadTestcasesSites(force, presetDomain) {
     if (select.value) await loadTestcasesData(select.value);
     return;
   }
-  setTcStatus('解析済みサイトを読み込んでいます。');
+  setTcStatus('観測済みサイトを読み込んでいます。');
   try {
     const res = await fetch('/api/history');
     const data = await res.json();
     const items = data.items || [];
     const previous = select.value;
-    select.innerHTML = '<option value="">解析済みサイトを選択</option>' +
+    select.innerHTML = '<option value="">観測済みサイトを選択</option>' +
       items.map(it => `<option value="${escHtml(it.domain)}">${escHtml(it.domain)}</option>`).join('');
     const target = presetDomain || (items.some(it => it.domain === previous) ? previous : (items[0] && items[0].domain) || '');
     if (target) select.value = target;
@@ -43,8 +43,8 @@ async function loadTestcasesSites(force, presetDomain) {
     if (select.value) {
       await loadTestcasesData(select.value);
     } else {
-      setTcStatus('解析済みサイトがありません。');
-      document.getElementById('tc-content').innerHTML = '<div class="empty">解析済みサイトがありません。</div>';
+      setTcStatus('観測済みサイトがありません。');
+      document.getElementById('tc-content').innerHTML = '<div class="empty">観測済みサイトがありません。</div>';
     }
   } catch (e) {
     setTcStatus('サイト一覧の読み込みに失敗しました。', true);

@@ -16,7 +16,7 @@ document.getElementById('sidebar-toggle-btn')?.addEventListener('click', () => {
 });
 const VIEW_HEADER = {
   dashboard: { trail: ['WebSpec2Doc', 'ホーム'], title: 'QAドキュメント生成' },
-  generate: { trail: ['ダッシュボード', 'サイトを追加'], title: 'サイトを追加 / 再クロール' },
+  generate: { trail: ['ダッシュボード', 'サイトを追加'], title: 'サイトを追加 / 再観測' },
   'qa-quality': { trail: ['ダッシュボード', '品質観点'], title: '品質観点' },
   viewpoints: { trail: ['ダッシュボード', '観点管理'], title: '観点管理' },
   'auto-run': { trail: ['ダッシュボード', 'AutoRun'], title: 'AutoRun — 全自動テスト実行' },
@@ -190,12 +190,6 @@ document.getElementById('hero-url')?.addEventListener('keydown', (event) => {
 document.getElementById('hero-guided-btn')?.addEventListener('click', () => {
   _heroStartGuided((document.getElementById('hero-url')?.value || '').trim());
 });
-document.getElementById('hero-auto-btn')?.addEventListener('click', () => {
-  const v = (document.getElementById('hero-url')?.value || '').trim();
-  switchView('auto-run');
-  const a = document.getElementById('autorun-url');
-  if (a && v) { a.value = v; a.dispatchEvent(new Event('input', { bubbles: true })); }
-});
 document.getElementById('hero-sample-btn')?.addEventListener('click', () => {
   const input = document.getElementById('hero-url');
   if (input) { input.value = 'https://example.com'; input.dispatchEvent(new Event('input', { bubbles: true })); }
@@ -214,20 +208,6 @@ document.getElementById('p1-next-btn').addEventListener('click', () => {
 // P2 → P1: 「解析に戻る」ボタン
 document.getElementById('p2-back-btn').addEventListener('click', () => {
   showWizardStep(1);
-});
-
-// ---- テーマ（ライト/ダーク）切替・localStorage 永続 ----
-const THEME_KEY = 'webspec2doc.theme';
-function _applyTheme(theme) {
-  document.documentElement.setAttribute('data-theme', theme);
-  const btn = document.getElementById('theme-toggle-btn');
-  if (btn) btn.title = theme === 'dark' ? 'ライトモードに切替' : 'ダークモードに切替';
-}
-_applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light');
-document.getElementById('theme-toggle-btn')?.addEventListener('click', () => {
-  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-  _applyTheme(next);
-  try { localStorage.setItem(THEME_KEY, next); } catch (e) {}
 });
 
 // ---- トースト通知 ----

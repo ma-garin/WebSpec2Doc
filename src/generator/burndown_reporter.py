@@ -14,7 +14,7 @@ from __future__ import annotations
 import html
 from typing import Any
 
-from generator.heatmap_reporter import _DARK_RAMP, _LIGHT_RAMP
+from generator.heatmap_reporter import _LIGHT_RAMP
 
 BURNDOWN_FILE_NAME = "exploration_burndown.html"
 
@@ -27,9 +27,7 @@ _PAD_BOTTOM = 32
 
 # heatmap の 4 段パレットのうち最も濃い色を「未探索画面」、次点を「未到達状態」に割り当てる
 _SCREENS_LIGHT = _LIGHT_RAMP[3]
-_SCREENS_DARK = _DARK_RAMP[2]
 _STATES_LIGHT = _LIGHT_RAMP[1]
-_STATES_DARK = _DARK_RAMP[3]
 
 
 def _scale(value: float, max_value: float, axis_len: float) -> float:
@@ -50,7 +48,6 @@ def _build_series_svg(
     points: list[dict[str, Any]],
     key: str,
     color_light: str,
-    color_dark: str,
     max_value: int,
 ) -> tuple[str, str]:
     """1 系列分の折れ線 SVG（path + マーカー）を返す（ライト用 class 付き共通マークアップ）。"""
@@ -80,10 +77,7 @@ def _build_series_svg(
             f'<circle cx="{x:.1f}" cy="{y:.1f}" r="4" fill="var({var_name})"{dash}>'
             f"<title>{html.escape(title)}</title></circle>"
         )
-    css = (
-        f":root {{ {var_name}: {color_light}; }}\n"
-        f"@media (prefers-color-scheme: dark) {{ :root {{ {var_name}: {color_dark}; }} }}"
-    )
+    css = f":root {{ {var_name}: {color_light}; }}\n"
     return line + "".join(markers), css
 
 
@@ -102,10 +96,10 @@ def generate_burndown_html(burndown: dict[str, Any]) -> str:
         css_vars = ""
     else:
         screens_svg, screens_css = _build_series_svg(
-            points, "remaining_screens", _SCREENS_LIGHT, _SCREENS_DARK, max(total_screens, 1)
+            points, "remaining_screens", _SCREENS_LIGHT, max(total_screens, 1)
         )
         states_svg, states_css = _build_series_svg(
-            points, "remaining_states", _STATES_LIGHT, _STATES_DARK, max(total_states, 1)
+            points, "remaining_states", _STATES_LIGHT, max(total_states, 1)
         )
         axis_w = _CHART_WIDTH - _PAD_LEFT - _PAD_RIGHT
         x_labels = "".join(
@@ -158,9 +152,6 @@ def generate_burndown_html(burndown: dict[str, Any]) -> str:
 <style>
 :root {{
   --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --line: #e5e4e0;
-}}
-@media (prefers-color-scheme: dark) {{
-  :root {{ --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --line: #383835; }}
 }}
 {css_vars}
 body {{ margin: 0; padding: 24px; background: var(--surface); color: var(--ink);

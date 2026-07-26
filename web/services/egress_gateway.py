@@ -60,6 +60,9 @@ class EgressPolicy:
     extra_denied_hosts: tuple[str, ...] = ()
     #: True の場合、全ての送信を遮断する（自己検証など対象へ触れてはならない用途）
     block_all: bool = False
+    #: ローカル/プライベート宛先を許可する。既定は False（SSRF 保護優先）。
+    #: 運用者が WEBSPEC2DOC_ALLOW_LOCAL=1 を明示した場合にのみ True にする。
+    allow_local: bool = False
 
     def to_json(self) -> str:
         per_worker = max(1, self.budget // max(1, self.workers))
@@ -69,6 +72,7 @@ class EgressPolicy:
                 "selfOrigins": list(self.self_origins),
                 "deniedHosts": sorted(set(METADATA_HOSTS) | set(self.extra_denied_hosts)),
                 "blockAll": self.block_all,
+                "allowLocal": self.allow_local,
             }
         )
 
@@ -117,7 +121,7 @@ def assert_target_allowed(url: str, policy: EgressPolicy) -> None:
 
     if host in METADATA_HOSTS:
         raise EgressDenied(f"クラウドメタデータへのアクセスは禁止です: {host}")
-    if host in LOCAL_HOSTNAMES or host.endswith(LOCAL_SUFFIXES):
+    if not policy.allow_local and (host in LOCAL_HOSTNAMES or host.endswith(LOCAL_SUFFIXES)):
         raise EgressDenied(f"ローカルホストへのアクセスは禁止です: {host}")
     if host in {h.lower() for h in policy.extra_denied_hosts}:
         raise EgressDenied(f"拒否リストのホストです: {host}")
@@ -127,6 +131,8 @@ def assert_target_allowed(url: str, policy: EgressPolicy) -> None:
         raise EgressDenied(f"WebSpec2Doc 自身へのアクセスは禁止です: {origin}")
 
     for address in _resolve_all(host):
+        if policy.allow_local:
+            break  # 運用者が明示的にローカル対象を許可している
         if not address.is_global:
             raise EgressDenied(
                 f"プライベート/予約済みアドレスへ解決されました: {host} -> {address}"
@@ -188,6 +194,7 @@ const BUDGET = Number(POLICY.budgetPerWorker ?? 1e9);
 const SELF_ORIGINS: string[] = POLICY.selfOrigins || [];
 const DENIED_HOSTS: string[] = POLICY.deniedHosts || [];
 const BLOCK_ALL: boolean = Boolean(POLICY.blockAll);
+const ALLOW_LOCAL: boolean = Boolean(POLICY.allowLocal);
 
 let used = 0;
 
@@ -218,7 +225,7 @@ function denyReason(rawUrl: string): string | null {
   if (!['http:', 'https:'].includes(u.protocol)) return 'scheme';
   const host = u.hostname.toLowerCase();
   if (DENIED_HOSTS.includes(host)) return 'denied_host';
-  if (isPrivateHost(host)) return 'private_address';
+  if (isPrivateHost(host) && !ALLOW_LOCAL) return 'private_address';
   if (SELF_ORIGINS.includes(u.origin.toLowerCase())) return 'self_origin';
   return null;
 }

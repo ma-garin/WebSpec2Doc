@@ -521,7 +521,7 @@ function clearDiscovered() {
 function setAllDiscovered(v) { document.querySelectorAll('.discovered-cb').forEach(cb => { cb.checked = v; }); updateTargetPreview(); }
 function selectedDiscovered() { return [...document.querySelectorAll('.discovered-cb:checked')].map(cb => cb.value); }
 
-// ---- クロール方法（自動クロール／選択したURLのみ）----
+// ---- 観測方法（自動観測／選択したURLのみ）----
 // 「画面分析で見つけたURLだけをクロールするか、そこからリンクを辿って
 // 自動的にクロール範囲を広げるかを選びたい」というドッグフーディング要望への対応。
 function crawlTargetMode() {
@@ -555,7 +555,7 @@ function updateTargetPreview() {
   const urls = buildTargetUrls();
   const isAuto = crawlTargetMode() === 'auto';
   targetPreview.querySelector('strong').textContent = isAuto
-    ? '自動クロール（起点URLからリンクを辿ります）'
+    ? '自動観測（起点URLからリンクを辿ります）'
     : `チェック対象 ${urls.length}件`;
   const etaEl = document.getElementById('target-preview-eta');
   if (!urls.length) {

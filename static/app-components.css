@@ -75,10 +75,6 @@
 .topbar-icon-btn:hover { color: var(--primary-dark); background: var(--surface-subtle); border-color: var(--border-strong); }
 .topbar-icon-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 .topbar-icon-btn svg { width: 17px; height: 17px; }
-.icon-theme-moon { display: block; }
-.icon-theme-sun { display: none; }
-html[data-theme="dark"] .icon-theme-moon { display: none; }
-html[data-theme="dark"] .icon-theme-sun { display: block; }
 
 /* ── トースト通知 ── */
 .toast-container {
@@ -122,8 +118,6 @@ html[data-theme="dark"] .icon-theme-sun { display: block; }
 .confirm-actions { display: flex; justify-content: flex-end; gap: 10px; }
 .btn-danger { background: var(--critical); }
 .btn-danger:hover:not(:disabled) { background: #B91C1C; }
-html[data-theme="dark"] .btn-danger { background: #DC2626; color: #fff; }
-html[data-theme="dark"] .btn-danger:hover:not(:disabled) { background: #EF4444; }
 
 /* ── キーボードショートカット ヘルプモーダル ── */
 .shortcut-overlay {
@@ -513,12 +507,6 @@ kbd.kbd {
 .activity-list div { display: grid; }
 .activity-list strong { color: var(--text); font-size: 11px; font-weight: 600; }
 .activity-list small { color: var(--text-subtle); font-size: 10px; }
-
-html[data-theme="dark"] .delivery-backlog { background: var(--bg); }
-html[data-theme="dark"] .backlog-table th,
-html[data-theme="dark"] .backlog-row:hover td { background: var(--surface-subtle); }
-html[data-theme="dark"] .backlog-row.is-selected td { background: #17345d; }
-html[data-theme="dark"] .status-todo { background: #364152; color: #d8dee9; }
 
 @media (max-width: 1200px) {
   .backlog-active .app-content { overflow: auto; }

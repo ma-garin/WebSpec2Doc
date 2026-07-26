@@ -1,5 +1,6 @@
-// ---- テスト実行タブ（AutoRun / Playwright 実行結果の一元表示） ----
-// データソース: /api/result の files.playwright_json（qa_process/playwright_report.json）
+// ---- テスト実行タブ（テストケース表から実行した結果の表示） ----
+// データソース: testcases/run_result.json（テストケースタブの「実行」で作られる）。
+// 実行していないサイトでは必ず「未実行」を出す（他系統の古い結果を流用しない）。
 
 async function renderTestRuns() {
   // await 中にタブ切替で resultHero シムが差し替わっても自パネルへ描き続ける
@@ -10,10 +11,10 @@ async function renderTestRuns() {
   if (!files.playwright_json) {
     uiEmpty(host, {
       icon: '🧪',
-      title: 'テスト実行結果はまだありません',
-      desc: 'AutoRun でこのサイトの自動テストを実行すると、PASS/FAIL の結果と実行レポートがここに表示されます。',
-      actionLabel: 'AutoRun で自動テストを実行 →',
-      onAction: () => switchView('auto-run'),
+      title: 'まだ実行していません',
+      desc: 'テストケースタブで対象を選び「実行」を押すと、ケースごとの PASS/FAIL がここに表示されます。',
+      actionLabel: 'テストケースタブを開く →',
+      onAction: () => selectResultTab('testcases'),
     });
     return;
   }
@@ -41,16 +42,27 @@ async function renderTestRuns() {
       '<div class="runs-unavailable-help">' +
       '<div class="runs-unavailable-help-title">セットアップ手順</div>' +
       '<pre class="runs-setup-pre">cd output/.playwright_env\nnpm install -D @playwright/test\nnpx playwright install chromium</pre>' +
-      '<p class="muted-copy">セットアップ後、AutoRun から再実行してください。</p>' +
+      '<p class="muted-copy">セットアップ後に再実行してください。</p>' +
       '</div></div></div>';
     return;
   }
 
   const safeNumber = value => Number.isFinite(Number(value)) ? Number(value) : 0;
-  const total = safeNumber(r.total);
-  const passed = safeNumber(r.passed);
-  const failed = safeNumber(r.failed);
-  const skipped = safeNumber(r.skipped);
+  const summary = r.summary || {};
+  const total = safeNumber(summary.total);
+  const passed = safeNumber(summary.passed);
+  const failed = safeNumber(summary.failed);
+  const skipped = safeNumber(summary.skipped);
+  // ケース単位の結果を表示用の配列へ（テスト名ではなくケースIDで並べる）
+  const tests = Object.entries(r.cases || {})
+    .map(([caseId, v]) => ({
+      title: caseId,
+      status: v.status,
+      duration_ms: v.duration_ms,
+      error: v.error,
+    }))
+    .sort((a, b) => a.title.localeCompare(b.title));
+  r = { ...r, error: summary.error || '', duration_ms: summary.duration_ms, tests };
 
   // evidence-only: エラーがあり、かつ回収できた結果が1件も無い場合は「実行エラー」を
   // 明示する（PASS率リングや0/0/0のカードを描画しない）。AutoRunで188件実行したのに
@@ -89,14 +101,13 @@ async function renderTestRuns() {
     `<circle class="runs-ring-fill" cx="18" cy="18" r="15.9" stroke-dasharray="${passRate} 100"></circle></svg>` +
     `<div class="runs-passrate-label"><strong>${passRate}%</strong><span>PASS率</span></div></div>`;
 
-  const tests = r.tests || [];
   const rows = tests.map(t => {
     const cls = t.status === 'passed' ? 'status-low' : t.status === 'skipped' ? 'status-muted' : 'status-critical';
     const err = t.error
       ? `<details class="runs-error-detail"><summary>エラーを表示</summary><pre class="runs-error-pre">${escHtml(t.error)}</pre></details>`
       : '—';
     return `<tr>
-      <td class="cell-title">${escHtml(t.title || '')}</td>
+      <td class="cell-title"><code>${escHtml(t.title || '')}</code></td>
       <td><span class="runs-status-badge ${cls}">${escHtml(t.status || '')}</span></td>
       <td class="num">${safeNumber(t.duration_ms)}ms</td>
       <td class="runs-error-cell">${err}</td>
@@ -116,13 +127,13 @@ async function renderTestRuns() {
     '<div class="runs-header">' +
     '<div><div class="hero-section-title" style="margin:0">テスト実行結果</div>' +
     `<p class="muted-copy runs-meta">実行日時: ${escHtml(runAt || '不明')}${r.duration_ms ? ' ／ 所要 ' + Math.round(r.duration_ms / 1000) + '秒' : ''}</p></div>` +
-    `<div class="runs-header-actions">${linkBtn(files.playwright_html, '実行レポートを開く', true)} ${devLink} ${linkBtn(files.qa_process_report, 'QAレポート', false)} ${dlSpec}</div>` +
+    `<div class="runs-header-actions">${linkBtn(files.playwright_html, '実行レポートを開く', true)} ${devLink} ${dlSpec}</div>` +
     '</div>' +
     (r.interrupted ? `<div class="runs-stale-note">⚠ ${escHtml(r.error || '実行が途中で中断されました。')}</div>` : '') +
-    (stale ? '<div class="runs-stale-note">⚠ この実行結果は最終クロール（' + escHtml(crawledAt) + '）より前のものです。仕様が更新されている可能性があるため、AutoRun での再実行を推奨します。</div>' : '') +
+    (stale ? '<div class="runs-stale-note">⚠ この実行結果は最終クロール（' + escHtml(crawledAt) + '）より前のものです。仕様が更新されている可能性があるため、再実行を推奨します。</div>' : '') +
     `<div class="runs-summary-row">${ring}<div class="runs-stat-grid">${cards}</div></div>` +
     (tests.length
-      ? '<table class="ov-screens runs-table"><thead><tr><th>テスト</th><th>結果</th><th>時間</th><th>エラー</th></tr></thead><tbody>' + rows + '</tbody></table>'
+      ? '<table class="ov-screens runs-table"><thead><tr><th>テストケースID</th><th>結果</th><th>時間</th><th>エラー</th></tr></thead><tbody>' + rows + '</tbody></table>'
       : (r.error ? `<div class="runs-unavailable-card"><div class="runs-unavailable-title">⚠ 実行エラー</div><p class="runs-unavailable-reason">${escHtml(r.error)}</p></div>` : '')) +
     '</div>';
 }

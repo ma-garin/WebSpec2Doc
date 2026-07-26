@@ -150,6 +150,32 @@ function _autorunOutputMetric(key, data) {
       return qa.count
         ? { num: qa.count + '件', sub: '成果物', alert: false }
         : { num: '開く', sub: '', alert: false };
+    case 'cross_review': {
+      // 横断レビューは指摘件数が判断材料そのもの。0件でも「0件」と出す。
+      const findings = Number((step.review || {}).findings ?? NaN);
+      if (Number.isNaN(findings)) return { num: '開く', sub: '', alert: false };
+      return { num: findings + '件', sub: '指摘', alert: findings > 0 };
+    }
+    case 'test_design':
+    case 'test_analysis':
+      return qa.viewpoint_count
+        ? { num: qa.viewpoint_count + '観点', sub: '', alert: false }
+        : { num: '開く', sub: '', alert: false };
+    case 'model_graph':
+      return crawl.screens
+        ? { num: crawl.screens + '画面', sub: '遷移モデル', alert: false }
+        : { num: '開く', sub: '', alert: false };
+    case 'playwright_candidates_html':
+    case 'spec_ts':
+      return scripts.count
+        ? { num: scripts.count + '件', sub: '自動化候補', alert: false }
+        : { num: '開く', sub: '', alert: false };
+    case 'test_plan':
+      return crawl.screens
+        ? { num: crawl.screens + '画面', sub: '対象範囲', alert: false }
+        : { num: '開く', sub: '', alert: false };
+    case 'playwright_native_html':
+      return { num: '開く', sub: '開発者向け', alert: false };
     default:
       return { num: '開く', sub: '', alert: false };
   }
@@ -808,6 +834,64 @@ function _autorunRenderReviewGate(data, status) {
 }
 
 // ---- AutoRun: レンダリング（status/outputs から冪等に導出） ----
+// ログイン壁で止まったときの説明。判定根拠と取得できた範囲を示す。
+// ログに1行流すだけでは「なぜ止まったか」が分からない。
+function _autorunRenderLoginStop(data) {
+  const host = document.getElementById('autorun-login-stop');
+  if (!host) return;
+  const req = data.input_request || {};
+  const step = data.step_data || {};
+  const discovered = step.discover || {};
+  host.style.display = '';
+  host.replaceChildren();
+
+  const title = document.createElement('div');
+  title.className = 'autorun-stop-title';
+  title.textContent = 'このサイトはログインが必要です';
+  host.appendChild(title);
+
+  const body = document.createElement('p');
+  body.className = 'autorun-stop-body';
+  body.textContent = req.message
+    || '未ログインで到達できる範囲まで取得しました。この先へ進むには認証が必要です。';
+  host.appendChild(body);
+
+  const fact = document.createElement('div');
+  fact.className = 'autorun-stop-fact';
+  const reachable = Number(discovered.pages || 0) - Number(discovered.login_required || 0);
+  fact.textContent =
+    `判定根拠: ${req.login_url || '対象URL'} でログインフォームを検出しました`
+    + ` ／ 取得できた範囲: ${Math.max(reachable, 0)}画面`
+    + ` ／ 到達できなかった: ${Number(discovered.login_required || 0)}画面`;
+  host.appendChild(fact);
+
+  const hint = document.createElement('p');
+  hint.className = 'autorun-stop-hint';
+  hint.textContent =
+    '「未ログインのまま進む」を選ぶと、成果物に「未ログイン範囲のみ」と明記されます。';
+  host.appendChild(hint);
+}
+
+function _autorunHideLoginStop() {
+  const host = document.getElementById('autorun-login-stop');
+  if (host) { host.style.display = 'none'; host.replaceChildren(); }
+}
+
+// 未ログインのまま進む。選ばなかったことを記録として残す。
+async function _autorunSkipLogin(jobId) {
+  if (!jobId) return;
+  try {
+    await fetch('/api/autorun/submit-input', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ job_id: jobId, type: 'skip' }),
+    });
+    _autorunHideLoginStop();
+  } catch (e) {
+    console.error('[autorun] スキップに失敗しました', e);
+  }
+}
+
 // 主導線バー: いま何が起きていて、次に何を押すかを最上部に常設する。
 // 段階承認中は autorun-stages.js が上書きするので、ここでは扱わない。
 function _autorunRenderLeadBar(data, status) {
@@ -816,18 +900,28 @@ function _autorunRenderLeadBar(data, status) {
 
   if (status === 'awaiting_stages') return;
 
+  if (status !== 'awaiting_input') _autorunHideLoginStop();
   if (status === 'idle' || !status) { bar.hide(); return; }
 
   if (status === 'awaiting_input') {
+    // 無言で「取得できた範囲」を進めない。止めて、判定根拠と選択肢を出す。
     bar.set({
       tone: 'stop',
       title: '停止中 — ログインが必要です',
       meta: 'あなたの選択を待っています',
-      actions: [{
-        label: 'ログイン情報を設定',
-        onClick: () => { _autoRunLoginSuppressed = false; _autorunShowLoginModal(data.input_request); },
-      }],
+      actions: [
+        {
+          label: 'ログイン情報を設定して続ける',
+          onClick: () => { _autoRunLoginSuppressed = false; _autorunShowLoginModal(data.input_request); },
+        },
+        {
+          label: '未ログインのまま進む',
+          kind: 'ghost',
+          onClick: () => _autorunSkipLogin(data.job_id),
+        },
+      ],
     });
+    _autorunRenderLoginStop(data);
     return;
   }
 

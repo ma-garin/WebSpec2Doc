@@ -40,6 +40,7 @@ def build_evidence_pack(
     audit_entries: list[dict[str, Any]] | None = None,
     generated_at: datetime | None = None,
     mutation_check: dict[str, Any] | None = None,
+    run_conditions: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """検収提出用の証跡パックを組み立てる。
 
@@ -106,6 +107,9 @@ def build_evidence_pack(
             "claim_scope": CLAIM_SCOPE,
             "claim_notice": CLAIM_NOTICE,
             "missing_inputs": missing,
+            # 利用者が確定した実行条件。どの前提で得られた結果かを
+            # 結果と切り離さずに残す（合否基準は判断の前提そのもの）。
+            "run_conditions": dict(run_conditions or {}),
         },
         "summary": {
             "total": int(report.get("total", len(cases)) or 0),

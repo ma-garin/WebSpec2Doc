@@ -49,6 +49,23 @@ class FieldGap:
     crawl_selector: str = ""
 
 
+#: 文書にあるが実測に無い画面の理由。「未実装」と断定しない。
+#: 取得できなかっただけの画面を「未実装疑い」と報告すると、
+#: 存在する画面を欠陥として報告することになる（実測で発覚）。
+DOC_ONLY_UNIMPLEMENTED = "unimplemented"   # どこからもリンクされておらず取得もされていない
+DOC_ONLY_UNREACHED = "unreached"           # 実測ページからリンクはあるが取得していない
+DOC_ONLY_NO_URL = "no_url"                 # 文書にURL記載が無く、対応づけ自体ができない
+
+
+@dataclass(frozen=True)
+class DocOnlyScreen:
+    """文書のみに存在する画面と、その判定理由。"""
+
+    screen: DocumentedScreen
+    reason: str
+    evidence: str = ""
+
+
 @dataclass(frozen=True)
 class FusionResult:
     """突合結果一式。official_names は page_id → 文書上の正式画面名。"""
@@ -58,6 +75,8 @@ class FusionResult:
     crawl_only_page_ids: tuple[str, ...]
     field_gaps: tuple[FieldGap, ...]
     official_names: dict[str, str] = field(default_factory=dict)
+    #: doc_only_screens の判定理由。screen.name → DocOnlyScreen
+    doc_only_details: tuple[DocOnlyScreen, ...] = ()
 
 
 def fuse(pages: list[AnalyzedPage], bundle: DocumentBundle) -> FusionResult:
@@ -70,6 +89,7 @@ def fuse(pages: list[AnalyzedPage], bundle: DocumentBundle) -> FusionResult:
     matched_screen_names = {m.screen.name for m in matches}
 
     doc_only = tuple(s for s in bundle.screens if s.name not in matched_screen_names)
+    doc_only_details = _classify_doc_only(doc_only, pages)
     crawl_only = tuple(p.page_id for p in canonical_pages if p.page_id not in matched_page_ids)
 
     gaps: list[FieldGap] = []
@@ -89,7 +109,77 @@ def fuse(pages: list[AnalyzedPage], bundle: DocumentBundle) -> FusionResult:
         crawl_only_page_ids=crawl_only,
         field_gaps=tuple(gaps),
         official_names=official_names,
+        doc_only_details=doc_only_details,
     )
+
+
+def _classify_doc_only(
+    doc_only: tuple[DocumentedScreen, ...], pages: list[AnalyzedPage]
+) -> tuple[DocOnlyScreen, ...]:
+    """文書のみの画面を、判定できる根拠にもとづいて分類する。
+
+    取得できなかっただけの画面を「未実装」と断定しない。実測ページから
+    リンクされているなら、それは実装がある証拠であり、クロールが
+    到達しなかっただけである（ログインウォール・上限打ち切りなど）。
+    """
+    # 実測した全ページのリンク先とフォーム送信先（実装が存在する証拠）。
+    # フォームの action は、リンクを辿れない画面（確認・完了など）の
+    # 実装を示す唯一の手がかりになることが多い。
+    linked_paths: set[str] = set()
+    for page in pages:
+        for link in page.page_data.links:
+            linked_paths.add(_path_of(link))
+        for form in page.page_data.forms:
+            if form.action:
+                linked_paths.add(_path_of(form.action))
+
+    results: list[DocOnlyScreen] = []
+    for screen in doc_only:
+        hint = (screen.url_hint or "").strip()
+        if not hint:
+            results.append(
+                DocOnlyScreen(
+                    screen=screen,
+                    reason=DOC_ONLY_NO_URL,
+                    evidence="文書にURLの記載が無いため、実測との対応づけができません",
+                )
+            )
+            continue
+        path = _path_of(hint)
+        if path in linked_paths:
+            results.append(
+                DocOnlyScreen(
+                    screen=screen,
+                    reason=DOC_ONLY_UNREACHED,
+                    evidence=(
+                        f"実測したページから {path} への導線（リンクまたはフォーム送信先）"
+                        "を検出しています。"
+                        "実装は存在しますが、今回のクロールでは取得していません"
+                    ),
+                )
+            )
+            continue
+        results.append(
+            DocOnlyScreen(
+                screen=screen,
+                reason=DOC_ONLY_UNIMPLEMENTED,
+                evidence=(
+                    f"{path} は実測したどのページからもリンクされておらず、取得もできていません"
+                ),
+            )
+        )
+    return tuple(results)
+
+
+def _path_of(url: str) -> str:
+    """URL/パスをパス部分へ正規化する。末尾スラッシュの揺れを吸収する。"""
+    from urllib.parse import urlparse
+
+    parsed = urlparse(url)
+    path = parsed.path or "/"
+    if len(path) > 1 and path.endswith("/"):
+        path = path[:-1]
+    return path
 
 
 def _screen_score(page: AnalyzedPage, screen: DocumentedScreen) -> tuple[float, str]:

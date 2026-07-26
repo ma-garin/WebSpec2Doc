@@ -2307,3 +2307,23 @@
   color: var(--color-text-secondary);
   margin-bottom: 5px;
 }
+
+/* ---- ログイン壁の停止カード ---- */
+.autorun-stop-card {
+  border: 1px solid var(--color-critical);
+  background: var(--color-critical-bg);
+  border-radius: var(--radius-md);
+  padding: 12px 15px;
+  margin-bottom: 12px;
+}
+.autorun-stop-title { font-weight: 700; color: var(--color-critical); font-size: var(--text-sm); }
+.autorun-stop-body { margin: 3px 0 8px; font-size: var(--text-xs); }
+.autorun-stop-fact {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 7px 10px;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+.autorun-stop-hint { margin: 7px 0 0; font-size: var(--text-xs); color: var(--color-text-secondary); }

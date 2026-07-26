@@ -26,6 +26,13 @@ def fusion_to_dict(result: FusionResult, bundle: DocumentBundle) -> dict:
             "documented_fields": len(bundle.fields),
             "matched_screens": len(result.screen_matches),
             "doc_only_screens": len(result.doc_only_screens),
+            # 「実装が無い」と「取得できなかった」を数でも分けて示す
+            "doc_only_unimplemented": sum(
+                1 for d in (result.doc_only_details or ()) if d.reason == "unimplemented"
+            ),
+            "doc_only_unreached": sum(
+                1 for d in (result.doc_only_details or ()) if d.reason == "unreached"
+            ),
             "crawl_only_screens": len(result.crawl_only_page_ids),
             "field_gaps": len(result.field_gaps),
         },
@@ -44,12 +51,16 @@ def fusion_to_dict(result: FusionResult, bundle: DocumentBundle) -> dict:
         ],
         "doc_only_screens": [
             {
-                "name": s.name,
-                "screen_id": s.screen_id,
-                "url_hint": s.url_hint,
-                "doc_evidence": document_evidence_to_dict(s.evidence),
+                "name": d.screen.name,
+                "screen_id": d.screen.screen_id,
+                "url_hint": d.screen.url_hint,
+                "doc_evidence": document_evidence_to_dict(d.screen.evidence),
+                # 「取得できなかった」と「実装が無い」を区別する。
+                # 混ぜると、存在する画面を欠陥として報告することになる。
+                "reason": d.reason,
+                "reason_evidence": d.evidence,
             }
-            for s in result.doc_only_screens
+            for d in (result.doc_only_details or ())
         ],
         "crawl_only_page_ids": list(result.crawl_only_page_ids),
         "field_gaps": [
@@ -105,7 +116,13 @@ def _render_markdown(data: dict) -> str:
         "",
         f"- 文書記載の画面: {meta['documented_screens']} 件 / 項目: {meta['documented_fields']} 件",
         f"- 画面の対応づけ: {meta['matched_screens']} 件",
-        f"- 文書のみの画面（未実装/廃止の疑い）: {meta['doc_only_screens']} 件",
+        f"- 文書のみの画面: {meta['doc_only_screens']} 件"
+        + (
+            f"（うち未実装の疑い {meta.get('doc_only_unimplemented', 0)} 件 / "
+            f"未到達 {meta.get('doc_only_unreached', 0)} 件）"
+            if meta.get("doc_only_screens")
+            else ""
+        ),
         f"- 実測のみの画面（文書化漏れ）: {meta['crawl_only_screens']} 件",
         f"- 項目レベルのギャップ: {meta['field_gaps']} 件",
         "",
@@ -124,10 +141,23 @@ def _render_markdown(data: dict) -> str:
         lines.append("")
     if data["doc_only_screens"]:
         lines += ["## 文書のみの画面", ""]
+        lines += [
+            "> 「未到達」は実装が存在する証拠（他ページからのリンク）がある画面です。",
+            "> 今回のクロールで取得できなかっただけなので、未実装として扱わないでください。",
+            "",
+        ]
+        labels = {
+            "unimplemented": "未実装の疑い",
+            "unreached": "未到達（実装あり・今回未取得）",
+            "no_url": "対応づけ不可（文書にURL記載なし）",
+        }
         for s in data["doc_only_screens"]:
             evidence = s["doc_evidence"] or {}
             location = f"{evidence.get('file', '')} {evidence.get('location', '')}".strip()
-            lines.append(f"- **{s['name']}**（出所: {location}）")
+            label = labels.get(s.get("reason", ""), "判定不明")
+            lines.append(f"- **{s['name']}** — {label}（出所: {location}）")
+            if s.get("reason_evidence"):
+                lines.append(f"  - 根拠: {s['reason_evidence']}")
         lines.append("")
     if data["crawl_only_page_ids"]:
         lines += ["## 実測のみの画面（文書化漏れ候補）", ""]

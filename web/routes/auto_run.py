@@ -578,6 +578,25 @@ def _apply_decisions_to_policy(job: AutoRunJob) -> None:
     job.run_policy["auth_scope"] = auth_scope
     if auth_scope == "authenticated":
         job.add_log("認証範囲: ログイン後の画面も対象にします（認証情報が必要です）")
+        # 選択を記録するだけでは、ログイン後の画面を対象にできない。
+        # 認証情報が未登録なら、その場で登録を求めて止める。
+        auth_path = _job_out(job) / job.domain / "auth.json" if job.domain else None
+        if auth_path is None or not auth_path.is_file():
+            job.status = "awaiting_input"
+            job.step_label = "認証情報の登録待ち"
+            job.input_request = {
+                "type": "login",
+                "login_url": job.url,
+                "login_fields": [],
+                "domain": job.domain,
+                "message": (
+                    "ログイン後の画面もテストする条件を選びました。"
+                    "認証情報を登録してください。登録せずに進むと未ログインの範囲のみになります。"
+                ),
+            }
+            job.add_log(
+                "認証情報が未登録です。登録するまでログイン後の画面は対象になりません。"
+            )
     else:
         job.add_log("認証範囲: 未ログインで到達できる範囲のみを対象にします")
 
@@ -603,6 +622,52 @@ def _apply_decisions_to_policy(job: AutoRunJob) -> None:
     if job.decisions_note:
         job.run_policy["note"] = job.decisions_note
         job.add_log(f"追加の指示: {job.decisions_note}")
+
+    _annotate_docs_with_conditions(job)
+
+
+def _annotate_docs_with_conditions(job: AutoRunJob) -> None:
+    """生成済みのテスト文書へ、実際の実行条件を追記する。
+
+    テスト設計・ケースは条件確定より前に生成されるため、本文には
+    「フォーム送信を確認」と書かれたまま残る。実際には送信しない設定で
+    実行されることがあり、文書と実施内容が食い違う。
+    再生成はせず、実際の条件を明記して食い違いを解消する。
+    """
+    if not job.domain:
+        return
+    allow_submit = bool(job.run_policy.get("allow_submit"))
+    note = [
+        "",
+        "## 実行条件（この実行で確定した内容）",
+        "",
+        "- フォーム送信: "
+        + (
+            "実行します（対象サイトに実データが登録されます）"
+            if allow_submit
+            else "**行いません**。送信を伴う設計項目は、入力の観測までを実施範囲とします"
+        ),
+        "- 認証範囲: "
+        + (
+            "ログイン後の画面を含みます"
+            if job.run_policy.get("auth_scope") == "authenticated"
+            else "未ログインで到達できる範囲のみです"
+        ),
+        f"- 合否基準: {job.run_policy.get('exit_criteria', 'severity')}",
+        "",
+    ]
+    qa_dir = _job_out(job) / job.domain / "qa_process"
+    for name in ("test_design.md", "test_cases.md"):
+        path = qa_dir / name
+        if not path.is_file():
+            continue
+        try:
+            body = path.read_text(encoding="utf-8")
+            if "## 実行条件（この実行で確定した内容）" in body:
+                continue
+            path.write_text(body.rstrip("\n") + "\n" + "\n".join(note), encoding="utf-8")
+        except OSError as exc:
+            logging.warning("実行条件を %s へ追記できませんでした: %s", name, exc)
 
 
 #: 段階ごとの関門メッセージ（仕様7〜14: 各段階で個別に提示・承認する）。
@@ -1334,12 +1399,18 @@ def _execute_tests(job: AutoRunJob) -> None:
                 job.add_log(f"スクリプト再生成時エラー（元スクリプトで続行）: {exc}")
 
     try:
+        # ローカル対象の許可はクロールと実行で揃える。実行側へ渡していなかったため、
+        # 設定でローカルを許可していても全テストが private_address で拒否されていた。
+        from crawler.url_safety import _local_targets_allowed
+        from web.services.egress_gateway import EgressPolicy
+
         result = run_playwright(
             spec_path,
             report_dir,
             per_test_timeout_sec=per_test_timeout_sec,
             add_log=job.add_log,
             device=device,
+            egress_policy=EgressPolicy(allow_local=_local_targets_allowed()),
         )
     except Exception as exc:
         _mark_job_failed(job, f"テスト実行エラー: {exc}")

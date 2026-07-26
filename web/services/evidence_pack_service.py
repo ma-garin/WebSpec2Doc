@@ -35,8 +35,31 @@ def generate_evidence_pack(job: AutoRunJob, output_dir: Path) -> dict[str, Path]
         manual_procedures=_read_text(qa_dir / "manual_procedures.md"),
         audit_entries=_read_audit_tail(domain_dir / "audit.jsonl"),
         mutation_check=_read_json(qa_dir / "mutation_verification.json"),
+        run_conditions=_run_conditions(job),
     )
     return save_evidence_pack(pack, qa_dir)
+
+
+def _run_conditions(job: AutoRunJob) -> dict[str, Any]:
+    """利用者が確定した実行条件を、証跡へ載せる形へまとめる。
+
+    合否基準を自由入力で指定できるようにした以上、その基準を
+    結果と一緒に残さないと、何をもって合格としたのかが分からなくなる。
+    """
+    policy = job.run_policy or {}
+    exit_criteria = str(policy.get("exit_criteria", "") or "")
+    return {
+        "exit_criteria": (
+            "重大度で整理し、最終判断は人が行う"
+            if exit_criteria in ("", "severity")
+            else exit_criteria
+        ),
+        "exit_criteria_specified": bool(exit_criteria and exit_criteria != "severity"),
+        "allow_submit": bool(policy.get("allow_submit")),
+        "auth_scope": str(policy.get("auth_scope", "") or "public_only"),
+        "browser_request": str(policy.get("browser_request", "") or ""),
+        "note": str(policy.get("note", "") or ""),
+    }
 
 
 def attach_evidence_pack(job: AutoRunJob, output_dir: Path) -> None:

@@ -1,0 +1,44 @@
+{
+  "document_id": "WS2D-ZBQA",
+  "version": "1.0",
+  "created": "2026-07-26",
+  "status": "pending_approval",
+  "test_execution_started": false,
+  "sut": "http://127.0.0.1:8766/systems",
+  "test_data": "http://127.0.0.1:8767/index.html",
+  "inventory": {
+    "features": 40,
+    "symbols": 164,
+    "uniqueSymbols": 160,
+    "failures": 187,
+    "required": 150,
+    "outputs": 128,
+    "persistence": 54,
+    "uiRefs": 49,
+    "uniqueUiRefs": 28,
+    "routeRefs": 33,
+    "uniqueRouteRefs": 23,
+    "coreRefs": 176,
+    "risk": {
+      "critical": 10,
+      "high": 15,
+      "medium": 13,
+      "low": 2
+    }
+  },
+  "counts": {
+    "unit": 847,
+    "integration": 1000,
+    "system": 3040,
+    "acceptance": 312,
+    "total": 5199
+  },
+  "files": [
+    "index.html",
+    "01_unit.html",
+    "02_integration.html",
+    "03_system.html",
+    "04_acceptance.html",
+    "05_traceability.html"
+  ]
+}

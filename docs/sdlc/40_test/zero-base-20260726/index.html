@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ゼロベース第三者検証 マスターテスト計画 | WebSpec2Doc 第三者検証</title><style>
+:root{--ink:#172033;--muted:#5c667a;--line:#dce2eb;--paper:#fff;--bg:#f4f6fa;--brand:#1456b8;--brand2:#eaf2ff;--good:#16794a;--warn:#9a5b00;--bad:#b42318;--shadow:0 10px 28px rgba(22,32,51,.08)}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif;line-height:1.65}a{color:var(--brand)}.shell{display:grid;grid-template-columns:260px minmax(0,1fr);min-height:100vh}.side{position:sticky;top:0;height:100vh;overflow:auto;background:#0d1f3c;color:#fff;padding:28px 22px}.side h1{font-size:18px;margin:0 0 4px}.side p{color:#b8c7dd;font-size:12px;margin:0 0 24px}.side a{display:block;color:#dbe8fa;text-decoration:none;padding:9px 10px;border-radius:8px;margin:3px 0;font-size:13px}.side a:hover,.side a.active{background:#1d4f91;color:#fff}.main{min-width:0;padding:28px clamp(20px,3vw,52px) 80px}.page{max-width:1480px;margin:0 auto}.hero{background:linear-gradient(135deg,#0d2b55,#1763c5);color:#fff;padding:38px;border-radius:18px;box-shadow:var(--shadow)}.eyebrow{font-weight:800;letter-spacing:.08em;font-size:12px;text-transform:uppercase}.hero h2{font-size:clamp(28px,4vw,48px);line-height:1.18;margin:8px 0 12px}.hero p{max-width:900px;color:#dcecff}.badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 10px;font-size:12px;font-weight:800;background:#fff;color:#154e98}.badge.wait{background:#fff1c7;color:#754400}.badge.risk-critical{background:#fee4e2;color:#912018}.badge.risk-high{background:#fff0d5;color:#7a4300}.badge.risk-medium{background:#e8f2ff;color:#174f93}.badge.risk-low{background:#e8f7ee;color:#17603c}.grid{display:grid;gap:16px}.stats{grid-template-columns:repeat(5,minmax(120px,1fr));margin:22px 0}.stat,.card,section{background:var(--paper);border:1px solid var(--line);border-radius:14px;box-shadow:0 4px 14px rgba(22,32,51,.04)}.stat{padding:18px}.stat strong{display:block;font-size:28px;line-height:1.2}.stat span{font-size:12px;color:var(--muted)}section{padding:26px;margin:20px 0}section h2{font-size:24px;margin:0 0 14px;color:#103f7d}section h3{font-size:18px;margin:24px 0 8px}.callout{border-left:4px solid var(--brand);background:var(--brand2);padding:14px 16px;border-radius:8px}.callout.warn{border-color:#e28a00;background:#fff8e8}.callout.bad{border-color:var(--bad);background:#fff0ef}.columns{grid-template-columns:repeat(2,minmax(0,1fr))}.four{grid-template-columns:repeat(4,minmax(0,1fr))}.card{padding:18px}.card h3{margin:0 0 8px;font-size:16px}.card p,.card li{font-size:13px}table{width:100%;border-collapse:separate;border-spacing:0;font-size:12px}th,td{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:9px;vertical-align:top;background:#fff}th{position:sticky;top:0;z-index:1;background:#eef3fa;color:#30415c;text-align:left}tr:first-child th{border-top:1px solid var(--line)}th:first-child,td:first-child{border-left:1px solid var(--line)}tr:first-child th:first-child{border-top-left-radius:8px}tr:first-child th:last-child{border-top-right-radius:8px}.table-wrap{overflow:auto;max-height:70vh;border-radius:9px}.controls{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}.controls input,.controls select{min-height:42px;border:1px solid #bfc9d8;border-radius:8px;padding:8px 12px;background:#fff}.controls input{min-width:min(480px,100%);flex:1}.metric-line{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.small{font-size:12px;color:var(--muted)}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.flow{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;align-items:stretch}.flow div{position:relative;background:#eef4fd;border:1px solid #c9d8ec;border-radius:10px;padding:12px;text-align:center;font-size:12px;font-weight:700}.flow div:not(:last-child)::after{content:"→";position:absolute;right:-10px;top:35%;z-index:2;color:#3567a7}.toc a{display:block;margin:5px 0}.decision{border:2px solid #e0a400;background:#fffdf2}.footer{font-size:11px;color:var(--muted);margin-top:28px}.nowrap{white-space:nowrap}.case-id{font-weight:800;color:#154f96}.case-count{font-weight:800;color:var(--brand)}details{border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin:10px 0;background:#fff}summary{cursor:pointer;font-weight:800}
+@media(max-width:1000px){.shell{grid-template-columns:1fr}.side{position:relative;height:auto}.stats,.four{grid-template-columns:repeat(2,1fr)}.columns{grid-template-columns:1fr}.flow{grid-template-columns:repeat(3,1fr)}.main{padding:18px}.hero{padding:24px}}
+@media(max-width:620px){.stats,.four,.flow{grid-template-columns:1fr}.hero h2{font-size:28px}}
+@media print{body{background:#fff}.shell{display:block}.side,.controls{display:none}.main{padding:0}.page{max-width:none}.hero,section,.stat,.card{box-shadow:none;break-inside:avoid}.hero{color:#000;background:#fff;border:2px solid #000}.hero p{color:#333}.table-wrap{max-height:none;overflow:visible}th{position:static}a{color:#000;text-decoration:none}}
+</style></head>
+<body><div class="shell"><aside class="side"><h1>WebSpec2Doc QA</h1><p>第三者検証・承認前テストウェア<br>版 1.0 / 2026-07-26</p><a class="active" href="index.html">総合索引・マスタープラン</a><a class="" href="01_unit.html">単体 — 847件</a><a class="" href="02_integration.html">結合 — 1,000件</a><a class="" href="03_system.html">システム — 3,040件</a><a class="" href="04_acceptance.html">受入 — 312件</a><a class="" href="05_traceability.html">トレーサビリティ・リスク</a></aside>
+<main class="main"><div class="page"><header class="hero"><span class="badge wait">承認待ち・未実行</span><div class="eyebrow">Independent Verification Testware</div>
+<h2>ゼロベース第三者検証</h2><p>WebSpec2Docの単体・結合・システム・受入を、内部品質・外部品質・利用時品質まで一貫したモデルで計画・分析・設計・具体化した承認前テストウェア。</p>
+<div class="badge">5,199 concrete cases</div></header>
+<div class="grid stats"><div class="stat"><strong>40</strong><span>対象機能</span></div>
+<div class="stat"><strong>5,199</strong><span>全具体ケース</span></div>
+<div class="stat"><strong>3,040</strong><span>システムケース</span></div>
+<div class="stat"><strong>187</strong><span>故障モード</span></div>
+<div class="stat"><strong>0</strong><span>実行済み（承認前）</span></div></div>
+<section class="decision"><h2>承認依頼</h2><p>本成果物はテスト実行前のベースライン候補である。次の5点を承認後に、環境固定、ケースレビュー、実装、実行へ進む。</p>
+<ol><li>対象を品質契約の全40機能とする。</li><li>テストデータとして http://127.0.0.1:8767/index.html を使用し、外部サイトへ破壊的操作を行わない。</li><li>単体847・結合1,000・システム3,040・受入312、合計5,199件を初期フルスコープとする。</li><li>リスクベースでP0/P1を先行し、合格基準を緩和しない。</li><li>実行で得た事実と計画上の仮説を明確に分離する。</li></ol>
+<div class="callout bad"><strong>重要:</strong> 現時点ではテストを実行していない。「passed」「準拠済み」「品質保証済み」とは判定しない。</div></section>
+<section><h2>1. 文書体系と開発プロセス</h2>
+<div class="flow"><div>テストベース</div><div>要求分析</div><div>アーキテクチャ</div><div>詳細設計</div><div>実装可能ケース</div><div>承認・実行</div></div>
+<p>ASTERの成果物0〜4に相当する全体像、要求分析、アーキテクチャ、詳細設計、実装可能ケースを本HTML群で相互追跡する。フェーズ別ページは、ISO 29119-3の計画情報と、分析・設計・ケースを一体化している。</p>
+<table><thead><tr><th>成果物</th><th>計画</th><th>分析</th><th>設計</th><th>ケース</th></tr></thead><tbody>
+<tr><td><a href="01_unit.html">単体 — 847件</a></td><td>目的・範囲・開始/終了</td><td>条件・リスク・母数</td><td>技法・構造・厚み</td><td>全件一覧・導出元</td></tr><tr><td><a href="02_integration.html">結合 — 1,000件</a></td><td>目的・範囲・開始/終了</td><td>条件・リスク・母数</td><td>技法・構造・厚み</td><td>全件一覧・導出元</td></tr><tr><td><a href="03_system.html">システム — 3,040件</a></td><td>目的・範囲・開始/終了</td><td>条件・リスク・母数</td><td>技法・構造・厚み</td><td>全件一覧・導出元</td></tr><tr><td><a href="04_acceptance.html">受入 — 312件</a></td><td>目的・範囲・開始/終了</td><td>条件・リスク・母数</td><td>技法・構造・厚み</td><td>全件一覧・導出元</td></tr>
+</tbody></table></section>
+<section><h2>2. テスト対象・テストベース</h2>
+<div class="grid columns"><div class="card"><h3>対象</h3><ul><li>SUT: http://127.0.0.1:8766/systems</li><li>テストデータ: http://127.0.0.1:8767/index.html</li><li>品質契約: 40機能（critical 10 / high 15 / medium 13 / low 2）</li><li>参照母数: symbol 164, failure 187, required 150, output 128, persistence 54</li></ul></div>
+<div class="card"><h3>優先順位</h3><p>安全性・秘密性・テナント分離・証跡真正性・承認状態をP0、主要業務フロー・回復・表示判断をP1、補助機能をP2/P3とする。発生確率だけでなく影響、検出困難性、回復困難性を考慮する。</p></div></div>
+<div class="callout warn"><strong>テストベースのドリフト:</strong> 要件定義は33機能、非機能要件は旧ISO 25010の8特性、既存計画は19機能を記載している。一方、現行品質契約は40機能である。本計画は40機能を基準にし、文書差異自体を品質リスクR-07として扱う。</div></section>
+<section><h2>3. 準拠モデル</h2><table><thead><tr><th>規格・知識体系</th><th>採用範囲</th><th>本書での扱い</th></tr></thead><tbody>
+<tr><td>ISTQB CTFL v4.0.1</td><td>テスト活動、レベル/タイプ、リスク、監視・制御、構成・欠陥管理</td><td>用語と活動を整合。ISTQB自体は計画書様式を規定しない。</td></tr><tr><td>ISO/IEC/IEEE 29119-2:2021</td><td>組織・管理・動的テストプロセス</td><td>計画→監視/制御→完了、分析→設計→実装→実行を採用。</td></tr><tr><td>ISO/IEC/IEEE 29119-3:2021</td><td>テスト文書テンプレート</td><td>識別、文脈、リスク、戦略、環境、要員、日程、完了基準、成果物を収録。</td></tr><tr><td>ISO/IEC/IEEE 29119-4:2021</td><td>テスト設計技法</td><td>仕様ベース、構造ベース、経験ベースの技法選択根拠を保持。</td></tr><tr><td>ISO/IEC 25010:2023</td><td>製品品質9特性</td><td>機能適合性、性能効率性、互換性、相互作用能力、信頼性、セキュリティ、保守性、柔軟性、安全性。</td></tr><tr><td>ISO/IEC 25019:2023</td><td>利用時品質3特性</td><td>有益性、リスク回避性、受容性を指定利用文脈で評価。</td></tr><tr><td>ISO/IEC 25012:2008</td><td>データ品質モデル</td><td>生成仕様、証跡、トレーサビリティの正確性・完全性・一貫性を評価。</td></tr><tr><td>ASTER テスト設計コンテスト&#39;26</td><td>要求分析、アーキテクチャ、詳細設計、実装と一貫性</td><td>観点導出、関係、厚み、スコープ、ケース構造、カバレッジ説明を成果物化。</td></tr></tbody></table>
+<p class="small">本書は規格の認証取得や完全適合を宣言するものではない。公開された最新版情報とプロジェクトへのテーラリング方針を明示する。</p></section>
+<section><h2>4. 品質モデル — 内部・外部・利用時</h2>
+<table><thead><tr><th>品質層</th><th>定義</th><th>主な観測対象</th><th>主要フェーズ</th></tr></thead><tbody>
+<tr><td><strong>内部品質</strong></td><td>実行せずに観測できるソース、構造、依存、テスト容易性、静的安全性。</td><td>複雑度、重複、依存方向、秘密情報、脆弱性、スキーマ、保守性。</td><td>静的レビュー・単体</td></tr>
+<tr><td><strong>外部品質</strong></td><td>実行中の製品が示す振る舞いと品質特性。</td><td>ISO 25010:2023の9特性、API、画面、性能、回復、互換、セキュリティ。</td><td>単体・結合・システム</td></tr>
+<tr><td><strong>利用時品質</strong></td><td>指定利用文脈で利用者・組織・社会にもたらす結果。</td><td>ISO 25019:2023の有益性、リスク回避性、受容性。</td><td>システム・受入</td></tr>
+</tbody></table>
+<h3>製品品質9特性</h3><p>機能適合性、性能効率性、互換性、相互作用能力、信頼性、セキュリティ、保守性、柔軟性、安全性を全体マトリクスに置く。UIの過大余白は装飾上の好みではなく、相互作用能力・柔軟性・効率に影響する外部品質条件である。</p>
+<h3>指定利用文脈</h3><p>利用者（QAリード、設計者、実行者、監査者、管理者）×目標（12業務ジャーニー）×機器（2解像度・キーボード/支援技術）×環境（初回、反復、時間制約、障害、監査、長時間）を固定して評価する。</p></section>
+<section><h2>5. テスト戦略 — 点・線・面・立体・時間・多次元</h2><div class="grid four">
+  <div class="card"><h3>点</h3><p>局所欠陥を狙う。エラー推測、探索、静的レビュー。</p></div>
+  <div class="card"><h3>線</h3><p>連続領域を切る。同値分割、境界値、負荷の変曲点。</p></div>
+  <div class="card"><h3>面</h3><p>論理条件を組む。ドメイン分析、決定表、原因結果。</p></div>
+  <div class="card"><h3>立体</h3><p>順序なし因子を扱う。HAYST、直交表、pairwise。</p></div>
+  <div class="card"><h3>時間</h3><p>状態と履歴を追う。状態遷移、N-switch、並行性。</p></div>
+  <div class="card"><h3>多次元</h3><p>利用文脈を通す。シナリオ、UAT、統計的サンプリング。</p></div>
+  </div>
+<p>各層を独立した流行語として並べず、点で得た欠陥仮説を線の境界、面の論理、立体の因子、時間の状態、多次元の利用文脈へ拡張する。逆に受入で見つかった問題を、下位レベルの再発防止ケースへ還流する。</p></section>
+<section><h2>6. フェーズ別規模と責務</h2><table><thead><tr><th>フェーズ</th><th>具体ケース</th><th>主目的</th><th>主オラクル</th><th>実行責任</th></tr></thead><tbody>
+<tr><td>単体</td><td>847</td><td>局所契約・分岐・不変条件</td><td>関数契約、プロパティ、スキーマ</td><td>開発＋独立QAレビュー</td></tr>
+<tr><td>結合</td><td>1,000</td><td>接続・状態受渡し・分離</td><td>API契約、データ差分、監査ログ</td><td>QA自動化</td></tr>
+<tr><td>システム</td><td>3,040</td><td>完成系の機能・非機能・横断品質</td><td>要求、画面、成果物、計測値</td><td>独立検証チーム</td></tr>
+<tr><td>受入</td><td>312</td><td>業務価値・リスク・受容性</td><td>利用者判断、受入基準</td><td>PO/利用者＋第三者立会</td></tr>
+</tbody></table></section>
+<section><h2>7. リスク登録簿</h2><table><thead><tr><th>ID</th><th>リスク</th><th>水準</th><th>影響</th><th>テスト対策</th></tr></thead><tbody>
+<tr><td class="mono">R-01</td><td>根拠なき仕様・ケース生成</td><td><span class="badge risk-critical">最重要</span></td><td>成果物の誤判断、監査不能</td><td>evidence-only、原情報リンク、サンプル照合</td></tr><tr><td class="mono">R-02</td><td>SSRF・破壊的クロール・外部送信</td><td><span class="badge risk-critical">最重要</span></td><td>情報漏えい、対象破壊</td><td>localhost/URL安全性、送信ゲート、非破壊データ</td></tr><tr><td class="mono">R-03</td><td>認証情報・トークンの保持/露出</td><td><span class="badge risk-critical">最重要</span></td><td>アカウント侵害</td><td>即時破棄、ログマスキング、スコープ検証</td></tr><tr><td class="mono">R-04</td><td>テナント／ワークスペース越境</td><td><span class="badge risk-critical">最重要</span></td><td>機密データ漏えい</td><td>主体×資源×操作、競合・履歴・出力を横断</td></tr><tr><td class="mono">R-05</td><td>AutoRun承認状態の矛盾</td><td><span class="badge risk-critical">最重要</span></td><td>未承認成果物の確定、手戻り</td><td>8段階状態モデル、N-switch、再開・差戻し</td></tr><tr><td class="mono">R-06</td><td>部分失敗・再試行による破損</td><td><span class="badge risk-high">高</span></td><td>成果物欠損、重複、無限待機</td><td>故障注入、冪等性、チェックポイント</td></tr><tr><td class="mono">R-07</td><td>仕様文書と現行実装のドリフト</td><td><span class="badge risk-high">高</span></td><td>誤スコープ、誤合格</td><td>品質契約40機能を正本、差分台帳</td></tr><tr><td class="mono">R-08</td><td>undefined・関数表現・件数不整合</td><td><span class="badge risk-high">高</span></td><td>結果解釈不能、信頼低下</td><td>出力スキーマ、ラウンドトリップ、全成果物表示</td></tr><tr><td class="mono">R-09</td><td>過大余白・切れ・情報優先順位不良</td><td><span class="badge risk-high">高</span></td><td>作業効率・受容性低下</td><td>49 UI参照×状態×解像度×テーマ</td></tr><tr><td class="mono">R-10</td><td>LLM変動・プロンプト注入・捏造</td><td><span class="badge risk-critical">最重要</span></td><td>誤成果物、外部漏えい</td><td>ルール/LLM比較、非信頼境界、再現性</td></tr><tr><td class="mono">R-11</td><td>負荷・長時間実行・資源枯渇</td><td><span class="badge risk-high">高</span></td><td>タイムアウト、データ損失</td><td>容量境界、持久、キャンセル、回復</td></tr><tr><td class="mono">R-12</td><td>観測不能・証跡欠落</td><td><span class="badge risk-high">高</span></td><td>不具合再現不能、検収不能</td><td>相関ID、構造化ログ、動画・ハッシュ</td></tr>
+</tbody></table></section>
+<section><h2>8. テストデータ設計</h2><div class="grid four">
+<div class="card"><h3>TD-0 標準</h3><p>8767の正常到達・代表入力</p></div><div class="card"><h3>TD-1 不整合</h3><p>文書/実装差、欠損画面、矛盾件数</p></div><div class="card"><h3>TD-2 境界</h3><p>空、最小、最大±1、長文、Unicode</p></div><div class="card"><h3>TD-3 認証</h3><p>未認証、一般、管理、期限切れ</p></div><div class="card"><h3>TD-4 障害</h3><p>timeout、切断、5xx、部分失敗</p></div><div class="card"><h3>TD-5 攻撃</h3><p>SSRF、XSS、注入、traversal、prompt injection</p></div><div class="card"><h3>TD-6 容量</h3><p>多数画面、長時間、巨大成果物、並行実行</p></div><div class="card"><h3>TD-7 利用文脈</h3><p>拡大、キーボード、初見、監査、復旧</p></div></div>
+<p>資格情報・個人情報は合成し、実データを保存しない。各ケースは入力データ版と生成物ハッシュを証跡へ記録する。</p></section>
+<section><h2>9. 環境・構成・証跡</h2><ul><li>SUT版、commit、OS、Python、依存ロック、ブラウザ版、環境変数（秘密値を除く）を実行単位で固定する。</li><li>証跡はケースID、時刻、操作者、入力版、要求/応答、ログ、画面、成果物ハッシュ、判定、欠陥IDを持つ。</li><li>解像度は1920×1080と1366×768を必須とし、主作業領域の利用率、過大余白、切れ、重なり、可読行長を測る。</li><li>テストデータサイトへの操作は非破壊とし、送信が必要なケースは合成データと隔離環境のみで実施する。</li></ul></section>
+<section><h2>10. 組織・日程・監視</h2><table><thead><tr><th>ゲート</th><th>活動</th><th>完了条件</th></tr></thead><tbody>
+<tr><td>G0 承認</td><td>本計画、スコープ、リスク、閾値をレビュー</td><td>承認者、版、条件を記録</td></tr>
+<tr><td>G1 準備</td><td>環境・データ・自動化・証跡を固定</td><td>再現性スモーク合格</td></tr>
+<tr><td>G2 内部</td><td>静的、単体、結合を実行</td><td>P0/P1合格、重大欠陥0</td></tr>
+<tr><td>G3 外部</td><td>システム機能・非機能・回帰を実行</td><td>システム終了基準合格</td></tr>
+<tr><td>G4 利用時</td><td>UAT、文脈内評価、成果物レビュー</td><td>受入署名</td></tr>
+<tr><td>G5 完了</td><td>残存リスク、逸脱、メトリクスを報告</td><td>サマリ承認、証跡保全</td></tr>
+</tbody></table>
+<p><strong>監視指標:</strong> 計画/実行/合格/阻害件数、要件・リスク・品質特性カバレッジ、欠陥密度、再オープン、漏出、flaky、平均復旧時間、タスク完了率、成果物再現率。ケース消化率だけで品質を判定しない。</p></section>
+<section><h2>11. 中断・再開・完了基準</h2><div class="grid columns"><div class="card"><h3>中断</h3><ul><li>SUT/データ版を特定できない</li><li>破壊的送信または情報漏えいの兆候</li><li>Sev1または後続判定を無効化するSev2</li><li>証跡がケースへ結び付かない</li><li>環境不安定で再現性が得られない</li></ul></div>
+<div class="card"><h3>再開・完了</h3><ul><li>原因と影響ケースを特定し、環境を再固定</li><li>P0/P1 100%実行・合格</li><li>Sev1/2未解決0、逸脱は承認済み</li><li>トレーサビリティ100%、未説明skip 0</li><li>受入権限者が残存リスク込みで署名</li></ul></div></div></section>
+<section><h2>12. 参照情報</h2><ul>
+<li><a href="https://www.istqb.org/certifications/certified-tester-foundation-level-ctfl-v4-0/">ISTQB CTFL v4.0.1</a></li>
+<li><a href="https://www.iso.org/standard/79428.html">ISO/IEC/IEEE 29119-2:2021</a> / <a href="https://www.iso.org/standard/79429.html">29119-3:2021</a> / <a href="https://www.iso.org/standard/79430.html">29119-4:2021</a></li>
+<li><a href="https://www.iso.org/standard/78176.html">ISO/IEC 25010:2023</a> / <a href="https://www.iso.org/standard/78177.html">ISO/IEC 25019:2023</a></li>
+<li><a href="https://www.aster.or.jp/testcontest/open/">ASTER テスト設計コンテスト'26 OPEN審査基準</a> / <a href="https://www.aster.or.jp/testcontest/u30/">U-30成果物体系</a></li>
+<li><a href="https://www.juse-p.co.jp/filemanager/source/Trial_Reading/2022/trial9784817197665.pdf">ソフトウェアテスト技法ドリル試読（点・線・面・立体・時間・多次元）</a></li>
+</ul></section><p class="footer">文書ID: WS2D-ZBQA-INDEX / 状態: 承認待ち / テスト未実行 / 生成元: quality/feature_contracts.yml</p></div></main></div></body></html>

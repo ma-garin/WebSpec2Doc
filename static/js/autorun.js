@@ -767,6 +767,8 @@ function _autorunRender(data) {
       _autoRunStagesDomain = data.domain;
       _autoRunStagesOpened = atGate;
       window.autorunStages.load(data.domain, { open: atGate });
+      // 要確認チェックリスト: 人が見るべき項目だけを同じタイミングで読み込む
+      if (window.autorunReview) window.autorunReview.load(data.domain);
     }
     if (!atGate) _autoRunStagesOpened = false;
   }

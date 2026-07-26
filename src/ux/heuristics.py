@@ -12,7 +12,6 @@ confidence は 0.9 を上限とする（evidence-only 原則。CONVENTIONS §1-2
 
 from __future__ import annotations
 
-import json
 import logging
 from dataclasses import dataclass
 from typing import Any
@@ -95,16 +94,15 @@ def build_ux_review_prompt(screen_info: dict[str, Any]) -> str:
         "axe_violation_summary": list(screen_info.get("axe_violation_summary", [])),
         "known_selectors": list(screen_info.get("known_selectors", [])),
     }
+    from llm.prompt_guard import QA_PRINCIPLES, untrusted_block
+
     return (
         "あなたはユーザビリティ専門家です。ニールセンの10原則(N1〜N10)に基づき、"
-        "以下のWeb画面情報からユーザビリティ上の所見を返してください。\n"
-        f"画面情報: {json.dumps(payload, ensure_ascii=False)}\n\n"
-        "各所見は以下のキーを持つこと: "
-        "principle(N1〜N10のいずれか), severity(high/medium/low), "
-        "finding(所見本文、日本語で具体的に), "
-        "selector(根拠となる実在の要素セレクタ。known_selectors に含まれるものだけを使うこと)。"
-        "axe_violation_summary に記載済みの指摘は重複計上しないこと。"
-        "known_selectors に無いセレクタを創作しないこと。"
+        "実測した Web 画面情報からユーザビリティ上の所見を返してください。\n"
+        + QA_PRINCIPLES
+        + "- selector には known_selectors に含まれる実在セレクタだけを使う。創作しない。\n"
+        "- axe_violation_summary に記載済みの指摘は重複計上しない。\n\n"
+        + untrusted_block(payload, label="site_data", source="クロール対象サイト")
     )
 
 

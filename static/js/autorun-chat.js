@@ -133,6 +133,9 @@
         body: JSON.stringify({
           message: message,
           context: currentContext(),
+          // 対象ドメインを渡すと、サーバ側が実測サマリ（画面数・フォーム数・
+          // 段階の進み）を添えて、対象に即した助言ができるようになる
+          domain: (window._autoRunLastData && window._autoRunLastData.domain) || '',
           history: currentHistory().slice(-MAX_HISTORY),
         }),
       });

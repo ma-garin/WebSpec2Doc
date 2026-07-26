@@ -491,6 +491,56 @@
   box-shadow: var(--shadow-sm);
 }
 
+/* 1フェーズ＝1画面の切替スライド。進む=右から、戻る=左から入る。
+   モーションはトークン（--motion-normal）に合わせ、reduced-motion では停止する */
+.autorun-stage-panel.is-slide-fwd {
+  animation: autorun-slide-in-fwd var(--motion-normal, .2s) ease-out;
+}
+.autorun-stage-panel.is-slide-back {
+  animation: autorun-slide-in-back var(--motion-normal, .2s) ease-out;
+}
+@keyframes autorun-slide-in-fwd {
+  from { transform: translateX(28px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes autorun-slide-in-back {
+  from { transform: translateX(-28px); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .autorun-stage-panel.is-slide-fwd,
+  .autorun-stage-panel.is-slide-back { animation: none; }
+}
+
+/* フェーズ内のHTML中間成果物インラインプレビュー */
+.autorun-stage-artifact {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  background: var(--color-surface-2);
+}
+.autorun-stage-artifact-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.autorun-stage-artifact-label {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+.autorun-stage-artifact-frame {
+  width: 100%;
+  height: 360px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
 .autorun-stage-head { display: grid; gap: 3px; }
 .autorun-stage-title { margin: 0; font-size: var(--text-lg); font-weight: 800; }
 .autorun-stage-purpose {

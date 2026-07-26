@@ -162,6 +162,7 @@ class OpenAIProvider:
                 prompt,
                 VIEWPOINT_SCHEMA_NAME,
                 VIEWPOINT_JSON_SCHEMA,
+                purpose="viewpoints",
             )
             items = validate_viewpoint_payload(raw)
         except (ViewpointValidationError, LLMResponseError) as exc:
@@ -205,18 +206,18 @@ class OpenAIProvider:
     ) -> dict[str, Any]:
         from ingest.llm_extractor import EXTRACTION_JSON_SCHEMA, EXTRACTION_SCHEMA_NAME
         from llm.openai_client import LLMResponseError, request_structured_json
+        from llm.prompt_guard import QA_PRINCIPLES, untrusted_block
 
+        document_lines = "\n".join(f"[{location}] {text}" for location, text in lines)
         prompt = (
-            "あなたは文書解析の専門家です。以下は文書（"
-            f"{source_file}）から抽出したテキスト行です。各行は "
-            "[位置] テキスト の形式です。\n\n"
-            + "\n".join(f"[{location}] {text}" for location, text in lines)
-            + "\n\n"
-            "この文書に書かれている画面・入力項目・業務ルール（計算式・限度値・"
-            "権限条件）・要件（RFP や要件一覧に記載された、実現すべき機能/非機能の"
-            "記述）を抽出してください。"
-            "文書に書かれていないことを推測で補完しないこと。"
-            "各項目には、抽出根拠となった原文をそのまま quote に含めること。"
+            "あなたは文書解析の専門家です。参照文書から画面・入力項目・業務ルール"
+            "（計算式・限度値・権限条件）・要件（RFP や要件一覧に記載された、"
+            "実現すべき機能/非機能の記述）を抽出してください。\n"
+            + QA_PRINCIPLES
+            + "- 文書に書かれていないことを推測で補完しない。\n"
+            "- 各項目には、抽出根拠となった原文をそのまま quote に含める。\n\n"
+            f"文書名: {source_file}（各行は [位置] テキスト の形式）\n"
+            + untrusted_block(document_lines, label="document_text", source="参照文書")
         )
         try:
             return request_structured_json(
@@ -225,6 +226,7 @@ class OpenAIProvider:
                 prompt,
                 EXTRACTION_SCHEMA_NAME,
                 EXTRACTION_JSON_SCHEMA,
+                purpose="document_extract",
             )
         except LLMResponseError as exc:
             logger.warning("LLM 抽出応答を棄却しました（理由: %s）", exc)
@@ -252,6 +254,7 @@ class OpenAIProvider:
                 prompt,
                 UX_REVIEW_SCHEMA_NAME,
                 UX_REVIEW_JSON_SCHEMA,
+                purpose="ux_review",
             )
             items = validate_ux_payload(raw)
         except (UxReviewValidationError, LLMResponseError) as exc:

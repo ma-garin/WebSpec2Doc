@@ -6,7 +6,6 @@ LLM 版は失敗時にルールベースへ自動フォールバックする。
 
 from __future__ import annotations
 
-import json
 import logging
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Any
@@ -550,19 +549,18 @@ def _call_llm_for_abnormal_scenarios(
 ) -> list[AbnormalScenario]:
     """OpenAI API（Structured Outputs）で異常系シナリオを取得する。"""
     from llm.openai_client import request_structured_json
+    from llm.prompt_guard import QA_PRINCIPLES, untrusted_block
 
     screen_info = {
         "screen_type": screen_classification.screen_type,
         "field_count": len(field_data_list),
     }
     prompt = (
-        "あなたは QA エンジニアです。以下の Web 画面情報に基づき異常系テストシナリオを返してください。\n"
-        f"画面情報: {json.dumps(screen_info, ensure_ascii=False)}\n\n"
-        "各シナリオは以下のキーを持つこと: "
-        "category(入力値異常/認証/ネットワーク/業務フロー/セキュリティ), "
-        "title(シナリオタイトル), description(詳細説明), "
-        "affected_fields(影響フィールド名の配列), "
-        "risk_level(高/中/低), test_steps(テストステップ配列 2〜4 件)"
+        "あなたは QA エンジニアです。実測した Web 画面情報から異常系テストシナリオを"
+        "洗い出してください。\n"
+        + QA_PRINCIPLES
+        + "- test_steps は各シナリオ 2〜4 件とする。\n\n"
+        + untrusted_block(screen_info, label="site_data", source="クロール対象サイト")
     )
     parsed = request_structured_json(
         api_key,
@@ -570,6 +568,7 @@ def _call_llm_for_abnormal_scenarios(
         prompt,
         ABNORMAL_SCENARIO_SCHEMA_NAME,
         ABNORMAL_SCENARIO_JSON_SCHEMA,
+        purpose="abnormal_scenarios",
     )
     items = parsed.get("scenarios", [])
     return [
@@ -619,13 +618,22 @@ class ViewpointValidationError(ValueError):
 
 
 def build_viewpoint_prompt(screen_info: dict) -> str:
-    """観点生成用プロンプトを構築する。"""
+    """観点生成用プロンプトを構築する。
+
+    出力形式は Structured Outputs（VIEWPOINT_JSON_SCHEMA）が強制するため、
+    ここではキー仕様を繰り返さない（スキーマ変更時のズレを防ぐ）。
+    画面情報はクロール対象サイト由来の自由文を含むため untrusted_block で区切る。
+    """
+    from llm.prompt_guard import QA_PRINCIPLES, untrusted_block
+
     return (
-        "あなたは QA エンジニアです。以下の Web 画面情報に基づきテスト観点を返してください。\n"
-        f"画面情報: {json.dumps(screen_info, ensure_ascii=False)}\n\n"
-        "各観点は以下のキーを持つこと: "
-        "category(機能/セキュリティ/ユーザビリティ/パフォーマンス/アクセシビリティ), "
-        "viewpoint(観点説明), risk_level(高/中/低), example_cases(文字列配列 2〜3 件)"
+        "あなたは QA エンジニアです。実測した Web 画面情報からテスト観点を洗い出してください。\n"
+        + QA_PRINCIPLES
+        + "- テスト設計に関わる観点は ISTQB の技法名（同値分割・境界値分析・"
+        "デシジョンテーブル・状態遷移・組合せ）で根拠付ける。\n"
+        "- 同じ内容の言い換えを重複して出さない。\n"
+        "- example_cases は各観点 2〜3 件とする。\n\n"
+        + untrusted_block(screen_info, label="site_data", source="クロール対象サイト")
     )
 
 

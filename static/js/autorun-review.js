@@ -6,7 +6,12 @@
 (function () {
   'use strict';
 
-  var state = { domain: '', entries: [], counts: null, busy: false, showAuto: false };
+  // confirmed / audit は render() で描き直す対象。append しただけでは
+  // withBusy 末尾の render() で消えるため、状態として持つ。
+  var state = {
+    domain: '', entries: [], counts: null, busy: false, showAuto: false,
+    confirmed: null, audit: null,
+  };
 
   function $(id) { return document.getElementById(id); }
   function root() { return $('autorun-review'); }
@@ -190,6 +195,15 @@
     });
     wrap.appendChild(head);
 
+    // 畳んだままでも「何を根拠に通したか」は読めるようにする。
+    // 件数だけでは、中身を見ずに承認が成立したことへの判断材料にならない。
+    var basis = document.createElement('p');
+    basis.className = 'arv-auto-basis';
+    basis.textContent =
+      '実測できた事実に基づき、リスクが低いと判定した項目です。人の確認は求めていません。'
+      + '内容は上の見出しから開けます。';
+    wrap.appendChild(basis);
+
     if (state.showAuto) {
       var list = document.createElement('div');
       list.className = 'arv-auto-list';
@@ -252,6 +266,7 @@
 
     host.appendChild(renderAuto());
     host.appendChild(renderFooter());
+    host.appendChild(renderConfirmed());
   }
 
   function renderFooter() {
@@ -354,20 +369,58 @@
       if (failed.length) {
         throw new Error('承認できなかった段階があります: ' + failed.join(' / '));
       }
-      var counts = state.counts || {};
-      renderConfirmed(counts);
+      state.confirmed = state.counts || {};
     });
   }
 
-  function renderConfirmed(counts) {
-    var host = root();
-    if (!host) return;
+  // 記録した事実と、その記録の中身。どちらも render() が描き直す。
+  function renderConfirmed() {
+    var counts = state.confirmed;
+    var frag = document.createDocumentFragment();
+    if (!counts) return frag;
     var box = document.createElement('div');
     box.className = 'arv-confirmed';
-    box.textContent =
+    var text = document.createElement('span');
+    text.textContent =
       '確認済みとして記録しました。要確認 ' + (counts.review || 0) + ' 件 / 自動承認 '
-      + (counts.auto || 0) + ' 件。記録はアクティビティログに残ります。';
-    host.appendChild(box);
+      + (counts.auto || 0) + ' 件。';
+    box.appendChild(text);
+    // 「記録に残ります」とだけ書いて、どこで見られるかを示さないのは案内として不十分。
+    // その場で開けるようにする。
+    box.appendChild(button('記録を見る', showAuditTrail, 'arv-link-btn'));
+    frag.appendChild(box);
+
+    if (state.audit) {
+      var audit = document.createElement('div');
+      audit.className = 'arv-audit';
+      var head = document.createElement('div');
+      head.className = 'arv-audit-head';
+      head.textContent = '承認・確認の記録 ' + state.audit.length + ' 件';
+      audit.appendChild(head);
+      if (!state.audit.length) {
+        audit.appendChild(message('まだ記録がありません。'));
+      } else {
+        var list = document.createElement('ul');
+        list.className = 'arv-audit-list';
+        state.audit.slice(-30).reverse().forEach(function (e) {
+          var li = document.createElement('li');
+          li.textContent = [e.at, e.action, e.stage_id, e.actor, e.detail]
+            .filter(Boolean).join(' / ');
+          list.appendChild(li);
+        });
+        audit.appendChild(list);
+      }
+      frag.appendChild(audit);
+    }
+    return frag;
+  }
+
+  // 誰がいつ何を通したかの記録を、その場に開く（別画面へ飛ばさない）。
+  function showAuditTrail() {
+    return withBusy(async function () {
+      var data = await call('/api/autorun/stages?domain=' + encodeURIComponent(state.domain));
+      state.audit = (data && data.audit) || [];
+    });
   }
 
   async function refresh() {

@@ -2300,6 +2300,29 @@
   border: 0;
 }
 
+/* 自動承認の判断根拠。畳んだままでも読めるようにする。 */
+.arv-auto-basis {
+  margin: 4px 0 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+/* 承認・確認の記録。どこに残るかを書くだけでなく、その場で開けるようにする。 */
+.arv-audit {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, 6px);
+}
+.arv-audit-head { font-size: var(--text-sm); font-weight: 700; }
+.arv-audit-list {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+.arv-audit-list li { margin: 2px 0; word-break: break-all; }
+
 /* 既定の観測範囲。折りたたみに隠すと規模の見当がつかない。 */
 .autorun-scope-default {
   margin: 10px 0 4px;

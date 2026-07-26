@@ -391,6 +391,13 @@ def crawl_site(
                 completed=len(pages),
                 total=max_pages,
                 elapsed_sec=round(time.monotonic() - started_at, 3),
+                # 画面上で「何が取れたか」をその場で示すため、検出数を添える。
+                # 件数が無いと、進捗が数字だけで中身が見えない（利用者の指摘）。
+                forms=len(page_data.forms),
+                links=len(page_data.links),
+                required_inputs=sum(
+                    1 for form in page_data.forms for field in form.fields if field.required
+                ),
             )
             queue.extend(_next_urls(page_data.links, current_depth, visited, depth))
             _polite_delay(page)

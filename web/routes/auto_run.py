@@ -470,7 +470,9 @@ def release_stage_gate(job_id: str, domain: str) -> bool:
         return True
 
 
-def release_all_stage_gates(job_id: str, domain: str) -> bool:
+def release_all_stage_gates(
+    job_id: str, domain: str, decisions: dict[str, Any] | None = None, note: str = ""
+) -> bool:
     """実行条件の確定により、以降すべての段階の関門を解除する。
 
     段階ごとに承認させるのをやめたため、ここで一度に解除する。
@@ -491,10 +493,116 @@ def release_all_stage_gates(job_id: str, domain: str) -> bool:
         if job is None:
             return False
         job.stages_all_released = True
+        job.decisions = dict(decisions or {})
+        job.decisions_note = note
+
+        # 記録して終わらせない。選んだ内容を実行の挙動へ反映する。
+        _apply_decisions_to_policy(job)
+
         job.add_log("実行条件を確定しました。以降の段階は承認済みとして進みます。")
         # 待機中なら起こす。待機していなければフラグだけが効く。
         job._stages_event.set()
         return True
+
+
+def _format_crawl_event(line: str) -> str:
+    """CRAWL_EVENT 行を、人が読める1行へ整える。
+
+    取得できた件数だけでなく、スキップ・失敗も理由つきで出す。
+    「取得できなかった」を隠して空欄で通さないため。
+    """
+    if not line.startswith("CRAWL_EVENT:"):
+        return ""
+    try:
+        event = json.loads(line[len("CRAWL_EVENT:") :])
+    except (ValueError, TypeError):
+        return ""
+    if not isinstance(event, dict):
+        return ""
+
+    kind = str(event.get("event", ""))
+    url = str(event.get("url", ""))
+    path = _short_path(url)
+
+    if kind == "crawl_started":
+        return f"クロール開始: 最大 {event.get('total', '?')} ページ / 並列 {event.get('parallelism', 1)}"
+    if kind == "page_started":
+        return f"取得中  {path}（{event.get('index', '?')} / {event.get('total', '?')}）"
+    if kind == "page_completed":
+        detail = f"フォーム{event.get('forms', 0)}件"
+        required = event.get("required_inputs", 0)
+        if required:
+            detail += f"（必須{required}）"
+        detail += f" ・ リンク{event.get('links', 0)}件"
+        return (
+            f"取得済み {path} — {detail}"
+            f"（{event.get('completed', '?')} / {event.get('total', '?')}）"
+        )
+    if kind == "page_skipped":
+        return f"スキップ {path} — {event.get('reason', '理由不明')}"
+    if kind == "checkpoint_saved":
+        return f"途中保存: {event.get('saved_count', 0)}件"
+    if kind == "crawl_completed":
+        return f"クロール完了: {event.get('completed', 0)} / {event.get('total', '?')} ページ"
+    return ""
+
+
+def _short_path(url: str) -> str:
+    """ログに出す用に、URL をパスだけへ縮める。"""
+    if not url:
+        return "(URL不明)"
+    from urllib.parse import urlparse
+
+    parsed = urlparse(url)
+    return (parsed.path or "/") + (f"?{parsed.query}" if parsed.query else "")
+
+
+def _apply_decisions_to_policy(job: AutoRunJob) -> None:
+    """確定した実行条件を run_policy へ反映し、選んだ結果をログに残す。
+
+    以前は選択内容を保存するだけで挙動が変わらなかった。「送信まで実行」を
+    選んでも送信されないのは、選ばせている意味がない。
+    """
+    answers = job.decisions or {}
+
+    side_effect = (answers.get("side_effect") or {}).get("choice", "observe_only")
+    allow_submit = side_effect == "submit"
+    job.run_policy["allow_submit"] = allow_submit
+    job.add_log(
+        "フォーム送信: 実行します（対象サイトに実データが登録されます）"
+        if allow_submit
+        else "フォーム送信: 行いません（入力の観測にとどめます）"
+    )
+
+    auth_scope = (answers.get("auth_scope") or {}).get("choice", "public_only")
+    job.run_policy["auth_scope"] = auth_scope
+    if auth_scope == "authenticated":
+        job.add_log("認証範囲: ログイン後の画面も対象にします（認証情報が必要です）")
+    else:
+        job.add_log("認証範囲: 未ログインで到達できる範囲のみを対象にします")
+
+    exit_criteria = answers.get("exit_criteria") or {}
+    if exit_criteria.get("choice") == "custom" and exit_criteria.get("text"):
+        job.run_policy["exit_criteria"] = exit_criteria["text"]
+        job.add_log(f"合否基準: {exit_criteria['text']}")
+    else:
+        job.run_policy["exit_criteria"] = "severity"
+        job.add_log("合否基準: 重大度で整理し、最終判断は人が行います")
+
+    browser = answers.get("browser") or {}
+    if browser.get("choice") == "custom" and browser.get("text"):
+        # 実行環境は Chromium のみ検証済み。指定は記録するが、勝手に切り替えない。
+        job.run_policy["browser_request"] = browser["text"]
+        job.add_log(
+            f"ブラウザ指定: {browser['text']}（未対応のため Chromium で実行します。"
+            "この実行は指定ブラウザでの確認になっていません）"
+        )
+    else:
+        job.run_policy["browser_request"] = ""
+
+    if job.decisions_note:
+        job.run_policy["note"] = job.decisions_note
+        job.add_log(f"追加の指示: {job.decisions_note}")
 
 
 #: 段階ごとの関門メッセージ（仕様7〜14: 各段階で個別に提示・承認する）。
@@ -799,10 +907,16 @@ def _phase_crawl(job: AutoRunJob, depth: int, max_pages: int) -> None:
                 proc.terminate()
                 return
             line = line.rstrip()
-            if line:
-                # クロールCLIの生出力は開発者向け（UIでは既定非表示、トグルで表示）。
-                # 生ログがそのまま表示され読みにくい、というドッグフーディング指摘への対応。
-                job.add_log(f"[cli] {line}")
+            if not line:
+                continue
+            # クロールの進捗イベントは、いま何を取得しているか・何が取れたかを
+            # その場で見せる形に整える。生ログのままだと中身が読み取れない。
+            readable = _format_crawl_event(line)
+            if readable:
+                job.add_log(readable)
+                continue
+            # それ以外の生出力は開発者向け（UIでは既定非表示、トグルで表示）。
+            job.add_log(f"[cli] {line}")
         proc.wait(timeout=600)
         job._proc = None
     except subprocess.TimeoutExpired:

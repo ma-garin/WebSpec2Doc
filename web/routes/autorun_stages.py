@@ -213,7 +213,8 @@ def api_submit_decisions() -> tuple[dict, int] | dict:
 
     from web.routes.auto_run import release_all_stage_gates
 
-    released = release_all_stage_gates(job_id, domain)
+    note = str(payload.get("note", "")).strip()
+    released = release_all_stage_gates(job_id, domain, normalized, note)
     return {
         "domain": domain,
         "answers": normalized,

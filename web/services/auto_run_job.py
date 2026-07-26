@@ -68,6 +68,11 @@ class AutoRunJob:
     # 実行条件を一括で確定した場合に True。以降の段階では止まらない。
     # 生成済みの内容を段階ごとに承認させないため（利用者の指摘）。
     stages_all_released: bool = False
+    # 実行条件ダイアログで確定した内容（decision_id -> {choice,label,text}）。
+    # 記録だけで終わらせず、実行の挙動へ反映する。
+    decisions: dict[str, Any] = field(default_factory=dict)
+    # 利用者の自由記述による追加指示。実行方針として証跡に残す。
+    decisions_note: str = ""
 
     _proc: Any = field(default=None, init=False, repr=False, compare=False)
     # ジョブ開始リクエスト時に解決したテナントスコープ済み出力先（Path）。
@@ -137,6 +142,8 @@ class AutoRunJob:
             "elapsed_sec": self.elapsed_sec(),
             "input_request": self.input_request,
             "run_policy": self.run_policy,
+            "decisions": self.decisions,
+            "decisions_note": self.decisions_note,
             "step_data": self.step_data,
             "viewpoint": {
                 "set_id": self.viewpoint_set_id,

@@ -24,6 +24,9 @@ DOMAIN_RE = re.compile(r"^[A-Za-z0-9._:\[\]-]{1,253}$")
 ENV_KEY_RE = re.compile(r"^[A-Z_][A-Z0-9_]*$")
 MAX_DEPTH = 10
 MAX_PAGES_LIMIT = 500
+#: クロールの並列数の上限。src/main.py の MAX_PARALLELISM と同じ値にする
+#: （GUI は subprocess で CLI を呼ぶため、片方だけ上げても実効値は上がらない）。
+MAX_PARALLELISM = 8
 
 _PREVIEW_MIME = {
     ".html": "text/html; charset=utf-8",

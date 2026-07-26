@@ -54,6 +54,11 @@ DIFF_REPORT_FILE_NAME = "diff_report.html"
 FIRST_SNAPSHOT_MESSAGE = "初回スナップショットを保存しました。次回実行から差分を検出できます"
 
 logger = logging.getLogger(__name__)
+
+#: クロールの並列数の上限。GUI・CLI の双方でここを上限としてクランプする。
+#: 対象サイトへの負荷が上限を決める要因のため、増やす際は運用側の合意が要る。
+MAX_PARALLELISM = 8
+
 _STOP_REQUESTED = threading.Event()
 _EVENT_WRITE_LOCK = threading.Lock()
 
@@ -161,7 +166,7 @@ def parse_args() -> argparse.Namespace:
         "--parallelism",
         type=int,
         default=1,
-        help="クロールの並列数（明示URL・オートクローリング共通。GUI既定: 2、最大: 4）",
+        help="クロールの並列数（明示URL・オートクローリング共通。GUI既定: 4、最大: 8）",
     )
     parser.add_argument(
         "--fail-on-drift",
@@ -746,7 +751,7 @@ def _do_crawl(
             url_list,
             output_dir=output_dir,
             auth_state=auth_state,
-            parallelism=max(1, min(int(getattr(args, "parallelism", 1)), 4)),
+            parallelism=max(1, min(int(getattr(args, "parallelism", 1)), MAX_PARALLELISM)),
             respect_robots=True,
             on_event=on_event,
             on_checkpoint=on_checkpoint,
@@ -765,7 +770,7 @@ def _do_crawl(
         stop_requested=_STOP_REQUESTED.is_set,
         ux_review=ux_review,
         on_ux_result=on_ux_result,
-        parallelism=max(1, min(int(getattr(args, "parallelism", 1)), 4)),
+        parallelism=max(1, min(int(getattr(args, "parallelism", 1)), MAX_PARALLELISM)),
     )
 
 

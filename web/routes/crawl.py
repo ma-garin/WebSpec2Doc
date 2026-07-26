@@ -8,7 +8,7 @@ from pathlib import Path
 
 from flask import Blueprint, Response, request, send_file
 
-from web.config import MAX_DEPTH, MAX_PAGES_LIMIT, OUTPUT_DIR
+from web.config import MAX_DEPTH, MAX_PAGES_LIMIT, MAX_PARALLELISM, OUTPUT_DIR
 from web.process import _RUNNING_PROCS, _terminate_proc
 from web.summary import _summary_for_domain
 from web.tenancy import scoped_output_dir
@@ -54,7 +54,7 @@ def run() -> Response:
     compare = request.form.get("compare", "false") == "true"
     auth = _safe_auth_path(request.form.get("auth", "").strip())
     crawl_mode = request.form.get("crawl_mode", "").strip()
-    parallelism = str(_clean_int(request.form.get("parallelism", "4"), 4, 1, 4))
+    parallelism = str(_clean_int(request.form.get("parallelism", "4"), 4, 1, MAX_PARALLELISM))
     domain = _domain_of(urls.split(",")[0]) if urls else ""
     reference_docs = _safe_reference_doc_paths(request.form.get("reference_docs", ""), domain)
 

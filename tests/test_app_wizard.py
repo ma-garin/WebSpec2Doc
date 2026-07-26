@@ -200,8 +200,8 @@ def test_discover_to_crawl_flow(tmp_path: Path, monkeypatch) -> None:
     assert popen_calls[0][popen_calls[0].index("--parallelism") + 1] == "4"
 
 
-def test_run_parallelism_is_configurable_within_1_to_4(tmp_path: Path, monkeypatch) -> None:
-    """並列数はUIから指定でき（既定4）、1〜4の範囲にクランプされる
+def test_run_parallelism_is_configurable_within_1_to_8(tmp_path: Path, monkeypatch) -> None:
+    """並列数はUIから指定でき（既定4）、1〜8の範囲にクランプされる
     （ドッグフーディング要望: 分析時間を短縮したい、への対応）。"""
     _patch_output_dirs(tmp_path, monkeypatch)
     _write_report_files(tmp_path)
@@ -215,17 +215,17 @@ def test_run_parallelism_is_configurable_within_1_to_4(tmp_path: Path, monkeypat
 
     _client().post(
         "/run",
-        data={"urls": "https://example.com/", "format": "md,html", "parallelism": "4"},
+        data={"urls": "https://example.com/", "format": "md,html", "parallelism": "8"},
     )
     cmd = popen_calls[0]
-    assert cmd[cmd.index("--parallelism") + 1] == "4"
+    assert cmd[cmd.index("--parallelism") + 1] == "8"
 
     _client().post(
         "/run",
         data={"urls": "https://example.com/", "format": "md,html", "parallelism": "99"},
     )
     cmd2 = popen_calls[1]
-    assert cmd2[cmd2.index("--parallelism") + 1] == "4"  # 上限4にクランプ
+    assert cmd2[cmd2.index("--parallelism") + 1] == "8"  # 上限8にクランプ
 
 
 def test_discover_stream_emits_run_id_and_registers_cancellable_process(monkeypatch) -> None:

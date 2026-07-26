@@ -12,9 +12,10 @@ async function renderTestRuns() {
     uiEmpty(host, {
       icon: '🧪',
       title: 'まだ実行していません',
-      desc: 'テストケースタブで対象を選び「実行」を押すと、ケースごとの PASS/FAIL がここに表示されます。',
-      actionLabel: 'テストケースタブを開く →',
-      onAction: () => selectResultTab('testcases'),
+      desc: '「自動化可」のテストケースを実行すると、ケースごとの PASS/FAIL がここに表示されます。'
+        + '対象を絞って実行したい場合はテストケースタブから実行してください。',
+      actionLabel: '▶ テストを実行する',
+      onAction: () => runTestsFromRunsTab(),
     });
     return;
   }
@@ -127,7 +128,9 @@ async function renderTestRuns() {
     '<div class="runs-header">' +
     '<div><div class="hero-section-title" style="margin:0">テスト実行結果</div>' +
     `<p class="muted-copy runs-meta">実行日時: ${escHtml(runAt || '不明')}${r.duration_ms ? ' ／ 所要 ' + Math.round(r.duration_ms / 1000) + '秒' : ''}</p></div>` +
-    `<div class="runs-header-actions">${linkBtn(files.playwright_html, '実行レポートを開く', true)} ${devLink} ${dlSpec}</div>` +
+    '<div class="runs-header-actions">' +
+    '<button type="button" class="btn-outline-sm" id="runs-rerun-btn">▶ 再実行</button>' +
+    `${linkBtn(files.playwright_html, '実行レポートを開く', true)} ${devLink} ${dlSpec}</div>` +
     '</div>' +
     (r.interrupted ? `<div class="runs-stale-note">⚠ ${escHtml(r.error || '実行が途中で中断されました。')}</div>` : '') +
     (stale ? '<div class="runs-stale-note">⚠ この実行結果は最終クロール（' + escHtml(crawledAt) + '）より前のものです。仕様が更新されている可能性があるため、再実行を推奨します。</div>' : '') +
@@ -136,4 +139,57 @@ async function renderTestRuns() {
       ? '<table class="ov-screens runs-table"><thead><tr><th>テストケースID</th><th>結果</th><th>時間</th><th>エラー</th></tr></thead><tbody>' + rows + '</tbody></table>'
       : (r.error ? `<div class="runs-unavailable-card"><div class="runs-unavailable-title">⚠ 実行エラー</div><p class="runs-unavailable-reason">${escHtml(r.error)}</p></div>` : '')) +
     '</div>';
+  host.querySelector('#runs-rerun-btn')?.addEventListener('click', () => runTestsFromRunsTab());
+}
+
+// ---- このタブから直接テストを実行する ----
+// 起動導線がテストケースタブにしか無く、「テスト実行」タブを開いても実行できなかった。
+// 対象は「自動化可」の全ケース（絞り込んで実行したい場合はテストケースタブを使う）。
+function _runsDomain() {
+  return (document.getElementById('r-domain') || {}).textContent || '';
+}
+
+async function runTestsFromRunsTab() {
+  const domain = _runsDomain();
+  if (!domain) { showToast('対象サイトを特定できませんでした', 'error'); return; }
+  const ok = await confirmDialog({
+    title: 'テストを実行',
+    message: '自動化可のテストケースを実行します。対象サイトへ実際にアクセスします。',
+    confirmLabel: '実行する',
+  });
+  if (!ok) return;
+
+  const host = resultHero;
+  const started = Date.now();
+  host.innerHTML =
+    '<div class="hero-msg"><span class="spinner"></span>' +
+    '<span id="runs-progress">実行中…</span>' +
+    '<span class="muted-copy">完了するまでこのタブを開いたままにしてください。</span></div>';
+  const tick = setInterval(() => {
+    const el = document.getElementById('runs-progress');
+    if (el) el.textContent = `実行中… 経過 ${Math.round((Date.now() - started) / 1000)}秒`;
+  }, 1000);
+
+  try {
+    const res = await fetch('/api/testcases/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ domain }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '実行に失敗しました');
+    const s = (data.run && data.run.summary) || {};
+    showToast(
+      `実行完了: PASS ${s.passed || 0} / FAIL ${s.failed || 0} / 全${s.total || 0}件`,
+      data.ok ? 'success' : 'error');
+    await showResults(domain, 'runs');
+  } catch (e) {
+    uiError(host, {
+      title: 'テストを実行できませんでした',
+      message: e.message,
+      onRetry: () => renderTestRuns(),
+    });
+  } finally {
+    clearInterval(tick);
+  }
 }

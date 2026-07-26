@@ -2,6 +2,8 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import crypto from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -13,12 +15,50 @@ const outDir = path.join(
   "40_test",
   "zero-base-20260726",
 );
-const contract = JSON.parse(fs.readFileSync(contractPath, "utf8"));
-const features = contract.features;
+const contractRaw = fs.readFileSync(contractPath, "utf8");
+const contract = JSON.parse(contractRaw);
+
+// 契約内の同一リスト重複はケースIDの黙示的リネーム(-D2)を生むため、
+// 取り込み時に除去し、データ品質所見として manifest へ記録する。
+const LIST_KEYS = [
+  "symbols", "failure_modes", "outputs", "persistence",
+  "ui_files", "route_files", "core_files", "required_tests",
+];
+const contractDuplicates = [];
+const features = contract.features.map((feature) => {
+  const normalized = { ...feature };
+  for (const key of LIST_KEYS) {
+    const list = feature[key] ?? [];
+    const seen = new Set();
+    normalized[key] = list.filter((item) => {
+      if (seen.has(item)) {
+        contractDuplicates.push({ feature: feature.feature_id, key, value: item });
+        return false;
+      }
+      seen.add(item);
+      return true;
+    });
+  }
+  return normalized;
+});
+
+// テストベースの版を固定する。ドリフト(R-07)を読者が検出できるようにする。
+const git = (args) => {
+  try {
+    return execFileSync("git", args, { cwd: repoRoot, encoding: "utf8" }).trim();
+  } catch {
+    return "unknown";
+  }
+};
+const baseline = {
+  repo_commit: git(["rev-parse", "--short", "HEAD"]),
+  contract_dirty: git(["status", "--porcelain", "--", "quality/feature_contracts.yml"]) !== "",
+  contract_sha256: crypto.createHash("sha256").update(contractRaw).digest("hex").slice(0, 16),
+};
 
 fs.mkdirSync(outDir, { recursive: true });
 
-const VERSION = "1.0";
+const VERSION = "1.1";
 const CREATED = "2026-07-26";
 const SUT_URL = "http://127.0.0.1:8766/systems";
 const DATA_URL = "http://127.0.0.1:8767/index.html";
@@ -39,12 +79,15 @@ const autorunStages = [
   "テストケース",
   "Playwright自動化",
 ];
-const stageEvents = ["開始", "承認", "差戻し", "再開", "取消", "失敗回復"];
+// 2026-07-26 commit 8acb4a9 で段階ごとの承認UIは廃止され、実行条件の確定
+// ダイアログが以降の関門を一括解除する(release_all_stage_gates)。内部の
+// 8段階状態モデル(pending/generated/approved/skipped)と段階単位の監査記録は維持。
+const stageEvents = ["生成完了", "実行条件の確定（一括解除）", "SKIP適用", "取消", "失敗回復", "再表示・再開"];
 const journeys = [
   "URLから画面候補を発見する",
   "クロールして仕様書を生成する",
   "ログイン後の画面を取得する",
-  "AutoRunを段階承認して完了する",
+  "AutoRunの実行条件を確定して完了する",
   "生成成果物を確認し根拠へ遡る",
   "差分を検出して重要度を判断する",
   "文書と実測の不一致を確認する",
@@ -73,17 +116,19 @@ const esc = (value) =>
     .replaceAll("'", "&#39;");
 const idPart = (value) => {
   const raw = String(value ?? "none");
-  const ascii = raw
-    .replace(/[^A-Za-z0-9_-]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 48);
-  if (ascii) return ascii;
+  const full = raw.replace(/[^A-Za-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "");
+  const ascii = full.slice(0, 48);
   let hash = 2166136261;
   for (const char of raw) {
     hash ^= char.codePointAt(0);
     hash = Math.imul(hash, 16777619);
   }
-  return `u${(hash >>> 0).toString(36)}`;
+  const suffix = `u${(hash >>> 0).toString(36)}`;
+  if (!ascii) return suffix;
+  // ASCII化・切詰めが情報を失う場合はハッシュで一意性を保証する
+  // （例: comparison.html と comparison.html「網羅性サマリ」節 の潰れ防止）。
+  if (/[^\x20-\x7E]/.test(raw) || full.length > 48) return `${ascii}-${suffix}`;
+  return ascii;
 };
 const flatten = (key) => features.flatMap((feature) => feature[key] ?? []);
 const countBy = (items, key) =>
@@ -108,6 +153,9 @@ const inventory = {
   coreRefs: flatten("core_files").length,
   risk: countBy(features, "risk_level"),
 };
+const riskSummary = ["critical", "high", "medium", "low"]
+  .map((level) => `${level} ${inventory.risk[level] ?? 0}`)
+  .join(" / ");
 
 function caseRow({
   id,
@@ -502,18 +550,84 @@ function buildSystemCases() {
             category: "AutoRun時系列",
             quality: "信頼性／相互作用能力",
             technique: "状態遷移・N-switch",
-            condition: `${stage} で${event}したときの遷移`,
-            precondition: `対象ステージ直前まで完了し、${viewport}で表示する。`,
+            condition: `内部段階「${stage}」に対し「${event}」が起きたときの状態整合`,
+            precondition: `対象段階の直前まで生成が完了し、${viewport}で成果物ビューを表示する。段階別承認UIは存在しない（実行条件の確定ダイアログに集約済み）。`,
             data: `stage=${stage}; event=${event}; viewport=${viewport}`,
-            steps: `1. ${stage} を開く。 2. ${event}を行う。 3. 前後ステージ、保存状態、操作可能性を確認する。`,
-            expected: "許可遷移だけが成立し、承認前成果物は確定扱いにならない。再表示後も同一状態で、進捗と主操作が矛盾しない。",
+            steps: `1. 成果物ビューで ${stage} の内容を確認する。 2. ${event}を発生させる（確定は実行条件ダイアログ経由、release_all_stage_gatesの一括解除を含む）。 3. 内部状態(pending/generated/approved/skipped)、段階単位の監査記録、画面の進捗表示を照合する。`,
+            expected: "許可遷移だけが成立し、確定前の成果物は確定扱いにならない。一括解除後も監査記録は段階単位で残り、再表示後も同一状態で、進捗と主操作が矛盾しない。",
             automation: "自動＋目視",
-            evidence: "遷移表照合、画面、状態API",
-            source: "src/autorun/stages.py:8-stage-model",
+            evidence: "遷移表照合、画面、状態API、段階別監査記録",
+            source: "src/autorun/stages.py:8-stage-model + commit 8acb4a9 (実行条件確定ダイアログ)",
           }),
         );
       }
     }
+  }
+  // セキュリティ攻撃ケース: リスク登録簿 R-02/R-03/R-04/R-10 と TD-5 を
+  // 実ケースへ接続する。HTTP境界を持つ critical/high 機能に適用する。
+  const attackProfiles = [
+    ["SSRF", "内部アドレス・リダイレクト誘導URLを入力し、内部ネットワークへの到達と外部送信を試みる"],
+    ["パストラバーサル", "../ や絶対パスを含む識別子で他テナント・システム領域のファイル参照を試みる"],
+    ["XSS", "格納型・反射型のスクリプト断片を入力し、成果物表示・一覧・履歴でのエスケープ欠落を試す"],
+    ["CSRF-Origin", "Origin/Referer不一致・トークン欠落の状態変更要求を送る"],
+    ["プロンプト注入", "クロール対象コンテンツへ指示文を混入させ、LLM有効時の逸脱出力・外部送信を試みる"],
+    ["認可バイパス", "権限のない主体で直接URL・APIを指定し、認可チェックの網羅を試す"],
+  ];
+  for (const feature of features) {
+    if (!(feature.route_files ?? []).length) continue;
+    if (!["critical", "high"].includes(feature.risk_level)) continue;
+    for (const [attack, description] of attackProfiles) {
+      cases.push(
+        caseRow({
+          id: `ST-${idPart(feature.feature_id)}-SEC-${idPart(attack)}`,
+          feature,
+          phase: "システム",
+          category: "セキュリティ攻撃",
+          quality: "セキュリティ／安全性",
+          technique: "攻撃者視点・ネガティブテスト",
+          condition: `${feature.name} に対する${attack}攻撃の遮断`,
+          precondition: "隔離環境と合成データのみを使用し、実外部サイトへ攻撃トラフィックを送らない。送信ゲートウェイの監査ログを observable にする。",
+          data: `attack=${attack}; profile=TD-5; ${description}`,
+          steps: `1. ${description}。 2. 応答、成果物、保存状態、送信ゲートウェイのログを確認する。 3. 同一攻撃を再試行し再現性を確認する。`,
+          expected: "攻撃入力は拒否または無害化され、内部情報・認証情報・他テナントデータの露出、意図しない外部送信、スクリプト実行が発生しない。試行は監査ログに記録される。",
+          automation: "自動",
+          evidence: "HTTP記録、送信ゲートウェイログ、成果物検査、監査ログ",
+          source: `risk-register:R-02/R-03/R-04/R-10 + TD-5 + feature_contracts:${feature.feature_id}:route_files`,
+        }),
+      );
+    }
+  }
+  // 容量・持久・キャンセルケース: R-11 と TD-6 を実ケースへ接続する。
+  const capacityScenarios = [
+    ["大規模サイト", "画面数が上限近傍のサイトをクロールする", "処理が完了または明示的に上限打切りされ、部分結果と理由が表示される。"],
+    ["巨大成果物", "最大長の本文・多数項目の成果物を生成・表示する", "生成・表示・エクスポートが劣化なく完了し、切捨てが起きる場合は明示される。"],
+    ["並行実行", "2セッションで同時に実行・編集を行う", "相互破壊・デッドロック・他セッションデータの混入がない。"],
+    ["長時間持久", "連続実行を長時間継続する", "メモリ・ディスクの単調増加や応答劣化の発散がなく、証跡が欠落しない。"],
+    ["実行中キャンセル", "実行途中で取消し、直後に再実行する", "取消は即時反映され、再実行が汚染された状態から開始されない。"],
+    ["低速・切断", "低速ネットワークと途中切断を注入する", "無限待機せず、タイムアウトと再開手段が提示される。"],
+    ["容量逼迫", "保存先ディスク残量の逼迫状態で実行する", "書込み失敗が検出・通知され、既存データが破損しない。"],
+    ["大量履歴", "多数の実行履歴・スナップショットがある状態で一覧を表示する", "一覧表示・検索が実用時間内に応答し、件数表示が正確である。"],
+  ];
+  for (const [name, action, oracle] of capacityScenarios) {
+    cases.push(
+      caseRow({
+        id: `ST-CAP-${idPart(name)}`,
+        feature: null,
+        phase: "システム",
+        category: "容量・持久",
+        quality: "性能効率性／信頼性",
+        technique: "容量境界・持久・キャンセル",
+        condition: `${name}条件下での継続稼働と回復`,
+        precondition: "資源使用量（CPU・メモリ・ディスク・応答時間）を計測できる環境を準備する。閾値はG0で合意した値を用いる。",
+        data: `scenario=${name}; profile=TD-6`,
+        steps: `1. ${action}。 2. 資源使用量と応答時間を記録する。 3. 完了・打切り・回復の挙動と証跡を確認する。`,
+        expected: `${oracle} G0合意の性能閾値を超過しない。`,
+        risk: "high",
+        automation: "自動＋計測",
+        evidence: "資源メトリクス、応答時間系列、証跡ログ",
+        source: "risk-register:R-11 + TD-6",
+      }),
+    );
   }
   for (const journey of journeys) {
     for (const viewport of viewports) {
@@ -659,12 +773,8 @@ const phaseCases = {
   acceptance: buildAcceptanceCases(),
 };
 const allCases = Object.values(phaseCases).flat();
-const caseIdOccurrences = new Map();
-for (const testCase of allCases) {
-  const occurrence = (caseIdOccurrences.get(testCase.id) ?? 0) + 1;
-  caseIdOccurrences.set(testCase.id, occurrence);
-  if (occurrence > 1) testCase.id = `${testCase.id}-D${occurrence}`;
-}
+// ID衝突は黙示的リネームせず生成を失敗させる（契約重複は読込時に除去済みのため、
+// ここでの衝突は idPart の切詰め・ハッシュ衝突を意味し、命名規則の修正が必要）。
 const allCaseIds = allCases.map((testCase) => testCase.id);
 if (new Set(allCaseIds).size !== allCaseIds.length) {
   const seen = new Set();
@@ -704,7 +814,7 @@ function layout({ title, active, hero, body, script = "" }) {
 <html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)} | WebSpec2Doc 第三者検証</title><style>${CSS}</style></head>
 <body><div class="shell"><aside class="side"><h1>WebSpec2Doc QA</h1><p>第三者検証・承認前テストウェア<br>版 ${VERSION} / ${CREATED}</p>${nav}</aside>
-<main class="main"><div class="page">${hero}${body}<p class="footer">文書ID: WS2D-ZBQA-${active.toUpperCase()} / 状態: 承認待ち / テスト未実行 / 生成元: quality/feature_contracts.yml</p></div></main></div>${script}</body></html>`;
+<main class="main"><div class="page">${hero}${body}<p class="footer">文書ID: WS2D-ZBQA-${active.toUpperCase()} / 版 ${VERSION} / 状態: 承認待ち / テスト未実行 / 生成元: quality/feature_contracts.yml @ commit ${esc(baseline.repo_commit)}${baseline.contract_dirty ? "+未コミット変更" : ""} (sha256 ${esc(baseline.contract_sha256)})</p></div></main></div>${script}</body></html>`;
 }
 
 function hero(title, subtitle, count) {
@@ -779,7 +889,7 @@ function phasePage({ key, title, subtitle, cases, plan, analysis, design, entry,
 <section id="plan"><h2>1. テスト計画・方針</h2>${plan}
 <div class="grid columns"><div class="card"><h3>開始基準</h3>${entry}</div><div class="card"><h3>終了基準</h3>${exit}</div></div>
 <h3>環境・データ</h3>${environment}</section>
-<section id="analysis"><h2>2. テスト分析</h2>${analysis}<div class="callout warn"><strong>分析上の原則:</strong> 要件文書の「33機能」「ISO 25010の8特性」「過去の合格件数」は現行品質契約と不一致のため、合格根拠に使用しない。40機能の機械可読契約と実行時観測を正とする。</div></section>
+<section id="analysis"><h2>2. テスト分析</h2>${analysis}<div class="callout warn"><strong>分析上の原則:</strong> 要件文書の「33機能」「ISO 25010の8特性」「過去の合格件数」は現行品質契約と不一致のため、合格根拠に使用しない。${inventory.features}機能の機械可読契約（commit ${esc(baseline.repo_commit)} / sha256 ${esc(baseline.contract_sha256)}）と実行時観測を正とする。</div></section>
 <section id="design"><h2>3. テストアーキテクチャ・設計</h2>${design}${testArchitecture()}<h3>ケース群と厚み</h3>${phaseSummaryCards(cases)}</section>
 <section id="cases"><h2>4. 具体的テストケース</h2><p>全件に対象、テスト条件、前提、データ、手順、期待結果、証跡、導出元を付与した。検索・絞込みが可能。</p>${caseTable(cases)}</section>`,
     script: filterScript,
@@ -791,13 +901,13 @@ const unitHtml = phasePage({
   title: "単体テスト仕様",
   subtitle: "関数・クラス・生成器・永続化境界を単離し、内部品質と局所的な機能契約を証明する。",
   cases: phaseCases.unit,
-  plan: `<p><strong>目的:</strong> 164シンボル参照と40機能のドメイン規則を最小単位で検証し、欠陥を結合前に局所化する。</p>
+  plan: `<p><strong>目的:</strong> ${inventory.symbols}シンボル参照と${inventory.features}機能のドメイン規則を最小単位で検証し、欠陥を結合前に局所化する。</p>
   <p><strong>範囲:</strong> src/、web/の純粋ロジック、検証、変換、シリアライズ、エラー分類、パス・キー生成。UI描画と実ネットワークは対象外。</p>
   <p><strong>方針:</strong> 高リスクは正常・不正・故障注入・不変条件を必須化。行カバレッジだけでなく分岐、条件、ミューテーション生存を評価する。</p>`,
   entry: "<ul><li>対象シンボルと契約が特定済み</li><li>外部依存を制御可能</li><li>期待結果のオラクルがレビュー済み</li></ul>",
   exit: "<ul><li>P0/P1 100%実行・合格</li><li>全体合格率99%以上</li><li>変更コード分岐100%、全体分岐80%以上</li><li>重大ミューテーション生存0</li></ul>",
   environment: `<p>Pythonのプロジェクト固定版、pytest、隔離一時領域、固定時刻・乱数、ネットワーク遮断。テストデータは最小有効値、境界値、欠損、型違反、Unicode、パストラバーサルを使用する。</p>`,
-  analysis: `<p>入力領域、出力スキーマ、副作用、例外、状態不変条件、セキュリティ境界をテスト条件へ分解した。母数はシンボル参照164×正常/不正、故障モード187、成果物128、永続化54、必須経路150。</p>`,
+  analysis: `<p>入力領域、出力スキーマ、副作用、例外、状態不変条件、セキュリティ境界をテスト条件へ分解した。母数はシンボル参照${inventory.symbols}×正常/不正、故障モード${inventory.failures}、成果物${inventory.outputs}、永続化${inventory.persistence}、必須経路${inventory.required}。</p>`,
   design: `<p>同値分割・境界値分析・デシジョンテーブル・ホワイトボックス条件網羅・フォールトインジェクション・プロパティベース・ミューテーションを使い分ける。テストダブルは観測性・制御性のために使用し、実装詳細への過結合を避ける。</p>`,
 });
 
@@ -807,28 +917,28 @@ const integrationHtml = phasePage({
   subtitle: "UI、HTTPルート、コア、永続化、成果物表示の接続契約と状態の受渡しを検証する。",
   cases: phaseCases.integration,
   plan: `<p><strong>目的:</strong> コンポーネント単体では見えない型・状態・認証・エラー・データ欠落を境界ごとに検出する。</p>
-  <p><strong>範囲:</strong> UI→Route、Route→Core、Core→Artifact、33ルート参照、成果物パイプライン、永続化とテナント境界。実ブラウザの視覚品質はシステムへ委譲する。</p>
+  <p><strong>範囲:</strong> UI→Route、Route→Core、Core→Artifact、${inventory.routeRefs}ルート参照、成果物パイプライン、永続化とテナント境界。実ブラウザの視覚品質はシステムへ委譲する。</p>
   <p><strong>方針:</strong> 各必須経路を3境界で追跡し、正常、入力違反、権限不足、下流障害、再試行、並行性を検証する。</p>`,
   entry: "<ul><li>関連単体P0/P1合格</li><li>契約・スキーマ・エラー分類が固定</li><li>テスト用ワークスペースを分離</li></ul>",
   exit: "<ul><li>P0/P1 100%実行・合格</li><li>契約違反0、未分類5xx 0</li><li>テナント越境0、未説明のデータ損失0</li><li>再試行非冪等欠陥0</li></ul>",
   environment: `<p>Flask test clientまたは隔離サーバ、実ファイル/DBの一時領域、契約スタブ、複数セッション。HTTP要求、CSRF/Origin、期限切れセッション、競合書込み、部分成果物を使用する。</p>`,
-  analysis: `<p>150必須経路を3つの接続点へ展開し、33ルート参照×4プロトコル状態、128成果物×2受渡し、54永続化先×3状態として分析した。重点は認証・テナント・エラー意味論・ラウンドトリップ整合性。</p>`,
+  analysis: `<p>${inventory.required}必須経路を3つの接続点へ展開し、${inventory.routeRefs}ルート参照×4プロトコル状態、${inventory.outputs}成果物×2受渡し、${inventory.persistence}永続化先×3状態として分析した。重点は認証・テナント・エラー意味論・ラウンドトリップ整合性。</p>`,
   design: `<p>インタフェース分析、API契約、データフロー、ラウンドトリップ、状態遷移、並行性、フォールトインジェクションを採用。境界ごとに相関IDと前後ハッシュを証跡化する。</p>`,
 });
 
 const systemHtml = phasePage({
   key: "system",
   title: "システムテスト仕様",
-  subtitle: "40機能を稼働形態どおりに通し、機能・非機能・表示・状態・証跡を横断して評価する。",
+  subtitle: `${inventory.features}機能を稼働形態どおりに通し、機能・非機能・表示・状態・証跡を横断して評価する。`,
   cases: phaseCases.system,
   plan: `<p><strong>目的:</strong> ${SUT_URL} を完成システムとして扱い、${DATA_URL} を統制テストデータに、利用者が価値を受け取れることと重大リスクが制御されることを証明する。</p>
-  <p><strong>範囲:</strong> 全40機能、正常/異常/回復、成果物128種、49 UI参照、2解像度、light/dark、AutoRun 8段階、認証・テナント・横断ジャーニー、性能・互換・a11y・セキュリティ・信頼性。</p>
+  <p><strong>範囲:</strong> 全${inventory.features}機能、正常/異常/回復、成果物${inventory.outputs}種、${inventory.uiRefs} UI参照、2解像度、light/dark、AutoRun内部8段階（実行条件確定ダイアログ・一括解除）、認証・テナント・横断ジャーニー、セキュリティ攻撃、容量・持久、互換・a11y・信頼性。</p>
   <p><strong>方針:</strong> 機能別の縦割りだけでなく、画面×状態×データ×役割×解像度×操作経路を制約付きで横断する。スクリーンショット例の表示崩れは既知の種として扱い、同型欠陥を全画面から探索する。</p>`,
   entry: "<ul><li>対象版・構成・テストサイト版を凍結</li><li>単体/結合P0/P1合格</li><li>証跡取得と故障注入が利用可能</li><li>実行による外部破壊がないことを確認</li></ul>",
   exit: "<ul><li>P0/P1 100%実行・合格、P2 98%以上</li><li>Sev1/Sev2未解決0</li><li>要件・リスク・品質特性の追跡率100%</li><li>未説明skip/flaky/console error 0</li><li>性能・a11y・セキュリティ閾値合格</li></ul>",
   environment: `<p>SUT ${SUT_URL}、データ ${DATA_URL}、Chromium、1920×1080 / 1366×768、light/dark。必要に応じFirefox/WebKitは互換性主張の確認用に追加する。ネットワーク遅延・切断、LLM無効/有効、認証4状態、異なるワークスペースを制御する。</p>`,
-  analysis: `<p>150必須経路、187故障モード、128成果物、49 UI参照、54永続化先、AutoRun 8段階、12横断ジャーニーを分析単位とした。特に「undefined/関数文字列」「成果物の優先順位」「広画面の過大余白」は、機能正確性・情報設計・相互作用能力・柔軟性にまたがる横断リスクとして定義した。</p>`,
-  design: `<p>機能経路600件、異常回復748件、成果物表示512件、画面状態784件、永続状態108件、AutoRun時系列96件、横断ジャーニー192件。全直積は行わず、故障影響と利用文脈を保った制約付き組合せを採用する。</p>`,
+  analysis: `<p>${inventory.required}必須経路、${inventory.failures}故障モード、${inventory.outputs}成果物、${inventory.uiRefs} UI参照、${inventory.persistence}永続化先、AutoRun内部8段階、12横断ジャーニー、攻撃プロファイル6種、容量・持久8シナリオを分析単位とした。特に「undefined/関数文字列」「成果物の優先順位」「広画面の過大余白」は、機能正確性・情報設計・相互作用能力・柔軟性にまたがる横断リスクとして定義した。</p>`,
+  design: `<p>${Object.entries(countBy(phaseCases.system, "category")).map(([name, count]) => `${name}${count.toLocaleString()}件`).join("、")}。全直積は行わず、故障影響と利用文脈を保った制約付き組合せを採用する。</p>`,
 });
 
 const acceptanceHtml = phasePage({
@@ -837,7 +947,7 @@ const acceptanceHtml = phasePage({
   subtitle: "指定された利用文脈で、業務上の有益性、リスク回避性、受容性と検収可能性を判断する。",
   cases: phaseCases.acceptance,
   plan: `<p><strong>目的:</strong> 機能が動くことではなく、QA担当者・監査担当者・管理者が正しい判断を再現可能な根拠付きで行えることを受け入れる。</p>
-  <p><strong>範囲:</strong> 12業務目標×5ペルソナ×2解像度、40機能の価値、ISO/IEC 25019の3特性×8文脈、128成果物の第三者レビュー。</p>
+  <p><strong>範囲:</strong> 12業務目標×5ペルソナ×2解像度、${inventory.features}機能の価値、ISO/IEC 25019の3特性×8文脈、${inventory.outputs}成果物の第三者レビュー。</p>
   <p><strong>方針:</strong> 初見タスク、反復タスク、障害時、監査説明、アクセシビリティ文脈を分離し、完了率・時間・誤操作・信頼・満足・重大リスクを測る。</p>`,
   entry: "<ul><li>システムテスト終了基準を満たす</li><li>代表利用者と受入権限者を確保</li><li>目的・文脈・閾値を事前合意</li><li>既知制約を開示</li></ul>",
   exit: "<ul><li>重要業務タスク完了率100%</li><li>重大誤判断・データ越境・証跡欠落0</li><li>成果物サンプルの再現可能率100%</li><li>PO/受入権限者が制約込みで署名</li></ul>",
@@ -851,7 +961,7 @@ const riskRows = [
   ["R-02","SSRF・破壊的クロール・外部送信","critical","情報漏えい、対象破壊","localhost/URL安全性、送信ゲート、非破壊データ"],
   ["R-03","認証情報・トークンの保持/露出","critical","アカウント侵害","即時破棄、ログマスキング、スコープ検証"],
   ["R-04","テナント／ワークスペース越境","critical","機密データ漏えい","主体×資源×操作、競合・履歴・出力を横断"],
-  ["R-05","AutoRun承認状態の矛盾","critical","未承認成果物の確定、手戻り","8段階状態モデル、N-switch、再開・差戻し"],
+  ["R-05","AutoRun確定状態の矛盾","critical","確定前成果物の確定扱い、手戻り","8段階内部状態、実行条件の確定、一括解除、監査記録"],
   ["R-06","部分失敗・再試行による破損","high","成果物欠損、重複、無限待機","故障注入、冪等性、チェックポイント"],
   ["R-07","仕様文書と現行実装のドリフト","high","誤スコープ、誤合格","品質契約40機能を正本、差分台帳"],
   ["R-08","undefined・関数表現・件数不整合","high","結果解釈不能、信頼低下","出力スキーマ、ラウンドトリップ、全成果物表示"],
@@ -887,7 +997,7 @@ const masterHtml = layout({
 <div class="stat"><strong>${inventory.failures}</strong><span>故障モード</span></div>
 <div class="stat"><strong>0</strong><span>実行済み（承認前）</span></div></div>
 <section class="decision"><h2>承認依頼</h2><p>本成果物はテスト実行前のベースライン候補である。次の5点を承認後に、環境固定、ケースレビュー、実装、実行へ進む。</p>
-<ol><li>対象を品質契約の全40機能とする。</li><li>テストデータとして ${esc(DATA_URL)} を使用し、外部サイトへ破壊的操作を行わない。</li><li>単体847・結合1,000・システム3,040・受入312、合計5,199件を初期フルスコープとする。</li><li>リスクベースでP0/P1を先行し、合格基準を緩和しない。</li><li>実行で得た事実と計画上の仮説を明確に分離する。</li></ol>
+<ol><li>対象を品質契約の全${inventory.features}機能（commit ${esc(baseline.repo_commit)} 時点、sha256 ${esc(baseline.contract_sha256)}）とする。</li><li>テストデータとして ${esc(DATA_URL)} を使用し、外部サイトへ破壊的操作を行わない。</li><li>単体${phaseCases.unit.length.toLocaleString()}・結合${phaseCases.integration.length.toLocaleString()}・システム${phaseCases.system.length.toLocaleString()}・受入${phaseCases.acceptance.length.toLocaleString()}、合計${allCases.length.toLocaleString()}件を初期フルスコープとする。</li><li>リスクベースでP0/P1を先行し、合格基準を緩和しない。</li><li>実行で得た事実と計画上の仮説を明確に分離する。</li><li>判定閾値（§9）の提案値をG0で確定する。</li></ol>
 <div class="callout bad"><strong>重要:</strong> 現時点ではテストを実行していない。「passed」「準拠済み」「品質保証済み」とは判定しない。</div></section>
 <section><h2>1. 文書体系と開発プロセス</h2>
 <div class="flow"><div>テストベース</div><div>要求分析</div><div>アーキテクチャ</div><div>詳細設計</div><div>実装可能ケース</div><div>承認・実行</div></div>
@@ -896,7 +1006,7 @@ const masterHtml = layout({
 ${navItems.slice(1,5).map(([href,label])=>`<tr><td><a href="${href}">${esc(label)}</a></td><td>目的・範囲・開始/終了</td><td>条件・リスク・母数</td><td>技法・構造・厚み</td><td>全件一覧・導出元</td></tr>`).join("")}
 </tbody></table></section>
 <section><h2>2. テスト対象・テストベース</h2>
-<div class="grid columns"><div class="card"><h3>対象</h3><ul><li>SUT: ${esc(SUT_URL)}</li><li>テストデータ: ${esc(DATA_URL)}</li><li>品質契約: 40機能（critical 10 / high 15 / medium 13 / low 2）</li><li>参照母数: symbol ${inventory.symbols}, failure ${inventory.failures}, required ${inventory.required}, output ${inventory.outputs}, persistence ${inventory.persistence}</li></ul></div>
+<div class="grid columns"><div class="card"><h3>対象</h3><ul><li>SUT: ${esc(SUT_URL)}</li><li>テストデータ: ${esc(DATA_URL)}</li><li>品質契約: ${inventory.features}機能（${esc(riskSummary)}）</li><li>ベースライン: commit ${esc(baseline.repo_commit)}${baseline.contract_dirty ? "（契約に未コミット変更を含む）" : ""} / 契約sha256 ${esc(baseline.contract_sha256)}</li><li>参照母数: symbol ${inventory.symbols}（一意${inventory.uniqueSymbols}）, failure ${inventory.failures}, required ${inventory.required}, output ${inventory.outputs}, persistence ${inventory.persistence}, UI参照${inventory.uiRefs}（一意${inventory.uniqueUiRefs}）</li><li>参照母数は機能単位の延べ数。複数機能が同一ファイル・シンボルを参照する場合、機能ごとの責務として重複検証する（重複は統合せず責任境界を保持する方針）。</li></ul></div>
 <div class="card"><h3>優先順位</h3><p>安全性・秘密性・テナント分離・証跡真正性・承認状態をP0、主要業務フロー・回復・表示判断をP1、補助機能をP2/P3とする。発生確率だけでなく影響、検出困難性、回復困難性を考慮する。</p></div></div>
 <div class="callout warn"><strong>テストベースのドリフト:</strong> 要件定義は33機能、非機能要件は旧ISO 25010の8特性、既存計画は19機能を記載している。一方、現行品質契約は40機能である。本計画は40機能を基準にし、文書差異自体を品質リスクR-07として扱う。</div></section>
 <section><h2>3. 準拠モデル</h2><table><thead><tr><th>規格・知識体系</th><th>採用範囲</th><th>本書での扱い</th></tr></thead><tbody>
@@ -933,7 +1043,17 @@ ${[
 ["TD-7 利用文脈","拡大、キーボード、初見、監査、復旧"],
 ].map(([name,desc])=>`<div class="card"><h3>${esc(name)}</h3><p>${esc(desc)}</p></div>`).join("")}</div>
 <p>資格情報・個人情報は合成し、実データを保存しない。各ケースは入力データ版と生成物ハッシュを証跡へ記録する。</p></section>
-<section><h2>9. 環境・構成・証跡</h2><ul><li>SUT版、commit、OS、Python、依存ロック、ブラウザ版、環境変数（秘密値を除く）を実行単位で固定する。</li><li>証跡はケースID、時刻、操作者、入力版、要求/応答、ログ、画面、成果物ハッシュ、判定、欠陥IDを持つ。</li><li>解像度は1920×1080と1366×768を必須とし、主作業領域の利用率、過大余白、切れ、重なり、可読行長を測る。</li><li>テストデータサイトへの操作は非破壊とし、送信が必要なケースは合成データと隔離環境のみで実施する。</li></ul></section>
+<section><h2>9. 環境・構成・証跡・判定閾値</h2><ul><li>SUT版、commit、OS、Python、依存ロック、ブラウザ版、環境変数（秘密値を除く）を実行単位で固定する。</li><li>証跡はケースID、時刻、操作者、入力版、要求/応答、ログ、画面、成果物ハッシュ、判定、欠陥IDを持つ。</li><li>解像度は1920×1080と1366×768を必須とし、主作業領域の利用率、過大余白、切れ、重なり、可読行長を測る。</li><li>テストデータサイトへの操作は非破壊とし、送信が必要なケースは合成データと隔離環境のみで実施する。</li></ul>
+<h3>判定閾値（提案値 — G0承認で確定するまで未確定）</h3>
+<table><thead><tr><th>観測項目</th><th>提案閾値</th><th>状態</th></tr></thead><tbody>
+<tr><td>axe-core critical違反</td><td>0件</td><td>提案・未確定</td></tr>
+<tr><td>console error（未説明）</td><td>0件</td><td>提案・未確定</td></tr>
+<tr><td>主作業領域の横幅利用率（1920×1080）</td><td>60%以上</td><td>提案・未確定</td></tr>
+<tr><td>対話操作の応答（体感区切り）</td><td>3秒以内、超過時は進捗表示</td><td>提案・未確定</td></tr>
+<tr><td>クロール・生成のタイムアウト上限</td><td>機能別にG0で合意</td><td>未定義</td></tr>
+<tr><td>持久試験の資源増加傾向</td><td>単調増加の発散なし（回帰勾配で判定）</td><td>提案・未確定</td></tr>
+</tbody></table>
+<p class="small">閾値なしの「過大余白がない」等の定性オラクルは、上表の確定後に測定基準へ置換する。確定前の実行は判定不能としてブロックする。</p></section>
 <section><h2>10. 組織・日程・監視</h2><table><thead><tr><th>ゲート</th><th>活動</th><th>完了条件</th></tr></thead><tbody>
 <tr><td>G0 承認</td><td>本計画、スコープ、リスク、閾値をレビュー</td><td>承認者、版、条件を記録</td></tr>
 <tr><td>G1 準備</td><td>環境・データ・自動化・証跡を固定</td><td>再現性スモーク合格</td></tr>
@@ -951,47 +1071,97 @@ ${[
 <li><a href="https://www.iso.org/standard/78176.html">ISO/IEC 25010:2023</a> / <a href="https://www.iso.org/standard/78177.html">ISO/IEC 25019:2023</a></li>
 <li><a href="https://www.aster.or.jp/testcontest/open/">ASTER テスト設計コンテスト'26 OPEN審査基準</a> / <a href="https://www.aster.or.jp/testcontest/u30/">U-30成果物体系</a></li>
 <li><a href="https://www.juse-p.co.jp/filemanager/source/Trial_Reading/2022/trial9784817197665.pdf">ソフトウェアテスト技法ドリル試読（点・線・面・立体・時間・多次元）</a></li>
-</ul></section>`,
+</ul></section>
+<section><h2>13. 改版履歴</h2><table><thead><tr><th>版</th><th>日付</th><th>内容</th></tr></thead><tbody>
+<tr><td>1.0</td><td>2026-07-26</td><td>初版。契約40機能・5,199件。</td></tr>
+<tr><td>1.1</td><td>2026-07-26</td><td>攻撃者視点レビューによる改訂。契約${inventory.features}機能へ追随（testcase_table収載）。AutoRun時系列を実行条件確定ダイアログ設計（commit 8acb4a9）へ改訂。セキュリティ攻撃・容量/持久ケース族を追加しR-02/R-10/R-11をケースへ接続。ベースライン（commit・契約sha256）を明記。トレーサビリティ表へCROSS-CUT行・合計行を追加。判定閾値の提案表を追加。契約内重複エントリの黙示的リネームを廃止。</td></tr>
+</tbody></table></section>`,
 });
 
 function traceTable() {
   const byFeature = new Map(features.map((feature) => [feature.feature_id, { feature }]));
+  const crossCut = { unit: 0, integration: 0, system: 0, acceptance: 0 };
   for (const [phase, cases] of Object.entries(phaseCases)) {
     for (const testCase of cases) {
-      if (!byFeature.has(testCase.featureId)) continue;
-      const record = byFeature.get(testCase.featureId);
-      record[phase] = (record[phase] ?? 0) + 1;
+      if (byFeature.has(testCase.featureId)) {
+        const record = byFeature.get(testCase.featureId);
+        record[phase] = (record[phase] ?? 0) + 1;
+      } else {
+        crossCut[phase] += 1;
+      }
     }
   }
-  return [...byFeature.values()]
+  const featureRows = [...byFeature.values()]
     .sort((a, b) => riskOrder[b.feature.risk_level] - riskOrder[a.feature.risk_level])
     .map(({ feature, unit = 0, integration = 0, system = 0, acceptance = 0 }) => `<tr>
 <td class="mono">${esc(feature.feature_id)}</td><td>${esc(feature.name)}</td><td><span class="badge risk-${feature.risk_level}">${esc(riskJa[feature.risk_level])}</span></td>
 <td>${unit}</td><td>${integration}</td><td>${system}</td><td>${acceptance}</td><td>${unit+integration+system+acceptance}</td>
 <td>${(feature.failure_modes??[]).length}</td><td>${(feature.required_tests??[]).length}</td><td>${(feature.outputs??[]).length}</td></tr>`).join("");
+  const crossTotal = crossCut.unit + crossCut.integration + crossCut.system + crossCut.acceptance;
+  const crossRow = `<tr>
+<td class="mono">CROSS-CUT</td><td>横断（ジャーニー・容量/持久・利用時品質・業務目標）</td><td><span class="badge risk-critical">最重要</span></td>
+<td>${crossCut.unit}</td><td>${crossCut.integration}</td><td>${crossCut.system}</td><td>${crossCut.acceptance}</td><td>${crossTotal}</td>
+<td>—</td><td>—</td><td>—</td></tr>`;
+  const totalsRow = `<tr>
+<td class="mono"><strong>合計</strong></td><td><strong>全ケース</strong></td><td>—</td>
+<td><strong>${phaseCases.unit.length}</strong></td><td><strong>${phaseCases.integration.length}</strong></td><td><strong>${phaseCases.system.length}</strong></td><td><strong>${phaseCases.acceptance.length}</strong></td><td><strong>${allCases.length}</strong></td>
+<td>—</td><td>—</td><td>—</td></tr>`;
+  return featureRows + crossRow + totalsRow;
 }
+
+// リスク→ケースの接続をビルド時に実証する。ヒット0件の検索キーは
+// 「リスク登録簿がケースへ接続されていない」ことを意味するため、生成を失敗させる。
+const caseSearchTexts = allCases.map((testCase) => Object.values(testCase).join(" "));
+const riskSearchKeys = [
+  ["R-01", ["根拠へ遡る", "照合", "feature_contracts"]],
+  ["R-02", ["SSRF", "送信ゲートウェイ", "外部送信"]],
+  ["R-03", ["認証情報", "認可バイパス", "期限切れ"]],
+  ["R-04", ["テナント", "他テナント"]],
+  ["R-05", ["release_all_stage_gates", "実行条件"]],
+  ["R-06", ["再試行", "中断"]],
+  ["R-07", ["不整合", "差分"]],
+  ["R-08", ["undefined", "関数文字列"]],
+  ["R-09", ["過大余白", "切れ"]],
+  ["R-10", ["プロンプト注入", "LLM有効"]],
+  ["R-11", ["容量", "キャンセル", "持久"]],
+  ["R-12", ["監査ログ", "ハッシュ"]],
+];
+const riskKeyHits = riskSearchKeys.map(([riskId, keys]) => [
+  riskId,
+  keys.map((key) => {
+    const hits = caseSearchTexts.filter((text) => text.includes(key)).length;
+    if (hits === 0) {
+      throw new Error(`Risk search key has zero case hits: ${riskId} "${key}"`);
+    }
+    return [key, hits];
+  }),
+]);
+const riskKeyHitMap = new Map(riskKeyHits);
 
 const traceHtml = layout({
   title: "トレーサビリティ・リスク",
   active: "trace",
-  hero: hero("トレーサビリティとリスク", "40機能から4フェーズ5,199件への双方向追跡と、品質リスク・テストベース差異を示す。", allCases.length),
+  hero: hero("トレーサビリティとリスク", `${inventory.features}機能から4フェーズ${allCases.length.toLocaleString()}件への双方向追跡と、品質リスク・テストベース差異を示す。`, allCases.length),
   body: `<section><h2>1. 機能→フェーズ→ケース数</h2><div class="table-wrap"><table><thead><tr><th>機能ID</th><th>名称</th><th>リスク</th><th>単体</th><th>結合</th><th>システム</th><th>受入</th><th>計</th><th>故障</th><th>必須経路</th><th>成果物</th></tr></thead><tbody>${traceTable()}</tbody></table></div>
-<p class="small">横断ケースは特定機能へ重複配賦せずCROSS-CUTとして管理するため、上表合計と全ケース総数には差がある。</p></section>
+<p class="small">配賦規則: AutoRun時系列（ST-AUTORUN）は autorun_stage_approval の行へ配賦する。横断ジャーニー（ST-XFLOW）、容量・持久（ST-CAP）、業務目標（AT-GOAL）、利用時品質（AT-QIU）は特定機能へ配賦せずCROSS-CUT行で管理する。合計行は各フェーズの全ケース数と一致する。</p></section>
 <section><h2>2. ケース生成規則</h2><table><thead><tr><th>フェーズ</th><th>算定式</th><th>件数</th></tr></thead><tbody>
-<tr><td>単体</td><td>164 symbols×2 + 187 failures + 128 outputs + 54 persistence + 150 required</td><td>${phaseCases.unit.length}</td></tr>
-<tr><td>結合</td><td>150 required×3 boundaries + 33 routes×4 protocols + 128 outputs×2 + 54 persistence×3</td><td>${phaseCases.integration.length}</td></tr>
-<tr><td>システム</td><td>150×2 viewports×2 modes + 187×2×2 recovery + 128×2×2 theme + 49 UI×4 states×2×2 + 54×2 + 8 stages×6 events×2 + 12 journeys×2×4 roles×2 data</td><td>${phaseCases.system.length}</td></tr>
-<tr><td>受入</td><td>12 journeys×5 personas×2 viewports + 40 features + 3 QIU×8 contexts + 128 outputs</td><td>${phaseCases.acceptance.length}</td></tr>
-</tbody></table><p>算定式はカバレッジ義務の可視化であり、実行時に同一事象を重複検証する場合はケース統合せず、異なるオラクルと責任境界を保持する。</p></section>
+<tr><td>単体</td><td>${inventory.symbols} symbols×2 + ${inventory.failures} failures + ${inventory.outputs} outputs + ${inventory.persistence} persistence + ${inventory.required} required</td><td>${phaseCases.unit.length}</td></tr>
+<tr><td>結合</td><td>${inventory.required} required×3 boundaries + ${inventory.routeRefs} routes×4 protocols + ${inventory.outputs} outputs×2 + ${inventory.persistence} persistence×3</td><td>${phaseCases.integration.length}</td></tr>
+<tr><td>システム</td><td>${inventory.required}×2 viewports×2 modes + ${inventory.failures}×2×2 recovery + ${inventory.outputs}×2×2 theme + ${inventory.uiRefs} UI×4 states×2×2 + ${inventory.persistence}×2 + 8 stages×6 events×2 + 12 journeys×2×4 roles×2 data + 攻撃6×HTTP境界をもつcritical/high機能 + 容量・持久8</td><td>${phaseCases.system.length}</td></tr>
+<tr><td>受入</td><td>12 journeys×5 personas×2 viewports + ${inventory.features} features + 3 QIU×8 contexts + ${inventory.outputs} outputs</td><td>${phaseCases.acceptance.length}</td></tr>
+</tbody></table><p>算定式はカバレッジ義務の可視化であり、実行時に同一事象を重複検証する場合はケース統合せず、異なるオラクルと責任境界を保持する。件数はすべて契約から機械的に導出され、本表は生成時に実ケース数と照合される。</p></section>
 <section><h2>3. 既知のテストベース差異</h2><table><thead><tr><th>ID</th><th>差異</th><th>計画上の扱い</th></tr></thead><tbody>
 <tr><td>TB-GAP-01</td><td>要件定義33機能 vs 品質契約40機能</td><td>40機能を対象。7機能の要件レビューを開始基準に追加。</td></tr>
 <tr><td>TB-GAP-02</td><td>非機能文書がISO 25010:2011の8特性</td><td>2023年版9特性と25019利用時品質へ再分類。</td></tr>
 <tr><td>TB-GAP-03</td><td>既存計画の19機能・過去合格件数</td><td>現行版の合格証拠に流用しない。</td></tr>
 <tr><td>TB-GAP-04</td><td>デモ文書と実装の入力制約・画面・遷移差</td><td>テストデータの不整合プロファイルとして期待値を二重化せず、差異そのものを検出対象にする。</td></tr>
 <tr><td>TB-GAP-05</td><td>表示例にundefined、関数文字列、過大余白</td><td>個別画面だけでなく全成果物・全UI状態へ横展開。</td></tr>
+<tr><td>TB-GAP-06</td><td>版1.0は契約40機能を対象としたが、同日中に testcase_table（high・implemented）が契約へ追加された</td><td>版1.1で契約${inventory.features}機能へ追随し全フェーズへ収載。以後、生成時にベースライン（commit・sha256）を明記し、契約変更時は再生成を必須とする。</td></tr>
+<tr><td>TB-GAP-07</td><td>AutoRunの段階別承認UIが廃止され、実行条件の確定ダイアログ＋一括解除（release_all_stage_gates）へ変更（commit 8acb4a9）</td><td>AutoRun時系列ケースを現行設計へ改訂。内部8段階状態と段階単位の監査記録は検証対象として維持。</td></tr>
+${contractDuplicates.length ? `<tr><td>TB-GAP-08</td><td>品質契約内の重複エントリ: ${esc(contractDuplicates.map((d)=>`${d.feature}:${d.key}:${d.value}`).join(", "))}</td><td>生成時に除去し重複IDの黙示的リネームを廃止。契約側の修正を推奨。</td></tr>` : ""}
 </tbody></table></section>
-<section><h2>4. リスク→ケース検索キー</h2><p>各フェーズのケース一覧で、次の語を検索する。</p><table><thead><tr><th>リスク</th><th>検索キー例</th><th>主フェーズ</th></tr></thead><tbody>
-${riskRows.map((row)=>`<tr><td>${row[0]} ${esc(row[1])}</td><td>${esc(row[4])}</td><td>${row[2]==="critical"?"全フェーズ":"結合・システム・受入"}</td></tr>`).join("")}</tbody></table></section>`,
+<section><h2>4. リスク→ケース検索キー</h2><p>各フェーズのケース一覧で、次の語を検索する。ヒット件数は生成時に実ケース本文と照合済みで、0件のキーは存在しない（0件になった場合は生成が失敗する）。</p><table><thead><tr><th>リスク</th><th>検索キー（実ヒット件数）</th><th>主フェーズ</th></tr></thead><tbody>
+${riskRows.map((row)=>`<tr><td>${row[0]} ${esc(row[1])}</td><td>${(riskKeyHitMap.get(row[0])??[]).map(([key,hits])=>`${esc(key)}（${hits}件）`).join("、")}</td><td>${row[2]==="critical"?"全フェーズ":"結合・システム・受入"}</td></tr>`).join("")}</tbody></table></section>`,
 });
 
 const files = {
@@ -1014,6 +1184,11 @@ const manifest = {
   test_execution_started: false,
   sut: SUT_URL,
   test_data: DATA_URL,
+  baseline,
+  contract_duplicates: contractDuplicates,
+  risk_search_keys_verified: Object.fromEntries(
+    riskKeyHits.map(([riskId, keys]) => [riskId, Object.fromEntries(keys)]),
+  ),
   inventory,
   counts: {
     unit: phaseCases.unit.length,

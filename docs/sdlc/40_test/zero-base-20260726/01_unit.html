@@ -7,21 +7,21 @@
 @media(max-width:620px){.stats,.four,.flow{grid-template-columns:1fr}.hero h2{font-size:28px}}
 @media print{body{background:#fff}.shell{display:block}.side,.controls{display:none}.main{padding:0}.page{max-width:none}.hero,section,.stat,.card{box-shadow:none;break-inside:avoid}.hero{color:#000;background:#fff;border:2px solid #000}.hero p{color:#333}.table-wrap{max-height:none;overflow:visible}th{position:static}a{color:#000;text-decoration:none}}
 </style></head>
-<body><div class="shell"><aside class="side"><h1>WebSpec2Doc QA</h1><p>第三者検証・承認前テストウェア<br>版 1.0 / 2026-07-26</p><a class="" href="index.html">総合索引・マスタープラン</a><a class="active" href="01_unit.html">単体 — 847件</a><a class="" href="02_integration.html">結合 — 1,000件</a><a class="" href="03_system.html">システム — 3,040件</a><a class="" href="04_acceptance.html">受入 — 312件</a><a class="" href="05_traceability.html">トレーサビリティ・リスク</a></aside>
+<body><div class="shell"><aside class="side"><h1>WebSpec2Doc QA</h1><p>第三者検証・承認前テストウェア<br>版 1.1 / 2026-07-26</p><a class="" href="index.html">総合索引・マスタープラン</a><a class="active" href="01_unit.html">単体 — 889件</a><a class="" href="02_integration.html">結合 — 1,033件</a><a class="" href="03_system.html">システム — 3,300件</a><a class="" href="04_acceptance.html">受入 — 317件</a><a class="" href="05_traceability.html">トレーサビリティ・リスク</a></aside>
 <main class="main"><div class="page"><header class="hero"><span class="badge wait">承認待ち・未実行</span><div class="eyebrow">Independent Verification Testware</div>
 <h2>単体テスト仕様</h2><p>関数・クラス・生成器・永続化境界を単離し、内部品質と局所的な機能契約を証明する。</p>
-<div class="badge">847 concrete cases</div></header>
-<div class="grid stats"><div class="stat"><strong>847</strong><span>具体ケース</span></div>
+<div class="badge">889 concrete cases</div></header>
+<div class="grid stats"><div class="stat"><strong>889</strong><span>具体ケース</span></div>
 <div class="stat"><strong>6</strong><span>ケース群</span></div>
-<div class="stat"><strong>40</strong><span>対象ID</span></div>
-<div class="stat"><strong>260</strong><span>P0ケース</span></div>
+<div class="stat"><strong>41</strong><span>対象ID</span></div>
+<div class="stat"><strong>262</strong><span>P0ケース</span></div>
 <div class="stat"><strong>0</strong><span>実行済み（承認前）</span></div></div>
-<section id="plan"><h2>1. テスト計画・方針</h2><p><strong>目的:</strong> 164シンボル参照と40機能のドメイン規則を最小単位で検証し、欠陥を結合前に局所化する。</p>
+<section id="plan"><h2>1. テスト計画・方針</h2><p><strong>目的:</strong> 175シンボル参照と41機能のドメイン規則を最小単位で検証し、欠陥を結合前に局所化する。</p>
   <p><strong>範囲:</strong> src/、web/の純粋ロジック、検証、変換、シリアライズ、エラー分類、パス・キー生成。UI描画と実ネットワークは対象外。</p>
   <p><strong>方針:</strong> 高リスクは正常・不正・故障注入・不変条件を必須化。行カバレッジだけでなく分岐、条件、ミューテーション生存を評価する。</p>
 <div class="grid columns"><div class="card"><h3>開始基準</h3><ul><li>対象シンボルと契約が特定済み</li><li>外部依存を制御可能</li><li>期待結果のオラクルがレビュー済み</li></ul></div><div class="card"><h3>終了基準</h3><ul><li>P0/P1 100%実行・合格</li><li>全体合格率99%以上</li><li>変更コード分岐100%、全体分岐80%以上</li><li>重大ミューテーション生存0</li></ul></div></div>
 <h3>環境・データ</h3><p>Pythonのプロジェクト固定版、pytest、隔離一時領域、固定時刻・乱数、ネットワーク遮断。テストデータは最小有効値、境界値、欠損、型違反、Unicode、パストラバーサルを使用する。</p></section>
-<section id="analysis"><h2>2. テスト分析</h2><p>入力領域、出力スキーマ、副作用、例外、状態不変条件、セキュリティ境界をテスト条件へ分解した。母数はシンボル参照164×正常/不正、故障モード187、成果物128、永続化54、必須経路150。</p><div class="callout warn"><strong>分析上の原則:</strong> 要件文書の「33機能」「ISO 25010の8特性」「過去の合格件数」は現行品質契約と不一致のため、合格根拠に使用しない。40機能の機械可読契約と実行時観測を正とする。</div></section>
+<section id="analysis"><h2>2. テスト分析</h2><p>入力領域、出力スキーマ、副作用、例外、状態不変条件、セキュリティ境界をテスト条件へ分解した。母数はシンボル参照175×正常/不正、故障モード196、成果物132、永続化58、必須経路153。</p><div class="callout warn"><strong>分析上の原則:</strong> 要件文書の「33機能」「ISO 25010の8特性」「過去の合格件数」は現行品質契約と不一致のため、合格根拠に使用しない。41機能の機械可読契約（commit 268abd1 / sha256 7c470d937f96da1c）と実行時観測を正とする。</div></section>
 <section id="design"><h2>3. テストアーキテクチャ・設計</h2><p>同値分割・境界値分析・デシジョンテーブル・ホワイトボックス条件網羅・フォールトインジェクション・プロパティベース・ミューテーションを使い分ける。テストダブルは観測性・制御性のために使用し、実装詳細への過結合を避ける。</p><div class="grid four">
   <div class="card"><h3>点</h3><p>局所欠陥を狙う。エラー推測、探索、静的レビュー。</p></div>
   <div class="card"><h3>線</h3><p>連続領域を切る。同値分割、境界値、負荷の変曲点。</p></div>
@@ -29,11 +29,11 @@
   <div class="card"><h3>立体</h3><p>順序なし因子を扱う。HAYST、直交表、pairwise。</p></div>
   <div class="card"><h3>時間</h3><p>状態と履歴を追う。状態遷移、N-switch、並行性。</p></div>
   <div class="card"><h3>多次元</h3><p>利用文脈を通す。シナリオ、UAT、統計的サンプリング。</p></div>
-  </div><h3>ケース群と厚み</h3><div class="grid four"><div class="card"><h3>シンボル契約</h3><strong>164</strong><p>導出済み具体ケース</p></div><div class="card"><h3>シンボル防御</h3><strong>164</strong><p>導出済み具体ケース</p></div><div class="card"><h3>故障モード</h3><strong>187</strong><p>導出済み具体ケース</p></div><div class="card"><h3>成果物契約</h3><strong>128</strong><p>導出済み具体ケース</p></div><div class="card"><h3>必須経路</h3><strong>150</strong><p>導出済み具体ケース</p></div><div class="card"><h3>永続化境界</h3><strong>54</strong><p>導出済み具体ケース</p></div></div></section>
+  </div><h3>ケース群と厚み</h3><div class="grid four"><div class="card"><h3>シンボル契約</h3><strong>175</strong><p>導出済み具体ケース</p></div><div class="card"><h3>シンボル防御</h3><strong>175</strong><p>導出済み具体ケース</p></div><div class="card"><h3>故障モード</h3><strong>196</strong><p>導出済み具体ケース</p></div><div class="card"><h3>成果物契約</h3><strong>132</strong><p>導出済み具体ケース</p></div><div class="card"><h3>必須経路</h3><strong>153</strong><p>導出済み具体ケース</p></div><div class="card"><h3>永続化境界</h3><strong>58</strong><p>導出済み具体ケース</p></div></div></section>
 <section id="cases"><h2>4. 具体的テストケース</h2><p>全件に対象、テスト条件、前提、データ、手順、期待結果、証跡、導出元を付与した。検索・絞込みが可能。</p><div class="controls"><input data-case-search type="search" placeholder="ID・機能・観点・期待結果を検索">
 <select data-risk-filter><option value="">全リスク</option><option value="critical">P0 最重要</option><option value="high">P1 高</option><option value="medium">P2 中</option><option value="low">P3 低</option></select>
 <select data-category-filter><option value="">全カテゴリ</option><option>シンボル契約</option><option>シンボル防御</option><option>故障モード</option><option>成果物契約</option><option>必須経路</option><option>永続化境界</option></select>
-<span class="small">表示 <strong data-visible-count>847</strong> / 847件</span></div>
+<span class="small">表示 <strong data-visible-count>889</strong> / 889件</span></div>
 <div class="table-wrap"><table><thead><tr><th>ID</th><th>優先度</th><th>対象</th><th>分類</th><th>テスト条件</th><th>前提・データ</th><th>手順</th><th>期待結果</th><th>実装・証跡</th><th>導出元</th></tr></thead><tbody><tr data-case-row data-search="ut-discover-sym-discover_pages-n discover url解析 / 画面発見 単体 シンボル契約 機能適合性／保守性 同値分割・ホワイトボックス discover_pages の正常入力に対する公開契約 外部i/oをテストダブルへ置換し、対象シンボルを単離する。 最小の有効入力、代表的な通常入力。 1. discover_pages を有効入力で呼ぶ。 2. 戻り値、状態変化、呼出し先を記録する。 仕様化された型・値・副作用だけを返し、例外・隠れた外部送信・共有状態汚染がない。 critical p0 必須 アサーション、分岐カバレッジ、テストログ feature_contracts:discover:symbols:discover_pages" data-risk="critical" data-category="シンボル契約">
 <td class="case-id mono">UT-discover-SYM-discover_pages-N</td>
 <td><span class="badge risk-critical">P0 最重要</span></td>
@@ -2289,8 +2289,8 @@
 <td>失敗が分類され、上位層が処理可能な結果となる。部分データ破損、無限再試行、機密露出がない。</td>
 <td>必須<br><span class="small">失敗分類、例外チェーン、状態差分</span></td>
 <td class="mono small">feature_contracts:coverage_gap_report:failure_modes:stale_crawl_started_records</td>
-</tr><tr data-case-row data-search="ut-coverage_gap_report-out-report-html coverage_gap_report カバレッジと未確認領域（網羅性証明） 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 report.html「カバレッジと未確認領域」節 の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. report.html「カバレッジと未確認領域」節 を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 medium p2 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:coverage_gap_report:outputs:report.html「カバレッジと未確認領域」節" data-risk="medium" data-category="成果物契約">
-<td class="case-id mono">UT-coverage_gap_report-OUT-report-html</td>
+</tr><tr data-case-row data-search="ut-coverage_gap_report-out-report-html-u1fgaj9f coverage_gap_report カバレッジと未確認領域（網羅性証明） 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 report.html「カバレッジと未確認領域」節 の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. report.html「カバレッジと未確認領域」節 を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 medium p2 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:coverage_gap_report:outputs:report.html「カバレッジと未確認領域」節" data-risk="medium" data-category="成果物契約">
+<td class="case-id mono">UT-coverage_gap_report-OUT-report-html-u1fgaj9f</td>
 <td><span class="badge risk-medium">P2 中</span></td>
 <td><strong>coverage_gap_report</strong><br>カバレッジと未確認領域（網羅性証明）</td>
 <td>成果物契約<br><span class="small">機能完全性／データ品質</span></td>
@@ -2300,8 +2300,8 @@
 <td>必須値が実値で埋まり、undefined、関数文字列、NaN、未エスケープ値が成果物へ混入しない。</td>
 <td>必須<br><span class="small">スキーマ検証結果、ゴールデン差分</span></td>
 <td class="mono small">feature_contracts:coverage_gap_report:outputs:report.html「カバレッジと未確認領域」節</td>
-</tr><tr data-case-row data-search="ut-coverage_gap_report-out-comparison-html coverage_gap_report カバレッジと未確認領域（網羅性証明） 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 comparison.html「網羅性サマリ」節 の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. comparison.html「網羅性サマリ」節 を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 medium p2 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:coverage_gap_report:outputs:comparison.html「網羅性サマリ」節" data-risk="medium" data-category="成果物契約">
-<td class="case-id mono">UT-coverage_gap_report-OUT-comparison-html</td>
+</tr><tr data-case-row data-search="ut-coverage_gap_report-out-comparison-html-u1qv9rsd coverage_gap_report カバレッジと未確認領域（網羅性証明） 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 comparison.html「網羅性サマリ」節 の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. comparison.html「網羅性サマリ」節 を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 medium p2 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:coverage_gap_report:outputs:comparison.html「網羅性サマリ」節" data-risk="medium" data-category="成果物契約">
+<td class="case-id mono">UT-coverage_gap_report-OUT-comparison-html-u1qv9rsd</td>
 <td><span class="badge risk-medium">P2 中</span></td>
 <td><strong>coverage_gap_report</strong><br>カバレッジと未確認領域（網羅性証明）</td>
 <td>成果物契約<br><span class="small">機能完全性／データ品質</span></td>
@@ -2850,8 +2850,8 @@
 <td>必須値が実値で埋まり、undefined、関数文字列、NaN、未エスケープ値が成果物へ混入しない。</td>
 <td>必須<br><span class="small">スキーマ検証結果、ゴールデン差分</span></td>
 <td class="mono small">feature_contracts:doc_fusion:outputs:documented_rules in doc_fusion.json</td>
-</tr><tr data-case-row data-search="ut-doc_fusion-out-document_conditions-test_conditions_detail-in-re doc_fusion 文書×実測突合（doc fusion） 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 document_conditions/test_conditions_detail in report.json の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. document_conditions/test_conditions_detail in report.json を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 high p1 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:doc_fusion:outputs:document_conditions/test_conditions_detail in report.json" data-risk="high" data-category="成果物契約">
-<td class="case-id mono">UT-doc_fusion-OUT-document_conditions-test_conditions_detail-in-re</td>
+</tr><tr data-case-row data-search="ut-doc_fusion-out-document_conditions-test_conditions_detail-in-re-u1dr5ony doc_fusion 文書×実測突合（doc fusion） 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 document_conditions/test_conditions_detail in report.json の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. document_conditions/test_conditions_detail in report.json を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 high p1 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:doc_fusion:outputs:document_conditions/test_conditions_detail in report.json" data-risk="high" data-category="成果物契約">
+<td class="case-id mono">UT-doc_fusion-OUT-document_conditions-test_conditions_detail-in-re-u1dr5ony</td>
 <td><span class="badge risk-high">P1 高</span></td>
 <td><strong>doc_fusion</strong><br>文書×実測突合（Doc Fusion）</td>
 <td>成果物契約<br><span class="small">機能完全性／データ品質</span></td>
@@ -3576,8 +3576,8 @@
 <td>失敗が分類され、上位層が処理可能な結果となる。部分データ破損、無限再試行、機密露出がない。</td>
 <td>必須<br><span class="small">失敗分類、例外チェーン、状態差分</span></td>
 <td class="mono small">feature_contracts:field_definition_bva:failure_modes:no_evidence</td>
-</tr><tr data-case-row data-search="ut-field_definition_bva-out-spec-xlsx field_definition_bva 項目定義書＋境界値分析（bva）テストデータ自動生成 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 spec.xlsx（項目定義書シート・境界値データシート） の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. spec.xlsx（項目定義書シート・境界値データシート） を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 medium p2 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:field_definition_bva:outputs:spec.xlsx（項目定義書シート・境界値データシート）" data-risk="medium" data-category="成果物契約">
-<td class="case-id mono">UT-field_definition_bva-OUT-spec-xlsx</td>
+</tr><tr data-case-row data-search="ut-field_definition_bva-out-spec-xlsx-ukutiw0 field_definition_bva 項目定義書＋境界値分析（bva）テストデータ自動生成 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 spec.xlsx（項目定義書シート・境界値データシート） の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. spec.xlsx（項目定義書シート・境界値データシート） を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 medium p2 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:field_definition_bva:outputs:spec.xlsx（項目定義書シート・境界値データシート）" data-risk="medium" data-category="成果物契約">
+<td class="case-id mono">UT-field_definition_bva-OUT-spec-xlsx-ukutiw0</td>
 <td><span class="badge risk-medium">P2 中</span></td>
 <td><strong>field_definition_bva</strong><br>項目定義書＋境界値分析（BVA）テストデータ自動生成</td>
 <td>成果物契約<br><span class="small">機能完全性／データ品質</span></td>
@@ -4082,8 +4082,8 @@
 <td>失敗が分類され、上位層が処理可能な結果となる。部分データ破損、無限再試行、機密露出がない。</td>
 <td>必須<br><span class="small">失敗分類、例外チェーン、状態差分</span></td>
 <td class="mono small">feature_contracts:ci_warnings_cleanup:failure_modes:pillow_deprecation_regression</td>
-</tr><tr data-case-row data-search="ut-ci_warnings_cleanup-out-pytest-0 ci_warnings_cleanup ci警告一掃（pytest収集警告・pillow非推奨警告の解消と再発防止） 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 pytest実行ログ（警告0件） の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. pytest実行ログ（警告0件） を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 low p3 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:ci_warnings_cleanup:outputs:pytest実行ログ（警告0件）" data-risk="low" data-category="成果物契約">
-<td class="case-id mono">UT-ci_warnings_cleanup-OUT-pytest-0</td>
+</tr><tr data-case-row data-search="ut-ci_warnings_cleanup-out-pytest-0-u15i3w4t ci_warnings_cleanup ci警告一掃（pytest収集警告・pillow非推奨警告の解消と再発防止） 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 pytest実行ログ（警告0件） の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. pytest実行ログ（警告0件） を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 low p3 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:ci_warnings_cleanup:outputs:pytest実行ログ（警告0件）" data-risk="low" data-category="成果物契約">
+<td class="case-id mono">UT-ci_warnings_cleanup-OUT-pytest-0-u15i3w4t</td>
 <td><span class="badge risk-low">P3 低</span></td>
 <td><strong>ci_warnings_cleanup</strong><br>CI警告一掃（pytest収集警告・Pillow非推奨警告の解消と再発防止）</td>
 <td>成果物契約<br><span class="small">機能完全性／データ品質</span></td>
@@ -4390,8 +4390,8 @@
 <td>必須値が実値で埋まり、undefined、関数文字列、NaN、未エスケープ値が成果物へ混入しない。</td>
 <td>必須<br><span class="small">スキーマ検証結果、ゴールデン差分</span></td>
 <td class="mono small">feature_contracts:old_new_comparison:outputs:old/dynamic_masks.json</td>
-</tr><tr data-case-row data-search="ut-old_new_comparison-out-comparison-html-d2 old_new_comparison 現新比較モード（移行検証支援） 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 comparison.html「網羅性サマリ」節 の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. comparison.html「網羅性サマリ」節 を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 high p1 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:old_new_comparison:outputs:comparison.html「網羅性サマリ」節" data-risk="high" data-category="成果物契約">
-<td class="case-id mono">UT-old_new_comparison-OUT-comparison-html-D2</td>
+</tr><tr data-case-row data-search="ut-old_new_comparison-out-comparison-html-u1qv9rsd old_new_comparison 現新比較モード（移行検証支援） 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 comparison.html「網羅性サマリ」節 の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. comparison.html「網羅性サマリ」節 を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 high p1 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:old_new_comparison:outputs:comparison.html「網羅性サマリ」節" data-risk="high" data-category="成果物契約">
+<td class="case-id mono">UT-old_new_comparison-OUT-comparison-html-u1qv9rsd</td>
 <td><span class="badge risk-high">P1 高</span></td>
 <td><strong>old_new_comparison</strong><br>現新比較モード（移行検証支援）</td>
 <td>成果物契約<br><span class="small">機能完全性／データ品質</span></td>
@@ -4720,8 +4720,8 @@
 <td>必須値が実値で埋まり、undefined、関数文字列、NaN、未エスケープ値が成果物へ混入しない。</td>
 <td>必須<br><span class="small">スキーマ検証結果、ゴールデン差分</span></td>
 <td class="mono small">feature_contracts:ux_review:outputs:ux_review.json</td>
-</tr><tr data-case-row data-search="ut-ux_review-out-report-html-ux ux_review ux自動エキスパートレビュー（axe-core＋ニールセン10原則ヒューリスティック） 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 report.html「ux 所見」タブ の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. report.html「ux 所見」タブ を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 medium p2 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:ux_review:outputs:report.html「ux 所見」タブ" data-risk="medium" data-category="成果物契約">
-<td class="case-id mono">UT-ux_review-OUT-report-html-UX</td>
+</tr><tr data-case-row data-search="ut-ux_review-out-report-html-ux-ufzkz1a ux_review ux自動エキスパートレビュー（axe-core＋ニールセン10原則ヒューリスティック） 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 report.html「ux 所見」タブ の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. report.html「ux 所見」タブ を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 medium p2 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:ux_review:outputs:report.html「ux 所見」タブ" data-risk="medium" data-category="成果物契約">
+<td class="case-id mono">UT-ux_review-OUT-report-html-UX-ufzkz1a</td>
 <td><span class="badge risk-medium">P2 中</span></td>
 <td><strong>ux_review</strong><br>UX自動エキスパートレビュー（axe-core＋ニールセン10原則ヒューリスティック）</td>
 <td>成果物契約<br><span class="small">機能完全性／データ品質</span></td>
@@ -5655,28 +5655,6 @@
 <td>契約化された失敗として制御され、秘密情報漏えい、破壊的副作用、未定義値の伝播がない。</td>
 <td>必須<br><span class="small">例外アサーション、状態差分、ログ</span></td>
 <td class="mono small">feature_contracts:document_mbt:symbols:build_metamorphic_candidates</td>
-</tr><tr data-case-row data-search="ut-document_mbt-sym-build_document_mbt-n-d2 document_mbt 文書駆動mbt（要件×実測からのテスト設計） 単体 シンボル契約 機能適合性／保守性 同値分割・ホワイトボックス build_document_mbt の正常入力に対する公開契約 外部i/oをテストダブルへ置換し、対象シンボルを単離する。 最小の有効入力、代表的な通常入力。 1. build_document_mbt を有効入力で呼ぶ。 2. 戻り値、状態変化、呼出し先を記録する。 仕様化された型・値・副作用だけを返し、例外・隠れた外部送信・共有状態汚染がない。 critical p0 必須 アサーション、分岐カバレッジ、テストログ feature_contracts:document_mbt:symbols:build_document_mbt" data-risk="critical" data-category="シンボル契約">
-<td class="case-id mono">UT-document_mbt-SYM-build_document_mbt-N-D2</td>
-<td><span class="badge risk-critical">P0 最重要</span></td>
-<td><strong>document_mbt</strong><br>文書駆動MBT（要件×実測からのテスト設計）</td>
-<td>シンボル契約<br><span class="small">機能適合性／保守性</span></td>
-<td>build_document_mbt の正常入力に対する公開契約<br><span class="small">技法: 同値分割・ホワイトボックス</span></td>
-<td><strong>前提</strong> 外部I/Oをテストダブルへ置換し、対象シンボルを単離する。<br><strong>データ</strong> 最小の有効入力、代表的な通常入力。</td>
-<td>1. build_document_mbt を有効入力で呼ぶ。 2. 戻り値、状態変化、呼出し先を記録する。</td>
-<td>仕様化された型・値・副作用だけを返し、例外・隠れた外部送信・共有状態汚染がない。</td>
-<td>必須<br><span class="small">アサーション、分岐カバレッジ、テストログ</span></td>
-<td class="mono small">feature_contracts:document_mbt:symbols:build_document_mbt</td>
-</tr><tr data-case-row data-search="ut-document_mbt-sym-build_document_mbt-i-d2 document_mbt 文書駆動mbt（要件×実測からのテスト設計） 単体 シンボル防御 信頼性／安全性 境界値分析・エラー推測 build_document_mbt の欠損・型違反・境界外入力 対象シンボルを単離し、例外と副作用を観測可能にする。 null相当、空、型違反、上限直前・上限・上限超過。 1. build_document_mbt へ不正・境界入力を順に与える。 2. 例外、戻り値、副作用を確認する。 契約化された失敗として制御され、秘密情報漏えい、破壊的副作用、未定義値の伝播がない。 critical p0 必須 例外アサーション、状態差分、ログ feature_contracts:document_mbt:symbols:build_document_mbt" data-risk="critical" data-category="シンボル防御">
-<td class="case-id mono">UT-document_mbt-SYM-build_document_mbt-I-D2</td>
-<td><span class="badge risk-critical">P0 最重要</span></td>
-<td><strong>document_mbt</strong><br>文書駆動MBT（要件×実測からのテスト設計）</td>
-<td>シンボル防御<br><span class="small">信頼性／安全性</span></td>
-<td>build_document_mbt の欠損・型違反・境界外入力<br><span class="small">技法: 境界値分析・エラー推測</span></td>
-<td><strong>前提</strong> 対象シンボルを単離し、例外と副作用を観測可能にする。<br><strong>データ</strong> null相当、空、型違反、上限直前・上限・上限超過。</td>
-<td>1. build_document_mbt へ不正・境界入力を順に与える。 2. 例外、戻り値、副作用を確認する。</td>
-<td>契約化された失敗として制御され、秘密情報漏えい、破壊的副作用、未定義値の伝播がない。</td>
-<td>必須<br><span class="small">例外アサーション、状態差分、ログ</span></td>
-<td class="mono small">feature_contracts:document_mbt:symbols:build_document_mbt</td>
 </tr><tr data-case-row data-search="ut-document_mbt-sym-suggest_matches-n document_mbt 文書駆動mbt（要件×実測からのテスト設計） 単体 シンボル契約 機能適合性／保守性 同値分割・ホワイトボックス suggest_matches の正常入力に対する公開契約 外部i/oをテストダブルへ置換し、対象シンボルを単離する。 最小の有効入力、代表的な通常入力。 1. suggest_matches を有効入力で呼ぶ。 2. 戻り値、状態変化、呼出し先を記録する。 仕様化された型・値・副作用だけを返し、例外・隠れた外部送信・共有状態汚染がない。 critical p0 必須 アサーション、分岐カバレッジ、テストログ feature_contracts:document_mbt:symbols:suggest_matches" data-risk="critical" data-category="シンボル契約">
 <td class="case-id mono">UT-document_mbt-SYM-suggest_matches-N</td>
 <td><span class="badge risk-critical">P0 最重要</span></td>
@@ -6271,8 +6249,8 @@
 <td>失敗が分類され、上位層が処理可能な結果となる。部分データ破損、無限再試行、機密露出がない。</td>
 <td>必須<br><span class="small">失敗分類、例外チェーン、状態差分</span></td>
 <td class="mono small">feature_contracts:diff_severity:failure_modes:missing_screenshot</td>
-</tr><tr data-case-row data-search="ut-diff_severity-out-diff_report-html diff_severity 差分の重要度判定と誤検知フィルタ 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 diff_report.html（重要度・除外内訳・画像比較） の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. diff_report.html（重要度・除外内訳・画像比較） を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 high p1 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:diff_severity:outputs:diff_report.html（重要度・除外内訳・画像比較）" data-risk="high" data-category="成果物契約">
-<td class="case-id mono">UT-diff_severity-OUT-diff_report-html</td>
+</tr><tr data-case-row data-search="ut-diff_severity-out-diff_report-html-uz8zdeq diff_severity 差分の重要度判定と誤検知フィルタ 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 diff_report.html（重要度・除外内訳・画像比較） の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. diff_report.html（重要度・除外内訳・画像比較） を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 high p1 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:diff_severity:outputs:diff_report.html（重要度・除外内訳・画像比較）" data-risk="high" data-category="成果物契約">
+<td class="case-id mono">UT-diff_severity-OUT-diff_report-html-uz8zdeq</td>
 <td><span class="badge risk-high">P1 高</span></td>
 <td><strong>diff_severity</strong><br>差分の重要度判定と誤検知フィルタ</td>
 <td>成果物契約<br><span class="small">機能完全性／データ品質</span></td>
@@ -6909,8 +6887,8 @@
 <td>失敗が分類され、上位層が処理可能な結果となる。部分データ破損、無限再試行、機密露出がない。</td>
 <td>必須<br><span class="small">失敗分類、例外チェーン、状態差分</span></td>
 <td class="mono small">feature_contracts:sso_oidc:failure_modes:readonly_token_mutation</td>
-</tr><tr data-case-row data-search="ut-sso_oidc-out-sso sso_oidc sso（oidc）とapiトークンスコープ 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 ssoセッション の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. ssoセッション を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 critical p0 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:sso_oidc:outputs:ssoセッション" data-risk="critical" data-category="成果物契約">
-<td class="case-id mono">UT-sso_oidc-OUT-SSO</td>
+</tr><tr data-case-row data-search="ut-sso_oidc-out-sso-u1fxeiyx sso_oidc sso（oidc）とapiトークンスコープ 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 ssoセッション の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. ssoセッション を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 critical p0 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:sso_oidc:outputs:ssoセッション" data-risk="critical" data-category="成果物契約">
+<td class="case-id mono">UT-sso_oidc-OUT-SSO-u1fxeiyx</td>
 <td><span class="badge risk-critical">P0 最重要</span></td>
 <td><strong>sso_oidc</strong><br>SSO（OIDC）とAPIトークンスコープ</td>
 <td>成果物契約<br><span class="small">機能完全性／データ品質</span></td>
@@ -6920,8 +6898,8 @@
 <td>必須値が実値で埋まり、undefined、関数文字列、NaN、未エスケープ値が成果物へ混入しない。</td>
 <td>必須<br><span class="small">スキーマ検証結果、ゴールデン差分</span></td>
 <td class="mono small">feature_contracts:sso_oidc:outputs:SSOセッション</td>
-</tr><tr data-case-row data-search="ut-sso_oidc-out-api sso_oidc sso（oidc）とapiトークンスコープ 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 apiトークン（スコープ付き） の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. apiトークン（スコープ付き） を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 critical p0 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:sso_oidc:outputs:apiトークン（スコープ付き）" data-risk="critical" data-category="成果物契約">
-<td class="case-id mono">UT-sso_oidc-OUT-API</td>
+</tr><tr data-case-row data-search="ut-sso_oidc-out-api-u1n3o8v8 sso_oidc sso（oidc）とapiトークンスコープ 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 apiトークン（スコープ付き） の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. apiトークン（スコープ付き） を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 critical p0 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:sso_oidc:outputs:apiトークン（スコープ付き）" data-risk="critical" data-category="成果物契約">
+<td class="case-id mono">UT-sso_oidc-OUT-API-u1n3o8v8</td>
 <td><span class="badge risk-critical">P0 最重要</span></td>
 <td><strong>sso_oidc</strong><br>SSO（OIDC）とAPIトークンスコープ</td>
 <td>成果物契約<br><span class="small">機能完全性／データ品質</span></td>
@@ -7129,8 +7107,8 @@
 <td>失敗が分類され、上位層が処理可能な結果となる。部分データ破損、無限再試行、機密露出がない。</td>
 <td>必須<br><span class="small">失敗分類、例外チェーン、状態差分</span></td>
 <td class="mono small">feature_contracts:observability:failure_modes:negative_value</td>
-</tr><tr data-case-row data-search="ut-observability-out-metrics-prometheus observability 可観測性（メトリクス・構造化ログ） 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 /metrics（prometheus形式） の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. /metrics（prometheus形式） を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 medium p2 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:observability:outputs:/metrics（prometheus形式）" data-risk="medium" data-category="成果物契約">
-<td class="case-id mono">UT-observability-OUT-metrics-Prometheus</td>
+</tr><tr data-case-row data-search="ut-observability-out-metrics-prometheus-u1h12y0d observability 可観測性（メトリクス・構造化ログ） 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 /metrics（prometheus形式） の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. /metrics（prometheus形式） を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 medium p2 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:observability:outputs:/metrics（prometheus形式）" data-risk="medium" data-category="成果物契約">
+<td class="case-id mono">UT-observability-OUT-metrics-Prometheus-u1h12y0d</td>
 <td><span class="badge risk-medium">P2 中</span></td>
 <td><strong>observability</strong><br>可観測性（メトリクス・構造化ログ）</td>
 <td>成果物契約<br><span class="small">機能完全性／データ品質</span></td>
@@ -7140,8 +7118,8 @@
 <td>必須値が実値で埋まり、undefined、関数文字列、NaN、未エスケープ値が成果物へ混入しない。</td>
 <td>必須<br><span class="small">スキーマ検証結果、ゴールデン差分</span></td>
 <td class="mono small">feature_contracts:observability:outputs:/metrics（Prometheus形式）</td>
-</tr><tr data-case-row data-search="ut-observability-out-json observability 可観測性（メトリクス・構造化ログ） 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 json構造化ログ の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. json構造化ログ を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 medium p2 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:observability:outputs:json構造化ログ" data-risk="medium" data-category="成果物契約">
-<td class="case-id mono">UT-observability-OUT-JSON</td>
+</tr><tr data-case-row data-search="ut-observability-out-json-uj5i77j observability 可観測性（メトリクス・構造化ログ） 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 json構造化ログ の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. json構造化ログ を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 medium p2 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:observability:outputs:json構造化ログ" data-risk="medium" data-category="成果物契約">
+<td class="case-id mono">UT-observability-OUT-JSON-uj5i77j</td>
 <td><span class="badge risk-medium">P2 中</span></td>
 <td><strong>observability</strong><br>可観測性（メトリクス・構造化ログ）</td>
 <td>成果物契約<br><span class="small">機能完全性／データ品質</span></td>
@@ -7272,8 +7250,8 @@
 <td>失敗が分類され、上位層が処理可能な結果となる。部分データ破損、無限再試行、機密露出がない。</td>
 <td>必須<br><span class="small">失敗分類、例外チェーン、状態差分</span></td>
 <td class="mono small">feature_contracts:api_spec_recovery:failure_modes:unparseable_path</td>
-</tr><tr data-case-row data-search="ut-api_spec_recovery-out-api api_spec_recovery api仕様の逆生成 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 画面↔api対応表 の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. 画面↔api対応表 を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 medium p2 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:api_spec_recovery:outputs:画面↔api対応表" data-risk="medium" data-category="成果物契約">
-<td class="case-id mono">UT-api_spec_recovery-OUT-API</td>
+</tr><tr data-case-row data-search="ut-api_spec_recovery-out-api-ukg41cy api_spec_recovery api仕様の逆生成 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 画面↔api対応表 の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. 画面↔api対応表 を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 medium p2 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:api_spec_recovery:outputs:画面↔api対応表" data-risk="medium" data-category="成果物契約">
+<td class="case-id mono">UT-api_spec_recovery-OUT-API-ukg41cy</td>
 <td><span class="badge risk-medium">P2 中</span></td>
 <td><strong>api_spec_recovery</strong><br>API仕様の逆生成</td>
 <td>成果物契約<br><span class="small">機能完全性／データ品質</span></td>
@@ -7283,8 +7261,8 @@
 <td>必須値が実値で埋まり、undefined、関数文字列、NaN、未エスケープ値が成果物へ混入しない。</td>
 <td>必須<br><span class="small">スキーマ検証結果、ゴールデン差分</span></td>
 <td class="mono small">feature_contracts:api_spec_recovery:outputs:画面↔API対応表</td>
-</tr><tr data-case-row data-search="ut-api_spec_recovery-out-openapi api_spec_recovery api仕様の逆生成 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 openapi雛形 の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. openapi雛形 を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 medium p2 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:api_spec_recovery:outputs:openapi雛形" data-risk="medium" data-category="成果物契約">
-<td class="case-id mono">UT-api_spec_recovery-OUT-OpenAPI</td>
+</tr><tr data-case-row data-search="ut-api_spec_recovery-out-openapi-u1ftflmm api_spec_recovery api仕様の逆生成 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 openapi雛形 の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. openapi雛形 を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 medium p2 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:api_spec_recovery:outputs:openapi雛形" data-risk="medium" data-category="成果物契約">
+<td class="case-id mono">UT-api_spec_recovery-OUT-OpenAPI-u1ftflmm</td>
 <td><span class="badge risk-medium">P2 中</span></td>
 <td><strong>api_spec_recovery</strong><br>API仕様の逆生成</td>
 <td>成果物契約<br><span class="small">機能完全性／データ品質</span></td>
@@ -7745,8 +7723,8 @@
 <td>失敗が分類され、上位層が処理可能な結果となる。部分データ破損、無限再試行、機密露出がない。</td>
 <td>必須<br><span class="small">失敗分類、例外チェーン、状態差分</span></td>
 <td class="mono small">feature_contracts:full_archive:failure_modes:broken_sitemap</td>
-</tr><tr data-case-row data-search="ut-full_archive-out-archive_-zip-manifest-json full_archive 完全アーカイブと外形監視（sitemap/pdf） 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 archive_*.zip（manifest.json同梱） の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. archive_*.zip（manifest.json同梱） を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 medium p2 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:full_archive:outputs:archive_*.zip（manifest.json同梱）" data-risk="medium" data-category="成果物契約">
-<td class="case-id mono">UT-full_archive-OUT-archive_-zip-MANIFEST-json</td>
+</tr><tr data-case-row data-search="ut-full_archive-out-archive_-zip-manifest-json-u1deg8a4 full_archive 完全アーカイブと外形監視（sitemap/pdf） 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 archive_*.zip（manifest.json同梱） の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. archive_*.zip（manifest.json同梱） を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 medium p2 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:full_archive:outputs:archive_*.zip（manifest.json同梱）" data-risk="medium" data-category="成果物契約">
+<td class="case-id mono">UT-full_archive-OUT-archive_-zip-MANIFEST-json-u1deg8a4</td>
 <td><span class="badge risk-medium">P2 中</span></td>
 <td><strong>full_archive</strong><br>完全アーカイブと外形監視（sitemap/PDF）</td>
 <td>成果物契約<br><span class="small">機能完全性／データ品質</span></td>
@@ -7756,8 +7734,8 @@
 <td>必須値が実値で埋まり、undefined、関数文字列、NaN、未エスケープ値が成果物へ混入しない。</td>
 <td>必須<br><span class="small">スキーマ検証結果、ゴールデン差分</span></td>
 <td class="mono small">feature_contracts:full_archive:outputs:archive_*.zip（MANIFEST.json同梱）</td>
-</tr><tr data-case-row data-search="ut-full_archive-out-sitemap full_archive 完全アーカイブと外形監視（sitemap/pdf） 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 sitemap/文書の差分 の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. sitemap/文書の差分 を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 medium p2 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:full_archive:outputs:sitemap/文書の差分" data-risk="medium" data-category="成果物契約">
-<td class="case-id mono">UT-full_archive-OUT-sitemap</td>
+</tr><tr data-case-row data-search="ut-full_archive-out-sitemap-u10wz3io full_archive 完全アーカイブと外形監視（sitemap/pdf） 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 sitemap/文書の差分 の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. sitemap/文書の差分 を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 medium p2 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:full_archive:outputs:sitemap/文書の差分" data-risk="medium" data-category="成果物契約">
+<td class="case-id mono">UT-full_archive-OUT-sitemap-u10wz3io</td>
 <td><span class="badge risk-medium">P2 中</span></td>
 <td><strong>full_archive</strong><br>完全アーカイブと外形監視（sitemap/PDF）</td>
 <td>成果物契約<br><span class="small">機能完全性／データ品質</span></td>
@@ -7976,6 +7954,28 @@
 <td>契約化された失敗として制御され、秘密情報漏えい、破壊的副作用、未定義値の伝播がない。</td>
 <td>必須<br><span class="small">例外アサーション、状態差分、ログ</span></td>
 <td class="mono small">feature_contracts:autorun_stage_approval:symbols:Pipeline</td>
+</tr><tr data-case-row data-search="ut-autorun_stage_approval-sym-build_decisions-n autorun_stage_approval autorun 段階承認パイプライン（テスト目的〜テストケース） 単体 シンボル契約 機能適合性／保守性 同値分割・ホワイトボックス build_decisions の正常入力に対する公開契約 外部i/oをテストダブルへ置換し、対象シンボルを単離する。 最小の有効入力、代表的な通常入力。 1. build_decisions を有効入力で呼ぶ。 2. 戻り値、状態変化、呼出し先を記録する。 仕様化された型・値・副作用だけを返し、例外・隠れた外部送信・共有状態汚染がない。 critical p0 必須 アサーション、分岐カバレッジ、テストログ feature_contracts:autorun_stage_approval:symbols:build_decisions" data-risk="critical" data-category="シンボル契約">
+<td class="case-id mono">UT-autorun_stage_approval-SYM-build_decisions-N</td>
+<td><span class="badge risk-critical">P0 最重要</span></td>
+<td><strong>autorun_stage_approval</strong><br>AutoRun 段階承認パイプライン（テスト目的〜テストケース）</td>
+<td>シンボル契約<br><span class="small">機能適合性／保守性</span></td>
+<td>build_decisions の正常入力に対する公開契約<br><span class="small">技法: 同値分割・ホワイトボックス</span></td>
+<td><strong>前提</strong> 外部I/Oをテストダブルへ置換し、対象シンボルを単離する。<br><strong>データ</strong> 最小の有効入力、代表的な通常入力。</td>
+<td>1. build_decisions を有効入力で呼ぶ。 2. 戻り値、状態変化、呼出し先を記録する。</td>
+<td>仕様化された型・値・副作用だけを返し、例外・隠れた外部送信・共有状態汚染がない。</td>
+<td>必須<br><span class="small">アサーション、分岐カバレッジ、テストログ</span></td>
+<td class="mono small">feature_contracts:autorun_stage_approval:symbols:build_decisions</td>
+</tr><tr data-case-row data-search="ut-autorun_stage_approval-sym-build_decisions-i autorun_stage_approval autorun 段階承認パイプライン（テスト目的〜テストケース） 単体 シンボル防御 信頼性／安全性 境界値分析・エラー推測 build_decisions の欠損・型違反・境界外入力 対象シンボルを単離し、例外と副作用を観測可能にする。 null相当、空、型違反、上限直前・上限・上限超過。 1. build_decisions へ不正・境界入力を順に与える。 2. 例外、戻り値、副作用を確認する。 契約化された失敗として制御され、秘密情報漏えい、破壊的副作用、未定義値の伝播がない。 critical p0 必須 例外アサーション、状態差分、ログ feature_contracts:autorun_stage_approval:symbols:build_decisions" data-risk="critical" data-category="シンボル防御">
+<td class="case-id mono">UT-autorun_stage_approval-SYM-build_decisions-I</td>
+<td><span class="badge risk-critical">P0 最重要</span></td>
+<td><strong>autorun_stage_approval</strong><br>AutoRun 段階承認パイプライン（テスト目的〜テストケース）</td>
+<td>シンボル防御<br><span class="small">信頼性／安全性</span></td>
+<td>build_decisions の欠損・型違反・境界外入力<br><span class="small">技法: 境界値分析・エラー推測</span></td>
+<td><strong>前提</strong> 対象シンボルを単離し、例外と副作用を観測可能にする。<br><strong>データ</strong> null相当、空、型違反、上限直前・上限・上限超過。</td>
+<td>1. build_decisions へ不正・境界入力を順に与える。 2. 例外、戻り値、副作用を確認する。</td>
+<td>契約化された失敗として制御され、秘密情報漏えい、破壊的副作用、未定義値の伝播がない。</td>
+<td>必須<br><span class="small">例外アサーション、状態差分、ログ</span></td>
+<td class="mono small">feature_contracts:autorun_stage_approval:symbols:build_decisions</td>
 </tr><tr data-case-row data-search="ut-autorun_stage_approval-sym-build_plan-n autorun_stage_approval autorun 段階承認パイプライン（テスト目的〜テストケース） 単体 シンボル契約 機能適合性／保守性 同値分割・ホワイトボックス build_plan の正常入力に対する公開契約 外部i/oをテストダブルへ置換し、対象シンボルを単離する。 最小の有効入力、代表的な通常入力。 1. build_plan を有効入力で呼ぶ。 2. 戻り値、状態変化、呼出し先を記録する。 仕様化された型・値・副作用だけを返し、例外・隠れた外部送信・共有状態汚染がない。 critical p0 必須 アサーション、分岐カバレッジ、テストログ feature_contracts:autorun_stage_approval:symbols:build_plan" data-risk="critical" data-category="シンボル契約">
 <td class="case-id mono">UT-autorun_stage_approval-SYM-build_plan-N</td>
 <td><span class="badge risk-critical">P0 最重要</span></td>
@@ -8108,6 +8108,28 @@
 <td>契約化された失敗として制御され、秘密情報漏えい、破壊的副作用、未定義値の伝播がない。</td>
 <td>必須<br><span class="small">例外アサーション、状態差分、ログ</span></td>
 <td class="mono small">feature_contracts:autorun_stage_approval:symbols:to_csv</td>
+</tr><tr data-case-row data-search="ut-autorun_stage_approval-sym-validate_answers-n autorun_stage_approval autorun 段階承認パイプライン（テスト目的〜テストケース） 単体 シンボル契約 機能適合性／保守性 同値分割・ホワイトボックス validate_answers の正常入力に対する公開契約 外部i/oをテストダブルへ置換し、対象シンボルを単離する。 最小の有効入力、代表的な通常入力。 1. validate_answers を有効入力で呼ぶ。 2. 戻り値、状態変化、呼出し先を記録する。 仕様化された型・値・副作用だけを返し、例外・隠れた外部送信・共有状態汚染がない。 critical p0 必須 アサーション、分岐カバレッジ、テストログ feature_contracts:autorun_stage_approval:symbols:validate_answers" data-risk="critical" data-category="シンボル契約">
+<td class="case-id mono">UT-autorun_stage_approval-SYM-validate_answers-N</td>
+<td><span class="badge risk-critical">P0 最重要</span></td>
+<td><strong>autorun_stage_approval</strong><br>AutoRun 段階承認パイプライン（テスト目的〜テストケース）</td>
+<td>シンボル契約<br><span class="small">機能適合性／保守性</span></td>
+<td>validate_answers の正常入力に対する公開契約<br><span class="small">技法: 同値分割・ホワイトボックス</span></td>
+<td><strong>前提</strong> 外部I/Oをテストダブルへ置換し、対象シンボルを単離する。<br><strong>データ</strong> 最小の有効入力、代表的な通常入力。</td>
+<td>1. validate_answers を有効入力で呼ぶ。 2. 戻り値、状態変化、呼出し先を記録する。</td>
+<td>仕様化された型・値・副作用だけを返し、例外・隠れた外部送信・共有状態汚染がない。</td>
+<td>必須<br><span class="small">アサーション、分岐カバレッジ、テストログ</span></td>
+<td class="mono small">feature_contracts:autorun_stage_approval:symbols:validate_answers</td>
+</tr><tr data-case-row data-search="ut-autorun_stage_approval-sym-validate_answers-i autorun_stage_approval autorun 段階承認パイプライン（テスト目的〜テストケース） 単体 シンボル防御 信頼性／安全性 境界値分析・エラー推測 validate_answers の欠損・型違反・境界外入力 対象シンボルを単離し、例外と副作用を観測可能にする。 null相当、空、型違反、上限直前・上限・上限超過。 1. validate_answers へ不正・境界入力を順に与える。 2. 例外、戻り値、副作用を確認する。 契約化された失敗として制御され、秘密情報漏えい、破壊的副作用、未定義値の伝播がない。 critical p0 必須 例外アサーション、状態差分、ログ feature_contracts:autorun_stage_approval:symbols:validate_answers" data-risk="critical" data-category="シンボル防御">
+<td class="case-id mono">UT-autorun_stage_approval-SYM-validate_answers-I</td>
+<td><span class="badge risk-critical">P0 最重要</span></td>
+<td><strong>autorun_stage_approval</strong><br>AutoRun 段階承認パイプライン（テスト目的〜テストケース）</td>
+<td>シンボル防御<br><span class="small">信頼性／安全性</span></td>
+<td>validate_answers の欠損・型違反・境界外入力<br><span class="small">技法: 境界値分析・エラー推測</span></td>
+<td><strong>前提</strong> 対象シンボルを単離し、例外と副作用を観測可能にする。<br><strong>データ</strong> null相当、空、型違反、上限直前・上限・上限超過。</td>
+<td>1. validate_answers へ不正・境界入力を順に与える。 2. 例外、戻り値、副作用を確認する。</td>
+<td>契約化された失敗として制御され、秘密情報漏えい、破壊的副作用、未定義値の伝播がない。</td>
+<td>必須<br><span class="small">例外アサーション、状態差分、ログ</span></td>
+<td class="mono small">feature_contracts:autorun_stage_approval:symbols:validate_answers</td>
 </tr><tr data-case-row data-search="ut-autorun_stage_approval-fm-invalid_domain autorun_stage_approval autorun 段階承認パイプライン（テスト目的〜テストケース） 単体 故障モード 信頼性／安全性 フォールトインジェクション invalid_domain を局所的に発生させたときの封じ込め 対象依存先をテストダブル化し、指定故障を決定的に注入できる。 故障プロファイル=invalid_domain 1. invalid_domain を注入する。 2. 対象ロジックを実行する。 3. 戻り値、例外、状態を確認する。 失敗が分類され、上位層が処理可能な結果となる。部分データ破損、無限再試行、機密露出がない。 critical p0 必須 失敗分類、例外チェーン、状態差分 feature_contracts:autorun_stage_approval:failure_modes:invalid_domain" data-risk="critical" data-category="故障モード">
 <td class="case-id mono">UT-autorun_stage_approval-FM-invalid_domain</td>
 <td><span class="badge risk-critical">P0 最重要</span></td>
@@ -8240,8 +8262,8 @@
 <td>必須値が実値で埋まり、undefined、関数文字列、NaN、未エスケープ値が成果物へ混入しない。</td>
 <td>必須<br><span class="small">スキーマ検証結果、ゴールデン差分</span></td>
 <td class="mono small">feature_contracts:autorun_stage_approval:outputs:viewpoints</td>
-</tr><tr data-case-row data-search="ut-autorun_stage_approval-per-output-domain-qa_process-automation_coverage-jso autorun_stage_approval autorun 段階承認パイプライン（テスト目的〜テストケース） 単体 永続化境界 信頼性／セキュリティ 境界・不変条件 output/&lt;domain&gt;/qa_process/automation_coverage.json のパス・キー・原子性 一時領域を用い、他テナントと失敗注入用の境界を準備する。 通常キー、衝突キー、 traversal文字列、中断書込み。 1. 保存する。 2. 再読込する。 3. 境界外指定と中断を注入する。 同一データを復元でき、境界外アクセス・他テナント混入・半端なコミットが発生しない。 critical p0 必須 保存前後ハッシュ、パス検査、状態差分 feature_contracts:autorun_stage_approval:persistence:output/&lt;domain&gt;/qa_process/automation_coverage.json" data-risk="critical" data-category="永続化境界">
-<td class="case-id mono">UT-autorun_stage_approval-PER-output-domain-qa_process-automation_coverage-jso</td>
+</tr><tr data-case-row data-search="ut-autorun_stage_approval-per-output-domain-qa_process-automation_coverage-jso-u11uoxkb autorun_stage_approval autorun 段階承認パイプライン（テスト目的〜テストケース） 単体 永続化境界 信頼性／セキュリティ 境界・不変条件 output/&lt;domain&gt;/qa_process/automation_coverage.json のパス・キー・原子性 一時領域を用い、他テナントと失敗注入用の境界を準備する。 通常キー、衝突キー、 traversal文字列、中断書込み。 1. 保存する。 2. 再読込する。 3. 境界外指定と中断を注入する。 同一データを復元でき、境界外アクセス・他テナント混入・半端なコミットが発生しない。 critical p0 必須 保存前後ハッシュ、パス検査、状態差分 feature_contracts:autorun_stage_approval:persistence:output/&lt;domain&gt;/qa_process/automation_coverage.json" data-risk="critical" data-category="永続化境界">
+<td class="case-id mono">UT-autorun_stage_approval-PER-output-domain-qa_process-automation_coverage-jso-u11uoxkb</td>
 <td><span class="badge risk-critical">P0 最重要</span></td>
 <td><strong>autorun_stage_approval</strong><br>AutoRun 段階承認パイプライン（テスト目的〜テストケース）</td>
 <td>永続化境界<br><span class="small">信頼性／セキュリティ</span></td>
@@ -8691,8 +8713,8 @@
 <td>必須値が実値で埋まり、undefined、関数文字列、NaN、未エスケープ値が成果物へ混入しない。</td>
 <td>必須<br><span class="small">スキーマ検証結果、ゴールデン差分</span></td>
 <td class="mono small">feature_contracts:autorun_security_kernel:outputs:egress_log.ndjson</td>
-</tr><tr data-case-row data-search="ut-autorun_security_kernel-out-allowed-denied autorun_security_kernel autorun セキュリティカーネル（送信ゲートウェイ・非信頼コンテンツ境界） 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 送信レポート（allowed/denied/予算切れ） の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. 送信レポート（allowed/denied/予算切れ） を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 critical p0 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:autorun_security_kernel:outputs:送信レポート（allowed/denied/予算切れ）" data-risk="critical" data-category="成果物契約">
-<td class="case-id mono">UT-autorun_security_kernel-OUT-allowed-denied</td>
+</tr><tr data-case-row data-search="ut-autorun_security_kernel-out-allowed-denied-u5h2ahk autorun_security_kernel autorun セキュリティカーネル（送信ゲートウェイ・非信頼コンテンツ境界） 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 送信レポート（allowed/denied/予算切れ） の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. 送信レポート（allowed/denied/予算切れ） を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 critical p0 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:autorun_security_kernel:outputs:送信レポート（allowed/denied/予算切れ）" data-risk="critical" data-category="成果物契約">
+<td class="case-id mono">UT-autorun_security_kernel-OUT-allowed-denied-u5h2ahk</td>
 <td><span class="badge risk-critical">P0 最重要</span></td>
 <td><strong>autorun_security_kernel</strong><br>AutoRun セキュリティカーネル（送信ゲートウェイ・非信頼コンテンツ境界）</td>
 <td>成果物契約<br><span class="small">機能完全性／データ品質</span></td>
@@ -9076,8 +9098,8 @@
 <td>必須値が実値で埋まり、undefined、関数文字列、NaN、未エスケープ値が成果物へ混入しない。</td>
 <td>必須<br><span class="small">スキーマ検証結果、ゴールデン差分</span></td>
 <td class="mono small">feature_contracts:autorun_nonfunctional_judge:outputs:未観測領域の明示</td>
-</tr><tr data-case-row data-search="ut-autorun_nonfunctional_judge-per-output-domain-qa_process-nonfunctional_judgement autorun_nonfunctional_judge autorun 非機能判定・観測完全性 単体 永続化境界 信頼性／セキュリティ 境界・不変条件 output/{domain}/qa_process/nonfunctional_judgement.json のパス・キー・原子性 一時領域を用い、他テナントと失敗注入用の境界を準備する。 通常キー、衝突キー、 traversal文字列、中断書込み。 1. 保存する。 2. 再読込する。 3. 境界外指定と中断を注入する。 同一データを復元でき、境界外アクセス・他テナント混入・半端なコミットが発生しない。 high p1 必須 保存前後ハッシュ、パス検査、状態差分 feature_contracts:autorun_nonfunctional_judge:persistence:output/{domain}/qa_process/nonfunctional_judgement.json" data-risk="high" data-category="永続化境界">
-<td class="case-id mono">UT-autorun_nonfunctional_judge-PER-output-domain-qa_process-nonfunctional_judgement</td>
+</tr><tr data-case-row data-search="ut-autorun_nonfunctional_judge-per-output-domain-qa_process-nonfunctional_judgement-u305o3t autorun_nonfunctional_judge autorun 非機能判定・観測完全性 単体 永続化境界 信頼性／セキュリティ 境界・不変条件 output/{domain}/qa_process/nonfunctional_judgement.json のパス・キー・原子性 一時領域を用い、他テナントと失敗注入用の境界を準備する。 通常キー、衝突キー、 traversal文字列、中断書込み。 1. 保存する。 2. 再読込する。 3. 境界外指定と中断を注入する。 同一データを復元でき、境界外アクセス・他テナント混入・半端なコミットが発生しない。 high p1 必須 保存前後ハッシュ、パス検査、状態差分 feature_contracts:autorun_nonfunctional_judge:persistence:output/{domain}/qa_process/nonfunctional_judgement.json" data-risk="high" data-category="永続化境界">
+<td class="case-id mono">UT-autorun_nonfunctional_judge-PER-output-domain-qa_process-nonfunctional_judgement-u305o3t</td>
 <td><span class="badge risk-high">P1 高</span></td>
 <td><strong>autorun_nonfunctional_judge</strong><br>AutoRun 非機能判定・観測完全性</td>
 <td>永続化境界<br><span class="small">信頼性／セキュリティ</span></td>
@@ -9351,7 +9373,447 @@
 <td>各条件組合せが仕様どおりに分類され、未定義分岐と到達不能な必須分岐がない。</td>
 <td>必須<br><span class="small">分岐表、MC/DCまたは条件カバレッジ</span></td>
 <td class="mono small">feature_contracts:autorun_failure_triage:required_tests:evidence</td>
-</tr></tbody></table></div></section><p class="footer">文書ID: WS2D-ZBQA-UNIT / 状態: 承認待ち / テスト未実行 / 生成元: quality/feature_contracts.yml</p></div></main></div><script>
+</tr><tr data-case-row data-search="ut-testcase_table-sym-build_testcase_table-n testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 シンボル契約 機能適合性／保守性 同値分割・ホワイトボックス build_testcase_table の正常入力に対する公開契約 外部i/oをテストダブルへ置換し、対象シンボルを単離する。 最小の有効入力、代表的な通常入力。 1. build_testcase_table を有効入力で呼ぶ。 2. 戻り値、状態変化、呼出し先を記録する。 仕様化された型・値・副作用だけを返し、例外・隠れた外部送信・共有状態汚染がない。 high p1 必須 アサーション、分岐カバレッジ、テストログ feature_contracts:testcase_table:symbols:build_testcase_table" data-risk="high" data-category="シンボル契約">
+<td class="case-id mono">UT-testcase_table-SYM-build_testcase_table-N</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>シンボル契約<br><span class="small">機能適合性／保守性</span></td>
+<td>build_testcase_table の正常入力に対する公開契約<br><span class="small">技法: 同値分割・ホワイトボックス</span></td>
+<td><strong>前提</strong> 外部I/Oをテストダブルへ置換し、対象シンボルを単離する。<br><strong>データ</strong> 最小の有効入力、代表的な通常入力。</td>
+<td>1. build_testcase_table を有効入力で呼ぶ。 2. 戻り値、状態変化、呼出し先を記録する。</td>
+<td>仕様化された型・値・副作用だけを返し、例外・隠れた外部送信・共有状態汚染がない。</td>
+<td>必須<br><span class="small">アサーション、分岐カバレッジ、テストログ</span></td>
+<td class="mono small">feature_contracts:testcase_table:symbols:build_testcase_table</td>
+</tr><tr data-case-row data-search="ut-testcase_table-sym-build_testcase_table-i testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 シンボル防御 信頼性／安全性 境界値分析・エラー推測 build_testcase_table の欠損・型違反・境界外入力 対象シンボルを単離し、例外と副作用を観測可能にする。 null相当、空、型違反、上限直前・上限・上限超過。 1. build_testcase_table へ不正・境界入力を順に与える。 2. 例外、戻り値、副作用を確認する。 契約化された失敗として制御され、秘密情報漏えい、破壊的副作用、未定義値の伝播がない。 high p1 必須 例外アサーション、状態差分、ログ feature_contracts:testcase_table:symbols:build_testcase_table" data-risk="high" data-category="シンボル防御">
+<td class="case-id mono">UT-testcase_table-SYM-build_testcase_table-I</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>シンボル防御<br><span class="small">信頼性／安全性</span></td>
+<td>build_testcase_table の欠損・型違反・境界外入力<br><span class="small">技法: 境界値分析・エラー推測</span></td>
+<td><strong>前提</strong> 対象シンボルを単離し、例外と副作用を観測可能にする。<br><strong>データ</strong> null相当、空、型違反、上限直前・上限・上限超過。</td>
+<td>1. build_testcase_table へ不正・境界入力を順に与える。 2. 例外、戻り値、副作用を確認する。</td>
+<td>契約化された失敗として制御され、秘密情報漏えい、破壊的副作用、未定義値の伝播がない。</td>
+<td>必須<br><span class="small">例外アサーション、状態差分、ログ</span></td>
+<td class="mono small">feature_contracts:testcase_table:symbols:build_testcase_table</td>
+</tr><tr data-case-row data-search="ut-testcase_table-sym-compose-n testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 シンボル契約 機能適合性／保守性 同値分割・ホワイトボックス compose の正常入力に対する公開契約 外部i/oをテストダブルへ置換し、対象シンボルを単離する。 最小の有効入力、代表的な通常入力。 1. compose を有効入力で呼ぶ。 2. 戻り値、状態変化、呼出し先を記録する。 仕様化された型・値・副作用だけを返し、例外・隠れた外部送信・共有状態汚染がない。 high p1 必須 アサーション、分岐カバレッジ、テストログ feature_contracts:testcase_table:symbols:compose" data-risk="high" data-category="シンボル契約">
+<td class="case-id mono">UT-testcase_table-SYM-compose-N</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>シンボル契約<br><span class="small">機能適合性／保守性</span></td>
+<td>compose の正常入力に対する公開契約<br><span class="small">技法: 同値分割・ホワイトボックス</span></td>
+<td><strong>前提</strong> 外部I/Oをテストダブルへ置換し、対象シンボルを単離する。<br><strong>データ</strong> 最小の有効入力、代表的な通常入力。</td>
+<td>1. compose を有効入力で呼ぶ。 2. 戻り値、状態変化、呼出し先を記録する。</td>
+<td>仕様化された型・値・副作用だけを返し、例外・隠れた外部送信・共有状態汚染がない。</td>
+<td>必須<br><span class="small">アサーション、分岐カバレッジ、テストログ</span></td>
+<td class="mono small">feature_contracts:testcase_table:symbols:compose</td>
+</tr><tr data-case-row data-search="ut-testcase_table-sym-compose-i testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 シンボル防御 信頼性／安全性 境界値分析・エラー推測 compose の欠損・型違反・境界外入力 対象シンボルを単離し、例外と副作用を観測可能にする。 null相当、空、型違反、上限直前・上限・上限超過。 1. compose へ不正・境界入力を順に与える。 2. 例外、戻り値、副作用を確認する。 契約化された失敗として制御され、秘密情報漏えい、破壊的副作用、未定義値の伝播がない。 high p1 必須 例外アサーション、状態差分、ログ feature_contracts:testcase_table:symbols:compose" data-risk="high" data-category="シンボル防御">
+<td class="case-id mono">UT-testcase_table-SYM-compose-I</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>シンボル防御<br><span class="small">信頼性／安全性</span></td>
+<td>compose の欠損・型違反・境界外入力<br><span class="small">技法: 境界値分析・エラー推測</span></td>
+<td><strong>前提</strong> 対象シンボルを単離し、例外と副作用を観測可能にする。<br><strong>データ</strong> null相当、空、型違反、上限直前・上限・上限超過。</td>
+<td>1. compose へ不正・境界入力を順に与える。 2. 例外、戻り値、副作用を確認する。</td>
+<td>契約化された失敗として制御され、秘密情報漏えい、破壊的副作用、未定義値の伝播がない。</td>
+<td>必須<br><span class="small">例外アサーション、状態差分、ログ</span></td>
+<td class="mono small">feature_contracts:testcase_table:symbols:compose</td>
+</tr><tr data-case-row data-search="ut-testcase_table-sym-update_cell-n testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 シンボル契約 機能適合性／保守性 同値分割・ホワイトボックス update_cell の正常入力に対する公開契約 外部i/oをテストダブルへ置換し、対象シンボルを単離する。 最小の有効入力、代表的な通常入力。 1. update_cell を有効入力で呼ぶ。 2. 戻り値、状態変化、呼出し先を記録する。 仕様化された型・値・副作用だけを返し、例外・隠れた外部送信・共有状態汚染がない。 high p1 必須 アサーション、分岐カバレッジ、テストログ feature_contracts:testcase_table:symbols:update_cell" data-risk="high" data-category="シンボル契約">
+<td class="case-id mono">UT-testcase_table-SYM-update_cell-N</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>シンボル契約<br><span class="small">機能適合性／保守性</span></td>
+<td>update_cell の正常入力に対する公開契約<br><span class="small">技法: 同値分割・ホワイトボックス</span></td>
+<td><strong>前提</strong> 外部I/Oをテストダブルへ置換し、対象シンボルを単離する。<br><strong>データ</strong> 最小の有効入力、代表的な通常入力。</td>
+<td>1. update_cell を有効入力で呼ぶ。 2. 戻り値、状態変化、呼出し先を記録する。</td>
+<td>仕様化された型・値・副作用だけを返し、例外・隠れた外部送信・共有状態汚染がない。</td>
+<td>必須<br><span class="small">アサーション、分岐カバレッジ、テストログ</span></td>
+<td class="mono small">feature_contracts:testcase_table:symbols:update_cell</td>
+</tr><tr data-case-row data-search="ut-testcase_table-sym-update_cell-i testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 シンボル防御 信頼性／安全性 境界値分析・エラー推測 update_cell の欠損・型違反・境界外入力 対象シンボルを単離し、例外と副作用を観測可能にする。 null相当、空、型違反、上限直前・上限・上限超過。 1. update_cell へ不正・境界入力を順に与える。 2. 例外、戻り値、副作用を確認する。 契約化された失敗として制御され、秘密情報漏えい、破壊的副作用、未定義値の伝播がない。 high p1 必須 例外アサーション、状態差分、ログ feature_contracts:testcase_table:symbols:update_cell" data-risk="high" data-category="シンボル防御">
+<td class="case-id mono">UT-testcase_table-SYM-update_cell-I</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>シンボル防御<br><span class="small">信頼性／安全性</span></td>
+<td>update_cell の欠損・型違反・境界外入力<br><span class="small">技法: 境界値分析・エラー推測</span></td>
+<td><strong>前提</strong> 対象シンボルを単離し、例外と副作用を観測可能にする。<br><strong>データ</strong> null相当、空、型違反、上限直前・上限・上限超過。</td>
+<td>1. update_cell へ不正・境界入力を順に与える。 2. 例外、戻り値、副作用を確認する。</td>
+<td>契約化された失敗として制御され、秘密情報漏えい、破壊的副作用、未定義値の伝播がない。</td>
+<td>必須<br><span class="small">例外アサーション、状態差分、ログ</span></td>
+<td class="mono small">feature_contracts:testcase_table:symbols:update_cell</td>
+</tr><tr data-case-row data-search="ut-testcase_table-sym-reset_cell-n testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 シンボル契約 機能適合性／保守性 同値分割・ホワイトボックス reset_cell の正常入力に対する公開契約 外部i/oをテストダブルへ置換し、対象シンボルを単離する。 最小の有効入力、代表的な通常入力。 1. reset_cell を有効入力で呼ぶ。 2. 戻り値、状態変化、呼出し先を記録する。 仕様化された型・値・副作用だけを返し、例外・隠れた外部送信・共有状態汚染がない。 high p1 必須 アサーション、分岐カバレッジ、テストログ feature_contracts:testcase_table:symbols:reset_cell" data-risk="high" data-category="シンボル契約">
+<td class="case-id mono">UT-testcase_table-SYM-reset_cell-N</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>シンボル契約<br><span class="small">機能適合性／保守性</span></td>
+<td>reset_cell の正常入力に対する公開契約<br><span class="small">技法: 同値分割・ホワイトボックス</span></td>
+<td><strong>前提</strong> 外部I/Oをテストダブルへ置換し、対象シンボルを単離する。<br><strong>データ</strong> 最小の有効入力、代表的な通常入力。</td>
+<td>1. reset_cell を有効入力で呼ぶ。 2. 戻り値、状態変化、呼出し先を記録する。</td>
+<td>仕様化された型・値・副作用だけを返し、例外・隠れた外部送信・共有状態汚染がない。</td>
+<td>必須<br><span class="small">アサーション、分岐カバレッジ、テストログ</span></td>
+<td class="mono small">feature_contracts:testcase_table:symbols:reset_cell</td>
+</tr><tr data-case-row data-search="ut-testcase_table-sym-reset_cell-i testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 シンボル防御 信頼性／安全性 境界値分析・エラー推測 reset_cell の欠損・型違反・境界外入力 対象シンボルを単離し、例外と副作用を観測可能にする。 null相当、空、型違反、上限直前・上限・上限超過。 1. reset_cell へ不正・境界入力を順に与える。 2. 例外、戻り値、副作用を確認する。 契約化された失敗として制御され、秘密情報漏えい、破壊的副作用、未定義値の伝播がない。 high p1 必須 例外アサーション、状態差分、ログ feature_contracts:testcase_table:symbols:reset_cell" data-risk="high" data-category="シンボル防御">
+<td class="case-id mono">UT-testcase_table-SYM-reset_cell-I</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>シンボル防御<br><span class="small">信頼性／安全性</span></td>
+<td>reset_cell の欠損・型違反・境界外入力<br><span class="small">技法: 境界値分析・エラー推測</span></td>
+<td><strong>前提</strong> 対象シンボルを単離し、例外と副作用を観測可能にする。<br><strong>データ</strong> null相当、空、型違反、上限直前・上限・上限超過。</td>
+<td>1. reset_cell へ不正・境界入力を順に与える。 2. 例外、戻り値、副作用を確認する。</td>
+<td>契約化された失敗として制御され、秘密情報漏えい、破壊的副作用、未定義値の伝播がない。</td>
+<td>必須<br><span class="small">例外アサーション、状態差分、ログ</span></td>
+<td class="mono small">feature_contracts:testcase_table:symbols:reset_cell</td>
+</tr><tr data-case-row data-search="ut-testcase_table-sym-add_row-n testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 シンボル契約 機能適合性／保守性 同値分割・ホワイトボックス add_row の正常入力に対する公開契約 外部i/oをテストダブルへ置換し、対象シンボルを単離する。 最小の有効入力、代表的な通常入力。 1. add_row を有効入力で呼ぶ。 2. 戻り値、状態変化、呼出し先を記録する。 仕様化された型・値・副作用だけを返し、例外・隠れた外部送信・共有状態汚染がない。 high p1 必須 アサーション、分岐カバレッジ、テストログ feature_contracts:testcase_table:symbols:add_row" data-risk="high" data-category="シンボル契約">
+<td class="case-id mono">UT-testcase_table-SYM-add_row-N</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>シンボル契約<br><span class="small">機能適合性／保守性</span></td>
+<td>add_row の正常入力に対する公開契約<br><span class="small">技法: 同値分割・ホワイトボックス</span></td>
+<td><strong>前提</strong> 外部I/Oをテストダブルへ置換し、対象シンボルを単離する。<br><strong>データ</strong> 最小の有効入力、代表的な通常入力。</td>
+<td>1. add_row を有効入力で呼ぶ。 2. 戻り値、状態変化、呼出し先を記録する。</td>
+<td>仕様化された型・値・副作用だけを返し、例外・隠れた外部送信・共有状態汚染がない。</td>
+<td>必須<br><span class="small">アサーション、分岐カバレッジ、テストログ</span></td>
+<td class="mono small">feature_contracts:testcase_table:symbols:add_row</td>
+</tr><tr data-case-row data-search="ut-testcase_table-sym-add_row-i testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 シンボル防御 信頼性／安全性 境界値分析・エラー推測 add_row の欠損・型違反・境界外入力 対象シンボルを単離し、例外と副作用を観測可能にする。 null相当、空、型違反、上限直前・上限・上限超過。 1. add_row へ不正・境界入力を順に与える。 2. 例外、戻り値、副作用を確認する。 契約化された失敗として制御され、秘密情報漏えい、破壊的副作用、未定義値の伝播がない。 high p1 必須 例外アサーション、状態差分、ログ feature_contracts:testcase_table:symbols:add_row" data-risk="high" data-category="シンボル防御">
+<td class="case-id mono">UT-testcase_table-SYM-add_row-I</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>シンボル防御<br><span class="small">信頼性／安全性</span></td>
+<td>add_row の欠損・型違反・境界外入力<br><span class="small">技法: 境界値分析・エラー推測</span></td>
+<td><strong>前提</strong> 対象シンボルを単離し、例外と副作用を観測可能にする。<br><strong>データ</strong> null相当、空、型違反、上限直前・上限・上限超過。</td>
+<td>1. add_row へ不正・境界入力を順に与える。 2. 例外、戻り値、副作用を確認する。</td>
+<td>契約化された失敗として制御され、秘密情報漏えい、破壊的副作用、未定義値の伝播がない。</td>
+<td>必須<br><span class="small">例外アサーション、状態差分、ログ</span></td>
+<td class="mono small">feature_contracts:testcase_table:symbols:add_row</td>
+</tr><tr data-case-row data-search="ut-testcase_table-sym-delete_row-n testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 シンボル契約 機能適合性／保守性 同値分割・ホワイトボックス delete_row の正常入力に対する公開契約 外部i/oをテストダブルへ置換し、対象シンボルを単離する。 最小の有効入力、代表的な通常入力。 1. delete_row を有効入力で呼ぶ。 2. 戻り値、状態変化、呼出し先を記録する。 仕様化された型・値・副作用だけを返し、例外・隠れた外部送信・共有状態汚染がない。 high p1 必須 アサーション、分岐カバレッジ、テストログ feature_contracts:testcase_table:symbols:delete_row" data-risk="high" data-category="シンボル契約">
+<td class="case-id mono">UT-testcase_table-SYM-delete_row-N</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>シンボル契約<br><span class="small">機能適合性／保守性</span></td>
+<td>delete_row の正常入力に対する公開契約<br><span class="small">技法: 同値分割・ホワイトボックス</span></td>
+<td><strong>前提</strong> 外部I/Oをテストダブルへ置換し、対象シンボルを単離する。<br><strong>データ</strong> 最小の有効入力、代表的な通常入力。</td>
+<td>1. delete_row を有効入力で呼ぶ。 2. 戻り値、状態変化、呼出し先を記録する。</td>
+<td>仕様化された型・値・副作用だけを返し、例外・隠れた外部送信・共有状態汚染がない。</td>
+<td>必須<br><span class="small">アサーション、分岐カバレッジ、テストログ</span></td>
+<td class="mono small">feature_contracts:testcase_table:symbols:delete_row</td>
+</tr><tr data-case-row data-search="ut-testcase_table-sym-delete_row-i testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 シンボル防御 信頼性／安全性 境界値分析・エラー推測 delete_row の欠損・型違反・境界外入力 対象シンボルを単離し、例外と副作用を観測可能にする。 null相当、空、型違反、上限直前・上限・上限超過。 1. delete_row へ不正・境界入力を順に与える。 2. 例外、戻り値、副作用を確認する。 契約化された失敗として制御され、秘密情報漏えい、破壊的副作用、未定義値の伝播がない。 high p1 必須 例外アサーション、状態差分、ログ feature_contracts:testcase_table:symbols:delete_row" data-risk="high" data-category="シンボル防御">
+<td class="case-id mono">UT-testcase_table-SYM-delete_row-I</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>シンボル防御<br><span class="small">信頼性／安全性</span></td>
+<td>delete_row の欠損・型違反・境界外入力<br><span class="small">技法: 境界値分析・エラー推測</span></td>
+<td><strong>前提</strong> 対象シンボルを単離し、例外と副作用を観測可能にする。<br><strong>データ</strong> null相当、空、型違反、上限直前・上限・上限超過。</td>
+<td>1. delete_row へ不正・境界入力を順に与える。 2. 例外、戻り値、副作用を確認する。</td>
+<td>契約化された失敗として制御され、秘密情報漏えい、破壊的副作用、未定義値の伝播がない。</td>
+<td>必須<br><span class="small">例外アサーション、状態差分、ログ</span></td>
+<td class="mono small">feature_contracts:testcase_table:symbols:delete_row</td>
+</tr><tr data-case-row data-search="ut-testcase_table-sym-load_history-n testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 シンボル契約 機能適合性／保守性 同値分割・ホワイトボックス load_history の正常入力に対する公開契約 外部i/oをテストダブルへ置換し、対象シンボルを単離する。 最小の有効入力、代表的な通常入力。 1. load_history を有効入力で呼ぶ。 2. 戻り値、状態変化、呼出し先を記録する。 仕様化された型・値・副作用だけを返し、例外・隠れた外部送信・共有状態汚染がない。 high p1 必須 アサーション、分岐カバレッジ、テストログ feature_contracts:testcase_table:symbols:load_history" data-risk="high" data-category="シンボル契約">
+<td class="case-id mono">UT-testcase_table-SYM-load_history-N</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>シンボル契約<br><span class="small">機能適合性／保守性</span></td>
+<td>load_history の正常入力に対する公開契約<br><span class="small">技法: 同値分割・ホワイトボックス</span></td>
+<td><strong>前提</strong> 外部I/Oをテストダブルへ置換し、対象シンボルを単離する。<br><strong>データ</strong> 最小の有効入力、代表的な通常入力。</td>
+<td>1. load_history を有効入力で呼ぶ。 2. 戻り値、状態変化、呼出し先を記録する。</td>
+<td>仕様化された型・値・副作用だけを返し、例外・隠れた外部送信・共有状態汚染がない。</td>
+<td>必須<br><span class="small">アサーション、分岐カバレッジ、テストログ</span></td>
+<td class="mono small">feature_contracts:testcase_table:symbols:load_history</td>
+</tr><tr data-case-row data-search="ut-testcase_table-sym-load_history-i testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 シンボル防御 信頼性／安全性 境界値分析・エラー推測 load_history の欠損・型違反・境界外入力 対象シンボルを単離し、例外と副作用を観測可能にする。 null相当、空、型違反、上限直前・上限・上限超過。 1. load_history へ不正・境界入力を順に与える。 2. 例外、戻り値、副作用を確認する。 契約化された失敗として制御され、秘密情報漏えい、破壊的副作用、未定義値の伝播がない。 high p1 必須 例外アサーション、状態差分、ログ feature_contracts:testcase_table:symbols:load_history" data-risk="high" data-category="シンボル防御">
+<td class="case-id mono">UT-testcase_table-SYM-load_history-I</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>シンボル防御<br><span class="small">信頼性／安全性</span></td>
+<td>load_history の欠損・型違反・境界外入力<br><span class="small">技法: 境界値分析・エラー推測</span></td>
+<td><strong>前提</strong> 対象シンボルを単離し、例外と副作用を観測可能にする。<br><strong>データ</strong> null相当、空、型違反、上限直前・上限・上限超過。</td>
+<td>1. load_history へ不正・境界入力を順に与える。 2. 例外、戻り値、副作用を確認する。</td>
+<td>契約化された失敗として制御され、秘密情報漏えい、破壊的副作用、未定義値の伝播がない。</td>
+<td>必須<br><span class="small">例外アサーション、状態差分、ログ</span></td>
+<td class="mono small">feature_contracts:testcase_table:symbols:load_history</td>
+</tr><tr data-case-row data-search="ut-testcase_table-sym-generate_spec-n testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 シンボル契約 機能適合性／保守性 同値分割・ホワイトボックス generate_spec の正常入力に対する公開契約 外部i/oをテストダブルへ置換し、対象シンボルを単離する。 最小の有効入力、代表的な通常入力。 1. generate_spec を有効入力で呼ぶ。 2. 戻り値、状態変化、呼出し先を記録する。 仕様化された型・値・副作用だけを返し、例外・隠れた外部送信・共有状態汚染がない。 high p1 必須 アサーション、分岐カバレッジ、テストログ feature_contracts:testcase_table:symbols:generate_spec" data-risk="high" data-category="シンボル契約">
+<td class="case-id mono">UT-testcase_table-SYM-generate_spec-N</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>シンボル契約<br><span class="small">機能適合性／保守性</span></td>
+<td>generate_spec の正常入力に対する公開契約<br><span class="small">技法: 同値分割・ホワイトボックス</span></td>
+<td><strong>前提</strong> 外部I/Oをテストダブルへ置換し、対象シンボルを単離する。<br><strong>データ</strong> 最小の有効入力、代表的な通常入力。</td>
+<td>1. generate_spec を有効入力で呼ぶ。 2. 戻り値、状態変化、呼出し先を記録する。</td>
+<td>仕様化された型・値・副作用だけを返し、例外・隠れた外部送信・共有状態汚染がない。</td>
+<td>必須<br><span class="small">アサーション、分岐カバレッジ、テストログ</span></td>
+<td class="mono small">feature_contracts:testcase_table:symbols:generate_spec</td>
+</tr><tr data-case-row data-search="ut-testcase_table-sym-generate_spec-i testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 シンボル防御 信頼性／安全性 境界値分析・エラー推測 generate_spec の欠損・型違反・境界外入力 対象シンボルを単離し、例外と副作用を観測可能にする。 null相当、空、型違反、上限直前・上限・上限超過。 1. generate_spec へ不正・境界入力を順に与える。 2. 例外、戻り値、副作用を確認する。 契約化された失敗として制御され、秘密情報漏えい、破壊的副作用、未定義値の伝播がない。 high p1 必須 例外アサーション、状態差分、ログ feature_contracts:testcase_table:symbols:generate_spec" data-risk="high" data-category="シンボル防御">
+<td class="case-id mono">UT-testcase_table-SYM-generate_spec-I</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>シンボル防御<br><span class="small">信頼性／安全性</span></td>
+<td>generate_spec の欠損・型違反・境界外入力<br><span class="small">技法: 境界値分析・エラー推測</span></td>
+<td><strong>前提</strong> 対象シンボルを単離し、例外と副作用を観測可能にする。<br><strong>データ</strong> null相当、空、型違反、上限直前・上限・上限超過。</td>
+<td>1. generate_spec へ不正・境界入力を順に与える。 2. 例外、戻り値、副作用を確認する。</td>
+<td>契約化された失敗として制御され、秘密情報漏えい、破壊的副作用、未定義値の伝播がない。</td>
+<td>必須<br><span class="small">例外アサーション、状態差分、ログ</span></td>
+<td class="mono small">feature_contracts:testcase_table:symbols:generate_spec</td>
+</tr><tr data-case-row data-search="ut-testcase_table-sym-is_executable-n testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 シンボル契約 機能適合性／保守性 同値分割・ホワイトボックス is_executable の正常入力に対する公開契約 外部i/oをテストダブルへ置換し、対象シンボルを単離する。 最小の有効入力、代表的な通常入力。 1. is_executable を有効入力で呼ぶ。 2. 戻り値、状態変化、呼出し先を記録する。 仕様化された型・値・副作用だけを返し、例外・隠れた外部送信・共有状態汚染がない。 high p1 必須 アサーション、分岐カバレッジ、テストログ feature_contracts:testcase_table:symbols:is_executable" data-risk="high" data-category="シンボル契約">
+<td class="case-id mono">UT-testcase_table-SYM-is_executable-N</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>シンボル契約<br><span class="small">機能適合性／保守性</span></td>
+<td>is_executable の正常入力に対する公開契約<br><span class="small">技法: 同値分割・ホワイトボックス</span></td>
+<td><strong>前提</strong> 外部I/Oをテストダブルへ置換し、対象シンボルを単離する。<br><strong>データ</strong> 最小の有効入力、代表的な通常入力。</td>
+<td>1. is_executable を有効入力で呼ぶ。 2. 戻り値、状態変化、呼出し先を記録する。</td>
+<td>仕様化された型・値・副作用だけを返し、例外・隠れた外部送信・共有状態汚染がない。</td>
+<td>必須<br><span class="small">アサーション、分岐カバレッジ、テストログ</span></td>
+<td class="mono small">feature_contracts:testcase_table:symbols:is_executable</td>
+</tr><tr data-case-row data-search="ut-testcase_table-sym-is_executable-i testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 シンボル防御 信頼性／安全性 境界値分析・エラー推測 is_executable の欠損・型違反・境界外入力 対象シンボルを単離し、例外と副作用を観測可能にする。 null相当、空、型違反、上限直前・上限・上限超過。 1. is_executable へ不正・境界入力を順に与える。 2. 例外、戻り値、副作用を確認する。 契約化された失敗として制御され、秘密情報漏えい、破壊的副作用、未定義値の伝播がない。 high p1 必須 例外アサーション、状態差分、ログ feature_contracts:testcase_table:symbols:is_executable" data-risk="high" data-category="シンボル防御">
+<td class="case-id mono">UT-testcase_table-SYM-is_executable-I</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>シンボル防御<br><span class="small">信頼性／安全性</span></td>
+<td>is_executable の欠損・型違反・境界外入力<br><span class="small">技法: 境界値分析・エラー推測</span></td>
+<td><strong>前提</strong> 対象シンボルを単離し、例外と副作用を観測可能にする。<br><strong>データ</strong> null相当、空、型違反、上限直前・上限・上限超過。</td>
+<td>1. is_executable へ不正・境界入力を順に与える。 2. 例外、戻り値、副作用を確認する。</td>
+<td>契約化された失敗として制御され、秘密情報漏えい、破壊的副作用、未定義値の伝播がない。</td>
+<td>必須<br><span class="small">例外アサーション、状態差分、ログ</span></td>
+<td class="mono small">feature_contracts:testcase_table:symbols:is_executable</td>
+</tr><tr data-case-row data-search="ut-testcase_table-sym-save_run_result-n testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 シンボル契約 機能適合性／保守性 同値分割・ホワイトボックス save_run_result の正常入力に対する公開契約 外部i/oをテストダブルへ置換し、対象シンボルを単離する。 最小の有効入力、代表的な通常入力。 1. save_run_result を有効入力で呼ぶ。 2. 戻り値、状態変化、呼出し先を記録する。 仕様化された型・値・副作用だけを返し、例外・隠れた外部送信・共有状態汚染がない。 high p1 必須 アサーション、分岐カバレッジ、テストログ feature_contracts:testcase_table:symbols:save_run_result" data-risk="high" data-category="シンボル契約">
+<td class="case-id mono">UT-testcase_table-SYM-save_run_result-N</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>シンボル契約<br><span class="small">機能適合性／保守性</span></td>
+<td>save_run_result の正常入力に対する公開契約<br><span class="small">技法: 同値分割・ホワイトボックス</span></td>
+<td><strong>前提</strong> 外部I/Oをテストダブルへ置換し、対象シンボルを単離する。<br><strong>データ</strong> 最小の有効入力、代表的な通常入力。</td>
+<td>1. save_run_result を有効入力で呼ぶ。 2. 戻り値、状態変化、呼出し先を記録する。</td>
+<td>仕様化された型・値・副作用だけを返し、例外・隠れた外部送信・共有状態汚染がない。</td>
+<td>必須<br><span class="small">アサーション、分岐カバレッジ、テストログ</span></td>
+<td class="mono small">feature_contracts:testcase_table:symbols:save_run_result</td>
+</tr><tr data-case-row data-search="ut-testcase_table-sym-save_run_result-i testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 シンボル防御 信頼性／安全性 境界値分析・エラー推測 save_run_result の欠損・型違反・境界外入力 対象シンボルを単離し、例外と副作用を観測可能にする。 null相当、空、型違反、上限直前・上限・上限超過。 1. save_run_result へ不正・境界入力を順に与える。 2. 例外、戻り値、副作用を確認する。 契約化された失敗として制御され、秘密情報漏えい、破壊的副作用、未定義値の伝播がない。 high p1 必須 例外アサーション、状態差分、ログ feature_contracts:testcase_table:symbols:save_run_result" data-risk="high" data-category="シンボル防御">
+<td class="case-id mono">UT-testcase_table-SYM-save_run_result-I</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>シンボル防御<br><span class="small">信頼性／安全性</span></td>
+<td>save_run_result の欠損・型違反・境界外入力<br><span class="small">技法: 境界値分析・エラー推測</span></td>
+<td><strong>前提</strong> 対象シンボルを単離し、例外と副作用を観測可能にする。<br><strong>データ</strong> null相当、空、型違反、上限直前・上限・上限超過。</td>
+<td>1. save_run_result へ不正・境界入力を順に与える。 2. 例外、戻り値、副作用を確認する。</td>
+<td>契約化された失敗として制御され、秘密情報漏えい、破壊的副作用、未定義値の伝播がない。</td>
+<td>必須<br><span class="small">例外アサーション、状態差分、ログ</span></td>
+<td class="mono small">feature_contracts:testcase_table:symbols:save_run_result</td>
+</tr><tr data-case-row data-search="ut-testcase_table-fm-report_corrupt testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 故障モード 信頼性／安全性 フォールトインジェクション report_corrupt を局所的に発生させたときの封じ込め 対象依存先をテストダブル化し、指定故障を決定的に注入できる。 故障プロファイル=report_corrupt 1. report_corrupt を注入する。 2. 対象ロジックを実行する。 3. 戻り値、例外、状態を確認する。 失敗が分類され、上位層が処理可能な結果となる。部分データ破損、無限再試行、機密露出がない。 high p1 必須 失敗分類、例外チェーン、状態差分 feature_contracts:testcase_table:failure_modes:report_corrupt" data-risk="high" data-category="故障モード">
+<td class="case-id mono">UT-testcase_table-FM-report_corrupt</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>故障モード<br><span class="small">信頼性／安全性</span></td>
+<td>report_corrupt を局所的に発生させたときの封じ込め<br><span class="small">技法: フォールトインジェクション</span></td>
+<td><strong>前提</strong> 対象依存先をテストダブル化し、指定故障を決定的に注入できる。<br><strong>データ</strong> 故障プロファイル=report_corrupt</td>
+<td>1. report_corrupt を注入する。 2. 対象ロジックを実行する。 3. 戻り値、例外、状態を確認する。</td>
+<td>失敗が分類され、上位層が処理可能な結果となる。部分データ破損、無限再試行、機密露出がない。</td>
+<td>必須<br><span class="small">失敗分類、例外チェーン、状態差分</span></td>
+<td class="mono small">feature_contracts:testcase_table:failure_modes:report_corrupt</td>
+</tr><tr data-case-row data-search="ut-testcase_table-fm-uneditable_column testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 故障モード 信頼性／安全性 フォールトインジェクション uneditable_column を局所的に発生させたときの封じ込め 対象依存先をテストダブル化し、指定故障を決定的に注入できる。 故障プロファイル=uneditable_column 1. uneditable_column を注入する。 2. 対象ロジックを実行する。 3. 戻り値、例外、状態を確認する。 失敗が分類され、上位層が処理可能な結果となる。部分データ破損、無限再試行、機密露出がない。 high p1 必須 失敗分類、例外チェーン、状態差分 feature_contracts:testcase_table:failure_modes:uneditable_column" data-risk="high" data-category="故障モード">
+<td class="case-id mono">UT-testcase_table-FM-uneditable_column</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>故障モード<br><span class="small">信頼性／安全性</span></td>
+<td>uneditable_column を局所的に発生させたときの封じ込め<br><span class="small">技法: フォールトインジェクション</span></td>
+<td><strong>前提</strong> 対象依存先をテストダブル化し、指定故障を決定的に注入できる。<br><strong>データ</strong> 故障プロファイル=uneditable_column</td>
+<td>1. uneditable_column を注入する。 2. 対象ロジックを実行する。 3. 戻り値、例外、状態を確認する。</td>
+<td>失敗が分類され、上位層が処理可能な結果となる。部分データ破損、無限再試行、機密露出がない。</td>
+<td>必須<br><span class="small">失敗分類、例外チェーン、状態差分</span></td>
+<td class="mono small">feature_contracts:testcase_table:failure_modes:uneditable_column</td>
+</tr><tr data-case-row data-search="ut-testcase_table-fm-unknown_case_id testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 故障モード 信頼性／安全性 フォールトインジェクション unknown_case_id を局所的に発生させたときの封じ込め 対象依存先をテストダブル化し、指定故障を決定的に注入できる。 故障プロファイル=unknown_case_id 1. unknown_case_id を注入する。 2. 対象ロジックを実行する。 3. 戻り値、例外、状態を確認する。 失敗が分類され、上位層が処理可能な結果となる。部分データ破損、無限再試行、機密露出がない。 high p1 必須 失敗分類、例外チェーン、状態差分 feature_contracts:testcase_table:failure_modes:unknown_case_id" data-risk="high" data-category="故障モード">
+<td class="case-id mono">UT-testcase_table-FM-unknown_case_id</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>故障モード<br><span class="small">信頼性／安全性</span></td>
+<td>unknown_case_id を局所的に発生させたときの封じ込め<br><span class="small">技法: フォールトインジェクション</span></td>
+<td><strong>前提</strong> 対象依存先をテストダブル化し、指定故障を決定的に注入できる。<br><strong>データ</strong> 故障プロファイル=unknown_case_id</td>
+<td>1. unknown_case_id を注入する。 2. 対象ロジックを実行する。 3. 戻り値、例外、状態を確認する。</td>
+<td>失敗が分類され、上位層が処理可能な結果となる。部分データ破損、無限再試行、機密露出がない。</td>
+<td>必須<br><span class="small">失敗分類、例外チェーン、状態差分</span></td>
+<td class="mono small">feature_contracts:testcase_table:failure_modes:unknown_case_id</td>
+</tr><tr data-case-row data-search="ut-testcase_table-fm-concurrent_edit_overwrite testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 故障モード 信頼性／安全性 フォールトインジェクション concurrent_edit_overwrite を局所的に発生させたときの封じ込め 対象依存先をテストダブル化し、指定故障を決定的に注入できる。 故障プロファイル=concurrent_edit_overwrite 1. concurrent_edit_overwrite を注入する。 2. 対象ロジックを実行する。 3. 戻り値、例外、状態を確認する。 失敗が分類され、上位層が処理可能な結果となる。部分データ破損、無限再試行、機密露出がない。 high p1 必須 失敗分類、例外チェーン、状態差分 feature_contracts:testcase_table:failure_modes:concurrent_edit_overwrite" data-risk="high" data-category="故障モード">
+<td class="case-id mono">UT-testcase_table-FM-concurrent_edit_overwrite</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>故障モード<br><span class="small">信頼性／安全性</span></td>
+<td>concurrent_edit_overwrite を局所的に発生させたときの封じ込め<br><span class="small">技法: フォールトインジェクション</span></td>
+<td><strong>前提</strong> 対象依存先をテストダブル化し、指定故障を決定的に注入できる。<br><strong>データ</strong> 故障プロファイル=concurrent_edit_overwrite</td>
+<td>1. concurrent_edit_overwrite を注入する。 2. 対象ロジックを実行する。 3. 戻り値、例外、状態を確認する。</td>
+<td>失敗が分類され、上位層が処理可能な結果となる。部分データ破損、無限再試行、機密露出がない。</td>
+<td>必須<br><span class="small">失敗分類、例外チェーン、状態差分</span></td>
+<td class="mono small">feature_contracts:testcase_table:failure_modes:concurrent_edit_overwrite</td>
+</tr><tr data-case-row data-search="ut-testcase_table-fm-save_failure testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 故障モード 信頼性／安全性 フォールトインジェクション save_failure を局所的に発生させたときの封じ込め 対象依存先をテストダブル化し、指定故障を決定的に注入できる。 故障プロファイル=save_failure 1. save_failure を注入する。 2. 対象ロジックを実行する。 3. 戻り値、例外、状態を確認する。 失敗が分類され、上位層が処理可能な結果となる。部分データ破損、無限再試行、機密露出がない。 high p1 必須 失敗分類、例外チェーン、状態差分 feature_contracts:testcase_table:failure_modes:save_failure" data-risk="high" data-category="故障モード">
+<td class="case-id mono">UT-testcase_table-FM-save_failure</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>故障モード<br><span class="small">信頼性／安全性</span></td>
+<td>save_failure を局所的に発生させたときの封じ込め<br><span class="small">技法: フォールトインジェクション</span></td>
+<td><strong>前提</strong> 対象依存先をテストダブル化し、指定故障を決定的に注入できる。<br><strong>データ</strong> 故障プロファイル=save_failure</td>
+<td>1. save_failure を注入する。 2. 対象ロジックを実行する。 3. 戻り値、例外、状態を確認する。</td>
+<td>失敗が分類され、上位層が処理可能な結果となる。部分データ破損、無限再試行、機密露出がない。</td>
+<td>必須<br><span class="small">失敗分類、例外チェーン、状態差分</span></td>
+<td class="mono small">feature_contracts:testcase_table:failure_modes:save_failure</td>
+</tr><tr data-case-row data-search="ut-testcase_table-fm-no_executable_case testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 故障モード 信頼性／安全性 フォールトインジェクション no_executable_case を局所的に発生させたときの封じ込め 対象依存先をテストダブル化し、指定故障を決定的に注入できる。 故障プロファイル=no_executable_case 1. no_executable_case を注入する。 2. 対象ロジックを実行する。 3. 戻り値、例外、状態を確認する。 失敗が分類され、上位層が処理可能な結果となる。部分データ破損、無限再試行、機密露出がない。 high p1 必須 失敗分類、例外チェーン、状態差分 feature_contracts:testcase_table:failure_modes:no_executable_case" data-risk="high" data-category="故障モード">
+<td class="case-id mono">UT-testcase_table-FM-no_executable_case</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>故障モード<br><span class="small">信頼性／安全性</span></td>
+<td>no_executable_case を局所的に発生させたときの封じ込め<br><span class="small">技法: フォールトインジェクション</span></td>
+<td><strong>前提</strong> 対象依存先をテストダブル化し、指定故障を決定的に注入できる。<br><strong>データ</strong> 故障プロファイル=no_executable_case</td>
+<td>1. no_executable_case を注入する。 2. 対象ロジックを実行する。 3. 戻り値、例外、状態を確認する。</td>
+<td>失敗が分類され、上位層が処理可能な結果となる。部分データ破損、無限再試行、機密露出がない。</td>
+<td>必須<br><span class="small">失敗分類、例外チェーン、状態差分</span></td>
+<td class="mono small">feature_contracts:testcase_table:failure_modes:no_executable_case</td>
+</tr><tr data-case-row data-search="ut-testcase_table-fm-playwright_not_installed testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 故障モード 信頼性／安全性 フォールトインジェクション playwright_not_installed を局所的に発生させたときの封じ込め 対象依存先をテストダブル化し、指定故障を決定的に注入できる。 故障プロファイル=playwright_not_installed 1. playwright_not_installed を注入する。 2. 対象ロジックを実行する。 3. 戻り値、例外、状態を確認する。 失敗が分類され、上位層が処理可能な結果となる。部分データ破損、無限再試行、機密露出がない。 high p1 必須 失敗分類、例外チェーン、状態差分 feature_contracts:testcase_table:failure_modes:playwright_not_installed" data-risk="high" data-category="故障モード">
+<td class="case-id mono">UT-testcase_table-FM-playwright_not_installed</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>故障モード<br><span class="small">信頼性／安全性</span></td>
+<td>playwright_not_installed を局所的に発生させたときの封じ込め<br><span class="small">技法: フォールトインジェクション</span></td>
+<td><strong>前提</strong> 対象依存先をテストダブル化し、指定故障を決定的に注入できる。<br><strong>データ</strong> 故障プロファイル=playwright_not_installed</td>
+<td>1. playwright_not_installed を注入する。 2. 対象ロジックを実行する。 3. 戻り値、例外、状態を確認する。</td>
+<td>失敗が分類され、上位層が処理可能な結果となる。部分データ破損、無限再試行、機密露出がない。</td>
+<td>必須<br><span class="small">失敗分類、例外チェーン、状態差分</span></td>
+<td class="mono small">feature_contracts:testcase_table:failure_modes:playwright_not_installed</td>
+</tr><tr data-case-row data-search="ut-testcase_table-fm-egress_denied testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 故障モード 信頼性／安全性 フォールトインジェクション egress_denied を局所的に発生させたときの封じ込め 対象依存先をテストダブル化し、指定故障を決定的に注入できる。 故障プロファイル=egress_denied 1. egress_denied を注入する。 2. 対象ロジックを実行する。 3. 戻り値、例外、状態を確認する。 失敗が分類され、上位層が処理可能な結果となる。部分データ破損、無限再試行、機密露出がない。 high p1 必須 失敗分類、例外チェーン、状態差分 feature_contracts:testcase_table:failure_modes:egress_denied" data-risk="high" data-category="故障モード">
+<td class="case-id mono">UT-testcase_table-FM-egress_denied</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>故障モード<br><span class="small">信頼性／安全性</span></td>
+<td>egress_denied を局所的に発生させたときの封じ込め<br><span class="small">技法: フォールトインジェクション</span></td>
+<td><strong>前提</strong> 対象依存先をテストダブル化し、指定故障を決定的に注入できる。<br><strong>データ</strong> 故障プロファイル=egress_denied</td>
+<td>1. egress_denied を注入する。 2. 対象ロジックを実行する。 3. 戻り値、例外、状態を確認する。</td>
+<td>失敗が分類され、上位層が処理可能な結果となる。部分データ破損、無限再試行、機密露出がない。</td>
+<td>必須<br><span class="small">失敗分類、例外チェーン、状態差分</span></td>
+<td class="mono small">feature_contracts:testcase_table:failure_modes:egress_denied</td>
+</tr><tr data-case-row data-search="ut-testcase_table-fm-execution_timeout testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 故障モード 信頼性／安全性 フォールトインジェクション execution_timeout を局所的に発生させたときの封じ込め 対象依存先をテストダブル化し、指定故障を決定的に注入できる。 故障プロファイル=execution_timeout 1. execution_timeout を注入する。 2. 対象ロジックを実行する。 3. 戻り値、例外、状態を確認する。 失敗が分類され、上位層が処理可能な結果となる。部分データ破損、無限再試行、機密露出がない。 high p1 必須 失敗分類、例外チェーン、状態差分 feature_contracts:testcase_table:failure_modes:execution_timeout" data-risk="high" data-category="故障モード">
+<td class="case-id mono">UT-testcase_table-FM-execution_timeout</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>故障モード<br><span class="small">信頼性／安全性</span></td>
+<td>execution_timeout を局所的に発生させたときの封じ込め<br><span class="small">技法: フォールトインジェクション</span></td>
+<td><strong>前提</strong> 対象依存先をテストダブル化し、指定故障を決定的に注入できる。<br><strong>データ</strong> 故障プロファイル=execution_timeout</td>
+<td>1. execution_timeout を注入する。 2. 対象ロジックを実行する。 3. 戻り値、例外、状態を確認する。</td>
+<td>失敗が分類され、上位層が処理可能な結果となる。部分データ破損、無限再試行、機密露出がない。</td>
+<td>必須<br><span class="small">失敗分類、例外チェーン、状態差分</span></td>
+<td class="mono small">feature_contracts:testcase_table:failure_modes:execution_timeout</td>
+</tr><tr data-case-row data-search="ut-testcase_table-out-10-id-uud515b testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 10列テストケース表（id/名称/画面/機能/観点/前提条件/手順/期待結果/自動化判定/結果） の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. 10列テストケース表（id/名称/画面/機能/観点/前提条件/手順/期待結果/自動化判定/結果） を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 high p1 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:testcase_table:outputs:10列テストケース表（id/名称/画面/機能/観点/前提条件/手順/期待結果/自動化判定/結果）" data-risk="high" data-category="成果物契約">
+<td class="case-id mono">UT-testcase_table-OUT-10-ID-uud515b</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>成果物契約<br><span class="small">機能完全性／データ品質</span></td>
+<td>10列テストケース表（ID/名称/画面/機能/観点/前提条件/手順/期待結果/自動化判定/結果） の生成契約と未定義値排除<br><span class="small">技法: データフロー・スキーマ検証</span></td>
+<td><strong>前提</strong> 固定入力と固定時刻で成果物生成器を単離する。<br><strong>データ</strong> 完全データ、任意項目欠損データ、多言語文字列。</td>
+<td>1. 10列テストケース表（ID/名称/画面/機能/観点/前提条件/手順/期待結果/自動化判定/結果） を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。</td>
+<td>必須値が実値で埋まり、undefined、関数文字列、NaN、未エスケープ値が成果物へ混入しない。</td>
+<td>必須<br><span class="small">スキーマ検証結果、ゴールデン差分</span></td>
+<td class="mono small">feature_contracts:testcase_table:outputs:10列テストケース表（ID/名称/画面/機能/観点/前提条件/手順/期待結果/自動化判定/結果）</td>
+</tr><tr data-case-row data-search="ut-testcase_table-out-upzuna3 testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 編集履歴（変更前後の値） の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. 編集履歴（変更前後の値） を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 high p1 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:testcase_table:outputs:編集履歴（変更前後の値）" data-risk="high" data-category="成果物契約">
+<td class="case-id mono">UT-testcase_table-OUT-upzuna3</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>成果物契約<br><span class="small">機能完全性／データ品質</span></td>
+<td>編集履歴（変更前後の値） の生成契約と未定義値排除<br><span class="small">技法: データフロー・スキーマ検証</span></td>
+<td><strong>前提</strong> 固定入力と固定時刻で成果物生成器を単離する。<br><strong>データ</strong> 完全データ、任意項目欠損データ、多言語文字列。</td>
+<td>1. 編集履歴（変更前後の値） を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。</td>
+<td>必須値が実値で埋まり、undefined、関数文字列、NaN、未エスケープ値が成果物へ混入しない。</td>
+<td>必須<br><span class="small">スキーマ検証結果、ゴールデン差分</span></td>
+<td class="mono small">feature_contracts:testcase_table:outputs:編集履歴（変更前後の値）</td>
+</tr><tr data-case-row data-search="ut-testcase_table-out-testcases-spec-ts-playwright-u1bmpn1n testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 testcases.spec.ts（表から生成した playwright コード） の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. testcases.spec.ts（表から生成した playwright コード） を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 high p1 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:testcase_table:outputs:testcases.spec.ts（表から生成した playwright コード）" data-risk="high" data-category="成果物契約">
+<td class="case-id mono">UT-testcase_table-OUT-testcases-spec-ts-Playwright-u1bmpn1n</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>成果物契約<br><span class="small">機能完全性／データ品質</span></td>
+<td>testcases.spec.ts（表から生成した Playwright コード） の生成契約と未定義値排除<br><span class="small">技法: データフロー・スキーマ検証</span></td>
+<td><strong>前提</strong> 固定入力と固定時刻で成果物生成器を単離する。<br><strong>データ</strong> 完全データ、任意項目欠損データ、多言語文字列。</td>
+<td>1. testcases.spec.ts（表から生成した Playwright コード） を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。</td>
+<td>必須値が実値で埋まり、undefined、関数文字列、NaN、未エスケープ値が成果物へ混入しない。</td>
+<td>必須<br><span class="small">スキーマ検証結果、ゴールデン差分</span></td>
+<td class="mono small">feature_contracts:testcase_table:outputs:testcases.spec.ts（表から生成した Playwright コード）</td>
+</tr><tr data-case-row data-search="ut-testcase_table-out-pass-fail-uusao0q testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 成果物契約 機能完全性／データ品質 データフロー・スキーマ検証 実行結果（ケース単位の pass/fail） の生成契約と未定義値排除 固定入力と固定時刻で成果物生成器を単離する。 完全データ、任意項目欠損データ、多言語文字列。 1. 実行結果（ケース単位の pass/fail） を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。 必須値が実値で埋まり、undefined、関数文字列、nan、未エスケープ値が成果物へ混入しない。 high p1 必須 スキーマ検証結果、ゴールデン差分 feature_contracts:testcase_table:outputs:実行結果（ケース単位の pass/fail）" data-risk="high" data-category="成果物契約">
+<td class="case-id mono">UT-testcase_table-OUT-PASS-FAIL-uusao0q</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>成果物契約<br><span class="small">機能完全性／データ品質</span></td>
+<td>実行結果（ケース単位の PASS/FAIL） の生成契約と未定義値排除<br><span class="small">技法: データフロー・スキーマ検証</span></td>
+<td><strong>前提</strong> 固定入力と固定時刻で成果物生成器を単離する。<br><strong>データ</strong> 完全データ、任意項目欠損データ、多言語文字列。</td>
+<td>1. 実行結果（ケース単位の PASS/FAIL） を生成する。 2. スキーマ、必須値、エスケープ、順序安定性を検証する。</td>
+<td>必須値が実値で埋まり、undefined、関数文字列、NaN、未エスケープ値が成果物へ混入しない。</td>
+<td>必須<br><span class="small">スキーマ検証結果、ゴールデン差分</span></td>
+<td class="mono small">feature_contracts:testcase_table:outputs:実行結果（ケース単位の PASS/FAIL）</td>
+</tr><tr data-case-row data-search="ut-testcase_table-per-output-domain-testcases-edits-json testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 永続化境界 信頼性／セキュリティ 境界・不変条件 output/{domain}/testcases/edits.json のパス・キー・原子性 一時領域を用い、他テナントと失敗注入用の境界を準備する。 通常キー、衝突キー、 traversal文字列、中断書込み。 1. 保存する。 2. 再読込する。 3. 境界外指定と中断を注入する。 同一データを復元でき、境界外アクセス・他テナント混入・半端なコミットが発生しない。 high p1 必須 保存前後ハッシュ、パス検査、状態差分 feature_contracts:testcase_table:persistence:output/{domain}/testcases/edits.json" data-risk="high" data-category="永続化境界">
+<td class="case-id mono">UT-testcase_table-PER-output-domain-testcases-edits-json</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>永続化境界<br><span class="small">信頼性／セキュリティ</span></td>
+<td>output/{domain}/testcases/edits.json のパス・キー・原子性<br><span class="small">技法: 境界・不変条件</span></td>
+<td><strong>前提</strong> 一時領域を用い、他テナントと失敗注入用の境界を準備する。<br><strong>データ</strong> 通常キー、衝突キー、 traversal文字列、中断書込み。</td>
+<td>1. 保存する。 2. 再読込する。 3. 境界外指定と中断を注入する。</td>
+<td>同一データを復元でき、境界外アクセス・他テナント混入・半端なコミットが発生しない。</td>
+<td>必須<br><span class="small">保存前後ハッシュ、パス検査、状態差分</span></td>
+<td class="mono small">feature_contracts:testcase_table:persistence:output/{domain}/testcases/edits.json</td>
+</tr><tr data-case-row data-search="ut-testcase_table-per-output-domain-testcases-history-jsonl testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 永続化境界 信頼性／セキュリティ 境界・不変条件 output/{domain}/testcases/history.jsonl のパス・キー・原子性 一時領域を用い、他テナントと失敗注入用の境界を準備する。 通常キー、衝突キー、 traversal文字列、中断書込み。 1. 保存する。 2. 再読込する。 3. 境界外指定と中断を注入する。 同一データを復元でき、境界外アクセス・他テナント混入・半端なコミットが発生しない。 high p1 必須 保存前後ハッシュ、パス検査、状態差分 feature_contracts:testcase_table:persistence:output/{domain}/testcases/history.jsonl" data-risk="high" data-category="永続化境界">
+<td class="case-id mono">UT-testcase_table-PER-output-domain-testcases-history-jsonl</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>永続化境界<br><span class="small">信頼性／セキュリティ</span></td>
+<td>output/{domain}/testcases/history.jsonl のパス・キー・原子性<br><span class="small">技法: 境界・不変条件</span></td>
+<td><strong>前提</strong> 一時領域を用い、他テナントと失敗注入用の境界を準備する。<br><strong>データ</strong> 通常キー、衝突キー、 traversal文字列、中断書込み。</td>
+<td>1. 保存する。 2. 再読込する。 3. 境界外指定と中断を注入する。</td>
+<td>同一データを復元でき、境界外アクセス・他テナント混入・半端なコミットが発生しない。</td>
+<td>必須<br><span class="small">保存前後ハッシュ、パス検査、状態差分</span></td>
+<td class="mono small">feature_contracts:testcase_table:persistence:output/{domain}/testcases/history.jsonl</td>
+</tr><tr data-case-row data-search="ut-testcase_table-per-output-domain-testcases-testcases-spec-ts testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 永続化境界 信頼性／セキュリティ 境界・不変条件 output/{domain}/testcases/testcases.spec.ts のパス・キー・原子性 一時領域を用い、他テナントと失敗注入用の境界を準備する。 通常キー、衝突キー、 traversal文字列、中断書込み。 1. 保存する。 2. 再読込する。 3. 境界外指定と中断を注入する。 同一データを復元でき、境界外アクセス・他テナント混入・半端なコミットが発生しない。 high p1 必須 保存前後ハッシュ、パス検査、状態差分 feature_contracts:testcase_table:persistence:output/{domain}/testcases/testcases.spec.ts" data-risk="high" data-category="永続化境界">
+<td class="case-id mono">UT-testcase_table-PER-output-domain-testcases-testcases-spec-ts</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>永続化境界<br><span class="small">信頼性／セキュリティ</span></td>
+<td>output/{domain}/testcases/testcases.spec.ts のパス・キー・原子性<br><span class="small">技法: 境界・不変条件</span></td>
+<td><strong>前提</strong> 一時領域を用い、他テナントと失敗注入用の境界を準備する。<br><strong>データ</strong> 通常キー、衝突キー、 traversal文字列、中断書込み。</td>
+<td>1. 保存する。 2. 再読込する。 3. 境界外指定と中断を注入する。</td>
+<td>同一データを復元でき、境界外アクセス・他テナント混入・半端なコミットが発生しない。</td>
+<td>必須<br><span class="small">保存前後ハッシュ、パス検査、状態差分</span></td>
+<td class="mono small">feature_contracts:testcase_table:persistence:output/{domain}/testcases/testcases.spec.ts</td>
+</tr><tr data-case-row data-search="ut-testcase_table-per-output-domain-testcases-run_result-json testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 永続化境界 信頼性／セキュリティ 境界・不変条件 output/{domain}/testcases/run_result.json のパス・キー・原子性 一時領域を用い、他テナントと失敗注入用の境界を準備する。 通常キー、衝突キー、 traversal文字列、中断書込み。 1. 保存する。 2. 再読込する。 3. 境界外指定と中断を注入する。 同一データを復元でき、境界外アクセス・他テナント混入・半端なコミットが発生しない。 high p1 必須 保存前後ハッシュ、パス検査、状態差分 feature_contracts:testcase_table:persistence:output/{domain}/testcases/run_result.json" data-risk="high" data-category="永続化境界">
+<td class="case-id mono">UT-testcase_table-PER-output-domain-testcases-run_result-json</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>永続化境界<br><span class="small">信頼性／セキュリティ</span></td>
+<td>output/{domain}/testcases/run_result.json のパス・キー・原子性<br><span class="small">技法: 境界・不変条件</span></td>
+<td><strong>前提</strong> 一時領域を用い、他テナントと失敗注入用の境界を準備する。<br><strong>データ</strong> 通常キー、衝突キー、 traversal文字列、中断書込み。</td>
+<td>1. 保存する。 2. 再読込する。 3. 境界外指定と中断を注入する。</td>
+<td>同一データを復元でき、境界外アクセス・他テナント混入・半端なコミットが発生しない。</td>
+<td>必須<br><span class="small">保存前後ハッシュ、パス検査、状態差分</span></td>
+<td class="mono small">feature_contracts:testcase_table:persistence:output/{domain}/testcases/run_result.json</td>
+</tr><tr data-case-row data-search="ut-testcase_table-req-happy_path testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 必須経路 機能正確性 条件網羅・デシジョンテーブル happy_path を成立させるドメイン規則 対象規則を外部依存から単離し、入力条件を直接制御できる。 required_test=happy_path の真・偽・境界条件 1. 条件の成立・不成立を与える。 2. 判定結果と副作用を比較する。 各条件組合せが仕様どおりに分類され、未定義分岐と到達不能な必須分岐がない。 high p1 必須 分岐表、mc/dcまたは条件カバレッジ feature_contracts:testcase_table:required_tests:happy_path" data-risk="high" data-category="必須経路">
+<td class="case-id mono">UT-testcase_table-REQ-happy_path</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>必須経路<br><span class="small">機能正確性</span></td>
+<td>happy_path を成立させるドメイン規則<br><span class="small">技法: 条件網羅・デシジョンテーブル</span></td>
+<td><strong>前提</strong> 対象規則を外部依存から単離し、入力条件を直接制御できる。<br><strong>データ</strong> required_test=happy_path の真・偽・境界条件</td>
+<td>1. 条件の成立・不成立を与える。 2. 判定結果と副作用を比較する。</td>
+<td>各条件組合せが仕様どおりに分類され、未定義分岐と到達不能な必須分岐がない。</td>
+<td>必須<br><span class="small">分岐表、MC/DCまたは条件カバレッジ</span></td>
+<td class="mono small">feature_contracts:testcase_table:required_tests:happy_path</td>
+</tr><tr data-case-row data-search="ut-testcase_table-req-error_path testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 必須経路 機能正確性 条件網羅・デシジョンテーブル error_path を成立させるドメイン規則 対象規則を外部依存から単離し、入力条件を直接制御できる。 required_test=error_path の真・偽・境界条件 1. 条件の成立・不成立を与える。 2. 判定結果と副作用を比較する。 各条件組合せが仕様どおりに分類され、未定義分岐と到達不能な必須分岐がない。 high p1 必須 分岐表、mc/dcまたは条件カバレッジ feature_contracts:testcase_table:required_tests:error_path" data-risk="high" data-category="必須経路">
+<td class="case-id mono">UT-testcase_table-REQ-error_path</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>必須経路<br><span class="small">機能正確性</span></td>
+<td>error_path を成立させるドメイン規則<br><span class="small">技法: 条件網羅・デシジョンテーブル</span></td>
+<td><strong>前提</strong> 対象規則を外部依存から単離し、入力条件を直接制御できる。<br><strong>データ</strong> required_test=error_path の真・偽・境界条件</td>
+<td>1. 条件の成立・不成立を与える。 2. 判定結果と副作用を比較する。</td>
+<td>各条件組合せが仕様どおりに分類され、未定義分岐と到達不能な必須分岐がない。</td>
+<td>必須<br><span class="small">分岐表、MC/DCまたは条件カバレッジ</span></td>
+<td class="mono small">feature_contracts:testcase_table:required_tests:error_path</td>
+</tr><tr data-case-row data-search="ut-testcase_table-req-evidence testcase_table ローレベルテストケース表（9列生成・excel風編集・編集履歴） 単体 必須経路 機能正確性 条件網羅・デシジョンテーブル evidence を成立させるドメイン規則 対象規則を外部依存から単離し、入力条件を直接制御できる。 required_test=evidence の真・偽・境界条件 1. 条件の成立・不成立を与える。 2. 判定結果と副作用を比較する。 各条件組合せが仕様どおりに分類され、未定義分岐と到達不能な必須分岐がない。 high p1 必須 分岐表、mc/dcまたは条件カバレッジ feature_contracts:testcase_table:required_tests:evidence" data-risk="high" data-category="必須経路">
+<td class="case-id mono">UT-testcase_table-REQ-evidence</td>
+<td><span class="badge risk-high">P1 高</span></td>
+<td><strong>testcase_table</strong><br>ローレベルテストケース表（9列生成・Excel風編集・編集履歴）</td>
+<td>必須経路<br><span class="small">機能正確性</span></td>
+<td>evidence を成立させるドメイン規則<br><span class="small">技法: 条件網羅・デシジョンテーブル</span></td>
+<td><strong>前提</strong> 対象規則を外部依存から単離し、入力条件を直接制御できる。<br><strong>データ</strong> required_test=evidence の真・偽・境界条件</td>
+<td>1. 条件の成立・不成立を与える。 2. 判定結果と副作用を比較する。</td>
+<td>各条件組合せが仕様どおりに分類され、未定義分岐と到達不能な必須分岐がない。</td>
+<td>必須<br><span class="small">分岐表、MC/DCまたは条件カバレッジ</span></td>
+<td class="mono small">feature_contracts:testcase_table:required_tests:evidence</td>
+</tr></tbody></table></div></section><p class="footer">文書ID: WS2D-ZBQA-UNIT / 版 1.1 / 状態: 承認待ち / テスト未実行 / 生成元: quality/feature_contracts.yml @ commit 268abd1+未コミット変更 (sha256 7c470d937f96da1c)</p></div></main></div><script>
 const search=document.querySelector("[data-case-search]"),risk=document.querySelector("[data-risk-filter]"),category=document.querySelector("[data-category-filter]"),rows=[...document.querySelectorAll("[data-case-row]")],count=document.querySelector("[data-visible-count]");
 function filter(){const q=(search?.value||"").trim().toLowerCase(),r=risk?.value||"",c=category?.value||"";let visible=0;for(const row of rows){const ok=(!q||row.dataset.search.includes(q))&&(!r||row.dataset.risk===r)&&(!c||row.dataset.category===c);row.hidden=!ok;if(ok)visible++}if(count)count.textContent=visible.toLocaleString()}
 search?.addEventListener("input",filter);risk?.addEventListener("change",filter);category?.addEventListener("change",filter);

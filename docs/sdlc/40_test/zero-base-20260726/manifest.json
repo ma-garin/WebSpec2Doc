@@ -1,37 +1,103 @@
 {
   "document_id": "WS2D-ZBQA",
-  "version": "1.0",
+  "version": "1.1",
   "created": "2026-07-26",
   "status": "pending_approval",
   "test_execution_started": false,
   "sut": "http://127.0.0.1:8766/systems",
   "test_data": "http://127.0.0.1:8767/index.html",
+  "baseline": {
+    "repo_commit": "268abd1",
+    "contract_dirty": true,
+    "contract_sha256": "7c470d937f96da1c"
+  },
+  "contract_duplicates": [
+    {
+      "feature": "document_mbt",
+      "key": "symbols",
+      "value": "build_document_mbt"
+    }
+  ],
+  "risk_search_keys_verified": {
+    "R-01": {
+      "根拠へ遡る": 770,
+      "照合": 228,
+      "feature_contracts": 5099
+    },
+    "R-02": {
+      "SSRF": 22,
+      "送信ゲートウェイ": 229,
+      "外部送信": 307
+    },
+    "R-03": {
+      "認証情報": 132,
+      "認可バイパス": 22,
+      "期限切れ": 48
+    },
+    "R-04": {
+      "テナント": 711,
+      "他テナント": 364
+    },
+    "R-05": {
+      "release_all_stage_gates": 96,
+      "実行条件": 123
+    },
+    "R-06": {
+      "再試行": 1286,
+      "中断": 232
+    },
+    "R-07": {
+      "不整合": 96,
+      "差分": 1802
+    },
+    "R-08": {
+      "undefined": 924,
+      "関数文字列": 660
+    },
+    "R-09": {
+      "過大余白": 832,
+      "切れ": 888
+    },
+    "R-10": {
+      "プロンプト注入": 22,
+      "LLM有効": 328
+    },
+    "R-11": {
+      "容量": 169,
+      "キャンセル": 8,
+      "持久": 8
+    },
+    "R-12": {
+      "監査ログ": 519,
+      "ハッシュ": 514
+    }
+  },
   "inventory": {
-    "features": 40,
-    "symbols": 164,
-    "uniqueSymbols": 160,
-    "failures": 187,
-    "required": 150,
-    "outputs": 128,
-    "persistence": 54,
-    "uiRefs": 49,
-    "uniqueUiRefs": 28,
-    "routeRefs": 33,
+    "features": 41,
+    "symbols": 175,
+    "uniqueSymbols": 172,
+    "failures": 196,
+    "required": 153,
+    "outputs": 132,
+    "persistence": 58,
+    "uiRefs": 52,
+    "uniqueUiRefs": 30,
+    "routeRefs": 34,
     "uniqueRouteRefs": 23,
-    "coreRefs": 176,
+    "coreRefs": 180,
     "risk": {
       "critical": 10,
-      "high": 15,
+      "high": 16,
       "medium": 13,
       "low": 2
     }
   },
   "counts": {
-    "unit": 847,
-    "integration": 1000,
-    "system": 3040,
-    "acceptance": 312,
-    "total": 5199
+    "unit": 889,
+    "integration": 1033,
+    "system": 3300,
+    "acceptance": 317,
+    "total": 5539
   },
   "files": [
     "index.html",

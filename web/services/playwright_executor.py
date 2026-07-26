@@ -11,7 +11,7 @@ from collections.abc import Callable
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _pkg_version
 from pathlib import Path
-from typing import Any
+from typing import Any, Final
 
 # AutoRun が生成した .spec.ts を実行するための共有 node_modules の場所
 _PW_ENV_DIR = Path("output/.playwright_env")
@@ -80,6 +80,7 @@ def run_playwright(
     device: str = "pc",
     workers: int = 1,
     egress_policy: Any = None,
+    browser: str = "chromium",
 ) -> dict[str, Any]:
     """
     ローカル @playwright/test CLI でスペックを実行し、結果を返す。
@@ -160,6 +161,7 @@ def run_playwright(
         progress_path=progress_path,
         device=device,
         workers=workers,
+        browser=browser,
     )
 
     resolved_timeout_sec = _resolve_timeout_sec(spec_path, per_test_timeout_sec, timeout_sec)
@@ -294,6 +296,7 @@ def _write_pw_config(
     progress_path: Path | None = None,
     device: str = "pc",
     workers: int = 1,
+    browser: str = "chromium",
 ) -> Path:
     """JS 形式の playwright config を生成する（TypeScript import 不要）。
 
@@ -302,6 +305,8 @@ def _write_pw_config(
     """
     if device not in ("pc", "mobile"):
         device = "pc"
+    if browser not in SUPPORTED_BROWSERS:
+        browser = "chromium"
     config_path = spec_path.parent / _PW_CONFIG_NAME
     reporter_path = spec_path.parent / _PW_PROGRESS_REPORTER_NAME
     spec_dir_abs = str(spec_path.parent.resolve())
@@ -354,6 +359,7 @@ def _write_pw_config(
         f"  workers: {int(workers) if workers and workers > 0 else 1},\n"
         f"  outputDir: {json.dumps(artifacts_dir_abs)},\n"
         "  use: {\n"
+        f"    browserName: {json.dumps(browser)},\n"
         "    screenshot: 'on',\n"
         "    trace: 'retain-on-failure',\n"
         f"    actionTimeout: {action_timeout_ms},\n"
@@ -476,6 +482,39 @@ def _required_browser_globs(pw_test_version: str) -> tuple[str, ...]:
     return ("chromium-*",)
 
 
+#: 実行できるブラウザ。Playwright の browserName にそのまま渡せる値のみを許す。
+#: 利用者の自由入力（「Firefox で見たい」等）はここへ正規化する。
+SUPPORTED_BROWSERS: Final = ("chromium", "firefox", "webkit")
+
+#: 自由入力からブラウザ名を引くための別名。表記ゆれを吸収する。
+_BROWSER_ALIASES: Final = {
+    "chromium": "chromium",
+    "chrome": "chromium",
+    "google chrome": "chromium",
+    "edge": "chromium",
+    "firefox": "firefox",
+    "ff": "firefox",
+    "mozilla": "firefox",
+    "webkit": "webkit",
+    "safari": "webkit",
+}
+
+
+def normalize_browser(raw: str) -> str:
+    """利用者の指定をブラウザ名へ正規化する。判別できなければ空文字。
+
+    黙って Chromium へ読み替えない。判別できないことは呼び出し側へ返し、
+    「指定した環境で確認したつもり」を作らせない。
+    """
+    text = (raw or "").strip().lower()
+    if not text:
+        return ""
+    for key, value in _BROWSER_ALIASES.items():
+        if key in text:
+            return value
+    return ""
+
+
 def _browsers_present(browsers_path: Path, pw_test_version: str) -> bool:
     """必要ブラウザが全て導入済みか（版対応・AND判定）。実行ファイル実在まで確認する。
 
@@ -496,6 +535,50 @@ def _browsers_present(browsers_path: Path, pw_test_version: str) -> bool:
     return True
 
 
+#: 追加で導入したいブラウザ（実行条件で指定されたときに積む）。
+_EXTRA_BROWSERS: list[str] = []
+
+
+def request_browser_install(browser: str) -> None:
+    """次回の導入時に、指定ブラウザも入れるよう記録する。"""
+    if browser in SUPPORTED_BROWSERS and browser not in _EXTRA_BROWSERS:
+        _EXTRA_BROWSERS.append(browser)
+
+
+def _browsers_to_install() -> list[str]:
+    return ["chromium", *_EXTRA_BROWSERS]
+
+
+def ensure_browser_available(browser: str) -> tuple[bool, str]:
+    """指定ブラウザを実行できる状態にする。できなければ理由を返す。"""
+    if browser not in SUPPORTED_BROWSERS:
+        return False, f"対応していないブラウザです: {browser}"
+    if browser == "chromium":
+        return True, ""
+    browsers_path = _configured_browsers_path()
+    if any(browsers_path.glob(f"{browser}-*")):
+        return True, ""
+    if not shutil.which("npx"):
+        return False, "npx が見つからず、指定ブラウザを自動導入できません。"
+    request_browser_install(browser)
+    env = os.environ.copy()
+    env["PLAYWRIGHT_BROWSERS_PATH"] = str(browsers_path)
+    try:
+        proc = subprocess.run(
+            ["npx", "playwright", "install", browser],
+            capture_output=True,
+            text=True,
+            timeout=600,
+            cwd=str(_PW_ENV_DIR),
+            env=env,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        return False, f"{browser} の導入に失敗しました: {exc}"
+    if proc.returncode != 0:
+        return False, f"{browser} の導入に失敗しました: {proc.stderr[:300]}"
+    return (True, "") if any(browsers_path.glob(f"{browser}-*")) else (False, f"{browser} が導入されませんでした")
+
+
 def _ensure_browsers_installed(pw_test_version: str) -> tuple[bool, str]:
     """chromium ブラウザ本体の実在を確認し、無ければ自動導入する。
 
@@ -513,7 +596,7 @@ def _ensure_browsers_installed(pw_test_version: str) -> tuple[bool, str]:
     env["PLAYWRIGHT_BROWSERS_PATH"] = str(browsers_path)
     try:
         proc = subprocess.run(
-            ["npx", "playwright", "install", "chromium"],
+            ["npx", "playwright", "install", *_browsers_to_install()],
             capture_output=True,
             text=True,
             timeout=300,
@@ -905,12 +988,6 @@ def _build_html_report(result: dict[str, Any]) -> str:
   --bg:#ffffff; --fg:#111827; --border:#e5e7eb; --th-bg:#f1f5f9; --pre-bg:#f9fafb;
   --ok:#16a34a; --fail:#dc2626; --warn:#d97706; --skip:#9ca3af; --err-bg:#fef2f2; --err-border:#fecaca;
   --muted:#6b7280;
-}}
-@media (prefers-color-scheme: dark) {{
-  :root {{
-    --bg:#0f172a; --fg:#e5e7eb; --border:#334155; --th-bg:#1e293b; --pre-bg:#111827;
-    --err-bg:#3f1d1d; --err-border:#7f1d1d; --muted:#9ca3af;
-  }}
 }}
 body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;margin:28px;color:var(--fg);background:var(--bg)}}
 .intro{{color:var(--muted);font-size:14px;margin:6px 0 18px}}

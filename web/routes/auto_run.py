@@ -623,15 +623,32 @@ def _apply_decisions_to_policy(job: AutoRunJob) -> None:
         job.add_log("合否基準: 重大度で整理し、最終判断は人が行います")
 
     browser = answers.get("browser") or {}
-    if browser.get("choice") == "custom" and browser.get("text"):
-        # 実行環境は Chromium のみ検証済み。指定は記録するが、勝手に切り替えない。
-        job.run_policy["browser_request"] = browser["text"]
-        job.add_log(
-            f"ブラウザ指定: {browser['text']}（未対応のため Chromium で実行します。"
-            "この実行は指定ブラウザでの確認になっていません）"
-        )
+    requested = browser.get("text", "") if browser.get("choice") == "custom" else ""
+    job.run_policy["browser_request"] = requested
+    if requested:
+        from web.services.playwright_executor import ensure_browser_available, normalize_browser
+
+        resolved = normalize_browser(requested)
+        if not resolved:
+            # 判別できないものを黙って Chromium へ読み替えない。
+            job.run_policy["browser"] = "chromium"
+            job.add_log(
+                f"ブラウザ指定「{requested}」を判別できませんでした。Chromium で実行します"
+                "（指定した環境での確認にはなっていません）"
+            )
+        else:
+            ok, reason = ensure_browser_available(resolved)
+            if ok:
+                job.run_policy["browser"] = resolved
+                job.add_log(f"ブラウザ: {resolved} で実行します")
+            else:
+                job.run_policy["browser"] = "chromium"
+                job.add_log(
+                    f"{resolved} を使えないため Chromium で実行します（{reason}）。"
+                    "この実行は指定した環境での確認になっていません"
+                )
     else:
-        job.run_policy["browser_request"] = ""
+        job.run_policy["browser"] = "chromium"
 
     if job.decisions_note:
         job.run_policy["note"] = job.decisions_note
@@ -1434,6 +1451,7 @@ def _execute_tests(job: AutoRunJob) -> None:
             add_log=job.add_log,
             device=device,
             egress_policy=EgressPolicy(allow_local=_local_targets_allowed()),
+            browser=str(job.run_policy.get("browser", "chromium")),
         )
     except Exception as exc:
         _mark_job_failed(job, f"テスト実行エラー: {exc}")

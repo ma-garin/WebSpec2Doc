@@ -270,7 +270,11 @@ def _test_design(domain: str, report: dict[str, Any]) -> str:
         lines.append(f"| TD-{sid}-NAV | 画面遷移 | 遷移先へ到達できることを確認 | {sid} |")
         for form_idx, form in enumerate(_forms(screen), 1):
             fid = f"{sid}-F{form_idx:02d}"
-            lines.append(f"| TD-{fid}-SUBMIT | フォーム送信 | 正常入力と必須未入力を確認 | {fid} |")
+            lines.append(
+                f"| TD-{fid}-SUBMIT | フォーム入力の妥当性 |"
+                " 正常入力と必須未入力を確認（送信の有無は実行条件で決まる） |"
+                f" {fid} |"
+            )
             for field_idx, field in enumerate(_fields(form), 1):
                 trace = _field_trace_id(screen, form_idx, field_idx)
                 cond = " / ".join(field.get("test_conditions") or []) or "仕様から条件を補完する"
@@ -331,7 +335,9 @@ def _test_cases(domain: str, report: dict[str, Any]) -> str:
                 case_no += 1
                 if field.get("required"):
                     lines.append(
-                        f"| TC-{case_no:04d} | 必須 | `{_md(label)}` を未入力にする | 必須エラーが表示され送信されない | {trace} |"
+                        f"| TC-{case_no:04d} | 必須 | `{_md(label)}` を未入力にする |"
+                        " 入力が不正と判定される（送信は実行条件に従う） |"
+                        f" {trace} |"
                     )
                     case_no += 1
                 for cond in field.get("test_conditions") or []:

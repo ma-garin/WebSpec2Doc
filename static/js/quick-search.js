@@ -8,16 +8,18 @@
   if (!input || !panel) return;
 
   // ナビ可能なビュー（VIEW_HEADER / nav.html のラベルに対応）。
+  // system: そのビューが属するシステム（docs / autorun / common）。
+  // 現在のシステム以外のビューは候補に出さない（相手システムの画面を混ぜない）。
   const VIEWS = [
-    { view: 'dashboard', label: 'ホーム', kw: 'home dashboard qa ドキュメント生成' },
-    { view: 'generate', label: '新規解析', kw: 'add site crawl 再クロール url' },
-    { view: 'auto-run', label: 'AutoRun', kw: '全自動 テスト実行 autorun' },
-    { view: 'run-history', label: '実行履歴', kw: 'history ラン run' },
-    { view: 'testcases', label: 'テストケース', kw: 'test case ケース' },
-    { view: 'qa-quality', label: '品質観点', kw: 'quality ひんしつ' },
-    { view: 'viewpoints', label: '観点管理', kw: 'viewpoint 観点 かんてん' },
-    { view: 'user-guide', label: 'ユーザーガイド', kw: 'guide help ヘルプ 使い方' },
-    { view: 'settings', label: '設定', kw: 'settings config せってい' },
+    { view: 'dashboard', label: 'ホーム', kw: 'home dashboard qa ドキュメント生成', system: 'docs' },
+    { view: 'generate', label: '新規解析', kw: 'add site crawl 再クロール url', system: 'docs' },
+    { view: 'auto-run', label: 'AutoRun', kw: '全自動 テスト実行 autorun', system: 'autorun' },
+    { view: 'run-history', label: '実行履歴', kw: 'history ラン run', system: 'autorun' },
+    { view: 'testcases', label: 'テストケース', kw: 'test case ケース', system: 'docs' },
+    { view: 'qa-quality', label: '品質観点', kw: 'quality ひんしつ', system: 'docs' },
+    { view: 'viewpoints', label: '観点管理', kw: 'viewpoint 観点 かんてん', system: 'docs' },
+    { view: 'user-guide', label: 'ユーザーガイド', kw: 'guide help ヘルプ 使い方', system: 'common' },
+    { view: 'settings', label: '設定', kw: 'settings config せってい', system: 'common' },
   ];
 
   const esc = (s) => (typeof escHtml === 'function' ? escHtml(s) : String(s));
@@ -41,7 +43,9 @@
   function buildItems(query) {
     const q = query.trim().toLowerCase();
     const out = [];
+    const sys = document.body.getAttribute('data-system') || 'docs';
     for (const v of VIEWS) {
+      if (v.system && v.system !== 'common' && v.system !== sys) continue;
       if (!q || v.label.toLowerCase().includes(q) || v.kw.toLowerCase().includes(q)) {
         out.push({ type: 'view', key: v.view, label: v.label, sub: '画面' });
       }
@@ -86,6 +90,9 @@
   }
 
   function close() {
+    // 進行中の refresh を無効化してから閉じる。順序を逆にすると、
+    // 閉じた直後に古い結果で開き直される。
+    generation += 1;
     panel.hidden = true;
     input.setAttribute('aria-expanded', 'false');
     active = -1;
@@ -102,8 +109,16 @@
     }
   }
 
+  // 閉じた後に、遅れて完了した refresh がパネルを開き直す競合があった
+  // （Escape で閉じたのに再表示される。E2E の flaky として観測）。
+  // 世代番号で、閉じる操作より前に始まった描画を捨てる。
+  let generation = 0;
+
   async function refresh() {
+    const myGeneration = generation;
     await ensureSites();
+    // 待っている間に閉じられていたら、この結果はもう古い
+    if (myGeneration !== generation) return;
     items = buildItems(input.value);
     active = items.length ? 0 : -1;
     render();

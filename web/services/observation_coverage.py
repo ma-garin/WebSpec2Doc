@@ -63,7 +63,11 @@ class ObservationCoverage:
 
         条件2（未検証を問題なしと言わない）の起点。
         """
-        base = f"本実行が観測できたのは {self.observed_pages} ページ（正規化後 {self.canonical_screens} 画面）です。"
+        # 「ページ」と「画面」を混ぜて数えない。単位は画面に統一する。
+        base = (
+            f"本実行が観測できたのは {self.observed_pages} 画面"
+            f"（重複をまとめると {self.canonical_screens} 画面）です。"
+        )
         if not self.gaps:
             return (
                 base
@@ -137,7 +141,7 @@ def _detect_limit_truncation(coverage: ObservationCoverage, log: list[str]) -> N
                 kind="件数上限で打ち切り",
                 count=coverage.observed_pages,
                 reason=(
-                    f"最大ページ数 {coverage.max_pages} に到達したため、"
+                    f"最大画面数 {coverage.max_pages} に到達したため、"
                     "それ以上のクロールを打ち切りました。上限を超えた領域は未観測です。"
                 ),
             )

@@ -533,39 +533,61 @@ def test_result_api_playwright_keys_empty_without_qa_process(tmp_path: Path, mon
     assert data["playwright_run_at"] == ""
 
 
-def test_result_api_returns_qa_process_outputs(tmp_path: Path, monkeypatch) -> None:
-    """AutoRun 実行後（qa_process/ あり）は「テスト実行」タブ用のパスと実行日時が返る。"""
+def test_result_api_returns_testcase_run_outputs(tmp_path: Path, monkeypatch) -> None:
+    """「テスト実行」タブはテストケース表の実行結果（testcases/）だけを参照する。"""
     _patch_output_dirs(tmp_path, monkeypatch)
     domain_dir = _write_report_files(tmp_path)
-    qa_dir = domain_dir / "qa_process"
-    qa_dir.mkdir()
-    (qa_dir / "playwright_report.json").write_text(
-        json.dumps({"ok": True, "passed": 2, "failed": 0, "skipped": 0, "total": 2, "tests": []}),
+    tc_dir = domain_dir / "testcases"
+    tc_dir.mkdir()
+    (tc_dir / "run_result.json").write_text(
+        json.dumps(
+            {
+                "ran_at": "2026-07-26 12:00:00",
+                "summary": {"ok": True, "passed": 2, "failed": 0, "skipped": 0, "total": 2},
+                "cases": {"TC-P001-DSP-001": {"status": "passed", "duration_ms": 10, "error": ""}},
+            }
+        ),
         encoding="utf-8",
     )
-    (qa_dir / "playwright_report.html").write_text("<html>fallback</html>", encoding="utf-8")
-    (qa_dir / "autorun.spec.ts").write_text("// spec", encoding="utf-8")
-    (qa_dir / "qa_process_report.html").write_text("<html>qa</html>", encoding="utf-8")
+    (tc_dir / "playwright_report.html").write_text("<html>fallback</html>", encoding="utf-8")
+    (tc_dir / "testcases.spec.ts").write_text("// spec", encoding="utf-8")
 
     data = _client().get("/api/result?domain=example.com").get_json()
 
-    assert data["files"]["playwright_json"].endswith("playwright_report.json")
+    assert data["files"]["playwright_json"].endswith("run_result.json")
     assert data["files"]["playwright_html"].endswith("playwright_report.html")
-    assert data["files"]["spec_ts"].endswith("autorun.spec.ts")
-    assert data["files"]["qa_process_report"].endswith("qa_process_report.html")
-    assert data["playwright_run_at"].endswith("Z")
-    # Playwright ネイティブレポート（スクショ・トレース付き）が無い間は空文字
+    assert data["files"]["spec_ts"].endswith("testcases.spec.ts")
+    assert data["playwright_run_at"] == "2026-07-26 12:00:00"
+    assert data["testcase_run"]["summary"]["passed"] == 2
     assert data["files"]["playwright_native_html"] == ""
 
-    # 自前の日本語サマリ HTML を既定として使い続ける（開発者向けネイティブ
-    # レポートが後から生成されても playwright_html は切り替わらない）。
-    # ネイティブレポートは playwright_native_html で別途参照する。
-    native = qa_dir / "playwright-report"
+    native = tc_dir / "playwright-report"
     native.mkdir()
     (native / "index.html").write_text("<html>native</html>", encoding="utf-8")
     data = _client().get("/api/result?domain=example.com").get_json()
     assert data["files"]["playwright_html"].endswith("playwright_report.html")
     assert data["files"]["playwright_native_html"].endswith("playwright-report/index.html")
+
+
+def test_result_api_ignores_autorun_playwright_report(tmp_path: Path, monkeypatch) -> None:
+    """AutoRun が残した qa_process/ の結果を「テスト実行」タブに流用しないこと。
+
+    自分が実行していない結果が最初から表示される不具合の再発防止。
+    """
+    _patch_output_dirs(tmp_path, monkeypatch)
+    domain_dir = _write_report_files(tmp_path)
+    qa_dir = domain_dir / "qa_process"
+    qa_dir.mkdir()
+    (qa_dir / "playwright_report.json").write_text(
+        json.dumps({"ok": False, "passed": 0, "failed": 7, "total": 7, "tests": []}),
+        encoding="utf-8",
+    )
+
+    data = _client().get("/api/result?domain=example.com").get_json()
+
+    assert data["files"]["playwright_json"] == ""
+    assert data["playwright_run_at"] == ""
+    assert data["testcase_run"] == {}
 
 
 def test_result_api_rejects_external_symlink_outputs(tmp_path: Path, monkeypatch) -> None:

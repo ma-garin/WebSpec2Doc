@@ -291,7 +291,7 @@ function renderTechniqueDetail() {
 }
 
 // ============================================================
-// カバレッジヒートマップ（解析＝取得状況3色 / AutoRun＝実行回数×成否）
+// カバレッジヒートマップ（画面の取得状況を3色で表示）
 // ============================================================
 let _covHeatToken = 0;
 function renderCoverageHeatmap() {
@@ -300,20 +300,15 @@ function renderCoverageHeatmap() {
   host.innerHTML =
     '<div class="hero-pad">' +
     '<div class="hero-section-title">カバレッジヒートマップ</div>' +
-    '<p class="design-section-note">解析＝画面の取得状況（取得済み／要ログイン／未取得）、AutoRun＝画面ごとの実行回数×成否。</p>' +
-    '<div class="cov-mode" style="margin:6px 0 12px;font-size:13px">' +
-    '<label style="margin-right:14px"><input type="radio" name="cov-kind" value="analysis" checked> 解析カバレッジ</label>' +
-    '<label><input type="radio" name="cov-kind" value="autorun"> AutoRunカバレッジ</label></div>' +
+    '<p class="design-section-note">画面ごとの取得状況（取得済み／要ログイン／未取得）を示します。</p>' +
     '<div class="tl-diff-frame" id="cov-frame"></div>' +
     '</div>';
-  const load = () => _loadCoverageHeatmap(domain);
-  document.querySelectorAll('input[name=cov-kind]').forEach(el => el.addEventListener('change', load));
-  load();
+  _loadCoverageHeatmap(domain);
 }
 async function _loadCoverageHeatmap(domain) {
   const box = document.getElementById('cov-frame');
   if (!box) return;
-  const kind = (document.querySelector('input[name=cov-kind]:checked') || {}).value || 'analysis';
+  const kind = 'analysis';
   const myToken = ++_covHeatToken;
   uiSkeleton(box, 'table');
   let html = '';
@@ -333,7 +328,7 @@ async function _loadCoverageHeatmap(domain) {
   if (myToken !== _covHeatToken) return;
   box.replaceChildren();
   const iframe = document.createElement('iframe');
-  iframe.title = kind === 'autorun' ? 'AutoRunカバレッジヒートマップ' : '解析カバレッジヒートマップ';
+  iframe.title = '解析カバレッジヒートマップ';
   iframe.srcdoc = html;
   box.appendChild(iframe);
 }

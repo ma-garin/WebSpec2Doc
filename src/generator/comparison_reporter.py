@@ -137,10 +137,6 @@ def generate_comparison_html(result: ComparisonResult) -> str:
   --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e;
   --line: #e5e4e0; --breaking: #d03b3b; --warning: #b8860b; --info: #52514e;
 }}
-@media (prefers-color-scheme: dark) {{
-  :root {{ --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --line: #383835;
-    --breaking: #ff6b6b; --warning: #e0b84d; --info: #c3c2b7; }}
-}}
 body {{ margin: 0; padding: 24px; background: var(--surface); color: var(--ink);
   font-family: "Hiragino Sans", "Noto Sans JP", Meiryo, sans-serif; }}
 h1 {{ font-size: 20px; margin: 0 0 4px; }}

@@ -8,11 +8,6 @@
   --sys-run-weak: #DCF5EE;
   --sys-run-ink: #0A7359;
 }
-html[data-theme="dark"] {
-  --sys-run: #3FCE9F;
-  --sys-run-weak: #10281F;
-  --sys-run-ink: #7EE6C4;
-}
 
 .sysselect-body {
   margin: 0;

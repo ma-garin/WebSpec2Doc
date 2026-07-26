@@ -37,7 +37,7 @@ document.querySelectorAll('.set-tabs .set-tab').forEach(t => {
 function getSettings() { try { return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}; } catch { return {}; } }
 function applySettings() {
   const s = getSettings();
-  // crawl-depth / max-pages はウィザードの自動クロールモードでのみ使う値のため
+  // crawl-depth / max-pages はウィザードの自動観測モードでのみ使う値のため
   // ここでは上書きしない（既定値のまま）。
   if (s.auth) document.getElementById('auth-path').value = s.auth;
 }
@@ -257,7 +257,7 @@ async function loadOperationalSites(force = false) {
     items.forEach(item => _operationsSiteUrls.set(item.domain, item.site_url || ''));
     select.innerHTML = items.length
       ? items.map(item => `<option value="${escHtml(item.domain)}">${escHtml(item.domain)}</option>`).join('')
-      : '<option value="">解析済みサイトがありません</option>';
+      : '<option value="">観測済みサイトがありません</option>';
     if (items.some(item => item.domain === previous)) select.value = previous;
     _operationsSitesLoaded = true;
     if (select.value) await loadOperationalConfig(select.value);

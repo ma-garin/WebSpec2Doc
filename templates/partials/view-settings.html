@@ -2,7 +2,7 @@
         <section class="view" id="view-settings">
           <div class="set-tabs" role="tablist" aria-label="設定タブ">
             <button type="button" class="set-tab is-active" data-tab="api" role="tab" aria-selected="true" aria-controls="set-panel-api" id="set-tab-api" tabindex="0">APIキー</button>
-            <button type="button" class="set-tab" data-tab="crawl" role="tab" aria-selected="false" aria-controls="set-panel-crawl" id="set-tab-crawl" tabindex="-1">クロール既定値</button>
+            <button type="button" class="set-tab" data-tab="crawl" role="tab" aria-selected="false" aria-controls="set-panel-crawl" id="set-tab-crawl" tabindex="-1">観測の既定値</button>
             <button type="button" class="set-tab" data-tab="notify" role="tab" aria-selected="false" aria-controls="set-panel-notify" id="set-tab-notify" tabindex="-1">通知</button>
             <button type="button" class="set-tab" data-tab="operations" role="tab" aria-selected="false" aria-controls="set-panel-operations" id="set-tab-operations" tabindex="-1">運用監視</button>
             {% if not auth_user or auth_user.role in ('owner', 'admin') %}
@@ -49,7 +49,7 @@
           <div class="set-panel" id="set-panel-notify" role="tabpanel" aria-labelledby="set-tab-notify">
             <div class="input-card">
               <h2 class="set-card-title">Slack 通知</h2>
-              <p class="input-hint" style="margin-top:0;margin-bottom:14px">仕様ドリフト（再クロール後の差分）を検知した際に Slack チャンネルへ通知します。<br>Incoming Webhook URL は <a href="https://api.slack.com/messaging/webhooks" target="_blank" rel="noopener">Slack API</a> で取得してください。</p>
+              <p class="input-hint" style="margin-top:0;margin-bottom:14px">仕様ドリフト（再観測後の差分）を検知した際に Slack チャンネルへ通知します。<br>Incoming Webhook URL は <a href="https://api.slack.com/messaging/webhooks" target="_blank" rel="noopener">Slack API</a> で取得してください。</p>
               <div class="field full" style="margin-bottom:14px">
                 <label>現在の設定</label>
                 <div class="key-current" id="slack-webhook-current">未設定</div>
@@ -65,7 +65,7 @@
 
           <div class="set-panel" id="set-panel-crawl" role="tabpanel" aria-labelledby="set-tab-crawl">
             <div class="input-card">
-              <h2 class="set-card-title">クロール既定値</h2>
+              <h2 class="set-card-title">観測の既定値</h2>
               <p class="input-hint" style="margin-top:0;margin-bottom:14px">このブラウザに保存され、生成ウィザードの初期値に反映されます。</p>
               <div class="options-grid">
                 <div class="field"><label for="set-depth">階層数（既定）</label><input type="number" id="set-depth" min="1" max="5"></div>
@@ -84,10 +84,10 @@
                 <label class="checkbox-chip" style="align-items:flex-start;gap:10px;height:auto;padding:10px 12px">
                   <input type="checkbox" id="allow-local-toggle" style="margin-top:2px">
                   <span>
-                    <strong>ローカル/ステージング環境のクロールを許可</strong>
+                    <strong>ローカル/ステージング環境の観測を許可</strong>
                     <br>
                     <span style="font-size:12px;color:var(--text-muted)">
-                      <code>localhost</code>・<code>*.local</code>・プライベートIPへのクロールを有効にします。
+                      <code>localhost</code>・<code>*.local</code>・プライベートIPへの観測を有効にします。
                       <br>
                       <span style="color:var(--color-high)">⚠️ 信頼できる環境でのみ使用してください（SSRF保護をバイパスします）。</span>
                     </span>
@@ -269,7 +269,7 @@
               <div class="field full" style="margin-top:18px">
                 <label for="td-value-catalog">テスト値カタログ（JSON・カテゴリ→ラベル/値/備考）</label>
                 <textarea id="td-value-catalog" spellcheck="false" style="width:100%;min-height:220px;font-family:ui-monospace,monospace;font-size:12.5px"></textarea>
-                <p class="input-hint" style="margin-top:6px">既知境界値の一般知識（メール上限値/RFC違反/空白 等）。解析対象サイト固有のデータではありません。</p>
+                <p class="input-hint" style="margin-top:6px">既知境界値の一般知識（メール上限値/RFC違反/空白 等）。観測対象サイト固有のデータではありません。</p>
               </div>
 
               <button class="btn-primary" id="save-test-design" style="margin-top:18px">テスト設計設定を保存</button>

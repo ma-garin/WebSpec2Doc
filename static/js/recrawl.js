@@ -1,10 +1,10 @@
 
-// ---- 再クロール（ドリフト検知）: 既知のサイトを同じ画面構成で取り直す ----
+// ---- 再観測（ドリフト検知）: 既知のサイトを同じ画面構成で取り直す ----
 
 async function recrawlSite(domain) {
   let site = null, urls = [], auth = getSettings().auth || '';
   // 前回クロールで「認証が必要」と判定された画面の URL 集合とログインページ URL。
-  // これを使わず一律 login_required:false で復元すると、再クロールのたびに
+  // これを使わず一律 login_required:false で復元すると、再観測のたびに
   // 「認証が必要なページ」バナー直下のログインフォームが消える再発バグになる。
   let loginUrlSet = new Set(), loginLandingUrl = '';
   try { site = (await fetch('/api/site?domain=' + encodeURIComponent(domain)).then(r => r.json())).site; } catch (e) {}
@@ -49,7 +49,7 @@ async function recrawlSite(domain) {
     };
   });
   renderDiscovered();
-  // クロール方法（自動クロール／選択したURLのみ）も前回設定から復元する。
+  // 観測方法（自動観測／選択したURLのみ）も前回設定から復元する。
   // renderDiscovered() が画面リストパネルの表示状態を上書きするため、その後に呼ぶ。
   setCrawlTargetMode(site && site.crawl_mode === 'auto' ? 'auto' : 'selected');
   showWizardStep(2);

@@ -158,6 +158,7 @@ class FieldData:
     aria_required: bool = False
     role: str = ""
     has_visible_label: bool = False
+    label_text: str = ""  # 画面に見えているラベル文言（テスト手順で欄を特定するために使う）
     # DOM 実測由来のため confidence は 1.0 固定
     evidence: SourceEvidence | None = None
     confidence: float = 1.0

@@ -235,15 +235,6 @@
       });
     });
 
-    var themeBtn = $('arep-theme');
-    if (themeBtn) {
-      themeBtn.addEventListener('click', function () {
-        var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', next);
-        try { localStorage.setItem('webspec2doc.theme', next); } catch (e) {}
-      });
-    }
-
     var initial = (location.hash || '').replace('#', '') || 'dashboard';
     var known = Array.prototype.map.call(
       document.querySelectorAll('.arep-nav-item'),

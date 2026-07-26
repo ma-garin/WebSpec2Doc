@@ -6,9 +6,13 @@
     「ごちゃごちゃして見える」を主観のまま放置すると、増改築のたびに悪化して
     誰も気づけない。要素数・色数・情報密度を数値で固定し、回帰を検知する。
 
+測り方は2系統:
+    1. DOM 由来（要素数・色数・情報密度）— 何が増えたかを特定しやすい
+    2. 描画結果由来（圧縮率・エッジ密度・colorfulness）— 実際に目に入る量に近い
+       Reinecke et al. 2013 が用いた画像特徴量の再実装（web/services/visual_complexity.py）
+
 限界:
-    画像処理による知覚ベースの複雑性（AIM 等）ではなく、DOM から算出できる
-    代理指標である。絶対値の良し悪しを主張するものではなく、
+    知覚モデルそのものではない。絶対値で美しさを主張するものではなく、
     **これ以上増やさないための上限**として使う。
 
 閾値の根拠:
@@ -20,9 +24,16 @@ from __future__ import annotations
 
 import json
 import os
+import sys
+from pathlib import Path
 
 import pytest
 from playwright.sync_api import Page
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
+
+from web.services.visual_complexity import measure  # noqa: E402
 
 BASE_URL = os.environ.get("WEBSPEC2DOC_E2E_URL", "http://127.0.0.1:8765")
 
@@ -119,4 +130,47 @@ class TestVisualComplexityBudget:
         measured = page.evaluate(_MEASURE_JS)
         assert measured["primaryCtas"] <= 1, (
             f"受付画面の主要CTAが {measured['primaryCtas']} 個あります（1個以下にすること）"
+        )
+
+
+#: 描画結果から測る上限。2026-07-26 の実測に余裕を持たせた値。
+#: 参考実測: 受付 圧縮率0.083/エッジ0.046、改修前の段階画面 0.080/0.043 →
+#: 改修後 0.068/0.033（要確認1本化とCTA整理で約2割低下）。
+_IMAGE_BUDGETS = {
+    "auto-run": {"path": "/auto-run", "compression_ratio": 0.12, "edge_density": 0.065, "colorfulness": 55.0},
+    "report": {
+        "path": "/autorun/report/127.0.0.1:8767",
+        "compression_ratio": 0.12,
+        "edge_density": 0.065,
+        "colorfulness": 55.0,
+    },
+}
+
+
+class TestRenderedComplexityBudget:
+    """描画結果そのものの複雑性が上限を超えていないこと。
+
+    DOM の要素数は代理でしかない。実際に目に入るのは描画結果なので、
+    スクリーンショットから圧縮率・エッジ密度・色の豊かさを測る。
+    """
+
+    @pytest.mark.parametrize("name", sorted(_IMAGE_BUDGETS))
+    def test_rendered_within_budget(self, page: Page, tmp_path: Path, name: str) -> None:
+        budget = _IMAGE_BUDGETS[name]
+        page.set_viewport_size({"width": 1440, "height": 900})
+        page.goto(f"{BASE_URL}{budget['path']}")
+        page.wait_for_load_state("networkidle")
+        shot = tmp_path / f"{name}.png"
+        page.screenshot(path=str(shot), full_page=False, animations="disabled", caret="hide")
+
+        measured = measure(shot).to_dict()
+        exceeded = {
+            key: (measured[key], limit)
+            for key, limit in budget.items()
+            if key != "path" and measured.get(key, 0) > limit
+        }
+        assert not exceeded, (
+            f"{name} の描画複雑性が上限を超えました: "
+            f"{json.dumps(exceeded, ensure_ascii=False)} / "
+            f"実測={json.dumps(measured, ensure_ascii=False)}"
         )

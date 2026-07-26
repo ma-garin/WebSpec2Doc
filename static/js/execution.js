@@ -57,7 +57,7 @@ function updateCrawlProgress() {
   if (!crawlProgress) return;
   const p = crawlProgress;
   execCount.textContent = `${p.finished} / ${p.total || '?'}`;
-  execTitle.textContent = `クロール中…（${p.finished}/${p.total || '?'}）`;
+  execTitle.textContent = `観測中…（${p.finished}/${p.total || '?'}）`;
   execSkipped.textContent = `${p.skipped + p.login + p.failed}件`;
   execSkipped.title = `制約: ${p.skipped} / ログイン必須: ${p.login} / 失敗: ${p.failed}`;
   execSaved.textContent = `${p.saved}件`;
@@ -72,9 +72,9 @@ function handleCrawlEvent(event) {
   if (event.event === 'crawl_started') {
     p.total = Number(event.total) || p.total;
     p.parallelism = Number(event.parallelism) || 1;
-    execPhase.textContent = `解析中（${p.parallelism}並列）`;
+    execPhase.textContent = `観測中（${p.parallelism}並列）`;
   } else if (event.event === 'page_started') {
-    execMessage.textContent = `${event.index || '?'}件目を解析中: ${event.url || ''}`;
+    execMessage.textContent = `${event.index || '?'}件目を観測中: ${event.url || ''}`;
     setStep(1);
   } else if (event.event === 'page_completed') {
     p.finished += 1; p.completed += 1;
@@ -111,17 +111,42 @@ function saveUrlHistory(url) {
     localStorage.setItem(URL_HISTORY_KEY, JSON.stringify(next));
   } catch (_) {}
 }
+// 観測済みサイト（サーバ側）のURL。localStorage はオリジン単位のため、
+// ポート違い・別端末・シークレットウィンドウでは履歴が空になる。サーバの
+// 解析実績を候補に混ぜて、どこから開いても過去のURLを選べるようにする。
+let _serverUrlHistory = [];
+async function loadServerUrlHistory() {
+  try {
+    const res = await fetch('/api/history');
+    if (!res.ok) return;
+    const data = await res.json();
+    _serverUrlHistory = (data.items || []).map(it => it.site_url).filter(Boolean);
+  } catch (_) { /* 履歴が取れなくても localStorage 分だけで動作させる */ }
+}
 function populateUrlHistory() {
   const list = document.getElementById('url-history-list');
   if (!list) return;
+  const limit = _urlHistoryLimit();
+  if (!limit) { list.replaceChildren(); return; }
   let items = [];
   try { items = JSON.parse(localStorage.getItem(URL_HISTORY_KEY) || '[]'); } catch (_) {}
-  list.replaceChildren(...items.slice(0, _urlHistoryLimit()).map(u => {
+  const merged = [...items.slice(0, limit)];
+  for (const u of _serverUrlHistory) {
+    if (merged.length >= limit * 2) break;
+    if (!merged.includes(u)) merged.push(u);
+  }
+  list.replaceChildren(...merged.map(u => {
     const o = document.createElement('option'); o.value = u; return o;
   }));
 }
 populateUrlHistory();
-document.getElementById('url-input')?.addEventListener('focus', populateUrlHistory);
+loadServerUrlHistory().then(populateUrlHistory);
+['url-input', 'hero-url'].forEach(id => {
+  document.getElementById(id)?.addEventListener('focus', () => {
+    populateUrlHistory();
+    loadServerUrlHistory().then(populateUrlHistory);
+  });
+});
 
 document.getElementById('form').addEventListener('submit', (e) => {
   e.preventDefault();
@@ -136,7 +161,7 @@ document.getElementById('form').addEventListener('submit', (e) => {
     setUrlMessage(msg, true);
     return;
   }
-  // 認証が必要な画面（再クロール時にログインバナー・フォームを復元するため site.json に保存する）
+  // 認証が必要な画面（再観測時にログインバナー・フォームを復元するため site.json に保存する）
   const loginUrlSet = new Set(urls);
   const loginUrls = discovered.filter(p => p.login_required && loginUrlSet.has(p.url)).map(p => p.url);
   const loginLandingUrl = discovered.find(p => p.login_required && p.login_url)?.login_url
@@ -176,7 +201,7 @@ async function runWith(bodyStr, domain, label, urlCount) {
   previewImage.classList.remove('show'); previewPlaceholder.classList.remove('hidden');
   execLog.textContent = '';
   execTarget.textContent = label;
-  execTitle.textContent = 'クロール中…'; execMessage.textContent = `${urlCount}件の対象をクロールしてドキュメント化します。`;
+  execTitle.textContent = '観測中…'; execMessage.textContent = `${urlCount}件の対象をクロールしてドキュメント化します。`;
   execPhase.textContent = '実行中'; setStep(0); startTimer(); startPreviewPolling();
   resetCrawlProgress(urlCount);
 
@@ -251,10 +276,7 @@ document.getElementById('exec-new-btn').addEventListener('click', () => {
   appContent.classList.remove('is-executing'); genPanel.style.display = '';
   showWizardStep(2);
 });
-document.getElementById('r-new-btn').addEventListener('click', () => {
-  document.body.classList.remove('result-maximized');
-  switchView('dashboard');
-});
+// ダッシュボードへの導線はトップバーのパンくず（ダッシュボード）に一本化した
 document.getElementById('btn-view-report').addEventListener('click', () => showResults(activeDomain));
 document.getElementById('r-recrawl-btn').addEventListener('click', () => {
   const domain = document.getElementById('r-domain').textContent.trim();

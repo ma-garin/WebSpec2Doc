@@ -5,7 +5,7 @@
           <div class="wizard-progress" id="wizard-progress-bar" style="margin-bottom:16px;display:none">
             <div class="wizard-step-node is-active" id="ws-1">
               <div class="wizard-step-circle">1</div>
-              <span class="wizard-step-label">解析</span>
+              <span class="wizard-step-label">観測</span>
             </div>
             <div class="wizard-step-line" id="wl-1"></div>
             <div class="wizard-step-node" id="ws-2">
@@ -26,9 +26,9 @@
 
           <div id="gen-panel">
 
-            <!-- ステップ1: URL入力・解析 -->
+            <!-- ステップ1: URL入力・観測（語は AutoRun と揃えて「観測」に統一） -->
             <div id="wizard-p1" class="input-card">
-              <label for="url-input" class="form-label">クロール対象 URL <span style="color:var(--color-critical)">*</span></label>
+              <label for="url-input" class="form-label">観測対象 URL <span style="color:var(--color-critical)">*</span></label>
               <div class="input-row" style="gap:8px">
                 <input type="url" id="url-input" class="url-input" placeholder="https://example.com" autocomplete="url" list="url-history-list" style="flex:1" />
                 <datalist id="url-history-list"></datalist>
@@ -64,7 +64,7 @@
                 <div id="discover-live-feed" class="discover-live-feed"></div>
               </div>
               <div id="discover-status" class="discover-status"></div>
-              <!-- 解析完了サマリー -->
+              <!-- 観測完了サマリー -->
               <div id="p1-summary" class="wizard-p1-summary" style="display:none">
                 <div class="p1-result-cards">
                   <div class="p1-result-card p1-result-card--screens">
@@ -77,7 +77,7 @@
                   </div>
                   <div class="p1-result-card p1-result-card--time" id="p1-time-card" style="display:none">
                     <span class="p1-result-num" id="p1-elapsed-num">-</span>
-                    <span class="p1-result-label">解析時間</span>
+                    <span class="p1-result-label">観測時間</span>
                   </div>
                 </div>
                 <span class="wizard-p1-summary-hint" id="p1-login-hint" style="display:none"></span>
@@ -91,12 +91,12 @@
                 <div class="input-card">
                   <div class="wizard-p2-header">
                     <h2>条件設定</h2>
-                    <button type="button" id="p2-back-btn" class="btn-outline-sm">← 解析に戻る</button>
+                    <button type="button" id="p2-back-btn" class="btn-outline-sm">← 観測に戻る</button>
                   </div>
 
-                  <!-- クロール方法（自動クロール／選択したURLのみ） -->
+                  <!-- 観測方法（自動でリンクを辿る／選択したURLのみ） -->
                   <div class="field" id="crawl-mode-field" style="margin-bottom:14px">
-                    <label class="form-label" style="margin-bottom:6px">クロール方法</label>
+                    <label class="form-label" style="margin-bottom:6px">観測方法</label>
                     <div style="display:flex;gap:16px;flex-wrap:wrap">
                       <label class="checkbox-chip">
                         <input type="radio" name="crawl-target-mode" id="crawl-mode-selected" value="selected" checked>
@@ -104,7 +104,7 @@
                       </label>
                       <label class="checkbox-chip">
                         <input type="radio" name="crawl-target-mode" id="crawl-mode-auto" value="auto">
-                        自動クロール（リンクを辿る）
+                        自動で辿る（リンクを追跡）
                       </label>
                     </div>
                     <div id="crawl-mode-auto-fields" style="display:none;margin-top:10px;gap:16px;flex-wrap:wrap" class="control-grid-2">
@@ -118,7 +118,7 @@
                       </div>
                     </div>
                     <div class="control-field" style="margin-top:10px;max-width:180px">
-                      <label for="crawl-parallelism">並列数<span class="info-tip" tabindex="0" role="img" aria-label="同時にアクセスする画面数。増やすと解析時間は短くなりますが、対象サイトへの負荷が増えます。" data-tip="同時にアクセスする画面数。増やすと解析時間は短くなりますが、対象サイトへの負荷が増えます。">ⓘ</span></label>
+                      <label for="crawl-parallelism">並列数<span class="info-tip" tabindex="0" role="img" aria-label="同時にアクセスする画面数。増やすと観測時間は短くなりますが、対象サイトへの負荷が増えます。" data-tip="同時にアクセスする画面数。増やすと観測時間は短くなりますが、対象サイトへの負荷が増えます。">ⓘ</span></label>
                       <select id="crawl-parallelism" class="url-input select-compact">
                         <option value="1">1（順次）</option>
                         <option value="2" selected>2（既定）</option>
@@ -192,7 +192,7 @@
                   </div>
 
                   <div class="wizard-footer" style="justify-content:flex-end">
-                    <button type="submit" class="btn-primary" id="submit-btn" style="height:44px;padding:0 28px;font-size:15px">解析開始</button>
+                    <button type="submit" class="btn-primary" id="submit-btn" style="height:44px;padding:0 28px;font-size:15px">観測開始</button>
                   </div>
                 </div>
               </form>
@@ -203,20 +203,20 @@
           <div id="execution-view" class="execution-view hidden">
             <div class="execution-topbar">
               <div class="execution-topbar-head">
-                <h2 class="execution-title" id="exec-title">クロール中…</h2>
+                <h2 class="execution-title" id="exec-title">観測中…</h2>
                 <span class="execution-elapsed" id="exec-elapsed">00:00</span>
               </div>
-              <p class="execution-message" id="exec-message">対象を受け付けて、クロールの準備を進めています。</p>
+              <p class="execution-message" id="exec-message">対象を受け付けて、観測の準備を進めています。</p>
               <div class="execution-progress"><div class="execution-progress-bar" id="exec-progress-bar"></div></div>
               <div class="execution-steps">
                 <div class="execution-step is-active" id="estep-0">1. 受付</div>
                 <div class="execution-step" id="estep-1">2. ページ取得</div>
-                <div class="execution-step" id="estep-2">3. 解析</div>
+                <div class="execution-step" id="estep-2">3. 観測</div>
                 <div class="execution-step" id="estep-3">4. 結果整理</div>
               </div>
             </div>
             <div class="execution-preview-frame">
-              <img id="exec-preview-image" class="execution-preview-image" alt="クロール中のライブプレビュー" />
+              <img id="exec-preview-image" class="execution-preview-image" alt="観測中のライブプレビュー" />
               <div id="exec-preview-placeholder" class="execution-preview-placeholder">
                 <div class="spinner"></div>
                 <p>ライブプレビューを準備しています…</p>
@@ -245,21 +245,32 @@
 
           <!-- ステップ4: レポート -->
           <div id="result-panel" class="result-panel hidden">
-            <div class="result-summary">
-              <div class="result-summary-head">
-                <div style="display:flex;align-items:center;gap:10px;min-width:0;flex-wrap:wrap">
-                  <strong id="r-domain">-</strong>
-                  <span id="r-diff-badge" style="display:none"></span>
-                  <span id="r-crawled" style="font-size:12px;color:var(--text-muted)"></span>
-                </div>
-                <div style="display:flex;gap:8px;align-items:center">
-                  <div class="export-dropdown" id="export-dropdown">
-                    <button type="button" class="btn-outline-sm" id="export-dropdown-btn">↓ エクスポート</button>
-                    <div class="export-dropdown-menu" id="export-dropdown-menu"></div>
-                  </div>
-                  <button type="button" id="r-recrawl-btn" class="btn-outline-sm">再クロール</button>
-                </div>
+            <div class="result-bar">
+              <strong id="r-domain" hidden>-</strong>
+              <div class="result-tabs" role="tablist" aria-label="結果ビュー">
+                <button type="button" role="tab" aria-selected="true" class="result-tab is-active" data-tab="overview" aria-controls="rp-overview">概要</button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="screens" aria-controls="rp-screens">画面と仕様<span class="tab-count" id="tab-count-screens"></span></button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="test-design" aria-controls="rp-test-design">テスト設計<span class="tab-count" id="tab-count-test-design"></span></button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="testcases" aria-controls="rp-testcases">テストケース<span class="tab-count" id="tab-count-testcases"></span></button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="flow" aria-controls="rp-flow">画面遷移</button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="runs" aria-controls="rp-runs">テスト実行</button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="doc-fusion" aria-controls="rp-doc-fusion" id="tab-doc-fusion" hidden>文書突合<span class="tab-count" id="tab-count-doc-fusion"></span></button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="history" aria-controls="rp-history">履歴・差分<span class="tab-count" id="tab-count-history"></span></button>
               </div>
+              <div class="result-bar-actions">
+                <span id="r-diff-badge" style="display:none"></span>
+                <span id="r-crawled" class="result-crawled"></span>
+                <div class="export-dropdown" id="export-dropdown">
+                  <button type="button" class="btn-outline-sm" id="export-dropdown-btn">↓ エクスポート</button>
+                  <div class="export-dropdown-menu" id="export-dropdown-menu"></div>
+                </div>
+                <button type="button" id="r-recrawl-btn" class="btn-outline-sm">再観測</button>
+                <button type="button" id="r-density-btn" class="btn-outline-sm btn-icon-only" title="表の行間を切り替え" aria-label="表の行間を切り替え">☰</button>
+                <button type="button" id="r-maximize-btn" class="btn-outline-sm btn-icon-only" title="最大化 (Esc で解除)" aria-label="最大化">⛶</button>
+              </div>
+            </div>
+            <!-- KPI は概要タブの内容。他タブでは隠して表示領域を広く使う -->
+            <div id="kpi-hero-wrap">
               <div class="kpi-hero">
                 <div class="kpi-tile">
                   <span class="kpi-num" id="k-screens">0</span>
@@ -289,22 +300,6 @@
                 </button>
               </div>
             </div>
-            <div class="result-bar">
-              <div class="result-tabs" role="tablist" aria-label="結果ビュー">
-                <button type="button" role="tab" aria-selected="true" class="result-tab is-active" data-tab="overview" aria-controls="rp-overview">概要</button>
-                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="screens" aria-controls="rp-screens">画面と仕様<span class="tab-count" id="tab-count-screens"></span></button>
-                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="test-design" aria-controls="rp-test-design">テスト設計<span class="tab-count" id="tab-count-test-design"></span></button>
-                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="flow" aria-controls="rp-flow">画面遷移</button>
-                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="runs" aria-controls="rp-runs">テスト実行</button>
-                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="doc-fusion" aria-controls="rp-doc-fusion" id="tab-doc-fusion" hidden>文書突合<span class="tab-count" id="tab-count-doc-fusion"></span></button>
-                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="history" aria-controls="rp-history">履歴・差分<span class="tab-count" id="tab-count-history"></span></button>
-              </div>
-              <div class="result-bar-actions">
-                <button type="button" id="r-density-btn" class="btn-outline-sm" title="表の行間を切り替え">☰ 密度</button>
-                <button type="button" id="r-maximize-btn" class="btn-outline-sm" title="最大化 (Esc で解除)">⛶ 最大化</button>
-                <button type="button" id="r-new-btn" class="btn-outline-sm">ダッシュボードへ</button>
-              </div>
-            </div>
             <div class="result-hero" id="result-hero">
               <div class="result-tab-panel rp-simple" id="rp-overview" role="tabpanel" tabindex="0" aria-label="概要"></div>
               <div class="result-tab-panel" id="rp-screens" role="tabpanel" tabindex="0" aria-label="画面と仕様" hidden>
@@ -329,6 +324,7 @@
                 <div class="result-subpanel" id="rp-test-design-detail" hidden></div>
                 <div class="result-subpanel" id="rp-test-design-mbt" hidden></div>
               </div>
+              <div class="result-tab-panel rp-simple" id="rp-testcases" role="tabpanel" tabindex="0" aria-label="テストケース" hidden></div>
               <div class="result-tab-panel" id="rp-flow" role="tabpanel" tabindex="0" aria-label="画面遷移" hidden>
                 <div class="result-subtabs" role="tablist" aria-label="画面遷移のビュー" data-tab="flow">
                   <button type="button" role="tab" aria-selected="true" class="result-subtab is-active" data-sub="diagram">遷移図</button>

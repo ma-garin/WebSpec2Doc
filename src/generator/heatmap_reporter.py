@@ -17,7 +17,6 @@ AUTORUN_COVERAGE_FILE_NAME = "autorun_coverage_heatmap.html"
 
 # ordinal 4 段（validate_palette.js で light/dark とも PASS 済み）
 _LIGHT_RAMP = ("#86b6ef", "#3987e5", "#1c5cab", "#0d366b")
-_DARK_RAMP = ("#184f95", "#2a78d6", "#6da7ec", "#b7d3f6")
 _BUCKET_LABELS = ("1", "2〜3", "4〜6", "7+")
 
 
@@ -96,12 +95,6 @@ def generate_heatmap_html(coverage: dict[str, Any]) -> str:
         f'.legend-step i[data-level="{i}"]{{background:{color}}}'
         for i, color in enumerate(_LIGHT_RAMP, start=1)
     )
-    dark_css = "".join(
-        f'.count[data-level="{i}"]{{background:{color};'
-        f'color:{"#ffffff" if i <= 2 else "#0b0b0b"}}}'
-        f'.legend-step i[data-level="{i}"]{{background:{color}}}'
-        for i, color in enumerate(_DARK_RAMP, start=1)
-    )
 
     return f"""<!DOCTYPE html>
 <html lang="ja">
@@ -113,9 +106,6 @@ def generate_heatmap_html(coverage: dict[str, Any]) -> str:
 :root {{
   --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e;
   --line: #e5e4e0; --warn: #d03b3b; --ok: #0ca30c;
-}}
-@media (prefers-color-scheme: dark) {{
-  :root {{ --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --line: #383835; }}
 }}
 body {{ margin: 0; padding: 24px; background: var(--surface); color: var(--ink);
   font-family: "Hiragino Sans", "Noto Sans JP", Meiryo, sans-serif; }}
@@ -144,7 +134,6 @@ h2 {{ font-size: 16px; }}
 code {{ background: transparent; border: 1px solid var(--line); border-radius: 4px;
   padding: 1px 4px; }}
 {light_css}
-@media (prefers-color-scheme: dark) {{ {dark_css} }}
 </style>
 </head>
 <body>
@@ -286,9 +275,6 @@ _COVERAGE_BASE_CSS = """
 body { margin: 0; padding: 24px; background: var(--surface); color: var(--ink);
   font-family: "Hiragino Sans", "Noto Sans JP", Meiryo, sans-serif; }
 :root { --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --line: #e5e4e0; }
-@media (prefers-color-scheme: dark) {
-  :root { --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --line: #383835; }
-}
 h1 { font-size: 20px; margin: 0 0 4px; }
 p.caption { color: var(--ink-2); margin: 0 0 20px; font-size: 13px; }
 .tiles { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
@@ -322,16 +308,6 @@ td.cov .runs { display: block; font-size: 11px; font-weight: 400; color: var(--i
 .cov.autorun.fail[data-runs="3"] { background: #e79393; }
 .cov.autorun.fail[data-runs="4"] { background: #db6a6a; }
 .i-pass { background: #8fd3a6; } .i-fail { background: #e79393; } .i-none { background: #f1eeea; }
-@media (prefers-color-scheme: dark) {
-  .cov.captured, .cov.autorun.pass { background: #1f4a2e; color: #eafff0; }
-  .cov.login { background: #4a3d1c; color: #fff4d9; }
-  .cov.missing, .cov.autorun.none { background: #2c2b28; color: var(--ink-2); }
-  .cov.autorun.fail { background: #4d2222; color: #ffe6e6; }
-  .cov.autorun.pass[data-runs="3"] { background: #2c6b41; }
-  .cov.autorun.pass[data-runs="4"] { background: #388a53; }
-  .cov.autorun.fail[data-runs="3"] { background: #6e2f2f; }
-  .cov.autorun.fail[data-runs="4"] { background: #8a3838; }
-}
 """
 
 

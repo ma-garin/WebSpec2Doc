@@ -77,7 +77,7 @@ class TestSystemScoping:
         ("label", "system"),
         [
             ("ホーム", "docs"),
-            ("新規解析", "docs"),
+            ("新規観測", "docs"),
             ("テストケース", "docs"),
             ("品質観点", "docs"),
             ("観点管理", "docs"),
@@ -97,7 +97,7 @@ class TestSystemScoping:
         assert pattern.search(spa), f'ナビ「{label}」に data-system="{system}" がありません'
 
     def test_new_analysis_button_is_docs_only(self, spa: str) -> None:
-        """サイドバーの「新規解析」ボタンは AutoRun 側で隠れる必要がある。"""
+        """サイドバーの「新規観測」ボタンは AutoRun 側で隠れる必要がある。"""
         assert re.search(r'id="add-site-btn"[^>]*data-system="docs"', spa)
 
     def test_system_switcher_present(self, spa: str) -> None:

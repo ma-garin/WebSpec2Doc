@@ -139,6 +139,157 @@ def api_testcases() -> dict | tuple[dict, int]:
     return _testcases_payload(domain, report)
 
 
+def _table_request() -> tuple[str, dict[str, Any] | None, dict | None]:
+    """テストケース表 API 共通の引数取り出し（domain と report.json）。"""
+    body = request.get_json(silent=True) or {}
+    domain = request.args.get("domain") or request.form.get("domain") or body.get("domain", "")
+    report_path, error = _report_json_path(domain)
+    if error:
+        return domain, None, {"error": error}
+    report = _load_report(report_path)
+    if report is None:
+        return domain, None, {"error": "invalid report.json"}
+    return domain, report, None
+
+
+@bp.get("/api/testcases/table")
+def api_testcases_table() -> dict | tuple[dict, int]:
+    """9 列のローレベルテストケース表（生成値＋ユーザー編集）を返す。"""
+    from web.services.testcase_table_store import compose
+
+    domain, report, error = _table_request()
+    if error:
+        return error, 404
+    assert report is not None
+    return compose(domain, report)
+
+
+@bp.get("/api/testcases/history")
+def api_testcases_history() -> dict | tuple[dict, int]:
+    from web.services.testcase_table_store import load_history
+
+    domain = request.args.get("domain", "")
+    if not _valid_domain(domain):
+        return {"error": "not found"}, 404
+    limit = request.args.get("limit", type=int) or 200
+    return {"domain": domain, "items": load_history(domain, limit=limit)}
+
+
+@bp.post("/api/testcases/cell")
+def api_testcases_cell() -> dict | tuple[dict, int]:
+    """1 セルを更新する。value は文字列、または list 列なら配列。"""
+    from web.services.testcase_table_store import TestcaseStoreError, update_cell
+
+    body = request.get_json(silent=True) or {}
+    domain, report, error = _table_request()
+    if error:
+        return error, 404
+    assert report is not None
+    try:
+        return update_cell(
+            domain,
+            report,
+            str(body.get("case_id", "")),
+            str(body.get("column", "")),
+            body.get("value", ""),
+        )
+    except TestcaseStoreError as exc:
+        return {"error": str(exc)}, 400
+
+
+@bp.post("/api/testcases/cell/reset")
+def api_testcases_cell_reset() -> dict | tuple[dict, int]:
+    from web.services.testcase_table_store import TestcaseStoreError, reset_cell
+
+    body = request.get_json(silent=True) or {}
+    domain, report, error = _table_request()
+    if error:
+        return error, 404
+    assert report is not None
+    try:
+        return reset_cell(
+            domain, report, str(body.get("case_id", "")), str(body.get("column", ""))
+        )
+    except TestcaseStoreError as exc:
+        return {"error": str(exc)}, 400
+
+
+@bp.post("/api/testcases/run")
+def api_testcases_run() -> dict | tuple[dict, int]:
+    """テストケース表から Playwright spec を生成し、その場で実行して結果を保存する。
+
+    実行対象は「自動化判定＝自動化可」かつ実行操作・検証を持つ行のみ。
+    body の case_ids を指定すると、その行だけに絞って実行する（画面の絞り込み結果を実行する用途）。
+    """
+    from datetime import datetime
+    from pathlib import Path
+
+    from crawler.url_safety import _local_targets_allowed
+    from web.services.egress_gateway import EgressPolicy
+    from web.services.playwright_executor import run_playwright
+    from web.services.testcase_spec_generator import SpecGenerationError, generate_spec
+    from web.services.testcase_table_store import compose, run_dir, save_run_result
+
+    body = request.get_json(silent=True) or {}
+    domain, report, error = _table_request()
+    if error:
+        return error, 404
+    assert report is not None
+
+    payload = compose(domain, report)
+    rows = payload["rows"]
+    wanted = body.get("case_ids")
+    if isinstance(wanted, list) and wanted:
+        allow = {str(x) for x in wanted}
+        rows = [r for r in rows if r["case_id"] in allow]
+
+    out_dir = run_dir(domain)
+    try:
+        gen = generate_spec(rows, Path(out_dir))
+    except SpecGenerationError as exc:
+        return {"error": str(exc)}, 400
+
+    # ローカル対象の許可は運用者の明示設定（WEBSPEC2DOC_ALLOW_LOCAL=1）にのみ従う
+    result = run_playwright(
+        Path(gen["spec_path"]),
+        Path(out_dir),
+        per_test_timeout_sec=int(body.get("per_test_timeout_sec") or 20),
+        egress_policy=EgressPolicy(allow_local=_local_targets_allowed()),
+    )
+    saved = save_run_result(domain, result, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    return {
+        "ok": bool(result.get("ok")),
+        "generated": gen,
+        "run": saved,
+        "error": str(result.get("error") or ""),
+    }
+
+
+@bp.post("/api/testcases/row")
+def api_testcases_row() -> dict | tuple[dict, int]:
+    """行の追加・削除・復元。action で切り替える。"""
+    from web.services.testcase_table_store import add_row, delete_row, restore_row
+
+    body = request.get_json(silent=True) or {}
+    domain, report, error = _table_request()
+    if error:
+        return error, 404
+    assert report is not None
+    action = str(body.get("action", ""))
+    case_id = str(body.get("case_id", ""))
+    if action == "add":
+        return add_row(domain, report, case_id)
+    if action == "delete":
+        if not case_id:
+            return {"error": "case_id が必要です"}, 400
+        return delete_row(domain, case_id)
+    if action == "restore":
+        if not case_id:
+            return {"error": "case_id が必要です"}, 400
+        return restore_row(domain, case_id)
+    return {"error": f"不明な action です: {action}"}, 400
+
+
 def _test_design_params(settings: dict[str, Any]) -> Any:
     """設定 dict から TestDesignParams を構築する（value_catalog と技法パラメータ）。"""
     from generator.test_design import TestDesignParams

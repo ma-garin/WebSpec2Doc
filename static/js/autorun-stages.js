@@ -826,6 +826,14 @@
     load: load,
     render: render,
     showIntake: showIntake,
-    hide: function () { show(false); },
+    // 段階パネルだけを閉じる。受付フォームは戻さない。
+    // show(false) は受付を復活させるため、実行完了後に呼ぶと
+    // 結果ではなく入力欄が現れてしまう（実測で発覚）。
+    hide: function () {
+      var el = root();
+      if (el) el.style.display = 'none';
+      var ws = document.querySelector('.autorun-workspace');
+      if (ws) ws.classList.remove('is-staging');
+    },
   };
 })();

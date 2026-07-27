@@ -790,7 +790,171 @@ def _technique_items(obs: Observation | None) -> list[StageItem]:
                     data={"page_id": page_id, "technique": "ペアワイズ"},
                 )
             )
+        items.extend(_extended_technique_items(applied, page_id, title))
+
+    items.extend(_cross_screen_technique_items(obs.screens))
     return items
+
+
+#: 追加技法の表示定義。(apply_all のキー, 見出しの単位, 整形関数名)
+_EXTENDED_TECHNIQUES: tuple[tuple[str, str], ...] = (
+    ("classification_tree", "ケース"),
+    ("orthogonal_array", "ケース"),
+    ("cause_effect", "規則"),
+    ("domain_analysis", "ケース"),
+    ("error_guessing", "件"),
+)
+
+
+def _extended_technique_items(
+    applied: dict[str, Any], page_id: str, title: str
+) -> list[StageItem]:
+    """分類ツリー法・直交表・原因結果グラフ・ドメイン分析・エラー推測を項目化する。"""
+    items: list[StageItem] = []
+    for key, unit in _EXTENDED_TECHNIQUES:
+        block = applied.get(key)
+        if not isinstance(block, dict) or not block.get("applicable"):
+            continue
+        technique = str(block.get("technique", key))
+        count = int(block.get("case_count") or 0)
+        items.append(
+            StageItem(
+                item_id=f"tech-{key.replace('_', '-')}-{page_id}",
+                title=f"{title}: {technique}（{count}{unit}）",
+                detail=_format_extended(key, block),
+                data={"page_id": page_id, "technique": technique},
+            )
+        )
+    return items
+
+
+def _cross_screen_technique_items(screens: list[dict[str, Any]]) -> list[StageItem]:
+    """画面をまたぐ技法（ユースケーステスト）を項目化する。"""
+    from autorun.techniques import apply_cross_screen
+
+    cross = apply_cross_screen(list(screens))
+    use_case = cross.get("use_case") or {}
+    if not use_case.get("applicable"):
+        return []
+    return [
+        StageItem(
+            item_id="tech-use-case",
+            title=f"全画面: ユースケーステスト（{use_case['case_count']}フロー）",
+            detail=_format_use_case(use_case),
+            data={"page_id": "", "technique": "ユースケーステスト"},
+        )
+    ]
+
+
+def _format_extended(key: str, block: dict[str, Any]) -> str:
+    formatter = {
+        "classification_tree": _format_classification_tree,
+        "orthogonal_array": _format_orthogonal_array,
+        "cause_effect": _format_cause_effect,
+        "domain_analysis": _format_domain_analysis,
+        "error_guessing": _format_error_guessing,
+    }[key]
+    body = formatter(block)
+    notice = str(block.get("notice") or "")
+    return f"{body}\n\n注記: {notice}" if notice else body
+
+
+def _format_classification_tree(block: dict[str, Any]) -> str:
+    lines: list[str] = []
+    for branch in block["tree"]["branches"]:
+        lines.append(f"■ {branch['label']}")
+        for classification in branch["classifications"]:
+            labels = " / ".join(c["label"] for c in classification["classes"])
+            lines.append(f"  {classification['name']}: {labels}")
+        lines.append("  組合せ（クラス被覆）:")
+        for row in branch["combinations"]:
+            cells = ", ".join(f"{k}={v}" for k, v in row["selection"].items())
+            lines.append(f"    {row['case']} | {cells} | {row['expected']}")
+        lines.append("")
+    lines.append(f"被覆: {block['coverage']}")
+    return "\n".join(lines)
+
+
+def _format_orthogonal_array(block: dict[str, Any]) -> str:
+    lines = [f"使用する表: {block['array']}（直交性検査: {'合格' if block['orthogonal'] else '不合格'}）"]
+    lines.append("因子と水準:")
+    for name, levels in block["factors"].items():
+        lines.append(f"  {name}: {' / '.join(levels)}")
+    lines.append("")
+    names = list(block["factors"])
+    header = "ケース | " + " | ".join(names)
+    lines.append(header)
+    lines.append("-" * len(header))
+    for case in block["cases"]:
+        lines.append(f"{case['case']} | " + " | ".join(case["selection"][n] for n in names))
+    lines.append("")
+    lines.append(f"被覆: {block['coverage']}")
+    return "\n".join(lines)
+
+
+def _format_cause_effect(block: dict[str, Any]) -> str:
+    graph = block["graph"]
+    lines = ["原因（入力条件）:"]
+    for cause in graph["causes"]:
+        lines.append(f"  {cause['id']}: {cause['description']}（根拠 {cause['source_attribute']}）")
+    lines.append("")
+    lines.append("結果:")
+    for effect in graph["effects"]:
+        lines.append(f"  {effect['id']}: {effect['description']}")
+    if graph["constraints"]:
+        lines.append("")
+        lines.append("制約:")
+        for constraint in graph["constraints"]:
+            lines.append(f"  [{constraint['kind']}] {constraint['description']}")
+    lines.append("")
+    lines.append("導出された判定表:")
+    for rule in block["rules"]:
+        false_causes = [k for k, v in rule["conditions"].items() if not v] or ["なし"]
+        lines.append(f"  {rule['rule']} | 偽の原因: {', '.join(false_causes)} | {rule['expected']}")
+    lines.append("")
+    lines.append(f"被覆: {block['coverage']}")
+    return "\n".join(lines)
+
+
+def _format_domain_analysis(block: dict[str, Any]) -> str:
+    header = "項目 | 境界 | 条件 | ON | OFF | IN | OUT"
+    lines = [header, "-" * len(header)]
+    for row in block["matrix"]:
+        lines.append(
+            f"{row['field']} | {row['boundary']} | {row['relation']} | "
+            f"{_short(row['on']['value'])} | {_short(row['off']['value'])} | "
+            f"{_short(row['in']['value'])} | {_short(row['out']['value'])}"
+        )
+    lines.append("")
+    lines.append(f"被覆: {block['coverage']}")
+    return "\n".join(lines)
+
+
+def _format_error_guessing(block: dict[str, Any]) -> str:
+    lines = ["適用先 | 分類 | 推測する欠陥 | 入力 | 期待結果"]
+    lines.append("-" * len(lines[0]))
+    for guess in block["guesses"]:
+        lines.append(
+            f"{guess['target']} | {guess['category']} | {guess['title']} | "
+            f"{_short(guess['input'])} | {guess['expected']}"
+        )
+    lines.append("")
+    lines.append(f"被覆: {block['coverage']}（確信度 {block['confidence']}・未実測）")
+    return "\n".join(lines)
+
+
+def _format_use_case(block: dict[str, Any]) -> str:
+    lines: list[str] = []
+    for use_case in block["use_cases"]:
+        lines.append(f"■ {use_case['id']}: {use_case['title']}")
+        lines.append(f"  アクター: {use_case['actor']}")
+        for flow in use_case["flows"]:
+            steps = " → ".join(flow["steps"])
+            lines.append(f"  [{flow['type']}] {steps}")
+            lines.append(f"      {flow['description']} / 期待: {flow['expected']}")
+        lines.append("")
+    lines.append(f"被覆: {block['coverage']}")
+    return "\n".join(lines)
 
 
 def _format_value_table(fields: list[dict[str, Any]]) -> str:

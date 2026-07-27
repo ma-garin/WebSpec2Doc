@@ -31,17 +31,30 @@ MAX_ONE_SWITCH_PATHS = 200
 
 EVENT_LINK = "リンク"
 EVENT_SUBMIT = "フォーム送信"
+#: 画面内アクション（モーダル・タブ・アコーディオンの開閉など）による状態遷移。
+EVENT_ACTION = "画面内アクション"
+#: pushState / replaceState / hashchange による SPA 遷移。
+EVENT_SPA = "SPA遷移"
 
 
 @dataclass(frozen=True)
 class State:
-    """1 つの状態（＝画面）。"""
+    """1 つの状態。
+
+    URL 単位の画面だけを状態にすると、同じ URL でモーダルが開いている / 閉じている
+    といった差が 1 状態に潰れる。`page_states`（クリック等で出現した DOM 状態）を
+    子状態として分け、`kind` で由来を示す。
+    """
 
     state_id: str
     title: str
     url: str
     is_initial: bool
     is_final: bool
+    #: "screen"（URL 単位の画面） / "modal" / "tabpanel" / "accordion" / "dom_change"
+    kind: str = "screen"
+    #: 子状態の場合の親画面。画面そのものなら空。
+    parent: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -50,6 +63,8 @@ class State:
             "url": self.url,
             "is_initial": self.is_initial,
             "is_final": self.is_final,
+            "kind": self.kind,
+            "parent": self.parent,
         }
 
 
@@ -158,6 +173,37 @@ def _title_of(screen: dict[str, Any]) -> str:
     return str(screen.get("title") or _screen_id(screen))
 
 
+def _page_states_of(screen: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
+    """画面内アクションで出現した状態を (子状態ID, 元データ) の列で返す。"""
+    out: list[tuple[str, dict[str, Any]]] = []
+    for page_state in screen.get("page_states") or []:
+        if not isinstance(page_state, dict):
+            continue
+        raw_id = str(page_state.get("state_id") or "").strip()
+        if not raw_id:
+            continue
+        out.append((f"{_screen_id(screen)}#{raw_id}", page_state))
+    return out
+
+
+def _page_state_label(page_state: dict[str, Any]) -> str:
+    description = str(page_state.get("description") or "").strip()
+    if description:
+        return description
+    kind = str(page_state.get("kind") or "dom_change")
+    return {
+        "modal": "モーダル",
+        "tabpanel": "タブ",
+        "accordion": "アコーディオン",
+    }.get(kind, "DOM 変化後の状態")
+
+
+def _id_for_url(by_id: dict[str, dict[str, Any]], url: str) -> str:
+    if not url:
+        return ""
+    return next((sid for sid, sc in by_id.items() if str(sc.get("url", "")) == url), "")
+
+
 def _is_common_event(
     event_id: str, event_sources: set[str], states_with_exits: set[str]
 ) -> bool:
@@ -192,16 +238,35 @@ def build_state_table(screens: list[dict[str, Any]]) -> StateTable:
     # あるサイトでは該当が 0 件になるため、その場合は観測の起点（先頭の画面）を採る。
     unlinked = [_screen_id(s) for s in valid_screens if _screen_id(s) not in linked_to]
     initial_ids = set(unlinked) or {_screen_id(valid_screens[0])}
-    states = tuple(
+    screen_states = [
         State(
             state_id=_screen_id(screen),
             title=_title_of(screen),
             url=str(screen.get("url", "")),
             is_initial=_screen_id(screen) in initial_ids,
             is_final=not ((screen.get("transitions") or {}).get("to") or []),
+            kind="screen",
         )
         for screen in valid_screens
-    )
+    ]
+    # 画面内アクションで出現した DOM 状態を子状態として分ける。URL は同じでも
+    # 「モーダルが開いている」状態は別状態であり、潰すと遷移の被覆が実態と合わない。
+    child_states: list[State] = []
+    for screen in valid_screens:
+        for child_id, page_state in _page_states_of(screen):
+            child_states.append(
+                State(
+                    state_id=child_id,
+                    title=f"{_title_of(screen)}／{_page_state_label(page_state)}",
+                    url=str(screen.get("url", "")),
+                    is_initial=False,
+                    # 閉じる操作は観測できていないため、出口なしとして扱う（捏造しない）。
+                    is_final=True,
+                    kind=str(page_state.get("kind") or "dom_change"),
+                    parent=_screen_id(screen),
+                )
+            )
+    states = tuple([*screen_states, *child_states])
 
     # ---- イベントと有効遷移 ----
     transitions: list[Transition] = []
@@ -211,6 +276,44 @@ def build_state_table(screens: list[dict[str, Any]]) -> StateTable:
 
     for screen in valid_screens:
         source = _screen_id(screen)
+        # 画面内アクション（モーダル等）による親→子の遷移
+        for index, (child_id, page_state) in enumerate(_page_states_of(screen), start=1):
+            event_id = f"action:{source}:{index}"
+            event_labels[event_id] = (
+                EVENT_ACTION,
+                f"「{_title_of(screen)}」で {_page_state_label(page_state)} を開く"
+                f"（{page_state.get('trigger_selector') or 'セレクタ未記録'}）",
+            )
+            submit_sources.setdefault(event_id, set()).add(source)
+            transitions.append(
+                Transition(
+                    from_state=source,
+                    event_id=event_id,
+                    to_state=child_id,
+                    action=str(page_state.get("trigger_selector") or ""),
+                )
+            )
+        # SPA 遷移（pushState / replaceState / hashchange）
+        for spa in screen.get("spa_transitions") or []:
+            if not isinstance(spa, dict):
+                continue
+            target_id = _id_for_url(by_id, str(spa.get("to_url") or ""))
+            if not target_id:
+                continue
+            event_id = f"spa:{target_id}"
+            event_labels[event_id] = (
+                EVENT_SPA,
+                f"{spa.get('kind') or 'pushstate'} で「{_title_of(by_id[target_id])}」へ遷移する",
+            )
+            link_sources.setdefault(event_id, set()).add(source)
+            transitions.append(
+                Transition(
+                    from_state=source,
+                    event_id=event_id,
+                    to_state=target_id,
+                    action=str(spa.get("to_url") or ""),
+                )
+            )
         for target in (screen.get("transitions") or {}).get("to") or []:
             target_id = str(target)
             if target_id not in by_id:
@@ -308,42 +411,88 @@ def zero_switch_paths(table: StateTable) -> tuple[dict[str, Any], ...]:
     )
 
 
-def one_switch_paths(table: StateTable) -> tuple[tuple[dict[str, Any], ...], int]:
-    """1-switch: 連続する 2 遷移の全組合せ。上限超過分の件数も返す。"""
+def one_switch_paths(
+    table: StateTable,
+) -> tuple[tuple[dict[str, Any], ...], tuple[dict[str, Any], ...]]:
+    """1-switch: 連続する 2 遷移の全組合せ。
+
+    上限を超えた分は件数だけでなく**どの経路を捨てたか**を返す。件数しか残さないと
+    「打ち切った」ことは分かっても、後から手動で補うべき対象が特定できない。
+    """
     by_source: dict[str, list[Transition]] = {}
     for transition in table.transitions:
         by_source.setdefault(transition.from_state, []).append(transition)
 
     paths: list[dict[str, Any]] = []
-    dropped = 0
+    dropped: list[dict[str, Any]] = []
     for first in table.transitions:
         for second in by_source.get(first.to_state, []):
+            entry = {
+                "steps": [first.from_state, first.to_state, second.to_state],
+                "events": [first.event_id, second.event_id],
+                "expected": f"{second.to_state} へ到達する",
+            }
             if len(paths) >= MAX_ONE_SWITCH_PATHS:
-                dropped += 1
+                dropped.append({**entry, "reason": f"上限 {MAX_ONE_SWITCH_PATHS} 件を超過"})
                 continue
-            paths.append(
-                {
-                    "path_id": f"SW1-{len(paths) + 1:02d}",
-                    "steps": [first.from_state, first.to_state, second.to_state],
-                    "events": [first.event_id, second.event_id],
-                    "expected": f"{second.to_state} へ到達する",
-                }
-            )
-    return tuple(paths), dropped
+            paths.append({"path_id": f"SW1-{len(paths) + 1:02d}", **entry})
+    return tuple(paths), tuple(dropped)
 
 
 def invalid_transition_cases(table: StateTable) -> tuple[dict[str, Any], ...]:
-    """無効遷移の検証ケース。URL 直打ち等で到達しないことを確かめる。"""
-    return tuple(
-        {
-            "case_id": f"INV-{index:02d}",
-            "state": item.from_state,
-            "event": item.event_id,
-            "expected": "当該操作の導線が画面上に存在しない（存在すれば設計との不一致）",
-            "reason": item.reason,
-        }
-        for index, item in enumerate(table.invalid, start=1)
-    )
+    """無効遷移の検証ケース。
+
+    「導線が画面に無い」ことの確認だけでは不十分で、URL を直接開けば到達できて
+    しまう場合がある。認可の観点ではむしろ後者が本命なので、UI 上の確認と
+    直接アクセスの確認を必ず 2 本立てで出す。
+    """
+    url_of = {s.state_id: s.url for s in table.states}
+    label_of = {e.event_id: e.label for e in table.events}
+    cases: list[dict[str, Any]] = []
+    for index, item in enumerate(table.invalid, start=1):
+        target = _event_target(item.event_id)
+        target_url = url_of.get(target, "")
+        direct = (
+            {
+                "applicable": True,
+                "steps": [
+                    f"{item.from_state} を開いた状態のセッションを保つ",
+                    f"アドレスバーに {target_url} を直接入力して開く",
+                ],
+                "expected": (
+                    "認可が必要な画面なら拒否または認証要求になる。到達できる場合は"
+                    "「導線が無いだけで誰でも開ける」ことを意味するため、意図した設計か確認する"
+                ),
+            }
+            if target_url
+            else {
+                "applicable": False,
+                "reason": "遷移先が URL を持たない操作（フォーム送信・画面内アクション）のため直接アクセスの概念がない",
+            }
+        )
+        cases.append(
+            {
+                "case_id": f"INV-{index:02d}",
+                "state": item.from_state,
+                "event": item.event_id,
+                "event_label": label_of.get(item.event_id, item.event_id),
+                "reason": item.reason,
+                "ui_check": {
+                    "steps": [f"{item.from_state} を開く", "画面上の操作導線を確認する"],
+                    "expected": "当該操作の導線が画面上に存在しない（存在すれば設計との不一致）",
+                },
+                "direct_access_check": direct,
+                "expected": "導線が存在せず、かつ直接アクセスが意図どおりに制御されている",
+            }
+        )
+    return tuple(cases)
+
+
+def _event_target(event_id: str) -> str:
+    """イベント ID から遷移先の状態 ID を取り出す（link/spa のみ意味を持つ）。"""
+    if event_id.startswith(("link:", "spa:")):
+        return event_id.split(":", 1)[1]
+    return ""
 
 
 # =========================================================================
@@ -374,6 +523,8 @@ def build_state_transition_report(screens: list[dict[str, Any]]) -> dict[str, An
             "initial_states": [s.state_id for s in table.states if s.is_initial],
             "final_states": [s.state_id for s in table.states if s.is_final],
             "common_events": [e.event_id for e in table.events if e.is_common],
+            "screen_state_count": len([s for s in table.states if s.kind == "screen"]),
+            "child_state_count": len([s for s in table.states if s.kind != "screen"]),
         },
         "coverage": {
             "zero_switch": {
@@ -384,7 +535,8 @@ def build_state_transition_report(screens: list[dict[str, Any]]) -> dict[str, An
             "one_switch": {
                 "paths": list(one),
                 "count": len(one),
-                "dropped": dropped,
+                "dropped": len(dropped),
+                "dropped_paths": list(dropped),
                 "description": "連続する 2 遷移の全組合せを通る（1-switch 被覆）",
             },
             "invalid": {
@@ -394,7 +546,8 @@ def build_state_transition_report(screens: list[dict[str, Any]]) -> dict[str, An
             },
         },
         "notice": (
-            f"1-switch のテストパスを上限 {MAX_ONE_SWITCH_PATHS} 件で打ち切り、{dropped} 件を除外した。"
+            f"1-switch のテストパスを上限 {MAX_ONE_SWITCH_PATHS} 件で打ち切り、"
+            f"{len(dropped)} 件を除外した（除外した経路は dropped_paths に全件記録している）。"
             if dropped
             else ""
         ),

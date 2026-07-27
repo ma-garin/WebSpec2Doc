@@ -161,6 +161,11 @@
 
     var detail = document.createElement('p');
     detail.className = 'autorun-stage-item-detail';
+    // テスト技法の項目は「|」区切りの表を含む。等幅フォントでないと桁が揃わず、
+    // 折り返されると表として読めなくなるため、表示だけ等幅＋横スクロールに切り替える。
+    if (item.data && item.data.technique) {
+      detail.className += ' is-tabular';
+    }
     detail.textContent = item.detail;
     row.appendChild(detail);
 

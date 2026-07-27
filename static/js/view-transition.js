@@ -681,17 +681,30 @@ function _stEventsBlock(data) {
   );
 }
 
+const _ST_KIND_LABEL = {
+  screen: '画面',
+  modal: 'モーダル',
+  tabpanel: 'タブ',
+  accordion: 'アコーディオン',
+  dom_change: 'DOM変化',
+};
+
 function _stStatesBlock(data) {
   const rows = data.states.map(s => `
     <tr>
       <td class="c-screen">${escHtml(s.state_id)}</td>
       <td>${escHtml(s.title)}</td>
+      <td>${escHtml(_ST_KIND_LABEL[s.kind] || s.kind)}${s.parent ? `<span class="trans-link-detail">親: ${escHtml(s.parent)}</span>` : ''}</td>
       <td>${_stStatePill(s)}</td>
       <td style="font-size:11px;font-family:monospace;color:var(--text-muted);word-break:break-all">${escHtml(s.url)}</td>
     </tr>`).join('');
+  const child = data.summary.child_state_count;
+  const note = child
+    ? `<p class="st-note">同一 URL でも画面内アクションで出現する状態（モーダル等）は別状態として ${child} 件に分けています。</p>`
+    : '<p class="st-note">画面内アクションによる状態（モーダル等）は観測されていません。</p>';
   return (
-    '<div class="hero-section-title">状態一覧</div>' +
-    '<table class="trans-table"><thead><tr><th>状態</th><th>タイトル</th><th>区分</th><th>URL</th></tr></thead>' +
+    '<div class="hero-section-title">状態一覧</div>' + note +
+    '<table class="trans-table"><thead><tr><th>状態</th><th>タイトル</th><th>種別</th><th>区分</th><th>URL</th></tr></thead>' +
     `<tbody>${rows}</tbody></table>`
   );
 }
@@ -701,24 +714,46 @@ function _stPathsBlock(data) {
     <tr><td class="c-screen">${escHtml(p.path_id)}</td><td>${escHtml(p.steps.join(' → '))}</td><td>${escHtml(p.event)}</td><td>${escHtml(p.expected)}</td></tr>`).join('');
   const one = data.coverage.one_switch.paths.map(p => `
     <tr><td class="c-screen">${escHtml(p.path_id)}</td><td>${escHtml(p.steps.join(' → '))}</td><td>${escHtml(p.events.join(' , '))}</td><td>${escHtml(p.expected)}</td></tr>`).join('');
+  const droppedPaths = data.coverage.one_switch.dropped_paths || [];
+  const droppedBlock = droppedPaths.length
+    ? '<div class="hero-section-title">1-switch で除外した経路（' + droppedPaths.length + '件）</div>' +
+      '<p class="st-note">上限を超えたため自動生成から外した経路。網羅済みと誤読しないよう全件を記載する（手動で補う対象）。</p>' +
+      '<table class="trans-table"><thead><tr><th>経路</th><th>イベント</th><th>除外理由</th></tr></thead><tbody>' +
+      droppedPaths.map(p => `<tr><td>${escHtml(p.steps.join(' → '))}</td><td>${escHtml((p.events || []).join(' , '))}</td><td>${escHtml(p.reason || '')}</td></tr>`).join('') +
+      '</tbody></table>'
+    : '';
   return (
     '<div class="hero-section-title">0-switch 被覆（各有効遷移を1回）</div>' +
     '<table class="trans-table"><thead><tr><th>ID</th><th>経路</th><th>イベント</th><th>期待結果</th></tr></thead>' +
     `<tbody>${zero}</tbody></table>` +
     '<div class="hero-section-title">1-switch 被覆（連続する2遷移の全組合せ）</div>' +
     '<table class="trans-table"><thead><tr><th>ID</th><th>経路</th><th>イベント</th><th>期待結果</th></tr></thead>' +
-    `<tbody>${one}</tbody></table>`
+    `<tbody>${one}</tbody></table>` +
+    droppedBlock
   );
 }
 
 function _stInvalidBlock(data) {
-  const rows = data.coverage.invalid.cases.map(c => `
-    <tr><td class="c-screen">${escHtml(c.case_id)}</td><td class="c-screen">${escHtml(c.state)}</td><td>${escHtml(c.event)}</td><td>${escHtml(c.reason)}</td><td>${escHtml(c.expected)}</td></tr>`).join('');
+  const rows = data.coverage.invalid.cases.map(c => {
+    const direct = c.direct_access_check || {};
+    const directCell = direct.applicable
+      ? `<strong>手順</strong><br>${(direct.steps || []).map(escHtml).join('<br>')}<span class="trans-link-detail">期待: ${escHtml(direct.expected || '')}</span>`
+      : `<span style="color:var(--text-muted)">対象外 — ${escHtml(direct.reason || '')}</span>`;
+    return `<tr>
+      <td class="c-screen">${escHtml(c.case_id)}</td>
+      <td class="c-screen">${escHtml(c.state)}</td>
+      <td>${escHtml(c.event)}<span class="trans-link-detail">${escHtml(c.event_label || '')}</span></td>
+      <td>${escHtml(c.reason)}</td>
+      <td>${(c.ui_check.steps || []).map(escHtml).join('<br>')}<span class="trans-link-detail">期待: ${escHtml(c.ui_check.expected || '')}</span></td>
+      <td>${directCell}</td>
+    </tr>`;
+  }).join('');
   return (
     '<div class="hero-section-title">無効遷移の検証（' + data.coverage.invalid.count + '件）</div>' +
-    '<p class="st-note">「起きてはいけない遷移」の確認は状態遷移テストの主目的の一つで、有効遷移だけの一覧からは得られない。</p>' +
-    '<table class="trans-table"><thead><tr><th>ID</th><th>状態</th><th>イベント</th><th>無効である理由</th><th>期待結果</th></tr></thead>' +
-    `<tbody>${rows}</tbody></table>`
+    '<p class="st-note">「起きてはいけない遷移」の確認は状態遷移テストの主目的の一つで、有効遷移だけの一覧からは得られない。' +
+    '<strong>導線が無いことの確認だけでは不十分</strong>で、URL を直接開けば到達できる場合があるため、認可の確認を別立てにしている。</p>' +
+    '<div style="overflow-x:auto"><table class="trans-table"><thead><tr><th>ID</th><th>状態</th><th>イベント</th><th>無効である理由</th><th>UI上の確認</th><th>直接アクセスの確認（認可）</th></tr></thead>' +
+    `<tbody>${rows}</tbody></table></div>`
   );
 }
 

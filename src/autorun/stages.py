@@ -931,14 +931,18 @@ def _format_domain_analysis(block: dict[str, Any]) -> str:
 
 
 def _format_error_guessing(block: dict[str, Any]) -> str:
-    lines = ["適用先 | 分類 | 推測する欠陥 | 入力 | 期待結果"]
+    lines = ["適用先 | 分類 | 推測する欠陥 | 入力 | 期待結果 | 対応する外部体系"]
     lines.append("-" * len(lines[0]))
     for guess in block["guesses"]:
         lines.append(
             f"{guess['target']} | {guess['category']} | {guess['title']} | "
-            f"{_short(guess['input'])} | {guess['expected']}"
+            f"{_short(guess['input'])} | {guess['expected']} | {guess.get('standard', '')}"
         )
     lines.append("")
+    lines.append("照合した外部体系: " + " / ".join(block.get("reference_taxonomies") or []))
+    unmapped = block.get("unmapped_categories") or []
+    if unmapped:
+        lines.append("外部体系へ対応付けできていない分類: " + "、".join(unmapped))
     lines.append(f"被覆: {block['coverage']}（確信度 {block['confidence']}・未実測）")
     return "\n".join(lines)
 
@@ -952,6 +956,12 @@ def _format_use_case(block: dict[str, Any]) -> str:
             steps = " → ".join(flow["steps"])
             lines.append(f"  [{flow['type']}] {steps}")
             lines.append(f"      {flow['description']} / 期待: {flow['expected']}")
+        lines.append("")
+    dropped = block.get("dropped_paths") or []
+    if dropped:
+        lines.append(f"上限により自動生成から外した経路（{len(dropped)}件・手動で補う対象）:")
+        for item in dropped:
+            lines.append(f"  {' → '.join(item['steps'])}（{item['reason']}）")
         lines.append("")
     lines.append(f"被覆: {block['coverage']}")
     return "\n".join(lines)

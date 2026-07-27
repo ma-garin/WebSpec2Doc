@@ -114,24 +114,45 @@ def _shortest_path(
 
 def _alternative_paths(
     graph: dict[str, tuple[str, ...]], start: str, goal: str, basic: tuple[str, ...]
-) -> list[tuple[str, ...]]:
-    """基本フローと異なる経路を、経路長の短い順に列挙する（単純路のみ）。"""
+) -> tuple[list[tuple[str, ...]], list[dict[str, Any]]]:
+    """基本フローと異なる経路を、経路長の短い順に列挙する（単純路のみ）。
+
+    打ち切りは 2 種類ある（件数上限・経路長上限）。どちらも「黙って捨てる」と
+    網羅したように見えてしまうため、捨てた理由と件数を必ず返す。
+    """
     found: list[tuple[str, ...]] = []
+    dropped: list[dict[str, Any]] = []
+    max_length = len(basic) + 2
     queue: deque[tuple[str, ...]] = deque([(start,)])
-    while queue and len(found) < MAX_ALTERNATIVE_FLOWS:
+    while queue:
         path = queue.popleft()
-        if len(path) > len(basic) + 2:  # 極端に長い迂回は採らない
+        if len(path) > max_length:  # 極端に長い迂回は採らない
+            dropped.append(
+                {
+                    "steps": list(path),
+                    "reason": f"経路長が基本フロー+2（{max_length} 画面）を超過",
+                }
+            )
             continue
         for nxt in graph.get(path[-1], ()):
             if nxt in path:  # 単純路のみ（閉路を辿らない）
                 continue
             extended = (*path, nxt)
             if nxt == goal:
-                if extended != basic:
-                    found.append(extended)
+                if extended == basic:
+                    continue
+                if len(found) >= MAX_ALTERNATIVE_FLOWS:
+                    dropped.append(
+                        {
+                            "steps": list(extended),
+                            "reason": f"代替フローの上限 {MAX_ALTERNATIVE_FLOWS} 件を超過",
+                        }
+                    )
+                    continue
+                found.append(extended)
             else:
                 queue.append(extended)
-    return found
+    return found, dropped
 
 
 def _screen_index(screens: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
@@ -160,11 +181,17 @@ def _required_fields(screen: dict[str, Any] | None) -> list[str]:
 # =========================================================================
 # 構築
 # =========================================================================
-def build_use_cases(screens: list[dict[str, Any]]) -> tuple[UseCase, ...]:
-    """遷移グラフからユースケース候補を導く。"""
+def build_use_cases(
+    screens: list[dict[str, Any]],
+) -> tuple[tuple[UseCase, ...], list[dict[str, Any]]]:
+    """遷移グラフからユースケース候補を導く。
+
+    第 2 要素は打ち切りで捨てた経路・ユースケースの記録。網羅していない事実を
+    出力から追えるようにするため、件数ではなく内容を残す。
+    """
     graph = _build_graph(screens)
     if not graph:
-        return ()
+        return (), []
     index = _screen_index(screens)
 
     targets = {t for ts in graph.values() for t in ts}
@@ -174,6 +201,7 @@ def build_use_cases(screens: list[dict[str, Any]]) -> tuple[UseCase, ...]:
         goals = [s for s in graph if _required_fields(index.get(s))]
 
     use_cases: list[UseCase] = []
+    dropped: list[dict[str, Any]] = []
     counter = 0
     for entry in entries:
         for goal in goals:
@@ -184,7 +212,13 @@ def build_use_cases(screens: list[dict[str, Any]]) -> tuple[UseCase, ...]:
                 continue
             counter += 1
             if counter > MAX_USE_CASES:
-                return tuple(use_cases)
+                dropped.append(
+                    {
+                        "steps": [entry, goal],
+                        "reason": f"ユースケース候補の上限 {MAX_USE_CASES} 件を超過",
+                    }
+                )
+                continue
 
             flows: list[Flow] = [
                 Flow(
@@ -194,7 +228,9 @@ def build_use_cases(screens: list[dict[str, Any]]) -> tuple[UseCase, ...]:
                     expected=f"「{_title_of(index.get(goal), goal)}」へ到達する",
                 )
             ]
-            for alternative in _alternative_paths(graph, entry, goal, basic):
+            alternatives, alt_dropped = _alternative_paths(graph, entry, goal, basic)
+            dropped.extend(alt_dropped)
+            for alternative in alternatives:
                 flows.append(
                     Flow(
                         flow_type=FLOW_ALTERNATIVE,
@@ -232,7 +268,7 @@ def build_use_cases(screens: list[dict[str, Any]]) -> tuple[UseCase, ...]:
                     flows=tuple(flows),
                 )
             )
-    return tuple(use_cases)
+    return tuple(use_cases), dropped
 
 
 # =========================================================================
@@ -240,7 +276,7 @@ def build_use_cases(screens: list[dict[str, Any]]) -> tuple[UseCase, ...]:
 # =========================================================================
 def use_case_testing(screens: list[dict[str, Any]]) -> dict[str, Any]:
     """`techniques.apply_all` から呼ぶ辞書インタフェース。"""
-    use_cases = build_use_cases(screens)
+    use_cases, dropped = build_use_cases(screens)
     if not use_cases:
         return {
             "applicable": False,
@@ -258,8 +294,16 @@ def use_case_testing(screens: list[dict[str, Any]]) -> dict[str, Any]:
             f"ユースケース候補 {len(use_cases)} 件・フロー {total_flows} 本"
             "（基本 / 代替 / 例外）"
         ),
+        "dropped_paths": dropped,
+        "dropped_count": len(dropped),
         "notice": (
             "フローは観測した遷移から機械的に導いた候補であり、"
             "業務上のユースケースと一致することを保証しない。レビューで採否を判断すること。"
+            + (
+                f" また上限により {len(dropped)} 件の経路を除外している"
+                "（内訳は dropped_paths に全件記録）。"
+                if dropped
+                else ""
+            )
         ),
     }

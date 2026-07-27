@@ -26,6 +26,50 @@ CATALOG_CONFIDENCE = 0.9
 
 _SKIP_FIELD_TYPES = frozenset({"hidden", "submit", "button", "reset", "image"})
 
+#: 分類 → 対応付けた外部の欠陥分類体系。
+#:
+#: 自作の分類を独自体系として提示しないため、各分類を既存の体系へ紐付ける。
+#: 参照した体系は次の 3 つ:
+#:
+#: - ODC (Orthogonal Defect Classification, IBM): 欠陥タイプの分類
+#:   （Assignment/Initialization, Checking, Algorithm, Interface,
+#:     Function, Timing/Serialization, Build/Package/Merge, Documentation）
+#: - IEEE 1044-2009: Standard Classification for Software Anomalies
+#: - OWASP WSTG (Web Security Testing Guide): カテゴリ単位で参照
+#:   （INPV = Input Validation / SESS = Session Management / BUSL = Business Logic）
+#:
+#: **この対応付けは本システムが行ったものであり、各体系が公式に定めた対応ではない。**
+#: また WSTG の個別テスト ID（WSTG-INPV-01 等）は一次資料で確認していないため、
+#: カテゴリ単位の参照に留めている。
+CATEGORY_STANDARD: dict[str, str] = {
+    "入力値の正規化": "ODC: Checking / IEEE 1044: Data",
+    "文字種": "ODC: Checking / IEEE 1044: Data",
+    "エスケープ": "OWASP WSTG: Input Validation (INPV)",
+    "数値表記": "ODC: Algorithm / IEEE 1044: Logic",
+    "桁あふれ": "ODC: Checking / IEEE 1044: Data",
+    "小数": "ODC: Algorithm",
+    "形式": "ODC: Checking / OWASP WSTG: Input Validation (INPV)",
+    "暦": "ODC: Algorithm",
+    "境界": "ISTQB: 境界値分析の補完（暦・単位系の特異点）",
+    "長さ": "ODC: Checking / IEEE 1044: Data",
+    "区切り": "ODC: Checking",
+    "拡張子": "OWASP WSTG: Business Logic (BUSL) — ファイルアップロード",
+    "サイズ": "OWASP WSTG: Business Logic (BUSL) — ファイルアップロード",
+    "文字": "IEEE 1044: Data（文字符号化）",
+    "多重実行": "ODC: Timing/Serialization / OWASP WSTG: Business Logic (BUSL)",
+    "画面遷移": "OWASP WSTG: Business Logic (BUSL)",
+    "セッション": "OWASP WSTG: Session Management (SESS)",
+    "並行更新": "ODC: Timing/Serialization",
+    "再読込": "OWASP WSTG: Business Logic (BUSL)",
+}
+
+#: 参照した外部体系の一覧（出力に添えて、網羅性の根拠を明示する）。
+REFERENCE_TAXONOMIES: tuple[str, ...] = (
+    "ODC (Orthogonal Defect Classification, IBM)",
+    "IEEE 1044-2009 Standard Classification for Software Anomalies",
+    "OWASP Web Security Testing Guide (カテゴリ単位)",
+)
+
 
 @dataclass(frozen=True)
 class DefectGuess:
@@ -39,6 +83,11 @@ class DefectGuess:
     expected: str
     confidence: float = CATALOG_CONFIDENCE
 
+    @property
+    def standard(self) -> str:
+        """この分類を対応付けた外部体系。未対応付けなら空文字。"""
+        return CATEGORY_STANDARD.get(self.category, "")
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.guess_id,
@@ -48,6 +97,7 @@ class DefectGuess:
             "input": self.input_value,
             "expected": self.expected,
             "confidence": self.confidence,
+            "standard": self.standard,
             "evidence": "欠陥タクソノミ（一般知識・未実測）",
         }
 
@@ -209,18 +259,25 @@ def error_guessing(fields: list[dict[str, Any]], *, has_form: bool = True) -> di
         }
 
     categories = sorted({g.category for g in guesses})
+    unmapped = [c for c in categories if not CATEGORY_STANDARD.get(c)]
     return {
         "applicable": True,
         "technique": TECHNIQUE_ERROR_GUESSING,
         "guesses": [g.to_dict() for g in guesses],
         "case_count": len(guesses),
         "categories": categories,
+        "category_standards": {c: CATEGORY_STANDARD.get(c, "") for c in categories},
+        "reference_taxonomies": list(REFERENCE_TAXONOMIES),
+        "unmapped_categories": unmapped,
         "confidence": CATALOG_CONFIDENCE,
         "coverage": (
             f"欠陥タクソノミ {len(categories)} 分類・{len(guesses)} 件を実測項目へ適用"
+            f"（ODC / IEEE 1044 / OWASP WSTG に対応付け済み）"
         ),
         "notice": (
             "本技法の出力は一般知識に由来し、対象システムの実測ではない。"
             "採否は必ずレビューで判断すること。"
+            "外部体系への対応付けは本システムが行ったもので、各体系が公式に定めた"
+            "対応ではない（WSTG の個別テスト ID は一次確認していないためカテゴリ単位）。"
         ),
     }

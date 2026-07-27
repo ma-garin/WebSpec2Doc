@@ -1814,6 +1814,46 @@
       ]
     },
     {
+      "feature_id": "technique_engine",
+      "name": "テスト技法エンジン（被覆配列の正準実装・制約/seeding/mixed-strength・性質検証器）",
+      "risk_level": "high",
+      "status": "implemented",
+      "ui_files": [],
+      "route_files": [],
+      "core_files": [
+        "src/techniques/__init__.py",
+        "src/techniques/combinatorial.py",
+        "src/techniques/verify.py",
+        "src/generator/test_design.py",
+        "src/analyzer/test_conditions.py",
+        "src/mbt/pairwise.py"
+      ],
+      "symbols": [
+        "generate_covering_array",
+        "verify_t_way_coverage",
+        "CoverageRequirement",
+        "CoveringArrayResult"
+      ],
+      "outputs": [
+        "t-way 被覆配列（決定的・同一入力から同一出力）",
+        "制約により被覆不能となった t-tuple の全件記録",
+        "被覆率の機械検証レポート（未被覆組の列挙）"
+      ],
+      "persistence": [
+        "output/{domain}/qa_process/pairwise_cases.json"
+      ],
+      "failure_modes": [
+        "conflicting_constraints_make_tuples_uncoverable",
+        "strength_exceeds_factor_count",
+        "empty_domain"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "evidence"
+      ]
+    },
+    {
       "feature_id": "autorun_extended_techniques",
       "name": "テスト技法の網羅的適用（分類ツリー法・直交表・原因結果グラフ・ドメイン分析・エラー推測・ユースケース）",
       "risk_level": "high",

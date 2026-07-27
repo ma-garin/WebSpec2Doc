@@ -168,14 +168,24 @@ def _get_representative_values(field: FieldData) -> list[str]:
 
 def generate_pairwise_cases(fields: list[FieldData]) -> list[dict[str, str]]:
     """2-way カバレッジ（ペアワイズ）でテストケースセットを生成する。
-    各フィールドの代表値（正常・境界・異常）を組み合わせ、
-    全ての 2 フィールドの組み合わせをカバーする最小セットを返す。
-    8 フィールド超は先頭 8 フィールドに縮退して爆発を防ぐ。"""
+
+    正準実装は techniques.combinatorial（決定的な貪欲 AETG 系。
+    Cohen et al., IEEE TSE 1997）へ委譲する。旧実装は「先頭フィールドの
+    各値 × 残りのラウンドロビン」という近似で、**2-way 被覆を保証しないのに
+    ペアワイズを名乗っていた**ため置き換えた。被覆性は
+    techniques.verify.verify_t_way_coverage で機械検証できる。
+
+    8 フィールド超は先頭 8 フィールドに縮退して爆発を防ぐ（従来仕様を維持）。
+    `_MAX_PAIRWISE_CASES` による打ち切りも維持するが、打ち切りが起きた場合は
+    完全被覆でないことに注意（呼び出し側の表示上限のための安全弁）。
+    """
+    from techniques.combinatorial import generate_covering_array
+
     if not fields:
         return []
 
     active = fields[:_MAX_PAIRWISE_FIELDS]
-    rep_values = [_get_representative_values(f) for f in active]
+    rep_values = [tuple(_get_representative_values(f)) for f in active]
 
     if len(active) <= 2:
         # 2フィールド以下は全組み合わせを直接返す
@@ -184,24 +194,10 @@ def generate_pairwise_cases(fields: list[FieldData]) -> list[dict[str, str]]:
             :_MAX_PAIRWISE_CASES
         ]
 
-    # 3フィールド以上: 最初のフィールドの各値を基準行として、
-    # 残りフィールドをラウンドロビンで割り当てることで2-wayカバレッジを近似する
-    cases: list[dict[str, str]] = []
-    first_vals = rep_values[0]
-    rest_fields = active[1:]
-    rest_vals = rep_values[1:]
-
-    max_rest_len = max(len(v) for v in rest_vals)
-    for _fi, fval in enumerate(first_vals):
-        for ri in range(max_rest_len):
-            row: dict[str, str] = {active[0].name: fval}
-            for _j, (rf, rv) in enumerate(zip(rest_fields, rest_vals, strict=False)):
-                row[rf.name] = rv[ri % len(rv)]
-            cases.append(row)
-            if len(cases) >= _MAX_PAIRWISE_CASES:
-                return cases
-
-    return cases[:_MAX_PAIRWISE_CASES]
+    result = generate_covering_array(list(rep_values), 2)
+    return [
+        {active[i].name: row[i] for i in range(len(active))} for row in result.rows
+    ][:_MAX_PAIRWISE_CASES]
 
 
 def generate_decision_table(

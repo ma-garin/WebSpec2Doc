@@ -21,7 +21,7 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from itertools import combinations, product
+from itertools import product
 from pathlib import Path
 from typing import Any
 
@@ -364,18 +364,20 @@ def _dt_action(names: tuple[str, ...], combo: tuple[bool, ...]) -> str:
 
 
 # =========================================================================
-# ペアワイズ（自前・決定的な貪欲 t-way 被覆）
+# ペアワイズ（正準実装は techniques.combinatorial — 本モジュールは委譲）
 # =========================================================================
 def _build_pairwise(
     fields: tuple[dict[str, Any], ...], params: TestDesignParams
 ) -> PairwiseTable | None:
+    from techniques.combinatorial import generate_covering_array
+
     par = _pairwise_params(fields)
     strength = params.pairwise_strength
     if len(par) <= strength:
         # パラメータが強度以下なら全数（デカルト積）で足りるため、ペアワイズ不要
         return None
-    rows = _greedy_cover([p.values for p in par], strength)
-    return PairwiseTable(params=tuple(par), rows=tuple(rows), strength=strength)
+    result = generate_covering_array([p.values for p in par], strength)
+    return PairwiseTable(params=tuple(par), rows=result.rows, strength=strength)
 
 
 def _pairwise_params(fields: tuple[dict[str, Any], ...]) -> list[PairwiseParam]:
@@ -388,82 +390,6 @@ def _pairwise_params(fields: tuple[dict[str, Any], ...]) -> list[PairwiseParam]:
             values = ("有効値", "無効値")  # 同値クラス（有効/無効の2値）
         par.append(PairwiseParam(name=_field_label(fld), values=values))
     return par
-
-
-def _greedy_cover(domains: list[tuple[str, ...]], strength: int) -> list[tuple[str, ...]]:
-    """全 t-way 組み合わせを被覆する行集合を決定的に生成する（AETG 系の貪欲法）。
-
-    各行は未被覆の t-tuple を1つ「種」として固定し、残りの列を貪欲に埋める。
-    種は必ず新規被覆になるため未被覆集合は毎回真に減少し、有限回で全被覆に至る。
-    種の選択（`min`）と値の先頭優先タイブレークにより、同一入力→同一出力（決定的）。
-    """
-    uncovered = _all_t_tuples(domains, strength)
-    rows: list[tuple[str, ...]] = []
-    while uncovered:
-        seed = min(uncovered)  # 決定的な種の選択
-        row = _build_row(domains, strength, uncovered, seed)
-        uncovered -= _tuples_in_row(row, strength)
-        rows.append(row)
-    return rows
-
-
-def _all_t_tuples(
-    domains: list[tuple[str, ...]], strength: int
-) -> set[tuple[tuple[int, str], ...]]:
-    tuples: set[tuple[tuple[int, str], ...]] = set()
-    for idxs in combinations(range(len(domains)), strength):
-        for values in product(*(domains[i] for i in idxs)):
-            tuples.add(tuple(zip(idxs, values, strict=False)))
-    return tuples
-
-
-def _build_row(
-    domains: list[tuple[str, ...]],
-    strength: int,
-    uncovered: set[tuple[tuple[int, str], ...]],
-    seed: tuple[tuple[int, str], ...],
-) -> tuple[str, ...]:
-    row: list[str | None] = [None] * len(domains)
-    for idx, value in seed:  # 種のタプルを固定（この行は必ずこれを被覆する）
-        row[idx] = value
-    for i in range(len(domains)):
-        if row[i] is not None:
-            continue
-        best_value = domains[i][0]
-        best_gain = -1
-        for value in domains[i]:
-            gain = _gain(row, i, value, strength, uncovered)
-            if gain > best_gain:  # 先頭優先の決定的タイブレーク
-                best_gain = gain
-                best_value = value
-        row[i] = best_value
-    return tuple(v for v in row if v is not None)
-
-
-def _gain(
-    row: list[str | None],
-    idx: int,
-    value: str,
-    strength: int,
-    uncovered: set[tuple[tuple[int, str], ...]],
-) -> int:
-    """value を idx に置いたとき、既に確定済みの列との組で新たに覆う t-tuple 数。"""
-    fixed = [j for j in range(len(row)) if j != idx and row[j] is not None]
-    if len(fixed) < strength - 1:
-        return 0
-    count = 0
-    for combo in combinations(fixed, strength - 1):
-        key = tuple(sorted([(j, row[j]) for j in combo] + [(idx, value)]))
-        if key in uncovered:
-            count += 1
-    return count
-
-
-def _tuples_in_row(row: tuple[str, ...], strength: int) -> set[tuple[tuple[int, str], ...]]:
-    covered: set[tuple[tuple[int, str], ...]] = set()
-    for idxs in combinations(range(len(row)), strength):
-        covered.add(tuple((i, row[i]) for i in idxs))
-    return covered
 
 
 # =========================================================================

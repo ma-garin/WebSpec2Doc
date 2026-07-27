@@ -13,7 +13,7 @@ IPO/IPOG 系）。ここでは貪欲法で「全ての値ペアを最低1回含�
 
 from __future__ import annotations
 
-from itertools import combinations, product
+from itertools import combinations
 from typing import Any
 
 CLAIM_SCOPE = "measured_options_only"
@@ -47,43 +47,20 @@ def extract_factors(screen: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def generate_pairwise_rows(factors: list[dict[str, Any]]) -> list[dict[str, str]]:
-    """全ての値ペアを最低1回含む行集合を貪欲法で構築する（決定的）。"""
+    """全ての値ペアを最低1回含む行集合を構築する（決定的）。
+
+    正準実装 techniques.combinatorial（決定的な貪欲 AETG 系）への委譲。
+    旧実装は同一アルゴリズムの重複だったため本体を削除した。
+    2-way 被覆は techniques.verify.verify_t_way_coverage で機械検証できる。
+    """
+    from techniques.combinatorial import generate_covering_array
+
     if len(factors) < MIN_FACTORS:
         return []
     names = [f["name"] for f in factors]
-    values = [f["values"] for f in factors]
-
-    # 覆うべき全ペア: (因子i, 値a, 因子j, 値b)
-    uncovered: set[tuple[int, str, int, str]] = set()
-    for (i, vi), (j, vj) in combinations(enumerate(values), 2):
-        for a, b in product(vi, vj):
-            uncovered.add((i, a, j, b))
-
-    rows: list[dict[str, str]] = []
-    while uncovered:
-        best_row: list[str] | None = None
-        best_gain = -1
-        # 先頭の未カバーペアを種にし、残り因子を貪欲に決める
-        seed = min(uncovered)  # 決定性のため辞書順最小を種とする
-        si, sa, sj, sb = seed
-        candidate = [""] * len(factors)
-        candidate[si], candidate[sj] = sa, sb
-        for k in range(len(factors)):
-            if candidate[k]:
-                continue
-            gain_by_value = []
-            for v in values[k]:
-                trial = list(candidate)
-                trial[k] = v
-                gain = _covered_count(trial, uncovered)
-                gain_by_value.append((gain, v))
-            candidate[k] = max(gain_by_value)[1]
-        best_row, best_gain = candidate, _covered_count(candidate, uncovered)
-        if best_gain <= 0:
-            break  # 理論上到達しないが、無限ループは絶対に避ける
-        uncovered -= _pairs_of(best_row)
-        rows.append(dict(zip(names, best_row, strict=True)))
-    return rows
+    values = [tuple(f["values"]) for f in factors]
+    result = generate_covering_array(list(values), 2)
+    return [dict(zip(names, row, strict=True)) for row in result.rows]
 
 
 def build_pairwise_cases(report: dict[str, Any]) -> list[dict[str, Any]]:
@@ -117,13 +94,3 @@ def build_pairwise_cases(report: dict[str, Any]) -> list[dict[str, Any]]:
     return cases
 
 
-def _pairs_of(row: list[str]) -> set[tuple[int, str, int, str]]:
-    return {(i, row[i], j, row[j]) for i, j in combinations(range(len(row)), 2)}
-
-
-def _covered_count(row: list[str], uncovered: set[tuple[int, str, int, str]]) -> int:
-    count = 0
-    for i, j in combinations(range(len(row)), 2):
-        if row[i] and row[j] and (i, row[i], j, row[j]) in uncovered:
-            count += 1
-    return count

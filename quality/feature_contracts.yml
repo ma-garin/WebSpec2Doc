@@ -1870,6 +1870,50 @@
       ]
     },
     {
+      "feature_id": "state_transition_table",
+      "name": "状態遷移表（ISTQB 状態遷移テスト・無効遷移・0/1-switch 被覆）",
+      "risk_level": "high",
+      "status": "implemented",
+      "ui_files": [
+        "templates/partials/view-generate.html",
+        "static/js/view-transition.js",
+        "static/app-report.css"
+      ],
+      "route_files": [
+        "web/routes/report.py"
+      ],
+      "core_files": [
+        "src/graph/state_table.py"
+      ],
+      "symbols": [
+        "build_state_table",
+        "build_state_transition_report",
+        "zero_switch_paths",
+        "one_switch_paths",
+        "invalid_transition_cases"
+      ],
+      "outputs": [
+        "状態一覧（初期状態・終了状態）",
+        "イベント一覧（共通ナビの識別）",
+        "状態×イベントの遷移マトリクス",
+        "無効遷移の検証ケース",
+        "0-switch / 1-switch テストパス"
+      ],
+      "persistence": [
+        "output/{domain}/report.json"
+      ],
+      "failure_modes": [
+        "no_screens_observed",
+        "report_unreadable",
+        "one_switch_path_truncated"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "evidence"
+      ]
+    },
+    {
       "feature_id": "testcase_table",
       "name": "ローレベルテストケース表（9列生成・Excel風編集・編集履歴）",
       "risk_level": "high",

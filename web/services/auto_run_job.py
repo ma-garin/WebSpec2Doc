@@ -188,6 +188,17 @@ class AutoRunJob:
             "reference_doc_count": len(self._reference_docs),
         }
 
+    def register_proc(self, proc: Any) -> None:
+        """実行中の子プロセスを登録する。登録が無い子プロセスは cancel() から
+        見えず、中止しても走り続ける。cancel() との競合（登録直前に中止された
+        場合）に備え、登録時点で中止済みなら即座に終了させる。"""
+        self._proc = proc
+        if self._cancelled:
+            try:
+                proc.terminate()
+            except Exception:
+                pass
+
     def cancel(self) -> None:
         self._cancelled = True
         proc = self._proc

@@ -605,6 +605,15 @@
   line-height: var(--leading-normal);
   white-space: pre-wrap;
 }
+/* テスト技法の表（同値分割・直交表・ドメイン分析等）は「|」で桁を揃えているため、
+   等幅フォントかつ折り返さない場合にだけ表として読める。ページ全体を横に溢れさせず、
+   この要素の中だけをスクロールさせる。 */
+.autorun-stage-item-detail.is-tabular {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  white-space: pre;
+  overflow-x: auto;
+  max-width: 100%;
+}
 .autorun-stage-badge {
   font-size: 10px;
   font-weight: 700;

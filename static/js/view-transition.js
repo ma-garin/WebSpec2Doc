@@ -92,14 +92,30 @@ document.addEventListener('keydown', e => {
   if (canvas && canvas.classList.contains('is-fullscreen')) _toggleUmlFullscreen();
 });
 
+// 遷移「図」だけで使う間引き。図はヘッダリンクで密になると読めなくなるため、
+// 全画面から張られている真の共通ナビだけを落とす。
+// 割合（旧: 画面数の50%以上）を閾値にすると、画面数が少ないサイトでは
+// 2画面から張られた通常のリンクまで共通ナビ扱いになり、図から遷移が消える。
+// そのため「外向き遷移を持つ全画面（自分自身を除く）から張られているか」で判定し、
+// 判定が成立しうる規模（3画面以上）でのみ適用する。
+// なお遷移「表」では間引かない（状態遷移表は共通ナビを含めてこそ被覆が成立する）。
+const _COMMON_NAV_MIN_SCREENS = 3;
+
 function _commonNavTargets(screens) {
-  const n = screens.length;
-  const count = {};
+  if (screens.length < _COMMON_NAV_MIN_SCREENS) return new Set();
+  const sources = {};
+  const withExits = new Set();
   screens.forEach(sc => {
-    (sc.transitions && sc.transitions.to || []).forEach(to => { count[to] = (count[to] || 0) + 1; });
+    const to = (sc.transitions && sc.transitions.to) || [];
+    if (to.length) withExits.add(sc.page_id);
+    to.forEach(t => { (sources[t] = sources[t] || new Set()).add(sc.page_id); });
   });
-  const threshold = Math.max(2, Math.floor(n * 0.5));
-  return new Set(Object.entries(count).filter(([, c]) => c >= threshold).map(([k]) => k));
+  const common = new Set();
+  Object.entries(sources).forEach(([target, from]) => {
+    const candidates = [...withExits].filter(id => id !== target);
+    if (candidates.length >= 2 && candidates.every(id => from.has(id))) common.add(target);
+  });
+  return common;
 }
 
 function _shortVisLabel(sc) {
@@ -148,8 +164,31 @@ function _mermaidText(value) {
   return String(value || '').replace(/[<>{}"'`]/g, '').replace(/\s+/g, ' ').trim();
 }
 
+// 間引き後にこの割合を下回るなら、間引き自体をやめて全遷移を出す。
+// 全画面が相互リンクするサイトでは「共通ナビ」判定が全遷移に当たり、
+// 図が空になってしまう。読みにくい図の方が、何も無い図よりましである。
+const _COMMON_NAV_KEEP_RATIO = 0.3;
+
+//: 直近の _transitionRows が実際に間引いたかどうか（見出し文の生成に使う）。
+let _lastTransitionFiltered = false;
+
 function _transitionRows(screens) {
+  const all = _collectTransitionRows(screens, new Set());
   const common = _commonNavTargets(screens);
+  if (!common.size) {
+    _lastTransitionFiltered = false;
+    return all;
+  }
+  const filtered = _collectTransitionRows(screens, common);
+  if (filtered.length < Math.max(1, Math.floor(all.length * _COMMON_NAV_KEEP_RATIO))) {
+    _lastTransitionFiltered = false;
+    return all;
+  }
+  _lastTransitionFiltered = true;
+  return filtered;
+}
+
+function _collectTransitionRows(screens, common) {
   const idToScreen = {};
   const urlToId = {};
   screens.forEach(sc => {
@@ -245,7 +284,9 @@ function _showUmlPanel(type, screens) {
     '<div class="uml-panel-head">' +
     `<div><strong>${escHtml(meta.title)}</strong><span>${escHtml(meta.desc)}</span></div>` +
     '<div class="uml-panel-actions">' +
-    `<p>${rows.length}件の遷移。共通ナビゲーション（全ページの50%以上から発生する遷移）は除外しています。</p>` +
+    `<p>${rows.length}件の遷移。${_lastTransitionFiltered
+      ? '図を読めるようにするため、全画面から張られている共通ナビゲーションは除外しています（遷移表には含まれます）。'
+      : '共通ナビゲーションを除外すると図がほぼ空になるため、除外していません。'}</p>` +
     _umlZoomControls() +
     '</div>' +
     '</div>' +
@@ -390,7 +431,7 @@ async function _renderUmlDiagram(type, screens, rows) {
   const source = _umlSource(type, screens, rows);
   _currentUmlSource = source;
   if (!rows.length) {
-    target.innerHTML = '<div class="hero-msg">遷移情報がありません（共通ナビのみ検出）。</div>';
+    target.innerHTML = '<div class="hero-msg">遷移が観測されていません。</div>';
     return;
   }
   try {
@@ -571,43 +612,188 @@ function _umlTable(type, rows) {
   );
 }
 
-// ---- 画面遷移表（ISTQB 状態遷移テスト標準フォーマット）----
-function renderTransitionTable() {
-  if (!reportJson || !(reportJson.screens || []).length) {
+// ---- 画面遷移表（ISTQB 状態遷移テスト）----
+// 成果物は「有効遷移の一覧」だけでは足りない。状態 × イベントの全マトリクスと、
+// そこに現れる無効遷移、0-switch / 1-switch 被覆までを一式で示す。
+// 共通ナビゲーションは除外しない（除外すると「どの状態からでも同じイベントを
+// 受け付ける」という表の核心が消え、被覆も欠ける）。印を付けるだけに留める。
+
+function _stStatePill(state) {
+  const marks = [];
+  if (state.is_initial) marks.push('<span class="cond-pill cc-format">初期状態</span>');
+  if (state.is_final) marks.push('<span class="cond-pill cc-other">終了状態</span>');
+  return marks.join(' ');
+}
+
+function _stSummaryBlock(data) {
+  const s = data.summary;
+  const items = [
+    ['状態', s.state_count],
+    ['イベント', s.event_count],
+    ['有効遷移', s.valid_transition_count],
+    ['無効遷移', s.invalid_transition_count],
+    ['0-switch', data.coverage.zero_switch.count],
+    ['1-switch', data.coverage.one_switch.count],
+  ];
+  return (
+    '<div class="st-summary">' +
+    items.map(([label, value]) =>
+      `<div class="st-summary-cell"><span class="st-summary-num">${value}</span><span class="st-summary-label">${escHtml(label)}</span></div>`
+    ).join('') +
+    '</div>'
+  );
+}
+
+function _stMatrixBlock(data) {
+  const head = data.events.map(e =>
+    `<th title="${escHtml(e.label)}">${escHtml(e.event_id)}${e.is_common ? '<span class="st-common">共通</span>' : ''}</th>`
+  ).join('');
+  const body = data.matrix.map(row => {
+    const cells = row.cells.map(c =>
+      c.valid
+        ? `<td class="st-cell st-valid">${escHtml(c.to)}</td>`
+        : '<td class="st-cell st-invalid" title="無効遷移（この状態でこのイベントは定義されていない）">－</td>'
+    ).join('');
+    return `<tr><th class="st-rowhead">${escHtml(row.state_id)}<span>${escHtml(row.title)}</span></th>${cells}</tr>`;
+  }).join('');
+  return (
+    '<div class="hero-section-title">状態遷移表（状態 × イベント）</div>' +
+    '<p class="st-note">セルは遷移先の状態。<strong>－ は無効遷移</strong>で、その状態にそのイベントの導線が無いことを表す。</p>' +
+    '<div style="overflow-x:auto"><table class="trans-table st-matrix">' +
+    `<thead><tr><th>状態＼イベント</th>${head}</tr></thead>` +
+    `<tbody>${body}</tbody></table></div>`
+  );
+}
+
+function _stEventsBlock(data) {
+  const rows = data.events.map(e => `
+    <tr>
+      <td class="c-screen">${escHtml(e.event_id)}</td>
+      <td><span class="cond-pill ${e.kind === 'フォーム送信' ? 'cc-format trans-event-form' : 'cc-other trans-event-link'}">${escHtml(e.kind)}</span></td>
+      <td>${escHtml(e.label)}</td>
+      <td>${e.source_count}</td>
+      <td>${e.is_common ? '共通ナビ' : '個別'}</td>
+    </tr>`).join('');
+  return (
+    '<div class="hero-section-title">イベント一覧</div>' +
+    '<table class="trans-table"><thead><tr><th>ID</th><th>種別</th><th>操作</th><th>受付状態数</th><th>区分</th></tr></thead>' +
+    `<tbody>${rows}</tbody></table>`
+  );
+}
+
+const _ST_KIND_LABEL = {
+  screen: '画面',
+  modal: 'モーダル',
+  tabpanel: 'タブ',
+  accordion: 'アコーディオン',
+  dom_change: 'DOM変化',
+};
+
+function _stStatesBlock(data) {
+  const rows = data.states.map(s => `
+    <tr>
+      <td class="c-screen">${escHtml(s.state_id)}</td>
+      <td>${escHtml(s.title)}</td>
+      <td>${escHtml(_ST_KIND_LABEL[s.kind] || s.kind)}${s.parent ? `<span class="trans-link-detail">親: ${escHtml(s.parent)}</span>` : ''}</td>
+      <td>${_stStatePill(s)}</td>
+      <td style="font-size:11px;font-family:monospace;color:var(--text-muted);word-break:break-all">${escHtml(s.url)}</td>
+    </tr>`).join('');
+  const child = data.summary.child_state_count;
+  const note = child
+    ? `<p class="st-note">同一 URL でも画面内アクションで出現する状態（モーダル等）は別状態として ${child} 件に分けています。</p>`
+    : '<p class="st-note">画面内アクションによる状態（モーダル等）は観測されていません。</p>';
+  return (
+    '<div class="hero-section-title">状態一覧</div>' + note +
+    '<table class="trans-table"><thead><tr><th>状態</th><th>タイトル</th><th>種別</th><th>区分</th><th>URL</th></tr></thead>' +
+    `<tbody>${rows}</tbody></table>`
+  );
+}
+
+function _stPathsBlock(data) {
+  const zero = data.coverage.zero_switch.paths.map(p => `
+    <tr><td class="c-screen">${escHtml(p.path_id)}</td><td>${escHtml(p.steps.join(' → '))}</td><td>${escHtml(p.event)}</td><td>${escHtml(p.expected)}</td></tr>`).join('');
+  const one = data.coverage.one_switch.paths.map(p => `
+    <tr><td class="c-screen">${escHtml(p.path_id)}</td><td>${escHtml(p.steps.join(' → '))}</td><td>${escHtml(p.events.join(' , '))}</td><td>${escHtml(p.expected)}</td></tr>`).join('');
+  const droppedPaths = data.coverage.one_switch.dropped_paths || [];
+  const droppedBlock = droppedPaths.length
+    ? '<div class="hero-section-title">1-switch で除外した経路（' + droppedPaths.length + '件）</div>' +
+      '<p class="st-note">上限を超えたため自動生成から外した経路。網羅済みと誤読しないよう全件を記載する（手動で補う対象）。</p>' +
+      '<table class="trans-table"><thead><tr><th>経路</th><th>イベント</th><th>除外理由</th></tr></thead><tbody>' +
+      droppedPaths.map(p => `<tr><td>${escHtml(p.steps.join(' → '))}</td><td>${escHtml((p.events || []).join(' , '))}</td><td>${escHtml(p.reason || '')}</td></tr>`).join('') +
+      '</tbody></table>'
+    : '';
+  return (
+    '<div class="hero-section-title">0-switch 被覆（各有効遷移を1回）</div>' +
+    '<table class="trans-table"><thead><tr><th>ID</th><th>経路</th><th>イベント</th><th>期待結果</th></tr></thead>' +
+    `<tbody>${zero}</tbody></table>` +
+    '<div class="hero-section-title">1-switch 被覆（連続する2遷移の全組合せ）</div>' +
+    '<table class="trans-table"><thead><tr><th>ID</th><th>経路</th><th>イベント</th><th>期待結果</th></tr></thead>' +
+    `<tbody>${one}</tbody></table>` +
+    droppedBlock
+  );
+}
+
+function _stInvalidBlock(data) {
+  const rows = data.coverage.invalid.cases.map(c => {
+    const direct = c.direct_access_check || {};
+    const directCell = direct.applicable
+      ? `<strong>手順</strong><br>${(direct.steps || []).map(escHtml).join('<br>')}<span class="trans-link-detail">期待: ${escHtml(direct.expected || '')}</span>`
+      : `<span style="color:var(--text-muted)">対象外 — ${escHtml(direct.reason || '')}</span>`;
+    return `<tr>
+      <td class="c-screen">${escHtml(c.case_id)}</td>
+      <td class="c-screen">${escHtml(c.state)}</td>
+      <td>${escHtml(c.event)}<span class="trans-link-detail">${escHtml(c.event_label || '')}</span></td>
+      <td>${escHtml(c.reason)}</td>
+      <td>${(c.ui_check.steps || []).map(escHtml).join('<br>')}<span class="trans-link-detail">期待: ${escHtml(c.ui_check.expected || '')}</span></td>
+      <td>${directCell}</td>
+    </tr>`;
+  }).join('');
+  return (
+    '<div class="hero-section-title">無効遷移の検証（' + data.coverage.invalid.count + '件）</div>' +
+    '<p class="st-note">「起きてはいけない遷移」の確認は状態遷移テストの主目的の一つで、有効遷移だけの一覧からは得られない。' +
+    '<strong>導線が無いことの確認だけでは不十分</strong>で、URL を直接開けば到達できる場合があるため、認可の確認を別立てにしている。</p>' +
+    '<div style="overflow-x:auto"><table class="trans-table"><thead><tr><th>ID</th><th>状態</th><th>イベント</th><th>無効である理由</th><th>UI上の確認</th><th>直接アクセスの確認（認可）</th></tr></thead>' +
+    `<tbody>${rows}</tbody></table></div>`
+  );
+}
+
+async function renderTransitionTable() {
+  const domain = typeof currentResultDomain === 'string' ? currentResultDomain : '';
+  if (!domain) {
     resultHero.innerHTML = '<div class="hero-msg">遷移データがありません。</div>';
     return;
   }
-  const screens = reportJson.screens;
-  const idToUrl = {};
-  screens.forEach(s => { idToUrl[s.page_id] = s.url; });
-  const rows = _transitionRows(screens);
+  resultHero.innerHTML = '<div class="hero-msg">状態遷移表を作成しています…</div>';
 
-  if (!rows.length) { resultHero.innerHTML = '<div class="hero-msg">遷移情報がありません（共通ナビのみ検出）。</div>'; return; }
+  let data;
+  try {
+    const res = await fetch('/api/state-table?domain=' + encodeURIComponent(domain));
+    data = await res.json();
+    if (!res.ok) throw new Error(data.error || '状態遷移表の取得に失敗しました');
+  } catch (e) {
+    resultHero.innerHTML = `<div class="hero-msg">状態遷移表を取得できませんでした（${escHtml(e.message)}）。</div>`;
+    return;
+  }
+  if (!data.applicable) {
+    resultHero.innerHTML = `<div class="hero-msg">${escHtml(data.reason || '状態が観測されていません。')}</div>`;
+    return;
+  }
 
-  const tableRows = rows.map(r => {
-    const destUrl = idToUrl[r.toId] || r.action || '';
-    let linkPath = destUrl;
-    try { linkPath = new URL(destUrl).pathname; } catch (e) {}
-    return `<tr>
-      <td class="c-screen">${escHtml(r.fromId)}</td>
-      <td>${escHtml(r.fromTitle)}</td>
-      <td>
-        <span class="cond-pill ${r.event === 'フォーム送信' ? 'cc-format trans-event-form' : 'cc-other trans-event-link'}">${escHtml(r.event)}</span>
-        <span class="trans-link-detail">${escHtml(r.event === 'フォーム送信' ? r.eventDetail : linkPath)}</span>
-      </td>
-      <td class="c-screen">${escHtml(r.toId)}</td>
-      <td>${escHtml(r.toTitle)}</td>
-      <td style="font-size:11px;font-family:monospace;color:var(--text-muted);word-break:break-all">${escHtml(destUrl)}</td>
-    </tr>`;
-  }).join('');
-
+  const s = data.summary;
+  const notice = data.notice ? `<p class="st-note">注記: ${escHtml(data.notice)}</p>` : '';
   resultHero.innerHTML =
     '<div class="hero-pad">' +
     '<div class="hero-section-title">画面遷移表 — ISTQB 状態遷移テスト</div>' +
-    `<p style="color:var(--text-muted);font-size:12px;margin:0 0 12px">${rows.length}件の遷移。共通ナビ（${Math.floor(screens.length * 0.5)}件以上から発生）は除外しています。</p>` +
-    '<div style="overflow-x:auto">' +
-    '<table class="trans-table">' +
-    '<thead><tr><th>現在の画面</th><th>タイトル</th><th>イベント</th><th>遷移先</th><th>遷移先タイトル</th><th>アクション</th></tr></thead>' +
-    `<tbody>${tableRows}</tbody>` +
-    '</table></div></div>';
+    `<p class="st-note">状態 ${s.state_count} × イベント ${s.event_count} = ${s.cell_total} セルのうち、` +
+    `有効遷移 ${s.valid_transition_count} 件・無効遷移 ${s.invalid_transition_count} 件。` +
+    `初期状態 ${escHtml((s.initial_states || []).join(', ') || 'なし')} ／ 終了状態 ${escHtml((s.final_states || []).join(', ') || 'なし')}。` +
+    `共通ナビは ${s.common_events.length} 件を識別しているが、被覆が欠けるため除外していない。</p>` +
+    _stSummaryBlock(data) +
+    _stMatrixBlock(data) +
+    _stStatesBlock(data) +
+    _stEventsBlock(data) +
+    _stInvalidBlock(data) +
+    _stPathsBlock(data) +
+    notice +
+    '</div>';
 }

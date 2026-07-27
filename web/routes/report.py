@@ -305,6 +305,37 @@ def _autorun_coverage_screens(domain_dir: Path, screens_meta: list[dict]) -> lis
     return result
 
 
+@bp.get("/api/state-table")
+def api_state_table() -> dict | tuple[dict, int]:
+    """状態遷移表（ISTQB 状態遷移テスト）を report.json から導出して返す。
+
+    共通ナビゲーションは除外しない。除外すると「全状態から同じイベントを受け付ける」
+    という状態遷移表の核心が失われ、被覆も欠ける（識別は is_common で行う）。
+    """
+    from graph.state_table import build_state_transition_report
+
+    domain = request.args.get("domain", "")
+    if not _valid_domain(domain):
+        return {"error": "not found"}, 404
+    domain_dir = _out() / domain
+    if not domain_dir.is_dir() or domain_dir.is_symlink():
+        return {"error": "not found"}, 404
+
+    report_path = _safe_output_path(str(domain_dir / "report.json"))
+    if report_path is None:
+        return {"error": "report not found"}, 404
+    try:
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning("state-table: report.json を読めません domain=%s: %s", domain, exc)
+        return {"error": "report unreadable"}, 500
+
+    screens = report.get("screens")
+    if not isinstance(screens, list):
+        return {"applicable": False, "reason": "画面が観測されていません。"}
+    return build_state_transition_report(screens)
+
+
 @bp.get("/api/coverage-heatmap")
 def api_coverage_heatmap() -> Response:
     """カバレッジヒートマップ（kind=analysis: 取得状況3色 / kind=autorun: 実行回数×成否）をHTMLで返す。"""

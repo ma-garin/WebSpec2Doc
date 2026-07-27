@@ -301,7 +301,17 @@ def _factor_levels(field: dict[str, Any]) -> list[str]:
 
 
 def apply_all(screen: dict[str, Any]) -> dict[str, Any]:
-    """1画面に対して適用可能な技法をすべて実行し、具体的な設計を返す。"""
+    """1画面に対して適用可能な技法をすべて実行し、具体的な設計を返す。
+
+    技法モジュールは循環 import を避けるため関数内で読み込む
+    （`classification_tree` は本モジュールの `equivalence_classes` を使う）。
+    """
+    from autorun.cause_effect import cause_effect_graph
+    from autorun.classification_tree import classification_tree
+    from autorun.domain_analysis import domain_analysis
+    from autorun.error_guessing import error_guessing
+    from autorun.orthogonal_array import orthogonal_array
+
     fields = [
         f
         for form in (screen.get("forms") or [])
@@ -323,12 +333,58 @@ def apply_all(screen: dict[str, Any]) -> dict[str, Any]:
                 "case_count": len(eq) + len(bv),
             }
         )
-    return {
+    result: dict[str, Any] = {
         "page_id": str(screen.get("page_id", "")),
         "fields": per_field,
         "decision_table": decision_table(fields),
         "pairwise": pairwise_pairs(fields),
+        "classification_tree": classification_tree(screen),
+        "orthogonal_array": orthogonal_array(fields),
+        "cause_effect": cause_effect_graph(fields),
+        "domain_analysis": domain_analysis(fields),
+        "error_guessing": error_guessing(fields, has_form=bool(screen.get("forms"))),
         "total_cases": sum(f["case_count"] for f in per_field),
+    }
+    result["technique_case_counts"] = _technique_case_counts(result)
+    return result
+
+
+#: `apply_all` が返す技法別ブロックのキー（表示順 = 適用順）。
+TECHNIQUE_BLOCK_KEYS: tuple[str, ...] = (
+    "decision_table",
+    "pairwise",
+    "classification_tree",
+    "orthogonal_array",
+    "cause_effect",
+    "domain_analysis",
+    "error_guessing",
+)
+
+
+def _technique_case_counts(result: dict[str, Any]) -> dict[str, int]:
+    """技法ごとの導出ケース数。適用外（applicable=False）は 0 とする。"""
+    counts: dict[str, int] = {"同値分割・境界値分析": int(result.get("total_cases", 0))}
+    for key in TECHNIQUE_BLOCK_KEYS:
+        block = result.get(key)
+        if not isinstance(block, dict) or not block.get("applicable"):
+            continue
+        name = str(block.get("technique") or key)
+        if key == "decision_table":
+            counts[name] = len(block.get("rules") or [])
+        elif key == "pairwise":
+            counts[name] = int(block.get("required_pairs") or 0)
+        else:
+            counts[name] = int(block.get("case_count") or 0)
+    return counts
+
+
+def apply_cross_screen(screens: list[dict[str, Any]]) -> dict[str, Any]:
+    """複数画面にまたがる技法（状態遷移・ユースケース）をまとめて適用する。"""
+    from autorun.use_case_testing import use_case_testing
+
+    return {
+        "state_transition": state_transitions(screens),
+        "use_case": use_case_testing(screens),
     }
 
 

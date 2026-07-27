@@ -1814,6 +1814,106 @@
       ]
     },
     {
+      "feature_id": "autorun_extended_techniques",
+      "name": "テスト技法の網羅的適用（分類ツリー法・直交表・原因結果グラフ・ドメイン分析・エラー推測・ユースケース）",
+      "risk_level": "high",
+      "status": "implemented",
+      "ui_files": [
+        "templates/partials/view-auto-run.html",
+        "static/js/autorun-stages.js"
+      ],
+      "route_files": [
+        "web/routes/autorun_stages.py"
+      ],
+      "core_files": [
+        "src/autorun/classification_tree.py",
+        "src/autorun/orthogonal_array.py",
+        "src/autorun/cause_effect.py",
+        "src/autorun/domain_analysis.py",
+        "src/autorun/error_guessing.py",
+        "src/autorun/use_case_testing.py",
+        "src/autorun/techniques.py",
+        "src/autorun/stages.py"
+      ],
+      "symbols": [
+        "classification_tree",
+        "orthogonal_array",
+        "cause_effect_graph",
+        "domain_analysis",
+        "error_guessing",
+        "use_case_testing",
+        "apply_all",
+        "apply_cross_screen",
+        "verify_orthogonality"
+      ],
+      "outputs": [
+        "分類ツリーとクラス被覆の組合せ表",
+        "直交表（均等割付け・直交性検査の結果付き）",
+        "原因結果グラフと導出された判定表",
+        "1x1 ドメイン行列（ON/OFF/IN/OUT）",
+        "欠陥タクソノミの適用結果（未実測である旨付き）",
+        "ユースケース候補（基本/代替/例外フロー）"
+      ],
+      "persistence": [
+        "instance/autorun/{run_id}/stages.json"
+      ],
+      "failure_modes": [
+        "no_measured_constraints",
+        "too_many_levels_for_orthogonal_array",
+        "no_transitions_observed",
+        "unknown_field_type"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "evidence"
+      ]
+    },
+    {
+      "feature_id": "state_transition_table",
+      "name": "状態遷移表（ISTQB 状態遷移テスト・無効遷移・0/1-switch 被覆）",
+      "risk_level": "high",
+      "status": "implemented",
+      "ui_files": [
+        "templates/partials/view-generate.html",
+        "static/js/view-transition.js",
+        "static/app-report.css"
+      ],
+      "route_files": [
+        "web/routes/report.py"
+      ],
+      "core_files": [
+        "src/graph/state_table.py"
+      ],
+      "symbols": [
+        "build_state_table",
+        "build_state_transition_report",
+        "zero_switch_paths",
+        "one_switch_paths",
+        "invalid_transition_cases"
+      ],
+      "outputs": [
+        "状態一覧（初期状態・終了状態）",
+        "イベント一覧（共通ナビの識別）",
+        "状態×イベントの遷移マトリクス",
+        "無効遷移の検証ケース",
+        "0-switch / 1-switch テストパス"
+      ],
+      "persistence": [
+        "output/{domain}/report.json"
+      ],
+      "failure_modes": [
+        "no_screens_observed",
+        "report_unreadable",
+        "one_switch_path_truncated"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "evidence"
+      ]
+    },
+    {
       "feature_id": "testcase_table",
       "name": "ローレベルテストケース表（9列生成・Excel風編集・編集履歴）",
       "risk_level": "high",

@@ -112,6 +112,48 @@ class TestAutoRunJob:
         job.cancel()
         assert job._input_event.is_set()
 
+    def test_register_proc_keeps_proc_when_running(self) -> None:
+        job = _make_job()
+        mock_proc = MagicMock()
+        job.register_proc(mock_proc)
+        assert job._proc is mock_proc
+        mock_proc.terminate.assert_not_called()
+
+    def test_register_proc_terminates_when_already_cancelled(self) -> None:
+        # cancel() と登録の競合: 中止後に登録された子プロセスも走り続けさせない
+        job = _make_job()
+        job.cancel()
+        mock_proc = MagicMock()
+        job.register_proc(mock_proc)
+        mock_proc.terminate.assert_called_once()
+
+    def test_run_child_process_cancel_terminates_child(self) -> None:
+        # 中止で到達確認・ログインの子プロセスが実際に殺されること（実プロセス）
+        import sys
+        import threading
+        import time as _time
+
+        from web.routes.auto_run import _run_child_process
+
+        job = _make_job()
+        threading.Timer(0.3, job.cancel).start()
+        start = _time.monotonic()
+        _run_child_process(
+            job, [sys.executable, "-c", "import time; time.sleep(30)"], timeout=20
+        )
+        assert job._cancelled
+        assert _time.monotonic() - start < 10
+
+    def test_mark_job_failed_does_not_override_cancelled(self) -> None:
+        from web.routes.auto_run import _mark_job_failed
+
+        job = _make_job()
+        job.cancel()
+        job.status = "cancelled"
+        _mark_job_failed(job, "子プロセスが異常終了")
+        assert job.status == "cancelled"
+        assert job.error == ""
+
 
 # ─────────────────────── _execute_tests ───────────────────────
 
@@ -123,6 +165,24 @@ class TestExecuteTests:
         _execute_tests(job)
         assert job.status == "failed"
         assert "spec.ts" in job.error
+
+    def test_cancel_during_run_keeps_cancelled_status(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # 実行中に中止 → 完走後も complete/failed で上書きされないこと
+        job = _make_job()
+        spec = tmp_path / "x.spec.ts"
+        spec.write_text("test('a', () => {});", encoding="utf-8")
+        job.outputs = {"spec_ts": str(spec)}
+
+        def fake_run(*args: Any, **kwargs: Any) -> dict[str, Any]:
+            job.cancel()
+            job.status = "cancelled"
+            return {"passed": 0, "failed": 0, "total": 0}
+
+        monkeypatch.setattr("web.routes.auto_run.run_playwright", fake_run)
+        _execute_tests(job)
+        assert job.status == "cancelled"
 
     def test_spec_path_not_found_sets_failed(self, tmp_path: Path) -> None:
         job = _make_job()
@@ -628,8 +688,9 @@ class TestPhaseDiscoverLoginConsolidation:
             },
             *login_pages,
         ]
+        # _run_child_process が使う Popen 互換モック（communicate が stdout を返す）
         proc = MagicMock()
-        proc.stdout = json.dumps({"pages": pages})
+        proc.communicate.return_value = (json.dumps({"pages": pages}), "")
         return proc
 
     def test_multiple_login_pages_yield_single_input_request(self) -> None:
@@ -645,7 +706,7 @@ class TestPhaseDiscoverLoginConsolidation:
             for i in range(3)
         ]
         with patch(
-            "web.routes.auto_run.subprocess.run",
+            "web.routes.auto_run.subprocess.Popen",
             return_value=self._discover_proc(login_pages),
         ):
             _phase_discover(job, depth=2, max_pages=30)
@@ -660,7 +721,7 @@ class TestPhaseDiscoverLoginConsolidation:
     def test_no_login_pages_skips_awaiting_input(self) -> None:
         job = _make_job(url="https://example.com/", domain="example.com")
         with patch(
-            "web.routes.auto_run.subprocess.run",
+            "web.routes.auto_run.subprocess.Popen",
             return_value=self._discover_proc([]),
         ):
             _phase_discover(job, depth=2, max_pages=30)
@@ -676,11 +737,11 @@ class TestPhaseDiscoverLoginConsolidation:
         job._input_data = {"username": "user", "password": "pass"}
 
         login_proc = MagicMock()
-        login_proc.stdout = json.dumps({"success": True})
+        login_proc.communicate.return_value = (json.dumps({"success": True}), "")
 
         with (
             patch("web.routes.auto_run.OUTPUT_DIR", tmp_path),
-            patch("web.routes.auto_run.subprocess.run", return_value=login_proc) as mock_run,
+            patch("web.routes.auto_run.subprocess.Popen", return_value=login_proc) as mock_run,
         ):
             _do_login(job)
 

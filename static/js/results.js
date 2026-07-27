@@ -30,6 +30,8 @@ const LEGACY_TAB_MAP = {
 };
 
 let resultData = null, reportJson = null, docFusionData = null;
+// 状態遷移表など、report.json ではなくサーバ側の導出結果を取りに行くビューが使う。
+let currentResultDomain = '';
 let activeResultTab = 'overview', activeResultSub = '';
 const _renderedPanels = new Set(); // "tab/sub" 単位の描画済みフラグ（dirty 管理）
 
@@ -55,6 +57,7 @@ async function showResults(domain, tab, sub) {
     return;
   }
   resultData = data;
+  currentResultDomain = domain;
   reportJson = null;
   if (data.files && data.files.json) {
     try { reportJson = await fetch('/preview?path=' + encodeURIComponent(data.files.json)).then(r => r.json()); } catch (e) {}

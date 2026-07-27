@@ -57,19 +57,25 @@ def render_markdown(pack: dict[str, Any]) -> str:
     if conditions:
         # 何をもって合格としたかは、結果と切り離せない。必ず結果の手前に置く。
         lines += ["", "## 実行条件（利用者が確定）", ""]
-        lines.append(f"- 合否基準: {conditions.get('exit_criteria', '')}"
-                     + ("" if conditions.get("exit_criteria_specified") else "（既定）"))
+        lines.append(
+            f"- 合否基準: {conditions.get('exit_criteria', '')}"
+            + ("" if conditions.get("exit_criteria_specified") else "（既定）")
+        )
         lines.append(
             "- フォーム送信: "
-            + ("実行した（対象サイトに実データが登録されています）"
-               if conditions.get("allow_submit")
-               else "行っていない（入力の観測のみ）")
+            + (
+                "実行した（対象サイトに実データが登録されています）"
+                if conditions.get("allow_submit")
+                else "行っていない（入力の観測のみ）"
+            )
         )
         lines.append(
             "- 認証範囲: "
-            + ("ログイン後の画面を含む"
-               if conditions.get("auth_scope") == "authenticated"
-               else "未ログインで到達できる範囲のみ")
+            + (
+                "ログイン後の画面を含む"
+                if conditions.get("auth_scope") == "authenticated"
+                else "未ログインで到達できる範囲のみ"
+            )
         )
         if conditions.get("browser_request"):
             lines.append(

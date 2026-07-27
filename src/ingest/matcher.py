@@ -52,9 +52,9 @@ class FieldGap:
 #: 文書にあるが実測に無い画面の理由。「未実装」と断定しない。
 #: 取得できなかっただけの画面を「未実装疑い」と報告すると、
 #: 存在する画面を欠陥として報告することになる（実測で発覚）。
-DOC_ONLY_UNIMPLEMENTED = "unimplemented"   # どこからもリンクされておらず取得もされていない
-DOC_ONLY_UNREACHED = "unreached"           # 実測ページからリンクはあるが取得していない
-DOC_ONLY_NO_URL = "no_url"                 # 文書にURL記載が無く、対応づけ自体ができない
+DOC_ONLY_UNIMPLEMENTED = "unimplemented"  # どこからもリンクされておらず取得もされていない
+DOC_ONLY_UNREACHED = "unreached"  # 実測ページからリンクはあるが取得していない
+DOC_ONLY_NO_URL = "no_url"  # 文書にURL記載が無く、対応づけ自体ができない
 
 
 @dataclass(frozen=True)

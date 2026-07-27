@@ -82,7 +82,9 @@ def _payload(status: str, step_label: str) -> dict:
         ),
         "error": "観測結果を保存できませんでした。" if status == "failed" else None,
         "started_at": "2026-07-26T20:00:00",
-        "finished_at": "2026-07-26T20:01:00" if status in {"complete", "failed", "cancelled"} else None,
+        "finished_at": (
+            "2026-07-26T20:01:00" if status in {"complete", "failed", "cancelled"} else None
+        ),
         "elapsed_sec": 60,
         "input_request": (
             {"message": "ログインが必要です", "login_url": "http://127.0.0.1:8767/login.html"}
@@ -91,7 +93,10 @@ def _payload(status: str, step_label: str) -> dict:
         ),
         "awaiting_remaining_sec": 1700 if status == "awaiting_input" else 0,
         "run_policy": {},
-        "step_data": {"crawl": {"screens": 6, "forms": 3}, "discover": {"pages": 7, "login_required": 1}},
+        "step_data": {
+            "crawl": {"screens": 6, "forms": 3},
+            "discover": {"pages": 7, "login_required": 1},
+        },
         "unverified": ["未観測の領域: 認証が必要で未観測（1件）"] if status == "complete" else [],
     }
 
@@ -125,12 +130,14 @@ class TestActiveStates:
         主導線バーの外に2つ目の「停止」が出ていた（利用者の指摘で発覚）。
         """
         r = autorun.evaluate(_PROBE_JS, _payload(status, label))
-        assert not r["duplicateButtons"], (
-            f"{status}: 同じラベルのボタンが重複 {json.dumps(r['duplicateButtons'], ensure_ascii=False)}"
-        )
+        assert not r[
+            "duplicateButtons"
+        ], f"{status}: 同じラベルのボタンが重複 {json.dumps(r['duplicateButtons'], ensure_ascii=False)}"
 
     @pytest.mark.parametrize(("status", "label"), _ACTIVE)
-    def test_intake_form_is_hidden_while_running(self, autorun: Page, status: str, label: str) -> None:
+    def test_intake_form_is_hidden_while_running(
+        self, autorun: Page, status: str, label: str
+    ) -> None:
         """実行中に受付フォームを出さない（いま何の画面か分からなくなる）。"""
         r = autorun.evaluate(_PROBE_JS, _payload(status, label))
         assert not r["intakeVisible"], f"{status}: 実行中なのに受付フォームが出ている"
@@ -144,9 +151,9 @@ class TestActiveStates:
         r = autorun.evaluate(_PROBE_JS, _payload(status, label))
         assert r["barVisible"], f"{status}: 主導線バーが出ていない"
         expected = "ログインが必要です" if status == "awaiting_input" else label
-        assert expected in r["barText"], (
-            f"{status}: バーから現在の状況が読み取れない / {r['barText']}"
-        )
+        assert (
+            expected in r["barText"]
+        ), f"{status}: バーから現在の状況が読み取れない / {r['barText']}"
 
 
 class TestTerminalStates:
@@ -165,9 +172,9 @@ class TestTerminalStates:
     @pytest.mark.parametrize(("status", "label"), _TERMINAL)
     def test_no_duplicate_buttons(self, autorun: Page, status: str, label: str) -> None:
         r = autorun.evaluate(_PROBE_JS, _payload(status, label))
-        assert not r["duplicateButtons"], (
-            f"{status}: 同じラベルのボタンが重複 {json.dumps(r['duplicateButtons'], ensure_ascii=False)}"
-        )
+        assert not r[
+            "duplicateButtons"
+        ], f"{status}: 同じラベルのボタンが重複 {json.dumps(r['duplicateButtons'], ensure_ascii=False)}"
 
     @pytest.mark.parametrize("status", ["failed", "cancelled"])
     def test_失敗と停止からはやり直せる(self, autorun: Page, status: str) -> None:

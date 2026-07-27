@@ -207,9 +207,7 @@ def api_testcases_cell_reset() -> dict | tuple[dict, int]:
         return error, 404
     assert report is not None
     try:
-        return reset_cell(
-            domain, report, str(body.get("case_id", "")), str(body.get("column", ""))
-        )
+        return reset_cell(domain, report, str(body.get("case_id", "")), str(body.get("column", "")))
     except TestcaseStoreError as exc:
         return {"error": str(exc)}, 400
 

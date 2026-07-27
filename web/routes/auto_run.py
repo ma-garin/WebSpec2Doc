@@ -632,9 +632,7 @@ def _apply_decisions_to_policy(job: AutoRunJob) -> None:
                     "認証情報を登録してください。登録せずに進むと未ログインの範囲のみになります。"
                 ),
             }
-            job.add_log(
-                "認証情報が未登録です。登録するまでログイン後の画面は対象になりません。"
-            )
+            job.add_log("認証情報が未登録です。登録するまでログイン後の画面は対象になりません。")
     else:
         job.add_log("認証範囲: 未ログインで到達できる範囲のみを対象にします")
 
@@ -791,9 +789,7 @@ def _await_stage_approval(job: AutoRunJob, gate: str) -> None:
 
     if not job.require_stage_approval:
         # 人が承認できない文脈（自動実行など）。飛ばした事実を必ず残す。
-        job.add_unverified(
-            f"{subject}: 自動実行のため段階承認を行わず、人の確認を経ていません。"
-        )
+        job.add_unverified(f"{subject}: 自動実行のため段階承認を行わず、人の確認を経ていません。")
         return
 
     # 仕様7〜14は「提示・承認」。利用者に「内容を生成」を押させるのではなく、
@@ -946,7 +942,11 @@ def _phase_discover(job: AutoRunJob, depth: int, max_pages: int) -> None:
     job.step_data["discover"] = {"pages": len(pages), "login_required": len(login_pages)}
     job.add_log(
         f"到達確認完了: {len(pages)}画面を検出"
-        + (f"（うち要ログイン {len(login_pages)}画面。認証しなければ観測対象外）" if login_pages else "")
+        + (
+            f"（うち要ログイン {len(login_pages)}画面。認証しなければ観測対象外）"
+            if login_pages
+            else ""
+        )
     )
 
     if login_pages:

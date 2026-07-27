@@ -64,8 +64,9 @@ def _action_lines(action: Mapping[str, Any]) -> list[str]:
     locator = str(action.get("locator") or "")
 
     if kind == "goto":
-        return [f"  await page.goto({_ts(action.get('url'))}, "
-                "{ waitUntil: 'domcontentloaded' });"]
+        return [
+            f"  await page.goto({_ts(action.get('url'))}, " "{ waitUntil: 'domcontentloaded' });"
+        ]
     if kind == "wait_load":
         return ["  await page.waitForLoadState('domcontentloaded');"]
     if kind == "fill" and locator:
@@ -94,8 +95,10 @@ def _assertion_lines(assertion: Mapping[str, Any]) -> list[str]:
     if kind == "expect_title":
         return [f"  expect(await page.title()).toContain({_ts(assertion.get('value'))});"]
     if kind == "expect_text":
-        return [f"  await expect(page.getByText({_ts(assertion.get('value'))}, "
-                "{ exact: false }).first()).toBeVisible();"]
+        return [
+            f"  await expect(page.getByText({_ts(assertion.get('value'))}, "
+            "{ exact: false }).first()).toBeVisible();"
+        ]
     if kind == "expect_url":
         return [f"  await expect(page).toHaveURL({_ts(assertion.get('value'))});"]
     if kind == "expect_no_error":
@@ -105,8 +108,10 @@ def _assertion_lines(assertion: Mapping[str, Any]) -> list[str]:
     if kind == "expect_no_server_error":
         return ["  await expectNoServerError(page);"]
     if kind == "expect_value_length":
-        return [f"  await expectValueLength(page, {_ts(assertion.get('locator'))}, "
-                f"{int(assertion.get('max') or 0)});"]
+        return [
+            f"  await expectValueLength(page, {_ts(assertion.get('locator'))}, "
+            f"{int(assertion.get('max') or 0)});"
+        ]
     return [f"  // 未対応の検証のためスキップ: {json.dumps(dict(assertion), ensure_ascii=False)}"]
 
 

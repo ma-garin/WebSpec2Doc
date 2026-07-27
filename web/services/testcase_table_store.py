@@ -207,7 +207,9 @@ def compose(domain: str, report: Mapping[str, Any]) -> dict[str, Any]:
     status_label = {"passed": "PASS", "failed": "FAIL", "timedOut": "TIMEOUT", "skipped": "SKIP"}
     for row in rows:
         entry = cases.get(row["case_id"])
-        row["result"] = status_label.get(str((entry or {}).get("status")), "—" if entry is None else "?")
+        row["result"] = status_label.get(
+            str((entry or {}).get("status")), "—" if entry is None else "?"
+        )
         row["result_error"] = (entry or {}).get("error", "")
 
     return {
@@ -321,9 +323,7 @@ def _generated_value(report: Mapping[str, Any], case_id: str, column: str) -> An
     return None
 
 
-def reset_cell(
-    domain: str, report: Mapping[str, Any], case_id: str, column: str
-) -> dict[str, Any]:
+def reset_cell(domain: str, report: Mapping[str, Any], case_id: str, column: str) -> dict[str, Any]:
     """1 セルを生成値へ戻す（履歴には reset として残す）。"""
     if column not in _EDITABLE:
         raise TestcaseStoreError(f"編集できない列です: {column}")

@@ -77,7 +77,10 @@ _MOCK_DECISIONS = {
         },
     ],
     "facts": [
-        {"title": "基準の確立", "detail": "前回スナップショットが無いため比較の基準を作る回になります"}
+        {
+            "title": "基準の確立",
+            "detail": "前回スナップショットが無いため比較の基準を作る回になります",
+        }
     ],
 }
 
@@ -173,9 +176,7 @@ class TestDecisionsDialog:
         # 推奨バッジが選択済みの側に付いている
         expect(selected.first.locator(".ard-tag")).to_have_text("推奨")
 
-    def test_submitting_without_touching_sends_recommendations(
-        self, decisions_page: Page
-    ) -> None:
+    def test_submitting_without_touching_sends_recommendations(self, decisions_page: Page) -> None:
         """何も触らずに確定すると、推奨がそのまま送られる。"""
         decisions_page.click("#autorun-leadbar button")
         decisions_page.click("#autorun-decisions-go")

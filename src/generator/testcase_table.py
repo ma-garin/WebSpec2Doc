@@ -77,9 +77,7 @@ class TestCaseRow:
 # =========================================================================
 # エントリポイント
 # =========================================================================
-def build_testcase_table(
-    report: Mapping[str, Any], design: TestDesign
-) -> tuple[TestCaseRow, ...]:
+def build_testcase_table(report: Mapping[str, Any], design: TestDesign) -> tuple[TestCaseRow, ...]:
     """report と TestDesign から、画面順・技法順に並んだテストケース表を作る。"""
     screens = {str(s.get("page_id", "")): s for s in report.get("screens") or []}
     designs = {d.page_id: d for d in design.screens}
@@ -338,7 +336,10 @@ def _bva_rows(ctx: _ScreenContext, sd: ScreenTestDesign) -> list[TestCaseRow]:
                 automation, reason = AUTOMATION_MANUAL, "期待結果が仕様未確定（要確認）のため"
             elif case.expected == "無効" and str(case.evidence).startswith("値カタログ"):
                 # 「未登録アドレス」等は弾くかどうかがアプリ仕様。機械判定すると誤検知になる
-                automation, reason = AUTOMATION_MANUAL, "無効判定がアプリ仕様に依存するため（値カタログ由来）"
+                automation, reason = (
+                    AUTOMATION_MANUAL,
+                    "無効判定がアプリ仕様に依存するため（値カタログ由来）",
+                )
             texts, actions = _split_steps(steps)
             rows.append(
                 TestCaseRow(
@@ -425,9 +426,7 @@ def _dt_rows(ctx: _ScreenContext, sd: ScreenTestDesign) -> list[TestCaseRow]:
         steps = [ctx.open_step()]
         for name, present in zip(dt.conditions, rule.conditions, strict=False):
             fld = ctx.field_by_name.get(name)
-            steps.append(
-                _input_step(fld, name, _sample_value(fld) if present else "")
-            )
+            steps.append(_input_step(fld, name, _sample_value(fld) if present else ""))
         # 条件に含まれない必須項目（max_dt_conditions で溢れた分）も具体値で埋める
         steps.extend(_fill_other_required_steps(ctx, *dt.conditions))
         steps.append(_submit_step(ctx))
@@ -438,7 +437,9 @@ def _dt_rows(ctx: _ScreenContext, sd: ScreenTestDesign) -> list[TestCaseRow]:
             TestCaseRow(
                 case_id=f"TC-{ctx.page_id}-DT-{idx:03d}",
                 name="必須項目の組み合わせ: "
-                + (f"入力あり={'、'.join(filled) or 'なし'}／未入力={'、'.join(missing) or 'なし'}"),
+                + (
+                    f"入力あり={'、'.join(filled) or 'なし'}／未入力={'、'.join(missing) or 'なし'}"
+                ),
                 screen=ctx.label,
                 function=ctx.function,
                 viewpoint="デシジョンテーブル／必須チェック",
@@ -451,7 +452,8 @@ def _dt_rows(ctx: _ScreenContext, sd: ScreenTestDesign) -> list[TestCaseRow]:
                 actions=actions,
                 assertions=(
                     ({"type": "expect_stay", "url": ctx.url},)
-                    if missing else ({"type": "expect_no_error"},)
+                    if missing
+                    else ({"type": "expect_no_error"},)
                 ),
             )
         )
@@ -562,10 +564,12 @@ def _state_rows(
             target = screens.get(nxt) or {}
             target_title = _screen_title(target)
             last_url = str(target.get("url") or "")
-            steps.append(Step(
-                f"{nxt}（{target_title}）へ進むリンクまたはボタンをクリックする",
-                {"type": "click_link_to", "url": last_url, "title": target_title},
-            ))
+            steps.append(
+                Step(
+                    f"{nxt}（{target_title}）へ進むリンクまたはボタンをクリックする",
+                    {"type": "click_link_to", "url": last_url, "title": target_title},
+                )
+            )
         texts, actions = _split_steps(steps)
         rows.append(
             TestCaseRow(
@@ -585,9 +589,7 @@ def _state_rows(
                 automation_reason="遷移先 URL の一致で判定できるため",
                 trace_id="->".join(seq.steps),
                 actions=actions,
-                assertions=(
-                    ({"type": "expect_url", "value": last_url},) if last_url else ()
-                ),
+                assertions=(({"type": "expect_url", "value": last_url},) if last_url else ()),
             )
         )
     return rows
@@ -628,9 +630,7 @@ def _transition_rows(
                 automation_reason="遷移先 URL の一致で判定できるため",
                 trace_id=f"{ctx.page_id}->{nxt}",
                 actions=actions,
-                assertions=(
-                    ({"type": "expect_url", "value": target_url},) if target_url else ()
-                ),
+                assertions=(({"type": "expect_url", "value": target_url},) if target_url else ()),
             )
         )
     return rows

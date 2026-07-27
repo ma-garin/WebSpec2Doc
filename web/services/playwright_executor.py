@@ -582,7 +582,11 @@ def ensure_browser_available(browser: str) -> tuple[bool, str]:
         return False, f"{browser} の導入に失敗しました: {exc}"
     if proc.returncode != 0:
         return False, f"{browser} の導入に失敗しました: {proc.stderr[:300]}"
-    return (True, "") if any(browsers_path.glob(f"{browser}-*")) else (False, f"{browser} が導入されませんでした")
+    return (
+        (True, "")
+        if any(browsers_path.glob(f"{browser}-*"))
+        else (False, f"{browser} が導入されませんでした")
+    )
 
 
 def _ensure_browsers_installed(pw_test_version: str) -> tuple[bool, str]:

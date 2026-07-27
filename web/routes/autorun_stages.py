@@ -218,7 +218,8 @@ def api_submit_decisions() -> tuple[dict, int] | dict:
         pipeline = pipeline.recorded(
             "unverified",
             "",
-            f"人の確認を経ずに実行へ進んだ項目 {len(unverified)} 件: " + " / ".join(unverified[:20]),
+            f"人の確認を経ずに実行へ進んだ項目 {len(unverified)} 件: "
+            + " / ".join(unverified[:20]),
             actor,
         )
     _save_pipeline(domain, pipeline)

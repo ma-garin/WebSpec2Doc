@@ -344,7 +344,7 @@ def _append_submit_statement(lines: list[str], form_selector: str) -> None:
     lines.append("  const beforeUrl = page.url();")
     lines.append(
         f"  const submitButton = {target}"
-        ".locator('button[type=\"submit\"], input[type=\"submit\"]').first();"
+        '.locator(\'button[type="submit"], input[type="submit"]\').first();'
     )
     lines.append("  if (await submitButton.count()) {")
     lines.append("    await submitButton.click();")
@@ -357,10 +357,11 @@ def _append_submit_statement(lines: list[str], form_selector: str) -> None:
     lines.append("  expect(typeof afterUrl).toBe('string');")
     lines.append("  if (afterUrl === beforeUrl) {")
     lines.append(
-        "    // 遷移しない実装もあるため、失敗にはしない。"
-        "送信した事実だけを証跡へ残す。"
+        "    // 遷移しない実装もあるため、失敗にはしない。" "送信した事実だけを証跡へ残す。"
     )
-    lines.append("    test.info().annotations.push({ type: 'submit', description: '送信後も同一URL' });")
+    lines.append(
+        "    test.info().annotations.push({ type: 'submit', description: '送信後も同一URL' });"
+    )
     lines.append("  }")
 
 

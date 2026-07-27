@@ -201,9 +201,7 @@ class TestStore:
         report = _report()
         case_id = store.compose(DOMAIN, report)["rows"][0]["case_id"]
         store.update_cell(DOMAIN, report, case_id, "steps", "1つ目\n2つ目\n")
-        row = next(
-            r for r in store.compose(DOMAIN, report)["rows"] if r["case_id"] == case_id
-        )
+        row = next(r for r in store.compose(DOMAIN, report)["rows"] if r["case_id"] == case_id)
         assert row["steps"] == ["1つ目", "2つ目"]
 
     def test_reset_cell_restores_generated_value(self, output_dir: Path) -> None:
@@ -213,9 +211,7 @@ class TestStore:
         store.update_cell(DOMAIN, report, case_id, "name", "編集後")
         store.reset_cell(DOMAIN, report, case_id, "name")
 
-        row = next(
-            r for r in store.compose(DOMAIN, report)["rows"] if r["case_id"] == case_id
-        )
+        row = next(r for r in store.compose(DOMAIN, report)["rows"] if r["case_id"] == case_id)
         assert row["name"] == original
         assert row["edited_columns"] == []
         assert [h["action"] for h in store.load_history(DOMAIN)][:2] == ["reset", "edit"]
@@ -294,7 +290,12 @@ class TestApi:
     def test_cell_endpoint_rejects_uneditable_column(self, output_dir: Path) -> None:
         res = self._client().post(
             "/api/testcases/cell",
-            json={"domain": DOMAIN, "case_id": "TC-P001-DSP-001", "column": "case_id", "value": "X"},
+            json={
+                "domain": DOMAIN,
+                "case_id": "TC-P001-DSP-001",
+                "column": "case_id",
+                "value": "X",
+            },
         )
         assert res.status_code == 400
 

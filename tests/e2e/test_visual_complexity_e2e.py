@@ -128,16 +128,21 @@ class TestVisualComplexityBudget:
         page.goto(f"{BASE_URL}/auto-run")
         page.wait_for_load_state("networkidle")
         measured = page.evaluate(_MEASURE_JS)
-        assert measured["primaryCtas"] <= 1, (
-            f"受付画面の主要CTAが {measured['primaryCtas']} 個あります（1個以下にすること）"
-        )
+        assert (
+            measured["primaryCtas"] <= 1
+        ), f"受付画面の主要CTAが {measured['primaryCtas']} 個あります（1個以下にすること）"
 
 
 #: 描画結果から測る上限。2026-07-26 の実測に余裕を持たせた値。
 #: 参考実測: 受付 圧縮率0.083/エッジ0.046、改修前の段階画面 0.080/0.043 →
 #: 改修後 0.068/0.033（要確認1本化とCTA整理で約2割低下）。
 _IMAGE_BUDGETS = {
-    "auto-run": {"path": "/auto-run", "compression_ratio": 0.12, "edge_density": 0.065, "colorfulness": 55.0},
+    "auto-run": {
+        "path": "/auto-run",
+        "compression_ratio": 0.12,
+        "edge_density": 0.065,
+        "colorfulness": 55.0,
+    },
     "report": {
         "path": "/autorun/report/127.0.0.1:8767",
         "compression_ratio": 0.12,

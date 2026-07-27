@@ -7,7 +7,5 @@ mypy==1.13.0
 types-PyYAML==6.0.12.20260518
 pip-audit==2.7.3
 
-# E2E ビジュアルリグレッションのピクセル比較（未導入だと完全hash一致を要求し
-# PNGエンコードの非決定性で誤検知するため、verify-ui の堅牢化に必須）
-Pillow>=11.0.0
-numpy>=2.0.0
+# Pillow / numpy は web/services/visual_complexity.py が実行時に使うため
+# requirements.txt（ランタイム依存）へ移動した（E2E ピクセル比較でも使用）

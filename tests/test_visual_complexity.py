@@ -9,7 +9,6 @@ from __future__ import annotations
 import numpy as np
 import pytest
 from PIL import Image
-
 from web.services.visual_complexity import measure
 
 

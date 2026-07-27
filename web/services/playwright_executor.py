@@ -82,6 +82,7 @@ def run_playwright(
     egress_policy: Any = None,
     browser: str = "chromium",
     headed: bool = False,
+    on_proc: Callable[[Any], None] | None = None,
 ) -> dict[str, Any]:
     """
     ローカル @playwright/test CLI でスペックを実行し、結果を返す。
@@ -103,6 +104,9 @@ def run_playwright(
         headed: True でブラウザ画面を表示して実行する（`--headed`）。既定はヘッドレス。
             画面はこのプロセスが動くマシンに開くため、実行中の様子を人が直接見たい
             ローカル運用でのみ意味を持つ。
+        on_proc: 起動した子プロセス（Popen）を受け取るフック。AutoRun の中止は
+            ジョブに登録された子プロセスしか殺せないため、中止可能にしたい呼び出し元は
+            ここで登録する。省略時は従来どおり subprocess.run で実行する。
     """
     if device not in ("pc", "mobile"):
         device = "pc"
@@ -194,13 +198,7 @@ def run_playwright(
         from web.services.egress_gateway import POLICY_ENV
 
         env[POLICY_ENV] = policy.to_json()
-        proc = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=resolved_timeout_sec,
-            env=env,
-        )
+        proc = _spawn_and_wait(cmd, resolved_timeout_sec, env, on_proc)
     except subprocess.TimeoutExpired as exc:
         return _interrupted_result(
             resolved_timeout_sec,
@@ -224,6 +222,34 @@ def run_playwright(
     json_report_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     fallback_html_path.write_text(_build_html_report(result), encoding="utf-8")
     return result
+
+
+def _spawn_and_wait(
+    cmd: list[str],
+    timeout_sec: int,
+    env: dict[str, str],
+    on_proc: Callable[[Any], None] | None,
+) -> subprocess.CompletedProcess:
+    """subprocess.run 相当の実行。on_proc がある場合のみ Popen で起動して登録する。
+
+    subprocess.run はプロセスハンドルを外へ出さないため、AutoRun の中止から
+    子プロセスを終了させられない。中止可能にする呼び出し元だけがこの Popen 経路を通る。
+    """
+    if on_proc is None:
+        return subprocess.run(
+            cmd, capture_output=True, text=True, timeout=timeout_sec, env=env
+        )
+    proc = subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env
+    )
+    on_proc(proc)
+    try:
+        stdout, stderr = proc.communicate(timeout=timeout_sec)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        stdout, stderr = proc.communicate()
+        raise subprocess.TimeoutExpired(cmd, timeout_sec, output=stdout, stderr=stderr)
+    return subprocess.CompletedProcess(cmd, proc.returncode, stdout=stdout, stderr=stderr)
 
 
 def _read_raw_json(raw_json_path: Path, stdout: str) -> dict[str, Any]:

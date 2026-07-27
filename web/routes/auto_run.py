@@ -892,6 +892,8 @@ def _run_job(job: AutoRunJob, depth: int, max_pages: int) -> None:
         if job.status in ("failed", "cancelled"):
             return
         _execute_tests(job)
+        if job._cancelled:
+            return
         # L0/L4: 観測の完全性と非機能の合否判定。既存成果物のみを読むため
         # 対象サイトへの追加アクセスは発生しない。失敗しても本体結果は壊さない。
         _run_nonfunctional_analysis(job)
@@ -902,6 +904,34 @@ def _run_job(job: AutoRunJob, depth: int, max_pages: int) -> None:
             return
         _mark_job_failed(job, str(exc))
         job.add_log(f"予期しないエラー: {exc}")
+
+
+def _run_child_process(
+    job: AutoRunJob, cmd: list[str], timeout: int, input_text: str | None = None
+) -> str:
+    """ジョブに登録した子プロセスとして CLI を実行し stdout を返す。
+
+    subprocess.run はプロセスハンドルを外へ出さず、中止（cancel）から
+    子プロセスを終了させられない。到達確認・ログインが止められなかった原因。
+    呼び出し元は戻った直後に job._cancelled を確認して打ち切ること。
+    """
+    proc = subprocess.Popen(
+        cmd,
+        stdin=subprocess.PIPE if input_text is not None else None,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    job.register_proc(proc)
+    try:
+        stdout, _ = proc.communicate(input=input_text, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.communicate()
+        raise
+    finally:
+        job._proc = None
+    return stdout
 
 
 def _phase_discover(job: AutoRunJob, depth: int, max_pages: int) -> None:
@@ -927,18 +957,17 @@ def _phase_discover(job: AutoRunJob, depth: int, max_pages: int) -> None:
         cmd += ["--auth", job.auth_path]
 
     try:
-        proc = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=DISCOVER_TIMEOUT_SEC,
-        )
-        data = json.loads(proc.stdout.strip() or "{}")
+        stdout = _run_child_process(job, cmd, DISCOVER_TIMEOUT_SEC)
+        if job._cancelled:
+            return
+        data = json.loads(stdout.strip() or "{}")
         pages: list[dict[str, Any]] = data.get("pages", [])
     except subprocess.TimeoutExpired:
         job.add_log("到達確認タイムアウト。そのまま観測を続行します。")
         return
     except Exception as exc:
+        if job._cancelled:
+            return
         job.add_log(f"到達確認エラー: {exc}。そのまま観測を続行します。")
         return
 
@@ -986,14 +1015,10 @@ def _do_login(job: AutoRunJob) -> None:
         str(auth_path),
     ]
     try:
-        proc = subprocess.run(
-            cmd,
-            input=creds_json,
-            capture_output=True,
-            text=True,
-            timeout=60,
-        )
-        data = json.loads(proc.stdout.strip() or "{}")
+        stdout = _run_child_process(job, cmd, 60, input_text=creds_json)
+        if job._cancelled:
+            return
+        data = json.loads(stdout.strip() or "{}")
         if data.get("success"):
             job.auth_path = str(auth_path.resolve())
             job.add_log(f"ログイン成功。auth.json を保存しました: {job.auth_path}")
@@ -1518,9 +1543,18 @@ def _execute_tests(job: AutoRunJob) -> None:
             device=device,
             egress_policy=EgressPolicy(allow_local=_local_targets_allowed()),
             browser=str(job.run_policy.get("browser", "chromium")),
+            # 中止からPlaywrightプロセスを終了させるための登録。
+            # 未登録だと「中止する」を押しても最後の1件まで走り続ける。
+            on_proc=job.register_proc,
         )
     except Exception as exc:
         _mark_job_failed(job, f"テスト実行エラー: {exc}")
+        return
+    finally:
+        job._proc = None
+
+    if job._cancelled:
+        job.add_log("中止により、テスト実行をここで打ち切りました（部分結果はファイルに残ります）。")
         return
 
     job.test_results = result
@@ -1613,6 +1647,10 @@ def _update_failure_classification(
 
 
 def _mark_job_failed(job: AutoRunJob, error: str) -> None:
+    # 中止済みを「失敗」で上書きしない。中止直後は子プロセスの異常終了が
+    # 必ず観測されるため、ここで弾かないと停止表示が失敗表示へ化ける。
+    if job._cancelled:
+        return
     job.status = "failed"
     job.error = error
     job.finished_at = _now_iso()

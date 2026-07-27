@@ -1338,3 +1338,32 @@ class TestPerTestTimeoutParam:
             run_playwright(Path("spec.ts"), tmp_out)
 
         assert any("timeout: 30000" in c for c in config_contents)
+
+
+# ─────────────────────── _spawn_and_wait ───────────────────────
+
+
+class TestSpawnAndWait:
+    def test_without_on_proc_uses_subprocess_run(self) -> None:
+        from web.services.playwright_executor import _spawn_and_wait
+
+        with patch(
+            "web.services.playwright_executor.subprocess.run",
+            return_value=subprocess.CompletedProcess([], 0, stdout="", stderr=""),
+        ) as mock_run:
+            _spawn_and_wait(["true"], 5, {}, None)
+        mock_run.assert_called_once()
+
+    def test_on_proc_receives_popen_and_result_matches(self) -> None:
+        import os
+        import sys
+
+        from web.services.playwright_executor import _spawn_and_wait
+
+        seen: list = []
+        cp = _spawn_and_wait(
+            [sys.executable, "-c", "print('hi')"], 30, os.environ.copy(), seen.append
+        )
+        assert cp.returncode == 0
+        assert "hi" in cp.stdout
+        assert seen and seen[0].pid > 0

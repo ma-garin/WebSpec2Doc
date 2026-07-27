@@ -262,6 +262,21 @@
 .trans-event-form { background:var(--info-bg); border:1px solid var(--info-border); color:var(--primary-dark); }
 .trans-link-detail { display:block; font-size:11px; font-family:monospace; color:var(--text-muted); margin-top:2px; word-break:break-all; }
 
+/* ── 状態遷移表（ISTQB 状態遷移テスト）── */
+.st-note { color:var(--text-muted); font-size:12px; line-height:1.7; margin:0 0 12px; }
+.st-summary { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 20px; }
+.st-summary-cell { flex:1 1 100px; background:var(--surface-soft); border:1px solid var(--border); border-radius:var(--radius); padding:10px 12px; text-align:center; }
+.st-summary-num { display:block; font-size:20px; font-weight:800; color:var(--text); line-height:1.2; }
+.st-summary-label { display:block; font-size:11px; color:var(--text-muted); margin-top:2px; }
+/* 行数・列数とも増えるため、表本体だけを横スクロールさせる（ページ全体は溢れさせない）。 */
+.st-matrix th, .st-matrix td { text-align:center; white-space:nowrap; }
+.st-matrix .st-rowhead { text-align:left; position:sticky; left:0; z-index:3; background:var(--surface-soft); }
+.st-matrix .st-rowhead span { display:block; font-size:10px; font-weight:500; color:var(--text-muted); max-width:180px; overflow:hidden; text-overflow:ellipsis; }
+.st-cell { font-family:monospace; font-size:12px; }
+.st-valid { color:var(--primary-dark); font-weight:700; background:var(--info-bg); }
+.st-invalid { color:var(--text-muted); }
+.st-common { display:inline-block; margin-left:4px; padding:0 4px; border-radius:3px; background:var(--info-bg); border:1px solid var(--info-border); color:var(--primary-dark); font-size:9px; font-weight:700; }
+
 /* ── 画面リスト ログイングループ区切り ── */
 .disc-login-group-separator { display:flex; align-items:center; gap:8px; margin:10px 0 6px; font-size:11px; font-weight:700; color:var(--warning); }
 .disc-login-group-separator::before,.disc-login-group-separator::after { content:''; flex:1; height:1px; background:var(--warning-border); }

@@ -24,7 +24,11 @@ from autorun.classification_tree import (
     classification_tree,
 )
 from autorun.domain_analysis import domain_analysis
-from autorun.error_guessing import CATALOG_CONFIDENCE, error_guessing
+from autorun.error_guessing import (
+    CATALOG_CONFIDENCE,
+    CATEGORY_STANDARD,
+    error_guessing,
+)
 from autorun.orthogonal_array import (
     build_array,
     orthogonal_array,
@@ -232,6 +236,36 @@ def test_error_guessing_skips_unknown_field_types() -> None:
     assert result["applicable"] is False
 
 
+def test_every_defect_category_maps_to_an_external_taxonomy() -> None:
+    """自作分類を独自体系として出さない。全分類が外部体系へ対応付けられている。"""
+    all_fields = [
+        {"name": n, "field_type": t}
+        for n, t in [
+            ("a", "text"),
+            ("b", "textarea"),
+            ("c", "number"),
+            ("d", "email"),
+            ("e", "date"),
+            ("f", "password"),
+            ("g", "tel"),
+            ("h", "file"),
+        ]
+    ]
+    result = error_guessing(all_fields)
+    assert result["unmapped_categories"] == [], (
+        f"外部体系へ対応付けられていない分類がある: {result['unmapped_categories']}"
+    )
+    for category in result["categories"]:
+        assert CATEGORY_STANDARD[category]
+
+
+def test_error_guessing_declares_mapping_is_not_official() -> None:
+    """対応付けが本システム独自であることを出力で明示する。"""
+    result = error_guessing(FIELDS)
+    assert "公式に定めた" in result["notice"]
+    assert result["reference_taxonomies"]
+
+
 # =========================================================================
 # ユースケーステスト
 # =========================================================================
@@ -253,6 +287,30 @@ def test_use_case_declares_candidates_are_not_guaranteed() -> None:
 def test_use_case_not_applicable_without_transitions() -> None:
     result = use_case_testing([{"page_id": "only", "transitions": {"to": []}}])
     assert result["applicable"] is False
+
+
+def test_use_case_records_dropped_paths_not_silently() -> None:
+    """上限で捨てた迂回路を、件数と内容の両方で残す（黙って切らない）。"""
+    screens = [
+        {"page_id": "P1", "title": "入口", "transitions": {"to": ["P2", "P3", "P4", "GOAL"]}},
+        {"page_id": "P2", "title": "A", "transitions": {"to": ["P3", "GOAL"]}},
+        {"page_id": "P3", "title": "B", "transitions": {"to": ["P4", "GOAL"]}},
+        {"page_id": "P4", "title": "C", "transitions": {"to": ["GOAL"]}},
+        {"page_id": "GOAL", "title": "完了", "transitions": {"to": []}},
+    ]
+    result = use_case_testing(screens)
+    assert result["dropped_count"] > 0
+    assert len(result["dropped_paths"]) == result["dropped_count"]
+    for item in result["dropped_paths"]:
+        assert item["steps"]
+        assert "上限" in item["reason"] or "超過" in item["reason"]
+    assert "除外している" in result["notice"]
+
+
+def test_use_case_reports_no_drop_when_all_paths_fit() -> None:
+    result = use_case_testing([SCREEN, GOAL_SCREEN])
+    assert result["dropped_count"] == 0
+    assert "除外している" not in result["notice"]
 
 
 # =========================================================================

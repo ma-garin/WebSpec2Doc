@@ -77,7 +77,16 @@
 - 結果: discover 2.36s ／ クロール 16.61s ／ API 0.00s（いずれも 7 画面・3試行の中央値）
 - **判明した事実**: TTFV の支配項は**クロール本体（全体の約 88%）**。→ **P2-6 の発動条件が成立**。また UI の目安文言「10画面で2〜3分」は実測（10画面換算 約24秒）と乖離 → **P1-2 の必要性を確認**
 
-**P0-2 自 UI の機械 UX 監査（ドッグフーディング）**（見積 1h）
+**P0-2 自 UI の機械 UX 監査（ドッグフーディング）**（見積 1h）— ✅ **完了（2026-07-29）**
+- 結果: `docs/design/2026-07-29_self-ux-audit.md`。**axe critical 0 件で受入を満たす**
+- **監査が製品自身の欠陥 3 件で止まり、いずれも利用者にも実害があるものだった**（ドッグフーディングの最大の収穫）
+  - D-1 ログイン壁の誤検知 → password 欄が 1 つあるだけでクロールが 0 件で終わる。判定を「表示中のパスワード欄＋同一フォーム内の ID 欄」に精密化
+  - D-2 `<label>` 入れ子を認識せず、存在しないラベル不備を報告（N6 high 5→1）
+  - D-3 API エンドポイント（`content-type: text/markdown`）を画面として解析 → 画面数の水増し。非 HTML を除外
+- 併せて banner ランドマーク重複を修正（コンポーネント見出し 4 つの `<header>`→`<div>`、driver.js ポップオーバーに `role="presentation"`）。**いずれも見た目は不変**
+- **承認待ちに分離**: `color-contrast` × 9（トークン変更＝全画面の見た目に影響）、可視ラベル追加 2 件
+
+**P0-2（原文）**
 - 狙い: 満足性・アクセシビリティ。Nielsen/WCAG 準拠の欠陥洗い出し
 - 内容: 製品自身の `--ux-review`（axe-core＋Nielsen。`src/main.py --help` 確認済み・OPENAI_API_KEY 無しでも rules モードで動く）を `WEBSPEC2DOC_ALLOW_LOCAL=1` で自 UI（127.0.0.1:8765 の主要ビュー: dashboard / generate / auto-run / testcases / viewpoints / settings / run-history）へ実行。結果を `docs/design/2026-07-29_self-ux-audit.md` に Critical/Major/Minor で整理し、各件に処置（修正 or 却下＋理由）を付す
 - 承認: 監査自体は不要。**修正のうちレイアウトが変わるものは個別に mock 承認**（aria 属性追加など見た目が変わらない修正は不要）

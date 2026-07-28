@@ -98,10 +98,48 @@ def extract_internal_links(page: Page, base_url: str) -> list[str]:
     return list(dict.fromkeys(normalized_links))
 
 
+# ログインフォームらしさの判定スクリプト。
+# 「<input type=password> が存在する」だけを根拠にすると、API キーや Webhook URL を
+# type=password で伏せる設定画面や、ログイン画面を非表示のまま同梱する SPA を
+# ログイン壁と誤判定し、クロールが 1 件も取得できずに終わる（自製品で再現）。
+# そのため (1) 実際に表示されている (2) 同一フォーム内に ID/メール欄が対で存在する、
+# の両方を満たすパスワード欄だけをログインフォームの根拠とする。
+_LOGIN_FORM_SCRIPT = """
+(() => {
+  const isVisible = (el) => {
+    const rect = el.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return false;
+    const style = getComputedStyle(el);
+    return style.visibility !== 'hidden' && style.display !== 'none';
+  };
+  const passwords = Array.from(
+    document.querySelectorAll('input[type=password]')
+  ).filter(isVisible);
+  if (!passwords.length) return false;
+  const IDENTIFIER = /user|email|mail|login|account|uid|ユーザ|メール|アカウント/i;
+  const COMPANION_TYPES = ['text', 'email', 'tel', ''];
+  return passwords.some((password) => {
+    const scope = password.closest('form') || document.body;
+    return Array.from(scope.querySelectorAll('input')).some((input) => {
+      if (input === password) return false;
+      if (!COMPANION_TYPES.includes((input.type || '').toLowerCase())) return false;
+      const hints = [input.name, input.id, input.autocomplete, input.placeholder].join(' ');
+      return IDENTIFIER.test(hints);
+    });
+  });
+})()
+"""
+
+
 def has_password_field(page: Page) -> bool:
-    """ページ内に <input type=password> が存在するか（login wall 検出の素性）。"""
+    """ログインフォームらしいパスワード欄があるか（login wall 検出の素性）。
+
+    単なる ``<input type=password>`` の存在ではなく、表示されていて、かつ同一
+    フォーム内に ID／メールらしき入力欄が対で存在することを条件とする。詳細は
+    ``_LOGIN_FORM_SCRIPT`` のコメントを参照。
+    """
     try:
-        return page.query_selector("input[type=password]") is not None
+        return bool(page.evaluate(_LOGIN_FORM_SCRIPT))
     except Exception as exc:
         logger.warning("パスワード欄の判定に失敗しました: %s", exc)
         return False
@@ -461,6 +499,10 @@ _FORM_SCRIPT = """
         if (id && document.querySelector('label[for="' + id + '"]')) return true;
         if (field.getAttribute('aria-label')) return true;
         if (field.getAttribute('aria-labelledby')) return true;
+        // <label><input> テキスト</label> の入れ子も有効なラベル付けであり、
+        // これを見落とすと「ラベルなし」という誤った UX 所見を出してしまう。
+        const wrapping = field.closest('label');
+        if (wrapping && wrapping.innerText.trim()) return true;
         return false;
       })(),
       // 画面上に見えているラベル文言。テスト手順を「氏名 欄に入力」と書くために使う

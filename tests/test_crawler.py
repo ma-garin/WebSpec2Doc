@@ -207,8 +207,12 @@ class TestDiscoverOne:
         page.title.return_value = title
         page.eval_on_selector_all.return_value = hrefs
         page.url = "https://example.com/"
-        page.goto.return_value = MagicMock(status=200)
+        page.goto.return_value = MagicMock(status=200, headers={"content-type": "text/html"})
         page.query_selector.return_value = None
+        # has_password_field（ログインフォーム判定）と、リンク安定待ちの
+        # スクリプト有無判定はいずれも page.evaluate を使う。既定は「ログイン
+        # フォームなし／スクリプトなし」として、待たずに 1 回で確定させる。
+        page.evaluate.return_value = False
         return page
 
     def test_appends_url_and_title(self) -> None:
@@ -226,7 +230,8 @@ class TestDiscoverOne:
 
     def test_password_page_is_login_required(self) -> None:
         page = self._mock_page("ログイン", [])
-        page.query_selector.return_value = MagicMock()
+        # 表示中のパスワード欄と ID 欄が対で見つかった状態を模す
+        page.evaluate.return_value = True
         found: list[dict[str, object]] = []
         _discover_one(page, "https://example.com/", found)
         assert found[0]["login_required"] is True

@@ -276,13 +276,13 @@
 
             <div id="autorun-preview-panel" class="autorun-modal autorun-preview-modal" style="display:none">
               <div class="autorun-modal-panel autorun-preview-panel">
-                <header class="autorun-modal-head">
+                <div class="autorun-modal-head">
                   <span class="autorun-modal-title">テストケース・スクリプト確認</span>
                   <div class="autorun-preview-head-actions">
                     <span id="autorun-preview-loading" class="muted-copy"></span>
                     <button type="button" onclick="arShowPreview()" class="autorun-modal-close" aria-label="閉じる">×</button>
                   </div>
-                </header>
+                </div>
                 <div class="autorun-preview-tabs">
                   <button class="result-tab is-active autorun-preview-tab" data-ptab="cases">テストケース一覧</button>
                   <button class="result-tab autorun-preview-tab" data-ptab="script">スクリプト (.spec.ts)</button>
@@ -346,14 +346,14 @@
             <div id="autorun-chat-scrim" class="autorun-chat-scrim" hidden></div>
 
             <aside class="autorun-chat" id="autorun-chat" aria-label="QAアシスタント" aria-hidden="true">
-              <header class="autorun-chat-head">
+              <div class="autorun-chat-head">
                 <div>
                   <div class="section-kicker">QAアシスタント</div>
                   <p class="autorun-chat-sub" id="autorun-chat-context">受付</p>
                 </div>
                 <span class="autorun-chat-status" id="autorun-chat-status" aria-live="polite"></span>
                 <button type="button" id="autorun-chat-close" class="autorun-chat-close" aria-label="閉じる">×</button>
-              </header>
+              </div>
 
               <!-- 何について相談しているかを見失わせないための固定表示 -->
               <div id="autorun-chat-target" class="autorun-chat-target" style="display:none"></div>

@@ -82,6 +82,12 @@
   function addSkipButton(popover, opts) {
     popover.closeButton.setAttribute('aria-label', '操作ツアーをスキップ');
     popover.closeButton.setAttribute('title', 'スキップ');
+    // driver.js はポップオーバーのタイトルを <header> で描画するため、ページの
+    // banner ランドマークが2つになり axe の landmark-no-duplicate-banner に触れる。
+    // 見た目は変えずランドマークだけ無効化する（自製品の UX 監査で検出）。
+    if (popover.title && popover.title.tagName === 'HEADER') {
+      popover.title.setAttribute('role', 'presentation');
+    }
     if (popover.footerButtons.querySelector('.wsd-tour-skip')) return;
     const skip = document.createElement('button');
     skip.type = 'button';

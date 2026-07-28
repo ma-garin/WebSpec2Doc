@@ -29,22 +29,23 @@ from crawler.page_crawler import EmbeddedFrame
 # ---------- has_password_field ----------
 
 
-def test_has_password_field_true_when_present() -> None:
+def test_has_password_field_true_when_login_form_detected() -> None:
+    """表示中のパスワード欄と ID 欄が対で見つかった場合は True。"""
     page = MagicMock()
-    page.query_selector.return_value = MagicMock()
+    page.evaluate.return_value = True
     assert has_password_field(page) is True
-    page.query_selector.assert_called_once_with("input[type=password]")
+    assert page.evaluate.call_count == 1
 
 
 def test_has_password_field_false_when_absent() -> None:
     page = MagicMock()
-    page.query_selector.return_value = None
+    page.evaluate.return_value = False
     assert has_password_field(page) is False
 
 
 def test_has_password_field_false_on_error() -> None:
     page = MagicMock()
-    page.query_selector.side_effect = RuntimeError("boom")
+    page.evaluate.side_effect = RuntimeError("boom")
     assert has_password_field(page) is False
 
 

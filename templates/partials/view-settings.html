@@ -13,6 +13,31 @@
           </div>
 
           <div class="set-panel is-active" id="set-panel-api" role="tabpanel" aria-labelledby="set-tab-api">
+            <div class="input-card" style="margin-bottom:16px">
+              <h2 class="set-card-title">LLM プロバイダ</h2>
+              <p class="input-hint" style="margin-top:0;margin-bottom:14px">OpenAI（クラウド）と Ollama（ローカル）を切り替えます。Ollama は API キー不要で、ローカルの OpenAI 互換エンドポイントへ接続します。</p>
+              <div class="options-grid">
+                <div class="field full">
+                  <label for="llm-provider">プロバイダ</label>
+                  <select id="llm-provider" class="url-input" style="height:40px">
+                    <option value="openai">OpenAI（クラウド・APIキー必要）</option>
+                    <option value="ollama">Ollama（ローカル・APIキー不要）</option>
+                  </select>
+                </div>
+                <div class="field" id="ollama-base-url-field" style="display:none">
+                  <label for="llm-base-url">ベース URL</label>
+                  <input type="text" id="llm-base-url" placeholder="http://127.0.0.1:11434/v1">
+                </div>
+                <div class="field" id="ollama-model-field" style="display:none">
+                  <label for="llm-model">モデル</label>
+                  <input type="text" id="llm-model" placeholder="qwen2.5:3b">
+                </div>
+              </div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px">
+                <button class="btn-primary" id="save-llm-provider">プロバイダを保存</button>
+              </div>
+              <div class="settings-msg" id="llm-provider-msg">保存しました</div>
+            </div>
             <div class="input-card">
               <h2 class="set-card-title">OpenAI API キー・モデル</h2>
               <p class="input-hint" style="margin-top:0;margin-bottom:14px">キーは <code>.env</code> に保存されます（ブラウザには保存しません）。空欄で保存すると既存キーを保持します。</p>

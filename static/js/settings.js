@@ -99,6 +99,13 @@ async function loadServerSettings() {
       const modelEl = document.getElementById('api-model');
       if (modelEl) modelEl.value = data.openai_model;
     }
+    const providerEl = document.getElementById('llm-provider');
+    if (providerEl) providerEl.value = data.llm_provider || 'openai';
+    const baseUrlEl = document.getElementById('llm-base-url');
+    if (baseUrlEl) baseUrlEl.value = data.llm_base_url || '';
+    const llmModelEl = document.getElementById('llm-model');
+    if (llmModelEl) llmModelEl.value = data.llm_model || '';
+    syncLlmProviderFields();
     await loadAllowLocalToggle();
   } catch (e) { /* 設定読み込み失敗は無視 */ }
 }
@@ -123,6 +130,41 @@ async function saveApiKey() {
     }
   } catch (e) { showToast('設定の保存に失敗しました', 'error'); }
 }
+
+const OLLAMA_DEFAULT_BASE_URL = 'http://127.0.0.1:11434/v1';
+const OLLAMA_DEFAULT_MODEL = 'qwen2.5:3b';
+
+// プロバイダ選択に応じて Ollama 用の入力欄を出し分ける
+function syncLlmProviderFields() {
+  const provider = document.getElementById('llm-provider')?.value || 'openai';
+  const display = provider === 'ollama' ? '' : 'none';
+  const baseField = document.getElementById('ollama-base-url-field');
+  const modelField = document.getElementById('ollama-model-field');
+  if (baseField) baseField.style.display = display;
+  if (modelField) modelField.style.display = display;
+}
+
+async function saveLlmProvider() {
+  const provider = document.getElementById('llm-provider')?.value || 'openai';
+  const form = new FormData();
+  form.append('llm_provider', provider);
+  if (provider === 'ollama') {
+    form.append('llm_base_url', document.getElementById('llm-base-url')?.value?.trim() || OLLAMA_DEFAULT_BASE_URL);
+    form.append('llm_model', document.getElementById('llm-model')?.value?.trim() || OLLAMA_DEFAULT_MODEL);
+  }
+  try {
+    const res = await fetch('/api/settings', { method: 'POST', body: form });
+    const data = await res.json();
+    if (data.ok) {
+      const msg = document.getElementById('llm-provider-msg'); msg.classList.add('show');
+      setTimeout(() => msg.classList.remove('show'), 2500);
+      await loadServerSettings();
+    }
+  } catch (e) { showToast('プロバイダの保存に失敗しました', 'error'); }
+}
+
+document.getElementById('llm-provider')?.addEventListener('change', syncLlmProviderFields);
+document.getElementById('save-llm-provider')?.addEventListener('click', saveLlmProvider);
 
 async function testConnection() {
   const btn = document.getElementById('test-connection');

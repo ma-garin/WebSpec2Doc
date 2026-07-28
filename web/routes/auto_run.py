@@ -1554,7 +1554,9 @@ def _execute_tests(job: AutoRunJob) -> None:
         job._proc = None
 
     if job._cancelled:
-        job.add_log("中止により、テスト実行をここで打ち切りました（部分結果はファイルに残ります）。")
+        job.add_log(
+            "中止により、テスト実行をここで打ち切りました（部分結果はファイルに残ります）。"
+        )
         return
 
     job.test_results = result

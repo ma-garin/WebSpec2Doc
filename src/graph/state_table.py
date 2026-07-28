@@ -204,9 +204,7 @@ def _id_for_url(by_id: dict[str, dict[str, Any]], url: str) -> str:
     return next((sid for sid, sc in by_id.items() if str(sc.get("url", "")) == url), "")
 
 
-def _is_common_event(
-    event_id: str, event_sources: set[str], states_with_exits: set[str]
-) -> bool:
+def _is_common_event(event_id: str, event_sources: set[str], states_with_exits: set[str]) -> bool:
     """遷移元になりうる全状態がそのイベントを受け付けるなら共通ナビとみなす。
 
     フォーム送信は特定画面にしか存在しないため常に共通ではない。
@@ -229,9 +227,9 @@ def build_state_table(screens: list[dict[str, Any]]) -> StateTable:
     by_id = {_screen_id(s): s for s in valid_screens}
     linked_to: set[str] = set()
     for screen in valid_screens:
-        transitions = screen.get("transitions")
-        if isinstance(transitions, dict):
-            linked_to.update(str(t) for t in (transitions.get("to") or []))
+        screen_transitions = screen.get("transitions")
+        if isinstance(screen_transitions, dict):
+            linked_to.update(str(t) for t in (screen_transitions.get("to") or []))
 
     # ---- 状態 ----
     # 他から張られていない画面を初期状態とする。ただしトップへ戻る導線が全画面に

@@ -216,9 +216,7 @@ def classification_tree(screen: dict[str, Any]) -> dict[str, Any]:
             "technique": TECHNIQUE_CLASSIFICATION_TREE,
             "reason": "クラスを構成できる入力項目が観測されていません。",
         }
-    total_classes = sum(
-        len(c.classes) for b in tree.branches for c in b.classifications
-    )
+    total_classes = sum(len(c.classes) for b in tree.branches for c in b.classifications)
     total_rows = sum(len(b.combinations) for b in tree.branches)
     truncated = sum(c.truncated for b in tree.branches for c in b.classifications)
     return {
@@ -235,8 +233,6 @@ def classification_tree(screen: dict[str, Any]) -> dict[str, Any]:
         ),
         "truncated_classes": truncated,
         "notice": (
-            f"選択肢が多い項目で {truncated} クラスを表示上限で除外した。"
-            if truncated
-            else ""
+            f"選択肢が多い項目で {truncated} クラスを表示上限で除外した。" if truncated else ""
         ),
     }

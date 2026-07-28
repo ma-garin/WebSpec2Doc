@@ -102,9 +102,7 @@ def build_array(prime: int, factor_count: int) -> OrthogonalArray | None:
                 for row_vec in product(range(prime), repeat=power)
             )
             name = f"L{row_count}({prime}^{factor_count})"
-            return OrthogonalArray(
-                name=name, levels=prime, rows=rows, column_count=factor_count
-            )
+            return OrthogonalArray(name=name, levels=prime, rows=rows, column_count=factor_count)
         power += 1
 
 
@@ -179,8 +177,7 @@ def orthogonal_array(fields: list[dict[str, Any]]) -> dict[str, Any]:
     cases: list[dict[str, Any]] = []
     for row_index, row in enumerate(array.rows, start=1):
         selection = {
-            name: levels[row[col] % len(levels)]
-            for col, (name, levels) in enumerate(factors)
+            name: levels[row[col] % len(levels)] for col, (name, levels) in enumerate(factors)
         }
         cases.append({"case": f"OA{row_index}", "selection": selection})
 

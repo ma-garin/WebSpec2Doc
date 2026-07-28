@@ -75,9 +75,10 @@ def test_classification_tree_covers_every_class_at_least_once() -> None:
                 appeared.add((name, label))
         for classification in branch.classifications:
             for cls in classification.classes:
-                assert (classification.name, cls.label) in appeared, (
-                    f"{classification.name} のクラス「{cls.label}」が被覆されていない"
-                )
+                assert (
+                    classification.name,
+                    cls.label,
+                ) in appeared, f"{classification.name} のクラス「{cls.label}」が被覆されていない"
 
 
 def test_classification_tree_row_count_is_lower_bound() -> None:
@@ -123,9 +124,7 @@ def test_classification_tree_not_applicable_without_fields() -> None:
         (5, 6, "L25(5^6)"),
     ],
 )
-def test_build_array_produces_standard_arrays(
-    prime: int, factors: int, expected_name: str
-) -> None:
+def test_build_array_produces_standard_arrays(prime: int, factors: int, expected_name: str) -> None:
     """文献の標準直交表と同じ形（行数・列数）が生成される。"""
     array = build_array(prime, factors)
     assert array is not None
@@ -252,9 +251,9 @@ def test_every_defect_category_maps_to_an_external_taxonomy() -> None:
         ]
     ]
     result = error_guessing(all_fields)
-    assert result["unmapped_categories"] == [], (
-        f"外部体系へ対応付けられていない分類がある: {result['unmapped_categories']}"
-    )
+    assert (
+        result["unmapped_categories"] == []
+    ), f"外部体系へ対応付けられていない分類がある: {result['unmapped_categories']}"
     for category in result["categories"]:
         assert CATEGORY_STANDARD[category]
 

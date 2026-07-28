@@ -488,11 +488,15 @@ function renderDiscovered() {
       <div class="disc-item-login-panel" data-login-url="${escHtml(loginUrl)}">
         <div class="disc-item-login-header">🔒 この画面へのアクセスに認証が必要です <span class="disc-item-login-urlpath">ログインURL: ${escHtml(loginUrlDisplay)}</span></div>
         <div class="disc-item-login-body">
-          <div class="disc-item-login-row">
-            <input type="text" class="disc-item-login-user url-input disc-item-login-input" placeholder="ID / メールアドレス" autocomplete="username" />
-            <input type="password" class="disc-item-login-pass url-input disc-item-login-input" placeholder="パスワード" autocomplete="current-password" />
-            <button type="button" class="btn-primary disc-item-login-btn">ログイン</button>
-          </div>
+          <!-- パスワード欄が form の外にあるとブラウザが警告を出し、パスワード管理も
+               効かないため form で包む。送信は JS が行うので既定の送信は抑止する。 -->
+          <form class="disc-item-login-form" autocomplete="on" onsubmit="return false">
+            <div class="disc-item-login-row">
+              <input type="text" class="disc-item-login-user url-input disc-item-login-input" placeholder="ID / メールアドレス" autocomplete="username" />
+              <input type="password" class="disc-item-login-pass url-input disc-item-login-input" placeholder="パスワード" autocomplete="current-password" />
+              <button type="button" class="btn-primary disc-item-login-btn">ログイン</button>
+            </div>
+          </form>
           <div class="disc-item-login-loading discover-loading" style="display:none;margin-top:6px"><span class="spinner"></span><span>ログインしています…</span></div>
           <div class="disc-item-login-status input-field-message" style="margin-top:4px"></div>
         </div>

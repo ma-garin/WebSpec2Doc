@@ -597,6 +597,50 @@ def _goto_for_discover(page: Page, url: str) -> Any:
     return page.goto(url, wait_until="domcontentloaded", timeout=DEFAULT_TIMEOUT_MS)
 
 
+# リンク数の安定待ち。JS 描画でリンクが後から増えるサイトを取り逃さないための上限と刻み。
+# MIN は「描画が始まる前に切り上げない」ための下限。実測で 300ms 後に描画する SPA を
+# 取り逃したため、安定判定だけでの早期打ち切りは行わない。
+LINK_SETTLE_STEP_MS = 120
+LINK_SETTLE_MIN_MS = 480
+LINK_SETTLE_MAX_MS = 960
+LINK_SETTLE_STABLE_ROUNDS = 2
+
+
+def _extract_links_settled(page: Page, url: str) -> tuple[str, ...]:
+    """リンクを抽出する。JS 描画で後から増える場合に備え、増加が止まるまで短時間待つ。
+
+    `networkidle` は「500ms 間ネットワークが静止すること」を条件とするため、瞬時に
+    読み終わるページにも必ず 500ms 以上の税がかかる。ここでは代わりにリンク数そのものを
+    観測し、増加が止まった時点で切り上げる。スクリプトを持たないページは後から
+    リンクが増えようがないため、待たずに返す。
+    """
+    from crawler.link_extractor import extract_internal_links
+
+    links = tuple(extract_internal_links(page, url))
+    try:
+        has_script = bool(page.evaluate("() => document.scripts.length > 0"))
+    except PlaywrightError:
+        has_script = True
+    if not has_script:
+        return links
+
+    waited_ms = 0
+    stable_rounds = 0
+    while waited_ms < LINK_SETTLE_MAX_MS:
+        page.wait_for_timeout(LINK_SETTLE_STEP_MS)
+        waited_ms += LINK_SETTLE_STEP_MS
+        current = tuple(extract_internal_links(page, url))
+        if len(current) > len(links):
+            links = current
+            stable_rounds = 0
+            continue
+        stable_rounds += 1
+        # 下限を満たす前に打ち切ると、遅れて描画される SPA を取り逃す。
+        if waited_ms >= LINK_SETTLE_MIN_MS and stable_rounds >= LINK_SETTLE_STABLE_ROUNDS:
+            break
+    return links
+
+
 def _guard_session(page: Page, url: str, auth_state: Path | None) -> None:
     """認証付きクロールの入口で保存セッションの失効を確認する（#7）。
     失効（login wall 検出）時は SessionExpiredError を送出しクロールを中断する。
@@ -655,14 +699,10 @@ def _discover_one(page: Page, url: str, found: list[dict[str, object]]) -> tuple
     )
     if verdict.is_login_required:
         return ()
-    links = tuple(extract_internal_links(page, normalized))
-    if links or signals.status >= 400:
-        # エラーページ（404 等）はリンクが無いのが正常なので、SPA 判定の対象にしない。
-        return links
-    # リンクが 1 件も取れないのは、JS 描画後にしかリンクが現れない SPA の可能性がある。
-    # この場合だけ networkidle まで待って取り直す（静的サイトに 500ms の税を課さない）。
-    _wait_network_idle(page, normalized)
-    return tuple(extract_internal_links(page, normalized))
+    if signals.status >= 400:
+        # エラーページ（404 等）はリンクが無いのが正常なので、待たずに返す。
+        return tuple(extract_internal_links(page, normalized))
+    return _extract_links_settled(page, normalized)
 
 
 _GEOMETRY_SCRIPT = """

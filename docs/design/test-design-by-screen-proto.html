@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>テスト設計 → 画面別設計 — デザイン案10種</title>
+<style>
+  :root{
+    --primary:#1976D2; --primary-dark:#0D47A1; --primary-soft:#E8F1FB;
+    --bg:#F4F6F9; --surface:#fff; --surface-soft:#F8FAFC;
+    --border:#E3E8EF; --border-strong:#CBD5E1;
+    --text:#1B2733; --text-muted:#64748B;
+    --ok:#0F9D58; --critical:#D93025; --idle:#94A3B8; --warn:#B45309; --warn-bg:#FEF3C7;
+    --cc-req:#D93025; --cc-req-bg:#FCE8E6;
+    --cc-bound:#B45309; --cc-bound-bg:#FEF3C7;
+    --cc-format:#0369A1; --cc-format-bg:#E0F2FE;
+    --cc-opt:#0F9D58; --cc-opt-bg:#E6F4EA;
+    --cc-other:#64748B; --cc-other-bg:#EEF2F6;
+    --t-st:#0E7490; --t-disp:#475569; --t-eg:#6B7280;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+    font-size:14px;line-height:1.6}
+  .page{max-width:1260px;margin:0 auto;padding:22px 16px 70px}
+  h1{font-size:19px;margin:0 0 6px}
+  .lead{color:var(--text-muted);font-size:13px;margin:0 0 10px}
+  .fixed{background:var(--primary-soft);border-left:3px solid var(--primary);
+    padding:11px 14px;border-radius:0 8px 8px 0;font-size:12.5px;margin:0 0 14px}
+  .fixed b{color:var(--primary-dark)}
+  .fixed ul{margin:5px 0 0;padding-left:19px}
+
+  .switch{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px}
+  .switch button{border:1px solid var(--border-strong);background:var(--surface);border-radius:8px;
+    padding:6px 11px;font:inherit;font-size:11.5px;color:var(--text-muted);cursor:pointer;
+    display:flex;flex-direction:column;line-height:1.3;min-width:96px;text-align:left}
+  .switch button span{font-size:9.5px;opacity:.85}
+  .switch button.on{border-color:var(--primary);background:var(--primary-soft);
+    color:var(--primary-dark);font-weight:700}
+
+  .app{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;
+    box-shadow:0 1px 3px rgba(16,24,40,.1)}
+  .topbar{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--border)}
+  .crumb{font-size:11.5px;color:var(--text-muted)} .crumb b{color:var(--text)}
+  .topbar .sp{flex:1}
+  .tb-btn{border:1px solid var(--border-strong);border-radius:6px;background:var(--surface);
+    color:var(--text-muted);font-size:11px;padding:3px 9px}
+  .rbody{display:grid;grid-template-columns:158px 1fr;min-height:560px}
+  .rtabs{background:var(--surface-soft);border-right:1px solid var(--border);padding:10px 8px}
+  .chap{font-size:10px;font-weight:700;letter-spacing:.05em;color:var(--text-muted);padding:9px 8px 3px}
+  .rtab{display:block;width:100%;text-align:left;border:0;background:transparent;padding:6px 10px;
+    border-radius:6px;font:inherit;font-size:12.5px;color:var(--text-muted);margin-bottom:2px}
+  .rtab.on{background:var(--primary-soft);color:var(--primary-dark);font-weight:700}
+  .rtab .n{color:var(--text-muted);font-weight:400;font-size:11px}
+  .rmain{padding:12px 14px 16px;min-width:0}
+  .subtabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px;border-bottom:1px solid var(--border)}
+  .subtab{border:0;background:transparent;padding:7px 13px;font:inherit;font-size:12.5px;
+    color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+  .subtab.on{color:var(--primary-dark);font-weight:700;border-bottom-color:var(--primary)}
+
+  /* 「画面と仕様」と同じ骨格（全案共通・変更しない） */
+  .rpt-pane-wrap{display:grid;grid-template-columns:214px 1fr;border:1px solid var(--border);
+    border-radius:8px;overflow:hidden;min-height:500px}
+  .rpt-list{background:var(--surface-soft);border-right:1px solid var(--border);overflow:auto;max-height:560px}
+  .rpt-list-item{padding:9px 11px;border-bottom:1px solid var(--border);cursor:pointer}
+  .rpt-list-item.is-active{background:var(--primary-soft);box-shadow:inset 3px 0 0 var(--primary)}
+  .rpt-list-item strong{display:block;font-size:12.5px;color:var(--primary-dark)}
+  .rpt-list-item span{display:block;font-size:10.5px;color:var(--text-muted);white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis}
+  .rpt-list-item em{display:block;font-style:normal;font-size:10px;font-weight:700;color:var(--primary);margin-top:2px}
+  .rpt-detail{padding:14px 16px;overflow:auto;max-height:560px;min-width:0}
+  .rpt-detail-header h3{font-size:16px;margin:0 0 4px}
+  .rpt-url{font-size:11px;color:var(--text-muted);font-family:ui-monospace,monospace;word-break:break-all}
+  .rpt-screenshot-caption{font-size:10.5px;color:var(--text-muted);text-align:right;max-width:520px;margin:0 0 10px}
+  .rpt-transitions{background:var(--surface-soft);border:1px solid var(--border);border-radius:6px;
+    padding:8px 11px;font-size:11.5px;color:var(--text-muted);margin-bottom:14px}
+  .shot{width:100%;max-width:520px;height:138px;border:1px solid var(--border);border-radius:6px;
+    margin:12px 0 3px;background:linear-gradient(180deg,#fff 0 42%,#3f4448 42% 60%,#fafafa 60% 100%);
+    position:relative;overflow:hidden}
+  .shot::before{content:"HOTEL PLANISPHERE";position:absolute;top:15px;left:0;right:0;text-align:center;
+    font-size:16px;letter-spacing:.06em;color:#333}
+  .shot::after{content:"Home     Reserve     Sign up     Login";position:absolute;top:65px;left:0;right:0;
+    text-align:center;font-size:9px;color:#e8e8e8;letter-spacing:.04em}
+
+  /* 設計ブロック共通 */
+  .tds-block{border:1px solid var(--primary);border-radius:8px;overflow:hidden;margin-bottom:12px}
+  .tds-head{background:var(--primary-soft);padding:7px 11px;font-size:12px;font-weight:700;
+    color:var(--primary-dark);display:flex;align-items:center;gap:8px}
+  .tds-head .cnt{margin-left:auto;font-size:11px;color:var(--primary-dark);font-weight:400}
+  table.tds{width:100%;border-collapse:collapse;font-size:11.5px;background:#fff}
+  table.tds th{background:var(--surface-soft);color:var(--text-muted);font-size:10.5px;text-align:left;
+    padding:6px 9px;border-bottom:1px solid var(--border);font-weight:700;white-space:nowrap}
+  table.tds td{padding:7px 9px;border-bottom:1px solid var(--border);vertical-align:top}
+  table.tds tr:last-child td{border-bottom:none}
+  table.tds td.num{text-align:right;font-weight:800;font-family:ui-monospace,monospace}
+  .el-name{font-weight:700}
+  .el-type{color:var(--text-muted);font-size:10.5px}
+  .why{display:block;font-size:10px;color:var(--text-muted);line-height:1.45;margin-top:3px}
+  .pill{display:inline-block;padding:1px 7px;border-radius:999px;font-size:9.5px;font-weight:700;
+    white-space:nowrap;border:1px solid currentColor;line-height:1.5;margin:0 3px 3px 0}
+  .p-st{color:var(--t-st)} .p-disp{color:var(--t-disp)} .p-eg{color:var(--t-eg)}
+  .cond{display:inline-block;padding:1px 8px;border-radius:999px;font-size:10px;font-weight:700;
+    margin:0 4px 4px 0;line-height:1.6}
+  .cc-req{background:var(--cc-req-bg);color:var(--cc-req)}
+  .cc-bound{background:var(--cc-bound-bg);color:var(--cc-bound)}
+  .cc-format{background:var(--cc-format-bg);color:var(--cc-format)}
+  .cc-opt{background:var(--cc-opt-bg);color:var(--cc-opt)}
+  .cc-other{background:var(--cc-other-bg);color:var(--cc-other)}
+  .tds-policy{border:1px solid var(--border);border-radius:8px;padding:9px 11px;margin-bottom:12px;
+    background:var(--surface-soft);font-size:11.5px}
+  .tds-policy b{display:block;margin-bottom:5px}
+  .tds-policy .off{color:var(--text-muted);line-height:1.6}
+
+  /* 案2 カード */
+  .cards{display:grid;gap:8px}
+  .ecard{border:1px solid var(--border);border-radius:8px;padding:10px 12px;background:#fff}
+  .ecard-h{display:flex;align-items:baseline;gap:8px;margin-bottom:5px}
+  .ecard-h .k{font-size:9.5px;font-weight:700;color:var(--text-muted);background:var(--surface-soft);
+    border-radius:4px;padding:1px 6px}
+  .ecard-h b{font-size:12.5px}
+  .ecard-h .c{margin-left:auto;font-size:10.5px;font-weight:800;color:var(--primary-dark)}
+  .ecard-row{display:flex;gap:8px;font-size:11px;margin-top:4px}
+  .ecard-row .lab{color:var(--text-muted);min-width:56px;flex:none;font-weight:700;font-size:10px;padding-top:2px}
+
+  /* 案3 条件主役 */
+  .cond-lead{font-weight:700;font-size:11.5px}
+
+  /* 案4 マトリクス */
+  table.mx{width:100%;border-collapse:collapse;font-size:11px;background:#fff}
+  table.mx th{background:var(--surface-soft);color:var(--text-muted);font-size:9.5px;padding:5px 4px;
+    border:1px solid var(--border);font-weight:700;text-align:center}
+  table.mx th.lft{text-align:left;width:180px}
+  table.mx td{border:1px solid var(--border);padding:5px 4px;text-align:center;font-weight:700}
+  table.mx td.lft{text-align:left;font-weight:400}
+  .mx-on{background:var(--cc-opt-bg);color:var(--cc-opt)}
+  .mx-off{background:#FCFDFE;color:#D7DEE7}
+
+  /* 案5 グルーピング */
+  .grp{margin-bottom:12px}
+  .grp-h{background:var(--surface-soft);border:1px solid var(--border);border-bottom:none;
+    border-radius:7px 7px 0 0;padding:7px 11px;font-size:11.5px;font-weight:700;
+    display:flex;align-items:center;gap:8px}
+  .grp-h .pol{font-weight:400;color:var(--text-muted);font-size:10.5px}
+  .grp-h .c{margin-left:auto;font-size:10.5px;color:var(--primary-dark)}
+  .grp table.tds{border:1px solid var(--border);border-radius:0 0 7px 7px}
+
+  /* 案6 チェックリスト */
+  .ck{border:1px solid var(--border);border-radius:8px;background:#fff;overflow:hidden}
+  .ck-sec{border-bottom:1px solid var(--border)}
+  .ck-sec:last-child{border-bottom:none}
+  .ck-sec-h{background:var(--surface-soft);padding:6px 11px;font-size:11px;font-weight:700;color:var(--text-muted)}
+  .ck-row{display:flex;gap:9px;padding:7px 11px;border-top:1px solid var(--border);font-size:11.5px;align-items:flex-start}
+  .ck-row .bx{width:13px;height:13px;border:1.5px solid var(--border-strong);border-radius:3px;flex:none;margin-top:3px}
+  .ck-row .txt{flex:1}
+  .ck-row .src{font-size:10px;color:var(--text-muted)}
+
+  /* 案7 2カラム */
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:960px){.twocol{grid-template-columns:1fr}}
+
+  /* 案8 タイムライン */
+  .tl{position:relative;padding-left:20px}
+  .tl::before{content:"";position:absolute;left:5px;top:6px;bottom:6px;width:2px;background:var(--border)}
+  .tl-item{position:relative;margin-bottom:10px}
+  .tl-item::before{content:"";position:absolute;left:-19px;top:6px;width:9px;height:9px;border-radius:50%;
+    background:var(--primary);border:2px solid #fff;box-shadow:0 0 0 1px var(--border)}
+  .tl-item b{font-size:12px;display:block}
+  .tl-item .m{font-size:10.5px;color:var(--text-muted)}
+
+  /* 案9 アコーディオン */
+  .acc{border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff}
+  .acc-row{border-bottom:1px solid var(--border)}
+  .acc-row:last-child{border-bottom:none}
+  .acc-sum{display:flex;align-items:center;gap:9px;padding:8px 11px;cursor:pointer;font-size:11.5px}
+  .acc-sum .k{font-size:9.5px;font-weight:700;color:var(--text-muted);background:var(--surface-soft);
+    border-radius:4px;padding:1px 6px;flex:none}
+  .acc-sum b{flex:1;font-size:12px}
+  .acc-sum .c{font-size:10.5px;font-weight:800;color:var(--primary-dark)}
+  .acc-sum .ar{color:var(--text-muted);font-size:10px}
+  .acc-body{padding:0 11px 10px 46px;font-size:11px}
+  .acc-row.open .acc-body{display:block}
+  .acc-row .acc-body{display:none}
+
+  /* 案10 サマリー先出し */
+  .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:11px}
+  .kpi div{border:1px solid var(--border);border-radius:8px;padding:8px 10px;background:var(--surface-soft)}
+  .kpi .n{display:block;font-size:19px;font-weight:800;line-height:1.15}
+  .kpi .l{display:block;font-size:10.5px;color:var(--text-muted)}
+
+  .pc{margin-top:13px;font-size:12.5px;display:grid;gap:3px}
+  .pc .pro::before{content:"利点 ";color:var(--ok);font-weight:700}
+  .pc .con::before{content:"欠点 ";color:var(--warn);font-weight:700}
+  .hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>テスト設計 →「画面別設計」 デザイン案10種</h1>
+<p class="lead">上のボタンで案を切り替えます。基準画面は <b>P002（フォームなし）</b>。</p>
+<div class="fixed">
+  <b>全案で固定した条件</b>
+  <ul>
+    <li>「画面と仕様」と<b>同一の骨格</b>（左：画面リスト／右：タイトル・URL・スクリーンショット・遷移先/遷移元）</li>
+    <li>右ペイン最後の<b>「ページ要素」の表だけ</b>を設計に置換する</li>
+    <li><b>テストケースは載せない</b>（入力値・手順・期待結果は「テストケース」タブの担当）</li>
+  </ul>
+  変えているのは<b>設計ブロックの表現だけ</b>です。
+</div>
+
+<div class="switch" id="sw">
+  <button class="on" data-v="1">案1<span>要素の表</span></button>
+  <button data-v="2">案2<span>要素カード</span></button>
+  <button data-v="3">案3<span>条件が主役</span></button>
+  <button data-v="4">案4<span>要素×技法</span></button>
+  <button data-v="5">案5<span>種別グループ</span></button>
+  <button data-v="6">案6<span>チェックリスト</span></button>
+  <button data-v="7">案7<span>2カラム</span></button>
+  <button data-v="8">案8<span>導出の流れ</span></button>
+  <button data-v="9">案9<span>折りたたみ</span></button>
+  <button data-v="10">案10<span>サマリー先出し</span></button>
+</div>
+
+<div class="app">
+  <div class="topbar">
+    <div class="crumb">ダッシュボード / <b>hotel-example-site.takeyaqa.dev</b></div>
+    <div class="sp"></div>
+    <span class="tb-btn">↓ エクスポート</span><span class="tb-btn">再解析</span><span class="tb-btn">≡</span>
+  </div>
+  <div class="rbody">
+    <nav class="rtabs">
+      <div class="chap">読む</div>
+      <button class="rtab">概要</button>
+      <button class="rtab">画面と仕様 <span class="n">12</span></button>
+      <div class="chap">設計する</div>
+      <button class="rtab on">テスト設計 <span class="n">28</span></button>
+      <button class="rtab">テストケース <span class="n">1146</span></button>
+      <button class="rtab">画面遷移</button>
+      <div class="chap">実行する</div>
+      <button class="rtab">テスト実行</button>
+      <div class="chap">記録</div>
+      <button class="rtab">履歴・差分 <span class="n">18</span></button>
+    </nav>
+
+    <div class="rmain">
+      <div class="subtabs">
+        <button class="subtab on">画面別設計</button>
+        <button class="subtab">条件マトリクス</button>
+        <button class="subtab">技法サマリー</button>
+        <button class="subtab">技法詳細</button>
+        <button class="subtab">技法別設計（MBT）</button>
+      </div>
+
+      <div class="rpt-pane-wrap">
+        <div class="rpt-list">
+          <div class="rpt-list-item"><strong>P001</strong><span>HOTEL PLANISPHERE - テスト自動化…</span><em>要素7・条件9</em></div>
+          <div class="rpt-list-item is-active"><strong>P002</strong><span>HOTEL PLANISPHERE - Website…</span><em>要素8・条件12</em></div>
+          <div class="rpt-list-item"><strong>P005</strong><span>Plans | HOTEL PLANISPHERE…</span><em>要素6・条件8</em></div>
+          <div class="rpt-list-item"><strong>P008</strong><span>宿泊プラン一覧 | HOTEL…</span><em>2項目・条件5</em></div>
+          <div class="rpt-list-item"><strong>P011</strong><span>Reservation | HOTEL PLANISPHERE</span><em>14項目・条件28</em></div>
+          <div class="rpt-list-item"><strong>P012</strong><span>Confirm | HOTEL PLANISPHERE</span><em>3項目・条件7</em></div>
+          <div class="rpt-list-item"><strong>P013</strong><span>Sign up | HOTEL PLANISPHERE</span><em>6項目・条件16</em></div>
+        </div>
+
+        <div class="rpt-detail">
+          <div class="rpt-detail-header">
+            <h3>HOTEL PLANISPHERE - Website for Practice Test Automation</h3>
+            <code class="rpt-url">https://hotel-example-site.takeyaqa.dev/en-US</code>
+          </div>
+          <div class="shot"></div>
+          <p class="rpt-screenshot-caption">クリックで全画面表示</p>
+          <div class="rpt-transitions">遷移先: HOTEL PLANISPHERE、Plans | HOTEL PLANISPHERE、Sign up ／ 遷移元: HOTEL PLANISPHERE - テスト自動化練習サイト</div>
+
+          <!-- ══════ 案1: 要素の表 ══════ -->
+          <div data-p="1">
+            <div class="tds-block">
+              <div class="tds-head">ページ要素のテスト設計（フォームなし）<span class="cnt">8 要素 → 12 テスト条件</span></div>
+              <table class="tds">
+                <thead><tr><th style="width:56px">種別</th><th style="width:184px">要素</th>
+                  <th style="width:158px">適用技法</th><th>テスト条件</th><th style="width:44px">条件数</th></tr></thead>
+                <tbody>
+                  <tr><td class="el-type">見出し</td><td class="el-name">HOTEL PLANISPHERE</td>
+                    <td><span class="pill p-disp">表示確認</span><span class="why">静的テキスト。入力も分岐も無い</span></td>
+                    <td><span class="cond cc-other">見出しが表示される</span></td><td class="num">1</td></tr>
+                  <tr><td class="el-type">見出し</td><td class="el-name">Notice</td>
+                    <td><span class="pill p-disp">表示確認</span><span class="why">告知領域。本文に外部リンクを含む</span></td>
+                    <td><span class="cond cc-other">見出しが表示される</span><span class="cond cc-format">本文中のリンク先が到達可能</span></td><td class="num">2</td></tr>
+                  <tr><td class="el-type">見出し</td><td class="el-name">This site is a sandbox to practice…</td>
+                    <td><span class="pill p-disp">表示確認</span><span class="why">静的テキスト</span></td>
+                    <td><span class="cond cc-other">説明文が表示される</span></td><td class="num">1</td></tr>
+                  <tr><td class="el-type">リンク</td><td class="el-name">Home</td>
+                    <td><span class="pill p-st">状態遷移</span><span class="why">遷移先が自画面</span></td>
+                    <td><span class="cond cc-other">現在の画面が再表示される</span></td><td class="num">1</td></tr>
+                  <tr><td class="el-type">リンク</td><td class="el-name">Reserve</td>
+                    <td><span class="pill p-st">状態遷移</span><span class="why">遷移先 P008 を解析済み。往復で 0-switch を構成</span></td>
+                    <td><span class="cond cc-other">宿泊プラン一覧へ遷移する</span><span class="cond cc-other">戻ると本画面に復帰する</span></td><td class="num">2</td></tr>
+                  <tr><td class="el-type">リンク</td><td class="el-name">Sign up</td>
+                    <td><span class="pill p-st">状態遷移</span><span class="why">遷移先 P013 を解析済み</span></td>
+                    <td><span class="cond cc-other">会員登録画面へ遷移する</span></td><td class="num">1</td></tr>
+                  <tr><td class="el-type">ボタン</td><td class="el-name">Login</td>
+                    <td><span class="pill p-st">状態遷移</span><span class="pill p-eg">エラー推測</span><span class="why">認証境界。未ログインからの入口で欠陥が集まりやすい</span></td>
+                    <td><span class="cond cc-other">ログイン画面へ遷移する</span><span class="cond cc-req">未ログインで直接URLを叩くと弾かれる</span><span class="cond cc-other">連打で多重遷移しない</span></td><td class="num">3</td></tr>
+                  <tr><td class="el-type">画面</td><td class="el-name">（画面全体）</td>
+                    <td><span class="pill p-eg">エラー推測</span><span class="why">環境分類。言語が URL パスに現れる</span></td>
+                    <td><span class="cond cc-other">/ja と /en-US で表示言語が切り替わる</span></td><td class="num">1</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="tds-policy"><b>適用しなかった技法とその理由</b>
+              <div class="off">同値分割・境界値分析・デシジョンテーブル・ペアワイズ・分類ツリー法・直交表・原因結果グラフ・ドメイン分析 — <b>入力項目が0件のため適用対象がありません。</b></div></div>
+            <div class="pc"><span class="pro">「画面と仕様」の項目表と列構成が近く、両タブを行き来しても目が迷わない。</span>
+              <span class="con">条件が多い要素で行が縦に伸び、行の高さが不揃いになる。</span></div>
+          </div>
+
+          <!-- ══════ 案2: 要素カード ══════ -->
+          <div data-p="2" class="hidden">
+            <div class="tds-block">
+              <div class="tds-head">ページ要素のテスト設計（フォームなし）<span class="cnt">8 要素 → 12 テスト条件</span></div>
+              <div style="padding:10px;background:var(--surface-soft)"><div class="cards">
+                <div class="ecard"><div class="ecard-h"><span class="k">見出し</span><b>HOTEL PLANISPHERE</b><span class="c">1 条件</span></div>
+                  <div class="ecard-row"><span class="lab">技法</span><div><span class="pill p-disp">表示確認</span><span class="why">静的テキスト。入力も分岐も無い</span></div></div>
+                  <div class="ecard-row"><span class="lab">条件</span><div><span class="cond cc-other">見出しが表示される</span></div></div></div>
+                <div class="ecard"><div class="ecard-h"><span class="k">見出し</span><b>Notice</b><span class="c">2 条件</span></div>
+                  <div class="ecard-row"><span class="lab">技法</span><div><span class="pill p-disp">表示確認</span><span class="why">告知領域。本文に外部リンクを含む</span></div></div>
+                  <div class="ecard-row"><span class="lab">条件</span><div><span class="cond cc-other">見出しが表示される</span><span class="cond cc-format">本文中のリンク先が到達可能</span></div></div></div>
+                <div class="ecard"><div class="ecard-h"><span class="k">リンク</span><b>Reserve</b><span class="c">2 条件</span></div>
+                  <div class="ecard-row"><span class="lab">技法</span><div><span class="pill p-st">状態遷移</span><span class="why">遷移先 P008 を解析済み。往復で 0-switch を構成</span></div></div>
+                  <div class="ecard-row"><span class="lab">条件</span><div><span class="cond cc-other">宿泊プラン一覧へ遷移する</span><span class="cond cc-other">戻ると本画面に復帰する</span></div></div></div>
+                <div class="ecard"><div class="ecard-h"><span class="k">ボタン</span><b>Login</b><span class="c">3 条件</span></div>
+                  <div class="ecard-row"><span class="lab">技法</span><div><span class="pill p-st">状態遷移</span><span class="pill p-eg">エラー推測</span><span class="why">認証境界。未ログインからの入口で欠陥が集まりやすい</span></div></div>
+                  <div class="ecard-row"><span class="lab">条件</span><div><span class="cond cc-other">ログイン画面へ遷移する</span><span class="cond cc-req">未ログインで直接URLを叩くと弾かれる</span><span class="cond cc-other">連打で多重遷移しない</span></div></div></div>
+                <div class="ecard"><div class="ecard-h"><span class="k">画面</span><b>（画面全体）</b><span class="c">1 条件</span></div>
+                  <div class="ecard-row"><span class="lab">技法</span><div><span class="pill p-eg">エラー推測</span><span class="why">環境分類。言語が URL パスに現れる</span></div></div>
+                  <div class="ecard-row"><span class="lab">条件</span><div><span class="cond cc-other">/ja と /en-US で表示言語が切り替わる</span></div></div></div>
+              </div></div>
+            </div>
+            <div class="pc"><span class="pro">1要素の情報がまとまり、条件が多くても崩れない。横スクロールが発生しない。</span>
+              <span class="con">要素同士の比較がしにくい。縦に最も長くなる。</span></div>
+          </div>
+
+          <!-- ══════ 案3: 条件が主役 ══════ -->
+          <div data-p="3" class="hidden">
+            <div class="tds-block">
+              <div class="tds-head">この画面のテスト条件<span class="cnt">12 条件 ／ 由来 8 要素</span></div>
+              <table class="tds">
+                <thead><tr><th style="width:34px">No</th><th>テスト条件</th>
+                  <th style="width:170px">由来した要素</th><th style="width:126px">導出技法</th></tr></thead>
+                <tbody>
+                  <tr><td class="num">1</td><td class="cond-lead">見出し「HOTEL PLANISPHERE」が表示される</td>
+                    <td class="el-type">見出し / HOTEL PLANISPHERE</td><td><span class="pill p-disp">表示確認</span></td></tr>
+                  <tr><td class="num">2</td><td class="cond-lead">見出し「Notice」が表示される</td>
+                    <td class="el-type">見出し / Notice</td><td><span class="pill p-disp">表示確認</span></td></tr>
+                  <tr><td class="num">3</td><td class="cond-lead">告知本文中のリンク先が到達可能である</td>
+                    <td class="el-type">見出し / Notice</td><td><span class="pill p-disp">表示確認</span></td></tr>
+                  <tr><td class="num">4</td><td class="cond-lead">説明文が表示される</td>
+                    <td class="el-type">見出し / This site is a sandbox…</td><td><span class="pill p-disp">表示確認</span></td></tr>
+                  <tr><td class="num">5</td><td class="cond-lead">Home をクリックすると現在の画面が再表示される</td>
+                    <td class="el-type">リンク / Home</td><td><span class="pill p-st">状態遷移</span></td></tr>
+                  <tr><td class="num">6</td><td class="cond-lead">Reserve から宿泊プラン一覧へ遷移する</td>
+                    <td class="el-type">リンク / Reserve</td><td><span class="pill p-st">状態遷移</span></td></tr>
+                  <tr><td class="num">7</td><td class="cond-lead">遷移後に戻ると本画面へ復帰する</td>
+                    <td class="el-type">リンク / Reserve</td><td><span class="pill p-st">状態遷移</span></td></tr>
+                  <tr><td class="num">8</td><td class="cond-lead">Sign up から会員登録画面へ遷移する</td>
+                    <td class="el-type">リンク / Sign up</td><td><span class="pill p-st">状態遷移</span></td></tr>
+                  <tr><td class="num">9</td><td class="cond-lead">Login からログイン画面へ遷移する</td>
+                    <td class="el-type">ボタン / Login</td><td><span class="pill p-st">状態遷移</span></td></tr>
+                  <tr><td class="num">10</td><td class="cond-lead">未ログインで保護URLを直接叩くと弾かれる</td>
+                    <td class="el-type">ボタン / Login</td><td><span class="pill p-eg">エラー推測</span></td></tr>
+                  <tr><td class="num">11</td><td class="cond-lead">Login を連打しても多重遷移しない</td>
+                    <td class="el-type">ボタン / Login</td><td><span class="pill p-eg">エラー推測</span></td></tr>
+                  <tr><td class="num">12</td><td class="cond-lead">/ja と /en-US で表示言語が切り替わる</td>
+                    <td class="el-type">画面 / 全体</td><td><span class="pill p-eg">エラー推測</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="pc"><span class="pro">設計書としての体裁に最も近く、条件に通し番号が振れる。テストケースとの対応が取りやすい。</span>
+              <span class="con">要素の網羅性が見えない。どの要素が設計されていないかが分からない。</span></div>
+          </div>
+
+          <!-- ══════ 案4: 要素×技法マトリクス ══════ -->
+          <div data-p="4" class="hidden">
+            <div class="tds-block">
+              <div class="tds-head">要素 × 技法の適用マトリクス<span class="cnt">セルの数字＝テスト条件数</span></div>
+              <div style="padding:10px;overflow-x:auto">
+                <table class="mx">
+                  <thead><tr><th class="lft">要素</th><th>表示<br>確認</th><th>状態<br>遷移</th><th>エラー<br>推測</th>
+                    <th>同値<br>分割</th><th>境界値<br>分析</th><th>デシジョン<br>テーブル</th><th>ペア<br>ワイズ</th><th>計</th></tr></thead>
+                  <tbody>
+                    <tr><td class="lft">見出し / HOTEL PLANISPHERE</td><td class="mx-on">1</td><td class="mx-off">−</td><td class="mx-off">−</td><td class="mx-off">−</td><td class="mx-off">−</td><td class="mx-off">−</td><td class="mx-off">−</td><td>1</td></tr>
+                    <tr><td class="lft">見出し / Notice</td><td class="mx-on">2</td><td class="mx-off">−</td><td class="mx-off">−</td><td class="mx-off">−</td><td class="mx-off">−</td><td class="mx-off">−</td><td class="mx-off">−</td><td>2</td></tr>
+                    <tr><td class="lft">見出し / This site is a sandbox…</td><td class="mx-on">1</td><td class="mx-off">−</td><td class="mx-off">−</td><td class="mx-off">−</td><td class="mx-off">−</td><td class="mx-off">−</td><td class="mx-off">−</td><td>1</td></tr>
+                    <tr><td class="lft">リンク / Home</td><td class="mx-off">−</td><td class="mx-on">1</td><td class="mx-off">−</td><td class="mx-off">−</td><td class="mx-off">−</td><td class="mx-off">−</td><td class="mx-off">−</td><td>1</td></tr>
+                    <tr><td class="lft">リンク / Reserve</td><td class="mx-off">−</td><td class="mx-on">2</td><td class="mx-off">−</td><td class="mx-off">−</td><td class="mx-off">−</td><td class="mx-off">−</td><td class="mx-off">−</td><td>2</td></tr>
+                    <tr><td class="lft">リンク / Sign up</td><td class="mx-off">−</td><td class="mx-on">1</td><td class="mx-off">−</td><td class="mx-off">−</td><td class="mx-off">−</td><td class="mx-off">−</td><td class="mx-off">−</td><td>1</td></tr>
+                    <tr><td class="lft">ボタン / Login</td><td class="mx-off">−</td><td class="mx-on">1</td><td class="mx-on">2</td><td class="mx-off">−</td><td class="mx-off">−</td><td class="mx-off">−</td><td class="mx-off">−</td><td>3</td></tr>
+                    <tr><td class="lft">画面 / 全体</td><td class="mx-off">−</td><td class="mx-off">−</td><td class="mx-on">1</td><td class="mx-off">−</td><td class="mx-off">−</td><td class="mx-off">−</td><td class="mx-off">−</td><td>1</td></tr>
+                  </tbody>
+                </table>
+                <p style="font-size:11px;color:var(--text-muted);margin:9px 0 0">
+                  <b>灰色の列が広い＝入力項目が無い画面。</b>同値分割から右の4技法はこの画面に適用対象がありません。</p>
+              </div>
+            </div>
+            <div class="pc"><span class="pro">技法の当たり外れが「面」で見え、設計が薄い要素が空白として現れる。画面間の比較にも使える。</span>
+              <span class="con">テスト条件の中身が読めない。数字だけでは何を確認するのか分からない。</span></div>
+          </div>
+
+          <!-- ══════ 案5: 種別グループ ══════ -->
+          <div data-p="5" class="hidden">
+            <div class="grp">
+              <div class="grp-h">見出し <span class="pol">静的テキスト → 表示確認のみ</span><span class="c">3 要素 / 4 条件</span></div>
+              <table class="tds"><tbody>
+                <tr><td class="el-name" style="width:238px">HOTEL PLANISPHERE</td><td><span class="cond cc-other">見出しが表示される</span></td><td class="num" style="width:44px">1</td></tr>
+                <tr><td class="el-name">Notice</td><td><span class="cond cc-other">見出しが表示される</span><span class="cond cc-format">本文中のリンク先が到達可能</span></td><td class="num">2</td></tr>
+                <tr><td class="el-name">This site is a sandbox to practice…</td><td><span class="cond cc-other">説明文が表示される</span></td><td class="num">1</td></tr>
+              </tbody></table>
+            </div>
+            <div class="grp">
+              <div class="grp-h">リンク・ボタン <span class="pol">遷移先が解析済み → 状態遷移。認証境界にはエラー推測を追加</span><span class="c">4 要素 / 7 条件</span></div>
+              <table class="tds"><tbody>
+                <tr><td class="el-name" style="width:238px">Home</td><td><span class="cond cc-other">現在の画面が再表示される</span></td><td class="num" style="width:44px">1</td></tr>
+                <tr><td class="el-name">Reserve</td><td><span class="cond cc-other">宿泊プラン一覧へ遷移する</span><span class="cond cc-other">戻ると本画面に復帰する</span></td><td class="num">2</td></tr>
+                <tr><td class="el-name">Sign up</td><td><span class="cond cc-other">会員登録画面へ遷移する</span></td><td class="num">1</td></tr>
+                <tr><td class="el-name">Login <span class="pill p-eg" style="margin-left:5px">エラー推測</span></td><td><span class="cond cc-other">ログイン画面へ遷移する</span><span class="cond cc-req">未ログインで直接URLを叩くと弾かれる</span><span class="cond cc-other">連打で多重遷移しない</span></td><td class="num">3</td></tr>
+              </tbody></table>
+            </div>
+            <div class="grp">
+              <div class="grp-h">画面全体 <span class="pol">環境分類 → エラー推測</span><span class="c">1 要素 / 1 条件</span></div>
+              <table class="tds"><tbody>
+                <tr><td class="el-name" style="width:238px">（画面全体）</td><td><span class="cond cc-other">/ja と /en-US で表示言語が切り替わる</span></td><td class="num" style="width:44px">1</td></tr>
+              </tbody></table>
+            </div>
+            <div class="grp">
+              <div class="grp-h" style="color:var(--text-muted)">入力項目 <span class="pol">この画面には0件。同値分割・境界値・DT・ペアワイズ等は適用対象なし</span><span class="c">0 要素</span></div>
+            </div>
+            <div class="pc"><span class="pro">種別ごとに設計方針を1行で示せるため、「なぜその技法か」が要素ごとに繰り返されず簡潔になる。</span>
+              <span class="con">同じ種別に例外的な要素（Login）が混ざると、グループの方針と行の内容がずれる。</span></div>
+          </div>
+
+          <!-- ══════ 案6: チェックリスト ══════ -->
+          <div data-p="6" class="hidden">
+            <div class="ck">
+              <div class="ck-sec"><div class="ck-sec-h">表示確認　3要素 / 4条件</div>
+                <div class="ck-row"><span class="bx"></span><span class="txt">見出し「HOTEL PLANISPHERE」が表示される<span class="src">　← 見出し / HOTEL PLANISPHERE</span></span></div>
+                <div class="ck-row"><span class="bx"></span><span class="txt">見出し「Notice」が表示される<span class="src">　← 見出し / Notice</span></span></div>
+                <div class="ck-row"><span class="bx"></span><span class="txt">告知本文中のリンク先が到達可能である<span class="src">　← 見出し / Notice</span></span></div>
+                <div class="ck-row"><span class="bx"></span><span class="txt">説明文が表示される<span class="src">　← 見出し / This site is a sandbox…</span></span></div>
+              </div>
+              <div class="ck-sec"><div class="ck-sec-h">状態遷移　4要素 / 5条件</div>
+                <div class="ck-row"><span class="bx"></span><span class="txt">Home で現在の画面が再表示される<span class="src">　← リンク / Home</span></span></div>
+                <div class="ck-row"><span class="bx"></span><span class="txt">Reserve から宿泊プラン一覧へ遷移する<span class="src">　← リンク / Reserve</span></span></div>
+                <div class="ck-row"><span class="bx"></span><span class="txt">遷移後に戻ると本画面へ復帰する<span class="src">　← リンク / Reserve</span></span></div>
+                <div class="ck-row"><span class="bx"></span><span class="txt">Sign up から会員登録画面へ遷移する<span class="src">　← リンク / Sign up</span></span></div>
+                <div class="ck-row"><span class="bx"></span><span class="txt">Login からログイン画面へ遷移する<span class="src">　← ボタン / Login</span></span></div>
+              </div>
+              <div class="ck-sec"><div class="ck-sec-h">エラー推測　2要素 / 3条件</div>
+                <div class="ck-row"><span class="bx"></span><span class="txt">未ログインで保護URLを直接叩くと弾かれる<span class="src">　← ボタン / Login</span></span></div>
+                <div class="ck-row"><span class="bx"></span><span class="txt">Login を連打しても多重遷移しない<span class="src">　← ボタン / Login</span></span></div>
+                <div class="ck-row"><span class="bx"></span><span class="txt">/ja と /en-US で表示言語が切り替わる<span class="src">　← 画面 / 全体</span></span></div>
+              </div>
+            </div>
+            <div class="pc"><span class="pro">レビュー時にそのまま使える。設計の抜けを潰す作業に向き、印刷・共有もしやすい。</span>
+              <span class="con">技法が見出しになり要素が従になるため、「どの要素にどう挑むか」という視点が弱まる。</span></div>
+          </div>
+
+          <!-- ══════ 案7: 2カラム ══════ -->
+          <div data-p="7" class="hidden">
+            <div class="tds-block">
+              <div class="tds-head">ページ要素のテスト設計（フォームなし）<span class="cnt">8 要素 → 12 テスト条件</span></div>
+              <div style="padding:10px;background:var(--surface-soft)"><div class="twocol">
+                <div class="ecard"><div class="ecard-h"><span class="k">見出し</span><b>HOTEL PLANISPHERE</b><span class="c">1</span></div>
+                  <div><span class="pill p-disp">表示確認</span></div>
+                  <div style="margin-top:4px"><span class="cond cc-other">見出しが表示される</span></div></div>
+                <div class="ecard"><div class="ecard-h"><span class="k">見出し</span><b>Notice</b><span class="c">2</span></div>
+                  <div><span class="pill p-disp">表示確認</span></div>
+                  <div style="margin-top:4px"><span class="cond cc-other">見出しが表示される</span><span class="cond cc-format">リンク先が到達可能</span></div></div>
+                <div class="ecard"><div class="ecard-h"><span class="k">見出し</span><b>This site is a sandbox…</b><span class="c">1</span></div>
+                  <div><span class="pill p-disp">表示確認</span></div>
+                  <div style="margin-top:4px"><span class="cond cc-other">説明文が表示される</span></div></div>
+                <div class="ecard"><div class="ecard-h"><span class="k">リンク</span><b>Home</b><span class="c">1</span></div>
+                  <div><span class="pill p-st">状態遷移</span></div>
+                  <div style="margin-top:4px"><span class="cond cc-other">現在の画面が再表示される</span></div></div>
+                <div class="ecard"><div class="ecard-h"><span class="k">リンク</span><b>Reserve</b><span class="c">2</span></div>
+                  <div><span class="pill p-st">状態遷移</span></div>
+                  <div style="margin-top:4px"><span class="cond cc-other">宿泊プラン一覧へ遷移</span><span class="cond cc-other">戻ると復帰する</span></div></div>
+                <div class="ecard"><div class="ecard-h"><span class="k">ボタン</span><b>Login</b><span class="c">3</span></div>
+                  <div><span class="pill p-st">状態遷移</span><span class="pill p-eg">エラー推測</span></div>
+                  <div style="margin-top:4px"><span class="cond cc-other">ログイン画面へ遷移</span><span class="cond cc-req">未ログインで弾かれる</span><span class="cond cc-other">連打で多重遷移しない</span></div></div>
+              </div></div>
+            </div>
+            <div class="pc"><span class="pro">縦の長さが案2の半分になる。要素が多い画面（P011 の14項目）でも一覧できる。</span>
+              <span class="con">1枚あたりが狭く、技法の選定理由を書ききれない。理由はホバー等に逃がす必要がある。</span></div>
+          </div>
+
+          <!-- ══════ 案8: 導出の流れ ══════ -->
+          <div data-p="8" class="hidden">
+            <div class="tds-block">
+              <div class="tds-head">設計の導出過程<span class="cnt">観測 → 技法選定 → テスト条件</span></div>
+              <div style="padding:12px 14px"><div class="tl">
+                <div class="tl-item"><b>① 観測された要素</b>
+                  <div class="m">見出し3件・リンク3件・ボタン1件を検出。<b>入力フォームは0件。</b></div></div>
+                <div class="tl-item"><b>② 適用できる技法の判定</b>
+                  <div class="m">入力項目が無いため、同値分割・境界値分析・デシジョンテーブル・ペアワイズ・分類ツリー法・直交表・原因結果グラフ・ドメイン分析は<b>いずれも適用対象なし</b>。
+                    残るのは表示確認・状態遷移・エラー推測の3つ。</div></div>
+                <div class="tl-item"><b>③ 技法ごとの割り当て</b>
+                  <div class="m">
+                    <span class="pill p-disp">表示確認</span> 見出し3件（静的テキスト）<br>
+                    <span class="pill p-st">状態遷移</span> リンク3件・ボタン1件（遷移先が解析済み）<br>
+                    <span class="pill p-eg">エラー推測</span> Login（認証境界）・画面全体（言語切替）</div></div>
+                <div class="tl-item"><b>④ 導出されたテスト条件 12 件</b>
+                  <div class="m" style="margin-top:5px">
+                    <span class="cond cc-other">見出しが表示される ×3</span><span class="cond cc-format">リンク先が到達可能</span>
+                    <span class="cond cc-other">遷移する ×4</span><span class="cond cc-other">戻ると復帰する</span>
+                    <span class="cond cc-req">未ログインで弾かれる</span><span class="cond cc-other">連打で多重遷移しない</span>
+                    <span class="cond cc-other">言語が切り替わる</span></div></div>
+              </div></div>
+            </div>
+            <div class="pc"><span class="pro">「なぜこの設計になったか」が上から順に追え、レビューで根拠を問われたときに答えられる。</span>
+              <span class="con">個々の要素と条件の対応を引くのに向かない。要素数が増えると流れが冗長になる。</span></div>
+          </div>
+
+          <!-- ══════ 案9: 折りたたみ ══════ -->
+          <div data-p="9" class="hidden">
+            <div class="tds-block">
+              <div class="tds-head">ページ要素のテスト設計（フォームなし）<span class="cnt">8 要素 → 12 テスト条件</span></div>
+              <div class="acc">
+                <div class="acc-row"><div class="acc-sum"><span class="k">見出し</span><b>HOTEL PLANISPHERE</b>
+                  <span><span class="pill p-disp">表示確認</span></span><span class="c">1</span><span class="ar">▸</span></div></div>
+                <div class="acc-row"><div class="acc-sum"><span class="k">見出し</span><b>Notice</b>
+                  <span><span class="pill p-disp">表示確認</span></span><span class="c">2</span><span class="ar">▸</span></div></div>
+                <div class="acc-row"><div class="acc-sum"><span class="k">見出し</span><b>This site is a sandbox…</b>
+                  <span><span class="pill p-disp">表示確認</span></span><span class="c">1</span><span class="ar">▸</span></div></div>
+                <div class="acc-row"><div class="acc-sum"><span class="k">リンク</span><b>Home</b>
+                  <span><span class="pill p-st">状態遷移</span></span><span class="c">1</span><span class="ar">▸</span></div></div>
+                <div class="acc-row"><div class="acc-sum"><span class="k">リンク</span><b>Reserve</b>
+                  <span><span class="pill p-st">状態遷移</span></span><span class="c">2</span><span class="ar">▸</span></div></div>
+                <div class="acc-row"><div class="acc-sum"><span class="k">リンク</span><b>Sign up</b>
+                  <span><span class="pill p-st">状態遷移</span></span><span class="c">1</span><span class="ar">▸</span></div></div>
+                <div class="acc-row open"><div class="acc-sum"><span class="k">ボタン</span><b>Login</b>
+                  <span><span class="pill p-st">状態遷移</span><span class="pill p-eg">エラー推測</span></span><span class="c">3</span><span class="ar">▾</span></div>
+                  <div class="acc-body">
+                    <div class="why" style="margin:0 0 6px">認証境界。未ログイン状態からの入口であり欠陥が集まりやすいため、状態遷移にエラー推測を併用する。</div>
+                    <span class="cond cc-other">ログイン画面へ遷移する</span><span class="cond cc-req">未ログインで直接URLを叩くと弾かれる</span><span class="cond cc-other">連打で多重遷移しない</span></div></div>
+                <div class="acc-row"><div class="acc-sum"><span class="k">画面</span><b>（画面全体）</b>
+                  <span><span class="pill p-eg">エラー推測</span></span><span class="c">1</span><span class="ar">▸</span></div></div>
+              </div>
+            </div>
+            <div class="pc"><span class="pro">既定では要素の一覧性が最も高く、P011 の14項目でも1画面に収まる。深掘りは開いたときだけ。</span>
+              <span class="con">閉じている間はテスト条件が読めず、設計書として通読・印刷ができない。</span></div>
+          </div>
+
+          <!-- ══════ 案10: サマリー先出し ══════ -->
+          <div data-p="10" class="hidden">
+            <div class="kpi">
+              <div><span class="n">8</span><span class="l">要素</span></div>
+              <div><span class="n">12</span><span class="l">テスト条件</span></div>
+              <div><span class="n">3</span><span class="l">適用技法</span></div>
+              <div><span class="n" style="color:var(--warn)">8</span><span class="l">適用外の技法</span></div>
+            </div>
+            <div class="tds-policy" style="background:var(--warn-bg);border-color:#FDE68A;color:#78350F">
+              <b>この画面の設計方針</b>
+              入力項目が0件のため、値に関する技法（同値分割・境界値分析・デシジョンテーブル・ペアワイズ・分類ツリー法・直交表・原因結果グラフ・ドメイン分析）は<b>いずれも適用対象がありません</b>。設計は<b>表示確認</b>と<b>遷移確認</b>に限定されます。
+            </div>
+            <div class="tds-block">
+              <div class="tds-head">要素ごとの設計<span class="cnt">8 要素</span></div>
+              <table class="tds">
+                <thead><tr><th style="width:56px">種別</th><th style="width:190px">要素</th>
+                  <th style="width:150px">適用技法</th><th>テスト条件</th><th style="width:44px">条件数</th></tr></thead>
+                <tbody>
+                  <tr><td class="el-type">見出し</td><td class="el-name">HOTEL PLANISPHERE</td><td><span class="pill p-disp">表示確認</span></td>
+                    <td><span class="cond cc-other">見出しが表示される</span></td><td class="num">1</td></tr>
+                  <tr><td class="el-type">見出し</td><td class="el-name">Notice</td><td><span class="pill p-disp">表示確認</span></td>
+                    <td><span class="cond cc-other">見出しが表示される</span><span class="cond cc-format">本文中のリンク先が到達可能</span></td><td class="num">2</td></tr>
+                  <tr><td class="el-type">リンク</td><td class="el-name">Reserve</td><td><span class="pill p-st">状態遷移</span></td>
+                    <td><span class="cond cc-other">宿泊プラン一覧へ遷移する</span><span class="cond cc-other">戻ると本画面に復帰する</span></td><td class="num">2</td></tr>
+                  <tr><td class="el-type">ボタン</td><td class="el-name">Login</td><td><span class="pill p-st">状態遷移</span><span class="pill p-eg">エラー推測</span></td>
+                    <td><span class="cond cc-other">ログイン画面へ遷移する</span><span class="cond cc-req">未ログインで直接URLを叩くと弾かれる</span><span class="cond cc-other">連打で多重遷移しない</span></td><td class="num">3</td></tr>
+                  <tr><td class="el-type">画面</td><td class="el-name">（画面全体）</td><td><span class="pill p-eg">エラー推測</span></td>
+                    <td><span class="cond cc-other">/ja と /en-US で表示言語が切り替わる</span></td><td class="num">1</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="pc"><span class="pro">画面を開いた瞬間に規模と方針が分かる。適用外8技法を数値で先に出すため「設計が薄い」と誤解されない。</span>
+              <span class="con">タイル4枚ぶん縦を消費し、表の開始位置が下がる。要素の少ない画面では冗長。</span></div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll('#sw button').forEach(function(b){
+    b.addEventListener('click', function(){
+      document.querySelectorAll('#sw button').forEach(function(x){ x.classList.toggle('on', x === b); });
+      document.querySelectorAll('[data-p]').forEach(function(p){ p.classList.toggle('hidden', p.dataset.p !== b.dataset.v); });
+    });
+  });
+</script>
+</div>
+</body>
+</html>

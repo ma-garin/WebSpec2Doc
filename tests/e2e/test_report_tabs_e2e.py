@@ -113,19 +113,36 @@ class TestTabStructure:
 class TestSubTabs:
     """複合タブのサブタブ切替の検証。"""
 
-    def test_all_four_design_subtabs_visible_at_900px(self, page: Page) -> None:
-        """R3-14: 技法タブの視認性。幅900pxでも4つ目（技法別設計 MBT）が
-        overflow-x スクロールの陰に隠れず、折返し表示で常に視認できること。"""
+    # テスト設計タブのサブタブ（templates/partials/view-generate.html の並び順）
+    DESIGN_SUBTABS = (
+        ("by-screen", "画面別設計"),
+        ("matrix", "条件マトリクス"),
+        ("summary", "技法サマリー"),
+        ("detail", "技法詳細"),
+        ("mbt", "技法別設計"),
+    )
+
+    def test_all_design_subtabs_visible_at_900px(self, page: Page) -> None:
+        """R3-14: 技法タブの視認性。幅900pxでも最後（技法別設計 MBT）まで
+        overflow-x スクロールの陰に隠れず、折返し表示で常に視認できること。
+
+        .result-subtabs は flex-wrap:wrap のため、5件になっても横にはみ出さず
+        2行へ折り返す。順序は画面別設計 → 条件マトリクス → 技法サマリー →
+        技法詳細 → 技法別設計（MBT）。"""
         page.set_viewport_size({"width": 900, "height": 700})
         _open_report(page)
         page.locator('.result-tab[data-tab="test-design"]').click()
         tabs = page.locator("#rp-test-design .result-subtabs .result-subtab")
-        expect(tabs).to_have_count(4)
-        for i in range(4):
-            box = tabs.nth(i).bounding_box()
-            assert box is not None, f"サブタブ{i}のbounding_boxが取得できない"
-            assert box["x"] + box["width"] <= 900, f"サブタブ{i}が画面外にはみ出している: {box}"
-        expect(tabs.nth(3)).to_have_text(re.compile("技法別設計"))
+        expect(tabs).to_have_count(len(self.DESIGN_SUBTABS))
+        for i, (sub, label) in enumerate(self.DESIGN_SUBTABS):
+            tab = tabs.nth(i)
+            expect(tab).to_have_attribute("data-sub", sub)
+            expect(tab).to_have_text(re.compile(label))
+            box = tab.bounding_box()
+            assert box is not None, f"サブタブ{i}({sub})のbounding_boxが取得できない"
+            assert (
+                box["x"] + box["width"] <= 900
+            ), f"サブタブ{i}({sub})が画面外にはみ出している: {box}"
 
 
 class TestRunsTab:

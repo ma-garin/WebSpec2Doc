@@ -1969,7 +1969,8 @@
       "core_files": [
         "src/generator/testcase_table.py",
         "web/services/testcase_table_store.py",
-        "web/services/testcase_spec_generator.py"
+        "web/services/testcase_spec_generator.py",
+        "web/services/screen_test_design.py"
       ],
       "symbols": [
         "build_testcase_table",

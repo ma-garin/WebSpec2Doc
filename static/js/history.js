@@ -55,7 +55,7 @@ function _emptyState() {
       <button type="button" class="btn-outline-sm empty-demo-btn" data-onboarding-demo>
         同梱デモサイトのURLを使う
       </button>
-      <p style="font-size:12px;color:var(--text-muted);margin-top:4px">所要時間の目安: 10画面のサイトで約2〜3分</p>
+      <p style="font-size:12px;color:var(--text-muted);margin-top:4px">所要時間の目安: 1画面あたり約2〜3秒（10画面で30秒前後）</p>
     </div>`;
 }
 

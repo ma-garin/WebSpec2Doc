@@ -236,19 +236,15 @@ def _spawn_and_wait(
     子プロセスを終了させられない。中止可能にする呼び出し元だけがこの Popen 経路を通る。
     """
     if on_proc is None:
-        return subprocess.run(
-            cmd, capture_output=True, text=True, timeout=timeout_sec, env=env
-        )
-    proc = subprocess.Popen(
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env
-    )
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_sec, env=env)
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env)
     on_proc(proc)
     try:
         stdout, stderr = proc.communicate(timeout=timeout_sec)
-    except subprocess.TimeoutExpired:
+    except subprocess.TimeoutExpired as err:
         proc.kill()
         stdout, stderr = proc.communicate()
-        raise subprocess.TimeoutExpired(cmd, timeout_sec, output=stdout, stderr=stderr)
+        raise subprocess.TimeoutExpired(cmd, timeout_sec, output=stdout, stderr=stderr) from err
     return subprocess.CompletedProcess(cmd, proc.returncode, stdout=stdout, stderr=stderr)
 
 

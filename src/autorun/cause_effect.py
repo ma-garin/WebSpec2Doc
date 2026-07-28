@@ -120,7 +120,9 @@ def _conditions_of(field: dict[str, Any]) -> list[tuple[str, str, str]]:
     name = _field_name(field)
     out: list[tuple[str, str, str]] = []
     if field.get("required"):
-        out.append((f"「{name}」が入力されている", f"「{name}」の必須エラーが表示される", "required"))
+        out.append(
+            (f"「{name}」が入力されている", f"「{name}」の必須エラーが表示される", "required")
+        )
     if field.get("maxlength") not in (None, ""):
         limit = field["maxlength"]
         out.append(

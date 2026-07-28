@@ -195,9 +195,9 @@ def generate_pairwise_cases(fields: list[FieldData]) -> list[dict[str, str]]:
         ]
 
     result = generate_covering_array(list(rep_values), 2)
-    return [
-        {active[i].name: row[i] for i in range(len(active))} for row in result.rows
-    ][:_MAX_PAIRWISE_CASES]
+    return [{active[i].name: row[i] for i in range(len(active))} for row in result.rows][
+        :_MAX_PAIRWISE_CASES
+    ]
 
 
 def generate_decision_table(

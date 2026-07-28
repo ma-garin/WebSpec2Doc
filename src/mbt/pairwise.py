@@ -13,7 +13,6 @@ IPO/IPOG 系）。ここでは貪欲法で「全ての値ペアを最低1回含�
 
 from __future__ import annotations
 
-from itertools import combinations
 from typing import Any
 
 CLAIM_SCOPE = "measured_options_only"
@@ -92,5 +91,3 @@ def build_pairwise_cases(report: dict[str, Any]) -> list[dict[str, Any]]:
                 }
             )
     return cases
-
-

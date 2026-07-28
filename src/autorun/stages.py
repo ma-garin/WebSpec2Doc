@@ -792,7 +792,7 @@ def _technique_items(obs: Observation | None) -> list[StageItem]:
             )
         items.extend(_extended_technique_items(applied, page_id, title))
 
-    items.extend(_cross_screen_technique_items(obs.screens))
+    items.extend(_cross_screen_technique_items(list(obs.screens)))
     return items
 
 
@@ -806,9 +806,7 @@ _EXTENDED_TECHNIQUES: tuple[tuple[str, str], ...] = (
 )
 
 
-def _extended_technique_items(
-    applied: dict[str, Any], page_id: str, title: str
-) -> list[StageItem]:
+def _extended_technique_items(applied: dict[str, Any], page_id: str, title: str) -> list[StageItem]:
     """分類ツリー法・直交表・原因結果グラフ・ドメイン分析・エラー推測を項目化する。"""
     items: list[StageItem] = []
     for key, unit in _EXTENDED_TECHNIQUES:
@@ -876,7 +874,9 @@ def _format_classification_tree(block: dict[str, Any]) -> str:
 
 
 def _format_orthogonal_array(block: dict[str, Any]) -> str:
-    lines = [f"使用する表: {block['array']}（直交性検査: {'合格' if block['orthogonal'] else '不合格'}）"]
+    lines = [
+        f"使用する表: {block['array']}（直交性検査: {'合格' if block['orthogonal'] else '不合格'}）"
+    ]
     lines.append("因子と水準:")
     for name, levels in block["factors"].items():
         lines.append(f"  {name}: {' / '.join(levels)}")

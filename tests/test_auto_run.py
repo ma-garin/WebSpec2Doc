@@ -138,9 +138,7 @@ class TestAutoRunJob:
         job = _make_job()
         threading.Timer(0.3, job.cancel).start()
         start = _time.monotonic()
-        _run_child_process(
-            job, [sys.executable, "-c", "import time; time.sleep(30)"], timeout=20
-        )
+        _run_child_process(job, [sys.executable, "-c", "import time; time.sleep(30)"], timeout=20)
         assert job._cancelled
         assert _time.monotonic() - start < 10
 

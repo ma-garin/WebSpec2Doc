@@ -96,6 +96,12 @@ async function showResults(domain, tab, sub) {
   setTabCount('tab-count-screens', screenCount);
   setTabCount('tab-count-test-design', fieldCount);
   setTabCount('tab-count-history', snapCount);
+  // テストケース件数は表本体の描画（タブを開いたとき）でしか設定されておらず、
+  // 開くまでバッジが空だった。他タブと揃えてレポート表示時に取得する。
+  fetch('/api/testcases/count?domain=' + encodeURIComponent(domain))
+    .then(r => (r.ok ? r.json() : null))
+    .then(d => { if (d) setTabCount('tab-count-testcases', d.count || 0); })
+    .catch(() => { /* 件数が出せなくても本体の表示は妨げない */ });
 
   // 文書突合タブ（doc_fusion.json 存在時のみ表示 — AC-4/AC-5）
   docFusionData = null;
@@ -138,7 +144,7 @@ function _updateKpiHero(s, required, data) {
   } else {
     setText('k-conds', '—');
     setText('k-cases', '—');
-    setText('k-hours-sub', '再観測で算出');
+    setText('k-hours-sub', '再解析で算出');
   }
 
   // テストケース表から実行した結果の PASS 率（/api/result の testcase_run）
@@ -306,7 +312,7 @@ async function renderTimeline() {
   } catch (e) {}
   if (snaps.length < 2) {
     host.innerHTML = '<div class="hero-pad"><div class="hero-section-title">クロール履歴</div>' +
-      '<p style="color:var(--text-muted);font-size:13px">履歴が' + snaps.length + '件です。<strong>再観測</strong>すると、前回との仕様ドリフト（追加/削除された画面・変更されたフォーム）を時系列で比較できます。</p>' +
+      '<p style="color:var(--text-muted);font-size:13px">履歴が' + snaps.length + '件です。<strong>再解析</strong>すると、前回との仕様ドリフト（追加/削除された画面・変更されたフォーム）を時系列で比較できます。</p>' +
       _ciGuidanceCard(domain) + '</div>';
     _bindCiCopy();
     return;

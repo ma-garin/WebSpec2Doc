@@ -164,6 +164,22 @@ def api_testcases_table() -> dict | tuple[dict, int]:
     return compose(domain, report)
 
 
+@bp.get("/api/testcases/count")
+def api_testcases_count() -> dict | tuple[dict, int]:
+    """テストケース件数だけを返す。
+
+    タブを開く前に件数バッジを出すための軽量経路。表本体（/api/testcases/table）は
+    全行を返すため、件数表示のためだけに呼ばない。
+    """
+    from web.services.testcase_table_store import compose
+
+    domain, report, error = _table_request()
+    if error:
+        return error, 404
+    assert report is not None
+    return {"domain": domain, "count": len(compose(domain, report).get("rows", []))}
+
+
 @bp.get("/api/testcases/history")
 def api_testcases_history() -> dict | tuple[dict, int]:
     from web.services.testcase_table_store import load_history

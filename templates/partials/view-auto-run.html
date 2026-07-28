@@ -43,7 +43,7 @@
                 <div class="control-field">
                   <label for="autorun-url">対象URL</label>
                   <div class="autorun-url-row">
-                    <!-- 仕様4: 過去に観測したサイトから選べるようにする（AutoRun専用の候補） -->
+                    <!-- 仕様4: 過去に解析したサイトから選べるようにする（AutoRun専用の候補） -->
                     <input type="url" id="autorun-url" class="url-input input-compact" placeholder="https://example.com" autocomplete="url" list="autorun-url-suggestions" />
                     <datalist id="autorun-url-suggestions"></datalist>
                     <!-- 事前確認は明示操作でのみ実行する。URLを打っただけで対象サイトへ
@@ -77,7 +77,7 @@
                   </div>
                   <label class="autorun-validation-option" for="autorun-observe-validation">
                     <input type="checkbox" id="autorun-observe-validation">
-                    <span><strong>入力検証も観測する</strong><small id="autorun-validation-safety-note">フォームへ入力のみ・送信しません</small></span>
+                    <span><strong>入力検証も解析する</strong><small id="autorun-validation-safety-note">フォームへ入力のみ・送信しません</small></span>
                   </label>
                 </div>
                 <div class="control-field">
@@ -91,16 +91,16 @@
                 </div>
                 <!-- 既定値は折りたたみの中に隠さない。「全ページ対象」とだけ書かれても
                      何画面・どこまで辿るのかが分からず、規模の見当がつかない。 -->
-                <p class="autorun-scope-default">既定の観測範囲: <strong>リンクを10回まで辿り、最大500画面</strong>（サイト全体）。狭めたいときは下で変更できます。</p>
+                <p class="autorun-scope-default">既定の解析範囲: <strong>リンクを10回まで辿り、最大500画面</strong>（サイト全体）。狭めたいときは下で変更できます。</p>
                 <details class="autorun-advanced-options">
-                  <summary>観測範囲を変更する</summary>
+                  <summary>解析範囲を変更する</summary>
                   <div class="control-grid-2">
                     <div class="control-field">
-                      <label for="autorun-depth">深さ<span class="info-tip" tabindex="0" role="img" aria-label="トップ画面からリンクを何回辿るか。既定は上限（10）で、サイト全体を対象にします。少なくすると観測範囲を絞れます。" data-tip="トップ画面からリンクを何回辿るか。既定は上限（10）で、サイト全体を対象にします。少なくすると観測範囲を絞れます。">ⓘ</span></label>
+                      <label for="autorun-depth">深さ<span class="info-tip" tabindex="0" role="img" aria-label="トップ画面からリンクを何回辿るか。既定は上限（10）で、サイト全体を対象にします。少なくすると解析範囲を絞れます。" data-tip="トップ画面からリンクを何回辿るか。既定は上限（10）で、サイト全体を対象にします。少なくすると解析範囲を絞れます。">ⓘ</span></label>
                       <input type="number" id="autorun-depth" class="url-input input-compact" value="10" min="1" max="10" />
                     </div>
                     <div class="control-field">
-                      <label for="autorun-max-pages">最大画面数<span class="info-tip" tabindex="0" role="img" aria-label="観測・テスト対象にする画面数の上限。既定は上限（500）で、サイト全体を対象にします。この件数に達したら観測を打ち切ります。" data-tip="観測・テスト対象にする画面数の上限。既定は上限（500）で、サイト全体を対象にします。この件数に達したら観測を打ち切ります。">ⓘ</span></label>
+                      <label for="autorun-max-pages">最大画面数<span class="info-tip" tabindex="0" role="img" aria-label="解析・テスト対象にする画面数の上限。既定は上限（500）で、サイト全体を対象にします。この件数に達したら解析を打ち切ります。" data-tip="解析・テスト対象にする画面数の上限。既定は上限（500）で、サイト全体を対象にします。この件数に達したら解析を打ち切ります。">ⓘ</span></label>
                       <input type="number" id="autorun-max-pages" class="url-input input-compact" value="500" min="1" max="500" />
                     </div>
                   </div>
@@ -114,10 +114,10 @@
                    番号と名称は src/autorun/stages.py の STAGE_DEFINITIONS が正。 -->
               <div class="autorun-intake-flow">
                 <div class="autorun-intake-phase">
-                  <div class="autorun-intake-phase-head">観測</div>
+                  <div class="autorun-intake-phase-head">解析</div>
                   <ol class="autorun-intake-steps">
                     <li><span class="ai-n">–</span>受領（URL / 仕様書）</li>
-                    <li><span class="ai-n">–</span>悉皆観測（全画面・入力・遷移・データフロー）</li>
+                    <li><span class="ai-n">–</span>悉皆解析（全画面・入力・遷移・データフロー）</li>
                   </ol>
                 </div>
                 <div class="autorun-intake-phase">
@@ -137,7 +137,7 @@
                   <div class="autorun-intake-phase-head">実行・納品</div>
                   <ol class="autorun-intake-steps">
                     <li><span class="ai-n">–</span>テスト実行（Playwright）</li>
-                    <li><span class="ai-n">–</span>評価（観測事実と品質判断を分離）</li>
+                    <li><span class="ai-n">–</span>評価（解析事実と品質判断を分離）</li>
                     <li><span class="ai-n">–</span>レポート納品＋回帰・ドリフト検知</li>
                   </ol>
                 </div>
@@ -186,7 +186,7 @@
               <div class="autorun-step-row stepper">
                 <div class="autorun-step-item" id="ars-crawl">
                   <span class="autorun-step-icon stepper-icon" aria-hidden="true"></span>
-                  <span class="autorun-step-label">観測</span>
+                  <span class="autorun-step-label">解析</span>
                   <span class="autorun-step-meta" id="ars-crawl-meta"></span>
                 </div>
                 <div class="autorun-step-item" id="ars-qa">

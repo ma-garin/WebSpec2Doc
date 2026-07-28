@@ -81,16 +81,16 @@
     });
     nodes.push(grid);
 
-    // L0 観測の完全性。どの範囲についての結論かを、数値より先に示す。
+    // L0 解析の完全性。どの範囲についての結論かを、数値より先に示す。
     if (data.observation_scope) {
       var obs = el('div', 'arep-scope');
-      obs.appendChild(el('strong', null, '観測できた範囲: '));
+      obs.appendChild(el('strong', null, '解析できた範囲: '));
       obs.appendChild(document.createTextNode(data.observation_scope));
       nodes.push(obs);
     }
     (data.observation_gaps || []).forEach(function (gap) {
       var g = el('div', 'arep-scope');
-      g.appendChild(el('strong', null, '未観測 — ' + gap.kind + '（' + gap.count + '）: '));
+      g.appendChild(el('strong', null, '未解析 — ' + gap.kind + '（' + gap.count + '）: '));
       g.appendChild(document.createTextNode(gap.reason));
       nodes.push(g);
     });

@@ -76,7 +76,7 @@ class TestSystemScoping:
         ("label", "system"),
         [
             ("ホーム", "docs"),
-            ("新規観測", "docs"),
+            ("新規解析", "docs"),
             ("テストケース", "docs"),
             ("品質観点", "docs"),
             ("観点管理", "docs"),
@@ -96,7 +96,7 @@ class TestSystemScoping:
         assert pattern.search(spa), f'ナビ「{label}」に data-system="{system}" がありません'
 
     def test_new_analysis_button_is_docs_only(self, spa: str) -> None:
-        """サイドバーの「新規観測」ボタンは AutoRun 側で隠れる必要がある。"""
+        """サイドバーの「新規解析」ボタンは AutoRun 側で隠れる必要がある。"""
         assert re.search(r'id="add-site-btn"[^>]*data-system="docs"', spa)
 
     def test_system_switcher_present(self, spa: str) -> None:
@@ -251,7 +251,7 @@ class TestOtherViewStructures:
     def test_testcases_view_removed(self, spa: str) -> None:
         """テストケース一覧は廃止した（実行履歴へ置き換え）。
 
-        観測前は「report.json not found」しか出せず、単独では判断材料に
+        解析前は「report.json not found」しか出せず、単独では判断材料に
         ならなかった。セレクタだけ残すと死んだ導線が再び生える。
         """
         for element_id in ("tc-domain-select", "tc-status", "tc-content", "tc-output-links"):

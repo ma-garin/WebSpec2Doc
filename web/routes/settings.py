@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import json
 import logging
+import urllib.error
+import urllib.parse
+import urllib.request
 from pathlib import Path
 
 from flask import Blueprint, request
@@ -15,8 +19,38 @@ from web.services.test_design_settings import (
 )
 from web.validation import _sanitize
 
+logger = logging.getLogger(__name__)
+
 bp = Blueprint("settings", __name__)
 INSTANCE_DIR = Path("instance")
+
+# LLM 接続先。src/llm/openai_client.py が同名の環境変数を読む。
+ENV_LLM_BASE_URL = "WEBSPEC2DOC_LLM_BASE_URL"
+ENV_LLM_MODEL = "WEBSPEC2DOC_LLM_MODEL"
+OLLAMA_DEFAULT_BASE_URL = "http://127.0.0.1:11434/v1"
+OLLAMA_DEFAULT_MODEL = "qwen2.5:3b"
+
+
+def _provider_of(base_url: str) -> str:
+    """ベース URL からプロバイダ種別を導出する。
+
+    空または OpenAI 公式エンドポイントなら ``openai``、それ以外は
+    OpenAI 互換のローカルサーバ（Ollama）とみなす。
+    """
+    if not base_url or "api.openai.com" in base_url:
+        return "openai"
+    return "ollama"
+
+
+def _is_local_base_url(base_url: str) -> bool:
+    """ベース URL がローカルホスト宛かを判定する（SSRF 防止）。"""
+    try:
+        parsed = urllib.parse.urlparse(base_url)
+    except ValueError:
+        return False
+    if parsed.scheme not in {"http", "https"}:
+        return False
+    return (parsed.hostname or "") in {"127.0.0.1", "localhost", "::1"}
 
 
 @bp.before_request
@@ -37,6 +71,7 @@ def get_settings() -> dict:
     env = _read_env()
     key = env.get("OPENAI_API_KEY", "")
     slack_url = env.get("SLACK_WEBHOOK_URL", "")
+    llm_base_url = env.get(ENV_LLM_BASE_URL, "")
     return {
         "openai_key_set": bool(key),
         "openai_key_masked": _mask_key(key),
@@ -45,7 +80,36 @@ def get_settings() -> dict:
         "openai_project_id": env.get("OPENAI_PROJECT_ID", ""),
         "slack_webhook_set": bool(slack_url),
         "slack_webhook_masked": (_mask_key(slack_url) if slack_url else ""),
+        "llm_provider": _provider_of(llm_base_url),
+        "llm_base_url": llm_base_url,
+        "llm_model": env.get(ENV_LLM_MODEL, ""),
     }
+
+
+@bp.get("/api/settings/llm-models")
+def list_llm_models() -> dict:
+    """ローカル LLM サーバ（Ollama 等）が提供するモデル一覧を返す。
+
+    OpenAI 互換の ``GET {base_url}/models`` を叩く。SSRF を避けるため、
+    ローカルホスト宛のベース URL のみ許可する。
+    """
+    base_url = (
+        _sanitize(request.args.get("base_url", ""))
+        or _read_env().get(ENV_LLM_BASE_URL, "")
+        or OLLAMA_DEFAULT_BASE_URL
+    )
+    if not _is_local_base_url(base_url):
+        return {"ok": False, "error": "ローカルのエンドポイントのみ取得できます", "models": []}
+    # スキームと宛先ホストは _is_local_base_url で検証済み（http(s) + localhost のみ）
+    url = f"{base_url.rstrip('/')}/models"
+    try:
+        with urllib.request.urlopen(url, timeout=3) as response:  # nosec B310
+            payload = json.loads(response.read().decode("utf-8"))
+    except (urllib.error.URLError, OSError, ValueError, TimeoutError) as exc:
+        logger.info("LLM モデル一覧の取得に失敗しました (%s): %s", url, exc)
+        return {"ok": False, "error": "接続できませんでした", "models": []}
+    models = sorted(str(item.get("id", "")) for item in payload.get("data", []) if item.get("id"))
+    return {"ok": True, "models": models}
 
 
 @bp.post("/api/settings")
@@ -60,6 +124,19 @@ def post_settings() -> dict:
         updates["OPENAI_ORG_ID"] = _sanitize(request.form.get("org_id", ""))
     if "project_id" in request.form:
         updates["OPENAI_PROJECT_ID"] = _sanitize(request.form.get("project_id", ""))
+    if "llm_provider" in request.form:
+        provider = _sanitize(request.form.get("llm_provider", "")) or "openai"
+        if provider == "ollama":
+            updates[ENV_LLM_BASE_URL] = (
+                _sanitize(request.form.get("llm_base_url", "")) or OLLAMA_DEFAULT_BASE_URL
+            )
+            updates[ENV_LLM_MODEL] = (
+                _sanitize(request.form.get("llm_model", "")) or OLLAMA_DEFAULT_MODEL
+            )
+        else:
+            # OpenAI に戻す: ベース URL を空にして既定（api.openai.com）へ復帰させる。
+            updates[ENV_LLM_BASE_URL] = ""
+            updates[ENV_LLM_MODEL] = _read_env().get("OPENAI_MODEL", DEFAULT_OPENAI_MODEL)
     slack_url = _sanitize(request.form.get("slack_webhook_url", ""))
     if "slack_webhook_url" in request.form:
         updates["SLACK_WEBHOOK_URL"] = slack_url

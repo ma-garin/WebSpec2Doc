@@ -145,7 +145,7 @@
       var badge = document.createElement('span');
       badge.className = 'autorun-stage-badge is-assumed';
       badge.textContent = '前提';
-      badge.title = '観測では決められないため前提を置いています。実行は止めません。';
+      badge.title = '解析では決められないため前提を置いています。実行は止めません。';
       head.appendChild(badge);
     }
     if (item.source === 'user') {

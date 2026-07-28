@@ -50,7 +50,7 @@ function _emptyState() {
         <div class="onboard-step"><span class="onboard-num">3</span><strong>ドキュメントを確認</strong><span>生成された仕様書とテスト設計を確認</span></div>
       </div>
       <button type="button" class="btn-primary empty-add-btn" style="height:44px;padding:0 28px;font-size:15px;margin-top:8px">
-        最初の観測を始める
+        最初の解析を始める
       </button>
       <button type="button" class="btn-outline-sm empty-demo-btn" data-onboarding-demo>
         同梱デモサイトのURLを使う
@@ -81,12 +81,12 @@ function _buildStats(items) {
   return `
     <div class="stat-cards" aria-label="解析サマリ">
       <div class="stat-card">
-        <div class="stat-card-head"><span class="stat-card-icon">${icon('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>')}</span><span class="stat-card-label">観測サイト</span></div>
+        <div class="stat-card-head"><span class="stat-card-icon">${icon('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>')}</span><span class="stat-card-label">解析サイト</span></div>
         <div class="stat-card-num">${sites}</div><div class="stat-card-sub">登録済みのサイト数</div>
       </div>
       <div class="stat-card">
         <div class="stat-card-head"><span class="stat-card-icon">${icon('<rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/>')}</span><span class="stat-card-label">総画面数</span></div>
-        <div class="stat-card-num">${screens}</div><div class="stat-card-sub">観測済みの画面の合計</div>
+        <div class="stat-card-num">${screens}</div><div class="stat-card-sub">解析済みの画面の合計</div>
       </div>
       <div class="stat-card">
         <div class="stat-card-head"><span class="stat-card-icon">${icon('<path d="M4 6h16M4 12h16M4 18h10"/>')}</span><span class="stat-card-label">総項目数</span></div>
@@ -102,7 +102,7 @@ function _buildStats(items) {
 function _buildTable(items) {
   let html = _buildStats(items) + `
     <table class="data dashboard-table">
-      <thead><tr><th>サイト</th><th class="num">画面</th><th class="num">項目</th><th>観測回数</th><th>最終観測</th><th>操作</th></tr></thead>
+      <thead><tr><th>サイト</th><th class="num">画面</th><th class="num">項目</th><th>解析回数</th><th>最終解析</th><th>操作</th></tr></thead>
       <tbody>`;
 
   for (const it of items) {
@@ -120,7 +120,7 @@ function _buildTable(items) {
         <td><span class="freshness ${fresh.cls}">${fresh.label}</span></td>
         <td><div class="history-actions">
           <button type="button" class="btn-primary hist-open" data-domain="${escHtml(it.domain)}" style="height:36px;padding:0 14px;font-size:13px">開く</button>
-          <button type="button" class="btn-outline-sm hist-recrawl" data-domain="${escHtml(it.domain)}">再観測</button>
+          <button type="button" class="btn-outline-sm hist-recrawl" data-domain="${escHtml(it.domain)}">再解析</button>
           <button type="button" class="btn-outline-sm hist-delete" data-domain="${escHtml(it.domain)}">削除</button>
         </div></td>
       </tr>`;

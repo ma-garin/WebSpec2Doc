@@ -3,12 +3,12 @@
           <div class="input-card user-guide-panel">
             <div class="wizard-page-header">
               <h2>WebSpec2Doc ユーザーガイド</h2>
-              <p>URL観測からレポート確認、品質観点レビューまで、画面上で確認できる操作ガイドです。</p>
+              <p>URL解析からレポート確認、品質観点レビューまで、画面上で確認できる操作ガイドです。</p>
             </div>
 
             <div class="qa-card-grid">
               <div class="qa-mini-card"><strong>1. サイトを追加</strong><span>左上の「サイトを追加」から対象URLを入力します。</span></div>
-              <div class="qa-mini-card"><strong>2. 画面分析</strong><span>「画面分析」で取得対象ページを検出します。</span></div>
+              <div class="qa-mini-card"><strong>2. 画面解析</strong><span>「画面解析」で取得対象ページを検出します。</span></div>
               <div class="qa-mini-card"><strong>3. 条件設定</strong><span>対象画面、ログイン、差分出力を確認します。</span></div>
               <div class="qa-mini-card"><strong>4. レポート確認</strong><span>概要、画面別仕様、入力項目、遷移、履歴差分を確認します。</span></div>
               <div class="qa-mini-card"><strong>5. 品質観点</strong><span>CSV、a11y、OWASP、境界値、API契約の観点を確認します。</span></div>
@@ -41,8 +41,8 @@
                   </tr>
                   <tr>
                     <td><strong>履歴・差分</strong></td>
-                    <td>再観測前後の画面追加・削除・フィールド変更を検知</td>
-                    <td>リリース後に再観測すると仕様ドリフトが可視化される。バッジの数字が差分件数</td>
+                    <td>再解析前後の画面追加・削除・フィールド変更を検知</td>
+                    <td>リリース後に再解析すると仕様ドリフトが可視化される。バッジの数字が差分件数</td>
                   </tr>
                 </tbody>
               </table>
@@ -63,13 +63,13 @@
             </div>
 
             <div class="qa-readable-section">
-              <h3>4ステップURL観測</h3>
+              <h3>4ステップURL解析</h3>
               <table class="data">
                 <thead><tr><th>Step</th><th>画面</th><th>操作</th></tr></thead>
                 <tbody>
-                  <tr><td>1</td><td>URL入力・観測</td><td>観測対象URLを入力し、「観測開始」を押します。</td></tr>
+                  <tr><td>1</td><td>URL入力・解析</td><td>解析対象URLを入力し、「解析開始」を押します。</td></tr>
                   <tr><td>2</td><td>条件設定</td><td>取得対象画面、ログイン、差分出力を確認します。</td></tr>
-                  <tr><td>3</td><td>実行</td><td>受付、画面取得、観測、結果整理の進捗を確認します。</td></tr>
+                  <tr><td>3</td><td>実行</td><td>受付、画面取得、解析、結果整理の進捗を確認します。</td></tr>
                   <tr><td>4</td><td>レポート</td><td>生成された仕様、入力項目、遷移、差分、出力形式を確認します。</td></tr>
                 </tbody>
               </table>
@@ -114,7 +114,7 @@
               <ol class="qa-check-list" style="padding-left:18px;list-style:decimal">
                 <li>サンプルサイトを起動する: <code>python demo/demo_site.py --site-dir verify_site --port 8767</code></li>
                 <li>設定で「ローカル/プライベートアドレスの許可」をONにする（未設定だと 127.0.0.1 はSSRF保護で拒否されます）</li>
-                <li>観測対象URLに <code>http://127.0.0.1:8767/</code> を指定する</li>
+                <li>解析対象URLに <code>http://127.0.0.1:8767/</code> を指定する</li>
                 <li>文書駆動を試す場合は、参考文書として <code>画面仕様書.md</code> と <code>要件一覧.md</code> をアップロードする</li>
                 <li>実行後、<code>README_検証手順.md</code> の「仕込んだ仕様乖離」と結果を突き合わせる</li>
               </ol>
@@ -132,22 +132,22 @@
               <table class="data">
                 <thead><tr><th>オプション</th><th>役割</th><th>例</th></tr></thead>
                 <tbody>
-                  <tr><td><code>--url</code></td><td>観測対象のURL（観測の起点）</td><td><code>--url https://example.com/</code></td></tr>
+                  <tr><td><code>--url</code></td><td>解析対象のURL（解析の起点）</td><td><code>--url https://example.com/</code></td></tr>
                   <tr><td><code>--format</code></td><td>出力形式（指定可能: md,html,excel,pdf,json。既定は md のみ）。カンマ区切りで複数指定可</td><td><code>--format html,pdf,excel,json,md</code></td></tr>
-                  <tr><td><code>--compare</code></td><td>前回の観測結果（スナップショット）と比較し、仕様ドリフトを検出する</td><td><code>--compare</code></td></tr>
+                  <tr><td><code>--compare</code></td><td>前回の解析結果（スナップショット）と比較し、仕様ドリフトを検出する</td><td><code>--compare</code></td></tr>
                   <tr><td><code>--fail-on-drift</code></td><td>ドリフト検出時に exit code 1 で終了する（CIでの失敗判定に使う）</td><td><code>--compare --fail-on-drift</code></td></tr>
                   <tr><td><code>--login-record</code></td><td>見えるブラウザでログイン操作を記録し、認証セッション（<code>auth.json</code>）を保存する。<code>--login-record-url</code>（ログインページ）と <code>--login-signal</code>（完了シグナルファイル）を併用する</td><td><code>--login-record --login-record-url https://example.com/login --login-signal .signal</code></td></tr>
-                  <tr><td><code>--auth</code></td><td>保存済みの認証セッションファイル（auth.json）を指定して観測する</td><td><code>--auth auth.json</code></td></tr>
+                  <tr><td><code>--auth</code></td><td>保存済みの認証セッションファイル（auth.json）を指定して解析する</td><td><code>--auth auth.json</code></td></tr>
                   <tr><td><code>--depth</code></td><td>リンクをたどる階層数（既定 2）</td><td><code>--depth 3</code></td></tr>
                   <tr><td><code>--max-pages</code></td><td>取得する最大ページ数（既定 30）</td><td><code>--max-pages 50</code></td></tr>
                 </tbody>
               </table>
               <p style="font-size:13px;color:var(--text-muted);margin:10px 0 4px">代表的な使い方の流れ:</p>
               <ol class="qa-check-list" style="padding-left:18px;list-style:decimal">
-                <li>初回観測（仕様書一式を生成）: <code>python src/main.py --url https://example.com/ --format html,pdf,excel,json,md</code></li>
+                <li>初回解析（仕様書一式を生成）: <code>python src/main.py --url https://example.com/ --format html,pdf,excel,json,md</code></li>
                 <li>ログインが必要なサイトは、画面の「ログイン情報の設定」またはCLIの <code>--login-record</code> で先にセッションを記録する</li>
-                <li>記録した認証情報で観測: <code>python src/main.py --url https://example.com/mypage --auth auth.json</code></li>
-                <li>リリース後の再観測で仕様ドリフトを検知: <code>python src/main.py --url https://example.com/ --compare</code></li>
+                <li>記録した認証情報で解析: <code>python src/main.py --url https://example.com/mypage --auth auth.json</code></li>
+                <li>リリース後の再解析で仕様ドリフトを検知: <code>python src/main.py --url https://example.com/ --compare</code></li>
                 <li>CIパイプラインでドリフトを失敗判定にする: <code>python src/main.py --url https://example.com/ --compare --fail-on-drift</code></li>
               </ol>
               <p class="input-hint" style="margin-top:8px">全オプション一覧は <code>python src/main.py --help</code> で確認できます。ログイン記録CLIの詳細フラグは複雑なため、通常は画面（設定 →「ログイン情報の設定」）からの記録を推奨します。</p>
@@ -162,16 +162,16 @@
                 <li><strong>CLI:</strong> <code>python src/main.py --url https://staging.example.com --compare --fail-on-drift</code></li>
                 <li><strong>GitHub Actions:</strong> リポジトリ同梱の <code>.github/workflows/spec-drift.yml</code> をそのまま利用できます（毎週月曜の定期実行 + 手動実行）。リポジトリ変数 <code>WEBSPEC_TARGET_URL</code> に対象URLを設定してください。</li>
                 <li><strong>Slack通知:</strong> 設定 → 通知タブで Incoming Webhook URL を登録すると、ドリフト検知時に自動でSlackへ通知します。</li>
-                <li><strong>社内環境の観測:</strong> ステージング等のプライベートアドレスを対象にする場合は環境変数 <code>WEBSPEC2DOC_ALLOW_LOCAL=1</code> を設定してください（既定では SSRF 保護のため拒否されます）。</li>
+                <li><strong>社内環境の解析:</strong> ステージング等のプライベートアドレスを対象にする場合は環境変数 <code>WEBSPEC2DOC_ALLOW_LOCAL=1</code> を設定してください（既定では SSRF 保護のため拒否されます）。</li>
               </ul>
             </div>
 
             <div class="qa-readable-section">
               <h3>よくある確認</h3>
               <ul class="qa-check-list qa-question-list">
-                <li>品質観点に対象サイトが出ない場合は、先にサイトを観測して report.json を生成してください。</li>
-                <li>ログインが必要な画面は、条件設定で認証情報を入力してから観測してください。</li>
-                <li>前回との差分は「再観測」後、レポートの「履歴・差分」タブで確認できます。</li>
+                <li>品質観点に対象サイトが出ない場合は、先にサイトを解析して report.json を生成してください。</li>
+                <li>ログインが必要な画面は、条件設定で認証情報を入力してから解析してください。</li>
+                <li>前回との差分は「再解析」後、レポートの「履歴・差分」タブで確認できます。</li>
               </ul>
             </div>
 

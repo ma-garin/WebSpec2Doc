@@ -74,8 +74,8 @@
 - 実装: `web/auth.py` / `web/services/auth_store.py` / `web/tenancy.py` /
   `web/routes/account.py`。有効化は環境変数（`docs/AUTH_TENANCY.md`）。
 
-> 注: 初期に検討した軽量版（メール自己申告＋WS選択、`docs/design/auth-tenant-integration.md` /
-> ADR-0004）は本商用実装に統合・置換された（履歴として design/adr を保持）。
+> 注: 初期に検討した軽量版（メール自己申告＋WS選択、ADR-0004）は本商用実装に統合・
+> 置換された。当時の設計ドキュメントは統合完了により削除（履歴は git に残る）。
 
 ## 6. 非機能要件
 

@@ -1,0 +1,32 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8">
+<title>実行結果画面 サイドメニュー プロトタイプ 5案</title>
+<style>
+ body { margin:0; background:#eef1f4; color:#1c2430; font-family:"Hiragino Sans","Noto Sans JP",Meiryo,system-ui,sans-serif; line-height:1.75; }
+ .w { max-width:1000px; margin:0 auto; padding:28px 24px 60px; }
+ h1 { font-size:20px; margin:0 0 4px; }
+ .sub { color:#6b7684; font-size:13px; margin:0 0 20px; }
+ .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:12px; }
+ .c { display:block; background:#fff; border:1px solid #dfe4ea; border-radius:10px; padding:14px 16px; text-decoration:none; color:inherit; }
+ .c:hover { border-color:#1976D2; box-shadow:0 2px 10px rgba(25,118,210,.12); }
+ .c .n { display:inline-block; background:#1976D2; color:#fff; border-radius:4px; padding:1px 8px; font-size:11px; font-weight:700; }
+ .c b { display:block; margin:7px 0 3px; font-size:15px; }
+ .c .d { font-size:12.5px; color:#4a5566; }
+ table { border-collapse:collapse; background:#fff; margin-top:22px; font-size:13px; width:100%; }
+ th,td { border:1px solid #e3e8ee; padding:7px 10px; text-align:left; vertical-align:top; }
+ th { background:#f5f7f9; white-space:nowrap; }
+ .note { background:#fff; border-left:4px solid #1976D2; border:1px solid #dfe4ea; border-left-width:4px; border-radius:8px; padding:12px 16px; margin:20px 0 0; font-size:13px; }
+ code { background:#f1f4f8; padding:1px 5px; border-radius:4px; font-size:.92em; }
+</style></head><body><div class="w">
+<h1>実行結果画面 サイドメニュー プロトタイプ 5案</h1>
+<p class="sub">本番の CSS（<code>tokens.css</code> / <code>app.css</code> / <code>report-v2.css</code> ほか）を読み込み、稼働中アプリ（127.0.0.1:8767 の観測結果）から採取した実データの DOM をそのまま埋め込んでいます。ナビはクリックで実際に切り替わります。</p>
+<div class="grid"><a class="c" href="result-proto/proto-1.html"><span class="n">案 1</span><b>章立てナビ</b><span class="d">8項目を「読む／設計する／実行する／記録」の4章に束ねる</span></a><a class="c" href="result-proto/proto-2.html"><span class="n">案 2</span><b>アイコンレール</b><span class="d">常時60px。ホバーで展開、⇥ で固定。本文幅を最優先</span></a><a class="c" href="result-proto/proto-3.html"><span class="n">案 3</span><b>グローバル統合</b><span class="d">サイドバーを1枚に保ち、結果を第2階層として展開</span></a><a class="c" href="result-proto/proto-4.html"><span class="n">案 4</span><b>サマリ常駐ナビ</b><span class="d">ナビ上部に観測サマリ、下部に成果物ダウンロードを常駐</span></a><a class="c" href="result-proto/proto-5.html"><span class="n">案 5</span><b>検索駆動ナビ</b><span class="d">絞り込み入力と最近見た項目。/ でフォーカス、Enter で移動</span></a></div>
+<table>
+ <tr><th>判断軸</th><th>1 章立て</th><th>2 レール</th><th>3 統合</th><th>4 サマリ常駐</th><th>5 検索駆動</th></tr>
+ <tr><th>ナビ占有幅</th><td>200px</td><td>60px（展開 232px）</td><td>0（既存サイドバー内）</td><td>232px</td><td>222px</td></tr>
+ <tr><th>項目の意味が伝わる</th><td>◎ 章で区切る</td><td>△ アイコン依存</td><td>○ ツリー</td><td>◎ 説明文つき</td><td>○ 説明文つき</td></tr>
+ <tr><th>本文の表示幅</th><td>△</td><td>◎</td><td>◎</td><td>△</td><td>△</td></tr>
+ <tr><th>実装コスト（見立て）</th><td>小</td><td>中</td><td>大</td><td>小</td><td>中</td></tr>
+ <tr><th>向く場面</th><td>初見のユーザー</td><td>テストケース表を読む</td><td>ナビを増やしたくない</td><td>成果物を配る</td><td>項目が今後増える</td></tr>
+</table>
+<div class="note"><b>未検証:</b> 5案とも <code>#result-panel</code> を grid 化してナビを置いた静的プロトタイプで、本番の JS（タブ切替・サブタブ・最大化・密度切替）とは接続していません。実装時は <code>data-tab</code> に依存する既存コードと E2E テストの修正が必要で、その影響範囲は未調査です。</div>
+</div></body></html>

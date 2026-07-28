@@ -33,9 +33,9 @@
 | WS2D-RD-001 | [要件定義書](10_requirements/WS2D-RD-001_要件定義書.md) | 新設 | feature_contracts.yml / README.md |
 | WS2D-NF-001 | [非機能要件定義書](10_requirements/WS2D-NF-001_非機能要件定義書.md) | 新設 | ISO 25010 / TESTING_STRATEGY §6 |
 | WS2D-BD-001 | [基本設計書](20_design/WS2D-BD-001_基本設計書.md) | 新設 | docs/adr/* |
-| WS2D-SD-001 | [画面設計書](20_design/WS2D-SD-001_画面設計書.md) | 新設 | CONTEXT.md / ui-redesign-plan.md |
+| WS2D-SD-001 | [画面設計書](20_design/WS2D-SD-001_画面設計書.md) | 新設 | CONTEXT.md / templates/*（as-built） |
 | WS2D-IF-001 | [API設計書](20_design/WS2D-IF-001_API設計書.md) | 新設 | web/routes/*（as-built 抽出） |
-| WS2D-DD-001 | [データ設計書](20_design/WS2D-DD-001_データ設計書.md) | 新設 | workspace-data-separation.md |
+| WS2D-DD-001 | [データ設計書](20_design/WS2D-DD-001_データ設計書.md) | 新設 | docs/AUTH_TENANCY.md |
 | WS2D-CS-001 | [コーディング規約](30_implementation/WS2D-CS-001_コーディング規約.md) | 新設 | specs/CONVENTIONS.md / pyproject.toml |
 | WS2D-TP-001 | [テスト計画書](40_test/WS2D-TP-001_テスト計画書.md) | 新設 | **TESTING_STRATEGY.md** |
 | WS2D-TV-001 | [テスト観点表](40_test/WS2D-TV-001_テスト観点表.md) | 新設 | data/viewpoint_templates/* |

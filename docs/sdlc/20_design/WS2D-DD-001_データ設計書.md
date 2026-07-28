@@ -1,7 +1,7 @@
 # WS2D-DD-001 データ設計書
 
 - 版数: 1.0 / 作成日: 2026-07-16 / 準拠: IPA 共通フレーム（データ設計）
-- 分離の将来設計は `docs/design/workspace-data-separation.md`。
+- ワークスペース分離の現行仕様は `docs/AUTH_TENANCY.md`。
 
 ## 1. データ配置一覧
 

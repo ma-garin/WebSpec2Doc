@@ -570,13 +570,31 @@ def _stability_timeout_ms() -> int:
 def _goto_stable(page: Page, url: str) -> Any:
     """DOM構築を待って返し、networkidleは短時間だけ補助的に待つ。"""
     response = page.goto(url, wait_until="domcontentloaded", timeout=DEFAULT_TIMEOUT_MS)
-    timeout_ms = _stability_timeout_ms()
-    if timeout_ms > 0:
-        try:
-            page.wait_for_load_state("networkidle", timeout=timeout_ms)
-        except PlaywrightError:
-            logger.debug("networkidle待機を打ち切りました: %s", url)
+    _wait_network_idle(page, url)
     return response
+
+
+def _wait_network_idle(page: Page, url: str) -> None:
+    """networkidle を上限つきで待つ。打ち切りは失敗扱いにしない。"""
+    timeout_ms = _stability_timeout_ms()
+    if timeout_ms <= 0:
+        return
+    try:
+        page.wait_for_load_state("networkidle", timeout=timeout_ms)
+    except PlaywrightError:
+        logger.debug("networkidle待機を打ち切りました: %s", url)
+
+
+def _goto_for_discover(page: Page, url: str) -> Any:
+    """画面リスト取得用の遷移。まず DOM 構築だけで返す。
+
+    Playwright の networkidle は「500ms 間ネットワークが静止すること」を条件とするため、
+    ページが瞬時に読み終わっても 1 ページあたり必ず 500ms 以上かかる。discover は
+    URL・タイトル・ログイン壁の判定しか行わないため、初期 DOM で足りることが多い。
+    JS 描画後にしかリンクが現れない SPA を取り逃さないよう、リンクが 1 件も取れなかった
+    場合に限り networkidle まで待って再抽出する（呼び出し側が判断する）。
+    """
+    return page.goto(url, wait_until="domcontentloaded", timeout=DEFAULT_TIMEOUT_MS)
 
 
 def _guard_session(page: Page, url: str, auth_state: Path | None) -> None:
@@ -615,7 +633,7 @@ def _discover_one(page: Page, url: str, found: list[dict[str, object]]) -> tuple
 
     normalized = normalize_url(url)
     try:
-        response = _goto_stable(page, normalized)
+        response = _goto_for_discover(page, normalized)
     except PlaywrightError as exc:
         logger.warning("画面リスト取得に失敗しました: %s (%s)", url, exc)
         return ()
@@ -637,6 +655,13 @@ def _discover_one(page: Page, url: str, found: list[dict[str, object]]) -> tuple
     )
     if verdict.is_login_required:
         return ()
+    links = tuple(extract_internal_links(page, normalized))
+    if links or signals.status >= 400:
+        # エラーページ（404 等）はリンクが無いのが正常なので、SPA 判定の対象にしない。
+        return links
+    # リンクが 1 件も取れないのは、JS 描画後にしかリンクが現れない SPA の可能性がある。
+    # この場合だけ networkidle まで待って取り直す（静的サイトに 500ms の税を課さない）。
+    _wait_network_idle(page, normalized)
     return tuple(extract_internal_links(page, normalized))
 
 

@@ -1,55 +1,5 @@
 // ---- 概要 ----
 
-// 画面のリスクスコア: 必須項目×2 + 入力項目 + 遷移先数（テスト工数・障害インパクトの近似）
-function _screenRiskScore(sc) {
-  const fields = (sc.forms || []).flatMap(fm => fm.fields || []);
-  const required = fields.filter(f => f.required).length;
-  const to = (sc.transitions && sc.transitions.to || []).length;
-  return required * 2 + fields.length + to;
-}
-
-function _execSummary(allScreens) {
-  // クエリ重複（reserve.html?plan-id=N 等）を統合した正規化済み画面のみで集計する。
-  // メトリクスの水増しを防ぐため、画面数・項目数・ケース数・工数はすべて canonical 基準。
-  const screens = canonicalScreens(reportJson);
-  const pageCount = (allScreens || []).length;
-  const screenCount = screens.length;
-  const totalFields = screens.reduce((n, sc) => n + (sc.forms || []).reduce((m, fm) => m + (fm.fields || []).length, 0), 0);
-  const totalRequired = screens.reduce((n, sc) => n + (sc.forms || []).reduce((m, fm) => m + (fm.fields || []).filter(f => f.required).length, 0), 0);
-  const formScreens = screens.filter(sc => (sc.forms || []).some(fm => (fm.fields || []).length)).length;
-  // テスト規模の概算は KPI ヒーローと同じ計算式（view-utils.js estimateTestEffort）を使う
-  const { cases: estCases, hours: estHours, caseMinutes } = estimateTestEffort(reportJson);
-  const top3 = [...screens].sort((a, b) => _screenRiskScore(b) - _screenRiskScore(a)).slice(0, 3)
-    .filter(sc => _screenRiskScore(sc) > 0);
-
-  const top3Html = top3.map((sc, i) =>
-    `<li><strong>${escHtml(sc.page_id)}</strong> ${escHtml(sc.title || '')}<span style="color:var(--text-muted)">（リスクスコア ${_screenRiskScore(sc)}：必須項目と遷移が多く、障害時の影響が大きい画面）</span></li>`
-  ).join('');
-
-  // 到達ページ数 > 画面数 のとき、クエリ重複を統合した旨を明示（数値の信頼性）。
-  const dedupNote = pageCount > screenCount
-    ? `<span style="color:var(--text-muted)">（${pageCount}ページ検出 → クエリ重複を統合）</span>`
-    : '';
-
-  // 信頼性バッジ: メトリクスが重複統合済み・機械導出であることを明示（検証会社の監査用）。
-  const trustBreakdown = pageCount > screenCount
-    ? `${pageCount}ページ検出 → ${screenCount}画面（クエリ重複を統合）／入力項目は canonical 画面のみ集計／テスト条件は機械導出`
-    : `${screenCount}画面・${totalFields}項目を機械導出／クエリ重複は統合済み`;
-  const trustBadge = `<span class="trust-badge" title="${escHtml(trustBreakdown)}">✓ 重複統合済み・機械導出（監査可能）</span>`;
-
-  return `
-    <div class="exec-summary">
-      <div class="hero-section-title">エグゼクティブサマリー ${trustBadge}</div>
-      <p style="font-size:13px;line-height:1.7;margin:0 0 10px">
-        本システムは <strong>${screenCount}画面</strong>${dedupNote}（うち入力フォームあり ${formScreens}画面）で構成され、
-        入力項目は <strong>${totalFields}項目</strong>（必須 ${totalRequired}項目）です。
-        機械導出したテスト条件から、概算 <strong>${estCases}テストケース / 約${estHours}時間</strong>のテスト規模と推定されます
-        <span style="color:var(--text-muted)">（1ケース${caseMinutes}分換算・設定で変更可／概算＝入力項目×3＋遷移×2）</span>。
-      </p>
-      ${top3.length ? `<div style="font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:4px">優先テスト対象（リスク上位3画面）</div><ol style="margin:0 0 4px 20px;font-size:12.5px;line-height:1.8">${top3Html}</ol>` : ''}
-    </div>`;
-}
-
 function renderOverview() {
   if (!reportJson) {
     resultHero.innerHTML = '<div class="hero-pad">' +
@@ -88,7 +38,6 @@ function renderOverview() {
     : '';
   resultHero.innerHTML = '<div class="hero-pad">' +
     `<p style="color:var(--text-muted);font-size:13px;margin-bottom:12px">対象 ${escHtml(meta.target_url || '')} ／ クロール: 深さ${meta.crawl_depth ?? '-'} ・最大${meta.max_pages ?? '-'}ページ ／ ${escHtml(meta.crawled_at || '')}</p>` +
-    _execSummary(screens) +
     `<div class="next-steps-cta">
       <span class="next-steps-label">次のステップ</span>
       <button type="button" class="next-step-btn" onclick="selectResultTab('test-design','matrix')">テスト条件を確認する →</button>

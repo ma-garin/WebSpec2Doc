@@ -9,7 +9,7 @@ const TAB_DEFS = {
   overview:      { panel: 'rp-overview', render: 'renderOverview' },
   screens:       { panel: 'rp-screens', defaultSub: 'spec',
                    subs: { spec: 'renderReport', gallery: 'renderShots', coverage: 'renderCoverageHeatmap' } },
-  'test-design': { panel: 'rp-test-design', defaultSub: 'matrix',
+  'test-design': { panel: 'rp-test-design', defaultSub: 'by-screen',
                    subs: { 'by-screen': 'renderDesignByScreen', matrix: 'renderMatrix', summary: 'renderDesign', detail: 'renderTechniqueDetail', mbt: 'renderMbtDesign' } },
   testcases:     { panel: 'rp-testcases', render: 'renderResultTestcases' },
   flow:          { panel: 'rp-flow', defaultSub: 'diagram',

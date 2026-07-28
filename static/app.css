@@ -522,7 +522,6 @@
     .diff-badge { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 10px; background: #FFF3CD; border: 1px solid #FBBF24; color: #92400E; font-size: 11px; font-weight: 800; white-space: nowrap; }
     .snap-badge { display: inline-flex; align-items: center; height: 22px; padding: 0 10px; border-radius: 4px; background: var(--surface-soft); border: 1px solid var(--border); color: var(--text-muted); font-size: 12px; font-weight: 700; }
     .snap-badge-first { background: var(--info-bg); border-color: var(--info-border); color: var(--primary-dark); }
-    .trust-badge { display: inline-block; padding: 1px 9px; border-radius: 10px; background: var(--ok-bg); color: var(--ok); font-size: 11px; font-weight: 700; vertical-align: middle; cursor: help; white-space: nowrap; }
     /* ── QAツール空状態 ── */
     .qa-empty-state { padding: 60px 32px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; }
     .qa-empty-icon { font-size: 42px; line-height: 1; opacity: .7; }

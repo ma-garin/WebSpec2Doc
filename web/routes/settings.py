@@ -45,10 +45,12 @@ def _provider_of(base_url: str) -> str:
 def _is_local_base_url(base_url: str) -> bool:
     """ベース URL がローカルホスト宛かを判定する（SSRF 防止）。"""
     try:
-        host = urllib.parse.urlparse(base_url).hostname or ""
+        parsed = urllib.parse.urlparse(base_url)
     except ValueError:
         return False
-    return host in {"127.0.0.1", "localhost", "::1"}
+    if parsed.scheme not in {"http", "https"}:
+        return False
+    return (parsed.hostname or "") in {"127.0.0.1", "localhost", "::1"}
 
 
 @bp.before_request
@@ -98,9 +100,10 @@ def list_llm_models() -> dict:
     )
     if not _is_local_base_url(base_url):
         return {"ok": False, "error": "ローカルのエンドポイントのみ取得できます", "models": []}
+    # スキームと宛先ホストは _is_local_base_url で検証済み（http(s) + localhost のみ）
     url = f"{base_url.rstrip('/')}/models"
     try:
-        with urllib.request.urlopen(url, timeout=3) as response:  # noqa: S310 - ローカル限定
+        with urllib.request.urlopen(url, timeout=3) as response:  # nosec B310
             payload = json.loads(response.read().decode("utf-8"))
     except (urllib.error.URLError, OSError, ValueError, TimeoutError) as exc:
         logger.info("LLM モデル一覧の取得に失敗しました (%s): %s", url, exc)

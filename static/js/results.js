@@ -96,6 +96,12 @@ async function showResults(domain, tab, sub) {
   setTabCount('tab-count-screens', screenCount);
   setTabCount('tab-count-test-design', fieldCount);
   setTabCount('tab-count-history', snapCount);
+  // テストケース件数は表本体の描画（タブを開いたとき）でしか設定されておらず、
+  // 開くまでバッジが空だった。他タブと揃えてレポート表示時に取得する。
+  fetch('/api/testcases/count?domain=' + encodeURIComponent(domain))
+    .then(r => (r.ok ? r.json() : null))
+    .then(d => { if (d) setTabCount('tab-count-testcases', d.count || 0); })
+    .catch(() => { /* 件数が出せなくても本体の表示は妨げない */ });
 
   // 文書突合タブ（doc_fusion.json 存在時のみ表示 — AC-4/AC-5）
   docFusionData = null;

@@ -138,7 +138,7 @@ function _updateKpiHero(s, required, data) {
   } else {
     setText('k-conds', '—');
     setText('k-cases', '—');
-    setText('k-hours-sub', '再観測で算出');
+    setText('k-hours-sub', '再解析で算出');
   }
 
   // テストケース表から実行した結果の PASS 率（/api/result の testcase_run）
@@ -306,7 +306,7 @@ async function renderTimeline() {
   } catch (e) {}
   if (snaps.length < 2) {
     host.innerHTML = '<div class="hero-pad"><div class="hero-section-title">クロール履歴</div>' +
-      '<p style="color:var(--text-muted);font-size:13px">履歴が' + snaps.length + '件です。<strong>再観測</strong>すると、前回との仕様ドリフト（追加/削除された画面・変更されたフォーム）を時系列で比較できます。</p>' +
+      '<p style="color:var(--text-muted);font-size:13px">履歴が' + snaps.length + '件です。<strong>再解析</strong>すると、前回との仕様ドリフト（追加/削除された画面・変更されたフォーム）を時系列で比較できます。</p>' +
       _ciGuidanceCard(domain) + '</div>';
     _bindCiCopy();
     return;

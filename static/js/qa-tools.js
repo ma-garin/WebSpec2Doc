@@ -28,7 +28,7 @@ async function loadQaToolSites(viewName, force) {
     if (selectEl?.value) await loadQaToolData(viewName, selectEl.value);
     return;
   }
-  setQaToolStatus(viewName, '観測済みサイトを読み込んでいます。');
+  setQaToolStatus(viewName, '解析済みサイトを読み込んでいます。');
   try {
     const res = await fetch('/api/history');
     const data = await res.json();
@@ -37,7 +37,7 @@ async function loadQaToolSites(viewName, force) {
       const select = document.getElementById(QA_TOOL_CONFIG[toolName].select);
       if (!select) continue;
       const previous = select.value;
-      select.innerHTML = '<option value="">観測済みサイトを選択</option>' +
+      select.innerHTML = '<option value="">解析済みサイトを選択</option>' +
         items.map(it => `<option value="${escHtml(it.domain)}">${escHtml(it.domain)}</option>`).join('');
       if (previous && items.some(it => it.domain === previous)) select.value = previous;
       if (!previous && items.length > 0) select.value = items[0].domain;
@@ -48,13 +48,13 @@ async function loadQaToolSites(viewName, force) {
       if (selectEl?.value) await loadQaToolData(viewName, selectEl.value);
       return;
     }
-    setQaToolStatus(viewName, '観測済みサイトがありません。「+ サイトを追加」から最初のサイトを登録してください。');
+    setQaToolStatus(viewName, '解析済みサイトがありません。「+ サイトを追加」から最初のサイトを登録してください。');
     for (const toolCfg of Object.values(QA_TOOL_CONFIG)) {
       const contentEl = document.getElementById(toolCfg.content);
       const outputsEl = document.getElementById(toolCfg.outputs);
       if (contentEl) {
         contentEl.innerHTML = `<div class="empty" style="text-align:center;padding:40px 20px">
-          <p style="font-size:15px;font-weight:700;margin-bottom:8px">まだ観測済みサイトがありません</p>
+          <p style="font-size:15px;font-weight:700;margin-bottom:8px">まだ解析済みサイトがありません</p>
           <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px">
             生成ウィザードでサイトを解析すると、ここにデータが表示されます。
           </p>

@@ -57,7 +57,7 @@ document.getElementById('discovered-url-list').addEventListener('click', async (
   const statusEl = panel.querySelector('.disc-item-login-status');
   const loadingEl = panel.querySelector('.disc-item-login-loading');
   const domain = loginDomain();
-  if (!loginUrl) { statusEl.textContent = 'ログインURLが見つかりません。上級設定でURLを入力してください。'; statusEl.classList.add('input-field-message-error'); return; }
+  if (!loginUrl) { statusEl.textContent = 'ログインURLが見つかりません。上のログインURL欄に入力してください。'; statusEl.classList.add('input-field-message-error'); return; }
   btn.disabled = true; loadingEl.style.display = 'flex'; statusEl.textContent = '';
   try {
     const res = await fetch('/api/login/simple', { method: 'POST', body: new URLSearchParams({
@@ -79,7 +79,7 @@ document.getElementById('discovered-url-list').addEventListener('click', async (
   }
 });
 
-// ---- 上級ログイン（アコーディオン内）: フォームを取得ボタン ----
+// ---- ログイン案内カード: フォームを取得ボタン ----
 document.getElementById('login-scrape-btn').addEventListener('click', async () => {
   const url = document.getElementById('login-url').value.trim();
   const domain = loginDomain();
@@ -252,7 +252,7 @@ document.getElementById('login-record-cancel-btn').addEventListener('click', asy
 document.getElementById('select-all-btn').addEventListener('click', () => setAllDiscovered(true));
 document.getElementById('clear-all-btn').addEventListener('click', () => setAllDiscovered(false));
 
-// ---- 画面分析 経過時間タイマー ----
+// ---- 画面解析 経過時間タイマー ----
 let _discoverTimerInterval = null;
 function _startDiscoverTimer() {
   const el = document.getElementById('discover-elapsed');
@@ -274,9 +274,28 @@ function _stopDiscoverTimer() {
   return elapsed;
 }
 
+// 画面解析の結果に応じてログイン案内カードを出し分ける。
+//   detected: ログインが必要な画面を検知した / closed: 公開画面が0件＝閉じた環境の疑い
+//   none: ログイン不要
+function showLoginPrompt(kind) {
+  const card = document.getElementById('login-required-card');
+  if (!card) return;
+  if (kind === 'none') { card.style.display = 'none'; return; }
+  const title = document.getElementById('login-required-title');
+  const desc = document.getElementById('login-required-desc');
+  if (kind === 'closed') {
+    if (title) title.textContent = '🔒 ログインが必要な環境の可能性があります';
+    if (desc) desc.textContent = '公開されている画面が見つかりませんでした。閉じた環境の場合は、ここでログインしてから「画面解析」をもう一度実行してください。';
+  } else {
+    if (title) title.textContent = '🔒 このサイトはログインが必要です';
+    if (desc) desc.textContent = '認証の内側にある画面も対象にするには、ログインしてください。ログイン後に「画面解析」を再実行すると、認証済みの画面が追加されます。';
+  }
+  card.style.display = '';
+}
+
 // skipLoginSection=true のとき（ログイン後の再解析）はログインセクションを再展開しない
-// 画面分析（discover）フェーズの中断用状態。クロール実行フェーズには停止ボタンが
-// あるのに画面分析フェーズには無い、というドッグフーディング要望への対応。
+// 画面解析（discover）フェーズの中断用状態。クロール実行フェーズには停止ボタンが
+// あるのに画面解析フェーズには無い、というドッグフーディング要望への対応。
 let _discoverRunId = null;
 let _discoverReader = null;
 let _discoverCancelledByUser = false;
@@ -293,7 +312,7 @@ document.getElementById('discover-cancel-btn')?.addEventListener('click', async 
 
 async function discoverUrls(skipLoginSection) {
   const url = urlInput.value.trim();
-  if (!url) { setUrlMessage('URLを入力してから画面分析を実行してください', true); return; }
+  if (!url) { setUrlMessage('URLを入力してから画面解析を実行してください', true); return; }
   if (!validateUrlInput()) return;
   const loading = document.getElementById('discover-loading');
   const status = document.getElementById('discover-status');
@@ -388,15 +407,18 @@ async function discoverUrls(skipLoginSection) {
     // （途中結果を保存するクロール実行フェーズの挙動と揃える）。
     discovered = discovered.filter(p => p && p.url);
     renderDiscovered();
-    // ログインURLを上級設定フィールドに反映（参考表示）
-    if (!skipLoginSection && discovered.some(p => p.login_required)) {
+    const loginCount = discovered.filter(p => p.login_required).length;
+    // ログイン壁を検知したら、その場でログインを促す（旧「上級設定」は廃止）
+    if (!skipLoginSection) {
       const loginPage = discovered.find(p => p.login_required && p.login_url);
       if (loginPage) {
-        const advUrl = document.getElementById('login-url');
-        if (advUrl && !advUrl.value) advUrl.value = loginPage.login_url;
+        const urlInput = document.getElementById('login-url');
+        if (urlInput && !urlInput.value) urlInput.value = loginPage.login_url;
       }
+      if (loginCount) showLoginPrompt('detected');
+      else if (!discovered.length && !_discoverCancelledByUser) showLoginPrompt('closed');
+      else showLoginPrompt('none');
     }
-    const loginCount = discovered.filter(p => p.login_required).length;
     if (discovered.length) {
       const summary = document.getElementById('p1-summary');
       if (summary) {
@@ -518,8 +540,8 @@ function clearDiscovered() {
 function setAllDiscovered(v) { document.querySelectorAll('.discovered-cb').forEach(cb => { cb.checked = v; }); }
 function selectedDiscovered() { return [...document.querySelectorAll('.discovered-cb:checked')].map(cb => cb.value); }
 
-// ---- 観測方法（自動観測／選択したURLのみ）----
-// 「画面分析で見つけたURLだけをクロールするか、そこからリンクを辿って
+// ---- 解析方法（自動解析／選択したURLのみ）----
+// 「画面解析で見つけたURLだけをクロールするか、そこからリンクを辿って
 // 自動的にクロール範囲を広げるかを選びたい」というドッグフーディング要望への対応。
 function crawlTargetMode() {
   return document.querySelector('input[name="crawl-target-mode"]:checked')?.value || 'selected';

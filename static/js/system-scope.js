@@ -36,7 +36,7 @@
   function apply(sys) {
     document.body.setAttribute('data-system', sys);
 
-    // 対象外の項目（ナビ・グループ見出し・新規観測ボタン）を非表示
+    // 対象外の項目（ナビ・グループ見出し・新規解析ボタン）を非表示
     var scoped = document.querySelectorAll('[data-system]');
     scoped.forEach(function (el) {
       if (el === document.body) return;

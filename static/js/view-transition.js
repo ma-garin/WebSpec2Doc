@@ -431,7 +431,7 @@ async function _renderUmlDiagram(type, screens, rows) {
   const source = _umlSource(type, screens, rows);
   _currentUmlSource = source;
   if (!rows.length) {
-    target.innerHTML = '<div class="hero-msg">遷移が観測されていません。</div>';
+    target.innerHTML = '<div class="hero-msg">遷移が解析されていません。</div>';
     return;
   }
   try {
@@ -701,7 +701,7 @@ function _stStatesBlock(data) {
   const child = data.summary.child_state_count;
   const note = child
     ? `<p class="st-note">同一 URL でも画面内アクションで出現する状態（モーダル等）は別状態として ${child} 件に分けています。</p>`
-    : '<p class="st-note">画面内アクションによる状態（モーダル等）は観測されていません。</p>';
+    : '<p class="st-note">画面内アクションによる状態（モーダル等）は解析されていません。</p>';
   return (
     '<div class="hero-section-title">状態一覧</div>' + note +
     '<table class="trans-table"><thead><tr><th>状態</th><th>タイトル</th><th>種別</th><th>区分</th><th>URL</th></tr></thead>' +
@@ -775,7 +775,7 @@ async function renderTransitionTable() {
     return;
   }
   if (!data.applicable) {
-    resultHero.innerHTML = `<div class="hero-msg">${escHtml(data.reason || '状態が観測されていません。')}</div>`;
+    resultHero.innerHTML = `<div class="hero-msg">${escHtml(data.reason || '状態が解析されていません。')}</div>`;
     return;
   }
 

@@ -12,7 +12,7 @@ Object.assign(AUTORUN_OUTPUT_LABELS, {
   manual_procedures_xlsx: '手動テスト手順（Excel）',
   test_data_json: 'テストデータ（JSON）',
   test_data_csv: 'テストデータ（CSV）',
-  validation_observations_json: '入力検証の観測結果',
+  validation_observations_json: '入力検証の解析結果',
 });
 Object.assign(AUTORUN_OUTPUT_CATEGORIES, {
   document_mbt_json: '設計',

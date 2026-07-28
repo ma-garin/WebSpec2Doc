@@ -36,7 +36,7 @@ const AUTORUN_PHASE_LABELS = {
   idle: '待機中',
   discovering: '到達確認中…',
   awaiting_input: 'ログイン情報の入力待ち',
-  crawling: '観測中…（仕様書を作成）',
+  crawling: '解析中…（仕様書を作成）',
   generating_qa: '成果物を生成中…',
   awaiting_stages: '確認待ち — 要確認の項目を確認してください',
   generating_scripts: 'スクリプト生成中…',

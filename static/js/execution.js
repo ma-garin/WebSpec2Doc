@@ -57,7 +57,7 @@ function updateCrawlProgress() {
   if (!crawlProgress) return;
   const p = crawlProgress;
   execCount.textContent = `${p.finished} / ${p.total || '?'}`;
-  execTitle.textContent = `観測中…（${p.finished}/${p.total || '?'}）`;
+  execTitle.textContent = `解析中…（${p.finished}/${p.total || '?'}）`;
   execSkipped.textContent = `${p.skipped + p.login + p.failed}件`;
   execSkipped.title = `制約: ${p.skipped} / ログイン必須: ${p.login} / 失敗: ${p.failed}`;
   execSaved.textContent = `${p.saved}件`;
@@ -72,9 +72,9 @@ function handleCrawlEvent(event) {
   if (event.event === 'crawl_started') {
     p.total = Number(event.total) || p.total;
     p.parallelism = Number(event.parallelism) || 1;
-    execPhase.textContent = `観測中（${p.parallelism}並列）`;
+    execPhase.textContent = `解析中（${p.parallelism}並列）`;
   } else if (event.event === 'page_started') {
-    execMessage.textContent = `${event.index || '?'}件目を観測中: ${event.url || ''}`;
+    execMessage.textContent = `${event.index || '?'}件目を解析中: ${event.url || ''}`;
     setStep(1);
   } else if (event.event === 'page_completed') {
     p.finished += 1; p.completed += 1;
@@ -111,7 +111,7 @@ function saveUrlHistory(url) {
     localStorage.setItem(URL_HISTORY_KEY, JSON.stringify(next));
   } catch (_) {}
 }
-// 観測済みサイト（サーバ側）のURL。localStorage はオリジン単位のため、
+// 解析済みサイト（サーバ側）のURL。localStorage はオリジン単位のため、
 // ポート違い・別端末・シークレットウィンドウでは履歴が空になる。サーバの
 // 解析実績を候補に混ぜて、どこから開いても過去のURLを選べるようにする。
 let _serverUrlHistory = [];
@@ -157,11 +157,11 @@ document.getElementById('form').addEventListener('submit', (e) => {
   if (!urls.length) {
     const msg = mode === 'auto'
       ? 'URL を入力してください'
-      : (discovered.length ? 'ドキュメント化する画面を1件以上選択してください' : '先に「画面分析」を実行してください');
+      : (discovered.length ? 'ドキュメント化する画面を1件以上選択してください' : '先に「画面解析」を実行してください');
     setUrlMessage(msg, true);
     return;
   }
-  // 認証が必要な画面（再観測時にログインバナー・フォームを復元するため site.json に保存する）
+  // 認証が必要な画面（再解析時にログインバナー・フォームを復元するため site.json に保存する）
   const loginUrlSet = new Set(urls);
   const loginUrls = discovered.filter(p => p.login_required && loginUrlSet.has(p.url)).map(p => p.url);
   const loginLandingUrl = discovered.find(p => p.login_required && p.login_url)?.login_url
@@ -201,7 +201,7 @@ async function runWith(bodyStr, domain, label, urlCount) {
   previewImage.classList.remove('show'); previewPlaceholder.classList.remove('hidden');
   execLog.textContent = '';
   execTarget.textContent = label;
-  execTitle.textContent = '観測中…'; execMessage.textContent = `${urlCount}件の対象をクロールしてドキュメント化します。`;
+  execTitle.textContent = '解析中…'; execMessage.textContent = `${urlCount}件の対象をクロールしてドキュメント化します。`;
   execPhase.textContent = '実行中'; setStep(0); startTimer(); startPreviewPolling();
   resetCrawlProgress(urlCount);
 

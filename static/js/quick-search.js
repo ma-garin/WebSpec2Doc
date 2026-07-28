@@ -1,5 +1,5 @@
 // ==================== トップバー クイック検索 ====================
-// 画面（ビュー）と観測済みサイトを横断検索し、Enter/クリックで遷移する。
+// 画面（ビュー）と解析済みサイトを横断検索し、Enter/クリックで遷移する。
 // Cmd/Ctrl+K でフォーカス、Esc で閉じる。core.js の switchView /
 // openResultsForDomain に依存する（読み込み順は index.html で保証）。
 (function () {
@@ -12,7 +12,7 @@
   // 現在のシステム以外のビューは候補に出さない（相手システムの画面を混ぜない）。
   const VIEWS = [
     { view: 'dashboard', label: 'ホーム', kw: 'home dashboard qa ドキュメント生成', system: 'docs' },
-    { view: 'generate', label: '新規観測', kw: 'add site crawl 再観測 url', system: 'docs' },
+    { view: 'generate', label: '新規解析', kw: 'add site crawl 再解析 url', system: 'docs' },
     { view: 'auto-run', label: 'AutoRun', kw: '全自動 テスト実行 autorun', system: 'autorun' },
     { view: 'run-history', label: '実行履歴', kw: 'history ラン run', system: 'autorun' },
     { view: 'testcases', label: 'テストケース', kw: 'test case ケース', system: 'docs' },
@@ -52,7 +52,7 @@
     }
     for (const d of sites) {
       if (!q || d.toLowerCase().includes(q)) {
-        out.push({ type: 'site', key: d, label: d, sub: '観測済みサイト' });
+        out.push({ type: 'site', key: d, label: d, sub: '解析済みサイト' });
       }
     }
     return out.slice(0, 8);
@@ -110,7 +110,7 @@
   }
 
   // 閉じた後に、遅れて完了した refresh がパネルを開き直す競合があった
-  // （Escape で閉じたのに再表示される。E2E の flaky として観測）。
+  // （Escape で閉じたのに再表示される。E2E の flaky として解析）。
   // 世代番号で、閉じる操作より前に始まった描画を捨てる。
   let generation = 0;
 

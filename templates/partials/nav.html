@@ -4,7 +4,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11.5L12 4l9 7.5"/><path d="M5.5 10v10h13V10M9.5 20v-6h5v6"/></svg>
         <span class="nav-label">ホーム</span>
       </button>
-      <!-- 「新規観測」はサイドバー上部の主要アクションボタン（#add-site-btn）が持つ。
+      <!-- 「新規解析」はサイドバー上部の主要アクションボタン（#add-site-btn）が持つ。
            ナビにも同じ項目を置くと同じ導線が 2 つ並ぶため、ここには置かない。 -->
       <div class="app-nav-group" data-system="autorun">メイン</div>
       <button class="app-nav-item" data-view="auto-run" data-system="autorun">
@@ -21,7 +21,7 @@
            常時 display:none にされ、段階詳細を描く関数も存在しないため到達できなかった。
            非表示のまま残すとセレクタだけが生き、旧承認モーダルと同じ事故になる。
            確認の導線は要確認キュー（#autorun-review）に一本化する。 -->
-      <!-- テストケース一覧は、観測前は「report.json not found」しか出せず
+      <!-- テストケース一覧は、解析前は「report.json not found」しか出せず
            単独では判断材料にならなかったため廃止。実行履歴へ置き換える。 -->
       <button class="app-nav-item" id="nav-docs-run-history-btn" type="button" data-system="docs">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 8v5l3 2"/><circle cx="12" cy="12" r="9"/></svg>

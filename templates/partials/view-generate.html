@@ -5,7 +5,7 @@
           <div class="wizard-progress" id="wizard-progress-bar" style="margin-bottom:16px;display:none">
             <div class="wizard-step-node is-active" id="ws-1">
               <div class="wizard-step-circle">1</div>
-              <span class="wizard-step-label">観測</span>
+              <span class="wizard-step-label">解析</span>
             </div>
             <div class="wizard-step-line" id="wl-1"></div>
             <div class="wizard-step-node" id="ws-2">
@@ -26,13 +26,13 @@
 
           <div id="gen-panel">
 
-            <!-- ステップ1: URL入力・観測（語は AutoRun と揃えて「観測」に統一） -->
+            <!-- ステップ1: URL入力・解析（語は AutoRun と揃えて「解析」に統一） -->
             <div id="wizard-p1" class="input-card">
-              <label for="url-input" class="form-label">観測対象 URL <span style="color:var(--color-critical)">*</span></label>
+              <label for="url-input" class="form-label">解析対象 URL <span style="color:var(--color-critical)">*</span></label>
               <div class="input-row" style="gap:8px">
                 <input type="url" id="url-input" class="url-input" placeholder="https://example.com" autocomplete="url" list="url-history-list" style="flex:1" />
                 <datalist id="url-history-list"></datalist>
-                <button type="button" id="discover-btn" class="btn-primary" style="height:40px;padding:0 18px;font-size:13px;white-space:nowrap">画面分析</button>
+                <button type="button" id="discover-btn" class="btn-primary" style="height:40px;padding:0 18px;font-size:13px;white-space:nowrap">画面解析</button>
               </div>
               <div id="url-input-message" class="input-field-message"></div>
               <!-- オンボーディングヒント -->
@@ -47,15 +47,13 @@
                   </button>
                 </div>
                 <p style="font-size:12px;color:var(--text-muted);margin:0">
-                  💡 ログインが必要なサイトは「画面分析」後に認証情報を追加できます。
-                  <br>
-                  認証済みページもテスト設計対象にしたい場合は「上級設定」からログインURLを指定してください。
+                  💡 ログインが必要な閉じた環境も対象にできます。画面解析でログインが必要と分かった時点で、この画面にログインの案内が出ます。
                 </p>
               </div>
               <div id="discover-loading" class="discover-live-card" style="display:none;margin-top:10px">
                 <div class="discover-live-header">
                   <span class="spinner"></span>
-                  <span>画面を分析しています...</span>
+                  <span>画面を解析しています...</span>
                   <span id="discover-count-label" class="discover-live-count">0画面を発見</span>
                   <span class="discover-live-elapsed-label">経過:</span>
                   <span id="discover-elapsed" class="discover-live-elapsed"></span>
@@ -64,7 +62,7 @@
                 <div id="discover-live-feed" class="discover-live-feed"></div>
               </div>
               <div id="discover-status" class="discover-status"></div>
-              <!-- 観測完了サマリー -->
+              <!-- 解析完了サマリー -->
               <div id="p1-summary" class="wizard-p1-summary" style="display:none">
                 <div class="p1-result-cards">
                   <div class="p1-result-card p1-result-card--screens">
@@ -77,11 +75,45 @@
                   </div>
                   <div class="p1-result-card p1-result-card--time" id="p1-time-card" style="display:none">
                     <span class="p1-result-num" id="p1-elapsed-num">-</span>
-                    <span class="p1-result-label">観測時間</span>
+                    <span class="p1-result-label">解析時間</span>
                   </div>
                 </div>
                 <span class="wizard-p1-summary-hint" id="p1-login-hint" style="display:none"></span>
                 <button type="button" id="p1-next-btn" class="btn-primary" style="height:44px;padding:0 28px;font-size:14px;margin-top:4px">条件設定へ →</button>
+              </div>
+
+              <!-- ログイン案内: 画面解析でログイン壁を検知したときだけ表示する。
+                   閉じた環境が例外ではなく通常の対象であるため、折りたたみに隠さない。 -->
+              <div id="login-required-card" class="input-card" style="display:none;margin-top:12px">
+                <h3 id="login-required-title" style="margin:0 0 6px;font-size:15px">🔒 このサイトはログインが必要です</h3>
+                <p class="input-hint" id="login-required-desc" style="margin:0 0 14px">認証の内側にある画面も対象にするには、ログインしてください。</p>
+
+                <div class="field" style="margin-bottom:8px">
+                  <label for="login-url">ログインURL</label>
+                  <div style="display:flex;gap:6px;align-items:center">
+                    <input type="url" id="login-url" class="url-input" style="flex:1" placeholder="https://example.com/login" />
+                    <button type="button" id="login-scrape-btn" class="btn-outline-sm">フォームを取得</button>
+                  </div>
+                </div>
+                <div id="login-loading" style="display:none" class="discover-loading"><span class="spinner"></span><span id="login-loading-msg">フォームを取得しています…</span></div>
+                <div id="login-fields-area"></div>
+                <div id="login-status" class="input-field-message" style="margin-top:6px"></div>
+
+                <!-- 認証フローレコーダー（SPEC-3-2）: 見えるブラウザで人が普通にログインし、ボタン一つで保存する -->
+                <div class="field" style="margin-top:10px;border-top:1px solid var(--border, #e5e5e5);padding-top:10px">
+                  <label>ブラウザでログインして保存（MFA・ソーシャルログインにも対応）</label>
+                  <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+                    <button type="button" id="login-record-start-btn" class="btn-outline-sm">ブラウザでログインして保存</button>
+                    <button type="button" id="login-record-complete-btn" class="btn-primary" style="display:none;height:28px;padding:0 12px;font-size:12px">ログイン完了</button>
+                    <button type="button" id="login-record-cancel-btn" class="btn-outline-sm" style="display:none">キャンセル</button>
+                  </div>
+                  <div id="login-record-status" class="input-field-message" style="margin-top:6px"></div>
+                </div>
+
+                <div class="field" style="margin-top:8px">
+                  <label for="auth-path">auth.json パス（CLI保存済みの場合）</label>
+                  <input type="text" id="auth-path" placeholder="output/example.com/auth.json" />
+                </div>
               </div>
             </div>
 
@@ -91,12 +123,12 @@
                 <div class="input-card">
                   <div class="wizard-p2-header">
                     <h2>条件設定</h2>
-                    <button type="button" id="p2-back-btn" class="btn-outline-sm">← 観測に戻る</button>
+                    <button type="button" id="p2-back-btn" class="btn-outline-sm">← 解析に戻る</button>
                   </div>
 
-                  <!-- 観測方法（自動でリンクを辿る／選択したURLのみ） -->
+                  <!-- 解析方法（自動でリンクを辿る／選択したURLのみ） -->
                   <div class="field" id="crawl-mode-field" style="margin-bottom:14px">
-                    <label class="form-label" style="margin-bottom:6px">観測方法</label>
+                    <label class="form-label" style="margin-bottom:6px">解析方法</label>
                     <div style="display:flex;gap:16px;flex-wrap:wrap">
                       <label class="checkbox-chip">
                         <input type="radio" name="crawl-target-mode" id="crawl-mode-selected" value="selected" checked>
@@ -143,10 +175,10 @@
                   <!-- オプション -->
                   <div style="margin-top:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
                     <label class="checkbox-chip"><input type="checkbox" id="compare"> 前回との差分を出力</label>
-                    <!-- 並列数は毎回変える値ではないため、既定は設定画面（観測の既定値）で決める。
+                    <!-- 並列数は毎回変える値ではないため、既定は設定画面（解析の既定値）で決める。
                          ここは今回だけ変えたいときの上書き手段として残す。 -->
                     <label class="control-field control-field-inline" for="crawl-parallelism">
-                      <span>並列数<span class="info-tip" tabindex="0" role="img" aria-label="同時にアクセスする画面数。増やすと観測時間は短くなりますが、対象サイトへの負荷が増えます。既定は設定画面で変更できます。" data-tip="同時にアクセスする画面数。増やすと観測時間は短くなりますが、対象サイトへの負荷が増えます。既定は設定画面で変更できます。">ⓘ</span></span>
+                      <span>並列数<span class="info-tip" tabindex="0" role="img" aria-label="同時にアクセスする画面数。増やすと解析時間は短くなりますが、対象サイトへの負荷が増えます。既定は設定画面で変更できます。" data-tip="同時にアクセスする画面数。増やすと解析時間は短くなりますが、対象サイトへの負荷が増えます。既定は設定画面で変更できます。">ⓘ</span></span>
                       <select id="crawl-parallelism" class="url-input select-compact">
                         <option value="1">1（順次）</option>
                         <option value="2">2</option>
@@ -154,41 +186,10 @@
                         <option value="8">8（最大）</option>
                       </select>
                     </label>
-                    <details id="login-setup-section" style="flex:1">
-                      <summary style="cursor:pointer;font-size:12px;color:var(--text-muted);padding:4px 0;user-select:none">上級設定（カスタムログインURL・auth.json）</summary>
-                      <div style="padding:10px 0 4px">
-                        <div class="field" style="margin-bottom:8px">
-                          <label for="login-url">ログインURL（カスタム）</label>
-                          <div style="display:flex;gap:6px;align-items:center">
-                            <input type="url" id="login-url" class="url-input" style="flex:1" placeholder="https://example.com/login" />
-                            <button type="button" id="login-scrape-btn" class="btn-outline-sm">フォームを取得</button>
-                          </div>
-                        </div>
-                        <div id="login-loading" style="display:none" class="discover-loading"><span class="spinner"></span><span id="login-loading-msg">フォームを取得しています…</span></div>
-                        <div id="login-fields-area"></div>
-                        <div id="login-status" class="input-field-message" style="margin-top:6px"></div>
-
-                        <!-- 認証フローレコーダー（SPEC-3-2）: 見えるブラウザで人が普通にログインし、ボタン一つで保存する -->
-                        <div class="field" style="margin-top:10px;border-top:1px solid var(--border, #e5e5e5);padding-top:10px">
-                          <label>ブラウザでログインして保存（MFA・ソーシャルログインにも対応）</label>
-                          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-                            <button type="button" id="login-record-start-btn" class="btn-outline-sm">ブラウザでログインして保存</button>
-                            <button type="button" id="login-record-complete-btn" class="btn-primary" style="display:none;height:28px;padding:0 12px;font-size:12px">ログイン完了</button>
-                            <button type="button" id="login-record-cancel-btn" class="btn-outline-sm" style="display:none">キャンセル</button>
-                          </div>
-                          <div id="login-record-status" class="input-field-message" style="margin-top:6px"></div>
-                        </div>
-
-                        <div class="field" style="margin-top:8px">
-                          <label for="auth-path">auth.json パス（CLI保存済みの場合）</label>
-                          <input type="text" id="auth-path" placeholder="output/example.com/auth.json" />
-                        </div>
-                      </div>
-                    </details>
                   </div>
 
                   <div class="wizard-footer" style="justify-content:flex-end">
-                    <button type="submit" class="btn-primary" id="submit-btn" style="height:44px;padding:0 28px;font-size:15px">観測開始</button>
+                    <button type="submit" class="btn-primary" id="submit-btn" style="height:44px;padding:0 28px;font-size:15px">解析開始</button>
                   </div>
                 </div>
               </form>
@@ -199,20 +200,20 @@
           <div id="execution-view" class="execution-view hidden">
             <div class="execution-topbar">
               <div class="execution-topbar-head">
-                <h2 class="execution-title" id="exec-title">観測中…</h2>
+                <h2 class="execution-title" id="exec-title">解析中…</h2>
                 <span class="execution-elapsed" id="exec-elapsed">00:00</span>
               </div>
-              <p class="execution-message" id="exec-message">対象を受け付けて、観測の準備を進めています。</p>
+              <p class="execution-message" id="exec-message">対象を受け付けて、解析の準備を進めています。</p>
               <div class="execution-progress"><div class="execution-progress-bar" id="exec-progress-bar"></div></div>
               <div class="execution-steps">
                 <div class="execution-step is-active" id="estep-0">1. 受付</div>
                 <div class="execution-step" id="estep-1">2. ページ取得</div>
-                <div class="execution-step" id="estep-2">3. 観測</div>
+                <div class="execution-step" id="estep-2">3. 解析</div>
                 <div class="execution-step" id="estep-3">4. 結果整理</div>
               </div>
             </div>
             <div class="execution-preview-frame">
-              <img id="exec-preview-image" class="execution-preview-image" alt="観測中のライブプレビュー" />
+              <img id="exec-preview-image" class="execution-preview-image" alt="解析中のライブプレビュー" />
               <div id="exec-preview-placeholder" class="execution-preview-placeholder">
                 <div class="spinner"></div>
                 <p>ライブプレビューを準備しています…</p>
@@ -250,7 +251,7 @@
                   <button type="button" class="btn-outline-sm" id="export-dropdown-btn">↓ エクスポート</button>
                   <div class="export-dropdown-menu" id="export-dropdown-menu"></div>
                 </div>
-                <button type="button" id="r-recrawl-btn" class="btn-outline-sm">再観測</button>
+                <button type="button" id="r-recrawl-btn" class="btn-outline-sm">再解析</button>
                 <button type="button" id="r-density-btn" class="btn-outline-sm btn-icon-only" title="表の行間を切り替え" aria-label="表の行間を切り替え">☰</button>
                 <button type="button" id="r-maximize-btn" class="btn-outline-sm btn-icon-only" title="最大化 (Esc で解除)" aria-label="最大化">⛶</button>
               </div>

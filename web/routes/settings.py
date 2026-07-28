@@ -19,6 +19,8 @@ from web.services.test_design_settings import (
 )
 from web.validation import _sanitize
 
+logger = logging.getLogger(__name__)
+
 bp = Blueprint("settings", __name__)
 INSTANCE_DIR = Path("instance")
 
@@ -103,9 +105,7 @@ def list_llm_models() -> dict:
     except (urllib.error.URLError, OSError, ValueError, TimeoutError) as exc:
         logger.info("LLM モデル一覧の取得に失敗しました (%s): %s", url, exc)
         return {"ok": False, "error": "接続できませんでした", "models": []}
-    models = sorted(
-        str(item.get("id", "")) for item in payload.get("data", []) if item.get("id")
-    )
+    models = sorted(str(item.get("id", "")) for item in payload.get("data", []) if item.get("id"))
     return {"ok": True, "models": models}
 
 

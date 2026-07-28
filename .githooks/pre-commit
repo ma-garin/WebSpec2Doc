@@ -49,6 +49,9 @@ PY_CHANGED=false
 
 while IFS= read -r file; do
   case "$file" in
+    # docs/ 配下の HTML/JS/CSS は設計モックアップ・プロトタイプであり実 UI ではない。
+    # E2E ゲートの対象外（誤検出で pytest 全件を完走してから BLOCK していた）。
+    docs/*.html|docs/*.js|docs/*.css) ;;
     *.html|*.js|*.css) UI_CHANGED=true ;;
     *.py)              PY_CHANGED=true ;;
   esac

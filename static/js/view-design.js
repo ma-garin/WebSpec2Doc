@@ -453,3 +453,194 @@ function _openMbtModal(pid, tech) {
   document.body.appendChild(overlay);
 }
 
+
+// ---- テスト設計 / 画面別設計（案3「条件が主役」）----
+// 右ペインは「画面と仕様」の renderReportDetail と同じ骨格（ヘッダ→スクショ→遷移）を保ち、
+// 本体をテスト条件の表に差し替える。テストケース（入力値・手順・期待結果）は出さない。
+let _tdsToken = 0; // 連打・タブ切替時に古い fetch 応答の描画を捨てる
+
+function _tdsDomain() {
+  return ((document.getElementById('r-domain') || {}).textContent || '').trim();
+}
+
+// 描画失敗時に results.js の描画済みフラグを取り消し、再選択で描き直せるようにする。
+// （results.js 側のハーネスは変更せず、自分の後始末だけを行う）
+function _tdsClearRenderedFlag() {
+  try {
+    if (typeof _renderedPanels !== 'undefined' && _renderedPanels) {
+      _renderedPanels.delete('test-design/by-screen');
+    }
+  } catch (e) { /* フラグが無い実装でも描画は成立するため無視 */ }
+}
+
+// スクリーンショットは API に含まれないため report.json / resultData から引く（view-report.js と同方式）
+function _tdsShotHtml(pageId) {
+  const all = (typeof resultData !== 'undefined' && resultData && resultData.screenshots) || [];
+  const shotPath = all.find(p => p.split('/').pop().replace(/\.png$/, '') === pageId);
+  if (!shotPath) return '';
+  const shotSrc = `/preview?path=${encodeURIComponent(shotPath)}`;
+  // 拡大表示は全体スクショ（{page_id}_full.png）を優先し、見切れを防ぐ
+  const fullPath = all.find(p => p.split('/').pop() === `${pageId}_full.png`);
+  const lightboxSrc = fullPath ? `/preview?path=${encodeURIComponent(fullPath)}` : shotSrc;
+  return `<img src="${escHtml(shotSrc)}" class="rpt-screenshot" loading="lazy" alt="${escHtml(pageId)}"` +
+    ` onclick="openLightbox('${escHtml(lightboxSrc)}')" />` +
+    '<p class="rpt-screenshot-caption">クリックで全画面表示</p>';
+}
+
+// 遷移情報も API 外。report.json の screens から内部IDを画面名に解決して出す
+function _tdsTransHtml(pageId) {
+  const screens = (typeof reportJson !== 'undefined' && reportJson && reportJson.screens) || [];
+  const sc = screens.find(s => s.page_id === pageId);
+  if (!sc) return '';
+  const label = id => { const t = screens.find(s => s.page_id === id); return (t && t.title) || id; };
+  const to = (sc.transitions && sc.transitions.to) || [];
+  const from = (sc.transitions && sc.transitions.from) || [];
+  if (!to.length && !from.length) return '';
+  return '<div class="rpt-transitions">遷移先: ' +
+    (to.length ? to.map(id => escHtml(label(id))).join('、') : '—') +
+    ' ／ 遷移元: ' +
+    (from.length ? from.map(id => escHtml(label(id))).join('、') : '—') +
+    '</div>';
+}
+
+// class 属性へ入れる値は必ずホワイトリストに落とす（API が想定外の文字列を返しても属性を壊さない）
+const TDS_COND_CLASSES = ['cc-req', 'cc-bound', 'cc-format', 'cc-opt', 'cc-other'];
+function _tdsCondClass(v) {
+  return TDS_COND_CLASSES.includes(v) ? v : 'cc-other';
+}
+
+// 技法名 → CSS の色クラス（static/app-report.css の .tds-pill.t-* に対応）
+const TDS_TECHNIQUE_CLASS = {
+  同値分割: 't-ep',
+  境界値分析: 't-bva',
+  デシジョンテーブル: 't-dt',
+  状態遷移: 't-st',
+  状態遷移テスト: 't-st',
+  分類ツリー法: 't-ct',
+  ペアワイズ: 't-pw',
+  ユースケーステスト: 't-uc',
+  直交表: 't-comb',
+};
+function _tdsTechniqueClass(name) {
+  return TDS_TECHNIQUE_CLASS[name] || '';
+}
+
+function _tdsDetailHtml(d) {
+  const conds = d.conditions || [];
+  const rows = conds.map((c, i) => {
+    const source = [c.source_kind, c.source_name].filter(Boolean).map(escHtml).join(' / ');
+    const tech = c.technique || '—';
+    return '<tr>' +
+      `<td class="tds-no">${escHtml(c.no != null ? c.no : i + 1)}</td>` +
+      `<td class="tds-cond-lead ${_tdsCondClass(c.cond_class)}">${escHtml(c.condition || '')}</td>` +
+      `<td class="tds-source">${source || '—'}</td>` +
+      `<td><span class="tds-pill ${_tdsTechniqueClass(tech)}">${escHtml(tech)}</span></td>` +
+      '</tr>';
+  }).join('');
+  const table = conds.length
+    ? '<div class="tds-table-wrap"><table class="tds-table">' +
+      '<thead><tr><th>No</th><th>テスト条件</th><th>由来した要素</th><th>導出技法</th></tr></thead>' +
+      `<tbody>${rows}</tbody></table></div>`
+    : '<p class="tds-empty">この画面から導出されたテスト条件はありません。</p>';
+
+  const unapplied = d.unapplied || [];
+  const policy = unapplied.length
+    ? '<div class="tds-policy">' +
+      '<div class="tds-policy-title">適用しなかった技法とその理由</div>' +
+      unapplied.map(u =>
+        '<div class="tds-policy-item">' +
+        `<span class="tds-policy-tech">${escHtml(u.technique || '')}</span>` +
+        `<span class="tds-policy-reason">${escHtml(u.reason || '')}</span>` +
+        '</div>').join('') +
+      '</div>'
+    : '';
+
+  return '<div class="rpt-detail-header" style="margin-bottom:12px">' +
+    `<h3 style="font-size:16px;margin-bottom:4px">${escHtml(d.title || d.page_id || '')}</h3>` +
+    `<code class="rpt-url">${escHtml(d.url || '')}</code></div>` +
+    _tdsShotHtml(d.page_id) + _tdsTransHtml(d.page_id) + table + policy;
+}
+
+async function _tdsRenderDetail(pageId) {
+  const detail = document.getElementById('tds-detail');
+  if (!detail) return;
+  const token = ++_tdsToken;
+  uiSkeleton(detail, 'table');
+  const url = `/api/test-design/by-screen?domain=${encodeURIComponent(_tdsDomain())}` +
+    `&page_id=${encodeURIComponent(pageId)}`;
+  let data = null;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    data = await res.json();
+  } catch (e) {
+    if (token !== _tdsToken || !document.getElementById('tds-detail')) return;
+    uiError(detail, {
+      title: '画面別設計の読み込みに失敗しました',
+      message: `${pageId} のテスト条件を取得できませんでした（${e.message}）。`,
+      onRetry: () => _tdsRenderDetail(pageId),
+    });
+    return;
+  }
+  if (token !== _tdsToken || !document.getElementById('tds-detail')) return;
+  detail.innerHTML = _tdsDetailHtml(data || {});
+}
+
+async function renderDesignByScreen() {
+  const host = resultHero; // await 中にタブが切り替わっても自パネルへ描き続ける
+  uiSkeleton(host, 'table');
+  let screens = [];
+  try {
+    const res = await fetch(`/api/test-design/by-screen?domain=${encodeURIComponent(_tdsDomain())}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    screens = (await res.json()).screens || [];
+  } catch (e) {
+    // selectResultTab は描画「前」に描画済みフラグを立てるため、失敗をそのままにすると
+    // 再クリックしても二度と描画されない（＝空のまま固まる）。フラグを取り消して復帰可能にする。
+    _tdsClearRenderedFlag();
+    uiError(host, {
+      title: '画面別設計の読み込みに失敗しました',
+      message: `画面一覧を取得できませんでした（${e.message}）。`,
+      onRetry: () => renderDesignByScreen(),
+    });
+    return;
+  }
+  // 「画面と仕様」「条件マトリクス」は canonicalScreens() でクエリ違いの重複を除く。
+  // ここだけ生の全画面を出すと画面数が食い違うため、同じ基準に揃える。
+  if (typeof canonicalScreens === 'function' && typeof reportJson !== 'undefined' && reportJson) {
+    const allow = new Set(canonicalScreens(reportJson).map(s => s.page_id));
+    if (allow.size) screens = screens.filter(s => allow.has(s.page_id));
+  }
+  if (!screens.length) {
+    uiEmpty(host, {
+      icon: '🧪',
+      title: 'テスト設計の対象画面がありません',
+      desc: '解析済みの画面に入力要素・遷移が見つからないため、テスト条件を導出できませんでした。',
+    });
+    return;
+  }
+
+  host.innerHTML =
+    '<div class="rpt-pane-wrap">' +
+    '<div class="rpt-list" id="tds-list"></div>' +
+    '<div class="rpt-detail" id="tds-detail"></div>' +
+    '</div>';
+
+  const list = document.getElementById('tds-list');
+  screens.forEach((sc, idx) => {
+    const item = document.createElement('div');
+    item.className = 'rpt-list-item' + (idx === 0 ? ' is-active' : '');
+    item.dataset.pid = sc.page_id;
+    item.innerHTML =
+      `<strong>${escHtml(sc.page_id || '')}</strong>` +
+      `<span>${escHtml(sc.title || '')}</span>` +
+      `<span class="tds-badge">要素${escHtml(sc.element_count || 0)}・条件${escHtml(sc.condition_count || 0)}</span>`;
+    item.addEventListener('click', () => {
+      list.querySelectorAll('.rpt-list-item').forEach(el => el.classList.remove('is-active'));
+      item.classList.add('is-active');
+      _tdsRenderDetail(sc.page_id);
+    });
+    list.appendChild(item);
+  });
+  _tdsRenderDetail(screens[0].page_id);
+}

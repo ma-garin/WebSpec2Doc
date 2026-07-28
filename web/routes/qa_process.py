@@ -398,6 +398,27 @@ def api_test_design() -> dict | tuple[dict, int]:
     return asdict(design)
 
 
+@bp.get("/api/test-design/by-screen")
+def api_test_design_by_screen() -> dict | tuple[dict, int]:
+    """画面別テスト設計。page_id 省略で画面リスト、指定でその画面の条件一覧を返す。"""
+    from web.services.screen_test_design import build_screen_detail, build_screen_index
+
+    domain = request.args.get("domain", "")
+    if not _valid_domain(domain):
+        return {"error": "invalid domain"}, 404
+    _, report, error = _table_request()
+    if error:
+        return error, 404
+    assert report is not None
+    page_id = request.args.get("page_id", "").strip()
+    if not page_id:
+        return {"domain": domain, "screens": build_screen_index(report)}
+    detail = build_screen_detail(report, page_id)
+    if detail is None:
+        return {"error": f"screen not found: {page_id}"}, 404
+    return detail
+
+
 @bp.get("/api/qa-process/advanced")
 def api_qa_process_advanced() -> dict | tuple[dict, int]:
     domain = request.args.get("domain", "")

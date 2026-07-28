@@ -3,16 +3,7 @@
         <div class="app-breadcrumb" id="topbar-breadcrumb"><span>WebSpec2Doc</span><span class="sep">/</span><span>ホーム</span></div>
         <h1 class="app-topbar-title" id="topbar-title">QAドキュメント生成</h1>
       </div>
-      <div class="topbar-search" role="search">
-        <svg class="topbar-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-        <input type="search" id="topbar-search-input" class="topbar-search-input"
-               placeholder="画面・サイトを検索（⌘K）" autocomplete="off" spellcheck="false"
-               role="combobox" aria-expanded="false" aria-controls="topbar-search-results"
-               aria-label="画面・解析済みサイトを検索">
-        <kbd class="topbar-search-kbd" aria-hidden="true">⌘K</kbd>
-        <div class="topbar-search-results" id="topbar-search-results" role="listbox" aria-label="検索候補" hidden></div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:auto">
         <div class="app-topbar-actions" id="topbar-actions"></div>
         {% if auth_user %}
         <a href="/auth/account" title="アカウント（{{ auth_user.email }}）"

@@ -280,6 +280,7 @@ function _showUmlPanel(type, screens) {
   const meta = _umlMeta(type);
   _currentUmlType = type;
   umlZoom = 1;
+  area.classList.add('is-split');
   area.innerHTML =
     '<div class="uml-panel-head">' +
     `<div><strong>${escHtml(meta.title)}</strong><span>${escHtml(meta.desc)}</span></div>` +
@@ -292,13 +293,127 @@ function _showUmlPanel(type, screens) {
     '</div>' +
     '<div class="uml-layout">' +
     '<div class="uml-canvas" id="uml-render-target"><div class="hero-msg">図を描画しています…</div></div>' +
-    `<div class="uml-table-wrap">${_umlTable(type, rows)}</div>` +
+    '<div class="uml-table-wrap uml-case-pane" id="uml-case-pane">' +
+    '<div class="hero-msg">テストケースを読み込んでいます…</div></div>' +
     '</div>';
+  _renderUmlCasePane();
   _loadMermaid(() => {
     _renderUmlDiagram(type, screens, rows).then(() => {
       setTimeout(_initUmlZoom, 100);
     });
   });
+}
+
+// ---- 右ペイン: 遷移図に対応するテストケース ----
+// データ源の優先順:
+//   1) reportJson.transition_tests（transition_tests_to_dict の出力形）
+//   2) reportJson.meta.business_flows（同じくテストパス。優先度付き）
+//   3) /api/testcases/table（生成済みテストケース表）
+// いずれも無ければ「テストケースがありません」を出す（エラーにしない）。
+let _umlCaseRows = null;   // API から取得した行のキャッシュ（サブタブ切替で再取得しない）
+let _umlCaseState = '';    // '' | 'loading' | 'loaded' | 'error'
+let _umlCaseError = '';
+
+function _screenTitleMap() {
+  const map = {};
+  ((reportJson && reportJson.screens) || []).forEach(s => {
+    if (s && s.page_id) map[s.page_id] = s.title || '';
+  });
+  return map;
+}
+
+function _umlLocalCaseRows() {
+  const meta = (reportJson && reportJson.meta) || {};
+  const direct = reportJson && Array.isArray(reportJson.transition_tests) ? reportJson.transition_tests : null;
+  const flows = Array.isArray(meta.business_flows) ? meta.business_flows : null;
+  const src = (direct && direct.length) ? direct : (flows || []);
+  if (!src.length) return [];
+  const titles = _screenTitleMap();
+  return src.map((p, i) => {
+    const nodes = Array.isArray(p.nodes) ? p.nodes : [];
+    return {
+      id: String(p.path_id || `TP-${i + 1}`),
+      path: nodes.map(n => titles[n] || n).join(' → '),
+      objective: String(p.test_objective || p.flow_name || ''),
+      tag: p.priority ? `優先度${p.priority}` : (p.coverage || '')
+    };
+  }).filter(r => r.path || r.objective);
+}
+
+function _umlCaseTable(rows, source) {
+  if (!rows.length) {
+    return '<div class="uml-case-head"><div class="uml-table-title">テストケース</div></div>' +
+      '<div class="hero-msg">テストケースがありません。</div>';
+  }
+  const body = rows.map(r => `
+    <tr>
+      <td class="c-screen">${escHtml(r.id)}</td>
+      <td class="uml-case-path">${escHtml(r.path || '—')}${r.tag ? `<span class="trans-link-detail">${escHtml(r.tag)}</span>` : ''}</td>
+      <td class="uml-case-obj">${escHtml(r.objective || '—')}</td>
+    </tr>
+  `).join('');
+  return (
+    '<div class="uml-case-head">' +
+    '<div class="uml-table-title">テストケース</div>' +
+    `<span class="uml-case-count">${rows.length}件</span>` +
+    '</div>' +
+    `<p class="uml-case-src">${escHtml(source)}</p>` +
+    '<table class="trans-table uml-linked-table uml-case-table">' +
+    '<thead><tr><th>ID</th><th>経路 / 対象画面</th><th>目的</th></tr></thead>' +
+    `<tbody>${body}</tbody>` +
+    '</table>'
+  );
+}
+
+function _renderUmlCasePane() {
+  const pane = document.getElementById('uml-case-pane');
+  if (!pane) return;
+  const local = _umlLocalCaseRows();
+  if (local.length) {
+    pane.innerHTML = _umlCaseTable(local, '左の遷移図に対応する遷移テストパス（レポート同梱）。');
+    return;
+  }
+  if (_umlCaseState === 'loaded') {
+    pane.innerHTML = _umlCaseTable(_umlCaseRows || [], '生成済みテストケース表（テストケースタブと同じ内容）。');
+    return;
+  }
+  if (_umlCaseState === 'error') {
+    pane.innerHTML = '<div class="uml-case-head"><div class="uml-table-title">テストケース</div></div>' +
+      `<div class="hero-msg">テストケースを取得できませんでした（${escHtml(_umlCaseError)}）。</div>`;
+    return;
+  }
+  pane.innerHTML = '<div class="hero-msg">テストケースを読み込んでいます…</div>';
+  if (_umlCaseState !== 'loading') _loadUmlCaseRows();
+}
+
+async function _loadUmlCaseRows() {
+  const domain =
+    (typeof currentResultDomain === 'string' && currentResultDomain) ||
+    (typeof TCG === 'object' && TCG && typeof TCG.domain === 'string' && TCG.domain) ||
+    '';
+  if (!domain) {
+    _umlCaseState = 'loaded';
+    _umlCaseRows = [];
+    _renderUmlCasePane();
+    return;
+  }
+  _umlCaseState = 'loading';
+  try {
+    const res = await fetch('/api/testcases/table?domain=' + encodeURIComponent(domain));
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    _umlCaseRows = ((data && data.rows) || []).map((r, i) => ({
+      id: String(r.case_id || `TC-${i + 1}`),
+      path: String(r.screen || ''),
+      objective: String(r.name || ''),
+      tag: String(r.viewpoint || '')
+    }));
+    _umlCaseState = 'loaded';
+  } catch (e) {
+    _umlCaseState = 'error';
+    _umlCaseError = (e && e.message) || String(e);
+  }
+  _renderUmlCasePane();
 }
 
 function _umlZoomControls() {
@@ -331,6 +446,7 @@ function _umlMeta(type) {
 }
 
 function _showViewpointMap(area, rows) {
+  area.classList.remove('is-split');
   const groups = _viewpointGroups(rows);
   const totalChecks = groups.reduce((sum, g) => sum + g.rows.length, 0);
   // R1-05: 「見方がわかりにくい」への対応。各観点カテゴリの意味を凡例として明示する。

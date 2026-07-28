@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>設定画面 LLM プロバイダ — デザイン案5種</title>
+<style>
+  :root{
+    --primary:#1976D2; --primary-dark:#0D47A1; --primary-soft:#E8F1FB;
+    --bg:#F4F6F9; --card:#fff; --border:#E3E8EF; --border-strong:#CBD5E1;
+    --text:#1B2733; --text-muted:#64748B;
+    --ok:#0F9D58; --ok-bg:#E6F4EA; --warn:#B45309; --warn-bg:#FEF3C7;
+    --r:12px; --r-sm:8px;
+    --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.1);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+    font-size:14px;line-height:1.6}
+  .wrap{max-width:920px;margin:0 auto;padding:32px 20px 80px}
+  header.page{margin-bottom:28px}
+  header.page h1{font-size:22px;margin:0 0 8px}
+  header.page p{color:var(--text-muted);margin:0}
+  .problem{background:#FEF2F2;border:1px solid #FECACA;border-radius:var(--r);
+    padding:14px 16px;margin:18px 0 32px;color:#991B1B}
+  .problem b{display:block;margin-bottom:4px}
+
+  section.variant{margin-bottom:44px}
+  .vhead{display:flex;align-items:baseline;gap:10px;margin-bottom:6px}
+  .vnum{display:inline-flex;align-items:center;justify-content:center;
+    width:26px;height:26px;border-radius:50%;background:var(--primary);color:#fff;
+    font-size:13px;font-weight:700;flex:none}
+  .vhead h2{font-size:17px;margin:0}
+  .vnote{color:var(--text-muted);margin:0 0 14px 36px;font-size:13px}
+  .vnote .pro{color:var(--ok);font-weight:600}
+  .vnote .con{color:var(--warn);font-weight:600}
+
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+    padding:22px;box-shadow:var(--shadow)}
+  .card h3{font-size:15px;margin:0 0 4px}
+  .hint{color:var(--text-muted);font-size:12.5px;margin:0 0 16px}
+
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:12px;font-weight:600;color:var(--text-muted);
+    margin-bottom:5px;letter-spacing:.02em}
+  .field input,.field select{width:100%;height:38px;padding:0 11px;
+    border:1px solid var(--border-strong);border-radius:var(--r-sm);
+    background:#fff;color:var(--text);font-size:14px;font-family:inherit}
+  .field input:focus,.field select:focus{outline:2px solid var(--primary-soft);
+    border-color:var(--primary)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:640px){.grid2{grid-template-columns:1fr}}
+
+  .btn{height:38px;padding:0 16px;border-radius:var(--r-sm);border:1px solid transparent;
+    font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit}
+  .btn-primary{background:var(--primary);color:#fff}
+  .btn-primary:hover{background:var(--primary-dark)}
+  .btn-ghost{background:#fff;border-color:var(--border-strong);color:var(--text)}
+  .actions{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+
+  .badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;
+    font-size:11.5px;font-weight:700}
+  .badge-ok{background:var(--ok-bg);color:var(--ok)}
+  .badge-warn{background:var(--warn-bg);color:var(--warn)}
+  .badge-idle{background:#EEF2F6;color:var(--text-muted)}
+  .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+
+  /* 案1: セグメント */
+  .seg{display:inline-flex;background:#EEF2F6;border-radius:10px;padding:3px;gap:2px;margin-bottom:18px}
+  .seg button{border:0;background:transparent;padding:7px 18px;border-radius:8px;
+    font-size:13.5px;font-weight:600;color:var(--text-muted);cursor:pointer;font-family:inherit}
+  .seg button[aria-selected=true]{background:#fff;color:var(--primary-dark);box-shadow:var(--shadow)}
+
+  /* 案2: ラジオカード */
+  .radio-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:6px}
+  @media(max-width:640px){.radio-cards{grid-template-columns:1fr}}
+  .rcard{border:1.5px solid var(--border);border-radius:var(--r);padding:14px;cursor:pointer;
+    background:#fff;transition:border-color .12s,background .12s}
+  .rcard:hover{border-color:var(--border-strong)}
+  .rcard[aria-checked=true]{border-color:var(--primary);background:var(--primary-soft)}
+  .rcard .rtop{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px}
+  .rcard .rmark{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--border-strong);flex:none}
+  .rcard[aria-checked=true] .rmark{border:5px solid var(--primary)}
+  .rcard p{margin:6px 0 0 24px;font-size:12px;color:var(--text-muted)}
+  .rpanel{margin-top:16px;padding-top:16px;border-top:1px dashed var(--border)}
+
+  /* 案3: マスター/ディテール */
+  .md{display:grid;grid-template-columns:200px 1fr;gap:0;border:1px solid var(--border);
+    border-radius:var(--r);overflow:hidden;background:#fff;box-shadow:var(--shadow)}
+  @media(max-width:640px){.md{grid-template-columns:1fr}}
+  .md-list{background:#FAFBFC;border-right:1px solid var(--border);padding:10px}
+  .md-list button{display:block;width:100%;text-align:left;border:0;background:transparent;
+    padding:10px 12px;border-radius:var(--r-sm);font-size:13.5px;font-weight:600;
+    color:var(--text-muted);cursor:pointer;font-family:inherit;margin-bottom:4px}
+  .md-list button[aria-selected=true]{background:var(--primary-soft);color:var(--primary-dark)}
+  .md-list .sub{display:block;font-weight:400;font-size:11px;margin-top:2px}
+  .md-body{padding:22px}
+
+  /* 案4: プロファイル表 */
+  table.prof{width:100%;border-collapse:collapse;font-size:13px}
+  table.prof th{text-align:left;font-size:11.5px;color:var(--text-muted);font-weight:600;
+    padding:8px 10px;border-bottom:1px solid var(--border)}
+  table.prof td{padding:11px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+  table.prof tr[data-active=true]{background:var(--primary-soft)}
+  table.prof code{font-size:12px;color:var(--text-muted)}
+  .link{background:none;border:0;color:var(--primary);font-weight:600;cursor:pointer;
+    font-size:13px;font-family:inherit;padding:0}
+
+  /* 案5: ウィザード */
+  .steps{display:flex;gap:0;margin-bottom:20px}
+  .step{flex:1;position:relative;padding:0 0 12px;border-bottom:2px solid var(--border);
+    font-size:12.5px;font-weight:600;color:var(--text-muted)}
+  .step[aria-current=true]{border-bottom-color:var(--primary);color:var(--primary-dark)}
+  .step[data-done=true]{border-bottom-color:var(--ok);color:var(--ok)}
+  .step .n{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;
+    border-radius:50%;background:#EEF2F6;font-size:11px;margin-right:6px}
+  .step[aria-current=true] .n{background:var(--primary);color:#fff}
+  .step[data-done=true] .n{background:var(--ok);color:#fff}
+
+  .hidden{display:none !important}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="page">
+  <h1>設定画面 — LLM プロバイダ選択 デザイン案 5種</h1>
+  <p>各案はそのまま操作できます。プロバイダを切り替えて、表示される項目を確認してください。</p>
+</header>
+
+<div class="problem">
+  <b>現状の問題</b>
+  プロバイダ選択を既存の「OpenAI API キー・モデル」カードの<b>上に足しただけ</b>のため、
+  Ollama を選んでも OpenAI のキー欄・モデル欄が残る。選択と表示内容が連動していない。
+</div>
+
+<!-- ============ 案1 ============ -->
+<section class="variant">
+  <div class="vhead"><span class="vnum">1</span><h2>セグメント切替 — 単一カード</h2></div>
+  <p class="vnote">
+    カード1枚。上部のセグメントで切り替え、下の内容がまるごと入れ替わる。<br>
+    <span class="pro">利点</span> 最小の変更で問題が消える。画面が縦に伸びない。
+    <span class="con">欠点</span> 3つ目以降のプロバイダが増えると窮屈。
+  </p>
+  <div class="card" id="v1">
+    <h3>LLM 接続先</h3>
+    <p class="hint">テストケース生成・観点生成に使う LLM の接続先を選びます。</p>
+    <div class="seg" role="tablist">
+      <button role="tab" aria-selected="true" data-p="openai">OpenAI</button>
+      <button role="tab" aria-selected="false" data-p="ollama">Ollama（ローカル）</button>
+    </div>
+    <div data-panel="openai">
+      <div class="field"><label>API キー</label><input type="password" placeholder="sk-..."></div>
+      <div class="grid2">
+        <div class="field"><label>モデル</label>
+          <select><option>gpt-5.4-mini（推奨）</option><option>gpt-5.4</option><option>gpt-5.5</option></select></div>
+        <div class="field"><label>組織 ID（任意）</label><input placeholder="org-..."></div>
+      </div>
+    </div>
+    <div data-panel="ollama" class="hidden">
+      <div class="grid2">
+        <div class="field"><label>ベース URL</label><input value="http://127.0.0.1:11434/v1"></div>
+        <div class="field"><label>モデル</label><input value="qwen2.5:3b"></div>
+      </div>
+      <p class="hint" style="margin:0">API キーは不要です。ローカルの Ollama が起動している必要があります。</p>
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary">保存</button>
+      <button class="btn btn-ghost">疎通確認</button>
+      <span class="badge badge-idle" style="align-self:center"><span class="dot"></span>未確認</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 案2 ============ -->
+<section class="variant">
+  <div class="vhead"><span class="vnum">2</span><h2>ラジオカード — 選んだ方だけ展開</h2></div>
+  <p class="vnote">
+    2枚のカードで違いを説明してから選ばせる。選択した方の下だけが開く。<br>
+    <span class="pro">利点</span> 初見でも違い（費用・APIキーの要否）が分かる。
+    <span class="con">欠点</span> 縦に長い。設定を頻繁に触る人には冗長。
+  </p>
+  <div class="card" id="v2">
+    <h3>LLM 接続先</h3>
+    <p class="hint">用途に合わせて選んでください。あとから切り替えられます。</p>
+    <div class="radio-cards">
+      <div class="rcard" role="radio" aria-checked="true" data-p="openai" tabindex="0">
+        <div class="rtop"><span class="rmark"></span>OpenAI</div>
+        <p>クラウド。高精度。API キーと従量課金が必要。</p>
+      </div>
+      <div class="rcard" role="radio" aria-checked="false" data-p="ollama" tabindex="0">
+        <div class="rtop"><span class="rmark"></span>Ollama</div>
+        <p>ローカル実行。無料・データが外に出ない。事前に起動が必要。</p>
+      </div>
+    </div>
+    <div class="rpanel" data-panel="openai">
+      <div class="field"><label>API キー</label><input type="password" placeholder="sk-..."></div>
+      <div class="field"><label>モデル</label>
+        <select><option>gpt-5.4-mini（推奨）</option><option>gpt-5.4</option></select></div>
+    </div>
+    <div class="rpanel hidden" data-panel="ollama">
+      <div class="grid2">
+        <div class="field"><label>ベース URL</label><input value="http://127.0.0.1:11434/v1"></div>
+        <div class="field"><label>モデル</label><input value="qwen2.5:3b"></div>
+      </div>
+      <span class="badge badge-ok"><span class="dot"></span>qwen2.5:3b を検出</span>
+    </div>
+    <div class="actions"><button class="btn btn-primary">保存</button>
+      <button class="btn btn-ghost">疎通確認</button></div>
+  </div>
+</section>
+
+<!-- ============ 案3 ============ -->
+<section class="variant">
+  <div class="vhead"><span class="vnum">3</span><h2>マスター / ディテール</h2></div>
+  <p class="vnote">
+    左に接続先の一覧、右にその設定。設定画面の他タブと同じ操作感になる。<br>
+    <span class="pro">利点</span> プロバイダが増えても崩れない。現在有効な接続が一覧で分かる。
+    <span class="con">欠点</span> 2択のためだけには構造が重い。
+  </p>
+  <div class="md" id="v3">
+    <div class="md-list" role="tablist">
+      <button role="tab" aria-selected="true" data-p="openai">OpenAI
+        <span class="sub">クラウド・従量課金</span></button>
+      <button role="tab" aria-selected="false" data-p="ollama">Ollama
+        <span class="sub">ローカル・無料</span></button>
+    </div>
+    <div class="md-body">
+      <div data-panel="openai">
+        <h3>OpenAI <span class="badge badge-ok" style="margin-left:6px"><span class="dot"></span>使用中</span></h3>
+        <p class="hint">キーは <code>.env</code> に保存され、ブラウザには保存されません。</p>
+        <div class="field"><label>API キー</label><input type="password" placeholder="sk-..."></div>
+        <div class="grid2">
+          <div class="field"><label>モデル</label>
+            <select><option>gpt-5.4-mini（推奨）</option><option>gpt-5.4</option></select></div>
+          <div class="field"><label>プロジェクト ID（任意）</label><input placeholder="proj_..."></div>
+        </div>
+        <div class="actions"><button class="btn btn-primary">この接続先を使う</button>
+          <button class="btn btn-ghost">疎通確認</button></div>
+      </div>
+      <div data-panel="ollama" class="hidden">
+        <h3>Ollama <span class="badge badge-idle" style="margin-left:6px"><span class="dot"></span>未使用</span></h3>
+        <p class="hint">ローカルの OpenAI 互換エンドポイントへ接続します。API キーは不要です。</p>
+        <div class="grid2">
+          <div class="field"><label>ベース URL</label><input value="http://127.0.0.1:11434/v1"></div>
+          <div class="field"><label>モデル</label><input value="qwen2.5:3b"></div>
+        </div>
+        <div class="actions"><button class="btn btn-primary">この接続先を使う</button>
+          <button class="btn btn-ghost">疎通確認</button></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 案4 ============ -->
+<section class="variant">
+  <div class="vhead"><span class="vnum">4</span><h2>接続プロファイル一覧</h2></div>
+  <p class="vnote">
+    接続先を複数登録し、1つをアクティブにする。開発用ローカルと本番クラウドを行き来する運用に効く。<br>
+    <span class="pro">利点</span> 切り替えが1クリック。設定を消さずに往復できる。
+    <span class="con">欠点</span> 実装量が最大。今の要求（2択）には過剰。
+  </p>
+  <div class="card" id="v4">
+    <h3>LLM 接続プロファイル</h3>
+    <p class="hint">生成処理は「使用中」のプロファイルで実行されます。</p>
+    <table class="prof">
+      <thead><tr><th>名前</th><th>接続先</th><th>モデル</th><th>状態</th><th></th></tr></thead>
+      <tbody>
+        <tr data-active="true">
+          <td><b>OpenAI 本番</b></td>
+          <td><code>api.openai.com</code></td>
+          <td>gpt-5.4-mini</td>
+          <td><span class="badge badge-warn"><span class="dot"></span>キー未設定</span></td>
+          <td><button class="link" disabled style="color:var(--text-muted)">使用中</button></td>
+        </tr>
+        <tr data-active="false">
+          <td><b>Ollama ローカル</b></td>
+          <td><code>127.0.0.1:11434</code></td>
+          <td>qwen2.5:3b</td>
+          <td><span class="badge badge-ok"><span class="dot"></span>応答あり</span></td>
+          <td><button class="link">使用する</button></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="actions"><button class="btn btn-ghost">＋ プロファイルを追加</button></div>
+  </div>
+</section>
+
+<!-- ============ 案5 ============ -->
+<section class="variant">
+  <div class="vhead"><span class="vnum">5</span><h2>3ステップ ウィザード</h2></div>
+  <p class="vnote">
+    選択 → 接続情報 → 疎通確認 を順に踏ませ、確認せずに保存できないようにする。<br>
+    <span class="pro">利点</span> 「設定したのに動かない」を構造的に防ぐ。
+    <span class="con">欠点</span> 1項目直すだけでも手数が増える。再設定時にうるさい。
+  </p>
+  <div class="card" id="v5">
+    <div class="steps">
+      <div class="step" aria-current="true" data-s="1"><span class="n">1</span>プロバイダ</div>
+      <div class="step" data-s="2"><span class="n">2</span>接続情報</div>
+      <div class="step" data-s="3"><span class="n">3</span>疎通確認</div>
+    </div>
+    <div data-step="1">
+      <h3>どちらを使いますか</h3>
+      <p class="hint">あとから設定画面で変更できます。</p>
+      <div class="radio-cards">
+        <div class="rcard" role="radio" aria-checked="false" data-p="openai" tabindex="0">
+          <div class="rtop"><span class="rmark"></span>OpenAI</div><p>クラウド・高精度・要APIキー</p></div>
+        <div class="rcard" role="radio" aria-checked="true" data-p="ollama" tabindex="0">
+          <div class="rtop"><span class="rmark"></span>Ollama</div><p>ローカル・無料・要起動</p></div>
+      </div>
+      <div class="actions"><button class="btn btn-primary" data-go="2">次へ</button></div>
+    </div>
+    <div data-step="2" class="hidden">
+      <h3>接続情報</h3>
+      <p class="hint">Ollama は API キー不要です。</p>
+      <div class="grid2">
+        <div class="field"><label>ベース URL</label><input value="http://127.0.0.1:11434/v1"></div>
+        <div class="field"><label>モデル</label><input value="qwen2.5:3b"></div>
+      </div>
+      <div class="actions"><button class="btn btn-ghost" data-go="1">戻る</button>
+        <button class="btn btn-primary" data-go="3">疎通確認へ</button></div>
+    </div>
+    <div data-step="3" class="hidden">
+      <h3>疎通確認</h3>
+      <p class="hint">実際に1回リクエストを送り、応答を確認してから保存します。</p>
+      <div style="background:#F8FAFC;border:1px solid var(--border);border-radius:var(--r-sm);
+        padding:14px;margin-bottom:14px">
+        <span class="badge badge-ok"><span class="dot"></span>応答 200 / 0.42s</span>
+        <div style="margin-top:8px;font-size:12.5px;color:var(--text-muted)">
+          モデル <b>qwen2.5:3b</b> から応答を受信しました。</div>
+      </div>
+      <div class="actions"><button class="btn btn-ghost" data-go="2">戻る</button>
+        <button class="btn btn-primary">この設定で保存</button></div>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<script>
+  // 表示するパネルを1つに絞る共通処理
+  function showPanel(root, provider){
+    root.querySelectorAll('[data-panel]').forEach(function(el){
+      el.classList.toggle('hidden', el.dataset.panel !== provider);
+    });
+  }
+  // 案1・案3: タブ / リスト選択
+  ['v1','v3'].forEach(function(id){
+    var root = document.getElementById(id);
+    root.querySelectorAll('[role=tab]').forEach(function(tab){
+      tab.addEventListener('click', function(){
+        root.querySelectorAll('[role=tab]').forEach(function(t){
+          t.setAttribute('aria-selected', String(t === tab));
+        });
+        showPanel(root, tab.dataset.p);
+      });
+    });
+  });
+  // 案2・案5: ラジオカード
+  ['v2','v5'].forEach(function(id){
+    var root = document.getElementById(id);
+    root.querySelectorAll('[role=radio]').forEach(function(card){
+      card.addEventListener('click', function(){
+        root.querySelectorAll('[role=radio]').forEach(function(c){
+          c.setAttribute('aria-checked', String(c === card));
+        });
+        if (id === 'v2') showPanel(root, card.dataset.p);
+      });
+    });
+  });
+  // 案4: プロファイル切替
+  (function(){
+    var root = document.getElementById('v4');
+    root.querySelectorAll('.link').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var row = btn.closest('tr');
+        root.querySelectorAll('tbody tr').forEach(function(tr){
+          var active = tr === row;
+          tr.dataset.active = String(active);
+          var b = tr.querySelector('.link');
+          b.textContent = active ? '使用中' : '使用する';
+          b.disabled = active;
+          b.style.color = active ? 'var(--text-muted)' : 'var(--primary)';
+        });
+      });
+    });
+  })();
+  // 案5: ステップ遷移
+  (function(){
+    var root = document.getElementById('v5');
+    root.querySelectorAll('[data-go]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var n = btn.dataset.go;
+        root.querySelectorAll('[data-step]').forEach(function(el){
+          el.classList.toggle('hidden', el.dataset.step !== n);
+        });
+        root.querySelectorAll('.step').forEach(function(s){
+          var cur = s.dataset.s === n;
+          s.setAttribute('aria-current', String(cur));
+          s.dataset.done = String(Number(s.dataset.s) < Number(n));
+        });
+      });
+    });
+  })();
+</script>
+</body>
+</html>

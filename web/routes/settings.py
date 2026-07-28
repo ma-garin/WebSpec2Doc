@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import json
 import logging
+import urllib.error
+import urllib.parse
+import urllib.request
 from pathlib import Path
 
 from flask import Blueprint, request
@@ -36,6 +40,15 @@ def _provider_of(base_url: str) -> str:
     return "ollama"
 
 
+def _is_local_base_url(base_url: str) -> bool:
+    """ベース URL がローカルホスト宛かを判定する（SSRF 防止）。"""
+    try:
+        host = urllib.parse.urlparse(base_url).hostname or ""
+    except ValueError:
+        return False
+    return host in {"127.0.0.1", "localhost", "::1"}
+
+
 @bp.before_request
 def _settings_admin_guard():
     """設定の変更（APIキー・Slack・許可設定など）は管理者のみ。
@@ -67,6 +80,33 @@ def get_settings() -> dict:
         "llm_base_url": llm_base_url,
         "llm_model": env.get(ENV_LLM_MODEL, ""),
     }
+
+
+@bp.get("/api/settings/llm-models")
+def list_llm_models() -> dict:
+    """ローカル LLM サーバ（Ollama 等）が提供するモデル一覧を返す。
+
+    OpenAI 互換の ``GET {base_url}/models`` を叩く。SSRF を避けるため、
+    ローカルホスト宛のベース URL のみ許可する。
+    """
+    base_url = (
+        _sanitize(request.args.get("base_url", ""))
+        or _read_env().get(ENV_LLM_BASE_URL, "")
+        or OLLAMA_DEFAULT_BASE_URL
+    )
+    if not _is_local_base_url(base_url):
+        return {"ok": False, "error": "ローカルのエンドポイントのみ取得できます", "models": []}
+    url = f"{base_url.rstrip('/')}/models"
+    try:
+        with urllib.request.urlopen(url, timeout=3) as response:  # noqa: S310 - ローカル限定
+            payload = json.loads(response.read().decode("utf-8"))
+    except (urllib.error.URLError, OSError, ValueError, TimeoutError) as exc:
+        logger.info("LLM モデル一覧の取得に失敗しました (%s): %s", url, exc)
+        return {"ok": False, "error": "接続できませんでした", "models": []}
+    models = sorted(
+        str(item.get("id", "")) for item in payload.get("data", []) if item.get("id")
+    )
+    return {"ok": True, "models": models}
 
 
 @bp.post("/api/settings")

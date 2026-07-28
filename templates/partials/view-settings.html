@@ -13,57 +13,58 @@
           </div>
 
           <div class="set-panel is-active" id="set-panel-api" role="tabpanel" aria-labelledby="set-tab-api">
-            <div class="input-card" style="margin-bottom:16px">
-              <h2 class="set-card-title">LLM プロバイダ</h2>
-              <p class="input-hint" style="margin-top:0;margin-bottom:14px">OpenAI（クラウド）と Ollama（ローカル）を切り替えます。Ollama は API キー不要で、ローカルの OpenAI 互換エンドポイントへ接続します。</p>
-              <div class="options-grid">
-                <div class="field full">
-                  <label for="llm-provider">プロバイダ</label>
-                  <select id="llm-provider" class="url-input" style="height:40px">
-                    <option value="openai">OpenAI（クラウド・APIキー必要）</option>
-                    <option value="ollama">Ollama（ローカル・APIキー不要）</option>
-                  </select>
-                </div>
-                <div class="field" id="ollama-base-url-field" style="display:none">
-                  <label for="llm-base-url">ベース URL</label>
-                  <input type="text" id="llm-base-url" placeholder="http://127.0.0.1:11434/v1">
-                </div>
-                <div class="field" id="ollama-model-field" style="display:none">
-                  <label for="llm-model">モデル</label>
-                  <input type="text" id="llm-model" placeholder="qwen2.5:3b">
-                </div>
-              </div>
-              <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px">
-                <button class="btn-primary" id="save-llm-provider">プロバイダを保存</button>
-              </div>
-              <div class="settings-msg" id="llm-provider-msg">保存しました</div>
-            </div>
+            <style>
+              .llm-seg{display:inline-flex;background:var(--surface-alt,#EEF2F6);border-radius:10px;padding:3px;gap:2px;margin-bottom:18px}
+              .llm-seg button{border:0;background:transparent;padding:8px 18px;border-radius:8px;font:inherit;font-size:13.5px;font-weight:600;color:var(--text-muted);cursor:pointer}
+              .llm-seg button[aria-selected="true"]{background:var(--surface,#fff);color:var(--primary-dark);box-shadow:0 1px 2px rgba(16,24,40,.08)}
+            </style>
             <div class="input-card">
-              <h2 class="set-card-title">OpenAI API キー・モデル</h2>
-              <p class="input-hint" style="margin-top:0;margin-bottom:14px">キーは <code>.env</code> に保存されます（ブラウザには保存しません）。空欄で保存すると既存キーを保持します。</p>
-              <div class="field full" style="margin-bottom:14px">
-                <label>現在のキー</label>
-                <div class="key-current" id="api-key-current">未設定</div>
+              <h2 class="set-card-title">LLM 接続先</h2>
+              <p class="input-hint" style="margin-top:0;margin-bottom:14px">テストケース生成・観点生成に使う LLM を選びます。設定は <code>.env</code> に保存されます（ブラウザには保存しません）。</p>
+              <div class="llm-seg" id="llm-seg" role="tablist" aria-label="LLM プロバイダ">
+                <button type="button" role="tab" aria-selected="true" data-provider="openai">OpenAI</button>
+                <button type="button" role="tab" aria-selected="false" data-provider="ollama">Ollama（ローカル）</button>
               </div>
-              <div class="options-grid">
-                <div class="field full"><label for="api-key">OPENAI_API_KEY</label><input type="password" id="api-key" placeholder="sk-..." autocomplete="off"></div>
-                <div class="field"><label for="api-org">OPENAI_ORG_ID（任意）</label><input type="text" id="api-org" placeholder="org-..."></div>
-                <div class="field"><label for="api-project">OPENAI_PROJECT_ID（任意）</label><input type="text" id="api-project" placeholder="proj_..."></div>
-                <div class="field full">
-                  <label for="api-model">OPENAI_MODEL</label>
-                  <select id="api-model" class="url-input" style="height:40px">
-                    <option value="gpt-5.4-mini">gpt-5.4-mini（コスト効率・推奨）</option>
-                    <option value="gpt-5.4-nano">gpt-5.4-nano（最安・最速）</option>
-                    <option value="gpt-5.4">gpt-5.4（標準）</option>
-                    <option value="gpt-5.5">gpt-5.5（高精度）</option>
-                    <option value="gpt-5.5-pro">gpt-5.5-pro（最高精度）</option>
-                    <option value="gpt-4.1">gpt-4.1（非推論・ツール呼び出し）</option>
-                  </select>
+
+              <div data-llm-panel="openai">
+                <div class="field full" style="margin-bottom:14px">
+                  <label>現在のキー</label>
+                  <div class="key-current" id="api-key-current">未設定</div>
                 </div>
+                <div class="options-grid">
+                  <div class="field full"><label for="api-key">API キー</label><input type="password" id="api-key" placeholder="sk-..." autocomplete="off"></div>
+                  <div class="field"><label for="api-org">組織 ID（任意）</label><input type="text" id="api-org" placeholder="org-..."></div>
+                  <div class="field"><label for="api-project">プロジェクト ID（任意）</label><input type="text" id="api-project" placeholder="proj_..."></div>
+                  <div class="field full">
+                    <label for="api-model">モデル</label>
+                    <select id="api-model" class="url-input" style="height:40px">
+                      <option value="gpt-5.4-mini">gpt-5.4-mini（コスト効率・推奨）</option>
+                      <option value="gpt-5.4-nano">gpt-5.4-nano（最安・最速）</option>
+                      <option value="gpt-5.4">gpt-5.4（標準）</option>
+                      <option value="gpt-5.5">gpt-5.5（高精度）</option>
+                      <option value="gpt-5.5-pro">gpt-5.5-pro（最高精度）</option>
+                      <option value="gpt-4.1">gpt-4.1（非推論・ツール呼び出し）</option>
+                    </select>
+                  </div>
+                </div>
+                <p class="input-hint" style="margin:12px 0 0">空欄で保存すると既存キーを保持します。</p>
               </div>
+
+              <div data-llm-panel="ollama" style="display:none">
+                <div class="options-grid">
+                  <div class="field"><label for="llm-base-url">ベース URL</label><input type="text" id="llm-base-url" placeholder="http://127.0.0.1:11434/v1"></div>
+                  <div class="field">
+                    <label for="llm-model">モデル</label>
+                    <select id="llm-model" class="url-input" style="height:40px"><option value="">読み込み中…</option></select>
+                  </div>
+                </div>
+                <p class="input-hint" id="ollama-status" style="margin:12px 0 0">API キーは不要です。ローカルの Ollama が起動している必要があります。</p>
+              </div>
+
               <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px">
-                <button class="btn-primary" id="save-api">APIキー・モデルを保存</button>
+                <button class="btn-primary" id="save-api">保存</button>
                 <button class="btn-outline-sm" id="test-connection" type="button">疎通確認</button>
+                <button class="btn-outline-sm" id="reload-ollama-models" type="button" style="display:none">モデル一覧を再取得</button>
               </div>
               <div class="settings-msg" id="api-msg">保存しました</div>
               <div class="settings-msg" id="api-status-msg" style="display:none;margin-top:12px"></div>

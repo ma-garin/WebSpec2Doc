@@ -99,27 +99,31 @@ async function loadServerSettings() {
       const modelEl = document.getElementById('api-model');
       if (modelEl) modelEl.value = data.openai_model;
     }
-    const providerEl = document.getElementById('llm-provider');
-    if (providerEl) providerEl.value = data.llm_provider || 'openai';
     const baseUrlEl = document.getElementById('llm-base-url');
-    if (baseUrlEl) baseUrlEl.value = data.llm_base_url || '';
+    if (baseUrlEl) baseUrlEl.value = data.llm_base_url || OLLAMA_DEFAULT_BASE_URL;
     const llmModelEl = document.getElementById('llm-model');
-    if (llmModelEl) llmModelEl.value = data.llm_model || '';
-    syncLlmProviderFields();
+    if (llmModelEl) llmModelEl.dataset.selected = data.llm_model || '';
+    setLlmProvider(data.llm_provider || 'openai');
     await loadAllowLocalToggle();
   } catch (e) { /* 設定読み込み失敗は無視 */ }
 }
 
 async function saveApiKey() {
-  const key = document.getElementById('api-key')?.value?.trim() || '';
-  const org = document.getElementById('api-org')?.value?.trim() || '';
-  const proj = document.getElementById('api-project')?.value?.trim() || '';
-  const model = document.getElementById('api-model')?.value || '';
+  const provider = currentLlmProvider();
   const form = new FormData();
-  if (key) form.append('api_key', key);
-  if (org) form.append('org_id', org);
-  if (proj) form.append('project_id', proj);
-  form.append('model', model);
+  form.append('llm_provider', provider);
+  if (provider === 'ollama') {
+    form.append('llm_base_url', document.getElementById('llm-base-url')?.value?.trim() || OLLAMA_DEFAULT_BASE_URL);
+    form.append('llm_model', document.getElementById('llm-model')?.value || OLLAMA_DEFAULT_MODEL);
+  } else {
+    const key = document.getElementById('api-key')?.value?.trim() || '';
+    const org = document.getElementById('api-org')?.value?.trim() || '';
+    const proj = document.getElementById('api-project')?.value?.trim() || '';
+    if (key) form.append('api_key', key);
+    if (org) form.append('org_id', org);
+    if (proj) form.append('project_id', proj);
+    form.append('model', document.getElementById('api-model')?.value || '');
+  }
   try {
     const res = await fetch('/api/settings', { method: 'POST', body: form });
     const data = await res.json();
@@ -134,37 +138,60 @@ async function saveApiKey() {
 const OLLAMA_DEFAULT_BASE_URL = 'http://127.0.0.1:11434/v1';
 const OLLAMA_DEFAULT_MODEL = 'qwen2.5:3b';
 
-// プロバイダ選択に応じて Ollama 用の入力欄を出し分ける
-function syncLlmProviderFields() {
-  const provider = document.getElementById('llm-provider')?.value || 'openai';
-  const display = provider === 'ollama' ? '' : 'none';
-  const baseField = document.getElementById('ollama-base-url-field');
-  const modelField = document.getElementById('ollama-model-field');
-  if (baseField) baseField.style.display = display;
-  if (modelField) modelField.style.display = display;
+// セグメントで選択中のプロバイダ
+function currentLlmProvider() {
+  return document.querySelector('#llm-seg [role="tab"][aria-selected="true"]')?.dataset.provider || 'openai';
 }
 
-async function saveLlmProvider() {
-  const provider = document.getElementById('llm-provider')?.value || 'openai';
-  const form = new FormData();
-  form.append('llm_provider', provider);
-  if (provider === 'ollama') {
-    form.append('llm_base_url', document.getElementById('llm-base-url')?.value?.trim() || OLLAMA_DEFAULT_BASE_URL);
-    form.append('llm_model', document.getElementById('llm-model')?.value?.trim() || OLLAMA_DEFAULT_MODEL);
-  }
+// 選択したプロバイダの設定だけを表示する（OpenAI と Ollama は同時に出さない）
+function setLlmProvider(provider) {
+  document.querySelectorAll('#llm-seg [role="tab"]').forEach(tab => {
+    tab.setAttribute('aria-selected', String(tab.dataset.provider === provider));
+  });
+  document.querySelectorAll('[data-llm-panel]').forEach(panel => {
+    panel.style.display = panel.dataset.llmPanel === provider ? '' : 'none';
+  });
+  const reloadBtn = document.getElementById('reload-ollama-models');
+  if (reloadBtn) reloadBtn.style.display = provider === 'ollama' ? '' : 'none';
+  if (provider === 'ollama') loadOllamaModels();
+}
+
+// Ollama が実際に保持しているモデルを取得してプルダウンへ流し込む
+async function loadOllamaModels() {
+  const select = document.getElementById('llm-model');
+  const status = document.getElementById('ollama-status');
+  if (!select) return;
+  const baseUrl = document.getElementById('llm-base-url')?.value?.trim() || OLLAMA_DEFAULT_BASE_URL;
+  const wanted = select.dataset.selected || select.value || '';
+  select.innerHTML = '<option value="">読み込み中…</option>';
   try {
-    const res = await fetch('/api/settings', { method: 'POST', body: form });
-    const data = await res.json();
-    if (data.ok) {
-      const msg = document.getElementById('llm-provider-msg'); msg.classList.add('show');
-      setTimeout(() => msg.classList.remove('show'), 2500);
-      await loadServerSettings();
+    const url = '/api/settings/llm-models?base_url=' + encodeURIComponent(baseUrl);
+    const data = await fetch(url).then(r => r.json());
+    if (data.ok && data.models.length) {
+      // モデル名は外部プロセス由来のため innerHTML を使わず DOM API で組む
+      select.replaceChildren(...data.models.map(m => {
+        const opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = m;
+        return opt;
+      }));
+      if (wanted && data.models.includes(wanted)) select.value = wanted;
+      if (status) status.textContent = `${data.models.length} 件のモデルを検出しました。API キーは不要です。`;
+    } else {
+      select.innerHTML = '<option value="">（取得できませんでした）</option>';
+      if (status) status.textContent = 'Ollama に接続できませんでした。起動しているか、ベース URL が正しいか確認してください。';
     }
-  } catch (e) { showToast('プロバイダの保存に失敗しました', 'error'); }
+  } catch (e) {
+    select.innerHTML = '<option value="">（取得できませんでした）</option>';
+    if (status) status.textContent = 'モデル一覧の取得に失敗しました。';
+  }
 }
 
-document.getElementById('llm-provider')?.addEventListener('change', syncLlmProviderFields);
-document.getElementById('save-llm-provider')?.addEventListener('click', saveLlmProvider);
+document.querySelectorAll('#llm-seg [role="tab"]').forEach(tab => {
+  tab.addEventListener('click', () => setLlmProvider(tab.dataset.provider));
+});
+document.getElementById('reload-ollama-models')?.addEventListener('click', loadOllamaModels);
+document.getElementById('llm-base-url')?.addEventListener('change', loadOllamaModels);
 
 async function testConnection() {
   const btn = document.getElementById('test-connection');
@@ -570,6 +597,8 @@ async function loadAdminAudit({append = false} = {}) {
 
 document.getElementById('save-api')?.addEventListener('click', saveApiKey);
 document.getElementById('test-connection')?.addEventListener('click', testConnection);
+// /settings へ直接遷移した場合もナビ経由と同じく保存済み設定を復元する
+if (document.getElementById('llm-seg')) loadServerSettings();
 document.getElementById('save-slack')?.addEventListener('click', saveSlackWebhook);
 document.getElementById('allow-local-toggle')?.addEventListener('change', saveAllowLocal);
 document.getElementById('save-test-design')?.addEventListener('click', saveTestDesignSettings);

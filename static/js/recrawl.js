@@ -7,6 +7,7 @@ async function recrawlSite(domain) {
   // これを使わず一律 login_required:false で復元すると、再解析のたびに
   // 「認証が必要なページ」バナー直下のログインフォームが消える再発バグになる。
   let loginUrlSet = new Set(), loginLandingUrl = '';
+  // noqa: fetch-error 取得できない場合は下の /api/result 経由の復元へフォールバックする
   try { site = (await fetch('/api/site?domain=' + encodeURIComponent(domain)).then(r => r.json())).site; } catch (e) {}
   if (site) {
     urls = site.urls || [];

@@ -240,13 +240,24 @@ document.getElementById('login-record-complete-btn').addEventListener('click', a
 document.getElementById('login-record-cancel-btn').addEventListener('click', async () => {
   const domain = loginDomain();
   stopLoginRecordPolling();
+  let cancelFailed = false;
   if (loginRecordPid) {
-    await fetch('/api/login/record/cancel', { method: 'POST', body: new URLSearchParams({ pid: String(loginRecordPid) }) });
+    try {
+      await fetch('/api/login/record/cancel', { method: 'POST', body: new URLSearchParams({ pid: String(loginRecordPid) }) });
+    } catch (e) {
+      // 中断要求が届かなくても UI は必ず閉じる。閉じないと記録中のまま操作不能になる。
+      cancelFailed = true;
+    }
     loginRecordPid = null;
   }
   setLoginRecordUI('closed');
   const el = loginRecordStatusEl();
-  if (el) { el.textContent = 'キャンセルしました'; el.classList.remove('input-field-message-error'); }
+  if (el) {
+    el.textContent = cancelFailed
+      ? '中断要求を送信できませんでした。ブラウザ側は閉じましたが、サーバ側の処理が残っている可能性があります。'
+      : 'キャンセルしました';
+    el.classList.toggle('input-field-message-error', cancelFailed);
+  }
 });
 
 document.getElementById('select-all-btn').addEventListener('click', () => setAllDiscovered(true));

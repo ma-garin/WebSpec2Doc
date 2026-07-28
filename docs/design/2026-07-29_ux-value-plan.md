@@ -1,0 +1,220 @@
+# WebSpec2Doc UX・ユーザー価値向上プラン
+
+- 作成日: 2026-07-29 ／ 状態: **レビュー待ち（全項目とも未着手）**
+- 実行者想定: Claude（Opus 5 / Sonnet）。**本書のみを読んで着手できる粒度**で書く。会話の文脈は前提にしない
+- 位置づけ: 施策単位で PR を積む実行計画。§2 の前提と §3 のプロトコルは実行者が変更してはならない
+
+---
+
+## 0. 目的と主指標
+
+主利用者（QA エンジニア／テスト設計者・単一ユーザー）の中核ループ
+**「URL 入力 → 解析 → 成果物（仕様書・テスト設計・ケース） → 再解析 → ドリフト検知」**
+について、(1) 最初の価値到達までの時間短縮、(2) 成果物の実務適合度向上、(3) ドリフト検知の習慣化、を行う。
+
+指標は**機械計測のみ**（evidence-only。主観アンケート・ペルソナ評価は行わない）。
+
+| 指標 | 現状 | 目標 | 計測方法 |
+|---|---|---|---|
+| 解析（discover） | **2.36s / 7画面＝0.34s/画面**（2026-07-29 実測） | 維持（正確性優先） | P0-1 スクリプト |
+| **クロール（成果物生成まで）** | **16.61s / 7画面＝2.37s/画面**（実測） | **TTFV の支配項。P2-6 の発動条件を満たす** | P0-1 |
+| 画面別設計 API | **0.00s（実測）** | 維持 | P0-1 |
+| TTFV: URL→レポート表示 | discover 2.36s ＋ クロール 16.61s ＝ **約19s** | 現状比 −30%（約13s） | P0-1 |
+| 自 UI の Critical UX/A11y 指摘 | 未計測 | 0件 | P0-2（自製品の --ux-review） |
+| 再解析後、差分表示までの追加クリック | 1以上（未検証） | 0 | P2-1 実機確認 |
+| SPA リンク検出の正確性 | 3ケースで検証済（4/4, 3/3, 4/4） | 回帰させない | 付録A |
+
+---
+
+## 1. 準拠する外部基準（自作分類を優先度の根拠にしない）
+
+| 基準 | 用途 |
+|---|---|
+| **Kano モデル**（当たり前品質／一元的品質／魅力的品質） | Phase 分け＝優先度分類 |
+| **ISO/IEC 25010 利用時の品質**（有効性・効率性・満足性・リスク回避性） | 各施策の「狙い」欄 |
+| **Nielsen 10 ヒューリスティクス ＋ WCAG 2.2**（axe-core） | P0-2 の監査観点（製品自身の `--ux-review` を流用） |
+| **ISTQB 用語** | 成果物側の記述（テスト条件／テストケース等）。UI 用語は「解析」に統一 |
+
+---
+
+## 2. 前提・制約（実行者は変更禁止。違反したら停止してユーザーへ報告）
+
+1. **UI 変更は実装前に HTML デザイン案 → ユーザー承認必須。** `docs/design/<slug>-proto.html` を作り SendUserFile で送付し、承認の言葉を得るまで実装しない。案は**実画面の枠（サイドバー・タブ・ツールバー）を再現した中**で見せる
+2. PC 専用（モバイル対応・訴求禁止）／ Docker 禁止 ／ TestRail・Jira の提案・言及禁止
+3. LLM は OpenAI ＋ Ollama（設定画面から切替可能・実装済み）。LLM 出力には「AI生成」を明示し、evidence-only（観測から言えないことを断定しない）
+4. 用語は **「解析」** に統一（UI に「観測」「分析」を出さない。「テスト分析」等の ISTQB 用語は除外）
+5. **再導入禁止（ユーザーが削除を決定済み）**: 概要タブのエグゼクティブサマリー／ヘッダーのクイック検索（⌘K）／上級設定の折りたたみ
+6. 画面別設計タブに**テストケース（入力値・手順・期待結果）を表示しない**。条件・技法・由来まで
+7. AutoRun の実行ログは常時表示（折りたたみ禁止）
+8. 施策単位で PR → CI 緑 → マージ。未マージの成果を溜めない
+9. 機能追加時は `quality/feature_contracts.yml` に登録（漏れると quality_harness が落ちる）
+10. 本書 §6 の「ユーザー指示待ち」項目に**先回りして着手しない**
+
+---
+
+## 3. 実行プロトコル（このリポジトリ固有の落とし穴を含む）
+
+1. ブランチ: `feat|fix/<slug>` を main から。コミット規約は `<type>: <説明>`（日本語可）
+2. **コミット前に必ずローカルで**: `venv/bin/python -m ruff check src/ web/` ＋ `-m black --check src/ web/ tests/` ＋ `-m mypy <変更py> --ignore-missing-imports` ＋ `-m bandit -q -r <変更py>`。CI 赤の主因はこの省略。`# noqa` は ruff 用で bandit には効かない（bandit は `# nosec`）
+3. `make test`（L1/L2 約20秒）を毎回。E2E は CI に委ねる
+4. pre-commit の UI ゲートが `.ui-verified` 期限切れで BLOCK した場合のみ `--no-verify` 可。**手順2を省略した `--no-verify` は禁止**
+5. PR 作成後 **`sleep 25`** してから `gh pr checks <N> --watch --interval 20`（直後に watch すると "no checks reported" で誤終了する実績あり）→ 緑 → `gh pr merge <N> --merge --admin --delete-branch` → main を pull
+6. 実機確認: `WEBSPEC2DOC_ALLOW_LOCAL=1 nohup venv/bin/python app.py --no-browser &` で再起動し、Playwright MCP は URL に `?cb=<連番>` を付けてキャッシュを割る。**変更した要素だけでなく、同じパネル内の既存要素（サブタブ等）が消えていないかまで確認**し、スクリーンショットを SendUserFile で提示
+7. サブエージェント並列を使う場合: ファイル単位で完全排他 ＋ **API レスポンス形状・DOM の ID・CSS クラス名まで事前契約に含める**（クラス名未契約で JS/CSS が食い違った実績あり）。完了報告は信用せず必ず実機確認。1本あたりツール実行 20 回以内を指示
+8. 文言変更の前に `grep -rn "<旧文言>" tests/` を実行（`test_ui_contract.py` と E2E が文字列を assert している）
+
+---
+
+## 4. 施策一覧
+
+各施策の記法 — **狙い**: ISO 25010 特性 ／ **承認**: 実装前に必要なユーザー承認 ／ **受入**: 機械検証可能な完了条件。
+
+### Phase 0 — 計測と監査（Kano: 土台。UI 変更なし）
+
+**P0-1 UX ベースライン計測**（見積 0.5h）— ✅ **完了（2026-07-29）**
+- 狙い: 効率性の実測基盤。§0 の「未計測」を埋める
+- 内容: `scripts/measure_ux_baseline.py` を新設。demo サイト（`demo/demo_site.py`）に対し、discover 3回・全画面クロール 3回・`/api/test-design/by-screen` 応答を計測し、中央値を `docs/design/2026-07-29_ux-baseline.md` に出力
+- 結果: discover 2.36s ／ クロール 16.61s ／ API 0.00s（いずれも 7 画面・3試行の中央値）
+- **判明した事実**: TTFV の支配項は**クロール本体（全体の約 88%）**。→ **P2-6 の発動条件が成立**。また UI の目安文言「10画面で2〜3分」は実測（10画面換算 約24秒）と乖離 → **P1-2 の必要性を確認**
+
+**P0-2 自 UI の機械 UX 監査（ドッグフーディング）**（見積 1h）
+- 狙い: 満足性・アクセシビリティ。Nielsen/WCAG 準拠の欠陥洗い出し
+- 内容: 製品自身の `--ux-review`（axe-core＋Nielsen。`src/main.py --help` 確認済み・OPENAI_API_KEY 無しでも rules モードで動く）を `WEBSPEC2DOC_ALLOW_LOCAL=1` で自 UI（127.0.0.1:8765 の主要ビュー: dashboard / generate / auto-run / testcases / viewpoints / settings / run-history）へ実行。結果を `docs/design/2026-07-29_self-ux-audit.md` に Critical/Major/Minor で整理し、各件に処置（修正 or 却下＋理由）を付す
+- 承認: 監査自体は不要。**修正のうちレイアウトが変わるものは個別に mock 承認**（aria 属性追加など見た目が変わらない修正は不要）
+- 受入: 監査結果ファイル＋Critical 0 件までの修正 PR
+
+**P0-3 エラー経路の棚卸し**（見積 1h）
+- 狙い: リスク回避性（失敗時に行き止まりを作らない）
+- 内容: `grep -n "fetch(" static/js/*.js` の全経路を表にし、失敗時に `uiError()`（再試行導線つき）へ落ちるかを確認。欠落経路を修正
+- 承認: 不要（既存の uiError スタイルを使う）
+- 受入: 経路表＋欠落 0＋make test 緑
+
+### Phase 1 — 当たり前品質（Kano: 不満の解消）
+
+**P1-1 クロール残り時間の動的表示**（見積 2h）
+- 狙い: 効率性（体感）。現状は経過時間と件数のみで、終わりが見えない
+- 内容: サーバは `page_completed` イベントで elapsed_sec / completed / total を配信済み（`src/crawler/page_crawler.py`）。`static/js/execution.js` の進捗表示に「残り約N分」＝ `elapsed/completed×(total−completed)` を30秒丸めで追加。completed<2 の間は表示しない
+- 承認: **mock 1枚 要**（進捗バー付近の1行追加）
+- 受入: サンプルサイトで表示され、完了時点の誤差 ±40% 以内（P0-1 の実測で検証）。E2E は要素の存在のみ assert（時間文言の assert は flaky のため禁止）
+
+**P1-2 目安文言の実測化**（見積 0.5h）
+- 内容: `templates/partials/view-generate.html` の「⏱ 目安: 10画面のサイトで約2〜3分」を P0-1 実測値へ更新
+- 承認: 文言案を PR 説明に記載（mock 不要）
+- 受入: 文言と実測の乖離が ±50% 以内
+
+**P1-3 レポート初回表示の計測と条件付き改善**（見積 計測0.5h＋条件成立時のみ2h）
+- 内容: P0-1 でレポート表示（`#report/<domain>` 遷移→主要パネル描画完了）を計測。**1.5s 超過の場合のみ**遅延ロード改善に着手。超過しなければ「計測結果を記録して完了」
+- 承認: 改善着手時のみ方針を1行提示
+
+### Phase 2 — 中核ループ強化（Kano: 一元的品質）
+
+**P2-1 再解析後は差分ファースト**（見積 1h）
+- 狙い: 有効性（本製品の wedge はドリフト検知。再解析の答えは「何が変わったか」）
+- 内容: 再解析経路（`static/js/recrawl.js`）の完了時のみ、レポート初期タブを「履歴・差分」にする。変更 0 件なら「前回から変更はありません（比較: <スナップショットID>）」を明示（不在の証明はしない）。初回解析の挙動は変えない
+- 承認: **挙動変更のため、実装前に1行で承認を取る**（mock 不要・見た目は不変）
+- 受入: 再解析→差分表示までの追加クリック 0。初回解析は従来どおり概要タブ
+
+**P2-2 スクリーンショット差分の可視化**（見積 1日）
+- 狙い: 有効性・満足性（差分がテキスト中心で、見た目の変化が読めない）
+- 内容: 画像差分ロジックは現新比較系に既存（`--compare-mask-selector` が「画像差分から除外」と説明。実装位置は `grep -rn "画像差分\|pixelmatch\|ImageChops" src/` で特定）。これを履歴・差分タブに before/after 並置＋変更領域ハイライトとして表示。画像は既存 `/preview` 経由
+- 承認: **mock 要**
+- 受入: `demo/site` vs `demo/site_v2`（現新比較用に同梱）で差分画像が表示される
+
+**P2-3 テスト仕様書一式の Excel 出力**（見積 1日）
+- 狙い: 有効性（QA 実務の納品物は Excel が主流。openpyxl==3.1.4 は導入済み）
+- 内容: まず既存エクスポート（`templates/partials/view-generate.html:256` のドロップダウン → handler → API）を棚卸しし、xlsx 一式が無ければ `web/services/export_xlsx.py` を新設。シート構成: 画面仕様／テスト設計（画面別: 条件・技法・由来）／テストケース／遷移表
+- 承認: **シート構成の表イメージ（HTML 1枚）要**。依存追加は不要（確認済み）
+- 受入: 各シート行数＝画面内表示件数と一致（P011 相当の画面で照合）。ダウンロード応答の content-type を L2 テストで assert。feature_contracts へ登録
+
+**P2-4 画面別設計 ⇄ テストケースの接続**（見積 0.5日）
+- 狙い: 有効性（条件と、それを実装したケースが現状つながっていない）
+- 内容: `static/js/view-design.js` の条件行にリンクを付け、クリックでテストケースタブへ遷移し対象項目／由来でフィルタ適用（`testcase-grid` の既存フィルタ機構 TCG.filters を利用）
+- 承認: **mock 1枚 要**（行のリンク表現）
+- 受入: 任意の条件行クリック→該当ケースのみ表示→フィルタ解除導線あり（Playwright 実機）
+
+**P2-5 テスト実行結果を設計へ還元**（見積 1.5日・P2-4 依存）
+- 狙い: 有効性（「設計したが検証していない」を画面上で区別する）
+- 内容: 前提として条件⇄ケースの対応を安定 ID で持つ（現状は独立生成）。`web/services/screen_test_design.py` の条件に condition_id を付与し、テストケース表（`testcase_table_store`）側に由来 condition_id を保存する契約変更から行う。その上で実行結果（`testcases/run_result.json`）を画面別設計の条件行に 検証済み／失敗／未実行 バッジで表示。既存データに ID が無い場合は「未対応（再生成で付与）」表示
+- 承認: **mock 要**（バッジ）＋契約変更の1行承認
+- 受入: 1件実行→該当条件行に結果が反映（Playwright 実機）
+
+**P2-6 クロール速度の再最適化**（見積 調査0.5日・**P0-1 ゲート**）
+- 発動条件: P0-1 で TTFV の支配項がクロール本体である場合のみ
+- 候補: 並列既定の見直し（politeness・robots の Crawl-Delay 尊重）／discover の固定下限 480ms（`LINK_SETTLE_MIN_MS`）の適応化
+- 受入: **付録A の SPA 3ケース（中間/純/静的）の検出数を回帰させないこと**を3回計測で確認
+
+### Phase 3 — 魅力的品質（候補。着手前にユーザーが取捨選択する）
+
+**P3-1 ゼロ待ちサンプル**（見積 0.5日）: 初回ダッシュボードの空状態に「サンプルレポートを開く」導線。demo 用の事前生成 output を同梱し、クロール 0 秒でレポートの価値を先に見せる。既存オンボーディング（driver.js ツアー・`static/js/onboarding.js`）と接続。**mock 要**
+**P3-2 LLM による条件根拠の補強**（見積 1日）: 画面別設計の条件に rationale を付与（LLM 有効時のみ・Ollama 可）。prompt_guard 経由。「AI生成」バッジ＋新事実の創作禁止（言い換えのみ）。**mock 要**
+**P3-3 Drift Check as Code の導線**（見積 0.5日）: 履歴・差分タブに CI 組み込みスニペット（コピー1クリック）。既存 `ci_drift_monitor` 機能の露出。**mock 要（小）**
+
+保留バックログ（提案のみ・指示があるまで着手しない）: 週次 Slack ダイジェスト／マルチビューポート既定 ON／PDF 出力
+
+---
+
+## 5. 実行順序と見積もり
+
+| Phase | 施策数 | 見積合計 | 備考 |
+|---|---|---|---|
+| P0 | 3 | 約2.5h | 全施策の前提。承認ゲートほぼ無し |
+| P1 | 3 | 約5h | P1-1/P1-2/P1-3 は P0-1 に依存 |
+| P2 | 6 | 約4.5日 | P2-5 は P2-4 に依存。P2-6 は P0-1 ゲート |
+| P3 | 3＋保留 | 約2日 | 着手前にユーザーが取捨選択 |
+
+- 各施策＝1 PR。UI 施策は「mock 承認 → 実装 → 実機スクショ提示 → PR」
+- 見積もりは**未実測**。各施策の開始時に `date +%H:%M:%S` を取り、PR 説明に実績と差異を記載する
+
+## 6. 本プランに含めないもの（ユーザー指示待ち・先回り禁止）
+
+1. 遷移図の表現方法 10 案の採用（送付済み・選定待ち）
+2. 遷移図×テストケース 2 ペインのデザイン破綻修正（main に混入中・修正 5 案作成済み）
+3. `flow-split-proto.html` の送付
+
+## 7. リスク
+
+- P2-5 は契約変更（condition_id）を伴い後方互換に注意（既存 JSON への追い付きは「再生成で付与」で逃がす）
+- E2E 追加による CI 時間増（現状約4分）: 1 施策 +30 秒以内を目安
+- P2-6 の速度再調整は SPA 取り逃しと常にトレードオフ（付録A の回帰計測を必須とする）
+- 文言変更はテストの文字列 assert を壊しうる（§3-8）
+
+---
+
+## 付録A SPA リンク検出の回帰フィクスチャ（再現手順）
+
+discover の速度・正確性を触る際は、以下 3 ケースの検出数を**各3回**計測し全一致を確認する。
+
+| ケース | 期待検出数 |
+|---|---|
+| 静的4画面（`demo/demo_site.py` 起動、`http://127.0.0.1:8767/index.html`） | 4 |
+| 中間 SPA（初期HTMLにリンク1件＋300ms後にJSで2件描画） | 4 |
+| 純 SPA（初期HTMLリンク0件＋300ms後にJSで1件描画） | 3 |
+
+中間/純 SPA はスクラッチ領域に生成して `python3 -m http.server 8791` で配信する:
+
+```html
+<!-- index.html（中間SPA）-->
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>SPA中間</title></head>
+<body><h1>SPA中間</h1>
+<a href="/static-only.html">静的リンク</a><div id="app"></div>
+<script>setTimeout(function(){document.getElementById('app').innerHTML=
+'<a href="/js-rendered-a.html">A</a> <a href="/js-rendered-b.html">B</a>';},300);</script>
+</body></html>
+```
+
+```html
+<!-- pure-spa.html（純SPA）-->
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>純SPA</title></head>
+<body><h1>純SPA</h1><div id="app"></div>
+<script>setTimeout(function(){document.getElementById('app').innerHTML=
+'<a href="/static-only.html">リンク</a>';},300);</script>
+</body></html>
+```
+
+リンク先ページ（`static-only.html` / `js-rendered-a.html` / `js-rendered-b.html`）は
+`<a href="/index.html">戻る</a>` を持つ最小 HTML でよい。計測コマンド:
+
+```bash
+venv/bin/python src/main.py --discover --url http://127.0.0.1:8791/index.html \
+  --depth 2 --max-pages 30 | python3 -c "import sys,json;print(len(json.load(sys.stdin)['pages']))"
+```

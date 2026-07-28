@@ -497,12 +497,24 @@ function _autorunStartPolling() {
 function _autorunStopPolling() {
   if (_autoRunPollTimer) { clearInterval(_autoRunPollTimer); _autoRunPollTimer = null; }
 }
+// 実行状況の取得が続けて失敗すると、画面は最後に取れた状態のまま止まる。
+// 黙って固まると利用者は「進んでいない」のか「表示が壊れた」のか判別できないため、
+// 一定回数連続で失敗した時点で一度だけ知らせる（毎回出すと通知が溢れる）。
+const AUTORUN_POLL_FAILURE_LIMIT = 3;
+let _autorunPollFailures = 0;
+
 async function _autorunPoll() {
   if (!_autoRunJobId) return;
   try {
     const data = await fetch('/api/autorun/status?job_id=' + encodeURIComponent(_autoRunJobId)).then(r => r.json());
+    _autorunPollFailures = 0;
     _autorunRender(data);
-  } catch (e) {}
+  } catch (e) {
+    _autorunPollFailures += 1;
+    if (_autorunPollFailures === AUTORUN_POLL_FAILURE_LIMIT && typeof showToast === 'function') {
+      showToast('実行状況を取得できません。表示が更新されていない可能性があります', 'error');
+    }
+  }
 }
 
 // ---- AutoRun: テスト実行中のライブプレビュー ----
@@ -521,6 +533,7 @@ function _autorunStartLivePreview(domain) {
     if (!image || !placeholder) return;
     const url = `/api/autorun/live-screenshot?domain=${encodeURIComponent(_autoRunLivePreviewDomain)}&t=${Date.now()}`;
     try {
+      // noqa: fetch-error ライブプレビューは失敗時に前回の画像を残すのが正しい挙動
       const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) return; // 未生成。次のポーリングを待つ
       const blob = await res.blob();

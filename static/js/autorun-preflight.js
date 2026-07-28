@@ -80,6 +80,7 @@
       var id = runId;
       runId = '';
       try {
+        // noqa: fetch-error 中断要求は届かなくても実害がなく、UI は後続で必ず閉じる
         await fetch('/api/cancel', { method: 'POST', body: new URLSearchParams({ run_id: id }) });
       } catch (e) { /* 中断できなくても実害はない */ }
     }

@@ -264,7 +264,12 @@ document.getElementById('exec-stop-btn').addEventListener('click', async () => {
   execMessage.textContent = '停止要求を送信しています…';
   // サーバ側のクロールプロセスを確実に終了させてから、クライアントの受信を中断する
   if (activeRunId) {
-    try { await fetch('/api/cancel', { method: 'POST', body: new URLSearchParams({ run_id: activeRunId }) }); } catch (e) {}
+    try {
+      await fetch('/api/cancel', { method: 'POST', body: new URLSearchParams({ run_id: activeRunId }) });
+    } catch (e) {
+      // 停止要求が届かないまま黙って「停止中…」で固まると、利用者は待ち続けてしまう。
+      execMessage.textContent = '停止要求を送信できませんでした。サーバ側の処理が続いている可能性があります。';
+    }
   } else if (runAbort) {
     runAbort.abort();
   }

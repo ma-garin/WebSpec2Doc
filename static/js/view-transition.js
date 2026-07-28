@@ -547,7 +547,7 @@ async function _renderUmlDiagram(type, screens, rows) {
   const source = _umlSource(type, screens, rows);
   _currentUmlSource = source;
   if (!rows.length) {
-    target.innerHTML = '<div class="hero-msg">遷移が解析されていません。</div>';
+    target.innerHTML = '<div class="hero-msg">遷移が検出されていません。</div>';
     return;
   }
   try {
@@ -705,27 +705,6 @@ function _activityDiagram(rows) {
   });
   lines.push(`  CHECK${Math.min(rows.length, 30) - 1} --> END([終了])`);
   return lines.join('\n');
-}
-
-function _umlTable(type, rows) {
-  if (!rows.length) return '<div class="hero-msg">表にできる遷移がありません。</div>';
-  const title = type === 'activity' ? 'テスト手順表' : type === 'sequence' ? 'シナリオ表' : '遷移サマリー表';
-  const tableRows = rows.map(r => `
-    <tr>
-      <td class="c-screen">${escHtml(r.no)}</td>
-      <td><strong>${escHtml(r.fromId)}</strong><span>${escHtml(r.fromTitle)}</span></td>
-      <td><span class="cond-pill ${r.event === 'フォーム送信' ? 'cc-format trans-event-form' : 'cc-other trans-event-link'}">${escHtml(r.event)}</span><span class="trans-link-detail">${escHtml(r.eventDetail)}</span></td>
-      <td><strong>${escHtml(r.toId)}</strong><span>${escHtml(r.toTitle)}</span></td>
-      <td>${escHtml(r.viewpoint)}</td>
-    </tr>
-  `).join('');
-  return (
-    `<div class="uml-table-title">${escHtml(title)}</div>` +
-    '<table class="trans-table uml-linked-table">' +
-    '<thead><tr><th>No</th><th>From</th><th>操作</th><th>To</th><th>QA観点</th></tr></thead>' +
-    `<tbody>${tableRows}</tbody>` +
-    '</table>'
-  );
 }
 
 // ---- 画面遷移表（ISTQB 状態遷移テスト）----

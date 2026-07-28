@@ -96,7 +96,12 @@
                   </div>
                 </div>
                 <div id="login-loading" style="display:none" class="discover-loading"><span class="spinner"></span><span id="login-loading-msg">フォームを取得しています…</span></div>
-                <div id="login-fields-area"></div>
+                <!-- 取得したログインフォームの入力欄はここに動的生成される。パスワード欄が
+                     form の外にあるとブラウザが警告を出し、パスワード管理も効かないため
+                     form で包む。送信は JS が行うので既定の送信は抑止する。 -->
+                <form id="login-fields-form" autocomplete="on" onsubmit="return false">
+                  <div id="login-fields-area"></div>
+                </form>
                 <div id="login-status" class="input-field-message" style="margin-top:6px"></div>
 
                 <!-- 認証フローレコーダー（SPEC-3-2）: 見えるブラウザで人が普通にログインし、ボタン一つで保存する -->

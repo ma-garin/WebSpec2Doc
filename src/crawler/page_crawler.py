@@ -667,6 +667,26 @@ def _guard_session(page: Page, url: str, auth_state: Path | None) -> None:
         raise SessionExpiredError(f"保存セッションが失効しています: {url}")
 
 
+def _is_html_response(response: Any) -> bool:
+    """レスポンスが HTML 文書かを判定する。
+
+    JSON / Markdown / プレーンテキストを返す API エンドポイントを「画面」として
+    数えると、画面数が水増しされ、仕様書やテスト設計に画面でないものが混ざる
+    （自製品の UX 監査で `/api/...` が画面として解析され検出）。
+    content-type が取れない場合は誤って除外しないよう HTML とみなす。
+    """
+    if response is None:
+        return True
+    try:
+        headers = response.headers or {}
+        content_type = headers.get("content-type", "") if isinstance(headers, dict) else ""
+    except (AttributeError, TypeError, PlaywrightError):
+        return True
+    if not isinstance(content_type, str) or not content_type:
+        return True
+    return "html" in content_type.lower()
+
+
 def _discover_one(page: Page, url: str, found: list[dict[str, object]]) -> tuple[str, ...]:
     from analyzer.login_wall import PageAuthSignals, detect_login_wall
     from crawler.link_extractor import (
@@ -680,6 +700,10 @@ def _discover_one(page: Page, url: str, found: list[dict[str, object]]) -> tuple
         response = _goto_for_discover(page, normalized)
     except PlaywrightError as exc:
         logger.warning("画面リスト取得に失敗しました: %s (%s)", url, exc)
+        return ()
+    if not _is_html_response(response):
+        # API エンドポイント等は画面ではないため一覧に載せない。黙って捨てず記録する。
+        logger.info("HTML ではないため画面から除外しました: %s", normalized)
         return ()
     signals = PageAuthSignals(
         requested_url=normalized,

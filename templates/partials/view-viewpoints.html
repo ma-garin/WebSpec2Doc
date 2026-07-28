@@ -10,7 +10,7 @@
             </div>
 
             <!-- タブバー -->
-            <header class="vp-commandbar">
+            <div class="vp-commandbar">
               <div class="vp-tabs" role="tablist" aria-label="観点管理の表示">
                 <button type="button" class="vp-tab is-active" data-vp-tab="draft" role="tab" aria-selected="true">下書き</button>
                 <button type="button" class="vp-tab" data-vp-tab="published" role="tab" aria-selected="false">公開版</button>
@@ -23,7 +23,7 @@
                 <input type="file" id="vp-csv-import" accept=".csv,text/csv" hidden>
                 <button type="button" id="vp-publish" class="btn-primary">公開</button>
               </div>
-            </header>
+            </div>
 
             <!-- 3ペインワークスペース -->
             <div class="vp-workspace">
@@ -161,7 +161,7 @@
           <!-- 詳細編集モーダル（既存viewpoint-editor.jsと連携） -->
           <div id="vp-editor-overlay" class="vp-editor-overlay" role="dialog" aria-modal="true" aria-labelledby="vp-editor-title" aria-describedby="vp-editor-state" hidden>
             <div class="vp-editor-modal">
-              <header class="vp-editor-head">
+              <div class="vp-editor-head">
                 <div>
                   <p id="vp-editor-context" class="vp-editor-context">観点セット</p>
                   <h2 id="vp-editor-title" tabindex="-1">観点を編集</h2>
@@ -170,7 +170,7 @@
                   <span id="vp-editor-state" class="vp-editor-state">保存済み</span>
                   <button type="button" id="vp-editor-close" class="vp-editor-close" aria-label="編集画面を閉じる">×</button>
                 </div>
-              </header>
+              </div>
 
               <div class="vp-editor-layout">
                 <nav class="vp-section-nav" aria-label="編集セクション">

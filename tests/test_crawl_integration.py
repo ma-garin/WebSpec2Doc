@@ -22,6 +22,9 @@ class TestCrawlPageIntegration:
         page.content.return_value = "<html><body><h1>Test</h1></body></html>"
         page.eval_on_selector_all.return_value = []
         page.query_selector.return_value = None
+        # has_password_field（ログインフォーム判定）は page.evaluate を使う。
+        # 既定は「ログインフォームなし」とし、公開ページとして扱わせる。
+        page.evaluate.return_value = False
         page.screenshot.return_value = b"\x89PNG\r\n"  # fake PNG
         # goto() returns a response-like mock
         mock_response = MagicMock()

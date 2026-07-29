@@ -176,6 +176,27 @@ def configure_expect_timeout() -> None:
 
 
 @pytest.fixture(autouse=True)
+def skip_onboarding_tour(request: pytest.FixtureRequest) -> None:
+    """オンボーディングツアーを完了済みとして始め、E2E を決定的にする。
+
+    driver.js のツアーはフレッシュなブラウザで自動起動し、その SVG オーバーレイ
+    （`.driver-overlay`）がクリックを遮る。テストごとに新しいコンテキストが作られるため、
+    ツアーが出るかどうかがタイミング次第になり「element intercepts pointer events」で
+    45 秒タイムアウトする経路があった（ユーザーガイド・観点ダイアログ等）。
+
+    ツアー自体を検証する E2E は無いため、常に完了済みにして固定する。
+    ツアーを検証したくなった場合は、そのテストで localStorage を消してから遷移する。
+    """
+    if "page" not in request.fixturenames:
+        return
+    page = request.getfixturevalue("page")
+    page.add_init_script(
+        "try { localStorage.setItem('webspec2doc.onboarding.tour-completed', '1'); }"
+        " catch (e) { /* private mode 等では何もしない */ }"
+    )
+
+
+@pytest.fixture(autouse=True)
 def configure_page_timeouts(request: pytest.FixtureRequest) -> None:
     """page を使うテストに、長い連続実行向けの実タイムアウトを適用する。"""
     if "page" not in request.fixturenames:

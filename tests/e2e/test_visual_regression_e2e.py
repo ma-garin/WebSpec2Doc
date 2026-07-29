@@ -37,7 +37,7 @@ def _assert_visual_match(page: Page, name: str, threshold: float = VISUAL_THRESH
 
     - ベースラインが存在しない場合: 作成して pytest.skip（次回から比較）
     - ベースラインが存在する場合: ピクセル比較、差分 > threshold で FAIL
-    - pytest --update-snapshots フラグがある場合: ベースラインを強制更新
+    - WEBSPEC2DOC_UPDATE_SNAPSHOTS=1 の場合: ベースラインを強制更新
     """
     baseline_path = SNAPSHOTS_DIR / f"{name}.png"
     page.add_style_tag(
@@ -101,7 +101,7 @@ def _assert_visual_match(page: Page, name: str, threshold: float = VISUAL_THRESH
                 f"ビジュアルリグレッション検出: diff={diff_ratio:.4f} (閾値: {threshold})\n"
                 f"  ベースライン: {baseline_path}\n"
                 f"  現在:         {diff_path}\n"
-                f"  ベースライン更新: pytest tests/e2e/ --update-snapshots"
+                f"  ベースライン更新: WEBSPEC2DOC_UPDATE_SNAPSHOTS=1 pytest tests/e2e/"
             )
 
     except ImportError:

@@ -30,8 +30,30 @@ def index() -> str:
 
 @bp.route("/systems")
 def systems() -> str:
-    """ログイン後のシステム選択ハブ。ドキュメント作成 / AutoRun を選ぶ。"""
+    """ログイン後のシステム選択ハブ。ドキュメント作成 / AutoRun / CLI モードを選ぶ。"""
     return render_template("system-select.html")
+
+
+@bp.route("/cli")
+def cli_mode() -> str:
+    """CLI モード（System 03）の案内。
+
+    CLI 自体は画面を持たない（端末で動かす）ため、このページは実行はせず、
+    貼り付けられるコマンドの組み立てと、できること・終了コードの案内だけを行う。
+    ドメインの候補は実際の出力先から取るので、存在しない名前を勧めない。
+    """
+    from web.config import OUTPUT_DIR
+    from web.tenancy import TENANTS_DIR_NAME, scoped_output_dir
+
+    out = scoped_output_dir(OUTPUT_DIR)
+    domains: list[str] = []
+    if out.is_dir():
+        domains = sorted(
+            d.name
+            for d in out.iterdir()
+            if d.is_dir() and not d.name.startswith(".") and d.name != TENANTS_DIR_NAME
+        )
+    return render_template("cli.html", domains=domains)
 
 
 @bp.route("/<view_name>")

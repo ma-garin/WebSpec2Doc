@@ -32,7 +32,7 @@
     <div class="sysselect-head">
       <div class="sysselect-kicker">システム選択</div>
       <h1>どのシステムを使いますか？</h1>
-      <p>使うシステムを選んでください。ドキュメント作成と AutoRun は独立したシステムです。</p>
+      <p>使うシステムを選んでください。3 つは独立したシステムです。CLI モードは画面を持たず、端末から同じ機能を使います。</p>
     </div>
 
     <div class="sysselect-grid">
@@ -72,9 +72,27 @@
         <span class="syscard-open">AutoRun を開く →</span>
       </a>
 
+      <a class="syscard syscard-cli" href="/cli">
+        <span class="syscard-accent" aria-hidden="true"></span>
+        <span class="syscard-badge">画面なし</span>
+        <span class="syscard-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3"/><path d="M13 15h4"/>
+          </svg>
+        </span>
+        <span class="syscard-no">System 03</span>
+        <span class="syscard-title">CLI モード</span>
+        <span class="syscard-desc">同じ機能を端末から。ブラウザを開かずに解析・AutoRun・テスト実行まで回せます。CI や定期実行に組み込む用途に。</span>
+        <span class="syscard-chips">
+          <span class="syscard-chip">CI 組み込み</span><span class="syscard-chip">定期実行</span>
+          <span class="syscard-chip">JSON 出力</span><span class="syscard-chip">終了コード</span>
+        </span>
+        <span class="syscard-open">CLI の使い方を見る →</span>
+      </a>
+
     </div>
 
-    <p class="sysselect-note">2 つは別システムです。入口・世界観・ナビは独立し、共通はログインとアカウントだけ。いつでもこの画面に戻って切り替えられます。</p>
+    <p class="sysselect-note">3 つは別システムです。入口・世界観・ナビは独立し、共通はログインとアカウントだけ。いつでもこの画面に戻って切り替えられます。CLI モードは画面を持たず、端末から同じ機能を使います。</p>
   </main>
 
 </body>

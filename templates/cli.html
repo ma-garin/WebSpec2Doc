@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <title>CLI モード - WebSpec2Doc</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/system-select.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/cli-mode.css') }}?v={{ _ver }}">
+</head>
+<body class="sysselect-body cli-body">
+
+  <header class="sysselect-topbar">
+    <div class="sysselect-brand">
+      <span class="sysselect-brand-mark">W</span>
+      <span class="sysselect-brand-name">WebSpec2Doc</span>
+      <span class="sysselect-brand-tag">CLI モード</span>
+    </div>
+    <div class="sysselect-account">
+      <a class="cli-back" href="/systems">← システム選択へ戻る</a>
+    </div>
+  </header>
+
+  <main class="cli-stage">
+    <div class="cli-head">
+      <div class="sysselect-kicker">System 03</div>
+      <h1>CLI モード（画面なし）</h1>
+      <p>
+        ブラウザを開かずに、ドキュメント作成・AutoRun・テスト実行を端末から回します。
+        <strong>この画面は使い方の案内です。実行は端末で行います。</strong>
+        CI や定期実行に組み込む用途を想定しています。
+      </p>
+    </div>
+
+    <section class="cli-section">
+      <h2>コマンドを組み立てる</h2>
+      <p class="cli-lead">
+        条件を選ぶと、そのまま貼り付けられるコマンドを作ります。
+        入口は <code>python src/cli.py &lt;コマンド&gt;</code> の一本で、
+        <code>--help</code> を付ければ端末側でも一覧を確認できます。
+      </p>
+      <div class="cli-builder">
+        <label class="cli-field">
+          <span>やること</span>
+          <select id="cli-cmd">
+            <option value="doc">01 ドキュメント作成（仕様書を生成）</option>
+            <option value="autorun">02 AutoRun（解析からテスト実行まで全自動）</option>
+            <option value="test">テストケースを実行する</option>
+            <option value="sites">解析済みサイトを一覧する</option>
+            <option value="show">成果物の場所を確認する</option>
+            <option value="viewpoints">観点セットを一覧する</option>
+          </select>
+        </label>
+        <label class="cli-field" id="cli-url-field">
+          <span>対象 URL</span>
+          <input type="url" id="cli-url" placeholder="https://example.com" value="https://example.com">
+        </label>
+        <label class="cli-field cli-hidden" id="cli-domain-field">
+          <span>対象ドメイン</span>
+          <input type="text" id="cli-domain" placeholder="example.com" list="cli-domains">
+          <datalist id="cli-domains">
+            {% for d in domains %}<option value="{{ d }}"></option>{% endfor %}
+          </datalist>
+        </label>
+        <label class="cli-field cli-narrow" id="cli-depth-field">
+          <span>深さ</span>
+          <input type="number" id="cli-depth" value="2" min="1" max="10">
+        </label>
+        <label class="cli-field cli-narrow" id="cli-max-field">
+          <span>最大画面数</span>
+          <input type="number" id="cli-max" value="30" min="1" max="500">
+        </label>
+        <label class="cli-check"><input type="checkbox" id="cli-json"> 結果を JSON で受け取る（自動化向け）</label>
+      </div>
+      <div class="cli-out">
+        <code id="cli-command"></code>
+        <button type="button" class="cli-copy" id="cli-copy">コピー</button>
+      </div>
+    </section>
+
+    <section class="cli-section">
+      <h2>できること</h2>
+      <table class="cli-table">
+        <thead><tr><th>コマンド</th><th>内容</th><th>GUI の対応</th></tr></thead>
+        <tbody>
+          <tr><td><code>doc</code></td><td>クロールして画面仕様書・遷移図・項目定義を生成</td><td>01 ドキュメント作成</td></tr>
+          <tr><td><code>autorun</code></td><td>解析 → 設計 → spec 生成 → テスト実行までを自動で通す</td><td>02 AutoRun</td></tr>
+          <tr><td><code>test</code></td><td>テストケース表から Playwright を実行して結果を保存</td><td>レポートの「テスト実行」</td></tr>
+          <tr><td><code>sites</code></td><td>解析済みサイトと画面数・項目数・履歴数の一覧</td><td>ホームの解析履歴</td></tr>
+          <tr><td><code>show</code></td><td>1 サイトの成果物の場所と、テスト実行の実績</td><td>レポートのエクスポート</td></tr>
+          <tr><td><code>viewpoints</code></td><td>観点セットの一覧（名称・公開版・観点数）</td><td>観点管理</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="cli-section">
+      <h2>終了コード</h2>
+      <p class="cli-lead">CI から成否を判定できるように揃えてあります。</p>
+      <table class="cli-table cli-table-narrow">
+        <thead><tr><th>コード</th><th>意味</th></tr></thead>
+        <tbody>
+          <tr><td><code>0</code></td><td>正常終了</td></tr>
+          <tr><td><code>1</code></td><td>完了したが失敗を含む（テスト失敗・ドリフト検出）</td></tr>
+          <tr><td><code>2</code></td><td>実行エラー（対象に到達できない・設定不備など）</td></tr>
+          <tr><td><code>130</code></td><td>中止（タイムアウト・シグナル）</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="cli-section">
+      <h2>知っておくこと</h2>
+      <ul class="cli-notes">
+        <li><strong>ログインが必要な画面</strong>は、<code>--login-user</code> / <code>--login-pass</code> を渡さない限りスキップします。
+          その場合は成果物に「未ログイン範囲のみ」と記録されます。スキップさせたくないときは <code>--require-login</code> を付けると、資格情報が無いときに中止します。</li>
+        <li><strong>段階承認</strong>は CLI では人が判断できないため自動で通します。何を自動で通したかは実行結果に必ず出ます。</li>
+        <li>GUI を起動する必要はありません。CLI は Flask のリクエストコンテキストを使いません。</li>
+      </ul>
+    </section>
+  </main>
+
+  <script src="{{ url_for('static', filename='js/cli-mode.js') }}?v={{ _ver }}"></script>
+</body>
+</html>

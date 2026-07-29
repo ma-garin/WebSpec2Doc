@@ -5,6 +5,9 @@
   --sys-doc-weak: var(--color-primary-light);
   --sys-doc-ink: var(--color-primary-dark);
   --sys-run: #0E9C7A;
+  --sys-cli: #4B5563;
+  --sys-cli-weak: #E5E7EB;
+  --sys-cli-ink: #1F2937;
   --sys-run-weak: #DCF5EE;
   --sys-run-ink: #0A7359;
 }
@@ -76,10 +79,12 @@
 
 .sysselect-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  /* カードは 3 枚（01 ドキュメント作成 / 02 AutoRun / 03 CLIモード）。
+     狭い幅では自動で折り返す。 */
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: var(--space-5);
   width: 100%;
-  max-width: 780px;
+  max-width: 1160px;
 }
 
 .syscard {
@@ -104,6 +109,8 @@
 .syscard-doc:hover { border-color: var(--sys-doc); }
 .syscard-doc .syscard-accent { background: var(--sys-doc); }
 .syscard-run:hover { border-color: var(--sys-run); }
+.syscard-cli:hover { border-color: var(--sys-cli); }
+.syscard-cli .syscard-accent { background: var(--sys-cli); }
 .syscard-run .syscard-accent { background: var(--sys-run); }
 
 .syscard-icon {
@@ -112,12 +119,14 @@
 }
 .syscard-doc .syscard-icon { background: var(--sys-doc-weak); color: var(--sys-doc-ink); }
 .syscard-run .syscard-icon { background: var(--sys-run-weak); color: var(--sys-run-ink); }
+.syscard-cli .syscard-icon { background: var(--sys-cli-weak); color: var(--sys-cli-ink); }
 
 .syscard-no {
   font-size: var(--text-xs); font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
 }
 .syscard-doc .syscard-no { color: var(--sys-doc-ink); }
 .syscard-run .syscard-no { color: var(--sys-run-ink); }
+.syscard-cli .syscard-no { color: var(--sys-cli-ink); }
 
 .syscard-title { font-size: var(--text-xl); font-weight: 800; }
 .syscard-desc {

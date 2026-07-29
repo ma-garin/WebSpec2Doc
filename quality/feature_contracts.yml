@@ -2058,6 +2058,56 @@
         "error_path",
         "evidence"
       ]
+    },
+    {
+      "feature_id": "cli_mode",
+      "name": "CLI モード（System 03・画面なし）",
+      "risk_level": "high",
+      "status": "implemented",
+      "ui_files": [
+        "templates/system-select.html",
+        "templates/cli.html",
+        "static/js/cli-mode.js",
+        "static/css/cli-mode.css"
+      ],
+      "route_files": [
+        "web/routes/pages.py"
+      ],
+      "core_files": [
+        "src/cli.py",
+        "web/services/cli_runner.py"
+      ],
+      "symbols": [
+        "run_autorun",
+        "run_testcases",
+        "build_parser",
+        "cmd_autorun",
+        "cmd_test"
+      ],
+      "outputs": [
+        "端末出力（人が読む形）",
+        "JSON 出力（--json・自動化向け）",
+        "終了コード（0/1/2/130）",
+        "output/{domain}/ 配下の成果物"
+      ],
+      "persistence": [
+        "output/{domain}/",
+        "output/{domain}/testcases/run_result.json"
+      ],
+      "failure_modes": [
+        "login_required_without_credentials",
+        "target_unreachable",
+        "zero_tests_executed_reported_as_success",
+        "stage_approval_auto_passed_without_human",
+        "timeout_cancelled",
+        "unknown_option_silently_ignored"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "exit_code_path",
+        "evidence"
+      ]
     }
   ]
 }

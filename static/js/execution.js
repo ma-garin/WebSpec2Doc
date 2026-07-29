@@ -48,29 +48,43 @@ function resetCrawlProgress(total) {
   crawlProgress = { total: total || 0, finished: 0, completed: 0, skipped: 0, login: 0, failed: 0, saved: 0, parallelism: 1, durations: [] };
   updateCrawlProgress();
 }
+// 1 秒刻みで数字が動くと落ち着いて待てず、見積もりの精度以上に正確そうな印象も与えるため丸める。
+// 丸め幅は残り時間で変える: 1 画面あたり約2〜3秒（P1-2 実測）なので、一律 30 秒丸めにすると
+// 数秒で終わる場面まで「約30秒」と過大に出てしまう。
 function formatEta(seconds) {
   if (!Number.isFinite(seconds) || seconds < 0) return '算出中';
-  if (seconds < 60) return `約${Math.max(1, Math.ceil(seconds))}秒`;
-  return `約${Math.ceil(seconds / 60)}分`;
+  if (seconds < 60) return `約${Math.max(10, Math.round(seconds / 10) * 10)}秒`;
+  const rounded = Math.round(seconds / 30) * 30;
+  const minutes = Math.floor(rounded / 60);
+  return rounded % 60 === 0 ? `約${minutes}分` : `約${minutes}分30秒`;
 }
 function updateCrawlProgress() {
   if (!crawlProgress) return;
   const p = crawlProgress;
-  execCount.textContent = `${p.finished} / ${p.total || '?'}`;
-  execTitle.textContent = `解析中…（${p.finished}/${p.total || '?'}）`;
+  // サーバの total は「クロール対象になる画面数」。除外（robots・ログイン必須・失敗）は
+  // 分子にだけ数えるため、分母が分子を下回って「8 / 6」と出ないよう下限を合わせる。
+  const total = Math.max(p.total, p.finished);
+  execCount.textContent = `${p.finished} / ${total || '?'}`;
+  execTitle.textContent = `解析中…（${p.finished}/${total || '?'}）`;
   execSkipped.textContent = `${p.skipped + p.login + p.failed}件`;
   execSkipped.title = `制約: ${p.skipped} / ログイン必須: ${p.login} / 失敗: ${p.failed}`;
   execSaved.textContent = `${p.saved}件`;
-  const average = p.durations.length ? p.durations.reduce((a, b) => a + b, 0) / p.durations.length : NaN;
-  const remaining = Math.max(0, p.total - p.finished);
-  execEta.textContent = remaining === 0 && p.total ? 'まもなく完了' : formatEta(remaining * average / Math.max(1, p.parallelism));
-  if (p.total > 0) execProgressBar.style.width = `${Math.min(76, 8 + (p.finished / p.total) * 68)}%`;
+  // 1画面ぶんの実績だけで残り時間を出すと大きく外れるため、2画面完了するまでは「算出中」に留める。
+  const average = (p.completed >= 2 && p.durations.length)
+    ? p.durations.reduce((a, b) => a + b, 0) / p.durations.length
+    : NaN;
+  const remaining = Math.max(0, total - p.finished);
+  execEta.textContent = remaining === 0 && total ? 'まもなく完了' : formatEta(remaining * average / Math.max(1, p.parallelism));
+  if (total > 0) execProgressBar.style.width = `${Math.min(76, 8 + (p.finished / total) * 68)}%`;
 }
 function handleCrawlEvent(event) {
   if (!event || !crawlProgress) return;
   const p = crawlProgress;
+  // リンク追跡モードでは対象数がクロール中に判明していく。開始時の値だけを見ていると
+  // 分母が古いまま残るため、total を運ぶイベントすべてで更新する。
+  const reportedTotal = Number(event.total);
+  if (Number.isFinite(reportedTotal) && reportedTotal > 0) p.total = reportedTotal;
   if (event.event === 'crawl_started') {
-    p.total = Number(event.total) || p.total;
     p.parallelism = Number(event.parallelism) || 1;
     execPhase.textContent = `解析中（${p.parallelism}並列）`;
   } else if (event.event === 'page_started') {

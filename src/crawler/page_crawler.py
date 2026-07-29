@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 import os
 import time
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -309,7 +309,9 @@ def crawl_site(
     visited: set[str] = set()
     queue: list[tuple[str, int]] = [(base_url, 0)]
     pages: list[PageData] = []
-    _emit_event(on_event, "crawl_started", total=max_pages, parallelism=worker_count)
+    # 開始時点で判明している対象は起点 URL のみ。上限値を配信すると、実画面数より
+    # 大きい分母（例: 8画面のサイトで「0 / 30」）が最後まで残る。
+    _emit_event(on_event, "crawl_started", total=len(queue), parallelism=worker_count)
     append_audit_log(
         output_dir,
         {
@@ -366,7 +368,9 @@ def crawl_site(
                 "page_started",
                 url=current_url,
                 index=len(pages) + 1,
-                total=max_pages,
+                total=known_total(
+                    len(pages), 1, queue, visited, max_pages, max_depth=depth, robots=robots
+                ),
             )
             limiter.acquire()
             page_data = _crawl_page_with_id(
@@ -385,12 +389,17 @@ def crawl_site(
             pages.append(page_data)
             if on_checkpoint:
                 on_checkpoint(list(pages))
+            # 新たに見つかったリンクを先にキューへ入れてから進捗を配信する。
+            # 順序が逆だと、判明済み対象数がこのページ分だけ古いまま配信される。
+            queue.extend(_next_urls(page_data.links, current_depth, visited, depth))
             _emit_event(
                 on_event,
                 "page_completed",
                 url=current_url,
                 completed=len(pages),
-                total=max_pages,
+                total=known_total(
+                    len(pages), 0, queue, visited, max_pages, max_depth=depth, robots=robots
+                ),
                 elapsed_sec=round(time.monotonic() - started_at, 3),
                 # 画面上で「何が取れたか」をその場で示すため、検出数を添える。
                 # 件数が無いと、進捗が数字だけで中身が見えない（利用者の指摘）。
@@ -400,11 +409,16 @@ def crawl_site(
                     1 for form in page_data.forms for field in form.fields if field.required
                 ),
             )
-            queue.extend(_next_urls(page_data.links, current_depth, visited, depth))
             _polite_delay(page)
 
     event = "crawl_cancelled" if stop_requested and stop_requested() else "crawl_completed"
-    _emit_event(on_event, event, completed=len(pages), total=max_pages)
+    # 終了時の total に上限値を載せると、収束していた分母が最後だけ跳ね上がる。
+    _emit_event(
+        on_event,
+        event,
+        completed=len(pages),
+        total=known_total(len(pages), 0, queue, visited, max_pages, max_depth=depth, robots=robots),
+    )
     return pages
 
 
@@ -1200,6 +1214,37 @@ def _full_screenshot_enabled() -> bool:
     """全体スクリーンショットを保存するか。既定は有効（レポートの拡大表示用）。"""
     raw = os.environ.get(FULL_SCREENSHOT_ENV, "").strip().lower()
     return raw not in _FALSE_ENV_VALUES
+
+
+def known_total(
+    completed: int,
+    in_flight: int,
+    frontier: Iterable[tuple[str, int]],
+    visited: set[str],
+    max_pages: int,
+    *,
+    max_depth: int,
+    robots: RobotFileParser,
+) -> int:
+    """現時点で判明している対象画面数を返す（`max_pages` で頭打ち）。
+
+    リンク追跡（auto）モードでは全体数がクロール完了まで確定しない。以前は上限値
+    `max_pages` をそのまま進捗イベントの total として配信していたが、上限30・実画面8の
+    サイトで「8 / 30」「残り時間 約40秒」を完了の瞬間まで表示し続けた（実測: 残り時間の
+    誤差 中央値 +161%）。判明済みの対象数を配信することで、進捗も残り時間も実数へ収束する。
+
+    フロンティアには重複・訪問済み・depth 超過・robots 拒否が混ざる。これらを数に入れると
+    分母が実数より大きいまま残るため、取り出し時と同じ条件で絞ってから数える。判定内容は
+    `_skip_reason` と同じだが、集計のたびに警告ログを出さないようここでは静かに評価する。
+    """
+    pending: set[str] = set()
+    for url, url_depth in frontier:
+        if url_depth > max_depth or url in visited or url in pending:
+            continue
+        if not is_safe_target(url) or not robots.can_fetch(USER_AGENT, url):
+            continue
+        pending.add(url)
+    return max(1, min(max_pages, completed + in_flight + len(pending)))
 
 
 def _format_page_id(index: int) -> str:

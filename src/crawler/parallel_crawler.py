@@ -159,6 +159,7 @@ def crawl_site_parallel(
         _format_page_id,
         _next_urls,
         _skip_reason,
+        known_total,
     )
 
     state = threading.Condition()
@@ -174,7 +175,13 @@ def crawl_site_parallel(
     def should_stop() -> bool:
         return internal_stop.is_set() or bool(stop_requested and stop_requested())
 
-    def reserve_task() -> tuple[int, str, int] | None:
+    def _known_total_locked() -> int:
+        """判明済みの対象数。`state` を保持した状態で呼ぶこと。"""
+        return known_total(
+            len(results), in_flight, frontier, visited, max_pages, max_depth=depth, robots=robots
+        )
+
+    def reserve_task() -> tuple[int, str, int, int] | None:
         """次のクロール対象を予約する。None は「もう仕事が来ない」を意味する。
 
         max_pages は「成功数 + 実行中数」で予約制にし、直列版と同様に
@@ -196,7 +203,7 @@ def crawl_site_parallel(
                         visited.add(url)
                         in_flight += 1
                         dispatched += 1
-                        return dispatched, url, current_depth
+                        return dispatched, url, current_depth, _known_total_locked()
                     if in_flight == 0:
                         return None
                 state.wait(timeout=_WAIT_POLL_SEC)
@@ -206,6 +213,7 @@ def crawl_site_parallel(
     ) -> None:
         nonlocal in_flight
         completed_count = 0
+        total_known = max_pages
         with state:
             in_flight -= 1
             if page_data is not None and len(results) < max_pages:
@@ -214,6 +222,7 @@ def crawl_site_parallel(
                 frontier.extend(_next_urls(page_data.links, current_depth, visited, depth))
             else:
                 page_data = None
+            total_known = _known_total_locked()
             state.notify_all()
         if page_data is None:
             return
@@ -227,7 +236,7 @@ def crawl_site_parallel(
             "page_completed",
             url=url,
             completed=completed_count,
-            total=max_pages,
+            total=total_known,
             elapsed_sec=round(time.monotonic() - started_at, 3),
         )
 
@@ -238,9 +247,9 @@ def crawl_site_parallel(
                     task = reserve_task()
                     if task is None:
                         return
-                    index, url, current_depth = task
+                    index, url, current_depth, total_known = task
                     started_at = time.monotonic()
-                    _emit(on_event, "page_started", url=url, index=index, total=max_pages)
+                    _emit(on_event, "page_started", url=url, index=index, total=total_known)
                     limiter.acquire()
                     page_data: PageData | None = None
                     try:
@@ -272,7 +281,10 @@ def crawl_site_parallel(
         raise errors[0]
     pages = _compact_page_screenshots([results[key] for key in sorted(results)], output_dir)
     event = "crawl_cancelled" if should_stop() else "crawl_completed"
-    _emit(on_event, event, completed=len(pages), total=max_pages)
+    # 終了時の total に上限値を載せると、収束していた分母が最後だけ跳ね上がる。
+    with state:
+        final_total = _known_total_locked()
+    _emit(on_event, event, completed=len(pages), total=final_total)
     return pages
 
 

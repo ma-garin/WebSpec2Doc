@@ -1,5 +1,13 @@
 // ====================== トレーサビリティマトリクス ======================
 
+// この画面は /traceability/view で単体ページとして開く。SPA 本体（core.js）は
+// 読み込まないため、escHtml をそこに依存すると未定義で描画が止まる。
+// 単体でも動くよう、無ければ同等の実装を用意する。
+const _tcEsc = typeof escHtml === 'function'
+  ? escHtml
+  : (s) => String(s).replace(/[&<>"']/g, c => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
 // キャッシュ: 最後に取得したマトリクスデータ
 let _traceabilityMatrix = null;
 
@@ -13,17 +21,17 @@ function renderTraceabilityRow(req) {
   const coverage = req.coverage || 'uncovered';
   const label = _COVERAGE_LABELS[coverage] || coverage;
   // 色は CSS クラス（.coverage-${coverage}）で付与する（ダーク対応・生 hex を持たない）。
-  const badge = `<span class="coverage-badge coverage-${escHtml(coverage)}">${escHtml(label)}</span>`;
+  const badge = `<span class="coverage-badge coverage-${_tcEsc(coverage)}">${_tcEsc(label)}</span>`;
 
   const testIdsHtml = req.test_ids && req.test_ids.length
-    ? `<span class="test-ids-cell">${req.test_ids.map(escHtml).join(', ')}</span>`
+    ? `<span class="test-ids-cell">${req.test_ids.map(_tcEsc).join(', ')}</span>`
     : '<span class="tc-dash">—</span>';
 
   return `
     <tr>
-      <td class="req-id-cell">${escHtml(req.req_id)}</td>
-      <td>${escHtml(req.req_title)}</td>
-      <td class="url-cell">${escHtml(req.page_url)}</td>
+      <td class="req-id-cell">${_tcEsc(req.req_id)}</td>
+      <td>${_tcEsc(req.req_title)}</td>
+      <td class="url-cell">${_tcEsc(req.page_url)}</td>
       <td>${testIdsHtml}</td>
       <td>${badge}</td>
     </tr>`;
@@ -85,7 +93,7 @@ async function loadTraceabilityMatrix(domain) {
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       if (tbody) {
-        tbody.innerHTML = `<tr><td colspan="5" class="traceability-msg is-error">エラー: ${escHtml(err.error || String(res.status))}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="traceability-msg is-error">エラー: ${_tcEsc(err.error || String(res.status))}</td></tr>`;
       }
       return;
     }

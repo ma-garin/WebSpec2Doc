@@ -258,6 +258,15 @@ async function runWith(bodyStr, domain, label, urlCount) {
     execTitle.textContent = '実行を停止しました'; execPhase.textContent = '停止';
     execMessage.textContent = `${crawlProgress?.saved || 0}画面の途中結果を保存して停止しました。`;
     if (reportPath) document.getElementById('btn-view-report').style.display = '';
+  } else if (crawlProgress?.saved === 0) {
+    // 1 画面も保存できていないのに「生成完了」と出すと、失敗を成功と取り違える。
+    // （http のサイトを https で取りに行って全滅しても完了と表示されていた）
+    execActions.classList.remove('hidden');
+    execTitle.textContent = '取得できた画面がありません'; execPhase.textContent = '失敗';
+    execMessage.textContent =
+      '対象 URL から1画面も取得できませんでした。URL のスキーム（http / https）・到達できるか・'
+      + 'robots.txt の制限・ログインの要否を確認してください。';
+    execError.classList.remove('hidden');
   } else if (ok || reportPath) {
     setStep(4); execProgressBar.style.width = '100%';
     estep.forEach(el => el.className = 'execution-step is-complete');

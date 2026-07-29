@@ -52,6 +52,9 @@ function _emptyState() {
       <button type="button" class="btn-primary empty-add-btn" style="height:44px;padding:0 28px;font-size:15px;margin-top:8px">
         最初の解析を始める
       </button>
+      <button type="button" class="btn-sample-report" data-sample-report>
+        サンプルレポートを見る<span class="sample-zero">解析なし</span>
+      </button>
       <button type="button" class="btn-outline-sm empty-demo-btn" data-onboarding-demo>
         同梱デモサイトのURLを使う
       </button>

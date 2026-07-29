@@ -117,6 +117,14 @@ async function showResults(domain, tab, sub) {
 
   setHeader(['ダッシュボード', domain], domain);
 
+  // 同梱サンプル（P3-1）は自分の解析結果と取り違えられないよう必ず明示する。
+  // 判定はサーバ（/api/result の is_sample）を正本にし、予約ドメイン名を画面側に持たない。
+  const sampleBanner = document.getElementById('r-sample-banner');
+  if (sampleBanner) sampleBanner.hidden = !data.is_sample;
+  // サンプルは実在するサイトではないため「再解析」は行き止まりになる。押させない。
+  const recrawlBtn = document.getElementById('r-recrawl-btn');
+  if (recrawlBtn) recrawlBtn.hidden = Boolean(data.is_sample);
+
   executionView.classList.add('hidden'); resultPanel.classList.remove('hidden');
   appContent.classList.add('is-reporting');
   _buildExportDropdown(data);
@@ -468,6 +476,14 @@ function _showCompletionPopup(elapsedSec) {
 
 document.getElementById('popup-close-btn').addEventListener('click', () => {
   document.getElementById('completion-overlay').classList.add('hidden');
+});
+// サンプルを見終えた利用者を、自分のサイトの解析へ戻す（P3-1）。
+document.getElementById('r-sample-exit-btn')?.addEventListener('click', () => {
+  resultPanel.classList.add('hidden');
+  appContent.classList.remove('is-reporting');
+  switchView('dashboard');
+  try { history.replaceState(null, '', location.pathname); } catch (e) { /* 履歴が触れなくても遷移は成立する */ }
+  document.getElementById('hero-url')?.focus();
 });
 document.getElementById('popup-view-report-btn').addEventListener('click', () => {
   document.getElementById('completion-overlay').classList.add('hidden');

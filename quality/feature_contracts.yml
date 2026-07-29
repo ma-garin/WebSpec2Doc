@@ -2014,6 +2014,50 @@
         "error_path",
         "evidence"
       ]
+    },
+    {
+      "feature_id": "zero_wait_sample_report",
+      "name": "ゼロ待ちサンプルレポート",
+      "risk_level": "medium",
+      "status": "implemented",
+      "ui_files": [
+        "templates/partials/view-dashboard.html",
+        "templates/partials/view-generate.html",
+        "static/js/core.js",
+        "static/js/history.js",
+        "static/js/results.js"
+      ],
+      "route_files": [
+        "web/routes/report.py",
+        "web/routes/history.py"
+      ],
+      "core_files": [
+        "web/routes/report.py",
+        "web/config.py"
+      ],
+      "symbols": [
+        "api_sample_report",
+        "SAMPLE_REPORT_DIR",
+        "SAMPLE_DOMAIN"
+      ],
+      "outputs": [
+        "sample report (展開済みレポート一式)"
+      ],
+      "persistence": [
+        "demo/sample_report/",
+        "output/{SAMPLE_DOMAIN}/"
+      ],
+      "failure_modes": [
+        "bundled_sample_missing",
+        "sample_mistaken_for_own_analysis",
+        "sample_leaks_into_history",
+        "recrawl_dead_end_on_sample"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "evidence"
+      ]
     }
   ]
 }

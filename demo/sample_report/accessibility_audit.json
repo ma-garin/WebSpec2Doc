@@ -1,0 +1,59 @@
+{
+  "meta": {
+    "engine": "axe-core",
+    "claim_scope": "automated_detectable_subset_only",
+    "disclaimer": "axe-core による機械判定可能な項目だけの一次スクリーニングです。WCAG/JIS X 8341-3 への適合を保証せず、残りの項目は人による手動確認が必要です。",
+    "manual_review_required": true
+  },
+  "summary": {
+    "violations": 0,
+    "critical": 0,
+    "serious": 0,
+    "moderate": 0,
+    "minor": 0
+  },
+  "screens": [
+    {
+      "page_id": "P001",
+      "url": "http://127.0.0.1:8767/index.html",
+      "title": "DemoMart - デモストア トップ",
+      "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P001.png",
+      "violations": []
+    },
+    {
+      "page_id": "P002",
+      "url": "http://127.0.0.1:8767/products.html",
+      "title": "DemoMart - 商品一覧",
+      "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P002.png",
+      "violations": []
+    },
+    {
+      "page_id": "P003",
+      "url": "http://127.0.0.1:8767/checkout.html",
+      "title": "DemoMart - お支払い・決済",
+      "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P003.png",
+      "violations": []
+    },
+    {
+      "page_id": "P004",
+      "url": "http://127.0.0.1:8767/contact.html",
+      "title": "DemoMart - お問い合わせ",
+      "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P004.png",
+      "violations": []
+    },
+    {
+      "page_id": "P005",
+      "url": "http://127.0.0.1:8767/dashboard.html",
+      "title": "DemoMart - マイページ",
+      "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P005.png",
+      "violations": []
+    },
+    {
+      "page_id": "P006",
+      "url": "http://127.0.0.1:8767/spa.html",
+      "title": "DemoMart - キャンペーン",
+      "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P006.png",
+      "violations": []
+    }
+  ]
+}

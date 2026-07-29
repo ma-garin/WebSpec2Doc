@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import json
 import logging
+import shutil
 import subprocess
 import tempfile
 import zipfile
@@ -10,7 +11,7 @@ from pathlib import Path
 
 from flask import Blueprint, Response, make_response, redirect, request, send_file, url_for
 
-from web.config import _PREVIEW_MIME, OUTPUT_DIR
+from web.config import _PREVIEW_MIME, OUTPUT_DIR, SAMPLE_DOMAIN, SAMPLE_REPORT_DIR
 from web.services.admin_audit import append_admin_audit
 from web.services.spec_ts_generator import generate_spec_ts
 from web.summary import _summary_for_domain
@@ -164,6 +165,33 @@ def _generate_features_md_if_missing(domain_dir: Path) -> None:
         pass
 
 
+@bp.post("/api/sample-report")
+def api_sample_report() -> dict | tuple[dict, int]:
+    """同梱のサンプルレポートを自テナントの出力先へ展開し、開くドメインを返す（P3-1）。
+
+    初回の利用者にクロールを待たせずレポートの仕上がりを見せるための導線。同梱物は
+    デモサイトを事前に解析した実際の成果物で、その場でクロールは行わない。
+
+    展開先を予約ドメインにすることで、レポート表示・スクリーンショット・エクスポートは
+    通常の経路をそのまま使える（読み取り API を増やさない）。利用者自身の解析結果と
+    混ざらないよう、この予約ドメインは解析履歴の一覧から除外している。
+    """
+    source = SAMPLE_REPORT_DIR
+    if not source.is_dir():
+        logger.error("同梱サンプルが見つかりません: %s", source)
+        return {"error": "サンプルレポートが同梱されていません"}, 404
+    target = _out() / SAMPLE_DOMAIN
+    try:
+        if target.exists():
+            # 同梱物を正本とし、前回展開した内容は毎回置き換える（更新の取りこぼしを防ぐ）
+            shutil.rmtree(target)
+        shutil.copytree(source, target)
+    except OSError:
+        logger.exception("サンプルレポートの展開に失敗しました: %s", target)
+        return {"error": "サンプルレポートを準備できませんでした"}, 500
+    return {"domain": SAMPLE_DOMAIN}
+
+
 @bp.get("/api/result")
 def api_result() -> dict | tuple[dict, int]:
     domain = request.args.get("domain", "")
@@ -224,6 +252,9 @@ def api_result() -> dict | tuple[dict, int]:
         "playwright_run_at": playwright_run_at,
         "testcase_run": run_result,
         "screenshots": [path for s in shots if (path := path_of(str(s.relative_to(domain_dir))))],
+        # 同梱サンプル（P3-1）かどうか。画面側で「これはサンプルです」と明示するために使う。
+        # 予約ドメインの判定はサーバを正本にし、画面側に定数を二重管理させない。
+        "is_sample": domain == SAMPLE_DOMAIN,
     }
 
 

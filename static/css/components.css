@@ -1999,6 +1999,13 @@
   padding: 10px 16px; border: 1px solid var(--ok-border); border-radius: var(--radius);
   background: var(--ok-bg); margin-bottom: 10px;
 }
+/* display を指定したクラスは UA の [hidden]{display:none} に勝ってしまうため、明示的に打ち消す。
+   これが無いと hidden 属性が付いていても表示され続け、利用者自身のレポートにも
+   「これはサンプルです」と出る（実際に一度作り込んだ不具合）。 */
+.result-sample-banner[hidden] { display: none; }
+/* 同じ理由で、サンプル閲覧中に隠す「再解析」ボタンにも打ち消しが要る
+   （.btn-outline-sm が display:inline-flex を持つため）。 */
+#r-recrawl-btn[hidden] { display: none; }
 .result-sample-mark {
   flex: none; padding: 2px 10px; border-radius: 999px;
   background: var(--ok); color: #fff; font-size: 11px; font-weight: 800;

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>トレーサビリティマトリクス — WebSpec2Doc</title>
+  {# 単体ページとして開くため、SPA 本体（index.html）とは別に必要なものを自分で読み込む。
+     これが無かったため、これまで表が描画されず「読み込み中...」のまま止まっていた。 #}
+  <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}?v={{ _ver }}">
+  <style>
+    body { margin: 0; background: var(--bg); }
+    .tc-page { max-width: 1180px; margin: 0 auto; padding: 24px 20px 60px; }
+    /* SPA では .view は is-active のときだけ表示される。単体ページでは常に見せる。 */
+    .tc-page .view { display: block; }
+    .tc-back { display: inline-block; margin-bottom: 14px; font-size: 13px; color: var(--primary-dark); }
+  </style>
+</head>
+<body>
+  <div class="tc-page">
+    <a class="tc-back" href="/">← ホームへ戻る</a>
+    {% include "partials/view-traceability.html" %}
+  </div>
+  <script src="{{ url_for('static', filename='js/traceability.js') }}?v={{ _ver }}"></script>
+  <script>
+    // ドメインはサーバ側で検証済みの値をそのまま渡す（画面側で組み立てない）
+    initTraceability({{ domain | tojson }});
+  </script>
+</body>
+</html>

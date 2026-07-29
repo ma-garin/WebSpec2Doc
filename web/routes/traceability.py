@@ -93,6 +93,11 @@ def _load_test_metadata(domain_dir) -> list[dict]:
 
 @traceability_bp.get("/traceability/view")
 def view_traceability() -> str:
-    """トレーサビリティマトリクスビューをレンダリングする。"""
+    """トレーサビリティマトリクスビューをレンダリングする。
+
+    以前は partial（section 断片）だけを返しており、CSS も JS も読み込まれないため
+    表が描画されず「読み込み中...」のまま止まっていた。単体ページとして完成した
+    HTML を返す。
+    """
     domain = request.args.get("domain", "").strip()
-    return render_template("partials/view-traceability.html", domain=domain)
+    return render_template("traceability.html", domain=domain)

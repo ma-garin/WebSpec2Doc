@@ -19,6 +19,13 @@ DEFAULT_OPENAI_MODEL = "gpt-5.4-mini"
 DISCOVER_TIMEOUT_SEC = 180
 LOGIN_FINISH_TIMEOUT_SEC = 60
 
+#: 同梱サンプルレポート（P3-1 ゼロ待ちサンプル）の実体。同梱デモサイトを解析した
+#: 事前生成の成果物で、クロールを待たずにレポートの仕上がりを見せるために使う。
+SAMPLE_REPORT_DIR = Path("demo/sample_report")
+#: サンプルを開いたときに使う予約ドメイン。利用者自身の解析結果と混ざらないよう、
+#: 解析履歴の一覧からは除外する（web/routes/history.py）。
+SAMPLE_DOMAIN = "sample.webspec2doc.local"
+
 ALLOWED_FORMATS = ("md", "html", "excel", "pdf", "json")
 DOMAIN_RE = re.compile(r"^[A-Za-z0-9._:\[\]-]{1,253}$")
 ENV_KEY_RE = re.compile(r"^[A-Z_][A-Z0-9_]*$")

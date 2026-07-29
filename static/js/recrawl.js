@@ -1,6 +1,18 @@
 
 // ---- 再解析（ドリフト検知）: 既知のサイトを同じ画面構成で取り直す ----
 
+// 再解析として始めた実行かどうかを、対象ドメインで覚えておく（P2-1）。
+// 再解析の答えは「何が変わったか」なので、完了後は概要ではなく履歴・差分を最初に出す。
+// 別サイトを解析したときに誤って差分タブが開かないよう、ドメイン一致を条件にする。
+let pendingRecrawlDomain = '';
+
+// 再解析の完了直後に一度だけ 'history' を返す。それ以外は undefined（＝従来どおり概要）。
+function initialReportTabFor(domain) {
+  if (!domain || pendingRecrawlDomain !== domain) return undefined;
+  pendingRecrawlDomain = '';
+  return 'history';
+}
+
 async function recrawlSite(domain) {
   let site = null, urls = [], auth = getSettings().auth || '';
   // 前回クロールで「認証が必要」と判定された画面の URL 集合とログインページ URL。
@@ -54,6 +66,7 @@ async function recrawlSite(domain) {
   // renderDiscovered() が画面リストパネルの表示状態を上書きするため、その後に呼ぶ。
   setCrawlTargetMode(site && site.crawl_mode === 'auto' ? 'auto' : 'selected');
   showWizardStep(2);
+  pendingRecrawlDomain = domain;
   showToast(`前回の対象画面（${discovered.length}件）を復元しました。条件を確認して実行してください`, 'info');
 }
 

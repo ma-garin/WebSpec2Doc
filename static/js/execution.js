@@ -296,7 +296,8 @@ document.getElementById('exec-new-btn').addEventListener('click', () => {
   showWizardStep(2);
 });
 // ダッシュボードへの導線はトップバーのパンくず（ダッシュボード）に一本化した
-document.getElementById('btn-view-report').addEventListener('click', () => showResults(activeDomain));
+// 再解析の完了直後だけ「履歴・差分」から開く（P2-1）。初回解析は従来どおり概要タブ。
+document.getElementById('btn-view-report').addEventListener('click', () => showResults(activeDomain, initialReportTabFor(activeDomain)));
 document.getElementById('r-recrawl-btn').addEventListener('click', () => {
   const domain = document.getElementById('r-domain').textContent.trim();
   if (domain && domain !== '-') recrawlSite(domain);

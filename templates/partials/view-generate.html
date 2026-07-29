@@ -248,6 +248,13 @@
 
           <!-- ステップ4: レポート -->
           <div id="result-panel" class="result-panel hidden">
+            <!-- 同梱サンプル（P3-1）を開いているときだけ出す帯。自分の解析結果と取り違えると
+                 「登録した覚えのないサイトが出ている」という誤解になるため、必ず明示する。 -->
+            <div id="r-sample-banner" class="result-sample-banner" hidden>
+              <span class="result-sample-mark">サンプル</span>
+              <span class="result-sample-text">これは同梱デモサイトを解析した<strong>サンプルレポート</strong>です。あなたが解析したサイトではありません。</span>
+              <button type="button" id="r-sample-exit-btn" class="btn-primary btn-sm">自分のサイトを解析する</button>
+            </div>
             <div class="result-bar">
               <strong id="r-domain" hidden>-</strong>
               <div class="result-bar-actions">

@@ -1,0 +1,765 @@
+[
+  {
+    "url": "http://127.0.0.1:8767/index.html",
+    "title": "DemoMart - デモストア トップ",
+    "headings": [
+      "DemoMart デモストア",
+      "ようこそ DemoMart へ",
+      "本日のおすすめ"
+    ],
+    "links": [
+      "http://127.0.0.1:8767/index.html",
+      "http://127.0.0.1:8767/products.html",
+      "http://127.0.0.1:8767/login.html",
+      "http://127.0.0.1:8767/checkout.html",
+      "http://127.0.0.1:8767/contact.html",
+      "http://127.0.0.1:8767/dashboard.html",
+      "http://127.0.0.1:8767/spa.html",
+      "http://127.0.0.1:8767/admin.html"
+    ],
+    "forms": [],
+    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P001.png",
+    "buttons": [
+      "おすすめを見る"
+    ],
+    "api_calls": [],
+    "stack_info": {
+      "frontend_framework": "不明",
+      "rendering_mode": "MPA",
+      "css_framework": "不明",
+      "state_management": "不明",
+      "backend_hints": [
+        "Server: Werkzeug/3.1.8 Python/3.12.3"
+      ],
+      "detected_libraries": []
+    },
+    "state_id": "ac5f4686",
+    "a11y_issues": [],
+    "page_states": [],
+    "validation_observations": [],
+    "spa_transitions": [],
+    "embedded_frames": [],
+    "http_status": 200,
+    "console_errors": [],
+    "mixed_content": [],
+    "performance": {
+      "lcp_ms": 400.0,
+      "cls": 0.0,
+      "ttfb_ms": 339.2999999988824,
+      "dcl_ms": 349.69999999925494,
+      "load_ms": 358.19999999925494,
+      "transfer_bytes": 1610,
+      "claim_scope": "lab_single_run_this_environment"
+    },
+    "element_boxes": [],
+    "horizontal_overflow": false
+  },
+  {
+    "url": "http://127.0.0.1:8767/products.html",
+    "title": "DemoMart - 商品一覧",
+    "headings": [
+      "DemoMart デモストア",
+      "商品一覧",
+      "デモ商品ラインナップ"
+    ],
+    "links": [
+      "http://127.0.0.1:8767/index.html",
+      "http://127.0.0.1:8767/checkout.html",
+      "http://127.0.0.1:8767/contact.html"
+    ],
+    "forms": [
+      {
+        "action": "/products",
+        "method": "get",
+        "fields": [
+          {
+            "field_type": "search",
+            "name": "q",
+            "placeholder": "商品名で検索",
+            "required": false,
+            "maxlength": 80,
+            "minlength": null,
+            "min_value": "",
+            "max_value": "",
+            "pattern": "",
+            "default": "",
+            "options": [],
+            "element_id": "q",
+            "aria_label": "",
+            "aria_required": false,
+            "role": "",
+            "has_visible_label": true,
+            "label_text": "キーワード検索",
+            "evidence": {
+              "selector": "#q",
+              "html_attribute": "id",
+              "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P002.png",
+              "bbox": [
+                305,
+                247,
+                670,
+                34
+              ]
+            },
+            "confidence": 1.0
+          }
+        ]
+      }
+    ],
+    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P002.png",
+    "buttons": [
+      "検索"
+    ],
+    "api_calls": [],
+    "stack_info": {
+      "frontend_framework": "不明",
+      "rendering_mode": "MPA",
+      "css_framework": "不明",
+      "state_management": "不明",
+      "backend_hints": [
+        "Server: Werkzeug/3.1.8 Python/3.12.3"
+      ],
+      "detected_libraries": []
+    },
+    "state_id": "ac5f4686",
+    "a11y_issues": [],
+    "page_states": [],
+    "validation_observations": [],
+    "spa_transitions": [],
+    "embedded_frames": [],
+    "http_status": 200,
+    "console_errors": [],
+    "mixed_content": [],
+    "performance": {
+      "lcp_ms": 80.0,
+      "cls": 0.0,
+      "ttfb_ms": 12.799999998882413,
+      "dcl_ms": 22.699999999254942,
+      "load_ms": 61.5,
+      "transfer_bytes": 1589,
+      "claim_scope": "lab_single_run_this_environment"
+    },
+    "element_boxes": [],
+    "horizontal_overflow": false
+  },
+  {
+    "url": "http://127.0.0.1:8767/checkout.html",
+    "title": "DemoMart - お支払い・決済",
+    "headings": [
+      "DemoMart デモストア",
+      "お支払い・決済",
+      "クレジットカード情報"
+    ],
+    "links": [
+      "http://127.0.0.1:8767/index.html",
+      "http://127.0.0.1:8767/products.html"
+    ],
+    "forms": [
+      {
+        "action": "/payment/confirm",
+        "method": "post",
+        "fields": [
+          {
+            "field_type": "text",
+            "name": "card_number",
+            "placeholder": "1111 2222 3333 4444",
+            "required": true,
+            "maxlength": 19,
+            "minlength": null,
+            "min_value": "",
+            "max_value": "",
+            "pattern": "[0-9 ]{13,19}",
+            "default": "",
+            "options": [],
+            "element_id": "card-number",
+            "aria_label": "",
+            "aria_required": true,
+            "role": "",
+            "has_visible_label": true,
+            "label_text": "カード番号",
+            "evidence": {
+              "selector": "#card-number",
+              "html_attribute": "id",
+              "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P004.png",
+              "bbox": [
+                305,
+                279,
+                670,
+                34
+              ]
+            },
+            "confidence": 1.0
+          },
+          {
+            "field_type": "text",
+            "name": "card_name",
+            "placeholder": "TARO YAMADA",
+            "required": true,
+            "maxlength": 40,
+            "minlength": null,
+            "min_value": "",
+            "max_value": "",
+            "pattern": "",
+            "default": "",
+            "options": [],
+            "element_id": "card-name",
+            "aria_label": "",
+            "aria_required": true,
+            "role": "",
+            "has_visible_label": true,
+            "label_text": "カード名義",
+            "evidence": {
+              "selector": "#card-name",
+              "html_attribute": "id",
+              "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P004.png",
+              "bbox": [
+                305,
+                353,
+                670,
+                34
+              ]
+            },
+            "confidence": 1.0
+          },
+          {
+            "field_type": "text",
+            "name": "expiry",
+            "placeholder": "12/28",
+            "required": true,
+            "maxlength": 5,
+            "minlength": null,
+            "min_value": "",
+            "max_value": "",
+            "pattern": "(0[1-9]|1[0-2])/[0-9]{2}",
+            "default": "",
+            "options": [],
+            "element_id": "expiry",
+            "aria_label": "",
+            "aria_required": true,
+            "role": "",
+            "has_visible_label": true,
+            "label_text": "有効期限（MM/YY）",
+            "evidence": {
+              "selector": "#expiry",
+              "html_attribute": "id",
+              "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P004.png",
+              "bbox": [
+                305,
+                427,
+                670,
+                34
+              ]
+            },
+            "confidence": 1.0
+          },
+          {
+            "field_type": "text",
+            "name": "cvc",
+            "placeholder": "123",
+            "required": true,
+            "maxlength": 4,
+            "minlength": null,
+            "min_value": "",
+            "max_value": "",
+            "pattern": "[0-9]{3,4}",
+            "default": "",
+            "options": [],
+            "element_id": "cvc",
+            "aria_label": "",
+            "aria_required": true,
+            "role": "",
+            "has_visible_label": true,
+            "label_text": "セキュリティコード",
+            "evidence": {
+              "selector": "#cvc",
+              "html_attribute": "id",
+              "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P004.png",
+              "bbox": [
+                305,
+                501,
+                670,
+                34
+              ]
+            },
+            "confidence": 1.0
+          },
+          {
+            "field_type": "number",
+            "name": "amount",
+            "placeholder": "",
+            "required": true,
+            "maxlength": null,
+            "minlength": null,
+            "min_value": "100",
+            "max_value": "1000000",
+            "pattern": "",
+            "default": "4980",
+            "options": [],
+            "element_id": "amount",
+            "aria_label": "",
+            "aria_required": true,
+            "role": "",
+            "has_visible_label": true,
+            "label_text": "支払金額（円）",
+            "evidence": {
+              "selector": "#amount",
+              "html_attribute": "id",
+              "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P004.png",
+              "bbox": [
+                305,
+                574,
+                670,
+                34
+              ]
+            },
+            "confidence": 1.0
+          }
+        ]
+      }
+    ],
+    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P003.png",
+    "buttons": [
+      "この内容で支払う"
+    ],
+    "api_calls": [],
+    "stack_info": {
+      "frontend_framework": "不明",
+      "rendering_mode": "MPA",
+      "css_framework": "不明",
+      "state_management": "不明",
+      "backend_hints": [
+        "Server: Werkzeug/3.1.8 Python/3.12.3"
+      ],
+      "detected_libraries": []
+    },
+    "state_id": "ac5f4686",
+    "a11y_issues": [],
+    "page_states": [],
+    "validation_observations": [
+      {
+        "field_name": "card_number",
+        "message": "Please fill out this field.",
+        "evidence": {
+          "selector": "#card-number",
+          "html_attribute": null,
+          "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P004.png",
+          "bbox": null
+        },
+        "confidence": 1.0
+      },
+      {
+        "field_name": "card_name",
+        "message": "Please fill out this field.",
+        "evidence": {
+          "selector": "#card-name",
+          "html_attribute": null,
+          "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P004.png",
+          "bbox": null
+        },
+        "confidence": 1.0
+      },
+      {
+        "field_name": "expiry",
+        "message": "Please fill out this field.",
+        "evidence": {
+          "selector": "#expiry",
+          "html_attribute": null,
+          "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P004.png",
+          "bbox": null
+        },
+        "confidence": 1.0
+      },
+      {
+        "field_name": "cvc",
+        "message": "Please fill out this field.",
+        "evidence": {
+          "selector": "#cvc",
+          "html_attribute": null,
+          "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P004.png",
+          "bbox": null
+        },
+        "confidence": 1.0
+      }
+    ],
+    "spa_transitions": [],
+    "embedded_frames": [],
+    "http_status": 200,
+    "console_errors": [],
+    "mixed_content": [],
+    "performance": {
+      "lcp_ms": 52.0,
+      "cls": 0.0,
+      "ttfb_ms": 6.300000000745058,
+      "dcl_ms": 14.300000000745058,
+      "load_ms": 20.300000000745058,
+      "transfer_bytes": 2113,
+      "claim_scope": "lab_single_run_this_environment"
+    },
+    "element_boxes": [],
+    "horizontal_overflow": false
+  },
+  {
+    "url": "http://127.0.0.1:8767/contact.html",
+    "title": "DemoMart - お問い合わせ",
+    "headings": [
+      "DemoMart デモストア",
+      "お問い合わせ"
+    ],
+    "links": [
+      "http://127.0.0.1:8767/index.html",
+      "http://127.0.0.1:8767/products.html"
+    ],
+    "forms": [
+      {
+        "action": "/contact/send",
+        "method": "post",
+        "fields": [
+          {
+            "field_type": "text",
+            "name": "name",
+            "placeholder": "山田 太郎",
+            "required": true,
+            "maxlength": 50,
+            "minlength": null,
+            "min_value": "",
+            "max_value": "",
+            "pattern": "",
+            "default": "",
+            "options": [],
+            "element_id": "name",
+            "aria_label": "",
+            "aria_required": true,
+            "role": "",
+            "has_visible_label": true,
+            "label_text": "お名前（必須）",
+            "evidence": {
+              "selector": "#name",
+              "html_attribute": "id",
+              "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P005.png",
+              "bbox": [
+                305,
+                275,
+                670,
+                34
+              ]
+            },
+            "confidence": 1.0
+          },
+          {
+            "field_type": "email",
+            "name": "email",
+            "placeholder": "user@example.com",
+            "required": true,
+            "maxlength": null,
+            "minlength": null,
+            "min_value": "",
+            "max_value": "",
+            "pattern": "",
+            "default": "",
+            "options": [],
+            "element_id": "contact-email",
+            "aria_label": "",
+            "aria_required": true,
+            "role": "",
+            "has_visible_label": true,
+            "label_text": "メールアドレス（必須）",
+            "evidence": {
+              "selector": "#contact-email",
+              "html_attribute": "id",
+              "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P005.png",
+              "bbox": [
+                305,
+                348,
+                670,
+                34
+              ]
+            },
+            "confidence": 1.0
+          },
+          {
+            "field_type": "select",
+            "name": "category",
+            "placeholder": "",
+            "required": false,
+            "maxlength": null,
+            "minlength": null,
+            "min_value": "",
+            "max_value": "",
+            "pattern": "",
+            "default": "",
+            "options": [
+              "order",
+              "product",
+              "other"
+            ],
+            "element_id": "category",
+            "aria_label": "",
+            "aria_required": false,
+            "role": "",
+            "has_visible_label": true,
+            "label_text": "お問い合わせ種別",
+            "evidence": {
+              "selector": "#category",
+              "html_attribute": "id",
+              "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P005.png",
+              "bbox": [
+                305,
+                422,
+                670,
+                36
+              ]
+            },
+            "confidence": 1.0
+          },
+          {
+            "field_type": "textarea",
+            "name": "message",
+            "placeholder": "お問い合わせ内容をご記入ください",
+            "required": true,
+            "maxlength": 500,
+            "minlength": null,
+            "min_value": "",
+            "max_value": "",
+            "pattern": "",
+            "default": "",
+            "options": [],
+            "element_id": "message",
+            "aria_label": "",
+            "aria_required": true,
+            "role": "",
+            "has_visible_label": true,
+            "label_text": "お問い合わせ内容（必須・500文字まで）",
+            "evidence": {
+              "selector": "#message",
+              "html_attribute": "id",
+              "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P005.png",
+              "bbox": [
+                305,
+                498,
+                670,
+                98
+              ]
+            },
+            "confidence": 1.0
+          }
+        ]
+      }
+    ],
+    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P004.png",
+    "buttons": [
+      "送信する"
+    ],
+    "api_calls": [],
+    "stack_info": {
+      "frontend_framework": "不明",
+      "rendering_mode": "MPA",
+      "css_framework": "不明",
+      "state_management": "不明",
+      "backend_hints": [
+        "Server: Werkzeug/3.1.8 Python/3.12.3"
+      ],
+      "detected_libraries": []
+    },
+    "state_id": "ac5f4686",
+    "a11y_issues": [],
+    "page_states": [],
+    "validation_observations": [
+      {
+        "field_name": "name",
+        "message": "Please fill out this field.",
+        "evidence": {
+          "selector": "#name",
+          "html_attribute": null,
+          "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P005.png",
+          "bbox": null
+        },
+        "confidence": 1.0
+      },
+      {
+        "field_name": "email",
+        "message": "Please fill out this field.",
+        "evidence": {
+          "selector": "#contact-email",
+          "html_attribute": null,
+          "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P005.png",
+          "bbox": null
+        },
+        "confidence": 1.0
+      },
+      {
+        "field_name": "message",
+        "message": "Please fill out this field.",
+        "evidence": {
+          "selector": "#message",
+          "html_attribute": null,
+          "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P005.png",
+          "bbox": null
+        },
+        "confidence": 1.0
+      }
+    ],
+    "spa_transitions": [],
+    "embedded_frames": [],
+    "http_status": 200,
+    "console_errors": [],
+    "mixed_content": [],
+    "performance": {
+      "lcp_ms": 64.0,
+      "cls": 0.01237630844116211,
+      "ttfb_ms": 8.5,
+      "dcl_ms": 47.19999999925494,
+      "load_ms": 47.40000000037253,
+      "transfer_bytes": 2442,
+      "claim_scope": "lab_single_run_this_environment"
+    },
+    "element_boxes": [],
+    "horizontal_overflow": false
+  },
+  {
+    "url": "http://127.0.0.1:8767/dashboard.html",
+    "title": "DemoMart - マイページ",
+    "headings": [
+      "DemoMart デモストア",
+      "マイページ",
+      "会員情報",
+      "退会の確認",
+      "注文履歴",
+      "よくある質問"
+    ],
+    "links": [
+      "http://127.0.0.1:8767/index.html",
+      "http://127.0.0.1:8767/products.html",
+      "http://127.0.0.1:8767/contact.html"
+    ],
+    "forms": [],
+    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P005.png",
+    "buttons": [
+      "退会手続き",
+      "キャンセル",
+      "直近の注文",
+      "全期間"
+    ],
+    "api_calls": [],
+    "stack_info": {
+      "frontend_framework": "不明",
+      "rendering_mode": "MPA",
+      "css_framework": "不明",
+      "state_management": "不明",
+      "backend_hints": [
+        "Server: Werkzeug/3.1.8 Python/3.12.3"
+      ],
+      "detected_libraries": []
+    },
+    "state_id": "91dc2483",
+    "a11y_issues": [],
+    "page_states": [
+      {
+        "state_id": "e45da655",
+        "trigger_selector": "#open-withdraw-modal",
+        "kind": "modal",
+        "description": "#open-withdraw-modal クリックで modal 状態が出現"
+      },
+      {
+        "state_id": "09eedb38",
+        "trigger_selector": "#tab-all",
+        "kind": "tabpanel",
+        "description": "#tab-all クリックで tabpanel 状態が出現"
+      },
+      {
+        "state_id": "26921d61",
+        "trigger_selector": "summary:has-text(\"配送日数はどのくらいですか？\")",
+        "kind": "accordion",
+        "description": "summary:has-text(\"配送日数はどのくらいですか？\") クリックで accordion 状態が出現"
+      },
+      {
+        "state_id": "d00108f9",
+        "trigger_selector": "summary:has-text(\"返品はできますか？\")",
+        "kind": "accordion",
+        "description": "summary:has-text(\"返品はできますか？\") クリックで accordion 状態が出現"
+      }
+    ],
+    "validation_observations": [],
+    "spa_transitions": [],
+    "embedded_frames": [],
+    "http_status": 200,
+    "console_errors": [],
+    "mixed_content": [],
+    "performance": {
+      "lcp_ms": 72.0,
+      "cls": 0.0,
+      "ttfb_ms": 18.5,
+      "dcl_ms": 48.40000000037253,
+      "load_ms": 49.40000000037253,
+      "transfer_bytes": 3916,
+      "claim_scope": "lab_single_run_this_environment"
+    },
+    "element_boxes": [],
+    "horizontal_overflow": false
+  },
+  {
+    "url": "http://127.0.0.1:8767/spa.html",
+    "title": "DemoMart - キャンペーン",
+    "headings": [
+      "DemoMart デモストア",
+      "キャンペーン特集（SPA デモ）",
+      "開催中のキャンペーン"
+    ],
+    "links": [
+      "http://127.0.0.1:8767/index.html",
+      "http://127.0.0.1:8767/products.html"
+    ],
+    "forms": [],
+    "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P006.png",
+    "buttons": [
+      "夏のセールを見る",
+      "商品一覧へ（SPA遷移）"
+    ],
+    "api_calls": [],
+    "stack_info": {
+      "frontend_framework": "不明",
+      "rendering_mode": "MPA",
+      "css_framework": "不明",
+      "state_management": "不明",
+      "backend_hints": [
+        "Server: Werkzeug/3.1.8 Python/3.12.3"
+      ],
+      "detected_libraries": []
+    },
+    "state_id": "ac5f4686",
+    "a11y_issues": [],
+    "page_states": [],
+    "validation_observations": [],
+    "spa_transitions": [
+      {
+        "from_url": "http://127.0.0.1:8767/spa.html#summer-sale",
+        "to_url": "http://127.0.0.1:8767/spa.html#summer-sale",
+        "kind": "hashchange"
+      },
+      {
+        "from_url": "http://127.0.0.1:8767/spa.html#summer-sale",
+        "to_url": "http://127.0.0.1:8767/spa.html",
+        "kind": "hashchange"
+      },
+      {
+        "from_url": "http://127.0.0.1:8767/spa.html",
+        "to_url": "http://127.0.0.1:8767/products.html",
+        "kind": "pushstate"
+      }
+    ],
+    "embedded_frames": [],
+    "http_status": 200,
+    "console_errors": [],
+    "mixed_content": [],
+    "performance": {
+      "lcp_ms": 48.0,
+      "cls": 0.0,
+      "ttfb_ms": 8.5,
+      "dcl_ms": 24.699999999254942,
+      "load_ms": 25.399999998509884,
+      "transfer_bytes": 2204,
+      "claim_scope": "lab_single_run_this_environment"
+    },
+    "element_boxes": [],
+    "horizontal_overflow": false
+  }
+]

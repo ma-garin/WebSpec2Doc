@@ -1,0 +1,71 @@
+{
+  "claim_boundary": "クロール中に到達・観測できた対象のみ",
+  "summary": {
+    "page_http_errors": 0,
+    "broken_links": 0,
+    "console_errors": 0,
+    "mixed_content": 0
+  },
+  "screens": [
+    {
+      "url": "http://127.0.0.1:8767/index.html",
+      "title": "DemoMart - デモストア トップ",
+      "status_code": 200,
+      "http_error": false,
+      "broken_links": [],
+      "console_errors": [],
+      "mixed_content": [],
+      "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P001.png"
+    },
+    {
+      "url": "http://127.0.0.1:8767/products.html",
+      "title": "DemoMart - 商品一覧",
+      "status_code": 200,
+      "http_error": false,
+      "broken_links": [],
+      "console_errors": [],
+      "mixed_content": [],
+      "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P002.png"
+    },
+    {
+      "url": "http://127.0.0.1:8767/checkout.html",
+      "title": "DemoMart - お支払い・決済",
+      "status_code": 200,
+      "http_error": false,
+      "broken_links": [],
+      "console_errors": [],
+      "mixed_content": [],
+      "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P003.png"
+    },
+    {
+      "url": "http://127.0.0.1:8767/contact.html",
+      "title": "DemoMart - お問い合わせ",
+      "status_code": 200,
+      "http_error": false,
+      "broken_links": [],
+      "console_errors": [],
+      "mixed_content": [],
+      "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P004.png"
+    },
+    {
+      "url": "http://127.0.0.1:8767/dashboard.html",
+      "title": "DemoMart - マイページ",
+      "status_code": 200,
+      "http_error": false,
+      "broken_links": [],
+      "console_errors": [],
+      "mixed_content": [],
+      "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P005.png"
+    },
+    {
+      "url": "http://127.0.0.1:8767/spa.html",
+      "title": "DemoMart - キャンペーン",
+      "status_code": 200,
+      "http_error": false,
+      "broken_links": [],
+      "console_errors": [],
+      "mixed_content": [],
+      "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P006.png"
+    }
+  ]
+}

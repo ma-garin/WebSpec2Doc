@@ -1,0 +1,2 @@
+{"timestamp": "2026-07-29T04:52:17+00:00", "event": "crawl_started", "mode": "site", "base_url": "http://127.0.0.1:8767/index.html", "robots_allowed": true, "robots_crawl_delay_sec": 2.0, "interval_sec": 2.0, "user_agent": "WebSpec2Doc/1.0 (+https://github.com/ma-garin/WebSpec2Doc)", "depth": 2, "max_pages": 30, "parallelism": 2, "mutations_allowed": false}
+{"timestamp": "2026-07-29T04:52:22+00:00", "event": "login_wall_detected", "url": "http://127.0.0.1:8767/login.html", "login_url": "http://127.0.0.1:8767/login.html", "reasons": ["password_field"]}

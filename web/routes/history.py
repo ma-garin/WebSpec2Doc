@@ -9,7 +9,7 @@ from pathlib import Path
 
 from flask import Blueprint, Response, request
 
-from web.config import OUTPUT_DIR
+from web.config import OUTPUT_DIR, SAMPLE_DOMAIN
 from web.summary import _fmt_snap_ts, _summary_for_domain
 from web.tenancy import scoped_output_dir
 from web.validation import _safe_output_path, _valid_domain
@@ -31,11 +31,16 @@ def api_history() -> dict:
         from web.tenancy import TENANTS_DIR_NAME
 
         # ドット始まり（.playwright_env 等の隠しディレクトリ）と
-        # テナント領域（tenants/）はサイトではないため除外
+        # テナント領域（tenants/）はサイトではないため除外。
+        # 同梱サンプル（P3-1）は利用者が解析したサイトではないため、自分の解析結果と
+        # 混ざらないよう履歴からも件数からも外す。
         domains = [
             d
             for d in out_dir.iterdir()
-            if d.is_dir() and not d.name.startswith(".") and d.name != TENANTS_DIR_NAME
+            if d.is_dir()
+            and not d.name.startswith(".")
+            and d.name != TENANTS_DIR_NAME
+            and d.name != SAMPLE_DOMAIN
         ]
         for d in sorted(domains, key=lambda p: p.stat().st_mtime, reverse=True):
             from registry.site_registry import load_site

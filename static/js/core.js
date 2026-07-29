@@ -188,9 +188,29 @@ document.getElementById('hero-url')?.addEventListener('keydown', (event) => {
   event.preventDefault();
   document.getElementById('hero-start-btn')?.click();
 });
-document.getElementById('hero-sample-btn')?.addEventListener('click', () => {
-  const input = document.getElementById('hero-url');
-  if (input) { input.value = 'https://example.com'; input.dispatchEvent(new Event('input', { bubbles: true })); }
+// サンプルレポート（P3-1 ゼロ待ちサンプル）: 同梱の事前生成結果を開く。
+// 以前の「サンプルURLで試す」は URL 欄に example.com を書き込むだけで、
+// 結局クロールの完了を待たないとレポートを見られなかったため置き換えた。
+// 導線はダッシュボードのヒーローと、履歴が空のときのパネルの2箇所にある。
+document.addEventListener('click', async (event) => {
+  const btn = event.target?.closest?.('[data-sample-report]');
+  if (!btn) return;
+  // ラベルは「解析なし」バッジを内包するため、テキスト差し替えではなく子ノードを退避する
+  const original = Array.from(btn.childNodes).map((node) => node.cloneNode(true));
+  btn.disabled = true;
+  btn.replaceChildren(document.createTextNode('サンプルを開いています…'));
+  try {
+    const res = await fetch('/api/sample-report', { method: 'POST' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.domain) throw new Error(data.error || 'サンプルレポートを開けませんでした');
+    await openResultsForDomain(data.domain);
+  } catch (e) {
+    // 黙って何も起きないと、利用者は壊れているのか待つべきなのか判断できない。
+    showToast(e.message || 'サンプルレポートを開けませんでした', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.replaceChildren(...original);
+  }
 });
 
 // P1 → P2: 「次へ」ボタン

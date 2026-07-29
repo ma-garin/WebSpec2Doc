@@ -1,0 +1,16 @@
+graph TD
+    User(["👤 ユーザー"])
+    FE["🖥 フロントエンド\n（フレームワーク不明）"]
+    BE["⚙ バックエンド\n(Werkzeug/3.1.8 Python/3.12.3)"]
+    DB[("💾 データストア\n（推定）")]
+    User -->|"操作"| FE
+    FE -->|"HTTP"| BE
+    BE --> DB
+    classDef frontend fill:#EDF5FF,stroke:#0F62FE,color:#0043CE
+    classDef backend fill:#DEFBE6,stroke:#198038,color:#0e6027
+    classDef db fill:#FFF8E1,stroke:#F59E0B,color:#92400e
+    classDef user fill:#F4F4F4,stroke:#525252
+    class FE frontend
+    class BE backend
+    class DB db
+    class User user

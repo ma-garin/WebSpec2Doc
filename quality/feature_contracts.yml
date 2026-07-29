@@ -360,7 +360,9 @@
         "missing_snapshot",
         "session_expired_false_diff",
         "snapshot_overwrite",
-        "login_required_flags_lost_on_recrawl"
+        "login_required_flags_lost_on_recrawl",
+        "recrawl_lands_on_overview_instead_of_diff",
+        "diff_shown_without_stating_compared_snapshots"
       ],
       "required_tests": [
         "happy_path",

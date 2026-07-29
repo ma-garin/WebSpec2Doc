@@ -334,6 +334,7 @@ async function renderTimeline() {
     '<label style="margin-right:14px"><input type="radio" name="tl-mode" value="comparison" checked> 現新比較（4分類・既定）</label>' +
     '<label><input type="radio" name="tl-mode" value="diff"> 簡易ドリフト差分</label></div>' +
     '<div style="margin:12px 0"><button type="button" class="btn-primary" id="tl-diff-btn">この2時点を比較する</button></div>' +
+    '<p class="tl-diff-basis" id="tl-diff-basis"></p>' +
     '<div class="tl-diff-frame" id="tl-diff"></div>' +
     _ciGuidanceCard(domain) + '</div>';
   document.getElementById('tl-diff-btn').addEventListener('click', showTimelineDiff);
@@ -370,12 +371,19 @@ function _ciGuidanceCard(domain) {
 // 選択を変えずに連打すると src が同一文字列のままブラウザが再読込しない場合があり
 // 「何も起きていないように見える」状態になっていた。fetch で明示的に取得し、
 // 読み込み中・成功・失敗（理由つき）を必ず画面に反映する（evidence-only 原則）。
+// どの2時点を比べた結果なのかを必ず添える（P2-1）。差分が出なかったときに「変更が無い」のか
+// 「そもそも比較できていない」のかを利用者が区別できないと、不在の証明になってしまう。
+function _setDiffBasis(text) {
+  const el = document.getElementById('tl-diff-basis');
+  if (el) el.textContent = text || '';
+}
 async function showTimelineDiff() {
   const from = (document.querySelector('input[name=snap-from]:checked') || {}).value;
   const to = (document.querySelector('input[name=snap-to]:checked') || {}).value;
   const box = document.getElementById('tl-diff');
   const btn = document.getElementById('tl-diff-btn');
   if (!box) return;
+  _setDiffBasis('');
   if (!from || !to) { box.innerHTML = '<div class="hero-msg">2時点を選択してください。</div>'; return; }
   if (from === to) { box.innerHTML = '<div class="hero-msg">異なる2時点を選択してください。</div>'; return; }
 
@@ -407,6 +415,7 @@ async function showTimelineDiff() {
   if (myToken !== _tlDiffToken) return; // 選択が変わった後の古い成功応答は無視
 
   box.replaceChildren();
+  _setDiffBasis(`比較: ${from} → ${to}`);
   const iframe = document.createElement('iframe');
   iframe.title = frameTitle;
   iframe.srcdoc = html; // src の使い回しでは同一URL時にブラウザが再読込しないことがあるため必ず更新される srcdoc を使う
@@ -462,7 +471,8 @@ document.getElementById('popup-close-btn').addEventListener('click', () => {
 });
 document.getElementById('popup-view-report-btn').addEventListener('click', () => {
   document.getElementById('completion-overlay').classList.add('hidden');
-  showResults(activeDomain);
+  // 再解析の完了直後だけ「履歴・差分」から開く（P2-1）。初回解析は従来どおり概要タブ。
+  showResults(activeDomain, initialReportTabFor(activeDomain));
 });
 document.getElementById('completion-overlay').addEventListener('click', (e) => {
   if (e.target === e.currentTarget) document.getElementById('completion-overlay').classList.add('hidden');

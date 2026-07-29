@@ -1977,6 +1977,8 @@
 .mbt-badge.is-measured { background: #d7f0dd; color: #17512c; }
 .mbt-badge.is-catalog { background: #fdeecd; color: #6b4e12; }
 #cov-frame iframe, .tl-diff-frame iframe { width: 100%; min-height: 460px; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+/* 比較した2時点の明示（差分が無いときに「比較できていない」と誤読させないため） */
+.tl-diff-basis { margin: 0 0 8px; font-size: 12.5px; color: var(--text-muted); }
 
 /* ---- R3-13: ログインモーダル×ショートカットヘルプのz-index競合 ----
    ログインモーダルは .file-preview-modal（static/app-report.css, z-index:2000）を

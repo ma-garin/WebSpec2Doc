@@ -18,6 +18,7 @@ from crawler.page_crawler import (
     _save_screenshot,
     _should_skip,
     is_internal_link,
+    known_total,
     normalize_url,
 )
 
@@ -150,6 +151,51 @@ class TestNextUrls:
 
     def test_empty_links(self) -> None:
         assert _next_urls((), 0, set(), 3) == []
+
+
+# ---------- known_total ----------
+
+
+class TestKnownTotal:
+    """進捗イベントの分母。上限値ではなく「判明している対象数」を返すこと。
+
+    上限値を返していた頃は、上限30・実画面8のサイトで「8 / 30」「残り約40秒」を
+    完了の瞬間まで表示していた（残り時間の誤差 中央値 +161%）。
+    """
+
+    def _robots(self) -> RobotFileParser:
+        return _allow_all_robots()
+
+    def test_counts_completed_in_flight_and_frontier(self) -> None:
+        frontier = [("https://example.com/a", 1), ("https://example.com/b", 1)]
+        assert known_total(3, 1, frontier, set(), 30, max_depth=3, robots=self._robots()) == 6
+
+    def test_capped_by_max_pages(self) -> None:
+        frontier = [(f"https://example.com/{i}", 1) for i in range(50)]
+        assert known_total(0, 0, frontier, set(), 10, max_depth=3, robots=self._robots()) == 10
+
+    def test_excludes_visited_and_duplicates(self) -> None:
+        frontier = [
+            ("https://example.com/a", 1),
+            ("https://example.com/a", 1),  # フロンティア内の重複
+            ("https://example.com/b", 1),  # 訪問済み
+        ]
+        visited = {"https://example.com/b"}
+        assert known_total(1, 0, frontier, visited, 30, max_depth=3, robots=self._robots()) == 2
+
+    def test_excludes_urls_beyond_max_depth(self) -> None:
+        frontier = [("https://example.com/a", 4), ("https://example.com/b", 2)]
+        assert known_total(1, 0, frontier, set(), 30, max_depth=3, robots=self._robots()) == 2
+
+    def test_excludes_robots_denied_urls(self) -> None:
+        robots = RobotFileParser()
+        robots.parse(["User-agent: *", "Disallow: /admin"])
+        frontier = [("https://example.com/admin", 1), ("https://example.com/ok", 1)]
+        assert known_total(1, 0, frontier, set(), 30, max_depth=3, robots=robots) == 2
+
+    def test_never_returns_zero(self) -> None:
+        """分母が 0 だと進捗が「0 / 0」になり、割り算も破綻する。"""
+        assert known_total(0, 0, [], set(), 30, max_depth=3, robots=self._robots()) == 1
 
 
 # ---------- _save_screenshot ----------

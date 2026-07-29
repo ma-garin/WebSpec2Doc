@@ -168,6 +168,51 @@ def api_snapshot_diff() -> Response:
     return resp
 
 
+@bp.get("/api/snapshot-diff-summary")
+def api_snapshot_diff_summary() -> dict | tuple[dict, int]:
+    """2 時点間に仕様の変更があったかを JSON で返す（P2-1）。
+
+    差分レポート本体は HTML で返しているため、画面側からは「変更 0 件」なのか
+    「そもそも比較できていない」のかを区別できなかった。区別できないまま何も出さないと
+    不在の証明になるため、件数を機械可読な形でも配信する。
+    """
+    domain = request.args.get("domain", "")
+    if not _valid_domain(domain):
+        return {"error": "not found"}, 404
+    snaps_dir = _out() / domain / "snapshots"
+    from_path = _safe_output_path(str(snaps_dir / (request.args.get("from", "") + ".json")))
+    to_path = _safe_output_path(str(snaps_dir / (request.args.get("to", "") + ".json")))
+    if from_path is None or to_path is None or not from_path.exists() or not to_path.exists():
+        return {"error": "snapshot not found"}, 404
+    if str(Path("src").resolve()) not in sys.path:
+        sys.path.insert(0, str(Path("src").resolve()))
+    try:
+        from diff.differ import compute_diff
+        from diff.snapshot import load_snapshot
+    except ImportError:
+        logger.exception("差分モジュールの読み込みに失敗しました")
+        return {"error": "diff unavailable"}, 500
+    try:
+        diff = compute_diff(load_snapshot(from_path), load_snapshot(to_path))
+    except Exception:  # noqa: BLE001  # 壊れたスナップショットの形は事前に絞れない
+        # ここで 500 を返しても画面は差分表本体を出せる。誤って「変更なし」と
+        # 言わないことのほうが重要なので、握りつぶさず失敗として返す。
+        logger.exception("スナップショットの比較に失敗しました: %s / %s", from_path, to_path)
+        return {"error": "diff failed"}, 500
+    return {
+        "from": from_path.stem,
+        "to": to_path.stem,
+        "has_changes": bool(diff.has_changes),
+        "counts": {
+            "added_pages": len(diff.added_pages),
+            "removed_pages": len(diff.removed_pages),
+            "field_changes": len(diff.field_changes),
+            "link_changes": len(diff.link_changes),
+            "title_changes": len(diff.title_changes),
+        },
+    }
+
+
 def _snapshot_not_found() -> Response:
     return Response(
         "<p style='font-family:sans-serif;padding:16px'>指定されたスナップショットが見つかりません。</p>",

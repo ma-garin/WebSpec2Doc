@@ -381,9 +381,29 @@ function _ciGuidanceCard(domain) {
 // 読み込み中・成功・失敗（理由つき）を必ず画面に反映する（evidence-only 原則）。
 // どの2時点を比べた結果なのかを必ず添える（P2-1）。差分が出なかったときに「変更が無い」のか
 // 「そもそも比較できていない」のかを利用者が区別できないと、不在の証明になってしまう。
-function _setDiffBasis(text) {
+function _setDiffBasis(text, noChange) {
   const el = document.getElementById('tl-diff-basis');
-  if (el) el.textContent = text || '';
+  if (!el) return;
+  el.textContent = text || '';
+  el.classList.toggle('is-no-change', Boolean(noChange));
+}
+// 変更が 0 件のときは、それを言葉で明示する（P2-1）。差分表が空なだけだと
+// 「変わっていない」のか「比較できていない」のか読み手が判断できない。
+// 件数が取れなかった場合は何も言わない（不在を断定しない）。
+async function _annotateNoChange(from, to) {
+  const token = _tlDiffToken;
+  try {
+    const res = await fetch(
+      `/api/snapshot-diff-summary?domain=${encodeURIComponent(timelineDomain)}` +
+      `&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`
+    );
+    if (!res.ok) return;
+    const data = await res.json();
+    if (token !== _tlDiffToken) return; // 選択が変わった後の古い応答は捨てる
+    if (data.has_changes === false) {
+      _setDiffBasis(`前回から変更はありません（比較: ${from} → ${to}）`, true);
+    }
+  } catch (e) { /* 件数が取れなくても差分表本体の表示は妨げない */ }
 }
 async function showTimelineDiff() {
   const from = (document.querySelector('input[name=snap-from]:checked') || {}).value;
@@ -424,6 +444,7 @@ async function showTimelineDiff() {
 
   box.replaceChildren();
   _setDiffBasis(`比較: ${from} → ${to}`);
+  _annotateNoChange(from, to);
   const iframe = document.createElement('iframe');
   iframe.title = frameTitle;
   iframe.srcdoc = html; // src の使い回しでは同一URL時にブラウザが再読込しないことがあるため必ず更新される srcdoc を使う

@@ -27,6 +27,9 @@ def client(tmp_path: Path, monkeypatch):
     out.mkdir()
     monkeypatch.setattr("web.routes.report.OUTPUT_DIR", out)
     monkeypatch.setattr("web.routes.history.OUTPUT_DIR", out)
+    # _safe_output_path は web.validation 側の OUTPUT_DIR を基準に境界判定するため、
+    # ここも差し替えないとテスト用の出力先が「範囲外」と判定される。
+    monkeypatch.setattr("web.validation.OUTPUT_DIR", out)
     return appmod.app.test_client(), out
 
 
@@ -94,3 +97,65 @@ class TestSampleIsDistinguishable:
         domains = [item["domain"] for item in items]
         assert "example.com" in domains
         assert SAMPLE_DOMAIN not in domains
+
+
+class TestSnapshotDiffSummary:
+    """変更 0 件かどうかを機械可読に返す（P2-1）。
+
+    差分レポート本体は HTML のため、これが無いと画面側で「変わっていない」のか
+    「比較できていない」のかを区別できず、不在の証明になってしまう。
+    """
+
+    def _snapshot(self, out: Path, domain: str, snap_id: str, screens: list[dict]) -> None:
+        snaps = out / domain / "snapshots"
+        snaps.mkdir(parents=True, exist_ok=True)
+        # スナップショットはトップレベルが画面の配列（save_snapshot と同じ形）
+        (snaps / f"{snap_id}.json").write_text(
+            json.dumps(screens, ensure_ascii=False), encoding="utf-8"
+        )
+
+    def _page(self, url: str, title: str = "画面") -> dict:
+        return {
+            "url": url,
+            "title": title,
+            "headings": [],
+            "links": [],
+            "forms": [],
+            "screenshot_path": None,
+            "buttons": [],
+        }
+
+    def test_reports_no_change_for_identical_snapshots(self, client) -> None:
+        c, out = client
+        self._snapshot(out, "example.com", "20260101-000000", [self._page("http://example.com/")])
+        self._snapshot(out, "example.com", "20260102-000000", [self._page("http://example.com/")])
+        res = c.get(
+            "/api/snapshot-diff-summary?domain=example.com"
+            "&from=20260101-000000&to=20260102-000000",
+            headers=H,
+        )
+        assert res.status_code == 200
+        assert res.get_json()["has_changes"] is False
+
+    def test_reports_change_when_page_added(self, client) -> None:
+        c, out = client
+        self._snapshot(out, "example.com", "20260101-000000", [self._page("http://example.com/")])
+        self._snapshot(
+            out,
+            "example.com",
+            "20260102-000000",
+            [self._page("http://example.com/"), self._page("http://example.com/new")],
+        )
+        data = c.get(
+            "/api/snapshot-diff-summary?domain=example.com"
+            "&from=20260101-000000&to=20260102-000000",
+            headers=H,
+        ).get_json()
+        assert data["has_changes"] is True
+        assert data["counts"]["added_pages"] == 1
+
+    def test_missing_snapshot_is_404(self, client) -> None:
+        """比較できないときに「変更なし」と誤って言わないよう、成功で返さない。"""
+        c, _ = client
+        res = c.get("/api/snapshot-diff-summary?domain=example.com&from=nope&to=nope", headers=H)
+        assert res.status_code == 404

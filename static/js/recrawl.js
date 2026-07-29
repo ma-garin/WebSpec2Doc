@@ -35,14 +35,20 @@ async function recrawlSite(domain) {
       }
     } catch (e) {}
   }
-  if (!urls.length) urls = [{ url: 'https://' + domain + '/', title: domain }];
+  // 再解析の対象 URL は、前回実際に解析した URL をそのまま使う。
+  // ドメイン名から 'https://' を組み立てると、http で公開されているサイト
+  // （社内環境・ローカル検証・デモ）へ https で取りに行って全滅する。
+  // しかも1画面も取れなくても画面には「生成完了」と出るため、失敗に気づけなかった。
+  const firstUrl = urls.length ? (typeof urls[0] === 'string' ? urls[0] : urls[0].url) : '';
+  const baseUrl = firstUrl || 'https://' + domain + '/';
+  if (!urls.length) urls = [{ url: baseUrl, title: domain }];
 
   // P2へ遷移して前回設定を復元
   switchView('generate');
   executionView.classList.add('hidden'); resultPanel.classList.add('hidden');
   appContent.classList.remove('is-executing'); genPanel.style.display = '';
 
-  document.getElementById('url-input').value = 'https://' + domain + '/';
+  document.getElementById('url-input').value = baseUrl;
   if (auth) document.getElementById('auth-path').value = auth;
   if (loginLandingUrl) document.getElementById('login-url').value = loginLandingUrl;
   document.getElementById('compare').checked = true;

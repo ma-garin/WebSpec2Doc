@@ -498,6 +498,26 @@ function _showCompletionPopup(elapsedSec) {
 document.getElementById('popup-close-btn').addEventListener('click', () => {
   document.getElementById('completion-overlay').classList.add('hidden');
 });
+// テストケース表から実行したあと、レポート側の実績表示を最新にする。
+// レポートは開いた時点の /api/result を保持し、パネルも描画済みキャッシュを持つため、
+// 実行して結果が保存されても「まだ実行していません」と出たままになっていた。
+async function refreshRunResults() {
+  if (!currentResultDomain) return;
+  let data;
+  try {
+    data = await fetch('/api/result?domain=' + encodeURIComponent(currentResultDomain))
+      .then(r => (r.ok ? r.json() : null));
+  } catch (e) { return; }        // 取得できなければ表示は変えない（古い値のまま嘘をつかない）
+  if (!data || !resultData) return;
+  resultData.testcase_run = data.testcase_run;
+  resultData.playwright_run_at = data.playwright_run_at;
+  if (data.files) resultData.files = data.files;
+  _updateKpiHero(resultData.summary || {}, reportJson ? countRequired(reportJson) : 0, resultData);
+  _renderedPanels.delete('runs/');   // 次に開いたとき再描画させる
+  const active = document.querySelector('.result-tab[aria-selected="true"]')?.dataset.tab;
+  if (active === 'runs') selectResultTab('runs');
+}
+
 // サンプルを見終えた利用者を、自分のサイトの解析へ戻す（P3-1）。
 document.getElementById('r-sample-exit-btn')?.addEventListener('click', () => {
   resultPanel.classList.add('hidden');

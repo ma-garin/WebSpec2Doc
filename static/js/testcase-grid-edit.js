@@ -379,6 +379,10 @@ async function tcgRunCases() {
     await _tcgReload(
       `実行完了: PASS ${s.passed || 0} / FAIL ${s.failed || 0} / 全${s.total || 0}件` +
       (s.error ? ` — ${s.error}` : ''));
+    // 「テスト実行」タブと概要の実績も同時に更新する。
+    // これが無いと、実行して結果が保存されたのにレポートを開き直すまで
+    // 「まだ実行していません」と表示され続けた。
+    if (typeof refreshRunResults === 'function') await refreshRunResults();
   } catch (e) {
     tcgSetStatus(e.message, true);
   } finally {

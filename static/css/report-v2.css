@@ -19,6 +19,9 @@
 }
 /* hidden 属性は表示種別の指定（.rp-simple 等）に常に勝つ必要がある */
 .result-tab-panel[hidden] { display: none !important; }
+/* タブ本体も同様に打ち消す。.result-tab は display:flex を持つため、hidden 属性だけでは
+   消えず、文書突合の結果が無いのに「文書突合」タブが出て空振りさせていた。 */
+.result-tab[hidden] { display: none !important; }
 /* 単純タブ: パネル自体がスクロールコンテナ */
 .result-tab-panel.rp-simple {
   display: block;

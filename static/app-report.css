@@ -170,7 +170,12 @@
 .uml-zoom-btn { height:28px; min-width:30px; padding:0 8px; border:1px solid transparent; border-radius:3px; background:transparent; color:var(--text); font-size:12px; font-weight:800; cursor:pointer; }
 .uml-zoom-btn:hover { border-color:var(--info-border); background:var(--surface); color:var(--primary-dark); }
 .uml-zoom-level { min-width:52px; color:var(--primary-dark); }
-.uml-layout { display:grid; grid-template-columns:minmax(420px,1.2fr) minmax(360px,.8fr); gap:0; min-height:520px; }
+/* 図の側は中身の実寸に合わせ、余った幅はテストケース表へ回す。
+   固定比（1.2fr / .8fr）だと、小さい図でも左に 6 割を取り続けるため、
+   図が左ペインの 7% しか占めず 93% が空白なのに、右の表は 378px に詰まる—という
+   破綻が起きていた（実測）。fit-content(58%) は「中身の幅。ただし最大 58%」を意味し、
+   大きい図では従来どおり左が広がる。 */
+.uml-layout { display:grid; grid-template-columns:fit-content(58%) minmax(360px,1fr); gap:0; min-height:520px; }
 .uml-canvas { min-width:0; overflow:auto; padding:16px; border-right:1px solid var(--border); background:#fff; cursor:grab; }
 .uml-canvas.is-panning { cursor:grabbing; user-select:none; }
 .uml-canvas.is-fullscreen { position:fixed; inset:0; z-index:1900; background:var(--bg); padding:20px; overflow:auto; border:none !important; cursor:grab; }

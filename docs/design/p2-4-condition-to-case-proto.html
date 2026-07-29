@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>P2-4 画面別設計 ⇄ テストケースの接続 — デザイン案</title>
+<style>
+  :root{ --primary:#1976D2; --primary-dark:#0D47A1; --primary-light:#E3F2FD;
+    --bg:#F4F6F9; --surface:#fff; --surface-soft:#FAFBFC; --border:#E3E8EE;
+    --text:#212121; --muted:#616161; --ok:#388E3C; --ok-bg:#E8F5E9; --ok-border:#A5D6A7;
+    --new:#D32F2F; --radius:8px; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-size:14px;line-height:1.7;
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif}
+  .page{max-width:1180px;margin:0 auto;padding:26px 20px 70px}
+  h1{font-size:21px;margin:0 0 6px} h2{font-size:16px;margin:28px 0 8px}
+  .lead{color:#455;font-size:13.5px;margin:0 0 12px}
+  .note{background:#fff8e1;border:1px solid #ffe082;border-radius:var(--radius);
+    padding:12px 16px;font-size:13px;margin:14px 0}
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+    padding:16px 18px;margin:14px 0 24px;box-shadow:0 2px 8px rgba(16,24,40,.05)}
+  .panel h3{font-size:13.5px;margin:0 0 3px}
+  .panel .src{font-size:12px;color:var(--muted);margin:0 0 12px}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{border:1px solid var(--border);padding:7px 10px;text-align:left;vertical-align:top}
+  th{background:var(--surface-soft);color:var(--muted);font-size:11.5px;white-space:nowrap}
+  .pill{display:inline-block;padding:1px 9px;border-radius:999px;background:var(--primary-light);
+    color:var(--primary-dark);font-size:11px;font-weight:800;white-space:nowrap}
+  /* 新規: 条件行からテストケースへ飛ぶリンク */
+  .cond-link{color:var(--primary-dark);text-decoration:none;border-bottom:1px dashed var(--primary);
+    cursor:pointer}
+  .case-count{display:inline-block;margin-left:8px;padding:0 7px;border-radius:999px;
+    background:var(--surface-soft);border:1px solid var(--border);color:var(--muted);
+    font-size:11px;font-weight:800}
+  .case-count.is-zero{background:#fdecea;border-color:#f5c6c2;color:#b3261e}
+  .is-new{outline:2px dashed var(--new);outline-offset:3px}
+  .newtag{display:inline-block;background:var(--new);color:#fff;font-size:10px;font-weight:800;
+    border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:middle}
+  /* フィルタ適用バー */
+  .filterbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 14px;
+    background:var(--ok-bg);border:1px solid var(--ok-border);border-radius:var(--radius);
+    margin-bottom:12px;font-size:12.5px;color:#1b5e20}
+  .filterbar .chip{background:#fff;border:1px solid var(--ok-border);border-radius:999px;
+    padding:2px 10px;font-weight:700}
+  .filterbar button{margin-left:auto;border:1px solid var(--ok-border);background:#fff;
+    color:#1b5e20;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer}
+  .q{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--primary);
+    border-radius:var(--radius);padding:12px 16px;margin:10px 0;font-size:13px}
+  code{background:#eef1f5;border-radius:4px;padding:1px 5px;font-size:12px}
+  .arrow{text-align:center;font-size:22px;color:var(--muted);margin:2px 0}
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>P2-4 画面別設計 ⇄ テストケースの接続 — デザイン案</h1>
+<p class="lead">「この条件を、どのテストケースで確かめているのか」が今はつながっていません。条件行から該当ケースへ1クリックで飛べるようにします。</p>
+
+<div class="note">
+  <strong>現物確認:</strong> 画面別設計の条件表は
+  <code>No / テスト条件 / 由来した要素 / 導出技法</code> の4列（<code>static/js/view-design.js</code>）。
+  テストケース表には既にフィルタ機構（<code>TCG.filters</code>）があり、
+  <strong>絞り込みの仕組みは作らずに済みます</strong>。
+  ただし条件とケースは<strong>独立に生成されており、両者を結ぶ安定 ID はまだありません</strong>
+  （それを入れるのが P2-5）。本案は ID を使わず、<strong>画面＋由来した要素</strong>で絞り込みます。
+</div>
+
+<h2>① 画面別設計タブ（条件行にリンクを付ける）</h2>
+<div class="panel">
+  <h3>P003 お支払い・決済</h3>
+  <p class="src">http://127.0.0.1:8767/checkout.html</p>
+  <table>
+    <thead><tr><th style="width:44px">No</th><th>テスト条件</th><th>由来した要素</th><th style="width:130px">導出技法</th></tr></thead>
+    <tbody>
+      <tr class="is-new">
+        <td>1</td>
+        <td><a class="cond-link">カード番号が未入力のとき送信できないこと</a><span class="case-count">ケース 3件</span><span class="newtag">追加</span></td>
+        <td>DOM実測 / card_number</td><td><span class="pill">同値分割</span></td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td><a class="cond-link">カード番号が15桁のとき拒否されること</a><span class="case-count">ケース 2件</span></td>
+        <td>DOM実測 / card_number</td><td><span class="pill">境界値分析</span></td>
+      </tr>
+      <tr>
+        <td>3</td>
+        <td><a class="cond-link">支払方法の各選択肢で送信できること</a><span class="case-count is-zero">ケース 0件</span></td>
+        <td>DOM実測 / method</td><td><span class="pill">同値分割</span></td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="src" style="margin-top:10px">
+    件数バッジは「設計したが、まだケースが無い条件」を見つけるためのものです。
+    <strong>0件は赤地</strong>にして、抜けとして目に入るようにします。
+  </p>
+</div>
+
+<div class="arrow">↓ 条件をクリック</div>
+
+<h2>② テストケースタブ（フィルタが適用された状態で開く）</h2>
+<div class="panel">
+  <div class="filterbar">
+    <strong>絞り込み中</strong>
+    <span class="chip">画面: お支払い・決済</span>
+    <span class="chip">由来: card_number</span>
+    <span>該当 3 件 / 全 103 件</span>
+    <button type="button">絞り込みを解除</button>
+  </div>
+  <table>
+    <thead><tr><th>ID</th><th>テストケース名</th><th>画面</th><th>観点</th><th>自動化判定</th><th>結果</th></tr></thead>
+    <tbody>
+      <tr><td>TC001</td><td>カード番号未入力で送信</td><td>お支払い・決済</td><td>入力検証</td><td>自動化可</td><td>未実行</td></tr>
+      <tr><td>TC004</td><td>カード番号に空白のみを入力</td><td>お支払い・決済</td><td>入力検証</td><td>自動化可</td><td>未実行</td></tr>
+      <tr><td>TC009</td><td>カード番号を消して再送信</td><td>お支払い・決済</td><td>入力検証</td><td>要手動</td><td>未実行</td></tr>
+    </tbody>
+  </table>
+  <p class="src" style="margin-top:10px">
+    受入は「任意の条件行クリック → 該当ケースのみ表示 → <strong>フィルタ解除の導線がある</strong>」です。
+    解除ボタンは絞り込みバーの右端に置き、押すと全件表示に戻ります。
+  </p>
+</div>
+
+<h2>実装前に決めたいこと</h2>
+<div class="q">
+  <strong>Q1. 安定 ID が無い状態での絞り込みキーは「画面＋由来した要素」でよいですか。</strong><br>
+  条件とケースは独立生成のため厳密な対応は取れません。<strong>取りこぼし（本来該当するのに出ない）や
+  過剰一致（関係ないケースが出る）が起こりえます</strong>。厳密化は P2-5 の <code>condition_id</code> 導入待ちです。
+  この不確かさを、絞り込みバーに一言（例: 「由来が一致するケースを表示しています」）添える案にしています。
+</div>
+<div class="q">
+  <strong>Q2. 件数バッジ（ケース N件 / 0件は赤）を出しますか。</strong><br>
+  「設計したのにケースが無い条件」が見つかるので入れたいのですが、
+  Q1 の取りこぼしがあると<strong>0件表示が誤報になりえます</strong>。出さない選択もあります。
+</div>
+<div class="q">
+  <strong>Q3. 逆向き（ケース → 条件）の導線も要りますか。</strong><br>
+  本案には入れていません。プランの受入は条件→ケースの一方向のみです。
+</div>
+
+</div>
+</body>
+</html>

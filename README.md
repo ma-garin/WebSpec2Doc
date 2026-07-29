@@ -104,7 +104,54 @@ python app.py   # → http://127.0.0.1:8765 が開く
 
 ---
 
-## CLI で使う
+## CLI モードで使う（System 03・画面なし）
+
+ブラウザを開かずに、GUI と同じ 3 系統を端末から回せます。入口は `src/cli.py` の一本です。
+使い方の案内とコマンドの組み立ては、GUI の「システム選択 → 03 CLI モード」（`/cli`）にもあります。
+
+```bash
+# 01 ドキュメント作成（クロールして仕様書を生成）
+python src/cli.py doc --url https://example.com --format md,html,json
+
+# 02 AutoRun（解析 → 設計 → spec 生成 → テスト実行まで自動）
+python src/cli.py autorun --url https://example.com --depth 2 --max-pages 30
+
+# テストケース表から Playwright を実行
+python src/cli.py test --domain example.com
+
+# 解析済みサイトの一覧 / 成果物の場所 / 観点セット
+python src/cli.py sites
+python src/cli.py show --domain example.com
+python src/cli.py viewpoints
+
+# 自動化向けに JSON で受け取る
+python src/cli.py sites --json
+```
+
+### 終了コード
+
+CI から成否を判定できるように揃えてあります。
+
+| コード | 意味 |
+|---|---|
+| `0` | 正常終了 |
+| `1` | 完了したが失敗を含む（テスト失敗・ドリフト検出） |
+| `2` | 実行エラー（対象に到達できない・設定不備など） |
+| `130` | 中止（タイムアウト・シグナル） |
+
+### 知っておくこと
+
+- **ログインが必要な画面**は、`--login-user` / `--login-pass` を渡さない限りスキップします。
+  その場合は成果物に「未ログイン範囲のみ」と記録されます。スキップさせたくないときは
+  `--require-login` を付けると、資格情報が無いときに中止します。
+- **段階承認**は CLI では人が判断できないため自動で通します。何を自動で通したかは実行結果に必ず出ます。
+- GUI を起動する必要はありません。CLI は Flask のリクエストコンテキストを使いません。
+
+---
+
+## クロール CLI（従来の入口）
+
+`src/cli.py doc` はこの入口へ委譲しているため、細かいオプションはこちらがそのまま使えます。
 
 ```bash
 # 最小構成

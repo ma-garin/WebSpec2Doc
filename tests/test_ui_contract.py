@@ -110,17 +110,24 @@ class TestSystemScoping:
 class TestSystemSelect:
     """ログイン後のシステム選択ハブ。"""
 
-    def test_offers_exactly_two_systems(self, systems: str) -> None:
+    def test_offers_exactly_three_systems(self, systems: str) -> None:
+        """01 ドキュメント作成 / 02 AutoRun / 03 CLIモード の 3 系統。"""
         cards = re.findall(r'class="syscard syscard-(\w+)"', systems)
-        assert sorted(cards) == ["doc", "run"]
+        assert sorted(cards) == ["cli", "doc", "run"]
 
     def test_links_to_each_system(self, systems: str) -> None:
         assert 'href="/generate"' in systems
         assert 'href="/auto-run"' in systems
+        assert 'href="/cli"' in systems
 
-    def test_names_both_systems(self, systems: str) -> None:
+    def test_names_all_systems(self, systems: str) -> None:
         assert "ドキュメント作成" in systems
         assert "AutoRun" in systems
+        assert "CLI モード" in systems
+
+    def test_cli_card_states_it_has_no_screen(self, systems: str) -> None:
+        """CLI は画面を持たない。開いたら画面が出ると誤解させない。"""
+        assert "画面なし" in systems
 
     def test_declares_claim_scope_boundary(self, systems: str) -> None:
         """AutoRun カードは「不在を証明しない」姿勢を明示すること。"""

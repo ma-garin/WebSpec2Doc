@@ -51,7 +51,9 @@ def _fake_graph(analyzed):
 def test_parse_formats_requested_patterns() -> None:
     assert _parse_formats("md,html,excel") == ("md", "html", "excel")
     assert _parse_formats("pdf,json") == ("pdf", "json")
-    assert _parse_formats("unknown") in {("md",), ()}
+    with pytest.raises(SystemExit) as e:
+        _parse_formats("unknown")
+    assert e.value.code == 2
 
 
 def test_domain_name_requested_patterns() -> None:

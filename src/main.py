@@ -657,10 +657,48 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
     analyzed_pages = analyze_pages(pages)
     graph = build_graph(analyzed_pages)
     form_summary = summarize_forms(analyzed_pages)
+    # ── 成果物の生成フェーズ ─────────────────────────────────────
+    # クロールが終わってからここが終わるまで、画面には何の手がかりも無く
+    # 「まもなく完了」と出たまま数秒待たされていた（全体の約 25%）。
+    # 工程を区切って進捗を配信し、残り時間に含められるようにする（P1-1）。
+    _gen_steps = [
+        ("transition", "遷移の品質を評価"),
+        ("impact", "影響範囲を算出"),
+        ("doc_fusion", "文書と実測を突合"),
+        ("ux", "UX・アクセシビリティを評価"),
+        ("snapshot", "スナップショットを保存"),
+        ("diff", "差分レポートを作成"),
+        ("outputs", "成果物を書き出し"),
+    ]
+    _gen_done = 0
+
+    def emit_generate(step: str, label: str, *, done: bool = False) -> None:
+        nonlocal _gen_done
+        if done:
+            _gen_done += 1
+        emit_event(
+            {
+                "event": "generate_completed" if done else "generate_step",
+                "step": step,
+                "label": label,
+                "index": _gen_done,
+                "total_steps": len(_gen_steps),
+            }
+        )
+
+    emit_event({"event": "generate_started", "total_steps": len(_gen_steps)})
+
+    emit_generate("transition", "遷移の品質を評価")
     transition_coverage, business_flows = _compute_transition_quality(pages)
+    emit_generate("transition", "遷移の品質を評価", done=True)
+
+    emit_generate("impact", "影響範囲を算出")
     impact_report = None
     if bool(getattr(args, "compare", False)) and prior_snapshot is not None:
         impact_report = _compute_impact_report(prior_snapshot, analyzed_pages, output_dir)
+    emit_generate("impact", "影響範囲を算出", done=True)
+
+    emit_generate("doc_fusion", "文書と実測を突合")
     official_names, rule_conditions = _run_doc_fusion(
         analyzed_pages,
         getattr(args, "reference_doc", None),
@@ -668,6 +706,9 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
         use_llm=bool(getattr(args, "doc_llm", False)),
         refresh_doc=bool(getattr(args, "refresh_doc", False)),
     )
+    emit_generate("doc_fusion", "文書と実測を突合", done=True)
+
+    emit_generate("ux", "UX・アクセシビリティを評価")
     exploration_coverage = _load_exploration_coverage(output_dir)
     ux_review = None
     if ux_review_enabled:
@@ -683,6 +724,7 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
         accessibility_audit = build_accessibility_audit(pages, page_ids, ux_axe_results)
         save_accessibility_audit(accessibility_audit, output_dir)
     coverage_gaps = _collect_coverage_gaps(output_dir, pages, exploration_coverage)
+    emit_generate("ux", "UX・アクセシビリティを評価", done=True)
     if _STOP_REQUESTED.is_set():
         partial = save_partial_snapshot(pages, output_dir, finalized=True)
         emit_event(
@@ -699,12 +741,19 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
 
     # CIがレポート生成途中で失敗しても比較事実を失わないよう、差分サマリを先に確定する。
     output_dir.mkdir(parents=True, exist_ok=True)
+    emit_generate("snapshot", "スナップショットを保存")
     new_snapshot = save_snapshot(pages, output_dir)
+    emit_generate("snapshot", "スナップショットを保存", done=True)
+
+    emit_generate("diff", "差分レポートを作成")
     drift_detected = False
     if bool(getattr(args, "compare", False)):
         drift_detected = _save_diff_report(
             prior_snapshot, new_snapshot, pages, output_dir, primary_url
         )
+    emit_generate("diff", "差分レポートを作成", done=True)
+
+    emit_generate("outputs", "成果物を書き出し")
     save_outputs(
         analyzed_pages,
         graph,
@@ -724,6 +773,7 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
         accessibility_audit=accessibility_audit,
         coverage_gaps=coverage_gaps,
     )
+    emit_generate("outputs", "成果物を書き出し", done=True)
     if bool(getattr(args, "ci", False)):
         emit_ci_summary(output_dir, exit_code=1 if drift_detected else 0)
     logger.info("出力が完了しました: %s", output_dir)
@@ -1478,9 +1528,19 @@ def _parse_formats(raw_formats: str) -> tuple[str, ...]:
         item.strip().lower() for item in raw_formats.split(FORMAT_SEPARATOR) if item.strip()
     )
     unknown = sorted(set(formats) - SUPPORTED_FORMATS)
+    known = tuple(item for item in formats if item in SUPPORTED_FORMATS)
     if unknown:
         logger.warning("未対応の出力形式を無視します: %s", ", ".join(unknown))
-    return tuple(item for item in formats if item in SUPPORTED_FORMATS)
+    if not known:
+        # 有効な形式が 1 つも残らないのに成功で終わると、指定した成果物が
+        # 出ていないことに気づけない。何を指定でき、何が不明だったかを示して止める。
+        logger.error(
+            "出力形式が 1 つも指定されていません（不明: %s）。指定できるのは %s です。",
+            ", ".join(unknown) or "なし",
+            ", ".join(sorted(SUPPORTED_FORMATS)),
+        )
+        raise SystemExit(2)
+    return known
 
 
 def _domain_name(url: str) -> str:

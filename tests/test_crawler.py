@@ -634,3 +634,53 @@ class TestPageDataStateId:
         )
         with pytest.raises((AttributeError, TypeError)):
             page.state_id = "other"  # type: ignore[misc]
+
+
+class TestGeneratePhaseEvents:
+    """成果物の生成フェーズが進捗を配信すること（P1-1 の残り）。
+
+    クロールが終わってから成果物が出るまで（実測で全体の約 25%）、画面には
+    「まもなく完了」と出たまま何の手がかりも無かった。残り時間に含めるには、
+    工程の区切りを機械可読に配信できている必要がある。
+    """
+
+    @staticmethod
+    def _root():
+        from pathlib import Path as _P
+
+        return _P(__file__).resolve().parent.parent
+
+    def _events(self, log: str) -> list[dict]:
+        import json as _json
+
+        out = []
+        for line in log.splitlines():
+            if line.startswith("CRAWL_EVENT:"):
+                try:
+                    out.append(_json.loads(line[len("CRAWL_EVENT:") :]))
+                except ValueError:
+                    pass
+        return out
+
+    def test_source_emits_generate_events(self) -> None:
+        """main.py が生成フェーズの開始・各工程・完了を出すこと。"""
+        src = (self._root() / "src" / "main.py").read_text(encoding="utf-8")
+        assert '"event": "generate_started"' in src or "generate_started" in src
+        assert "emit_generate(" in src
+        # 工程は名前つきで配信する（どこで待たされているか分かるようにするため）
+        for step in ("transition", "doc_fusion", "snapshot", "outputs"):
+            assert f'"{step}"' in src
+
+    def test_generate_steps_are_counted(self) -> None:
+        """総工程数と完了数を持つこと。持たないと残り時間を出せない。"""
+        src = (self._root() / "src" / "main.py").read_text(encoding="utf-8")
+        assert "total_steps" in src
+        assert '"index": _gen_done' in src or '"index"' in src
+
+    def test_ui_consumes_generate_events(self) -> None:
+        """画面側が生成フェーズを残り時間に織り込むこと。"""
+        js = (self._root() / "static" / "js" / "execution.js").read_text(encoding="utf-8")
+        assert "generate_started" in js
+        assert "generate_completed" in js
+        # 生成フェーズぶんを足していること（クロール分だけで終わらせない）
+        assert "genEta" in js and "crawlEta" in js

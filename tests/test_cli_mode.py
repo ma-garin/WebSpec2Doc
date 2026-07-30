@@ -22,7 +22,7 @@ import app as appmod  # noqa: E402
 from web.services.cli_runner import AutoRunResult  # noqa: E402
 from web.services.cli_runner import TestRunResult as RunResult  # noqa: E402
 
-from cli import build_parser, cmd_show, cmd_sites, cmd_test  # noqa: E402
+from cli import build_parser, cmd_review, cmd_show, cmd_sites, cmd_test  # noqa: E402
 
 H = {"Host": "127.0.0.1"}
 
@@ -219,3 +219,94 @@ class TestCliModePage:
         assert "src/cli.py" in html
         # 終了コードの説明は CI 組み込みの前提なので必ず載せる
         assert "130" in html
+
+
+class TestViewpointAndReviewSubcommands:
+    """GUI でしか行えなかった観点セットの版操作とレビュー更新を端末から使えること。
+
+    移行元は PR #96（別 CLI として実装されていた）。入口を 2 つに増やすと
+    利用者がどちらを使えばよいか分からなくなるため、既存の cli.py へ統合した。
+    """
+
+    def test_viewpoints_without_action_still_lists(self) -> None:
+        """後方互換: 引数なしの `viewpoints` は従来どおり一覧。"""
+        ns = build_parser().parse_args(["viewpoints"])
+        assert ns.command == "viewpoints"
+        assert ns.vp_action == "list"
+
+    @pytest.mark.parametrize(
+        "argv,action",
+        [
+            (["viewpoints", "show", "S1"], "show"),
+            (["viewpoints", "versions", "S1"], "versions"),
+            (["viewpoints", "items", "S1"], "items"),
+            (["viewpoints", "diff", "S1", "--from", "1", "--to", "2"], "diff"),
+            (["viewpoints", "export", "S1"], "export"),
+            (["viewpoints", "import", "S1", "vp.csv"], "import"),
+            (["viewpoints", "publish", "S1", "2"], "publish"),
+            (["viewpoints", "rollback", "S1", "1"], "rollback"),
+            (["viewpoints", "templates"], "templates"),
+            (["viewpoints", "apply-template", "S1", "iso25010"], "apply-template"),
+            (["viewpoints", "create", "--name", "新セット"], "create"),
+        ],
+    )
+    def test_viewpoint_actions_are_reachable(self, argv, action) -> None:
+        assert build_parser().parse_args(argv).vp_action == action
+
+    def test_review_requires_an_action(self) -> None:
+        """`review` だけでは何をするか決まらない。黙って 0 で返さず弾く。"""
+        with pytest.raises(SystemExit) as e:
+            build_parser().parse_args(["review"])
+        assert e.value.code == 2
+
+    def test_review_rejects_domain_that_is_not_a_domain(self, tmp_path, capsys) -> None:
+        ns = build_parser().parse_args(["review", "cases", ""])
+        ns.output = tmp_path
+        assert cmd_review(ns, []) == 2
+        assert "ドメイン名として扱えません" in capsys.readouterr().out
+
+    def test_review_rejects_unknown_status(self, tmp_path, capsys) -> None:
+        """状態を取り違えたまま成功で返すと、更新できていないことに気づけない。"""
+        ns = build_parser().parse_args(["review", "update", "a.test", "TC-1", "--status", "bogus"])
+        ns.output = tmp_path
+        assert cmd_review(ns, []) == 2
+        out = capsys.readouterr().out
+        assert "指定できない状態です" in out
+        assert "approved" in out  # 指定できる値を示すこと
+
+    def test_review_update_then_cases_reflects_it(self, tmp_path, capsys) -> None:
+        """更新した状態が一覧に出ること（保存されないと気づけないため）。"""
+        domain = "review-cli.test"
+        (tmp_path / domain).mkdir()
+        (tmp_path / domain / "playwright_candidates.json").write_text(
+            json.dumps([{"id": "PW-0001", "title": "画面表示スモーク"}]), encoding="utf-8"
+        )
+
+        ns = build_parser().parse_args(
+            ["review", "update", domain, "PW-0001", "--status", "approved", "--comment", "OK"]
+        )
+        ns.output = tmp_path
+        assert cmd_review(ns, []) == 0
+        capsys.readouterr()
+
+        ns = build_parser().parse_args(["review", "cases", domain, "--json"])
+        ns.output = tmp_path
+        assert cmd_review(ns, []) == 0
+        cases = json.loads(capsys.readouterr().out)["cases"]
+        assert cases[0]["status"] == "approved"
+        assert cases[0]["comment"] == "OK"
+
+    def test_frozen_advances_the_version(self, tmp_path, capsys) -> None:
+        """frozen は『この内容で確定した』印なので版を進める。"""
+        domain = "review-cli2.test"
+        (tmp_path / domain).mkdir()
+        (tmp_path / domain / "playwright_candidates.json").write_text(
+            json.dumps([{"id": "PW-0001", "title": "x"}]), encoding="utf-8"
+        )
+        for status, want in (("approved", 1), ("frozen", 2)):
+            ns = build_parser().parse_args(
+                ["review", "update", domain, "PW-0001", "--status", status, "--json"]
+            )
+            ns.output = tmp_path
+            assert cmd_review(ns, []) == 0
+            assert json.loads(capsys.readouterr().out)["version"] == want

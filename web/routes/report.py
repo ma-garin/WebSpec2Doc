@@ -69,6 +69,39 @@ def download() -> Response:
     return send_file(target, as_attachment=True, download_name=target.name)
 
 
+@bp.get("/api/export/spec-xlsx")
+def export_spec_xlsx() -> Response:
+    """テスト仕様書一式（7 シート）の Excel を返す（P2-3）。
+
+    クロール時に作られる `spec.xlsx` は実測仕様の 4 シートだけで、
+    テスト設計・テストケース・遷移表は入っていない。これらはクロールより
+    後に生成・編集されるため、要求された時点で組み直して返す。
+    同じ内容をディスクへも書き戻し、ZIP 一括や CLI から読む `spec.xlsx` と
+    食い違わないようにする。
+    """
+    from web.services.export_xlsx import ExportError, write_full_spec_xlsx
+
+    domain = request.args.get("domain", "")
+    if not _valid_domain(domain):
+        return Response(status=404)
+    out_dir = _out()
+    if not (out_dir / domain).is_dir():
+        return Response(status=404)
+    try:
+        target, counts = write_full_spec_xlsx(domain, out_dir)
+    except ExportError as exc:
+        logger.warning("Excel を組み立てられません（%s）: %s", domain, exc)
+        return Response(str(exc), status=409, mimetype="text/plain; charset=utf-8")
+    _record_export(f"{domain}/spec.xlsx", {"format": "xlsx", "sheets": counts})
+    # send_file は相対パスをアプリのルート（web/）基準で解決するため絶対パスで渡す。
+    return send_file(
+        target.resolve(),
+        as_attachment=True,
+        download_name="spec.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+
 @bp.get("/download-zip")
 def download_zip() -> Response:
     """ドメイン配下をZIP化する。`paths`（複数値・カンマ区切りいずれも可）を指定した場合は

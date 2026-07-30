@@ -200,6 +200,12 @@ function _buildExportDropdown(data) {
   ];
   const zipRow = `<div class="export-dropdown-item is-zip"><span>すべてZIPでダウンロード</span><a href="/download-zip?domain=${encodeURIComponent(domain)}" class="btn-primary" style="height:28px;padding:0 10px;font-size:12px">DL</a></div>`;
   const fileRows = defs.map(d => {
+    if (d.key === 'excel' && files.excel) {
+      // Excel はテスト設計・テストケース・遷移表を含めて要求時に組み直す。
+      // ディスク上のものはクロール時点の 4 シートで、後から生成されるものが入らない。
+      const url = `/api/export/spec-xlsx?domain=${encodeURIComponent(domain)}`;
+      return `<div class="export-dropdown-item"><span>${escHtml(d.label)}<small style="display:block;color:var(--text-muted);font-size:11px">画面仕様・テスト設計・テストケース・遷移表（7シート）</small></span><div style="display:flex;gap:4px"><a href="${url}" class="btn-outline-sm" style="height:28px;padding:0 8px;font-size:12px" download>DL</a></div></div>`;
+    }
     if (files[d.key]) {
       return `<div class="export-dropdown-item"><span>${escHtml(d.label)}</span><div style="display:flex;gap:4px"><a href="/preview?path=${encodeURIComponent(files[d.key])}" target="_blank" class="btn-outline-sm" style="height:28px;padding:0 8px;font-size:12px">開く</a><a href="/download?path=${encodeURIComponent(files[d.key])}" class="btn-outline-sm" style="height:28px;padding:0 8px;font-size:12px" download>DL</a></div></div>`;
     }

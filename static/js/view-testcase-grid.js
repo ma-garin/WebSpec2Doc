@@ -97,6 +97,7 @@ function _tcgBuildShell(body) {
   const gridTemplate = '40px ' + TCG.columns.map(c => (TCG_COL_WIDTH[c.key] || 160) + 'px').join(' ');
   body.innerHTML =
     _tcgCommonPreconditionsHtml() +
+    '<div class="tcg-cond-banner" id="tcg-cond-banner" role="status" hidden></div>' +
     '<div class="tcg-toolbar">' +
       '<div class="tc-search">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>' +
@@ -178,7 +179,11 @@ function _tcgBuildHeader() {
       sel.className = 'tcg-filter-select';
       sel.appendChild(new Option('すべて', ''));
       for (const v of _tcgDistinct(c.key)) sel.appendChild(new Option(v, v));
-      sel.addEventListener('change', () => { TCG.filters[c.key] = sel.value; tcgApplyFilters(); });
+      sel.addEventListener('change', () => {
+        TCG.filters[c.key] = sel.value;
+        _tcgHideConditionBanner();  // 利用者が自分で絞り始めたら、条件由来の帯は外す
+        tcgApplyFilters();
+      });
       wrap.appendChild(sel);
     } else {
       const input = document.createElement('input');
@@ -186,7 +191,11 @@ function _tcgBuildHeader() {
       input.dataset.key = c.key;
       input.className = 'tcg-filter-input';
       input.placeholder = '絞り込み';
-      input.addEventListener('input', () => { TCG.filters[c.key] = input.value; tcgApplyFilters(); });
+      input.addEventListener('input', () => {
+        TCG.filters[c.key] = input.value;
+        _tcgHideConditionBanner();
+        tcgApplyFilters();
+      });
       wrap.appendChild(input);
     }
     return wrap;
@@ -207,9 +216,62 @@ function _tcgDistinct(key) {
   return [...values].sort();
 }
 
+// 画面別設計の条件行から飛んできたときの絞り込み（P2-4）。
+// 条件とテストケースは独立に生成されており、両者を結ぶ安定 ID がまだ無い。
+// そのため「画面＋由来した要素」で絞る。厳密な対応ではないため、
+// 何で絞っているかを帯に明示し、断定しない書き方にする。
+function tcgFilterFromCondition({ pageId = '', screenLabel = '', source = '' } = {}) {
+  TCG.filters = {};
+  TCG.query = source || '';
+  const q = document.getElementById('tcg-query');
+  if (q) q.value = TCG.query;
+  document.querySelectorAll('.tcg-filter-input').forEach(i => { i.value = ''; });
+  document.querySelectorAll('.tcg-filter-select').forEach(s => { s.value = ''; });
+
+  // 画面の選択肢は「P001 タイトル」の形。絞り込みだけ効かせて選択肢を空のままにすると
+  // 絞られているのに「すべて」と見えるため、対応する選択肢自体を選ぶ。
+  const sel = document.querySelector('.tcg-filter-select[data-key="screen"]');
+  if (pageId && sel) {
+    const opt = [...sel.options].find(o => o.value && o.value.startsWith(pageId));
+    if (opt) { sel.value = opt.value; TCG.filters.screen = opt.value; }
+    else TCG.filters.screen = pageId;
+  } else if (pageId) {
+    TCG.filters.screen = pageId;
+  }
+  tcgApplyFilters();
+  _tcgShowConditionBanner({ screenLabel: screenLabel || pageId, source });
+}
+
+function _tcgShowConditionBanner({ screenLabel = '', source = '' } = {}) {
+  const host = document.getElementById('tcg-cond-banner');
+  if (!host) return;
+  const shown = TCG.view.length;
+  const total = TCG.rows.length;
+  host.innerHTML =
+    '<span class="tcg-cond-tag">絞り込み中</span>' +
+    `<span class="tcg-cond-key">画面: ${escHtml(screenLabel || '—')}</span>` +
+    (source ? `<span class="tcg-cond-key">由来: ${escHtml(source)}</span>` : '') +
+    `<span class="tcg-cond-count">該当 ${shown} 件 / 全 ${total} 件</span>` +
+    // 対応が厳密でないことを黙っていると、出た件数を「これが全て」と読まれる
+    '<span class="tcg-cond-note">由来が一致するケースを表示しています</span>' +
+    '<button type="button" class="btn-outline-sm" id="tcg-cond-clear">絞り込みを解除</button>';
+  host.hidden = false;
+  document.getElementById('tcg-cond-clear').addEventListener('click', () => {
+    document.getElementById('tcg-clear-filters').click();
+  });
+}
+
+function _tcgHideConditionBanner() {
+  const host = document.getElementById('tcg-cond-banner');
+  if (!host) return;
+  host.hidden = true;
+  host.innerHTML = '';
+}
+
 function _tcgBindToolbar() {
   document.getElementById('tcg-query').addEventListener('input', (e) => {
     TCG.query = e.target.value;
+    _tcgHideConditionBanner();
     tcgApplyFilters();
   });
   document.getElementById('tcg-clear-filters').addEventListener('click', () => {
@@ -218,6 +280,7 @@ function _tcgBindToolbar() {
     document.getElementById('tcg-query').value = '';
     document.querySelectorAll('.tcg-filter-input').forEach(i => { i.value = ''; });
     document.querySelectorAll('.tcg-filter-select').forEach(s => { s.value = ''; });
+    _tcgHideConditionBanner();
     tcgApplyFilters();
   });
   const compactBtn = document.getElementById('tcg-compact');

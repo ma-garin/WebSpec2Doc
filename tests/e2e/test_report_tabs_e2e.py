@@ -182,3 +182,49 @@ class TestExportDropdownKeyboard:
         expect(page.locator("#export-dropdown")).not_to_have_class(re.compile(r"\bis-open\b"))
         expect(button).to_have_attribute("aria-expanded", "false")
         expect(button).to_be_focused()
+
+
+class TestConditionToCaseLink:
+    """画面別設計の条件 → テストケース（P2-4）。
+
+    受入: 条件から 1 クリックで該当ケースのみ表示され、解除の導線がある。
+    """
+
+    def test_condition_opens_filtered_cases_and_can_be_cleared(self, page: Page) -> None:
+        _open_report(page, "/test-design/by-screen")
+        go = page.locator(".tds-cond-go").first
+        expect(go).to_be_visible()
+
+        go.click()
+        # テストケースタブへ移り、絞り込みの帯が出る
+        expect(page.locator('.result-tab[data-tab="testcases"]')).to_have_attribute(
+            "aria-selected", "true"
+        )
+        banner = page.locator("#tcg-cond-banner")
+        expect(banner).to_be_visible()
+        # 何で絞ったかと、厳密な対応ではないことが読み取れる
+        expect(banner).to_contain_text("絞り込み中")
+        expect(banner).to_contain_text("由来が一致するケースを表示しています")
+
+        total = page.locator("#tcg-rows .tcg-tr").count()
+        page.click("#tcg-cond-clear")
+        expect(banner).to_be_hidden()
+        # 解除で件数が戻る（戻らないと、絞り込まれたまま全件と誤解される）
+        expect(page.locator("#tcg-rows .tcg-tr").nth(total)).to_be_attached()
+
+    def test_link_is_reachable_by_keyboard(self, page: Page) -> None:
+        """マウスでしか押せないと、キーボード利用者はこの導線を使えない。"""
+        _open_report(page, "/test-design/by-screen")
+        go = page.locator(".tds-cond-go").first
+        go.focus()
+        expect(go).to_be_focused()
+        page.keyboard.press("Enter")
+        expect(page.locator("#tcg-cond-banner")).to_be_visible()
+
+    def test_own_filtering_removes_the_condition_banner(self, page: Page) -> None:
+        """自分で検索し直したのに帯が残ると、何で絞られているか分からなくなる。"""
+        _open_report(page, "/test-design/by-screen")
+        page.locator(".tds-cond-go").first.click()
+        expect(page.locator("#tcg-cond-banner")).to_be_visible()
+        page.fill("#tcg-query", "TC-")
+        expect(page.locator("#tcg-cond-banner")).to_be_hidden()

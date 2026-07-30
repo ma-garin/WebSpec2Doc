@@ -505,3 +505,17 @@
   background: var(--surface-soft);
   color: var(--text-muted); font-size: var(--text-sm); line-height: var(--leading-normal);
 }
+
+/* ── 条件行 → テストケースへの導線（P2-4） ────────────────────── */
+.tds-cond-action { width: 1%; white-space: nowrap; text-align: right; }
+.tds-cond-go {
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--primary); font-weight: 700; font-size: .72rem;
+  padding: 3px 9px; border-radius: 999px; white-space: nowrap; cursor: pointer;
+}
+.tds-cond-go:hover { background: var(--primary-light); border-color: var(--primary); }
+.tds-cond-go:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.tds-cond-row:hover td { background: var(--primary-light); }
+.tds-cond-hint {
+  margin: var(--space-2) 0 0; font-size: .72rem; color: var(--text-muted); line-height: 1.7;
+}

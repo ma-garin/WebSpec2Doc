@@ -104,3 +104,21 @@
 .tcg-td-check { cursor: default; }
 .tcg-row-check, #tcg-check-all { width: 14px; height: 14px; cursor: pointer; accent-color: var(--primary); }
 .tcg-row-check:disabled { cursor: not-allowed; opacity: .35; }
+
+/* ── 画面別設計から絞り込んで来たときの帯（P2-4） ─────────────── */
+.tcg-cond-banner {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-bottom: 8px; padding: 8px 12px;
+  background: var(--primary-light); border: 1px solid var(--primary);
+  border-radius: 8px; font-size: 12.5px;
+}
+.tcg-cond-banner[hidden] { display: none; }
+.tcg-cond-tag {
+  font-weight: 700; color: var(--surface); background: var(--primary);
+  border-radius: 999px; padding: 1px 10px; font-size: 11.5px;
+}
+.tcg-cond-key { font-weight: 700; }
+.tcg-cond-count { font-variant-numeric: tabular-nums; }
+/* 対応が厳密でないことを添える。断定に読まれると件数を「これが全て」と誤解される */
+.tcg-cond-note { color: var(--text-muted); font-size: 11.5px; }
+.tcg-cond-banner button { margin-left: auto; }

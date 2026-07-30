@@ -2108,6 +2108,100 @@
         "exit_code_path",
         "evidence"
       ]
+    },
+    {
+      "feature_id": "spec_xlsx_full_export",
+      "name": "テスト仕様書一式の Excel 出力（7シート）",
+      "risk_level": "medium",
+      "status": "implemented",
+      "ui_files": [
+        "templates/partials/view-generate.html",
+        "static/js/results.js"
+      ],
+      "route_files": [
+        "web/routes/report.py"
+      ],
+      "core_files": [
+        "web/services/export_xlsx.py",
+        "web/services/screen_test_design.py",
+        "web/services/testcase_table_store.py",
+        "web/routes/report.py",
+        "src/graph/state_table.py",
+        "src/generator/excel_reporter.py"
+      ],
+      "symbols": [
+        "export_spec_xlsx",
+        "write_full_spec_xlsx",
+        "build_workbook",
+        "build_test_design_rows",
+        "build_testcase_rows",
+        "build_state_table_grid"
+      ],
+      "outputs": [
+        "spec.xlsx（画面一覧・フォーム・項目定義書・境界値データ・テスト設計・テストケース・遷移表）"
+      ],
+      "persistence": [
+        "output/{domain}/spec.xlsx"
+      ],
+      "failure_modes": [
+        "report_json_missing",
+        "report_json_unreadable",
+        "state_table_not_applicable",
+        "sheet_rows_diverge_from_ui",
+        "duplicate_sheets_on_reexport",
+        "invalid_domain"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "evidence"
+      ]
+    },
+    {
+      "feature_id": "condition_to_testcase_link",
+      "name": "画面別設計の条件 ⇄ テストケースの接続",
+      "risk_level": "medium",
+      "status": "implemented",
+      "ui_files": [
+        "templates/partials/view-generate.html",
+        "static/js/view-design.js",
+        "static/js/view-testcase-grid.js",
+        "static/app-report.css",
+        "static/css/testcase-grid.css"
+      ],
+      "route_files": [
+        "web/routes/qa_process.py"
+      ],
+      "core_files": [
+        "web/services/screen_test_design.py",
+        "web/services/testcase_table_store.py",
+        "static/js/view-design.js",
+        "static/js/view-testcase-grid.js"
+      ],
+      "symbols": [
+        "tcgFilterFromCondition",
+        "_tdsBindConditionLinks",
+        "_tdsOpenCasesFor",
+        "build_screen_detail",
+        "compose"
+      ],
+      "outputs": [
+        "テストケースタブの絞り込み結果（該当ケースのみ）",
+        "絞り込み条件と件数の明示"
+      ],
+      "persistence": [],
+      "failure_modes": [
+        "grid_not_loaded_when_filter_applied",
+        "filter_matches_nothing_silently",
+        "no_way_to_clear_the_filter",
+        "keyboard_cannot_follow_the_link",
+        "approximate_match_presented_as_exact"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "evidence"
+      ]
     }
   ]
 }

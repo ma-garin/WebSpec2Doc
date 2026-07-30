@@ -530,17 +530,31 @@ function _tdsDetailHtml(d) {
   const rows = conds.map((c, i) => {
     const source = [c.source_kind, c.source_name].filter(Boolean).map(escHtml).join(' / ');
     const tech = c.technique || '—';
-    return '<tr>' +
+    // 条件を確かめているテストケースへ 1 クリックで飛べるようにする（P2-4）。
+    // 絞り込みキーは「画面＋由来した要素」。安定 ID が入るまでは厳密な対応ではない。
+    // 行全体ではなく行内のボタンにするのは、sticky ヘッダに重なる位置ができるのと、
+    // <tr> に role="link" を付けるのが ARIA の表構造として不正なため。
+    const label = escHtml(c.condition || '');
+    const go = `<button type="button" class="tds-cond-go"` +
+      ` data-tds-page="${escHtml(d.page_id || '')}"` +
+      ` data-tds-screen="${escHtml(d.title || '')}"` +
+      ` data-tds-source="${escHtml(c.source_name || '')}"` +
+      ` aria-label="「${label}」を確かめているテストケースを表示">ケースを見る →</button>`;
+    return '<tr class="tds-cond-row">' +
       `<td class="tds-no">${escHtml(c.no != null ? c.no : i + 1)}</td>` +
-      `<td class="tds-cond-lead ${_tdsCondClass(c.cond_class)}">${escHtml(c.condition || '')}</td>` +
+      `<td class="tds-cond-lead ${_tdsCondClass(c.cond_class)}">${label}</td>` +
       `<td class="tds-source">${source || '—'}</td>` +
       `<td><span class="tds-pill ${_tdsTechniqueClass(tech)}">${escHtml(tech)}</span></td>` +
+      `<td class="tds-cond-action">${go}</td>` +
       '</tr>';
   }).join('');
   const table = conds.length
     ? '<div class="tds-table-wrap"><table class="tds-table">' +
-      '<thead><tr><th>No</th><th>テスト条件</th><th>由来した要素</th><th>導出技法</th></tr></thead>' +
-      `<tbody>${rows}</tbody></table></div>`
+      '<thead><tr><th>No</th><th>テスト条件</th><th>由来した要素</th><th>導出技法</th>' +
+      '<th><span class="visually-hidden">テストケースへの導線</span></th></tr></thead>' +
+      `<tbody>${rows}</tbody></table></div>` +
+      '<p class="tds-cond-hint">「ケースを見る」で、その条件を確かめているテストケースに絞って表示します。' +
+      '由来が一致するものを出すため、厳密な対応ではありません。</p>'
     : '<p class="tds-empty">この画面から導出されたテスト条件はありません。</p>';
 
   const unapplied = d.unapplied || [];
@@ -584,6 +598,30 @@ async function _tdsRenderDetail(pageId) {
   }
   if (token !== _tdsToken || !document.getElementById('tds-detail')) return;
   detail.innerHTML = _tdsDetailHtml(data || {});
+  _tdsBindConditionLinks(detail);
+}
+
+/** 条件行 → テストケースタブ（該当ケースのみ表示）への導線（P2-4）。 */
+function _tdsBindConditionLinks(host) {
+  host.querySelectorAll('.tds-cond-go').forEach(btn => {
+    btn.addEventListener('click', () => _tdsOpenCasesFor(btn.dataset));
+  });
+}
+
+async function _tdsOpenCasesFor({ tdsPage = '', tdsScreen = '', tdsSource = '' } = {}) {
+  selectResultTab('testcases');
+  // 表はタブを開いた時に読み込まれる。読み込み前に絞ると空振りするため、
+  // グリッドの絞り込み口が生えるのを待つ（出ないまま黙って終わらない）。
+  for (let i = 0; i < 100; i++) {
+    if (typeof tcgFilterFromCondition === 'function' && document.getElementById('tcg-query')) {
+      tcgFilterFromCondition({ pageId: tdsPage, screenLabel: tdsScreen, source: tdsSource });
+      return;
+    }
+    await new Promise(r => setTimeout(r, 50));
+  }
+  if (typeof showToast === 'function') {
+    showToast('テストケース表を開けませんでした。テストケースタブから確認してください。', 'error');
+  }
 }
 
 async function renderDesignByScreen() {

@@ -45,9 +45,18 @@ function startPreviewPolling() {
 function stopPreviewPolling() { clearInterval(previewTimer); }
 
 function resetCrawlProgress(total) {
-  crawlProgress = { total: total || 0, finished: 0, completed: 0, skipped: 0, login: 0, failed: 0, saved: 0, parallelism: 1, durations: [] };
+  crawlProgress = {
+    total: total || 0, finished: 0, completed: 0, skipped: 0, login: 0, failed: 0,
+    saved: 0, parallelism: 1, durations: [],
+    // 成果物の生成フェーズ（P1-1）。クロールが終わってからここが終わるまでが
+    // 全体の約 25% を占めるため、残り時間に含める。
+    gen: { started: false, steps: 0, done: 0, startedAt: 0, stepDurations: [], lastStepAt: 0 },
+  };
   updateCrawlProgress();
 }
+//: 生成フェーズの 1 工程あたりの初期見積（秒）。実測が溜まればそちらを使う。
+//  同梱デモ 6 画面で全 7 工程が約 5〜6 秒だったため 0.8 秒/工程から始める。
+const GEN_STEP_SEC_INITIAL = 0.8;
 // 1 秒刻みで数字が動くと落ち着いて待てず、見積もりの精度以上に正確そうな印象も与えるため丸める。
 // 丸め幅は残り時間で変える: 1 画面あたり約2〜3秒（P1-2 実測）なので、一律 30 秒丸めにすると
 // 数秒で終わる場面まで「約30秒」と過大に出てしまう。
@@ -74,7 +83,26 @@ function updateCrawlProgress() {
     ? p.durations.reduce((a, b) => a + b, 0) / p.durations.length
     : NaN;
   const remaining = Math.max(0, total - p.finished);
-  execEta.textContent = remaining === 0 && total ? 'まもなく完了' : formatEta(remaining * average / Math.max(1, p.parallelism));
+  const crawlEta = remaining * average / Math.max(1, p.parallelism);
+
+  // 生成フェーズの残り。工程数が分かっているので、実測の 1 工程あたり時間で見積もる。
+  // これを足さないと、クロールが終わった瞬間に「まもなく完了」と出したまま
+  // 数秒待たせることになる（全体の約 25% を無視していた）。
+  const g = p.gen || {};
+  const genStepSec = g.stepDurations && g.stepDurations.length
+    ? g.stepDurations.reduce((a, b) => a + b, 0) / g.stepDurations.length
+    : GEN_STEP_SEC_INITIAL;
+  const genRemainingSteps = Math.max(0, (g.steps || 0) - (g.done || 0));
+  // まだ生成フェーズに入っていない場合も、工程数の既定値で先に織り込む
+  const genEta = g.started ? genRemainingSteps * genStepSec : 7 * GEN_STEP_SEC_INITIAL;
+
+  const totalEta = (Number.isFinite(crawlEta) ? crawlEta : NaN) + genEta;
+  if (g.started && genRemainingSteps === 0) {
+    execEta.textContent = 'まもなく完了';
+  } else {
+    execEta.textContent = formatEta(Number.isFinite(crawlEta) ? totalEta : NaN);
+  }
+
   if (total > 0) execProgressBar.style.width = `${Math.min(76, 8 + (p.finished / total) * 68)}%`;
 }
 function handleCrawlEvent(event) {
@@ -109,6 +137,26 @@ function handleCrawlEvent(event) {
     p.saved = Number(event.saved_count) || p.saved;
   } else if (event.event === 'crawl_cancelled') {
     execPhase.textContent = '途中結果を保存中';
+  } else if (event.event === 'generate_started') {
+    // クロールは終わり、ここから成果物の生成（P1-1）
+    p.gen.started = true;
+    p.gen.steps = Number(event.total_steps) || 7;
+    p.gen.startedAt = p.gen.lastStepAt = Date.now();
+    execPhase.textContent = '成果物を生成中';
+    setStep(3);
+  } else if (event.event === 'generate_step' || event.event === 'generate_completed') {
+    if (event.label) execMessage.textContent = `${event.label}…`;
+    if (event.event === 'generate_completed') {
+      p.gen.done = Number(event.index) || (p.gen.done + 1);
+      const now = Date.now();
+      if (p.gen.lastStepAt) p.gen.stepDurations.push((now - p.gen.lastStepAt) / 1000);
+      if (p.gen.stepDurations.length > 5) p.gen.stepDurations.shift();
+      p.gen.lastStepAt = now;
+      // 生成フェーズの進み具合もバーに出す（76%〜96% を割り当てる）
+      if (p.gen.steps > 0) {
+        execProgressBar.style.width = `${76 + (p.gen.done / p.gen.steps) * 20}%`;
+      }
+    }
   }
   updateCrawlProgress();
 }

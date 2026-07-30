@@ -39,3 +39,21 @@ def test_viewpoint_dialog_focus_trap_escape_and_discard(page: Page) -> None:
     page.locator("#confirm-ok-btn").click()
     expect(page.locator("#vp-editor-overlay")).to_be_hidden()
     expect(page.locator(f'[data-vp-item-id="{item_id}"]')).to_be_focused()
+
+
+def test_template_menu_closes_on_escape(page: Page) -> None:
+    """テンプレートメニューは Escape で閉じ、開いたボタンへフォーカスが戻る。
+
+    再発防止: 外側クリックでしか閉じられず、キーボードだけで操作している利用者は
+    開いたメニューを畳めないまま先へ進めなかった。
+    """
+    _open_viewpoints(page)
+    button = page.locator("#vp-tree-template-btn")
+    button.click()
+    expect(page.locator("#vp-template-menu")).to_be_visible()
+    expect(button).to_have_attribute("aria-expanded", "true")
+
+    page.keyboard.press("Escape")
+    expect(page.locator("#vp-template-menu")).to_be_hidden()
+    expect(button).to_have_attribute("aria-expanded", "false")
+    expect(button).to_be_focused()

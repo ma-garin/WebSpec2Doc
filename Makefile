@@ -202,6 +202,8 @@ lint: check-venv
 	venv/bin/ruff check src/ web/ app.py --fix
 	venv/bin/mypy src/ web/ app.py --ignore-missing-imports
 	$(PYTHON) scripts/check_e2e_conventions.py
+	$(PYTHON) scripts/check_fetch_error_handling.py --fail-on-missing > /dev/null
+	@echo "  ✅ fetch 経路のエラー処理（P0-3）"
 	@echo ""
 
 # =============================================================================

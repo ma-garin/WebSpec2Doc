@@ -209,13 +209,26 @@ function _buildExportDropdown(data) {
 }
 
 // エクスポートドロップダウンの開閉
-document.getElementById('export-dropdown-btn').addEventListener('click', (e) => {
-  e.stopPropagation();
-  document.getElementById('export-dropdown').classList.toggle('is-open');
-});
-document.addEventListener('click', () => {
+const _exportBtn = document.getElementById('export-dropdown-btn');
+function _closeExportDropdown({ refocus = false } = {}) {
   const dd = document.getElementById('export-dropdown');
-  if (dd) dd.classList.remove('is-open');
+  if (!dd || !dd.classList.contains('is-open')) return;
+  dd.classList.remove('is-open');
+  _exportBtn?.setAttribute('aria-expanded', 'false');
+  if (refocus) _exportBtn?.focus();
+}
+_exportBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const dd = document.getElementById('export-dropdown');
+  const opening = !dd.classList.contains('is-open');
+  dd.classList.toggle('is-open');
+  _exportBtn.setAttribute('aria-expanded', String(opening));
+});
+document.addEventListener('click', () => _closeExportDropdown());
+// Escape で閉じる。外側クリックしか手段がないと、キーボードだけで操作している
+// 利用者は開いたドロップダウンを畳めない。
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') _closeExportDropdown({ refocus: true });
 });
 
 document.querySelectorAll('.result-tabs .result-tab').forEach(t => {
@@ -507,8 +520,14 @@ async function refreshRunResults() {
   try {
     data = await fetch('/api/result?domain=' + encodeURIComponent(currentResultDomain))
       .then(r => (r.ok ? r.json() : null));
-  } catch (e) { return; }        // 取得できなければ表示は変えない（古い値のまま嘘をつかない）
-  if (!data || !resultData) return;
+  } catch (e) { data = null; }
+  if (!data) {
+    // 古い値のまま黙って残すと、「まだ実行していません」が実行済みなのか
+    // 反映に失敗しただけなのか区別できない。表示は変えず、失敗だけ伝える。
+    showToast('実行結果の反映に失敗しました。ページを再読み込みしてください。', 'error');
+    return;
+  }
+  if (!resultData) return;
   resultData.testcase_run = data.testcase_run;
   resultData.playwright_run_at = data.playwright_run_at;
   if (data.files) resultData.files = data.files;

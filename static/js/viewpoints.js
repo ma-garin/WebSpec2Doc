@@ -935,25 +935,39 @@ document.getElementById('vp-tree-all-btn')?.addEventListener('click', () => {
 
 // テンプレートメニュー（一覧は開いたタイミングで /api/viewpoint-templates から取得）
 const templateMenu = document.getElementById('vp-template-menu');
-document.getElementById('vp-tree-template-btn')?.addEventListener('click', async () => {
+const templateMenuBtn = document.getElementById('vp-tree-template-btn');
+function vpCloseTemplateMenu({ refocus = false } = {}) {
+  if (!templateMenu || templateMenu.hidden) return;
+  templateMenu.hidden = true;
+  templateMenuBtn?.setAttribute('aria-expanded', 'false');
+  if (refocus) templateMenuBtn?.focus();
+}
+templateMenuBtn?.addEventListener('click', async () => {
   if (!templateMenu) return;
   const opening = templateMenu.hidden;
   templateMenu.hidden = !templateMenu.hidden;
+  templateMenuBtn.setAttribute('aria-expanded', String(opening));
   if (opening) {
     vpRenderTemplateMenu(await vpFetchTemplates());
   }
+});
+// Escape で閉じる。外側クリックでしか閉じられないと、キーボードだけで
+// 操作している利用者はメニューを畳めないまま先へ進めなくなる。
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape' || !templateMenu || templateMenu.hidden) return;
+  vpCloseTemplateMenu({ refocus: true });
 });
 // テンプレート項目はメニュー開閉のたびに再生成されるため、静的な querySelectorAll
 // ではなくイベント委譲で拾う。
 templateMenu?.addEventListener('click', (event) => {
   const button = event.target.closest('[data-template]');
   if (!button) return;
-  templateMenu.hidden = true;
+  vpCloseTemplateMenu();
   vpLoadTemplate(button.dataset.template);
 });
 document.addEventListener('click', (event) => {
   if (templateMenu && !event.target.closest('#vp-tree-template-btn') && !event.target.closest('#vp-template-menu')) {
-    templateMenu.hidden = true;
+    vpCloseTemplateMenu();
   }
 });
 

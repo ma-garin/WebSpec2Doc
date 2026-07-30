@@ -86,8 +86,11 @@ def cmd_autorun(args: argparse.Namespace, _extra: list[str]) -> int:
     from web.services.cli_runner import run_autorun
 
     def on_log(line: str) -> None:
-        if not args.quiet:
-            print(line, flush=True)
+        if args.quiet:
+            return
+        # --json のときは標準出力を JSON だけにする。ログを混ぜると
+        # そのままパイプで渡せず、自動化から読めなくなる（実行ログは標準エラーへ）。
+        print(line, flush=True, file=sys.stderr if args.json else sys.stdout)
 
     result = run_autorun(
         args.url,
@@ -329,13 +332,38 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--output", type=Path, default=DEFAULT_OUTPUT, help="出力先（既定: output）")
     p.add_argument("--json", action="store_true", help="結果を JSON で出す（自動化向け）")
+
+    # 共通オプションはサブコマンドの後ろに置くのが自然な書き方（`sites --json`）なので、
+    # 各サブパーサでも受け取れるようにする。default=SUPPRESS にしておくと、
+    # 指定が無いときにサブパーサ側の既定値が親の指定（`--json sites`）を上書きしない。
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument(
+        "--output", type=Path, default=argparse.SUPPRESS, help="出力先（既定: output）"
+    )
+    common.add_argument(
+        "--json",
+        action="store_true",
+        default=argparse.SUPPRESS,
+        help="結果を JSON で出す（自動化向け）",
+    )
+
     sub = p.add_subparsers(dest="command", required=True)
 
-    d = sub.add_parser("doc", help="01 ドキュメント作成（クロールして仕様書を生成）")
+    # doc は本体 CLI へ委譲するため、--help も本体のものを見せる。
+    # add_help=False にしないと argparse がここで自前のヘルプを出して終わり、
+    # 実際に使える --format / --compare / --auth などが一切分からなかった。
+    d = sub.add_parser(
+        "doc",
+        parents=[common],
+        add_help=False,
+        help="01 ドキュメント作成（クロールして仕様書を生成）",
+    )
     d.add_argument("--url", help="解析対象 URL")
     d.set_defaults(func=cmd_doc)
 
-    a = sub.add_parser("autorun", help="02 AutoRun（解析からテスト実行まで全自動）")
+    a = sub.add_parser(
+        "autorun", parents=[common], help="02 AutoRun（解析からテスト実行まで全自動）"
+    )
     a.add_argument("--url", required=True, help="解析対象 URL")
     a.add_argument("--depth", type=int, default=2, help="リンクを追う深さ（既定 2）")
     a.add_argument("--max-pages", type=int, default=30, help="取得する画面数の上限（既定 30）")
@@ -359,19 +387,19 @@ def build_parser() -> argparse.ArgumentParser:
     a.add_argument("--quiet", action="store_true", help="実行ログを出さない")
     a.set_defaults(func=cmd_autorun)
 
-    t = sub.add_parser("test", help="テストケース表から Playwright を実行する")
+    t = sub.add_parser("test", parents=[common], help="テストケース表から Playwright を実行する")
     t.add_argument("--domain", required=True, help="対象ドメイン（output 配下の名前）")
     t.add_argument("--case-id", action="append", help="実行するケース ID（複数指定可）")
     t.set_defaults(func=cmd_test)
 
-    s = sub.add_parser("sites", help="解析済みサイトの一覧")
+    s = sub.add_parser("sites", parents=[common], help="解析済みサイトの一覧")
     s.set_defaults(func=cmd_sites)
 
-    sh = sub.add_parser("show", help="1 サイトの成果物と要約")
+    sh = sub.add_parser("show", parents=[common], help="1 サイトの成果物と要約")
     sh.add_argument("--domain", required=True, help="対象ドメイン")
     sh.set_defaults(func=cmd_show)
 
-    v = sub.add_parser("viewpoints", help="観点セットの一覧")
+    v = sub.add_parser("viewpoints", parents=[common], help="観点セットの一覧")
     v.set_defaults(func=cmd_viewpoints)
 
     return p

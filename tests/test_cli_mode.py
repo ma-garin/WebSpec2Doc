@@ -73,6 +73,42 @@ class TestParser:
         ):
             assert p.parse_args(argv).command == argv[0]
 
+    @pytest.mark.parametrize(
+        "argv",
+        [["sites", "--json"], ["--json", "sites"], ["show", "--domain", "e.test", "--json"]],
+    )
+    def test_common_options_accepted_before_and_after_subcommand(self, argv) -> None:
+        """`sites --json` と `--json sites` のどちらでも通ること。
+
+        サブコマンドの後ろに置くのが自然な書き方なのに弾かれ、
+        自動化から JSON を受け取れないという不具合があった。
+        """
+        ns = build_parser().parse_args(argv)
+        assert ns.json is True
+
+    def test_output_option_after_subcommand_wins(self, tmp_path) -> None:
+        ns = build_parser().parse_args(["sites", "--output", str(tmp_path)])
+        assert str(ns.output) == str(tmp_path)
+
+    def test_doc_delegates_help_to_main_cli(self) -> None:
+        """`doc --help` は本体 CLI のヘルプを見せること。
+
+        ラッパ自身のヘルプで止まると、実際に使える --format / --compare / --auth
+        などが一切分からず、doc サブコマンドが使い物にならなかった。
+        """
+        import subprocess
+        import sys as _sys
+
+        r = subprocess.run(
+            [_sys.executable, "src/cli.py", "doc", "--help"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        out = r.stdout + r.stderr
+        assert "--format" in out or "--compare" in out
+
     def test_unknown_option_is_rejected(self) -> None:
         """知らないオプションを黙って捨てると、指定が効かないのに成功に見える。"""
         from cli import main

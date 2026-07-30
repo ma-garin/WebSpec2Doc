@@ -9,6 +9,8 @@ GUI の 3 系統をそのまま端末から使うための入口。
     python src/cli.py sites                                   # 解析済みサイト一覧
     python src/cli.py show      --domain example.com         # 成果物の場所と要約
     python src/cli.py viewpoints                              # 観点セット一覧
+    python src/cli.py viewpoints export <set_id>              # 観点を CSV で持ち出す
+    python src/cli.py review cases <domain>                   # レビュー対象の一覧
 
 終了コードは自動化から判定できるように揃えてある。
     0   正常終了
@@ -306,7 +308,15 @@ def cmd_show(args: argparse.Namespace, _extra: list[str]) -> int:
 
 
 def cmd_viewpoints(args: argparse.Namespace, _extra: list[str]) -> int:
-    """観点セットの一覧（GUI の観点管理に相当）。"""
+    """観点セットの一覧と、版のライフサイクル操作（GUI の観点管理に相当）。
+
+    アクション未指定は一覧。以前からの `python src/cli.py viewpoints` は
+    そのまま一覧として動く。
+    """
+    action = getattr(args, "vp_action", "") or "list"
+    if action != "list":
+        return _viewpoints_action(args, action)
+
     from web.services.viewpoint_store import get_viewpoint_store
 
     try:
@@ -337,6 +347,246 @@ def cmd_viewpoints(args: argparse.Namespace, _extra: list[str]) -> int:
         for i in items
     ]
     _emit({"command": "viewpoints", "sets": items, "_lines": lines}, args.json)
+    return 0
+
+
+def _dump(payload: dict, as_json: bool, lines: list[str]) -> None:
+    _emit({**payload, "_lines": lines}, as_json)
+
+
+def _viewpoints_action(args: argparse.Namespace, action: str) -> int:
+    """観点セットの版操作。GUI でしか行えなかった経路を端末から使えるようにする。"""
+    from web.services.viewpoint_store import ViewpointStoreError, get_viewpoint_store
+
+    store = get_viewpoint_store()
+    try:
+        if action == "show":
+            data = store.get_set(args.set_id)
+            _dump({"command": "viewpoints show", "set": data}, args.json, [json_line(data)])
+        elif action == "versions":
+            rows = store.list_versions(args.set_id) or []
+            _dump(
+                {"command": "viewpoints versions", "versions": rows},
+                args.json,
+                [_rule(f"版（{len(rows)} 件）"), *[json_line(r) for r in rows]],
+            )
+        elif action == "items":
+            rows = store.list_items(args.set_id, args.version) or []
+            _dump(
+                {"command": "viewpoints items", "items": rows},
+                args.json,
+                [_rule(f"観点項目（{len(rows)} 件）"), *[json_line(r) for r in rows]],
+            )
+        elif action == "diff":
+            data = store.version_diff(args.set_id, args.from_version, args.to_version)
+            _dump({"command": "viewpoints diff", "diff": data}, args.json, [json_line(data)])
+        elif action == "export":
+            csv_text = store.export_csv(args.set_id, args.version)
+            if args.file:
+                Path(args.file).write_text(csv_text, encoding="utf-8")
+                _dump(
+                    {"command": "viewpoints export", "file": str(args.file)},
+                    args.json,
+                    [f"エクスポートしました: {args.file}"],
+                )
+            else:
+                # 標準出力へ流すときは CSV そのものを出す（--json は付けない前提）
+                sys.stdout.write(csv_text)
+        elif action == "import":
+            path = Path(args.file)
+            if not path.is_file():
+                _dump(
+                    {"command": "viewpoints import", "error": "file not found"},
+                    args.json,
+                    [f"ファイルが見つかりません: {path}"],
+                )
+                return 2
+            data = store.import_csv(args.set_id, path.read_text(encoding="utf-8"))
+            _dump({"command": "viewpoints import", "result": data}, args.json, [json_line(data)])
+        elif action == "publish":
+            data = store.publish(
+                args.set_id, args.version, revision=args.revision, change_reason=args.reason
+            )
+            _dump({"command": "viewpoints publish", "result": data}, args.json, [json_line(data)])
+        elif action == "rollback":
+            data = store.rollback(args.set_id, args.version, args.reason)
+            _dump({"command": "viewpoints rollback", "result": data}, args.json, [json_line(data)])
+        elif action == "templates":
+            from web.services.viewpoint_templates import list_templates
+
+            rows = list_templates() or []
+            _dump(
+                {"command": "viewpoints templates", "templates": rows},
+                args.json,
+                [_rule(f"テンプレート（{len(rows)} 件）"), *[json_line(r) for r in rows]],
+            )
+        elif action == "apply-template":
+            from web.services.viewpoint_templates import apply_template
+
+            data = apply_template(args.set_id, args.template_key)
+            _dump(
+                {"command": "viewpoints apply-template", "result": data},
+                args.json,
+                [json_line(data)],
+            )
+        elif action == "create":
+            payload = {"name": args.name}
+            if args.description:
+                payload["description"] = args.description
+            data = store.create_set(payload)
+            _dump({"command": "viewpoints create", "set": data}, args.json, [json_line(data)])
+        else:  # pragma: no cover  argparse の choices で弾かれる
+            _dump(
+                {"command": "viewpoints", "error": f"unknown action: {action}"},
+                args.json,
+                [f"知らない操作です: {action}"],
+            )
+            return 2
+    except ViewpointStoreError as exc:
+        _dump(
+            {"command": f"viewpoints {action}", "error": str(exc)},
+            args.json,
+            [f"観点セットを操作できません: {exc}"],
+        )
+        return 2
+    except (OSError, ValueError, KeyError) as exc:
+        _dump(
+            {"command": f"viewpoints {action}", "error": str(exc)},
+            args.json,
+            [f"失敗しました: {exc}"],
+        )
+        return 2
+    return 0
+
+
+def json_line(row: object) -> str:
+    """1 件を 1 行で読める形にする。列構成がまちまちなので JSON をそのまま出す。"""
+    return "  " + json.dumps(row, ensure_ascii=False, default=str)
+
+
+# ────────────────────────── テストケースレビュー ──────────────────────────
+
+
+def _review_candidates(out_dir: Path, domain: str) -> list[dict]:
+    """レビュー候補を読む。書き出し先が 2 箇所・形式が 2 通りあるため両方を吸収する。"""
+    for path in (
+        out_dir / domain / "playwright_candidates.json",
+        out_dir / domain / "qa_process" / "playwright_candidates.json",
+    ):
+        if not path.is_file():
+            continue
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if isinstance(data, dict):
+            return list(data.get("candidates", []))
+        if isinstance(data, list):
+            return data
+    return []
+
+
+def cmd_review(args: argparse.Namespace, _extra: list[str]) -> int:
+    """テストケースのレビュー状態を端末から見る・更新する（GUI のレビューに相当）。"""
+    from datetime import datetime
+
+    from web.routes import review as review_mod
+
+    rejected = _reject_bad_domain(args, "review")
+    if rejected is not None:
+        return rejected
+
+    domain = str(args.domain).strip()
+    out_dir = Path(args.output)
+    review_mod.OUTPUT_DIR = out_dir
+
+    action = args.review_action
+    if action == "cases":
+        cases = review_mod._merge_candidates_with_state(
+            _review_candidates(out_dir, domain), review_mod._load_review_state(domain)
+        )
+        lines = [_rule(f"レビュー対象（{len(cases)} 件）"), *[json_line(c) for c in cases]]
+        if not cases:
+            lines = [
+                _rule("レビュー対象（0 件）"),
+                "  候補がありません。先に AutoRun か QA 生成を実行してください。",
+            ]
+        _emit(
+            {"command": "review cases", "domain": domain, "cases": cases, "_lines": lines},
+            args.json,
+        )
+        return 0
+
+    if action == "export":
+        cases = review_mod._merge_candidates_with_state(
+            _review_candidates(out_dir, domain), review_mod._load_review_state(domain)
+        )
+        if args.filter == "approved":
+            cases = [c for c in cases if c.get("status") in ("approved", "frozen")]
+        payload = {"domain": domain, "exported_count": len(cases), "cases": cases}
+        if args.file:
+            Path(args.file).write_text(
+                json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
+            _emit(
+                {
+                    "command": "review export",
+                    **payload,
+                    "file": str(args.file),
+                    "_lines": [f"エクスポートしました: {args.file}（{len(cases)} 件）"],
+                },
+                args.json,
+            )
+        else:
+            _emit(
+                {"command": "review export", **payload, "_lines": [json_line(payload)]},
+                args.json,
+            )
+        return 0
+
+    # update
+    if args.status not in review_mod._VALID_STATUSES:
+        _emit(
+            {
+                "command": "review update",
+                "error": "invalid status",
+                "_lines": [
+                    f"指定できない状態です: {args.status}"
+                    f"（指定できるのは {', '.join(sorted(review_mod._VALID_STATUSES))}）"
+                ],
+            },
+            args.json,
+        )
+        return 2
+
+    with review_mod._get_review_lock(domain):
+        state = review_mod._load_review_state(domain)
+        cases_state: dict = state.setdefault("cases", {})
+        prev = cases_state.get(args.case_id, {}).get("version", 1)
+        # frozen は「この内容で確定した」印なので版を進める。それ以外は据え置く。
+        version = prev + 1 if args.status == "frozen" else prev
+        now = datetime.now().isoformat(timespec="seconds")
+        cases_state[args.case_id] = {
+            "status": args.status,
+            "comment": args.comment or "",
+            "version": version,
+            "reviewed_at": now,
+        }
+        state["domain"] = domain
+        state["updated_at"] = now
+        review_mod._save_review_state(domain, state)
+
+    _emit(
+        {
+            "command": "review update",
+            "domain": domain,
+            "case_id": args.case_id,
+            "status": args.status,
+            "version": version,
+            "_lines": [f"{args.case_id} を {args.status} にしました（版 {version}）"],
+        },
+        args.json,
+    )
     return 0
 
 
@@ -427,8 +677,70 @@ def build_parser() -> argparse.ArgumentParser:
     sh.add_argument("--domain", required=True, help="対象ドメイン")
     sh.set_defaults(func=cmd_show)
 
-    v = sub.add_parser("viewpoints", parents=[common], help="観点セットの一覧")
+    v = sub.add_parser("viewpoints", parents=[common], help="観点セットの一覧と版の操作")
     v.set_defaults(func=cmd_viewpoints)
+    vs = v.add_subparsers(dest="vp_action", metavar="操作")
+    # 操作を省いたときは従来どおり一覧。argparse は set_defaults より
+    # サブパーサの既定（None）を優先するため、アクション側に持たせる。
+    vs.default = "list"
+    vs.add_parser("show", parents=[common], help="1 セットの詳細").add_argument("set_id")
+    vs.add_parser("versions", parents=[common], help="版の一覧").add_argument("set_id")
+
+    vp = vs.add_parser("items", parents=[common], help="観点項目の一覧")
+    vp.add_argument("set_id")
+    vp.add_argument("--version", type=int, default=None, help="版番号（既定は公開版）")
+
+    vp = vs.add_parser("diff", parents=[common], help="版どうしの差分")
+    vp.add_argument("set_id")
+    vp.add_argument("--from", dest="from_version", type=int, required=True)
+    vp.add_argument("--to", dest="to_version", type=int, required=True)
+
+    vp = vs.add_parser("export", parents=[common], help="CSV で書き出す")
+    vp.add_argument("set_id")
+    vp.add_argument("--version", type=int, default=None)
+    vp.add_argument("--file", default="", help="書き出し先（省略で標準出力）")
+
+    vp = vs.add_parser("import", parents=[common], help="CSV を読み込んで下書き版を作る")
+    vp.add_argument("set_id")
+    vp.add_argument("file", help="読み込む CSV")
+
+    vp = vs.add_parser("publish", parents=[common], help="版を公開する")
+    vp.add_argument("set_id")
+    vp.add_argument("version", type=int)
+    vp.add_argument("--reason", default="", help="変更理由")
+    vp.add_argument("--revision", type=int, default=None, help="競合検知用のリビジョン")
+
+    vp = vs.add_parser("rollback", parents=[common], help="公開済みの版へ戻す")
+    vp.add_argument("set_id")
+    vp.add_argument("version", type=int)
+    vp.add_argument("--reason", default="")
+
+    vs.add_parser("templates", parents=[common], help="テンプレートの一覧")
+    vp = vs.add_parser("apply-template", parents=[common], help="テンプレートを適用する")
+    vp.add_argument("set_id")
+    vp.add_argument("template_key")
+
+    vp = vs.add_parser("create", parents=[common], help="観点セットを新規作成する")
+    vp.add_argument("--name", required=True)
+    vp.add_argument("--description", default="")
+
+    r = sub.add_parser("review", parents=[common], help="テストケースのレビュー状態")
+    r.set_defaults(func=cmd_review)
+    rs = r.add_subparsers(dest="review_action", metavar="操作", required=True)
+    rs.add_parser("cases", parents=[common], help="レビュー対象の一覧").add_argument("domain")
+
+    rp = rs.add_parser("update", parents=[common], help="1 ケースの状態を更新する")
+    rp.add_argument("domain")
+    rp.add_argument("case_id")
+    rp.add_argument(
+        "--status", required=True, help="draft / reviewing / approved / frozen のいずれか"
+    )
+    rp.add_argument("--comment", default="")
+
+    rp = rs.add_parser("export", parents=[common], help="レビュー結果を書き出す")
+    rp.add_argument("domain")
+    rp.add_argument("--filter", default="all", choices=("all", "approved"))
+    rp.add_argument("--file", default="", help="書き出し先（省略で標準出力）")
 
     return p
 

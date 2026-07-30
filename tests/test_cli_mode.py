@@ -22,7 +22,7 @@ import app as appmod  # noqa: E402
 from web.services.cli_runner import AutoRunResult  # noqa: E402
 from web.services.cli_runner import TestRunResult as RunResult  # noqa: E402
 
-from cli import build_parser, cmd_show, cmd_sites  # noqa: E402
+from cli import build_parser, cmd_show, cmd_sites, cmd_test  # noqa: E402
 
 H = {"Host": "127.0.0.1"}
 
@@ -155,6 +155,37 @@ class TestReadCommands:
         out = capsys.readouterr().out
         assert code == 0
         assert "PASS 5" in out and "FAIL 1" in out
+
+    @pytest.mark.parametrize(
+        "domain",
+        [
+            "",  # 空文字は出力先そのものを指してしまう
+            "   ",
+            "../etc",  # 出力先の外
+            "a/b",
+            "a\\b",
+            ".hidden",
+        ],
+    )
+    def test_show_rejects_domain_that_is_not_a_domain(self, tmp_path, capsys, domain) -> None:
+        """ドメインとして扱えない指定は、一覧が出て成功したように見せてはいけない。"""
+        code = cmd_show(self._args(tmp_path, argv=["show", "--domain", domain]), [])
+        assert code == 2
+        assert "ドメイン名として扱えません" in capsys.readouterr().out
+
+    def test_test_rejects_domain_that_is_not_a_domain(self, tmp_path, capsys) -> None:
+        """テスト実行側も同じ入口で弾く（実行してから気づくのでは遅い）。"""
+        code = cmd_test(self._args(tmp_path, argv=["test", "--domain", ""]), [])
+        assert code == 2
+        assert "ドメイン名として扱えません" in capsys.readouterr().out
+
+    def test_bad_domain_is_reported_in_json_too(self, tmp_path, capsys) -> None:
+        args = self._args(tmp_path, argv=["show", "--domain", ""])
+        args.json = True
+        assert cmd_show(args, []) == 2
+        data = json.loads(capsys.readouterr().out)
+        assert data["command"] == "show"
+        assert data["error"] == "invalid domain"
 
     def test_json_output_is_machine_readable(self, tmp_path, capsys) -> None:
         (tmp_path / "a.test").mkdir()

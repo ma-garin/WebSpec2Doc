@@ -42,16 +42,25 @@ class TestParseFormats:
         result = _parse_formats(" md , html ")
         assert set(result) == {"md", "html"}
 
-    def test_empty_string_returns_empty(self) -> None:
-        assert _parse_formats("") == ()
+    def test_empty_string_is_rejected(self) -> None:
+        # 有効な形式が 1 つも残らないまま成功で終わると、成果物が出ていないことに
+        # 気づけないまま次工程へ進んでしまう。
+        with pytest.raises(SystemExit) as e:
+            _parse_formats("")
+        assert e.value.code == 2
 
     def test_case_insensitive(self) -> None:
         result = _parse_formats("MD,HTML")
         assert "md" in result
         assert "html" in result
 
-    def test_all_unknown_returns_empty(self) -> None:
-        assert _parse_formats("foo,bar") == ()
+    def test_all_unknown_is_rejected(self, caplog) -> None:
+        with caplog.at_level(logging.ERROR), pytest.raises(SystemExit) as e:
+            _parse_formats("foo,bar")
+        assert e.value.code == 2
+        # 何が不明で、何なら指定できるのかが読み取れること
+        assert "foo" in caplog.text and "bar" in caplog.text
+        assert "md" in caplog.text
 
 
 # ---------- _parse_url_list ----------

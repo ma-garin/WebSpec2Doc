@@ -148,8 +148,33 @@ def cmd_autorun(args: argparse.Namespace, _extra: list[str]) -> int:
 # ────────────────────────────── テスト実行 ──────────────────────────────
 
 
+def _reject_bad_domain(args: argparse.Namespace, command: str) -> int | None:
+    """ドメイン名として扱えない指定を弾く。
+
+    空文字は `output / ""` が出力先そのものを指してしまい、成果物が無いのに
+    一覧が出て成功したように見える。パス区切りは出力先の外を指しうる。
+    """
+    raw = str(getattr(args, "domain", "") or "")
+    bad = (not raw.strip()) or any(x in raw for x in ("/", "\\", "..")) or raw.startswith(".")
+    if not bad:
+        return None
+    _emit(
+        {
+            "command": command,
+            "error": "invalid domain",
+            "_lines": [f"ドメイン名として扱えません: {raw!r}"],
+        },
+        args.json,
+    )
+    return 2
+
+
 def cmd_test(args: argparse.Namespace, _extra: list[str]) -> int:
     from web.services.cli_runner import run_testcases
+
+    rejected = _reject_bad_domain(args, "test")
+    if rejected is not None:
+        return rejected
 
     result = run_testcases(
         args.domain,
@@ -231,6 +256,9 @@ def cmd_sites(args: argparse.Namespace, _extra: list[str]) -> int:
 
 def cmd_show(args: argparse.Namespace, _extra: list[str]) -> int:
     """1 サイトの成果物の場所と要約（GUI のレポート概要に相当）。"""
+    rejected = _reject_bad_domain(args, "show")
+    if rejected is not None:
+        return rejected
     d = args.output / args.domain
     if not d.is_dir():
         _emit(

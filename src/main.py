@@ -1528,9 +1528,19 @@ def _parse_formats(raw_formats: str) -> tuple[str, ...]:
         item.strip().lower() for item in raw_formats.split(FORMAT_SEPARATOR) if item.strip()
     )
     unknown = sorted(set(formats) - SUPPORTED_FORMATS)
+    known = tuple(item for item in formats if item in SUPPORTED_FORMATS)
     if unknown:
         logger.warning("未対応の出力形式を無視します: %s", ", ".join(unknown))
-    return tuple(item for item in formats if item in SUPPORTED_FORMATS)
+    if not known:
+        # 有効な形式が 1 つも残らないのに成功で終わると、指定した成果物が
+        # 出ていないことに気づけない。何を指定でき、何が不明だったかを示して止める。
+        logger.error(
+            "出力形式が 1 つも指定されていません（不明: %s）。指定できるのは %s です。",
+            ", ".join(unknown) or "なし",
+            ", ".join(sorted(SUPPORTED_FORMATS)),
+        )
+        raise SystemExit(2)
+    return known
 
 
 def _domain_name(url: str) -> str:

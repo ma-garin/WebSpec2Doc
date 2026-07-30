@@ -349,8 +349,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub = p.add_subparsers(dest="command", required=True)
 
+    # doc は本体 CLI へ委譲するため、--help も本体のものを見せる。
+    # add_help=False にしないと argparse がここで自前のヘルプを出して終わり、
+    # 実際に使える --format / --compare / --auth などが一切分からなかった。
     d = sub.add_parser(
-        "doc", parents=[common], help="01 ドキュメント作成（クロールして仕様書を生成）"
+        "doc",
+        parents=[common],
+        add_help=False,
+        help="01 ドキュメント作成（クロールして仕様書を生成）",
     )
     d.add_argument("--url", help="解析対象 URL")
     d.set_defaults(func=cmd_doc)

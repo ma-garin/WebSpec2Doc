@@ -90,6 +90,25 @@ class TestParser:
         ns = build_parser().parse_args(["sites", "--output", str(tmp_path)])
         assert str(ns.output) == str(tmp_path)
 
+    def test_doc_delegates_help_to_main_cli(self) -> None:
+        """`doc --help` は本体 CLI のヘルプを見せること。
+
+        ラッパ自身のヘルプで止まると、実際に使える --format / --compare / --auth
+        などが一切分からず、doc サブコマンドが使い物にならなかった。
+        """
+        import subprocess
+        import sys as _sys
+
+        r = subprocess.run(
+            [_sys.executable, "src/cli.py", "doc", "--help"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        out = r.stdout + r.stderr
+        assert "--format" in out or "--compare" in out
+
     def test_unknown_option_is_rejected(self) -> None:
         """知らないオプションを黙って捨てると、指定が効かないのに成功に見える。"""
         from cli import main

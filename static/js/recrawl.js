@@ -33,7 +33,12 @@ async function recrawlSite(domain) {
         const rj = await fetch('/preview?path=' + encodeURIComponent(data.files.json)).then(r => r.json());
         urls = (rj.screens || []).map(s => ({ url: s.url, title: s.title || s.url }));
       }
-    } catch (e) {}
+    } catch (e) {
+      // ここで黙ると、前回の URL 一覧を復元できていないまま再解析が始まる。
+      // 復元できないと下で 'https://' + domain を組み立てるため、http で
+      // 公開されているサイトは全滅する。何が起きたかを先に伝える。
+      showToast('前回の解析対象を復元できませんでした。対象 URL を確認してください。', 'error');
+    }
   }
   // 再解析の対象 URL は、前回実際に解析した URL をそのまま使う。
   // ドメイン名から 'https://' を組み立てると、http で公開されているサイト

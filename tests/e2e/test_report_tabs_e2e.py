@@ -162,3 +162,23 @@ class TestStatePreservation:
 
 class TestDeepLink:
     """ディープリンクと旧タブ名互換の検証。"""
+
+
+class TestExportDropdownKeyboard:
+    """エクスポートのドロップダウンをキーボードだけで畳めること。"""
+
+    def test_export_dropdown_closes_on_escape(self, page: Page) -> None:
+        """再発防止: 外側クリックでしか閉じられず、キーボード操作では
+        開いたドロップダウンを畳めないまま先へ進めなかった。
+        """
+        _open_report(page)
+        button = page.locator("#export-dropdown-btn")
+        expect(button).to_be_visible()
+        button.click()
+        expect(page.locator("#export-dropdown")).to_have_class(re.compile(r"\bis-open\b"))
+        expect(button).to_have_attribute("aria-expanded", "true")
+
+        page.keyboard.press("Escape")
+        expect(page.locator("#export-dropdown")).not_to_have_class(re.compile(r"\bis-open\b"))
+        expect(button).to_have_attribute("aria-expanded", "false")
+        expect(button).to_be_focused()

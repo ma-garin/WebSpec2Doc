@@ -3,12 +3,18 @@
 """
 
 import asyncio
+import os
 import sys
+
 from playwright.async_api import async_playwright
 
-BASE_URL = "http://localhost:5555"
+# 既定ポートは 8765（web/config.py の PORT）。5555 を固定していたため、
+# アプリを普通に起動した状態では接続できず、この検証は動かせなかった。
+# E2E と同じ環境変数で上書きできるようにする。
+BASE_URL = os.environ.get("WEBSPEC2DOC_E2E_URL", "http://127.0.0.1:8765")
 PASSED = []
 FAILED = []
+UNVERIFIED = []
 
 
 def ok(label):
@@ -19,6 +25,16 @@ def ok(label):
 def fail(label, detail=""):
     FAILED.append(label)
     print(f"  ✗ {label}  {detail}")
+
+
+def unverified(label, reason=""):
+    """検証できなかったもの。PASS にも FAIL にもしない。
+
+    前提データが無いだけの状態を FAIL にすると、不具合と区別できなくなる。
+    かといって PASS にすると、通っていないものを通ったことにしてしまう。
+    """
+    UNVERIFIED.append(f"{label}（{reason}）" if reason else label)
+    print(f"  – {label}  未確認: {reason}")
 
 
 async def wait_dialog_open(page, timeout=3000):
@@ -33,6 +49,13 @@ async def run():
     async with async_playwright() as pw:
         browser = await pw.chromium.launch(headless=True)
         page = await browser.new_page()
+        # driver.js のツアーはフレッシュなブラウザで自動起動し、その SVG
+        # オーバーレイがクリックを遮る。ツアー自体はここの検証対象ではないため
+        # 完了済みとして始める（tests/e2e/conftest.py と同じ扱い）。
+        await page.add_init_script(
+            "try { localStorage.setItem('webspec2doc.onboarding.tour-completed', '1'); }"
+            " catch (e) { /* private mode 等では何もしない */ }"
+        )
 
         # ---- 1. ページ読み込み + 3ペインUI確認 ----
         await page.goto(BASE_URL, wait_until="networkidle")
@@ -47,7 +70,12 @@ async def run():
 
         # ---- 3. ツリーパネルにフォルダが表示される ----
         folders = await page.query_selector_all(".vp-tree-node")
-        ok(f"分類ツリー: {len(folders)}フォルダ") if folders else fail("分類ツリー: フォルダなし")
+        if folders:
+            ok(f"分類ツリー: {len(folders)}フォルダ")
+        else:
+            # 既定の観点セットはフォルダを持たない（分類は項目側の category）。
+            # フォルダが無いこと自体は不具合ではないので FAIL にしない。
+            unverified("分類ツリーのフォルダ表示", "既定データにフォルダが未作成")
 
         # ---- 4. フォルダクリックでフィルタ ----
         if folders:
@@ -64,9 +92,11 @@ async def run():
         await page.click("#vp-tree-template-btn")
         menu_visible = await page.is_visible("#vp-template-menu")
         ok("テンプレートメニュー表示") if menu_visible else fail("テンプレートメニュー未表示")
+        # Escape で閉じる。以前は body の中央を押して閉じていたが、
+        # メニュー項目の上を踏んでテンプレート適用の確認ダイアログが開き、
+        # 以降の操作が全て塞がれていた。
         await page.keyboard.press("Escape")
-        await page.wait_for_timeout(200)
-        await page.click("body")  # メニューを閉じる
+        await page.wait_for_selector("#vp-template-menu", state="hidden", timeout=5000)
 
         # ---- 6. 新規セット inputDialog ----
         await page.click("#vp-new-set")
@@ -162,13 +192,14 @@ async def run():
     # ---- 結果サマリ ----
     print()
     print("=" * 50)
-    print(f"PASSED: {len(PASSED)}  FAILED: {len(FAILED)}")
+    print(f"PASSED: {len(PASSED)}  FAILED: {len(FAILED)}  未確認: {len(UNVERIFIED)}")
+    for u in UNVERIFIED:
+        print(f"  – {u}")
     if FAILED:
         for f in FAILED:
             print(f"  ✗ {f}")
         sys.exit(1)
-    else:
-        print("All checks passed.")
+    print("失敗なし（未確認は上記のとおり）。")
 
 
 if __name__ == "__main__":

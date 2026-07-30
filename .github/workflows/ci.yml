@@ -69,6 +69,15 @@ jobs:
       - name: E2E conventions (fixed-wait ratchet)
         run: python scripts/check_e2e_conventions.py
 
+      # 通信の失敗が画面に出ない経路を作らせない（P0-3）。
+      # 作られていたが、どこからも実行されておらず検知できていなかった
+      - name: fetch error handling (P0-3)
+        run: python scripts/check_fetch_error_handling.py --fail-on-missing
+
+      # CLAUDE.md が完了判定の前提としているゲート。CI で未実行だった
+      - name: Functional Integrity Gate
+        run: python scripts/quality_harness.py
+
       - name: Tests + coverage gate (80%) — src AND web
         # web/ を含めることで認証・CSRF・API エンドポイントのカバレッジを計測
         run: |

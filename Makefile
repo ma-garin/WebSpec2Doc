@@ -180,7 +180,7 @@ security: check-venv
 	@echo "  ━━ セキュリティスキャン ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	venv/bin/pip install --quiet bandit pip-audit 2>/dev/null || true
 	venv/bin/python -m bandit -r src web app.py -ll -q
-	venv/bin/python -m pip_audit --requirement requirements.txt -q
+	venv/bin/python -m pip_audit --requirement requirements.txt --progress-spinner off
 	@echo "  ✅ セキュリティスキャン完了"
 
 # =============================================================================

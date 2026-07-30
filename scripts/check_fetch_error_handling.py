@@ -17,6 +17,7 @@
 判定はヒューリスティックであり、構文解析ではない。誤判定を避けるため、
 `# noqa: fetch-error` を含む行は「意図的に無視」として除外する。
 """
+
 from __future__ import annotations
 
 import argparse

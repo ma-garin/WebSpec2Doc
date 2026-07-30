@@ -33,12 +33,10 @@ class TestGuideScrollAfterDeeplink:
         # ページ遷移なしで再現する: パスを /user-guide に変えて DOMContentLoaded を
         # 再発火させる（history.pushState はハッシュではなくパス遷移だが、
         # このハンドラが「起動時のディープリンク解決」を担う唯一の経路である）。
-        page.evaluate(
-            """() => {
+        page.evaluate("""() => {
                 history.pushState({}, '', '/user-guide');
                 window.dispatchEvent(new Event('DOMContentLoaded'));
-            }"""
-        )
+            }""")
 
         # 実行中フラグが解除されていること（残留していないこと）
         classes = page.evaluate("document.getElementById('app-content').className")
@@ -49,12 +47,10 @@ class TestGuideScrollAfterDeeplink:
         expect(page.locator("#view-user-guide")).to_have_class(re.compile(r"is-active"))
 
         # ガイド本文がスクロール可能であること（overflow:hidden に固定されていないこと）
-        scrollable = page.evaluate(
-            """() => {
+        scrollable = page.evaluate("""() => {
                 const el = document.getElementById('app-content');
                 return el.scrollHeight > el.clientHeight;
-            }"""
-        )
+            }""")
         assert scrollable, "ガイド画面がスクロール不能になっている（is-executing 残留の再発）"
 
         overflow = page.evaluate(

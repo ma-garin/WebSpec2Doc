@@ -113,7 +113,9 @@ class TestCaptureCoverageE2E:
                 recorder = SessionRecorder(page=page, session_path=session_path)
                 recorder.start()
                 page.click("#open-withdraw-modal")
-                page.wait_for_timeout(300)
+                # モーダルが実際に開いたことを待つ。固定待機だと開かなかった場合に
+                # 「記録が空」の理由が待ち不足なのか不具合なのか分からなくなる。
+                page.wait_for_selector("#withdraw-modal", state="visible")
                 recorder.poll_once()
                 recorder.flush()
 

@@ -1,6 +1,7 @@
 """
 観点管理UIのheadless高速検証スクリプト（3ペインUI対応）。
 """
+
 import asyncio
 import sys
 from playwright.async_api import async_playwright
@@ -72,7 +73,11 @@ async def run():
         await wait_dialog_open(page)
         textarea_visible = await page.is_visible("#input-dialog-textarea")
         input_visible = await page.is_visible("#input-dialog-input")
-        ok("新規セット: textareaが非表示・inputが表示") if not textarea_visible and input_visible else fail("新規セット: textarea表示バグ")
+        (
+            ok("新規セット: textareaが非表示・inputが表示")
+            if not textarea_visible and input_visible
+            else fail("新規セット: textarea表示バグ")
+        )
         await page.keyboard.press("Escape")
         await wait_dialog_close(page)
 
@@ -90,11 +95,19 @@ async def run():
             await page.wait_for_selector("#vp-bulkbar", state="visible", timeout=3000)
             ok("バルクバー: 1件選択で表示")
 
-            for bulk_action, expected_title in [("tag", "タグ"), ("category", "カテゴリ"), ("risk", "リスク")]:
+            for bulk_action, expected_title in [
+                ("tag", "タグ"),
+                ("category", "カテゴリ"),
+                ("risk", "リスク"),
+            ]:
                 await page.click(f"button[data-vp-bulk='{bulk_action}']")
                 await wait_dialog_open(page)
                 title = await page.text_content("#input-dialog-title")
-                ok(f"バルク{expected_title}: [{title}]") if expected_title in (title or "") else fail(f"バルク{expected_title}", title)
+                (
+                    ok(f"バルク{expected_title}: [{title}]")
+                    if expected_title in (title or "")
+                    else fail(f"バルク{expected_title}", title)
+                )
                 await page.keyboard.press("Escape")
                 await wait_dialog_close(page)
 
@@ -104,7 +117,11 @@ async def run():
             await page.fill("#input-dialog-input", "abc")
             await page.click("#input-dialog-ok-btn")
             error_visible = await page.is_visible("#input-dialog-error")
-            ok("バルクリスク: 不正値でエラー表示") if error_visible else fail("バルクリスク: バリデーションエラーなし")
+            (
+                ok("バルクリスク: 不正値でエラー表示")
+                if error_visible
+                else fail("バルクリスク: バリデーションエラーなし")
+            )
             await page.keyboard.press("Escape")
             await wait_dialog_close(page)
 
@@ -129,7 +146,11 @@ async def run():
             await page.wait_for_selector("#vp-editor-overlay", state="visible", timeout=3000)
             ok("エディタモーダル: ✏ボタンで表示")
             options = await page.query_selector_all("#vp-category-datalist option")
-            ok(f"カテゴリdatalist: {len(options)}件") if options else fail("カテゴリdatalist: 候補なし")
+            (
+                ok(f"カテゴリdatalist: {len(options)}件")
+                if options
+                else fail("カテゴリdatalist: 候補なし")
+            )
             await page.click("#vp-editor-close")
             await page.wait_for_selector("#vp-editor-overlay", state="hidden", timeout=2000)
             ok("エディタモーダル: 閉じる動作")

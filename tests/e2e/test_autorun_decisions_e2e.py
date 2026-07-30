@@ -150,9 +150,11 @@ def decisions_page(page: Page) -> Page:
     page.route("**/api/autorun/decisions", _capture)
 
     page.goto(f"{BASE_URL}/auto-run", wait_until="domcontentloaded")
-    page.wait_for_timeout(400)
+    # 固定待機だと「まだ読み込めていない」と「そもそも壊れている」を区別できない。
+    # 呼びたい関数が生えたことと、押したいボタンが出たことをそれぞれ待つ。
+    page.wait_for_function("() => !!(window.autorunStages && window.autorunStages.load)")
     page.evaluate(f"() => window.autorunStages.load('{_DOMAIN}', {{open: true}})")
-    page.wait_for_timeout(700)
+    page.wait_for_selector("#autorun-leadbar button", state="visible")
     return page
 
 
@@ -179,8 +181,10 @@ class TestDecisionsDialog:
     def test_submitting_without_touching_sends_recommendations(self, decisions_page: Page) -> None:
         """何も触らずに確定すると、推奨がそのまま送られる。"""
         decisions_page.click("#autorun-leadbar button")
-        decisions_page.click("#autorun-decisions-go")
-        decisions_page.wait_for_timeout(600)
+        # 送信そのものを目印にする。固定待機だと「まだ来ていない」のか
+        # 「そもそも呼ばれない」のかを区別できず、後者を取り逃がす。
+        with decisions_page.expect_request("**/api/autorun/decisions"):
+            decisions_page.click("#autorun-decisions-go")
 
         payloads = decisions_page.decisions_payloads  # type: ignore[attr-defined]
         assert payloads, "確定 API が呼ばれていません（押しても何も起きない状態）"
@@ -192,8 +196,8 @@ class TestDecisionsDialog:
         """推奨以外を選ぶと、その選択が送られる。"""
         decisions_page.click("#autorun-leadbar button")
         decisions_page.locator(".ard-choice", has_text="ログインしてテスト").click()
-        decisions_page.click("#autorun-decisions-go")
-        decisions_page.wait_for_timeout(600)
+        with decisions_page.expect_request("**/api/autorun/decisions"):
+            decisions_page.click("#autorun-decisions-go")
 
         payloads = decisions_page.decisions_payloads  # type: ignore[attr-defined]
         assert payloads[-1]["answers"]["auth_scope"]["choice"] == "authenticated"
@@ -203,8 +207,11 @@ class TestDecisionsDialog:
         decisions_page.click("#autorun-leadbar button")
         before = decisions_page.locator(".ard-text").count()
         decisions_page.locator(".ard-choice", has_text="基準を指定する").click()
-        decisions_page.wait_for_timeout(300)
-        assert decisions_page.locator(".ard-text").count() > before
+        # 「増えた」ことそのものを待つ。増える数は選択肢によって変わるため
+        # 固定値では判定できない（実測: 1 つの選択で 2 つ増える場合がある）。
+        decisions_page.wait_for_function(
+            "n => document.querySelectorAll('.ard-text').length > n", arg=before
+        )
 
     def test_facts_are_shown_not_asked(self, decisions_page: Page) -> None:
         """選択の余地がない前提は、質問ではなく事実として出る。"""

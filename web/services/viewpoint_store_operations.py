@@ -292,23 +292,19 @@ class ViewpointStoreOperations(ViewpointStoreBase):
 
     def _auto_select_set(self, context: dict[str, Any]) -> dict[str, Any]:
         with self._connect() as conn:
-            rows = conn.execute(
-                """SELECT a.*,s.name,s.is_default,s.priority AS set_priority
+            rows = conn.execute("""SELECT a.*,s.name,s.is_default,s.priority AS set_priority
                    FROM viewpoint_assignments a JOIN viewpoint_sets s ON s.id=a.set_id
                    WHERE a.deleted_at IS NULL AND a.enabled=1 AND s.deleted_at IS NULL
-                   ORDER BY a.priority DESC,s.priority DESC"""
-            ).fetchall()
+                   ORDER BY a.priority DESC,s.priority DESC""").fetchall()
             for row in rows:
                 if rule_matches(_json(row["rule"], {}), context):
                     result = self.get_set(row["set_id"])
                     result["_selection_reason"] = "URL・業種・画面条件に一致する適用ルール"
                     return result
-            row = conn.execute(
-                """SELECT s.* FROM viewpoint_sets s
+            row = conn.execute("""SELECT s.* FROM viewpoint_sets s
                    WHERE s.deleted_at IS NULL AND s.is_default=1
                    AND EXISTS(SELECT 1 FROM viewpoint_versions v WHERE v.set_id=s.id AND v.status='published')
-                   ORDER BY s.priority DESC LIMIT 1"""
-            ).fetchone()
+                   ORDER BY s.priority DESC LIMIT 1""").fetchone()
         if row is None:
             raise ConflictError("既定の公開済み観点セットがありません。")
         result = dict(row)

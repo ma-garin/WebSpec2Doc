@@ -11,6 +11,7 @@
 
 判定できないものは PASS にせず理由を残す。
 """
+
 from __future__ import annotations
 
 import json

@@ -4,6 +4,7 @@
 各シナリオは「QA エンジニアが実際にやること」を 1 つずつ通し、
 受入条件を数字で判定する。判定できない場合は PASS にせず理由を残す。
 """
+
 from __future__ import annotations
 
 import json

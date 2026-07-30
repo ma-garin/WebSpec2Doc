@@ -122,5 +122,8 @@ class TestHistoryDiffFeedback:
         page.on("pageerror", lambda exc: js_errors.append(str(exc)))
         self._open_history_tab(page)
         page.locator("#tl-diff-btn").click()
-        page.wait_for_timeout(500)
+        # 押下中はボタンが無効化＋文言が変わる。元に戻った時点が「一巡し終えた」印で、
+        # 成功・失敗どちらの経路でもここに到達する（固定待機だと取り逃がす）。
+        expect(page.locator("#tl-diff-btn")).to_be_enabled(timeout=15_000)
+        expect(page.locator("#tl-diff-btn")).to_have_text("この2時点を比較する")
         assert js_errors == [], f"JavaScript エラー: {js_errors}"

@@ -70,14 +70,12 @@ class PlaywrightValidationPage:
         self._page.locator(locator).evaluate("element => element.blur()")
 
     def validation_state(self, locator: str) -> dict[str, object]:
-        result = self._page.locator(locator).evaluate(
-            """element => ({
+        result = self._page.locator(locator).evaluate("""element => ({
                 observed_value: String(element.value || ''),
                 accepted: element.checkValidity(),
                 validation_message: element.validationMessage || '',
                 input_length: String(element.value || '').length,
-            })"""
-        )
+            })""")
         return result if isinstance(result, dict) else {}
 
 

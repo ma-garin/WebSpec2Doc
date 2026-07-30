@@ -5,6 +5,7 @@ S01〜S10（verify_scenarios.py）に続く追加分。異常系・境界・成�
 観点管理・AutoRun・CLI・セキュリティを網羅する。
 判定できないものは PASS にせず理由を残す。
 """
+
 from __future__ import annotations
 
 import json

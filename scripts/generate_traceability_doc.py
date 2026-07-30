@@ -46,7 +46,9 @@ def _iter_test_files(repo_root: Path) -> list[Path]:
     return sorted(tests_dir.rglob("test_*.py"))
 
 
-def find_tests_for(feature: dict, repo_root: Path, _cache: dict[Path, str] | None = None) -> list[str]:
+def find_tests_for(
+    feature: dict, repo_root: Path, _cache: dict[Path, str] | None = None
+) -> list[str]:
     """feature を参照するテストファイル（相対パス）を返す。
 
     判定は「feature_id か symbol か core/route ファイルの stem が
@@ -100,9 +102,13 @@ def to_markdown(rows: list[dict]) -> str:
     """要件行を Markdown 表にする。GAP は列で明示する。"""
     covered = sum(1 for r in rows if not r["gap"])
     lines: list[str] = []
-    lines.append(f"要件総数: **{len(rows)}** / テスト紐付けあり: **{covered}** / GAP: **{len(rows) - covered}**")
+    lines.append(
+        f"要件総数: **{len(rows)}** / テスト紐付けあり: **{covered}** / GAP: **{len(rows) - covered}**"
+    )
     lines.append("")
-    lines.append("| 要件ID | 名称 | リスク | 実装ファイル | 必須テスト | 異常系 | 紐付くテスト | GAP |")
+    lines.append(
+        "| 要件ID | 名称 | リスク | 実装ファイル | 必須テスト | 異常系 | 紐付くテスト | GAP |"
+    )
     lines.append("|---|---|---|---|---|---|---|---|")
     for r in rows:
         impl = "<br>".join(f"`{p}`" for p in r["impl_files"]) or "—"
@@ -147,7 +153,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.write:
         ok = _write_into_doc(repo_root, table)
         if not ok:
-            print(f"[WARN] {TM_DOC} に AUTO-GENERATED マーカーが見つからず未書込み", file=sys.stderr)
+            print(
+                f"[WARN] {TM_DOC} に AUTO-GENERATED マーカーが見つからず未書込み", file=sys.stderr
+            )
             print(table)
             return 1
         print(f"[OK] {TM_DOC} を更新しました（要件 {len(rows)} 件）")

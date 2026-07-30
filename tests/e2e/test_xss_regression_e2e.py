@@ -27,8 +27,7 @@ def autorun_page(page: Page) -> Page:
 
 def test_malicious_test_title_is_escaped(autorun_page: Page) -> None:
     """進捗NDJSON由来のtitleに<img onerror>を仕込んでもimg要素が生成されない。"""
-    autorun_page.evaluate(
-        """() => _autorunRender({
+    autorun_page.evaluate("""() => _autorunRender({
             status: 'running_tests',
             job_id: 'xss-test-job',
             domain: 'example.com',
@@ -42,8 +41,7 @@ def test_malicious_test_title_is_escaped(autorun_page: Page) -> None:
             },
             started_at: '2026-07-06T10:00:00', elapsed_sec: 1,
             error: null, finished_at: null, input_request: null, run_policy: {},
-        })"""
-    )
+        })""")
     area = autorun_page.locator("#autorun-live-tests-area")
     expect(area.locator(".autorun-live-tests")).to_be_visible()
     # img要素・script要素として解釈されていないこと（escHtml回帰）

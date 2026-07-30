@@ -151,8 +151,7 @@ class AuthStore:
         if version > SCHEMA_VERSION:
             raise AuthError("認証DBのスキーマがこのアプリより新しいため起動できません。")
         if version < 1:
-            conn.executescript(
-                """
+            conn.executescript("""
                 BEGIN;
                 CREATE TABLE IF NOT EXISTS tenants (
                     id TEXT PRIMARY KEY,
@@ -207,8 +206,7 @@ class AuthStore:
                 );
                 PRAGMA user_version = 1;
                 COMMIT;
-                """
-            )
+                """)
         if version < 2:
             columns = {str(row[1]) for row in conn.execute("PRAGMA table_info(users)").fetchall()}
             if "tour_completed_at" not in columns:

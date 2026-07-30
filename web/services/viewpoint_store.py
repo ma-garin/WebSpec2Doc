@@ -203,8 +203,7 @@ class ViewpointStoreBase:
         if version > SCHEMA_VERSION:
             raise ViewpointStoreError("観点DBのスキーマがこのアプリより新しいため起動できません。")
         if version < 1:
-            conn.executescript(
-                """
+            conn.executescript("""
                 BEGIN;
                 CREATE TABLE IF NOT EXISTS viewpoint_sets (
                     id TEXT PRIMARY KEY,
@@ -288,8 +287,7 @@ class ViewpointStoreBase:
                 CREATE INDEX IF NOT EXISTS ix_viewpoint_versions_set ON viewpoint_versions(set_id, version_number DESC);
                 PRAGMA user_version = 1;
                 COMMIT;
-                """
-            )
+                """)
         if version < 2:
             self._migrate_v1_to_v2(conn)
 

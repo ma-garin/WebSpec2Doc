@@ -40,15 +40,13 @@ def _assert_visual_match(page: Page, name: str, threshold: float = VISUAL_THRESH
     - WEBSPEC2DOC_UPDATE_SNAPSHOTS=1 の場合: ベースラインを強制更新
     """
     baseline_path = SNAPSHOTS_DIR / f"{name}.png"
-    page.add_style_tag(
-        content="""
+    page.add_style_tag(content="""
         *, *::before, *::after {
             animation: none !important;
             transition: none !important;
             caret-color: transparent !important;
         }
-        """
-    )
+        """)
     current_bytes = page.screenshot(full_page=False, animations="disabled", caret="hide")
 
     # 以前は pytest.ini_options（存在しない属性）を見ており、更新モードに

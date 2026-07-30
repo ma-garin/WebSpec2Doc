@@ -64,6 +64,11 @@ jobs:
       - name: Type check (mypy)
         run: mypy
 
+      # make lint に含まれるが CI では実行されておらず、main で赤いまま
+      # 誰も気づけない状態が続いていたため、ここで必ず通す
+      - name: E2E conventions (fixed-wait ratchet)
+        run: python scripts/check_e2e_conventions.py
+
       - name: Tests + coverage gate (80%) — src AND web
         # web/ を含めることで認証・CSRF・API エンドポイントのカバレッジを計測
         run: |

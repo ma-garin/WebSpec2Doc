@@ -25,8 +25,7 @@ class TestQualityViewpointsInfoTip:
         """マウス操作前提にせず、Tabフォーカスでも説明が読めること。"""
         page.goto(f"{BASE_URL}/qa-quality")
         page.wait_for_selector("#qa-quality-content")
-        page.evaluate(
-            """() => renderQaQualityTool({
+        page.evaluate("""() => renderQaQualityTool({
                 quality_viewpoints: {
                     items: [
                         {id: 'V1', viewpoint: '必須未入力', category: '入力検証',
@@ -36,8 +35,7 @@ class TestQualityViewpointsInfoTip:
                     screen_risks: [],
                     questions: [],
                 },
-            })"""
-        )
+            })""")
         first_tip = page.locator("#qa-quality-content .info-tip").first
         first_tip.focus()
         expect(first_tip).to_be_focused()

@@ -5,6 +5,7 @@
     python scripts/ui-hash.py disk    # ディスク上の UI ファイルをハッシュ
     python scripts/ui-hash.py staged  # git staged の UI ファイルをハッシュ
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -38,10 +39,7 @@ def _ui_files_staged() -> list[str]:
         capture_output=True,
         text=True,
     )
-    return sorted(
-        f for f in result.stdout.strip().splitlines()
-        if Path(f).suffix in UI_EXTENSIONS
-    )
+    return sorted(f for f in result.stdout.strip().splitlines() if Path(f).suffix in UI_EXTENSIONS)
 
 
 def compute_hash(mode: str = "disk") -> str:

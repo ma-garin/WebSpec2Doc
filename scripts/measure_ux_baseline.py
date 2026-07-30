@@ -19,6 +19,7 @@
 いずれも中央値を採る。1 回目はディスクキャッシュ等の影響を受けるため、
 `--runs` は 3 以上を推奨する（既定 3）。
 """
+
 from __future__ import annotations
 
 import argparse

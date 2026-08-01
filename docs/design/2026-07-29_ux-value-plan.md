@@ -189,13 +189,35 @@
 - 承認: **mock 要**
 - 受入: `demo/site` vs `demo/site_v2`（現新比較用に同梱）で差分画像が表示される
 
-**P2-3 テスト仕様書一式の Excel 出力**（見積 1日）
+**P2-3 テスト仕様書一式の Excel 出力**（見積 1日）— ✅ **完了（2026-07-30）**
+- 案: `docs/design/p2-3-excel-sheets-proto.html`（承認済み）
+- 棚卸しで判明: クロール時に作られる `spec.xlsx` は**実測仕様の 4 シート**（画面一覧・フォーム・
+  項目定義書・境界値データ）だけで、**テスト仕様が入っていなかった**。
+  `web/services/export_xlsx.py`（245 行）を新設し **テスト設計／テストケース／遷移表** を追加（計 7 シート）
+- 配信: `GET /api/export/spec-xlsx` → `write_full_spec_xlsx()`。同じ内容をディスクへも書き戻し、
+  ZIP 一括や CLI から読む `spec.xlsx` と食い違わないようにした
+- feature_contracts に `spec_xlsx_full_export` として登録。`tests/test_export_xlsx.py`（228 行）で
+  シート行数と content-type を assert
+
+**P2-3（原文）**
 - 狙い: 有効性（QA 実務の納品物は Excel が主流。openpyxl==3.1.4 は導入済み）
 - 内容: まず既存エクスポート（`templates/partials/view-generate.html:256` のドロップダウン → handler → API）を棚卸しし、xlsx 一式が無ければ `web/services/export_xlsx.py` を新設。シート構成: 画面仕様／テスト設計（画面別: 条件・技法・由来）／テストケース／遷移表
 - 承認: **シート構成の表イメージ（HTML 1枚）要**。依存追加は不要（確認済み）
 - 受入: 各シート行数＝画面内表示件数と一致（P011 相当の画面で照合）。ダウンロード応答の content-type を L2 テストで assert。feature_contracts へ登録
 
-**P2-4 画面別設計 ⇄ テストケースの接続**（見積 0.5日）
+**P2-4 画面別設計 ⇄ テストケースの接続**（見積 0.5日）— ✅ **完了（2026-07-30）**
+- 案: `docs/design/p2-4-condition-to-case-proto.html`（承認済み）
+- 条件行に「ケースを見る →」ボタンを置き、押すとテストケースタブへ切り替えて絞り込む
+  （`_tdsOpenCasesFor` → `tcgFilterFromCondition`）。解除導線として条件由来の帯を出し、
+  利用者が自分で絞り始めたら帯を外す
+- **限界を UI に明示した**: 条件とテストケースは独立に生成されており、両者を結ぶ安定 ID が無い。
+  絞り込みキーは「画面＋由来した要素」で厳密な対応ではない旨をヒント文と帯に書いた。
+  安定 ID の付与は **P2-5 の前提作業**
+- 行全体ではなく行内ボタンにした理由: sticky ヘッダに重なる位置ができること、
+  `<tr>` に `role="link"` を付けるのが ARIA の表構造として不正なため
+- feature_contracts に `condition_to_testcase_link` として登録。E2E は `tests/e2e/test_report_tabs_e2e.py`
+
+**P2-4（原文）**
 - 狙い: 有効性（条件と、それを実装したケースが現状つながっていない）
 - 内容: `static/js/view-design.js` の条件行にリンクを付け、クリックでテストケースタブへ遷移し対象項目／由来でフィルタ適用（`testcase-grid` の既存フィルタ機構 TCG.filters を利用）
 - 承認: **mock 1枚 要**（行のリンク表現）

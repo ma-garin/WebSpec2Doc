@@ -316,11 +316,21 @@ def api_snapshot_comparison_json() -> Response | tuple[dict, int]:
         check_links=False,
         new_dir=diff_dir,
     )
+    # ScreenPair は page_id しか持たない。一覧に「P001」だけ並ぶとどの画面か分からないため、
+    # 解析済みページから名前と URL を渡す。
+    page_info = {
+        page.page_id: {
+            "title": str(page.page_data.title or page.page_id),
+            "url": str(page.page_data.url or ""),
+        }
+        for page in [*old_analyzed, *new_analyzed]
+    }
     payload = build_workspace(
         comparison_result_to_dict(result),
         out_dir,
         from_label=from_path.stem,
         to_label=to_path.stem,
+        page_info=page_info,
     )
     resp = jsonify(payload)
     resp.headers["Cache-Control"] = "no-store"

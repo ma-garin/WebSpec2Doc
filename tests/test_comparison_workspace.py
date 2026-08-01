@@ -149,6 +149,40 @@ class TestScreenshotPaths:
         ws = build_workspace(_comparison(), OUT)
         assert ws["pairs"][0]["screenshots"] == {}
 
+    def test_same_capture_is_flagged(self) -> None:
+        """世代保存より前のスナップショットは両世代が同じ画像を指す。
+
+        並べても同じ絵になるため、「変化が無い」ではなく「比較できない」と
+        分かるように印を付ける。
+        """
+        shot = str(OUT / "example.com" / "screenshots" / "P001.png")
+        diffs = [
+            {
+                "page_id": "P001",
+                "before_path": shot,
+                "after_path": shot,
+                "diff_image_path": "",
+                "diff_ratio": 0.0,
+                "is_significant": False,
+            }
+        ]
+        ws = build_workspace(_comparison(screenshot_diffs=diffs), OUT)
+        assert ws["pairs"][0]["screenshots"]["same_capture"] is True
+
+    def test_different_captures_are_not_flagged(self) -> None:
+        diffs = [
+            {
+                "page_id": "P001",
+                "before_path": str(OUT / "a" / "P001.png"),
+                "after_path": str(OUT / "b" / "P001.png"),
+                "diff_image_path": "",
+                "diff_ratio": 0.0,
+                "is_significant": False,
+            }
+        ]
+        ws = build_workspace(_comparison(screenshot_diffs=diffs), OUT)
+        assert ws["pairs"][0]["screenshots"]["same_capture"] is False
+
 
 def test_labels_are_carried_through() -> None:
     ws = build_workspace(_comparison(), OUT, from_label="20260801-143846", to_label="20260801-143907")

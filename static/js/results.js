@@ -17,6 +17,7 @@ const TAB_DEFS = {
   runs:          { panel: 'rp-runs', render: 'renderTestRuns' },
   'doc-fusion':  { panel: 'rp-doc-fusion', render: 'renderDocFusion' },
   history:       { panel: 'rp-history', render: 'renderTimeline' },
+  compare:       { panel: 'rp-compare', render: 'renderCompare' },
 };
 
 // 旧8タブ時代のディープリンク互換（共有済みURLを壊さない）

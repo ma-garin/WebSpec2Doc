@@ -60,13 +60,19 @@ def _shots_by_page(diffs: list[Mapping[str, Any]], out_dir: Path) -> dict[str, d
         page_id = str(d.get("page_id") or "")
         if not page_id:
             continue
+        before_raw = str(d.get("before_path") or "")
+        after_raw = str(d.get("after_path") or "")
         index[page_id] = {
-            "before": _preview_path(str(d.get("before_path") or ""), out_dir),
-            "after": _preview_path(str(d.get("after_path") or ""), out_dir),
+            "before": _preview_path(before_raw, out_dir),
+            "after": _preview_path(after_raw, out_dir),
             "diff": _preview_path(str(d.get("diff_image_path") or ""), out_dir),
             "diff_ratio": float(d.get("diff_ratio") or 0.0),
             "is_significant": bool(d.get("is_significant")),
             "structural_similarity": float(d.get("structural_similarity") or 1.0),
+            # 世代別スクリーンショットを保存する前に取ったスナップショットは、
+            # 両世代が同じ最新画像を指す。並べても同じ絵になるので、
+            # 「変化が無い」ではなく「比較できない」と分かる形で伝える。
+            "same_capture": bool(before_raw) and before_raw == after_raw,
         }
     return index
 
@@ -89,28 +95,36 @@ def build_workspace(
     *,
     from_label: str = "",
     to_label: str = "",
+    page_info: Mapping[str, Mapping[str, str]] | None = None,
 ) -> dict[str, Any]:
     """comparison_result_to_dict() の結果を、画面が描ける形に組み直す。
 
     ペアごとに「指摘・画像・最も重い分類」をまとめる。画面側で毎回
     findings を走査させると、フィルタや選択のたびに同じ集計を繰り返すことになる。
+
+    page_info は page_id → {"title", "url"}。ScreenPair は page_id しか持たないため、
+    一覧に出す名前は呼び出し側から渡す（P001 だけ並ぶと、どの画面か分からない）。
     """
     findings = list(comparison.get("findings") or [])
     grouped = _findings_by_pair(findings)
     shots = _shots_by_page(list(comparison.get("screenshot_diffs") or []), out_dir)
+    info = page_info or {}
 
     pairs: list[dict[str, Any]] = []
     for pair in comparison.get("pairs") or []:
         old_id = str(pair.get("old_page_id") or "")
+        new_id = str(pair.get("new_page_id") or "")
         items = grouped.get(old_id, [])
         top = items[0] if items else None
+        # 名前は新側を優先する。比較の関心は「今どうなっているか」にあるため。
+        meta = info.get(new_id) or info.get(old_id) or {}
         pairs.append(
             {
                 "state": PAIR_STATE_MATCHED,
                 "old_page_id": old_id,
-                "new_page_id": str(pair.get("new_page_id") or ""),
-                "url": str(pair.get("url") or pair.get("old_url") or ""),
-                "title": str(pair.get("title") or old_id),
+                "new_page_id": new_id,
+                "url": str(meta.get("url") or ""),
+                "title": str(meta.get("title") or old_id),
                 "finding_count": len(items),
                 "top_category": str(top.get("category")) if top else "",
                 "top_severity": str(top.get("severity")) if top else "",
@@ -121,10 +135,14 @@ def build_workspace(
 
     # 追加・削除は比較そのものができない。指摘 0 件と同じ見た目にしない。
     for page_id in comparison.get("added_page_ids") or []:
-        pairs.append(_unmatched(PAIR_STATE_ADDED, str(page_id), "新側にのみ存在し、比較対象がありません"))
+        pairs.append(
+            _unmatched(PAIR_STATE_ADDED, str(page_id), "新側にのみ存在し、比較対象がありません", info)
+        )
     for page_id in comparison.get("removed_page_ids") or []:
         pairs.append(
-            _unmatched(PAIR_STATE_REMOVED, str(page_id), "現行側にのみ存在し、比較対象がありません")
+            _unmatched(
+                PAIR_STATE_REMOVED, str(page_id), "現行側にのみ存在し、比較対象がありません", info
+            )
         )
 
     return {
@@ -136,13 +154,16 @@ def build_workspace(
     }
 
 
-def _unmatched(state: str, page_id: str, reason: str) -> dict[str, Any]:
+def _unmatched(
+    state: str, page_id: str, reason: str, info: Mapping[str, Mapping[str, str]] | None = None
+) -> dict[str, Any]:
+    meta = (info or {}).get(page_id) or {}
     return {
         "state": state,
         "old_page_id": page_id if state == PAIR_STATE_REMOVED else "",
         "new_page_id": page_id if state == PAIR_STATE_ADDED else "",
-        "url": "",
-        "title": page_id,
+        "url": str(meta.get("url") or ""),
+        "title": str(meta.get("title") or page_id),
         "finding_count": 0,
         "top_category": "",
         "top_severity": "",

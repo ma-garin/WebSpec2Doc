@@ -44,9 +44,13 @@
                 </div>
                 <div class="vp-set-footer">
                   <span id="vp-set-summary">読み込み中…</span>
+                  <!-- 操作対象を明示する。フッタは「選択中のセット」に効くが、
+                       名前が出ていないと、どれを消すのか確かめずに押せてしまう。 -->
+                  <span id="vp-set-target" class="vp-set-target"></span>
                   <div class="vp-set-footer-actions">
-                    <button type="button" id="vp-make-default" class="vp-link-button">既定にする</button>
+                    <button type="button" id="vp-make-default" class="btn-outline-sm vp-default-action">既定にする</button>
                     <button type="button" id="vp-edit-set" class="vp-link-button">設定</button>
+                    <span class="vp-footer-divider" aria-hidden="true"></span>
                     <button type="button" id="vp-delete-set" class="vp-link-button vp-danger-link">削除</button>
                   </div>
                 </div>

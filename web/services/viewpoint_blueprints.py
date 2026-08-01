@@ -37,6 +37,32 @@ EXTRA_SUFFIX = "_*.json"
 PRIORITY_WEIGHT = {"P0": 5, "P1": 4, "P2": 3, "P3": 2}
 DEFAULT_WEIGHT = 3
 
+# 観点定義の automation は自由文で、ストアが受け付ける3値とは粒度が違う。
+# 全件を semi_automated に潰すと「この製品では実行できない」観点まで
+# 半自動と表示され、実行できるかのように読める。文の意味で振り分ける。
+AUTOMATION_MARKERS = (
+    ("実行できない", "manual"),
+    ("手動確認が中心", "manual"),
+    ("自動検査できる", "automated"),
+    ("自動化候補", "semi_automated"),
+    ("半自動", "semi_automated"),
+    ("一部", "semi_automated"),
+)
+DEFAULT_AUTOMATION = "manual"
+
+
+def _automation_of(blueprint: dict[str, Any]) -> str:
+    """観点定義の自動化に関する記述を、ストアが扱う3値へ写す。
+
+    判別できないものは manual にする。実際には手作業が要るものを
+    「自動」と表示するほうが、逆より害が大きい。
+    """
+    text = str(blueprint.get("automation", ""))
+    for marker, value in AUTOMATION_MARKERS:
+        if marker in text:
+            return value
+    return DEFAULT_AUTOMATION
+
 
 class ViewpointGeneratorError(Exception):
     """観点生成に必要なカタログが読めない・領域が存在しない。"""
@@ -170,6 +196,7 @@ def _checks_of(
             f"「{blueprint['kind']}」を{level}で確認する。",
             f"操作: {_fill(blueprint['operation'], context)}",
             f"判定点: {_fill(blueprint['point'], context)}",
+            f"実施手段: {blueprint.get('automation', '')}",
         ]
     )
 
@@ -209,7 +236,7 @@ def generate(domain_key: str) -> dict[str, Any]:
                     "technique": str(blueprint["technique"]),
                     "test_level": level,
                     "risk_weight": PRIORITY_WEIGHT.get(str(blueprint["priority"]), DEFAULT_WEIGHT),
-                    "automation": "semi_automated",
+                    "automation": _automation_of(blueprint),
                     "standards": _standards_of(blueprint),
                     "tags": [
                         str(blueprint["series"]),

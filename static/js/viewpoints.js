@@ -124,6 +124,26 @@ function vpRenderSets() {
   const total = vpState.sets.reduce((sum, item) => sum + Number(item.item_count || 0), 0);
   const summary = document.getElementById('vp-set-summary');
   if (summary) summary.textContent = `${vpState.sets.length}セット / 観点 ${total}件`;
+  vpRenderSetFooter();
+}
+
+// フッタの操作は「選択中のセット」に効く。どれに効くのかを書かないと、
+// 対象を確かめずに削除を押せてしまう。既に既定のセットに対して
+// 「既定にする」を押せる状態も残さない。
+function vpRenderSetFooter() {
+  const target = document.getElementById('vp-set-target');
+  const makeDefault = document.getElementById('vp-make-default');
+  const current = vpState.currentSet;
+  if (target) {
+    target.textContent = current ? `操作対象: ${current.name}` : '';
+  }
+  if (!makeDefault) return;
+  const isDefault = !!current?.is_default;
+  makeDefault.disabled = !current || isDefault;
+  makeDefault.textContent = isDefault ? '既定のセット' : '既定にする';
+  makeDefault.title = isDefault
+    ? 'このセットが既定です。適用ルールに一致しないURLはこの観点でテストされます。'
+    : '適用ルールに一致しないURLを、このセットの観点でテストします。';
 }
 
 async function vpSelectSet(setId, { skipDirtyCheck = false } = {}) {

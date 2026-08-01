@@ -328,3 +328,53 @@ class TestQualityModelCoverage:
         by_theme = {b["theme"]: b for b in _blueprints()["blueprints"]}
         order = {"P0": 0, "P1": 1, "P2": 2, "P3": 3}
         assert order[by_theme["当たり前品質"]["priority"]] < order[by_theme["魅力的品質"]["priority"]]
+
+
+class TestAutomationReflectsDefinition:
+    """自動化区分が、観点定義の記述から決まること。
+
+    生成器は長らく全件を semi_automated に固定しており、定義側の記述は
+    一度も使われていなかった。そのため「この製品はクロールのみを行うため
+    実行できない」観点まで半自動と表示され、実行できるかのように読めた。
+    実際には手作業が要るものを自動と表示するほうが、逆より害が大きい。
+    """
+
+    def test_not_every_item_has_the_same_automation(self) -> None:
+        """全件が同じ値に潰れていないこと。
+
+        ここが1種類なら、定義側の記述が捨てられている。
+        """
+        values = {item["automation"] for item in generate("domain-13")["items"]}
+        assert len(values) > 1, f"自動化区分が1種類しかない: {values}"
+
+    def test_unexecutable_viewpoints_are_marked_manual(self) -> None:
+        """この製品で実行できない観点が、手動として扱われること。"""
+        for item in generate("domain-13")["items"]:
+            if "実行できない" in item["recommended_checks"]:
+                assert item["automation"] == "manual", item["name"]
+
+    def test_crawl_checkable_viewpoints_are_marked_automated(self) -> None:
+        """クロール結果から検査できる観点が、自動として扱われること。"""
+        found = False
+        for item in generate("domain-13")["items"]:
+            if "クロール結果から自動検査できる" in item["recommended_checks"]:
+                assert item["automation"] == "automated", item["name"]
+                found = True
+        assert found, "クロールで検査できる観点が1件も無い"
+
+    def test_execution_means_is_carried_into_the_item(self) -> None:
+        """実施手段の但し書きが観点に残ること。
+
+        ストアの3値では「なぜ手動なのか」が伝わらない。リポジトリ参照が
+        要るのか、単に人の判断が要るのかで、利用者の次の行動が変わる。
+        """
+        for meta in list_domains():
+            for item in generate(meta["key"])["items"]:
+                assert "実施手段: " in item["recommended_checks"], item["name"]
+
+    def test_unknown_automation_text_falls_back_to_manual(self) -> None:
+        """判別できない記述は手動として扱うこと。"""
+        from web.services.viewpoint_blueprints import _automation_of
+
+        assert _automation_of({"automation": "見たことのない書き方"}) == "manual"
+        assert _automation_of({}) == "manual"

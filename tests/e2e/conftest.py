@@ -126,11 +126,9 @@ def _server_uses_isolated_db(url: str, timeout: float = 0.5) -> bool:
     return isinstance(payload, dict) and payload.get("viewpoints_db") == E2E_DB_NAME
 
 
-def _free_port() -> int:
-    """OS に空きポートを1つ選ばせる。"""
-    with socket.socket() as sock:
-        sock.bind(("127.0.0.1", 0))
-        return int(sock.getsockname()[1])
+# 退避先ポートを押さえておくソケット。選んだ直後に手放すと、サーバーが
+# bind するまでの間に他プロセスへ奪われうる。起動直前まで握り続ける。
+_RESERVED_SOCKET: socket.socket | None = None
 
 
 def _use_fallback_port() -> None:
@@ -141,12 +139,21 @@ def _use_fallback_port() -> None:
 
     各テストは conftest の変数ではなく WEBSPEC2DOC_E2E_URL から独自に
     宛先を組み立てる。モジュール変数だけ書き換えても伝わらないため、
-    環境変数も同時に更新する。テストの収集はこの fixture より後に走るので、
-    ここで設定すれば間に合う。
+    環境変数も同時に更新する。収集はこの呼び出しより後に走るので間に合う。
     """
-    global BASE_URL
-    BASE_URL = f"http://127.0.0.1:{_free_port()}"
+    global BASE_URL, _RESERVED_SOCKET
+    _RESERVED_SOCKET = socket.socket()
+    _RESERVED_SOCKET.bind(("127.0.0.1", 0))
+    BASE_URL = f"http://127.0.0.1:{_RESERVED_SOCKET.getsockname()[1]}"
     os.environ["WEBSPEC2DOC_E2E_URL"] = BASE_URL
+
+
+def _release_reserved_port() -> None:
+    """押さえていたポートを手放す。サーバーを起動する直前に呼ぶ。"""
+    global _RESERVED_SOCKET
+    if _RESERVED_SOCKET is not None:
+        _RESERVED_SOCKET.close()
+        _RESERVED_SOCKET = None
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -181,7 +188,6 @@ def flask_server() -> Generator[None, None, None]:
     # そのポートを渡さないと既定 8765 で起動して疎通せず、全テストが
     # スキップ→「緑」になってしまう（E2E ゲートが形骸化する）。
     # BASE_URL のポートを起動側にも必ず渡す。
-    base_port = urlparse(BASE_URL).port or 8765
     # E2E は観点セットを作ったり消したりする。既定の instance/viewpoints.db を
     # そのまま使うと、開発中のデータに検証用のセットや観点が残る。実際に
     # 「E2E削除対象-*」が469件溜まり、分類ツリーが読めなくなったことがある。
@@ -189,13 +195,34 @@ def flask_server() -> Generator[None, None, None]:
     e2e_db = ROOT / "instance" / E2E_DB_NAME
     for leftover in e2e_db.parent.glob(f"{e2e_db.name}*"):
         leftover.unlink(missing_ok=True)
+
+    proc = _spawn_server(e2e_db)
+    try:
+        yield
+    finally:
+        proc.terminate()
+        proc.wait(timeout=10)
+
+
+def _spawn_server(e2e_db: Path) -> subprocess.Popen[bytes]:
+    """サーバーを起動し、疎通するまで待つ。
+
+    退避先のポートは、選んだ時点から起動直前まで握り続けている。
+    ここで手放してすぐ起動するため、他プロセスに奪われる隙をほぼ残さない。
+    奪われた場合は疎通せず、緑にはならない（失敗として扱う）。
+    """
+    # app.py は WEBSPEC2DOC_PORT を見て待ち受けポートを決める。
+    # BASE_URL（= WEBSPEC2DOC_E2E_URL）で別ポートを指定しても、起動側へ
+    # そのポートを渡さないと既定 8765 で起動して疎通せず、全テストが
+    # スキップ→「緑」になってしまう（E2E ゲートが形骸化する）。
     env = {
         **os.environ,
         "FLASK_TESTING": "1",
         "PYTHONPATH": str(ROOT),
-        "WEBSPEC2DOC_PORT": str(base_port),
+        "WEBSPEC2DOC_PORT": str(urlparse(BASE_URL).port or 8765),
         "VIEWPOINTS_DB": str(e2e_db),
     }
+    _release_reserved_port()
     proc = subprocess.Popen(
         [sys.executable, "app.py"],
         cwd=str(ROOT),
@@ -203,25 +230,18 @@ def flask_server() -> Generator[None, None, None]:
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
-
-    # 最大10秒待機
-    for _ in range(20):
+    for _ in range(20):  # 最大10秒
         if _server_is_up(BASE_URL):
-            break
+            return proc
         time.sleep(0.5)
-    else:
-        proc.terminate()
-        # ここを skip にすると「サーバーが起動しなかった＝未検証」を「緑」と
-        # 誤認させる。E2E を要求した以上、起動できないのは失敗として扱う。
-        pytest.fail(
-            f"Flask サーバーが {BASE_URL} で起動しませんでした。E2E は未実行です"
-            "（この状態を PASS 扱いにしない）。"
-        )
-
-    yield
-
     proc.terminate()
     proc.wait(timeout=10)
+    # ここを skip にすると「サーバーが起動しなかった＝未検証」を「緑」と
+    # 誤認させる。E2E を要求した以上、起動できないのは失敗として扱う。
+    pytest.fail(
+        f"Flask サーバーが {BASE_URL} で起動しませんでした。"
+        "E2E は未実行です（この状態を PASS 扱いにしない）。"
+    )
 
 
 @pytest.fixture(scope="session")

@@ -451,6 +451,10 @@ class ViewpointStoreOperations(ViewpointStoreBase):
             "purpose",
             "trigger_rule",
             "recommended_checks",
+            "expected_result",
+            "evidence",
+            "technique",
+            "test_level",
             "risk_weight",
             "automation",
             "standards",
@@ -795,6 +799,10 @@ class ViewpointStoreOperations(ViewpointStoreBase):
             "purpose": str(payload.get("purpose", "")).strip(),
             "trigger_rule": validate_rule(payload.get("trigger_rule")),
             "recommended_checks": str(payload.get("recommended_checks", "")).strip(),
+            "expected_result": str(payload.get("expected_result", "")).strip(),
+            "evidence": str(payload.get("evidence", "")).strip(),
+            "technique": str(payload.get("technique", "")).strip(),
+            "test_level": str(payload.get("test_level", "")).strip(),
             "risk_weight": risk,
             "automation": automation,
             "standards": str(payload.get("standards", "")).strip(),
@@ -811,9 +819,10 @@ class ViewpointStoreOperations(ViewpointStoreBase):
         item_id = uuid.uuid4().hex
         conn.execute(
             """INSERT INTO viewpoint_items
-               (id,version_id,persistent_key,name,category,purpose,trigger_rule,recommended_checks,risk_weight,
+               (id,version_id,persistent_key,name,category,purpose,trigger_rule,recommended_checks,
+                expected_result,evidence,technique,test_level,risk_weight,
                 automation,standards,tags,enabled,node_type,parent_key,sort_order,created_at,updated_at)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 item_id,
                 version_id,
@@ -823,6 +832,10 @@ class ViewpointStoreOperations(ViewpointStoreBase):
                 item["purpose"],
                 _canonical(item["trigger_rule"]),
                 item["recommended_checks"],
+                item["expected_result"],
+                item["evidence"],
+                item["technique"],
+                item["test_level"],
                 item["risk_weight"],
                 item["automation"],
                 item["standards"],

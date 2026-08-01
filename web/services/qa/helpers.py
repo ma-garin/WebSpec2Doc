@@ -242,6 +242,10 @@ def _legacy_viewpoint(item: dict[str, Any]) -> dict[str, Any]:
         "tags": item.get("tags", []),
         "purpose": str(item.get("purpose", "")),
         "recommended_checks": str(item.get("recommended_checks", "")),
+        "expected_result": str(item.get("expected_result", "")),
+        "evidence": str(item.get("evidence", "")),
+        "technique": str(item.get("technique", "")),
+        "test_level": str(item.get("test_level", "")),
     }
 
 

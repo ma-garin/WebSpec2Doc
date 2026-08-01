@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
+import shutil
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta, tzinfo
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -130,7 +134,10 @@ def collect_storage_usage(output_dir: Path, instance_dir: Path) -> StorageUsage:
             ):
                 continue
             site_files = _regular_files(site_dir)
-            snapshot_files = [path for path in site_files if path.parent == site_dir / "snapshots"]
+            # snapshots/ 配下は再帰で数える。世代別スクリーンショット（*-shots/）が
+            # サブディレクトリに入るため、直下だけを見ると容量を実際より小さく報告する。
+            snapshots_dir = site_dir / "snapshots"
+            snapshot_files = [path for path in site_files if snapshots_dir in path.parents]
             latest_mtime = max((path.stat().st_mtime for path in site_files), default=0.0)
             sites.append(
                 SiteStorageUsage(
@@ -208,7 +215,42 @@ def prune_snapshots(
             deleted_count += 1
             deleted_bytes += size
             deleted_paths.append(str(path.relative_to(output_dir)))
+            # JSON だけ消すと、対応する世代別スクリーンショット（*-shots/）が
+            # 参照されないまま残り続け、容量が単調増加する。
+            shots_bytes = _remove_snapshot_shots(path, snapshots_root)
+            if shots_bytes:
+                deleted_bytes += shots_bytes
+                deleted_paths.append(str(_shots_dir_of(path).relative_to(output_dir)))
     return PruneResult(deleted_count, deleted_bytes, tuple(deleted_paths))
+
+
+def _shots_dir_of(snapshot_path: Path) -> Path:
+    """スナップショット JSON に対応する世代別スクリーンショット置き場。
+
+    命名規則は src/diff/snapshot.py の SHOTS_DIR_SUFFIX と対応する。
+    どちらかを変えるときは両方直すこと。
+    """
+    return snapshot_path.with_name(f"{snapshot_path.stem}-shots")
+
+
+def _remove_snapshot_shots(snapshot_path: Path, snapshots_root: Path) -> int:
+    """世代別スクリーンショットを削除し、消したバイト数を返す。
+
+    snapshots/ の外・シンボリックリンクは触らない（保持設定の適用範囲を超えないため）。
+    """
+    shots_dir = _shots_dir_of(snapshot_path)
+    if shots_dir.is_symlink() or not shots_dir.is_dir():
+        return 0
+    if not _is_within(shots_dir, snapshots_root):
+        return 0
+    files = [p for p in shots_dir.rglob("*") if p.is_file() and not p.is_symlink()]
+    total = sum(p.stat().st_size for p in files)
+    try:
+        shutil.rmtree(shots_dir)
+    except OSError:
+        logger.warning("世代別スクリーンショットを削除できませんでした: %s", shots_dir)
+        return 0
+    return total
 
 
 def _is_within(path: Path, root: Path) -> bool:

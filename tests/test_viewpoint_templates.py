@@ -115,3 +115,68 @@ def test_load_broken_template_raises(templates_dir: Path) -> None:
 
     with pytest.raises(TemplateNotFoundError):
         _load_template_file("broken")
+
+
+# ---------- 同梱テンプレートの妥当性（data/viewpoint_templates/*.json） ----------
+
+
+def _bundled_templates() -> list[tuple[str, dict]]:
+    """リポジトリに同梱している観点テンプレートを読み込む。"""
+    import json
+
+    root = Path(__file__).resolve().parent.parent / "data" / "viewpoint_templates"
+    return [(p.stem, json.loads(p.read_text(encoding="utf-8"))) for p in sorted(root.glob("*.json"))]
+
+
+class TestBundledTemplates:
+    """同梱テンプレートが投入可能な形であることを、投入前に静的に確かめる。
+
+    apply_template は create_item を通すため、必須項目が欠けていると
+    実行時に 400 で落ちる。実際に「category 欠落」で落ちたことがあるので、
+    ファイル側で止める。
+    """
+
+    def test_required_fields_present(self) -> None:
+        """name と category は create_item の必須項目。"""
+        for key, data in _bundled_templates():
+            for folder in data.get("folders", []):
+                for item in folder.get("items", []):
+                    assert item.get("name"), f"{key}: name が空"
+                    assert item.get("category"), f"{key}: {item.get('name')} の category が空"
+
+    def test_automation_values_are_valid(self) -> None:
+        """automation は許容値のみ（不正値は正規化で落ちる）。"""
+        from web.services.viewpoint_store import AUTOMATION_VALUES
+
+        for key, data in _bundled_templates():
+            for folder in data.get("folders", []):
+                for item in folder.get("items", []):
+                    value = item.get("automation", "manual")
+                    assert value in AUTOMATION_VALUES, f"{key}: {item['name']} の automation={value}"
+
+    def test_no_duplicate_names_within_template(self) -> None:
+        """同一テンプレート内で観点名が重複しないこと。
+
+        重複していると、利用者が同じ確認を二度行うことになる。
+        """
+        for key, data in _bundled_templates():
+            names = [i["name"] for f in data.get("folders", []) for i in f.get("items", [])]
+            duplicated = {n for n in names if names.count(n) > 1}
+            assert not duplicated, f"{key}: 観点名が重複 {duplicated}"
+
+    def test_common_web_covers_analyzable_surfaces(self) -> None:
+        """共通観点が、解析で得られる対象を一通り覆っていること。
+
+        画面・フォーム・遷移・API といった WebSpec2Doc が実際に抽出する
+        対象に対応していないと、観点があっても確認に使えない。
+        """
+        data = dict(_bundled_templates())["common_web"]
+        folders = {f["name"] for f in data["folders"]}
+        for required in ("画面表示", "入力フォーム", "画面遷移", "API・連携", "認証・認可"):
+            assert required in folders, f"共通観点に「{required}」が無い"
+
+    def test_common_web_has_enough_items(self) -> None:
+        """実務で使える規模（250件）を保つ。減った場合は意図を確認する。"""
+        data = dict(_bundled_templates())["common_web"]
+        total = sum(len(f["items"]) for f in data["folders"])
+        assert total >= 250, f"共通観点が {total} 件に減っている"

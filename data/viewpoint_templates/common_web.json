@@ -1,0 +1,3571 @@
+{
+  "name": "共通観点（Webアプリ横断）",
+  "description": "業種に依存しない Web アプリ共通の確認観点。WebSpec2Doc が解析できる対象（画面・フォーム・遷移・API・認証）に対応する。分類軸は ISO/IEC 25010・ISTQB・OWASP ASVS・WCAG 2.2 に準拠。",
+  "folders": [
+    {
+      "name": "画面表示",
+      "items": [
+        {
+          "name": "主要見出しの表示",
+          "purpose": "各画面の見出しが仕様どおり表示されることを確認する。",
+          "recommended_checks": "解析で抽出した見出し一覧と仕様書の画面定義を突き合わせる。",
+          "risk_weight": 3,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC 25010 機能適合性",
+          "tags": [
+            "表示",
+            "機能適合性",
+            "正常系"
+          ],
+          "category": "画面表示"
+        },
+        {
+          "name": "画面タイトルの妥当性",
+          "purpose": "ブラウザのタイトルが画面内容と一致することを確認する。",
+          "recommended_checks": "title 要素と画面の主見出しが対応しているか確認する。",
+          "risk_weight": 2,
+          "automation": "automated",
+          "standards": "ISO/IEC 25010 使用性",
+          "tags": [
+            "表示",
+            "使用性",
+            "正常系"
+          ],
+          "category": "画面表示"
+        },
+        {
+          "name": "必須要素の欠落検知",
+          "purpose": "ヘッダ・フッタ・ナビゲーションが全画面に存在することを確認する。",
+          "recommended_checks": "全画面の共通要素の有無を一覧化して欠落を洗い出す。",
+          "risk_weight": 3,
+          "automation": "automated",
+          "standards": "ISO/IEC 25010 一貫性",
+          "tags": [
+            "表示",
+            "使用性",
+            "異常系"
+          ],
+          "category": "画面表示"
+        },
+        {
+          "name": "文字化けの検知",
+          "purpose": "文字エンコーディングの不整合による文字化けがないことを確認する。",
+          "recommended_checks": "U+FFFD（置換文字）や意図しない記号の混入を全画面で走査する。",
+          "risk_weight": 4,
+          "automation": "automated",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "表示",
+            "機能正確性",
+            "異常系"
+          ],
+          "category": "画面表示"
+        },
+        {
+          "name": "空表示の検知",
+          "purpose": "データ0件時に空白ではなく説明が表示されることを確認する。",
+          "recommended_checks": "一覧・検索結果が0件のときの表示文言を確認する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 使用性",
+          "tags": [
+            "表示",
+            "使用性",
+            "準正常系"
+          ],
+          "category": "画面表示"
+        },
+        {
+          "name": "長文テキストの折り返し",
+          "purpose": "長い文字列がレイアウトを破壊しないことを確認する。",
+          "recommended_checks": "最大長の文字列を投入し、はみ出し・重なりを確認する。",
+          "risk_weight": 2,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 使用性",
+          "tags": [
+            "表示",
+            "使用性",
+            "準正常系"
+          ],
+          "category": "画面表示"
+        },
+        {
+          "name": "画像の代替テキスト",
+          "purpose": "画像に代替テキストが設定されていることを確認する。",
+          "recommended_checks": "img 要素の alt 属性の有無と内容の妥当性を確認する。",
+          "risk_weight": 3,
+          "automation": "automated",
+          "standards": "WCAG 2.2 1.1.1",
+          "tags": [
+            "表示",
+            "アクセシビリティ",
+            "異常系"
+          ],
+          "category": "画面表示"
+        },
+        {
+          "name": "見出し階層の妥当性",
+          "purpose": "見出しレベルが飛ばずに構成されていることを確認する。",
+          "recommended_checks": "h1→h2→h3 の順序が守られているかを確認する。",
+          "risk_weight": 2,
+          "automation": "automated",
+          "standards": "WCAG 2.2 1.3.1",
+          "tags": [
+            "表示",
+            "アクセシビリティ",
+            "準正常系"
+          ],
+          "category": "画面表示"
+        },
+        {
+          "name": "コントラスト比",
+          "purpose": "文字と背景のコントラストが基準を満たすことを確認する。",
+          "recommended_checks": "本文4.5:1、大文字3:1 を満たすか自動監査で確認する。",
+          "risk_weight": 3,
+          "automation": "automated",
+          "standards": "WCAG 2.2 1.4.3",
+          "tags": [
+            "表示",
+            "アクセシビリティ",
+            "異常系"
+          ],
+          "category": "画面表示"
+        },
+        {
+          "name": "表示崩れの検知",
+          "purpose": "解像度変更時にレイアウトが崩れないことを確認する。",
+          "recommended_checks": "1920x1080 と 1366x768 で表示を比較する。",
+          "risk_weight": 3,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC 25010 使用性",
+          "tags": [
+            "表示",
+            "互換性",
+            "異常系"
+          ],
+          "category": "画面表示"
+        },
+        {
+          "name": "フォントの可読性",
+          "purpose": "本文の文字サイズが読める大きさであることを確認する。",
+          "recommended_checks": "本文サイズが14px以上か、拡大で破綻しないかを確認する。",
+          "risk_weight": 2,
+          "automation": "manual",
+          "standards": "WCAG 2.2 1.4.4",
+          "tags": [
+            "表示",
+            "使用性",
+            "準正常系"
+          ],
+          "category": "画面表示"
+        },
+        {
+          "name": "読み込み中の表示",
+          "purpose": "処理中であることが利用者に伝わることを確認する。",
+          "recommended_checks": "時間のかかる操作でローディング表示が出るか確認する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 使用性",
+          "tags": [
+            "表示",
+            "使用性",
+            "準正常系"
+          ],
+          "category": "画面表示"
+        },
+        {
+          "name": "重複要素の検知",
+          "purpose": "同一idが複数存在しないことを確認する。",
+          "recommended_checks": "HTML内のid重複を走査する。",
+          "risk_weight": 2,
+          "automation": "automated",
+          "standards": "WCAG 2.2 4.1.1",
+          "tags": [
+            "表示",
+            "構造",
+            "異常系"
+          ],
+          "category": "画面表示"
+        },
+        {
+          "name": "言語属性の指定",
+          "purpose": "ページの言語が指定されていることを確認する。",
+          "recommended_checks": "html要素のlang属性を確認する。",
+          "risk_weight": 2,
+          "automation": "automated",
+          "standards": "WCAG 2.2 3.1.1",
+          "tags": [
+            "表示",
+            "アクセシビリティ",
+            "異常系"
+          ],
+          "category": "画面表示"
+        },
+        {
+          "name": "横スクロールの発生",
+          "purpose": "意図しない横スクロールが出ないことを確認する。",
+          "recommended_checks": "各解像度で body の横方向はみ出しを確認する。",
+          "risk_weight": 3,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC 25010 使用性",
+          "tags": [
+            "表示",
+            "使用性",
+            "異常系"
+          ],
+          "category": "画面表示"
+        },
+        {
+          "name": "固定ヘッダの重なり",
+          "purpose": "固定要素が本文を隠さないことを確認する。",
+          "recommended_checks": "スクロール時にヘッダが内容と重ならないか確認する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 使用性",
+          "tags": [
+            "表示",
+            "使用性",
+            "異常系"
+          ],
+          "category": "画面表示"
+        },
+        {
+          "name": "favicon の設定",
+          "purpose": "ブラウザタブのアイコンが設定されていることを確認する。",
+          "recommended_checks": "favicon の応答コードを確認する。",
+          "risk_weight": 1,
+          "automation": "automated",
+          "standards": "ISO/IEC 25010 使用性",
+          "tags": [
+            "表示",
+            "使用性",
+            "準正常系"
+          ],
+          "category": "画面表示"
+        },
+        {
+          "name": "印刷不要要素の除外",
+          "purpose": "印刷時にナビ等が省かれることを確認する。",
+          "recommended_checks": "印刷プレビューで不要要素の有無を確認する。",
+          "risk_weight": 1,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 使用性",
+          "tags": [
+            "表示",
+            "使用性",
+            "準正常系"
+          ],
+          "category": "画面表示"
+        },
+        {
+          "name": "タイトルの一意性",
+          "purpose": "画面ごとにタイトルが異なることを確認する。",
+          "recommended_checks": "全画面の title を収集し重複を洗い出す。",
+          "risk_weight": 2,
+          "automation": "automated",
+          "standards": "WCAG 2.2 2.4.2",
+          "tags": [
+            "表示",
+            "使用性",
+            "異常系"
+          ],
+          "category": "画面表示"
+        },
+        {
+          "name": "メタ情報の妥当性",
+          "purpose": "description 等のメタ情報が設定されていることを確認する。",
+          "recommended_checks": "meta description の有無と内容を確認する。",
+          "risk_weight": 1,
+          "automation": "automated",
+          "standards": "ISO/IEC 25010 使用性",
+          "tags": [
+            "表示",
+            "構造",
+            "準正常系"
+          ],
+          "category": "画面表示"
+        },
+        {
+          "name": "読み込み失敗時の代替",
+          "purpose": "画像・資産の読み込み失敗時に破綻しないことを確認する。",
+          "recommended_checks": "資産のURLを無効にして表示を確認する。",
+          "risk_weight": 2,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 信頼性",
+          "tags": [
+            "表示",
+            "堅牢性",
+            "異常系"
+          ],
+          "category": "画面表示"
+        },
+        {
+          "name": "動的領域の安定性",
+          "purpose": "再読込のたびに変わる領域を把握する。",
+          "recommended_checks": "同一画面を複数回取得し差分を確認する。",
+          "risk_weight": 2,
+          "automation": "automated",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "表示",
+            "差分",
+            "準正常系"
+          ],
+          "category": "画面表示"
+        }
+      ]
+    },
+    {
+      "name": "入力フォーム",
+      "items": [
+        {
+          "name": "必須項目の検証",
+          "purpose": "必須項目が未入力のとき送信できないことを確認する。",
+          "recommended_checks": "required 属性を持つ全項目で未入力送信を試す。",
+          "risk_weight": 4,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "フォーム",
+            "機能正確性",
+            "異常系"
+          ],
+          "category": "入力フォーム"
+        },
+        {
+          "name": "最大長の境界値",
+          "purpose": "入力可能な最大文字数の境界で正しく判定されることを確認する。",
+          "recommended_checks": "maxlength-1 / maxlength / maxlength+1 の3点で確認する。",
+          "risk_weight": 4,
+          "automation": "semi_automated",
+          "standards": "ISTQB 境界値分析",
+          "tags": [
+            "フォーム",
+            "境界値",
+            "準正常系"
+          ],
+          "category": "入力フォーム"
+        },
+        {
+          "name": "最小長の境界値",
+          "purpose": "最小文字数の境界で正しく判定されることを確認する。",
+          "recommended_checks": "minlength-1 / minlength / minlength+1 の3点で確認する。",
+          "risk_weight": 3,
+          "automation": "semi_automated",
+          "standards": "ISTQB 境界値分析",
+          "tags": [
+            "フォーム",
+            "境界値",
+            "準正常系"
+          ],
+          "category": "入力フォーム"
+        },
+        {
+          "name": "数値範囲の境界値",
+          "purpose": "min/max 属性の境界で正しく判定されることを確認する。",
+          "recommended_checks": "min-1 / min / max / max+1 の4点で確認する。",
+          "risk_weight": 4,
+          "automation": "semi_automated",
+          "standards": "ISTQB 境界値分析",
+          "tags": [
+            "フォーム",
+            "境界値",
+            "準正常系"
+          ],
+          "category": "入力フォーム"
+        },
+        {
+          "name": "同値分割による網羅",
+          "purpose": "有効クラス・無効クラスの代表値で検証されることを確認する。",
+          "recommended_checks": "各入力項目を有効・無効クラスに分け、代表値で試す。",
+          "risk_weight": 3,
+          "automation": "semi_automated",
+          "standards": "ISTQB 同値分割",
+          "tags": [
+            "フォーム",
+            "同値分割",
+            "正常系"
+          ],
+          "category": "入力フォーム"
+        },
+        {
+          "name": "メール形式の検証",
+          "purpose": "メールアドレス形式の妥当性が検証されることを確認する。",
+          "recommended_checks": "@ 欠落・ドメイン欠落・連続ドット等の不正形式を試す。",
+          "risk_weight": 4,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "フォーム",
+            "入力検証",
+            "異常系"
+          ],
+          "category": "入力フォーム"
+        },
+        {
+          "name": "電話番号形式の検証",
+          "purpose": "電話番号の形式が検証されることを確認する。",
+          "recommended_checks": "ハイフン有無・国番号・桁数不足の各パターンを試す。",
+          "risk_weight": 3,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "フォーム",
+            "入力検証",
+            "異常系"
+          ],
+          "category": "入力フォーム"
+        },
+        {
+          "name": "日付形式と論理妥当性",
+          "purpose": "日付の形式と論理的な妥当性が検証されることを確認する。",
+          "recommended_checks": "2月30日・過去日付・開始>終了 の各パターンを試す。",
+          "risk_weight": 4,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "フォーム",
+            "入力検証",
+            "異常系"
+          ],
+          "category": "入力フォーム"
+        },
+        {
+          "name": "半角・全角の扱い",
+          "purpose": "全角数字や半角カナの入力時の挙動を確認する。",
+          "recommended_checks": "数値項目に全角数字、カナ項目に半角カナを入力する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "フォーム",
+            "入力検証",
+            "準正常系"
+          ],
+          "category": "入力フォーム"
+        },
+        {
+          "name": "前後空白の扱い",
+          "purpose": "入力値の前後空白が適切に処理されることを確認する。",
+          "recommended_checks": "前後に空白を付けた値で登録し、保存値を確認する。",
+          "risk_weight": 2,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "フォーム",
+            "入力検証",
+            "準正常系"
+          ],
+          "category": "入力フォーム"
+        },
+        {
+          "name": "選択肢の網羅",
+          "purpose": "セレクト・ラジオの全選択肢が機能することを確認する。",
+          "recommended_checks": "抽出した選択肢すべてを選んで送信を試す。",
+          "risk_weight": 3,
+          "automation": "semi_automated",
+          "standards": "ISTQB 同値分割",
+          "tags": [
+            "フォーム",
+            "機能適合性",
+            "正常系"
+          ],
+          "category": "入力フォーム"
+        },
+        {
+          "name": "チェックボックスの組合せ",
+          "purpose": "複数チェックボックスの組合せが正しく処理されることを確認する。",
+          "recommended_checks": "全選択・全解除・一部選択の各パターンを試す。",
+          "risk_weight": 3,
+          "automation": "semi_automated",
+          "standards": "ISTQB ペアワイズ",
+          "tags": [
+            "フォーム",
+            "組合せ",
+            "正常系"
+          ],
+          "category": "入力フォーム"
+        },
+        {
+          "name": "項目間の相関検証",
+          "purpose": "項目間の依存関係が検証されることを確認する。",
+          "recommended_checks": "「その他」選択時の自由記述必須など、条件付き必須を試す。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "フォーム",
+            "入力検証",
+            "準正常系"
+          ],
+          "category": "入力フォーム"
+        },
+        {
+          "name": "エラーメッセージの妥当性",
+          "purpose": "エラー内容が利用者に理解できる形で示されることを確認する。",
+          "recommended_checks": "各バリデーションエラー時の文言が原因と対処を示すか確認する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 使用性",
+          "tags": [
+            "フォーム",
+            "使用性",
+            "異常系"
+          ],
+          "category": "入力フォーム"
+        },
+        {
+          "name": "エラー時の入力保持",
+          "purpose": "エラー後に入力値が保持されることを確認する。",
+          "recommended_checks": "複数項目入力後にエラーを起こし、値が残るか確認する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 使用性",
+          "tags": [
+            "フォーム",
+            "使用性",
+            "異常系"
+          ],
+          "category": "入力フォーム"
+        },
+        {
+          "name": "二重送信の防止",
+          "purpose": "送信ボタン連打で二重登録されないことを確認する。",
+          "recommended_checks": "送信ボタンを短時間に複数回押下する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "フォーム",
+            "信頼性",
+            "異常系"
+          ],
+          "category": "入力フォーム"
+        },
+        {
+          "name": "フォームのラベル関連付け",
+          "purpose": "入力項目とラベルが関連付けられていることを確認する。",
+          "recommended_checks": "label の for 属性と input の id の対応を確認する。",
+          "risk_weight": 3,
+          "automation": "automated",
+          "standards": "WCAG 2.2 3.3.2",
+          "tags": [
+            "フォーム",
+            "アクセシビリティ",
+            "異常系"
+          ],
+          "category": "入力フォーム"
+        },
+        {
+          "name": "オートコンプリート属性",
+          "purpose": "個人情報項目に適切な autocomplete が設定されることを確認する。",
+          "recommended_checks": "氏名・メール・電話等の autocomplete 属性を確認する。",
+          "risk_weight": 2,
+          "automation": "automated",
+          "standards": "WCAG 2.2 1.3.5",
+          "tags": [
+            "フォーム",
+            "アクセシビリティ",
+            "準正常系"
+          ],
+          "category": "入力フォーム"
+        },
+        {
+          "name": "ファイルアップロードの形式制限",
+          "purpose": "許可外の拡張子が拒否されることを確認する。",
+          "recommended_checks": "accept 属性外のファイル、拡張子偽装ファイルを試す。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "OWASP ASVS 12.1",
+          "tags": [
+            "フォーム",
+            "セキュリティ",
+            "異常系"
+          ],
+          "category": "入力フォーム"
+        },
+        {
+          "name": "ファイルサイズ上限",
+          "purpose": "上限を超えるファイルが拒否されることを確認する。",
+          "recommended_checks": "上限直下・上限・上限超過の3点で試す。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "OWASP ASVS 12.1",
+          "tags": [
+            "フォーム",
+            "境界値",
+            "異常系"
+          ],
+          "category": "入力フォーム"
+        },
+        {
+          "name": "入力補助の妥当性",
+          "purpose": "サジェスト・補完が誤誘導しないことを確認する。",
+          "recommended_checks": "候補表示と実際の登録値を突き合わせる。",
+          "risk_weight": 2,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 使用性",
+          "tags": [
+            "フォーム",
+            "使用性",
+            "準正常系"
+          ],
+          "category": "入力フォーム"
+        },
+        {
+          "name": "確認画面の内容一致",
+          "purpose": "確認画面が入力値と一致することを確認する。",
+          "recommended_checks": "入力値と確認画面の表示を突き合わせる。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "フォーム",
+            "機能正確性",
+            "異常系"
+          ],
+          "category": "入力フォーム"
+        },
+        {
+          "name": "修正時の値の復元",
+          "purpose": "確認画面から戻ったとき値が残ることを確認する。",
+          "recommended_checks": "確認画面で戻り、入力値を確認する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 使用性",
+          "tags": [
+            "フォーム",
+            "使用性",
+            "準正常系"
+          ],
+          "category": "入力フォーム"
+        },
+        {
+          "name": "コピー貼り付けの許容",
+          "purpose": "貼り付けが禁止されていないことを確認する。",
+          "recommended_checks": "各項目に値を貼り付ける。",
+          "risk_weight": 2,
+          "automation": "manual",
+          "standards": "WCAG 2.2 3.3.7",
+          "tags": [
+            "フォーム",
+            "使用性",
+            "準正常系"
+          ],
+          "category": "入力フォーム"
+        },
+        {
+          "name": "入力途中の離脱警告",
+          "purpose": "未保存のまま離脱する際に警告が出ることを確認する。",
+          "recommended_checks": "入力途中で画面を閉じる。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 使用性",
+          "tags": [
+            "フォーム",
+            "使用性",
+            "異常系"
+          ],
+          "category": "入力フォーム"
+        },
+        {
+          "name": "パスワードの表示切替",
+          "purpose": "パスワードの表示・非表示を切り替えられることを確認する。",
+          "recommended_checks": "表示切替ボタンの動作を確認する。",
+          "risk_weight": 2,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 使用性",
+          "tags": [
+            "フォーム",
+            "使用性",
+            "準正常系"
+          ],
+          "category": "入力フォーム"
+        },
+        {
+          "name": "数値項目の入力方式",
+          "purpose": "数値項目で数値キーボードが出ることを確認する。",
+          "recommended_checks": "inputmode / type 属性を確認する。",
+          "risk_weight": 2,
+          "automation": "automated",
+          "standards": "ISO/IEC 25010 使用性",
+          "tags": [
+            "フォーム",
+            "使用性",
+            "準正常系"
+          ],
+          "category": "入力フォーム"
+        },
+        {
+          "name": "フォーム送信先の妥当性",
+          "purpose": "送信先が意図したエンドポイントであることを確認する。",
+          "recommended_checks": "action 属性と実際の送信先を確認する。",
+          "risk_weight": 4,
+          "automation": "semi_automated",
+          "standards": "OWASP ASVS 5.5",
+          "tags": [
+            "フォーム",
+            "セキュリティ",
+            "異常系"
+          ],
+          "category": "入力フォーム"
+        }
+      ]
+    },
+    {
+      "name": "画面遷移",
+      "items": [
+        {
+          "name": "正常フローの完走",
+          "purpose": "主要業務フローが最初から最後まで完了することを確認する。",
+          "recommended_checks": "解析した遷移図に沿って一連の操作を通す。",
+          "risk_weight": 5,
+          "automation": "semi_automated",
+          "standards": "ISTQB ユースケーステスト",
+          "tags": [
+            "遷移",
+            "機能適合性",
+            "正常系"
+          ],
+          "category": "画面遷移"
+        },
+        {
+          "name": "リンク切れの検知",
+          "purpose": "画面内リンクの遷移先が存在することを確認する。",
+          "recommended_checks": "抽出した全リンクの応答コードを確認する。",
+          "risk_weight": 4,
+          "automation": "automated",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "遷移",
+            "機能正確性",
+            "異常系"
+          ],
+          "category": "画面遷移"
+        },
+        {
+          "name": "戻る操作の整合性",
+          "purpose": "ブラウザの戻るで不整合が起きないことを確認する。",
+          "recommended_checks": "登録完了後に戻り、二重登録や不整合が生じないか確認する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 信頼性",
+          "tags": [
+            "遷移",
+            "信頼性",
+            "異常系"
+          ],
+          "category": "画面遷移"
+        },
+        {
+          "name": "直リンクの可否",
+          "purpose": "URL直接入力で意図した画面に到達できることを確認する。",
+          "recommended_checks": "各画面のURLを直接入力して表示を確認する。",
+          "risk_weight": 3,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC 25010 使用性",
+          "tags": [
+            "遷移",
+            "使用性",
+            "準正常系"
+          ],
+          "category": "画面遷移"
+        },
+        {
+          "name": "未ログイン時の遷移制御",
+          "purpose": "認証が必要な画面へ未認証でアクセスした際の挙動を確認する。",
+          "recommended_checks": "ログイン前に保護画面のURLへ直接アクセスする。",
+          "risk_weight": 5,
+          "automation": "semi_automated",
+          "standards": "OWASP ASVS 4.1",
+          "tags": [
+            "遷移",
+            "セキュリティ",
+            "異常系"
+          ],
+          "category": "画面遷移"
+        },
+        {
+          "name": "遷移先の権限確認",
+          "purpose": "権限のない画面へ遷移できないことを確認する。",
+          "recommended_checks": "低権限アカウントで管理画面のURLへアクセスする。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "OWASP ASVS 4.1",
+          "tags": [
+            "遷移",
+            "セキュリティ",
+            "異常系"
+          ],
+          "category": "画面遷移"
+        },
+        {
+          "name": "パンくずの整合性",
+          "purpose": "パンくず表示が実際の階層と一致することを確認する。",
+          "recommended_checks": "各画面のパンくずと遷移経路を突き合わせる。",
+          "risk_weight": 2,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 使用性",
+          "tags": [
+            "遷移",
+            "使用性",
+            "準正常系"
+          ],
+          "category": "画面遷移"
+        },
+        {
+          "name": "キャンセル時の状態",
+          "purpose": "キャンセル操作で変更が破棄されることを確認する。",
+          "recommended_checks": "入力途中でキャンセルし、データが保存されていないか確認する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "遷移",
+            "機能正確性",
+            "準正常系"
+          ],
+          "category": "画面遷移"
+        },
+        {
+          "name": "画面遷移の網羅",
+          "purpose": "遷移図に現れる全経路が到達可能であることを確認する。",
+          "recommended_checks": "抽出した遷移表の各エッジを1回以上通す。",
+          "risk_weight": 4,
+          "automation": "semi_automated",
+          "standards": "ISTQB 状態遷移テスト",
+          "tags": [
+            "遷移",
+            "網羅性",
+            "正常系"
+          ],
+          "category": "画面遷移"
+        },
+        {
+          "name": "到達不能画面の検知",
+          "purpose": "どこからも遷移できない画面がないことを確認する。",
+          "recommended_checks": "遷移図で入次数0のノードを洗い出す。",
+          "risk_weight": 3,
+          "automation": "automated",
+          "standards": "ISTQB 状態遷移テスト",
+          "tags": [
+            "遷移",
+            "網羅性",
+            "異常系"
+          ],
+          "category": "画面遷移"
+        },
+        {
+          "name": "多段階フローの中断",
+          "purpose": "途中離脱後に再開できることを確認する。",
+          "recommended_checks": "複数ステップの途中で離脱し、再訪時の状態を確認する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 使用性",
+          "tags": [
+            "遷移",
+            "使用性",
+            "準正常系"
+          ],
+          "category": "画面遷移"
+        },
+        {
+          "name": "完了画面の再訪",
+          "purpose": "完了画面を再読込しても二重処理されないことを確認する。",
+          "recommended_checks": "完了画面でリロードし、処理が再実行されないか確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 信頼性",
+          "tags": [
+            "遷移",
+            "信頼性",
+            "異常系"
+          ],
+          "category": "画面遷移"
+        },
+        {
+          "name": "外部リンクの明示",
+          "purpose": "外部サイトへの遷移が分かることを確認する。",
+          "recommended_checks": "外部リンクの表示と target 属性を確認する。",
+          "risk_weight": 2,
+          "automation": "automated",
+          "standards": "ISO/IEC 25010 使用性",
+          "tags": [
+            "遷移",
+            "使用性",
+            "準正常系"
+          ],
+          "category": "画面遷移"
+        },
+        {
+          "name": "404画面の妥当性",
+          "purpose": "存在しないURLで適切な案内が出ることを確認する。",
+          "recommended_checks": "存在しないパスへアクセスし表示を確認する。",
+          "risk_weight": 3,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC 25010 使用性",
+          "tags": [
+            "遷移",
+            "使用性",
+            "異常系"
+          ],
+          "category": "画面遷移"
+        },
+        {
+          "name": "500画面の妥当性",
+          "purpose": "サーバエラー時に適切な案内が出ることを確認する。",
+          "recommended_checks": "エラーを発生させ、表示内容を確認する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 使用性",
+          "tags": [
+            "遷移",
+            "使用性",
+            "異常系"
+          ],
+          "category": "画面遷移"
+        },
+        {
+          "name": "リダイレクトの連鎖",
+          "purpose": "過剰なリダイレクトが発生しないことを確認する。",
+          "recommended_checks": "各URLのリダイレクト回数を計測する。",
+          "risk_weight": 3,
+          "automation": "automated",
+          "standards": "ISO/IEC 25010 性能効率性",
+          "tags": [
+            "遷移",
+            "性能",
+            "異常系"
+          ],
+          "category": "画面遷移"
+        },
+        {
+          "name": "URL の正規化",
+          "purpose": "同一画面が複数URLで到達しないことを確認する。",
+          "recommended_checks": "末尾スラッシュ有無・大文字小文字で比較する。",
+          "risk_weight": 2,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC 25010 一貫性",
+          "tags": [
+            "遷移",
+            "構造",
+            "準正常系"
+          ],
+          "category": "画面遷移"
+        },
+        {
+          "name": "ディープリンクの復元",
+          "purpose": "URL共有で同じ状態を再現できることを確認する。",
+          "recommended_checks": "タブ・フィルタ状態を含むURLを別セッションで開く。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 使用性",
+          "tags": [
+            "遷移",
+            "使用性",
+            "正常系"
+          ],
+          "category": "画面遷移"
+        },
+        {
+          "name": "SPA遷移の履歴",
+          "purpose": "SPA内遷移でブラウザ履歴が正しく積まれることを確認する。",
+          "recommended_checks": "画面切替後に戻る操作で前画面へ戻るか確認する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 使用性",
+          "tags": [
+            "遷移",
+            "使用性",
+            "準正常系"
+          ],
+          "category": "画面遷移"
+        },
+        {
+          "name": "遷移中の二重操作",
+          "purpose": "遷移処理中の再操作で不整合が起きないことを確認する。",
+          "recommended_checks": "遷移中にリンクを連打する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 信頼性",
+          "tags": [
+            "遷移",
+            "信頼性",
+            "異常系"
+          ],
+          "category": "画面遷移"
+        }
+      ]
+    },
+    {
+      "name": "認証・認可",
+      "items": [
+        {
+          "name": "正しい資格情報でのログイン",
+          "purpose": "有効なID・パスワードでログインできることを確認する。",
+          "recommended_checks": "登録済みアカウントでログインし、想定画面へ遷移するか確認する。",
+          "risk_weight": 5,
+          "automation": "semi_automated",
+          "standards": "OWASP ASVS 2.1",
+          "tags": [
+            "認証",
+            "機能適合性",
+            "正常系"
+          ],
+          "category": "認証・認可"
+        },
+        {
+          "name": "誤った資格情報の拒否",
+          "purpose": "誤ったパスワードでログインできないことを確認する。",
+          "recommended_checks": "ID正・パスワード誤、ID誤・パスワード正の両方を試す。",
+          "risk_weight": 5,
+          "automation": "semi_automated",
+          "standards": "OWASP ASVS 2.1",
+          "tags": [
+            "認証",
+            "セキュリティ",
+            "異常系"
+          ],
+          "category": "認証・認可"
+        },
+        {
+          "name": "エラー文言の情報漏えい",
+          "purpose": "認証失敗時にIDの存在有無が推測できないことを確認する。",
+          "recommended_checks": "存在するIDと存在しないIDでエラー文言を比較する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "OWASP ASVS 2.2",
+          "tags": [
+            "認証",
+            "セキュリティ",
+            "異常系"
+          ],
+          "category": "認証・認可"
+        },
+        {
+          "name": "アカウントロック",
+          "purpose": "連続失敗時にロックされることを確認する。",
+          "recommended_checks": "規定回数まで連続で失敗させ、ロック動作を確認する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "OWASP ASVS 2.2",
+          "tags": [
+            "認証",
+            "セキュリティ",
+            "異常系"
+          ],
+          "category": "認証・認可"
+        },
+        {
+          "name": "パスワード強度の要求",
+          "purpose": "脆弱なパスワードが拒否されることを確認する。",
+          "recommended_checks": "短い・単純・辞書語のパスワードで登録を試す。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "OWASP ASVS 2.1",
+          "tags": [
+            "認証",
+            "セキュリティ",
+            "異常系"
+          ],
+          "category": "認証・認可"
+        },
+        {
+          "name": "ログアウトの完全性",
+          "purpose": "ログアウト後にセッションが無効化されることを確認する。",
+          "recommended_checks": "ログアウト後に戻る操作や保護URLへのアクセスを試す。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "OWASP ASVS 3.3",
+          "tags": [
+            "認証",
+            "セキュリティ",
+            "異常系"
+          ],
+          "category": "認証・認可"
+        },
+        {
+          "name": "セッションタイムアウト",
+          "purpose": "無操作時間経過でセッションが切れることを確認する。",
+          "recommended_checks": "規定時間放置後に操作を試みる。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "OWASP ASVS 3.3",
+          "tags": [
+            "認証",
+            "セキュリティ",
+            "異常系"
+          ],
+          "category": "認証・認可"
+        },
+        {
+          "name": "セッション固定攻撃の防止",
+          "purpose": "ログイン前後でセッションIDが変わることを確認する。",
+          "recommended_checks": "ログイン前後のセッションIDを比較する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "OWASP ASVS 3.2",
+          "tags": [
+            "認証",
+            "セキュリティ",
+            "異常系"
+          ],
+          "category": "認証・認可"
+        },
+        {
+          "name": "Cookie のセキュア属性",
+          "purpose": "セッションCookieに Secure/HttpOnly が付くことを確認する。",
+          "recommended_checks": "Set-Cookie ヘッダの属性を確認する。",
+          "risk_weight": 5,
+          "automation": "automated",
+          "standards": "OWASP ASVS 3.4",
+          "tags": [
+            "認証",
+            "セキュリティ",
+            "異常系"
+          ],
+          "category": "認証・認可"
+        },
+        {
+          "name": "多要素認証の動作",
+          "purpose": "MFAが設定されている場合に正しく機能することを確認する。",
+          "recommended_checks": "コード誤り・期限切れ・再送の各パターンを試す。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "OWASP ASVS 2.8",
+          "tags": [
+            "認証",
+            "セキュリティ",
+            "異常系"
+          ],
+          "category": "認証・認可"
+        },
+        {
+          "name": "パスワードリセット経路",
+          "purpose": "リセット手順が安全に機能することを確認する。",
+          "recommended_checks": "リンクの有効期限・再利用不可・他人のトークンでの試行を確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "OWASP ASVS 2.5",
+          "tags": [
+            "認証",
+            "セキュリティ",
+            "異常系"
+          ],
+          "category": "認証・認可"
+        },
+        {
+          "name": "権限別の表示制御",
+          "purpose": "権限に応じて機能の表示が変わることを確認する。",
+          "recommended_checks": "各ロールでログインし、表示される機能を比較する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "OWASP ASVS 4.1",
+          "tags": [
+            "認可",
+            "セキュリティ",
+            "正常系"
+          ],
+          "category": "認証・認可"
+        },
+        {
+          "name": "水平権限昇格の防止",
+          "purpose": "他人のデータにアクセスできないことを確認する。",
+          "recommended_checks": "URLのIDを他人のものに書き換えてアクセスする。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "OWASP ASVS 4.2",
+          "tags": [
+            "認可",
+            "セキュリティ",
+            "異常系"
+          ],
+          "category": "認証・認可"
+        },
+        {
+          "name": "垂直権限昇格の防止",
+          "purpose": "上位権限の機能を実行できないことを確認する。",
+          "recommended_checks": "一般利用者で管理機能のAPIを直接呼ぶ。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "OWASP ASVS 4.1",
+          "tags": [
+            "認可",
+            "セキュリティ",
+            "異常系"
+          ],
+          "category": "認証・認可"
+        },
+        {
+          "name": "ログイン壁の検知",
+          "purpose": "認証が必要な画面が正しく保護されていることを確認する。",
+          "recommended_checks": "解析でログイン壁を検知した画面の一覧を確認する。",
+          "risk_weight": 4,
+          "automation": "automated",
+          "standards": "OWASP ASVS 4.1",
+          "tags": [
+            "認可",
+            "セキュリティ",
+            "正常系"
+          ],
+          "category": "認証・認可"
+        },
+        {
+          "name": "同時ログインの制御",
+          "purpose": "複数端末での同時ログインが仕様どおりであることを確認する。",
+          "recommended_checks": "2端末で同一アカウントにログインする。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "OWASP ASVS 3.3",
+          "tags": [
+            "認証",
+            "セキュリティ",
+            "準正常系"
+          ],
+          "category": "認証・認可"
+        },
+        {
+          "name": "記憶するログインの安全性",
+          "purpose": "ログイン保持機能が安全に実装されることを確認する。",
+          "recommended_checks": "保持用トークンの有効期限と失効を確認する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "OWASP ASVS 3.4",
+          "tags": [
+            "認証",
+            "セキュリティ",
+            "異常系"
+          ],
+          "category": "認証・認可"
+        },
+        {
+          "name": "権限変更の即時反映",
+          "purpose": "権限変更が既存セッションに反映されることを確認する。",
+          "recommended_checks": "ログイン中に権限を変更し、操作可否を確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "OWASP ASVS 4.1",
+          "tags": [
+            "認可",
+            "セキュリティ",
+            "異常系"
+          ],
+          "category": "認証・認可"
+        }
+      ]
+    },
+    {
+      "name": "入力値セキュリティ",
+      "items": [
+        {
+          "name": "反射型XSSの防止",
+          "purpose": "入力値がそのまま出力されないことを確認する。",
+          "recommended_checks": "script タグ・イベント属性を含む値を各項目へ投入する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "OWASP ASVS 5.3",
+          "tags": [
+            "セキュリティ",
+            "XSS",
+            "異常系"
+          ],
+          "category": "入力値セキュリティ"
+        },
+        {
+          "name": "蓄積型XSSの防止",
+          "purpose": "保存された値が出力時に無害化されることを確認する。",
+          "recommended_checks": "スクリプトを含む値を登録し、一覧・詳細での表示を確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "OWASP ASVS 5.3",
+          "tags": [
+            "セキュリティ",
+            "XSS",
+            "異常系"
+          ],
+          "category": "入力値セキュリティ"
+        },
+        {
+          "name": "SQLインジェクションの防止",
+          "purpose": "入力値がSQLとして解釈されないことを確認する。",
+          "recommended_checks": "シングルクォート・OR 1=1・UNION を含む値を試す。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "OWASP ASVS 5.3",
+          "tags": [
+            "セキュリティ",
+            "インジェクション",
+            "異常系"
+          ],
+          "category": "入力値セキュリティ"
+        },
+        {
+          "name": "コマンドインジェクションの防止",
+          "purpose": "OSコマンドが実行されないことを確認する。",
+          "recommended_checks": "セミコロン・パイプ・バッククォートを含む値を試す。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "OWASP ASVS 5.3",
+          "tags": [
+            "セキュリティ",
+            "インジェクション",
+            "異常系"
+          ],
+          "category": "入力値セキュリティ"
+        },
+        {
+          "name": "パストラバーサルの防止",
+          "purpose": "ファイルパス指定で上位階層へ到達できないことを確認する。",
+          "recommended_checks": "../ を含むパスをファイル指定項目へ投入する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "OWASP ASVS 12.3",
+          "tags": [
+            "セキュリティ",
+            "インジェクション",
+            "異常系"
+          ],
+          "category": "入力値セキュリティ"
+        },
+        {
+          "name": "CSRF対策の有無",
+          "purpose": "状態変更操作にCSRF対策があることを確認する。",
+          "recommended_checks": "トークンなしでPOSTを送信して拒否されるか確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "OWASP ASVS 4.2",
+          "tags": [
+            "セキュリティ",
+            "CSRF",
+            "異常系"
+          ],
+          "category": "入力値セキュリティ"
+        },
+        {
+          "name": "オープンリダイレクトの防止",
+          "purpose": "任意の外部URLへ誘導できないことを確認する。",
+          "recommended_checks": "リダイレクト先パラメータに外部URLを指定する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "OWASP ASVS 5.5",
+          "tags": [
+            "セキュリティ",
+            "リダイレクト",
+            "異常系"
+          ],
+          "category": "入力値セキュリティ"
+        },
+        {
+          "name": "HTTPセキュリティヘッダ",
+          "purpose": "主要なセキュリティヘッダが設定されていることを確認する。",
+          "recommended_checks": "CSP・X-Frame-Options・HSTS の有無を確認する。",
+          "risk_weight": 4,
+          "automation": "automated",
+          "standards": "OWASP ASVS 14.4",
+          "tags": [
+            "セキュリティ",
+            "設定",
+            "異常系"
+          ],
+          "category": "入力値セキュリティ"
+        },
+        {
+          "name": "秘密情報の露出",
+          "purpose": "レスポンスやソースに秘密情報が含まれないことを確認する。",
+          "recommended_checks": "HTMLコメント・JS・APIレスポンスを走査する。",
+          "risk_weight": 5,
+          "automation": "semi_automated",
+          "standards": "OWASP ASVS 14.3",
+          "tags": [
+            "セキュリティ",
+            "情報漏えい",
+            "異常系"
+          ],
+          "category": "入力値セキュリティ"
+        },
+        {
+          "name": "エラー画面の情報漏えい",
+          "purpose": "例外時にスタックトレース等が露出しないことを確認する。",
+          "recommended_checks": "意図的にエラーを起こし、表示内容を確認する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "OWASP ASVS 7.4",
+          "tags": [
+            "セキュリティ",
+            "情報漏えい",
+            "異常系"
+          ],
+          "category": "入力値セキュリティ"
+        },
+        {
+          "name": "破壊的リクエストの遮断",
+          "purpose": "解析中に状態変更が起きないことを確認する。",
+          "recommended_checks": "POST/PUT/DELETE が遮断されたログを確認する。",
+          "risk_weight": 5,
+          "automation": "automated",
+          "standards": "ISO/IEC 25010 信頼性",
+          "tags": [
+            "セキュリティ",
+            "解析",
+            "異常系"
+          ],
+          "category": "入力値セキュリティ"
+        },
+        {
+          "name": "外部送信の抑止",
+          "purpose": "解析中に外部サービスへデータが送られないことを確認する。",
+          "recommended_checks": "計測ビーコン等の遮断状況を監査ログで確認する。",
+          "risk_weight": 4,
+          "automation": "automated",
+          "standards": "ISO/IEC 27001 A.8",
+          "tags": [
+            "セキュリティ",
+            "解析",
+            "異常系"
+          ],
+          "category": "入力値セキュリティ"
+        },
+        {
+          "name": "HTTPヘッダインジェクション",
+          "purpose": "ヘッダに改行が注入されないことを確認する。",
+          "recommended_checks": "改行コードを含む値をヘッダ生成箇所へ渡す。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "OWASP ASVS 5.3",
+          "tags": [
+            "セキュリティ",
+            "インジェクション",
+            "異常系"
+          ],
+          "category": "入力値セキュリティ"
+        },
+        {
+          "name": "XML外部実体参照の防止",
+          "purpose": "XXE が発生しないことを確認する。",
+          "recommended_checks": "外部実体を含むXMLを送信する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "OWASP ASVS 5.5",
+          "tags": [
+            "セキュリティ",
+            "インジェクション",
+            "異常系"
+          ],
+          "category": "入力値セキュリティ"
+        },
+        {
+          "name": "安全でないデシリアライズ",
+          "purpose": "信頼できないデータの復元が行われないことを確認する。",
+          "recommended_checks": "改ざんしたシリアライズデータを送信する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "OWASP ASVS 5.5",
+          "tags": [
+            "セキュリティ",
+            "インジェクション",
+            "異常系"
+          ],
+          "category": "入力値セキュリティ"
+        },
+        {
+          "name": "クリックジャッキング対策",
+          "purpose": "iframe への埋め込みが制限されることを確認する。",
+          "recommended_checks": "X-Frame-Options / frame-ancestors を確認する。",
+          "risk_weight": 4,
+          "automation": "automated",
+          "standards": "OWASP ASVS 14.4",
+          "tags": [
+            "セキュリティ",
+            "設定",
+            "異常系"
+          ],
+          "category": "入力値セキュリティ"
+        },
+        {
+          "name": "HTTPS の強制",
+          "purpose": "平文通信へフォールバックしないことを確認する。",
+          "recommended_checks": "HTTP でアクセスし、HTTPS へ誘導されるか確認する。",
+          "risk_weight": 5,
+          "automation": "automated",
+          "standards": "OWASP ASVS 9.1",
+          "tags": [
+            "セキュリティ",
+            "通信",
+            "異常系"
+          ],
+          "category": "入力値セキュリティ"
+        }
+      ]
+    },
+    {
+      "name": "API・連携",
+      "items": [
+        {
+          "name": "正常応答の確認",
+          "purpose": "APIが仕様どおりの形式で応答することを確認する。",
+          "recommended_checks": "抽出したAPI一覧の応答コードとスキーマを確認する。",
+          "risk_weight": 4,
+          "automation": "automated",
+          "standards": "ISO/IEC 25010 機能適合性",
+          "tags": [
+            "API",
+            "機能適合性",
+            "正常系"
+          ],
+          "category": "API・連携"
+        },
+        {
+          "name": "必須パラメータの欠落",
+          "purpose": "必須パラメータなしで適切に拒否されることを確認する。",
+          "recommended_checks": "各必須パラメータを1つずつ欠落させて呼ぶ。",
+          "risk_weight": 4,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "API",
+            "入力検証",
+            "異常系"
+          ],
+          "category": "API・連携"
+        },
+        {
+          "name": "型不一致の扱い",
+          "purpose": "想定と異なる型の値で適切に拒否されることを確認する。",
+          "recommended_checks": "数値項目に文字列、真偽値に数値を渡す。",
+          "risk_weight": 3,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "API",
+            "入力検証",
+            "異常系"
+          ],
+          "category": "API・連携"
+        },
+        {
+          "name": "タイムアウト時の挙動",
+          "purpose": "外部連携のタイムアウト時に安全に復帰することを確認する。",
+          "recommended_checks": "応答遅延を発生させ、画面側の表示を確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 信頼性",
+          "tags": [
+            "API",
+            "信頼性",
+            "異常系"
+          ],
+          "category": "API・連携"
+        },
+        {
+          "name": "外部サービス障害時の縮退",
+          "purpose": "連携先が落ちたときの縮退動作を確認する。",
+          "recommended_checks": "連携先を停止させ、利用者への通知を確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 信頼性",
+          "tags": [
+            "API",
+            "信頼性",
+            "異常系"
+          ],
+          "category": "API・連携"
+        },
+        {
+          "name": "リトライの妥当性",
+          "purpose": "再試行が過剰でないことを確認する。",
+          "recommended_checks": "失敗時のリトライ回数と間隔をログで確認する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 信頼性",
+          "tags": [
+            "API",
+            "信頼性",
+            "準正常系"
+          ],
+          "category": "API・連携"
+        },
+        {
+          "name": "エラー応答の一貫性",
+          "purpose": "エラー時の応答形式が統一されていることを確認する。",
+          "recommended_checks": "各エラーケースの応答構造を比較する。",
+          "risk_weight": 3,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC 25010 一貫性",
+          "tags": [
+            "API",
+            "機能適合性",
+            "異常系"
+          ],
+          "category": "API・連携"
+        },
+        {
+          "name": "レート制限の動作",
+          "purpose": "過剰なリクエストが制限されることを確認する。",
+          "recommended_checks": "短時間に大量のリクエストを送る。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "OWASP ASVS 11.1",
+          "tags": [
+            "API",
+            "セキュリティ",
+            "異常系"
+          ],
+          "category": "API・連携"
+        },
+        {
+          "name": "認証なし呼び出しの拒否",
+          "purpose": "認証が必要なAPIが保護されていることを確認する。",
+          "recommended_checks": "トークンなしで各APIを呼ぶ。",
+          "risk_weight": 5,
+          "automation": "semi_automated",
+          "standards": "OWASP ASVS 4.1",
+          "tags": [
+            "API",
+            "セキュリティ",
+            "異常系"
+          ],
+          "category": "API・連携"
+        },
+        {
+          "name": "APIバージョンの互換性",
+          "purpose": "バージョン変更時に既存クライアントが動くことを確認する。",
+          "recommended_checks": "旧バージョンのリクエスト形式で呼ぶ。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 互換性",
+          "tags": [
+            "API",
+            "互換性",
+            "準正常系"
+          ],
+          "category": "API・連携"
+        },
+        {
+          "name": "レスポンス時間の計測",
+          "purpose": "APIの応答時間が許容範囲内であることを確認する。",
+          "recommended_checks": "抽出したAPIごとに応答時間を計測する。",
+          "risk_weight": 3,
+          "automation": "automated",
+          "standards": "ISO/IEC 25010 時間効率性",
+          "tags": [
+            "API",
+            "性能",
+            "正常系"
+          ],
+          "category": "API・連携"
+        },
+        {
+          "name": "文字コードの指定",
+          "purpose": "Content-Type に文字コードが指定されることを確認する。",
+          "recommended_checks": "レスポンスヘッダを確認する。",
+          "risk_weight": 2,
+          "automation": "automated",
+          "standards": "ISO/IEC 25010 相互運用性",
+          "tags": [
+            "API",
+            "互換性",
+            "準正常系"
+          ],
+          "category": "API・連携"
+        },
+        {
+          "name": "CORS設定の妥当性",
+          "purpose": "許可オリジンが必要最小限であることを確認する。",
+          "recommended_checks": "Access-Control-Allow-Origin の値を確認する。",
+          "risk_weight": 4,
+          "automation": "automated",
+          "standards": "OWASP ASVS 14.5",
+          "tags": [
+            "API",
+            "セキュリティ",
+            "異常系"
+          ],
+          "category": "API・連携"
+        },
+        {
+          "name": "HTTPメソッドの制限",
+          "purpose": "許可外メソッドが拒否されることを確認する。",
+          "recommended_checks": "各エンドポイントに OPTIONS/TRACE/PUT を送る。",
+          "risk_weight": 4,
+          "automation": "semi_automated",
+          "standards": "OWASP ASVS 14.4",
+          "tags": [
+            "API",
+            "セキュリティ",
+            "異常系"
+          ],
+          "category": "API・連携"
+        },
+        {
+          "name": "大きなペイロードの拒否",
+          "purpose": "過大なリクエストが拒否されることを確認する。",
+          "recommended_checks": "上限を超えるボディを送信する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "OWASP ASVS 11.1",
+          "tags": [
+            "API",
+            "境界値",
+            "異常系"
+          ],
+          "category": "API・連携"
+        },
+        {
+          "name": "同時実行時の整合性",
+          "purpose": "並行呼び出しで結果が壊れないことを確認する。",
+          "recommended_checks": "同一リソースへ同時にリクエストを送る。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 信頼性",
+          "tags": [
+            "API",
+            "並行性",
+            "異常系"
+          ],
+          "category": "API・連携"
+        },
+        {
+          "name": "べき等性の確認",
+          "purpose": "再送で重複処理されないことを確認する。",
+          "recommended_checks": "同じリクエストを2回送る。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 信頼性",
+          "tags": [
+            "API",
+            "信頼性",
+            "異常系"
+          ],
+          "category": "API・連携"
+        },
+        {
+          "name": "ページング仕様の一貫性",
+          "purpose": "一覧APIのページング形式が統一されていることを確認する。",
+          "recommended_checks": "各一覧APIのパラメータ名と応答構造を比較する。",
+          "risk_weight": 2,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 一貫性",
+          "tags": [
+            "API",
+            "機能適合性",
+            "準正常系"
+          ],
+          "category": "API・連携"
+        },
+        {
+          "name": "空配列とnullの区別",
+          "purpose": "データなしの表現が一貫していることを確認する。",
+          "recommended_checks": "0件時のレスポンスを各APIで比較する。",
+          "risk_weight": 2,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC 25010 一貫性",
+          "tags": [
+            "API",
+            "機能適合性",
+            "準正常系"
+          ],
+          "category": "API・連携"
+        },
+        {
+          "name": "外部依存の一覧化",
+          "purpose": "連携している外部サービスを把握する。",
+          "recommended_checks": "解析で抽出したAPI一覧から外部ドメインを洗い出す。",
+          "risk_weight": 3,
+          "automation": "automated",
+          "standards": "ISO/IEC 25010 保守性",
+          "tags": [
+            "API",
+            "保守性",
+            "正常系"
+          ],
+          "category": "API・連携"
+        }
+      ]
+    },
+    {
+      "name": "データ整合性",
+      "items": [
+        {
+          "name": "登録データの保存確認",
+          "purpose": "入力した値がそのまま保存されることを確認する。",
+          "recommended_checks": "登録後に一覧・詳細で値を突き合わせる。",
+          "risk_weight": 5,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "データ",
+            "機能正確性",
+            "正常系"
+          ],
+          "category": "データ整合性"
+        },
+        {
+          "name": "更新の反映",
+          "purpose": "更新操作が全表示箇所に反映されることを確認する。",
+          "recommended_checks": "更新後に一覧・詳細・関連画面を確認する。",
+          "risk_weight": 4,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "データ",
+            "機能正確性",
+            "正常系"
+          ],
+          "category": "データ整合性"
+        },
+        {
+          "name": "削除の波及",
+          "purpose": "削除時に関連データが適切に処理されることを確認する。",
+          "recommended_checks": "参照されているデータの削除を試す。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "データ",
+            "機能正確性",
+            "異常系"
+          ],
+          "category": "データ整合性"
+        },
+        {
+          "name": "排他制御",
+          "purpose": "同時更新時に後勝ちで消えないことを確認する。",
+          "recommended_checks": "2セッションで同一データを同時に更新する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 信頼性",
+          "tags": [
+            "データ",
+            "並行性",
+            "異常系"
+          ],
+          "category": "データ整合性"
+        },
+        {
+          "name": "トランザクション整合性",
+          "purpose": "処理途中で失敗した際に部分反映が残らないことを確認する。",
+          "recommended_checks": "処理中に中断させ、データ状態を確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 信頼性",
+          "tags": [
+            "データ",
+            "信頼性",
+            "異常系"
+          ],
+          "category": "データ整合性"
+        },
+        {
+          "name": "一意制約の検証",
+          "purpose": "重複登録が拒否されることを確認する。",
+          "recommended_checks": "同一キーで2回登録を試す。",
+          "risk_weight": 4,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "データ",
+            "機能正確性",
+            "異常系"
+          ],
+          "category": "データ整合性"
+        },
+        {
+          "name": "桁あふれの検知",
+          "purpose": "数値の桁あふれが起きないことを確認する。",
+          "recommended_checks": "最大桁数を超える値で計算・保存を試す。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "ISTQB 境界値分析",
+          "tags": [
+            "データ",
+            "境界値",
+            "異常系"
+          ],
+          "category": "データ整合性"
+        },
+        {
+          "name": "小数の丸め",
+          "purpose": "金額等の丸め処理が仕様どおりであることを確認する。",
+          "recommended_checks": "端数が出る値で計算し、丸め方向を確認する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "データ",
+            "機能正確性",
+            "準正常系"
+          ],
+          "category": "データ整合性"
+        },
+        {
+          "name": "日時のタイムゾーン",
+          "purpose": "日時の表示と保存でタイムゾーンがずれないことを確認する。",
+          "recommended_checks": "登録時刻と表示時刻を突き合わせる。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "データ",
+            "機能正確性",
+            "準正常系"
+          ],
+          "category": "データ整合性"
+        },
+        {
+          "name": "文字コードの一貫性",
+          "purpose": "絵文字・機種依存文字が正しく保存されることを確認する。",
+          "recommended_checks": "絵文字・㍿・①等を含む値を登録して表示を確認する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "データ",
+            "機能正確性",
+            "準正常系"
+          ],
+          "category": "データ整合性"
+        },
+        {
+          "name": "並び順の安定性",
+          "purpose": "一覧の並び順が一貫していることを確認する。",
+          "recommended_checks": "同条件で複数回取得し、順序が変わらないか確認する。",
+          "risk_weight": 2,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "データ",
+            "機能正確性",
+            "準正常系"
+          ],
+          "category": "データ整合性"
+        },
+        {
+          "name": "ページングの整合性",
+          "purpose": "ページ送りで重複・欠落が起きないことを確認する。",
+          "recommended_checks": "全ページを巡回し、件数と一意性を確認する。",
+          "risk_weight": 4,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "データ",
+            "機能正確性",
+            "異常系"
+          ],
+          "category": "データ整合性"
+        },
+        {
+          "name": "初期値の妥当性",
+          "purpose": "新規作成時の初期値が仕様どおりであることを確認する。",
+          "recommended_checks": "新規画面の各項目の初期値を確認する。",
+          "risk_weight": 2,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "データ",
+            "機能正確性",
+            "正常系"
+          ],
+          "category": "データ整合性"
+        },
+        {
+          "name": "NULL と空文字の区別",
+          "purpose": "未入力の保存形式が一貫していることを確認する。",
+          "recommended_checks": "任意項目を空で保存し、保存値を確認する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 一貫性",
+          "tags": [
+            "データ",
+            "機能正確性",
+            "準正常系"
+          ],
+          "category": "データ整合性"
+        },
+        {
+          "name": "論理削除の扱い",
+          "purpose": "削除済みデータが一覧に出ないことを確認する。",
+          "recommended_checks": "削除後に一覧・検索・APIで出現しないか確認する。",
+          "risk_weight": 4,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "データ",
+            "機能正確性",
+            "異常系"
+          ],
+          "category": "データ整合性"
+        },
+        {
+          "name": "集計値の一致",
+          "purpose": "合計・件数が明細と一致することを確認する。",
+          "recommended_checks": "集計表示と明細件数を突き合わせる。",
+          "risk_weight": 4,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "データ",
+            "機能正確性",
+            "異常系"
+          ],
+          "category": "データ整合性"
+        },
+        {
+          "name": "CSV出力の内容一致",
+          "purpose": "出力ファイルが画面表示と一致することを確認する。",
+          "recommended_checks": "CSV と画面の内容を突き合わせる。",
+          "risk_weight": 4,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "データ",
+            "機能正確性",
+            "異常系"
+          ],
+          "category": "データ整合性"
+        },
+        {
+          "name": "CSV取込のエラー処理",
+          "purpose": "不正な取込ファイルが適切に拒否されることを確認する。",
+          "recommended_checks": "列不足・型不正・文字化けファイルを取り込む。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "データ",
+            "入力検証",
+            "異常系"
+          ],
+          "category": "データ整合性"
+        },
+        {
+          "name": "インポートの部分失敗",
+          "purpose": "一部エラー時の扱いが仕様どおりであることを確認する。",
+          "recommended_checks": "一部行にエラーを含むファイルを取り込む。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 信頼性",
+          "tags": [
+            "データ",
+            "信頼性",
+            "異常系"
+          ],
+          "category": "データ整合性"
+        },
+        {
+          "name": "大量データの取込",
+          "purpose": "上限件数の取込が完了することを確認する。",
+          "recommended_checks": "想定最大件数のファイルを取り込む。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 容量満足性",
+          "tags": [
+            "データ",
+            "負荷",
+            "準正常系"
+          ],
+          "category": "データ整合性"
+        }
+      ]
+    },
+    {
+      "name": "検索・絞り込み",
+      "items": [
+        {
+          "name": "完全一致検索",
+          "purpose": "完全一致条件で正しく絞り込めることを確認する。",
+          "recommended_checks": "既知の値で検索し、期待件数と一致するか確認する。",
+          "risk_weight": 3,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "検索",
+            "機能正確性",
+            "正常系"
+          ],
+          "category": "検索・絞り込み"
+        },
+        {
+          "name": "部分一致検索",
+          "purpose": "部分一致が意図どおり動作することを確認する。",
+          "recommended_checks": "前方・中間・後方一致の各パターンを試す。",
+          "risk_weight": 3,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "検索",
+            "機能正確性",
+            "正常系"
+          ],
+          "category": "検索・絞り込み"
+        },
+        {
+          "name": "該当なしの表示",
+          "purpose": "結果0件のときの表示を確認する。",
+          "recommended_checks": "存在しない値で検索し、案内文言を確認する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 使用性",
+          "tags": [
+            "検索",
+            "使用性",
+            "準正常系"
+          ],
+          "category": "検索・絞り込み"
+        },
+        {
+          "name": "特殊文字での検索",
+          "purpose": "記号を含む検索語が正しく扱われることを確認する。",
+          "recommended_checks": "% _ ' \" を含む語で検索する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "OWASP ASVS 5.3",
+          "tags": [
+            "検索",
+            "セキュリティ",
+            "異常系"
+          ],
+          "category": "検索・絞り込み"
+        },
+        {
+          "name": "複合条件の絞り込み",
+          "purpose": "複数条件のAND/ORが正しく機能することを確認する。",
+          "recommended_checks": "条件を組み合わせて期待件数と照合する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "ISTQB デシジョンテーブル",
+          "tags": [
+            "検索",
+            "組合せ",
+            "正常系"
+          ],
+          "category": "検索・絞り込み"
+        },
+        {
+          "name": "条件のクリア",
+          "purpose": "絞り込み解除が機能することを確認する。",
+          "recommended_checks": "条件設定後にクリアし、全件表示に戻るか確認する。",
+          "risk_weight": 2,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 使用性",
+          "tags": [
+            "検索",
+            "使用性",
+            "準正常系"
+          ],
+          "category": "検索・絞り込み"
+        },
+        {
+          "name": "検索条件の保持",
+          "purpose": "再検索時に前回条件が保持されることを確認する。",
+          "recommended_checks": "検索後に詳細へ遷移し、戻ったときの条件を確認する。",
+          "risk_weight": 2,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 使用性",
+          "tags": [
+            "検索",
+            "使用性",
+            "準正常系"
+          ],
+          "category": "検索・絞り込み"
+        },
+        {
+          "name": "大量結果時の応答",
+          "purpose": "結果件数が多いときの応答時間を確認する。",
+          "recommended_checks": "広い条件で検索し、応答時間を計測する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 性能効率性",
+          "tags": [
+            "検索",
+            "性能",
+            "準正常系"
+          ],
+          "category": "検索・絞り込み"
+        },
+        {
+          "name": "大文字小文字の扱い",
+          "purpose": "検索の大文字小文字区別が仕様どおりであることを確認する。",
+          "recommended_checks": "同じ語を大文字・小文字で検索し件数を比較する。",
+          "risk_weight": 2,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "検索",
+            "機能正確性",
+            "準正常系"
+          ],
+          "category": "検索・絞り込み"
+        },
+        {
+          "name": "全角半角の扱い",
+          "purpose": "全角半角の違いが検索結果に影響しないことを確認する。",
+          "recommended_checks": "全角英数と半角英数で検索し比較する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "検索",
+            "機能正確性",
+            "準正常系"
+          ],
+          "category": "検索・絞り込み"
+        },
+        {
+          "name": "空白入りの検索語",
+          "purpose": "空白を含む語がAND検索になるか確認する。",
+          "recommended_checks": "2語を空白区切りで検索し結果を確認する。",
+          "risk_weight": 2,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "検索",
+            "機能正確性",
+            "準正常系"
+          ],
+          "category": "検索・絞り込み"
+        },
+        {
+          "name": "長大な検索語",
+          "purpose": "極端に長い検索語で異常が起きないことを確認する。",
+          "recommended_checks": "上限を超える長さの語で検索する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISTQB 境界値分析",
+          "tags": [
+            "検索",
+            "境界値",
+            "異常系"
+          ],
+          "category": "検索・絞り込み"
+        },
+        {
+          "name": "並び替えの動作",
+          "purpose": "各列での並び替えが機能することを確認する。",
+          "recommended_checks": "全ソート可能列で昇順・降順を試す。",
+          "risk_weight": 3,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "検索",
+            "機能正確性",
+            "正常系"
+          ],
+          "category": "検索・絞り込み"
+        },
+        {
+          "name": "並び替えとページングの併用",
+          "purpose": "並び替え後もページングが整合することを確認する。",
+          "recommended_checks": "ソート後に全ページを巡回し重複を確認する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "検索",
+            "機能正確性",
+            "異常系"
+          ],
+          "category": "検索・絞り込み"
+        },
+        {
+          "name": "絞り込み結果の件数表示",
+          "purpose": "表示件数と実際の件数が一致することを確認する。",
+          "recommended_checks": "表示された件数と実データ件数を突き合わせる。",
+          "risk_weight": 3,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "検索",
+            "機能正確性",
+            "異常系"
+          ],
+          "category": "検索・絞り込み"
+        },
+        {
+          "name": "検索履歴の扱い",
+          "purpose": "検索履歴に機微情報が残らないことを確認する。",
+          "recommended_checks": "履歴の保存先と保持期間を確認する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "OWASP ASVS 8.1",
+          "tags": [
+            "検索",
+            "セキュリティ",
+            "異常系"
+          ],
+          "category": "検索・絞り込み"
+        },
+        {
+          "name": "インクリメンタル検索の負荷",
+          "purpose": "入力中の検索が過剰なリクエストを出さないことを確認する。",
+          "recommended_checks": "文字入力中のリクエスト数を計測する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 資源効率性",
+          "tags": [
+            "検索",
+            "性能",
+            "準正常系"
+          ],
+          "category": "検索・絞り込み"
+        },
+        {
+          "name": "検索条件のURL反映",
+          "purpose": "検索条件がURLに反映され共有できることを確認する。",
+          "recommended_checks": "検索後のURLを別セッションで開く。",
+          "risk_weight": 2,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 使用性",
+          "tags": [
+            "検索",
+            "使用性",
+            "準正常系"
+          ],
+          "category": "検索・絞り込み"
+        }
+      ]
+    },
+    {
+      "name": "性能",
+      "items": [
+        {
+          "name": "初回表示の応答時間",
+          "purpose": "主要画面の初回表示が許容範囲内であることを確認する。",
+          "recommended_checks": "各画面の表示完了までの時間を計測する。",
+          "risk_weight": 3,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC 25010 時間効率性",
+          "tags": [
+            "性能",
+            "時間効率性",
+            "正常系"
+          ],
+          "category": "性能"
+        },
+        {
+          "name": "操作応答の体感",
+          "purpose": "操作から反応までの時間が許容範囲内であることを確認する。",
+          "recommended_checks": "主要操作の応答時間を計測する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 時間効率性",
+          "tags": [
+            "性能",
+            "時間効率性",
+            "正常系"
+          ],
+          "category": "性能"
+        },
+        {
+          "name": "同時アクセス時の劣化",
+          "purpose": "想定同時数で応答が劣化しないことを確認する。",
+          "recommended_checks": "想定同時接続数で負荷をかけ応答時間を計測する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 容量満足性",
+          "tags": [
+            "性能",
+            "負荷",
+            "準正常系"
+          ],
+          "category": "性能"
+        },
+        {
+          "name": "大量データ時の挙動",
+          "purpose": "データ量増加時の応答を確認する。",
+          "recommended_checks": "想定最大件数で一覧・検索を実行する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 容量満足性",
+          "tags": [
+            "性能",
+            "負荷",
+            "準正常系"
+          ],
+          "category": "性能"
+        },
+        {
+          "name": "リソースリークの検知",
+          "purpose": "長時間稼働でリソースが枯渇しないことを確認する。",
+          "recommended_checks": "連続操作を繰り返し、メモリ・接続数を監視する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 資源効率性",
+          "tags": [
+            "性能",
+            "資源効率性",
+            "異常系"
+          ],
+          "category": "性能"
+        },
+        {
+          "name": "静的資産の最適化",
+          "purpose": "画像・スクリプトのサイズが適正であることを確認する。",
+          "recommended_checks": "転送量の大きい資産を洗い出す。",
+          "risk_weight": 2,
+          "automation": "automated",
+          "standards": "ISO/IEC 25010 資源効率性",
+          "tags": [
+            "性能",
+            "資源効率性",
+            "準正常系"
+          ],
+          "category": "性能"
+        },
+        {
+          "name": "タイムアウト設定",
+          "purpose": "処理が無限に待たないことを確認する。",
+          "recommended_checks": "長時間処理を発生させ、タイムアウト動作を確認する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 信頼性",
+          "tags": [
+            "性能",
+            "信頼性",
+            "異常系"
+          ],
+          "category": "性能"
+        },
+        {
+          "name": "初回訪問時のキャッシュ",
+          "purpose": "初回と2回目以降の表示時間差を確認する。",
+          "recommended_checks": "キャッシュ無効・有効で表示時間を比較する。",
+          "risk_weight": 2,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC 25010 時間効率性",
+          "tags": [
+            "性能",
+            "時間効率性",
+            "準正常系"
+          ],
+          "category": "性能"
+        },
+        {
+          "name": "画像の遅延読み込み",
+          "purpose": "画面外画像が遅延読み込みされることを確認する。",
+          "recommended_checks": "loading属性の設定を確認する。",
+          "risk_weight": 2,
+          "automation": "automated",
+          "standards": "ISO/IEC 25010 資源効率性",
+          "tags": [
+            "性能",
+            "資源効率性",
+            "準正常系"
+          ],
+          "category": "性能"
+        },
+        {
+          "name": "N+1問題の検知",
+          "purpose": "一覧表示で過剰なリクエストが出ないことを確認する。",
+          "recommended_checks": "一覧表示時のリクエスト数を件数と比較する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 資源効率性",
+          "tags": [
+            "性能",
+            "資源効率性",
+            "異常系"
+          ],
+          "category": "性能"
+        },
+        {
+          "name": "バッチ処理の所要時間",
+          "purpose": "一括処理が想定時間内に終わることを確認する。",
+          "recommended_checks": "最大件数で一括処理を実行し計測する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 時間効率性",
+          "tags": [
+            "性能",
+            "時間効率性",
+            "準正常系"
+          ],
+          "category": "性能"
+        },
+        {
+          "name": "ファイルダウンロードの応答",
+          "purpose": "大きなファイルの生成・配信が完了することを確認する。",
+          "recommended_checks": "最大想定サイズでダウンロードを実行する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 時間効率性",
+          "tags": [
+            "性能",
+            "時間効率性",
+            "準正常系"
+          ],
+          "category": "性能"
+        },
+        {
+          "name": "同時セッション数",
+          "purpose": "想定同時ログイン数で動作することを確認する。",
+          "recommended_checks": "複数セッションを同時に維持する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 容量満足性",
+          "tags": [
+            "性能",
+            "負荷",
+            "準正常系"
+          ],
+          "category": "性能"
+        },
+        {
+          "name": "長時間セッションの安定性",
+          "purpose": "長時間の連続利用で劣化しないことを確認する。",
+          "recommended_checks": "一定時間の連続操作後に応答時間を再計測する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 信頼性",
+          "tags": [
+            "性能",
+            "信頼性",
+            "異常系"
+          ],
+          "category": "性能"
+        },
+        {
+          "name": "再解析時の増分",
+          "purpose": "再解析の所要時間が初回より短いことを確認する。",
+          "recommended_checks": "初回と再解析の所要時間を比較する。",
+          "risk_weight": 2,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC 25010 時間効率性",
+          "tags": [
+            "性能",
+            "時間効率性",
+            "正常系"
+          ],
+          "category": "性能"
+        }
+      ]
+    },
+    {
+      "name": "互換性",
+      "items": [
+        {
+          "name": "主要ブラウザでの動作",
+          "purpose": "対象ブラウザで機能が動作することを確認する。",
+          "recommended_checks": "サポート対象ブラウザで主要フローを通す。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 互換性",
+          "tags": [
+            "互換性",
+            "機能適合性",
+            "正常系"
+          ],
+          "category": "互換性"
+        },
+        {
+          "name": "解像度別の表示",
+          "purpose": "対象解像度で表示が崩れないことを確認する。",
+          "recommended_checks": "1920x1080 / 1366x768 で全画面を確認する。",
+          "risk_weight": 3,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC 25010 互換性",
+          "tags": [
+            "互換性",
+            "表示",
+            "準正常系"
+          ],
+          "category": "互換性"
+        },
+        {
+          "name": "ズーム時の表示",
+          "purpose": "ブラウザズーム時にレイアウトが保たれることを確認する。",
+          "recommended_checks": "200%まで拡大して操作可能か確認する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "WCAG 2.2 1.4.4",
+          "tags": [
+            "互換性",
+            "アクセシビリティ",
+            "準正常系"
+          ],
+          "category": "互換性"
+        },
+        {
+          "name": "JavaScript無効時",
+          "purpose": "スクリプト無効時の挙動を確認する。",
+          "recommended_checks": "JSを無効にして主要画面を開く。",
+          "risk_weight": 2,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 互換性",
+          "tags": [
+            "互換性",
+            "堅牢性",
+            "異常系"
+          ],
+          "category": "互換性"
+        },
+        {
+          "name": "Cookie無効時",
+          "purpose": "Cookie無効時の挙動を確認する。",
+          "recommended_checks": "Cookieをブロックしてログインを試す。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 互換性",
+          "tags": [
+            "互換性",
+            "堅牢性",
+            "異常系"
+          ],
+          "category": "互換性"
+        },
+        {
+          "name": "印刷時のレイアウト",
+          "purpose": "印刷プレビューで内容が欠けないことを確認する。",
+          "recommended_checks": "主要画面を印刷プレビューで確認する。",
+          "risk_weight": 2,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 使用性",
+          "tags": [
+            "互換性",
+            "使用性",
+            "準正常系"
+          ],
+          "category": "互換性"
+        },
+        {
+          "name": "旧バージョンブラウザ",
+          "purpose": "サポート下限バージョンで動作することを確認する。",
+          "recommended_checks": "サポート最古のブラウザで主要フローを通す。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 互換性",
+          "tags": [
+            "互換性",
+            "機能適合性",
+            "準正常系"
+          ],
+          "category": "互換性"
+        },
+        {
+          "name": "フォント未インストール時",
+          "purpose": "指定フォントが無い環境で表示が崩れないことを確認する。",
+          "recommended_checks": "フォールバックフォントで表示を確認する。",
+          "risk_weight": 2,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 互換性",
+          "tags": [
+            "互換性",
+            "表示",
+            "準正常系"
+          ],
+          "category": "互換性"
+        },
+        {
+          "name": "ダークモードの表示",
+          "purpose": "OSのダークモード設定で表示が破綻しないことを確認する。",
+          "recommended_checks": "prefers-color-scheme を切り替えて確認する。",
+          "risk_weight": 2,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 互換性",
+          "tags": [
+            "互換性",
+            "表示",
+            "準正常系"
+          ],
+          "category": "互換性"
+        },
+        {
+          "name": "拡張機能との共存",
+          "purpose": "広告ブロッカー等で機能が壊れないことを確認する。",
+          "recommended_checks": "主要な拡張機能を有効にして操作する。",
+          "risk_weight": 2,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 互換性",
+          "tags": [
+            "互換性",
+            "堅牢性",
+            "異常系"
+          ],
+          "category": "互換性"
+        },
+        {
+          "name": "低速回線での動作",
+          "purpose": "低速回線で操作が完了することを確認する。",
+          "recommended_checks": "回線速度を制限して主要フローを通す。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 互換性",
+          "tags": [
+            "互換性",
+            "性能",
+            "準正常系"
+          ],
+          "category": "互換性"
+        },
+        {
+          "name": "オフライン時の挙動",
+          "purpose": "通信断時に適切な案内が出ることを確認する。",
+          "recommended_checks": "通信を遮断して操作を試みる。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 信頼性",
+          "tags": [
+            "互換性",
+            "信頼性",
+            "異常系"
+          ],
+          "category": "互換性"
+        },
+        {
+          "name": "文字サイズ変更への追従",
+          "purpose": "OS/ブラウザの文字サイズ設定に追従することを確認する。",
+          "recommended_checks": "文字サイズを大きくして表示を確認する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "WCAG 2.2 1.4.4",
+          "tags": [
+            "互換性",
+            "アクセシビリティ",
+            "準正常系"
+          ],
+          "category": "互換性"
+        },
+        {
+          "name": "入力デバイスの多様性",
+          "purpose": "キーボード・マウス以外でも操作できることを確認する。",
+          "recommended_checks": "タッチ・ペン入力で主要操作を試す。",
+          "risk_weight": 2,
+          "automation": "manual",
+          "standards": "WCAG 2.2 2.5.1",
+          "tags": [
+            "互換性",
+            "操作性",
+            "準正常系"
+          ],
+          "category": "互換性"
+        }
+      ]
+    },
+    {
+      "name": "アクセシビリティ",
+      "items": [
+        {
+          "name": "キーボード操作の完結",
+          "purpose": "マウスなしで主要操作が完了することを確認する。",
+          "recommended_checks": "Tab と Enter だけで主要フローを通す。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "WCAG 2.2 2.1.1",
+          "tags": [
+            "アクセシビリティ",
+            "操作性",
+            "正常系"
+          ],
+          "category": "アクセシビリティ"
+        },
+        {
+          "name": "フォーカス表示",
+          "purpose": "現在のフォーカス位置が視認できることを確認する。",
+          "recommended_checks": "Tab 移動時のフォーカスリングを確認する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "WCAG 2.2 2.4.7",
+          "tags": [
+            "アクセシビリティ",
+            "操作性",
+            "異常系"
+          ],
+          "category": "アクセシビリティ"
+        },
+        {
+          "name": "フォーカス順序",
+          "purpose": "フォーカス移動順が視覚的順序と一致することを確認する。",
+          "recommended_checks": "Tab を順に押し、移動順を記録する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "WCAG 2.2 2.4.3",
+          "tags": [
+            "アクセシビリティ",
+            "操作性",
+            "準正常系"
+          ],
+          "category": "アクセシビリティ"
+        },
+        {
+          "name": "フォーカストラップの回避",
+          "purpose": "モーダル外へフォーカスが漏れないことを確認する。",
+          "recommended_checks": "モーダル表示中に Tab を回し続ける。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "WCAG 2.2 2.1.2",
+          "tags": [
+            "アクセシビリティ",
+            "操作性",
+            "異常系"
+          ],
+          "category": "アクセシビリティ"
+        },
+        {
+          "name": "スキップリンク",
+          "purpose": "本文へ直接移動する手段があることを確認する。",
+          "recommended_checks": "ページ先頭で Tab を押しスキップリンクを確認する。",
+          "risk_weight": 2,
+          "automation": "manual",
+          "standards": "WCAG 2.2 2.4.1",
+          "tags": [
+            "アクセシビリティ",
+            "操作性",
+            "準正常系"
+          ],
+          "category": "アクセシビリティ"
+        },
+        {
+          "name": "見出しによる構造化",
+          "purpose": "支援技術で構造が把握できることを確認する。",
+          "recommended_checks": "見出し一覧を抽出し階層を確認する。",
+          "risk_weight": 3,
+          "automation": "automated",
+          "standards": "WCAG 2.2 1.3.1",
+          "tags": [
+            "アクセシビリティ",
+            "構造",
+            "準正常系"
+          ],
+          "category": "アクセシビリティ"
+        },
+        {
+          "name": "フォームのエラー通知",
+          "purpose": "エラーが支援技術に伝わることを確認する。",
+          "recommended_checks": "aria-invalid と aria-describedby の設定を確認する。",
+          "risk_weight": 3,
+          "automation": "automated",
+          "standards": "WCAG 2.2 3.3.1",
+          "tags": [
+            "アクセシビリティ",
+            "フォーム",
+            "異常系"
+          ],
+          "category": "アクセシビリティ"
+        },
+        {
+          "name": "動的更新の通知",
+          "purpose": "非同期更新が支援技術に伝わることを確認する。",
+          "recommended_checks": "aria-live 領域の有無を確認する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "WCAG 2.2 4.1.3",
+          "tags": [
+            "アクセシビリティ",
+            "動的",
+            "異常系"
+          ],
+          "category": "アクセシビリティ"
+        },
+        {
+          "name": "色だけに依存しない表現",
+          "purpose": "色以外の手段でも情報が伝わることを確認する。",
+          "recommended_checks": "必須マーク・エラー表示が色以外でも判別できるか確認する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "WCAG 2.2 1.4.1",
+          "tags": [
+            "アクセシビリティ",
+            "表示",
+            "異常系"
+          ],
+          "category": "アクセシビリティ"
+        },
+        {
+          "name": "リンクテキストの明確さ",
+          "purpose": "リンク文言だけで遷移先が分かることを確認する。",
+          "recommended_checks": "「こちら」等の曖昧な文言を洗い出す。",
+          "risk_weight": 2,
+          "automation": "automated",
+          "standards": "WCAG 2.2 2.4.4",
+          "tags": [
+            "アクセシビリティ",
+            "使用性",
+            "準正常系"
+          ],
+          "category": "アクセシビリティ"
+        },
+        {
+          "name": "テーブルの見出し関連付け",
+          "purpose": "表のセルと見出しが関連付けられることを確認する。",
+          "recommended_checks": "th の scope 属性、headers 属性を確認する。",
+          "risk_weight": 3,
+          "automation": "automated",
+          "standards": "WCAG 2.2 1.3.1",
+          "tags": [
+            "アクセシビリティ",
+            "構造",
+            "異常系"
+          ],
+          "category": "アクセシビリティ"
+        },
+        {
+          "name": "ボタンとリンクの使い分け",
+          "purpose": "操作の性質に合った要素が使われることを確認する。",
+          "recommended_checks": "遷移はa、操作はbutton になっているか確認する。",
+          "risk_weight": 2,
+          "automation": "automated",
+          "standards": "WCAG 2.2 4.1.2",
+          "tags": [
+            "アクセシビリティ",
+            "構造",
+            "準正常系"
+          ],
+          "category": "アクセシビリティ"
+        },
+        {
+          "name": "アイコンのみボタンの名前",
+          "purpose": "アイコンだけのボタンに名前があることを確認する。",
+          "recommended_checks": "aria-label または視覚的に隠したテキストを確認する。",
+          "risk_weight": 3,
+          "automation": "automated",
+          "standards": "WCAG 2.2 4.1.2",
+          "tags": [
+            "アクセシビリティ",
+            "操作性",
+            "異常系"
+          ],
+          "category": "アクセシビリティ"
+        },
+        {
+          "name": "タイムアウト前の警告",
+          "purpose": "セッション切れ前に警告が出ることを確認する。",
+          "recommended_checks": "タイムアウト直前の挙動を確認する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "WCAG 2.2 2.2.1",
+          "tags": [
+            "アクセシビリティ",
+            "使用性",
+            "異常系"
+          ],
+          "category": "アクセシビリティ"
+        },
+        {
+          "name": "自動再生の制御",
+          "purpose": "動きのあるコンテンツを停止できることを確認する。",
+          "recommended_checks": "自動再生要素に停止手段があるか確認する。",
+          "risk_weight": 2,
+          "automation": "manual",
+          "standards": "WCAG 2.2 2.2.2",
+          "tags": [
+            "アクセシビリティ",
+            "操作性",
+            "異常系"
+          ],
+          "category": "アクセシビリティ"
+        },
+        {
+          "name": "点滅の制限",
+          "purpose": "発作を誘発する点滅がないことを確認する。",
+          "recommended_checks": "毎秒3回を超える点滅の有無を確認する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "WCAG 2.2 2.3.1",
+          "tags": [
+            "アクセシビリティ",
+            "安全性",
+            "異常系"
+          ],
+          "category": "アクセシビリティ"
+        },
+        {
+          "name": "タッチ領域の大きさ",
+          "purpose": "操作対象が十分な大きさであることを確認する。",
+          "recommended_checks": "ボタン・リンクのクリック領域を計測する。",
+          "risk_weight": 2,
+          "automation": "semi_automated",
+          "standards": "WCAG 2.2 2.5.8",
+          "tags": [
+            "アクセシビリティ",
+            "操作性",
+            "準正常系"
+          ],
+          "category": "アクセシビリティ"
+        },
+        {
+          "name": "入力目的の明示",
+          "purpose": "入力欄が何を求めているか明確であることを確認する。",
+          "recommended_checks": "プレースホルダだけに頼っていないか確認する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "WCAG 2.2 3.3.2",
+          "tags": [
+            "アクセシビリティ",
+            "フォーム",
+            "異常系"
+          ],
+          "category": "アクセシビリティ"
+        },
+        {
+          "name": "一貫したナビゲーション",
+          "purpose": "画面間でナビ配置が一貫することを確認する。",
+          "recommended_checks": "全画面のナビ位置と順序を比較する。",
+          "risk_weight": 2,
+          "automation": "manual",
+          "standards": "WCAG 2.2 3.2.3",
+          "tags": [
+            "アクセシビリティ",
+            "使用性",
+            "準正常系"
+          ],
+          "category": "アクセシビリティ"
+        },
+        {
+          "name": "予期しない文脈変化",
+          "purpose": "フォーカスや入力で勝手に遷移しないことを確認する。",
+          "recommended_checks": "選択・入力時に自動送信が起きないか確認する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "WCAG 2.2 3.2.2",
+          "tags": [
+            "アクセシビリティ",
+            "操作性",
+            "異常系"
+          ],
+          "category": "アクセシビリティ"
+        }
+      ]
+    },
+    {
+      "name": "運用・保守",
+      "items": [
+        {
+          "name": "エラーログの記録",
+          "purpose": "障害調査に必要な情報が記録されることを確認する。",
+          "recommended_checks": "異常を発生させ、ログの内容を確認する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 保守性",
+          "tags": [
+            "運用",
+            "可観測性",
+            "異常系"
+          ],
+          "category": "運用・保守"
+        },
+        {
+          "name": "ログの相関追跡",
+          "purpose": "1つの処理を通しで追跡できることを確認する。",
+          "recommended_checks": "リクエストIDやジョブIDでログを串刺しできるか確認する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 保守性",
+          "tags": [
+            "運用",
+            "可観測性",
+            "準正常系"
+          ],
+          "category": "運用・保守"
+        },
+        {
+          "name": "秘密情報のログ出力",
+          "purpose": "ログに認証情報が残らないことを確認する。",
+          "recommended_checks": "ログイン処理のログにパスワードが出ないか確認する。",
+          "risk_weight": 5,
+          "automation": "semi_automated",
+          "standards": "OWASP ASVS 7.1",
+          "tags": [
+            "運用",
+            "セキュリティ",
+            "異常系"
+          ],
+          "category": "運用・保守"
+        },
+        {
+          "name": "監視・通知の到達",
+          "purpose": "異常時に運用者へ通知が届くことを確認する。",
+          "recommended_checks": "障害を模擬し、通知の到達を確認する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 保守性",
+          "tags": [
+            "運用",
+            "可観測性",
+            "異常系"
+          ],
+          "category": "運用・保守"
+        },
+        {
+          "name": "バックアップからの復旧",
+          "purpose": "バックアップから復旧できることを確認する。",
+          "recommended_checks": "取得済みバックアップで復元を試す。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 回復性",
+          "tags": [
+            "運用",
+            "回復性",
+            "異常系"
+          ],
+          "category": "運用・保守"
+        },
+        {
+          "name": "計画停止時の案内",
+          "purpose": "メンテナンス時に利用者へ案内が出ることを確認する。",
+          "recommended_checks": "メンテナンスモードで画面表示を確認する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 使用性",
+          "tags": [
+            "運用",
+            "使用性",
+            "準正常系"
+          ],
+          "category": "運用・保守"
+        },
+        {
+          "name": "設定変更の反映",
+          "purpose": "設定変更が再起動なしで反映されることを確認する。",
+          "recommended_checks": "設定を変更し、動作へ反映されるか確認する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 保守性",
+          "tags": [
+            "運用",
+            "保守性",
+            "準正常系"
+          ],
+          "category": "運用・保守"
+        },
+        {
+          "name": "バージョン表示",
+          "purpose": "稼働中のバージョンが確認できることを確認する。",
+          "recommended_checks": "画面またはAPIでバージョン情報を取得する。",
+          "risk_weight": 2,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 保守性",
+          "tags": [
+            "運用",
+            "保守性",
+            "正常系"
+          ],
+          "category": "運用・保守"
+        },
+        {
+          "name": "ログレベルの妥当性",
+          "purpose": "重大度に応じたレベルで記録されることを確認する。",
+          "recommended_checks": "warning と error の使い分けを確認する。",
+          "risk_weight": 3,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC 25010 保守性",
+          "tags": [
+            "運用",
+            "可観測性",
+            "準正常系"
+          ],
+          "category": "運用・保守"
+        },
+        {
+          "name": "ログ量の妥当性",
+          "purpose": "ログが過剰・過少でないことを確認する。",
+          "recommended_checks": "1リクエストあたりのログ行数を確認する。",
+          "risk_weight": 2,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 資源効率性",
+          "tags": [
+            "運用",
+            "可観測性",
+            "準正常系"
+          ],
+          "category": "運用・保守"
+        },
+        {
+          "name": "監査ログの改ざん耐性",
+          "purpose": "監査ログが後から書き換えられないことを確認する。",
+          "recommended_checks": "保存先の権限と追記専用性を確認する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "OWASP ASVS 7.3",
+          "tags": [
+            "運用",
+            "セキュリティ",
+            "異常系"
+          ],
+          "category": "運用・保守"
+        },
+        {
+          "name": "保持期間の遵守",
+          "purpose": "ログ・データの保持期間が設定どおりであることを確認する。",
+          "recommended_checks": "保持設定と実際の削除動作を突き合わせる。",
+          "risk_weight": 3,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC 27001 A.8",
+          "tags": [
+            "運用",
+            "コンプライアンス",
+            "異常系"
+          ],
+          "category": "運用・保守"
+        },
+        {
+          "name": "ディスク使用量の増加",
+          "purpose": "運用でディスクが枯渇しないことを確認する。",
+          "recommended_checks": "一定期間の使用量増加を計測する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 資源効率性",
+          "tags": [
+            "運用",
+            "資源効率性",
+            "異常系"
+          ],
+          "category": "運用・保守"
+        },
+        {
+          "name": "依存ライブラリの脆弱性",
+          "purpose": "既知脆弱性を持つ依存がないことを確認する。",
+          "recommended_checks": "依存監査ツールで検査する。",
+          "risk_weight": 5,
+          "automation": "automated",
+          "standards": "OWASP ASVS 14.2",
+          "tags": [
+            "運用",
+            "セキュリティ",
+            "異常系"
+          ],
+          "category": "運用・保守"
+        },
+        {
+          "name": "障害時の切り戻し",
+          "purpose": "デプロイ後に前バージョンへ戻せることを確認する。",
+          "recommended_checks": "切り戻し手順を実行して復旧を確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 回復性",
+          "tags": [
+            "運用",
+            "回復性",
+            "異常系"
+          ],
+          "category": "運用・保守"
+        },
+        {
+          "name": "環境間の差異",
+          "purpose": "本番と検証環境で挙動が一致することを確認する。",
+          "recommended_checks": "同一操作を両環境で実施し結果を比較する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 互換性",
+          "tags": [
+            "運用",
+            "保守性",
+            "異常系"
+          ],
+          "category": "運用・保守"
+        },
+        {
+          "name": "定期実行の確実性",
+          "purpose": "スケジュール実行が漏れなく動くことを確認する。",
+          "recommended_checks": "実行履歴と予定を突き合わせる。",
+          "risk_weight": 4,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC 25010 信頼性",
+          "tags": [
+            "運用",
+            "信頼性",
+            "異常系"
+          ],
+          "category": "運用・保守"
+        },
+        {
+          "name": "通知先の妥当性",
+          "purpose": "通知が正しい宛先へ届くことを確認する。",
+          "recommended_checks": "設定した宛先と実際の到達先を確認する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 保守性",
+          "tags": [
+            "運用",
+            "可観測性",
+            "準正常系"
+          ],
+          "category": "運用・保守"
+        },
+        {
+          "name": "設定値の外部化",
+          "purpose": "秘密情報が設定ファイルに直書きされないことを確認する。",
+          "recommended_checks": "ソース内の認証情報の有無を走査する。",
+          "risk_weight": 5,
+          "automation": "automated",
+          "standards": "OWASP ASVS 14.1",
+          "tags": [
+            "運用",
+            "セキュリティ",
+            "異常系"
+          ],
+          "category": "運用・保守"
+        },
+        {
+          "name": "ヘルスチェックの提供",
+          "purpose": "稼働状態を外部から確認できることを確認する。",
+          "recommended_checks": "ヘルスチェック用エンドポイントの応答を確認する。",
+          "risk_weight": 3,
+          "automation": "automated",
+          "standards": "ISO/IEC 25010 保守性",
+          "tags": [
+            "運用",
+            "可観測性",
+            "正常系"
+          ],
+          "category": "運用・保守"
+        }
+      ]
+    },
+    {
+      "name": "仕様トレーサビリティ",
+      "items": [
+        {
+          "name": "要件の網羅",
+          "purpose": "要件定義の全項目がテスト対象に含まれることを確認する。",
+          "recommended_checks": "要件一覧とテスト条件を突き合わせる。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "ISO/IEC/IEEE 29119-3",
+          "tags": [
+            "トレーサビリティ",
+            "網羅性",
+            "正常系"
+          ],
+          "category": "仕様トレーサビリティ"
+        },
+        {
+          "name": "画面と仕様の一致",
+          "purpose": "解析結果と仕様書の画面定義が一致することを確認する。",
+          "recommended_checks": "抽出した画面一覧と仕様書を突き合わせる。",
+          "risk_weight": 4,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC/IEEE 29119-3",
+          "tags": [
+            "トレーサビリティ",
+            "機能適合性",
+            "正常系"
+          ],
+          "category": "仕様トレーサビリティ"
+        },
+        {
+          "name": "項目定義との一致",
+          "purpose": "入力項目の型・桁・必須が仕様と一致することを確認する。",
+          "recommended_checks": "抽出した項目定義書と仕様書を突き合わせる。",
+          "risk_weight": 4,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC/IEEE 29119-3",
+          "tags": [
+            "トレーサビリティ",
+            "機能適合性",
+            "異常系"
+          ],
+          "category": "仕様トレーサビリティ"
+        },
+        {
+          "name": "未実装機能の検知",
+          "purpose": "仕様にあって実装にない機能を洗い出す。",
+          "recommended_checks": "仕様の機能一覧と解析結果を差分比較する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "ISO/IEC/IEEE 29119-3",
+          "tags": [
+            "トレーサビリティ",
+            "網羅性",
+            "異常系"
+          ],
+          "category": "仕様トレーサビリティ"
+        },
+        {
+          "name": "仕様外機能の検知",
+          "purpose": "仕様にない機能が実装されていないか確認する。",
+          "recommended_checks": "解析結果のうち仕様に対応のない画面・項目を洗い出す。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISO/IEC/IEEE 29119-3",
+          "tags": [
+            "トレーサビリティ",
+            "網羅性",
+            "異常系"
+          ],
+          "category": "仕様トレーサビリティ"
+        },
+        {
+          "name": "変更の影響範囲",
+          "purpose": "仕様変更がテスト観点へ反映されることを確認する。",
+          "recommended_checks": "変更履歴と観点の更新履歴を突き合わせる。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "PMBOK 変更管理",
+          "tags": [
+            "トレーサビリティ",
+            "変更管理",
+            "準正常系"
+          ],
+          "category": "仕様トレーサビリティ"
+        },
+        {
+          "name": "前回からの差分",
+          "purpose": "前回解析からの変更点を確認する。",
+          "recommended_checks": "履歴・差分で追加・削除・変更を確認する。",
+          "risk_weight": 4,
+          "automation": "automated",
+          "standards": "ISO/IEC 25010 保守性",
+          "tags": [
+            "トレーサビリティ",
+            "差分",
+            "正常系"
+          ],
+          "category": "仕様トレーサビリティ"
+        },
+        {
+          "name": "意図しない変更の検知",
+          "purpose": "想定外の変更が混入していないことを確認する。",
+          "recommended_checks": "差分のうち変更計画にないものを洗い出す。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "PMBOK 変更管理",
+          "tags": [
+            "トレーサビリティ",
+            "差分",
+            "異常系"
+          ],
+          "category": "仕様トレーサビリティ"
+        },
+        {
+          "name": "観点とケースの対応",
+          "purpose": "各テスト条件に対応するケースがあることを確認する。",
+          "recommended_checks": "条件一覧とテストケースを突き合わせる。",
+          "risk_weight": 4,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC/IEEE 29119-3",
+          "tags": [
+            "トレーサビリティ",
+            "網羅性",
+            "異常系"
+          ],
+          "category": "仕様トレーサビリティ"
+        },
+        {
+          "name": "実行結果の反映",
+          "purpose": "テスト実行結果が設計へ戻ることを確認する。",
+          "recommended_checks": "実行結果と条件の対応状況を確認する。",
+          "risk_weight": 4,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC/IEEE 29119-3",
+          "tags": [
+            "トレーサビリティ",
+            "網羅性",
+            "正常系"
+          ],
+          "category": "仕様トレーサビリティ"
+        },
+        {
+          "name": "未実行条件の把握",
+          "purpose": "実行されていない条件を把握する。",
+          "recommended_checks": "条件のうち結果が未反映のものを洗い出す。",
+          "risk_weight": 4,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC/IEEE 29119-3",
+          "tags": [
+            "トレーサビリティ",
+            "網羅性",
+            "異常系"
+          ],
+          "category": "仕様トレーサビリティ"
+        },
+        {
+          "name": "適用外技法の理由",
+          "purpose": "適用しなかった技法に理由があることを確認する。",
+          "recommended_checks": "適用外リストの理由記載を確認する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISTQB テスト設計",
+          "tags": [
+            "トレーサビリティ",
+            "網羅性",
+            "準正常系"
+          ],
+          "category": "仕様トレーサビリティ"
+        },
+        {
+          "name": "受入基準の合意",
+          "purpose": "完了の定義が関係者間で合意されていることを確認する。",
+          "recommended_checks": "受入基準の記載と承認記録を確認する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "PMBOK 品質管理",
+          "tags": [
+            "トレーサビリティ",
+            "合意",
+            "正常系"
+          ],
+          "category": "仕様トレーサビリティ"
+        },
+        {
+          "name": "リスクの反映",
+          "purpose": "識別済みリスクが観点に反映されることを確認する。",
+          "recommended_checks": "リスク一覧と観点の対応を確認する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "PMBOK リスク管理",
+          "tags": [
+            "トレーサビリティ",
+            "リスク",
+            "異常系"
+          ],
+          "category": "仕様トレーサビリティ"
+        },
+        {
+          "name": "成果物の整合",
+          "purpose": "出力した仕様書と解析結果が一致することを確認する。",
+          "recommended_checks": "Excel・HTML・JSON の内容を突き合わせる。",
+          "risk_weight": 4,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC/IEEE 29119-3",
+          "tags": [
+            "トレーサビリティ",
+            "機能正確性",
+            "異常系"
+          ],
+          "category": "仕様トレーサビリティ"
+        },
+        {
+          "name": "証跡の保存",
+          "purpose": "確認した根拠が残ることを確認する。",
+          "recommended_checks": "スクリーンショット・ログの保存先を確認する。",
+          "risk_weight": 4,
+          "automation": "automated",
+          "standards": "ISO/IEC/IEEE 29119-3",
+          "tags": [
+            "トレーサビリティ",
+            "証跡",
+            "正常系"
+          ],
+          "category": "仕様トレーサビリティ"
+        },
+        {
+          "name": "未確認事項の明示",
+          "purpose": "確認できなかった項目が明示されることを確認する。",
+          "recommended_checks": "「未確認」と記録された項目の一覧を確認する。",
+          "risk_weight": 5,
+          "automation": "semi_automated",
+          "standards": "ISO/IEC/IEEE 29119-3",
+          "tags": [
+            "トレーサビリティ",
+            "証跡",
+            "異常系"
+          ],
+          "category": "仕様トレーサビリティ"
+        },
+        {
+          "name": "レビュー実施の記録",
+          "purpose": "関係者レビューが実施・記録されることを確認する。",
+          "recommended_checks": "レビュー記録の有無と指摘の反映を確認する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "PMBOK ステークホルダー管理",
+          "tags": [
+            "トレーサビリティ",
+            "合意",
+            "準正常系"
+          ],
+          "category": "仕様トレーサビリティ"
+        }
+      ]
+    }
+  ]
+}

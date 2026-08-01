@@ -54,6 +54,8 @@ class ScreenshotDiff:
     diff_ratio: float  # 変化したピクセルの割合 0.0〜1.0
     is_significant: bool  # 画素・構造の両方で有意（下記参照）
     structural_similarity: float = 1.0  # SSIM 0.0〜1.0（1.0=同一）
+    # after 側に変更領域の枠を描いた画像（P2-2）。作れなかったときは空文字。
+    diff_image_path: str = ""
 
 
 SSIM_SIGNIFICANT_BELOW = 0.98  # 経験値: AA/フォント差はほぼ 0.99 以上に収まる
@@ -285,6 +287,111 @@ def _count_significant_pixels(diff_img: Any, channel_tolerance: int) -> int:  # 
     for band in bands[1:]:
         mask = ImageChops.lighter(mask, band.point(lut))
     return sum(mask.histogram()[1:])
+
+
+# 変更領域の枠色（赤）と、走査に使うグリッド幅。
+# グリッドを粗くすると枠が実際の変更より大きく見え、細かくすると枠が散らばって読めない。
+# 16px は detect_dynamic_regions が動的領域検出で使っている値に合わせた。
+DIFF_BOX_COLOR = (225, 29, 72)
+DIFF_BOX_WIDTH = 3
+DIFF_GRID = 16
+MAX_DIFF_BOXES = 40
+
+
+def _changed_blocks(
+    mask: Any, grid: int = DIFF_GRID
+) -> list[tuple[int, int, int, int]]:  # PIL.Image instance
+    """差分マスクを grid 単位で走査し、変化のあったブロックを矩形で返す。
+
+    1 ピクセルずつ枠を出すと読めないため、ブロック単位に丸める。
+    隣接ブロックは横方向にだけ連結する（縦にも連結すると、無関係な変更が
+    1 つの大きな枠にまとまって「どこが変わったか」が消える）。
+    """
+    width, height = mask.size
+    boxes: list[tuple[int, int, int, int]] = []
+    for top in range(0, height, grid):
+        run_start: int | None = None
+        for left in range(0, width, grid):
+            box = (left, top, min(left + grid, width), min(top + grid, height))
+            changed = any(mask.crop(box).histogram()[1:])
+            if changed and run_start is None:
+                run_start = left
+            elif not changed and run_start is not None:
+                boxes.append((run_start, top, left, min(top + grid, height)))
+                run_start = None
+        if run_start is not None:
+            boxes.append((run_start, top, width, min(top + grid, height)))
+    return boxes
+
+
+def save_diff_overlay(
+    before_path: Path,
+    after_path: Path,
+    out_path: Path,
+    masks: tuple[tuple[int, int, int, int], ...] = (),
+    channel_tolerance: int = DEFAULT_CHANNEL_TOLERANCE,
+) -> Path | None:
+    """after 側に変更領域の枠を描いた画像を保存し、そのパスを返す（P2-2）。
+
+    差分比率は既存の比較関数が算出しているが、**どこが変わったかは残していなかった**。
+    テキスト中心の差分では見た目の変化が読めないため、画像として残す。
+
+    枠は after 側にだけ描く。両方に描くと目移りして対応関係が追いにくい。
+    Pillow が無い・画像が壊れている場合は None を返す（比較そのものは止めない）。
+    """
+    if not before_path.exists() or not after_path.exists():
+        return None
+    try:
+        from PIL import Image, ImageChops, ImageDraw  # noqa: PLC0415
+    except ImportError:
+        logger.debug("Pillow が利用できないため差分画像を作りません。")
+        return None
+    try:
+        before_img = Image.open(before_path).convert("RGB")
+        after_img = Image.open(after_path).convert("RGB")
+        target_size = _smaller_size(before_img.size, after_img.size)
+        if before_img.size != target_size:
+            before_img = before_img.resize(target_size)
+        if after_img.size != target_size:
+            after_img = after_img.resize(target_size)
+
+        masked_before, masked_after = before_img, after_img
+        if masks:
+            masked_before, masked_after = before_img.copy(), after_img.copy()
+            for target in (masked_before, masked_after):
+                draw_mask = ImageDraw.Draw(target)
+                for x, y, width, height in masks:
+                    draw_mask.rectangle((x, y, x + width, y + height), fill=(0, 0, 0))
+
+        diff_img = ImageChops.difference(masked_before, masked_after)
+        lut = [255 if value > channel_tolerance else 0 for value in range(256)]
+        bands = diff_img.split()
+        mask = bands[0].point(lut)
+        for band in bands[1:]:
+            mask = ImageChops.lighter(mask, band.point(lut))
+
+        boxes = _changed_blocks(mask)
+        if not boxes:
+            return None
+        overlay = after_img.copy()
+        draw = ImageDraw.Draw(overlay)
+        # 枠が多すぎると画面が赤で埋まって読めない。上限を超えたら描画を打ち切り、
+        # 打ち切った事実はログに残す（黙って間引くと「全部囲めている」と誤解される）。
+        if len(boxes) > MAX_DIFF_BOXES:
+            logger.info(
+                "変更領域が %d 箇所あるため %d 箇所までを枠で示します: %s",
+                len(boxes),
+                MAX_DIFF_BOXES,
+                after_path.name,
+            )
+        for box in boxes[:MAX_DIFF_BOXES]:
+            draw.rectangle(box, outline=DIFF_BOX_COLOR, width=DIFF_BOX_WIDTH)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        overlay.save(out_path)
+        return out_path
+    except Exception as exc:
+        logger.warning("差分画像を作れませんでした: %s (%s)", after_path, exc)
+        return None
 
 
 def detect_dynamic_regions(

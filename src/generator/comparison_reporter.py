@@ -99,6 +99,9 @@ def comparison_result_to_dict(result: ComparisonResult) -> dict[str, object]:
                 "after_path": d.after_path,
                 "diff_ratio": d.diff_ratio,
                 "is_significant": d.is_significant,
+                "structural_similarity": d.structural_similarity,
+                # 変更領域に枠を描いた画像（P2-2）。作れなかったときは空文字。
+                "diff_image_path": d.diff_image_path,
             }
             for d in result.screenshot_diffs
         ],
@@ -110,10 +113,15 @@ def generate_comparison_json(result: ComparisonResult) -> str:
     return json.dumps(comparison_result_to_dict(result), ensure_ascii=False, indent=2)
 
 
-def generate_comparison_html(result: ComparisonResult) -> str:
-    """自己完結の comparison.html（4 分類×画面マトリクス）を生成する。"""
+def generate_comparison_html(result: ComparisonResult, base_dir: Path | None = None) -> str:
+    """自己完結の comparison.html（4 分類×画面マトリクス）を生成する。
+
+    base_dir を渡すと、スクリーンショットを相対パスで参照する（成果物一式を
+    そのまま配っても画像が表示されるようにするため）。
+    """
     summary_tiles = _render_summary_tiles(result)
     coverage_summary_html = _render_coverage_summary(result)
+    screenshot_section = _render_screenshot_diffs(result, base_dir)
     findings_by_category: dict[str, list[ComparisonFinding]] = {
         category: [] for category in _CATEGORY_ORDER
     }
@@ -155,6 +163,15 @@ th {{ color: var(--ink-2); font-weight: 600; }}
 code {{ background: transparent; border: 1px solid var(--line); border-radius: 4px;
   padding: 1px 4px; font-size: 12px; }}
 .empty {{ color: var(--ink-2); font-size: 13px; }}
+/* 見た目の変化（P2-2）。左右2ペインにする。上下だと縦長ページで対応箇所が離れすぎる。 */
+.shot-pair {{ margin: 18px 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; }}
+.shot-pair h3 {{ margin: 0 0 10px; font-size: 14px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }}
+.shot-ratio {{ font-size: 12px; font-weight: 400; color: var(--ink-2); }}
+.shot-note {{ font-size: 12px; font-weight: 400; color: var(--warning); }}
+.shot-row {{ display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }}
+.shot-row figure {{ margin: 0; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }}
+.shot-row figcaption {{ font-size: 11px; font-weight: 700; padding: 5px 8px; background: #f6f6f4; border-bottom: 1px solid var(--line); }}
+.shot-row img {{ width: 100%; display: block; }}
 </style>
 </head>
 <body>
@@ -163,6 +180,7 @@ code {{ background: transparent; border: 1px solid var(--line); border-radius: 4
 リンク切れ検査から想定不具合 4 分類で報告します。分類できない差分は「未分類（要確認）」です。</p>
 {summary_tiles}
 {coverage_summary_html}
+{screenshot_section}
 {sections}
 {added_removed}
 </body>
@@ -182,6 +200,62 @@ def _render_coverage_summary(result: ComparisonResult) -> str:
         f'<div class="tile"><b>{summary["unchecked_links"]}</b><span>検査できなかったリンク</span></div>'
         "</div>"
     )
+
+
+def _rel_src(path: str, base: Path | None) -> str:
+    """comparison.html から参照できる相対パスにする。base 外なら絶対パスのまま。"""
+    if not path:
+        return ""
+    if base is None:
+        return html.escape(path)
+    try:
+        return html.escape(str(Path(path).resolve().relative_to(base.resolve())))
+    except (ValueError, OSError):
+        return html.escape(path)
+
+
+def _render_screenshot_diffs(result: ComparisonResult, base: Path | None = None) -> str:
+    """見た目の変化を before/after 並置で見せる（P2-2）。
+
+    有意でない差分（アンチエイリアス・フォント差）は畳む。全部並べると、
+    見るべき変化がノイズに埋もれる。
+    """
+    diffs = list(result.screenshot_diffs)
+    if not diffs:
+        return ""
+    significant = [d for d in diffs if d.is_significant]
+    if not significant:
+        return (
+            "<h2>見た目の変化</h2>"
+            f'<p class="empty">{len(diffs)} 組を比較し、有意な変化はありませんでした。</p>'
+        )
+
+    cards = []
+    for d in significant:
+        after_src = _rel_src(d.diff_image_path or d.after_path, base)
+        before_src = _rel_src(d.before_path, base)
+        # 枠付き画像が作れなかったときは、その旨を書いて after をそのまま出す。
+        # 黙って素の画像を出すと「変化が枠で示されていない＝変化が無い」と読まれる。
+        note = (
+            ""
+            if d.diff_image_path
+            else '<span class="shot-note">（変更領域の枠は作れませんでした）</span>'
+        )
+        cards.append(
+            '<div class="shot-pair">'
+            f"<h3>{html.escape(d.page_id)}"
+            f'<span class="shot-ratio">変化 {d.diff_ratio * 100:.1f}%'
+            f" / SSIM {d.structural_similarity:.2f}</span>{note}</h3>"
+            '<div class="shot-row">'
+            f'<figure><figcaption>現行</figcaption><img src="{before_src}" alt="現行 {html.escape(d.page_id)}"></figure>'
+            f'<figure><figcaption>新（変更箇所を赤枠）</figcaption><img src="{after_src}" alt="新 {html.escape(d.page_id)}"></figure>'
+            "</div></div>"
+        )
+    folded = len(diffs) - len(significant)
+    tail = (
+        f'<p class="empty">有意差なしとして {folded} 組を省きました。</p>' if folded else ""
+    )
+    return f"<h2>見た目の変化（{len(significant)} 組）</h2>{''.join(cards)}{tail}"
 
 
 def _render_summary_tiles(result: ComparisonResult) -> str:
@@ -254,6 +328,7 @@ def save_comparison_outputs(result: ComparisonResult, output_dir: Path) -> tuple
     json_path = output_dir / COMPARISON_JSON_FILE_NAME
     html_path = output_dir / COMPARISON_HTML_FILE_NAME
     json_path.write_text(generate_comparison_json(result), encoding="utf-8")
-    html_path.write_text(generate_comparison_html(result), encoding="utf-8")
+    # 画像は output_dir からの相対で参照する。成果物一式をそのまま配っても表示できるようにする。
+    html_path.write_text(generate_comparison_html(result, output_dir), encoding="utf-8")
     logger.info("現新比較レポートを保存しました: %s / %s", json_path, html_path)
     return json_path, html_path

@@ -837,17 +837,21 @@
         "detect_dynamic_regions",
         "compare_page_pair",
         "save_comparison_outputs",
-        "compute_coverage_summary"
+        "compute_coverage_summary",
+        "save_diff_overlay"
       ],
       "outputs": [
         "comparison.json",
         "comparison.html",
         "old/dynamic_masks.json",
-        "comparison.html「網羅性サマリ」節"
+        "comparison.html「網羅性サマリ」節",
+        "comparison.html「見た目の変化」節（before/after 並置＋変更領域の赤枠）",
+        "new/screenshot_diffs/{page_id}.png"
       ],
       "persistence": [
         "output/{domain}/compare_*/old/",
         "output/{domain}/compare_*/new/",
+        "output/{domain}/compare_*/new/screenshot_diffs/",
         "output/{domain}/compare_*/comparison.json",
         "output/{domain}/compare_*/comparison.html"
       ],
@@ -856,7 +860,10 @@
         "no_pairs",
         "link_timeout",
         "screenshot_missing",
-        "mask_detection_failed"
+        "mask_detection_failed",
+        "diff_overlay_unavailable_without_pillow",
+        "insignificant_diff_shown_as_change",
+        "diff_boxes_cover_the_whole_page"
       ],
       "required_tests": [
         "happy_path",

@@ -43,3 +43,29 @@ class TestPageRoutes:
     def test_unknown_view_path_returns_404(self) -> None:
         response = _client().get("/not-a-real-view", headers={"Host": "127.0.0.1"})
         assert response.status_code == 404
+
+    def test_settings_tab_paths_render_index(self) -> None:
+        """タブ単位の URL でも設定画面が開ける（リロード・直リンク・共有用）。"""
+        client = _client()
+        for tab in ("api", "crawl", "notify", "operations", "data", "audit", "test-design"):
+            response = client.get(f"/settings/{tab}", headers={"Host": "127.0.0.1"})
+            assert response.status_code == 200, tab
+            assert 'id="view-settings"' in response.get_data(as_text=True), tab
+
+    def test_unknown_settings_tab_returns_404(self) -> None:
+        response = _client().get("/settings/not-a-real-tab", headers={"Host": "127.0.0.1"})
+        assert response.status_code == 404
+
+    def test_settings_tabs_cover_rendered_tab_buttons(self) -> None:
+        """ルートが受け付けるタブ名と、画面に描画されるタブが食い違わないこと。
+
+        片方だけ増えると「押せるのに直リンクは 404」「URL は通るのに開けない」が起きる。
+        """
+        import re
+
+        from web.routes.pages import _SETTINGS_TABS
+
+        html = _client().get("/settings", headers={"Host": "127.0.0.1"}).get_data(as_text=True)
+        rendered = set(re.findall(r'class="set-tab[^"]*" data-tab="([^"]+)"', html))
+        assert rendered, "設定タブが描画されていない"
+        assert rendered <= _SETTINGS_TABS, f"ルート未登録のタブ: {rendered - _SETTINGS_TABS}"

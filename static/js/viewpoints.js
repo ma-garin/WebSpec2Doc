@@ -340,13 +340,60 @@ async function vpFetchTemplates() {
 function vpRenderTemplateMenu(templates) {
   const container = document.getElementById('vp-template-menu-items');
   if (!container) return;
-  container.innerHTML = templates.length
-    ? templates.map((t) => `
-      <button type="button" class="vp-template-item" data-template="${escHtml(t.key)}" role="menuitem">
-        <strong>${escHtml(t.name)}</strong>
-        <span>${escHtml(t.description || '')}（${t.folder_count}フォルダ・${t.item_count}観点）</span>
-      </button>`).join('')
-    : '<div class="vp-template-menu-empty">利用可能なテンプレートがありません。</div>';
+  if (!templates.length) {
+    container.innerHTML = '<div class="vp-template-menu-empty">利用可能なテンプレートがありません。</div>';
+    return;
+  }
+  // 領域が60件あるため、カテゴリで束ねないと目的の領域に辿り着けない。
+  // 表示順は取得順を保つ（領域プロファイルの並び＝サイドメニューの並び）。
+  const groups = [];
+  templates.forEach((t) => {
+    const label = t.category || 'その他';
+    let group = groups.find((g) => g.label === label);
+    if (!group) { group = { label, items: [] }; groups.push(group); }
+    group.items.push(t);
+  });
+  // 「開いているセットに足す」と「新しいセットとして作る」を分ける。
+  // 足すだけだとセット一覧にテンプレートが現れず、用意した観点の存在に気づけない。
+  container.innerHTML = groups.map((group) => `
+    <div class="vp-template-group">
+      <div class="vp-template-group-head">${escHtml(group.label)}<span>${group.items.length}</span></div>
+      ${group.items.map((t) => `
+        <div class="vp-template-row">
+          <button type="button" class="vp-template-item" data-template="${escHtml(t.key)}" role="menuitem">
+            <strong>${escHtml(t.name)}</strong>
+            <span>${escHtml(t.description || '')}</span>
+            <span class="vp-template-count">${Number(t.item_count || 0)}観点</span>
+          </button>
+          <button type="button" class="vp-template-as-set" data-template-newset="${escHtml(t.key)}"
+                  role="menuitem" title="このテンプレートから観点セットを新しく作る">＋ セットにする</button>
+        </div>`).join('')}
+    </div>`).join('');
+}
+
+async function vpCreateSetFromTemplate(templateKey) {
+  const templates = await vpFetchTemplates();
+  const template = templates.find((t) => t.key === templateKey);
+  if (!template) return;
+  const confirmed = await confirmDialog({
+    title: `「${template.name}」を新しいセットにしますか？`,
+    message: `観点セットを新規作成し、${template.item_count}件の観点を入れて v1 として公開します。既存のセットは変更されません。`,
+    confirmLabel: '作成する',
+  });
+  if (!confirmed) return;
+  try {
+    const data = await vpApi(
+      `/api/viewpoint-templates/${encodeURIComponent(templateKey)}/create-set`,
+      { method: 'POST', body: JSON.stringify({}) }
+    );
+    const created = data.result?.set;
+    vpCloseTemplateMenu();
+    // 作成したセットを選択状態にして開く。作った直後に中身が見えないと、
+    // できたのかどうかが分からない。
+    if (created?.id) vpState.currentSet = { id: created.id };
+    await loadViewpointManager();
+    vpFeedback(`「${template.name}」を新しいセットとして作成しました（${template.item_count}観点）。`);
+  } catch (error) { vpFeedback(error.message, 'error'); }
 }
 
 async function vpLoadTemplate(templateKey) {
@@ -960,6 +1007,14 @@ document.addEventListener('keydown', (event) => {
 // テンプレート項目はメニュー開閉のたびに再生成されるため、静的な querySelectorAll
 // ではなくイベント委譲で拾う。
 templateMenu?.addEventListener('click', (event) => {
+  // 「セットにする」を先に判定する。行全体が [data-template] を含むため、
+  // 順序を逆にすると常に「開いているセットへ追加」になってしまう。
+  const asSet = event.target.closest('[data-template-newset]');
+  if (asSet) {
+    vpCloseTemplateMenu();
+    vpCreateSetFromTemplate(asSet.dataset.templateNewset);
+    return;
+  }
   const button = event.target.closest('[data-template]');
   if (!button) return;
   vpCloseTemplateMenu();

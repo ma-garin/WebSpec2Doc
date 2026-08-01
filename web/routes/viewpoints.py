@@ -9,7 +9,11 @@ from web.audit_context import record_admin_event
 from web.services.openai_qa import OpenAIQAError, has_openai_api_key
 from web.services.viewpoint_proposals import generate_viewpoint_proposals
 from web.services.viewpoint_store import ViewpointStoreError, get_viewpoint_store
-from web.services.viewpoint_templates import apply_template, list_templates
+from web.services.viewpoint_templates import (
+    apply_template,
+    create_set_from_template,
+    list_templates,
+)
 
 bp = Blueprint("viewpoints", __name__)
 INSTANCE_DIR = Path("instance")
@@ -280,6 +284,17 @@ def api_resolve_viewpoint_source() -> dict[str, Any]:
 @bp.post("/api/viewpoint-sets/<set_id>/templates/<template_key>/apply")
 def api_apply_viewpoint_template(set_id: str, template_key: str) -> dict[str, Any]:
     return {"result": apply_template(set_id, template_key)}
+
+
+@bp.post("/api/viewpoint-templates/<template_key>/create-set")
+def api_create_set_from_template(template_key: str) -> dict[str, Any]:
+    """テンプレートから観点セットを新規作成する。
+
+    既存の apply は「開いているセットに足す」動作で、テンプレートを用意しても
+    セット一覧には現れなかった。使い始めるまでの手数を1つにする。
+    """
+    body = _body()
+    return {"result": create_set_from_template(template_key, str(body.get("name", "")))}
 
 
 @bp.patch("/api/viewpoint-items/<item_id>/move")

@@ -1,0 +1,1740 @@
+{
+ "schema_version": 1,
+ "source": "kanten viewpoint_tables_v3 (domain_profiles) + v4 capability rules",
+ "domains": [
+  {
+   "key": "domain-01",
+   "category": "顧客業界領域",
+   "name": "金融",
+   "primary_object": "口座・契約・取引残高",
+   "primary_flow": "取引受付から勘定反映・承認・顧客通知まで",
+   "external_interface": "決済網・信用情報・会計システム連携",
+   "data_asset": "顧客識別情報・口座情報・取引履歴",
+   "scheduled_process": "日次締め・利息計算・残高照合",
+   "output_artifact": "取引明細・残高証明・監査帳票",
+   "critical_risk": "誤送金、残高不整合、不正取引、監査証跡欠落",
+   "evidence_labels": [
+    "金融：FISC",
+    "決済：PCI DSS",
+    "金融・決済"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "money",
+    "operations",
+    "performance",
+    "privacy",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-02",
+   "category": "顧客業界領域",
+   "name": "医療・ヘルスケア",
+   "primary_object": "患者・診療・処方・検査情報",
+   "primary_flow": "受付から診療、オーダー、実施、会計まで",
+   "external_interface": "HL7/FHIR・検査機器・保険請求連携",
+   "data_asset": "要配慮個人情報・診療記録・同意履歴",
+   "scheduled_process": "レセプト生成・マスタ配信・データ保全",
+   "output_artifact": "診療記録・処方箋・請求明細",
+   "critical_risk": "患者取り違え、診療情報漏えい、処方誤り、連携欠落",
+   "evidence_labels": [
+    "医療：HL7 / FHIR",
+    "医療・ヘルスケア",
+    "個人情報・プライバシー"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "privacy",
+    "report",
+    "safety",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-03",
+   "category": "顧客業界領域",
+   "name": "製造",
+   "primary_object": "品目・BOM・工程・製造実績",
+   "primary_flow": "受注から生産計画、製造、検査、出荷まで",
+   "external_interface": "MES・PLM・設備・サプライヤー連携",
+   "data_asset": "設計情報・製造条件・品質記録",
+   "scheduled_process": "所要量計算・原価計算・実績集計",
+   "output_artifact": "製造指図・検査成績書・トレーサビリティ記録",
+   "critical_risk": "誤製造、ロット追跡不能、設備停止、品質記録欠落",
+   "evidence_labels": [
+    "ISO/IEC 25010 品質モデル",
+    "ISO/IEC 27001 情報セキュリティ"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "safety",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-04",
+   "category": "顧客業界領域",
+   "name": "流通・小売・EC",
+   "primary_object": "商品・価格・在庫・注文・決済",
+   "primary_flow": "商品検索から注文、決済、引当、配送、返品まで",
+   "external_interface": "決済・倉庫・配送・モール連携",
+   "data_asset": "顧客情報・注文情報・決済関連情報",
+   "scheduled_process": "在庫同期・売上集計・価格反映",
+   "output_artifact": "受注票・納品書・売上帳票",
+   "critical_risk": "二重決済、在庫超過販売、価格誤り、配送指示欠落",
+   "evidence_labels": [
+    "流通：GS1",
+    "決済：PCI DSS",
+    "消費者保護"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "money",
+    "operations",
+    "performance",
+    "privacy",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-05",
+   "category": "顧客業界領域",
+   "name": "公共・行政",
+   "primary_object": "住民・申請・届出・給付・公文書",
+   "primary_flow": "申請受付から審査、決裁、交付、通知まで",
+   "external_interface": "マイナンバー・決済・他行政機関連携",
+   "data_asset": "住民情報・申請内容・審査記録",
+   "scheduled_process": "給付判定・統計集計・公文書保存",
+   "output_artifact": "受理通知・決定通知・行政文書",
+   "critical_risk": "誤給付、権限外閲覧、処理期限超過、説明責任不履行",
+   "evidence_labels": [
+    "公共：デジタル庁標準仕様",
+    "公共・行政",
+    "デジタル庁"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "privacy",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-06",
+   "category": "顧客業界領域",
+   "name": "建設・不動産",
+   "primary_object": "案件・図面・工程・原価・物件・契約",
+   "primary_flow": "計画から設計、施工、検査、引渡し、維持管理まで",
+   "external_interface": "BIM/CIM・電子納品・協力会社連携",
+   "data_asset": "設計図書・施工記録・契約情報",
+   "scheduled_process": "工程更新・出来高集計・原価集計",
+   "output_artifact": "図面・工程表・検査記録・電子納品物",
+   "critical_risk": "版違い施工、工程遅延、原価誤計上、納品物欠落",
+   "evidence_labels": [
+    "建設：BIM/CIM / 電子納品",
+    "ISO/IEC 25010 品質モデル"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "safety",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-07",
+   "category": "顧客業界領域",
+   "name": "通信",
+   "primary_object": "契約・回線・設備・利用量・課金",
+   "primary_flow": "申込から開通、利用量収集、課金、障害対応まで",
+   "external_interface": "3GPP・TM Forum・ネットワーク装置連携",
+   "data_asset": "加入者情報・通信記録・課金明細",
+   "scheduled_process": "利用量集計・請求計算・設備状態収集",
+   "output_artifact": "開通結果・請求明細・障害報告",
+   "critical_risk": "誤課金、開通失敗、通信記録漏えい、障害長期化",
+   "evidence_labels": [
+    "通信：3GPP / TM Forum",
+    "電気通信"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-08",
+   "category": "顧客業界領域",
+   "name": "エネルギー・ユーティリティ",
+   "primary_object": "契約・メーター・使用量・料金・設備",
+   "primary_flow": "契約から検針、料金計算、請求、設備保全まで",
+   "external_interface": "スマートメーター・需給管理・決済連携",
+   "data_asset": "契約者情報・使用量・設備状態",
+   "scheduled_process": "検針取込・料金計算・需給予測",
+   "output_artifact": "使用量通知・請求書・設備保全記録",
+   "critical_risk": "誤請求、需給不整合、供給停止、設備異常見逃し",
+   "evidence_labels": [
+    "ISO 22301 事業継続",
+    "ISO/IEC 27001 情報セキュリティ"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "safety",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-09",
+   "category": "顧客業界領域",
+   "name": "教育",
+   "primary_object": "学習者・履修・成績・教材・出欠",
+   "primary_flow": "受講登録から学習、評価、成績確定、証明書発行まで",
+   "external_interface": "LMS・認証・決済・教材配信連携",
+   "data_asset": "学生情報・学習履歴・成績情報",
+   "scheduled_process": "履修確定・成績集計・進級判定",
+   "output_artifact": "成績表・修了証・出欠帳票",
+   "critical_risk": "成績誤登録、受講権限逸脱、個人情報漏えい、教材利用不能",
+   "evidence_labels": [
+    "個人情報・プライバシー",
+    "W3C WCAG / WAI-ARIA"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "privacy",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-10",
+   "category": "顧客業界領域",
+   "name": "運輸・物流",
+   "primary_object": "貨物・荷姿・輸送指示・車両・配送実績",
+   "primary_flow": "集荷受付から配車、輸送、追跡、配達完了まで",
+   "external_interface": "荷主・倉庫・配送会社・位置情報連携",
+   "data_asset": "配送先・貨物情報・位置情報・受領記録",
+   "scheduled_process": "配車計画・進捗集計・運賃計算",
+   "output_artifact": "送り状・配車表・配達証明",
+   "critical_risk": "誤配送、貨物追跡不能、遅配、運賃誤計算",
+   "evidence_labels": [
+    "流通：GS1",
+    "ISO 22301 事業継続"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "safety",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-11",
+   "category": "顧客業界領域",
+   "name": "メディア・エンタメ",
+   "primary_object": "コンテンツ・権利・契約・配信・視聴履歴",
+   "primary_flow": "入稿から審査、公開、配信、課金、権利精算まで",
+   "external_interface": "CDN・広告・決済・権利管理連携",
+   "data_asset": "コンテンツ原本・権利情報・視聴者情報",
+   "scheduled_process": "公開予約・視聴集計・権利料計算",
+   "output_artifact": "配信実績・広告実績・権利精算書",
+   "critical_risk": "公開事故、権利侵害、配信停止、精算誤り",
+   "evidence_labels": [
+    "消費者保護",
+    "ISO/IEC 27001 情報セキュリティ"
+   ],
+   "capabilities": [
+    "accessibility",
+    "ai",
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-12",
+   "category": "顧客業界領域",
+   "name": "商社・グローバル",
+   "primary_object": "商材・契約・受発注・為替・貿易書類",
+   "primary_flow": "見積から契約、受発注、輸出入、決済、採算確定まで",
+   "external_interface": "取引先・物流・金融機関・通関連携",
+   "data_asset": "取引条件・価格・与信・貿易情報",
+   "scheduled_process": "為替換算・採算集計・与信更新",
+   "output_artifact": "契約書・インボイス・船積書類・採算表",
+   "critical_risk": "契約条件誤適用、為替差損、輸出管理違反、決済不整合",
+   "evidence_labels": [
+    "ISO/IEC 27001 情報セキュリティ",
+    "内部統制 / J-SOX"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-13",
+   "category": "技術基盤領域",
+   "name": "API基盤",
+   "primary_object": "API定義・クライアント・資格情報・利用量",
+   "primary_flow": "API登録から公開、認証、呼出し、制限、廃止まで",
+   "external_interface": "API Gateway・認証基盤・バックエンド連携",
+   "data_asset": "API仕様・トークン・要求応答ログ",
+   "scheduled_process": "利用量集計・鍵ローテーション・仕様棚卸し",
+   "output_artifact": "OpenAPI文書・利用統計・監査ログ",
+   "critical_risk": "契約不整合、認可不備、過負荷、機密情報露出",
+   "evidence_labels": [
+    "OpenAPI",
+    "HTTP",
+    "JSON Schema",
+    "OWASP ASVS / Top 10"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "code",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-14",
+   "category": "技術基盤領域",
+   "name": "セキュリティ",
+   "primary_object": "ID・権限・脆弱性・検知イベント・秘密情報",
+   "primary_flow": "識別から認証、認可、監視、検知、対応まで",
+   "external_interface": "IdP・SIEM・EDR・脆弱性管理連携",
+   "data_asset": "認証情報・権限情報・セキュリティログ",
+   "scheduled_process": "権限棚卸し・脆弱性診断・鍵更新",
+   "output_artifact": "検知記録・監査証跡・是正報告",
+   "critical_risk": "不正アクセス、権限逸脱、情報漏えい、検知漏れ",
+   "evidence_labels": [
+    "ISO/IEC 27001 情報セキュリティ",
+    "NIST CSF",
+    "OWASP ASVS / Top 10"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "code",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-15",
+   "category": "技術基盤領域",
+   "name": "クラウド",
+   "primary_object": "アカウント・リソース・構成・ポリシー・コスト",
+   "primary_flow": "設計からプロビジョニング、運用、変更、廃止まで",
+   "external_interface": "クラウドAPI・ID基盤・監視・課金連携",
+   "data_asset": "構成情報・アクセスログ・バックアップ",
+   "scheduled_process": "構成評価・バックアップ・コスト集計",
+   "output_artifact": "構成台帳・評価結果・コストレポート",
+   "critical_risk": "設定不備、権限過剰、データ消失、コスト逸脱",
+   "evidence_labels": [
+    "AWS Well-Architected",
+    "Azure Well-Architected",
+    "Google Cloud Architecture Framework"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "code",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-16",
+   "category": "技術基盤領域",
+   "name": "データベース",
+   "primary_object": "スキーマ・レコード・制約・トランザクション",
+   "primary_flow": "データ登録から更新、参照、集計、保全、削除まで",
+   "external_interface": "アプリケーション・ETL・バックアップ連携",
+   "data_asset": "業務データ・メタデータ・監査ログ",
+   "scheduled_process": "バックアップ・統計更新・整合性検査",
+   "output_artifact": "DDL・バックアップ・整合性検査結果",
+   "critical_risk": "整合性破壊、データ消失、性能劣化、不正参照",
+   "evidence_labels": [
+    "ISO/IEC 25010 品質モデル",
+    "ISO/IEC 27001 情報セキュリティ"
+   ],
+   "capabilities": [
+    "batch",
+    "code",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security"
+   ]
+  },
+  {
+   "key": "domain-17",
+   "category": "技術基盤領域",
+   "name": "ネットワーク",
+   "primary_object": "セグメント・経路・通信規則・名前解決",
+   "primary_flow": "接続要求から経路選択、制御、監視、切断まで",
+   "external_interface": "ルーター・FW・DNS・LB・拠点回線連携",
+   "data_asset": "構成情報・通信ログ・証明書",
+   "scheduled_process": "構成バックアップ・到達性検査・証明書更新",
+   "output_artifact": "ネットワーク構成図・通信試験結果・障害記録",
+   "critical_risk": "通信断、誤経路、不要公開、名前解決障害",
+   "evidence_labels": [
+    "NIST CSF",
+    "TLS",
+    "ISO 22301 事業継続"
+   ],
+   "capabilities": [
+    "batch",
+    "code",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security"
+   ]
+  },
+  {
+   "key": "domain-18",
+   "category": "技術基盤領域",
+   "name": "データ分析・AI",
+   "primary_object": "データセット・特徴量・モデル・推論結果",
+   "primary_flow": "収集から前処理、学習、評価、配備、監視まで",
+   "external_interface": "データ基盤・モデルAPI・業務システム連携",
+   "data_asset": "学習データ・モデル・評価指標・推論ログ",
+   "scheduled_process": "再学習・ドリフト検知・品質集計",
+   "output_artifact": "モデルカード・評価報告・推論結果",
+   "critical_risk": "バイアス、精度劣化、データ漏えい、説明不能",
+   "evidence_labels": [
+    "ISO/IEC 25010 品質モデル",
+    "個人情報・プライバシー"
+   ],
+   "capabilities": [
+    "accessibility",
+    "ai",
+    "batch",
+    "code",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-19",
+   "category": "技術基盤領域",
+   "name": "DR/BCP",
+   "primary_object": "重要業務・復旧対象・バックアップ・代替手段",
+   "primary_flow": "障害検知から切替、復旧、整合確認、通常復帰まで",
+   "external_interface": "バックアップ・代替サイト・連絡網連携",
+   "data_asset": "復旧計画・バックアップ・訓練記録",
+   "scheduled_process": "バックアップ検証・切替訓練・計画見直し",
+   "output_artifact": "復旧手順・訓練結果・RTO/RPO評価",
+   "critical_risk": "復旧不能、データ欠損、目標時間超過、連絡不全",
+   "evidence_labels": [
+    "ISO 22301 事業継続",
+    "IPA 非機能要求グレード"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "code",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-20",
+   "category": "技術基盤領域",
+   "name": "DevOps",
+   "primary_object": "ソース・ビルド・成果物・パイプライン・環境",
+   "primary_flow": "変更登録から検査、ビルド、配備、ロールバックまで",
+   "external_interface": "SCM・CI/CD・成果物管理・クラウド連携",
+   "data_asset": "ソースコード・署名済み成果物・実行ログ",
+   "scheduled_process": "依存関係検査・脆弱性検査・保守更新",
+   "output_artifact": "ビルド結果・配備記録・SBOM",
+   "critical_risk": "不正成果物混入、配備失敗、環境差異、復旧不能",
+   "evidence_labels": [
+    "ISO/IEC/IEEE 29119 ソフトウェアテスト",
+    "NIST CSF"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "code",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-21",
+   "category": "技術基盤領域",
+   "name": "サーバー",
+   "primary_object": "OS・プロセス・ストレージ・アカウント・パッチ",
+   "primary_flow": "構築から設定、稼働、更新、障害対応、廃止まで",
+   "external_interface": "認証・監視・バックアップ・配布基盤連携",
+   "data_asset": "構成情報・システムログ・バックアップ",
+   "scheduled_process": "パッチ適用・容量確認・ログ保全",
+   "output_artifact": "構成台帳・パッチ記録・稼働報告",
+   "critical_risk": "停止、脆弱性放置、容量枯渇、設定ドリフト",
+   "evidence_labels": [
+    "NIST CSF",
+    "IPA セキュリティ関連",
+    "ISO 22301 事業継続"
+   ],
+   "capabilities": [
+    "batch",
+    "code",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security"
+   ]
+  },
+  {
+   "key": "domain-22",
+   "category": "技術基盤領域",
+   "name": "監視・可観測性",
+   "primary_object": "メトリクス・ログ・トレース・アラート・SLO",
+   "primary_flow": "テレメトリ収集から相関、検知、通知、対応まで",
+   "external_interface": "監視エージェント・通知・ITSM連携",
+   "data_asset": "テレメトリ・アラート履歴・対応記録",
+   "scheduled_process": "SLO集計・ルール評価・ログ保管",
+   "output_artifact": "ダッシュボード・アラート・SLOレポート",
+   "critical_risk": "検知漏れ、誤検知、通知遅延、原因追跡不能",
+   "evidence_labels": [
+    "ISO/IEC 25010 品質モデル",
+    "ServiceNow"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "code",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-23",
+   "category": "業務システム領域",
+   "name": "ERP",
+   "primary_object": "会計・購買・販売・在庫・固定資産伝票",
+   "primary_flow": "業務入力から承認、転記、締め、財務報告まで",
+   "external_interface": "銀行・税務・販売・購買システム連携",
+   "data_asset": "仕訳・取引先・勘定科目・承認履歴",
+   "scheduled_process": "月次締め・減価償却・原価計算",
+   "output_artifact": "元帳・試算表・財務諸表",
+   "critical_risk": "誤仕訳、締め不整合、権限分離違反、決算遅延",
+   "evidence_labels": [
+    "電子帳簿・会計・税務",
+    "内部統制 / J-SOX"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "money",
+    "operations",
+    "performance",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-24",
+   "category": "業務システム領域",
+   "name": "CRM",
+   "primary_object": "顧客・商談・活動・問い合わせ・同意",
+   "primary_flow": "見込客登録から商談、契約、支援、継続提案まで",
+   "external_interface": "メール・CTI・販売・マーケティング連携",
+   "data_asset": "顧客情報・接触履歴・同意情報",
+   "scheduled_process": "顧客統合・スコア計算・フォロー抽出",
+   "output_artifact": "顧客台帳・商談予測・活動報告",
+   "critical_risk": "重複顧客、同意違反、対応漏れ、予測誤り",
+   "evidence_labels": [
+    "Salesforce",
+    "個人情報・プライバシー"
+   ],
+   "capabilities": [
+    "accessibility",
+    "ai",
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "privacy",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-25",
+   "category": "業務システム領域",
+   "name": "SCM",
+   "primary_object": "需要・供給・在庫・発注・輸送計画",
+   "primary_flow": "需要予測から調達、生産、補充、配送まで",
+   "external_interface": "ERP・WMS・取引先・物流連携",
+   "data_asset": "需要実績・在庫・リードタイム・発注情報",
+   "scheduled_process": "需要予測・補充計画・在庫最適化",
+   "output_artifact": "需給計画・発注提案・在庫レポート",
+   "critical_risk": "欠品、過剰在庫、発注誤り、計画連携遅延",
+   "evidence_labels": [
+    "流通：GS1",
+    "ISO 22301 事業継続"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "money",
+    "operations",
+    "performance",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-26",
+   "category": "業務システム領域",
+   "name": "帳票・BI",
+   "primary_object": "データセット・指標・集計軸・帳票定義",
+   "primary_flow": "抽出から変換、集計、可視化、配布まで",
+   "external_interface": "DWH・業務DB・ファイル・配信連携",
+   "data_asset": "集計元データ・指標定義・配布先情報",
+   "scheduled_process": "データ更新・集計・定期配信",
+   "output_artifact": "帳票・ダッシュボード・配信履歴",
+   "critical_risk": "集計誤り、秘匿情報露出、配信漏れ、鮮度不足",
+   "evidence_labels": [
+    "ISO/IEC 25010 品質モデル",
+    "個人情報・プライバシー"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-27",
+   "category": "業務システム領域",
+   "name": "ワークフロー",
+   "primary_object": "申請・承認経路・代理・決裁・証跡",
+   "primary_flow": "起票から回付、承認、差戻し、完了まで",
+   "external_interface": "組織・認証・通知・業務システム連携",
+   "data_asset": "申請内容・承認権限・決裁履歴",
+   "scheduled_process": "滞留通知・期限超過処理・組織反映",
+   "output_artifact": "決裁記録・滞留一覧・監査証跡",
+   "critical_risk": "承認迂回、権限誤適用、申請滞留、証跡欠落",
+   "evidence_labels": [
+    "内部統制 / J-SOX",
+    "ISO/IEC 27001 情報セキュリティ"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-28",
+   "category": "業務システム領域",
+   "name": "人事給与",
+   "primary_object": "従業員・組織・勤怠・給与・社会保険",
+   "primary_flow": "勤怠確定から給与計算、承認、振込、明細交付まで",
+   "external_interface": "勤怠・銀行・税・社会保険連携",
+   "data_asset": "個人情報・給与情報・評価情報",
+   "scheduled_process": "給与計算・年末調整・組織反映",
+   "output_artifact": "給与明細・振込データ・法定帳票",
+   "critical_risk": "給与誤計算、振込誤り、機微情報漏えい、法定期限超過",
+   "evidence_labels": [
+    "個人情報・プライバシー",
+    "電子帳簿・会計・税務"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "money",
+    "operations",
+    "performance",
+    "privacy",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-29",
+   "category": "業務システム領域",
+   "name": "データ連携",
+   "primary_object": "連携定義・メッセージ・変換規則・再送状態",
+   "primary_flow": "抽出から変換、送信、受信、反映、照合まで",
+   "external_interface": "API・ファイル・メッセージング・ETL連携",
+   "data_asset": "連携データ・変換定義・送受信履歴",
+   "scheduled_process": "定期連携・再送・件数照合",
+   "output_artifact": "連携結果・エラー一覧・照合報告",
+   "critical_risk": "欠落、重複、順序逆転、変換誤り",
+   "evidence_labels": [
+    "OpenAPI",
+    "JSON Schema",
+    "HTTP"
+   ],
+   "capabilities": [
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security"
+   ]
+  },
+  {
+   "key": "domain-30",
+   "category": "業務システム領域",
+   "name": "文書管理",
+   "primary_object": "文書・版・属性・権限・保存期限",
+   "primary_flow": "作成から承認、公開、改訂、保管、廃棄まで",
+   "external_interface": "認証・ワークフロー・電子署名連携",
+   "data_asset": "文書本体・メタデータ・アクセス履歴",
+   "scheduled_process": "保存期限判定・棚卸し・アーカイブ",
+   "output_artifact": "最新版文書・版履歴・廃棄証跡",
+   "critical_risk": "旧版利用、権限外閲覧、改ざん、保存期限違反",
+   "evidence_labels": [
+    "ISO/IEC 27001 情報セキュリティ",
+    "電子帳簿・会計・税務"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "privacy",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-31",
+   "category": "運用・保守領域",
+   "name": "ITSM",
+   "primary_object": "インシデント・問題・変更・要求・ナレッジ",
+   "primary_flow": "受付から分類、割当、対応、解決、クローズまで",
+   "external_interface": "監視・CMDB・通知・開発管理連携",
+   "data_asset": "チケット・対応履歴・既知エラー情報",
+   "scheduled_process": "滞留監視・SLA判定・傾向集計",
+   "output_artifact": "対応記録・問題分析・運用報告",
+   "critical_risk": "対応漏れ、誤優先度、SLA違反、再発",
+   "evidence_labels": [
+    "ServiceNow",
+    "ISO 22301 事業継続"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-32",
+   "category": "運用・保守領域",
+   "name": "SLA管理",
+   "primary_object": "サービス・SLA・SLI・違反・免責条件",
+   "primary_flow": "指標収集から評価、違反判定、報告、改善まで",
+   "external_interface": "監視・ITSM・契約管理連携",
+   "data_asset": "測定値・契約条件・違反履歴",
+   "scheduled_process": "月次評価・違反集計・レポート配信",
+   "output_artifact": "SLAレポート・違反通知・改善計画",
+   "critical_risk": "測定誤り、違反見逃し、免責誤適用、報告遅延",
+   "evidence_labels": [
+    "ISO/IEC 25010 品質モデル",
+    "ServiceNow"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-33",
+   "category": "運用・保守領域",
+   "name": "構成管理",
+   "primary_object": "構成アイテム・関係・版・ベースライン",
+   "primary_flow": "登録から変更、承認、配布、棚卸しまで",
+   "external_interface": "CMDB・資産管理・CI/CD・監視連携",
+   "data_asset": "構成台帳・変更履歴・依存関係",
+   "scheduled_process": "差分検出・棚卸し・整合性検査",
+   "output_artifact": "構成台帳・差分一覧・監査結果",
+   "critical_risk": "構成ドリフト、未承認変更、影響分析漏れ、台帳不一致",
+   "evidence_labels": [
+    "ServiceNow",
+    "ISO/IEC 27001 情報セキュリティ"
+   ],
+   "capabilities": [
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security"
+   ]
+  },
+  {
+   "key": "domain-34",
+   "category": "運用・保守領域",
+   "name": "障害復旧",
+   "primary_object": "障害・影響サービス・復旧手順・復旧状態",
+   "primary_flow": "検知から切分け、暫定復旧、恒久対応、事後評価まで",
+   "external_interface": "監視・ITSM・連絡網・バックアップ連携",
+   "data_asset": "障害ログ・対応履歴・復旧データ",
+   "scheduled_process": "復旧訓練・手順確認・再発傾向分析",
+   "output_artifact": "障害報告・復旧記録・再発防止策",
+   "critical_risk": "復旧遅延、誤操作、データ不整合、再発",
+   "evidence_labels": [
+    "ISO 22301 事業継続",
+    "JPCERT/CC"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-35",
+   "category": "運用・保守領域",
+   "name": "可用性管理",
+   "primary_object": "サービス・依存関係・稼働時間・停止時間",
+   "primary_flow": "稼働監視から停止判定、集計、分析、改善まで",
+   "external_interface": "監視・構成管理・SLA管理連携",
+   "data_asset": "稼働実績・停止理由・除外時間",
+   "scheduled_process": "可用性集計・傾向分析・冗長性検査",
+   "output_artifact": "可用性レポート・停止分析・改善計画",
+   "critical_risk": "可用性誤算、単一障害点、切替失敗、停止理由誤分類",
+   "evidence_labels": [
+    "ISO 22301 事業継続",
+    "IPA 非機能要求グレード"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-36",
+   "category": "運用・保守領域",
+   "name": "キャパシティ管理",
+   "primary_object": "需要・処理量・資源使用率・上限・予測",
+   "primary_flow": "実績収集から予測、閾値判定、増強、効果確認まで",
+   "external_interface": "監視・クラウド・計画管理連携",
+   "data_asset": "利用実績・需要予測・増強履歴",
+   "scheduled_process": "容量集計・枯渇予測・閾値評価",
+   "output_artifact": "容量レポート・増強計画・予測結果",
+   "critical_risk": "容量枯渇、過剰投資、予測外れ、増強遅延",
+   "evidence_labels": [
+    "IPA 非機能要求グレード",
+    "ISO/IEC 25010 品質モデル"
+   ],
+   "capabilities": [
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security"
+   ]
+  },
+  {
+   "key": "domain-37",
+   "category": "運用・保守領域",
+   "name": "継続的改善",
+   "primary_object": "改善候補・指標・施策・効果・課題",
+   "primary_flow": "課題収集から優先付け、実施、測定、標準化まで",
+   "external_interface": "ITSM・監視・品質管理・計画管理連携",
+   "data_asset": "指標実績・改善履歴・学習事項",
+   "scheduled_process": "KPI集計・振返り・改善棚卸し",
+   "output_artifact": "改善計画・効果測定・標準手順",
+   "critical_risk": "効果未測定、局所最適、改善停滞、再発知識未共有",
+   "evidence_labels": [
+    "ISO/IEC/IEEE 29119 ソフトウェアテスト",
+    "ISO/IEC 25010 品質モデル"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-38",
+   "category": "横断品質・統制領域",
+   "name": "品質保証",
+   "primary_object": "品質計画・基準・レビュー・不具合・品質指標",
+   "primary_flow": "計画から予防、評価、是正、完了判定まで",
+   "external_interface": "開発・テスト・構成管理・監査連携",
+   "data_asset": "レビュー記録・テスト結果・不具合履歴",
+   "scheduled_process": "品質集計・傾向分析・完了基準評価",
+   "output_artifact": "品質計画・品質報告・出荷判定記録",
+   "critical_risk": "欠陥流出、評価漏れ、基準形骸化、出荷判断誤り",
+   "evidence_labels": [
+    "ISO/IEC/IEEE 29119 ソフトウェアテスト",
+    "ISTQB"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-39",
+   "category": "横断品質・統制領域",
+   "name": "データガバナンス",
+   "primary_object": "データ項目・所有者・品質規則・分類・利用目的",
+   "primary_flow": "定義から収集、利用、共有、保管、廃棄まで",
+   "external_interface": "データカタログ・DWH・業務システム連携",
+   "data_asset": "メタデータ・品質結果・利用履歴",
+   "scheduled_process": "品質測定・分類棚卸し・保持期限判定",
+   "output_artifact": "データ辞書・品質報告・利用承認記録",
+   "critical_risk": "定義不一致、品質劣化、目的外利用、保持期限違反",
+   "evidence_labels": [
+    "ISO/IEC 27701 プライバシー",
+    "個人情報・プライバシー"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-40",
+   "category": "横断品質・統制領域",
+   "name": "統制",
+   "primary_object": "統制目的・統制活動・証跡・不備・是正",
+   "primary_flow": "リスク識別から統制設計、実施、評価、改善まで",
+   "external_interface": "業務システム・監査・ID管理連携",
+   "data_asset": "承認記録・アクセス記録・統制評価結果",
+   "scheduled_process": "権限棚卸し・統制評価・不備フォロー",
+   "output_artifact": "統制一覧・評価調書・是正記録",
+   "critical_risk": "職務分掌違反、証跡欠落、統制不備未是正、不正",
+   "evidence_labels": [
+    "内部統制 / J-SOX",
+    "SOC2",
+    "ISMS"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-41",
+   "category": "横断品質・統制領域",
+   "name": "プロジェクト管理",
+   "primary_object": "スコープ・計画・課題・リスク・成果物",
+   "primary_flow": "立上げから計画、実行、監視、変更、終結まで",
+   "external_interface": "開発管理・工数・調達・品質管理連携",
+   "data_asset": "計画・進捗・課題・意思決定記録",
+   "scheduled_process": "進捗集計・リスク評価・予実更新",
+   "output_artifact": "計画書・進捗報告・完了報告",
+   "critical_risk": "スコープ逸脱、遅延、リスク見逃し、合意不足",
+   "evidence_labels": [
+    "ISO/IEC/IEEE 29119 ソフトウェアテスト",
+    "ISO/IEC 25010 品質モデル"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-42",
+   "category": "SIサービス領域",
+   "name": "システム開発",
+   "primary_object": "要求・設計・コード・テスト・リリース",
+   "primary_flow": "要求定義から設計、実装、検証、移行、保守まで",
+   "external_interface": "利用部門・外部システム・運用組織連携",
+   "data_asset": "要求仕様・設計書・ソース・テスト証跡",
+   "scheduled_process": "ビルド・静的解析・回帰テスト",
+   "output_artifact": "設計書・プログラム・テスト報告・リリース物",
+   "critical_risk": "要求漏れ、設計不整合、欠陥流出、移行失敗",
+   "evidence_labels": [
+    "ISO/IEC/IEEE 29119 ソフトウェアテスト",
+    "ISO/IEC 25010 品質モデル",
+    "ISTQB"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "code",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-43",
+   "category": "SIサービス領域",
+   "name": "検証サービス",
+   "primary_object": "テストベース・観点・ケース・実行結果・欠陥",
+   "primary_flow": "分析から計画、設計、実装、実行、完了まで",
+   "external_interface": "開発管理・欠陥管理・CI連携",
+   "data_asset": "テストケース・データ・証跡・欠陥情報",
+   "scheduled_process": "自動テスト・回帰選定・品質集計",
+   "output_artifact": "テスト計画・ケース・結果・完了報告",
+   "critical_risk": "観点漏れ、判定誤り、証跡不足、欠陥未追跡",
+   "evidence_labels": [
+    "ISO/IEC/IEEE 29119 ソフトウェアテスト",
+    "ISTQB"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "code",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-44",
+   "category": "SIサービス領域",
+   "name": "ITインフラ構築",
+   "primary_object": "構成・ネットワーク・OS・ミドルウェア・運用設定",
+   "primary_flow": "設計から調達、構築、試験、移行、引渡しまで",
+   "external_interface": "クラウド・ネットワーク・監視・認証連携",
+   "data_asset": "構成定義・資格情報・試験結果",
+   "scheduled_process": "構成検査・パッチ・バックアップ試験",
+   "output_artifact": "構成図・パラメータシート・試験報告",
+   "critical_risk": "構成誤り、接続不能、セキュリティ不備、引継ぎ不足",
+   "evidence_labels": [
+    "IPA 非機能要求グレード",
+    "NIST CSF"
+   ],
+   "capabilities": [
+    "batch",
+    "code",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "safety",
+    "security"
+   ]
+  },
+  {
+   "key": "domain-45",
+   "category": "SIサービス領域",
+   "name": "ITマネジメント",
+   "primary_object": "サービス・費用・契約・要員・品質・リスク",
+   "primary_flow": "方針策定から計画、運営、評価、改善まで",
+   "external_interface": "経営・利用部門・委託先・運用組織連携",
+   "data_asset": "サービス実績・費用・契約・評価履歴",
+   "scheduled_process": "KPI集計・契約評価・予算見直し",
+   "output_artifact": "運営計画・実績報告・改善計画",
+   "critical_risk": "目標不整合、費用超過、委託統制不足、改善停滞",
+   "evidence_labels": [
+    "ISO 22301 事業継続",
+    "内部統制 / J-SOX"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-46",
+   "category": "SIサービス領域",
+   "name": "コンサルティング",
+   "primary_object": "課題・仮説・調査データ・提言・実行計画",
+   "primary_flow": "課題設定から調査、分析、合意、実行支援まで",
+   "external_interface": "経営・現場・外部情報・各システム連携",
+   "data_asset": "顧客資料・分析結果・意思決定記録",
+   "scheduled_process": "進捗評価・仮説更新・効果測定",
+   "output_artifact": "調査報告・提言書・ロードマップ",
+   "critical_risk": "前提誤り、根拠不足、機密漏えい、実行不能な提言",
+   "evidence_labels": [
+    "ISO/IEC 25010 品質モデル",
+    "ISO/IEC 27001 情報セキュリティ"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-47",
+   "category": "SIサービス領域",
+   "name": "BPO",
+   "primary_object": "業務依頼・処理案件・手順・品質・要員",
+   "primary_flow": "受付から処理、検査、納品、例外対応まで",
+   "external_interface": "顧客システム・ワークフロー・連絡基盤連携",
+   "data_asset": "顧客データ・処理結果・作業履歴",
+   "scheduled_process": "案件配分・品質検査・生産性集計",
+   "output_artifact": "処理結果・品質報告・例外一覧",
+   "critical_risk": "誤処理、納期遅延、情報漏えい、手順逸脱",
+   "evidence_labels": [
+    "ISO/IEC 27001 情報セキュリティ",
+    "内部統制 / J-SOX"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "money",
+    "operations",
+    "performance",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-48",
+   "category": "SIサービス領域",
+   "name": "ITハード・ソフト販売",
+   "primary_object": "商品・ライセンス・見積・受注・保守契約",
+   "primary_flow": "提案から見積、受注、納品、検収、保守開始まで",
+   "external_interface": "仕入先・物流・ライセンス発行・会計連携",
+   "data_asset": "顧客情報・価格条件・ライセンス情報",
+   "scheduled_process": "更新期限抽出・売上集計・在庫照合",
+   "output_artifact": "見積書・納品書・ライセンス証書",
+   "critical_risk": "誤価格、誤納品、ライセンス不足、更新漏れ",
+   "evidence_labels": [
+    "消費者保護",
+    "内部統制 / J-SOX"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-49",
+   "category": "プロダクト・専門ソリューション領域",
+   "name": "SaaS",
+   "primary_object": "テナント・契約・ユーザー・機能設定・利用量",
+   "primary_flow": "契約からプロビジョニング、利用、変更、解約まで",
+   "external_interface": "IdP・決済・通知・外部API連携",
+   "data_asset": "テナントデータ・設定・利用ログ",
+   "scheduled_process": "課金計算・利用量集計・保守更新",
+   "output_artifact": "利用明細・請求書・監査ログ",
+   "critical_risk": "テナント分離違反、課金誤り、停止、データ残存",
+   "evidence_labels": [
+    "SOC2",
+    "ISO/IEC 27001 情報セキュリティ",
+    "OWASP ASVS / Top 10"
+   ],
+   "capabilities": [
+    "accessibility",
+    "ai",
+    "batch",
+    "code",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "privacy",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-50",
+   "category": "プロダクト・専門ソリューション領域",
+   "name": "セキュリティ製品",
+   "primary_object": "ポリシー・シグネチャ・検知・隔離・例外",
+   "primary_flow": "導入から設定、検知、対応、更新、報告まで",
+   "external_interface": "EDR・SIEM・ID・通知連携",
+   "data_asset": "検知ログ・端末情報・ポリシー",
+   "scheduled_process": "定義更新・スキャン・検知集計",
+   "output_artifact": "検知通知・対応記録・セキュリティ報告",
+   "critical_risk": "検知漏れ、誤隔離、更新失敗、ログ欠落",
+   "evidence_labels": [
+    "NIST CSF",
+    "JPCERT/CC",
+    "IPA セキュリティ関連"
+   ],
+   "capabilities": [
+    "accessibility",
+    "ai",
+    "batch",
+    "code",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-51",
+   "category": "プロダクト・専門ソリューション領域",
+   "name": "ネットワーク製品",
+   "primary_object": "ポート・経路・通信規則・冗長状態・ファームウェア",
+   "primary_flow": "設置から設定、通信、監視、切替、更新まで",
+   "external_interface": "管理基盤・認証・監視・他ネットワーク機器連携",
+   "data_asset": "構成・通信ログ・証明書・更新イメージ",
+   "scheduled_process": "構成保存・健全性確認・更新確認",
+   "output_artifact": "構成情報・通信試験結果・障害ログ",
+   "critical_risk": "通信断、規則誤適用、切替失敗、脆弱性残存",
+   "evidence_labels": [
+    "NIST CSF",
+    "TLS",
+    "ISO 22301 事業継続"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "code",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-52",
+   "category": "プロダクト・専門ソリューション領域",
+   "name": "CAD/CAE/PLM",
+   "primary_object": "設計モデル・部品・解析条件・版・承認状態",
+   "primary_flow": "設計から解析、レビュー、承認、出図、変更まで",
+   "external_interface": "BOM・PDM・製造・解析エンジン連携",
+   "data_asset": "設計知財・モデル・解析結果・版履歴",
+   "scheduled_process": "変換・干渉チェック・版整合検査",
+   "output_artifact": "図面・3Dモデル・解析報告・変更履歴",
+   "critical_risk": "版取り違え、変換欠落、解析条件誤り、知財漏えい",
+   "evidence_labels": [
+    "建設：BIM/CIM / 電子納品",
+    "ISO/IEC 27001 情報セキュリティ"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "code",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "safety",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-53",
+   "category": "プロダクト・専門ソリューション領域",
+   "name": "ローコード",
+   "primary_object": "アプリ定義・画面・ロジック・権限・拡張部品",
+   "primary_flow": "設計から構成、公開、変更、版管理まで",
+   "external_interface": "認証・API・データベース・通知連携",
+   "data_asset": "アプリ定義・資格情報・利用データ",
+   "scheduled_process": "公開物検査・依存関係確認・版バックアップ",
+   "output_artifact": "アプリパッケージ・設定一覧・公開履歴",
+   "critical_risk": "権限設定不備、環境差異、拡張部品脆弱性、変更競合",
+   "evidence_labels": [
+    "OWASP ASVS / Top 10",
+    "ISO/IEC 25010 品質モデル"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "code",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-54",
+   "category": "プロダクト・専門ソリューション領域",
+   "name": "サーバー・ストレージ製品",
+   "primary_object": "ノード・ボリューム・冗長構成・ファームウェア",
+   "primary_flow": "導入から構成、割当、保護、障害切替、更新まで",
+   "external_interface": "管理基盤・バックアップ・監視・SAN連携",
+   "data_asset": "保存データ・構成・障害ログ・スナップショット",
+   "scheduled_process": "整合性検査・容量確認・保護コピー作成",
+   "output_artifact": "構成台帳・保護結果・障害診断情報",
+   "critical_risk": "データ消失、容量枯渇、冗長性喪失、更新失敗",
+   "evidence_labels": [
+    "ISO 22301 事業継続",
+    "IPA 非機能要求グレード"
+   ],
+   "capabilities": [
+    "batch",
+    "code",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security"
+   ]
+  },
+  {
+   "key": "domain-55",
+   "category": "プロダクト・専門ソリューション領域",
+   "name": "ミドルウェア",
+   "primary_object": "インスタンス・設定・接続・キュー・キャッシュ",
+   "primary_flow": "導入から設定、起動、処理、監視、更新まで",
+   "external_interface": "アプリケーション・DB・認証・監視連携",
+   "data_asset": "設定・メッセージ・キャッシュ・実行ログ",
+   "scheduled_process": "ログ保守・キュー監視・設定バックアップ",
+   "output_artifact": "設定一覧・稼働記録・性能結果",
+   "critical_risk": "接続枯渇、メッセージ消失、設定不整合、更新停止",
+   "evidence_labels": [
+    "ISO/IEC 25010 品質モデル",
+    "NIST CSF"
+   ],
+   "capabilities": [
+    "batch",
+    "code",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security"
+   ]
+  },
+  {
+   "key": "domain-56",
+   "category": "BPO・業務代行領域",
+   "name": "ECフルフィルメント",
+   "primary_object": "注文・在庫・ピッキング・梱包・出荷・返品",
+   "primary_flow": "受注取込から引当、出庫、配送、返品処理まで",
+   "external_interface": "EC・WMS・配送・決済連携",
+   "data_asset": "注文・配送先・在庫・作業履歴",
+   "scheduled_process": "注文取込・在庫同期・出荷締め",
+   "output_artifact": "出荷指示・送り状・作業実績",
+   "critical_risk": "誤出荷、欠品、個人情報漏えい、出荷遅延",
+   "evidence_labels": [
+    "流通：GS1",
+    "個人情報・プライバシー"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "money",
+    "operations",
+    "performance",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-57",
+   "category": "BPO・業務代行領域",
+   "name": "コンタクトセンター",
+   "primary_object": "顧客・問い合わせ・応対・録音・エスカレーション",
+   "primary_flow": "着信受付から本人確認、応対、記録、後処理まで",
+   "external_interface": "CTI・CRM・FAQ・録音・通知連携",
+   "data_asset": "顧客情報・応対履歴・録音データ",
+   "scheduled_process": "応対品質集計・滞留確認・要員予測",
+   "output_artifact": "応対記録・品質評価・稼働報告",
+   "critical_risk": "本人確認不備、誤案内、記録漏れ、個人情報漏えい",
+   "evidence_labels": [
+    "個人情報・プライバシー",
+    "消費者保護"
+   ],
+   "capabilities": [
+    "accessibility",
+    "ai",
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "privacy",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-58",
+   "category": "BPO・業務代行領域",
+   "name": "バックオフィス",
+   "primary_object": "申請・伝票・証憑・承認・処理期限",
+   "primary_flow": "受付から入力、照合、承認、登録、保管まで",
+   "external_interface": "顧客システム・会計・ワークフロー連携",
+   "data_asset": "申請情報・証憑・処理履歴",
+   "scheduled_process": "未処理抽出・照合・生産性集計",
+   "output_artifact": "処理済み伝票・照合結果・業務報告",
+   "critical_risk": "入力誤り、二重処理、期限超過、証憑紛失",
+   "evidence_labels": [
+    "内部統制 / J-SOX",
+    "個人情報・プライバシー"
+   ],
+   "capabilities": [
+    "accessibility",
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "money",
+    "operations",
+    "performance",
+    "privacy",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-59",
+   "category": "BPO・業務代行領域",
+   "name": "本人確認",
+   "primary_object": "申込者・本人確認書類・照合結果・審査状態",
+   "primary_flow": "申込受付から書類取得、照合、判定、記録まで",
+   "external_interface": "eKYC・公的個人認証・制裁リスト連携",
+   "data_asset": "本人確認情報・画像・照合結果・同意履歴",
+   "scheduled_process": "再確認期限抽出・審査品質集計・データ削除",
+   "output_artifact": "確認結果・審査記録・監査証跡",
+   "critical_risk": "なりすまし、誤判定、機微情報漏えい、証跡不足",
+   "evidence_labels": [
+    "個人情報・プライバシー",
+    "金融・決済",
+    "NIST CSF"
+   ],
+   "capabilities": [
+    "accessibility",
+    "ai",
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "privacy",
+    "report",
+    "security",
+    "ui"
+   ]
+  },
+  {
+   "key": "domain-60",
+   "category": "BPO・業務代行領域",
+   "name": "業務監視",
+   "primary_object": "業務イベント・閾値・異常・通知・対応状態",
+   "primary_flow": "監視から異常判定、通知、一次対応、引継ぎまで",
+   "external_interface": "業務システム・監視・ITSM・連絡基盤連携",
+   "data_asset": "業務ログ・アラート・対応履歴",
+   "scheduled_process": "滞留検知・件数照合・監視結果集計",
+   "output_artifact": "アラート・対応記録・監視報告",
+   "critical_risk": "異常見逃し、誤通知、対応遅延、引継ぎ漏れ",
+   "evidence_labels": [
+    "ISO 22301 事業継続",
+    "ServiceNow"
+   ],
+   "capabilities": [
+    "accessibility",
+    "ai",
+    "batch",
+    "core",
+    "data",
+    "interface",
+    "operations",
+    "performance",
+    "report",
+    "security",
+    "ui"
+   ]
+  }
+ ]
+}

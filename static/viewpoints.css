@@ -266,13 +266,26 @@
   position: absolute;
   top: 50px; right: 0;
   z-index: 50;
-  min-width: 280px;
+  min-width: 340px;
   background: var(--surface);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-md);
   overflow: hidden;
 }
+/* 領域が60件あるため、メニュー自体をスクロールさせる。
+   画面外にはみ出すと下位のカテゴリに到達できない。 */
+#vp-template-menu-items { max-height: 62vh; overflow-y: auto; }
+.vp-template-group-head {
+  position: sticky; top: 0; z-index: 1;
+  display: flex; justify-content: space-between; gap: 8px;
+  padding: 7px 14px;
+  font-size: 10.5px; font-weight: 800;
+  color: var(--text-muted);
+  background: var(--surface-soft);
+  border-bottom: 1px solid var(--border);
+}
+.vp-template-count { color: var(--text-muted); font-size: 11px; }
 .vp-tree-panel { position: relative; }
 .vp-template-menu-head {
   padding: 10px 14px;
@@ -699,3 +712,14 @@ textarea.input-dialog-input { resize: vertical; min-height: 90px; }
 .vp-source-hint a { color: var(--primary); text-decoration: underline; overflow-wrap: anywhere; }
 .vp-source-meta { color: var(--text-muted); margin-left: 6px; }
 .vp-source-unknown { color: var(--warn, #b45309); }
+
+/* テンプレートを「開いているセットに足す」と「新しいセットにする」で分ける。
+   足すだけだとセット一覧にテンプレートが現れず、用意した観点に気づけない。 */
+.vp-template-row { display: flex; align-items: stretch; gap: 4px; }
+.vp-template-row .vp-template-item { flex: 1; min-width: 0; }
+.vp-template-as-set {
+  flex: 0 0 auto; padding: 0 10px; border: 1px solid var(--border);
+  border-radius: 6px; background: var(--surface); color: var(--primary);
+  font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap;
+}
+.vp-template-as-set:hover { border-color: var(--primary); background: var(--info-bg, #eff6ff); }

@@ -65,8 +65,17 @@ def store(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> ViewpointStore:
     return result
 
 
+def _file_entries(templates: list[dict[str, object]]) -> list[dict[str, object]]:
+    """ファイル由来のテンプレートだけを取り出す。
+
+    一覧には領域から生成する分（60件）も混ざる。ここで見たいのは
+    ディレクトリの読み取りとメタ情報の組み立てなので、出どころで絞る。
+    """
+    return [t for t in templates if t["source"] == "file"]
+
+
 def test_list_templates_reports_metadata(templates_dir: Path) -> None:
-    templates = list_templates()
+    templates = _file_entries(list_templates())
     assert len(templates) == 1  # broken.json は不正形式のためスキップされる
     entry = templates[0]
     assert entry["key"] == "sample"
@@ -80,7 +89,17 @@ def test_list_templates_empty_dir_returns_empty_list(
 ) -> None:
     empty = tmp_path / "empty"
     monkeypatch.setattr(viewpoint_templates, "VIEWPOINT_TEMPLATES_DIR", empty)
-    assert list_templates() == []
+    assert _file_entries(list_templates()) == []
+
+
+def test_list_templates_includes_generated_domains() -> None:
+    """領域から生成する分が一覧に出ること。
+
+    ここが出ないと、60領域を用意しても利用者は選べない。
+    """
+    domains = [t for t in list_templates() if t["source"] == "domain"]
+    assert len(domains) == 60
+    assert all(t["item_count"] > 0 for t in domains)
 
 
 def test_apply_template_creates_folders_and_items(
@@ -230,3 +249,45 @@ class TestIndustryTemplates:
             actual = {f["name"] for f in templates[key]["folders"]}
             for name in folders:
                 assert name in actual, f"{key} に「{name}」が無い"
+
+
+class TestCreateSetFromTemplate:
+    """テンプレートから観点セットを直接作れること。
+
+    既存の apply_template は「開いているセットに足す」動作で、テンプレートを
+    用意してもセット一覧には現れなかった。使い始めるまでに
+    「セットを作る → テンプレートを選ぶ」の2手が要り、存在に気づけなかった。
+    """
+
+    def test_creates_a_new_set(self, store: ViewpointStore, templates_dir: Path) -> None:
+        from web.services.viewpoint_templates import create_set_from_template
+
+        before = len(store.list_sets())
+        result = create_set_from_template("sample")
+        assert len(store.list_sets()) == before + 1
+        assert result["set"]["name"]
+        assert result["created_items"] >= 1
+
+    def test_uses_template_name_by_default(self, store: ViewpointStore, templates_dir: Path) -> None:
+        from web.services.viewpoint_templates import _load_template_file, create_set_from_template
+
+        expected = _load_template_file("sample")["name"]
+        result = create_set_from_template("sample")
+        assert result["set"]["name"] == expected
+
+    def test_custom_name_wins(self, store: ViewpointStore, templates_dir: Path) -> None:
+        from web.services.viewpoint_templates import create_set_from_template
+
+        result = create_set_from_template("sample", "自分でつけた名前")
+        assert result["set"]["name"] == "自分でつけた名前"
+
+    def test_unknown_template_does_not_create_set(
+        self, store: ViewpointStore, templates_dir: Path
+    ) -> None:
+        """存在しないキーでセットだけ作られる、を起こさない。"""
+        from web.services.viewpoint_templates import create_set_from_template
+
+        before = len(store.list_sets())
+        with pytest.raises(TemplateNotFoundError):
+            create_set_from_template("does-not-exist")
+        assert len(store.list_sets()) == before

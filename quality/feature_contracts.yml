@@ -389,7 +389,8 @@
         "web/services/viewpoint_proposals.py",
         "web/services/viewpoint_store_operations.py",
         "web/services/viewpoint_templates.py",
-        "web/services/viewpoint_sources.py"
+        "web/services/viewpoint_sources.py",
+        "web/services/viewpoint_blueprints.py"
       ],
       "symbols": [
         "_write_env",

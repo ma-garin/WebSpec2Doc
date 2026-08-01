@@ -1,0 +1,1477 @@
+{
+ "schema_version": 1,
+ "source": "kanten viewpoint_tables_v4 (blueprint_catalog_v4)",
+ "level_scope": {
+  "コンポーネントテスト": "関数・クラス・モジュール単位",
+  "統合テスト": "コンポーネント間と外部インターフェース境界",
+  "システムテスト": "本番相当のシステム全体",
+  "受け入れテスト": "実利用者の業務受入条件",
+  "運用受入": "本番相当の運用体制・手順・監視・復旧環境"
+ },
+ "blueprints": [
+  {
+   "identifier": "F01",
+   "test_type": "機能テスト",
+   "theme": "標準業務",
+   "target": "primary_flow",
+   "series": "正常系",
+   "kind": "標準フロー成立",
+   "condition": "有効な{primary_object}が必要な事前状態を満たす",
+   "point": "開始条件から正常終了状態まで",
+   "operation": "{level_scope}で{primary_flow}を実行し、各遷移と更新結果を記録する",
+   "expected": "各処理が一度だけ成立し、{output_artifact}と保存データが一致する",
+   "proof": "画面・API応答・データ差分・監査ログ",
+   "levels": [
+    "統合テスト",
+    "受け入れテスト"
+   ],
+   "technique": "ユースケーステスト",
+   "quality": "機能完全性",
+   "sources": [
+    "EV-ISO-29119-4-2021"
+   ],
+   "capabilities": [
+    "core"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "F02",
+   "test_type": "機能テスト",
+   "theme": "入力妥当性",
+   "target": "primary_object",
+   "series": "異常系",
+   "kind": "必須欠落",
+   "condition": "必須属性を一項ずつ欠落させる",
+   "point": "未入力・null・空文字・空白のみを区別",
+   "operation": "入力経路ごとに欠落値を送信し、受付可否と更新有無を確認する",
+   "expected": "全経路で同じ要求に従って拒否され、データは更新されず、訂正可能な理由が示される",
+   "proof": "入力データ・エラー応答・更新前後差分",
+   "levels": [
+    "コンポーネントテスト"
+   ],
+   "technique": "同値分割",
+   "quality": "機能正確性",
+   "sources": [
+    "EV-ISO-29119-4-2021"
+   ],
+   "capabilities": [
+    "core"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "F03",
+   "test_type": "機能テスト",
+   "theme": "入力妥当性",
+   "target": "primary_object",
+   "series": "準正常系",
+   "kind": "境界値",
+   "condition": "数値・件数・文字数・日付の仕様境界が定義されている",
+   "point": "下限直前/下限/下限直後と上限直前/上限/上限直後",
+   "operation": "要求仕様の実際の境界値を参照し、各判定点を独立に実行する",
+   "expected": "境界内だけが受理され、包含/非包含、丸め、タイムゾーンの定義と一致する",
+   "proof": "要求記載・入力一覧・判定結果・データ差分",
+   "levels": [
+    "コンポーネントテスト"
+   ],
+   "technique": "境界値分析",
+   "quality": "機能正確性",
+   "sources": [
+    "EV-ISO-29119-4-2021"
+   ],
+   "capabilities": [
+    "core"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "F04",
+   "test_type": "機能テスト",
+   "theme": "状態管理",
+   "target": "primary_flow",
+   "series": "準正常系",
+   "kind": "許可遷移",
+   "condition": "{primary_object}が業務上の中間状態にある",
+   "point": "全許可遷移と自己遷移",
+   "operation": "状態遷移図の各許可イベントを1回ずつ実行する",
+   "expected": "次状態、副作用、通知、履歴が遷移定義と一致する",
+   "proof": "状態遷移履歴・データスナップショット・イベントログ",
+   "levels": [
+    "統合テスト"
+   ],
+   "technique": "状態遷移テスト",
+   "quality": "機能正確性",
+   "sources": [
+    "EV-ISO-29119-4-2021"
+   ],
+   "capabilities": [
+    "core"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "F05",
+   "test_type": "機能テスト",
+   "theme": "状態管理",
+   "target": "primary_flow",
+   "series": "異常系",
+   "kind": "禁止遷移",
+   "condition": "{primary_object}が操作を許可しない状態にある",
+   "point": "到達不能状態・逆遷移・飛び越し遷移",
+   "operation": "禁止イベントをUIとAPIの両経路から実行する",
+   "expected": "処理が拒否され、元状態と関連データが保持され、不正操作が記録される",
+   "proof": "UI表示・API応答・状態差分・監査ログ",
+   "levels": [
+    "統合テスト"
+   ],
+   "technique": "状態遷移テスト",
+   "quality": "機能完全性",
+   "sources": [
+    "EV-ISO-29119-4-2021"
+   ],
+   "capabilities": [
+    "core"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "F06",
+   "test_type": "機能テスト",
+   "theme": "業務ルール",
+   "target": "primary_flow",
+   "series": "準正常系",
+   "kind": "条件組合せ",
+   "condition": "複数の判定条件が結果を分岐させる",
+   "point": "各条件の真偽とelse経路",
+   "operation": "要求からデシジョンテーブルを作り、各ルールを1回以上実行する",
+   "expected": "各ルールの出力、優先順位、競合時の判定が仕様と一致する",
+   "proof": "ルール表・実行条件・処理結果",
+   "levels": [
+    "システムテスト"
+   ],
+   "technique": "デシジョンテーブル",
+   "quality": "機能適切性",
+   "sources": [
+    "EV-ISO-29119-4-2021"
+   ],
+   "capabilities": [
+    "core"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "F07",
+   "test_type": "機能テスト",
+   "theme": "重複実行",
+   "target": "primary_flow",
+   "series": "準正常系",
+   "kind": "二重送信・再実行",
+   "condition": "同一利用者または同一要求が短時間に重複実行される",
+   "point": "連打・再読込み・通信再送・二重クリック",
+   "operation": "同一キーの処理を並行・順次で再送する",
+   "expected": "ビジネス処理は要求された回数だけ成立し、二重計上・二重通知・二重履歴が生じない",
+   "proof": "要求ID・更新履歴・メッセージログ",
+   "levels": [
+    "統合テスト"
+   ],
+   "technique": "競合テスト",
+   "quality": "機能正確性",
+   "sources": [
+    "EV-ISO-29119-4-2021"
+   ],
+   "capabilities": [
+    "core"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "F08",
+   "test_type": "機能テスト",
+   "theme": "日付時刻",
+   "target": "primary_flow",
+   "series": "準正常系",
+   "kind": "カレンダー境界",
+   "condition": "日付・締切・有効期限・集計期間が処理に影響する",
+   "point": "月末・年末・閏日・日付跨ぎ・タイムゾーン変換",
+   "operation": "仮想時刻または制御可能な時計を使い、各境界の直前・一致・直後で実行する",
+   "expected": "業務日、表示日時、保存時刻、期限判定が要求と一致する",
+   "proof": "仮想時刻設定・画面・保存値・ジョブ履歴",
+   "levels": [
+    "システムテスト"
+   ],
+   "technique": "境界値分析",
+   "quality": "機能正確性",
+   "sources": [
+    "EV-ISO-29119-4-2021"
+   ],
+   "capabilities": [
+    "core"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "N01",
+   "test_type": "非機能テスト",
+   "theme": "品質目標",
+   "target": "critical_risk",
+   "series": "正常系",
+   "kind": "品質目標の測定可能性",
+   "condition": "品質要求が対象、尺度、測定方法、合格基準を持つ",
+   "point": "機能適合性・性能効率性・互換性・相互運用性・使用性・信頼性・セキュリティ・保守性・移行性",
+   "operation": "ISO/IEC 25010の品質特性ごとに、{domain}の受入可否を定量または明確な順序尺度で定義する",
+   "expected": "各重要リスクに対する未定義の品質特性がなく、合否を再現可能に判定できる",
+   "proof": "品質要求一覧・リスク対応表・測定定義",
+   "levels": [
+    "受け入れテスト"
+   ],
+   "technique": "品質特性ベーステスト",
+   "quality": "総合品質",
+   "sources": [
+    "EV-ISO-25010-2023",
+    "EV4-ISO-25023-2016",
+    "EV4-ISO-25040-2011"
+   ],
+   "capabilities": [
+    "core"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "N02",
+   "test_type": "非機能テスト",
+   "theme": "障害安全性",
+   "target": "external_interface",
+   "series": "異常系",
+   "kind": "依存先障害の局所化",
+   "condition": "{external_interface}が遅延・切断・不正応答のいずれかになる",
+   "point": "タイムアウト・接続リセット・プロトコル違反・部分応答",
+   "operation": "障害注入を行い、発生中と復旧後の{primary_flow}を実行する",
+   "expected": "障害が連鎖せず、失敗の可視化、重複しない再試行、復旧後の整合性回復が確認できる",
+   "proof": "障害注入条件・トレース・メトリクス・復旧後照合",
+   "levels": [
+    "システムテスト"
+   ],
+   "technique": "フォールトインジェクション",
+   "quality": "回復性・障害耐性",
+   "sources": [
+    "EV-ISO-25010-2023",
+    "EV-IPA-NFR-2018"
+   ],
+   "capabilities": [
+    "core"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "N03",
+   "test_type": "非機能テスト",
+   "theme": "互換性",
+   "target": "external_interface",
+   "series": "準正常系",
+   "kind": "共存と相互運用",
+   "condition": "複数バージョンや隣接システムが共存する",
+   "point": "現行版・一世代前・移行期間の混在",
+   "operation": "サポート対象の組合せでデータ交換と並行運用を行う",
+   "expected": "互いの資源を壊さず、交換可能な情報の意味と制約が保たれる",
+   "proof": "環境構成・契約版・通信ログ・照合結果",
+   "levels": [
+    "統合テスト"
+   ],
+   "technique": "構成テスト",
+   "quality": "互換性",
+   "sources": [
+    "EV-ISO-25010-2023"
+   ],
+   "capabilities": [
+    "core"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "W01",
+   "test_type": "ホワイトボックステスト",
+   "theme": "制御フロー",
+   "target": "primary_flow",
+   "series": "正常系",
+   "kind": "命令・分岐カバレッジ",
+   "condition": "実行可能な全分岐が設計に現れる",
+   "point": "命令、判定結果のTrue/False、例外経路",
+   "operation": "カバレッジ計測下で単体テストを実行し未通過分岐を調査する",
+   "expected": "合意したカバレッジ基準を満たし、到達不能コードは理由付きで除外される",
+   "proof": "カバレッジレポート・単体テストログ",
+   "levels": [
+    "コンポーネントテスト"
+   ],
+   "technique": "ホワイトボックステスト",
+   "quality": "保守性",
+   "sources": [
+    "EV-ISO-29119-4-2021"
+   ],
+   "capabilities": [
+    "code"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "W02",
+   "test_type": "ホワイトボックステスト",
+   "theme": "例外処理",
+   "target": "primary_flow",
+   "series": "異常系",
+   "kind": "例外と後始末",
+   "condition": "下位処理が例外を送出する",
+   "point": "検査例外・非検査例外・キャンセル",
+   "operation": "例外を発生させ、捕捉、ロールバック、リソース解放を追跡する",
+   "expected": "例外が握りつぶされず、部分更新とリソース漏れが残らない",
+   "proof": "例外ログ・トレース・トランザクション履歴",
+   "levels": [
+    "コンポーネントテスト"
+   ],
+   "technique": "例外パステスト",
+   "quality": "信頼性・保守性",
+   "sources": [
+    "EV-ISO-29119-4-2021"
+   ],
+   "capabilities": [
+    "code"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "C01",
+   "test_type": "変更部分のテスト",
+   "theme": "影響分析",
+   "target": "primary_flow",
+   "series": "準正常系",
+   "kind": "要求・コード・テストの追跡",
+   "condition": "要求、設計、コード、設定またはデータが変更される",
+   "point": "直接変更、依存先、逆依存、運用影響",
+   "operation": "変更差分から影響先を追跡し、追加・更新・廃止する観点を特定する",
+   "expected": "変更要求と実行観点が相互追跡でき、未対応の影響先がない",
+   "proof": "差分・トレーサビリティ表・影響分析レビュー",
+   "levels": [
+    "統合テスト"
+   ],
+   "technique": "影響度分析",
+   "quality": "保守性",
+   "sources": [
+    "EV-ISO-29119-2-2021",
+    "EV4-ISO-29119-3-2021"
+   ],
+   "capabilities": [
+    "core"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "C02",
+   "test_type": "変更部分のテスト",
+   "theme": "設定変更",
+   "target": "critical_risk",
+   "series": "異常系",
+   "kind": "旧新設定の境界",
+   "condition": "機能フラグ・閾値・マスタが変更される",
+   "point": "変更前・切替中・変更後・切戻し後",
+   "operation": "各状態で同一業務を実行し、適用タイミングと履歴を照合する",
+   "expected": "新旧の動作が混在せず、設定版と処理結果の組合せを追跡できる",
+   "proof": "設定版・反映時刻・処理ログ・切戻し記録",
+   "levels": [
+    "システムテスト"
+   ],
+   "technique": "状態遷移テスト",
+   "quality": "適応性・信頼性",
+   "sources": [
+    "EV-ISO-29119-4-2021"
+   ],
+   "capabilities": [
+    "core"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "R01",
+   "test_type": "回帰テスト",
+   "theme": "回帰範囲",
+   "target": "primary_flow",
+   "series": "正常系",
+   "kind": "クリティカルパス",
+   "condition": "変更の有無にかかわらず事業継続に必須の経路",
+   "point": "リスクP0/P1の標準・代替・復旧経路",
+   "operation": "本番相当の構成でクリティカルパスを自動および手動で再検証する",
+   "expected": "重要業務とその安全制御に新しい欠陥がなく、過去の重大欠陥が再発しない",
+   "proof": "回帰実行結果・差分・欠陥履歴・カバレッジ",
+   "levels": [
+    "システムテスト"
+   ],
+   "technique": "リスクベースドテスト",
+   "quality": "信頼性",
+   "sources": [
+    "EV-ISO-29119-2-2021",
+    "EV4-AGEST-VIEWPOINT"
+   ],
+   "capabilities": [
+    "core"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "B01",
+   "test_type": "業務シナリオテスト",
+   "theme": "E2E業務",
+   "target": "primary_flow",
+   "series": "正常系",
+   "kind": "主シナリオ",
+   "condition": "実際の権限分担と外部連携を含む",
+   "point": "受付・承認・実行・通知・後続確認",
+   "operation": "実データと同じ意味的制約を持つ代表データで{primary_flow}を最後まで実行する",
+   "expected": "利用者の目的が達成され、システム間の値・状態・時刻・履歴が一貫する",
+   "proof": "E2E操作録画・相関ID付きトレース・データ照合",
+   "levels": [
+    "受け入れテスト"
+   ],
+   "technique": "ユースケーステスト",
+   "quality": "機能適切性",
+   "sources": [
+    "EV-ISO-29119-4-2021",
+    "EV4-SHIFT-VIEWPOINT"
+   ],
+   "capabilities": [
+    "core"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "B02",
+   "test_type": "業務シナリオテスト",
+   "theme": "中断と再開",
+   "target": "primary_flow",
+   "series": "準正常系",
+   "kind": "業務中断後の継続",
+   "condition": "利用者離脱、セッション期限、一時保存または担当者交代が起きる",
+   "point": "保存前・保存後・承認前・承認後の中断",
+   "operation": "各中断点で終了し、同一人および権限を引き継いだ別人で再開する",
+   "expected": "許可された状態からのみ再開でき、重複処理や履歴欠落がない",
+   "proof": "中断・再開時刻・一時保存データ・引継履歴",
+   "levels": [
+    "受け入れテスト"
+   ],
+   "technique": "シナリオテスト",
+   "quality": "使用性・信頼性",
+   "sources": [
+    "EV-ISO-29119-4-2021"
+   ],
+   "capabilities": [
+    "core"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "A01",
+   "test_type": "IF/APIテスト",
+   "theme": "契約",
+   "target": "external_interface",
+   "series": "正常系",
+   "kind": "スキーマ適合",
+   "condition": "{external_interface}の公開契約がバージョン管理されている",
+   "point": "必須・型・形式・列挙・追加属性",
+   "operation": "有効な要求と応答を契約検証し、実サービスと比較する",
+   "expected": "送受信のスキーマ、必須性、制約、文字エンコードが契約と一致する",
+   "proof": "契約ファイル・要求応答・検証レポート",
+   "levels": [
+    "統合テスト"
+   ],
+   "technique": "契約テスト",
+   "quality": "相互運用性",
+   "sources": [
+    "EV-OAS-3.2.0",
+    "EV-JSON-SCHEMA-2020-12"
+   ],
+   "capabilities": [
+    "interface"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "A02",
+   "test_type": "IF/APIテスト",
+   "theme": "異常応答",
+   "target": "external_interface",
+   "series": "異常系",
+   "kind": "プロトコル異常",
+   "condition": "依存先が仕様外ステータス、不正形式、空応答または遅延を返す",
+   "point": "4xx/5xx・タイムアウト・切断・不正Content-Type・壊れた本文",
+   "operation": "スタブで各異常応答を発生させ、エラー変換と再試行制御を確認する",
+   "expected": "異常が成功と誤認されず、無限再試行・二重更新・内部情報露出が起きない",
+   "proof": "スタブ設定・要求応答・再試行ログ・更新差分",
+   "levels": [
+    "統合テスト"
+   ],
+   "technique": "フォールトインジェクション",
+   "quality": "障害耐性",
+   "sources": [
+    "EV-RFC-9110",
+    "EV-OAS-3.2.0"
+   ],
+   "capabilities": [
+    "interface"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "A03",
+   "test_type": "IF/APIテスト",
+   "theme": "再送制御",
+   "target": "external_interface",
+   "series": "準正常系",
+   "kind": "冪等性と順序",
+   "condition": "タイムアウト後に処理済みか不明な要求が再送される",
+   "point": "同一冪等キー・異なるキー・古いシーケンス・順序逆転",
+   "operation": "初回応答を失わせて再送し、保存結果と返却結果を照合する",
+   "expected": "同一業務操作が要求仕様以上の回数成立せず、順序性違反が検出される",
+   "proof": "相関ID・冪等キー・受付履歴・保存差分",
+   "levels": [
+    "統合テスト"
+   ],
+   "technique": "プロトコルテスト",
+   "quality": "信頼性・相互運用性",
+   "sources": [
+    "EV-RFC-9110",
+    "EV-OAS-3.2.0"
+   ],
+   "capabilities": [
+    "interface"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "D01",
+   "test_type": "データ整合性テスト",
+   "theme": "一意性・参照整合性",
+   "target": "data_asset",
+   "series": "異常系",
+   "kind": "制約違反",
+   "condition": "同一キー重複、親の不在、子の残留が起こりうる",
+   "point": "重複・孤児・削除制約・循環参照",
+   "operation": "UI、API、バッチ、直接取込の各経路から制約違反データを投入する",
+   "expected": "すべての更新経路で同じ整合性が保護され、部分的な残留データが生じない",
+   "proof": "入力データ・制約エラー・テーブル差分・照合SQL",
+   "levels": [
+    "統合テスト"
+   ],
+   "technique": "データ品質テスト",
+   "quality": "一貫性・正確性",
+   "sources": [
+    "EV4-ISO-25012-2008",
+    "EV4-ISO-25024-2015"
+   ],
+   "capabilities": [
+    "data"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "D02",
+   "test_type": "データ整合性テスト",
+   "theme": "トランザクション",
+   "target": "data_asset",
+   "series": "異常系",
+   "kind": "原子性とロールバック",
+   "condition": "複数データ更新の中間で例外・タイムアウト・強制終了が起きる",
+   "point": "最初・中間・コミット直前・コミット後",
+   "operation": "各障害点で処理を中断し、データと後続メッセージの状態を照合する",
+   "expected": "要求されたトランザクション境界で全件成功または全件取消となり、再開で整合する",
+   "proof": "障害点・トランザクションログ・データ差分・キュー状態",
+   "levels": [
+    "統合テスト"
+   ],
+   "technique": "フォールトインジェクション",
+   "quality": "一貫性・回復性",
+   "sources": [
+    "EV4-ISO-25012-2008"
+   ],
+   "capabilities": [
+    "data"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "D03",
+   "test_type": "データ整合性テスト",
+   "theme": "並行更新",
+   "target": "data_asset",
+   "series": "準正常系",
+   "kind": "競合制御",
+   "condition": "複数利用者またはプロセスが同一{primary_object}を更新する",
+   "point": "同時更新・読込後更新・デッドロック・楽観ロック競合",
+   "operation": "実行順序を制御して競合を発生させ、確定値と各利用者への応答を照合する",
+   "expected": "更新消失、不整合な中間値、無限待機が発生せず、競合が利用者に明示される",
+   "proof": "実行シーケンス・ロック情報・バージョン値・更新履歴",
+   "levels": [
+    "統合テスト"
+   ],
+   "technique": "競合テスト",
+   "quality": "一貫性・信頼性",
+   "sources": [
+    "EV4-ISO-25012-2008"
+   ],
+   "capabilities": [
+    "data"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "J01",
+   "test_type": "バッチテスト",
+   "theme": "定時実行",
+   "target": "scheduled_process",
+   "series": "正常系",
+   "kind": "対象抽出と締め",
+   "condition": "対象日、カットオフ時刻、抽出条件が定義されている",
+   "point": "対象直前・対象一致・対象直後のレコード",
+   "operation": "制御した業務日と時計で{scheduled_process}を実行する",
+   "expected": "抽出対象の過不足がなく、処理件数、更新件数、出力件数、除外件数が整合する",
+   "proof": "ジョブ実行条件・対象ID一覧・件数照合・出力ファイル",
+   "levels": [
+    "システムテスト"
+   ],
+   "technique": "境界値分析",
+   "quality": "機能正確性",
+   "sources": [
+    "EV-ISO-29119-4-2021"
+   ],
+   "capabilities": [
+    "batch"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "J02",
+   "test_type": "バッチテスト",
+   "theme": "再開・再実行",
+   "target": "scheduled_process",
+   "series": "異常系",
+   "kind": "中断点からの復旧",
+   "condition": "ジョブがチャンク境界、出力中、コミット中のいずれかで停止する",
+   "point": "開始直後・中間チェックポイント・最終コミット直前",
+   "operation": "各中断点で強制停止し、手順書に従って再開または再実行する",
+   "expected": "処理漏れと二重処理がなく、処理済み/未処理/要手動対応を一意に識別できる",
+   "proof": "チェックポイント・対象ID・処理前後差分・再開ログ",
+   "levels": [
+    "運用受入"
+   ],
+   "technique": "回復テスト",
+   "quality": "回復性",
+   "sources": [
+    "EV-ISO-22301-2019",
+    "EV-IPA-NFR-2018"
+   ],
+   "capabilities": [
+    "batch"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "P01",
+   "test_type": "帳票テスト",
+   "theme": "内容整合性",
+   "target": "output_artifact",
+   "series": "正常系",
+   "kind": "原始データとの照合",
+   "condition": "{output_artifact}が複数テーブルや計算結果を参照する",
+   "point": "明細・小計・税・丸め・合計・ページ跨ぎ",
+   "operation": "出力の各項目に対して原始データと再計算結果を照合する",
+   "expected": "表示値、丸め順序、小計、総計、対象期間が要求と一致する",
+   "proof": "出力ファイル・原始データ・再計算シート・差分",
+   "levels": [
+    "システムテスト"
+   ],
+   "technique": "オラクルテスト",
+   "quality": "機能正確性",
+   "sources": [
+    "EV-ISO-29119-4-2021"
+   ],
+   "capabilities": [
+    "report"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "P02",
+   "test_type": "帳票テスト",
+   "theme": "表示・出力",
+   "target": "output_artifact",
+   "series": "準正常系",
+   "kind": "可変長と分頁",
+   "condition": "長い文字列、多件数、複数言語、特殊文字を含む",
+   "point": "折返し・改ページ・改頁・ヘッダー再表示・フォント代替",
+   "operation": "最大長相当のデータでPDF/CSV/画面出力を生成し、各ビューアで確認する",
+   "expected": "欠落、重なり、文字化け、意図しないセル分割、数値の文字列化が起きない",
+   "proof": "各形式の出力・レンダリング画像・パース結果",
+   "levels": [
+    "受け入れテスト"
+   ],
+   "technique": "構成テスト",
+   "quality": "使用性・互換性",
+   "sources": [
+    "EV-ISO-25010-2023"
+   ],
+   "capabilities": [
+    "report"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "L01",
+   "test_type": "性能テスト",
+   "theme": "定常負荷",
+   "target": "primary_flow",
+   "series": "正常系",
+   "kind": "応答時間とスループット",
+   "condition": "本番の時間帯別負荷モデルとデータ量が定義されている",
+   "point": "低負荷・代表負荷・業務ピークの定常区間",
+   "operation": "本番比率でシナリオを発生させ、暖機後の分位点応答時間、スループット、誤り率を測定する",
+   "expected": "要求で定義された各分位点と処理量を満たし、エラー率とキュー滞留が許容範囲にある",
+   "proof": "負荷モデル・生データ・分位点・誤り率・リソースメトリクス",
+   "levels": [
+    "システムテスト"
+   ],
+   "technique": "負荷テスト",
+   "quality": "時間効率性・容量満足性",
+   "sources": [
+    "EV-ISO-25010-2023",
+    "EV4-ISO-25023-2016",
+    "EV-IPA-NFR-2018"
+   ],
+   "capabilities": [
+    "performance"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "L02",
+   "test_type": "性能テスト",
+   "theme": "急増負荷",
+   "target": "primary_flow",
+   "series": "準正常系",
+   "kind": "スパイクとバックプレッシャー",
+   "condition": "短時間で要求量が急増し、処理能力を一時的に超える",
+   "point": "増加傾斜・ピーク継続・通常負荷への復帰",
+   "operation": "負荷を段階的または瞬間的に上げ、入口制御、キュー、自動拡縮、復旧を追跡する",
+   "expected": "過負荷を明示的に制御し、データ不整合を起こさず、負荷低下後に手動操作なしで安定状態へ戻る",
+   "proof": "負荷波形・キュー長・スケール履歴・エラー率・復帰時間",
+   "levels": [
+    "システムテスト"
+   ],
+   "technique": "スパイクテスト",
+   "quality": "容量満足性・回復性",
+   "sources": [
+    "EV-ISO-25010-2023",
+    "EV-IPA-NFR-2018"
+   ],
+   "capabilities": [
+    "performance"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "L03",
+   "test_type": "性能テスト",
+   "theme": "長時間稼働",
+   "target": "primary_flow",
+   "series": "準正常系",
+   "kind": "ソークと劣化傾向",
+   "condition": "定常負荷を業務サイクルをまたいで継続する",
+   "point": "メモリ・接続・スレッド・一時領域・ログ・キューの時系列",
+   "operation": "代表負荷を実際の定期処理周期を含む時間継続し、傾向と急変を観測する",
+   "expected": "応答と誤り率が時間とともに劣化せず、資源が循環利用され、業務日切替で異常が起きない",
+   "proof": "時系列メトリクス・ヒープ/接続スナップショット・ジョブ履歴",
+   "levels": [
+    "システムテスト"
+   ],
+   "technique": "ソークテスト",
+   "quality": "資源効率性・安定性",
+   "sources": [
+    "EV-ISO-25010-2023",
+    "EV4-ISO-25023-2016"
+   ],
+   "capabilities": [
+    "performance"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "S01",
+   "test_type": "セキュリティテスト",
+   "theme": "認証",
+   "target": "primary_flow",
+   "series": "異常系",
+   "kind": "認証バイパス防止",
+   "condition": "未認証、失効資格情報、不正な署名または異なる発行者でアクセスする",
+   "point": "トークンなし・期限切れ・改ざん・別環境発行・リプレイ",
+   "operation": "UI、API、直接URL、バックグラウンド経路から各不正資格情報で試行する",
+   "expected": "すべての経路で保護対象の処理前に拒否され、アカウント存在や内部情報を不要に露出しない",
+   "proof": "要求応答・認証ログ・保護リソースの未更新証跡",
+   "levels": [
+    "システムテスト"
+   ],
+   "technique": "ネガティブテスト",
+   "quality": "真正性・機密性",
+   "sources": [
+    "EV-OWASP-ASVS-5.0.0",
+    "EV-ISO-27001-2022"
+   ],
+   "capabilities": [
+    "security"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "S02",
+   "test_type": "セキュリティテスト",
+   "theme": "認可",
+   "target": "primary_object",
+   "series": "異常系",
+   "kind": "権限境界と所有者検証",
+   "condition": "権限不足の利用者が自他の{primary_object}へアクセスする",
+   "point": "水平権限昇格・垂直権限昇格・テナント越境・直接ID指定",
+   "operation": "画面表示の有無に依存せず、読取・作成・更新・削除・出力を直接要求する",
+   "expected": "サーバー側で全操作がデフォルト拒否され、存在有無や他者データが露出しない",
+   "proof": "権限マトリクス・要求応答・監査ログ・データ差分",
+   "levels": [
+    "システムテスト"
+   ],
+   "technique": "権限マトリクステスト",
+   "quality": "アクセス制御性・機密性",
+   "sources": [
+    "EV-OWASP-ASVS-5.0.0",
+    "EV-ISO-27001-2022"
+   ],
+   "capabilities": [
+    "security"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "S03",
+   "test_type": "セキュリティテスト",
+   "theme": "入力・出力安全性",
+   "target": "primary_object",
+   "series": "異常系",
+   "kind": "注入とエンコード",
+   "condition": "外部入力がコマンド、クエリ、テンプレートまたは表示に渡る",
+   "point": "SQL/OS/テンプレート/パス注入・格納型/反射型スクリプト・CSV数式",
+   "operation": "入力経路と出力コンテキストを列挙し、構文を変えるペイロードで実行する",
+   "expected": "ペイロードはデータとして扱われ、コマンド実行、認可回避、他データ取得が起きない",
+   "proof": "ペイロード・要求応答・データベースログ・ブラウザ実行結果",
+   "levels": [
+    "システムテスト"
+   ],
+   "technique": "セキュリティネガティブテスト",
+   "quality": "完全性・機密性",
+   "sources": [
+    "EV-OWASP-ASVS-5.0.0",
+    "EV-IPA-WEBSEC-7"
+   ],
+   "capabilities": [
+    "security"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "S04",
+   "test_type": "セキュリティテスト",
+   "theme": "秘密情報",
+   "target": "data_asset",
+   "series": "異常系",
+   "kind": "ログ・通信・保存中の露出",
+   "condition": "{data_asset}または資格情報を処理する",
+   "point": "通常ログ・例外ログ・トレース・バックアップ・一時ファイル・通信",
+   "operation": "正常と異常の両経路を実行し、全証跡・ダンプ・保存媒体を検索する",
+   "expected": "必要最小限の識別子以外はマスクまたは暗号化され、復号鍵とデータが同じ保護境界に残らない",
+   "proof": "検索結果・ログ・通信キャプチャ・保存設定・鍵管理履歴",
+   "levels": [
+    "システムテスト"
+   ],
+   "technique": "情報漏えいテスト",
+   "quality": "機密性",
+   "sources": [
+    "EV-OWASP-ASVS-5.0.0",
+    "EV-ISO-27001-2022",
+    "EV-RFC-8446"
+   ],
+   "capabilities": [
+    "security"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "U01",
+   "test_type": "ユーザビリティテスト",
+   "theme": "タスク完遂",
+   "target": "primary_flow",
+   "series": "正常系",
+   "kind": "初見利用者の業務完遂",
+   "condition": "対象業務の知識はあるがシステム操作経験がない",
+   "point": "開始点の発見・入力・確認・誤操作からの回復・完了確認",
+   "operation": "事前説明を業務上必要な範囲に限定し、代表利用者が{primary_flow}を実行する",
+   "expected": "利用者が致命的な支援なしで目的を完了し、完了・失敗・取消の状態を区別できる",
+   "proof": "操作録画・完遂可否・迷いポイント・発話・所要時間",
+   "levels": [
+    "受け入れテスト"
+   ],
+   "technique": "ユーザビリティテスト",
+   "quality": "運用操作性・ユーザーエラー防止性",
+   "sources": [
+    "EV-ISO-25010-2023",
+    "EV4-VALTES-VIEWPOINT"
+   ],
+   "capabilities": [
+    "ui"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "X01",
+   "test_type": "アクセシビリティテスト",
+   "theme": "キーボード",
+   "target": "primary_flow",
+   "series": "正常系",
+   "kind": "キーボード操作の完結",
+   "condition": "ポインティングデバイスを使用しない",
+   "point": "フォーカス順序・視認性・トラップ防止・モダール開閉・ショートカット",
+   "operation": "標準キー操作だけで{primary_flow}を最後まで実行する",
+   "expected": "全操作が実行可能で、フォーカス位置と順序を常に識別でき、操作不能な閉路に入らない",
+   "proof": "操作録画・フォーカス順序・アクセシビリティツリー",
+   "levels": [
+    "受け入れテスト"
+   ],
+   "technique": "キーボード操作テスト",
+   "quality": "包括性・操作性",
+   "sources": [
+    "EV-W3C-WCAG-2.2"
+   ],
+   "capabilities": [
+    "accessibility"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "X02",
+   "test_type": "アクセシビリティテスト",
+   "theme": "支援技術",
+   "target": "primary_flow",
+   "series": "正常系",
+   "kind": "名前・役割・値の公開",
+   "condition": "スクリーンリーダーとブラウザの支援組合せを使う",
+   "point": "ラベル・役割・状態・エラー・動的更新・読上げ順序",
+   "operation": "画面を見ずに読上げ情報だけで{primary_flow}を実行する",
+   "expected": "コントロールの目的、入力値、状態、エラー、結果を視覚に依存せず理解できる",
+   "proof": "読上げ録音・アクセシビリティツリー・操作録画",
+   "levels": [
+    "受け入れテスト"
+   ],
+   "technique": "スクリーンリーダーテスト",
+   "quality": "包括性・理解性",
+   "sources": [
+    "EV-W3C-WCAG-2.2"
+   ],
+   "capabilities": [
+    "accessibility"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "M01",
+   "test_type": "移行テスト",
+   "theme": "データ移行",
+   "target": "data_asset",
+   "series": "正常系",
+   "kind": "全件性・正確性・追跡性",
+   "condition": "旧データを新スキーマまたは新システムに変換する",
+   "point": "件数・キー・金額/数量合計・必須率・参照関係・履歴鏈",
+   "operation": "移行前に固定した照合クエリを旧新両方に実行し、差分を全件分類する",
+   "expected": "欠落・重複・意図しない変換がなく、許容差分は変換仕様と個体識別子へ追跡できる",
+   "proof": "旧新スナップショット・照合SQL・差分一覧・変換ログ",
+   "levels": [
+    "システムテスト"
+   ],
+   "technique": "データ照合テスト",
+   "quality": "移行性・正確性",
+   "sources": [
+    "EV4-ISO-25012-2008",
+    "EV4-ISO-25024-2015"
+   ],
+   "capabilities": [
+    "data"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "M02",
+   "test_type": "移行テスト",
+   "theme": "切替・切戻し",
+   "target": "primary_flow",
+   "series": "異常系",
+   "kind": "本番切替手順の可逆性",
+   "condition": "切替中に判定基準未達、タイムアウトまたは致命的エラーが起きる",
+   "point": "事前・更新停止後・データ移行後・ルーティング切替後",
+   "operation": "実際の担当者と連絡経路でリハーサルし、各中止点から切戻す",
+   "expected": "定義した判定時間内に安全な経路へ戻り、新旧双方へ更新されたデータが未分類で残らない",
+   "proof": "切替手順・実績時刻・承認ログ・新旧差分・切戻し後スモーク結果",
+   "levels": [
+    "運用受入"
+   ],
+   "technique": "リハーサルテスト",
+   "quality": "移行性・回復性",
+   "sources": [
+    "EV-ISO-22301-2019",
+    "EV-IPA-NFR-2018"
+   ],
+   "capabilities": [
+    "core"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "O01",
+   "test_type": "運用テスト",
+   "theme": "監視・通知",
+   "target": "critical_risk",
+   "series": "異常系",
+   "kind": "利用者影響の発見",
+   "condition": "{critical_risk}に繋がる予兆または障害が発生する",
+   "point": "可用性・遅延・誤り率・滞留・データ鮮度・セキュリティイベント",
+   "operation": "各検知条件を障害注入し、メトリクス、アラート、通知、初動まで追跡する",
+   "expected": "利用者の申告より前に検知可能で、担当、影響範囲、優先度、最初の診断情報が付与される",
+   "proof": "障害注入時刻・メトリクス・アラート・通知履歴・チケット",
+   "levels": [
+    "運用受入"
+   ],
+   "technique": "運用シナリオテスト",
+   "quality": "可観測性・運用性",
+   "sources": [
+    "EV-NIST-CSF-2.0",
+    "EV-ISO-22301-2019"
+   ],
+   "capabilities": [
+    "operations"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "O02",
+   "test_type": "運用テスト",
+   "theme": "復旧",
+   "target": "primary_flow",
+   "series": "異常系",
+   "kind": "バックアップ復元と業務再開",
+   "condition": "最新データ、設定、鍵、ジョブ状態を含む復旧が必要になる",
+   "point": "フル復元・増分復元・特定時点・別サイト・鍵ローテーション後",
+   "operation": "手順書だけを用いて別環境へ復元し、{primary_flow}と照合クエリを実行する",
+   "expected": "復旧時点と所要時間が要求を満たし、復元済みデータの一貫性と業務再開を実証できる",
+   "proof": "バックアップID・復元ログ・所要時間・照合結果・スモーク結果",
+   "levels": [
+    "運用受入"
+   ],
+   "technique": "リカバリテスト",
+   "quality": "回復性・可用性",
+   "sources": [
+    "EV-ISO-22301-2019",
+    "EV-IPA-NFR-2018"
+   ],
+   "capabilities": [
+    "operations"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "O03",
+   "test_type": "運用テスト",
+   "theme": "デプロイ",
+   "target": "primary_flow",
+   "series": "準正常系",
+   "kind": "無停止変更と切戻し",
+   "condition": "アプリ、データベース、設定または依存関係を本番に反映する",
+   "point": "事前チェック・混在版・スキーマ展開・ヘルス判定・自動中止・切戻し",
+   "operation": "本番同等構成でデプロイ中に業務負荷を継続し、成功と失敗の両シナリオを実行する",
+   "expected": "許容停止・誤り率内で切替わり、新旧両立期間の互換性が保たれ、失敗時は一意な版へ戻る",
+   "proof": "デプロイログ・版情報・エラー率・データ差分・切戻し結果",
+   "levels": [
+    "運用受入"
+   ],
+   "technique": "運用リハーサル",
+   "quality": "移行性・可用性",
+   "sources": [
+    "EV-ISO-22301-2019",
+    "EV-NIST-CSF-2.0"
+   ],
+   "capabilities": [
+    "operations"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "AI01",
+   "test_type": "機能テスト",
+   "theme": "AI出力品質",
+   "target": "primary_flow",
+   "series": "準正常系",
+   "kind": "テストオラクルと受入基準",
+   "condition": "AI出力が確率的、非決定的または一意な正解を持たない",
+   "point": "正解付き・部分正解・専門家判定・メタモルフィック関係・統計基準",
+   "operation": "用途と失敗影響ごとにオラクルと許容幅を先に定義し、固定済み評価セットで反復測定する",
+   "expected": "合否判定が実行者の主観だけに依存せず、モデル版と評価データ版を含め再現できる",
+   "proof": "評価データ版・モデル版・生出条件・指標・専門家判定履歴",
+   "levels": [
+    "システムテスト"
+   ],
+   "technique": "AIオラクル設計・メタモルフィックテスト",
+   "quality": "機能正確性・信頼性",
+   "sources": [
+    "EV4-ISO-29119-11-2020",
+    "EV4-ISO-42119-2-2025"
+   ],
+   "capabilities": [
+    "ai"
+   ],
+   "risk": "AI出力を決定的システムと同じ方法で判定し、重要な誤りを見逃す",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "AI02",
+   "test_type": "データ整合性テスト",
+   "theme": "AIデータ品質",
+   "target": "data_asset",
+   "series": "準正常系",
+   "kind": "学習・評価・運用データの適合性",
+   "condition": "AIの学習、検証、テストまたは検索に外部データを使う",
+   "point": "完全性・正確性・代表性・新鮮度・重複・ラベル品質・リーケージ・利用権",
+   "operation": "データセットごとにプロファイル、分布比較、重複/近傍検索、ラベル一致度、来歴と利用条件を検査する",
+   "expected": "用途に必要な品質尺度と受入基準が満たされ、評価データの漏えいと不正利用がない",
+   "proof": "データカード・プロファイル・分布差分・重複結果・ラベルレビュー・権利証跡",
+   "levels": [
+    "システムテスト"
+   ],
+   "technique": "データ品質評価",
+   "quality": "データ品質・公平性",
+   "sources": [
+    "EV4-ISO-5259-2-2024",
+    "EV4-ISO-25012-2008",
+    "EV4-ISO-25024-2015"
+   ],
+   "capabilities": [
+    "ai"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "AI03",
+   "test_type": "非機能テスト",
+   "theme": "AI頑健性",
+   "target": "primary_flow",
+   "series": "異常系",
+   "kind": "分布外・擾乱・ドリフト",
+   "condition": "入力が学習時分布から外れるか、軽微な擾乱を含む",
+   "point": "欠落・ノイズ・表記揺れ・外れ値・新規カテゴリ・時系列ドリフト",
+   "operation": "意味を保つ変換と意味を壊す変換を分けて投入し、出力変化、信頼度、拒否、人間への委譲を測定する",
+   "expected": "安定すべき入力では結果が許容幅内に留まり、分布外では過度に確信せず検知・拒否・委譲のいずれかが機能する",
+   "proof": "変換定義・入出力ペア・確信度・分布外スコア・委譲ログ",
+   "levels": [
+    "システムテスト"
+   ],
+   "technique": "メタモルフィックテスト・頑健性テスト",
+   "quality": "頑健性・安全性",
+   "sources": [
+    "EV4-ISO-29119-11-2020",
+    "EV4-ISO-42119-2-2025"
+   ],
+   "capabilities": [
+    "ai"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "AI04",
+   "test_type": "業務シナリオテスト",
+   "theme": "AI人間監督",
+   "target": "primary_flow",
+   "series": "異常系",
+   "kind": "人間による覆し・停止・訂正",
+   "condition": "AI出力が低信頼、高影響またはポリシー違反である",
+   "point": "自動適用前の承認・事後取消・即時停止・代替手順・異議申立",
+   "operation": "実際の運用権限で各人間介入を実行し、介入前後の対外影響と履歴を確認する",
+   "expected": "正しい権限者が理解可能な根拠で介入でき、不利益な処理を停止・取消し、全操作を監査できる",
+   "proof": "判定根拠・承認/取消履歴・対外処理ログ・異議申立履歴",
+   "levels": [
+    "受け入れテスト"
+   ],
+   "technique": "ユースケーステスト・エラー推測",
+   "quality": "安全性・説明可能性・責任追跡性",
+   "sources": [
+    "EV4-ISO-42001-2023",
+    "EV4-ISO-42005-2025"
+   ],
+   "capabilities": [
+    "ai"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "AI05",
+   "test_type": "運用テスト",
+   "theme": "AI影響評価",
+   "target": "critical_risk",
+   "series": "準正常系",
+   "kind": "ライフサイクル影響の再評価",
+   "condition": "用途、モデル、データ、対象者、法規制または運用環境が変更される",
+   "point": "設計前・導入前・重要変更時・インシデント後・定期レビュー",
+   "operation": "影響を受ける個人・集団・社会、予見可能な誤用、便益、リスク、軽減策、残留リスクを更新する",
+   "expected": "変更後の実際の用途と影響範囲が評価に反映され、高リスクの残留項目に責任者と受容/追加処置が定められる",
+   "proof": "AI影響評価書・利害関係者レビュー・リスク登録簿・変更履歴・承認記録",
+   "levels": [
+    "運用受入"
+   ],
+   "technique": "影響評価・リスクベースドテスト",
+   "quality": "社会的影響・公平性・透明性",
+   "sources": [
+    "EV4-ISO-42005-2025",
+    "EV4-ISO-42001-2023"
+   ],
+   "capabilities": [
+    "ai"
+   ],
+   "risk": "重要な品質要求の未達",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "G01",
+   "test_type": "業務シナリオテスト",
+   "theme": "金額・残高",
+   "target": "primary_object",
+   "series": "異常系",
+   "kind": "二重計上と不符合防止",
+   "condition": "金額、数量、ポイントまたは残高を増減する処理が再送・競合・部分失敗する",
+   "point": "同一取引再送・双方同時更新・仕訳片側失敗・取消と確定の競合",
+   "operation": "障害点と実行順を制御し、業務取引と会計/在庫/残高の各記録を独立照合する",
+   "expected": "取引の成立回数と増減結果が一致し、双方の合計・仕訳・残高に説明できない差額が残らない",
+   "proof": "業務取引ID・仕訳・残高履歴・外部照合・差額レポート",
+   "levels": [
+    "統合テスト"
+   ],
+   "technique": "デシジョンテーブル・競合テスト",
+   "quality": "機能正確性・一貫性",
+   "sources": [
+    "EV-ISO-29119-4-2021",
+    "EV4-ISO-25012-2008"
+   ],
+   "capabilities": [
+    "money"
+   ],
+   "risk": "二重計上、消込漏れ、説明不能な差額",
+   "priority": "P1",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "H01",
+   "test_type": "非機能テスト",
+   "theme": "安全性",
+   "target": "critical_risk",
+   "series": "異常系",
+   "kind": "危険状態への移行防止",
+   "condition": "誤入力、センサー異常、通信断、タイミング競合またはオペレータ誤操作が起きる",
+   "point": "単一故障・現実的な二重故障・操作順序違反・インターロック解除試行",
+   "operation": "ハザード分析の原因と制御を対応付け、制御の有効・無効と故障の組合せを実行する",
+   "expected": "危険側に処理を継続せず、安全状態へ移行し、復旧に権限と確認を要し、原因と操作を追跡できる",
+   "proof": "ハザードID・障害注入条件・状態履歴・インターロックログ・復旧承認",
+   "levels": [
+    "システムテスト"
+   ],
+   "technique": "ハザードベースドテスト・フォールトインジェクション",
+   "quality": "安全性・障害耐性",
+   "sources": [
+    "EV-ISO-25010-2023",
+    "EV-ISO-29119-4-2021"
+   ],
+   "capabilities": [
+    "safety"
+   ],
+   "risk": "人身・財産・環境への危害",
+   "priority": "P0",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "PR01",
+   "test_type": "セキュリティテスト",
+   "theme": "プライバシー",
+   "target": "data_asset",
+   "series": "異常系",
+   "kind": "目的外利用と保存期間",
+   "condition": "{data_asset}が異なる利用目的・同意状態・保存期限にまたがる",
+   "point": "同意前・同意後・撤回後・利用目的変更・期限超過・削除保留",
+   "operation": "各ライフサイク状態で収集・参照・二次利用・出力・削除を試行する",
+   "expected": "適法な目的と有効な同意の範囲でのみ利用でき、撤回・期限・削除保留の要求がすべての複製へ適用される",
+   "proof": "同意履歴・利用目的・アクセスログ・データストア検索・削除レポート",
+   "levels": [
+    "システムテスト"
+   ],
+   "technique": "データライフサイクルテスト",
+   "quality": "プライバシー・アカウンタビリティ",
+   "sources": [
+    "EV-ISO-27701-2025",
+    "EV-PPC-APPI-GUIDELINE-2026-06"
+   ],
+   "capabilities": [
+    "privacy"
+   ],
+   "risk": "要配慮情報の目的外利用、過剰保存、削除不備",
+   "priority": "P0",
+   "measure": "要求に定義した合否判定",
+   "automation": "回帰対象は自動化候補"
+  }
+ ]
+}

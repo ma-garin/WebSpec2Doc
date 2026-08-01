@@ -10,6 +10,7 @@ VIEWPOINTS_DB = Path(os.environ.get("VIEWPOINTS_DB", "instance/viewpoints.db"))
 VIEWPOINT_TEMPLATES_DIR = Path(
     os.environ.get("VIEWPOINT_TEMPLATES_DIR", "data/viewpoint_templates")
 )
+DATA_DIR = Path(os.environ.get("WEBSPEC2DOC_DATA_DIR", "data"))
 TEST_DESIGN_SETTINGS_FILE = Path(
     os.environ.get("TEST_DESIGN_SETTINGS_FILE", "instance/test_design_settings.json")
 )

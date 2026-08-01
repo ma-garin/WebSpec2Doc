@@ -9,7 +9,11 @@ from web.audit_context import record_admin_event
 from web.services.openai_qa import OpenAIQAError, has_openai_api_key
 from web.services.viewpoint_proposals import generate_viewpoint_proposals
 from web.services.viewpoint_store import ViewpointStoreError, get_viewpoint_store
-from web.services.viewpoint_templates import apply_template, list_templates
+from web.services.viewpoint_templates import (
+    apply_template,
+    create_set_from_template,
+    list_templates,
+)
 
 bp = Blueprint("viewpoints", __name__)
 INSTANCE_DIR = Path("instance")
@@ -257,9 +261,40 @@ def api_viewpoint_templates() -> dict[str, Any]:
     return {"templates": list_templates()}
 
 
+@bp.get("/api/viewpoint-sources")
+def api_viewpoint_sources() -> dict[str, Any]:
+    """観点の根拠となる規格・ガイドラインの出典一覧。
+
+    観点の standards（例: "OWASP ASVS 4.1"）から原典へ辿れるようにする。
+    「なぜこの観点が必要か」を利用者が自分で確かめられないと、観点は指示書にしかならない。
+    """
+    from web.services.viewpoint_sources import list_sources
+
+    return {"sources": list_sources()}
+
+
+@bp.get("/api/viewpoint-sources/resolve")
+def api_resolve_viewpoint_source() -> dict[str, Any]:
+    """standards 文字列から出典を引く。該当が無ければ source は null。"""
+    from web.services.viewpoint_sources import resolve
+
+    return {"source": resolve(request.args.get("standards", ""))}
+
+
 @bp.post("/api/viewpoint-sets/<set_id>/templates/<template_key>/apply")
 def api_apply_viewpoint_template(set_id: str, template_key: str) -> dict[str, Any]:
     return {"result": apply_template(set_id, template_key)}
+
+
+@bp.post("/api/viewpoint-templates/<template_key>/create-set")
+def api_create_set_from_template(template_key: str) -> dict[str, Any]:
+    """テンプレートから観点セットを新規作成する。
+
+    既存の apply は「開いているセットに足す」動作で、テンプレートを用意しても
+    セット一覧には現れなかった。使い始めるまでの手数を1つにする。
+    """
+    body = _body()
+    return {"result": create_set_from_template(template_key, str(body.get("name", "")))}
 
 
 @bp.patch("/api/viewpoint-items/<item_id>/move")

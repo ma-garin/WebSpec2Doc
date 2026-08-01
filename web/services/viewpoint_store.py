@@ -427,7 +427,8 @@ class ViewpointStoreBase:
                     (SELECT version_number FROM viewpoint_versions v
                      WHERE v.set_id=s.id AND v.status='draft' LIMIT 1) AS draft_version,
                     (SELECT COUNT(*) FROM viewpoint_items i JOIN viewpoint_versions v ON v.id=i.version_id
-                     WHERE v.set_id=s.id AND v.status='published' AND i.deleted_at IS NULL AND i.enabled=1) AS item_count,
+                     WHERE v.set_id=s.id AND v.status='published' AND i.deleted_at IS NULL
+                       AND i.enabled=1 AND i.node_type='viewpoint') AS item_count,
                     (SELECT COUNT(*) FROM viewpoint_assignments a
                      WHERE a.set_id=s.id AND a.deleted_at IS NULL AND a.enabled=1) AS assignment_count
                     FROM viewpoint_sets s {where}

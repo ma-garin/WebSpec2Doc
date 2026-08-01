@@ -248,6 +248,10 @@
                     <div class="vp-field">
                       <label for="vp-item-standards">標準・根拠</label>
                       <input id="vp-item-standards" maxlength="500">
+                      <!-- 入力した規格名から原典へのリンクを出す。
+                           「なぜこの観点が必要か」を利用者が自分で確かめられないと、
+                           観点は根拠のない指示書になる。 -->
+                      <p class="vp-source-hint" id="vp-item-source" hidden></p>
                     </div>
                     <div class="vp-field">
                       <label for="vp-item-tags">タグ</label>

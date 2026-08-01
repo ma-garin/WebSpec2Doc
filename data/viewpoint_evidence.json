@@ -1,0 +1,916 @@
+{
+ "schema_version": 1,
+ "source": "kanten evidence_sources + professional_sources",
+ "sources": [
+  {
+   "id": "EV-ISO-29119-1-2022",
+   "labels": [
+    "ISO/IEC/IEEE 29119 ソフトウェアテスト",
+    "ISO 29119",
+    "IEC / IEEE 系"
+   ],
+   "category": "国際規格",
+   "issuer": "ISO/IEC/IEEE",
+   "document": "ISO/IEC/IEEE 29119-1:2022 Software testing — Part 1: General concepts",
+   "location": "General concepts and terminology; full clauses require a licensed copy",
+   "url": "https://www.iso.org/standard/81291.html",
+   "access": "public_summary"
+  },
+  {
+   "id": "EV-ISO-29119-2-2021",
+   "labels": [
+    "ISO/IEC/IEEE 29119 ソフトウェアテスト"
+   ],
+   "category": "国際規格",
+   "issuer": "ISO/IEC/IEEE",
+   "document": "ISO/IEC/IEEE 29119-2:2021 Software testing — Part 2: Test processes",
+   "location": "Dynamic test processes; full clauses require a licensed copy",
+   "url": "https://www.iso.org/standard/79428.html",
+   "access": "public_summary"
+  },
+  {
+   "id": "EV-ISO-29119-4-2021",
+   "labels": [
+    "ISO/IEC/IEEE 29119 ソフトウェアテスト"
+   ],
+   "category": "国際規格",
+   "issuer": "ISO/IEC/IEEE",
+   "document": "ISO/IEC/IEEE 29119-4:2021 Software testing — Part 4: Test techniques",
+   "location": "Specification-based, structure-based and experience-based test techniques; full clauses require a licensed copy",
+   "url": "https://www.iso.org/standard/79430.html",
+   "access": "public_summary"
+  },
+  {
+   "id": "EV-ISTQB-CTFL-4.0.1",
+   "labels": [
+    "ISTQB"
+   ],
+   "category": "規格・標準",
+   "issuer": "ISTQB",
+   "document": "Certified Tester Foundation Level Syllabus v4.0.1",
+   "location": "Chapter 4 Test Analysis and Design; Chapter 5 Managing the Test Activities",
+   "url": "https://istqb.org/wp-content/uploads/2024/11/ISTQB_CTFL_Syllabus_v4.0.1.pdf",
+   "access": "public_full"
+  },
+  {
+   "id": "EV-ISO-25010-2023",
+   "labels": [
+    "ISO/IEC 25010 品質モデル",
+    "ISO 25010"
+   ],
+   "category": "国際規格",
+   "issuer": "ISO/IEC",
+   "document": "ISO/IEC 25010:2023 SQuaRE — Product quality model",
+   "location": "Product quality model and nine characteristics; full clauses require a licensed copy",
+   "url": "https://www.iso.org/standard/78176.html",
+   "access": "public_summary"
+  },
+  {
+   "id": "EV-IPA-NFR-2018",
+   "labels": [
+    "IPA 非機能要求グレード"
+   ],
+   "category": "公的機関ガイド",
+   "issuer": "IPA",
+   "document": "非機能要求グレード2018",
+   "location": "可用性、性能・拡張性、運用・保守性、移行性、セキュリティ、システム環境・エコロジー",
+   "url": "https://www.ipa.go.jp/sec/softwareengineering/std/ent03-b.html",
+   "access": "public_full"
+  },
+  {
+   "id": "EV-OAS-3.2.0",
+   "labels": [
+    "OpenAPI"
+   ],
+   "category": "技術標準・仕様",
+   "issuer": "OpenAPI Initiative",
+   "document": "OpenAPI Specification v3.2.0",
+   "location": "Paths, Operations, Parameters, Request Body, Responses, Security and Schema Objects",
+   "url": "https://spec.openapis.org/oas/latest.html",
+   "access": "public_full"
+  },
+  {
+   "id": "EV-RFC-9110",
+   "labels": [
+    "HTTP"
+   ],
+   "category": "技術標準・仕様",
+   "issuer": "IETF",
+   "document": "RFC 9110 HTTP Semantics",
+   "location": "Sections 9 Request Methods and 15 Status Codes",
+   "url": "https://www.rfc-editor.org/rfc/rfc9110.html",
+   "access": "public_full"
+  },
+  {
+   "id": "EV-JSON-SCHEMA-2020-12",
+   "labels": [
+    "JSON Schema"
+   ],
+   "category": "技術標準・仕様",
+   "issuer": "JSON Schema",
+   "document": "JSON Schema Draft 2020-12",
+   "location": "Core and Validation specifications",
+   "url": "https://json-schema.org/specification",
+   "access": "public_full"
+  },
+  {
+   "id": "EV-ISO-22301-2019",
+   "labels": [
+    "ISO 22301 事業継続"
+   ],
+   "category": "国際規格",
+   "issuer": "ISO",
+   "document": "ISO 22301:2019 Business continuity management systems",
+   "location": "Business continuity requirements; full clauses require a licensed copy",
+   "url": "https://www.iso.org/standard/75106.html",
+   "access": "public_summary"
+  },
+  {
+   "id": "EV-OWASP-ASVS-5.0.0",
+   "labels": [
+    "OWASP ASVS / Top 10",
+    "OWASP"
+   ],
+   "category": "技術標準・仕様",
+   "issuer": "OWASP Foundation",
+   "document": "OWASP Application Security Verification Standard 5.0.0",
+   "location": "Versioned requirements v5.0.0; select the exact requirement identifier during review",
+   "url": "https://owasp.org/www-project-application-security-verification-standard/",
+   "access": "public_full"
+  },
+  {
+   "id": "EV-ISO-27001-2022",
+   "labels": [
+    "ISO/IEC 27001 情報セキュリティ",
+    "ISMS"
+   ],
+   "category": "国際規格",
+   "issuer": "ISO/IEC",
+   "document": "ISO/IEC 27001:2022 Information security management systems — Requirements",
+   "location": "ISMS requirements and Annex A controls; full clauses require a licensed copy",
+   "url": "https://www.iso.org/standard/27001",
+   "access": "public_summary"
+  },
+  {
+   "id": "EV-W3C-WCAG-2.2",
+   "labels": [
+    "W3C WCAG / WAI-ARIA"
+   ],
+   "category": "技術標準・仕様",
+   "issuer": "W3C",
+   "document": "Web Content Accessibility Guidelines (WCAG) 2.2",
+   "location": "Success Criteria 1.4, 2.1, 2.4, 3.3 and 4.1; refine to an exact criterion per viewpoint",
+   "url": "https://www.w3.org/TR/WCAG22/",
+   "access": "public_full"
+  },
+  {
+   "id": "EV-NIST-CSF-2.0",
+   "labels": [
+    "NIST CSF"
+   ],
+   "category": "公的機関ガイド",
+   "issuer": "NIST",
+   "document": "The NIST Cybersecurity Framework (CSF) 2.0",
+   "location": "Govern, Identify, Protect, Detect, Respond and Recover functions",
+   "url": "https://www.nist.gov/publications/nist-cybersecurity-framework-csf-20",
+   "access": "public_full"
+  },
+  {
+   "id": "EV-AWS-WAF-CURRENT",
+   "labels": [
+    "AWS Well-Architected"
+   ],
+   "category": "ベンダー公式基準",
+   "issuer": "Amazon Web Services",
+   "document": "AWS Well-Architected Framework",
+   "location": "Operational Excellence, Security, Reliability, Performance Efficiency, Cost Optimization and Sustainability pillars; refine to a BP identifier per viewpoint",
+   "url": "https://docs.aws.amazon.com/wellarchitected/latest/framework/welcome.html",
+   "access": "public_full"
+  },
+  {
+   "id": "EV-AZURE-WAF-CURRENT",
+   "labels": [
+    "Azure Well-Architected"
+   ],
+   "category": "ベンダー公式基準",
+   "issuer": "Microsoft",
+   "document": "Azure Well-Architected Framework",
+   "location": "Reliability, Security, Cost Optimization, Operational Excellence and Performance Efficiency pillars",
+   "url": "https://learn.microsoft.com/en-us/azure/well-architected/what-is-well-architected-framework",
+   "access": "public_full"
+  },
+  {
+   "id": "EV-GCP-WAF-CURRENT",
+   "labels": [
+    "Google Cloud Architecture Framework"
+   ],
+   "category": "ベンダー公式基準",
+   "issuer": "Google Cloud",
+   "document": "Google Cloud Well-Architected Framework",
+   "location": "Operational excellence, Security, Reliability, Cost optimization, Performance optimization and Sustainability pillars",
+   "url": "https://cloud.google.com/architecture/framework",
+   "access": "public_full"
+  },
+  {
+   "id": "EV-SALESFORCE-WAF-CURRENT",
+   "labels": [
+    "Salesforce"
+   ],
+   "category": "ベンダー公式基準",
+   "issuer": "Salesforce",
+   "document": "Salesforce Well-Architected",
+   "location": "Trusted, Easy and Adaptable principles and related patterns",
+   "url": "https://architect.salesforce.com/well-architected/overview",
+   "access": "public_full"
+  },
+  {
+   "id": "EV-SERVICENOW-ITSM-CURRENT",
+   "labels": [
+    "ServiceNow"
+   ],
+   "category": "ベンダー公式基準",
+   "issuer": "ServiceNow",
+   "document": "ServiceNow IT Service Management",
+   "location": "ITSM product capabilities; refine to the applicable product documentation topic per viewpoint",
+   "url": "https://www.servicenow.com/products/itsm.html",
+   "access": "public_summary"
+  },
+  {
+   "id": "EV-IPA-WEBSEC-7",
+   "labels": [
+    "IPA セキュリティ関連"
+   ],
+   "category": "公的機関ガイド",
+   "issuer": "IPA",
+   "document": "安全なウェブサイトの作り方 改訂第7版",
+   "location": "Chapter 1 web application security implementation; refine to items 1.1–1.11",
+   "url": "https://www.ipa.go.jp/security/vuln/websecurity.html",
+   "access": "public_full"
+  },
+  {
+   "id": "EV-JPCERT-SECURE-CODING",
+   "labels": [
+    "JPCERT/CC"
+   ],
+   "category": "公的機関ガイド",
+   "issuer": "JPCERT/CC",
+   "document": "JPCERT/CC セキュアコーディング",
+   "location": "CERT C and Java secure coding standards and supporting materials",
+   "url": "https://www.jpcert.or.jp/securecoding/",
+   "access": "public_full"
+  },
+  {
+   "id": "EV-ISO-27701-2025",
+   "labels": [
+    "ISO/IEC 27701 プライバシー"
+   ],
+   "category": "国際規格",
+   "issuer": "ISO/IEC",
+   "document": "ISO/IEC 27701:2025 Privacy information management systems — Requirements and guidance",
+   "location": "PIMS requirements and guidance; full clauses require a licensed copy",
+   "url": "https://www.iso.org/standard/27701",
+   "access": "public_summary"
+  },
+  {
+   "id": "EV-AICPA-SOC2-TSC",
+   "labels": [
+    "SOC2"
+   ],
+   "category": "認証・監査基準",
+   "issuer": "AICPA & CIMA",
+   "document": "SOC 2 and Trust Services Criteria resource set",
+   "location": "Security, Availability, Processing Integrity, Confidentiality and Privacy criteria",
+   "url": "https://www.aicpa-cima.com/resources/landing/system-and-organization-controls-soc-suite-of-services",
+   "access": "public_summary"
+  },
+  {
+   "id": "EV-RFC-8446",
+   "labels": [
+    "TLS"
+   ],
+   "category": "技術標準・仕様",
+   "issuer": "IETF",
+   "document": "RFC 8446 The Transport Layer Security (TLS) Protocol Version 1.3",
+   "location": "Sections 4 Handshake Protocol, 5 Record Protocol and 6 Alert Protocol",
+   "url": "https://www.rfc-editor.org/rfc/rfc8446.html",
+   "access": "public_full"
+  },
+  {
+   "id": "EV-DIGITAL-GIF-2026",
+   "labels": [
+    "デジタル庁",
+    "公共・行政"
+   ],
+   "category": "行政ガイドライン",
+   "issuer": "デジタル庁",
+   "document": "政府相互運用性フレームワーク（GIF）",
+   "location": "実装データモデル、コアデータモデル、コアデータパーツおよび導入実践ガイドブック",
+   "url": "https://www.digital.go.jp/policies/data_strategy_government_interoperability_framework",
+   "access": "public_full"
+  },
+  {
+   "id": "EV-DIGITAL-LOCAL-COMMON-2.7",
+   "labels": [
+    "公共：デジタル庁標準仕様",
+    "公共・行政",
+    "デジタル庁"
+   ],
+   "category": "業界標準",
+   "issuer": "デジタル庁",
+   "document": "地方公共団体情報システム共通機能標準仕様書 第2.7版",
+   "location": "申請管理、庁内データ連携、文字、統合収納管理等の共通機能要求",
+   "url": "https://www.digital.go.jp/policies/local_governments/common-feature-specification",
+   "access": "public_full"
+  },
+  {
+   "id": "EV-PPC-APPI-GUIDELINE-2026-06",
+   "labels": [
+    "個人情報・プライバシー",
+    "個人情報保護委員会"
+   ],
+   "category": "法令・規制",
+   "issuer": "個人情報保護委員会",
+   "document": "個人情報の保護に関する法律についてのガイドライン（通則編）令和8年6月一部改正",
+   "location": "利用目的、安全管理措置、第三者提供、保有個人データおよび漏えい等対応",
+   "url": "https://www.ppc.go.jp/personalinfo/legal/guidelines_tsusoku/",
+   "access": "public_full"
+  },
+  {
+   "id": "EV-MHLW-MEDINFO-6.0",
+   "labels": [
+    "医療・ヘルスケア",
+    "厚労省"
+   ],
+   "category": "行政ガイドライン",
+   "issuer": "厚生労働省",
+   "document": "医療情報システムの安全管理に関するガイドライン 第6.0版",
+   "location": "概説編、経営管理編、企画管理編、システム運用編および令和7年5月Q&A",
+   "url": "https://www.mhlw.go.jp/stf/shingi/0000516275_00006.html",
+   "access": "public_full"
+  },
+  {
+   "id": "EV-HL7-FHIR-R5",
+   "labels": [
+    "医療：HL7 / FHIR"
+   ],
+   "category": "業界標準",
+   "issuer": "HL7 International",
+   "document": "HL7 FHIR R5 v5.0.0",
+   "location": "Resources, RESTful API, Conformance, Terminology, Security and Privacy modules",
+   "url": "https://hl7.org/fhir/",
+   "access": "public_full"
+  },
+  {
+   "id": "EV-MLIT-BIMCIM-2026",
+   "labels": [
+    "建設：BIM/CIM / 電子納品"
+   ],
+   "category": "業界標準",
+   "issuer": "国土交通省",
+   "document": "BIM/CIM 適用業務実施要領 令和8年4月改定版",
+   "location": "BIM/CIM成果、確認方法および電子納品・後段階への引継ぎ",
+   "url": "https://www.mlit.go.jp/kowan/content/001992868.pdf",
+   "access": "public_full"
+  },
+  {
+   "id": "EV-PCI-DSS-4.0.1",
+   "labels": [
+    "決済：PCI DSS"
+   ],
+   "category": "業界標準",
+   "issuer": "PCI Security Standards Council",
+   "document": "Payment Card Industry Data Security Standard v4.0.1",
+   "location": "Requirements 1–12 and testing procedures; select an exact requirement per applicable viewpoint",
+   "url": "https://www.pcisecuritystandards.org/document_library/",
+   "access": "public_full"
+  },
+  {
+   "id": "EV-GS1-STANDARDS-CURRENT",
+   "labels": [
+    "流通：GS1"
+   ],
+   "category": "業界標準",
+   "issuer": "GS1",
+   "document": "GS1 Standards",
+   "location": "Identify, Capture and Share standards; select General Specifications, EPCIS or Global Traceability Standard as applicable",
+   "url": "https://www.gs1.org/standards",
+   "access": "public_full"
+  },
+  {
+   "id": "EV-3GPP-SPECS-CURRENT",
+   "labels": [
+    "通信：3GPP / TM Forum"
+   ],
+   "category": "業界標準",
+   "issuer": "3GPP",
+   "document": "3GPP Specifications",
+   "location": "Select the exact Technical Specification number and Release for the network function under test",
+   "url": "https://www.3gpp.org/specifications",
+   "access": "public_full"
+  },
+  {
+   "id": "EV-TMF-OPENAPI-CURRENT",
+   "labels": [
+    "通信：3GPP / TM Forum"
+   ],
+   "category": "業界標準",
+   "issuer": "TM Forum",
+   "document": "TM Forum Open APIs",
+   "location": "TMF630 REST API Design Guidelines and exact TMF API specification/conformance kit",
+   "url": "https://www.tmforum.org/oda/open-apis/",
+   "access": "public_mixed"
+  },
+  {
+   "id": "EV-FISC-SAFETY-13",
+   "labels": [
+    "金融：FISC"
+   ],
+   "category": "業界標準",
+   "issuer": "金融情報システムセンター",
+   "document": "金融機関等コンピュータシステムの安全対策基準・解説書 第13版",
+   "location": "統制、システム開発・運用、セキュリティおよび監査の該当基準小項目",
+   "url": "https://www.fisc.or.jp/topics/006665.php",
+   "access": "public_summary"
+  },
+  {
+   "id": "EV-EGOV-PAYMENT-SERVICES-ACT",
+   "labels": [
+    "金融・決済"
+   ],
+   "category": "法令・規制",
+   "issuer": "e-Gov法令検索",
+   "document": "資金決済に関する法律（平成21年法律第59号）",
+   "location": "適用するサービス区分に応じた利用者保護、情報管理、帳簿および監督規定",
+   "url": "https://laws.e-gov.go.jp/law/421AC0000000059",
+   "access": "public_full"
+  },
+  {
+   "id": "EV-EGOV-CONSUMER-CONTRACT-ACT",
+   "labels": [
+    "消費者保護"
+   ],
+   "category": "法令・規制",
+   "issuer": "e-Gov法令検索",
+   "document": "消費者契約法（平成12年法律第61号）",
+   "location": "契約申込み・承諾、取消しおよび不当条項に関する規定",
+   "url": "https://laws.e-gov.go.jp/law/412AC0000000061",
+   "access": "public_full"
+  },
+  {
+   "id": "EV-EGOV-EBOOKS-ACT",
+   "labels": [
+    "電子帳簿・会計・税務"
+   ],
+   "category": "法令・規制",
+   "issuer": "e-Gov法令検索",
+   "document": "電子帳簿保存法（平成10年法律第25号）",
+   "location": "第4条 電磁的記録による保存等、第7条 電子取引の取引情報に係る電磁的記録の保存",
+   "url": "https://laws.e-gov.go.jp/law/410AC0000000025",
+   "access": "public_full"
+  },
+  {
+   "id": "EV-EGOV-TELECOM-BUSINESS-ACT",
+   "labels": [
+    "電気通信"
+   ],
+   "category": "法令・規制",
+   "issuer": "e-Gov法令検索",
+   "document": "電気通信事業法（昭和59年法律第86号）",
+   "location": "通信の秘密、利用者保護、事故報告および設備・業務管理に関する適用条項",
+   "url": "https://laws.e-gov.go.jp/law/359AC0000000086",
+   "access": "public_full"
+  },
+  {
+   "id": "EV-FSA-INTERNAL-CONTROL-2023",
+   "labels": [
+    "内部統制 / J-SOX",
+    "金融庁"
+   ],
+   "category": "認証・監査基準",
+   "issuer": "金融庁 企業会計審議会",
+   "document": "財務報告に係る内部統制の評価及び監査の基準並びに実施基準 令和5年改訂",
+   "location": "内部統制の基本的枠組み、評価範囲、業務プロセス評価、ITへの対応および報告",
+   "url": "https://www.fsa.go.jp/news/r4/sonota/20230407/1.pdf",
+   "access": "public_full"
+  },
+  {
+   "id": "EV-JISC-JIS-SEARCH",
+   "labels": [
+    "JIS Q 系",
+    "JIS X 系",
+    "JIS化されたISO/IEC規格"
+   ],
+   "category": "国内規格",
+   "issuer": "日本産業標準調査会",
+   "document": "JIS検索",
+   "location": "JIS Q（管理システム）およびJIS X（情報処理）の該当規格番号を選定するための公式データベース",
+   "url": "https://www.jisc.go.jp/jis/general/GnrJISSearch.html",
+   "access": "public_index"
+  },
+  {
+   "id": "EV-NISC-UNIFIED-2025",
+   "labels": [
+    "NISC"
+   ],
+   "category": "公的機関ガイド",
+   "issuer": "国家サイバー統括室（旧NISC）",
+   "document": "政府機関等のサイバーセキュリティ対策のための統一基準群 令和7年度版",
+   "location": "情報システムのライフサイクル、構成要素、セキュリティ要件および運用",
+   "url": "https://www.nisc.go.jp/policy/group/general/kijun.html",
+   "access": "public_full"
+  },
+  {
+   "id": "EV-ISMAP-CONTROLS",
+   "labels": [
+    "ISMAP"
+   ],
+   "category": "認証・監査基準",
+   "issuer": "ISMAP運営委員会",
+   "document": "ISMAP管理基準",
+   "location": "統制目標、3桁管理策および詳細管理策。完全版は関連JIS購入者向け",
+   "url": "https://www.ismap.go.jp/csm?id=kb_article_view&sysparm_article=KB0010028",
+   "access": "public_summary"
+  },
+  {
+   "id": "EV-JIPDEC-PRIVACYMARK-2023",
+   "labels": [
+    "プライバシーマーク"
+   ],
+   "category": "認証・監査基準",
+   "issuer": "JIPDEC",
+   "document": "プライバシーマークにおける個人情報保護マネジメントシステム構築・運用指針 JIS Q 15001:2023準拠 ver1.0",
+   "location": "PMS方針、計画、運用、評価、改善および付与適格性審査基準",
+   "url": "https://www.privacymark.jp/guideline/outline.html",
+   "access": "public_full"
+  },
+  {
+   "id": "EV-RFC-9700",
+   "labels": [
+    "OAuth / OpenID Connect"
+   ],
+   "category": "技術標準・仕様",
+   "issuer": "IETF",
+   "document": "RFC 9700 Best Current Practice for OAuth 2.0 Security",
+   "location": "Sections 2 Best Practices and 4 Attacks and Mitigations",
+   "url": "https://www.rfc-editor.org/rfc/rfc9700.html",
+   "access": "public_full"
+  },
+  {
+   "id": "EV-OIDC-CORE-1.0",
+   "labels": [
+    "OAuth / OpenID Connect"
+   ],
+   "category": "技術標準・仕様",
+   "issuer": "OpenID Foundation",
+   "document": "OpenID Connect Core 1.0 incorporating errata set 2",
+   "location": "Authentication flows, ID Token validation, Claims, client authentication, security and privacy considerations",
+   "url": "https://openid.net/specs/openid-connect-core-1_0-final.html",
+   "access": "public_full"
+  },
+  {
+   "id": "EV-OASIS-SAML-2.0-CORE",
+   "labels": [
+    "SAML"
+   ],
+   "category": "技術標準・仕様",
+   "issuer": "OASIS",
+   "document": "Assertions and Protocols for the OASIS Security Assertion Markup Language (SAML) V2.0",
+   "location": "Assertions, protocols, processing rules and error responses",
+   "url": "https://docs.oasis-open.org/security/saml/v2.0/saml-core-2.0-os.pdf",
+   "access": "public_full"
+  },
+  {
+   "id": "EV-METI-CYBER-GUIDE-3.0",
+   "labels": [
+    "経産省"
+   ],
+   "category": "行政ガイドライン",
+   "issuer": "経済産業省",
+   "document": "サイバーセキュリティ経営ガイドライン Ver.3.0",
+   "location": "経営者が認識すべき原則およびサイバーセキュリティ経営の重要10項目",
+   "url": "https://www.meti.go.jp/policy/netsecurity/mng_guide.html",
+   "access": "public_full"
+  },
+  {
+   "id": "EV-MIC-CLOUD-SECURITY-3",
+   "labels": [
+    "総務省"
+   ],
+   "category": "行政ガイドライン",
+   "issuer": "総務省",
+   "document": "クラウドサービス提供における情報セキュリティ対策ガイドライン 第3版",
+   "location": "SaaS/IaaS/PaaSの責任分界およびクラウドサービス提供者の情報セキュリティ対策",
+   "url": "https://www.soumu.go.jp/main_content/000771515.pdf",
+   "access": "public_full"
+  },
+  {
+   "id": "EV4-ISO-29119-3-2021",
+   "labels": [
+    "ISO/IEC/IEEE 29119 ソフトウェアテスト",
+    "ISO 29119",
+    "テスト文書"
+   ],
+   "category": "国際規格",
+   "issuer": "ISO/IEC/IEEE",
+   "document": "ISO/IEC/IEEE 29119-3:2021 Software testing — Part 3: Test documentation",
+   "location": "Public abstract: test documentation templates and outputs of the Part 2 test processes",
+   "url": "https://www.iso.org/standard/79429.html",
+   "access": "public_summary"
+  },
+  {
+   "id": "EV4-ISO-29119-11-2020",
+   "labels": [
+    "AIテスト",
+    "ISO 29119",
+    "ISO/IEC 42000シリーズ"
+   ],
+   "category": "国際規格",
+   "issuer": "ISO/IEC",
+   "document": "ISO/IEC TR 29119-11:2020 Guidelines on the testing of AI-based systems",
+   "location": "Public abstract: AI test-oracle problem, lifecycle testing, black-box and neural-network white-box approaches",
+   "url": "https://www.iso.org/standard/79016.html",
+   "access": "public_summary"
+  },
+  {
+   "id": "EV4-ISO-42119-2-2025",
+   "labels": [
+    "AIテスト",
+    "ISO/IEC 42000シリーズ"
+   ],
+   "category": "国際規格",
+   "issuer": "ISO/IEC",
+   "document": "ISO/IEC TS 42119-2:2025 Testing of AI — Part 2: Overview of testing AI systems",
+   "location": "Public abstract: application of the ISO/IEC/IEEE 29119 series to testing AI systems",
+   "url": "https://www.iso.org/standard/84127.html",
+   "access": "public_summary"
+  },
+  {
+   "id": "EV4-ISO-25012-2008",
+   "labels": [
+    "ISO/IEC 25000シリーズ",
+    "データ品質"
+   ],
+   "category": "国際規格",
+   "issuer": "ISO/IEC",
+   "document": "ISO/IEC 25012:2008 SQuaRE — Data quality model",
+   "location": "Public abstract and public table of contents: 15 inherent and system-dependent data-quality characteristics",
+   "url": "https://www.iso.org/standard/35736.html",
+   "access": "public_summary"
+  },
+  {
+   "id": "EV4-ISO-25023-2016",
+   "labels": [
+    "ISO/IEC 25000シリーズ",
+    "ISO/IEC 25010 品質モデル",
+    "品質測定"
+   ],
+   "category": "国際規格",
+   "issuer": "ISO/IEC",
+   "document": "ISO/IEC 25023:2016 SQuaRE — Measurement of system and software product quality",
+   "location": "Public abstract: measures for characteristics and subcharacteristics defined in ISO/IEC 25010",
+   "url": "https://www.iso.org/standard/35747.html",
+   "access": "public_summary"
+  },
+  {
+   "id": "EV4-ISO-25024-2015",
+   "labels": [
+    "ISO/IEC 25000シリーズ",
+    "データ品質",
+    "品質測定"
+   ],
+   "category": "国際規格",
+   "issuer": "ISO/IEC",
+   "document": "ISO/IEC 25024:2015 SQuaRE — Measurement of data quality",
+   "location": "Public abstract: quantitative data-quality measures based on ISO/IEC 25012",
+   "url": "https://www.iso.org/standard/35749.html",
+   "access": "public_summary"
+  },
+  {
+   "id": "EV4-ISO-25040-2011",
+   "labels": [
+    "ISO/IEC 25000シリーズ",
+    "品質評価"
+   ],
+   "category": "国際規格",
+   "issuer": "ISO/IEC",
+   "document": "ISO/IEC 25040:2011 SQuaRE — Evaluation process",
+   "location": "Public abstract: requirements and recommendations for software-product quality evaluation",
+   "url": "https://www.iso.org/standard/35765.html",
+   "access": "public_summary"
+  },
+  {
+   "id": "EV4-ISO-42001-2023",
+   "labels": [
+    "ISO/IEC 42000シリーズ",
+    "AIマネジメント",
+    "AIガバナンス"
+   ],
+   "category": "国際規格",
+   "issuer": "ISO/IEC",
+   "document": "ISO/IEC 42001:2023 Artificial intelligence — Management system",
+   "location": "Public overview: establish, implement, maintain and continually improve an AI management system",
+   "url": "https://www.iso.org/standard/42001",
+   "access": "public_summary"
+  },
+  {
+   "id": "EV4-ISO-42005-2025",
+   "labels": [
+    "ISO/IEC 42000シリーズ",
+    "AI影響評価",
+    "AIガバナンス"
+   ],
+   "category": "国際規格",
+   "issuer": "ISO/IEC",
+   "document": "ISO/IEC 42005:2025 Artificial intelligence — AI system impact assessment",
+   "location": "Public overview: identify, evaluate and document impacts throughout the AI-system lifecycle",
+   "url": "https://www.iso.org/standard/42005",
+   "access": "public_summary"
+  },
+  {
+   "id": "EV4-ISO-42006-2025",
+   "labels": [
+    "ISO/IEC 42000シリーズ",
+    "AI監査",
+    "AIガバナンス"
+   ],
+   "category": "国際規格",
+   "issuer": "ISO/IEC",
+   "document": "ISO/IEC 42006:2025 Requirements for bodies providing audit and certification of AI management systems",
+   "location": "Public overview: consistent and credible audit and certification of ISO/IEC 42001 management systems",
+   "url": "https://www.iso.org/standard/42006",
+   "access": "public_summary"
+  },
+  {
+   "id": "EV4-ISO-5259-2-2024",
+   "labels": [
+    "AIテスト",
+    "データ品質",
+    "AIデータ品質"
+   ],
+   "category": "国際規格",
+   "issuer": "ISO/IEC",
+   "document": "ISO/IEC 5259-2:2024 AI — Data quality for analytics and ML — Part 2: Data quality measures",
+   "location": "Public overview: measurable data-quality characteristics for analytics and machine learning",
+   "url": "https://www.iso.org/standard/81860.html",
+   "access": "public_summary"
+  },
+  {
+   "id": "EV4-VERISERVE-TEST-DESIGN",
+   "labels": [
+    "検証専門会社メソッド",
+    "テスト設計",
+    "VSTeP"
+   ],
+   "category": "検証専門会社公開知見",
+   "issuer": "株式会社ベリサーブ",
+   "document": "テスト設計 / VSTePテスト技法解説",
+   "location": "テスト対象分析、観点とビュー、重点領域、状態遷移・同値分割・境界値・デシジョンテーブル・組合せ",
+   "url": "https://www.veriserve.co.jp/service/detail/testdesign.html",
+   "access": "public_full"
+  },
+  {
+   "id": "EV4-SHIFT-VIEWPOINT",
+   "labels": [
+    "検証専門会社メソッド",
+    "テスト観点"
+   ],
+   "category": "検証専門会社公開知見",
+   "issuer": "株式会社SHIFT",
+   "document": "テスト観点とは？必要性や洗い出すための要素、つくり方を解説",
+   "location": "機能要素・検証方法・入力条件・出力結果の4要素、ユーザー/仕様/バグ/設計実装の4視点",
+   "url": "https://service.shiftinc.jp/column/5029/",
+   "access": "public_full"
+  },
+  {
+   "id": "EV4-VALTES-VIEWPOINT",
+   "labels": [
+    "検証専門会社メソッド",
+    "テスト観点"
+   ],
+   "category": "検証専門会社公開知見",
+   "issuer": "バルテス株式会社",
+   "document": "テスト観点とは？重要性とテスト観点リストの作り方・整理するポイント",
+   "location": "要件、使用性、アクセシビリティ、セキュリティ、性能とリスクの可視化",
+   "url": "https://service.valtes.co.jp/s-test/blog/testing-perspective_vol76/",
+   "access": "public_full"
+  },
+  {
+   "id": "EV4-WEBRAGE-VIEWPOINT",
+   "labels": [
+    "検証専門会社メソッド",
+    "テスト観点"
+   ],
+   "category": "検証専門会社公開知見",
+   "issuer": "デロイト トーマツ ウェブレッジ",
+   "document": "テスト観点～概要と具体的な観点～",
+   "location": "User-view, Spec-view, Fault-view, Design-viewと品質特性",
+   "url": "https://webrage.jp/techblog/software_testing_point_of_view/",
+   "access": "public_full"
+  },
+  {
+   "id": "EV4-AGEST-VIEWPOINT",
+   "labels": [
+    "検証専門会社メソッド",
+    "テスト観点",
+    "リスクベースドテスト"
+   ],
+   "category": "検証専門会社公開知見",
+   "issuer": "株式会社AGEST",
+   "document": "テスト観点とは？洗い出し方や活用プロセス、網羅性を高めるためのポイント",
+   "location": "対象部分と検証視点、テストマトリクス、優先度と除外の明示、ダブルチェック",
+   "url": "https://agest.co.jp/column/2025-12-24/",
+   "access": "public_full"
+  },
+  {
+   "id": "EV4-WHATWG-HTML-LS",
+   "labels": [
+    "HTML Living Standard",
+    "UI/HTML仕様"
+   ],
+   "category": "技術標準・仕様",
+   "issuer": "WHATWG",
+   "document": "HTML Living Standard",
+   "location": "Forms, input types, autocomplete and inputmode requirements",
+   "url": "https://html.spec.whatwg.org/",
+   "access": "public_full"
+  },
+  {
+   "id": "EV4-MDN-FORMS",
+   "labels": [
+    "MDN Web Docs",
+    "UI/HTML実装"
+   ],
+   "category": "ブラウザ実装リファレンス",
+   "issuer": "Mozilla",
+   "document": "MDN Web Docs: HTML forms and input behavior",
+   "location": "inputmode, autocomplete and browser/virtual-keyboard behavior reference",
+   "url": "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input",
+   "access": "public_full"
+  },
+  {
+   "id": "EV4-OWASP-AUTH-CS",
+   "labels": [
+    "OWASP Authentication",
+    "認証・セキュリティ"
+   ],
+   "category": "セキュリティガイド",
+   "issuer": "OWASP",
+   "document": "OWASP Authentication Cheat Sheet",
+   "location": "Authentication responses, password handling, reauthentication and account protections",
+   "url": "https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html",
+   "access": "public_full"
+  },
+  {
+   "id": "EV4-RFC-6265",
+   "labels": [
+    "HTTP Cookie",
+    "セッション/Cookie"
+   ],
+   "category": "技術標準・仕様",
+   "issuer": "IETF",
+   "document": "RFC 6265 HTTP State Management Mechanism",
+   "location": "Cookie syntax, storage model and user-agent/server requirements",
+   "url": "https://www.rfc-editor.org/rfc/rfc6265",
+   "access": "public_full"
+  },
+  {
+   "id": "EV4-NIST-SP800-63B-4",
+   "labels": [
+    "NIST Digital Identity",
+    "認証・パスワード"
+   ],
+   "category": "公的機関ガイド",
+   "issuer": "NIST",
+   "document": "NIST SP 800-63B-4 Digital Identity Guidelines: Authentication and Authenticator Management",
+   "location": "Authentication assurance, authenticators, password and session requirements",
+   "url": "https://pages.nist.gov/800-63-4/sp800-63b.html",
+   "access": "public_full"
+  },
+  {
+   "id": "EV4-RFC-6749",
+   "labels": [
+    "OAuth 2.0",
+    "認可プロトコル"
+   ],
+   "category": "技術標準・仕様",
+   "issuer": "IETF",
+   "document": "RFC 6749 The OAuth 2.0 Authorization Framework",
+   "location": "Authorization grants, token endpoint, client and resource-owner flows",
+   "url": "https://www.rfc-editor.org/rfc/rfc6749",
+   "access": "public_full"
+  },
+  {
+   "id": "EV4-LOGIN-DESIGN-REFERENCE",
+   "labels": [
+    "対象画面デザイン",
+    "ログイン画面リファレンス"
+   ],
+   "category": "参考資料",
+   "issuer": "8bit",
+   "document": "ログイン画面のデザインまとめ",
+   "location": "提供済み重要ZIPが参照した画面バリエーション",
+   "url": "https://blog.8bit.co.jp/?p=11410",
+   "access": "public_full"
+  }
+ ]
+}

@@ -98,8 +98,9 @@ class TestCompareAnalyzedPages:
         """渡した dynamic_masks が画像比較へそのまま伝播することを確認する。"""
         captured: dict[str, object] = {}
 
-        def _fake_shot(pair, old_page, new_page, masks, threshold, tolerance):
+        def _fake_shot(pair, old_page, new_page, masks, threshold, tolerance, diff_dir=None):
             captured["masks"] = masks
+            captured["diff_dir"] = diff_dir
             return None
 
         monkeypatch.setattr(comparison_module, "_compare_pair_screenshots", _fake_shot)
@@ -110,6 +111,26 @@ class TestCompareAnalyzedPages:
         compare_analyzed_pages(old, new, dynamic_masks=masks)
 
         assert captured["masks"] == masks
+        assert captured["diff_dir"] is None, "new_dir 未指定なら差分画像は作らない"
+
+    def test_diff_images_go_under_new_dir(self, monkeypatch, tmp_path) -> None:
+        """new_dir があれば差分画像の保存先が screenshot_diffs/ になること（P2-2）。"""
+        captured: dict[str, object] = {}
+
+        def _fake_shot(pair, old_page, new_page, masks, threshold, tolerance, diff_dir=None):
+            captured["diff_dir"] = diff_dir
+            return None
+
+        monkeypatch.setattr(comparison_module, "_compare_pair_screenshots", _fake_shot)
+        monkeypatch.setattr(comparison_module, "check_links", lambda *a, **k: [])
+        old = _analyzed(_page("https://x/a"))
+        new = _analyzed(_page("https://x/a"))
+
+        compare_analyzed_pages(
+            old, new, dynamic_masks={}, check_links=True, new_dir=tmp_path / "new"
+        )
+
+        assert captured["diff_dir"] == tmp_path / "new" / "screenshot_diffs"
 
     def test_check_links_requires_new_dir(self) -> None:
         old = _analyzed(_page("https://x/a"))

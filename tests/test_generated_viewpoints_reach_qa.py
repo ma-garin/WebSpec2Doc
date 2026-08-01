@@ -151,3 +151,116 @@ class TestMixedTaxonomiesBothSurvive:
         """既定観点だけのときは、従来どおりの振る舞いであること。"""
         assert self._names(self.LEGACY, "category_l2") == ["既定観点"]
         assert self._names(self.LEGACY, "quality_area_l1") == ["機能適合性"]
+
+
+class TestViewpointsAppearInGeneratedDocuments:
+    """観点の中身が、生成される文書の本文に現れること。
+
+    QA層に渡っただけでは届いたことにならない。`_load_qa_viewpoints()` の
+    戻り値を検査するテストは、doc_generator が `.name` しか読まず
+    期待結果を固定文言で上書きしていた間もずっと緑だった。
+    渡した先で使われているかは、出力本文で確かめるしかない。
+    """
+
+    REPORT = {
+        "screens": [
+            {
+                "page_id": "s1",
+                "title": "トップ",
+                "url": "https://x.test/",
+                "forms": [],
+                "buttons": [],
+                "transitions": [],
+            }
+        ]
+    }
+
+    def _docs(self) -> tuple[str, str]:
+        from web.services.qa import doc_generator
+
+        items = [
+            {"persistent_key": f"g{i}", **item}
+            for i, item in enumerate(generate("domain-01")["items"])
+        ]
+        with use_viewpoint_snapshot(items):
+            return (
+                doc_generator._test_design("x.test", self.REPORT),
+                doc_generator._test_cases("x.test", self.REPORT),
+            )
+
+    def test_expected_result_appears_in_test_design(self) -> None:
+        design, _ = self._docs()
+        expected = generate("domain-01")["items"][0]["expected_result"]
+        assert expected in design, "期待結果が設計文書の本文に出ていない"
+
+    def test_fixed_placeholder_text_is_gone(self) -> None:
+        """全件を同じ文言で埋めていないこと。
+
+        固定文言だと、どの観点でも同じ設計方針に見え、観点ごとの
+        判定基準が文書から失われる。
+        """
+        design, _ = self._docs()
+        assert "CSV観点を対象仕様へ適用し" not in design
+
+    def test_steps_and_evidence_appear_in_test_cases(self) -> None:
+        _, cases = self._docs()
+        item = generate("domain-01")["items"][0]
+        assert item["evidence"] in cases, "証跡がケース文書の本文に出ていない"
+        assert item["expected_result"] in cases, "期待結果がケース文書の本文に出ていない"
+
+    def test_truncation_is_disclosed(self) -> None:
+        """表に載せきれなかった件数を隠さないこと。
+
+        黙って切ると「これで全部」と読まれる。5,000観点のセットで
+        12件しか載らないのに、その事実が文書から読み取れなければ、
+        利用者は網羅したと誤認する。
+        """
+        design, cases = self._docs()
+        total = len(generate("domain-01")["items"])
+        for doc in (design, cases):
+            assert f"このセットは {total} 観点あり" in doc
+            assert "未掲載" in doc
+
+
+class TestQualityAreaDoesNotCollideWithReservedWords:
+    """分類の文字列が内部の予約語と一致しても、品質領域が消えないこと。
+
+    かつては分類名（テストタイプ）を領域として流用しており、その文字列が
+    `category_l2` 等の予約語と一致すると、領域の見出しが無言で消えた。
+    領域は品質特性の値として持ち、文字列の一致に左右されないようにする。
+    """
+
+    LEGACY = [
+        {"persistent_key": "l1", "name": "既定観点", "category": "category_l2"},
+        {"persistent_key": "l2", "name": "セキュリティ", "category": "quality_area_l1"},
+    ]
+
+    def _areas(self, snapshot: list[dict[str, Any]]) -> list[str]:
+        with use_viewpoint_snapshot(snapshot):
+            return [str(vp["name"]) for vp in _viewpoints_by_type("quality_area_l1")]
+
+    def test_reserved_word_as_category_still_yields_its_area(self) -> None:
+        colliding = [
+            {
+                "persistent_key": "a1",
+                "name": "予約語と衝突する観点",
+                "category": "category_l2",
+                "quality_area": "信頼性",
+            }
+        ]
+        assert "信頼性" in self._areas(self.LEGACY + colliding)
+
+    def test_quality_area_comes_from_the_characteristic_not_the_test_type(self) -> None:
+        """品質領域が、テストタイプではなく品質特性であること。"""
+        item = generate("domain-01")["items"][0]
+        assert item["quality_area"], "品質特性が空"
+        assert item["quality_area"] != item["category"], "テストタイプを領域に流用している"
+
+    def test_generated_viewpoints_carry_quality_area_to_qa(self) -> None:
+        items = [
+            {"persistent_key": f"g{i}", **item}
+            for i, item in enumerate(generate("domain-01")["items"][:5])
+        ]
+        areas = self._areas(items)
+        assert areas, "品質領域が1件も出ない"
+        assert all(area not in ("category_l2", "quality_area_l1") for area in areas)

@@ -372,9 +372,45 @@ class TestAutomationReflectsDefinition:
             for item in generate(meta["key"])["items"]:
                 assert "実施手段: " in item["recommended_checks"], item["name"]
 
-    def test_unknown_automation_text_falls_back_to_manual(self) -> None:
-        """判別できない記述は手動として扱うこと。"""
+    def test_every_definition_declares_its_automation_level(self) -> None:
+        """全ての観点定義が、自動化区分を明示していること。
+
+        かつては自由文から日本語の部分一致で推測しており、言い回しを
+        変えるだけで分類が変わった。101定義すべてが宣言していることを
+        ここで固定する。1件でも欠ければ生成時に落ちる。
+        """
+        from web.services.viewpoint_blueprints import AUTOMATION_LEVELS, _blueprints
+
+        undeclared = [
+            b["identifier"]
+            for b in _blueprints()["blueprints"]
+            if b.get("automation_level") not in AUTOMATION_LEVELS
+        ]
+        assert not undeclared, f"automation_level が未宣言・不正: {undeclared}"
+
+    def test_undeclared_automation_level_is_rejected(self) -> None:
+        """未宣言・不正値を黙って既定値へ倒さないこと。
+
+        倒すと、カタログの不備が「全部半自動」として出力に紛れ込み、
+        表示を見ただけでは気づけない。
+        """
         from web.services.viewpoint_blueprints import _automation_of
 
-        assert _automation_of({"automation": "見たことのない書き方"}) == "manual"
-        assert _automation_of({}) == "manual"
+        for broken in ({}, {"automation_level": ""}, {"automation_level": "auto"}):
+            with pytest.raises(ViewpointGeneratorError):
+                _automation_of(broken)
+
+    def test_unverifiable_definitions_are_counted(self) -> None:
+        """この製品で証跡を取れない観点の件数を、隠さず数えること。
+
+        観点があることと、この製品で確かめられることは別である。
+        数えていないと「観点を用意した＝検証できる」と読まれる。
+        """
+        result = generate("domain-13")
+        unverifiable = set(result["unverifiable_by_product"])
+        assert unverifiable, "外部手段が要る観点が1件も無い"
+        # リポジトリ参照が要る内部品質は、この製品では証跡を取れない
+        assert {"QI01", "QI02", "QI03", "QI04"}.issubset(unverifiable)
+        # 数え漏れが無いこと
+        applied = set(result["applied_definitions"])
+        assert unverifiable.issubset(applied)

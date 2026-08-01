@@ -61,6 +61,15 @@ def create_app() -> Flask:
     # 変更が反映されるようにする（再起動待ちが実測で 1 回 1〜2 分かかるため）。
     dev_reload = os.environ.get("WEBSPEC2DOC_TEMPLATES_AUTO_RELOAD", "").strip() == "1"
     app.config["TEMPLATES_AUTO_RELOAD"] = dev_reload
+    if dev_reload:
+        # 観点カタログ（JSON）も読み直す。Jinja2 テンプレートだけを再読込して
+        # 観点定義を固定したままにすると、JSON を編集しても画面が変わらず、
+        # 変数名から「観点も再読込される」と誤解したまま原因を探すことになる。
+        @app.before_request
+        def _reload_viewpoint_catalogs() -> None:
+            from web.services.viewpoint_blueprints import reload_catalogs
+
+            reload_catalogs()
     app.jinja_env.auto_reload = dev_reload
     app.jinja_env.globals["_ver"] = str(int(time.time()))
     if dev_reload:

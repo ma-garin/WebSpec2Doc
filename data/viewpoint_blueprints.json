@@ -36,7 +36,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "F02",
@@ -64,7 +65,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "F03",
@@ -92,7 +94,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "F04",
@@ -120,7 +123,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "F05",
@@ -148,7 +152,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "F06",
@@ -176,7 +181,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "F07",
@@ -204,7 +210,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "F08",
@@ -232,7 +239,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "N01",
@@ -262,7 +270,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "N02",
@@ -291,7 +300,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "N03",
@@ -319,7 +329,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "W01",
@@ -347,7 +358,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "W02",
@@ -375,7 +387,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "C01",
@@ -404,7 +417,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "C02",
@@ -432,7 +446,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "R01",
@@ -461,7 +476,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "B01",
@@ -490,7 +506,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "B02",
@@ -518,7 +535,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "A01",
@@ -547,7 +565,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "A02",
@@ -576,7 +595,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "A03",
@@ -605,7 +625,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "D01",
@@ -634,7 +655,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "D02",
@@ -662,7 +684,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "D03",
@@ -690,7 +713,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "J01",
@@ -718,7 +742,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "J02",
@@ -747,7 +772,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "P01",
@@ -775,7 +801,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "P02",
@@ -803,7 +830,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "L01",
@@ -833,7 +861,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "L02",
@@ -862,7 +891,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "L03",
@@ -891,7 +921,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "S01",
@@ -920,7 +951,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "S02",
@@ -949,7 +981,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "S03",
@@ -978,7 +1011,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "S04",
@@ -1008,7 +1042,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "U01",
@@ -1037,7 +1072,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "X01",
@@ -1065,7 +1101,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "X02",
@@ -1093,7 +1130,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "M01",
@@ -1122,7 +1160,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "M02",
@@ -1151,7 +1190,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "O01",
@@ -1180,7 +1220,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "O02",
@@ -1209,7 +1250,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "O03",
@@ -1238,7 +1280,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "AI01",
@@ -1267,7 +1310,8 @@
    "risk": "AI出力を決定的システムと同じ方法で判定し、重要な誤りを見逃す",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "AI02",
@@ -1297,7 +1341,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "AI03",
@@ -1326,7 +1371,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "AI04",
@@ -1355,7 +1401,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "AI05",
@@ -1384,7 +1431,8 @@
    "risk": "重要な品質要求の未達",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "G01",
@@ -1413,7 +1461,8 @@
    "risk": "二重計上、消込漏れ、説明不能な差額",
    "priority": "P1",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "H01",
@@ -1442,7 +1491,8 @@
    "risk": "人身・財産・環境への危害",
    "priority": "P0",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "PR01",
@@ -1471,7 +1521,8 @@
    "risk": "要配慮情報の目的外利用、過剰保存、削除不備",
    "priority": "P0",
    "measure": "要求に定義した合否判定",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   }
  ]
 }

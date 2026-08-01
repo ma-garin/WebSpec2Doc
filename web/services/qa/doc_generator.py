@@ -25,6 +25,34 @@ from web.services.qa.helpers import (
 from web.services.qa.markdown_lite import render_markdown_lite
 
 
+# 文書の表に載せる観点の上限。全件を1つの表に流すと読めなくなるが、
+# 黙って切ると「これで全部」と読まれる。切った件数を必ず書き添える。
+VIEWPOINT_TABLE_LIMIT = 12
+VIEWPOINT_CASE_LIMIT = 10
+
+
+def _truncation_note(total: int, limit: int) -> str:
+    """表に載せきれなかった件数を明記する行を返す。
+
+    検出できなかったことを不在の証明として書かない、という原則を
+    件数にも適用する。載っていない観点があることを利用者に隠さない。
+    """
+    if total <= limit:
+        return ""
+    return (
+        f"\n> このセットは {total} 観点あり、上表には先頭 {limit} 件のみ掲載しています"
+        f"（残り {total - limit} 件は未掲載）。全件は観点管理のCSV出力で確認できます。"
+    )
+
+
+def _first_line(text: Any, *, prefix: str) -> str:
+    """複数行テキストから、指定の見出しで始まる行の中身を取り出す。"""
+    for line in str(text or "").splitlines():
+        if line.startswith(prefix):
+            return line[len(prefix):].strip()
+    return ""
+
+
 def _generate_outputs(
     domain: str, report: dict[str, Any], ai_artifact: dict[str, Any] | None = None
 ) -> dict[str, Path]:
@@ -275,10 +303,16 @@ def _test_design(domain: str, report: dict[str, Any]) -> str:
                 lines.append(
                     f"| TD-{trace} | 入力項目 `{_md(field.get('name') or field.get('element_id') or 'unnamed')}` | {_md(cond)} | {trace} |"
                 )
-    for idx, viewpoint in enumerate(_viewpoints_by_type("category_l2")[:12], 1):
-        lines.append(
-            f"| TD-VP-{idx:02d} | {_md(viewpoint['name'])} | CSV観点を対象仕様へ適用し、該当有無・期待結果・不足仕様を確認 | QA-VP-{idx:02d} |"
+    # 観点が持つ期待結果をそのまま載せる。固定文言で埋めると、どの観点でも
+    # 同じ設計方針に見え、観点ごとの判定基準が文書から失われる。
+    viewpoints = _viewpoints_by_type("category_l2")
+    for idx, viewpoint in enumerate(viewpoints[:VIEWPOINT_TABLE_LIMIT], 1):
+        design = (
+            str(viewpoint.get("expected_result") or "").strip()
+            or "観点を対象仕様へ適用し、該当有無・期待結果・不足仕様を確認"
         )
+        lines.append(f"| TD-VP-{idx:02d} | {_md(viewpoint['name'])} | {_md(design)} | QA-VP-{idx:02d} |")
+    lines.append(_truncation_note(len(viewpoints), VIEWPOINT_TABLE_LIMIT))
     lines += [
         "",
         "## 質問待ち",
@@ -339,11 +373,25 @@ def _test_cases(domain: str, report: dict[str, Any]) -> str:
                         f"| TC-{case_no:04d} | 条件 | `{_md(label)}` で {_md(cond)} | 仕様通りに受理またはエラー表示される | {trace} |"
                     )
                     case_no += 1
-    for idx, viewpoint in enumerate(_viewpoints_by_type("category_l2")[:10], 1):
+    # 手順と期待結果は観点が持っているものを使う。固定文言だと、
+    # どのケースも「照合する」としか書いておらず、合否を判定できない。
+    viewpoints = _viewpoints_by_type("category_l2")
+    for idx, viewpoint in enumerate(viewpoints[:VIEWPOINT_CASE_LIMIT], 1):
+        steps = _first_line(viewpoint.get("recommended_checks"), prefix="操作: ") or (
+            f"観点 `{viewpoint['name']}` を対象仕様へ照合"
+        )
+        expected = (
+            str(viewpoint.get("expected_result") or "").strip()
+            or "該当仕様、非該当理由、不足質問が記録される"
+        )
+        evidence = str(viewpoint.get("evidence") or "").strip()
+        if evidence:
+            expected = f"{expected}（証跡: {evidence}）"
         lines.append(
-            f"| TC-{case_no:04d} | 観点レビュー | CSV観点 `{_md(viewpoint['name'])}` を対象仕様へ照合 | 該当仕様、非該当理由、不足質問が記録される | QA-VP-{idx:02d} |"
+            f"| TC-{case_no:04d} | 観点レビュー | {_md(steps)} | {_md(expected)} | QA-VP-{idx:02d} |"
         )
         case_no += 1
+    lines.append(_truncation_note(len(viewpoints), VIEWPOINT_CASE_LIMIT))
     if case_no == 1:
         lines.append(
             "| TC-0001 | 質問待ち | 画面仕様の詳細確認 | テスト可能な期待結果を定義する | QA-UNKNOWN |"

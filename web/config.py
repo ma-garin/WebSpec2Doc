@@ -7,6 +7,19 @@ from pathlib import Path
 OUTPUT_DIR = Path("output")
 QA_VIEWPOINTS_CSV = Path(os.environ.get("QA_VIEWPOINTS_CSV", "data/qa_viewpoints_summary.csv"))
 VIEWPOINTS_DB = Path(os.environ.get("VIEWPOINTS_DB", "instance/viewpoints.db"))
+
+
+def viewpoints_db_path() -> Path:
+    """観点DBの場所を、そのつど環境変数から解決する。
+
+    モジュール定数は import 時に一度だけ評価されるため、同一プロセス内で
+    環境変数を変えても効かない。テストが monkeypatch.setenv だけで隔離した
+    つもりになり、黙って同じDBを共有する事故が起きる（実際に test_tenancy は
+    setenv と setattr の両方を書かないと隔離できていない）。
+
+    定数 VIEWPOINTS_DB は既存の参照互換のために残す。新しい参照はこの関数を使う。
+    """
+    return Path(os.environ.get("VIEWPOINTS_DB", str(VIEWPOINTS_DB)))
 VIEWPOINT_TEMPLATES_DIR = Path(
     os.environ.get("VIEWPOINT_TEMPLATES_DIR", "data/viewpoint_templates")
 )

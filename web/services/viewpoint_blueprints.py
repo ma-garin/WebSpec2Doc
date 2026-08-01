@@ -37,35 +37,32 @@ EXTRA_SUFFIX = "_*.json"
 PRIORITY_WEIGHT = {"P0": 5, "P1": 4, "P2": 3, "P3": 2}
 DEFAULT_WEIGHT = 3
 
-# 観点定義の automation は自由文で、ストアが受け付ける3値とは粒度が違う。
-# 全件を semi_automated に潰すと「この製品では実行できない」観点まで
-# 半自動と表示され、実行できるかのように読める。文の意味で振り分ける。
-AUTOMATION_MARKERS = (
-    ("実行できない", "manual"),
-    ("手動確認が中心", "manual"),
-    ("自動検査できる", "automated"),
-    ("自動化候補", "semi_automated"),
-    ("半自動", "semi_automated"),
-    ("一部", "semi_automated"),
-)
-DEFAULT_AUTOMATION = "manual"
-
-
-def _automation_of(blueprint: dict[str, Any]) -> str:
-    """観点定義の自動化に関する記述を、ストアが扱う3値へ写す。
-
-    判別できないものは manual にする。実際には手作業が要るものを
-    「自動」と表示するほうが、逆より害が大きい。
-    """
-    text = str(blueprint.get("automation", ""))
-    for marker, value in AUTOMATION_MARKERS:
-        if marker in text:
-            return value
-    return DEFAULT_AUTOMATION
+# 自動化区分。観点定義は automation_level に明示する。
+# かつて自由文の automation から日本語の部分一致で推測していたが、
+# 言い回しを変えるだけで分類が変わる。推測させず、定義に書かせる。
+AUTOMATION_LEVELS = {"manual", "semi_automated", "automated"}
+# この製品自身では証跡を取れない観点。リポジトリ参照など外部の手段が要る。
+UNVERIFIABLE_LEVEL = "manual"
 
 
 class ViewpointGeneratorError(Exception):
     """観点生成に必要なカタログが読めない・領域が存在しない。"""
+
+
+def _automation_of(blueprint: dict[str, Any]) -> str:
+    """観点定義が宣言した自動化区分を返す。
+
+    未宣言や不正値はカタログの不備として扱い、黙って既定値へ倒さない。
+    実際には手作業が要るものを「自動」と表示するほうが、逆より害が大きく、
+    その誤りは表示を見ただけでは気づけないため。
+    """
+    level = str(blueprint.get("automation_level", ""))
+    if level not in AUTOMATION_LEVELS:
+        raise ViewpointGeneratorError(
+            f"観点定義 {blueprint.get('identifier', '?')} の automation_level が不正です: "
+            f"{level!r}（{sorted(AUTOMATION_LEVELS)} のいずれか）"
+        )
+    return level
 
 
 def _load(filename: str) -> dict[str, Any]:
@@ -100,6 +97,18 @@ def _load_merged(base_file: str, key: str) -> dict[str, Any]:
     for path in sorted(DATA_DIR.glob(stem + EXTRA_SUFFIX)):
         merged += _load(path.name).get(key, [])
     return {**base, key: merged}
+
+
+def reload_catalogs() -> None:
+    """観点カタログの読み込みキャッシュを捨てる。
+
+    カタログはプロセス起動中に変わらない前提でキャッシュしている。
+    開発中に JSON を編集したときだけ、この関数で捨てる。
+    キャッシュを持たないと、テンプレート適用のたびに
+    101定義 × 60領域の適用判定を回すことになる。
+    """
+    for cached in (_blueprints, _domains_by_key, _evidence_by_id):
+        cached.cache_clear()
 
 
 @lru_cache(maxsize=1)
@@ -235,6 +244,10 @@ def generate(domain_key: str) -> dict[str, Any]:
                     "evidence": _fill(blueprint["proof"], context),
                     "technique": str(blueprint["technique"]),
                     "test_level": level,
+                    # 品質領域は品質特性そのもの。分類名（テストタイプ）を
+                    # 領域として流用すると、分類の文字列が内部の予約語と
+                    # 衝突したときに領域が消える。値として持たせる。
+                    "quality_area": str(blueprint["quality"]),
                     "risk_weight": PRIORITY_WEIGHT.get(str(blueprint["priority"]), DEFAULT_WEIGHT),
                     "automation": _automation_of(blueprint),
                     "standards": _standards_of(blueprint),
@@ -258,4 +271,10 @@ def generate(domain_key: str) -> dict[str, Any]:
         "items": items,
         "applied_definitions": [str(b["identifier"]) for b in applied],
         "excluded_definitions": excluded,
+        # この製品はクロールしかしない。リポジトリ参照など外部の手段が要る
+        # 観点は、生成しても自分では証跡を取れない。件数を隠さず数える。
+        # 「観点がある」ことと「この製品で確かめられる」ことは別である。
+        "unverifiable_by_product": [
+            str(b["identifier"]) for b in applied if _automation_of(b) == UNVERIFIABLE_LEVEL
+        ],
     }

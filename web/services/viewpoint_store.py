@@ -903,10 +903,10 @@ def get_viewpoint_store() -> ViewpointStore:
     instance/viewpoints.db を使う。テナントごとに独立した観点DBを持つことで
     スキーマにテナント列を持ち込まずにデータを完全分離する。
     """
-    from web.config import QA_VIEWPOINTS_CSV, VIEWPOINTS_DB
+    from web.config import QA_VIEWPOINTS_CSV, viewpoints_db_path
     from web.tenancy import scoped_instance_path
 
-    db_path = scoped_instance_path(VIEWPOINTS_DB)
+    db_path = scoped_instance_path(viewpoints_db_path())
     key = (str(db_path), str(QA_VIEWPOINTS_CSV))
     store = _STORES.get(key)
     if store is not None:

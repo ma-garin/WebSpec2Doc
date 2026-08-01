@@ -40,19 +40,20 @@
                    数値の意味を知らなくても所要時間で選べるよう、プリセットを先に置く。 -->
               <div class="discover-scope" id="discover-scope" role="group" aria-label="解析する範囲">
                 <span class="discover-scope-title">解析する範囲</span>
+                {#- プリセットは1箇所に列挙する。逐語コピーすると、ラベル・note・data-* の
+                    どれか1つの直し忘れが画面とテストの食い違いを生むため。 -#}
+                {%- set discover_presets = [
+                  {'id': 'single', 'value': 'one-page', 'label': 'この1画面のみ', 'note': '1画面', 'depth': 1, 'max': 1},
+                  {'id': 'standard', 'value': 'standard', 'label': '標準', 'note': '深さ2 / 最大30画面', 'depth': 2, 'max': 30, 'checked': true},
+                  {'id': 'wide', 'value': 'wide', 'label': '広め', 'note': '深さ5 / 最大300画面', 'depth': 5, 'max': 300}
+                ] -%}
                 <div class="discover-scope-chips">
+                  {% for p in discover_presets %}
                   <label class="checkbox-chip">
-                    <input type="radio" name="discover-scope" id="discover-scope-single" value="one-page" data-depth="1" data-max="1">
-                    この1画面のみ<span class="discover-scope-note">1画面</span>
+                    <input type="radio" name="discover-scope" id="discover-scope-{{ p.id }}" value="{{ p.value }}" data-depth="{{ p.depth }}" data-max="{{ p.max }}"{% if p.checked %} checked{% endif %}>
+                    {{ p.label }}<span class="discover-scope-note">{{ p.note }}</span>
                   </label>
-                  <label class="checkbox-chip">
-                    <input type="radio" name="discover-scope" id="discover-scope-standard" value="standard" data-depth="2" data-max="30" checked>
-                    標準<span class="discover-scope-note">深さ2 / 最大30画面</span>
-                  </label>
-                  <label class="checkbox-chip">
-                    <input type="radio" name="discover-scope" id="discover-scope-wide" value="wide" data-depth="5" data-max="300">
-                    広め<span class="discover-scope-note">深さ5 / 最大300画面</span>
-                  </label>
+                  {% endfor %}
                   <label class="checkbox-chip">
                     <input type="radio" name="discover-scope" id="discover-scope-custom" value="custom">
                     カスタム

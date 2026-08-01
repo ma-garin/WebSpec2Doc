@@ -22,6 +22,12 @@ _VIEW_NAMES = frozenset(
 )
 _VIEW_ALIASES = {"home": "dashboard"}
 
+# 設定画面のタブ（templates/partials/view-settings.html の data-tab と対応）。
+# タブごとに URL を持たせ、共有・ブックマーク・ブラウザの戻るを効かせる。
+_SETTINGS_TABS = frozenset(
+    {"api", "crawl", "notify", "operations", "data", "audit", "test-design"}
+)
+
 
 @bp.route("/")
 def index() -> str:
@@ -54,6 +60,18 @@ def cli_mode() -> str:
             if d.is_dir() and not d.name.startswith(".") and d.name != TENANTS_DIR_NAME
         )
     return render_template("cli.html", domains=domains)
+
+
+@bp.route("/settings/<tab>")
+def settings_tab(tab: str) -> str:
+    """設定画面をタブ指定で開く（例: /settings/api）。
+
+    リロード・直リンクでも同じタブが開くようにする。実際のタブ切替は
+    クライアント側の syncSettingsTabFromPath() が location.pathname を見て行う。
+    """
+    if tab not in _SETTINGS_TABS:
+        abort(404)
+    return render_template("index.html")
 
 
 @bp.route("/<view_name>")

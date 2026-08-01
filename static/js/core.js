@@ -50,7 +50,11 @@ const VIEW_PATHS = {
 const PATH_VIEWS = { '/home': 'dashboard', '/dashboard': 'dashboard' };
 Object.entries(VIEW_PATHS).forEach(([name, path]) => { PATH_VIEWS[path] = name; });
 function _viewFromPath(pathname) {
-  return PATH_VIEWS[pathname] || null;
+  if (PATH_VIEWS[pathname]) return PATH_VIEWS[pathname];
+  // 設定はタブも URL に持つ（/settings/api 等）。タブ名が妥当かは
+  // syncSettingsTabFromPath() 側で見るため、ここではビュー名だけ解決する。
+  if (/^\/settings\/[^/]+\/?$/.test(pathname)) return 'settings';
+  return null;
 }
 window.addEventListener('popstate', () => {
   const m = location.hash.match(/^#report\/([^/]+)(?:\/([^/]+))?(?:\/([^/]+))?$/);
@@ -90,6 +94,9 @@ function switchView(name, opts = {}) {
       try { history.pushState({ view: name }, '', target); } catch (e) {}
     }
   }
+  // 設定はタブ状態も URL に載せている。ナビからの遷移・戻る操作のどちらでも
+  // URL と開いているタブを一致させる（settings.js 側に実体がある）。
+  if (name === 'settings' && typeof syncSettingsTabFromPath === 'function') syncSettingsTabFromPath();
   if (name === 'dashboard') {
     loadHistory();
     // ディープリンクのハッシュをクリア（レポートから戻った時のみ。初期化時は保持）

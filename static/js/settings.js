@@ -1,8 +1,17 @@
 // ---- 設定タブ切替（APIキー・モデル/クロール既定値/通知）----
 // 従来 .set-tab ボタンに click ハンドラが未実装で「タブ操作ができない」不具合があったため追加。
-function selectSettingsTab(tab) {
+// タブは URL（/settings/<tab>）にも反映する。従来は class を切り替えるだけで
+// URL が変わらず、共有・ブックマーク・ブラウザの戻るがいずれも効かなかった。
+const SETTINGS_TAB_DEFAULT = 'api';
+
+function _settingsTabFromPath() {
+  const m = location.pathname.match(/^\/settings\/([^/]+)\/?$/);
+  return m ? decodeURIComponent(m[1]) : SETTINGS_TAB_DEFAULT;
+}
+
+function selectSettingsTab(tab, opts = {}) {
   const tabs = [...document.querySelectorAll('.set-tabs .set-tab')];
-  if (!tabs.some(t => t.dataset.tab === tab)) return;
+  if (!tabs.some(t => t.dataset.tab === tab)) return false;
   tabs.forEach(t => {
     const on = t.dataset.tab === tab;
     t.classList.toggle('is-active', on);
@@ -12,6 +21,26 @@ function selectSettingsTab(tab) {
   document.querySelectorAll('.set-panel').forEach(p => {
     p.classList.toggle('is-active', p.id === 'set-panel-' + tab);
   });
+  if (!opts.skipHistory && location.pathname !== '/settings/' + tab) {
+    try { history.pushState({ view: 'settings', tab }, '', '/settings/' + tab); } catch (e) {}
+  }
+  return true;
+}
+
+// URL からタブを復元する。core.js の switchView('settings') と popstate から呼ばれる。
+// データ管理・監査ログは権限が無いとタブ自体が描画されないため、直接開かれた場合は
+// 既定タブへ落とし、URL も置き換える（開けない画面を指す URL を残さないため）。
+function syncSettingsTabFromPath() {
+  const wanted = _settingsTabFromPath();
+  if (selectSettingsTab(wanted, { skipHistory: true })) {
+    loadSettingsTabData(wanted);
+    return;
+  }
+  selectSettingsTab(SETTINGS_TAB_DEFAULT, { skipHistory: true });
+  loadSettingsTabData(SETTINGS_TAB_DEFAULT);
+  try {
+    history.replaceState({ view: 'settings', tab: SETTINGS_TAB_DEFAULT }, '', '/settings/' + SETTINGS_TAB_DEFAULT);
+  } catch (e) {}
 }
 function loadSettingsTabData(tab) {
   if (tab === 'operations') loadOperationalSites();

@@ -462,6 +462,20 @@
   line-height: 1.5; overflow-wrap: anywhere;
 }
 
+/* 実行結果バッジ（P2-5）。塗りタイプにして、枠線の導出技法バッジと形で区別する。
+   「対応なし」は「失敗」と別の色にする。実行して落ちたのか、そもそも紐付くケースが
+   無いのかを、色だけで取り違えられないようにするため。 */
+.tds-run { white-space: nowrap; }
+.tds-run-badge {
+  display: inline-block; padding: 2px 9px; border-radius: var(--radius-full);
+  font-size: var(--text-xs); font-weight: 700; line-height: 1.6; white-space: nowrap;
+  background: var(--surface-soft); color: var(--text-muted);
+}
+.tds-run-pass { background: var(--ok-bg); color: var(--ok); }
+.tds-run-fail { background: var(--critical-bg); color: var(--critical); }
+.tds-run-none { background: var(--surface-soft); color: var(--text-muted); }
+.tds-run-na   { background: var(--warn-bg, #fffbeb); color: var(--warn, #b45309); }
+
 /* 導出技法バッジ（枠線タイプ。塗りの .cond-pill とは形も塗りも変えて区別する）
    基準色は --c。JSは下のクラスを付けるか、style で --c を直接指定してよい。 */
 .tds-pill {

@@ -3,6 +3,7 @@ from __future__ import annotations
 # ruff: noqa: E402, I001
 
 import json
+import logging
 from typing import Any
 
 from flask import Blueprint, request
@@ -416,7 +417,28 @@ def api_test_design_by_screen() -> dict | tuple[dict, int]:
     detail = build_screen_detail(report, page_id)
     if detail is None:
         return {"error": f"screen not found: {page_id}"}, 404
-    return detail
+    return _with_run_status(domain, report, detail)
+
+
+def _with_run_status(domain: str, report: dict, detail: dict) -> dict:
+    """条件行にテスト実行結果を付ける（P2-5）。
+
+    実行結果が読めなくても設計そのものは表示できるべきなので、
+    失敗しても detail をそのまま返す（バッジが出ないだけ）。
+    """
+    from web.services.condition_run_status import attach_run_status
+    from web.services.testcase_table_store import compose, load_run_result
+
+    conditions = detail.get("conditions")
+    if not isinstance(conditions, list) or not conditions:
+        return detail
+    try:
+        rows = compose(domain, report).get("rows") or []
+        run_result = load_run_result(domain)
+    except Exception:
+        logging.warning("テスト実行結果を条件へ紐付けられませんでした: %s", domain, exc_info=True)
+        return detail
+    return dict(detail, conditions=attach_run_status(conditions, rows, run_result))
 
 
 @bp.get("/api/qa-process/advanced")

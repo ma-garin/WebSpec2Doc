@@ -30,6 +30,9 @@ _BLOCK_TECHNIQUES: tuple[tuple[str, str], ...] = (
     ("domain_analysis", "ドメイン分析"),
     ("error_guessing", "エラー推測"),
 )
+# ブロック技法のうち、テストケース表に行が生まれるものだけ（P2-5）。
+# generator/testcase_table.py の _dt_rows / _pairwise_rows に対応する。
+_BLOCK_TRACE_SUFFIX: dict[str, str] = {"デシジョンテーブル": "DT", "ペアワイズ": "PW"}
 
 #: 言語パス（/ja・/en-US 等）の判定
 _LANG_SEGMENT = re.compile(r"^[a-z]{2}(-[A-Za-z]{2,4})?$")
@@ -51,14 +54,24 @@ def cond_class(text: str) -> str:
 
 
 def _condition(
-    condition: str, source_kind: str, source_name: str, technique: str
+    condition: str,
+    source_kind: str,
+    source_name: str,
+    technique: str,
+    trace_target: str = "",
 ) -> dict[str, Any]:
+    """テスト条件 1 件。
+
+    trace_target は遷移条件の遷移先 page_id。condition_id を組むときだけ使う
+    （表示名は source_name に入れるため、page_id はここで別に持つ）。
+    """
     return {
         "condition": condition,
         "source_kind": source_kind,
         "source_name": source_name,
         "technique": technique,
         "cond_class": cond_class(condition),
+        "trace_target": trace_target,
     }
 
 
@@ -125,7 +138,13 @@ def _element_conditions(screen: dict[str, Any], titles: dict[str, str]) -> list[
         page_id = str(target)
         name = titles.get(page_id) or page_id
         conditions.append(
-            _condition(f"{name} へ遷移する", "リンク", name, TECHNIQUE_STATE_TRANSITION)
+            _condition(
+                f"{name} へ遷移する",
+                "リンク",
+                name,
+                TECHNIQUE_STATE_TRANSITION,
+                trace_target=page_id,
+            )
         )
     return conditions
 
@@ -257,6 +276,35 @@ def _screen_design(screen: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+def condition_id(page_id: str, cond: dict[str, Any]) -> str:
+    """この条件を検証するテストケースの trace_id を返す（P2-5）。
+
+    テストケース側は generator/testcase_table.py が既に安定 ID（trace_id）を
+    振っている。条件側に同じ規則で ID を振れば、テストケース表のデータ構造を
+    変えずに突き合わせられる。**規則を変えるときは両方を直すこと。**
+
+    対応（generator/testcase_table.py の trace_id=... 行と 1 対 1）:
+      入力項目          → "{page_id}:{項目名}"   （_bva_rows）
+      デシジョンテーブル → "{page_id}:DT"        （_dt_rows）
+      ペアワイズ         → "{page_id}:PW"        （_pairwise_rows）
+      リンク遷移         → "{page_id}->{遷移先}" （_transition_rows）
+      それ以外（表示等） → "{page_id}"           （_display_rows）
+    """
+    if not page_id:
+        return ""
+    if cond.get("source_kind") == "入力項目":
+        return f"{page_id}:{cond.get('source_name', '')}"
+    if cond.get("source_kind") == "リンク" and cond.get("trace_target"):
+        return f"{page_id}->{cond['trace_target']}"
+    if cond.get("source_kind") == "フォーム":
+        # フォーム由来はブロック技法。テストケースを生むのはデシジョンテーブルと
+        # ペアワイズだけで、分類ツリー法・直交表・原因結果グラフ等は対応する行が無い。
+        # 無いものを既存 ID に寄せると「検証済み」と誤表示するため空 ID（＝対応なし）にする。
+        suffix = _BLOCK_TRACE_SUFFIX.get(str(cond.get("technique") or ""))
+        return f"{page_id}:{suffix}" if suffix else ""
+    return page_id
+
+
 def build_conditions(
     screen: dict[str, Any], titles: dict[str, str]
 ) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
@@ -279,6 +327,7 @@ def build_conditions(
             {"technique": TECHNIQUE_STATE_TRANSITION, "reason": "画面遷移が観測されていません。"}
         )
 
+    page_id = str(screen.get("page_id", ""))
     numbered = [dict(c, no=index) for index, c in enumerate(conditions, start=1)]
     ordered = [
         {
@@ -288,6 +337,7 @@ def build_conditions(
             "source_name": c["source_name"],
             "technique": c["technique"],
             "cond_class": c["cond_class"],
+            "condition_id": condition_id(page_id, c),
         }
         for c in numbered
     ]

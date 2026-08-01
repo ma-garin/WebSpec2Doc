@@ -505,6 +505,51 @@ function _tdsTransHtml(pageId) {
 
 // class 属性へ入れる値は必ずホワイトリストに落とす（API が想定外の文字列を返しても属性を壊さない）
 const TDS_COND_CLASSES = ['cc-req', 'cc-bound', 'cc-format', 'cc-opt', 'cc-other'];
+// 条件行の実行結果バッジ（P2-5）。
+// 「対応なし」を「未実行」に混ぜないのが要点。実行し忘れなのか、そもそも紐付く
+// テストケースが無いのかを区別できないと、「設計したが検証していない」を見つけられない。
+const TDS_RUN_BADGES = {
+  passed:  { label: '検証済み', cls: 'tds-run-pass', hint: 'このケースはすべて成功しています' },
+  failed:  { label: '失敗',     cls: 'tds-run-fail', hint: '紐づくケースに失敗があります' },
+  not_run: { label: '未実行',   cls: 'tds-run-none', hint: 'ケースはあるが実行されていません' },
+  no_case: { label: '対応なし', cls: 'tds-run-na',   hint: 'この条件を確かめるケースがまだありません' },
+};
+
+function _tdsRunBadge(c) {
+  const badge = TDS_RUN_BADGES[c.run_status];
+  if (!badge) return '<span class="tds-run-badge tds-run-none">—</span>';
+  const counts = c.run_counts || {};
+  const detail = counts.total
+    ? `${badge.hint}（${counts.passed || 0}/${counts.total} 成功）`
+    : badge.hint;
+  return `<span class="tds-run-badge ${badge.cls}" title="${escHtml(detail)}">${badge.label}</span>`;
+}
+
+// 結果の読み方を書き添える。断定しないための注記なので、該当するときだけ出す。
+function _tdsRunLegend(conds) {
+  const notes = [];
+  const noCase = conds.filter(c => c.run_status === 'no_case').length;
+  if (noCase) {
+    notes.push('「対応なし」が ' + noCase + ' 件あります。' +
+      'テストケースを生む技法（境界値・デシジョンテーブル・ペアワイズ・表示・遷移）以外の条件、' +
+      'または再生成前のデータです。レポートを再生成すると紐付きます。');
+  }
+  // 同じテストケースを共有する条件は、結果も共有する。
+  // 1件のケースが落ちると、それが確かめている条件がまとめて「失敗」になる。
+  // 条件ごとに個別の結果が出ていると誤解させないよう明示する。
+  const byId = {};
+  conds.forEach(c => {
+    if (c.run_status === 'no_case') return;
+    const id = c.condition_id || '';
+    byId[id] = (byId[id] || 0) + 1;
+  });
+  if (Object.values(byId).some(n => n > 1)) {
+    notes.push('同じテストケースを共有する条件は、結果も同じになります。' +
+      '条件ごとに個別に実行しているわけではありません。');
+  }
+  return notes.map(t => `<p class="tds-cond-hint">${t}</p>`).join('');
+}
+
 function _tdsCondClass(v) {
   return TDS_COND_CLASSES.includes(v) ? v : 'cc-other';
 }
@@ -545,16 +590,19 @@ function _tdsDetailHtml(d) {
       `<td class="tds-cond-lead ${_tdsCondClass(c.cond_class)}">${label}</td>` +
       `<td class="tds-source">${source || '—'}</td>` +
       `<td><span class="tds-pill ${_tdsTechniqueClass(tech)}">${escHtml(tech)}</span></td>` +
+      `<td class="tds-run">${_tdsRunBadge(c)}</td>` +
       `<td class="tds-cond-action">${go}</td>` +
       '</tr>';
   }).join('');
   const table = conds.length
     ? '<div class="tds-table-wrap"><table class="tds-table">' +
       '<thead><tr><th>No</th><th>テスト条件</th><th>由来した要素</th><th>導出技法</th>' +
+      '<th>結果</th>' +
       '<th><span class="visually-hidden">テストケースへの導線</span></th></tr></thead>' +
       `<tbody>${rows}</tbody></table></div>` +
       '<p class="tds-cond-hint">「ケースを見る」で、その条件を確かめているテストケースに絞って表示します。' +
-      '由来が一致するものを出すため、厳密な対応ではありません。</p>'
+      '由来が一致するものを出すため、厳密な対応ではありません。</p>' +
+      _tdsRunLegend(conds)
     : '<p class="tds-empty">この画面から導出されたテスト条件はありません。</p>';
 
   const unapplied = d.unapplied || [];

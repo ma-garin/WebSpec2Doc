@@ -2203,6 +2203,52 @@
         "error_path",
         "evidence"
       ]
+    },
+    {
+      "feature_id": "condition_run_status",
+      "name": "テスト実行結果の設計への還元",
+      "risk_level": "medium",
+      "status": "implemented",
+      "ui_files": [
+        "static/js/view-design.js",
+        "static/app-report.css"
+      ],
+      "route_files": [
+        "web/routes/qa_process.py"
+      ],
+      "core_files": [
+        "web/services/condition_run_status.py",
+        "web/services/screen_test_design.py",
+        "web/services/testcase_table_store.py",
+        "web/routes/qa_process.py",
+        "static/js/view-design.js"
+      ],
+      "symbols": [
+        "attach_run_status",
+        "condition_id",
+        "_with_run_status",
+        "_tdsRunBadge",
+        "load_run_result"
+      ],
+      "outputs": [
+        "画面別設計の条件行に 検証済み / 失敗 / 未実行 / 対応なし のバッジ",
+        "「対応なし」の件数と理由の明示"
+      ],
+      "persistence": [
+        "output/{domain}/testcases/run_result.json"
+      ],
+      "failure_modes": [
+        "unrun_condition_shown_as_verified",
+        "no_case_confused_with_not_run",
+        "failure_diluted_by_passing_cases",
+        "run_result_unreadable_breaks_design_view",
+        "trace_id_rule_drifts_between_condition_and_testcase"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "evidence"
+      ]
     }
   ]
 }

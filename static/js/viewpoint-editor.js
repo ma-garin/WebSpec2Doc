@@ -1,3 +1,51 @@
+// ---- 標準・根拠から原典へのリンク ----
+// 「ISO/IEC 25010 機能正確性」のような表記を出典カタログと突き合わせ、
+// 原典URLと該当条項を出す。根拠を辿れないと、観点は指示書にしかならない。
+let _vpSourceToken = 0;
+
+function _vpEsc(text) {
+  const div = document.createElement('div');
+  div.textContent = String(text ?? '');
+  return div.innerHTML;
+}
+
+async function vpShowSource(standards) {
+  const box = document.getElementById('vp-item-source');
+  if (!box) return;
+  const text = (standards || '').trim();
+  if (!text) { box.hidden = true; box.textContent = ''; return; }
+  const token = ++_vpSourceToken;
+  try {
+    const res = await fetch('/api/viewpoint-sources/resolve?standards=' + encodeURIComponent(text));
+    const data = await res.json();
+    if (token !== _vpSourceToken) return;  // 入力が進んでいたら古い応答は捨てる
+    const s = data.source;
+    if (!s) {
+      // 出典に無い規格名を黙って空欄にすると、根拠が有るのか無いのか区別できない。
+      box.innerHTML = '<span class="vp-source-unknown">出典カタログに登録がありません</span>';
+      box.hidden = false;
+      return;
+    }
+    const clause = s.clause ? `（${_vpEsc(s.clause)}）` : '';
+    const meta = `${clause} <span class="vp-source-meta">${_vpEsc(s.issuer)} / ${_vpEsc(s.level)}</span>`;
+    // href はエスケープだけでは javascript: を防げないため、スキームを検査する。
+    // 出典は自前のカタログ由来だが、リンク先の検証はここでしかできない。
+    const safeUrl = /^https?:\/\//i.test(String(s.url || '')) ? s.url : '';
+    box.innerHTML = safeUrl
+      ? `<a href="${_vpEsc(safeUrl)}" target="_blank" rel="noopener noreferrer">${_vpEsc(s.title)}</a>${meta}`
+      : `${_vpEsc(s.title)}${meta}`;
+    box.hidden = false;
+  } catch (e) {
+    if (token !== _vpSourceToken) return;
+    box.innerHTML = '<span class="vp-source-unknown">出典を取得できませんでした</span>';
+    box.hidden = false;
+  }
+}
+
+document.getElementById('vp-item-standards')?.addEventListener('input', (e) => {
+  vpShowSource(e.target.value);
+});
+
 async function vpSelectItem(itemId, opener = null) {
   const item = vpState.items.find((row) => row.id === itemId);
   if (!item) return;
@@ -113,6 +161,7 @@ function vpFillEditor(item, { isNew = false } = {}) {
   document.getElementById('vp-item-risk').value = String(item.risk_weight || 3);
   document.getElementById('vp-item-automation').value = item.automation === 'manual' ? 'human' : (item.automation || 'human');
   document.getElementById('vp-item-standards').value = item.standards || '';
+  vpShowSource(item.standards || '');
   document.getElementById('vp-item-tags').value = (item.tags || []).join(', ');
   document.getElementById('vp-item-enabled').checked = item.enabled !== false;
   const condition = item.trigger_rule?.condition || {};

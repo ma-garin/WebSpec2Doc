@@ -257,6 +257,26 @@ def api_viewpoint_templates() -> dict[str, Any]:
     return {"templates": list_templates()}
 
 
+@bp.get("/api/viewpoint-sources")
+def api_viewpoint_sources() -> dict[str, Any]:
+    """観点の根拠となる規格・ガイドラインの出典一覧。
+
+    観点の standards（例: "OWASP ASVS 4.1"）から原典へ辿れるようにする。
+    「なぜこの観点が必要か」を利用者が自分で確かめられないと、観点は指示書にしかならない。
+    """
+    from web.services.viewpoint_sources import list_sources
+
+    return {"sources": list_sources()}
+
+
+@bp.get("/api/viewpoint-sources/resolve")
+def api_resolve_viewpoint_source() -> dict[str, Any]:
+    """standards 文字列から出典を引く。該当が無ければ source は null。"""
+    from web.services.viewpoint_sources import resolve
+
+    return {"source": resolve(request.args.get("standards", ""))}
+
+
 @bp.post("/api/viewpoint-sets/<set_id>/templates/<template_key>/apply")
 def api_apply_viewpoint_template(set_id: str, template_key: str) -> dict[str, Any]:
     return {"result": apply_template(set_id, template_key)}

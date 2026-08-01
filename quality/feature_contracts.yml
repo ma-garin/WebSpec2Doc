@@ -388,10 +388,12 @@
         "web/env_store.py",
         "web/services/viewpoint_proposals.py",
         "web/services/viewpoint_store_operations.py",
-        "web/services/viewpoint_templates.py"
+        "web/services/viewpoint_templates.py",
+        "web/services/viewpoint_sources.py"
       ],
       "symbols": [
-        "_write_env"
+        "_write_env",
+        "resolve"
       ],
       "outputs": [
         "settings state",

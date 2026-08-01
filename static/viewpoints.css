@@ -693,3 +693,9 @@ textarea.input-dialog-input { resize: vertical; min-height: 90px; }
   .vp-editor-form { scroll-behavior: auto; }
   .vp-tree-expand { transition: none; }
 }
+
+/* 標準・根拠から原典へのリンク。根拠を辿れないと観点は指示書にしかならない。 */
+.vp-source-hint { margin: 4px 0 0; font-size: 11px; line-height: 1.6; }
+.vp-source-hint a { color: var(--primary); text-decoration: underline; overflow-wrap: anywhere; }
+.vp-source-meta { color: var(--text-muted); margin-left: 6px; }
+.vp-source-unknown { color: var(--warn, #b45309); }

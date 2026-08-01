@@ -1,0 +1,265 @@
+{
+  "description": "観点の根拠となる規格・ガイドラインの出典。観点の standards はこの prefix と前方一致で対応づける。",
+  "levels": {
+    "L2": "国際規格・国内公的機関の基準",
+    "L3": "業界標準・技術仕様・法令",
+    "L4": "ベンダ公開のフレームワーク",
+    "L5": "実務書・公開知見"
+  },
+  "sources": [
+    {
+      "id": "iso25010",
+      "prefix": "ISO/IEC 25010",
+      "title": "ISO/IEC 25010 システム及びソフトウェア品質モデル",
+      "issuer": "ISO/IEC",
+      "level": "L2",
+      "url": "https://iso25000.com/index.php/en/iso-25000-standards/iso-25010",
+      "note": "機能適合性・性能効率性・互換性・使用性・信頼性・セキュリティ・保守性・移植性の8特性"
+    },
+    {
+      "id": "iso29119",
+      "prefix": "ISO/IEC/IEEE 29119",
+      "title": "ISO/IEC/IEEE 29119 ソフトウェアテスト",
+      "issuer": "ISO/IEC/IEEE",
+      "level": "L2",
+      "url": "https://www.iso.org/standard/81291.html",
+      "note": "Part 3 はテスト文書、Part 4 はテスト技法"
+    },
+    {
+      "id": "iso27001",
+      "prefix": "ISO/IEC 27001",
+      "title": "ISO/IEC 27001 情報セキュリティマネジメント",
+      "issuer": "ISO/IEC",
+      "level": "L2",
+      "url": "https://www.iso.org/isoiec-27001-information-security.html"
+    },
+    {
+      "id": "iso27701",
+      "prefix": "ISO/IEC 27701",
+      "title": "ISO/IEC 27701 プライバシー情報マネジメント",
+      "issuer": "ISO/IEC",
+      "level": "L2",
+      "url": "https://www.iso.org/standard/71670.html"
+    },
+    {
+      "id": "iso22301",
+      "prefix": "ISO 22301",
+      "title": "ISO 22301 事業継続マネジメント",
+      "issuer": "ISO",
+      "level": "L2",
+      "url": "https://www.iso.org/standard/75106.html"
+    },
+    {
+      "id": "ipa_nfr",
+      "prefix": "非機能要求グレード",
+      "title": "IPA 非機能要求グレード",
+      "issuer": "IPA",
+      "level": "L2",
+      "url": "https://www.ipa.go.jp/archive/digital/iot-en-ci/jyouryuu/hikinou/ent03-b.html"
+    },
+    {
+      "id": "istqb",
+      "prefix": "ISTQB",
+      "title": "ISTQB シラバス（テスト技法）",
+      "issuer": "ISTQB",
+      "level": "L3",
+      "url": "https://www.istqb.org/certifications/certified-tester-foundation-level",
+      "note": "境界値分析・同値分割・デシジョンテーブル・状態遷移・ペアワイズ等"
+    },
+    {
+      "id": "owasp_asvs",
+      "prefix": "OWASP ASVS",
+      "title": "OWASP Application Security Verification Standard",
+      "issuer": "OWASP",
+      "level": "L3",
+      "url": "https://owasp.org/www-project-application-security-verification-standard/",
+      "note": "章番号（例: 4.1）は ASVS の検証要件に対応"
+    },
+    {
+      "id": "owasp_top10",
+      "prefix": "OWASP Top 10",
+      "title": "OWASP Top 10",
+      "issuer": "OWASP",
+      "level": "L3",
+      "url": "https://owasp.org/www-project-top-ten/"
+    },
+    {
+      "id": "owasp_api",
+      "prefix": "OWASP API Security",
+      "title": "OWASP API Security Top 10",
+      "issuer": "OWASP",
+      "level": "L3",
+      "url": "https://owasp.org/www-project-api-security/"
+    },
+    {
+      "id": "wcag22",
+      "prefix": "WCAG 2.2",
+      "title": "WCAG 2.2 ウェブアクセシビリティ",
+      "issuer": "W3C",
+      "level": "L3",
+      "url": "https://www.w3.org/TR/WCAG22/",
+      "note": "達成基準番号（例: 1.4.3）で該当項目を特定できる"
+    },
+    {
+      "id": "wai_aria",
+      "prefix": "WAI-ARIA",
+      "title": "WAI-ARIA 1.2",
+      "issuer": "W3C",
+      "level": "L3",
+      "url": "https://www.w3.org/TR/wai-aria-1.2/"
+    },
+    {
+      "id": "nist_csf",
+      "prefix": "NIST CSF",
+      "title": "NIST Cybersecurity Framework",
+      "issuer": "NIST",
+      "level": "L2",
+      "url": "https://www.nist.gov/cyberframework"
+    },
+    {
+      "id": "nist_80053",
+      "prefix": "NIST SP 800-53",
+      "title": "NIST SP 800-53 セキュリティ管理策",
+      "issuer": "NIST",
+      "level": "L2",
+      "url": "https://csrc.nist.gov/publications/detail/sp/800-53/rev-5/final"
+    },
+    {
+      "id": "nist_80063",
+      "prefix": "NIST SP 800-63",
+      "title": "NIST SP 800-63 デジタルアイデンティティ",
+      "issuer": "NIST",
+      "level": "L2",
+      "url": "https://pages.nist.gov/800-63-3/"
+    },
+    {
+      "id": "openapi",
+      "prefix": "OpenAPI",
+      "title": "OpenAPI Specification",
+      "issuer": "OpenAPI Initiative",
+      "level": "L3",
+      "url": "https://spec.openapis.org/oas/latest.html"
+    },
+    {
+      "id": "oauth2",
+      "prefix": "OAuth 2.0",
+      "title": "OAuth 2.0 (RFC 6749)",
+      "issuer": "IETF",
+      "level": "L3",
+      "url": "https://www.rfc-editor.org/rfc/rfc6749"
+    },
+    {
+      "id": "oidc",
+      "prefix": "OpenID Connect",
+      "title": "OpenID Connect Core",
+      "issuer": "OpenID Foundation",
+      "level": "L3",
+      "url": "https://openid.net/specs/openid-connect-core-1_0.html"
+    },
+    {
+      "id": "rfc8446",
+      "prefix": "RFC 8446",
+      "title": "TLS 1.3 (RFC 8446)",
+      "issuer": "IETF",
+      "level": "L3",
+      "url": "https://www.rfc-editor.org/rfc/rfc8446"
+    },
+    {
+      "id": "rfc9110",
+      "prefix": "RFC 9110",
+      "title": "HTTP Semantics (RFC 9110)",
+      "issuer": "IETF",
+      "level": "L3",
+      "url": "https://www.rfc-editor.org/rfc/rfc9110"
+    },
+    {
+      "id": "fisc",
+      "prefix": "FISC",
+      "title": "FISC 金融機関等コンピュータシステムの安全対策基準",
+      "issuer": "FISC",
+      "level": "L3",
+      "url": "https://www.fisc.or.jp/",
+      "note": "基準番号までは特定していない。該当条項は原典で確認すること"
+    },
+    {
+      "id": "pcidss",
+      "prefix": "PCI DSS",
+      "title": "PCI DSS カード情報セキュリティ基準",
+      "issuer": "PCI SSC",
+      "level": "L3",
+      "url": "https://www.pcisecuritystandards.org/document_library/"
+    },
+    {
+      "id": "med_guideline",
+      "prefix": "医療情報システムの安全管理ガイドライン",
+      "title": "医療情報システムの安全管理に関するガイドライン",
+      "issuer": "厚生労働省",
+      "level": "L3",
+      "url": "https://www.mhlw.go.jp/stf/shingi/0000516275_00006.html"
+    },
+    {
+      "id": "hl7_fhir",
+      "prefix": "HL7 FHIR",
+      "title": "HL7 FHIR 医療情報交換規格",
+      "issuer": "HL7",
+      "level": "L3",
+      "url": "https://www.hl7.org/fhir/"
+    },
+    {
+      "id": "ppc_guideline",
+      "prefix": "個人情報保護法ガイドライン",
+      "title": "個人情報の保護に関する法律についてのガイドライン（通則編）",
+      "issuer": "個人情報保護委員会",
+      "level": "L3",
+      "url": "https://www.ppc.go.jp/personalinfo/legal/"
+    },
+    {
+      "id": "tokushoho",
+      "prefix": "特定商取引法",
+      "title": "特定商取引に関する法律",
+      "issuer": "消費者庁",
+      "level": "L3",
+      "url": "https://www.no-trouble.caa.go.jp/"
+    },
+    {
+      "id": "keihyoho",
+      "prefix": "景品表示法",
+      "title": "不当景品類及び不当表示防止法",
+      "issuer": "消費者庁",
+      "level": "L3",
+      "url": "https://www.caa.go.jp/policies/policy/representation/fair_labeling/"
+    },
+    {
+      "id": "gs1",
+      "prefix": "GS1",
+      "title": "GS1 Standards（商品識別コード）",
+      "issuer": "GS1",
+      "level": "L3",
+      "url": "https://www.gs1.org/standards"
+    },
+    {
+      "id": "pmbok",
+      "prefix": "PMBOK",
+      "title": "PMBOK ガイド",
+      "issuer": "PMI",
+      "level": "L4",
+      "url": "https://www.pmi.org/pmbok-guide-standards"
+    },
+    {
+      "id": "aws_wa",
+      "prefix": "AWS Well-Architected",
+      "title": "AWS Well-Architected Framework",
+      "issuer": "AWS",
+      "level": "L4",
+      "url": "https://docs.aws.amazon.com/wellarchitected/latest/framework/welcome.html"
+    },
+    {
+      "id": "sre",
+      "prefix": "Google SRE",
+      "title": "Google SRE Book",
+      "issuer": "Google",
+      "level": "L5",
+      "url": "https://sre.google/sre-book/table-of-contents/"
+    }
+  ]
+}

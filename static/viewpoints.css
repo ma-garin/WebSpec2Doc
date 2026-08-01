@@ -723,3 +723,17 @@ textarea.input-dialog-input { resize: vertical; min-height: 90px; }
   font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap;
 }
 .vp-template-as-set:hover { border-color: var(--primary); background: var(--info-bg, #eff6ff); }
+
+/* 既定セットの印。どのセットで AutoRun が走るかを一覧上で示す。 */
+.vp-set-default-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  border: 1px solid var(--accent-border, #c7d2fe);
+  background: var(--accent-soft, #eef2ff);
+  color: var(--accent-strong, #3730a3);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.6;
+}

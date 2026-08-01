@@ -106,9 +106,13 @@ function vpRenderSets() {
       : item.published_version
         ? `公開 v${item.published_version}`
         : '未公開';
+    // 既定セットを明示する。AutoRun は URL に一致する適用ルールが無ければ
+    // 既定セットの観点で走るため、どれが既定かが見えないと「どの観点で
+    // テストされたのか」を後から説明できない。
+    const badge = item.is_default ? '<span class="vp-set-default-badge">既定</span>' : '';
     rows.push(`<button type="button" class="vp-set-row${active}" data-vp-set-id="${escHtml(item.id)}" data-depth="${depth}">
       <strong>${escHtml(item.name)}</strong><span class="vp-set-count">${Number(item.item_count || 0)}</span>
-      <span class="vp-set-meta">${escHtml(version)}</span>
+      <span class="vp-set-meta">${escHtml(version)}${badge}</span>
     </button>`);
     (byParent.get(item.id) || []).forEach((child) => visit(child, Math.min(depth + 1, 1)));
   };
@@ -834,6 +838,30 @@ async function vpNewSet() {
   } catch (error) { vpFeedback(error.message, 'error'); }
 }
 
+async function vpMakeDefault() {
+  const target = vpState.currentSet;
+  if (!target) return;
+  if (target.is_default) { vpFeedback(`「${target.name}」は既に既定です。`); return; }
+  if (!target.published_version) {
+    vpFeedback('公開版が無いセットは既定にできません。先に公開してください。', 'error');
+    return;
+  }
+  const confirmed = await confirmDialog({
+    title: `「${target.name}」を既定にしますか？`,
+    message: 'URLに一致する適用ルールが無いとき、AutoRun はこのセットの観点でテストします。既定は1つだけで、現在の既定は解除されます。',
+    confirmLabel: '既定にする',
+  });
+  if (!confirmed) return;
+  try {
+    await vpApi(`/api/viewpoint-sets/${encodeURIComponent(target.id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ revision: target.revision, is_default: true }),
+    });
+    await vpRefreshSetsOnly();
+    vpFeedback(`「${target.name}」を既定にしました（${Number(target.item_count || 0)}観点）。`);
+  } catch (error) { vpFeedback(error.message, 'error'); }
+}
+
 async function vpEditSet() {
   if (!vpState.currentSet) return;
   const description = await inputDialog({
@@ -949,6 +977,7 @@ function vpMarkDirty(event) {
 /* ── イベント登録 ── */
 document.getElementById('vp-feedback-close')?.addEventListener('click', vpClearFeedback);
 document.getElementById('vp-new-set')?.addEventListener('click', vpNewSet);
+document.getElementById('vp-make-default')?.addEventListener('click', vpMakeDefault);
 document.getElementById('vp-edit-set')?.addEventListener('click', vpEditSet);
 document.getElementById('vp-delete-set')?.addEventListener('click', vpDeleteSet);
 document.getElementById('vp-new-assignment')?.addEventListener('click', vpNewAssignment);

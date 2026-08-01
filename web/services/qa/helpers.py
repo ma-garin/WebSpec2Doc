@@ -286,7 +286,15 @@ def _viewpoints_by_type(summary_type: str) -> list[dict[str, Any]]:
 
 
 def _is_area_heading(viewpoint: dict[str, Any]) -> bool:
-    """その観点が、品質領域の見出しそのものか。"""
+    """その観点が、品質領域の見出しそのものか。
+
+    自分がどの品質領域に属するかを持つ観点は、見出しではなく領域に属する
+    観点である。分類名だけで判定すると、分類の文字列がたまたま予約語と
+    一致した通常の観点が見出し扱いになり、テスト設計・ケース表から
+    エラーも警告もなく消える。所属を宣言しているものは観点として扱う。
+    """
+    if str(viewpoint.get("quality_area", "")).strip():
+        return False
     return viewpoint.get("summary_type") == QUALITY_AREA_TYPE
 
 

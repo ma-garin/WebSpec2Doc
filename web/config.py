@@ -6,7 +6,8 @@ from pathlib import Path
 
 OUTPUT_DIR = Path("output")
 QA_VIEWPOINTS_CSV = Path(os.environ.get("QA_VIEWPOINTS_CSV", "data/qa_viewpoints_summary.csv"))
-VIEWPOINTS_DB = Path(os.environ.get("VIEWPOINTS_DB", "instance/viewpoints.db"))
+DEFAULT_VIEWPOINTS_DB = "instance/viewpoints.db"
+VIEWPOINTS_DB = Path(os.environ.get("VIEWPOINTS_DB", DEFAULT_VIEWPOINTS_DB))
 
 
 def viewpoints_db_path() -> Path:
@@ -17,9 +18,16 @@ def viewpoints_db_path() -> Path:
     つもりになり、黙って同じDBを共有する事故が起きる（実際に test_tenancy は
     setenv と setattr の両方を書かないと隔離できていない）。
 
+    既定値は定数 VIEWPOINTS_DB ではなくリテラルを使う。定数を既定にすると、
+    その定数自体が import 時の環境変数から作られているため、環境変数を
+    後から消しても最初の値が残り、既定へ戻らない。
+    空文字も未設定として扱う（`VIEWPOINTS_DB=` は「指定なし」の意図）。
+
     定数 VIEWPOINTS_DB は既存の参照互換のために残す。新しい参照はこの関数を使う。
     """
-    return Path(os.environ.get("VIEWPOINTS_DB", str(VIEWPOINTS_DB)))
+    return Path(os.environ.get("VIEWPOINTS_DB", "").strip() or DEFAULT_VIEWPOINTS_DB)
+
+
 VIEWPOINT_TEMPLATES_DIR = Path(
     os.environ.get("VIEWPOINT_TEMPLATES_DIR", "data/viewpoint_templates")
 )

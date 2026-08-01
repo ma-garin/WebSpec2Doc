@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import dataclasses
 import json
 import logging
@@ -64,10 +66,15 @@ def api_healthz() -> dict:
     """システムヘルスチェック。スケジューラー稼働状態を返す。"""
     from web.services.scheduler import _scheduler_started, _stop_event
 
+    from web.config import VIEWPOINTS_DB
+
     scheduler_running = _scheduler_started and not _stop_event.is_set()
     return {
         "status": "ok",
         "scheduler": {"running": scheduler_running},
+        # 観点DBのファイル名だけを返す。E2E が既存サーバーに相乗りしてよいかを
+        # 判断するために要る。パス全体は環境の情報が漏れるので出さない。
+        "viewpoints_db": Path(VIEWPOINTS_DB).name,
         "version": "1.0",
     }
 

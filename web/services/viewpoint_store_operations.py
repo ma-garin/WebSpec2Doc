@@ -269,10 +269,15 @@ class ViewpointStoreOperations(ViewpointStoreBase):
         if set_id is None:
             raise ViewpointStoreError("観点セットを選択できませんでした。")
         version = self.get_version(set_id, version_number, status="published")
+        # フォルダは分類の入れ物であって観点ではない。除かないと、名前しか持たない
+        # 空の行が観点としてQA生成へ渡り、期待結果も証跡も無いまま出力に並ぶ。
+        # 件数も水増しされる（16分類のセットなら実際の観点数より16件多く報告される）。
         items = [
             item
             for item in self.list_items(set_id, version["version_number"], resolved=True)
-            if item["enabled"] and not item["deleted_at"]
+            if item["enabled"]
+            and not item["deleted_at"]
+            and item.get("node_type", "viewpoint") == "viewpoint"
         ]
         if not items:
             raise ConflictError("適用できる公開済み観点が0件です。既定公開版へ切り替えてください。")

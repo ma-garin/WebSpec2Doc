@@ -249,26 +249,39 @@ def _legacy_viewpoint(item: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-# QA 文書が観点を引くときの分類。既定観点（qa_viewpoints_summary.csv）は
-# この2値しか持たないが、領域から生成した観点はテストタイプで分類される。
-# 決め打ちで絞ると生成分が1件も載らないため、既定の2値を優先しつつ、
-# 該当が無ければ全件を対象にする。
-LEGACY_SUMMARY_TYPES = ("category_l2", "quality_area_l1")
+# QA 文書は観点を2つの役割で引く。
+#   quality_area_l1 … 品質領域の見出し（品質観点マップに載る）
+#   category_l2     … テスト設計に使う具体的な観点（設計表・ケース表に載る）
+# 観点の分類体系は出どころで違い、既定観点（qa_viewpoints_summary.csv）は
+# この2値を直接持つが、領域から生成した観点はテストタイプで分類される。
+QUALITY_AREA_TYPE = "quality_area_l1"
+DESIGN_TYPE = "category_l2"
 
 
 def _viewpoints_by_type(summary_type: str) -> list[dict[str, Any]]:
-    """指定分類の観点を返す。該当が無ければ既定分類以外の観点で補う。
+    """指定した役割に当たる観点を返す。
 
-    観点の分類体系は出どころによって違う。呼び出し側が求めた分類に
-    1件も無いとき、表を空にするのではなく、既定分類に属さない観点
-    （＝別体系で分類された観点）を返す。空の表は「観点が無い」のか
-    「分類が噛み合っていない」のか、利用者から区別できない。
+    分類体系の違いは、読み出し時に役割へ写して吸収する。「求めた分類が
+    0件なら別の分類を返す」形にすると、既定観点と生成観点が混ざったとき、
+    既定側が1件でもあれば生成側が丸ごと消える。どちらが出るかが
+    データの並びで決まる状態を作らない。
+
+    生成観点にとってはテストタイプ（機能テスト・性能テスト等）が品質領域に
+    当たるため、領域の見出しとしてはその名前を代表として返す。
     """
     viewpoints = _load_qa_viewpoints()
-    matched = [vp for vp in viewpoints if vp.get("summary_type") == summary_type]
-    if matched:
-        return matched
-    return [vp for vp in viewpoints if vp.get("summary_type") not in LEGACY_SUMMARY_TYPES]
+    if summary_type != QUALITY_AREA_TYPE:
+        return [vp for vp in viewpoints if vp.get("summary_type") != QUALITY_AREA_TYPE]
+
+    areas = [vp for vp in viewpoints if vp.get("summary_type") == QUALITY_AREA_TYPE]
+    seen = {str(vp["name"]) for vp in areas}
+    for vp in viewpoints:
+        area = str(vp.get("summary_type", ""))
+        if area in (QUALITY_AREA_TYPE, DESIGN_TYPE, "") or area in seen:
+            continue
+        seen.add(area)
+        areas.append({**vp, "name": area})
+    return areas
 
 
 def _viewpoint_names(summary_type: str, limit: int = 8) -> list[str]:

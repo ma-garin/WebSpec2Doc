@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import os
+import socket
 import subprocess
 import sys
 import time
@@ -49,6 +50,19 @@ SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
 # 将来 flaky が出た場合はここに "ファイル::クラス::テスト" を追加する。
 # 一時解除するには WEBSPEC2DOC_E2E_NO_QUARANTINE=1 を設定する。
 _QUARANTINED_TESTS: frozenset[str] = frozenset()
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    """収集より前に、E2E が使う宛先を確定させる。
+
+    各テストはモジュール読み込み時に WEBSPEC2DOC_E2E_URL から宛先を組み立てる。
+    収集はこのフックの後に走るので、ここで決めれば全テストに伝わる。
+    fixture まで待つと手遅れになる。
+    """
+    if os.environ.get("WEBSPEC2DOC_E2E_EXTERNAL") == "1":
+        return
+    if _server_is_up(BASE_URL) and not _server_uses_isolated_db(BASE_URL):
+        _use_fallback_port()
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
@@ -96,14 +110,62 @@ def require_playwright() -> None:
         pytest.skip("playwright not installed — skipping E2E tests", allow_module_level=True)
 
 
+E2E_DB_NAME = "viewpoints.e2e.db"
+
+
+def _server_uses_isolated_db(url: str, timeout: float = 0.5) -> bool:
+    """既に動いているサーバーが、E2E 専用の観点DBを使っているか。
+
+    判定できない（古いサーバーで項目を返さない等）場合は False を返す。
+    共有してよいか分からないものを共有しない。
+    """
+    try:
+        payload = requests.get(f"{url.rstrip('/')}/api/v1/healthz", timeout=timeout).json()
+    except Exception:
+        return False
+    return isinstance(payload, dict) and payload.get("viewpoints_db") == E2E_DB_NAME
+
+
+def _free_port() -> int:
+    """OS に空きポートを1つ選ばせる。"""
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", 0))
+        return int(sock.getsockname()[1])
+
+
+def _use_fallback_port() -> None:
+    """開発サーバーと衝突しないポートへ移る。
+
+    開発サーバーが既定ポートを握っているとき、それを止めさせるのは
+    作業の中断を強いる。E2E 側が別ポートで自前のサーバーを立てればよい。
+
+    各テストは conftest の変数ではなく WEBSPEC2DOC_E2E_URL から独自に
+    宛先を組み立てる。モジュール変数だけ書き換えても伝わらないため、
+    環境変数も同時に更新する。テストの収集はこの fixture より後に走るので、
+    ここで設定すれば間に合う。
+    """
+    global BASE_URL
+    BASE_URL = f"http://127.0.0.1:{_free_port()}"
+    os.environ["WEBSPEC2DOC_E2E_URL"] = BASE_URL
+
+
 @pytest.fixture(scope="session", autouse=True)
 def flask_server() -> Generator[None, None, None]:
     """Flask サーバーを session スコープで起動・終了する。
 
     環境変数 WEBSPEC2DOC_E2E_EXTERNAL=1 が設定されている場合は
     外部サーバーを使用し、自動起動をスキップする。
+
+    既にサーバーが動いていても、それが開発用DBを使っているなら乗らない。
+    E2E は観点セットを作ったり消したりするため、開発中のデータに検証用の
+    残骸が残る。実際に「E2E削除対象-*」が469件溜まり、分類ツリーが
+    読めなくなったことがある。専用DBで起動し直す。
     """
-    if os.environ.get("WEBSPEC2DOC_E2E_EXTERNAL") == "1" or _server_is_up(BASE_URL):
+    if os.environ.get("WEBSPEC2DOC_E2E_EXTERNAL") == "1":
+        yield
+        return
+
+    if _server_is_up(BASE_URL):
         yield
         return
 
@@ -120,11 +182,19 @@ def flask_server() -> Generator[None, None, None]:
     # スキップ→「緑」になってしまう（E2E ゲートが形骸化する）。
     # BASE_URL のポートを起動側にも必ず渡す。
     base_port = urlparse(BASE_URL).port or 8765
+    # E2E は観点セットを作ったり消したりする。既定の instance/viewpoints.db を
+    # そのまま使うと、開発中のデータに検証用のセットや観点が残る。実際に
+    # 「E2E削除対象-*」が469件溜まり、分類ツリーが読めなくなったことがある。
+    # 専用DBへ逃がし、実行のたびに作り直す。
+    e2e_db = ROOT / "instance" / E2E_DB_NAME
+    for leftover in e2e_db.parent.glob(f"{e2e_db.name}*"):
+        leftover.unlink(missing_ok=True)
     env = {
         **os.environ,
         "FLASK_TESTING": "1",
         "PYTHONPATH": str(ROOT),
         "WEBSPEC2DOC_PORT": str(base_port),
+        "VIEWPOINTS_DB": str(e2e_db),
     }
     proc = subprocess.Popen(
         [sys.executable, "app.py"],

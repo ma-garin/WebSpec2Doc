@@ -264,3 +264,151 @@ class TestQualityAreaDoesNotCollideWithReservedWords:
         areas = self._areas(items)
         assert areas, "品質領域が1件も出ない"
         assert all(area not in ("category_l2", "quality_area_l1") for area in areas)
+
+
+class TestViewpointsDbPathResolution:
+    """観点DBの場所が、そのつど環境変数から解決されること。
+
+    モジュール定数は import 時に一度しか評価されない。テストが
+    monkeypatch.setenv だけで隔離したつもりになり、黙って同じDBを
+    共有する事故が起きる。
+    """
+
+    def test_change_is_reflected(self, monkeypatch: Any) -> None:
+        from web.config import viewpoints_db_path
+
+        monkeypatch.setenv("VIEWPOINTS_DB", "/tmp/first.db")
+        assert str(viewpoints_db_path()) == "/tmp/first.db"
+        monkeypatch.setenv("VIEWPOINTS_DB", "/tmp/second.db")
+        assert str(viewpoints_db_path()) == "/tmp/second.db"
+
+    def test_falls_back_to_default_when_unset(self, monkeypatch: Any) -> None:
+        """環境変数を消したら既定へ戻ること。
+
+        既定値に定数 VIEWPOINTS_DB を使うと、その定数自体が import 時の
+        環境変数から作られているため、消しても最初の値が残る。
+        """
+        from web.config import DEFAULT_VIEWPOINTS_DB, viewpoints_db_path
+
+        monkeypatch.setenv("VIEWPOINTS_DB", "/tmp/leftover.db")
+        monkeypatch.delenv("VIEWPOINTS_DB")
+        assert str(viewpoints_db_path()) == DEFAULT_VIEWPOINTS_DB
+
+    def test_empty_value_is_treated_as_unset(self, monkeypatch: Any) -> None:
+        """空文字は「指定なし」として扱うこと。"""
+        from web.config import DEFAULT_VIEWPOINTS_DB, viewpoints_db_path
+
+        monkeypatch.setenv("VIEWPOINTS_DB", "   ")
+        assert str(viewpoints_db_path()) == DEFAULT_VIEWPOINTS_DB
+
+
+class TestDocumentTablesSurviveHostileValues:
+    """観点の値に表を壊す文字が含まれても、文書の表が崩れないこと。
+
+    観点は利用者が編集でき、CSV取込でも入る。縦棒や改行を含む値が
+    そのまま表へ流れると、以降の行がすべてずれて読めなくなる。
+    """
+
+    def test_pipes_and_newlines_are_escaped(self) -> None:
+        from web.services.qa import doc_generator
+
+        hostile = [
+            {
+                "persistent_key": "h1",
+                "name": "攻撃|観点",
+                "category": "category_l2",
+                "expected_result": "期待|結果に縦棒\nと改行",
+                "evidence": "証跡|にも縦棒",
+                "recommended_checks": "操作: 手順|に縦棒\n判定点: x",
+                "quality_area": "信頼性",
+            }
+        ]
+        report = {
+            "screens": [
+                {
+                    "page_id": "s1",
+                    "title": "T",
+                    "url": "https://x/",
+                    "forms": [],
+                    "buttons": [],
+                    "transitions": [],
+                }
+            ]
+        }
+        with use_viewpoint_snapshot(hostile):
+            design = doc_generator._test_design("x", report)
+
+        header = next(line for line in design.splitlines() if line.startswith("| 観点ID"))
+        row = next(line for line in design.splitlines() if "TD-VP-01" in line)
+        # エスケープ済みの縦棒は列の区切りにならない
+        assert row.replace("\\|", "").count("|") == header.count("|")
+        assert "\n" not in row
+
+
+class TestReservedCategoryDoesNotHideViewpoints:
+    """分類名が予約語と一致した観点が、テスト設計・ケース表から消えないこと。
+
+    品質領域の見出しかどうかを分類名だけで判定していたため、
+    `category="quality_area_l1"` を持つ通常の観点が見出し扱いになり、
+    エラーも警告もなく文書から抜け落ちていた。所属する品質領域を
+    宣言している観点は、見出しではなく観点として扱う。
+    """
+
+    def test_viewpoint_with_reserved_category_still_appears_in_design_view(self) -> None:
+        colliding = [
+            {
+                "persistent_key": "x",
+                "name": "通常観点X",
+                "category": "quality_area_l1",
+                "quality_area": "機能性",
+            }
+        ]
+        with use_viewpoint_snapshot(colliding):
+            names = [str(vp["name"]) for vp in _viewpoints_by_type("category_l2")]
+            areas = [str(vp["name"]) for vp in _viewpoints_by_type("quality_area_l1")]
+        assert "通常観点X" in names, "設計ビューから消えている"
+        assert areas == ["機能性"], "所属する品質領域が見出しとして出ていない"
+
+    def test_area_heading_without_own_area_stays_a_heading(self) -> None:
+        """自分の所属領域を持たない項目は、従来どおり見出しであること。"""
+        headings = [
+            {"persistent_key": "h", "name": "セキュリティ", "category": "quality_area_l1"}
+        ]
+        with use_viewpoint_snapshot(headings):
+            names = [str(vp["name"]) for vp in _viewpoints_by_type("category_l2")]
+            areas = [str(vp["name"]) for vp in _viewpoints_by_type("quality_area_l1")]
+        assert names == []
+        assert areas == ["セキュリティ"]
+
+
+class TestCatalogReloadOnlyWhenChanged:
+    """カタログのキャッシュを、実際に編集されたときだけ捨てること。
+
+    毎回無条件に捨てると、キャッシュを置いた意味が消える。開発モードでは
+    リクエストのたびに101定義 × 60領域の適用判定を回すことになる。
+    """
+
+    def test_unchanged_catalog_keeps_the_cache(self) -> None:
+        from web.services.viewpoint_blueprints import list_domains, reload_catalogs
+
+        list_domains()
+        reload_catalogs()  # 現在の更新時刻を記録する
+        assert reload_catalogs() is False
+
+    def test_edited_catalog_drops_the_cache(self, tmp_path: Any) -> None:
+        import time
+        from pathlib import Path
+
+        from web.services.viewpoint_blueprints import reload_catalogs
+
+        reload_catalogs()
+        target = Path("data/viewpoint_domains.json")
+        original = target.read_text(encoding="utf-8")
+        try:
+            time.sleep(0.01)
+            target.write_text(original, encoding="utf-8")  # 更新時刻だけ変える
+            assert reload_catalogs() is True
+            assert reload_catalogs() is False
+        finally:
+            target.write_text(original, encoding="utf-8")
+            reload_catalogs(force=True)

@@ -99,16 +99,35 @@ def _load_merged(base_file: str, key: str) -> dict[str, Any]:
     return {**base, key: merged}
 
 
-def reload_catalogs() -> None:
-    """観点カタログの読み込みキャッシュを捨てる。
+_CATALOG_STAMP: tuple[tuple[str, float], ...] = ()
 
-    カタログはプロセス起動中に変わらない前提でキャッシュしている。
-    開発中に JSON を編集したときだけ、この関数で捨てる。
-    キャッシュを持たないと、テンプレート適用のたびに
-    101定義 × 60領域の適用判定を回すことになる。
+
+def _catalog_stamp() -> tuple[tuple[str, float], ...]:
+    """カタログJSONの更新時刻の一覧。中身が変わったかの判定に使う。"""
+    return tuple(
+        sorted(
+            (path.name, path.stat().st_mtime)
+            for path in DATA_DIR.glob("viewpoint_*.json")
+            if path.is_file()
+        )
+    )
+
+
+def reload_catalogs(*, force: bool = False) -> bool:
+    """カタログJSONが変わっていればキャッシュを捨てる。捨てたら True。
+
+    毎回無条件に捨てると、キャッシュを置いた意味が消える（開発モードでは
+    リクエストのたびに101定義 × 60領域の適用判定を回すことになる）。
+    更新時刻を見て、実際に編集されたときだけ捨てる。
     """
+    global _CATALOG_STAMP
+    stamp = _catalog_stamp()
+    if not force and stamp == _CATALOG_STAMP:
+        return False
+    _CATALOG_STAMP = stamp
     for cached in (_blueprints, _domains_by_key, _evidence_by_id):
         cached.cache_clear()
+    return True
 
 
 @lru_cache(maxsize=1)

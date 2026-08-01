@@ -386,7 +386,11 @@
     .ci-guidance { margin-top: 18px; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-soft); }
     .ci-guidance-title { font-size: 13px; font-weight: 800; color: var(--text); }
     .ci-guidance-cmd { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .ci-guidance-cmd code { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; padding: 8px 10px; border-radius: 6px; background: var(--bg-panel, #0f172a0a); border: 1px solid var(--border); font-size: 12.5px; color: var(--text); }
+    /* 複数行スニペット（GitHub Actions の run ブロック）を折り返さずに読ませる。 */
+    .ci-guidance-cmd code { flex: 1; min-width: 0; overflow-x: auto; white-space: pre; padding: 8px 10px; border-radius: 6px; background: var(--bg-panel, #0f172a0a); border: 1px solid var(--border); font-size: 12.5px; color: var(--text); line-height: 1.6; }
+    .ci-format-tabs { display: inline-flex; gap: 4px; padding: 3px; margin-bottom: 8px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+    .ci-format-btn { height: 28px; padding: 0 12px; border: 0; border-radius: 4px; background: transparent; color: var(--text-muted); font-size: 12px; font-weight: 700; cursor: pointer; }
+    .ci-format-btn.is-active { background: var(--info-bg); color: var(--primary-dark); }
     .r-shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
     .r-shots a { display: block; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
     .r-shots figure { margin: 0; }

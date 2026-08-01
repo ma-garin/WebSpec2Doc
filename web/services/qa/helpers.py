@@ -225,6 +225,12 @@ def _load_qa_viewpoints(
 
 
 def _legacy_viewpoint(item: dict[str, Any]) -> dict[str, Any]:
+    """観点ストアの項目を、QA 生成側が扱う形へ写す。
+
+    `purpose` と `recommended_checks` も渡す。観点は「何を見るか」だけでは
+    合否を判定できず、操作・判定点・期待結果・証跡が揃って初めて実行できる。
+    ここで落とすと、それらを作り込んでも出力には一切現れない。
+    """
     return {
         "persistent_key": str(item.get("persistent_key", "")),
         "summary_type": str(item.get("category") or item.get("summary_type") or "一般"),
@@ -234,11 +240,31 @@ def _legacy_viewpoint(item: dict[str, Any]) -> dict[str, Any]:
         "automation": str(item.get("automation", "manual")),
         "standards": str(item.get("standards", "")),
         "tags": item.get("tags", []),
+        "purpose": str(item.get("purpose", "")),
+        "recommended_checks": str(item.get("recommended_checks", "")),
     }
 
 
+# QA 文書が観点を引くときの分類。既定観点（qa_viewpoints_summary.csv）は
+# この2値しか持たないが、領域から生成した観点はテストタイプで分類される。
+# 決め打ちで絞ると生成分が1件も載らないため、既定の2値を優先しつつ、
+# 該当が無ければ全件を対象にする。
+LEGACY_SUMMARY_TYPES = ("category_l2", "quality_area_l1")
+
+
 def _viewpoints_by_type(summary_type: str) -> list[dict[str, Any]]:
-    return [vp for vp in _load_qa_viewpoints() if vp.get("summary_type") == summary_type]
+    """指定分類の観点を返す。該当が無ければ既定分類以外の観点で補う。
+
+    観点の分類体系は出どころによって違う。呼び出し側が求めた分類に
+    1件も無いとき、表を空にするのではなく、既定分類に属さない観点
+    （＝別体系で分類された観点）を返す。空の表は「観点が無い」のか
+    「分類が噛み合っていない」のか、利用者から区別できない。
+    """
+    viewpoints = _load_qa_viewpoints()
+    matched = [vp for vp in viewpoints if vp.get("summary_type") == summary_type]
+    if matched:
+        return matched
+    return [vp for vp in viewpoints if vp.get("summary_type") not in LEGACY_SUMMARY_TYPES]
 
 
 def _viewpoint_names(summary_type: str, limit: int = 8) -> list[str]:

@@ -294,3 +294,48 @@ class TestReferencesView:
     def test_does_not_claim_conformance(self, spa: str) -> None:
         """標準への準拠を主張しないこと（claim_scope の原則）。"""
         assert "標準への準拠を主張するものではなく" in spa
+
+
+class TestDiscoverScopeControls:
+    """画面解析の範囲指定（Issue #15）。
+
+    従来は wizard.js が depth=5 / max_pages=300 を固定で送っており、大規模サイトでは
+    300画面・15分規模の解析になっても中断以外の手が無かった。
+
+    **ここで担保できないもの**: プリセット選択でカスタム入力が開くこと、見込み時間の
+    再計算、実際に送信される値——いずれも JS の実行が必要で、本ファイルでは未検証。
+    """
+
+    @pytest.mark.parametrize(
+        ("preset", "depth", "max_pages"),
+        [("one-page", "1", "1"), ("standard", "2", "30"), ("wide", "5", "300")],
+    )
+    def test_preset_exposes_scope_values(
+        self, spa: str, preset: str, depth: str, max_pages: str
+    ) -> None:
+        """各プリセットが depth / max_pages を data 属性で持つこと。"""
+        pattern = (
+            rf'<input[^>]*value="{preset}"[^>]*data-depth="{depth}"[^>]*data-max="{max_pages}"'
+        )
+        assert re.search(pattern, spa), f"プリセット {preset} の値が期待と異なる"
+
+    def test_single_page_preset_exists(self, spa: str) -> None:
+        """「1画面のみ」の導線があること（利用者からの直接要望）。"""
+        assert 'id="discover-scope-single"' in spa
+        assert "この1画面のみ" in spa
+
+    def test_custom_inputs_within_api_limits(self, spa: str) -> None:
+        """カスタム入力の min/max が API 側の受付範囲（1..10 / 1..500）に収まること。
+
+        画面側が API より広い範囲を許すと、送っても黙って丸められる。
+        """
+        depth = re.search(r'<input[^>]*id="discover-depth"[^>]*>', spa)
+        max_pages = re.search(r'<input[^>]*id="discover-max-pages"[^>]*>', spa)
+        assert depth and max_pages, "カスタム入力欄が無い"
+        assert 'min="1"' in depth.group() and 'max="10"' in depth.group()
+        assert 'min="1"' in max_pages.group() and 'max="500"' in max_pages.group()
+
+    def test_default_preset_is_standard(self, spa: str) -> None:
+        """既定は標準（深さ2 / 最大30）。旧既定の 300画面固定に戻っていないこと。"""
+        standard = re.search(r'<input[^>]*id="discover-scope-standard"[^>]*>', spa)
+        assert standard and "checked" in standard.group()

@@ -1,0 +1,194 @@
+<meta charset="utf-8">
+<title>画面解析の範囲指定 — デザイン案</title>
+<style>
+  :root{
+    --border:#e3e6ea; --surface:#fff; --surface-soft:#f7f8fa; --text:#1b1f24;
+    --text-muted:#6b7280; --primary:#2563eb; --primary-dark:#1d4ed8; --radius:8px;
+    --ok:#15803d; --ok-bg:#f0fdf4; --warn:#b45309; --warn-bg:#fffbeb;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:28px;background:#eef1f5;color:var(--text);
+       font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;font-size:14px;line-height:1.65}
+  h1{font-size:20px;margin:0 0 4px}
+  h2{font-size:16px;margin:32px 0 10px;padding-top:18px;border-top:2px solid #d7dce2}
+  .lede{color:var(--text-muted);font-size:13px;margin:0 0 8px}
+  .frame{max-width:820px;background:var(--surface);border:1px solid var(--border);
+         border-radius:10px;padding:20px;margin:12px 0}
+  .frame-label{font-size:11px;font-weight:800;letter-spacing:.08em;color:var(--text-muted);
+               text-transform:uppercase;margin-bottom:10px}
+  .form-label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}
+  .req{color:#dc2626}
+  .input-row{display:flex;gap:8px}
+  .url-input{flex:1;height:40px;padding:0 12px;border:1px solid var(--border);
+             border-radius:var(--radius);font-size:13px;background:var(--surface)}
+  .btn-primary{height:40px;padding:0 18px;border:0;border-radius:var(--radius);
+               background:var(--primary);color:#fff;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+  .btn-outline-sm{height:30px;padding:0 12px;border:1px solid var(--border);border-radius:var(--radius);
+                  background:var(--surface);color:var(--text);font-size:12px;cursor:pointer}
+  .hint{font-size:12px;color:var(--text-muted);margin:10px 0 0}
+
+  /* 範囲指定ブロック共通 */
+  .scope{margin-top:12px;padding:12px 14px;background:var(--surface-soft);
+         border:1px solid var(--border);border-radius:var(--radius)}
+  .scope-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .scope-title{font-size:12px;font-weight:800;letter-spacing:.04em;color:var(--text-muted)}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{padding:7px 14px;border:1px solid var(--border);border-radius:16px;background:var(--surface);
+        font-size:13px;cursor:pointer;color:var(--text);display:inline-flex;align-items:center;gap:6px}
+  .chip.on{border-color:var(--primary);background:#eff6ff;color:var(--primary-dark);font-weight:700;
+           box-shadow:inset 0 0 0 1px var(--primary)}
+  .chip small{font-size:11px;color:var(--text-muted);font-weight:400}
+  .chip.on small{color:var(--primary-dark)}
+  .fields{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px dashed var(--border)}
+  .field label{display:block;font-size:12px;font-weight:700;margin-bottom:4px}
+  .field input[type=number]{width:104px;height:34px;padding:0 10px;border:1px solid var(--border);
+                            border-radius:var(--radius);font-size:13px}
+  .est{margin-top:10px;font-size:12px;color:var(--ok);background:var(--ok-bg);
+       border:1px solid #bbf7d0;border-radius:var(--radius);padding:7px 10px;display:inline-block}
+  .est.warn{color:var(--warn);background:var(--warn-bg);border-color:#fde68a}
+
+  table{border-collapse:collapse;width:100%;max-width:820px;margin:10px 0;background:var(--surface);font-size:13px}
+  th,td{border:1px solid var(--border);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:var(--surface-soft);font-weight:700;white-space:nowrap}
+  code{background:#f1f3f5;padding:1px 5px;border-radius:4px;font-size:12px}
+  .verdict{max-width:820px;padding:12px 14px;border-radius:var(--radius);font-size:13px;margin:10px 0}
+  .rec{background:var(--ok-bg);border:1px solid #bbf7d0}
+  .no{background:#fef2f2;border:1px solid #fecaca}
+  ul{margin:6px 0;padding-left:20px}
+</style>
+
+<h1>画面解析の範囲指定 — デザイン案</h1>
+<p class="lede">対象: ステップ1「解析対象 URL」（<code>templates/partials/view-generate.html:30-53</code>）。バックエンドは既に <code>depth</code> / <code>max_pages</code> 対応済みのため、変更は画面と <code>wizard.js:373</code> のみ。</p>
+
+<div class="verdict rec">
+  <strong>推奨は案A。</strong> 「1画面のみ」が1クリックで押せ、深さ指定も同じ場所で完結し、既定を安全側（標準）に置けるため。
+  案B は深さしか変えられず「1画面のみ」を max_pages で表現できない。案C は常時2入力が出て、数値の意味を知らない利用者に判断を強いる。
+</div>
+
+<h2>現状（比較用）</h2>
+<div class="frame">
+  <div class="frame-label">現状 — 範囲を指定する手段が無い</div>
+  <label class="form-label">解析対象 URL <span class="req">*</span></label>
+  <div class="input-row">
+    <input class="url-input" value="https://www.veriserve.co.jp/" />
+    <button class="btn-primary">画面解析</button>
+  </div>
+  <p class="hint">⏱ 目安: 1画面あたり約2〜3秒（10画面で30秒前後）</p>
+  <div class="est warn" style="margin-top:12px">
+    実際には <code>depth=5 / max_pages=300</code> が固定で渡る → <strong>300画面・約15分30秒</strong>。利用者は止める以外に手が無い。
+  </div>
+</div>
+
+<h2>案A（推奨）— プリセット＋カスタム</h2>
+<div class="frame">
+  <div class="frame-label">案A</div>
+  <label class="form-label">解析対象 URL <span class="req">*</span></label>
+  <div class="input-row">
+    <input class="url-input" value="https://www.veriserve.co.jp/" />
+    <button class="btn-primary">画面解析</button>
+  </div>
+
+  <div class="scope">
+    <div class="scope-head"><span class="scope-title">解析する範囲</span></div>
+    <div class="chips">
+      <span class="chip">この1画面のみ <small>1画面 / 約3秒</small></span>
+      <span class="chip on">標準 <small>深さ2 / 最大30画面 / 約1分</small></span>
+      <span class="chip">広め <small>深さ5 / 最大300画面 / 約15分</small></span>
+      <span class="chip">カスタム</small></span>
+    </div>
+    <div class="fields">
+      <div class="field">
+        <label for="a-depth">深さ（開始ページが0）</label>
+        <input id="a-depth" type="number" value="2" min="1" max="10" />
+      </div>
+      <div class="field">
+        <label for="a-max">最大ページ</label>
+        <input id="a-max" type="number" value="30" min="1" max="500" />
+      </div>
+    </div>
+    <div class="est">見込み: 最大30画面・約1分（1画面2.4秒の実測値から算出）</div>
+  </div>
+  <p class="hint">「カスタム」を選んだときだけ数値入力を表示。プリセット選択中は入力欄を畳んで、数値を読まずに決められるようにする。</p>
+</div>
+
+<h2>案B — 深さスライダー＋1画面チェック</h2>
+<div class="frame">
+  <div class="frame-label">案B</div>
+  <label class="form-label">解析対象 URL <span class="req">*</span></label>
+  <div class="input-row">
+    <input class="url-input" value="https://www.veriserve.co.jp/" />
+    <button class="btn-primary">画面解析</button>
+  </div>
+  <div class="scope">
+    <div class="scope-head"><span class="scope-title">解析する範囲</span></div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:12px">
+      <input type="checkbox" /> この1画面のみ解析する（リンクを辿らない）
+    </label>
+    <div class="field">
+      <label>リンクを辿る深さ: <strong>2</strong></label>
+      <input type="range" min="1" max="10" value="2" style="width:280px" />
+    </div>
+    <div class="est">見込み: 深さ2・最大30画面・約1分</div>
+  </div>
+  <p class="hint">最大ページ数を出さないぶん簡潔。ただし深さ2でもリンクが多いサイトでは画面数が読めず、上限を止められない。</p>
+</div>
+
+<h2>案C — 数値2つを常時表示</h2>
+<div class="frame">
+  <div class="frame-label">案C</div>
+  <label class="form-label">解析対象 URL <span class="req">*</span></label>
+  <div class="input-row">
+    <input class="url-input" value="https://www.veriserve.co.jp/" />
+    <button class="btn-primary">画面解析</button>
+  </div>
+  <div class="scope">
+    <div class="scope-head"><span class="scope-title">解析する範囲</span>
+      <button class="btn-outline-sm" style="margin-left:auto">この1画面のみ</button>
+    </div>
+    <div class="fields" style="border-top:0;padding-top:0;margin-top:0">
+      <div class="field">
+        <label>深さ</label>
+        <input type="number" value="2" min="1" max="10" />
+      </div>
+      <div class="field">
+        <label>最大ページ</label>
+        <input type="number" value="30" min="1" max="500" />
+      </div>
+    </div>
+    <div class="est">見込み: 最大30画面・約1分</div>
+  </div>
+  <p class="hint">実装は最小。ステップ2「自動で辿る」の既存UI（<code>#crawl-depth</code> / <code>#max-pages</code>）と見た目が揃う。</p>
+</div>
+
+<h2>比較</h2>
+<table>
+  <tr><th>軸</th><th>案A（推奨）</th><th>案B</th><th>案C</th></tr>
+  <tr><td>「1画面のみ」の操作数</td><td>1クリック</td><td>1クリック</td><td>1クリック</td></tr>
+  <tr><td>深さの指定</td><td>プリセット or カスタム</td><td>スライダーのみ</td><td>数値入力</td></tr>
+  <tr><td>最大ページの上限指定</td><td>できる</td><td><strong>できない</strong></td><td>できる</td></tr>
+  <tr><td>数値を知らない人が決められるか</td><td>できる（所要時間で選べる）</td><td>一部（深さの意味は要理解）</td><td><strong>難しい</strong></td></tr>
+  <tr><td>所要時間の予告</td><td>プリセットに併記</td><td>算出値のみ</td><td>算出値のみ</td></tr>
+  <tr><td>実装量</td><td>中（チップ＋開閉）</td><td>中</td><td>小</td></tr>
+  <tr><td>既存UIとの一貫性</td><td>新パターン</td><td>新パターン</td><td>ステップ2と同形</td></tr>
+</table>
+
+<h2>あわせて決めていただきたいこと</h2>
+<div class="verdict no">
+  <strong>既定値を <code>depth=5 / max_pages=300</code> のまま残すか、<code>depth=2 / max_pages=30</code>（＝API既定値）へ下げるか。</strong>
+  <ul>
+    <li><strong>下げる場合</strong>: 初回の待ちが約15分 → 約1分になる。ただし「以前は全部拾えていたのに拾わなくなった」と見える可能性がある</li>
+    <li><strong>残す場合</strong>: 挙動は変わらないが、範囲指定を足しても既定のままEnterした人は15分待つ</li>
+  </ul>
+  推奨は<strong>下げる</strong>。300画面を既定にする根拠が実装側に無く（<code>wizard.js:373</code> のハードコード）、API側の既定は 2/30 のため、そちらに揃うほうが一貫する。
+</div>
+
+<h2>実装範囲（案A採用時）</h2>
+<table>
+  <tr><th>ファイル</th><th>変更</th></tr>
+  <tr><td><code>templates/partials/view-generate.html</code></td><td>URL行の下に「解析する範囲」ブロックを追加</td></tr>
+  <tr><td><code>static/js/wizard.js:373</code></td><td>ハードコードを画面の選択値から取るよう変更</td></tr>
+  <tr><td><code>static/app.css</code></td><td>チップとフィールドのスタイル</td></tr>
+  <tr><td><code>tests/</code></td><td>選択値が <code>/api/discover-stream</code> に渡ること、1画面のみで1件だけ返ること</td></tr>
+  <tr><td>バックエンド</td><td><strong>変更なし</strong>（<code>discover.py:20-21</code> が既に受け付ける）</td></tr>
+</table>
+<p class="lede">既存 Open Issue <strong>#15「Add screen discovery depth and max pages controls」</strong> がこの要求に対応する。実装時にクローズする。</p>

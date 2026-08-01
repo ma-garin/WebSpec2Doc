@@ -163,6 +163,14 @@
     }
     .checkbox-chip input { accent-color: var(--primary); width: 15px; height: 15px; }
     .checkbox-chip:has(input:checked) { border-color: var(--primary); background: var(--info-bg); color: var(--primary-dark); }
+    .discover-scope { margin-top: 12px; padding: 12px 14px; background: var(--surface-soft); border: 1px solid var(--border); border-radius: var(--radius); }
+    .discover-scope-title { display: block; font-size: 12px; font-weight: 800; letter-spacing: .04em; color: var(--text-muted); margin-bottom: 8px; }
+    .discover-scope-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+    .discover-scope-chips .checkbox-chip { height: auto; min-height: 36px; padding: 6px 12px; }
+    .discover-scope-note { font-size: 11px; font-weight: 400; color: var(--text-muted); margin-left: 4px; }
+    .checkbox-chip:has(input:checked) .discover-scope-note { color: var(--primary-dark); }
+    .discover-scope-fields { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border); }
+    .discover-scope-est { margin: 10px 0 0; font-size: 12px; color: var(--text-muted); }
     .btn-primary {
       display: inline-flex; align-items: center; justify-content: center;
       height: 40px; padding: 0 18px; background: var(--primary); color: #fff;

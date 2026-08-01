@@ -35,6 +35,41 @@
                 <button type="button" id="discover-btn" class="btn-primary" style="height:40px;padding:0 18px;font-size:13px;white-space:nowrap">画面解析</button>
               </div>
               <div id="url-input-message" class="input-field-message"></div>
+              <!-- 解析する範囲（Issue #15）。従来は depth=5 / max_pages=300 が固定で渡っており、
+                   300画面・15分規模になっても利用者には中断以外の手が無かった。
+                   数値の意味を知らなくても所要時間で選べるよう、プリセットを先に置く。 -->
+              <div class="discover-scope" id="discover-scope" role="group" aria-label="解析する範囲">
+                <span class="discover-scope-title">解析する範囲</span>
+                <div class="discover-scope-chips">
+                  <label class="checkbox-chip">
+                    <input type="radio" name="discover-scope" id="discover-scope-single" value="one-page" data-depth="1" data-max="1">
+                    この1画面のみ<span class="discover-scope-note">1画面</span>
+                  </label>
+                  <label class="checkbox-chip">
+                    <input type="radio" name="discover-scope" id="discover-scope-standard" value="standard" data-depth="2" data-max="30" checked>
+                    標準<span class="discover-scope-note">深さ2 / 最大30画面</span>
+                  </label>
+                  <label class="checkbox-chip">
+                    <input type="radio" name="discover-scope" id="discover-scope-wide" value="wide" data-depth="5" data-max="300">
+                    広め<span class="discover-scope-note">深さ5 / 最大300画面</span>
+                  </label>
+                  <label class="checkbox-chip">
+                    <input type="radio" name="discover-scope" id="discover-scope-custom" value="custom">
+                    カスタム
+                  </label>
+                </div>
+                <div class="discover-scope-fields" id="discover-scope-fields" style="display:none">
+                  <div class="control-field">
+                    <label for="discover-depth">深さ（開始ページが 0）</label>
+                    <input type="number" id="discover-depth" class="url-input input-compact" value="2" min="1" max="10" />
+                  </div>
+                  <div class="control-field">
+                    <label for="discover-max-pages">最大ページ</label>
+                    <input type="number" id="discover-max-pages" class="url-input input-compact" value="30" min="1" max="500" />
+                  </div>
+                </div>
+                <p class="discover-scope-est" id="discover-scope-est" role="status"></p>
+              </div>
               <!-- オンボーディングヒント -->
               <div class="wizard-p1-hints" style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
                 <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">

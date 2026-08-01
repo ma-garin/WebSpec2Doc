@@ -316,10 +316,70 @@ document.getElementById('discover-cancel-btn')?.addEventListener('click', async 
   if (_discoverRunId) {
     try {
       await fetch('/api/cancel', { method: 'POST', body: new URLSearchParams({ run_id: _discoverRunId }) });
-    } catch (e) {}
+    } catch (e) {
+      // 中断要求が届かなかった場合、サーバ側の解析はそのまま走り続ける。
+      // 黙って握りつぶすと「止めたつもりで止まっていない」状態になるため必ず伝える。
+      setUrlMessage('中断の要求を送れませんでした。解析が続いている可能性があります。', true);
+    }
   }
   if (_discoverReader) { try { await _discoverReader.cancel(); } catch (e) {} }
 });
+
+// ---- 解析する範囲（深さ・最大ページ）----
+// 従来は depth=5 / max_pages=300 を固定で送っており、大規模サイトでは 300画面・15分規模の
+// 解析になっても中断以外の手が無かった（Issue #15）。API 側は元から depth / max_pages を
+// 受け付けているため、ここでは画面の選択値を渡すだけにする。
+const DISCOVER_SCOPE_FALLBACK = { depth: 2, max_pages: 30 };
+const DISCOVER_SEC_PER_PAGE = 2.4;  // P0-1 の実測（デモサイト 7画面 16.6秒）
+
+function _clampInt(value, min, max, fallback) {
+  const n = parseInt(value, 10);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(Math.max(n, min), max);
+}
+
+/** 選択中のプリセット（またはカスタム入力）から depth / max_pages を返す。 */
+function discoverScope() {
+  const sel = document.querySelector('input[name="discover-scope"]:checked');
+  if (sel && sel.value !== 'custom') {
+    return {
+      depth: _clampInt(sel.dataset.depth, 1, 10, DISCOVER_SCOPE_FALLBACK.depth),
+      max_pages: _clampInt(sel.dataset.max, 1, 500, DISCOVER_SCOPE_FALLBACK.max_pages),
+    };
+  }
+  return {
+    depth: _clampInt(document.getElementById('discover-depth')?.value, 1, 10, DISCOVER_SCOPE_FALLBACK.depth),
+    max_pages: _clampInt(document.getElementById('discover-max-pages')?.value, 1, 500, DISCOVER_SCOPE_FALLBACK.max_pages),
+  };
+}
+
+function _discoverEstimateText(maxPages) {
+  const sec = Math.round(maxPages * DISCOVER_SEC_PER_PAGE);
+  return sec < 60 ? `約${sec}秒` : `約${Math.round(sec / 60)}分`;
+}
+
+// 選択に応じてカスタム入力の開閉と見込み時間の表示を更新する。
+// 見込みは「最大ページ数 × 実測 2.4秒」の上限値。実際は発見数がこれを下回ることが多く、
+// 対象サイトの応答速度や robots.txt の Crawl-Delay で延びるため、断定しない書き方にする。
+function _syncDiscoverScope() {
+  const sel = document.querySelector('input[name="discover-scope"]:checked');
+  const fields = document.getElementById('discover-scope-fields');
+  if (fields) fields.style.display = (sel && sel.value === 'custom') ? 'flex' : 'none';
+  const est = document.getElementById('discover-scope-est');
+  if (!est) return;
+  const scope = discoverScope();
+  est.textContent = scope.max_pages === 1
+    ? '開始ページの1画面だけを解析します（リンクは辿りません）。'
+    : `最大 ${scope.max_pages} 画面・${_discoverEstimateText(scope.max_pages)}の見込みです。対象サイトの応答速度により延びることがあります。`;
+}
+
+document.querySelectorAll('input[name="discover-scope"]').forEach(r => {
+  r.addEventListener('change', _syncDiscoverScope);
+});
+['discover-depth', 'discover-max-pages'].forEach(id => {
+  document.getElementById(id)?.addEventListener('input', _syncDiscoverScope);
+});
+_syncDiscoverScope();
 
 async function discoverUrls(skipLoginSection) {
   const url = urlInput.value.trim();
@@ -370,7 +430,10 @@ async function discoverUrls(skipLoginSection) {
 
   try {
     const auth = document.getElementById('auth-path').value.trim() || getSettings().auth || '';
-    const body = new URLSearchParams({ url, depth: '5', max_pages: '300', auth });
+    const scope = discoverScope();
+    const body = new URLSearchParams({
+      url, depth: String(scope.depth), max_pages: String(scope.max_pages), auth,
+    });
     const res = await fetch('/api/discover-stream', { method: 'POST', body });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));

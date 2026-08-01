@@ -17,6 +17,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from functools import lru_cache
 from typing import Any
@@ -99,14 +100,20 @@ def _load_merged(base_file: str, key: str) -> dict[str, Any]:
     return {**base, key: merged}
 
 
-_CATALOG_STAMP: tuple[tuple[str, float], ...] = ()
+_CATALOG_STAMP: tuple[tuple[str, str], ...] = ()
 
 
-def _catalog_stamp() -> tuple[tuple[str, float], ...]:
-    """カタログJSONの更新時刻の一覧。中身が変わったかの判定に使う。"""
+def _catalog_stamp() -> tuple[tuple[str, str], ...]:
+    """カタログJSONの中身を表す指紋の一覧。変わったかの判定に使う。
+
+    更新時刻だけで比べると、編集後に更新時刻を元へ戻された変更を見逃す
+    （git checkout や rsync、エディタの一部設定で起こりうる）。中身を
+    読んで指紋を取る。対象は8ファイル・約300KBで、実測 0.29ms/回。
+    開発モードでリクエストごとに実行しても問題にならない。
+    """
     return tuple(
         sorted(
-            (path.name, path.stat().st_mtime)
+            (path.name, hashlib.sha256(path.read_bytes()).hexdigest())
             for path in DATA_DIR.glob("viewpoint_*.json")
             if path.is_file()
         )
@@ -118,7 +125,7 @@ def reload_catalogs(*, force: bool = False) -> bool:
 
     毎回無条件に捨てると、キャッシュを置いた意味が消える（開発モードでは
     リクエストのたびに101定義 × 60領域の適用判定を回すことになる）。
-    更新時刻を見て、実際に編集されたときだけ捨てる。
+    中身の指紋を見て、実際に編集されたときだけ捨てる。
     """
     global _CATALOG_STAMP
     stamp = _catalog_stamp()

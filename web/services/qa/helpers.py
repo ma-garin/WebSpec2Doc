@@ -206,13 +206,18 @@ def _load_qa_viewpoints(
         name = str(item.get("viewpoint") or "").strip()
         if not name:
             continue
+        # AI提案の観点も、ストア由来のものと同じ形に揃える。役割と所属領域を
+        # 持たない観点が混ざると、role だけを見る読み出し側で常に「観点」と
+        # みなされ、判定を1箇所に集約した意味が消える。
         generated.append(
-            {
-                "summary_type": str(item.get("category") or "provider"),
-                "name": name,
-                "count": 1,
-                "source": str(item.get("source") or "rules"),
-            }
+            _legacy_viewpoint(
+                {
+                    "category": str(item.get("category") or "provider"),
+                    "name": name,
+                    "count": 1,
+                }
+            )
+            | {"source": str(item.get("source") or "rules")}
         )
 
     seen = {(item["summary_type"], item["name"]) for item in viewpoints}

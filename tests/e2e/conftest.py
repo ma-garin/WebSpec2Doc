@@ -41,6 +41,9 @@ ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(ROOT))
 
 BASE_URL = os.environ.get("WEBSPEC2DOC_E2E_URL", "http://127.0.0.1:8765")
+# 利用者が宛先を明示したか。明示されているなら、E2E の都合で勝手に別ポートへ
+# 動かさない。指定した先を見ているつもりで別のサーバーを検証させない。
+URL_WAS_PINNED = bool(os.environ.get("WEBSPEC2DOC_E2E_URL", "").strip())
 SCREENSHOT_DIR = Path(__file__).parent / "screenshots"
 SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -61,8 +64,19 @@ def pytest_configure(config: pytest.Config) -> None:
     """
     if os.environ.get("WEBSPEC2DOC_E2E_EXTERNAL") == "1":
         return
-    if _server_is_up(BASE_URL) and not _server_uses_isolated_db(BASE_URL):
-        _use_fallback_port()
+    if not (_server_is_up(BASE_URL) and not _server_uses_isolated_db(BASE_URL)):
+        return
+    if URL_WAS_PINNED:
+        # 明示された宛先を黙って変えない。利用者はそのURLを検証したいはずで、
+        # 別ポートへ移すと「指定した先を見ているつもりで別物を見る」ことになる。
+        pytest.exit(
+            f"{BASE_URL} で開発用DBを使うサーバーが動いています。"
+            "WEBSPEC2DOC_E2E_URL で宛先を指定しているため別ポートへは移しません。"
+            "そのサーバーを止めるか、共有してよいなら WEBSPEC2DOC_E2E_EXTERNAL=1 を"
+            "指定してください。",
+            returncode=1,
+        )
+    _use_fallback_port()
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:

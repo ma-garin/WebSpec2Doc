@@ -49,12 +49,21 @@ const VIEW_PATHS = {
 };
 const PATH_VIEWS = { '/home': 'dashboard', '/dashboard': 'dashboard' };
 Object.entries(VIEW_PATHS).forEach(([name, path]) => { PATH_VIEWS[path] = name; });
+// ビュー内の状態まで URL に載せるビュー（/settings/api 等）。
+// ここに名前を足せば、パスの正規表現を書き足さずに同じ解決が効く。
+const VIEWS_WITH_SUBPATH = new Set(['settings']);
+/** /settings/api の "api" にあたる部分を返す。無ければ空文字。 */
+function _subPathOf(pathname) {
+  const parts = pathname.split('/').filter(Boolean);
+  return parts.length > 1 ? decodeURIComponent(parts[1]) : '';
+}
 function _viewFromPath(pathname) {
   if (PATH_VIEWS[pathname]) return PATH_VIEWS[pathname];
-  // 設定はタブも URL に持つ（/settings/api 等）。タブ名が妥当かは
-  // syncSettingsTabFromPath() 側で見るため、ここではビュー名だけ解決する。
-  if (/^\/settings\/[^/]+\/?$/.test(pathname)) return 'settings';
-  return null;
+  // サブパス付き（/settings/api）。サブパス自体が妥当かは各ビュー側で見る。
+  const parts = pathname.split('/').filter(Boolean);
+  if (parts.length !== 2) return null;
+  const view = PATH_VIEWS['/' + parts[0]];
+  return VIEWS_WITH_SUBPATH.has(view) ? view : null;
 }
 window.addEventListener('popstate', () => {
   const m = location.hash.match(/^#report\/([^/]+)(?:\/([^/]+))?(?:\/([^/]+))?$/);

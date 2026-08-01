@@ -2,12 +2,8 @@
 // 従来 .set-tab ボタンに click ハンドラが未実装で「タブ操作ができない」不具合があったため追加。
 // タブは URL（/settings/<tab>）にも反映する。従来は class を切り替えるだけで
 // URL が変わらず、共有・ブックマーク・ブラウザの戻るがいずれも効かなかった。
+// URL の形（/settings/<tab>）の解釈は core.js の _subPathOf() に一本化している。
 const SETTINGS_TAB_DEFAULT = 'api';
-
-function _settingsTabFromPath() {
-  const m = location.pathname.match(/^\/settings\/([^/]+)\/?$/);
-  return m ? decodeURIComponent(m[1]) : SETTINGS_TAB_DEFAULT;
-}
 
 function selectSettingsTab(tab, opts = {}) {
   const tabs = [...document.querySelectorAll('.set-tabs .set-tab')];
@@ -31,21 +27,33 @@ function selectSettingsTab(tab, opts = {}) {
 // データ管理・監査ログは権限が無いとタブ自体が描画されないため、直接開かれた場合は
 // 既定タブへ落とし、URL も置き換える（開けない画面を指す URL を残さないため）。
 function syncSettingsTabFromPath() {
-  const wanted = _settingsTabFromPath();
-  if (selectSettingsTab(wanted, { skipHistory: true })) {
-    loadSettingsTabData(wanted);
-    return;
+  const wanted = _subPathOf(location.pathname) || SETTINGS_TAB_DEFAULT;
+  const applied = selectSettingsTab(wanted, { skipHistory: true }) ? wanted : SETTINGS_TAB_DEFAULT;
+  if (applied !== wanted) {
+    selectSettingsTab(applied, { skipHistory: true });
+    try {
+      history.replaceState({ view: 'settings', tab: applied }, '', '/settings/' + applied);
+    } catch (e) {}
   }
-  selectSettingsTab(SETTINGS_TAB_DEFAULT, { skipHistory: true });
-  loadSettingsTabData(SETTINGS_TAB_DEFAULT);
-  try {
-    history.replaceState({ view: 'settings', tab: SETTINGS_TAB_DEFAULT }, '', '/settings/' + SETTINGS_TAB_DEFAULT);
-  } catch (e) {}
+  loadSettingsTabData(applied);
 }
-function loadSettingsTabData(tab) {
-  if (tab === 'operations') loadOperationalSites();
-  if (tab === 'data') loadDataManagement();
-  if (tab === 'audit') loadAdminAudit();
+
+// タブを URL に載せたことで、戻る/進むのたびにここが走るようになった。
+// 毎回読み直すと同じ API を叩き続けるため、一度読んだタブは飛ばす。
+// 各ローダーは自前で例外を捕まえるので、失敗しても「読んだ」扱いになる。
+// 明示的な再取得は各タブの更新ボタン（data-refresh / audit-refresh）が担う。
+const _settingsTabLoaded = new Set();
+const SETTINGS_TAB_LOADERS = {
+  operations: () => loadOperationalSites(),
+  data: () => loadDataManagement(),
+  audit: () => loadAdminAudit(),
+};
+
+async function loadSettingsTabData(tab) {
+  const loader = SETTINGS_TAB_LOADERS[tab];
+  if (!loader || _settingsTabLoaded.has(tab)) return;
+  _settingsTabLoaded.add(tab);
+  await loader();
 }
 document.querySelectorAll('.set-tabs .set-tab').forEach(t => {
   t.addEventListener('click', () => {

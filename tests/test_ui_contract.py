@@ -27,6 +27,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 import app as appmod
 
 
+def _input_tag(html: str, elem_id: str) -> str:
+    """id で <input> タグ1つを取り出す。
+
+    属性の並び順に依存しないよう、タグ全体を取ってから個別の属性を検査するために使う。
+    """
+    match = re.search(rf'<input[^>]*id="{re.escape(elem_id)}"[^>]*>', html)
+    assert match, f'id="{elem_id}" の input が見つかりません'
+    return match.group()
+
+
 def _html(path: str) -> str:
     res = appmod.app.test_client().get(path)
     assert res.status_code == 200, f"{path} が {res.status_code} を返しました"
@@ -307,17 +317,21 @@ class TestDiscoverScopeControls:
     """
 
     @pytest.mark.parametrize(
-        ("preset", "depth", "max_pages"),
-        [("one-page", "1", "1"), ("standard", "2", "30"), ("wide", "5", "300")],
+        ("preset_id", "value", "depth", "max_pages"),
+        [
+            ("single", "one-page", "1", "1"),
+            ("standard", "standard", "2", "30"),
+            ("wide", "wide", "5", "300"),
+        ],
     )
     def test_preset_exposes_scope_values(
-        self, spa: str, preset: str, depth: str, max_pages: str
+        self, spa: str, preset_id: str, value: str, depth: str, max_pages: str
     ) -> None:
         """各プリセットが depth / max_pages を data 属性で持つこと。"""
-        pattern = (
-            rf'<input[^>]*value="{preset}"[^>]*data-depth="{depth}"[^>]*data-max="{max_pages}"'
-        )
-        assert re.search(pattern, spa), f"プリセット {preset} の値が期待と異なる"
+        tag = _input_tag(spa, f"discover-scope-{preset_id}")
+        assert f'value="{value}"' in tag
+        assert f'data-depth="{depth}"' in tag
+        assert f'data-max="{max_pages}"' in tag
 
     def test_single_page_preset_exists(self, spa: str) -> None:
         """「1画面のみ」の導線があること（利用者からの直接要望）。"""
@@ -329,13 +343,11 @@ class TestDiscoverScopeControls:
 
         画面側が API より広い範囲を許すと、送っても黙って丸められる。
         """
-        depth = re.search(r'<input[^>]*id="discover-depth"[^>]*>', spa)
-        max_pages = re.search(r'<input[^>]*id="discover-max-pages"[^>]*>', spa)
-        assert depth and max_pages, "カスタム入力欄が無い"
-        assert 'min="1"' in depth.group() and 'max="10"' in depth.group()
-        assert 'min="1"' in max_pages.group() and 'max="500"' in max_pages.group()
+        depth = _input_tag(spa, "discover-depth")
+        max_pages = _input_tag(spa, "discover-max-pages")
+        assert 'min="1"' in depth and 'max="10"' in depth
+        assert 'min="1"' in max_pages and 'max="500"' in max_pages
 
     def test_default_preset_is_standard(self, spa: str) -> None:
         """既定は標準（深さ2 / 最大30）。旧既定の 300画面固定に戻っていないこと。"""
-        standard = re.search(r'<input[^>]*id="discover-scope-standard"[^>]*>', spa)
-        assert standard and "checked" in standard.group()
+        assert "checked" in _input_tag(spa, "discover-scope-standard")

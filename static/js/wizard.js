@@ -322,64 +322,83 @@ document.getElementById('discover-cancel-btn')?.addEventListener('click', async 
       setUrlMessage('中断の要求を送れませんでした。解析が続いている可能性があります。', true);
     }
   }
-  if (_discoverReader) { try { await _discoverReader.cancel(); } catch (e) {} }
+  if (_discoverReader) {
+    try {
+      await _discoverReader.cancel();
+    } catch (e) {
+      // 受信の打ち切りに失敗した場合も、サーバ側の解析は動き続けている可能性がある。
+      // /api/cancel と同じ理由で握りつぶさない（feature_contracts: discover は critical）。
+      setUrlMessage('中断しきれませんでした。解析が続いている可能性があります。', true);
+    }
+  }
 });
 
 // ---- 解析する範囲（深さ・最大ページ）----
 // 従来は depth=5 / max_pages=300 を固定で送っており、大規模サイトでは 300画面・15分規模の
 // 解析になっても中断以外の手が無かった（Issue #15）。API 側は元から depth / max_pages を
 // 受け付けているため、ここでは画面の選択値を渡すだけにする。
-const DISCOVER_SCOPE_FALLBACK = { depth: 2, max_pages: 30 };
 const DISCOVER_SEC_PER_PAGE = 2.4;  // P0-1 の実測（デモサイト 7画面 16.6秒）
+// 受付範囲は web/config.py の MAX_DEPTH / MAX_PAGES_LIMIT に対応する。
+// 画面側が API より広い範囲を許すと、送っても黙って丸められる。
+const DISCOVER_LIMITS = {
+  depth: { min: 1, max: 10, fallback: 2 },
+  max_pages: { min: 1, max: 500, fallback: 30 },
+};
 
-function _clampInt(value, min, max, fallback) {
+function _clampInt(value, { min, max, fallback }) {
   const n = parseInt(value, 10);
   if (!Number.isFinite(n)) return fallback;
   return Math.min(Math.max(n, min), max);
 }
 
-/** 選択中のプリセット（またはカスタム入力）から depth / max_pages を返す。 */
-function discoverScope() {
-  const sel = document.querySelector('input[name="discover-scope"]:checked');
-  if (sel && sel.value !== 'custom') {
-    return {
-      depth: _clampInt(sel.dataset.depth, 1, 10, DISCOVER_SCOPE_FALLBACK.depth),
-      max_pages: _clampInt(sel.dataset.max, 1, 500, DISCOVER_SCOPE_FALLBACK.max_pages),
-    };
-  }
-  return {
-    depth: _clampInt(document.getElementById('discover-depth')?.value, 1, 10, DISCOVER_SCOPE_FALLBACK.depth),
-    max_pages: _clampInt(document.getElementById('discover-max-pages')?.value, 1, 500, DISCOVER_SCOPE_FALLBACK.max_pages),
-  };
+function _checkedDiscoverScope() {
+  return document.querySelector('input[name="discover-scope"]:checked');
 }
 
-function _discoverEstimateText(maxPages) {
-  const sec = Math.round(maxPages * DISCOVER_SEC_PER_PAGE);
-  return sec < 60 ? `約${sec}秒` : `約${Math.round(sec / 60)}分`;
+/** 選択中のプリセット（またはカスタム入力）から depth / max_pages を返す。 */
+function discoverScope(sel = _checkedDiscoverScope()) {
+  // プリセットは data 属性、カスタムは数値入力欄。違うのは読む場所だけ。
+  const src = (sel && sel.value !== 'custom')
+    ? { depth: sel.dataset.depth, max: sel.dataset.max }
+    : {
+      depth: document.getElementById('discover-depth')?.value,
+      max: document.getElementById('discover-max-pages')?.value,
+    };
+  return {
+    depth: _clampInt(src.depth, DISCOVER_LIMITS.depth),
+    max_pages: _clampInt(src.max, DISCOVER_LIMITS.max_pages),
+  };
 }
 
 // 選択に応じてカスタム入力の開閉と見込み時間の表示を更新する。
 // 見込みは「最大ページ数 × 実測 2.4秒」の上限値。実際は発見数がこれを下回ることが多く、
 // 対象サイトの応答速度や robots.txt の Crawl-Delay で延びるため、断定しない書き方にする。
+// 丸めは execution.js の formatEta() に合わせる。画面ごとに粒度が違うと、
+// 同じ待ち時間が別の精度で見え、見積もりが実際より正確そうに見えてしまう。
 function _syncDiscoverScope() {
-  const sel = document.querySelector('input[name="discover-scope"]:checked');
+  const sel = _checkedDiscoverScope();
   const fields = document.getElementById('discover-scope-fields');
   if (fields) fields.style.display = (sel && sel.value === 'custom') ? 'flex' : 'none';
   const est = document.getElementById('discover-scope-est');
   if (!est) return;
-  const scope = discoverScope();
+  const scope = discoverScope(sel);
   est.textContent = scope.max_pages === 1
     ? '開始ページの1画面だけを解析します（リンクは辿りません）。'
-    : `最大 ${scope.max_pages} 画面・${_discoverEstimateText(scope.max_pages)}の見込みです。対象サイトの応答速度により延びることがあります。`;
+    : `最大 ${scope.max_pages} 画面・${formatEta(scope.max_pages * DISCOVER_SEC_PER_PAGE)}の見込みです。`
+      + '対象サイトの応答速度により延びることがあります。';
 }
 
-document.querySelectorAll('input[name="discover-scope"]').forEach(r => {
-  r.addEventListener('change', _syncDiscoverScope);
+// formatEta は execution.js にあり、そちらは wizard.js より後に読み込まれる。
+// トップレベルで初期化すると未定義になるため DOMContentLoaded まで待つ。
+window.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('input[name="discover-scope"]').forEach(r => {
+    r.addEventListener('change', _syncDiscoverScope);
+  });
+  ['discover-depth', 'discover-max-pages'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', _syncDiscoverScope);
+  });
+  _syncDiscoverScope();
 });
-['discover-depth', 'discover-max-pages'].forEach(id => {
-  document.getElementById(id)?.addEventListener('input', _syncDiscoverScope);
-});
-_syncDiscoverScope();
 
 async function discoverUrls(skipLoginSection) {
   const url = urlInput.value.trim();

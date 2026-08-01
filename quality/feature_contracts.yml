@@ -381,7 +381,8 @@
         "static/js/settings.js"
       ],
       "route_files": [
-        "web/routes/settings.py"
+        "web/routes/settings.py",
+        "web/routes/pages.py"
       ],
       "core_files": [
         "web/env_store.py",

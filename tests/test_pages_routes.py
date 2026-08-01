@@ -56,10 +56,11 @@ class TestPageRoutes:
         response = _client().get("/settings/not-a-real-tab", headers={"Host": "127.0.0.1"})
         assert response.status_code == 404
 
-    def test_settings_tabs_cover_rendered_tab_buttons(self) -> None:
-        """ルートが受け付けるタブ名と、画面に描画されるタブが食い違わないこと。
+    def test_settings_tabs_match_rendered_tab_buttons(self) -> None:
+        """ルートが受け付けるタブ名と、画面に描画されるタブが完全に一致すること。
 
-        片方だけ増えると「押せるのに直リンクは 404」「URL は通るのに開けない」が起きる。
+        片方向（描画 ⊆ ルート）だけでは、テンプレートからタブを消して _SETTINGS_TABS に
+        残した場合を見逃し、開けない画面を指す URL が 404 にならず残る。
         """
         import re
 
@@ -68,4 +69,7 @@ class TestPageRoutes:
         html = _client().get("/settings", headers={"Host": "127.0.0.1"}).get_data(as_text=True)
         rendered = set(re.findall(r'class="set-tab[^"]*" data-tab="([^"]+)"', html))
         assert rendered, "設定タブが描画されていない"
-        assert rendered <= _SETTINGS_TABS, f"ルート未登録のタブ: {rendered - _SETTINGS_TABS}"
+        assert rendered == _SETTINGS_TABS, (
+            f"ルート未登録のタブ: {rendered - _SETTINGS_TABS} / "
+            f"画面に無いのにルートが受けるタブ: {_SETTINGS_TABS - rendered}"
+        )

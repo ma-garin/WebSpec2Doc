@@ -1,0 +1,571 @@
+{
+  "name": "流通・小売・EC向け観点",
+  "description": "EC固有のリスク（二重決済・在庫超過販売・価格誤り・配送指示欠落）に対応する観点。特定商取引法・景品表示法・PCI DSS に準拠。共通観点と併用する。",
+  "folders": [
+    {
+      "name": "価格・計算",
+      "items": [
+        {
+          "name": "表示価格の正確性",
+          "purpose": "一覧・詳細・カートで価格が一致することを確認する。",
+          "recommended_checks": "同一商品の価格を各画面で突き合わせる。",
+          "risk_weight": 5,
+          "automation": "semi_automated",
+          "standards": "景品表示法",
+          "tags": [
+            "価格",
+            "一貫性",
+            "異常系",
+            "EC"
+          ],
+          "category": "価格・計算"
+        },
+        {
+          "name": "税込・税抜の表示",
+          "purpose": "税表示が法令どおりであることを確認する。",
+          "recommended_checks": "総額表示の有無と内訳を確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "景品表示法",
+          "tags": [
+            "価格",
+            "コンプライアンス",
+            "正常系",
+            "EC"
+          ],
+          "category": "価格・計算"
+        },
+        {
+          "name": "割引の適用",
+          "purpose": "クーポン・セール価格が正しく適用されることを確認する。",
+          "recommended_checks": "各割引条件の境界で計算結果を確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "景品表示法",
+          "tags": [
+            "価格",
+            "機能正確性",
+            "準正常系",
+            "EC"
+          ],
+          "category": "価格・計算"
+        },
+        {
+          "name": "割引の重複適用",
+          "purpose": "割引が意図せず重複しないことを確認する。",
+          "recommended_checks": "複数クーポンの同時使用を試す。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "景品表示法",
+          "tags": [
+            "価格",
+            "機能正確性",
+            "異常系",
+            "EC"
+          ],
+          "category": "価格・計算"
+        },
+        {
+          "name": "送料の計算",
+          "purpose": "送料が条件どおり計算されることを確認する。",
+          "recommended_checks": "無料条件の直下・直上の金額で確認する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "ISTQB 境界値分析",
+          "tags": [
+            "価格",
+            "境界値",
+            "準正常系",
+            "EC"
+          ],
+          "category": "価格・計算"
+        },
+        {
+          "name": "価格改定時の整合",
+          "purpose": "価格変更がカート内商品に与える影響を確認する。",
+          "recommended_checks": "カート投入後に価格を変更する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "景品表示法",
+          "tags": [
+            "価格",
+            "機能正確性",
+            "異常系",
+            "EC"
+          ],
+          "category": "価格・計算"
+        },
+        {
+          "name": "端数処理",
+          "purpose": "消費税の端数処理が仕様どおりであることを確認する。",
+          "recommended_checks": "端数が出る金額で計算結果を確認する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "景品表示法",
+          "tags": [
+            "価格",
+            "機能正確性",
+            "準正常系",
+            "EC"
+          ],
+          "category": "価格・計算"
+        },
+        {
+          "name": "合計金額の一致",
+          "purpose": "明細合計と請求額が一致することを確認する。",
+          "recommended_checks": "注文確認・完了・メールの金額を突き合わせる。",
+          "risk_weight": 5,
+          "automation": "semi_automated",
+          "standards": "景品表示法",
+          "tags": [
+            "価格",
+            "一貫性",
+            "異常系",
+            "EC"
+          ],
+          "category": "価格・計算"
+        }
+      ]
+    },
+    {
+      "name": "在庫管理",
+      "items": [
+        {
+          "name": "在庫数の反映",
+          "purpose": "購入後に在庫が減ることを確認する。",
+          "recommended_checks": "購入前後の在庫数を突き合わせる。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "在庫",
+            "機能正確性",
+            "正常系",
+            "EC"
+          ],
+          "category": "在庫管理"
+        },
+        {
+          "name": "在庫切れの表示",
+          "purpose": "在庫0の商品が購入できないことを確認する。",
+          "recommended_checks": "在庫0の商品でカート投入・購入を試す。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "在庫",
+            "機能正確性",
+            "異常系",
+            "EC"
+          ],
+          "category": "在庫管理"
+        },
+        {
+          "name": "同時購入の排他",
+          "purpose": "在庫1を複数人が同時購入できないことを確認する。",
+          "recommended_checks": "2セッションから同時に購入する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 並行性",
+          "tags": [
+            "在庫",
+            "並行性",
+            "異常系",
+            "EC"
+          ],
+          "category": "在庫管理"
+        },
+        {
+          "name": "カート保持中の在庫変動",
+          "purpose": "カート投入後に在庫が尽きた場合の挙動を確認する。",
+          "recommended_checks": "カート投入後に別経路で在庫を消費する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "在庫",
+            "機能正確性",
+            "異常系",
+            "EC"
+          ],
+          "category": "在庫管理"
+        },
+        {
+          "name": "予約・取り置きの扱い",
+          "purpose": "確保された在庫が二重に売られないことを確認する。",
+          "recommended_checks": "取り置き中の商品を別経路で購入する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "在庫",
+            "機能正確性",
+            "異常系",
+            "EC"
+          ],
+          "category": "在庫管理"
+        },
+        {
+          "name": "キャンセル時の在庫戻し",
+          "purpose": "注文取消で在庫が戻ることを確認する。",
+          "recommended_checks": "注文後にキャンセルし在庫を確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "在庫",
+            "機能正確性",
+            "準正常系",
+            "EC"
+          ],
+          "category": "在庫管理"
+        },
+        {
+          "name": "在庫表示の粒度",
+          "purpose": "残数表示が仕様どおりであることを確認する。",
+          "recommended_checks": "「残りわずか」等の閾値を確認する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 使用性",
+          "tags": [
+            "在庫",
+            "表示",
+            "準正常系",
+            "EC"
+          ],
+          "category": "在庫管理"
+        }
+      ]
+    },
+    {
+      "name": "決済",
+      "items": [
+        {
+          "name": "二重決済の防止",
+          "purpose": "同一注文が二重に課金されないことを確認する。",
+          "recommended_checks": "確定ボタン連打・リロード・戻る操作を試す。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "PCI DSS",
+          "tags": [
+            "決済",
+            "信頼性",
+            "異常系",
+            "EC"
+          ],
+          "category": "決済"
+        },
+        {
+          "name": "決済失敗時の注文状態",
+          "purpose": "決済失敗時に注文が確定しないことを確認する。",
+          "recommended_checks": "決済を意図的に失敗させ、注文状態を確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "PCI DSS",
+          "tags": [
+            "決済",
+            "信頼性",
+            "異常系",
+            "EC"
+          ],
+          "category": "決済"
+        },
+        {
+          "name": "決済中断時の復旧",
+          "purpose": "決済画面で離脱した場合の状態を確認する。",
+          "recommended_checks": "決済途中でブラウザを閉じる。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "PCI DSS",
+          "tags": [
+            "決済",
+            "信頼性",
+            "異常系",
+            "EC"
+          ],
+          "category": "決済"
+        },
+        {
+          "name": "カード情報の非保持",
+          "purpose": "カード番号が保存されないことを確認する。",
+          "recommended_checks": "送信内容とログ・DBを確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "PCI DSS",
+          "tags": [
+            "決済",
+            "セキュリティ",
+            "異常系",
+            "EC"
+          ],
+          "category": "決済"
+        },
+        {
+          "name": "決済方法の切替",
+          "purpose": "決済手段変更時に金額が正しく再計算されることを確認する。",
+          "recommended_checks": "手数料の異なる手段へ切り替える。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "PCI DSS",
+          "tags": [
+            "決済",
+            "機能正確性",
+            "準正常系",
+            "EC"
+          ],
+          "category": "決済"
+        },
+        {
+          "name": "返金処理",
+          "purpose": "返金が正しく実行されることを確認する。",
+          "recommended_checks": "全額・一部返金を実行し金額を確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "PCI DSS",
+          "tags": [
+            "決済",
+            "機能正確性",
+            "準正常系",
+            "EC"
+          ],
+          "category": "決済"
+        },
+        {
+          "name": "決済通知の到達",
+          "purpose": "決済完了が利用者に通知されることを確認する。",
+          "recommended_checks": "完了画面とメールの内容を確認する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 使用性",
+          "tags": [
+            "決済",
+            "使用性",
+            "正常系",
+            "EC"
+          ],
+          "category": "決済"
+        },
+        {
+          "name": "金額改ざんの防止",
+          "purpose": "クライアント側で金額を書き換えられないことを確認する。",
+          "recommended_checks": "リクエストの金額パラメータを改変する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "OWASP ASVS 5.1",
+          "tags": [
+            "決済",
+            "セキュリティ",
+            "異常系",
+            "EC"
+          ],
+          "category": "決済"
+        }
+      ]
+    },
+    {
+      "name": "注文・配送",
+      "items": [
+        {
+          "name": "配送先の登録",
+          "purpose": "配送先が正しく登録・反映されることを確認する。",
+          "recommended_checks": "登録した住所と注文情報を突き合わせる。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "配送",
+            "機能正確性",
+            "正常系",
+            "EC"
+          ],
+          "category": "注文・配送"
+        },
+        {
+          "name": "住所の妥当性検証",
+          "purpose": "不正な住所が検知されることを確認する。",
+          "recommended_checks": "郵便番号と住所の不一致を試す。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 入力検証",
+          "tags": [
+            "配送",
+            "入力検証",
+            "異常系",
+            "EC"
+          ],
+          "category": "注文・配送"
+        },
+        {
+          "name": "配送日時の選択",
+          "purpose": "選択可能な日時が制約どおりであることを確認する。",
+          "recommended_checks": "当日・締切後・遠方の指定を試す。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "配送",
+            "境界値",
+            "準正常系",
+            "EC"
+          ],
+          "category": "注文・配送"
+        },
+        {
+          "name": "配送先の変更期限",
+          "purpose": "出荷後に変更できないことを確認する。",
+          "recommended_checks": "出荷ステータス変更後に住所変更を試す。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "配送",
+            "機能正確性",
+            "異常系",
+            "EC"
+          ],
+          "category": "注文・配送"
+        },
+        {
+          "name": "分割配送の扱い",
+          "purpose": "複数配送時に指示が欠落しないことを確認する。",
+          "recommended_checks": "在庫状況の異なる商品を同時注文する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "配送",
+            "機能正確性",
+            "異常系",
+            "EC"
+          ],
+          "category": "注文・配送"
+        },
+        {
+          "name": "注文状態の追跡",
+          "purpose": "注文状態が正しく遷移することを確認する。",
+          "recommended_checks": "受付→出荷→配達完了の遷移を確認する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 機能正確性",
+          "tags": [
+            "配送",
+            "機能正確性",
+            "正常系",
+            "EC"
+          ],
+          "category": "注文・配送"
+        },
+        {
+          "name": "注文キャンセルの期限",
+          "purpose": "キャンセル可能期間が仕様どおりであることを確認する。",
+          "recommended_checks": "期限前後でキャンセルを試す。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "特定商取引法",
+          "tags": [
+            "配送",
+            "コンプライアンス",
+            "準正常系",
+            "EC"
+          ],
+          "category": "注文・配送"
+        }
+      ]
+    },
+    {
+      "name": "表示・法令",
+      "items": [
+        {
+          "name": "特商法表記の掲載",
+          "purpose": "特定商取引法に基づく表記があることを確認する。",
+          "recommended_checks": "表記ページの掲載項目を確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "特定商取引法",
+          "tags": [
+            "法令",
+            "コンプライアンス",
+            "正常系",
+            "EC"
+          ],
+          "category": "表示・法令"
+        },
+        {
+          "name": "返品条件の明示",
+          "purpose": "返品・交換の条件が明示されることを確認する。",
+          "recommended_checks": "購入前に条件が確認できるか確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "特定商取引法",
+          "tags": [
+            "法令",
+            "コンプライアンス",
+            "正常系",
+            "EC"
+          ],
+          "category": "表示・法令"
+        },
+        {
+          "name": "二重価格表示の回避",
+          "purpose": "比較対照価格の表示が適正であることを確認する。",
+          "recommended_checks": "セール価格の根拠表示を確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "景品表示法",
+          "tags": [
+            "法令",
+            "コンプライアンス",
+            "異常系",
+            "EC"
+          ],
+          "category": "表示・法令"
+        },
+        {
+          "name": "在庫僅少表示の根拠",
+          "purpose": "「残りわずか」等の表示が実態と合うことを確認する。",
+          "recommended_checks": "表示と実在庫を突き合わせる。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "景品表示法",
+          "tags": [
+            "法令",
+            "コンプライアンス",
+            "異常系",
+            "EC"
+          ],
+          "category": "表示・法令"
+        },
+        {
+          "name": "レビューの真正性",
+          "purpose": "レビュー投稿の制御が適切であることを確認する。",
+          "recommended_checks": "購入していない商品への投稿を試す。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "景品表示法",
+          "tags": [
+            "法令",
+            "コンプライアンス",
+            "異常系",
+            "EC"
+          ],
+          "category": "表示・法令"
+        },
+        {
+          "name": "年齢制限商品の確認",
+          "purpose": "年齢制限のある商品で確認が行われることを確認する。",
+          "recommended_checks": "該当商品の購入フローを確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "特定商取引法",
+          "tags": [
+            "法令",
+            "コンプライアンス",
+            "異常系",
+            "EC"
+          ],
+          "category": "表示・法令"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,526 @@
+{
+  "name": "医療・ヘルスケア向け観点",
+  "description": "医療システム固有のリスク（患者取り違え・診療情報漏えい・処方誤り・連携欠落）に対応する観点。医療情報システムの安全管理ガイドライン・個人情報保護法に準拠。共通観点と併用する。",
+  "folders": [
+    {
+      "name": "患者識別",
+      "items": [
+        {
+          "name": "患者IDの一意性",
+          "purpose": "同一患者が重複登録されないことを確認する。",
+          "recommended_checks": "同姓同名・同生年月日で登録を試す。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "医療情報システムの安全管理ガイドライン",
+          "tags": [
+            "患者識別",
+            "機能正確性",
+            "異常系",
+            "医療"
+          ],
+          "category": "患者識別"
+        },
+        {
+          "name": "氏名の同姓同名対策",
+          "purpose": "同姓同名を区別できることを確認する。",
+          "recommended_checks": "一覧で同姓同名時の識別情報の表示を確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "医療情報システムの安全管理ガイドライン",
+          "tags": [
+            "患者識別",
+            "使用性",
+            "異常系",
+            "医療"
+          ],
+          "category": "患者識別"
+        },
+        {
+          "name": "患者選択時の確認",
+          "purpose": "処置対象の患者が明示されることを確認する。",
+          "recommended_checks": "操作画面に患者情報が常時表示されるか確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "医療情報システムの安全管理ガイドライン",
+          "tags": [
+            "患者識別",
+            "使用性",
+            "正常系",
+            "医療"
+          ],
+          "category": "患者識別"
+        },
+        {
+          "name": "患者切替時の残存",
+          "purpose": "前患者の情報が残らないことを確認する。",
+          "recommended_checks": "患者を切り替え、前の情報が消えるか確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "医療情報システムの安全管理ガイドライン",
+          "tags": [
+            "患者識別",
+            "機能正確性",
+            "異常系",
+            "医療"
+          ],
+          "category": "患者識別"
+        },
+        {
+          "name": "生年月日の妥当性",
+          "purpose": "ありえない生年月日が拒否されることを確認する。",
+          "recommended_checks": "未来日・150年前の日付を試す。",
+          "risk_weight": 4,
+          "automation": "semi_automated",
+          "standards": "ISTQB 境界値分析",
+          "tags": [
+            "患者識別",
+            "入力検証",
+            "異常系",
+            "医療"
+          ],
+          "category": "患者識別"
+        },
+        {
+          "name": "カナ氏名の表記ゆれ",
+          "purpose": "カナの表記ゆれで検索漏れが起きないことを確認する。",
+          "recommended_checks": "濁点・長音の有無で検索し結果を比較する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "医療情報システムの安全管理ガイドライン",
+          "tags": [
+            "患者識別",
+            "機能正確性",
+            "準正常系",
+            "医療"
+          ],
+          "category": "患者識別"
+        },
+        {
+          "name": "旧姓・改名の追跡",
+          "purpose": "改名後も過去の記録が追えることを確認する。",
+          "recommended_checks": "氏名変更後に過去の診療記録を検索する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "医療情報システムの安全管理ガイドライン",
+          "tags": [
+            "患者識別",
+            "機能正確性",
+            "準正常系",
+            "医療"
+          ],
+          "category": "患者識別"
+        }
+      ]
+    },
+    {
+      "name": "診療情報の保護",
+      "items": [
+        {
+          "name": "閲覧権限の制御",
+          "purpose": "担当以外が診療情報を見られないことを確認する。",
+          "recommended_checks": "他科・他病棟の担当者でアクセスを試す。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "医療情報システムの安全管理ガイドライン",
+          "tags": [
+            "情報保護",
+            "セキュリティ",
+            "異常系",
+            "医療"
+          ],
+          "category": "診療情報の保護"
+        },
+        {
+          "name": "アクセス記録",
+          "purpose": "誰がいつ閲覧したかが記録されることを確認する。",
+          "recommended_checks": "閲覧後にログの記録を確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "医療情報システムの安全管理ガイドライン",
+          "tags": [
+            "情報保護",
+            "証跡",
+            "異常系",
+            "医療"
+          ],
+          "category": "診療情報の保護"
+        },
+        {
+          "name": "画面の自動ロック",
+          "purpose": "離席時に情報が露出しないことを確認する。",
+          "recommended_checks": "無操作時のロック動作を確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "医療情報システムの安全管理ガイドライン",
+          "tags": [
+            "情報保護",
+            "セキュリティ",
+            "異常系",
+            "医療"
+          ],
+          "category": "診療情報の保護"
+        },
+        {
+          "name": "印刷物の管理",
+          "purpose": "出力物に出力者・日時が記録されることを確認する。",
+          "recommended_checks": "印刷・PDF出力の内容を確認する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "医療情報システムの安全管理ガイドライン",
+          "tags": [
+            "情報保護",
+            "証跡",
+            "異常系",
+            "医療"
+          ],
+          "category": "診療情報の保護"
+        },
+        {
+          "name": "要配慮個人情報の扱い",
+          "purpose": "病歴等が適切に保護されることを確認する。",
+          "recommended_checks": "表示・出力・通信での保護状況を確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "個人情報保護法ガイドライン",
+          "tags": [
+            "情報保護",
+            "コンプライアンス",
+            "異常系",
+            "医療"
+          ],
+          "category": "診療情報の保護"
+        },
+        {
+          "name": "同意の記録",
+          "purpose": "情報利用の同意が記録されることを確認する。",
+          "recommended_checks": "同意取得の画面と記録を確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "個人情報保護法ガイドライン",
+          "tags": [
+            "情報保護",
+            "コンプライアンス",
+            "正常系",
+            "医療"
+          ],
+          "category": "診療情報の保護"
+        },
+        {
+          "name": "バックアップの暗号化",
+          "purpose": "保存データが暗号化されることを確認する。",
+          "recommended_checks": "バックアップの保存形式を確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "医療情報システムの安全管理ガイドライン",
+          "tags": [
+            "情報保護",
+            "セキュリティ",
+            "異常系",
+            "医療"
+          ],
+          "category": "診療情報の保護"
+        }
+      ]
+    },
+    {
+      "name": "処方・オーダ",
+      "items": [
+        {
+          "name": "用法用量の検証",
+          "purpose": "処方量が許容範囲内であることを確認する。",
+          "recommended_checks": "上限を超える量の入力を試す。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "医療情報システムの安全管理ガイドライン",
+          "tags": [
+            "処方",
+            "入力検証",
+            "異常系",
+            "医療"
+          ],
+          "category": "処方・オーダ"
+        },
+        {
+          "name": "相互作用の警告",
+          "purpose": "併用禁忌が警告されることを確認する。",
+          "recommended_checks": "禁忌の組合せで処方を試す。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "医療情報システムの安全管理ガイドライン",
+          "tags": [
+            "処方",
+            "機能適合性",
+            "異常系",
+            "医療"
+          ],
+          "category": "処方・オーダ"
+        },
+        {
+          "name": "アレルギー情報の反映",
+          "purpose": "アレルギー該当薬で警告が出ることを確認する。",
+          "recommended_checks": "登録済みアレルギーに該当する薬を処方する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "医療情報システムの安全管理ガイドライン",
+          "tags": [
+            "処方",
+            "機能適合性",
+            "異常系",
+            "医療"
+          ],
+          "category": "処方・オーダ"
+        },
+        {
+          "name": "単位の明示",
+          "purpose": "投与量の単位が明示されることを確認する。",
+          "recommended_checks": "入力・確認・出力での単位表示を確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "医療情報システムの安全管理ガイドライン",
+          "tags": [
+            "処方",
+            "表示",
+            "正常系",
+            "医療"
+          ],
+          "category": "処方・オーダ"
+        },
+        {
+          "name": "小数点の誤入力",
+          "purpose": "小数点の位置ずれが検知されることを確認する。",
+          "recommended_checks": "10倍・1/10の量を入力する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "ISTQB 境界値分析",
+          "tags": [
+            "処方",
+            "入力検証",
+            "異常系",
+            "医療"
+          ],
+          "category": "処方・オーダ"
+        },
+        {
+          "name": "オーダの取消",
+          "purpose": "発行済みオーダを取消できることを確認する。",
+          "recommended_checks": "実施前後での取消可否を確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "医療情報システムの安全管理ガイドライン",
+          "tags": [
+            "処方",
+            "機能正確性",
+            "準正常系",
+            "医療"
+          ],
+          "category": "処方・オーダ"
+        },
+        {
+          "name": "実施記録の紐付け",
+          "purpose": "オーダと実施記録が対応することを確認する。",
+          "recommended_checks": "オーダから実施記録への追跡を確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "医療情報システムの安全管理ガイドライン",
+          "tags": [
+            "処方",
+            "証跡",
+            "正常系",
+            "医療"
+          ],
+          "category": "処方・オーダ"
+        },
+        {
+          "name": "重複オーダの検知",
+          "purpose": "同一内容の重複発行が検知されることを確認する。",
+          "recommended_checks": "同じオーダを2回発行する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "医療情報システムの安全管理ガイドライン",
+          "tags": [
+            "処方",
+            "機能正確性",
+            "異常系",
+            "医療"
+          ],
+          "category": "処方・オーダ"
+        }
+      ]
+    },
+    {
+      "name": "システム連携",
+      "items": [
+        {
+          "name": "外部システムとの整合",
+          "purpose": "連携先とデータが一致することを確認する。",
+          "recommended_checks": "連携後に双方のデータを突き合わせる。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "医療情報システムの安全管理ガイドライン",
+          "tags": [
+            "連携",
+            "機能正確性",
+            "正常系",
+            "医療"
+          ],
+          "category": "システム連携"
+        },
+        {
+          "name": "連携失敗時の検知",
+          "purpose": "連携が失敗したことを検知できることを確認する。",
+          "recommended_checks": "連携先を停止させ、通知を確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "医療情報システムの安全管理ガイドライン",
+          "tags": [
+            "連携",
+            "信頼性",
+            "異常系",
+            "医療"
+          ],
+          "category": "システム連携"
+        },
+        {
+          "name": "連携データの欠落",
+          "purpose": "項目の欠落なく連携されることを確認する。",
+          "recommended_checks": "送信項目と受信項目を突き合わせる。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "医療情報システムの安全管理ガイドライン",
+          "tags": [
+            "連携",
+            "機能正確性",
+            "異常系",
+            "医療"
+          ],
+          "category": "システム連携"
+        },
+        {
+          "name": "再送時の重複",
+          "purpose": "再送で重複登録されないことを確認する。",
+          "recommended_checks": "同じデータを2回送信する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "医療情報システムの安全管理ガイドライン",
+          "tags": [
+            "連携",
+            "信頼性",
+            "異常系",
+            "医療"
+          ],
+          "category": "システム連携"
+        },
+        {
+          "name": "文字コードの変換",
+          "purpose": "連携時に文字化けが起きないことを確認する。",
+          "recommended_checks": "外字・機種依存文字を含むデータを送る。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "医療情報システムの安全管理ガイドライン",
+          "tags": [
+            "連携",
+            "機能正確性",
+            "異常系",
+            "医療"
+          ],
+          "category": "システム連携"
+        },
+        {
+          "name": "停止時の縮退運用",
+          "purpose": "連携停止時も業務が継続できることを確認する。",
+          "recommended_checks": "連携を切って主要業務を実施する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "医療情報システムの安全管理ガイドライン",
+          "tags": [
+            "連携",
+            "回復性",
+            "異常系",
+            "医療"
+          ],
+          "category": "システム連携"
+        }
+      ]
+    },
+    {
+      "name": "可用性・継続性",
+      "items": [
+        {
+          "name": "障害時の代替手段",
+          "purpose": "システム停止時の代替手順があることを確認する。",
+          "recommended_checks": "停止を模擬し、代替手順を実行する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "医療情報システムの安全管理ガイドライン",
+          "tags": [
+            "可用性",
+            "回復性",
+            "異常系",
+            "医療"
+          ],
+          "category": "可用性・継続性"
+        },
+        {
+          "name": "データ復旧の実効性",
+          "purpose": "バックアップから復旧できることを確認する。",
+          "recommended_checks": "復旧手順を実行し、データを確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "医療情報システムの安全管理ガイドライン",
+          "tags": [
+            "可用性",
+            "回復性",
+            "異常系",
+            "医療"
+          ],
+          "category": "可用性・継続性"
+        },
+        {
+          "name": "計画停止の周知",
+          "purpose": "停止予定が事前に周知されることを確認する。",
+          "recommended_checks": "メンテナンス告知の表示を確認する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "医療情報システムの安全管理ガイドライン",
+          "tags": [
+            "可用性",
+            "使用性",
+            "準正常系",
+            "医療"
+          ],
+          "category": "可用性・継続性"
+        },
+        {
+          "name": "復旧後の整合性",
+          "purpose": "復旧後にデータの矛盾がないことを確認する。",
+          "recommended_checks": "復旧後に主要データを検証する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "医療情報システムの安全管理ガイドライン",
+          "tags": [
+            "可用性",
+            "機能正確性",
+            "異常系",
+            "医療"
+          ],
+          "category": "可用性・継続性"
+        },
+        {
+          "name": "応答遅延時の挙動",
+          "purpose": "処理が遅い場合の表示を確認する。",
+          "recommended_checks": "負荷をかけて応答時間を計測する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "ISO/IEC 25010 時間効率性",
+          "tags": [
+            "可用性",
+            "性能",
+            "準正常系",
+            "医療"
+          ],
+          "category": "可用性・継続性"
+        }
+      ]
+    }
+  ]
+}

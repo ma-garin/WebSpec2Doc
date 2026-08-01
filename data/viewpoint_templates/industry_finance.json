@@ -1,0 +1,696 @@
+{
+  "name": "金融向け観点",
+  "description": "金融システム固有のリスク（誤送金・残高不整合・不正取引・監査証跡欠落）に対応する観点。FISC 安全対策基準・個人情報保護法ガイドラインに準拠。共通観点と併用する。",
+  "folders": [
+    {
+      "name": "金額・計算",
+      "items": [
+        {
+          "name": "金額の桁区切り表示",
+          "purpose": "金額が読み違えない形式で表示されることを確認する。",
+          "recommended_checks": "3桁区切り・通貨記号・小数桁の表示を全画面で確認する。",
+          "risk_weight": 4,
+          "automation": "semi_automated",
+          "standards": "FISC 安全対策基準",
+          "tags": [
+            "金額",
+            "表示",
+            "正常系",
+            "金融"
+          ],
+          "category": "金額・計算"
+        },
+        {
+          "name": "端数処理の方向",
+          "purpose": "切り上げ・切り捨て・四捨五入が仕様どおりであることを確認する。",
+          "recommended_checks": "端数が出る取引で計算結果を仕様と突き合わせる。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "FISC 安全対策基準",
+          "tags": [
+            "金額",
+            "機能正確性",
+            "準正常系",
+            "金融"
+          ],
+          "category": "金額・計算"
+        },
+        {
+          "name": "金額の上限下限",
+          "purpose": "取引金額の境界で正しく判定されることを確認する。",
+          "recommended_checks": "下限-1／下限／上限／上限+1 の4点で試す。",
+          "risk_weight": 5,
+          "automation": "semi_automated",
+          "standards": "ISTQB 境界値分析",
+          "tags": [
+            "金額",
+            "境界値",
+            "準正常系",
+            "金融"
+          ],
+          "category": "金額・計算"
+        },
+        {
+          "name": "マイナス金額の扱い",
+          "purpose": "負の金額が意図どおり処理されることを確認する。",
+          "recommended_checks": "返金・取消でマイナス値が発生する経路を確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "FISC 安全対策基準",
+          "tags": [
+            "金額",
+            "機能正確性",
+            "異常系",
+            "金融"
+          ],
+          "category": "金額・計算"
+        },
+        {
+          "name": "ゼロ円取引の扱い",
+          "purpose": "0円の取引が仕様どおりに扱われることを確認する。",
+          "recommended_checks": "金額0で送信し、拒否または受理を仕様と照合する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "ISTQB 境界値分析",
+          "tags": [
+            "金額",
+            "境界値",
+            "準正常系",
+            "金融"
+          ],
+          "category": "金額・計算"
+        },
+        {
+          "name": "桁あふれの防止",
+          "purpose": "上限を超える金額で計算が破綻しないことを確認する。",
+          "recommended_checks": "システム最大値付近の金額で計算を実行する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "FISC 安全対策基準",
+          "tags": [
+            "金額",
+            "境界値",
+            "異常系",
+            "金融"
+          ],
+          "category": "金額・計算"
+        },
+        {
+          "name": "通貨単位の一貫性",
+          "purpose": "画面間で通貨単位が一致することを確認する。",
+          "recommended_checks": "入力・確認・完了・帳票の通貨表示を突き合わせる。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "FISC 安全対策基準",
+          "tags": [
+            "金額",
+            "一貫性",
+            "異常系",
+            "金融"
+          ],
+          "category": "金額・計算"
+        },
+        {
+          "name": "為替レートの適用時点",
+          "purpose": "適用するレートの時点が仕様どおりであることを確認する。",
+          "recommended_checks": "取引時刻と適用レートの対応を確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "FISC 安全対策基準",
+          "tags": [
+            "金額",
+            "機能正確性",
+            "準正常系",
+            "金融"
+          ],
+          "category": "金額・計算"
+        },
+        {
+          "name": "手数料の計算",
+          "purpose": "手数料が仕様どおり計算されることを確認する。",
+          "recommended_checks": "金額帯ごとの手数料を境界値で確認する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "FISC 安全対策基準",
+          "tags": [
+            "金額",
+            "機能正確性",
+            "準正常系",
+            "金融"
+          ],
+          "category": "金額・計算"
+        },
+        {
+          "name": "合計値の一致",
+          "purpose": "明細の合計と表示合計が一致することを確認する。",
+          "recommended_checks": "明細を合算し、表示された合計と突き合わせる。",
+          "risk_weight": 5,
+          "automation": "semi_automated",
+          "standards": "FISC 安全対策基準",
+          "tags": [
+            "金額",
+            "機能正確性",
+            "異常系",
+            "金融"
+          ],
+          "category": "金額・計算"
+        }
+      ]
+    },
+    {
+      "name": "残高・整合性",
+      "items": [
+        {
+          "name": "残高の更新反映",
+          "purpose": "取引後の残高が即座に正しく反映されることを確認する。",
+          "recommended_checks": "取引前後の残高差分と取引額を突き合わせる。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "FISC 安全対策基準",
+          "tags": [
+            "残高",
+            "機能正確性",
+            "正常系",
+            "金融"
+          ],
+          "category": "残高・整合性"
+        },
+        {
+          "name": "残高不足時の拒否",
+          "purpose": "残高を超える取引が拒否されることを確認する。",
+          "recommended_checks": "残高+1円で送金を試す。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "FISC 安全対策基準",
+          "tags": [
+            "残高",
+            "機能正確性",
+            "異常系",
+            "金融"
+          ],
+          "category": "残高・整合性"
+        },
+        {
+          "name": "同時取引の排他",
+          "purpose": "並行取引で残高が壊れないことを確認する。",
+          "recommended_checks": "2セッションから同時に出金を実行する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "FISC 安全対策基準",
+          "tags": [
+            "残高",
+            "並行性",
+            "異常系",
+            "金融"
+          ],
+          "category": "残高・整合性"
+        },
+        {
+          "name": "取消時の残高復元",
+          "purpose": "取消操作で残高が正しく戻ることを確認する。",
+          "recommended_checks": "取引実行後に取消し、残高を確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "FISC 安全対策基準",
+          "tags": [
+            "残高",
+            "機能正確性",
+            "異常系",
+            "金融"
+          ],
+          "category": "残高・整合性"
+        },
+        {
+          "name": "未確定取引の扱い",
+          "purpose": "処理中の取引が残高にどう反映されるか確認する。",
+          "recommended_checks": "処理中状態での残高表示を確認する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "FISC 安全対策基準",
+          "tags": [
+            "残高",
+            "機能正確性",
+            "準正常系",
+            "金融"
+          ],
+          "category": "残高・整合性"
+        },
+        {
+          "name": "日跨ぎ処理の整合",
+          "purpose": "日付変更をまたぐ取引が正しく計上されることを確認する。",
+          "recommended_checks": "締め時刻前後で取引を実行する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "FISC 安全対策基準",
+          "tags": [
+            "残高",
+            "機能正確性",
+            "準正常系",
+            "金融"
+          ],
+          "category": "残高・整合性"
+        },
+        {
+          "name": "残高照会の一貫性",
+          "purpose": "複数画面で表示される残高が一致することを確認する。",
+          "recommended_checks": "一覧・詳細・APIの残高を突き合わせる。",
+          "risk_weight": 4,
+          "automation": "semi_automated",
+          "standards": "FISC 安全対策基準",
+          "tags": [
+            "残高",
+            "一貫性",
+            "異常系",
+            "金融"
+          ],
+          "category": "残高・整合性"
+        }
+      ]
+    },
+    {
+      "name": "誤送金の防止",
+      "items": [
+        {
+          "name": "振込先の確認画面",
+          "purpose": "送金前に宛先を確認できることを確認する。",
+          "recommended_checks": "確認画面に口座番号・名義が表示されるか確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "FISC 安全対策基準",
+          "tags": [
+            "送金",
+            "使用性",
+            "正常系",
+            "金融"
+          ],
+          "category": "誤送金の防止"
+        },
+        {
+          "name": "口座番号の検証",
+          "purpose": "口座番号の桁数・チェックディジットが検証されることを確認する。",
+          "recommended_checks": "桁数不足・不正なチェックディジットを試す。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "FISC 安全対策基準",
+          "tags": [
+            "送金",
+            "入力検証",
+            "異常系",
+            "金融"
+          ],
+          "category": "誤送金の防止"
+        },
+        {
+          "name": "名義の照合",
+          "purpose": "振込先名義の照合が行われることを確認する。",
+          "recommended_checks": "口座と異なる名義で送金を試す。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "FISC 安全対策基準",
+          "tags": [
+            "送金",
+            "入力検証",
+            "異常系",
+            "金融"
+          ],
+          "category": "誤送金の防止"
+        },
+        {
+          "name": "二重送金の防止",
+          "purpose": "同一取引が重複実行されないことを確認する。",
+          "recommended_checks": "送信ボタン連打・リロード・戻る操作を試す。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "FISC 安全対策基準",
+          "tags": [
+            "送金",
+            "信頼性",
+            "異常系",
+            "金融"
+          ],
+          "category": "誤送金の防止"
+        },
+        {
+          "name": "送金先の登録上限",
+          "purpose": "登録可能な送金先数の上限が機能することを確認する。",
+          "recommended_checks": "上限まで登録し、超過時の挙動を確認する。",
+          "risk_weight": 3,
+          "automation": "manual",
+          "standards": "FISC 安全対策基準",
+          "tags": [
+            "送金",
+            "境界値",
+            "準正常系",
+            "金融"
+          ],
+          "category": "誤送金の防止"
+        },
+        {
+          "name": "高額取引の追加確認",
+          "purpose": "一定額以上で追加確認が求められることを確認する。",
+          "recommended_checks": "閾値の直下・直上の金額で送金を試す。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "FISC 安全対策基準",
+          "tags": [
+            "送金",
+            "セキュリティ",
+            "準正常系",
+            "金融"
+          ],
+          "category": "誤送金の防止"
+        },
+        {
+          "name": "送金予約の実行",
+          "purpose": "予約した送金が指定日時に実行されることを確認する。",
+          "recommended_checks": "予約後に実行日時と実績を突き合わせる。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "FISC 安全対策基準",
+          "tags": [
+            "送金",
+            "機能正確性",
+            "正常系",
+            "金融"
+          ],
+          "category": "誤送金の防止"
+        },
+        {
+          "name": "送金予約の取消",
+          "purpose": "予約の取消が期限内に可能であることを確認する。",
+          "recommended_checks": "実行直前の取消を試す。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "FISC 安全対策基準",
+          "tags": [
+            "送金",
+            "機能正確性",
+            "準正常系",
+            "金融"
+          ],
+          "category": "誤送金の防止"
+        }
+      ]
+    },
+    {
+      "name": "不正取引の検知",
+      "items": [
+        {
+          "name": "異常な取引パターン",
+          "purpose": "通常と異なる取引が検知されることを確認する。",
+          "recommended_checks": "短時間の連続送金・深夜の高額取引を試す。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "FISC 安全対策基準",
+          "tags": [
+            "不正検知",
+            "セキュリティ",
+            "異常系",
+            "金融"
+          ],
+          "category": "不正取引の検知"
+        },
+        {
+          "name": "ログイン元の変化",
+          "purpose": "普段と異なる環境からのアクセスが検知されることを確認する。",
+          "recommended_checks": "別IP・別デバイスからログインする。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "FISC 安全対策基準",
+          "tags": [
+            "不正検知",
+            "セキュリティ",
+            "異常系",
+            "金融"
+          ],
+          "category": "不正取引の検知"
+        },
+        {
+          "name": "取引限度額の設定",
+          "purpose": "利用者が限度額を設定でき、機能することを確認する。",
+          "recommended_checks": "限度額を設定し、超過取引を試す。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "FISC 安全対策基準",
+          "tags": [
+            "不正検知",
+            "セキュリティ",
+            "異常系",
+            "金融"
+          ],
+          "category": "不正取引の検知"
+        },
+        {
+          "name": "取引パスワードの要求",
+          "purpose": "重要操作で追加認証が要求されることを確認する。",
+          "recommended_checks": "送金・限度額変更で追加認証の有無を確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "FISC 安全対策基準",
+          "tags": [
+            "不正検知",
+            "セキュリティ",
+            "正常系",
+            "金融"
+          ],
+          "category": "不正取引の検知"
+        },
+        {
+          "name": "ワンタイムパスワードの有効期限",
+          "purpose": "OTPが期限切れで無効になることを確認する。",
+          "recommended_checks": "期限経過後のOTPで実行を試す。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "OWASP ASVS 2.8",
+          "tags": [
+            "不正検知",
+            "セキュリティ",
+            "異常系",
+            "金融"
+          ],
+          "category": "不正取引の検知"
+        },
+        {
+          "name": "セッション横取りの防止",
+          "purpose": "他人のセッションで操作できないことを確認する。",
+          "recommended_checks": "セッションIDを差し替えてリクエストを送る。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "OWASP ASVS 3.2",
+          "tags": [
+            "不正検知",
+            "セキュリティ",
+            "異常系",
+            "金融"
+          ],
+          "category": "不正取引の検知"
+        }
+      ]
+    },
+    {
+      "name": "監査証跡",
+      "items": [
+        {
+          "name": "取引履歴の記録",
+          "purpose": "全取引が履歴に残ることを確認する。",
+          "recommended_checks": "実行した取引が履歴一覧に現れるか確認する。",
+          "risk_weight": 5,
+          "automation": "semi_automated",
+          "standards": "FISC 安全対策基準",
+          "tags": [
+            "監査",
+            "証跡",
+            "正常系",
+            "金融"
+          ],
+          "category": "監査証跡"
+        },
+        {
+          "name": "操作ログの完全性",
+          "purpose": "誰が・いつ・何をしたかが記録されることを確認する。",
+          "recommended_checks": "操作後にログの記録内容を確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "FISC 安全対策基準",
+          "tags": [
+            "監査",
+            "証跡",
+            "異常系",
+            "金融"
+          ],
+          "category": "監査証跡"
+        },
+        {
+          "name": "失敗操作の記録",
+          "purpose": "失敗した操作も記録されることを確認する。",
+          "recommended_checks": "認証失敗・残高不足での拒否がログに残るか確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "FISC 安全対策基準",
+          "tags": [
+            "監査",
+            "証跡",
+            "異常系",
+            "金融"
+          ],
+          "category": "監査証跡"
+        },
+        {
+          "name": "ログの改ざん防止",
+          "purpose": "記録が後から書き換えられないことを確認する。",
+          "recommended_checks": "保存先の権限と追記専用性を確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "FISC 安全対策基準",
+          "tags": [
+            "監査",
+            "セキュリティ",
+            "異常系",
+            "金融"
+          ],
+          "category": "監査証跡"
+        },
+        {
+          "name": "履歴の保持期間",
+          "purpose": "法定期間の履歴が保持されることを確認する。",
+          "recommended_checks": "保持設定と削除動作を確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "FISC 安全対策基準",
+          "tags": [
+            "監査",
+            "コンプライアンス",
+            "異常系",
+            "金融"
+          ],
+          "category": "監査証跡"
+        },
+        {
+          "name": "明細のダウンロード",
+          "purpose": "取引明細を出力でき、内容が一致することを確認する。",
+          "recommended_checks": "出力した明細と画面表示を突き合わせる。",
+          "risk_weight": 4,
+          "automation": "semi_automated",
+          "standards": "FISC 安全対策基準",
+          "tags": [
+            "監査",
+            "証跡",
+            "正常系",
+            "金融"
+          ],
+          "category": "監査証跡"
+        },
+        {
+          "name": "時刻の正確性",
+          "purpose": "記録される時刻が正確であることを確認する。",
+          "recommended_checks": "操作時刻と記録時刻の差を確認する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "FISC 安全対策基準",
+          "tags": [
+            "監査",
+            "証跡",
+            "準正常系",
+            "金融"
+          ],
+          "category": "監査証跡"
+        }
+      ]
+    },
+    {
+      "name": "個人情報保護",
+      "items": [
+        {
+          "name": "マスキング表示",
+          "purpose": "口座番号等が部分マスクされることを確認する。",
+          "recommended_checks": "一覧・詳細での表示形式を確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "個人情報保護法ガイドライン",
+          "tags": [
+            "個人情報",
+            "セキュリティ",
+            "正常系",
+            "金融"
+          ],
+          "category": "個人情報保護"
+        },
+        {
+          "name": "通信の暗号化",
+          "purpose": "全通信が暗号化されることを確認する。",
+          "recommended_checks": "HTTP でのアクセスと TLS バージョンを確認する。",
+          "risk_weight": 5,
+          "automation": "automated",
+          "standards": "RFC 8446",
+          "tags": [
+            "個人情報",
+            "通信",
+            "異常系",
+            "金融"
+          ],
+          "category": "個人情報保護"
+        },
+        {
+          "name": "印刷・出力時のマスク",
+          "purpose": "出力物にも保護が適用されることを確認する。",
+          "recommended_checks": "PDF・CSV 出力の内容を確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "個人情報保護法ガイドライン",
+          "tags": [
+            "個人情報",
+            "セキュリティ",
+            "異常系",
+            "金融"
+          ],
+          "category": "個人情報保護"
+        },
+        {
+          "name": "第三者提供の同意",
+          "purpose": "データ提供時に同意が取得されることを確認する。",
+          "recommended_checks": "同意画面の表示と記録を確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "個人情報保護法ガイドライン",
+          "tags": [
+            "個人情報",
+            "コンプライアンス",
+            "正常系",
+            "金融"
+          ],
+          "category": "個人情報保護"
+        },
+        {
+          "name": "開示・訂正の導線",
+          "purpose": "本人が情報を確認・訂正できることを確認する。",
+          "recommended_checks": "開示請求の導線と反映を確認する。",
+          "risk_weight": 4,
+          "automation": "manual",
+          "standards": "個人情報保護法ガイドライン",
+          "tags": [
+            "個人情報",
+            "コンプライアンス",
+            "正常系",
+            "金融"
+          ],
+          "category": "個人情報保護"
+        },
+        {
+          "name": "退会後のデータ扱い",
+          "purpose": "退会時にデータが仕様どおり処理されることを確認する。",
+          "recommended_checks": "退会後の保持・削除状況を確認する。",
+          "risk_weight": 5,
+          "automation": "manual",
+          "standards": "個人情報保護法ガイドライン",
+          "tags": [
+            "個人情報",
+            "コンプライアンス",
+            "異常系",
+            "金融"
+          ],
+          "category": "個人情報保護"
+        }
+      ]
+    }
+  ]
+}

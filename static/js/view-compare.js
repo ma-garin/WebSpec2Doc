@@ -10,10 +10,15 @@ const CMP_CATEGORY_LABELS = {
   layout_broken: '表示崩れ',
   unclassified: '未分類（要確認）',
 };
-// severity は src/diff/differ.py の値（breaking / warning / info）。
-// 画面には日本語で出すが、判定は必ずこの値で行う。
-const CMP_SEVERITY_LABELS = { breaking: '高', warning: '中', info: '低' };
-const CMP_SEVERITY_TOP = 'breaking';
+// severity の語彙とラベルは API 応答（data.severity）から受け取る。
+// ここで再定義すると、段階を増減したとき片方だけ直して並べ替えと表示が食い違う。
+// 実際に high/medium/low という実在しない値を書いていて、フィルタが黙って効かなかった。
+function cmpSeverityLabel(severity) {
+  return (CMP.data?.severity?.labels || {})[severity] || severity || '';
+}
+function cmpTopSeverity() {
+  return (CMP.data?.severity?.order || [])[0] || '';
+}
 // 比較できなかった画面。「指摘0件」と同じ見た目にしない。
 const CMP_STATE_LABELS = { added: '追加', removed: '削除' };
 
@@ -33,6 +38,9 @@ const CMP = {
 const CMP_ZOOM_STEPS = [50, 75, 100, 150, 200];
 
 function cmpPanel() { return document.getElementById('rp-compare'); }
+
+/** 出力先のファイルを画面に出すための URL。3 箇所で同じ組み立てをしない。 */
+function cmpPreviewUrl(path) { return '/preview?path=' + encodeURIComponent(path); }
 
 // ---- 入口（results.js のタブ登録から呼ばれる） ----
 // 描画関数は引数なしで呼ばれる規約（results.js:322-324）。ドメインは
@@ -158,7 +166,7 @@ function cmpFilters(pair) {
     `<button type="button" class="cmp-filter${CMP.filter === key ? ' is-active' : ''}"` +
     ` data-cmp-filter="${escHtml(key)}">${escHtml(label)}</button>`;
   const buttons = [btn('all', 'すべて')];
-  if (findings.some(f => f.severity === CMP_SEVERITY_TOP)) buttons.push(btn('high', '重要度 高'));
+  if (findings.some(f => f.severity === cmpTopSeverity())) buttons.push(btn('high', '重要度 高'));
   [...new Set(findings.map(f => f.category))].forEach(c => {
     buttons.push(btn(c, CMP_CATEGORY_LABELS[c] || c));
   });
@@ -167,7 +175,7 @@ function cmpFilters(pair) {
 
 function cmpMatchesFilter(finding) {
   if (CMP.filter === 'all') return true;
-  if (CMP.filter === 'high') return finding.severity === CMP_SEVERITY_TOP;
+  if (CMP.filter === 'high') return finding.severity === cmpTopSeverity();
   return finding.category === CMP.filter;
 }
 
@@ -221,15 +229,15 @@ function cmpOverlay(s) {
     '<figcaption>重ね合わせ<span>現行 + 新（半透明）</span></figcaption>' +
     `<div class="cmp-shot-body" data-cmp-scroll="overlay" style="zoom:${CMP.zoom / 100}">` +
       '<div class="cmp-overlay-stack">' +
-        `<img src="/preview?path=${encodeURIComponent(s.before)}" alt="現行">` +
-        `<img class="cmp-overlay-top" src="/preview?path=${encodeURIComponent(s.after)}" alt="新">` +
+        `<img src="${cmpPreviewUrl(s.before)}" alt="現行">` +
+        `<img class="cmp-overlay-top" src="${cmpPreviewUrl(s.after)}" alt="新">` +
       '</div>' +
     '</div></figure>';
 }
 
 function cmpShot(caption, stamp, src) {
   const body = src
-    ? `<img src="/preview?path=${encodeURIComponent(src)}" alt="${escHtml(caption)}" loading="lazy">`
+    ? `<img src="${cmpPreviewUrl(src)}" alt="${escHtml(caption)}" loading="lazy">`
     : '<div class="cmp-shot-missing">キャプチャなし</div>';
   return '<figure class="cmp-shot">' +
     `<figcaption>${escHtml(caption)}<span>${escHtml(stamp || '')}</span></figcaption>` +
@@ -246,7 +254,7 @@ function cmpIssues(pair) {
   const rows = items.map(f =>
     `<button type="button" class="cmp-issue" data-cmp-issue="${f.index}">` +
     `<span class="cmp-badge cmp-cat-${escHtml(f.category)}">${escHtml(CMP_CATEGORY_LABELS[f.category] || f.category)}</span>` +
-    `<span class="cmp-sev">${escHtml(CMP_SEVERITY_LABELS[f.severity] || f.severity || '')}</span>` +
+    `<span class="cmp-sev">${escHtml(cmpSeverityLabel(f.severity))}</span>` +
     `<span class="cmp-issue-detail">${escHtml(f.detail || '')}</span></button>`).join('');
   return `<div class="cmp-issues">${rows}</div>`;
 }
@@ -261,7 +269,7 @@ function cmpOpenDetail(index) {
   const rows = [
     ['検出内容', f.detail || ''],
     ['分類', CMP_CATEGORY_LABELS[f.category] || f.category || ''],
-    ['重要度', CMP_SEVERITY_LABELS[f.severity] || f.severity || ''],
+    ['重要度', cmpSeverityLabel(f.severity)],
     ['確信度', f.confidence != null ? `${Math.round(f.confidence * 100)}%` : ''],
     ['対象要素', ev.selector || '（記録なし）'],
     ['根拠キャプチャ', ev.screenshot_path || '（記録なし）'],
@@ -269,7 +277,7 @@ function cmpOpenDetail(index) {
   cmpShowModal('差分の詳細',
     '<div class="cmp-modal-alert">' +
       `${escHtml(CMP_CATEGORY_LABELS[f.category] || f.category || '')}　/　` +
-      `重要度: ${escHtml(CMP_SEVERITY_LABELS[f.severity] || f.severity || '')}</div>` +
+      `重要度: ${escHtml(cmpSeverityLabel(f.severity))}</div>` +
     rows.map(([k, v]) =>
       '<div class="cmp-detail-row">' +
       `<div class="cmp-detail-label">${escHtml(k)}</div>` +
@@ -354,19 +362,29 @@ function cmpBind() {
   panel.querySelectorAll('[data-cmp-issue]').forEach(b => {
     b.addEventListener('click', () => cmpOpenDetail(Number(b.dataset.cmpIssue)));
   });
+  // ズームと同期スクロールは表示だけの変更なので再描画しない。
+  // cmpRender() すると <img> を作り直すことになり、画像を再デコードさせてしまう。
   panel.querySelectorAll('[data-cmp-zoom]').forEach(b => {
     b.addEventListener('click', () => {
       const i = CMP_ZOOM_STEPS.indexOf(CMP.zoom);
       const next = b.dataset.cmpZoom === '+' ? i + 1 : i - 1;
       if (next < 0 || next >= CMP_ZOOM_STEPS.length) return;
       CMP.zoom = CMP_ZOOM_STEPS[next];
-      cmpRender();
+      panel.querySelectorAll('.cmp-shot-body').forEach(el => { el.style.zoom = CMP.zoom / 100; });
+      const label = panel.querySelector('.cmp-zoom-val');
+      if (label) label.textContent = `${CMP.zoom}%`;
     });
   });
   panel.querySelectorAll('[data-cmp-toggle]').forEach(b => {
     b.addEventListener('click', () => {
-      const key = b.dataset.cmpToggle === 'sync' ? 'syncScroll' : 'overlay';
-      CMP[key] = !CMP[key];
+      if (b.dataset.cmpToggle === 'sync') {
+        CMP.syncScroll = !CMP.syncScroll;
+        b.classList.toggle('is-on', CMP.syncScroll);
+        b.setAttribute('aria-pressed', String(CMP.syncScroll));
+        return;
+      }
+      // 重ね合わせは並置と DOM 構造が違うため、ここだけ再描画する。
+      CMP.overlay = !CMP.overlay;
       cmpRender();
     });
   });

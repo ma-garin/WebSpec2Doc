@@ -227,10 +227,12 @@ def prune_snapshots(
 def _shots_dir_of(snapshot_path: Path) -> Path:
     """スナップショット JSON に対応する世代別スクリーンショット置き場。
 
-    命名規則は src/diff/snapshot.py の SHOTS_DIR_SUFFIX と対応する。
-    どちらかを変えるときは両方直すこと。
+    命名規則は src/diff/snapshot.py が持つ。コメントで同期を約束するのではなく、
+    実体を 1 つにして import する（片方だけ直す事故を構造で防ぐ）。
     """
-    return snapshot_path.with_name(f"{snapshot_path.stem}-shots")
+    from diff.snapshot import snapshot_shots_dir
+
+    return snapshot_shots_dir(snapshot_path)
 
 
 def _remove_snapshot_shots(snapshot_path: Path, snapshots_root: Path) -> int:

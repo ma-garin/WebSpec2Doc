@@ -3,7 +3,7 @@ from __future__ import annotations
 import io
 import logging
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -212,6 +212,67 @@ def compare_screenshots_masked(
     )
 
 
+def compare_and_overlay(
+    before_path: Path,
+    after_path: Path,
+    out_path: Path,
+    page_id: str = "",
+    threshold: float = DEFAULT_THRESHOLD,
+    masks: tuple[tuple[int, int, int, int], ...] = (),
+    channel_tolerance: int = DEFAULT_CHANNEL_TOLERANCE,
+) -> ScreenshotDiff:
+    """比較し、有意差があれば変更領域の枠画像も作る（画像の読み込みと差分計算は 1 回）。
+
+    比較（compare_screenshots_masked）と枠画像（save_diff_overlay）を別々に呼ぶと、
+    同じ 2 枚に対して open + resize + difference + 二値化を 2 回やることになる。
+    有意差ありのペアごとに丸ごと重複するため、1 回で済ませる入口を用意する。
+    """
+    ratio, mask = _diff_ratio_and_mask(before_path, after_path, masks, channel_tolerance)
+    diff = ScreenshotDiff(
+        page_id=page_id,
+        before_path=str(before_path),
+        after_path=str(after_path),
+        diff_ratio=ratio,
+        is_significant=ratio > threshold,
+    )
+    if not diff.is_significant or mask is None:
+        return diff
+    saved = save_diff_overlay(before_path, after_path, out_path, masks, channel_tolerance, mask)
+    return diff if saved is None else replace(diff, diff_image_path=str(saved))
+
+
+def _diff_ratio_and_mask(
+    before_path: Path,
+    after_path: Path,
+    masks: tuple[tuple[int, int, int, int], ...],
+    channel_tolerance: int,
+) -> tuple[float, Any | None]:
+    """差分比率と有意差マスクを 1 回の読み込みで返す。
+
+    Pillow が無い・ファイルが無い場合はマスクを None にし、比率だけ既存経路で返す
+    （枠画像は作れないが、比較そのものは従来どおり続ける）。
+    """
+    if not before_path.exists() or not after_path.exists():
+        return _compute_diff_ratio_masked(before_path, after_path, masks, channel_tolerance), None
+    try:
+        from PIL import Image, ImageChops, ImageDraw  # noqa: PLC0415
+    except ImportError:
+        return _compute_size_diff_ratio(before_path, after_path), None
+    try:
+        before_img, after_img, size = _load_masked_pair(
+            before_path, after_path, masks, Image, ImageDraw
+        )
+        mask = _significant_diff_mask(
+            ImageChops.difference(before_img, after_img), channel_tolerance
+        )
+        total = size[0] * size[1]
+        ratio = (sum(mask.histogram()[1:]) / total) if total else 0.0
+        return ratio, mask
+    except Exception as exc:
+        logger.warning("画像差分の計算に失敗しました: %s (%s)", after_path, exc)
+        return 1.0, None
+
+
 def _compute_diff_ratio_masked(
     before_path: Path,
     after_path: Path,
@@ -246,6 +307,29 @@ def _compute_pixel_diff_ratio_masked(
     numpy は仕様外の新規依存として持ち込まない（罠 §8）。Pillow の split/point/
     ImageChops のみで RGB のまま比較する（getdata 非依存・Pillow 14 対応）。
     """
+    before_img, after_img, target_size = _load_masked_pair(
+        before_path, after_path, masks, Image, ImageDraw
+    )
+    diff_img = ImageChops.difference(before_img, after_img)
+    diff_pixels = _count_significant_pixels(diff_img, channel_tolerance)
+    total_pixels = target_size[0] * target_size[1]
+    if total_pixels == 0:
+        return 0.0
+    return diff_pixels / total_pixels
+
+
+def _load_masked_pair(
+    before_path: Path,
+    after_path: Path,
+    masks: tuple[tuple[int, int, int, int], ...],
+    Image: Any,  # PIL.Image module
+    ImageDraw: Any,  # PIL.ImageDraw module
+) -> tuple[Any, Any, tuple[int, int]]:
+    """2 枚を読み、小さい方に揃え、マスク領域を塗り潰して返す。
+
+    比率算出と差分画像の生成が同じ前処理を必要とするため 1 箇所に置く。
+    リサイズ方針やマスクの塗り方を変えるとき、直す場所を 1 つにするため。
+    """
     before_img = Image.open(before_path).convert("RGB")
     after_img = Image.open(after_path).convert("RGB")
 
@@ -258,26 +342,18 @@ def _compute_pixel_diff_ratio_masked(
     if masks:
         before_img = before_img.copy()
         after_img = after_img.copy()
-        before_draw = ImageDraw.Draw(before_img)
-        after_draw = ImageDraw.Draw(after_img)
-        for x, y, width, height in masks:
-            box = (x, y, x + width, y + height)
-            before_draw.rectangle(box, fill=(0, 0, 0))
-            after_draw.rectangle(box, fill=(0, 0, 0))
-
-    diff_img = ImageChops.difference(before_img, after_img)
-    diff_pixels = _count_significant_pixels(diff_img, channel_tolerance)
-    total_pixels = target_size[0] * target_size[1]
-    if total_pixels == 0:
-        return 0.0
-    return diff_pixels / total_pixels
+        for target in (before_img, after_img):
+            draw = ImageDraw.Draw(target)
+            for x, y, width, height in masks:
+                draw.rectangle((x, y, x + width, y + height), fill=(0, 0, 0))
+    return before_img, after_img, target_size
 
 
-def _count_significant_pixels(diff_img: Any, channel_tolerance: int) -> int:  # PIL.Image instance
-    """差分イメージのうち、画素値差が channel_tolerance を超えるピクセル数を返す
+def _significant_diff_mask(diff_img: Any, channel_tolerance: int) -> Any:
+    """画素値差が channel_tolerance を超えた画素だけを 255 にした 1 バンド画像を返す。
 
-    （getdata 非依存・Pillow 14 対応。_count_nonzero_pixels と同様に
-    split/point/ImageChops.lighter/histogram のみで実装する）。
+    件数を数える（_count_significant_pixels）のと、どこが変わったかを枠にする
+    （save_diff_overlay）のとで同じマスクを使う。
     """
     from PIL import ImageChops  # noqa: PLC0415
 
@@ -286,7 +362,16 @@ def _count_significant_pixels(diff_img: Any, channel_tolerance: int) -> int:  # 
     mask = bands[0].point(lut)
     for band in bands[1:]:
         mask = ImageChops.lighter(mask, band.point(lut))
-    return sum(mask.histogram()[1:])
+    return mask
+
+
+def _count_significant_pixels(diff_img: Any, channel_tolerance: int) -> int:  # PIL.Image instance
+    """差分イメージのうち、画素値差が channel_tolerance を超えるピクセル数を返す
+
+    （getdata 非依存・Pillow 14 対応。_count_nonzero_pixels と同様に
+    split/point/ImageChops.lighter/histogram のみで実装する）。
+    """
+    return sum(_significant_diff_mask(diff_img, channel_tolerance).histogram()[1:])
 
 
 # 変更領域の枠色（赤）と、走査に使うグリッド幅。
@@ -330,6 +415,7 @@ def save_diff_overlay(
     out_path: Path,
     masks: tuple[tuple[int, int, int, int], ...] = (),
     channel_tolerance: int = DEFAULT_CHANNEL_TOLERANCE,
+    precomputed_mask: Any = None,
 ) -> Path | None:
     """after 側に変更領域の枠を描いた画像を保存し、そのパスを返す（P2-2）。
 
@@ -337,6 +423,7 @@ def save_diff_overlay(
     テキスト中心の差分では見た目の変化が読めないため、画像として残す。
 
     枠は after 側にだけ描く。両方に描くと目移りして対応関係が追いにくい。
+    precomputed_mask を渡すと差分の再計算を省く（compare_and_overlay 経由）。
     Pillow が無い・画像が壊れている場合は None を返す（比較そのものは止めない）。
     """
     if not before_path.exists() or not after_path.exists():
@@ -347,29 +434,22 @@ def save_diff_overlay(
         logger.debug("Pillow が利用できないため差分画像を作りません。")
         return None
     try:
-        before_img = Image.open(before_path).convert("RGB")
-        after_img = Image.open(after_path).convert("RGB")
-        target_size = _smaller_size(before_img.size, after_img.size)
-        if before_img.size != target_size:
-            before_img = before_img.resize(target_size)
-        if after_img.size != target_size:
-            after_img = after_img.resize(target_size)
-
-        masked_before, masked_after = before_img, after_img
-        if masks:
-            masked_before, masked_after = before_img.copy(), after_img.copy()
-            for target in (masked_before, masked_after):
-                draw_mask = ImageDraw.Draw(target)
-                for x, y, width, height in masks:
-                    draw_mask.rectangle((x, y, x + width, y + height), fill=(0, 0, 0))
-
-        diff_img = ImageChops.difference(masked_before, masked_after)
-        lut = [255 if value > channel_tolerance else 0 for value in range(256)]
-        bands = diff_img.split()
-        mask = bands[0].point(lut)
-        for band in bands[1:]:
-            mask = ImageChops.lighter(mask, band.point(lut))
-
+        if precomputed_mask is not None:
+            mask = precomputed_mask
+            after_img = Image.open(after_path).convert("RGB")
+            if after_img.size != mask.size:
+                after_img = after_img.resize(mask.size)
+        else:
+            masked_before, masked_after, _ = _load_masked_pair(
+                before_path, after_path, masks, Image, ImageDraw
+            )
+            # 枠は素の after に描く。マスクで塗り潰した黒を利用者に見せない。
+            after_img = Image.open(after_path).convert("RGB")
+            if after_img.size != masked_after.size:
+                after_img = after_img.resize(masked_after.size)
+            mask = _significant_diff_mask(
+                ImageChops.difference(masked_before, masked_after), channel_tolerance
+            )
         boxes = _changed_blocks(mask)
         if not boxes:
             return None

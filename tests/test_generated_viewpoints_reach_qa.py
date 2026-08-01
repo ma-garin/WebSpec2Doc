@@ -395,22 +395,27 @@ class TestCatalogReloadOnlyWhenChanged:
         reload_catalogs()  # 現在の更新時刻を記録する
         assert reload_catalogs() is False
 
-    def test_edited_catalog_drops_the_cache(self, tmp_path: Any) -> None:
-        import time
+    def test_edited_catalog_drops_the_cache(self) -> None:
+        """中身が変わったら捨て、変わっていなければ捨てないこと。
+
+        更新時刻だけの変更では捨てない（中身の指紋で判定するため）。
+        書き戻しや touch のたびに捨てると、キャッシュの意味が薄れる。
+        """
         from pathlib import Path
 
         from web.services.viewpoint_blueprints import reload_catalogs
 
-        reload_catalogs()
         target = Path("data/viewpoint_domains.json")
-        original = target.read_text(encoding="utf-8")
+        original = target.read_bytes()
+        reload_catalogs(force=True)
         try:
-            time.sleep(0.01)
-            target.write_text(original, encoding="utf-8")  # 更新時刻だけ変える
+            target.write_bytes(
+                original.replace(b'"schema_version": 1', b'"schema_version": 2', 1)
+            )
             assert reload_catalogs() is True
             assert reload_catalogs() is False
         finally:
-            target.write_text(original, encoding="utf-8")
+            target.write_bytes(original)
             reload_catalogs(force=True)
 
 
@@ -462,3 +467,70 @@ class TestRoleIsDecidedOnce:
             delivered = _load_qa_viewpoints()[0]
         assert delivered["role"] == "viewpoint"
         assert delivered["area_label"] == "機能完全性"
+
+
+class TestProviderViewpointsShareTheSameShape:
+    """AI提案の観点も、ストア由来のものと同じ形を持つこと。
+
+    役割と所属領域を持たない観点が混ざると、role だけを見る読み出し側で
+    常に「観点」とみなされ、判定を1箇所に集約した意味が消える。
+    集約したときに、この経路を通っていなかった。
+    """
+
+    class _Provider:
+        def generate_viewpoints(self, screen_info: dict[str, Any]) -> list[dict[str, Any]]:
+            return [
+                {"viewpoint": "AI提案：入力の妥当性", "category": "機能テスト"},
+                {"viewpoint": "AI提案：見出し扱いされうる観点", "category": "quality_area_l1"},
+            ]
+
+    REPORT = {
+        "screens": [
+            {
+                "page_id": "s1",
+                "title": "T",
+                "url": "https://x/",
+                "forms": [],
+                "buttons": [],
+                "transitions": [],
+            }
+        ]
+    }
+
+    def test_provider_viewpoints_carry_role_and_area(self) -> None:
+        from web.services.qa import helpers
+
+        delivered = helpers._load_qa_viewpoints("x", self.REPORT, self._Provider())
+        proposed = [vp for vp in delivered if str(vp["name"]).startswith("AI提案")]
+        assert proposed, "AI提案の観点が届いていない"
+        for viewpoint in proposed:
+            assert "role" in viewpoint, f"role を持たない: {viewpoint['name']}"
+            assert "area_label" in viewpoint, f"area_label を持たない: {viewpoint['name']}"
+
+
+class TestCatalogChangeDetectionUsesContent:
+    """カタログの変更検知が、更新時刻ではなく中身を見ていること。
+
+    更新時刻だけで比べると、編集後に時刻を元へ戻された変更を見逃す
+    （git checkout や rsync で起こりうる）。
+    """
+
+    def test_content_change_with_restored_mtime_is_detected(self) -> None:
+        import os
+        from pathlib import Path
+
+        from web.services.viewpoint_blueprints import reload_catalogs
+
+        target = Path("data/viewpoint_domains.json")
+        original = target.read_bytes()
+        stat = target.stat()
+        reload_catalogs(force=True)
+        assert reload_catalogs() is False
+        try:
+            target.write_bytes(original.replace(b'"schema_version": 1', b'"schema_version": 2', 1))
+            os.utime(target, (stat.st_atime, stat.st_mtime))  # 更新時刻を元へ戻す
+            assert reload_catalogs() is True, "中身の変更を見逃している"
+        finally:
+            target.write_bytes(original)
+            os.utime(target, (stat.st_atime, stat.st_mtime))
+            reload_catalogs(force=True)

@@ -7,7 +7,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from flask import Blueprint, Response, request
+from flask import Blueprint, Response, jsonify, request
 
 from web.config import OUTPUT_DIR, SAMPLE_DOMAIN
 from web.summary import _fmt_snap_ts, _summary_for_domain
@@ -266,5 +266,62 @@ def api_snapshot_comparison() -> Response:
         check_links=False,
     )
     resp = Response(generate_comparison_html(result), mimetype="text/html")
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+@bp.get("/api/snapshot-comparison.json")
+def api_snapshot_comparison_json() -> Response | tuple[dict, int]:
+    """現新比較をペア単位の JSON で返す（現新比較ワークスペース用）。
+
+    HTML を返す `/api/snapshot-comparison` は iframe に埋めるだけで操作できない。
+    画面ペアを選ぶ・差分を辿る・根拠を見る、を画面上で行うために構造化して返す。
+    """
+    domain = request.args.get("domain", "")
+    if not _valid_domain(domain):
+        return {"error": "invalid domain"}, 404
+    out_dir = _out()
+    snaps_dir = out_dir / domain / "snapshots"
+    from_key = request.args.get("from", "")
+    to_key = request.args.get("to", "")
+    from_path = _safe_output_path(str(snaps_dir / (from_key + ".json")))
+    to_path = _safe_output_path(str(snaps_dir / (to_key + ".json")))
+    if from_path is None or to_path is None or not from_path.exists() or not to_path.exists():
+        return {"error": "snapshot not found"}, 404
+    if str(Path("src").resolve()) not in sys.path:
+        sys.path.insert(0, str(Path("src").resolve()))
+    try:
+        from analyzer.html_analyzer import analyze_pages
+        from diff.comparison import compare_analyzed_pages, load_dynamic_masks
+        from diff.snapshot import load_snapshot
+        from generator.comparison_reporter import comparison_result_to_dict
+        from web.services.comparison_workspace import build_workspace
+    except ImportError:
+        logger.exception("現新比較モジュールの読み込みに失敗しました")
+        return {"error": "comparison unavailable"}, 500
+    try:
+        old_analyzed = analyze_pages(load_snapshot(from_path))
+        new_analyzed = analyze_pages(load_snapshot(to_path))
+    except (OSError, json.JSONDecodeError):
+        logger.exception("スナップショットの読み込みに失敗しました: domain=%s", domain)
+        return {"error": "snapshot unreadable"}, 500
+
+    # 差分画像は 2 時点の組み合わせごとに変わるため、その組み合わせ専用の置き場に作る。
+    # 使い回すと、別の比較を開いたときに前の枠が残った画像を見せてしまう。
+    diff_dir = out_dir / domain / "comparisons" / f"{from_key}__{to_key}"
+    result = compare_analyzed_pages(
+        old_analyzed,
+        new_analyzed,
+        dynamic_masks=load_dynamic_masks(out_dir / domain / "old"),
+        check_links=False,
+        new_dir=diff_dir,
+    )
+    payload = build_workspace(
+        comparison_result_to_dict(result),
+        out_dir,
+        from_label=from_path.stem,
+        to_label=to_path.stem,
+    )
+    resp = jsonify(payload)
     resp.headers["Cache-Control"] = "no-store"
     return resp

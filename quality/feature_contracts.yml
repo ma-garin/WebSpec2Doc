@@ -818,15 +818,19 @@
       "risk_level": "high",
       "status": "implemented",
       "ui_files": [],
-      "route_files": [],
+      "route_files": [
+        "web/routes/history.py"
+      ],
       "core_files": [
         "src/diff/pair_matcher.py",
         "src/diff/comparison.py",
         "src/diff/link_checker.py",
         "src/diff/screenshot_diff.py",
+        "src/diff/snapshot.py",
         "src/diff/differ.py",
         "src/generator/comparison_reporter.py",
         "src/analyzer/text_similarity.py",
+        "web/services/comparison_workspace.py",
         "src/main.py"
       ],
       "symbols": [
@@ -838,7 +842,9 @@
         "compare_page_pair",
         "save_comparison_outputs",
         "compute_coverage_summary",
-        "save_diff_overlay"
+        "save_diff_overlay",
+        "build_workspace",
+        "snapshot_shots_dir"
       ],
       "outputs": [
         "comparison.json",

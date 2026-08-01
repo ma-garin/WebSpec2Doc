@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import logging
+import shutil
 from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
@@ -9,8 +11,13 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from crawler.page_crawler import FieldData, FormData, PageData
 
+logger = logging.getLogger(__name__)
+
 SNAPSHOTS_DIR_NAME = "snapshots"
 SNAPSHOT_EXTENSION = ".json"
+# 世代別スクリーンショットの置き場（snapshots/20260801-143846-shots/）。
+# JSON と同じ接頭辞にして、対応関係をファイル名だけで追えるようにする。
+SHOTS_DIR_SUFFIX = "-shots"
 SNAPSHOT_TIME_FORMAT = "%Y%m%d-%H%M%S"
 JSON_INDENT = 2
 WORK_DIR_NAME = "work"
@@ -20,13 +27,53 @@ CHECKPOINT_FILE_NAME = "current-checkpoint.json"
 def save_snapshot(pages: list[PageData], output_dir: Path) -> Path:
     snapshots_dir = output_dir / SNAPSHOTS_DIR_NAME
     snapshots_dir.mkdir(parents=True, exist_ok=True)
-    snapshot_path = snapshots_dir / f"{_timestamp()}{SNAPSHOT_EXTENSION}"
+    stamp = _timestamp()
+    snapshot_path = snapshots_dir / f"{stamp}{SNAPSHOT_EXTENSION}"
     payload = [asdict(page) for page in pages]
+    payload = _archive_screenshots(payload, snapshots_dir / f"{stamp}{SHOTS_DIR_SUFFIX}")
     snapshot_path.write_text(
         json.dumps(payload, ensure_ascii=False, indent=JSON_INDENT),
         encoding="utf-8",
     )
     return snapshot_path
+
+
+def _archive_screenshots(payload: list[dict[str, Any]], shots_dir: Path) -> list[dict[str, Any]]:
+    """スクリーンショットを世代ごとに複製し、payload のパスを複製先へ書き換える。
+
+    screenshots/ は再クロールのたびに上書きされるため、JSON だけを世代保存すると
+    古い世代のスナップショットも最新の画像を指してしまう。現新比較で
+    before/after を並べても同じ画像になり、見た目の変化を確認できない。
+
+    複製に失敗したページは元のパスのまま残す（比較そのものは止めない）。
+    """
+    archived: list[dict[str, Any]] = []
+    for page in payload:
+        source = str(page.get("screenshot_path") or "")
+        if not source:
+            archived.append(page)
+            continue
+        copied = _copy_shot(Path(source), shots_dir)
+        archived.append(page if copied is None else {**page, "screenshot_path": str(copied)})
+    return archived
+
+
+def _copy_shot(source: Path, shots_dir: Path) -> Path | None:
+    if not source.is_file():
+        return None
+    try:
+        shots_dir.mkdir(parents=True, exist_ok=True)
+        target = shots_dir / source.name
+        shutil.copy2(source, target)
+        return target
+    except OSError:
+        logger.warning("スクリーンショットを世代保存できませんでした: %s", source, exc_info=True)
+        return None
+
+
+def snapshot_shots_dir(snapshot_path: Path) -> Path:
+    """スナップショット JSON に対応する世代別スクリーンショット置き場を返す。"""
+    return snapshot_path.with_name(f"{snapshot_path.stem}{SHOTS_DIR_SUFFIX}")
 
 
 def save_partial_snapshot(

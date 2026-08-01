@@ -152,9 +152,26 @@ def _evidence_by_id() -> dict[str, dict[str, Any]]:
     return {str(s["id"]): s for s in _load_merged(EVIDENCE_FILE, "sources")["sources"]}
 
 
+def _capabilities_of(domain: dict[str, Any]) -> set[str]:
+    """領域が持つ能力タグ。配列でなければカタログの不備として落とす。
+
+    文字列をそのまま集合にすると1文字ずつに分解され、`"core"` は
+    `{"c","o","r","e"}` になる。どの定義とも一致しなくなり、エラーも
+    警告もないまま「観点が1件も無いセット」ができる。実測で 89 → 0。
+    利用者は打ち間違いに気づけない。
+    """
+    caps = domain.get("capabilities", [])
+    if not isinstance(caps, list) or any(not isinstance(c, str) for c in caps):
+        raise ViewpointGeneratorError(
+            f"領域 {domain.get('name', domain.get('key', '?'))} の capabilities は"
+            f"文字列の配列で指定してください: {caps!r}"
+        )
+    return set(caps)
+
+
 def _applicable(domain: dict[str, Any]) -> tuple[list[dict[str, Any]], list[str]]:
     """領域に適用できる観点定義と、除外した定義IDを返す。"""
-    caps = set(domain.get("capabilities", []))
+    caps = _capabilities_of(domain)
     applied: list[dict[str, Any]] = []
     excluded: list[str] = []
     for blueprint in _blueprints()["blueprints"]:

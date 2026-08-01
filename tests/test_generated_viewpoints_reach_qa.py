@@ -534,3 +534,83 @@ class TestCatalogChangeDetectionUsesContent:
             target.write_bytes(original)
             os.utime(target, (stat.st_atime, stat.st_mtime))
             reload_catalogs(force=True)
+
+
+class TestEveryEntryPointDecidesRole:
+    """観点がQA層へ入る全ての入口が、役割の決定を通ること。
+
+    判定を1箇所に集約しても、その1箇所を通らない入口があれば意味がない。
+    実際、集約した直後にAI提案の経路が漏れていた（role を持たない観点が
+    混ざり、読み出し側で常に「観点」とみなされていた）。
+
+    入口を目視で数えるのは今日4回失敗した形なので、機械的に固定する。
+    入口が増えたらこのテストが落ちる。
+    """
+
+    REPORT = {
+        "screens": [
+            {
+                "page_id": "s1",
+                "title": "T",
+                "url": "https://x/",
+                "forms": [],
+                "buttons": [],
+                "transitions": [],
+            }
+        ]
+    }
+    REQUIRED_KEYS = ("role", "area_label", "expected_result", "evidence")
+
+    class _Provider:
+        def generate_viewpoints(self, screen_info: dict[str, Any]) -> list[dict[str, Any]]:
+            return [{"viewpoint": "AI提案の観点", "category": "機能テスト"}]
+
+    def _assert_shape(self, viewpoints: list[dict[str, Any]], entry: str) -> None:
+        assert viewpoints, f"{entry}: 観点が届いていない"
+        for viewpoint in viewpoints:
+            missing = [k for k in self.REQUIRED_KEYS if k not in viewpoint]
+            assert not missing, f"{entry}: {viewpoint.get('name')} に {missing} が無い"
+
+    def test_override_entry(self) -> None:
+        """AutoRun が固定したスナップショットを流す入口。"""
+        items = [
+            {"persistent_key": f"g{i}", **item}
+            for i, item in enumerate(generate("domain-01")["items"][:3])
+        ]
+        with use_viewpoint_snapshot(items):
+            self._assert_shape(_load_qa_viewpoints(), "override")
+
+    def test_store_entry(self) -> None:
+        """観点ストアの自動選択から読む入口。"""
+        self._assert_shape(_load_qa_viewpoints(), "store")
+
+    def test_provider_entry(self) -> None:
+        """AI提案を足す入口。"""
+        from web.services.qa import helpers
+
+        delivered = helpers._load_qa_viewpoints("x", self.REPORT, self._Provider())
+        self._assert_shape(delivered, "provider")
+
+    def test_no_unaccounted_entry_point_exists(self) -> None:
+        """観点を組み立てる箇所が、役割決定を通る3つの入口だけであること。
+
+        新しい入口が足されたらここで落ちる。落ちたときは、その入口が
+        _legacy_viewpoint を通っているかを確かめてから、この一覧を更新する。
+        """
+        import inspect
+
+        from web.services.qa import helpers
+
+        source = inspect.getsource(helpers._load_qa_viewpoints)
+        # 入口は override / snapshot / provider の3つ。観点の組み立ては
+        # いずれも _legacy_viewpoint の呼び出しでしか行わない。
+        assert source.count("_legacy_viewpoint(") == 3, (
+            "_load_qa_viewpoints 内の観点組み立て箇所が3つから変わった。"
+            "増えた入口が _legacy_viewpoint を通っているか確認してから、"
+            "この件数を更新すること。"
+        )
+        # 辞書リテラルで観点を直接組み立てていないこと（役割決定を迂回する形）
+        assert '"summary_type":' not in source, (
+            "_load_qa_viewpoints 内で観点を直接組み立てている。"
+            "_legacy_viewpoint を通すこと。"
+        )

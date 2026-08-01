@@ -164,7 +164,7 @@ class ViewpointStoreBase:
         if not self.db_path.exists() or self.db_path.stat().st_size == 0:
             return
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with sqlite3.connect(self.db_path, timeout=10) as conn:
                 version = int(conn.execute("PRAGMA user_version").fetchone()[0])
         except sqlite3.DatabaseError:
             version = 0
@@ -177,13 +177,37 @@ class ViewpointStoreBase:
     def _connect(self) -> Iterator[sqlite3.Connection]:
         conn = sqlite3.connect(self.db_path, timeout=10, isolation_level=None)
         conn.row_factory = sqlite3.Row
+        # 待ち時間を先に設定する。journal_mode の切り替えより後に置くと、
+        # 切り替えで競合したときに待たずに落ちる。
+        conn.execute("PRAGMA busy_timeout = 10000")
         conn.execute("PRAGMA foreign_keys = ON")
-        conn.execute("PRAGMA journal_mode = WAL")
-        conn.execute("PRAGMA busy_timeout = 5000")
+        self._ensure_wal(conn)
         try:
             yield conn
         finally:
             conn.close()
+
+    @staticmethod
+    def _ensure_wal(conn: sqlite3.Connection) -> None:
+        """WAL へ切り替える。既に WAL なら何もしない。
+
+        journal_mode の変更は他の接続が開いていると SQLITE_BUSY で即座に
+        失敗し、busy_timeout を待たない。開発サーバーと E2E、複数ワーカーの
+        同時起動で実際に `database is locked` が出た（8スレッド同時初期化で
+        再現率およそ 1/6）。
+
+        WAL はファイルに永続する設定なので、誰か1つが切り替えれば足りる。
+        現在の値を見て、必要なときだけ切り替える。競合した場合は他が
+        切り替え中なので続行する。切り替わらなくても既定のジャーナルで
+        動作は正しく、同時実行性が落ちるだけ。
+        """
+        current = str(conn.execute("PRAGMA journal_mode").fetchone()[0]).lower()
+        if current == "wal":
+            return
+        try:
+            conn.execute("PRAGMA journal_mode = WAL")
+        except sqlite3.OperationalError:
+            pass  # 他の接続が切り替え中。既定のジャーナルでも動作は正しい
 
     @contextmanager
     def _transaction(self) -> Iterator[sqlite3.Connection]:

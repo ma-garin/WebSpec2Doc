@@ -412,3 +412,53 @@ class TestCatalogReloadOnlyWhenChanged:
         finally:
             target.write_text(original, encoding="utf-8")
             reload_catalogs(force=True)
+
+
+class TestRoleIsDecidedOnce:
+    """観点の役割と所属領域を、1箇所で決めていること。
+
+    役割を分類名から都度推測すると、推測箇所ごとに条件がずれる。実際、
+    「予約語と衝突しても領域が消えない」を直した後に、逆方向（通常の観点が
+    見出し扱いされて設計表から消える）が残っていた。判定を1箇所に集約し、
+    以降は決まった結果だけを見る。
+    """
+
+    @pytest.mark.parametrize(
+        "summary_type,quality_area,name,expected_role,expected_area",
+        [
+            # 所属を宣言していれば、分類名が何であれ観点として扱う
+            ("機能テスト", "機能完全性", "X", "viewpoint", "機能完全性"),
+            ("quality_area_l1", "機能性", "Y", "viewpoint", "機能性"),
+            ("category_l2", "信頼性", "Z", "viewpoint", "信頼性"),
+            # 所属を持たず分類が領域の予約語なら、それ自体が見出し
+            ("quality_area_l1", "", "セキュリティ", "area_heading", "セキュリティ"),
+            # 所属を持たず分類が設計の予約語なら、領域は無い
+            ("category_l2", "", "既定観点", "viewpoint", ""),
+            # それ以外は分類名を領域として代用する
+            ("性能テスト", "", "W", "viewpoint", "性能テスト"),
+        ],
+    )
+    def test_role_and_area_are_deterministic(
+        self,
+        summary_type: str,
+        quality_area: str,
+        name: str,
+        expected_role: str,
+        expected_area: str,
+    ) -> None:
+        from web.services.qa.helpers import _role_and_area
+
+        assert _role_and_area(summary_type, quality_area, name) == (
+            expected_role,
+            expected_area,
+        )
+
+    def test_decided_role_is_carried_to_the_qa_layer(self) -> None:
+        """決めた役割が観点に載って QA 層まで渡ること。"""
+        snapshot = [
+            {"persistent_key": "a", "name": "X", "category": "機能テスト", "quality_area": "機能完全性"}
+        ]
+        with use_viewpoint_snapshot(snapshot):
+            delivered = _load_qa_viewpoints()[0]
+        assert delivered["role"] == "viewpoint"
+        assert delivered["area_label"] == "機能完全性"

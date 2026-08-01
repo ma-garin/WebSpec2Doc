@@ -241,3 +241,27 @@ class TestCreateSetFromTemplate:
         with pytest.raises(TemplateNotFoundError):
             create_set_from_template("does-not-exist")
         assert len(store.list_sets()) == before
+
+
+def test_apply_template_twice_does_not_duplicate(
+    templates_dir: Path, store: ViewpointStore
+) -> None:
+    """同じテンプレートを二度適用しても中身が増えないこと。
+
+    防いでいなかったため、既定セットに同名フォルダが47組・観点469件溜まり、
+    分類ツリーが読めなくなった。テンプレートは「この内容を揃える」ものであって
+    「押した回数だけ積む」ものではない。
+    """
+    created = store.create_set({"name": "二重適用セット"})
+    first = apply_template(created["id"], "sample")
+    second = apply_template(created["id"], "sample")
+
+    assert second["created_folders"] == 0
+    assert second["created_items"] == 0
+    assert second["skipped_items"] == first["created_items"]
+
+    items = store.list_items(created["id"], resolved=False)
+    folders = [i for i in items if i["node_type"] == "folder"]
+    viewpoints = [i for i in items if i["node_type"] == "viewpoint"]
+    assert len(folders) == first["created_folders"]
+    assert len(viewpoints) == first["created_items"]

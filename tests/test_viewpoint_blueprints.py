@@ -10,10 +10,25 @@ import pytest
 
 from web.services.viewpoint_blueprints import (
     ViewpointGeneratorError,
+    _blueprints,
+    _evidence_by_id,
     generate,
     get_domain,
     list_domains,
 )
+
+
+def _searchable(*fields: str, lower: bool = False) -> str:
+    """観点定義の指定フィールドを繋いだ検索用文字列を返す。
+
+    体系の網羅を確かめるテストは「その語が定義群のどこかに現れるか」を見る。
+    クラスごとに同じ連結処理を書くと、対象フィールドがずれて測る範囲が
+    変わっても気づけない。1箇所に集約する。
+    """
+    text = " | ".join(
+        "|".join(str(b.get(f, "")) for f in fields) for b in _blueprints()["blueprints"]
+    )
+    return text.lower() if lower else text
 
 
 class TestDomainCatalog:
@@ -70,7 +85,7 @@ class TestGeneratedViewpoints:
         """
         for meta in list_domains():
             for item in generate(meta["key"])["items"]:
-                for field in ("name", "purpose", "recommended_checks"):
+                for field in ("name", "purpose", "recommended_checks", "expected_result", "evidence"):
                     assert "{" not in item[field], f"{meta['name']} / {item['name']} / {field}"
 
     def test_each_item_carries_expected_result_and_evidence(self) -> None:
@@ -81,9 +96,8 @@ class TestGeneratedViewpoints:
         """
         for meta in list_domains():
             for item in generate(meta["key"])["items"]:
-                checks = item["recommended_checks"]
-                assert "期待結果: " in checks, f"{meta['name']} / {item['name']}"
-                assert "証跡: " in checks, f"{meta['name']} / {item['name']}"
+                assert item["expected_result"].strip(), f"{meta['name']} / {item['name']}"
+                assert item["evidence"].strip(), f"{meta['name']} / {item['name']}"
 
     def test_items_are_placed_in_declared_folders(self) -> None:
         for meta in list_domains():
@@ -125,3 +139,192 @@ class TestApplicability:
         """金額を扱う領域に、金額固有の観点が入ること。"""
         finance = next(m for m in list_domains() if m["name"] == "金融")
         assert "money" in finance["capabilities"]
+
+
+class TestGeneratedSetRecordsApplicability:
+    """生成したセットが、適用と除外の記録を持つこと。
+
+    観点表に或る観点が無いとき、意図的な除外なのか作り忘れなのかを
+    後から説明できないと、抜けを指摘されても答えられない。
+    """
+
+    def test_set_carries_applied_and_excluded_definitions(self) -> None:
+        from web.services.viewpoint_store import get_viewpoint_store
+        from web.services.viewpoint_templates import create_set_from_template
+
+        store = get_viewpoint_store()
+        created = create_set_from_template("domain-16", "【テスト】適用可否")
+        try:
+            record = store.get_set(created["set"]["id"])["applicability"]
+            assert record["source"] == "domain_blueprint"
+            assert record["domain_key"] == "domain-16"
+            total = list_domains()[0]["total_definitions"]
+            assert len(record["applied"]) + len(record["excluded"]) == total
+            # データベース領域は画面を持たないので、画面前提の観点が除外される
+            assert {"U01", "X01", "X02"}.issubset(set(record["excluded"]))
+        finally:
+            store.delete_set(created["set"]["id"])
+
+
+class TestStandardCoverage:
+    """参考ページに掲げた標準を、項目単位で観点が覆っていること。
+
+    「その標準に触れている観点が1件でもあるか」の 0/1 判定では、
+    ISO 25010 の8特性のうち1つしか見ていなくても満点になる。
+    標準の中の項目を単位にして測る。
+    """
+
+    def _haystack(self) -> str:
+        return _searchable("theme", "kind", "technique", "quality", "test_type", lower=True)
+
+    @pytest.mark.parametrize(
+        "characteristic",
+        [
+            "機能適合性", "性能効率性", "互換性", "相互作用性", "信頼性",
+            "セキュリティ", "保守性", "柔軟性", "安全性",
+        ],
+    )
+    def test_iso25010_characteristics_are_covered(self, characteristic: str) -> None:
+        assert characteristic.lower() in self._haystack()
+
+    @pytest.mark.parametrize("principle", ["知覚可能", "操作可能", "理解可能", "堅牢"])
+    def test_wcag_principles_are_covered(self, principle: str) -> None:
+        assert principle.lower() in self._haystack()
+
+    @pytest.mark.parametrize(
+        "category",
+        [
+            "アクセス制御", "インジェクション", "安全でない設計", "設定不備",
+            "脆弱なコンポーネント", "認証の失敗", "完全性の失敗", "ログと監視", "SSRF",
+        ],
+    )
+    def test_owasp_categories_are_covered(self, category: str) -> None:
+        assert category.lower() in self._haystack()
+
+    @pytest.mark.parametrize(
+        "technique",
+        [
+            "同値分割", "境界値分析", "デシジョンテーブル", "状態遷移テスト",
+            "ユースケーステスト", "ペアワイズ", "エラー推測",
+        ],
+    )
+    def test_istqb_techniques_are_covered(self, technique: str) -> None:
+        assert technique.lower() in self._haystack()
+
+
+class TestPipelineStageCoverage:
+    """URL→画面遷移図→テスト設計→テストケース→実行→レポートの各工程に、
+    対応する観点定義があること。
+
+    観点はこの製品のエンジンなので、製品が生成する成果物そのものを
+    検証する観点が無いと、生成物の正しさを誰も確かめない。
+    """
+
+    STAGES = {
+        "URL・クロール": ["WE01", "WE02"],
+        "画面遷移図": ["WE03"],
+        "テスト設計": ["WQ02", "WQ03"],
+        "テストケース": ["WE05"],
+        "テスト実行": ["WE06", "WE07"],
+        "レポート・証跡": ["WE08", "WE09"],
+        "追跡性": ["WE04"],
+    }
+
+    @pytest.mark.parametrize("stage,identifiers", list(STAGES.items()))
+    def test_stage_has_dedicated_definitions(self, stage: str, identifiers: list[str]) -> None:
+        available = {b["identifier"] for b in _blueprints()["blueprints"]}
+        missing = [i for i in identifiers if i not in available]
+        assert not missing, f"{stage}: {missing} が無い"
+
+
+class TestQualityManagementCoverage:
+    """品質保証・品質マネジメントの体系が、観点の根拠として使われていること。
+
+    移植元の定義は製品品質（ISO 25010）とテスト技法（29119-4）に寄っており、
+    「正しく作ったか」は問えても「正しいものを作ったか」を問う観点が無かった。
+    ISO 9000 系・要求工学・検証と妥当性確認・レビューの体系を持たないまま
+    観点を名乗ると、テストの網羅性を品質保証の網羅性と取り違える。
+    """
+
+    def _referenced_documents(self) -> str:
+        evidence = _evidence_by_id()
+        used = {s for b in _blueprints()["blueprints"] for s in b["sources"]}
+        return " | ".join(str(evidence.get(s, {}).get("document", "")) for s in used).lower()
+
+    @pytest.mark.parametrize(
+        "standard",
+        [
+            "ISO 9000", "ISO 9001", "90003", "19011", "12207",
+            "29148", "1012", "1028", "33002", "31000", "25019", "20000",
+        ],
+    )
+    def test_quality_management_standard_is_referenced(self, standard: str) -> None:
+        assert standard.lower() in self._referenced_documents()
+
+    @pytest.mark.parametrize(
+        "theme",
+        [
+            "妥当性確認", "要求の検証可能性", "要求集合の健全性", "レビュー",
+            "不適合の処理", "リスク対応", "変更とリリース", "利用時品質",
+            "客観的証拠", "検証と妥当性確認の分離", "構成管理", "ソフトウェア品質保証",
+        ],
+    )
+    def test_quality_management_theme_exists(self, theme: str) -> None:
+        assert theme in {b["theme"] for b in _blueprints()["blueprints"]}
+
+    def test_every_referenced_source_exists_in_catalog(self) -> None:
+        """観点が参照する出典が、すべてカタログに実在すること。
+
+        存在しない出典IDを参照していると、根拠のリンクが切れたまま
+        「規格に準拠」と表示され、利用者が確かめられない。
+        """
+        evidence = _evidence_by_id()
+        missing = sorted(
+            {s for b in _blueprints()["blueprints"] for s in b["sources"] if s not in evidence}
+        )
+        assert not missing, f"カタログに無い出典を参照: {missing}"
+
+
+class TestQualityModelCoverage:
+    """品質モデルの層と、顧客満足への写像が観点に含まれること。
+
+    既存の定義は「動かしたときに仕様どおりか」に寄っていた。静的な作りを見る
+    内部品質が無いと変更に耐えられるかを問えず、狩野モデルの分類が無いと
+    全ての品質要求を同じ重みで扱い、当たり前品質を欠いたまま魅力的品質に
+    工数を割く判断が起きる。
+
+    「外部品質」は語として持たない。ISO/IEC 25010:2023 で内部/外部の区別は
+    廃され製品品質へ統合されたため、機能・性能・セキュリティ等の既存定義が
+    実質的にそれにあたる。層の名前を後付けしない。
+    """
+
+    def _strict(self) -> str:
+        return _searchable("theme", "kind", "quality")
+
+    @pytest.mark.parametrize("layer", ["内部品質", "利用時品質"])
+    def test_quality_layers_are_present(self, layer: str) -> None:
+        assert layer in self._strict()
+
+    @pytest.mark.parametrize(
+        "classification",
+        ["当たり前品質", "一元的品質", "魅力的品質", "逆品質", "無関心品質"],
+    )
+    def test_kano_classifications_are_present(self, classification: str) -> None:
+        assert classification in self._strict()
+
+    @pytest.mark.parametrize(
+        "sub", ["モジュール性", "再利用性", "解析性", "修正性", "試験性"]
+    )
+    def test_maintainability_subcharacteristics_are_present(self, sub: str) -> None:
+        assert sub in self._strict()
+
+    def test_must_be_quality_outranks_attractive_quality(self) -> None:
+        """当たり前品質の観点が、魅力的品質より高い優先度を持つこと。
+
+        当たり前品質は満たしても満足が上がらないため後回しにされやすいが、
+        1つでも欠けると利用が止まる。優先度が逆転していると、観点表が
+        誤った工数配分を誘導する。
+        """
+        by_theme = {b["theme"]: b for b in _blueprints()["blueprints"]}
+        order = {"P0": 0, "P1": 1, "P2": 2, "P3": 3}
+        assert order[by_theme["当たり前品質"]["priority"]] < order[by_theme["魅力的品質"]["priority"]]

@@ -27,6 +27,11 @@ BLUEPRINTS_FILE = "viewpoint_blueprints.json"
 DOMAINS_FILE = "viewpoint_domains.json"
 EVIDENCE_FILE = "viewpoint_evidence.json"
 
+# 追加分は接尾辞付きのファイルとして置く（例: viewpoint_blueprints_web.json）。
+# ファイル名を定数で列挙すると、カテゴリを1つ増やすたびに定数・ループ・docstring の
+# 3箇所を直すことになる。命名規約で拾えば、ファイルを置くだけで増える。
+EXTRA_SUFFIX = "_*.json"
+
 # 優先度から観点の重み(1-5)へ。移植元は P0/P1 の2値しか持たないため、
 # 存在しない粒度を作らずそのまま2値で写す。
 PRIORITY_WEIGHT = {"P0": 5, "P1": 4, "P2": 3, "P3": 2}
@@ -47,9 +52,33 @@ def _load(filename: str) -> dict[str, Any]:
         raise ViewpointGeneratorError(f"観点カタログの読み込みに失敗しました: {filename}") from exc
 
 
+def _load_merged(base_file: str, key: str) -> dict[str, Any]:
+    """基本ファイルと、同じ接頭辞を持つ追加ファイルの中身を合わせて返す。
+
+    ファイルを分けているのは出どころを混ぜないため。観点定義なら
+
+    - 汎用: 業務システム一般の定義（移植元は対象システムを知らない）
+    - Web固有: クロールした実画面と、この製品が生成する成果物
+      （画面遷移図・テスト設計・テストケース・実行結果・レポート）に対応する定義
+    - 品質保証: 品質マネジメント・要求工学・検証と妥当性確認・レビュー・
+      リスクマネジメントの体系。汎用分は製品品質とテスト技法に寄っており、
+      「正しいものを作ったか」を問う観点を持たない
+    - 品質モデル: 内部品質（静的な作り）と、要求を満たすことが満足に
+      結び付くかの分類
+
+    出どころは分けたいが、使う側は1つの束として扱いたい。ここで合わせる。
+    """
+    base = _load(base_file)
+    merged = list(base[key])
+    stem = base_file.removesuffix(".json")
+    for path in sorted(DATA_DIR.glob(stem + EXTRA_SUFFIX)):
+        merged += _load(path.name).get(key, [])
+    return {**base, key: merged}
+
+
 @lru_cache(maxsize=1)
 def _blueprints() -> dict[str, Any]:
-    return _load(BLUEPRINTS_FILE)
+    return _load_merged(BLUEPRINTS_FILE, "blueprints")
 
 
 @lru_cache(maxsize=1)
@@ -59,7 +88,7 @@ def _domains_by_key() -> dict[str, dict[str, Any]]:
 
 @lru_cache(maxsize=1)
 def _evidence_by_id() -> dict[str, dict[str, Any]]:
-    return {str(s["id"]): s for s in _load(EVIDENCE_FILE)["sources"]}
+    return {str(s["id"]): s for s in _load_merged(EVIDENCE_FILE, "sources")["sources"]}
 
 
 def _applicable(domain: dict[str, Any]) -> tuple[list[dict[str, Any]], list[str]]:
@@ -115,23 +144,32 @@ def _standards_of(blueprint: dict[str, Any]) -> str:
     return ""
 
 
+def _fill(template: str, context: dict[str, Any]) -> str:
+    """観点定義のプレースホルダを領域の語彙で埋める。
+
+    観点定義は `{primary_object}` のように対象を伏せて書かれている。
+    領域プロファイルの語彙（金融なら「口座・契約・取引残高」）で埋めて
+    初めて、何を見るのか読める文になる。
+    """
+    return str(template).format(**context)
+
+
 def _checks_of(
     blueprint: dict[str, Any], context: dict[str, Any], target: str, level: str
 ) -> str:
-    """確認内容・操作・期待結果・証跡を1つの手順テキストにまとめる。
+    """確認内容・操作・判定点を、実施手順のテキストにまとめる。
 
-    観点は「何を見るか」だけでは実行できない。判定点と期待結果と、
-    合否の根拠になる証跡まで揃って初めてテスト設計に使える。
+    期待結果と証跡はここに含めない。合否の判定に使う値なので、
+    手順の中に埋めると機械的に取り出せず、CSV でも1セルに混ざる。
+    それぞれ独立した列に持つ。
     """
-    fmt = lambda value: str(value).format(**context)  # noqa: E731
     return "\n".join(
         [
             f"確認内容: {context['domain']}の「{target}」に対し、"
-            f"{fmt(blueprint['condition'])}場合の「{blueprint['kind']}」を{level}で確認する。",
-            f"操作: {fmt(blueprint['operation'])}",
-            f"判定点: {fmt(blueprint['point'])}",
-            f"期待結果: {fmt(blueprint['expected'])}",
-            f"証跡: {fmt(blueprint['proof'])}",
+            f"{_fill(blueprint['condition'], context)}場合の"
+            f"「{blueprint['kind']}」を{level}で確認する。",
+            f"操作: {_fill(blueprint['operation'], context)}",
+            f"判定点: {_fill(blueprint['point'], context)}",
         ]
     )
 
@@ -166,6 +204,10 @@ def generate(domain_key: str) -> dict[str, Any]:
                         f"{blueprint['quality']}と{domain['critical_risk']}の未検出を防ぐため。"
                     ),
                     "recommended_checks": _checks_of(blueprint, context, target, level),
+                    "expected_result": _fill(blueprint["expected"], context),
+                    "evidence": _fill(blueprint["proof"], context),
+                    "technique": str(blueprint["technique"]),
+                    "test_level": level,
                     "risk_weight": PRIORITY_WEIGHT.get(str(blueprint["priority"]), DEFAULT_WEIGHT),
                     "automation": "semi_automated",
                     "standards": _standards_of(blueprint),
@@ -187,5 +229,6 @@ def generate(domain_key: str) -> dict[str, Any]:
         },
         "folders": folders,
         "items": items,
+        "applied_definitions": [str(b["identifier"]) for b in applied],
         "excluded_definitions": excluded,
     }

@@ -1,0 +1,127 @@
+{
+ "schema_version": 1,
+ "source": "WebSpec2Doc 固有（品質保証・品質マネジメント体系）",
+ "note": "移植元の出典カタログは製品品質（ISO 25010系）とテストプロセス（29119系）に寄っており、品質マネジメント（ISO 9000系）・ライフサイクル（12207）・要求工学（29148）・検証と妥当性確認（1012）・レビュー（IEEE 1028）が1件も無かった。ここで補う。組織成熟度（CMMI・ISO 9004）は、この製品がWebサイトの実測しかできず評価対象にできないため入れない。URLは各規格の公式カタログページのみを記載し、条項番号は推測しない。",
+ "sources": [
+  {
+   "id": "EV-ISO-9000-2015",
+   "labels": ["ISO 9000 品質マネジメント", "ISO 9000", "国際規格"],
+   "category": "国際規格",
+   "issuer": "ISO",
+   "document": "ISO 9000:2015 Quality management systems — Fundamentals and vocabulary",
+   "location": "品質・要求事項・適合・不適合・是正処置の定義。条項の適合性確認には正規版の参照が必要",
+   "url": "https://www.iso.org/standard/45481.html",
+   "access": "public_summary"
+  },
+  {
+   "id": "EV-ISO-9001-2015",
+   "labels": ["ISO 9001 QMS要求事項", "ISO 9001", "JIS Q 9001", "国際規格"],
+   "category": "国際規格",
+   "issuer": "ISO",
+   "document": "ISO 9001:2015 Quality management systems — Requirements",
+   "location": "設計・開発の計画/インプット/アウトプット/レビュー/検証/妥当性確認/変更管理、不適合の管理。条項の適合性確認には正規版の参照が必要",
+   "url": "https://www.iso.org/standard/62085.html",
+   "access": "public_summary"
+  },
+  {
+   "id": "EV-ISO-90003-2018",
+   "labels": ["ISO/IEC 90003 ソフトウェアへの9001適用", "90003", "国際規格"],
+   "category": "国際規格",
+   "issuer": "ISO/IEC",
+   "document": "ISO/IEC/IEEE 90003:2018 Software engineering — Guidelines for the application of ISO 9001:2015 to computer software",
+   "location": "ISO 9001 の要求事項をソフトウェアの設計・開発・検証へ適用する際の解釈",
+   "url": "https://www.iso.org/standard/74348.html",
+   "access": "public_summary"
+  },
+  {
+   "id": "EV-ISO-19011-2018",
+   "labels": ["ISO 19011 監査", "ISO 19011", "国際規格"],
+   "category": "国際規格",
+   "issuer": "ISO",
+   "document": "ISO 19011:2018 Guidelines for auditing management systems",
+   "location": "監査証拠・監査所見・客観的証拠に基づく結論の導出",
+   "url": "https://www.iso.org/standard/70017.html",
+   "access": "public_summary"
+  },
+  {
+   "id": "EV-ISO-12207-2017",
+   "labels": ["ISO/IEC/IEEE 12207 ライフサイクル", "12207", "国際規格"],
+   "category": "国際規格",
+   "issuer": "ISO/IEC/IEEE",
+   "document": "ISO/IEC/IEEE 12207:2017 Systems and software engineering — Software life cycle processes",
+   "location": "検証プロセス・妥当性確認プロセス・品質保証プロセス・構成管理プロセス",
+   "url": "https://www.iso.org/standard/63712.html",
+   "access": "public_summary"
+  },
+  {
+   "id": "EV-ISO-29148-2018",
+   "labels": ["ISO/IEC/IEEE 29148 要求工学", "29148", "国際規格"],
+   "category": "国際規格",
+   "issuer": "ISO/IEC/IEEE",
+   "document": "ISO/IEC/IEEE 29148:2018 Systems and software engineering — Life cycle processes — Requirements engineering",
+   "location": "個々の要求の特性（必要性・明確性・検証可能性）と要求集合の特性（完全性・無矛盾性・追跡可能性）",
+   "url": "https://www.iso.org/standard/72089.html",
+   "access": "public_summary"
+  },
+  {
+   "id": "EV-IEEE-1012-2016",
+   "labels": ["IEEE 1012 検証と妥当性確認", "1012", "V&V", "IEC / IEEE 系"],
+   "category": "国際規格",
+   "issuer": "IEEE",
+   "document": "ISO/IEC/IEEE 1012:2016 Systems, software, and hardware verification and validation",
+   "location": "検証（正しく作ったか）と妥当性確認（正しいものを作ったか）の分離、独立性の水準",
+   "url": "https://www.iso.org/standard/72042.html",
+   "access": "public_summary"
+  },
+  {
+   "id": "EV-IEEE-1028-2008",
+   "labels": ["IEEE 1028 ソフトウェアレビュー", "1028", "IEC / IEEE 系"],
+   "category": "国際規格",
+   "issuer": "IEEE",
+   "document": "IEEE 1028-2008 IEEE Standard for Software Reviews and Audits",
+   "location": "管理レビュー・技術レビュー・インスペクション・ウォークスルー・監査の役割と記録",
+   "url": "https://standards.ieee.org/ieee/1028/4218/",
+   "access": "public_summary"
+  },
+  {
+   "id": "EV-ISO-33002-2015",
+   "labels": ["ISO/IEC 33002 プロセスアセスメント", "33000", "15504", "国際規格"],
+   "category": "国際規格",
+   "issuer": "ISO/IEC",
+   "document": "ISO/IEC 33002:2015 Information technology — Process assessment — Requirements for performing process assessment",
+   "location": "プロセス実施の客観的証拠に基づく評価",
+   "url": "https://www.iso.org/standard/54176.html",
+   "access": "public_summary"
+  },
+  {
+   "id": "EV-ISO-31000-2018",
+   "labels": ["ISO 31000 リスクマネジメント", "ISO 31000", "国際規格"],
+   "category": "国際規格",
+   "issuer": "ISO",
+   "document": "ISO 31000:2018 Risk management — Guidelines",
+   "location": "リスクの特定・分析・評価・対応と、残留リスクの受容判断",
+   "url": "https://www.iso.org/standard/65694.html",
+   "access": "public_summary"
+  },
+  {
+   "id": "EV-ISO-25019-2023",
+   "labels": ["ISO/IEC 25019 利用時品質", "25019", "国際規格"],
+   "category": "国際規格",
+   "issuer": "ISO/IEC",
+   "document": "ISO/IEC 25019:2023 SQuaRE — Quality-in-use model",
+   "location": "特定の利用状況における有効性・効率性・満足性・リスク回避性・利用状況網羅性",
+   "url": "https://www.iso.org/standard/78176.html",
+   "access": "public_summary"
+  },
+  {
+   "id": "EV-ISO-20000-1-2018",
+   "labels": ["ISO/IEC 20000 ITサービスマネジメント", "20000", "国際規格"],
+   "category": "国際規格",
+   "issuer": "ISO/IEC",
+   "document": "ISO/IEC 20000-1:2018 Information technology — Service management — Part 1: Service management system requirements",
+   "location": "サービス提供・変更管理・リリース及び展開管理・インシデント管理",
+   "url": "https://www.iso.org/standard/70636.html",
+   "access": "public_summary"
+  }
+ ]
+}

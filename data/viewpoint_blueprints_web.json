@@ -1,0 +1,741 @@
+{
+ "schema_version": 1,
+ "source": "WebSpec2Doc 固有（kanten 由来ではない）",
+ "note": "kanten の51定義は業務システム汎用で、Web アプリ固有の検証と、WebSpec2Doc が生成する成果物（画面遷移図・テスト設計・テストケース・実行結果・レポート）に対応する観点を持たない。参考ページに掲載した標準・先行研究のうち、Web 固有のものをここで観点にする。",
+ "blueprints": [
+  {
+   "identifier": "WC01",
+   "test_type": "アクセシビリティテスト",
+   "theme": "知覚可能",
+   "target": "primary_flow",
+   "series": "準正常系",
+   "kind": "非テキストと色の代替",
+   "condition": "画像・アイコン・色のみで意味を伝えている箇所がある",
+   "point": "代替テキスト・コントラスト比・色以外の手がかり",
+   "operation": "{level_scope}で各画面の非テキスト要素を列挙し、代替テキストの有無とコントラスト比を測定する",
+   "expected": "意味を持つ非テキストに代替が付き、コントラスト比が基準を満たし、色を見分けられなくても情報が失われない",
+   "proof": "要素一覧・代替テキスト・コントラスト測定値・スクリーンショット",
+   "levels": [
+    "システムテスト"
+   ],
+   "technique": "アクセシビリティ検査",
+   "quality": "包括性・知覚可能性",
+   "sources": [
+    "EV-W3C-WCAG-2.2"
+   ],
+   "capabilities": [
+    "accessibility"
+   ],
+   "risk": "視覚に依存した情報伝達により、一部の利用者が業務を完遂できない",
+   "priority": "P1",
+   "measure": "WCAG 2.2 の該当達成基準",
+   "automation": "自動検出できるのは達成基準の一部。残りは手動確認"
+  },
+  {
+   "identifier": "WC02",
+   "test_type": "アクセシビリティテスト",
+   "theme": "理解可能",
+   "target": "primary_object",
+   "series": "異常系",
+   "kind": "入力エラーの識別と修正手段",
+   "condition": "入力値が要求を満たさず、エラーになる",
+   "point": "エラー箇所の特定・原因の説明・修正方法の提示",
+   "operation": "各入力項目を不正値で送信し、エラーの提示方法とフォーカス移動を確認する",
+   "expected": "どの項目が・なぜ不正かがテキストで示され、修正方法が分かり、支援技術にも通知される",
+   "proof": "エラー表示・DOM の aria 属性・フォーカス順・読み上げログ",
+   "levels": [
+    "システムテスト"
+   ],
+   "technique": "アクセシビリティ検査",
+   "quality": "理解容易性・ユーザーエラー防止性",
+   "sources": [
+    "EV-W3C-WCAG-2.2"
+   ],
+   "capabilities": [
+    "accessibility"
+   ],
+   "risk": "エラーの原因が分からず、利用者が入力を完了できない",
+   "priority": "P1",
+   "measure": "WCAG 2.2 の該当達成基準",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "WC03",
+   "test_type": "アクセシビリティテスト",
+   "theme": "堅牢",
+   "target": "primary_flow",
+   "series": "正常系",
+   "kind": "マークアップの妥当性と支援技術互換",
+   "condition": "動的に生成・更新される領域がある",
+   "point": "ID重複・不正な入れ子・ライブリージョンの通知",
+   "operation": "DOM を検証し、動的更新の前後で支援技術への通知が発生するかを確認する",
+   "expected": "マークアップが妥当で、更新内容が支援技術へ通知され、操作の文脈が失われない",
+   "proof": "DOM 検証結果・aria-live の発火ログ・読み上げログ",
+   "levels": [
+    "システムテスト"
+   ],
+   "technique": "構成テスト",
+   "quality": "包括性・相互運用性・堅牢性",
+   "sources": [
+    "EV-W3C-WCAG-2.2"
+   ],
+   "capabilities": [
+    "accessibility"
+   ],
+   "risk": "支援技術で内容が正しく解釈されず、動的更新に気づけない",
+   "priority": "P2",
+   "measure": "WCAG 2.2 の該当達成基準",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "WC04",
+   "test_type": "アクセシビリティテスト",
+   "theme": "操作可能",
+   "target": "primary_flow",
+   "series": "準正常系",
+   "kind": "入力手段と時間制限",
+   "condition": "ポインタ以外の手段で操作する、または操作に時間制限がある",
+   "point": "キーボードのみでの到達・フォーカスの可視性・時間制限の延長",
+   "operation": "ポインタを使わず{primary_flow}を最後まで操作し、時間制限のある画面で延長できるかを確認する",
+   "expected": "全ての操作対象へ到達でき、現在位置が見え、閉じ込められず、時間制限を延長または解除できる",
+   "proof": "操作記録・フォーカス順・スクリーンショット・時間制限の挙動",
+   "levels": [
+    "システムテスト"
+   ],
+   "technique": "キーボード操作テスト",
+   "quality": "包括性・操作可能性",
+   "sources": [
+    "EV-W3C-WCAG-2.2"
+   ],
+   "capabilities": [
+    "accessibility"
+   ],
+   "risk": "ポインタを使えない利用者が業務を完遂できない",
+   "priority": "P1",
+   "measure": "WCAG 2.2 の該当達成基準",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "WS01",
+   "test_type": "セキュリティテスト",
+   "theme": "安全でない設計",
+   "target": "primary_flow",
+   "series": "異常系",
+   "kind": "業務フローの悪用",
+   "condition": "業務フローに、順序・回数・金額などの前提がある",
+   "point": "手順の飛ばし・巻き戻し・回数超過・並行実行",
+   "operation": "画面を経由せず各段階のリクエストを直接送り、前提を崩した順序で{primary_flow}を実行する",
+   "expected": "前提を満たさない要求が拒否され、業務上ありえない状態に到達できない",
+   "proof": "リクエスト列・応答・状態遷移・保存データ差分",
+   "levels": [
+    "システムテスト"
+   ],
+   "technique": "脅威モデリングベーステスト",
+   "quality": "完全性・機能正確性",
+   "sources": [
+    "EV-OWASP-ASVS-5.0.0"
+   ],
+   "capabilities": [
+    "security"
+   ],
+   "risk": "画面制約だけに依存した設計により、直接リクエストで業務前提を破られる",
+   "priority": "P0",
+   "measure": "拒否されるべき要求の拒否率",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "WS02",
+   "test_type": "セキュリティテスト",
+   "theme": "設定不備",
+   "target": "external_interface",
+   "series": "準正常系",
+   "kind": "ヘッダ・エラー・既定値",
+   "condition": "本番相当の構成で公開されている",
+   "point": "セキュリティヘッダ・詳細エラー・既定資格情報・不要な公開パス",
+   "operation": "応答ヘッダを収集し、存在しないパス・不正メソッド・例外経路の応答内容を確認する",
+   "expected": "必要なヘッダが付与され、スタックトレースや内部パスが応答に出ず、既定資格情報が無効化されている",
+   "proof": "応答ヘッダ一覧・エラー応答本文・到達可能パス一覧",
+   "levels": [
+    "システムテスト"
+   ],
+   "technique": "構成テスト",
+   "quality": "機密性・セキュリティ",
+   "sources": [
+    "EV-OWASP-ASVS-5.0.0",
+    "EV-RFC-9110"
+   ],
+   "capabilities": [
+    "security"
+   ],
+   "risk": "設定の既定値や詳細エラーから内部構造が漏れ、攻撃の足がかりになる",
+   "priority": "P1",
+   "measure": "要求したヘッダの付与率",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "WS03",
+   "test_type": "セキュリティテスト",
+   "theme": "認証の失敗",
+   "target": "primary_flow",
+   "series": "異常系",
+   "kind": "セッションと試行制御",
+   "condition": "ログインを伴う経路がある",
+   "point": "総当たり制限・セッション固定・ログアウト後の再利用・有効期限",
+   "operation": "連続失敗・ログイン前後のセッション識別子・ログアウト後の旧識別子で再アクセスする",
+   "expected": "試行が制限され、ログイン時に識別子が再発行され、ログアウト後の識別子が失効している",
+   "proof": "Cookie の変化・応答コード・試行回数と待ち時間・監査ログ",
+   "levels": [
+    "システムテスト"
+   ],
+   "technique": "セキュリティネガティブテスト",
+   "quality": "真正性・アクセス制御性",
+   "sources": [
+    "EV4-OWASP-AUTH-CS",
+    "EV4-RFC-6265"
+   ],
+   "capabilities": [
+    "security"
+   ],
+   "risk": "セッションの使い回しや総当たりにより、他人の権限で操作される",
+   "priority": "P0",
+   "measure": "失効すべき識別子の失効率",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "WS04",
+   "test_type": "セキュリティテスト",
+   "theme": "ログと監視",
+   "target": "critical_risk",
+   "series": "準正常系",
+   "kind": "重要操作の記録と検知",
+   "condition": "認証・権限変更・金額変更などの重要操作がある",
+   "point": "記録の有無・改ざん耐性・検知までの時間",
+   "operation": "重要操作と失敗操作を実施し、記録内容と通知の発生を確認する",
+   "expected": "誰が・いつ・何を行ったかが追跡でき、失敗の連続が検知され、記録を後から書き換えられない",
+   "proof": "監査ログ・通知履歴・記録の改ざん試行結果",
+   "levels": [
+    "運用受入"
+   ],
+   "technique": "運用シナリオテスト",
+   "quality": "責任追跡性・可観測性",
+   "sources": [
+    "EV-OWASP-ASVS-5.0.0"
+   ],
+   "capabilities": [
+    "security",
+    "operations"
+   ],
+   "risk": "不正操作が記録されず、事後に何が起きたか説明できない",
+   "priority": "P1",
+   "measure": "記録すべき操作の記録率",
+   "automation": "手動確認が中心"
+  },
+  {
+   "identifier": "WS05",
+   "test_type": "セキュリティテスト",
+   "theme": "SSRF・外部要求",
+   "target": "external_interface",
+   "series": "異常系",
+   "kind": "サーバ側からの外部取得",
+   "condition": "利用者が指定した URL やファイル参照をサーバ側が取得する",
+   "point": "内部アドレス・リダイレクト追跡・スキーム制限",
+   "operation": "内部アドレスや別スキームを指す値を与え、サーバ側の取得結果と応答内容を確認する",
+   "expected": "許可した宛先以外への要求が拒否され、取得結果が利用者へそのまま返らない",
+   "proof": "要求先の記録・応答内容・拒否ログ",
+   "levels": [
+    "統合テスト"
+   ],
+   "technique": "セキュリティネガティブテスト",
+   "quality": "機密性・完全性",
+   "sources": [
+    "EV-OWASP-ASVS-5.0.0"
+   ],
+   "capabilities": [
+    "security",
+    "interface"
+   ],
+   "risk": "サーバを踏み台にして内部ネットワークへ到達される",
+   "priority": "P0",
+   "measure": "許可外宛先の拒否率",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "WS06",
+   "test_type": "セキュリティテスト",
+   "theme": "完全性の失敗",
+   "target": "external_interface",
+   "series": "準正常系",
+   "kind": "外部資源と更新経路",
+   "condition": "外部ホストのスクリプト・スタイル・パッケージを読み込む",
+   "point": "配信元の限定・改ざん検証・バージョン固定",
+   "operation": "読み込む外部資源を列挙し、配信元・完全性検証・固定状況を確認する",
+   "expected": "資源の配信元が限定され、改ざんを検証でき、意図しない版へ勝手に入れ替わらない",
+   "proof": "資源一覧・配信元・完全性属性・依存関係の版",
+   "levels": [
+    "システムテスト"
+   ],
+   "technique": "構成テスト",
+   "quality": "完全性・セキュリティ",
+   "sources": [
+    "EV-OWASP-ASVS-5.0.0"
+   ],
+   "capabilities": [
+    "security"
+   ],
+   "risk": "外部資源の差し替えにより、全利用者へ改ざんされたコードが配布される",
+   "priority": "P1",
+   "measure": "完全性検証を持つ外部資源の割合",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "WS07",
+   "test_type": "セキュリティテスト",
+   "theme": "脆弱なコンポーネント",
+   "target": "critical_risk",
+   "series": "準正常系",
+   "kind": "既知脆弱性の残存",
+   "condition": "第三者製のライブラリ・フレームワークを利用している",
+   "point": "版の特定可否・既知脆弱性の有無・更新経路",
+   "operation": "利用中の部品と版を列挙し、公開されている既知脆弱性と照合する",
+   "expected": "利用部品と版が特定でき、対処済みか、未対処なら影響と期限が記録されている",
+   "proof": "部品一覧と版・照合結果・対処記録",
+   "levels": [
+    "運用受入"
+   ],
+   "technique": "リスクベースドテスト",
+   "quality": "セキュリティ・保守性",
+   "sources": [
+    "EV-OWASP-ASVS-5.0.0"
+   ],
+   "capabilities": [
+    "security"
+   ],
+   "risk": "既知の脆弱性が放置され、公開情報だけで攻撃が成立する",
+   "priority": "P1",
+   "measure": "未対処脆弱性の件数と経過日数",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "WQ01",
+   "test_type": "性能テスト",
+   "theme": "体感性能",
+   "target": "primary_flow",
+   "series": "正常系",
+   "kind": "表示・応答・視覚安定性",
+   "condition": "利用者が実際に使う回線と端末条件で表示する",
+   "point": "主要コンテンツの表示時間・操作への応答時間・表示のずれ",
+   "operation": "{level_scope}で主要画面を読み込み、表示完了・初回操作応答・レイアウト移動量を測定する",
+   "expected": "測定値が合意した目標を満たし、読み込み中に押した操作が別の要素に当たらない",
+   "proof": "測定値・計測トレース・録画",
+   "levels": [
+    "システムテスト"
+   ],
+   "technique": "性能測定",
+   "quality": "性能効率性・時間効率性・相互作用性",
+   "sources": [
+    "EV-ISO-25010-2023"
+   ],
+   "capabilities": [
+    "performance",
+    "ui"
+   ],
+   "risk": "表示が遅い・要素が動くことで、操作を誤るか離脱する",
+   "priority": "P1",
+   "measure": "対象システムに対して合意した目標値。未定義ならテスト前に要求不備として解消する",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "WQ02",
+   "test_type": "機能テスト",
+   "theme": "機能適合性",
+   "target": "primary_flow",
+   "series": "正常系",
+   "kind": "実測仕様と要求の照合",
+   "condition": "クロールで実測した画面・項目・遷移がある",
+   "point": "要求にあって実装に無いもの、実装にあって要求に無いもの",
+   "operation": "実測した画面・入力項目・遷移を要求仕様と突き合わせ、双方向の差分を列挙する",
+   "expected": "要求の各項目が実装に対応づき、対応の無いものは追加要求か不要かが判定されている",
+   "proof": "実測一覧・要求一覧・対応表・未対応の理由",
+   "levels": [
+    "受け入れテスト"
+   ],
+   "technique": "トレーサビリティ分析",
+   "quality": "機能適合性・機能完全性",
+   "sources": [
+    "EV4-ISO-29119-3-2021",
+    "EV-ISO-25010-2023"
+   ],
+   "capabilities": [
+    "core"
+   ],
+   "risk": "要求と実装の対応が取れず、抜けと余剰に気づけない",
+   "priority": "P1",
+   "measure": "要求項目のうち実装に対応づいた割合",
+   "automation": "半自動（実測は自動・判定は人）"
+  },
+  {
+   "identifier": "WQ03",
+   "test_type": "機能テスト",
+   "theme": "入力妥当性",
+   "target": "primary_object",
+   "series": "準正常系",
+   "kind": "項目間の組合せ",
+   "condition": "複数の入力項目が互いの妥当性に影響する",
+   "point": "2因子間の全組合せ・禁止組合せ・依存関係",
+   "operation": "実測した入力項目から組合せを生成し、少ない件数で2因子間を網羅するよう選んで実行する",
+   "expected": "許可される組合せが受理され、禁止される組合せが理由付きで拒否される",
+   "proof": "組合せ表・入力値・受理/拒否結果",
+   "levels": [
+    "統合テスト"
+   ],
+   "technique": "ペアワイズ",
+   "quality": "機能正確性・機能適切性",
+   "sources": [
+    "EV-ISO-29119-4-2021"
+   ],
+   "capabilities": [
+    "core"
+   ],
+   "risk": "単項目では通るが組合せで矛盾する入力が受理される",
+   "priority": "P1",
+   "measure": "2因子間の組合せ網羅率",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "WQ04",
+   "test_type": "ユーザビリティテスト",
+   "theme": "使用性の3側面",
+   "target": "primary_flow",
+   "series": "正常系",
+   "kind": "有効さ・効率・満足度",
+   "condition": "想定利用者が特定の利用状況で目的を達成しようとする",
+   "point": "目的達成率・所要時間と操作数・主観評価",
+   "operation": "代表タスクを与え、達成の可否・所要時間・操作数を記録し、終了後に主観評価を取る",
+   "expected": "目的が達成でき、所要時間と操作数が許容範囲で、利用者が使い続けられると答える",
+   "proof": "タスク記録・操作ログ・所要時間・主観評価",
+   "levels": [
+    "受け入れテスト"
+   ],
+   "technique": "ユーザビリティテスト",
+   "quality": "有効さ・効率・満足度",
+   "sources": [
+    "EV-ISO-25010-2023"
+   ],
+   "capabilities": [
+    "ui"
+   ],
+   "risk": "操作はできるが、目的達成に時間がかかり使われなくなる",
+   "priority": "P2",
+   "measure": "タスク達成率と所要時間",
+   "automation": "手動確認が中心"
+  },
+  {
+   "identifier": "WQ05",
+   "test_type": "ユーザビリティテスト",
+   "theme": "状態の提示",
+   "target": "primary_flow",
+   "series": "準正常系",
+   "kind": "空・読込中・失敗の表示",
+   "condition": "データが0件、読み込み中、または取得に失敗する",
+   "point": "何が起きたか・次に何ができるか",
+   "operation": "各状態を意図的に発生させ、画面の表示内容と次の操作への導線を確認する",
+   "expected": "状態が言葉で示され、利用者が次に取れる行動が提示され、白紙や無反応にならない",
+   "proof": "各状態のスクリーンショット・表示文言・導線",
+   "levels": [
+    "システムテスト"
+   ],
+   "technique": "状態遷移テスト",
+   "quality": "使用性・理解容易性",
+   "sources": [
+    "EV-ISO-25010-2023"
+   ],
+   "capabilities": [
+    "ui"
+   ],
+   "risk": "空や失敗の状態で画面が無言になり、利用者が詰まる",
+   "priority": "P2",
+   "measure": "状態ごとの説明と導線の有無",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "WQ06",
+   "test_type": "ユーザビリティテスト",
+   "theme": "レイアウト健全性",
+   "target": "primary_flow",
+   "series": "準正常系",
+   "kind": "要素の重なり・はみ出し",
+   "condition": "表示幅・文字サイズ・文字量が変わる",
+   "point": "重なり・はみ出し・見切れ・折返し不能",
+   "operation": "表示幅と文字サイズを変えながら各画面を描画し、要素の位置関係を比較する",
+   "expected": "要素が重ならず、内容が見切れず、操作対象に到達できる",
+   "proof": "各条件のスクリーンショット・要素矩形の比較結果",
+   "levels": [
+    "システムテスト"
+   ],
+   "technique": "レイアウト差分検査",
+   "quality": "使用性・互換性",
+   "sources": [
+    "EV-ISO-25010-2023"
+   ],
+   "capabilities": [
+    "ui"
+   ],
+   "risk": "特定の表示条件でボタンが隠れ、業務を完遂できない",
+   "priority": "P2",
+   "measure": "検出した重なり・はみ出しの件数",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "WE01",
+   "test_type": "機能テスト",
+   "theme": "到達性",
+   "target": "primary_flow",
+   "series": "正常系",
+   "kind": "画面の網羅と到達不能",
+   "condition": "起点URLから辿れる画面を機械的に収集する",
+   "point": "収集できた画面・辿れなかった経路・除外した理由",
+   "operation": "起点から遷移を辿って画面を収集し、収集できなかった経路とその理由を記録する",
+   "expected": "収集範囲が明示され、辿れなかった経路が理由付きで残り、未収集を収集済みとして扱わない",
+   "proof": "収集した画面一覧・未到達URL・除外理由・実行ログ",
+   "levels": [
+    "システムテスト"
+   ],
+   "technique": "探索的走査",
+   "quality": "機能完全性・可観測性",
+   "sources": [
+    "EV-ISO-29119-2-2021"
+   ],
+   "capabilities": [
+    "core"
+   ],
+   "risk": "収集できた範囲を全体だと誤認し、未検証の画面を検証済みとして報告する",
+   "priority": "P0",
+   "measure": "収集画面数と未到達件数",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "WE02",
+   "test_type": "機能テスト",
+   "theme": "到達性",
+   "target": "external_interface",
+   "series": "異常系",
+   "kind": "制限・認証壁・リダイレクト",
+   "condition": "収集対象に、認証・アクセス制限・転送が含まれる",
+   "point": "ログイン要求・巡回制限・転送の連鎖・重複URL",
+   "operation": "認証前後で収集し、制限された経路・転送先・同一内容の別URLを分類する",
+   "expected": "制限された経路が「未検証」と記録され、転送先が正しく解決し、同一内容が重複計上されない",
+   "proof": "応答コード・転送履歴・制限記録・正規化前後のURL",
+   "levels": [
+    "システムテスト"
+   ],
+   "technique": "探索的走査",
+   "quality": "機能正確性・可観測性",
+   "sources": [
+    "EV-RFC-9110"
+   ],
+   "capabilities": [
+    "core"
+   ],
+   "risk": "認証壁の向こう側を未検証と記録せず、検証済みとして扱う",
+   "priority": "P0",
+   "measure": "制限記録の網羅性",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "WE03",
+   "test_type": "業務シナリオテスト",
+   "theme": "画面遷移",
+   "target": "primary_flow",
+   "series": "準正常系",
+   "kind": "遷移図と実挙動の一致",
+   "condition": "実測した遷移から画面遷移図を生成する",
+   "point": "図にあって実際に遷移しない辺・実際に遷移するのに図に無い辺・孤立画面",
+   "operation": "生成した遷移図の各辺を実際に操作して辿り、図と実挙動の差分を列挙する",
+   "expected": "図の各辺が実際に辿れ、辿れる経路が図に載り、孤立した画面が理由付きで示される",
+   "proof": "遷移図・辺ごとの実行結果・差分一覧",
+   "levels": [
+    "システムテスト"
+   ],
+   "technique": "状態遷移テスト",
+   "quality": "機能正確性・追跡性",
+   "sources": [
+    "EV-ISO-29119-4-2021"
+   ],
+   "capabilities": [
+    "core"
+   ],
+   "risk": "遷移図が実挙動と食い違い、設計の根拠として使えない",
+   "priority": "P1",
+   "measure": "図の辺のうち実際に辿れた割合",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "WE04",
+   "test_type": "変更部分のテスト",
+   "theme": "追跡性",
+   "target": "output_artifact",
+   "series": "正常系",
+   "kind": "要求・画面・ケースの相互追跡",
+   "condition": "要求、実測した画面・項目、生成したテストケースが揃っている",
+   "point": "要求→画面→ケースの前方追跡と、ケース→画面→要求の後方追跡",
+   "operation": "各成果物の識別子をたどり、双方向に対応づかない要素を列挙する",
+   "expected": "各要求に対応するケースがあり、各ケースが根拠となる要求と実測箇所を持つ",
+   "proof": "対応表・未対応の識別子一覧",
+   "levels": [
+    "受け入れテスト"
+   ],
+   "technique": "トレーサビリティ分析",
+   "quality": "追跡性・保守性",
+   "sources": [
+    "EV4-ISO-29119-3-2021"
+   ],
+   "capabilities": [
+    "core"
+   ],
+   "risk": "変更時に影響範囲を特定できず、修正漏れが残る",
+   "priority": "P1",
+   "measure": "双方向に対応づいた要素の割合",
+   "automation": "半自動（対応づけは自動・妥当性判定は人）"
+  },
+  {
+   "identifier": "WE05",
+   "test_type": "業務シナリオテスト",
+   "theme": "テストケース",
+   "target": "output_artifact",
+   "series": "正常系",
+   "kind": "手順の再現性と判定可能性",
+   "condition": "生成したテストケースを、作成者以外が実行する",
+   "point": "事前条件・操作・期待結果・判定基準の欠落",
+   "operation": "生成したケースを別の実行者が読んで実行し、判断に迷った箇所と補った前提を記録する",
+   "expected": "追加の説明なしに同じ結果へ到達でき、合否が実行者によって割れない",
+   "proof": "実行記録・迷った箇所の一覧・実行者間の判定差",
+   "levels": [
+    "受け入れテスト"
+   ],
+   "technique": "レビューと実行",
+   "quality": "理解容易性・再現性",
+   "sources": [
+    "EV4-ISO-29119-3-2021"
+   ],
+   "capabilities": [
+    "core"
+   ],
+   "risk": "手順が曖昧で、実行者によって結果が変わる",
+   "priority": "P1",
+   "measure": "実行者間で一致した判定の割合",
+   "automation": "手動確認が中心"
+  },
+  {
+   "identifier": "WE06",
+   "test_type": "回帰テスト",
+   "theme": "実行の安定性",
+   "target": "primary_flow",
+   "series": "準正常系",
+   "kind": "再実行で結果が揺れない",
+   "condition": "対象を変更せずに同じテストを繰り返し実行する",
+   "point": "実行ごとの合否の揺れ・待ち条件・実行順序への依存",
+   "operation": "同一条件で複数回実行し、結果が揺れたケースと揺れた原因を分類する",
+   "expected": "同じ条件で同じ結果になり、揺れるケースは原因が特定され隔離されている",
+   "proof": "実行ごとの結果・揺れたケース一覧・原因分類",
+   "levels": [
+    "システムテスト"
+   ],
+   "technique": "反復実行",
+   "quality": "信頼性・再現性",
+   "sources": [
+    "EV-ISO-29119-2-2021"
+   ],
+   "capabilities": [
+    "core"
+   ],
+   "risk": "結果が揺れるテストにより、本当の欠陥が見過ごされる",
+   "priority": "P1",
+   "measure": "反復実行で結果が一致した割合",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "WE07",
+   "test_type": "回帰テスト",
+   "theme": "実行の保守性",
+   "target": "primary_object",
+   "series": "準正常系",
+   "kind": "要素特定の安定性",
+   "condition": "画面の構造や文言が変わる",
+   "point": "要素の特定方法・変更時の壊れやすさ・修正箇所の集中度",
+   "operation": "画面の構造・文言・並びを変えたうえでテストを実行し、壊れた箇所と修正範囲を記録する",
+   "expected": "意味の変わらない変更でテストが壊れず、壊れる場合も修正が1箇所に収まる",
+   "proof": "変更内容・壊れたケース・修正差分",
+   "levels": [
+    "システムテスト"
+   ],
+   "technique": "保守性評価",
+   "quality": "保守性・柔軟性・変更容易性",
+   "sources": [
+    "EV-ISO-25010-2023"
+   ],
+   "capabilities": [
+    "core"
+   ],
+   "risk": "軽微な画面変更でテストが大量に壊れ、維持できなくなる",
+   "priority": "P2",
+   "measure": "変更あたりの修正箇所数",
+   "automation": "回帰対象は自動化候補"
+  },
+  {
+   "identifier": "WE08",
+   "test_type": "帳票テスト",
+   "theme": "レポートと証跡",
+   "target": "output_artifact",
+   "series": "正常系",
+   "kind": "主張範囲と根拠の一致",
+   "condition": "実行結果からレポートを生成する",
+   "point": "検証済み・未検証・検出なしの区別、各主張の根拠",
+   "operation": "レポートの各主張について、対応する証跡を辿れるかを確認する",
+   "expected": "各主張に証跡が対応づき、未検証が未検証として示され、検出できなかったことを不在の証明として書かない",
+   "proof": "レポート・証跡ファイル・主張と証跡の対応表",
+   "levels": [
+    "受け入れテスト"
+   ],
+   "technique": "オラクルテスト",
+   "quality": "信頼性・追跡性",
+   "sources": [
+    "EV4-ISO-29119-3-2021"
+   ],
+   "capabilities": [
+    "report"
+   ],
+   "risk": "検出できなかったことを問題が無いことと誤読され、誤った意思決定を招く",
+   "priority": "P0",
+   "measure": "証跡を辿れる主張の割合",
+   "automation": "半自動（対応づけは自動・妥当性判定は人）"
+  },
+  {
+   "identifier": "WE09",
+   "test_type": "変更部分のテスト",
+   "theme": "差分検知",
+   "target": "output_artifact",
+   "series": "準正常系",
+   "kind": "環境間・時点間の比較",
+   "condition": "同一対象を異なる時点または環境で取得する",
+   "point": "意味のある差分・無視してよい揺らぎ・欠落",
+   "operation": "2つの取得結果を比較し、差分を重大度で分類して、揺らぎと実際の変化を切り分ける",
+   "expected": "実際の変更が漏れなく検出され、動的な揺らぎが差分として報告されない",
+   "proof": "比較対象の識別子・差分一覧・重大度・判定根拠",
+   "levels": [
+    "システムテスト"
+   ],
+   "technique": "差分比較",
+   "quality": "機能正確性・可観測性",
+   "sources": [
+    "EV-ISO-29119-2-2021"
+   ],
+   "capabilities": [
+    "core"
+   ],
+   "risk": "揺らぎが差分として大量に出て、本当の変更が埋もれる",
+   "priority": "P1",
+   "measure": "検出した差分のうち実際の変更である割合",
+   "automation": "回帰対象は自動化候補"
+  }
+ ]
+}

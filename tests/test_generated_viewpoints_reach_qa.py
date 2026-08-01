@@ -40,6 +40,10 @@ def _generated_items(domain_key: str = "domain-01") -> list[dict[str, Any]]:
             "category": item["category"],
             "purpose": item["purpose"],
             "recommended_checks": item["recommended_checks"],
+            "expected_result": item["expected_result"],
+            "evidence": item["evidence"],
+            "technique": item["technique"],
+            "test_level": item["test_level"],
             "risk_weight": item["risk_weight"],
             "automation": item["automation"],
             "standards": item["standards"],
@@ -81,7 +85,9 @@ class TestGeneratedViewpointsAreConsumable:
             names = _viewpoint_names("category_l2", 12) + _viewpoint_names("quality_area_l1", 12)
         assert names, "観点名が1件もドキュメントに載らない"
 
-    @pytest.mark.parametrize("field", ["purpose", "recommended_checks"])
+    @pytest.mark.parametrize(
+        "field", ["purpose", "recommended_checks", "expected_result", "evidence"]
+    )
     def test_expected_result_and_evidence_survive_to_qa(self, field: str) -> None:
         """期待結果・証跡を含む項目が QA 層まで残ること。
 

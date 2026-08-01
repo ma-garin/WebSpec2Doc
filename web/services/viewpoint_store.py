@@ -14,7 +14,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 4
 STANDARD_SET_NAME = "WebSpec2Doc標準観点"
 ALLOWED_RULE_FIELDS = {
     "url",
@@ -213,6 +213,7 @@ class ViewpointStoreBase:
                     state TEXT NOT NULL DEFAULT 'active',
                     is_default INTEGER NOT NULL DEFAULT 0,
                     priority INTEGER NOT NULL DEFAULT 0,
+                    applicability TEXT NOT NULL DEFAULT '{}',
                     revision INTEGER NOT NULL DEFAULT 1,
                     deleted_at TEXT,
                     created_at TEXT NOT NULL,
@@ -245,6 +246,10 @@ class ViewpointStoreBase:
                     purpose TEXT NOT NULL DEFAULT '',
                     trigger_rule TEXT NOT NULL DEFAULT '{}',
                     recommended_checks TEXT NOT NULL DEFAULT '',
+                    expected_result TEXT NOT NULL DEFAULT '',
+                    evidence TEXT NOT NULL DEFAULT '',
+                    technique TEXT NOT NULL DEFAULT '',
+                    test_level TEXT NOT NULL DEFAULT '',
                     risk_weight INTEGER NOT NULL DEFAULT 3 CHECK(risk_weight BETWEEN 1 AND 5),
                     automation TEXT NOT NULL DEFAULT 'manual',
                     standards TEXT NOT NULL DEFAULT '',
@@ -290,18 +295,68 @@ class ViewpointStoreBase:
                 """)
         if version < 2:
             self._migrate_v1_to_v2(conn)
+        if version < 3:
+            self._migrate_v2_to_v3(conn)
+        if version < 4:
+            self._migrate_v3_to_v4(conn)
+
+    @staticmethod
+    def _add_columns(conn: sqlite3.Connection, table: str, columns: list[str]) -> None:
+        """未追加の列だけを足す。既にある列は飛ばす。
+
+        「列が既にある」以外の OperationalError（DB破損・テーブル不在など）は
+        握りつぶさずに投げる。全部を無条件に沈黙させると、壊れたDBに対しても
+        移行が成功したことになり、後続の書き込みで初めて気づくことになる。
+        """
+        existing = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}  # nosec B608
+        for definition in columns:
+            if definition.split()[0] in existing:
+                continue
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {definition}")  # nosec B608
+
+    def _migrate_v2_to_v3(self, conn: sqlite3.Connection) -> None:
+        """テスト実行に必要な項目を独立列にする。
+
+        期待結果と証跡が無い観点は「何を見るか」しか言っておらず、合否を
+        判定できない。手順テキストに押し込むと、CSV出力で1セルに改行込みで
+        入り、機械的に扱えない。テスト技法とテストレベルも同様に、絞り込みや
+        集計の対象になるため列にする。
+        """
+        self._add_columns(
+            conn,
+            "viewpoint_items",
+            [
+                "expected_result TEXT NOT NULL DEFAULT ''",
+                "evidence TEXT NOT NULL DEFAULT ''",
+                "technique TEXT NOT NULL DEFAULT ''",
+                "test_level TEXT NOT NULL DEFAULT ''",
+            ],
+        )
+        conn.execute("PRAGMA user_version = 3")
+
+    def _migrate_v3_to_v4(self, conn: sqlite3.Connection) -> None:
+        """セットに適用可否を持たせる。
+
+        観点表に或る観点が無いとき、意図的に除外したのか作り忘れたのかを
+        後から説明できないと、抜けを指摘されても答えられない。
+        どの観点定義を適用し、どれをなぜ除外したかをセット単位で残す。
+        """
+        self._add_columns(
+            conn, "viewpoint_sets", ["applicability TEXT NOT NULL DEFAULT '{}'"]
+        )
+        conn.execute("PRAGMA user_version = 4")
 
     def _migrate_v1_to_v2(self, conn: sqlite3.Connection) -> None:
         """Add tree columns; build folder nodes from existing category values."""
-        for col_sql in [
-            "ALTER TABLE viewpoint_items ADD COLUMN node_type TEXT NOT NULL DEFAULT 'viewpoint'",
-            "ALTER TABLE viewpoint_items ADD COLUMN parent_key TEXT DEFAULT NULL",
-            "ALTER TABLE viewpoint_items ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0",
-        ]:
-            try:
-                conn.execute(col_sql)
-            except Exception:
-                pass  # column already added
+        self._add_columns(
+            conn,
+            "viewpoint_items",
+            [
+                "node_type TEXT NOT NULL DEFAULT 'viewpoint'",
+                "parent_key TEXT DEFAULT NULL",
+                "sort_order INTEGER NOT NULL DEFAULT 0",
+            ],
+        )
         now = _now()
         version_ids = [r[0] for r in conn.execute("SELECT id FROM viewpoint_versions").fetchall()]
         for version_id in version_ids:
@@ -434,7 +489,18 @@ class ViewpointStoreBase:
                     FROM viewpoint_sets s {where}
                     ORDER BY s.is_default DESC, s.priority DESC, lower(s.name)"""  # nosec B608
             ).fetchall()
-        return [dict(row) for row in rows]
+        return [self._set_dict(row) for row in rows]
+
+    @staticmethod
+    def _set_dict(row: Any) -> dict[str, Any]:
+        """セット行を辞書にする。適用可否は JSON として扱う。
+
+        「なぜこの領域にこの観点が無いか」を後から説明できないと、
+        観点表の抜けが意図的な除外なのか作り忘れなのか区別できない。
+        """
+        result = dict(row)
+        result["applicability"] = _json(result.get("applicability"), {})
+        return result
 
     def get_set(self, set_id: str, *, include_deleted: bool = False) -> dict[str, Any]:
         self.initialize()
@@ -442,7 +508,7 @@ class ViewpointStoreBase:
             row = conn.execute("SELECT * FROM viewpoint_sets WHERE id=?", (set_id,)).fetchone()
         if row is None or (row["deleted_at"] and not include_deleted):
             raise NotFoundError("観点セットが見つかりません。")
-        return dict(row)
+        return self._set_dict(row)
 
     def create_set(self, payload: dict[str, Any]) -> dict[str, Any]:
         name = str(payload.get("name", "")).strip()
@@ -457,8 +523,9 @@ class ViewpointStoreBase:
             try:
                 conn.execute(
                     """INSERT INTO viewpoint_sets
-                       (id,name,description,parent_set_id,state,is_default,priority,created_at,updated_at)
-                       VALUES (?,?,?,?,?,?,?,?,?)""",
+                       (id,name,description,parent_set_id,state,is_default,priority,applicability,
+                        created_at,updated_at)
+                       VALUES (?,?,?,?,?,?,?,?,?,?)""",
                     (
                         set_id,
                         name,
@@ -467,6 +534,7 @@ class ViewpointStoreBase:
                         "active",
                         int(bool(payload.get("is_default"))),
                         int(payload.get("priority", 0)),
+                        _canonical(payload.get("applicability") or {}),
                         now,
                         now,
                     ),
@@ -600,10 +668,12 @@ class ViewpointStoreBase:
                 conn.execute(
                     """INSERT INTO viewpoint_items
                        (id,version_id,persistent_key,name,category,purpose,trigger_rule,recommended_checks,
+                        expected_result,evidence,technique,test_level,
                         risk_weight,automation,standards,tags,enabled,node_type,parent_key,sort_order,
                         revision,deleted_at,created_at,updated_at)
                        SELECT lower(hex(randomblob(16))), ?, persistent_key,name,category,purpose,trigger_rule,
-                        recommended_checks,risk_weight,automation,standards,tags,enabled,node_type,parent_key,sort_order,
+                        recommended_checks,expected_result,evidence,technique,test_level,
+                        risk_weight,automation,standards,tags,enabled,node_type,parent_key,sort_order,
                         1,deleted_at,?,?
                        FROM viewpoint_items WHERE version_id=?""",
                     (version_id, now, now, source["id"]),
@@ -735,6 +805,7 @@ class ViewpointStoreBase:
         with self._transaction() as conn:
             conn.execute(
                 """UPDATE viewpoint_items SET name=?,category=?,purpose=?,trigger_rule=?,recommended_checks=?,
+                   expected_result=?,evidence=?,technique=?,test_level=?,
                    risk_weight=?,automation=?,standards=?,tags=?,enabled=?,revision=revision+1,updated_at=?
                    WHERE id=?""",
                 (
@@ -743,6 +814,10 @@ class ViewpointStoreBase:
                     item["purpose"],
                     _canonical(item["trigger_rule"]),
                     item["recommended_checks"],
+                    item["expected_result"],
+                    item["evidence"],
+                    item["technique"],
+                    item["test_level"],
                     item["risk_weight"],
                     item["automation"],
                     item["standards"],

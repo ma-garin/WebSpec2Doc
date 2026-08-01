@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -117,7 +118,13 @@ def create_set_from_template(template_key: str, name: str = "") -> dict[str, Any
     return {"set": store.get_set(created["id"]), "published": published, **result}
 
 
+@lru_cache(maxsize=1)
 def _domains_by_key() -> dict[str, Any]:
+    """領域キーから領域メタを引く。
+
+    テンプレート適用のたびに 60領域 × 99定義 の適用判定を回すのは無駄。
+    カタログはプロセス起動中に変わらないので1回で足りる。
+    """
     try:
         return {domain["key"]: domain for domain in list_domains()}
     except ViewpointGeneratorError:
@@ -140,6 +147,12 @@ def _create_set_from_domain(domain_key: str, name: str = "") -> dict[str, Any]:
                 f"{domain['category']} / {domain['name']}。"
                 f"想定リスク: {domain['critical_risk']}"
             ),
+            "applicability": {
+                "source": "domain_blueprint",
+                "domain_key": domain_key,
+                "applied": generated["applied_definitions"],
+                "excluded": generated["excluded_definitions"],
+            },
         }
     )
     set_id = created["id"]
@@ -195,34 +208,52 @@ def apply_template(set_id: str, template_key: str) -> dict[str, Any]:
 
     フォルダ→アイテムの順に既存の create_folder/create_item を呼び出すだけで、
     バージョン管理・整合性検証は ViewpointStore 側の既存ロジックにそのまま乗る
-    （プリセット投入専用の別経路を作らない）。"""
+    （プリセット投入専用の別経路を作らない）。
+
+    同じテンプレートを二度適用しても中身は増えない。既にある同名のフォルダ・観点は
+    飛ばし、足りないものだけを足す。テンプレートは「この内容を揃える」ものであって
+    「押した回数だけ積む」ものではない。防いでいなかったため、47回押した既定セットに
+    同名フォルダが47組・観点469件溜まり、分類ツリーが読めなくなった。
+    """
     data = _load_template_file(template_key)
     store = get_viewpoint_store()
     draft = store.ensure_draft(set_id)
     version_number = int(draft["version_number"])
 
+    existing = store.list_items(set_id, version_number, resolved=False)
+    folder_keys = {
+        str(i["name"]): str(i["persistent_key"]) for i in existing if i["node_type"] == "folder"
+    }
+    existing_names = {str(i["name"]) for i in existing if i["node_type"] == "viewpoint"}
+
     created_folders = 0
     created_items = 0
+    skipped_items = 0
     for folder in data.get("folders", []):
         folder_name = str(folder.get("name", "")).strip()
         if not folder_name:
             continue
-        folder_item = store.create_folder(
-            set_id, {"name": folder_name}, version_number=version_number
-        )
-        created_folders += 1
+        parent_key = folder_keys.get(folder_name)
+        if parent_key is None:
+            parent_key = store.create_folder(
+                set_id, {"name": folder_name}, version_number=version_number
+            )["persistent_key"]
+            folder_keys[folder_name] = parent_key
+            created_folders += 1
         for item in folder.get("items", []):
-            payload = {
-                **item,
-                "node_type": "viewpoint",
-                "parent_key": folder_item["persistent_key"],
-            }
+            name = str(item.get("name", "")).strip()
+            if name in existing_names:
+                skipped_items += 1
+                continue
+            payload = {**item, "node_type": "viewpoint", "parent_key": parent_key}
             store.create_item(set_id, payload, version_number=version_number)
+            existing_names.add(name)
             created_items += 1
 
     return {
         "template_key": template_key,
         "template_name": data.get("name", template_key),
+        "skipped_items": skipped_items,
         "created_folders": created_folders,
         "created_items": created_items,
     }

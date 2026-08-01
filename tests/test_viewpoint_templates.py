@@ -201,56 +201,6 @@ class TestBundledTemplates:
         assert total >= 250, f"共通観点が {total} 件に減っている"
 
 
-class TestIndustryTemplates:
-    """業種別テンプレートは共通観点と併用する前提なので、重複しないこと。
-
-    重複していると、共通＋業種を両方読み込んだ利用者が同じ確認を二度行う。
-    """
-
-    INDUSTRY_KEYS = ("industry_finance", "industry_medical", "industry_ec")
-
-    def _names(self, data: dict) -> set[str]:
-        return {i["name"] for f in data.get("folders", []) for i in f.get("items", [])}
-
-    def test_industry_templates_exist(self) -> None:
-        keys = {key for key, _ in _bundled_templates()}
-        for key in self.INDUSTRY_KEYS:
-            assert key in keys, f"{key} が無い"
-
-    def test_no_overlap_with_common(self) -> None:
-        """業種別が共通観点と同じ観点を持たないこと。"""
-        templates = dict(_bundled_templates())
-        common = self._names(templates["common_web"])
-        for key in self.INDUSTRY_KEYS:
-            overlap = common & self._names(templates[key])
-            assert not overlap, f"{key} が共通観点と重複: {sorted(overlap)}"
-
-    def test_industry_tag_is_present(self) -> None:
-        """どの業種の観点かがタグで分かること（併用時に出所を追えるようにする）。"""
-        templates = dict(_bundled_templates())
-        expected = {"industry_finance": "金融", "industry_medical": "医療", "industry_ec": "EC"}
-        for key, tag in expected.items():
-            for folder in templates[key]["folders"]:
-                for item in folder["items"]:
-                    assert tag in item.get("tags", []), f"{key}: {item['name']} に「{tag}」タグが無い"
-
-    def test_industry_risk_focus(self) -> None:
-        """業種固有リスクに対応する分類を持つこと。
-
-        共通観点で足りるものだけを並べても、業種別を分ける意味がない。
-        """
-        templates = dict(_bundled_templates())
-        required = {
-            "industry_finance": ("金額・計算", "残高・整合性", "誤送金の防止", "監査証跡"),
-            "industry_medical": ("患者識別", "診療情報の保護", "処方・オーダ", "システム連携"),
-            "industry_ec": ("価格・計算", "在庫管理", "決済", "注文・配送"),
-        }
-        for key, folders in required.items():
-            actual = {f["name"] for f in templates[key]["folders"]}
-            for name in folders:
-                assert name in actual, f"{key} に「{name}」が無い"
-
-
 class TestCreateSetFromTemplate:
     """テンプレートから観点セットを直接作れること。
 

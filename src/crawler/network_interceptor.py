@@ -9,13 +9,16 @@ from __future__ import annotations
 import json
 import logging
 import os
+from collections import Counter
 from collections.abc import Callable
 from typing import Any
 from urllib.parse import urlparse
 
 from playwright.sync_api import Page, Response
 
-from crawler.page_crawler import ApiEndpoint
+# 監査ログと同じ短縮規則を使う。画面ログと audit.jsonl で URL の形が違うと
+# 突き合わせられなくなるため、切り詰め方は 1 箇所に持たせる。
+from crawler.page_crawler import ApiEndpoint, _strip_query_for_audit
 
 STATIC_EXTENSIONS = frozenset(
     {
@@ -46,6 +49,39 @@ MUTATION_METHODS = frozenset({"POST", "PUT", "DELETE", "PATCH"})
 ALLOW_MUTATION_ENV = "WEBSPEC2DOC_ALLOW_MUTATION"
 
 logger = logging.getLogger(__name__)
+
+
+def _origin_of(url: str) -> str:
+    """https://example.com/a?b=c → https://example.com。取れなければ元の文字列。"""
+    parsed = urlparse(url)
+    return f"{parsed.scheme}://{parsed.netloc}" if parsed.netloc else url
+
+
+# 遮断ログの抑制状態はクロール全体で共有する。MutationBlocker は 1 ページごとに
+# 作り直されるため、インスタンス変数に持たせると 300 ページで同じ行が 300 回出る。
+# 遮断そのものはページ単位で audit.jsonl に全件残るので、ここで間引くのは表示だけ。
+_LOGGED_ORIGINS: set[str] = set()
+_SUPPRESSED_BY_ORIGIN: Counter[str] = Counter()
+
+
+def reset_mutation_log_state() -> None:
+    """遮断ログの抑制状態を初期化する。クロール開始時に呼ぶ。"""
+    _LOGGED_ORIGINS.clear()
+    _SUPPRESSED_BY_ORIGIN.clear()
+
+
+def log_mutation_block_summary() -> None:
+    """抑制した遮断の件数をオリジン別に 1 行で出す。クロール終了時に呼ぶ。
+
+    「出さなかった」ではなく「まとめた」と分かる形で残す。
+    件数を伏せると、遮断が起きていないのか隠れているのか区別できなくなる。
+    """
+    if not _SUPPRESSED_BY_ORIGIN:
+        return
+    breakdown = "、".join(
+        f"{origin} ×{count}件" for origin, count in sorted(_SUPPRESSED_BY_ORIGIN.items())
+    )
+    logger.warning("破壊的リクエストの遮断（2件目以降をまとめました）: %s", breakdown)
 
 
 def mutations_allowed() -> bool:
@@ -79,6 +115,23 @@ class MutationBlocker:
         """破壊的リクエストを許可しているかを返す。"""
         return self._allow
 
+    def _log_blocked(self, method: str, url: str) -> None:
+        """遮断を画面ログへ出す。同じオリジンの 2 件目以降は数えるだけにする。
+
+        アクセス解析のビーコン（GA / 広告タグ等）は 1 ページで何本も飛び、
+        クエリ文字列が数百文字あるため、そのまま出すと 1 件で 3〜4 行を占める。
+        300 ページ規模では実行ログが遮断ログだけで埋まり、進捗が読めなくなる。
+        遮断した事実は self.blocked と audit.jsonl に全件残るので、監査は落ちない。
+        """
+        origin = _origin_of(url)
+        if origin in _LOGGED_ORIGINS:
+            _SUPPRESSED_BY_ORIGIN[origin] += 1
+            return
+        _LOGGED_ORIGINS.add(origin)
+        logger.warning(
+            "破壊的リクエストを遮断しました: %s %s", method, _strip_query_for_audit(url)
+        )
+
     def attach(self, page: Page) -> None:
         """page の全リクエストルートにハンドラを登録する。"""
         self._page = page
@@ -106,7 +159,7 @@ class MutationBlocker:
             method, url = "GET", ""
         if not self._allow and method in MUTATION_METHODS:
             self.blocked.append((method, url))
-            logger.warning("破壊的リクエストを遮断しました: %s %s", method, url)
+            self._log_blocked(method, url)
             try:
                 route.abort()
             except Exception as exc:

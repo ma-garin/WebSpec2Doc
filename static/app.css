@@ -293,7 +293,9 @@
     .execution-preview-image.show { display: block; }
     .execution-preview-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: var(--text-muted); text-align: center; padding: 20px; }
     .execution-preview-placeholder.hidden { display: none; }
-    .execution-log { flex-shrink: 0; background: #1e1e1e; color: #d4d4d4; padding: 12px; border-radius: 6px; font-size: .78rem; white-space: pre-wrap; max-height: 220px; overflow-y: auto; }
+    /* 高さは 220px から下げた。1 件が 1 行に収まるようになった（遮断ログの短縮・集約）ため、
+       同じ高さを取らなくても読める行数が確保できる。折りたたみはしない（常時表示の方針）。 */
+    .execution-log { flex-shrink: 0; background: #1e1e1e; color: #d4d4d4; padding: 12px; border-radius: 6px; font-size: .78rem; white-space: pre-wrap; max-height: 160px; overflow-y: auto; }
     .execution-error-card { flex-shrink: 0; border: 1px solid var(--critical-border); background: var(--critical-bg); color: var(--critical); border-radius: var(--radius); padding: 12px 16px; font-size: 14px; font-weight: 700; }
     .execution-error-card.hidden { display: none; }
     .execution-bottombar { flex-shrink: 0; background: rgba(255,255,255,.96); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 16px; display: flex; align-items: center; gap: 12px; }

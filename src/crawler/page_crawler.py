@@ -471,9 +471,16 @@ def crawl_urls(
 ) -> list[PageData]:
     """Crawl an explicit list of URLs (no link following). Backs the GUI
     'selected pages' / 'manual URL' modes."""
+    from crawler.network_interceptor import (
+        log_mutation_block_summary,
+        reset_mutation_log_state,
+    )
+
     targets = list(dict.fromkeys(normalize_url(u) for u in urls if u.strip()))
     requested_total = len(targets)
     worker_count = max(1, min(parallelism, requested_total or 1))
+    # 遮断ログの抑制はクロール単位。前回の実行で出したオリジンを引き継がない。
+    reset_mutation_log_state()
     _emit_event(on_event, "crawl_started", total=requested_total, parallelism=worker_count)
     robots_skipped: list[str] = []
     origin_delays: dict[str, float] = {}
@@ -556,6 +563,8 @@ def crawl_urls(
                 )
             _polite_delay(page)
 
+    # まとめた遮断の件数は最後に 1 行で出す。ページごとに出すと結局ログが埋まる。
+    log_mutation_block_summary()
     event = "crawl_cancelled" if stop_requested and stop_requested() else "crawl_completed"
     _emit_event(on_event, event, completed=len(pages), total=len(targets))
     return pages

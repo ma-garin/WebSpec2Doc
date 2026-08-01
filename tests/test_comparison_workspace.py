@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from web.services.comparison_workspace import (  # noqa: E402
     PAIR_STATE_ADDED,
@@ -30,7 +31,7 @@ def _comparison(**over):
     return base
 
 
-def _finding(category="layout_broken", severity="medium", old_id="P001"):
+def _finding(category="layout_broken", severity="warning", old_id="P001"):
     return {
         "category": category,
         "severity": severity,
@@ -50,9 +51,9 @@ class TestPairAssembly:
 
     def test_top_finding_is_the_most_severe(self) -> None:
         """レールに出すのは最も重い指摘。軽いものが先頭に来ると危険度を読み違える。"""
-        findings = [_finding(severity="low"), _finding(category="inoperable", severity="high")]
+        findings = [_finding(severity="info"), _finding(category="inoperable", severity="breaking")]
         ws = build_workspace(_comparison(findings=findings), OUT)
-        assert ws["pairs"][0]["top_severity"] == "high"
+        assert ws["pairs"][0]["top_severity"] == "breaking"
         assert ws["pairs"][0]["top_category"] == "inoperable"
 
     def test_findings_of_other_pairs_are_not_mixed_in(self) -> None:
@@ -182,6 +183,33 @@ class TestScreenshotPaths:
         ]
         ws = build_workspace(_comparison(screenshot_diffs=diffs), OUT)
         assert ws["pairs"][0]["screenshots"]["same_capture"] is False
+
+
+class TestSeverityVocabulary:
+    """severity の語彙が分類器側とずれていないこと。
+
+    ここがずれると「最も重い指摘」の並べ替えとフィルタが黙って効かなくなる。
+    実際に high/medium/low という存在しない値を使っていて、指摘 0 件のデータでしか
+    確認していなかったため気付かなかった。
+    """
+
+    def test_order_matches_differ_severities(self) -> None:
+        from diff.differ import SEVERITY_BREAKING, SEVERITY_INFO, SEVERITY_WARNING
+
+        from web.services.comparison_workspace import SEVERITY_ORDER
+
+        assert SEVERITY_ORDER == (SEVERITY_BREAKING, SEVERITY_WARNING, SEVERITY_INFO)
+
+    def test_breaking_outranks_warning(self) -> None:
+        findings = [_finding(severity="warning"), _finding(category="inoperable", severity="breaking")]
+        ws = build_workspace(_comparison(findings=findings), OUT)
+        assert ws["pairs"][0]["top_severity"] == "breaking"
+
+    def test_unknown_severity_sorts_last(self) -> None:
+        """未知の値が来ても既知の重い指摘を押しのけないこと。"""
+        findings = [_finding(severity="???"), _finding(category="inoperable", severity="info")]
+        ws = build_workspace(_comparison(findings=findings), OUT)
+        assert ws["pairs"][0]["top_severity"] == "info"
 
 
 def test_labels_are_carried_through() -> None:

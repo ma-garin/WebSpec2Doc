@@ -22,7 +22,10 @@ PAIR_STATE_ADDED = "added"
 PAIR_STATE_REMOVED = "removed"
 
 # 重大度の並び。フィルタと「最も重い指摘」の判定に使う。
-SEVERITY_ORDER: tuple[str, ...] = ("high", "medium", "low")
+# 値は src/diff/differ.py の SEVERITY_BREAKING / WARNING / INFO と対応する。
+# 別の語彙（high/medium/low 等）を持ち込むと、並べ替えが黙って効かなくなる。
+SEVERITY_BREAKING = "breaking"
+SEVERITY_ORDER: tuple[str, ...] = (SEVERITY_BREAKING, "warning", "info")
 
 
 def _severity_rank(severity: str) -> int:

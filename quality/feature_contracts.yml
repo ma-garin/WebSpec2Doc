@@ -817,7 +817,12 @@
       "name": "現新比較モード（移行検証支援）",
       "risk_level": "high",
       "status": "implemented",
-      "ui_files": [],
+      "ui_files": [
+        "static/js/view-compare.js",
+        "static/js/results.js",
+        "static/app-report.css",
+        "templates/partials/view-generate.html"
+      ],
       "route_files": [
         "web/routes/history.py"
       ],
@@ -1026,7 +1031,9 @@
       "risk_level": "high",
       "status": "implemented",
       "ui_files": [
-        "templates/partials/view-settings.html"
+        "templates/partials/view-settings.html",
+        "static/js/results.js",
+        "static/app.css"
       ],
       "route_files": [],
       "core_files": [

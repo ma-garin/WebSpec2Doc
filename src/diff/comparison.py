@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from pathlib import Path
 
 from analyzer.html_analyzer import AnalyzedPage, analyze_pages
@@ -34,9 +34,9 @@ from diff.pair_matcher import ScreenPair, match_page_pairs
 from diff.screenshot_diff import (
     ScreenshotDiff,
     channel_tolerance_from_env,
+    compare_and_overlay,
     compare_screenshots_masked,
     detect_dynamic_regions,
-    save_diff_overlay,
     threshold_from_env,
 )
 
@@ -229,26 +229,26 @@ def _compare_pair_screenshots(
         logger.info("画像未取得のため画像差分をスキップします: old=%s new=%s", old_shot, new_shot)
         return None
     masks = dynamic_masks.get(pair.old_page_id, ())
-    diff = compare_screenshots_masked(
+    if diff_dir is None:
+        return compare_screenshots_masked(
+            Path(old_shot),
+            Path(new_shot),
+            page_id=pair.old_page_id,
+            threshold=threshold,
+            masks=masks,
+            channel_tolerance=tolerance,
+        )
+    # 枠画像は有意な差分のときだけ作る（P2-2）。有意でない画素ゆらぎまで画像化すると、
+    # 枚数だけ増えて見るべきものが埋もれる。判定と描画は 1 回の読み込みで済ませる。
+    return compare_and_overlay(
         Path(old_shot),
         Path(new_shot),
+        diff_dir / f"{pair.old_page_id}.png",
         page_id=pair.old_page_id,
         threshold=threshold,
         masks=masks,
         channel_tolerance=tolerance,
     )
-    # 変更領域の枠画像は有意な差分のときだけ作る（P2-2）。
-    # 有意でない画素ゆらぎまで画像化すると、枚数だけ増えて見るべきものが埋もれる。
-    if diff_dir is None or not diff.is_significant:
-        return diff
-    saved = save_diff_overlay(
-        Path(old_shot),
-        Path(new_shot),
-        diff_dir / f"{pair.old_page_id}.png",
-        masks=masks,
-        channel_tolerance=tolerance,
-    )
-    return diff if saved is None else replace(diff, diff_image_path=str(saved))
 
 
 def _field_evidence_maps(

@@ -18,6 +18,16 @@ from web import create_app  # noqa: E402
 ENV = "WEBSPEC2DOC_TEMPLATES_AUTO_RELOAD"
 
 
+def _render_ver(app) -> str:
+    """テンプレートが実際に埋め込む `_ver` の値を得る。
+
+    グローバル変数を直接読むと context_processor による上書きを見落とす。
+    """
+    context: dict = {}
+    app.update_template_context(context)  # context_processor の結果をここへ流し込む
+    return app.jinja_env.from_string("{{ _ver }}").render(**context)
+
+
 @pytest.fixture(autouse=True)
 def _clean_env(monkeypatch):
     monkeypatch.delenv(ENV, raising=False)
@@ -31,9 +41,11 @@ class TestDefaultIsProductionBehaviour:
     def test_version_is_fixed_at_startup(self, monkeypatch) -> None:
         """本番では起動時に固定した値を配り、ブラウザにキャッシュさせる。"""
         app = create_app()
-        ver = app.jinja_env.globals["_ver"]
-        assert isinstance(ver, str)
-        assert str(ver) == str(ver)
+        with app.test_request_context():
+            first = _render_ver(app)
+        monkeypatch.setattr("web.time.time", lambda: 999999)
+        with app.test_request_context():
+            assert _render_ver(app) == first, "本番で _ver が変わってはいけない"
 
 
 class TestDevReloadEnabled:
@@ -51,12 +63,12 @@ class TestDevReloadEnabled:
         """
         monkeypatch.setenv(ENV, "1")
         app = create_app()
-        ver = app.jinja_env.globals["_ver"]
 
         seen = set()
         for stamp in (1000, 1001, 1002):
             monkeypatch.setattr("web.time.time", lambda s=stamp: s)
-            seen.add(str(ver))
+            with app.test_request_context():
+                seen.add(_render_ver(app))
         assert len(seen) == 3, "レンダリングのたびに _ver が変わっていない"
 
     def test_other_values_do_not_enable_it(self, monkeypatch) -> None:

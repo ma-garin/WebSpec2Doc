@@ -15,17 +15,34 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-# ペアの状態。追加・削除・未対応は「比較できなかった」ことを表し、
+# ペアの状態。追加・削除は「比較できなかった」ことを表し、
 # 指摘が 0 件であることと区別する（不在を証明しない）。
+#
+# **既知の欠落**: デザイン案（docs/design/old-new-comparison-proto.html）は
+# 「未対応（画面対応付けが確立できません）」を第 4 の状態として持つが、実装していない。
+# match_page_pairs（src/diff/pair_matcher.py:78-80）が返すのは pairs / removed / added の
+# 3 つだけで、対応付けに失敗した画面は removed / added に混ざる。
+# 「消えた画面」と「対応先が分からなかった画面」を画面上で区別できていない。
+# 分けるには pair_matcher の戻り値を増やす必要があり、ここだけでは直せない。
 PAIR_STATE_MATCHED = "matched"
 PAIR_STATE_ADDED = "added"
 PAIR_STATE_REMOVED = "removed"
 
-# 重大度の並び。フィルタと「最も重い指摘」の判定に使う。
-# 値は src/diff/differ.py の SEVERITY_BREAKING / WARNING / INFO と対応する。
-# 別の語彙（high/medium/low 等）を持ち込むと、並べ替えが黙って効かなくなる。
-SEVERITY_BREAKING = "breaking"
-SEVERITY_ORDER: tuple[str, ...] = (SEVERITY_BREAKING, "warning", "info")
+def _severity_order() -> tuple[str, ...]:
+    """重大度の並び（重い順）。値の出所は src/diff/differ.py の 1 箇所だけにする。
+
+    以前ここで high/medium/low という実在しない値を再定義しており、
+    並べ替えとフィルタが黙って効かない状態になっていた。再定義しない。
+    """
+    from diff.differ import SEVERITY_BREAKING, SEVERITY_INFO, SEVERITY_WARNING
+
+    return (SEVERITY_BREAKING, SEVERITY_WARNING, SEVERITY_INFO)
+
+
+# 画面に出す日本語ラベル。JS 側で再定義せず、この API の応答に載せて配る
+# （JS は Python を import できないため、値ではなく表示物として渡す）。
+SEVERITY_LABELS: dict[str, str] = {"breaking": "高", "warning": "中", "info": "低"}
+SEVERITY_ORDER: tuple[str, ...] = _severity_order()
 
 
 def _severity_rank(severity: str) -> int:
@@ -120,20 +137,17 @@ def build_workspace(
         items = grouped.get(old_id, [])
         top = items[0] if items else None
         # 名前は新側を優先する。比較の関心は「今どうなっているか」にあるため。
-        meta = info.get(new_id) or info.get(old_id) or {}
         pairs.append(
-            {
-                "state": PAIR_STATE_MATCHED,
-                "old_page_id": old_id,
-                "new_page_id": new_id,
-                "url": str(meta.get("url") or ""),
-                "title": str(meta.get("title") or old_id),
-                "finding_count": len(items),
-                "top_category": str(top.get("category")) if top else "",
-                "top_severity": str(top.get("severity")) if top else "",
-                "findings": items,
-                "screenshots": shots.get(old_id, {}),
-            }
+            _pair_record(
+                PAIR_STATE_MATCHED,
+                old_id=old_id,
+                new_id=new_id,
+                meta=info.get(new_id) or info.get(old_id) or {},
+                fallback_title=old_id,
+                findings=items,
+                top=top,
+                screenshots=shots.get(old_id, {}),
+            )
         )
 
     # 追加・削除は比較そのものができない。指摘 0 件と同じ見た目にしない。
@@ -154,26 +168,56 @@ def build_workspace(
         "coverage": dict(comparison.get("coverage_summary") or {}),
         "pairs": pairs,
         "counts": _counts(pairs),
+        # 語彙は Python 側の 1 箇所が持つ。JS で再定義すると、段階を増減したとき
+        # 片方だけ直して並べ替えと表示が食い違う（実際に起きた）。
+        "severity": {"order": list(SEVERITY_ORDER), "labels": dict(SEVERITY_LABELS)},
+    }
+
+
+def _pair_record(
+    state: str,
+    *,
+    old_id: str = "",
+    new_id: str = "",
+    meta: Mapping[str, str] | None = None,
+    fallback_title: str = "",
+    findings: list[dict[str, Any]] | None = None,
+    top: Mapping[str, Any] | None = None,
+    screenshots: Mapping[str, Any] | None = None,
+    unmatched_reason: str = "",
+) -> dict[str, Any]:
+    """画面が読む 1 ペア分のレコード。matched も未対応も同じ形で作る。
+
+    形を 2 箇所で組み立てると、フィールドを増やしたとき片方でキーが欠ける。
+    """
+    meta = meta or {}
+    items = findings or []
+    return {
+        "state": state,
+        "old_page_id": old_id,
+        "new_page_id": new_id,
+        "url": str(meta.get("url") or ""),
+        "title": str(meta.get("title") or fallback_title),
+        "finding_count": len(items),
+        "top_category": str(top.get("category")) if top else "",
+        "top_severity": str(top.get("severity")) if top else "",
+        "findings": items,
+        "screenshots": dict(screenshots or {}),
+        "unmatched_reason": unmatched_reason,
     }
 
 
 def _unmatched(
     state: str, page_id: str, reason: str, info: Mapping[str, Mapping[str, str]] | None = None
 ) -> dict[str, Any]:
-    meta = (info or {}).get(page_id) or {}
-    return {
-        "state": state,
-        "old_page_id": page_id if state == PAIR_STATE_REMOVED else "",
-        "new_page_id": page_id if state == PAIR_STATE_ADDED else "",
-        "url": str(meta.get("url") or ""),
-        "title": str(meta.get("title") or page_id),
-        "finding_count": 0,
-        "top_category": "",
-        "top_severity": "",
-        "unmatched_reason": reason,
-        "findings": [],
-        "screenshots": {},
-    }
+    return _pair_record(
+        state,
+        old_id=page_id if state == PAIR_STATE_REMOVED else "",
+        new_id=page_id if state == PAIR_STATE_ADDED else "",
+        meta=(info or {}).get(page_id) or {},
+        fallback_title=page_id,
+        unmatched_reason=reason,
+    )
 
 
 def _counts(pairs: list[dict[str, Any]]) -> dict[str, int]:

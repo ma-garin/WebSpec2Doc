@@ -112,7 +112,11 @@ def test_generate_creates_all_qa_process_files(tmp_path: Path, monkeypatch) -> N
         assert (qa_dir / filename).exists()
     assert "P001-F01-I01" in (qa_dir / "test_cases.md").read_text(encoding="utf-8")
     assert "外部LLM API未使用" in (qa_dir / "qa_process_report.html").read_text(encoding="utf-8")
-    assert "CSV観点" in (qa_dir / "test_design.md").read_text(encoding="utf-8")
+    # 観点が設計文書に載ること。かつては固定文言「CSV観点を対象仕様へ適用し…」を
+    # 全行に書いていたため、その文字列の有無で判定していた。固定文言では観点ごとの
+    # 判定基準が文書から失われるので、観点行そのものが出ていることで確かめる。
+    design_doc = (qa_dir / "test_design.md").read_text(encoding="utf-8")
+    assert "| TD-VP-01 |" in design_doc
     assert "セキュリティ" in (qa_dir / "qa_process_report.html").read_text(encoding="utf-8")
     assert (
         json.loads((qa_dir / "screen_transition_graph.json").read_text(encoding="utf-8"))["edges"][

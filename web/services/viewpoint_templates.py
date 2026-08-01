@@ -152,6 +152,7 @@ def _create_set_from_domain(domain_key: str, name: str = "") -> dict[str, Any]:
                 "domain_key": domain_key,
                 "applied": generated["applied_definitions"],
                 "excluded": generated["excluded_definitions"],
+                "unverifiable_by_product": generated["unverifiable_by_product"],
             },
         }
     )

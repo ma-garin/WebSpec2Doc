@@ -246,6 +246,7 @@ def _legacy_viewpoint(item: dict[str, Any]) -> dict[str, Any]:
         "evidence": str(item.get("evidence", "")),
         "technique": str(item.get("technique", "")),
         "test_level": str(item.get("test_level", "")),
+        "quality_area": str(item.get("quality_area", "")),
     }
 
 
@@ -271,17 +272,39 @@ def _viewpoints_by_type(summary_type: str) -> list[dict[str, Any]]:
     """
     viewpoints = _load_qa_viewpoints()
     if summary_type != QUALITY_AREA_TYPE:
-        return [vp for vp in viewpoints if vp.get("summary_type") != QUALITY_AREA_TYPE]
+        return [vp for vp in viewpoints if not _is_area_heading(vp)]
 
-    areas = [vp for vp in viewpoints if vp.get("summary_type") == QUALITY_AREA_TYPE]
-    seen = {str(vp["name"]) for vp in areas}
-    for vp in viewpoints:
-        area = str(vp.get("summary_type", ""))
-        if area in (QUALITY_AREA_TYPE, DESIGN_TYPE, "") or area in seen:
+    areas: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for viewpoint in viewpoints:
+        label = _area_label_of(viewpoint)
+        if not label or label in seen:
             continue
-        seen.add(area)
-        areas.append({**vp, "name": area})
+        seen.add(label)
+        areas.append(viewpoint if _is_area_heading(viewpoint) else {**viewpoint, "name": label})
     return areas
+
+
+def _is_area_heading(viewpoint: dict[str, Any]) -> bool:
+    """その観点が、品質領域の見出しそのものか。"""
+    return viewpoint.get("summary_type") == QUALITY_AREA_TYPE
+
+
+def _area_label_of(viewpoint: dict[str, Any]) -> str:
+    """観点が属する品質領域の名前。無ければ空文字。
+
+    生成観点は quality_area（品質特性）を値として持つ。分類名を領域として
+    流用すると、分類の文字列が内部の予約語（category_l2 等）と衝突したとき、
+    領域が無言で消える。値で持てば文字列の一致に左右されない。
+    """
+    if _is_area_heading(viewpoint):
+        return str(viewpoint.get("name", ""))
+    area = str(viewpoint.get("quality_area", "")).strip()
+    if area:
+        return area
+    # 品質特性を持たない観点（既定観点・AI提案）は分類名で代用する。
+    fallback = str(viewpoint.get("summary_type", ""))
+    return "" if fallback in (QUALITY_AREA_TYPE, DESIGN_TYPE) else fallback
 
 
 def _viewpoint_names(summary_type: str, limit: int = 8) -> list[str]:

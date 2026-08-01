@@ -29,7 +29,8 @@
    "risk": "視覚に依存した情報伝達により、一部の利用者が業務を完遂できない",
    "priority": "P1",
    "measure": "WCAG 2.2 の該当達成基準",
-   "automation": "自動検出できるのは達成基準の一部。残りは手動確認"
+   "automation": "自動検出できるのは達成基準の一部。残りは手動確認",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "WC02",
@@ -57,7 +58,8 @@
    "risk": "エラーの原因が分からず、利用者が入力を完了できない",
    "priority": "P1",
    "measure": "WCAG 2.2 の該当達成基準",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "WC03",
@@ -85,7 +87,8 @@
    "risk": "支援技術で内容が正しく解釈されず、動的更新に気づけない",
    "priority": "P2",
    "measure": "WCAG 2.2 の該当達成基準",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "WC04",
@@ -113,7 +116,8 @@
    "risk": "ポインタを使えない利用者が業務を完遂できない",
    "priority": "P1",
    "measure": "WCAG 2.2 の該当達成基準",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "WS01",
@@ -141,7 +145,8 @@
    "risk": "画面制約だけに依存した設計により、直接リクエストで業務前提を破られる",
    "priority": "P0",
    "measure": "拒否されるべき要求の拒否率",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "WS02",
@@ -170,7 +175,8 @@
    "risk": "設定の既定値や詳細エラーから内部構造が漏れ、攻撃の足がかりになる",
    "priority": "P1",
    "measure": "要求したヘッダの付与率",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "WS03",
@@ -199,7 +205,8 @@
    "risk": "セッションの使い回しや総当たりにより、他人の権限で操作される",
    "priority": "P0",
    "measure": "失効すべき識別子の失効率",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "WS04",
@@ -228,7 +235,8 @@
    "risk": "不正操作が記録されず、事後に何が起きたか説明できない",
    "priority": "P1",
    "measure": "記録すべき操作の記録率",
-   "automation": "手動確認が中心"
+   "automation": "手動確認が中心",
+   "automation_level": "manual"
   },
   {
    "identifier": "WS05",
@@ -257,7 +265,8 @@
    "risk": "サーバを踏み台にして内部ネットワークへ到達される",
    "priority": "P0",
    "measure": "許可外宛先の拒否率",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "WS06",
@@ -285,7 +294,8 @@
    "risk": "外部資源の差し替えにより、全利用者へ改ざんされたコードが配布される",
    "priority": "P1",
    "measure": "完全性検証を持つ外部資源の割合",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "WS07",
@@ -313,7 +323,8 @@
    "risk": "既知の脆弱性が放置され、公開情報だけで攻撃が成立する",
    "priority": "P1",
    "measure": "未対処脆弱性の件数と経過日数",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "WQ01",
@@ -342,7 +353,8 @@
    "risk": "表示が遅い・要素が動くことで、操作を誤るか離脱する",
    "priority": "P1",
    "measure": "対象システムに対して合意した目標値。未定義ならテスト前に要求不備として解消する",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "WQ02",
@@ -371,7 +383,8 @@
    "risk": "要求と実装の対応が取れず、抜けと余剰に気づけない",
    "priority": "P1",
    "measure": "要求項目のうち実装に対応づいた割合",
-   "automation": "半自動（実測は自動・判定は人）"
+   "automation": "半自動（実測は自動・判定は人）",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "WQ03",
@@ -399,7 +412,8 @@
    "risk": "単項目では通るが組合せで矛盾する入力が受理される",
    "priority": "P1",
    "measure": "2因子間の組合せ網羅率",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "WQ04",
@@ -427,7 +441,8 @@
    "risk": "操作はできるが、目的達成に時間がかかり使われなくなる",
    "priority": "P2",
    "measure": "タスク達成率と所要時間",
-   "automation": "手動確認が中心"
+   "automation": "手動確認が中心",
+   "automation_level": "manual"
   },
   {
    "identifier": "WQ05",
@@ -455,7 +470,8 @@
    "risk": "空や失敗の状態で画面が無言になり、利用者が詰まる",
    "priority": "P2",
    "measure": "状態ごとの説明と導線の有無",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "WQ06",
@@ -483,7 +499,8 @@
    "risk": "特定の表示条件でボタンが隠れ、業務を完遂できない",
    "priority": "P2",
    "measure": "検出した重なり・はみ出しの件数",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "WE01",
@@ -511,7 +528,8 @@
    "risk": "収集できた範囲を全体だと誤認し、未検証の画面を検証済みとして報告する",
    "priority": "P0",
    "measure": "収集画面数と未到達件数",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "WE02",
@@ -539,7 +557,8 @@
    "risk": "認証壁の向こう側を未検証と記録せず、検証済みとして扱う",
    "priority": "P0",
    "measure": "制限記録の網羅性",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "WE03",
@@ -567,7 +586,8 @@
    "risk": "遷移図が実挙動と食い違い、設計の根拠として使えない",
    "priority": "P1",
    "measure": "図の辺のうち実際に辿れた割合",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "WE04",
@@ -595,7 +615,8 @@
    "risk": "変更時に影響範囲を特定できず、修正漏れが残る",
    "priority": "P1",
    "measure": "双方向に対応づいた要素の割合",
-   "automation": "半自動（対応づけは自動・妥当性判定は人）"
+   "automation": "半自動（対応づけは自動・妥当性判定は人）",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "WE05",
@@ -623,7 +644,8 @@
    "risk": "手順が曖昧で、実行者によって結果が変わる",
    "priority": "P1",
    "measure": "実行者間で一致した判定の割合",
-   "automation": "手動確認が中心"
+   "automation": "手動確認が中心",
+   "automation_level": "manual"
   },
   {
    "identifier": "WE06",
@@ -651,7 +673,8 @@
    "risk": "結果が揺れるテストにより、本当の欠陥が見過ごされる",
    "priority": "P1",
    "measure": "反復実行で結果が一致した割合",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "WE07",
@@ -679,7 +702,8 @@
    "risk": "軽微な画面変更でテストが大量に壊れ、維持できなくなる",
    "priority": "P2",
    "measure": "変更あたりの修正箇所数",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "WE08",
@@ -707,7 +731,8 @@
    "risk": "検出できなかったことを問題が無いことと誤読され、誤った意思決定を招く",
    "priority": "P0",
    "measure": "証跡を辿れる主張の割合",
-   "automation": "半自動（対応づけは自動・妥当性判定は人）"
+   "automation": "半自動（対応づけは自動・妥当性判定は人）",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "WE09",
@@ -735,7 +760,8 @@
    "risk": "揺らぎが差分として大量に出て、本当の変更が埋もれる",
    "priority": "P1",
    "measure": "検出した差分のうち実際の変更である割合",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   }
  ]
 }

@@ -15,15 +15,23 @@
    "operation": "実利用者または代理者が実際の業務目的で{primary_flow}を通し、目的の達成可否と迂回操作を記録する",
    "expected": "意図した用途で目的が達成され、仕様は満たすが業務では使えない箇所が残っていない",
    "proof": "利用状況の記述・実施記録・達成可否・迂回操作の一覧",
-   "levels": ["受け入れテスト"],
+   "levels": [
+    "受け入れテスト"
+   ],
    "technique": "妥当性確認",
    "quality": "機能適合性・有効さ",
-   "sources": ["EV-IEEE-1012-2016", "EV-ISO-25019-2023"],
-   "capabilities": ["core"],
+   "sources": [
+    "EV-IEEE-1012-2016",
+    "EV-ISO-25019-2023"
+   ],
+   "capabilities": [
+    "core"
+   ],
    "risk": "仕様どおりに作ったが、意図した用途では使えないものが納品される",
    "priority": "P0",
    "measure": "意図した用途での目的達成率",
-   "automation": "手動確認が中心"
+   "automation": "手動確認が中心",
+   "automation_level": "manual"
   },
   {
    "identifier": "QM02",
@@ -37,15 +45,22 @@
    "operation": "各要求について合否の判定方法を書き出し、判定できないものを不備として列挙する",
    "expected": "各要求が単一の意味に読め、合否を判定でき、判定できないものは要求不備として差し戻されている",
    "proof": "要求一覧・判定方法・不備として差し戻した項目",
-   "levels": ["受け入れテスト"],
+   "levels": [
+    "受け入れテスト"
+   ],
    "technique": "要求レビュー",
    "quality": "検証可能性・機能適合性",
-   "sources": ["EV-ISO-29148-2018"],
-   "capabilities": ["core"],
+   "sources": [
+    "EV-ISO-29148-2018"
+   ],
+   "capabilities": [
+    "core"
+   ],
    "risk": "「速いこと」のような判定できない要求が残り、合否を争う",
    "priority": "P1",
    "measure": "判定方法を持つ要求の割合",
-   "automation": "手動確認が中心"
+   "automation": "手動確認が中心",
+   "automation_level": "manual"
   },
   {
    "identifier": "QM03",
@@ -59,15 +74,22 @@
    "operation": "要求を対象ごとに束ね、同一対象への記述が矛盾しないか、状態の網羅に抜けがないかを照合する",
    "expected": "矛盾する要求が解消され、想定すべき状態に抜けがなく、重複した記述が統合されている",
    "proof": "対象別の要求束・矛盾の一覧・解消記録",
-   "levels": ["受け入れテスト"],
+   "levels": [
+    "受け入れテスト"
+   ],
    "technique": "要求レビュー",
    "quality": "無矛盾性・完全性",
-   "sources": ["EV-ISO-29148-2018"],
-   "capabilities": ["core"],
+   "sources": [
+    "EV-ISO-29148-2018"
+   ],
+   "capabilities": [
+    "core"
+   ],
    "risk": "矛盾した要求のまま実装が進み、どちらが正かを後から決められない",
    "priority": "P1",
    "measure": "解消済み矛盾の件数と残件数",
-   "automation": "手動確認が中心"
+   "automation": "手動確認が中心",
+   "automation_level": "manual"
   },
   {
    "identifier": "QM04",
@@ -81,15 +103,23 @@
    "operation": "各成果物のレビュー記録を確認し、指摘が是正され、是正が確認されたところまで辿る",
    "expected": "レビューが記録され、指摘に対する是正が完了確認まで到達し、未完了が可視化されている",
    "proof": "レビュー記録・指摘一覧・是正内容・完了確認",
-   "levels": ["受け入れテスト"],
+   "levels": [
+    "受け入れテスト"
+   ],
    "technique": "インスペクション",
    "quality": "保守性・追跡性",
-   "sources": ["EV-IEEE-1028-2008", "EV-ISO-9001-2015"],
-   "capabilities": ["core"],
+   "sources": [
+    "EV-IEEE-1028-2008",
+    "EV-ISO-9001-2015"
+   ],
+   "capabilities": [
+    "core"
+   ],
    "risk": "指摘が出たまま是正されず、同じ欠陥が後工程へ流出する",
    "priority": "P1",
    "measure": "是正が完了確認まで到達した指摘の割合",
-   "automation": "手動確認が中心"
+   "automation": "手動確認が中心",
+   "automation_level": "manual"
   },
   {
    "identifier": "QM05",
@@ -103,15 +133,23 @@
    "operation": "検出した不適合を追跡し、影響範囲の特定と処置、同種の再発有無を確認する",
    "expected": "不適合が記録され、影響範囲が特定され、処置後に再確認され、同種の再発が抑えられている",
    "proof": "不適合記録・影響範囲・処置内容・再確認結果",
-   "levels": ["受け入れテスト"],
+   "levels": [
+    "受け入れテスト"
+   ],
    "technique": "是正処置の追跡",
    "quality": "信頼性・保守性",
-   "sources": ["EV-ISO-9001-2015", "EV-ISO-9000-2015"],
-   "capabilities": ["core"],
+   "sources": [
+    "EV-ISO-9001-2015",
+    "EV-ISO-9000-2015"
+   ],
+   "capabilities": [
+    "core"
+   ],
    "risk": "欠陥を直しただけで原因を残し、同じ欠陥が繰り返し発生する",
    "priority": "P1",
    "measure": "是正処置後の同種欠陥の再発件数",
-   "automation": "手動確認が中心"
+   "automation": "手動確認が中心",
+   "automation_level": "manual"
   },
   {
    "identifier": "QM06",
@@ -125,15 +163,22 @@
    "operation": "検証できなかった領域を列挙し、影響度を見積もり、受容するか追加検証するかの判断を記録する",
    "expected": "未検証領域が漏れなく列挙され、影響度が付き、受容の判断と判断者が記録されている",
    "proof": "未検証領域の一覧・影響度・受容判断の記録",
-   "levels": ["受け入れテスト"],
+   "levels": [
+    "受け入れテスト"
+   ],
    "technique": "リスクベースドテスト",
    "quality": "リスク回避性・透明性",
-   "sources": ["EV-ISO-31000-2018"],
-   "capabilities": ["core"],
+   "sources": [
+    "EV-ISO-31000-2018"
+   ],
+   "capabilities": [
+    "core"
+   ],
    "risk": "未検証の領域が「問題なし」として扱われ、無自覚にリスクを負う",
    "priority": "P0",
    "measure": "未検証領域のうち受容判断が記録された割合",
-   "automation": "手動確認が中心"
+   "automation": "手動確認が中心",
+   "automation_level": "manual"
   },
   {
    "identifier": "QM07",
@@ -147,15 +192,23 @@
    "operation": "変更を適用し、承認記録・影響評価・切戻しの実行可否を確認する",
    "expected": "承認なしに変更が入らず、影響が事前に評価され、切戻しが実際に実行でき、記録が残る",
    "proof": "変更要求・承認記録・影響評価・切戻し実行結果",
-   "levels": ["運用受入"],
+   "levels": [
+    "運用受入"
+   ],
    "technique": "運用リハーサル",
    "quality": "変更容易性・可用性",
-   "sources": ["EV-ISO-20000-1-2018", "EV-ISO-12207-2017"],
-   "capabilities": ["operations"],
+   "sources": [
+    "EV-ISO-20000-1-2018",
+    "EV-ISO-12207-2017"
+   ],
+   "capabilities": [
+    "operations"
+   ],
    "risk": "無承認の変更や切戻し不能な変更により、障害から復帰できない",
    "priority": "P0",
    "measure": "切戻しに要した時間と成否",
-   "automation": "手動確認が中心"
+   "automation": "手動確認が中心",
+   "automation_level": "manual"
   },
   {
    "identifier": "QM08",
@@ -169,15 +222,22 @@
    "operation": "損失につながる操作を意図的に行い、事前の警告・取り消し可否・被害の範囲を確認する",
    "expected": "取り返しのつかない操作の前に確認があり、可能な範囲で取り消せ、被害が限定される",
    "proof": "操作記録・警告内容・取り消し結果・影響範囲",
-   "levels": ["受け入れテスト"],
+   "levels": [
+    "受け入れテスト"
+   ],
    "technique": "エラー推測",
    "quality": "リスク回避性・ユーザーエラー防止性",
-   "sources": ["EV-ISO-25019-2023"],
-   "capabilities": ["ui"],
+   "sources": [
+    "EV-ISO-25019-2023"
+   ],
+   "capabilities": [
+    "ui"
+   ],
    "risk": "誤操作が確認なく確定し、取り返しのつかない損失につながる",
    "priority": "P1",
    "measure": "取り消し可能な操作の割合",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "QM09",
@@ -191,15 +251,22 @@
    "operation": "想定利用状況を列挙し、それぞれで{primary_flow}を実施して、確認できた範囲と未確認を分ける",
    "expected": "主要な利用状況で目的が達成でき、確認していない状況が未検証として明示される",
    "proof": "利用状況の一覧・実施結果・未確認の記録",
-   "levels": ["受け入れテスト"],
+   "levels": [
+    "受け入れテスト"
+   ],
    "technique": "構成テスト",
    "quality": "利用状況網羅性・機能適合性",
-   "sources": ["EV-ISO-25019-2023"],
-   "capabilities": ["ui"],
+   "sources": [
+    "EV-ISO-25019-2023"
+   ],
+   "capabilities": [
+    "ui"
+   ],
    "risk": "一部の環境でしか確認せず、他の環境で使えないまま公開される",
    "priority": "P1",
    "measure": "確認済み利用状況の割合",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "QM10",
@@ -213,15 +280,23 @@
    "operation": "報告の各結論について、対応する証拠を辿り、第三者が同じ証拠から同じ結論に至るかを確認する",
    "expected": "各結論に証拠が対応づき、証拠が改変されておらず、第三者が同じ結論を導ける",
    "proof": "結論と証拠の対応表・証拠ファイル・取得条件",
-   "levels": ["受け入れテスト"],
+   "levels": [
+    "受け入れテスト"
+   ],
    "technique": "監査",
    "quality": "追跡性・透明性",
-   "sources": ["EV-ISO-19011-2018", "EV-ISO-33002-2015"],
-   "capabilities": ["report"],
+   "sources": [
+    "EV-ISO-19011-2018",
+    "EV-ISO-33002-2015"
+   ],
+   "capabilities": [
+    "report"
+   ],
    "risk": "根拠を辿れない結論が報告され、判断の妥当性を後から検証できない",
    "priority": "P1",
    "measure": "証拠を辿れる結論の割合",
-   "automation": "半自動（対応づけは自動・妥当性判定は人）"
+   "automation": "半自動（対応づけは自動・妥当性判定は人）",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "QM11",
@@ -235,15 +310,23 @@
    "operation": "各成果物について、前段との一致を確認する活動と、利用目的への適合を確認する活動を分けて追跡する",
    "expected": "両方の活動が実施され、どちらの観点で確認したかが記録から区別できる",
    "proof": "検証記録・妥当性確認記録・各活動の実施者",
-   "levels": ["統合テスト"],
+   "levels": [
+    "統合テスト"
+   ],
    "technique": "検証と妥当性確認",
    "quality": "機能適合性・追跡性",
-   "sources": ["EV-IEEE-1012-2016", "EV-ISO-12207-2017"],
-   "capabilities": ["core"],
+   "sources": [
+    "EV-IEEE-1012-2016",
+    "EV-ISO-12207-2017"
+   ],
+   "capabilities": [
+    "core"
+   ],
    "risk": "仕様との一致だけを確認し、そもそも仕様が誤っていることに気づかない",
    "priority": "P1",
    "measure": "両方の活動が記録された成果物の割合",
-   "automation": "手動確認が中心"
+   "automation": "手動確認が中心",
+   "automation_level": "manual"
   },
   {
    "identifier": "QM12",
@@ -257,15 +340,23 @@
    "operation": "検証結果に対して、対象の版・環境・使用データを辿り、再実行で同じ条件を再現できるかを確認する",
    "expected": "どの版の何を検証したかが特定でき、同じ条件を再現でき、結果が対象と結び付いている",
    "proof": "対象の版識別子・環境情報・データ識別子・再現手順",
-   "levels": ["統合テスト"],
+   "levels": [
+    "統合テスト"
+   ],
    "technique": "構成管理監査",
    "quality": "追跡性・再現性",
-   "sources": ["EV-ISO-12207-2017", "EV-ISO-9001-2015"],
-   "capabilities": ["core"],
+   "sources": [
+    "EV-ISO-12207-2017",
+    "EV-ISO-9001-2015"
+   ],
+   "capabilities": [
+    "core"
+   ],
    "risk": "どの版を検証したか分からず、結果を別の版の保証として誤用する",
    "priority": "P1",
    "measure": "版を特定できる検証結果の割合",
-   "automation": "回帰対象は自動化候補"
+   "automation": "回帰対象は自動化候補",
+   "automation_level": "semi_automated"
   },
   {
    "identifier": "QM13",
@@ -279,15 +370,23 @@
    "operation": "設計変更を辿り、影響を受けた成果物と再検証の実施範囲を確認する",
    "expected": "変更がレビューされ、影響を受けた成果物が特定され、必要な再検証が実施されている",
    "proof": "変更記録・影響分析・再検証の実施範囲と結果",
-   "levels": ["統合テスト"],
+   "levels": [
+    "統合テスト"
+   ],
    "technique": "影響度分析",
    "quality": "保守性・機能適合性",
-   "sources": ["EV-ISO-90003-2018", "EV-ISO-9001-2015"],
-   "capabilities": ["core"],
+   "sources": [
+    "EV-ISO-90003-2018",
+    "EV-ISO-9001-2015"
+   ],
+   "capabilities": [
+    "core"
+   ],
    "risk": "設計変更の影響が追えず、変更していない箇所が壊れたまま出荷される",
    "priority": "P1",
    "measure": "変更に対する再検証の実施率",
-   "automation": "半自動（影響特定は自動・範囲判断は人）"
+   "automation": "半自動（影響特定は自動・範囲判断は人）",
+   "automation_level": "semi_automated"
   }
  ]
 }

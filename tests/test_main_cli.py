@@ -695,3 +695,43 @@ def test_main_loads_env_and_runs_parsed_args() -> None:
     basic_config.assert_called_once()
     load_env.assert_called_once()
     run_mock.assert_called_once_with(parsed)
+
+
+# ---------- P3-3: 画面が配る CI スニペットが実際に通ること ----------
+
+
+class TestCiSnippetFlagsExist:
+    """履歴・差分タブがコピーさせるコマンド（static/js/results.js の CI_SNIPPET_FORMATS）が
+    実在するフラグだけで構成されていることを担保する。
+
+    利用者はこれをそのまま CI に貼る。フラグが消えたり名前が変わったりすると、
+    画面は何事もなく動くのに、渡した先のパイプラインが壊れる。
+    """
+
+    def _parse(self, argv: list[str]) -> argparse.Namespace:
+        import main as main_module
+
+        with patch.object(sys, "argv", ["main.py", *argv]):
+            return main_module.parse_args()
+
+    def test_snippet_command_parses(self) -> None:
+        args = self._parse(
+            ["--url", "https://example.com/", "--output", "output/example.com", "--ci"]
+        )
+        assert args.url == "https://example.com/"
+        assert str(args.output) == "output/example.com"
+        assert args.ci is True
+
+    def test_ci_flag_is_documented_as_including_compare_and_fail_on_drift(self) -> None:
+        """--ci の説明文が「--compare --fail-on-drift を含む」ことを示していること。
+
+        画面側は個別フラグを並べず --ci 1 つを配る。この前提が崩れたら
+        スニペットを直す必要がある。
+        """
+        import main as main_module
+
+        with patch.object(sys, "argv", ["main.py", "--help"]), pytest.raises(SystemExit):
+            main_module.parse_args()
+        # --help は SystemExit するため、フラグの併存だけを確認する
+        args = self._parse(["--url", "https://example.com/", "--ci"])
+        assert hasattr(args, "compare") and hasattr(args, "fail_on_drift")

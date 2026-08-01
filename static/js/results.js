@@ -370,27 +370,77 @@ async function renderTimeline() {
   showTimelineDiff();
 }
 function _bindCiCopy() {
+  const card = document.querySelector('.ci-guidance');
   const btn = document.getElementById('ci-copy-btn');
-  if (!btn) return;
+  if (!card || !btn) return;
+  const domain = card.dataset.ciDomain || '';
+  card.querySelectorAll('[data-ci-format]').forEach(tab => {
+    tab.addEventListener('click', () => {
+      _ciSnippetFormat = tab.dataset.ciFormat;
+      card.querySelectorAll('[data-ci-format]').forEach(t => {
+        t.classList.toggle('is-active', t === tab);
+      });
+      const cmd = document.getElementById('ci-cmd');
+      if (cmd) cmd.textContent = _ciSnippetText(domain);
+    });
+  });
   btn.addEventListener('click', () => {
     const cmd = document.getElementById('ci-cmd');
     if (!cmd) return;
+    // 失敗を黙って捨てると「押したのに入っていない」状態になる（clipboard は
+    // 権限・非セキュアコンテキストで拒否されうる）。手でコピーする導線を出す。
     navigator.clipboard.writeText(cmd.textContent).then(() => {
-      const orig = btn.textContent;
       btn.textContent = 'コピーしました';
-      setTimeout(() => { btn.textContent = orig; }, 1500);
-    }).catch(() => {});
+      setTimeout(() => { btn.textContent = 'コピー'; }, 1500);
+    }).catch(() => {
+      btn.textContent = 'コピーできません（手で選択してください）';
+      setTimeout(() => { btn.textContent = 'コピー'; }, 3000);
+    });
   });
 }
+// CI 組み込み用スニペット（P3-3）。--ci は --compare --fail-on-drift を含み、
+// 機械可読サマリを stdout へ出す（src/main.py:177）。個別フラグを並べるより
+// 1 つで意図が伝わり、サマリ出力も付くのでこちらを勧める。
+// 連携先（GitHub Actions / Jenkins / 自前スクリプト）は顧客環境次第のため断定しない。
+const CI_SNIPPET_FORMATS = {
+  gha: {
+    label: 'GitHub Actions',
+    build: (domain) =>
+      '- name: 仕様ドリフト検知\n' +
+      '  run: |\n' +
+      `    python src/main.py --url https://${domain}/ \\\n` +
+      `      --output output/${domain} --ci`,
+  },
+  shell: {
+    label: 'シェル',
+    build: (domain) =>
+      `python src/main.py --url https://${domain}/ \\\n` +
+      `  --output output/${domain} --ci`,
+  },
+};
+let _ciSnippetFormat = 'gha';
+
+function _ciSnippetText(domain) {
+  const format = CI_SNIPPET_FORMATS[_ciSnippetFormat] || CI_SNIPPET_FORMATS.gha;
+  return format.build(domain);
+}
+
 function _ciGuidanceCard(domain) {
-  // CI連携先（Jenkins/GitHub Actions等）は顧客環境次第のため断定せず、中立的に提示する。
-  const cmd = `python src/main.py --url https://${domain}/ --compare --fail-on-drift`;
-  return '<div class="ci-guidance">' +
+  const tabs = Object.entries(CI_SNIPPET_FORMATS).map(([key, f]) =>
+    `<button type="button" class="ci-format-btn${key === _ciSnippetFormat ? ' is-active' : ''}"` +
+    ` data-ci-format="${key}">${escHtml(f.label)}</button>`).join('');
+  return '<div class="ci-guidance" data-ci-domain="' + escHtml(domain) + '">' +
     '<div class="ci-guidance-title">⚙️ CI/CD で自動ドリフト検知</div>' +
     '<p style="font-size:12.5px;color:var(--text-muted);margin:4px 0 8px">' +
-    '定期実行ジョブに組み込むと、前回から仕様ドリフトが出たとき <code>exit code 1</code> で失敗し、パイプラインを止められます。お使いのCIのジョブに以下を追加してください。</p>' +
-    '<div class="ci-guidance-cmd"><code id="ci-cmd">' + escHtml(cmd) + '</code>' +
-    '<button type="button" class="btn-outline-sm" id="ci-copy-btn">コピー</button></div></div>';
+    '定期実行ジョブに組み込むと、前回から仕様ドリフトが出たとき <code>exit code 1</code> で失敗し、' +
+    'パイプラインを止められます。</p>' +
+    `<div class="ci-format-tabs">${tabs}</div>` +
+    '<div class="ci-guidance-cmd"><code id="ci-cmd">' + escHtml(_ciSnippetText(domain)) + '</code>' +
+    '<button type="button" class="btn-outline-sm" id="ci-copy-btn">コピー</button></div>' +
+    '<p style="font-size:12px;color:var(--text-muted);margin:8px 0 0">' +
+    '結果の読み方: 差分があると <code>exit code 1</code>。機械可読サマリは stdout と ' +
+    `<code>output/${escHtml(domain)}/drift_summary.json</code> の両方に出ます。</p>` +
+    '</div>';
 }
 
 // 「この2時点の差分を表示」ボタンの応答が「押しても反応がわからない」と報告された不具合の修正。

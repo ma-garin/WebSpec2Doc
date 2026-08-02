@@ -280,10 +280,41 @@ def api_testcases_run() -> dict | tuple[dict, int]:
         headed=bool(body.get("headed")),
     )
     saved = save_run_result(domain, result, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    # テスト実行も 1 回の実行として履歴に残す。退避に失敗しても実行結果の応答は返す。
+    run_id = ""
+    try:
+        from web.services.qa.helpers import _output_dir
+        from web.services.run_store import snapshot_run
+        from web.services.usage_tracker import record_usage
+
+        summary = (saved or {}).get("summary") or {}
+        run_id = (
+            snapshot_run(
+                _output_dir(),
+                domain,
+                event="testcase_run",
+                status="complete" if result.get("ok") else "failed",
+                summary={
+                    "passed": int(summary.get("passed", 0)),
+                    "failed": int(summary.get("failed", 0)),
+                    "total": int(summary.get("total", 0)),
+                },
+            )
+            or ""
+        )
+        record_usage(
+            _output_dir(),
+            event="testcase_run",
+            domain=domain,
+            run_id=run_id,
+        )
+    except Exception:  # noqa: BLE001
+        logging.warning("テスト実行の履歴記録に失敗しました（応答は継続）", exc_info=True)
     return {
         "ok": bool(result.get("ok")),
         "generated": gen,
         "run": saved,
+        "run_id": run_id,
         "error": str(result.get("error") or ""),
     }
 

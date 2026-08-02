@@ -339,13 +339,16 @@
         "src/diff/snapshot.py",
         "src/diff/differ.py",
         "src/registry/site_registry.py",
-        "src/diff/impact_analyzer.py"
+        "src/diff/impact_analyzer.py",
+        "web/services/run_store.py"
       ],
       "symbols": [
         "save_snapshot",
         "compute_diff",
         "save_site",
-        "load_site"
+        "load_site",
+        "snapshot_run",
+        "list_runs"
       ],
       "outputs": [
         "snapshots",

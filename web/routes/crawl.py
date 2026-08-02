@@ -132,15 +132,26 @@ def run() -> Response:
 
 
 def _record_usage_safely(domain: str, compare: bool, out_dir: Path | None = None) -> None:
-    """利用実績の記録を行う。記録失敗はクロール結果配信を妨げない。"""
+    """成果物を実行回ごとに退避し、利用実績を記録する。
+
+    どちらもベストエフォート。失敗してもクロール成功の応答は返す
+    （成果物そのものは従来どおり output/<domain>/ に残っているため）。
+    """
+    root = out_dir if out_dir is not None else OUTPUT_DIR
     try:
+        from web.services.run_store import snapshot_run
         from web.services.usage_tracker import record_crawl_from_report
 
-        record_crawl_from_report(
-            out_dir if out_dir is not None else OUTPUT_DIR, domain, diff_run=compare
+        # 生成側には手を入れず、終わった時点の成果物をこの実行回として写し取る。
+        # これをしないと成果物はサイト単位で上書きされ、履歴の全行が同じ中身を指す。
+        run_id = snapshot_run(
+            root,
+            domain,
+            event="crawl",
+            summary=_summary_for_domain(domain, root),
         )
+        record_crawl_from_report(root, domain, diff_run=compare, run_id=run_id or "")
     except Exception:  # noqa: BLE001
-        # 実績記録はベストエフォート。失敗してもクロール成功の応答は返す
         pass
 
 

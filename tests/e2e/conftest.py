@@ -207,8 +207,9 @@ def flask_server() -> Generator[None, None, None]:
     # 「E2E削除対象-*」が469件溜まり、分類ツリーが読めなくなったことがある。
     # 専用DBへ逃がし、実行のたびに作り直す。
     e2e_db = ROOT / "instance" / E2E_DB_NAME
-    for leftover in e2e_db.parent.glob(f"{e2e_db.name}*"):
-        leftover.unlink(missing_ok=True)
+    for pattern in (f"{e2e_db.name}*", "auth.e2e.db*"):
+        for leftover in e2e_db.parent.glob(pattern):
+            leftover.unlink(missing_ok=True)
 
     proc = _spawn_server(e2e_db)
     try:
@@ -232,9 +233,12 @@ def _spawn_server(e2e_db: Path) -> subprocess.Popen[bytes]:
     env = {
         **os.environ,
         "FLASK_TESTING": "1",
-        # E2E は認証なし（ユーザー0人）の前提で画面を触る。初期管理者を作ると
+        # E2E は認証なし（ユーザー0人）の前提で画面を触る。初期管理者ができると
         # 全ページがログイン必須になり、既存のE2Eが一斉にログイン壁へ落ちる。
+        # 自動作成を止めるだけでなく、認証DBも観点DBと同様に専用ファイルへ逃がす
+        # （開発中の instance/auth.db を E2E が読み書きしないようにする）。
         "WEBSPEC2DOC_BOOTSTRAP_ADMIN": "0",
+        "WEBSPEC2DOC_AUTH_DB": str(e2e_db.with_name("auth.e2e.db")),
         "PYTHONPATH": str(ROOT),
         "WEBSPEC2DOC_PORT": str(urlparse(BASE_URL).port or 8765),
         "VIEWPOINTS_DB": str(e2e_db),

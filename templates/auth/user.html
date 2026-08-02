@@ -1,26 +1,14 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-  <title>ユーザー選択 - WebSpec2Doc</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/tenant-auth.css') }}?v={{ _ver }}">
-</head>
-<body class="tsel-body">
+{% extends "auth/_shell.html" %}
+{% block title %}ユーザー選択 - WebSpec2Doc{% endblock %}
 
-<div class="tsel-topbar">
-  <div class="tsel-brand"><span class="tsel-brand-mark">W</span><span>WebSpec2Doc</span></div>
-  <div class="tsel-who">
-    <span>{{ user.name }} でログイン中</span>
-    <form method="post" action="/auth/logout">
-      <button class="tsel-text-btn" type="submit">ログアウト</button>
-    </form>
-  </div>
-</div>
+{% block topbar_actions %}
+  <span>{{ user.name }} でログイン中</span>
+  <form method="post" action="/auth/logout">
+    <button class="tsel-text-btn" type="submit">ログアウト</button>
+  </form>
+{% endblock %}
 
+{% block content %}
 <div class="tsel-stage tsel-stage-narrow">
   <p class="tsel-kicker">STEP 1 / 3</p>
   <h1>どのユーザーとして使いますか？</h1>
@@ -77,6 +65,4 @@
     パスワードを設定したアカウントには切り替えられません。そのアカウントを使うにはログインし直してください。
   </div>
 </div>
-
-</body>
-</html>
+{% endblock %}

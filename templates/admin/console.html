@@ -1,26 +1,19 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-  <title>テナントとユーザーの管理 - WebSpec2Doc</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/tenant-auth.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-console.css') }}?v={{ _ver }}">
-</head>
-<body class="adm-body">
+{% extends "auth/_shell.html" %}
+{% block title %}テナントとユーザーの管理 - WebSpec2Doc{% endblock %}
+{% block body_class %}adm-body{% endblock %}
 
-<div class="tsel-topbar">
-  <div class="tsel-brand"><span class="tsel-brand-mark">W</span><span>WebSpec2Doc</span></div>
-  <div class="tsel-who">
-    <span>{{ user.name }} <span class="badge-role is-admin">管理者</span></span>
-    {% if tenant %}<span class="adm-current-tenant">{{ tenant.name }}</span>{% endif %}
-    <a class="tsel-text-btn" href="/auth/tenant">テナントを切り替え</a>
-    <a class="tsel-text-btn" href="/systems">システム選択へ</a>
-  </div>
-</div>
+{% block extra_css %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-console.css') }}?v={{ _ver }}">
+{% endblock %}
+
+{% block topbar_actions %}
+  <span>{{ user.name }} <span class="badge-role is-admin">管理者</span></span>
+  {% if tenant %}<span class="adm-current-tenant">{{ tenant.name }}</span>{% endif %}
+  <a class="tsel-text-btn" href="/auth/tenant">テナントを切り替え</a>
+  <a class="tsel-text-btn" href="/systems">システム選択へ</a>
+{% endblock %}
+
+{% block content %}
 
 <div class="adm-wrap">
   <div class="adm-head">
@@ -117,7 +110,8 @@
     </div>
   </div>
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script src="{{ url_for('static', filename='js/admin-console.js') }}?v={{ _ver }}"></script>
-</body>
-</html>
+{% endblock %}

@@ -1,0 +1,28 @@
+{# ログイン後の選択画面と管理画面の共通枠。
+   head とトップバーの外枠をここに集約し、各画面はタイトル・追加CSS・
+   トップバー右側・本文だけを差し替える。 #}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <title>{% block title %}WebSpec2Doc{% endblock %}</title>
+  <!-- Google Fonts はローカル専用の CSP（style-src 'self'）でブロックされ読み込まれないため撤去。
+       描画は --font-main / --font-mono のシステムフォント・フォールバックで確定する。 -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tenant-auth.css') }}?v={{ _ver }}">
+  {% block extra_css %}{% endblock %}
+</head>
+<body class="{% block body_class %}tsel-body{% endblock %}">
+
+<div class="tsel-topbar">
+  <div class="tsel-brand"><span class="tsel-brand-mark">W</span><span>WebSpec2Doc</span></div>
+  <div class="tsel-who">{% block topbar_actions %}{% endblock %}</div>
+</div>
+
+{% block content %}{% endblock %}
+{% block scripts %}{% endblock %}
+</body>
+</html>

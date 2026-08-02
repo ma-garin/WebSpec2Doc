@@ -12,7 +12,13 @@ from __future__ import annotations
 from flask import Blueprint, g, redirect, render_template, request
 from werkzeug.wrappers import Response as BaseResponse
 
-from web.auth import auth_enabled, mock_auth_enabled, require_admin
+from web.auth import (
+    SYSTEM_SELECT_PATH,
+    auth_enabled,
+    create_user_from_payload,
+    mock_auth_enabled,
+    require_admin,
+)
 from web.services.auth_store import (
     ROLE_ADMIN,
     ROLE_LABELS,
@@ -56,7 +62,7 @@ def console_page() -> BaseResponse | str:
     if user is None:
         return redirect("/auth/login?next=/admin/console")
     if user.get("role") != ROLE_ADMIN:
-        return redirect("/systems")
+        return redirect(SYSTEM_SELECT_PATH)
     return render_template("admin/console.html", user=user, tenant=getattr(g, "tenant", None))
 
 
@@ -121,18 +127,8 @@ def api_delete_tenant(tenant_id: str) -> JsonResult:
 def api_create_user() -> JsonResult:
     payload = request.get_json(silent=True) or {}
     tenant_id = str(payload.get("tenant_id", "")).strip() or None
-    # パスワードは任意。空ならモック認証（一覧クリック・メールのみ）で入るユーザーになる。
-    password = str(payload.get("password", ""))
     try:
-        user = get_auth_store().create_user(
-            tenant_id,
-            str(payload.get("email", "")),
-            str(payload.get("name", "")),
-            password,
-            role=str(payload.get("role", ROLE_MEMBER)),
-            actor_id=_actor_id(),
-            enforce_password_policy=not mock_auth_enabled(),
-        )
+        user = create_user_from_payload(payload, tenant_id=tenant_id, actor_id=_actor_id())
     except AuthError as exc:
         return {"error": str(exc), "code": exc.code}, 400
     return {"ok": True, "user": user, **_snapshot()}
@@ -160,19 +156,8 @@ def api_update_user(user_id: str) -> JsonResult:
     is_active = payload.get("is_active")
     if not isinstance(is_active, bool):
         return {"error": "is_active は真偽値で指定してください。", "code": "invalid_request"}, 400
-    store = get_auth_store()
-    memberships = store.list_memberships(user_id)
-    if not memberships:
-        return {"error": "所属のないユーザーは無効化できません。", "code": "no_membership"}, 400
     try:
-        # 所属テナントのいずれかを基準に「最後の管理者」判定を通す
-        for membership in memberships:
-            store.update_user(
-                user_id,
-                str(membership["tenant_id"]),
-                is_active=is_active,
-                actor_id=_actor_id(),
-            )
+        get_auth_store().set_user_active(user_id, is_active, actor_id=_actor_id())
     except AuthError as exc:
         return {"error": str(exc), "code": exc.code}, 400
     return {"ok": True, **_snapshot()}

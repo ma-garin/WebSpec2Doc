@@ -15,7 +15,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
 from web.services.viewpoint_store import ViewpointStore
 from web.services.viewpoint_templates import create_set_from_template
 

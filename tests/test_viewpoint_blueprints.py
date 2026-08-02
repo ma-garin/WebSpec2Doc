@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 import pytest
-
 from web.services.viewpoint_blueprints import (
     ViewpointGeneratorError,
     _blueprints,

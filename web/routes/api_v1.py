@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import dataclasses
 import json
 import logging
@@ -64,9 +62,8 @@ def _snapshot_ts_to_iso(stem: str) -> str:
 @bp.get("/healthz")
 def api_healthz() -> dict:
     """システムヘルスチェック。スケジューラー稼働状態を返す。"""
-    from web.services.scheduler import _scheduler_started, _stop_event
-
     from web.config import viewpoints_db_path
+    from web.services.scheduler import _scheduler_started, _stop_event
 
     scheduler_running = _scheduler_started and not _stop_event.is_set()
     return {

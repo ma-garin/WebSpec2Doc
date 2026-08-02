@@ -19,7 +19,6 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-
 from web.services.viewpoint_store import SCHEMA_VERSION, ViewpointStore
 
 

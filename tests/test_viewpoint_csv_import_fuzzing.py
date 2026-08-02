@@ -14,10 +14,8 @@ CSVは利用者が外部で編集して持ち込む。表計算ソフトの出�
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 import pytest
-
 from web.services.viewpoint_store import ViewpointStore, ViewpointStoreError
 
 HEADER = "persistent_key,name,category,purpose,recommended_checks,risk_weight,automation,standards,tags,enabled"

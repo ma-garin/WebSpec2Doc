@@ -15,7 +15,6 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-
 from web.services.qa.helpers import (
     _load_qa_viewpoints,
     _viewpoint_names,

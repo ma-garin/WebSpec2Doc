@@ -21,7 +21,6 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-
 from web.services.viewpoint_blueprints import (
     ViewpointGeneratorError,
     generate,

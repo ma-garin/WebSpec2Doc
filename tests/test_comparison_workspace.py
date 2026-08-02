@@ -194,9 +194,9 @@ class TestSeverityVocabulary:
     """
 
     def test_order_matches_differ_severities(self) -> None:
-        from diff.differ import SEVERITY_BREAKING, SEVERITY_INFO, SEVERITY_WARNING
-
         from web.services.comparison_workspace import SEVERITY_ORDER
+
+        from diff.differ import SEVERITY_BREAKING, SEVERITY_INFO, SEVERITY_WARNING
 
         assert SEVERITY_ORDER == (SEVERITY_BREAKING, SEVERITY_WARNING, SEVERITY_INFO)
 

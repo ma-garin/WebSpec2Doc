@@ -24,7 +24,6 @@ from web.services.qa.helpers import (
 )
 from web.services.qa.markdown_lite import render_markdown_lite
 
-
 # 文書の表に載せる観点の上限。全件を1つの表に流すと読めなくなるが、
 # 黙って切ると「これで全部」と読まれる。切った件数を必ず書き添える。
 VIEWPOINT_TABLE_LIMIT = 12

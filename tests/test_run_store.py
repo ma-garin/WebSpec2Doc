@@ -13,7 +13,6 @@ from datetime import datetime
 from pathlib import Path
 
 import pytest
-
 from web.services.run_store import (
     artifact_file,
     latest_run_id,

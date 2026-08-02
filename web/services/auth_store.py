@@ -30,10 +30,17 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from web.services.admin_audit import append_admin_audit
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
-ROLES = ("owner", "admin", "member")
-_ADMIN_ROLES = frozenset({"owner", "admin"})
+# ロールはユーザーではなく所属（memberships）が持つ。値は「一般」「管理者」の2つ。
+# 同じ人がテナントAでは一般、テナントBでは管理者、という持ち方を可能にするため。
+ROLE_MEMBER = "member"
+ROLE_ADMIN = "admin"
+ROLES = (ROLE_MEMBER, ROLE_ADMIN)
+ROLE_LABELS = {ROLE_MEMBER: "一般", ROLE_ADMIN: "管理者"}
+# v3以前の owner は admin に統合した。旧APIからの入力は読み替えて受け付ける。
+_LEGACY_ROLE_ALIASES = {"owner": ROLE_ADMIN}
+_ADMIN_ROLES = frozenset({ROLE_ADMIN})
 
 # ロックアウト: MAX_FAILED_ATTEMPTS 回連続で失敗すると LOCK_MINUTES 分ロック
 MAX_FAILED_ATTEMPTS = 5
@@ -83,6 +90,15 @@ def slugify_tenant_name(name: str) -> str:
     if not slug or not _SLUG_RE.match(slug):
         slug = "tenant"
     return slug
+
+
+def normalize_role(role: str) -> str:
+    """旧ロール名（owner）を現行の2ロールへ畳む。未知の値は例外にする。"""
+    value = (role or "").strip().lower()
+    value = _LEGACY_ROLE_ALIASES.get(value, value)
+    if value not in ROLES:
+        raise AuthError("不正なロールです。", "invalid_role")
+    return value
 
 
 def validate_password(password: str, email: str = "") -> None:
@@ -222,6 +238,70 @@ class AuthStore:
                     f"ALTER TABLE api_tokens ADD COLUMN scope TEXT NOT NULL DEFAULT '{SCOPE_FULL}'"
                 )
             conn.execute("PRAGMA user_version = 3")
+        if version < 4:
+            self._migrate_v4(conn)
+
+    @staticmethod
+    def _migrate_v4(conn: sqlite3.Connection) -> None:
+        """1ユーザー=1テナントを解き、所属を memberships テーブルへ移す。
+
+        users から tenant_id / role を落とし、password_hash を空文字許容にする
+        （パスワード未設定 = モック認証で使うユーザー）。SQLite は列を削除できない
+        ため、テーブルを作り直して移し替える。
+        """
+        session_columns = {
+            str(row[1]) for row in conn.execute("PRAGMA table_info(auth_sessions)").fetchall()
+        }
+        if "tenant_id" not in session_columns:
+            conn.execute("ALTER TABLE auth_sessions ADD COLUMN tenant_id TEXT")
+        # users を差し替える間、参照している auth_sessions が壊れないよう外部キーを外す。
+        # PRAGMA foreign_keys はトランザクション内では変更できないため、外側で切り替える。
+        conn.execute("PRAGMA foreign_keys = OFF")
+        try:
+            conn.executescript("""
+                BEGIN;
+                CREATE TABLE IF NOT EXISTS memberships (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL REFERENCES users(id),
+                    tenant_id TEXT NOT NULL REFERENCES tenants(id),
+                    role TEXT NOT NULL CHECK(role IN ('member','admin')),
+                    created_at TEXT NOT NULL,
+                    UNIQUE(user_id, tenant_id)
+                );
+                INSERT OR IGNORE INTO memberships (id, user_id, tenant_id, role, created_at)
+                    SELECT lower(hex(randomblob(16))), id, tenant_id,
+                           CASE WHEN role IN ('owner','admin') THEN 'admin' ELSE 'member' END,
+                           created_at
+                    FROM users;
+                CREATE TABLE users_v4 (
+                    id TEXT PRIMARY KEY,
+                    email TEXT NOT NULL UNIQUE,
+                    name TEXT NOT NULL,
+                    password_hash TEXT NOT NULL DEFAULT '',
+                    is_active INTEGER NOT NULL DEFAULT 1,
+                    failed_attempts INTEGER NOT NULL DEFAULT 0,
+                    locked_until TEXT,
+                    last_login_at TEXT,
+                    tour_completed_at TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
+                INSERT INTO users_v4 (id, email, name, password_hash, is_active,
+                                      failed_attempts, locked_until, last_login_at,
+                                      tour_completed_at, created_at, updated_at)
+                    SELECT id, email, name, password_hash, is_active,
+                           failed_attempts, locked_until, last_login_at,
+                           tour_completed_at, created_at, updated_at
+                    FROM users;
+                DROP TABLE users;
+                ALTER TABLE users_v4 RENAME TO users;
+                CREATE INDEX IF NOT EXISTS ix_memberships_user ON memberships(user_id);
+                CREATE INDEX IF NOT EXISTS ix_memberships_tenant ON memberships(tenant_id);
+                PRAGMA user_version = 4;
+                COMMIT;
+                """)
+        finally:
+            conn.execute("PRAGMA foreign_keys = ON")
 
     # --- 監査ログ -----------------------------------------------------
 
@@ -264,11 +344,16 @@ class AuthStore:
 
     # --- テナント -----------------------------------------------------
 
-    def create_tenant(self, name: str) -> dict:
+    def create_tenant(self, name: str, slug: str = "", *, actor_id: str = "") -> dict:
         name = name.strip()
         if not name:
             raise AuthError("テナント名を入力してください。", "invalid_input")
-        base_slug = slugify_tenant_name(name)
+        requested = (slug or "").strip().lower()
+        if requested and not _SLUG_RE.match(requested):
+            raise AuthError(
+                "slug は英小文字・数字・ハイフンで、32文字以内にしてください。", "invalid_slug"
+            )
+        base_slug = requested or slugify_tenant_name(name)
         with self._transaction() as conn:
             slug = base_slug
             for i in range(2, 100):
@@ -285,13 +370,86 @@ class AuthStore:
                 " VALUES (?, ?, ?, ?, ?)",
                 (tenant_id, name, slug, now, now),
             )
-            return {"id": tenant_id, "name": name, "slug": slug}
+            created = {"id": tenant_id, "name": name, "slug": slug}
+        if actor_id:
+            self.audit(
+                "tenant.created",
+                user_id=actor_id,
+                tenant_id=tenant_id,
+                detail=name,
+                target_type="tenant",
+                target_id=tenant_id,
+            )
+        return created
 
     def get_tenant(self, tenant_id: str) -> dict | None:
         self.initialize()
         with self._connect() as conn:
             row = conn.execute("SELECT * FROM tenants WHERE id = ?", (tenant_id,)).fetchone()
             return dict(row) if row else None
+
+    def list_tenants(self) -> list[dict]:
+        """全テナントとメンバー数（管理画面用）。"""
+        self.initialize()
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT t.*,"
+                " (SELECT COUNT(*) FROM memberships m WHERE m.tenant_id = t.id) AS member_count"
+                " FROM tenants t ORDER BY t.created_at"
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def rename_tenant(self, tenant_id: str, name: str, *, actor_id: str = "") -> dict:
+        name = name.strip()
+        if not name:
+            raise AuthError("テナント名を入力してください。", "invalid_input")
+        with self._transaction() as conn:
+            cursor = conn.execute(
+                "UPDATE tenants SET name = ?, updated_at = ? WHERE id = ?",
+                (name, _iso(_now()), tenant_id),
+            )
+            if cursor.rowcount == 0:
+                raise AuthError("テナントが存在しません。", "tenant_not_found")
+        self.audit(
+            "tenant.renamed",
+            user_id=actor_id or None,
+            tenant_id=tenant_id,
+            detail=name,
+            target_type="tenant",
+            target_id=tenant_id,
+        )
+        return self.get_tenant(tenant_id) or {}
+
+    def delete_tenant(self, tenant_id: str, *, actor_id: str = "") -> dict:
+        """テナントと、その所属・APIトークンを削除する。
+
+        出力ディレクトリ（output/tenants/{slug}）は削除しない。生成物を
+        DB操作の巻き添えで失わせないため、ファイルの後始末は運用側に残す。
+        """
+        tenant = self.get_tenant(tenant_id)
+        if tenant is None:
+            raise AuthError("テナントが存在しません。", "tenant_not_found")
+        with self._transaction() as conn:
+            remaining = int(conn.execute("SELECT COUNT(*) FROM tenants").fetchone()[0])
+            if remaining <= 1:
+                raise AuthError(
+                    "最後のテナントは削除できません。先に別のテナントを作成してください。",
+                    "last_tenant",
+                )
+            conn.execute("DELETE FROM memberships WHERE tenant_id = ?", (tenant_id,))
+            conn.execute("DELETE FROM api_tokens WHERE tenant_id = ?", (tenant_id,))
+            conn.execute(
+                "UPDATE auth_sessions SET tenant_id = NULL WHERE tenant_id = ?", (tenant_id,)
+            )
+            conn.execute("DELETE FROM tenants WHERE id = ?", (tenant_id,))
+        self.audit(
+            "tenant.deleted",
+            user_id=actor_id or None,
+            detail=f"{tenant['name']} (slug={tenant['slug']})",
+            target_type="tenant",
+            target_id=tenant_id,
+        )
+        return tenant
 
     # --- ユーザー -----------------------------------------------------
 
@@ -302,37 +460,56 @@ class AuthStore:
 
     def create_user(
         self,
-        tenant_id: str,
-        email: str,
-        name: str,
-        password: str,
-        role: str = "member",
+        tenant_id: str | None = None,
+        email: str = "",
+        name: str = "",
+        password: str = "",
+        role: str = ROLE_MEMBER,
         *,
         actor_id: str = "",
     ) -> dict:
+        """ユーザーを作る。
+
+        tenant_id を渡すとその所属も同時に作る。None なら所属なしで作成し、
+        管理者が割り当てるまで待機状態になる（本人によるサインアップの経路）。
+        password が空文字ならパスワード未設定として作る（モック認証で使う）。
+        """
         email = email.strip().lower()
         name = name.strip()
         if not _EMAIL_RE.match(email):
             raise AuthError("メールアドレスの形式が正しくありません。", "invalid_email")
         if not name:
             raise AuthError("表示名を入力してください。", "invalid_input")
-        if role not in ROLES:
-            raise AuthError("不正なロールです。", "invalid_role")
-        validate_password(password, email)
+        role = normalize_role(role)
+        password_hash = ""
+        if password:
+            validate_password(password, email)
+            password_hash = generate_password_hash(password)
         with self._transaction() as conn:
-            if conn.execute("SELECT 1 FROM tenants WHERE id = ?", (tenant_id,)).fetchone() is None:
+            if (
+                tenant_id
+                and conn.execute("SELECT 1 FROM tenants WHERE id = ?", (tenant_id,)).fetchone()
+                is None
+            ):
                 raise AuthError("テナントが存在しません。", "tenant_not_found")
             if conn.execute("SELECT 1 FROM users WHERE email = ?", (email,)).fetchone():
                 raise AuthError("このメールアドレスは既に登録されています。", "email_taken")
             now = _iso(_now())
             user_id = uuid.uuid4().hex
             conn.execute(
-                "INSERT INTO users (id, tenant_id, email, name, password_hash, role,"
-                " is_active, created_at, updated_at)"
-                " VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)",
-                (user_id, tenant_id, email, name, generate_password_hash(password), role, now, now),
+                "INSERT INTO users (id, email, name, password_hash, is_active,"
+                " created_at, updated_at) VALUES (?, ?, ?, ?, 1, ?, ?)",
+                (user_id, email, name, password_hash, now, now),
             )
+            if tenant_id:
+                conn.execute(
+                    "INSERT INTO memberships (id, user_id, tenant_id, role, created_at)"
+                    " VALUES (?, ?, ?, ?, ?)",
+                    (uuid.uuid4().hex, user_id, tenant_id, role, now),
+                )
         user = self.get_user(user_id) or {}
+        if tenant_id:
+            user["role"] = role
         self.audit(
             "user.created",
             user_id=actor_id or user_id,
@@ -343,12 +520,12 @@ class AuthStore:
         )
         return user
 
-    def setup_initial(self, tenant_name: str, email: str, name: str, password: str) -> dict:
-        """初期セットアップ: 最初のテナントとオーナーを作成する（ユーザーが1人でも居れば拒否）。"""
+    def setup_initial(self, tenant_name: str, email: str, name: str, password: str = "") -> dict:
+        """初期セットアップ: 最初のテナントと管理者を作る（ユーザーが1人でも居れば拒否）。"""
         if self.has_any_user():
             raise AuthError("初期セットアップは完了済みです。", "already_setup")
         tenant = self.create_tenant(tenant_name)
-        user = self.create_user(tenant["id"], email, name, password, role="owner")
+        user = self.create_user(tenant["id"], email, name, password, role=ROLE_ADMIN)
         self.audit("tenant.created", user_id=user["id"], tenant_id=tenant["id"], detail=tenant_name)
         return {"tenant": tenant, "user": user}
 
@@ -359,12 +536,44 @@ class AuthStore:
             return self._public_user(row) if row else None
 
     def list_users(self, tenant_id: str) -> list[dict]:
+        """指定テナントに所属するユーザー（role はそのテナントでのロール）。"""
         self.initialize()
         with self._connect() as conn:
             rows = conn.execute(
-                "SELECT * FROM users WHERE tenant_id = ? ORDER BY created_at", (tenant_id,)
+                "SELECT u.*, m.role AS role FROM users u"
+                " JOIN memberships m ON m.user_id = u.id"
+                " WHERE m.tenant_id = ? ORDER BY u.created_at",
+                (tenant_id,),
             ).fetchall()
             return [self._public_user(r) for r in rows]
+
+    def list_all_users(self) -> list[dict]:
+        """全ユーザーと所属テナント一覧（管理画面用）。所属なしのユーザーも含む。"""
+        self.initialize()
+        with self._connect() as conn:
+            users = conn.execute("SELECT * FROM users ORDER BY created_at").fetchall()
+            membership_rows = conn.execute(
+                "SELECT m.user_id, t.id AS tenant_id, t.name, t.slug, m.role"
+                " FROM memberships m JOIN tenants t ON t.id = m.tenant_id"
+                " ORDER BY t.name"
+            ).fetchall()
+        grouped: dict[str, list[dict]] = {}
+        for row in membership_rows:
+            grouped.setdefault(str(row["user_id"]), []).append(
+                {
+                    "tenant_id": row["tenant_id"],
+                    "name": row["name"],
+                    "slug": row["slug"],
+                    "role": row["role"],
+                }
+            )
+        result = []
+        for row in users:
+            public = self._public_user(row)
+            public["memberships"] = grouped.get(str(row["id"]), [])
+            public["has_password"] = bool(row["password_hash"])
+            result.append(public)
+        return result
 
     def complete_tour(self, user_id: str) -> dict:
         """本人の初回ツアー完了時刻を冪等に記録する。"""
@@ -396,55 +605,56 @@ class AuthStore:
         is_active: bool | None = None,
         actor_id: str = "",
     ) -> dict:
-        """ロール変更・有効/無効化（同一テナント内のみ）。最後のownerの降格/無効化は拒否する。"""
-        if role is not None and role not in ROLES:
-            raise AuthError("不正なロールです。", "invalid_role")
+        """テナント内のロール変更と、アカウントの有効/無効化。
+
+        role は「そのテナントでの所属ロール」を変える。is_active はユーザー本体の
+        有効/無効で全テナントに効く。最後の管理者の降格・無効化は拒否する。
+        """
+        if role is not None:
+            role = normalize_role(role)
         with self._transaction() as conn:
             row = conn.execute(
-                "SELECT * FROM users WHERE id = ? AND tenant_id = ?", (user_id, tenant_id)
+                "SELECT u.*, m.role AS role FROM users u"
+                " JOIN memberships m ON m.user_id = u.id"
+                " WHERE u.id = ? AND m.tenant_id = ?",
+                (user_id, tenant_id),
             ).fetchone()
             if row is None:
                 raise AuthError("ユーザーが存在しません。", "user_not_found")
-            demoting = role is not None and role != "owner" and row["role"] == "owner"
+            current_role = str(row["role"])
+            demoting = role is not None and role != ROLE_ADMIN and current_role == ROLE_ADMIN
             deactivating = is_active is False and bool(row["is_active"])
-            if demoting or deactivating:
-                owners = conn.execute(
-                    "SELECT COUNT(*) FROM users"
-                    " WHERE tenant_id = ? AND role = 'owner' AND is_active = 1",
-                    (tenant_id,),
-                ).fetchone()[0]
-                if row["role"] == "owner" and owners <= 1:
-                    raise AuthError(
-                        "最後のオーナーを無効化・降格することはできません。", "last_owner"
-                    )
-            updates: list[str] = []
-            params: list[object] = []
-            if role is not None:
-                updates.append("role = ?")
-                params.append(role)
-            if is_active is not None:
-                updates.append("is_active = ?")
-                params.append(1 if is_active else 0)
-                if is_active:
-                    updates.append("failed_attempts = 0")
-                    updates.append("locked_until = NULL")
-            if not updates:
-                return self._public_user(row)
-            updates.append("updated_at = ?")
-            params.append(_iso(_now()))
-            params.extend([user_id, tenant_id])
-            # updates はこの関数内のリテラル断片のみ・値は全てプレースホルダ渡し
-            conn.execute(
-                f"UPDATE users SET {', '.join(updates)} WHERE id = ? AND tenant_id = ?",  # nosec B608
-                params,
-            )
-            if is_active is False:
-                # 無効化したユーザーの既存セッションは即座に失効させる
-                conn.execute(
-                    "UPDATE auth_sessions SET revoked_at = ? WHERE user_id = ?",
-                    (_iso(_now()), user_id),
+            if current_role == ROLE_ADMIN and (demoting or deactivating):
+                admins = int(
+                    conn.execute(
+                        "SELECT COUNT(*) FROM memberships m JOIN users u ON u.id = m.user_id"
+                        " WHERE m.tenant_id = ? AND m.role = ? AND u.is_active = 1",
+                        (tenant_id, ROLE_ADMIN),
+                    ).fetchone()[0]
                 )
+                if admins <= 1:
+                    raise AuthError(
+                        "最後の管理者を無効化・降格することはできません。", "last_admin"
+                    )
+            now = _iso(_now())
+            if role is not None:
+                conn.execute(
+                    "UPDATE memberships SET role = ? WHERE user_id = ? AND tenant_id = ?",
+                    (role, user_id, tenant_id),
+                )
+            if is_active is not None:
+                conn.execute(
+                    "UPDATE users SET is_active = ?, failed_attempts = 0, locked_until = NULL,"
+                    " updated_at = ? WHERE id = ?",
+                    (1 if is_active else 0, now, user_id),
+                )
+                if not is_active:
+                    # 無効化したユーザーの既存セッションは即座に失効させる
+                    conn.execute(
+                        "UPDATE auth_sessions SET revoked_at = ? WHERE user_id = ?", (now, user_id)
+                    )
         updated_user = self.get_user(user_id) or {}
+        updated_user["role"] = role or current_role
         self.audit(
             "user.updated",
             user_id=actor_id or None,
@@ -457,6 +667,124 @@ class AuthStore:
             target_id=user_id,
         )
         return updated_user
+
+    def delete_user(self, user_id: str, *, actor_id: str = "") -> None:
+        """ユーザーを削除する。所属とセッションも併せて消す。"""
+        with self._transaction() as conn:
+            row = conn.execute("SELECT email FROM users WHERE id = ?", (user_id,)).fetchone()
+            if row is None:
+                raise AuthError("ユーザーが存在しません。", "user_not_found")
+            self._guard_last_admin_removal(conn, user_id, set())
+            conn.execute("DELETE FROM memberships WHERE user_id = ?", (user_id,))
+            conn.execute("DELETE FROM auth_sessions WHERE user_id = ?", (user_id,))
+            conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
+            email = str(row["email"])
+        self.audit(
+            "user.deleted",
+            user_id=actor_id or None,
+            detail=email,
+            target_type="user",
+            target_id=user_id,
+        )
+
+    # --- 所属（memberships） -------------------------------------------
+
+    def list_memberships(self, user_id: str) -> list[dict]:
+        """このユーザーが所属するテナントと、そこでのロール。"""
+        self.initialize()
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT t.id AS tenant_id, t.name, t.slug, m.role,"
+                " (SELECT COUNT(*) FROM memberships mm WHERE mm.tenant_id = t.id)"
+                "   AS member_count"
+                " FROM memberships m JOIN tenants t ON t.id = m.tenant_id"
+                " WHERE m.user_id = ? ORDER BY t.name",
+                (user_id,),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def membership_role(self, user_id: str, tenant_id: str) -> str | None:
+        self.initialize()
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT role FROM memberships WHERE user_id = ? AND tenant_id = ?",
+                (user_id, tenant_id),
+            ).fetchone()
+        return str(row["role"]) if row is not None else None
+
+    def set_memberships(
+        self, user_id: str, entries: list[dict], *, actor_id: str = ""
+    ) -> list[dict]:
+        """所属を一括置換する（管理画面の「所属を編集」）。空リストなら所属なしにする。"""
+        normalized: list[tuple[str, str]] = []
+        seen: set[str] = set()
+        for entry in entries:
+            tenant_id = str(entry.get("tenant_id", "")).strip()
+            if not tenant_id or tenant_id in seen:
+                continue
+            seen.add(tenant_id)
+            normalized.append((tenant_id, normalize_role(str(entry.get("role", ROLE_MEMBER)))))
+        with self._transaction() as conn:
+            if conn.execute("SELECT 1 FROM users WHERE id = ?", (user_id,)).fetchone() is None:
+                raise AuthError("ユーザーが存在しません。", "user_not_found")
+            for tenant_id, _role in normalized:
+                if (
+                    conn.execute("SELECT 1 FROM tenants WHERE id = ?", (tenant_id,)).fetchone()
+                    is None
+                ):
+                    raise AuthError("テナントが存在しません。", "tenant_not_found")
+            keeping_admin = {t for t, role in normalized if role == ROLE_ADMIN}
+            self._guard_last_admin_removal(conn, user_id, keeping_admin)
+            conn.execute("DELETE FROM memberships WHERE user_id = ?", (user_id,))
+            now = _iso(_now())
+            for tenant_id, role in normalized:
+                conn.execute(
+                    "INSERT INTO memberships (id, user_id, tenant_id, role, created_at)"
+                    " VALUES (?, ?, ?, ?, ?)",
+                    (uuid.uuid4().hex, user_id, tenant_id, role, now),
+                )
+            # 所属から外れたテナントを選択中のセッションは、選択を解除して選び直させる
+            conn.execute(
+                "UPDATE auth_sessions SET tenant_id = NULL"
+                " WHERE user_id = ? AND tenant_id IS NOT NULL AND tenant_id NOT IN"
+                " (SELECT tenant_id FROM memberships WHERE user_id = ?)",
+                (user_id, user_id),
+            )
+        self.audit(
+            "membership.updated",
+            user_id=actor_id or None,
+            detail=f"target={user_id} tenants={len(normalized)}",
+            target_type="user",
+            target_id=user_id,
+        )
+        return self.list_memberships(user_id)
+
+    @staticmethod
+    def _guard_last_admin_removal(
+        conn: sqlite3.Connection, user_id: str, keeping_admin: set[str]
+    ) -> None:
+        """管理者が0人になるテナントを作らせない。"""
+        rows = conn.execute(
+            "SELECT tenant_id FROM memberships WHERE user_id = ? AND role = ?",
+            (user_id, ROLE_ADMIN),
+        ).fetchall()
+        for row in rows:
+            tenant_id = str(row["tenant_id"])
+            if tenant_id in keeping_admin:
+                continue
+            others = int(
+                conn.execute(
+                    "SELECT COUNT(*) FROM memberships m JOIN users u ON u.id = m.user_id"
+                    " WHERE m.tenant_id = ? AND m.role = ? AND m.user_id != ? AND u.is_active = 1",
+                    (tenant_id, ROLE_ADMIN, user_id),
+                ).fetchone()[0]
+            )
+            if others == 0:
+                raise AuthError(
+                    "最後の管理者をテナントから外すことはできません。"
+                    "先に別のユーザーを管理者にしてください。",
+                    "last_admin",
+                )
 
     # --- 認証 ---------------------------------------------------------
 
@@ -473,12 +801,10 @@ class AuthStore:
         error: AuthError | None = None
         user: dict | None = None
         failed_user_id: str | None = None
-        failed_tenant_id: str | None = None
         with self._transaction() as conn:
             row = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
             if row is not None:
                 failed_user_id = str(row["id"])
-                failed_tenant_id = str(row["tenant_id"])
             locked_until = row["locked_until"] if row is not None else None
             if row is None:
                 # ユーザー有無でレスポンス時間差を作らないためダミー検証を行う
@@ -488,6 +814,12 @@ class AuthStore:
                 )
             elif not row["is_active"]:
                 error = AuthError("このアカウントは無効化されています。", "inactive")
+            elif not row["password_hash"]:
+                error = AuthError(
+                    "このアカウントはパスワードが設定されていません。"
+                    "メールアドレスだけでログインしてください。",
+                    "no_password",
+                )
             elif locked_until and datetime.fromisoformat(locked_until) > now:
                 error = AuthError(
                     "ログイン失敗が続いたため一時的にロックされています。"
@@ -525,7 +857,7 @@ class AuthStore:
             self.audit(
                 "user.login",
                 user_id=failed_user_id,
-                tenant_id=failed_tenant_id,
+                tenant_id=self._sole_tenant_id(failed_user_id),
                 actor_email=email,
                 target_type="user",
                 target_id=failed_user_id or "unknown",
@@ -535,11 +867,74 @@ class AuthStore:
         self.audit(
             "user.login",
             user_id=user["id"],
-            tenant_id=user["tenant_id"],
+            tenant_id=self._sole_tenant_id(user["id"]),
             target_type="user",
             target_id=user["id"],
         )
         return user
+
+    def _sole_tenant_id(self, user_id: str | None) -> str | None:
+        """所属が1件だけならその ID。0件・複数件は None。
+
+        ログインはテナントを選ぶ前の出来事なので、テナント別の監査ログに落とせるのは
+        所属が一意に決まるときだけ。複数所属の場合はテナント選択時に別途記録する。
+        """
+        if not user_id:
+            return None
+        memberships = self.list_memberships(user_id)
+        return str(memberships[0]["tenant_id"]) if len(memberships) == 1 else None
+
+    def authenticate_passwordless(self, email: str) -> dict:
+        """モック認証: メールアドレスだけでログインする（社内モック用）。
+
+        パスワードを設定済みのユーザーはこの経路では通さない。モックを有効にした
+        だけで、パスワードで守っていたアカウントが素通りになるのを防ぐため。
+        """
+        email = (email or "").strip().lower()
+        self.initialize()
+        now = _iso(_now())
+        with self._transaction() as conn:
+            row = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+            if row is None:
+                raise AuthError(
+                    "このメールアドレスのユーザーは登録されていません。", "unknown_user"
+                )
+            if not row["is_active"]:
+                raise AuthError("このアカウントは無効化されています。", "inactive")
+            if row["password_hash"]:
+                raise AuthError(
+                    "このアカウントはパスワードが必要です。", "password_required"
+                )
+            conn.execute(
+                "UPDATE users SET failed_attempts = 0, locked_until = NULL,"
+                " last_login_at = ?, updated_at = ? WHERE id = ?",
+                (now, now, row["id"]),
+            )
+            user = self._public_user(row)
+        self.audit(
+            "user.login",
+            user_id=user["id"],
+            tenant_id=self._sole_tenant_id(user["id"]),
+            detail="passwordless",
+            target_type="user",
+            target_id=user["id"],
+        )
+        return user
+
+    def list_login_candidates(self, limit: int = 20) -> list[dict]:
+        """モックログイン画面に並べる、パスワード未設定の有効ユーザー。"""
+        self.initialize()
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT u.id, u.email, u.name,"
+                " (SELECT COUNT(*) FROM memberships m WHERE m.user_id = u.id) AS tenant_count,"
+                " (SELECT COUNT(*) FROM memberships m WHERE m.user_id = u.id AND m.role = ?)"
+                "   AS admin_count"
+                " FROM users u WHERE u.is_active = 1 AND u.password_hash = ''"
+                " ORDER BY u.created_at LIMIT ?",
+                (ROLE_ADMIN, max(1, min(limit, 50))),
+            ).fetchall()
+        return [dict(row) for row in rows]
 
     def change_password(self, user_id: str, current: str, new: str) -> None:
         self.initialize()
@@ -559,7 +954,7 @@ class AuthStore:
             conn.execute(
                 "UPDATE auth_sessions SET revoked_at = ? WHERE user_id = ?", (now, user_id)
             )
-        self.audit("user.password_changed", user_id=user_id, tenant_id=row["tenant_id"])
+        self.audit("user.password_changed", user_id=user_id)
 
     # --- セッション ---------------------------------------------------
 
@@ -576,13 +971,14 @@ class AuthStore:
             ).fetchone()
         return self._public_user(row) if row is not None else None
 
-    def create_session(self, user_id: str) -> str:
+    def create_session(self, user_id: str, tenant_id: str | None = None) -> str:
+        """セッションを発行する。tenant_id は未選択なら None（テナント選択画面へ送る）。"""
         raw = secrets.token_urlsafe(32)
         now = _now()
         with self._transaction() as conn:
             conn.execute(
                 "INSERT INTO auth_sessions (id, user_id, token_hash, created_at,"
-                " expires_at, last_seen_at) VALUES (?, ?, ?, ?, ?, ?)",
+                " expires_at, last_seen_at, tenant_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (
                     uuid.uuid4().hex,
                     user_id,
@@ -590,19 +986,49 @@ class AuthStore:
                     _iso(now),
                     _iso(now + timedelta(hours=session_hours())),
                     _iso(now),
+                    tenant_id,
                 ),
             )
         return raw
 
+    def bind_session_tenant(self, raw_token: str, tenant_id: str) -> bool:
+        """テナント選択の結果をセッションへ結び付ける。所属していなければ False。"""
+        if not raw_token or not tenant_id:
+            return False
+        with self._transaction() as conn:
+            row = conn.execute(
+                "SELECT id AS session_id, user_id FROM auth_sessions"
+                " WHERE token_hash = ? AND revoked_at IS NULL",
+                (_hash_token(raw_token),),
+            ).fetchone()
+            if row is None:
+                return False
+            member = conn.execute(
+                "SELECT 1 FROM memberships WHERE user_id = ? AND tenant_id = ?",
+                (row["user_id"], tenant_id),
+            ).fetchone()
+            if member is None:
+                return False
+            conn.execute(
+                "UPDATE auth_sessions SET tenant_id = ? WHERE id = ?",
+                (tenant_id, row["session_id"]),
+            )
+        return True
+
     def resolve_session(self, raw_token: str) -> dict | None:
-        """セッショントークンから user + tenant を返す。無効なら None。"""
+        """セッショントークンから user + tenant を返す。無効なら None。
+
+        テナント未選択のセッションは tenant=None で返す。ログイン済みかどうかと、
+        作業するテナントが決まっているかどうかは別の状態なので分けて扱う。
+        """
         if not raw_token:
             return None
         self.initialize()
         now = _now()
         with self._connect() as conn:
             row = conn.execute(
-                "SELECT s.id AS session_id, s.expires_at, s.revoked_at, u.*"
+                "SELECT s.id AS session_id, s.expires_at, s.revoked_at,"
+                " s.tenant_id AS session_tenant_id, u.*"
                 " FROM auth_sessions s JOIN users u ON u.id = s.user_id"
                 " WHERE s.token_hash = ?",
                 (_hash_token(raw_token),),
@@ -611,19 +1037,30 @@ class AuthStore:
                 return None
             if datetime.fromisoformat(row["expires_at"]) <= now:
                 return None
-            tenant = conn.execute(
-                "SELECT * FROM tenants WHERE id = ?", (row["tenant_id"],)
-            ).fetchone()
-            if tenant is None:
-                return None
+            tenant: dict | None = None
+            role: str | None = None
+            session_tenant_id = row["session_tenant_id"]
+            if session_tenant_id:
+                tenant_row = conn.execute(
+                    "SELECT * FROM tenants WHERE id = ?", (session_tenant_id,)
+                ).fetchone()
+                member_row = conn.execute(
+                    "SELECT role FROM memberships WHERE user_id = ? AND tenant_id = ?",
+                    (row["id"], session_tenant_id),
+                ).fetchone()
+                # テナント削除・所属解除の後は未選択として扱い、選び直させる
+                if tenant_row is not None and member_row is not None:
+                    tenant = dict(tenant_row)
+                    role = str(member_row["role"])
             conn.execute(
                 "UPDATE auth_sessions SET last_seen_at = ? WHERE id = ?",
                 (_iso(now), row["session_id"]),
             )
             user = self._public_user(row)
-            for extra in ("session_id", "expires_at", "revoked_at"):
+            for extra in ("session_id", "expires_at", "revoked_at", "session_tenant_id"):
                 user.pop(extra, None)
-            return {"user": user, "tenant": dict(tenant)}
+            user["role"] = role
+            return {"user": user, "tenant": tenant}
 
     def revoke_session(self, raw_token: str) -> None:
         if not raw_token:

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <title>テナントとユーザーの管理 - WebSpec2Doc</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tenant-auth.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-console.css') }}?v={{ _ver }}">
+</head>
+<body class="adm-body">
+
+<div class="tsel-topbar">
+  <div class="tsel-brand"><span class="tsel-brand-mark">W</span><span>WebSpec2Doc</span></div>
+  <div class="tsel-who">
+    <span>{{ user.name }} <span class="badge-role is-admin">管理者</span></span>
+    {% if tenant %}<span class="adm-current-tenant">{{ tenant.name }}</span>{% endif %}
+    <a class="tsel-text-btn" href="/auth/tenant">テナントを切り替え</a>
+    <a class="tsel-text-btn" href="/systems">システム選択へ</a>
+  </div>
+</div>
+
+<div class="adm-wrap">
+  <div class="adm-head">
+    <div>
+      <h1>テナントとユーザーの管理</h1>
+      <p>管理者だけがこの画面に到達できます。ロールはテナントごとに設定します。</p>
+    </div>
+  </div>
+
+  <div id="adm-alert" class="adm-alert" role="alert" hidden></div>
+
+  <!-- テナント -->
+  <section class="adm-card">
+    <div class="adm-card-head">
+      <h2>テナント</h2>
+      <span class="hint">データ保存先: output/tenants/{slug}/ ・ instance/tenants/{slug}/</span>
+    </div>
+    <form class="adm-inline" id="tenant-form">
+      <div>
+        <label for="t-name">テナント名</label>
+        <input type="text" id="t-name" placeholder="例: 決済基盤リプレイスPJ" required>
+      </div>
+      <div>
+        <label for="t-slug">slug（省略時は名前から自動生成）</label>
+        <!-- ハイフンはエスケープする。未エスケープだと v フラグ下で不正な文字クラスになる -->
+        <input type="text" id="t-slug" placeholder="payment-replace" pattern="[a-z0-9][a-z0-9\-]{0,31}">
+      </div>
+      <button class="btn-primary" type="submit">作成</button>
+    </form>
+    <table class="adm">
+      <thead>
+        <tr>
+          <th style="width:32%">名前</th><th style="width:22%">slug</th>
+          <th style="width:12%">メンバー</th><th style="width:16%">作成日</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="tenant-rows"></tbody>
+    </table>
+  </section>
+
+  <!-- ユーザー -->
+  <section class="adm-card">
+    <div class="adm-card-head">
+      <h2>ユーザー</h2>
+      <span class="hint">1人が複数テナントに所属でき、テナントごとにロールを持ちます</span>
+    </div>
+    <form class="adm-inline adm-inline-user" id="user-form">
+      <div>
+        <label for="u-name">表示名</label>
+        <input type="text" id="u-name" placeholder="山田 太郎" required>
+      </div>
+      <div>
+        <label for="u-mail">メールアドレス</label>
+        <input type="email" id="u-mail" placeholder="yamada@example.co.jp" required>
+      </div>
+      <div>
+        <label for="u-tenant">所属テナント</label>
+        <select id="u-tenant"></select>
+      </div>
+      <div>
+        <label for="u-role">ロール</label>
+        <select id="u-role">
+          <option value="member">一般</option>
+          <option value="admin">管理者</option>
+        </select>
+      </div>
+      <button class="btn-primary" type="submit">作成</button>
+    </form>
+    <table class="adm">
+      <thead>
+        <tr>
+          <th style="width:18%">名前</th><th style="width:24%">メールアドレス</th>
+          <th style="width:38%">所属テナントとロール</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="user-rows"></tbody>
+    </table>
+  </section>
+</div>
+
+<!-- 所属編集ダイアログ -->
+<div class="adm-modal" id="membership-modal" hidden>
+  <div class="adm-modal-box" role="dialog" aria-modal="true" aria-labelledby="membership-title">
+    <h2 id="membership-title">所属を編集</h2>
+    <p class="adm-modal-sub" id="membership-sub"></p>
+    <div class="adm-modal-list" id="membership-list"></div>
+    <div class="adm-modal-actions">
+      <button class="btn-ghost" type="button" data-close>キャンセル</button>
+      <button class="btn-primary" type="button" id="membership-save">保存</button>
+    </div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/admin-console.js') }}?v={{ _ver }}"></script>
+</body>
+</html>

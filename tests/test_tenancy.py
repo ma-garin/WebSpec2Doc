@@ -26,6 +26,8 @@ H = {"Host": "127.0.0.1"}
 def _isolated_auth_db(tmp_path: Path, monkeypatch):
     monkeypatch.setenv("WEBSPEC2DOC_AUTH_DB", str(tmp_path / "auth.db"))
     monkeypatch.delenv("WEBSPEC2DOC_AUTH_MODE", raising=False)
+    # ここではパスワード認証の経路を検証する（モック認証は test_mock_auth_tenancy.py 側）
+    monkeypatch.setenv("WEBSPEC2DOC_AUTH_MOCK", "0")
     yield
 
 

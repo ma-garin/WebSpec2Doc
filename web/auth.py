@@ -21,9 +21,12 @@ from werkzeug.wrappers import Response as BaseResponse
 from web.services.auth_store import get_auth_store
 
 AUTH_MODE_ENV = "WEBSPEC2DOC_AUTH_MODE"
+AUTH_MOCK_ENV = "WEBSPEC2DOC_AUTH_MOCK"
 SECRET_KEY_ENV = "WEBSPEC2DOC_SECRET_KEY"
 SECURE_COOKIES_ENV = "WEBSPEC2DOC_SECURE_COOKIES"
 SESSION_COOKIE_NAME = "ws2d_session"
+
+TENANT_SELECT_PATH = "/auth/tenant"
 
 # 認証が有効でも到達できるパス（ログイン画面・静的ファイル・死活監視）
 _EXEMPT_PREFIXES = ("/static/",)
@@ -34,6 +37,17 @@ _EXEMPT_PATHS = frozenset(
         "/auth/login",
         "/auth/logout",
         "/auth/setup",
+        "/auth/signup",
+    }
+)
+
+# ログイン済みだがテナント未選択でも到達できるパス。
+# ここを通さないと、テナントを選ぶ画面自体がテナント未選択で弾かれて詰む。
+_TENANT_EXEMPT_PATHS = frozenset(
+    {
+        TENANT_SELECT_PATH,
+        "/api/auth/me",
+        "/api/auth/tenants",
     }
 )
 
@@ -41,6 +55,15 @@ _EXEMPT_PATHS = frozenset(
 def effective_auth_mode() -> str:
     mode = os.environ.get(AUTH_MODE_ENV, "auto").strip().lower()
     return mode if mode in ("auto", "required", "off") else "auto"
+
+
+def mock_auth_enabled() -> bool:
+    """モック認証（パスワードなし・ユーザー一覧から選択）を使うか。
+
+    社内モックとしての利用が前提なので既定で有効。パスワードを必須にしたい場合は
+    WEBSPEC2DOC_AUTH_MOCK=0 を設定する。有効時はログイン画面にその旨を表示する。
+    """
+    return os.environ.get(AUTH_MOCK_ENV, "1").strip().lower() not in ("0", "off", "false")
 
 
 def auth_enabled() -> bool:
@@ -122,6 +145,10 @@ def auth_guard() -> BaseResponse | None:
         g.auth_user = session["user"]
         g.tenant = session["tenant"]
         g.auth_via = "session"
+        if g.tenant is None and path not in _TENANT_EXEMPT_PATHS:
+            if _wants_login_redirect():
+                return redirect(TENANT_SELECT_PATH)
+            return _unauthorized_json("作業するテナントを選択してください。", "tenant_required")
         return None
 
     if _wants_login_redirect():
@@ -138,18 +165,22 @@ def _forbidden_json(message: str) -> Response:
     return resp
 
 
-def _unauthorized_json(message: str) -> Response:
-    resp = jsonify({"error": message, "code": "unauthorized"})
+def _unauthorized_json(message: str, code: str = "unauthorized") -> Response:
+    resp = jsonify({"error": message, "code": code})
     resp.status_code = 401
     return resp
 
 
 def require_admin() -> BaseResponse | None:
-    """管理者（owner/admin）専用エンドポイント用のチェック。認証オフ時は制限しない。"""
+    """管理者専用エンドポイント用のチェック。認証オフ時は制限しない。
+
+    ロールは選択中テナントでの所属ロール。別テナントで管理者でも、
+    いま選んでいるテナントで一般なら管理操作はできない。
+    """
     if not auth_enabled():
         return None
     user = getattr(g, "auth_user", None)
-    if user is None or user.get("role") not in ("owner", "admin"):
+    if user is None or user.get("role") != "admin":
         resp = jsonify({"error": "この操作には管理者権限が必要です。", "code": "forbidden"})
         resp.status_code = 403
         return resp

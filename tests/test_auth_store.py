@@ -27,10 +27,10 @@ def _setup(store: AuthStore) -> dict:
 # ---------- 初期セットアップ ----------
 
 
-def test_setup_initial_creates_tenant_and_owner(store: AuthStore) -> None:
+def test_setup_initial_creates_tenant_and_admin(store: AuthStore) -> None:
     result = _setup(store)
     assert result["tenant"]["slug"] == "qa-team"
-    assert result["user"]["role"] == "owner"
+    assert result["user"]["role"] == "admin"
     assert result["user"]["email"] == "owner@example.com"
     assert store.has_any_user()
 
@@ -156,7 +156,7 @@ def test_inactive_user_cannot_authenticate(store: AuthStore) -> None:
 
 def test_session_roundtrip_and_revoke(store: AuthStore) -> None:
     result = _setup(store)
-    token = store.create_session(result["user"]["id"])
+    token = store.create_session(result["user"]["id"], result["tenant"]["id"])
     session = store.resolve_session(token)
     assert session is not None
     assert session["user"]["email"] == "owner@example.com"
@@ -167,7 +167,7 @@ def test_session_roundtrip_and_revoke(store: AuthStore) -> None:
 
 def test_expired_session_is_rejected(store: AuthStore) -> None:
     result = _setup(store)
-    token = store.create_session(result["user"]["id"])
+    token = store.create_session(result["user"]["id"], result["tenant"]["id"])
     past = (datetime.now(UTC) - timedelta(hours=1)).isoformat()
     with store._connect() as conn:
         conn.execute("UPDATE auth_sessions SET expires_at = ?", (past,))
@@ -198,16 +198,16 @@ def test_change_password_requires_current_and_revokes_sessions(store: AuthStore)
 # ---------- ロール・最後のオーナー保護 ----------
 
 
-def test_last_owner_cannot_be_demoted_or_deactivated(store: AuthStore) -> None:
+def test_last_admin_cannot_be_demoted_or_deactivated(store: AuthStore) -> None:
     result = _setup(store)
     tenant_id = result["tenant"]["id"]
-    owner_id = result["user"]["id"]
+    admin_id = result["user"]["id"]
     with pytest.raises(AuthError) as exc:
-        store.update_user(owner_id, tenant_id, role="member")
-    assert exc.value.code == "last_owner"
+        store.update_user(admin_id, tenant_id, role="member")
+    assert exc.value.code == "last_admin"
     with pytest.raises(AuthError) as exc:
-        store.update_user(owner_id, tenant_id, is_active=False)
-    assert exc.value.code == "last_owner"
+        store.update_user(admin_id, tenant_id, is_active=False)
+    assert exc.value.code == "last_admin"
 
 
 def test_update_user_scoped_to_tenant(store: AuthStore) -> None:

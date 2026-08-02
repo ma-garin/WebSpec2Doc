@@ -36,6 +36,7 @@ def create_app() -> Flask:
         schedule,
         settings,
         site,
+        tenant_admin,
         traceability,
         usage,
         viewpoints,
@@ -94,6 +95,7 @@ def create_app() -> Flask:
 
     app.register_blueprint(account.bp)
     app.register_blueprint(admin.bp)
+    app.register_blueprint(tenant_admin.bp)
     app.register_blueprint(pages.bp)
     app.register_blueprint(discover.bp)
     app.register_blueprint(site.bp)

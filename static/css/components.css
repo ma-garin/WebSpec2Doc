@@ -2026,17 +2026,13 @@
 #autorun-login-modal { z-index: 2300; }
 
 /* ==================== 実行履歴（run-history）データテーブル ==================== */
-.rh-toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
 .rh-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .rh-table th, .rh-table td { padding: 9px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: middle; }
 .rh-table th { background: var(--surface-soft); font-weight: 700; color: var(--text-muted); white-space: nowrap; }
 .rh-table tbody tr:hover td { background: var(--surface-soft); }
 #rh-empty { padding: 32px; text-align: center; color: var(--text-muted); font-size: 14px; }
-/* 種別タブ（.set-tab と同スタイル） */
-.rh-type-tabs { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-soft); flex-wrap: wrap; }
-.rh-type-tab { height: 34px; padding: 0 16px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-muted); font-size: 13px; font-weight: 700; cursor: pointer; }
-.rh-type-tab.is-active { background: var(--surface); color: var(--primary-dark); box-shadow: inset 0 -2px 0 var(--primary); }
-.rh-type-tab:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+/* 種別タブは廃止した（5つのうち3つが実データ0件、「すべて」は別システムが混在）。
+   種別は行のバッジで示し、絞り込みが要るときだけ開く。 */
 
 /* 種別・状態バッジ（soft パターン。--c を基準色に color-mix でライト/ダーク自動追従） */
 .rh-type-badge, .rh-status-badge {
@@ -2528,3 +2524,86 @@
 }
 .rr-missing strong { display: block; font-size: var(--text-md); color: var(--color-high); margin-bottom: 6px; }
 .rr-missing p { font-size: 13px; color: var(--text-muted); margin: 0; }
+
+/* ==================== 実行履歴（タブ廃止後） ====================
+   種別タブをやめ、件数＋絞り込み（折りたたみ）＋ソート可能な表にした。 */
+.rh-head { display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap; margin-bottom: 12px; }
+.rh-count { font-size: 19px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.rh-count span { font-size: 13px; font-weight: 400; color: var(--text-muted); margin-left: 4px; }
+.rh-sub { font-size: 12px; color: var(--text-muted); }
+.rh-head-actions { margin-left: auto; display: flex; gap: 7px; align-items: center; }
+.rh-filter-toggle { display: inline-flex; align-items: center; gap: 5px; }
+.rh-filter-n {
+  background: var(--primary); color: #fff; border-radius: var(--radius-full);
+  font-size: 10px; padding: 0 6px; height: 16px; display: inline-grid; place-items: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.rh-filter {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 14px 16px; margin-bottom: 14px; box-shadow: var(--shadow-sm);
+}
+.rh-filter-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+.rh-filter-row:last-child { margin-bottom: 0; }
+.rh-filter-label { font-size: 10.5px; color: var(--text-muted); font-weight: 700; min-width: 52px; }
+.rh-chips { display: flex; gap: 7px; flex-wrap: wrap; }
+.rh-tilde { color: var(--text-muted); font-size: 12px; }
+.rh-chip {
+  height: 29px; padding: 0 12px; border-radius: var(--radius-full);
+  border: 1px solid var(--border-strong); background: var(--surface);
+  font-size: 12px; font-weight: 700; cursor: pointer; color: var(--text-muted); font-family: inherit;
+}
+.rh-chip:hover { border-color: var(--primary); color: var(--primary-dark); }
+.rh-chip.is-on { background: var(--info-bg); border-color: var(--primary); color: var(--primary-dark); }
+.rh-chip-n { margin-left: 5px; font-size: 10.5px; color: var(--text-subtle); font-variant-numeric: tabular-nums; }
+.rh-chip.is-on .rh-chip-n { color: var(--primary-dark); }
+.rh-filter input[type=date] {
+  height: 29px; padding: 0 9px; border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm); background: var(--surface); font-size: 12px;
+  font-family: inherit; color: var(--text);
+}
+
+.rh-applied { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+.rh-tag {
+  display: inline-flex; align-items: center; gap: 5px; background: var(--info-bg);
+  border: 1px solid var(--primary); color: var(--primary-dark);
+  border-radius: var(--radius-full); padding: 2px 9px; font-size: 11.5px; font-weight: 700;
+}
+.rh-tag button { border: 0; background: transparent; color: var(--primary-dark); cursor: pointer; font-size: 13px; line-height: 1; padding: 0; }
+
+.rh-table th.rh-sortable { cursor: pointer; user-select: none; }
+.rh-table th.rh-sortable:hover { color: var(--primary-dark); background: var(--info-bg); }
+.rh-table th.rh-sortable.is-sorted { color: var(--primary-dark); }
+.rh-arrow { margin-left: 4px; font-size: 10px; color: var(--text-subtle); }
+.rh-table th.is-sorted .rh-arrow { color: var(--primary); }
+/* 数値列は右揃え。桁が揃って大小を比べられる */
+.rh-table th.rh-num, .rh-table td.rh-num { text-align: right; }
+.rh-table td.rh-num { font-weight: 700; }
+.rh-site { font-weight: 700; }
+.rh-table tbody tr[data-act] { cursor: pointer; }
+/* 日付区切り。同じ日に何度実行したかが見える */
+.rh-day td { background: var(--surface-soft); font-size: 11.5px; font-weight: 700; color: var(--text-muted); padding: 6px 10px; }
+.rh-day-n { color: var(--text-subtle); font-weight: 400; margin-left: 8px; }
+/* その回の成果物が残っていない行。押せる（最新が開く）が、その回のものではない */
+.rh-nosave { color: var(--text-subtle); }
+.rh-open-primary { border-color: var(--primary); color: var(--primary-dark); background: var(--info-bg); }
+
+/* 列幅（実測 880px のコンテンツ幅で折り返さないこと）。
+   固定幅の合計を 470px 台に抑え、サイト名と日時へ余白を回す。 */
+/* 種別バッジは行内で最も情報量が少ない。幅を詰めてサイト名へ回す。 */
+.rh-table th.rh-col-type { width: 96px; }
+.rh-table td .rh-type-badge { font-size: 10px; padding: 2px 7px; }
+.rh-table th.rh-col-site { min-width: 210px; }
+.rh-table th.rh-col-ts { width: 156px; }
+.rh-table th.rh-col-status { width: 64px; }
+.rh-table th.rh-col-n { width: 68px; }
+.rh-table th.rh-col-act { width: 66px; }
+/* サイト名は折り返さず、入りきらなければ省略する（行の高さを揃える）。
+   全体は title 属性で読める。 */
+.rh-table td.rh-site { max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 種別バッジと操作ボタンも折り返さない */
+.rh-table td .rh-type-badge, .rh-table td .btn-outline-sm { white-space: nowrap; }
+.rh-table th, .rh-table td { white-space: nowrap; }
+.rh-table td .muted-copy { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 導出対象が無かった値。測って 0 だったのとは違うので、数値ではなく — で示す */
+.rh-table td .rh-none { color: var(--text-subtle); font-weight: 400; }

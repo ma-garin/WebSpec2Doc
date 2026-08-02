@@ -1,123 +1,290 @@
-// ---- 実行履歴ビュー（種別を問わない一般化・R2-27） ----
-const RH_TYPE_LABELS = { crawl: '解析', autorun: 'AutoRun', comparison: '現新比較', ux_review: 'UXレビュー', schedule: 'スケジュール' };
-const RH_TERMINAL_STATUSES = new Set(['complete', 'failed', 'cancelled']);
-const RH_TYPE_KEY = 'wsd_rh_type';
-const RH_VALID_TYPES = ['crawl', 'autorun', 'comparison', 'ux_review', 'schedule', 'all'];
-const RH_PAGE_SIZE = 20;
+// ---- 実行履歴ビュー ----
+// 種別タブは廃止した。5 タブのうち「現新比較」「UXレビュー」「スケジュール」は
+// 実データが 0 件で、押しても「実行履歴がありません」しか出なかった。
+// 「すべて」は別システム（AutoRun）の記録が混ざり、このシステムの分が埋もれていた。
+// 種別は行のバッジで示し、絞り込みは要るときだけ開く。
+
+const RH_TYPE_LABELS = {
+  crawl: 'ドキュメント作成',
+  testcase_run: 'テスト実行',
+  autorun: 'AutoRun',
+  comparison: '現新比較',
+  ux_review: 'UXレビュー',
+  schedule: 'スケジュール',
+};
+// 系ごとに扱う種別。相手システムの記録を混ぜない（旧「すべて」タブの問題）。
+const RH_SYSTEM_TYPES = {
+  docs: ['crawl', 'testcase_run', 'comparison', 'ux_review', 'schedule'],
+  autorun: ['autorun'],
+};
+// これを超えたらページ送りを出す。下回るならスクロールで足りる。
+const RH_PAGE_THRESHOLD = 50;
+const RH_PAGE_SIZE = 25;
+
 let _rhRuns = [];
-let _rhPage = 1;
+const RH = { page: 1, site: '', from: '', to: '', status: '', type: '', sort: 'ts', dir: 'desc', open: false };
 
-// 履歴の種別タブ（R3-16: 従来の全種別混在selectをタブ分離。既定は「解析」）
-// 選択中のシステムで表示される種別だけを扱う。
-// 隠れているタブ（別システムの種別）が選ばれたままだと、
-// どのタブも選択されていないのに空の一覧が出る。
-function _rhVisibleTypes() {
-  const sys = document.body.getAttribute('data-system') || 'docs';
-  const visible = [];
-  document.querySelectorAll('.rh-type-tab').forEach((btn) => {
-    const owner = btn.getAttribute('data-system');
-    if (!owner || owner === 'common' || owner === sys) visible.push(btn.dataset.type);
-  });
-  return visible.length ? visible : RH_VALID_TYPES;
+function _rhSystem() {
+  return document.body.getAttribute('data-system') || 'docs';
+}
+// この系で扱う実行だけを対象にする。相手システムの記録は最初から持ち込まない。
+function _rhScoped() {
+  const allow = RH_SYSTEM_TYPES[_rhSystem()] || RH_SYSTEM_TYPES.docs;
+  return _rhRuns.filter(r => allow.includes(r.type));
 }
 
-function _rhCurrentType() {
-  let stored = '';
-  try { stored = localStorage.getItem(RH_TYPE_KEY) || ''; } catch (_) { stored = ''; }
-  const visible = _rhVisibleTypes();
-  if (visible.includes(stored)) return stored;
-  // 既定はそのシステムの主種別。無ければ「すべて」に落とす。
-  const sys = document.body.getAttribute('data-system') || 'docs';
-  const preferred = sys === 'autorun' ? 'autorun' : 'crawl';
-  if (visible.includes(preferred)) return preferred;
-  return visible.includes('all') ? 'all' : visible[0];
-}
-function _rhSyncTypeTabsUI(type) {
-  document.querySelectorAll('.rh-type-tab').forEach(btn => {
-    const active = btn.dataset.type === type;
-    btn.classList.toggle('is-active', active);
-    btn.setAttribute('aria-selected', active ? 'true' : 'false');
-  });
-}
-function _rhSetType(type) {
-  try { localStorage.setItem(RH_TYPE_KEY, type); } catch (_) { /* 保存失敗時はUIのみ切替（機能は継続） */ }
-  _rhPage = 1; // 種別切替でページを先頭に戻す
-  _rhSyncTypeTabsUI(type);
-  _rhRenderTable();
-}
-
-// ISO形式（例: 2026-07-05T16:08:11+00:00）のまま出すと読みにくいため、
-// ローカル時刻の読みやすい形式に整形する（監査で発覚・修正）。
-// 解析に失敗した場合は元の文字列をそのまま返す（未加工の値を握りつぶさない）。
-function _rhFormatTimestamp(raw) {
+// ISO 形式のままでは読みにくいので整形する。解析に失敗したら元の文字列を返す
+// （未加工の値を握りつぶさない）。
+function _rhFormatTimestamp(raw, opts) {
   if (!raw) return '';
   const d = new Date(raw);
   if (isNaN(d.getTime())) return raw;
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} `
-    + `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const p = (n) => String(n).padStart(2, '0');
+  const time = `${p(d.getHours())}:${p(d.getMinutes())}`;
+  if (opts && opts.timeOnly) return time;
+  return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())} ${time}`;
+}
+function _rhDayKey(raw) {
+  const d = new Date(raw);
+  if (isNaN(d.getTime())) return '';
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+function _rhDayLabel(key) {
+  const d = new Date(key + 'T00:00:00');
+  if (isNaN(d.getTime())) return key;
+  const w = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()];
+  return `${key.slice(5, 7)}/${key.slice(8, 10)}（${w}）`;
+}
+function _rhRelative(raw) {
+  const d = new Date(raw);
+  if (isNaN(d.getTime())) return '';
+  const days = Math.round((Date.now() - d.getTime()) / 86400000);
+  if (days <= 0) return '今日';
+  if (days === 1) return '昨日';
+  if (days < 30) return `${days}日前`;
+  return `${Math.floor(days / 30)}か月前`;
 }
 
-function _rhStatusClass(status) {
-  if (status === 'complete') return 'rh-status-complete';
-  if (status === 'failed') return 'rh-status-failed';
-  if (status === 'cancelled') return 'rh-status-cancelled';
-  return 'rh-status-running';
+function _rhStatusBadge(status) {
+  if (status === 'complete') return '<span class="rh-status-badge rh-status-complete">完了</span>';
+  if (status === 'failed') return '<span class="rh-status-badge rh-status-failed">失敗</span>';
+  if (status === 'cancelled') return '<span class="rh-status-badge rh-status-cancelled">中断</span>';
+  return '<span class="rh-status-badge rh-status-running">実行中</span>';
 }
 
-function _rhStatusLabel(status) {
-  if (status === 'complete') return '完了';
-  if (status === 'failed') return '失敗';
-  if (status === 'cancelled') return '中断';
-  return RH_TERMINAL_STATUSES.has(status) ? status : '実行中';
-}
-
-function _rhSummaryText(run) {
+// 数値3列。種別ごとに意味が違うので、その種別が持たない値は空欄にする。
+//
+// 0 の扱いを 2 つに分ける:
+//   測って 0 だった  → 0 と出す（実績。失敗 0 件など）
+//   数える対象が無い → — と出す（導出できなかった。入力項目 0 でテスト条件も 0 など）
+// どちらも "0" と書くと、「条件を数えたら 0 だった」と読めてしまう。
+function _rhMetrics(run) {
   const s = run.summary || {};
-  if (run.type === 'autorun') {
-    return `PASS ${s.passed || 0} / FAIL ${s.failed || 0} / TOTAL ${s.total || 0}（${s.duration_sec || 0}秒）`;
+  if (run.type === 'autorun' || run.type === 'testcase_run') {
+    return { screens: '', conds: s.total ?? '', docs: s.passed ?? '' };
   }
   if (run.type === 'comparison' || run.type === 'ux_review') {
-    return `画面 ${s.compare_screen_count || 0} / 指摘 ${s.finding_count || 0}件`;
+    return { screens: s.compare_screen_count ?? '', conds: s.finding_count ?? '', docs: '' };
   }
   if (run.type === 'schedule') {
-    const error = s.error ? ` / ${s.error}` : '';
-    return `試行 ${s.attempts || 0}回 / ${s.duration_sec || 0}秒${error}`;
+    return { screens: '', conds: s.attempts ?? '', docs: '' };
   }
-  return `画面 ${s.screen_count || 0} / フォーム ${s.test_condition_count || 0} / 成果物 ${s.document_count || 0}`;
+  // クロール: テスト条件は入力項目から導出する。0 件は「数えたら 0」ではなく
+  // 「導出する対象が無かった」（入力項目が無い、または導出に失敗した）なので — で出す。
+  // 画面数・成果物数の 0 は測った結果なので 0 のまま出す（1画面も取れなかった、等）。
+  const conds = s.test_condition_count;
+  return {
+    screens: s.screen_count ?? '',
+    conds: conds === undefined ? '' : (Number(conds) > 0 ? conds : { none: true }),
+    docs: s.document_count ?? '',
+  };
+}
+
+// 数値セル。導出対象が無い（{none:true}）ときは — をグレーで出す。
+function _rhNumCell(value) {
+  if (value === '' || value === undefined || value === null) return '';
+  if (typeof value === 'object' && value.none) {
+    return '<span class="rh-none" title="この実行では導出の対象がありませんでした（測って0ではありません）">—</span>';
+  }
+  return escHtml(String(value));
 }
 
 async function loadRunHistory() {
   const tbody = document.getElementById('rh-tbody');
   const empty = document.getElementById('rh-empty');
   if (!tbody) return;
-  _rhSyncTypeTabsUI(_rhCurrentType());
-  tbody.innerHTML = '<tr><td colspan="7">読み込んでいます…</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="8">読み込んでいます…</td></tr>';
   try {
     const res = await fetch('/api/history/runs');
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '実行履歴を取得できませんでした');
     _rhRuns = data.runs || [];
-    _rhRenderTable();
+    RH.page = 1;
+    _rhRenderAll();
   } catch (e) {
     tbody.innerHTML = '';
     if (empty) { empty.style.display = ''; empty.textContent = String(e.message); }
   }
 }
 
-// 段階承認の状況。「未承認のまま実行された」ことを隠さない。
-function _rhApprovalCell(run) {
-  const a = run.stage_approval;
-  if (!a) return '<span class="muted-copy">—</span>';
-  const label = `${a.approved} / ${a.total}`;
-  if (a.all_approved) {
-    const note = a.skipped && a.skipped.length
-      ? `（${a.skipped.join('・')}をスキップ）` : '';
-    return `<span class="rh-approval is-ok">${escHtml(label)} 承認済み</span>`
-      + (note ? `<span class="rh-approval-note">${escHtml(note)}</span>` : '');
+function _rhFiltered() {
+  return _rhScoped().filter(r =>
+    (!RH.site || r.domain === RH.site) &&
+    (!RH.type || r.type === RH.type) &&
+    (!RH.status || r.status === RH.status) &&
+    (!RH.from || _rhDayKey(r.timestamp) >= RH.from) &&
+    (!RH.to || _rhDayKey(r.timestamp) <= RH.to));
+}
+
+function _rhSorted(list) {
+  const dir = RH.dir === 'asc' ? 1 : -1;
+  // 値が無い（''）と導出対象が無い（—）は、数値の並びでは最小として末尾へ送る。
+  const metric = (r, k) => {
+    const v = _rhMetrics(r)[k];
+    if (v === '' || v === undefined || v === null) return -1;
+    if (typeof v === 'object') return -1;
+    return Number(v);
+  };
+  const key = {
+    ts: r => String(r.timestamp || ''),
+    domain: r => String(r.domain || ''),
+    screens: r => metric(r, 'screens'),
+    conds: r => metric(r, 'conds'),
+    docs: r => metric(r, 'docs'),
+  }[RH.sort] || (r => String(r.timestamp || ''));
+  return [...list].sort((a, b) => {
+    const x = key(a), y = key(b);
+    // 同値は必ず新しい順。並びが描き直すたびに変わると、見ている行を見失う。
+    if (x === y) return String(a.timestamp) < String(b.timestamp) ? 1 : -1;
+    return (x > y ? 1 : -1) * dir;
+  });
+}
+
+// 日付区切りは「日時順に並んでいる」ことが前提。別の列で並べ替えたら成り立たない。
+const _rhGrouping = () => RH.sort === 'ts';
+
+function _rhActiveCount() {
+  return [RH.site, RH.from, RH.to, RH.status, RH.type].filter(Boolean).length;
+}
+
+function _rhSet(key, value) {
+  RH[key] = value;
+  RH.page = 1;
+  _rhRenderAll();
+}
+function _rhClear() {
+  RH.site = ''; RH.from = ''; RH.to = ''; RH.status = ''; RH.type = '';
+  RH.page = 1;
+  _rhRenderAll();
+}
+function _rhSortBy(col) {
+  if (RH.sort === col) RH.dir = RH.dir === 'desc' ? 'asc' : 'desc';
+  else { RH.sort = col; RH.dir = col === 'domain' ? 'asc' : 'desc'; }
+  RH.page = 1;
+  _rhRenderAll();
+}
+
+function _rhRenderAll() {
+  _rhRenderHead();
+  _rhRenderFilter();
+  _rhRenderApplied();
+  _rhRenderSortIndicators();
+  _rhRenderTable();
+}
+
+function _rhRenderHead() {
+  const scoped = _rhScoped();
+  const list = _rhFiltered();
+  const n = _rhActiveCount();
+  const countEl = document.getElementById('rh-count');
+  const subEl = document.getElementById('rh-sub');
+  const btn = document.getElementById('rh-filter-btn');
+  if (countEl) {
+    countEl.innerHTML = `${list.length.toLocaleString()}<span>件の実行`
+      + (n ? `（全 ${scoped.length.toLocaleString()} 件中）` : '') + '</span>';
   }
-  return `<span class="rh-approval is-partial">${escHtml(label)}</span>`
-    + '<span class="rh-approval-note">未承認の段階があります</span>';
+  if (subEl) {
+    const sites = new Set(scoped.map(r => r.domain)).size;
+    const last = scoped.length ? _rhRelative(scoped[0].timestamp) : '';
+    subEl.textContent = scoped.length ? `${sites} サイト ／ 最終 ${last}` : '';
+  }
+  if (btn) {
+    btn.textContent = RH.open ? '絞り込みを閉じる' : '絞り込み';
+    if (n) btn.innerHTML += `<span class="rh-filter-n">${n}</span>`;
+    btn.setAttribute('aria-expanded', RH.open ? 'true' : 'false');
+  }
+  const panel = document.getElementById('rh-filter');
+  if (panel) panel.hidden = !RH.open;
+}
+
+function _rhChip(label, count, on, action) {
+  return `<button type="button" class="rh-chip${on ? ' is-on' : ''}" data-act="${escHtml(action)}">`
+    + `${escHtml(label)}<span class="rh-chip-n">${count}</span></button>`;
+}
+
+function _rhRenderFilter() {
+  if (!RH.open) return;
+  const scoped = _rhScoped();
+  const siteHost = document.getElementById('rh-site-chips');
+  const statusHost = document.getElementById('rh-status-chips');
+  const typeHost = document.getElementById('rh-type-chips');
+
+  if (siteHost) {
+    const sites = [...new Set(scoped.map(r => r.domain))].filter(Boolean);
+    siteHost.innerHTML = _rhChip('すべて', scoped.length, RH.site === '', 'site:')
+      + sites.map(s => _rhChip(s, scoped.filter(r => r.domain === s).length, RH.site === s, 'site:' + s)).join('');
+  }
+  if (statusHost) {
+    // 該当 0 件の状態は選択肢に出さない（押しても何も出ない選択肢を並べない）
+    const present = ['complete', 'failed', 'cancelled']
+      .map(s => [s, scoped.filter(r => r.status === s).length])
+      .filter(([, c]) => c > 0);
+    const label = { complete: '完了', failed: '失敗', cancelled: '中断' };
+    statusHost.innerHTML = _rhChip('すべて', scoped.length, RH.status === '', 'status:')
+      + present.map(([s, c]) => _rhChip(label[s], c, RH.status === s, 'status:' + s)).join('');
+  }
+  if (typeHost) {
+    // 記録がある種別だけ出す。0 件の種別をタブで並べていたのが元の問題。
+    const present = [...new Set(scoped.map(r => r.type))]
+      .map(t => [t, scoped.filter(r => r.type === t).length])
+      .filter(([, c]) => c > 0);
+    typeHost.innerHTML = present.length > 1
+      ? _rhChip('すべて', scoped.length, RH.type === '', 'type:')
+        + present.map(([t, c]) => _rhChip(RH_TYPE_LABELS[t] || t, c, RH.type === t, 'type:' + t)).join('')
+      : present.map(([t, c]) => _rhChip(RH_TYPE_LABELS[t] || t, c, true, 'type:')).join('');
+  }
+  const from = document.getElementById('rh-from');
+  const to = document.getElementById('rh-to');
+  if (from) from.value = RH.from;
+  if (to) to.value = RH.to;
+}
+
+function _rhRenderApplied() {
+  const host = document.getElementById('rh-applied');
+  if (!host) return;
+  const tags = [];
+  if (RH.site) tags.push(['サイト: ' + RH.site, 'site:']);
+  if (RH.type) tags.push([RH_TYPE_LABELS[RH.type] || RH.type, 'type:']);
+  if (RH.status) tags.push([{ complete: '完了のみ', failed: '失敗のみ', cancelled: '中断のみ' }[RH.status] || RH.status, 'status:']);
+  if (RH.from) tags.push([RH.from + ' 以降', 'from:']);
+  if (RH.to) tags.push([RH.to + ' 以前', 'to:']);
+  host.hidden = !tags.length;
+  if (!tags.length) return;
+  host.innerHTML = '<span class="muted-copy">絞り込み中:</span>'
+    + tags.map(([t, act]) => `<span class="rh-tag">${escHtml(t)}`
+      + `<button type="button" data-act="${escHtml(act)}" aria-label="${escHtml(t)} を外す">×</button></span>`).join('')
+    + '<button type="button" class="btn-outline-sm" data-act="clear">すべて解除</button>';
+}
+
+function _rhRenderSortIndicators() {
+  document.querySelectorAll('#view-run-history .rh-sortable').forEach(th => {
+    const on = th.dataset.sort === RH.sort;
+    th.classList.toggle('is-sorted', on);
+    const arrow = th.querySelector('.rh-arrow');
+    if (arrow) arrow.textContent = on ? (RH.dir === 'asc' ? '▲' : '▼') : '⇅';
+    th.setAttribute('aria-sort', on ? (RH.dir === 'asc' ? 'ascending' : 'descending') : 'none');
+  });
 }
 
 function _rhRenderTable() {
@@ -125,59 +292,127 @@ function _rhRenderTable() {
   const empty = document.getElementById('rh-empty');
   const pager = document.getElementById('rh-pager');
   if (!tbody) return;
-  const filter = _rhCurrentType();
-  const runs = filter === 'all' ? _rhRuns : _rhRuns.filter(r => r.type === filter);
+
+  const list = _rhSorted(_rhFiltered());
   if (pager) pager.innerHTML = '';
-  if (!runs.length) {
+  if (!list.length) {
     tbody.innerHTML = '';
-    if (empty) { empty.style.display = ''; empty.textContent = '実行履歴がありません。'; }
+    if (empty) {
+      empty.style.display = '';
+      empty.innerHTML = _rhActiveCount()
+        ? '条件に合う実行がありません。<button type="button" class="btn-outline-sm" data-act="clear" style="margin-left:10px">絞り込みを解除</button>'
+        : '実行履歴がありません。';
+    }
     return;
   }
   if (empty) empty.style.display = 'none';
-  const info = TableUtils.paginate(runs, _rhPage, RH_PAGE_SIZE);
-  _rhPage = info.page; // クランプ後の値へ同期
-  if (pager) pager.innerHTML = TableUtils.pagerHtml(info);
-  tbody.innerHTML = info.items.map(run => {
-    const typeLabel = run.type_label || RH_TYPE_LABELS[run.type] || run.type;
-    // 遷移先の優先順:
-    //   1) result_url … その実行回の成果物（run_id を持つ実行だけ）
-    //   2) report_url … AutoRun のレポート（サイト単位・最新のみ）
-    //   3) link      … 単一ファイルのプレビュー
-    // 1 があるならそれを使う。2/3 はサイト単位で最新を指すため、
-    // 「その行の実行結果」ではないことが分かるラベルにする。
-    const linkCell = run.result_url
-      ? `<button class="qa-output-btn rh-open-run" data-domain="${escHtml(run.domain)}" data-run="${escHtml(run.run_id)}">この実行を見る →</button>`
-      : (run.report_url
-        ? `<a class="qa-output-btn" href="${escHtml(run.report_url)}" title="サイト単位の最新のレポートです（この実行時点のものではありません）">最新のレポート →</a>`
-        : (run.link
-          ? `<button class="qa-output-btn qa-preview-btn" data-path="${escHtml(run.link)}" data-label="${escHtml(typeLabel)} - ${escHtml(run.domain)}">最新を開く</button>`
-          : '<span class="muted-copy">—</span>'));
-    return `<tr>
-      <td><span class="rh-type-badge rh-type-${escHtml(run.type)}">${escHtml(typeLabel)}</span></td>
-      <td>${escHtml(run.domain)}</td>
-      <td title="${escHtml(run.timestamp || '')}">${escHtml(_rhFormatTimestamp(run.timestamp))}</td>
-      <td><span class="rh-status-badge ${_rhStatusClass(run.status)}">${escHtml(_rhStatusLabel(run.status))}</span></td>
-      <td>${_rhApprovalCell(run)}</td>
-      <td>${escHtml(_rhSummaryText(run))}</td>
-      <td>${linkCell}</td>
+
+  const usePager = list.length > RH_PAGE_THRESHOLD;
+  let items = list;
+  if (usePager) {
+    const info = TableUtils.paginate(list, RH.page, RH_PAGE_SIZE);
+    RH.page = info.page;
+    items = info.items;
+    if (pager) pager.innerHTML = TableUtils.pagerHtml(info);
+  }
+
+  const counts = {};
+  if (_rhGrouping()) list.forEach(r => { const d = _rhDayKey(r.timestamp); counts[d] = (counts[d] || 0) + 1; });
+
+  let html = '', lastDay = '';
+  items.forEach(run => {
+    if (_rhGrouping()) {
+      const day = _rhDayKey(run.timestamp);
+      if (day && day !== lastDay) {
+        lastDay = day;
+        html += `<tr class="rh-day"><td colspan="8">${escHtml(_rhDayLabel(day))}`
+          + `<span class="rh-day-n">${counts[day]}件</span></td></tr>`;
+      }
+    }
+    const m = _rhMetrics(run);
+    const label = run.type_label || RH_TYPE_LABELS[run.type] || run.type;
+    // 操作は「開く」1種類に統一する。押した先が「その回」か「最新」かは行の状態で、
+    // 操作の種類ではない。その回の成果物が無いことは日時の下に添える。
+    const hasRun = !!run.result_url;
+    const openAttrs = hasRun
+      ? `data-act="run:${escHtml(run.domain)}|${escHtml(run.run_id)}"`
+      : (run.report_url ? `data-act="url:${escHtml(run.report_url)}"`
+        : (run.link ? `data-act="file:${escHtml(run.link)}|${escHtml(label)} - ${escHtml(run.domain)}"` : ''));
+    // 日時セルは1行に収める。文言は短く、意味は title で補う。
+    const noSave = hasRun ? ''
+      : '<span class="rh-nosave" title="この実行回の成果物は保存されていません（開くと最新が出ます）">・成果物なし</span>';
+    const openBtn = openAttrs
+      ? `<button type="button" class="btn-outline-sm${hasRun ? ' rh-open-primary' : ''}" ${openAttrs}>開く</button>`
+      : '<span class="muted-copy">—</span>';
+    html += `<tr${openAttrs ? ' ' + openAttrs : ''}>
+      <td><span class="rh-type-badge rh-type-${escHtml(run.type)}">${escHtml(label)}</span></td>
+      <td class="rh-site" title="${escHtml(run.domain)}">${escHtml(run.domain)}</td>
+      <td class="num">${escHtml(_rhFormatTimestamp(run.timestamp, { timeOnly: _rhGrouping() }))}
+        <div class="muted-copy">${escHtml(_rhRelative(run.timestamp))}${noSave}</div></td>
+      <td>${_rhStatusBadge(run.status)}</td>
+      <td class="num rh-num">${_rhNumCell(m.screens)}</td>
+      <td class="num rh-num">${_rhNumCell(m.conds)}</td>
+      <td class="num rh-num">${_rhNumCell(m.docs)}</td>
+      <td>${openBtn}</td>
     </tr>`;
-  }).join('');
+  });
+  tbody.innerHTML = html;
 }
 
-document.querySelectorAll('.rh-type-tab').forEach(btn => {
-  btn.addEventListener('click', () => _rhSetType(btn.dataset.type));
+// ---- 操作（イベント委譲。行の描き直しでハンドラを付け直さない） ----
+function _rhDispatch(act) {
+  if (!act) return;
+  if (act === 'clear') { _rhClear(); return; }
+  const [kind, rest = ''] = [act.slice(0, act.indexOf(':')), act.slice(act.indexOf(':') + 1)];
+  if (kind === 'site') { _rhSet('site', rest); return; }
+  if (kind === 'type') { _rhSet('type', rest); return; }
+  if (kind === 'status') { _rhSet('status', rest); return; }
+  if (kind === 'from') { _rhSet('from', rest); return; }
+  if (kind === 'to') { _rhSet('to', rest); return; }
+  if (kind === 'run') {
+    const [domain, runId] = rest.split('|');
+    if (typeof openRunResult === 'function') openRunResult(domain, runId);
+    return;
+  }
+  if (kind === 'url') { location.href = rest; return; }
+  if (kind === 'file') {
+    const [path, label] = rest.split('|');
+    if (typeof openFilePreview === 'function') openFilePreview(path, label);
+    else window.open('/preview?path=' + encodeURIComponent(path), '_blank');
+  }
+}
+
+document.getElementById('view-run-history')?.addEventListener('click', (e) => {
+  const th = e.target.closest('.rh-sortable');
+  if (th) { _rhSortBy(th.dataset.sort); return; }
+  const range = e.target.closest('[data-range]');
+  if (range) {
+    const days = Number(range.dataset.range);
+    const d = new Date(Date.now() - days * 86400000);
+    const p = (n) => String(n).padStart(2, '0');
+    RH.from = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+    RH.to = '';
+    RH.page = 1;
+    _rhRenderAll();
+    return;
+  }
+  const acted = e.target.closest('[data-act]');
+  if (acted) { e.stopPropagation(); _rhDispatch(acted.dataset.act); return; }
+  // 行のどこを押しても開く（ボタンを狙わせない）
+  const row = e.target.closest('#rh-tbody tr[data-act]');
+  if (row) _rhDispatch(row.dataset.act);
+});
+
+document.getElementById('rh-filter-btn')?.addEventListener('click', () => {
+  RH.open = !RH.open;
+  _rhRenderAll();
 });
 document.getElementById('rh-reload-btn')?.addEventListener('click', loadRunHistory);
-// 行から「この実行を見る」: その実行回の実行結果ページへ（最新ではなくその回）
-document.getElementById('rh-tbody')?.addEventListener('click', (e) => {
-  const btn = e.target.closest('.rh-open-run');
-  if (!btn || typeof openRunResult !== 'function') return;
-  openRunResult(btn.dataset.domain, btn.dataset.run);
-});
-// ページャ（イベント委譲）: クリックされたページへ移動して再描画する
+document.getElementById('rh-from')?.addEventListener('change', (e) => _rhSet('from', e.target.value));
+document.getElementById('rh-to')?.addEventListener('change', (e) => _rhSet('to', e.target.value));
 document.getElementById('rh-pager')?.addEventListener('click', (e) => {
   const page = TableUtils.pageFromClick(e);
-  if (page === null || page === _rhPage) return;
-  _rhPage = page;
+  if (page === null || page === RH.page) return;
+  RH.page = page;
   _rhRenderTable();
 });

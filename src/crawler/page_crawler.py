@@ -429,16 +429,46 @@ def discover_pages(
     auth_state: Path | None = None,
     on_page_found: Callable[[dict[str, object]], None] | None = None,
     on_event: CrawlEventCallback | None = None,
+    parallelism: int = 1,
 ) -> list[dict[str, object]]:
     """Lightweight BFS listing reachable pages (url + title + login wall 判定)
-    without screenshots or form extraction. Backs the GUI '画面リスト取得' step."""
+    without screenshots or form extraction. Backs the GUI '画面リスト取得' step.
+
+    parallelism > 1 のとき、同じ深さの URL をまとめて取りに行く（深さはまたがない）。
+    """
     base_url = normalize_url(url)
+    # 最初の 1 画面が出るまで約 1.2 秒あり、その間ずっと画面が無反応だった
+    # （経過秒だけが動く）。実測の内訳は robots.txt の取得とブラウザ起動。
+    # 実時間は変わらないが、何を待っているのかは出せる。推測ではなく
+    # 実際にこれから行う処理を、始める直前に知らせる。
+    _emit_event(on_event, "discover_started", url=base_url)
+    _emit_event(on_event, "robots_checking", url=base_url)
     robots = _load_robots_parser(base_url)
     visited: set[str] = set()
     queue: list[tuple[str, int]] = [(base_url, 0)]
     found: list[dict[str, object]] = []
 
+    # 同じ深さの URL は互いに依存しないので、まとめて取りに行ける。
+    # 直列だと 1 ページあたり実測 0.53 秒がそのまま積み上がっていた。
+    # 深さをまたぐ並列化はしない（次の深さの URL は今の深さの結果から決まる）。
+    worker_count = max(1, min(int(parallelism), max_pages))
+    if worker_count > 1 and max_pages > 1:
+        from crawler.parallel_crawler import discover_pages_parallel
+
+        return discover_pages_parallel(
+            base_url=base_url,
+            depth=depth,
+            max_pages=max_pages,
+            auth_state=auth_state,
+            robots=robots,
+            worker_count=worker_count,
+            on_page_found=on_page_found,
+            on_event=on_event,
+        )
+
+    _emit_event(on_event, "browser_starting")
     with _browser_page(auth_state) as page:
+        _emit_event(on_event, "browser_ready")
         while queue and len(found) < max_pages:
             prev_count = len(found)
             current_url, current_depth = queue.pop(0)

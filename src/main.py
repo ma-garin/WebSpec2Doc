@@ -1005,6 +1005,7 @@ def _discover(args: argparse.Namespace, auth_path: Path | None) -> None:
             auth_state=Path(auth_path) if auth_path else None,
             on_page_found=_emit,
             on_event=_emit_discover_event,
+            parallelism=max(1, min(int(getattr(args, "parallelism", 1)), MAX_PARALLELISM)),
         )
         sys.stdout.write(json.dumps({"done": True, "total": len(pages)}, ensure_ascii=False) + "\n")
         sys.stdout.flush()

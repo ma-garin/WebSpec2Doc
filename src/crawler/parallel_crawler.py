@@ -321,3 +321,123 @@ def _compact_page_screenshots(pages: list[PageData], output_dir: Path | None) ->
 def _emit(callback: CrawlEventCallback | None, event: str, **details: object) -> None:
     if callback is not None:
         callback({"event": event, **details})
+
+
+def discover_pages_parallel(
+    *,
+    base_url: str,
+    depth: int,
+    max_pages: int,
+    auth_state: Path | None,
+    robots: RobotFileParser | None,
+    worker_count: int,
+    on_page_found: Any = None,
+    on_event: CrawlEventCallback | None = None,
+) -> list[dict[str, object]]:
+    """画面リスト探索（BFS）を、深さ単位の波で並列に行う。
+
+    直列だと 1 ページあたり実測 0.53 秒がそのまま積み上がっていた。
+    同じ深さの URL は互いに依存しないので、まとめて取りに行ける。
+
+    深さはまたがない。次の深さへ進む URL は、いまの深さで見つけたリンクから
+    決まるため、先に進むと探索範囲が変わってしまう。
+
+    発見順は「深さ順・同一深さ内は元の順序」で安定させる。並列で終わった順に
+    出すと、同じサイトを解析するたびに画面の並びが変わり、前回との比較が
+    できなくなる。
+
+    Chromium はワーカーごとに起動する（起動は実測 0.21 秒/個）。1 個を共有して
+    コンテキストだけ分ける案は成立しない。Playwright の同期 API は、
+    オブジェクトを作ったスレッド以外から触ると
+    `greenlet.error: Cannot switch to a different thread` で落ちる。
+    既存の crawl_urls_parallel がワーカーごとに独立 Playwright を持つのも同じ理由。
+    """
+    from crawler.page_crawler import (
+        _browser_page,
+        _discover_one,
+        _emit_event,
+        _next_urls,
+        _skip_reason,
+    )
+
+    visited: set[str] = set()
+    found: list[dict[str, object]] = []
+    wave: list[tuple[str, int]] = [(base_url, 0)]
+
+    _emit_event(on_event, "browser_starting")
+    first_wave = True
+    while wave and len(found) < max_pages:
+        # この波で実際に取りに行く URL を先に確定させる（除外はここで判定する）
+        targets: list[tuple[str, int]] = []
+        for url, url_depth in wave:
+            if len(targets) + len(found) >= max_pages:
+                break
+            reason = _skip_reason(url, url_depth, depth, visited, robots)
+            if reason:
+                if reason not in {"visited", "depth"}:
+                    _emit_event(on_event, "page_skipped", url=url, reason=reason)
+                continue
+            visited.add(url)
+            targets.append((url, url_depth))
+        if not targets:
+            break
+
+        task_queue: queue.Queue[int] = queue.Queue()
+        for index in range(len(targets)):
+            task_queue.put(index)
+        # 添字ごとに結果を置く。並列で終わった順ではなく、元の順序で拾い直すため。
+        page_slots: list[list[dict[str, object]]] = [[] for _ in targets]
+        link_slots: list[tuple[str, ...]] = [() for _ in targets]
+        errors: list[BaseException] = []
+
+        # 波ごとに worker を作り直すため、この波の状態を引数で束縛する。
+        # 外側のループ変数を閉じ込めると、波が進んだときに前の波の器へ
+        # 書き込む余地が残る（B023）。
+        def worker(
+            tasks: queue.Queue[int] = task_queue,
+            urls: list[tuple[str, int]] = targets,
+            pages_out: list[list[dict[str, object]]] = page_slots,
+            links_out: list[tuple[str, ...]] = link_slots,
+            failures: list[BaseException] = errors,
+        ) -> None:
+            try:
+                with _browser_page(auth_state) as page:
+                    while True:
+                        try:
+                            index = tasks.get_nowait()
+                        except queue.Empty:
+                            return
+                        url, _ = urls[index]
+                        local: list[dict[str, object]] = []
+                        links_out[index] = _discover_one(page, url, local)
+                        pages_out[index] = local
+            except BaseException as exc:  # noqa: BLE001  # 収集して呼び出し元へ伝える
+                failures.append(exc)
+
+        threads = [
+            threading.Thread(target=worker, daemon=True)
+            for _ in range(min(worker_count, len(targets)))
+        ]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+        if errors:
+            raise errors[0]
+        if first_wave:
+            _emit_event(on_event, "browser_ready")
+            first_wave = False
+
+        # 元の順序で確定させ、その順で通知する
+        next_wave: list[tuple[str, int]] = []
+        for index, (_url, url_depth) in enumerate(targets):
+            for item in page_slots[index]:
+                if len(found) >= max_pages:
+                    break
+                found.append(item)
+                if on_page_found is not None:
+                    on_page_found(item)
+            next_wave.extend(_next_urls(link_slots[index], url_depth, visited, depth))
+        wave = next_wave
+
+    return found

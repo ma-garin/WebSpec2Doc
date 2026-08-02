@@ -132,7 +132,15 @@ async function showResults(domain, tab, sub, runId) {
   const recrawlBtn = document.getElementById('r-recrawl-btn');
   if (recrawlBtn) recrawlBtn.hidden = Boolean(data.is_sample);
 
-  executionView.classList.add('hidden'); resultPanel.classList.remove('hidden');
+  executionView.classList.add('hidden');
+  // レポートパネルは .view の外にあり（generate と run-result で共有するため）、
+  // hidden を外すだけだと今いる画面の上に出てしまう。所属するビューでなければ
+  // 先に移動する。テスト実行の完了時など、別の画面にいる間に呼ばれる経路がある。
+  const owner = (resultPanel.dataset.views || '').split(/\s+/);
+  const active = [...document.querySelectorAll('.view.is-active')][0];
+  const activeName = active ? active.id.replace(/^view-/, '') : '';
+  if (owner.length && !owner.includes(activeName)) switchView('generate');
+  resultPanel.classList.remove('hidden');
   appContent.classList.add('is-reporting');
   _buildExportDropdown(data);
   showWizardStep(4);

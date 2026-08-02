@@ -1,31 +1,60 @@
-        <!-- ===== 実行履歴ビュー（種別を問わない一般化・R2-27） ===== -->
+        <!-- ===== 実行履歴ビュー =====
+             種別タブは廃止した。5 タブのうち「現新比較」「UXレビュー」「スケジュール」は
+             実データが 0 件で、押しても「実行履歴がありません」しか出なかった。
+             「すべて」は別システム（AutoRun）の記録が混ざり、このシステムの分が埋もれていた。
+             種別は行のバッジで示し、絞り込みは要るときだけ開く。 -->
         <section class="view" id="view-run-history">
-          <div class="rh-toolbar">
-            <div class="rh-type-tabs" role="tablist" aria-label="履歴の種別">
-              <!-- 他のタブは機能名なのに、ここだけ動詞（解析）だった。
-                   AutoRun 側は「解析」に統一したため、動詞のままだと
-                   同じ行為を2語で呼ぶことになる。システム名に揃える。 -->
-              <button type="button" class="rh-type-tab" data-type="crawl" data-system="docs" role="tab">ドキュメント作成</button>
-              <button type="button" class="rh-type-tab" data-type="autorun" data-system="autorun" role="tab">AutoRun</button>
-              <button type="button" class="rh-type-tab" data-type="comparison" data-system="docs" role="tab">現新比較</button>
-              <button type="button" class="rh-type-tab" data-type="ux_review" data-system="docs" role="tab">UXレビュー</button>
-              <button type="button" class="rh-type-tab" data-type="schedule" data-system="docs" role="tab">スケジュール</button>
-              <button type="button" class="rh-type-tab" data-type="all" role="tab">すべて</button>
-            </div>
-            <button type="button" id="rh-reload-btn" class="btn-outline-sm">↺ 再読み込み</button>
+          <div class="rh-head">
+            <span class="rh-count" id="rh-count"></span>
+            <span class="rh-sub" id="rh-sub"></span>
+            <span class="rh-head-actions">
+              <button type="button" class="btn-outline-sm rh-filter-toggle" id="rh-filter-btn"
+                      aria-expanded="false" aria-controls="rh-filter">絞り込み</button>
+              <button type="button" id="rh-reload-btn" class="btn-outline-sm">↺ 再読み込み</button>
+            </span>
           </div>
+
+          <!-- 絞り込み。既定は閉じる（件数が少ないうちは邪魔になるため）。
+               該当 0 件の選択肢は出さない（押しても何も出ない選択肢を並べない）。 -->
+          <div class="rh-filter" id="rh-filter" hidden>
+            <div class="rh-filter-row">
+              <span class="rh-filter-label">サイト</span>
+              <span class="rh-chips" id="rh-site-chips"></span>
+            </div>
+            <div class="rh-filter-row">
+              <span class="rh-filter-label">期間</span>
+              <input type="date" id="rh-from" aria-label="開始日">
+              <span class="rh-tilde">〜</span>
+              <input type="date" id="rh-to" aria-label="終了日">
+              <button type="button" class="rh-chip" data-range="7">直近7日</button>
+              <button type="button" class="rh-chip" data-range="30">直近30日</button>
+            </div>
+            <div class="rh-filter-row">
+              <span class="rh-filter-label">状態</span>
+              <span class="rh-chips" id="rh-status-chips"></span>
+            </div>
+            <div class="rh-filter-row">
+              <span class="rh-filter-label">種別</span>
+              <span class="rh-chips" id="rh-type-chips"></span>
+            </div>
+          </div>
+
+          <div class="rh-applied" id="rh-applied" hidden></div>
 
           <div id="rh-container">
             <table class="rh-table">
               <thead>
+                <!-- 実測 880px 幅に合わせる。固定幅の合計を抑え、サイト名（最長
+                     hotel-example-site.takeyaqa.dev）が折り返さない幅を可変列へ残す。 -->
                 <tr>
-                  <th>種別</th>
-                  <th>サイト</th>
-                  <th>日時</th>
-                  <th>状態</th>
-                  <th>段階承認</th>
-                      <th>主要数値</th>
-                  <th>操作</th>
+                  <th class="rh-col-type">種別</th>
+                  <th class="rh-sortable rh-col-site" data-sort="domain">サイト<span class="rh-arrow"></span></th>
+                  <th class="rh-sortable rh-col-ts" data-sort="ts">日時<span class="rh-arrow"></span></th>
+                  <th class="rh-col-status">状態</th>
+                  <th class="rh-sortable rh-num rh-col-n" data-sort="screens">画面<span class="rh-arrow"></span></th>
+                  <th class="rh-sortable rh-num rh-col-n" data-sort="conds">条件<span class="rh-arrow"></span></th>
+                  <th class="rh-sortable rh-num rh-col-n" data-sort="docs">成果物<span class="rh-arrow"></span></th>
+                  <th class="rh-col-act">操作</th>
                 </tr>
               </thead>
               <tbody id="rh-tbody"></tbody>

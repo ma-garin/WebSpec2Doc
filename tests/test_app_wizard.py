@@ -95,7 +95,52 @@ def test_first_wave_operations_controls_are_wired() -> None:
         "ops-test-notify",
     ):
         assert f'id="{element_id}"' in html
-    assert 'data-type="schedule"' in html
+
+
+def test_scheduled_runs_are_visible_in_run_history() -> None:
+    """スケジュール実行の結果が実行履歴に出ること。
+
+    以前は実行履歴の種別タブ（data-type="schedule"）の存在で確かめていたが、
+    タブは廃止した（5つのうち3つが実データ0件で、押しても何も出なかった）。
+    タブの有無ではなく、実際に「スケジュール実行が履歴の行になるか」を見る。
+    """
+    from pathlib import Path
+
+    from web.services.usage_tracker import _RUN_TYPE_LABELS, _schedule_runs
+
+    # 行に付くラベルが定義されていること（未定義だと種別名が生の "schedule" になる）
+    assert _RUN_TYPE_LABELS["schedule"] == "スケジュール"
+
+    # schedule_history.jsonl があれば履歴の行として拾えること
+    import json
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        domain_dir = root / "example.com"
+        domain_dir.mkdir()
+        (domain_dir / "schedule_history.jsonl").write_text(
+            json.dumps(
+                {
+                    "domain": "example.com",
+                    "started_at": "2026-08-01T09:00:00",
+                    "status": "complete",
+                    "attempts": 1,
+                    "duration_sec": 12,
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        runs = _schedule_runs(root)
+
+    assert [r["type"] for r in runs] == ["schedule"]
+    assert runs[0]["type_label"] == "スケジュール"
+
+    # 実行履歴の画面がドキュメント作成系の種別として扱うこと
+    js = Path("static/js/view-run-history.js").read_text(encoding="utf-8")
+    docs_line = next(line for line in js.splitlines() if "docs:" in line)
+    assert "'schedule'" in docs_line
 
 
 def test_first_wave_onboarding_is_local_and_replayable() -> None:

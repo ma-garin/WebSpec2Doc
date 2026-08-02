@@ -99,6 +99,11 @@ function switchView(name, opts = {}) {
   document.querySelectorAll('[data-views]').forEach(el => {
     if (!el.dataset.views.split(/\s+/).includes(name)) el.classList.add('hidden');
   });
+  // 画面解析の途中で他の画面へ移ったら、実行中の表示だけを畳む。残すと戻ったときに
+  // 前回の「解析しています…（経過 0:05）」が出たままで、今動いているのか
+  // 前回の残りなのか判断できない（ブラウザの戻るでも同じ経路を通る）。
+  // 解析し終えた画面一覧は残す。消すと戻った利用者が解析し直しになる。
+  if (name !== 'generate' && typeof stopDiscoverInFlight === 'function') stopDiscoverInFlight();
   document.body.classList.toggle('viewpoints-active', name === 'viewpoints');
   document.querySelectorAll('.app-nav-item[data-view]').forEach(b => b.classList.toggle('is-active', b.dataset.view === name));
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('is-active', v.id === 'view-' + name));

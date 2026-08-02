@@ -626,12 +626,64 @@ function renderDiscovered() {
   }
   list.innerHTML = html;
 }
+const _rmDisc = (id, how) => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (how === 'hide') el.style.display = 'none';
+  else el.innerHTML = '';
+};
+
+// 「実行中の表示」だけを畳む。**完了した解析結果には触らない。**
+//
+// 画面を離れるときに呼ぶ。以前は進捗カード・ライブフィード・経過タイマーが
+// 残り、戻ったときに前回の「画面を解析しています…（経過 0:05）」が
+// そのまま出ていた（今動いているのか前回の残りか判断できない）。
+// 一方で、解析し終えた画面一覧まで消すと、戻った利用者は解析し直しになる。
+// 消すのは「進行中に見えるもの」に限る。
+function stopDiscoverInFlight() {
+  _abortDiscover();
+  _stopDiscoverTimer();
+  _rmDisc('discover-loading', 'hide');   // 「画面を解析しています…」の進捗カード
+  _rmDisc('discover-live-feed', 'clear'); // 解析中に積み上がる途中経過のリスト
+  const elapsed = document.getElementById('discover-elapsed');
+  if (elapsed) elapsed.textContent = '';
+  const btn = document.getElementById('discover-btn');
+  if (btn) btn.disabled = false;
+}
+
+// 画面解析の表示を初期状態へ戻す。「新規解析」でやり直すときに呼ぶ。
+// 実行中の表示に加えて、確定した結果（発見した画面・ログイン案内）も消す。
+function resetDiscoverUI() {
+  stopDiscoverInFlight();
+  _rmDisc('login-required-card', 'hide');  // 「このサイトはログインが必要です」
+  _rmDisc('discovered-url-panel', 'hide');
+  _rmDisc('discovered-url-list', 'clear');
+  const count = document.getElementById('discover-count-label');
+  if (count) count.textContent = '0画面を発見';
+  const status = document.getElementById('discover-status');
+  if (status) { status.textContent = ''; status.classList.remove('discover-status-error'); }
+}
+
+// 走っている画面解析を止める。中断ボタンと違い、利用者への通知はしない
+// （画面を離れる・やり直すときの後始末なので、本人は既に次へ進んでいる）。
+function _abortDiscover() {
+  if (!_discoverRunId && !_discoverReader) return;
+  _discoverCancelledByUser = true;
+  if (_discoverRunId) {
+    fetch('/api/cancel', { method: 'POST', body: new URLSearchParams({ run_id: _discoverRunId }) })
+      .catch(() => { /* 届かなくても画面はリセットする。サーバ側は自然終了に任せる */ });
+  }
+  if (_discoverReader) {
+    try { _discoverReader.cancel(); } catch (e) { /* 受信打ち切りの失敗は表示に影響しない */ }
+  }
+  _discoverRunId = null;
+  _discoverReader = null;
+}
+
 function clearDiscovered() {
   discovered = [];
   discoverSkipped = [];
-  document.getElementById('discovered-url-panel').style.display = 'none';
-  document.getElementById('discovered-url-list').innerHTML = '';
-  document.getElementById('discover-status').textContent = '';
+  resetDiscoverUI();
   setCrawlTargetMode('selected');
 }
 function setAllDiscovered(v) { document.querySelectorAll('.discovered-cb').forEach(cb => { cb.checked = v; }); }

@@ -98,9 +98,9 @@ class TestGeneratedViewpointsAreConsumable:
         with use_viewpoint_snapshot(items):
             delivered = _load_qa_viewpoints()
         assert delivered, "観点が1件も届いていない"
-        assert any(str(vp.get(field, "")).strip() for vp in delivered), (
-            f"{field} が QA 層に届いていない。届いた項目: {sorted(delivered[0].keys())}"
-        )
+        assert any(
+            str(vp.get(field, "")).strip() for vp in delivered
+        ), f"{field} が QA 層に届いていない。届いた項目: {sorted(delivered[0].keys())}"
 
 
 class TestMixedTaxonomiesBothSurvive:
@@ -370,9 +370,7 @@ class TestReservedCategoryDoesNotHideViewpoints:
 
     def test_area_heading_without_own_area_stays_a_heading(self) -> None:
         """自分の所属領域を持たない項目は、従来どおり見出しであること。"""
-        headings = [
-            {"persistent_key": "h", "name": "セキュリティ", "category": "quality_area_l1"}
-        ]
+        headings = [{"persistent_key": "h", "name": "セキュリティ", "category": "quality_area_l1"}]
         with use_viewpoint_snapshot(headings):
             names = [str(vp["name"]) for vp in _viewpoints_by_type("category_l2")]
             areas = [str(vp["name"]) for vp in _viewpoints_by_type("quality_area_l1")]
@@ -408,9 +406,7 @@ class TestCatalogReloadOnlyWhenChanged:
         original = target.read_bytes()
         reload_catalogs(force=True)
         try:
-            target.write_bytes(
-                original.replace(b'"schema_version": 1', b'"schema_version": 2', 1)
-            )
+            target.write_bytes(original.replace(b'"schema_version": 1', b'"schema_version": 2', 1))
             assert reload_catalogs() is True
             assert reload_catalogs() is False
         finally:
@@ -460,7 +456,12 @@ class TestRoleIsDecidedOnce:
     def test_decided_role_is_carried_to_the_qa_layer(self) -> None:
         """決めた役割が観点に載って QA 層まで渡ること。"""
         snapshot = [
-            {"persistent_key": "a", "name": "X", "category": "機能テスト", "quality_area": "機能完全性"}
+            {
+                "persistent_key": "a",
+                "name": "X",
+                "category": "機能テスト",
+                "quality_area": "機能完全性",
+            }
         ]
         with use_viewpoint_snapshot(snapshot):
             delivered = _load_qa_viewpoints()[0]
@@ -610,6 +611,5 @@ class TestEveryEntryPointDecidesRole:
         )
         # 辞書リテラルで観点を直接組み立てていないこと（役割決定を迂回する形）
         assert '"summary_type":' not in source, (
-            "_load_qa_viewpoints 内で観点を直接組み立てている。"
-            "_legacy_viewpoint を通すこと。"
+            "_load_qa_viewpoints 内で観点を直接組み立てている。" "_legacy_viewpoint を通すこと。"
         )

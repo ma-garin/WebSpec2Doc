@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
-from web.services.run_store import RUNS_DIR_NAME, valid_run_id
+from web.services.run_store import run_exists
 
 logger = logging.getLogger(__name__)
 
@@ -370,7 +370,7 @@ def _run_from_record(output_root: Path, record: dict) -> dict:
     # 実行回ごとの成果物が残っている実行だけが run_id を持つ。持っていれば
     # その回の実行結果ページへ飛ばせる（最新の成果物ではなく、その回のもの）。
     run_id = str(record.get("run_id", ""))
-    if run_id and valid_run_id(run_id) and (domain_dir / RUNS_DIR_NAME / run_id).is_dir():
+    if run_id and run_exists(output_root, domain, run_id):
         entry["run_id"] = run_id
         entry["result_url"] = f"/runs/{domain}/{run_id}"
     if report_url:

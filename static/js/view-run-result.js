@@ -19,15 +19,6 @@ let _rrDetail = null;
 let _rrRuns = [];
 let _rrTab = 'result';
 
-function _rrFmt(ts) {
-  if (!ts) return '';
-  const d = new Date(ts);
-  if (isNaN(d.getTime())) return ts;
-  const p = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())} `
-    + `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
-}
-
 // run_id は「20260802-113000」。人が読める形に直す（別途 UUID を持たせていない）。
 function _rrRunLabel(runId) {
   const m = String(runId || '').match(/^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})(?:-(\d+))?$/);
@@ -59,14 +50,19 @@ async function _rrLoad() {
   document.getElementById('rr-artifacts').innerHTML = '';
   _rrClearBody();
 
-  // 一覧（セレクタ用）と詳細を同時に取る。片方が失敗しても、もう片方は出す。
+  // 実行回セレクタの選択肢は同じサイトなら変わらない。回を切り替えるたびに
+  // 一覧を取り直すと、N 件を順に辿るだけで一覧取得が N 回走る。
+  // 同じサイトを見ている間はクライアント側で使い回す。
+  const needRuns = !_rrRuns.length || _rrRuns[0].domain !== _rrDomain;
   const [runsRes, detailRes] = await Promise.all([
-    fetch(`/api/runs/${encodeURIComponent(_rrDomain)}`).then(r => r.ok ? r.json() : null).catch(() => null),
+    needRuns
+      ? fetch(`/api/runs/${encodeURIComponent(_rrDomain)}`).then(r => r.ok ? r.json() : null).catch(() => null)
+      : Promise.resolve(null),
     fetch(`/api/runs/${encodeURIComponent(_rrDomain)}/${encodeURIComponent(_rrRunId)}`)
       .then(async r => ({ ok: r.ok, data: await r.json() })).catch(() => null),
   ]);
 
-  _rrRuns = (runsRes && runsRes.runs) || [];
+  if (needRuns) _rrRuns = (runsRes && runsRes.runs) || [];
   if (!detailRes) {
     uiError(body, {
       title: '実行回を取得できませんでした',
@@ -120,7 +116,7 @@ function _rrRenderRunbar() {
     + `<span class="rr-runid">${escHtml(_rrRunId)}</span>`
     + (d && d.is_current
       ? '<span class="rh-approval is-ok">現在の成果物</span>'
-      : '<span class="rr-past">過去の実行</span>')
+      : '<span class="rh-approval is-neutral">過去の実行</span>')
     + '</span>'
     + '<span class="rr-runbar-actions">'
     + `<button type="button" class="btn-outline-sm" id="rr-back">← 実行履歴へ戻る</button>`
@@ -147,7 +143,7 @@ function _rrRenderArtifactTabs() {
     const on = _rrTab === a.key;
     return `<button type="button" class="rr-artifact${on ? ' is-active' : ''}" role="tab"
       aria-selected="${on ? 'true' : 'false'}" data-art="${a.key}" ${has ? '' : 'disabled'}>
-      <span class="rr-artifact-badge">${has ? '<span class="rh-approval is-ok">あり</span>' : '<span class="rr-none">なし</span>'}</span>
+      <span class="rr-artifact-badge">${has ? '<span class="rh-approval is-ok">あり</span>' : '<span class="rh-approval is-neutral">なし</span>'}</span>
       <span class="rr-artifact-n">${a.n}</span>
       <span class="rr-artifact-t">${escHtml(a.label)}</span>
       <span class="rr-artifact-d">${escHtml(a.desc)}</span>
@@ -178,44 +174,24 @@ function _rrOpen(path, label) {
   else window.open('/preview?path=' + encodeURIComponent(path), '_blank');
 }
 
-// 既存のレポートパネル（#result-panel）は generate ビューの中にある。
-// タブ1では、それを実行回バーの下へ「移設」して使う。作り直すと、タブが
-// 増えたときに 2 か所を直すことになり、片方が古びる。
-let _rrPanelHome = null;   // 元の親と位置（戻すときに使う）
-
-function _rrBorrowReportPanel() {
+// レポートパネル（#result-panel）は generate と run-result の両方で使うため、
+// どちらのビューの中でもない場所（.app-content-inner 直下）に置いてある。
+// このビューでは表示/非表示を切り替えるだけでよく、DOM を移動しない。
+function _rrShowReportPanel(show) {
   const panel = document.getElementById('result-panel');
-  const body = document.getElementById('rr-body');
-  if (!panel || !body) return null;
-  if (!_rrPanelHome) {
-    _rrPanelHome = { parent: panel.parentNode, next: panel.nextSibling };
-  }
-  if (panel.parentNode !== body) body.appendChild(panel);
-  panel.classList.remove('hidden');
+  if (panel) panel.classList.toggle('hidden', !show);
   return panel;
 }
 
-function rrReleaseReportPanel() {
-  const panel = document.getElementById('result-panel');
-  if (!panel || !_rrPanelHome) return;
-  if (panel.parentNode !== _rrPanelHome.parent) {
-    _rrPanelHome.parent.insertBefore(panel, _rrPanelHome.next);
-  }
-  panel.classList.add('hidden');
-}
-
-// #rr-body を空にする前に、必ず借りているパネルを返す。
-// 直接 innerHTML='' すると、借り物である #result-panel ごと破棄され、
-// 以降どの画面からもレポートが出せなくなる（実行回の切替で実際に消えた）。
 function _rrClearBody() {
-  rrReleaseReportPanel();
+  _rrShowReportPanel(false);
   const body = document.getElementById('rr-body');
   if (body) body.innerHTML = '';
 }
 
-// #rr-body の中身を差し替える唯一の入口。借り物を返してから書き換える。
+// #rr-body の中身を差し替える唯一の入口。レポートパネルは畳んでから書き換える。
 function _rrSetBody(html) {
-  rrReleaseReportPanel();
+  _rrShowReportPanel(false);
   const body = document.getElementById('rr-body');
   if (body) body.innerHTML = html;
   return body;
@@ -240,10 +216,9 @@ function _rrRenderBody() {
 // タブ構成は既存実装をそのまま使う。ここで作り直さない。
 async function _rrRenderResult(body) {
   _rrClearBody();
-  const panel = _rrBorrowReportPanel();
-  if (!panel) {
-    body.innerHTML = '<div class="rr-missing"><strong>レポート画面を表示できません</strong>'
-      + '<p>結果パネルが見つかりませんでした。ページを再読み込みしてください。</p></div>';
+  if (!_rrShowReportPanel(true)) {
+    _rrSetBody('<div class="rr-missing"><strong>レポート画面を表示できません</strong>'
+      + '<p>結果パネルが見つかりませんでした。ページを再読み込みしてください。</p></div>');
     return;
   }
   if (typeof showResults !== 'function') return;

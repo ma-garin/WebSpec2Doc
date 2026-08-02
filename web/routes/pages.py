@@ -24,9 +24,7 @@ _VIEW_ALIASES = {"home": "dashboard"}
 
 # 設定画面のタブ（templates/partials/view-settings.html の data-tab と対応）。
 # タブごとに URL を持たせ、共有・ブックマーク・ブラウザの戻るを効かせる。
-_SETTINGS_TABS = frozenset(
-    {"api", "crawl", "notify", "operations", "data", "audit", "test-design"}
-)
+_SETTINGS_TABS = frozenset({"api", "crawl", "notify", "operations", "data", "audit", "test-design"})
 
 
 @bp.route("/")

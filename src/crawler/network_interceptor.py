@@ -128,9 +128,7 @@ class MutationBlocker:
             _SUPPRESSED_BY_ORIGIN[origin] += 1
             return
         _LOGGED_ORIGINS.add(origin)
-        logger.warning(
-            "破壊的リクエストを遮断しました: %s %s", method, _strip_query_for_audit(url)
-        )
+        logger.warning("破壊的リクエストを遮断しました: %s %s", method, _strip_query_for_audit(url))
 
     def attach(self, page: Page) -> None:
         """page の全リクエストルートにハンドラを登録する。"""

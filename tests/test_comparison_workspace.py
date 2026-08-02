@@ -73,17 +73,13 @@ class TestPairAssembly:
 class TestUnmatchedPages:
     def test_added_and_removed_become_pairs_with_reason(self) -> None:
         """追加・削除は「指摘0件」と同じ見た目にしない（比較できていないため）。"""
-        ws = build_workspace(
-            _comparison(added_page_ids=["P009"], removed_page_ids=["P008"]), OUT
-        )
+        ws = build_workspace(_comparison(added_page_ids=["P009"], removed_page_ids=["P008"]), OUT)
         states = {p["state"]: p for p in ws["pairs"]}
         assert states[PAIR_STATE_ADDED]["unmatched_reason"]
         assert states[PAIR_STATE_REMOVED]["unmatched_reason"]
 
     def test_counts_separate_matched_from_unmatched(self) -> None:
-        ws = build_workspace(
-            _comparison(added_page_ids=["P009"], removed_page_ids=["P008"]), OUT
-        )
+        ws = build_workspace(_comparison(added_page_ids=["P009"], removed_page_ids=["P008"]), OUT)
         assert ws["counts"] == {
             "pairs": 3,
             "matched": 1,
@@ -201,7 +197,10 @@ class TestSeverityVocabulary:
         assert SEVERITY_ORDER == (SEVERITY_BREAKING, SEVERITY_WARNING, SEVERITY_INFO)
 
     def test_breaking_outranks_warning(self) -> None:
-        findings = [_finding(severity="warning"), _finding(category="inoperable", severity="breaking")]
+        findings = [
+            _finding(severity="warning"),
+            _finding(category="inoperable", severity="breaking"),
+        ]
         ws = build_workspace(_comparison(findings=findings), OUT)
         assert ws["pairs"][0]["top_severity"] == "breaking"
 
@@ -213,6 +212,8 @@ class TestSeverityVocabulary:
 
 
 def test_labels_are_carried_through() -> None:
-    ws = build_workspace(_comparison(), OUT, from_label="20260801-143846", to_label="20260801-143907")
+    ws = build_workspace(
+        _comparison(), OUT, from_label="20260801-143846", to_label="20260801-143907"
+    )
     assert ws["from"] == "20260801-143846"
     assert ws["to"] == "20260801-143907"

@@ -232,9 +232,7 @@ def _fill(template: str, context: dict[str, Any]) -> str:
     return str(template).format(**context)
 
 
-def _checks_of(
-    blueprint: dict[str, Any], context: dict[str, Any], target: str, level: str
-) -> str:
+def _checks_of(blueprint: dict[str, Any], context: dict[str, Any], target: str, level: str) -> str:
     """確認内容・操作・判定点を、実施手順のテキストにまとめる。
 
     期待結果と証跡はここに含めない。合否の判定に使う値なので、
@@ -272,7 +270,9 @@ def generate(domain_key: str) -> dict[str, Any]:
             folders.append(test_type)
         target = str(domain[blueprint["target"]])
         for level in blueprint["levels"]:
-            context = dict(domain, domain=domain["name"], level=level, level_scope=level_scope[level])
+            context = dict(
+                domain, domain=domain["name"], level=level, level_scope=level_scope[level]
+            )
             items.append(
                 {
                     "folder": test_type,

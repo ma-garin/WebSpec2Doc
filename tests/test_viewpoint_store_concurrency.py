@@ -25,9 +25,7 @@ from web.services.viewpoint_store import SCHEMA_VERSION, ViewpointStore
 @pytest.fixture()
 def seed(tmp_path: Path) -> Path:
     path = tmp_path / "seed.csv"
-    path.write_text(
-        "summary_type,name,count\ncategory_l2,既定観点,1\n", encoding="utf-8"
-    )
+    path.write_text("summary_type,name,count\ncategory_l2,既定観点,1\n", encoding="utf-8")
     return path
 
 
@@ -76,9 +74,7 @@ class TestConcurrentMigration:
 class TestConcurrentWrites:
     """同時書き込みが、黙って失われないこと。"""
 
-    def test_parallel_item_creation_keeps_every_item(
-        self, tmp_path: Path, seed: Path
-    ) -> None:
+    def test_parallel_item_creation_keeps_every_item(self, tmp_path: Path, seed: Path) -> None:
         """並行して観点を足しても、書いた分がすべて残ること。
 
         片方の書き込みが黙って消えると、観点表に穴が空いたまま
@@ -118,18 +114,14 @@ class TestConcurrentWrites:
             f"失敗も {len(failures)} 件しか報告されていない"
         )
 
-    def test_only_one_default_survives_parallel_switching(
-        self, tmp_path: Path, seed: Path
-    ) -> None:
+    def test_only_one_default_survives_parallel_switching(self, tmp_path: Path, seed: Path) -> None:
         """既定セットを同時に切り替えても、既定が1つに収まること。
 
         複数が既定になると、どれで AutoRun が走るかが偶然で決まる。
         """
         store = ViewpointStore(tmp_path / "viewpoints.db", seed)
         store.initialize()
-        sets = [
-            store.create_set({"name": f"セット{index}"}) for index in range(4)
-        ]
+        sets = [store.create_set({"name": f"セット{index}"}) for index in range(4)]
         for created in sets:
             version = int(store.ensure_draft(created["id"])["version_number"])
             store.create_item(
@@ -218,8 +210,7 @@ class TestCrossProcessMigration:
 
         script = tmp_path / "init_store.py"
         script.write_text(
-            textwrap.dedent(
-                f"""
+            textwrap.dedent(f"""
                 import sys
                 sys.path.insert(0, {str(Path.cwd())!r})
                 from web.services.viewpoint_store import ViewpointStore
@@ -227,8 +218,7 @@ class TestCrossProcessMigration:
                 store.initialize()
                 sets = store.list_sets()
                 print(len(sets), sum(1 for s in sets if s["is_default"]))
-                """
-            ),
+                """),
             encoding="utf-8",
         )
         processes = [

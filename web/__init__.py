@@ -71,6 +71,7 @@ def create_app() -> Flask:
             from web.services.viewpoint_blueprints import reload_catalogs
 
             reload_catalogs()
+
     app.jinja_env.auto_reload = dev_reload
     app.jinja_env.globals["_ver"] = str(int(time.time()))
     if dev_reload:
@@ -79,6 +80,7 @@ def create_app() -> Flask:
         @app.context_processor
         def _dev_cache_buster() -> dict:
             return {"_ver": str(int(time.time()))}
+
     app.before_request(localhost_guard)
     app.before_request(csrf_guard)
     app.before_request(auth_guard)

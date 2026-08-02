@@ -24,10 +24,14 @@ from flask import Blueprint, abort, render_template, request
 
 from web.config import OUTPUT_DIR
 from web.services.run_store import (
+    ARTIFACT_PROBES,
+    RESULT_FILE_MAP,
     artifact_file,
+    list_run_ids,
     list_runs,
     load_meta,
     run_dir,
+    run_exists,
     valid_run_id,
 )
 from web.tenancy import scoped_output_dir
@@ -35,41 +39,6 @@ from web.validation import _valid_domain
 
 bp = Blueprint("runs", __name__)
 logger = logging.getLogger(__name__)
-
-# 3 つの成果物と、その有無を決める代表ファイル。
-# 画面のタブ（1/2/3）と 1 対 1 で対応させる。
-_ARTIFACT_FILES: dict[str, tuple[str, ...]] = {
-    "result": ("report.json",),
-    "analysis": ("report.html",),
-    "autorun": (
-        "qa_process/playwright_report.json",
-        "qa_process/stages.json",
-        "qa_process/autorun.spec.ts",
-    ),
-}
-
-# 実行結果タブ（1）が使う成果物。無いものは空文字で返し、画面側で「未生成」を出す。
-_RESULT_FILES: dict[str, str] = {
-    "json": "report.json",
-    "html": "report.html",
-    "pdf": "report.pdf",
-    "excel": "spec.xlsx",
-    "screens_md": "screens.md",
-    "forms_md": "forms.md",
-    "features_md": "features.md",
-    "transition_mmd": "transition.mmd",
-    "diff": "diff_report.html",
-    "playwright_json": "testcases/run_result.json",
-    "qa_process_report": "qa_process/qa_process_report.html",
-    "playwright_report_json": "qa_process/playwright_report.json",
-    "playwright_report_html": "qa_process/playwright_report.html",
-    "spec_ts": "qa_process/autorun.spec.ts",
-    "test_plan": "qa_process/test_plan.md",
-    "test_analysis": "qa_process/test_analysis.md",
-    "test_design": "qa_process/test_design.md",
-    "test_cases": "qa_process/test_cases.md",
-    "stages": "qa_process/stages.json",
-}
 
 
 def _out() -> Path:
@@ -80,13 +49,13 @@ def _artifact_flags(root: Path, domain: str, run_id: str) -> dict[str, bool]:
     """3 つの成果物の有無。実物があるものだけ True（捏造しない）。"""
     return {
         key: any(artifact_file(root, domain, run_id, rel) is not None for rel in rels)
-        for key, rels in _ARTIFACT_FILES.items()
+        for key, rels in ARTIFACT_PROBES.items()
     }
 
 
 def _files_of(root: Path, domain: str, run_id: str) -> dict[str, str]:
     out: dict[str, str] = {}
-    for key, rel in _RESULT_FILES.items():
+    for key, rel in RESULT_FILE_MAP.items():
         path = artifact_file(root, domain, run_id, rel)
         out[key] = str(path) if path is not None else ""
     return out
@@ -137,8 +106,9 @@ def api_run_detail(domain: str, run_id: str) -> dict | tuple[dict, int]:
             ),
         }, 404
 
-    runs = list_runs(root, domain)
-    ids = [str(r.get("run_id", "")) for r in runs]
+    # 前後の実行回と位置を出すだけなので ID の一覧で足りる。
+    # 全件の meta.json を読むと 1 実行回を開くたびに N 件のパースが走る。
+    ids = list_run_ids(root, domain)
     idx = ids.index(run_id) if run_id in ids else -1
     payload: dict[str, Any] = {
         "domain": domain,
@@ -160,8 +130,7 @@ def api_run_exists(domain: str, run_id: str) -> dict | tuple[dict, int]:
     """実行回の成果物があるかだけを返す（一覧の行が導線を出すかの判断用）。"""
     if not _valid_domain(domain) or not valid_run_id(run_id):
         return {"exists": False}, 200
-    target = run_dir(_out(), domain, run_id)
-    exists = target is not None and (target / "meta.json").is_file()
+    exists = run_exists(_out(), domain, run_id)
     return {"exists": exists, "run_id": run_id if exists else ""}
 
 

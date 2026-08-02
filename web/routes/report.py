@@ -7,6 +7,8 @@ import shutil
 import subprocess
 import tempfile
 import zipfile
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 
 from flask import Blueprint, Response, make_response, redirect, request, send_file, url_for
@@ -225,6 +227,65 @@ def api_sample_report() -> dict | tuple[dict, int]:
     return {"domain": SAMPLE_DOMAIN}
 
 
+@dataclass(frozen=True)
+class _ResultSource:
+    """結果ページのデータ源。サイト単位の最新か、特定の実行回か。
+
+    同じ画面に 2 つのデータ源を通すため、両者の違いをここへ集める。
+    分岐を呼び出し側に散らすと、項目が増えるたびに同じ ``if`` が増殖する。
+    """
+
+    base_dir: Path
+    domain_dir: Path
+    run_id: str
+
+    @property
+    def is_run(self) -> bool:
+        return bool(self.run_id)
+
+    @property
+    def backfills_features(self) -> bool:
+        """features.md の遅延生成をするか。実行回は当時の内容を変えないので生成しない。"""
+        return not self.is_run
+
+    @property
+    def spec_ts_rel(self) -> str:
+        # 実行回へ退避しているのは AutoRun が生成した spec。サイト単位は
+        # テストケース表から生成した spec を使う（別系統の成果物）。
+        return "qa_process/autorun.spec.ts" if self.is_run else "testcases/testcases.spec.ts"
+
+    def playwright_html_rel(self, path_of: Callable[[str], str]) -> str:
+        if self.is_run:
+            # 実行回は testcases/playwright-report/ を退避していないため、
+            # 退避済みの qa_process/playwright_report.html を実行レポートとして使う。
+            return "qa_process/playwright_report.html"
+        native = self.domain_dir / "testcases" / "playwright-report" / "index.html"
+        fallback = self.domain_dir / "testcases" / "playwright_report.html"
+        chosen = fallback if path_of("testcases/playwright_report.html") else native
+        return str(chosen.relative_to(self.domain_dir))
+
+    def summary(self, domain: str, output_root: Path) -> dict[str, int]:
+        if self.is_run:
+            from_run = summary_from_report(self.base_dir / "report.json")
+            if from_run is not None:
+                return from_run
+        return _summary_for_domain(domain, output_root)
+
+
+def _result_source(domain: str, domain_dir: Path, run_id: str) -> _ResultSource | None:
+    """データ源を決める。実行回が指定されていて成果物が無ければ None。"""
+    if not run_id:
+        return _ResultSource(base_dir=domain_dir, domain_dir=domain_dir, run_id="")
+    from web.services.run_store import run_dir, run_exists
+
+    if not run_exists(_out(), domain, run_id):
+        return None
+    base = run_dir(_out(), domain, run_id)
+    if base is None:
+        return None
+    return _ResultSource(base_dir=base, domain_dir=domain_dir, run_id=run_id)
+
+
 @bp.get("/api/result")
 def api_result() -> dict | tuple[dict, int]:
     """結果ページのデータ源。
@@ -241,21 +302,17 @@ def api_result() -> dict | tuple[dict, int]:
         return {"error": "not found"}, 404
 
     run_id = request.args.get("run_id", "").strip()
-    if run_id:
-        from web.services.run_store import run_dir as _run_dir
-
-        base_dir = _run_dir(_out(), domain, run_id)
-        if base_dir is None or not (base_dir / "meta.json").is_file():
-            # 最新で代替しない。別の実行の中身を、この実行のものとして見せないため。
-            return {
-                "error": "この実行回の成果物は保存されていません",
-                "recovery": (
-                    "実行回ごとの保存を入れる前の実行です。"
-                    "最新の成果物を代わりに表示することはしません。"
-                ),
-            }, 404
-    else:
-        base_dir = domain_dir
+    source = _result_source(domain, domain_dir, run_id)
+    if source is None:
+        # 最新で代替しない。別の実行の中身を、この実行のものとして見せないため。
+        return {
+            "error": "この実行回の成果物は保存されていません",
+            "recovery": (
+                "実行回ごとの保存を入れる前の実行です。"
+                "最新の成果物を代わりに表示することはしません。"
+            ),
+        }, 404
+    base_dir = source.base_dir
     base_root = base_dir.resolve()
 
     def path_of(name: str) -> str:
@@ -276,29 +333,16 @@ def api_result() -> dict | tuple[dict, int]:
     shots = sorted(shots_dir.glob("*.png")) if shots_dir.is_dir() else []
     snap_dir = domain_dir / "snapshots"
     snapshot_count = len(list(snap_dir.glob("*.json"))) if snap_dir.is_dir() else 0
-    if not run_id:
+    if source.backfills_features:
         _generate_features_md_if_missing(domain_dir)
 
     # 「テスト実行」タブのデータソースは、テストケース表から実行した結果
     # （testcases/run_result.json）だけを使う。qa_process/ 配下は AutoRun が残した
     # 別系統の成果物で、自分が実行していない結果を docs 側に出さないため参照しない。
     run_result = _testcase_run_summary(base_dir)
-    if run_id:
-        # 実行回は testcases/playwright-report/ を退避していないため、
-        # 退避済みの qa_process/playwright_report.html を実行レポートとして使う。
-        pw_html_rel = "qa_process/playwright_report.html"
-    else:
-        pw_html_native = domain_dir / "testcases" / "playwright-report" / "index.html"
-        pw_html_fallback = domain_dir / "testcases" / "playwright_report.html"
-        pw_html = (
-            pw_html_fallback if path_of("testcases/playwright_report.html") else pw_html_native
-        )
-        pw_html_rel = str(pw_html.relative_to(domain_dir))
-    summary = (
-        summary_from_report(base_dir / "report.json") if run_id else None
-    ) or _summary_for_domain(domain, _out())
+    pw_html_rel = source.playwright_html_rel(path_of)
     return {
-        "summary": summary,
+        "summary": source.summary(domain, _out()),
         "snapshot_count": snapshot_count,
         "run_id": run_id,
         "files": {
@@ -314,9 +358,7 @@ def api_result() -> dict | tuple[dict, int]:
             "playwright_json": path_of("testcases/run_result.json"),
             "playwright_html": path_of(pw_html_rel),
             "playwright_native_html": path_of("testcases/playwright-report/index.html"),
-            "spec_ts": path_of(
-                "qa_process/autorun.spec.ts" if run_id else "testcases/testcases.spec.ts"
-            ),
+            "spec_ts": path_of(source.spec_ts_rel),
             "qa_process_report": path_of("qa_process/qa_process_report.html"),
             "exploration_heatmap": path_of("exploration_heatmap.html"),
             "exploration_json": path_of("exploration_coverage.json"),

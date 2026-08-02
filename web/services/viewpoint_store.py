@@ -365,9 +365,7 @@ class ViewpointStoreBase:
         後から説明できないと、抜けを指摘されても答えられない。
         どの観点定義を適用し、どれをなぜ除外したかをセット単位で残す。
         """
-        self._add_columns(
-            conn, "viewpoint_sets", ["applicability TEXT NOT NULL DEFAULT '{}'"]
-        )
+        self._add_columns(conn, "viewpoint_sets", ["applicability TEXT NOT NULL DEFAULT '{}'"])
         conn.execute("PRAGMA user_version = 4")
 
     def _migrate_v1_to_v2(self, conn: sqlite3.Connection) -> None:

@@ -84,7 +84,7 @@ _TESTCASE_ARTIFACTS: tuple[str, ...] = (
 
 # 画面（案A の 3 タブ）に対応する成果物の判定材料。
 # 「あり」と言えるのは実物が置けたときだけで、無いものを在るように見せない。
-_ARTIFACT_PROBES: dict[str, tuple[str, ...]] = {
+ARTIFACT_PROBES: dict[str, tuple[str, ...]] = {
     "result": ("report.json",),
     "analysis": ("report.html",),
     "autorun": (
@@ -92,6 +92,31 @@ _ARTIFACT_PROBES: dict[str, tuple[str, ...]] = {
         "qa_process/stages.json",
         "qa_process/autorun.spec.ts",
     ),
+}
+
+# 結果ページが使う成果物の論理名 → 退避後の相対パス。
+# 退避対象（上の 3 定数）から外れた名前をここへ足しても artifact_file() が
+# None を返すだけで無言で機能しないため、対応は必ずこの 1 か所で管理する。
+RESULT_FILE_MAP: dict[str, str] = {
+    "json": "report.json",
+    "html": "report.html",
+    "pdf": "report.pdf",
+    "excel": "spec.xlsx",
+    "screens_md": "screens.md",
+    "forms_md": "forms.md",
+    "features_md": "features.md",
+    "transition_mmd": "transition.mmd",
+    "diff": "diff_report.html",
+    "playwright_json": "testcases/run_result.json",
+    "qa_process_report": "qa_process/qa_process_report.html",
+    "playwright_report_json": "qa_process/playwright_report.json",
+    "playwright_report_html": "qa_process/playwright_report.html",
+    "spec_ts": "qa_process/autorun.spec.ts",
+    "test_plan": "qa_process/test_plan.md",
+    "test_analysis": "qa_process/test_analysis.md",
+    "test_design": "qa_process/test_design.md",
+    "test_cases": "qa_process/test_cases.md",
+    "stages": "qa_process/stages.json",
 }
 
 
@@ -161,24 +186,53 @@ def _copy_file(src: Path, dest: Path) -> bool:
     return True
 
 
+def _present_names(directory: Path) -> set[str]:
+    """ディレクトリ直下の実ファイル名。無ければ空。
+
+    候補 1 件ずつ ``is_file()`` を呼ぶと、退避のたびに 27 回の stat が走る。
+    ディレクトリを 1 回列挙して突き合わせる。
+    """
+    if not directory.is_dir():
+        return set()
+    try:
+        return {e.name for e in directory.iterdir() if e.is_file()}
+    except OSError as exc:
+        logger.warning("ディレクトリを列挙できません: %s (%s)", directory, exc)
+        return set()
+
+
 def _copy_artifacts(domain_dir: Path, target: Path) -> list[str]:
     """成果物を退避し、実際にコピーできた相対パスを返す。"""
     copied: list[str] = []
-    for name in _ROOT_ARTIFACTS:
-        if _copy_file(domain_dir / name, target / name):
-            copied.append(name)
-    for name in _QA_ARTIFACTS:
-        if _copy_file(domain_dir / "qa_process" / name, target / "qa_process" / name):
-            copied.append(f"qa_process/{name}")
-    for name in _TESTCASE_ARTIFACTS:
-        if _copy_file(domain_dir / "testcases" / name, target / "testcases" / name):
-            copied.append(f"testcases/{name}")
+    groups: tuple[tuple[str, tuple[str, ...]], ...] = (
+        ("", _ROOT_ARTIFACTS),
+        ("qa_process", _QA_ARTIFACTS),
+        ("testcases", _TESTCASE_ARTIFACTS),
+    )
+    for sub, names in groups:
+        src_dir = domain_dir / sub if sub else domain_dir
+        present = _present_names(src_dir)
+        for name in names:
+            if name not in present:
+                continue
+            dest = (target / sub / name) if sub else (target / name)
+            if _copy_file(src_dir / name, dest):
+                copied.append(f"{sub}/{name}" if sub else name)
     return copied
+
+
+# 退避対象の全相対パス。artifact_file() が呼ばれるたびに組み直さないよう
+# モジュール読み込み時に 1 度だけ作る（1 リクエストで最大 24 回呼ばれる）。
+_ALLOWED_RELATIVE: frozenset[str] = frozenset(
+    (*_ROOT_ARTIFACTS,)
+    + tuple(f"qa_process/{n}" for n in _QA_ARTIFACTS)
+    + tuple(f"testcases/{n}" for n in _TESTCASE_ARTIFACTS)
+)
 
 
 def _artifact_flags(copied: list[str]) -> dict[str, bool]:
     present = set(copied)
-    return {key: any(p in present for p in probes) for key, probes in _ARTIFACT_PROBES.items()}
+    return {key: any(p in present for p in probes) for key, probes in ARTIFACT_PROBES.items()}
 
 
 def snapshot_run(
@@ -228,9 +282,14 @@ def snapshot_run(
             artifacts=_artifact_flags(copied),
             summary=dict(summary or {}),
         )
-        (target / META_FILE_NAME).write_text(
+        # meta.json の有無が「この実行回が使えるか」の判定なので、書き込み中断で
+        # 壊れた meta.json が残らないよう tmp へ書いてから差し替える。
+        meta_path = target / META_FILE_NAME
+        tmp_path = meta_path.with_suffix(".json.tmp")
+        tmp_path.write_text(
             json.dumps(meta.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8"
         )
+        tmp_path.replace(meta_path)
         return rid
     except (OSError, RuntimeError, ValueError) as exc:
         logger.warning("実行回の退避に失敗しました: domain=%s (%s)", domain, exc)
@@ -253,6 +312,33 @@ def load_meta(output_root: Path, domain: str, run_id: str) -> dict[str, Any] | N
     return data if isinstance(data, dict) else None
 
 
+def run_exists(output_root: Path, domain: str, run_id: str) -> bool:
+    """その実行回が使える状態で残っているか。
+
+    判定は meta.json の有無で統一する。ディレクトリの有無で見ると、退避が
+    途中で失敗した器を「ある」と判定してしまう。
+    """
+    target = run_dir(output_root, domain, run_id)
+    return target is not None and (target / META_FILE_NAME).is_file()
+
+
+def list_run_ids(output_root: Path, domain: str) -> list[str]:
+    """実行回の ID だけを新しい順で返す（meta.json の中身は読まない）。
+
+    前後の実行回や件数を出すだけなら中身は要らない。全件の JSON を読むと
+    1 実行回を開くたびに N 件のパースが走る。
+    """
+    root = runs_root(output_root, domain)
+    if not root.is_dir():
+        return []
+    ids = [
+        child.name
+        for child in root.iterdir()
+        if child.is_dir() and valid_run_id(child.name) and (child / META_FILE_NAME).is_file()
+    ]
+    return sorted(ids, reverse=True)
+
+
 def list_runs(output_root: Path, domain: str) -> list[dict[str, Any]]:
     """そのサイトの実行回を新しい順で返す（meta.json のあるものだけ）。"""
     root = runs_root(output_root, domain)
@@ -269,17 +355,12 @@ def list_runs(output_root: Path, domain: str) -> list[dict[str, Any]]:
     return metas
 
 
-def artifact_file(
-    output_root: Path, domain: str, run_id: str, relative: str
-) -> Path | None:
+def artifact_file(output_root: Path, domain: str, run_id: str, relative: str) -> Path | None:
     """実行回の成果物ファイルの実パス。実在しなければ None（捏造しない）。
 
     ``relative`` は退避対象の allowlist に含まれるものだけを受け付ける。
     """
-    allowed = set(_ROOT_ARTIFACTS)
-    allowed |= {f"qa_process/{n}" for n in _QA_ARTIFACTS}
-    allowed |= {f"testcases/{n}" for n in _TESTCASE_ARTIFACTS}
-    if relative not in allowed:
+    if relative not in _ALLOWED_RELATIVE:
         return None
     target = run_dir(output_root, domain, run_id)
     if target is None:

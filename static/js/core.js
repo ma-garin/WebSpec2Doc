@@ -93,9 +93,12 @@ function setHeader(trail, title) {
 // ---- ナビ切替 ----
 document.querySelectorAll('.app-nav-item[data-view]').forEach(btn => btn.addEventListener('click', () => switchView(btn.dataset.view)));
 function switchView(name, opts = {}) {
-  // 実行結果ハブは generate 画面のレポートパネル（#result-panel）を借りて表示する。
-  // 借りたまま他画面へ移ると generate 側からパネルが消えるため、必ず返す。
-  if (name !== 'run-result' && typeof rrReleaseReportPanel === 'function') rrReleaseReportPanel();
+  // ビュー横断で使う要素（data-views="a b"）は .view の外に置いてあるため、
+  // .view の表示切替では畳まれない。所属しないビューへ移ったらここで畳む。
+  // 特定のビュー名を書かない一般規則にしてあるので、対象が増えても変更不要。
+  document.querySelectorAll('[data-views]').forEach(el => {
+    if (!el.dataset.views.split(/\s+/).includes(name)) el.classList.add('hidden');
+  });
   document.body.classList.toggle('viewpoints-active', name === 'viewpoints');
   document.querySelectorAll('.app-nav-item[data-view]').forEach(b => b.classList.toggle('is-active', b.dataset.view === name));
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('is-active', v.id === 'view-' + name));

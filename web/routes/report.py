@@ -14,7 +14,7 @@ from flask import Blueprint, Response, make_response, redirect, request, send_fi
 from web.config import _PREVIEW_MIME, OUTPUT_DIR, SAMPLE_DOMAIN, SAMPLE_REPORT_DIR
 from web.services.admin_audit import append_admin_audit
 from web.services.spec_ts_generator import generate_spec_ts
-from web.summary import _summary_for_domain
+from web.summary import _summary_for_domain, summary_from_report
 from web.tenancy import current_auth_user, scoped_instance_path, scoped_output_dir
 from web.validation import _safe_output_path, _valid_domain
 
@@ -227,43 +227,80 @@ def api_sample_report() -> dict | tuple[dict, int]:
 
 @bp.get("/api/result")
 def api_result() -> dict | tuple[dict, int]:
+    """結果ページのデータ源。
+
+    ``run_id`` を付けると、その実行回（runs/<run_id>/）の成果物を返す。
+    付けなければ従来どおりサイト単位の最新（output/<domain>/）を返す。
+    実行結果ページは同じ画面のまま、データ源だけを実行回へ差し替えて使う。
+    """
     domain = request.args.get("domain", "")
     if not _valid_domain(domain):
         return {"error": "not found"}, 404
     domain_dir = _out() / domain
-    domain_root = domain_dir.resolve()
     if not domain_dir.is_dir() or domain_dir.is_symlink():
         return {"error": "not found"}, 404
 
+    run_id = request.args.get("run_id", "").strip()
+    if run_id:
+        from web.services.run_store import run_dir as _run_dir
+
+        base_dir = _run_dir(_out(), domain, run_id)
+        if base_dir is None or not (base_dir / "meta.json").is_file():
+            # 最新で代替しない。別の実行の中身を、この実行のものとして見せないため。
+            return {
+                "error": "この実行回の成果物は保存されていません",
+                "recovery": (
+                    "実行回ごとの保存を入れる前の実行です。"
+                    "最新の成果物を代わりに表示することはしません。"
+                ),
+            }, 404
+    else:
+        base_dir = domain_dir
+    base_root = base_dir.resolve()
+
     def path_of(name: str) -> str:
-        candidate = domain_dir / name
+        candidate = base_dir / name
         resolved = candidate.resolve()
         if (
-            resolved == domain_root
-            or domain_root not in resolved.parents
+            resolved == base_root
+            or base_root not in resolved.parents
             or candidate.is_symlink()
             or not resolved.is_file()
         ):
             return ""
         return str(resolved)
 
-    shots_dir = domain_dir / "screenshots"
+    # スクリーンショットとスナップショットは実行回へ退避していない（容量のため）。
+    # 実行回を見ているときは、その回のものが無いことを空で示す。
+    shots_dir = base_dir / "screenshots"
     shots = sorted(shots_dir.glob("*.png")) if shots_dir.is_dir() else []
     snap_dir = domain_dir / "snapshots"
     snapshot_count = len(list(snap_dir.glob("*.json"))) if snap_dir.is_dir() else 0
-    _generate_features_md_if_missing(domain_dir)
+    if not run_id:
+        _generate_features_md_if_missing(domain_dir)
 
     # 「テスト実行」タブのデータソースは、テストケース表から実行した結果
     # （testcases/run_result.json）だけを使う。qa_process/ 配下は AutoRun が残した
     # 別系統の成果物で、自分が実行していない結果を docs 側に出さないため参照しない。
-    run_result = _testcase_run_summary(domain_dir)
-    pw_html_native = domain_dir / "testcases" / "playwright-report" / "index.html"
-    pw_html_fallback = domain_dir / "testcases" / "playwright_report.html"
-    pw_html = pw_html_fallback if path_of("testcases/playwright_report.html") else pw_html_native
-    playwright_run_at = run_result.get("ran_at", "")
+    run_result = _testcase_run_summary(base_dir)
+    if run_id:
+        # 実行回は testcases/playwright-report/ を退避していないため、
+        # 退避済みの qa_process/playwright_report.html を実行レポートとして使う。
+        pw_html_rel = "qa_process/playwright_report.html"
+    else:
+        pw_html_native = domain_dir / "testcases" / "playwright-report" / "index.html"
+        pw_html_fallback = domain_dir / "testcases" / "playwright_report.html"
+        pw_html = (
+            pw_html_fallback if path_of("testcases/playwright_report.html") else pw_html_native
+        )
+        pw_html_rel = str(pw_html.relative_to(domain_dir))
+    summary = (
+        summary_from_report(base_dir / "report.json") if run_id else None
+    ) or _summary_for_domain(domain, _out())
     return {
-        "summary": _summary_for_domain(domain, _out()),
+        "summary": summary,
         "snapshot_count": snapshot_count,
+        "run_id": run_id,
         "files": {
             "html": path_of("report.html"),
             "pdf": path_of("report.pdf"),
@@ -275,16 +312,18 @@ def api_result() -> dict | tuple[dict, int]:
             "transition_mmd": path_of("transition.mmd"),
             "diff": path_of("diff_report.html"),
             "playwright_json": path_of("testcases/run_result.json"),
-            "playwright_html": path_of(str(pw_html.relative_to(domain_dir))),
+            "playwright_html": path_of(pw_html_rel),
             "playwright_native_html": path_of("testcases/playwright-report/index.html"),
-            "spec_ts": path_of("testcases/testcases.spec.ts"),
+            "spec_ts": path_of(
+                "qa_process/autorun.spec.ts" if run_id else "testcases/testcases.spec.ts"
+            ),
             "qa_process_report": path_of("qa_process/qa_process_report.html"),
             "exploration_heatmap": path_of("exploration_heatmap.html"),
             "exploration_json": path_of("exploration_coverage.json"),
         },
-        "playwright_run_at": playwright_run_at,
+        "playwright_run_at": run_result.get("ran_at", ""),
         "testcase_run": run_result,
-        "screenshots": [path for s in shots if (path := path_of(str(s.relative_to(domain_dir))))],
+        "screenshots": [path for s in shots if (path := path_of(str(s.relative_to(base_dir))))],
         # 同梱サンプル（P3-1）かどうか。画面側で「これはサンプルです」と明示するために使う。
         # 予約ドメインの判定はサーバを正本にし、画面側に定数を二重管理させない。
         "is_sample": domain == SAMPLE_DOMAIN,

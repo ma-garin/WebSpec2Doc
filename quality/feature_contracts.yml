@@ -329,11 +329,13 @@
       "ui_files": [
         "static/js/history.js",
         "static/js/recrawl.js",
-        "static/js/results.js"
+        "static/js/results.js",
+        "static/js/view-run-result.js"
       ],
       "route_files": [
         "web/routes/history.py",
-        "web/routes/site.py"
+        "web/routes/site.py",
+        "web/routes/runs.py"
       ],
       "core_files": [
         "src/diff/snapshot.py",

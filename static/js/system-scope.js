@@ -5,7 +5,12 @@
   'use strict';
 
   var KEY = 'webspec2doc.system';
-  var AUTORUN_PATHS = { '/auto-run': 1, '/run-history': 1 };
+  // 実行履歴(/run-history)と実行結果(/runs/...)は両システムが持つ画面なので、
+  // ここで系を決めない。以前は /run-history を AutoRun 専用として扱っており、
+  // ドキュメント作成で開いてリロード・ブックマーク・直リンクすると、
+  // システムごと AutoRun に切り替わってしまっていた（docs 側の実行履歴に
+  // 到達できるURLが事実上存在しなかった）。保存値へ委ねる。
+  var AUTORUN_PATHS = { '/auto-run': 1 };
   var DOCS_PATHS = {
     '/': 1, '/home': 1, '/dashboard': 1, '/generate': 1,
     '/testcases': 1, '/qa-quality': 1, '/viewpoints': 1,
@@ -15,7 +20,9 @@
     var p = location.pathname;
     if (AUTORUN_PATHS[p]) return 'autorun';
     if (DOCS_PATHS[p]) return 'docs';
-    return null; // 共通ページ(/settings, /user-guide 等)は判定不能 → 保存値にフォールバック
+    // 共通ページ(/settings, /user-guide)と両系が持つページ(/run-history, /runs/...)
+    // は判定不能 → 保存値にフォールバックする
+    return null;
   }
 
   function currentSystem() {

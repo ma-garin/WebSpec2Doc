@@ -33,13 +33,19 @@ const LEGACY_TAB_MAP = {
 let resultData = null, reportJson = null, docFusionData = null;
 // 状態遷移表など、report.json ではなくサーバ側の導出結果を取りに行くビューが使う。
 let currentResultDomain = '';
+// 実行回を指定して開いているときの run_id（空ならサイト単位の最新）。
+// この画面は同じ構成のまま、データ源だけを実行回へ差し替えて使い回す。
+let currentResultRunId = '';
 let activeResultTab = 'overview', activeResultSub = '';
 const _renderedPanels = new Set(); // "tab/sub" 単位の描画済みフラグ（dirty 管理）
 
-async function showResults(domain, tab, sub) {
+async function showResults(domain, tab, sub, runId) {
+  currentResultRunId = runId || '';
   let data;
   try {
-    const res = await fetch('/api/result?domain=' + encodeURIComponent(domain));
+    const q = '/api/result?domain=' + encodeURIComponent(domain)
+      + (currentResultRunId ? '&run_id=' + encodeURIComponent(currentResultRunId) : '');
+    const res = await fetch(q);
     data = await res.json();
     if (!res.ok) throw new Error(data.error || '結果の取得に失敗しました');
   } catch (e) {
@@ -53,7 +59,7 @@ async function showResults(domain, tab, sub) {
     uiError(document.getElementById('rp-overview'), {
       title: '結果の取得に失敗しました',
       message: e.message,
-      onRetry: () => showResults(domain, tab, sub),
+      onRetry: () => showResults(domain, tab, sub, runId),
     });
     return;
   }
@@ -304,6 +310,9 @@ function _switchPanels(tab, sub) {
 }
 
 function _writeReportHash() {
+  // 実行回を開いているときのURLは /runs/<domain>/<run_id>。#report/... を重ねると
+  // 戻る操作でどちらへ帰るのか決まらなくなるので、ハッシュは書かない。
+  if (currentResultRunId) return;
   const domain = (document.getElementById('r-domain') || {}).textContent || '';
   if (!domain || domain === '-' || resultPanel.classList.contains('hidden')) return;
   let hash = '#report/' + encodeURIComponent(domain) + '/' + activeResultTab;

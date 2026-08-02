@@ -17,6 +17,33 @@ def _count_screens(screens_md: Path) -> int:
     )
 
 
+def summary_from_report(report_json: Path) -> dict[str, int] | None:
+    """report.json 1 ファイルから集計する。読めなければ None。
+
+    実行回ごとの成果物（runs/<run_id>/report.json）も同じ数え方で集計するため、
+    ドメイン基準の探索から切り離してある。
+    """
+    if not report_json.is_file():
+        return None
+    try:
+        data = json.loads(report_json.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    screens = data.get("screens", [])
+    # クエリ重複を統合した「正規化済み画面」のみで集計する。
+    # 旧 report.json（is_canonical 無し）は全画面を canonical 扱いにフォールバック。
+    canonical = [s for s in screens if s.get("is_canonical", True)]
+    meta = data.get("meta", {})
+    return {
+        "screens": meta.get("screen_count", len(canonical)),
+        "forms": sum(len(s.get("forms", [])) for s in canonical),
+        "fields": sum(len(f.get("fields", [])) for s in canonical for f in s.get("forms", [])),
+        "buttons": sum(len(s.get("buttons", [])) for s in canonical),
+    }
+
+
 def _summary_for_domain(domain: str, base_dir: Path | None = None) -> dict[str, int]:
     """最新の生成結果（report.json）を唯一の真実源として集計する。
     結果ページのサマリー／概要／マトリクス／履歴をすべて一致させるため。
@@ -25,25 +52,9 @@ def _summary_for_domain(domain: str, base_dir: Path | None = None) -> dict[str, 
     base_dir: テナントスコープ済み出力ディレクトリ。リクエストコンテキスト外
     （ストリーミング応答・バックグラウンド処理）から呼ぶ場合に明示的に渡す。"""
     domain_dir = (base_dir if base_dir is not None else OUTPUT_DIR) / domain
-    report_json = domain_dir / "report.json"
-    if report_json.exists():
-        try:
-            data = json.loads(report_json.read_text(encoding="utf-8"))
-            screens = data.get("screens", [])
-            # クエリ重複を統合した「正規化済み画面」のみで集計する。
-            # 旧 report.json（is_canonical 無し）は全画面を canonical 扱いにフォールバック。
-            canonical = [s for s in screens if s.get("is_canonical", True)]
-            meta = data.get("meta", {})
-            return {
-                "screens": meta.get("screen_count", len(canonical)),
-                "forms": sum(len(s.get("forms", [])) for s in canonical),
-                "fields": sum(
-                    len(f.get("fields", [])) for s in canonical for f in s.get("forms", [])
-                ),
-                "buttons": sum(len(s.get("buttons", [])) for s in canonical),
-            }
-        except (OSError, json.JSONDecodeError):
-            pass
+    from_report = summary_from_report(domain_dir / "report.json")
+    if from_report is not None:
+        return from_report
     snaps_dir = domain_dir / "snapshots"
     snaps = sorted(snaps_dir.glob("*.json")) if snaps_dir.is_dir() else []
     if not snaps:

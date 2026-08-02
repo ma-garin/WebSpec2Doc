@@ -32,6 +32,7 @@ def create_app() -> Flask:
         qa_process,
         report,
         review,
+        runs,
         schedule,
         settings,
         site,
@@ -102,6 +103,7 @@ def create_app() -> Flask:
     app.register_blueprint(crawl.bp)
     app.register_blueprint(auto_run.bp)
     app.register_blueprint(review.bp)
+    app.register_blueprint(runs.bp)
     app.register_blueprint(schedule.bp)
     app.register_blueprint(api_v1.bp)
     app.register_blueprint(api_v1_schedule.bp)

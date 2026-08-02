@@ -1,0 +1,446 @@
+[
+  {
+    "name": "Authlib",
+    "version": "1.7.2",
+    "license": "BSD License",
+    "homepage": "Documentation, https://docs.authlib.org/"
+  },
+  {
+    "name": "black",
+    "version": "26.3.1",
+    "license": "UNKNOWN",
+    "homepage": "Documentation, https://black.readthedocs.io/"
+  },
+  {
+    "name": "blinker",
+    "version": "1.9.0",
+    "license": "MIT License",
+    "homepage": "Chat, https://discord.gg/pallets"
+  },
+  {
+    "name": "boolean.py",
+    "version": "5.0",
+    "license": "BSD-2-Clause",
+    "homepage": "https://github.com/bastikr/boolean.py"
+  },
+  {
+    "name": "CacheControl",
+    "version": "0.14.4",
+    "license": "UNKNOWN",
+    "homepage": "Homepage, https://pypi.org/project/CacheControl/"
+  },
+  {
+    "name": "certifi",
+    "version": "2026.7.22",
+    "license": "Mozilla Public License 2.0 (MPL 2.0)",
+    "homepage": "https://github.com/certifi/python-certifi"
+  },
+  {
+    "name": "cffi",
+    "version": "2.1.0",
+    "license": "UNKNOWN",
+    "homepage": "Documentation, https://cffi.readthedocs.io/"
+  },
+  {
+    "name": "charset-normalizer",
+    "version": "3.4.9",
+    "license": "MIT",
+    "homepage": "Changelog, https://github.com/jawah/charset_normalizer/blob/master/CHANGELOG.md"
+  },
+  {
+    "name": "click",
+    "version": "8.4.2",
+    "license": "UNKNOWN",
+    "homepage": "Changes, https://click.palletsprojects.com/page/changes/"
+  },
+  {
+    "name": "coverage",
+    "version": "7.15.2",
+    "license": "Apache-2.0",
+    "homepage": "https://github.com/coveragepy/coveragepy"
+  },
+  {
+    "name": "cryptography",
+    "version": "49.0.0",
+    "license": "UNKNOWN",
+    "homepage": "changelog, https://cryptography.io/en/latest/changelog/"
+  },
+  {
+    "name": "cyclonedx-python-lib",
+    "version": "7.6.2",
+    "license": "Apache Software License",
+    "homepage": "https://github.com/CycloneDX/cyclonedx-python-lib/#readme"
+  },
+  {
+    "name": "defusedxml",
+    "version": "0.7.1",
+    "license": "Python Software Foundation License",
+    "homepage": "https://github.com/tiran/defusedxml"
+  },
+  {
+    "name": "et_xmlfile",
+    "version": "2.0.0",
+    "license": "MIT License",
+    "homepage": "https://foss.heptapod.net/openpyxl/et_xmlfile"
+  },
+  {
+    "name": "filelock",
+    "version": "3.32.2",
+    "license": "MIT License",
+    "homepage": "Documentation, https://py-filelock.readthedocs.io"
+  },
+  {
+    "name": "Flask",
+    "version": "3.1.3",
+    "license": "UNKNOWN",
+    "homepage": "Changes, https://flask.palletsprojects.com/page/changes/"
+  },
+  {
+    "name": "greenlet",
+    "version": "3.5.4",
+    "license": "UNKNOWN",
+    "homepage": "Homepage, https://greenlet.readthedocs.io"
+  },
+  {
+    "name": "html5lib",
+    "version": "1.1",
+    "license": "MIT License",
+    "homepage": "https://github.com/html5lib/html5lib-python"
+  },
+  {
+    "name": "idna",
+    "version": "3.18",
+    "license": "UNKNOWN",
+    "homepage": "Changelog, https://github.com/kjd/idna/blob/master/HISTORY.md"
+  },
+  {
+    "name": "iniconfig",
+    "version": "2.3.0",
+    "license": "UNKNOWN",
+    "homepage": "Homepage, https://github.com/pytest-dev/iniconfig"
+  },
+  {
+    "name": "itsdangerous",
+    "version": "2.2.0",
+    "license": "BSD License",
+    "homepage": "Changes, https://itsdangerous.palletsprojects.com/changes/"
+  },
+  {
+    "name": "Jinja2",
+    "version": "3.1.6",
+    "license": "BSD License",
+    "homepage": "Changes, https://jinja.palletsprojects.com/changes/"
+  },
+  {
+    "name": "joserfc",
+    "version": "1.7.4",
+    "license": "BSD License",
+    "homepage": "Documentation, https://jose.authlib.org/"
+  },
+  {
+    "name": "license-expression",
+    "version": "30.4.4",
+    "license": "Apache-2.0",
+    "homepage": "https://github.com/aboutcode-org/license-expression"
+  },
+  {
+    "name": "lxml",
+    "version": "6.1.1",
+    "license": "BSD-3-Clause",
+    "homepage": "https://lxml.de/"
+  },
+  {
+    "name": "markdown-it-py",
+    "version": "4.2.0",
+    "license": "MIT License",
+    "homepage": "Documentation, https://markdown-it-py.readthedocs.io"
+  },
+  {
+    "name": "MarkupSafe",
+    "version": "3.0.3",
+    "license": "UNKNOWN",
+    "homepage": "Donate, https://palletsprojects.com/donate"
+  },
+  {
+    "name": "mdurl",
+    "version": "0.1.2",
+    "license": "MIT License",
+    "homepage": "Homepage, https://github.com/executablebooks/mdurl"
+  },
+  {
+    "name": "msgpack",
+    "version": "1.2.1",
+    "license": "UNKNOWN",
+    "homepage": "Homepage, https://msgpack.org/"
+  },
+  {
+    "name": "mypy",
+    "version": "1.13.0",
+    "license": "MIT License",
+    "homepage": "https://www.mypy-lang.org/"
+  },
+  {
+    "name": "mypy_extensions",
+    "version": "1.1.0",
+    "license": "UNKNOWN",
+    "homepage": "Homepage, https://github.com/python/mypy_extensions"
+  },
+  {
+    "name": "networkx",
+    "version": "3.3",
+    "license": "BSD License",
+    "homepage": "Homepage, https://networkx.org/"
+  },
+  {
+    "name": "numpy",
+    "version": "2.5.1",
+    "license": "UNKNOWN",
+    "homepage": "homepage, https://numpy.org"
+  },
+  {
+    "name": "openpyxl",
+    "version": "3.1.4",
+    "license": "MIT License",
+    "homepage": "https://openpyxl.readthedocs.io"
+  },
+  {
+    "name": "packageurl-python",
+    "version": "0.17.6",
+    "license": "MIT License",
+    "homepage": "https://github.com/package-url/packageurl-python"
+  },
+  {
+    "name": "packaging",
+    "version": "26.2",
+    "license": "UNKNOWN",
+    "homepage": "Documentation, https://packaging.pypa.io/"
+  },
+  {
+    "name": "pathspec",
+    "version": "1.1.1",
+    "license": "Mozilla Public License 2.0 (MPL 2.0)",
+    "homepage": "Change Log, https://python-path-specification.readthedocs.io/en/latest/changes.html"
+  },
+  {
+    "name": "pillow",
+    "version": "12.3.0",
+    "license": "UNKNOWN",
+    "homepage": "Release notes, https://pillow.readthedocs.io/en/stable/releasenotes/index.html"
+  },
+  {
+    "name": "pip",
+    "version": "26.2",
+    "license": "UNKNOWN",
+    "homepage": "Changelog, https://pip.pypa.io/en/stable/news/"
+  },
+  {
+    "name": "pip-api",
+    "version": "0.0.34",
+    "license": "Apache Software License",
+    "homepage": "http://github.com/di/pip-api"
+  },
+  {
+    "name": "pip-requirements-parser",
+    "version": "32.0.1",
+    "license": "MIT",
+    "homepage": "https://github.com/nexB/pip-requirements-parser"
+  },
+  {
+    "name": "pip_audit",
+    "version": "2.7.3",
+    "license": "Apache Software License",
+    "homepage": "Homepage, https://pypi.org/project/pip-audit/"
+  },
+  {
+    "name": "platformdirs",
+    "version": "4.11.0",
+    "license": "MIT License",
+    "homepage": "Changelog, https://platformdirs.readthedocs.io/en/latest/changelog.html"
+  },
+  {
+    "name": "playwright",
+    "version": "1.61.0",
+    "license": "UNKNOWN",
+    "homepage": "homepage, https://github.com/Microsoft/playwright-python"
+  },
+  {
+    "name": "pluggy",
+    "version": "1.6.0",
+    "license": "MIT License",
+    "homepage": ""
+  },
+  {
+    "name": "prometheus_client",
+    "version": "0.21.1",
+    "license": "Apache Software License",
+    "homepage": "https://github.com/prometheus/client_python"
+  },
+  {
+    "name": "py-serializable",
+    "version": "1.1.2",
+    "license": "Apache Software License",
+    "homepage": "https://github.com/madpah/serializable#readme"
+  },
+  {
+    "name": "pycparser",
+    "version": "3.0",
+    "license": "UNKNOWN",
+    "homepage": "Homepage, https://github.com/eliben/pycparser"
+  },
+  {
+    "name": "pyee",
+    "version": "13.0.1",
+    "license": "MIT License",
+    "homepage": "Repository, https://github.com/jfhbrook/pyee"
+  },
+  {
+    "name": "Pygments",
+    "version": "2.20.0",
+    "license": "UNKNOWN",
+    "homepage": "Homepage, https://pygments.org"
+  },
+  {
+    "name": "pyparsing",
+    "version": "3.3.2",
+    "license": "UNKNOWN",
+    "homepage": "Documentation, https://pyparsing-docs.readthedocs.io/en/latest/"
+  },
+  {
+    "name": "pypdf",
+    "version": "6.14.2",
+    "license": "UNKNOWN",
+    "homepage": "Bug Reports, https://github.com/py-pdf/pypdf/issues"
+  },
+  {
+    "name": "pytest",
+    "version": "9.0.3",
+    "license": "UNKNOWN",
+    "homepage": "Changelog, https://docs.pytest.org/en/stable/changelog.html"
+  },
+  {
+    "name": "pytest-base-url",
+    "version": "2.1.0",
+    "license": "Mozilla Public License 2.0 (MPL 2.0)",
+    "homepage": "Homepage, https://github.com/pytest-dev/pytest-base-url"
+  },
+  {
+    "name": "pytest-cov",
+    "version": "5.0.0",
+    "license": "MIT License",
+    "homepage": "https://github.com/pytest-dev/pytest-cov"
+  },
+  {
+    "name": "pytest-playwright",
+    "version": "0.8.0",
+    "license": "Apache Software License",
+    "homepage": "homepage, https://github.com/microsoft/playwright-pytest"
+  },
+  {
+    "name": "pytest-timeout",
+    "version": "2.3.1",
+    "license": "DFSG approved",
+    "homepage": "https://github.com/pytest-dev/pytest-timeout"
+  },
+  {
+    "name": "python-docx",
+    "version": "1.2.0",
+    "license": "MIT License",
+    "homepage": "Changelog, https://github.com/python-openxml/python-docx/blob/master/HISTORY.rst"
+  },
+  {
+    "name": "python-dotenv",
+    "version": "1.2.2",
+    "license": "BSD-3-Clause",
+    "homepage": "Source, https://github.com/theskumar/python-dotenv"
+  },
+  {
+    "name": "python-slugify",
+    "version": "8.0.4",
+    "license": "MIT License",
+    "homepage": "https://github.com/un33k/python-slugify"
+  },
+  {
+    "name": "pytokens",
+    "version": "0.4.1",
+    "license": "MIT License",
+    "homepage": "Homepage, https://github.com/tusharsadhwani/pytokens"
+  },
+  {
+    "name": "PyYAML",
+    "version": "6.0.1",
+    "license": "MIT License",
+    "homepage": "https://pyyaml.org/"
+  },
+  {
+    "name": "requests",
+    "version": "2.34.2",
+    "license": "Apache Software License",
+    "homepage": "Documentation, https://requests.readthedocs.io"
+  },
+  {
+    "name": "rich",
+    "version": "15.0.0",
+    "license": "MIT License",
+    "homepage": "Documentation, https://rich.readthedocs.io/en/latest/"
+  },
+  {
+    "name": "ruff",
+    "version": "0.6.9",
+    "license": "MIT License",
+    "homepage": "https://docs.astral.sh/ruff"
+  },
+  {
+    "name": "six",
+    "version": "1.17.0",
+    "license": "MIT License",
+    "homepage": "https://github.com/benjaminp/six"
+  },
+  {
+    "name": "sortedcontainers",
+    "version": "2.4.0",
+    "license": "Apache Software License",
+    "homepage": "http://www.grantjenks.com/docs/sortedcontainers/"
+  },
+  {
+    "name": "text-unidecode",
+    "version": "1.3",
+    "license": "Artistic License",
+    "homepage": "https://github.com/kmike/text-unidecode/"
+  },
+  {
+    "name": "toml",
+    "version": "0.10.2",
+    "license": "MIT License",
+    "homepage": "https://github.com/uiri/toml"
+  },
+  {
+    "name": "types-PyYAML",
+    "version": "6.0.12.20260518",
+    "license": "UNKNOWN",
+    "homepage": "Homepage, https://github.com/python/typeshed"
+  },
+  {
+    "name": "typing_extensions",
+    "version": "4.16.0",
+    "license": "UNKNOWN",
+    "homepage": "Bug Tracker, https://github.com/python/typing_extensions/issues"
+  },
+  {
+    "name": "urllib3",
+    "version": "2.7.0",
+    "license": "UNKNOWN",
+    "homepage": "Changelog, https://github.com/urllib3/urllib3/blob/main/CHANGES.rst"
+  },
+  {
+    "name": "webencodings",
+    "version": "0.5.1",
+    "license": "BSD License",
+    "homepage": "https://github.com/SimonSapin/python-webencodings"
+  },
+  {
+    "name": "Werkzeug",
+    "version": "3.1.8",
+    "license": "UNKNOWN",
+    "homepage": "Changes, https://werkzeug.palletsprojects.com/page/changes/"
+  }
+]

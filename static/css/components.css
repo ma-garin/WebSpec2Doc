@@ -2605,3 +2605,5 @@
 .rh-table td .rh-type-badge, .rh-table td .btn-outline-sm { white-space: nowrap; }
 .rh-table th, .rh-table td { white-space: nowrap; }
 .rh-table td .muted-copy { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 導出対象が無かった値。測って 0 だったのとは違うので、数値ではなく — で示す */
+.rh-table td .rh-none { color: var(--text-subtle); font-weight: 400; }

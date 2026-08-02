@@ -279,6 +279,34 @@ class TestOtherViewStructures:
     def test_run_history_view_structure(self, spa: str, element_id: str) -> None:
         assert f'id="{element_id}"' in spa
 
+    def test_run_history_type_tabs_are_gone(self, spa: str) -> None:
+        """種別タブは廃止した。
+
+        5 つのうち「現新比較」「UXレビュー」「スケジュール」は実データが 0 件で、
+        押しても「実行履歴がありません」しか出なかった。「すべて」は別システムの
+        記録が混ざり、このシステムの分が埋もれていた。
+        セレクタだけ残すと、押しても何も出ない導線が再び生える。
+        """
+        assert 'class="rh-type-tabs"' not in spa
+        assert "rh-type-tab" not in spa
+
+    @pytest.mark.parametrize(
+        "element_id",
+        ["rh-count", "rh-filter-btn", "rh-filter", "rh-site-chips", "rh-status-chips"],
+    )
+    def test_run_history_has_count_and_filter(self, spa: str, element_id: str) -> None:
+        """タブの代わりに件数と絞り込みを置いた。"""
+        assert f'id="{element_id}"' in spa
+
+    @pytest.mark.parametrize("col", ["domain", "ts", "screens", "conds", "docs"])
+    def test_run_history_columns_are_sortable(self, spa: str, col: str) -> None:
+        """結果を 1 列に詰め込まず、列ごとに並べ替えられること。
+
+        以前は「画面 N / テスト条件 N / 成果物 N」を 1 列に入れており、
+        どの値で並べ替えているのか列見出しから分からなかった。
+        """
+        assert f'data-sort="{col}"' in spa
+
     @pytest.mark.parametrize(
         "tab", ["overview", "screens", "test-design", "testcases", "flow", "runs", "history"]
     )

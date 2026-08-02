@@ -73,7 +73,12 @@ function _rhStatusBadge(status) {
   return '<span class="rh-status-badge rh-status-running">実行中</span>';
 }
 
-// 数値3列。種別ごとに意味が違うので、無い値は空欄にする（0 と混同させない）。
+// 数値3列。種別ごとに意味が違うので、その種別が持たない値は空欄にする。
+//
+// 0 の扱いを 2 つに分ける:
+//   測って 0 だった  → 0 と出す（実績。失敗 0 件など）
+//   数える対象が無い → — と出す（導出できなかった。入力項目 0 でテスト条件も 0 など）
+// どちらも "0" と書くと、「条件を数えたら 0 だった」と読めてしまう。
 function _rhMetrics(run) {
   const s = run.summary || {};
   if (run.type === 'autorun' || run.type === 'testcase_run') {
@@ -85,11 +90,24 @@ function _rhMetrics(run) {
   if (run.type === 'schedule') {
     return { screens: '', conds: s.attempts ?? '', docs: '' };
   }
+  // クロール: テスト条件は入力項目から導出する。0 件は「数えたら 0」ではなく
+  // 「導出する対象が無かった」（入力項目が無い、または導出に失敗した）なので — で出す。
+  // 画面数・成果物数の 0 は測った結果なので 0 のまま出す（1画面も取れなかった、等）。
+  const conds = s.test_condition_count;
   return {
     screens: s.screen_count ?? '',
-    conds: s.test_condition_count ?? '',
+    conds: conds === undefined ? '' : (Number(conds) > 0 ? conds : { none: true }),
     docs: s.document_count ?? '',
   };
+}
+
+// 数値セル。導出対象が無い（{none:true}）ときは — をグレーで出す。
+function _rhNumCell(value) {
+  if (value === '' || value === undefined || value === null) return '';
+  if (typeof value === 'object' && value.none) {
+    return '<span class="rh-none" title="この実行では導出の対象がありませんでした（測って0ではありません）">—</span>';
+  }
+  return escHtml(String(value));
 }
 
 async function loadRunHistory() {
@@ -121,7 +139,13 @@ function _rhFiltered() {
 
 function _rhSorted(list) {
   const dir = RH.dir === 'asc' ? 1 : -1;
-  const metric = (r, k) => { const v = _rhMetrics(r)[k]; return v === '' ? -1 : Number(v); };
+  // 値が無い（''）と導出対象が無い（—）は、数値の並びでは最小として末尾へ送る。
+  const metric = (r, k) => {
+    const v = _rhMetrics(r)[k];
+    if (v === '' || v === undefined || v === null) return -1;
+    if (typeof v === 'object') return -1;
+    return Number(v);
+  };
   const key = {
     ts: r => String(r.timestamp || ''),
     domain: r => String(r.domain || ''),
@@ -326,9 +350,9 @@ function _rhRenderTable() {
       <td class="num">${escHtml(_rhFormatTimestamp(run.timestamp, { timeOnly: _rhGrouping() }))}
         <div class="muted-copy">${escHtml(_rhRelative(run.timestamp))}${noSave}</div></td>
       <td>${_rhStatusBadge(run.status)}</td>
-      <td class="num rh-num">${escHtml(String(m.screens))}</td>
-      <td class="num rh-num">${escHtml(String(m.conds))}</td>
-      <td class="num rh-num">${escHtml(String(m.docs))}</td>
+      <td class="num rh-num">${_rhNumCell(m.screens)}</td>
+      <td class="num rh-num">${_rhNumCell(m.conds)}</td>
+      <td class="num rh-num">${_rhNumCell(m.docs)}</td>
       <td>${openBtn}</td>
     </tr>`;
   });

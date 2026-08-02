@@ -90,7 +90,10 @@
               <div id="discover-loading" class="discover-live-card" style="display:none;margin-top:10px">
                 <div class="discover-live-header">
                   <span class="spinner"></span>
-                  <span>画面を解析しています...</span>
+                  <!-- 最初の1画面が出るまで約1.2秒あり、その間ずっと無反応だった
+                       （経過秒だけが動く）。いま何を待っているのかをここに出す。
+                       文言はサーバが実際にその処理へ入る直前に送るイベントで差し替える。 -->
+                  <span id="discover-phase" aria-live="polite">対象サイトを確認しています…</span>
                   <span id="discover-count-label" class="discover-live-count">0画面を発見</span>
                   <span class="discover-live-elapsed-label">経過:</span>
                   <span id="discover-elapsed" class="discover-live-elapsed"></span>

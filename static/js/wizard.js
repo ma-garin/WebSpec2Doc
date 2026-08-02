@@ -263,6 +263,20 @@ document.getElementById('login-record-cancel-btn').addEventListener('click', asy
 document.getElementById('select-all-btn').addEventListener('click', () => setAllDiscovered(true));
 document.getElementById('clear-all-btn').addEventListener('click', () => setAllDiscovered(false));
 
+// 画面解析の工程。サーバが実際にその処理へ入る直前に送ってくるイベントを、
+// そのまま文言にする（先回りして「〜しています」と出すと実態とずれる）。
+const DISCOVER_PHASE_LABELS = {
+  discover_started: '対象サイトを確認しています…',
+  robots_checking: 'robots.txt を確認しています…',
+  browser_starting: 'ブラウザを起動しています…',
+  browser_ready: '画面をたどっています…',
+};
+
+function _setDiscoverPhase(text) {
+  const el = document.getElementById('discover-phase');
+  if (el) el.textContent = text;
+}
+
 // ---- 画面解析 経過時間タイマー ----
 let _discoverTimerInterval = null;
 function _startDiscoverTimer() {
@@ -416,6 +430,8 @@ async function discoverUrls(skipLoginSection) {
   btn.disabled = true;
   if (feed) feed.innerHTML = '';
   if (countLabel) countLabel.textContent = '0画面を発見';
+  // サーバから最初のイベントが届くまでの数百ミリ秒も、押した直後から動かす
+  _setDiscoverPhase('対象サイトへ接続しています…');
   discovered = [];
   discoverSkipped = [];
   _discoverRunId = null;
@@ -481,6 +497,10 @@ async function discoverUrls(skipLoginSection) {
           discovered.push(obj.page);
           if (countLabel) countLabel.textContent = `${discovered.length}画面を発見`;
           lastRow = _addRow(obj.page, true);
+        } else if (DISCOVER_PHASE_LABELS[obj.crawl_event?.event]) {
+          // 最初の1画面が出るまでの約1.2秒、経過秒しか動かず止まって見えていた。
+          // 実時間は変わらないが、いま何を待っているのかは出せる。
+          _setDiscoverPhase(DISCOVER_PHASE_LABELS[obj.crawl_event.event]);
         } else if (obj.crawl_event?.event === 'page_skipped') {
           discoverSkipped.push(obj.crawl_event);
           const skipped = obj.crawl_event;

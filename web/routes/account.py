@@ -11,10 +11,12 @@ from werkzeug.wrappers import Response as BaseResponse
 
 from web.auth import (
     SESSION_COOKIE_NAME,
+    SYSTEM_SELECT_PATH,
     TENANT_SELECT_PATH,
     USER_SELECT_PATH,
     auth_enabled,
     clear_session_cookie,
+    create_user_from_payload,
     effective_auth_mode,
     mock_auth_enabled,
     require_admin,
@@ -24,11 +26,18 @@ from web.services.auth_store import ROLE_ADMIN, ROLE_MEMBER, AuthError, get_auth
 
 bp = Blueprint("account", __name__)
 
-# ログイン後の遷移は常にこの順で進む。
-# ログイン → ユーザー選択 → テナント選択 → システム選択。
+# ログイン後の遷移は常に ログイン → ユーザー選択 → テナント選択 → システム選択。
 # 元のURL（next）へは戻さない。認証ガードが付ける next は "/" のことが多く、
 # システム選択を飛ばしてドキュメント作成の画面へ直行してしまうため。
-SYSTEM_SELECT_PATH = "/systems"
+# 選択画面はログイン必須。個々のハンドラで判定を繰り返さず、ここで一括で弾く。
+_SELECTION_ENDPOINTS = frozenset(
+    {
+        "account.user_page",
+        "account.user_select",
+        "account.tenant_page",
+        "account.tenant_select",
+    }
+)
 
 # 各選択画面に出すエラー。クエリ文字列の値をそのまま表示しないための対応表。
 _TENANT_ERRORS = {
@@ -39,6 +48,17 @@ _USER_ERRORS = {
     "not_switchable": "そのユーザーには切り替えられません。"
     "パスワードが設定されているか、無効化されています。",
 }
+
+
+@bp.before_request
+def _require_login_for_selection_screens() -> BaseResponse | None:
+    if request.endpoint not in _SELECTION_ENDPOINTS:
+        return None
+    if not auth_enabled():
+        return redirect("/")
+    if getattr(g, "auth_user", None) is None:
+        return redirect("/auth/login")
+    return None
 
 
 def _login_page_context(error: str | None, email: str) -> dict:
@@ -88,14 +108,11 @@ def login_submit() -> BaseResponse | tuple[str, int]:
 @bp.get(USER_SELECT_PATH)
 def user_page() -> BaseResponse | str:
     """モックのユーザー選択。誰として作業するかをここで決める。"""
-    if not auth_enabled() or not mock_auth_enabled():
+    if not mock_auth_enabled():
         return redirect(TENANT_SELECT_PATH)
-    user = getattr(g, "auth_user", None)
-    if user is None:
-        return redirect("/auth/login")
     return render_template(
         "auth/user.html",
-        user=user,
+        user=g.auth_user,
         candidates=get_auth_store().list_login_candidates(),
         error=_USER_ERRORS.get(request.args.get("error", "")),
     )
@@ -103,11 +120,9 @@ def user_page() -> BaseResponse | str:
 
 @bp.post(USER_SELECT_PATH)
 def user_select() -> BaseResponse:
-    if not auth_enabled() or not mock_auth_enabled():
+    if not mock_auth_enabled():
         return redirect(TENANT_SELECT_PATH)
-    current = getattr(g, "auth_user", None)
-    if current is None:
-        return redirect("/auth/login")
+    current = g.auth_user
     user_id = request.form.get("user_id", "").strip()
     # 空、または自分自身なら切り替えずそのまま進む
     if not user_id or user_id == current.get("id"):
@@ -128,7 +143,7 @@ def signup_page() -> BaseResponse | str:
     if not store.has_any_user():
         return redirect("/auth/setup")
     if getattr(g, "auth_user", None):
-        return redirect("/systems")
+        return redirect(SYSTEM_SELECT_PATH)
     return render_template("auth/signup.html", error=None, form={}, mock_auth=mock_auth_enabled())
 
 
@@ -141,10 +156,17 @@ def signup_submit() -> BaseResponse | tuple[str, int]:
         "name": request.form.get("name", "").strip(),
         "email": request.form.get("email", "").strip(),
     }
-    password = "" if mock_auth_enabled() else request.form.get("password", "")
     try:
         # 所属なしで作る。どのテナントに入れるかは管理者が決める。
-        user = store.create_user(None, form["email"], form["name"], password, role=ROLE_MEMBER)
+        # モックではテンプレートがパスワード欄を出さないので、空 = パスワードなしになる。
+        user = store.create_user(
+            None,
+            form["email"],
+            form["name"],
+            request.form.get("password", ""),
+            role=ROLE_MEMBER,
+            enforce_password_policy=not mock_auth_enabled(),
+        )
     except AuthError as exc:
         html = render_template(
             "auth/signup.html", error=str(exc), form=form, mock_auth=mock_auth_enabled()
@@ -156,11 +178,7 @@ def signup_submit() -> BaseResponse | tuple[str, int]:
 
 @bp.get(TENANT_SELECT_PATH)
 def tenant_page() -> BaseResponse | str:
-    if not auth_enabled():
-        return redirect("/")
-    user = getattr(g, "auth_user", None)
-    if user is None:
-        return redirect("/auth/login")
+    user = g.auth_user
     store = get_auth_store()
     return render_template(
         "auth/tenant.html",
@@ -174,10 +192,6 @@ def tenant_page() -> BaseResponse | str:
 
 @bp.post(TENANT_SELECT_PATH)
 def tenant_select() -> BaseResponse:
-    if not auth_enabled():
-        return redirect("/")
-    if getattr(g, "auth_user", None) is None:
-        return redirect("/auth/login")
     tenant_id = request.form.get("tenant_id", "").strip()
     if not tenant_id:
         return redirect(f"{TENANT_SELECT_PATH}?error=missing")
@@ -219,16 +233,16 @@ def setup_submit() -> BaseResponse | tuple[str, int]:
         "email": request.form.get("email", "").strip(),
     }
     mock = mock_auth_enabled()
-    password = "" if mock else request.form.get("password", "")
-    confirm = "" if mock else request.form.get("password_confirm", "")
+    password = request.form.get("password", "")
     try:
-        if password != confirm:
+        if password != request.form.get("password_confirm", ""):
             raise AuthError("確認用パスワードが一致しません。", "password_mismatch")
         result = store.setup_initial(
             form["tenant_name"] or "My Workspace",
             form["email"],
             form["name"],
             password,
+            enforce_password_policy=not mock,
         )
     except AuthError as exc:
         html = render_template("auth/setup.html", error=str(exc), form=form, mock_auth=mock)
@@ -388,19 +402,11 @@ def api_create_user() -> BaseResponse | tuple[dict, int] | dict:
     denied = require_admin()
     if denied is not None:
         return denied
-    payload = request.get_json(silent=True) or {}
-    role = str(payload.get("role", ROLE_MEMBER))
-    # パスワードは任意。空ならモック認証（メールアドレスだけでログイン）になる。
-    password = str(payload.get("password", ""))
     try:
-        user = get_auth_store().create_user(
-            g.tenant["id"],
-            str(payload.get("email", "")),
-            str(payload.get("name", "")),
-            password,
-            role=role,
+        user = create_user_from_payload(
+            request.get_json(silent=True) or {},
+            tenant_id=g.tenant["id"],
             actor_id=g.auth_user["id"],
-            enforce_password_policy=not mock_auth_enabled(),
         )
     except AuthError as exc:
         return {"error": str(exc), "code": exc.code}, 400

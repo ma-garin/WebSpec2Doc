@@ -26,8 +26,11 @@ SECRET_KEY_ENV = "WEBSPEC2DOC_SECRET_KEY"
 SECURE_COOKIES_ENV = "WEBSPEC2DOC_SECURE_COOKIES"
 SESSION_COOKIE_NAME = "ws2d_session"
 
+# ログイン後は必ずこの順で進む。順序を変えるときはここだけを見ればよいように、
+# 3つのパスを並べて置く。
 USER_SELECT_PATH = "/auth/user"
 TENANT_SELECT_PATH = "/auth/tenant"
+SYSTEM_SELECT_PATH = "/systems"
 
 # 認証が有効でも到達できるパス（ログイン画面・静的ファイル・死活監視）
 _EXEMPT_PREFIXES = ("/static/",)
@@ -219,6 +222,27 @@ def clear_session_cookie(response: BaseResponse) -> BaseResponse:
 
 
 # --- SECRET_KEY ---------------------------------------------------------
+
+
+def create_user_from_payload(payload: dict, tenant_id: str | None, actor_id: str) -> dict:
+    """管理APIの JSON からユーザーを1人作る。
+
+    /api/auth/users（テナント内）と /api/admin/tenancy/users（テナント横断）で
+    同じ規則を使うため、payload の読み方とパスワードの扱いをここに集約する。
+    パスワードは任意で、空ならモック認証（メールアドレスだけでログイン）になる。
+    モック時は長さ要件を課さない（配布用の短い資格情報を許すため）。
+    """
+    from web.services.auth_store import ROLE_MEMBER, get_auth_store
+
+    return get_auth_store().create_user(
+        tenant_id,
+        str(payload.get("email", "")),
+        str(payload.get("name", "")),
+        str(payload.get("password", "")),
+        role=str(payload.get("role", ROLE_MEMBER)),
+        actor_id=actor_id,
+        enforce_password_policy=not mock_auth_enabled(),
+    )
 
 
 def ensure_secret_key(app: Flask, instance_dir: Path = Path("instance")) -> None:

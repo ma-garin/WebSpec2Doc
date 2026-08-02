@@ -16,10 +16,10 @@
   var modalSub = document.getElementById('membership-sub');
   var editingUserId = '';
 
-  function showError(message) {
+  function showMessage(message, options) {
     alertBox.textContent = message;
     alertBox.hidden = false;
-    alertBox.scrollIntoView({ block: 'nearest' });
+    if (options && options.scroll) alertBox.scrollIntoView({ block: 'nearest' });
   }
 
   function clearError() {
@@ -52,7 +52,7 @@
       apply(data);
       if (onDone) onDone(data);
     }).catch(function (error) {
-      showError(error.message || String(error));
+      showMessage(error.message || String(error), { scroll: true });
     });
   }
 
@@ -110,7 +110,7 @@
         );
         if (!ok) return;
         run(request('DELETE', '/tenants/' + tenant.id), function (data) {
-          if (data.note) showNote(data.note);
+          if (data.note) showMessage(data.note);
         });
       }));
       var actionCell = el('td');
@@ -118,11 +118,6 @@
       row.appendChild(actionCell);
       tenantRows.appendChild(row);
     });
-  }
-
-  function showNote(message) {
-    alertBox.textContent = message;
-    alertBox.hidden = false;
   }
 
   function renderTenantOptions() {

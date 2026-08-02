@@ -198,3 +198,52 @@ class TestConcurrentReadDuringWrite:
         assert not errors, f"並行読み書きで失敗: {errors}"
         # 既定セットの観点数は書き込みの影響を受けない
         assert all(count > 0 for count in seen), f"0件のスナップショットを掴んだ: {seen}"
+
+
+class TestCrossProcessMigration:
+    """別プロセスから同時に初期化しても壊れないこと。
+
+    スレッド並行では `_init_lock` が効くが、プロセスをまたぐと効かない。
+    開発サーバーと E2E、複数ワーカーは別プロセスで動く。
+
+    手元では 6プロセス × 20ラウンド（120回起動）で失敗ゼロを確認した。
+    ここでは1ラウンドだけ回す（全体のテスト時間を延ばさないため）。
+    タイミング依存の検証を1回で断定しない規律（AGENTS.md V-4）に従い、
+    疑わしいときは同じ形で回数を増やして確かめる。
+    """
+
+    def test_parallel_processes_converge(self, tmp_path: Path, seed: Path) -> None:
+        import subprocess
+        import sys
+        import textwrap
+
+        script = tmp_path / "init_store.py"
+        script.write_text(
+            textwrap.dedent(
+                f"""
+                import sys
+                sys.path.insert(0, {str(Path.cwd())!r})
+                from web.services.viewpoint_store import ViewpointStore
+                store = ViewpointStore({str(tmp_path / "viewpoints.db")!r}, {str(seed)!r})
+                store.initialize()
+                sets = store.list_sets()
+                print(len(sets), sum(1 for s in sets if s["is_default"]))
+                """
+            ),
+            encoding="utf-8",
+        )
+        processes = [
+            subprocess.Popen(  # noqa: S603 - 生成した検証用スクリプトのみ実行する
+                [sys.executable, str(script)],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            for _ in range(6)
+        ]
+        results = [proc.communicate() for proc in processes]
+
+        for index, (out, err) in enumerate(results):
+            assert processes[index].returncode == 0, f"プロセス{index}が失敗: {err[-400:]}"
+            _sets, defaults = out.split()
+            assert defaults == "1", f"プロセス{index}から見た既定セットが{defaults}件"

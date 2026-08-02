@@ -121,7 +121,8 @@ def api_delete_tenant(tenant_id: str) -> JsonResult:
 def api_create_user() -> JsonResult:
     payload = request.get_json(silent=True) or {}
     tenant_id = str(payload.get("tenant_id", "")).strip() or None
-    password = "" if mock_auth_enabled() else str(payload.get("password", ""))
+    # パスワードは任意。空ならモック認証（一覧クリック・メールのみ）で入るユーザーになる。
+    password = str(payload.get("password", ""))
     try:
         user = get_auth_store().create_user(
             tenant_id,
@@ -130,6 +131,7 @@ def api_create_user() -> JsonResult:
             password,
             role=str(payload.get("role", ROLE_MEMBER)),
             actor_id=_actor_id(),
+            enforce_password_policy=not mock_auth_enabled(),
         )
     except AuthError as exc:
         return {"error": str(exc), "code": exc.code}, 400

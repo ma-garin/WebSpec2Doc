@@ -57,11 +57,19 @@ def test_tenant_slug_collision_gets_suffix(store: AuthStore) -> None:
 # ---------- ユーザー作成・検証 ----------
 
 
-def test_create_user_rejects_invalid_email(store: AuthStore) -> None:
+def test_create_user_rejects_invalid_login_id(store: AuthStore) -> None:
+    """ログインIDはメールアドレスか英数字の識別子。空白や記号は受け付けない。"""
     tenant = store.create_tenant("T")
-    with pytest.raises(AuthError) as exc:
-        store.create_user(tenant["id"], "not-an-email", "N", "secret-pass-123")
-    assert exc.value.code == "invalid_email"
+    for invalid in ("not an email", "a", "駄目なID", "user@"):
+        with pytest.raises(AuthError) as exc:
+            store.create_user(tenant["id"], invalid, "N", "secret-pass-123")
+        assert exc.value.code == "invalid_email"
+
+
+def test_create_user_accepts_plain_identifier_as_login_id(store: AuthStore) -> None:
+    tenant = store.create_tenant("T")
+    user = store.create_user(tenant["id"], "admin", "管理者", "secret-pass-123")
+    assert user["email"] == "admin"
 
 
 def test_create_user_rejects_weak_password(store: AuthStore) -> None:

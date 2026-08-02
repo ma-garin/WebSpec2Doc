@@ -275,14 +275,17 @@
     var name = document.getElementById('u-name');
     var email = document.getElementById('u-mail');
     var role = document.getElementById('u-role');
+    var password = document.getElementById('u-password');
     run(request('POST', '/users', {
       name: name.value,
       email: email.value,
       tenant_id: tenantSelect.value,
-      role: role.value
+      role: role.value,
+      password: password.value
     }), function () {
       name.value = '';
       email.value = '';
+      password.value = '';
     });
   });
 

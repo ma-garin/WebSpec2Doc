@@ -53,7 +53,17 @@ DEFAULT_SESSION_HOURS = 12
 MIN_PASSWORD_LENGTH = 10
 
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+# ログインIDはメールアドレスに限らない。初期管理者の "admin" のような
+# 短い識別子も受け付ける（社内モックで配る資格情報のため）。
+_LOGIN_ID_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{1,63}$")
 _SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,31}$")
+
+# 初期管理者。ユーザーが1人も居ないサーバーを起動したときに作られる。
+INITIAL_ADMIN_LOGIN_ID = "admin"
+INITIAL_ADMIN_PASSWORD = "password"  # nosec B105 - 社内モック用の既定資格情報
+INITIAL_ADMIN_NAME = "管理者"
+INITIAL_TENANT_NAME = "既定のテナント"
+INITIAL_TENANT_SLUG = "default"
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +100,11 @@ def slugify_tenant_name(name: str) -> str:
     if not slug or not _SLUG_RE.match(slug):
         slug = "tenant"
     return slug
+
+
+def valid_login_id(value: str) -> bool:
+    """ログインIDとして使えるか。メールアドレス、または英数字の識別子を許可する。"""
+    return bool(_EMAIL_RE.match(value) or _LOGIN_ID_RE.match(value))
 
 
 def normalize_role(role: str) -> str:
@@ -467,23 +482,29 @@ class AuthStore:
         role: str = ROLE_MEMBER,
         *,
         actor_id: str = "",
+        enforce_password_policy: bool = True,
     ) -> dict:
         """ユーザーを作る。
 
         tenant_id を渡すとその所属も同時に作る。None なら所属なしで作成し、
         管理者が割り当てるまで待機状態になる（本人によるサインアップの経路）。
         password が空文字ならパスワード未設定として作る（モック認証で使う）。
+        email はメールアドレスのほか、"admin" のような識別子も受け付ける。
         """
         email = email.strip().lower()
         name = name.strip()
-        if not _EMAIL_RE.match(email):
-            raise AuthError("メールアドレスの形式が正しくありません。", "invalid_email")
+        if not valid_login_id(email):
+            raise AuthError(
+                "ログインIDはメールアドレス、または英数字（2文字以上）で指定してください。",
+                "invalid_email",
+            )
         if not name:
             raise AuthError("表示名を入力してください。", "invalid_input")
         role = normalize_role(role)
         password_hash = ""
         if password:
-            validate_password(password, email)
+            if enforce_password_policy:
+                validate_password(password, email)
             password_hash = generate_password_hash(password)
         with self._transaction() as conn:
             if (
@@ -527,6 +548,37 @@ class AuthStore:
         tenant = self.create_tenant(tenant_name)
         user = self.create_user(tenant["id"], email, name, password, role=ROLE_ADMIN)
         self.audit("tenant.created", user_id=user["id"], tenant_id=tenant["id"], detail=tenant_name)
+        return {"tenant": tenant, "user": user}
+
+    def ensure_initial_admin(self) -> dict | None:
+        """ユーザーが1人も居なければ初期管理者と既定テナントを作る。
+
+        既にユーザーが居れば何もしない（既存環境のパスワードを上書きしない）。
+        サーバー起動時にだけ呼ぶ。import しただけのテストでは走らせない。
+        """
+        if self.has_any_user():
+            return None
+        tenant = self.create_tenant(INITIAL_TENANT_NAME, INITIAL_TENANT_SLUG)
+        user = self.create_user(
+            tenant["id"],
+            INITIAL_ADMIN_LOGIN_ID,
+            INITIAL_ADMIN_NAME,
+            INITIAL_ADMIN_PASSWORD,
+            role=ROLE_ADMIN,
+            # 既定資格情報は配布用の短い文字列なので、長さ要件は課さない
+            enforce_password_policy=False,
+        )
+        self.audit(
+            "tenant.created",
+            user_id=user["id"],
+            tenant_id=tenant["id"],
+            detail=f"{INITIAL_TENANT_NAME}（初期セットアップ）",
+        )
+        logger.info(
+            "初期管理者を作成しました: ログインID=%s / 既定テナント=%s",
+            INITIAL_ADMIN_LOGIN_ID,
+            tenant["slug"],
+        )
         return {"tenant": tenant, "user": user}
 
     def get_user(self, user_id: str) -> dict | None:

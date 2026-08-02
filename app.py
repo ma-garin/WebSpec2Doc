@@ -33,6 +33,25 @@ def _open_browser() -> None:
     webbrowser.open(f"http://127.0.0.1:{PORT}")
 
 
+BOOTSTRAP_ADMIN_ENV = "WEBSPEC2DOC_BOOTSTRAP_ADMIN"
+
+
+def _bootstrap_initial_admin() -> None:
+    """ユーザーが1人も居なければ初期管理者（admin / password）を用意する。
+
+    サーバー起動時にだけ呼ぶ。app モジュールを import するだけの単体テストは
+    ここを通らないため、テスト用の空DB前提を壊さない。E2E は
+    WEBSPEC2DOC_BOOTSTRAP_ADMIN=0 で明示的に無効化する。
+    """
+    if os.environ.get(BOOTSTRAP_ADMIN_ENV, "1").strip().lower() in ("0", "off", "false"):
+        return
+    from web.services.auth_store import INITIAL_ADMIN_LOGIN_ID, get_auth_store
+
+    created = get_auth_store().ensure_initial_admin()
+    if created is not None:
+        print(f"初期管理者を作成しました: ログインID={INITIAL_ADMIN_LOGIN_ID} / パスワード=password")
+
+
 if __name__ == "__main__":
     from crawler.playwright_runtime import PlaywrightRuntimeError, verify_playwright_runtime
 
@@ -43,6 +62,7 @@ if __name__ == "__main__":
     print(
         f"Playwright Chromium {runtime.chromium_version} 起動確認済み " f"({runtime.browsers_path})"
     )
+    _bootstrap_initial_admin()
     host, open_browser = _bind_host()
     if open_browser:
         threading.Thread(target=_open_browser, daemon=True).start()

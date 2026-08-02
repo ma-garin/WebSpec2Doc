@@ -65,7 +65,7 @@
   <section class="adm-card">
     <div class="adm-card-head">
       <h2>ユーザー</h2>
-      <span class="hint">1人が複数テナントに所属でき、テナントごとにロールを持ちます</span>
+      <span class="hint">1人が複数テナントに所属でき、テナントごとにロールを持ちます。パスワードなしのユーザーはログイン画面の一覧に並びます</span>
     </div>
     <form class="adm-inline adm-inline-user" id="user-form">
       <div>
@@ -73,8 +73,8 @@
         <input type="text" id="u-name" placeholder="山田 太郎" required>
       </div>
       <div>
-        <label for="u-mail">メールアドレス</label>
-        <input type="email" id="u-mail" placeholder="yamada@example.co.jp" required>
+        <label for="u-mail">メールアドレス / ログインID</label>
+        <input type="text" id="u-mail" placeholder="yamada@example.co.jp" required>
       </div>
       <div>
         <label for="u-tenant">所属テナント</label>
@@ -86,6 +86,10 @@
           <option value="member">一般</option>
           <option value="admin">管理者</option>
         </select>
+      </div>
+      <div>
+        <label for="u-password">パスワード（任意）</label>
+        <input type="text" id="u-password" placeholder="空ならパスワードなし">
       </div>
       <button class="btn-primary" type="submit">作成</button>
     </form>

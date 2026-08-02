@@ -345,6 +345,12 @@ def discover_pages_parallel(
     発見順は「深さ順・同一深さ内は元の順序」で安定させる。並列で終わった順に
     出すと、同じサイトを解析するたびに画面の並びが変わり、前回との比較が
     できなくなる。
+
+    Chromium はワーカーごとに起動する（起動は実測 0.21 秒/個）。1 個を共有して
+    コンテキストだけ分ける案は成立しない。Playwright の同期 API は、
+    オブジェクトを作ったスレッド以外から触ると
+    `greenlet.error: Cannot switch to a different thread` で落ちる。
+    既存の crawl_urls_parallel がワーカーごとに独立 Playwright を持つのも同じ理由。
     """
     from crawler.page_crawler import (
         _browser_page,
@@ -357,11 +363,11 @@ def discover_pages_parallel(
     visited: set[str] = set()
     found: list[dict[str, object]] = []
     wave: list[tuple[str, int]] = [(base_url, 0)]
-    emit_lock = threading.Lock()
 
     _emit_event(on_event, "browser_starting")
+    first_wave = True
     while wave and len(found) < max_pages:
-        # この波で実際に取りに行く URL を、先に確定させる（除外はここで判定する）
+        # この波で実際に取りに行く URL を先に確定させる（除外はここで判定する）
         targets: list[tuple[str, int]] = []
         for url, url_depth in wave:
             if len(targets) + len(found) >= max_pages:
@@ -414,13 +420,13 @@ def discover_pages_parallel(
         ]
         for thread in threads:
             thread.start()
-        if threads:
-            with emit_lock:
-                _emit_event(on_event, "browser_ready")
         for thread in threads:
             thread.join()
         if errors:
             raise errors[0]
+        if first_wave:
+            _emit_event(on_event, "browser_ready")
+            first_wave = False
 
         # 元の順序で確定させ、その順で通知する
         next_wave: list[tuple[str, int]] = []

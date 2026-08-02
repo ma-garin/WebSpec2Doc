@@ -1,0 +1,2602 @@
+[
+  {
+    "module": "web/routes/account.py",
+    "blueprint": "account",
+    "module_summary": "アプリ利用者のログイン・初期セットアップ・アカウント管理ルート。",
+    "endpoint": "account.api_list_tokens",
+    "function": "api_list_tokens",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/auth/api-tokens",
+    "summary": "",
+    "line": 441
+  },
+  {
+    "module": "web/routes/account.py",
+    "blueprint": "account",
+    "module_summary": "アプリ利用者のログイン・初期セットアップ・アカウント管理ルート。",
+    "endpoint": "account.api_create_token",
+    "function": "api_create_token",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/auth/api-tokens",
+    "summary": "",
+    "line": 452
+  },
+  {
+    "module": "web/routes/account.py",
+    "blueprint": "account",
+    "module_summary": "アプリ利用者のログイン・初期セットアップ・アカウント管理ルート。",
+    "endpoint": "account.api_revoke_token",
+    "function": "api_revoke_token",
+    "methods": [
+      "DELETE"
+    ],
+    "path": "/api/auth/api-tokens/<token_id>",
+    "summary": "",
+    "line": 470
+  },
+  {
+    "module": "web/routes/account.py",
+    "blueprint": "account",
+    "module_summary": "アプリ利用者のログイン・初期セットアップ・アカウント管理ルート。",
+    "endpoint": "account.api_me",
+    "function": "api_me",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/auth/me",
+    "summary": "",
+    "line": 280
+  },
+  {
+    "module": "web/routes/account.py",
+    "blueprint": "account",
+    "module_summary": "アプリ利用者のログイン・初期セットアップ・アカウント管理ルート。",
+    "endpoint": "account.api_change_password",
+    "function": "api_change_password",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/auth/password",
+    "summary": "",
+    "line": 369
+  },
+  {
+    "module": "web/routes/account.py",
+    "blueprint": "account",
+    "module_summary": "アプリ利用者のログイン・初期セットアップ・アカウント管理ルート。",
+    "endpoint": "account.api_my_tenants",
+    "function": "api_my_tenants",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/auth/tenants",
+    "summary": "ログイン中ユーザーの所属テナント一覧（テナント選択のデータ源）。",
+    "line": 294
+  },
+  {
+    "module": "web/routes/account.py",
+    "blueprint": "account",
+    "module_summary": "アプリ利用者のログイン・初期セットアップ・アカウント管理ルート。",
+    "endpoint": "account.api_list_users",
+    "function": "api_list_users",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/auth/users",
+    "summary": "",
+    "line": 387
+  },
+  {
+    "module": "web/routes/account.py",
+    "blueprint": "account",
+    "module_summary": "アプリ利用者のログイン・初期セットアップ・アカウント管理ルート。",
+    "endpoint": "account.api_create_user",
+    "function": "api_create_user",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/auth/users",
+    "summary": "",
+    "line": 398
+  },
+  {
+    "module": "web/routes/account.py",
+    "blueprint": "account",
+    "module_summary": "アプリ利用者のログイン・初期セットアップ・アカウント管理ルート。",
+    "endpoint": "account.api_update_user",
+    "function": "api_update_user",
+    "methods": [
+      "PATCH"
+    ],
+    "path": "/api/auth/users/<user_id>",
+    "summary": "",
+    "line": 417
+  },
+  {
+    "module": "web/routes/account.py",
+    "blueprint": "account",
+    "module_summary": "アプリ利用者のログイン・初期セットアップ・アカウント管理ルート。",
+    "endpoint": "account.api_onboarding",
+    "function": "api_onboarding",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/onboarding",
+    "summary": "",
+    "line": 325
+  },
+  {
+    "module": "web/routes/account.py",
+    "blueprint": "account",
+    "module_summary": "アプリ利用者のログイン・初期セットアップ・アカウント管理ルート。",
+    "endpoint": "account.api_onboarding_complete",
+    "function": "api_onboarding_complete",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/onboarding/complete",
+    "summary": "",
+    "line": 340
+  },
+  {
+    "module": "web/routes/account.py",
+    "blueprint": "account",
+    "module_summary": "アプリ利用者のログイン・初期セットアップ・アカウント管理ルート。",
+    "endpoint": "account.account_page",
+    "function": "account_page",
+    "methods": [
+      "GET"
+    ],
+    "path": "/auth/account",
+    "summary": "",
+    "line": 255
+  },
+  {
+    "module": "web/routes/account.py",
+    "blueprint": "account",
+    "module_summary": "アプリ利用者のログイン・初期セットアップ・アカウント管理ルート。",
+    "endpoint": "account.login_page",
+    "function": "login_page",
+    "methods": [
+      "GET"
+    ],
+    "path": "/auth/login",
+    "summary": "",
+    "line": 78
+  },
+  {
+    "module": "web/routes/account.py",
+    "blueprint": "account",
+    "module_summary": "アプリ利用者のログイン・初期セットアップ・アカウント管理ルート。",
+    "endpoint": "account.login_submit",
+    "function": "login_submit",
+    "methods": [
+      "POST"
+    ],
+    "path": "/auth/login",
+    "summary": "",
+    "line": 90
+  },
+  {
+    "module": "web/routes/account.py",
+    "blueprint": "account",
+    "module_summary": "アプリ利用者のログイン・初期セットアップ・アカウント管理ルート。",
+    "endpoint": "account.logout",
+    "function": "logout",
+    "methods": [
+      "POST"
+    ],
+    "path": "/auth/logout",
+    "summary": "",
+    "line": 205
+  },
+  {
+    "module": "web/routes/account.py",
+    "blueprint": "account",
+    "module_summary": "アプリ利用者のログイン・初期セットアップ・アカウント管理ルート。",
+    "endpoint": "account.setup_page",
+    "function": "setup_page",
+    "methods": [
+      "GET"
+    ],
+    "path": "/auth/setup",
+    "summary": "",
+    "line": 214
+  },
+  {
+    "module": "web/routes/account.py",
+    "blueprint": "account",
+    "module_summary": "アプリ利用者のログイン・初期セットアップ・アカウント管理ルート。",
+    "endpoint": "account.setup_submit",
+    "function": "setup_submit",
+    "methods": [
+      "POST"
+    ],
+    "path": "/auth/setup",
+    "summary": "",
+    "line": 226
+  },
+  {
+    "module": "web/routes/account.py",
+    "blueprint": "account",
+    "module_summary": "アプリ利用者のログイン・初期セットアップ・アカウント管理ルート。",
+    "endpoint": "account.signup_page",
+    "function": "signup_page",
+    "methods": [
+      "GET"
+    ],
+    "path": "/auth/signup",
+    "summary": "",
+    "line": 139
+  },
+  {
+    "module": "web/routes/account.py",
+    "blueprint": "account",
+    "module_summary": "アプリ利用者のログイン・初期セットアップ・アカウント管理ルート。",
+    "endpoint": "account.signup_submit",
+    "function": "signup_submit",
+    "methods": [
+      "POST"
+    ],
+    "path": "/auth/signup",
+    "summary": "",
+    "line": 151
+  },
+  {
+    "module": "",
+    "blueprint": "account",
+    "module_summary": "",
+    "endpoint": "account.tenant_page",
+    "function": "tenant_page",
+    "methods": [
+      "GET"
+    ],
+    "path": "/auth/tenant",
+    "summary": "",
+    "line": 0
+  },
+  {
+    "module": "",
+    "blueprint": "account",
+    "module_summary": "",
+    "endpoint": "account.tenant_select",
+    "function": "tenant_select",
+    "methods": [
+      "POST"
+    ],
+    "path": "/auth/tenant",
+    "summary": "",
+    "line": 0
+  },
+  {
+    "module": "",
+    "blueprint": "account",
+    "module_summary": "",
+    "endpoint": "account.user_page",
+    "function": "user_page",
+    "methods": [
+      "GET"
+    ],
+    "path": "/auth/user",
+    "summary": "",
+    "line": 0
+  },
+  {
+    "module": "",
+    "blueprint": "account",
+    "module_summary": "",
+    "endpoint": "account.user_select",
+    "function": "user_select",
+    "methods": [
+      "POST"
+    ],
+    "path": "/auth/user",
+    "summary": "",
+    "line": 0
+  },
+  {
+    "module": "web/routes/admin.py",
+    "blueprint": "admin",
+    "module_summary": "",
+    "endpoint": "admin.get_audit",
+    "function": "get_audit",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/admin/audit",
+    "summary": "",
+    "line": 58
+  },
+  {
+    "module": "web/routes/admin.py",
+    "blueprint": "admin",
+    "module_summary": "",
+    "endpoint": "admin.get_backup_guide",
+    "function": "get_backup_guide",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/admin/backup-guide",
+    "summary": "",
+    "line": 49
+  },
+  {
+    "module": "web/routes/admin.py",
+    "blueprint": "admin",
+    "module_summary": "",
+    "endpoint": "admin.get_retention",
+    "function": "get_retention",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/admin/retention",
+    "summary": "",
+    "line": 83
+  },
+  {
+    "module": "web/routes/admin.py",
+    "blueprint": "admin",
+    "module_summary": "",
+    "endpoint": "admin.put_retention",
+    "function": "put_retention",
+    "methods": [
+      "PUT"
+    ],
+    "path": "/api/admin/retention",
+    "summary": "",
+    "line": 88
+  },
+  {
+    "module": "web/routes/admin.py",
+    "blueprint": "admin",
+    "module_summary": "",
+    "endpoint": "admin.get_storage",
+    "function": "get_storage",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/admin/storage",
+    "summary": "",
+    "line": 43
+  },
+  {
+    "module": "web/routes/api_v1.py",
+    "blueprint": "api_v1",
+    "module_summary": "",
+    "endpoint": "api_v1.api_docs",
+    "function": "api_docs",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/v1/docs",
+    "summary": "APIリファレンス（自己完結HTML・外部ホスト非依存）。",
+    "line": 274
+  },
+  {
+    "module": "web/routes/api_v1.py",
+    "blueprint": "api_v1",
+    "module_summary": "",
+    "endpoint": "api_v1.api_healthz",
+    "function": "api_healthz",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/v1/healthz",
+    "summary": "システムヘルスチェック。スケジューラー稼働状態を返す。",
+    "line": 63
+  },
+  {
+    "module": "web/routes/api_v1.py",
+    "blueprint": "api_v1",
+    "module_summary": "",
+    "endpoint": "api_v1.api_job_status",
+    "function": "api_job_status",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/v1/jobs/<job_id>",
+    "summary": "クロールジョブの現在の状態を返す。",
+    "line": 216
+  },
+  {
+    "module": "web/routes/api_v1.py",
+    "blueprint": "api_v1",
+    "module_summary": "",
+    "endpoint": "api_v1.api_openapi_spec",
+    "function": "api_openapi_spec",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/v1/openapi.json",
+    "summary": "実装済みエンドポイントの OpenAPI 3.0 仕様を返す。",
+    "line": 264
+  },
+  {
+    "module": "web/routes/api_v1.py",
+    "blueprint": "api_v1",
+    "module_summary": "",
+    "endpoint": "api_v1.api_sites",
+    "function": "api_sites",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/v1/sites",
+    "summary": "登録済みサイト一覧を返す。",
+    "line": 83
+  },
+  {
+    "module": "web/routes/api_v1.py",
+    "blueprint": "api_v1",
+    "module_summary": "",
+    "endpoint": "api_v1.api_crawl",
+    "function": "api_crawl",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/v1/sites/<domain>/crawl",
+    "summary": "非同期クロールをトリガーする。job_id を返し、バックグラウンドで実行する。",
+    "line": 169
+  },
+  {
+    "module": "web/routes/api_v1.py",
+    "blueprint": "api_v1",
+    "module_summary": "",
+    "endpoint": "api_v1.api_diff",
+    "function": "api_diff",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/v1/sites/<domain>/diff",
+    "summary": "最新 2 スナップショットの差分を返す。",
+    "line": 140
+  },
+  {
+    "module": "web/routes/api_v1.py",
+    "blueprint": "api_v1",
+    "module_summary": "",
+    "endpoint": "api_v1.api_domain_jobs",
+    "function": "api_domain_jobs",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/v1/sites/<domain>/jobs",
+    "summary": "ドメインのジョブ履歴一覧を返す（新しい順、最大20件）。",
+    "line": 230
+  },
+  {
+    "module": "web/routes/api_v1.py",
+    "blueprint": "api_v1",
+    "module_summary": "",
+    "endpoint": "api_v1.api_report",
+    "function": "api_report",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/v1/sites/<domain>/report",
+    "summary": "指定ドメインの最新 report.json を返す。",
+    "line": 105
+  },
+  {
+    "module": "web/routes/api_v1.py",
+    "blueprint": "api_v1",
+    "module_summary": "",
+    "endpoint": "api_v1.api_snapshots",
+    "function": "api_snapshots",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/v1/sites/<domain>/snapshots",
+    "summary": "スナップショット一覧（ファイル名・タイムスタンプ）を返す。",
+    "line": 124
+  },
+  {
+    "module": "web/routes/api_v1.py",
+    "blueprint": "api_v1",
+    "module_summary": "",
+    "endpoint": "api_v1.api_test_cases",
+    "function": "api_test_cases",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/v1/sites/<domain>/test-cases",
+    "summary": "最新の playwright_candidates.json のテストケース一覧を返す。",
+    "line": 244
+  },
+  {
+    "module": "web/routes/api_v1_schedule.py",
+    "blueprint": "api_v1_schedule",
+    "module_summary": "/api/v1 のスケジュール・通知設定 CRUD。",
+    "endpoint": "api_v1_schedule.api_v1_notifications_get",
+    "function": "api_v1_notifications_get",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/v1/sites/<domain>/notifications",
+    "summary": "通知設定を返す（送信先は _public_config の方針に従う）。",
+    "line": 115
+  },
+  {
+    "module": "web/routes/api_v1_schedule.py",
+    "blueprint": "api_v1_schedule",
+    "module_summary": "/api/v1 のスケジュール・通知設定 CRUD。",
+    "endpoint": "api_v1_schedule.api_v1_notifications_put",
+    "function": "api_v1_notifications_put",
+    "methods": [
+      "PUT"
+    ],
+    "path": "/api/v1/sites/<domain>/notifications",
+    "summary": "通知設定のみを更新する（スケジュール間隔などは変更しない）。",
+    "line": 124
+  },
+  {
+    "module": "web/routes/api_v1_schedule.py",
+    "blueprint": "api_v1_schedule",
+    "module_summary": "/api/v1 のスケジュール・通知設定 CRUD。",
+    "endpoint": "api_v1_schedule.api_v1_schedule_delete",
+    "function": "api_v1_schedule_delete",
+    "methods": [
+      "DELETE"
+    ],
+    "path": "/api/v1/sites/<domain>/schedule",
+    "summary": "定期クロール設定を削除する。存在しない場合も 404 にはしない（冪等）。",
+    "line": 89
+  },
+  {
+    "module": "web/routes/api_v1_schedule.py",
+    "blueprint": "api_v1_schedule",
+    "module_summary": "/api/v1 のスケジュール・通知設定 CRUD。",
+    "endpoint": "api_v1_schedule.api_v1_schedule_get",
+    "function": "api_v1_schedule_get",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/v1/sites/<domain>/schedule",
+    "summary": "定期クロール設定を返す。未設定なら既定値を返す。",
+    "line": 59
+  },
+  {
+    "module": "web/routes/api_v1_schedule.py",
+    "blueprint": "api_v1_schedule",
+    "module_summary": "/api/v1 のスケジュール・通知設定 CRUD。",
+    "endpoint": "api_v1_schedule.api_v1_schedule_put",
+    "function": "api_v1_schedule_put",
+    "methods": [
+      "PUT"
+    ],
+    "path": "/api/v1/sites/<domain>/schedule",
+    "summary": "定期クロール設定を作成・更新する。",
+    "line": 67
+  },
+  {
+    "module": "web/routes/auto_run.py",
+    "blueprint": "auto_run",
+    "module_summary": "",
+    "endpoint": "auto_run.api_autorun_approve",
+    "function": "api_autorun_approve",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/autorun/approve",
+    "summary": "",
+    "line": 293
+  },
+  {
+    "module": "web/routes/auto_run.py",
+    "blueprint": "auto_run",
+    "module_summary": "",
+    "endpoint": "auto_run.api_autorun_cancel",
+    "function": "api_autorun_cancel",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/autorun/cancel",
+    "summary": "",
+    "line": 172
+  },
+  {
+    "module": "web/routes/auto_run.py",
+    "blueprint": "auto_run",
+    "module_summary": "",
+    "endpoint": "auto_run.api_autorun_jobs",
+    "function": "api_autorun_jobs",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/autorun/jobs",
+    "summary": "",
+    "line": 361
+  },
+  {
+    "module": "web/routes/auto_run.py",
+    "blueprint": "auto_run",
+    "module_summary": "",
+    "endpoint": "auto_run.api_autorun_live_screenshot",
+    "function": "api_autorun_live_screenshot",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/autorun/live-screenshot",
+    "summary": "テスト実行中の最新スクリーンショットを返す（screenshot:'on' 設定済みの",
+    "line": 342
+  },
+  {
+    "module": "web/routes/auto_run.py",
+    "blueprint": "auto_run",
+    "module_summary": "",
+    "endpoint": "auto_run.api_autorun_preview",
+    "function": "api_autorun_preview",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/autorun/preview",
+    "summary": "テストケース一覧・スクリプト内容・フィルター件数を返す。",
+    "line": 283
+  },
+  {
+    "module": "web/routes/auto_run.py",
+    "blueprint": "auto_run",
+    "module_summary": "",
+    "endpoint": "auto_run.api_autorun_report",
+    "function": "api_autorun_report",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/autorun/report",
+    "summary": "",
+    "line": 333
+  },
+  {
+    "module": "web/routes/auto_run.py",
+    "blueprint": "auto_run",
+    "module_summary": "",
+    "endpoint": "auto_run.api_autorun_start",
+    "function": "api_autorun_start",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/autorun/start",
+    "summary": "",
+    "line": 65
+  },
+  {
+    "module": "web/routes/auto_run.py",
+    "blueprint": "auto_run",
+    "module_summary": "",
+    "endpoint": "auto_run.api_autorun_status",
+    "function": "api_autorun_status",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/autorun/status",
+    "summary": "",
+    "line": 128
+  },
+  {
+    "module": "web/routes/auto_run.py",
+    "blueprint": "auto_run",
+    "module_summary": "",
+    "endpoint": "auto_run.api_autorun_submit_input",
+    "function": "api_autorun_submit_input",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/autorun/submit-input",
+    "summary": "ログイン情報などの人的インプットを受け取り、待機中のジョブを再開する。",
+    "line": 252
+  },
+  {
+    "module": "web/routes/auto_run.py",
+    "blueprint": "auto_run",
+    "module_summary": "",
+    "endpoint": "auto_run.api_history_runs",
+    "function": "api_history_runs",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/history/runs",
+    "summary": "種別を問わない一般化された実行履歴（R2-27）。",
+    "line": 189
+  },
+  {
+    "module": "web/routes/autorun_report.py",
+    "blueprint": "autorun_report",
+    "module_summary": "AutoRun 実行結果レポート専用ページ（仕様15〜17）。",
+    "endpoint": "autorun_report.api_autorun_report",
+    "function": "api_autorun_report",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/autorun/report/<domain>",
+    "summary": "レポートのセクション内容を返す。",
+    "line": 232
+  },
+  {
+    "module": "web/routes/autorun_report.py",
+    "blueprint": "autorun_report",
+    "module_summary": "AutoRun 実行結果レポート専用ページ（仕様15〜17）。",
+    "endpoint": "autorun_report.autorun_report_page",
+    "function": "autorun_report_page",
+    "methods": [
+      "GET"
+    ],
+    "path": "/autorun/report/<domain>",
+    "summary": "実行結果レポートの専用ページ（仕様16）。",
+    "line": 218
+  },
+  {
+    "module": "web/routes/autorun_stages.py",
+    "blueprint": "autorun_stages",
+    "module_summary": "AutoRun 段階承認パイプラインの API（仕様7〜13）。",
+    "endpoint": "autorun_stages.api_decisions",
+    "function": "api_decisions",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/autorun/decisions",
+    "summary": "実行条件の質問を返す。",
+    "line": 142
+  },
+  {
+    "module": "web/routes/autorun_stages.py",
+    "blueprint": "autorun_stages",
+    "module_summary": "AutoRun 段階承認パイプラインの API（仕様7〜13）。",
+    "endpoint": "autorun_stages.api_submit_decisions",
+    "function": "api_submit_decisions",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/autorun/decisions",
+    "summary": "実行条件を確定し、全段階を承認して後続へ進む。",
+    "line": 171
+  },
+  {
+    "module": "web/routes/autorun_stages.py",
+    "blueprint": "autorun_stages",
+    "module_summary": "AutoRun 段階承認パイプラインの API（仕様7〜13）。",
+    "endpoint": "autorun_stages.api_review_queue",
+    "function": "api_review_queue",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/autorun/review-queue",
+    "summary": "要確認キューを返す。",
+    "line": 241
+  },
+  {
+    "module": "web/routes/autorun_stages.py",
+    "blueprint": "autorun_stages",
+    "module_summary": "AutoRun 段階承認パイプラインの API（仕様7〜13）。",
+    "endpoint": "autorun_stages.api_auto_approve",
+    "function": "api_auto_approve",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/autorun/review-queue/auto-approve",
+    "summary": "自動承認の対象（実測 × 低〜中リスク）をまとめて承認する。",
+    "line": 262
+  },
+  {
+    "module": "web/routes/autorun_stages.py",
+    "blueprint": "autorun_stages",
+    "module_summary": "AutoRun 段階承認パイプラインの API（仕様7〜13）。",
+    "endpoint": "autorun_stages.api_stages",
+    "function": "api_stages",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/autorun/stages",
+    "summary": "段階の一覧と現在地を返す。",
+    "line": 132
+  },
+  {
+    "module": "web/routes/autorun_stages.py",
+    "blueprint": "autorun_stages",
+    "module_summary": "AutoRun 段階承認パイプラインの API（仕様7〜13）。",
+    "endpoint": "autorun_stages.api_adopt_suggestion",
+    "function": "api_adopt_suggestion",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/autorun/stages/adopt",
+    "summary": "LLM の提案を項目として採用する。出所は llm として残す。",
+    "line": 493
+  },
+  {
+    "module": "web/routes/autorun_stages.py",
+    "blueprint": "autorun_stages",
+    "module_summary": "AutoRun 段階承認パイプラインの API（仕様7〜13）。",
+    "endpoint": "autorun_stages.api_approve_stage",
+    "function": "api_approve_stage",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/autorun/stages/approve",
+    "summary": "段階を承認する。項目承認が必要な段階では全項目の承認を要求する。",
+    "line": 340
+  },
+  {
+    "module": "web/routes/autorun_stages.py",
+    "blueprint": "autorun_stages",
+    "module_summary": "AutoRun 段階承認パイプラインの API（仕様7〜13）。",
+    "endpoint": "autorun_stages.api_generate_stage",
+    "function": "api_generate_stage",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/autorun/stages/generate",
+    "summary": "指定段階の内容を生成する（ルールベース）。",
+    "line": 313
+  },
+  {
+    "module": "web/routes/autorun_stages.py",
+    "blueprint": "autorun_stages",
+    "module_summary": "AutoRun 段階承認パイプラインの API（仕様7〜13）。",
+    "endpoint": "autorun_stages.api_update_item",
+    "function": "api_update_item",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/autorun/stages/item",
+    "summary": "項目の承認状態・内容を更新する。",
+    "line": 398
+  },
+  {
+    "module": "web/routes/autorun_stages.py",
+    "blueprint": "autorun_stages",
+    "module_summary": "AutoRun 段階承認パイプラインの API（仕様7〜13）。",
+    "endpoint": "autorun_stages.api_proceed",
+    "function": "api_proceed",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/autorun/stages/proceed",
+    "summary": "段階承認を終えて、後続（Playwright化・実行）へ進む。",
+    "line": 525
+  },
+  {
+    "module": "web/routes/autorun_stages.py",
+    "blueprint": "autorun_stages",
+    "module_summary": "AutoRun 段階承認パイプラインの API（仕様7〜13）。",
+    "endpoint": "autorun_stages.api_reset_stages",
+    "function": "api_reset_stages",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/autorun/stages/reset",
+    "summary": "段階状態を初期化する（作り直し）。",
+    "line": 439
+  },
+  {
+    "module": "web/routes/autorun_stages.py",
+    "blueprint": "autorun_stages",
+    "module_summary": "AutoRun 段階承認パイプラインの API（仕様7〜13）。",
+    "endpoint": "autorun_stages.api_skip_stage",
+    "function": "api_skip_stage",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/autorun/stages/skip",
+    "summary": "2回目以降のみ、スキップ可能な段階を飛ばす（仕様8）。",
+    "line": 370
+  },
+  {
+    "module": "web/routes/autorun_stages.py",
+    "blueprint": "autorun_stages",
+    "module_summary": "AutoRun 段階承認パイプラインの API（仕様7〜13）。",
+    "endpoint": "autorun_stages.api_suggest",
+    "function": "api_suggest",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/autorun/stages/suggest",
+    "summary": "段階に対する追加候補を LLM に問い合わせる（補助）。",
+    "line": 451
+  },
+  {
+    "module": "web/routes/autorun_stages.py",
+    "blueprint": "autorun_stages",
+    "module_summary": "AutoRun 段階承認パイプラインの API（仕様7〜13）。",
+    "endpoint": "autorun_stages.api_test_cases",
+    "function": "api_test_cases",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/autorun/stages/testcases",
+    "summary": "テストケースを QualityForward のカラム構成で返す（表 / CSV）。",
+    "line": 586
+  },
+  {
+    "module": "web/routes/crawl.py",
+    "blueprint": "crawl",
+    "module_summary": "",
+    "endpoint": "crawl.api_cancel",
+    "function": "api_cancel",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/cancel",
+    "summary": "",
+    "line": 159
+  },
+  {
+    "module": "web/routes/crawl.py",
+    "blueprint": "crawl",
+    "module_summary": "",
+    "endpoint": "crawl.api_doc_fusion",
+    "function": "api_doc_fusion",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/doc-fusion",
+    "summary": "output/{domain}/doc_fusion.json をそのまま返す（無ければ 404）。",
+    "line": 227
+  },
+  {
+    "module": "web/routes/crawl.py",
+    "blueprint": "crawl",
+    "module_summary": "",
+    "endpoint": "crawl.live_screenshot",
+    "function": "live_screenshot",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/live-screenshot",
+    "summary": "",
+    "line": 168
+  },
+  {
+    "module": "web/routes/crawl.py",
+    "blueprint": "crawl",
+    "module_summary": "",
+    "endpoint": "crawl.upload_reference_docs",
+    "function": "upload_reference_docs",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/reference-docs",
+    "summary": "参考文書のアップロード（multipart）。output/{domain}/reference_docs/ へ保存する。",
+    "line": 184
+  },
+  {
+    "module": "web/routes/crawl.py",
+    "blueprint": "crawl",
+    "module_summary": "",
+    "endpoint": "crawl.run",
+    "function": "run",
+    "methods": [
+      "POST"
+    ],
+    "path": "/run",
+    "summary": "",
+    "line": 36
+  },
+  {
+    "module": "web/routes/discover.py",
+    "blueprint": "discover",
+    "module_summary": "",
+    "endpoint": "discover.api_discover",
+    "function": "api_discover",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/discover",
+    "summary": "",
+    "line": 18
+  },
+  {
+    "module": "web/routes/discover.py",
+    "blueprint": "discover",
+    "module_summary": "",
+    "endpoint": "discover.api_discover_stream",
+    "function": "api_discover_stream",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/discover-stream",
+    "summary": "発見ページを SSE（text/event-stream）でリアルタイム配信する。",
+    "line": 50
+  },
+  {
+    "module": "web/routes/history.py",
+    "blueprint": "history",
+    "module_summary": "",
+    "endpoint": "history.api_history",
+    "function": "api_history",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/history",
+    "summary": "",
+    "line": 27
+  },
+  {
+    "module": "web/routes/history.py",
+    "blueprint": "history",
+    "module_summary": "",
+    "endpoint": "history.api_delete_site",
+    "function": "api_delete_site",
+    "methods": [
+      "DELETE"
+    ],
+    "path": "/api/site/<domain>",
+    "summary": "",
+    "line": 83
+  },
+  {
+    "module": "web/routes/history.py",
+    "blueprint": "history",
+    "module_summary": "",
+    "endpoint": "history.api_snapshot_comparison",
+    "function": "api_snapshot_comparison",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/snapshot-comparison",
+    "summary": "2つのスナップショット間を「現新比較（4分類）」でHTML化して返す。",
+    "line": 224
+  },
+  {
+    "module": "web/routes/history.py",
+    "blueprint": "history",
+    "module_summary": "",
+    "endpoint": "history.api_snapshot_comparison_json",
+    "function": "api_snapshot_comparison_json",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/snapshot-comparison.json",
+    "summary": "現新比較をペア単位の JSON で返す（現新比較ワークスペース用）。",
+    "line": 274
+  },
+  {
+    "module": "web/routes/history.py",
+    "blueprint": "history",
+    "module_summary": "",
+    "endpoint": "history.api_snapshot_diff",
+    "function": "api_snapshot_diff",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/snapshot-diff",
+    "summary": "2つのスナップショット間の仕様ドリフト差分をHTMLで返す。",
+    "line": 136
+  },
+  {
+    "module": "web/routes/history.py",
+    "blueprint": "history",
+    "module_summary": "",
+    "endpoint": "history.api_snapshot_diff_summary",
+    "function": "api_snapshot_diff_summary",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/snapshot-diff-summary",
+    "summary": "2 時点間に仕様の変更があったかを JSON で返す（P2-1）。",
+    "line": 172
+  },
+  {
+    "module": "web/routes/history.py",
+    "blueprint": "history",
+    "module_summary": "",
+    "endpoint": "history.api_snapshots",
+    "function": "api_snapshots",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/snapshots",
+    "summary": "サイトのクロール履歴（スナップショット）一覧。新しい順。",
+    "line": 108
+  },
+  {
+    "module": "web/routes/llm_chat.py",
+    "blueprint": "llm_chat",
+    "module_summary": "QA アシスタント（LLM チャット）の API。",
+    "endpoint": "llm_chat.api_llm_chat",
+    "function": "api_llm_chat",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/llm/chat",
+    "summary": "QA アシスタントへの相談。",
+    "line": 116
+  },
+  {
+    "module": "web/routes/login.py",
+    "blueprint": "login",
+    "module_summary": "",
+    "endpoint": "login.api_login_record_cancel",
+    "function": "api_login_record_cancel",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/login/record/cancel",
+    "summary": "保存前にレコーダーを中断する（PID を直接 terminate。状態はファイルで共有するため",
+    "line": 241
+  },
+  {
+    "module": "web/routes/login.py",
+    "blueprint": "login",
+    "module_summary": "",
+    "endpoint": "login.api_login_record_complete",
+    "function": "api_login_record_complete",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/login/record/complete",
+    "summary": "「ログイン完了」ボタン。シグナルファイルを作成し、レコーダーに保存を指示する。",
+    "line": 229
+  },
+  {
+    "module": "web/routes/login.py",
+    "blueprint": "login",
+    "module_summary": "",
+    "endpoint": "login.api_login_record_start",
+    "function": "api_login_record_start",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/login/record/start",
+    "summary": "認証フローレコーダーを起動する。ブラウザは非ブロッキングで起動し、",
+    "line": 161
+  },
+  {
+    "module": "web/routes/login.py",
+    "blueprint": "login",
+    "module_summary": "",
+    "endpoint": "login.api_login_record_status",
+    "function": "api_login_record_status",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/login/record/status",
+    "summary": "レコーダーの進行状態をポーリングする（1秒間隔想定）。",
+    "line": 202
+  },
+  {
+    "module": "web/routes/login.py",
+    "blueprint": "login",
+    "module_summary": "",
+    "endpoint": "login.api_login_scrape",
+    "function": "api_login_scrape",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/login/scrape",
+    "summary": "ログインページのフォームフィールドを動的スクレイプする（ADR-0002）。",
+    "line": 85
+  },
+  {
+    "module": "web/routes/login.py",
+    "blueprint": "login",
+    "module_summary": "",
+    "endpoint": "login.api_login_simple",
+    "function": "api_login_simple",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/login/simple",
+    "summary": "IDとパスワードをtype属性ベースで自動マッピングしてログインする（シンプルフロー）。",
+    "line": 40
+  },
+  {
+    "module": "web/routes/login.py",
+    "blueprint": "login",
+    "module_summary": "",
+    "endpoint": "login.api_login_submit",
+    "function": "api_login_submit",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/login/submit",
+    "summary": "ログインフォームを自動送信してセッションを保存する（ADR-0002）。",
+    "line": 104
+  },
+  {
+    "module": "web/routes/metrics.py",
+    "blueprint": "metrics",
+    "module_summary": "Prometheus のスクレイプ先 `/metrics`。",
+    "endpoint": "metrics.metrics",
+    "function": "metrics",
+    "methods": [
+      "GET"
+    ],
+    "path": "/metrics",
+    "summary": "Prometheus 形式のメトリクスを返す。",
+    "line": 15
+  },
+  {
+    "module": "web/routes/oidc.py",
+    "blueprint": "oidc",
+    "module_summary": "SSO（OIDC）のログイン開始とコールバック。",
+    "endpoint": "oidc.oidc_callback",
+    "function": "oidc_callback",
+    "methods": [
+      "GET"
+    ],
+    "path": "/auth/oidc/callback",
+    "summary": "IdP からの戻り。state 照合 → トークン交換 → 利用者解決 → セッション発行。",
+    "line": 53
+  },
+  {
+    "module": "web/routes/oidc.py",
+    "blueprint": "oidc",
+    "module_summary": "SSO（OIDC）のログイン開始とコールバック。",
+    "endpoint": "oidc.oidc_login",
+    "function": "oidc_login",
+    "methods": [
+      "GET"
+    ],
+    "path": "/auth/oidc/login",
+    "summary": "IdP の認可画面へ送る。",
+    "line": 37
+  },
+  {
+    "module": "web/routes/pages.py",
+    "blueprint": "pages",
+    "module_summary": "",
+    "endpoint": "pages.index",
+    "function": "index",
+    "methods": [
+      "GET"
+    ],
+    "path": "/",
+    "summary": "",
+    "line": 31
+  },
+  {
+    "module": "web/routes/pages.py",
+    "blueprint": "pages",
+    "module_summary": "",
+    "endpoint": "pages.view",
+    "function": "view",
+    "methods": [
+      "GET"
+    ],
+    "path": "/<view_name>",
+    "summary": "",
+    "line": 76
+  },
+  {
+    "module": "web/routes/pages.py",
+    "blueprint": "pages",
+    "module_summary": "",
+    "endpoint": "pages.cli_mode",
+    "function": "cli_mode",
+    "methods": [
+      "GET"
+    ],
+    "path": "/cli",
+    "summary": "CLI モード（System 03）の案内。",
+    "line": 42
+  },
+  {
+    "module": "web/routes/pages.py",
+    "blueprint": "pages",
+    "module_summary": "",
+    "endpoint": "pages.settings_tab",
+    "function": "settings_tab",
+    "methods": [
+      "GET"
+    ],
+    "path": "/settings/<tab>",
+    "summary": "設定画面をタブ指定で開く（例: /settings/api）。",
+    "line": 64
+  },
+  {
+    "module": "web/routes/pages.py",
+    "blueprint": "pages",
+    "module_summary": "",
+    "endpoint": "pages.systems",
+    "function": "systems",
+    "methods": [
+      "GET"
+    ],
+    "path": "/systems",
+    "summary": "ログイン後のシステム選択ハブ。ドキュメント作成 / AutoRun / CLI モードを選ぶ。",
+    "line": 36
+  },
+  {
+    "module": "web/routes/qa_process.py",
+    "blueprint": "qa_process",
+    "module_summary": "",
+    "endpoint": "qa_process.api_qa_process_advanced",
+    "function": "api_qa_process_advanced",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/qa-process/advanced",
+    "summary": "",
+    "line": 476
+  },
+  {
+    "module": "web/routes/qa_process.py",
+    "blueprint": "qa_process",
+    "module_summary": "",
+    "endpoint": "qa_process.api_qa_process_generate",
+    "function": "api_qa_process_generate",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/qa-process/generate",
+    "summary": "",
+    "line": 64
+  },
+  {
+    "module": "web/routes/qa_process.py",
+    "blueprint": "qa_process",
+    "module_summary": "",
+    "endpoint": "qa_process.api_qa_process_generate_advanced",
+    "function": "api_qa_process_generate_advanced",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/qa-process/generate-advanced",
+    "summary": "",
+    "line": 488
+  },
+  {
+    "module": "web/routes/qa_process.py",
+    "blueprint": "qa_process",
+    "module_summary": "",
+    "endpoint": "qa_process.api_qa_process_input",
+    "function": "api_qa_process_input",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/qa-process/input",
+    "summary": "",
+    "line": 52
+  },
+  {
+    "module": "web/routes/qa_process.py",
+    "blueprint": "qa_process",
+    "module_summary": "",
+    "endpoint": "qa_process.api_qa_process_result",
+    "function": "api_qa_process_result",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/qa-process/result",
+    "summary": "",
+    "line": 120
+  },
+  {
+    "module": "web/routes/qa_process.py",
+    "blueprint": "qa_process",
+    "module_summary": "",
+    "endpoint": "qa_process.api_test_design",
+    "function": "api_test_design",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/test-design",
+    "summary": "MBT テスト設計（BVA/DT/PW/ST）を画面ごとに生成して JSON で返す。",
+    "line": 414
+  },
+  {
+    "module": "web/routes/qa_process.py",
+    "blueprint": "qa_process",
+    "module_summary": "",
+    "endpoint": "qa_process.api_test_design_by_screen",
+    "function": "api_test_design_by_screen",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/test-design/by-screen",
+    "summary": "画面別テスト設計。page_id 省略で画面リスト、指定でその画面の条件一覧を返す。",
+    "line": 434
+  },
+  {
+    "module": "web/routes/qa_process.py",
+    "blueprint": "qa_process",
+    "module_summary": "",
+    "endpoint": "qa_process.api_testcases",
+    "function": "api_testcases",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/testcases",
+    "summary": "",
+    "line": 132
+  },
+  {
+    "module": "web/routes/qa_process.py",
+    "blueprint": "qa_process",
+    "module_summary": "",
+    "endpoint": "qa_process.api_testcases_cell",
+    "function": "api_testcases_cell",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/testcases/cell",
+    "summary": "1 セルを更新する。value は文字列、または list 列なら配列。",
+    "line": 196
+  },
+  {
+    "module": "web/routes/qa_process.py",
+    "blueprint": "qa_process",
+    "module_summary": "",
+    "endpoint": "qa_process.api_testcases_cell_reset",
+    "function": "api_testcases_cell_reset",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/testcases/cell/reset",
+    "summary": "",
+    "line": 218
+  },
+  {
+    "module": "web/routes/qa_process.py",
+    "blueprint": "qa_process",
+    "module_summary": "",
+    "endpoint": "qa_process.api_testcases_count",
+    "function": "api_testcases_count",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/testcases/count",
+    "summary": "テストケース件数だけを返す。",
+    "line": 169
+  },
+  {
+    "module": "web/routes/qa_process.py",
+    "blueprint": "qa_process",
+    "module_summary": "",
+    "endpoint": "qa_process.api_testcases_history",
+    "function": "api_testcases_history",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/testcases/history",
+    "summary": "",
+    "line": 185
+  },
+  {
+    "module": "web/routes/qa_process.py",
+    "blueprint": "qa_process",
+    "module_summary": "",
+    "endpoint": "qa_process.api_testcases_live_progress",
+    "function": "api_testcases_live_progress",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/testcases/live-progress",
+    "summary": "実行中のテスト進捗を返す。実行完了を待たずに、その時点までの結果を読む。",
+    "line": 323
+  },
+  {
+    "module": "web/routes/qa_process.py",
+    "blueprint": "qa_process",
+    "module_summary": "",
+    "endpoint": "qa_process.api_testcases_live_screenshot",
+    "function": "api_testcases_live_screenshot",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/testcases/live-screenshot",
+    "summary": "実行中の最新スクリーンショットを返す（config の screenshot:'on' が",
+    "line": 350
+  },
+  {
+    "module": "web/routes/qa_process.py",
+    "blueprint": "qa_process",
+    "module_summary": "",
+    "endpoint": "qa_process.api_testcases_row",
+    "function": "api_testcases_row",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/testcases/row",
+    "summary": "行の追加・削除・復元。action で切り替える。",
+    "line": 376
+  },
+  {
+    "module": "web/routes/qa_process.py",
+    "blueprint": "qa_process",
+    "module_summary": "",
+    "endpoint": "qa_process.api_testcases_run",
+    "function": "api_testcases_run",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/testcases/run",
+    "summary": "テストケース表から Playwright spec を生成し、その場で実行して結果を保存する。",
+    "line": 233
+  },
+  {
+    "module": "web/routes/qa_process.py",
+    "blueprint": "qa_process",
+    "module_summary": "",
+    "endpoint": "qa_process.api_testcases_table",
+    "function": "api_testcases_table",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/testcases/table",
+    "summary": "9 列のローレベルテストケース表（生成値＋ユーザー編集）を返す。",
+    "line": 157
+  },
+  {
+    "module": "web/routes/report.py",
+    "blueprint": "report",
+    "module_summary": "",
+    "endpoint": "report.api_coverage_heatmap",
+    "function": "api_coverage_heatmap",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/coverage-heatmap",
+    "summary": "カバレッジヒートマップ（kind=analysis: 取得状況3色 / kind=autorun: 実行回数×成否）をHTMLで返す。",
+    "line": 485
+  },
+  {
+    "module": "web/routes/report.py",
+    "blueprint": "report",
+    "module_summary": "",
+    "endpoint": "report.export_spec_xlsx",
+    "function": "export_spec_xlsx",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/export/spec-xlsx",
+    "summary": "テスト仕様書一式（7 シート）の Excel を返す（P2-3）。",
+    "line": 75
+  },
+  {
+    "module": "web/routes/report.py",
+    "blueprint": "report",
+    "module_summary": "",
+    "endpoint": "report.download_spec_ts",
+    "function": "download_spec_ts",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/report/<domain>/spec-ts",
+    "summary": "",
+    "line": 147
+  },
+  {
+    "module": "web/routes/report.py",
+    "blueprint": "report",
+    "module_summary": "",
+    "endpoint": "report.api_result",
+    "function": "api_result",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/result",
+    "summary": "結果ページのデータ源。",
+    "line": 290
+  },
+  {
+    "module": "web/routes/report.py",
+    "blueprint": "report",
+    "module_summary": "",
+    "endpoint": "report.api_sample_report",
+    "function": "api_sample_report",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/sample-report",
+    "summary": "同梱のサンプルレポートを自テナントの出力先へ展開し、開くドメインを返す（P3-1）。",
+    "line": 204
+  },
+  {
+    "module": "web/routes/report.py",
+    "blueprint": "report",
+    "module_summary": "",
+    "endpoint": "report.api_state_table",
+    "function": "api_state_table",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/state-table",
+    "summary": "状態遷移表（ISTQB 状態遷移テスト）を report.json から導出して返す。",
+    "line": 454
+  },
+  {
+    "module": "web/routes/report.py",
+    "blueprint": "report",
+    "module_summary": "",
+    "endpoint": "report.download",
+    "function": "download",
+    "methods": [
+      "GET"
+    ],
+    "path": "/download",
+    "summary": "",
+    "line": 62
+  },
+  {
+    "module": "web/routes/report.py",
+    "blueprint": "report",
+    "module_summary": "",
+    "endpoint": "report.download_zip",
+    "function": "download_zip",
+    "methods": [
+      "GET"
+    ],
+    "path": "/download-zip",
+    "summary": "ドメイン配下をZIP化する。`paths`（複数値・カンマ区切りいずれも可）を指定した場合は",
+    "line": 108
+  },
+  {
+    "module": "web/routes/report.py",
+    "blueprint": "report",
+    "module_summary": "",
+    "endpoint": "report.open_file",
+    "function": "open_file",
+    "methods": [
+      "GET"
+    ],
+    "path": "/open",
+    "summary": "",
+    "line": 523
+  },
+  {
+    "module": "web/routes/report.py",
+    "blueprint": "report",
+    "module_summary": "",
+    "endpoint": "report.preview",
+    "function": "preview",
+    "methods": [
+      "GET"
+    ],
+    "path": "/preview",
+    "summary": "",
+    "line": 50
+  },
+  {
+    "module": "web/routes/review.py",
+    "blueprint": "review",
+    "module_summary": "",
+    "endpoint": "review.api_review_cases",
+    "function": "api_review_cases",
+    "methods": [
+      "GET"
+    ],
+    "path": "/review/cases",
+    "summary": "",
+    "line": 88
+  },
+  {
+    "module": "web/routes/review.py",
+    "blueprint": "review",
+    "module_summary": "",
+    "endpoint": "review.api_review_export",
+    "function": "api_review_export",
+    "methods": [
+      "GET"
+    ],
+    "path": "/review/export",
+    "summary": "",
+    "line": 146
+  },
+  {
+    "module": "web/routes/review.py",
+    "blueprint": "review",
+    "module_summary": "",
+    "endpoint": "review.api_review_update",
+    "function": "api_review_update",
+    "methods": [
+      "POST"
+    ],
+    "path": "/review/update",
+    "summary": "",
+    "line": 108
+  },
+  {
+    "module": "web/routes/runs.py",
+    "blueprint": "runs",
+    "module_summary": "実行回ごとの成果物を返すルート（案A: 実行結果ページ = 実行回のハブ）。",
+    "endpoint": "runs.api_runs",
+    "function": "api_runs",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/runs/<domain>",
+    "summary": "そのサイトの実行回一覧（新しい順）。実行回セレクタが使う。",
+    "line": 76
+  },
+  {
+    "module": "web/routes/runs.py",
+    "blueprint": "runs",
+    "module_summary": "実行回ごとの成果物を返すルート（案A: 実行結果ページ = 実行回のハブ）。",
+    "endpoint": "runs.api_run_detail",
+    "function": "api_run_detail",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/runs/<domain>/<run_id>",
+    "summary": "1 実行回の中身。3 つの成果物の有無とファイルパスを返す。",
+    "line": 92
+  },
+  {
+    "module": "web/routes/runs.py",
+    "blueprint": "runs",
+    "module_summary": "実行回ごとの成果物を返すルート（案A: 実行結果ページ = 実行回のハブ）。",
+    "endpoint": "runs.api_run_artifact",
+    "function": "api_run_artifact",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/runs/<domain>/<run_id>/artifact",
+    "summary": "実行回の成果物ファイルの実パスを返す（/preview で開くために使う）。",
+    "line": 138
+  },
+  {
+    "module": "web/routes/runs.py",
+    "blueprint": "runs",
+    "module_summary": "実行回ごとの成果物を返すルート（案A: 実行結果ページ = 実行回のハブ）。",
+    "endpoint": "runs.api_run_exists",
+    "function": "api_run_exists",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/runs/<domain>/<run_id>/exists",
+    "summary": "実行回の成果物があるかだけを返す（一覧の行が導線を出すかの判断用）。",
+    "line": 129
+  },
+  {
+    "module": "web/routes/runs.py",
+    "blueprint": "runs",
+    "module_summary": "実行回ごとの成果物を返すルート（案A: 実行結果ページ = 実行回のハブ）。",
+    "endpoint": "runs.run_page",
+    "function": "run_page",
+    "methods": [
+      "GET"
+    ],
+    "path": "/runs/<domain>/<run_id>",
+    "summary": "実行結果ページ（実行回のハブ）。実体の描画はクライアント側が行う。",
+    "line": 65
+  },
+  {
+    "module": "web/routes/schedule.py",
+    "blueprint": "schedule",
+    "module_summary": "",
+    "endpoint": "schedule.api_schedule_config_get",
+    "function": "api_schedule_config_get",
+    "methods": [
+      "GET"
+    ],
+    "path": "/schedule/config",
+    "summary": "",
+    "line": 177
+  },
+  {
+    "module": "web/routes/schedule.py",
+    "blueprint": "schedule",
+    "module_summary": "",
+    "endpoint": "schedule.api_schedule_config_post",
+    "function": "api_schedule_config_post",
+    "methods": [
+      "POST"
+    ],
+    "path": "/schedule/config",
+    "summary": "",
+    "line": 185
+  },
+  {
+    "module": "web/routes/schedule.py",
+    "blueprint": "schedule",
+    "module_summary": "",
+    "endpoint": "schedule.api_schedule_history",
+    "function": "api_schedule_history",
+    "methods": [
+      "GET"
+    ],
+    "path": "/schedule/history",
+    "summary": "",
+    "line": 298
+  },
+  {
+    "module": "web/routes/schedule.py",
+    "blueprint": "schedule",
+    "module_summary": "",
+    "endpoint": "schedule.api_schedule_notify_test",
+    "function": "api_schedule_notify_test",
+    "methods": [
+      "POST"
+    ],
+    "path": "/schedule/notify/test",
+    "summary": "",
+    "line": 327
+  },
+  {
+    "module": "web/routes/schedule.py",
+    "blueprint": "schedule",
+    "module_summary": "",
+    "endpoint": "schedule.api_schedule_run_now",
+    "function": "api_schedule_run_now",
+    "methods": [
+      "POST"
+    ],
+    "path": "/schedule/run-now",
+    "summary": "",
+    "line": 262
+  },
+  {
+    "module": "web/routes/schedule.py",
+    "blueprint": "schedule",
+    "module_summary": "",
+    "endpoint": "schedule.api_schedule_status",
+    "function": "api_schedule_status",
+    "methods": [
+      "GET"
+    ],
+    "path": "/schedule/status",
+    "summary": "",
+    "line": 283
+  },
+  {
+    "module": "web/routes/settings.py",
+    "blueprint": "settings",
+    "module_summary": "",
+    "endpoint": "settings.get_settings",
+    "function": "get_settings",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/settings",
+    "summary": "",
+    "line": 70
+  },
+  {
+    "module": "web/routes/settings.py",
+    "blueprint": "settings",
+    "module_summary": "",
+    "endpoint": "settings.post_settings",
+    "function": "post_settings",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/settings",
+    "summary": "",
+    "line": 116
+  },
+  {
+    "module": "web/routes/settings.py",
+    "blueprint": "settings",
+    "module_summary": "",
+    "endpoint": "settings.get_allow_local",
+    "function": "get_allow_local",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/settings/allow-local",
+    "summary": "",
+    "line": 189
+  },
+  {
+    "module": "web/routes/settings.py",
+    "blueprint": "settings",
+    "module_summary": "",
+    "endpoint": "settings.post_allow_local",
+    "function": "post_allow_local",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/settings/allow-local",
+    "summary": "",
+    "line": 195
+  },
+  {
+    "module": "web/routes/settings.py",
+    "blueprint": "settings",
+    "module_summary": "",
+    "endpoint": "settings.list_llm_models",
+    "function": "list_llm_models",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/settings/llm-models",
+    "summary": "ローカル LLM サーバ（Ollama 等）が提供するモデル一覧を返す。",
+    "line": 90
+  },
+  {
+    "module": "web/routes/settings.py",
+    "blueprint": "settings",
+    "module_summary": "",
+    "endpoint": "settings.post_test_connection",
+    "function": "post_test_connection",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/settings/test-connection",
+    "summary": "",
+    "line": 161
+  },
+  {
+    "module": "web/routes/settings.py",
+    "blueprint": "settings",
+    "module_summary": "",
+    "endpoint": "settings.get_test_design",
+    "function": "get_test_design",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/settings/test-design",
+    "summary": "",
+    "line": 167
+  },
+  {
+    "module": "web/routes/settings.py",
+    "blueprint": "settings",
+    "module_summary": "",
+    "endpoint": "settings.post_test_design",
+    "function": "post_test_design",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/settings/test-design",
+    "summary": "",
+    "line": 172
+  },
+  {
+    "module": "web/routes/site.py",
+    "blueprint": "site",
+    "module_summary": "",
+    "endpoint": "site.api_site",
+    "function": "api_site",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/site",
+    "summary": "",
+    "line": 55
+  },
+  {
+    "module": "web/routes/tenant_admin.py",
+    "blueprint": "tenant_admin",
+    "module_summary": "テナントとユーザーの管理画面（管理者専用）。",
+    "endpoint": "tenant_admin.console_page",
+    "function": "console_page",
+    "methods": [
+      "GET"
+    ],
+    "path": "/admin/console",
+    "summary": "",
+    "line": 57
+  },
+  {
+    "module": "web/routes/tenant_admin.py",
+    "blueprint": "tenant_admin",
+    "module_summary": "テナントとユーザーの管理画面（管理者専用）。",
+    "endpoint": "tenant_admin.api_snapshot",
+    "function": "api_snapshot",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/admin/tenancy",
+    "summary": "",
+    "line": 81
+  },
+  {
+    "module": "web/routes/tenant_admin.py",
+    "blueprint": "tenant_admin",
+    "module_summary": "テナントとユーザーの管理画面（管理者専用）。",
+    "endpoint": "tenant_admin.api_create_tenant",
+    "function": "api_create_tenant",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/admin/tenancy/tenants",
+    "summary": "",
+    "line": 86
+  },
+  {
+    "module": "web/routes/tenant_admin.py",
+    "blueprint": "tenant_admin",
+    "module_summary": "テナントとユーザーの管理画面（管理者専用）。",
+    "endpoint": "tenant_admin.api_delete_tenant",
+    "function": "api_delete_tenant",
+    "methods": [
+      "DELETE"
+    ],
+    "path": "/api/admin/tenancy/tenants/<tenant_id>",
+    "summary": "",
+    "line": 112
+  },
+  {
+    "module": "web/routes/tenant_admin.py",
+    "blueprint": "tenant_admin",
+    "module_summary": "テナントとユーザーの管理画面（管理者専用）。",
+    "endpoint": "tenant_admin.api_rename_tenant",
+    "function": "api_rename_tenant",
+    "methods": [
+      "PATCH"
+    ],
+    "path": "/api/admin/tenancy/tenants/<tenant_id>",
+    "summary": "",
+    "line": 100
+  },
+  {
+    "module": "web/routes/tenant_admin.py",
+    "blueprint": "tenant_admin",
+    "module_summary": "テナントとユーザーの管理画面（管理者専用）。",
+    "endpoint": "tenant_admin.api_create_user",
+    "function": "api_create_user",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/admin/tenancy/users",
+    "summary": "",
+    "line": 127
+  },
+  {
+    "module": "web/routes/tenant_admin.py",
+    "blueprint": "tenant_admin",
+    "module_summary": "テナントとユーザーの管理画面（管理者専用）。",
+    "endpoint": "tenant_admin.api_delete_user",
+    "function": "api_delete_user",
+    "methods": [
+      "DELETE"
+    ],
+    "path": "/api/admin/tenancy/users/<user_id>",
+    "summary": "",
+    "line": 167
+  },
+  {
+    "module": "web/routes/tenant_admin.py",
+    "blueprint": "tenant_admin",
+    "module_summary": "テナントとユーザーの管理画面（管理者専用）。",
+    "endpoint": "tenant_admin.api_update_user",
+    "function": "api_update_user",
+    "methods": [
+      "PATCH"
+    ],
+    "path": "/api/admin/tenancy/users/<user_id>",
+    "summary": "アカウントの有効/無効化（全テナントに効く）。",
+    "line": 153
+  },
+  {
+    "module": "web/routes/tenant_admin.py",
+    "blueprint": "tenant_admin",
+    "module_summary": "テナントとユーザーの管理画面（管理者専用）。",
+    "endpoint": "tenant_admin.api_set_memberships",
+    "function": "api_set_memberships",
+    "methods": [
+      "PUT"
+    ],
+    "path": "/api/admin/tenancy/users/<user_id>/memberships",
+    "summary": "",
+    "line": 138
+  },
+  {
+    "module": "web/routes/traceability.py",
+    "blueprint": "traceability",
+    "module_summary": "",
+    "endpoint": "traceability.api_traceability_matrix",
+    "function": "api_traceability_matrix",
+    "methods": [
+      "GET"
+    ],
+    "path": "/traceability/matrix",
+    "summary": "report.json + playwright_candidates.json を読んで TraceabilityMatrix を返す。",
+    "line": 39
+  },
+  {
+    "module": "web/routes/traceability.py",
+    "blueprint": "traceability",
+    "module_summary": "",
+    "endpoint": "traceability.view_traceability",
+    "function": "view_traceability",
+    "methods": [
+      "GET"
+    ],
+    "path": "/traceability/view",
+    "summary": "トレーサビリティマトリクスビューをレンダリングする。",
+    "line": 95
+  },
+  {
+    "module": "web/routes/usage.py",
+    "blueprint": "usage",
+    "module_summary": "ROI ダッシュボード: 利用実績と推定削減工数を表示する。",
+    "endpoint": "usage.api_usage",
+    "function": "api_usage",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/usage",
+    "summary": "累計利用実績と推定削減工数（ROI）を返す。",
+    "line": 19
+  },
+  {
+    "module": "web/routes/usage.py",
+    "blueprint": "usage",
+    "module_summary": "ROI ダッシュボード: 利用実績と推定削減工数を表示する。",
+    "endpoint": "usage.view_usage",
+    "function": "view_usage",
+    "methods": [
+      "GET"
+    ],
+    "path": "/usage",
+    "summary": "ROI ダッシュボードビューをレンダリングする。",
+    "line": 28
+  },
+  {
+    "module": "web/routes/viewpoints.py",
+    "blueprint": "viewpoints",
+    "module_summary": "",
+    "endpoint": "viewpoints.api_delete_viewpoint_assignment",
+    "function": "api_delete_viewpoint_assignment",
+    "methods": [
+      "DELETE"
+    ],
+    "path": "/api/viewpoint-assignments/<assignment_id>",
+    "summary": "",
+    "line": 178
+  },
+  {
+    "module": "web/routes/viewpoints.py",
+    "blueprint": "viewpoints",
+    "module_summary": "",
+    "endpoint": "viewpoints.api_update_viewpoint_assignment",
+    "function": "api_update_viewpoint_assignment",
+    "methods": [
+      "PATCH"
+    ],
+    "path": "/api/viewpoint-assignments/<assignment_id>",
+    "summary": "",
+    "line": 173
+  },
+  {
+    "module": "web/routes/viewpoints.py",
+    "blueprint": "viewpoints",
+    "module_summary": "",
+    "endpoint": "viewpoints.api_delete_viewpoint_folder",
+    "function": "api_delete_viewpoint_folder",
+    "methods": [
+      "DELETE"
+    ],
+    "path": "/api/viewpoint-folders/<item_id>",
+    "summary": "",
+    "line": 317
+  },
+  {
+    "module": "web/routes/viewpoints.py",
+    "blueprint": "viewpoints",
+    "module_summary": "",
+    "endpoint": "viewpoints.api_delete_viewpoint_item",
+    "function": "api_delete_viewpoint_item",
+    "methods": [
+      "DELETE"
+    ],
+    "path": "/api/viewpoint-items/<item_id>",
+    "summary": "",
+    "line": 111
+  },
+  {
+    "module": "web/routes/viewpoints.py",
+    "blueprint": "viewpoints",
+    "module_summary": "",
+    "endpoint": "viewpoints.api_update_viewpoint_item",
+    "function": "api_update_viewpoint_item",
+    "methods": [
+      "PATCH"
+    ],
+    "path": "/api/viewpoint-items/<item_id>",
+    "summary": "",
+    "line": 106
+  },
+  {
+    "module": "web/routes/viewpoints.py",
+    "blueprint": "viewpoints",
+    "module_summary": "",
+    "endpoint": "viewpoints.api_move_viewpoint_item",
+    "function": "api_move_viewpoint_item",
+    "methods": [
+      "PATCH"
+    ],
+    "path": "/api/viewpoint-items/<item_id>/move",
+    "summary": "",
+    "line": 301
+  },
+  {
+    "module": "web/routes/viewpoints.py",
+    "blueprint": "viewpoints",
+    "module_summary": "",
+    "endpoint": "viewpoints.api_restore_viewpoint_item",
+    "function": "api_restore_viewpoint_item",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/viewpoint-items/<item_id>/restore",
+    "summary": "",
+    "line": 119
+  },
+  {
+    "module": "web/routes/viewpoints.py",
+    "blueprint": "viewpoints",
+    "module_summary": "",
+    "endpoint": "viewpoints.api_bulk_update_viewpoint_items",
+    "function": "api_bulk_update_viewpoint_items",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/viewpoint-items/bulk",
+    "summary": "",
+    "line": 124
+  },
+  {
+    "module": "web/routes/viewpoints.py",
+    "blueprint": "viewpoints",
+    "module_summary": "",
+    "endpoint": "viewpoints.api_decide_viewpoint_proposal",
+    "function": "api_decide_viewpoint_proposal",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/viewpoint-proposals/<proposal_id>/decision",
+    "summary": "",
+    "line": 205
+  },
+  {
+    "module": "web/routes/viewpoints.py",
+    "blueprint": "viewpoints",
+    "module_summary": "",
+    "endpoint": "viewpoints.api_viewpoint_selection",
+    "function": "api_viewpoint_selection",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/viewpoint-selection",
+    "summary": "",
+    "line": 322
+  },
+  {
+    "module": "web/routes/viewpoints.py",
+    "blueprint": "viewpoints",
+    "module_summary": "",
+    "endpoint": "viewpoints.api_viewpoint_sets",
+    "function": "api_viewpoint_sets",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/viewpoint-sets",
+    "summary": "",
+    "line": 36
+  },
+  {
+    "module": "web/routes/viewpoints.py",
+    "blueprint": "viewpoints",
+    "module_summary": "",
+    "endpoint": "viewpoints.api_create_viewpoint_set",
+    "function": "api_create_viewpoint_set",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/viewpoint-sets",
+    "summary": "",
+    "line": 46
+  },
+  {
+    "module": "web/routes/viewpoints.py",
+    "blueprint": "viewpoints",
+    "module_summary": "",
+    "endpoint": "viewpoints.api_delete_viewpoint_set",
+    "function": "api_delete_viewpoint_set",
+    "methods": [
+      "DELETE"
+    ],
+    "path": "/api/viewpoint-sets/<set_id>",
+    "summary": "",
+    "line": 66
+  },
+  {
+    "module": "web/routes/viewpoints.py",
+    "blueprint": "viewpoints",
+    "module_summary": "",
+    "endpoint": "viewpoints.api_get_viewpoint_set",
+    "function": "api_get_viewpoint_set",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/viewpoint-sets/<set_id>",
+    "summary": "",
+    "line": 51
+  },
+  {
+    "module": "web/routes/viewpoints.py",
+    "blueprint": "viewpoints",
+    "module_summary": "",
+    "endpoint": "viewpoints.api_update_viewpoint_set",
+    "function": "api_update_viewpoint_set",
+    "methods": [
+      "PATCH"
+    ],
+    "path": "/api/viewpoint-sets/<set_id>",
+    "summary": "",
+    "line": 61
+  },
+  {
+    "module": "web/routes/viewpoints.py",
+    "blueprint": "viewpoints",
+    "module_summary": "",
+    "endpoint": "viewpoints.api_viewpoint_assignments",
+    "function": "api_viewpoint_assignments",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/viewpoint-sets/<set_id>/assignments",
+    "summary": "",
+    "line": 163
+  },
+  {
+    "module": "web/routes/viewpoints.py",
+    "blueprint": "viewpoints",
+    "module_summary": "",
+    "endpoint": "viewpoints.api_create_viewpoint_assignment",
+    "function": "api_create_viewpoint_assignment",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/viewpoint-sets/<set_id>/assignments",
+    "summary": "",
+    "line": 168
+  },
+  {
+    "module": "web/routes/viewpoints.py",
+    "blueprint": "viewpoints",
+    "module_summary": "",
+    "endpoint": "viewpoints.api_export_viewpoint_set",
+    "function": "api_export_viewpoint_set",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/viewpoint-sets/<set_id>/export",
+    "summary": "",
+    "line": 214
+  },
+  {
+    "module": "web/routes/viewpoints.py",
+    "blueprint": "viewpoints",
+    "module_summary": "",
+    "endpoint": "viewpoints.api_create_viewpoint_folder",
+    "function": "api_create_viewpoint_folder",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/viewpoint-sets/<set_id>/folders",
+    "summary": "",
+    "line": 254
+  },
+  {
+    "module": "web/routes/viewpoints.py",
+    "blueprint": "viewpoints",
+    "module_summary": "",
+    "endpoint": "viewpoints.api_import_viewpoint_set",
+    "function": "api_import_viewpoint_set",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/viewpoint-sets/<set_id>/import",
+    "summary": "",
+    "line": 230
+  },
+  {
+    "module": "web/routes/viewpoints.py",
+    "blueprint": "viewpoints",
+    "module_summary": "",
+    "endpoint": "viewpoints.api_reorder_viewpoint_items",
+    "function": "api_reorder_viewpoint_items",
+    "methods": [
+      "PATCH"
+    ],
+    "path": "/api/viewpoint-sets/<set_id>/items/reorder",
+    "summary": "",
+    "line": 308
+  },
+  {
+    "module": "web/routes/viewpoints.py",
+    "blueprint": "viewpoints",
+    "module_summary": "",
+    "endpoint": "viewpoints.api_viewpoint_proposals",
+    "function": "api_viewpoint_proposals",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/viewpoint-sets/<set_id>/proposals",
+    "summary": "",
+    "line": 184
+  },
+  {
+    "module": "web/routes/viewpoints.py",
+    "blueprint": "viewpoints",
+    "module_summary": "",
+    "endpoint": "viewpoints.api_generate_viewpoint_proposals",
+    "function": "api_generate_viewpoint_proposals",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/viewpoint-sets/<set_id>/proposals",
+    "summary": "",
+    "line": 192
+  },
+  {
+    "module": "web/routes/viewpoints.py",
+    "blueprint": "viewpoints",
+    "module_summary": "",
+    "endpoint": "viewpoints.api_restore_viewpoint_set",
+    "function": "api_restore_viewpoint_set",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/viewpoint-sets/<set_id>/restore",
+    "summary": "",
+    "line": 71
+  },
+  {
+    "module": "web/routes/viewpoints.py",
+    "blueprint": "viewpoints",
+    "module_summary": "",
+    "endpoint": "viewpoints.api_apply_viewpoint_template",
+    "function": "api_apply_viewpoint_template",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/viewpoint-sets/<set_id>/templates/<template_key>/apply",
+    "summary": "",
+    "line": 285
+  },
+  {
+    "module": "web/routes/viewpoints.py",
+    "blueprint": "viewpoints",
+    "module_summary": "",
+    "endpoint": "viewpoints.api_viewpoint_tree",
+    "function": "api_viewpoint_tree",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/viewpoint-sets/<set_id>/tree",
+    "summary": "",
+    "line": 240
+  },
+  {
+    "module": "web/routes/viewpoints.py",
+    "blueprint": "viewpoints",
+    "module_summary": "",
+    "endpoint": "viewpoints.api_viewpoint_versions",
+    "function": "api_viewpoint_versions",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/viewpoint-sets/<set_id>/versions",
+    "summary": "",
+    "line": 76
+  },
+  {
+    "module": "web/routes/viewpoints.py",
+    "blueprint": "viewpoints",
+    "module_summary": "",
+    "endpoint": "viewpoints.api_create_viewpoint_draft",
+    "function": "api_create_viewpoint_draft",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/viewpoint-sets/<set_id>/versions",
+    "summary": "",
+    "line": 81
+  },
+  {
+    "module": "web/routes/viewpoints.py",
+    "blueprint": "viewpoints",
+    "module_summary": "",
+    "endpoint": "viewpoints.api_viewpoint_items",
+    "function": "api_viewpoint_items",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/viewpoint-sets/<set_id>/versions/<int:version>/items",
+    "summary": "",
+    "line": 86
+  },
+  {
+    "module": "web/routes/viewpoints.py",
+    "blueprint": "viewpoints",
+    "module_summary": "",
+    "endpoint": "viewpoints.api_create_viewpoint_item",
+    "function": "api_create_viewpoint_item",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/viewpoint-sets/<set_id>/versions/<int:version>/items",
+    "summary": "",
+    "line": 100
+  },
+  {
+    "module": "web/routes/viewpoints.py",
+    "blueprint": "viewpoints",
+    "module_summary": "",
+    "endpoint": "viewpoints.api_publish_viewpoint_version",
+    "function": "api_publish_viewpoint_version",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/viewpoint-sets/<set_id>/versions/<int:version>/publish",
+    "summary": "",
+    "line": 135
+  },
+  {
+    "module": "web/routes/viewpoints.py",
+    "blueprint": "viewpoints",
+    "module_summary": "",
+    "endpoint": "viewpoints.api_rollback_viewpoint_version",
+    "function": "api_rollback_viewpoint_version",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/viewpoint-sets/<set_id>/versions/<int:version>/rollback",
+    "summary": "",
+    "line": 147
+  },
+  {
+    "module": "web/routes/viewpoints.py",
+    "blueprint": "viewpoints",
+    "module_summary": "",
+    "endpoint": "viewpoints.api_diff_viewpoint_versions",
+    "function": "api_diff_viewpoint_versions",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/viewpoint-sets/<set_id>/versions/diff",
+    "summary": "",
+    "line": 154
+  },
+  {
+    "module": "web/routes/viewpoints.py",
+    "blueprint": "viewpoints",
+    "module_summary": "",
+    "endpoint": "viewpoints.api_viewpoint_sources",
+    "function": "api_viewpoint_sources",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/viewpoint-sources",
+    "summary": "観点の根拠となる規格・ガイドラインの出典一覧。",
+    "line": 265
+  },
+  {
+    "module": "web/routes/viewpoints.py",
+    "blueprint": "viewpoints",
+    "module_summary": "",
+    "endpoint": "viewpoints.api_resolve_viewpoint_source",
+    "function": "api_resolve_viewpoint_source",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/viewpoint-sources/resolve",
+    "summary": "standards 文字列から出典を引く。該当が無ければ source は null。",
+    "line": 277
+  },
+  {
+    "module": "web/routes/viewpoints.py",
+    "blueprint": "viewpoints",
+    "module_summary": "",
+    "endpoint": "viewpoints.api_viewpoint_templates",
+    "function": "api_viewpoint_templates",
+    "methods": [
+      "GET"
+    ],
+    "path": "/api/viewpoint-templates",
+    "summary": "",
+    "line": 260
+  },
+  {
+    "module": "web/routes/viewpoints.py",
+    "blueprint": "viewpoints",
+    "module_summary": "",
+    "endpoint": "viewpoints.api_create_set_from_template",
+    "function": "api_create_set_from_template",
+    "methods": [
+      "POST"
+    ],
+    "path": "/api/viewpoint-templates/<template_key>/create-set",
+    "summary": "テンプレートから観点セットを新規作成する。",
+    "line": 290
+  }
+]

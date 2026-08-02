@@ -1,0 +1,288 @@
+[
+  {
+    "path": "templates/admin/console.html",
+    "loc": 118,
+    "extends": [
+      "auth/_shell.html"
+    ],
+    "includes": [],
+    "blocks": [
+      "body_class",
+      "content",
+      "extra_css",
+      "scripts",
+      "title",
+      "topbar_actions"
+    ],
+    "title": ""
+  },
+  {
+    "path": "templates/auth/_shell.html",
+    "loc": 29,
+    "extends": [],
+    "includes": [],
+    "blocks": [
+      "body_class",
+      "content",
+      "extra_css",
+      "scripts",
+      "title",
+      "topbar_actions"
+    ],
+    "title": "{% block title %}WebSpec2Doc{% endblock %}"
+  },
+  {
+    "path": "templates/auth/account.html",
+    "loc": 277,
+    "extends": [],
+    "includes": [],
+    "blocks": [],
+    "title": "アカウント - WebSpec2Doc"
+  },
+  {
+    "path": "templates/auth/login.html",
+    "loc": 77,
+    "extends": [],
+    "includes": [],
+    "blocks": [],
+    "title": "ログイン - WebSpec2Doc"
+  },
+  {
+    "path": "templates/auth/setup.html",
+    "loc": 76,
+    "extends": [],
+    "includes": [],
+    "blocks": [],
+    "title": "初期セットアップ - WebSpec2Doc"
+  },
+  {
+    "path": "templates/auth/signup.html",
+    "loc": 76,
+    "extends": [],
+    "includes": [],
+    "blocks": [],
+    "title": "アカウント作成 - WebSpec2Doc"
+  },
+  {
+    "path": "templates/auth/tenant.html",
+    "loc": 70,
+    "extends": [
+      "auth/_shell.html"
+    ],
+    "includes": [],
+    "blocks": [
+      "content",
+      "title",
+      "topbar_actions"
+    ],
+    "title": ""
+  },
+  {
+    "path": "templates/auth/user.html",
+    "loc": 69,
+    "extends": [
+      "auth/_shell.html"
+    ],
+    "includes": [],
+    "blocks": [
+      "content",
+      "title",
+      "topbar_actions"
+    ],
+    "title": ""
+  },
+  {
+    "path": "templates/autorun-report.html",
+    "loc": 46,
+    "extends": [],
+    "includes": [],
+    "blocks": [],
+    "title": "実行結果レポート {{ domain }} - AutoRun"
+  },
+  {
+    "path": "templates/cli.html",
+    "loc": 125,
+    "extends": [],
+    "includes": [],
+    "blocks": [],
+    "title": "CLI モード - WebSpec2Doc"
+  },
+  {
+    "path": "templates/index.html",
+    "loc": 207,
+    "extends": [],
+    "includes": [
+      "partials/modal-autorun-login.html",
+      "partials/modal-file-preview.html",
+      "partials/nav.html",
+      "partials/result-panel.html",
+      "partials/topbar.html",
+      "partials/view-auto-run.html",
+      "partials/view-dashboard.html",
+      "partials/view-generate.html",
+      "partials/view-qa-quality.html",
+      "partials/view-references.html",
+      "partials/view-run-history.html",
+      "partials/view-run-result.html",
+      "partials/view-settings.html",
+      "partials/view-user-guide.html",
+      "partials/view-viewpoints.html"
+    ],
+    "blocks": [],
+    "title": "WebSpec2Doc"
+  },
+  {
+    "path": "templates/partials/modal-autorun-login.html",
+    "loc": 30,
+    "extends": [],
+    "includes": [],
+    "blocks": [],
+    "title": ""
+  },
+  {
+    "path": "templates/partials/modal-file-preview.html",
+    "loc": 16,
+    "extends": [],
+    "includes": [],
+    "blocks": [],
+    "title": ""
+  },
+  {
+    "path": "templates/partials/nav.html",
+    "loc": 53,
+    "extends": [],
+    "includes": [],
+    "blocks": [],
+    "title": ""
+  },
+  {
+    "path": "templates/partials/result-panel.html",
+    "loc": 123,
+    "extends": [],
+    "includes": [],
+    "blocks": [],
+    "title": ""
+  },
+  {
+    "path": "templates/partials/topbar.html",
+    "loc": 22,
+    "extends": [],
+    "includes": [],
+    "blocks": [],
+    "title": ""
+  },
+  {
+    "path": "templates/partials/view-auto-run.html",
+    "loc": 378,
+    "extends": [],
+    "includes": [],
+    "blocks": [],
+    "title": ""
+  },
+  {
+    "path": "templates/partials/view-dashboard.html",
+    "loc": 58,
+    "extends": [],
+    "includes": [],
+    "blocks": [],
+    "title": ""
+  },
+  {
+    "path": "templates/partials/view-generate.html",
+    "loc": 303,
+    "extends": [],
+    "includes": [],
+    "blocks": [],
+    "title": ""
+  },
+  {
+    "path": "templates/partials/view-qa-quality.html",
+    "loc": 31,
+    "extends": [],
+    "includes": [],
+    "blocks": [],
+    "title": ""
+  },
+  {
+    "path": "templates/partials/view-references.html",
+    "loc": 227,
+    "extends": [],
+    "includes": [],
+    "blocks": [],
+    "title": ""
+  },
+  {
+    "path": "templates/partials/view-run-history.html",
+    "loc": 66,
+    "extends": [],
+    "includes": [],
+    "blocks": [],
+    "title": ""
+  },
+  {
+    "path": "templates/partials/view-run-result.html",
+    "loc": 11,
+    "extends": [],
+    "includes": [],
+    "blocks": [],
+    "title": ""
+  },
+  {
+    "path": "templates/partials/view-settings.html",
+    "loc": 313,
+    "extends": [],
+    "includes": [],
+    "blocks": [],
+    "title": ""
+  },
+  {
+    "path": "templates/partials/view-traceability.html",
+    "loc": 31,
+    "extends": [],
+    "includes": [],
+    "blocks": [],
+    "title": ""
+  },
+  {
+    "path": "templates/partials/view-usage.html",
+    "loc": 83,
+    "extends": [],
+    "includes": [],
+    "blocks": [],
+    "title": ""
+  },
+  {
+    "path": "templates/partials/view-user-guide.html",
+    "loc": 181,
+    "extends": [],
+    "includes": [],
+    "blocks": [],
+    "title": ""
+  },
+  {
+    "path": "templates/partials/view-viewpoints.html",
+    "loc": 296,
+    "extends": [],
+    "includes": [],
+    "blocks": [],
+    "title": ""
+  },
+  {
+    "path": "templates/system-select.html",
+    "loc": 102,
+    "extends": [],
+    "includes": [],
+    "blocks": [],
+    "title": "システム選択 - WebSpec2Doc"
+  },
+  {
+    "path": "templates/traceability.html",
+    "loc": 32,
+    "extends": [],
+    "includes": [
+      "partials/view-traceability.html"
+    ],
+    "blocks": [],
+    "title": "トレーサビリティマトリクス — WebSpec2Doc"
+  }
+]

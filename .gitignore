@@ -34,6 +34,14 @@ build/
 htmlcov/
 .runtime/
 
+# ドキュメント生成の依存・中間物（いずれも再生成可能）
+# node_modules は mermaid-cli（図の PNG 化）用。npm i で復元できる
+node_modules/
+# 図の PNG は Word に埋め込み済み。ここはレンダリングキャッシュ
+docs/sdlc/_asbuilt/figures/
+# 旧出力先。現在は docs/sdlc/ 配下に直接生成する
+delivery/
+
 # IDE
 .vscode/
 .idea/

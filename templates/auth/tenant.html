@@ -15,6 +15,7 @@
   <div class="tsel-brand"><span class="tsel-brand-mark">W</span><span>WebSpec2Doc</span></div>
   <div class="tsel-who">
     <span>{{ user.name }}</span>
+    {% if mock_auth %}<a class="tsel-text-btn" href="/auth/user">ユーザーを変更</a>{% endif %}
     <form method="post" action="/auth/logout">
       <button class="tsel-text-btn" type="submit">ログアウト</button>
     </form>
@@ -22,7 +23,7 @@
 </div>
 
 <div class="tsel-stage">
-  <p class="tsel-kicker">STEP 1 / 2</p>
+  <p class="tsel-kicker">STEP 2 / 3</p>
   <h1>どのテナントで作業しますか？</h1>
   <p class="tsel-lead">テナントごとに、生成したドキュメント・AutoRun の実行履歴・観点セットは分離されています。</p>
 
@@ -37,7 +38,6 @@
   <div class="tsel-grid">
     {% for membership in memberships %}
     <form method="post" action="/auth/tenant">
-      <input type="hidden" name="next" value="{{ next_path }}">
       <input type="hidden" name="tenant_id" value="{{ membership.tenant_id }}">
       <button type="submit" class="tcard {% if current_tenant and current_tenant.id == membership.tenant_id %}is-current{% endif %}">
         <span class="tcard-head">

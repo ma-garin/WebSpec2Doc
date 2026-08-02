@@ -6,56 +6,48 @@
 
 from __future__ import annotations
 
-from urllib.parse import quote
-
 from flask import Blueprint, current_app, g, jsonify, redirect, render_template, request
 from werkzeug.wrappers import Response as BaseResponse
 
 from web.auth import (
     SESSION_COOKIE_NAME,
     TENANT_SELECT_PATH,
+    USER_SELECT_PATH,
     auth_enabled,
     clear_session_cookie,
     effective_auth_mode,
     mock_auth_enabled,
     require_admin,
-    safe_next_path,
     set_session_cookie,
 )
 from web.services.auth_store import ROLE_ADMIN, ROLE_MEMBER, AuthError, get_auth_store
 
 bp = Blueprint("account", __name__)
 
-# テナント選択画面に出すエラー。クエリ文字列の値をそのまま表示しないための対応表。
+# ログイン後の遷移は常にこの順で進む。
+# ログイン → ユーザー選択 → テナント選択 → システム選択。
+# 元のURL（next）へは戻さない。認証ガードが付ける next は "/" のことが多く、
+# システム選択を飛ばしてドキュメント作成の画面へ直行してしまうため。
+SYSTEM_SELECT_PATH = "/systems"
+
+# 各選択画面に出すエラー。クエリ文字列の値をそのまま表示しないための対応表。
 _TENANT_ERRORS = {
     "not_member": "そのテナントに所属していません。管理者に追加を依頼してください。",
     "missing": "テナントを選択してください。",
 }
+_USER_ERRORS = {
+    "not_switchable": "そのユーザーには切り替えられません。"
+    "パスワードが設定されているか、無効化されています。",
+}
 
 
-def _login_page_context(error: str | None, email: str, next_path: str) -> dict:
-    store = get_auth_store()
-    mock = mock_auth_enabled()
-    return {
-        "error": error,
-        "email": email,
-        "next_path": next_path,
-        "mock_auth": mock,
-        "candidates": store.list_login_candidates() if mock else [],
-    }
+def _login_page_context(error: str | None, email: str) -> dict:
+    return {"error": error, "email": email, "mock_auth": mock_auth_enabled()}
 
 
-def _start_session(user: dict, next_path: str) -> BaseResponse:
-    """ログイン成立後のセッション発行と遷移先の決定。
-
-    所属が1件ならそのテナントを自動選択して本来の遷移先へ送る。0件または
-    2件以上のときだけテナント選択画面を挟む（毎回1クリック増やさないため）。
-    """
-    store = get_auth_store()
-    memberships = store.list_memberships(user["id"])
-    tenant_id = memberships[0]["tenant_id"] if len(memberships) == 1 else None
-    token = store.create_session(user["id"], tenant_id)
-    target = next_path if tenant_id else f"{TENANT_SELECT_PATH}?next={quote(next_path)}"
+def _start_session(user: dict, target: str) -> BaseResponse:
+    """ログイン成立後のセッションを発行する。テナントは未選択のまま始める。"""
+    token = get_auth_store().create_session(user["id"])
     return set_session_cookie(redirect(target), token)
 
 
@@ -70,9 +62,8 @@ def login_page() -> BaseResponse | str:
     if not store.has_any_user():
         return redirect("/auth/setup")
     if getattr(g, "auth_user", None):
-        return redirect(safe_next_path(request.args.get("next", "/systems")))
-    next_path = safe_next_path(request.args.get("next", "/systems"))
-    return render_template("auth/login.html", **_login_page_context(None, "", next_path))
+        return redirect(USER_SELECT_PATH)
+    return render_template("auth/login.html", **_login_page_context(None, ""))
 
 
 @bp.post("/auth/login")
@@ -80,21 +71,53 @@ def login_submit() -> BaseResponse | tuple[str, int]:
     store = get_auth_store()
     email = request.form.get("email", "").strip()
     password = request.form.get("password", "")
-    next_path = safe_next_path(request.form.get("next", "/systems"))
     try:
         # モックでもパスワードが入力されていれば通常の認証を通す。
         # 初期管理者（admin / password）のようにパスワードを持つアカウントは
-        # 一覧クリックでは入れず、必ずパスワード照合を経る。
+        # パスワード照合を必ず経る。
         if mock_auth_enabled() and not password:
             user = store.authenticate_passwordless(email)
         else:
             user = store.authenticate(email, password)
     except AuthError as exc:
-        html = render_template(
-            "auth/login.html", **_login_page_context(str(exc), email, next_path)
-        )
-        return html, 401
-    return _start_session(user, next_path)
+        return render_template("auth/login.html", **_login_page_context(str(exc), email)), 401
+    target = USER_SELECT_PATH if mock_auth_enabled() else TENANT_SELECT_PATH
+    return _start_session(user, target)
+
+
+@bp.get(USER_SELECT_PATH)
+def user_page() -> BaseResponse | str:
+    """モックのユーザー選択。誰として作業するかをここで決める。"""
+    if not auth_enabled() or not mock_auth_enabled():
+        return redirect(TENANT_SELECT_PATH)
+    user = getattr(g, "auth_user", None)
+    if user is None:
+        return redirect("/auth/login")
+    return render_template(
+        "auth/user.html",
+        user=user,
+        candidates=get_auth_store().list_login_candidates(),
+        error=_USER_ERRORS.get(request.args.get("error", "")),
+    )
+
+
+@bp.post(USER_SELECT_PATH)
+def user_select() -> BaseResponse:
+    if not auth_enabled() or not mock_auth_enabled():
+        return redirect(TENANT_SELECT_PATH)
+    current = getattr(g, "auth_user", None)
+    if current is None:
+        return redirect("/auth/login")
+    user_id = request.form.get("user_id", "").strip()
+    # 空、または自分自身なら切り替えずそのまま進む
+    if not user_id or user_id == current.get("id"):
+        return redirect(TENANT_SELECT_PATH)
+    token = get_auth_store().switch_session_user(
+        request.cookies.get(SESSION_COOKIE_NAME, ""), user_id
+    )
+    if token is None:
+        return redirect(f"{USER_SELECT_PATH}?error=not_switchable")
+    return set_session_cookie(redirect(TENANT_SELECT_PATH), token)
 
 
 @bp.get("/auth/signup")
@@ -127,7 +150,8 @@ def signup_submit() -> BaseResponse | tuple[str, int]:
             "auth/signup.html", error=str(exc), form=form, mock_auth=mock_auth_enabled()
         )
         return html, 400
-    return _start_session(user, "/systems")
+    # 作った本人として続けるので、ユーザー選択は挟まずテナント選択へ送る
+    return _start_session(user, TENANT_SELECT_PATH)
 
 
 @bp.get(TENANT_SELECT_PATH)
@@ -136,14 +160,14 @@ def tenant_page() -> BaseResponse | str:
         return redirect("/")
     user = getattr(g, "auth_user", None)
     if user is None:
-        return redirect(f"/auth/login?next={quote(TENANT_SELECT_PATH)}")
+        return redirect("/auth/login")
     store = get_auth_store()
     return render_template(
         "auth/tenant.html",
         user=user,
         memberships=store.list_memberships(user["id"]),
         current_tenant=getattr(g, "tenant", None),
-        next_path=safe_next_path(request.args.get("next", "/systems")),
+        mock_auth=mock_auth_enabled(),
         error=_TENANT_ERRORS.get(request.args.get("error", "")),
     )
 
@@ -155,13 +179,12 @@ def tenant_select() -> BaseResponse:
     if getattr(g, "auth_user", None) is None:
         return redirect("/auth/login")
     tenant_id = request.form.get("tenant_id", "").strip()
-    next_path = safe_next_path(request.form.get("next", "/systems"))
     if not tenant_id:
         return redirect(f"{TENANT_SELECT_PATH}?error=missing")
     token = request.cookies.get(SESSION_COOKIE_NAME, "")
     if not get_auth_store().bind_session_tenant(token, tenant_id):
         return redirect(f"{TENANT_SELECT_PATH}?error=not_member")
-    return redirect(next_path)
+    return redirect(SYSTEM_SELECT_PATH)
 
 
 @bp.post("/auth/logout")
@@ -211,7 +234,7 @@ def setup_submit() -> BaseResponse | tuple[str, int]:
         html = render_template("auth/setup.html", error=str(exc), form=form, mock_auth=mock)
         return html, 400
     token = store.create_session(result["user"]["id"], result["tenant"]["id"])
-    return set_session_cookie(redirect("/"), token)
+    return set_session_cookie(redirect(SYSTEM_SELECT_PATH), token)
 
 
 @bp.get("/auth/account")

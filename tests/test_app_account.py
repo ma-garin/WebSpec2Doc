@@ -45,10 +45,18 @@ def _setup_owner(client, email="owner@example.com", password="secret-pass-123"):
     )
 
 
+def _select_first_tenant(client) -> None:
+    """ログイン直後はテナント未選択。所属の先頭を選んで作業できる状態にする。"""
+    payload = client.get("/api/auth/tenants", headers=H).get_json() or {}
+    tenants = payload.get("tenants", [])
+    if tenants:
+        client.post("/auth/tenant", data={"tenant_id": tenants[0]["tenant_id"]}, headers=H)
+
+
 def _login(client, email="owner@example.com", password="secret-pass-123"):
-    return client.post(
-        "/auth/login", data={"email": email, "password": password, "next": "/"}, headers=H
-    )
+    response = client.post("/auth/login", data={"email": email, "password": password}, headers=H)
+    _select_first_tenant(client)
+    return response
 
 
 # ---------- auto モード（既定） ----------
@@ -84,7 +92,8 @@ def test_login_flow_and_logout() -> None:
     assert bad.status_code == 401
     assert "ログインできませんでした" in bad.get_data(as_text=True)
     ok = _login(anon)
-    assert ok.status_code == 302 and ok.headers["Location"] == "/"
+    # ログイン直後はテナント選択へ送られる（_login がそのあと所属先を選ぶ）
+    assert ok.status_code == 302 and ok.headers["Location"] == "/auth/tenant"
     me = anon.get("/api/auth/me", headers=H).get_json()
     assert me["user"]["email"] == "owner@example.com"
     assert me["tenant"]["slug"] == "qa-team"
@@ -93,7 +102,8 @@ def test_login_flow_and_logout() -> None:
     assert anon.get("/api/history", headers=H).status_code == 401
 
 
-def test_login_next_open_redirect_blocked() -> None:
+def test_login_ignores_next_parameter() -> None:
+    """ログイン後の遷移先は固定。next は見ないので外部URLへも飛ばない。"""
     c = _client()
     _setup_owner(c)
     anon = _client()
@@ -107,7 +117,7 @@ def test_login_next_open_redirect_blocked() -> None:
         headers=H,
     )
     assert res.status_code == 302
-    assert res.headers["Location"] == "/"
+    assert res.headers["Location"] == "/auth/tenant"
 
 
 def test_setup_page_redirects_to_login_after_setup() -> None:

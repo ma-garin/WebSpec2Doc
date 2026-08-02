@@ -42,10 +42,15 @@ def _setup_owner(client) -> None:
 def _login(client, email: str, password: str) -> None:
     response = client.post(
         "/auth/login",
-        data={"email": email, "password": password, "next": "/"},
+        data={"email": email, "password": password},
         headers=H,
     )
     assert response.status_code == 302
+    # ログイン直後はテナント未選択。所属の先頭を選んで作業できる状態にする。
+    payload = client.get("/api/auth/tenants", headers=H).get_json() or {}
+    tenants = payload.get("tenants", [])
+    if tenants:
+        client.post("/auth/tenant", data={"tenant_id": tenants[0]["tenant_id"]}, headers=H)
 
 
 def test_local_admin_can_read_and_update_retention_policy() -> None:

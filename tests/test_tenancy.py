@@ -101,7 +101,17 @@ def _make_two_tenants(client):
         data={"email": "b@example.com", "password": "secret-pass-123"},
         headers=H,
     )
+    for client in (ca, cb):
+        _select_first_tenant(client)
     return ca, cb
+
+
+def _select_first_tenant(client) -> None:
+    """ログイン直後はテナント未選択。所属の先頭を選んで作業できる状態にする。"""
+    payload = client.get("/api/auth/tenants", headers=H).get_json() or {}
+    tenants = payload.get("tenants", [])
+    if tenants:
+        client.post("/auth/tenant", data={"tenant_id": tenants[0]["tenant_id"]}, headers=H)
 
 
 def test_history_is_isolated_per_tenant(tmp_path: Path, monkeypatch) -> None:

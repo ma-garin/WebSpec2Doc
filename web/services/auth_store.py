@@ -973,8 +973,35 @@ class AuthStore:
         )
         return user
 
+    def switch_session_user(self, raw_token: str, user_id: str) -> str | None:
+        """セッションを別ユーザーへ切り替える（モックのユーザー選択画面）。
+
+        切り替え先はパスワード未設定の有効ユーザーに限る。パスワードで守られた
+        アカウントを、選ぶだけで乗っ取れないようにするため。
+        戻り値は新しいセッショントークン。切り替え不可なら None。
+        """
+        if not raw_token or not user_id:
+            return None
+        self.initialize()
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT id, password_hash, is_active FROM users WHERE id = ?", (user_id,)
+            ).fetchone()
+        if row is None or not row["is_active"] or row["password_hash"]:
+            return None
+        self.revoke_session(raw_token)
+        token = self.create_session(user_id)
+        self.audit(
+            "user.switched",
+            user_id=user_id,
+            detail="mock user selection",
+            target_type="user",
+            target_id=user_id,
+        )
+        return token
+
     def list_login_candidates(self, limit: int = 20) -> list[dict]:
-        """モックログイン画面に並べる、パスワード未設定の有効ユーザー。"""
+        """モックのユーザー選択画面に並べる、パスワード未設定の有効ユーザー。"""
         self.initialize()
         with self._connect() as conn:
             rows = conn.execute(

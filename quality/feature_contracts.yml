@@ -228,6 +228,7 @@
       "risk_level": "critical",
       "status": "implemented",
       "ui_files": [
+        "templates/auth/user.html",
         "templates/auth/tenant.html",
         "templates/admin/console.html",
         "static/css/tenant-auth.css",
@@ -246,6 +247,8 @@
         "list_memberships",
         "set_memberships",
         "bind_session_tenant",
+        "switch_session_user",
+        "ensure_initial_admin",
         "authenticate_passwordless",
         "delete_tenant"
       ],

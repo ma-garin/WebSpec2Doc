@@ -167,6 +167,9 @@
     var(--color-bg);
 }
 .tsel-stage { max-width: 940px; margin: 0 auto; padding: var(--space-12) var(--space-6) var(--space-8); }
+.tsel-stage-narrow { max-width: 560px; }
+.tsel-stage form { margin: 0; }
+.userpick-self { background: var(--color-primary-light); border-color: #C5DDF6; }
 .tsel-kicker {
   margin: 0 0 var(--space-2);
   font-size: var(--text-xs);

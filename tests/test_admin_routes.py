@@ -18,6 +18,8 @@ H = {"Host": "127.0.0.1"}
 def _local_admin_scope(tmp_path: Path, monkeypatch):
     monkeypatch.setenv("WEBSPEC2DOC_AUTH_MODE", "off")
     monkeypatch.setenv("WEBSPEC2DOC_AUTH_DB", str(tmp_path / "instance" / "auth.db"))
+    # ここではパスワード認証の経路を検証する（モック認証は test_mock_auth_tenancy.py 側）
+    monkeypatch.setenv("WEBSPEC2DOC_AUTH_MOCK", "0")
     monkeypatch.setattr(admin, "OUTPUT_DIR", tmp_path / "output")
     monkeypatch.setattr(admin, "INSTANCE_DIR", tmp_path / "instance")
 
@@ -184,7 +186,7 @@ def test_two_tenants_keep_storage_retention_audit_and_gc_isolated(
 
     store = get_auth_store()
     user_a = store.authenticate("owner@example.com", "secret-pass-123")
-    tenant_a = store.get_tenant(user_a["tenant_id"])
+    tenant_a = store.get_tenant(store.list_memberships(user_a["id"])[0]["tenant_id"])
     assert tenant_a is not None
     tenant_b = store.create_tenant("Other Team")
     store.create_user(

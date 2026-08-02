@@ -9,6 +9,7 @@
        描画は --font-main / --font-mono のシステムフォント・フォールバックで確定する。 -->
   <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tenant-auth.css') }}?v={{ _ver }}">
 </head>
 <body class="auth-body">
 
@@ -32,12 +33,26 @@
     <dl class="account-meta">
       <dt>表示名</dt><dd>{{ user.name }}</dd>
       <dt>メールアドレス</dt><dd>{{ user.email }}</dd>
-      <dt>ロール</dt><dd><span class="badge-role">{{ user.role }}</span></dd>
-      <dt>ワークスペース</dt><dd>{{ tenant.name }}（{{ tenant.slug }}）</dd>
+      <dt>ロール</dt>
+      <dd>
+        {% if user.role == 'admin' %}<span class="badge-role is-admin">管理者</span>
+        {% else %}<span class="badge-role">一般</span>{% endif %}
+        <span style="color:var(--color-text-secondary);font-size:var(--text-xs)">（このテナントでのロール）</span>
+      </dd>
+      <dt>選択中のテナント</dt><dd>{{ tenant.name }}（{{ tenant.slug }}）</dd>
+      <dt>所属テナント</dt>
+      <dd>
+        {% for membership in memberships %}
+        <span class="chip {% if membership.role == 'admin' %}is-admin{% endif %}">{{ membership.name }} / {% if membership.role == 'admin' %}管理者{% else %}一般{% endif %}</span>
+        {% else %}—{% endfor %}
+        <a class="btn-ghost" href="/auth/tenant" style="margin-left:8px">切り替え</a>
+        {% if is_admin %}<a class="btn-ghost" href="/admin/console">テナント・ユーザー管理</a>{% endif %}
+      </dd>
       <dt>最終ログイン</dt><dd>{{ user.last_login_at or '—' }}</dd>
     </dl>
   </section>
 
+  {% if not mock_auth %}
   <section class="account-card">
     <h2>パスワード変更</h2>
     <form id="password-form" class="account-inline-form">
@@ -53,6 +68,7 @@
     </form>
     <div id="password-status" class="account-status" aria-live="polite"></div>
   </section>
+  {% endif %}
 
   {% if is_admin %}
   <section class="account-card">
@@ -66,7 +82,10 @@
         <tr data-user-id="{{ member.id }}">
           <td>{{ member.name }}</td>
           <td>{{ member.email }}</td>
-          <td><span class="badge-role">{{ member.role }}</span></td>
+          <td>
+            {% if member.role == 'admin' %}<span class="badge-role is-admin">管理者</span>
+            {% else %}<span class="badge-role">一般</span>{% endif %}
+          </td>
           <td>
             {% if member.is_active %}<span class="badge-role">有効</span>
             {% else %}<span class="badge-role badge-inactive">無効</span>{% endif %}
@@ -95,16 +114,17 @@
         <label for="inv-email">メールアドレス</label>
         <input type="email" id="inv-email" required>
       </div>
+      {% if not mock_auth %}
       <div class="auth-field">
         <label for="inv-password">初期パスワード</label>
         <input type="text" id="inv-password" required>
       </div>
+      {% endif %}
       <div class="auth-field" style="flex:0 0 130px">
         <label for="inv-role">ロール</label>
         <select id="inv-role" style="width:100%;min-height:44px;border:1px solid var(--color-border-strong);border-radius:var(--radius-md);background:var(--color-surface);color:var(--color-text);font-family:inherit">
-          <option value="member">member</option>
-          <option value="admin">admin</option>
-          {% if user.role == 'owner' %}<option value="owner">owner</option>{% endif %}
+          <option value="member">一般</option>
+          <option value="admin">管理者</option>
         </select>
       </div>
       <button type="submit" class="auth-submit">追加</button>
@@ -195,7 +215,7 @@
         await postJSON('/api/auth/users', 'POST', {
           name: document.getElementById('inv-name').value,
           email: document.getElementById('inv-email').value,
-          password: document.getElementById('inv-password').value,
+          password: (document.getElementById('inv-password') || {}).value || '',
           role: document.getElementById('inv-role').value,
         });
         setStatus('invite-status', '追加しました ✓', true);

@@ -22,6 +22,8 @@ def _isolated_auth_db(tmp_path: Path, monkeypatch):
     """テストごとに独立した認証DBを使う（get_auth_store は env 変更に追従する）。"""
     monkeypatch.setenv("WEBSPEC2DOC_AUTH_DB", str(tmp_path / "auth.db"))
     monkeypatch.delenv("WEBSPEC2DOC_AUTH_MODE", raising=False)
+    # ここではパスワード認証の経路を検証する（モック認証は test_mock_auth_tenancy.py 側）
+    monkeypatch.setenv("WEBSPEC2DOC_AUTH_MOCK", "0")
     yield
 
 
@@ -232,22 +234,11 @@ def test_member_cannot_manage_users_or_settings() -> None:
     assert mc.get("/api/settings", headers=H).status_code == 200
 
 
-def test_admin_cannot_create_owner() -> None:
+def test_legacy_owner_role_is_normalized_to_admin() -> None:
+    """ロールは一般/管理者の2つ。旧APIが送る owner は管理者として受け付ける。"""
     c = _client()
     _setup_owner(c)
-    c.post(
-        "/api/auth/users",
-        json={
-            "email": "admin@example.com",
-            "name": "Admin",
-            "password": "admin-pass-1234",
-            "role": "admin",
-        },
-        headers=H,
-    )
-    ac = _client()
-    _login(ac, email="admin@example.com", password="admin-pass-1234")
-    res = ac.post(
+    res = c.post(
         "/api/auth/users",
         json={
             "email": "o2@example.com",
@@ -257,7 +248,8 @@ def test_admin_cannot_create_owner() -> None:
         },
         headers=H,
     )
-    assert res.status_code == 403
+    assert res.status_code == 200
+    assert res.get_json()["user"]["role"] == "admin"
 
 
 def test_password_change_forces_relogin() -> None:

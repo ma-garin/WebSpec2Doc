@@ -6,20 +6,57 @@
 
 from __future__ import annotations
 
+from urllib.parse import quote
+
 from flask import Blueprint, current_app, g, jsonify, redirect, render_template, request
 from werkzeug.wrappers import Response as BaseResponse
 
 from web.auth import (
+    SESSION_COOKIE_NAME,
+    TENANT_SELECT_PATH,
     auth_enabled,
     clear_session_cookie,
     effective_auth_mode,
+    mock_auth_enabled,
     require_admin,
     safe_next_path,
     set_session_cookie,
 )
-from web.services.auth_store import AuthError, get_auth_store
+from web.services.auth_store import ROLE_ADMIN, ROLE_MEMBER, AuthError, get_auth_store
 
 bp = Blueprint("account", __name__)
+
+# テナント選択画面に出すエラー。クエリ文字列の値をそのまま表示しないための対応表。
+_TENANT_ERRORS = {
+    "not_member": "そのテナントに所属していません。管理者に追加を依頼してください。",
+    "missing": "テナントを選択してください。",
+}
+
+
+def _login_page_context(error: str | None, email: str, next_path: str) -> dict:
+    store = get_auth_store()
+    mock = mock_auth_enabled()
+    return {
+        "error": error,
+        "email": email,
+        "next_path": next_path,
+        "mock_auth": mock,
+        "candidates": store.list_login_candidates() if mock else [],
+    }
+
+
+def _start_session(user: dict, next_path: str) -> BaseResponse:
+    """ログイン成立後のセッション発行と遷移先の決定。
+
+    所属が1件ならそのテナントを自動選択して本来の遷移先へ送る。0件または
+    2件以上のときだけテナント選択画面を挟む（毎回1クリック増やさないため）。
+    """
+    store = get_auth_store()
+    memberships = store.list_memberships(user["id"])
+    tenant_id = memberships[0]["tenant_id"] if len(memberships) == 1 else None
+    token = store.create_session(user["id"], tenant_id)
+    target = next_path if tenant_id else f"{TENANT_SELECT_PATH}?next={quote(next_path)}"
+    return set_session_cookie(redirect(target), token)
 
 
 # --- 画面 ---------------------------------------------------------------
@@ -34,12 +71,8 @@ def login_page() -> BaseResponse | str:
         return redirect("/auth/setup")
     if getattr(g, "auth_user", None):
         return redirect(safe_next_path(request.args.get("next", "/systems")))
-    return render_template(
-        "auth/login.html",
-        error=None,
-        email="",
-        next_path=safe_next_path(request.args.get("next", "/systems")),
-    )
+    next_path = safe_next_path(request.args.get("next", "/systems"))
+    return render_template("auth/login.html", **_login_page_context(None, "", next_path))
 
 
 @bp.post("/auth/login")
@@ -49,12 +82,83 @@ def login_submit() -> BaseResponse | tuple[str, int]:
     password = request.form.get("password", "")
     next_path = safe_next_path(request.form.get("next", "/systems"))
     try:
-        user = store.authenticate(email, password)
+        if mock_auth_enabled():
+            user = store.authenticate_passwordless(email)
+        else:
+            user = store.authenticate(email, password)
     except AuthError as exc:
-        html = render_template("auth/login.html", error=str(exc), email=email, next_path=next_path)
+        html = render_template(
+            "auth/login.html", **_login_page_context(str(exc), email, next_path)
+        )
         return html, 401
-    token = store.create_session(user["id"])
-    return set_session_cookie(redirect(next_path), token)
+    return _start_session(user, next_path)
+
+
+@bp.get("/auth/signup")
+def signup_page() -> BaseResponse | str:
+    if effective_auth_mode() == "off":
+        return redirect("/")
+    store = get_auth_store()
+    if not store.has_any_user():
+        return redirect("/auth/setup")
+    if getattr(g, "auth_user", None):
+        return redirect("/systems")
+    return render_template("auth/signup.html", error=None, form={}, mock_auth=mock_auth_enabled())
+
+
+@bp.post("/auth/signup")
+def signup_submit() -> BaseResponse | tuple[str, int]:
+    if effective_auth_mode() == "off":
+        return redirect("/")
+    store = get_auth_store()
+    form = {
+        "name": request.form.get("name", "").strip(),
+        "email": request.form.get("email", "").strip(),
+    }
+    password = "" if mock_auth_enabled() else request.form.get("password", "")
+    try:
+        # 所属なしで作る。どのテナントに入れるかは管理者が決める。
+        user = store.create_user(None, form["email"], form["name"], password, role=ROLE_MEMBER)
+    except AuthError as exc:
+        html = render_template(
+            "auth/signup.html", error=str(exc), form=form, mock_auth=mock_auth_enabled()
+        )
+        return html, 400
+    return _start_session(user, "/systems")
+
+
+@bp.get(TENANT_SELECT_PATH)
+def tenant_page() -> BaseResponse | str:
+    if not auth_enabled():
+        return redirect("/")
+    user = getattr(g, "auth_user", None)
+    if user is None:
+        return redirect(f"/auth/login?next={quote(TENANT_SELECT_PATH)}")
+    store = get_auth_store()
+    return render_template(
+        "auth/tenant.html",
+        user=user,
+        memberships=store.list_memberships(user["id"]),
+        current_tenant=getattr(g, "tenant", None),
+        next_path=safe_next_path(request.args.get("next", "/systems")),
+        error=_TENANT_ERRORS.get(request.args.get("error", "")),
+    )
+
+
+@bp.post(TENANT_SELECT_PATH)
+def tenant_select() -> BaseResponse:
+    if not auth_enabled():
+        return redirect("/")
+    if getattr(g, "auth_user", None) is None:
+        return redirect("/auth/login")
+    tenant_id = request.form.get("tenant_id", "").strip()
+    next_path = safe_next_path(request.form.get("next", "/systems"))
+    if not tenant_id:
+        return redirect(f"{TENANT_SELECT_PATH}?error=missing")
+    token = request.cookies.get(SESSION_COOKIE_NAME, "")
+    if not get_auth_store().bind_session_tenant(token, tenant_id):
+        return redirect(f"{TENANT_SELECT_PATH}?error=not_member")
+    return redirect(next_path)
 
 
 @bp.post("/auth/logout")
@@ -73,7 +177,9 @@ def setup_page() -> BaseResponse | str:
         return redirect("/")
     if store.has_any_user():
         return redirect("/auth/login")
-    return render_template("auth/setup.html", error=None, form={})
+    return render_template(
+        "auth/setup.html", error=None, form={}, mock_auth=mock_auth_enabled()
+    )
 
 
 @bp.post("/auth/setup")
@@ -86,8 +192,9 @@ def setup_submit() -> BaseResponse | tuple[str, int]:
         "name": request.form.get("name", "").strip(),
         "email": request.form.get("email", "").strip(),
     }
-    password = request.form.get("password", "")
-    confirm = request.form.get("password_confirm", "")
+    mock = mock_auth_enabled()
+    password = "" if mock else request.form.get("password", "")
+    confirm = "" if mock else request.form.get("password_confirm", "")
     try:
         if password != confirm:
             raise AuthError("確認用パスワードが一致しません。", "password_mismatch")
@@ -98,9 +205,9 @@ def setup_submit() -> BaseResponse | tuple[str, int]:
             password,
         )
     except AuthError as exc:
-        html = render_template("auth/setup.html", error=str(exc), form=form)
+        html = render_template("auth/setup.html", error=str(exc), form=form, mock_auth=mock)
         return html, 400
-    token = store.create_session(result["user"]["id"])
+    token = store.create_session(result["user"]["id"], result["tenant"]["id"])
     return set_session_cookie(redirect("/"), token)
 
 
@@ -112,13 +219,15 @@ def account_page() -> BaseResponse | str:
     if user is None:
         return redirect("/auth/login?next=/auth/account")
     store = get_auth_store()
-    is_admin = user.get("role") in ("owner", "admin")
+    is_admin = user.get("role") == ROLE_ADMIN
     tenant = getattr(g, "tenant", None) or {}
     return render_template(
         "auth/account.html",
         user=user,
         tenant=tenant,
         is_admin=is_admin,
+        memberships=store.list_memberships(user["id"]),
+        mock_auth=mock_auth_enabled(),
         users=store.list_users(tenant.get("id", "")) if is_admin else [],
         api_tokens=store.list_api_tokens(tenant.get("id", "")) if is_admin else [],
     )
@@ -134,8 +243,22 @@ def api_me() -> dict:
     return {
         "auth_enabled": auth_enabled(),
         "mode": effective_auth_mode(),
+        "mock_auth": mock_auth_enabled(),
         "user": user,
         "tenant": tenant,
+        "memberships": get_auth_store().list_memberships(user["id"]) if user else [],
+    }
+
+
+@bp.get("/api/auth/tenants")
+def api_my_tenants() -> tuple[dict, int] | dict:
+    """ログイン中ユーザーの所属テナント一覧（テナント選択のデータ源）。"""
+    user = getattr(g, "auth_user", None)
+    if user is None:
+        return {"error": "ログインが必要です。", "code": "unauthorized"}, 401
+    return {
+        "tenants": get_auth_store().list_memberships(user["id"]),
+        "current": getattr(g, "tenant", None),
     }
 
 
@@ -240,15 +363,15 @@ def api_create_user() -> BaseResponse | tuple[dict, int] | dict:
     if denied is not None:
         return denied
     payload = request.get_json(silent=True) or {}
-    role = str(payload.get("role", "member"))
-    if role == "owner" and g.auth_user.get("role") != "owner":
-        return {"error": "オーナーの追加はオーナーのみ可能です。", "code": "forbidden"}, 403
+    role = str(payload.get("role", ROLE_MEMBER))
+    # モック認証ではパスワードを持たせない（メールアドレスだけでログインする）
+    password = "" if mock_auth_enabled() else str(payload.get("password", ""))
     try:
         user = get_auth_store().create_user(
             g.tenant["id"],
             str(payload.get("email", "")),
             str(payload.get("name", "")),
-            str(payload.get("password", "")),
+            password,
             role=role,
             actor_id=g.auth_user["id"],
         )
@@ -268,8 +391,6 @@ def api_update_user(user_id: str) -> BaseResponse | tuple[dict, int] | dict:
     payload = request.get_json(silent=True) or {}
     role = payload.get("role")
     is_active = payload.get("is_active")
-    if role == "owner" and g.auth_user.get("role") != "owner":
-        return {"error": "オーナーへの昇格はオーナーのみ可能です。", "code": "forbidden"}, 403
     try:
         user = get_auth_store().update_user(
             user_id,

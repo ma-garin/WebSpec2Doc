@@ -126,9 +126,11 @@ class TestSystemSelect:
         assert sorted(cards) == ["cli", "doc", "run"]
 
     def test_links_to_each_system(self, systems: str) -> None:
-        assert 'href="/generate"' in systems
+        """各カードはそのシステムの TOP を指す。作業画面（/generate）へ直行しない。"""
+        assert 'href="/dashboard"' in systems
         assert 'href="/auto-run"' in systems
         assert 'href="/cli"' in systems
+        assert 'href="/generate"' not in systems
 
     def test_names_all_systems(self, systems: str) -> None:
         assert "ドキュメント作成" in systems

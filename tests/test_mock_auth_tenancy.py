@@ -43,8 +43,25 @@ def _setup_admin(client, email: str = "admin@example.com") -> None:
     assert response.status_code == 302
 
 
-def _login(client, email: str):
-    return client.post("/auth/login", data={"email": email, "next": "/systems"}, headers=H)
+def _login(client, email: str, password: str = ""):
+    """ログインだけ行う（テナントは未選択のまま）。"""
+    return client.post(
+        "/auth/login", data={"email": email, "password": password}, headers=H
+    )
+
+
+def _select_first_tenant(client) -> None:
+    payload = client.get("/api/auth/tenants", headers=H).get_json() or {}
+    tenants = payload.get("tenants", [])
+    if tenants:
+        client.post("/auth/tenant", data={"tenant_id": tenants[0]["tenant_id"]}, headers=H)
+
+
+def _login_and_work(client, email: str, password: str = ""):
+    """ログイン → テナント選択まで済ませ、作業できる状態にする。"""
+    response = _login(client, email, password)
+    _select_first_tenant(client)
+    return response
 
 
 def _store():
@@ -64,21 +81,64 @@ def test_setup_creates_passwordless_admin() -> None:
     assert users[0]["memberships"][0]["role"] == "admin"
 
 
-def test_login_page_lists_prepared_users() -> None:
+def test_user_select_page_lists_prepared_users() -> None:
     _setup_admin(_client())
-    html = _client().get("/auth/login", headers=H).get_data(as_text=True)
+    client = _client()
+    _login(client, "admin@example.com")
+    html = client.get("/auth/user", headers=H).get_data(as_text=True)
+    assert "どのユーザーとして使いますか" in html
     assert "admin@example.com" in html
-    assert "モック認証が有効です" in html
 
 
-def test_login_with_email_only_succeeds() -> None:
+def test_login_leads_through_user_tenant_then_systems() -> None:
+    """期待する順序: ログイン → ユーザー選択 → テナント選択 → システム選択。"""
     _setup_admin(_client())
     client = _client()
     response = _login(client, "admin@example.com")
     assert response.status_code == 302
-    # 所属が1件なので自動選択され、本来の遷移先へ進む
-    assert response.headers["Location"] == "/systems"
+    assert response.headers["Location"] == "/auth/user"
+
+    kept = client.post("/auth/user", data={"user_id": ""}, headers=H)
+    assert kept.headers["Location"] == "/auth/tenant"
+
+    tenant_id = _store().list_tenants()[0]["id"]
+    selected = client.post("/auth/tenant", data={"tenant_id": tenant_id}, headers=H)
+    assert selected.headers["Location"] == "/systems"
     assert client.get("/api/auth/me", headers=H).get_json()["tenant"]["slug"] == "tenant-a"
+
+
+def test_login_never_lands_on_document_wizard() -> None:
+    """認証ガードが付けた next（"/"）でシステム選択を飛ばさない。"""
+    _setup_admin(_client())
+    client = _client()
+    redirected = client.get("/", headers=H)
+    assert redirected.status_code == 302
+    response = client.post(
+        "/auth/login", data={"email": "admin@example.com", "next": "/"}, headers=H
+    )
+    assert response.headers["Location"] == "/auth/user"
+
+
+def test_system_select_links_to_each_system_top() -> None:
+    """システム選択の各カードは、そのシステムの TOP へ送る（作業画面へ直行しない）。"""
+    client = _client()
+    _setup_admin(client)
+    html = client.get("/systems", headers=H).get_data(as_text=True)
+    assert 'href="/dashboard"' in html  # ドキュメント作成の TOP
+    assert 'href="/auto-run"' in html  # AutoRun の TOP
+    assert 'href="/generate"' not in html  # 「サイトを追加」は入口にしない
+
+
+def test_user_switch_changes_identity() -> None:
+    _setup_admin(_client())
+    store = _store()
+    tenant_id = store.list_tenants()[0]["id"]
+    target = store.create_user(tenant_id, "member@example.com", "Member", "")
+    client = _client()
+    _login(client, "admin@example.com")
+    response = client.post("/auth/user", data={"user_id": target["id"]}, headers=H)
+    assert response.headers["Location"] == "/auth/tenant"
+    assert client.get("/api/auth/me", headers=H).get_json()["user"]["email"] == "member@example.com"
 
 
 def test_login_rejects_unknown_email() -> None:
@@ -125,10 +185,18 @@ def test_initial_admin_logs_in_with_password() -> None:
     _store().ensure_initial_admin()
     client = _client()
     response = client.post(
-        "/auth/login", data={"email": "admin", "password": "password", "next": "/systems"}, headers=H
+        "/auth/login", data={"email": "admin", "password": "password"}, headers=H
     )
     assert response.status_code == 302
-    assert response.headers["Location"] == "/systems"
+    assert response.headers["Location"] == "/auth/user"
+
+    assert client.post("/auth/user", data={"user_id": ""}, headers=H).headers[
+        "Location"
+    ] == "/auth/tenant"
+    tenant_id = _store().list_tenants()[0]["id"]
+    assert client.post("/auth/tenant", data={"tenant_id": tenant_id}, headers=H).headers[
+        "Location"
+    ] == "/systems"
     me = client.get("/api/auth/me", headers=H).get_json()
     assert me["user"]["role"] == "admin"
     assert me["tenant"]["slug"] == "default"
@@ -142,11 +210,26 @@ def test_initial_admin_cannot_log_in_without_password() -> None:
     assert "パスワードが必要" in response.get_data(as_text=True)
 
 
-def test_initial_admin_is_not_listed_on_login_page() -> None:
+def test_login_page_shows_initial_admin_credentials() -> None:
     _store().ensure_initial_admin()
     html = _client().get("/auth/login", headers=H).get_data(as_text=True)
     assert "<b>admin</b> / <b>password</b>" in html  # 資格情報の案内は出す
-    assert "userpick-item" not in html  # 一覧には並べない
+    assert "userpick-item" not in html  # 一覧はユーザー選択画面へ移した
+
+
+def test_cannot_switch_to_password_protected_user() -> None:
+    """パスワードを持つアカウントには、選ぶだけでは切り替えられない。"""
+    store = _store()
+    store.ensure_initial_admin()
+    tenant_id = store.list_tenants()[0]["id"]
+    store.create_user(tenant_id, "member@example.com", "Member", "")
+    client = _client()
+    _login(client, "member@example.com")
+    response = client.post("/auth/user", data={"user_id": _user_id("admin")}, headers=H)
+    assert response.headers["Location"] == "/auth/user?error=not_switchable"
+    assert (
+        client.get("/api/auth/me", headers=H).get_json()["user"]["email"] == "member@example.com"
+    )
 
 
 def test_login_id_accepts_non_email_identifier() -> None:
@@ -235,15 +318,14 @@ def test_multi_tenant_user_must_choose() -> None:
     _, tenant_a, _tenant_b = _two_tenant_user()
     client = _client()
     response = _login(client, "multi@example.com")
-    assert response.headers["Location"].startswith("/auth/tenant")
+    assert response.headers["Location"] == "/auth/user"
+    client.post("/auth/user", data={"user_id": ""}, headers=H)
 
     page = client.get("/auth/tenant", headers=H).get_data(as_text=True)
     assert "Tenant A" in page
     assert "Tenant B" in page
 
-    selected = client.post(
-        "/auth/tenant", data={"tenant_id": tenant_a, "next": "/systems"}, headers=H
-    )
+    selected = client.post("/auth/tenant", data={"tenant_id": tenant_a}, headers=H)
     assert selected.headers["Location"] == "/systems"
     assert client.get("/api/auth/me", headers=H).get_json()["tenant"]["slug"] == "tenant-a"
 
@@ -282,7 +364,7 @@ def test_role_follows_selected_tenant() -> None:
 def _admin_client():
     _setup_admin(_client())
     client = _client()
-    _login(client, "admin@example.com")
+    _login_and_work(client, "admin@example.com")
     return client
 
 
@@ -372,7 +454,7 @@ def test_member_cannot_reach_admin_api() -> None:
     tenant_a = store.list_tenants()[0]["id"]
     store.create_user(tenant_a, "member@example.com", "Member", "")
     client = _client()
-    _login(client, "member@example.com")
+    _login_and_work(client, "member@example.com")
     assert client.get("/api/admin/tenancy", headers=H).status_code == 403
     assert (
         client.post("/api/admin/tenancy/tenants", json={"name": "X"}, headers=H).status_code == 403

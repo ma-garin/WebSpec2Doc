@@ -15,6 +15,37 @@ from crawler.page_crawler import FieldData, FormData, PageData
 SAMPLE_SITE_DIR = Path(__file__).parent / "fixtures" / "sample_site"
 
 
+@pytest.fixture(autouse=True, scope="session")
+def isolate_auth_db_for_session(tmp_path_factory) -> Iterator[None]:
+    """セッション全体の既定として、認証DBを実環境から切り離す。
+
+    module スコープの fixture（例: test_ui_contract の spa）は function スコープの
+    fixture より先に作られるため、function スコープの隔離だけでは間に合わない。
+    """
+    key = "WEBSPEC2DOC_AUTH_DB"
+    previous = os.environ.get(key)
+    os.environ[key] = str(tmp_path_factory.mktemp("auth-session") / "auth.db")
+    try:
+        yield
+    finally:
+        if previous is None:
+            os.environ.pop(key, None)
+        else:
+            os.environ[key] = previous
+
+
+@pytest.fixture(autouse=True)
+def isolate_auth_db(tmp_path, monkeypatch) -> None:
+    """認証DBを実環境（instance/auth.db）から切り離す。
+
+    開発サーバーを一度起動すると instance/auth.db に初期管理者ができる。
+    認証は「ユーザー0人なら無効」なので、切り離さないと全ページが認証必須になり、
+    それを前提にしていないテストが一斉にログイン壁へ落ちる（実測 341 failed）。
+    テスト側で独自に WEBSPEC2DOC_AUTH_DB を設定するモジュールは、そちらが勝つ。
+    """
+    monkeypatch.setenv("WEBSPEC2DOC_AUTH_DB", str(tmp_path / "auth-isolated.db"))
+
+
 @pytest.fixture(autouse=True)
 def isolate_allow_local_environment() -> Iterator[None]:
     """ローカルクロール許可が別テストへ漏れてSSRF前提を変えないよう隔離する。"""

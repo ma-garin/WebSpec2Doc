@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <title>ユーザー選択 - WebSpec2Doc</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tenant-auth.css') }}?v={{ _ver }}">
+</head>
+<body class="tsel-body">
+
+<div class="tsel-topbar">
+  <div class="tsel-brand"><span class="tsel-brand-mark">W</span><span>WebSpec2Doc</span></div>
+  <div class="tsel-who">
+    <span>{{ user.name }} でログイン中</span>
+    <form method="post" action="/auth/logout">
+      <button class="tsel-text-btn" type="submit">ログアウト</button>
+    </form>
+  </div>
+</div>
+
+<div class="tsel-stage tsel-stage-narrow">
+  <p class="tsel-kicker">STEP 1 / 3</p>
+  <h1>どのユーザーとして使いますか？</h1>
+  <p class="tsel-lead">社内モックのため、用意されたユーザーに切り替えて動作を確認できます。</p>
+
+  {% if error %}
+  <div class="auth-error" role="alert">
+    <b>ユーザーを切り替えられませんでした</b>
+    <span>{{ error }}</span>
+  </div>
+  {% endif %}
+
+  <form method="post" action="/auth/user">
+    <input type="hidden" name="user_id" value="">
+    <button type="submit" class="userpick-item userpick-self">
+      <span class="userpick-avatar is-admin">{{ user.name[:1] }}</span>
+      <span class="userpick-main">
+        <span class="userpick-name">{{ user.name }} <span class="badge-role is-admin">ログイン中のアカウント</span></span>
+        <span class="userpick-mail">{{ user.email }}</span>
+      </span>
+      <span class="userpick-arrow" aria-hidden="true">→</span>
+    </button>
+  </form>
+
+  {% if candidates %}
+  <div class="auth-sep">切り替えて使う</div>
+
+  <div class="userpick">
+    {% for candidate in candidates %}
+    {% if candidate.id != user.id %}
+    <form method="post" action="/auth/user">
+      <input type="hidden" name="user_id" value="{{ candidate.id }}">
+      <button type="submit" class="userpick-item">
+        <span class="userpick-avatar {% if candidate.admin_count %}is-admin{% endif %}">{{ candidate.name[:1] }}</span>
+        <span class="userpick-main">
+          <span class="userpick-name">
+            {{ candidate.name }}
+            {% if candidate.admin_count %}<span class="badge-role is-admin">管理者</span>
+            {% else %}<span class="badge-role">一般</span>{% endif %}
+            {% if candidate.tenant_count > 1 %}<span class="badge-tcount">{{ candidate.tenant_count }} テナント</span>
+            {% elif candidate.tenant_count == 0 %}<span class="badge-tcount">所属なし</span>{% endif %}
+          </span>
+          <span class="userpick-mail">{{ candidate.email }}</span>
+        </span>
+        <span class="userpick-arrow" aria-hidden="true">→</span>
+      </button>
+    </form>
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="tsel-note">
+    パスワードを設定したアカウントには切り替えられません。そのアカウントを使うにはログインし直してください。
+  </div>
+</div>
+
+</body>
+</html>

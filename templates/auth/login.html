@@ -34,9 +34,7 @@
   <main class="auth-form-pane">
     <div class="auth-form-box">
       <h1>おかえりなさい</h1>
-      <p class="auth-form-lead">
-        {% if mock_auth %}利用するアカウントを選んでください。{% else %}アカウントにログインして続けます。{% endif %}
-      </p>
+      <p class="auth-form-lead">アカウントにログインして続けます。</p>
 
       {% if error %}
       <div class="auth-error" role="alert">
@@ -47,47 +45,19 @@
 
       {% if mock_auth %}
       <div class="auth-mock-note" role="note">
-        モック認証が有効です（社内利用向け）。一般ユーザーはパスワードなしでログインします。<br>
-        初期管理者は <b>admin</b> / <b>password</b> です。
+        モック認証が有効です（社内利用向け）。<br>
+        初期管理者は <b>admin</b> / <b>password</b> です。ログイン後に利用するユーザーを選びます。
       </div>
-
-      {% if candidates %}
-      <div class="userpick">
-        {% for candidate in candidates %}
-        <form method="post" action="/auth/login">
-          <input type="hidden" name="next" value="{{ next_path }}">
-          <input type="hidden" name="email" value="{{ candidate.email }}">
-          <button type="submit" class="userpick-item">
-            <span class="userpick-avatar {% if candidate.admin_count %}is-admin{% endif %}">{{ candidate.name[:1] }}</span>
-            <span class="userpick-main">
-              <span class="userpick-name">
-                {{ candidate.name }}
-                {% if candidate.admin_count %}<span class="badge-role is-admin">管理者</span>
-                {% else %}<span class="badge-role">一般</span>{% endif %}
-                {% if candidate.tenant_count > 1 %}<span class="badge-tcount">{{ candidate.tenant_count }} テナント</span>
-                {% elif candidate.tenant_count == 0 %}<span class="badge-tcount">所属なし</span>{% endif %}
-              </span>
-              <span class="userpick-mail">{{ candidate.email }}</span>
-            </span>
-            <span class="userpick-arrow" aria-hidden="true">→</span>
-          </button>
-        </form>
-        {% endfor %}
-      </div>
-
-      <div class="auth-sep">または</div>
-      {% endif %}
       {% endif %}
 
       <form method="post" action="/auth/login" novalidate>
-        <input type="hidden" name="next" value="{{ next_path }}">
         <div class="auth-field">
           <label for="email">{% if mock_auth %}メールアドレス / ログインID{% else %}メールアドレス{% endif %}</label>
           <input type="text" id="email" name="email" value="{{ email }}"
-                 autocomplete="username" required {% if not candidates %}autofocus{% endif %}>
+                 autocomplete="username" required autofocus>
         </div>
         <div class="auth-field">
-          <label for="password">パスワード{% if mock_auth %}<span class="auth-optional">管理者のみ</span>{% endif %}</label>
+          <label for="password">パスワード{% if mock_auth %}<span class="auth-optional">パスワードなしのユーザーは空のまま</span>{% endif %}</label>
           <input type="password" id="password" name="password"
                  autocomplete="current-password" {% if not mock_auth %}required{% endif %}>
         </div>

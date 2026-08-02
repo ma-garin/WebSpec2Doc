@@ -26,6 +26,7 @@ SECRET_KEY_ENV = "WEBSPEC2DOC_SECRET_KEY"
 SECURE_COOKIES_ENV = "WEBSPEC2DOC_SECURE_COOKIES"
 SESSION_COOKIE_NAME = "ws2d_session"
 
+USER_SELECT_PATH = "/auth/user"
 TENANT_SELECT_PATH = "/auth/tenant"
 
 # 認証が有効でも到達できるパス（ログイン画面・静的ファイル・死活監視）
@@ -45,6 +46,7 @@ _EXEMPT_PATHS = frozenset(
 # ここを通さないと、テナントを選ぶ画面自体がテナント未選択で弾かれて詰む。
 _TENANT_EXEMPT_PATHS = frozenset(
     {
+        USER_SELECT_PATH,
         TENANT_SELECT_PATH,
         "/api/auth/me",
         "/api/auth/tenants",

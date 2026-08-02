@@ -24,7 +24,6 @@ from web.services.qa.helpers import (
 )
 from web.services.qa.markdown_lite import render_markdown_lite
 
-
 # 文書の表に載せる観点の上限。全件を1つの表に流すと読めなくなるが、
 # 黙って切ると「これで全部」と読まれる。切った件数を必ず書き添える。
 VIEWPOINT_TABLE_LIMIT = 12
@@ -49,7 +48,7 @@ def _first_line(text: Any, *, prefix: str) -> str:
     """複数行テキストから、指定の見出しで始まる行の中身を取り出す。"""
     for line in str(text or "").splitlines():
         if line.startswith(prefix):
-            return line[len(prefix):].strip()
+            return line[len(prefix) :].strip()
     return ""
 
 
@@ -311,7 +310,9 @@ def _test_design(domain: str, report: dict[str, Any]) -> str:
             str(viewpoint.get("expected_result") or "").strip()
             or "観点を対象仕様へ適用し、該当有無・期待結果・不足仕様を確認"
         )
-        lines.append(f"| TD-VP-{idx:02d} | {_md(viewpoint['name'])} | {_md(design)} | QA-VP-{idx:02d} |")
+        lines.append(
+            f"| TD-VP-{idx:02d} | {_md(viewpoint['name'])} | {_md(design)} | QA-VP-{idx:02d} |"
+        )
     lines.append(_truncation_note(len(viewpoints), VIEWPOINT_TABLE_LIMIT))
     lines += [
         "",

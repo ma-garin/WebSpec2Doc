@@ -202,10 +202,15 @@ def api_history_runs() -> dict:
 
 
 def _attach_stage_approval(runs: list[dict]) -> None:
-    """各実行に段階承認の状況を添える（過去履歴画面で表示するため）。
+    """AutoRun の実行に段階承認の状況を添える（実行履歴で表示するため）。
 
-    承認状態はドメイン単位で保存しているので、同一ドメインの実行には
-    同じ状態が付く。「未承認のまま実行された」ことを隠さないのが目的。
+    承認状態はドメイン単位でしか保存されていないため、同一ドメインの実行には
+    同じ値が付く。実際の承認時点とは一致しないので、その旨を ``scope`` で明示する
+    （「この実行時点の承認状態」だと誤読させない）。
+
+    段階承認は AutoRun にしか無い概念なので、crawl / 現新比較 / UX レビュー /
+    スケジュールの行には付けない。以前は種別を見ずに全行へ付けており、
+    ドキュメント作成の 24 行中 22 行が AutoRun のレポートへ飛んでいた。
     """
     from autorun.stages import Pipeline
 
@@ -213,6 +218,8 @@ def _attach_stage_approval(runs: list[dict]) -> None:
     out_root = _out()
 
     for run in runs:
+        if str(run.get("type") or "") != "autorun":
+            continue
         domain = str(run.get("domain") or "")
         if not domain:
             continue
@@ -229,6 +236,9 @@ def _attach_stage_approval(runs: list[dict]) -> None:
                         "all_approved": pipeline.all_approved,
                         "skipped": skipped,
                         "audit_count": len(pipeline.audit),
+                        # 実行ごとではなくドメイン単位の値であることを画面へ伝える。
+                        # 黙って出すと、過去の実行に現在の承認状態が付いて見える。
+                        "scope": "domain",
                     }
                 except (OSError, json.JSONDecodeError, ValueError) as exc:
                     logger.warning("段階承認の状況を読めません（%s）: %s", domain, exc)
@@ -1663,19 +1673,37 @@ def _mark_job_failed(job: AutoRunJob, error: str) -> None:
 
 
 def _record_autorun_usage_safely(job: AutoRunJob) -> None:
-    """実行履歴（usage_log.jsonl）へのAutoRun実績記録。記録失敗は応答を妨げない。"""
+    """成果物を実行回ごとに退避し、実行履歴へAutoRun実績を記録する。
+
+    記録・退避の失敗は応答を妨げない（成果物は従来どおり output/<domain>/ に残る）。
+    """
     try:
+        from web.services.run_store import snapshot_run
         from web.services.usage_tracker import record_autorun
 
         test_results = job.test_results or {}
+        out_root = _job_out(job)
+        run_id = snapshot_run(
+            out_root,
+            job.domain,
+            event="autorun",
+            status=job.status,
+            summary={
+                "passed": int(test_results.get("passed", 0)),
+                "failed": int(test_results.get("failed", 0)),
+                "total": int(test_results.get("total", 0)),
+                "duration_sec": job.elapsed_sec(),
+            },
+        )
         record_autorun(
-            _job_out(job),
+            out_root,
             job.domain,
             status=job.status,
             passed=int(test_results.get("passed", 0)),
             failed=int(test_results.get("failed", 0)),
             total=int(test_results.get("total", 0)),
             duration_sec=job.elapsed_sec(),
+            run_id=run_id or "",
         )
     except Exception:  # noqa: BLE001
         logger.warning("AutoRun実績の記録に失敗しました（応答は継続）", exc_info=True)

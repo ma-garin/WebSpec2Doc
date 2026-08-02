@@ -16,6 +16,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
+from web.services.run_store import run_exists
+
 logger = logging.getLogger(__name__)
 
 USAGE_LOG_FILE_NAME = "usage_log.jsonl"
@@ -93,6 +95,7 @@ def record_usage(
     diff_run: bool = False,
     compare_screen_count: int = 0,
     finding_count: int = 0,
+    run_id: str = "",
 ) -> Path | None:
     """利用実績を output_root/usage_log.jsonl に 1 行追記する。
 
@@ -117,6 +120,10 @@ def record_usage(
     if event in _EVENTS_WITH_EXTRA_KEYS:
         entry["compare_screen_count"] = int(compare_screen_count)
         entry["finding_count"] = int(finding_count)
+    # 実行回を一意に指す識別子。成果物を runs/<run_id>/ に退避できた実行だけが持つ。
+    # 既存行は持たないため、読み手は空文字を「その実行回の成果物は無い」と扱う。
+    if run_id:
+        entry["run_id"] = run_id
     log_path = output_root / USAGE_LOG_FILE_NAME
     try:
         output_root.mkdir(parents=True, exist_ok=True)
@@ -133,6 +140,7 @@ def record_crawl_from_report(
     domain: str,
     *,
     diff_run: bool = False,
+    run_id: str = "",
 ) -> Path | None:
     """クロール完了後、生成された report.json から実績を集計して記録する。
 
@@ -170,6 +178,7 @@ def record_crawl_from_report(
         test_condition_count=condition_count,
         document_count=document_count,
         diff_run=diff_run,
+        run_id=run_id,
     )
 
 
@@ -259,6 +268,7 @@ def record_autorun(
     failed: int = 0,
     total: int = 0,
     duration_sec: int = 0,
+    run_id: str = "",
 ) -> Path | None:
     """AutoRunの終端状態（complete/failed/cancelled）で実行結果を1行追記する。
 
@@ -276,6 +286,8 @@ def record_autorun(
         "total": int(total),
         "duration_sec": int(duration_sec),
     }
+    if run_id:
+        entry["run_id"] = run_id
     log_path = output_root / USAGE_LOG_FILE_NAME
     try:
         output_root.mkdir(parents=True, exist_ok=True)
@@ -288,7 +300,11 @@ def record_autorun(
 
 
 _RUN_TYPE_LABELS = {
-    "crawl": "解析",
+    # タブ側の表記（templates/partials/view-run-history.html）と揃える。
+    # 以前はタブが「ドキュメント作成」、行のバッジが「解析」で、同じものを 2 語で
+    # 呼んでいた（統一の修正がタブ側だけで止まっていた）。
+    "crawl": "ドキュメント作成",
+    "testcase_run": "テスト実行",
     "comparison": "現新比較",
     "ux_review": "UXレビュー",
     "autorun": "AutoRun",
@@ -305,6 +321,10 @@ def _run_from_record(output_root: Path, record: dict) -> dict:
     event = str(record.get("event", "crawl"))
     domain = str(record.get("domain", ""))
     domain_dir = output_root / domain
+    # 分岐の前に必ず初期化する。以前は comparison / ux_review の枝だけ代入が無く、
+    # 現新比較や UX レビューを 1 度でも実行すると末尾の `if report_url:` で
+    # UnboundLocalError になり、実行履歴の API 全体が 500 で落ちていた。
+    report_url = ""
     if event == "autorun":
         status = str(record.get("status") or "complete")
         summary = {
@@ -337,7 +357,6 @@ def _run_from_record(output_root: Path, record: dict) -> dict:
             "document_count": int(record.get("document_count", 0)),
         }
         link = _existing_path(domain_dir / "report.html")
-        report_url = ""
     entry = {
         "type": event,
         "type_label": _RUN_TYPE_LABELS.get(event, event),
@@ -348,6 +367,12 @@ def _run_from_record(output_root: Path, record: dict) -> dict:
         "link": link,
         "source": "log",
     }
+    # 実行回ごとの成果物が残っている実行だけが run_id を持つ。持っていれば
+    # その回の実行結果ページへ飛ばせる（最新の成果物ではなく、その回のもの）。
+    run_id = str(record.get("run_id", ""))
+    if run_id and run_exists(output_root, domain, run_id):
+        entry["run_id"] = run_id
+        entry["result_url"] = f"/runs/{domain}/{run_id}"
     if report_url:
         entry["report_url"] = report_url
     return entry

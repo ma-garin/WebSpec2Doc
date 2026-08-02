@@ -252,9 +252,7 @@ def _render_screenshot_diffs(result: ComparisonResult, base: Path | None = None)
             "</div></div>"
         )
     folded = len(diffs) - len(significant)
-    tail = (
-        f'<p class="empty">有意差なしとして {folded} 組を省きました。</p>' if folded else ""
-    )
+    tail = f'<p class="empty">有意差なしとして {folded} 組を省きました。</p>' if folded else ""
     return f"<h2>見た目の変化（{len(significant)} 組）</h2>{''.join(cards)}{tail}"
 
 

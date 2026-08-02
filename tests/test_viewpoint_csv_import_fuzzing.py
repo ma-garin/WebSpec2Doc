@@ -14,10 +14,8 @@ CSVは利用者が外部で編集して持ち込む。表計算ソフトの出�
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 import pytest
-
 from web.services.viewpoint_store import ViewpointStore, ViewpointStoreError
 
 HEADER = "persistent_key,name,category,purpose,recommended_checks,risk_weight,automation,standards,tags,enabled"
@@ -70,9 +68,7 @@ class TestPartialImportIsRejected:
     def test_invalid_row_blocks_the_whole_import(
         self, store: ViewpointStore, target: str, bad_row: str, reason: str
     ) -> None:
-        csv_text = "\n".join(
-            [HEADER, "ok1,正しい観点,カテゴリ,,,3,manual,,,1", bad_row]
-        )
+        csv_text = "\n".join([HEADER, "ok1,正しい観点,カテゴリ,,,3,manual,,,1", bad_row])
         with pytest.raises(ViewpointStoreError) as exc:
             store.import_csv(target, csv_text)
         assert _count(store, target) == 0, f"{reason}: 一部だけ取り込まれた"
@@ -95,9 +91,7 @@ class TestHostileValuesDoNotCorruptTheStore:
         """タブ・改行・ヌル文字混じりの値を、壊さず往復できること。"""
         name = "制御文字\tを含む観点"
         checks = '操作: 手順1\n判定点: "引用" と \\ バックスラッシュ'
-        csv_text = "\n".join(
-            [HEADER, f'k1,{name},カテゴリ,,"{checks}",3,manual,,,1']
-        )
+        csv_text = "\n".join([HEADER, f'k1,{name},カテゴリ,,"{checks}",3,manual,,,1'])
         store.import_csv(target, csv_text)
         items = [
             item
@@ -129,9 +123,7 @@ class TestHostileValuesDoNotCorruptTheStore:
         ][0]
         assert len(stored["recommended_checks"]) == len(long_text), "黙って切り詰めている"
 
-    def test_sql_like_value_is_treated_as_data(
-        self, store: ViewpointStore, target: str
-    ) -> None:
+    def test_sql_like_value_is_treated_as_data(self, store: ViewpointStore, target: str) -> None:
         """SQLに見える文字列を、値として扱うこと。"""
         injection = "'); DROP TABLE viewpoint_items; --"
         csv_text = "\n".join([HEADER, f'k1,"{injection}",カテゴリ,,,3,manual,,,1'])
@@ -173,9 +165,7 @@ class TestMalformedCsvIsReported:
         self, store: ViewpointStore, target: str
     ) -> None:
         """列が多い行で、値がずれて別の項目に入らないこと。"""
-        csv_text = "\n".join(
-            [HEADER, "k1,観点,カテゴリ,,,3,manual,,,1,余分,さらに余分"]
-        )
+        csv_text = "\n".join([HEADER, "k1,観点,カテゴリ,,,3,manual,,,1,余分,さらに余分"])
         try:
             store.import_csv(target, csv_text)
         except ViewpointStoreError:
@@ -189,9 +179,7 @@ class TestMalformedCsvIsReported:
         assert stored["category"] == "カテゴリ"
         assert stored["risk_weight"] == 3
 
-    def test_row_with_missing_columns_is_reported(
-        self, store: ViewpointStore, target: str
-    ) -> None:
+    def test_row_with_missing_columns_is_reported(self, store: ViewpointStore, target: str) -> None:
         """列が足りない行を、既定値で埋めて黙って通さないこと。"""
         csv_text = "\n".join([HEADER, "k1,観点"])
         try:

@@ -92,7 +92,7 @@ async function loadRunHistory() {
   const empty = document.getElementById('rh-empty');
   if (!tbody) return;
   _rhSyncTypeTabsUI(_rhCurrentType());
-  tbody.innerHTML = '<tr><td colspan="6">読み込んでいます…</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="7">読み込んでいます…</td></tr>';
   try {
     const res = await fetch('/api/history/runs');
     const data = await res.json();
@@ -139,11 +139,19 @@ function _rhRenderTable() {
   if (pager) pager.innerHTML = TableUtils.pagerHtml(info);
   tbody.innerHTML = info.items.map(run => {
     const typeLabel = run.type_label || RH_TYPE_LABELS[run.type] || run.type;
-    const linkCell = run.report_url
-      ? `<a class="qa-output-btn" href="${escHtml(run.report_url)}">結果を見る →</a>`
-      : (run.link
-        ? `<button class="qa-output-btn qa-preview-btn" data-path="${escHtml(run.link)}" data-label="${escHtml(typeLabel)} - ${escHtml(run.domain)}">開く</button>`
-        : '<span class="muted-copy">—</span>');
+    // 遷移先の優先順:
+    //   1) result_url … その実行回の成果物（run_id を持つ実行だけ）
+    //   2) report_url … AutoRun のレポート（サイト単位・最新のみ）
+    //   3) link      … 単一ファイルのプレビュー
+    // 1 があるならそれを使う。2/3 はサイト単位で最新を指すため、
+    // 「その行の実行結果」ではないことが分かるラベルにする。
+    const linkCell = run.result_url
+      ? `<button class="qa-output-btn rh-open-run" data-domain="${escHtml(run.domain)}" data-run="${escHtml(run.run_id)}">この実行を見る →</button>`
+      : (run.report_url
+        ? `<a class="qa-output-btn" href="${escHtml(run.report_url)}" title="サイト単位の最新のレポートです（この実行時点のものではありません）">最新のレポート →</a>`
+        : (run.link
+          ? `<button class="qa-output-btn qa-preview-btn" data-path="${escHtml(run.link)}" data-label="${escHtml(typeLabel)} - ${escHtml(run.domain)}">最新を開く</button>`
+          : '<span class="muted-copy">—</span>'));
     return `<tr>
       <td><span class="rh-type-badge rh-type-${escHtml(run.type)}">${escHtml(typeLabel)}</span></td>
       <td>${escHtml(run.domain)}</td>
@@ -160,6 +168,12 @@ document.querySelectorAll('.rh-type-tab').forEach(btn => {
   btn.addEventListener('click', () => _rhSetType(btn.dataset.type));
 });
 document.getElementById('rh-reload-btn')?.addEventListener('click', loadRunHistory);
+// 行から「この実行を見る」: その実行回の実行結果ページへ（最新ではなくその回）
+document.getElementById('rh-tbody')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.rh-open-run');
+  if (!btn || typeof openRunResult !== 'function') return;
+  openRunResult(btn.dataset.domain, btn.dataset.run);
+});
 // ページャ（イベント委譲）: クリックされたページへ移動して再描画する
 document.getElementById('rh-pager')?.addEventListener('click', (e) => {
   const page = TableUtils.pageFromClick(e);

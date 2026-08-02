@@ -144,7 +144,9 @@ def _bundled_templates() -> list[tuple[str, dict]]:
     import json
 
     root = Path(__file__).resolve().parent.parent / "data" / "viewpoint_templates"
-    return [(p.stem, json.loads(p.read_text(encoding="utf-8"))) for p in sorted(root.glob("*.json"))]
+    return [
+        (p.stem, json.loads(p.read_text(encoding="utf-8"))) for p in sorted(root.glob("*.json"))
+    ]
 
 
 class TestBundledTemplates:
@@ -171,7 +173,9 @@ class TestBundledTemplates:
             for folder in data.get("folders", []):
                 for item in folder.get("items", []):
                     value = item.get("automation", "manual")
-                    assert value in AUTOMATION_VALUES, f"{key}: {item['name']} の automation={value}"
+                    assert (
+                        value in AUTOMATION_VALUES
+                    ), f"{key}: {item['name']} の automation={value}"
 
     def test_no_duplicate_names_within_template(self) -> None:
         """同一テンプレート内で観点名が重複しないこと。
@@ -218,7 +222,9 @@ class TestCreateSetFromTemplate:
         assert result["set"]["name"]
         assert result["created_items"] >= 1
 
-    def test_uses_template_name_by_default(self, store: ViewpointStore, templates_dir: Path) -> None:
+    def test_uses_template_name_by_default(
+        self, store: ViewpointStore, templates_dir: Path
+    ) -> None:
         from web.services.viewpoint_templates import _load_template_file, create_set_from_template
 
         expected = _load_template_file("sample")["name"]

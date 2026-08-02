@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 import pytest
-
 from web.services.viewpoint_blueprints import (
     ViewpointGeneratorError,
     _blueprints,
@@ -85,7 +84,13 @@ class TestGeneratedViewpoints:
         """
         for meta in list_domains():
             for item in generate(meta["key"])["items"]:
-                for field in ("name", "purpose", "recommended_checks", "expected_result", "evidence"):
+                for field in (
+                    "name",
+                    "purpose",
+                    "recommended_checks",
+                    "expected_result",
+                    "evidence",
+                ):
                     assert "{" not in item[field], f"{meta['name']} / {item['name']} / {field}"
 
     def test_each_item_carries_expected_result_and_evidence(self) -> None:
@@ -180,8 +185,15 @@ class TestStandardCoverage:
     @pytest.mark.parametrize(
         "characteristic",
         [
-            "機能適合性", "性能効率性", "互換性", "相互作用性", "信頼性",
-            "セキュリティ", "保守性", "柔軟性", "安全性",
+            "機能適合性",
+            "性能効率性",
+            "互換性",
+            "相互作用性",
+            "信頼性",
+            "セキュリティ",
+            "保守性",
+            "柔軟性",
+            "安全性",
         ],
     )
     def test_iso25010_characteristics_are_covered(self, characteristic: str) -> None:
@@ -194,8 +206,15 @@ class TestStandardCoverage:
     @pytest.mark.parametrize(
         "category",
         [
-            "アクセス制御", "インジェクション", "安全でない設計", "設定不備",
-            "脆弱なコンポーネント", "認証の失敗", "完全性の失敗", "ログと監視", "SSRF",
+            "アクセス制御",
+            "インジェクション",
+            "安全でない設計",
+            "設定不備",
+            "脆弱なコンポーネント",
+            "認証の失敗",
+            "完全性の失敗",
+            "ログと監視",
+            "SSRF",
         ],
     )
     def test_owasp_categories_are_covered(self, category: str) -> None:
@@ -204,8 +223,13 @@ class TestStandardCoverage:
     @pytest.mark.parametrize(
         "technique",
         [
-            "同値分割", "境界値分析", "デシジョンテーブル", "状態遷移テスト",
-            "ユースケーステスト", "ペアワイズ", "エラー推測",
+            "同値分割",
+            "境界値分析",
+            "デシジョンテーブル",
+            "状態遷移テスト",
+            "ユースケーステスト",
+            "ペアワイズ",
+            "エラー推測",
         ],
     )
     def test_istqb_techniques_are_covered(self, technique: str) -> None:
@@ -254,8 +278,18 @@ class TestQualityManagementCoverage:
     @pytest.mark.parametrize(
         "standard",
         [
-            "ISO 9000", "ISO 9001", "90003", "19011", "12207",
-            "29148", "1012", "1028", "33002", "31000", "25019", "20000",
+            "ISO 9000",
+            "ISO 9001",
+            "90003",
+            "19011",
+            "12207",
+            "29148",
+            "1012",
+            "1028",
+            "33002",
+            "31000",
+            "25019",
+            "20000",
         ],
     )
     def test_quality_management_standard_is_referenced(self, standard: str) -> None:
@@ -264,9 +298,18 @@ class TestQualityManagementCoverage:
     @pytest.mark.parametrize(
         "theme",
         [
-            "妥当性確認", "要求の検証可能性", "要求集合の健全性", "レビュー",
-            "不適合の処理", "リスク対応", "変更とリリース", "利用時品質",
-            "客観的証拠", "検証と妥当性確認の分離", "構成管理", "ソフトウェア品質保証",
+            "妥当性確認",
+            "要求の検証可能性",
+            "要求集合の健全性",
+            "レビュー",
+            "不適合の処理",
+            "リスク対応",
+            "変更とリリース",
+            "利用時品質",
+            "客観的証拠",
+            "検証と妥当性確認の分離",
+            "構成管理",
+            "ソフトウェア品質保証",
         ],
     )
     def test_quality_management_theme_exists(self, theme: str) -> None:
@@ -312,9 +355,7 @@ class TestQualityModelCoverage:
     def test_kano_classifications_are_present(self, classification: str) -> None:
         assert classification in self._strict()
 
-    @pytest.mark.parametrize(
-        "sub", ["モジュール性", "再利用性", "解析性", "修正性", "試験性"]
-    )
+    @pytest.mark.parametrize("sub", ["モジュール性", "再利用性", "解析性", "修正性", "試験性"])
     def test_maintainability_subcharacteristics_are_present(self, sub: str) -> None:
         assert sub in self._strict()
 
@@ -327,7 +368,9 @@ class TestQualityModelCoverage:
         """
         by_theme = {b["theme"]: b for b in _blueprints()["blueprints"]}
         order = {"P0": 0, "P1": 1, "P2": 2, "P3": 3}
-        assert order[by_theme["当たり前品質"]["priority"]] < order[by_theme["魅力的品質"]["priority"]]
+        assert (
+            order[by_theme["当たり前品質"]["priority"]] < order[by_theme["魅力的品質"]["priority"]]
+        )
 
 
 class TestAutomationReflectsDefinition:

@@ -28,6 +28,7 @@ PAIR_STATE_MATCHED = "matched"
 PAIR_STATE_ADDED = "added"
 PAIR_STATE_REMOVED = "removed"
 
+
 def _severity_order() -> tuple[str, ...]:
     """重大度の並び（重い順）。値の出所は src/diff/differ.py の 1 箇所だけにする。
 
@@ -153,7 +154,9 @@ def build_workspace(
     # 追加・削除は比較そのものができない。指摘 0 件と同じ見た目にしない。
     for page_id in comparison.get("added_page_ids") or []:
         pairs.append(
-            _unmatched(PAIR_STATE_ADDED, str(page_id), "新側にのみ存在し、比較対象がありません", info)
+            _unmatched(
+                PAIR_STATE_ADDED, str(page_id), "新側にのみ存在し、比較対象がありません", info
+            )
         )
     for page_id in comparison.get("removed_page_ids") or []:
         pairs.append(

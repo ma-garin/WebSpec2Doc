@@ -15,7 +15,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
 from web.services.viewpoint_store import ViewpointStore
 from web.services.viewpoint_templates import create_set_from_template
 
@@ -26,9 +25,7 @@ def store(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> ViewpointStore:
     seed.write_text("summary_type,name,count\ncategory_l2,既定観点,1\n", encoding="utf-8")
     result = ViewpointStore(tmp_path / "viewpoints.db", seed)
     result.initialize()
-    monkeypatch.setattr(
-        "web.services.viewpoint_templates.get_viewpoint_store", lambda: result
-    )
+    monkeypatch.setattr("web.services.viewpoint_templates.get_viewpoint_store", lambda: result)
     return result
 
 

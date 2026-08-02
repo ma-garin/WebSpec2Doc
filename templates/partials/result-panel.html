@@ -1,0 +1,122 @@
+        <!-- ===== レポートパネル（ビュー横断） =====
+             「サイトを追加(generate)」と「実行結果(run-result)」の両方で使う。
+             どちらか一方のビューの中に置くと、もう一方から使うときに DOM を
+             借りて返す必要が出る（返し忘れると相手のビューから消える）。
+             どのビューに属するかは data-views で宣言し、switchView が
+             所属しないビューへ移ったときに畳む。 -->
+          <div id="result-panel" class="result-panel hidden" data-views="generate run-result">
+            <!-- 同梱サンプル（P3-1）を開いているときだけ出す帯。自分の解析結果と取り違えると
+                 「登録した覚えのないサイトが出ている」という誤解になるため、必ず明示する。 -->
+            <div id="r-sample-banner" class="result-sample-banner" hidden>
+              <span class="result-sample-mark">サンプル</span>
+              <span class="result-sample-text">これは同梱デモサイトを解析した<strong>サンプルレポート</strong>です。あなたが解析したサイトではありません。</span>
+              <button type="button" id="r-sample-exit-btn" class="btn-primary btn-sm">自分のサイトを解析する</button>
+            </div>
+            <div class="result-bar">
+              <strong id="r-domain" hidden>-</strong>
+              <div class="result-bar-actions">
+                <span id="r-diff-badge" style="display:none"></span>
+                <span id="r-crawled" class="result-crawled"></span>
+                <div class="export-dropdown" id="export-dropdown">
+                  <button type="button" class="btn-outline-sm" id="export-dropdown-btn" aria-haspopup="menu" aria-expanded="false" aria-controls="export-dropdown-menu">↓ エクスポート</button>
+                  <div class="export-dropdown-menu" id="export-dropdown-menu"></div>
+                </div>
+                <button type="button" id="r-recrawl-btn" class="btn-outline-sm">再解析</button>
+                <button type="button" id="r-density-btn" class="btn-outline-sm btn-icon-only" title="表の行間を切り替え" aria-label="表の行間を切り替え">☰</button>
+                <button type="button" id="r-maximize-btn" class="btn-outline-sm btn-icon-only" title="最大化 (Esc で解除)" aria-label="最大化">⛶</button>
+              </div>
+            </div>
+            <div class="result-body">
+              <!-- 結果ビューのナビ。横一列のタブは 8 個が同格に並んで「今どこを見ているか」が
+                   読み取れなかったため、章（読む／設計する／実行する／記録）で束ねた縦ナビにする。
+                   クラス名（.result-tabs / .result-tab[data-tab]）は既存 JS と E2E が参照しているので変えない。 -->
+              <nav class="result-tabs" role="tablist" aria-orientation="vertical" aria-label="結果ビュー">
+                <div class="result-nav-chap">読む</div>
+                <button type="button" role="tab" aria-selected="true" class="result-tab is-active" data-tab="overview" aria-controls="rp-overview">概要</button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="screens" aria-controls="rp-screens">画面と仕様<span class="tab-count" id="tab-count-screens"></span></button>
+                <div class="result-nav-chap">設計する</div>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="test-design" aria-controls="rp-test-design">テスト設計<span class="tab-count" id="tab-count-test-design"></span></button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="testcases" aria-controls="rp-testcases">テストケース<span class="tab-count" id="tab-count-testcases"></span></button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="flow" aria-controls="rp-flow">画面遷移</button>
+                <div class="result-nav-chap">実行する</div>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="runs" aria-controls="rp-runs">テスト実行</button>
+                <div class="result-nav-chap">記録</div>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="doc-fusion" aria-controls="rp-doc-fusion" id="tab-doc-fusion" hidden>文書突合<span class="tab-count" id="tab-count-doc-fusion"></span></button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="history" aria-controls="rp-history">履歴・差分<span class="tab-count" id="tab-count-history"></span></button>
+                <button type="button" role="tab" aria-selected="false" class="result-tab" data-tab="compare" aria-controls="rp-compare">現新比較<span class="tab-count" id="tab-count-compare"></span></button>
+              </nav>
+              <div class="result-main">
+            <!-- KPI は概要タブの内容。他タブでは隠して表示領域を広く使う -->
+            <div id="kpi-hero-wrap">
+              <div class="kpi-hero">
+                <div class="kpi-tile">
+                  <span class="kpi-num" id="k-screens">0</span>
+                  <span class="kpi-label">画面</span>
+                  <span class="kpi-sub" id="k-forms-sub"></span>
+                </div>
+                <div class="kpi-tile">
+                  <span class="kpi-num" id="k-fields">0</span>
+                  <span class="kpi-label">入力項目</span>
+                  <div class="kpi-bar" aria-hidden="true"><div class="kpi-bar-fill" id="k-required-bar"></div></div>
+                  <span class="kpi-sub" id="k-required-sub"></span>
+                </div>
+                <div class="kpi-tile">
+                  <span class="kpi-num" id="k-conds">0</span>
+                  <span class="kpi-label">テスト条件</span>
+                  <span class="kpi-sub">機械導出</span>
+                </div>
+                <div class="kpi-tile">
+                  <span class="kpi-num" id="k-cases">0</span>
+                  <span class="kpi-label">概算ケース</span>
+                  <span class="kpi-sub" id="k-hours-sub"></span>
+                </div>
+                <button type="button" class="kpi-tile kpi-tile--action" id="k-runs-tile" title="テスト実行タブを開く">
+                  <span class="kpi-num" id="k-passrate">—</span>
+                  <span class="kpi-label">テスト実行</span>
+                  <span class="kpi-sub" id="k-runs-sub">未実行</span>
+                </button>
+              </div>
+            </div>
+            <div class="result-hero" id="result-hero">
+              <div class="result-tab-panel rp-simple" id="rp-overview" role="tabpanel" tabindex="0" aria-label="概要"></div>
+              <div class="result-tab-panel" id="rp-screens" role="tabpanel" tabindex="0" aria-label="画面と仕様" hidden>
+                <div class="result-subtabs" role="tablist" aria-label="画面と仕様のビュー" data-tab="screens">
+                  <button type="button" role="tab" aria-selected="true" class="result-subtab is-active" data-sub="spec">画面仕様</button>
+                  <button type="button" role="tab" aria-selected="false" class="result-subtab" data-sub="gallery">ギャラリー</button>
+                  <button type="button" role="tab" aria-selected="false" class="result-subtab" data-sub="coverage">カバレッジ</button>
+                </div>
+                <div class="result-subpanel" id="rp-screens-spec"></div>
+                <div class="result-subpanel" id="rp-screens-gallery" hidden></div>
+                <div class="result-subpanel" id="rp-screens-coverage" hidden></div>
+              </div>
+              <div class="result-tab-panel" id="rp-test-design" role="tabpanel" tabindex="0" aria-label="テスト設計" hidden>
+                <div class="result-subtabs" role="tablist" aria-label="テスト設計のビュー" data-tab="test-design">
+                  <button type="button" role="tab" aria-selected="true" class="result-subtab is-active" data-sub="by-screen">画面別設計</button>
+                  <button type="button" role="tab" aria-selected="false" class="result-subtab" data-sub="matrix">条件マトリクス</button>
+                  <button type="button" role="tab" aria-selected="false" class="result-subtab" data-sub="summary">技法サマリー</button>
+                  <button type="button" role="tab" aria-selected="false" class="result-subtab" data-sub="detail">技法詳細</button>
+                  <button type="button" role="tab" aria-selected="false" class="result-subtab" data-sub="mbt">技法別設計（MBT）</button>
+                </div>
+                <div class="result-subpanel" id="rp-test-design-by-screen"></div>
+                <div class="result-subpanel" id="rp-test-design-matrix" hidden></div>
+                <div class="result-subpanel" id="rp-test-design-summary" hidden></div>
+                <div class="result-subpanel" id="rp-test-design-detail" hidden></div>
+                <div class="result-subpanel" id="rp-test-design-mbt" hidden></div>
+              </div>
+              <div class="result-tab-panel rp-simple" id="rp-testcases" role="tabpanel" tabindex="0" aria-label="テストケース" hidden></div>
+              <div class="result-tab-panel" id="rp-flow" role="tabpanel" tabindex="0" aria-label="画面遷移" hidden>
+                <div class="result-subtabs" role="tablist" aria-label="画面遷移のビュー" data-tab="flow">
+                  <button type="button" role="tab" aria-selected="true" class="result-subtab is-active" data-sub="diagram">遷移図</button>
+                  <button type="button" role="tab" aria-selected="false" class="result-subtab" data-sub="table">遷移表</button>
+                </div>
+                <div class="result-subpanel" id="rp-flow-diagram"></div>
+                <div class="result-subpanel" id="rp-flow-table" hidden></div>
+              </div>
+              <div class="result-tab-panel rp-simple" id="rp-runs" role="tabpanel" tabindex="0" aria-label="テスト実行" hidden></div>
+              <div class="result-tab-panel rp-simple" id="rp-doc-fusion" role="tabpanel" tabindex="0" aria-label="文書突合" hidden></div>
+              <div class="result-tab-panel rp-simple" id="rp-history" role="tabpanel" tabindex="0" aria-label="履歴・差分" hidden></div>
+              <div class="result-tab-panel rp-simple" id="rp-compare" role="tabpanel" tabindex="0" aria-label="現新比較" hidden></div>
+            </div>
+              </div>
+            </div>
+          </div>

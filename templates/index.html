@@ -65,11 +65,14 @@
 
 {% include 'partials/view-auto-run.html' %}
 {% include 'partials/view-run-history.html' %}
+{% include 'partials/view-run-result.html' %}
 
 {% include 'partials/view-user-guide.html' %}
 {% include 'partials/view-references.html' %}
 
 {% include 'partials/view-settings.html' %}
+
+{% include 'partials/result-panel.html' %}
 
       </div>
     </main>
@@ -174,6 +177,7 @@
   <script src="{{ url_for('static', filename='js/autorun.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/autorun-document.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/view-run-history.js') }}?v={{ _ver }}"></script>
+  <script src="{{ url_for('static', filename='js/view-run-result.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/viewpoint-editor.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/viewpoints.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/events.js') }}?v={{ _ver }}"></script>

@@ -21,7 +21,6 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-
 from web.services.viewpoint_blueprints import (
     ViewpointGeneratorError,
     generate,
@@ -60,9 +59,7 @@ class TestBrokenBlueprintIsRejected:
             ("automation_level", ""),
         ],
     )
-    def test_invalid_automation_level_names_the_definition(
-        self, field: str, value: Any
-    ) -> None:
+    def test_invalid_automation_level_names_the_definition(self, field: str, value: Any) -> None:
         def mutate(data: dict[str, Any]) -> None:
             data["blueprints"][0][field] = value
 

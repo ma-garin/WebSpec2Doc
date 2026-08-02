@@ -32,6 +32,7 @@ def create_app() -> Flask:
         qa_process,
         report,
         review,
+        runs,
         schedule,
         settings,
         site,
@@ -70,6 +71,7 @@ def create_app() -> Flask:
             from web.services.viewpoint_blueprints import reload_catalogs
 
             reload_catalogs()
+
     app.jinja_env.auto_reload = dev_reload
     app.jinja_env.globals["_ver"] = str(int(time.time()))
     if dev_reload:
@@ -78,6 +80,7 @@ def create_app() -> Flask:
         @app.context_processor
         def _dev_cache_buster() -> dict:
             return {"_ver": str(int(time.time()))}
+
     app.before_request(localhost_guard)
     app.before_request(csrf_guard)
     app.before_request(auth_guard)
@@ -102,6 +105,7 @@ def create_app() -> Flask:
     app.register_blueprint(crawl.bp)
     app.register_blueprint(auto_run.bp)
     app.register_blueprint(review.bp)
+    app.register_blueprint(runs.bp)
     app.register_blueprint(schedule.bp)
     app.register_blueprint(api_v1.bp)
     app.register_blueprint(api_v1_schedule.bp)

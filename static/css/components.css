@@ -2208,6 +2208,12 @@
   border-color: var(--color-high-border);
   color: var(--color-high);
 }
+/* 中立（「なし」「過去の実行」など、良し悪しを含まない状態） */
+.rh-approval.is-neutral {
+  background: var(--surface-soft);
+  border-color: var(--border);
+  color: var(--text-muted);
+}
 .rh-approval-note {
   display: block;
   margin-top: 2px;
@@ -2464,3 +2470,61 @@
   color: var(--color-text-secondary);
 }
 .autorun-stop-hint { margin: 7px 0 0; font-size: var(--text-xs); color: var(--color-text-secondary); }
+
+/* ==================== 実行結果ページ（実行回のハブ・案A） ====================
+   実行履歴の 1 行から開く。上の実行回セレクタで回を切り替えると、
+   3 つの成果物すべてがその回のものに揃う。 */
+.rr-runbar {
+  display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 12px 16px; margin-bottom: 16px; box-shadow: var(--shadow-sm);
+}
+.rr-runbar-label { font-size: 10.5px; color: var(--text-muted); font-weight: 700; }
+.rr-select {
+  height: 36px; padding: 0 10px; border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm); background: var(--surface);
+  font-family: var(--font-mono); font-size: 12.5px; min-width: 250px; color: var(--text);
+}
+.rr-nav {
+  width: 34px; height: 34px; border: 1px solid var(--border-strong); background: var(--surface);
+  border-radius: var(--radius-sm); cursor: pointer; font-size: 14px; color: var(--text-muted);
+}
+.rr-nav:hover:not(:disabled) { border-color: var(--primary); color: var(--primary-dark); }
+.rr-nav:disabled { opacity: .35; cursor: not-allowed; }
+.rr-meta { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 12px; color: var(--text-muted); }
+.rr-runid { font-family: var(--font-mono); font-size: 11.5px; color: var(--text); }
+.rr-runbar-actions { margin-left: auto; display: flex; gap: 7px; }
+.rr-loading { font-size: 13px; color: var(--text-muted); }
+
+.rr-artifacts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+.rr-artifact {
+  position: relative; text-align: left; padding: 14px 16px; cursor: pointer;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  font-family: inherit; color: var(--text); transition: border-color .12s, box-shadow .12s;
+}
+.rr-artifact:hover:not(:disabled) { border-color: var(--primary); box-shadow: var(--shadow-md); }
+.rr-artifact.is-active { border-color: var(--primary); background: var(--info-bg); box-shadow: inset 0 -3px 0 var(--primary); }
+.rr-artifact:disabled { opacity: .55; cursor: not-allowed; background: var(--surface-soft); }
+.rr-artifact-badge { position: absolute; top: 12px; right: 12px; }
+.rr-artifact-n { display: block; font-size: 10px; color: var(--text-subtle); font-weight: 700; }
+.rr-artifact-t { display: block; font-size: 14.5px; font-weight: 800; margin: 3px 0 4px; }
+.rr-artifact-d { display: block; font-size: 11px; color: var(--text-muted); line-height: 1.5; }
+.rr-artifact-f { display: block; font-family: var(--font-mono); font-size: 10px; color: var(--text-subtle); margin-top: 6px; word-break: break-all; }
+
+.rr-pane { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.rr-pane-head {
+  padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--surface-soft);
+  display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+}
+.rr-path { font-family: var(--font-mono); font-size: 11px; color: var(--text-subtle); margin-left: auto; word-break: break-all; }
+.rr-pane-body { padding: 18px; }
+.rr-files { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 16px; }
+.rr-files-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+.rr-file { display: block; font-family: var(--font-mono); font-size: 10px; color: var(--text-subtle); font-weight: 400; }
+.rr-frame { width: 100%; height: 520px; border: 1px solid var(--border); border-radius: var(--radius); background: #fff; }
+.rr-missing {
+  background: var(--color-high-bg); border: 1px solid var(--color-high-border);
+  border-radius: var(--radius-lg); padding: 28px 22px; text-align: center; line-height: 1.8;
+}
+.rr-missing strong { display: block; font-size: var(--text-md); color: var(--color-high); margin-bottom: 6px; }
+.rr-missing p { font-size: 13px; color: var(--text-muted); margin: 0; }

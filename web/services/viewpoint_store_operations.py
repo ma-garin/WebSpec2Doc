@@ -744,7 +744,9 @@ class ViewpointStoreOperations(ViewpointStoreBase):
     def _normalize_import_row(self, row: dict[str, Any], *, index: int) -> dict[str, Any]:
         name = str(row.get("name") or "").strip()
         old_category = str(row.get("summary_type") or "").strip()
-        category = str(row.get("category") or old_category or "一般").strip()
+        # 分類を既定値で埋めない。埋めると、利用者が書き忘れた観点が
+        # 「一般」という実在しない分類に入り、指定漏れに気づけない。
+        category = str(row.get("category") or old_category or "").strip()
         tags = _json(row.get("tags"), [])
         if not isinstance(tags, list):
             tags = []
@@ -755,12 +757,15 @@ class ViewpointStoreOperations(ViewpointStoreBase):
                 "persistent_key": row.get("persistent_key") or _key_for(name, str(index)),
                 "name": name,
                 "category": category,
-                "purpose": row.get("purpose") or f"{name}に関する品質リスクを確認する",
+                # 空欄をそれらしい文言で埋めない。特に standards は、
+                # 利用者が根拠を書かなかった観点に ISO/IEC 25010 を付けており、
+                # 存在しない裏付けを主張していた。書かれていないものは空で残す。
+                "purpose": row.get("purpose") or "",
                 "trigger_rule": _json(row.get("trigger_rule"), {}),
-                "recommended_checks": row.get("recommended_checks") or name,
+                "recommended_checks": row.get("recommended_checks") or "",
                 "risk_weight": row.get("risk_weight") or 3,
                 "automation": row.get("automation") or "manual",
-                "standards": row.get("standards") or "ISO/IEC 25010:2023",
+                "standards": row.get("standards") or "",
                 "tags": tags,
                 "enabled": str(row.get("enabled", "1")).lower() not in {"0", "false", "off"},
             }

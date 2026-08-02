@@ -82,7 +82,10 @@ def login_submit() -> BaseResponse | tuple[str, int]:
     password = request.form.get("password", "")
     next_path = safe_next_path(request.form.get("next", "/systems"))
     try:
-        if mock_auth_enabled():
+        # モックでもパスワードが入力されていれば通常の認証を通す。
+        # 初期管理者（admin / password）のようにパスワードを持つアカウントは
+        # 一覧クリックでは入れず、必ずパスワード照合を経る。
+        if mock_auth_enabled() and not password:
             user = store.authenticate_passwordless(email)
         else:
             user = store.authenticate(email, password)
@@ -364,8 +367,8 @@ def api_create_user() -> BaseResponse | tuple[dict, int] | dict:
         return denied
     payload = request.get_json(silent=True) or {}
     role = str(payload.get("role", ROLE_MEMBER))
-    # モック認証ではパスワードを持たせない（メールアドレスだけでログインする）
-    password = "" if mock_auth_enabled() else str(payload.get("password", ""))
+    # パスワードは任意。空ならモック認証（メールアドレスだけでログイン）になる。
+    password = str(payload.get("password", ""))
     try:
         user = get_auth_store().create_user(
             g.tenant["id"],
@@ -374,6 +377,7 @@ def api_create_user() -> BaseResponse | tuple[dict, int] | dict:
             password,
             role=role,
             actor_id=g.auth_user["id"],
+            enforce_password_policy=not mock_auth_enabled(),
         )
     except AuthError as exc:
         return {"error": str(exc), "code": exc.code}, 400

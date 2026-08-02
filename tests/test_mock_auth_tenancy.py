@@ -98,6 +98,75 @@ def test_login_rejects_user_that_has_password() -> None:
     assert "パスワードが必要" in response.get_data(as_text=True)
 
 
+# ---------- 初期管理者（admin / password） ----------
+
+
+def test_ensure_initial_admin_creates_admin_and_tenant() -> None:
+    from web.services.auth_store import (
+        INITIAL_ADMIN_LOGIN_ID,
+        INITIAL_TENANT_SLUG,
+    )
+
+    created = _store().ensure_initial_admin()
+    assert created is not None
+    assert created["user"]["email"] == INITIAL_ADMIN_LOGIN_ID
+    assert created["tenant"]["slug"] == INITIAL_TENANT_SLUG
+    assert created["user"]["role"] == "admin"
+
+
+def test_ensure_initial_admin_is_idempotent() -> None:
+    store = _store()
+    store.ensure_initial_admin()
+    assert store.ensure_initial_admin() is None
+    assert len(store.list_all_users()) == 1
+
+
+def test_initial_admin_logs_in_with_password() -> None:
+    _store().ensure_initial_admin()
+    client = _client()
+    response = client.post(
+        "/auth/login", data={"email": "admin", "password": "password", "next": "/systems"}, headers=H
+    )
+    assert response.status_code == 302
+    assert response.headers["Location"] == "/systems"
+    me = client.get("/api/auth/me", headers=H).get_json()
+    assert me["user"]["role"] == "admin"
+    assert me["tenant"]["slug"] == "default"
+
+
+def test_initial_admin_cannot_log_in_without_password() -> None:
+    """パスワードを持つアカウントは、モックでも素通りさせない。"""
+    _store().ensure_initial_admin()
+    response = _client().post("/auth/login", data={"email": "admin"}, headers=H)
+    assert response.status_code == 401
+    assert "パスワードが必要" in response.get_data(as_text=True)
+
+
+def test_initial_admin_is_not_listed_on_login_page() -> None:
+    _store().ensure_initial_admin()
+    html = _client().get("/auth/login", headers=H).get_data(as_text=True)
+    assert "<b>admin</b> / <b>password</b>" in html  # 資格情報の案内は出す
+    assert "userpick-item" not in html  # 一覧には並べない
+
+
+def test_login_id_accepts_non_email_identifier() -> None:
+    _store().ensure_initial_admin()
+    store = _store()
+    tenant_id = store.list_tenants()[0]["id"]
+    user = store.create_user(tenant_id, "yamada", "山田", "")
+    assert user["email"] == "yamada"
+    response = _client().post("/auth/login", data={"email": "yamada"}, headers=H)
+    assert response.status_code == 302
+
+
+def test_login_id_rejects_garbage() -> None:
+    from web.services.auth_store import AuthError
+
+    with pytest.raises(AuthError) as exc:
+        _store().create_user(None, "駄目な ID", "X", "")
+    assert exc.value.code == "invalid_email"
+
+
 # ---------- サインアップと所属 ----------
 
 

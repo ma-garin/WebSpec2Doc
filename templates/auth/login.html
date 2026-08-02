@@ -47,7 +47,8 @@
 
       {% if mock_auth %}
       <div class="auth-mock-note" role="note">
-        モック認証が有効です。パスワードは使いません（社内利用向け）。
+        モック認証が有効です（社内利用向け）。一般ユーザーはパスワードなしでログインします。<br>
+        初期管理者は <b>admin</b> / <b>password</b> です。
       </div>
 
       {% if candidates %}
@@ -81,17 +82,15 @@
       <form method="post" action="/auth/login" novalidate>
         <input type="hidden" name="next" value="{{ next_path }}">
         <div class="auth-field">
-          <label for="email">メールアドレス</label>
-          <input type="email" id="email" name="email" value="{{ email }}"
+          <label for="email">{% if mock_auth %}メールアドレス / ログインID{% else %}メールアドレス{% endif %}</label>
+          <input type="text" id="email" name="email" value="{{ email }}"
                  autocomplete="username" required {% if not candidates %}autofocus{% endif %}>
         </div>
-        {% if not mock_auth %}
         <div class="auth-field">
-          <label for="password">パスワード</label>
+          <label for="password">パスワード{% if mock_auth %}<span class="auth-optional">管理者のみ</span>{% endif %}</label>
           <input type="password" id="password" name="password"
-                 autocomplete="current-password" required>
+                 autocomplete="current-password" {% if not mock_auth %}required{% endif %}>
         </div>
-        {% endif %}
         <button type="submit" class="auth-submit">ログイン</button>
       </form>
 

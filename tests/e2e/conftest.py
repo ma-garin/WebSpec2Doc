@@ -232,6 +232,9 @@ def _spawn_server(e2e_db: Path) -> subprocess.Popen[bytes]:
     env = {
         **os.environ,
         "FLASK_TESTING": "1",
+        # E2E は認証なし（ユーザー0人）の前提で画面を触る。初期管理者を作ると
+        # 全ページがログイン必須になり、既存のE2Eが一斉にログイン壁へ落ちる。
+        "WEBSPEC2DOC_BOOTSTRAP_ADMIN": "0",
         "PYTHONPATH": str(ROOT),
         "WEBSPEC2DOC_PORT": str(urlparse(BASE_URL).port or 8765),
         "VIEWPOINTS_DB": str(e2e_db),

@@ -6604,7 +6604,7 @@
     "package": "web",
     "subpackage": "web.routes",
     "summary": "",
-    "loc": 513,
+    "loc": 508,
     "classes": [],
     "functions": [
       {
@@ -6689,25 +6689,25 @@
         "name": "api_test_design",
         "summary": "MBT テスト設計（BVA/DT/PW/ST）を画面ごとに生成して JSON で返す。",
         "signature": "() -> dict | tuple[dict, int]",
-        "line": 414
+        "line": 408
       },
       {
         "name": "api_test_design_by_screen",
         "summary": "画面別テスト設計。page_id 省略で画面リスト、指定でその画面の条件一覧を返す。",
         "signature": "() -> dict | tuple[dict, int]",
-        "line": 434
+        "line": 428
       },
       {
         "name": "api_qa_process_advanced",
         "summary": "",
         "signature": "() -> dict | tuple[dict, int]",
-        "line": 476
+        "line": 470
       },
       {
         "name": "api_qa_process_generate_advanced",
         "summary": "",
         "signature": "() -> dict | tuple[dict, int]",
-        "line": 488
+        "line": 482
       }
     ],
     "internal_deps": [
@@ -7839,7 +7839,7 @@
     "package": "web",
     "subpackage": "web.services",
     "summary": "CLI モード（画面なし）から本体機能を実行するための Flask 非依存ランナー。",
-    "loc": 308,
+    "loc": 313,
     "classes": [
       {
         "name": "AutoRunResult",
@@ -7862,10 +7862,10 @@
           {
             "name": "exit_code",
             "summary": "",
-            "line": 227
+            "line": 232
           }
         ],
-        "line": 215
+        "line": 220
       }
     ],
     "functions": [
@@ -7879,7 +7879,7 @@
         "name": "run_testcases",
         "summary": "テストケース表から spec を生成し、その場で実行して結果を保存する。",
         "signature": "(domain) -> TestRunResult",
-        "line": 233
+        "line": 238
       }
     ],
     "internal_deps": [
@@ -7925,14 +7925,14 @@
     "package": "web",
     "subpackage": "web.services",
     "summary": "AutoRun文書駆動モードの設定検証と成果物生成。",
-    "loc": 217,
+    "loc": 220,
     "classes": [
       {
         "name": "DocumentAutoRunConfig",
         "summary": "",
         "bases": [],
         "methods": [],
-        "line": 24
+        "line": 27
       }
     ],
     "functions": [
@@ -7940,29 +7940,28 @@
         "name": "parse_document_autorun_config",
         "summary": "文書駆動固有の開始設定を検証し、正規化する。",
         "signature": "(form, body, url) -> DocumentAutoRunConfig",
-        "line": 32
+        "line": 35
       },
       {
         "name": "candidate_filename",
         "summary": "モードに対応する、実行対象として選定済みの候補ファイル名。",
         "signature": "(mode) -> str",
-        "line": 73
+        "line": 76
       },
       {
         "name": "generate_document_autorun_artifacts",
         "summary": "文書要件と実測画面から第3弾成果物一式と集計を返す。",
         "signature": "(job, output_dir) -> tuple[dict[str, Path], dict[str, int | float]]",
-        "line": 82
+        "line": 85
       },
       {
         "name": "run_document_autorun_phase",
         "summary": "文書駆動フェーズの状態遷移・成果物登録・失敗処理を一括する。",
         "signature": "(job, output_dir, mark_failed) -> None",
-        "line": 193
+        "line": 196
       }
     ],
     "internal_deps": [
-      "web.routes",
       "web.validation"
     ]
   },
@@ -9142,7 +9141,7 @@
     "package": "web",
     "subpackage": "web.services",
     "summary": "",
-    "loc": 139,
+    "loc": 157,
     "classes": [],
     "functions": [
       {
@@ -9200,7 +9199,7 @@
     "package": "web",
     "subpackage": "web.services",
     "summary": "テストケース表の永続化（生成値・ユーザー編集・編集履歴）。",
-    "loc": 399,
+    "loc": 401,
     "classes": [
       {
         "name": "TestcaseStoreError",
@@ -9259,42 +9258,40 @@
         "name": "compose",
         "summary": "生成値にユーザー編集を重ね、UI がそのまま描画できる形にして返す。",
         "signature": "(domain, report) -> dict[str, Any]",
-        "line": 183
+        "line": 185
       },
       {
         "name": "update_cell",
         "summary": "1 セルを更新し、履歴に前後値を残す。戻り値は更新後の行と履歴レコード。",
         "signature": "(domain, report, case_id, column, value) -> dict[str, Any]",
-        "line": 267
+        "line": 269
       },
       {
         "name": "reset_cell",
         "summary": "1 セルを生成値へ戻す（履歴には reset として残す）。",
         "signature": "(domain, report, case_id, column) -> dict[str, Any]",
-        "line": 326
+        "line": 328
       },
       {
         "name": "add_row",
         "summary": "手動行を 1 件追加する（ID は MAN-nnn で採番）。",
         "signature": "(domain, report, after_case_id) -> dict[str, Any]",
-        "line": 353
+        "line": 355
       },
       {
         "name": "delete_row",
         "summary": "行を削除する（生成行は非表示リストへ、手動行は実体を除去する）。",
         "signature": "(domain, case_id) -> dict[str, Any]",
-        "line": 370
+        "line": 372
       },
       {
         "name": "restore_row",
         "summary": "削除した生成行を戻す。",
         "signature": "(domain, case_id) -> dict[str, Any]",
-        "line": 389
+        "line": 391
       }
     ],
-    "internal_deps": [
-      "web.routes"
-    ]
+    "internal_deps": []
   },
   {
     "path": "web/services/traceability.py",

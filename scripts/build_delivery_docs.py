@@ -24,10 +24,11 @@ from pathlib import Path
 from typing import Any
 
 from docx import Document
+from docx.enum.section import WD_ORIENT, WD_SECTION
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
-from docx.shared import Inches, Pt, RGBColor
+from docx.shared import Emu, Mm, Pt, RGBColor
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
@@ -539,20 +540,22 @@ def _assign_figure_numbers(blocks: list[dict[str, Any]]) -> tuple[list[str], lis
 
 def _insert_picture(doc: Document, png: Path) -> bool:
     """図を本文幅に収めて貼る。縦長の図は高さ基準にしてページからはみ出させない。"""
-    max_width_in = 6.0
-    max_height_in = 7.5
+    section = doc.sections[-1]
+    max_width = _usable_width(section)
+    # 本文が入る縦寸法。キャプションと余白の分を残す
+    max_height = int((section.page_height - section.top_margin - section.bottom_margin) * 0.82)
     try:
         from PIL import Image
 
         with Image.open(png) as img:
             width_px, height_px = img.size
-        if width_px and height_px / width_px * max_width_in > max_height_in:
-            doc.add_picture(str(png), height=Inches(max_height_in))
+        if width_px and height_px / width_px * max_width > max_height:
+            doc.add_picture(str(png), height=Emu(max_height))
         else:
-            doc.add_picture(str(png), width=Inches(max_width_in))
+            doc.add_picture(str(png), width=Emu(max_width))
     except Exception:  # PIL 不在や壊れた PNG でも本文生成は止めない
         try:
-            doc.add_picture(str(png), width=Inches(max_width_in))
+            doc.add_picture(str(png), width=Emu(max_width))
         except Exception as exc:
             print(f"WARN: picture insert failed {png.name}: {exc}")
             return False
@@ -582,6 +585,7 @@ def markdown_to_docx(md_path: Path, out_path: Path) -> tuple[int, int]:
     doc_id_match = re.match(r"(WS2D-[A-Z]{2}-\d+)", md_path.stem)
     doc_id = doc_id_match.group(1) if doc_id_match else "—"
 
+    _apply_page_setup(doc.sections[0])  # A4 縦。既定の Letter では納品文書にならない
     _add_cover(doc, doc_id, title, md_path)
     _add_page_number_footer(doc.sections[0])
     _add_header(doc.sections[0], title, doc_id)
@@ -617,7 +621,7 @@ def markdown_to_docx(md_path: Path, out_path: Path) -> tuple[int, int]:
 
         elif kind == "table":
             _add_caption(doc, block.get("caption", ""))  # 表はキャプションが上
-            _write_docx_table(doc, block)
+            _write_docx_table(doc, block, title, doc_id)
             doc.add_paragraph()
 
         elif kind == "code":
@@ -645,26 +649,81 @@ def markdown_to_docx(md_path: Path, out_path: Path) -> tuple[int, int]:
     return rendered_figures, len(tables)
 
 
-def _write_docx_table(doc: Document, block: dict[str, Any]) -> None:
-    """表を Word のテーブルにする。列数はヘッダーに合わせて詰める。"""
+_LANDSCAPE_MIN_COLS = 8  # これ以上の列数は A4 縦では潰れるので横向きページに逃がす
+
+
+def _apply_page_setup(section, landscape: bool = False) -> None:
+    """A4 に設定する。日本の納品文書は A4 が標準で、既定の Letter では通らない。"""
+    portrait_w, portrait_h = Mm(210), Mm(297)
+    if landscape:
+        section.orientation = WD_ORIENT.LANDSCAPE
+        section.page_width, section.page_height = portrait_h, portrait_w
+    else:
+        section.orientation = WD_ORIENT.PORTRAIT
+        section.page_width, section.page_height = portrait_w, portrait_h
+    section.top_margin = Mm(25)
+    section.bottom_margin = Mm(20)
+    section.left_margin = Mm(20)
+    section.right_margin = Mm(15)
+
+
+def _usable_width(section) -> int:
+    return section.page_width - section.left_margin - section.right_margin
+
+
+def _switch_section(doc: Document, landscape: bool, title: str, doc_id: str):
+    """向きを切り替えた新しいセクションを開始し、ヘッダー／フッターを引き継ぐ。"""
+    section = doc.add_section(WD_SECTION.NEW_PAGE)
+    _apply_page_setup(section, landscape=landscape)
+    section.header.is_linked_to_previous = True
+    section.footer.is_linked_to_previous = True
+    return section
+
+
+def _write_docx_table(doc: Document, block: dict[str, Any], title: str, doc_id: str) -> None:
+    """表を Word のテーブルにする。
+
+    autofit 任せだと列数の多い表がページ幅を突き抜ける。列幅を明示し、
+    列数に応じて文字を詰め、それでも苦しい表は横向きページへ逃がす。
+    """
     header = block["header"]
     rows = block["rows"]
     if not header:
         return
     cols = len(header)
 
+    wide = cols >= _LANDSCAPE_MIN_COLS
+    if wide:
+        _switch_section(doc, landscape=True, title=title, doc_id=doc_id)
+
+    section = doc.sections[-1]
+    usable = _usable_width(section)
+    col_width = int(usable / cols)
+
+    # 列が増えるほど 1 列あたりが細くなるので、文字も段階的に落とす
+    if cols >= 10:
+        font_size = Pt(7)
+    elif cols >= _LANDSCAPE_MIN_COLS:
+        font_size = Pt(7.5)
+    elif cols >= 6:
+        font_size = Pt(8.5)
+    else:
+        font_size = Pt(9)
+
     table = doc.add_table(rows=1, cols=cols)
     table.style = "Table Grid"
-    table.autofit = True
+    table.autofit = False  # 明示幅を効かせるには autofit を切る必要がある
+    table.allow_autofit = False
 
     shading = "D9E2F3"
     for idx, name in enumerate(header):
         cell = table.rows[0].cells[idx]
+        cell.width = col_width
         cell.text = ""
         _add_inline(cell.paragraphs[0], name)
         for run in cell.paragraphs[0].runs:
             run.bold = True
-            run.font.size = Pt(9)
+            run.font.size = font_size
         tc_pr = cell._tc.get_or_add_tcPr()
         shd = OxmlElement("w:shd")
         shd.set(qn("w:fill"), shading)
@@ -675,10 +734,18 @@ def _write_docx_table(doc: Document, block: dict[str, Any]) -> None:
         row = table.add_row()
         for idx, value in enumerate(cells):
             cell = row.cells[idx]
+            cell.width = col_width
             cell.text = ""
             _add_inline(cell.paragraphs[0], value)
             for run in cell.paragraphs[0].runs:
-                run.font.size = Pt(9)
+                run.font.size = font_size
+
+    # 列幅は tblGrid にも書かないと Word 側が再計算してしまう
+    for column in table.columns:
+        column.width = col_width
+
+    if wide:
+        _switch_section(doc, landscape=False, title=title, doc_id=doc_id)
 
 
 # ---------------------------------------------------------------- Excel 生成

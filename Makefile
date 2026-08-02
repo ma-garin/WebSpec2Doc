@@ -85,6 +85,32 @@ verify-all: quality-harness test verify-ui
 	@echo ""
 
 # =============================================================================
+# 納品ドキュメント（docs/sdlc/）
+# =============================================================================
+docs-extract: check-venv ## コードから as-built 情報を再抽出する
+	@echo ""
+	@echo "  ━━ as-built 抽出（エンドポイント / モジュール / スキーマ / ライセンス）━━"
+	$(PYTHON) scripts/extract_asbuilt.py
+	@echo ""
+
+docs-build: docs-extract ## SDLC 文書の Word / Excel を再生成する（mermaid 図の PNG 化を含む）
+	@echo ""
+	@echo "  ━━ 納品ドキュメント生成（Word / Excel）━━━━━━━━━━━━━━━━━"
+	$(PYTHON) scripts/build_delivery_docs.py
+	@echo ""
+
+docs-check: check-venv ## 文書の整合性を点検する（陳腐化した数値・リンク切れ・再生成漏れ・循環依存）
+	@echo ""
+	@echo "  ━━ SDLC 文書 整合性点検 ━━━━━━━━━━━━━━━━━━━━━━━━"
+	$(PYTHON) scripts/check_doc_consistency.py
+	@echo ""
+
+docs: docs-build docs-check ## 抽出 → 生成 → 点検をまとめて実行する
+	@echo ""
+	@echo "  ✅ docs PASS（extract + build + check）"
+	@echo ""
+
+# =============================================================================
 # L1/L2: ユニット・統合テスト
 # =============================================================================
 test: check-venv

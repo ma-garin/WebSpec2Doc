@@ -3,7 +3,7 @@
 - 版数: 1.1 / 作成日: 2026-08-02 / 準拠: IPA 共通フレーム（ソフトウェア詳細設計）
 - 位置づけ: `WS2D-BD-001`（基本設計書）の3層アーキテクチャを、実装済みモジュール単位に落とし込む。
 - 実測元: `docs/sdlc/_asbuilt/modules.json`（src/・web/ 配下 237 モジュール機械抽出）、
-  `docs/sdlc/_asbuilt/routes.json`（Flask エンドポイント 196 本）。
+  `docs/sdlc/_asbuilt/routes.json`（Flask エンドポイント 200 本。`app.url_map` 実測）。
   取得コマンド: `venv/bin/python3 -c "import json; print(len(json.load(open('docs/sdlc/_asbuilt/modules.json'))))"` → 237。
 
 ## 1. パッケージ構成一覧
@@ -461,13 +461,21 @@ graph LR
 
 | # | サイクル | 実測件数（エッジ別） |
 |---|---|---|
-| 1 | `web.services` ⇄ `web.routes` | services→routes 3件、routes→services 82件 |
-| 2 | `web.services` → `web.routes` → `web.auth` → `web.services` | 3件・8件・3件 |
-| 3 | `web.services` → `web.routes` → `web.audit_context` → `web.services` | 3件・5件・1件 |
+| 1 | `web.services` ⇄ `web.routes` | services→routes 1件、routes→services 82件 |
+| 2 | `web.services` → `web.routes` → `web.auth` → `web.services` | 1件・8件・3件 |
+| 3 | `web.services` → `web.routes` → `web.audit_context` → `web.services` | 1件・5件・1件 |
 | 4 | `web.services` ⇄ `src.llm` | services→llm 1件、llm→services 1件 |
 | 5 | `src.crawler` ⇄ `src.analyzer` | crawler→analyzer 8件、analyzer→crawler 5件 |
 
 `src.capture` は `src.crawler`・`src.llm` へ依存するのみで、`web.*` からの直接 import は実測されなかった（web層からの起動経路は本図の実測範囲では未確認。CLI経由の可能性がある）。
+
+**#1〜#3 の解消状況（2026-08-03 対応）**: 循環の本質原因だった `web.services → web.routes` の逆依存（レイヤ逆転）は3箇所あったが、うち2箇所を解消した。
+
+- `web/services/document_autorun.py`: `_load_report` の import 元を `web.routes.qa_process`（re-export 経由）から、実体のある `web.services.qa.helpers` へ変更した。
+- `web/services/testcase_table_store.py`: `_test_design_params`（Flask に依存しない純粋関数）を `web.routes.qa_process` から `web.services.test_design_settings` へ移設し、そちらから直接 import するよう変更した。`web/routes/qa_process.py` は後方互換のため従来通り同名で re-export している。
+- `web/services/cli_runner.py` の `_run_job`（実装は `web.routes.auto_run` 側）は**未解消のまま残した**。`_run_job` は同一ファイル内の `_phase_*` 群（約900行、`_phase_discover`/`_phase_crawl`/`_execute_tests` 等）と直接呼び出しで密結合しており、切り出すには AutoRun パイプライン全体を services 層へ移す大規模リファクタリングが必要になる。最小修正の範囲を超えるため今回は対象外とし、既存の関数内遅延 import のまま、循環依存を承知の上での意図的な残置であることをコード上のコメントで明記した。
+
+`scripts/extract_asbuilt.py` の循環検出はサブパッケージ単位（`web.services` 全体 vs `web.routes` 全体）でエッジの有無を判定するため、上記1件（cli_runner.py）が残る限り `web.services → web.routes` のエッジ自体は存在し続け、#1〜#3 は機械的な検出結果としては引き続き3件のまま出力される（`docs/sdlc/_asbuilt/dependency_cycles.json` 参照）。実体としての逆依存の import 文は3箇所から1箇所へ減っている。
 
 **この実測の限界（未確認事項）**: 上記は同一ファイル内の `import`/`from` 文の静的走査であり、関数内の遅延 import・動的 import・`TYPE_CHECKING` 専用 import を区別せず数えている。件数は実行時依存の強さを正確には反映しない可能性がある。また `src/main.py`・`src/generator/*`・`src/diff/*` 等、Webアプリ層と直接依存しない CLI側パイプライン（3章のドメイン層一覧のうち本書スコープ外の部分）は本図に含めていない。
 
@@ -477,3 +485,4 @@ graph LR
 |---|---|---|---|
 | 1.0 | 2026-08-02 | 初版作成 | 開発チーム |
 | 1.1 | 2026-08-02 | クラス図4種（ストア層/AutoRun系/クローラ・解析系/パッケージ依存）を追加。パッケージ依存はimport文の実測により4章の未確認事項を補完し、循環依存5件を検出 | 開発チーム |
+| 1.2 | 2026-08-03 | 循環依存#1〜#3の本質原因（web.services→web.routesの逆依存3箇所）のうち2箇所を解消（document_autorun.py・testcase_table_store.py）。残り1箇所（cli_runner.py→auto_run._run_job）は_phase_*群との密結合により大規模リファクタリング相当のため意図的に残置し、理由をコード内コメントで明記。pytest 3239件は全件通過を確認 | 開発チーム |

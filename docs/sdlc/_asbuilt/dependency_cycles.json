@@ -1,19 +1,28 @@
-[
-  [
-    "web.routes",
-    "web.audit_context",
-    "web.services",
-    "web.routes"
+{
+  "cycles": [
+    [
+      "web.routes",
+      "web.audit_context",
+      "web.services",
+      "web.routes"
+    ],
+    [
+      "web.routes",
+      "web.auth",
+      "web.services",
+      "web.routes"
+    ],
+    [
+      "web.routes",
+      "web.services",
+      "web.routes"
+    ]
   ],
-  [
-    "web.routes",
-    "web.auth",
-    "web.services",
-    "web.routes"
-  ],
-  [
-    "web.routes",
-    "web.services",
-    "web.routes"
+  "offending_modules": [
+    {
+      "module": "web/services/cli_runner.py",
+      "imports": "web.routes",
+      "reason": "web.services(層3) -> web.routes(層1) の逆流"
+    }
   ]
-]
+}

@@ -251,6 +251,56 @@ def _subpackage(dotted: str) -> str:
     return ".".join(parts[:2]) if len(parts) >= 2 else parts[0]
 
 
+# WS2D-BD-001 のレイヤ構造。番号が小さいほど上位（呼ぶ側）。
+# 上位 → 下位の依存は正常で、下位 → 上位が逆流＝循環の原因になる。
+_LAYER_RANK = {
+    "web.routes": 1,
+    "web.services": 3,
+}
+_WEB_SHARED_RANK = 2  # web 直下（auth, tenancy, config, audit_context …）は共通基盤
+_DOMAIN_RANK = 4  # src.* はドメイン中核。誰にも依存しないのが正しい
+
+
+def _layer_rank(node: str) -> int:
+    if node in _LAYER_RANK:
+        return _LAYER_RANK[node]
+    if node.split(".")[0] == "src":
+        return _DOMAIN_RANK
+    return _WEB_SHARED_RANK
+
+
+def offending_imports(
+    modules: list[dict[str, Any]], cycles: list[list[str]]
+) -> list[dict[str, str]]:
+    """循環を成立させている「逆流した import」だけを名指しする。
+
+    循環はサブパッケージ単位で数えるため、逆依存が 1 本残るだけで経路は複数出る。
+    件数だけ見ても改善が見えないので、実際に直すべき import を列挙する。
+    経路上のエッジを全部挙げると `web.routes -> web.services` のような正常な依存まで
+    混ざるので、レイヤ順序に逆らう向きのものに絞る。
+    """
+    edges: set[tuple[str, str]] = set()
+    for cycle in cycles:
+        for src, dst in zip(cycle, cycle[1:], strict=False):
+            if _layer_rank(src) > _layer_rank(dst):  # 下位 → 上位＝逆流
+                edges.add((src, dst))
+
+    offenders: list[dict[str, str]] = []
+    for module in modules:
+        node = module.get("subpackage") or module["package"]
+        for dep in module["internal_deps"]:
+            if (node, dep) in edges:
+                offenders.append(
+                    {
+                        "module": module["path"],
+                        "imports": dep,
+                        "reason": f"{node}(層{_layer_rank(node)}) -> {dep}(層{_layer_rank(dep)}) の逆流",
+                    }
+                )
+    offenders.sort(key=lambda d: d["module"])
+    return offenders
+
+
 def detect_cycles(modules: list[dict[str, Any]]) -> list[list[str]]:
     """サブパッケージ間の循環依存を検出する。設計書に載せるべき事実なので機械で取る。"""
     graph: dict[str, set[str]] = {}
@@ -316,6 +366,36 @@ def extract_schema() -> str:
     return "\n".join(chunks) + "\n"
 
 
+def _license_of(meta: Any) -> tuple[str, str]:
+    """配布メタデータからライセンス名と、その判定根拠を返す。
+
+    近年のパッケージは PEP 639 の `License-Expression` にライセンスを入れ、
+    従来の `License` フィールドと `License ::` classifier を空にする。
+    そこだけ見ていると Flask・numpy・pytest まで UNKNOWN になる。
+    """
+    expression = (meta.get("License-Expression") or "").strip()
+    if expression:
+        return expression, "License-Expression (PEP 639)"
+
+    for item in meta.get_all("Classifier") or []:
+        if item.startswith("License ::"):
+            return item.split("::")[-1].strip(), "Classifier"
+
+    legacy = (meta.get("License") or "").strip()
+    if legacy:
+        # 一部のパッケージは License に全文を入れる。1 行目だけを名前として扱う
+        first_line = legacy.splitlines()[0].strip()
+        if first_line and len(first_line) <= 80:
+            return first_line, "License field"
+        return "要確認（License 欄に全文が入っている）", "License field (full text)"
+
+    files = meta.get_all("License-File") or []
+    if files:
+        return "要確認（同梱 LICENSE ファイル参照）", f"License-File: {', '.join(files[:3])}"
+
+    return "UNKNOWN", "メタデータに記載なし"
+
+
 def extract_licenses() -> list[dict[str, str]]:
     """requirements に現れる依存の OSS ライセンスを配布メタデータから取る。"""
     results: list[dict[str, str]] = []
@@ -327,17 +407,14 @@ def extract_licenses() -> list[dict[str, str]]:
             continue
         seen.add(name.lower())
 
-        license_name = dist.metadata.get("License") or ""
-        classifiers = dist.metadata.get_all("Classifier") or []
-        for item in classifiers:
-            if item.startswith("License ::"):
-                license_name = item.split("::")[-1].strip()
-                break
+        license_name, source = _license_of(dist.metadata)
         results.append(
             {
                 "name": name,
                 "version": dist.version or "",
                 "license": license_name.strip() or "UNKNOWN",
+                "license_source": source,  # 判定根拠。監査で「どこから取ったか」を問われる
+                "ecosystem": "PyPI",
                 "homepage": dist.metadata.get("Home-page")
                 or dist.metadata.get("Project-URL")
                 or "",
@@ -438,17 +515,25 @@ def main() -> int:
     (OUT_DIR / "schema.sql").write_text(schema, encoding="utf-8")
 
     cycles = detect_cycles(modules)
+    offenders = offending_imports(modules, cycles)
     (OUT_DIR / "dependency_cycles.json").write_text(
-        json.dumps(cycles, ensure_ascii=False, indent=2), encoding="utf-8"
+        json.dumps(
+            {"cycles": cycles, "offending_modules": offenders},
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
     )
 
     print(f"routes    : {len(routes)}")
     print(f"modules   : {len(modules)}")
     print(f"templates : {len(templates)}")
     print(f"licenses  : {len(licenses)}")
-    print(f"cycles    : {len(cycles)}")
+    print(f"cycles    : {len(cycles)} 経路 / 原因 import {len(offenders)} 本")
     for cycle in cycles[:10]:
-        print(f"        {' -> '.join(cycle)}")
+        print(f"        経路: {' -> '.join(cycle)}")
+    for item in offenders[:10]:
+        print(f"        原因: {item['module']} -> {item['imports']}")
     print(f"output    : {OUT_DIR.relative_to(ROOT)}")
     return 0
 

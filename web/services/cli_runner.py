@@ -88,6 +88,11 @@ def run_autorun(
         approve: 段階承認の扱い。'auto'（内容を生成して自動承認）/ 'skip'（関門を素通り）。
         on_log: 実行ログを逐次受け取るコールバック（CLI の標準出力用）。
     """
+    # AutoRun パイプライン本体（_run_job）は web.routes.auto_run に実装がある。
+    # 本来は services 層に置くべきだが、_phase_* 群（同ファイル内に約900行）と
+    # 密結合しており、分離は大規模リファクタリングになるため今回の対象外とした。
+    # services -> routes の循環 import になることを承知の上で、関数内に閉じた
+    # 遅延 import として残す（モジュール読み込み時には発火しない）。
     from web.routes.auto_run import _run_job
     from web.services.auto_run_job import AutoRunJob
 

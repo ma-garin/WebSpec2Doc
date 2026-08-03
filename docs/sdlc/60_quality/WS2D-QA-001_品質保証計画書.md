@@ -114,9 +114,10 @@ UI → API → backend route → service/core → output → persistence → err
 
 詳細は `WS2D-TP-001`（テスト計画書、`docs/sdlc/40_test/WS2D-TP-001_テスト計画書.md`）および `docs/TESTING_STRATEGY.md` を参照。本書では概要のみ示す。
 
-- L1/L2（単体・結合）: `tests/`配下、非E2Eテストファイル108本（`docs/sdlc/README.md`実測サマリ2026-07-16時点）。
-- L3（システム・E2E）: `tests/e2e/`配下、E2Eテストファイル32本。デモサイト標的は`contact.html`（フォーム）・`dashboard.html`（モーダル/タブ/アコーディオン）・`spa.html`・`checkout.html`。`login.html`はログインウォール検出でE2E標的から除外する（既知の罠5）。
-- テスト関数総数1,985（`grep -rhE '^\s*def test_' tests/ | wc -l`実測）。
+- L1/L2（単体・結合）: `tests/`配下、非E2Eテストファイル **193本**（2026-08-02 実測）。
+- L3（システム・E2E）: `tests/e2e/`配下、E2Eテストファイル **20本**（2026-08-02 実測）。デモサイト標的は`contact.html`（フォーム）・`dashboard.html`（モーダル/タブ/アコーディオン）・`spa.html`・`checkout.html`。`login.html`はログインウォール検出でE2E標的から除外する（既知の罠5）。
+- テスト関数総数 **3,026**（`grep -rhE '^\s*def test_' tests/ | wc -l` 2026-08-02 実測）。うち E2E 62。
+- L1/L2 の実行結果は **3,239 passed**（2026-08-03、pre-commit の pytest ゲート）。関数数 3,026 より多いのは `parametrize` で 1 関数が複数ケースに展開されるため。関数数と実行ケース数は別指標として扱う。
 - E2E実行時の既知の罠（CONVENTIONS §4）: pytest-playwrightのセッションfixtureがメインスレッドのasyncioループを保持するため、実ブラウザ処理は専用スレッドで実行する（`_run_in_thread`パターン）。ポート衝突回避（8765=GUI・8766=demo・8894/8896=既存e2e）。
 
 ## 9. 不具合の予防と再発防止プロセス
@@ -130,16 +131,17 @@ UI → API → backend route → service/core → output → persistence → err
 
 品質メトリクスは何を測り、どう使うかを明確にする。
 
-| メトリクス | 何を測るか | どう使うか | 実測（2026-07-16、`docs/sdlc/README.md`） |
-|---|---|---|---|
-| 機能契約検証 | feature_contracts.ymlの整合性 | L0ゲートのPASS/FAIL判定 | validated_features=19（注: 2026-08-02時点のfeature_contracts.yml実物は51件のfeature_idを含み、この数値は要再測定。§2参照） |
-| L1/L2テスト | 単体・結合の合否 | コミットのブロック判定 | 1,831 passed |
-| L3 E2E | 実ブラウザ動作 | UI変更のリリース可否判定 | 200 passed / 0 skipped |
-| カバレッジ | テストが到達したコード行の割合 | 80%を下回ると`make coverage`が失敗 | 84.30% |
-| Blueprint/エンドポイント数 | APIの規模 | 変更影響範囲の把握 | 17 Blueprint / 121エンドポイント |
-| テスト関数総数 | テスト資産の規模 | テスト負債の把握 | 1,985 |
-| トレーサビリティGAP | 要件⇔テストの対応漏れ | `WS2D-TM-001`（機械生成）で0を維持 | 0 |
-| quarantine（隔離テスト） | flaky等で一時隔離したテスト数 | 隔離の常態化を防ぐ監視 | 0 |
+| メトリクス | 何を測るか | どう使うか | 最新実測 | 計測日 |
+|---|---|---|---|---|
+| 機能契約検証 | feature_contracts.ymlの整合性 | L0ゲートのPASS/FAIL判定 | **51件**（critical 11 / high 20 / medium 18 / low 2） | 2026-08-02 |
+| L1/L2テスト | 単体・結合の合否 | コミットのブロック判定 | **3,239 passed / 0 failed** | 2026-08-03 |
+| L3 E2E | 実ブラウザ動作 | UI変更のリリース可否判定 | 200 passed / 0 skipped（**参考値**。当時 E2E 32 ファイル、現在 20 ファイル） | 2026-07-16 |
+| カバレッジ | テストが到達したコード行の割合 | 80%を下回ると`make coverage`が失敗 | 84.30%（**参考値**。現構成では未計測） | 2026-07-16 |
+| Blueprint/エンドポイント数 | APIの規模 | 変更影響範囲の把握 | **26 Blueprint / 200 エンドポイント** | 2026-08-02 |
+| テスト関数総数 | テスト資産の規模 | テスト負債の把握 | **3,026**（うち E2E 62） | 2026-08-02 |
+| サブパッケージ循環依存 | レイヤ構造の健全性 | 0 を維持する。`extract_asbuilt.py` が機械検出 | WS2D-MD-001 参照 | 2026-08-03 |
+| トレーサビリティGAP | 要件⇔テストの対応漏れ | `WS2D-TM-001`（機械生成）で0を維持 | 全 51 件に何らかのテストが紐付く。ただし **L3 未検証が critical 11 件中 9 件** | 2026-08-02 |
+| quarantine（隔離テスト） | flaky等で一時隔離したテスト数 | 隔離の常態化を防ぐ監視 | 0 | 2026-07-16 |
 
 可観測性機能（`web/services/metrics.py`、`/metrics` Prometheusエンドポイント）は対象サイトのクロール・通知・ジョブキューの実行時メトリクスを提供するが、これは**プロダクト自身の品質メトリクスではなく運用監視機能**である点に注意する（混同しないこと）。
 

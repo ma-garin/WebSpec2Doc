@@ -1,19 +1,4 @@
-[
-  [
-    "web.routes",
-    "web.audit_context",
-    "web.services",
-    "web.routes"
-  ],
-  [
-    "web.routes",
-    "web.auth",
-    "web.services",
-    "web.routes"
-  ],
-  [
-    "web.routes",
-    "web.services",
-    "web.routes"
-  ]
-]
+{
+  "cycles": [],
+  "offending_modules": []
+}

@@ -134,7 +134,7 @@
 - **何を確認するか**: 設計文書（`docs/sdlc/20_design/`, `30_implementation/`）に記述されたAPI・画面・DBスキーマと、実装（`web/routes/*.py`, `templates/`, `docs/sdlc/_asbuilt/schema.sql`）の一致。
 - **どう確認するか**: `scripts/extract_asbuilt.py`が実装から機械的に抽出した as-built 情報（`docs/sdlc/_asbuilt/routes.json`＝エンドポイント一覧、`modules.json`＝モジュール一覧、`templates.json`＝画面テンプレート一覧、`schema.sql`＝実際のDBスキーマ、`licenses.json`＝OSSライセンス一覧）を再生成し、設計文書側の記述と突合する。差分があれば、設計文書側の記述漏れか、意図しない実装変更かを切り分ける。
 - **いつ確認するか**: マイルストーン区切り、およびリリース判定（`WS2D-RL-001`）の前。四半期に一度は`docs/sdlc/README.md`の実測サマリ（機能契約数、テスト件数、カバレッジ等）を再取得し、記載値を更新する。
-- **併用する機械検証（機能契約）**: `python scripts/quality_harness.py` — `quality/feature_contracts.yml`の機能契約（19件）が実装と対応しているかを検証する。
+- **併用する機械検証（機能契約）**: `python scripts/quality_harness.py` — `quality/feature_contracts.yml`の機能契約（**51件**、2026-08-02 実測）が実装と対応しているかを検証する。
 - **併用する機械検証（トレーサビリティ）**: `python scripts/generate_traceability_doc.py --write` — `WS2D-TM-001_トレーサビリティマトリクス.md`を再生成する。
 - **併用する機械検証（カバレッジ）**: `make coverage` — テストカバレッジを実測し、`docs/sdlc/README.md`記載の閾値80%との突合を行う。
 - **監査結果の記録先**: 現状、構成監査専用の記録様式・記録先は本リポジトリに存在しない（要決定）。当面は各SDLC文書の改訂履歴表に監査実施日と結果を追記する運用を推奨する。

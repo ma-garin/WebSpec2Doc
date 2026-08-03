@@ -106,7 +106,7 @@ def test_live_tests_error_is_truncated(tmp_path: Path) -> None:
     ]
     ndjson_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
-    with patch("web.routes.auto_run.OUTPUT_DIR", tmp_path):
+    with patch("web.services.auto_run_job.OUTPUT_DIR", tmp_path):
         progress = _current_test_progress(job)
 
     assert len(progress["tests"][0]["title"]) == 200

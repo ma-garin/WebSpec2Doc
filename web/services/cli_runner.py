@@ -22,6 +22,9 @@ from datetime import UTC
 from pathlib import Path
 from typing import Any
 
+from web.services.auto_run_job import AutoRunJob
+from web.services.auto_run_pipeline import _run_job
+
 #: ログイン待ち・段階待ちを見張る間隔（秒）
 _POLL_SEC = 0.5
 #: パイプライン全体の既定上限（秒）。超えたら中止して理由を残す。
@@ -88,9 +91,6 @@ def run_autorun(
         approve: 段階承認の扱い。'auto'（内容を生成して自動承認）/ 'skip'（関門を素通り）。
         on_log: 実行ログを逐次受け取るコールバック（CLI の標準出力用）。
     """
-    from web.routes.auto_run import _run_job
-    from web.services.auto_run_job import AutoRunJob
-
     started = time.monotonic()
     auto_handled: list[str] = []
 

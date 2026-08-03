@@ -338,6 +338,7 @@
         "web/services/playwright_executor.py",
         "web/services/auto_run_config.py",
         "web/services/auto_run_job.py",
+        "web/services/auto_run_pipeline.py",
         "web/services/auto_run_preview.py",
         "web/services/failure_classifier.py",
         "src/crawler/data_flow.py",

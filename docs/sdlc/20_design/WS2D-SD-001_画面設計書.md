@@ -2,7 +2,7 @@
 
 - 版数: 3.1 / 作成日: 2026-07-16 / 最終更新: 2026-08-02 / 準拠: IPA 共通フレーム（画面設計）
 - UI フローの用語は `CONTEXT.md`。刷新計画（Phase A〜F）は実装完了につき本書へ吸収済み。
-- 本版の実測方法: `docs/sdlc/_asbuilt/routes.json`（Flask エンドポイント 196 本）と
+- 本版の実測方法: `docs/sdlc/_asbuilt/routes.json`（Flask エンドポイント 200 本。`app.url_map` 実測）と
   `docs/sdlc/_asbuilt/templates.json`（Jinja2 テンプレート 30 件）を Python/AST で突合。
   GET かつ `render_template` を呼ぶ関数を画面候補として抽出し、権限判定は各ブループリントの
   `before_request` / 個別ガードのソースを直接確認した。確認できなかった項目は

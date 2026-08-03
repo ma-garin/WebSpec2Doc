@@ -15,8 +15,11 @@ from mbt.pairwise import build_pairwise_cases
 from mbt.test_data import generate_test_data, save_test_data
 from mbt.trace_suggestions import suggest_matches
 from mbt.validation_observer import run_validation_observation
-from web.routes.qa_process import _load_report
 from web.services.auto_run_job import AutoRunJob
+
+# _load_report の実体は web.services.qa.helpers にある。web.routes.qa_process 経由だと
+# services -> routes の循環 import になるため、実体を直接 import する。
+from web.services.qa.helpers import _load_report
 from web.validation import _domain_of, _safe_reference_doc_paths
 
 

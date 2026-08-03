@@ -582,7 +582,7 @@
     ],
     "path": "/api/autorun/approve",
     "summary": "",
-    "line": 293
+    "line": 303
   },
   {
     "module": "web/routes/auto_run.py",
@@ -595,7 +595,7 @@
     ],
     "path": "/api/autorun/cancel",
     "summary": "",
-    "line": 172
+    "line": 182
   },
   {
     "module": "web/routes/auto_run.py",
@@ -608,7 +608,7 @@
     ],
     "path": "/api/autorun/jobs",
     "summary": "",
-    "line": 361
+    "line": 371
   },
   {
     "module": "web/routes/auto_run.py",
@@ -621,7 +621,7 @@
     ],
     "path": "/api/autorun/live-screenshot",
     "summary": "テスト実行中の最新スクリーンショットを返す（screenshot:'on' 設定済みの",
-    "line": 342
+    "line": 352
   },
   {
     "module": "web/routes/auto_run.py",
@@ -634,7 +634,7 @@
     ],
     "path": "/api/autorun/preview",
     "summary": "テストケース一覧・スクリプト内容・フィルター件数を返す。",
-    "line": 283
+    "line": 293
   },
   {
     "module": "web/routes/auto_run.py",
@@ -647,7 +647,7 @@
     ],
     "path": "/api/autorun/report",
     "summary": "",
-    "line": 333
+    "line": 343
   },
   {
     "module": "web/routes/auto_run.py",
@@ -660,7 +660,7 @@
     ],
     "path": "/api/autorun/start",
     "summary": "",
-    "line": 65
+    "line": 75
   },
   {
     "module": "web/routes/auto_run.py",
@@ -673,7 +673,7 @@
     ],
     "path": "/api/autorun/status",
     "summary": "",
-    "line": 128
+    "line": 138
   },
   {
     "module": "web/routes/auto_run.py",
@@ -686,7 +686,7 @@
     ],
     "path": "/api/autorun/submit-input",
     "summary": "ログイン情報などの人的インプットを受け取り、待機中のジョブを再開する。",
-    "line": 252
+    "line": 262
   },
   {
     "module": "web/routes/auto_run.py",
@@ -699,7 +699,7 @@
     ],
     "path": "/api/history/runs",
     "summary": "種別を問わない一般化された実行履歴（R2-27）。",
-    "line": 189
+    "line": 199
   },
   {
     "module": "web/routes/autorun_report.py",
@@ -1310,7 +1310,7 @@
     ],
     "path": "/api/qa-process/advanced",
     "summary": "",
-    "line": 476
+    "line": 470
   },
   {
     "module": "web/routes/qa_process.py",
@@ -1336,7 +1336,7 @@
     ],
     "path": "/api/qa-process/generate-advanced",
     "summary": "",
-    "line": 488
+    "line": 482
   },
   {
     "module": "web/routes/qa_process.py",
@@ -1375,7 +1375,7 @@
     ],
     "path": "/api/test-design",
     "summary": "MBT テスト設計（BVA/DT/PW/ST）を画面ごとに生成して JSON で返す。",
-    "line": 414
+    "line": 408
   },
   {
     "module": "web/routes/qa_process.py",
@@ -1388,7 +1388,7 @@
     ],
     "path": "/api/test-design/by-screen",
     "summary": "画面別テスト設計。page_id 省略で画面リスト、指定でその画面の条件一覧を返す。",
-    "line": 434
+    "line": 428
   },
   {
     "module": "web/routes/qa_process.py",

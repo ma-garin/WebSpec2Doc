@@ -397,17 +397,11 @@ def api_testcases_row() -> dict | tuple[dict, int]:
     return {"error": f"不明な action です: {action}"}, 400
 
 
-def _test_design_params(settings: dict[str, Any]) -> Any:
-    """設定 dict から TestDesignParams を構築する（value_catalog と技法パラメータ）。"""
-    from generator.test_design import TestDesignParams
-
-    kwargs: dict[str, Any] = {"value_catalog": settings.get("value_catalog") or {}}
-    if isinstance(settings.get("enabled_techniques"), list):
-        kwargs["enabled_techniques"] = tuple(settings["enabled_techniques"])
-    for key in ("bva_offset", "pairwise_strength", "n_switch", "max_dt_conditions"):
-        if isinstance(settings.get(key), int):
-            kwargs[key] = settings[key]
-    return TestDesignParams(**kwargs)
+# _test_design_params は web.services.test_design_settings へ移設した。
+# services 層（testcase_table_store.py）からも参照されており、ここに置いたままだと
+# web.services -> web.routes の循環 import になっていたため。
+# 呼び出し側（本ファイル内の api_test_design 含む）は変えず、
+# ファイル末尾の backward-compat re-export で同名を解決する。
 
 
 @bp.get("/api/test-design")
@@ -509,4 +503,5 @@ def api_qa_process_generate_advanced() -> dict | tuple[dict, int]:
 from web.services.qa.helpers import _load_report as _load_report  # noqa: F401
 from web.services.qa.doc_generator import _generate_outputs as _generate_outputs  # noqa: F401
 from web.services.qa.advanced_generator import _generate_advanced_outputs as _generate_advanced_outputs  # noqa: F401
+from web.services.test_design_settings import _test_design_params as _test_design_params  # noqa: F401
 # fmt: on

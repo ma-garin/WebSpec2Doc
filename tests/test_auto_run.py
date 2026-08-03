@@ -178,7 +178,7 @@ class TestExecuteTests:
             job.status = "cancelled"
             return {"passed": 0, "failed": 0, "total": 0}
 
-        monkeypatch.setattr("web.routes.auto_run.run_playwright", fake_run)
+        monkeypatch.setattr("web.services.auto_run_pipeline.run_playwright", fake_run)
         _execute_tests(job)
         assert job.status == "cancelled"
 
@@ -206,7 +206,7 @@ class TestExecuteTests:
             "total": 5,
             "tests": [],
         }
-        with patch("web.routes.auto_run.run_playwright", return_value=mock_result):
+        with patch("web.services.auto_run_pipeline.run_playwright", return_value=mock_result):
             _execute_tests(job)
 
         assert job.status == "complete"
@@ -231,7 +231,7 @@ class TestExecuteTests:
             "total": 3,
             "tests": [],
         }
-        with patch("web.routes.auto_run.run_playwright", return_value=mock_result):
+        with patch("web.services.auto_run_pipeline.run_playwright", return_value=mock_result):
             _execute_tests(job)
 
         assert job.status == "complete"
@@ -256,7 +256,7 @@ class TestExecuteTests:
             "tests": [],
             "error": "実行結果を解析できませんでした（終了コード 1）",
         }
-        with patch("web.routes.auto_run.run_playwright", return_value=mock_result):
+        with patch("web.services.auto_run_pipeline.run_playwright", return_value=mock_result):
             _execute_tests(job)
 
         assert job.status == "failed"
@@ -282,7 +282,7 @@ class TestExecuteTests:
             "error": "テスト実行が制限時間 600秒 に達したため中断しました。188件中42件まで実行済み",
             "interrupted": True,
         }
-        with patch("web.routes.auto_run.run_playwright", return_value=mock_result):
+        with patch("web.services.auto_run_pipeline.run_playwright", return_value=mock_result):
             _execute_tests(job)
 
         assert job.status == "failed"
@@ -297,7 +297,7 @@ class TestExecuteTests:
         job.run_policy = {"filter_mode": "all", "per_test_timeout_sec": 30}
 
         with patch(
-            "web.routes.auto_run.run_playwright", side_effect=RuntimeError("予期しないエラー")
+            "web.services.auto_run_pipeline.run_playwright", side_effect=RuntimeError("予期しないエラー")
         ):
             _execute_tests(job)
 
@@ -312,7 +312,7 @@ class TestExecuteTests:
         job._cancelled = True
 
         mock_pw = MagicMock()
-        with patch("web.routes.auto_run.run_playwright", mock_pw):
+        with patch("web.services.auto_run_pipeline.run_playwright", mock_pw):
             _execute_tests(job)
 
         mock_pw.assert_not_called()
@@ -359,9 +359,9 @@ class TestExecuteTests:
             captured_submit.append(allow_submit)
 
         with (
-            patch("web.routes.auto_run.run_playwright", return_value=mock_result),
-            patch("web.routes.auto_run.OUTPUT_DIR", tmp_path),
-            patch("web.routes.auto_run.generate_spec_ts", side_effect=fake_gen),
+            patch("web.services.auto_run_pipeline.run_playwright", return_value=mock_result),
+            patch("web.services.auto_run_job.OUTPUT_DIR", tmp_path),
+            patch("web.services.auto_run_pipeline.generate_spec_ts", side_effect=fake_gen),
         ):
             _execute_tests(job)
 
@@ -384,7 +384,7 @@ class TestExecuteTests:
             captured_kwargs.append(kwargs)
             return mock_result
 
-        with patch("web.routes.auto_run.run_playwright", side_effect=fake_pw):
+        with patch("web.services.auto_run_pipeline.run_playwright", side_effect=fake_pw):
             _execute_tests(job)
 
         assert captured_kwargs[0].get("per_test_timeout_sec") == 45
@@ -404,8 +404,8 @@ class TestExecuteTests:
 
         mock_result = {"ok": True, "passed": 1, "failed": 0, "skipped": 0, "total": 1, "tests": []}
         with (
-            patch("web.routes.auto_run.run_playwright", return_value=mock_result),
-            patch("web.routes.auto_run.OUTPUT_DIR", tmp_path.parent),
+            patch("web.services.auto_run_pipeline.run_playwright", return_value=mock_result),
+            patch("web.services.auto_run_job.OUTPUT_DIR", tmp_path.parent),
         ):
             _execute_tests(job)
 
@@ -432,8 +432,8 @@ class TestExecuteTests:
 
         mock_result = {"ok": True, "passed": 1, "failed": 0, "skipped": 0, "total": 1, "tests": []}
         with (
-            patch("web.routes.auto_run.run_playwright", return_value=mock_result),
-            patch("web.routes.auto_run.OUTPUT_DIR", tmp_path),
+            patch("web.services.auto_run_pipeline.run_playwright", return_value=mock_result),
+            patch("web.services.auto_run_job.OUTPUT_DIR", tmp_path),
         ):
             _execute_tests(job)
 
@@ -457,8 +457,8 @@ class TestExecuteTests:
 
         mock_result = {"ok": True, "passed": 1, "failed": 0, "skipped": 0, "total": 1, "tests": []}
         with (
-            patch("web.routes.auto_run.run_playwright", return_value=mock_result),
-            patch("web.routes.auto_run.OUTPUT_DIR", tmp_path),
+            patch("web.services.auto_run_pipeline.run_playwright", return_value=mock_result),
+            patch("web.services.auto_run_job.OUTPUT_DIR", tmp_path),
         ):
             _execute_tests(job)
 
@@ -476,7 +476,7 @@ class TestExecuteTests:
 class TestCurrentTestProgress:
     def test_no_progress_file_returns_zero_and_none_total(self, tmp_path: Path) -> None:
         job = _make_job(domain="example.com")
-        with patch("web.routes.auto_run.OUTPUT_DIR", tmp_path):
+        with patch("web.services.auto_run_job.OUTPUT_DIR", tmp_path):
             progress = _current_test_progress(job)
         assert progress["completed"] == 0
         assert progress["total"] is None
@@ -497,7 +497,7 @@ class TestCurrentTestProgress:
         ]
         ndjson_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
-        with patch("web.routes.auto_run.OUTPUT_DIR", tmp_path):
+        with patch("web.services.auto_run_job.OUTPUT_DIR", tmp_path):
             progress = _current_test_progress(job)
 
         assert progress["completed"] == 3
@@ -520,7 +520,7 @@ class TestCurrentTestProgress:
         ]
         ndjson_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
-        with patch("web.routes.auto_run.OUTPUT_DIR", tmp_path):
+        with patch("web.services.auto_run_job.OUTPUT_DIR", tmp_path):
             progress = _current_test_progress(job)
 
         assert len(progress["tests"]) == 3
@@ -544,7 +544,7 @@ class TestCurrentTestProgress:
             lines.append(json.dumps({"event": "test", "title": f"t{i}", "status": "passed"}))
         ndjson_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
-        with patch("web.routes.auto_run.OUTPUT_DIR", tmp_path):
+        with patch("web.services.auto_run_job.OUTPUT_DIR", tmp_path):
             progress = _current_test_progress(job)
 
         assert progress["completed"] == 60
@@ -568,7 +568,7 @@ class TestCurrentTestProgress:
         ]
         ndjson_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
-        with patch("web.routes.auto_run.OUTPUT_DIR", tmp_path):
+        with patch("web.services.auto_run_job.OUTPUT_DIR", tmp_path):
             progress = _current_test_progress(job)
 
         assert len(progress["tests"][0]["title"]) == 200
@@ -641,7 +641,7 @@ class TestApproveRoute:
 class TestPhaseGenerateScripts:
     def test_no_candidates_file_sets_failed(self, tmp_path: Path) -> None:
         job = _make_job(domain="example.com")
-        with patch("web.routes.auto_run.OUTPUT_DIR", tmp_path):
+        with patch("web.services.auto_run_job.OUTPUT_DIR", tmp_path):
             _phase_generate_scripts(job)
         assert job.status == "failed"
         assert "playwright_candidates.json" in job.error
@@ -653,7 +653,7 @@ class TestPhaseGenerateScripts:
         cands.write_text('{"candidates": []}', encoding="utf-8")
 
         job = _make_job(domain="example.com")
-        with patch("web.routes.auto_run.OUTPUT_DIR", tmp_path):
+        with patch("web.services.auto_run_job.OUTPUT_DIR", tmp_path):
             _phase_generate_scripts(job)
 
         assert "spec_ts" in job.outputs
@@ -663,7 +663,7 @@ class TestPhaseGenerateScripts:
         job = _make_job(domain="example.com")
         job._cancelled = True
         mock_gen = MagicMock()
-        with patch("web.routes.auto_run.generate_spec_ts", mock_gen):
+        with patch("web.services.auto_run_pipeline.generate_spec_ts", mock_gen):
             _phase_generate_scripts(job)
         mock_gen.assert_not_called()
 
@@ -738,7 +738,7 @@ class TestPhaseDiscoverLoginConsolidation:
         login_proc.communicate.return_value = (json.dumps({"success": True}), "")
 
         with (
-            patch("web.routes.auto_run.OUTPUT_DIR", tmp_path),
+            patch("web.services.auto_run_job.OUTPUT_DIR", tmp_path),
             patch("web.routes.auto_run.subprocess.Popen", return_value=login_proc) as mock_run,
         ):
             _do_login(job)
@@ -765,7 +765,7 @@ class TestPhaseDiscoverLoginConsolidation:
         (report_dir / "report.json").write_text('{"screens": []}', encoding="utf-8")
 
         with (
-            patch("web.routes.auto_run.OUTPUT_DIR", tmp_path),
+            patch("web.services.auto_run_job.OUTPUT_DIR", tmp_path),
             patch("web.routes.auto_run.subprocess.Popen", side_effect=fake_popen),
         ):
             _phase_crawl(job, depth=2, max_pages=30)
@@ -791,7 +791,7 @@ class TestPhaseDiscoverLoginConsolidation:
         (report_dir / "report.json").write_text('{"screens": []}', encoding="utf-8")
 
         with (
-            patch("web.routes.auto_run.OUTPUT_DIR", tmp_path),
+            patch("web.services.auto_run_job.OUTPUT_DIR", tmp_path),
             patch("web.routes.auto_run.subprocess.Popen", side_effect=fake_popen),
         ):
             _phase_crawl(job, depth=2, max_pages=30)
@@ -869,6 +869,8 @@ class TestHistoryRunsRoute:
         return appmod.app.test_client()
 
     def test_returns_empty_list_when_no_history(self, tmp_path: Path) -> None:
+        # このルートは web/routes/auto_run.py の _out() 経由で出力先を解決する。
+        # services 側だけ差し替えても効かず、実データの output/ を読んでしまう。
         with patch("web.routes.auto_run.OUTPUT_DIR", tmp_path):
             res = self._client().get("/api/history/runs")
         assert res.status_code == 200

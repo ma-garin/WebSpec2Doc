@@ -172,8 +172,10 @@ def build_rows(report: Mapping[str, Any]) -> list[dict[str, Any]]:
     """report からテストケース表の生成値を作る（編集は未適用）。"""
     from generator.test_design import build_test_design
     from generator.testcase_table import build_testcase_table
-    from web.routes.qa_process import _test_design_params
-    from web.services.test_design_settings import get_test_design_settings
+
+    # web.routes.qa_process 経由だと services -> routes の循環 import になるため、
+    # 実体が移設された web.services.test_design_settings から直接 import する。
+    from web.services.test_design_settings import _test_design_params, get_test_design_settings
 
     params = _test_design_params(get_test_design_settings())
     design = build_test_design(report, params)

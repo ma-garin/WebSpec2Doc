@@ -136,3 +136,21 @@ def save_test_design_settings(settings: dict[str, Any]) -> dict[str, Any]:
         json.dumps(normalized, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8"
     )
     return normalized
+
+
+def _test_design_params(settings: dict[str, Any]) -> Any:
+    """設定 dict から TestDesignParams を構築する（value_catalog と技法パラメータ）。
+
+    元は web.routes.qa_process にあったが、web.services.testcase_table_store からも
+    参照されており、services -> routes の循環 import の原因になっていたためこちらへ移設した。
+    web.routes.qa_process 側は後方互換のため同名で re-export している。
+    """
+    from generator.test_design import TestDesignParams
+
+    kwargs: dict[str, Any] = {"value_catalog": settings.get("value_catalog") or {}}
+    if isinstance(settings.get("enabled_techniques"), list):
+        kwargs["enabled_techniques"] = tuple(settings["enabled_techniques"])
+    for key in ("bva_offset", "pairwise_strength", "n_switch", "max_dt_conditions"):
+        if isinstance(settings.get(key), int):
+            kwargs[key] = settings[key]
+    return TestDesignParams(**kwargs)

@@ -32,28 +32,46 @@ WebSpec2Doc 自身の開発ライフサイクル文書を、SIer が納品時に
 | テストファイル総数 | **213**（非E2E 193 / E2E 20） | `find tests -name 'test_*.py' \| wc -l` |
 | テスト関数総数 | **3,026**（うち E2E 62） | `grep -rhE '^\s*def test_' tests/ \| wc -l` |
 
-### テスト実行結果
+### テスト実行結果（すべて 2026-08-03 に現構成で実測）
 
-| 指標 | 値 | 計測日 | 備考 |
-|---|---|---|---|
-| L1/L2 テスト | **3,239 passed / 0 failed** | 2026-08-03 | pre-commit の pytest ゲート（32.66 秒） |
-| L3 E2E テスト | 200 passed / 0 skipped | 2026-07-16 | **参考値**。当時の E2E は 32 ファイル、現在は 20 ファイル |
-| カバレッジ | 84.30%（閾値 80%） | 2026-07-16 | **参考値**。現構成では未計測 |
+| 指標 | 値 | 取得コマンド |
+|---|---|---|
+| L1/L2 テスト | **3,239 passed / 0 failed**（31 秒） | `make test` |
+| L3 E2E テスト | **94 passed / 1 skipped**（2 分 23 秒） | `make verify-ui` |
+| カバレッジ | **84%**（閾値 80%） | `make coverage` |
+| 機能契約検証 | **PASS**（validated_features=51） | `python scripts/quality_harness.py` |
+| 静的解析 | **PASS** | `make lint` |
 
-L1/L2 は現構成での実測値。前回計測（1,831 passed）から 1,408 件増えている。
+前回計測（2026-07-16）の 1,831 passed から 1,408 件増えている。
 テスト関数の実測は 3,026 件だが passed が 3,239 件なのは、`parametrize` で
 1 関数が複数ケースに展開されるため。関数数と実行ケース数は別の指標である。
 
-L3 とカバレッジは未取得。納品前に `make verify-ui` / `make coverage` を実行して更新すること。
+E2E の 1 skipped は `autorun_security_kernel`。送信ゲートウェイがテスト生成・実行段階
+でのみ有効で、クロール段階は別の検査（`src/crawler/url_safety.py`）を通る構造のため、
+素直に書くと別機能を検証してしまう。理由を `tests/e2e/test_autorun_security_e2e.py`
+に明記した上で skip している。
 
-## 既知のリスク（納品前に判断が必要）
+**E2E 実行時の注意**: ポート 8765 で開発用 DB のサーバーが動いていると、
+`make verify-ui` は DB 汚染を避けるために停止する。サーバーを止めたくない場合は
+`env -u WEBSPEC2DOC_E2E_URL venv/bin/python -m pytest tests/e2e/ -q` を使うと、
+conftest が別ポートに隔離サーバーを立てて実行する。
 
-| # | 内容 | 該当文書 |
+## 品質状況
+
+### 解消済み（2026-08-03）
+
+| # | 内容 | 対応 |
 |---|---|---|
-| 1 | **critical 機能 11 件のうち 9 件が、テストレベル L3（E2E）で検証されていない**。認証(account_auth)・テナントメンバーシップ・テナント分離・AutoRun段階承認・セキュリティカーネル等は L1/L2 のみ。E2E 20 ファイルを grep で実測して確認済み | WS2D-ST-001 §6 / WS2D-TM-001 |
-| 2 | サブパッケージ間の循環依存 3 件 | WS2D-MD-001 |
-| 3 | OSS ライセンスに UNKNOWN が残る。再配布判断には個別特定が必要 | WS2D-LI-001 |
-| 4 | 承認者・配布先・問い合わせ先が未設定（Word の承認欄は空欄） | 全文書 |
+| 1 | critical 機能の L3（E2E）未検証 | 認証(account_auth)・テナントメンバーシップ・テナント分離・AutoRun 段階承認の E2E を追加（`tests/e2e/test_auth_tenant_e2e.py`, `test_autorun_security_e2e.py`） |
+| 2 | サブパッケージ間の循環依存 3 経路 | **0 経路 / 原因 import 0 本**。AutoRun パイプライン 886 行を `web/services/auto_run_pipeline.py` へ移設し、`web.services -> web.routes` の逆依存を解消 |
+| 3 | OSS ライセンスの UNKNOWN 26 件 | **0 件**。PEP 639 の `License-Expression` に対応。MPL-2.0 が 3 件、GPL・LGPL・AGPL は該当なし |
+
+### 残る要対応事項
+
+| # | 内容 | 理由 |
+|---|---|---|
+| 1 | 承認者・配布先・問い合わせ先が未設定（Word の承認欄は空欄） | 実在しない氏名・連絡先を書くのは捏造にあたるため空欄のまま。納品時に記入する |
+| 2 | `autorun_security_kernel` の E2E が 1 件 skip | 送信ゲートウェイがテスト生成・実行段階でのみ有効で、クロール段階は別検査を通る構造。素直に書くと別機能を検証することになる。理由をテストに明記済み |
 
 ## 文書一覧
 

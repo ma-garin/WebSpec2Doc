@@ -17,6 +17,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 import web.routes.auto_run as auto_run
+import web.services.auto_run_pipeline as auto_run_pipeline
 from web.services.auto_run_job import AutoRunJob
 
 
@@ -33,7 +34,7 @@ def job() -> AutoRunJob:
 class TestStageGateBlocks:
     def test_gate_waits_until_released(self, job: AutoRunJob, monkeypatch) -> None:
         """承認されるまで先へ進まないこと。"""
-        monkeypatch.setattr(auto_run, "STAGE_APPROVAL_TIMEOUT_SEC", 5)
+        monkeypatch.setattr(auto_run_pipeline, "STAGE_APPROVAL_TIMEOUT_SEC", 5)
         finished = threading.Event()
 
         def run() -> None:
@@ -55,7 +56,7 @@ class TestStageGateBlocks:
         self, job: AutoRunJob, monkeypatch
     ) -> None:
         """画面をリロードして job_id を失っても、ドメインで解除できる。"""
-        monkeypatch.setattr(auto_run, "STAGE_APPROVAL_TIMEOUT_SEC", 5)
+        monkeypatch.setattr(auto_run_pipeline, "STAGE_APPROVAL_TIMEOUT_SEC", 5)
         worker = threading.Thread(
             target=lambda: auto_run._await_stage_approval(job, "test_objective"), daemon=True
         )
@@ -72,7 +73,7 @@ class TestStageGateBlocks:
 
     def test_cancel_releases_the_gate(self, job: AutoRunJob, monkeypatch) -> None:
         """停止したのに承認待ちで固まらないこと。"""
-        monkeypatch.setattr(auto_run, "STAGE_APPROVAL_TIMEOUT_SEC", 30)
+        monkeypatch.setattr(auto_run_pipeline, "STAGE_APPROVAL_TIMEOUT_SEC", 30)
         worker = threading.Thread(
             target=lambda: auto_run._await_stage_approval(job, "test_objective"), daemon=True
         )
@@ -88,7 +89,7 @@ class TestStageGateBlocks:
 
         ログ1行だけでは成果物を見た人に届かないため、job.unverified に載せる。
         """
-        monkeypatch.setattr(auto_run, "STAGE_APPROVAL_TIMEOUT_SEC", 0.2)
+        monkeypatch.setattr(auto_run_pipeline, "STAGE_APPROVAL_TIMEOUT_SEC", 0.2)
         auto_run._await_stage_approval(job, "test_objective")
         joined = "\n".join(job.log)
         assert "タイムアウト" in joined

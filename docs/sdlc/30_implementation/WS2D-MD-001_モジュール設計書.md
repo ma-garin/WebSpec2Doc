@@ -469,13 +469,13 @@ graph LR
 
 `src.capture` は `src.crawler`・`src.llm` へ依存するのみで、`web.*` からの直接 import は実測されなかった（web層からの起動経路は本図の実測範囲では未確認。CLI経由の可能性がある）。
 
-**#1〜#3 の解消状況（2026-08-03 対応）**: 循環の本質原因だった `web.services → web.routes` の逆依存（レイヤ逆転）は3箇所あったが、うち2箇所を解消した。
+**#1〜#3 の解消状況（2026-08-03 対応、同日中に全3箇所を解消）**: 循環の本質原因だった `web.services → web.routes` の逆依存（レイヤ逆転）は3箇所あったが、**全て解消した**。
 
 - `web/services/document_autorun.py`: `_load_report` の import 元を `web.routes.qa_process`（re-export 経由）から、実体のある `web.services.qa.helpers` へ変更した。
 - `web/services/testcase_table_store.py`: `_test_design_params`（Flask に依存しない純粋関数）を `web.routes.qa_process` から `web.services.test_design_settings` へ移設し、そちらから直接 import するよう変更した。`web/routes/qa_process.py` は後方互換のため従来通り同名で re-export している。
-- `web/services/cli_runner.py` の `_run_job`（実装は `web.routes.auto_run` 側）は**未解消のまま残した**。`_run_job` は同一ファイル内の `_phase_*` 群（約900行、`_phase_discover`/`_phase_crawl`/`_execute_tests` 等）と直接呼び出しで密結合しており、切り出すには AutoRun パイプライン全体を services 層へ移す大規模リファクタリングが必要になる。最小修正の範囲を超えるため今回は対象外とし、既存の関数内遅延 import のまま、循環依存を承知の上での意図的な残置であることをコード上のコメントで明記した。
+- `web/services/cli_runner.py` の `_run_job`（旧・実装は `web.routes.auto_run` 側）: 当初は `_phase_*` 群（約900行）との密結合を理由に対象外としていたが、同日中に AutoRun パイプライン本体（`_run_job` と 21 個の `_phase_*`/補助関数、および段階承認まわりの `_await_stage_approval` 等）を新設の `web/services/auto_run_pipeline.py` へ移設した。このパイプラインは Flask のリクエストコンテキスト（`request`/`session`/`g`/`current_app`）に一切依存していないことを AST 走査で確認済みで、移設は純粋な切り出しで済んだ。`logger`/`_job_out`（routes 側・pipeline 側の双方から呼ばれる下位関数）は既存の `web/services/auto_run_job.py` に集約した。`web/routes/auto_run.py` は後方互換のため移設した名前を同名で re-export しており（`_await_stage_approval` 等、外部テストからの直接参照が複数あったため）、`web/services/cli_runner.py` は `web.services.auto_run_pipeline` からトップレベルで直接 import するよう変更し、循環を承知で残していた遅延 import と弁明コメントは削除した。
 
-`scripts/extract_asbuilt.py` の循環検出はサブパッケージ単位（`web.services` 全体 vs `web.routes` 全体）でエッジの有無を判定するため、上記1件（cli_runner.py）が残る限り `web.services → web.routes` のエッジ自体は存在し続け、#1〜#3 は機械的な検出結果としては引き続き3件のまま出力される（`docs/sdlc/_asbuilt/dependency_cycles.json` 参照）。実体としての逆依存の import 文は3箇所から1箇所へ減っている。
+`scripts/extract_asbuilt.py` の循環検出はサブパッケージ単位（`web.services` 全体 vs `web.routes` 全体）でエッジの有無を判定する。上記の移設により `web/services/*.py` から `web.routes.*` を import する行はコードベース全体で 0 本になり、実行結果は `cycles: 0 経路 / 原因 import: 0 本`（`docs/sdlc/_asbuilt/dependency_cycles.json` も cycles: [] / offending_modules: [] ）。#1〜#3 は名実ともに解消済み。
 
 **この実測の限界（未確認事項）**: 上記は同一ファイル内の `import`/`from` 文の静的走査であり、関数内の遅延 import・動的 import・`TYPE_CHECKING` 専用 import を区別せず数えている。件数は実行時依存の強さを正確には反映しない可能性がある。また `src/main.py`・`src/generator/*`・`src/diff/*` 等、Webアプリ層と直接依存しない CLI側パイプライン（3章のドメイン層一覧のうち本書スコープ外の部分）は本図に含めていない。
 
@@ -486,3 +486,4 @@ graph LR
 | 1.0 | 2026-08-02 | 初版作成 | 開発チーム |
 | 1.1 | 2026-08-02 | クラス図4種（ストア層/AutoRun系/クローラ・解析系/パッケージ依存）を追加。パッケージ依存はimport文の実測により4章の未確認事項を補完し、循環依存5件を検出 | 開発チーム |
 | 1.2 | 2026-08-03 | 循環依存#1〜#3の本質原因（web.services→web.routesの逆依存3箇所）のうち2箇所を解消（document_autorun.py・testcase_table_store.py）。残り1箇所（cli_runner.py→auto_run._run_job）は_phase_*群との密結合により大規模リファクタリング相当のため意図的に残置し、理由をコード内コメントで明記。pytest 3239件は全件通過を確認 | 開発チーム |
+| 1.3 | 2026-08-03 | 残っていた最後の循環依存1本（cli_runner.py→auto_run._run_job）を解消。AutoRunパイプライン本体（_run_job・21関数・_await_stage_approval等）を新設の web/services/auto_run_pipeline.py へ移設し、logger/_job_out は既存の web/services/auto_run_job.py に集約。web/routes/auto_run.py は後方互換のため同名re-export、web/services/cli_runner.py はトップレベルで直接importするよう変更。scripts/extract_asbuilt.py の結果は cycles 0経路・原因import 0本。quality/feature_contracts.yml のautorun契約にauto_run_pipeline.pyを登録 | 開発チーム |

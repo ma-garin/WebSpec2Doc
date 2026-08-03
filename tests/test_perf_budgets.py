@@ -60,7 +60,7 @@ def test_autorun_status_response_under_64kb(tmp_path: Path) -> None:
     qa_dir.mkdir(parents=True)
     _write_worst_case_ndjson(qa_dir / "playwright_progress.ndjson")
 
-    with patch("web.routes.auto_run.OUTPUT_DIR", tmp_path):
+    with patch("web.services.auto_run_job.OUTPUT_DIR", tmp_path):
         progress = _current_test_progress(job)
 
     body_size = len(json.dumps(progress).encode("utf-8"))
@@ -76,7 +76,7 @@ def test_autorun_status_latency_p95_under_100ms(tmp_path: Path) -> None:
     _write_worst_case_ndjson(qa_dir / "playwright_progress.ndjson")
 
     durations_ms: list[float] = []
-    with patch("web.routes.auto_run.OUTPUT_DIR", tmp_path):
+    with patch("web.services.auto_run_job.OUTPUT_DIR", tmp_path):
         for _ in range(100):
             start = time.perf_counter()
             _current_test_progress(job)

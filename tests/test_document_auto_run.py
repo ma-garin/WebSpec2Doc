@@ -61,9 +61,9 @@ class TestStartDocumentDrivenRoute:
 
         with (
             patch("web.routes.auto_run._JOBS", jobs),
-            patch("web.routes.auto_run.OUTPUT_DIR", tmp_path),
+            patch("web.services.auto_run_job.OUTPUT_DIR", tmp_path),
             patch("web.validation.OUTPUT_DIR", tmp_path),
-            patch("web.routes.auto_run.get_viewpoint_store", return_value=_viewpoint_store()),
+            patch("web.services.auto_run_pipeline.get_viewpoint_store", return_value=_viewpoint_store()),
             patch("web.routes.auto_run.threading.Thread"),
         ):
             response = _client().post(
@@ -96,9 +96,9 @@ class TestStartDocumentDrivenRoute:
 
         with (
             patch("web.routes.auto_run._JOBS", jobs),
-            patch("web.routes.auto_run.OUTPUT_DIR", tmp_path),
+            patch("web.services.auto_run_job.OUTPUT_DIR", tmp_path),
             patch("web.validation.OUTPUT_DIR", tmp_path),
-            patch("web.routes.auto_run.get_viewpoint_store", return_value=_viewpoint_store()),
+            patch("web.services.auto_run_pipeline.get_viewpoint_store", return_value=_viewpoint_store()),
             patch("web.routes.auto_run.threading.Thread") as thread,
         ):
             response = _client().post(
@@ -119,10 +119,10 @@ class TestStartDocumentDrivenRoute:
 
         with (
             patch("web.routes.auto_run._JOBS", jobs),
-            patch("web.routes.auto_run.OUTPUT_DIR", tmp_path),
+            patch("web.services.auto_run_job.OUTPUT_DIR", tmp_path),
             patch("web.routes.crawl.OUTPUT_DIR", tmp_path),
             patch("web.validation.OUTPUT_DIR", tmp_path),
-            patch("web.routes.auto_run.get_viewpoint_store", return_value=_viewpoint_store()),
+            patch("web.services.auto_run_pipeline.get_viewpoint_store", return_value=_viewpoint_store()),
             patch("web.routes.auto_run.threading.Thread"),
         ):
             upload = _client().post(
@@ -177,12 +177,12 @@ def test_document_phase_runs_before_script_generation() -> None:
         return lambda *_args: order.append(name)
 
     with (
-        patch("web.routes.auto_run._phase_discover", side_effect=phase("discover")),
-        patch("web.routes.auto_run._phase_crawl", side_effect=phase("crawl")),
-        patch("web.routes.auto_run._phase_generate_qa", side_effect=phase("qa")),
-        patch("web.routes.auto_run._phase_generate_document_mbt", side_effect=phase("mbt")),
-        patch("web.routes.auto_run._phase_generate_scripts", side_effect=phase("scripts")),
-        patch("web.routes.auto_run._execute_tests", side_effect=phase("execute")),
+        patch("web.services.auto_run_pipeline._phase_discover", side_effect=phase("discover")),
+        patch("web.services.auto_run_pipeline._phase_crawl", side_effect=phase("crawl")),
+        patch("web.services.auto_run_pipeline._phase_generate_qa", side_effect=phase("qa")),
+        patch("web.services.auto_run_pipeline._phase_generate_document_mbt", side_effect=phase("mbt")),
+        patch("web.services.auto_run_pipeline._phase_generate_scripts", side_effect=phase("scripts")),
+        patch("web.services.auto_run_pipeline._execute_tests", side_effect=phase("execute")),
     ):
         _run_job(job, depth=5, max_pages=300)
 
@@ -205,10 +205,10 @@ def test_filter_keeps_document_candidates(tmp_path: Path) -> None:
     generated_from: list[Path] = []
 
     with (
-        patch("web.routes.auto_run.OUTPUT_DIR", tmp_path),
-        patch("web.routes.auto_run.generate_spec_ts") as generate,
+        patch("web.services.auto_run_job.OUTPUT_DIR", tmp_path),
+        patch("web.services.auto_run_pipeline.generate_spec_ts") as generate,
         patch(
-            "web.routes.auto_run.run_playwright",
+            "web.services.auto_run_pipeline.run_playwright",
             return_value={"ok": True, "passed": 0, "failed": 0, "total": 0, "tests": []},
         ),
     ):
@@ -232,7 +232,7 @@ def test_script_generation_uses_document_candidates(tmp_path: Path) -> None:
     )
     job = _make_job(mode="document")
 
-    with patch("web.routes.auto_run.OUTPUT_DIR", tmp_path):
+    with patch("web.services.auto_run_job.OUTPUT_DIR", tmp_path):
         _phase_generate_scripts(job)
 
     content = Path(job.outputs["spec_ts"]).read_text(encoding="utf-8")
@@ -291,7 +291,7 @@ def test_document_phase_generates_artifacts_and_summary(tmp_path: Path) -> None:
     )
     job = _make_job(mode="document", selection_criterion="reached_target", target_page_id="P002")
 
-    with patch("web.routes.auto_run.OUTPUT_DIR", tmp_path):
+    with patch("web.services.auto_run_job.OUTPUT_DIR", tmp_path):
         _phase_generate_document_mbt(job)
 
     assert job.status != "failed"
@@ -334,7 +334,7 @@ def test_crawl_receives_each_reference_document(tmp_path: Path) -> None:
 
     _write_json(tmp_path / "example.com" / "report.json", {"screens": []})
     with (
-        patch("web.routes.auto_run.OUTPUT_DIR", tmp_path),
+        patch("web.services.auto_run_job.OUTPUT_DIR", tmp_path),
         patch("web.routes.auto_run.subprocess.Popen", side_effect=fake_popen),
     ):
         _phase_crawl(job, depth=2, max_pages=30)

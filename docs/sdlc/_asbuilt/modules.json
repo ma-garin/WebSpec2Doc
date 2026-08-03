@@ -6063,86 +6063,86 @@
     "package": "web",
     "subpackage": "web.routes",
     "summary": "",
-    "loc": 1725,
+    "loc": 610,
     "classes": [],
     "functions": [
       {
         "name": "api_autorun_start",
         "summary": "",
         "signature": "() -> dict | tuple[dict, int]",
-        "line": 65
+        "line": 75
       },
       {
         "name": "api_autorun_status",
         "summary": "",
         "signature": "() -> dict | tuple[dict, int]",
-        "line": 128
+        "line": 138
       },
       {
         "name": "api_autorun_cancel",
         "summary": "",
         "signature": "() -> dict | tuple[dict, int]",
-        "line": 172
+        "line": 182
       },
       {
         "name": "api_history_runs",
         "summary": "種別を問わない一般化された実行履歴（R2-27）。",
         "signature": "() -> dict",
-        "line": 189
+        "line": 199
       },
       {
         "name": "api_autorun_submit_input",
         "summary": "ログイン情報などの人的インプットを受け取り、待機中のジョブを再開する。",
         "signature": "() -> dict | tuple[dict, int]",
-        "line": 252
+        "line": 262
       },
       {
         "name": "api_autorun_preview",
         "summary": "テストケース一覧・スクリプト内容・フィルター件数を返す。",
         "signature": "() -> dict | tuple[dict, int]",
-        "line": 283
+        "line": 293
       },
       {
         "name": "api_autorun_approve",
         "summary": "",
         "signature": "() -> dict | tuple[dict, int]",
-        "line": 293
+        "line": 303
       },
       {
         "name": "api_autorun_report",
         "summary": "",
         "signature": "() -> dict | tuple[dict, int]",
-        "line": 333
+        "line": 343
       },
       {
         "name": "api_autorun_live_screenshot",
         "summary": "テスト実行中の最新スクリーンショットを返す（screenshot:'on' 設定済みの",
         "signature": "() -> Response",
-        "line": 342
+        "line": 352
       },
       {
         "name": "api_autorun_jobs",
         "summary": "",
         "signature": "() -> dict",
-        "line": 361
+        "line": 371
       },
       {
         "name": "current_awaiting_stage",
         "summary": "いま承認待ちの段階IDを返す（無ければ空文字）。",
         "signature": "(job_id, domain) -> str",
-        "line": 465
+        "line": 393
       },
       {
         "name": "release_stage_gate",
         "summary": "段階承認の関門を解除する。解除できたら True。",
         "signature": "(job_id, domain) -> bool",
-        "line": 487
+        "line": 415
       },
       {
         "name": "release_all_stage_gates",
         "summary": "実行条件の確定により、以降すべての段階の関門を解除する。",
         "signature": "(job_id, domain, decisions, note, unverified) -> bool",
-        "line": 514
+        "line": 442
       }
     ],
     "internal_deps": [
@@ -7761,7 +7761,7 @@
     "package": "web",
     "subpackage": "web.services",
     "summary": "",
-    "loc": 217,
+    "loc": 229,
     "classes": [
       {
         "name": "AutoRunJob",
@@ -7771,40 +7771,40 @@
           {
             "name": "add_log",
             "summary": "",
-            "line": 103
+            "line": 115
           },
           {
             "name": "add_unverified",
             "summary": "人の確認を経ていない事項を記録する。",
-            "line": 115
+            "line": 127
           },
           {
             "name": "awaiting_remaining_sec",
             "summary": "待機期限までの残り秒。待機していなければ 0。",
-            "line": 127
+            "line": 139
           },
           {
             "name": "elapsed_sec",
             "summary": "",
-            "line": 133
+            "line": 145
           },
           {
             "name": "to_dict",
             "summary": "",
-            "line": 151
+            "line": 163
           },
           {
             "name": "register_proc",
             "summary": "実行中の子プロセスを登録する。登録が無い子プロセスは cancel() から",
-            "line": 191
+            "line": 203
           },
           {
             "name": "cancel",
             "summary": "",
-            "line": 202
+            "line": 214
           }
         ],
-        "line": 31
+        "line": 43
       }
     ],
     "functions": [
@@ -7812,10 +7812,25 @@
         "name": "job_output_dir",
         "summary": "バックグラウンドジョブに固定済みのテナント出力先を返す。",
         "signature": "(job, default) -> Path",
-        "line": 17
+        "line": 19
       }
     ],
-    "internal_deps": []
+    "internal_deps": [
+      "web.config"
+    ]
+  },
+  {
+    "path": "web/services/auto_run_pipeline.py",
+    "package": "web",
+    "subpackage": "web.services",
+    "summary": "AutoRun パイプライン本体（実行フェーズ群）。",
+    "loc": 1168,
+    "classes": [],
+    "functions": [],
+    "internal_deps": [
+      "web.config",
+      "web.validation"
+    ]
   },
   {
     "path": "web/services/auto_run_preview.py",
@@ -7839,7 +7854,7 @@
     "package": "web",
     "subpackage": "web.services",
     "summary": "CLI モード（画面なし）から本体機能を実行するための Flask 非依存ランナー。",
-    "loc": 313,
+    "loc": 308,
     "classes": [
       {
         "name": "AutoRunResult",
@@ -7849,10 +7864,10 @@
           {
             "name": "exit_code",
             "summary": "終了コード。0=正常 / 1=テスト失敗を含む完了 / 2=実行エラー / 130=中止。",
-            "line": 49
+            "line": 52
           }
         ],
-        "line": 32
+        "line": 35
       },
       {
         "name": "TestRunResult",
@@ -7862,10 +7877,10 @@
           {
             "name": "exit_code",
             "summary": "",
-            "line": 232
+            "line": 227
           }
         ],
-        "line": 220
+        "line": 215
       }
     ],
     "functions": [
@@ -7873,18 +7888,16 @@
         "name": "run_autorun",
         "summary": "AutoRun のパイプラインを端末から最後まで回す。",
         "signature": "(url) -> AutoRunResult",
-        "line": 67
+        "line": 70
       },
       {
         "name": "run_testcases",
         "summary": "テストケース表から spec を生成し、その場で実行して結果を保存する。",
         "signature": "(domain) -> TestRunResult",
-        "line": 238
+        "line": 233
       }
     ],
-    "internal_deps": [
-      "web.routes"
-    ]
+    "internal_deps": []
   },
   {
     "path": "web/services/comparison_workspace.py",

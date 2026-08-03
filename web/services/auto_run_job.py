@@ -8,6 +8,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from web.config import OUTPUT_DIR
+
 logger = logging.getLogger(__name__)
 
 MAX_LOG_LINES = 1000
@@ -18,6 +20,16 @@ def job_output_dir(job: AutoRunJob, default: Path) -> Path:
     """バックグラウンドジョブに固定済みのテナント出力先を返す。"""
     stored = getattr(job, "_output_dir", None)
     return stored if isinstance(stored, Path) else default
+
+
+def _job_out(job: AutoRunJob) -> Path:
+    """ジョブの出力ディレクトリ（テナントスコープ解決済み）を返す。
+
+    web/routes/auto_run.py と web/services/auto_run_pipeline.py の双方から
+    呼ばれるため、両者が依存できる下位モジュールとしてここに置く
+    （services 側に置くことで web.services -> web.routes の逆依存を作らない）。
+    """
+    return job_output_dir(job, OUTPUT_DIR)
 
 
 def _truncate_utf8(value: str, limit: int) -> str:

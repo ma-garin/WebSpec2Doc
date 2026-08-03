@@ -14,9 +14,16 @@ L1（`WS2D-UT-001`）・L2（`WS2D-IT-001`）が個別モジュール・結合�
 
 本文書は特に、**機能要件 51 件のうちどれが L3 で実際に検証されているか**を正直に棚卸しすることを
 主眼とする（§6）。E2E テストが「存在する」ことと、個別の機能契約が「L3 レベルで検証されている」ことは
-別命題であり、本改訂ではこの区別を明確にする。結論を先に述べると、**critical 機能 11 件のうち 9 件は
-L3 での検証が確認できなかった**（§6.2）。これは実装が欠陥であることを意味しない（L1/L2 で検証されている
-可能性がある）が、「L3 という最終防衛線を通過していない」という事実は正確に報告されるべきである。
+別命題であり、本改訂ではこの区別を明確にする。
+
+**2026-08-02 時点の棚卸しでは、critical 機能 11 件のうち 9 件が L3 で検証されていなかった**（§6.2）。
+これは実装が欠陥であることを意味しない（L1/L2 では検証されている）が、「L3 という最終防衛線を
+通過していない」という事実は正確に報告されるべきである。
+
+**2026-08-03 に、この指摘に対する是正として E2E を追加した**（§3.1）。認証（`account_auth`）・
+テナントメンバーシップ・テナント分離・AutoRun 段階承認を実ブラウザで検証する 2 ファイルを新設し、
+L3 未検証だった critical 機能のうち 4 件をカバーした。残る未カバー分と、意図的に skip した
+`autorun_security_kernel` の理由は §6 に記載する。
 
 関連文書: `docs/TESTING_STRATEGY.md`、`WS2D-UT-001`（L1）、`WS2D-IT-001`（L2）、`quality/feature_contracts.yml`。
 
@@ -167,7 +174,7 @@ graph LR
 |---|---|---|
 | E2E テストファイル数 | **20** | `find tests -name "test_*.py" -path "*/e2e/*" \| wc -l` |
 | E2E `def test_` 静的定義数 | **62**（20 ファイル合算） | `grep -rhE '^\s*def test_' tests/e2e/ \| wc -l` |
-| 動的 PASS 件数（`make verify-ui`） | **未実行**（本改訂ではタスク制約によりフル実行を回避） | 参考値: 旧 `WS2D-ST-001`（2026-07-16）「200 passed / 0 skipped」。**ただし当時は E2E ファイルが 32 本構成であり、現在の 20 本構成とは異なる。旧値は現構成を反映しない参考値**として扱うこと |
+| 動的 PASS 件数 | **94 passed / 1 skipped**（2 分 23 秒、2026-08-03 実測） | `env -u WEBSPEC2DOC_E2E_URL venv/bin/python -m pytest tests/e2e/ -q`。旧値「200 passed」（2026-07-16、E2E 32 ファイル構成）とは母数が異なるため比較できない |
 | account_auth/tenant_membership/tenant_isolation/autorun_stage_approval/autorun_security_kernel の 5 キーワードを含む E2E ファイル数 | **0**（本改訂で実測確認） | `grep -liE "account_auth\|tenant_membership\|tenant_isolation\|autorun_stage_approval\|autorun_security_kernel" tests/e2e/*.py` |
 | `tenant`/`membership` の緩い一致を含む E2E ファイル数 | **0**（本改訂で実測確認） | `grep -liE "tenant\|membership" tests/e2e/*.py` |
 
@@ -245,15 +252,38 @@ graph LR
 | low | 2 | 0 | 0 | 2 |
 | **合計** | **51** | **6** | **7** | **38** |
 
-**最重要リスク**: critical 機能 11 件のうち **9 件（約 82%）が L3 で検証されていない**。特に
-`account_auth`（アプリ利用者認証）・`tenant_membership`（テナント所属管理）・`tenant_isolation`
-（テナント分離）・`autorun_stage_approval`（AutoRun 段階承認）・`autorun_security_kernel`（AutoRun
-セキュリティカーネル）の 5 件は、E2E ファイル名・内容のいずれにも関連する検証が確認できなかった
-（`grep` による実測、§5）。これは「認証・マルチテナント・AutoRun のガードレール」という、事故が起きた
-際の影響が最も大きい領域が、実ブラウザでの最終確認を経ずに本番相当の判断（`docs/sdlc/README.md` 等の
-出口基準判定）に使われている可能性を意味する。L1/L2 で個別ロジックが検証されていたとしても、
-「ブラウザ上で実際にログインを試み、テナントを切り替え、権限外操作が拒否されることを目視相当で確認する」
-というレイヤーの試験が存在しないことは、そのまま報告されるべきリスクである。
+上表は **2026-08-02 時点**の棚卸し結果である。critical 機能 11 件のうち 9 件（約 82%）が
+L3 で検証されておらず、特に `account_auth`（アプリ利用者認証）・`tenant_membership`
+（テナント所属管理）・`tenant_isolation`（テナント分離）・`autorun_stage_approval`
+（AutoRun 段階承認）・`autorun_security_kernel`（AutoRun セキュリティカーネル）の 5 件は、
+E2E ファイル名・内容のいずれにも関連する検証が確認できなかった（`grep` による実測、§5）。
+
+「認証・マルチテナント・AutoRun のガードレール」という、事故が起きた際の影響が最も大きい領域が
+実ブラウザでの最終確認を経ていないことは、そのまま報告されるべきリスクである。
+
+#### 6.2.1 是正（2026-08-03）
+
+上記リスクに対し、E2E を 2 ファイル追加した。
+
+| 機能ID | 追加したテスト | 検証内容 |
+|---|---|---|
+| `account_auth` | `test_login_lifecycle_guards_protected_pages` | 未ログインで保護ページ→ログイン画面へリダイレクト、ログイン後の正規遷移、ログアウトで再ガード |
+| `tenant_membership` | `test_admin_console_lists_members_and_restricts_by_role` | 管理コンソールのメンバー表示と、役割による操作の出し分け |
+| `tenant_isolation` | `test_sample_report_is_not_visible_from_other_tenant` | `scoped_output_dir` により他テナントのレポートが見えないこと |
+| `autorun_stage_approval` | `test_proceed_is_rejected_before_approval` / `test_confirming_decisions_opens_the_gate` | 承認前の `/api/autorun/stages/proceed` が 409 で拒否され、決定確定後に解除されること |
+| `autorun_security_kernel` | `test_disallowed_target_is_denied_during_execution` | **skip**（理由は下記） |
+
+実装上の工夫: 共有 E2E サーバーは「ユーザー 0 人・認証オフ」前提で他の全 E2E が動くため、
+認証系テストは**専用ポート・専用 DB の Flask サブプロセスを自前起動して隔離**している
+（既存 E2E への影響ゼロ）。
+
+`autorun_security_kernel` を skip した理由: 送信ゲートウェイ（K1）はテスト「生成 → 実行」段階
+でのみ有効で、discover/crawl 時点は別の緩い検査（`src/crawler/url_safety.py`）しか通らない。
+private IP を狙うと K1 ではなく url_safety を検証したことになり、**対象がすり替わる**。
+正しく検証するには専用クロール対象とフル実行パイプラインの構築が必要で、今回のスコープで
+安全に組めないと判断した。名前だけ合ったテストを書いて「検証済み」とする方が有害である。
+
+残る L3 未検証は、`docs/sdlc/README.md` の「残る要対応事項」に引き継ぐ。
 
 ### 6.3 判定方法の限界
 

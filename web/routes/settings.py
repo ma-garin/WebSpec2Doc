@@ -157,6 +157,25 @@ def post_settings() -> dict:
     }
 
 
+@bp.post("/api/settings/clear-key")
+def post_clear_key() -> dict:
+    """保存済みの OpenAI API キーを明示的に削除する。
+
+    空欄で保存すると既存キーを保持する仕様のため、キーを消す手段が別途必要。
+    参照実装（UX_Auto_Reviewer）の「APIキーを削除」に相当する。
+    """
+    _write_env({"OPENAI_API_KEY": ""})
+    record_admin_event(
+        INSTANCE_DIR,
+        action="settings.key_cleared",
+        target_type="workspace",
+        target_id="current",
+        detail={"cleared": "OPENAI_API_KEY"},
+    )
+    env = _read_env()
+    return {"ok": True, "openai_key_set": bool(env.get("OPENAI_API_KEY"))}
+
+
 @bp.post("/api/settings/test-connection")
 def post_test_connection() -> dict:
     ok, message = test_openai_connection()

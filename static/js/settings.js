@@ -190,6 +190,10 @@ function setLlmProvider(provider) {
   });
   const reloadBtn = document.getElementById('reload-ollama-models');
   if (reloadBtn) reloadBtn.style.display = provider === 'ollama' ? '' : 'none';
+  // OpenAI 固有の操作（APIキー削除）は Ollama 選択時に隠す
+  document.querySelectorAll('[data-llm-only]').forEach(el => {
+    el.style.display = el.dataset.llmOnly === provider ? '' : 'none';
+  });
   if (provider === 'ollama') loadOllamaModels();
 }
 
@@ -247,6 +251,31 @@ async function testConnection() {
     msg.classList.add('show', 'is-error');
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '疎通確認'; }
+  }
+}
+
+// 保存済みの OpenAI API キーを明示的に削除する。
+// 空欄保存では既存キーを保持するため、消す操作を別に用意している。
+async function clearApiKey() {
+  const btn = document.getElementById('clear-api-key');
+  const msg = document.getElementById('api-status-msg');
+  if (!confirm('保存済みの API キーを削除します。よろしいですか？')) return;
+  if (btn) { btn.disabled = true; btn.textContent = '削除中…'; }
+  try {
+    const res = await fetch('/api/settings/clear-key', { method: 'POST' });
+    const data = await res.json();
+    if (data.ok) {
+      const keyInput = document.getElementById('api-key');
+      if (keyInput) keyInput.value = '';
+      await loadServerSettings();  // 「現在のキー」表示を最新化
+      if (msg) { msg.textContent = 'API キーを削除しました。'; msg.classList.remove('is-error'); msg.classList.add('show'); }
+    } else if (msg) {
+      msg.textContent = '削除に失敗しました。'; msg.classList.add('show', 'is-error');
+    }
+  } catch (e) {
+    if (msg) { msg.textContent = '削除リクエストに失敗しました。'; msg.classList.add('show', 'is-error'); }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'API キーを削除'; }
   }
 }
 
@@ -634,6 +663,7 @@ async function loadAdminAudit({append = false} = {}) {
 
 document.getElementById('save-api')?.addEventListener('click', saveApiKey);
 document.getElementById('test-connection')?.addEventListener('click', testConnection);
+document.getElementById('clear-api-key')?.addEventListener('click', clearApiKey);
 // /settings へ直接遷移した場合もナビ経由と同じく保存済み設定を復元する
 if (document.getElementById('llm-seg')) loadServerSettings();
 document.getElementById('save-slack')?.addEventListener('click', saveSlackWebhook);

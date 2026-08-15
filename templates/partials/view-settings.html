@@ -33,8 +33,10 @@
                 </div>
                 <div class="options-grid">
                   <div class="field full"><label for="api-key">API キー</label><input type="password" id="api-key" placeholder="sk-..." autocomplete="off"></div>
-                  <div class="field"><label for="api-org">組織 ID（任意）</label><input type="text" id="api-org" placeholder="org-..."></div>
-                  <div class="field"><label for="api-project">プロジェクト ID（任意）</label><input type="text" id="api-project" placeholder="proj_..."></div>
+                  <!-- 原語も添える。値をコピーしてくる先（OpenAI の管理画面）は英語表記なので、
+                       日本語だけにするとどれを写すのか分からない。 -->
+                  <div class="field"><label for="api-org">組織 ID<span class="set-label-origin">（Organization ID）</span><span class="set-label-opt">任意</span></label><input type="text" id="api-org" placeholder="org-..."></div>
+                  <div class="field"><label for="api-project">プロジェクト ID<span class="set-label-origin">（Project ID）</span><span class="set-label-opt">任意</span></label><input type="text" id="api-project" placeholder="proj_..."></div>
                   <div class="field full">
                     <label for="api-model">モデル</label>
                     <select id="api-model" class="url-input" style="height:40px">
@@ -52,7 +54,7 @@
 
               <div data-llm-panel="ollama" style="display:none">
                 <div class="options-grid">
-                  <div class="field"><label for="llm-base-url">ベース URL</label><input type="text" id="llm-base-url" placeholder="http://127.0.0.1:11434/v1"></div>
+                  <div class="field full"><label for="llm-base-url">ベース URL<span class="set-label-origin">（Ollama URL）</span></label><input type="text" id="llm-base-url" placeholder="http://127.0.0.1:11434/v1"><p class="input-hint" style="margin:6px 0 0">localhost / 127.0.0.1 / ::1 のローカルアドレスのみ指定できます（SSRF 保護）。</p></div>
                   <div class="field">
                     <label for="llm-model">モデル</label>
                     <select id="llm-model" class="url-input" style="height:40px"><option value="">読み込み中…</option></select>
@@ -64,6 +66,8 @@
               <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px">
                 <button class="btn-primary" id="save-api">保存</button>
                 <button class="btn-outline-sm" id="test-connection" type="button">疎通確認</button>
+                <!-- 空欄保存では既存キーを保持するため、消す手段を別に用意する -->
+                <button class="btn-outline-sm" id="clear-api-key" type="button" data-llm-only="openai">API キーを削除</button>
                 <button class="btn-outline-sm" id="reload-ollama-models" type="button" style="display:none">モデル一覧を再取得</button>
               </div>
               <div class="settings-msg" id="api-msg">保存しました</div>

@@ -559,6 +559,9 @@
     .set-panel.is-active { display: block; }
     .key-current { padding: 10px 12px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface-soft); font-size: 13px; font-family: ui-monospace, monospace; color: var(--text); }
     .set-card-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+    /* ラベルの原語併記（コピー元 OpenAI 画面は英語表記）と「任意」バッジ */
+    .set-label-origin { color: var(--text-muted); font-weight: 400; font-size: 0.85em; margin-left: 2px; }
+    .set-label-opt { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 8px; background: var(--surface); color: var(--text-muted); font-size: 11px; font-weight: 700; vertical-align: middle; }
     @keyframes shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
     @keyframes spin { to { transform: rotate(360deg); } }
 

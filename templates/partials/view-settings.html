@@ -26,49 +26,58 @@
                 <button type="button" role="tab" aria-selected="false" data-provider="ollama">Ollama（ローカル）</button>
               </div>
 
-              <div data-llm-panel="openai">
-                <div class="field full" style="margin-bottom:14px">
+              <div data-llm-panel="openai" class="set-form">
+                <div class="set-field">
                   <label>現在のキー</label>
                   <div class="key-current" id="api-key-current">未設定</div>
                 </div>
-                <div class="options-grid">
-                  <div class="field full"><label for="api-key">API キー</label><input type="password" id="api-key" placeholder="sk-..." autocomplete="off"></div>
-                  <!-- 原語も添える。値をコピーしてくる先（OpenAI の管理画面）は英語表記なので、
-                       日本語だけにするとどれを写すのか分からない。 -->
-                  <div class="field"><label for="api-org">組織 ID<span class="set-label-origin">（Organization ID）</span><span class="set-label-opt">任意</span></label><input type="text" id="api-org" placeholder="org-..."></div>
-                  <div class="field"><label for="api-project">プロジェクト ID<span class="set-label-origin">（Project ID）</span><span class="set-label-opt">任意</span></label><input type="text" id="api-project" placeholder="proj_..."></div>
-                  <div class="field full">
-                    <label for="api-model">モデル</label>
-                    <select id="api-model" class="url-input" style="height:40px">
-                      <option value="gpt-5.4-mini">gpt-5.4-mini（コスト効率・推奨）</option>
-                      <option value="gpt-5.4-nano">gpt-5.4-nano（最安・最速）</option>
-                      <option value="gpt-5.4">gpt-5.4（標準）</option>
-                      <option value="gpt-5.5">gpt-5.5（高精度）</option>
-                      <option value="gpt-5.5-pro">gpt-5.5-pro（最高精度）</option>
-                      <option value="gpt-4.1">gpt-4.1（非推論・ツール呼び出し）</option>
-                    </select>
-                  </div>
+                <div class="set-field">
+                  <label for="api-key">API キー</label>
+                  <input type="password" id="api-key" placeholder="sk-..." autocomplete="off">
+                  <p class="set-help">空欄で保存すると既存キーを保持します。</p>
                 </div>
-                <p class="input-hint" style="margin:12px 0 0">空欄で保存すると既存キーを保持します。</p>
+                <!-- 原語も添える。値をコピーしてくる先（OpenAI の管理画面）は英語表記なので、
+                     日本語だけにするとどれを写すのか分からない。 -->
+                <div class="set-field">
+                  <label for="api-org">組織 ID<span class="set-label-origin">（Organization ID）</span><span class="set-label-opt">任意</span></label>
+                  <input type="text" id="api-org" placeholder="org-...">
+                </div>
+                <div class="set-field">
+                  <label for="api-project">プロジェクト ID<span class="set-label-origin">（Project ID）</span><span class="set-label-opt">任意</span></label>
+                  <input type="text" id="api-project" placeholder="proj_...">
+                </div>
+                <div class="set-field">
+                  <label for="api-model">モデル</label>
+                  <select id="api-model" class="set-select">
+                    <option value="gpt-5.4-mini">gpt-5.4-mini（コスト効率・推奨）</option>
+                    <option value="gpt-5.4-nano">gpt-5.4-nano（最安・最速）</option>
+                    <option value="gpt-5.4">gpt-5.4（標準）</option>
+                    <option value="gpt-5.5">gpt-5.5（高精度）</option>
+                    <option value="gpt-5.5-pro">gpt-5.5-pro（最高精度）</option>
+                    <option value="gpt-4.1">gpt-4.1（非推論・ツール呼び出し）</option>
+                  </select>
+                </div>
               </div>
 
-              <div data-llm-panel="ollama" style="display:none">
-                <div class="options-grid">
-                  <div class="field full"><label for="llm-base-url">ベース URL<span class="set-label-origin">（Ollama URL）</span></label><input type="text" id="llm-base-url" placeholder="http://127.0.0.1:11434/v1"><p class="input-hint" style="margin:6px 0 0">localhost / 127.0.0.1 / ::1 のローカルアドレスのみ指定できます（SSRF 保護）。</p></div>
-                  <div class="field">
-                    <label for="llm-model">モデル</label>
-                    <select id="llm-model" class="url-input" style="height:40px"><option value="">読み込み中…</option></select>
-                  </div>
+              <div data-llm-panel="ollama" class="set-form" style="display:none">
+                <div class="set-field">
+                  <label for="llm-base-url">ベース URL<span class="set-label-origin">（Ollama URL）</span></label>
+                  <input type="text" id="llm-base-url" placeholder="http://127.0.0.1:11434/v1">
+                  <p class="set-help">localhost / 127.0.0.1 / ::1 のローカルアドレスのみ指定できます（SSRF 保護）。</p>
                 </div>
-                <p class="input-hint" id="ollama-status" style="margin:12px 0 0">API キーは不要です。ローカルの Ollama が起動している必要があります。</p>
+                <div class="set-field">
+                  <label for="llm-model">モデル</label>
+                  <select id="llm-model" class="set-select"><option value="">読み込み中…</option></select>
+                  <p class="set-help" id="ollama-status">API キーは不要です。ローカルの Ollama が起動している必要があります。</p>
+                </div>
               </div>
 
-              <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px">
+              <div class="set-actions">
                 <button class="btn-primary" id="save-api">保存</button>
                 <button class="btn-outline-sm" id="test-connection" type="button">疎通確認</button>
-                <!-- 空欄保存では既存キーを保持するため、消す手段を別に用意する -->
-                <button class="btn-outline-sm" id="clear-api-key" type="button" data-llm-only="openai">API キーを削除</button>
                 <button class="btn-outline-sm" id="reload-ollama-models" type="button" style="display:none">モデル一覧を再取得</button>
+                <!-- 消す操作は決定のとなりに置かない。並べると保存のつもりで削除を押せてしまう。 -->
+                <button class="btn-outline-sm set-danger" id="clear-api-key" type="button" data-llm-only="openai">API キーを削除</button>
               </div>
               <div class="settings-msg" id="api-msg">保存しました</div>
               <div class="settings-msg" id="api-status-msg" style="margin-top:12px"></div>

@@ -562,6 +562,32 @@
     /* ラベルの原語併記（コピー元 OpenAI 画面は英語表記）と「任意」バッジ */
     .set-label-origin { color: var(--text-muted); font-weight: 400; font-size: 0.85em; margin-left: 2px; }
     .set-label-opt { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 8px; background: var(--surface); color: var(--text-muted); font-size: 11px; font-weight: 700; vertical-align: middle; }
+    /* API設定フォーム — 参照実装（UX_Auto_Reviewer）の設計言語に合わせる。
+       横並びグリッドをやめ、項目を縦1列にゆったり積み、入力欄は淡い塗り。 */
+    .set-form { display: grid; gap: 18px; padding-top: 4px; }
+    .set-field { display: grid; gap: 8px; }
+    .set-field > label { font-size: var(--text-sm); font-weight: 700; color: var(--text); }
+    .set-field input,
+    .set-field .set-select {
+      height: 44px; width: 100%; box-sizing: border-box;
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      background: var(--surface-soft); color: var(--text);
+      font-size: var(--text-base); padding: 0 14px;
+    }
+    .set-field .set-select { cursor: pointer; }
+    .set-field input:focus,
+    .set-field .set-select:focus {
+      outline: none; border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--focus-ring);
+    }
+    .set-help { min-height: 18px; margin: 0; color: var(--text-muted); font-size: var(--text-sm); }
+    .set-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border); }
+    /* 消す操作は決定のとなりに置かない。右端へ寄せて、保存と誤って押させない。 */
+    .set-actions .set-danger { margin-left: auto; color: var(--danger, #B42318); border-color: var(--danger, #B42318); }
+    /* API設定カードは参照に合わせ、角丸を大きく・余白を広く・ヘッダに区切り線を入れる */
+    #set-panel-api .input-card { border-radius: var(--radius-lg); padding: 28px; max-width: 780px; }
+    #set-panel-api .set-card-title { font-size: var(--text-lg, 18px); }
+    #set-panel-api .set-card-title + .input-hint { padding-bottom: 18px; border-bottom: 1px solid var(--border); }
     @keyframes shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
     @keyframes spin { to { transform: rotate(360deg); } }
 

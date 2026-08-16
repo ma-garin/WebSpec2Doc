@@ -11,6 +11,7 @@ import logging
 from pathlib import Path
 
 from flask import Blueprint, g, request
+from werkzeug.wrappers import Response as BaseResponse
 
 from web.auth import require_admin
 from web.services.feedback_store import (
@@ -65,7 +66,7 @@ def api_submit_feedback() -> tuple[dict, int] | dict:
 
 
 @bp.get("/api/feedback")
-def api_list_feedback() -> tuple[dict, int] | dict:
+def api_list_feedback() -> tuple[dict, int] | dict | BaseResponse:
     """このテナントに届いたフィードバック一覧（管理者のみ）。
 
     閲覧用の画面は用意していない。届いたものを確認する手段がファイルの直接参照

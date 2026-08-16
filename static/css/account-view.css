@@ -82,9 +82,11 @@
 
 .account-subhead { margin: 24px 0 10px; font-size: var(--text-sm); font-weight: 700; }
 
+/* 状態メッセージのクラスは core.js の setViewStatus と対。
+   フィードバック側（.feedback-status）と同じ語彙にしてある。 */
 .account-status { margin-top: 10px; font-size: var(--text-sm); min-height: 1em; }
-.account-status.ok { color: var(--color-low); }
-.account-status.err { color: var(--color-critical); }
+.account-status.is-error { color: var(--color-critical); }
+.account-status.is-success { color: var(--color-low); }
 
 /* ===== 個人設定：表 ===== */
 .account-table-wrap { overflow-x: auto; }
@@ -104,7 +106,6 @@
   font-size: var(--text-xs);
   word-break: break-all;
 }
-.token-once[hidden] { display: none; }
 
 /* ===== フィードバックビュー ===== */
 .feedback-field { margin: 0 0 16px; padding: 0; border: 0; }
@@ -161,7 +162,6 @@
 .feedback-meta-key { display: inline-block; min-width: 78px; font-weight: 600; }
 
 .feedback-status { margin: 12px 0 0; font-size: var(--text-sm); }
-.feedback-status[hidden] { display: none; }
 .feedback-status.is-error { color: var(--color-critical); }
 .feedback-status.is-success { color: var(--color-low); }
 

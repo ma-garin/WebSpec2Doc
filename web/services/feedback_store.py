@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import threading
 import uuid
+from collections import deque
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -21,10 +22,12 @@ from pathlib import Path
 CATEGORIES: tuple[str, ...] = ("bug", "request", "other")
 
 MAX_MESSAGE_LENGTH = 4000
+MAX_READ_LIMIT = 1000
 _MAX_FIELD_LENGTH = 200
 
-_LOCKS_GUARD = threading.Lock()
-_LOCKS: dict[str, threading.Lock] = {}
+# 追記は 1 行・低頻度なので、テナントごとにロックを作り分ける利益がない。
+# プロセス内で 1 本にして、ロック辞書の管理をなくす。
+_WRITE_LOCK = threading.Lock()
 
 
 class FeedbackError(Exception):
@@ -46,14 +49,6 @@ class FeedbackEntry:
     user_email: str
     tenant_id: str
     view: str
-
-
-def _lock_for(path: Path) -> threading.Lock:
-    key = str(path.resolve() if path.is_absolute() else path)
-    with _LOCKS_GUARD:
-        if key not in _LOCKS:
-            _LOCKS[key] = threading.Lock()
-        return _LOCKS[key]
 
 
 def _clip(value: str, limit: int = _MAX_FIELD_LENGTH) -> str:
@@ -103,28 +98,38 @@ def append_feedback(
         view=_clip(view),
     )
     line = json.dumps(asdict(entry), ensure_ascii=False)
-    with _lock_for(path):
-        path.parent.mkdir(parents=True, exist_ok=True)
+    # ディレクトリ作成はロックの外。排他が要るのは追記だけ。
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with _WRITE_LOCK:
         with path.open("a", encoding="utf-8") as handle:
             handle.write(line + "\n")
+        # 氏名・ログインID・自由記述が入るので所有者だけが読める権限にする
+        # （admin_audit.jsonl と同じ扱い）。既存ファイルも毎回この権限に直す。
+        try:
+            path.chmod(0o600)
+        except OSError:
+            pass
     return entry
 
 
 def read_feedback(path: Path, limit: int = 100) -> list[dict]:
-    """新しい順に読み出す。壊れた行は捨てる（1 行の破損で全体を失わせない）。"""
+    """新しい順に読み出す。壊れた行は捨てる（1 行の破損で全体を失わせない）。
+
+    返すのは末尾 limit 件なので、パースも保持もその件数で頭打ちにする。
+    行が増えても JSON パース回数とピークメモリが O(limit) に収まる。
+    """
     if not path.is_file():
         return []
-    entries: list[dict] = []
+    capped = max(1, min(limit, MAX_READ_LIMIT))
     with path.open("r", encoding="utf-8") as handle:
-        for line in handle:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                parsed = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            if isinstance(parsed, dict):
-                entries.append(parsed)
-    entries.reverse()
-    return entries[: max(1, min(limit, 1000))]
+        tail = deque((line for line in handle if line.strip()), maxlen=capped)
+
+    entries: list[dict] = []
+    for line in reversed(tail):
+        try:
+            parsed = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(parsed, dict):
+            entries.append(parsed)
+    return entries

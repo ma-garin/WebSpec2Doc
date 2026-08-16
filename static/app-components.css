@@ -32,17 +32,9 @@
 .topbar-avatar-logout:hover { background: var(--critical-bg); color: var(--critical); }
 
 
-/* ── トップバー ツールボタン（テーマ切替・ショートカットヘルプ） ── */
-.app-topbar-tools { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-.topbar-icon-btn {
-  width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center;
-  border: 1px solid var(--border); border-radius: var(--radius);
-  background: var(--surface); color: var(--text-muted); cursor: pointer;
-  transition: color .12s, background .12s, border-color .12s;
-}
-.topbar-icon-btn:hover { color: var(--primary-dark); background: var(--surface-subtle); border-color: var(--border-strong); }
-.topbar-icon-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
-.topbar-icon-btn svg { width: 17px; height: 17px; }
+/* トップバーのツールボタン（.app-topbar-tools / .topbar-icon-btn）は、
+   ショートカットヘルプの起動ボタンを消した時点で使う要素が無くなったため削除した。
+   ヘルプの入口は「?」キーだけ（static/js/core.js の keydown）。 */
 
 /* ── トースト通知 ── */
 .toast-container {
@@ -444,7 +436,6 @@ kbd.kbd {
   .backlog-active .app-sidebar { display: none; }
   .backlog-active .app-topbar { min-height: 62px; padding: 9px 12px; }
   .backlog-active .app-breadcrumb { display: none; }
-  .backlog-active .app-topbar-tools { display: none; }
   .backlog-active .topbar-new-analysis { min-height: 36px; }
   .backlog-toolbar { display: block; padding: 14px 12px; }
   .backlog-toolbar h2 { font-size: 18px; }

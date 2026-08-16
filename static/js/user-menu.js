@@ -46,12 +46,6 @@
     if (ev.key === 'Escape' && isOpen()) closeMenu(true);
   });
 
-  /** 今表示している画面名。フィードバックに「どこで気づいたか」を添えるために控える。 */
-  function currentViewLabel() {
-    const title = document.getElementById('topbar-title');
-    return (title && title.textContent.trim()) || '';
-  }
-
   /** メニュー項目からビューへ移る。core.js の読み込み順が変わっても落とさない。 */
   function go(viewName) {
     closeMenu(false);
@@ -60,9 +54,6 @@
 
   document.getElementById('usermenu-account-btn')?.addEventListener('click', () => go('account'));
   document.getElementById('usermenu-guide-btn')?.addEventListener('click', () => go('user-guide'));
-  document.getElementById('usermenu-feedback-btn')?.addEventListener('click', () => {
-    // 遷移するとタイトルがフィードバック自身に変わるため、先に控える
-    window.__feedbackOriginView = currentViewLabel();
-    go('feedback');
-  });
+  // 「どの画面から来たか」は switchView が覚えているので、ここでは控えない
+  document.getElementById('usermenu-feedback-btn')?.addEventListener('click', () => go('feedback'));
 })();

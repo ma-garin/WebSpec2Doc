@@ -33,6 +33,31 @@ const VIEW_HEADER = {
 };
 const escHtml = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
+/** 同一オリジンの JSON API を呼ぶ。失敗はサーバーが返した error 文言で throw する。 */
+async function apiJSON(url, method = 'GET', body) {
+  const res = await fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  let data = {};
+  try { data = await res.json(); } catch (e) { /* 非JSONレスポンス */ }
+  if (!res.ok) throw new Error(data.error || ('エラーが発生しました (' + res.status + ')'));
+  return data;
+}
+
+/**
+ * ビュー内の状態メッセージを出す。空文字なら消す。
+ * kind: 'error' | 'success' | 省略（進行中などの中立表示）
+ */
+function setViewStatus(el, text, kind) {
+  if (!el) return;
+  el.textContent = text || '';
+  el.hidden = !text;
+  el.classList.toggle('is-error', kind === 'error');
+  el.classList.toggle('is-success', kind === 'success');
+}
+
 // ---- 情報アイコン（用語説明のツールチップ。列見出し・設定項目ラベル等で共通利用） ----
 function infoTip(text) {
   const t = escHtml(text || '');
@@ -96,8 +121,30 @@ function setHeader(trail, title) {
 }
 
 // ---- ナビ切替 ----
+
+// ビューを開いた時に走らせたい処理は、ビュー側からここへ登録する。
+// switchView に `name === 'xxx'` の分岐を足していくと、ビューが増えるたびに
+// 共有関数を書き換えることになるため（下に残っている分岐がその形）。
+// 新しいビューはこの表を使うこと。
+const VIEW_INIT = {};
+function onViewEnter(name, fn) {
+  (VIEW_INIT[name] || (VIEW_INIT[name] = [])).push(fn);
+}
+
+// 直前に開いていたビュー名。フィードバックが「どの画面で気づいたか」を添えるのに使う。
+// 表示名は VIEW_HEADER から引くので、ヘッダの DOM を読みに行かなくてよい。
+let _prevViewName = null;
+let _curViewName = null;
+function previousViewLabel() {
+  return (VIEW_HEADER[_prevViewName] || {}).title || '';
+}
+
 document.querySelectorAll('.app-nav-item[data-view]').forEach(btn => btn.addEventListener('click', () => switchView(btn.dataset.view)));
 function switchView(name, opts = {}) {
+  if (name !== _curViewName) {
+    _prevViewName = _curViewName;
+    _curViewName = name;
+  }
   // ビュー横断で使う要素（data-views="a b"）は .view の外に置いてあるため、
   // .view の表示切替では畳まれない。所属しないビューへ移ったらここで畳む。
   // 特定のビュー名を書かない一般規則にしてあるので、対象が増えても変更不要。
@@ -126,9 +173,7 @@ function switchView(name, opts = {}) {
   // 設定はタブ状態も URL に載せている。ナビからの遷移・戻る操作のどちらでも
   // URL と開いているタブを一致させる（settings.js 側に実体がある）。
   if (name === 'settings' && typeof syncSettingsTabFromPath === 'function') syncSettingsTabFromPath();
-  // 個人設定は開いた時に読む（ホームを開くたびにメンバー一覧まで読ませない）
-  if (name === 'account' && typeof loadAccountView === 'function') loadAccountView();
-  if (name === 'feedback' && typeof prepareFeedbackView === 'function') prepareFeedbackView();
+  (VIEW_INIT[name] || []).forEach(fn => fn());
   if (name === 'dashboard') {
     loadHistory();
     // ディープリンクのハッシュをクリア（レポートから戻った時のみ。初期化時は保持）

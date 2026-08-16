@@ -3,8 +3,6 @@
  * 以前はモーダルだったが、個人設定・ユーザーガイドと表示方法を揃えるため
  * 画面内ビューにした。送信してもビューは閉じない（自分自身が画面のため）。
  * 入力欄を空にして完了メッセージを出し、その場に留まる。
- *
- * core.js の switchView('feedback') から prepareFeedbackView() が呼ばれる。
  */
 (function () {
   'use strict';
@@ -18,22 +16,14 @@
   const statusBox = document.getElementById('feedback-status');
   const submitBtn = document.getElementById('feedback-submit-btn');
 
-  function setStatus(text, kind) {
-    if (!statusBox) return;
-    statusBox.textContent = text || '';
-    statusBox.hidden = !text;
-    statusBox.classList.toggle('is-error', kind === 'error');
-    statusBox.classList.toggle('is-success', kind === 'success');
-  }
+  const status = (text, kind) => setViewStatus(statusBox, text, kind);
 
   /* このビュー自身が画面になったので「今いる画面」は使えない。
-     ユーザーメニューが遷移前に控えた画面名を使い、無ければ空で送る。 */
-  function originView() {
-    return window.__feedbackOriginView || '';
-  }
+     直前のビューは core.js の switchView が持っている。 */
+  const originView = () => previousViewLabel();
 
   function prepare() {
-    setStatus('', null);
+    status('', null);
 
     const userName = document.querySelector('.usermenu-name');
     const userMail = document.querySelector('.usermenu-mail');
@@ -48,7 +38,7 @@
     if (messageInput) messageInput.focus();
   }
 
-  window.prepareFeedbackView = prepare;
+  onViewEnter('feedback', prepare);
 
   function clearInput() {
     if (messageInput) messageInput.value = '';
@@ -61,7 +51,7 @@
 
   document.getElementById('feedback-clear-btn')?.addEventListener('click', () => {
     clearInput();
-    setStatus('', null);
+    status('', null);
     messageInput?.focus();
   });
 
@@ -73,29 +63,20 @@
 
     // 送ってから弾かれるより、その場で気づけるほうが速い
     if (!message) {
-      setStatus('内容を入力してください。', 'error');
+      status('内容を入力してください。', 'error');
       messageInput?.focus();
       return;
     }
 
     if (submitBtn) submitBtn.disabled = true;
-    setStatus('送信中…', null);
+    status('送信中…', null);
     try {
-      const response = await fetch('/api/feedback', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ category, message, view: originView() })
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        setStatus(data.error || '送信に失敗しました。', 'error');
-        return;
-      }
-      setStatus('送信しました。ありがとうございます。', 'success');
+      await apiJSON('/api/feedback', 'POST', { category, message, view: originView() });
+      status('送信しました。ありがとうございます。', 'success');
       // 送信済みの内容が残っていると二重送信を招くので消す
       clearInput();
     } catch (err) {
-      setStatus('通信に失敗しました。接続を確認してもう一度お試しください。', 'error');
+      status(err.message, 'error');
     } finally {
       if (submitBtn) submitBtn.disabled = false;
     }

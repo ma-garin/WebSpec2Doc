@@ -25,7 +25,7 @@
   font-size: var(--text-xs);
   font-weight: 600;
 }
-.badge-role.is-admin { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+.badge-role.is-admin { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-on-primary); }
 .badge-role.is-inactive { color: var(--color-text-disabled); }
 
 .account-chip {

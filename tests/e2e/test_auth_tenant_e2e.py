@@ -54,6 +54,10 @@ _TENANT_B_NAME = "E2E Tenant B"
 _TENANT_B_SLUG = "e2e-tenant-b"
 _MEMBER_EMAIL = "e2e-member@example.com"
 _MEMBER_PASSWORD = "e2e-member-pass-123"
+# ユーザー管理ビューで作成し、そのままパスワードリセットの対象にするアカウント
+_RESET_EMAIL = "e2e-reset@example.com"
+_RESET_INITIAL_PASSWORD = "e2e-reset-initial-1"
+_RESET_NEW_PASSWORD = "e2e-reset-updated-2"
 
 TENANT_SELECT = "/auth/tenant"
 SYSTEM_SELECT = "/systems"
@@ -169,20 +173,20 @@ class TestAccountAuth:
 class TestTenantMembership:
     """tenant_membership: テナント選択と所属管理（管理者/一般の出し分け）。"""
 
-    def test_admin_console_lists_members_and_restricts_by_role(
+    def test_user_management_lists_members_and_restricts_by_role(
         self, page: Page, auth_server: str
     ) -> None:
-        """管理コンソールにメンバー一覧が表示され、一般メンバーは到達できない。"""
+        """管理画面はユーザー管理ビューに統合済み。旧URLは転送され、一般メンバーは弾かれる。"""
         _login_as(page, auth_server, _ADMIN_EMAIL, _ADMIN_PASSWORD)
 
-        # 管理者は管理コンソールに到達できる
+        # 旧 /admin/console はブックマークを壊さずユーザー管理ビューへ転送する
         page.goto(f"{auth_server}/admin/console")
-        expect(page).to_have_url(f"{auth_server}/admin/console")
-        expect(page.locator("#tenant-form")).to_be_visible()
+        expect(page).to_have_url(f"{auth_server}/user-management")
+        expect(page.locator("#uadm-add-btn")).to_be_visible()
 
-        # テナントB・一般メンバーを作る。管理コンソールと同一の実APIを、認証済みの
+        # テナントB・一般メンバーを作る。画面と同一の実APIを、認証済みの
         # ブラウザセッション（page.request は Cookie を共有する）から直接叩く。
-        # admin-console.js のフォーム送信の実装詳細に依存せず、ゲートの効果
+        # user-admin-view.js のフォーム送信の実装詳細に依存せず、ゲートの効果
         # （表示・遷移）そのものの検証に集中するための選択。
         tenant_resp = page.request.post(
             f"{auth_server}/api/admin/tenancy/tenants",
@@ -203,17 +207,17 @@ class TestTenantMembership:
         )
         assert user_resp.ok, user_resp.text()
 
-        # 管理コンソールを開き直すと、作成したテナント・メンバーが一覧に表示される
-        page.goto(f"{auth_server}/admin/console")
-        expect(page.locator("#tenant-rows")).to_contain_text(_TENANT_B_NAME)
-        rows_text = page.locator("#user-rows").inner_text()
-        assert "E2E Member" in rows_text or _MEMBER_EMAIL in rows_text, rows_text
+        # 作成したメンバーはユーザー管理、テナントはテナント管理に出る（画面を分けている）
+        page.goto(f"{auth_server}/user-management")
+        expect(page.locator("#uadm-user-rows")).to_contain_text(_MEMBER_EMAIL)
+        page.goto(f"{auth_server}/tenant-management")
+        expect(page.locator("#tadm-rows")).to_contain_text(_TENANT_B_NAME)
 
         # ログアウトして一般メンバーとしてログイン
         page.request.post(f"{auth_server}/auth/logout")
         _login_as(page, auth_server, _MEMBER_EMAIL, _MEMBER_PASSWORD)
 
-        # 一般メンバーは管理コンソールに到達できず /systems へ戻される
+        # 一般メンバーは旧URLからも到達できず /systems へ戻される
         # （権限による操作の出し分け＝ tenant_admin.py console_page のガード）
         page.goto(f"{auth_server}/admin/console")
         expect(page).to_have_url(f"{auth_server}{SYSTEM_SELECT}")
@@ -262,10 +266,10 @@ class TestTenantIsolation:
 class TestUserMenu:
     """user_menu_feedback: トップバーのユーザーメニューとフィードバック送信。"""
 
-    def test_menu_opens_with_four_items_and_no_shortcut_button(
+    def test_menu_opens_with_admin_items_and_no_shortcut_button(
         self, page: Page, auth_server: str
     ) -> None:
-        """アイコンは即遷移せずメニューを開き、項目は4つ。ショートカットボタンは無い。"""
+        """アイコンは即遷移せずメニューを開く。管理者は管理2画面を含む6項目。"""
         _login_as(page, auth_server, _ADMIN_EMAIL, _ADMIN_PASSWORD)
         page.goto(f"{auth_server}/")
 
@@ -276,11 +280,13 @@ class TestUserMenu:
         trigger.click()
         expect(trigger).to_have_attribute("aria-expanded", "true")
         items = page.locator("#usermenu-pop .usermenu-item")
-        expect(items).to_have_count(4)
+        expect(items).to_have_count(6)
         expect(items.nth(0)).to_contain_text("個人設定")
-        expect(items.nth(1)).to_contain_text("ユーザーガイド")
-        expect(items.nth(2)).to_contain_text("フィードバック")
-        expect(items.nth(3)).to_contain_text("ログアウト")
+        expect(items.nth(1)).to_contain_text("ユーザー管理")
+        expect(items.nth(2)).to_contain_text("テナント管理")
+        expect(items.nth(3)).to_contain_text("ユーザーガイド")
+        expect(items.nth(4)).to_contain_text("フィードバック")
+        expect(items.nth(5)).to_contain_text("ログアウト")
 
         # ヘッダーのキーボードショートカット起動ボタンは削除済み
         expect(page.locator("#shortcut-help-btn")).to_have_count(0)
@@ -304,10 +310,10 @@ class TestUserMenu:
 
         # モック認証でもログインにパスワードが要るので、変更手段が必ずある
         expect(page.locator("#password-form")).to_be_visible()
-        # 中身は API から描かれる（管理者なのでメンバー一覧まで出る）
+        # 中身は API から描かれる
         expect(page.locator("#account-profile")).to_contain_text(_ADMIN_EMAIL)
-        expect(page.locator("#account-members-card")).to_be_visible()
-        expect(page.locator("#member-rows tr")).not_to_have_count(0)
+        # 他人の管理はユーザー管理ビューへ移した。この画面は「自分のこと」だけを扱う
+        expect(page.locator("#account-members-card")).to_have_count(0)
 
     def test_old_account_url_redirects_to_view(self, page: Page, auth_server: str) -> None:
         """旧 /auth/account を開いても同じビューに着く。"""
@@ -379,3 +385,262 @@ class TestUserMenu:
         assert any(
             entry["message"] == message and entry["category"] == "request" for entry in entries
         ), entries
+
+
+class TestUserManagement:
+    """ユーザー管理ビュー: 一覧は表、新規登録と編集はダイアログ、削除は行から。
+
+    旧・管理者コンソール（/admin/console）を統合した1画面なので、テナント管理も
+    ここで検証する。
+    """
+
+    def test_view_opens_from_menu_in_place(self, page: Page, auth_server: str) -> None:
+        """「ユーザー管理」も画面内ビュー。別ページへ飛ばさない。"""
+        _login_as(page, auth_server, _ADMIN_EMAIL, _ADMIN_PASSWORD)
+        page.goto(f"{auth_server}/")
+        page.locator("#usermenu-trigger").click()
+        page.locator("#usermenu-users-btn").click()
+
+        expect(page).to_have_url(f"{auth_server}/user-management")
+        expect(page.locator("#topbar-title")).to_have_text("ユーザー管理")
+        expect(page.locator(".app-sidebar")).to_be_visible()
+
+        # ユーザーとテナントが同じ画面に並ぶ（別画面に分けない）
+        admin_row = page.locator(f'#uadm-user-rows tr:has-text("{_ADMIN_EMAIL}")')
+        expect(admin_row).to_have_count(1)
+        # 自分自身は消せない・所属も変えられないので操作を出さない
+        expect(admin_row).to_contain_text("自分")
+        expect(admin_row.locator("button")).to_have_count(0)
+        expect(page.locator("#uadm-user-count")).to_contain_text("表示中")
+        # テナント管理は別画面（この画面に混ぜない）
+        expect(page.locator("#uadm-tenant-rows")).to_have_count(0)
+
+        # 新規登録はフォーム常設ではなくダイアログ（開くまで出さない）
+        expect(page.locator("#uadm-add-modal")).to_be_hidden()
+        page.locator("#uadm-add-btn").click()
+        expect(page.locator("#uadm-add-modal")).to_be_visible()
+        page.keyboard.press("Escape")
+        expect(page.locator("#uadm-add-modal")).to_be_hidden()
+
+    def test_registers_user_then_resets_password_in_dialog(
+        self, page: Page, auth_server: str
+    ) -> None:
+        """新規登録も編集もダイアログで行い、リセット後の資格情報で実際にログインできる。
+
+        画面の成功表示だけで終わらせず、保存されたことを実データで確かめる
+        （保存されたかどうかが利用者にとっての結果のため）。
+        """
+        _login_as(page, auth_server, _ADMIN_EMAIL, _ADMIN_PASSWORD)
+        page.goto(f"{auth_server}/user-management")
+
+        page.locator("#uadm-add-btn").click()
+        page.locator("#uadm-add-name").fill("E2E Reset Target")
+        page.locator("#uadm-add-email").fill(_RESET_EMAIL)
+        page.locator("#uadm-add-password").fill(_RESET_INITIAL_PASSWORD)
+        page.locator("#uadm-add-tenant").select_option(label=_TENANT_A_NAME)
+        page.locator("#uadm-add-form button[type=submit]").click()
+
+        expect(page.locator("#uadm-add-modal")).to_be_hidden()
+        expect(page.locator("#uadm-user-status")).to_contain_text("登録しました")
+
+        row = page.locator(f'#uadm-user-rows tr:has-text("{_RESET_EMAIL}")')
+        expect(row).to_have_count(1)
+        # 行に並ぶ操作は「編集」「削除」の2つ（列幅に収まる大きさに抑えている）
+        expect(row.locator("button")).to_have_count(2)
+
+        row.locator(".uadm-edit-btn").click()
+        modal = page.locator("#uadm-edit-modal")
+        expect(modal).to_be_visible()
+        expect(page.locator("#uadm-edit-title")).to_have_text("E2E Reset Target を編集")
+
+        page.locator("#uadm-edit-password").fill(_RESET_NEW_PASSWORD)
+        page.locator("#uadm-reset-submit").click()
+        expect(modal).to_be_hidden()
+        expect(page.locator("#uadm-user-status")).to_contain_text("リセットしました")
+
+        # 旧パスワードでは入れない
+        page.request.post(f"{auth_server}/auth/logout")
+        page.goto(f"{auth_server}/auth/login")
+        page.locator("#email").fill(_RESET_EMAIL)
+        page.locator("#password").fill(_RESET_INITIAL_PASSWORD)
+        page.locator("button.auth-submit").click()
+        expect(page).to_have_url(re.compile(re.escape(f"{auth_server}/auth/login")))
+
+        # 新パスワードなら入れる
+        _login_as(page, auth_server, _RESET_EMAIL, _RESET_NEW_PASSWORD)
+
+    def test_edit_dialog_closes_without_applying(self, page: Page, auth_server: str) -> None:
+        """閉じただけでは何も起きない（ダイアログを開くこと自体で確定させない）。"""
+        _login_as(page, auth_server, _ADMIN_EMAIL, _ADMIN_PASSWORD)
+        page.goto(f"{auth_server}/user-management")
+
+        page.locator(f'#uadm-user-rows tr:has-text("{_RESET_EMAIL}")').locator(
+            ".uadm-edit-btn"
+        ).click()
+        modal = page.locator("#uadm-edit-modal")
+        expect(modal).to_be_visible()
+        page.locator("#uadm-edit-password").fill("typed-but-not-applied-1")
+        modal.locator(".file-preview-header [data-dialog-close]").click()
+        expect(modal).to_be_hidden()
+
+        # 直前のリセットで設定したパスワードのままログインできる
+        page.request.post(f"{auth_server}/auth/logout")
+        _login_as(page, auth_server, _RESET_EMAIL, _RESET_NEW_PASSWORD)
+
+    def test_membership_is_edited_in_dialog_across_tenants(
+        self, page: Page, auth_server: str
+    ) -> None:
+        """所属とロールは編集ダイアログで変更でき、開き直しても維持される。"""
+        _login_as(page, auth_server, _ADMIN_EMAIL, _ADMIN_PASSWORD)
+        page.goto(f"{auth_server}/user-management")
+
+        row = page.locator(f'#uadm-user-rows tr:has-text("{_RESET_EMAIL}")')
+        expect(row).to_contain_text("一般")
+        row.locator(".uadm-edit-btn").click()
+
+        modal = page.locator("#uadm-edit-modal")
+        expect(modal).to_be_visible()
+
+        # テナントAでのロールを管理者へ上げ、テナントBにも所属させる
+        tenant_a = modal.locator(f'.uadm-membership-row:has-text("{_TENANT_A_NAME}")')
+        tenant_a.locator(".uadm-role-select").select_option("admin")
+        tenant_b = modal.locator(f'.uadm-membership-row:has-text("{_TENANT_B_NAME}")')
+        # 未所属のうちはロールを触らせない
+        expect(tenant_b.locator(".uadm-role-select")).to_be_disabled()
+        tenant_b.locator("input[type=checkbox]").check()
+        expect(tenant_b.locator(".uadm-role-select")).to_be_enabled()
+
+        page.locator("#uadm-membership-save").click()
+        expect(modal).to_be_hidden()
+        expect(page.locator("#uadm-user-status")).to_contain_text("所属を更新しました")
+
+        page.reload()
+        updated = page.locator(f'#uadm-user-rows tr:has-text("{_RESET_EMAIL}")')
+        expect(updated).to_contain_text(f"{_TENANT_A_NAME} / 管理者")
+        expect(updated).to_contain_text(f"{_TENANT_B_NAME} / 一般")
+
+    def test_search_filters_the_list(self, page: Page, auth_server: str) -> None:
+        """一覧上の絞り込みは名前・ログインID・テナント名に効き、件数も追随する。"""
+        _login_as(page, auth_server, _ADMIN_EMAIL, _ADMIN_PASSWORD)
+        page.goto(f"{auth_server}/user-management")
+
+        expect(page.locator(f'#uadm-user-rows tr:has-text("{_ADMIN_EMAIL}")')).to_have_count(1)
+        page.locator("#uadm-user-search").fill("e2e-reset")
+        expect(page.locator(f'#uadm-user-rows tr:has-text("{_RESET_EMAIL}")')).to_have_count(1)
+        expect(page.locator(f'#uadm-user-rows tr:has-text("{_ADMIN_EMAIL}")')).to_have_count(0)
+        expect(page.locator("#uadm-user-count")).to_contain_text("1件 表示中")
+
+        # 一致が無いときは黙って空の表を見せない
+        page.locator("#uadm-user-search").fill("no-such-person-xyz")
+        expect(page.locator("#uadm-user-rows")).to_contain_text("一致するユーザーがいません")
+
+    def test_user_is_deleted_from_the_row(self, page: Page, auth_server: str) -> None:
+        """行の操作は無効化ではなく削除。消えたら一覧からもログインからも消える。"""
+        _login_as(page, auth_server, _ADMIN_EMAIL, _ADMIN_PASSWORD)
+        page.goto(f"{auth_server}/user-management")
+
+        row = page.locator(f'#uadm-user-rows tr:has-text("{_RESET_EMAIL}")')
+        # 無効化は廃止済み（同じ目的の操作が2通りあると、どちらが正か分からなくなる）
+        expect(page.locator("#uadm-user-rows .uadm-active-btn")).to_have_count(0)
+
+        page.once("dialog", lambda dialog: dialog.accept())
+        row.locator(".uadm-delete-user-btn").click()
+        expect(page.locator("#uadm-user-status")).to_contain_text("削除しました")
+        expect(page.locator(f'#uadm-user-rows tr:has-text("{_RESET_EMAIL}")')).to_have_count(0)
+
+        # 画面の表示だけで終わらせず、実際にログインできなくなったことを確かめる
+        page.request.post(f"{auth_server}/auth/logout")
+        page.goto(f"{auth_server}/auth/login")
+        page.locator("#email").fill(_RESET_EMAIL)
+        page.locator("#password").fill(_RESET_NEW_PASSWORD)
+        page.locator("button.auth-submit").click()
+        expect(page).to_have_url(re.compile(re.escape(f"{auth_server}/auth/login")))
+
+    def test_member_cannot_see_or_use_user_management(
+        self, page: Page, auth_server: str
+    ) -> None:
+        """一般メンバーにはメニュー項目を出さず、URL直打ちでも操作させない。"""
+        _login_as(page, auth_server, _MEMBER_EMAIL, _MEMBER_PASSWORD)
+        page.goto(f"{auth_server}/")
+
+        page.locator("#usermenu-trigger").click()
+        expect(page.locator("#usermenu-users-btn")).to_have_count(0)
+        expect(page.locator("#usermenu-pop .usermenu-item")).to_have_count(4)
+
+        page.goto(f"{auth_server}/user-management")
+        expect(page.locator("#uadm-denied-card")).to_be_visible()
+        expect(page.locator("#uadm-add-btn")).to_be_hidden()
+
+        page.goto(f"{auth_server}/tenant-management")
+        expect(page.locator("#tadm-denied-card")).to_be_visible()
+        expect(page.locator("#tadm-add-btn")).to_be_hidden()
+
+    def test_password_reset_api_rejects_non_admin(self, page: Page, auth_server: str) -> None:
+        """画面を隠すだけでなく、APIそのものが一般メンバーを拒否する。"""
+        _login_as(page, auth_server, _MEMBER_EMAIL, _MEMBER_PASSWORD)
+        resp = page.request.post(
+            f"{auth_server}/api/admin/tenancy/users/anything/password",
+            data={"password": "should-not-work-1"},
+        )
+        assert resp.status == 403, f"{resp.status} {resp.text()}"
+
+
+class TestTenantManagement:
+    """テナント管理ビュー: ユーザー管理とは別画面で、登録・改名・削除まで完結する。"""
+
+    def test_view_opens_from_menu_in_place(self, page: Page, auth_server: str) -> None:
+        _login_as(page, auth_server, _ADMIN_EMAIL, _ADMIN_PASSWORD)
+        page.goto(f"{auth_server}/")
+        page.locator("#usermenu-trigger").click()
+        page.locator("#usermenu-tenants-btn").click()
+
+        expect(page).to_have_url(f"{auth_server}/tenant-management")
+        expect(page.locator("#topbar-title")).to_have_text("テナント管理")
+        expect(page.locator(".app-sidebar")).to_be_visible()
+        expect(page.locator("#tadm-rows tr")).not_to_have_count(0)
+        # 利用者の管理は持ち込まない（画面の責務を分けている）
+        expect(page.locator("#uadm-user-rows tr")).to_have_count(0)
+
+    def test_tenant_is_registered_renamed_and_deleted(
+        self, page: Page, auth_server: str
+    ) -> None:
+        """登録・改名・削除がダイアログと行の操作で完結する。"""
+        _login_as(page, auth_server, _ADMIN_EMAIL, _ADMIN_PASSWORD)
+        page.goto(f"{auth_server}/tenant-management")
+
+        page.locator("#tadm-add-btn").click()
+        page.locator("#tadm-name").fill("E2E Tenant C")
+        page.locator("#tadm-slug").fill("e2e-tenant-c")
+        page.locator("#tadm-add-form button[type=submit]").click()
+        expect(page.locator("#tadm-add-modal")).to_be_hidden()
+        expect(page.locator("#tadm-status")).to_contain_text("登録しました")
+
+        row = page.locator('#tadm-rows tr:has-text("e2e-tenant-c")')
+        expect(row).to_have_count(1)
+
+        row.locator(".tadm-edit-btn").click()
+        expect(page.locator("#tadm-edit-modal")).to_be_visible()
+        # slug は保存先ディレクトリ名なので変更させず、そのことを画面に出す
+        expect(page.locator("#tadm-edit-slug")).to_have_text("e2e-tenant-c")
+        page.locator("#tadm-rename").fill("E2E Tenant C2")
+        page.locator("#tadm-edit-form button[type=submit]").click()
+        expect(page.locator("#tadm-edit-modal")).to_be_hidden()
+        expect(page.locator("#tadm-rows")).to_contain_text("E2E Tenant C2")
+
+        page.once("dialog", lambda dialog: dialog.accept())
+        page.locator('#tadm-rows tr:has-text("e2e-tenant-c")').locator(
+            ".tadm-delete-btn"
+        ).click()
+        # 生成物が残ることを黙って伏せない
+        expect(page.locator("#tadm-status")).to_contain_text("残っています")
+        expect(page.locator('#tadm-rows tr:has-text("e2e-tenant-c")')).to_have_count(0)
+
+    def test_search_filters_the_list(self, page: Page, auth_server: str) -> None:
+        """名前・slug での絞り込みと件数表示。"""
+        _login_as(page, auth_server, _ADMIN_EMAIL, _ADMIN_PASSWORD)
+        page.goto(f"{auth_server}/tenant-management")
+
+        expect(page.locator(f'#tadm-rows tr:has-text("{_TENANT_B_SLUG}")')).to_have_count(1)
+        page.locator("#tadm-search").fill("no-such-tenant-xyz")
+        expect(page.locator("#tadm-rows")).to_contain_text("一致するテナントがありません")
+        expect(page.locator("#tadm-count")).to_contain_text("0件 表示中")

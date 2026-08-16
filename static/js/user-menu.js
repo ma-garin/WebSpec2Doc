@@ -53,6 +53,9 @@
   }
 
   document.getElementById('usermenu-account-btn')?.addEventListener('click', () => go('account'));
+  // 管理者のときだけトップバーに描画される（templates/partials/topbar.html）
+  document.getElementById('usermenu-users-btn')?.addEventListener('click', () => go('user-management'));
+  document.getElementById('usermenu-tenants-btn')?.addEventListener('click', () => go('tenant-management'));
   document.getElementById('usermenu-guide-btn')?.addEventListener('click', () => go('user-guide'));
   // 「どの画面から来たか」は switchView が覚えているので、ここでは控えない
   document.getElementById('usermenu-feedback-btn')?.addEventListener('click', () => go('feedback'));

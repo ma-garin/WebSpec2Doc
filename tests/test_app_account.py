@@ -320,8 +320,9 @@ def test_account_view_is_served_in_app_shell() -> None:
     html = c.get("/account", headers=H).get_data(as_text=True)
     assert 'id="view-account"' in html
     assert "プロフィール" in html
-    assert "メンバー管理" in html
     assert "APIトークン" in html
+    # 他人の管理はユーザー管理ビューの担当。この画面には残していない
+    assert 'id="account-members-card"' not in html
     # ビューはサイドバー・トップバーごと配られる（別ページに飛ばさない）
     assert 'id="usermenu-trigger"' in html
 
@@ -332,3 +333,124 @@ def test_topbar_shows_user_menu_when_logged_in() -> None:
     html = c.get("/", headers=H).get_data(as_text=True)
     assert 'id="usermenu-account-btn"' in html
     assert 'id="usermenu-feedback-btn"' in html
+
+
+def test_user_management_view_is_served_in_app_shell() -> None:
+    """ユーザー管理も個人設定と同じ画面内ビューとして配られる。"""
+    c = _client()
+    _setup_owner(c)
+    html = c.get("/user-management", headers=H).get_data(as_text=True)
+    assert 'id="view-user-management"' in html
+    # 一覧は表、新規登録と編集はダイアログ（画面内にフォームを常設しない）
+    assert 'id="uadm-user-rows"' in html
+    assert 'id="uadm-add-btn"' in html
+    assert "ユーザーの新規登録" in html
+    assert "パスワードをリセット" in html
+    assert 'id="usermenu-trigger"' in html
+
+
+def test_tenant_management_view_is_served_in_app_shell() -> None:
+    """テナント管理はユーザー管理とは別のビュー（ユーザー管理画面に混ぜない）。"""
+    c = _client()
+    _setup_owner(c)
+    html = c.get("/tenant-management", headers=H).get_data(as_text=True)
+    assert 'id="view-tenant-management"' in html
+    assert 'id="tadm-rows"' in html
+    assert "テナントの新規登録" in html
+    # ユーザー管理側にテナントの表を残さない
+    user_html = c.get("/user-management", headers=H).get_data(as_text=True)
+    assert 'id="uadm-tenant-rows"' not in user_html
+
+
+def test_user_management_menu_item_is_admin_only() -> None:
+    """一般メンバーのトップバーには「ユーザー管理」「テナント管理」を描画しない。"""
+    c = _client()
+    _setup_owner(c)
+    c.post(
+        "/api/auth/users",
+        json={
+            "email": "member@example.com",
+            "name": "Member",
+            "password": "member-pass-123",
+            "role": "member",
+        },
+        headers=H,
+    )
+    admin_html = c.get("/", headers=H).get_data(as_text=True)
+    assert 'id="usermenu-users-btn"' in admin_html
+    assert 'id="usermenu-tenants-btn"' in admin_html
+
+    mc = _client()
+    _login(mc, email="member@example.com", password="member-pass-123")
+    member_html = mc.get("/", headers=H).get_data(as_text=True)
+    assert 'id="usermenu-users-btn"' not in member_html
+    assert 'id="usermenu-tenants-btn"' not in member_html
+    # 画面の出し分けだけに頼らず、ビュー側も管理者以外には操作させない
+    assert 'data-is-admin="0"' in mc.get("/user-management", headers=H).get_data(as_text=True)
+    assert 'data-is-admin="0"' in mc.get("/tenant-management", headers=H).get_data(as_text=True)
+
+
+# ---------- パスワードリセット（管理者による他ユーザーの再設定） ----------
+
+
+def test_admin_resets_member_password_without_current_password() -> None:
+    """本人が忘れても管理者が復旧できる。旧パスワードは使えなくなる。"""
+    c = _client()
+    _setup_owner(c)
+    created = c.post(
+        "/api/auth/users",
+        json={
+            "email": "member@example.com",
+            "name": "Member",
+            "password": "member-pass-123",
+            "role": "member",
+        },
+        headers=H,
+    )
+    user_id = created.get_json()["user"]["id"]
+
+    res = c.post(
+        f"/api/admin/tenancy/users/{user_id}/password",
+        json={"password": "reset-pass-4567"},
+        headers=H,
+    )
+    assert res.status_code == 200, res.get_data(as_text=True)
+    # 他人の再設定なので、操作した管理者は再ログインを求められない
+    assert res.get_json()["relogin"] is False
+
+    old = _client()
+    assert _login(old, email="member@example.com", password="member-pass-123").status_code == 401
+    new = _client()
+    assert _login(new, email="member@example.com", password="reset-pass-4567").status_code == 302
+
+
+def test_password_reset_rejects_weak_and_non_admin() -> None:
+    """パスワード要件は本人変更と同じ。一般メンバーはそもそも呼べない。"""
+    c = _client()
+    _setup_owner(c)
+    created = c.post(
+        "/api/auth/users",
+        json={
+            "email": "member@example.com",
+            "name": "Member",
+            "password": "member-pass-123",
+            "role": "member",
+        },
+        headers=H,
+    )
+    user_id = created.get_json()["user"]["id"]
+
+    weak = c.post(
+        f"/api/admin/tenancy/users/{user_id}/password", json={"password": "x"}, headers=H
+    )
+    assert weak.status_code == 400
+    assert weak.get_json()["code"] == "weak_password"
+
+    mc = _client()
+    _login(mc, email="member@example.com", password="member-pass-123")
+    denied = mc.post(
+        f"/api/admin/tenancy/users/{user_id}/password",
+        json={"password": "reset-pass-4567"},
+        headers=H,
+    )
+    assert denied.status_code == 403

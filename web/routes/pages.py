@@ -21,6 +21,8 @@ _VIEW_NAMES = frozenset(
         # サイドバーには無く、トップバーのユーザーメニューから開く画面。
         # 表示方法を他のビューに揃えたので、URL も同じ規則で持たせる。
         "account",
+        "user-management",
+        "tenant-management",
         "feedback",
     }
 )

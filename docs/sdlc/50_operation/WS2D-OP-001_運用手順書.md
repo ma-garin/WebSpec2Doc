@@ -9,7 +9,7 @@
 
 - 本製品はPC（デスクトップ）専用のローカル/社内サーバー運用を想定しており、SaaS型の24/365運用を前提とした体制（オンコール等）は定義されていない。
 - 運用時間・SLA・当番体制は **本書時点で未定義**。社内展開する場合は導入組織側で定めること。
-- 管理者ロール（`ROLE_ADMIN`）はテナント単位で付与され、`web/routes/tenant_admin.py` の管理コンソール（`/admin/console`）とテナント内管理API（`web/routes/account.py`）の双方の操作権限を持つ。
+- 管理者ロール（`ROLE_ADMIN`）はテナント単位で付与され、`web/routes/tenant_admin.py` のテナント横断API（画面は `/user-management`）とテナント内管理API（`web/routes/account.py`）の双方の操作権限を持つ。
 
 ## 2. 起動・停止
 
@@ -188,21 +188,24 @@ python app.py
 
 ## 7. アカウント・テナント管理運用
 
-出典: `web/routes/tenant_admin.py`（管理コンソール・全テナント横断操作）、`web/routes/account.py`（テナントスコープの操作・APIトークン）。
+出典: `web/routes/tenant_admin.py`（全テナント横断操作）、`web/routes/account.py`（テナントスコープの操作・APIトークン）。
 
-### 7.1 管理コンソール（`/admin/console`、要 `ROLE_ADMIN`）
+### 7.1 ユーザー管理（`/user-management`、要 `ROLE_ADMIN`）
 
-| 操作 | エンドポイント | 備考 |
-|---|---|---|
-| テナント作成 | `POST /api/admin/tenancy/tenants` | name, slug を指定 |
-| テナント名変更 | `PATCH /api/admin/tenancy/tenants/<id>` | |
-| テナント削除 | `DELETE /api/admin/tenancy/tenants/<id>` | **`output/tenants/<slug>` 配下のファイルは削除されない**（コード内の明示コメント）。生成物は別途整理が必要 |
-| ユーザー作成 | `POST /api/admin/tenancy/users` | 任意でtenant_idを指定 |
-| 所属・ロール設定 | `PUT /api/admin/tenancy/users/<id>/memberships` | テナントごとに member/admin を使い分け可能 |
-| アカウント有効/無効化 | `PATCH /api/admin/tenancy/users/<id>` | `is_active` 真偽値。**全テナントに効く** |
-| ユーザー削除 | `DELETE /api/admin/tenancy/users/<id>` | 自分自身は削除不可 |
+旧・管理コンソール（`/admin/console`）はこの画面へ統合済み。旧URLは 302 で転送される。
 
-### 7.2 テナント内管理（`/auth/account`、要ログイン。管理者操作は要 `ROLE_ADMIN`）
+| 操作 | エンドポイント | 画面での操作 | 備考 |
+|---|---|---|---|
+| テナント作成 | `POST /api/admin/tenancy/tenants` | 「テナントを追加」 | name, slug を指定 |
+| テナント名変更 | `PATCH /api/admin/tenancy/tenants/<id>` | 行の「名前を変更」 | |
+| テナント削除 | `DELETE /api/admin/tenancy/tenants/<id>` | 行の「削除」 | **`output/tenants/<slug>` 配下のファイルは削除されない**（コード内の明示コメント）。生成物は別途整理が必要 |
+| ユーザー作成 | `POST /api/admin/tenancy/users` | 「ユーザーを追加」 | 任意でtenant_idを指定 |
+| 所属・ロール設定 | `PUT /api/admin/tenancy/users/<id>/memberships` | 行の「所属」（ダイアログ） | テナントごとに member/admin を使い分け可能 |
+| パスワード再設定 | `POST /api/admin/tenancy/users/<id>/password` | 行の「パスワード」（ダイアログ） | 現パスワード不要。対象の全セッション失効とロック解除を伴う |
+| ユーザー削除 | `DELETE /api/admin/tenancy/users/<id>` | 行の「削除」 | 自分自身は削除不可 |
+| アカウント有効/無効化 | `PATCH /api/admin/tenancy/users/<id>` | **画面には無い**（APIのみ） | `is_active` 真偽値。**全テナントに効く**。画面上の運用は削除に一本化した |
+
+### 7.2 テナント内管理API（要ログイン。管理者操作は要 `ROLE_ADMIN`）
 
 | 操作 | エンドポイント | 備考 |
 |---|---|---|

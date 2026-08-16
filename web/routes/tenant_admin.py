@@ -9,7 +9,7 @@
 
 from __future__ import annotations
 
-from flask import Blueprint, g, redirect, render_template, request
+from flask import Blueprint, g, redirect, request
 from werkzeug.wrappers import Response as BaseResponse
 
 from web.auth import (
@@ -28,6 +28,9 @@ from web.services.auth_store import (
 )
 
 bp = Blueprint("tenant_admin", __name__)
+
+# 管理の入口はアプリ内ビュー1つに統一した（旧 /admin/console はここへ転送）
+USER_MANAGEMENT_PATH = "/user-management"
 
 JsonResult = tuple[dict, int] | dict
 
@@ -54,16 +57,22 @@ def _snapshot() -> dict:
 
 
 @bp.get("/admin/console")
-def console_page() -> BaseResponse | str:
+def console_page() -> BaseResponse:
+    """旧・管理者コンソール。ユーザー管理ビューへ統合したので転送だけを残す。
+
+    テナント管理と所属編集が別画面にあると、利用者の管理が2画面に割れる。
+    いまは `/user-management`（アプリ内ビュー）が両方を扱う。ブックマークを
+    壊さないため、ロール判定はそのままにして行き先だけを差し替えている。
+    """
     if not auth_enabled():
         # 認証オフではテナントもユーザーも意味を持たない
         return redirect("/auth/setup")
     user = getattr(g, "auth_user", None)
     if user is None:
-        return redirect("/auth/login?next=/admin/console")
+        return redirect(f"/auth/login?next={USER_MANAGEMENT_PATH}")
     if user.get("role") != ROLE_ADMIN:
         return redirect(SYSTEM_SELECT_PATH)
-    return render_template("admin/console.html", user=user, tenant=getattr(g, "tenant", None))
+    return redirect(USER_MANAGEMENT_PATH)
 
 
 # --- API ----------------------------------------------------------------
@@ -161,6 +170,27 @@ def api_update_user(user_id: str) -> JsonResult:
     except AuthError as exc:
         return {"error": str(exc), "code": exc.code}, 400
     return {"ok": True, **_snapshot()}
+
+
+@bp.post("/api/admin/tenancy/users/<user_id>/password")
+def api_reset_user_password(user_id: str) -> JsonResult:
+    """管理者による他ユーザーのパスワード再設定（本人が忘れた場合の復旧手段）。
+
+    本人の変更（/api/auth/password）と違い現パスワードを求めない。`_guard` で
+    管理者に限定済み。
+    """
+    payload = request.get_json(silent=True) or {}
+    try:
+        get_auth_store().reset_password(
+            user_id,
+            str(payload.get("password", "")),
+            actor_id=_actor_id(),
+            enforce_password_policy=not mock_auth_enabled(),
+        )
+    except AuthError as exc:
+        return {"error": str(exc), "code": exc.code}, 400
+    # 自分自身を再設定した場合は、自分のセッションも失効しているので再ログインが要る
+    return {"ok": True, "relogin": user_id == _actor_id(), **_snapshot()}
 
 
 @bp.delete("/api/admin/tenancy/users/<user_id>")

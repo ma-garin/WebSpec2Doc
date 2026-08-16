@@ -21,10 +21,18 @@ WebSpec2Doc を「1人のローカルツール」から「チーム/商用で共
 
 - `GET/POST /auth/setup` — 初期セットアップ（ワークスペース＋オーナー作成、ユーザー0人時のみ）
 - `GET/POST /auth/login` / `POST /auth/logout` — ログイン/ログアウト
-- `GET /auth/account` — マイページ（プロフィール・パスワード変更、管理者はメンバー管理・APIトークン）
+- `GET /account` — 個人設定（自分のプロフィール・パスワード変更、管理者はAPIトークン）。旧 `/auth/account` はここへ 302
+- `GET /user-management` — ユーザー管理。ユーザーとテナントの管理を1画面に統合したアプリ内ビュー
+  （一覧・追加・所属とロールの編集・パスワードリセット・削除、テナントの作成/改名/削除）。
+  トップバーのユーザーメニューには管理者のときだけ項目を出す
+- `GET /admin/console` — 旧・管理者コンソール。上記へ統合したため `/user-management` へ 302
+  （管理者以外は従来どおり `/systems` へ）
 - `GET /api/auth/me` — 現在のユーザー・テナント・認証モード
-- `POST /api/auth/password` — パスワード変更（変更後は全セッション失効）
-- `GET/POST /api/auth/users`, `PATCH /api/auth/users/<id>` — メンバー管理（owner/admin のみ）
+- `POST /api/auth/password` — 本人のパスワード変更（現パスワード必須。変更後は全セッション失効）
+- `GET/POST /api/auth/users`, `PATCH /api/auth/users/<id>` — テナント内のユーザー管理（owner/admin のみ）
+- `POST /api/admin/tenancy/users/<id>/password` — 管理者による他ユーザーのパスワード再設定
+  （owner/admin のみ）。現パスワードは要求しない。再設定後は対象ユーザーの全セッションを失効させ、
+  ログイン失敗によるロックも解除する
 - `GET/POST/DELETE /api/auth/api-tokens` — `/api/v1` 用テナントAPIトークン（owner/admin のみ）
 
 ## セキュリティ仕様
@@ -34,9 +42,9 @@ WebSpec2Doc を「1人のローカルツール」から「チーム/商用で共
   ランダムトークンのみ（`ws2d_session`, HttpOnly, SameSite=Lax）。DBにはトークンの
   SHA-256のみ保存。既定12時間で失効（`WEBSPEC2DOC_SESSION_HOURS`）
 - ロックアウト: ログイン5回連続失敗で15分ロック（正しいパスワードでも拒否）
-- ロール: `owner` / `admin` / `member`。設定変更（OpenAIキー等）とメンバー管理は
+- ロール: `owner` / `admin` / `member`。設定変更（OpenAIキー等）とユーザー管理は
   owner/admin のみ。最後の有効オーナーは無効化・降格不可
-- 無効化・パスワード変更時は該当ユーザーの既存セッションを即時失効
+- 無効化・パスワード変更・パスワードリセット時は該当ユーザーの既存セッションを即時失効
 - `next` パラメータは相対パスのみ許可（オープンリダイレクト防止）
 - 監査ログ: ログイン・ユーザー作成/変更・トークン発行/失効を `audit_log` に記録
 - SECRET_KEY: `WEBSPEC2DOC_SECRET_KEY` → `instance/secret_key`（0600で自動生成）の順で解決

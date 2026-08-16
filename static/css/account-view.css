@@ -107,6 +107,174 @@
   word-break: break-all;
 }
 
+/* ===== ユーザー管理ビュー ===== */
+/* 外枠・表は個人設定と同じ .account-* を使い、ダイアログの枠は
+   .file-preview-modal（AutoRunのログイン入力と同じ）を使う。ここで足すのは
+   一覧のツールバー・列幅・行内の操作ボタンと、ダイアログの中身だけ。 */
+
+/* 見た目には出さないが読み上げには残す。
+   このリポジトリに同等のユーティリティが無かったのでここで定義する。 */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.uadm-muted { color: var(--color-text-secondary); font-size: var(--text-xs); }
+
+/* 一覧の上: 絞り込み・件数（左）と新規登録（右） */
+.uadm-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 4px 0 12px;
+}
+.uadm-toolbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+
+.uadm-search {
+  width: 280px;
+  height: 34px;
+  padding: 0 11px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--text-sm);
+}
+.uadm-search:focus-visible {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+  outline: none;
+}
+
+.uadm-count { color: var(--color-text-secondary); font-size: var(--text-xs); white-space: nowrap; }
+
+.uadm-add-btn { flex-shrink: 0; height: 34px; padding: 0 18px; white-space: nowrap; }
+
+/* 列幅を固定する。自然幅に任せると操作列が押し出されて見切れる。 */
+.uadm-table { table-layout: fixed; width: 100%; }
+.uadm-table th,
+.uadm-table td { vertical-align: middle; }
+.uadm-table thead th {
+  background: var(--color-surface-2);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+.uadm-table thead th:first-child { border-top-left-radius: var(--radius-md); }
+.uadm-table thead th:last-child { border-top-right-radius: var(--radius-md); }
+.uadm-table th.uadm-th-act { text-align: right; }
+
+.uadm-col-name { width: 16%; }
+.uadm-col-login { width: 22%; }
+.uadm-col-scope { width: 30%; }
+.uadm-col-seen { width: 16%; }
+.uadm-col-act { width: 16%; }
+.uadm-col-tname { width: 26%; }
+.uadm-col-slug { width: 24%; }
+.uadm-col-count { width: 12%; }
+
+/* 長い名前・IDは切り詰める（title 属性に全文を持たせている） */
+.uadm-table td.uadm-cell-clip { overflow: hidden; text-overflow: ellipsis; }
+/* チップ列だけは折り返す。1行に収めようとして表が横に伸びるのを止める。 */
+.uadm-table td.uadm-cell-wrap { white-space: normal; }
+.uadm-table td.uadm-cell-seen { font-variant-numeric: tabular-nums; }
+.uadm-table td.uadm-cell-act { text-align: right; }
+
+/* 行内の操作は2つ横並び。列幅に収まる大きさに抑える。 */
+.uadm-act-btn {
+  height: 28px;
+  min-width: 52px;
+  padding: 0 10px;
+  font-size: var(--text-xs);
+}
+.uadm-act-btn + .uadm-act-btn { margin-left: 6px; }
+
+.uadm-danger { color: var(--color-critical); border-color: var(--color-critical); }
+
+.uadm-role-select {
+  height: 30px;
+  padding: 0 6px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--text-xs);
+}
+.uadm-role-select:focus-visible {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+  outline: none;
+}
+.uadm-role-select:disabled { opacity: 0.5; }
+
+/* ダイアログの中身 */
+.uadm-dialog-body { padding: 20px; overflow-y: auto; }
+
+.uadm-dialog-note {
+  margin: 0 0 16px;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  line-height: 1.8;
+}
+.uadm-dialog-note strong { color: var(--color-text); }
+
+.uadm-dialog-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 16px; }
+.uadm-dialog-field label { font-size: var(--text-sm); font-weight: 600; }
+.uadm-dialog-field input {
+  height: 38px;
+  padding: 0 11px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--text-sm);
+}
+.uadm-dialog-field input:focus-visible {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+  outline: none;
+}
+
+.uadm-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.uadm-dialog-actions .uadm-dialog-cancel { height: 38px; padding: 0 16px; }
+.uadm-dialog-actions .uadm-dialog-submit { height: 38px; padding: 0 18px; }
+
+/* 編集ダイアログは操作ごとに節を分ける（所属とロール / パスワード） */
+.uadm-section { padding: 16px 0; border-top: 1px solid var(--color-divider); }
+.uadm-section:first-child { border-top: 0; padding-top: 0; }
+.uadm-section h3 { margin: 0 0 4px; font-size: var(--text-sm); font-weight: 700; }
+.uadm-section p {
+  margin: 0 0 10px;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+}
+.uadm-section .uadm-dialog-actions { margin-top: 12px; }
+
+.uadm-inline { display: flex; gap: 8px; align-items: flex-end; }
+.uadm-inline .uadm-dialog-field { flex: 1; margin: 0; }
+.uadm-inline-btn { height: 38px; padding: 0 14px; white-space: nowrap; }
+
+.uadm-membership-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--color-divider);
+}
+.uadm-membership-row label { flex: 1; font-size: var(--text-sm); }
+.uadm-membership-row input[type="checkbox"] { accent-color: var(--color-primary); }
+
 /* ===== フィードバックビュー ===== */
 .feedback-field { margin: 0 0 16px; padding: 0; border: 0; }
 .feedback-label { display: block; margin-bottom: 7px; padding: 0; font-size: var(--text-sm); font-weight: 600; }

@@ -33,46 +33,9 @@
             <div id="password-status" class="account-status" aria-live="polite"></div>
           </div>
 
-          <!-- 管理者だけに出す。一般利用者に空のカードを並べない。 -->
-          <div class="input-card" id="account-members-card" hidden>
-            <div class="wizard-page-header">
-              <h2>メンバー管理</h2>
-              <p>このテナントの利用者です。管理者のみ表示されます。</p>
-            </div>
-            <div class="account-table-wrap">
-              <table class="account-table">
-                <thead>
-                  <tr><th>名前</th><th>ログインID</th><th>ロール</th><th>状態</th><th>最終ログイン</th><th></th></tr>
-                </thead>
-                <tbody id="member-rows"></tbody>
-              </table>
-            </div>
-
-            <h3 class="account-subhead">メンバーを追加</h3>
-            <form id="invite-form" class="account-inline-form">
-              <div class="auth-field">
-                <label for="inv-name">表示名</label>
-                <input type="text" id="inv-name" required>
-              </div>
-              <div class="auth-field">
-                <label for="inv-email">ログインID / メールアドレス</label>
-                <input type="text" id="inv-email" required>
-              </div>
-              <div class="auth-field">
-                <label for="inv-password">初期パスワード</label>
-                <input type="text" id="inv-password" required>
-              </div>
-              <div class="auth-field account-field-narrow">
-                <label for="inv-role">ロール</label>
-                <select id="inv-role" class="account-select">
-                  <option value="member">一般</option>
-                  <option value="admin">管理者</option>
-                </select>
-              </div>
-              <button type="submit" class="btn-primary account-submit">追加</button>
-            </form>
-            <div id="invite-status" class="account-status" aria-live="polite"></div>
-          </div>
+          {# 利用者の追加・ロール変更・パスワードリセットは
+             ユーザー管理ビュー（partials/view-user-management.html）へ移した。
+             この画面は「自分のこと」だけを扱う。 #}
 
           <div class="input-card" id="account-tokens-card" hidden>
             <div class="wizard-page-header">

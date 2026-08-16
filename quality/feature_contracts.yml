@@ -279,10 +279,14 @@
       "status": "implemented",
       "ui_files": [
         "templates/auth/tenant.html",
-        "templates/admin/console.html",
+        "templates/partials/view-user-management.html",
+        "templates/partials/modal-user-admin.html",
+        "templates/partials/view-tenant-management.html",
+        "templates/partials/modal-tenant-admin.html",
         "static/css/tenant-auth.css",
-        "static/css/admin-console.css",
-        "static/js/admin-console.js"
+        "static/css/account-view.css",
+        "static/js/user-admin-view.js",
+        "static/js/tenant-admin-view.js"
       ],
       "route_files": [
         "web/routes/tenant_admin.py",
@@ -297,6 +301,7 @@
         "set_memberships",
         "bind_session_tenant",
         "ensure_initial_admin",
+        "reset_password",
         "delete_tenant"
       ],
       "outputs": [

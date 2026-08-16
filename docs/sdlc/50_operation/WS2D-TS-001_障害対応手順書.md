@@ -98,14 +98,15 @@ flowchart TD
 
 ### 5.2 ログインできない
 
-- **確認コマンド**: ブラウザで `/auth/login` を開きエラーメッセージを確認する。管理者は `/admin/console` で対象ユーザーの `is_active` を確認する。
+- **確認コマンド**: ブラウザで `/auth/login` を開きエラーメッセージを確認する。管理者は `/user-management` の一覧で対象ユーザーの存在を確認する（`is_active` は画面に出さないため、無効化の有無は `GET /api/admin/tenancy` の応答で確認する）。
 - **想定原因**:
   - `WEBSPEC2DOC_AUTH_MODE=off` になっている（認証自体が無効）
   - アカウントが無効化されている（`is_active=false`）
   - パスワード誤り、またはSSO設定不備（`WEBSPEC2DOC_OIDC_CLIENT_ID`等の不足。不足時は不足変数名を挙げて起動時に失敗する仕様）
 - **対処**:
   - 環境変数 `WEBSPEC2DOC_AUTH_MODE` を確認する
-  - 管理コンソール（`/admin/console`）でアカウントの有効/無効を確認・切替する（`WS2D-OP-001` §7.1）
+  - パスワード忘れ・ロックアウトは、ユーザー管理（`/user-management`）の「パスワード」ダイアログで再設定する（再設定時にロックも解除される。`WS2D-OP-001` §7.1）
+  - 無効化されたアカウントの復帰は `PATCH /api/admin/tenancy/users/<id>` に `{"is_active": true}` を送る（画面には有効/無効の操作を置いていない）
   - SSO利用時は `WEBSPEC2DOC_OIDC_CLIENT_ID` / `_CLIENT_SECRET` / `_REDIRECT_URI` の設定漏れを確認する
 
 ### 5.3 クロールが失敗する

@@ -1,0 +1,33 @@
+テストID,ロール,対象機能,ツアー観点,テスト目的,前提条件,手順,期待される結果,severity
+ST-001,未認証,認証,Saboteur,未認証アクセスの遮断,ログアウト状態,トップURL(/)へ直接アクセスする,ログイン画面へリダイレクトされる,Critical
+ST-002,未認証,認証,Guidebook,ログイン正常系,有効なユーザーが存在する,ログイン画面でID/パスワードを入力し送信する,テナント選択(単一所属時はシステム選択)へ遷移する,Critical
+ST-003,未認証,認証,Intellectual,ログイン失敗時のエラー表示,有効なユーザーが存在する,誤ったパスワードで送信する,エラーメッセージが表示され画面に留まる。詳細な失敗理由は漏れない,High
+ST-004,未認証,認証,Guidebook,サインアップ正常系,サインアップが有効,signup画面で新規登録する,登録が完了し所定の画面へ遷移する,High
+ST-005,member,認証,Saboteur,ログアウト後の再入防止,ログイン済み,ログアウトし、ブラウザ戻る操作で認証後ページへ戻ろうとする,ログイン画面へ戻り、認証後の画面・APIは操作できない,Critical
+ST-006,member,テナント選択,Guidebook,所属テナントの選択,複数テナントに所属,tenant画面で所属テナントを選択する,システム選択画面へ遷移する,High
+ST-007,member,システム選択,Guidebook,ドキュメント作成への遷移,ログイン・テナント選択済み,システム選択で「ドキュメント作成」カードを選択する,ドキュメント作成システム(ダッシュボード)へ遷移する,High
+ST-008,member,システム選択,Guidebook,AutoRunへの遷移,ログイン・テナント選択済み,システム選択で「AutoRun」カードを選択する,AutoRunシステムへ遷移する,High
+ST-009,member,システム選択,Landmark,個人設定への導線,ログイン・テナント選択済み,システム選択画面から個人設定へ移動する,アカウント/個人設定画面が表示される,Medium
+ST-010,member,ドキュメント作成,Money,URL指定でのドキュメント生成正常系,対象サイトが到達可能,generate画面で対象URLを入力し実行する,実行が開始され、進捗と成果物が結果パネルに表示される,Critical
+ST-011,member,ドキュメント作成,Intellectual,不正URL入力のバリデーション,ログイン済み,不正な形式のURLを入力して実行する,ユーザーに分かるエラーが表示され実行は開始されない,High
+ST-012,member,ドキュメント作成,FedEx,実行履歴から結果への追跡,過去の実行が1件以上ある,run-historyを開き履歴項目を選択する,run-resultで該当実行の結果が表示される,High
+ST-013,member,ドキュメント作成,FedEx,成果物ファイルのプレビュー,成果物ファイルが存在する,結果画面からファイルプレビューを開き、閉じる,モーダルで内容が表示され、閉じると元画面に戻る,Medium
+ST-014,member,AutoRun,Money,段階承認フローの正常系,AutoRun対象の設定が完了している,目的→計画→FE→観点→設計→詳細→ケースの承認ステップを順に承認する,各ステップが承認済みとなり次ステップへ進み、最終的に実行が完了する,Critical
+ST-015,member,AutoRun,Guidebook,実行ログの常時表示,AutoRun実行中または実行済み,AutoRun実行画面を表示する,実行ログが折りたたみなしで常時表示されている,High
+ST-016,member,AutoRun,FedEx,実行結果専用ページの表示,AutoRun実行が完了している,autorun-reportページを開く,QF列を含む実行結果レポートが表示される,High
+ST-017,member,AutoRun,Saboteur,承認待ちでの停止保持,承認待ちステップが存在する,承認せずに他画面へ遷移し、戻る,勝手に次ステップへ進まず承認待ち状態が保持されている,High
+ST-018,member,観点管理,Guidebook,観点一覧の表示と編集,ログイン済み,viewpointsを開き観点を編集して保存する,一覧が表示され、編集内容が保存・再表示される,Medium
+ST-019,member,QA品質,Back Alley,QA品質ビューの表示,実行データが存在する,qa-qualityを開く,品質指標が表示される,Medium
+ST-020,member,トレーサビリティ,FedEx,要件-テスト対応の表示,対応データが存在する,traceabilityを開く,要件とテストの対応関係が表示される,Medium
+ST-021,member,フィードバック,Back Alley,フィードバック送信と一覧反映,ログイン済み,feedbackで内容を送信する,送信が完了し一覧に反映される,Low
+ST-022,member,権限境界,Saboteur,memberの管理機能アクセス遮断,memberでログイン,settings / user-managementへ直接URLアクセスする,アクセスが拒否され(導線も非表示)、設定・ユーザー情報は閲覧/変更できない,Critical
+ST-023,admin,設定,Guidebook,テナント設定の変更と永続化,adminでログイン,settingsでOpenAIキー等を変更し保存、再読込する,保存が成功し再読込後も設定が維持される,High
+ST-024,admin,ユーザー管理,Guidebook,ユーザー作成,adminでログイン,user-managementでユーザーを追加する,一覧に追加され、対象ユーザーがログインできる,High
+ST-025,admin,ユーザー管理,FedEx,パスワード再設定とセッション失効,対象memberが存在しログイン中,対象ユーザーのパスワードを再設定する,対象の全セッションが失効し、新パスワードでのみログインできる,Critical
+ST-026,admin,ユーザー管理,Guidebook,ロール変更の反映,対象memberが存在する,memberをadminへ変更する,変更が保存され、対象ユーザーに管理権限が反映される,High
+ST-027,owner,ユーザー管理,Saboteur,最後の有効ownerの降格・無効化不可,有効なownerが自分1名のみ,自身の降格または無効化を試行する,操作が拒否されエラーが表示される。ownerは維持される,Critical
+ST-028,admin,APIトークン,Back Alley,テナントAPIトークンの発行と削除,adminでログイン,api-tokensでトークンを発行し、その後削除する,発行時のみトークン値が表示され、削除後はそのトークンでのAPIアクセスが拒否される,High
+ST-029,member,アカウント,Guidebook,個人設定の変更,ログイン済み,accountで自身の設定を変更し保存する,保存され、再表示時に反映されている,Medium
+ST-030,member,使用量,Back Alley,使用量の表示,実行実績が存在する,usageを開く,使用量情報が表示される,Low
+ST-031,member,共通UI,Landmark,全ビューのナビゲーション網羅,ログイン済み,navから全ビュー(dashboard〜user-guide)を順に開く,各ビューがJSエラー・描画崩れなく表示される,High
+ST-032,member,認証,Saboteur,セッション失効後の操作遮断,セッションが失効している,失効後に画面操作またはAPI呼び出しを行う,ログインへ誘導され、操作は実行されない,Critical

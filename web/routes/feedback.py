@@ -1,6 +1,6 @@
-"""利用者フィードバックの受け口（POST /api/feedback）。
+"""利用者フィードバックの受け口（POST /api/feedback）と一覧（GET /api/feedback）。
 
-トップバーのユーザーメニュー →「フィードバック」で開くモーダルから呼ばれる。
+トップバーのユーザーメニュー →「フィードバック」で開くビューから呼ばれる。
 送信者・テナント・画面名はサーバー側で補うため、クライアントは種類と本文だけを送る
 （クライアント申告の身元を信じない）。
 """
@@ -12,6 +12,7 @@ from pathlib import Path
 
 from flask import Blueprint, g, request
 
+from web.auth import require_admin
 from web.services.feedback_store import (
     FeedbackError,
     append_feedback,
@@ -65,9 +66,11 @@ def api_submit_feedback() -> tuple[dict, int] | dict:
 
 @bp.get("/api/feedback")
 def api_list_feedback() -> tuple[dict, int] | dict:
-    """このテナントに届いたフィードバック一覧（管理者のみ）。"""
-    from web.auth import require_admin
+    """このテナントに届いたフィードバック一覧（管理者のみ）。
 
+    閲覧用の画面は用意していない。届いたものを確認する手段がファイルの直接参照
+    しかない状態を避けるため、API だけ先に置いてある。
+    """
     denied = require_admin()
     if denied is not None:
         return denied

@@ -23,17 +23,18 @@
 ## 2. 画面一覧
 
 `routes.json` の GET エンドポイントのうち `render_template` を呼ぶもの 14 本を
-実データから抽出し、`account.py` の `_SELECTION_ENDPOINTS`（ユーザー選択・テナント選択の
-ガード対象一覧）と突き合わせて 2 画面（ユーザー選択・テナント選択）を追加した。
+実データから抽出し、`account.py` の `_SELECTION_ENDPOINTS`（テナント選択のガード対象一覧）と
+突き合わせて画面を追加した。ユーザー選択（旧 SC-04）は、ログインを ID＋パスワードの
+1経路へ統一した際に廃止済み。
 
 | 画面ID | 画面名 | URL | テンプレート | アクセス権限 | 概要 |
 |---|---|---|---|---|---|
 | SC-01 | ログイン | `/auth/login` | `templates/auth/login.html` | 未認証可 | メールアドレス＋パスワードでログイン（ロックアウトあり） |
 | SC-02 | 初期セットアップ | `/auth/setup` | `templates/auth/setup.html` | 未認証可（ユーザー0人時のみ有効） | 最初のワークスペース＋オーナー作成 |
 | SC-03 | サインアップ | `/auth/signup` | `templates/auth/signup.html` | 未認証可 | 新規ユーザーの自己登録 |
-| SC-04 | ユーザー選択 | `/auth/user` | `templates/auth/user.html` | 要ログイン | ログイン後、操作するユーザー（アカウント）を選択 |
+| SC-04 | （廃止）ユーザー選択 | — | — | — | ログイン後に操作ユーザーを選ぶ画面。ログインを ID＋パスワードの1経路へ統一した際に廃止（画面IDは欠番） |
 | SC-05 | テナント選択 | `/auth/tenant` | `templates/auth/tenant.html` | 要ログイン | 所属テナント（ワークスペース）を選択 |
-| SC-06 | マイページ | `/auth/account` | `templates/auth/account.html` | 要ログイン | プロフィール・パスワード変更。管理者はメンバー管理・APIトークンも表示 |
+| SC-06 | 個人設定 | `/account` | `templates/partials/view-account.html`（SC-09 内のビュー） | 要ログイン | プロフィール・パスワード変更。管理者はメンバー管理・APIトークンも表示。旧 `/auth/account` はここへ 302 |
 | SC-07 | システム選択 | `/systems` | `templates/system-select.html` | 要ログイン（*1） | ドキュメント作成／AutoRun／CLIモードを選ぶハブ画面 |
 | SC-08 | 管理者コンソール | `/admin/console` | `templates/admin/console.html` | 要admin | テナント・ユーザーの管理（管理者専用。`role != ROLE_ADMIN` は `/systems` へリダイレクト） |
 | SC-09 | メインSPAシェル | `/`、`/<view_name>`、`/settings/<tab>` | `templates/index.html` | 要ログイン（*1） | ダッシュボード等 11 ビューをクライアント側で出し分け（内訳は 2.1） |
@@ -41,6 +42,7 @@
 | SC-11 | AutoRun実行結果レポート | `/autorun/report/<domain>` | `templates/autorun-report.html` | 要ログイン（*1） | 独立ページ。テストケースCSVダウンロード導線あり |
 | SC-12 | CLIモード案内 | `/cli` | `templates/cli.html` | 要ログイン（*1） | CLIモード（System 03）の案内 |
 | SC-13 | トレーサビリティ（単独ページ） | `/traceability/view` | `templates/traceability.html` | 要ログイン（*1） | 要件⇔テストのトレーサビリティマトリクス（単独描画） |
+| SC-14 | フィードバック | `/feedback` | `templates/partials/view-feedback.html`（SC-09 内のビュー） | 要ログイン | 不具合・要望の送信。送信者・テナント・直前の画面はサーバー側で付与 |
 
 *1: `web/routes/pages.py`・`traceability.py`・`runs.py`・`autorun_report.py` の
 個別 `before_request` は本調査で確認できていない（**未確認**）。SC-04〜SC-06・SC-08 は
@@ -90,12 +92,11 @@ graph TD
     Start([初回アクセス]) -->|ユーザー0人| Setup[SC-02 初期セットアップ]
     Start -->|ユーザー存在| Login[SC-01 ログイン]
 
-    Setup -->|ワークスペースを作成| UserSelect
+    Setup -->|ワークスペースを作成| SystemSelect
     Login -->|新規登録リンク| Signup[SC-03 サインアップ]
-    Login -->|ログイン成功| UserSelect[SC-04 ユーザー選択]
-    Signup -->|作成してログイン| UserSelect
+    Login -->|ログイン成功 ID+パスワード| TenantSelect[SC-05 テナント選択]
+    Signup -->|作成してログイン| TenantSelect
 
-    UserSelect -->|ユーザーを選択 POST /auth/user| TenantSelect[SC-05 テナント選択]
     TenantSelect -->|テナントを選択 POST /auth/tenant| SystemSelect[SC-07 システム選択]
 
     SystemSelect -->|ドキュメント作成カード| Generate[SC-09 サイトを追加/再クロール]
@@ -105,7 +106,8 @@ graph TD
     Generate -->|解析開始 submit-btn| RunResult[SC-10 実行結果ページ]
     AutoRun -->|開始 autorun-start-btn→承認モーダル| AutoRunReport[SC-11 AutoRun実行結果レポート]
 
-    UserSelect -.マイページ導線.-> Account[SC-06 マイページ]
+    Generate -.ユーザーメニュー.-> Account[SC-06 個人設定]
+    Generate -.ユーザーメニュー.-> Feedback[SC-14 フィードバック]
     Account -->|管理者のみ| AdminConsole[SC-08 管理者コンソール]
 
     SystemSelect -.ログアウト POST /auth/logout.-> Login
@@ -199,7 +201,7 @@ HTML5 属性が主体と推測される）。
 | アクセス権限 | 該当画面 |
 |---|---|
 | 未認証可 | SC-01 ログイン、SC-02 初期セットアップ（ユーザー0人時のみ）、SC-03 サインアップ |
-| 要ログイン | SC-04 ユーザー選択、SC-05 テナント選択、SC-06 マイページ、SC-07 システム選択（*1）、SC-09 メインSPAシェル（*1）、SC-10 実行結果ページ（*1）、SC-11 AutoRun実行結果レポート（*1）、SC-12 CLIモード案内（*1）、SC-13 トレーサビリティ単独ページ（*1） |
+| 要ログイン | SC-05 テナント選択、SC-06 個人設定、SC-07 システム選択（*1）、SC-09 メインSPAシェル（*1）、SC-10 実行結果ページ（*1）、SC-11 AutoRun実行結果レポート（*1）、SC-12 CLIモード案内（*1）、SC-13 トレーサビリティ単独ページ（*1）、SC-14 フィードバック |
 | 要admin | SC-08 管理者コンソール（`role != ROLE_ADMIN` は `/systems` へリダイレクト。`/api/admin/*` も `require_admin()` でガード） |
 
 *1: 個別 `before_request` 未確認（2.表の注記と同じ）。

@@ -11,9 +11,9 @@
 from __future__ import annotations
 
 import json
+import logging
 import threading
 import uuid
-from collections import deque
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -28,6 +28,8 @@ _MAX_FIELD_LENGTH = 200
 # 追記は 1 行・低頻度なので、テナントごとにロックを作り分ける利益がない。
 # プロセス内で 1 本にして、ロック辞書の管理をなくす。
 _WRITE_LOCK = threading.Lock()
+
+logger = logging.getLogger(__name__)
 
 
 class FeedbackError(Exception):
@@ -105,31 +107,45 @@ def append_feedback(
             handle.write(line + "\n")
         # 氏名・ログインID・自由記述が入るので所有者だけが読める権限にする
         # （admin_audit.jsonl と同じ扱い）。既存ファイルも毎回この権限に直す。
+        # 失敗しても追記自体は成立しているので送信は成功として扱うが、
+        # 権限が緩いまま個人情報が残ることになるので必ず記録に残す。
         try:
             path.chmod(0o600)
         except OSError:
-            pass
+            logger.warning(
+                "フィードバックの保存先に 0600 を設定できませんでした: %s。"
+                "個人情報を含むため、ファイル権限を確認してください。",
+                path,
+                exc_info=True,
+            )
     return entry
 
 
 def read_feedback(path: Path, limit: int = 100) -> list[dict]:
-    """新しい順に読み出す。壊れた行は捨てる（1 行の破損で全体を失わせない）。
+    """新しい順に、読めた行を limit 件返す。壊れた行は数に含めず読み飛ばす。
 
-    返すのは末尾 limit 件なので、パースも保持もその件数で頭打ちにする。
-    行が増えても JSON パース回数とピークメモリが O(limit) に収まる。
+    limit は「返す件数」であって「読む行数」ではない。生の行を先に limit 件へ
+    切ってからパースすると、壊れた行がその枠を食って返却が limit 件に満たなくなる。
+    壊れた行の有無で件数が変わってはいけないので、末尾から順に見て
+    limit 件そろった時点で打ち切る（パース回数は limit + 壊れた行の数で収まる）。
+
+    行の保持はファイル全体ぶん必要になる。件数が実用上問題になる規模まで増えたら、
+    web/services/admin_audit.py の _reverse_lines と同じ末尾チャンク読みへ移すこと。
     """
     if not path.is_file():
         return []
     capped = max(1, min(limit, MAX_READ_LIMIT))
     with path.open("r", encoding="utf-8") as handle:
-        tail = deque((line for line in handle if line.strip()), maxlen=capped)
+        lines = [line for line in handle if line.strip()]
 
     entries: list[dict] = []
-    for line in reversed(tail):
+    for line in reversed(lines):
         try:
             parsed = json.loads(line)
         except json.JSONDecodeError:
             continue
         if isinstance(parsed, dict):
             entries.append(parsed)
+            if len(entries) >= capped:
+                break
     return entries

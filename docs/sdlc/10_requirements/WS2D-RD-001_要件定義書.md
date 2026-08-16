@@ -263,9 +263,10 @@ AutoRunを利用する場合は、上記フローに代えて「目的→計画�
 | `discover` | URL解析 / 画面発見 | 対象URLから到達可能な画面候補を検出する | critical | ウィザード ステップ1（view-generate.html） | `web/routes/discover.py`（/api/discover, /api/discover-stream） | `src/crawler/page_crawler.py`, `src/crawler/url_safety.py` |
 | `crawl` | クロール / レポート生成 | 検出画面をクロールし画面仕様書・レポートを生成する | critical | ウィザード ステップ3（view-generate.html） | `web/routes/crawl.py`（/run, /api/cancel, /api/live-screenshot） | `src/crawler/parallel_crawler.py`, `src/analyzer/html_analyzer.py` |
 | `login` | ログイン / セッション（対象サイト） | クロール対象サイトへの自動ログインとセッション保存 | critical | ウィザード内ログインフォーム | `web/routes/login.py`（/api/login/*） | `src/crawler/auto_login.py`, `src/analyzer/login_wall.py` |
-| `account_auth` | アプリ利用者認証 | WebSpec2Doc自体へのログイン・初期セットアップ・アカウント管理 | critical | auth/login.html, setup.html, account.html, signup.html | `web/routes/account.py`（/auth/*, /api/auth/*） | `web/services/auth_store.py`, `web/auth.py` |
-| `tenant_membership` | テナント選択と所属管理 | 利用者とワークスペースの所属・ロール（owner/admin/member）を管理する | critical | auth/user.html, auth/tenant.html, admin/console.html | `web/routes/tenant_admin.py`, `account.py` | `web/services/auth_store.py` |
-| `tenant_isolation` | テナント分離 | 出力・観点DB・APIトークンをワークスペース単位で分離する | critical | auth/account.html | `web/routes/account.py` | `web/tenancy.py`, `web/services/viewpoint_store.py` |
+| `account_auth` | アプリ利用者認証 | WebSpec2Doc自体へのログイン・初期セットアップ・アカウント管理 | critical | auth/login.html, setup.html, signup.html, partials/view-account.html | `web/routes/account.py`（/auth/*, /api/auth/*） | `web/services/auth_store.py`, `web/auth.py` |
+| `tenant_membership` | テナント選択と所属管理 | 利用者とワークスペースの所属・ロール（一般/管理者）を管理する | critical | auth/tenant.html, admin/console.html | `web/routes/tenant_admin.py`, `account.py` | `web/services/auth_store.py` |
+| `tenant_isolation` | テナント分離 | 出力・観点DB・APIトークンをワークスペース単位で分離する | critical | partials/view-account.html | `web/routes/account.py` | `web/tenancy.py`, `web/services/viewpoint_store.py` |
+| `user_menu_feedback` | ユーザーメニューと利用者フィードバック送信 | トップバーから個人設定・ガイド・フィードバック・ログアウトへ移動し、不具合や要望を送る | high | partials/topbar.html, partials/view-account.html, partials/view-feedback.html | `web/routes/feedback.py` | `web/services/feedback_store.py` |
 | `autorun` | AutoRun | 解析→クロール→QA生成→テスト実行を一つのフローで行う | high | view-auto-run.html | `web/routes/auto_run.py` | `web/services/spec_ts_generator.py`, `web/services/playwright_executor.py` |
 | `diff_history` | 差分 / 履歴 / 再クロール | 再クロールし前回スナップショットとの仕様ドリフトを検出する | critical | history.js, recrawl.js, results.js | `web/routes/history.py`, `site.py`, `runs.py` | `src/diff/snapshot.py`, `src/diff/differ.py` |
 | `settings` | 設定 | LLMキー等の環境設定を管理する | high | view-settings.html | `web/routes/settings.py`, `pages.py` | `web/env_store.py` |

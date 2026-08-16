@@ -196,7 +196,7 @@ classDiagram
         +has_any_user()
         +create_user()
         +authenticate()
-        +authenticate_passwordless()
+        +ensure_initial_admin()
         +create_session()
         +resolve_session()
         +revoke_session()

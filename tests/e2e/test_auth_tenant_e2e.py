@@ -18,13 +18,10 @@
     完全に分離した専用 Flask プロセスをこのファイル専用に起動することで、
     既存 E2E への影響をゼロにする。
 
-設計上の注意（パスワードを使わない理由）:
-    templates/auth/setup.html は `{% if not mock_auth %}` でパスワード欄自体を
-    描画しない。WEBSPEC2DOC_AUTH_MOCK は既定で有効（モック認証）のため、
-    このテストで作る全アカウントはパスワードなし（authenticate_passwordless）で
-    統一する。既定設定のまま実挙動を検証するための選択であり、意図的にモックを
-    無効化していない（無効化すると今度はパスワードなしメンバー作成が
-    enforce_password_policy に落ちる）。
+設計上の注意（パスワードを必ず入力する理由）:
+    ログインは「ログインID + パスワード」の1経路だけで、ユーザー選択画面は廃止した。
+    WEBSPEC2DOC_AUTH_MOCK（既定で有効）が変えるのはパスワードの長さ要件だけなので、
+    このテストは既定設定のまま、全アカウントにパスワードを設定して検証する。
 
 実行方法:
     venv/bin/python -m pytest tests/e2e/test_auth_tenant_e2e.py -q
@@ -49,12 +46,13 @@ from playwright.sync_api import Page, expect
 ROOT = Path(__file__).parent.parent.parent
 
 _ADMIN_EMAIL = "e2e-admin@example.com"
+_ADMIN_PASSWORD = "e2e-admin-pass-123"
 _TENANT_A_NAME = "E2E Tenant A"
 _TENANT_B_NAME = "E2E Tenant B"
 _TENANT_B_SLUG = "e2e-tenant-b"
 _MEMBER_EMAIL = "e2e-member@example.com"
+_MEMBER_PASSWORD = "e2e-member-pass-123"
 
-USER_SELECT = "/auth/user"
 TENANT_SELECT = "/auth/tenant"
 SYSTEM_SELECT = "/systems"
 
@@ -118,21 +116,12 @@ def auth_server() -> Generator[str, None, None]:
             Path(str(db) + suffix).unlink(missing_ok=True)
 
 
-def _login_as(page: Page, base_url: str, email: str) -> None:
-    """ログイン→ユーザー選択→テナント選択を経て /systems に到達する（モック認証・パスワードなし）。
-
-    mock_auth 有効時、login.html はパスワード未入力なら
-    store.authenticate_passwordless を通す（web/routes/account.py の login_submit）。
-    """
+def _login_as(page: Page, base_url: str, email: str, password: str) -> None:
+    """ログイン→テナント選択を経て /systems に到達する（ID＋パスワード認証）。"""
     page.goto(f"{base_url}/auth/login")
     page.locator("#email").fill(email)
+    page.locator("#password").fill(password)
     page.locator("button.auth-submit").click()
-
-    expect(page).to_have_url(f"{base_url}{USER_SELECT}")
-    # 「自分のまま続ける」（候補一覧の先頭、user_id が空の隠しフィールドを持つフォーム）
-    page.locator(
-        'form[action="/auth/user"]:has(input[name="user_id"][value=""]) button[type="submit"]'
-    ).click()
 
     expect(page).to_have_url(re.compile(re.escape(f"{base_url}{TENANT_SELECT}")))
     # 所属テナントの先頭を選ぶ（このテスト群では常に1件以上の所属がある状態で呼ぶ）
@@ -150,11 +139,12 @@ class TestAccountAuth:
         page.goto(f"{auth_server}/auth/login")
         expect(page).to_have_url(f"{auth_server}/auth/setup")
 
-        # setup.html は mock_auth 有効時にパスワード欄を出さない（{% if not mock_auth %}）。
-        # 空パスワードのまま作成され、以降はモック認証（パスワードなし）で扱われる。
+        # 初期セットアップで最初のテナントと管理者を作る。パスワードは必須。
         page.locator("#tenant_name").fill(_TENANT_A_NAME)
         page.locator("#name").fill("E2E Admin")
         page.locator("#email").fill(_ADMIN_EMAIL)
+        page.locator("#password").fill(_ADMIN_PASSWORD)
+        page.locator("#password_confirm").fill(_ADMIN_PASSWORD)
         page.locator("button.auth-submit").click()
         # setup_submit はセッションを即座に発行し、テナントも決定済みで /systems へ進む
         expect(page).to_have_url(f"{auth_server}{SYSTEM_SELECT}")
@@ -169,8 +159,8 @@ class TestAccountAuth:
         page.goto(f"{auth_server}{SYSTEM_SELECT}")
         expect(page).to_have_url(re.compile(r"/auth/login"))
 
-        # 再ログイン→ 本来の遷移（ユーザー選択→テナント選択→システム選択）に進む
-        _login_as(page, auth_server, _ADMIN_EMAIL)
+        # 再ログイン→ 本来の遷移（テナント選択→システム選択）に進む
+        _login_as(page, auth_server, _ADMIN_EMAIL, _ADMIN_PASSWORD)
         expect(page).to_have_url(f"{auth_server}{SYSTEM_SELECT}")
 
 
@@ -181,7 +171,7 @@ class TestTenantMembership:
         self, page: Page, auth_server: str
     ) -> None:
         """管理コンソールにメンバー一覧が表示され、一般メンバーは到達できない。"""
-        _login_as(page, auth_server, _ADMIN_EMAIL)
+        _login_as(page, auth_server, _ADMIN_EMAIL, _ADMIN_PASSWORD)
 
         # 管理者は管理コンソールに到達できる
         page.goto(f"{auth_server}/admin/console")
@@ -206,6 +196,7 @@ class TestTenantMembership:
                 "email": _MEMBER_EMAIL,
                 "role": "member",
                 "tenant_id": tenant_b_id,
+                "password": _MEMBER_PASSWORD,
             },
         )
         assert user_resp.ok, user_resp.text()
@@ -216,9 +207,9 @@ class TestTenantMembership:
         rows_text = page.locator("#user-rows").inner_text()
         assert "E2E Member" in rows_text or _MEMBER_EMAIL in rows_text, rows_text
 
-        # ログアウトして一般メンバーとしてログイン（パスワードなし＝モック認証）
+        # ログアウトして一般メンバーとしてログイン
         page.request.post(f"{auth_server}/auth/logout")
-        _login_as(page, auth_server, _MEMBER_EMAIL)
+        _login_as(page, auth_server, _MEMBER_EMAIL, _MEMBER_PASSWORD)
 
         # 一般メンバーは管理コンソールに到達できず /systems へ戻される
         # （権限による操作の出し分け＝ tenant_admin.py console_page のガード）
@@ -237,7 +228,7 @@ class TestTenantIsolation:
         TestTenantMembership で作成済みの「テナントBだけに所属する一般メンバー」を
         再利用する（同一モジュールの専用サーバー内で状態を引き継ぐ）。
         """
-        _login_as(page, auth_server, _ADMIN_EMAIL)
+        _login_as(page, auth_server, _ADMIN_EMAIL, _ADMIN_PASSWORD)
 
         # サンプルレポートをテナントAの出力先へ展開する
         # （UI の「サンプルレポートを見る」ボタン data-sample-report と同一の実API）。
@@ -258,7 +249,7 @@ class TestTenantIsolation:
         page.request.post(f"{auth_server}/auth/logout")
 
         # テナントBだけに所属する一般メンバーには見えない（scoped_output_dir の効果）
-        _login_as(page, auth_server, _MEMBER_EMAIL)
+        _login_as(page, auth_server, _MEMBER_EMAIL, _MEMBER_PASSWORD)
         report_b = page.request.get(f"{auth_server}/api/v1/sites/{sample_domain}/report")
         assert not report_b.ok, (
             f"テナント分離が効いていません。テナントBからテナントAのサンプルの"

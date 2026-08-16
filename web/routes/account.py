@@ -13,7 +13,6 @@ from web.auth import (
     SESSION_COOKIE_NAME,
     SYSTEM_SELECT_PATH,
     TENANT_SELECT_PATH,
-    USER_SELECT_PATH,
     auth_enabled,
     clear_session_cookie,
     create_user_from_payload,
@@ -26,14 +25,12 @@ from web.services.auth_store import ROLE_ADMIN, ROLE_MEMBER, AuthError, get_auth
 
 bp = Blueprint("account", __name__)
 
-# ログイン後の遷移は常に ログイン → ユーザー選択 → テナント選択 → システム選択。
+# ログイン後の遷移は常に ログイン → テナント選択 → システム選択。
 # 元のURL（next）へは戻さない。認証ガードが付ける next は "/" のことが多く、
 # システム選択を飛ばしてドキュメント作成の画面へ直行してしまうため。
 # 選択画面はログイン必須。個々のハンドラで判定を繰り返さず、ここで一括で弾く。
 _SELECTION_ENDPOINTS = frozenset(
     {
-        "account.user_page",
-        "account.user_select",
         "account.tenant_page",
         "account.tenant_select",
     }
@@ -43,10 +40,6 @@ _SELECTION_ENDPOINTS = frozenset(
 _TENANT_ERRORS = {
     "not_member": "そのテナントに所属していません。管理者に追加を依頼してください。",
     "missing": "テナントを選択してください。",
-}
-_USER_ERRORS = {
-    "not_switchable": "そのユーザーには切り替えられません。"
-    "パスワードが設定されているか、無効化されています。",
 }
 
 
@@ -82,57 +75,25 @@ def login_page() -> BaseResponse | str:
     if not store.has_any_user():
         return redirect("/auth/setup")
     if getattr(g, "auth_user", None):
-        return redirect(USER_SELECT_PATH)
+        return redirect(TENANT_SELECT_PATH)
     return render_template("auth/login.html", **_login_page_context(None, ""))
 
 
 @bp.post("/auth/login")
 def login_submit() -> BaseResponse | tuple[str, int]:
+    """ログインID＋パスワードでのみ認証する。
+
+    ユーザー選択画面（旧 /auth/user）は廃止した。誰として使うかはログインで決まる。
+    初期管理者は admin / password（web.services.auth_store.ensure_initial_admin）。
+    """
     store = get_auth_store()
     email = request.form.get("email", "").strip()
     password = request.form.get("password", "")
     try:
-        # モックでもパスワードが入力されていれば通常の認証を通す。
-        # 初期管理者（admin / password）のようにパスワードを持つアカウントは
-        # パスワード照合を必ず経る。
-        if mock_auth_enabled() and not password:
-            user = store.authenticate_passwordless(email)
-        else:
-            user = store.authenticate(email, password)
+        user = store.authenticate(email, password)
     except AuthError as exc:
         return render_template("auth/login.html", **_login_page_context(str(exc), email)), 401
-    target = USER_SELECT_PATH if mock_auth_enabled() else TENANT_SELECT_PATH
-    return _start_session(user, target)
-
-
-@bp.get(USER_SELECT_PATH)
-def user_page() -> BaseResponse | str:
-    """モックのユーザー選択。誰として作業するかをここで決める。"""
-    if not mock_auth_enabled():
-        return redirect(TENANT_SELECT_PATH)
-    return render_template(
-        "auth/user.html",
-        user=g.auth_user,
-        candidates=get_auth_store().list_login_candidates(),
-        error=_USER_ERRORS.get(request.args.get("error", "")),
-    )
-
-
-@bp.post(USER_SELECT_PATH)
-def user_select() -> BaseResponse:
-    if not mock_auth_enabled():
-        return redirect(TENANT_SELECT_PATH)
-    current = g.auth_user
-    user_id = request.form.get("user_id", "").strip()
-    # 空、または自分自身なら切り替えずそのまま進む
-    if not user_id or user_id == current.get("id"):
-        return redirect(TENANT_SELECT_PATH)
-    token = get_auth_store().switch_session_user(
-        request.cookies.get(SESSION_COOKIE_NAME, ""), user_id
-    )
-    if token is None:
-        return redirect(f"{USER_SELECT_PATH}?error=not_switchable")
-    return set_session_cookie(redirect(TENANT_SELECT_PATH), token)
+    return _start_session(user, TENANT_SELECT_PATH)
 
 
 @bp.get("/auth/signup")
@@ -172,7 +133,7 @@ def signup_submit() -> BaseResponse | tuple[str, int]:
             "auth/signup.html", error=str(exc), form=form, mock_auth=mock_auth_enabled()
         )
         return html, 400
-    # 作った本人として続けるので、ユーザー選択は挟まずテナント選択へ送る
+    # 作った本人として続けるのでテナント選択へ送る
     return _start_session(user, TENANT_SELECT_PATH)
 
 

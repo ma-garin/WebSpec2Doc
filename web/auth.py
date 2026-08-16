@@ -27,8 +27,7 @@ SECURE_COOKIES_ENV = "WEBSPEC2DOC_SECURE_COOKIES"
 SESSION_COOKIE_NAME = "ws2d_session"
 
 # ログイン後は必ずこの順で進む。順序を変えるときはここだけを見ればよいように、
-# 3つのパスを並べて置く。
-USER_SELECT_PATH = "/auth/user"
+# 2つのパスを並べて置く。
 TENANT_SELECT_PATH = "/auth/tenant"
 SYSTEM_SELECT_PATH = "/systems"
 
@@ -49,7 +48,6 @@ _EXEMPT_PATHS = frozenset(
 # ここを通さないと、テナントを選ぶ画面自体がテナント未選択で弾かれて詰む。
 _TENANT_EXEMPT_PATHS = frozenset(
     {
-        USER_SELECT_PATH,
         TENANT_SELECT_PATH,
         "/api/auth/me",
         "/api/auth/tenants",
@@ -229,7 +227,7 @@ def create_user_from_payload(payload: dict, tenant_id: str | None, actor_id: str
 
     /api/auth/users（テナント内）と /api/admin/tenancy/users（テナント横断）で
     同じ規則を使うため、payload の読み方とパスワードの扱いをここに集約する。
-    パスワードは任意で、空ならモック認証（メールアドレスだけでログイン）になる。
+    パスワードは必須（空だと作成したユーザーがログインできないため）。
     モック時は長さ要件を課さない（配布用の短い資格情報を許すため）。
     """
     from web.services.auth_store import ROLE_MEMBER, get_auth_store

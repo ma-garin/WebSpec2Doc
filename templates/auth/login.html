@@ -45,8 +45,8 @@
 
       {% if mock_auth %}
       <div class="auth-mock-note" role="note">
-        モック認証が有効です（社内利用向け）。<br>
-        初期管理者は <b>admin</b> / <b>password</b> です。ログイン後に利用するユーザーを選びます。
+        社内モックとして動作しています。<br>
+        初期管理者は <b>admin</b> / <b>password</b> です。
       </div>
       {% endif %}
 
@@ -57,9 +57,9 @@
                  autocomplete="username" required autofocus>
         </div>
         <div class="auth-field">
-          <label for="password">パスワード{% if mock_auth %}<span class="auth-optional">パスワードなしのユーザーは空のまま</span>{% endif %}</label>
+          <label for="password">パスワード</label>
           <input type="password" id="password" name="password"
-                 autocomplete="current-password" {% if not mock_auth %}required{% endif %}>
+                 autocomplete="current-password" required>
         </div>
         <button type="submit" class="auth-submit">ログイン</button>
       </form>

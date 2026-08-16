@@ -508,7 +508,8 @@ class AuthStore:
 
         tenant_id を渡すとその所属も同時に作る。None なら所属なしで作成し、
         管理者が割り当てるまで待機状態になる（本人によるサインアップの経路）。
-        password が空文字ならパスワード未設定として作る（モック認証で使う）。
+        パスワードは必須。ログインは ID＋パスワードの1経路だけなので、
+        空で作るとそのユーザーは二度とログインできなくなるため。
         email はメールアドレスのほか、"admin" のような識別子も受け付ける。
         """
         email = email.strip().lower()
@@ -520,12 +521,12 @@ class AuthStore:
             )
         if not name:
             raise AuthError("表示名を入力してください。", "invalid_input")
+        if not password:
+            raise AuthError("パスワードを入力してください。", "password_required")
         role = normalize_role(role)
-        password_hash = ""
-        if password:
-            if enforce_password_policy:
-                validate_password(password, email)
-            password_hash = generate_password_hash(password)
+        if enforce_password_policy:
+            validate_password(password, email)
+        password_hash = generate_password_hash(password)
         with self._transaction() as conn:
             if (
                 tenant_id
@@ -934,9 +935,11 @@ class AuthStore:
             elif not row["is_active"]:
                 error = AuthError("このアカウントは無効化されています。", "inactive")
             elif not row["password_hash"]:
+                # 旧モック認証（パスワードなし）時代に作られたアカウント。
+                # ログインはID＋パスワードの1経路だけなので、管理者に再発行を促す。
                 error = AuthError(
                     "このアカウントはパスワードが設定されていません。"
-                    "メールアドレスだけでログインしてください。",
+                    "管理者にパスワードの設定を依頼してください。",
                     "no_password",
                 )
             elif locked_until and datetime.fromisoformat(locked_until) > now:
@@ -1002,85 +1005,6 @@ class AuthStore:
             return None
         memberships = self.list_memberships(user_id)
         return str(memberships[0]["tenant_id"]) if len(memberships) == 1 else None
-
-    def authenticate_passwordless(self, email: str) -> dict:
-        """モック認証: メールアドレスだけでログインする（社内モック用）。
-
-        パスワードを設定済みのユーザーはこの経路では通さない。モックを有効にした
-        だけで、パスワードで守っていたアカウントが素通りになるのを防ぐため。
-        """
-        email = (email or "").strip().lower()
-        self.initialize()
-        now = _iso(_now())
-        with self._transaction() as conn:
-            row = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
-            if row is None:
-                raise AuthError(
-                    "このメールアドレスのユーザーは登録されていません。", "unknown_user"
-                )
-            if not row["is_active"]:
-                raise AuthError("このアカウントは無効化されています。", "inactive")
-            if row["password_hash"]:
-                raise AuthError(
-                    "このアカウントはパスワードが必要です。", "password_required"
-                )
-            conn.execute(
-                "UPDATE users SET failed_attempts = 0, locked_until = NULL,"
-                " last_login_at = ?, updated_at = ? WHERE id = ?",
-                (now, now, row["id"]),
-            )
-            user = self._public_user(row)
-        self.audit(
-            "user.login",
-            user_id=user["id"],
-            tenant_id=self._sole_tenant_id(user["id"]),
-            detail="passwordless",
-            target_type="user",
-            target_id=user["id"],
-        )
-        return user
-
-    def switch_session_user(self, raw_token: str, user_id: str) -> str | None:
-        """セッションを別ユーザーへ切り替える（モックのユーザー選択画面）。
-
-        切り替え先はパスワード未設定の有効ユーザーに限る。パスワードで守られた
-        アカウントを、選ぶだけで乗っ取れないようにするため。
-        戻り値は新しいセッショントークン。切り替え不可なら None。
-        """
-        if not raw_token or not user_id:
-            return None
-        self.initialize()
-        with self._connect() as conn:
-            row = conn.execute(
-                "SELECT id, password_hash, is_active FROM users WHERE id = ?", (user_id,)
-            ).fetchone()
-        if row is None or not row["is_active"] or row["password_hash"]:
-            return None
-        self.revoke_session(raw_token)
-        token = self.create_session(user_id)
-        self.audit(
-            "user.switched",
-            user_id=user_id,
-            detail="mock user selection",
-            target_type="user",
-            target_id=user_id,
-        )
-        return token
-
-    def list_login_candidates(self, limit: int = 20) -> list[dict]:
-        """モックのユーザー選択画面に並べる、パスワード未設定の有効ユーザー。"""
-        self.initialize()
-        with self._connect() as conn:
-            rows = conn.execute(
-                "SELECT u.id, u.email, u.name,"
-                " (SELECT COUNT(*) FROM memberships m WHERE m.user_id = u.id) AS tenant_count,"
-                " (SELECT COUNT(*) FROM memberships m WHERE m.user_id = u.id AND m.role = ?)"
-                "   AS admin_count"
-                " FROM users u WHERE u.is_active = 1 AND u.password_hash = ''"
-                " ORDER BY u.created_at LIMIT ?",
-                (ROLE_ADMIN, max(1, min(limit, 50))),
-            ).fetchall()
-        return [dict(row) for row in rows]
 
     def change_password(self, user_id: str, current: str, new: str) -> None:
         self.initialize()

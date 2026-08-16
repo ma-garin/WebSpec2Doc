@@ -31,7 +31,7 @@
     <div class="auth-form-box">
       <h1>アカウントを作成</h1>
       <p class="auth-form-lead">
-        {% if mock_auth %}社内利用のモック環境です。パスワードは設定しません。{% else %}メールアドレスとパスワードでアカウントを作成します。{% endif %}
+        メールアドレスとパスワードでアカウントを作成します。
       </p>
 
       {% if error %}
@@ -52,13 +52,13 @@
           <input type="email" id="email" name="email" value="{{ form.get('email', '') }}"
                  placeholder="you@example.co.jp" autocomplete="username" required>
         </div>
-        {% if not mock_auth %}
         <div class="auth-field">
           <label for="password">パスワード</label>
           <input type="password" id="password" name="password" autocomplete="new-password" required>
-          <div class="hint">10文字以上。メールアドレスと同一のものは使用できません。</div>
+          <div class="hint">
+            {% if mock_auth %}社内モックのため文字数制限はありません。{% else %}10文字以上。メールアドレスと同一のものは使用できません。{% endif %}
+          </div>
         </div>
-        {% endif %}
         <button type="submit" class="auth-submit">作成してログイン</button>
       </form>
 

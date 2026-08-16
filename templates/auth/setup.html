@@ -53,18 +53,18 @@
           <input type="email" id="email" name="email" value="{{ form.get('email', '') }}"
                  autocomplete="username" required>
         </div>
-        {% if not mock_auth %}
         <div class="auth-field">
           <label for="password">パスワード</label>
           <input type="password" id="password" name="password" autocomplete="new-password" required>
-          <div class="hint">10文字以上。メールアドレスと同一のものは使用できません。</div>
+          <div class="hint">
+            {% if mock_auth %}社内モックのため文字数制限はありません。{% else %}10文字以上。メールアドレスと同一のものは使用できません。{% endif %}
+          </div>
         </div>
         <div class="auth-field">
           <label for="password_confirm">パスワード（確認）</label>
           <input type="password" id="password_confirm" name="password_confirm"
                  autocomplete="new-password" required>
         </div>
-        {% endif %}
         <button type="submit" class="auth-submit">ワークスペースを作成</button>
       </form>
     </div>

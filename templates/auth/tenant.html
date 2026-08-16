@@ -3,7 +3,6 @@
 
 {% block topbar_actions %}
   <span>{{ user.name }}</span>
-  {% if mock_auth %}<a class="tsel-text-btn" href="/auth/user">ユーザーを変更</a>{% endif %}
   <form method="post" action="/auth/logout">
     <button class="tsel-text-btn" type="submit">ログアウト</button>
   </form>
@@ -11,7 +10,7 @@
 
 {% block content %}
 <div class="tsel-stage">
-  <p class="tsel-kicker">STEP 2 / 3</p>
+  <p class="tsel-kicker">STEP 1 / 2</p>
   <h1>どのテナントで作業しますか？</h1>
   <p class="tsel-lead">テナントごとに、生成したドキュメント・AutoRun の実行履歴・観点セットは分離されています。</p>
 

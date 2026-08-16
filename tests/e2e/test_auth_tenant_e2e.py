@@ -316,6 +316,21 @@ class TestUserMenu:
         expect(page).to_have_url(f"{auth_server}/account")
         expect(page.locator("#view-account")).to_be_visible()
 
+    def test_system_select_can_reach_personal_settings(
+        self, page: Page, auth_server: str
+    ) -> None:
+        """システム選択からも個人設定へ行ける。
+
+        この画面はアプリシェルの外でユーザーメニューが無く、システムを選ぶまで
+        パスワード変更にすら到達できない状態だったため、専用の導線を置いている。
+        """
+        _login_as(page, auth_server, _ADMIN_EMAIL, _ADMIN_PASSWORD)
+        page.goto(f"{auth_server}{SYSTEM_SELECT}")
+
+        page.locator('.sysselect-account a[href="/account"]').click()
+        expect(page).to_have_url(f"{auth_server}/account")
+        expect(page.locator("#account-profile")).to_contain_text(_ADMIN_EMAIL)
+
     def test_user_guide_switches_view_in_place(self, page: Page, auth_server: str) -> None:
         """「ユーザーガイド」は画面内のビュー切替で、別ページへ飛ばさない。"""
         _login_as(page, auth_server, _ADMIN_EMAIL, _ADMIN_PASSWORD)

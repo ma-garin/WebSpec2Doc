@@ -19,8 +19,11 @@
       <span class="sysselect-brand-tag">プラットフォーム</span>
     </div>
     <div class="sysselect-account">
-      {% if auth_user %}<span class="sysselect-who">{{ auth_user.email }}</span>{% endif %}
       {% if auth_user %}
+      <span class="sysselect-who">{{ auth_user.email }}</span>
+      {# この画面はアプリシェルの外なので、作業画面のユーザーメニューが使えない。
+         個人設定への導線がここに無いと、システムを選ぶまでパスワードも変えられない。 #}
+      <a class="sysselect-text-btn" href="/account">個人設定</a>
       <form method="post" action="/auth/logout" class="sysselect-logout-form">
         <button type="submit" class="sysselect-text-btn">ログアウト</button>
       </form>

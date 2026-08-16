@@ -10,6 +10,7 @@ from flask import Blueprint, current_app, g, jsonify, redirect, render_template,
 from werkzeug.wrappers import Response as BaseResponse
 
 from web.auth import (
+    ACCOUNT_VIEW_PATH,
     SESSION_COOKIE_NAME,
     SYSTEM_SELECT_PATH,
     TENANT_SELECT_PATH,
@@ -21,7 +22,7 @@ from web.auth import (
     require_admin,
     set_session_cookie,
 )
-from web.services.auth_store import ROLE_ADMIN, ROLE_MEMBER, AuthError, get_auth_store
+from web.services.auth_store import ROLE_MEMBER, AuthError, get_auth_store
 
 bp = Blueprint("account", __name__)
 
@@ -119,7 +120,7 @@ def signup_submit() -> BaseResponse | tuple[str, int]:
     }
     try:
         # 所属なしで作る。どのテナントに入れるかは管理者が決める。
-        # モックではテンプレートがパスワード欄を出さないので、空 = パスワードなしになる。
+        # パスワードは必須。モックで緩むのは長さ要件だけ。
         user = store.create_user(
             None,
             form["email"],
@@ -213,25 +214,17 @@ def setup_submit() -> BaseResponse | tuple[str, int]:
 
 
 @bp.get("/auth/account")
-def account_page() -> BaseResponse | str:
+def account_page() -> BaseResponse:
+    """旧アカウント専用ページ。アプリ内の個人設定ビュー（/account）へ送る。
+
+    表示方法を他のメニュー項目（ユーザーガイド等）と揃えるため画面内ビューへ移した。
+    ブックマークや外部からのリンクを壊さないよう、この経路は残して転送する。
+    """
     if not auth_enabled():
         return redirect("/")
-    user = getattr(g, "auth_user", None)
-    if user is None:
-        return redirect("/auth/login?next=/auth/account")
-    store = get_auth_store()
-    is_admin = user.get("role") == ROLE_ADMIN
-    tenant = getattr(g, "tenant", None) or {}
-    return render_template(
-        "auth/account.html",
-        user=user,
-        tenant=tenant,
-        is_admin=is_admin,
-        memberships=store.list_memberships(user["id"]),
-        mock_auth=mock_auth_enabled(),
-        users=store.list_users(tenant.get("id", "")) if is_admin else [],
-        api_tokens=store.list_api_tokens(tenant.get("id", "")) if is_admin else [],
-    )
+    if getattr(g, "auth_user", None) is None:
+        return redirect("/auth/login?next=/account")
+    return redirect(ACCOUNT_VIEW_PATH)
 
 
 # --- API ----------------------------------------------------------------

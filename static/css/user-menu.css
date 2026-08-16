@@ -1,0 +1,99 @@
+/* トップバー右上のユーザーメニュー。
+   各項目が開く画面のスタイルは static/css/account-view.css にある。
+   トークンは static/tokens.css に定義済みのものだけを使う。 */
+
+/* ===== トリガー ===== */
+.usermenu { position: relative; }
+
+.usermenu-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 4px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+.usermenu-trigger:hover { background: var(--color-surface-2); }
+.usermenu-trigger:focus-visible,
+.usermenu-trigger[aria-expanded="true"] {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+  outline: none;
+}
+.usermenu-caret { width: 12px; height: 12px; color: var(--color-text-secondary); }
+
+.usermenu-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: #fff;
+  font-weight: 700;
+  font-size: var(--text-xs);
+}
+.usermenu-avatar.is-lg { width: 38px; height: 38px; font-size: var(--text-base); }
+
+/* 画面が狭いときは名前を隠してアバターだけにする（PC のウィンドウ縮小を想定） */
+@media (max-width: 900px) {
+  .usermenu-trigger-name { display: none; }
+  .usermenu-trigger { padding-right: 6px; }
+}
+
+/* ===== ドロップダウン ===== */
+.usermenu-pop {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 252px;
+  padding: 6px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-pop);
+  z-index: 60;
+}
+.usermenu-pop[hidden] { display: none; }
+
+.usermenu-head { display: flex; align-items: center; gap: 10px; padding: 10px 10px 12px; }
+.usermenu-head-text { min-width: 0; }
+.usermenu-name,
+.usermenu-mail { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.usermenu-name { font-size: var(--text-base); font-weight: 700; line-height: 1.3; }
+.usermenu-mail { font-size: var(--text-xs); color: var(--color-text-secondary); }
+
+.usermenu-sep { height: 1px; margin: 4px 0; background: var(--color-divider); }
+
+.usermenu-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.usermenu-item:hover { background: var(--color-surface-2); }
+.usermenu-item:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+.usermenu-item svg { width: 16px; height: 16px; flex-shrink: 0; color: var(--color-text-secondary); }
+
+.usermenu-item.is-danger { color: var(--color-critical); }
+.usermenu-item.is-danger svg { color: var(--color-critical); }
+.usermenu-item.is-danger:hover { background: var(--color-critical-bg); }
+
+.usermenu-logout-form { margin: 0; }

@@ -31,6 +31,9 @@ SESSION_COOKIE_NAME = "ws2d_session"
 TENANT_SELECT_PATH = "/auth/tenant"
 SYSTEM_SELECT_PATH = "/systems"
 
+# 個人設定はアプリ内のビュー。旧 /auth/account はここへ転送する。
+ACCOUNT_VIEW_PATH = "/account"
+
 # 認証が有効でも到達できるパス（ログイン画面・静的ファイル・死活監視）
 _EXEMPT_PREFIXES = ("/static/",)
 _EXEMPT_PATHS = frozenset(

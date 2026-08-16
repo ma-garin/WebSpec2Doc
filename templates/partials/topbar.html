@@ -6,16 +6,49 @@
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:auto">
         <div class="app-topbar-actions" id="topbar-actions"></div>
         {% if auth_user %}
-        <a href="/auth/account" title="アカウント（{{ auth_user.email }}）"
-           style="display:inline-flex;align-items:center;gap:8px;padding:4px 12px 4px 4px;border:1px solid var(--color-border);border-radius:var(--radius-full);text-decoration:none;color:var(--color-text);font-size:var(--text-sm);background:var(--color-surface)">
-          <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--color-primary);color:#fff;font-weight:700;font-size:var(--text-xs)">{{ auth_user.name[:1] | upper }}</span>
-          <span>{{ auth_user.name }}</span>
-        </a>
-        {% endif %}
-        <div class="app-topbar-tools">
-          <button type="button" id="shortcut-help-btn" class="topbar-icon-btn" title="キーボードショートカット (?)" aria-label="キーボードショートカット一覧を表示">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h.01M18 14h.01M9 14h6"/></svg>
+        <div class="usermenu" id="usermenu">
+          <button type="button" class="usermenu-trigger" id="usermenu-trigger"
+                  aria-haspopup="true" aria-expanded="false" aria-controls="usermenu-pop"
+                  title="アカウントメニュー（{{ auth_user.email }}）">
+            <span class="usermenu-avatar">{{ auth_user.name[:1] | upper }}</span>
+            <span class="usermenu-trigger-name">{{ auth_user.name }}</span>
+            <svg class="usermenu-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
           </button>
+
+          <div class="usermenu-pop" id="usermenu-pop" role="menu" aria-labelledby="usermenu-trigger" hidden>
+            <div class="usermenu-head">
+              <span class="usermenu-avatar is-lg" aria-hidden="true">{{ auth_user.name[:1] | upper }}</span>
+              <span class="usermenu-head-text">
+                <span class="usermenu-name">{{ auth_user.name }}</span>
+                <span class="usermenu-mail">{{ auth_user.email }}</span>
+              </span>
+            </div>
+
+            <div class="usermenu-sep" role="none"></div>
+
+            <button type="button" class="usermenu-item" role="menuitem" id="usermenu-account-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+              <span>個人設定</span>
+            </button>
+            <button type="button" class="usermenu-item" role="menuitem" id="usermenu-guide-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 4h7v16H4zM13 4h7v16h-7z"/></svg>
+              <span>ユーザーガイド</span>
+            </button>
+            <button type="button" class="usermenu-item" role="menuitem" id="usermenu-feedback-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 12a8 8 0 0 1-8 8H7l-4 3v-5.5A8 8 0 0 1 11 4h2a8 8 0 0 1 8 8z"/></svg>
+              <span>フィードバック</span>
+            </button>
+
+            <div class="usermenu-sep" role="none"></div>
+
+            <form method="post" action="/auth/logout" class="usermenu-logout-form">
+              <button type="submit" class="usermenu-item is-danger" role="menuitem">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M15 17l5-5-5-5"/><path d="M20 12H9"/><path d="M12 3H5v18h7"/></svg>
+                <span>ログアウト</span>
+              </button>
+            </form>
+          </div>
         </div>
+        {% endif %}
       </div>
     </header>

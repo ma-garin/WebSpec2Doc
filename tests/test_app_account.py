@@ -304,17 +304,31 @@ def test_revoked_bearer_token_rejected() -> None:
 # ---------- アカウントページ ----------
 
 
-def test_account_page_renders_for_admin() -> None:
+def test_old_account_url_redirects_to_in_app_view() -> None:
+    """旧 /auth/account はアプリ内の個人設定ビューへ転送する（ブックマークを壊さない）。"""
     c = _client()
     _setup_owner(c)
-    html = c.get("/auth/account", headers=H).get_data(as_text=True)
+    response = c.get("/auth/account", headers=H)
+    assert response.status_code == 302
+    assert response.headers["Location"] == "/account"
+
+
+def test_account_view_is_served_in_app_shell() -> None:
+    """個人設定はユーザーガイドと同じ画面内ビューとして配られる。"""
+    c = _client()
+    _setup_owner(c)
+    html = c.get("/account", headers=H).get_data(as_text=True)
+    assert 'id="view-account"' in html
     assert "プロフィール" in html
     assert "メンバー管理" in html
     assert "APIトークン" in html
+    # ビューはサイドバー・トップバーごと配られる（別ページに飛ばさない）
+    assert 'id="usermenu-trigger"' in html
 
 
-def test_topbar_shows_account_chip_when_logged_in() -> None:
+def test_topbar_shows_user_menu_when_logged_in() -> None:
     c = _client()
     _setup_owner(c)
     html = c.get("/", headers=H).get_data(as_text=True)
-    assert "/auth/account" in html
+    assert 'id="usermenu-account-btn"' in html
+    assert 'id="usermenu-feedback-btn"' in html

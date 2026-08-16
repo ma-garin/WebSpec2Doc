@@ -25,6 +25,7 @@ def create_app() -> Flask:
         autorun_stages,
         crawl,
         discover,
+        feedback,
         history,
         llm_chat,
         login,
@@ -119,6 +120,7 @@ def create_app() -> Flask:
     app.register_blueprint(autorun_stages.bp)
     app.register_blueprint(autorun_report.bp)
     app.register_blueprint(viewpoints.bp)
+    app.register_blueprint(feedback.bp)
 
     from web.services.viewpoint_store import get_viewpoint_store
 

@@ -2,6 +2,9 @@
   --color-primary: #1976D2;
   --color-primary-light: #E3F2FD;
   --color-primary-dark: #0D47A1;
+  /* 濃色（primary 等）の上に載せる文字・アイコンの色。
+     これが無いと、規約が求める「新規コードはトークンを使う」を白に対して守れない。 */
+  --color-on-primary: #FFFFFF;
 
   --color-bg: #F4F6F9;
   --color-surface: #FFFFFF;

@@ -51,6 +51,9 @@
 - 全 Python ファイルの先頭に `from __future__ import annotations` を置く。実例: `web/routes/account.py`, `web/routes/login.py`, `src/ci_drift.py`, `scripts/quality_harness.py` はすべてこの1行がファイル冒頭（docstring直後）にある。
 - 型ヒントは必須。`docs/specs/CONVENTIONS.md` §2 は「型ヒント必須（mypy strict 相当で通ること）」と明記している。mypy 設定（`pyproject.toml`）は `warn_unused_ignores=true`・`warn_redundant_casts=true`・`no_implicit_optional=true` を有効化しており、曖昧な型抑制を許さない。
 - 戻り値注釈は原則すべての関数（public・private問わず）に付与する。実測サンプルでは `def _out() -> Path`、`def check_python_version(...) -> CheckResult`、`def count(name: str) -> int` のように、1行の小さなヘルパー関数にも戻り値注釈が付いている。戻り値が無い場合も `-> None` を明示する。
+- **機械検証の対象は `src/`・`web/`・`app.py` に限る**（`pyproject.toml` の `[tool.mypy] files`）。`tests/` と `scripts/` は mypy の対象外であり、この節の規定は努力目標として扱う。
+  - 理由: 2026-08-16 実測で `tests/` を mypy にかけると 43 ファイル・99 件のエラーが出る。戻り値注釈の欠落だけでなく、テスト特有の型（モンキーパッチした偽プロセス、`None` 初期化など）に起因するものを含む。一括解消の目処が立たないまま規約だけを残すと、「違反しているが誰も気づけない」状態が固定される。
+  - 対象を広げる場合は、99 件の解消計画とセットで判断する。**規約だけを先に広げない。**
 - `ignore_missing_imports=true` は networkx / openpyxl / playwright のスタブ未提供に対する現実的な妥協であり、「型を書かなくてよい」という意味ではない。スタブが無いサードパーティ呼び出し箇所こそ、呼び出し側の型を厳密に書く。
 - Union型は `X | Y` 記法（PEP 604、`from __future__ import annotations` により3.11でも文字列注釈として解決可能）を使う。実例: `web/routes/account.py` の `BaseResponse | str`。
 
@@ -158,7 +161,10 @@ src/generator                      … 出力層（md/html/excel/json/pdf）
 - **素のJavaScript（フレームワークなし）。** ビルドステップ・バンドラを使わない。`static/js/` 配下に機能単位でファイルを分割する（例: `autorun-chat.js`, `history.js`, `view-testcase-grid.js`）。IIFEパターン（`(function () { 'use strict'; ... })()`）でグローバル汚染を避ける。
 - 命名: 関数はcamelCase（`currentHistory()`, `syncContextLabel()`, `setPhase()`）、定数はUPPER_SNAKE_CASE（`MAX_HISTORY`, `PRESETS`）。コメントは日本語。
 - **ESLint / Prettier 等のJS/CSS向け静的解析ツールは未導入**（`.eslintrc*`, `.prettierrc*`, `package.json` を2026-08-02時点でリポジトリ直下に検索したが存在しない）。JS/CSSの品質担保は現状レビューとE2Eテストに依存しており、機械的な静的解析は無い。これは既知のギャップとして記録し、導入するかは別途判断する。
-- CSS変数によるデザイントークン一元管理（`static/tokens.css`）。色は生のhex値を直書きせず、トークン参照（`var(--color-primary)` 等）を使う。ダークモード追従のため。例外はエクスポート下地の白のみ。
+- CSS変数によるデザイントークン一元管理（`static/tokens.css`）。ダークモード追従のため、色はトークン参照（`var(--color-primary)` 等）を使う。
+  - **適用は新しく書く・変更する箇所に限る。** 既存の直書きを一括で置換することは求めない。
+  - 理由: 2026-08-16 実測で `static/` 配下の hex 直書きは 16 ファイル・276 箇所。全置換は対応するトークンの新設を伴い、影響範囲が広い。規約を全体へ適用したままにすると、既存 276 箇所が恒常的な違反として残り、新規の違反と区別できなくなる。
+  - 使うトークンが無い色に出会ったら、直書きせず `static/tokens.css` にトークンを足す（例: 濃色背景に載せる文字色は `--color-on-primary`）。
 - 共通UI部品を再利用する: `ui-states.js`（状態表示）、`core.js`（toast/dialog、`escHtml`）、`table-utils.js`（テーブル共通処理）。同じUIパターンを個別ファイルで再実装しない。
 - `static/vendor/` はサードパーティ資産専用（driver.js, mermaid）。ライセンスは `ASSET.md` に記録し、CDN取得は行わない（オフライン完結の方針、`src/ux/axe_runner.py` の axe-core 同梱も同じ方針）。
 
@@ -257,3 +263,4 @@ python scripts/check_fetch_error_handling.py --fail-on-missing
 |---|---|---|---|
 | 1.0 | 2026-07-16 | 新規作成 | 開発チーム |
 | 2.0 | 2026-08-02 | 全面改訂。命名規則表・型ヒント方針・docstring規約・ファイル/関数サイズの実測基準・JS/CSS規約・コミットメッセージ実例・pre-commit強制範囲の明確化・依存関係管理・AIエージェント向け規約を追加し、250行以上に拡充 | 開発チーム |
+| 2.1 | 2026-08-16 | 守られていない2規定を実態に合わせた。§3 型ヒント: 機械検証の対象を `src`/`web`/`app.py` に限り、`tests`/`scripts` は努力目標と明記（実測 99 件）。§13 CSS トークン: 適用を新規・変更箇所に限定（実測 276 箇所）。あわせて `--color-on-primary` を新設し、白を直書きせずに済むようにした | 開発チーム |

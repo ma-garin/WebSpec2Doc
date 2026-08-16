@@ -132,6 +132,20 @@ table.adm tr.is-inactive td { opacity: .6; }
 }
 .chip.is-admin { background: #EDE7FF; color: #4527A0; border-color: #D3C6F5; }
 
+/* 無効化されたユーザーの印（admin-console.js が名前セルに足す）。
+   旧アカウントページ用の css/auth.css にしか定義がなく、この画面はそれを
+   読み込まないため、無効なのに見た目が変わらない状態になっていた。 */
+.badge-inactive {
+  display: inline-block;
+  margin-left: var(--space-2);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-critical-bg);
+  color: var(--color-critical);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
 .row-actions { display: flex; gap: var(--space-2); justify-content: flex-end; }
 .adm-empty { padding: var(--space-8); text-align: center; color: var(--color-text-secondary); font-size: var(--text-sm); }
 

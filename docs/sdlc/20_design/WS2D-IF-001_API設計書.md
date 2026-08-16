@@ -22,7 +22,7 @@
   1. **セッション Cookie**（`ws2d_session`。HttpOnly・SameSite=Lax・Secure はリクエストが HTTPS または `WEBSPEC2DOC_SECURE_COOKIES=1` のとき付与）。有効期限は既定 12 時間（`WEBSPEC2DOC_SESSION_HOURS` で変更可）。`auth_sessions` テーブルには **SHA-256 の `token_hash` のみ**保存し、生トークンは保存しない。
   2. **API トークン（Bearer）**: `/api/v1/*` 配下のみ、`Authorization: Bearer <token>` ヘッダーでセッションなしに認証可能。`api_tokens` テーブルに `token_hash`（SHA-256）で保存。スコープは `full`（全操作）／`read`（GET/HEAD/OPTIONS のみ許可。書き込み操作は 403 `forbidden_scope`）。
 - 未ログイン時: 画面遷移（`Accept` が HTML、`/api` 配下以外）は `/auth/login?next=...` へ 302 リダイレクト。API 呼び出しは 401 JSON `{"error": "...", "code": "unauthorized"}`。
-- テナント未選択時（ログイン済みだが所属テナント未確定）: 画面遷移は `/auth/tenant` へリダイレクト、API は 401 `{"code": "tenant_required"}`。除外パス: `/auth/user`, `/auth/tenant`, `/api/auth/me`, `/api/auth/tenants`。
+- テナント未選択時（ログイン済みだが所属テナント未確定）: 画面遷移は `/auth/tenant` へリダイレクト、API は 401 `{"code": "tenant_required"}`。除外パス: `/auth/tenant`, `/api/auth/me`, `/api/auth/tenants`。
 - 管理者専用チェックは `require_admin()`（`web/auth.py`）を各ルートハンドラが呼び出す方式で実現されている（**デコレータではなく関数呼び出し**）。認証が無効な場合は制限しない。パターンは 2 通り確認した:
   - ブループリント単位の `@bp.before_request` が無条件または書き込みメソッド（POST/PUT/PATCH/DELETE）のときのみ `require_admin()` を呼ぶ（`admin`, `tenant_admin`, `api_v1_schedule`, `settings`, `schedule` の 5 ブループリントで確認）。
   - 個別のルート関数内で `require_admin()` を呼ぶ（`account` ブループリントの利用者/トークン管理系 6 関数で確認）。
@@ -77,8 +77,9 @@
 | POST | `/auth/signup` | `account.signup_submit` | signup_submit | 不要（認証対象外） |
 | GET | `/auth/tenant` | `account.tenant_page` | tenant_page | ログイン必須（テナント未選択でも可） |
 | POST | `/auth/tenant` | `account.tenant_select` | tenant_select | ログイン必須（テナント未選択でも可） |
-| GET | `/auth/user` | `account.user_page` | user_page | ログイン必須（テナント未選択でも可） |
-| POST | `/auth/user` | `account.user_select` | user_select | ログイン必須（テナント未選択でも可） |
+| GET | `/auth/account` | `account.account_page` | account_page（`/account` ビューへ 302。旧URL互換） | ログイン必須 |
+| POST | `/api/feedback` | `feedback.api_submit_feedback` | api_submit_feedback | ログイン必須 |
+| GET | `/api/feedback` | `feedback.api_list_feedback` | api_list_feedback | ログイン必須＋管理者権限 |
 
 ### admin（）— 5本
 
@@ -385,14 +386,14 @@
 
 ## 3. 主要API詳細仕様
 
-業務上重要な 14 本について、実装（`web/routes/*.py`）を読んだ上でのリクエスト/レスポンス/エラー仕様を示す。
+業務上重要な 16 本について、実装（`web/routes/*.py`）を読んだ上でのリクエスト/レスポンス/エラー仕様を示す。
 
 ### 3.1 POST /auth/login（`account.login_submit`）
 
 - 認証要否: 不要（認証対象外パス）
-- リクエスト: `application/x-www-form-urlencoded` — `email`（string, 必須）, `password`（string, 任意）
-- 処理: モック認証有効かつ `password` が空なら `authenticate_passwordless(email)`、それ以外は `authenticate(email, password)`。
-- レスポンス（成功）: 302 リダイレクト。モック認証時は `/auth/user`、通常時は `/auth/tenant`。
+- リクエスト: `application/x-www-form-urlencoded` — `email`（string, 必須。メールアドレスのほか `admin` のような識別子も可）, `password`（string, 必須）
+- 処理: `authenticate(email, password)` のみ。ログインは ID＋パスワードの1経路で、パスワードなしログイン（旧 `authenticate_passwordless`）とユーザー選択画面（旧 `/auth/user`）は廃止済み。モック認証（`WEBSPEC2DOC_AUTH_MOCK`、既定で有効）が変えるのはパスワードの長さ要件だけで、認証そのものは省略しない。
+- レスポンス（成功）: 302 リダイレクトで `/auth/tenant`（テナント選択）へ。以降 `/systems`（システム選択）へ進む。
 - エラー: 認証失敗時は HTTP 401 で `auth/login.html` をエラーメッセージ付きで再描画（JSON ではなく HTML）。
 
 ### 3.2 POST /api/auth/api-tokens（`account.api_create_token`）
@@ -474,6 +475,33 @@
 - 認証要否: ログイン必須（`web/auth.py` の認証除外パス一覧に `/auth/oidc/login` `/auth/oidc/callback` は含まれていないことをソースで確認済み。したがって未ログイン状態でアクセスすると `auth_guard` が先に `/auth/login` へリダイレクトする。SSO単独でのログイン開始を許すには、この2パスを認証除外パスへ追加する実装変更が別途必要と考えられる。`WEBSPEC2DOC_OIDC_PROVIDER` 未設定時はそもそも `oidc_enabled()` が false を返し機能自体が無効化される）
 - 処理フロー: login → state/nonce を生成しセッションへ保存 → IdP 認可エンドポイントへ 302。callback → state 照合（`secrets.compare_digest` による定数時間比較）→ 認可コード交換（`requests.post`、client_secret 使用）→ ID トークンを IdP の JWKS で署名検証（`authlib.jose`）→ userinfo 取得 → メールアドレスが一致する **既存**ユーザーのみセッション発行（自動プロビジョニングなし）。
 - エラー時: 各段階の失敗は `/auth/login?sso_error=<message>` へリダイレクト（セッションは発行されない）。未登録メールは「このアカウントは登録されていません」で拒否。
+
+### 3.15 POST /api/feedback（`feedback.api_submit_feedback`）
+
+利用者からのフィードバック送信。トップバーのユーザーメニュー →「フィードバック」で開く画面内ビュー（`/feedback`）から呼ばれる。
+
+- 認証要否: ログイン必須（ロール不問。一般利用者も送信できる）
+- リクエスト: JSON `{"category": "bug"|"request"|"other", "message": string, "view": string(任意)}`
+  - `view` は「どの画面で気づいたか」の手がかり。表示上の補助情報なのでクライアント申告のまま受ける。
+  - **送信者とテナントは受け取らない。** `g.auth_user` / `g.tenant` から補う（クライアントが名乗った身元は無視する）。
+- レスポンス（成功 200）: `{"ok": true, "id": string, "at": string(ISO8601)}`
+- エラー:
+  | コード | HTTP | 条件 |
+  |---|---|---|
+  | `invalid_category` | 400 | `category` が `bug` / `request` / `other` 以外 |
+  | `empty_message` | 400 | `message` が空、または空白のみ |
+  | `message_too_long` | 400 | `message` が 4000 文字超 |
+  | `write_failed` | 500 | ファイル書き込みに失敗（書けなかったものを成功として返さない） |
+- 永続化: `instance/tenants/{slug}/feedback.jsonl` に1行追記（テナント別）。個人情報を含むためファイル権限は `0600`。設定に失敗した場合は追記自体は成立させたうえで WARNING ログに残す。
+
+### 3.16 GET /api/feedback（`feedback.api_list_feedback`）
+
+このテナントに届いたフィードバックの一覧。**閲覧用の画面は用意していない**（届いたものを確認する手段がファイルの直接参照しかない状態を避けるため、API のみ先行して提供している）。
+
+- 認証要否: ログイン必須＋管理者権限（`require_admin`。一般利用者は 403）
+- レスポンス（成功 200）: `{"feedback": [{"version", "id", "at", "category", "message", "user_id", "user_email", "tenant_id", "view"}, ...]}`
+  - 新しい順。既定で最大 100 件（`read_feedback` の `limit`、上限 1000 件）。
+  - **壊れた行は件数に数えず読み飛ばす。** 1行の破損で一覧全体が失われないこと、および破損行の有無で返却件数が変わらないことを保証する。
 
 ## 4. 共通仕様
 

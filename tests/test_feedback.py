@@ -207,3 +207,67 @@ def test_broken_line_does_not_break_listing(tmp_path: Path) -> None:
 
     listed = client.get("/api/feedback", headers=H).get_json()["feedback"]
     assert [item["message"] for item in listed] == ["正常な行"]
+
+
+def _write_entries(path: Path, numbers: range) -> None:
+    from web.services.feedback_store import append_feedback
+
+    for index in numbers:
+        append_feedback(path, category="bug", message=f"{index}件目")
+
+
+def _write_broken(path: Path, text: str = "{壊れたJSON") -> None:
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(text + "\n")
+
+
+def test_broken_tail_line_does_not_reduce_returned_count(tmp_path: Path) -> None:
+    """末尾に壊れた行があっても、有効な行を limit 件返す。
+
+    read_feedback の limit は「返す件数」であって「読む行数」ではない。
+    生の行を先に limit 件へ切ってからパースすると、壊れた行が枠を1つ食って
+    返却が limit 未満になる。壊れた行の有無で件数が変わってはいけない。
+    """
+    from web.services.feedback_store import read_feedback
+
+    path = tmp_path / "feedback.jsonl"
+    _write_entries(path, range(1, 6))
+    _write_broken(path)
+    # 行順: 1, 2, 3, 4, 5, 壊れ
+
+    entries = read_feedback(path, limit=3)
+    assert [entry["message"] for entry in entries] == ["5件目", "4件目", "3件目"]
+
+
+def test_multiple_broken_tail_lines_still_fill_the_limit(tmp_path: Path) -> None:
+    """壊れた行が連続していても、有効な行だけを数えて limit 件返す。"""
+    from web.services.feedback_store import read_feedback
+
+    path = tmp_path / "feedback.jsonl"
+    _write_entries(path, range(1, 6))
+    _write_broken(path, "{壊れた1")
+    _write_broken(path, "{壊れた2")
+    # 行順: 1, 2, 3, 4, 5, 壊れ, 壊れ
+
+    entries = read_feedback(path, limit=2)
+    assert [entry["message"] for entry in entries] == ["5件目", "4件目"]
+
+
+def test_broken_line_between_valid_lines_is_skipped_without_losing_count(
+    tmp_path: Path,
+) -> None:
+    """壊れた行が有効行に挟まれていても、有効な行だけで limit を満たす。
+
+    末尾ではなく走査の途中で壊れた行を跨ぐ経路を通す。limit=4 は
+    壊れた行より古い「2件目」まで数え上げないと満たせない。
+    """
+    from web.services.feedback_store import read_feedback
+
+    path = tmp_path / "feedback.jsonl"
+    _write_entries(path, range(1, 3))
+    _write_broken(path)
+    _write_entries(path, range(3, 6))
+    # 行順: 1, 2, 壊れ, 3, 4, 5
+
+    entries = read_feedback(path, limit=4)
+    assert [entry["message"] for entry in entries] == ["5件目", "4件目", "3件目", "2件目"]

@@ -4,6 +4,8 @@
     - account_auth: 本システムへのログイン認証（web/routes/account.py）
     - tenant_membership: テナント選択と所属管理（web/routes/tenant_admin.py, account.py）
     - tenant_isolation: テナント分離（web/tenancy.py の scoped_output_dir の効果）
+    - user_menu_feedback: トップバーのユーザーメニューとフィードバック送信
+      （ログイン済みでないとメニュー自体が描画されないため、この専用サーバーで検証する）
 
 注意:
     これは WebSpec2Doc 自体のユーザー認証のテストである。
@@ -255,3 +257,110 @@ class TestTenantIsolation:
             f"テナント分離が効いていません。テナントBからテナントAのサンプルの"
             f"レポートが見えています: {report_b.status}"
         )
+
+
+class TestUserMenu:
+    """user_menu_feedback: トップバーのユーザーメニューとフィードバック送信。"""
+
+    def test_menu_opens_with_four_items_and_no_shortcut_button(
+        self, page: Page, auth_server: str
+    ) -> None:
+        """アイコンは即遷移せずメニューを開き、項目は4つ。ショートカットボタンは無い。"""
+        _login_as(page, auth_server, _ADMIN_EMAIL, _ADMIN_PASSWORD)
+        page.goto(f"{auth_server}/")
+
+        trigger = page.locator("#usermenu-trigger")
+        expect(trigger).to_have_attribute("aria-expanded", "false")
+        expect(page.locator("#usermenu-pop")).to_be_hidden()
+
+        trigger.click()
+        expect(trigger).to_have_attribute("aria-expanded", "true")
+        items = page.locator("#usermenu-pop .usermenu-item")
+        expect(items).to_have_count(4)
+        expect(items.nth(0)).to_contain_text("個人設定")
+        expect(items.nth(1)).to_contain_text("ユーザーガイド")
+        expect(items.nth(2)).to_contain_text("フィードバック")
+        expect(items.nth(3)).to_contain_text("ログアウト")
+
+        # ヘッダーのキーボードショートカット起動ボタンは削除済み
+        expect(page.locator("#shortcut-help-btn")).to_have_count(0)
+
+        # Escape で閉じる（開きっぱなしで他の操作を塞がない）
+        page.keyboard.press("Escape")
+        expect(page.locator("#usermenu-pop")).to_be_hidden()
+
+    def test_personal_settings_opens_as_in_app_view(self, page: Page, auth_server: str) -> None:
+        """「個人設定」も画面内ビュー。サイドバーごと残り、別ページへ飛ばさない。"""
+        _login_as(page, auth_server, _ADMIN_EMAIL, _ADMIN_PASSWORD)
+        page.goto(f"{auth_server}/")
+        page.locator("#usermenu-trigger").click()
+        page.locator("#usermenu-account-btn").click()
+
+        expect(page).to_have_url(f"{auth_server}/account")
+        expect(page.locator("#topbar-title")).to_have_text("個人設定")
+        # アプリの枠（サイドバー・ユーザーメニュー）が残っていることが「統一」の実体
+        expect(page.locator(".app-sidebar")).to_be_visible()
+        expect(page.locator("#usermenu-trigger")).to_be_visible()
+
+        # モック認証でもログインにパスワードが要るので、変更手段が必ずある
+        expect(page.locator("#password-form")).to_be_visible()
+        # 中身は API から描かれる（管理者なのでメンバー一覧まで出る）
+        expect(page.locator("#account-profile")).to_contain_text(_ADMIN_EMAIL)
+        expect(page.locator("#account-members-card")).to_be_visible()
+        expect(page.locator("#member-rows tr")).not_to_have_count(0)
+
+    def test_old_account_url_redirects_to_view(self, page: Page, auth_server: str) -> None:
+        """旧 /auth/account を開いても同じビューに着く。"""
+        _login_as(page, auth_server, _ADMIN_EMAIL, _ADMIN_PASSWORD)
+        page.goto(f"{auth_server}/auth/account")
+        expect(page).to_have_url(f"{auth_server}/account")
+        expect(page.locator("#view-account")).to_be_visible()
+
+    def test_user_guide_switches_view_in_place(self, page: Page, auth_server: str) -> None:
+        """「ユーザーガイド」は画面内のビュー切替で、別ページへ飛ばさない。"""
+        _login_as(page, auth_server, _ADMIN_EMAIL, _ADMIN_PASSWORD)
+        page.goto(f"{auth_server}/")
+        page.locator("#usermenu-trigger").click()
+        page.locator("#usermenu-guide-btn").click()
+
+        expect(page.locator("#topbar-title")).to_have_text("ユーザーガイド")
+        expect(page.locator("#usermenu-pop")).to_be_hidden()
+
+    def test_feedback_is_submitted_and_readable_by_admin(
+        self, page: Page, auth_server: str
+    ) -> None:
+        """空送信はその場で止め、入力すれば保存され、管理者が読める。"""
+        _login_as(page, auth_server, _ADMIN_EMAIL, _ADMIN_PASSWORD)
+        page.goto(f"{auth_server}/")
+        page.locator("#usermenu-trigger").click()
+        page.locator("#usermenu-feedback-btn").click()
+
+        # モーダルではなく画面内ビュー（他のメニュー項目と同じ表示方法）
+        expect(page).to_have_url(f"{auth_server}/feedback")
+        expect(page.locator("#view-feedback")).to_be_visible()
+        expect(page.locator(".app-sidebar")).to_be_visible()
+        # 送信者と「直前の画面」は画面側で補うため、空欄のまま出さない
+        expect(page.locator("#feedback-meta-user")).not_to_have_text("-")
+        expect(page.locator("#feedback-meta-view")).to_have_text("QAドキュメント生成")
+
+        # 空のまま送ると、その場で止まる（サーバーまで往復しない）
+        page.locator("#feedback-submit-btn").click()
+        expect(page.locator("#feedback-status")).to_contain_text("内容を入力してください")
+
+        message = "E2E からのフィードバック送信"
+        page.locator("#feedback-message").fill(message)
+        page.locator('input[name="feedback-category"][value="request"]').check()
+        page.locator("#feedback-submit-btn").click()
+        expect(page.locator("#feedback-status")).to_contain_text("送信しました")
+
+        # ビューなので閉じない。入力だけ消えて、その場に留まる
+        expect(page.locator("#view-feedback")).to_be_visible()
+        expect(page.locator("#feedback-message")).to_have_value("")
+
+        # 画面の成功表示だけで終わらせず、保存されたことを実データで確かめる
+        listed = page.request.get(f"{auth_server}/api/feedback")
+        assert listed.ok, listed.text()
+        entries = listed.json()["feedback"]
+        assert any(
+            entry["message"] == message and entry["category"] == "request" for entry in entries
+        ), entries

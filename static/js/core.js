@@ -27,6 +27,9 @@ const VIEW_HEADER = {
   'user-guide': { trail: ['ダッシュボード', 'ユーザーガイド'], title: 'ユーザーガイド' },
   references: { trail: ['ダッシュボード', '参考'], title: '参考 — 依拠する標準・先行研究・事例' },
   settings: { trail: ['ダッシュボード', '設定'], title: '設定' },
+  // ユーザーメニューから開く画面。サイドバーには置かず、表示方法だけ他のビューに揃える。
+  account: { trail: ['ダッシュボード', '個人設定'], title: '個人設定' },
+  feedback: { trail: ['ダッシュボード', 'フィードバック'], title: 'フィードバック' },
 };
 const escHtml = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -48,6 +51,8 @@ const VIEW_PATHS = {
   'user-guide': '/user-guide',
   references: '/references',
   settings: '/settings',
+  account: '/account',
+  feedback: '/feedback',
 };
 const PATH_VIEWS = { '/home': 'dashboard', '/dashboard': 'dashboard' };
 Object.entries(VIEW_PATHS).forEach(([name, path]) => { PATH_VIEWS[path] = name; });
@@ -121,6 +126,9 @@ function switchView(name, opts = {}) {
   // 設定はタブ状態も URL に載せている。ナビからの遷移・戻る操作のどちらでも
   // URL と開いているタブを一致させる（settings.js 側に実体がある）。
   if (name === 'settings' && typeof syncSettingsTabFromPath === 'function') syncSettingsTabFromPath();
+  // 個人設定は開いた時に読む（ホームを開くたびにメンバー一覧まで読ませない）
+  if (name === 'account' && typeof loadAccountView === 'function') loadAccountView();
+  if (name === 'feedback' && typeof prepareFeedbackView === 'function') prepareFeedbackView();
   if (name === 'dashboard') {
     loadHistory();
     // ディープリンクのハッシュをクリア（レポートから戻った時のみ。初期化時は保持）
@@ -422,7 +430,7 @@ function toggleShortcutHelp(force) {
   const show = force !== undefined ? force : ov.classList.contains('hidden');
   ov.classList.toggle('hidden', !show);
 }
-document.getElementById('shortcut-help-btn')?.addEventListener('click', () => toggleShortcutHelp(true));
+// ヘッダーの起動ボタンは削除した。ヘルプの入口は「?」キーだけ（下の keydown）。
 document.getElementById('shortcut-close-btn')?.addEventListener('click', () => toggleShortcutHelp(false));
 document.getElementById('shortcut-overlay')?.addEventListener('click', (e) => {
   if (e.target === e.currentTarget) toggleShortcutHelp(false);

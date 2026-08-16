@@ -18,6 +18,10 @@ _VIEW_NAMES = frozenset(
         "user-guide",
         "references",
         "settings",
+        # サイドバーには無く、トップバーのユーザーメニューから開く画面。
+        # 表示方法を他のビューに揃えたので、URL も同じ規則で持たせる。
+        "account",
+        "feedback",
     }
 )
 _VIEW_ALIASES = {"home": "dashboard"}

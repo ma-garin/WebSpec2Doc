@@ -1,0 +1,100 @@
+        <!-- ===== 個人設定ビュー ===== -->
+        <!-- 中身は account-view.js がビューを開いた時に API から描く。
+             ホームを開くたびにメンバー一覧やAPIトークンを読まないため、
+             サーバー側でここへ値を埋め込むことはしない。 -->
+        <section class="view" id="view-account">
+
+          <div class="input-card">
+            <div class="wizard-page-header">
+              <h2>プロフィール</h2>
+              <p>ログイン中のアカウントと、所属しているテナントです。</p>
+            </div>
+            <dl class="account-meta" id="account-profile">
+              <dt>読み込み中</dt><dd>—</dd>
+            </dl>
+          </div>
+
+          <div class="input-card">
+            <div class="wizard-page-header">
+              <h2>パスワード変更</h2>
+              <p>変更すると全てのセッションが無効になり、再ログインが必要です。</p>
+            </div>
+            <form id="password-form" class="account-inline-form">
+              <div class="auth-field">
+                <label for="pw-current">現在のパスワード</label>
+                <input type="password" id="pw-current" autocomplete="current-password" required>
+              </div>
+              <div class="auth-field">
+                <label for="pw-new">新しいパスワード</label>
+                <input type="password" id="pw-new" autocomplete="new-password" required>
+              </div>
+              <button type="submit" class="btn-primary account-submit">変更する</button>
+            </form>
+            <div id="password-status" class="account-status" aria-live="polite"></div>
+          </div>
+
+          <!-- 管理者だけに出す。一般利用者に空のカードを並べない。 -->
+          <div class="input-card" id="account-members-card" hidden>
+            <div class="wizard-page-header">
+              <h2>メンバー管理</h2>
+              <p>このテナントの利用者です。管理者のみ表示されます。</p>
+            </div>
+            <div class="account-table-wrap">
+              <table class="account-table">
+                <thead>
+                  <tr><th>名前</th><th>ログインID</th><th>ロール</th><th>状態</th><th>最終ログイン</th><th></th></tr>
+                </thead>
+                <tbody id="member-rows"></tbody>
+              </table>
+            </div>
+
+            <h3 class="account-subhead">メンバーを追加</h3>
+            <form id="invite-form" class="account-inline-form">
+              <div class="auth-field">
+                <label for="inv-name">表示名</label>
+                <input type="text" id="inv-name" required>
+              </div>
+              <div class="auth-field">
+                <label for="inv-email">ログインID / メールアドレス</label>
+                <input type="text" id="inv-email" required>
+              </div>
+              <div class="auth-field">
+                <label for="inv-password">初期パスワード</label>
+                <input type="text" id="inv-password" required>
+              </div>
+              <div class="auth-field account-field-narrow">
+                <label for="inv-role">ロール</label>
+                <select id="inv-role" class="account-select">
+                  <option value="member">一般</option>
+                  <option value="admin">管理者</option>
+                </select>
+              </div>
+              <button type="submit" class="btn-primary account-submit">追加</button>
+            </form>
+            <div id="invite-status" class="account-status" aria-live="polite"></div>
+          </div>
+
+          <div class="input-card" id="account-tokens-card" hidden>
+            <div class="wizard-page-header">
+              <h2>APIトークン（/api/v1 用）</h2>
+              <p>CI/CD などから REST API を呼び出すための、ワークスペース単位のトークンです。
+                 <code>Authorization: Bearer &lt;token&gt;</code> で送信してください。</p>
+            </div>
+            <div class="account-table-wrap">
+              <table class="account-table">
+                <thead><tr><th>名前</th><th>作成日</th><th>最終使用</th><th>状態</th><th></th></tr></thead>
+                <tbody id="token-rows"></tbody>
+              </table>
+            </div>
+            <form id="token-form" class="account-inline-form account-form-spaced">
+              <div class="auth-field">
+                <label for="token-name">トークン名</label>
+                <input type="text" id="token-name" placeholder="例: ci-pipeline" required>
+              </div>
+              <button type="submit" class="btn-primary account-submit">発行する</button>
+            </form>
+            <div id="token-once" class="token-once" hidden></div>
+            <div id="token-status" class="account-status" aria-live="polite"></div>
+          </div>
+
+        </section>

@@ -29,6 +29,8 @@ const VIEW_HEADER = {
   settings: { trail: ['ダッシュボード', '設定'], title: '設定' },
   // ユーザーメニューから開く画面。サイドバーには置かず、表示方法だけ他のビューに揃える。
   account: { trail: ['ダッシュボード', '個人設定'], title: '個人設定' },
+  'user-management': { trail: ['ダッシュボード', 'ユーザー管理'], title: 'ユーザー管理' },
+  'tenant-management': { trail: ['ダッシュボード', 'テナント管理'], title: 'テナント管理' },
   feedback: { trail: ['ダッシュボード', 'フィードバック'], title: 'フィードバック' },
 };
 const escHtml = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -58,6 +60,58 @@ function setViewStatus(el, text, kind) {
   el.classList.toggle('is-success', kind === 'success');
 }
 
+/**
+ * .file-preview-modal を使うダイアログ群の開閉をまとめる。
+ * prefix は「その画面のダイアログ」を選ぶための id 接頭辞（例 'uadm-'）。
+ * 閉じる操作（✕ / キャンセル / オーバーレイ）は [data-dialog-close] に委ねる。
+ */
+function createDialogController(prefix) {
+  const modals = () => document.querySelectorAll(`.file-preview-modal[id^="${prefix}"]`);
+  let lastTrigger = '';
+
+  function close(restoreFocus = true) {
+    modals().forEach((modal) => modal.classList.add('hidden'));
+    if (restoreFocus && lastTrigger) document.querySelector(lastTrigger)?.focus();
+    if (restoreFocus) lastTrigger = '';
+  }
+
+  function open(modalId, firstFieldId, triggerSelector) {
+    close(false);
+    lastTrigger = triggerSelector || '';
+    document.getElementById(modalId)?.classList.remove('hidden');
+    document.getElementById(firstFieldId)?.focus();
+  }
+
+  modals().forEach((modal) => {
+    modal.querySelectorAll('[data-dialog-close]').forEach((el) => {
+      el.addEventListener('click', () => close());
+    });
+  });
+
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key !== 'Escape') return;
+    if (Array.from(modals()).some((modal) => !modal.classList.contains('hidden'))) close();
+  });
+
+  return { open, close };
+}
+
+// ---- ロールバッジと表の描画（個人設定・ユーザー管理で共通） ----
+function roleBadge(role) {
+  return role === 'admin'
+    ? '<span class="badge-role is-admin">管理者</span>'
+    : '<span class="badge-role">一般</span>';
+}
+
+/** 表の中身を描く。空なら理由を1行出す（黙って空の表を見せない）。 */
+function renderTableRows(tbodyId, items, colspan, emptyText, rowHtml) {
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+  tbody.innerHTML = items.length
+    ? items.map(rowHtml).join('')
+    : `<tr><td colspan="${colspan}" class="account-empty">${escHtml(emptyText)}</td></tr>`;
+}
+
 // ---- 情報アイコン（用語説明のツールチップ。列見出し・設定項目ラベル等で共通利用） ----
 function infoTip(text) {
   const t = escHtml(text || '');
@@ -77,6 +131,8 @@ const VIEW_PATHS = {
   references: '/references',
   settings: '/settings',
   account: '/account',
+  'user-management': '/user-management',
+  'tenant-management': '/tenant-management',
   feedback: '/feedback',
 };
 const PATH_VIEWS = { '/home': 'dashboard', '/dashboard': 'dashboard' };

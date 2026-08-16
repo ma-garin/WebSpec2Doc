@@ -203,6 +203,32 @@ def test_change_password_requires_current_and_revokes_sessions(store: AuthStore)
     assert store.authenticate("owner@example.com", "new-secret-pass-1")
 
 
+def test_reset_password_revokes_sessions_without_current_password(store: AuthStore) -> None:
+    """管理者による再設定は現パスワード不要。既存セッションは失効し、旧パスワードは通らない。"""
+    result = _setup(store)
+    tenant_id = result["tenant"]["id"]
+    admin_id = result["user"]["id"]
+    member = store.create_user(tenant_id, "m@example.com", "M", "secret-pass-123")
+    token = store.create_session(member["id"])
+
+    store.reset_password(member["id"], "new-secret-pass-1", actor_id=admin_id)
+    assert store.resolve_session(token) is None
+    assert store.authenticate("m@example.com", "new-secret-pass-1")
+    with pytest.raises(AuthError):
+        store.authenticate("m@example.com", "secret-pass-123")
+
+
+def test_reset_password_rejects_empty_password_and_unknown_user(store: AuthStore) -> None:
+    """空のパスワードで確定させない（ログインできないアカウントを作らない）。"""
+    result = _setup(store)
+    with pytest.raises(AuthError) as exc:
+        store.reset_password(result["user"]["id"], "")
+    assert exc.value.code == "invalid_request"
+    with pytest.raises(AuthError) as exc:
+        store.reset_password("no-such-user", "new-secret-pass-1")
+    assert exc.value.code == "user_not_found"
+
+
 # ---------- ロール・最後のオーナー保護 ----------
 
 

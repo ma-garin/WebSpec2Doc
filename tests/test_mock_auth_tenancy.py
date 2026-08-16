@@ -362,7 +362,8 @@ def test_role_follows_selected_tenant() -> None:
 
     client.post("/auth/tenant", data={"tenant_id": tenant_b}, headers=H)
     assert client.get("/api/auth/me", headers=H).get_json()["user"]["role"] == "admin"
-    assert client.get("/admin/console", headers=H).status_code == 200
+    # 管理画面はユーザー管理ビューへ統合済み。管理者は転送され、一般は /systems へ戻る
+    assert client.get("/admin/console", headers=H).headers["Location"] == "/user-management"
 
 
 # ---------- 管理画面 ----------

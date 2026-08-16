@@ -34,15 +34,16 @@
 | SC-03 | サインアップ | `/auth/signup` | `templates/auth/signup.html` | 未認証可 | 新規ユーザーの自己登録 |
 | SC-04 | （廃止）ユーザー選択 | — | — | — | ログイン後に操作ユーザーを選ぶ画面。ログインを ID＋パスワードの1経路へ統一した際に廃止（画面IDは欠番） |
 | SC-05 | テナント選択 | `/auth/tenant` | `templates/auth/tenant.html` | 要ログイン | 所属テナント（ワークスペース）を選択 |
-| SC-06 | 個人設定 | `/account` | `templates/partials/view-account.html`（SC-09 内のビュー） | 要ログイン | プロフィール・パスワード変更。管理者はメンバー管理・APIトークンも表示。旧 `/auth/account` はここへ 302 |
+| SC-06 | 個人設定 | `/account` | `templates/partials/view-account.html`（SC-09 内のビュー） | 要ログイン | 自分のプロフィール・パスワード変更。管理者はAPIトークンも表示。他人の管理は SC-15 の担当。旧 `/auth/account` はここへ 302 |
 | SC-07 | システム選択 | `/systems` | `templates/system-select.html` | 要ログイン（*1） | ドキュメント作成／AutoRun／CLIモードを選ぶハブ画面 |
-| SC-08 | 管理者コンソール | `/admin/console` | `templates/admin/console.html` | 要admin | テナント・ユーザーの管理（管理者専用。`role != ROLE_ADMIN` は `/systems` へリダイレクト） |
-| SC-09 | メインSPAシェル | `/`、`/<view_name>`、`/settings/<tab>` | `templates/index.html` | 要ログイン（*1） | ダッシュボード等 11 ビューをクライアント側で出し分け（内訳は 2.1） |
+| SC-08 | （統合）管理者コンソール | `/admin/console` | — | 要admin | テナント・ユーザーの管理。SC-15 のユーザー管理ビューへ統合し、本URLは `/user-management` への 302 だけを残す（`role != ROLE_ADMIN` は従来どおり `/systems` へ） |
+| SC-09 | メインSPAシェル | `/`、`/<view_name>`、`/settings/<tab>` | `templates/index.html` | 要ログイン（*1） | ダッシュボード等の各ビューをクライアント側で出し分け（内訳は 2.1） |
 | SC-10 | 実行結果ページ | `/runs/<domain>/<run_id>` | `templates/index.html`（`view-run-result` ビュー） | 要ログイン（*1） | 実行回のハブ。実行結果／解析結果／実行結果レポートの 3 成果物を 1 回分揃えて表示 |
 | SC-11 | AutoRun実行結果レポート | `/autorun/report/<domain>` | `templates/autorun-report.html` | 要ログイン（*1） | 独立ページ。テストケースCSVダウンロード導線あり |
 | SC-12 | CLIモード案内 | `/cli` | `templates/cli.html` | 要ログイン（*1） | CLIモード（System 03）の案内 |
 | SC-13 | トレーサビリティ（単独ページ） | `/traceability/view` | `templates/traceability.html` | 要ログイン（*1） | 要件⇔テストのトレーサビリティマトリクス（単独描画） |
 | SC-14 | フィードバック | `/feedback` | `templates/partials/view-feedback.html`（SC-09 内のビュー） | 要ログイン | 不具合・要望の送信。送信者・テナント・直前の画面はサーバー側で付与 |
+| SC-15 | ユーザー管理 | `/user-management` | `templates/partials/view-user-management.html`＋`partials/modal-user-admin.html`（SC-09 内のビュー） | 要ログイン（操作は要admin） | ユーザーとテナントの管理を1画面に統合。ユーザーの一覧・追加・削除、所属とロールの編集（ダイアログ）、パスワードリセット（ダイアログ）、テナントの作成・改名・削除。メニュー項目は管理者にのみ描画し、URL直打ちの一般利用者にはフォームを出さず理由を表示する |
 
 *1: `web/routes/pages.py`・`traceability.py`・`runs.py`・`autorun_report.py` の
 個別 `before_request` は本調査で確認できていない（**未確認**）。SC-04〜SC-06・SC-08 は
@@ -70,6 +71,7 @@
 | usage | ROIダッシュボード | `partials/view-usage.html` | - | `/usage` は他ビューと異なり専用GETルート（`usage.view_usage`）が本パーシャルを直接 `render_template` している（実測。`index.html` 経由かは**未確認**） |
 | references | 参考 | `view-references.html` | 227 | 依拠した国際標準・先行研究・参考事例の一覧（新規発見・既存版未記載） |
 | run-result | 実行結果（ハブ） | `view-run-result.html` | 11 | SC-10 の実体。`rr-runbar`/`rr-artifacts`/`rr-body` の3領域をJSが描画 |
+| user-management | ユーザー管理 | `view-user-management.html` | 103 | SC-15 の実体。`static/js/user-admin-view.js` が `/api/admin/tenancy` から一覧を描画。ダイアログ2種は `partials/modal-user-admin.html` |
 
 ### 2.2 共通部品一覧（`templates/partials/` ほか）
 

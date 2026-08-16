@@ -313,11 +313,12 @@
 |---|---|---|---|---|
 | GET | `/api/site` | `site.api_site` | api_site | ログイン必須 |
 
-### tenant_admin（テナントとユーザーの管理画面（管理者専用）。）— 9本
+### tenant_admin（テナントとユーザーの管理（管理者専用）。画面は `/user-management`）— 10本
 
 | メソッド | パス | エンドポイント名 | 概要 | 認証要否 |
 |---|---|---|---|---|
-| GET | `/admin/console` | `tenant_admin.console_page` | console_page | ログイン必須（管理者以外は画面側でリダイレクト） |
+| GET | `/admin/console` | `tenant_admin.console_page` | console_page（`/user-management` へ 302。管理者以外は `/systems`） | ログイン必須（管理者以外は画面側でリダイレクト） |
+| POST | `/api/admin/tenancy/users/<user_id>/password` | `tenant_admin.api_reset_user_password` | api_reset_user_password（管理者による再設定。現パスワード不要） | ログイン必須＋管理者権限 |
 | GET | `/api/admin/tenancy` | `tenant_admin.api_snapshot` | api_snapshot | ログイン必須＋管理者権限 |
 | POST | `/api/admin/tenancy/tenants` | `tenant_admin.api_create_tenant` | api_create_tenant | ログイン必須＋管理者権限 |
 | DELETE | `/api/admin/tenancy/tenants/<tenant_id>` | `tenant_admin.api_delete_tenant` | api_delete_tenant | ログイン必須＋管理者権限 |

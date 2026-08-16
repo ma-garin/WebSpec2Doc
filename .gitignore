@@ -84,6 +84,9 @@ playwright_progress.ndjson
 tests/e2e/screenshots/
 tests/e2e/snapshots/*.png
 
+# システムテスト（/e2e-cycle）の動画・スクリーンショット・結果JSON
+/e2e/
+
 # ルート直下の検証スクリーンショット（一時アーティファクト）
 /*.png
 

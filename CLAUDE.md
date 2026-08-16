@@ -41,3 +41,9 @@ UI -> API -> backend route -> service/core -> output -> persistence -> error han
 ```
 
 This file is only the entrypoint. Detailed functional integrity rules live in the files above.
+
+## サーバ起動（必須）
+
+**`app.py` の起動は必ず `FLASK_TESTING=1` を付ける。**付けないと起動のたびに `webbrowser.open` でユーザーのブラウザにタブが増える。
+
+正: `FLASK_TESTING=1 WEBSPEC2DOC_ALLOW_LOCAL=1 nohup venv/bin/python app.py &`

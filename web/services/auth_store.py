@@ -1026,6 +1026,53 @@ class AuthStore:
             )
         self.audit("user.password_changed", user_id=user_id)
 
+    def reset_password(
+        self,
+        user_id: str,
+        new_password: str,
+        *,
+        actor_id: str = "",
+        enforce_password_policy: bool = True,
+    ) -> dict:
+        """管理者が他人のパスワードを再設定する（現在のパスワードは要求しない）。
+
+        本人による change_password と違い現パスワードで本人確認しないので、
+        呼び出し側で管理者であることを必ず確かめる（web/routes/tenant_admin.py の
+        `_guard`）。テナント横断のユーザー作成・削除と同じ権限で扱う。
+
+        再設定後は対象ユーザーの全セッションを失効させ、ログイン失敗による
+        ロックも解除する（忘却からの復帰が本来の用途のため）。
+        """
+        self.initialize()
+        if not new_password:
+            raise AuthError("新しいパスワードを入力してください。", "invalid_request")
+        with self._transaction() as conn:
+            row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+            if row is None:
+                raise AuthError("ユーザーが存在しません。", "user_not_found")
+            if enforce_password_policy:
+                validate_password(new_password, str(row["email"]))
+            now = _iso(_now())
+            conn.execute(
+                "UPDATE users SET password_hash = ?, failed_attempts = 0, locked_until = NULL,"
+                " updated_at = ? WHERE id = ?",
+                (generate_password_hash(new_password), now, user_id),
+            )
+            conn.execute(
+                "UPDATE auth_sessions SET revoked_at = ? WHERE user_id = ?", (now, user_id)
+            )
+            target = self._public_user(row)
+        # 監査には「誰が誰のパスワードを再設定したか」だけを残す（値は残さない）
+        self.audit(
+            "user.password_reset",
+            user_id=actor_id or None,
+            tenant_id=self._sole_tenant_id(user_id),
+            detail=f"target={user_id} email={target.get('email', '')}",
+            target_type="user",
+            target_id=user_id,
+        )
+        return target
+
     # --- セッション ---------------------------------------------------
 
     def find_active_user_by_email(self, email: str) -> dict | None:

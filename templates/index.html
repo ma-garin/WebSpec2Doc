@@ -74,6 +74,8 @@
 
 {# トップバーのユーザーメニューから開く画面。表示方法を他のビューと揃えている #}
 {% include 'partials/view-account.html' %}
+{% include 'partials/view-user-management.html' %}
+{% include 'partials/view-tenant-management.html' %}
 {% include 'partials/view-feedback.html' %}
 
 {% include 'partials/view-settings.html' %}
@@ -166,6 +168,8 @@
 
 {% include 'partials/modal-file-preview.html' %}
 {% include 'partials/modal-autorun-login.html' %}
+{% include 'partials/modal-user-admin.html' %}
+{% include 'partials/modal-tenant-admin.html' %}
 
   <script src="{{ url_for('static', filename='js/core.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/table-utils.js') }}?v={{ _ver }}"></script>
@@ -209,6 +213,8 @@
   <script src="{{ url_for('static', filename='js/onboarding.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/user-menu.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/account-view.js') }}?v={{ _ver }}"></script>
+  <script src="{{ url_for('static', filename='js/user-admin-view.js') }}?v={{ _ver }}"></script>
+  <script src="{{ url_for('static', filename='js/tenant-admin-view.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/feedback-view.js') }}?v={{ _ver }}"></script>
 
 </body>

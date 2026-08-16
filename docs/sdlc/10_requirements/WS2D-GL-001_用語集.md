@@ -28,7 +28,7 @@
 | メンバーシップ | membership | 利用者とワークスペースの所属関係。ロール（owner/admin/member）を持つ | `list_memberships`, `set_memberships`（`auth_store.py`） | owner/adminは設定変更・メンバー管理が可能、memberは不可 |
 | ロール | role | メンバーシップに付与される権限区分（owner／admin／member） | `web/services/auth_store.py: ROLE_ADMIN, ROLE_MEMBER` | 管理者専用画面（管理コンソール）はadmin以上が対象 |
 | テナント分離 | tenant_isolation | 出力・観点DB・APIトークンをワークスペース単位で分離する仕組み | `web/tenancy.py: scoped_output_dir`, `scoped_instance_path` | パストラバーサルによるテナント越境を防止する境界でもある |
-| 管理コンソール | admin console | テナント・ユーザーを管理する管理者専用画面 | `templates/admin/console.html`, `web/routes/tenant_admin.py` | 一般ロール（member）はアクセス不可 |
+| ユーザー管理 | user management | テナント・ユーザーを1画面で管理する管理者専用ビュー（旧・管理コンソール `/admin/console` を統合） | `templates/partials/view-user-management.html`, `web/routes/tenant_admin.py` | 一般ロール（member）は操作不可 |
 | 管理監査ログ | admin_audit | 管理操作を秘密値なしのJSONLへ記録する仕組み | `web/services/admin_audit.py: append_admin_audit` | ワークスペース単位で分離される（`instance/tenants/{slug}/admin_audit.jsonl`） |
 | SSO（OIDC） | sso_oidc | OpenID ConnectによるシングルサインオンとAPIトークンのスコープ管理 | `web/routes/oidc.py`, `web/services/oidc.py` | Microsoft Entra ID・Google Workspaceを先行対応 |
 | APIトークン | API token | プログラムからのAPI呼び出し用の認証トークン。スコープ付与が可能 | `create_api_token`（`auth_store.py`） | SSO経由の発行にも対応 |

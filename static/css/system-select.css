@@ -58,6 +58,8 @@
   font-family: var(--font-main);
 }
 .sysselect-text-btn:hover { border-color: var(--color-primary); color: var(--color-text); }
+/* 同じ見た目をボタンとリンクの両方で使う（個人設定はリンク、ログアウトは POST のボタン） */
+a.sysselect-text-btn { display: inline-flex; align-items: center; text-decoration: none; }
 
 /* ---- stage ---- */
 .sysselect-stage {

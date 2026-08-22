@@ -1,0 +1,127 @@
+        <!-- ===== テスト活動支援 / 連携設定 ===== -->
+        <section class="view" id="view-integrations">
+          <div class="dashboard-section-head">
+            <div>
+              <h2 class="dash-section-title">連携設定</h2>
+              <p class="dashboard-section-copy">テスト活動支援が参照する入力元を接続します。接続した情報はテスト設計・実装・不具合分析で使われます。</p>
+            </div>
+            <div class="dashboard-section-actions">
+              <button type="button" class="btn-outline-sm" id="ta-int-test-all">接続を確認</button>
+            </div>
+          </div>
+
+          <div class="ta-source">
+            <div class="ta-source-item">
+              <div class="card-title">ドキュメント</div>
+              <p class="card-subtitle">WebSpec2Doc のドキュメント作成で生成した画面仕様書・テスト設計を取り込みます。</p>
+              <span class="badge badge-muted">未接続</span>
+              <button type="button" class="btn-outline-sm" id="ta-int-docs-connect">接続</button>
+            </div>
+            <div class="ta-source-item">
+              <div class="card-title">GitHub</div>
+              <p class="card-subtitle">リポジトリ・ブランチ・PR・Issue と連携します。</p>
+              <span class="badge badge-muted">未接続</span>
+              <button type="button" class="btn-outline-sm" id="ta-int-github-connect">接続</button>
+            </div>
+            <div class="ta-source-item">
+              <div class="card-title">ソースコード</div>
+              <p class="card-subtitle">ローカルパスまたはリポジトリを静的解析し、テスト対象の構造を把握します。</p>
+              <span class="badge badge-muted">未接続</span>
+              <button type="button" class="btn-outline-sm" id="ta-int-code-connect">接続</button>
+            </div>
+            <div class="ta-source-item">
+              <div class="card-title">開発標準</div>
+              <p class="card-subtitle">コーディング規約・テスト規約の文書を登録し、生成コードを準拠させます。</p>
+              <span class="badge badge-muted">未接続</span>
+              <button type="button" class="btn-outline-sm" id="ta-int-standard-connect">接続</button>
+            </div>
+          </div>
+
+          <div class="ta-panel">
+            <div class="ta-panel-head">
+              <div>
+                <div class="ta-panel-title">GitHub</div>
+                <div class="ta-panel-sub">リポジトリへのアクセスに使う情報を設定します。</div>
+              </div>
+              <div class="ta-panel-actions">
+                <button type="button" class="btn-primary" id="ta-int-github-save">保存</button>
+              </div>
+            </div>
+            <div class="ta-panel-body">
+              <div class="ta-kv">
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key"><label for="ta-int-github-token">トークン</label></div>
+                  <div class="ta-kv-val">
+                    <input type="password" class="input-compact" id="ta-int-github-token" placeholder="ghp_..." autocomplete="new-password" />
+                  </div>
+                </div>
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key"><label for="ta-int-github-repo">リポジトリ</label></div>
+                  <div class="ta-kv-val">
+                    <input type="text" class="input-compact" id="ta-int-github-repo" placeholder="owner/repository" autocomplete="off" />
+                  </div>
+                </div>
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key"><label for="ta-int-github-branch">既定ブランチ</label></div>
+                  <div class="ta-kv-val">
+                    <input type="text" class="input-compact" id="ta-int-github-branch" placeholder="main" autocomplete="off" />
+                  </div>
+                </div>
+              </div>
+              <p class="ta-note">トークンは環境変数またはシークレットマネージャで管理します。リポジトリには保存しません。</p>
+            </div>
+          </div>
+
+          <div class="ta-panel">
+            <div class="ta-panel-head">
+              <div>
+                <div class="ta-panel-title">開発標準</div>
+                <div class="ta-panel-sub">コーディング規約・テスト規約の文書を登録します。生成コードのレビュー基準にも使われます。</div>
+              </div>
+              <div class="ta-panel-actions">
+                <button type="button" class="btn-primary" id="ta-int-standard-upload">アップロード</button>
+              </div>
+            </div>
+            <div class="ta-panel-body">
+              <div class="ta-kv">
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key"><label for="ta-int-standard-file">標準文書</label></div>
+                  <div class="ta-kv-val">
+                    <input type="file" class="input-compact" id="ta-int-standard-file" accept=".md,.txt,.pdf,.docx" multiple />
+                  </div>
+                </div>
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key"><label for="ta-int-standard-kind">種別</label></div>
+                  <div class="ta-kv-val">
+                    <select class="select-compact" id="ta-int-standard-kind">
+                      <option value="coding">コーディング規約</option>
+                      <option value="test">テスト規約</option>
+                      <option value="review">レビュー基準</option>
+                      <option value="other">その他</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div class="ta-table-wrap">
+                <table class="ta-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">文書名</th>
+                      <th scope="col">種別</th>
+                      <th scope="col">登録日</th>
+                      <th scope="col">状態</th>
+                      <th scope="col">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="ta-int-standard-body">
+                    <tr>
+                      <td colspan="5"><div class="empty">まだデータがありません</div></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <p class="ta-note">現在この画面は UI のみです。バックエンド未接続。</p>
+        </section>

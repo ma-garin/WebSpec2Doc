@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/report-v2.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/testcase-grid.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='viewpoints.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/test-activity.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/account-view.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='vendor/driver.js/driver.css') }}?v={{ _ver }}">
@@ -29,7 +30,13 @@
   <aside class="app-sidebar">
     <a href="/" class="app-brand">
       <span class="app-brand-mark">W</span>
-      <span class="app-brand-text"><strong>WebSpec2Doc</strong><span>QAドキュメント生成</span></span>
+      {# 副題はシステムごとに違う。docs のままだとテスト活動支援でも「QAドキュメント生成」と
+         名乗ってしまい、どのシステムにいるのか名前が嘘をつく。 #}
+      <span class="app-brand-text"><strong>WebSpec2Doc</strong>
+        <span data-system="docs">QAドキュメント生成</span>
+        <span data-system="testlab">テスト活動支援</span>
+        <span data-system="autorun">AutoRun</span>
+      </span>
     </a>
     <a href="/systems" class="sys-switcher" id="sys-switcher-link" title="システムを切り替える">
       <span class="sys-switcher-label">システム</span>
@@ -40,6 +47,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="16" height="16"><path d="M12 5v14M5 12h14"/></svg>
       <span class="add-site-label">新規解析</span>
     </button>
+    <button type="button" class="btn-primary sidebar-primary-action" id="ta-new-btn" data-system="testlab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="16" height="16"><path d="M12 5v14M5 12h14"/></svg>
+      <span>新規テスト活動</span>
+    </button>
 {% include 'partials/nav.html' %}
     <button type="button" id="sidebar-toggle-btn" class="sidebar-toggle-btn" title="サイドバーを折りたたむ">
       <svg class="icon-collapse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
@@ -47,7 +58,9 @@
       <span class="nav-label">折りたたむ</span>
     </button>
     <div class="app-sidebar-foot">
-      URLから画面仕様書・テスト設計・画面遷移図を生成します。
+      <span data-system="docs">URLから画面仕様書・テスト設計・画面遷移図を生成します。</span>
+      <span data-system="testlab">仕様書・GitHub・コードからテスト条件を抽出し、設計から不具合分析まで支援します。</span>
+      <span data-system="autorun">受領から実行完了レポートの納品までを止めずに回します。</span>
     </div>
   </aside>
 
@@ -68,6 +81,18 @@
 {% include 'partials/view-auto-run.html' %}
 {% include 'partials/view-run-history.html' %}
 {% include 'partials/view-run-result.html' %}
+
+{# テスト活動支援（System 02） #}
+{% include 'partials/view-ta-home.html' %}
+{% include 'partials/view-ta-plan.html' %}
+{% include 'partials/view-ta-analysis.html' %}
+{% include 'partials/view-ta-strategy.html' %}
+{% include 'partials/view-ta-design.html' %}
+{% include 'partials/view-ta-implementation.html' %}
+{% include 'partials/view-ta-execution.html' %}
+{% include 'partials/view-ta-defect.html' %}
+{% include 'partials/view-ta-codefix.html' %}
+{% include 'partials/view-ta-integrations.html' %}
 
 {% include 'partials/view-user-guide.html' %}
 {% include 'partials/view-references.html' %}
@@ -216,6 +241,10 @@
   <script src="{{ url_for('static', filename='js/user-admin-view.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/tenant-admin-view.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/feedback-view.js') }}?v={{ _ver }}"></script>
+  {# テスト活動支援（System 02）: 既存データ（解析・テストケース・実行履歴）への読み取り配線 #}
+  <script src="{{ url_for('static', filename='js/ta-analysis.js') }}?v={{ _ver }}"></script>
+  <script src="{{ url_for('static', filename='js/ta-design.js') }}?v={{ _ver }}"></script>
+  <script src="{{ url_for('static', filename='js/ta-execution.js') }}?v={{ _ver }}"></script>
 
 </body>
 </html>

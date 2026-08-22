@@ -1,4 +1,4 @@
-// システムスコープ: ログイン後の「システム選択」で選んだ系（ドキュメント作成 / AutoRun）に応じて
+// システムスコープ: ログイン後の「システム選択」で選んだ系（ドキュメント作成 / テスト活動支援 / AutoRun）に応じて
 // サイドバーを絞り込み、相手システムの画面を混ぜない。共通(common)は常に表示。
 // 系の判定は「現在のパス優先 → sessionStorage → 既定 docs」。切替はシステム選択画面へ戻る。
 (function () {
@@ -11,6 +11,12 @@
   // システムごと AutoRun に切り替わってしまっていた（docs 側の実行履歴に
   // 到達できるURLが事実上存在しなかった）。保存値へ委ねる。
   var AUTORUN_PATHS = { '/auto-run': 1 };
+  // テスト活動支援(testlab)は自前のパスしか持たないので、パスだけで系を確定できる。
+  var TESTLAB_PATHS = {
+    '/test-activity': 1, '/test-plan': 1, '/test-analysis': 1, '/test-strategy': 1,
+    '/test-design': 1, '/test-implementation': 1, '/test-execution': 1,
+    '/defect-analysis': 1, '/code-fix': 1, '/integrations': 1,
+  };
   var DOCS_PATHS = {
     '/': 1, '/home': 1, '/dashboard': 1, '/generate': 1,
     '/testcases': 1, '/qa-quality': 1, '/viewpoints': 1,
@@ -19,6 +25,7 @@
   function inferFromPath() {
     var p = location.pathname;
     if (AUTORUN_PATHS[p]) return 'autorun';
+    if (TESTLAB_PATHS[p]) return 'testlab';
     if (DOCS_PATHS[p]) return 'docs';
     // 共通ページ(/settings, /user-guide)と両系が持つページ(/run-history, /runs/...)
     // は判定不能 → 保存値にフォールバックする
@@ -30,7 +37,7 @@
     if (!sys) {
       try { sys = sessionStorage.getItem(KEY); } catch (e) { /* 非対応環境 */ }
     }
-    if (sys !== 'autorun' && sys !== 'docs') sys = 'docs';
+    if (sys !== 'autorun' && sys !== 'docs' && sys !== 'testlab') sys = 'docs';
     try { sessionStorage.setItem(KEY, sys); } catch (e) { /* 非対応環境 */ }
     return sys;
   }
@@ -39,6 +46,10 @@
     var s = el.getAttribute('data-system');
     return !s || s === 'common' || s === sys;
   }
+
+  // 系が増えるたびに三項演算子を継ぎ足すと分岐が読めなくなるため、対応表で引く。
+  var BRAND_HREF = { docs: '/', autorun: '/auto-run', testlab: '/test-activity' };
+  var SYSTEM_LABEL = { docs: 'ドキュメント作成', autorun: 'AutoRun', testlab: 'テスト活動支援' };
 
   function apply(sys) {
     document.body.setAttribute('data-system', sys);
@@ -64,11 +75,11 @@
 
     // ブランドロゴのリンク先を各システムのホームに
     var brand = document.querySelector('.app-brand');
-    if (brand) brand.setAttribute('href', sys === 'autorun' ? '/auto-run' : '/');
+    if (brand) brand.setAttribute('href', BRAND_HREF[sys] || BRAND_HREF.docs);
 
     // 切替UIの表示名
     var name = document.getElementById('sys-current-name');
-    if (name) name.textContent = sys === 'autorun' ? 'AutoRun' : 'ドキュメント作成';
+    if (name) name.textContent = SYSTEM_LABEL[sys] || SYSTEM_LABEL.docs;
 
     // 切替リンク: セッションの系をクリアしてシステム選択へ
     var link = document.getElementById('sys-switcher-link');

@@ -24,6 +24,17 @@ _VIEW_NAMES = frozenset(
         "user-management",
         "tenant-management",
         "feedback",
+        # テスト活動支援（System 02）。10 画面すべてを直リンク可能にする。
+        "test-activity",
+        "test-plan",
+        "test-analysis",
+        "test-strategy",
+        "test-design",
+        "test-implementation",
+        "test-execution",
+        "defect-analysis",
+        "code-fix",
+        "integrations",
     }
 )
 _VIEW_ALIASES = {"home": "dashboard"}
@@ -40,7 +51,7 @@ def index() -> str:
 
 @bp.route("/systems")
 def systems() -> str:
-    """ログイン後のシステム選択ハブ。ドキュメント作成 / AutoRun / CLI モードを選ぶ。"""
+    """ログイン後のシステム選択ハブ。ドキュメント作成 / テスト活動支援 / AutoRun / CLI・API を選ぶ。"""
     return render_template("system-select.html")
 
 

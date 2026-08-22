@@ -1,0 +1,129 @@
+        <!-- ===== テスト活動支援 / 不具合分析 ===== -->
+        <section class="view" id="view-defect-analysis">
+          <div class="dashboard-section-head">
+            <div>
+              <h2 class="dash-section-title">不具合分析</h2>
+              <p class="dashboard-section-copy">検出した不具合を ODC（Orthogonal Defect Classification）で分類し、混入工程と根本原因を特定します。</p>
+            </div>
+            <div class="dashboard-section-actions">
+              <button type="button" class="btn-outline-sm" id="ta-defect-reload">再読み込み</button>
+            </div>
+          </div>
+
+          <div class="ta-grid-3">
+            <div class="stat-card">
+              <div class="stat-card-value" id="ta-defect-stat-total">-</div>
+              <div class="stat-card-label">検出不具合</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-value" id="ta-defect-stat-open">-</div>
+              <div class="stat-card-label">未解決</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-value" id="ta-defect-stat-fixed">-</div>
+              <div class="stat-card-label">修正済み</div>
+            </div>
+          </div>
+
+          <div class="ta-panel">
+            <div class="ta-panel-head">
+              <div>
+                <div class="ta-panel-title">不具合一覧</div>
+                <div class="ta-panel-sub">検出工程・混入工程と ODC 分類（Defect Type / Trigger / Impact）を確認します。</div>
+              </div>
+              <div class="ta-panel-actions">
+                <button type="button" class="btn-primary" id="ta-defect-analyze">AIで原因分析</button>
+                <button type="button" class="btn-outline-sm" id="ta-defect-sync">GitHub Issue と同期</button>
+              </div>
+            </div>
+            <div class="ta-panel-body">
+              <div class="ta-table-wrap">
+                <table class="ta-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">不具合ID</th>
+                      <th scope="col">概要</th>
+                      <th scope="col">重大度</th>
+                      <th scope="col">検出工程</th>
+                      <th scope="col">混入工程</th>
+                      <th scope="col">Defect Type</th>
+                      <th scope="col">Trigger</th>
+                      <th scope="col">Impact</th>
+                      <th scope="col">状態</th>
+                      <th scope="col">対応コード</th>
+                    </tr>
+                  </thead>
+                  <tbody id="ta-defect-body">
+                    <tr>
+                      <td colspan="10"><div class="empty">まだデータがありません</div></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="ta-grid-2">
+            <div class="ta-panel">
+              <div class="ta-panel-head">
+                <div>
+                  <div class="ta-panel-title">混入工程の傾向</div>
+                  <div class="ta-panel-sub">不具合がどの工程で作り込まれたかの分布です。</div>
+                </div>
+              </div>
+              <div class="ta-panel-body">
+                <div id="ta-defect-phase-chart"><div class="empty">まだデータがありません</div></div>
+              </div>
+            </div>
+            <div class="ta-panel">
+              <div class="ta-panel-head">
+                <div>
+                  <div class="ta-panel-title">Defect Type の分布</div>
+                  <div class="ta-panel-sub">ODC の Defect Type ごとの件数です。</div>
+                </div>
+              </div>
+              <div class="ta-panel-body">
+                <div id="ta-defect-type-chart"><div class="empty">まだデータがありません</div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ta-panel">
+            <div class="ta-panel-head">
+              <div>
+                <div class="ta-panel-title">根本原因（RCA）</div>
+                <div class="ta-panel-sub">5 Whys で「なぜ」を5段まで掘り下げ、対策の対象を特定します。</div>
+              </div>
+              <div class="ta-panel-actions">
+                <button type="button" class="btn-outline-sm" id="ta-defect-rca-suggest">AIで下書き</button>
+                <button type="button" class="btn-primary" id="ta-defect-rca-save">保存</button>
+              </div>
+            </div>
+            <div class="ta-panel-body">
+              <div class="ta-steps">
+                <div class="ta-step">
+                  <div class="ta-step-title"><label for="ta-defect-why-1">Why 1</label></div>
+                  <div class="ta-step-desc"><input type="text" class="input-compact" id="ta-defect-why-1" placeholder="なぜこの不具合が起きたか" autocomplete="off" /></div>
+                </div>
+                <div class="ta-step">
+                  <div class="ta-step-title"><label for="ta-defect-why-2">Why 2</label></div>
+                  <div class="ta-step-desc"><input type="text" class="input-compact" id="ta-defect-why-2" placeholder="Why 1 はなぜ起きたか" autocomplete="off" /></div>
+                </div>
+                <div class="ta-step">
+                  <div class="ta-step-title"><label for="ta-defect-why-3">Why 3</label></div>
+                  <div class="ta-step-desc"><input type="text" class="input-compact" id="ta-defect-why-3" placeholder="Why 2 はなぜ起きたか" autocomplete="off" /></div>
+                </div>
+                <div class="ta-step">
+                  <div class="ta-step-title"><label for="ta-defect-why-4">Why 4</label></div>
+                  <div class="ta-step-desc"><input type="text" class="input-compact" id="ta-defect-why-4" placeholder="Why 3 はなぜ起きたか" autocomplete="off" /></div>
+                </div>
+                <div class="ta-step">
+                  <div class="ta-step-title"><label for="ta-defect-why-5">Why 5</label></div>
+                  <div class="ta-step-desc"><input type="text" class="input-compact" id="ta-defect-why-5" placeholder="Why 4 はなぜ起きたか（根本原因）" autocomplete="off" /></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p class="ta-note">現在この画面は UI のみです。バックエンド未接続。</p>
+        </section>

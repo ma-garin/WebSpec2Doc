@@ -1,0 +1,120 @@
+        <!-- ===== テスト活動支援 / 設計 ===== -->
+        <section class="view" id="view-test-design">
+          <div class="dashboard-section-head">
+            <div>
+              <h2 class="dash-section-title">テスト設計 <span id="ta-design-count" style="font-size:.72em;font-weight:600;color:var(--text-muted,#64748b);margin-left:.4em;"></span></h2>
+              <p class="dashboard-section-copy">テスト条件を技法で展開し、実行できる粒度のテストケースにします。</p>
+            </div>
+            <div class="dashboard-section-actions">
+              <select id="ta-design-domain" class="btn-outline-sm" aria-label="対象ドメイン">
+                <option value="">ドメインを選択</option>
+              </select>
+              <button type="button" class="btn-outline-sm" id="ta-design-reload">読み込み直す</button>
+            </div>
+          </div>
+
+          <div class="ta-panel">
+            <div class="ta-panel-head">
+              <div>
+                <div class="ta-panel-title">適用する技法</div>
+                <div class="ta-panel-sub">方針で選んだ技法が既定で有効になります。</div>
+              </div>
+              <div class="ta-panel-actions">
+                <button type="button" class="btn-outline-sm" data-ta-action="design-technique-reset">方針の既定に戻す</button>
+              </div>
+            </div>
+            <div class="ta-panel-body">
+              <div class="ta-chips" id="ta-design-techniques">
+                <button type="button" class="ta-chip" data-ta-action="toggle-design-technique" data-value="equivalence">同値分割</button>
+                <button type="button" class="ta-chip" data-ta-action="toggle-design-technique" data-value="boundary">境界値分析</button>
+                <button type="button" class="ta-chip" data-ta-action="toggle-design-technique" data-value="decision-table">デシジョンテーブル</button>
+                <button type="button" class="ta-chip" data-ta-action="toggle-design-technique" data-value="state-transition">状態遷移</button>
+                <button type="button" class="ta-chip" data-ta-action="toggle-design-technique" data-value="pairwise">ペアワイズ</button>
+                <button type="button" class="ta-chip" data-ta-action="toggle-design-technique" data-value="cfd">CFD</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="ta-grid-2">
+            <div class="ta-panel">
+              <div class="ta-panel-head">
+                <div>
+                  <div class="ta-panel-title">テスト条件</div>
+                  <div class="ta-panel-sub">分析工程から引き継いだ一覧。展開する条件を選びます。</div>
+                </div>
+                <div class="ta-panel-actions">
+                  <button type="button" class="btn-outline-sm" data-ta-action="design-condition-select-all">すべて選択</button>
+                </div>
+              </div>
+              <div class="ta-panel-body">
+                <div id="ta-design-condition-list"><div class="empty">まだデータがありません</div></div>
+              </div>
+            </div>
+            <div class="ta-panel">
+              <div class="ta-panel-head">
+                <div>
+                  <div class="ta-panel-title">因子・水準</div>
+                  <div class="ta-panel-sub">選んだ条件から抽出した因子と、取り得る水準。</div>
+                </div>
+                <div class="ta-panel-actions">
+                  <button type="button" class="btn-outline-sm" data-ta-action="design-factor-add">因子を追加</button>
+                </div>
+              </div>
+              <div class="ta-panel-body">
+                <div class="ta-table-wrap">
+                  <table class="ta-table">
+                    <thead>
+                      <tr>
+                        <th>因子</th>
+                        <th>水準</th>
+                        <th>由来</th>
+                      </tr>
+                    </thead>
+                    <tbody id="ta-factor-body">
+                      <tr>
+                        <td colspan="3"><div class="empty">まだデータがありません</div></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ta-panel">
+            <div class="ta-panel-head">
+              <div>
+                <div class="ta-panel-title">生成テストケース</div>
+                <div class="ta-panel-sub">条件と因子・水準から展開したケース。対応するテスト条件で追跡できます。</div>
+              </div>
+              <div class="ta-panel-actions">
+                <button type="button" class="btn-primary" id="ta-design-generate">テストケースを生成</button>
+                <button type="button" class="btn-outline-sm" id="ta-design-export">エクスポート</button>
+              </div>
+            </div>
+            <div class="ta-panel-body">
+              <div class="ta-table-wrap">
+                <table class="ta-table">
+                  <thead>
+                    <tr>
+                      <th>ケースID</th>
+                      <th>目的</th>
+                      <th>事前条件</th>
+                      <th>手順</th>
+                      <th>期待結果</th>
+                      <th>対応するテスト条件</th>
+                      <th>優先度</th>
+                    </tr>
+                  </thead>
+                  <tbody id="ta-case-body">
+                    <tr>
+                      <td colspan="7"><div class="empty">まだデータがありません</div></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <p class="ta-note">テストケースはドキュメント作成の生成結果を共用しています（この画面での編集・生成は未実装）。</p>
+        </section>

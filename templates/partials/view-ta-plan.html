@@ -1,0 +1,160 @@
+        <!-- ===== テスト活動支援 / 計画 ===== -->
+        <section class="view" id="view-test-plan">
+          <div class="dashboard-section-head">
+            <div>
+              <h2 class="dash-section-title">テスト計画</h2>
+              <p class="dashboard-section-copy">対象・スコープ・体制・リスクを固め、以降の分析と設計の前提にします。</p>
+            </div>
+            <div class="dashboard-section-actions">
+              <button type="button" class="btn-outline-sm" id="ta-plan-save">下書きを保存</button>
+              <button type="button" class="btn-primary" id="ta-plan-generate">AIで計画草案を作る</button>
+            </div>
+          </div>
+
+          <div class="ta-panel">
+            <div class="ta-panel-head">
+              <div>
+                <div class="ta-panel-title">マスタテスト計画</div>
+                <div class="ta-panel-sub">対象システムとリリース、期間、体制を記入します。</div>
+              </div>
+              <div class="ta-panel-actions">
+                <span class="status status-todo">未確定</span>
+              </div>
+            </div>
+            <div class="ta-panel-body">
+              <div class="ta-kv">
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key"><label for="ta-plan-system">対象システム</label></div>
+                  <div class="ta-kv-val"><input type="text" id="ta-plan-system" class="input-compact" placeholder="例: 会員ポータル" /></div>
+                </div>
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key"><label for="ta-plan-release">リリース</label></div>
+                  <div class="ta-kv-val"><input type="text" id="ta-plan-release" class="input-compact" placeholder="例: v2.4.0 / 2026-10 定期リリース" /></div>
+                </div>
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key"><label for="ta-plan-period-from">期間</label></div>
+                  <div class="ta-kv-val">
+                    <input type="date" id="ta-plan-period-from" class="input-compact" />
+                    <span>〜</span>
+                    <input type="date" id="ta-plan-period-to" class="input-compact" />
+                  </div>
+                </div>
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key"><label for="ta-plan-team">体制</label></div>
+                  <div class="ta-kv-val"><input type="text" id="ta-plan-team" class="input-compact" placeholder="例: QA 2名 / 開発 4名 / PO 1名" /></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ta-grid-2">
+            <div class="ta-panel">
+              <div class="ta-panel-head">
+                <div>
+                  <div class="ta-panel-title">スコープ In</div>
+                  <div class="ta-panel-sub">今回のテストで扱う機能・環境。</div>
+                </div>
+                <div class="ta-panel-actions">
+                  <button type="button" class="btn-outline-sm" data-ta-action="plan-scope-in-import">仕様書から取り込む</button>
+                </div>
+              </div>
+              <div class="ta-panel-body">
+                <div id="ta-plan-scope-in"><div class="empty">まだデータがありません</div></div>
+              </div>
+            </div>
+            <div class="ta-panel">
+              <div class="ta-panel-head">
+                <div>
+                  <div class="ta-panel-title">スコープ Out</div>
+                  <div class="ta-panel-sub">今回は扱わない範囲と、その理由。</div>
+                </div>
+                <div class="ta-panel-actions">
+                  <button type="button" class="btn-outline-sm" data-ta-action="plan-scope-out-add">追加</button>
+                </div>
+              </div>
+              <div class="ta-panel-body">
+                <div id="ta-plan-scope-out"><div class="empty">まだデータがありません</div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ta-panel">
+            <div class="ta-panel-head">
+              <div>
+                <div class="ta-panel-title">前提と制約</div>
+                <div class="ta-panel-sub">テスト環境・データ・依存システム・スケジュール上の制約。</div>
+              </div>
+              <div class="ta-panel-actions">
+                <button type="button" class="btn-outline-sm" data-ta-action="plan-assumption-add">追加</button>
+              </div>
+            </div>
+            <div class="ta-panel-body">
+              <div id="ta-plan-assumptions"><div class="empty">まだデータがありません</div></div>
+            </div>
+          </div>
+
+          <div class="ta-panel">
+            <div class="ta-panel-head">
+              <div>
+                <div class="ta-panel-title">リスクと対応</div>
+                <div class="ta-panel-sub">プロダクトリスク・プロジェクトリスクと、その軽減策。</div>
+              </div>
+              <div class="ta-panel-actions">
+                <button type="button" class="btn-outline-sm" data-ta-action="plan-risk-add">追加</button>
+              </div>
+            </div>
+            <div class="ta-panel-body">
+              <div class="ta-table-wrap">
+                <table class="ta-table">
+                  <thead>
+                    <tr>
+                      <th>リスク</th>
+                      <th>影響</th>
+                      <th>発生度</th>
+                      <th>対応</th>
+                      <th>担当</th>
+                    </tr>
+                  </thead>
+                  <tbody id="ta-plan-risk-body">
+                    <tr>
+                      <td colspan="5"><div class="empty">まだデータがありません</div></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="ta-panel">
+            <div class="ta-panel-head">
+              <div>
+                <div class="ta-panel-title">工数見積</div>
+                <div class="ta-panel-sub">工程ごとの想定ケース数と工数。設計・実行の実績が出たら更新します。</div>
+              </div>
+              <div class="ta-panel-actions">
+                <button type="button" class="btn-outline-sm" id="ta-plan-estimate-recalc">再計算</button>
+              </div>
+            </div>
+            <div class="ta-panel-body">
+              <div class="ta-table-wrap">
+                <table class="ta-table">
+                  <thead>
+                    <tr>
+                      <th>工程</th>
+                      <th>想定ケース数</th>
+                      <th>想定工数</th>
+                      <th>担当</th>
+                    </tr>
+                  </thead>
+                  <tbody id="ta-plan-estimate-body">
+                    <tr>
+                      <td colspan="4"><div class="empty">まだデータがありません</div></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <p class="ta-note">現在この画面は UI のみです。バックエンド未接続。</p>
+        </section>

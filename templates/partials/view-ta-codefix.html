@@ -1,0 +1,127 @@
+        <!-- ===== テスト活動支援 / コード修正 ===== -->
+        <section class="view" id="view-code-fix">
+          <div class="dashboard-section-head">
+            <div>
+              <h2 class="dash-section-title">コード修正</h2>
+              <p class="dashboard-section-copy">不具合の根本原因にもとづき修正案を生成し、回帰の影響を確認したうえで PR にまとめます。</p>
+            </div>
+            <div class="dashboard-section-actions">
+              <button type="button" class="btn-outline-sm" id="ta-fix-reload">再読み込み</button>
+            </div>
+          </div>
+
+          <div class="ta-panel">
+            <div class="ta-panel-head">
+              <div>
+                <div class="ta-panel-title">対象の不具合</div>
+                <div class="ta-panel-sub">修正する不具合を選ぶと、概要・再現手順・関連コードを表示します。</div>
+              </div>
+              <div class="ta-panel-actions">
+                <button type="button" class="btn-outline-sm" id="ta-fix-open-defect">不具合分析を開く</button>
+              </div>
+            </div>
+            <div class="ta-panel-body">
+              <div class="ta-kv">
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key"><label for="ta-fix-defect">不具合</label></div>
+                  <div class="ta-kv-val">
+                    <select class="select-compact" id="ta-fix-defect">
+                      <option value="">不具合を選択</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key">概要</div>
+                  <div class="ta-kv-val" id="ta-fix-summary"><div class="empty">まだデータがありません</div></div>
+                </div>
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key">再現手順</div>
+                  <div class="ta-kv-val" id="ta-fix-steps"><div class="empty">まだデータがありません</div></div>
+                </div>
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key">関連コード</div>
+                  <div class="ta-kv-val" id="ta-fix-refs"><div class="empty">まだデータがありません</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ta-panel">
+            <div class="ta-panel-head">
+              <div>
+                <div class="ta-panel-title">修正案</div>
+                <div class="ta-panel-sub">提案された差分です。内容を確認してから反映してください。</div>
+              </div>
+              <div class="ta-panel-actions">
+                <button type="button" class="btn-primary" id="ta-fix-generate">修正案を生成</button>
+              </div>
+            </div>
+            <div class="ta-panel-body">
+              <pre class="ta-code" id="ta-fix-diff"></pre>
+              <div class="empty" id="ta-fix-diff-empty">まだデータがありません</div>
+            </div>
+          </div>
+
+          <div class="ta-panel">
+            <div class="ta-panel-head">
+              <div>
+                <div class="ta-panel-title">回帰の影響</div>
+                <div class="ta-panel-sub">この修正で影響を受けるテストケースです。再実行の対象になります。</div>
+              </div>
+              <div class="ta-panel-actions">
+                <button type="button" class="btn-outline-sm" id="ta-fix-impact-run">影響範囲を再実行</button>
+              </div>
+            </div>
+            <div class="ta-panel-body">
+              <div class="ta-table-wrap">
+                <table class="ta-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">ケースID</th>
+                      <th scope="col">目的</th>
+                      <th scope="col">影響度</th>
+                      <th scope="col">前回結果</th>
+                      <th scope="col">再実行</th>
+                    </tr>
+                  </thead>
+                  <tbody id="ta-fix-impact-body">
+                    <tr>
+                      <td colspan="5"><div class="empty">まだデータがありません</div></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="ta-panel">
+            <div class="ta-panel-head">
+              <div>
+                <div class="ta-panel-title">反映</div>
+                <div class="ta-panel-sub">修正をブランチにコミットし、PR を作成します。</div>
+              </div>
+              <div class="ta-panel-actions">
+                <button type="button" class="btn-primary" id="ta-fix-pr">PRを作成</button>
+              </div>
+            </div>
+            <div class="ta-panel-body">
+              <div class="ta-kv">
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key"><label for="ta-fix-branch">ブランチ名</label></div>
+                  <div class="ta-kv-val">
+                    <input type="text" class="input-compact" id="ta-fix-branch" placeholder="fix/defect-0001" autocomplete="off" />
+                  </div>
+                </div>
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key"><label for="ta-fix-commit">コミットメッセージ</label></div>
+                  <div class="ta-kv-val">
+                    <input type="text" class="input-compact" id="ta-fix-commit" placeholder="fix: 不具合の内容を1行で記述" autocomplete="off" />
+                  </div>
+                </div>
+              </div>
+              <p class="ta-note">PR の作成は人の承認を経てから行います。自動でマージはしません。</p>
+            </div>
+          </div>
+
+          <p class="ta-note">現在この画面は UI のみです。バックエンド未接続。</p>
+        </section>

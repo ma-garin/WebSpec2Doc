@@ -1,0 +1,147 @@
+        <!-- ===== テスト活動支援 / ホーム ===== -->
+        <section class="view" id="view-test-activity">
+          <div class="dash-hero">
+            <div class="dash-hero-main">
+              <h1 class="dash-hero-title">ドキュメントからテスト設計まで、テスト活動を一気通貫で</h1>
+              <p class="dash-hero-sub">仕様書・GitHub・ソースコード・開発標準を読み取り、計画から不具合分析・コード修正までを支援します。</p>
+              <div class="dash-hero-form">
+                <select id="ta-project-select" class="select-compact">
+                  <option value="">プロジェクトを選択</option>
+                </select>
+                <button type="button" id="ta-start-btn" class="btn-primary">テスト活動を始める</button>
+              </div>
+              <div class="dash-hero-steps" aria-label="テスト活動の流れ">
+                <span class="dash-hero-step"><b>1</b> 取り込み</span>
+                <span class="dash-hero-arrow">→</span>
+                <span class="dash-hero-step"><b>2</b> 分析</span>
+                <span class="dash-hero-arrow">→</span>
+                <span class="dash-hero-step"><b>3</b> 設計</span>
+                <span class="dash-hero-arrow">→</span>
+                <span class="dash-hero-step"><b>4</b> 実行</span>
+                <span class="dash-hero-arrow">→</span>
+                <span class="dash-hero-step"><b>5</b> 分析・修正</span>
+                <span class="dash-hero-note">プロジェクトを選ぶと、工程ごとの進捗と成果物がここに集約されます。</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="dashboard-section-head">
+            <div>
+              <h2 class="dash-section-title">テスト活動の工程</h2>
+              <p class="dashboard-section-copy">8つの工程で、テスト計画から不具合を受けたコード修正までを扱います。</p>
+            </div>
+            <div class="dashboard-section-actions">
+              <button type="button" class="btn-outline-sm" id="ta-pipeline-reload">再読み込み</button>
+            </div>
+          </div>
+          <div class="ta-pipeline" id="ta-pipeline">
+            <div class="ta-pipeline-step">
+              <span class="ta-step-no">01</span>
+              <span class="ta-step-name">計画</span>
+              <span class="ta-step-state">未着手</span>
+            </div>
+            <div class="ta-pipeline-step">
+              <span class="ta-step-no">02</span>
+              <span class="ta-step-name">分析</span>
+              <span class="ta-step-state">未着手</span>
+            </div>
+            <div class="ta-pipeline-step">
+              <span class="ta-step-no">03</span>
+              <span class="ta-step-name">方針</span>
+              <span class="ta-step-state">未着手</span>
+            </div>
+            <div class="ta-pipeline-step">
+              <span class="ta-step-no">04</span>
+              <span class="ta-step-name">設計</span>
+              <span class="ta-step-state">未着手</span>
+            </div>
+            <div class="ta-pipeline-step">
+              <span class="ta-step-no">05</span>
+              <span class="ta-step-name">実装</span>
+              <span class="ta-step-state">未着手</span>
+            </div>
+            <div class="ta-pipeline-step">
+              <span class="ta-step-no">06</span>
+              <span class="ta-step-name">実行</span>
+              <span class="ta-step-state">未着手</span>
+            </div>
+            <div class="ta-pipeline-step">
+              <span class="ta-step-no">07</span>
+              <span class="ta-step-name">不具合分析</span>
+              <span class="ta-step-state">未着手</span>
+            </div>
+            <div class="ta-pipeline-step">
+              <span class="ta-step-no">08</span>
+              <span class="ta-step-name">コード修正</span>
+              <span class="ta-step-state">未着手</span>
+            </div>
+          </div>
+
+          <div class="ta-grid-3">
+            <div class="stat-card">
+              <div class="stat-card-value" id="ta-stat-cases">-</div>
+              <div class="stat-card-label">テストケース数</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-value" id="ta-stat-executed">-</div>
+              <div class="stat-card-label">実行済み</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-value" id="ta-stat-open-defects">-</div>
+              <div class="stat-card-label">未解決不具合</div>
+            </div>
+          </div>
+
+          <div class="ta-panel">
+            <div class="ta-panel-head">
+              <div>
+                <div class="ta-panel-title">連携ソース</div>
+                <div class="ta-panel-sub">テスト条件の抽出元。接続したソースが分析・設計の入力になります。</div>
+              </div>
+              <div class="ta-panel-actions">
+                <button type="button" class="btn-outline-sm" data-ta-action="source-refresh">接続状態を確認</button>
+              </div>
+            </div>
+            <div class="ta-panel-body">
+              <div class="ta-source" id="ta-source-list">
+                <div class="ta-source-item">
+                  <span class="card-title">ドキュメント</span>
+                  <span class="card-subtitle">画面仕様書・要件定義・API定義</span>
+                  <span class="badge badge-muted">未接続</span>
+                  <button type="button" class="btn-outline-sm" data-ta-action="connect-docs">接続</button>
+                </div>
+                <div class="ta-source-item">
+                  <span class="card-title">GitHub</span>
+                  <span class="card-subtitle">リポジトリ・ブランチ・PR の差分</span>
+                  <span class="badge badge-muted">未接続</span>
+                  <button type="button" class="btn-outline-sm" data-ta-action="connect-github">接続</button>
+                </div>
+                <div class="ta-source-item">
+                  <span class="card-title">ソースコード</span>
+                  <span class="card-subtitle">関数・分岐・例外処理の実装</span>
+                  <span class="badge badge-muted">未接続</span>
+                  <button type="button" class="btn-outline-sm" data-ta-action="connect-code">接続</button>
+                </div>
+                <div class="ta-source-item">
+                  <span class="card-title">開発標準</span>
+                  <span class="card-subtitle">コーディング規約・品質基準・テスト規程</span>
+                  <span class="badge badge-muted">未接続</span>
+                  <button type="button" class="btn-outline-sm" data-ta-action="connect-standard">接続</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="dashboard-section-head">
+            <div>
+              <h2 class="dash-section-title">最近の活動</h2>
+              <p class="dashboard-section-copy">工程の実行履歴と、生成された成果物の更新を時系列で表示します。</p>
+            </div>
+            <div class="dashboard-section-actions">
+              <button type="button" class="btn-outline-sm" id="ta-recent-reload">再読み込み</button>
+            </div>
+          </div>
+          <div id="ta-recent-body"><div class="empty">まだデータがありません</div></div>
+
+          <p class="ta-note">現在この画面は UI のみです。バックエンド未接続。</p>
+        </section>

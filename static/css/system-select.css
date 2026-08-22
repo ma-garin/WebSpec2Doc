@@ -5,6 +5,9 @@
   --sys-doc-weak: var(--color-primary-light);
   --sys-doc-ink: var(--color-primary-dark);
   --sys-run: #0E9C7A;
+  --sys-test: #6D4AC4;
+  --sys-test-weak: #EDE7FB;
+  --sys-test-ink: #4A2E93;
   --sys-cli: #4B5563;
   --sys-cli-weak: #E5E7EB;
   --sys-cli-ink: #1F2937;
@@ -81,12 +84,12 @@ a.sysselect-text-btn { display: inline-flex; align-items: center; text-decoratio
 
 .sysselect-grid {
   display: grid;
-  /* カードは 3 枚（01 ドキュメント作成 / 02 AutoRun / 03 CLIモード）。
-     狭い幅では自動で折り返す。 */
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: var(--space-5);
+  /* カードは 4 枚（01 ドキュメント作成 / 02 テスト活動支援 / 03 AutoRun / 04 CLI・API）。
+     PC 幅では 4 枚が横一列に収まり、狭い幅では自動で折り返す。 */
+  grid-template-columns: repeat(auto-fit, minmax(272px, 1fr));
+  gap: var(--space-4);
   width: 100%;
-  max-width: 1160px;
+  max-width: 1420px;
 }
 
 .syscard {
@@ -111,6 +114,8 @@ a.sysselect-text-btn { display: inline-flex; align-items: center; text-decoratio
 .syscard-doc:hover { border-color: var(--sys-doc); }
 .syscard-doc .syscard-accent { background: var(--sys-doc); }
 .syscard-run:hover { border-color: var(--sys-run); }
+.syscard-test:hover { border-color: var(--sys-test); }
+.syscard-test .syscard-accent { background: var(--sys-test); }
 .syscard-cli:hover { border-color: var(--sys-cli); }
 .syscard-cli .syscard-accent { background: var(--sys-cli); }
 .syscard-run .syscard-accent { background: var(--sys-run); }
@@ -121,6 +126,7 @@ a.sysselect-text-btn { display: inline-flex; align-items: center; text-decoratio
 }
 .syscard-doc .syscard-icon { background: var(--sys-doc-weak); color: var(--sys-doc-ink); }
 .syscard-run .syscard-icon { background: var(--sys-run-weak); color: var(--sys-run-ink); }
+.syscard-test .syscard-icon { background: var(--sys-test-weak); color: var(--sys-test-ink); }
 .syscard-cli .syscard-icon { background: var(--sys-cli-weak); color: var(--sys-cli-ink); }
 
 .syscard-no {
@@ -128,6 +134,7 @@ a.sysselect-text-btn { display: inline-flex; align-items: center; text-decoratio
 }
 .syscard-doc .syscard-no { color: var(--sys-doc-ink); }
 .syscard-run .syscard-no { color: var(--sys-run-ink); }
+.syscard-test .syscard-no { color: var(--sys-test-ink); }
 .syscard-cli .syscard-no { color: var(--sys-cli-ink); }
 
 .syscard-title { font-size: var(--text-xl); font-weight: 800; }
@@ -141,11 +148,17 @@ a.sysselect-text-btn { display: inline-flex; align-items: center; text-decoratio
   border: 1px solid var(--color-border); background: var(--color-surface-2); color: var(--color-text);
 }
 .syscard-open {
-  margin-top: var(--space-2); align-self: flex-start;
+  /* 説明文とチップの行数はカードごとに違う。auto にしないと「開く →」の高さが
+     4 枚でずれ、押せる場所を目で探し直すことになる。下端で揃える。 */
+  margin-top: auto; padding-top: var(--space-2); align-self: flex-start;
   font-size: var(--text-sm); font-weight: 800;
 }
 .syscard-doc .syscard-open { color: var(--sys-doc-ink); }
 .syscard-run .syscard-open { color: var(--sys-run-ink); }
+.syscard-test .syscard-open { color: var(--sys-test-ink); }
+/* CLI / API だけ .syscard-open の色指定が無く、本文と同じ色で沈んでいた。4 枚を並べると
+   ここだけ導線に見えないので、他の 3 枚と同じ規則を与える。 */
+.syscard-cli .syscard-open { color: var(--sys-cli-ink); }
 
 .syscard-badge {
   position: absolute; top: var(--space-4); right: var(--space-4);
@@ -164,6 +177,8 @@ a.sysselect-text-btn { display: inline-flex; align-items: center; text-decoratio
   color: var(--color-text-secondary);
 }
 
+/* 4 枚が 2 段になる幅では、1 段目 2 枚・2 段目 2 枚に割れて読みやすい。
+   さらに狭い PC ウィンドウでは 1 列に落とす。 */
 @media (max-width: 720px) {
   .sysselect-grid { grid-template-columns: 1fr; }
 }

@@ -32,6 +32,17 @@ const VIEW_HEADER = {
   'user-management': { trail: ['ダッシュボード', 'ユーザー管理'], title: 'ユーザー管理' },
   'tenant-management': { trail: ['ダッシュボード', 'テナント管理'], title: 'テナント管理' },
   feedback: { trail: ['ダッシュボード', 'フィードバック'], title: 'フィードバック' },
+  // テスト活動支援（System 02）。パンくずの1段目は自系のトップに揃える。
+  'test-activity': { trail: ['テスト活動支援', 'ホーム'], title: 'テスト活動支援' },
+  'test-plan': { trail: ['テスト活動支援', '計画'], title: 'テスト計画' },
+  'test-analysis': { trail: ['テスト活動支援', '分析'], title: 'テスト分析' },
+  'test-strategy': { trail: ['テスト活動支援', '方針'], title: 'テスト方針' },
+  'test-design': { trail: ['テスト活動支援', '設計'], title: 'テスト設計' },
+  'test-implementation': { trail: ['テスト活動支援', '実装'], title: 'テスト実装' },
+  'test-execution': { trail: ['テスト活動支援', '実行'], title: 'テスト実行' },
+  'defect-analysis': { trail: ['テスト活動支援', '不具合分析'], title: '不具合分析' },
+  'code-fix': { trail: ['テスト活動支援', 'コード修正'], title: 'コード修正' },
+  integrations: { trail: ['テスト活動支援', '連携設定'], title: '連携設定' },
 };
 const escHtml = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -134,6 +145,16 @@ const VIEW_PATHS = {
   'user-management': '/user-management',
   'tenant-management': '/tenant-management',
   feedback: '/feedback',
+  'test-activity': '/test-activity',
+  'test-plan': '/test-plan',
+  'test-analysis': '/test-analysis',
+  'test-strategy': '/test-strategy',
+  'test-design': '/test-design',
+  'test-implementation': '/test-implementation',
+  'test-execution': '/test-execution',
+  'defect-analysis': '/defect-analysis',
+  'code-fix': '/code-fix',
+  integrations: '/integrations',
 };
 const PATH_VIEWS = { '/home': 'dashboard', '/dashboard': 'dashboard' };
 Object.entries(VIEW_PATHS).forEach(([name, path]) => { PATH_VIEWS[path] = name; });

@@ -1,0 +1,137 @@
+        <!-- ===== テスト活動支援 / 方針 ===== -->
+        <section class="view" id="view-test-strategy">
+          <div class="dashboard-section-head">
+            <div>
+              <h2 class="dash-section-title">テスト方針</h2>
+              <p class="dashboard-section-copy">どのレベル・どのタイプを、どの技法で、どこまで自動化するかを決めます。</p>
+            </div>
+            <div class="dashboard-section-actions">
+              <button type="button" class="btn-outline-sm" id="ta-strategy-save">方針を保存</button>
+              <button type="button" class="btn-primary" id="ta-strategy-generate">開発標準から方針を生成</button>
+            </div>
+          </div>
+
+          <div class="ta-grid-2">
+            <div class="ta-panel">
+              <div class="ta-panel-head">
+                <div>
+                  <div class="ta-panel-title">テストレベル</div>
+                  <div class="ta-panel-sub">実施する段階を選びます。</div>
+                </div>
+                <div class="ta-panel-actions">
+                  <button type="button" class="btn-outline-sm" data-ta-action="level-clear">選択を解除</button>
+                </div>
+              </div>
+              <div class="ta-panel-body">
+                <div class="ta-chips" id="ta-strategy-levels">
+                  <button type="button" class="ta-chip" data-ta-action="toggle-level" data-value="unit">単体</button>
+                  <button type="button" class="ta-chip" data-ta-action="toggle-level" data-value="integration">結合</button>
+                  <button type="button" class="ta-chip" data-ta-action="toggle-level" data-value="system">システム</button>
+                  <button type="button" class="ta-chip" data-ta-action="toggle-level" data-value="acceptance">受入</button>
+                </div>
+              </div>
+            </div>
+            <div class="ta-panel">
+              <div class="ta-panel-head">
+                <div>
+                  <div class="ta-panel-title">テストタイプ</div>
+                  <div class="ta-panel-sub">確認する品質特性を選びます。</div>
+                </div>
+                <div class="ta-panel-actions">
+                  <button type="button" class="btn-outline-sm" data-ta-action="type-clear">選択を解除</button>
+                </div>
+              </div>
+              <div class="ta-panel-body">
+                <div class="ta-chips" id="ta-strategy-types">
+                  <button type="button" class="ta-chip" data-ta-action="toggle-type" data-value="functional">機能</button>
+                  <button type="button" class="ta-chip" data-ta-action="toggle-type" data-value="performance">性能</button>
+                  <button type="button" class="ta-chip" data-ta-action="toggle-type" data-value="security">セキュリティ</button>
+                  <button type="button" class="ta-chip" data-ta-action="toggle-type" data-value="usability">ユーザビリティ</button>
+                  <button type="button" class="ta-chip" data-ta-action="toggle-type" data-value="compatibility">互換性</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ta-panel">
+            <div class="ta-panel-head">
+              <div>
+                <div class="ta-panel-title">開始基準 / 終了基準</div>
+                <div class="ta-panel-sub">テストを始めてよい条件と、終わってよい条件。</div>
+              </div>
+              <div class="ta-panel-actions">
+                <span class="status status-todo">未確定</span>
+              </div>
+            </div>
+            <div class="ta-panel-body">
+              <div class="ta-kv">
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key"><label for="ta-strategy-entry">開始基準</label></div>
+                  <div class="ta-kv-val"><input type="text" id="ta-strategy-entry" class="input-compact" placeholder="例: 対象機能の実装完了・ビルド成功・テスト環境構築済み" /></div>
+                </div>
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key"><label for="ta-strategy-exit">終了基準</label></div>
+                  <div class="ta-kv-val"><input type="text" id="ta-strategy-exit" class="input-compact" placeholder="例: 計画ケース消化率 100% / 未解決の重大不具合 0件" /></div>
+                </div>
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key"><label for="ta-strategy-suspend">中断・再開基準</label></div>
+                  <div class="ta-kv-val"><input type="text" id="ta-strategy-suspend" class="input-compact" placeholder="例: ブロッカー不具合発生時は該当領域を中断" /></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ta-grid-2">
+            <div class="ta-panel">
+              <div class="ta-panel-head">
+                <div>
+                  <div class="ta-panel-title">自動化する範囲</div>
+                  <div class="ta-panel-sub">繰り返し実行する価値が高い領域。</div>
+                </div>
+                <div class="ta-panel-actions">
+                  <button type="button" class="btn-outline-sm" data-ta-action="automation-in-add">追加</button>
+                </div>
+              </div>
+              <div class="ta-panel-body">
+                <div id="ta-strategy-automation-in"><div class="empty">まだデータがありません</div></div>
+              </div>
+            </div>
+            <div class="ta-panel">
+              <div class="ta-panel-head">
+                <div>
+                  <div class="ta-panel-title">自動化しない範囲</div>
+                  <div class="ta-panel-sub">手動で確認する領域と、その理由。</div>
+                </div>
+                <div class="ta-panel-actions">
+                  <button type="button" class="btn-outline-sm" data-ta-action="automation-out-add">追加</button>
+                </div>
+              </div>
+              <div class="ta-panel-body">
+                <div id="ta-strategy-automation-out"><div class="empty">まだデータがありません</div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ta-panel">
+            <div class="ta-panel-head">
+              <div>
+                <div class="ta-panel-title">使用する設計技法</div>
+                <div class="ta-panel-sub">設計画面で既定として使う技法。</div>
+              </div>
+              <div class="ta-panel-actions">
+                <button type="button" class="btn-outline-sm" data-ta-action="technique-clear">選択を解除</button>
+              </div>
+            </div>
+            <div class="ta-panel-body">
+              <div class="ta-chips" id="ta-strategy-techniques">
+                <button type="button" class="ta-chip" data-ta-action="toggle-technique" data-value="equivalence">同値分割</button>
+                <button type="button" class="ta-chip" data-ta-action="toggle-technique" data-value="boundary">境界値</button>
+                <button type="button" class="ta-chip" data-ta-action="toggle-technique" data-value="decision-table">デシジョンテーブル</button>
+                <button type="button" class="ta-chip" data-ta-action="toggle-technique" data-value="state-transition">状態遷移</button>
+                <button type="button" class="ta-chip" data-ta-action="toggle-technique" data-value="pairwise">ペアワイズ</button>
+              </div>
+            </div>
+          </div>
+
+          <p class="ta-note">現在この画面は UI のみです。バックエンド未接続。</p>
+        </section>

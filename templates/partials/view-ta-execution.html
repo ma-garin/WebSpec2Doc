@@ -1,0 +1,119 @@
+        <!-- ===== テスト活動支援 / 実行 ===== -->
+        <section class="view" id="view-test-execution">
+          <div class="dashboard-section-head">
+            <div>
+              <h2 class="dash-section-title">テスト実行</h2>
+              <p class="dashboard-section-copy">実装した自動テストを環境ごとに実行し、結果と証跡を収集します。</p>
+            </div>
+            <div class="dashboard-section-actions">
+              <button type="button" class="btn-outline-sm" id="ta-exec-reload">再読み込み</button>
+              <button type="button" class="btn-danger-outline" id="ta-exec-stop">実行を停止</button>
+            </div>
+          </div>
+
+          <div class="ta-grid-3">
+            <div class="stat-card">
+              <div class="stat-card-value" id="ta-exec-stat-total">-</div>
+              <div class="stat-card-label">実行数</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-value" id="ta-exec-stat-rate">-</div>
+              <div class="stat-card-label">成功率</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-value" id="ta-exec-stat-failed">-</div>
+              <div class="stat-card-label">失敗数</div>
+            </div>
+          </div>
+
+          <div class="ta-panel">
+            <div class="ta-panel-head">
+              <div>
+                <div class="ta-panel-title">実行の設定</div>
+                <div class="ta-panel-sub">実行対象のテストスイート・環境・並列度を指定します。</div>
+              </div>
+              <div class="ta-panel-actions">
+                <button type="button" class="btn-primary" id="ta-exec-run" disabled title="この画面からの実行起動は未実装です">実行</button>
+                <button type="button" class="btn-outline-sm" id="ta-exec-schedule">スケジュール登録</button>
+              </div>
+            </div>
+            <div class="ta-panel-body">
+              <div class="ta-kv">
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key"><label for="ta-exec-suite">実行対象</label></div>
+                  <div class="ta-kv-val">
+                    <select class="select-compact" id="ta-exec-suite">
+                      <option value="">テストスイートを選択</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key"><label for="ta-exec-env">環境</label></div>
+                  <div class="ta-kv-val">
+                    <select class="select-compact" id="ta-exec-env">
+                      <option value="">環境を選択</option>
+                      <option value="local">ローカル</option>
+                      <option value="dev">開発</option>
+                      <option value="staging">ステージング</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key"><label for="ta-exec-parallel">並列度</label></div>
+                  <div class="ta-kv-val">
+                    <input type="number" class="input-compact" id="ta-exec-parallel" min="1" max="16" step="1" placeholder="1" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ta-panel">
+            <div class="ta-panel-head">
+              <div>
+                <div class="ta-panel-title">実行結果</div>
+                <div class="ta-panel-sub">ケースごとの結果・所要時間・失敗ステップ・証跡を確認します。</div>
+              </div>
+              <div class="ta-panel-actions">
+                <button type="button" class="btn-outline-sm" id="ta-exec-export">結果を書き出す</button>
+              </div>
+            </div>
+            <div class="ta-panel-body">
+              <div class="ta-table-wrap">
+                <table class="ta-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">ケースID</th>
+                      <th scope="col">結果</th>
+                      <th scope="col">所要</th>
+                      <th scope="col">失敗ステップ</th>
+                      <th scope="col">証跡</th>
+                    </tr>
+                  </thead>
+                  <tbody id="ta-exec-result-body">
+                    <tr>
+                      <td colspan="5"><div class="empty">まだデータがありません</div></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="ta-panel">
+            <div class="ta-panel-head">
+              <div>
+                <div class="ta-panel-title">実行ログ</div>
+                <div class="ta-panel-sub">実行中の標準出力とエラーをそのまま表示します。</div>
+              </div>
+              <div class="ta-panel-actions">
+                <button type="button" class="btn-outline-sm" id="ta-exec-log-clear">ログをクリア</button>
+              </div>
+            </div>
+            <div class="ta-panel-body">
+              <pre class="ta-code" id="ta-exec-log"></pre>
+            </div>
+          </div>
+
+          <p class="ta-note">実行履歴は既存の実行基盤を共用しています（この画面からの実行起動は未実装）。</p>
+        </section>

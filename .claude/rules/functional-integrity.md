@@ -30,12 +30,13 @@ For every critical or high risk feature, Claude must check:
 - logs or evidence
 - user-visible error or status
 
-Before saying done, run or explicitly report why you could not run:
+Run these ONLY when the user explicitly requests them (see speed-harness.md H-7).
+When not requested, deliver with every unverified item explicitly marked 未実行 / 未検証:
 
 ```bash
-python scripts/quality_harness.py
-make test
-make verify-ui
+python scripts/quality_harness.py   # on user request only
+make test                           # on user request only
+make verify-ui                      # on user request only
 ```
 
 If any item is unverified, say `未確認` and do not present it as done.

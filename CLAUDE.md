@@ -7,10 +7,9 @@
 最重要は次の 3 つ:
 
 1. **実装の前に実データを 1 回叩く**（S-1）。手戻りの最大要因。着手 2〜3 分 vs 手戻り 15〜25 分。
-2. **`make verify-ui` はコミット直前の 1 回だけ**（S-2）。途中実行はハッシュ照合で無効になる。
-3. **コミット直前の `make test` は流さない**（S-3）。pre-commit が同じものを実行する。
-
-ゲート自体は省略しない。減らすのは**重複実行と手戻り**であって、検証ではない。
+2. **pytest / make test / make verify-ui / make lint はユーザーが要求した時のみ実行する**（H-7・2026-08-22）。
+   コミットは `--no-verify` で直行する。無断のゲート実行はフック（.claude/hooks/block-gates.py）が物理的に拒否する。
+3. **検証を省いた箇所は「未実行」と明記して納品する。**黙って省くのと明示して省くのは別物。
 
 加えて `.claude/rules/speed-harness.md`（2026-08-22 実測）を順守する。
 サーバ起動・認証オフ・検証の型・委譲の型・標準コマンドは**そこからコピーし、その場で探索しない**。
@@ -29,12 +28,13 @@ Before implementation, review, UX evaluation, persona evaluation, strategy revie
 - `docs/process/claude-entrypoint.md`
 - `quality/feature_contracts.yml`
 
-Before marking work complete, run when possible:
+Run the gates below ONLY when the user explicitly asks for them (H-7).
+Otherwise deliver with the untested parts explicitly marked 未実行/未検証:
 
 ```bash
-python scripts/quality_harness.py
-make test
-make verify-ui
+python scripts/quality_harness.py   # 要求時のみ
+make test                           # 要求時のみ
+make verify-ui                      # 要求時のみ
 ```
 
 Do not mark work complete unless the execution path has been checked:

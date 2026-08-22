@@ -18,5 +18,11 @@
         ]
       }
     ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "python3 \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/statusline.py\"",
+    "refreshInterval": 5,
+    "padding": 2
   }
 }

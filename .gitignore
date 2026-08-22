@@ -99,3 +99,6 @@ demo/video/
 .rebuild-mode
 _autorun_egress.ts
 .ui-verified
+
+# statusline用の一時進捗（セッション状態。コミットしない）
+.claude/progress.json

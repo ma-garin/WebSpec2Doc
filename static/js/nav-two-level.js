@@ -26,6 +26,15 @@
     });
     const title = document.getElementById('ta2-cat-title');
     if (title) title.textContent = label;
+
+    // 子が 1 件だけのカテゴリでは、カテゴリ名と子の名前が同じものになる
+    // （例: ダッシュボード）。同じ語を 2 行続けても選ぶ余地は増えないので、
+    // 子リストは出さない。レールを押した時点でその画面へ着いている。
+    const open = document.querySelectorAll('.app-nav-item[data-cat-open]');
+    const head = document.querySelector('.ta2-panel-head');
+    const solo = open.length === 1 && open[0].textContent.trim() === label;
+    if (head) head.classList.toggle('is-solo', solo);
+    open.forEach((el) => { el.hidden = solo; });
   }
 
   function categoryOfActiveView() {

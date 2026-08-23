@@ -116,3 +116,14 @@ body[data-system="testlab"] { --rail-bg: #570DF8; }
 
 /* 畳んだときはレールだけ残す。親カテゴリは常に見えている必要がある。 */
 .app-shell.sidebar-collapsed .ta2-side-main { display: none; }
+
+/* レールに「ダッシュボード」を 2 行で収める */
+.ta2-rail-label { text-align: center; }
+
+/* 子が 1 件だけのカテゴリ（ダッシュボード等）は見出しだけを残す。
+   同じ語が 2 行続くのを避けるため、下線も引かない。 */
+.ta2-panel-head.is-solo { padding-bottom: 0; border-bottom: 0; }
+
+/* [hidden] は UA の display:none が .app-nav-item の display に負けるため明示する
+   （単独カテゴリで見出しと同じ語を 2 行続けないための非表示） */
+.app-nav-item[hidden] { display: none; }

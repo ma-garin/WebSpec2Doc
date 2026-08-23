@@ -15,7 +15,7 @@ document.getElementById('sidebar-toggle-btn')?.addEventListener('click', () => {
   localStorage.setItem(SIDEBAR_KEY, collapsed ? '1' : '0');
 });
 const VIEW_HEADER = {
-  dashboard: { trail: ['WebSpec2Doc', 'ホーム'], title: 'QAドキュメント生成' },
+  dashboard: { trail: ['WebSpec2Doc', 'ダッシュボード'], title: 'QAドキュメント生成' },
   generate: { trail: ['ダッシュボード', 'サイトを追加'], title: 'サイトを追加 / 再解析' },
   'qa-quality': { trail: ['ダッシュボード', '品質観点'], title: '品質観点' },
   viewpoints: { trail: ['ダッシュボード', '観点管理'], title: '観点管理' },
@@ -33,7 +33,7 @@ const VIEW_HEADER = {
   'tenant-management': { trail: ['ダッシュボード', 'テナント管理'], title: 'テナント管理' },
   feedback: { trail: ['ダッシュボード', 'フィードバック'], title: 'フィードバック' },
   // テスト活動支援（System 02）。パンくずの1段目は自系のトップに揃える。
-  'test-activity': { trail: ['テスト活動支援', 'ホーム'], title: 'テスト活動支援' },
+  'test-activity': { trail: ['テスト活動支援', 'ダッシュボード'], title: 'テスト活動支援' },
   'test-plan': { trail: ['テスト活動支援', 'テスト計画'], title: 'テスト計画' },
   'test-analysis': { trail: ['テスト活動支援', 'テスト基本設計'], title: 'テスト基本設計' },
   'test-strategy': { trail: ['テスト活動支援', 'テスト詳細設計'], title: 'テスト詳細設計' },

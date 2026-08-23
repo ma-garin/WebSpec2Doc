@@ -41,9 +41,42 @@ _VIEW_NAMES = frozenset(
 )
 _VIEW_ALIASES = {"home": "dashboard"}
 
+# テスト活動支援（System 02）の画面。管理者のみが開ける。
+# ここを 1 箇所にまとめておかないと、画面を足したときに保護漏れが出る。
+_TESTLAB_VIEWS = frozenset(
+    {
+        "test-activity",
+        "test-plan",
+        "test-analysis",
+        "test-strategy",
+        "test-design",
+        "test-implementation",
+        "test-execution",
+        "manual-execution",
+        "defect-analysis",
+        "code-fix",
+        "test-completion",
+        "integrations",
+    }
+)
+
+
 # 設定画面のタブ（templates/partials/view-settings.html の data-tab と対応）。
 # タブごとに URL を持たせ、共有・ブックマーク・ブラウザの戻るを効かせる。
 _SETTINGS_TABS = frozenset({"api", "crawl", "notify", "operations", "data", "audit", "test-design"})
+
+
+
+def _may_use_testlab() -> bool:
+    """テスト活動支援を使えるか。認証オフの開発環境では制限しない。"""
+    from flask import g
+
+    from web.auth import auth_enabled
+
+    if not auth_enabled():
+        return True
+    user = getattr(g, "auth_user", None)
+    return bool(user) and user.get("role") == "admin"
 
 
 @bp.route("/")
@@ -96,5 +129,9 @@ def view(view_name: str) -> str:
     resolved = _VIEW_ALIASES.get(view_name, view_name)
     if resolved not in _VIEW_NAMES:
         abort(404)
+    if resolved in _TESTLAB_VIEWS and not _may_use_testlab():
+        # 存在は隠さず 403 にする。404 にすると管理者にも「無い」と見え、
+        # 権限の問題なのか綴り違いなのか切り分けられない。
+        abort(403)
     # 実際の画面切替はクライアント側の switchView() が location.pathname を見て行う。
     return render_template("index.html")

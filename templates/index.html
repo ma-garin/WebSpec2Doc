@@ -35,7 +35,9 @@
          名乗ってしまい、どのシステムにいるのか名前が嘘をつく。 #}
       <span class="app-brand-text"><strong>WebSpec2Doc</strong>
         <span data-system="docs">QAドキュメント生成</span>
+        {% if not auth_user or auth_user.role == 'admin' %}
         <span data-system="testlab">テスト活動支援</span>
+        {% endif %}
         <span data-system="autorun">AutoRun</span>
       </span>
     </a>
@@ -48,10 +50,12 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="16" height="16"><path d="M12 5v14M5 12h14"/></svg>
       <span class="add-site-label">新規解析</span>
     </button>
+    {% if not auth_user or auth_user.role == 'admin' %}
     <button type="button" class="btn-primary sidebar-primary-action" id="ta-new-btn" data-system="testlab">
       <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" width="14" height="14" aria-hidden="true"><path d="M6 4l14 8-14 8z"/></svg>
       <span class="add-site-label">はじめる</span>
     </button>
+    {% endif %}
 {% include 'partials/nav.html' %}
     <button type="button" id="sidebar-toggle-btn" class="sidebar-toggle-btn" title="サイドバーを折りたたむ">
       <svg class="icon-collapse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
@@ -60,7 +64,9 @@
     </button>
     <div class="app-sidebar-foot">
       <span data-system="docs">URLから画面仕様書・テスト設計・画面遷移図を生成します。</span>
+      {% if not auth_user or auth_user.role == 'admin' %}
       <span data-system="testlab">仕様書・GitHub・コードからテスト条件を抽出し、設計から不具合分析まで支援します。</span>
+      {% endif %}
       <span data-system="autorun">受領から実行完了レポートの納品までを止めずに回します。</span>
     </div>
   </aside>
@@ -84,6 +90,7 @@
 {% include 'partials/view-run-result.html' %}
 
 {# テスト活動支援（System 02） #}
+{% if not auth_user or auth_user.role == 'admin' %}
 {% include 'partials/view-ta-home.html' %}
 {% include 'partials/view-ta-plan.html' %}
 {% include 'partials/view-ta-analysis.html' %}
@@ -96,6 +103,7 @@
 {% include 'partials/view-ta-codefix.html' %}
 {% include 'partials/view-ta-completion.html' %}
 {% include 'partials/view-ta-integrations.html' %}
+{% endif %}
 
 {% include 'partials/view-user-guide.html' %}
 {% include 'partials/view-references.html' %}

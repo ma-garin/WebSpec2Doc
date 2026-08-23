@@ -24,6 +24,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5l3 2"/></svg>
         <span class="nav-label">過去履歴</span>
       </button>
+      {% if not auth_user or auth_user.role == 'admin' %}
       <button class="app-nav-item" data-view="test-activity" data-system="testlab">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 11.5L12 4l9 7.5"/><path d="M5.5 10v10h13V10M9.5 20v-6h5v6"/></svg>
         <span class="nav-label">ダッシュボード</span>
@@ -75,6 +76,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M10.5 13.5a4 4 0 0 0 5.7 0l2.3-2.3a4 4 0 0 0-5.7-5.7l-1.3 1.3"/><path d="M13.5 10.5a4 4 0 0 0-5.7 0l-2.3 2.3a4 4 0 0 0 5.7 5.7l1.3-1.3"/></svg>
         <span class="nav-label">連携設定</span>
       </button>
+      {% endif %}
       <div class="app-nav-group" data-system="common">サポート</div>
       <button class="app-nav-item" data-view="user-guide" data-system="common">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 4h7v16H4zM13 4h7v16h-7z"/></svg>

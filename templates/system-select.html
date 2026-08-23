@@ -59,6 +59,8 @@
         <span class="syscard-open">ドキュメント作成を開く →</span>
       </a>
 
+      {# テスト活動支援（System 02）は管理者のみ。押しても 403 になるカードは並べない。 #}
+      {% if not auth_user or auth_user.role == 'admin' %}
       <!-- テスト活動支援（System 02）。TOP はテスト活動ダッシュボード。 -->
       <a class="syscard syscard-test" href="/test-activity">
         <span class="syscard-accent" aria-hidden="true"></span>
@@ -77,6 +79,7 @@
         </span>
         <span class="syscard-open">テスト活動支援を開く →</span>
       </a>
+      {% endif %}
 
       <a class="syscard syscard-run" href="/auto-run">
         <span class="syscard-accent" aria-hidden="true"></span>

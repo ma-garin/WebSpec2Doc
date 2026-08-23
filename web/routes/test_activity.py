@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from flask import Blueprint, request
+from werkzeug.wrappers import Response as BaseResponse
 
 from web.config import OUTPUT_DIR
 from web.services import (
@@ -27,6 +28,19 @@ from web.tenancy import scoped_output_dir
 from web.validation import _valid_domain
 
 bp = Blueprint("test_activity", __name__)
+
+
+@bp.before_request
+def _admin_only() -> "BaseResponse | None":
+    """テスト活動支援は管理者のみ。
+
+    blueprint 単位で掛ける。エンドポイントごとに書くと追加時に付け忘れ、
+    1 本だけ素通しの経路が残る。認証オフの開発環境では require_admin が
+    None を返すため制限されない。
+    """
+    from web.auth import require_admin
+
+    return require_admin()
 logger = logging.getLogger(__name__)
 
 JsonResult = dict[str, Any] | tuple[dict[str, Any], int]

@@ -15,7 +15,6 @@ import os
 import socket
 import subprocess
 import sys
-import time
 from collections.abc import Generator
 from pathlib import Path
 from urllib.parse import urlparse
@@ -39,6 +38,8 @@ except ImportError:
 # プロジェクトルートを sys.path に追加
 ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(ROOT))
+
+from tests.e2e.wait_helpers import wait_until  # noqa: E402
 
 BASE_URL = os.environ.get("WEBSPEC2DOC_E2E_URL", "http://127.0.0.1:8765")
 # 利用者が宛先を明示したか。明示されているなら、E2E の都合で勝手に別ポートへ
@@ -251,10 +252,8 @@ def _spawn_server(e2e_db: Path) -> subprocess.Popen[bytes]:
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
-    for _ in range(20):  # 最大10秒
-        if _server_is_up(BASE_URL):
-            return proc
-        time.sleep(0.5)
+    if wait_until(lambda: _server_is_up(BASE_URL), timeout_sec=10.0):
+        return proc
     proc.terminate()
     proc.wait(timeout=10)
     # ここを skip にすると「サーバーが起動しなかった＝未検証」を「緑」と

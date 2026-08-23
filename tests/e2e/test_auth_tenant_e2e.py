@@ -36,14 +36,13 @@ import re
 import socket
 import subprocess
 import sys
-import time
 import uuid
 from collections.abc import Generator
 from pathlib import Path
 
 import pytest
-import requests
 from playwright.sync_api import Page, expect
+from tests.e2e.wait_helpers import wait_http_success
 
 ROOT = Path(__file__).parent.parent.parent
 
@@ -64,15 +63,8 @@ SYSTEM_SELECT = "/systems"
 
 
 def _wait_for_health(url: str, timeout: float = 20.0) -> bool:
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        try:
-            if requests.get(f"{url}/api/v1/healthz", timeout=0.5).ok:
-                return True
-        except requests.RequestException:
-            pass
-        time.sleep(0.3)
-    return False
+    """サーバーの健全性エンドポイントが応答するまで待つ。"""
+    return wait_http_success(f"{url}/api/v1/healthz", timeout_sec=timeout, interval_sec=0.3)
 
 
 @pytest.fixture(scope="module")

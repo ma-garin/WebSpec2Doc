@@ -28,27 +28,18 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
-import time
-import urllib.error
-import urllib.request
 from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
 from playwright.sync_api import Page, expect
+from tests.e2e.wait_helpers import http_is_ok, wait_http_success
 
 BASE_URL = os.environ.get("WEBSPEC2DOC_E2E_URL", "http://127.0.0.1:8765")
 # 同梱デモサイト（demo/demo_site.py の site_v2）。外部へ出ずに解析できる。
 DEMO_PORT = 8767
 DEMO_URL = f"http://127.0.0.1:{DEMO_PORT}/index.html"
-
-
-def _demo_site_is_up() -> bool:
-    try:
-        with urllib.request.urlopen(f"http://127.0.0.1:{DEMO_PORT}/", timeout=1):
-            return True
-    except (urllib.error.URLError, OSError):
-        return False
+DEMO_ROOT_URL = f"http://127.0.0.1:{DEMO_PORT}/"
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -59,7 +50,7 @@ def demo_site() -> Iterator[None]:
     `pytest tests/e2e/` を回すと発見結果 0 件で落ちていた（環境依存の失敗）。
     テストが自分で前提を用意する形に変え、外部手順への依存を切る。
     """
-    if _demo_site_is_up():
+    if http_is_ok(DEMO_ROOT_URL):
         yield  # 既に起動済み（make demo 併用時）。他人が起動したものは止めない
         return
 
@@ -71,10 +62,7 @@ def demo_site() -> Iterator[None]:
         stderr=subprocess.DEVNULL,
     )
     try:
-        deadline = time.monotonic() + 15
-        while time.monotonic() < deadline and not _demo_site_is_up():
-            time.sleep(0.3)
-        if not _demo_site_is_up():
+        if not wait_http_success(DEMO_ROOT_URL, timeout_sec=15.0, interval_sec=0.3):
             proc.terminate()
             pytest.skip(f"デモサイト（ポート {DEMO_PORT}）を起動できなかった")
         yield

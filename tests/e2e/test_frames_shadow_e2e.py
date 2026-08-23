@@ -15,29 +15,21 @@ import os
 import subprocess
 import sys
 import threading
-import time
 from collections.abc import Generator
 from pathlib import Path
 from typing import Any
 
 import pytest
-import requests
 
 ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "src"))
 
+from tests.e2e.wait_helpers import wait_http_ok  # noqa: E402
+
 DEMO_PORT = int(os.environ.get("WEBSPEC2DOC_E2E_FRAMES_PORT", "8898"))
 DEMO_URL = f"http://127.0.0.1:{DEMO_PORT}"
 _THREAD_TIMEOUT_SEC = 120
-
-
-def _demo_is_up() -> bool:
-    try:
-        requests.get(f"{DEMO_URL}/", timeout=0.5)
-        return True
-    except Exception:
-        return False
 
 
 @pytest.fixture(scope="module")
@@ -48,11 +40,7 @@ def demo_site() -> Generator[str, None, None]:
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
-    for _ in range(20):
-        if _demo_is_up():
-            break
-        time.sleep(0.5)
-    else:
+    if not wait_http_ok(f"{DEMO_URL}/", timeout_sec=10.0):
         proc.terminate()
         pytest.skip("デモサイトが起動しませんでした")
     yield DEMO_URL

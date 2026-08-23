@@ -22,31 +22,23 @@ import os
 import subprocess
 import sys
 import threading
-import time
 from collections.abc import Generator
 from pathlib import Path
 from typing import Any
 
 import pytest
-import requests
 
 ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "src"))
+
+from tests.e2e.wait_helpers import wait_http_ok  # noqa: E402
 
 OLD_PORT = int(os.environ.get("WEBSPEC2DOC_E2E_COMPARE_OLD_PORT", "8902"))
 NEW_PORT = int(os.environ.get("WEBSPEC2DOC_E2E_COMPARE_NEW_PORT", "8903"))
 OLD_URL = f"http://127.0.0.1:{OLD_PORT}"
 NEW_URL = f"http://127.0.0.1:{NEW_PORT}"
 _THREAD_TIMEOUT_SEC = 150
-
-
-def _site_is_up(url: str) -> bool:
-    try:
-        requests.get(f"{url}/", timeout=0.5)
-        return True
-    except Exception:
-        return False
 
 
 def _start_demo(site_dir: str, port: int) -> subprocess.Popen[bytes]:
@@ -64,11 +56,7 @@ def _start_demo(site_dir: str, port: int) -> subprocess.Popen[bytes]:
         stderr=subprocess.DEVNULL,
     )
     url = f"http://127.0.0.1:{port}"
-    for _ in range(20):
-        if _site_is_up(url):
-            break
-        time.sleep(0.5)
-    else:
+    if not wait_http_ok(f"{url}/", timeout_sec=10.0):
         proc.terminate()
         pytest.skip(f"デモサイトが起動しませんでした: {url}")
     return proc

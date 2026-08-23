@@ -1,0 +1,15 @@
+{
+  "name": "webspec2doc",
+  "version": "0.0.0",
+  "private": true,
+  "description": "WebSpec2Doc のフロントエンド JS 用ツール定義。アプリ本体は Python（Flask）で、ここは JS ユニットテストと図生成 CLI のためだけに存在する。",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@mermaid-js/mermaid-cli": "^11.16.0",
+    "jsdom": "^29.1.1",
+    "vitest": "^4.1.11"
+  }
+}

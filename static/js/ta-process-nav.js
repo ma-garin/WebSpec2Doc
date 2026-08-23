@@ -58,6 +58,7 @@
       const back = document.createElement('button');
       back.type = 'button';
       back.className = 'btn-outline-sm';
+      back.setAttribute('data-sn-prev', prev.view);
       back.textContent = '← ' + prev.label;
       back.addEventListener('click', () => go(prev.view));
       nav.appendChild(back);
@@ -75,6 +76,7 @@
         const fwd = document.createElement('button');
         fwd.type = 'button';
         fwd.className = 'btn-primary';
+        fwd.setAttribute('data-sn-next', next.view);
         fwd.textContent = next.label + ' →';
         fwd.addEventListener('click', () => go(next.view));
         nav.appendChild(fwd);

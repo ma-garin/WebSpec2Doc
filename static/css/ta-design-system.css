@@ -575,3 +575,52 @@ body[data-system="testlab"] .ta2-ai-foot button {
   font-size: 13px;
   cursor: pointer;
 }
+
+/* ══════════════ 工程ゲート（未到達の工程は押せない） ══════════════ */
+/* 押せない項目は隠さず、薄くして理由をツールチップで示す。
+   隠すと全体像が分からなくなり、何が残っているのかも読めなくなるため。 */
+
+body[data-system="testlab"] .app-nav-item.is-locked {
+  opacity: .42;
+  cursor: not-allowed;
+}
+body[data-system="testlab"] .app-nav-item.is-locked:hover { background: none; }
+/* 鍵の印。色を読めない環境でも、押せないことが形で分かるようにする */
+body[data-system="testlab"] .app-nav-item.is-locked::after {
+  content: "🔒";
+  margin-left: auto;
+  font-size: 10px;
+  opacity: .8;
+}
+
+body[data-system="testlab"] .ta-pipeline-step.is-locked {
+  opacity: .45;
+  cursor: not-allowed;
+}
+body[data-system="testlab"] .ta-pipeline-step.is-locked:hover { color: var(--d-ink-sub); }
+
+body[data-system="testlab"] .ta2-stepnav [data-sn-next]:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+/* 止めた理由を伝えるトースト。黙って止まると「壊れている」と受け取られる */
+.ta-gate-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 26px;
+  z-index: 70;
+  max-width: min(560px, calc(100vw - 48px));
+  padding: 11px 20px;
+  border-radius: 999px;
+  background: #1F2937;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .3);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+  opacity: 0;
+  transform: translateX(-50%) translateY(8px);
+  transition: opacity .18s ease, transform .18s ease;
+  pointer-events: none;
+}
+.ta-gate-toast.is-on { opacity: 1; transform: translateX(-50%) translateY(0); }

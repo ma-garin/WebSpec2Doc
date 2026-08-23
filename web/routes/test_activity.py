@@ -16,7 +16,13 @@ from typing import Any
 from flask import Blueprint, request
 
 from web.config import OUTPUT_DIR
-from web.services import completion_criteria, defect_store, manual_execution_store, test_data_store
+from web.services import (
+    completion_criteria,
+    defect_store,
+    manual_execution_store,
+    process_gate,
+    test_data_store,
+)
 from web.tenancy import scoped_output_dir
 from web.validation import _valid_domain
 
@@ -55,7 +61,7 @@ def _api(fn: Callable[..., JsonResult]) -> Callable[..., JsonResult]:
     def wrapper(*args: Any, **kwargs: Any) -> JsonResult:
         try:
             return fn(*args, **kwargs)
-        except _BadRequest as exc:
+        except (_BadRequest, process_gate.ProcessGateError) as exc:
             return {"error": str(exc)}, 400
         except ValueError as exc:
             logger.warning("test_activity: 入力を処理できません: %s", exc)
@@ -314,3 +320,36 @@ def _blocker(defect: Mapping[str, Any]) -> dict[str, Any]:
         "state": str(defect.get("state") or ""),
         "case_id": str(defect.get("case_id") or ""),
     }
+
+
+# ---- 工程ゲート ----
+# 工程は順番にしか進めない。ナビの無効化だけでは URL 直打ちで素通りできるため、
+# 入場可否をサーバ側でも判定できる経路を用意する。
+
+
+@bp.get("/api/ta/process")
+@_api
+def api_process_status() -> JsonResult:
+    return process_gate.status(_out(), _require_domain())
+
+
+@bp.post("/api/ta/process/complete")
+@_api
+def api_process_complete() -> JsonResult:
+    body = _json_body()
+    domain = _require_domain(body)
+    phase = str(body.get("phase") or "").strip()
+    if not phase:
+        raise _BadRequest("完了する工程を指定してください")
+    return process_gate.complete(_out(), domain, phase)
+
+
+@bp.post("/api/ta/process/reopen")
+@_api
+def api_process_reopen() -> JsonResult:
+    body = _json_body()
+    domain = _require_domain(body)
+    phase = str(body.get("phase") or "").strip()
+    if not phase:
+        raise _BadRequest("やり直す工程を指定してください")
+    return process_gate.reopen(_out(), domain, phase)

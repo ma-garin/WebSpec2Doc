@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/testcase-grid.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='viewpoints.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/test-activity.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/ta-design-system.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/account-view.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='vendor/driver.js/driver.css') }}?v={{ _ver }}">
@@ -48,8 +49,8 @@
       <span class="add-site-label">新規解析</span>
     </button>
     <button type="button" class="btn-primary sidebar-primary-action" id="ta-new-btn" data-system="testlab">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="16" height="16"><path d="M12 5v14M5 12h14"/></svg>
-      <span>新規テスト活動</span>
+      <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" width="14" height="14" aria-hidden="true"><path d="M6 4l14 8-14 8z"/></svg>
+      <span>はじめる</span>
     </button>
 {% include 'partials/nav.html' %}
     <button type="button" id="sidebar-toggle-btn" class="sidebar-toggle-btn" title="サイドバーを折りたたむ">
@@ -90,8 +91,10 @@
 {% include 'partials/view-ta-design.html' %}
 {% include 'partials/view-ta-implementation.html' %}
 {% include 'partials/view-ta-execution.html' %}
+{% include 'partials/view-ta-manual.html' %}
 {% include 'partials/view-ta-defect.html' %}
 {% include 'partials/view-ta-codefix.html' %}
+{% include 'partials/view-ta-completion.html' %}
 {% include 'partials/view-ta-integrations.html' %}
 
 {% include 'partials/view-user-guide.html' %}
@@ -245,6 +248,10 @@
   <script src="{{ url_for('static', filename='js/ta-analysis.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/ta-design.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/ta-execution.js') }}?v={{ _ver }}"></script>
+  <script src="{{ url_for('static', filename='js/ta-process-nav.js') }}?v={{ _ver }}"></script>
+  <script src="{{ url_for('static', filename='js/ta-manual.js') }}?v={{ _ver }}"></script>
+  <script src="{{ url_for('static', filename='js/ta-completion.js') }}?v={{ _ver }}"></script>
+  <script src="{{ url_for('static', filename='js/ta-ai-panel.js') }}?v={{ _ver }}"></script>
 
 </body>
 </html>

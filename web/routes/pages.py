@@ -24,7 +24,7 @@ _VIEW_NAMES = frozenset(
         "user-management",
         "tenant-management",
         "feedback",
-        # テスト活動支援（System 02）。10 画面すべてを直リンク可能にする。
+        # テスト活動支援（System 02）。12 画面すべてを直リンク可能にする。
         "test-activity",
         "test-plan",
         "test-analysis",
@@ -32,8 +32,10 @@ _VIEW_NAMES = frozenset(
         "test-design",
         "test-implementation",
         "test-execution",
+        "manual-execution",
         "defect-analysis",
         "code-fix",
+        "test-completion",
         "integrations",
     }
 )

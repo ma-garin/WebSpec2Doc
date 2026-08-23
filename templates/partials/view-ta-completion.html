@@ -1,0 +1,78 @@
+        <!-- ===== テスト活動支援 / 完了 ===== -->
+        <section class="view" id="view-test-completion">
+          <div class="dashboard-section-head">
+            <div>
+              <h2 class="dash-section-title">テスト完了</h2>
+              <p class="dashboard-section-copy">終了基準を判定し、完了レポートと教訓を残します。承認は人が行い、自動でクローズしません。</p>
+            </div>
+            <div class="dashboard-section-actions">
+              <button type="button" class="btn-outline-sm" id="ta-completion-approve">完了を承認</button>
+              <button type="button" class="btn-primary" id="ta-completion-report">完了レポートを生成</button>
+            </div>
+          </div>
+
+          <div class="ta-panel">
+            <div class="ta-panel-head">
+              <div>
+                <div class="ta-panel-title">終了基準の判定</div>
+                <div class="ta-panel-sub">テスト計画で定めた基準との照合</div>
+              </div>
+              <div class="ta-panel-actions">
+                <!-- 個々の基準より総合判定を先に読ませるため、ヘッダに置く -->
+                <span class="rh-status-badge" id="ta-completion-verdict">判定待ち</span>
+              </div>
+            </div>
+            <div class="ta-panel-body">
+              <div class="ta-table-wrap">
+                <table class="ta-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">基準</th>
+                      <th scope="col">目標</th>
+                      <th scope="col">現在値</th>
+                      <th scope="col">判定</th>
+                    </tr>
+                  </thead>
+                  <tbody id="ta-completion-criteria-body">
+                    <tr>
+                      <td colspan="4"><div class="empty">まだデータがありません</div></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="ta-panel">
+            <div class="ta-panel-head">
+              <div>
+                <div class="ta-panel-title">残課題</div>
+                <div class="ta-panel-sub">完了を妨げている項目</div>
+              </div>
+            </div>
+            <div class="ta-panel-body">
+              <div id="ta-completion-blockers">
+                <div class="empty">まだデータがありません</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ta-panel">
+            <div class="ta-panel-head">
+              <div>
+                <div class="ta-panel-title">教訓・改善</div>
+                <div class="ta-panel-sub">次のプロジェクトへの引き継ぎ</div>
+              </div>
+              <div class="ta-panel-actions">
+                <button type="button" class="btn-outline-sm" id="ta-completion-lesson-add">追加</button>
+              </div>
+            </div>
+            <div class="ta-panel-body">
+              <div id="ta-completion-lessons">
+                <div class="empty">まだデータがありません</div>
+              </div>
+            </div>
+          </div>
+
+          <p class="ta-note">承認は人が行います。基準が未達のままでも記録は残せますが、その場合は理由が必須です。</p>
+        </section>

@@ -1,0 +1,105 @@
+        <!-- ===== テスト活動支援 / 手動テスト実行 ===== -->
+        <section class="view" id="view-manual-execution">
+          <div class="dashboard-section-head">
+            <div>
+              <h2 class="dash-section-title">手動テスト実行</h2>
+              <p class="dashboard-section-copy">自動化できないケースを人が実行し、結果と証跡を記録します。記録は消化率と完了判定に反映されます。</p>
+            </div>
+            <div class="dashboard-section-actions">
+              <button type="button" class="btn-outline-sm" id="ta-manual-reload">再読み込み</button>
+            </div>
+          </div>
+
+          <div class="ta-grid-3">
+            <div class="stat-card">
+              <div class="stat-card-value" id="ta-manual-stat-total">-</div>
+              <div class="stat-card-label">対象ケース</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-value" id="ta-manual-stat-done">-</div>
+              <div class="stat-card-label">実施済み</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-value" id="ta-manual-stat-failed">-</div>
+              <div class="stat-card-label">失敗</div>
+            </div>
+          </div>
+
+          <div class="ta-panel">
+            <div class="ta-panel-head">
+              <div>
+                <div class="ta-panel-title">対象ケース</div>
+                <div class="ta-panel-sub">テストケース実装から引き継いだ、自動化判定が「手動」のケース</div>
+              </div>
+            </div>
+            <div class="ta-panel-body">
+              <div class="ta-table-wrap">
+                <table class="ta-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">ケースID</th>
+                      <th scope="col">目的</th>
+                      <th scope="col">結果</th>
+                      <th scope="col">証跡</th>
+                      <th scope="col">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="ta-manual-case-body">
+                    <tr>
+                      <td colspan="5"><div class="empty">まだデータがありません</div></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="ta-panel">
+            <div class="ta-panel-head">
+              <div>
+                <div class="ta-panel-title">実行の記録</div>
+                <div class="ta-panel-sub">結果・実測メモ・証跡を残します。</div>
+              </div>
+              <div class="ta-panel-actions">
+                <button type="button" class="btn-primary" id="ta-manual-save">保存</button>
+              </div>
+            </div>
+            <div class="ta-panel-body">
+              <div class="ta-kv">
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key"><label for="ta-manual-case">ケース</label></div>
+                  <div class="ta-kv-val">
+                    <select class="select-compact" id="ta-manual-case">
+                      <option value="">ケースを選択</option>
+                    </select>
+                  </div>
+                </div>
+                <!-- 結果はチップの排他選択で扱うため label の for は使わない -->
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key">結果</div>
+                  <div class="ta-kv-val">
+                    <div class="ta-chips" id="ta-manual-result">
+                      <button type="button" class="ta-chip" data-value="pass">成功</button>
+                      <button type="button" class="ta-chip" data-value="fail">失敗</button>
+                      <button type="button" class="ta-chip" data-value="blocked">ブロック</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key"><label for="ta-manual-note">実測メモ</label></div>
+                  <div class="ta-kv-val">
+                    <input type="text" class="input-compact" id="ta-manual-note" placeholder="実測値・気づいたことを記録" />
+                  </div>
+                </div>
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key"><label for="ta-manual-evidence">証跡</label></div>
+                  <div class="ta-kv-val">
+                    <input type="file" class="input-compact" id="ta-manual-evidence" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p class="ta-note">証跡ファイルはテナントの output 配下に保存されます。</p>
+        </section>

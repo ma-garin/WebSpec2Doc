@@ -15,7 +15,8 @@
   var TESTLAB_PATHS = {
     '/test-activity': 1, '/test-plan': 1, '/test-analysis': 1, '/test-strategy': 1,
     '/test-design': 1, '/test-implementation': 1, '/test-execution': 1,
-    '/defect-analysis': 1, '/code-fix': 1, '/integrations': 1,
+    '/manual-execution': 1, '/defect-analysis': 1, '/code-fix': 1,
+    '/test-completion': 1, '/integrations': 1,
   };
   var DOCS_PATHS = {
     '/': 1, '/home': 1, '/dashboard': 1, '/generate': 1,

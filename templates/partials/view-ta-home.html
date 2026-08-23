@@ -10,17 +10,8 @@
                 </select>
                 <button type="button" id="ta-start-btn" class="btn-primary">テスト活動を始める</button>
               </div>
-              <div class="dash-hero-steps" aria-label="テスト活動の流れ">
-                <span class="dash-hero-step"><b>1</b> 取り込み</span>
-                <span class="dash-hero-arrow">→</span>
-                <span class="dash-hero-step"><b>2</b> 分析</span>
-                <span class="dash-hero-arrow">→</span>
-                <span class="dash-hero-step"><b>3</b> 設計</span>
-                <span class="dash-hero-arrow">→</span>
-                <span class="dash-hero-step"><b>4</b> 実行</span>
-                <span class="dash-hero-arrow">→</span>
-                <span class="dash-hero-step"><b>5</b> 分析・修正</span>
-                <span class="dash-hero-note">プロジェクトを選ぶと、工程ごとの進捗と成果物がここに集約されます。</span>
+              <div class="dash-hero-steps" aria-label="次に行う工程">
+                <span class="dash-hero-note" id="ta-hero-hint">プロジェクトを選ぶと、工程ごとの進捗と成果物がここに集約されます。</span>
               </div>
             </div>
           </div>
@@ -28,53 +19,23 @@
           <div class="dashboard-section-head">
             <div>
               <h2 class="dash-section-title">テスト活動の工程</h2>
-              <p class="dashboard-section-copy">8つの工程で、テスト計画から不具合を受けたコード修正までを扱います。</p>
+              <p class="dashboard-section-copy">10の工程で、テスト計画からテスト完了までを扱います。工程名を押すとその画面へ移動します。</p>
             </div>
             <div class="dashboard-section-actions">
               <button type="button" class="btn-outline-sm" id="ta-pipeline-reload">再読み込み</button>
             </div>
           </div>
           <div class="ta-pipeline" id="ta-pipeline">
-            <div class="ta-pipeline-step">
-              <span class="ta-step-no">01</span>
-              <span class="ta-step-name">計画</span>
-              <span class="ta-step-state">未着手</span>
-            </div>
-            <div class="ta-pipeline-step">
-              <span class="ta-step-no">02</span>
-              <span class="ta-step-name">分析</span>
-              <span class="ta-step-state">未着手</span>
-            </div>
-            <div class="ta-pipeline-step">
-              <span class="ta-step-no">03</span>
-              <span class="ta-step-name">方針</span>
-              <span class="ta-step-state">未着手</span>
-            </div>
-            <div class="ta-pipeline-step">
-              <span class="ta-step-no">04</span>
-              <span class="ta-step-name">設計</span>
-              <span class="ta-step-state">未着手</span>
-            </div>
-            <div class="ta-pipeline-step">
-              <span class="ta-step-no">05</span>
-              <span class="ta-step-name">実装</span>
-              <span class="ta-step-state">未着手</span>
-            </div>
-            <div class="ta-pipeline-step">
-              <span class="ta-step-no">06</span>
-              <span class="ta-step-name">実行</span>
-              <span class="ta-step-state">未着手</span>
-            </div>
-            <div class="ta-pipeline-step">
-              <span class="ta-step-no">07</span>
-              <span class="ta-step-name">不具合分析</span>
-              <span class="ta-step-state">未着手</span>
-            </div>
-            <div class="ta-pipeline-step">
-              <span class="ta-step-no">08</span>
-              <span class="ta-step-name">コード修正</span>
-              <span class="ta-step-state">未着手</span>
-            </div>
+            <button type="button" class="ta-pipeline-step" data-step="1" data-view="test-plan">テスト計画</button>
+            <button type="button" class="ta-pipeline-step" data-step="2" data-view="test-analysis">テスト基本設計</button>
+            <button type="button" class="ta-pipeline-step" data-step="3" data-view="test-strategy">テスト詳細設計</button>
+            <button type="button" class="ta-pipeline-step" data-step="4" data-view="test-design">テストケース実装</button>
+            <button type="button" class="ta-pipeline-step" data-step="5" data-view="test-implementation">自動テストケース実装</button>
+            <button type="button" class="ta-pipeline-step" data-step="6" data-view="test-execution">自動テスト実行</button>
+            <button type="button" class="ta-pipeline-step" data-step="7" data-view="manual-execution">手動テスト実行</button>
+            <button type="button" class="ta-pipeline-step" data-step="8" data-view="defect-analysis">不具合分析</button>
+            <button type="button" class="ta-pipeline-step" data-step="9" data-view="code-fix">コード修正提案</button>
+            <button type="button" class="ta-pipeline-step" data-step="10" data-view="test-completion">テスト完了</button>
           </div>
 
           <div class="ta-grid-3">
@@ -88,7 +49,7 @@
             </div>
             <div class="stat-card">
               <div class="stat-card-value" id="ta-stat-open-defects">-</div>
-              <div class="stat-card-label">未解決不具合</div>
+              <div class="stat-card-label">対応中の不具合</div>
             </div>
           </div>
 

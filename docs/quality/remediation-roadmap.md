@@ -196,3 +196,35 @@
 - **対処**: チェッカが用意している除外マーカー `noqa: fetch-error` を、意図の再掲とともに付与した。
   これは許容値の緩和ではなく、チェッカが想定する意図表明の手段である（`scripts/check_fetch_error_handling.py:18,49-50`）
 - **結果**: exit 0。ok 102 / silent 0 / no_catch 0 / ignored 4
+
+---
+
+## Phase 6 — R-09（JS ユニットテスト）が検出した実装課題
+
+いずれも**テストで現状を固定したうえで記録**しており、実装は未変更。E2E では検出できなかった種類の欠陥。
+
+### R-16 `fmtDuration` の丸めが不整合 — Sonnet ◎
+
+- **事象**: 分を `Math.floor`・秒を `Math.round` で別々に丸めるため、`59.6` → `"60秒"`、`119.6` → `"1分60秒"` になる
+- **箇所**: `static/js/ta-execution.js:18`
+- **対処**: 先に秒へ丸めてから分秒へ分解する。`tests/js/ta-execution.fmtDuration.test.js` の期待値も同時に更新する
+  （現在は「壊れた挙動」を固定しているテストがあるので、直すときは必ずテストを読むこと）
+
+### R-17 `statusBadge` がプロトタイプ汚染に弱い — Sonnet ◎
+
+- **事象**: ラベル表が素のオブジェクトリテラルのため、`status="__proto__"` が既知扱いになり
+  `rh-status-__proto__` がクラス名へ混入する
+- **箇所**: `static/js/ta-execution.js:25`
+- **対処**: `Object.create(null)` か `Map`、または `Object.prototype.hasOwnProperty.call()` で判定する
+- **影響度**: status はサーバ由来で現状 `__proto__` は返らないため実害は未確認。ただし外部由来の値を
+  そのままキー参照する形は避ける
+
+### R-18 `esc` の実装が 4 種類に分裂 — **設計判断が要る**
+
+- **事象**: エスケープ関数が 4 ファイルに個別実装され、挙動が揃っていない
+  - `static/js/ta-design.js:7` のみ `'`（シングルクォート）を変換しない
+  - null/undefined の扱いが不一致（`ta-execution` は文字列 `"null"` を出し、他は空文字）
+- **判断が要る点**: 共通化する場合、`core.js` の `escHtml` に寄せるのが自然だが、
+  各ファイルは「core.js の読み込み順に依存しない」ためにあえて自前実装を持っている
+  （`ta-analysis.js` のコメントに明記）。この設計意図を維持したまま統一する方法を決める必要がある
+- **暫定**: `tests/js/escape.test.js` が 4 実装の差分を固定しているため、意図しない変化は検出できる

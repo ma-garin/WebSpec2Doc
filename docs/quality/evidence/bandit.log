@@ -1,0 +1,16 @@
+[manager]	WARNING	Test in comment: ID is not a test name or id, ignoring
+[tester]	WARNING	nosec encountered (B324), but no failed test on file src/autorun/stages.py:465
+[tester]	WARNING	nosec encountered (B324), but no failed test on file src/autorun/stages.py:465
+[tester]	WARNING	nosec encountered (B608), but no failed test on file web/services/auth_store.py:428
+[tester]	WARNING	nosec encountered (B608), but no failed test on file web/services/auth_store.py:809
+[tester]	WARNING	nosec encountered (B324), but no failed test on file web/services/viewpoint_store.py:67
+[tester]	WARNING	nosec encountered (B324), but no failed test on file web/services/viewpoint_store.py:67
+[tester]	WARNING	nosec encountered (B608), but no failed test on file web/services/viewpoint_store.py:335
+[tester]	WARNING	nosec encountered (B608), but no failed test on file web/services/viewpoint_store.py:335
+[tester]	WARNING	nosec encountered (B608), but no failed test on file web/services/viewpoint_store.py:339
+[tester]	WARNING	nosec encountered (B608), but no failed test on file web/services/viewpoint_store.py:339
+[tester]	WARNING	nosec encountered (B608), but no failed test on file web/services/viewpoint_store.py:511
+[tester]	WARNING	nosec encountered (B608), but no failed test on file web/services/viewpoint_store.py:644
+[tester]	WARNING	nosec encountered (B608), but no failed test on file web/services/viewpoint_store.py:644
+[tester]	WARNING	nosec encountered (B608), but no failed test on file web/services/viewpoint_store.py:734
+[tester]	WARNING	nosec encountered (B608), but no failed test on file web/services/viewpoint_store_operations.py:580

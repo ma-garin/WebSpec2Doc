@@ -1,0 +1,5 @@
+Found 2 known vulnerabilities in 1 package
+Name  Version ID              Fix Versions
+----- ------- --------------- ------------
+pypdf 6.14.2  PYSEC-2026-3655 6.15.0
+pypdf 6.14.2  PYSEC-2026-3656 6.15.0

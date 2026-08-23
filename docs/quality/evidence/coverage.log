@@ -1,0 +1,298 @@
+........................................................................ [  2%]
+........................................................................ [  4%]
+........................................................................ [  6%]
+........................................................................ [  8%]
+........................................................................ [ 11%]
+........................................................................ [ 13%]
+........................................................................ [ 15%]
+........................................................................ [ 17%]
+........................................................................ [ 19%]
+........................................................................ [ 22%]
+........................................................................ [ 24%]
+........................................................................ [ 26%]
+........................................................................ [ 28%]
+........................................................................ [ 30%]
+........................................................................ [ 33%]
+........................................................................ [ 35%]
+........................................................................ [ 37%]
+........................................................................ [ 39%]
+........................................................................ [ 41%]
+........................................................................ [ 44%]
+........................................................................ [ 46%]
+........................................................................ [ 48%]
+........................................................................ [ 50%]
+........................................................................ [ 52%]
+........................................................................ [ 55%]
+........................................................................ [ 57%]
+........................................................................ [ 59%]
+........................................................................ [ 61%]
+........................................................................ [ 63%]
+........................................................................ [ 66%]
+........................................................................ [ 68%]
+........................................................................ [ 70%]
+........................................................................ [ 72%]
+........................................................................ [ 74%]
+........................................................................ [ 77%]
+........................................................................ [ 79%]
+........................................................................ [ 81%]
+........................................................................ [ 83%]
+...............F.F...................................................... [ 85%]
+........................................................................ [ 88%]
+........................................................................ [ 90%]
+........................................................................ [ 92%]
+........................................................................ [ 94%]
+........................................................................ [ 96%]
+........................................................................ [ 99%]
+............................                                             [100%]
+
+--------- coverage: platform darwin, python 3.12.13-final-0 ----------
+Name                                         Stmts   Miss  Cover
+----------------------------------------------------------------
+src/__init__.py                                  0      0   100%
+src/analyzer/__init__.py                         0      0   100%
+src/analyzer/bva.py                            127     12    91%
+src/analyzer/canonicalizer.py                   55      0   100%
+src/analyzer/form_analyzer.py                    5      0   100%
+src/analyzer/html_analyzer.py                   22      0   100%
+src/analyzer/login_wall.py                      31      0   100%
+src/analyzer/rule_injector.py                   73     10    86%
+src/analyzer/stack_detector.py                 105     19    82%
+src/analyzer/test_conditions.py                127      7    94%
+src/analyzer/text_similarity.py                 11      0   100%
+src/apispec/__init__.py                          0      0   100%
+src/apispec/coverage_map.py                     69      4    94%
+src/apispec/recovery.py                         60      0   100%
+src/archive/__init__.py                          0      0   100%
+src/archive/external_monitor.py                 44      0   100%
+src/archive/full_archive.py                     66      2    97%
+src/autorun/__init__.py                          0      0   100%
+src/autorun/automation_plan.py                  66      2    97%
+src/autorun/cause_effect.py                    119      8    93%
+src/autorun/classification_tree.py              96      4    96%
+src/autorun/decisions.py                        62     62     0%
+src/autorun/domain_analysis.py                  74      5    93%
+src/autorun/error_guessing.py                   54      0   100%
+src/autorun/orthogonal_array.py                 88     12    86%
+src/autorun/qf_schema.py                        53      3    94%
+src/autorun/review_queue.py                     92      0   100%
+src/autorun/stages.py                          519     53    90%
+src/autorun/suggest.py                          52      2    96%
+src/autorun/techniques.py                      147      5    97%
+src/autorun/use_case_testing.py                137     15    89%
+src/capture/__init__.py                          0      0   100%
+src/capture/burndown.py                         63      0   100%
+src/capture/coverage.py                        110      1    99%
+src/capture/finding_reporter.py                 78      0   100%
+src/capture/reverse_generator.py               133      1    99%
+src/capture/session_recorder.py                108     32    70%
+src/ci_drift.py                                 35      3    91%
+src/cli.py                                     349    124    64%
+src/crawler/__init__.py                          0      0   100%
+src/crawler/action_explorer.py                 166     42    75%
+src/crawler/auth.py                             36     10    72%
+src/crawler/auth_recorder.py                   148     52    65%
+src/crawler/auto_login.py                      149      2    99%
+src/crawler/data_flow.py                        40      2    95%
+src/crawler/form_navigator.py                   42      1    98%
+src/crawler/link_extractor.py                  212     22    90%
+src/crawler/login_signal.py                     14      0   100%
+src/crawler/network_interceptor.py             142     24    83%
+src/crawler/page_crawler.py                    739    167    77%
+src/crawler/parallel_crawler.py                243     76    69%
+src/crawler/performance_probe.py                38      2    95%
+src/crawler/playwright_runtime.py               29      7    76%
+src/crawler/politeness.py                      141     10    93%
+src/crawler/session_guard.py                    10      0   100%
+src/crawler/spa_monitor.py                      33      5    85%
+src/crawler/url_safety.py                       50      2    96%
+src/diff/__init__.py                             1      0   100%
+src/diff/comparison.py                         245     64    74%
+src/diff/differ.py                             151      1    99%
+src/diff/ignore_rules.py                       116      4    97%
+src/diff/impact_analyzer.py                     99      1    99%
+src/diff/link_checker.py                        61      6    90%
+src/diff/pair_matcher.py                        60      0   100%
+src/diff/screenshot_diff.py                    288     66    77%
+src/diff/severity.py                            97     10    90%
+src/diff/snapshot.py                           112      7    94%
+src/doctor.py                                   95     27    72%
+src/evidence/__init__.py                         0      0   100%
+src/evidence/pack_model.py                      92      3    97%
+src/evidence/pack_reporter.py                   82      4    95%
+src/generator/__init__.py                        0      0   100%
+src/generator/accessibility_reporter.py         25      0   100%
+src/generator/architecture_generator.py         73      1    99%
+src/generator/burndown_reporter.py              65      4    94%
+src/generator/comparison_reporter.py            99     22    78%
+src/generator/coverage_gap.py                  107      6    94%
+src/generator/csv_reporter.py                   45      2    96%
+src/generator/diff_reporter.py                 155     38    75%
+src/generator/excel_reporter.py                 53      0   100%
+src/generator/feature_catalog.py                47      0   100%
+src/generator/fusion_reporter.py                65     11    83%
+src/generator/heatmap_reporter.py              125     13    90%
+src/generator/html_reporter.py                 450     87    81%
+src/generator/json_reporter.py                  69      2    97%
+src/generator/markdown_generator.py             29      1    97%
+src/generator/markdown_util.py                   3      0   100%
+src/generator/mermaid_generator.py              45      0   100%
+src/generator/pdf_reporter.py                   24      0   100%
+src/generator/refresh_reporter.py              211     18    91%
+src/generator/test_design.py                   253      9    96%
+src/generator/test_plan_generator.py           176      2    99%
+src/generator/testcase_table.py                287     10    97%
+src/generator/trace_reporter.py                 56      0   100%
+src/generator/ux_reporter.py                    44      1    98%
+src/graph/__init__.py                            0      0   100%
+src/graph/state_table.py                       199      9    95%
+src/graph/transition_graph.py                  167      6    96%
+src/health/__init__.py                           0      0   100%
+src/health/technical_health.py                  24      0   100%
+src/ingest/__init__.py                           0      0   100%
+src/ingest/data_reader.py                       85     24    72%
+src/ingest/excel_reader.py                      43      6    86%
+src/ingest/gherkin_reader.py                    82      3    96%
+src/ingest/llm_extractor.py                     91      8    91%
+src/ingest/loader.py                           107     13    88%
+src/ingest/matcher.py                          199     11    94%
+src/ingest/models.py                            59      0   100%
+src/ingest/office_reader.py                     80     21    74%
+src/ingest/req_tracer.py                        87      4    95%
+src/ingest/tables.py                           140      6    96%
+src/ingest/text_reader.py                       51      9    82%
+src/llm/__init__.py                              0      0   100%
+src/llm/activity_log.py                         38      0   100%
+src/llm/industry_template.py                    21      0   100%
+src/llm/openai_client.py                        97     13    87%
+src/llm/prompt_guard.py                         12      0   100%
+src/llm/provider.py                             97      9    91%
+src/llm/screen_classifier.py                    56     13    77%
+src/llm/viewpoint_generator.py                 162     18    89%
+src/main.py                                    695    195    72%
+src/mbt/__init__.py                              2      0   100%
+src/mbt/document_model.py                      224     16    93%
+src/mbt/manual_procedures.py                    86      2    98%
+src/mbt/metamorphic.py                          80      1    99%
+src/mbt/pairwise.py                             48      4    92%
+src/mbt/test_data.py                           152     10    93%
+src/mbt/trace_suggestions.py                    86      6    93%
+src/mbt/validation_observer.py                 108     12    89%
+src/registry/__init__.py                         0      0   100%
+src/registry/session_store.py                   18      0   100%
+src/registry/site_registry.py                   40      0   100%
+src/techniques/__init__.py                       3      0   100%
+src/techniques/combinatorial.py                107      8    93%
+src/techniques/verify.py                        31      0   100%
+src/ux/__init__.py                               1      0   100%
+src/ux/axe_runner.py                            88     10    89%
+src/ux/heuristics.py                            95      5    95%
+src/ux/usability_smells.py                      90      0   100%
+src/viewport/__init__.py                         0      0   100%
+src/viewport/comparison.py                      32      0   100%
+src/viewport/layout_failures.py                 52      0   100%
+src/viewport/profiles.py                        37      0   100%
+src/viewport/reporter.py                        80      3    96%
+src/viewport/runner.py                          56      5    91%
+src/wording/__init__.py                          0      0   100%
+src/wording/consistency.py                     100      1    99%
+web/__init__.py                                 73      2    97%
+web/audit_context.py                            13      2    85%
+web/auth.py                                    141     22    84%
+web/config.py                                   28      0   100%
+web/env_store.py                                38      0   100%
+web/process.py                                  10      0   100%
+web/routes/__init__.py                           0      0   100%
+web/routes/account.py                          247     62    75%
+web/routes/admin.py                             59      8    86%
+web/routes/api_v1.py                           167     30    82%
+web/routes/api_v1_schedule.py                   99     10    90%
+web/routes/auto_run.py                         301    135    55%
+web/routes/autorun_report.py                   105     14    87%
+web/routes/autorun_stages.py                   316     72    77%
+web/routes/crawl.py                            143     23    84%
+web/routes/discover.py                          65     12    82%
+web/routes/feedback.py                          34      0   100%
+web/routes/history.py                          194     79    59%
+web/routes/llm_chat.py                         103     28    73%
+web/routes/login.py                            148     19    87%
+web/routes/metrics.py                            8      3    62%
+web/routes/oidc.py                              91     69    24%
+web/routes/pages.py                             32      0   100%
+web/routes/qa_process.py                       293     94    68%
+web/routes/report.py                           305    127    58%
+web/routes/review.py                           113     10    91%
+web/routes/runs.py                              65      8    88%
+web/routes/schedule.py                         210     13    94%
+web/routes/settings.py                         125     26    79%
+web/routes/site.py                              22      3    86%
+web/routes/tenant_admin.py                     103     26    75%
+web/routes/traceability.py                      63     14    78%
+web/routes/usage.py                             15      0   100%
+web/routes/viewpoints.py                       171     40    77%
+web/security.py                                 45      4    91%
+web/services/__init__.py                         0      0   100%
+web/services/admin_audit.py                    116     10    91%
+web/services/auth_store.py                     576     68    88%
+web/services/auto_run_config.py                  8      0   100%
+web/services/auto_run_job.py                   127     11    91%
+web/services/auto_run_pipeline.py              592    208    65%
+web/services/auto_run_preview.py                36      9    75%
+web/services/cli_runner.py                     139     92    34%
+web/services/comparison_workspace.py            73      3    96%
+web/services/condition_run_status.py            47      1    98%
+web/services/document_autorun.py               114     23    80%
+web/services/drift_summary.py                   20      4    80%
+web/services/egress_gateway.py                 102     17    83%
+web/services/evidence_pack_service.py           66     14    79%
+web/services/export_xlsx.py                    125      2    98%
+web/services/failure_classifier.py             120      2    98%
+web/services/failure_hypothesis.py              42      0   100%
+web/services/feedback_store.py                  70      3    96%
+web/services/job_queue.py                      109     37    66%
+web/services/metrics.py                         57      1    98%
+web/services/mutation_verifier.py               48      2    96%
+web/services/nonfunctional_judge.py             98      4    96%
+web/services/notifier.py                       168     40    76%
+web/services/observation_coverage.py            80      4    95%
+web/services/oidc.py                            93      4    96%
+web/services/openai_qa.py                      126     80    37%
+web/services/openapi_docs.py                    35      0   100%
+web/services/openapi_spec.py                    52      2    96%
+web/services/playwright_executor.py            419     54    87%
+web/services/qa/__init__.py                      0      0   100%
+web/services/qa/advanced_generator.py          111      5    95%
+web/services/qa/advanced_html.py                83      2    98%
+web/services/qa/doc_generator.py               184      9    95%
+web/services/qa/helpers.py                     178     13    93%
+web/services/qa/markdown_lite.py               102      0   100%
+web/services/qa/testcase_docs.py                43      0   100%
+web/services/retention.py                      167     25    85%
+web/services/run_store.py                      158     22    86%
+web/services/scheduler.py                      316     57    82%
+web/services/screen_test_design.py             162      9    94%
+web/services/spec_ts_generator.py              396    130    67%
+web/services/test_design_settings.py            43      2    95%
+web/services/testcase_spec_generator.py         96     96     0%
+web/services/testcase_table_store.py           216     30    86%
+web/services/traceability.py                    87      8    91%
+web/services/untrusted_content.py               50      2    96%
+web/services/usage_tracker.py                  219     30    86%
+web/services/viewpoint_blueprints.py           109      4    96%
+web/services/viewpoint_proposals.py             38     28    26%
+web/services/viewpoint_sources.py               34      4    88%
+web/services/viewpoint_store.py                455     74    84%
+web/services/viewpoint_store_operations.py     433    102    76%
+web/services/viewpoint_templates.py            113      8    93%
+web/services/visual_complexity.py               56      3    95%
+web/summary.py                                  44      1    98%
+web/tenancy.py                                  34      1    97%
+web/types.py                                    20     20     0%
+web/validation.py                               72     11    85%
+----------------------------------------------------------------
+TOTAL                                        25297   4027    84%
+
+Required test coverage of 80% reached. Total coverage: 84.08%
+=========================== short test summary info ============================
+FAILED tests/test_ui_contract.py::TestSystemSelect::test_offers_exactly_three_systems
+FAILED tests/test_ui_contract.py::TestSystemSelect::test_names_all_systems - ...
+2 failed, 3266 passed in 47.71s

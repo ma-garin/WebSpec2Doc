@@ -29,6 +29,34 @@
 <div class="app-shell">
 
   <aside class="app-sidebar">
+    <div class="ta2-rail" data-system="testlab" role="tablist" aria-label="機能カテゴリ">
+      <button type="button" class="ta2-rail-item" data-nav-cat="home" role="tab"
+              aria-selected="false" title="ホーム">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 11.5L12 4l9 7.5"/><path d="M5.5 10v10h13V10M9.5 20v-6h5v6"/></svg>
+        <span class="ta2-rail-label">ホーム</span>
+      </button>
+      <button type="button" class="ta2-rail-item" data-nav-cat="design" role="tab"
+              aria-selected="false" title="計画・設計">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14.5 3.5l6 6-10 10H4.5v-6z"/><path d="M12.5 5.5l6 6"/><path d="M4.5 19.5h16"/></svg>
+        <span class="ta2-rail-label">設計</span>
+      </button>
+      <button type="button" class="ta2-rail-item" data-nav-cat="run" role="tab"
+              aria-selected="false" title="実装・実行">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M10 8.2l6 3.8-6 3.8z"/></svg>
+        <span class="ta2-rail-label">実行</span>
+      </button>
+      <button type="button" class="ta2-rail-item" data-nav-cat="improve" role="tab"
+              aria-selected="false" title="改善・完了">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20v-5h5"/><path d="M4.6 15a8 8 0 1 0 1.7-3.2"/><path d="M9 12l2 2 4-5"/></svg>
+        <span class="ta2-rail-label">改善</span>
+      </button>
+      <button type="button" class="ta2-rail-item" data-nav-cat="config" role="tab"
+              aria-selected="false" title="設定">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M10.5 13.5a4 4 0 0 0 5.7 0l2.3-2.3a4 4 0 0 0-5.7-5.7l-1.3 1.3"/><path d="M13.5 10.5a4 4 0 0 0-5.7 0l-2.3 2.3a4 4 0 0 0 5.7 5.7l1.3-1.3"/></svg>
+        <span class="ta2-rail-label">設定</span>
+      </button>
+    </div>
+    <div class="ta2-side-main">
     <a href="/" class="app-brand">
       <span class="app-brand-mark">W</span>
       {# 副題はシステムごとに違う。docs のままだとテスト活動支援でも「QAドキュメント生成」と
@@ -50,7 +78,7 @@
     </button>
     <button type="button" class="btn-primary sidebar-primary-action" id="ta-new-btn" data-system="testlab">
       <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" width="14" height="14" aria-hidden="true"><path d="M6 4l14 8-14 8z"/></svg>
-      <span>はじめる</span>
+      <span class="add-site-label">はじめる</span>
     </button>
 {% include 'partials/nav.html' %}
     <button type="button" id="sidebar-toggle-btn" class="sidebar-toggle-btn" title="サイドバーを折りたたむ">
@@ -62,6 +90,7 @@
       <span data-system="docs">URLから画面仕様書・テスト設計・画面遷移図を生成します。</span>
       <span data-system="testlab">仕様書・GitHub・コードからテスト条件を抽出し、設計から不具合分析まで支援します。</span>
       <span data-system="autorun">受領から実行完了レポートの納品までを止めずに回します。</span>
+    </div>
     </div>
   </aside>
 

@@ -572,3 +572,128 @@ body[data-system="testlab"] .ta2-ai-foot button {
   font-size: 13px;
   cursor: pointer;
 }
+
+/* ══════════════ 二階層ナビ（親カテゴリのレール ＋ 子メニューのパネル） ══════════════ */
+/* 工程が 12 個あり、1 列に並べると「今どの局面にいるか」が読めない。
+   親カテゴリを色面の縦レールに、その配下だけを白面のパネルに出す。
+   参考: /Users/fujimagariyuki/dev/active/test の .sb-rail / .sb-panel。
+
+   レールは**サイドバーの端から端まで貫く**。途中から始まって途中で終わる色面は、
+   面の役割（ここが親の領域）を示せず、ただ浮いて見える。 */
+
+/* 既定は器として透明。System 01 のサイドバーは従来の 1 列のまま。 */
+.ta2-side-main { display: contents; }
+.ta2-rail,
+.ta2-panel-head { display: none; }
+
+body[data-system="testlab"] .app-sidebar {
+  flex-direction: row;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;   /* スクロールはレールではなく本体側に持たせる */
+}
+body[data-system="testlab"] .app-shell:not(.sidebar-collapsed) { --sidebar-w: 304px; }
+
+/* 現在のシステム名はブランド副題にも出ている。切替行では「システム」の見出しを省き、
+   名前を 1 行に収める（2 行に折り返すと切替ボタンまで縦に割れる）。 */
+body[data-system="testlab"] .sys-switcher { gap: 8px; padding: 8px 10px; }
+body[data-system="testlab"] .sys-switcher-label { display: none; }
+body[data-system="testlab"] .sys-switcher-cur {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+body[data-system="testlab"] .sys-switcher-swap { flex: none; white-space: nowrap; }
+
+body[data-system="testlab"] .ta2-rail {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 5px;
+  width: 72px;
+  padding: 14px 8px;
+  overflow-y: auto;
+  background: var(--d-primary);
+}
+body[data-system="testlab"] .ta2-rail-item {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 56px;
+  padding: 6px 2px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: none;
+  color: rgba(255, 255, 255, .72);
+  cursor: pointer;
+}
+body[data-system="testlab"] .ta2-rail-item:hover { background: rgba(255, 255, 255, .12); color: #fff; }
+body[data-system="testlab"] .ta2-rail-item[aria-selected="true"] {
+  border-color: rgba(255, 255, 255, .24);
+  background: rgba(255, 255, 255, .2);
+  color: #fff;
+}
+body[data-system="testlab"] .ta2-rail-item svg { width: 20px; height: 20px; }
+body[data-system="testlab"] .ta2-rail-label {
+  display: block;
+  margin-top: 3px;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+/* 本体（ブランド・切替・はじめる・子メニュー・折りたたみ・説明）を 1 列に積む */
+body[data-system="testlab"] .ta2-side-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px 12px;
+  overflow-y: auto;
+}
+
+body[data-system="testlab"] .ta2-panel-head {
+  display: block;
+  flex-shrink: 0;
+  padding: 0 10px 9px;
+  border-bottom: 1px solid var(--d-line-soft);
+}
+body[data-system="testlab"] .ta2-panel-caption {
+  display: block;
+  color: var(--d-ink-faint);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .05em;
+}
+body[data-system="testlab"] .ta2-panel-title {
+  display: block;
+  margin-top: 1px;
+  color: var(--d-ink);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+body[data-system="testlab"] .app-nav {
+  align-content: start;
+  min-height: 0;
+}
+/* 選ばれていないカテゴリの子項目は出さない（1 列に全部並ぶ状態に戻さない） */
+body[data-system="testlab"] .app-nav-item[data-nav-cat]:not([data-cat-open]) { display: none; }
+
+/* サポート（工程カテゴリの外）は最下部へ落とし、線で隔てる。
+   カテゴリの子項目の直後に続くと、その親に属しているように読めてしまう。 */
+body[data-system="testlab"] .app-nav-group[data-system="common"] {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--d-line-soft);
+  color: var(--d-ink-faint);
+}
+
+/* 畳んだときはレールだけ残す。親カテゴリは常に見えている必要がある。 */
+body[data-system="testlab"] .app-shell.sidebar-collapsed { --sidebar-w: 72px; }
+body[data-system="testlab"] .app-shell.sidebar-collapsed .ta2-side-main { display: none; }

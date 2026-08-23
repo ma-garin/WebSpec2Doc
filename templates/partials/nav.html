@@ -1,3 +1,7 @@
+    <div class="ta2-panel-head" data-system="testlab">
+      <span class="ta2-panel-caption">機能カテゴリ</span>
+      <strong class="ta2-panel-title" id="ta2-cat-title">ホーム</strong>
+    </div>
     <nav class="app-nav" aria-label="メインナビゲーション">
       <div class="app-nav-group" data-system="docs">メイン</div>
       <button class="app-nav-item is-active" data-view="dashboard" data-system="docs">
@@ -24,42 +28,40 @@
       <!-- テストケース一覧は、解析前は「report.json not found」しか出せず
            単独では判断材料にならなかったため廃止。実行履歴へ置き換える。 -->
             <!-- テスト活動支援: ISO 29119 の工程順。番号とグループ見出しは持たせない -->
-      <button class="app-nav-item" data-view="test-activity" data-system="testlab">
+      <button class="app-nav-item" data-view="test-activity" data-system="testlab" data-nav-cat="home">
         <span class="nav-label">ホーム</span>
       </button>
-      <div class="ta2-sep" data-system="testlab" aria-hidden="true"></div>
-      <button class="app-nav-item" data-view="test-plan" data-system="testlab">
+      <button class="app-nav-item" data-view="test-plan" data-system="testlab" data-nav-cat="design">
         <span class="nav-label">テスト計画</span>
       </button>
-      <button class="app-nav-item" data-view="test-analysis" data-system="testlab">
+      <button class="app-nav-item" data-view="test-analysis" data-system="testlab" data-nav-cat="design">
         <span class="nav-label">テスト基本設計</span>
       </button>
-      <button class="app-nav-item" data-view="test-strategy" data-system="testlab">
+      <button class="app-nav-item" data-view="test-strategy" data-system="testlab" data-nav-cat="design">
         <span class="nav-label">テスト詳細設計</span>
       </button>
-      <button class="app-nav-item" data-view="test-design" data-system="testlab">
+      <button class="app-nav-item" data-view="test-design" data-system="testlab" data-nav-cat="design">
         <span class="nav-label">テストケース実装</span>
       </button>
-      <button class="app-nav-item" data-view="test-implementation" data-system="testlab">
+      <button class="app-nav-item" data-view="test-implementation" data-system="testlab" data-nav-cat="run">
         <span class="nav-label">自動テストケース実装</span>
       </button>
-      <button class="app-nav-item" data-view="test-execution" data-system="testlab">
+      <button class="app-nav-item" data-view="test-execution" data-system="testlab" data-nav-cat="run">
         <span class="nav-label">自動テスト実行</span>
       </button>
-      <button class="app-nav-item" data-view="manual-execution" data-system="testlab">
+      <button class="app-nav-item" data-view="manual-execution" data-system="testlab" data-nav-cat="run">
         <span class="nav-label">手動テスト実行</span>
       </button>
-      <button class="app-nav-item" data-view="defect-analysis" data-system="testlab">
+      <button class="app-nav-item" data-view="defect-analysis" data-system="testlab" data-nav-cat="improve">
         <span class="nav-label">不具合分析</span>
       </button>
-      <button class="app-nav-item" data-view="code-fix" data-system="testlab">
+      <button class="app-nav-item" data-view="code-fix" data-system="testlab" data-nav-cat="improve">
         <span class="nav-label">コード修正提案</span>
       </button>
-      <button class="app-nav-item" data-view="test-completion" data-system="testlab">
+      <button class="app-nav-item" data-view="test-completion" data-system="testlab" data-nav-cat="improve">
         <span class="nav-label">テスト完了</span>
       </button>
-      <div class="ta2-sep" data-system="testlab" aria-hidden="true"></div>
-      <button class="app-nav-item" data-view="integrations" data-system="testlab">
+      <button class="app-nav-item" data-view="integrations" data-system="testlab" data-nav-cat="config">
         <span class="nav-label">連携設定</span>
       </button>
 <button class="app-nav-item" id="nav-docs-run-history-btn" type="button" data-system="docs">

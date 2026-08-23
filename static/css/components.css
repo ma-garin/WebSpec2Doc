@@ -341,8 +341,9 @@
   border: 1px solid var(--color-border); border-radius: var(--radius-full); padding: 1px 9px;
 }
 /* 折りたたみ時はラベルを隠しコンパクトに */
-.app-sidebar.is-collapsed .sys-switcher-label,
-.app-sidebar.is-collapsed .sys-switcher-cur { display: none; }
+.app-shell.sidebar-collapsed .sys-switcher-label,
+.app-shell.sidebar-collapsed .sys-switcher-cur,
+.app-shell.sidebar-collapsed .sys-switcher-swap { display: none; }
 
 /* ---- 参考（依拠する標準・先行研究・事例） ---- */
 .refs-page {

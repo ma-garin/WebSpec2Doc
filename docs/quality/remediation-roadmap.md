@@ -128,11 +128,17 @@
 - **変更**: 突合表の 17 定数から着手。各定数につき「定数を import して境界の両側を検証する」テストを追加（`MAX_PARALLELISM=8`・`DEFAULT_MAX_PAGES=50`・TIMEOUT 系を優先）
 - **完了判定**: 追加テストが定数参照で書かれている（リテラル再記載は不可）こと・全 PASS
 
-### R-11 機能契約→テストの追跡強化 — Sonnet ○
+### R-11 機能契約→テストの追跡強化 — **承認が先**（2026-08-23 に前提を訂正）
 
 - **根拠**: `scripts/quality_harness.py:103-106` は `required_tests` が空でないことしか検査しない。failure_mode がテストに現れない機能 15/52（critical 1 = `tenant_isolation`）
-- **変更**: quality_harness に「required_tests に列挙されたテストが実在するか（pytest --collect-only で解決可能か）」の検査を追加。`tenant_isolation` の failure_mode テストを最優先で追加
-- **完了判定**: `GATES_REQUESTED=1 venv/bin/python scripts/quality_harness.py` PASS のまま、実在しないテスト名を書いたら FAIL になること
+- **訂正**: 初版は「required_tests に列挙されたテストが `pytest --collect-only` で解決可能かを検査する」と書いたが、**これは実装できない**。
+  `quality/feature_contracts.yml` の `required_tests` は `happy_path` / `error_path` / `evidence` / `cancel_path` といった**抽象ラベル**であり、テスト関数名ではない（`quality/feature_contracts.yml:48-52` 等・52 機能すべて同形式）。ラベルと実テストを機械的に突き合わせる手段が現状は存在しない
+- **判断が要る点**: 突き合わせを可能にするには対応付けの規約を新設する必要がある。選択肢:
+  - (a) テスト側に pytest マーカーを付ける（例: `@pytest.mark.contract("autorun_execution", "error_path")`）。既存 3,268 テストへの後付けは段階的
+  - (b) 契約側に実テスト名を書く欄（`test_refs`）を追加する。契約ファイルの改修のみで済むが、テスト改名時に腐る
+  - (c) 現状維持とし、`tenant_isolation` など critical 機能だけ手動で対応表を作る
+- **承認後の共通作業**: `tenant_isolation`（critical・failure_mode がテストに現れていない唯一の critical）のテストを最優先で追加する
+- **完了判定**: 選んだ方式で「対応が取れていない critical 機能が 0 件」を quality_harness が検出できること
 
 ---
 

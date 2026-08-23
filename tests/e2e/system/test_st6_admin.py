@@ -14,7 +14,6 @@ from playwright.sync_api import Browser, Page, expect
 from tests.e2e.system.helpers import (
     ADMIN,
     MEMBER,
-    OWNER,
     StUser,
     create_user,
     find_user_id,
@@ -108,44 +107,124 @@ class TestStAdminOperations:
     def test_st026_role_change_grants_admin_access(
         self, page: Page, system_server: str
     ) -> None:
-        """ST-026: member を admin へ変更すると管理画面へアクセスできるようになる。"""
+        """ST-026: member を admin へ変更すると管理画面の管理操作が使えるようになる。
+
+        現行ロールは member / admin の2値（web/services/auth_store.py:37-39 ROLES）。
+        管理者判定は `#view-user-management[data-is-admin]`
+        （templates/partials/view-user-management.html:11）で、非管理者では
+        `.uadm-admin-only` が hidden・`#uadm-denied-card` が表示される
+        （static/js/user-admin-view.js:120-123）。旧 `#uadm-tenant-form` は実装から消滅済み。
+        """
         target = StUser("st-promote@example.com", "st-promote-pass-1", "ST Promote", "member")
         login(page, system_server, ADMIN)
         create_user(page, system_server, target)
         user_id = find_user_id(page, system_server, target.email)
+
+        # 昇格前: member には管理操作が出ず、拒否カードが出る
+        page.request.post(f"{system_server}/auth/logout")
+        login(page, system_server, target)
+        page.goto(f"{system_server}/user-management")
+        expect(page.locator("#uadm-denied-card")).to_be_visible()
+        expect(page.locator("#uadm-add-btn")).not_to_be_visible()
+
+        page.request.post(f"{system_server}/auth/logout")
+        login(page, system_server, ADMIN)
         resp = page.request.patch(
             f"{system_server}/api/auth/users/{user_id}", data={"role": "admin"}
         )
         assert resp.ok, f"ロール変更失敗: {resp.status} {resp.text()}"
 
+        # 昇格後: 本人が管理操作を行える
         page.request.post(f"{system_server}/auth/logout")
         login(page, system_server, target)
         page.goto(f"{system_server}/user-management")
-        expect(page.locator("#uadm-tenant-form")).to_be_visible()
+        expect(page.locator("#uadm-add-btn")).to_be_visible()
+        expect(page.locator("#uadm-denied-card")).not_to_be_visible()
+        assert any(
+            user.get("email") == target.email and user.get("role") == "admin"
+            for user in list_users(page, system_server)
+        ), "昇格したユーザーが admin として一覧に出ていません"
 
-    def test_st027_last_owner_cannot_be_demoted(self, page: Page, system_server: str) -> None:
-        """ST-027: 最後の有効オーナーは自身を降格できない。"""
-        login(page, system_server, OWNER)
-        owner_id = find_user_id(page, system_server, OWNER.email)
-        resp = page.request.patch(
-            f"{system_server}/api/auth/users/{owner_id}", data={"role": "member"}
-        )
-        assert not resp.ok, "最後のオーナーの降格が成功してしまいました"
-        entry = next(
-            user for user in list_users(page, system_server) if user.get("email") == OWNER.email
-        )
-        assert entry.get("role") in (None, "owner"), f"オーナーが降格されています: {entry}"
+    def test_st027_last_admin_cannot_be_demoted(self, page: Page, system_server: str) -> None:
+        """ST-027: テナントの管理者が0人になる降格は拒否される。
+
+        owner ロールは admin に統合済み（auth_store.py:41-43 `_LEGACY_ROLE_ALIASES`）で
+        「最後のオーナー」という概念は現行仕様に無い。現行の不変条件は
+        「テナントの管理者を0人にしない」であり、対象を除いた残りに有効な admin が
+        居るかで判定される（auth_store.py:713-716 → 872-893 `_assert_admin_remains`）。
+        違反時は `AuthError(..., "last_admin")` を 400 で返す
+        （web/routes/account.py:387-388）。
+        よって「admin が1名だけの状態を作り、その1名の降格を試みる」形で検証する。
+        """
+        login(page, system_server, ADMIN)
+        admins = [
+            user
+            for user in list_users(page, system_server)
+            if user.get("role") == "admin" and user.get("is_active", True)
+        ]
+        keeper = next(user for user in admins if user.get("email") == ADMIN.email)
+        keeper_id = str(keeper.get("id"))
+        # 操作主体（ADMIN）だけを残し、他の admin は一時的に member へ降格する
+        demoted: list[str] = []
+        try:
+            for user in admins:
+                user_id = str(user.get("id"))
+                if user_id == keeper_id:
+                    continue
+                resp = page.request.patch(
+                    f"{system_server}/api/auth/users/{user_id}", data={"role": "member"}
+                )
+                assert resp.ok, f"前提作成の降格に失敗: {resp.status} {resp.text()}"
+                demoted.append(user_id)
+
+            resp = page.request.patch(
+                f"{system_server}/api/auth/users/{keeper_id}", data={"role": "member"}
+            )
+            assert resp.status == 400, (
+                f"管理者が0人になる降格が拒否されていません: {resp.status} {resp.text()}"
+            )
+            assert resp.json().get("code") == "last_admin", (
+                f"想定と違うエラーコード: {resp.text()}"
+            )
+            entry = next(
+                user for user in list_users(page, system_server) if user.get("id") == keeper_id
+            )
+            assert entry.get("role") == "admin", f"管理者が降格されています: {entry}"
+        finally:
+            # 後続テストのために元の admin 構成へ戻す
+            for user_id in demoted:
+                page.request.patch(
+                    f"{system_server}/api/auth/users/{user_id}", data={"role": "admin"}
+                )
 
     def test_st028_api_token_issue_and_revoke(self, page: Page, system_server: str) -> None:
-        """ST-028: API トークンを発行すると一度だけ表示され、削除後は一覧から消える。"""
+        """ST-028: API トークンは発行時に一度だけ表示され、失効後は API 認証が拒否される。
+
+        失効は論理削除で、`revoked_at` を立てるだけ（auth_store.py:1255-1262）。
+        一覧は `revoked_at` で絞り込まない（同 1244-1253）ため「一覧から消える」ことは
+        期待しない。仕様（docs/system_test_cases.csv:29）の合否基準は
+        「削除後はそのトークンでのAPIアクセスが拒否される」であり、
+        `resolve_api_token` が revoked を None 扱いにし（auth_store.py:1233-1234）、
+        web/auth.py:136-139 が 401 を返すことで満たされる。
+        """
         token_name = "st-e2e-token"
+        api_url = f"{system_server}/api/v1/sites"
         login(page, system_server, ADMIN)
         page.locator(".sysselect-account").click()
         expect(page.locator("#token-form")).to_be_visible()
         page.locator("#token-name").fill(token_name)
         page.locator('#token-form button[type="submit"]').click()
-        expect(page.locator("#token-once")).to_contain_text(re.compile(r"\S"))
+        # 平文トークンはこの1回だけ表示される（static/js/account-view.js:119-123）
+        expect(page.locator("#token-once")).to_contain_text("ws2d_")
         expect(page.locator("#token-rows")).to_contain_text(token_name)
+        match = re.search(r"ws2d_[A-Za-z0-9_-]+", page.locator("#token-once").inner_text())
+        assert match, "発行画面から平文トークンを取得できません"
+        raw_token = match.group(0)
+        auth_header = {"Authorization": f"Bearer {raw_token}"}
+
+        # 失効前はそのトークンで API v1 にアクセスできる
+        resp = page.request.get(api_url, headers=auth_header)
+        assert resp.status == 200, f"発行直後のトークンでAPIが使えません: {resp.status} {resp.text()}"
 
         tokens = list_api_tokens(page, system_server)
         token_id = next(
@@ -154,6 +233,17 @@ class TestStAdminOperations:
         )
         assert token_id, f"発行したトークンが一覧にありません: {tokens}"
         resp = page.request.delete(f"{system_server}/api/auth/api-tokens/{token_id}")
-        assert resp.ok, f"トークン削除失敗: {resp.status} {resp.text()}"
-        remaining = [t for t in list_api_tokens(page, system_server) if t.get("name") == token_name]
-        assert not remaining, f"削除後もトークンが残っています: {remaining}"
+        assert resp.ok, f"トークン失効失敗: {resp.status} {resp.text()}"
+
+        # 論理削除なので一覧には残り、revoked_at が入る
+        entry = next(
+            (t for t in list_api_tokens(page, system_server) if t.get("id") == token_id), None
+        )
+        assert entry is not None, "失効後にトークンが一覧から消えました（実装は論理削除）"
+        assert entry.get("revoked_at"), f"revoked_at が設定されていません: {entry}"
+
+        # 仕様上の合否基準: 失効したトークンでは API アクセスが拒否される
+        resp = page.request.get(api_url, headers=auth_header)
+        assert resp.status == 401, (
+            f"失効済みトークンでAPIアクセスが拒否されていません: {resp.status} {resp.text()}"
+        )

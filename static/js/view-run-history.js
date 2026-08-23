@@ -116,7 +116,10 @@ async function loadRunHistory() {
   if (!tbody) return;
   tbody.innerHTML = '<tr><td colspan="8">読み込んでいます…</td></tr>';
   try {
-    const res = await fetch('/api/history/runs');
+    // limit=0 は全件。件数表示（「N 件の実行（全 M 件中）」）が取得件数から
+    // 算出されるため、ページングした部分集合では実際より少ない件数を表示してしまう。
+    // 追加読み込み方式（R-07・UI 案の承認待ち）へ移行するまでは全件を取る。
+    const res = await fetch('/api/history/runs?limit=0');
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '実行履歴を取得できませんでした');
     _rhRuns = data.runs || [];

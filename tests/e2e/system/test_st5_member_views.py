@@ -40,7 +40,10 @@ class TestStMemberViews:
         errors: list[str] = []
         page.on("pageerror", lambda exc: errors.append(str(exc)))
         login(page, system_server, MEMBER)
-        resp = page.goto(f"{system_server}/traceability", wait_until="domcontentloaded")
+        # 現行実装のページ URL は /traceability/view（web/routes/traceability.py:94）。
+        # 同ファイルの定義は /traceability/matrix（API・38 行目）と /traceability/view のみで、
+        # /traceability というパスは存在しない（＝404 はテストの陳腐化）。
+        resp = page.goto(f"{system_server}/traceability/view", wait_until="domcontentloaded")
         assert resp is not None and resp.ok, f"応答: {resp.status if resp else 'なし'}"
         assert not errors, f"JS エラー: {errors}"
 
@@ -56,7 +59,10 @@ class TestStMemberViews:
         """ST-029: 個人設定で自分のパスワードを変更し、新パスワードで再ログインできる。"""
         new_password = "st-member2-updated-9"
         login(page, system_server, PW_CHANGE_MEMBER)
-        page.locator(".sysselect-account").click()
+        # システム選択画面の個人設定導線は .sysselect-account 内のアンカー
+        # <a class="sysselect-text-btn" href="/account">（templates/system-select.html:26）。
+        # .sysselect-account 自体はコンテナ div（同 21 行目）で、クリックしても遷移しない。
+        page.locator('.sysselect-account a[href="/account"]').click()
         expect(page.locator("#view-account")).to_be_visible()
         page.locator("#pw-current").fill(PW_CHANGE_MEMBER.password)
         page.locator("#pw-new").fill(new_password)
@@ -69,6 +75,11 @@ class TestStMemberViews:
 
     def test_st030_usage_view_renders(self, page: Page, system_server: str) -> None:
         """ST-030: 使用量ビューが表示され、集計項目が存在する。"""
-        open_docs_system(page, system_server, MEMBER)
-        switch_view_by_script(page, "usage")
+        # 使用量ビューはアプリシェル（templates/index.html の include 一覧）に含まれず、
+        # /usage が partials/view-usage.html を単体でレンダリングする
+        # （web/routes/usage.py:27-30）。よって switchView('usage') では到達できない。
+        login(page, system_server, MEMBER)
+        resp = page.goto(f"{system_server}/usage", wait_until="domcontentloaded")
+        assert resp is not None and resp.ok, f"応答: {resp.status if resp else 'なし'}"
+        expect(page.locator("#view-usage")).to_be_visible()
         expect(page.locator("#usage-crawls")).to_be_attached()

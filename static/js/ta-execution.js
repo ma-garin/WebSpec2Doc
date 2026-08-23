@@ -79,7 +79,10 @@
     const tbody = document.getElementById('ta-exec-result-body');
     if (tbody) tbody.innerHTML = '<tr><td colspan="5"><div class="empty">読み込んでいます…</div></td></tr>';
     try {
-      const res = await fetch('/api/history/runs');
+      // limit=0 は全件。件数表示（実行数・成功率）が取得件数から算出されるため、
+      // ページングした部分集合を渡すと実際より少ない件数を表示してしまう。
+      // 追加読み込み方式（R-07・UI 案の承認待ち）へ移行するまでは全件を取る。
+      const res = await fetch('/api/history/runs?limit=0');
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || '実行履歴を取得できませんでした');
       const runs = (data.runs || []).filter((r) => TA_EXEC_TYPES.includes(r.type));

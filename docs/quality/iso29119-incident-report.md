@@ -157,3 +157,31 @@ E2E の失敗切り分けとは別に、**応答時間ベースライン測定**
 | 検出できなかった理由 | ISO/IEC 25010 の性能効率性に該当する既存テストは 3,106 件中 **5 件**のみで、応答時間・応答サイズに関する自動検証が存在しない（`iso25010-coverage.md`） |
 | 推奨対処 | (1) API に `limit` / `offset` を導入し既定を直近 N 件にする (2) 画面側を追加読み込みにする (3) 応答時間・サイズの回帰テストを追加する |
 | 証跡 | `docs/quality/evidence/perf-baseline.csv` |
+
+---
+
+## 追補: R-05（ST-029）の判定
+
+**判定: テスト陳腐化（製品欠陥ではない）。INC-10 / R-2 の「判定不能」を解消する。**
+
+| 項目 | 内容 |
+|---|---|
+| 事象 | `test_st029_change_own_password` が `#view-account` の `Locator expected to be visible` で失敗 |
+| 再現条件 | **単発事象ではなく決定論的に 100% 再現する。**flaky ではない |
+| 真因 | テストが `.sysselect-account` を `click()` していた。これは `templates/system-select.html:21` の**コンテナ `div`** であり、クリックしても遷移しない。個人設定への実導線は同 26 行目の `<a class="sysselect-text-btn" href="/account">個人設定</a>` |
+| 製品側の健全性 | 導線（`/account`）→ `web/routes/pages.py:23,92`（`account` を許可ビューとして index.html をレンダリング）→ `static/js/core.js:185` が `_viewFromPath` で `account` ビューを開く → `templates/partials/view-account.html:22` の `#password-form` → `web/routes/account.py:322` の `POST /api/auth/password` まで**一気通貫で動作する**。新パスワードでの再ログインまで PASS を確認済み |
+| 対処 | テスト側を実導線（`.sysselect-account a[href="/account"]`）へ追随。製品コードは無変更 |
+
+### 併せて確定した 2 件（R-04 の 4）
+
+| ID | 判定 | 真因 / 根拠 |
+|---|---|---|
+| ST-020 | テスト陳腐化 | テストが叩いていた `/traceability` は存在しない。実ルートは `/traceability/view`（`web/routes/traceability.py:94`）と API の `/traceability/matrix`（同 38）のみ |
+| ST-030 | テスト陳腐化 | 使用量ビューは**アプリシェルに含まれない**。`templates/index.html` の include 一覧に `partials/view-usage.html` が無く、`web/routes/usage.py:27-30` の `GET /usage` が当該 partial を単体でレンダリングする。よって `switchView('usage')` では到達できない |
+
+### 付随して観察した設計上の不整合（製品欠陥とまでは断定しない・未対処）
+
+`GET /usage` は共通レイアウト（`base.html` / ナビ / 共通 CSS）を経由せず `partials/view-usage.html` を直接返す。
+描画自体は partial 内のインライン `<style>` / `<script>`（`templates/partials/view-usage.html:59`）で成立するため機能欠陥ではないが、
+`web/routes/traceability.py:94-101` の docstring が「以前は partial 断片だけを返しており CSS も JS も読み込まれず表が描画されなかった」として**同型の問題を過去に修正済み**である。
+`/usage` は同じ形のまま残っており、ナビからの導線も無い（`/usage` を直接開く以外に到達手段が無い）。**要否の判断は未実施。**

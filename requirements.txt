@@ -11,7 +11,7 @@ jinja2==3.1.6
 openpyxl==3.1.4
 
 # 参考文書取り込み（Doc Fusion）
-pypdf==6.14.2
+pypdf==6.15.0
 PyYAML==6.0.1
 defusedxml==0.7.1
 

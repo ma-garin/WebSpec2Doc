@@ -195,20 +195,53 @@ def api_autorun_cancel() -> dict | tuple[dict, int]:
     return {"ok": True}
 
 
+HISTORY_RUNS_DEFAULT_LIMIT = 200
+HISTORY_RUNS_MAX_LIMIT = 1000
+
+
+def _history_paging_args() -> tuple[int, int]:
+    """実行履歴のページング引数。不正値は例外にせず既定へ丸める。
+
+    limit=0 は「全件」（ページング導入前の呼び出し元との後方互換）。
+    """
+    raw_limit = request.args.get("limit")
+    if raw_limit is None:
+        limit = HISTORY_RUNS_DEFAULT_LIMIT
+    else:
+        try:
+            limit = int(raw_limit)
+        except ValueError:
+            limit = HISTORY_RUNS_DEFAULT_LIMIT
+        limit = 0 if limit <= 0 else min(limit, HISTORY_RUNS_MAX_LIMIT)
+    try:
+        offset = max(0, int(request.args.get("offset", 0)))
+    except ValueError:
+        offset = 0
+    return limit, offset
+
+
 @bp.get("/api/history/runs")
 def api_history_runs() -> dict:
     """種別を問わない一般化された実行履歴（R2-27）。
 
     usage_log.jsonl の実績と実行中（未終端）のAutoRunジョブをマージして返す。
     リンクは実在するファイルのみ（実在検証・捏造しない）。
+
+    実行履歴は使うほど増えるため、既定で直近 HISTORY_RUNS_DEFAULT_LIMIT 件に絞る
+    （INC-P01: 全件返却で応答が 1.76MB / 3,770 件まで肥大していた）。
+    total を必ず返すので、呼び出し側は「まだ先がある」ことを判定できる。
     """
     from web.services.usage_tracker import build_run_history
 
     with _JOBS_LOCK:
         running_jobs = [job.to_dict() for job in _JOBS.values()]
     runs = build_run_history(_out(), running_jobs)
-    _attach_stage_approval(runs)
-    return {"runs": runs}
+    total = len(runs)
+    limit, offset = _history_paging_args()
+    page = runs[offset:] if limit == 0 else runs[offset : offset + limit]
+    # 段階承認の付与は返す分だけで足りる（全件に付けると件数に比例して遅くなる）
+    _attach_stage_approval(page)
+    return {"runs": page, "total": total, "limit": limit, "offset": offset}
 
 
 def _attach_stage_approval(runs: list[dict]) -> None:

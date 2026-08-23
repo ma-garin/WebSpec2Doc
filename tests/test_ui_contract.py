@@ -120,22 +120,24 @@ class TestSystemScoping:
 class TestSystemSelect:
     """ログイン後のシステム選択ハブ。"""
 
-    def test_offers_exactly_three_systems(self, systems: str) -> None:
-        """01 ドキュメント作成 / 02 AutoRun / 03 CLIモード の 3 系統。"""
+    def test_offers_exactly_four_systems(self, systems: str) -> None:
+        """01 ドキュメント作成 / 02 テスト活動支援 / 03 AutoRun / 04 CLI・API の 4 系統。"""
         cards = re.findall(r'class="syscard syscard-(\w+)"', systems)
-        assert sorted(cards) == ["cli", "doc", "run"]
+        assert sorted(cards) == ["cli", "doc", "run", "test"]
 
     def test_links_to_each_system(self, systems: str) -> None:
         """各カードはそのシステムの TOP を指す。作業画面（/generate）へ直行しない。"""
         assert 'href="/dashboard"' in systems
+        assert 'href="/test-activity"' in systems
         assert 'href="/auto-run"' in systems
         assert 'href="/cli"' in systems
         assert 'href="/generate"' not in systems
 
     def test_names_all_systems(self, systems: str) -> None:
         assert "ドキュメント作成" in systems
+        assert "テスト活動支援" in systems
         assert "AutoRun" in systems
-        assert "CLI モード" in systems
+        assert "CLI / API" in systems
 
     def test_cli_card_states_it_has_no_screen(self, systems: str) -> None:
         """CLI は画面を持たない。開いたら画面が出ると誤解させない。"""

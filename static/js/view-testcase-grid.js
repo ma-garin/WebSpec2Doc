@@ -43,20 +43,54 @@ function tcgCellRaw(row, key) {
 }
 
 // ============================================================
-// 読み込み
+// 読み込み（System 01 の結果タブ / System 02 の設計画面で共用）
 // ============================================================
-async function renderResultTestcases() {
-  const host = resultHero;
-  TCG.domain = ((document.getElementById('r-domain') || {}).textContent || '').trim();
-  host.innerHTML =
+const TCG_RESULT_NOTE = 'テスト設計から生成したローレベルテストケースです。手順・期待結果は省略せず全文を表示します。セルをダブルクリック（または Enter）で編集でき、編集内容と履歴はサーバに保存されます。';
+
+// TCG はグローバル単数のため、グリッドは同時に 2 つ存在できない。
+// マウント先の外に残っているグリッドは必ず捨てる（tcg-scroll 等の id が重複すると
+// getElementById が別画面の要素を返し、編集・キー操作が壊れる）。
+// 破棄された側はその画面へ戻ったときに作り直される。
+function _tcgDestroyOtherGrids(hostEl) {
+  document.querySelectorAll('.tcg-wrap').forEach(wrap => {
+    if (hostEl && hostEl.contains(wrap)) return;
+    // System 01 のケース表タブは _renderedPanels により 1 度しか描画されない。
+    // DOM を消すだけだと次に開いたとき空のまま復活しないため、dirty に戻す。
+    if (wrap.closest('#rp-testcases') && typeof _renderedPanels !== 'undefined') {
+      _renderedPanels.delete('testcases/');
+    }
+    wrap.remove();
+  });
+}
+
+let _tcgMountGen = 0;
+
+// 共用マウント。host 要素へ「取得 → 状態設定 → シェル構築 → フィルタ適用」を一括で行う。
+// opts: { title, note, setTabCount, showRun }
+//   title が空文字なら見出し帯を出さない（呼び出し側のパネル見出しと重複させないため）
+// 戻り値: 成功時は行数、失敗時は null（呼び出し側の件数バッジ判定に使う）。
+async function tcgMountGrid(hostEl, domain, opts = {}) {
+  if (!hostEl) return null;
+  const title = opts.title === undefined ? 'テストケース' : opts.title;
+  const note = opts.note === undefined ? TCG_RESULT_NOTE : opts.note;
+  const showRun = opts.showRun !== false;
+  // 世代トークン。ドメインを続けて切り替えると古い応答が後から届き得る。
+  // 後着で TCG.rows を上書きすると、表示は旧ドメイン・保存先は新ドメイン（TCG.domain）
+  // になり、別サイトのケースを書き換える。自分が最新でなければ以降を捨てる。
+  const gen = ++_tcgMountGen;
+  _tcgDestroyOtherGrids(hostEl);
+  TCG.domain = domain || '';
+  hostEl.innerHTML =
     '<div class="tcg-wrap">' +
-      '<div class="tcg-head">' +
-        '<div class="hero-section-title">テストケース</div>' +
-        '<p class="design-section-note">テスト設計から生成したローレベルテストケースです。手順・期待結果は省略せず全文を表示します。セルをダブルクリック（または Enter）で編集でき、編集内容と履歴はサーバに保存されます。</p>' +
-      '</div>' +
+      (title
+        ? '<div class="tcg-head">' +
+            `<div class="hero-section-title">${escHtml(title)}</div>` +
+            (note ? `<p class="design-section-note">${escHtml(note)}</p>` : '') +
+          '</div>'
+        : '') +
       '<div id="tcg-body"></div>' +
     '</div>';
-  const body = document.getElementById('tcg-body');
+  const body = hostEl.querySelector('#tcg-body');
   uiSkeleton(body, 'table');
   let data;
   try {
@@ -64,13 +98,15 @@ async function renderResultTestcases() {
     data = await res.json();
     if (!res.ok) throw new Error(data.error || 'テストケースを取得できませんでした');
   } catch (e) {
+    if (gen !== _tcgMountGen) return null;
     uiError(body, {
       title: 'テストケースの取得に失敗しました',
       message: e && e.message ? e.message : '通信エラー',
-      onRetry: renderResultTestcases,
+      onRetry: () => tcgMountGrid(hostEl, domain, opts),
     });
-    return;
+    return null;
   }
+  if (gen !== _tcgMountGen) return null;
   TCG.columns = data.columns || [];
   TCG.rows = data.rows || [];
   TCG.commonPreconditions = data.common_preconditions || [];
@@ -80,9 +116,21 @@ async function renderResultTestcases() {
   TCG.sel = { row: 0, col: 1 };
   TCG.undoStack = [];
   TCG.redoStack = [];
-  _tcgSetTabCount(TCG.rows.length);
-  _tcgBuildShell(body);
+  if (opts.setTabCount) _tcgSetTabCount(TCG.rows.length);
+  _tcgBuildShell(body, { showRun });
   tcgApplyFilters();
+  return TCG.rows.length;
+}
+
+// System 01（ドキュメント作成）の結果タブ。ドメインは結果ヘッダから取る。
+async function renderResultTestcases() {
+  const domain = ((document.getElementById('r-domain') || {}).textContent || '').trim();
+  return tcgMountGrid(resultHero, domain, {
+    title: 'テストケース',
+    note: TCG_RESULT_NOTE,
+    setTabCount: true,
+    showRun: true,
+  });
 }
 
 function _tcgSetTabCount(n) {
@@ -93,7 +141,8 @@ function _tcgSetTabCount(n) {
 // ============================================================
 // 外枠（ツールバー・ヘッダ・スクロール領域）
 // ============================================================
-function _tcgBuildShell(body) {
+function _tcgBuildShell(body, opts = {}) {
+  const showRun = opts.showRun !== false;
   const gridTemplate = '40px ' + TCG.columns.map(c => (TCG_COL_WIDTH[c.key] || 160) + 'px').join(' ');
   body.innerHTML =
     _tcgCommonPreconditionsHtml() +
@@ -110,7 +159,11 @@ function _tcgBuildShell(body) {
       '<button type="button" class="btn-outline-sm" id="tcg-del-row">− 行を削除</button>' +
       '<button type="button" class="btn-outline-sm" id="tcg-reset-cell">セルを生成値に戻す</button>' +
       '<button type="button" class="btn-outline-sm" id="tcg-history-btn">履歴</button>' +
-      '<button type="button" class="btn-primary tcg-run-btn" id="tcg-run">▶ 実行</button>' +
+      // 実行は System 01 の責務。設計画面では隠すが、要素自体は必ず残す
+      //（testcase-grid-edit.js が #tcg-run へ無条件でリスナーを張るため、
+      //  取り除くと編集の初期化ごと失敗する）。
+      '<button type="button" class="btn-primary tcg-run-btn" id="tcg-run"' +
+        (showRun ? '' : ' hidden style="display:none"') + '>▶ 実行</button>' +
       '<span class="tcg-count" id="tcg-count" aria-live="polite"></span>' +
     '</div>' +
     `<div class="tcg-grid" id="tcg-grid" style="--tcg-cols:${gridTemplate}">` +

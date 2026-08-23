@@ -85,7 +85,7 @@
             <div class="ta-panel-head">
               <div>
                 <div class="ta-panel-title">生成テストケース</div>
-                <div class="ta-panel-sub">条件と因子・水準から展開したケース。対応するテスト条件で追跡できます。</div>
+                <div class="ta-panel-sub">条件と因子・水準から展開したケース。セルをダブルクリックで編集し、保存されます。</div>
               </div>
               <div class="ta-panel-actions">
                 <button type="button" class="btn-primary" id="ta-design-generate">テストケースを生成</button>
@@ -93,28 +93,11 @@
               </div>
             </div>
             <div class="ta-panel-body">
-              <div class="ta-table-wrap">
-                <table class="ta-table">
-                  <thead>
-                    <tr>
-                      <th>ケースID</th>
-                      <th>目的</th>
-                      <th>事前条件</th>
-                      <th>手順</th>
-                      <th>期待結果</th>
-                      <th>対応するテスト条件</th>
-                      <th>優先度</th>
-                    </tr>
-                  </thead>
-                  <tbody id="ta-case-body">
-                    <tr>
-                      <td colspan="7"><div class="empty">まだデータがありません</div></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+              <!-- System 01 のテストケース表グリッドをここへ共用マウントする（ta-design.js → tcgMountGrid）。
+                   静的テーブルは持たない: 編集・保存の経路を 1 本にするため。 -->
+              <div id="ta-case-grid-host"><div class="empty">まだデータがありません</div></div>
             </div>
           </div>
 
-          <p class="ta-note">テストケースはドキュメント作成の生成結果を共用しています（この画面での編集・生成は未実装）。</p>
+          <p class="ta-note">テストケースはドキュメント作成の生成結果を共用しています。セルの編集はその場で保存され、ドキュメント作成の結果画面と同じデータを更新します。この画面からのケース生成・エクスポート、技法チップ・因子/水準の反映は未実装です。</p>
         </section>

@@ -35,10 +35,59 @@
     const rate = document.getElementById('ta-exec-stat-rate');
     const failedEl = document.getElementById('ta-exec-stat-failed');
     const s = stats || {};
-    const finished = (s.complete || 0) + (s.failed || 0) + (s.cancelled || 0);
-    if (total) total.textContent = String(s.total ?? 0);
-    if (rate) rate.textContent = finished ? `${Math.round(((s.complete || 0) / finished) * 100)}%` : '—';
-    if (failedEl) failedEl.textContent = String(s.failed ?? 0);
+    const completeN = s.complete || 0;
+    const failedN = s.failed || 0;
+    const cancelledN = s.cancelled || 0;
+    const totalN = Number(s.total) || 0;
+    const finished = completeN + failedN + cancelledN;
+    const ratePct = finished ? Math.round((completeN / finished) * 100) : null;
+    if (total) total.textContent = String(totalN);
+    if (rate) {
+      rate.textContent = ratePct === null ? '—' : `${ratePct}%`;
+      rate.classList.remove('is-ok', 'is-ng');
+      if (ratePct !== null) rate.classList.add(ratePct >= 80 ? 'is-ok' : 'is-ng');
+    }
+    if (failedEl) {
+      failedEl.textContent = String(failedN);
+      failedEl.classList.remove('is-ok', 'is-ng');
+      failedEl.classList.add(failedN > 0 ? 'is-ng' : 'is-ok');
+    }
+    updateGauge(completeN, failedN, Math.max(0, totalN - completeN - failedN));
+  }
+
+  // 積み上げゲージ: 成功/失敗/未実行（実行中・中断を含む残り）の比率を形で見せる。
+  // 数字を読む前に「赤の幅」で状態が入るようにする。
+  function updateGauge(okN, ngN, waitN) {
+    const sum = okN + ngN + waitN;
+    const pct = (n) => (sum ? `${(n / sum) * 100}%` : '0%');
+    const okBar = document.getElementById('ta-exec-gauge-ok');
+    const ngBar = document.getElementById('ta-exec-gauge-ng');
+    const waitBar = document.getElementById('ta-exec-gauge-wait');
+    if (okBar) okBar.style.width = pct(okN);
+    if (ngBar) ngBar.style.width = pct(ngN);
+    if (waitBar) waitBar.style.width = pct(waitN);
+    const okLegend = document.getElementById('ta-exec-legend-ok');
+    const ngLegend = document.getElementById('ta-exec-legend-ng');
+    const waitLegend = document.getElementById('ta-exec-legend-wait');
+    if (okLegend) okLegend.textContent = `成功 ${okN.toLocaleString()}`;
+    if (ngLegend) ngLegend.textContent = `失敗 ${ngN.toLocaleString()}`;
+    if (waitLegend) waitLegend.textContent = `未実行 ${waitN.toLocaleString()}`;
+  }
+
+  // 行の左端 4px 帯の色（状態ごと）。band のみ＝目印。背景まで塗るのは失敗行だけ。
+  function rowBandColor(status) {
+    if (status === 'failed') return 'var(--d-ng-text)';
+    if (status === 'complete') return 'var(--d-ok-text)';
+    if (status === 'cancelled') return 'var(--d-wa-text)';
+    return 'var(--d-info)'; // running / 不明
+  }
+
+  // 失敗を上に固定する（見るべきは失敗のため）。同じ状態内は元の順序を保つ安定ソート。
+  function sortForDisplay(runs) {
+    const failed = [];
+    const rest = [];
+    runs.forEach((run) => (run.status === 'failed' ? failed : rest).push(run));
+    return failed.concat(rest);
   }
 
   function renderRows(runs) {
@@ -48,16 +97,18 @@
       tbody.innerHTML = '<tr><td colspan="5"><div class="empty">テスト実行の履歴がありません</div></td></tr>';
       return;
     }
-    tbody.innerHTML = runs.map((run) => {
+    tbody.innerHTML = sortForDisplay(runs).map((run) => {
       const s = run.summary || {};
       // 失敗ステップ: 集計がある実行だけ件数を出す。集計を持たない実行は — （測って0ではない）
       const failedCell = Number(s.total) > 0 ? `${esc(s.failed ?? 0)} 件` : '—';
       const url = run.result_url
         || (run.domain && run.run_id ? `/runs/${encodeURIComponent(run.domain)}/${encodeURIComponent(run.run_id)}` : '');
       const evidence = url
-        ? `<a href="${esc(url)}" class="btn-outline-sm">結果を開く</a>`
+        ? `<a href="${esc(url)}" class="ta-linkbtn">結果を開く</a>`
         : '<span class="muted-copy">—</span>';
-      return `<tr>
+      const band = rowBandColor(run.status);
+      const bg = run.status === 'failed' ? 'color-mix(in srgb, var(--d-ng-text) 8%, var(--d-surface))' : 'transparent';
+      return `<tr style="border-left:4px solid ${band};background:${bg};">
         <td>${esc(run.run_id || '—')}<div class="muted-copy">${esc(run.type_label || run.type || '')} ／ ${esc(run.domain || '')}</div></td>
         <td>${statusBadge(run.status)}</td>
         <td class="num">${esc(fmtDuration(s.duration_sec))}</td>
@@ -159,6 +210,38 @@
   const runBtn = document.getElementById('ta-exec-run');
   const suiteSel = document.getElementById('ta-exec-suite');
   const logEl = document.getElementById('ta-exec-log');
+  const runBadge = document.getElementById('ta-exec-run-badge');
+  const runProgressEl = document.getElementById('ta-exec-run-progress');
+  const stopBtn = document.getElementById('ta-exec-stop');
+
+  // 実行中かどうかを画面のどこにも示していなかったため、バッジ＋経過時間で明示する。
+  let _elapsedTimer = null;
+  let _startedAt = 0;
+  function fmtElapsed(ms) {
+    const totalSec = Math.max(0, Math.floor(ms / 1000));
+    const mm = String(Math.floor(totalSec / 60)).padStart(2, '0');
+    const ss = String(totalSec % 60).padStart(2, '0');
+    return `${mm}:${ss}`;
+  }
+  function showRunBadge() {
+    // 実行中は「実行」を隠し「実行を停止」だけ見せる（排他表示。両方出ていた不具合の修正）
+    if (runBtn) runBtn.style.display = 'none';
+    if (stopBtn) stopBtn.style.display = '';
+    if (!runBadge) return;
+    runBadge.style.display = '';
+    _startedAt = Date.now();
+    if (runProgressEl) runProgressEl.textContent = '00:00';
+    _elapsedTimer = setInterval(() => {
+      if (runProgressEl) runProgressEl.textContent = fmtElapsed(Date.now() - _startedAt);
+    }, 1000);
+  }
+  function hideRunBadge() {
+    if (runBtn) runBtn.style.display = '';
+    if (stopBtn) stopBtn.style.display = 'none';
+    if (runBadge) runBadge.style.display = 'none';
+    if (_elapsedTimer) clearInterval(_elapsedTimer);
+    _elapsedTimer = null;
+  }
 
   // ログは追記のみ。クリア・折りたたみをしない（実行ログ常時表示のユーザー規約）。
   function appendLog(line) {
@@ -230,6 +313,7 @@
     _running = true;
     _lastCompleted = 0;
     appendLog(`実行を開始します: ${domain}`);
+    showRunBadge();
     const timer = setInterval(() => pollProgress(domain), 2000);
     try {
       const res = await fetch('/api/testcases/run', {
@@ -250,6 +334,7 @@
       appendLog(`エラー: ${String(e && e.message ? e.message : e)}`);
     } finally {
       runBtn.textContent = origLabel;
+      hideRunBadge();
       syncRunButton();
     }
   }

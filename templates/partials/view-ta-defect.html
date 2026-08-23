@@ -2,11 +2,14 @@
         <section class="view" id="view-defect-analysis">
           <div class="dashboard-section-head">
             <div>
-              <h2 class="dash-section-title">不具合分析</h2>
               <p class="dashboard-section-copy">検出した不具合を ODC（Orthogonal Defect Classification）で分類し、混入工程と根本原因を特定します。</p>
             </div>
             <div class="dashboard-section-actions">
-              <button type="button" class="btn-outline-sm" id="ta-defect-reload">再読み込み</button>
+              <label for="ta-defect-domain" style="font-size:var(--text-sm);">対象</label>
+              <select class="select-compact" id="ta-defect-domain" aria-label="対象ドメイン">
+                <option value="">ドメインを選択</option>
+              </select>
+              <button type="button" class="btn-primary" id="ta-defect-reload">再読み込み</button>
             </div>
           </div>
 
@@ -16,11 +19,11 @@
               <div class="stat-card-label">検出不具合</div>
             </div>
             <div class="stat-card">
-              <div class="stat-card-value" id="ta-defect-stat-open">-</div>
+              <div class="stat-card-value is-ng" id="ta-defect-stat-open">-</div>
               <div class="stat-card-label">未解決</div>
             </div>
             <div class="stat-card">
-              <div class="stat-card-value" id="ta-defect-stat-fixed">-</div>
+              <div class="stat-card-value is-ok" id="ta-defect-stat-fixed">-</div>
               <div class="stat-card-label">修正済み</div>
             </div>
           </div>
@@ -28,37 +31,77 @@
           <div class="ta-panel">
             <div class="ta-panel-head">
               <div>
-                <div class="ta-panel-title">不具合一覧</div>
-                <div class="ta-panel-sub">検出工程・混入工程と ODC 分類（Defect Type / Trigger / Impact）を確認します。</div>
+                <div class="ta-panel-title">不具合を掘る</div>
+                <div class="ta-panel-sub">左で不具合を選ぶと、観測された事実（中央）と AI の推定（右・紫地）を確認できます。</div>
               </div>
               <div class="ta-panel-actions">
-                <button type="button" class="btn-primary" id="ta-defect-analyze">AIで原因分析</button>
-                <button type="button" class="btn-outline-sm" id="ta-defect-sync">GitHub Issue と同期</button>
+                <button type="button" class="ta-linkbtn" id="ta-defect-sync" disabled data-wip="1">GitHub Issue と同期</button>
+                <span class="ta-wip-note">連携APIは未実装</span>
               </div>
             </div>
             <div class="ta-panel-body">
-              <div class="ta-table-wrap">
-                <table class="ta-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">不具合ID</th>
-                      <th scope="col">概要</th>
-                      <th scope="col">重大度</th>
-                      <th scope="col">検出工程</th>
-                      <th scope="col">混入工程</th>
-                      <th scope="col">Defect Type</th>
-                      <th scope="col">Trigger</th>
-                      <th scope="col">Impact</th>
-                      <th scope="col">状態</th>
-                      <th scope="col">対応コード</th>
-                    </tr>
-                  </thead>
-                  <tbody id="ta-defect-body">
-                    <tr>
-                      <td colspan="10"><div class="empty">まだデータがありません</div></td>
-                    </tr>
-                  </tbody>
-                </table>
+              <div style="display:grid; grid-template-columns: 180px minmax(0, 1fr) 208px; gap: var(--space-4); align-items: start;">
+                <!-- 左: 一覧 -->
+                <div style="display:flex; flex-direction:column; gap:var(--space-3); min-width:0;">
+                  <div>
+                    <div class="stat-card-value is-ng" style="font-size:30px; line-height:1;" id="ta-defect-critical-open">-</div>
+                    <div class="stat-card-label">未対応の重大</div>
+                  </div>
+                  <div id="ta-defect-list" style="display:flex; flex-direction:column; gap:2px; max-height:260px; overflow-y:auto;">
+                    <div class="empty">読み込んでいます…</div>
+                  </div>
+                </div>
+
+                <!-- 中央: 観測された事実 -->
+                <div style="min-width:0; display:flex; flex-direction:column; gap:var(--space-4);">
+                  <div id="ta-defect-detail" style="max-height:260px; overflow-y:auto;">
+                    <div class="empty">左の一覧から不具合を選ぶと、観測された事実が表示されます</div>
+                  </div>
+
+                  <details>
+                    <summary class="ta-panel-title" style="font-size:var(--text-sm); cursor:pointer;">根本原因（RCA・5 Whys）</summary>
+                    <div class="ta-steps" style="margin-top:var(--space-2);">
+                      <div class="ta-step">
+                        <div class="ta-step-title"><label for="ta-defect-why-1">Why 1</label></div>
+                        <div class="ta-step-desc"><input type="text" class="input-compact" id="ta-defect-why-1" placeholder="なぜこの不具合が起きたか" autocomplete="off" /></div>
+                      </div>
+                      <div class="ta-step">
+                        <div class="ta-step-title"><label for="ta-defect-why-2">Why 2</label></div>
+                        <div class="ta-step-desc"><input type="text" class="input-compact" id="ta-defect-why-2" placeholder="Why 1 はなぜ起きたか" autocomplete="off" /></div>
+                      </div>
+                      <div class="ta-step">
+                        <div class="ta-step-title"><label for="ta-defect-why-3">Why 3</label></div>
+                        <div class="ta-step-desc"><input type="text" class="input-compact" id="ta-defect-why-3" placeholder="Why 2 はなぜ起きたか" autocomplete="off" /></div>
+                      </div>
+                      <div class="ta-step">
+                        <div class="ta-step-title"><label for="ta-defect-why-4">Why 4</label></div>
+                        <div class="ta-step-desc"><input type="text" class="input-compact" id="ta-defect-why-4" placeholder="Why 3 はなぜ起きたか" autocomplete="off" /></div>
+                      </div>
+                      <div class="ta-step">
+                        <div class="ta-step-title"><label for="ta-defect-why-5">Why 5</label></div>
+                        <div class="ta-step-desc"><input type="text" class="input-compact" id="ta-defect-why-5" placeholder="Why 4 はなぜ起きたか（根本原因）" autocomplete="off" /></div>
+                      </div>
+                    </div>
+                    <div style="margin-top:var(--space-2); display:flex; align-items:center; gap:var(--space-2);">
+                      <button type="button" class="ta-linkbtn" id="ta-defect-rca-suggest" disabled data-wip="1">AIで下書き</button>
+                      <button type="button" class="ta-linkbtn" id="ta-defect-rca-save" disabled data-wip="1">保存</button>
+                      <span class="ta-wip-note">保存APIは未実装（入力内容は破棄されます）</span>
+                    </div>
+                  </details>
+                </div>
+
+                <!-- 右: AI の推定（紫地） -->
+                <div style="background:var(--d-primary-pale); border:1px solid var(--border); border-radius:var(--radius-md); padding:var(--space-3); display:flex; flex-direction:column; gap:var(--space-3);">
+                  <div class="ta-panel-title" style="font-size:var(--text-sm); color:var(--d-primary);">AI の推定</div>
+                  <div id="ta-defect-ai" style="max-height:260px; overflow-y:auto;">
+                    <div class="empty">不具合を選んでください</div>
+                  </div>
+                  <div style="border-top:1px solid var(--border); padding-top:var(--space-3); display:flex; flex-direction:column; gap:var(--space-2);">
+                    <button type="button" class="ta-linkbtn" id="ta-defect-analyze" disabled data-wip="1">AIで原因分析</button>
+                    <button type="button" class="ta-linkbtn" id="ta-defect-codefix" disabled data-wip="1">コード修正提案へ送る</button>
+                    <span class="ta-wip-note">原因分析・コード修正連携のAPIは未実装</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -72,7 +115,7 @@
                 </div>
               </div>
               <div class="ta-panel-body">
-                <div id="ta-defect-phase-chart"><div class="empty">まだデータがありません</div></div>
+                <div id="ta-defect-phase-chart"><div class="empty">読み込んでいます…</div></div>
               </div>
             </div>
             <div class="ta-panel">
@@ -83,47 +126,8 @@
                 </div>
               </div>
               <div class="ta-panel-body">
-                <div id="ta-defect-type-chart"><div class="empty">まだデータがありません</div></div>
+                <div id="ta-defect-type-chart"><div class="empty">読み込んでいます…</div></div>
               </div>
             </div>
           </div>
-
-          <div class="ta-panel">
-            <div class="ta-panel-head">
-              <div>
-                <div class="ta-panel-title">根本原因（RCA）</div>
-                <div class="ta-panel-sub">5 Whys で「なぜ」を5段まで掘り下げ、対策の対象を特定します。</div>
-              </div>
-              <div class="ta-panel-actions">
-                <button type="button" class="btn-outline-sm" id="ta-defect-rca-suggest">AIで下書き</button>
-                <button type="button" class="btn-primary" id="ta-defect-rca-save">保存</button>
-              </div>
-            </div>
-            <div class="ta-panel-body">
-              <div class="ta-steps">
-                <div class="ta-step">
-                  <div class="ta-step-title"><label for="ta-defect-why-1">Why 1</label></div>
-                  <div class="ta-step-desc"><input type="text" class="input-compact" id="ta-defect-why-1" placeholder="なぜこの不具合が起きたか" autocomplete="off" /></div>
-                </div>
-                <div class="ta-step">
-                  <div class="ta-step-title"><label for="ta-defect-why-2">Why 2</label></div>
-                  <div class="ta-step-desc"><input type="text" class="input-compact" id="ta-defect-why-2" placeholder="Why 1 はなぜ起きたか" autocomplete="off" /></div>
-                </div>
-                <div class="ta-step">
-                  <div class="ta-step-title"><label for="ta-defect-why-3">Why 3</label></div>
-                  <div class="ta-step-desc"><input type="text" class="input-compact" id="ta-defect-why-3" placeholder="Why 2 はなぜ起きたか" autocomplete="off" /></div>
-                </div>
-                <div class="ta-step">
-                  <div class="ta-step-title"><label for="ta-defect-why-4">Why 4</label></div>
-                  <div class="ta-step-desc"><input type="text" class="input-compact" id="ta-defect-why-4" placeholder="Why 3 はなぜ起きたか" autocomplete="off" /></div>
-                </div>
-                <div class="ta-step">
-                  <div class="ta-step-title"><label for="ta-defect-why-5">Why 5</label></div>
-                  <div class="ta-step-desc"><input type="text" class="input-compact" id="ta-defect-why-5" placeholder="Why 4 はなぜ起きたか（根本原因）" autocomplete="off" /></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <p class="ta-note">現在この画面は UI のみです。バックエンド未接続。</p>
         </section>

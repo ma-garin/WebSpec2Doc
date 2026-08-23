@@ -15,67 +15,73 @@
             </div>
           </div>
 
-          <div class="ta-pipeline" aria-label="テスト活動の工程">
-            <div class="ta-pipeline-step is-done"><span class="ta-step-no">1</span><span class="ta-step-name">計画</span><span class="ta-step-state">完了</span></div>
-            <div class="ta-pipeline-step is-done"><span class="ta-step-no">2</span><span class="ta-step-name">分析</span><span class="ta-step-state">完了</span></div>
-            <div class="ta-pipeline-step is-done"><span class="ta-step-no">3</span><span class="ta-step-name">方針</span><span class="ta-step-state">完了</span></div>
-            <div class="ta-pipeline-step is-done"><span class="ta-step-no">4</span><span class="ta-step-name">設計</span><span class="ta-step-state">完了</span></div>
-            <div class="ta-pipeline-step is-current"><span class="ta-step-no">5</span><span class="ta-step-name">実装</span><span class="ta-step-state">進行中</span></div>
-            <div class="ta-pipeline-step"><span class="ta-step-no">6</span><span class="ta-step-name">実行</span><span class="ta-step-state">未着手</span></div>
-            <div class="ta-pipeline-step"><span class="ta-step-no">7</span><span class="ta-step-name">不具合分析</span><span class="ta-step-state">未着手</span></div>
-            <div class="ta-pipeline-step"><span class="ta-step-no">8</span><span class="ta-step-name">コード修正</span><span class="ta-step-state">未着手</span></div>
+          <div class="ta-grid-3" aria-label="自動化の進捗">
+            <div class="stat-card">
+              <div class="stat-card-value" id="ta-impl-total-cases">—</div>
+              <div class="stat-card-label">対象ケース</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-value is-pri" id="ta-impl-automation-rate">—</div>
+              <div class="stat-card-label" id="ta-impl-automation-target">自動化率</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-value" id="ta-impl-automation-verdict">—</div>
+              <div class="stat-card-label">自動化可ケースの基準</div>
+            </div>
+            <div class="stat-card">
+              <button type="button" class="btn-primary" id="ta-impl-generate" disabled data-wip="1">AIでスクリプトを生成</button>
+              <div class="stat-card-label"><span class="ta-wip-note">準備中</span></div>
+            </div>
+          </div>
+
+          <div class="ta-chips" id="ta-impl-filter" role="group" aria-label="ケースの絞り込み">
+            <button type="button" class="ta-chip is-on" id="ta-impl-filter-all" disabled data-wip="1">すべて</button>
+            <button type="button" class="ta-chip" id="ta-impl-filter-done" disabled data-wip="1">自動化済</button>
+            <button type="button" class="ta-chip" id="ta-impl-filter-todo" disabled data-wip="1">未自動化</button>
+            <button type="button" class="ta-chip" id="ta-impl-filter-failed" disabled data-wip="1">失敗</button>
+            <span class="ta-wip-note">ケース一覧の取り込みAPIが未実装のため絞り込みは準備中</span>
           </div>
 
           <div class="dashboard-section-head">
             <div>
-              <h2 class="dash-section-title">自動テストケース実装</h2>
               <p class="dashboard-section-copy">自動化するケースを選び、フレームワークと出力先を指定してコードを生成します。</p>
             </div>
             <div class="dashboard-section-actions">
-              <button type="button" class="btn-outline-sm" id="ta-impl-reload">再読み込み</button>
+              <button type="button" class="ta-linkbtn" id="ta-impl-reload">再読み込み</button>
             </div>
           </div>
 
-          <div class="ta-panel">
-            <div class="ta-panel-head">
-              <div>
-                <div class="ta-panel-title">対象ケース</div>
-                <div class="ta-panel-sub">設計から引き継いだテストケースです。自動化するものを選択してください。</div>
-              </div>
-              <div class="ta-panel-actions">
-                <button type="button" class="btn-outline-sm" id="ta-impl-select-all">すべて選択</button>
-                <button type="button" class="btn-outline-sm" id="ta-impl-import">設計から取り込む</button>
-              </div>
-            </div>
-            <div class="ta-panel-body">
-              <div class="ta-table-wrap">
-                <table class="ta-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">選択</th>
-                      <th scope="col">ケースID</th>
-                      <th scope="col">目的</th>
-                      <th scope="col">自動化可否</th>
-                      <th scope="col">既存スクリプト</th>
-                    </tr>
-                  </thead>
-                  <tbody id="ta-impl-case-body">
-                    <tr>
-                      <td colspan="5"><div class="empty">まだデータがありません</div></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
+          <div class="ta-table-wrap">
+            <table class="ta-table">
+              <thead>
+                <tr>
+                  <th scope="col">選択</th>
+                  <th scope="col">ケースID</th>
+                  <th scope="col">目的</th>
+                  <th scope="col">自動化可否</th>
+                  <th scope="col">既存スクリプト</th>
+                </tr>
+              </thead>
+              <tbody id="ta-impl-case-body">
+                <tr>
+                  <td colspan="5"><div class="empty">テストケース一覧の取り込みは準備中です。実装が完了すると、設計工程のケースがここに並びます。</div></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="dashboard-section-actions" style="margin: var(--space-2) 0 var(--space-4);">
+            <button type="button" class="ta-linkbtn" id="ta-impl-select-all" disabled data-wip="1">すべて選択</button>
+            <button type="button" class="ta-linkbtn" id="ta-impl-import" disabled data-wip="1">設計から取り込む</button>
+            <span class="ta-wip-note">準備中</span>
           </div>
 
-          <div class="ta-panel">
-            <div class="ta-panel-head">
+          <details class="ta-panel">
+            <summary class="ta-panel-head">
               <div>
-                <div class="ta-panel-title">生成設定</div>
+                <div class="ta-panel-title">生成設定（既定値・未変更）</div>
                 <div class="ta-panel-sub">生成するコードのフレームワーク・言語と、出力先のリポジトリを指定します。</div>
               </div>
-            </div>
+            </summary>
             <div class="ta-panel-body">
               <div class="ta-grid-2">
                 <div class="ta-kv">
@@ -123,24 +129,22 @@
                 <button type="button" class="ta-chip" data-ta-action="impl-toggle-testdata">テストデータを分離</button>
               </div>
             </div>
-          </div>
+          </details>
 
-          <div class="ta-panel">
-            <div class="ta-panel-head">
+          <details class="ta-panel">
+            <summary class="ta-panel-head">
               <div>
-                <div class="ta-panel-title">生成コード</div>
+                <div class="ta-panel-title">生成コード（未生成）</div>
                 <div class="ta-panel-sub">生成された自動テストコードを確認し、問題がなければPRを作成します。</div>
               </div>
               <div class="ta-panel-actions">
-                <button type="button" class="btn-primary" id="ta-impl-generate">コードを生成</button>
-                <button type="button" class="btn-outline-sm" id="ta-impl-pr">PRを作成</button>
+                <button type="button" class="ta-linkbtn" id="ta-impl-pr" disabled data-wip="1">PRを作成</button>
+                <span class="ta-wip-note">準備中</span>
               </div>
-            </div>
+            </summary>
             <div class="ta-panel-body">
               <pre class="ta-code" id="ta-impl-code"></pre>
-              <div class="empty" id="ta-impl-code-empty">まだデータがありません</div>
+              <div class="empty" id="ta-impl-code-empty">上の［AIでスクリプトを生成］が使えるようになると、ここに生成コードが表示されます。</div>
             </div>
-          </div>
-
-          <p class="ta-note">現在この画面は UI のみです。バックエンド未接続。</p>
+          </details>
         </section>

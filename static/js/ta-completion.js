@@ -16,18 +16,27 @@
   }
 
   function renderCriteria(criteria) {
-    const tbody = document.getElementById('ta-completion-criteria-body');
-    if (!tbody) return;
+    const box = document.getElementById('ta-completion-criteria-body');
+    if (!box) return;
     if (!criteria || !criteria.length) {
-      tbody.innerHTML = '<tr><td colspan="4"><div class="empty">終了基準がまだありません（テスト計画で設定します）</div></td></tr>';
+      box.innerHTML = '<div class="empty">終了基準がまだありません（テスト計画で設定します）</div>';
       return;
     }
-    tbody.innerHTML = criteria.map((c) => `<tr>
-      <td>${esc(c.label)}</td>
-      <td class="num">${esc(c.target)}</td>
-      <td class="num">${esc(c.current)}</td>
-      <td><span class="ta2-badge ta2-badge-${c.met ? 'ok' : 'ng'}">${c.met ? '達成' : '未達'}</span></td>
-    </tr>`).join('');
+    box.innerHTML = criteria.map((c) => {
+      if (c.met) {
+        return `<div class="ta-kv-row is-met">
+          <div class="ta-kv-key"><span class="ta2-badge ta2-badge-ok">達成</span></div>
+          <div class="ta-kv-val">${esc(c.label)} <span class="muted-copy">${esc(c.current)} ／ 目標 ${esc(c.target)}</span></div>
+        </div>`;
+      }
+      return `<div class="ta-kv-row is-unmet">
+        <div class="ta-kv-key"><span class="ta2-badge ta2-badge-ng">未達</span></div>
+        <div class="ta-kv-val">
+          <div>${esc(c.label)}</div>
+          <div>現在 <span class="ta-num is-ng">${esc(c.current)}</span> ／ 目標 <span class="ta-num">${esc(c.target)}</span></div>
+        </div>
+      </div>`;
+    }).join('');
   }
 
   function renderVerdict(overall) {
@@ -45,20 +54,60 @@
       box.innerHTML = '<div class="empty">完了を妨げている重大な不具合はありません</div>';
       return;
     }
-    box.innerHTML = blockers.map((b) => `<div class="ta-source-row">
-      <span class="ta2-badge ta2-badge-wa">${esc(b.state_label || b.state || '')}</span>
-      <b>${esc(b.id || '')}</b> ${esc(b.summary || '')}
-    </div>`).join('');
+    box.innerHTML = blockers.map((b) => {
+      const critical = b.severity === 'critical';
+      return `<div class="ta-source-row">
+        <span class="ta2-badge ${critical ? 'ta2-badge-ng' : 'ta2-badge-wa'}">${esc(b.severity || b.state || '')}</span>
+        <b>${esc(b.id || '')}</b> ${esc(b.summary || '')}
+      </div>`;
+    }).join('');
+  }
+
+  // 未達件数と残ブロッカーから「完了と判定する」の可否を決める。
+  // 未達0件かつブロッカー0件のときだけ有効。押せない理由は必ず1行で示す。
+  function renderGate(criteria, blockers) {
+    const unmet = (criteria || []).filter((c) => !c.met).length;
+    const countEl = document.getElementById('ta-completion-unmet-count');
+    if (countEl) {
+      countEl.textContent = String(unmet);
+      countEl.className = 'stat-card-value ' + (unmet > 0 ? 'is-ng' : 'is-ok');
+    }
+    const critical = (blockers || []).find((b) => b.severity === 'critical');
+    let reason = '';
+    if (critical) {
+      reason = `重大な不具合 ${critical.id || ''} が未解決のため判定できません`;
+    } else if (blockers && blockers.length) {
+      reason = `未解決の不具合が ${blockers.length} 件あるため判定できません`;
+    } else if (unmet > 0) {
+      reason = `未達の基準が ${unmet} 件あるため判定できません`;
+    }
+    const reasonEl = document.getElementById('ta-completion-block-reason');
+    if (reasonEl) {
+      reasonEl.textContent = reason || '終了基準をすべて満たしています。判定できます。';
+      reasonEl.classList.toggle('is-error', Boolean(reason));
+    }
+    const btn = document.getElementById('ta-completion-approve');
+    if (btn) btn.disabled = Boolean(reason);
+  }
+
+  function renderGateEmpty(message) {
+    const countEl = document.getElementById('ta-completion-unmet-count');
+    if (countEl) { countEl.textContent = '–'; countEl.className = 'stat-card-value'; }
+    const reasonEl = document.getElementById('ta-completion-block-reason');
+    if (reasonEl) { reasonEl.textContent = message; reasonEl.classList.remove('is-error'); }
+    const btn = document.getElementById('ta-completion-approve');
+    if (btn) btn.disabled = true;
   }
 
   async function load() {
     const dom = domain();
-    const tbody = document.getElementById('ta-completion-criteria-body');
+    const box = document.getElementById('ta-completion-criteria-body');
     if (!dom) {
-      if (tbody) tbody.innerHTML = '<tr><td colspan="4"><div class="empty">対象ドメインを選択してください（テストケース実装の画面で選べます）</div></td></tr>';
+      if (box) box.innerHTML = '<div class="empty">対象を選ぶと判定基準がここに出ます</div>';
+      renderGateEmpty('対象を選択すると判定できます');
       return;
     }
-    if (tbody) tbody.innerHTML = '<tr><td colspan="4"><div class="empty">読み込んでいます…</div></td></tr>';
+    if (box) box.innerHTML = '<div class="empty">読み込んでいます…</div>';
     try {
       const res = await fetch('/api/ta/completion?domain=' + encodeURIComponent(dom));
       const data = await res.json();
@@ -66,19 +115,24 @@
       renderCriteria(data.criteria);
       renderVerdict(data.overall);
       renderBlockers(data.blockers);
+      renderGate(data.criteria, data.blockers);
       _loaded = true;
     } catch (e) {
-      if (tbody) tbody.innerHTML = `<tr><td colspan="4"><div class="empty">${esc(String(e && e.message ? e.message : e))}</div></td></tr>`;
+      const msg = String(e && e.message ? e.message : e);
+      if (box) box.innerHTML = `<div class="empty">${esc(msg)}</div>`;
+      renderGateEmpty('判定を取得できなかったため判定できません');
     }
   }
 
   if (typeof onViewEnter === 'function') {
     onViewEnter('test-completion', () => { if (!_loaded) load(); });
   }
-  // 承認・レポート生成はバックエンド未実装。押しても黙って何も起きない状態にしない。
+  // 承認の記録はバックエンド未実装。押しても黙って何も起きない状態にしない。
   document.getElementById('ta-completion-approve')?.addEventListener('click', () => {
-    const el = document.getElementById('ta-completion-verdict');
-    if (el) el.insertAdjacentHTML('afterend',
-      '<span class="muted-copy">承認の記録機能は未実装です（判定の表示のみ動作します）</span>');
+    const el = document.getElementById('ta-completion-block-reason');
+    if (el) {
+      el.textContent = '承認の記録機能は未実装です（判定の表示のみ動作します）';
+      el.classList.remove('is-error');
+    }
   });
 })();

@@ -122,7 +122,8 @@ class TestDiscoverStateDoesNotLinger:
 
         # 解析の途中で他の画面へ移る
         page.evaluate("switchView('run-history')")
-        page.wait_for_timeout(600)
+        # 実行履歴の画面が出たこと自体を目印にする（switchView の完了）
+        page.wait_for_selector("#view-run-history", state="visible")
 
         # 進捗まわりが残っていないこと
         assert not _is_shown(page, "discover-loading")
@@ -139,10 +140,11 @@ class TestDiscoverStateDoesNotLinger:
             timeout=90_000,
         )
         page.evaluate("switchView('dashboard')")
-        page.wait_for_timeout(500)
+        page.wait_for_selector("#view-dashboard", state="visible")
 
         page.evaluate("openAddSite()")
-        page.wait_for_timeout(500)
+        # 「新規解析」= ウィザード P1 に戻ったことを目印にする（openAddSite の完了）
+        page.wait_for_selector("#wizard-p1", state="visible")
 
         assert not _is_shown(page, "discover-loading")
         assert not _is_shown(page, "login-required-card")
@@ -165,9 +167,9 @@ class TestDiscoverStateDoesNotLinger:
         assert found > 0, "解析結果が0件では検証にならない"
 
         page.evaluate("switchView('dashboard')")
-        page.wait_for_timeout(500)
+        page.wait_for_selector("#view-dashboard", state="visible")
         page.evaluate("switchView('generate')")
-        page.wait_for_timeout(500)
+        page.wait_for_selector("#view-generate", state="visible")
 
         after = page.evaluate("document.getElementById('discovered-url-list').children.length")
         assert after == found, "完了した解析結果まで消えている"
@@ -182,9 +184,14 @@ class TestReportPanelStaysInItsView:
 
         # 別の画面にいる間に showResults が呼ばれる経路（テスト実行の完了時など）
         page.evaluate("switchView('settings')")
-        page.wait_for_timeout(400)
+        page.wait_for_selector("#view-settings", state="visible")
         page.evaluate("showResults('127.0.0.1:8767', 'overview')")
-        page.wait_for_timeout(1500)
+        # showResults が表示段階まで到達したこと（成功・失敗のどちらの経路でも
+        # 最後に result-panel の hidden を外す）を目印にする。
+        page.wait_for_function(
+            "() => !document.getElementById('result-panel').classList.contains('hidden')",
+            timeout=30_000,
+        )
 
         active = page.evaluate(
             "[...document.querySelectorAll('.view.is-active')].map(v => v.id)[0] || ''"
@@ -199,10 +206,9 @@ class TestReportPanelStaysInItsView:
         page.goto(BASE_URL)
         page.wait_for_selector("#view-dashboard", state="visible")
         page.evaluate("showResults('127.0.0.1:8767', 'overview')")
-        page.wait_for_timeout(1500)
-        expect(page.locator("#result-panel")).to_be_visible()
+        expect(page.locator("#result-panel")).to_be_visible(timeout=30_000)
 
         for view in ("dashboard", "run-history", "settings", "user-guide"):
             page.evaluate(f"switchView('{view}')")
-            page.wait_for_timeout(300)
+            page.wait_for_selector(f"#view-{view}", state="visible")
             assert not _is_shown(page, "result-panel"), f"{view} でパネルが出ている"

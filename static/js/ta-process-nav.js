@@ -94,54 +94,13 @@
     });
   }
 
-  // ---- 二階層ナビ: 親カテゴリのレールと、その配下だけを出す子パネル ----
-  // 12 工程を 1 列に並べると今どの局面にいるか読めないため、親で束ねる。
-  const CAT_LABELS = {
-    home: 'ホーム', design: '計画・設計', run: '実装・実行',
-    improve: '改善・完了', config: '設定',
-  };
-
-  function catOfView(view) {
-    const item = document.querySelector(`.app-nav-item[data-view="${view}"][data-nav-cat]`);
-    return item ? item.dataset.navCat : '';
-  }
-
-  function openCategory(cat) {
-    if (!cat) return;
-    document.querySelectorAll('.app-nav-item[data-nav-cat]').forEach((el) => {
-      if (el.dataset.navCat === cat) el.setAttribute('data-cat-open', '');
-      else el.removeAttribute('data-cat-open');
-    });
-    document.querySelectorAll('.ta2-rail-item').forEach((el) => {
-      el.setAttribute('aria-selected', String(el.dataset.navCat === cat));
-    });
-    const title = document.getElementById('ta2-cat-title');
-    if (title) title.textContent = CAT_LABELS[cat] || '';
-  }
-
-  function wireRail() {
-    document.querySelectorAll('.ta2-rail-item').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const cat = btn.dataset.navCat;
-        openCategory(cat);
-        // 子を開くだけで終わらせない。押した親の先頭画面まで連れて行く。
-        const first = document.querySelector(`.app-nav-item[data-nav-cat="${cat}"][data-view]`);
-        if (first) go(first.dataset.view);
-      });
-    });
-  }
-
   function init() {
     wirePipeline();
     injectStepNav();
     wireStartButton();
-    wireRail();
-    // 開いている画面の親カテゴリを開く。初期表示で子が全部閉じた状態を作らない。
-    const active = document.querySelector('.view.is-active');
-    openCategory(catOfView(active ? active.id.replace(/^view-/, '') : 'test-activity') || 'home');
-    ['test-activity', 'integrations'].concat(TA_PROCESS.map((s2) => s2.view)).forEach((view) => {
+    TA_PROCESS.forEach((step) => {
       if (typeof onViewEnter === 'function') {
-        onViewEnter(view, () => { markPipeline(view); openCategory(catOfView(view)); });
+        onViewEnter(step.view, () => markPipeline(step.view));
       }
     });
   }

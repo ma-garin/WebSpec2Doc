@@ -2,28 +2,35 @@
         <section class="view" id="view-test-design">
           <div class="dashboard-section-head">
             <div>
-              <h2 class="dash-section-title">テストケース実装 <span id="ta-design-count" style="font-size:.72em;font-weight:600;color:var(--text-muted,#64748b);margin-left:.4em;"></span></h2>
               <p class="dashboard-section-copy">テスト条件を技法で展開し、実行できる粒度のテストケースにします。</p>
             </div>
             <div class="dashboard-section-actions">
-              <select id="ta-design-domain" class="btn-outline-sm" aria-label="対象ドメイン">
+              <select id="ta-design-domain" class="select-compact" aria-label="対象ドメイン">
                 <option value="">ドメインを選択</option>
               </select>
-              <button type="button" class="btn-outline-sm" id="ta-design-reload">読み込み直す</button>
+              <button type="button" class="ta-linkbtn" id="ta-design-reload">読み込み直す</button>
             </div>
           </div>
 
+          <!-- 変換帯: 条件→ケースの件数と由来内訳、主アクション（未配線のため準備中表示） -->
           <div class="ta-panel">
             <div class="ta-panel-head">
               <div>
-                <div class="ta-panel-title">適用する技法</div>
-                <div class="ta-panel-sub">方針で選んだ技法が既定で有効になります。</div>
+                <div class="ta-panel-title">条件 → ケースへの変換</div>
+                <div class="ta-panel-sub">
+                  条件 <span id="ta-design-condition-count">0</span> 件 から
+                  ケース <span id="ta-design-count" class="ta2-badge ta2-badge-pri">0 件</span> を生成済み
+                  （由来: AI生成 <span id="ta-design-ai-count" class="ta2-badge ta2-badge-pri">0 件</span>
+                  ／ 手入力 <span id="ta-design-manual-count" class="ta2-badge ta2-badge-muted">0 件</span>）
+                </div>
               </div>
               <div class="ta-panel-actions">
-                <button type="button" class="btn-outline-sm" data-ta-action="design-technique-reset">方針の既定に戻す</button>
+                <button type="button" class="btn-primary" id="ta-design-generate" disabled data-wip="1">AIでケースを生成</button>
+                <span class="ta-wip-note">準備中</span>
               </div>
             </div>
-            <div class="ta-panel-body">
+            <details class="ta-panel-body">
+              <summary>技法を選択（任意・準備中）</summary>
               <div class="ta-chips" id="ta-design-techniques">
                 <button type="button" class="ta-chip" data-ta-action="toggle-design-technique" data-value="equivalence">同値分割</button>
                 <button type="button" class="ta-chip" data-ta-action="toggle-design-technique" data-value="boundary">境界値分析</button>
@@ -31,8 +38,10 @@
                 <button type="button" class="ta-chip" data-ta-action="toggle-design-technique" data-value="state-transition">状態遷移</button>
                 <button type="button" class="ta-chip" data-ta-action="toggle-design-technique" data-value="pairwise">ペアワイズ</button>
                 <button type="button" class="ta-chip" data-ta-action="toggle-design-technique" data-value="cfd">CFD</button>
+                <button type="button" class="ta-linkbtn" data-ta-action="design-technique-reset" disabled data-wip="1">方針の既定に戻す</button>
+                <span class="ta-wip-note">準備中</span>
               </div>
-            </div>
+            </details>
           </div>
 
           <div class="ta-grid-2">
@@ -43,12 +52,13 @@
                   <div class="ta-panel-sub">分析工程から引き継いだ一覧。展開する条件を選びます。</div>
                 </div>
                 <div class="ta-panel-actions">
-                  <button type="button" class="btn-outline-sm" data-ta-action="design-condition-select-all">すべて選択</button>
+                  <button type="button" class="ta-linkbtn" data-ta-action="design-condition-select-all">すべて選択</button>
                 </div>
               </div>
-              <div class="ta-panel-body">
+              <details class="ta-panel-body">
+                <summary>条件一覧を開く</summary>
                 <div id="ta-design-condition-list"><div class="empty">分析画面で「テスト条件を抽出」を実行すると、ここに引き継がれます</div></div>
-              </div>
+              </details>
             </div>
             <div class="ta-panel">
               <div class="ta-panel-head">
@@ -57,10 +67,12 @@
                   <div class="ta-panel-sub">選んだ条件から抽出した因子と、取り得る水準。</div>
                 </div>
                 <div class="ta-panel-actions">
-                  <button type="button" class="btn-outline-sm" data-ta-action="design-factor-add">因子を追加</button>
+                  <button type="button" class="ta-linkbtn" data-ta-action="design-factor-add" disabled data-wip="1">因子を追加</button>
+                  <span class="ta-wip-note">準備中</span>
                 </div>
               </div>
-              <div class="ta-panel-body">
+              <details class="ta-panel-body">
+                <summary>因子・水準を開く</summary>
                 <div class="ta-table-wrap">
                   <table class="ta-table">
                     <thead>
@@ -72,12 +84,12 @@
                     </thead>
                     <tbody id="ta-factor-body">
                       <tr>
-                        <td colspan="3"><div class="empty">まだデータがありません</div></td>
+                        <td colspan="3"><div class="empty">テスト条件を選ぶと、ここに因子・水準の候補が入ります（自動抽出は未実装）</div></td>
                       </tr>
                     </tbody>
                   </table>
                 </div>
-              </div>
+              </details>
             </div>
           </div>
 
@@ -88,16 +100,21 @@
                 <div class="ta-panel-sub">条件と因子・水準から展開したケース。セルをダブルクリックで編集し、保存されます。</div>
               </div>
               <div class="ta-panel-actions">
-                <button type="button" class="btn-primary" id="ta-design-generate">テストケースを生成</button>
-                <button type="button" class="btn-outline-sm" id="ta-design-export">エクスポート</button>
+                <div class="ta-chips" id="ta-design-origin-filter">
+                  <button type="button" class="ta-chip is-on" data-ta-action="design-origin-filter" data-value="all">すべて</button>
+                  <button type="button" class="ta-chip" data-ta-action="design-origin-filter" data-value="ai">AI生成</button>
+                  <button type="button" class="ta-chip" data-ta-action="design-origin-filter" data-value="manual">手入力</button>
+                </div>
+                <button type="button" class="ta-linkbtn" id="ta-design-export" disabled data-wip="1">エクスポート</button>
+                <span class="ta-wip-note">準備中</span>
               </div>
             </div>
             <div class="ta-panel-body">
               <!-- System 01 のテストケース表グリッドをここへ共用マウントする（ta-design.js → tcgMountGrid）。
                    静的テーブルは持たない: 編集・保存の経路を 1 本にするため。 -->
-              <div id="ta-case-grid-host"><div class="empty">まだデータがありません</div></div>
+              <div id="ta-case-grid-host"><div class="empty">ドメインを選択するとケースが表示されます</div></div>
             </div>
           </div>
 
-          <p class="ta-note">テストケースはドキュメント作成の生成結果を共用しています。セルの編集はその場で保存され、ドキュメント作成の結果画面と同じデータを更新します。この画面からのケース生成・エクスポート、技法チップ・因子/水準の反映は未実装です。</p>
+          <p class="ta-note">テストケースはドキュメント作成の生成結果を共用しています。セルの編集はその場で保存され、ドキュメント作成の結果画面と同じデータを更新します。</p>
         </section>

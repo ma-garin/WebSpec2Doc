@@ -30,6 +30,10 @@ body[data-system="testlab"] {
   --d-radius-card: 16px;
   --d-radius-ctl: 8px;
   --d-shadow: 0 1px 3px rgba(0, 0, 0, .06);
+  /* 文字色用の濃色（--d-ok/ng/wa は背景用の淡色のため、数値・本文には使えない） */
+  --d-ok-text: #0F9D6E;
+  --d-ng-text: #D93636;
+  --d-wa-text: #B77800;
 }
 
 /* ══════════════ シェル ══════════════ */
@@ -98,7 +102,7 @@ body[data-system="testlab"] .dashboard-section-copy {
 body[data-system="testlab"] .dashboard-section-head {
   align-items: flex-start;
   gap: 14px;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
 }
 body[data-system="testlab"] .dashboard-section-actions { gap: 8px; }
 
@@ -144,7 +148,7 @@ body[data-system="testlab"] .btn-danger-outline {
 body[data-system="testlab"] .ta-grid-3 {
   display: flex;
   gap: 0;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
   overflow: hidden;
   border-radius: var(--d-radius-card);
   background: var(--d-surface);
@@ -152,7 +156,7 @@ body[data-system="testlab"] .ta-grid-3 {
 }
 body[data-system="testlab"] .ta-grid-3 .stat-card {
   flex: 1;
-  padding: 15px 22px;
+  padding: 10px 22px;
   border: 0;
   border-right: 1px dashed var(--d-line);
   border-radius: 0;
@@ -185,7 +189,7 @@ body[data-system="testlab"] .ta-panel {
 }
 body[data-system="testlab"] .ta-panel-head {
   gap: 10px;
-  padding: 13px 20px;
+  padding: 9px 16px;
   border-bottom: 1px solid var(--d-line-soft);
   background: none;
 }
@@ -198,14 +202,14 @@ body[data-system="testlab"] .ta-panel-sub {
   color: var(--d-ink-faint);
   font-size: 11.5px;
 }
-body[data-system="testlab"] .ta-panel-body { padding: 16px 20px; }
+body[data-system="testlab"] .ta-panel-body { padding: 10px 16px; }
 body[data-system="testlab"] .ta-panel-actions { gap: 8px; }
 
 /* ══════════════ 表 ══════════════ */
 
 body[data-system="testlab"] .ta-table { font-size: 12.5px; }
 body[data-system="testlab"] .ta-table th {
-  padding: 9px 20px;
+  padding: 6px 16px;
   border-bottom: 1px solid var(--d-line-soft);
   background: none;
   color: var(--d-ink-faint);
@@ -216,7 +220,7 @@ body[data-system="testlab"] .ta-table th {
   white-space: nowrap;
 }
 body[data-system="testlab"] .ta-table td {
-  padding: 10px 20px;
+  padding: 7px 16px;
   border-bottom: 1px solid var(--d-line-faint);
   vertical-align: top;
 }
@@ -273,7 +277,7 @@ body[data-system="testlab"] .ta-kv-key label {
   font-size: 12px;
   font-weight: 600;
 }
-body[data-system="testlab"] .ta-kv-row { padding: 7px 0; border: 0; }
+body[data-system="testlab"] .ta-kv-row { padding: 5px 0; border: 0; }
 
 /* ══════════════ チップ（選択トグル） ══════════════ */
 
@@ -302,7 +306,7 @@ body[data-system="testlab"] .ta-chips button[aria-pressed="true"] {
 body[data-system="testlab"] .ta-pipeline {
   display: flex;
   gap: 0;
-  padding: 18px 12px 10px;
+  padding: 12px 12px 6px;
   margin-bottom: 0;
 }
 body[data-system="testlab"] .ta-pipeline-step {
@@ -624,3 +628,168 @@ body[data-system="testlab"] .ta2-stepnav [data-sn-next]:disabled {
   pointer-events: none;
 }
 .ta-gate-toast.is-on { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ══════════════ 補助アクション（btn-outline-sm からの格下げ先） ══════════════
+   主アクション 1 個を際立たせるため、補助操作は枠を持たないテキストボタンにする。
+   btn-outline-sm と同じ機能・同じ hit area を保ちつつ、視覚的重みだけを落とす。 */
+body[data-system="testlab"] .ta-linkbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: var(--d-radius-ctl);
+  background: transparent;
+  color: var(--d-ink-sub);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  text-decoration: none;
+}
+body[data-system="testlab"] .ta-linkbtn:hover:not(:disabled) {
+  color: var(--d-primary);
+  background: var(--d-line-faint);
+  text-decoration: underline;
+}
+body[data-system="testlab"] .ta-linkbtn:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+/* ══════════════ 数値の状態色 ══════════════
+   実測: 失敗 1892 件・成功率 50% が黒文字で出ていた。数値は状態を語る要素なので色を持たせる。 */
+body[data-system="testlab"] .stat-card-value.is-ng,
+body[data-system="testlab"] .ta-num.is-ng { color: var(--d-ng-text); }
+body[data-system="testlab"] .stat-card-value.is-ok,
+body[data-system="testlab"] .ta-num.is-ok { color: var(--d-ok-text); }
+body[data-system="testlab"] .stat-card-value.is-wa,
+body[data-system="testlab"] .ta-num.is-wa { color: var(--d-wa-text); }
+body[data-system="testlab"] .stat-card-value.is-pri,
+body[data-system="testlab"] .ta-num.is-pri { color: var(--d-primary); }
+
+/* ══════════════ 準備中（未配線）の明示 ══════════════
+   押しても何も起きないボタンを黙って置かない。無効であることを見た目で示す。 */
+body[data-system="testlab"] [data-wip="1"] {
+  opacity: .45;
+  cursor: not-allowed;
+}
+body[data-system="testlab"] .ta-wip-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 7px;
+  border-radius: var(--radius-full, 999px);
+  background: var(--d-line-soft);
+  color: var(--d-ink-faint);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* ══════════════ 縦圧縮（2026-08-24 実測: 表示領域 826px に対し全画面が超過）══════════════
+   ISO/IEC 25010 使用性→認識性: 1画面内で工程の状態を認識できることを基準に、
+   情報を削らず余白と折返しだけを削る。 */
+body[data-system="testlab"] .ta-wip-note {
+  padding: 0 6px;
+  font-size: 10px;
+  line-height: 16px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+/* 設定系の縦積みを横並びへ: label と入力を1行に収め、行あたりの高さを固定する */
+body[data-system="testlab"] .ta-kv-row {
+  padding: 3px 0;
+  align-items: center;
+  min-height: 34px;
+}
+body[data-system="testlab"] .ta-panel { margin-bottom: 8px; }
+body[data-system="testlab"] .ta-note { padding: 6px 12px; font-size: 12px; }
+body[data-system="testlab"] .ta2-stepnav { margin-top: 8px; }
+body[data-system="testlab"] .dashboard-section-head { margin-bottom: 6px; }
+
+/* ══════════════ 表の高さ制限（2026-08-24 実測: 実行結果200行で 11,672px ＝ 14画面分）══════════════
+   実データを入れると表がページ全体を押し広げ、画面の他の要素（数値・ゲージ・次工程）が
+   スクロールの彼方へ消える。表は自分の枠内でスクロールさせ、ページは1画面に収める。
+   ISO/IEC 25010 使用性→認識性: 状態を1画面で認識できることを優先する。 */
+body[data-system="testlab"] .ta-table-wrap {
+  /* 固定値ではなく画面高に追従させる。画面が大きいほど多くの行が見え、
+     どの画面サイズでもページ自体はスクロールしない。 */
+  max-height: calc(100vh - 690px);
+  min-height: 200px;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+/* 表ヘッダを固定して、スクロール中も列の意味を見失わせない */
+body[data-system="testlab"] .ta-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--d-line-faint);
+}
+/* ログも同様に枠内スクロール（常時表示は維持したまま高さだけ抑える） */
+body[data-system="testlab"] .ta-log,
+body[data-system="testlab"] pre.ta-code,
+body[data-system="testlab"] .ta-panel pre {
+  max-height: 150px;
+  overflow-y: auto;
+}
+/* 共用テストケースグリッドも同様 */
+body[data-system="testlab"] .tcg-scroll,
+body[data-system="testlab"] .testcase-grid-scroll {
+  max-height: calc(100vh - 600px);
+  min-height: 220px;
+  overflow-y: auto;
+}
+
+/* 縦圧縮 第2弾（2026-08-24 実測: 9画面が 53〜314px 超過）*/
+body[data-system="testlab"] .ta-panel { margin-bottom: 6px; }
+body[data-system="testlab"] .ta-panel-head { padding: 7px 14px; }
+body[data-system="testlab"] .ta-panel-body { padding: 8px 14px; }
+body[data-system="testlab"] .ta-grid-3 { margin-bottom: 8px; }
+body[data-system="testlab"] .stat-card { padding: 8px 18px; }
+body[data-system="testlab"] .dashboard-section-head { margin-bottom: 4px; }
+body[data-system="testlab"] .ta-panel-sub { font-size: 11px; line-height: 1.35; }
+body[data-system="testlab"] .ta-note { padding: 5px 12px; }
+body[data-system="testlab"] .ta2-stepnav { margin-top: 6px; }
+body[data-system="testlab"] .ta-table th { padding: 5px 14px; }
+body[data-system="testlab"] .ta-table td { padding: 5px 14px; }
+
+/* details パネルの開閉インジケータ（.ta-panel-head の flex で既定マーカーが消えるため補う）*/
+body[data-system="testlab"] details.ta-panel > summary.ta-panel-head {
+  cursor: pointer;
+  list-style: none;
+  position: relative;
+  padding-right: 34px;
+}
+body[data-system="testlab"] details.ta-panel > summary.ta-panel-head::-webkit-details-marker { display: none; }
+body[data-system="testlab"] details.ta-panel > summary.ta-panel-head::after {
+  content: "";
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  margin-top: -5px;
+  border-right: 2px solid var(--d-ink-sub);
+  border-bottom: 2px solid var(--d-ink-sub);
+  transform: rotate(45deg);
+  transition: transform .15s;
+}
+body[data-system="testlab"] details.ta-panel[open] > summary.ta-panel-head::after {
+  transform: rotate(-135deg);
+  margin-top: -1px;
+}
+body[data-system="testlab"] details.ta-panel > summary.ta-panel-head:hover { background: var(--d-line-faint); }
+
+/* 残余の超過潰し（実測 11〜108px）*/
+body[data-system="testlab"] .ta-panel-title { font-size: 13px; }
+body[data-system="testlab"] .ta-panel-head { padding: 6px 14px; }
+body[data-system="testlab"] .ta-panel-body { padding: 7px 14px; }
+body[data-system="testlab"] .ta-panel { margin-bottom: 5px; }
+body[data-system="testlab"] .stat-card { padding: 7px 18px; }
+body[data-system="testlab"] .ta-pipeline { padding: 8px 12px 4px; }
+body[data-system="testlab"] .ta-source-item { padding: 5px 10px; }

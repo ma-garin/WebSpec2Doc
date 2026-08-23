@@ -39,7 +39,7 @@
   async function loadConditions(domain) {
     const tbody = _tbody();
     if (!tbody) return;
-    if (!domain) { _showEmpty('まだデータがありません'); return; }
+    if (!domain) { _showEmpty('上の［テスト条件を抽出］を押すと、この表に条件が入ります。'); return; }
     tbody.innerHTML = '<tr><td colspan="6">読み込んでいます…</td></tr>';
     try {
       const res = await fetch('/api/result?domain=' + encodeURIComponent(domain));
@@ -80,15 +80,17 @@
         note: `遷移先 ${toCount} 件 ／ 流入 ${fromCount} 件`,
       };
     });
-    tbody.innerHTML = items.map(it => `<tr>
+    // 由来（画面由来 = クロール結果からの機械的な行）をフィルタ用の class/data-origin に載せる。
+    tbody.innerHTML = items.map(it => `<tr class="ta-row-origin-screen" data-origin="screen">
         <td>${esc(it.id)}</td>
-        <td>${esc(it.title)}<div class="muted-copy">${esc(it.url)}</div></td>
+        <td><span class="ta2-badge ta2-badge-info">画面由来</span> ${esc(it.title)}<div class="muted-copy">${esc(it.url)}</div></td>
         <td>${esc(it.condition)}</td>
         <td>${esc(it.category)}</td>
         <td>${esc(it.priority)}</td>
         <td>${esc(it.note)}</td>
       </tr>`).join('');
     _saveConditions(domain, items);
+    _updateStatConditions(items.length);
   }
 
   // 設計ビューへの引き継ぎ保存。契約: キー ta.conditions.v1 /
@@ -104,6 +106,7 @@
     loadDomains();
     const sel = _select();
     if (sel && sel.value) loadConditions(sel.value);
+    _updateStatSources();
   }
 
   document.getElementById('ta-analysis-doc-select')?.addEventListener('change', (e) => {
@@ -113,9 +116,10 @@
 
   // 画面切替時の初期化。core.js の VIEW_INIT 表へビュー側から登録する（core.js は編集しない）。
   if (typeof onViewEnter === 'function') {
-    onViewEnter('test-analysis', () => { if (!_domainsLoaded) loadDomains(); });
+    onViewEnter('test-analysis', () => { if (!_domainsLoaded) loadDomains(); _updateStatSources(); });
   } else {
     loadDomains();
+    _updateStatSources();
   }
 })();
 
@@ -138,10 +142,12 @@
 
   function _markDocConnected(count) {
     const item = document.querySelector('#ta-analysis-source-state .ta-source-item');
-    const badge = item ? item.querySelector('.badge') : null;
+    const badge = item ? item.querySelector('.ta2-badge') : null;
     if (!badge) return;
     badge.textContent = count + ' 件';
-    badge.classList.remove('badge-muted');
+    badge.classList.remove('ta2-badge-wa');
+    badge.classList.add('ta2-badge-ok');
+    _updateStatSources();
   }
 
   async function _upload() {
@@ -205,14 +211,16 @@
   function _render(items) {
     const tbody = _tbody();
     if (!tbody) return;
-    tbody.innerHTML = items.map((it, i) => `<tr>
+    // 由来（文書解析 = doc-fusion による抽出）をフィルタ用の class/data-origin に載せる。
+    tbody.innerHTML = items.map((it, i) => `<tr class="ta-row-origin-doc" data-origin="doc">
       <td>${esc(it.id || 'TC-' + String(i + 1).padStart(3, '0'))}</td>
-      <td>${esc(it.source || it.origin || '-')}</td>
+      <td><span class="ta2-badge ta2-badge-pri">文書解析</span> ${esc(it.source || it.origin || '-')}</td>
       <td>${esc(it.condition || it.title || '-')}</td>
       <td>${esc(it.category || '-')}</td>
       <td>${esc(it.priority || '-')}</td>
       <td>${esc(it.note || '-')}</td>
     </tr>`).join('');
+    _updateStatConditions(items.length);
   }
 
   async function _extract() {
@@ -249,3 +257,32 @@
     if (ev.target && ev.target.id === 'ta-analysis-run') _extract();
   });
 })();
+
+
+// ---- テスト活動支援 / 分析ビュー: 変換帯の集計・由来フィルタ ----
+// 「入力ソース→条件→対応漏れ」の件数を可視化する（新しい API は足さず、既存 DOM/取得済みデータから算出）。
+// トップレベルの function 宣言はホイスティングされるため、上の各 IIFE 内からも安全に呼び出せる。
+function _updateStatSources() {
+  const el = document.getElementById('ta-analysis-stat-sources');
+  if (!el) return;
+  const badges = document.querySelectorAll('#ta-analysis-source-state .ta-source-item .ta2-badge');
+  const total = badges.length;
+  const connected = Array.from(badges).filter((b) => !b.classList.contains('ta2-badge-wa')).length;
+  el.textContent = connected + ' / ' + total;
+}
+
+function _updateStatConditions(count) {
+  const el = document.getElementById('ta-analysis-stat-conditions');
+  if (el) el.textContent = String(count);
+}
+
+// 由来フィルタ（すべて／画面由来／文書解析）。行の表示切替のみで、データの再取得は行わない。
+document.addEventListener('click', (ev) => {
+  const chip = ev.target.closest && ev.target.closest('#ta-condition-filter .ta-chip');
+  if (!chip) return;
+  const origin = chip.getAttribute('data-origin') || '';
+  chip.parentElement.querySelectorAll('.ta-chip').forEach((c) => c.classList.toggle('is-on', c === chip));
+  document.querySelectorAll('#ta-condition-body tr[data-origin]').forEach((tr) => {
+    tr.style.display = (!origin || tr.getAttribute('data-origin') === origin) ? '' : 'none';
+  });
+});

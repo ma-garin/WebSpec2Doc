@@ -5,12 +5,27 @@
               <p class="dashboard-section-copy">ドキュメントと GitHub の差分から、何をテストすべきか（テスト条件）を洗い出します。</p>
             </div>
             <div class="dashboard-section-actions">
-              <button type="button" class="btn-outline-sm" id="ta-analysis-reload">入力ソースを再読み込み</button>
+              <button type="button" class="ta-linkbtn" id="ta-analysis-reload">入力ソースを再読み込み</button>
             </div>
           </div>
 
-          <div class="ta-panel">
-            <div class="ta-panel-head">
+          <div class="ta-grid-3">
+            <div class="stat-card">
+              <div class="stat-card-value" id="ta-analysis-stat-sources">0 / 4</div>
+              <div class="stat-card-label">入力ソース接続</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-value is-pri" id="ta-analysis-stat-conditions">0</div>
+              <div class="stat-card-label">抽出された条件</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-value" id="ta-analysis-stat-gaps">—</div>
+              <div class="stat-card-label">対応漏れ（未検査）</div>
+            </div>
+          </div>
+
+          <details class="ta-panel">
+            <summary class="ta-panel-head">
               <div>
                 <div class="ta-panel-title">入力ソース</div>
                 <div class="ta-panel-sub">仕様書・コード差分・開発標準を指定します。</div>
@@ -18,7 +33,7 @@
               <div class="ta-panel-actions">
                 <button type="button" class="btn-primary" id="ta-analysis-run">テスト条件を抽出</button>
               </div>
-            </div>
+            </summary>
             <div class="ta-panel-body">
               <div class="ta-kv">
                 <div class="ta-kv-row">
@@ -27,7 +42,7 @@
                     <div class="ta-upload-row">
                       <input type="file" id="ta-analysis-doc-files" class="input-compact" multiple
                              accept=".md,.txt,.html,.htm,.json,.yaml,.yml,.csv,.pdf,.docx,.xlsx,.pptx" />
-                      <button type="button" class="btn-outline-sm" id="ta-analysis-doc-upload">アップロード</button>
+                      <button type="button" class="ta-linkbtn" id="ta-analysis-doc-upload">アップロード</button>
                     </div>
                     <div class="ta-note" id="ta-analysis-doc-upload-state" hidden></div>
                   </div>
@@ -56,23 +71,23 @@
               <div class="ta-source" id="ta-analysis-source-state">
                 <div class="ta-source-item">
                   <span class="card-title">ドキュメント</span>
-                  <span class="badge badge-muted">未接続</span>
+                  <span class="ta2-badge ta2-badge-wa">未接続</span>
                 </div>
                 <div class="ta-source-item">
                   <span class="card-title">GitHub</span>
-                  <span class="badge badge-muted">未接続</span>
+                  <span class="ta2-badge ta2-badge-wa">未接続</span>
                 </div>
                 <div class="ta-source-item">
                   <span class="card-title">ソースコード</span>
-                  <span class="badge badge-muted">未接続</span>
+                  <span class="ta2-badge ta2-badge-wa">未接続</span>
                 </div>
                 <div class="ta-source-item">
                   <span class="card-title">開発標準</span>
-                  <span class="badge badge-muted">未接続</span>
+                  <span class="ta2-badge ta2-badge-wa">未接続</span>
                 </div>
               </div>
             </div>
-          </div>
+          </details>
 
           <div class="ta-panel">
             <div class="ta-panel-head">
@@ -81,11 +96,17 @@
                 <div class="ta-panel-sub">由来には、根拠となった文書の行またはコードの関数を記録します。</div>
               </div>
               <div class="ta-panel-actions">
-                <button type="button" class="btn-outline-sm" data-ta-action="condition-add">条件を追加</button>
-                <button type="button" class="btn-outline-sm" data-ta-action="condition-export">エクスポート</button>
+                <button type="button" class="ta-linkbtn" data-ta-action="condition-add" disabled data-wip="1">条件を追加</button>
+                <button type="button" class="ta-linkbtn" data-ta-action="condition-export" disabled data-wip="1">エクスポート</button>
+                <span class="ta-wip-note">準備中</span>
               </div>
             </div>
             <div class="ta-panel-body">
+              <div class="ta-chips" id="ta-condition-filter">
+                <button type="button" class="ta-chip is-on" data-origin="">すべて</button>
+                <button type="button" class="ta-chip" data-origin="screen">画面由来</button>
+                <button type="button" class="ta-chip" data-origin="doc">文書解析</button>
+              </div>
               <div class="ta-table-wrap">
                 <table class="ta-table">
                   <thead>
@@ -100,7 +121,7 @@
                   </thead>
                   <tbody id="ta-condition-body">
                     <tr>
-                      <td colspan="6"><div class="empty">まだデータがありません</div></td>
+                      <td colspan="6"><div class="empty">上の［テスト条件を抽出］を押すと、この表に条件が入ります。</div></td>
                     </tr>
                   </tbody>
                 </table>
@@ -108,20 +129,21 @@
             </div>
           </div>
 
-          <div class="ta-panel">
-            <div class="ta-panel-head">
+          <details class="ta-panel">
+            <summary class="ta-panel-head">
               <div>
                 <div class="ta-panel-title">トレーサビリティ</div>
                 <div class="ta-panel-sub">要求 → テスト条件 → ケース の対応が途切れている箇所を検出します。</div>
               </div>
               <div class="ta-panel-actions">
-                <button type="button" class="btn-outline-sm" id="ta-analysis-trace-check">対応漏れを検査</button>
+                <button type="button" class="ta-linkbtn" id="ta-analysis-trace-check" disabled data-wip="1">対応漏れを検査</button>
+                <span class="ta-wip-note">準備中</span>
               </div>
-            </div>
+            </summary>
             <div class="ta-panel-body">
-              <div id="ta-trace-body"><div class="empty">まだデータがありません</div></div>
+              <div id="ta-trace-body"><div class="empty">対応漏れ検査は準備中です。実装後、要求・条件・ケースの対応漏れがここに表示されます。</div></div>
             </div>
-          </div>
+          </details>
 
           <p class="ta-note">読み取りはドキュメント作成の解析データを共用（書き込みは未実装）。</p>
         </section>

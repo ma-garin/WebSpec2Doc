@@ -14,6 +14,26 @@
     if (el) el.textContent = text;
   }
 
+  // 由来（AI生成／手入力）の内訳。行データの row.origin === 'manual' が手入力、
+  // それ以外（未設定）が AI 生成。新しい API は足さず、共用グリッドが既に
+  // 保持している TCG.rows（テストケース行データ）から算出する。
+  function updateOriginCounts() {
+    const rows = (typeof TCG !== 'undefined' && Array.isArray(TCG.rows)) ? TCG.rows : [];
+    const manual = rows.filter((r) => r && r.origin === 'manual').length;
+    const ai = rows.length - manual;
+    const aiEl = $('ta-design-ai-count');
+    const manualEl = $('ta-design-manual-count');
+    if (aiEl) aiEl.textContent = ai + ' 件';
+    if (manualEl) manualEl.textContent = manual + ' 件';
+  }
+
+  function resetOriginCounts() {
+    const aiEl = $('ta-design-ai-count');
+    const manualEl = $('ta-design-manual-count');
+    if (aiEl) aiEl.textContent = '0 件';
+    if (manualEl) manualEl.textContent = '0 件';
+  }
+
   // ケース表は System 01 のグリッドを共用マウントする（tcgMountGrid）。
   // 状態メッセージはマウント先ごと差し替える（グリッドと同居させない）。
   function showMessage(msg) {
@@ -37,8 +57,10 @@
 
   function renderConditions() {
     const list = $('ta-design-condition-list');
+    const countEl = $('ta-design-condition-count');
     if (!list) return;
     const data = readConditions();
+    if (countEl) countEl.textContent = data ? String(data.items.length) : '0';
     if (!data) {
       list.innerHTML = '<div class="empty">分析画面で「テスト条件を抽出」を実行すると、ここに引き継がれます</div>';
       return;
@@ -54,6 +76,35 @@
     </div>`).join('');
   }
 
+  // 由来フィルタ（すべて／AI生成／手入力）。共用グリッドの行に既に付いている
+  // is-manual クラス（view-testcase-grid.js が付与）を使って表示切替するだけで、
+  // グリッド側の状態（TCG.filters 等）には触れない。
+  let _originFilter = 'all';
+  function applyOriginFilter() {
+    const host = $('ta-case-grid-host');
+    if (!host) return;
+    host.querySelectorAll('.tcg-tr').forEach((row) => {
+      const isManual = row.classList.contains('is-manual');
+      const show = _originFilter === 'all'
+        || (_originFilter === 'manual' && isManual)
+        || (_originFilter === 'ai' && !isManual);
+      row.style.display = show ? '' : 'none';
+    });
+  }
+  function resetOriginFilter() {
+    _originFilter = 'all';
+    const wrap = $('ta-design-origin-filter');
+    if (wrap) wrap.querySelectorAll('.ta-chip').forEach((c) => c.classList.toggle('is-on', c.dataset.value === 'all'));
+  }
+  // グリッドはスクロールで行を追加描画する（tcgMaybeAppendChunk）。追加された
+  // 行にもフィルタを効かせるため、そのスクロール要素にも同じ判定をかけ直す。
+  function bindOriginFilterScroll() {
+    const scroller = document.getElementById('tcg-scroll');
+    if (scroller) scroller.addEventListener('scroll', () => {
+      if (_originFilter !== 'all') applyOriginFilter();
+    });
+  }
+
   // マウント済みかどうか。他画面がグリッドを作るとこの画面の DOM は破棄されるため、
   // 画面へ戻ったときに作り直すかの判定に使う。
   let _mounted = false;
@@ -62,33 +113,40 @@
     const host = $('ta-case-grid-host');
     if (!host) return;
     _mounted = false;
+    resetOriginFilter();
     if (!domain) {
       setBadge('');
+      resetOriginCounts();
       showMessage('ドメインを選択してください');
       return;
     }
     if (typeof tcgMountGrid !== 'function') {
       setBadge('');
+      resetOriginCounts();
       showMessage('テストケース表を読み込めませんでした（グリッドが未ロードです）');
       return;
     }
-    setBadge('');
+    setBadge('0 件');
     showMessage('読み込み中…');
     // 見出し帯は出さない（パネル見出し「生成テストケース」と重複するため）。
     // 実行ボタンも出さない（実行は実行画面の責務）。
     const count = await tcgMountGrid(host, domain, { title: '', setTabCount: false, showRun: false });
     if (count === null) {
       // 取得失敗時は tcgMountGrid が再試行つきのエラーを host 内に描画済み。
-      setBadge('');
+      setBadge('0 件');
+      resetOriginCounts();
       return;
     }
     if (!count) {
-      setBadge('');
+      setBadge('0 件');
+      resetOriginCounts();
       showMessage('このドメインには生成テストケースがありません');
       return;
     }
     _mounted = true;
     setBadge(count + ' 件');
+    updateOriginCounts();
+    bindOriginFilterScroll();
   }
 
   async function loadDomains() {
@@ -135,6 +193,22 @@
     if (selectAll) selectAll.addEventListener('click', () => {
       const list = $('ta-design-condition-list');
       if (list) list.querySelectorAll('input[type="checkbox"]').forEach((cb) => { cb.checked = true; });
+    });
+    // 技法チップ: 適用する技法の選択トグル（見た目の選択状態のみ。生成は未実装）。
+    const techWrap = $('ta-design-techniques');
+    if (techWrap) techWrap.addEventListener('click', (ev) => {
+      const btn = ev.target.closest('.ta-chip[data-ta-action="toggle-design-technique"]');
+      if (!btn) return;
+      btn.classList.toggle('is-on');
+    });
+    // 由来フィルタ: すべて／AI生成／手入力の切り替え（実データで絞り込む）。
+    const filterWrap = $('ta-design-origin-filter');
+    if (filterWrap) filterWrap.addEventListener('click', (ev) => {
+      const btn = ev.target.closest('.ta-chip[data-ta-action="design-origin-filter"]');
+      if (!btn) return;
+      _originFilter = btn.dataset.value || 'all';
+      filterWrap.querySelectorAll('.ta-chip').forEach((c) => c.classList.toggle('is-on', c === btn));
+      applyOriginFilter();
     });
     renderConditions();
     loadDomains();

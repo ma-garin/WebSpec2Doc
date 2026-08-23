@@ -1,12 +1,13 @@
 // ---- テスト活動支援 / 実行ビュー ----
-// 既存の実行基盤（/api/history/runs）を読み取り専用で共用する。
-// この画面からの実行起動は未実装（起動系のボタンは HTML 側で無効化済み）。
+// 既存の実行基盤（/api/history/runs）を共用し、実行起動（POST /api/testcases/run）も
+// この画面から行う。停止・スケジュール登録・結果書き出し・環境/並列度は未配線。
 (function () {
   'use strict';
 
   // テスト実行に該当する種別だけを扱う（クロール等のドキュメント作成は混ぜない）。
-  // 実測（2026-08-22・/api/history/runs 3752件）で存在する type は autorun / crawl のみ。
-  const TA_EXEC_TYPES = ['autorun'];
+  // testcase_run はこの画面からの実行分（snapshot_run(event="testcase_run") →
+  // usage_tracker.py の build_run_history が event をそのまま type に入れる）。
+  const TA_EXEC_TYPES = ['autorun', 'testcase_run'];
   const TA_STATUS_LABELS = { complete: '完了', failed: '失敗', cancelled: '中断', running: '実行中' };
   let _loaded = false;
 
@@ -90,8 +91,112 @@
     }
   }
 
+  // ---- 実行起動（POST /api/testcases/run は同期実行。完了までレスポンスが返らない） ----
+  const runBtn = document.getElementById('ta-exec-run');
+  const suiteSel = document.getElementById('ta-exec-suite');
+  const logEl = document.getElementById('ta-exec-log');
+
+  // ログは追記のみ。クリア・折りたたみをしない（実行ログ常時表示のユーザー規約）。
+  function appendLog(line) {
+    if (!logEl) return;
+    logEl.textContent += (logEl.textContent ? '\n' : '') + line;
+  }
+
+  function syncRunButton() {
+    if (!runBtn || !suiteSel) return;
+    // 実行中は select を変えてもボタンを再有効化しない（走っているのは選択前の対象のため）
+    if (_running) return;
+    const ready = Boolean(suiteSel.value);
+    runBtn.disabled = !ready;
+    runBtn.title = ready ? '選択した対象のテストを実行します' : '実行対象を選択してください';
+  }
+
+  let _suitesLoaded = false;
+  async function loadSuites() {
+    if (!suiteSel) return;
+    try {
+      const res = await fetch('/api/history');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '実行対象を取得できませんでした');
+      // ケース表を組める report.json（JSON 形式の成果物）を持つドメインだけを実行対象にする
+      const items = (data.items || []).filter(
+        (it) => Number(it.screens) > 0 && (it.formats || []).includes('JSON'),
+      );
+      suiteSel.innerHTML = '<option value="">テストスイートを選択</option>'
+        + items.map((it) => `<option value="${esc(it.domain)}">${esc(it.domain)}</option>`).join('');
+      _suitesLoaded = true;
+    } catch (e) {
+      appendLog(`実行対象の取得に失敗しました: ${String(e && e.message ? e.message : e)}`);
+    }
+    syncRunButton();
+  }
+
+  // 実行中の途中経過。live-progress の tests は追記順（古い→新しい）の直近窓のため、
+  // 出力済み件数（_lastCompleted）との差分だけを末尾から取り出して追記する。
+  let _running = false;
+  let _lastCompleted = 0;
+  async function pollProgress(domain) {
+    try {
+      const res = await fetch(`/api/testcases/live-progress?domain=${encodeURIComponent(domain)}`);
+      const data = await res.json();
+      // 応答が実行完了後に届いた分は捨てる（要約行の後にケース行が混ざらないように）
+      if (!res.ok || !_running) return;
+      const completed = Number(data.done) || 0;
+      const total = Number(data.total) || 0;
+      // slice(-0) は全件コピーになるため、差分 0 件は明示的に空にする
+      const delta = Math.max(0, completed - _lastCompleted);
+      const fresh = delta > 0 ? (data.tests || []).slice(-delta) : [];
+      fresh.forEach((t, i) => {
+        const mark = t.status === 'passed' ? 'PASS'
+          : (t.status === 'failed' ? 'FAIL' : String(t.status || '').toUpperCase());
+        appendLog(`[${_lastCompleted + i + 1}/${total || '?'}] ${t.title || ''} ${mark}`);
+      });
+      _lastCompleted = Math.max(_lastCompleted, completed);
+    } catch (_e) {
+      // ポーリングの単発失敗は無視する（結果の正は POST の応答）
+    }
+  }
+
+  async function runSuite() {
+    if (!runBtn || !suiteSel || !suiteSel.value || _running) return;
+    const domain = suiteSel.value;
+    const origLabel = runBtn.textContent;
+    runBtn.disabled = true;
+    runBtn.textContent = '実行中…';
+    _running = true;
+    _lastCompleted = 0;
+    appendLog(`実行を開始します: ${domain}`);
+    const timer = setInterval(() => pollProgress(domain), 2000);
+    try {
+      const res = await fetch('/api/testcases/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain, per_test_timeout_sec: 20 }),
+      });
+      const data = await res.json();
+      _running = false;
+      clearInterval(timer);
+      if (!res.ok || data.error) throw new Error(data.error || '実行に失敗しました');
+      const s = (data.run && data.run.summary) || {};
+      appendLog(`実行完了: PASS ${s.passed ?? 0} / FAIL ${s.failed ?? 0} / 全${s.total ?? 0}件（run_id: ${data.run_id || '—'}）`);
+      await loadTaExecution();
+    } catch (e) {
+      _running = false;
+      clearInterval(timer);
+      appendLog(`エラー: ${String(e && e.message ? e.message : e)}`);
+    } finally {
+      runBtn.textContent = origLabel;
+      syncRunButton();
+    }
+  }
+
   if (typeof onViewEnter === 'function') {
-    onViewEnter('test-execution', () => { if (!_loaded) loadTaExecution(); });
+    onViewEnter('test-execution', () => {
+      if (!_loaded) loadTaExecution();
+      if (!_suitesLoaded) loadSuites();
+    });
   }
   document.getElementById('ta-exec-reload')?.addEventListener('click', loadTaExecution);
+  suiteSel?.addEventListener('change', syncRunButton);
+  runBtn?.addEventListener('click', runSuite);
 })();

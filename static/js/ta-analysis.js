@@ -52,7 +52,7 @@
       const report = await repRes.json();
       const screens = report.screens || [];
       if (!screens.length) { _showEmpty('このサイトには画面データがありません'); return; }
-      _renderConditions(screens);
+      _renderConditions(screens, domain);
     } catch (e) {
       _showEmpty('読み込みに失敗しました: ' + e.message);
     }
@@ -61,24 +61,43 @@
   // 画面 1 件をテスト条件の種 1 行にする。
   //   条件ID = 画面ID ／ 由来 = 画面名と URL ／ 分類 = 画面 ／ 観点 = 遷移先の数。
   // 優先度は流入遷移数から導出する（流入が多い画面ほど壊れたときの影響が広い）。
-  function _renderConditions(screens) {
+  function _renderConditions(screens, domain) {
     const tbody = _tbody();
     if (!tbody) return;
-    tbody.innerHTML = screens.map(sc => {
-      const id = sc.page_id || sc.state_id || '';
+    // 行データを先に配列として組み立て、表の描画と設計ビューへの引き継ぎ保存の
+    // 両方に同じデータを使う（描画とデータ構築の二重化を避ける）。
+    const items = screens.map(sc => {
       const title = sc.title || sc.url || '(無題)';
       const toCount = ((sc.transitions && sc.transitions.to) || []).length;
       const fromCount = ((sc.transitions && sc.transitions.from) || []).length;
-      const priority = fromCount >= 3 ? '高' : (fromCount >= 1 ? '中' : '低');
-      return `<tr>
-        <td>${esc(id)}</td>
-        <td>${esc(title)}<div class="muted-copy">${esc(sc.url || '')}</div></td>
-        <td>画面「${esc(title)}」が表示され、定義された遷移先へ移動できること</td>
-        <td>画面</td>
-        <td>${esc(priority)}</td>
-        <td>遷移先 ${toCount} 件 ／ 流入 ${fromCount} 件</td>
-      </tr>`;
-    }).join('');
+      return {
+        id: sc.page_id || sc.state_id || '',
+        title,
+        url: sc.url || '',
+        condition: `画面「${title}」が表示され、定義された遷移先へ移動できること`,
+        category: '画面',
+        priority: fromCount >= 3 ? '高' : (fromCount >= 1 ? '中' : '低'),
+        note: `遷移先 ${toCount} 件 ／ 流入 ${fromCount} 件`,
+      };
+    });
+    tbody.innerHTML = items.map(it => `<tr>
+        <td>${esc(it.id)}</td>
+        <td>${esc(it.title)}<div class="muted-copy">${esc(it.url)}</div></td>
+        <td>${esc(it.condition)}</td>
+        <td>${esc(it.category)}</td>
+        <td>${esc(it.priority)}</td>
+        <td>${esc(it.note)}</td>
+      </tr>`).join('');
+    _saveConditions(domain, items);
+  }
+
+  // 設計ビューへの引き継ぎ保存。契約: キー ta.conditions.v1 /
+  // 値 {"domain": 抽出元ドメイン, "items": [{id,title,url,condition,category,priority,note}]}。
+  // ストレージ不可（プライベートモード等）でも分析表示自体は成立させる。
+  function _saveConditions(domain, items) {
+    try {
+      sessionStorage.setItem('ta.conditions.v1', JSON.stringify({ domain, items }));
+    } catch (_) { /* 保存失敗は無視。分析表示を止めない */ }
   }
 
   function _reload() {

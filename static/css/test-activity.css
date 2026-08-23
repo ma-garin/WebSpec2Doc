@@ -269,3 +269,13 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* 入力ソース: ファイル選択とアップロードボタンを 1 行に並べる */
+.ta-upload-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.ta-upload-row .input-compact { flex: 1 1 320px; }
+.ta-note.is-error { color: var(--danger, #c0392b); }

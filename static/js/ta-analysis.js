@@ -118,3 +118,134 @@
     loadDomains();
   }
 })();
+
+
+// ---- テスト活動支援 / 分析ビュー: 仕様書ファイルのアップロード ----
+// 既存の POST /api/reference-docs（output/{domain}/reference_docs/ へ保存）へ配線する。
+// 受け入れ拡張子と上限サイズはサーバ側 allowlist が正で、ここでは事前選別のみ行う。
+(function () {
+  const UPLOAD_BUCKET = 'uploads';
+
+  function _el(id) { return document.getElementById(id); }
+
+  function _setState(message, isError) {
+    const box = _el('ta-analysis-doc-upload-state');
+    if (!box) return;
+    box.hidden = false;
+    box.textContent = message;
+    box.classList.toggle('is-error', Boolean(isError));
+  }
+
+  function _markDocConnected(count) {
+    const item = document.querySelector('#ta-analysis-source-state .ta-source-item');
+    const badge = item ? item.querySelector('.badge') : null;
+    if (!badge) return;
+    badge.textContent = count + ' 件';
+    badge.classList.remove('badge-muted');
+  }
+
+  async function _upload() {
+    const input = _el('ta-analysis-doc-files');
+    const files = input && input.files ? Array.from(input.files) : [];
+    if (!files.length) {
+      _setState('ファイルを選択してください。', true);
+      return;
+    }
+    // 解析済みサイトに依存せず単独で使えるよう、アップロード専用の保存先へ固定する。
+    // DOMAIN_RE（^[A-Za-z0-9._:\[\]-]{1,253}$）を満たす値であること。
+    const domain = UPLOAD_BUCKET;
+    const form = new FormData();
+    form.append('domain', domain);
+    files.forEach((file) => form.append('files', file));
+    _setState(files.length + ' 件をアップロードしています…');
+    try {
+      const res = await fetch('/api/reference-docs', { method: 'POST', body: form });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error || 'アップロードに失敗しました');
+      const saved = data.saved || [];
+      _setState(saved.length + ' 件をアップロードしました: ' + saved.map((s) => s.name).join('、'));
+      _markDocConnected(saved.length);
+    } catch (e) {
+      _setState('アップロードに失敗しました: ' + e.message, true);
+    }
+  }
+
+  // 読込順に依存しないよう委譲で束ねる。
+  document.addEventListener('click', (ev) => {
+    const target = ev.target;
+    if (target && target.id === 'ta-analysis-doc-upload') _upload();
+  });
+})();
+
+
+// ---- テスト活動支援 / 分析ビュー: 「テスト条件を抽出」ボタン ----
+// 押下しても無反応だった不具合の解消。成功・失敗・未生成のいずれでも必ず状態を表示する。
+(function () {
+  const UPLOAD_BUCKET = 'uploads';
+
+  const esc = (v) => (typeof escHtml === 'function'
+    ? escHtml(String(v))
+    : String(v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])));
+
+  function _setState(message, isError) {
+    const box = document.getElementById('ta-analysis-doc-upload-state');
+    if (!box) return;
+    box.hidden = false;
+    box.textContent = message;
+    box.classList.toggle('is-error', Boolean(isError));
+  }
+
+  function _tbody() { return document.getElementById('ta-condition-body'); }
+
+  function _showRowMessage(message) {
+    const tbody = _tbody();
+    if (tbody) tbody.innerHTML = `<tr><td colspan="6"><div class="empty">${esc(message)}</div></td></tr>`;
+  }
+
+  function _render(items) {
+    const tbody = _tbody();
+    if (!tbody) return;
+    tbody.innerHTML = items.map((it, i) => `<tr>
+      <td>${esc(it.id || 'TC-' + String(i + 1).padStart(3, '0'))}</td>
+      <td>${esc(it.source || it.origin || '-')}</td>
+      <td>${esc(it.condition || it.title || '-')}</td>
+      <td>${esc(it.category || '-')}</td>
+      <td>${esc(it.priority || '-')}</td>
+      <td>${esc(it.note || '-')}</td>
+    </tr>`).join('');
+  }
+
+  async function _extract() {
+    const btn = document.getElementById('ta-analysis-run');
+    if (btn) btn.disabled = true;
+    _setState('アップロード済み文書からテスト条件を抽出しています…');
+    _showRowMessage('抽出しています…');
+    try {
+      const res = await fetch('/api/doc-fusion?domain=' + encodeURIComponent(UPLOAD_BUCKET));
+      if (res.status === 404) {
+        _setState('アップロードした文書の解析結果がまだ生成されていません。先にドキュメントをアップロードしてください。', true);
+        _showRowMessage('解析結果がありません（doc_fusion.json 未生成）');
+        return;
+      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '抽出に失敗しました');
+      const items = data.items || data.conditions || data.requirements || [];
+      if (!items.length) {
+        _setState('解析結果に条件として取り出せる項目がありませんでした。', true);
+        _showRowMessage('抽出できる項目がありませんでした');
+        return;
+      }
+      _render(items);
+      _setState(items.length + ' 件のテスト条件を抽出しました。');
+    } catch (e) {
+      _setState('抽出に失敗しました: ' + e.message, true);
+      _showRowMessage('抽出に失敗しました: ' + e.message);
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  document.addEventListener('click', (ev) => {
+    if (ev.target && ev.target.id === 'ta-analysis-run') _extract();
+  });
+})();

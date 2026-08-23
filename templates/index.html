@@ -19,7 +19,6 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/testcase-grid.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='viewpoints.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/test-activity.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/nav-two-level.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ta-design-system.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/account-view.css') }}?v={{ _ver }}">
@@ -30,81 +29,6 @@
 <div class="app-shell">
 
   <aside class="app-sidebar">
-    <div class="ta2-rail" role="tablist" aria-label="機能カテゴリ">
-      <button type="button" class="ta2-rail-item" data-system="docs"
-              data-nav-cat="docs-home" data-cat-label="ダッシュボード" role="tab"
-              aria-selected="false" title="ダッシュボード">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 11.5L12 4l9 7.5"/><path d="M5.5 10v10h13V10M9.5 20v-6h5v6"/></svg>
-        <span class="ta2-rail-label">ダッシュ<br>ボード</span>
-      </button>
-      <button type="button" class="ta2-rail-item" data-system="docs"
-              data-nav-cat="docs-history" data-cat-label="実行履歴" role="tab"
-              aria-selected="false" title="実行履歴">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5l3 2"/></svg>
-        <span class="ta2-rail-label">履歴</span>
-      </button>
-      <button type="button" class="ta2-rail-item" data-system="docs"
-              data-nav-cat="docs-viewpoint" data-cat-label="観点" role="tab"
-              aria-selected="false" title="品質観点">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6l7-3z"/><path d="M9 12l2 2 4-5"/></svg>
-        <span class="ta2-rail-label">観点</span>
-      </button>
-      <button type="button" class="ta2-rail-item" data-system="autorun"
-              data-nav-cat="ar-intake" data-cat-label="受付" role="tab"
-              aria-selected="false" title="受付">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M13 2L4 14h8l-1 8 9-12h-8z"/></svg>
-        <span class="ta2-rail-label">受付</span>
-      </button>
-      <button type="button" class="ta2-rail-item" data-system="autorun"
-              data-nav-cat="ar-history" data-cat-label="過去履歴" role="tab"
-              aria-selected="false" title="過去履歴">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5l3 2"/></svg>
-        <span class="ta2-rail-label">履歴</span>
-      </button>
-      <button type="button" class="ta2-rail-item" data-system="testlab"
-              data-nav-cat="home" data-cat-label="ダッシュボード" role="tab"
-              aria-selected="false" title="ダッシュボード">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 11.5L12 4l9 7.5"/><path d="M5.5 10v10h13V10M9.5 20v-6h5v6"/></svg>
-        <span class="ta2-rail-label">ダッシュ<br>ボード</span>
-      </button>
-      <button type="button" class="ta2-rail-item" data-system="testlab"
-              data-nav-cat="design" data-cat-label="計画・設計" role="tab"
-              aria-selected="false" title="計画・設計">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14.5 3.5l6 6-10 10H4.5v-6z"/><path d="M12.5 5.5l6 6"/><path d="M4.5 19.5h16"/></svg>
-        <span class="ta2-rail-label">設計</span>
-      </button>
-      <button type="button" class="ta2-rail-item" data-system="testlab"
-              data-nav-cat="run" data-cat-label="実装・実行" role="tab"
-              aria-selected="false" title="実装・実行">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M10 8.2l6 3.8-6 3.8z"/></svg>
-        <span class="ta2-rail-label">実行</span>
-      </button>
-      <button type="button" class="ta2-rail-item" data-system="testlab"
-              data-nav-cat="improve" data-cat-label="改善・完了" role="tab"
-              aria-selected="false" title="改善・完了">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20v-5h5"/><path d="M4.6 15a8 8 0 1 0 1.7-3.2"/><path d="M9 12l2 2 4-5"/></svg>
-        <span class="ta2-rail-label">改善</span>
-      </button>
-      <button type="button" class="ta2-rail-item" data-system="testlab"
-              data-nav-cat="config" data-cat-label="連携設定" role="tab"
-              aria-selected="false" title="連携設定">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M10.5 13.5a4 4 0 0 0 5.7 0l2.3-2.3a4 4 0 0 0-5.7-5.7l-1.3 1.3"/><path d="M13.5 10.5a4 4 0 0 0-5.7 0l-2.3 2.3a4 4 0 0 0 5.7 5.7l1.3-1.3"/></svg>
-        <span class="ta2-rail-label">連携</span>
-      </button>
-      <button type="button" class="ta2-rail-item" data-system="common"
-              data-nav-cat="settings" data-cat-label="設定" role="tab"
-              aria-selected="false" title="設定">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6L7 7M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/></svg>
-        <span class="ta2-rail-label">設定</span>
-      </button>
-      <button type="button" class="ta2-rail-item" data-system="common"
-              data-nav-cat="support" data-cat-label="サポート" role="tab"
-              aria-selected="false" title="サポート">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.5 2.5 0 1 1 3.2 3.1c-.6.3-.8.7-.8 1.3v.4"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/></svg>
-        <span class="ta2-rail-label">サポート</span>
-      </button>
-    </div>
-    <div class="ta2-side-main">
     <a href="/" class="app-brand">
       <span class="app-brand-mark">W</span>
       {# 副題はシステムごとに違う。docs のままだとテスト活動支援でも「QAドキュメント生成」と
@@ -138,7 +62,6 @@
       <span data-system="docs">URLから画面仕様書・テスト設計・画面遷移図を生成します。</span>
       <span data-system="testlab">仕様書・GitHub・コードからテスト条件を抽出し、設計から不具合分析まで支援します。</span>
       <span data-system="autorun">受領から実行完了レポートの納品までを止めずに回します。</span>
-    </div>
     </div>
   </aside>
 
@@ -325,7 +248,6 @@
   <script src="{{ url_for('static', filename='js/ta-analysis.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/ta-design.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/ta-execution.js') }}?v={{ _ver }}"></script>
-  <script src="{{ url_for('static', filename='js/nav-two-level.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/ta-process-nav.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/ta-manual.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/ta-completion.js') }}?v={{ _ver }}"></script>

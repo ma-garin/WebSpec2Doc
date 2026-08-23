@@ -238,7 +238,12 @@ function switchView(name, opts = {}) {
   // 解析し終えた画面一覧は残す。消すと戻った利用者が解析し直しになる。
   if (name !== 'generate' && typeof stopDiscoverInFlight === 'function') stopDiscoverInFlight();
   document.body.classList.toggle('viewpoints-active', name === 'viewpoints');
-  document.querySelectorAll('.app-nav-item[data-view]').forEach(b => b.classList.toggle('is-active', b.dataset.view === name));
+  document.querySelectorAll('.app-nav-item[data-view]').forEach(b => {
+    const on = b.dataset.view === name;
+    b.classList.toggle('is-active', on);
+    if (on) b.setAttribute('aria-current', 'page');
+    else b.removeAttribute('aria-current');
+  });
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('is-active', v.id === 'view-' + name));
   const h = VIEW_HEADER[name];
   if (h) setHeader(h.trail, h.title);

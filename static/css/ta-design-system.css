@@ -44,14 +44,26 @@ body[data-system="testlab"] .app-sidebar {
 /* ナビ: 番号も進捗チェックも置かないフラットな一列（2026-08-23 承認） */
 body[data-system="testlab"] .app-nav-item[data-system="testlab"] {
   width: 100%;
-  padding: 7.5px 13px;
+  gap: 9px;
+  padding: 6px 11px;
   border: 0;
   border-radius: var(--d-radius-ctl);
   background: none;
   color: #374151;
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 400;
   text-align: left;
+}
+body[data-system="testlab"] .app-nav-item[data-system="testlab"] svg { width: 16px; height: 16px; opacity: .7; }
+body[data-system="testlab"] .app-nav-item[data-system="testlab"].is-active svg { opacity: 1; }
+
+/* グループ見出しは「工程の局面」を示す。押せる項目と紛れないよう小さく薄く置く。 */
+body[data-system="testlab"] .app-nav-group {
+  padding: 10px 11px 2px;
+  color: var(--d-ink-faint);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .06em;
 }
 body[data-system="testlab"] .app-nav-item[data-system="testlab"]:hover { background: var(--d-line-soft); }
 body[data-system="testlab"] .app-nav-item[data-system="testlab"].is-active {
@@ -60,14 +72,7 @@ body[data-system="testlab"] .app-nav-item[data-system="testlab"].is-active {
   font-weight: 600;
 }
 /* アイコンは持たせない。ラベルだけで読ませる */
-body[data-system="testlab"] .app-nav-item[data-system="testlab"] svg { display: none; }
 
-/* 区切り線（ホームの下・テスト完了の下）は JS が .ta2-sep を挿す */
-body[data-system="testlab"] .ta2-sep {
-  height: 1px;
-  margin: 8px 6px;
-  background: var(--d-line-soft);
-}
 
 body[data-system="testlab"] .sidebar-primary-action {
   border-radius: var(--d-radius-ctl);

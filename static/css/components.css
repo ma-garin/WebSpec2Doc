@@ -2608,3 +2608,17 @@
 .rh-table td .muted-copy { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* 導出対象が無かった値。測って 0 だったのとは違うので、数値ではなく — で示す */
 .rh-table td .rh-none { color: var(--text-subtle); font-weight: 400; }
+
+/* ---- 全画面共通の通知（無反応ボタンの解消） ---- */
+.app-global-notice {
+  position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 12px);
+  z-index: 400; max-width: min(560px, calc(100vw - 48px));
+  padding: 12px 18px; border-radius: var(--radius-md, 10px);
+  background: var(--color-text, #1d2129); color: #fff;
+  font-size: 13px; font-weight: 600; line-height: 1.6;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, .22);
+  opacity: 0; pointer-events: none;
+  transition: opacity .16s ease, transform .16s ease;
+}
+.app-global-notice.is-visible { opacity: 1; transform: translate(-50%, 0); }
+.app-global-notice.is-error { background: #b3261e; }

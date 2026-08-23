@@ -2,7 +2,6 @@
         <section class="view" id="view-test-analysis">
           <div class="dashboard-section-head">
             <div>
-              <h2 class="dash-section-title">テスト基本設計</h2>
               <p class="dashboard-section-copy">ドキュメントと GitHub の差分から、何をテストすべきか（テスト条件）を洗い出します。</p>
             </div>
             <div class="dashboard-section-actions">
@@ -23,11 +22,14 @@
             <div class="ta-panel-body">
               <div class="ta-kv">
                 <div class="ta-kv-row">
-                  <div class="ta-kv-key"><label for="ta-analysis-doc-select">ドキュメント（解析済みサイト）</label></div>
+                  <div class="ta-kv-key"><label for="ta-analysis-doc-files">ドキュメント（ファイル）</label></div>
                   <div class="ta-kv-val">
-                    <select id="ta-analysis-doc-select" class="select-compact">
-                      <option value="">解析済みサイトを選択</option>
-                    </select>
+                    <div class="ta-upload-row">
+                      <input type="file" id="ta-analysis-doc-files" class="input-compact" multiple
+                             accept=".md,.txt,.html,.htm,.json,.yaml,.yml,.csv,.pdf,.docx,.xlsx,.pptx" />
+                      <button type="button" class="btn-outline-sm" id="ta-analysis-doc-upload">アップロード</button>
+                    </div>
+                    <div class="ta-note" id="ta-analysis-doc-upload-state" hidden></div>
                   </div>
                 </div>
                 <div class="ta-kv-row">

@@ -26,12 +26,61 @@
 from __future__ import annotations
 
 import os
+import subprocess
+import sys
+import time
+import urllib.error
+import urllib.request
+from collections.abc import Iterator
+from pathlib import Path
 
+import pytest
 from playwright.sync_api import Page, expect
 
 BASE_URL = os.environ.get("WEBSPEC2DOC_E2E_URL", "http://127.0.0.1:8765")
-# 同梱デモサイト（make demo）。外部へ出ずに解析できる。
-DEMO_URL = "http://127.0.0.1:8767/index.html"
+# 同梱デモサイト（demo/demo_site.py の site_v2）。外部へ出ずに解析できる。
+DEMO_PORT = 8767
+DEMO_URL = f"http://127.0.0.1:{DEMO_PORT}/index.html"
+
+
+def _demo_site_is_up() -> bool:
+    try:
+        with urllib.request.urlopen(f"http://127.0.0.1:{DEMO_PORT}/", timeout=1):
+            return True
+    except (urllib.error.URLError, OSError):
+        return False
+
+
+@pytest.fixture(scope="module", autouse=True)
+def demo_site() -> Iterator[None]:
+    """解析対象のデモサイトを起動する。
+
+    以前は `make demo` で外部から起動されている前提だったため、単体で
+    `pytest tests/e2e/` を回すと発見結果 0 件で落ちていた（環境依存の失敗）。
+    テストが自分で前提を用意する形に変え、外部手順への依存を切る。
+    """
+    if _demo_site_is_up():
+        yield  # 既に起動済み（make demo 併用時）。他人が起動したものは止めない
+        return
+
+    root = Path(__file__).resolve().parent.parent.parent
+    proc = subprocess.Popen(  # noqa: S603
+        [sys.executable, str(root / "demo" / "demo_site.py"), "--port", str(DEMO_PORT),
+         "--site-dir", "site_v2"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    try:
+        deadline = time.monotonic() + 15
+        while time.monotonic() < deadline and not _demo_site_is_up():
+            time.sleep(0.3)
+        if not _demo_site_is_up():
+            proc.terminate()
+            pytest.skip(f"デモサイト（ポート {DEMO_PORT}）を起動できなかった")
+        yield
+    finally:
+        proc.terminate()
+        proc.wait(timeout=5)
 
 
 def _open_generate(page: Page) -> None:

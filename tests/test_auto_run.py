@@ -874,7 +874,9 @@ class TestHistoryRunsRoute:
         with patch("web.routes.auto_run.OUTPUT_DIR", tmp_path):
             res = self._client().get("/api/history/runs")
         assert res.status_code == 200
-        assert res.get_json() == {"runs": []}
+        # ページング導入（INC-P01）で total/limit/offset を返すようになった
+        assert res.get_json()["runs"] == []
+        assert res.get_json()["total"] == 0
 
     def test_includes_logged_autorun_and_running_job(self, tmp_path: Path) -> None:
         from web.services.usage_tracker import record_autorun

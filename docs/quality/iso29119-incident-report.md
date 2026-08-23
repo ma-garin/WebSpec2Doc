@@ -185,3 +185,47 @@ E2E の失敗切り分けとは別に、**応答時間ベースライン測定**
 描画自体は partial 内のインライン `<style>` / `<script>`（`templates/partials/view-usage.html:59`）で成立するため機能欠陥ではないが、
 `web/routes/traceability.py:94-101` の docstring が「以前は partial 断片だけを返しており CSS も JS も読み込まれず表が描画されなかった」として**同型の問題を過去に修正済み**である。
 `/usage` は同じ形のまま残っており、ナビからの導線も無い（`/usage` を直接開く以外に到達手段が無い）。**要否の判断は未実施。**
+
+---
+
+## 追補: R-04c で判明した事項（2026-08-23 / ST-014・ST-016・ST-017 の修正時）
+
+`tests/e2e/system/test_st4_autorun.py` の失敗 3 件を現行実装へ追随させる過程で、
+実装を読み・実際に叩いて確認した事項を記録する。**製品欠陥と断定できたものは無い。**
+
+### 1. `/autorun-report`（ドメイン非依存の入口）は実装に存在しない — INC-07 の追認
+
+- 実ルートは `/autorun/report/<domain>`（`web/routes/autorun_report.py:217`）と
+  `GET /api/autorun/report/<domain>`（同 231）の 2 本のみ。`grep -n "@bp.route\|@bp.get"` で全数確認した。
+- 404 の原因は URL 変更であり、テスト側の陳腐化。テストは `/autorun/report/<domain>` へ変更した。
+- ただし **404 の条件は 2 つある**: URL 不正だけでなく、
+  `_domain_dir(domain).is_dir()` が偽（＝その対象の成果物が 1 つも無い）でも `abort(404)` になる
+  （`web/routes/autorun_report.py:221-223`）。成果物が無いときに「まだ実行結果がありません」を
+  案内する画面は存在せず、利用者には素の 404 が出る。
+  **これを製品欠陥とするかは仕様判断であり、INC-07 と同じく未決のまま据え置く**（本サイクルでは実装に触れていない）。
+
+### 2. 段階承認 UI は「実行中の状態」からしか到達できない（テスト容易性の欠如）
+
+- `#autorun-leadbar` は既定 `display:none`（`templates/partials/view-auto-run.html:6`）で、
+  描画するのは `static/js/autorun.js:895` と `static/js/autorun-stages.js:541` の実行時経路だけ。
+  よって **AutoRun を実走させない限り `#autorun-leadbar button` は永久に現れない**。
+  旧テストの `wait_for_selector` タイムアウトはこれが原因で、実装の欠陥ではない。
+- 判断ダイアログ `#autorun-decisions` を開く唯一の呼び出し元も
+  `static/js/autorun-stages.js:581-583`（承認待ちステップの検出時）である。
+- さらに質問の内容は `qa_process/stages.json` に「前提（`assumed`）」項目が在ることが前提で、
+  `Pipeline.initial()`（`src/autorun/stages.py:264-265`）には項目が 1 つも無い。
+  すなわち **前提データを置かずに承認 UI を検証する手段が実装側に無い**。
+- 対処（テスト側）: `POST /api/autorun/decisions` に stages.json を作らせ、
+  `GET /api/autorun/stages` が返す現行スキーマへ `plan-assume-*` 項目を足して置き換え、
+  公開 API `window.autorunDecisions.open()` で開く。LLM 実行は行わない。
+- **残る弱点**: 「実行中に承認待ちへ遷移し、そこでダイアログが開く」という繋ぎ込み部分
+  （`autorun-stages.js:541,581-583`）は**依然として未検証**である。
+
+### 3. テナント別出力ディレクトリはテストから一意に特定できない
+
+- `scoped_output_dir`（`web/tenancy.py:51-56`）の slug は DB 由来で、テストからは決め打ちできない。
+- 同一ドメイン名のディレクトリが複数テナント配下に併存する（実測: `output/tenants/` に
+  `default` / `e2e-tenant-a` / `st-system-tenant` の 3 つがあり、いずれにも
+  `sample.webspec2doc.local` が存在した）。更新時刻でも判別できなかった。
+- 対処（テスト側）: 前提データ用のドメインを実行ごとに一意（`st-<uuid8>.example.com`）にし、
+  glob の一致が 1 件であることを assert して特定する。

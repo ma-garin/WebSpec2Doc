@@ -1,0 +1,24 @@
+E2E 規約違反: 固定待機が増えています
+
+  tests/e2e/conftest.py:257: time.sleep(0.5)
+  tests/e2e/test_auth_recorder_e2e.py:63: time.sleep(0.5)
+  tests/e2e/test_auth_tenant_e2e.py:74: time.sleep(0.3)
+  tests/e2e/test_capture_realbrowser_e2e.py:55: time.sleep(0.5)
+  tests/e2e/test_comparison_e2e.py:70: time.sleep(0.5)
+  tests/e2e/test_crawler_realbrowser_e2e.py:56: time.sleep(0.5)
+  tests/e2e/test_frames_shadow_e2e.py:54: time.sleep(0.5)
+  tests/e2e/test_stale_state_e2e.py:76: time.sleep(0.3)
+  tests/e2e/test_stale_state_e2e.py:125: page.wait_for_timeout(600)
+  tests/e2e/test_stale_state_e2e.py:142: page.wait_for_timeout(500)
+  tests/e2e/test_stale_state_e2e.py:145: page.wait_for_timeout(500)
+  tests/e2e/test_stale_state_e2e.py:168: page.wait_for_timeout(500)
+  tests/e2e/test_stale_state_e2e.py:170: page.wait_for_timeout(500)
+  tests/e2e/test_stale_state_e2e.py:185: page.wait_for_timeout(400)
+  tests/e2e/test_stale_state_e2e.py:187: page.wait_for_timeout(1500)
+  tests/e2e/test_stale_state_e2e.py:202: page.wait_for_timeout(1500)
+  tests/e2e/test_stale_state_e2e.py:207: page.wait_for_timeout(300)
+  tests/e2e/test_ux_review_e2e.py:62: time.sleep(0.5)
+
+固定待機 18 件（許容 7 件）。
+`time.sleep` / `wait_for_timeout` は使わず、肯定的な目印を待ってください:
+  expect(page.locator("#result")).to_be_visible()

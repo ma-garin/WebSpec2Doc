@@ -9,24 +9,16 @@
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const $ = (id) => document.getElementById(id);
 
-  // 実データに値が無いセルは「—」を出す。推測で埋めない。
-  const DASH = '—';
-  function cellText(v) {
-    return (v == null || v === '') ? DASH : esc(v);
-  }
-  function cellList(v) {
-    if (Array.isArray(v)) return v.length ? v.map(esc).join('<br>') : DASH;
-    return cellText(v);
-  }
-
   function setBadge(text) {
     const el = $('ta-design-count');
     if (el) el.textContent = text;
   }
 
+  // ケース表は System 01 のグリッドを共用マウントする（tcgMountGrid）。
+  // 状態メッセージはマウント先ごと差し替える（グリッドと同居させない）。
   function showMessage(msg) {
-    const body = $('ta-case-body');
-    if (body) body.innerHTML = `<tr><td colspan="7"><div class="empty">${esc(msg)}</div></td></tr>`;
+    const host = $('ta-case-grid-host');
+    if (host) host.innerHTML = `<div class="empty">${esc(msg)}</div>`;
   }
 
   // 分析ビューが保存した引き継ぎデータを読む。契約: キー ta.conditions.v1 /
@@ -62,44 +54,41 @@
     </div>`).join('');
   }
 
-  function renderRows(rows) {
-    if (!rows.length) {
-      showMessage('このドメインには生成テストケースがありません');
-      return;
-    }
-    // 列マップ: ケースID=case_id / 目的=name / 事前条件=preconditions /
-    // 手順=steps / 期待結果=expected / 対応するテスト条件=viewpoint（観点）。
-    // 優先度は実データに存在しないため常に「—」。
-    $('ta-case-body').innerHTML = rows.map((r) => `<tr>
-      <td>${cellText(r.case_id)}</td>
-      <td>${cellText(r.name)}</td>
-      <td>${cellList(r.preconditions)}</td>
-      <td>${cellList(r.steps)}</td>
-      <td>${cellList(r.expected)}</td>
-      <td>${cellText(r.viewpoint)}</td>
-      <td>${DASH}</td>
-    </tr>`).join('');
-  }
+  // マウント済みかどうか。他画面がグリッドを作るとこの画面の DOM は破棄されるため、
+  // 画面へ戻ったときに作り直すかの判定に使う。
+  let _mounted = false;
 
   async function loadCases(domain) {
+    const host = $('ta-case-grid-host');
+    if (!host) return;
+    _mounted = false;
     if (!domain) {
       setBadge('');
       showMessage('ドメインを選択してください');
       return;
     }
+    if (typeof tcgMountGrid !== 'function') {
+      setBadge('');
+      showMessage('テストケース表を読み込めませんでした（グリッドが未ロードです）');
+      return;
+    }
     setBadge('');
     showMessage('読み込み中…');
-    try {
-      const res = await fetch('/api/testcases/table?domain=' + encodeURIComponent(domain));
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const data = await res.json();
-      const rows = data.rows || [];
-      setBadge(rows.length + ' 件');
-      renderRows(rows);
-    } catch (e) {
+    // 見出し帯は出さない（パネル見出し「生成テストケース」と重複するため）。
+    // 実行ボタンも出さない（実行は実行画面の責務）。
+    const count = await tcgMountGrid(host, domain, { title: '', setTabCount: false, showRun: false });
+    if (count === null) {
+      // 取得失敗時は tcgMountGrid が再試行つきのエラーを host 内に描画済み。
       setBadge('');
-      showMessage('テストケースの読み込みに失敗しました（' + (e && e.message ? e.message : e) + '）');
+      return;
     }
+    if (!count) {
+      setBadge('');
+      showMessage('このドメインには生成テストケースがありません');
+      return;
+    }
+    _mounted = true;
+    setBadge(count + ' 件');
   }
 
   async function loadDomains() {
@@ -109,11 +98,17 @@
       const res = await fetch('/api/history');
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
-      const items = (data.items || []).filter((it) => it.domain);
+      // ケース表を組めるのは report.json（JSON 形式の成果物）を持つドメインだけ。
+      // 絞らないと既定選択が未生成ドメインに当たり、開いた瞬間に 404 になる。
+      const items = (data.items || []).filter(
+        (it) => it.domain && Number(it.screens) > 0 && (it.formats || []).includes('JSON'),
+      );
+      const current = sel.value;
       sel.innerHTML = '<option value="">ドメインを選択</option>'
         + items.map((it) => `<option value="${esc(it.domain)}">${esc(it.domain)}</option>`).join('');
       if (items.length) {
-        sel.value = items[0].domain;
+        // 再取得のときは選択中のドメインを保つ（一覧を更新しただけで表が別サイトに飛ばない）
+        sel.value = items.some((it) => it.domain === current) ? current : items[0].domain;
         loadCases(sel.value);
         renderConditions(); // ドメイン確定後に抽出元表記を正しくする
       } else {
@@ -130,8 +125,10 @@
     _booted = true;
     const sel = $('ta-design-domain');
     if (sel) sel.addEventListener('change', () => { loadCases(sel.value); renderConditions(); });
+    // 「読み込み直す」はドメイン一覧ごと取り直す。System 01 で新しく生成された
+    // サイトは一覧に無いままになるため、ケース表だけの再取得では追いつかない。
     const reload = $('ta-design-reload');
-    if (reload) reload.addEventListener('click', () => { loadCases(sel ? sel.value : ''); renderConditions(); });
+    if (reload) reload.addEventListener('click', () => { loadDomains(); renderConditions(); });
     // すべて選択: 引き継ぎ条件のチェックボックスを一括で選択状態にする
     //（選択状態は後続工程で使う。この画面では選択までを提供する）。
     const selectAll = document.querySelector('#view-test-design [data-ta-action="design-condition-select-all"]');
@@ -143,10 +140,25 @@
     loadDomains();
   }
 
+  // 画面へ入るたびに呼ばれる。初回は init（リスナー登録は 1 回だけ）。
+  // 2 回目以降は、他画面のグリッド生成でこの画面のグリッドが破棄されている場合に限り
+  // 作り直す。テスト条件の引き継ぎは分析画面で更新され得るため毎回描き直す。
+  function onEnter() {
+    if (!_booted) { init(); return; }
+    // グリッドが無ければ作り直す。_mounted を条件にすると、取得失敗で残った
+    // エラー表示が他画面のマウントで消えたときに空白のまま復帰できなくなる。
+    const host = $('ta-case-grid-host');
+    const sel = $('ta-design-domain');
+    if (host && !host.querySelector('.tcg-wrap') && sel && sel.value) {
+      loadCases(sel.value);
+    }
+    renderConditions();
+  }
+
   // core.js の VIEW_INIT へ登録する（core.js は編集しない）。
   // このファイルは defer 読み込みのため、core.js のグローバルは定義済み。
   if (typeof onViewEnter === 'function') {
-    onViewEnter('test-design', init);
+    onViewEnter('test-design', onEnter);
   } else {
     document.addEventListener('DOMContentLoaded', init);
   }

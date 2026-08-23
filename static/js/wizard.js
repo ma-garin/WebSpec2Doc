@@ -690,6 +690,7 @@ function _abortDiscover() {
   if (!_discoverRunId && !_discoverReader) return;
   _discoverCancelledByUser = true;
   if (_discoverRunId) {
+    // noqa: fetch-error 画面に出さないのは意図（上のコメントの通り、利用者は既に次へ進んでいる）
     fetch('/api/cancel', { method: 'POST', body: new URLSearchParams({ run_id: _discoverRunId }) })
       .catch(() => { /* 届かなくても画面はリセットする。サーバ側は自然終了に任せる */ });
   }

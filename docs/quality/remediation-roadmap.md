@@ -185,10 +185,14 @@
   ページ操作ではないため置換対象がない。チェッカの許容値を上げるのではなく、この 1 件が残る前提で他を削る
 - **完了判定**: `venv/bin/python scripts/check_e2e_conventions.py` が exit 0
 
-### R-15 fetch のエラー処理漏れを解消 — Sonnet ◎
+### R-15 fetch のエラー処理漏れを解消 — **完了**（2026-08-23）
 
 - **根拠**: `venv/bin/python scripts/check_fetch_error_handling.py --fail-on-missing` が
-  `static/js/wizard.js:693` の `fetch('/api/cancel', ...)` を未処理として FAIL
-- **変更**: 同ファイルの他の fetch と同じ流儀で `.catch` / `try-catch` とユーザーに見えるエラー表示を追加する。
-  **キャンセルの失敗が黙って無視される経路**なので、失敗時に「キャンセルできなかった」と分かる必要がある
-- **完了判定**: 同スクリプトが exit 0。実画面でキャンセル操作が従来どおり動くこと
+  `static/js/wizard.js:693` の `fetch('/api/cancel', ...)` を指摘して FAIL
+- **調査結果（初版の記述を訂正）**: 初版は「未処理」と書いたが、実際の判定は **`silent`（捕捉はするが画面に出ない）** であり、
+  `no_catch` は 0 件だった。当該箇所には既に `.catch()` があり、
+  さらに「走っている画面解析を止める。中断ボタンと違い、利用者への通知はしない（画面を離れる・やり直すときの
+  後始末なので、本人は既に次へ進んでいる）」という**設計意図がコメントで明示**されている
+- **対処**: チェッカが用意している除外マーカー `noqa: fetch-error` を、意図の再掲とともに付与した。
+  これは許容値の緩和ではなく、チェッカが想定する意図表明の手段である（`scripts/check_fetch_error_handling.py:18,49-50`）
+- **結果**: exit 0。ok 102 / silent 0 / no_catch 0 / ignored 4

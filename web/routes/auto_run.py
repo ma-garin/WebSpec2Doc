@@ -236,12 +236,34 @@ def api_history_runs() -> dict:
     with _JOBS_LOCK:
         running_jobs = [job.to_dict() for job in _JOBS.values()]
     runs = build_run_history(_out(), running_jobs)
+
+    # 種別で絞る。画面側が全件を取ってから絞ると、ページングと件数表示が両立しない
+    # （表示中の 200 件だけを数えた値を「実行数」として出してしまう）。
+    wanted_types = [t for t in (request.args.get("type") or "").split(",") if t]
+    if wanted_types:
+        runs = [r for r in runs if str(r.get("type", "")) in wanted_types]
+
     total = len(runs)
+    stats = _history_stats(runs)
     limit, offset = _history_paging_args()
     page = runs[offset:] if limit == 0 else runs[offset : offset + limit]
     # 段階承認の付与は返す分だけで足りる（全件に付けると件数に比例して遅くなる）
     _attach_stage_approval(page)
-    return {"runs": page, "total": total, "limit": limit, "offset": offset}
+    return {"runs": page, "total": total, "stats": stats, "limit": limit, "offset": offset}
+
+
+def _history_stats(runs: list[dict]) -> dict[str, int]:
+    """絞り込み後の全件に対する集計。
+
+    一覧はページングするが件数表示は全件が母数なので、集計はサーバで行う。
+    画面側が受け取った部分集合を数えると、実際より少ない件数を表示してしまう。
+    """
+    counts = {"total": len(runs), "complete": 0, "failed": 0, "cancelled": 0}
+    for run in runs:
+        status = str(run.get("status", ""))
+        if status in counts:
+            counts[status] += 1
+    return counts
 
 
 def _attach_stage_approval(runs: list[dict]) -> None:

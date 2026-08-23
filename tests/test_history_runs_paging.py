@@ -98,3 +98,42 @@ def test_offset_beyond_total_returns_empty_page_not_error(many_runs: int) -> Non
 
     assert data["runs"] == []
     assert data["total"] == many_runs
+
+
+def test_type_filter_scopes_total_and_stats(monkeypatch: pytest.MonkeyPatch) -> None:
+    """種別で絞ったとき、total と stats はその種別だけを母数にする。
+
+    画面側が全件を取ってから絞ると、ページングと件数表示が両立しない
+    （表示中の 200 件を数えた値を「実行数」として出してしまう）。
+    """
+    runs = (
+        [{"run_id": f"a{i}", "type": "autorun", "status": "complete"} for i in range(7)]
+        + [{"run_id": f"c{i}", "type": "crawl", "status": "failed"} for i in range(5)]
+        + [{"run_id": f"t{i}", "type": "testcase_run", "status": "failed"} for i in range(3)]
+    )
+    monkeypatch.setattr(auto_run_mod, "_attach_stage_approval", lambda _runs: None)
+    monkeypatch.setattr(
+        "web.services.usage_tracker.build_run_history", lambda *_a, **_k: list(runs)
+    )
+
+    data = _client().get("/api/history/runs?type=autorun,testcase_run").get_json()
+
+    assert data["total"] == 10  # crawl の 5 件は母数に入らない
+    assert data["stats"] == {"total": 10, "complete": 7, "failed": 3, "cancelled": 0}
+    assert {r["type"] for r in data["runs"]} == {"autorun", "testcase_run"}
+
+
+def test_stats_counts_all_pages_not_just_the_returned_one(many_runs: int) -> None:
+    """stats は返した 1 ページではなく、絞り込み後の全件を数える。"""
+    data = _client().get("/api/history/runs?limit=10").get_json()
+
+    assert len(data["runs"]) == 10
+    assert data["stats"]["total"] == many_runs
+
+
+def test_unknown_type_yields_empty_result_not_error(many_runs: int) -> None:
+    data = _client().get("/api/history/runs?type=no-such-type").get_json()
+
+    assert data["runs"] == []
+    assert data["total"] == 0
+    assert data["stats"]["total"] == 0

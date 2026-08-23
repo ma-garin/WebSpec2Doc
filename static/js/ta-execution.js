@@ -28,16 +28,17 @@
     return `<span class="rh-status-badge rh-status-${esc(cls)}">${esc(label)}</span>`;
   }
 
-  function renderStats(runs) {
+  // 集計はサーバが返す stats（絞り込み後の全件が母数）を使う。
+  // 表示中の行だけを数えると、ページングで「実行数 200」のような誤った値になる。
+  function renderStats(stats) {
     const total = document.getElementById('ta-exec-stat-total');
     const rate = document.getElementById('ta-exec-stat-rate');
     const failedEl = document.getElementById('ta-exec-stat-failed');
-    const failed = runs.filter((r) => r.status === 'failed').length;
-    const complete = runs.filter((r) => r.status === 'complete').length;
-    const finished = failed + complete + runs.filter((r) => r.status === 'cancelled').length;
-    if (total) total.textContent = String(runs.length);
-    if (rate) rate.textContent = finished ? `${Math.round((complete / finished) * 100)}%` : '—';
-    if (failedEl) failedEl.textContent = String(failed);
+    const s = stats || {};
+    const finished = (s.complete || 0) + (s.failed || 0) + (s.cancelled || 0);
+    if (total) total.textContent = String(s.total ?? 0);
+    if (rate) rate.textContent = finished ? `${Math.round(((s.complete || 0) / finished) * 100)}%` : '—';
+    if (failedEl) failedEl.textContent = String(s.failed ?? 0);
   }
 
   function renderRows(runs) {
@@ -75,22 +76,82 @@
     });
   }
 
+  // 履歴は使うほど増えるため、直近 PAGE_SIZE 件だけ描画し「さらに表示」で継ぎ足す（INC-P01）。
+  const PAGE_SIZE = 200;
+  let _loadedRuns = [];
+  let _totalRuns = 0;
+
+  // 「さらに表示」行は DOM API で組む（innerHTML を経由させない）
+  function _appendMoreRow(tbody) {
+    const rest = _totalRuns - _loadedRuns.length;
+    if (rest <= 0) return;
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = 5;
+    td.className = 'ta-exec-more-cell';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn-outline-sm';
+    btn.id = 'ta-exec-more';
+    btn.textContent = `さらに ${Math.min(PAGE_SIZE, rest).toLocaleString()} 件を読み込む`
+      + `（残り ${rest.toLocaleString()} 件）`;
+    btn.addEventListener('click', () => loadMoreRuns(btn));
+    td.appendChild(btn);
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+  }
+
+  function _renderLoaded() {
+    renderRows(_loadedRuns);
+    const tbody = document.getElementById('ta-exec-result-body');
+    if (tbody && _loadedRuns.length) _appendMoreRow(tbody);
+    const countEl = document.getElementById('ta-exec-shown-count');
+    if (countEl) {
+      countEl.textContent = _totalRuns
+        ? `${_totalRuns.toLocaleString()} 件中 ${_loadedRuns.length.toLocaleString()} 件を表示`
+        : '';
+    }
+  }
+
+  async function _fetchPage(offset) {
+    const query = `type=${encodeURIComponent(TA_EXEC_TYPES.join(','))}`
+      + `&limit=${PAGE_SIZE}&offset=${offset}`;
+    const res = await fetch(`/api/history/runs?${query}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '実行履歴を取得できませんでした');
+    return data;
+  }
+
   async function loadTaExecution() {
     const tbody = document.getElementById('ta-exec-result-body');
     if (tbody) tbody.innerHTML = '<tr><td colspan="5"><div class="empty">読み込んでいます…</div></td></tr>';
     try {
-      // limit=0 は全件。件数表示（実行数・成功率）が取得件数から算出されるため、
-      // ページングした部分集合を渡すと実際より少ない件数を表示してしまう。
-      // 追加読み込み方式（R-07・UI 案の承認待ち）へ移行するまでは全件を取る。
-      const res = await fetch('/api/history/runs?limit=0');
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || '実行履歴を取得できませんでした');
-      const runs = (data.runs || []).filter((r) => TA_EXEC_TYPES.includes(r.type));
-      renderStats(runs);
-      renderRows(runs);
+      const data = await _fetchPage(0);
+      _loadedRuns = data.runs || [];
+      _totalRuns = Number(data.total) || 0;
+      renderStats(data.stats);
+      _renderLoaded();
       _loaded = true;
     } catch (e) {
       renderError(String(e && e.message ? e.message : e));
+    }
+  }
+
+  async function loadMoreRuns(btn) {
+    const original = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '読み込んでいます…';
+    try {
+      const data = await _fetchPage(_loadedRuns.length);
+      _loadedRuns = _loadedRuns.concat(data.runs || []);
+      _totalRuns = Number(data.total) || _totalRuns;
+      _renderLoaded();
+    } catch (e) {
+      // 追加分の失敗で既に表示している行を消さない。ボタンだけ戻して再試行できるようにする
+      btn.disabled = false;
+      btn.textContent = original;
+      const countEl = document.getElementById('ta-exec-shown-count');
+      if (countEl) countEl.textContent = '追加の読み込みに失敗しました（もう一度お試しください）';
     }
   }
 

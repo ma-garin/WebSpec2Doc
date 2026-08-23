@@ -29,6 +29,39 @@
     if (body) body.innerHTML = `<tr><td colspan="7"><div class="empty">${esc(msg)}</div></td></tr>`;
   }
 
+  // 分析ビューが保存した引き継ぎデータを読む。契約: キー ta.conditions.v1 /
+  // 値 {"domain", "items": [{id,title,url,condition,category,priority,note}]}。
+  // 壊れた JSON・形不一致はデータ無しとして扱う（例外を画面に出さない）。
+  function readConditions() {
+    let raw = null;
+    try { raw = sessionStorage.getItem('ta.conditions.v1'); } catch (_) { return null; }
+    if (!raw) return null;
+    try {
+      const data = JSON.parse(raw);
+      if (!data || !Array.isArray(data.items) || !data.items.length) return null;
+      return data;
+    } catch (_) { return null; }
+  }
+
+  function renderConditions() {
+    const list = $('ta-design-condition-list');
+    if (!list) return;
+    const data = readConditions();
+    if (!data) {
+      list.innerHTML = '<div class="empty">分析画面で「テスト条件を抽出」を実行すると、ここに引き継がれます</div>';
+      return;
+    }
+    // 選択中ドメインと抽出元が異なっても一覧は出し、出所だけを明示する。
+    const sel = $('ta-design-domain');
+    const current = sel ? sel.value : '';
+    const sourceNote = (current && data.domain && current !== data.domain)
+      ? `<div class="muted-copy">抽出元: ${esc(data.domain)}</div>` : '';
+    list.innerHTML = sourceNote + data.items.map((it) => `<div>
+      <label><input type="checkbox" value="${esc(it.id)}"> ${esc(it.id)}: ${esc(it.condition)}</label>
+      <div class="muted-copy">${esc(it.title)} ${esc(it.url)}</div>
+    </div>`).join('');
+  }
+
   function renderRows(rows) {
     if (!rows.length) {
       showMessage('このドメインには生成テストケースがありません');
@@ -82,6 +115,7 @@
       if (items.length) {
         sel.value = items[0].domain;
         loadCases(sel.value);
+        renderConditions(); // ドメイン確定後に抽出元表記を正しくする
       } else {
         showMessage('ドキュメント作成の実行履歴がありません');
       }
@@ -95,9 +129,17 @@
     if (_booted) return;
     _booted = true;
     const sel = $('ta-design-domain');
-    if (sel) sel.addEventListener('change', () => loadCases(sel.value));
+    if (sel) sel.addEventListener('change', () => { loadCases(sel.value); renderConditions(); });
     const reload = $('ta-design-reload');
-    if (reload) reload.addEventListener('click', () => loadCases(sel ? sel.value : ''));
+    if (reload) reload.addEventListener('click', () => { loadCases(sel ? sel.value : ''); renderConditions(); });
+    // すべて選択: 引き継ぎ条件のチェックボックスを一括で選択状態にする
+    //（選択状態は後続工程で使う。この画面では選択までを提供する）。
+    const selectAll = document.querySelector('#view-test-design [data-ta-action="design-condition-select-all"]');
+    if (selectAll) selectAll.addEventListener('click', () => {
+      const list = $('ta-design-condition-list');
+      if (list) list.querySelectorAll('input[type="checkbox"]').forEach((cb) => { cb.checked = true; });
+    });
+    renderConditions();
     loadDomains();
   }
 

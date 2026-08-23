@@ -34,14 +34,16 @@ const VIEW_HEADER = {
   feedback: { trail: ['ダッシュボード', 'フィードバック'], title: 'フィードバック' },
   // テスト活動支援（System 02）。パンくずの1段目は自系のトップに揃える。
   'test-activity': { trail: ['テスト活動支援', 'ホーム'], title: 'テスト活動支援' },
-  'test-plan': { trail: ['テスト活動支援', '計画'], title: 'テスト計画' },
-  'test-analysis': { trail: ['テスト活動支援', '分析'], title: 'テスト分析' },
-  'test-strategy': { trail: ['テスト活動支援', '方針'], title: 'テスト方針' },
-  'test-design': { trail: ['テスト活動支援', '設計'], title: 'テスト設計' },
-  'test-implementation': { trail: ['テスト活動支援', '実装'], title: 'テスト実装' },
-  'test-execution': { trail: ['テスト活動支援', '実行'], title: 'テスト実行' },
+  'test-plan': { trail: ['テスト活動支援', 'テスト計画'], title: 'テスト計画' },
+  'test-analysis': { trail: ['テスト活動支援', 'テスト基本設計'], title: 'テスト基本設計' },
+  'test-strategy': { trail: ['テスト活動支援', 'テスト詳細設計'], title: 'テスト詳細設計' },
+  'test-design': { trail: ['テスト活動支援', 'テストケース実装'], title: 'テストケース実装' },
+  'test-implementation': { trail: ['テスト活動支援', '自動テストケース実装'], title: '自動テストケース実装' },
+  'test-execution': { trail: ['テスト活動支援', '自動テスト実行'], title: '自動テスト実行' },
+  'manual-execution': { trail: ['テスト活動支援', '手動テスト実行'], title: '手動テスト実行' },
   'defect-analysis': { trail: ['テスト活動支援', '不具合分析'], title: '不具合分析' },
-  'code-fix': { trail: ['テスト活動支援', 'コード修正'], title: 'コード修正' },
+  'code-fix': { trail: ['テスト活動支援', 'コード修正提案'], title: 'コード修正提案' },
+  'test-completion': { trail: ['テスト活動支援', 'テスト完了'], title: 'テスト完了' },
   integrations: { trail: ['テスト活動支援', '連携設定'], title: '連携設定' },
 };
 const escHtml = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -152,8 +154,10 @@ const VIEW_PATHS = {
   'test-design': '/test-design',
   'test-implementation': '/test-implementation',
   'test-execution': '/test-execution',
+  'manual-execution': '/manual-execution',
   'defect-analysis': '/defect-analysis',
   'code-fix': '/code-fix',
+  'test-completion': '/test-completion',
   integrations: '/integrations',
 };
 const PATH_VIEWS = { '/home': 'dashboard', '/dashboard': 'dashboard' };

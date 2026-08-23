@@ -35,6 +35,7 @@ def create_app() -> Flask:
         review,
         runs,
         schedule,
+        test_activity,
         settings,
         site,
         tenant_admin,
@@ -107,6 +108,7 @@ def create_app() -> Flask:
     app.register_blueprint(settings.bp)
     app.register_blueprint(crawl.bp)
     app.register_blueprint(auto_run.bp)
+    app.register_blueprint(test_activity.bp)
     app.register_blueprint(review.bp)
     app.register_blueprint(runs.bp)
     app.register_blueprint(schedule.bp)

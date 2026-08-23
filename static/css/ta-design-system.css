@@ -1,0 +1,574 @@
+/* テスト活動支援（System 02）のデザインシステム。
+   2026-08-23 承認のモック（Tailwind + daisyUI 系）を移植したもの。
+
+   **すべて body[data-system="testlab"] にスコープする。**
+   System 01（ドキュメント作成）と共用するクラス（.card / .btn-primary / ケース表グリッド等）を
+   グローバルに書き換えると、承認範囲外の画面まで見た目が変わるため。
+   スコープを外すときは、共用側の回帰確認とセットで行うこと。 */
+
+body[data-system="testlab"] {
+  /* ── 色 ── daisyUI light 相当。primary は System 02 のアイデンティティ色 */
+  --d-primary: #570DF8;
+  --d-primary-hover: #4A0BD4;
+  --d-primary-pale: #EDE7FE;
+  --d-ink: #1F2937;
+  --d-ink-sub: #6B7280;
+  --d-ink-faint: #9CA3AF;
+  --d-line: #E5E7EB;
+  --d-line-soft: #F3F4F6;
+  --d-line-faint: #F9FAFB;
+  --d-surface: #FFFFFF;
+  --d-bg: #F2F2F5;
+  --d-ok: #36D399;
+  --d-ok-ink: #003320;
+  --d-ng: #F87272;
+  --d-ng-ink: #470000;
+  --d-wa: #FBBD23;
+  --d-wa-ink: #382800;
+  --d-info: #3ABFF8;
+  --d-info-ink: #002B3D;
+  --d-radius-card: 16px;
+  --d-radius-ctl: 8px;
+  --d-shadow: 0 1px 3px rgba(0, 0, 0, .06);
+}
+
+/* ══════════════ シェル ══════════════ */
+
+body[data-system="testlab"] .app-content { background: var(--d-bg); }
+
+body[data-system="testlab"] .app-sidebar {
+  background: var(--d-surface);
+  border-right: 1px solid var(--d-line);
+}
+
+/* ナビ: 番号も進捗チェックも置かないフラットな一列（2026-08-23 承認） */
+body[data-system="testlab"] .app-nav-item[data-system="testlab"] {
+  display: block;
+  width: 100%;
+  padding: 7.5px 13px;
+  border: 0;
+  border-radius: var(--d-radius-ctl);
+  background: none;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 400;
+  text-align: left;
+}
+body[data-system="testlab"] .app-nav-item[data-system="testlab"]:hover { background: var(--d-line-soft); }
+body[data-system="testlab"] .app-nav-item[data-system="testlab"].is-active {
+  background: var(--d-primary);
+  color: #fff;
+  font-weight: 600;
+}
+/* アイコンは持たせない。ラベルだけで読ませる */
+body[data-system="testlab"] .app-nav-item[data-system="testlab"] svg { display: none; }
+body[data-system="testlab"] .app-nav-group[data-system="testlab"] { display: none; }
+
+/* 区切り線（ホームの下・テスト完了の下）は JS が .ta2-sep を挿す */
+body[data-system="testlab"] .ta2-sep {
+  height: 1px;
+  margin: 8px 6px;
+  background: var(--d-line-soft);
+}
+
+body[data-system="testlab"] .sidebar-primary-action {
+  border-radius: var(--d-radius-ctl);
+  background: var(--d-primary);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+body[data-system="testlab"] .sidebar-primary-action:hover { background: var(--d-primary-hover); }
+
+/* ══════════════ 見出し ══════════════ */
+
+body[data-system="testlab"] .dash-section-title {
+  color: var(--d-ink);
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+}
+body[data-system="testlab"] .dashboard-section-copy {
+  margin-top: 3px;
+  color: var(--d-ink-sub);
+  font-size: 12.5px;
+}
+body[data-system="testlab"] .dashboard-section-head {
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+body[data-system="testlab"] .dashboard-section-actions { gap: 8px; }
+
+/* ══════════════ ボタン（4種） ══════════════ */
+
+body[data-system="testlab"] .btn-primary {
+  padding: 8px 15px;
+  border: 1px solid transparent;
+  border-radius: var(--d-radius-ctl);
+  background: var(--d-primary);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+body[data-system="testlab"] .btn-primary:hover:not(:disabled) { background: var(--d-primary-hover); }
+body[data-system="testlab"] .btn-primary:disabled { opacity: .45; }
+
+body[data-system="testlab"] .btn-outline-sm {
+  padding: 8px 15px;
+  border: 1px solid #D1D5DB;
+  border-radius: var(--d-radius-ctl);
+  background: none;
+  color: #374151;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+body[data-system="testlab"] .btn-outline-sm:hover:not(:disabled) { background: var(--d-line-soft); }
+
+body[data-system="testlab"] .btn-danger-outline {
+  padding: 8px 15px;
+  border: 1px solid var(--d-ng);
+  border-radius: var(--d-radius-ctl);
+  background: none;
+  color: #E11D48;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+/* ══════════════ 統計（daisyUI stats: 連結ブロック） ══════════════ */
+
+body[data-system="testlab"] .ta-grid-3 {
+  display: flex;
+  gap: 0;
+  margin-bottom: 16px;
+  overflow: hidden;
+  border-radius: var(--d-radius-card);
+  background: var(--d-surface);
+  box-shadow: var(--d-shadow);
+}
+body[data-system="testlab"] .ta-grid-3 .stat-card {
+  flex: 1;
+  padding: 15px 22px;
+  border: 0;
+  border-right: 1px dashed var(--d-line);
+  border-radius: 0;
+  background: none;
+}
+body[data-system="testlab"] .ta-grid-3 .stat-card:last-child { border-right: 0; }
+body[data-system="testlab"] .stat-card-value {
+  color: var(--d-ink);
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -.02em;
+}
+body[data-system="testlab"] .ta-grid-3 .stat-card:first-child .stat-card-value { color: var(--d-primary); }
+body[data-system="testlab"] .stat-card-label {
+  color: var(--d-ink-sub);
+  font-size: 11.5px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* ══════════════ パネル ══════════════ */
+
+body[data-system="testlab"] .ta-panel {
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--d-radius-card);
+  background: var(--d-surface);
+  box-shadow: var(--d-shadow);
+}
+body[data-system="testlab"] .ta-panel-head {
+  gap: 10px;
+  padding: 13px 20px;
+  border-bottom: 1px solid var(--d-line-soft);
+  background: none;
+}
+body[data-system="testlab"] .ta-panel-title {
+  color: var(--d-ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+body[data-system="testlab"] .ta-panel-sub {
+  color: var(--d-ink-faint);
+  font-size: 11.5px;
+}
+body[data-system="testlab"] .ta-panel-body { padding: 16px 20px; }
+body[data-system="testlab"] .ta-panel-actions { gap: 8px; }
+
+/* ══════════════ 表 ══════════════ */
+
+body[data-system="testlab"] .ta-table { font-size: 12.5px; }
+body[data-system="testlab"] .ta-table th {
+  padding: 9px 20px;
+  border-bottom: 1px solid var(--d-line-soft);
+  background: none;
+  color: var(--d-ink-faint);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+body[data-system="testlab"] .ta-table td {
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--d-line-faint);
+  vertical-align: top;
+}
+body[data-system="testlab"] .ta-table tbody tr:nth-child(even) { background: #FAFAFB; }
+body[data-system="testlab"] .ta-table tbody tr:last-child td { border-bottom: 0; }
+body[data-system="testlab"] .ta-table a {
+  color: var(--d-primary);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* ══════════════ バッジ（意味色4つ） ══════════════ */
+
+body[data-system="testlab"] .rh-status-badge,
+body[data-system="testlab"] .ta2-badge {
+  display: inline-block;
+  padding: 2.5px 11px;
+  border: 0;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+body[data-system="testlab"] .ta2-badge-ok,
+body[data-system="testlab"] .rh-status-complete { background: var(--d-ok); color: var(--d-ok-ink); }
+body[data-system="testlab"] .ta2-badge-ng,
+body[data-system="testlab"] .rh-status-failed { background: var(--d-ng); color: var(--d-ng-ink); }
+body[data-system="testlab"] .ta2-badge-wa,
+body[data-system="testlab"] .rh-status-cancelled { background: var(--d-wa); color: var(--d-wa-ink); }
+body[data-system="testlab"] .ta2-badge-info,
+body[data-system="testlab"] .rh-status-running { background: var(--d-info); color: var(--d-info-ink); }
+body[data-system="testlab"] .ta2-badge-muted { background: var(--d-line-soft); color: var(--d-ink-sub); }
+body[data-system="testlab"] .ta2-badge-pri { background: var(--d-primary-pale); color: var(--d-primary); }
+
+/* ══════════════ フォーム ══════════════ */
+
+body[data-system="testlab"] .input-compact,
+body[data-system="testlab"] .select-compact {
+  padding: 8px 12px;
+  border: 1px solid #D1D5DB;
+  border-radius: var(--d-radius-ctl);
+  background: var(--d-surface);
+  color: var(--d-ink);
+  font-size: 12.5px;
+}
+body[data-system="testlab"] .input-compact:focus,
+body[data-system="testlab"] .select-compact:focus {
+  border-color: var(--d-primary);
+  outline: 2px solid var(--d-primary-pale);
+}
+body[data-system="testlab"] .ta-kv-key label {
+  color: var(--d-ink-sub);
+  font-size: 12px;
+  font-weight: 600;
+}
+body[data-system="testlab"] .ta-kv-row { padding: 7px 0; border: 0; }
+
+/* ══════════════ チップ（選択トグル） ══════════════ */
+
+body[data-system="testlab"] .ta-chips { gap: 8px; }
+body[data-system="testlab"] .ta-chip,
+body[data-system="testlab"] .ta-chips button {
+  padding: 5px 14px;
+  border: 1px solid #D1D5DB;
+  border-radius: 999px;
+  background: var(--d-surface);
+  color: #4B5563;
+  font-size: 12px;
+  font-weight: 600;
+}
+body[data-system="testlab"] .ta-chip.is-on,
+body[data-system="testlab"] .ta-chips button.is-on,
+body[data-system="testlab"] .ta-chip[aria-pressed="true"],
+body[data-system="testlab"] .ta-chips button[aria-pressed="true"] {
+  border-color: var(--d-primary);
+  background: var(--d-primary);
+  color: #fff;
+}
+
+/* ══════════════ 工程ストリップ（ホーム・10工程） ══════════════ */
+
+body[data-system="testlab"] .ta-pipeline {
+  display: flex;
+  gap: 0;
+  padding: 18px 12px 10px;
+  margin-bottom: 0;
+}
+body[data-system="testlab"] .ta-pipeline-step {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  padding: 30px 2px 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: var(--d-ink-sub);
+  font-size: 10px;
+  line-height: 1.35;
+  text-align: center;
+  cursor: pointer;
+}
+body[data-system="testlab"] .ta-pipeline-step:hover { color: var(--d-primary); }
+/* 工程をつなぐ線 */
+body[data-system="testlab"] .ta-pipeline-step::before {
+  content: "";
+  position: absolute;
+  top: 12px;
+  left: -50%;
+  z-index: 0;
+  width: 100%;
+  height: 6px;
+  background: var(--d-line);
+}
+body[data-system="testlab"] .ta-pipeline-step:first-child::before { display: none; }
+/* 工程番号の丸 */
+body[data-system="testlab"] .ta-pipeline-step::after {
+  content: attr(data-step);
+  position: absolute;
+  top: 0;
+  left: 50%;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--d-line);
+  color: var(--d-ink-sub);
+  font-size: 11px;
+  font-weight: 700;
+  transform: translateX(-50%);
+}
+body[data-system="testlab"] .ta-pipeline-step.is-done { color: var(--d-ink); }
+body[data-system="testlab"] .ta-pipeline-step.is-done::before { background: var(--d-ok); }
+body[data-system="testlab"] .ta-pipeline-step.is-done::after {
+  content: "✓";
+  background: var(--d-ok);
+  color: var(--d-ok-ink);
+}
+body[data-system="testlab"] .ta-pipeline-step.is-current {
+  background: none;
+  color: var(--d-primary);
+  font-weight: 700;
+}
+body[data-system="testlab"] .ta-pipeline-step.is-current::before { background: var(--d-ok); }
+body[data-system="testlab"] .ta-pipeline-step.is-current::after {
+  background: var(--d-primary);
+  color: #fff;
+}
+
+/* ══════════════ 前後ナビ（JS が各工程画面の末尾へ挿す） ══════════════ */
+
+body[data-system="testlab"] .ta2-stepnav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+body[data-system="testlab"] .ta2-stepnav .ta2-pos {
+  color: var(--d-ink-faint);
+  font-size: 11.5px;
+}
+body[data-system="testlab"] .ta2-stepnav .ta2-spacer { flex: 1; }
+
+/* ══════════════ 補助 ══════════════ */
+
+body[data-system="testlab"] .ta-note,
+body[data-system="testlab"] .muted-copy {
+  color: var(--d-ink-faint);
+  font-size: 11.5px;
+}
+body[data-system="testlab"] .empty {
+  padding: 14px 0;
+  color: var(--d-ink-faint);
+  font-size: 12.5px;
+  text-align: center;
+}
+body[data-system="testlab"] .ta-code {
+  padding: 14px 18px;
+  border: 0;
+  border-radius: 12px;
+  background: #1F2430;
+  color: #C9D2E0;
+  font-size: 11.5px;
+  line-height: 1.75;
+}
+body[data-system="testlab"] .ta-source .ta-source-row { border-bottom: 1px solid var(--d-line-faint); }
+body[data-system="testlab"] .ta-source .ta-source-row:last-child { border-bottom: 0; }
+
+/* 件数バッジ（見出し脇） */
+body[data-system="testlab"] .ta2-count {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--d-primary-pale);
+  color: var(--d-primary);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* ══════════════ AIと相談（浮遊ボタン＋重ねて開くパネル） ══════════════ */
+
+/* 既定は非表示。テスト活動支援でだけ現れる（他システムへ持ち込まない） */
+.ta2-ai-fab,
+.ta2-ai-panel { display: none; }
+
+body[data-system="testlab"] .ta2-ai-fab {
+  position: fixed;
+  right: 24px;
+  bottom: 22px;
+  z-index: 60;
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  padding: 11px 19px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--d-primary);
+  box-shadow: 0 8px 24px rgba(87, 13, 248, .38);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+body[data-system="testlab"] .ta2-ai-fab:hover { background: var(--d-primary-hover); }
+body[data-system="testlab"] .ta2-ai-fab[hidden] { display: none; }
+
+/* 画面を圧迫しないよう、レイアウトに割り込まず上に重ねる */
+body[data-system="testlab"] .ta2-ai-panel {
+  position: fixed;
+  top: 76px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 61;
+  display: flex;
+  flex-direction: column;
+  width: 340px;
+  max-width: calc(100vw - 32px);
+  overflow: hidden;
+  border: 1px solid var(--d-line);
+  border-radius: var(--d-radius-card);
+  background: var(--d-surface);
+  box-shadow: 0 18px 50px rgba(16, 24, 40, .30);
+  animation: ta2-ai-slide .18s ease-out;
+}
+@keyframes ta2-ai-slide {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: none; }
+}
+
+body[data-system="testlab"] .ta2-ai-head {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--d-line-soft);
+}
+body[data-system="testlab"] .ta2-ai-title { flex: 1; font-size: 13px; font-weight: 700; }
+body[data-system="testlab"] .ta2-ai-ctx {
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--d-primary-pale);
+  color: var(--d-primary);
+  font-size: 10px;
+  font-weight: 700;
+}
+body[data-system="testlab"] .ta2-ai-close {
+  border: 0;
+  background: none;
+  color: var(--d-ink-faint);
+  font-size: 15px;
+  cursor: pointer;
+}
+
+body[data-system="testlab"] .ta2-ai-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  overflow-y: auto;
+}
+body[data-system="testlab"] .ta2-msg {
+  max-width: 92%;
+  padding: 9px 12px;
+  border-radius: 14px;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+body[data-system="testlab"] .ta2-msg-ai {
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
+  background: var(--d-line-soft);
+  color: var(--d-ink);
+}
+body[data-system="testlab"] .ta2-msg-me {
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+  background: var(--d-primary);
+  color: #fff;
+}
+/* 反映・遷移の操作。AI が勝手に実行せず、人が押して初めて効く */
+body[data-system="testlab"] .ta2-msg-act {
+  align-self: flex-start;
+  padding: 5px 12px;
+  border: 1px solid #D6C7FA;
+  border-radius: var(--d-radius-ctl);
+  background: #fff;
+  color: var(--d-primary);
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+body[data-system="testlab"] .ta2-msg-act:disabled { opacity: .5; cursor: default; }
+
+body[data-system="testlab"] .ta2-sugg-label {
+  color: var(--d-ink-faint);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+body[data-system="testlab"] .ta2-sugg {
+  padding: 7px 11px;
+  border: 1px solid var(--d-line);
+  border-radius: 10px;
+  background: #FCFCFD;
+  color: #4B5563;
+  font-size: 11.5px;
+  text-align: left;
+  cursor: pointer;
+}
+body[data-system="testlab"] .ta2-sugg:hover { border-color: #D6C7FA; color: var(--d-primary); }
+
+body[data-system="testlab"] .ta2-ai-foot {
+  display: flex;
+  gap: 8px;
+  padding: 11px 14px;
+  border-top: 1px solid var(--d-line-soft);
+}
+body[data-system="testlab"] .ta2-ai-foot input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 14px;
+  border: 1px solid #D1D5DB;
+  border-radius: 999px;
+  font-size: 12px;
+}
+body[data-system="testlab"] .ta2-ai-foot button {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--d-primary);
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+}

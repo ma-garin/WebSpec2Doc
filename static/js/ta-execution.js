@@ -213,6 +213,87 @@
   const runBadge = document.getElementById('ta-exec-run-badge');
   const runProgressEl = document.getElementById('ta-exec-run-progress');
   const stopBtn = document.getElementById('ta-exec-stop');
+  const envSel = document.getElementById('ta-exec-env');
+  const parallelInput = document.getElementById('ta-exec-parallel');
+  const exportBtn = document.getElementById('ta-exec-export');
+  const exportStatusEl = document.getElementById('ta-exec-export-status');
+  const logClearBtn = document.getElementById('ta-exec-log-clear');
+  const logClearStatusEl = document.getElementById('ta-exec-log-clear-status');
+
+  // 成功/失敗の単発フィードバック（ボタン脇のバッジに出す。ログとは別枠）
+  function showStatusBadge(el, ok, message) {
+    if (!el) return;
+    el.textContent = message;
+    el.className = `ta2-badge ${ok ? 'ta2-badge-ok' : 'ta2-badge-ng'}`;
+    el.style.display = '';
+  }
+
+  // 並列度は 1〜16 に丸める（number input の min/max は入力自体を止めないため JS でも担保する）
+  function clampParallel() {
+    if (!parallelInput) return;
+    const raw = Number(parallelInput.value);
+    if (!parallelInput.value || !isFinite(raw)) {
+      parallelInput.value = '1';
+      return;
+    }
+    parallelInput.value = String(Math.min(16, Math.max(1, Math.round(raw))));
+  }
+  parallelInput?.addEventListener('change', clampParallel);
+
+  // ログをクリア: フロントのみ（APIなし）。クリア後の空表示自体が結果の証跡になる。
+  logClearBtn?.addEventListener('click', () => {
+    if (logEl) logEl.textContent = '';
+    showStatusBadge(logClearStatusEl, true, 'クリアしました');
+  });
+
+  function csvFilenameFromHeader(res, fallback) {
+    const cd = res.headers.get('Content-Disposition') || '';
+    const m = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(cd);
+    return m ? decodeURIComponent(m[1]) : fallback;
+  }
+
+  async function exportResults() {
+    if (!exportBtn) return;
+    const domain = suiteSel && suiteSel.value;
+    if (!domain) {
+      showStatusBadge(exportStatusEl, false, '実行対象を選択してください');
+      return;
+    }
+    const orig = exportBtn.textContent;
+    exportBtn.disabled = true;
+    exportBtn.textContent = '書き出し中…';
+    showStatusBadge(exportStatusEl, true, '書き出し中…');
+    try {
+      const res = await fetch(`/api/ta/export?domain=${encodeURIComponent(domain)}&kind=results&format=csv`);
+      if (!res.ok) {
+        let msg = res.status === 503 ? 'LLMが未設定です' : '書き出しに失敗しました';
+        try {
+          const data = await res.clone().json();
+          msg = data.error || msg;
+        } catch (_e) {
+          // CSV以外の応答（本文なし等）は既定メッセージのまま
+        }
+        throw new Error(msg);
+      }
+      const blob = await res.blob();
+      const filename = csvFilenameFromHeader(res, `${domain}_results.csv`);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      showStatusBadge(exportStatusEl, true, '書き出しました');
+    } catch (e) {
+      showStatusBadge(exportStatusEl, false, String(e && e.message ? e.message : e));
+    } finally {
+      exportBtn.disabled = false;
+      exportBtn.textContent = orig;
+    }
+  }
+  exportBtn?.addEventListener('click', exportResults);
 
   // 実行中かどうかを画面のどこにも示していなかったため、バッジ＋経過時間で明示する。
   let _elapsedTimer = null;
@@ -304,40 +385,64 @@
     }
   }
 
+  let _runAbort = null;
+  let _pollTimer = null;
+
   async function runSuite() {
     if (!runBtn || !suiteSel || !suiteSel.value || _running) return;
     const domain = suiteSel.value;
+    const env = envSel && envSel.value ? envSel.value : 'local';
+    clampParallel();
+    const parallel = parallelInput ? Number(parallelInput.value) || 1 : 1;
     const origLabel = runBtn.textContent;
     runBtn.disabled = true;
     runBtn.textContent = '実行中…';
     _running = true;
     _lastCompleted = 0;
-    appendLog(`実行を開始します: ${domain}`);
+    appendLog(`実行を開始します: ${domain}（環境: ${env} / 並列度: ${parallel}）`);
     showRunBadge();
-    const timer = setInterval(() => pollProgress(domain), 2000);
+    _runAbort = new AbortController();
+    _pollTimer = setInterval(() => pollProgress(domain), 2000);
     try {
       const res = await fetch('/api/testcases/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ domain, per_test_timeout_sec: 20 }),
+        body: JSON.stringify({ domain, per_test_timeout_sec: 20, env, parallel }),
+        signal: _runAbort.signal,
       });
       const data = await res.json();
       _running = false;
-      clearInterval(timer);
+      clearInterval(_pollTimer);
+      _pollTimer = null;
       if (!res.ok || data.error) throw new Error(data.error || '実行に失敗しました');
       const s = (data.run && data.run.summary) || {};
       appendLog(`実行完了: PASS ${s.passed ?? 0} / FAIL ${s.failed ?? 0} / 全${s.total ?? 0}件（run_id: ${data.run_id || '—'}）`);
       await loadTaExecution();
     } catch (e) {
       _running = false;
-      clearInterval(timer);
-      appendLog(`エラー: ${String(e && e.message ? e.message : e)}`);
+      if (_pollTimer) {
+        clearInterval(_pollTimer);
+        _pollTimer = null;
+      }
+      if (e && e.name === 'AbortError') {
+        appendLog('停止しました');
+      } else {
+        appendLog(`エラー: ${String(e && e.message ? e.message : e)}`);
+      }
     } finally {
+      _runAbort = null;
       runBtn.textContent = origLabel;
       hideRunBadge();
       syncRunButton();
     }
   }
+
+  // 実行の停止: サーバ側は同期実行のため処理自体は止まらないが、フロントは待たずに
+  // fetch を abort し、実行中フラグとポーリングを即座に落とす（要件はこれで満たす）。
+  stopBtn?.addEventListener('click', () => {
+    if (!_running || !_runAbort) return;
+    _runAbort.abort();
+  });
 
   if (typeof onViewEnter === 'function') {
     onViewEnter('test-execution', () => {

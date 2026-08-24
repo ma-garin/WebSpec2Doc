@@ -29,17 +29,16 @@
               <div class="stat-card-label">自動化可ケースの基準</div>
             </div>
             <div class="stat-card">
-              <button type="button" class="btn-primary" id="ta-impl-generate" disabled data-wip="1">AIでスクリプトを生成</button>
-              <div class="stat-card-label"><span class="ta-wip-note">準備中</span></div>
+              <button type="button" class="btn-primary" id="ta-impl-generate">AIでスクリプトを生成</button>
+              <div class="stat-card-label" id="ta-impl-generate-status"></div>
             </div>
           </div>
 
           <div class="ta-chips" id="ta-impl-filter" role="group" aria-label="ケースの絞り込み">
-            <button type="button" class="ta-chip is-on" id="ta-impl-filter-all" disabled data-wip="1">すべて</button>
-            <button type="button" class="ta-chip" id="ta-impl-filter-done" disabled data-wip="1">自動化済</button>
-            <button type="button" class="ta-chip" id="ta-impl-filter-todo" disabled data-wip="1">未自動化</button>
-            <button type="button" class="ta-chip" id="ta-impl-filter-failed" disabled data-wip="1">失敗</button>
-            <span class="ta-wip-note">ケース一覧の取り込みAPIが未実装のため絞り込みは準備中</span>
+            <button type="button" class="ta-chip ta2-badge-pri" id="ta-impl-filter-all" aria-pressed="true">すべて（0）</button>
+            <button type="button" class="ta-chip ta2-badge-muted" id="ta-impl-filter-done" aria-pressed="false">自動化済（0）</button>
+            <button type="button" class="ta-chip ta2-badge-muted" id="ta-impl-filter-todo" aria-pressed="false">未自動化（0）</button>
+            <button type="button" class="ta-chip ta2-badge-muted" id="ta-impl-filter-failed" aria-pressed="false">失敗（0）</button>
           </div>
 
           <div class="dashboard-section-head">
@@ -63,16 +62,16 @@
                 </tr>
               </thead>
               <tbody id="ta-impl-case-body">
-                <tr>
+                <tr data-ta-empty-row="1">
                   <td colspan="5"><div class="empty">テストケース一覧の取り込みは準備中です。実装が完了すると、設計工程のケースがここに並びます。</div></td>
                 </tr>
               </tbody>
             </table>
           </div>
           <div class="dashboard-section-actions" style="margin: var(--space-2) 0 var(--space-4);">
-            <button type="button" class="ta-linkbtn" id="ta-impl-select-all" disabled data-wip="1">すべて選択</button>
+            <button type="button" class="ta-linkbtn" id="ta-impl-select-all" data-ta-selected="0">すべて選択</button>
             <button type="button" class="ta-linkbtn" id="ta-impl-import" disabled data-wip="1">設計から取り込む</button>
-            <span class="ta-wip-note">準備中</span>
+            <span class="ta-wip-note">「設計から取り込む」は準備中</span>
           </div>
 
           <details class="ta-panel">

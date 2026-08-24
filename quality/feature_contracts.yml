@@ -2384,6 +2384,98 @@
         "error_path",
         "evidence"
       ]
+    },
+    {
+      "feature_id": "test_activity_support",
+      "name": "テスト活動支援（System 02・12工程）",
+      "risk_level": "high",
+      "status": "implemented",
+      "ui_files": [
+        "templates/partials/view-ta-analysis.html",
+        "templates/partials/view-ta-codefix.html",
+        "templates/partials/view-ta-completion.html",
+        "templates/partials/view-ta-defect.html",
+        "templates/partials/view-ta-design.html",
+        "templates/partials/view-ta-execution.html",
+        "templates/partials/view-ta-home.html",
+        "templates/partials/view-ta-implementation.html",
+        "templates/partials/view-ta-integrations.html",
+        "templates/partials/view-ta-manual.html",
+        "templates/partials/view-ta-plan.html",
+        "templates/partials/view-ta-strategy.html",
+        "static/js/ta-ai-panel.js",
+        "static/js/ta-analysis.js",
+        "static/js/ta-codefix.js",
+        "static/js/ta-completion.js",
+        "static/js/ta-defect.js",
+        "static/js/ta-design.js",
+        "static/js/ta-execution.js",
+        "static/js/ta-home.js",
+        "static/js/ta-implementation.js",
+        "static/js/ta-integrations.js",
+        "static/js/ta-manual.js",
+        "static/js/ta-plan.js",
+        "static/js/ta-process-gate.js",
+        "static/js/ta-process-nav.js",
+        "static/js/ta-strategy.js",
+        "static/css/ta-design-system.css",
+        "static/css/test-activity.css"
+      ],
+      "route_files": [
+        "web/routes/test_activity.py"
+      ],
+      "core_files": [
+        "web/services/completion_criteria.py",
+        "web/services/defect_store.py",
+        "web/services/manual_execution_store.py",
+        "web/services/process_gate.py",
+        "web/services/test_data_store.py",
+        "web/services/ta_ai.py"
+      ],
+      "symbols": [
+        "evaluate",
+        "list_defects",
+        "create_defect",
+        "can_transition",
+        "update_state",
+        "stats",
+        "append_record",
+        "list_records",
+        "latest_by_case",
+        "unlocked_index",
+        "status",
+        "can_enter",
+        "complete",
+        "reopen",
+        "list_datasets",
+        "get_dataset",
+        "save_dataset",
+        "delete_dataset",
+        "parse_csv",
+        "ProcessGateError",
+        "ManualExecutionError",
+        "TestDataError"
+      ],
+      "outputs": [
+        "output/<domain>/defects/",
+        "output/<domain>/process/",
+        "output/<domain>/qa_process/"
+      ],
+      "persistence": [
+        "output/<domain>/defects/*.json",
+        "output/<domain>/process/state.json"
+      ],
+      "failure_modes": [
+        "domain 未指定で 400 を返す",
+        "対象ドメインが存在しない場合に空の一覧を返す",
+        "工程ゲートで未到達工程をロックする",
+        "LLM 未設定時に 503 と理由を返す",
+        "外部連携（GitHub 等）の認証情報が未設定の場合は操作を無効化し理由を表示する"
+      ],
+      "required_tests": [
+        "tests/test_ta_process_gate.py",
+        "tests/test_ta_defect_store.py"
+      ]
     }
   ]
 }

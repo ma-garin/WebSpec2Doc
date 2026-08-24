@@ -6,15 +6,25 @@
 
   const STATE_LABELS = { new: '新規', fixing: '修正中', retest: '再テスト待ち', closed: 'クローズ' };
   const DOMAIN_KEY = 'webspec2doc.ta.domain';
+  const DEFECT_ID_KEY = 'webspec2doc.ta.defect_id';
 
   let _items = [];
   let _selectedId = null;
   let _loaded = false;
   let _domainsLoaded = false;
+  let _analysisById = {};   // 不具合ID → { loading, error, items }（AIで原因分析の結果キャッシュ）
 
   const esc = (v) => (typeof escHtml === 'function'
     ? escHtml(String(v))
     : String(v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])));
+
+  // AI 生成結果の1件は文字列 or オブジェクトの可能性があるため、表示用テキストに正規化する
+  function itemText(x) {
+    if (x === null || x === undefined) return '';
+    if (typeof x === 'string') return x;
+    if (typeof x === 'object') return x.text || x.why || x.content || x.label || x.summary || JSON.stringify(x);
+    return String(x);
+  }
 
   function rememberDomain(v) { try { sessionStorage.setItem(DOMAIN_KEY, v); } catch (e) { /* 非対応環境 */ } }
   function recallDomain() { try { return sessionStorage.getItem(DOMAIN_KEY) || ''; } catch (e) { return ''; } }
@@ -116,14 +126,33 @@
     if (!box) return;
     const item = _items.find((i) => i.id === _selectedId);
     if (!item) { box.innerHTML = '<div class="empty">不具合を選んでください</div>'; return; }
+    let html;
     if (!item.odc_type) {
-      box.innerHTML = '<span class="ta2-badge ta2-badge-muted">未分析</span>'
+      html = '<span class="ta2-badge ta2-badge-muted">未分析</span>'
         + '<div class="muted-copy" style="margin-top:var(--space-2);">ODC 分類（Defect Type）はまだ設定されていません。</div>';
-      return;
+    } else {
+      const related = _items.filter((i) => i.odc_type === item.odc_type && i.id !== item.id).length;
+      html = `<span class="ta2-badge ta2-badge-pri">${esc(item.odc_type)}</span>
+        <div class="muted-copy" style="margin-top:var(--space-2);">同じ分類の他の不具合: ${related} 件</div>`;
     }
-    const related = _items.filter((i) => i.odc_type === item.odc_type && i.id !== item.id).length;
-    box.innerHTML = `<span class="ta2-badge ta2-badge-pri">${esc(item.odc_type)}</span>
-      <div class="muted-copy" style="margin-top:var(--space-2);">同じ分類の他の不具合: ${related} 件</div>`;
+    const ana = _analysisById[item.id];
+    if (ana) {
+      if (ana.loading) {
+        html += '<div class="muted-copy" style="margin-top:var(--space-3); border-top:1px solid var(--border); padding-top:var(--space-2);">分析しています…</div>';
+      } else if (ana.error) {
+        html += `<div style="margin-top:var(--space-3); border-top:1px solid var(--border); padding-top:var(--space-2);">
+          <span class="ta2-badge ta2-badge-ng">失敗</span>
+          <div class="muted-copy" style="margin-top:var(--space-2);">${esc(ana.error)}</div>
+        </div>`;
+      } else {
+        const list = (ana.items || []).map((x) => `<li>${esc(itemText(x))}</li>`).join('') || '<li>（結果が空でした）</li>';
+        html += `<div style="margin-top:var(--space-3); border-top:1px solid var(--border); padding-top:var(--space-2);">
+          <span class="ta2-badge ta2-badge-ok">AIで原因分析・完了</span>
+          <ul style="margin:var(--space-2) 0 0; padding-left:1.2em;">${list}</ul>
+        </div>`;
+      }
+    }
+    box.innerHTML = html;
   }
 
   function groupCount(items, key) {
@@ -142,22 +171,53 @@
     box.innerHTML = `<div class="ta-chips">${groupCount(items, key).map(([label, n]) => `<span class="ta-chip">${esc(label)}（${n}）</span>`).join('')}</div>`;
   }
 
+  // AI/RCA 系のボタンは、不具合が選ばれていないと呼び出す対象がないため無効化する
+  // （data-wip とは別軸: これは「未実装」ではなく「対象未選択」の無効化）
+  function updateActionButtons() {
+    const has = !!_selectedId;
+    ['ta-defect-analyze', 'ta-defect-codefix', 'ta-defect-rca-suggest', 'ta-defect-rca-save'].forEach((id) => {
+      const btn = document.getElementById(id);
+      if (btn) btn.disabled = !has;
+    });
+  }
+
+  function setRcaStatus(kind, text) {
+    const el = document.getElementById('ta-defect-rca-status');
+    if (!el) return;
+    el.textContent = text || '';
+    el.className = kind === 'ok' ? 'ta2-badge ta2-badge-ok' : kind === 'ng' ? 'ta2-badge ta2-badge-ng' : 'muted-copy';
+    if (kind !== 'ok' && kind !== 'ng') el.style.fontSize = 'var(--text-xs)';
+    else el.style.fontSize = '';
+  }
+
+  function clearRcaForm() {
+    for (let i = 1; i <= 5; i++) {
+      const input = document.getElementById('ta-defect-why-' + i);
+      if (input) input.value = '';
+    }
+    setRcaStatus('idle', '');
+  }
+
   function selectDefect(id) {
     _selectedId = id;
+    clearRcaForm();
     renderList();
     renderDetail();
     renderAI();
+    updateActionButtons();
   }
 
   async function load() {
     const dom = domain();
     const list = document.getElementById('ta-defect-list');
+    _analysisById = {};
     if (!dom) {
       if (list) list.innerHTML = '<div class="empty">対象ドメインを選択してください</div>';
       _items = []; _selectedId = null;
       renderStats({});
       renderDetail();
       renderAI();
+      updateActionButtons();
       renderDist('ta-defect-phase-chart', [], 'injected_phase', '対象を選ぶと混入工程の分布が表示されます');
       renderDist('ta-defect-type-chart', [], 'odc_type', '対象を選ぶと Defect Type の分布が表示されます');
       return;
@@ -173,12 +233,104 @@
       renderList();
       renderDetail();
       renderAI();
+      updateActionButtons();
       renderDist('ta-defect-phase-chart', _items, 'injected_phase', '不具合が登録されると混入工程の分布が表示されます');
       renderDist('ta-defect-type-chart', _items, 'odc_type', 'ODC 分類（Defect Type）が設定されると分布が表示されます');
       _loaded = true;
     } catch (e) {
       if (list) list.innerHTML = `<div class="empty">${esc(String(e && e.message ? e.message : e))}</div>`;
     }
+  }
+
+  // ---- AIで原因分析（右ペイン・紫地に結果を出す） ----
+  async function runAnalyze() {
+    const dom = domain();
+    const item = _items.find((i) => i.id === _selectedId);
+    if (!dom || !item) return;
+    const btn = document.getElementById('ta-defect-analyze');
+    if (btn) btn.disabled = true;
+    _analysisById[item.id] = { loading: true, error: null, items: null };
+    renderAI();
+    try {
+      const res = await fetch('/api/ta/ai/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain: dom, kind: 'rca' }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        throw new Error(data.error || (res.status === 503 ? 'LLMが未設定です' : 'AIによる原因分析に失敗しました'));
+      }
+      _analysisById[item.id] = { loading: false, error: null, items: data.items || [] };
+    } catch (e) {
+      _analysisById[item.id] = { loading: false, error: String(e && e.message ? e.message : e), items: null };
+    } finally {
+      updateActionButtons();
+      renderAI();
+    }
+  }
+
+  // ---- AIで下書き（Why1〜5 に流し込む） ----
+  async function runRcaSuggest() {
+    const dom = domain();
+    if (!dom || !_selectedId) return;
+    const btn = document.getElementById('ta-defect-rca-suggest');
+    if (btn) btn.disabled = true;
+    setRcaStatus('busy', '下書きを作成しています…');
+    try {
+      const res = await fetch('/api/ta/ai/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain: dom, kind: 'rca' }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        throw new Error(data.error || (res.status === 503 ? 'LLMが未設定です' : '下書きの生成に失敗しました'));
+      }
+      const items = data.items || [];
+      for (let i = 0; i < 5; i++) {
+        const input = document.getElementById('ta-defect-why-' + (i + 1));
+        if (input && items[i] !== undefined) input.value = itemText(items[i]);
+      }
+      setRcaStatus('ok', '下書きを反映しました');
+    } catch (e) {
+      setRcaStatus('ng', String(e && e.message ? e.message : e));
+    } finally {
+      updateActionButtons();
+    }
+  }
+
+  // ---- RCA保存 ----
+  async function runRcaSave() {
+    const dom = domain();
+    if (!dom || !_selectedId) return;
+    const whys = [1, 2, 3, 4, 5].map((n) => (document.getElementById('ta-defect-why-' + n) || {}).value || '');
+    const btn = document.getElementById('ta-defect-rca-save');
+    if (btn) btn.disabled = true;
+    setRcaStatus('busy', '保存しています…');
+    try {
+      const res = await fetch('/api/ta/rca', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain: dom, defect_id: _selectedId, whys }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.error || data.ok === false) {
+        throw new Error(data.error || (res.status === 503 ? 'LLMが未設定です' : '保存に失敗しました'));
+      }
+      setRcaStatus('ok', '保存しました');
+    } catch (e) {
+      setRcaStatus('ng', String(e && e.message ? e.message : e));
+    } finally {
+      updateActionButtons();
+    }
+  }
+
+  // ---- コード修正提案へ送る（フロントのみ。選択中の不具合IDを引き継いで画面遷移） ----
+  function sendToCodeFix() {
+    if (!_selectedId) return;
+    try { sessionStorage.setItem(DEFECT_ID_KEY, _selectedId); } catch (e) { /* 非対応環境 */ }
+    if (typeof switchView === 'function') switchView('code-fix');
   }
 
   let _booted = false;
@@ -188,6 +340,15 @@
     const domSel = document.getElementById('ta-defect-domain');
     if (domSel) domSel.addEventListener('change', () => { rememberDomain(domSel.value); _selectedId = null; load(); });
     document.getElementById('ta-defect-reload')?.addEventListener('click', () => { loadDomains(); });
+    document.getElementById('ta-defect-analyze')?.addEventListener('click', runAnalyze);
+    document.getElementById('ta-defect-codefix')?.addEventListener('click', sendToCodeFix);
+    document.getElementById('ta-defect-rca-suggest')?.addEventListener('click', runRcaSuggest);
+    document.getElementById('ta-defect-rca-save')?.addEventListener('click', runRcaSave);
+    // GitHub Issue 同期: トークン未接続のため実行できない。理由を明示し、連携設定への導線だけ出す
+    document.getElementById('ta-defect-sync-note')?.addEventListener('click', () => {
+      if (typeof switchView === 'function') switchView('integrations');
+    });
+    updateActionButtons();
   }
 
   if (typeof onViewEnter === 'function') {

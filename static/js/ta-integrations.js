@@ -2,6 +2,8 @@
 // 3接続先を俯瞰する。実データで判定できるのは「ドキュメント」のみ（/api/history）。
 // ソースコード / 開発標準は接続APIが無いため data-wip で明示する。
 // ソースコード参照先は GitHub 固定ではなく、複数ホスティング先 + ローカルパス + ZIP から選べる。
+// ローカルパスだけは /api/history へのバックエンド疎通確認という形で「接続」を有効化する
+// （パスの実在チェックAPIは無いため、疎通確認であることを明示する）。
 (function () {
   'use strict';
 
@@ -24,6 +26,74 @@
     userpass: { secretLabel: 'パスワード', secretType: 'password', secretPlaceholder: '', showUsername: true, showSecret: true },
     anonymous: { secretLabel: 'トークン', secretType: 'password', secretPlaceholder: '', showUsername: false, showSecret: false },
   };
+
+  const AUTH_MISSING_NOTE = '認証情報が未設定のため利用できません';
+
+  // ローカルパス以外は認証トークンが無く本物の接続確認ができないため、
+  // 「ローカルパス」選択時だけ接続ボタンを有効化する。
+  function setButtonWip(btn, noteEl, enabled) {
+    if (!btn) return;
+    if (enabled) {
+      btn.disabled = false;
+      btn.removeAttribute('data-wip');
+      if (noteEl) noteEl.hidden = true;
+    } else {
+      btn.disabled = true;
+      btn.setAttribute('data-wip', '1');
+      if (noteEl) { noteEl.hidden = false; noteEl.textContent = AUTH_MISSING_NOTE; }
+    }
+  }
+
+  function updateCodeConnectAvailability() {
+    const select = document.getElementById('ta-int-code-provider');
+    const isLocal = !!select && select.value === 'local';
+    setButtonWip(document.getElementById('ta-int-code-connect'), document.getElementById('ta-int-code-wip-note'), isLocal);
+    setButtonWip(document.getElementById('ta-int-code-save'), document.getElementById('ta-int-code-detail-note'), isLocal);
+  }
+
+  function updateStandardConnectAvailability() {
+    const select = document.getElementById('ta-int-standard-source');
+    const isLocal = !!select && select.value === 'local';
+    setButtonWip(document.getElementById('ta-int-standard-connect'), document.getElementById('ta-int-standard-wip-note'), isLocal);
+  }
+
+  // ローカルパスのみ、バックエンド（/api/history）への疎通を確認する。
+  // パスの実在チェックAPIは無いため、疎通確認の結果であることをバッジ文言で明示する。
+  async function verifyLocalPath(pathInput, badgeEl, btn) {
+    const path = (pathInput && pathInput.value || '').trim();
+    if (!path) {
+      if (badgeEl) { badgeEl.textContent = 'パス未入力'; badgeEl.className = 'ta2-badge ta2-badge-wa'; }
+      return;
+    }
+    if (!btn) return;
+    btn.disabled = true;
+    const prevText = btn.textContent;
+    btn.textContent = '確認中…';
+    try {
+      const res = await fetch('/api/history');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+      if (badgeEl) { badgeEl.textContent = '疎通確認済み（パス実在は未検証）'; badgeEl.className = 'ta2-badge ta2-badge-wa'; }
+    } catch (e) {
+      if (badgeEl) { badgeEl.textContent = '確認失敗（' + (e && e.message ? e.message : e) + '）'; badgeEl.className = 'ta2-badge ta2-badge-ng'; }
+    } finally {
+      btn.disabled = false;
+      btn.textContent = prevText;
+    }
+  }
+
+  document.getElementById('ta-int-code-connect')?.addEventListener('click', (evt) => {
+    verifyLocalPath(document.getElementById('ta-int-code-local-path'), document.getElementById('ta-int-code-badge'), evt.currentTarget);
+  });
+  document.getElementById('ta-int-code-save')?.addEventListener('click', (evt) => {
+    // <summary> 内のボタンなので、クリックで <details> が開閉しないようにする。
+    evt.preventDefault();
+    evt.stopPropagation();
+    verifyLocalPath(document.getElementById('ta-int-code-local-path'), document.getElementById('ta-int-code-badge'), evt.currentTarget);
+  });
+  document.getElementById('ta-int-standard-connect')?.addEventListener('click', (evt) => {
+    verifyLocalPath(document.getElementById('ta-int-standard-local-path'), document.getElementById('ta-int-standard-badge'), evt.currentTarget);
+  });
 
   function setSummary(connectedCount) {
     const el = document.getElementById('ta-int-summary');
@@ -96,6 +166,7 @@
       if (repoInput) repoInput.placeholder = info.repoPlaceholder;
       if (hostInput) hostInput.placeholder = info.hostPlaceholder;
     }
+    updateCodeConnectAvailability();
   }
 
   function updateCodeAuthFields() {
@@ -129,6 +200,7 @@
     uploadFields.hidden = source !== 'upload';
     urlFields.hidden = source !== 'url';
     localFields.hidden = source !== 'local';
+    updateStandardConnectAvailability();
   }
 
   document.getElementById('ta-int-standard-source')?.addEventListener('change', updateStandardSourceFields);

@@ -30,11 +30,11 @@
                     <div class="ta-panel-sub">左の一覧から不具合を選ぶと、対象ファイルと差分を表示します。</div>
                   </div>
                   <div class="ta-panel-actions">
-                    <button type="button" class="ta-linkbtn" id="ta-fix-generate" disabled data-wip="1">AIで修正案を作る</button>
-                    <span class="ta-wip-note">準備中</span>
+                    <button type="button" class="ta-linkbtn" id="ta-fix-generate">AIで修正案を作る</button>
+                    <span class="ta2-badge ta2-badge-muted" id="ta-fix-generate-status" style="display:none;"></span>
                   </div>
                 </div>
-                <div class="ta-panel-body">
+                <div class="ta-panel-body" id="ta-fix-result-box">
                   <div class="ta-kv">
                     <div class="ta-kv-row">
                       <div class="ta-kv-key">対象ファイル</div>
@@ -46,7 +46,7 @@
                     </div>
                   </div>
                   <pre class="ta-code" id="ta-fix-diff" style="margin-top:var(--space-3); display:none;"></pre>
-                  <div class="empty" id="ta-fix-diff-empty">AIで修正案を作ると、ここに差分が出ます（準備中）</div>
+                  <div class="empty" id="ta-fix-diff-empty">AIで修正案を作ると、ここに差分が出ます</div>
                 </div>
               </div>
 
@@ -54,11 +54,10 @@
                 <div class="ta-panel-head">
                   <div>
                     <div class="ta-panel-title">影響範囲</div>
-                    <div class="ta-panel-sub">この修正の再実行対象になるテストケースです。</div>
+                    <div class="ta-panel-sub" id="ta-fix-impact-sub">この修正の再実行対象になるテストケースです。</div>
                   </div>
                   <div class="ta-panel-actions">
-                    <button type="button" class="ta-linkbtn" id="ta-fix-impact-run" disabled data-wip="1">影響範囲を再実行</button>
-                    <span class="ta-wip-note">準備中</span>
+                    <button type="button" class="ta-linkbtn" id="ta-fix-impact-run">影響範囲を再実行</button>
                   </div>
                 </div>
                 <div class="ta-panel-body">
@@ -128,7 +127,7 @@
                 </div>
                 <button type="button" class="ta-linkbtn" id="ta-fix-open-defect" disabled>不具合分析を開く</button>
                 <button type="button" class="ta-linkbtn" id="ta-fix-pr" disabled data-wip="1">PRにする</button>
-                <span class="ta-wip-note">準備中</span>
+                <span class="ta-wip-note">GitHub未接続のため利用できません（連携設定へ）</span>
               </div>
             </div>
           </div>

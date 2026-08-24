@@ -135,4 +135,70 @@
       el.classList.remove('is-error');
     }
   });
+
+  function setReportStatus(message, kind) {
+    const el = document.getElementById('ta-completion-report-status');
+    if (!el) return;
+    if (!message) { el.style.display = 'none'; el.textContent = ''; return; }
+    el.style.display = '';
+    el.textContent = message;
+    el.className = 'ta2-badge ta2-badge-' + (kind || 'muted');
+  }
+
+  // 完了レポート（判定基準CSV）の書き出し。/api/ta/export?kind=criteria&format=csv を叩き、
+  // 取得したCSVをそのままダウンロードさせる。承認とは独立（判定の表示のみ、保存はしない）。
+  async function downloadReport() {
+    const btn = document.getElementById('ta-completion-report');
+    const dom = domain();
+    if (!dom) { setReportStatus('対象を選択してください', 'ng'); return; }
+    if (btn) btn.disabled = true;
+    setReportStatus('生成しています…', 'info');
+    try {
+      const res = await fetch('/api/ta/export?domain=' + encodeURIComponent(dom) + '&kind=criteria&format=csv');
+      if (!res.ok) {
+        let msg = '完了レポートの生成に失敗しました';
+        try { const data = await res.json(); msg = data.error || msg; } catch (_) { /* not JSON */ }
+        setReportStatus(msg, 'ng');
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `completion-criteria-${dom}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setReportStatus('ダウンロードしました', 'ok');
+    } catch (e) {
+      setReportStatus('通信に失敗しました: ' + (e && e.message ? e.message : e), 'ng');
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  // 教訓の入力行を1行追加（フロントのみ・保存APIは無いため画面内のみで保持）
+  let _lessonSeq = 0;
+  function addLessonRow() {
+    const box = document.getElementById('ta-completion-lessons');
+    if (!box) return;
+    if (box.querySelector('.empty')) box.innerHTML = '';
+    const rowId = 'lesson-' + (++_lessonSeq);
+    const row = document.createElement('div');
+    row.className = 'ta-kv-row';
+    row.dataset.lessonRow = rowId;
+    row.style.gridTemplateColumns = '1fr auto';
+    row.style.alignItems = 'center';
+    row.innerHTML = `<input type="text" class="input-compact" placeholder="教訓・改善点を入力" autocomplete="off" />
+      <button type="button" class="ta-linkbtn" aria-label="削除">×</button>`;
+    row.querySelector('button')?.addEventListener('click', () => {
+      row.remove();
+      if (!box.children.length) box.innerHTML = '<div class="empty">教訓はまだ記録されていません</div>';
+    });
+    box.appendChild(row);
+    row.querySelector('input')?.focus();
+  }
+  document.getElementById('ta-completion-report')?.addEventListener('click', downloadReport);
+  document.getElementById('ta-completion-lesson-add')?.addEventListener('click', addLessonRow);
 })();

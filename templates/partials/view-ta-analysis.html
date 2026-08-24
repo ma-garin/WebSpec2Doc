@@ -96,9 +96,9 @@
                 <div class="ta-panel-sub">由来には、根拠となった文書の行またはコードの関数を記録します。</div>
               </div>
               <div class="ta-panel-actions">
-                <button type="button" class="ta-linkbtn" data-ta-action="condition-add" disabled data-wip="1">条件を追加</button>
-                <button type="button" class="ta-linkbtn" data-ta-action="condition-export" disabled data-wip="1">エクスポート</button>
-                <span class="ta-wip-note">準備中</span>
+                <button type="button" class="ta-linkbtn" data-ta-action="condition-add">条件を追加</button>
+                <button type="button" class="ta-linkbtn" id="ta-analysis-export" data-ta-action="condition-export">エクスポート</button>
+                <span class="ta2-badge ta2-badge-muted" id="ta-analysis-export-state" hidden></span>
               </div>
             </div>
             <div class="ta-panel-body">
@@ -136,12 +136,11 @@
                 <div class="ta-panel-sub">要求 → テスト条件 → ケース の対応が途切れている箇所を検出します。</div>
               </div>
               <div class="ta-panel-actions">
-                <button type="button" class="ta-linkbtn" id="ta-analysis-trace-check" disabled data-wip="1">対応漏れを検査</button>
-                <span class="ta-wip-note">準備中</span>
+                <button type="button" class="ta-linkbtn" id="ta-analysis-trace-check">対応漏れを検査</button>
               </div>
             </summary>
             <div class="ta-panel-body">
-              <div id="ta-trace-body"><div class="empty">対応漏れ検査は準備中です。実装後、要求・条件・ケースの対応漏れがここに表示されます。</div></div>
+              <div id="ta-trace-body"><div class="empty">「対応漏れを検査」を押すと、網羅すべき観点が未記入の条件をここに一覧表示します。</div></div>
             </div>
           </details>
 

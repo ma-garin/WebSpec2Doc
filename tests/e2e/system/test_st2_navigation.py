@@ -10,7 +10,14 @@ from __future__ import annotations
 import re
 
 from playwright.sync_api import Page, expect
-from tests.e2e.system.helpers import ADMIN, MEMBER, login, open_docs_system, switch_view
+from tests.e2e.system.helpers import (
+    ADMIN,
+    MEMBER,
+    login,
+    open_docs_system,
+    switch_view,
+    switch_view_by_script,
+)
 
 
 class TestStNavigation:
@@ -105,6 +112,44 @@ class TestStNavigation:
         # 入口は /test-activity（system-scope.js:15-19 TESTLAB_PATHS）。
         page.goto(f"{system_server}/test-activity")
         expect(page.locator("#view-test-activity")).to_be_visible()
+        # 工程ゲート（web/services/process_gate.py）が未到達工程の nav を
+        # disabled にし、JS 側（ta-process-gate.js）も switchView を止める。
+        # 本テストの目的は「全ビューが JS エラーなく描画されること」なので、
+        # 先に全工程を完了 API で解放してから巡回する
+        # （ゲートが効くこと自体の検証は test_st2_process_gate 側の責務）。
+        gate_domain = page.evaluate(
+            "async () => {"
+            " const r = await fetch('/api/history');"
+            " const d = await r.json();"
+            " return (d.items && d.items[0] && d.items[0].domain) || '';"
+            "}"
+        )
+        if gate_domain:
+            for phase in (
+                "test-plan",
+                "test-analysis",
+                "test-strategy",
+                "test-design",
+                "test-implementation",
+                "test-execution",
+                "manual-execution",
+                "defect-analysis",
+                "code-fix",
+                "test-completion",
+            ):
+                page.evaluate(
+                    "async ([domain, phase]) => {"
+                    " await fetch('/api/ta/process/complete', {"
+                    "  method: 'POST',"
+                    "  headers: {'Content-Type': 'application/json'},"
+                    "  body: JSON.stringify({domain, phase})"
+                    " });"
+                    "}",
+                    [gate_domain, phase],
+                )
+            page.reload()
+            expect(page.locator("#view-test-activity")).to_be_visible()
+
         for view in (
             "test-activity",
             "test-plan",
@@ -113,11 +158,17 @@ class TestStNavigation:
             "test-design",
             "test-implementation",
             "test-execution",
+            "manual-execution",
             "defect-analysis",
             "code-fix",
+            "test-completion",
             "integrations",
         ):
-            switch_view(page, view)
+            nav = page.locator(f'[data-view="{view}"]').first
+            if nav.count() and nav.is_enabled():
+                switch_view(page, view)
+            else:
+                switch_view_by_script(page, view)
 
         # System 03 AutoRun（nav.html:10-18 の data-system="autorun"）。
         # 入口は /auto-run（system-scope.js:13 AUTORUN_PATHS）。

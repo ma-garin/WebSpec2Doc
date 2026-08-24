@@ -21,16 +21,16 @@
             <div class="ta-panel-head">
               <div class="ta-panel-title" title="GitHub / GitLab / Bitbucket / Azure DevOps / 汎用 Git / ローカルパス / ZIP から参照元を選び、静的解析します。未接続だとコード変更に基づく影響範囲分析ができません。">ソースコード</div>
               <div class="ta-panel-actions">
-                <span class="ta2-badge ta2-badge-ng">未接続</span>
-                <span class="ta-wip-note">準備中</span>
+                <span class="ta2-badge ta2-badge-ng" id="ta-int-code-badge">未接続</span>
+                <span class="ta-wip-note" id="ta-int-code-wip-note">認証情報が未設定のため利用できません</span>
                 <button type="button" class="ta-linkbtn" id="ta-int-code-connect" disabled data-wip="1">接続</button>
               </div>
             </div>
             <div class="ta-panel-head">
               <div class="ta-panel-title" title="コーディング規約・テスト規約の文書を、アップロード / URL / ローカルパスから登録し、生成コードを準拠させます。未接続だと生成コードの規約チェックができません。">開発標準</div>
               <div class="ta-panel-actions">
-                <span class="ta2-badge ta2-badge-ng">未接続</span>
-                <span class="ta-wip-note">準備中</span>
+                <span class="ta2-badge ta2-badge-ng" id="ta-int-standard-badge">未接続</span>
+                <span class="ta-wip-note" id="ta-int-standard-wip-note">認証情報が未設定のため利用できません</span>
                 <button type="button" class="ta-linkbtn" id="ta-int-standard-connect" disabled data-wip="1">接続</button>
               </div>
             </div>
@@ -40,7 +40,7 @@
             <summary class="ta-panel-head">
               <div>
                 <div class="ta-panel-title">ソースコード連携（未接続）</div>
-                <div class="ta-panel-sub">参照元を1つ選び、アクセス情報を設定します。<span class="ta-wip-note">準備中（参照元を問わず取得APIが未実装）</span></div>
+                <div class="ta-panel-sub">参照元を1つ選び、アクセス情報を設定します。<span class="ta-wip-note" id="ta-int-code-detail-note">認証情報が未設定のため利用できません</span></div>
               </div>
               <div class="ta-panel-actions">
                 <button type="button" class="ta-linkbtn" id="ta-int-code-save" disabled data-wip="1">接続</button>
@@ -68,19 +68,19 @@
                 <div class="ta-kv-row">
                   <div class="ta-kv-key"><label for="ta-int-code-repo" id="ta-int-code-repo-label">リポジトリ</label></div>
                   <div class="ta-kv-val">
-                    <input type="text" class="input-compact" id="ta-int-code-repo" placeholder="owner/repository" autocomplete="off" data-wip="1" />
+                    <input type="text" class="input-compact" id="ta-int-code-repo" placeholder="owner/repository" autocomplete="off" />
                   </div>
                 </div>
                 <div class="ta-kv-row">
                   <div class="ta-kv-key"><label for="ta-int-code-host" id="ta-int-code-host-label">ホストURL</label></div>
                   <div class="ta-kv-val">
-                    <input type="text" class="input-compact" id="ta-int-code-host" placeholder="github.com（既定）または自ホストURL" autocomplete="off" data-wip="1" />
+                    <input type="text" class="input-compact" id="ta-int-code-host" placeholder="github.com（既定）または自ホストURL" autocomplete="off" />
                   </div>
                 </div>
                 <div class="ta-kv-row">
                   <div class="ta-kv-key"><label for="ta-int-code-auth-method">認証方式</label></div>
                   <div class="ta-kv-val">
-                    <select class="select-compact" id="ta-int-code-auth-method" data-wip="1">
+                    <select class="select-compact" id="ta-int-code-auth-method">
                       <option value="token">トークン</option>
                       <option value="ssh">SSH鍵</option>
                       <option value="userpass">ユーザー名とパスワード</option>
@@ -91,13 +91,13 @@
                 <div class="ta-kv-row" id="ta-int-code-username-row" hidden>
                   <div class="ta-kv-key"><label for="ta-int-code-username">ユーザー名</label></div>
                   <div class="ta-kv-val">
-                    <input type="text" class="input-compact" id="ta-int-code-username" autocomplete="off" data-wip="1" />
+                    <input type="text" class="input-compact" id="ta-int-code-username" autocomplete="off" />
                   </div>
                 </div>
                 <div class="ta-kv-row" id="ta-int-code-secret-row">
                   <div class="ta-kv-key"><label for="ta-int-code-secret" id="ta-int-code-secret-label">トークン</label></div>
                   <div class="ta-kv-val">
-                    <input type="password" class="input-compact" id="ta-int-code-secret" placeholder="ghp_..." autocomplete="new-password" data-wip="1" />
+                    <input type="password" class="input-compact" id="ta-int-code-secret" placeholder="ghp_..." autocomplete="new-password" />
                   </div>
                 </div>
               </div>
@@ -106,7 +106,7 @@
                 <div class="ta-kv-row">
                   <div class="ta-kv-key"><label for="ta-int-code-local-path">ディレクトリパス</label></div>
                   <div class="ta-kv-val">
-                    <input type="text" class="input-compact" id="ta-int-code-local-path" placeholder="/srv/repos/example" autocomplete="off" data-wip="1" />
+                    <input type="text" class="input-compact" id="ta-int-code-local-path" placeholder="/srv/repos/example" autocomplete="off" />
                   </div>
                 </div>
               </div>
@@ -121,6 +121,7 @@
               </div>
 
               <p class="ta-note">トークン・パスワード・鍵は環境変数またはシークレットマネージャで管理します。リポジトリには保存しません。</p>
+              <p class="ta-wip-note">入力内容を保存するAPIは未実装です。「接続」はローカルパス選択時のみ、バックエンドへの疎通確認を行います（パスの実在チェックは未実装）。</p>
             </div>
           </details>
 

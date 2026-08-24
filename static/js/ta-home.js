@@ -151,8 +151,19 @@
   }
 
   async function fetchJson(url) {
-    const res = await fetch(url);
-    const data = await res.json();
+    let res;
+    try {
+      res = await fetch(url);
+    } catch (e) {
+      // ネットワーク断・サーバ停止。理由を保ったまま呼び出し元へ渡す（画面に1行で出す）
+      throw new Error('通信に失敗しました（' + (e && e.message ? e.message : 'ネットワークエラー') + '）');
+    }
+    let data;
+    try {
+      data = await res.json();
+    } catch (e) {
+      throw new Error('応答を解釈できませんでした（HTTP ' + res.status + '）');
+    }
     if (!res.ok || data.error) throw new Error(data.error || ('HTTP ' + res.status));
     return data;
   }
@@ -222,6 +233,73 @@
     }
   }
 
+  // ---- 連携ソース: 接続状態を確認（フロントのみ。/api/history の応答で判定する） ----
+  async function checkSourceStatus() {
+    const btn = document.querySelector('[data-ta-action="source-refresh"]');
+    const result = $('ta-source-refresh-result');
+    if (!btn) return;
+    btn.disabled = true;
+    const prevText = btn.textContent;
+    btn.textContent = '確認中…';
+    try {
+      const res = await fetch('/api/history');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+      const items = (data.items || []).filter((it) => it.domain);
+      const docsBadge = $('ta-source-badge-docs');
+      if (docsBadge) {
+        if (items.length > 0) {
+          docsBadge.textContent = '接続済み';
+          docsBadge.className = 'ta2-badge ta2-badge-ok';
+        } else {
+          docsBadge.textContent = '未接続';
+          docsBadge.className = 'ta2-badge ta2-badge-wa';
+        }
+      }
+      if (result) {
+        result.hidden = false;
+        result.textContent = '確認しました';
+        result.className = 'ta2-badge ta2-badge-ok';
+      }
+    } catch (e) {
+      if (result) {
+        result.hidden = false;
+        result.textContent = '確認失敗（' + (e && e.message ? e.message : e) + '）';
+        result.className = 'ta2-badge ta2-badge-ng';
+      }
+    } finally {
+      btn.disabled = false;
+      btn.textContent = prevText;
+    }
+  }
+
+  // ---- 最近の活動: 再読み込み（フロントのみ。既存の実データAPIを再取得する） ----
+  async function reloadRecent() {
+    const btn = $('ta-recent-reload');
+    const body = $('ta-recent-body');
+    if (!btn) return;
+    const domain = currentDomain();
+    btn.disabled = true;
+    const prevText = btn.textContent;
+    btn.textContent = '更新中…';
+    try {
+      if (!domain) {
+        if (body) body.innerHTML = '<div class="empty">プロジェクトを選び、工程を進めると、実行履歴がここに表示されます</div>';
+        return;
+      }
+      await refreshAll();
+      if (body) {
+        const now = new Date().toLocaleTimeString('ja-JP');
+        body.innerHTML = `<div class="empty">${esc(now)} 時点の最新状態に更新しました <span class="ta2-badge ta2-badge-ok">再読み込み成功</span></div>`;
+      }
+    } catch (e) {
+      if (body) body.innerHTML = `<div class="empty">${errBadge('再読み込みに失敗しました（' + (e && e.message ? e.message : e) + '）')}</div>`;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = prevText;
+    }
+  }
+
   let _booted = false;
   function init() {
     if (_booted) return;
@@ -248,6 +326,17 @@
 
     const blockerOpen = $('ta-blocker-open');
     if (blockerOpen) blockerOpen.addEventListener('click', () => go('defect-analysis'));
+
+    const sourceRefreshBtn = document.querySelector('[data-ta-action="source-refresh"]');
+    if (sourceRefreshBtn) sourceRefreshBtn.addEventListener('click', checkSourceStatus);
+
+    // 連携ソースの「接続」×4: 実データの接続APIが無いため、連携設定画面への導線にする。
+    document.querySelectorAll('[data-ta-action^="connect-"]').forEach((btn) => {
+      btn.addEventListener('click', () => go('integrations'));
+    });
+
+    const recentReloadBtn = $('ta-recent-reload');
+    if (recentReloadBtn) recentReloadBtn.addEventListener('click', reloadRecent);
 
     // 工程マス自体のクリック遷移は ta-process-nav.js が配線済み（重複配線しない）。
 

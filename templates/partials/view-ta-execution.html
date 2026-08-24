@@ -20,24 +20,21 @@
                 </div>
                 <div style="display:flex;align-items:center;gap:6px;">
                   <label for="ta-exec-env" class="ta-kv-key">環境</label>
-                  <select class="select-compact" id="ta-exec-env" disabled data-wip="1" style="width:140px;">
-                    <option value="">環境を選択</option>
+                  <select class="select-compact" id="ta-exec-env" style="width:140px;">
                     <option value="local">ローカル</option>
-                    <option value="dev">開発</option>
                     <option value="staging">ステージング</option>
+                    <option value="production">本番</option>
                   </select>
-                  <span class="ta-wip-note">準備中</span>
                 </div>
                 <div style="display:flex;align-items:center;gap:6px;">
                   <label for="ta-exec-parallel" class="ta-kv-key">並列度</label>
-                  <input type="number" class="input-compact" id="ta-exec-parallel" min="1" max="16" step="1" placeholder="1" disabled data-wip="1" style="width:64px;" />
-                  <span class="ta-wip-note">準備中</span>
+                  <input type="number" class="input-compact" id="ta-exec-parallel" min="1" max="16" step="1" placeholder="1" value="1" style="width:64px;" />
                 </div>
                 <span class="ta2-badge ta2-badge-info" id="ta-exec-run-badge" style="display:none">実行中 <span id="ta-exec-run-progress"></span></span>
                 <div style="flex:1 1 auto;min-width:8px;"></div>
                 <button type="button" class="ta-linkbtn" id="ta-exec-schedule" disabled data-wip="1">スケジュール登録</button>
                 <span class="ta-wip-note">準備中</span>
-                <button type="button" class="btn-danger-outline" id="ta-exec-stop" disabled data-wip="1" title="実行の停止は未実装です" style="display:none;">実行を停止</button>
+                <button type="button" class="btn-danger-outline" id="ta-exec-stop" title="実行を停止します" style="display:none;">実行を停止</button>
                 <button type="button" class="btn-primary" id="ta-exec-run" disabled title="実行対象を選択してください">実行</button>
               </div>
             </div>
@@ -81,8 +78,8 @@
               </div>
               <div class="ta-panel-actions">
                 <span class="muted-copy" id="ta-exec-shown-count"></span>
-                <button type="button" class="ta-linkbtn" id="ta-exec-export" disabled data-wip="1">結果を書き出す</button>
-                <span class="ta-wip-note">準備中</span>
+                <button type="button" class="ta-linkbtn" id="ta-exec-export">結果を書き出す</button>
+                <span class="ta2-badge" id="ta-exec-export-status" style="display:none"></span>
               </div>
             </div>
             <div class="ta-panel-body">
@@ -114,8 +111,8 @@
                 <div class="ta-panel-sub">実行中の標準出力とエラーをそのまま表示します（常時表示・折りたたみません）。</div>
               </div>
               <div class="ta-panel-actions">
-                <button type="button" class="ta-linkbtn" id="ta-exec-log-clear" disabled data-wip="1">ログをクリア</button>
-                <span class="ta-wip-note">準備中</span>
+                <button type="button" class="ta-linkbtn" id="ta-exec-log-clear">ログをクリア</button>
+                <span class="ta2-badge" id="ta-exec-log-clear-status" style="display:none"></span>
               </div>
             </div>
             <div class="ta-panel-body">
@@ -123,5 +120,5 @@
             </div>
           </div>
 
-          <p class="ta-note">実行履歴は既存の実行基盤を共用しています。実行の停止・スケジュール登録・結果の書き出し・環境／並列度の指定は未実装です。</p>
+          <p class="ta-note">実行履歴は既存の実行基盤を共用しています。スケジュール登録は未実装です。</p>
         </section>

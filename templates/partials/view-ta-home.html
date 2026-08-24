@@ -95,8 +95,8 @@
                 <div class="ta-panel-sub">テスト条件の抽出元。接続したソースが分析・設計の入力になります。</div>
               </div>
               <div class="ta-panel-actions">
-                <button type="button" class="ta-linkbtn" data-ta-action="source-refresh" disabled data-wip="1">接続状態を確認</button>
-                <span class="ta-wip-note">準備中</span>
+                <button type="button" class="ta-linkbtn" data-ta-action="source-refresh">接続状態を確認</button>
+                <span class="ta2-badge ta2-badge-muted" id="ta-source-refresh-result" hidden></span>
               </div>
             </div>
             <div class="ta-panel-body">
@@ -104,30 +104,26 @@
                 <div class="ta-source-item">
                   <span class="card-title">ドキュメント</span>
                   <span class="card-subtitle">画面仕様書・要件定義・API定義</span>
-                  <span class="ta2-badge ta2-badge-wa">未接続</span>
-                  <button type="button" class="ta-linkbtn" data-ta-action="connect-docs" disabled data-wip="1">接続</button>
-                  <span class="ta-wip-note">準備中</span>
+                  <span class="ta2-badge ta2-badge-wa" id="ta-source-badge-docs">未接続</span>
+                  <button type="button" class="ta-linkbtn" data-ta-action="connect-docs">接続</button>
                 </div>
                 <div class="ta-source-item">
                   <span class="card-title">GitHub</span>
                   <span class="card-subtitle">リポジトリ・ブランチ・PR の差分</span>
                   <span class="ta2-badge ta2-badge-wa">未接続</span>
-                  <button type="button" class="ta-linkbtn" data-ta-action="connect-github" disabled data-wip="1">接続</button>
-                  <span class="ta-wip-note">準備中</span>
+                  <button type="button" class="ta-linkbtn" data-ta-action="connect-github">接続</button>
                 </div>
                 <div class="ta-source-item">
                   <span class="card-title">ソースコード</span>
                   <span class="card-subtitle">関数・分岐・例外処理の実装</span>
                   <span class="ta2-badge ta2-badge-wa">未接続</span>
-                  <button type="button" class="ta-linkbtn" data-ta-action="connect-code" disabled data-wip="1">接続</button>
-                  <span class="ta-wip-note">準備中</span>
+                  <button type="button" class="ta-linkbtn" data-ta-action="connect-code">接続</button>
                 </div>
                 <div class="ta-source-item">
                   <span class="card-title">開発標準</span>
                   <span class="card-subtitle">コーディング規約・品質基準・テスト規程</span>
                   <span class="ta2-badge ta2-badge-wa">未接続</span>
-                  <button type="button" class="ta-linkbtn" data-ta-action="connect-standard" disabled data-wip="1">接続</button>
-                  <span class="ta-wip-note">準備中</span>
+                  <button type="button" class="ta-linkbtn" data-ta-action="connect-standard">接続</button>
                 </div>
               </div>
             </div>
@@ -139,8 +135,7 @@
               <p class="dashboard-section-copy">工程の実行履歴と、生成された成果物の更新を時系列で表示します。</p>
             </div>
             <div class="dashboard-section-actions">
-              <button type="button" class="ta-linkbtn" id="ta-recent-reload" disabled data-wip="1">再読み込み</button>
-              <span class="ta-wip-note">準備中</span>
+              <button type="button" class="ta-linkbtn" id="ta-recent-reload">再読み込み</button>
             </div>
           </div>
           <div id="ta-recent-body"><div class="empty">プロジェクトを選び、工程を進めると、実行履歴がここに表示されます</div></div>

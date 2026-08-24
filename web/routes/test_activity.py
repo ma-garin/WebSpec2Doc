@@ -7,6 +7,8 @@ domain を検証せずにパス要素へ渡すと `../` で他テナントの出
 
 from __future__ import annotations
 
+import csv
+import io
 import logging
 from collections.abc import Callable, Mapping
 from functools import wraps
@@ -22,6 +24,7 @@ from web.services import (
     defect_store,
     manual_execution_store,
     process_gate,
+    ta_ai,
     test_data_store,
 )
 from web.tenancy import scoped_output_dir
@@ -31,7 +34,7 @@ bp = Blueprint("test_activity", __name__)
 
 
 @bp.before_request
-def _admin_only() -> "BaseResponse | None":
+def _admin_only() -> BaseResponse | None:
     """テスト活動支援は管理者のみ。
 
     blueprint 単位で掛ける。エンドポイントごとに書くと追加時に付け忘れ、
@@ -43,7 +46,7 @@ def _admin_only() -> "BaseResponse | None":
     return require_admin()
 logger = logging.getLogger(__name__)
 
-JsonResult = dict[str, Any] | tuple[dict[str, Any], int]
+JsonResult = dict[str, Any] | tuple[dict[str, Any], int] | BaseResponse
 
 _MANUAL_RUN_LIMIT_MAX = 500
 _CLOSED_STATE = "closed"  # defect_store.STATES の終端
@@ -138,10 +141,12 @@ def api_ta_datasets_create() -> JsonResult:
     if csv_text.strip():
         columns, rows = test_data_store.parse_csv(csv_text)
     else:
-        columns = body.get("columns")
-        rows = body.get("rows")
-        if not isinstance(columns, list) or not isinstance(rows, list):
+        raw_columns = body.get("columns")
+        raw_rows = body.get("rows")
+        if not isinstance(raw_columns, list) or not isinstance(raw_rows, list):
             raise _BadRequest("columns と rows は配列で指定してください（または csv を渡してください）")
+        columns = [str(c) for c in raw_columns]
+        rows = [{str(k): str(v) for k, v in r.items()} if isinstance(r, dict) else {} for r in raw_rows]
 
     return {"item": test_data_store.save_dataset(_out(), domain, name, columns, rows)}
 
@@ -234,11 +239,11 @@ def api_ta_defects_update(defect_id: str) -> JsonResult:
 # ─────────────────────────── 終了基準 ───────────────────────────
 
 
-@bp.get("/api/ta/completion")
-@_api
-def api_ta_completion() -> JsonResult:
-    domain = _require_domain()
-    out = _out()
+def _completion_result(out: Path, domain: str) -> dict[str, Any]:
+    """終了基準の評価結果（criteria/overall/unmet_keys/blockers）。
+
+    `/api/ta/completion` と CSV エクスポート（kind=criteria）が同じ計算を使う。
+    """
     metrics = _case_metrics(domain)
     blockers = [_blocker(d) for d in defect_store.list_defects(out, domain) if _is_blocker(d)]
     result = completion_criteria.evaluate(
@@ -254,6 +259,12 @@ def api_ta_completion() -> JsonResult:
         "unmet_keys": result.get("unmet_keys", []),
         "blockers": blockers,
     }
+
+
+@bp.get("/api/ta/completion")
+@_api
+def api_ta_completion() -> JsonResult:
+    return _completion_result(_out(), _require_domain())
 
 
 def _testcase_rows(domain: str) -> list[dict[str, Any]]:
@@ -334,6 +345,180 @@ def _blocker(defect: Mapping[str, Any]) -> dict[str, Any]:
         "state": str(defect.get("state") or ""),
         "case_id": str(defect.get("case_id") or ""),
     }
+
+
+# ─────────────────────────── AI 生成 ───────────────────────────
+# LLM 呼び出しの詳細（接続先解決・Structured Outputs・例外変換）は
+# web/services/ta_ai.py に閉じる。ここでは ta_ai の例外を HTTP へ写像するだけ。
+
+
+@bp.post("/api/ta/ai/generate")
+@_api
+def api_ta_ai_generate() -> JsonResult:
+    body = _json_body()
+    domain = _require_domain(body)
+    kind = str(body.get("kind") or "").strip()
+    try:
+        items = ta_ai.generate(_out(), domain, kind)
+    except ta_ai.TaAiUnavailableError as exc:
+        logger.info("test_activity: LLM未設定/到達不可 kind=%s domain=%s: %s", kind, domain, exc)
+        return {"ok": False, "error": "LLMが未設定です"}, 503
+    except ta_ai.TaAiGenerationError as exc:
+        logger.warning("test_activity: AI生成に失敗しました kind=%s domain=%s: %s", kind, domain, exc)
+        return {"ok": False, "error": "AI生成に失敗しました"}, 502
+    except ta_ai.TaAiError as exc:
+        raise _BadRequest(str(exc)) from exc
+    return {"ok": True, "items": items}
+
+
+# ─────────────────────────── なぜなぜ分析（RCA） ───────────────────────────
+
+
+@bp.post("/api/ta/rca")
+@_api
+def api_ta_rca_create() -> JsonResult:
+    body = _json_body()
+    domain = _require_domain(body)
+    defect_id = _require_id(str(body.get("defect_id") or ""), "defect_id")
+    whys = body.get("whys")
+    if not isinstance(whys, list):
+        raise _BadRequest("whys は配列で指定してください")
+    try:
+        ta_ai.save_rca(_out(), domain, defect_id, whys)
+    except ta_ai.TaAiError as exc:
+        raise _BadRequest(str(exc)) from exc
+    return {"ok": True, "saved": True}
+
+
+# ─────────────────────────── CSV エクスポート ───────────────────────────
+
+_EXPORT_KINDS: tuple[str, ...] = ("cases", "results", "defects", "criteria", "conditions")
+# 数式インジェクション対策: 先頭がこれらの文字だとスプレッドシートが数式として解釈しうる。
+_FORMULA_PREFIXES: tuple[str, ...] = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _csv_safe_cell(value: Any) -> str:
+    """セル値の先頭が `=+-@` 等ならアポストロフィを前置して数式評価を防ぐ。"""
+    text = "" if value is None else str(value)
+    if text.startswith(_FORMULA_PREFIXES):
+        return "'" + text
+    return text
+
+
+def _to_csv(header: list[str], rows: list[list[Any]]) -> str:
+    buffer = io.StringIO()
+    writer = csv.writer(buffer, lineterminator="\n")
+    writer.writerow([_csv_safe_cell(cell) for cell in header])
+    for row in rows:
+        writer.writerow([_csv_safe_cell(cell) for cell in row])
+    return buffer.getvalue()
+
+
+def _export_rows(out: Path, domain: str, kind: str) -> tuple[list[str], list[list[Any]]]:
+    if kind == "cases":
+        header = ["case_id", "title", "precondition", "steps", "expected"]
+        rows = [
+            [
+                item.get("case_id", ""),
+                item.get("title", ""),
+                item.get("precondition", ""),
+                " / ".join(str(s) for s in item["steps"])
+                if isinstance(item.get("steps"), list)
+                else str(item.get("steps") or ""),
+                item.get("expected", ""),
+            ]
+            for item in ta_ai.read_generated(out, domain, "cases")
+        ]
+        return header, rows
+    if kind == "conditions":
+        header = ["condition_id", "target", "condition", "technique", "note"]
+        rows = [
+            [
+                item.get("condition_id", ""),
+                item.get("target", ""),
+                item.get("condition", ""),
+                item.get("technique", ""),
+                item.get("note", ""),
+            ]
+            for item in ta_ai.read_generated(out, domain, "conditions")
+        ]
+        return header, rows
+    if kind == "results":
+        header = ["case_id", "result", "note", "evidence", "at"]
+        rows = [
+            [
+                r.get("case_id", ""),
+                r.get("result", ""),
+                r.get("note", ""),
+                r.get("evidence", ""),
+                r.get("at", ""),
+            ]
+            for r in manual_execution_store.list_records(out, domain, limit=_MANUAL_RUN_LIMIT_MAX)
+        ]
+        return header, rows
+    if kind == "defects":
+        header = [
+            "id",
+            "summary",
+            "severity",
+            "state",
+            "case_id",
+            "detected_phase",
+            "injected_phase",
+            "odc_type",
+            "created_at",
+            "updated_at",
+        ]
+        rows = [
+            [
+                d.get("id", ""),
+                d.get("summary", ""),
+                d.get("severity", ""),
+                d.get("state", ""),
+                d.get("case_id", ""),
+                d.get("detected_phase", ""),
+                d.get("injected_phase", ""),
+                d.get("odc_type", ""),
+                d.get("created_at", ""),
+                d.get("updated_at", ""),
+            ]
+            for d in defect_store.list_defects(out, domain)
+        ]
+        return header, rows
+    if kind == "criteria":
+        result = _completion_result(out, domain)
+        header = ["key", "label", "target", "current", "met"]
+        rows = [
+            [
+                c.get("key", ""),
+                c.get("label", ""),
+                c.get("target", ""),
+                c.get("current", ""),
+                "TRUE" if c.get("met") else "FALSE",
+            ]
+            for c in result["criteria"]
+        ]
+        return header, rows
+    raise _BadRequest(f"kind が不正です（許可: {', '.join(_EXPORT_KINDS)}）")
+
+
+@bp.get("/api/ta/export")
+@_api
+def api_ta_export() -> JsonResult:
+    domain = _require_domain()
+    kind = str(request.args.get("kind") or "").strip()
+    fmt = str(request.args.get("format") or "").strip().lower()
+    if fmt != "csv":
+        raise _BadRequest("format は csv のみ対応しています")
+    if kind not in _EXPORT_KINDS:
+        raise _BadRequest(f"kind が不正です（許可: {', '.join(_EXPORT_KINDS)}）")
+
+    header, rows = _export_rows(_out(), domain, kind)
+    return BaseResponse(
+        _to_csv(header, rows),
+        content_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{domain}_{kind}.csv"'},
+    )
 
 
 # ---- 工程ゲート ----

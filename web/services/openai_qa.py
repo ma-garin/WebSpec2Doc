@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import urllib.error
+import urllib.parse
 import urllib.request
 from typing import Any
 
@@ -12,6 +13,11 @@ OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
 OPENAI_MODELS_URL = "https://api.openai.com/v1/models"
 QA_ARTIFACT_VERSION = "qa-process-v1"
 
+#: LLM 接続先。web/routes/settings.py が同名の環境変数へ書き込む。
+#: settings.py（routes 層）から import すると services → routes の逆流になるため、
+#: 値だけをここでも定義する。
+ENV_LLM_BASE_URL = "WEBSPEC2DOC_LLM_BASE_URL"
+
 
 class OpenAIQAError(RuntimeError):
     """Raised when OpenAI QA artifact generation cannot complete."""
@@ -21,11 +27,55 @@ def has_openai_api_key() -> bool:
     return bool(_read_env().get("OPENAI_API_KEY", "").strip())
 
 
+def _is_local_base_url(base_url: str) -> bool:
+    """ベース URL がローカルホスト宛かを判定する（SSRF 防止）。"""
+    try:
+        parsed = urllib.parse.urlparse(base_url)
+    except ValueError:
+        return False
+    if parsed.scheme not in {"http", "https"}:
+        return False
+    return (parsed.hostname or "") in {"127.0.0.1", "localhost", "::1"}
+
+
+def _test_local_llm_connection(base_url: str) -> tuple[bool, str]:
+    """ローカルの OpenAI 互換サーバ（Ollama 等）へ疎通確認する。
+
+    API キーは不要。宛先はローカルホストに限る（SSRF 防止）。
+    """
+    if not _is_local_base_url(base_url):
+        return False, "ローカル（127.0.0.1 / localhost / ::1）のエンドポイントのみ疎通確認できます。"
+    url = f"{base_url.rstrip('/')}/models"
+    request = urllib.request.Request(url, method="GET")
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:  # nosec B310
+            payload = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        return False, f"接続に失敗しました（HTTP {exc.code}）。"
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        return False, f"接続に失敗しました: {exc}"
+    except (ValueError, json.JSONDecodeError):
+        # 応答は返ったが OpenAI 互換の JSON ではない。到達はしているので成功扱いにしない。
+        return False, "接続できましたが、OpenAI 互換の応答ではありませんでした。"
+    models = [item for item in payload.get("data", []) if item.get("id")]
+    return True, f"接続に成功しました（モデル {len(models)} 件）。"
+
+
 def test_openai_connection() -> tuple[bool, str]:
-    """設定済みのAPIキー・組織/プロジェクトIDで疎通確認する。
-    トークン課金を避けるため軽量な /v1/models 一覧取得のみ行い、実際の
-    生成は行わない。"""
+    """設定済みの接続先で疎通確認する。
+
+    トークン課金を避けるため軽量な /models 一覧取得のみ行い、実際の生成は行わない。
+
+    接続先が OpenAI 以外（Ollama 等のローカル OpenAI 互換サーバ）に設定されている
+    場合、OPENAI_API_KEY は不要。従来はプロバイダ設定を見ずに常に api.openai.com を
+    叩いていたため、Ollama を選んでいても「OPENAI_API_KEY が設定されていません。」が
+    返っていた。
+    """
     env = _read_env()
+    base_url = env.get(ENV_LLM_BASE_URL, "").strip()
+    if base_url and "api.openai.com" not in base_url:
+        return _test_local_llm_connection(base_url)
+
     api_key = env.get("OPENAI_API_KEY", "").strip()
     if not api_key:
         return False, "OPENAI_API_KEY が設定されていません。"

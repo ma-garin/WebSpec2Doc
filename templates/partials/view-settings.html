@@ -4,6 +4,7 @@
             <button type="button" class="set-tab is-active" data-tab="api" role="tab" aria-selected="true" aria-controls="set-panel-api" id="set-tab-api" tabindex="0">APIキー</button>
             <button type="button" class="set-tab" data-tab="crawl" role="tab" aria-selected="false" aria-controls="set-panel-crawl" id="set-tab-crawl" tabindex="-1">解析の既定値</button>
             <button type="button" class="set-tab" data-tab="notify" role="tab" aria-selected="false" aria-controls="set-panel-notify" id="set-tab-notify" tabindex="-1">通知</button>
+            <button type="button" class="set-tab" data-tab="integrations" role="tab" aria-selected="false" aria-controls="set-panel-integrations" id="set-tab-integrations" tabindex="-1">外部サービス連携</button>
             <button type="button" class="set-tab" data-tab="operations" role="tab" aria-selected="false" aria-controls="set-panel-operations" id="set-tab-operations" tabindex="-1">運用監視</button>
             {% if not auth_user or auth_user.role in ('owner', 'admin') %}
             <button type="button" class="set-tab" data-tab="data" role="tab" aria-selected="false" aria-controls="set-panel-data" id="set-tab-data" tabindex="-1">データ管理</button>
@@ -97,8 +98,174 @@
                 <label for="slack-webhook-url">SLACK_WEBHOOK_URL</label>
                 <input type="password" id="slack-webhook-url" placeholder="https://hooks.slack.com/services/..." autocomplete="off" style="width:100%">
               </div>
-              <button class="btn-primary" id="save-slack" style="margin-top:18px">Webhook URLを保存</button>
+              <div class="set-actions" style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+                <button class="btn-primary" id="save-slack">Webhook URLを保存</button>
+                <button class="btn-outline-sm" id="test-slack" type="button">テスト送信</button>
+              </div>
+              <p class="set-help" style="margin-top:10px">テスト送信は、保存済みの Webhook へ送信時刻入りのメッセージを実際に送ります。届かない場合は URL とチャンネルを確認してください。</p>
               <div class="settings-msg" id="slack-msg">保存しました</div>
+            </div>
+          </div>
+
+          <div class="set-panel" id="set-panel-integrations" role="tabpanel" aria-labelledby="set-tab-integrations">
+            <!-- カードが 6 枚あり縦に伸びるため 2 カラムで並べる。項目数の多いカードは grid-column で 1 行を使い切る。 -->
+            <div class="set-int-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
+              <div class="input-card" style="grid-column:1 / -1">
+                <h2 class="set-card-title">Jira 連携</h2>
+                <p class="set-help" style="margin-top:0;margin-bottom:14px">不具合分析で検出した不具合を Jira の課題として起票します。トークンは Atlassian のアカウント設定で発行できます。</p>
+                <div class="field full" style="margin-bottom:14px">
+                  <label>現在の設定</label>
+                  <div class="key-current" id="jira-current">未設定</div>
+                </div>
+                <div class="set-form">
+                  <div class="field full">
+                    <label for="jira-base-url">サイトURL</label>
+                    <input type="text" id="jira-base-url" placeholder="https://your-domain.atlassian.net" autocomplete="off" style="width:100%">
+                  </div>
+                  <div class="field">
+                    <label for="jira-email">メールアドレス</label>
+                    <input type="text" id="jira-email" placeholder="you@example.com" autocomplete="off" style="width:100%">
+                  </div>
+                  <div class="field">
+                    <label for="jira-api-token">API トークン</label>
+                    <input type="password" id="jira-api-token" placeholder="保存済みの場合は空欄で維持" autocomplete="off" style="width:100%">
+                  </div>
+                  <div class="field">
+                    <label for="jira-project-key">プロジェクトキー</label>
+                    <input type="text" id="jira-project-key" placeholder="QA" autocomplete="off" style="width:100%">
+                  </div>
+                  <div class="field">
+                    <label for="jira-issue-type">課題タイプ</label>
+                    <input type="text" id="jira-issue-type" placeholder="Bug" autocomplete="off" style="width:100%">
+                  </div>
+                </div>
+                <div style="margin-top:18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                  <button type="button" class="btn-primary" id="save-jira">保存</button>
+                  <button type="button" class="btn-outline-sm" id="test-jira">接続を確認</button>
+                </div>
+                <div class="settings-msg" id="jira-msg"></div>
+              </div>
+
+              <div class="input-card">
+                <h2 class="set-card-title">Microsoft Teams 通知</h2>
+                <p class="input-hint" style="margin-top:0;margin-bottom:14px">実行結果や仕様ドリフトを Teams のチャネルへ通知します。Workflows の Incoming Webhook URL を貼り付けてください。</p>
+                <div class="field full" style="margin-bottom:14px">
+                  <label>現在の設定</label>
+                  <div class="key-current" id="teams-current">未設定</div>
+                </div>
+                <div class="set-form">
+                  <div class="field full">
+                    <label for="teams-webhook-url">受信 Webhook URL</label>
+                    <input type="password" id="teams-webhook-url" placeholder="https://...webhook.office.com/..." autocomplete="off" style="width:100%">
+                  </div>
+                </div>
+                <div style="margin-top:18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                  <button type="button" class="btn-primary" id="save-teams">保存</button>
+                  <button type="button" class="btn-outline-sm" id="test-teams">テスト送信</button>
+                </div>
+                <div class="settings-msg" id="teams-msg"></div>
+              </div>
+
+              <div class="input-card">
+                <h2 class="set-card-title">Notion 連携</h2>
+                <p class="input-hint" style="margin-top:0;margin-bottom:14px">不具合やレポートを Notion のデータベースへページとして追加します。作成したインテグレーションに、対象データベースを共有しておく必要があります。</p>
+                <div class="field full" style="margin-bottom:14px">
+                  <label>現在の設定</label>
+                  <div class="key-current" id="notion-current">未設定</div>
+                </div>
+                <div class="set-form">
+                  <div class="field">
+                    <label for="notion-api-token">API トークン</label>
+                    <input type="password" id="notion-api-token" placeholder="保存済みの場合は空欄で維持" autocomplete="off" style="width:100%">
+                  </div>
+                  <div class="field">
+                    <label for="notion-database-id">データベース ID</label>
+                    <input type="text" id="notion-database-id" placeholder="32桁の ID" autocomplete="off" style="width:100%">
+                  </div>
+                </div>
+                <div style="margin-top:18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                  <button type="button" class="btn-primary" id="save-notion">保存</button>
+                  <button type="button" class="btn-outline-sm" id="test-notion">接続を確認</button>
+                </div>
+                <div class="settings-msg" id="notion-msg"></div>
+              </div>
+
+              <div class="input-card">
+                <h2 class="set-card-title">QualityForward 連携</h2>
+                <p class="input-hint" style="margin-top:0;margin-bottom:14px">テスト管理ツール QualityForward のプロジェクト API キーを設定します。キーはプロジェクト設定画面で発行できます。テスト結果の登録は未対応で、現在は接続確認のみです。</p>
+                <div class="field full" style="margin-bottom:14px">
+                  <label>現在の設定</label>
+                  <div class="key-current" id="qf-current">未設定</div>
+                </div>
+                <div class="set-form">
+                  <div class="field full">
+                    <label for="qf-api-key">API キー</label>
+                    <input type="password" id="qf-api-key" placeholder="保存済みの場合は空欄で維持" autocomplete="off" style="width:100%">
+                  </div>
+                </div>
+                <div style="margin-top:18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                  <button type="button" class="btn-primary" id="save-qf">保存</button>
+                  <button type="button" class="btn-outline-sm" id="test-qf">接続を確認</button>
+                </div>
+                <div class="settings-msg" id="qf-msg"></div>
+              </div>
+
+              <div class="input-card">
+                <h2 class="set-card-title">汎用 Webhook</h2>
+                <p class="input-hint" style="margin-top:0;margin-bottom:14px">任意の受信先へ JSON を POST します。社内システムや自前の受信口へつなぐときに使います。</p>
+                <div class="set-form">
+                  <div class="field full">
+                    <label for="generic-webhook-url">送信先 URL</label>
+                    <input type="password" id="generic-webhook-url" placeholder="https://example.com/hooks/webspec2doc" autocomplete="off" style="width:100%">
+                  </div>
+                </div>
+                <button type="button" class="btn-primary" id="save-webhook" style="margin-top:18px">Webhook URLを保存</button>
+                <div class="settings-msg" id="webhook-msg"></div>
+              </div>
+              <div class="input-card" style="grid-column:1 / -1">
+                <h2 class="set-card-title">Confluence 連携</h2>
+                <p class="input-hint" style="margin-top:0;margin-bottom:14px">レポートを Confluence のページとして発行します。トークンは Jira と同じ Atlassian のアカウント設定で発行できます。</p>
+                <div class="field full" style="margin-bottom:14px">
+                  <label>現在の設定</label>
+                  <div class="key-current" id="confluence-current">未設定</div>
+                </div>
+                <div class="set-form">
+                  <div class="field full">
+                    <label for="confluence-base-url">サイト URL</label>
+                    <input type="text" id="confluence-base-url" placeholder="https://your-domain.atlassian.net" autocomplete="off" style="width:100%">
+                  </div>
+                  <div class="field">
+                    <label for="confluence-email">メールアドレス</label>
+                    <input type="text" id="confluence-email" placeholder="you@example.com" autocomplete="off" style="width:100%">
+                  </div>
+                  <div class="field">
+                    <label for="confluence-api-token">API トークン</label>
+                    <input type="password" id="confluence-api-token" placeholder="保存済みの場合は空欄で維持" autocomplete="off" style="width:100%">
+                  </div>
+                  <div class="field">
+                    <label for="confluence-space-key">スペースキー</label>
+                    <input type="text" id="confluence-space-key" placeholder="QA" autocomplete="off" style="width:100%">
+                  </div>
+                </div>
+                <div style="margin-top:18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                  <button type="button" class="btn-primary" id="save-confluence">保存</button>
+                  <button type="button" class="btn-outline-sm" id="test-confluence">接続を確認</button>
+                </div>
+                <div class="settings-msg" id="confluence-msg"></div>
+              </div>
+
+              <div class="input-card" style="grid-column:1 / -1">
+                <h2 class="set-card-title">CI/CD 連携</h2>
+                <p class="input-hint" style="margin-top:0;margin-bottom:12px">CI のジョブから仕様ドリフトとテスト結果をゲートします。JUnit XML は既存のレポート機能でそのまま集計できます。</p>
+                <pre style="overflow-x:auto;margin:0 0 12px"><code>python src/cli.py ci gate --domain example.com --fail-on breaking --junit-xml report.xml</code></pre>
+                <!-- 3 値しかないため表にせず 1 行に畳む。表にすると見出し行の分だけ縦が伸びる。 -->
+                <p class="set-help" style="margin:0"><strong>終了コード</strong>　<code>0</code> 正常　/　<code>1</code> ドリフトまたはテスト失敗　/　<code>2</code> 実行エラー</p>
+                <p class="set-help" style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                  <span>API トークンの発行はアカウント画面から。詳しい手順は <code>docs/CI_INTEGRATION.md</code>。</span>
+                  <button type="button" class="btn-outline-sm" id="ci-goto-account">アカウント画面を開く</button>
+                </p>
+              </div>
+
             </div>
           </div>
 
@@ -147,46 +314,56 @@
           </div>
 
           <div class="set-panel" id="set-panel-operations" role="tabpanel" aria-labelledby="set-tab-operations">
-            <div class="input-card">
+            <div class="input-card ops-card">
               <h2 class="set-card-title">スケジュール・通知</h2>
-              <p class="input-hint" style="margin-top:0;margin-bottom:14px">サイトごとに実行可能な曜日・時間帯、失敗時の再試行、通知先を設定します。時間帯の終了が開始より前の場合は日跨ぎとして扱います。</p>
+              <p class="set-help ops-lead">サイトごとに実行可能な曜日・時間帯、失敗時の再試行、通知先を設定します。時間帯の終了が開始より前の場合は日跨ぎとして扱います。</p>
 
-              <div class="options-grid ops-grid">
-                <div class="field full">
+              <div class="ops-scope">
+                <div class="field">
                   <label for="ops-site">対象サイト</label>
                   <select id="ops-site" class="url-input"><option value="">サイトを選択してください</option></select>
                 </div>
-                <div class="field full"><label for="ops-site-url">サイトURL</label><input type="url" id="ops-site-url" placeholder="https://example.com"></div>
-                <div class="field"><label for="ops-interval">実行周期</label><select id="ops-interval"><option value="disabled">無効</option><option value="daily">毎日</option><option value="weekly">毎週</option><option value="monthly">毎月（30日）</option></select></div>
-                <div class="field"><label for="ops-timezone">タイムゾーン</label><select id="ops-timezone"><option value="Asia/Tokyo">Asia/Tokyo</option><option value="UTC">UTC</option><option value="America/New_York">America/New_York</option><option value="Europe/London">Europe/London</option></select></div>
-                <div class="field"><label for="ops-window-start">開始時刻（任意）</label><input type="time" id="ops-window-start"></div>
-                <div class="field"><label for="ops-window-end">終了時刻（任意）</label><input type="time" id="ops-window-end"></div>
-                <div class="field"><label for="ops-retry-max">再試行回数</label><input type="number" id="ops-retry-max" min="0" max="5" value="2"></div>
-                <div class="field"><label for="ops-backoff">初回バックオフ（秒）</label><input type="number" id="ops-backoff" min="1" max="3600" value="60"></div>
-                <fieldset class="field full ops-weekdays">
-                  <legend>実行曜日（未選択は毎日）</legend>
-                  <label><input type="checkbox" value="0">月</label><label><input type="checkbox" value="1">火</label><label><input type="checkbox" value="2">水</label><label><input type="checkbox" value="3">木</label><label><input type="checkbox" value="4">金</label><label><input type="checkbox" value="5">土</label><label><input type="checkbox" value="6">日</label>
-                </fieldset>
+                <div class="field"><label for="ops-site-url">サイトURL</label><input type="url" id="ops-site-url" placeholder="https://example.com"></div>
               </div>
 
-              <div class="ops-divider"></div>
-              <div class="options-grid ops-grid">
-                <div class="field"><label for="ops-notify-type">通知チャネル</label><select id="ops-notify-type"><option value="none">通知しない</option><option value="slack">Slack</option><option value="teams">Microsoft Teams Workflows</option><option value="webhook">Webhook</option><option value="email">Email（SMTP環境設定）</option></select></div>
-                <div class="field"><label for="ops-summary-limit">差分表示件数</label><input type="number" id="ops-summary-limit" min="1" max="20" value="5"></div>
-                <div class="field full"><label for="ops-endpoint">Webhook URL / SMTPホスト</label><input type="password" id="ops-endpoint" autocomplete="off" placeholder="https://..."></div>
-                <div class="field full"><label for="ops-template">通知テンプレート（Jinja2・任意）</label><textarea id="ops-template" rows="5" placeholder="{{ site_url }} で変更を検知しました"></textarea><p class="input-hint">利用可能: site_url / added_pages / removed_pages / field_changes / api_changes / added_page_names / removed_page_names</p></div>
-              </div>
+              <section class="ops-section">
+                <h3 class="ops-section-title">実行スケジュール</h3>
+                <div class="ops-grid">
+                  <div class="field"><label for="ops-interval">実行周期</label><select id="ops-interval"><option value="disabled">無効</option><option value="daily">毎日</option><option value="weekly">毎週</option><option value="monthly">毎月（30日）</option></select></div>
+                  <div class="field"><label for="ops-timezone">タイムゾーン</label><select id="ops-timezone"><option value="Asia/Tokyo">Asia/Tokyo</option><option value="UTC">UTC</option><option value="America/New_York">America/New_York</option><option value="Europe/London">Europe/London</option></select></div>
+                  <div class="field"><label for="ops-window-start">開始時刻（任意）</label><input type="time" id="ops-window-start"></div>
+                  <div class="field"><label for="ops-window-end">終了時刻（任意）</label><input type="time" id="ops-window-end"></div>
+                  <div class="field"><label for="ops-retry-max">再試行回数</label><input type="number" id="ops-retry-max" min="0" max="5" value="2"></div>
+                  <div class="field"><label for="ops-backoff">初回バックオフ（秒）</label><input type="number" id="ops-backoff" min="1" max="3600" value="60"></div>
+                  <fieldset class="field full ops-weekdays">
+                    <legend>実行曜日（未選択は毎日）</legend>
+                    <div class="ops-weekday-list">
+                      <label class="ops-day"><input type="checkbox" value="0"><span>月</span></label><label class="ops-day"><input type="checkbox" value="1"><span>火</span></label><label class="ops-day"><input type="checkbox" value="2"><span>水</span></label><label class="ops-day"><input type="checkbox" value="3"><span>木</span></label><label class="ops-day"><input type="checkbox" value="4"><span>金</span></label><label class="ops-day"><input type="checkbox" value="5"><span>土</span></label><label class="ops-day"><input type="checkbox" value="6"><span>日</span></label>
+                    </div>
+                  </fieldset>
+                </div>
+              </section>
+
+              <section class="ops-section">
+                <h3 class="ops-section-title">通知</h3>
+                <div class="ops-grid">
+                  <div class="field"><label for="ops-notify-type">通知チャネル</label><select id="ops-notify-type"><option value="none">通知しない</option><option value="slack">Slack</option><option value="teams">Microsoft Teams Workflows</option><option value="webhook">Webhook</option><option value="email">Email（SMTP環境設定）</option></select></div>
+                  <div class="field"><label for="ops-summary-limit">差分表示件数</label><input type="number" id="ops-summary-limit" min="1" max="20" value="5"></div>
+                  <div class="field full"><label for="ops-endpoint">Webhook URL / SMTPホスト</label><input type="password" id="ops-endpoint" autocomplete="off" placeholder="https://..."></div>
+                  <div class="field full"><label for="ops-template">通知テンプレート（Jinja2・任意）</label><textarea id="ops-template" rows="4" placeholder="{{ site_url }} で変更を検知しました"></textarea><p class="input-hint ops-token-hint">利用可能: site_url / added_pages / removed_pages / field_changes / api_changes / added_page_names / removed_page_names</p></div>
+                </div>
+              </section>
 
               <div class="ops-actions">
                 <button type="button" class="btn-primary" id="ops-save">運用設定を保存</button>
                 <button type="button" class="btn-outline-sm" id="ops-test-notify">テスト通知</button>
               </div>
               <div class="settings-msg" id="ops-msg" role="status"></div>
+            </div>
 
-              <div class="ops-history-card">
-                <h3>最近のスケジュール実行</h3>
-                <div id="ops-history"><p class="input-hint">サイトを選択すると表示します。</p></div>
-              </div>
+            <div class="input-card ops-card ops-history-card">
+              <h2 class="set-card-title">最近のスケジュール実行</h2>
+              <div id="ops-history"><p class="input-hint">サイトを選択すると表示します。</p></div>
             </div>
             <div class="input-card ci-drift-card">
               <div>

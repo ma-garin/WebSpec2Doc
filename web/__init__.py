@@ -27,6 +27,7 @@ def create_app() -> Flask:
         discover,
         feedback,
         history,
+        integrations,
         llm_chat,
         login,
         pages,
@@ -106,6 +107,7 @@ def create_app() -> Flask:
     app.register_blueprint(qa_process.bp)
     app.register_blueprint(history.bp)
     app.register_blueprint(settings.bp)
+    app.register_blueprint(integrations.bp)
     app.register_blueprint(crawl.bp)
     app.register_blueprint(auto_run.bp)
     app.register_blueprint(test_activity.bp)

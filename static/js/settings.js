@@ -45,6 +45,7 @@ function syncSettingsTabFromPath() {
 const _settingsTabLoaded = new Set();
 const SETTINGS_TAB_LOADERS = {
   operations: () => loadOperationalSites(),
+  integrations: () => loadIntegrations(),
   data: () => loadDataManagement(),
   audit: () => loadAdminAudit(),
 };
@@ -292,6 +293,247 @@ async function saveSlackWebhook() {
       await loadServerSettings();
     }
   } catch (e) { showToast('Slack設定の保存に失敗しました', 'error'); }
+}
+
+// 保存済みの Webhook へ実際に送ってみる。保存成功と到達可否は別物なので、
+// 結果は必ず slack-msg に文言で返す（成功も失敗も無反応にしない）。
+async function testSlackWebhook() {
+  const btn = document.getElementById('test-slack');
+  const msg = document.getElementById('slack-msg');
+  const prev = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '送信中…'; }
+  try {
+    const res = await fetch('/api/integrations/slack/test', { method: 'POST' });
+    const data = await res.json().catch(() => ({}));
+    const ok = res.ok && data.ok === true;
+    if (msg) {
+      msg.textContent = data.message || (ok ? '送信しました。' : '送信に失敗しました。');
+      msg.classList.toggle('is-error', !ok);
+      msg.classList.add('show');
+    }
+  } catch (e) {
+    if (msg) {
+      msg.textContent = 'テスト送信に失敗しました: ' + String(e && e.message ? e.message : e);
+      msg.classList.add('is-error');
+      msg.classList.add('show');
+    }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = prev || 'テスト送信'; }
+  }
+}
+
+// ---- 外部サービス連携（Jira / CI / 汎用 Webhook）----
+// 通信は必ず try/catch し、失敗時も settings-msg に理由を出す（無反応を作らない）。
+function _integrationsMessage(id, text, isError = false) {
+  const msg = document.getElementById(id);
+  if (!msg) return;
+  msg.textContent = text;
+  msg.classList.toggle('is-error', isError);
+  msg.classList.add('show');
+}
+
+// GET /api/integrations の内容をフォームへ反映する。
+// API トークンは値を戻さず、jira-current にマスク表示だけを出す。
+async function loadIntegrations() {
+  if (!document.getElementById('set-panel-integrations')) return;
+  try {
+    const res = await fetch('/api/integrations');
+    if (!res.ok) throw new Error('連携設定を取得できませんでした。');
+    const data = await res.json();
+    const jira = data.jira || {};
+    const setValue = (id, value) => {
+      const el = document.getElementById(id);
+      if (el) el.value = value || '';
+    };
+    setValue('jira-base-url', jira.base_url);
+    setValue('jira-email', jira.email);
+    setValue('jira-project-key', jira.project_key);
+    setValue('jira-issue-type', jira.issue_type);
+    const token = document.getElementById('jira-api-token');
+    if (token) token.value = '';
+    const current = document.getElementById('jira-current');
+    if (current) {
+      current.textContent = jira.configured
+        ? `設定済み（${jira.base_url || '—'} / トークン ${jira.token_masked || '****'}）`
+        : '未設定';
+    }
+    const webhook = data.webhook || {};
+    const webhookInput = document.getElementById('generic-webhook-url');
+    if (webhookInput) webhookInput.value = '';
+    if (webhook.configured) {
+      _integrationsMessage('webhook-msg', `設定済み: ${webhook.url_masked || '****'}`);
+    }
+    // Teams / Notion / Confluence。トークンは入力欄へ戻さず xxx-current にマスク表示のみ出す。
+    const clearValue = (id) => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    };
+    const setCurrent = (id, text) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = text;
+    };
+    const teams = data.teams || {};
+    clearValue('teams-webhook-url');
+    setCurrent('teams-current', teams.configured ? `設定済み（${teams.url_masked || '****'}）` : '未設定');
+    const notion = data.notion || {};
+    clearValue('notion-api-token');
+    setValue('notion-database-id', notion.database_id);
+    setCurrent('notion-current', notion.configured
+      ? `設定済み（DB ${notion.database_id || '—'} / トークン ${notion.token_masked || '****'}）`
+      : '未設定');
+    const confluence = data.confluence || {};
+    clearValue('confluence-api-token');
+    setValue('confluence-base-url', confluence.base_url);
+    setValue('confluence-email', confluence.email);
+    setValue('confluence-space-key', confluence.space_key);
+    setCurrent('confluence-current', confluence.configured
+      ? `設定済み（${confluence.base_url || '—'} / スペース ${confluence.space_key || '—'} / トークン ${confluence.token_masked || '****'}）`
+      : '未設定');
+    // QualityForward は API キー 1 項目のみ。キーは入力欄へ戻さずマスク表示だけ出す。
+    const qualityforward = data.qualityforward || {};
+    clearValue('qf-api-key');
+    setCurrent('qf-current', qualityforward.configured
+      ? `設定済み（API キー ${qualityforward.key_masked || '****'}）`
+      : '未設定');
+  } catch (e) {
+    _integrationsMessage('jira-msg', e.message || '連携設定を取得できませんでした。', true);
+  }
+}
+
+async function saveJiraIntegration() {
+  const form = new FormData();
+  form.append('jira_base_url', document.getElementById('jira-base-url')?.value?.trim() || '');
+  form.append('jira_email', document.getElementById('jira-email')?.value?.trim() || '');
+  form.append('jira_api_token', document.getElementById('jira-api-token')?.value || '');
+  form.append('jira_project_key', document.getElementById('jira-project-key')?.value?.trim() || '');
+  form.append('jira_issue_type', document.getElementById('jira-issue-type')?.value?.trim() || '');
+  try {
+    const res = await fetch('/api/integrations/jira', { method: 'POST', body: form });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || 'Jira 設定を保存できませんでした。');
+    _integrationsMessage('jira-msg', 'Jira 設定を保存しました。');
+    await loadIntegrations();
+  } catch (e) {
+    _integrationsMessage('jira-msg', e.message || 'Jira 設定の保存に失敗しました。', true);
+  }
+}
+
+async function testJiraIntegration() {
+  _integrationsMessage('jira-msg', '接続を確認しています…');
+  try {
+    const res = await fetch('/api/integrations/jira/test', { method: 'POST' });
+    const data = await res.json();
+    _integrationsMessage('jira-msg', data.message || (data.ok ? '接続できました。' : '接続できませんでした。'), !data.ok);
+  } catch (e) {
+    _integrationsMessage('jira-msg', e.message || '接続確認のリクエストに失敗しました。', true);
+  }
+}
+
+async function saveGenericWebhook() {
+  const form = new FormData();
+  form.append('webhook_url', document.getElementById('generic-webhook-url')?.value?.trim() || '');
+  try {
+    const res = await fetch('/api/integrations/webhook', { method: 'POST', body: form });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || 'Webhook URL を保存できませんでした。');
+    _integrationsMessage('webhook-msg', 'Webhook URL を保存しました。');
+    await loadIntegrations();
+  } catch (e) {
+    _integrationsMessage('webhook-msg', e.message || 'Webhook URL の保存に失敗しました。', true);
+  }
+}
+
+// 接続テストの共通処理。実行中はボタンを disabled にし、finally で必ず元へ戻す。
+async function _testIntegration(path, msgId, btnId, busyLabel) {
+  const btn = document.getElementById(btnId);
+  const prev = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = busyLabel; }
+  _integrationsMessage(msgId, busyLabel);
+  try {
+    const res = await fetch(path, { method: 'POST' });
+    const data = await res.json();
+    _integrationsMessage(msgId, data.message || (data.ok ? '成功しました。' : '失敗しました。'), !data.ok);
+  } catch (e) {
+    _integrationsMessage(msgId, e.message || 'リクエストに失敗しました。', true);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = prev; }
+  }
+}
+
+async function saveTeamsIntegration() {
+  const form = new FormData();
+  form.append('teams_webhook_url', document.getElementById('teams-webhook-url')?.value?.trim() || '');
+  try {
+    const res = await fetch('/api/integrations/teams', { method: 'POST', body: form });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || 'Teams 設定を保存できませんでした。');
+    _integrationsMessage('teams-msg', 'Teams 設定を保存しました。');
+    await loadIntegrations();
+  } catch (e) {
+    _integrationsMessage('teams-msg', e.message || 'Teams 設定の保存に失敗しました。', true);
+  }
+}
+
+async function testTeamsIntegration() {
+  await _testIntegration('/api/integrations/teams/test', 'teams-msg', 'test-teams', '送信中…');
+}
+
+async function saveNotionIntegration() {
+  const form = new FormData();
+  form.append('notion_api_token', document.getElementById('notion-api-token')?.value || '');
+  form.append('notion_database_id', document.getElementById('notion-database-id')?.value?.trim() || '');
+  try {
+    const res = await fetch('/api/integrations/notion', { method: 'POST', body: form });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || 'Notion 設定を保存できませんでした。');
+    _integrationsMessage('notion-msg', 'Notion 設定を保存しました。');
+    await loadIntegrations();
+  } catch (e) {
+    _integrationsMessage('notion-msg', e.message || 'Notion 設定の保存に失敗しました。', true);
+  }
+}
+
+async function testNotionIntegration() {
+  await _testIntegration('/api/integrations/notion/test', 'notion-msg', 'test-notion', '確認中…');
+}
+
+async function saveConfluenceIntegration() {
+  const form = new FormData();
+  form.append('confluence_base_url', document.getElementById('confluence-base-url')?.value?.trim() || '');
+  form.append('confluence_email', document.getElementById('confluence-email')?.value?.trim() || '');
+  form.append('confluence_api_token', document.getElementById('confluence-api-token')?.value || '');
+  form.append('confluence_space_key', document.getElementById('confluence-space-key')?.value?.trim() || '');
+  try {
+    const res = await fetch('/api/integrations/confluence', { method: 'POST', body: form });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || 'Confluence 設定を保存できませんでした。');
+    _integrationsMessage('confluence-msg', 'Confluence 設定を保存しました。');
+    await loadIntegrations();
+  } catch (e) {
+    _integrationsMessage('confluence-msg', e.message || 'Confluence 設定の保存に失敗しました。', true);
+  }
+}
+
+async function testConfluenceIntegration() {
+  await _testIntegration('/api/integrations/confluence/test', 'confluence-msg', 'test-confluence', '確認中…');
+}
+
+async function saveQualityForwardIntegration() {
+  const form = new FormData();
+  form.append('qualityforward_api_key', document.getElementById('qf-api-key')?.value || '');
+  try {
+    const res = await fetch('/api/integrations/qualityforward', { method: 'POST', body: form });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || 'QualityForward 設定を保存できませんでした。');
+    _integrationsMessage('qf-msg', 'QualityForward 設定を保存しました。');
+    await loadIntegrations();
+  } catch (e) {
+    _integrationsMessage('qf-msg', e.message || 'QualityForward 設定の保存に失敗しました。', true);
+  }
+}
+
+async function testQualityForwardIntegration() {
+  await _testIntegration('/api/integrations/qualityforward/test', 'qf-msg', 'test-qf', '確認中…');
 }
 
 async function loadAllowLocalToggle() {
@@ -667,6 +909,21 @@ document.getElementById('clear-api-key')?.addEventListener('click', clearApiKey)
 // /settings へ直接遷移した場合もナビ経由と同じく保存済み設定を復元する
 if (document.getElementById('llm-seg')) loadServerSettings();
 document.getElementById('save-slack')?.addEventListener('click', saveSlackWebhook);
+document.getElementById('test-slack')?.addEventListener('click', testSlackWebhook);
+document.getElementById('save-jira')?.addEventListener('click', saveJiraIntegration);
+document.getElementById('test-jira')?.addEventListener('click', testJiraIntegration);
+document.getElementById('save-webhook')?.addEventListener('click', saveGenericWebhook);
+document.getElementById('save-teams')?.addEventListener('click', saveTeamsIntegration);
+document.getElementById('test-teams')?.addEventListener('click', testTeamsIntegration);
+document.getElementById('save-notion')?.addEventListener('click', saveNotionIntegration);
+document.getElementById('test-notion')?.addEventListener('click', testNotionIntegration);
+document.getElementById('save-confluence')?.addEventListener('click', saveConfluenceIntegration);
+document.getElementById('test-confluence')?.addEventListener('click', testConfluenceIntegration);
+document.getElementById('save-qf')?.addEventListener('click', saveQualityForwardIntegration);
+document.getElementById('test-qf')?.addEventListener('click', testQualityForwardIntegration);
+document.getElementById('ci-goto-account')?.addEventListener('click', () => {
+  if (typeof switchView === 'function') switchView('account');
+});
 document.getElementById('allow-local-toggle')?.addEventListener('change', saveAllowLocal);
 document.getElementById('save-test-design')?.addEventListener('click', saveTestDesignSettings);
 document.getElementById('ops-site')?.addEventListener('change', (e) => loadOperationalConfig(e.target.value));

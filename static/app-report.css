@@ -331,8 +331,12 @@
 .p1-summary-elapsed { font-size:12px; color:var(--text-muted); margin-left:4px; }
 
 /* ── QAツール 2ペインレイアウト ── */
-.app-content.is-qa-tool { overflow: hidden; padding: 0; }
-.app-content.is-qa-tool .app-content-inner { max-width: none; height: 100%; }
+/* 横幅は全画面で共通にする。以前は padding:0 / max-width:none を併せて指定しており、
+   この 3 画面（品質観点・観点管理・AutoRun）だけ左右の余白が消えて他画面より広く表示され、
+   画面を移動するたびに本文の始まる位置が動いていた。
+   このクラスの目的は「高さ 100% で内部スクロールさせる」ことなので、縦の制御だけを残す。 */
+.app-content.is-qa-tool { overflow: hidden; }
+.app-content.is-qa-tool .app-content-inner { height: 100%; }
 .app-content.is-qa-tool .view.is-active { height: 100%; display: flex; flex-direction: column; }
 .qa-tool-2pane { display: grid; grid-template-columns: 280px 1fr; flex: 1; min-height: 0; overflow: hidden; }
 .qa-tool-sidebar { border-right: 1px solid var(--border); overflow-y: auto; padding: 18px 14px; display: flex; flex-direction: column; gap: 14px; background: var(--surface-soft); }

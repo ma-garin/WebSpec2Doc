@@ -15,6 +15,15 @@ logger = logging.getLogger(__name__)
 MAX_LOG_LINES = 1000
 MAX_LOG_BYTES = 256 * 1024
 
+#: これ以上状態が進まない終端。ここへ入った時点が「実行が終わった」時刻。
+TERMINAL_STATUSES = frozenset({"complete", "failed", "cancelled"})
+#: AutoRun の status を通知側の語彙へ写す。両者の語彙を無理に揃えない。
+_RUN_NOTIFY_STATUS = {
+    "complete": "completed",
+    "failed": "failed",
+    "cancelled": "cancelled",
+}
+
 
 def job_output_dir(job: AutoRunJob, default: Path) -> Path:
     """バックグラウンドジョブに固定済みのテナント出力先を返す。"""
@@ -111,6 +120,9 @@ class AutoRunJob:
         default_factory=threading.Event, init=False, repr=False, compare=False
     )
     _cancelled: bool = field(default=False, init=False, repr=False, compare=False)
+    # 終了通知を送ったか。終端遷移は複数箇所から起きるため、
+    # ここで一度きりに落とさないと同じ実行で通知が二重に鳴る。
+    _notified: bool = field(default=False, init=False, repr=False, compare=False)
 
     def add_log(self, msg: str) -> None:
         prefix = f"[{datetime.now().strftime('%H:%M:%S')}] "
@@ -226,3 +238,42 @@ class AutoRunJob:
         self._input_event.set()
         # 段階承認の待機も解除しないと、停止しても待ち続けてしまう
         self._stages_event.set()
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        super().__setattr__(name, value)
+        # 終端遷移は auto_run_pipeline.py と routes/auto_run.py に分散しているため、
+        # 状態の持ち主であるここで一括して拾う（発火点を増やすと通知漏れが必ず出る）。
+        # いずれの経路も status を先に、finished_at を後に設定するため、
+        # 両方が揃った時点で 1 回だけ通知する（error も finished_at より先に入る）。
+        if name in ("status", "finished_at"):
+            self._notify_finished_once()
+
+    def _notify_finished_once(self) -> None:
+        """終端に達した実行を 1 回だけ通知する。通知の失敗で実行を壊さない。"""
+        # __init__ 中にも __setattr__ が走る。宣言順の都合で status より後に定義される
+        # フィールドは未設定でありうるため、必ず getattr で参照する。
+        if getattr(self, "_notified", False):
+            return
+        if getattr(self, "status", "") not in TERMINAL_STATUSES:
+            return
+        if not getattr(self, "finished_at", ""):
+            return
+        self._notified = True
+        try:
+            # 遅延 import（web.services.notifier 経由の循環 import を避ける）。
+            from web.services.run_notifier import notify_run_finished
+
+            results = self.test_results if isinstance(self.test_results, dict) else {}
+            notify_run_finished(
+                site_url=self.url,
+                run_kind="autorun",
+                status=_RUN_NOTIFY_STATUS.get(self.status, "failed"),
+                total=int(results.get("total") or 0),
+                passed=int(results.get("passed") or 0),
+                failed=int(results.get("failed") or 0),
+                skipped=int(results.get("skipped") or 0),
+                elapsed_sec=self.elapsed_sec(),
+                error=self.error,
+            )
+        except Exception:
+            logger.warning("autorun[%s] 実行完了通知に失敗しました", self.job_id, exc_info=True)

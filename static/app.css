@@ -584,8 +584,18 @@
     .set-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border); }
     /* 消す操作は決定のとなりに置かない。右端へ寄せて、保存と誤って押させない。 */
     .set-actions .set-danger { margin-left: auto; color: var(--danger, #B42318); border-color: var(--danger, #B42318); }
-    /* API設定カードは参照に合わせ、角丸を大きく・余白を広く・ヘッダに区切り線を入れる */
-    #set-panel-api .input-card { border-radius: var(--radius-lg); padding: 28px; max-width: 780px; }
+    /* 設定カードの枠は全タブ共通にする。
+       以前は #set-panel-api と #set-panel-operations だけが幅と余白を個別指定しており、
+       タブを切り替えるたびにカード幅（780px / 1124px）と余白（28px / 24px）が変わっていた。
+       パネル単位の ID で上書きする作りだとタブを増やすたびに指定漏れが起きるため、
+       設定画面単位で規定する。 */
+    #view-settings .set-panel .input-card { border-radius: var(--radius-lg); padding: 28px; }
+    /* 見出しの大きさとヘッダの区切り線は API タブの意匠。ここは従来どおり据え置く */
+    /* 連携タブは項目数が多く 1 カラムだと縦に伸びるため、2 カラムに畳む。
+       全幅が要る項目（現在の設定・サイトURL）だけ .full で 1 行使う。 */
+    #set-panel-integrations .set-form { grid-template-columns: 1fr 1fr; gap: 16px; }
+    #set-panel-integrations .set-form .full { grid-column: 1 / -1; }
+    #set-panel-integrations pre { background: var(--surface-soft); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; font-size: var(--text-sm); }
     #set-panel-api .set-card-title { font-size: var(--text-lg, 18px); }
     #set-panel-api .set-card-title + .input-hint { padding-bottom: 18px; border-bottom: 1px solid var(--border); }
     @keyframes shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }

@@ -13,6 +13,7 @@
   let _loaded = false;
   let _domainsLoaded = false;
   let _analysisById = {};   // 不具合ID → { loading, error, items }（AIで原因分析の結果キャッシュ）
+  let _jiraConfigured = false;   // /api/integrations で確認した Jira の設定有無
 
   const esc = (v) => (typeof escHtml === 'function'
     ? escHtml(String(v))
@@ -179,6 +180,72 @@
       const btn = document.getElementById(id);
       if (btn) btn.disabled = !has;
     });
+    // Jira 起票は「不具合を選んでいる」かつ「Jira が設定済み」の両方が要る。
+    // どちらが欠けているかを注記で必ず返す（押せない理由が分からない状態を作らない）。
+    const syncBtn = document.getElementById('ta-defect-sync');
+    const syncNote = document.getElementById('ta-defect-sync-note');
+    if (syncBtn) syncBtn.disabled = !has || !_jiraConfigured;
+    if (syncNote) {
+      if (!_jiraConfigured) {
+        syncNote.hidden = false;
+        syncNote.textContent = 'Jira 未接続のため利用できません（連携設定へ）';
+      } else if (!has) {
+        syncNote.hidden = false;
+        syncNote.textContent = '不具合を選ぶと起票できます';
+      } else {
+        syncNote.hidden = true;
+      }
+    }
+  }
+
+  // ---- Jira 連携の設定有無を確認する（未設定なら起票ボタンを開けない） ----
+  async function loadJiraStatus() {
+    try {
+      const res = await fetch('/api/integrations');
+      const data = await res.json().catch(() => ({}));
+      _jiraConfigured = !!(res.ok && data && data.jira && data.jira.configured);
+    } catch (e) {
+      _jiraConfigured = false;
+    }
+    updateActionButtons();
+  }
+
+  // ---- 選択中の不具合を Jira 課題として起票する ----
+  async function syncToJira() {
+    const dom = domain();
+    const item = _items.find((i) => i.id === _selectedId);
+    if (!dom || !item) return;
+    const btn = document.getElementById('ta-defect-sync');
+    const note = document.getElementById('ta-defect-sync-note');
+    const prev = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = '起票中…'; }
+    if (note) { note.hidden = false; note.textContent = 'Jira へ送信しています…'; }
+    try {
+      const form = new FormData();
+      form.append('domain', dom);
+      form.append('defect_id', item.id);
+      const res = await fetch('/api/integrations/jira/issues', { method: 'POST', body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        throw new Error(data.error || ('起票に失敗しました（HTTP ' + res.status + '）'));
+      }
+      const key = data.issue_key || '';
+      const url = data.issue_url || '';
+      if (note) {
+        note.hidden = false;
+        note.textContent = '起票しました: ' + (key || '(キー不明)');
+      }
+      if (typeof appNotice === 'function') {
+        appNotice('Jira に起票しました: ' + (key || '(キー不明)') + (url ? ' — ' + url : ''), false);
+      }
+    } catch (e) {
+      const msg = String(e && e.message ? e.message : e);
+      if (note) { note.hidden = false; note.textContent = '起票に失敗しました: ' + msg; }
+      if (typeof appNotice === 'function') appNotice('Jira への起票に失敗しました: ' + msg, true);
+    } finally {
+      if (btn) btn.textContent = prev || 'Jira 課題として起票';
+      updateActionButtons();
+    }
   }
 
   function setRcaStatus(kind, text) {
@@ -345,9 +412,13 @@
     document.getElementById('ta-defect-rca-suggest')?.addEventListener('click', runRcaSuggest);
     document.getElementById('ta-defect-rca-save')?.addEventListener('click', runRcaSave);
     // GitHub Issue 同期: トークン未接続のため実行できない。理由を明示し、連携設定への導線だけ出す
+    document.getElementById('ta-defect-sync')?.addEventListener('click', syncToJira);
+    // 未接続のときだけ連携設定への導線として働かせる（接続済みなら結果表示欄になる）。
     document.getElementById('ta-defect-sync-note')?.addEventListener('click', () => {
+      if (_jiraConfigured) return;
       if (typeof switchView === 'function') switchView('integrations');
     });
+    loadJiraStatus();
     updateActionButtons();
   }
 

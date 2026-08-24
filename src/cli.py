@@ -11,6 +11,7 @@ GUI の 3 系統をそのまま端末から使うための入口。
     python src/cli.py viewpoints                              # 観点セット一覧
     python src/cli.py viewpoints export <set_id>              # 観点を CSV で持ち出す
     python src/cli.py review cases <domain>                   # レビュー対象の一覧
+    python src/cli.py ci gate --domain example.com            # CI 向けの合否判定
 
 終了コードは自動化から判定できるように揃えてある。
     0   正常終了
@@ -593,6 +594,102 @@ def cmd_review(args: argparse.Namespace, _extra: list[str]) -> int:
 # ────────────────────────────── 引数 ──────────────────────────────
 
 
+def cmd_ci(args: argparse.Namespace, _extra: list[str]) -> int:
+    """CI パイプライン向けの合否判定（`ci gate`）。
+
+    利用者のプロジェクトの CI から叩くことを想定している。既存の成果物
+    （drift_summary.json / testcases/run_result.json）を読むだけで、
+    クロールもテスト実行もここでは行わない。
+    """
+    from ci_drift import emit_ci_error, emit_ci_summary
+    from ci_gate import (
+        GateThresholds,
+        evaluate,
+        load_drift_summary,
+        load_test_results,
+        write_junit_xml,
+        write_step_summary,
+    )
+
+    rejected = _reject_bad_domain(args, "ci")
+    if rejected is not None:
+        return rejected
+
+    thresholds = GateThresholds(
+        fail_on=args.fail_on,
+        max_failed_tests=args.max_failed,
+        max_added_pages=args.max_added,
+        max_removed_pages=args.max_removed,
+    )
+    domain_dir = args.output / args.domain
+    try:
+        drift = load_drift_summary(args.output, args.domain)
+        tests = load_test_results(args.output, args.domain)
+        result = evaluate(drift, tests, thresholds)
+        if args.junit_xml:
+            write_junit_xml(result, Path(args.junit_xml))
+        step_summary = os.environ.get("GITHUB_STEP_SUMMARY", "")
+        if step_summary:
+            write_step_summary(result, Path(step_summary))
+    except OSError as exc:
+        emit_ci_error(f"CI ゲートを実行できません: {exc}")
+        _emit(
+            {"command": "ci", "error": str(exc), "_lines": [f"CI ゲートを実行できません: {exc}"]},
+            args.json,
+        )
+        return 2
+
+    # CI ログ側の契約（CI_SUMMARY 1 行）は既存資産に任せる。
+    # ただし drift_summary.json が無いと emit_ci_summary は exit_code を 2 へ上書きするため、
+    # プロセスの終了コードと食い違う。判定材料が無いだけで実行エラーではないので、
+    # その場合はゲートの判定結果をそのまま 1 行で出す。
+    if drift is not None:
+        emit_ci_summary(domain_dir, exit_code=result.exit_code)
+    else:
+        sys.stdout.write(
+            "CI_SUMMARY:"
+            + json.dumps(
+                {
+                    "version": 1,
+                    "first_run": False,
+                    "has_changes": False,
+                    "drift_summary": "unavailable",
+                    "exit_code": result.exit_code,
+                },
+                ensure_ascii=False,
+                separators=(",", ":"),
+                sort_keys=True,
+            )
+            + "\n"
+        )
+        sys.stdout.flush()
+
+    verdict = "PASS" if result.passed else "FAIL"
+    lines = [_rule(f"CI ゲート: {args.domain}"), f"  判定: {verdict}（終了コード {result.exit_code}）"]
+    lines += [f"  理由: {reason}" for reason in result.reasons]
+    lines += [
+        f"  - {check.get('name', ''):<22} {check.get('status', ''):<8} {check.get('reason', '')}"
+        for check in result.checks
+    ]
+    if args.junit_xml:
+        lines.append(f"  JUnit XML: {args.junit_xml}")
+    _emit(
+        {
+            "command": "ci",
+            "action": "gate",
+            "domain": args.domain,
+            "passed": result.passed,
+            "exit_code": result.exit_code,
+            "reasons": list(result.reasons),
+            "counts": result.counts,
+            "checks": [dict(c) for c in result.checks],
+            "_lines": lines,
+        },
+        args.json,
+    )
+    return result.exit_code
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="python src/cli.py",
@@ -605,6 +702,7 @@ def build_parser() -> argparse.ArgumentParser:
             "  python src/cli.py test --domain example.com\n"
             "  python src/cli.py sites\n"
             "  python src/cli.py show --domain example.com\n"
+            "  python src/cli.py ci gate --domain example.com --fail-on breaking\n"
             "\n終了コード: 0=正常 / 1=失敗を含む完了 / 2=実行エラー / 130=中止\n"
         ),
     )
@@ -741,6 +839,23 @@ def build_parser() -> argparse.ArgumentParser:
     rp.add_argument("domain")
     rp.add_argument("--filter", default="all", choices=("all", "approved"))
     rp.add_argument("--file", default="", help="書き出し先（省略で標準出力）")
+
+    c = sub.add_parser("ci", parents=[common], help="CI パイプライン向けの合否判定")
+    c.set_defaults(func=cmd_ci)
+    cs = c.add_subparsers(dest="ci_action", metavar="操作", required=True)
+    cg = cs.add_parser("gate", parents=[common], help="ドリフトとテスト結果でCIを通す／落とす")
+    cg.add_argument("--domain", required=True, help="対象ドメイン（output 配下の名前）")
+    cg.add_argument(
+        "--fail-on",
+        default="breaking",
+        choices=("none", "info", "warning", "breaking", "any"),
+        help="落とす重大度の下限（既定 breaking / none=ドリフトで落とさない）",
+    )
+    cg.add_argument("--max-failed", type=int, default=0, help="許容するテスト失敗数（既定 0）")
+    cg.add_argument("--max-added", type=int, default=-1, help="追加画面の上限（-1 は無制限）")
+    cg.add_argument("--max-removed", type=int, default=-1, help="削除画面の上限（-1 は無制限）")
+    cg.add_argument("--junit-xml", default="", help="JUnit XML の書き出し先")
+    cg.set_defaults(func=cmd_ci)
 
     return p
 

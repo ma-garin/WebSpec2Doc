@@ -52,6 +52,45 @@ class CrawlFailureNotification:
 
 
 @dataclass(frozen=True)
+class RunNotification:
+    """AutoRun / テスト実行の終了を伝える通知。
+
+    実行結果は「何件中いくつ落ちたか」が分かって初めて判断材料になるため、
+    件数と所要時間を必ず持たせる（取得できない項目は 0 のままにし、推測で埋めない）。
+    """
+
+    site_url: str
+    run_kind: str  # "autorun" | "test"
+    status: str  # "completed" | "failed" | "cancelled"
+    total: int = 0
+    passed: int = 0
+    failed: int = 0
+    skipped: int = 0
+    elapsed_sec: int = 0
+    report_url: str = ""
+    error: str = ""
+
+
+#: 通知本体として受け付ける型。増えるたびに全注釈を書き換えないための別名。
+@dataclass(frozen=True)
+class TestNotification:
+    """設定確認のためだけに送る通知。実データを含まない。
+
+    「保存できた」と「実際に届く」は別物なので、送信時刻を本文へ入れて
+    受信側で今回の送信かどうかを判別できるようにする。
+    """
+
+    sent_at: str
+    source: str = ""
+    site_url: str = ""  # メール件名の組み立てが site_url を参照するため空文字で持つ
+
+
+AnyNotification = (
+    DriftNotification | CrawlFailureNotification | RunNotification | TestNotification
+)
+
+
+@dataclass(frozen=True)
 class NotifierConfig:
     notifier_type: str  # NOTIFIER_SLACK / NOTIFIER_EMAIL / NOTIFIER_WEBHOOK
     endpoint: str  # Slack Webhook URL / SMTP host / Webhook URL
@@ -74,6 +113,16 @@ def send_crawl_failure_notification(
 ) -> bool:
     """最終リトライ後のクロール失敗を通知する。"""
     return _send_notification(config, notification, "crawl_failed")
+
+
+def send_test_notification(config: NotifierConfig, notification: TestNotification) -> bool:
+    """設定確認用のテスト送信。"""
+    return _send_notification(config, notification, "test_message")
+
+
+def send_run_notification(config: NotifierConfig, notification: RunNotification) -> bool:
+    """AutoRun / テスト実行の終了（完了・失敗・中止）を通知する。"""
+    return _send_notification(config, notification, f"run_{notification.status}")
 
 
 def notifier_config_from_mapping(values: dict[str, Any]) -> NotifierConfig | None:
@@ -112,7 +161,7 @@ def notifier_config_from_mapping(values: dict[str, Any]) -> NotifierConfig | Non
 
 def _send_notification(
     config: NotifierConfig,
-    notification: DriftNotification | CrawlFailureNotification,
+    notification: AnyNotification,
     event_type: str,
 ) -> bool:
     dispatch = {
@@ -138,7 +187,7 @@ def _send_notification(
 
 def render_notification_text(
     config: NotifierConfig,
-    notification: DriftNotification | CrawlFailureNotification,
+    notification: AnyNotification,
 ) -> str:
     """通知文面を安全な Jinja2 sandbox で描画する。"""
     if not config.template:
@@ -171,7 +220,42 @@ def validate_notification_template(template: str) -> str | None:
     return None
 
 
-def _default_text(notification: DriftNotification | CrawlFailureNotification) -> str:
+#: run_kind と表示名の対応。未知の値は素通しし、勝手に別の実行種別へ丸めない。
+_RUN_KIND_LABELS = {"autorun": "AutoRun", "test": "テスト実行"}
+
+
+def _run_text(notification: RunNotification) -> str:
+    kind = _RUN_KIND_LABELS.get(notification.run_kind, notification.run_kind or "実行")
+    minutes, seconds = divmod(max(0, int(notification.elapsed_sec)), 60)
+    if notification.status == "completed":
+        head = f"✅ {kind}完了: {notification.site_url}"
+    elif notification.status == "cancelled":
+        head = f"⏹️ {kind}中止: {notification.site_url}"
+    else:
+        head = f"❌ {kind}失敗: {notification.site_url}"
+    lines = [
+        head,
+        f"結果: {notification.passed}/{notification.total} 成功 / "
+        f"{notification.failed} 失敗 / {notification.skipped} スキップ",
+        f"所要: {minutes}分{seconds}秒",
+    ]
+    if notification.error:
+        lines.append(f"エラー: {notification.error}")
+    if notification.report_url:
+        lines.append(f"レポート: {notification.report_url}")
+    return "\n".join(lines)
+
+
+def _default_text(notification: AnyNotification) -> str:
+    if isinstance(notification, TestNotification):
+        origin = f"\n送信元: {notification.source}" if notification.source else ""
+        return (
+            "🔔 WebSpec2Doc テスト送信\n"
+            f"送信時刻: {notification.sent_at}{origin}\n"
+            "このメッセージが届いていれば、Webhook URL は正しく設定されています。"
+        )
+    if isinstance(notification, RunNotification):
+        return _run_text(notification)
     if isinstance(notification, CrawlFailureNotification):
         return (
             f"❌ クロール失敗: {notification.site_url}\n"
@@ -215,7 +299,7 @@ def _post_json(url: str, payload: dict[str, Any]) -> bool:
 
 def _send_text_webhook(
     config: NotifierConfig,
-    notification: DriftNotification | CrawlFailureNotification,
+    notification: AnyNotification,
     _event_type: str,
 ) -> bool:
     # Teams Workflows と Slack Incoming Webhook は text payload を共通で受け取る。
@@ -225,7 +309,7 @@ def _send_text_webhook(
 
 def _send_webhook(
     config: NotifierConfig,
-    notification: DriftNotification | CrawlFailureNotification,
+    notification: AnyNotification,
     event_type: str,
 ) -> bool:
     payload = dataclasses.asdict(notification)
@@ -235,7 +319,7 @@ def _send_webhook(
 
 def _send_email(
     config: NotifierConfig,
-    notification: DriftNotification | CrawlFailureNotification,
+    notification: AnyNotification,
     event_type: str,
 ) -> bool:
     # 送信対象なしを成功扱いするとテスト通知が偽陽性になる。
@@ -243,8 +327,17 @@ def _send_email(
         logger.error("Email recipient is not configured")
         return False
 
-    subject_label = "クロール失敗" if event_type == "crawl_failed" else "仕様ドリフト検知"
-    subject = f"[WebSpec2Doc] {subject_label}: {notification.site_url}"
+    if event_type == "test_message":
+        subject_label = "テスト送信"
+    elif event_type.startswith("run_"):
+        subject_label = "実行結果"
+    elif event_type == "crawl_failed":
+        subject_label = "クロール失敗"
+    else:
+        subject_label = "仕様ドリフト検知"
+    # テスト送信は対象サイトを持たないため、件名の末尾にコロンだけが残らないようにする。
+    target = getattr(notification, "site_url", "")
+    subject = f"[WebSpec2Doc] {subject_label}" + (f": {target}" if target else "")
     body = render_notification_text(config, notification)
 
     msg = MIMEText(body, "plain", "utf-8")

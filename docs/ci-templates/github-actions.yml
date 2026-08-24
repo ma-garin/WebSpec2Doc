@@ -1,0 +1,78 @@
+# WebSpec2Doc を自分のプロジェクトの CI に組み込む雛形。
+#
+# 使い方: このファイルを **利用者のリポジトリ** の
+# `.github/workflows/webspec2doc.yml` へコピーして、URL と対象ドメインを書き換える。
+# （WebSpec2Doc リポジトリ自身の .github/workflows へ置くと、このリポジトリの
+#  CI として動いてしまうため、雛形は docs 配下に置いてある。）
+name: WebSpec2Doc 仕様ドリフトゲート
+
+on:
+  pull_request:
+  schedule:
+    - cron: "0 21 * * *" # 毎日 06:00 JST
+
+env:
+  # 監視対象。ステージング環境など、CI から到達できる URL を指定する。
+  TARGET_URL: https://staging.example.com
+  # output/<TARGET_DOMAIN>/ が成果物の置き場になる（URL のホスト名）。
+  TARGET_DOMAIN: staging.example.com
+
+jobs:
+  spec-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: WebSpec2Doc を導入する
+        run: |
+          pip install --upgrade pip
+          pip install webspec2doc
+          # ソースから使う場合は次の 2 行に置き換える。
+          # git clone --depth 1 https://github.com/<org>/webspec2doc.git .webspec2doc
+          # pip install -r .webspec2doc/requirements.txt
+
+      # 前回の成果物を復元しておくと、初回以外は差分（ドリフト）を判定できる。
+      # 復元できない初回は first_run 扱いになり、ドリフト判定はスキップされる。
+      - name: 前回のスナップショットを復元する
+        uses: actions/cache@v4
+        with:
+          path: output/${{ env.TARGET_DOMAIN }}
+          key: webspec2doc-${{ env.TARGET_DOMAIN }}-${{ github.run_id }}
+          restore-keys: |
+            webspec2doc-${{ env.TARGET_DOMAIN }}-
+
+      - name: 仕様を取得して比較する
+        run: |
+          python src/cli.py doc --url "$TARGET_URL" --format html,json --compare
+
+      # 任意: テストケースを実行して結果を testcases/run_result.json に残す。
+      - name: テストケースを実行する
+        continue-on-error: true
+        run: |
+          python src/cli.py test --domain "$TARGET_DOMAIN"
+
+      # ここが CI ゲート。終了コードでジョブの成否が決まる。
+      # 0=合格 / 1=ドリフトまたはテスト失敗 / 2=判定材料なし
+      - name: CI ゲートで判定する
+        run: |
+          python src/cli.py ci gate \
+            --domain "$TARGET_DOMAIN" \
+            --fail-on breaking \
+            --max-failed 0 \
+            --junit-xml reports/webspec2doc-gate.xml
+
+      - name: 判定結果とレポートを保存する
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: webspec2doc-report
+          path: |
+            reports/webspec2doc-gate.xml
+            output/${{ env.TARGET_DOMAIN }}/report.html
+            output/${{ env.TARGET_DOMAIN }}/drift_summary.json
+          if-no-files-found: warn

@@ -210,6 +210,104 @@
       filterWrap.querySelectorAll('.ta-chip').forEach((c) => c.classList.toggle('is-on', c === btn));
       applyOriginFilter();
     });
+    // 方針の既定に戻す: 技法チップの選択状態をすべて解除する（フロントのみ）。
+    const techReset = document.querySelector('#view-test-design [data-ta-action="design-technique-reset"]');
+    if (techReset) techReset.addEventListener('click', () => {
+      if (techWrap) techWrap.querySelectorAll('.ta-chip[data-ta-action="toggle-design-technique"]').forEach((c) => c.classList.remove('is-on'));
+    });
+    // 因子を追加: 因子・水準テーブルに編集可能な行を1行追加する（フロントのみ、保存はしない）。
+    const factorAdd = document.querySelector('#view-test-design [data-ta-action="design-factor-add"]');
+    if (factorAdd) factorAdd.addEventListener('click', () => {
+      const body = $('ta-factor-body');
+      if (!body) return;
+      if (body.querySelector('.empty')) body.innerHTML = '';
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td><input type="text" class="input-compact" placeholder="因子名"></td>'
+        + '<td><input type="text" class="input-compact" placeholder="水準（カンマ区切り）"></td>'
+        + '<td><input type="text" class="input-compact" placeholder="由来"> '
+        + '<button type="button" class="ta-linkbtn" data-ta-action="design-factor-remove">×</button></td>';
+      body.appendChild(tr);
+    });
+    // 追加した因子行の削除（動的に増える行のため委譲で拾う）。
+    const factorBody = $('ta-factor-body');
+    if (factorBody) factorBody.addEventListener('click', (ev) => {
+      const rmBtn = ev.target.closest('[data-ta-action="design-factor-remove"]');
+      if (!rmBtn) return;
+      const tr = rmBtn.closest('tr');
+      if (tr) tr.remove();
+      if (!factorBody.children.length) {
+        factorBody.innerHTML = '<tr><td colspan="3"><div class="empty">テスト条件を選ぶと、ここに因子・水準の候補が入ります（自動抽出は未実装）</div></td></tr>';
+      }
+    });
+    // エクスポート: 選択中ドメインの生成ケースをCSVでダウンロードする。
+    const exportBtn = $('ta-design-export');
+    if (exportBtn) exportBtn.addEventListener('click', async () => {
+      const domain = sel ? sel.value : '';
+      const setExportState = (text, cls) => {
+        const el = $('ta-design-export-state');
+        if (!el) return;
+        el.hidden = false;
+        el.textContent = text;
+        el.className = 'ta2-badge ' + cls;
+      };
+      if (!domain) { setExportState('ドメインを選択してください', 'ta2-badge-ng'); return; }
+      exportBtn.disabled = true;
+      setExportState('エクスポート中…', 'ta2-badge-muted');
+      try {
+        const res = await fetch('/api/ta/export?domain=' + encodeURIComponent(domain) + '&kind=cases&format=csv');
+        if (!res.ok) {
+          let msg = 'HTTP ' + res.status;
+          try { const data = await res.json(); if (data && data.error) msg = data.error; } catch (_) { /* ignore */ }
+          throw new Error(msg);
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = domain + '-cases.csv';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        setExportState('エクスポートしました', 'ta2-badge-ok');
+      } catch (e) {
+        setExportState('エクスポートに失敗しました: ' + (e && e.message ? e.message : e), 'ta2-badge-ng');
+      } finally {
+        exportBtn.disabled = false;
+      }
+    });
+    // AIでケースを生成: 生成後はケース表を読み込み直して反映する。
+    const generateBtn = $('ta-design-generate');
+    if (generateBtn) generateBtn.addEventListener('click', async () => {
+      const domain = sel ? sel.value : '';
+      const setGenState = (text, cls) => {
+        const el = $('ta-design-generate-state');
+        if (!el) return;
+        el.hidden = false;
+        el.textContent = text;
+        el.className = 'ta2-badge ' + cls;
+      };
+      if (!domain) { setGenState('ドメインを選択してください', 'ta2-badge-ng'); return; }
+      generateBtn.disabled = true;
+      setGenState('生成しています…', 'ta2-badge-muted');
+      try {
+        const res = await fetch('/api/ta/ai/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ domain, kind: 'cases' }),
+        });
+        if (res.status === 503) { setGenState('LLMが未設定です', 'ta2-badge-ng'); return; }
+        const data = await res.json();
+        if (!res.ok || !data.ok) throw new Error((data && data.error) || 'HTTP ' + res.status);
+        const items = data.items || [];
+        setGenState(items.length + ' 件のケースを生成しました', 'ta2-badge-ok');
+        loadCases(domain);
+      } catch (e) {
+        setGenState('生成に失敗しました: ' + (e && e.message ? e.message : e), 'ta2-badge-ng');
+      } finally {
+        generateBtn.disabled = false;
+      }
+    });
     renderConditions();
     loadDomains();
   }

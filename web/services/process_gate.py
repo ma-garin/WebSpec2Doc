@@ -10,7 +10,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -80,7 +80,7 @@ def _save(out_dir: Path, domain: str, data: dict[str, Any]) -> None:
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
+    return datetime.now(UTC).astimezone().isoformat(timespec="seconds")
 
 
 def unlocked_index(completed: dict[str, Any]) -> int:

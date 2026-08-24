@@ -7,8 +7,8 @@
             <div class="dashboard-section-actions">
               <span class="ta2-badge ta2-badge-ng" id="ta-completion-verdict">判定待ち</span>
               <button type="button" class="btn-primary" id="ta-completion-approve" disabled>完了と判定する</button>
-              <button type="button" class="ta-linkbtn" id="ta-completion-report" disabled data-wip="1">完了レポートを生成</button>
-              <span class="ta-wip-note">準備中</span>
+              <button type="button" class="ta-linkbtn" id="ta-completion-report">完了レポートを生成</button>
+              <span class="ta2-badge ta2-badge-muted" id="ta-completion-report-status" style="display:none;"></span>
             </div>
           </div>
 
@@ -55,13 +55,12 @@
                 <div class="ta-panel-sub">次のプロジェクトへの引き継ぎ</div>
               </div>
               <div class="ta-panel-actions">
-                <button type="button" class="ta-linkbtn" id="ta-completion-lesson-add" disabled data-wip="1">追加</button>
-                <span class="ta-wip-note">準備中</span>
+                <button type="button" class="ta-linkbtn" id="ta-completion-lesson-add">追加</button>
               </div>
             </div>
             <div class="ta-panel-body">
               <div id="ta-completion-lessons">
-                <div class="empty">教訓はまだ記録されていません（追加機能は準備中です）</div>
+                <div class="empty">教訓はまだ記録されていません</div>
               </div>
             </div>
           </div>

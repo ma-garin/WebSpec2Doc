@@ -1,9 +1,12 @@
 // ---- テスト活動支援 / コード修正提案 ----
-// 修正提案そのものを作るAPIは無いため、不具合分析（/api/ta/defects）の結果を
-// 「修正提案の元」として一覧化する。差分生成・影響再実行・PR作成は未実装のため
-// data-wip で明示し、実データが取れる部分（不具合一覧・ODC分類・検出ケース）だけ表示する。
+// 不具合一覧は /api/ta/defects から取得する。修正案の生成は /api/ta/ai/generate
+// (kind:"codefix") を呼び、結果は紫地（AI由来）の枠に出す。影響範囲の再実行は
+// フロントのみ（読み込み済みの不具合一覧から同一ケースIDの件数を数える）。
+// PR作成はGitHubトークンが無いため data-wip のまま残す。
 (function () {
   'use strict';
+
+  const HANDOFF_KEY = 'webspec2doc.ta.defect_id';
 
   const SEVERITY_CLASS = { critical: 'ng', high: 'ng', medium: 'wa', low: 'muted' };
   const SEVERITY_LABEL = { critical: '重大', high: '高', medium: '中', low: '低' };
@@ -100,6 +103,17 @@
     if (openBtn) openBtn.disabled = false;
   }
 
+  function applyHandoff() {
+    let id = '';
+    try { id = sessionStorage.getItem(HANDOFF_KEY) || ''; } catch (_) { id = ''; }
+    if (id && _items.some((d) => d.id === id)) {
+      _selectedId = id;
+      try { sessionStorage.removeItem(HANDOFF_KEY); } catch (_) { /* noop */ }
+      return true;
+    }
+    return false;
+  }
+
   async function load() {
     const dom = domain();
     if (!dom) { renderList(); renderDetail(); return; }
@@ -110,7 +124,7 @@
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || '不具合を取得できませんでした');
       _items = data.items || [];
-      if (!_items.some((d) => d.id === _selectedId)) _selectedId = '';
+      if (!applyHandoff() && !_items.some((d) => d.id === _selectedId)) _selectedId = '';
       renderList();
       renderCount();
       renderDetail();
@@ -120,7 +134,93 @@
     }
   }
 
+  function setGenerateStatus(message, kind) {
+    const el = document.getElementById('ta-fix-generate-status');
+    if (!el) return;
+    if (!message) { el.style.display = 'none'; el.textContent = ''; return; }
+    el.style.display = '';
+    el.textContent = message;
+    el.className = 'ta2-badge ta2-badge-' + (kind || 'muted');
+  }
+
+  function renderAiResult(items) {
+    const box = document.getElementById('ta-fix-result-box');
+    const fileEl = document.getElementById('ta-fix-file');
+    const changeEl = document.getElementById('ta-fix-change-summary');
+    const diffEl = document.getElementById('ta-fix-diff');
+    const diffEmptyEl = document.getElementById('ta-fix-diff-empty');
+    const item = (items && items[0]) || {};
+    const fileVal = item.file || item.path || item.target || '';
+    const summaryVal = item.summary || item.description || item.title || '';
+    const diffVal = item.diff || item.patch || item.code || item.content || '';
+    if (fileEl) fileEl.textContent = fileVal || '（対象ファイルは返されませんでした）';
+    if (changeEl) changeEl.textContent = summaryVal || '（要約は返されませんでした）';
+    if (diffVal) {
+      if (diffEl) { diffEl.textContent = diffVal; diffEl.style.display = ''; }
+      if (diffEmptyEl) diffEmptyEl.style.display = 'none';
+    } else if (diffEmptyEl) {
+      diffEmptyEl.textContent = '差分は返されませんでした';
+      diffEmptyEl.style.display = '';
+    }
+    if (box) {
+      box.style.background = 'var(--d-primary-pale)';
+      box.style.border = '1px solid var(--border)';
+      box.style.borderRadius = 'var(--radius-md)';
+    }
+  }
+
+  async function generateFix() {
+    const btn = document.getElementById('ta-fix-generate');
+    const dom = domain();
+    const d = selected();
+    if (!dom) { setGenerateStatus('対象ドメインを選択してください', 'ng'); return; }
+    if (!d) { setGenerateStatus('左の一覧から不具合を選んでください', 'ng'); return; }
+    if (btn) btn.disabled = true;
+    setGenerateStatus('生成しています…', 'info');
+    try {
+      const res = await fetch('/api/ta/ai/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain: dom, kind: 'codefix', defect_id: d.id })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 503) {
+        setGenerateStatus(data.error || 'LLMが未設定です', 'ng');
+        return;
+      }
+      if (!res.ok || !data.ok) {
+        setGenerateStatus(data.error || '修正案の生成に失敗しました', 'ng');
+        return;
+      }
+      renderAiResult(data.items || []);
+      setGenerateStatus('生成しました', 'ok');
+    } catch (e) {
+      setGenerateStatus('通信に失敗しました: ' + (e && e.message ? e.message : e), 'ng');
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  function runImpact() {
+    const sub = document.getElementById('ta-fix-impact-sub');
+    const body = document.getElementById('ta-fix-impact-body');
+    const d = selected();
+    if (!d) return;
+    if (!d.case_id) {
+      if (body) body.innerHTML = '<tr><td colspan="3"><div class="empty">この不具合にはケースの紐付けがありません</div></td></tr>';
+      if (sub) sub.textContent = '紐づくケースはありません';
+      return;
+    }
+    const rows = _items.filter((x) => x.case_id === d.case_id);
+    if (body) {
+      body.innerHTML = rows.map((r) => `<tr><td><b>${esc(r.case_id)}</b></td><td>${esc(r.summary || '-')}</td><td>${badge(STATE_CLASS[r.state] || 'muted', STATE_LABEL[r.state] || r.state || '-')}</td></tr>`).join('');
+    }
+    if (sub) sub.textContent = `この修正の再実行対象になるテストケースです（${rows.length}件）`;
+  }
+
   document.getElementById('ta-fix-reload')?.addEventListener('click', load);
+  document.getElementById('ta-fix-generate')?.addEventListener('click', generateFix);
+  document.getElementById('ta-fix-impact-run')?.addEventListener('click', runImpact);
   document.getElementById('ta-fix-open-defect')?.addEventListener('click', () => {
     if (document.getElementById('ta-fix-open-defect')?.disabled) return;
     if (typeof switchView === 'function') switchView('defect-analysis');

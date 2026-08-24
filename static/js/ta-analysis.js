@@ -286,3 +286,152 @@ document.addEventListener('click', (ev) => {
     tr.style.display = (!origin || tr.getAttribute('data-origin') === origin) ? '' : 'none';
   });
 });
+
+
+// ---- テスト活動支援 / 分析ビュー: 「条件を追加」ボタン ----
+// 条件表に編集可能な行を1行追加する（フロントのみ、保存はしない）。
+(function () {
+  function _tbody() { return document.getElementById('ta-condition-body'); }
+
+  function _addRow() {
+    const tbody = _tbody();
+    if (!tbody) return;
+    if (tbody.querySelector('.empty')) tbody.innerHTML = '';
+    const tr = document.createElement('tr');
+    tr.setAttribute('data-origin', 'manual');
+    tr.innerHTML = '<td><input type="text" class="input-compact" placeholder="条件ID"></td>'
+      + '<td><input type="text" class="input-compact" placeholder="由来"></td>'
+      + '<td><input type="text" class="input-compact" placeholder="テスト条件"></td>'
+      + '<td><input type="text" class="input-compact" placeholder="分類"></td>'
+      + '<td><input type="text" class="input-compact" placeholder="優先度"></td>'
+      + '<td><input type="text" class="input-compact" placeholder="網羅すべき観点"> '
+      + '<button type="button" class="ta-linkbtn" data-ta-action="condition-remove">×</button></td>';
+    tbody.appendChild(tr);
+    if (typeof _updateStatConditions === 'function') {
+      _updateStatConditions(tbody.querySelectorAll('tr[data-origin]').length);
+    }
+  }
+
+  function _removeRow(tr) {
+    tr.remove();
+    const tbody = _tbody();
+    if (!tbody) return;
+    if (!tbody.children.length) {
+      tbody.innerHTML = '<tr><td colspan="6"><div class="empty">上の［テスト条件を抽出］を押すと、この表に条件が入ります。</div></td></tr>';
+    }
+    if (typeof _updateStatConditions === 'function') {
+      _updateStatConditions(tbody.querySelectorAll('tr[data-origin]').length);
+    }
+  }
+
+  document.addEventListener('click', (ev) => {
+    if (ev.target.closest && ev.target.closest('[data-ta-action="condition-add"]')) { _addRow(); return; }
+    const rmBtn = ev.target.closest && ev.target.closest('[data-ta-action="condition-remove"]');
+    if (rmBtn) { const tr = rmBtn.closest('tr'); if (tr) _removeRow(tr); }
+  });
+})();
+
+
+// ---- テスト活動支援 / 分析ビュー: 「エクスポート」ボタン ----
+// GET /api/ta/export?domain=uploads&kind=conditions&format=csv をCSVダウンロードする。
+// 「テスト条件を抽出」と同じ domain=uploads を対象にする（この画面の条件データの実体）。
+(function () {
+  const UPLOAD_BUCKET = 'uploads';
+
+  function _setState(text, cls) {
+    const el = document.getElementById('ta-analysis-export-state');
+    if (!el) return;
+    el.hidden = false;
+    el.textContent = text;
+    el.className = 'ta2-badge ' + cls;
+  }
+
+  async function _export() {
+    const btn = document.getElementById('ta-analysis-export');
+    if (btn) btn.disabled = true;
+    _setState('エクスポート中…', 'ta2-badge-muted');
+    try {
+      const res = await fetch('/api/ta/export?domain=' + encodeURIComponent(UPLOAD_BUCKET) + '&kind=conditions&format=csv');
+      if (!res.ok) {
+        let msg = 'HTTP ' + res.status;
+        try { const data = await res.json(); if (data && data.error) msg = data.error; } catch (_) { /* ignore */ }
+        throw new Error(msg);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'conditions.csv';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      _setState('エクスポートしました', 'ta2-badge-ok');
+    } catch (e) {
+      _setState('エクスポートに失敗しました: ' + (e && e.message ? e.message : e), 'ta2-badge-ng');
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  document.addEventListener('click', (ev) => {
+    if (ev.target && ev.target.id === 'ta-analysis-export') _export();
+  });
+})();
+
+
+// ---- テスト活動支援 / 分析ビュー: 「対応漏れを検査」ボタン ----
+// 新しいAPIは使わず、既に画面が持つデータ（条件表そのもの）だけで突合する。
+// 「観点に紐づかない機能」= 条件表の最終列（網羅すべき観点）が空／"-"のままの行。
+(function () {
+  const esc = (v) => String(v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  function _rows() { return Array.from(document.querySelectorAll('#ta-condition-body tr[data-origin]')); }
+
+  function _label(tr) {
+    const cells = tr.querySelectorAll('td');
+    const idCell = cells[0];
+    const condCell = cells[2];
+    const idInput = idCell ? idCell.querySelector('input') : null;
+    const condInput = condCell ? condCell.querySelector('input') : null;
+    const id = (idInput ? idInput.value : (idCell ? idCell.textContent : '')).trim() || '(ID未設定)';
+    const cond = (condInput ? condInput.value : (condCell ? condCell.textContent : '')).trim() || '(未入力)';
+    return id + ': ' + cond;
+  }
+
+  function _isGap(tr) {
+    const cells = tr.querySelectorAll('td');
+    const last = cells[cells.length - 1];
+    if (!last) return true;
+    const input = last.querySelector('input');
+    const text = (input ? input.value : last.textContent).trim();
+    return !text || text === '-';
+  }
+
+  function _check() {
+    const box = document.getElementById('ta-trace-body');
+    const stat = document.getElementById('ta-analysis-stat-gaps');
+    const rows = _rows();
+    if (!rows.length) {
+      if (box) box.innerHTML = '<div class="empty">条件表が空です。先にテスト条件を用意してください</div>';
+      if (stat) stat.textContent = '—';
+      return;
+    }
+    if (box) box.innerHTML = '<div class="empty">検査しています…</div>';
+    const gaps = rows.filter(_isGap);
+    if (box) {
+      box.innerHTML = gaps.length
+        ? '<ul>' + gaps.map((tr) => '<li>' + esc(_label(tr)) + '</li>').join('') + '</ul>'
+        : '<div class="empty">対応漏れはありません（すべての条件に観点が記載されています）</div>';
+    }
+    if (stat) {
+      stat.textContent = String(gaps.length);
+      stat.classList.remove('is-ok', 'is-ng', 'is-pri');
+      stat.classList.add('is-wa');
+    }
+  }
+
+  document.addEventListener('click', (ev) => {
+    if (ev.target && ev.target.id === 'ta-analysis-trace-check') _check();
+  });
+})();

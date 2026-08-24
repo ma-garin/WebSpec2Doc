@@ -25,8 +25,8 @@
                 </div>
               </div>
               <div class="ta-panel-actions">
-                <button type="button" class="btn-primary" id="ta-design-generate" disabled data-wip="1">AIでケースを生成</button>
-                <span class="ta-wip-note">準備中</span>
+                <button type="button" class="btn-primary" id="ta-design-generate">AIでケースを生成</button>
+                <span class="ta2-badge ta2-badge-muted" id="ta-design-generate-state" hidden></span>
               </div>
             </div>
             <details class="ta-panel-body">
@@ -38,8 +38,7 @@
                 <button type="button" class="ta-chip" data-ta-action="toggle-design-technique" data-value="state-transition">状態遷移</button>
                 <button type="button" class="ta-chip" data-ta-action="toggle-design-technique" data-value="pairwise">ペアワイズ</button>
                 <button type="button" class="ta-chip" data-ta-action="toggle-design-technique" data-value="cfd">CFD</button>
-                <button type="button" class="ta-linkbtn" data-ta-action="design-technique-reset" disabled data-wip="1">方針の既定に戻す</button>
-                <span class="ta-wip-note">準備中</span>
+                <button type="button" class="ta-linkbtn" data-ta-action="design-technique-reset">方針の既定に戻す</button>
               </div>
             </details>
           </div>
@@ -67,8 +66,7 @@
                   <div class="ta-panel-sub">選んだ条件から抽出した因子と、取り得る水準。</div>
                 </div>
                 <div class="ta-panel-actions">
-                  <button type="button" class="ta-linkbtn" data-ta-action="design-factor-add" disabled data-wip="1">因子を追加</button>
-                  <span class="ta-wip-note">準備中</span>
+                  <button type="button" class="ta-linkbtn" data-ta-action="design-factor-add">因子を追加</button>
                 </div>
               </div>
               <details class="ta-panel-body">
@@ -105,8 +103,8 @@
                   <button type="button" class="ta-chip" data-ta-action="design-origin-filter" data-value="ai">AI生成</button>
                   <button type="button" class="ta-chip" data-ta-action="design-origin-filter" data-value="manual">手入力</button>
                 </div>
-                <button type="button" class="ta-linkbtn" id="ta-design-export" disabled data-wip="1">エクスポート</button>
-                <span class="ta-wip-note">準備中</span>
+                <button type="button" class="ta-linkbtn" id="ta-design-export">エクスポート</button>
+                <span class="ta2-badge ta2-badge-muted" id="ta-design-export-state" hidden></span>
               </div>
             </div>
             <div class="ta-panel-body">

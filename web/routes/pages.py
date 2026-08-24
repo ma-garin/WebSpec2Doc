@@ -75,8 +75,10 @@ def _may_use_testlab() -> bool:
 
     if not auth_enabled():
         return True
-    user = getattr(g, "auth_user", None)
-    return bool(user) and user.get("role") == "admin"
+    user: dict[str, object] | None = getattr(g, "auth_user", None)
+    if not user:
+        return False
+    return user.get("role") == "admin"
 
 
 @bp.route("/")

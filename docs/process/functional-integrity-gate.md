@@ -73,10 +73,50 @@ make verify-ui
 
 UI変更がない場合でも、品質ゲート対象の機能変更であれば `quality_harness.py` は必須です。
 
+## 未実装 UI（WIP）の宣言義務
+
+追加日: 2026-08-24
+
+画面に置いたが中身が無い操作は、必ず **`data-wip="1"`** を付けて無効化し、
+`quality/feature_contracts.yml` の当該機能の `wip_ui` に理由付きで宣言します。
+
+```html
+<button type="button" id="ta-plan-generate" disabled data-wip="1">AIで計画草案を作る</button>
+<span class="ta-wip-note">準備中</span>
+```
+
+```json
+"status": "partial",
+"wip_ui": [
+  { "control": "ta-plan-generate", "reason": "AIによる計画草案生成。生成処理が未実装" }
+]
+```
+
+`python scripts/quality_harness.py` が以下を機械検証します。
+
+| 規則 | 失敗させる状態 |
+|---|---|
+| 所有 | `data-wip` を持つテンプレートがどの機能の `ui_files` にも属していない |
+| status 整合 | 未実装 UI を持つ機能が `status: "implemented"` を名乗っている |
+| 宣言漏れ | 画面にある `data-wip` が `wip_ui` に無い |
+| 残骸 | `wip_ui` にあるのに画面に `data-wip` が無い（実装済みなら宣言を消す） |
+| 理由 | `wip_ui` の要素に `reason` が無い |
+
+`data-wip` を持つ要素には `id` か `data-ta-action` を必ず付けます（識別子が無いと突き合わせできません）。
+
+JS 側のユーザー可視な未実装メッセージ（`ta-wip-note` / 「準備中です」/「未実装です」）は
+宣言と 1:1 で対応付けられないため、`WIP_MESSAGE_BASELINE` で件数を凍結し**増加のみ**を失敗させます。
+減らしたときは BASELINE も一緒に下げます。
+
+**なぜこの規則があるか**: 2026-08-24 まで、ハーネスの未実装検出は英語の探索語
+（`UI only` / `not implemented` 等）だけを見ており、このリポジトリが実際に使っている
+`data-wip` / 「準備中」を 1 件も検出できませんでした。その結果、未実装 UI を 22 箇所
+抱えたテスト活動支援が `status: "implemented"` のままゲートを通過していました。
+
 ## 禁止事項
 
 - コードを読まずにレビュー済みと言う
 - 実行パスを追わずに価値評価だけで完了扱いする
-- UIだけ存在する未接続機能を残す
+- UIだけ存在する未接続機能を、`data-wip` と `wip_ui` で宣言せずに残す
 - エラーをユーザーに見せずに失敗する
 - 証跡なしに検証済みと報告する

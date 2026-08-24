@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sys
+from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
 from pathlib import Path
@@ -20,7 +21,7 @@ _OUTPUT_DIR_OVERRIDE: ContextVar[Path | None] = ContextVar("qa_output_dir_overri
 
 
 @contextmanager
-def use_viewpoint_snapshot(viewpoints: list[dict[str, Any]]):
+def use_viewpoint_snapshot(viewpoints: list[dict[str, Any]]) -> Iterator[None]:
     token = _VIEWPOINT_OVERRIDE.set(viewpoints)
     try:
         yield
@@ -29,7 +30,7 @@ def use_viewpoint_snapshot(viewpoints: list[dict[str, Any]]):
 
 
 @contextmanager
-def use_output_dir(path: Path):
+def use_output_dir(path: Path) -> Iterator[None]:
     """出力先を明示的に固定する（AutoRun 等、リクエストコンテキスト外の生成処理用）。
 
     リクエスト処理中はテナントスコープを scoped_output_dir が自動解決するが、

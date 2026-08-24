@@ -33,6 +33,7 @@ UNREGISTERED_ALLOWLIST = {
     "web/env_store.py",
     "web/audit_context.py",
     "web/routes/pages.py",  # SPAシェルの配信のみ（機能ロジックを持たない）
+    "src/cli_args.py",  # CLI 引数の宣言のみ（分岐・処理を持たない）
     # LLM 補完は任意経路。未設定時はルールベースで全機能が成立するため、
     # 単独の機能ではなく差し替え可能なアダプタとして扱う。
     "src/llm/openai_client.py",

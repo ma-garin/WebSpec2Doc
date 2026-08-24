@@ -273,7 +273,7 @@ class TestEvidenceConsistencyAcrossFormats:
         from analyzer.form_analyzer import summarize_forms
         from generator.html_reporter import generate_html_report
         from generator.json_reporter import generate_json_report
-        from main import _save_excel_output
+        from output_writer import _save_excel_output
 
         pages = self._analyzed()
         graph = build_graph(pages)

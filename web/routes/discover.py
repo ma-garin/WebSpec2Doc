@@ -4,6 +4,7 @@ import json
 import subprocess
 import sys
 import uuid
+from collections.abc import Iterator
 
 from flask import Blueprint, Response, request
 
@@ -77,7 +78,7 @@ def api_discover_stream() -> Response | tuple[dict, int]:
 
     run_id = uuid.uuid4().hex
 
-    def generate():
+    def generate() -> Iterator[str]:
         proc = None
         try:
             proc = subprocess.Popen(

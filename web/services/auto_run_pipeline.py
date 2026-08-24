@@ -930,9 +930,11 @@ def _publish_playwright_stage(job: AutoRunJob, spec_dir: Path) -> None:
         if job.stages_all_released:
             from autorun.stages import STATUS_APPROVED
 
-            pipeline = pipeline.replaced(
-                pipeline.get(STAGE_PLAYWRIGHT).with_status(STATUS_APPROVED)
-            ).recorded("approve", STAGE_PLAYWRIGHT, "実行条件の確定により承認", "system")
+            playwright_stage = pipeline.get(STAGE_PLAYWRIGHT)
+            if playwright_stage is not None:
+                pipeline = pipeline.replaced(
+                    playwright_stage.with_status(STATUS_APPROVED)
+                ).recorded("approve", STAGE_PLAYWRIGHT, "実行条件の確定により承認", "system")
         stages_path.write_text(
             json.dumps(pipeline.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8"
         )

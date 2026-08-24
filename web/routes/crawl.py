@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+import logging
 import subprocess
 import sys
 import uuid
+from collections.abc import Iterator
 from pathlib import Path
 
 from flask import Blueprint, Response, request, send_file
@@ -22,6 +24,8 @@ from web.validation import (
 )
 
 bp = Blueprint("crawl", __name__)
+
+logger = logging.getLogger(__name__)
 
 _REFERENCE_DIR_NAME = "reference_docs"
 _MAX_REFERENCE_DOC_BYTES = 20 * 1024 * 1024  # 20MB/ファイル
@@ -63,7 +67,7 @@ def run() -> Response:
     # テナントスコープ済みの出力先はここ（リクエスト処理中）で解決して閉じ込める。
     out_dir = _out()
 
-    def generate():
+    def generate() -> Iterator[str]:
         # crawl_mode == "auto": 起点URLからリンクを辿って自動探索する（--url + depth）。
         # それ以外（既定）: 画面分析で選択された固定URL一覧のみをクロールする（--urls）。
         # 選択したURLのみモードでは depth/max_pages はリンク追跡をしないため無関係。
@@ -95,7 +99,8 @@ def run() -> Response:
         _RUNNING_PROCS[run_id] = proc
         try:
             yield f"RUN_ID:{run_id}\n"
-            yield from proc.stdout
+            if proc.stdout is not None:
+                yield from proc.stdout
             proc.wait()
             if proc.returncode is not None and proc.returncode < 0:
                 yield "\n停止しました。\n"
@@ -121,7 +126,9 @@ def run() -> Response:
                     login_landing_url,
                     base_dir=out_dir,
                 )
-                _record_usage_safely(domain, compare, out_dir)
+                warning = _record_usage_safely(domain, compare, out_dir)
+                if warning:
+                    yield f"\n{warning}\n"
             if proc.returncode != 0:
                 yield "\nエラーが発生しました。\n"
         finally:
@@ -131,11 +138,15 @@ def run() -> Response:
     return Response(generate(), mimetype="text/plain")
 
 
-def _record_usage_safely(domain: str, compare: bool, out_dir: Path | None = None) -> None:
+def _record_usage_safely(domain: str, compare: bool, out_dir: Path | None = None) -> str:
     """成果物を実行回ごとに退避し、利用実績を記録する。
 
     どちらもベストエフォート。失敗してもクロール成功の応答は返す
     （成果物そのものは従来どおり output/<domain>/ に残っているため）。
+
+    ただし**黙って失敗させない**。失敗するとクロールは成功したのに履歴へ
+    1行も残らず、利用者からは「実行したはずの回が消えた」ようにしか見えない。
+    ログへ証跡を残し、画面へ出す1行を返す（成功時は空文字）。
     """
     root = out_dir if out_dir is not None else OUTPUT_DIR
     try:
@@ -151,8 +162,13 @@ def _record_usage_safely(domain: str, compare: bool, out_dir: Path | None = None
             summary=_summary_for_domain(domain, root),
         )
         record_crawl_from_report(root, domain, diff_run=compare, run_id=run_id or "")
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("実行履歴の記録に失敗しました（domain=%s）: %s", domain, exc)
+        return (
+            "注意: クロールは完了しましたが、実行履歴の記録に失敗しました。"
+            "成果物は残っていますが履歴一覧には出ません（詳細はサーバログ）。"
+        )
+    return ""
 
 
 @bp.post("/api/cancel")

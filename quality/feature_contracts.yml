@@ -791,7 +791,8 @@
       "route_files": [],
       "core_files": [
         "src/analyzer/bva.py",
-        "src/main.py"
+        "src/main.py",
+        "src/output_writer.py"
       ],
       "symbols": [
         "derive_boundary_cases",
@@ -824,7 +825,8 @@
       "core_files": [
         "src/capture/finding_reporter.py",
         "src/capture/session_recorder.py",
-        "src/main.py"
+        "src/main.py",
+        "src/output_writer.py"
       ],
       "symbols": [
         "build_finding_tickets",
@@ -863,6 +865,7 @@
       "core_files": [
         "src/generator/test_plan_generator.py",
         "src/main.py",
+        "src/output_writer.py",
         "web/services/qa/doc_generator.py",
         "web/services/qa/advanced_generator.py",
         "web/services/qa/advanced_html.py",
@@ -951,7 +954,8 @@
         "src/generator/comparison_reporter.py",
         "src/analyzer/text_similarity.py",
         "web/services/comparison_workspace.py",
-        "src/main.py"
+        "src/main.py",
+        "src/output_writer.py"
       ],
       "symbols": [
         "match_page_pairs",
@@ -1013,6 +1017,7 @@
         "src/generator/ux_reporter.py",
         "src/generator/html_reporter.py",
         "src/main.py",
+        "src/output_writer.py",
         "src/generator/accessibility_reporter.py",
         "src/ux/usability_smells.py"
       ],
@@ -1153,6 +1158,7 @@
       "route_files": [],
       "core_files": [
         "src/main.py",
+        "src/output_writer.py",
         "src/ci_drift.py",
         "scripts/notify_drift.py",
         "web/services/drift_summary.py",

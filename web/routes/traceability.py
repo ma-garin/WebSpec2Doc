@@ -26,7 +26,7 @@ _CANDIDATES_JSON = "playwright_candidates.json"
 _REQUIREMENT_TRACE_JSON = "requirement_trace.json"
 
 
-def _load_json_file(path_obj) -> dict | list | None:
+def _load_json_file(path_obj: Path) -> dict | list | None:
     """JSON ファイルを読み込む。失敗時は None を返す。"""
     try:
         return json.loads(path_obj.read_text(encoding="utf-8"))
@@ -79,7 +79,7 @@ def api_traceability_matrix() -> tuple[dict, int] | dict:
     return response
 
 
-def _load_test_metadata(domain_dir) -> list[dict]:
+def _load_test_metadata(domain_dir: Path) -> list[dict]:
     """spec_ts_generator が併産したテストメタデータ JSON（tests リスト）を探索して返す。"""
     meta_paths = sorted(domain_dir.glob("qa_process/*.meta.json")) + sorted(
         domain_dir.glob("*.meta.json")

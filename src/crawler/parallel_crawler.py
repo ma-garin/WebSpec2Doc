@@ -329,7 +329,7 @@ def discover_pages_parallel(
     depth: int,
     max_pages: int,
     auth_state: Path | None,
-    robots: RobotFileParser | None,
+    robots: RobotFileParser,
     worker_count: int,
     on_page_found: Any = None,
     on_event: CrawlEventCallback | None = None,

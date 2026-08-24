@@ -205,7 +205,7 @@ def _page(url: str, title: str, fields: tuple[FieldData, ...] = ()) -> PageData:
 
 class TestExcelSheets:
     def test_excel_sheets_added(self, tmp_path: Path) -> None:
-        from main import _save_excel_output
+        from output_writer import _save_excel_output
 
         page = _page(
             "https://example.com/checkout",
@@ -231,7 +231,7 @@ class TestExcelSheets:
         assert bva_ws.cell(row=1, column=1).value == "画面ID"
 
     def test_official_name_injected(self, tmp_path: Path) -> None:
-        from main import _save_excel_output
+        from output_writer import _save_excel_output
 
         page = _page(
             "https://example.com/checkout", "決済", (_field(name="amount", required=True),)

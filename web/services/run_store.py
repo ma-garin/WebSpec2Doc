@@ -32,7 +32,7 @@ import json
 import logging
 import re
 import shutil
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -40,6 +40,8 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 RUNS_DIR_NAME = "runs"
+# 生成側（src/crawler/page_crawler.py の SCREENSHOTS_DIR_NAME）と同じ名前。
+SCREENSHOTS_DIR_NAME = "screenshots"
 META_FILE_NAME = "meta.json"
 
 # run_id は「日時そのもの」。別途 UUID を持たせるより、一覧の並びと人が読む値が
@@ -131,6 +133,8 @@ class RunMeta:
     status: str
     artifacts: dict[str, bool]
     summary: dict[str, Any]
+    # 証跡（スクリーンショット）の退避結果。欠落があれば画面側で理由を出せるようにする。
+    screenshots: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -141,6 +145,7 @@ class RunMeta:
             "status": self.status,
             "artifacts": dict(self.artifacts),
             "summary": dict(self.summary),
+            "screenshots": dict(self.screenshots),
         }
 
 
@@ -221,6 +226,50 @@ def _copy_artifacts(domain_dir: Path, target: Path) -> list[str]:
     return copied
 
 
+# スクリーンショットは可変名（P001.png…）なので固定名リストでは扱えない。
+# 表示に使うビューポート版だけを退避し、拡大表示用の全体版（{page_id}_full.png）は
+# 退避しない。全体版が無いときは表示側がビューポート版へ落ちる
+# （view-shots.js / view-report.js / view-design.js のいずれも実装済み）。
+#
+# 以前はスクリーンショットを一切退避していなかった。実行結果ページの主要導線は
+# runs/<run_id>/ 経由なので、この除外は事実上「画面と仕様のスクショが常に空」を
+# 意味していた（current 側に実物があるのに到達できない）。容量を理由に外すのは
+# 画面数に比例して増える全体版だけで足りる。
+_FULL_SCREENSHOT_SUFFIX = "_full.png"
+
+
+def _copy_screenshots(domain_dir: Path, target: Path) -> list[str]:
+    """表示用スクリーンショットを退避し、コピーできた相対パスを返す。"""
+    src_dir = domain_dir / SCREENSHOTS_DIR_NAME
+    if not src_dir.is_dir():
+        return []
+    copied: list[str] = []
+    for src in sorted(src_dir.glob("*.png")):
+        if src.name.endswith(_FULL_SCREENSHOT_SUFFIX):
+            continue
+        if _copy_file(src, target / SCREENSHOTS_DIR_NAME / src.name):
+            copied.append(f"{SCREENSHOTS_DIR_NAME}/{src.name}")
+    return copied
+
+
+def _screenshot_gap(target: Path, copied: list[str]) -> list[str]:
+    """退避後に証跡が欠けている画面の page_id を返す。
+
+    「画面と仕様」は report.json の screens を一覧に出し、同名の PNG を証跡として
+    並べる。screens にあって PNG が無い画面は、画面だけが出て証跡が無い状態になる。
+    黙って作らないよう、ここで突き合わせて欠落を洗い出す。
+    """
+    report = target / "report.json"
+    if not report.is_file():
+        return []
+    try:
+        screens = json.loads(report.read_text(encoding="utf-8")).get("screens") or []
+    except (OSError, ValueError):
+        return []
+    have = {Path(rel).stem for rel in copied}
+    return [pid for s in screens if (pid := str(s.get("page_id") or "")) and pid not in have]
+
+
 # 退避対象の全相対パス。artifact_file() が呼ばれるたびに組み直さないよう
 # モジュール読み込み時に 1 度だけ作る（1 リクエストで最大 24 回呼ばれる）。
 _ALLOWED_RELATIVE: frozenset[str] = frozenset(
@@ -273,6 +322,18 @@ def snapshot_run(
                 root.rmdir()
             logger.info("退避できる成果物がありません（run を作りません）: %s", domain)
             return None
+        # 成果物が残る実行にだけスクリーンショットを添える。空の器を作らない判定
+        # （上の copied）には含めない — スクショだけあって report が無い実行回は
+        # 開いても意味を持たないため。
+        copied_shots = _copy_screenshots(domain_dir, target)
+        missing_shots = _screenshot_gap(target, copied_shots)
+        if missing_shots:
+            logger.error(
+                "実行回に証跡の無い画面があります: domain=%s run_id=%s 欠落=%s",
+                domain,
+                rid,
+                ",".join(missing_shots),
+            )
         meta = RunMeta(
             run_id=rid,
             domain=domain,
@@ -281,6 +342,7 @@ def snapshot_run(
             status=status,
             artifacts=_artifact_flags(copied),
             summary=dict(summary or {}),
+            screenshots={"copied": len(copied_shots), "missing": missing_shots},
         )
         # meta.json の有無が「この実行回が使えるか」の判定なので、書き込み中断で
         # 壊れた meta.json が残らないよう tmp へ書いてから差し替える。

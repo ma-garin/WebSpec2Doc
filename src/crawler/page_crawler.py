@@ -30,6 +30,7 @@ from crawler.politeness import (
     backoff_delays,
     build_user_agent,
     crawl_interval_from_env,
+    interval_for_target,
     robots_crawl_delay,
 )
 from crawler.session_guard import SessionExpiredError
@@ -57,6 +58,11 @@ HTTPS_DEFAULT_PORT = 443
 PAGE_ID_PREFIX = "P"
 PAGE_ID_WIDTH = 3
 SCREENSHOTS_DIR_NAME = "screenshots"
+
+# スクリーンショット撮影の再試行。描画途中や一時的な detach で 1 回だけ失敗することが
+# あるため、1 回の失敗で「証跡なし」の成果物を作らない。
+SCREENSHOT_MAX_ATTEMPTS = 3
+SCREENSHOT_RETRY_WAIT_SEC = 0.4
 USER_AGENT = build_user_agent()
 BROWSER_LOCALE = "ja-JP"
 # Chromium の HTML5 バリデーションメッセージ（validationMessage）は、UI 言語バンドルを
@@ -304,7 +310,7 @@ def crawl_site(
 ) -> list[PageData]:
     base_url = normalize_url(url)
     robots = _load_robots_parser(base_url)
-    limiter = _make_rate_limiter(robots)
+    limiter = _make_rate_limiter(robots, base_url)
     worker_count = max(1, min(int(parallelism), max_pages))
     visited: set[str] = set()
     queue: list[tuple[str, int]] = [(base_url, 0)]
@@ -1124,11 +1130,22 @@ def _mutations_allowed_with_warning() -> bool:
     return allowed
 
 
-def _make_rate_limiter(robots: RobotFileParser | None) -> TokenBucketLimiter:
-    """環境変数の間隔設定と robots.txt の Crawl-Delay から rate limiter を構築する。"""
-    limiter = TokenBucketLimiter(crawl_interval_from_env())
+def _make_rate_limiter(
+    robots: RobotFileParser | None, base_url: str = ""
+) -> TokenBucketLimiter:
+    """環境変数の間隔設定と robots.txt の Crawl-Delay から rate limiter を構築する。
+
+    base_url が礼儀待ちの免除対象（ローカル許可済み）のときは、Crawl-Delay を
+    採用せず間隔も既定値に縛られない（politeness.interval_for_target を参照）。
+    """
+    parsed = urlparse(base_url) if base_url else None
+    origin = f"{parsed.scheme}://{parsed.netloc}" if parsed and parsed.netloc else ""
+    override = interval_for_target(origin)
+    limiter = TokenBucketLimiter(
+        crawl_interval_from_env() if override is None else override
+    )
     if robots is not None:
-        limiter.apply_crawl_delay(robots_crawl_delay(robots, USER_AGENT))
+        limiter.apply_crawl_delay(robots_crawl_delay(robots, USER_AGENT), origin)
     return limiter
 
 
@@ -1230,11 +1247,35 @@ def _save_screenshot(page: Page, output_dir: Path | None, page_id: str) -> str |
     screenshots_dir = output_dir / SCREENSHOTS_DIR_NAME
     screenshots_dir.mkdir(parents=True, exist_ok=True)
     # 表示用（レポート本文・画面詳細の evidence）はビューポートのみ（現状維持）。
+    # この 1 枚が欠けると「画面と仕様」で画面だけが出て証跡が無い状態になる。
+    # 1 回の失敗で諦めず、描画途中・一時的な detach を想定して短い間隔で再試行する。
     screenshot_path = screenshots_dir / f"{page_id}.png"
-    try:
-        page.screenshot(path=str(screenshot_path), full_page=False)
-    except PlaywrightError as exc:
-        logger.warning("スクリーンショット保存に失敗しました: %s (%s)", screenshot_path, exc)
+    last_error: Exception | None = None
+    for attempt in range(1, SCREENSHOT_MAX_ATTEMPTS + 1):
+        try:
+            page.screenshot(path=str(screenshot_path), full_page=False)
+            last_error = None
+            break
+        except PlaywrightError as exc:
+            last_error = exc
+            if attempt < SCREENSHOT_MAX_ATTEMPTS:
+                logger.warning(
+                    "スクリーンショット保存に失敗しました（%d/%d・再試行します）: %s (%s)",
+                    attempt,
+                    SCREENSHOT_MAX_ATTEMPTS,
+                    screenshot_path,
+                    exc,
+                )
+                time.sleep(SCREENSHOT_RETRY_WAIT_SEC)
+    if last_error is not None:
+        # 握りつぶすと、画面はあるのに証跡が無い成果物が黙って出来上がる。
+        # 復旧はできないので、少なくとも失敗したことを ERROR で残す。
+        logger.error(
+            "スクリーンショットを保存できませんでした（%d 回試行）: %s (%s)",
+            SCREENSHOT_MAX_ATTEMPTS,
+            screenshot_path,
+            last_error,
+        )
         return None
     # ギャラリーの拡大表示で画面が見切れる不具合の修正: 全体スクリーンショットを
     # 別ファイルで追加保存する（失敗してもビューポート版は既に保存済みなので致命的ではない）。

@@ -46,10 +46,11 @@ GENERATE_KINDS: tuple[str, ...] = (
 # 他の種別（観点・スクリプト・コード修正案・RCA下書き）は都度生成の使い捨て。
 _PERSISTED_KINDS: frozenset[str] = frozenset({"conditions", "cases"})
 
-_MAX_ITEMS = 20
+# ローカルモデルでも現実的な時間で返る件数。増やすと生成トークンが伸び応答が遅くなる。
+_MAX_ITEMS = 8
 _MAX_WHYS = 10
 _MAX_WHY_LENGTH = 500
-_GENERATION_TIMEOUT_SEC = 90
+_GENERATION_TIMEOUT_SEC = 60
 
 _KIND_LABELS: dict[str, str] = {
     "viewpoints": "テスト観点",

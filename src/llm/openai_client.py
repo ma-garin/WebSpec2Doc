@@ -35,6 +35,8 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_BASE_URL = "https://api.openai.com/v1"
 DEFAULT_TIMEOUT_SEC = 30
+# 応答トークンの上限。無指定だと生成が止まらず実質タイムアウトしない。
+MAX_OUTPUT_TOKENS = 2048
 # Ollama は認証しないが、OpenAI 互換クライアントは Authorization ヘッダを送るため置き値を使う
 PLACEHOLDER_API_KEY = "local"
 
@@ -185,6 +187,9 @@ def _request_structured_json_impl(
             "json_schema": {"name": schema_name, "strict": True, "schema": json_schema},
         },
         "temperature": 0,
+        # 上限を渡さないとローカルモデル（Ollama 等）が生成を続け、
+        # urllib の timeout（ソケット無通信時間）が働かないまま待ち続ける。
+        "max_tokens": MAX_OUTPUT_TOKENS,
     }
 
     try:
@@ -211,6 +216,7 @@ def _request_structured_json_impl(
         "messages": [{"role": "user", "content": fallback_prompt}],
         "response_format": {"type": "json_object"},
         "temperature": 0,
+        "max_tokens": MAX_OUTPUT_TOKENS,
     }
     try:
         parsed = _extract_json(

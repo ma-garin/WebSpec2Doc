@@ -66,6 +66,30 @@ def validate_target_url(url: str) -> None:
         raise UnsafeUrlError(f"プライベート/予約済みアドレスへのアクセスは禁止です: {host}")
 
 
+def is_local_target(url_or_host: str) -> bool:
+    """ループバック / プライベート / ローカル名前空間のホストかどうかを返す。
+
+    ``validate_target_url`` がローカル判定に使う条件と同じものを、
+    許可/拒否の判断とは切り離して真偽値で返す。URL でもホスト単体でも受ける。
+    """
+    raw = (url_or_host or "").strip()
+    if not raw:
+        return False
+    parsed = urlparse(raw if "//" in raw else f"//{raw}")
+    host = (parsed.hostname or "").lower()
+    if not host:
+        return False
+    if host in LOCAL_HOSTNAMES or host.endswith(LOCAL_SUFFIXES):
+        return True
+    ip = _as_ip_address(host)
+    return ip is not None and not ip.is_global
+
+
+def local_targets_allowed() -> bool:
+    """ローカル対象のクロールが opt-in で許可されているか。"""
+    return _local_targets_allowed()
+
+
 def is_safe_target(url: str) -> bool:
     """``validate_target_url`` が通る URL かどうかを真偽値で返す。"""
     try:

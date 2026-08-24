@@ -21,8 +21,15 @@ const RH_SYSTEM_TYPES = {
 const RH_PAGE_THRESHOLD = 50;
 const RH_PAGE_SIZE = 25;
 
+// 削除の確認は 2 段階クリックで取る。confirm() は使わない（ブラウザモーダルは
+// 自動テストを固めるうえ、押し間違いの取り消しもできない）。
+const RH_DEL_RESET_MS = 5000;
+
 let _rhRuns = [];
-const RH = { page: 1, site: '', from: '', to: '', status: '', type: '', sort: 'ts', dir: 'desc', open: false };
+// pendingDel は「いま確認待ちの行」1 件だけ。複数行を同時に確認待ちにしない
+// （どれを消すのか分からない状態を作らない）。
+const RH = { page: 1, site: '', from: '', to: '', status: '', type: '', sort: 'ts', dir: 'desc', open: false, pendingDel: '' };
+let _rhDelTimer = null;
 
 function _rhSystem() {
   return document.body.getAttribute('data-system') || 'docs';
@@ -110,11 +117,39 @@ function _rhNumCell(value) {
   return escHtml(String(value));
 }
 
+// ---- 実行条件（解析範囲）----
+// 履歴は「いつ・何画面」までしか語らず、同じサイトの2回が「違う範囲で走った」のか
+// 「同じ範囲なのに結果が変わった」のかを見分けられなかった。範囲は run.scope に入るが、
+// この項目より前の記録には付いていないため、常に無い前提で読む。
+function _rhScopeCell(run) {
+  // 範囲はクロール（ドキュメント作成）にしか無い概念。他の種別で空欄と区別が付かないと
+  // 「取れなかった」に見えるので、種別由来の — であることを揃えて示す。
+  const scope = run.type === 'crawl' ? run.scope : null;
+  const label = scope?.label;
+  if (!label) return '<span class="muted-copy">—</span>';
+  // 実効値はバッジに載せると列が壊れるので title に回す。ラベルだけで足りない
+  // 「で、何画面まで見たのか」に、ホバー1回で答えられる状態にする。
+  const title = `深さ${scope.depth ?? '—'} / 最大${scope.max_pages ?? '—'}画面`
+    + ` ・ 対象${scope.target_url_count ?? '—'}画面`;
+  // 種別バッジの見た目を --c の差し替えだけで流用する（新しい CSS を増やさない）。
+  return `<span class="rh-type-badge" style="--c: var(--text-subtle)"`
+    + ` title="${escHtml(title)}">${escHtml(label)}</span>`;
+}
+
+// ログインウォール・robots.txt で取得できなかった画面数。画面数の下に添える。
+// 0 件のときに「0件スキップ」と出すと、起きていないことをわざわざ主張することになるため出さない。
+function _rhSkippedNote(run) {
+  const n = run.type === 'crawl' ? run.scope?.skipped_count : 0;
+  if (!(n > 0)) return '';
+  return '<div class="muted-copy" title="ログインウォール・robots.txt により取得できなかった画面数です">'
+    + `${escHtml(String(n))}件スキップ</div>`;
+}
+
 async function loadRunHistory() {
   const tbody = document.getElementById('rh-tbody');
   const empty = document.getElementById('rh-empty');
   if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="8">読み込んでいます…</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="9">読み込んでいます…</td></tr>';
   try {
     // limit=0 は全件。件数表示（「N 件の実行（全 M 件中）」）が取得件数から
     // 算出されるため、ページングした部分集合では実際より少ない件数を表示してしまう。
@@ -124,6 +159,9 @@ async function loadRunHistory() {
     if (!res.ok) throw new Error(data.error || '実行履歴を取得できませんでした');
     _rhRuns = data.runs || [];
     RH.page = 1;
+    // 一覧が入れ替わるので確認待ちは持ち越さない（別の行のボタンが確認待ちに見えるのを防ぐ）
+    _rhClearPendingDel();
+    _rhShowError('');
     _rhRenderAll();
   } catch (e) {
     tbody.innerHTML = '';
@@ -328,38 +366,108 @@ function _rhRenderTable() {
       const day = _rhDayKey(run.timestamp);
       if (day && day !== lastDay) {
         lastDay = day;
-        html += `<tr class="rh-day"><td colspan="8">${escHtml(_rhDayLabel(day))}`
+        html += `<tr class="rh-day"><td colspan="9">${escHtml(_rhDayLabel(day))}`
           + `<span class="rh-day-n">${counts[day]}件</span></td></tr>`;
       }
     }
     const m = _rhMetrics(run);
     const label = run.type_label || RH_TYPE_LABELS[run.type] || run.type;
-    // 操作は「開く」1種類に統一する。押した先が「その回」か「最新」かは行の状態で、
-    // 操作の種類ではない。その回の成果物が無いことは日時の下に添える。
+    // 「開く」は必ず「その実行回」を開く。その回の成果物が無いときに最新の
+    // レポートへ逃がすと、別の実行の中身をこの実行のものとして見せることになる
+    // （view-run-result.js の _rrRenderMissingRun と同じ原則）。開けないときは
+    // 開かせず、理由を出す。
     const hasRun = !!run.result_url;
-    const openAttrs = hasRun
-      ? `data-act="run:${escHtml(run.domain)}|${escHtml(run.run_id)}"`
-      : (run.report_url ? `data-act="url:${escHtml(run.report_url)}"`
-        : (run.link ? `data-act="file:${escHtml(run.link)}|${escHtml(label)} - ${escHtml(run.domain)}"` : ''));
+    const openAttrs = hasRun ? `data-act="run:${escHtml(run.domain)}|${escHtml(run.run_id)}"` : '';
     // 日時セルは1行に収める。文言は短く、意味は title で補う。
     const noSave = hasRun ? ''
-      : '<span class="rh-nosave" title="この実行回の成果物は保存されていません（開くと最新が出ます）">・成果物なし</span>';
-    const openBtn = openAttrs
-      ? `<button type="button" class="btn-outline-sm${hasRun ? ' rh-open-primary' : ''}" ${openAttrs}>開く</button>`
-      : '<span class="muted-copy">—</span>';
+      : '<span class="rh-nosave" title="この回の成果物は保存されていないため、この実行回を開くことはできません。「成果物」列の件数は実行時に作られた数で、いま残っている数ではありません">・この回は未保存</span>';
+    const openBtn = hasRun
+      ? `<button type="button" class="btn-outline-sm rh-open-primary" ${openAttrs}>開く</button>`
+      : '<button type="button" class="btn-outline-sm" disabled'
+        + ' title="この実行回の成果物は保存されていないため開けません。最新の成果物は別の実行のもので、この回の結果ではありません">開く</button>';
+    const delBtn = _rhDelButton(run);
     html += `<tr${openAttrs ? ' ' + openAttrs : ''}>
       <td><span class="rh-type-badge rh-type-${escHtml(run.type)}">${escHtml(label)}</span></td>
       <td class="rh-site" title="${escHtml(run.domain)}">${escHtml(run.domain)}</td>
+      <td class="rh-col-scope">${_rhScopeCell(run)}</td>
       <td class="num">${escHtml(_rhFormatTimestamp(run.timestamp, { timeOnly: _rhGrouping() }))}
         <div class="muted-copy">${escHtml(_rhRelative(run.timestamp))}${noSave}</div></td>
       <td>${_rhStatusBadge(run.status)}</td>
-      <td class="num rh-num">${_rhNumCell(m.screens)}</td>
+      <td class="num rh-num">${_rhNumCell(m.screens)}${_rhSkippedNote(run)}</td>
       <td class="num rh-num">${_rhNumCell(m.conds)}</td>
       <td class="num rh-num">${_rhNumCell(m.docs)}</td>
-      <td>${openBtn}</td>
+      <td><span class="rh-act-cell" style="display:inline-flex;gap:6px;align-items:center">${openBtn}${delBtn}</span></td>
     </tr>`;
   });
   tbody.innerHTML = html;
+}
+
+// ---- 削除（2段階クリック） ----
+// 1 行を指す鍵。run_id を持たない古い行は "-" で表し、timestamp で特定する
+// （API 側と同じ約束。ここを変えるなら web/routes/history.py も同時に変える）。
+function _rhDelKey(run) {
+  return `${run.domain || ''}|${run.run_id || '-'}|${run.timestamp || ''}`;
+}
+
+function _rhDelButton(run) {
+  if (!run.domain) return '';
+  const key = _rhDelKey(run);
+  const pending = RH.pendingDel === key;
+  // 確認待ちは文言と色で示す。専用 CSS を足さずに済むよう配色だけ直接指定する。
+  const style = pending ? ' style="border-color:#c0392b;color:#c0392b"' : '';
+  const label = pending ? '本当に削除？' : '削除';
+  const title = pending
+    ? 'もう一度押すと削除します（数秒で元に戻ります）'
+    : 'この実行の履歴と、その回の成果物を削除します（最新の成果物は残ります）';
+  return `<button type="button" class="btn-outline-sm rh-del" data-act="del:${escHtml(key)}"`
+    + `${style} title="${escHtml(title)}">${escHtml(label)}</button>`;
+}
+
+function _rhClearPendingDel() {
+  if (_rhDelTimer) { clearTimeout(_rhDelTimer); _rhDelTimer = null; }
+  RH.pendingDel = '';
+}
+
+// 1 回目のクリック。押した行だけを確認待ちにし、放置したら元へ戻す
+// （確認待ちのまま残ると、次に押した人が意図せず削除してしまう）。
+function _rhArmDelete(key) {
+  _rhClearPendingDel();
+  RH.pendingDel = key;
+  _rhDelTimer = setTimeout(() => {
+    if (RH.pendingDel !== key) return;
+    _rhClearPendingDel();
+    _rhRenderTable();
+  }, RH_DEL_RESET_MS);
+  _rhRenderTable();
+}
+
+function _rhShowError(message) {
+  const host = document.getElementById('rh-error');
+  if (!host) return;
+  host.textContent = message || '';
+  host.style.display = message ? '' : 'none';
+}
+
+async function _rhRequestDelete(key) {
+  const [domain, runId, ts] = key.split('|');
+  const path = `/api/history/runs/${encodeURIComponent(domain)}/${encodeURIComponent(runId || '-')}`;
+  const url = ts ? `${path}?timestamp=${encodeURIComponent(ts)}` : path;
+  try {
+    const res = await fetch(url, { method: 'DELETE' });
+    const data = await res.json().catch(() => ({}));
+    // ok:false は「消せなかった」。握りつぶすと消えたように見えるので必ず出す。
+    if (!res.ok || !data.ok) throw new Error(data.error || '実行履歴を削除できませんでした');
+    await loadRunHistory();
+  } catch (e) {
+    _rhShowError(`削除に失敗しました: ${e.message}`);
+  }
+}
+
+function _rhDelete(key) {
+  if (RH.pendingDel !== key) { _rhArmDelete(key); return; }
+  _rhClearPendingDel();
+  _rhRenderTable();
+  _rhRequestDelete(key);
 }
 
 // ---- 操作（イベント委譲。行の描き直しでハンドラを付け直さない） ----
@@ -372,16 +480,11 @@ function _rhDispatch(act) {
   if (kind === 'status') { _rhSet('status', rest); return; }
   if (kind === 'from') { _rhSet('from', rest); return; }
   if (kind === 'to') { _rhSet('to', rest); return; }
+  if (kind === 'del') { _rhDelete(rest); return; }
   if (kind === 'run') {
     const [domain, runId] = rest.split('|');
     if (typeof openRunResult === 'function') openRunResult(domain, runId);
     return;
-  }
-  if (kind === 'url') { location.href = rest; return; }
-  if (kind === 'file') {
-    const [path, label] = rest.split('|');
-    if (typeof openFilePreview === 'function') openFilePreview(path, label);
-    else window.open('/preview?path=' + encodeURIComponent(path), '_blank');
   }
 }
 

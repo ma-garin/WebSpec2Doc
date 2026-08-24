@@ -45,6 +45,25 @@ function renderReport() {
   renderReportDetail(screens[0], allShots, idToScreen, fullByPageId);
 }
 
+// 証跡が無いとき、画像ブロックを黙って消さない。画面だけが出て証跡が無い状態は
+// 「撮れていない」のか「表示できていない」のか利用者に区別が付かないため、理由を書く。
+const _SHOT_MISSING_TEXT = {
+  not_snapshotted: '実行回ごとの証跡保存を入れる前の実行のため、この回のスクリーンショットは残っていません。'
+    + '最新の実行の画像を代わりに表示することはしません（別の実行の画面になるため）。',
+  capture_failed: 'この画面のスクリーンショットを撮影できませんでした。'
+    + '再解析すると取得できることがあります。',
+  not_captured: 'この解析ではスクリーンショットが保存されていません。',
+};
+
+function _shotMissingHtml(pageId) {
+  const reason = (typeof resultData === 'object' && resultData && resultData.screenshots_reason) || '';
+  const text = _SHOT_MISSING_TEXT[reason] || _SHOT_MISSING_TEXT.capture_failed;
+  return '<div class="rpt-shot-missing" role="status">'
+    + `<strong>スクリーンショットがありません（${escHtml(pageId)}）</strong>`
+    + `<span>${escHtml(text)}</span>`
+    + '</div>';
+}
+
 function renderReportDetail(sc, allShots, idToScreen, fullByPageId) {
   const detail = document.getElementById('rpt-detail');
   if (!detail) return;
@@ -53,9 +72,15 @@ function renderReportDetail(sc, allShots, idToScreen, fullByPageId) {
   const shotSrc = shotPath ? `/preview?path=${encodeURIComponent(shotPath)}` : '';
   const fullPath = (fullByPageId || {})[sc.page_id];
   const lightboxSrc = fullPath ? `/preview?path=${encodeURIComponent(fullPath)}` : shotSrc;
+  // 項目名クリックでスクショ上の位置を指すため、画像を相対配置のラッパで包む。
+  // ハイライト枠は同じラッパ内に絶対配置する（report.html の #shot-<page_id> と同じ骨格）。
   const shotHtml = shotPath
-    ? `<img src="${escHtml(shotSrc)}" class="rpt-screenshot" loading="lazy" alt="${escHtml(sc.page_id)}" onclick="openLightbox('${escHtml(lightboxSrc)}')" /><p class="rpt-screenshot-caption">クリックで全画面表示</p>`
-    : '';
+    ? `<div class="rpt-shot-wrap" id="rpt-shot-wrap" style="position:relative;display:inline-block;max-width:100%">`
+      + `<img src="${escHtml(shotSrc)}" class="rpt-screenshot" loading="lazy" alt="${escHtml(sc.page_id)}" onclick="openLightbox('${escHtml(lightboxSrc)}')" />`
+      + `<div class="rpt-shot-hl" id="rpt-shot-hl" style="display:none;position:absolute;border:2px solid #DA1E28;`
+      + `background:rgba(218,30,40,.14);border-radius:3px;pointer-events:none;transition:all .15s ease"></div>`
+      + `</div><p class="rpt-screenshot-caption">クリックで全画面表示／項目名を押すと位置を表示</p>`
+    : _shotMissingHtml(sc.page_id);
 
   // 「P003」等の内部IDのままでは分かりにくいため、可能な限り画面名で表示する
   const screenLabel = id => (idToScreen && idToScreen[id] && idToScreen[id].title) || id;
@@ -88,8 +113,18 @@ function renderReportDetail(sc, allShots, idToScreen, fullByPageId) {
         const condHtml = condCount
           ? `<details class="rpt-cond-expand"><summary class="rpt-cond-summary">${condCount}件</summary><div class="rpt-cond-pills">${(f.test_conditions || []).map(c => `<span class="cond-pill ${condClass(c)}">${escHtml(c)}</span>`).join('')}</div></details>`
           : '—';
+        // bbox を持つ項目だけ押せるようにする。持たない項目を押せるように
+        // 見せると、押しても何も起きない（何が押せるか分からなくなる）。
+        const bb = (f.evidence && f.evidence.bbox) || null;
+        const nameLabel = escHtml(f.name || '(無名)');
+        const nameCell = (Array.isArray(bb) && bb.length === 4)
+          ? `<button type="button" class="rpt-field-locate" data-bbox="${escHtml(bb.join(','))}"`
+            + ` title="スクリーンショット上の位置を表示します"`
+            + ` style="all:unset;cursor:pointer;font-weight:600;color:var(--primary);text-decoration:underline dotted">`
+            + `${nameLabel}</button>`
+          : nameLabel;
         return `<tr>
-          <td style="font-weight:600">${escHtml(f.name || '(無名)')}</td>
+          <td style="font-weight:600">${nameCell}</td>
           <td>${escHtml(f.field_type || '')}</td>
           <td style="text-align:center">${f.required ? '<span style="color:var(--critical);font-weight:700">●</span>' : ''}</td>
           <td style="font-size:11px">${escHtml(constraintText(f)) || '—'}</td>
@@ -119,5 +154,42 @@ function renderReportDetail(sc, allShots, idToScreen, fullByPageId) {
       <code class="rpt-url">${escHtml(sc.url || '')}</code>
     </div>` +
     shotHtml + transHtml + formsHtml;
+
+  _wireFieldLocate(detail);
+}
+
+// 項目名クリックでスクショ上の bbox をハイライトする。
+// report.html には以前からある仕組み（html_reporter.py の _evidence_script）だが、
+// アプリの「画面と仕様」タブには移植されておらず、押しても何も起きなかった。
+function _wireFieldLocate(detail) {
+  const hl = detail.querySelector('#rpt-shot-hl');
+  const img = detail.querySelector('.rpt-screenshot');
+  if (!hl || !img) return;
+
+  // bbox はスクショの実寸（naturalWidth）基準。表示は縮小されるため必ず換算する。
+  const place = (bbox) => {
+    if (!img.naturalWidth || !img.naturalHeight) return false;
+    const sx = img.clientWidth / img.naturalWidth;
+    const sy = img.clientHeight / img.naturalHeight;
+    hl.style.left = (bbox[0] * sx) + 'px';
+    hl.style.top = (bbox[1] * sy) + 'px';
+    hl.style.width = (bbox[2] * sx) + 'px';
+    hl.style.height = (bbox[3] * sy) + 'px';
+    hl.style.display = 'block';
+    return true;
+  };
+
+  detail.querySelectorAll('.rpt-field-locate').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const bbox = String(btn.dataset.bbox || '').split(',').map(Number);
+      if (bbox.length !== 4 || bbox.some(n => !Number.isFinite(n))) return;
+      // 画像がまだ読めていないと換算できない。読み込み完了を待って置き直す。
+      if (!place(bbox)) {
+        img.addEventListener('load', () => place(bbox), { once: true });
+      }
+      // 画面はスクロールさせない。押した項目の行から視線が外れ、
+      // どの項目を見ていたか分からなくなるため（scrollIntoView は入れない）。
+    });
+  });
 }
 

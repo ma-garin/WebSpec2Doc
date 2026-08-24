@@ -25,6 +25,36 @@ TOOL_VERSION = "1.0"
 DEFAULT_CRAWL_INTERVAL_SEC = 1.0
 CRAWL_INTERVAL_ENV = "WEBSPEC2DOC_CRAWL_INTERVAL_SEC"
 
+# ローカル対象に適用する間隔（秒）。Crawl-Delay は第三者のサーバを守るための
+# 礼儀であって、手元で動かしているローカル/プライベート環境に適用する意味がない。
+# 明示設定（CRAWL_INTERVAL_ENV）があるときは、そちらを尊重してこの値は使わない。
+LOCAL_CRAWL_INTERVAL_SEC = 0.0
+
+
+def politeness_exempt(origin_or_url: str) -> bool:
+    """礼儀待ち（間隔制御・Crawl-Delay）を免除してよい対象かを返す。
+
+    免除するのは「WEBSPEC2DOC_ALLOW_LOCAL=1 で明示的にローカル対象を許可していて、
+    かつ対象がループバック/プライベートアドレス」の場合だけ。外部ホストに対しては
+    robots.txt の Crawl-Delay を従来どおり全面的に尊重する。
+    """
+    if not origin_or_url:
+        return False
+    # 循環 import を避けるため関数内で解決する（url_safety 側は politeness を参照しない）。
+    from crawler.url_safety import is_local_target, local_targets_allowed
+
+    return local_targets_allowed() and is_local_target(origin_or_url)
+
+
+def interval_for_target(origin_or_url: str) -> float | None:
+    """対象に適用する間隔（秒）。既定のままでよい場合は None を返す。"""
+    if not politeness_exempt(origin_or_url):
+        return None
+    if os.environ.get(CRAWL_INTERVAL_ENV, ""):
+        # 利用者が明示した間隔は、ローカル対象でも上書きしない。
+        return None
+    return LOCAL_CRAWL_INTERVAL_SEC
+
 # 429/503 受信時の exponential backoff 設定
 BACKOFF_INITIAL_SEC = 2.0
 BACKOFF_MAX_SEC = 60.0
@@ -105,9 +135,19 @@ class TokenBucketLimiter:
         """現在のリクエスト間隔（秒）を返す。"""
         return self._interval_sec
 
-    def apply_crawl_delay(self, crawl_delay: float | None) -> None:
-        """robots.txt の Crawl-Delay と比較し、長い方を間隔として採用する。"""
+    def apply_crawl_delay(self, crawl_delay: float | None, origin: str = "") -> None:
+        """robots.txt の Crawl-Delay と比較し、長い方を間隔として採用する。
+
+        origin が礼儀待ちの免除対象（ローカル許可済み）のときは採用しない。
+        """
         if crawl_delay is None:
+            return
+        if origin and politeness_exempt(origin):
+            logger.info(
+                "ローカル対象のため robots.txt の Crawl-Delay (%s 秒) は適用しません: %s",
+                crawl_delay,
+                origin,
+            )
             return
         if crawl_delay > self._interval_sec:
             logger.info(
@@ -177,7 +217,7 @@ class OriginRateLimiter:
             # 既に生成済みの limiter にも反映する
             limiter = self._limiters.get(origin)
         if limiter is not None:
-            limiter.apply_crawl_delay(crawl_delay)
+            limiter.apply_crawl_delay(crawl_delay, origin)
 
     def _origin_of(self, url: str) -> str:
         from urllib.parse import urlparse
@@ -189,10 +229,13 @@ class OriginRateLimiter:
         with self._lock:
             limiter = self._limiters.get(origin)
             if limiter is None:
+                override = interval_for_target(origin)
                 limiter = TokenBucketLimiter(
-                    self._default_interval_sec, clock=self._clock, sleeper=self._sleeper
+                    self._default_interval_sec if override is None else override,
+                    clock=self._clock,
+                    sleeper=self._sleeper,
                 )
-                limiter.apply_crawl_delay(self._crawl_delays.get(origin))
+                limiter.apply_crawl_delay(self._crawl_delays.get(origin), origin)
                 self._limiters[origin] = limiter
         return limiter
 

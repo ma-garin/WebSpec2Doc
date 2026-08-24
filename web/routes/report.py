@@ -286,6 +286,30 @@ def _result_source(domain: str, domain_dir: Path, run_id: str) -> _ResultSource 
     return _ResultSource(base_dir=base, domain_dir=domain_dir, run_id=run_id)
 
 
+def _screenshot_reason(base_dir: Path, run_id: str, has_shots: bool) -> str:
+    """証跡（スクリーンショット）が欠けている理由コードを返す。欠けていなければ空。
+
+    - not_snapshotted: 実行回ごとの証跡退避を入れる前の実行。run に screenshots が無い
+    - capture_failed:  退避はされたが、撮影できなかった画面がある
+    - not_captured:    最新側で証跡が 1 枚も残っていない
+    """
+    if run_id:
+        meta_path = base_dir / "meta.json"
+        if meta_path.is_file():
+            try:
+                meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                meta = {}
+            recorded = meta.get("screenshots")
+            if isinstance(recorded, dict):
+                if recorded.get("missing"):
+                    return "capture_failed"
+                return ""
+        # 記録が無い＝退避処理を入れる前に作られた実行回。
+        return "" if has_shots else "not_snapshotted"
+    return "" if has_shots else "not_captured"
+
+
 @bp.get("/api/result")
 def api_result() -> dict | tuple[dict, int]:
     """結果ページのデータ源。
@@ -327,10 +351,15 @@ def api_result() -> dict | tuple[dict, int]:
             return ""
         return str(resolved)
 
-    # スクリーンショットとスナップショットは実行回へ退避していない（容量のため）。
-    # 実行回を見ているときは、その回のものが無いことを空で示す。
+    # スクリーンショットは実行回へも退避している（ビューポート版のみ。run_store.py 参照）。
+    # 以前は退避しておらず、実行回経由で開くと「画面と仕様」のスクショが常に空だった。
+    # スナップショットは容量のため退避しないので、件数は current 側を見る。
     shots_dir = base_dir / "screenshots"
     shots = sorted(shots_dir.glob("*.png")) if shots_dir.is_dir() else []
+    # 証跡が欠けているとき、画面側で黙って画像を消さずに理由を出せるようにする。
+    # どの画面が欠けているかは画面側が screens と突き合わせて判る。ここでは
+    # 「なぜ無いのか」だけを返す。
+    shots_reason = _screenshot_reason(base_dir, run_id, bool(shots))
     snap_dir = domain_dir / "snapshots"
     snapshot_count = len(list(snap_dir.glob("*.json"))) if snap_dir.is_dir() else 0
     if source.backfills_features:
@@ -366,6 +395,7 @@ def api_result() -> dict | tuple[dict, int]:
         "playwright_run_at": run_result.get("ran_at", ""),
         "testcase_run": run_result,
         "screenshots": [path for s in shots if (path := path_of(str(s.relative_to(base_dir))))],
+        "screenshots_reason": shots_reason,
         # 同梱サンプル（P3-1）かどうか。画面側で「これはサンプルです」と明示するために使う。
         # 予約ドメインの判定はサーバを正本にし、画面側に定数を二重管理させない。
         "is_sample": domain == SAMPLE_DOMAIN,

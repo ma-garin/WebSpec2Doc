@@ -4,6 +4,7 @@ from dataclasses import asdict
 from pathlib import Path
 
 from flask import Blueprint, Response, request
+from werkzeug.wrappers import Response as BaseResponse
 
 from web.auth import require_admin
 from web.services.admin_audit import append_admin_audit, read_admin_audit
@@ -23,7 +24,7 @@ BACKUP_GUIDE_PATH = Path(__file__).resolve().parents[2] / "docs" / "OPERATIONS_B
 
 
 @bp.before_request
-def _admin_guard():
+def _admin_guard() -> BaseResponse | None:
     return require_admin()
 
 

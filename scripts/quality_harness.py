@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -32,6 +33,7 @@ UNREGISTERED_ALLOWLIST = {
     "web/env_store.py",
     "web/audit_context.py",
     "web/routes/pages.py",  # SPAシェルの配信のみ（機能ロジックを持たない）
+    "src/cli_args.py",  # CLI 引数の宣言のみ（分岐・処理を持たない）
     # LLM 補完は任意経路。未設定時はルールベースで全機能が成立するため、
     # 単独の機能ではなく差し替え可能なアダプタとして扱う。
     "src/llm/openai_client.py",
@@ -43,6 +45,30 @@ UNREGISTERED_ALLOWLIST = {
     "src/doctor.py",  # 環境診断CLI（製品機能ではない）
     "src/crawler/playwright_runtime.py",  # ブラウザ実行環境の解決（全機能の土台）
 }
+# ── 未実装 UI（WIP）の検出 ────────────────────────────────────────────────
+# 「画面にボタンはあるが中身は無い」を機械検出するための唯一の正規マーカー。
+# 日本語の「準備中」「未実装」は製品ドメインの語彙でもあり（例: レポートの
+# 「未実装疑い」分類、実行状態ラベルの「準備中」）、文字列検索では区別できない。
+# そのため *属性* を正規マーカーとし、契約側の wip_ui 宣言と 1:1 で突き合わせる。
+#
+# 経緯: 2026-08-24。_validate_no_unimplemented_user_paths の探索語が英語のみで、
+# このリポジトリが実際に使っている data-wip / 準備中 を 1 件も検出できず、
+# 未実装 UI を 22 箇所抱えた機能が status="implemented" のまま PASS していた。
+WIP_TAG_RE = re.compile(r'<[^>]*\bdata-wip\s*=\s*"[^"]*"[^>]*>', re.S)
+WIP_ID_RE = re.compile(r'\bid\s*=\s*"([^"]+)"')
+WIP_ACTION_RE = re.compile(r'\bdata-ta-action\s*=\s*"([^"]+)"')
+
+# JS 側の「未実装」ユーザー可視メッセージ。HTML の data-wip と違い宣言と
+# 突き合わせられないため、既存分を凍結して**増加のみ**を失敗させる（ラチェット）。
+# scripts/check_e2e_conventions.py と同じ方式。減らしたらこの値も下げること。
+#
+# 現在の 3 件:
+#   static/js/ta-codefix.js      対象ファイル特定（コード連携が未接続）
+#   static/js/ta-completion.js   承認の記録（バックエンド未実装）
+#   static/js/ta-implementation.js  ケース一覧の取り込み（対応API無し）
+WIP_MESSAGE_RE = re.compile(r"ta-wip-note|準備中です|未実装です|準備中（")
+WIP_MESSAGE_BASELINE = 3
+
 ALLOWED_STATUS = {"implemented", "partial", "planned"}
 FORBIDDEN_STATUS = {"ui-only"}
 
@@ -94,10 +120,10 @@ def _validate_feature(feature: dict[str, Any], errors: list[str]) -> None:
         for path_text in feature.get(key, []):
             _require_path(path_text, errors)
 
-    if status == "implemented":
+    if status in {"implemented", "partial"}:
         has_execution_path = bool(feature.get("route_files")) or bool(feature.get("core_files"))
         if not has_execution_path:
-            errors.append(f"{feature_id}: implemented feature lacks route_files/core_files")
+            errors.append(f"{feature_id}: {status} feature lacks route_files/core_files")
 
     if risk_level in RISK_LEVELS_REQUIRING_FAILURE_TESTS:
         if not feature.get("failure_modes"):
@@ -131,6 +157,161 @@ def _validate_no_unimplemented_user_paths(errors: list[str]) -> None:
                     errors.append(
                         f"suspicious incomplete user path: {_rel(path)} contains {term!r}"
                     )
+
+
+def _wip_control_key(tag: str) -> str | None:
+    """data-wip が付いた要素の識別子を返す。id を優先し、無ければ data-ta-action。
+
+    どちらも無い要素は契約と突き合わせられないため、呼び出し側でエラーにする。
+    """
+    match = WIP_ID_RE.search(tag)
+    if match:
+        return match.group(1)
+    match = WIP_ACTION_RE.search(tag)
+    if match:
+        return f"action:{match.group(1)}"
+    return None
+
+
+def _scan_wip_controls(errors: list[str]) -> dict[str, list[str]]:
+    """templates 配下の data-wip 要素を {テンプレート相対パス: [識別子...]} で返す。"""
+    found: dict[str, list[str]] = {}
+    templates_root = ROOT / "templates"
+    if not templates_root.is_dir():
+        return found
+    for path in sorted(templates_root.rglob("*.html")):
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        rel = _rel(path)
+        for match in WIP_TAG_RE.finditer(text):
+            key = _wip_control_key(match.group(0))
+            if key is None:
+                errors.append(
+                    f"unidentifiable WIP control: {rel} の data-wip 要素に id / data-ta-action が無い"
+                    "（契約の wip_ui と突き合わせられないため、識別子を付けること）"
+                )
+                continue
+            found.setdefault(rel, []).append(key)
+    return found
+
+
+def _validate_wip_ui(features: list[dict[str, Any]], errors: list[str]) -> None:
+    """未実装 UI（data-wip）が契約で宣言され、status と整合することを確認する。
+
+    これが無いと「UI だけ置いて中身は無い」機能を status="implemented" と
+    宣言したままハーネスが PASS を返す（2026-08-24 に実際に発生していた。
+    テスト活動支援が未実装 UI 22 箇所を抱えたまま実装済みと宣言されていた）。
+
+    規則:
+      1. data-wip を持つテンプレートは、いずれかの機能の ui_files に属すること
+      2. 未実装 UI を持つ機能は status="partial"（"implemented" を名乗らせない）
+      3. 検出した識別子はすべて wip_ui に理由付きで宣言すること
+      4. wip_ui に宣言があるのに検出されない＝実装済みの残骸。宣言を消すこと
+    """
+    detected = _scan_wip_controls(errors)
+
+    owner: dict[str, str] = {}
+    by_id: dict[str, dict[str, Any]] = {}
+    for feature in features:
+        if not isinstance(feature, dict):
+            continue
+        feature_id = str(feature.get("feature_id", "<missing>"))
+        by_id[feature_id] = feature
+        for path_text in feature.get("ui_files", []):
+            owner[str(path_text)] = feature_id
+
+    # 1. 所有者のいない未実装 UI
+    detected_by_feature: dict[str, set[str]] = {}
+    for rel, keys in detected.items():
+        feature_id = owner.get(rel)
+        if feature_id is None:
+            errors.append(
+                f"unowned WIP control: {rel} に data-wip があるが、どの機能の ui_files にも属していない"
+                "（quality/feature_contracts.yml の ui_files へ登録すること）"
+            )
+            continue
+        detected_by_feature.setdefault(feature_id, set()).update(keys)
+
+    for feature_id, feature in by_id.items():
+        status = feature.get("status")
+        raw_entries = feature.get("wip_ui", [])
+        if not isinstance(raw_entries, list):
+            errors.append(f"{feature_id}: wip_ui はリストで宣言すること")
+            raw_entries = []
+
+        declared: set[str] = set()
+        for entry in raw_entries:
+            if not isinstance(entry, dict):
+                errors.append(
+                    f"{feature_id}: wip_ui の要素は control と reason を持つ object にすること"
+                )
+                continue
+            control = entry.get("control")
+            if not control:
+                errors.append(f"{feature_id}: wip_ui の要素に control が無い")
+                continue
+            if not entry.get("reason"):
+                errors.append(f"{feature_id}: wip_ui[{control}] に reason（未実装の理由）が無い")
+            declared.add(str(control))
+
+        found = detected_by_feature.get(feature_id, set())
+
+        # 2. 未実装 UI を持つ機能は implemented を名乗れない
+        if found and status == "implemented":
+            errors.append(
+                f"{feature_id}: 未実装 UI が {len(found)} 件あるのに status='implemented'"
+                "（status を 'partial' にし、wip_ui へ理由付きで宣言すること）"
+            )
+
+        # 3. 未宣言の未実装 UI
+        for control in sorted(found - declared):
+            errors.append(
+                f"{feature_id}: 未宣言の未実装 UI '{control}'"
+                "（quality/feature_contracts.yml の wip_ui へ control と reason を追加すること）"
+            )
+
+        # 4. 実装済みなのに残った宣言
+        for control in sorted(declared - found):
+            errors.append(
+                f"{feature_id}: wip_ui の '{control}' に対応する data-wip が画面に無い"
+                "（実装済みなら宣言を削除すること。未実装 UI の宣言は残骸を許さない）"
+            )
+
+        # partial は「何が未完成か」を必ず示す
+        if status == "partial" and not declared and not feature.get("partial_reason"):
+            errors.append(
+                f"{feature_id}: status='partial' には wip_ui か partial_reason が必要"
+                "（どこが未完成かを宣言すること）"
+            )
+
+
+def _validate_wip_message_ratchet(errors: list[str]) -> None:
+    """JS 側の「未実装」ユーザー可視メッセージを凍結し、増加のみ失敗させる。
+
+    HTML の data-wip と違い宣言と 1:1 で突き合わせられないため、
+    scripts/check_e2e_conventions.py と同じラチェット方式で増加だけを止める。
+    """
+    js_root = ROOT / "static" / "js"
+    if not js_root.is_dir():
+        return
+    hits: list[str] = []
+    for path in sorted(js_root.rglob("*.js")):
+        for lineno, line in enumerate(
+            path.read_text(encoding="utf-8", errors="ignore").splitlines(), 1
+        ):
+            if WIP_MESSAGE_RE.search(line):
+                hits.append(f"{_rel(path)}:{lineno}")
+
+    if len(hits) > WIP_MESSAGE_BASELINE:
+        errors.append(
+            f"未実装メッセージが JS に {len(hits)} 件（許容 {WIP_MESSAGE_BASELINE} 件）: "
+            + ", ".join(hits)
+            + "。新しい未実装経路を画面に足さないこと"
+        )
+    elif len(hits) < WIP_MESSAGE_BASELINE:
+        errors.append(
+            f"未実装メッセージが JS に {len(hits)} 件（許容 {WIP_MESSAGE_BASELINE} 件）。減っています。"
+            f"scripts/quality_harness.py の WIP_MESSAGE_BASELINE を {len(hits)} に下げてください"
+        )
 
 
 def _validate_all_modules_registered(features: list[dict[str, Any]], errors: list[str]) -> None:
@@ -180,7 +361,9 @@ def main() -> int:
 
     if isinstance(features, list):
         _validate_all_modules_registered(features, errors)
+        _validate_wip_ui(features, errors)
     _validate_no_unimplemented_user_paths(errors)
+    _validate_wip_message_ratchet(errors)
 
     if errors:
         print("Functional Integrity Harness: FAIL")

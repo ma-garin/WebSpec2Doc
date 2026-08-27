@@ -14,10 +14,34 @@ ignore = ["E501"]  # 行長は black に委ねる
 [tool.mypy]
 python_version = "3.12"
 files = ["src", "app.py", "web"]
+
+# mypy_path/explicit_package_bases が無いと、src 配下の相互 import
+# （`from crawler.page_crawler import ...` 等）が解決できず、
+# ignore_missing_imports によって**すべて Any 扱いで素通り**していた。
+# 追加した結果、それまで見えていなかった型エラーが 25 件出た（2026-08-24 に修正済み）。
+mypy_path = "src"
+explicit_package_bases = true
+
 ignore_missing_imports = true   # networkx / openpyxl / playwright のスタブ未提供
 warn_unused_ignores = true
 warn_redundant_casts = true
 no_implicit_optional = true
+
+# ── 厳格化（すべて現状 0 エラー。緩める変更は入れない） ──────────────
+check_untyped_defs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_untyped_calls = true
+disallow_subclassing_any = true
+disallow_untyped_decorators = true
+strict_equality = true
+
+# ── 次のラチェット段（2026-08-24 実測のエラー件数） ────────────────
+# 有効化するときは件数を 0 にしてからフラグを足すこと。
+#   no_implicit_reexport = true   # 2 件（別モジュールの非公開属性を跨いで参照）
+#   warn_unreachable     = true   # 7 件（到達不能コード。実際の死んだ分岐を含む）
+#   warn_return_any      = true   # 54 件
+#   disallow_any_generics = true  # 321 件
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

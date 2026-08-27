@@ -183,8 +183,10 @@ def api_crawl(domain: str) -> tuple[dict, int] | dict:
             config = load_site(domain, _out())
             if config and config.urls:
                 site_url = config.urls[0]
-        except Exception:
-            pass
+        except Exception as exc:  # noqa: BLE001
+            # 読めなかった事実を残す。握りつぶすと、登録済みサイトなのに
+            # 「url は必須です」という無関係な 400 だけが返り、原因を追えない。
+            logger.warning("site.json を読めませんでした（domain=%s）: %s", domain, exc)
     if not site_url:
         return {"error": "url は必須です。body に url を指定してください。"}, 400
     if not _valid_url(site_url):

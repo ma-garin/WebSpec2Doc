@@ -127,6 +127,6 @@ def build_rule_conditions(
         if not conditions:
             continue
         field_name = _match_field_for_rule(rule, pages_by_id.get(page_id))
-        key = (page_id, field_name)
-        injected.setdefault(key, []).extend(conditions)
+        injection_key = (page_id, field_name)
+        injected.setdefault(injection_key, []).extend(conditions)
     return {key: tuple(value) for key, value in injected.items()}

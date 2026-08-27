@@ -9,6 +9,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from flask import Blueprint, request
+from werkzeug.wrappers import Response as BaseResponse
 
 from web.audit_context import record_admin_event
 from web.config import OUTPUT_DIR
@@ -23,7 +24,7 @@ INSTANCE_DIR = Path("instance")
 
 
 @bp.before_request
-def _schedule_admin_guard():
+def _schedule_admin_guard() -> BaseResponse | None:
     if request.method in {"POST", "PUT", "PATCH", "DELETE"}:
         from web.auth import require_admin
 

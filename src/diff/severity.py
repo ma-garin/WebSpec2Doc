@@ -39,90 +39,90 @@ def score_changes(
     impact_counts = _impact_counts(impacted or [])
     scored: list[dict[str, Any]] = []
 
-    for change in diff_result.removed_pages:
+    for removed_page in diff_result.removed_pages:
         scored.append(
             _entry(
                 "removed_page",
                 SEVERITY_BREAKING,
                 "画面が削除され、到達できない経路が発生",
-                str(change.url),
-                str(change.url),
+                str(removed_page.url),
+                str(removed_page.url),
                 impact_counts,
             )
         )
 
-    for change in diff_result.added_pages:
+    for added_page in diff_result.added_pages:
         scored.append(
             _entry(
                 "added_page",
                 SEVERITY_INFO,
                 "画面の追加（既存経路への影響なし）",
-                str(change.url),
-                str(change.url),
+                str(added_page.url),
+                str(added_page.url),
                 impact_counts,
             )
         )
 
-    for change in diff_result.field_changes:
-        severity, reason = _field_change_verdict(change)
+    for field_change in diff_result.field_changes:
+        severity, reason = _field_change_verdict(field_change)
         scored.append(
             _entry(
                 "field_change",
                 severity,
                 reason,
-                str(change.page_url),
-                f"{change.page_url} / {change.field_name}",
+                str(field_change.page_url),
+                f"{field_change.page_url} / {field_change.field_name}",
                 impact_counts,
             )
         )
 
-    for change in diff_result.attribute_diffs:
-        severity, reason = _attribute_verdict(change)
+    for attribute_diff in diff_result.attribute_diffs:
+        severity, reason = _attribute_verdict(attribute_diff)
         scored.append(
             _entry(
                 "attribute_diff",
                 severity,
                 reason,
-                str(change.page_url),
-                f"{change.page_url} / {change.field_name}.{change.attribute}",
+                str(attribute_diff.page_url),
+                f"{attribute_diff.page_url} / {attribute_diff.field_name}.{attribute_diff.attribute}",
                 impact_counts,
             )
         )
 
-    for change in diff_result.link_changes:
-        removed = str(change.change_type) == CHANGE_REMOVED
+    for link_change in diff_result.link_changes:
+        removed = str(link_change.change_type) == CHANGE_REMOVED
         scored.append(
             _entry(
                 "link_change",
                 SEVERITY_WARNING if removed else SEVERITY_INFO,
                 "遷移リンクの削除により到達経路が減少" if removed else "遷移リンクの追加",
-                str(change.page_url),
-                f"{change.page_url} → {change.link}",
+                str(link_change.page_url),
+                f"{link_change.page_url} → {link_change.link}",
                 impact_counts,
             )
         )
 
-    for change in diff_result.title_changes:
+    for title_change in diff_result.title_changes:
         scored.append(
             _entry(
                 "title_change",
                 SEVERITY_INFO,
                 "表示文言の変化",
-                str(change.url),
-                str(change.url),
+                str(title_change.url),
+                str(title_change.url),
                 impact_counts,
             )
         )
 
-    for change in diff_result.api_changes:
-        severity, reason = _api_verdict(str(change.change_type))
+    for api_change in diff_result.api_changes:
+        severity, reason = _api_verdict(str(api_change.change_type))
         scored.append(
             _entry(
                 "api_change",
                 severity,
                 reason,
-                str(change.page_url),
-                f"{change.method} {change.path}",
+                str(api_change.page_url),
+                f"{api_change.method} {api_change.path}",
                 impact_counts,
             )
         )

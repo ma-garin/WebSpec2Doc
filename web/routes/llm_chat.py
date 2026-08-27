@@ -26,7 +26,11 @@ from web.validation import _valid_domain
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 from llm.activity_log import record_llm_activity  # noqa: E402
-from llm.openai_client import LLMUnavailableError, resolve_endpoint  # noqa: E402
+from llm.openai_client import (  # noqa: E402
+    LLMEndpoint,  # noqa: E402
+    LLMUnavailableError,
+    resolve_endpoint,
+)
 from llm.prompt_guard import QA_PRINCIPLES, untrusted_block  # noqa: E402
 
 logger = logging.getLogger(__name__)
@@ -89,7 +93,7 @@ def _observation_summary(domain: str) -> str | None:
     return "\n".join(lines)
 
 
-def _chat(endpoint, messages: list[dict[str, str]]) -> str:
+def _chat(endpoint: LLMEndpoint, messages: list[dict[str, str]]) -> str:
     payload = {
         "model": endpoint.model,
         "messages": messages,

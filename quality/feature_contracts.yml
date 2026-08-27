@@ -791,7 +791,8 @@
       "route_files": [],
       "core_files": [
         "src/analyzer/bva.py",
-        "src/main.py"
+        "src/main.py",
+        "src/output_writer.py"
       ],
       "symbols": [
         "derive_boundary_cases",
@@ -824,7 +825,8 @@
       "core_files": [
         "src/capture/finding_reporter.py",
         "src/capture/session_recorder.py",
-        "src/main.py"
+        "src/main.py",
+        "src/output_writer.py"
       ],
       "symbols": [
         "build_finding_tickets",
@@ -863,6 +865,7 @@
       "core_files": [
         "src/generator/test_plan_generator.py",
         "src/main.py",
+        "src/output_writer.py",
         "web/services/qa/doc_generator.py",
         "web/services/qa/advanced_generator.py",
         "web/services/qa/advanced_html.py",
@@ -951,7 +954,8 @@
         "src/generator/comparison_reporter.py",
         "src/analyzer/text_similarity.py",
         "web/services/comparison_workspace.py",
-        "src/main.py"
+        "src/main.py",
+        "src/output_writer.py"
       ],
       "symbols": [
         "match_page_pairs",
@@ -1013,6 +1017,7 @@
         "src/generator/ux_reporter.py",
         "src/generator/html_reporter.py",
         "src/main.py",
+        "src/output_writer.py",
         "src/generator/accessibility_reporter.py",
         "src/ux/usability_smells.py"
       ],
@@ -1153,6 +1158,7 @@
       "route_files": [],
       "core_files": [
         "src/main.py",
+        "src/output_writer.py",
         "src/ci_drift.py",
         "scripts/notify_drift.py",
         "web/services/drift_summary.py",
@@ -2389,7 +2395,97 @@
       "feature_id": "test_activity_support",
       "name": "テスト活動支援（System 02・12工程）",
       "risk_level": "high",
-      "status": "implemented",
+      "status": "partial",
+      "wip_ui": [
+        {
+          "control": "ta-fix-pr",
+          "reason": "修正PRの作成。GitHub 接続情報が無く、PR を作る先が存在しない"
+        },
+        {
+          "control": "ta-defect-sync",
+          "reason": "欠陥の GitHub Issue 同期。GitHub 接続情報が無い"
+        },
+        {
+          "control": "ta-impl-pr",
+          "reason": "実装PRの作成。GitHub 接続情報が無い"
+        },
+        {
+          "control": "ta-exec-schedule",
+          "reason": "実行のスケジュール登録。定期実行基盤へ未接続"
+        },
+        {
+          "control": "ta-impl-import",
+          "reason": "設計工程のケース取り込み。対応 API が未実装（static/js/ta-implementation.js）"
+        },
+        {
+          "control": "ta-int-code-connect",
+          "reason": "ソースコード連携の接続。接続 API が未実装（static/js/ta-integrations.js）"
+        },
+        {
+          "control": "ta-int-code-save",
+          "reason": "ソースコード連携先の保存。接続 API が未実装"
+        },
+        {
+          "control": "ta-int-code-zip-file",
+          "reason": "ソースコードZIPの取り込み。受け口 API が未実装"
+        },
+        {
+          "control": "ta-int-standard-connect",
+          "reason": "開発標準の接続。接続 API が未実装"
+        },
+        {
+          "control": "ta-int-standard-upload",
+          "reason": "開発標準の登録。受け口 API が未実装"
+        },
+        {
+          "control": "ta-int-standard-kind",
+          "reason": "開発標準の種別指定。登録 API が未実装のため入力ごと無効"
+        },
+        {
+          "control": "ta-int-standard-file",
+          "reason": "開発標準ファイルの指定。登録 API が未実装"
+        },
+        {
+          "control": "ta-int-standard-url",
+          "reason": "開発標準URLの指定。登録 API が未実装"
+        },
+        {
+          "control": "ta-int-standard-local-path",
+          "reason": "開発標準ローカルパスの指定。登録 API が未実装"
+        },
+        {
+          "control": "ta-plan-save",
+          "reason": "計画の下書き保存。永続化先が無く再読込で消える（12工程の入口が揮発する）"
+        },
+        {
+          "control": "ta-plan-generate",
+          "reason": "AIによる計画草案生成。生成処理が未実装"
+        },
+        {
+          "control": "action:plan-scope-in-import",
+          "reason": "仕様書からの対象スコープ取り込み。取り込み処理が未実装"
+        },
+        {
+          "control": "ta-plan-estimate-recalc",
+          "reason": "工数見積の自動再計算。算出ロジックが未実装"
+        },
+        {
+          "control": "ta-detail-generate",
+          "reason": "AIによるテスト条件生成。/api/ta/ai/generate は存在するが戦略画面へ未配線"
+        },
+        {
+          "control": "ta-detail-reset",
+          "reason": "テスト条件を計画の既定へ戻す操作。差し戻し処理が未実装"
+        },
+        {
+          "control": "ta-detail-condition-add",
+          "reason": "テスト条件の手動追加。追加処理が未実装"
+        },
+        {
+          "control": "ta-detail-expand",
+          "reason": "テスト技法によるテスト条件の展開。展開処理が未実装"
+        }
+      ],
       "ui_files": [
         "templates/partials/view-ta-analysis.html",
         "templates/partials/view-ta-codefix.html",

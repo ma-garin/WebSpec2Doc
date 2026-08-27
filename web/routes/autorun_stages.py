@@ -36,6 +36,7 @@ from autorun.stages import (  # noqa: E402
     STATUS_APPROVED,
     STATUS_PENDING,
     STATUS_SKIPPED,
+    Observation,
     Pipeline,
     StageItem,
     build_stage,
@@ -111,7 +112,7 @@ def _save_pipeline(domain: str, pipeline: Pipeline) -> None:
     path.write_text(json.dumps(pipeline.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def _observation(domain: str, url: str, payload: dict[str, Any]):
+def _observation(domain: str, url: str, payload: dict[str, Any]) -> Observation:
     return observation_from_report(
         _load_report(domain),
         url=url,
@@ -543,6 +544,7 @@ def api_proceed() -> tuple[dict, int] | dict:
     from web.routes.auto_run import current_awaiting_stage, release_stage_gate
 
     awaiting = current_awaiting_stage(job_id, domain)
+    required: tuple[str, ...]
     if awaiting:
         required = (awaiting,)
     else:

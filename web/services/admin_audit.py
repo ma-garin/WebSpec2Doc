@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import threading
 import uuid
+from collections.abc import Iterator
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -145,7 +146,7 @@ def _event_from_data(data: object) -> AdminAuditEvent | None:
         return None
 
 
-def _reverse_lines(path: Path, *, chunk_size: int = 8192):
+def _reverse_lines(path: Path, *, chunk_size: int = 8192) -> Iterator[str]:
     """監査ファイルを全体展開せず末尾から1行ずつ返す。"""
     with path.open("rb") as stream:
         stream.seek(0, 2)

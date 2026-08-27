@@ -8,6 +8,7 @@ import urllib.request
 from pathlib import Path
 
 from flask import Blueprint, request
+from werkzeug.wrappers import Response as BaseResponse
 
 from web.audit_context import record_admin_event
 from web.config import DEFAULT_OPENAI_MODEL
@@ -54,7 +55,7 @@ def _is_local_base_url(base_url: str) -> bool:
 
 
 @bp.before_request
-def _settings_admin_guard():
+def _settings_admin_guard() -> BaseResponse | None:
     """設定の変更（APIキー・Slack・許可設定など）は管理者のみ。
 
     認証が無効な場合（ローカル単独利用）は従来どおり制限しない。

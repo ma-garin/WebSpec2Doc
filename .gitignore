@@ -102,3 +102,7 @@ _autorun_egress.ts
 
 # statusline用の一時進捗（セッション状態。コミットしない）
 .claude/progress.json
+
+# 機能アセットのエクスポート結果（生成物。正本はコードと quality/feature_contracts.yml）
+# 受け渡しは dist/assets/<機能ID>-<版>.tar.gz を配る。docs/process/asset-distribution.md 参照。
+/dist/

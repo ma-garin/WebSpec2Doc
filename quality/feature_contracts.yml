@@ -229,7 +229,8 @@
         "templates/auth/setup.html",
         "templates/partials/view-account.html",
         "templates/auth/signup.html",
-        "static/css/auth.css"
+        "static/css/auth.css",
+        "templates/auth/_shell.html"
       ],
       "route_files": [
         "web/routes/account.py"
@@ -437,7 +438,10 @@
         "static/js/history.js",
         "static/js/recrawl.js",
         "static/js/results.js",
-        "static/js/view-run-result.js"
+        "static/js/view-run-result.js",
+        "templates/partials/view-run-history.html",
+        "templates/partials/view-run-result.html",
+        "static/js/view-run-history.js"
       ],
       "route_files": [
         "web/routes/history.py",
@@ -1670,7 +1674,8 @@
       "ui_files": [
         "templates/partials/view-auto-run.html",
         "static/js/autorun-stages.js",
-        "static/js/autorun-review.js"
+        "static/js/autorun-review.js",
+        "static/css/autorun-review.css"
       ],
       "route_files": [
         "web/routes/autorun_stages.py"

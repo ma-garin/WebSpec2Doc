@@ -28,6 +28,7 @@ def generate_spec_ts(
     generate_page_object: bool = False,
     report_path: Path | None = None,
     allow_submit: bool = False,
+    enable_visual_regression: bool = False,
 ) -> Path:
     """playwright_candidates.json から Playwright .spec.ts を生成する。
 
@@ -40,6 +41,10 @@ def generate_spec_ts(
     allow_submit: True の場合、入力が妥当なケースでフォームを実際に送信する。
       既定は False（入力の観測にとどめ、対象サイトへデータを残さない）。
       利用者が実行条件で「送信まで実行」を選んだときにだけ True にする。
+
+    enable_visual_regression: True の場合、画面表示スモークに toHaveScreenshot を追加する。
+      初回実行では基準画像が無いため Playwright が基準を作って失敗する（これは仕様）。
+      基準の作成は実行側の update_snapshots で明示的に行う。
 
     enable_strong_assertions: True の場合、expected フィールドに基づく強化アサーションを追加。
     enable_self_healing: True の場合、locators フィールドから resilient ロケータを生成。
@@ -80,6 +85,7 @@ def generate_spec_ts(
             enable_self_healing,
             screen_index,
             allow_submit,
+            enable_visual_regression,
         )
 
     output_path.write_text("\n".join(lines), encoding="utf-8")
@@ -195,6 +201,7 @@ def _append_test_block(
     enable_self_healing: bool,
     screen_index: dict[str, dict[str, str]] | None = None,
     allow_submit: bool = False,
+    enable_visual_regression: bool = False,
 ) -> None:
     """単一候補の test ブロックを lines に追記する。"""
     title = _safe_str(item.get("title", "untitled"))
@@ -254,6 +261,8 @@ def _append_test_block(
         _append_transition_assertion(lines, trace_id, screen_index)
     elif title == "画面表示スモーク":
         _append_smoke_assertion(lines, trace_id, screen_index)
+        if enable_visual_regression:
+            _append_visual_assertion(lines, trace_id, item)
 
     lines.append("});")
     lines.append("")
@@ -422,6 +431,30 @@ def _append_smoke_assertion(
     snippet = expected_title[:20]
     lines.append(f"  expect(title).toContain('{_esc(snippet)}');")
 
+
+
+def _append_visual_assertion(lines: list[str], trace_id: str, item: dict[str, Any]) -> None:
+    """画面全体のスクリーンショット比較を追加する。
+
+    文言や DOM 構造のアサーションでは拾えない「崩れ」を検出する枠。
+    基準画像は実行回ごとの出力ではなくサイト単位の固定ディレクトリに置く
+    （実行のたびに基準が入れ替わると、比較する意味がなくなる）。
+
+    動的要素（時刻表示・広告・カルーセル）は差分の常時発生源になるため、
+    候補データに `volatile_locators` があれば mask に渡して比較対象から外す。
+    """
+    name = _page_id_from_trace(trace_id) or _safe_str(item.get("id", "")) or "screen"
+    masks = [str(x) for x in (item.get("volatile_locators") or []) if str(x).strip()]
+    lines.append("  // 見た目の回帰検出。基準が無い初回は Playwright が基準を作って失敗する。")
+    lines.append("  await page.waitForLoadState('networkidle').catch(() => {});")
+    options = ["fullPage: true", "animations: 'disabled'"]
+    if masks:
+        arr = ", ".join(f"page.locator('{_esc(m)}')" for m in masks)
+        options.append(f"mask: [{arr}]")
+    lines.append(
+        f"  await expect(page).toHaveScreenshot('{_esc(name)}.png', "
+        + "{ " + ", ".join(options) + " });"
+    )
 
 
 # ------------------------------------------------------------------

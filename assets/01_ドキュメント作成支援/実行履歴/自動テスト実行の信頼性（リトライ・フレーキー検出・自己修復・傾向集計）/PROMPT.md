@@ -8,7 +8,7 @@
 WebSpec2Doc からの機能アセットで、必要なファイルと手順は同じフォルダに揃っている。
 
 このフォルダ（`PROMPT.md` が置かれているディレクトリ）がアセット本体。
-システム: 01_ドキュメント作成支援 / 画面: 実行履歴 / feature_id: `test_execution_reliability` / 版: `20260829-34d52a3`
+システム: 01_ドキュメント作成支援 / 画面: 実行履歴 / feature_id: `test_execution_reliability` / 版: `20260829-81e4c84`
 
 手順:
 

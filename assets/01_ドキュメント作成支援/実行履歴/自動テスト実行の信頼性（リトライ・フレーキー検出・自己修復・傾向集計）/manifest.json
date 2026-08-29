@@ -1,10 +1,10 @@
 {
   "schema": "webspec2doc/feature-asset@1",
-  "version": "20260829-34d52a3",
-  "generated_at": "2026-08-29T09:32:21Z",
+  "version": "20260829-81e4c84",
+  "generated_at": "2026-08-29T11:24:09Z",
   "source": {
     "repository": "WebSpec2Doc",
-    "revision": "34d52a3",
+    "revision": "81e4c84",
     "working_tree_dirty": true,
     "contract_file": "quality/feature_contracts.yml"
   },
@@ -96,14 +96,14 @@
     {
       "path": "web/services/playwright_executor.py",
       "role": "core",
-      "bytes": 51823,
-      "sha256": "5ccd1c84e703210b68e0d9bf41e336fece522e68c19a8f3e80066280ecea225e"
+      "bytes": 55392,
+      "sha256": "85c89d5e179735c07491db4d00ba269fdb36e9d49f137e82665f6ead09f74476"
     },
     {
       "path": "web/services/spec_ts_generator.py",
       "role": "core",
-      "bytes": 38349,
-      "sha256": "0acbd96cd31b8e559bed0777995e06feb178d809bf2039347c00635f65b9144e"
+      "bytes": 40271,
+      "sha256": "afc3d70dab5b0531d913a294a1abed7ead792b8c5dac8d7e5b0ad7174ad40f3f"
     }
   ],
   "wiring": {

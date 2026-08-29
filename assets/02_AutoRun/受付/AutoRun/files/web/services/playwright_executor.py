@@ -91,6 +91,9 @@ def run_playwright(
     storage_state: Path | None = None,
     base_url: str | None = None,
     matrix: list[dict[str, str]] | None = None,
+    snapshot_dir: Path | None = None,
+    update_snapshots: bool = False,
+    max_diff_pixel_ratio: float = 0.01,
 ) -> dict[str, Any]:
     """
     ローカル @playwright/test CLI でスペックを実行し、結果を返す。
@@ -124,6 +127,12 @@ def run_playwright(
         base_url: dev / stg / prod の切り替え用。生成テストが相対 URL を使う場合に効く。
         matrix: [{"browser": "chromium", "device": "pc"}, ...] を渡すと projects を組み、
             1 回の実行で複数構成を回す。渡さない場合は browser / device の単一構成。
+        snapshot_dir: ビジュアル回帰の基準画像を置くディレクトリ（サイト単位で固定）。
+            省略時は toHaveScreenshot 用の設定を書かない（従来どおり）。
+        update_snapshots: True で基準画像を作り直す（`--update-snapshots`）。
+            **比較ではなく上書き**なので、差分を確認したうえで人が選んだときだけ真にする。
+        max_diff_pixel_ratio: 許容する差分ピクセル比（既定 1%）。
+            0 にすると 1px のアンチエイリアス差でも落ちるため、既定は緩めに取る。
     """
     if device not in ("pc", "mobile"):
         device = "pc"
@@ -190,6 +199,8 @@ def run_playwright(
         device=device,
         workers=workers,
         browser=browser,
+        snapshot_dir=snapshot_dir,
+        max_diff_pixel_ratio=max_diff_pixel_ratio,
         retries=retries,
         video=video,
         storage_state=storage_state,
@@ -208,6 +219,10 @@ def run_playwright(
         cmd = [cli_cmd, "test", "--config", str(config_path.resolve())]
     if headed:
         cmd.append("--headed")
+    if update_snapshots:
+        # 比較ではなく上書き。人が差分を確認して「これが正」と決めたときだけ通る経路。
+        cmd.append("--update-snapshots")
+        _log("ビジュアル回帰: 基準画像を作り直します（比較ではありません）")
 
     expected_total = _count_tests_in_spec(spec_path)
     _log(
@@ -248,6 +263,9 @@ def run_playwright(
     # 自己修復の記録。第1候補が効かず第2候補以降で通ったものは、
     # 「まだ落ちていないが、画面が変わった」サインとして残す。
     result["self_healing"] = _read_healing_records(heal_path)
+    result["visual"] = _visual_summary(
+        result, snapshot_dir, output_dir / _PW_HTML_SUBDIR, update_snapshots
+    )
     json_report_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     fallback_html_path.write_text(_build_html_report(result), encoding="utf-8")
     return result
@@ -401,6 +419,8 @@ def _write_pw_config(
     storage_state: Path | None = None,
     base_url: str | None = None,
     matrix: list[dict[str, str]] | None = None,
+    snapshot_dir: Path | None = None,
+    max_diff_pixel_ratio: float = 0.01,
 ) -> Path:
     """JS 形式の playwright config を生成する（TypeScript import 不要）。
 
@@ -457,6 +477,11 @@ def _write_pw_config(
     if base_url:
         base_use["baseURL"] = base_url
 
+    if snapshot_dir is not None:
+        # 基準画像は実行回ごとの出力ではなくサイト単位の固定ディレクトリへ置く。
+        # 実行のたびに基準が入れ替わると、比較する意味が無くなる。
+        snapshot_dir.mkdir(parents=True, exist_ok=True)
+
     config: dict[str, Any] = {
         "testDir": spec_dir_abs,
         "testMatch": spec_path.name,
@@ -465,6 +490,18 @@ def _write_pw_config(
         "retries": max(0, int(retries)),
         "outputDir": artifacts_dir_abs,
     }
+    if snapshot_dir is not None:
+        # projects を使うと {projectName} がパスに入り、構成ごとに基準が分かれる。
+        # ブラウザが違えばレンダリングも違うため、これは分けるのが正しい。
+        config["snapshotPathTemplate"] = str(
+            (snapshot_dir / "{projectName}" / "{arg}{ext}").resolve()
+        )
+        config["expect"] = {
+            "toHaveScreenshot": {
+                "maxDiffPixelRatio": max_diff_pixel_ratio,
+                "animations": "disabled",
+            }
+        }
 
     if matrix:
         projects = []
@@ -815,6 +852,44 @@ def _ensure_pw_env(env_dir: Path) -> tuple[bool, str]:
     if not ok:
         return False, msg
     return True, f"@playwright/test {target_ver or ''} のインストールが完了しました。"
+
+
+def _visual_summary(
+    result: dict[str, Any],
+    snapshot_dir: Path | None,
+    html_dir: Path,
+    update_snapshots: bool,
+) -> dict[str, Any]:
+    """ビジュアル回帰の結果を要約する。
+
+    Playwright は差分を `<outputDir>/.../*-diff.png` に出す。どのファイルを見れば
+    差分が分かるかを結果に含めないと、利用者は「落ちた」しか分からない。
+    """
+    if snapshot_dir is None:
+        return {"enabled": False, "baselines": 0, "diffs": [], "updated": False}
+    baselines = (
+        sum(1 for _ in snapshot_dir.rglob("*.png")) if snapshot_dir.is_dir() else 0
+    )
+    artifacts = html_dir.parent / "test-results"
+    diffs: list[dict[str, str]] = []
+    if artifacts.is_dir():
+        for path in sorted(artifacts.rglob("*-diff.png")):
+            diffs.append(
+                {
+                    "diff": str(path),
+                    "actual": str(path.with_name(path.name.replace("-diff.", "-actual."))),
+                    "expected": str(path.with_name(path.name.replace("-diff.", "-expected."))),
+                    "case": path.parent.name,
+                }
+            )
+    return {
+        "enabled": True,
+        "baselines": baselines,
+        "diffs": diffs[:100],
+        "diff_count": len(diffs),
+        "updated": update_snapshots,
+        "snapshot_dir": str(snapshot_dir),
+    }
 
 
 def _read_healing_records(heal_path: Path) -> dict[str, Any]:

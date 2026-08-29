@@ -3,9 +3,9 @@
 | 項目 | 値 |
 |---|---|
 | feature_id | `test_activity_support` |
-| 版 | `20260829-34d52a3` |
-| 生成元 | `WebSpec2Doc` @ `34d52a3` |
-| 生成日時 (UTC) | 2026-08-29T09:32:21Z |
+| 版 | `20260829-81e4c84` |
+| 生成元 | `WebSpec2Doc` @ `81e4c84` |
+| 生成日時 (UTC) | 2026-08-29T11:24:09Z |
 | リスク / 状態 | high / implemented |
 | 同梱ファイル数 | 36 |
 | 生成時の作業ツリー | **未コミットの変更あり**（再現性が落ちる。コミット後の再生成を推奨） |
@@ -57,7 +57,7 @@ rsync -a files/ <受け側リポジトリのルート>/
 | `templates/partials/view-ta-design.html` | 7208 | `7320e2d56631` |
 | `templates/partials/view-ta-execution.html` | 6765 | `b26318c89f07` |
 | `templates/partials/view-ta-home.html` | 8705 | `0046b42c2149` |
-| `templates/partials/view-ta-implementation.html` | 8618 | `94e80334fc43` |
+| `templates/partials/view-ta-implementation.html` | 10443 | `1a76d510045a` |
 | `templates/partials/view-ta-integrations.html` | 11884 | `72330ae476c9` |
 | `templates/partials/view-ta-manual.html` | 7805 | `f0cf3c0fa1c0` |
 | `templates/partials/view-ta-plan.html` | 14360 | `8637dd78286d` |

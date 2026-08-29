@@ -3,9 +3,9 @@
 | 項目 | 値 |
 |---|---|
 | feature_id | `autorun` |
-| 版 | `20260829-34d52a3` |
-| 生成元 | `WebSpec2Doc` @ `34d52a3` |
-| 生成日時 (UTC) | 2026-08-29T09:32:20Z |
+| 版 | `20260829-81e4c84` |
+| 生成元 | `WebSpec2Doc` @ `81e4c84` |
+| 生成日時 (UTC) | 2026-08-29T11:24:08Z |
 | リスク / 状態 | high / implemented |
 | 同梱ファイル数 | 14 |
 | 生成時の作業ツリー | **未コミットの変更あり**（再現性が落ちる。コミット後の再生成を推奨） |
@@ -39,8 +39,8 @@ rsync -a files/ <受け側リポジトリのルート>/
 
 | パス | bytes | sha256 (先頭12) |
 |---|---:|---|
-| `web/services/spec_ts_generator.py` | 38349 | `0acbd96cd31b` |
-| `web/services/playwright_executor.py` | 51823 | `5ccd1c84e703` |
+| `web/services/spec_ts_generator.py` | 40271 | `afc3d70dab5b` |
+| `web/services/playwright_executor.py` | 55392 | `85c89d5e1797` |
 | `web/services/auto_run_config.py` | 693 | `e4602daf020a` |
 | `web/services/auto_run_job.py` | 12942 | `3b17dd692a20` |
 | `web/services/auto_run_pipeline.py` | 51642 | `8b0e9425df84` |

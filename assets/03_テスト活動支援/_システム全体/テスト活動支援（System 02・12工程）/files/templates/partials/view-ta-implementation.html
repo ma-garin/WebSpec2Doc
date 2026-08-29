@@ -15,6 +15,37 @@
             </div>
           </div>
 
+
+          <!-- ===== ステップ編集（ノーコード） =====
+               生成された .spec.ts を直接編集すると、再生成のたびに消える。
+               編集の正本はステップ列（test_steps.json）とし、コードは常にそこから生成する。
+               動作の語彙は /api/test-steps/actions から取る（画面と保存側で二重定義しない）。 -->
+          <section class="ns-panel" id="ns-panel">
+            <div class="ns-head">
+              <h2 class="ns-title">ステップ編集</h2>
+              <span class="ns-sub">コードを書かずにテストを組み立てます。生成されるコードは常にここから作り直されます。</span>
+            </div>
+
+            <div class="ns-toolbar">
+              <label class="ns-label" for="ns-domain">対象サイト</label>
+              <select id="ns-domain" class="ns-select"></select>
+              <button type="button" class="btn-outline-sm" id="ns-import">解析結果から取り込む</button>
+              <button type="button" class="btn-outline-sm" id="ns-add-test">＋ テストを追加</button>
+              <span class="ns-spacer"></span>
+              <button type="button" class="btn-outline-sm" id="ns-save">保存</button>
+              <button type="button" class="btn-outline-sm" id="ns-generate">コードを生成</button>
+            </div>
+
+            <p class="ns-message" id="ns-message" role="status" hidden></p>
+
+            <div class="ns-tests" id="ns-tests"></div>
+
+            <details class="ns-preview" id="ns-preview" hidden>
+              <summary class="ns-preview-sum">生成されたコード <span id="ns-preview-meta"></span></summary>
+              <pre class="ns-code" id="ns-code"></pre>
+            </details>
+          </section>
+
           <div class="ta-grid-3" aria-label="自動化の進捗">
             <div class="stat-card">
               <div class="stat-card-value" id="ta-impl-total-cases">—</div>

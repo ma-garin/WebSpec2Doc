@@ -8,7 +8,7 @@
 WebSpec2Doc からの機能アセットで、必要なファイルと手順は同じフォルダに揃っている。
 
 このフォルダ（`PROMPT.md` が置かれているディレクトリ）がアセット本体。
-システム: 02_AutoRun / 画面: 受付 / feature_id: `document_mbt` / 版: `20260829-34d52a3`
+システム: 02_AutoRun / 画面: 受付 / feature_id: `document_mbt` / 版: `20260829-81e4c84`
 
 手順:
 

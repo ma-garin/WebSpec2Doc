@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import uuid
 from typing import Any
 
 from flask import Blueprint, request
@@ -13,6 +14,7 @@ from llm.viewpoint_generator import make_provider
 # OUTPUT_DIR はテストが monkeypatch する互換ポイント（helpers._output_dir が参照）
 from web.config import OUTPUT_DIR  # noqa: F401
 from web.env_store import _read_env
+from web.process import _RUNNING_PROCS, _terminate_proc
 from web.services.openai_qa import OpenAIQAError, generate_openai_qa, has_openai_api_key
 from web.services.qa.advanced_generator import _advanced_payload, _testcases_payload
 from web.services.qa.helpers import (
@@ -27,6 +29,12 @@ from web.services.qa.helpers import (
 from web.validation import _valid_domain
 
 bp = Blueprint("qa_process", __name__)
+
+# 実行中テスト実行の run_id（domain → run_id）。
+# /api/testcases/run は完了までレスポンスを返さない同期実行のため、run_id を応答で
+# 渡しても停止には間に合わない。実行中に叩ける /api/testcases/live-progress から
+# 返せるよう、ここに保持する。
+_ACTIVE_TESTCASE_RUNS: dict[str, str] = {}
 
 QA_STEPS = (
     ("test_plan", "テスト計画", "test_plan.md"),
@@ -271,14 +279,51 @@ def api_testcases_run() -> dict | tuple[dict, int]:
     if stale_progress.is_file():
         stale_progress.unlink()
 
+    # 停止できるよう、この実行の run_id を実行開始より前に確定させる。
+    # クロール側（/api/cancel）と同じく、run_id で子プロセスを引いて終了させる。
+    exec_run_id = uuid.uuid4().hex
+    _ACTIVE_TESTCASE_RUNS[domain] = exec_run_id
+
+    def _register_proc(proc: Any) -> None:
+        # 起動直後の子プロセスを共有レジストリへ登録する（/api/testcases/cancel が引く）
+        _RUNNING_PROCS[exec_run_id] = proc
+
     # ローカル対象の許可は運用者の明示設定（WEBSPEC2DOC_ALLOW_LOCAL=1）にのみ従う
-    result = run_playwright(
-        Path(gen["spec_path"]),
-        Path(out_dir),
-        per_test_timeout_sec=int(body.get("per_test_timeout_sec") or 20),
-        egress_policy=EgressPolicy(allow_local=_local_targets_allowed()),
-        headed=bool(body.get("headed")),
-    )
+    try:
+        result = run_playwright(
+            Path(gen["spec_path"]),
+            Path(out_dir),
+            per_test_timeout_sec=int(body.get("per_test_timeout_sec") or 20),
+            egress_policy=EgressPolicy(allow_local=_local_targets_allowed()),
+            headed=bool(body.get("headed")),
+            on_proc=_register_proc,
+        )
+        proc = _RUNNING_PROCS.get(exec_run_id)
+        # シグナルで終了した（returncode < 0）＝停止ボタンによる中止。
+        # テストが落ちたわけではないので「失敗」として扱わない。
+        cancelled = bool(proc is not None and proc.returncode is not None and proc.returncode < 0)
+    finally:
+        # 実行が終わった経路（正常・失敗・例外）に関わらず、必ず登録を外して後始末する。
+        stopped = _RUNNING_PROCS.pop(exec_run_id, None)
+        if stopped is not None:
+            _terminate_proc(stopped)
+        if _ACTIVE_TESTCASE_RUNS.get(domain) == exec_run_id:
+            _ACTIVE_TESTCASE_RUNS.pop(domain, None)
+
+    if cancelled:
+        # 停止した実行は結果を保存しない。途中までの 0/0/0 を run_result.json や
+        # 履歴へ書くと「失敗した実行」として残り、実績（失敗件数）を水増しするため。
+        return {
+            "ok": False,
+            "cancelled": True,
+            "generated": gen,
+            "run": None,
+            "run_id": "",
+            "exec_run_id": exec_run_id,
+            "message": "停止しました。",
+            "error": "",
+        }
+
     saved = save_run_result(domain, result, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     # テスト実行も 1 回の実行として履歴に残す。退避に失敗しても実行結果の応答は返す。
     run_id = ""
@@ -312,11 +357,28 @@ def api_testcases_run() -> dict | tuple[dict, int]:
         logging.warning("テスト実行の履歴記録に失敗しました（応答は継続）", exc_info=True)
     return {
         "ok": bool(result.get("ok")),
+        "cancelled": False,
         "generated": gen,
         "run": saved,
         "run_id": run_id,
+        "exec_run_id": exec_run_id,
         "error": str(result.get("error") or ""),
     }
+
+
+@bp.post("/api/testcases/cancel")
+def api_testcases_cancel() -> dict:
+    """実行中のテスト実行を停止する。クロール側 /api/cancel と同じ契約。
+
+    run_id は実行中の /api/testcases/live-progress が返すものを使う。
+    既に終了している（レジストリに無い）場合は ok=False を返し、
+    止めていないのに「停止した」と誤解させない。
+    """
+    proc = _RUNNING_PROCS.get(request.form.get("run_id", ""))
+    if proc is None:
+        return {"ok": False}
+    _terminate_proc(proc)
+    return {"ok": True}
 
 
 @bp.get("/api/testcases/live-progress")
@@ -337,6 +399,9 @@ def api_testcases_live_progress() -> dict | tuple[dict, int]:
 
     total, tests = _read_progress_ndjson(run_dir(domain) / "playwright_progress.ndjson")
     return {
+        # 実行中のみ非空。クライアントはこれを /api/testcases/cancel へ渡して停止する
+        # （/api/testcases/run は同期実行で、完了までレスポンスを返さないため）。
+        "run_id": _ACTIVE_TESTCASE_RUNS.get(domain, ""),
         "total": total or 0,
         "done": len(tests),
         "passed": sum(1 for t in tests if t.get("status") == "passed"),

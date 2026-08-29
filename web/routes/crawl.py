@@ -26,6 +26,48 @@ bp = Blueprint("crawl", __name__)
 _REFERENCE_DIR_NAME = "reference_docs"
 _MAX_REFERENCE_DOC_BYTES = 20 * 1024 * 1024  # 20MB/ファイル
 
+# 解析範囲プリセットの許可リスト。表示名は usage_tracker._SCOPE_PRESET_LABELS が持つ。
+# ここでは値の検証だけを行い、外れた値は空へ丸める（実行を止めるほどの入力ではない）。
+_SCOPE_PRESETS = frozenset({"one-page", "standard", "wide", "custom"})
+
+# 実行条件として利用実績へ渡すキー。想定外のキーで record_crawl_from_report が
+# TypeError にならないよう、このリストで絞ってから渡す。
+_SCOPE_RECORD_KEYS = (
+    "scope_preset",
+    "scope_depth",
+    "scope_max_pages",
+    "crawl_mode",
+    "target_url_count",
+    "skipped_count",
+)
+
+_CRAWL_EVENT_PREFIX = "CRAWL_EVENT:"
+
+
+def _skipped_delta(line: str) -> int:
+    """クロール出力の1行から「解析できずスキップした画面数」を読み取る。
+
+    ログインウォールは検出のたびに 1 件、robots による除外は crawl_started が
+    持つ URL 配列の長さでまとめて分かる。JSON として読めない行（進捗テキスト等）は
+    0 を返して無視する。解釈できないことは異常ではないため例外にしない。
+    """
+    text = line.strip()
+    if not text.startswith(_CRAWL_EVENT_PREFIX):
+        return 0
+    try:
+        payload = json.loads(text[len(_CRAWL_EVENT_PREFIX) :])
+    except (ValueError, TypeError):
+        return 0
+    if not isinstance(payload, dict):
+        return 0
+    event = payload.get("event")
+    if event == "login_wall_detected":
+        return 1
+    if event == "crawl_started":
+        skipped = payload.get("robots_skipped_urls")
+        return len(skipped) if isinstance(skipped, list) else 0
+    return 0
+
 
 def _out() -> Path:
     """テナントスコープ済みの出力ディレクトリ（リクエスト毎に解決）。"""
@@ -57,6 +99,26 @@ def run() -> Response:
     parallelism = str(_clean_int(request.form.get("parallelism", "4"), 4, 1, MAX_PARALLELISM))
     domain = _domain_of(urls.split(",")[0]) if urls else ""
     reference_docs = _safe_reference_doc_paths(request.form.get("reference_docs", ""), domain)
+
+    # 実行条件（解析範囲）。実行履歴に「どの範囲を解析した結果か」を残すためだけの値で、
+    # クロール自体の引数には使わない（depth/max_pages は既存フィールドが持つ）。
+    # 未送信のフィールドは 0 / 空のままにし、記録側でキーごと落とす。
+    scope_preset = request.form.get("scope_preset", "").strip()
+    if scope_preset not in _SCOPE_PRESETS:
+        scope_preset = ""
+    raw_scope_depth = request.form.get("scope_depth", "").strip()
+    raw_scope_max_pages = request.form.get("scope_max_pages", "").strip()
+    scope_record = {
+        "scope_preset": scope_preset,
+        "scope_depth": (_clean_int(raw_scope_depth, 2, 1, MAX_DEPTH) if raw_scope_depth else 0),
+        "scope_max_pages": (
+            _clean_int(raw_scope_max_pages, 30, 1, MAX_PAGES_LIMIT) if raw_scope_max_pages else 0
+        ),
+        # 実行時にどちらのモードだったかは site.json ではなく履歴側でも要る
+        # （後から site.json を書き換えても、過去の実行の条件は変わらないため）。
+        "crawl_mode": "auto" if crawl_mode == "auto" else "selected",
+        "target_url_count": len([u for u in urls.split(",") if u]),
+    }
 
     run_id = uuid.uuid4().hex
     # ストリーミング応答のジェネレータはリクエストコンテキスト外で実行されるため、
@@ -93,9 +155,14 @@ def run() -> Response:
             cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
         )
         _RUNNING_PROCS[run_id] = proc
+        skipped_count = 0
         try:
             yield f"RUN_ID:{run_id}\n"
-            yield from proc.stdout
+            # 行は一切加工せずそのまま流す（クライアントの表示・パースを壊さないため）。
+            # 横でスキップ件数だけ数え、実行条件と一緒に履歴へ残す。
+            for line in proc.stdout:
+                skipped_count += _skipped_delta(line)
+                yield line
             proc.wait()
             if proc.returncode is not None and proc.returncode < 0:
                 yield "\n停止しました。\n"
@@ -121,7 +188,12 @@ def run() -> Response:
                     login_landing_url,
                     base_dir=out_dir,
                 )
-                _record_usage_safely(domain, compare, out_dir)
+                _record_usage_safely(
+                    domain,
+                    compare,
+                    out_dir,
+                    scope={**scope_record, "skipped_count": skipped_count},
+                )
             if proc.returncode != 0:
                 yield "\nエラーが発生しました。\n"
         finally:
@@ -131,13 +203,23 @@ def run() -> Response:
     return Response(generate(), mimetype="text/plain")
 
 
-def _record_usage_safely(domain: str, compare: bool, out_dir: Path | None = None) -> None:
+def _record_usage_safely(
+    domain: str,
+    compare: bool,
+    out_dir: Path | None = None,
+    *,
+    scope: dict | None = None,
+) -> None:
     """成果物を実行回ごとに退避し、利用実績を記録する。
 
     どちらもベストエフォート。失敗してもクロール成功の応答は返す
     （成果物そのものは従来どおり output/<domain>/ に残っているため）。
+
+    scope は実行条件（解析範囲）。キーは record_crawl_from_report の
+    キーワード引数名に対応し、渡された分だけ usage_log の行に載る。
     """
     root = out_dir if out_dir is not None else OUTPUT_DIR
+    scope_kwargs = {k: scope[k] for k in _SCOPE_RECORD_KEYS if scope and k in scope}
     try:
         from web.services.run_store import snapshot_run
         from web.services.usage_tracker import record_crawl_from_report
@@ -150,7 +232,9 @@ def _record_usage_safely(domain: str, compare: bool, out_dir: Path | None = None
             event="crawl",
             summary=_summary_for_domain(domain, root),
         )
-        record_crawl_from_report(root, domain, diff_run=compare, run_id=run_id or "")
+        record_crawl_from_report(
+            root, domain, diff_run=compare, run_id=run_id or "", **scope_kwargs
+        )
     except Exception:  # noqa: BLE001
         pass
 

@@ -384,6 +384,14 @@ function discoverScope(sel = _checkedDiscoverScope()) {
   };
 }
 
+/** 選択中のプリセットID（one-page / standard / wide / custom）を返す。未選択なら空文字。 */
+// depth / max_pages だけでは「標準を選んだ」のか「たまたま同じ数値をカスタム入力した」のかが
+// 区別できない。実行履歴で「どの範囲で実行したか」を言い当てるには選択そのものが要るため、
+// 実効値とは別に送る。discoverScope() と同じく、選択の読み出し方はここに閉じ込める。
+function discoverScopePreset(sel = _checkedDiscoverScope()) {
+  return sel?.value || '';
+}
+
 // 選択に応じてカスタム入力の開閉と見込み時間の表示を更新する。
 // 見込みは「最大ページ数 × 実測 2.4秒」の上限値。実際は発見数がこれを下回ることが多く、
 // 対象サイトの応答速度や robots.txt の Crawl-Delay で延びるため、断定しない書き方にする。

@@ -1,0 +1,502 @@
+        <!-- ===== 設定ビュー ===== -->
+        <section class="view" id="view-settings">
+          <div class="set-tabs" role="tablist" aria-label="設定タブ">
+            <button type="button" class="set-tab is-active" data-tab="api" role="tab" aria-selected="true" aria-controls="set-panel-api" id="set-tab-api" tabindex="0">APIキー</button>
+            <button type="button" class="set-tab" data-tab="crawl" role="tab" aria-selected="false" aria-controls="set-panel-crawl" id="set-tab-crawl" tabindex="-1">解析の既定値</button>
+            <button type="button" class="set-tab" data-tab="notify" role="tab" aria-selected="false" aria-controls="set-panel-notify" id="set-tab-notify" tabindex="-1">通知</button>
+            <button type="button" class="set-tab" data-tab="integrations" role="tab" aria-selected="false" aria-controls="set-panel-integrations" id="set-tab-integrations" tabindex="-1">外部サービス連携</button>
+            <button type="button" class="set-tab" data-tab="operations" role="tab" aria-selected="false" aria-controls="set-panel-operations" id="set-tab-operations" tabindex="-1">運用監視</button>
+            {% if not auth_user or auth_user.role in ('owner', 'admin') %}
+            <button type="button" class="set-tab" data-tab="data" role="tab" aria-selected="false" aria-controls="set-panel-data" id="set-tab-data" tabindex="-1">データ管理</button>
+            <button type="button" class="set-tab" data-tab="audit" role="tab" aria-selected="false" aria-controls="set-panel-audit" id="set-tab-audit" tabindex="-1">監査ログ</button>
+            {% endif %}
+            <button type="button" class="set-tab" data-tab="test-design" role="tab" aria-selected="false" aria-controls="set-panel-test-design" id="set-tab-test-design" tabindex="-1">テスト設計</button>
+          </div>
+
+          <div class="set-panel is-active" id="set-panel-api" role="tabpanel" aria-labelledby="set-tab-api">
+            <style>
+              .llm-seg{display:inline-flex;background:var(--surface-alt,#EEF2F6);border-radius:10px;padding:3px;gap:2px;margin-bottom:18px}
+              .llm-seg button{border:0;background:transparent;padding:8px 18px;border-radius:8px;font:inherit;font-size:13.5px;font-weight:600;color:var(--text-muted);cursor:pointer}
+              .llm-seg button[aria-selected="true"]{background:var(--surface,#fff);color:var(--primary-dark);box-shadow:0 1px 2px rgba(16,24,40,.08)}
+            </style>
+            <div class="input-card">
+              <h2 class="set-card-title">LLM 接続先</h2>
+              <p class="input-hint" style="margin-top:0;margin-bottom:14px">テストケース生成・観点生成に使う LLM を選びます。設定は <code>.env</code> に保存されます（ブラウザには保存しません）。</p>
+              <div class="llm-seg" id="llm-seg" role="tablist" aria-label="LLM プロバイダ">
+                <button type="button" role="tab" aria-selected="true" data-provider="openai">OpenAI</button>
+                <button type="button" role="tab" aria-selected="false" data-provider="ollama">Ollama（ローカル）</button>
+              </div>
+
+              <div data-llm-panel="openai" class="set-form">
+                <div class="set-field">
+                  <label>現在のキー</label>
+                  <div class="key-current" id="api-key-current">未設定</div>
+                </div>
+                <div class="set-field">
+                  <label for="api-key">API キー</label>
+                  <input type="password" id="api-key" placeholder="sk-..." autocomplete="off">
+                  <p class="set-help">空欄で保存すると既存キーを保持します。</p>
+                </div>
+                <!-- 原語も添える。値をコピーしてくる先（OpenAI の管理画面）は英語表記なので、
+                     日本語だけにするとどれを写すのか分からない。 -->
+                <div class="set-field">
+                  <label for="api-org">組織 ID<span class="set-label-origin">（Organization ID）</span><span class="set-label-opt">任意</span></label>
+                  <input type="text" id="api-org" placeholder="org-...">
+                </div>
+                <div class="set-field">
+                  <label for="api-project">プロジェクト ID<span class="set-label-origin">（Project ID）</span><span class="set-label-opt">任意</span></label>
+                  <input type="text" id="api-project" placeholder="proj_...">
+                </div>
+                <div class="set-field">
+                  <label for="api-model">モデル</label>
+                  <select id="api-model" class="set-select">
+                    <option value="gpt-5.4-mini">gpt-5.4-mini（コスト効率・推奨）</option>
+                    <option value="gpt-5.4-nano">gpt-5.4-nano（最安・最速）</option>
+                    <option value="gpt-5.4">gpt-5.4（標準）</option>
+                    <option value="gpt-5.5">gpt-5.5（高精度）</option>
+                    <option value="gpt-5.5-pro">gpt-5.5-pro（最高精度）</option>
+                    <option value="gpt-4.1">gpt-4.1（非推論・ツール呼び出し）</option>
+                  </select>
+                </div>
+              </div>
+
+              <div data-llm-panel="ollama" class="set-form" style="display:none">
+                <div class="set-field">
+                  <label for="llm-base-url">ベース URL<span class="set-label-origin">（Ollama URL）</span></label>
+                  <input type="text" id="llm-base-url" placeholder="http://127.0.0.1:11434/v1">
+                  <p class="set-help">localhost / 127.0.0.1 / ::1 のローカルアドレスのみ指定できます（SSRF 保護）。</p>
+                </div>
+                <div class="set-field">
+                  <label for="llm-model">モデル</label>
+                  <select id="llm-model" class="set-select"><option value="">読み込み中…</option></select>
+                  <p class="set-help" id="ollama-status">API キーは不要です。ローカルの Ollama が起動している必要があります。</p>
+                </div>
+              </div>
+
+              <div class="set-actions">
+                <button class="btn-primary" id="save-api">保存</button>
+                <button class="btn-outline-sm" id="test-connection" type="button">疎通確認</button>
+                <button class="btn-outline-sm" id="reload-ollama-models" type="button" style="display:none">モデル一覧を再取得</button>
+                <!-- 消す操作は決定のとなりに置かない。並べると保存のつもりで削除を押せてしまう。 -->
+                <button class="btn-outline-sm set-danger" id="clear-api-key" type="button" data-llm-only="openai">API キーを削除</button>
+              </div>
+              <div class="settings-msg" id="api-msg">保存しました</div>
+              <div class="settings-msg" id="api-status-msg" style="margin-top:12px"></div>
+              <div class="settings-msg" id="test-connection-msg" style="margin-top:12px"></div>
+            </div>
+          </div>
+
+          <div class="set-panel" id="set-panel-notify" role="tabpanel" aria-labelledby="set-tab-notify">
+            <div class="input-card">
+              <h2 class="set-card-title">Slack 通知</h2>
+              <p class="input-hint" style="margin-top:0;margin-bottom:14px">仕様ドリフト（再解析後の差分）を検知した際に Slack チャンネルへ通知します。<br>Incoming Webhook URL は <a href="https://api.slack.com/messaging/webhooks" target="_blank" rel="noopener">Slack API</a> で取得してください。</p>
+              <div class="field full" style="margin-bottom:14px">
+                <label>現在の設定</label>
+                <div class="key-current" id="slack-webhook-current">未設定</div>
+              </div>
+              <div class="field full">
+                <label for="slack-webhook-url">SLACK_WEBHOOK_URL</label>
+                <input type="password" id="slack-webhook-url" placeholder="https://hooks.slack.com/services/..." autocomplete="off" style="width:100%">
+              </div>
+              <div class="set-actions" style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+                <button class="btn-primary" id="save-slack">Webhook URLを保存</button>
+                <button class="btn-outline-sm" id="test-slack" type="button">テスト送信</button>
+              </div>
+              <p class="set-help" style="margin-top:10px">テスト送信は、保存済みの Webhook へ送信時刻入りのメッセージを実際に送ります。届かない場合は URL とチャンネルを確認してください。</p>
+              <div class="settings-msg" id="slack-msg">保存しました</div>
+            </div>
+          </div>
+
+          <div class="set-panel" id="set-panel-integrations" role="tabpanel" aria-labelledby="set-tab-integrations">
+            <!-- カードが 6 枚あり縦に伸びるため 2 カラムで並べる。項目数の多いカードは grid-column で 1 行を使い切る。 -->
+            <div class="set-int-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
+              <div class="input-card" style="grid-column:1 / -1">
+                <h2 class="set-card-title">Jira 連携</h2>
+                <p class="set-help" style="margin-top:0;margin-bottom:14px">不具合分析で検出した不具合を Jira の課題として起票します。トークンは Atlassian のアカウント設定で発行できます。</p>
+                <div class="field full" style="margin-bottom:14px">
+                  <label>現在の設定</label>
+                  <div class="key-current" id="jira-current">未設定</div>
+                </div>
+                <div class="set-form">
+                  <div class="field full">
+                    <label for="jira-base-url">サイトURL</label>
+                    <input type="text" id="jira-base-url" placeholder="https://your-domain.atlassian.net" autocomplete="off" style="width:100%">
+                  </div>
+                  <div class="field">
+                    <label for="jira-email">メールアドレス</label>
+                    <input type="text" id="jira-email" placeholder="you@example.com" autocomplete="off" style="width:100%">
+                  </div>
+                  <div class="field">
+                    <label for="jira-api-token">API トークン</label>
+                    <input type="password" id="jira-api-token" placeholder="保存済みの場合は空欄で維持" autocomplete="off" style="width:100%">
+                  </div>
+                  <div class="field">
+                    <label for="jira-project-key">プロジェクトキー</label>
+                    <input type="text" id="jira-project-key" placeholder="QA" autocomplete="off" style="width:100%">
+                  </div>
+                  <div class="field">
+                    <label for="jira-issue-type">課題タイプ</label>
+                    <input type="text" id="jira-issue-type" placeholder="Bug" autocomplete="off" style="width:100%">
+                  </div>
+                </div>
+                <div style="margin-top:18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                  <button type="button" class="btn-primary" id="save-jira">保存</button>
+                  <button type="button" class="btn-outline-sm" id="test-jira">接続を確認</button>
+                </div>
+                <div class="settings-msg" id="jira-msg"></div>
+              </div>
+
+              <div class="input-card">
+                <h2 class="set-card-title">Microsoft Teams 通知</h2>
+                <p class="input-hint" style="margin-top:0;margin-bottom:14px">実行結果や仕様ドリフトを Teams のチャネルへ通知します。Workflows の Incoming Webhook URL を貼り付けてください。</p>
+                <div class="field full" style="margin-bottom:14px">
+                  <label>現在の設定</label>
+                  <div class="key-current" id="teams-current">未設定</div>
+                </div>
+                <div class="set-form">
+                  <div class="field full">
+                    <label for="teams-webhook-url">受信 Webhook URL</label>
+                    <input type="password" id="teams-webhook-url" placeholder="https://...webhook.office.com/..." autocomplete="off" style="width:100%">
+                  </div>
+                </div>
+                <div style="margin-top:18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                  <button type="button" class="btn-primary" id="save-teams">保存</button>
+                  <button type="button" class="btn-outline-sm" id="test-teams">テスト送信</button>
+                </div>
+                <div class="settings-msg" id="teams-msg"></div>
+              </div>
+
+              <div class="input-card">
+                <h2 class="set-card-title">Notion 連携</h2>
+                <p class="input-hint" style="margin-top:0;margin-bottom:14px">不具合やレポートを Notion のデータベースへページとして追加します。作成したインテグレーションに、対象データベースを共有しておく必要があります。</p>
+                <div class="field full" style="margin-bottom:14px">
+                  <label>現在の設定</label>
+                  <div class="key-current" id="notion-current">未設定</div>
+                </div>
+                <div class="set-form">
+                  <div class="field">
+                    <label for="notion-api-token">API トークン</label>
+                    <input type="password" id="notion-api-token" placeholder="保存済みの場合は空欄で維持" autocomplete="off" style="width:100%">
+                  </div>
+                  <div class="field">
+                    <label for="notion-database-id">データベース ID</label>
+                    <input type="text" id="notion-database-id" placeholder="32桁の ID" autocomplete="off" style="width:100%">
+                  </div>
+                </div>
+                <div style="margin-top:18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                  <button type="button" class="btn-primary" id="save-notion">保存</button>
+                  <button type="button" class="btn-outline-sm" id="test-notion">接続を確認</button>
+                </div>
+                <div class="settings-msg" id="notion-msg"></div>
+              </div>
+
+              <div class="input-card">
+                <h2 class="set-card-title">QualityForward 連携</h2>
+                <p class="input-hint" style="margin-top:0;margin-bottom:14px">テスト管理ツール QualityForward のプロジェクト API キーを設定します。キーはプロジェクト設定画面で発行できます。テスト結果の登録は未対応で、現在は接続確認のみです。</p>
+                <div class="field full" style="margin-bottom:14px">
+                  <label>現在の設定</label>
+                  <div class="key-current" id="qf-current">未設定</div>
+                </div>
+                <div class="set-form">
+                  <div class="field full">
+                    <label for="qf-api-key">API キー</label>
+                    <input type="password" id="qf-api-key" placeholder="保存済みの場合は空欄で維持" autocomplete="off" style="width:100%">
+                  </div>
+                </div>
+                <div style="margin-top:18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                  <button type="button" class="btn-primary" id="save-qf">保存</button>
+                  <button type="button" class="btn-outline-sm" id="test-qf">接続を確認</button>
+                </div>
+                <div class="settings-msg" id="qf-msg"></div>
+              </div>
+
+              <div class="input-card">
+                <h2 class="set-card-title">汎用 Webhook</h2>
+                <p class="input-hint" style="margin-top:0;margin-bottom:14px">任意の受信先へ JSON を POST します。社内システムや自前の受信口へつなぐときに使います。</p>
+                <div class="set-form">
+                  <div class="field full">
+                    <label for="generic-webhook-url">送信先 URL</label>
+                    <input type="password" id="generic-webhook-url" placeholder="https://example.com/hooks/webspec2doc" autocomplete="off" style="width:100%">
+                  </div>
+                </div>
+                <button type="button" class="btn-primary" id="save-webhook" style="margin-top:18px">Webhook URLを保存</button>
+                <div class="settings-msg" id="webhook-msg"></div>
+              </div>
+              <div class="input-card" style="grid-column:1 / -1">
+                <h2 class="set-card-title">Confluence 連携</h2>
+                <p class="input-hint" style="margin-top:0;margin-bottom:14px">レポートを Confluence のページとして発行します。トークンは Jira と同じ Atlassian のアカウント設定で発行できます。</p>
+                <div class="field full" style="margin-bottom:14px">
+                  <label>現在の設定</label>
+                  <div class="key-current" id="confluence-current">未設定</div>
+                </div>
+                <div class="set-form">
+                  <div class="field full">
+                    <label for="confluence-base-url">サイト URL</label>
+                    <input type="text" id="confluence-base-url" placeholder="https://your-domain.atlassian.net" autocomplete="off" style="width:100%">
+                  </div>
+                  <div class="field">
+                    <label for="confluence-email">メールアドレス</label>
+                    <input type="text" id="confluence-email" placeholder="you@example.com" autocomplete="off" style="width:100%">
+                  </div>
+                  <div class="field">
+                    <label for="confluence-api-token">API トークン</label>
+                    <input type="password" id="confluence-api-token" placeholder="保存済みの場合は空欄で維持" autocomplete="off" style="width:100%">
+                  </div>
+                  <div class="field">
+                    <label for="confluence-space-key">スペースキー</label>
+                    <input type="text" id="confluence-space-key" placeholder="QA" autocomplete="off" style="width:100%">
+                  </div>
+                </div>
+                <div style="margin-top:18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                  <button type="button" class="btn-primary" id="save-confluence">保存</button>
+                  <button type="button" class="btn-outline-sm" id="test-confluence">接続を確認</button>
+                </div>
+                <div class="settings-msg" id="confluence-msg"></div>
+              </div>
+
+              <div class="input-card" style="grid-column:1 / -1">
+                <h2 class="set-card-title">CI/CD 連携</h2>
+                <p class="input-hint" style="margin-top:0;margin-bottom:12px">CI のジョブから仕様ドリフトとテスト結果をゲートします。JUnit XML は既存のレポート機能でそのまま集計できます。</p>
+                <pre style="overflow-x:auto;margin:0 0 12px"><code>python src/cli.py ci gate --domain example.com --fail-on breaking --junit-xml report.xml</code></pre>
+                <!-- 3 値しかないため表にせず 1 行に畳む。表にすると見出し行の分だけ縦が伸びる。 -->
+                <p class="set-help" style="margin:0"><strong>終了コード</strong>　<code>0</code> 正常　/　<code>1</code> ドリフトまたはテスト失敗　/　<code>2</code> 実行エラー</p>
+                <p class="set-help" style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                  <span>API トークンの発行はアカウント画面から。詳しい手順は <code>docs/CI_INTEGRATION.md</code>。</span>
+                  <button type="button" class="btn-outline-sm" id="ci-goto-account">アカウント画面を開く</button>
+                </p>
+              </div>
+
+            </div>
+          </div>
+
+          <div class="set-panel" id="set-panel-crawl" role="tabpanel" aria-labelledby="set-tab-crawl">
+            <div class="input-card">
+              <h2 class="set-card-title">解析の既定値</h2>
+              <p class="input-hint" style="margin-top:0;margin-bottom:14px">このブラウザに保存され、生成ウィザードの初期値に反映されます。</p>
+              <div class="options-grid">
+                <div class="field"><label for="set-depth">階層数（既定）</label><input type="number" id="set-depth" min="1" max="5"></div>
+                <div class="field"><label for="set-max">最大ページ数（既定）</label><input type="number" id="set-max" min="1" max="300"></div>
+                <div class="field"><label for="set-parallelism">並列数（既定）</label>
+                  <select id="set-parallelism">
+                    <option value="1">1（順次）</option><option value="2">2</option>
+                    <option value="4" selected>4（推奨）</option><option value="8">8（最大）</option>
+                  </select>
+                  <p class="input-hint" style="margin:4px 0 0">同時にアクセスする画面数。多いほど速いが、対象サイトへの負荷が増えます。</p>
+                </div>
+                <div class="field"><label for="set-case-minutes">1テストケースあたりの想定分数</label><input type="number" id="set-case-minutes" min="1" max="120" placeholder="10"></div>
+                <div class="field"><label for="set-url-history-limit">URL履歴の保持件数</label>
+                  <select id="set-url-history-limit">
+                    <option value="0">0（無効）</option><option value="5">5</option>
+                    <option value="10" selected>10</option><option value="30">30</option>
+                    <option value="50">50</option><option value="100">100</option>
+                  </select></div>
+
+                <div class="field full"><label for="set-auth">認証セッション auth.json パス（任意）</label><input type="text" id="set-auth" placeholder="auth.json"></div>
+              </div>
+              <div class="field full" style="margin-top:18px;padding-top:18px;border-top:1px solid var(--border)">
+                <label class="checkbox-chip" style="align-items:flex-start;gap:10px;height:auto;padding:10px 12px">
+                  <input type="checkbox" id="allow-local-toggle" style="margin-top:2px">
+                  <span>
+                    <strong>ローカル/ステージング環境の解析を許可</strong>
+                    <br>
+                    <span style="font-size:12px;color:var(--text-muted)">
+                      <code>localhost</code>・<code>*.local</code>・プライベートIPへの解析を有効にします。
+                      <br>
+                      <span style="color:var(--color-high)">⚠️ 信頼できる環境でのみ使用してください（SSRF保護をバイパスします）。</span>
+                    </span>
+                  </span>
+                </label>
+                <div class="settings-msg" id="allow-local-msg" style="margin-top:8px">保存しました</div>
+              </div>
+              <button class="btn-primary" id="save-settings" style="margin-top:18px">設定を保存</button>
+              <div class="settings-msg" id="settings-msg">設定を保存しました</div>
+            </div>
+          </div>
+
+          <div class="set-panel" id="set-panel-operations" role="tabpanel" aria-labelledby="set-tab-operations">
+            <div class="input-card ops-card">
+              <h2 class="set-card-title">スケジュール・通知</h2>
+              <p class="set-help ops-lead">サイトごとに実行可能な曜日・時間帯、失敗時の再試行、通知先を設定します。時間帯の終了が開始より前の場合は日跨ぎとして扱います。</p>
+
+              <div class="ops-scope">
+                <div class="field">
+                  <label for="ops-site">対象サイト</label>
+                  <select id="ops-site" class="url-input"><option value="">サイトを選択してください</option></select>
+                </div>
+                <div class="field"><label for="ops-site-url">サイトURL</label><input type="url" id="ops-site-url" placeholder="https://example.com"></div>
+              </div>
+
+              <section class="ops-section">
+                <h3 class="ops-section-title">実行スケジュール</h3>
+                <div class="ops-grid">
+                  <div class="field"><label for="ops-interval">実行周期</label><select id="ops-interval"><option value="disabled">無効</option><option value="daily">毎日</option><option value="weekly">毎週</option><option value="monthly">毎月（30日）</option></select></div>
+                  <div class="field"><label for="ops-timezone">タイムゾーン</label><select id="ops-timezone"><option value="Asia/Tokyo">Asia/Tokyo</option><option value="UTC">UTC</option><option value="America/New_York">America/New_York</option><option value="Europe/London">Europe/London</option></select></div>
+                  <div class="field"><label for="ops-window-start">開始時刻（任意）</label><input type="time" id="ops-window-start"></div>
+                  <div class="field"><label for="ops-window-end">終了時刻（任意）</label><input type="time" id="ops-window-end"></div>
+                  <div class="field"><label for="ops-retry-max">再試行回数</label><input type="number" id="ops-retry-max" min="0" max="5" value="2"></div>
+                  <div class="field"><label for="ops-backoff">初回バックオフ（秒）</label><input type="number" id="ops-backoff" min="1" max="3600" value="60"></div>
+                  <fieldset class="field full ops-weekdays">
+                    <legend>実行曜日（未選択は毎日）</legend>
+                    <div class="ops-weekday-list">
+                      <label class="ops-day"><input type="checkbox" value="0"><span>月</span></label><label class="ops-day"><input type="checkbox" value="1"><span>火</span></label><label class="ops-day"><input type="checkbox" value="2"><span>水</span></label><label class="ops-day"><input type="checkbox" value="3"><span>木</span></label><label class="ops-day"><input type="checkbox" value="4"><span>金</span></label><label class="ops-day"><input type="checkbox" value="5"><span>土</span></label><label class="ops-day"><input type="checkbox" value="6"><span>日</span></label>
+                    </div>
+                  </fieldset>
+                </div>
+              </section>
+
+              <section class="ops-section">
+                <h3 class="ops-section-title">通知</h3>
+                <div class="ops-grid">
+                  <div class="field"><label for="ops-notify-type">通知チャネル</label><select id="ops-notify-type"><option value="none">通知しない</option><option value="slack">Slack</option><option value="teams">Microsoft Teams Workflows</option><option value="webhook">Webhook</option><option value="email">Email（SMTP環境設定）</option></select></div>
+                  <div class="field"><label for="ops-summary-limit">差分表示件数</label><input type="number" id="ops-summary-limit" min="1" max="20" value="5"></div>
+                  <div class="field full"><label for="ops-endpoint">Webhook URL / SMTPホスト</label><input type="password" id="ops-endpoint" autocomplete="off" placeholder="https://..."></div>
+                  <div class="field full"><label for="ops-template">通知テンプレート（Jinja2・任意）</label><textarea id="ops-template" rows="4" placeholder="{{ site_url }} で変更を検知しました"></textarea><p class="input-hint ops-token-hint">利用可能: site_url / added_pages / removed_pages / field_changes / api_changes / added_page_names / removed_page_names</p></div>
+                </div>
+              </section>
+
+              <div class="ops-actions">
+                <button type="button" class="btn-primary" id="ops-save">運用設定を保存</button>
+                <button type="button" class="btn-outline-sm" id="ops-test-notify">テスト通知</button>
+              </div>
+              <div class="settings-msg" id="ops-msg" role="status"></div>
+            </div>
+
+            <div class="input-card ops-card ops-history-card">
+              <h2 class="set-card-title">最近のスケジュール実行</h2>
+              <div id="ops-history"><p class="input-hint">サイトを選択すると表示します。</p></div>
+            </div>
+            <div class="input-card ci-drift-card">
+              <div>
+                <h2 class="set-card-title">CIで仕様ドリフトをゲート</h2>
+                <p class="input-hint">前回スナップショットをCIキャッシュへ保存し、差分をリリース条件にできます。</p>
+              </div>
+              <code id="ci-drift-command">python src/main.py --url https://example.com --ci --format json,html</code>
+              <dl class="ci-exit-codes" aria-label="CI終了コード">
+                <div><dt>0</dt><dd>初回・差分なし</dd></div>
+                <div><dt>1</dt><dd>仕様ドリフトあり</dd></div>
+                <div><dt>2</dt><dd>取得・認証エラー</dd></div>
+              </dl>
+              <p class="input-hint">同梱テンプレート: <code>.github/workflows/spec-drift.yml</code></p>
+            </div>
+            <div class="input-card onboarding-replay-card">
+              <div>
+                <h2 class="set-card-title">操作ツアー</h2>
+                <p class="input-hint">初回に表示される4ステップの案内を、いつでも再表示できます。</p>
+              </div>
+              <button type="button" class="btn-outline-sm" id="restart-tour">操作ツアーを再表示</button>
+            </div>
+          </div>
+
+          {% if not auth_user or auth_user.role in ('owner', 'admin') %}
+          <div class="set-panel" id="set-panel-data" role="tabpanel" aria-labelledby="set-tab-data">
+            <div class="input-card">
+              <div class="admin-panel-head">
+                <div>
+                  <h2 class="set-card-title">データ容量と保持</h2>
+                  <p class="input-hint">既定は無制限です。世代数または期間を指定すると、成功したスケジュール実行後に古いスナップショットを削除します。</p>
+                </div>
+                <button type="button" class="btn-outline-sm" id="data-refresh">再読み込み</button>
+              </div>
+              <div class="storage-stats" aria-live="polite">
+                <div class="storage-stat"><span>出力データ</span><strong id="storage-output">—</strong></div>
+                <div class="storage-stat"><span>運用データ</span><strong id="storage-instance">—</strong></div>
+                <div class="storage-stat"><span>合計</span><strong id="storage-total">—</strong></div>
+              </div>
+              <div class="retention-editor">
+                <div class="field">
+                  <label for="retention-mode">保持方式</label>
+                  <select id="retention-mode">
+                    <option value="unlimited">無制限（既定）</option>
+                    <option value="generations">世代数</option>
+                    <option value="days">期間（日）</option>
+                  </select>
+                </div>
+                <div class="field" id="retention-generations-field" hidden>
+                  <label for="retention-generations">保持する世代数</label>
+                  <input type="number" id="retention-generations" min="1" max="10000" value="30">
+                </div>
+                <div class="field" id="retention-days-field" hidden>
+                  <label for="retention-days">保持日数</label>
+                  <input type="number" id="retention-days" min="1" max="3650" value="365">
+                </div>
+                <button type="button" class="btn-primary" id="retention-save">保持設定を保存</button>
+              </div>
+              <div class="settings-msg" id="retention-msg" role="status"></div>
+              <div class="admin-table-wrap">
+                <table class="admin-data-table" aria-label="サイト別データ容量">
+                  <thead><tr><th>サイト</th><th>スナップショット</th><th>スナップショット容量</th><th>合計容量</th><th>更新日時</th></tr></thead>
+                  <tbody id="storage-sites"><tr><td colspan="5">読み込み前です。</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="input-card backup-guide-card">
+              <div>
+                <h2 class="set-card-title">バックアップ／リストア</h2>
+                <p class="input-hint"><code>output/</code> と <code>instance/</code> は、必ず同じ時点の対として保存・復旧します。</p>
+              </div>
+              <a class="btn-outline-sm" href="/api/admin/backup-guide" target="_blank" rel="noopener">運用手順を開く</a>
+            </div>
+          </div>
+
+          <div class="set-panel" id="set-panel-audit" role="tabpanel" aria-labelledby="set-tab-audit">
+            <div class="input-card">
+              <div class="admin-panel-head">
+                <div>
+                  <h2 class="set-card-title">管理操作の監査ログ</h2>
+                  <p class="input-hint">ログイン成否、メンバー変更、設定変更、保持GC、レポート出力をワークスペース単位で表示します。</p>
+                </div>
+                <button type="button" class="btn-outline-sm" id="audit-refresh">再読み込み</button>
+              </div>
+              <div class="audit-filters">
+                <div class="field"><label for="audit-action">操作</label><select id="audit-action"><option value="">すべて</option><option value="user.login">ログイン</option><option value="user.created">メンバー追加</option><option value="user.updated">メンバー変更</option><option value="schedule.settings_updated">スケジュール・通知設定</option><option value="settings.updated">システム設定</option><option value="notification.tested">通知テスト</option><option value="retention.settings_updated">保持設定</option><option value="retention.snapshots_pruned">保持GC</option><option value="report.exported">レポート出力</option><option value="review.exported">レビュー出力</option><option value="viewpoint.exported">観点出力</option></select></div>
+                <div class="field"><label for="audit-outcome">結果</label><select id="audit-outcome"><option value="">すべて</option><option value="success">成功</option><option value="failure">失敗</option></select></div>
+                <div class="field audit-query"><label for="audit-query">検索</label><input type="search" id="audit-query" placeholder="メール・対象・操作"></div>
+                <button type="button" class="btn-primary" id="audit-search">絞り込む</button>
+              </div>
+              <div class="settings-msg" id="audit-msg" role="status"></div>
+              <div class="admin-table-wrap">
+                <table class="admin-data-table" id="admin-audit-table" aria-label="管理操作の監査ログ">
+                  <thead><tr><th>日時</th><th>実行者</th><th>操作</th><th>対象</th><th>結果</th><th>詳細</th></tr></thead>
+                  <tbody id="admin-audit-events"><tr><td colspan="6">読み込み前です。</td></tr></tbody>
+                </table>
+              </div>
+              <button type="button" class="btn-outline-sm" id="audit-load-more" hidden style="margin-top:12px">さらに読み込む</button>
+            </div>
+          </div>
+          {% endif %}
+
+          <div class="set-panel" id="set-panel-test-design" role="tabpanel" aria-labelledby="set-tab-test-design">
+            <div class="input-card">
+              <h2 class="set-card-title">テスト設計（MBT）</h2>
+              <p class="input-hint" style="margin-top:0;margin-bottom:14px">レポートの「テスト設計 → 技法別設計（MBT）」で使う技法・パラメータと、境界値テストの値カタログを調整します。<code>instance/test_design_settings.json</code> に保存されます。</p>
+
+              <div class="field full" style="margin-bottom:14px">
+                <label>使用する技法</label>
+                <div style="display:flex;flex-wrap:wrap;gap:14px;font-size:13px">
+                  <label><input type="checkbox" id="td-tech-bva" checked> 境界値分析(BVA)</label>
+                  <label><input type="checkbox" id="td-tech-dt" checked> デシジョンテーブル(DT)</label>
+                  <label><input type="checkbox" id="td-tech-pw" checked> ペアワイズ(PW)</label>
+                  <label><input type="checkbox" id="td-tech-st" checked> 状態遷移(ST)</label>
+                </div>
+              </div>
+
+              <div class="options-grid">
+                <div class="field"><label for="td-bva-offset">境界値オフセット</label><input type="number" id="td-bva-offset" min="1" max="5" value="1"></div>
+                <div class="field"><label for="td-pw-strength">ペアワイズ強度</label>
+                  <select id="td-pw-strength" class="url-input" style="height:40px"><option value="2">2-way</option><option value="3">3-way</option></select></div>
+                <div class="field"><label for="td-n-switch">状態遷移 Nスイッチ</label>
+                  <select id="td-n-switch" class="url-input" style="height:40px"><option value="0">0-switch</option><option value="1">1-switch</option></select></div>
+                <div class="field"><label for="td-max-dt">DT 最大条件数</label><input type="number" id="td-max-dt" min="1" max="6" value="4"></div>
+              </div>
+
+              <div class="field full" style="margin-top:18px">
+                <label for="td-value-catalog">テスト値カタログ（JSON・カテゴリ→ラベル/値/備考）</label>
+                <textarea id="td-value-catalog" spellcheck="false" style="width:100%;min-height:220px;font-family:ui-monospace,monospace;font-size:12.5px"></textarea>
+                <p class="input-hint" style="margin-top:6px">既知境界値の一般知識（メール上限値/RFC違反/空白 等）。解析対象サイト固有のデータではありません。</p>
+              </div>
+
+              <button class="btn-primary" id="save-test-design" style="margin-top:18px">テスト設計設定を保存</button>
+              <div class="settings-msg" id="test-design-msg" style="margin-top:12px"></div>
+            </div>
+          </div>
+        </section>

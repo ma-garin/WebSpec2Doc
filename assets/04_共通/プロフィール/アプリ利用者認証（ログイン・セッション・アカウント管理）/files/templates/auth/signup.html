@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <title>アカウント作成 - WebSpec2Doc</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}?v={{ _ver }}">
+</head>
+<body class="auth-body">
+<div class="auth-split">
+
+  <aside class="auth-brand-pane" aria-hidden="true">
+    <div class="auth-brand-logo">
+      <span class="auth-brand-mark">W</span>
+      <span>WebSpec2Doc</span>
+    </div>
+    <div class="auth-brand-copy">
+      <h2>チームで使う、<br>ひとつの仕様の土台。</h2>
+      <p>テナントごとにドキュメントと実行履歴を分けて管理。同じ人が複数のプロジェクトに参加しても、成果物が混ざりません。</p>
+      <div class="auth-brand-stats">
+        <div class="stat"><b>テナント分離</b><span>成果物・履歴・観点</span></div>
+        <div class="stat"><b>2ロール</b><span>一般 / 管理者</span></div>
+      </div>
+    </div>
+    <div></div>
+  </aside>
+
+  <main class="auth-form-pane">
+    <div class="auth-form-box">
+      <h1>アカウントを作成</h1>
+      <p class="auth-form-lead">
+        メールアドレスとパスワードでアカウントを作成します。
+      </p>
+
+      {% if error %}
+      <div class="auth-error" role="alert">
+        <b>作成できませんでした</b>
+        <span>{{ error }}</span>
+      </div>
+      {% endif %}
+
+      <form method="post" action="/auth/signup" novalidate>
+        <div class="auth-field">
+          <label for="name">表示名</label>
+          <input type="text" id="name" name="name" value="{{ form.get('name', '') }}"
+                 placeholder="山田 太郎" autocomplete="name" required autofocus>
+        </div>
+        <div class="auth-field">
+          <label for="email">メールアドレス</label>
+          <input type="email" id="email" name="email" value="{{ form.get('email', '') }}"
+                 placeholder="you@example.co.jp" autocomplete="username" required>
+        </div>
+        <div class="auth-field">
+          <label for="password">パスワード</label>
+          <input type="password" id="password" name="password" autocomplete="new-password" required>
+          <div class="hint">
+            {% if mock_auth %}社内モックのため文字数制限はありません。{% else %}10文字以上。メールアドレスと同一のものは使用できません。{% endif %}
+          </div>
+        </div>
+        <button type="submit" class="auth-submit">作成してログイン</button>
+      </form>
+
+      <p class="auth-foot">
+        作成した時点では、どのテナントにも所属していません。<br>
+        管理者がテナントに追加すると作業を開始できます。<br>
+        <a href="/auth/login">ログイン画面に戻る</a>
+      </p>
+    </div>
+  </main>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,381 @@
+{
+  "schema": "webspec2doc/feature-asset@1",
+  "version": "20260829-5345533",
+  "generated_at": "2026-08-29T07:50:11Z",
+  "source": {
+    "repository": "WebSpec2Doc",
+    "revision": "5345533",
+    "working_tree_dirty": true,
+    "contract_file": "quality/feature_contracts.yml"
+  },
+  "feature": {
+    "feature_id": "crawl",
+    "name": "クロール / レポート生成",
+    "risk_level": "critical",
+    "status": "implemented",
+    "ui_files": [
+      "templates/partials/view-generate.html",
+      "static/js/execution.js",
+      "static/js/results.js",
+      "static/js/ui-states.js"
+    ],
+    "route_files": [
+      "web/routes/crawl.py"
+    ],
+    "core_files": [
+      "src/crawler/page_crawler.py",
+      "src/crawler/parallel_crawler.py",
+      "src/crawler/politeness.py",
+      "src/crawler/action_explorer.py",
+      "src/crawler/link_extractor.py",
+      "src/analyzer/canonicalizer.py",
+      "src/analyzer/form_analyzer.py",
+      "src/analyzer/html_analyzer.py",
+      "src/analyzer/stack_detector.py",
+      "src/crawler/network_interceptor.py",
+      "src/crawler/spa_monitor.py",
+      "src/graph/transition_graph.py",
+      "src/generator/markdown_generator.py",
+      "src/generator/markdown_util.py",
+      "src/generator/mermaid_generator.py",
+      "src/generator/excel_reporter.py",
+      "src/generator/csv_reporter.py",
+      "src/generator/pdf_reporter.py",
+      "src/generator/architecture_generator.py",
+      "src/generator/feature_catalog.py",
+      "src/generator/test_design.py",
+      "src/crawler/performance_probe.py"
+    ],
+    "symbols": [
+      "crawl_site",
+      "crawl_urls_parallel",
+      "extract_links_all_scopes",
+      "collect_embedded_frames",
+      "collect_performance",
+      "install_performance_observers"
+    ],
+    "outputs": [
+      "report.html",
+      "report.json",
+      "screenshots",
+      "snapshot",
+      "audit.jsonl",
+      "performance samples (LCP/CLS/TTFB)"
+    ],
+    "persistence": [
+      "output/{domain}/",
+      "output/{domain}/snapshots/"
+    ],
+    "failure_modes": [
+      "login_wall_during_crawl",
+      "restricted_url",
+      "timeout",
+      "cancel",
+      "partial_checkpoint",
+      "robots_disallowed",
+      "rate_limit_backoff",
+      "mutation_blocked",
+      "mutation_blocked_audit",
+      "cross_origin_iframe",
+      "closed_shadow_root"
+    ],
+    "required_tests": [
+      "happy_path",
+      "error_path",
+      "cancel_path",
+      "checkpoint_path",
+      "evidence"
+    ]
+  },
+  "placement": {
+    "system_key": "docs",
+    "system": "01_ドキュメント作成支援",
+    "screen": "条件設定",
+    "screens": [
+      "条件設定"
+    ],
+    "classified_by": "screen"
+  },
+  "files": [
+    {
+      "path": "templates/partials/view-generate.html",
+      "role": "ui",
+      "bytes": 21038,
+      "sha256": "da6646d5d332341e31a9b632b97fdc4bea9dcbc610813e801264292322ccf8fd"
+    },
+    {
+      "path": "static/js/execution.js",
+      "role": "ui",
+      "bytes": 20310,
+      "sha256": "d56f390e4abbeaf30d27d74d083cb0e1a584338c751c5c672f1f7be07b3a449d"
+    },
+    {
+      "path": "static/js/results.js",
+      "role": "ui",
+      "bytes": 33264,
+      "sha256": "454d49c8a2415f32987d199797955eec83e75b3df16dd9f6db275755d9aae105"
+    },
+    {
+      "path": "static/js/ui-states.js",
+      "role": "ui",
+      "bytes": 3611,
+      "sha256": "7a21bccae08328f57c25ff25c0ff204650cbd7b55b25595ebe26d3663a008c2f"
+    },
+    {
+      "path": "web/routes/crawl.py",
+      "role": "route",
+      "bytes": 9778,
+      "sha256": "9cb5a2303935eb24cf53dc71f2d8281c60af1f5c3f02fbc991f33e9aa613383f"
+    },
+    {
+      "path": "src/crawler/page_crawler.py",
+      "role": "core",
+      "bytes": 61123,
+      "sha256": "e90a414ce2beb35923866b6642b026d9b19da81dbdcf90152813d337ea50d5d5"
+    },
+    {
+      "path": "src/crawler/parallel_crawler.py",
+      "role": "core",
+      "bytes": 17700,
+      "sha256": "7c84d2596da5097447f2c139940e0771105ebcc27f8461215eed7afa680a4d49"
+    },
+    {
+      "path": "src/crawler/politeness.py",
+      "role": "core",
+      "bytes": 11767,
+      "sha256": "45ee49c0592366a38ac5bd86af9b1f1376bc184f6e8eb36c40baba4035d1f828"
+    },
+    {
+      "path": "src/crawler/action_explorer.py",
+      "role": "core",
+      "bytes": 14225,
+      "sha256": "5d4697176708b4d02d94ff6a94e8e02daa296f52f952a86a674245a9f4e8a457"
+    },
+    {
+      "path": "src/crawler/link_extractor.py",
+      "role": "core",
+      "bytes": 23977,
+      "sha256": "eb1c0339d43f94aa46990aa73084b6f7a321490340fd65252afda7b38d63c5f7"
+    },
+    {
+      "path": "src/analyzer/canonicalizer.py",
+      "role": "core",
+      "bytes": 4284,
+      "sha256": "74787f78e51c5434aeb70251848de49247cd3aa91fe399968b6ee79398a0ca86"
+    },
+    {
+      "path": "src/analyzer/form_analyzer.py",
+      "role": "core",
+      "bytes": 690,
+      "sha256": "577830c0f309cdcfa6160acff1416c12da61f0423bc67aa96726502fa1da43c8"
+    },
+    {
+      "path": "src/analyzer/html_analyzer.py",
+      "role": "core",
+      "bytes": 1563,
+      "sha256": "b63d10dc46e6a4e651c4653ff84ec01df3a1625bbdb59accaeed7a4acdf605e7"
+    },
+    {
+      "path": "src/analyzer/stack_detector.py",
+      "role": "core",
+      "bytes": 6831,
+      "sha256": "ffe71315a422134181781ec05e67a93840e769ceffc168bcec39675ffed96ae1"
+    },
+    {
+      "path": "src/crawler/network_interceptor.py",
+      "role": "core",
+      "bytes": 10194,
+      "sha256": "395e4b061ecbb15b1755d0650009323fdef582cb41c8ae4b5315cdf0822cc31f"
+    },
+    {
+      "path": "src/crawler/spa_monitor.py",
+      "role": "core",
+      "bytes": 3080,
+      "sha256": "e24da90b91b899257afdf9a68b946efa55d45d0c377d0c2c1c3c038f22d5f927"
+    },
+    {
+      "path": "src/graph/transition_graph.py",
+      "role": "core",
+      "bytes": 12767,
+      "sha256": "80ad3e73f9cdc025635f16a69d4aaed3c670c75b064757e9ca092c9d668a6c13"
+    },
+    {
+      "path": "src/generator/markdown_generator.py",
+      "role": "core",
+      "bytes": 2029,
+      "sha256": "c4d4ff6d4120d6e335b417a83474f4681110dff4d4af3fad00cb7284d1fdeb21"
+    },
+    {
+      "path": "src/generator/markdown_util.py",
+      "role": "core",
+      "bytes": 618,
+      "sha256": "225ad5952a128de1f4921c916337356c84426642e6265e31cab3f3d1786e882c"
+    },
+    {
+      "path": "src/generator/mermaid_generator.py",
+      "role": "core",
+      "bytes": 2393,
+      "sha256": "2a1f3b51186c1dfc72576a0bdd2cf03adde522cb5f9527da8633009dd2bee500"
+    },
+    {
+      "path": "src/generator/excel_reporter.py",
+      "role": "core",
+      "bytes": 5657,
+      "sha256": "f15a55d2cb0aa8ed47740ca3bc6fa4f3a828a8a49092f45cca745c5b0f5fff3c"
+    },
+    {
+      "path": "src/generator/csv_reporter.py",
+      "role": "core",
+      "bytes": 3674,
+      "sha256": "715f33ee15ca6f138701012d26a41502d795092edd2cdd14aceba14ed2fd34ba"
+    },
+    {
+      "path": "src/generator/pdf_reporter.py",
+      "role": "core",
+      "bytes": 1172,
+      "sha256": "74557bdee49a79d7f219fc186070973591c6028362582e250323e42d09fe8373"
+    },
+    {
+      "path": "src/generator/architecture_generator.py",
+      "role": "core",
+      "bytes": 4885,
+      "sha256": "8f0b937f6e1084ccfd1de82e90a737bacfb9be597f44106e2dccbca045a15ef6"
+    },
+    {
+      "path": "src/generator/feature_catalog.py",
+      "role": "core",
+      "bytes": 3161,
+      "sha256": "8d67e5d28741f38610ac33c03e2cbf35dda03f7dff3e77ba8ae203d91c1ffa9f"
+    },
+    {
+      "path": "src/generator/test_design.py",
+      "role": "core",
+      "bytes": 17422,
+      "sha256": "e053e11c002fea1961f15af478ae5b82418bc240ded457c5325bfb3dd2d9b3d5"
+    },
+    {
+      "path": "src/crawler/performance_probe.py",
+      "role": "core",
+      "bytes": 4214,
+      "sha256": "b27a7cb5038bdd3cc12f2ca5be31c988c243b925635699c200e60b63d30692fb"
+    }
+  ],
+  "wiring": {
+    "blueprints": [
+      {
+        "file": "web/routes/crawl.py",
+        "name": "crawl",
+        "url_prefix": ""
+      }
+    ],
+    "provides_endpoints": [
+      {
+        "file": "web/routes/crawl.py",
+        "rule": "/run",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/crawl.py",
+        "rule": "/api/cancel",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/crawl.py",
+        "rule": "/api/live-screenshot",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/crawl.py",
+        "rule": "/api/reference-docs",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/crawl.py",
+        "rule": "/api/doc-fusion",
+        "methods": [
+          "GET"
+        ]
+      }
+    ]
+  },
+  "dependencies": {
+    "internal_modules_not_bundled": [
+      "src/analyzer/bva.py",
+      "src/analyzer/login_wall.py",
+      "src/analyzer/test_conditions.py",
+      "src/crawler/playwright_runtime.py",
+      "src/crawler/session_guard.py",
+      "src/crawler/url_safety.py",
+      "src/ingest/loader.py",
+      "src/llm/screen_classifier.py",
+      "src/techniques/combinatorial.py",
+      "src/ux/axe_runner.py",
+      "web/config.py",
+      "web/process.py",
+      "web/routes/site.py",
+      "web/services/run_store.py",
+      "web/services/usage_tracker.py",
+      "web/summary.py",
+      "web/tenancy.py",
+      "web/validation.py"
+    ],
+    "third_party_packages": [
+      {
+        "import": "flask",
+        "requirement": "flask==3.1.3",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "networkx",
+        "requirement": "networkx==3.3",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "openpyxl",
+        "requirement": "openpyxl==3.1.4",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "playwright",
+        "requirement": "playwright==1.61.0",
+        "declared_in_requirements": true
+      }
+    ],
+    "env_vars": [],
+    "data_files": [],
+    "consumes_endpoints": [
+      "/api/",
+      "/api/cancel",
+      "/api/doc-fusion",
+      "/api/export/spec-xlsx",
+      "/api/history",
+      "/api/live-screenshot",
+      "/api/result",
+      "/api/snapshot-diff-summary",
+      "/api/snapshots",
+      "/api/testcases/count",
+      "/preview",
+      "/run"
+    ],
+    "window_globals": [],
+    "template_includes_not_bundled": [],
+    "static_refs_not_bundled": []
+  },
+  "gaps": [],
+  "shared_assets": [],
+  "warnings": [],
+  "verification": {
+    "static_analysis": "done",
+    "pytest": "not_run",
+    "verify_ui": "not_run",
+    "manual_screen_check": "not_run"
+  }
+}

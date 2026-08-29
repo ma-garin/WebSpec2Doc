@@ -24,16 +24,24 @@
 `scripts/export_feature_asset.py` が次の構造を出力する。
 
 ```
-assets/<feature_id>/<版>/
-    PROMPT.md          受け側の AI エージェントへそのまま貼る指示文
-    manifest.json      機械可読（ファイル一覧・SHA-256・依存・提供API・警告）
-    INTEGRATION.md     受け側が読む組み込み手順（配置・配線・依存・受け入れ確認）
-    contract.json      quality/feature_contracts.yml から切り出した当該機能の契約
-    files/             ファイル実体。リポジトリ相対パスをそのまま保持
-        web/routes/history.py
-        static/js/history.js
-        ...
-assets/<feature_id>-<版>.tar.gz  （zip 経由なら不要）
+assets/
+    README.md                          システム → 画面 → 機能の目次
+    01_ドキュメント作成支援/
+        実行履歴/
+            差分 ・ 履歴 ・ 再クロール/
+                PROMPT.md              受け側の AI へそのまま貼る指示文
+                INTEGRATION.md         組み込み手順（配置・配線・依存・受け入れ確認）
+                manifest.json          ファイル一覧・SHA-256・依存・提供API・警告
+                contract.json          当該機能の契約
+                files/                 ファイル実体。リポジトリ相対パスをそのまま保持
+                    web/routes/history.py
+                    static/js/view-run-history.js
+                    templates/partials/view-run-history.html
+                    ...
+        _画面なし（API・基盤）/         画面を持たない機能はここへ
+    02_AutoRun/
+    03_テスト活動支援/
+    04_共通/
 ```
 
 ### なぜこの形式が確実か
@@ -68,21 +76,25 @@ git add assets/ && git commit && git push
 作業ツリーが汚れていると manifest に `working_tree_dirty: true` が立つので、
 **コミットしてからエクスポートする**。
 
-## 4. 受け取る側の手順（zip 前提）
+## 4. 受け取る側の手順（zip → フォルダを開く → 貼る）
 
-送る側がやることは push まで。受け側は GitHub の zip を落として、
-バンドル内の `PROMPT.md` を AI エージェントに貼るだけでよい。
+送る側がやることは push まで。受け側は次の 6 ステップで終わる。
 
-```
-GitHub → Code → Download ZIP → 展開
-  → assets/<機能ID>/<版>/PROMPT.md を開く
-  → 中身を受け側の Claude Code / Codex にコピペ
-```
+1. GitHub からリポジトリの zip をダウンロードする
+2. zip を解凍する
+3. `assets/` を開き、**システム名のフォルダ**を選ぶ
+   （`01_ドキュメント作成支援` / `02_AutoRun` / `03_テスト活動支援` / `04_共通`）
+4. **画面名のフォルダ**を選ぶ（`設定` / `ダッシュボード` / `実行履歴` など。
+   画面を持たない API・基盤の機能は `_画面なし（API・基盤）` にまとまっている）
+5. **機能名のフォルダ**を選ぶ（`AIトークン利用管理` など）
+6. そのフォルダの `PROMPT.md` を開き、中身をコピーして Codex / Claude Code に貼る
+
+`assets/README.md` がシステム → 画面 → 機能の目次になっている。探すときはここから入る。
 
 `PROMPT.md` はエクスポート時に自動生成される。次を含む。
 
-- 検証コマンド（`verify_feature_asset.py ... --against .`）と「`[NG]` なら配置するな」の指示
-- 配置コマンド（`rsync -a .../files/ ./`）
+- 検証コマンド（`verify_feature_asset.py <フォルダ> --against .`）と「`[NG]` なら配置するな」の指示
+- 配置コマンド（`rsync -a <フォルダ>/files/ ./`）
 - 配線は `INTEGRATION.md` 第 2 節を読ませる
 - 受け入れ確認は `INTEGRATION.md` 第 5 節（**送り側では未実行**であることを明示）
 - その機能固有の注意（同梱外の内部モジュール数・依存する他機能・必要な環境変数・残っている警告）
@@ -91,6 +103,19 @@ GitHub → Code → Download ZIP → 展開
 
 `--against` が報告する `[NG] 受け側に内部モジュールがない` は、**そのモジュールも渡す必要がある**
 という意味。別の feature_id に属していれば、そのアセットも併せてエクスポートして push する。
+
+### システム・画面の決まり方
+
+手で対応表を保守しない。次の優先順位で機械的に決める。
+
+1. 契約に `system` / `screen` を書いた場合はそれ（人が明示したものを最優先）
+2. 契約の `ui_files` にある画面テンプレート
+   → partial 内の `<section class="view" id="view-XXX">` の XXX
+   → `templates/partials/nav.html` の `data-system` / ラベル
+   （`view-ta-plan.html` が `test-plan` に対応するように、ファイル名からは導けない）
+3. 画面が無ければ実装ファイルのパスと機能名（`web/routes/test_activity` → テスト活動支援 など）
+
+1 機能が 3 画面以上にまたがる場合は、画面ではなくシステム直下の `_システム全体` に置く。
 
 ## 5. 渡してはいけないもの・そのまま使ってはいけないもの
 

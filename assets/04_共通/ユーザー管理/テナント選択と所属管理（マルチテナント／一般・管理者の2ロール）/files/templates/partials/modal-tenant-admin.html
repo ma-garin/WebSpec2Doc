@@ -1,0 +1,61 @@
+  <!-- ===== テナント管理ビューのダイアログ ===== -->
+  <!-- 作りはユーザー管理側（modal-user-admin.html）と揃えている。
+       削除は一覧の行から（確認ダイアログを挟む）。 -->
+
+  <div id="tadm-add-modal" class="file-preview-modal hidden" role="dialog" aria-modal="true"
+       aria-labelledby="tadm-add-title">
+    <div class="file-preview-overlay" data-dialog-close></div>
+    <div class="file-preview-panel" style="max-width:460px;height:auto;max-height:90vh">
+      <div class="file-preview-header">
+        <span class="file-preview-title" id="tadm-add-title">テナントの新規登録</span>
+        <button type="button" class="btn-outline-sm" style="font-size:12px;height:30px"
+                data-dialog-close>✕ 閉じる</button>
+      </div>
+      <form id="tadm-add-form" class="uadm-dialog-body">
+        <div class="auth-field uadm-dialog-field">
+          <label for="tadm-name">テナント名</label>
+          <input type="text" id="tadm-name" placeholder="例: 決済基盤リプレイスPJ" required>
+        </div>
+        <div class="auth-field uadm-dialog-field">
+          <label for="tadm-slug">slug（省略時は名前から自動生成）</label>
+          <!-- ハイフンはエスケープする。未エスケープだと v フラグ下で不正な文字クラスになる -->
+          <input type="text" id="tadm-slug" placeholder="payment-replace"
+                 pattern="[a-z0-9][a-z0-9\-]{0,31}">
+        </div>
+        <p class="uadm-dialog-note">
+          slug は成果物の保存先ディレクトリ名になります。作成後は変更できません。
+        </p>
+        <div id="tadm-add-status" class="account-status" aria-live="polite"></div>
+        <div class="uadm-dialog-actions">
+          <button type="button" class="btn-outline-sm uadm-dialog-cancel" data-dialog-close>キャンセル</button>
+          <button type="submit" class="btn-primary uadm-dialog-submit">登録する</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="tadm-edit-modal" class="file-preview-modal hidden" role="dialog" aria-modal="true"
+       aria-labelledby="tadm-edit-title">
+    <div class="file-preview-overlay" data-dialog-close></div>
+    <div class="file-preview-panel" style="max-width:460px;height:auto;max-height:90vh">
+      <div class="file-preview-header">
+        <span class="file-preview-title" id="tadm-edit-title">テナントを編集</span>
+        <button type="button" class="btn-outline-sm" style="font-size:12px;height:30px"
+                data-dialog-close>✕ 閉じる</button>
+      </div>
+      <form id="tadm-edit-form" class="uadm-dialog-body">
+        <div class="auth-field uadm-dialog-field">
+          <label for="tadm-rename">テナント名</label>
+          <input type="text" id="tadm-rename" required>
+        </div>
+        <p class="uadm-dialog-note">
+          slug（<code id="tadm-edit-slug"></code>）は保存先ディレクトリ名として使われているため変更できません。
+        </p>
+        <div id="tadm-edit-status" class="account-status" aria-live="polite"></div>
+        <div class="uadm-dialog-actions">
+          <button type="button" class="btn-outline-sm uadm-dialog-cancel" data-dialog-close>キャンセル</button>
+          <button type="submit" class="btn-primary uadm-dialog-submit">保存する</button>
+        </div>
+      </form>
+    </div>
+  </div>

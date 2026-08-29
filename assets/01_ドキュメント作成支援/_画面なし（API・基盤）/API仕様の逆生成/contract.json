@@ -1,0 +1,30 @@
+{
+  "feature_id": "api_spec_recovery",
+  "name": "API仕様の逆生成",
+  "risk_level": "medium",
+  "status": "implemented",
+  "ui_files": [],
+  "route_files": [],
+  "core_files": [
+    "src/apispec/recovery.py"
+  ],
+  "symbols": [
+    "build_screen_api_map",
+    "build_openapi_draft",
+    "templatize_path"
+  ],
+  "outputs": [
+    "画面↔API対応表",
+    "OpenAPI雛形"
+  ],
+  "persistence": [],
+  "failure_modes": [
+    "no_observed_calls",
+    "unparseable_path"
+  ],
+  "required_tests": [
+    "happy_path",
+    "no_invention",
+    "evidence"
+  ]
+}

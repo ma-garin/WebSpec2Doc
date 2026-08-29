@@ -1,0 +1,59 @@
+        <!-- ===== ユーザー管理ビュー（管理者専用） ===== -->
+        <!-- この画面が扱うのは利用者だけ。テナントそのものの管理は
+             partials/view-tenant-management.html（/tenant-management）が担当する。
+             形は一般的な管理画面に合わせている:
+               一覧の上に「検索＋件数＋新規登録」、行の操作は「編集／削除」。
+             列幅は colgroup で固定する。自然幅に任せると操作列が押し出されて見切れる。
+             中身は user-admin-view.js が /api/admin/tenancy から描く。
+             data-* は「誰が自分か」「管理者か」を初回 fetch なしで知るためのもの。 -->
+        <section class="view" id="view-user-management"
+                 data-current-user-id="{{ auth_user.id if auth_user else '' }}"
+                 data-is-admin="{{ '1' if auth_user and auth_user.role == 'admin' else '0' }}">
+
+          <!-- 管理者以外がURL直打ちで来たときに、空の表を並べず理由を出す -->
+          <div class="input-card" id="uadm-denied-card" hidden>
+            <div class="wizard-page-header">
+              <h2>ユーザー管理</h2>
+              <p>この画面は管理者のみが利用できます。権限が必要な場合は、所属テナントの管理者に依頼してください。</p>
+            </div>
+          </div>
+
+          <div class="input-card uadm-admin-only">
+            <div class="wizard-page-header">
+              <h2>ユーザー一覧</h2>
+              <p>1人が複数のテナントに所属でき、ロールはテナントごとに持ちます。
+                 テナントそのものの追加・削除は<a href="/tenant-management">テナント管理</a>で行います。</p>
+            </div>
+
+            <div class="uadm-toolbar">
+              <div class="uadm-toolbar-left">
+                <input type="search" id="uadm-user-search" class="uadm-search"
+                       placeholder="名前・ログインID・テナントで絞り込み"
+                       aria-label="ユーザーを絞り込み">
+                <span class="uadm-count" id="uadm-user-count" aria-live="polite"></span>
+              </div>
+              <button type="button" class="btn-primary uadm-add-btn" id="uadm-add-btn">新規登録</button>
+            </div>
+
+            <div class="account-table-wrap">
+              <table class="account-table uadm-table">
+                <colgroup>
+                  <col class="uadm-col-name">
+                  <col class="uadm-col-login">
+                  <col class="uadm-col-scope">
+                  <col class="uadm-col-seen">
+                  <col class="uadm-col-act">
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>名前</th><th>ログインID</th><th>所属テナントとロール</th>
+                    <th>最終ログイン</th><th class="uadm-th-act">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="uadm-user-rows"></tbody>
+              </table>
+            </div>
+            <div id="uadm-user-status" class="account-status" aria-live="polite"></div>
+          </div>
+
+        </section>

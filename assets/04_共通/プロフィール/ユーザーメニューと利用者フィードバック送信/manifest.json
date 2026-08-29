@@ -1,0 +1,197 @@
+{
+  "schema": "webspec2doc/feature-asset@1",
+  "version": "20260829-5345533",
+  "generated_at": "2026-08-29T07:50:11Z",
+  "source": {
+    "repository": "WebSpec2Doc",
+    "revision": "5345533",
+    "working_tree_dirty": true,
+    "contract_file": "quality/feature_contracts.yml"
+  },
+  "feature": {
+    "feature_id": "user_menu_feedback",
+    "name": "ユーザーメニューと利用者フィードバック送信",
+    "risk_level": "high",
+    "status": "implemented",
+    "ui_files": [
+      "templates/partials/topbar.html",
+      "templates/partials/view-account.html",
+      "templates/partials/view-feedback.html",
+      "static/css/user-menu.css",
+      "static/css/account-view.css",
+      "static/js/user-menu.js",
+      "static/js/account-view.js",
+      "static/js/feedback-view.js"
+    ],
+    "route_files": [
+      "web/routes/feedback.py"
+    ],
+    "core_files": [
+      "web/services/feedback_store.py"
+    ],
+    "symbols": [
+      "append_feedback",
+      "read_feedback",
+      "validate",
+      "FeedbackError"
+    ],
+    "outputs": [
+      "トップバーのユーザーメニュー（個人設定 / ユーザーガイド / フィードバック / ログアウト）",
+      "個人設定ビュー（/account）とフィードバックビュー（/feedback）",
+      "フィードバックの送信結果メッセージ",
+      "/api/feedback JSON"
+    ],
+    "persistence": [
+      "instance/tenants/{slug}/feedback.jsonl"
+    ],
+    "failure_modes": [
+      "empty_or_oversized_message_rejected",
+      "invalid_category_rejected",
+      "write_failure_reported_not_silently_dropped",
+      "identity_forged_by_client_ignored",
+      "broken_line_does_not_break_listing",
+      "non_admin_cannot_read_feedback"
+    ],
+    "required_tests": [
+      "happy_path",
+      "error_path",
+      "evidence"
+    ]
+  },
+  "placement": {
+    "system_key": "common",
+    "system": "04_共通",
+    "screen": "プロフィール",
+    "screens": [
+      "プロフィール",
+      "フィードバックを送る"
+    ],
+    "classified_by": "screen"
+  },
+  "files": [
+    {
+      "path": "templates/partials/topbar.html",
+      "role": "ui",
+      "bytes": 4753,
+      "sha256": "10e95e944ca210a4c18229792ea46c2f18927bb1dbc2bbc798af6878f1f7dae4"
+    },
+    {
+      "path": "templates/partials/view-account.html",
+      "role": "ui",
+      "bytes": 3314,
+      "sha256": "966a1af61677344bb311042f4c9c30b4cc172daa3c786344baab26f84f1ce23b"
+    },
+    {
+      "path": "templates/partials/view-feedback.html",
+      "role": "ui",
+      "bytes": 2457,
+      "sha256": "7e96ae77ca629b837472df0e8be84455e6c1bb9724e428661c2cde3d3a027e72"
+    },
+    {
+      "path": "static/css/user-menu.css",
+      "role": "ui",
+      "bytes": 3176,
+      "sha256": "15b7d8c33f75d862e2a206de00ec143f4713c6bb8476d26b58edfda0b22bacbe"
+    },
+    {
+      "path": "static/css/account-view.css",
+      "role": "ui",
+      "bytes": 11800,
+      "sha256": "5964be2979da51cd2162b66827752dc34cb2c4bc2d2a41328b201766d137d480"
+    },
+    {
+      "path": "static/js/user-menu.js",
+      "role": "ui",
+      "bytes": 2614,
+      "sha256": "46b0c823b0b27244d3fb33a0d9427d95693c27b8d9a9fb3486ce996536590a5e"
+    },
+    {
+      "path": "static/js/account-view.js",
+      "role": "ui",
+      "bytes": 5647,
+      "sha256": "5f2527c94b0050c226d0e5cde97eb948bcb14a5682028d18b52b31c07658346a"
+    },
+    {
+      "path": "static/js/feedback-view.js",
+      "role": "ui",
+      "bytes": 3208,
+      "sha256": "ce7dc822789341995d46c70a5d70255044e33bf6791847ce1b75fbda1d7252de"
+    },
+    {
+      "path": "web/routes/feedback.py",
+      "role": "route",
+      "bytes": 2854,
+      "sha256": "05bca31f81bb01c91c5527828bf1b43277acb7e0b879d83982adb9ed560833c7"
+    },
+    {
+      "path": "web/services/feedback_store.py",
+      "role": "core",
+      "bytes": 5860,
+      "sha256": "14ebf9f4cdfc702999ad6dd6076a63420d31d0b21c144d9d5bc4b13dc155f404"
+    }
+  ],
+  "wiring": {
+    "blueprints": [
+      {
+        "file": "web/routes/feedback.py",
+        "name": "feedback",
+        "url_prefix": ""
+      }
+    ],
+    "provides_endpoints": [
+      {
+        "file": "web/routes/feedback.py",
+        "rule": "/api/feedback",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/feedback.py",
+        "rule": "/api/feedback",
+        "methods": [
+          "GET"
+        ]
+      }
+    ]
+  },
+  "dependencies": {
+    "internal_modules_not_bundled": [
+      "web/auth.py",
+      "web/tenancy.py"
+    ],
+    "third_party_packages": [
+      {
+        "import": "flask",
+        "requirement": "flask==3.1.3",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "werkzeug",
+        "requirement": "",
+        "declared_in_requirements": false
+      }
+    ],
+    "env_vars": [],
+    "data_files": [],
+    "consumes_endpoints": [
+      "/api/auth/api-tokens",
+      "/api/auth/api-tokens/",
+      "/api/auth/me",
+      "/api/auth/password",
+      "/api/feedback"
+    ],
+    "window_globals": [],
+    "template_includes_not_bundled": [],
+    "static_refs_not_bundled": []
+  },
+  "gaps": [],
+  "shared_assets": [],
+  "warnings": [],
+  "verification": {
+    "static_analysis": "done",
+    "pytest": "not_run",
+    "verify_ui": "not_run",
+    "manual_screen_check": "not_run"
+  }
+}

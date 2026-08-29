@@ -1,0 +1,313 @@
+{
+  "schema": "webspec2doc/feature-asset@1",
+  "version": "20260829-5345533",
+  "generated_at": "2026-08-29T07:50:11Z",
+  "source": {
+    "repository": "WebSpec2Doc",
+    "revision": "5345533",
+    "working_tree_dirty": true,
+    "contract_file": "quality/feature_contracts.yml"
+  },
+  "feature": {
+    "feature_id": "autorun",
+    "name": "AutoRun",
+    "risk_level": "high",
+    "status": "implemented",
+    "ui_files": [
+      "templates/partials/view-auto-run.html",
+      "static/js/autorun.js",
+      "static/js/autorun-approval.js",
+      "static/js/view-test-runs.js"
+    ],
+    "route_files": [
+      "web/routes/auto_run.py"
+    ],
+    "core_files": [
+      "web/services/spec_ts_generator.py",
+      "web/services/playwright_executor.py",
+      "web/services/auto_run_config.py",
+      "web/services/auto_run_job.py",
+      "web/services/auto_run_pipeline.py",
+      "web/services/auto_run_preview.py",
+      "web/services/failure_classifier.py",
+      "src/crawler/data_flow.py",
+      "src/crawler/form_navigator.py"
+    ],
+    "symbols": [
+      "track_reflections",
+      "form_submit_enabled"
+    ],
+    "outputs": [
+      "QA artifacts",
+      "Playwright candidates",
+      "execution logs",
+      "data reflection flows",
+      "page object spec.ts"
+    ],
+    "persistence": [
+      "output/{domain}/qa_process/"
+    ],
+    "failure_modes": [
+      "approval_timeout",
+      "login_wait_timeout",
+      "dependency_missing",
+      "cancel",
+      "execution_timeout_partial_result",
+      "result_parse_failure",
+      "form_submit_disabled_by_default"
+    ],
+    "required_tests": [
+      "happy_path",
+      "approval_path",
+      "cancel_path",
+      "error_path",
+      "timeout_path",
+      "evidence"
+    ]
+  },
+  "placement": {
+    "system_key": "autorun",
+    "system": "02_AutoRun",
+    "screen": "受付",
+    "screens": [
+      "受付"
+    ],
+    "classified_by": "screen"
+  },
+  "files": [
+    {
+      "path": "templates/partials/view-auto-run.html",
+      "role": "ui",
+      "bytes": 27151,
+      "sha256": "1e5f7d80fcdd92e7055458b6519c6691e0ea381cf70f620d226726ec11b72250"
+    },
+    {
+      "path": "static/js/autorun.js",
+      "role": "ui",
+      "bytes": 60389,
+      "sha256": "fd73d9bc299c1d292ae5aa13829507e26bc7b9749635923d010e07e591eb4184"
+    },
+    {
+      "path": "static/js/autorun-approval.js",
+      "role": "ui",
+      "bytes": 5113,
+      "sha256": "b9883d8de36d5085d057bfa6744ca4eea23cff938b8cde8859d63c84a00964e1"
+    },
+    {
+      "path": "static/js/view-test-runs.js",
+      "role": "ui",
+      "bytes": 14254,
+      "sha256": "98e87562eaa727dde32e98b3e073be3bfa1f288060b078ec94a528339ad95fd2"
+    },
+    {
+      "path": "web/routes/auto_run.py",
+      "role": "route",
+      "bytes": 28109,
+      "sha256": "9d4beccc5ddd8f96f0ac799146cc80827e6f208ef072eb75211c0cfa9d27097d"
+    },
+    {
+      "path": "web/services/spec_ts_generator.py",
+      "role": "core",
+      "bytes": 32817,
+      "sha256": "269e545eb992ae9eb1a8f9b5fe01702190fb34c64b2906d9a490a4fcc3d8e49e"
+    },
+    {
+      "path": "web/services/playwright_executor.py",
+      "role": "core",
+      "bytes": 45033,
+      "sha256": "14537e601aaaf7824955f5015ab9d26718d4f92d11a9e7b55079e0deb81c0f29"
+    },
+    {
+      "path": "web/services/auto_run_config.py",
+      "role": "core",
+      "bytes": 693,
+      "sha256": "e4602daf020a1a62e62218a749b69cec3668b98f58742c7254cf769084322fa9"
+    },
+    {
+      "path": "web/services/auto_run_job.py",
+      "role": "core",
+      "bytes": 12942,
+      "sha256": "3b17dd692a20d53ab58d4b7c7fe9ccf2543774805d9c68c46d3bdd43f09a7efe"
+    },
+    {
+      "path": "web/services/auto_run_pipeline.py",
+      "role": "core",
+      "bytes": 51642,
+      "sha256": "8b0e9425df84f59c4f205bc6c17b489231d7bf75ec0e461ae64cfdaead86188e"
+    },
+    {
+      "path": "web/services/auto_run_preview.py",
+      "role": "core",
+      "bytes": 2004,
+      "sha256": "732a9088fa60f47cf0b36f0f6312ddd9a11586d6fd830bbd062d2297354593a9"
+    },
+    {
+      "path": "web/services/failure_classifier.py",
+      "role": "core",
+      "bytes": 9868,
+      "sha256": "c23109417c98461fcd4c325147bc0663a21d13eea801b62d10ba8a09be036f55"
+    },
+    {
+      "path": "src/crawler/data_flow.py",
+      "role": "core",
+      "bytes": 3667,
+      "sha256": "cb39435c4c7bb1350b6861e7fe572837f5794e0e0ba1d81b51e6c0ee75505914"
+    },
+    {
+      "path": "src/crawler/form_navigator.py",
+      "role": "core",
+      "bytes": 4293,
+      "sha256": "10a540750d6b70be7920c1d67a499b77291624421d5969ac5fd7e86679b8b325"
+    }
+  ],
+  "wiring": {
+    "blueprints": [
+      {
+        "file": "web/routes/auto_run.py",
+        "name": "auto_run",
+        "url_prefix": ""
+      }
+    ],
+    "provides_endpoints": [
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/autorun/start",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/autorun/status",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/autorun/cancel",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/history/runs",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/autorun/submit-input",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/autorun/preview",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/autorun/approve",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/autorun/report",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/autorun/live-screenshot",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/autorun/jobs",
+        "methods": [
+          "GET"
+        ]
+      }
+    ]
+  },
+  "dependencies": {
+    "internal_modules_not_bundled": [
+      "src/autorun/automation_plan.py",
+      "src/autorun/stages.py",
+      "src/crawler/playwright_runtime.py",
+      "src/crawler/url_safety.py",
+      "web/config.py",
+      "web/services/__init__.py",
+      "web/services/document_autorun.py",
+      "web/services/egress_gateway.py",
+      "web/services/evidence_pack_service.py",
+      "web/services/failure_hypothesis.py",
+      "web/services/mutation_verifier.py",
+      "web/services/nonfunctional_judge.py",
+      "web/services/observation_coverage.py",
+      "web/services/qa/advanced_generator.py",
+      "web/services/qa/doc_generator.py",
+      "web/services/qa/helpers.py",
+      "web/services/run_notifier.py",
+      "web/services/run_store.py",
+      "web/services/usage_tracker.py",
+      "web/services/viewpoint_store.py",
+      "web/tenancy.py",
+      "web/validation.py"
+    ],
+    "third_party_packages": [
+      {
+        "import": "flask",
+        "requirement": "flask==3.1.3",
+        "declared_in_requirements": true
+      }
+    ],
+    "env_vars": [
+      "WEBSPEC2DOC_PW_MAX_EXEC_SEC"
+    ],
+    "data_files": [],
+    "consumes_endpoints": [
+      "/api/autorun/cancel",
+      "/api/autorun/jobs",
+      "/api/autorun/live-screenshot",
+      "/api/autorun/preview",
+      "/api/autorun/status",
+      "/api/autorun/submit-input",
+      "/api/history",
+      "/api/testcases/live-progress",
+      "/api/testcases/live-screenshot",
+      "/api/testcases/run",
+      "/api/viewpoint-selection",
+      "/preview"
+    ],
+    "window_globals": [
+      "_autoRunLastData",
+      "autorunCancel",
+      "autorunLeadBar",
+      "autorunReview",
+      "autorunStages"
+    ],
+    "template_includes_not_bundled": [],
+    "static_refs_not_bundled": []
+  },
+  "gaps": [],
+  "shared_assets": [],
+  "warnings": [],
+  "verification": {
+    "static_analysis": "done",
+    "pytest": "not_run",
+    "verify_ui": "not_run",
+    "manual_screen_check": "not_run"
+  }
+}

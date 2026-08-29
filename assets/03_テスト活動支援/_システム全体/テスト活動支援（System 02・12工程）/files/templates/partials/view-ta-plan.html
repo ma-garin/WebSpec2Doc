@@ -1,0 +1,194 @@
+        <!-- ===== テスト活動支援 / 計画 ===== -->
+        <section class="view" id="view-test-plan">
+          <div class="dashboard-section-head">
+            <div>
+              <p class="dashboard-section-copy">対象・スコープ・体制・リスクを固め、以降の分析と設計の前提にします。9項目すべてを決めると計画を確定できます。</p>
+            </div>
+          </div>
+
+          <div class="ta-panel" style="margin-bottom:10px;">
+            <div class="ta-panel-head">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <div class="ta-panel-title">マスタテスト計画</div>
+                <span class="ta2-badge ta2-badge-wa" id="ta-plan-status-badge">未確定</span>
+              </div>
+              <div class="ta-panel-actions">
+                <button type="button" class="ta-linkbtn" id="ta-plan-save" disabled data-wip="1">下書きを保存</button>
+                <span class="ta-wip-note">保存先未接続・再読込で消えます</span>
+                <button type="button" class="ta-linkbtn" id="ta-plan-generate" disabled data-wip="1">AIで計画草案を作る</button>
+                <span class="ta-wip-note">準備中</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex; gap:16px; align-items:flex-start;">
+            <!-- 決定事項リスト -->
+            <div class="ta-panel" style="flex:1; min-width:0;">
+              <div class="ta-panel-body">
+
+                <div class="ta-panel-sub" style="margin:0 0 6px; font-weight:700;">対象と体制</div>
+
+                <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:4px 16px;">
+                  <div class="ta-decision-item" data-decision="system">
+                    <div data-dec-row style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:8px; border-left:3px solid transparent;">
+                      <span data-dec-dot aria-hidden="true">●</span>
+                      <label for="ta-plan-system" style="min-width:82px; font-size:12px; font-weight:600; color:var(--text-muted);">対象システム</label>
+                      <input type="text" id="ta-plan-system" class="input-compact" style="flex:1; min-width:0;" placeholder="例: 会員ポータル" />
+                    </div>
+                    <div class="ta-wip-note" data-dec-hint style="margin:2px 0 2px 20px;">未入力です</div>
+                  </div>
+
+                  <div class="ta-decision-item" data-decision="release">
+                    <div data-dec-row style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:8px; border-left:3px solid transparent;">
+                      <span data-dec-dot aria-hidden="true">●</span>
+                      <label for="ta-plan-release" style="min-width:82px; font-size:12px; font-weight:600; color:var(--text-muted);">リリース</label>
+                      <input type="text" id="ta-plan-release" class="input-compact" style="flex:1; min-width:0;" placeholder="例: v2.4.0 / 2026-10 定期リリース" />
+                    </div>
+                    <div class="ta-wip-note" data-dec-hint style="margin:2px 0 2px 20px;">未入力です</div>
+                  </div>
+
+                  <div class="ta-decision-item" data-decision="team">
+                    <div data-dec-row style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:8px; border-left:3px solid transparent;">
+                      <span data-dec-dot aria-hidden="true">●</span>
+                      <label for="ta-plan-team" style="min-width:82px; font-size:12px; font-weight:600; color:var(--text-muted);">体制</label>
+                      <input type="text" id="ta-plan-team" class="input-compact" style="flex:1; min-width:0;" placeholder="例: QA 2名 / 開発 4名 / PO 1名" />
+                    </div>
+                    <div class="ta-wip-note" data-dec-hint style="margin:2px 0 2px 20px;">未入力です</div>
+                  </div>
+
+                  <div class="ta-decision-item" data-decision="period" style="grid-column:1 / -1;">
+                    <div data-dec-row style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:8px; border-left:3px solid transparent; flex-wrap:wrap;">
+                      <span data-dec-dot aria-hidden="true">●</span>
+                      <label for="ta-plan-period-from" style="min-width:82px; font-size:12px; font-weight:600; color:var(--text-muted);">期間</label>
+                      <input type="date" id="ta-plan-period-from" class="input-compact" style="min-width:0;" />
+                      <span>〜</span>
+                      <input type="date" id="ta-plan-period-to" class="input-compact" style="min-width:0;" />
+                    </div>
+                    <div class="ta-wip-note" data-dec-hint style="margin:2px 0 2px 20px;">未入力です</div>
+                  </div>
+                </div>
+
+                <div class="ta-panel-sub" style="margin:10px 0 6px; font-weight:700;">スコープと制約・リスクと工数<span class="ta-wip-note" style="margin-left:8px; font-weight:400;">（見出しクリックで開閉・常時1件表示）</span></div>
+
+                <div class="ta-decision-item" data-decision="scope-in">
+                  <div data-dec-row tabindex="0" role="button" aria-expanded="true" style="cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:6px 10px; border-radius:8px; border-left:3px solid transparent;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                      <span data-acc-chevron aria-hidden="true" style="font-size:10px; color:var(--text-muted);">▾</span>
+                      <span data-dec-dot aria-hidden="true">●</span>
+                      <span style="font-size:12px; font-weight:600; color:var(--text-muted);">スコープ In</span>
+                    </div>
+                    <div style="display:flex; gap:6px;">
+                      <button type="button" class="ta-linkbtn" id="ta-plan-scope-in-add">追加</button>
+                      <button type="button" class="ta-linkbtn" data-ta-action="plan-scope-in-import" disabled data-wip="1">仕様書から取り込む</button>
+                    </div>
+                  </div>
+                  <div data-acc-body>
+                    <div id="ta-plan-scope-in" style="margin-left:30px;"><div class="empty">上の［追加］で今回扱う機能を1件ずつ入力します</div></div>
+                    <div class="ta-wip-note" data-dec-hint style="margin:2px 0 2px 20px;">0件です</div>
+                  </div>
+                </div>
+
+                <div class="ta-decision-item" data-decision="scope-out">
+                  <div data-dec-row tabindex="0" role="button" aria-expanded="false" style="cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:6px 10px; border-radius:8px; border-left:3px solid transparent;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                      <span data-acc-chevron aria-hidden="true" style="font-size:10px; color:var(--text-muted);">▸</span>
+                      <span data-dec-dot aria-hidden="true">●</span>
+                      <span style="font-size:12px; font-weight:600; color:var(--text-muted);">スコープ Out</span>
+                    </div>
+                    <button type="button" class="ta-linkbtn" data-ta-action="plan-scope-out-add">追加</button>
+                  </div>
+                  <div data-acc-body style="display:none;">
+                    <div id="ta-plan-scope-out" style="margin-left:30px;"><div class="empty">上の［追加］で今回扱わない範囲と理由を1件ずつ入力します</div></div>
+                    <div class="ta-wip-note" data-dec-hint style="margin:2px 0 2px 20px;">0件です</div>
+                  </div>
+                </div>
+
+                <div class="ta-decision-item" data-decision="assumptions">
+                  <div data-dec-row tabindex="0" role="button" aria-expanded="false" style="cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:6px 10px; border-radius:8px; border-left:3px solid transparent;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                      <span data-acc-chevron aria-hidden="true" style="font-size:10px; color:var(--text-muted);">▸</span>
+                      <span data-dec-dot aria-hidden="true">●</span>
+                      <span style="font-size:12px; font-weight:600; color:var(--text-muted);">前提と制約</span>
+                    </div>
+                    <button type="button" class="ta-linkbtn" data-ta-action="plan-assumption-add">追加</button>
+                  </div>
+                  <div data-acc-body style="display:none;">
+                    <div id="ta-plan-assumptions" style="margin-left:30px;"><div class="empty">上の［追加］で環境・データ・依存の前提条件を1件ずつ入力します</div></div>
+                    <div class="ta-wip-note" data-dec-hint style="margin:2px 0 2px 20px;">0件です</div>
+                  </div>
+                </div>
+
+                <div class="ta-decision-item" data-decision="risk">
+                  <div data-dec-row tabindex="0" role="button" aria-expanded="false" style="cursor:pointer; display:flex; align-items:center; justify-content:space-between; padding:6px 10px; border-radius:8px; border-left:3px solid transparent;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                      <span data-acc-chevron aria-hidden="true" style="font-size:10px; color:var(--text-muted);">▸</span>
+                      <span data-dec-dot aria-hidden="true">●</span>
+                      <span style="font-size:12px; font-weight:600; color:var(--text-muted);">リスクと対応</span>
+                    </div>
+                    <button type="button" class="ta-linkbtn" data-ta-action="plan-risk-add">追加</button>
+                  </div>
+                  <div data-acc-body style="display:none;">
+                    <div class="ta-table-wrap" style="margin-left:30px;">
+                      <table class="ta-table">
+                        <thead>
+                          <tr><th>リスク</th><th>影響</th><th>発生度</th><th>対応</th><th>担当</th></tr>
+                        </thead>
+                        <tbody id="ta-plan-risk-body">
+                          <tr><td colspan="5"><div class="empty">上の［追加］でリスクを1件ずつ入力します</div></td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <div class="ta-wip-note" data-dec-hint style="margin:4px 0 2px 20px;">0件です</div>
+                  </div>
+                </div>
+
+                <div class="ta-decision-item" data-decision="estimate">
+                  <div data-dec-row tabindex="0" role="button" aria-expanded="false" style="cursor:pointer; display:flex; align-items:center; justify-content:space-between; padding:6px 10px; border-radius:8px; border-left:3px solid transparent;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                      <span data-acc-chevron aria-hidden="true" style="font-size:10px; color:var(--text-muted);">▸</span>
+                      <span data-dec-dot aria-hidden="true">●</span>
+                      <span style="font-size:12px; font-weight:600; color:var(--text-muted);">工数見積</span>
+                    </div>
+                    <div style="display:flex; gap:6px; align-items:center;">
+                      <button type="button" class="ta-linkbtn" id="ta-plan-estimate-add">追加</button>
+                      <button type="button" class="ta-linkbtn" id="ta-plan-estimate-recalc" disabled data-wip="1">再計算</button>
+                      <span class="ta-wip-note">自動計算は準備中</span>
+                    </div>
+                  </div>
+                  <div data-acc-body style="display:none;">
+                    <div class="ta-table-wrap" style="margin-left:30px;">
+                      <table class="ta-table">
+                        <thead>
+                          <tr><th>工程</th><th>想定ケース数</th><th>想定工数</th><th>担当</th></tr>
+                        </thead>
+                        <tbody id="ta-plan-estimate-body">
+                          <tr><td colspan="4"><div class="empty">上の［追加］で工程ごとの見積を入力します</div></td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <div class="ta-wip-note" data-dec-hint style="margin:4px 0 2px 20px;">0件です</div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- 確定レール -->
+            <div style="flex:0 0 224px; position:sticky; top:16px; align-self:flex-start;">
+              <div class="ta-panel">
+                <div class="ta-panel-body" style="text-align:center;">
+                  <div class="stat-card-label">未決</div>
+                  <div class="stat-card-value is-wa" id="ta-plan-undecided-count" style="font-size:32px; line-height:1;">9 / 9</div>
+                  <button type="button" class="btn-primary" id="ta-plan-confirm" style="width:100%; margin-top:8px;" disabled>計画を確定する</button>
+                  <div class="ta-note" id="ta-plan-confirm-reason" style="margin-top:4px; text-align:left;">あと9項目を決めると確定できます</div>
+                  <div style="margin-top:10px; text-align:left;">
+                    <div class="ta-panel-sub" style="font-weight:700; margin-bottom:4px;">確定でアンロックされるもの</div>
+                    <ul id="ta-plan-unlock-list" style="margin:0; padding-left:18px; font-size:12px; color:var(--text-muted);">
+                      <li>確認中…</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>

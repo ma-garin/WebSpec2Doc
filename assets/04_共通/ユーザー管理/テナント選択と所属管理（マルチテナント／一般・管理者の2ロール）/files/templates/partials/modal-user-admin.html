@@ -1,0 +1,92 @@
+  <!-- ===== ユーザー管理ビューのダイアログ ===== -->
+  <!-- 新規登録と編集はダイアログで行う。画面内にフォームを常設しない。
+       削除は一覧の行から（確認ダイアログを挟む）。
+       枠は AutoRun のログイン入力と同じ .file-preview-modal を使う
+       （表示方法を増やさない）。 -->
+
+  <div id="uadm-add-modal" class="file-preview-modal hidden" role="dialog" aria-modal="true"
+       aria-labelledby="uadm-add-title">
+    <div class="file-preview-overlay" data-dialog-close></div>
+    <div class="file-preview-panel" style="max-width:480px;height:auto;max-height:90vh">
+      <div class="file-preview-header">
+        <span class="file-preview-title" id="uadm-add-title">ユーザーの新規登録</span>
+        <button type="button" class="btn-outline-sm" style="font-size:12px;height:30px"
+                data-dialog-close>✕ 閉じる</button>
+      </div>
+      <form id="uadm-add-form" class="uadm-dialog-body">
+        <div class="auth-field uadm-dialog-field">
+          <label for="uadm-add-name">表示名</label>
+          <input type="text" id="uadm-add-name" required>
+        </div>
+        <div class="auth-field uadm-dialog-field">
+          <label for="uadm-add-email">ログインID / メールアドレス</label>
+          <input type="text" id="uadm-add-email" required>
+        </div>
+        <div class="auth-field uadm-dialog-field">
+          <label for="uadm-add-password">初期パスワード</label>
+          <input type="text" id="uadm-add-password" required>
+        </div>
+        <div class="auth-field uadm-dialog-field">
+          <label for="uadm-add-tenant">所属テナント</label>
+          <select id="uadm-add-tenant" class="account-select"></select>
+        </div>
+        <div class="auth-field uadm-dialog-field">
+          <label for="uadm-add-role">ロール</label>
+          <select id="uadm-add-role" class="account-select">
+            <option value="member">一般</option>
+            <option value="admin">管理者</option>
+          </select>
+        </div>
+        <p class="uadm-dialog-note">
+          初期パスワードは本人に直接伝えてください。パスワードなしのユーザーは作成できません。
+        </p>
+        <div id="uadm-add-status" class="account-status" aria-live="polite"></div>
+        <div class="uadm-dialog-actions">
+          <button type="button" class="btn-outline-sm uadm-dialog-cancel" data-dialog-close>キャンセル</button>
+          <button type="submit" class="btn-primary uadm-dialog-submit">登録する</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="uadm-edit-modal" class="file-preview-modal hidden" role="dialog" aria-modal="true"
+       aria-labelledby="uadm-edit-title">
+    <div class="file-preview-overlay" data-dialog-close></div>
+    <div class="file-preview-panel" style="max-width:520px;height:auto;max-height:90vh">
+      <div class="file-preview-header">
+        <span class="file-preview-title" id="uadm-edit-title">ユーザーを編集</span>
+        <button type="button" class="btn-outline-sm" style="font-size:12px;height:30px"
+                data-dialog-close>✕ 閉じる</button>
+      </div>
+      <div class="uadm-dialog-body">
+
+        <div class="uadm-section">
+          <h3>所属とロール</h3>
+          <p>チェックしたテナントに所属します。ロールはテナントごとに持ちます。
+             テナントで最後の管理者は降格・除外できません。</p>
+          <div id="uadm-membership-list"></div>
+          <div class="uadm-dialog-actions">
+            <button type="button" class="btn-primary uadm-dialog-submit"
+                    id="uadm-membership-save">所属を保存</button>
+          </div>
+        </div>
+
+        <div class="uadm-section">
+          <h3>パスワードをリセット</h3>
+          <p>現在のパスワードは不要です。リセットすると対象ユーザーの全セッションが失効し、
+             ログイン失敗によるロックも解除されます。新しいパスワードは画面に残らないため、
+             その場で本人に直接伝えてください。</p>
+          <div class="uadm-inline">
+            <div class="auth-field uadm-dialog-field">
+              <label for="uadm-edit-password">新しいパスワード</label>
+              <input type="text" id="uadm-edit-password" placeholder="本人に伝えるパスワード">
+            </div>
+            <button type="button" class="btn-outline-sm uadm-inline-btn"
+                    id="uadm-reset-submit">リセット</button>
+          </div>
+        </div>
+
+        <div id="uadm-edit-status" class="account-status" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>

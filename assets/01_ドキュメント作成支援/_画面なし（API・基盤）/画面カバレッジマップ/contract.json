@@ -1,0 +1,33 @@
+{
+  "feature_id": "screen_coverage_map",
+  "name": "画面カバレッジマップ",
+  "risk_level": "medium",
+  "status": "implemented",
+  "ui_files": [],
+  "route_files": [],
+  "core_files": [
+    "src/apispec/coverage_map.py"
+  ],
+  "symbols": [
+    "build_coverage_map",
+    "executed_pages_from_meta",
+    "save_coverage_map"
+  ],
+  "outputs": [
+    "coverage_map.json",
+    "coverage_map.html"
+  ],
+  "persistence": [
+    "output/{domain}/qa_process/coverage_map.*"
+  ],
+  "failure_modes": [
+    "empty_graph",
+    "missing_meta",
+    "skipped_tests"
+  ],
+  "required_tests": [
+    "happy_path",
+    "no_rate_claim",
+    "evidence"
+  ]
+}

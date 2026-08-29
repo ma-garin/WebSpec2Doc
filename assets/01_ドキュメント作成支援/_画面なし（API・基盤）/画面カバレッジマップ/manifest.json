@@ -1,0 +1,82 @@
+{
+  "schema": "webspec2doc/feature-asset@1",
+  "version": "20260829-5345533",
+  "generated_at": "2026-08-29T07:50:12Z",
+  "source": {
+    "repository": "WebSpec2Doc",
+    "revision": "5345533",
+    "working_tree_dirty": true,
+    "contract_file": "quality/feature_contracts.yml"
+  },
+  "feature": {
+    "feature_id": "screen_coverage_map",
+    "name": "画面カバレッジマップ",
+    "risk_level": "medium",
+    "status": "implemented",
+    "ui_files": [],
+    "route_files": [],
+    "core_files": [
+      "src/apispec/coverage_map.py"
+    ],
+    "symbols": [
+      "build_coverage_map",
+      "executed_pages_from_meta",
+      "save_coverage_map"
+    ],
+    "outputs": [
+      "coverage_map.json",
+      "coverage_map.html"
+    ],
+    "persistence": [
+      "output/{domain}/qa_process/coverage_map.*"
+    ],
+    "failure_modes": [
+      "empty_graph",
+      "missing_meta",
+      "skipped_tests"
+    ],
+    "required_tests": [
+      "happy_path",
+      "no_rate_claim",
+      "evidence"
+    ]
+  },
+  "placement": {
+    "system_key": "docs",
+    "system": "01_ドキュメント作成支援",
+    "screen": "_画面なし（API・基盤）",
+    "screens": [],
+    "classified_by": "path"
+  },
+  "files": [
+    {
+      "path": "src/apispec/coverage_map.py",
+      "role": "core",
+      "bytes": 8037,
+      "sha256": "0ddfbd182adbc5aad3cb246bc4e8efd6d895cc41f7b3757228f0c6c0172a4149"
+    }
+  ],
+  "wiring": {
+    "blueprints": [],
+    "provides_endpoints": []
+  },
+  "dependencies": {
+    "internal_modules_not_bundled": [],
+    "third_party_packages": [],
+    "env_vars": [],
+    "data_files": [],
+    "consumes_endpoints": [],
+    "window_globals": [],
+    "template_includes_not_bundled": [],
+    "static_refs_not_bundled": []
+  },
+  "gaps": [],
+  "shared_assets": [],
+  "warnings": [],
+  "verification": {
+    "static_analysis": "done",
+    "pytest": "not_run",
+    "verify_ui": "not_run",
+    "manual_screen_check": "not_run"
+  }
+}

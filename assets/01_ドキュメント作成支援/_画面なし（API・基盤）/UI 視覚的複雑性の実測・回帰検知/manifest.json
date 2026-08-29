@@ -1,0 +1,90 @@
+{
+  "schema": "webspec2doc/feature-asset@1",
+  "version": "20260829-5345533",
+  "generated_at": "2026-08-29T07:50:12Z",
+  "source": {
+    "repository": "WebSpec2Doc",
+    "revision": "5345533",
+    "working_tree_dirty": true,
+    "contract_file": "quality/feature_contracts.yml"
+  },
+  "feature": {
+    "feature_id": "ui_visual_complexity",
+    "name": "UI 視覚的複雑性の実測・回帰検知",
+    "risk_level": "medium",
+    "status": "implemented",
+    "ui_files": [],
+    "route_files": [],
+    "core_files": [
+      "web/services/visual_complexity.py"
+    ],
+    "symbols": [
+      "measure",
+      "VisualComplexity"
+    ],
+    "outputs": [
+      "compression_ratio",
+      "edge_density",
+      "colorfulness"
+    ],
+    "persistence": [],
+    "failure_modes": [
+      "empty_image",
+      "resolution_variance",
+      "grayscale_only"
+    ],
+    "required_tests": [
+      "happy_path",
+      "error_path"
+    ]
+  },
+  "placement": {
+    "system_key": "docs",
+    "system": "01_ドキュメント作成支援",
+    "screen": "_画面なし（API・基盤）",
+    "screens": [],
+    "classified_by": "path"
+  },
+  "files": [
+    {
+      "path": "web/services/visual_complexity.py",
+      "role": "core",
+      "bytes": 4145,
+      "sha256": "a310eb6ad4a300ffaf57b9756f74692b3dd2ed32a11697822b4a5723d20da161"
+    }
+  ],
+  "wiring": {
+    "blueprints": [],
+    "provides_endpoints": []
+  },
+  "dependencies": {
+    "internal_modules_not_bundled": [],
+    "third_party_packages": [
+      {
+        "import": "Pillow",
+        "requirement": "Pillow>=11.0.0",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "numpy",
+        "requirement": "numpy>=2.0.0",
+        "declared_in_requirements": true
+      }
+    ],
+    "env_vars": [],
+    "data_files": [],
+    "consumes_endpoints": [],
+    "window_globals": [],
+    "template_includes_not_bundled": [],
+    "static_refs_not_bundled": []
+  },
+  "gaps": [],
+  "shared_assets": [],
+  "warnings": [],
+  "verification": {
+    "static_analysis": "done",
+    "pytest": "not_run",
+    "verify_ui": "not_run",
+    "manual_screen_check": "not_run"
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "feature_id": "spec_xlsx_full_export",
+  "name": "テスト仕様書一式の Excel 出力（7シート）",
+  "risk_level": "medium",
+  "status": "implemented",
+  "ui_files": [
+    "templates/partials/view-generate.html",
+    "static/js/results.js"
+  ],
+  "route_files": [
+    "web/routes/report.py"
+  ],
+  "core_files": [
+    "web/services/export_xlsx.py",
+    "web/services/screen_test_design.py",
+    "web/services/testcase_table_store.py",
+    "web/routes/report.py",
+    "src/graph/state_table.py",
+    "src/generator/excel_reporter.py"
+  ],
+  "symbols": [
+    "export_spec_xlsx",
+    "write_full_spec_xlsx",
+    "build_workbook",
+    "build_test_design_rows",
+    "build_testcase_rows",
+    "build_state_table_grid"
+  ],
+  "outputs": [
+    "spec.xlsx（画面一覧・フォーム・項目定義書・境界値データ・テスト設計・テストケース・遷移表）"
+  ],
+  "persistence": [
+    "output/{domain}/spec.xlsx"
+  ],
+  "failure_modes": [
+    "report_json_missing",
+    "report_json_unreadable",
+    "state_table_not_applicable",
+    "sheet_rows_diverge_from_ui",
+    "duplicate_sheets_on_reexport",
+    "invalid_domain"
+  ],
+  "required_tests": [
+    "happy_path",
+    "error_path",
+    "evidence"
+  ]
+}

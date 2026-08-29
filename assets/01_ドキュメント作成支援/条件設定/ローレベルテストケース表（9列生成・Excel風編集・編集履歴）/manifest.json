@@ -1,0 +1,310 @@
+{
+  "schema": "webspec2doc/feature-asset@1",
+  "version": "20260829-5345533",
+  "generated_at": "2026-08-29T07:50:13Z",
+  "source": {
+    "repository": "WebSpec2Doc",
+    "revision": "5345533",
+    "working_tree_dirty": true,
+    "contract_file": "quality/feature_contracts.yml"
+  },
+  "feature": {
+    "feature_id": "testcase_table",
+    "name": "ローレベルテストケース表（9列生成・Excel風編集・編集履歴）",
+    "risk_level": "high",
+    "status": "implemented",
+    "ui_files": [
+      "templates/partials/view-generate.html",
+      "static/js/view-testcase-grid.js",
+      "static/js/testcase-grid-edit.js"
+    ],
+    "route_files": [
+      "web/routes/qa_process.py"
+    ],
+    "core_files": [
+      "src/generator/testcase_table.py",
+      "web/services/testcase_table_store.py",
+      "web/services/testcase_spec_generator.py",
+      "web/services/screen_test_design.py"
+    ],
+    "symbols": [
+      "build_testcase_table",
+      "compose",
+      "update_cell",
+      "reset_cell",
+      "add_row",
+      "delete_row",
+      "load_history",
+      "generate_spec",
+      "is_executable",
+      "save_run_result"
+    ],
+    "outputs": [
+      "10列テストケース表（ID/名称/画面/機能/観点/前提条件/手順/期待結果/自動化判定/結果）",
+      "編集履歴（変更前後の値）",
+      "testcases.spec.ts（表から生成した Playwright コード）",
+      "実行結果（ケース単位の PASS/FAIL）"
+    ],
+    "persistence": [
+      "output/{domain}/testcases/edits.json",
+      "output/{domain}/testcases/history.jsonl",
+      "output/{domain}/testcases/testcases.spec.ts",
+      "output/{domain}/testcases/run_result.json"
+    ],
+    "failure_modes": [
+      "report_corrupt",
+      "uneditable_column",
+      "unknown_case_id",
+      "concurrent_edit_overwrite",
+      "save_failure",
+      "no_executable_case",
+      "playwright_not_installed",
+      "egress_denied",
+      "execution_timeout"
+    ],
+    "required_tests": [
+      "happy_path",
+      "error_path",
+      "evidence"
+    ]
+  },
+  "placement": {
+    "system_key": "docs",
+    "system": "01_ドキュメント作成支援",
+    "screen": "条件設定",
+    "screens": [
+      "条件設定"
+    ],
+    "classified_by": "screen"
+  },
+  "files": [
+    {
+      "path": "templates/partials/view-generate.html",
+      "role": "ui",
+      "bytes": 21038,
+      "sha256": "da6646d5d332341e31a9b632b97fdc4bea9dcbc610813e801264292322ccf8fd"
+    },
+    {
+      "path": "static/js/view-testcase-grid.js",
+      "role": "ui",
+      "bytes": 23932,
+      "sha256": "35efccb607a6ef8eab3ec47fa30e9974108ad4a7ba2fa808681669c956a705f4"
+    },
+    {
+      "path": "static/js/testcase-grid-edit.js",
+      "role": "ui",
+      "bytes": 18082,
+      "sha256": "857e824886e53f9a39c5bfa366bc82e00c59d4825afc822b820a8eea050ddc08"
+    },
+    {
+      "path": "web/routes/qa_process.py",
+      "role": "route",
+      "bytes": 19970,
+      "sha256": "aeb59facf1aed705cb7ea7c8be9ca917ae31d43918a8d5ef77042cfc266f16ae"
+    },
+    {
+      "path": "src/generator/testcase_table.py",
+      "role": "core",
+      "bytes": 27174,
+      "sha256": "664ea6ac8108c08c34df3d3bdcdf3bae926a5beb3d3569d0ae27d089695fceee"
+    },
+    {
+      "path": "web/services/testcase_table_store.py",
+      "role": "core",
+      "bytes": 15875,
+      "sha256": "d946a1027d64159eb727039b8c99c32f29fbffab760024f01ffc61e2a2423f82"
+    },
+    {
+      "path": "web/services/testcase_spec_generator.py",
+      "role": "core",
+      "bytes": 10168,
+      "sha256": "87fc5cf709f9fb168211e5863a4dfa0b38d780ccf99f653af4fd4e9ace808ae5"
+    },
+    {
+      "path": "web/services/screen_test_design.py",
+      "role": "core",
+      "bytes": 16445,
+      "sha256": "1369bf1737f1f8819fab3710d12e15cebdda7347e1a733205e3f66f0f02b9da7"
+    }
+  ],
+  "wiring": {
+    "blueprints": [
+      {
+        "file": "web/routes/qa_process.py",
+        "name": "qa_process",
+        "url_prefix": ""
+      }
+    ],
+    "provides_endpoints": [
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/qa-process/input",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/qa-process/generate",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/qa-process/result",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/testcases",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/testcases/table",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/testcases/count",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/testcases/history",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/testcases/cell",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/testcases/cell/reset",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/testcases/run",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/testcases/live-progress",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/testcases/live-screenshot",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/testcases/row",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/test-design",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/test-design/by-screen",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/qa-process/advanced",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/qa-process/generate-advanced",
+        "methods": [
+          "POST"
+        ]
+      }
+    ]
+  },
+  "dependencies": {
+    "internal_modules_not_bundled": [
+      "src/autorun/techniques.py",
+      "src/crawler/url_safety.py",
+      "src/generator/test_design.py",
+      "src/llm/viewpoint_generator.py",
+      "web/config.py",
+      "web/env_store.py",
+      "web/services/condition_run_status.py",
+      "web/services/egress_gateway.py",
+      "web/services/openai_qa.py",
+      "web/services/playwright_executor.py",
+      "web/services/qa/advanced_generator.py",
+      "web/services/qa/doc_generator.py",
+      "web/services/qa/helpers.py",
+      "web/services/run_store.py",
+      "web/services/test_design_settings.py",
+      "web/services/usage_tracker.py",
+      "web/validation.py"
+    ],
+    "third_party_packages": [
+      {
+        "import": "flask",
+        "requirement": "flask==3.1.3",
+        "declared_in_requirements": true
+      }
+    ],
+    "env_vars": [],
+    "data_files": [],
+    "consumes_endpoints": [
+      "/api/testcases/cell",
+      "/api/testcases/cell/reset",
+      "/api/testcases/history",
+      "/api/testcases/row",
+      "/api/testcases/run",
+      "/api/testcases/table"
+    ],
+    "window_globals": [],
+    "template_includes_not_bundled": [],
+    "static_refs_not_bundled": []
+  },
+  "gaps": [],
+  "shared_assets": [],
+  "warnings": [],
+  "verification": {
+    "static_analysis": "done",
+    "pytest": "not_run",
+    "verify_ui": "not_run",
+    "manual_screen_check": "not_run"
+  }
+}

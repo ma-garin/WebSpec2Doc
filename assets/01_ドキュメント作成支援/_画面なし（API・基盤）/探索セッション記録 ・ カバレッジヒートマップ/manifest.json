@@ -1,0 +1,256 @@
+{
+  "schema": "webspec2doc/feature-asset@1",
+  "version": "20260829-5345533",
+  "generated_at": "2026-08-29T07:50:12Z",
+  "source": {
+    "repository": "WebSpec2Doc",
+    "revision": "5345533",
+    "working_tree_dirty": true,
+    "contract_file": "quality/feature_contracts.yml"
+  },
+  "feature": {
+    "feature_id": "exploration_capture",
+    "name": "探索セッション記録 / カバレッジヒートマップ",
+    "risk_level": "high",
+    "status": "implemented",
+    "ui_files": [],
+    "route_files": [
+      "web/routes/report.py"
+    ],
+    "core_files": [
+      "src/capture/session_recorder.py",
+      "src/capture/coverage.py",
+      "src/capture/burndown.py",
+      "src/generator/heatmap_reporter.py",
+      "src/generator/html_reporter.py",
+      "src/generator/burndown_reporter.py",
+      "src/registry/session_store.py"
+    ],
+    "symbols": [
+      "SessionRecorder",
+      "compute_exploration_coverage",
+      "propose_charters",
+      "generate_heatmap_html",
+      "compute_exploration_burndown",
+      "generate_burndown_html"
+    ],
+    "outputs": [
+      "sessions/session_*.jsonl",
+      "exploration_coverage.json",
+      "exploration_heatmap.html",
+      "exploration_burndown.json",
+      "exploration_burndown.html"
+    ],
+    "persistence": [
+      "output/{domain}/sessions/"
+    ],
+    "failure_modes": [
+      "no_inventory",
+      "no_sessions",
+      "browser_closed",
+      "unmatched_footprint",
+      "coverage_file_corrupt",
+      "missing_ts_mtime_fallback"
+    ],
+    "required_tests": [
+      "happy_path",
+      "error_path",
+      "state_join_key",
+      "evidence"
+    ]
+  },
+  "placement": {
+    "system_key": "docs",
+    "system": "01_ドキュメント作成支援",
+    "screen": "_画面なし（API・基盤）",
+    "screens": [],
+    "classified_by": "path"
+  },
+  "files": [
+    {
+      "path": "web/routes/report.py",
+      "role": "route",
+      "bytes": 24514,
+      "sha256": "f1b9d3e492afe9ad356102cd9f83f5843a91b269adf478ecd75cefe697350297"
+    },
+    {
+      "path": "src/capture/session_recorder.py",
+      "role": "core",
+      "bytes": 10498,
+      "sha256": "6826b1dc0996d7a94c5223781e5023eff668ac4c491dab63e225e981b610f515"
+    },
+    {
+      "path": "src/capture/coverage.py",
+      "role": "core",
+      "bytes": 8260,
+      "sha256": "db1a224a5fa069545b0105d500671a42609ef80753fade8f32dc1e7ea25d92d0"
+    },
+    {
+      "path": "src/capture/burndown.py",
+      "role": "core",
+      "bytes": 6322,
+      "sha256": "8d59a59425e3801fb6d7ce52d5a94af423ca56607612ce292818c0fcd9ab80f6"
+    },
+    {
+      "path": "src/generator/heatmap_reporter.py",
+      "role": "core",
+      "bytes": 18464,
+      "sha256": "28b601be7b1aa4320759a03730e1657eb8f1cc39e6dd4de4668a8c8f1916f94a"
+    },
+    {
+      "path": "src/generator/html_reporter.py",
+      "role": "core",
+      "bytes": 54598,
+      "sha256": "2e1e13c1f799bbf3d73b79b667bcfc3532e6652ba1a06efabf51a190cb56974b"
+    },
+    {
+      "path": "src/generator/burndown_reporter.py",
+      "role": "core",
+      "bytes": 7953,
+      "sha256": "3b7eda2e3f9799bd6a90f6798253f1961d2863f7cdc0392187736c2729738d35"
+    },
+    {
+      "path": "src/registry/session_store.py",
+      "role": "core",
+      "bytes": 1153,
+      "sha256": "7c64759b9138819e3d5281a57f546c52132fa11b800c1ce7be954f546c47c790"
+    }
+  ],
+  "wiring": {
+    "blueprints": [
+      {
+        "file": "web/routes/report.py",
+        "name": "report",
+        "url_prefix": ""
+      }
+    ],
+    "provides_endpoints": [
+      {
+        "file": "web/routes/report.py",
+        "rule": "/preview",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/report.py",
+        "rule": "/download",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/report.py",
+        "rule": "/api/export/spec-xlsx",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/report.py",
+        "rule": "/download-zip",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/report.py",
+        "rule": "/api/report/<domain>/spec-ts",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/report.py",
+        "rule": "/api/sample-report",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/report.py",
+        "rule": "/api/result",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/report.py",
+        "rule": "/api/state-table",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/report.py",
+        "rule": "/api/coverage-heatmap",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/report.py",
+        "rule": "/open",
+        "methods": [
+          "GET"
+        ]
+      }
+    ]
+  },
+  "dependencies": {
+    "internal_modules_not_bundled": [
+      "src/analyzer/html_analyzer.py",
+      "src/analyzer/stack_detector.py",
+      "src/analyzer/test_conditions.py",
+      "src/crawler/action_explorer.py",
+      "src/crawler/page_crawler.py",
+      "src/crawler/url_safety.py",
+      "src/generator/architecture_generator.py",
+      "src/generator/coverage_gap.py",
+      "src/generator/feature_catalog.py",
+      "src/generator/test_design.py",
+      "src/graph/state_table.py",
+      "src/graph/transition_graph.py",
+      "web/config.py",
+      "web/services/admin_audit.py",
+      "web/services/export_xlsx.py",
+      "web/services/run_store.py",
+      "web/services/spec_ts_generator.py",
+      "web/summary.py",
+      "web/tenancy.py",
+      "web/validation.py"
+    ],
+    "third_party_packages": [
+      {
+        "import": "flask",
+        "requirement": "flask==3.1.3",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "networkx",
+        "requirement": "networkx==3.3",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "playwright",
+        "requirement": "playwright==1.61.0",
+        "declared_in_requirements": true
+      }
+    ],
+    "env_vars": [],
+    "data_files": [],
+    "consumes_endpoints": [],
+    "window_globals": [],
+    "template_includes_not_bundled": [],
+    "static_refs_not_bundled": []
+  },
+  "gaps": [],
+  "shared_assets": [],
+  "warnings": [],
+  "verification": {
+    "static_analysis": "done",
+    "pytest": "not_run",
+    "verify_ui": "not_run",
+    "manual_screen_check": "not_run"
+  }
+}

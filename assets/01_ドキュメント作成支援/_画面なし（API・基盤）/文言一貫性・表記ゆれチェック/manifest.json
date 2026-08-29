@@ -1,0 +1,79 @@
+{
+  "schema": "webspec2doc/feature-asset@1",
+  "version": "20260829-5345533",
+  "generated_at": "2026-08-29T07:50:12Z",
+  "source": {
+    "repository": "WebSpec2Doc",
+    "revision": "5345533",
+    "working_tree_dirty": true,
+    "contract_file": "quality/feature_contracts.yml"
+  },
+  "feature": {
+    "feature_id": "wording_consistency",
+    "name": "文言一貫性・表記ゆれチェック",
+    "risk_level": "low",
+    "status": "implemented",
+    "ui_files": [],
+    "route_files": [],
+    "core_files": [
+      "src/wording/consistency.py"
+    ],
+    "symbols": [
+      "check_wording",
+      "load_dictionary",
+      "texts_from_pages"
+    ],
+    "outputs": [
+      "表記ゆれ検出結果"
+    ],
+    "persistence": [
+      "output/{domain}/wording_dictionary.json"
+    ],
+    "failure_modes": [
+      "broken_dictionary",
+      "empty_texts"
+    ],
+    "required_tests": [
+      "happy_path",
+      "dictionary_scope"
+    ]
+  },
+  "placement": {
+    "system_key": "docs",
+    "system": "01_ドキュメント作成支援",
+    "screen": "_画面なし（API・基盤）",
+    "screens": [],
+    "classified_by": "path"
+  },
+  "files": [
+    {
+      "path": "src/wording/consistency.py",
+      "role": "core",
+      "bytes": 8039,
+      "sha256": "d6b22a2475457bfee8dd61c2aad598c1667d3208576b210934e70bd74c4c8952"
+    }
+  ],
+  "wiring": {
+    "blueprints": [],
+    "provides_endpoints": []
+  },
+  "dependencies": {
+    "internal_modules_not_bundled": [],
+    "third_party_packages": [],
+    "env_vars": [],
+    "data_files": [],
+    "consumes_endpoints": [],
+    "window_globals": [],
+    "template_includes_not_bundled": [],
+    "static_refs_not_bundled": []
+  },
+  "gaps": [],
+  "shared_assets": [],
+  "warnings": [],
+  "verification": {
+    "static_analysis": "done",
+    "pytest": "not_run",
+    "verify_ui": "not_run",
+    "manual_screen_check": "not_run"
+  }
+}

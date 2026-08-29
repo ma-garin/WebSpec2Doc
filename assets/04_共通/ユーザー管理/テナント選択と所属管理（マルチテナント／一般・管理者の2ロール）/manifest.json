@@ -1,0 +1,432 @@
+{
+  "schema": "webspec2doc/feature-asset@1",
+  "version": "20260829-5345533",
+  "generated_at": "2026-08-29T07:50:11Z",
+  "source": {
+    "repository": "WebSpec2Doc",
+    "revision": "5345533",
+    "working_tree_dirty": true,
+    "contract_file": "quality/feature_contracts.yml"
+  },
+  "feature": {
+    "feature_id": "tenant_membership",
+    "name": "テナント選択と所属管理（マルチテナント／一般・管理者の2ロール）",
+    "risk_level": "critical",
+    "status": "implemented",
+    "ui_files": [
+      "templates/auth/tenant.html",
+      "templates/partials/view-user-management.html",
+      "templates/partials/modal-user-admin.html",
+      "templates/partials/view-tenant-management.html",
+      "templates/partials/modal-tenant-admin.html",
+      "static/css/tenant-auth.css",
+      "static/css/account-view.css",
+      "static/js/user-admin-view.js",
+      "static/js/tenant-admin-view.js"
+    ],
+    "route_files": [
+      "web/routes/tenant_admin.py",
+      "web/routes/account.py"
+    ],
+    "core_files": [
+      "web/services/auth_store.py",
+      "web/auth.py"
+    ],
+    "symbols": [
+      "list_memberships",
+      "set_memberships",
+      "bind_session_tenant",
+      "ensure_initial_admin",
+      "reset_password",
+      "delete_tenant"
+    ],
+    "outputs": [
+      "tenant selection page",
+      "admin console page",
+      "/api/admin/tenancy/* JSON",
+      "audit_log"
+    ],
+    "persistence": [
+      "instance/auth.db"
+    ],
+    "failure_modes": [
+      "no_membership_blocks_work",
+      "tenant_not_selected_redirect",
+      "not_a_member_rejected",
+      "last_admin_protection",
+      "last_tenant_cannot_be_deleted",
+      "non_admin_forbidden"
+    ],
+    "required_tests": [
+      "happy_path",
+      "error_path",
+      "evidence"
+    ]
+  },
+  "placement": {
+    "system_key": "common",
+    "system": "04_共通",
+    "screen": "ユーザー管理",
+    "screens": [
+      "ユーザー管理",
+      "テナント管理"
+    ],
+    "classified_by": "screen"
+  },
+  "files": [
+    {
+      "path": "templates/auth/tenant.html",
+      "role": "ui",
+      "bytes": 2761,
+      "sha256": "dfea6638c68cad81fa53cbfbca9e47762928fbb249bc57538b850b198a29e211"
+    },
+    {
+      "path": "templates/partials/view-user-management.html",
+      "role": "ui",
+      "bytes": 3298,
+      "sha256": "6f48539fdf6762f38d0e09573111f4021f9c35fa48a7610f456bc50ff3898972"
+    },
+    {
+      "path": "templates/partials/modal-user-admin.html",
+      "role": "ui",
+      "bytes": 4845,
+      "sha256": "97a60c6ec31969ccdcfaf85b320906dbcaece32ada36de39c09d8fe7dc05c706"
+    },
+    {
+      "path": "templates/partials/view-tenant-management.html",
+      "role": "ui",
+      "bytes": 2796,
+      "sha256": "4c362fed8844bcdae57f39df846872f0336b771d9337265b9f44a9c36bf07271"
+    },
+    {
+      "path": "templates/partials/modal-tenant-admin.html",
+      "role": "ui",
+      "bytes": 3457,
+      "sha256": "1d3a01832190a57b13d8a6b799143de539f7e832f1e79bd3dfe0cf4e87dfe3ad"
+    },
+    {
+      "path": "static/css/tenant-auth.css",
+      "role": "ui",
+      "bytes": 7971,
+      "sha256": "a7d65cfe6c661b8ee7e412b2d2318ae8b9e1301eac8e6538ad1412bc39575d3a"
+    },
+    {
+      "path": "static/css/account-view.css",
+      "role": "ui",
+      "bytes": 11800,
+      "sha256": "5964be2979da51cd2162b66827752dc34cb2c4bc2d2a41328b201766d137d480"
+    },
+    {
+      "path": "static/js/user-admin-view.js",
+      "role": "ui",
+      "bytes": 11802,
+      "sha256": "4cdf0724b5c76646466bbba7717023ce82206302be43b405d77bd9e8250f35cc"
+    },
+    {
+      "path": "static/js/tenant-admin-view.js",
+      "role": "ui",
+      "bytes": 6116,
+      "sha256": "9373b4bd792fdf6c9deb8bc77c3257bd0e980a4ec9c37ee7770aa5a9d1898b5c"
+    },
+    {
+      "path": "web/routes/tenant_admin.py",
+      "role": "route",
+      "bytes": 7539,
+      "sha256": "be05d9ed30f25aa12d560cc29fb8fb4a1a1306c7cec6412a9a44abcf792b08cc"
+    },
+    {
+      "path": "web/routes/account.py",
+      "role": "route",
+      "bytes": 15585,
+      "sha256": "b8080ea179776af0f3357e4b39b19ca42b35192ad8133b89f8324574d2ee9316"
+    },
+    {
+      "path": "web/services/auth_store.py",
+      "role": "core",
+      "bytes": 57641,
+      "sha256": "77d943ff75509823ff3d62dbe3ef41b6d749f95809219f082897210f728dbaab"
+    },
+    {
+      "path": "web/auth.py",
+      "role": "core",
+      "bytes": 9885,
+      "sha256": "d4a8a25cb6427afd94a0db1ce98bb00d876ff587d147c59b60886a21222c9bc3"
+    }
+  ],
+  "wiring": {
+    "blueprints": [
+      {
+        "file": "web/routes/tenant_admin.py",
+        "name": "tenant_admin",
+        "url_prefix": ""
+      },
+      {
+        "file": "web/routes/account.py",
+        "name": "account",
+        "url_prefix": ""
+      }
+    ],
+    "provides_endpoints": [
+      {
+        "file": "web/routes/tenant_admin.py",
+        "rule": "/admin/console",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/tenant_admin.py",
+        "rule": "/api/admin/tenancy",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/tenant_admin.py",
+        "rule": "/api/admin/tenancy/tenants",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/tenant_admin.py",
+        "rule": "/api/admin/tenancy/tenants/<tenant_id>",
+        "methods": [
+          "PATCH"
+        ]
+      },
+      {
+        "file": "web/routes/tenant_admin.py",
+        "rule": "/api/admin/tenancy/tenants/<tenant_id>",
+        "methods": [
+          "DELETE"
+        ]
+      },
+      {
+        "file": "web/routes/tenant_admin.py",
+        "rule": "/api/admin/tenancy/users",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/tenant_admin.py",
+        "rule": "/api/admin/tenancy/users/<user_id>/memberships",
+        "methods": [
+          "PUT"
+        ]
+      },
+      {
+        "file": "web/routes/tenant_admin.py",
+        "rule": "/api/admin/tenancy/users/<user_id>",
+        "methods": [
+          "PATCH"
+        ]
+      },
+      {
+        "file": "web/routes/tenant_admin.py",
+        "rule": "/api/admin/tenancy/users/<user_id>/password",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/tenant_admin.py",
+        "rule": "/api/admin/tenancy/users/<user_id>",
+        "methods": [
+          "DELETE"
+        ]
+      },
+      {
+        "file": "web/routes/account.py",
+        "rule": "/auth/login",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/account.py",
+        "rule": "/auth/login",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/account.py",
+        "rule": "/auth/signup",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/account.py",
+        "rule": "/auth/signup",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/account.py",
+        "rule": "/auth/logout",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/account.py",
+        "rule": "/auth/setup",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/account.py",
+        "rule": "/auth/setup",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/account.py",
+        "rule": "/auth/account",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/account.py",
+        "rule": "/api/auth/me",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/account.py",
+        "rule": "/api/auth/tenants",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/account.py",
+        "rule": "/api/onboarding",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/account.py",
+        "rule": "/api/onboarding/complete",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/account.py",
+        "rule": "/api/auth/password",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/account.py",
+        "rule": "/api/auth/users",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/account.py",
+        "rule": "/api/auth/users",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/account.py",
+        "rule": "/api/auth/users/<user_id>",
+        "methods": [
+          "PATCH"
+        ]
+      },
+      {
+        "file": "web/routes/account.py",
+        "rule": "/api/auth/api-tokens",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/account.py",
+        "rule": "/api/auth/api-tokens",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/account.py",
+        "rule": "/api/auth/api-tokens/<token_id>",
+        "methods": [
+          "DELETE"
+        ]
+      }
+    ]
+  },
+  "dependencies": {
+    "internal_modules_not_bundled": [
+      "web/config.py",
+      "web/services/admin_audit.py",
+      "web/tenancy.py"
+    ],
+    "third_party_packages": [
+      {
+        "import": "flask",
+        "requirement": "flask==3.1.3",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "werkzeug",
+        "requirement": "",
+        "declared_in_requirements": false
+      }
+    ],
+    "env_vars": [],
+    "data_files": [],
+    "consumes_endpoints": [
+      "/api/admin/tenancy",
+      "/api/admin/tenancy/tenants",
+      "/api/admin/tenancy/tenants/",
+      "/api/admin/tenancy/users",
+      "/api/admin/tenancy/users/"
+    ],
+    "window_globals": [],
+    "template_includes_not_bundled": [
+      "auth/_shell.html"
+    ],
+    "static_refs_not_bundled": []
+  },
+  "gaps": [],
+  "shared_assets": [
+    {
+      "path": "templates/auth/_shell.html",
+      "owned_by": [
+        "account_auth"
+      ],
+      "reason": "同梱の `static/css/tenant-auth.css` を差し込んでいるが未同梱"
+    },
+    {
+      "path": "templates/auth/login.html",
+      "owned_by": [
+        "account_auth"
+      ],
+      "reason": "同梱の `static/css/tenant-auth.css` を差し込んでいるが未同梱"
+    }
+  ],
+  "warnings": [],
+  "verification": {
+    "static_analysis": "done",
+    "pytest": "not_run",
+    "verify_ui": "not_run",
+    "manual_screen_check": "not_run"
+  }
+}

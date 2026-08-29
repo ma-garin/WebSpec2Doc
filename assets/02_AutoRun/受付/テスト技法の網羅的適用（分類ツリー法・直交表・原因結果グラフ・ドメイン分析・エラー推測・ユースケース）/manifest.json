@@ -1,0 +1,305 @@
+{
+  "schema": "webspec2doc/feature-asset@1",
+  "version": "20260829-5345533",
+  "generated_at": "2026-08-29T07:50:12Z",
+  "source": {
+    "repository": "WebSpec2Doc",
+    "revision": "5345533",
+    "working_tree_dirty": true,
+    "contract_file": "quality/feature_contracts.yml"
+  },
+  "feature": {
+    "feature_id": "autorun_extended_techniques",
+    "name": "テスト技法の網羅的適用（分類ツリー法・直交表・原因結果グラフ・ドメイン分析・エラー推測・ユースケース）",
+    "risk_level": "high",
+    "status": "implemented",
+    "ui_files": [
+      "templates/partials/view-auto-run.html",
+      "static/js/autorun-stages.js"
+    ],
+    "route_files": [
+      "web/routes/autorun_stages.py"
+    ],
+    "core_files": [
+      "src/autorun/classification_tree.py",
+      "src/autorun/orthogonal_array.py",
+      "src/autorun/cause_effect.py",
+      "src/autorun/domain_analysis.py",
+      "src/autorun/error_guessing.py",
+      "src/autorun/use_case_testing.py",
+      "src/autorun/techniques.py",
+      "src/autorun/stages.py"
+    ],
+    "symbols": [
+      "classification_tree",
+      "orthogonal_array",
+      "cause_effect_graph",
+      "domain_analysis",
+      "error_guessing",
+      "use_case_testing",
+      "apply_all",
+      "apply_cross_screen",
+      "verify_orthogonality"
+    ],
+    "outputs": [
+      "分類ツリーとクラス被覆の組合せ表",
+      "直交表（均等割付け・直交性検査の結果付き）",
+      "原因結果グラフと導出された判定表",
+      "1x1 ドメイン行列（ON/OFF/IN/OUT）",
+      "欠陥タクソノミの適用結果（未実測である旨付き）",
+      "ユースケース候補（基本/代替/例外フロー）"
+    ],
+    "persistence": [
+      "instance/autorun/{run_id}/stages.json"
+    ],
+    "failure_modes": [
+      "no_measured_constraints",
+      "too_many_levels_for_orthogonal_array",
+      "no_transitions_observed",
+      "unknown_field_type"
+    ],
+    "required_tests": [
+      "happy_path",
+      "error_path",
+      "evidence"
+    ]
+  },
+  "placement": {
+    "system_key": "autorun",
+    "system": "02_AutoRun",
+    "screen": "受付",
+    "screens": [
+      "受付"
+    ],
+    "classified_by": "screen"
+  },
+  "files": [
+    {
+      "path": "templates/partials/view-auto-run.html",
+      "role": "ui",
+      "bytes": 27151,
+      "sha256": "1e5f7d80fcdd92e7055458b6519c6691e0ea381cf70f620d226726ec11b72250"
+    },
+    {
+      "path": "static/js/autorun-stages.js",
+      "role": "ui",
+      "bytes": 31671,
+      "sha256": "5c7d40c582cdc096a036fa9d4b006b8e5a59e9f80c519c087acafc79a81114cc"
+    },
+    {
+      "path": "web/routes/autorun_stages.py",
+      "role": "route",
+      "bytes": 22599,
+      "sha256": "bdc0b19a6d30c7a4b6169be4dc59d0eb70cfba39753fc2d36d059c38346a044d"
+    },
+    {
+      "path": "src/autorun/classification_tree.py",
+      "role": "core",
+      "bytes": 9384,
+      "sha256": "fcdbc775d48b932d4fe563254fce44c81918ca7260ecee4276ea30866f3d0816"
+    },
+    {
+      "path": "src/autorun/orthogonal_array.py",
+      "role": "core",
+      "bytes": 8035,
+      "sha256": "b9a4a24ccb35a0a63b41ad1963c1fe7bd9299f6e66ae16bebac06f5e602f24ae"
+    },
+    {
+      "path": "src/autorun/cause_effect.py",
+      "role": "core",
+      "bytes": 10779,
+      "sha256": "874fa0e1220b04e0e7dc0cc255018e3580db4a99634b13ecf4a1ba0dda85b7ad"
+    },
+    {
+      "path": "src/autorun/domain_analysis.py",
+      "role": "core",
+      "bytes": 8703,
+      "sha256": "c7ad973ae243c11e1c0002e12c88afe842f7a9501c220d48518c743342e1153b"
+    },
+    {
+      "path": "src/autorun/error_guessing.py",
+      "role": "core",
+      "bytes": 13521,
+      "sha256": "9bcc1a66d4e1f3b342b399ac40aa67236512a3721d13d6661bf984de1e21a7e2"
+    },
+    {
+      "path": "src/autorun/use_case_testing.py",
+      "role": "core",
+      "bytes": 11971,
+      "sha256": "852d756b81d99549b8dcf4416b5859dd7cf4cf0de4e60a79d6f32ef4122a570a"
+    },
+    {
+      "path": "src/autorun/techniques.py",
+      "role": "core",
+      "bytes": 16068,
+      "sha256": "74947c22ca8aee20d57c6a1eae52eb667872a2871e975538be1f31b9259e727b"
+    },
+    {
+      "path": "src/autorun/stages.py",
+      "role": "core",
+      "bytes": 50949,
+      "sha256": "03029be4e2077fb9c065a6adaa86600f7b5c742b8e8bb1f9787a822afa4a31b0"
+    }
+  ],
+  "wiring": {
+    "blueprints": [
+      {
+        "file": "web/routes/autorun_stages.py",
+        "name": "autorun_stages",
+        "url_prefix": ""
+      }
+    ],
+    "provides_endpoints": [
+      {
+        "file": "web/routes/autorun_stages.py",
+        "rule": "/api/autorun/stages",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/autorun_stages.py",
+        "rule": "/api/autorun/decisions",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/autorun_stages.py",
+        "rule": "/api/autorun/decisions",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/autorun_stages.py",
+        "rule": "/api/autorun/review-queue",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/autorun_stages.py",
+        "rule": "/api/autorun/review-queue/auto-approve",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/autorun_stages.py",
+        "rule": "/api/autorun/stages/generate",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/autorun_stages.py",
+        "rule": "/api/autorun/stages/approve",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/autorun_stages.py",
+        "rule": "/api/autorun/stages/skip",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/autorun_stages.py",
+        "rule": "/api/autorun/stages/item",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/autorun_stages.py",
+        "rule": "/api/autorun/stages/reset",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/autorun_stages.py",
+        "rule": "/api/autorun/stages/suggest",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/autorun_stages.py",
+        "rule": "/api/autorun/stages/adopt",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/autorun_stages.py",
+        "rule": "/api/autorun/stages/proceed",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/autorun_stages.py",
+        "rule": "/api/autorun/stages/testcases",
+        "methods": [
+          "GET"
+        ]
+      }
+    ]
+  },
+  "dependencies": {
+    "internal_modules_not_bundled": [
+      "src/autorun/decisions.py",
+      "src/autorun/qf_schema.py",
+      "src/autorun/review_queue.py",
+      "src/autorun/suggest.py",
+      "src/llm/activity_log.py",
+      "web/config.py",
+      "web/routes/auto_run.py",
+      "web/tenancy.py",
+      "web/validation.py"
+    ],
+    "third_party_packages": [
+      {
+        "import": "flask",
+        "requirement": "flask==3.1.3",
+        "declared_in_requirements": true
+      }
+    ],
+    "env_vars": [],
+    "data_files": [],
+    "consumes_endpoints": [
+      "/api/autorun/stages",
+      "/api/autorun/stages/adopt",
+      "/api/autorun/stages/approve",
+      "/api/autorun/stages/generate",
+      "/api/autorun/stages/item",
+      "/api/autorun/stages/proceed",
+      "/api/autorun/stages/skip",
+      "/api/autorun/stages/suggest",
+      "/api/autorun/stages/testcases"
+    ],
+    "window_globals": [
+      "_autoRunLastData",
+      "autorunCancel",
+      "autorunChat",
+      "autorunDecisions",
+      "autorunLeadBar",
+      "autorunStages"
+    ],
+    "template_includes_not_bundled": [],
+    "static_refs_not_bundled": []
+  },
+  "gaps": [],
+  "shared_assets": [],
+  "warnings": [],
+  "verification": {
+    "static_analysis": "done",
+    "pytest": "not_run",
+    "verify_ui": "not_run",
+    "manual_screen_check": "not_run"
+  }
+}

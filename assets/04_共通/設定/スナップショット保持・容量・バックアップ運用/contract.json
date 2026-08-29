@@ -1,0 +1,45 @@
+{
+  "feature_id": "snapshot_retention",
+  "name": "スナップショット保持・容量・バックアップ運用",
+  "risk_level": "high",
+  "status": "implemented",
+  "ui_files": [
+    "templates/partials/view-settings.html",
+    "static/js/settings.js",
+    "static/css/settings-admin.css"
+  ],
+  "route_files": [
+    "web/routes/admin.py"
+  ],
+  "core_files": [
+    "web/services/retention.py",
+    "web/services/scheduler.py"
+  ],
+  "symbols": [
+    "save_retention_policy",
+    "collect_storage_usage",
+    "prune_snapshots"
+  ],
+  "outputs": [
+    "retention.json",
+    "storage usage API",
+    "retention.snapshots_pruned audit event"
+  ],
+  "persistence": [
+    "instance/tenants/{slug}/retention.json",
+    "output/tenants/{slug}/{domain}/snapshots/"
+  ],
+  "failure_modes": [
+    "invalid_policy",
+    "malformed_policy",
+    "symlink_escape",
+    "gc_io_failure"
+  ],
+  "required_tests": [
+    "happy_path",
+    "error_path",
+    "tenant_isolation",
+    "symlink_boundary",
+    "evidence"
+  ]
+}

@@ -1,0 +1,210 @@
+{
+  "schema": "webspec2doc/feature-asset@1",
+  "version": "20260829-5345533",
+  "generated_at": "2026-08-29T07:50:12Z",
+  "source": {
+    "repository": "WebSpec2Doc",
+    "revision": "5345533",
+    "working_tree_dirty": true,
+    "contract_file": "quality/feature_contracts.yml"
+  },
+  "feature": {
+    "feature_id": "snapshot_retention",
+    "name": "スナップショット保持・容量・バックアップ運用",
+    "risk_level": "high",
+    "status": "implemented",
+    "ui_files": [
+      "templates/partials/view-settings.html",
+      "static/js/settings.js",
+      "static/css/settings-admin.css"
+    ],
+    "route_files": [
+      "web/routes/admin.py"
+    ],
+    "core_files": [
+      "web/services/retention.py",
+      "web/services/scheduler.py"
+    ],
+    "symbols": [
+      "save_retention_policy",
+      "collect_storage_usage",
+      "prune_snapshots"
+    ],
+    "outputs": [
+      "retention.json",
+      "storage usage API",
+      "retention.snapshots_pruned audit event"
+    ],
+    "persistence": [
+      "instance/tenants/{slug}/retention.json",
+      "output/tenants/{slug}/{domain}/snapshots/"
+    ],
+    "failure_modes": [
+      "invalid_policy",
+      "malformed_policy",
+      "symlink_escape",
+      "gc_io_failure"
+    ],
+    "required_tests": [
+      "happy_path",
+      "error_path",
+      "tenant_isolation",
+      "symlink_boundary",
+      "evidence"
+    ]
+  },
+  "placement": {
+    "system_key": "common",
+    "system": "04_共通",
+    "screen": "設定",
+    "screens": [
+      "設定"
+    ],
+    "classified_by": "screen"
+  },
+  "files": [
+    {
+      "path": "templates/partials/view-settings.html",
+      "role": "ui",
+      "bytes": 39538,
+      "sha256": "8df7d8ecb0f037236d5a6d63722f2e57b7a4c985b9ed66d036b5b47547be829d"
+    },
+    {
+      "path": "static/js/settings.js",
+      "role": "ui",
+      "bytes": 46487,
+      "sha256": "b14d55dfd0c8d421af260613351c4985bba15dd1cc8fcd9b583ab16baa65617f"
+    },
+    {
+      "path": "static/css/settings-admin.css",
+      "role": "ui",
+      "bytes": 3488,
+      "sha256": "91f9a279ba03a502658e4d36d26faad57980a645d2ab50c5cac65708a645005d"
+    },
+    {
+      "path": "web/routes/admin.py",
+      "role": "route",
+      "bytes": 3348,
+      "sha256": "a2ae89a447ea41bc4ced8c9e02a224b4034bc208d34a37cd18964c26bb7ba730"
+    },
+    {
+      "path": "web/services/retention.py",
+      "role": "core",
+      "bytes": 10026,
+      "sha256": "5df7d7c3afe01cb70a1fca3de985c31f1a7c48592a49d12ecbfe37f9f352998a"
+    },
+    {
+      "path": "web/services/scheduler.py",
+      "role": "core",
+      "bytes": 21979,
+      "sha256": "c49ab2c4bd7ffbf53ad9806eb6248f84368369368398fde04147d8a8e2332c70"
+    }
+  ],
+  "wiring": {
+    "blueprints": [
+      {
+        "file": "web/routes/admin.py",
+        "name": "admin",
+        "url_prefix": "/api/admin"
+      }
+    ],
+    "provides_endpoints": [
+      {
+        "file": "web/routes/admin.py",
+        "rule": "/storage",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/admin.py",
+        "rule": "/backup-guide",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/admin.py",
+        "rule": "/audit",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/admin.py",
+        "rule": "/retention",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/admin.py",
+        "rule": "/retention",
+        "methods": [
+          "PUT"
+        ]
+      }
+    ]
+  },
+  "dependencies": {
+    "internal_modules_not_bundled": [
+      "src/diff/snapshot.py",
+      "web/auth.py",
+      "web/config.py",
+      "web/services/admin_audit.py",
+      "web/services/metrics.py",
+      "web/services/notifier.py",
+      "web/tenancy.py"
+    ],
+    "third_party_packages": [
+      {
+        "import": "flask",
+        "requirement": "flask==3.1.3",
+        "declared_in_requirements": true
+      }
+    ],
+    "env_vars": [],
+    "data_files": [],
+    "consumes_endpoints": [
+      "/api/admin/audit",
+      "/api/admin/backup-guide",
+      "/api/admin/retention",
+      "/api/admin/storage",
+      "/api/history",
+      "/api/integrations",
+      "/api/integrations/confluence",
+      "/api/integrations/confluence/test",
+      "/api/integrations/jira",
+      "/api/integrations/jira/test",
+      "/api/integrations/notion",
+      "/api/integrations/notion/test",
+      "/api/integrations/qualityforward",
+      "/api/integrations/qualityforward/test",
+      "/api/integrations/slack/test",
+      "/api/integrations/teams",
+      "/api/integrations/teams/test",
+      "/api/integrations/webhook",
+      "/api/settings",
+      "/api/settings/allow-local",
+      "/api/settings/clear-key",
+      "/api/settings/llm-models",
+      "/api/settings/test-connection",
+      "/api/settings/test-design",
+      "/schedule/config",
+      "/schedule/history",
+      "/schedule/notify/test"
+    ],
+    "window_globals": [],
+    "template_includes_not_bundled": [],
+    "static_refs_not_bundled": []
+  },
+  "gaps": [],
+  "shared_assets": [],
+  "warnings": [],
+  "verification": {
+    "static_analysis": "done",
+    "pytest": "not_run",
+    "verify_ui": "not_run",
+    "manual_screen_check": "not_run"
+  }
+}

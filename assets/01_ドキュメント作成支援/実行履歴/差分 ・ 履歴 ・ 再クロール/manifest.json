@@ -1,0 +1,338 @@
+{
+  "schema": "webspec2doc/feature-asset@1",
+  "version": "20260829-5345533",
+  "generated_at": "2026-08-29T07:50:11Z",
+  "source": {
+    "repository": "WebSpec2Doc",
+    "revision": "5345533",
+    "working_tree_dirty": true,
+    "contract_file": "quality/feature_contracts.yml"
+  },
+  "feature": {
+    "feature_id": "diff_history",
+    "name": "差分 / 履歴 / 再クロール",
+    "risk_level": "critical",
+    "status": "implemented",
+    "ui_files": [
+      "static/js/history.js",
+      "static/js/recrawl.js",
+      "static/js/results.js",
+      "static/js/view-run-result.js",
+      "templates/partials/view-run-history.html",
+      "templates/partials/view-run-result.html",
+      "static/js/view-run-history.js"
+    ],
+    "route_files": [
+      "web/routes/history.py",
+      "web/routes/site.py",
+      "web/routes/runs.py"
+    ],
+    "core_files": [
+      "src/diff/snapshot.py",
+      "src/diff/differ.py",
+      "src/registry/site_registry.py",
+      "src/diff/impact_analyzer.py",
+      "web/services/run_store.py"
+    ],
+    "symbols": [
+      "save_snapshot",
+      "compute_diff",
+      "save_site",
+      "load_site",
+      "snapshot_run",
+      "list_runs"
+    ],
+    "outputs": [
+      "snapshots",
+      "diff_report.html",
+      "site.json"
+    ],
+    "persistence": [
+      "output/{domain}/snapshots/",
+      "output/{domain}/site.json"
+    ],
+    "failure_modes": [
+      "missing_snapshot",
+      "session_expired_false_diff",
+      "snapshot_overwrite",
+      "login_required_flags_lost_on_recrawl",
+      "recrawl_lands_on_overview_instead_of_diff",
+      "diff_shown_without_stating_compared_snapshots"
+    ],
+    "required_tests": [
+      "happy_path",
+      "breaking_change_path",
+      "error_path",
+      "evidence"
+    ]
+  },
+  "placement": {
+    "system_key": "docs",
+    "system": "01_ドキュメント作成支援",
+    "screen": "実行履歴",
+    "screens": [
+      "実行履歴",
+      "run-result"
+    ],
+    "classified_by": "screen"
+  },
+  "files": [
+    {
+      "path": "static/js/history.js",
+      "role": "ui",
+      "bytes": 8469,
+      "sha256": "f6e36ff3c53949195e7ebf22d674c611c037211778335dfc9c5ffc024df9d5a5"
+    },
+    {
+      "path": "static/js/recrawl.js",
+      "role": "ui",
+      "bytes": 6235,
+      "sha256": "05cd6dfee46739f6f4ad9d7832e52cb1fbcdba7da52b0558acb13983540d0dc1"
+    },
+    {
+      "path": "static/js/results.js",
+      "role": "ui",
+      "bytes": 33264,
+      "sha256": "454d49c8a2415f32987d199797955eec83e75b3df16dd9f6db275755d9aae105"
+    },
+    {
+      "path": "static/js/view-run-result.js",
+      "role": "ui",
+      "bytes": 14233,
+      "sha256": "79b50219af5de903d3eae5b86bda458ff98d6b51b353c9a9ca135615eb5fd569"
+    },
+    {
+      "path": "templates/partials/view-run-history.html",
+      "role": "ui",
+      "bytes": 3847,
+      "sha256": "9360321db4a9cb3d64d3c0b943a8ca7a259c8e4ac7351a03b031fc19a7eedaab"
+    },
+    {
+      "path": "templates/partials/view-run-result.html",
+      "role": "ui",
+      "bytes": 667,
+      "sha256": "d1220bd5ae9ea04b6e805461038a43a70adc9370c836586b92a614deeacca915"
+    },
+    {
+      "path": "static/js/view-run-history.js",
+      "role": "ui",
+      "bytes": 24165,
+      "sha256": "dcc71fdb3420f62235e86b6e45e7d3abf261d577c12bbc516ea6684e68ca08fb"
+    },
+    {
+      "path": "web/routes/history.py",
+      "role": "route",
+      "bytes": 14845,
+      "sha256": "6a74dcf728a7e4f2ece3f22150dfb0626d7d42e4750bc6728b47890006942d30"
+    },
+    {
+      "path": "web/routes/site.py",
+      "role": "route",
+      "bytes": 2102,
+      "sha256": "182d46fa54cd7991e02e3ee3f9b178d2dc371d23a079cda93606ad4f9c12cdeb"
+    },
+    {
+      "path": "web/routes/runs.py",
+      "role": "route",
+      "bytes": 5832,
+      "sha256": "9039f808c369a61bb52c548c33cb4dc430ad6a09ce05962b8136452c9986f4c8"
+    },
+    {
+      "path": "src/diff/snapshot.py",
+      "role": "core",
+      "bytes": 10140,
+      "sha256": "fc1c8fabd4ee5887c9c2b15cdf8ad9739a41feb63564ea8c181748f002a505d7"
+    },
+    {
+      "path": "src/diff/differ.py",
+      "role": "core",
+      "bytes": 11714,
+      "sha256": "77dba116e9d8c779b84cee8df2dda5a3ef83cd46de4d57881b3acc75f4452ef7"
+    },
+    {
+      "path": "src/registry/site_registry.py",
+      "role": "core",
+      "bytes": 2908,
+      "sha256": "6d48d69e3d7336bd9af2d8d97afea36d6685a167341a588397310930d17993bf"
+    },
+    {
+      "path": "src/diff/impact_analyzer.py",
+      "role": "core",
+      "bytes": 8507,
+      "sha256": "bd566da0cf09696b7237ff43021a5ee15d3a6a82e8c80e4e94a8185b0f751a41"
+    },
+    {
+      "path": "web/services/run_store.py",
+      "role": "core",
+      "bytes": 17526,
+      "sha256": "794bae53d53a46e5b474c2e600e1908411a798d7dc5965adaf05bf7c7ea6eec2"
+    }
+  ],
+  "wiring": {
+    "blueprints": [
+      {
+        "file": "web/routes/history.py",
+        "name": "history",
+        "url_prefix": ""
+      },
+      {
+        "file": "web/routes/site.py",
+        "name": "site",
+        "url_prefix": ""
+      },
+      {
+        "file": "web/routes/runs.py",
+        "name": "runs",
+        "url_prefix": ""
+      }
+    ],
+    "provides_endpoints": [
+      {
+        "file": "web/routes/history.py",
+        "rule": "/api/history",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/history.py",
+        "rule": "/api/site/<domain>",
+        "methods": [
+          "DELETE"
+        ]
+      },
+      {
+        "file": "web/routes/history.py",
+        "rule": "/api/snapshots",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/history.py",
+        "rule": "/api/snapshot-diff",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/history.py",
+        "rule": "/api/snapshot-diff-summary",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/history.py",
+        "rule": "/api/snapshot-comparison",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/history.py",
+        "rule": "/api/snapshot-comparison.json",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/site.py",
+        "rule": "/api/site",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/runs.py",
+        "rule": "/runs/<domain>/<run_id>",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/runs.py",
+        "rule": "/api/runs/<domain>",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/runs.py",
+        "rule": "/api/runs/<domain>/<run_id>",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/runs.py",
+        "rule": "/api/runs/<domain>/<run_id>/exists",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/runs.py",
+        "rule": "/api/runs/<domain>/<run_id>/artifact",
+        "methods": [
+          "GET"
+        ]
+      }
+    ]
+  },
+  "dependencies": {
+    "internal_modules_not_bundled": [
+      "src/analyzer/canonicalizer.py",
+      "src/analyzer/html_analyzer.py",
+      "src/analyzer/stack_detector.py",
+      "src/crawler/page_crawler.py",
+      "src/diff/comparison.py",
+      "src/generator/comparison_reporter.py",
+      "src/generator/diff_reporter.py",
+      "web/config.py",
+      "web/services/comparison_workspace.py",
+      "web/summary.py",
+      "web/tenancy.py",
+      "web/validation.py"
+    ],
+    "third_party_packages": [
+      {
+        "import": "flask",
+        "requirement": "flask==3.1.3",
+        "declared_in_requirements": true
+      }
+    ],
+    "env_vars": [],
+    "data_files": [],
+    "consumes_endpoints": [
+      "/api/",
+      "/api/doc-fusion",
+      "/api/export/spec-xlsx",
+      "/api/history",
+      "/api/history/runs",
+      "/api/history/runs/",
+      "/api/result",
+      "/api/runs/",
+      "/api/site",
+      "/api/site/",
+      "/api/snapshot-diff-summary",
+      "/api/snapshots",
+      "/api/testcases/count",
+      "/preview"
+    ],
+    "window_globals": [
+      "_appBooted"
+    ],
+    "template_includes_not_bundled": [],
+    "static_refs_not_bundled": []
+  },
+  "gaps": [],
+  "shared_assets": [],
+  "warnings": [],
+  "verification": {
+    "static_analysis": "done",
+    "pytest": "not_run",
+    "verify_ui": "not_run",
+    "manual_screen_check": "not_run"
+  }
+}

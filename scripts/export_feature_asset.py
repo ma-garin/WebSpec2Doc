@@ -161,6 +161,163 @@ def requirements_index() -> dict[str, str]:
     return index
 
 
+
+# --------------------------------------------------------------------------
+# システム / 画面の分類（assets/<システム>/<画面>/<機能>/ の階層を作る）
+# --------------------------------------------------------------------------
+# 系のキー -> フォルダ名。web/static/js/system-scope.js の定義に合わせる。
+SYSTEM_FOLDER = {
+    "docs": "01_ドキュメント作成支援",
+    "autorun": "02_AutoRun",
+    "testlab": "03_テスト活動支援",
+    "common": "04_共通",
+}
+NO_SCREEN = "_画面なし（API・基盤）"
+
+# 画面が特定できない機能の系を、実装ファイルのパスから判定する。
+# 上から順に評価し、最初に当たったものを採る。
+SYSTEM_BY_PATH = (
+    ("testlab", ("web/routes/test_activity", "web/services/ta_", "static/js/ta-",
+                 "web/services/test_data_store", "web/services/defect_store",
+                 "web/services/manual_execution_store", "web/services/process_gate",
+                 "web/services/completion_criteria")),
+    ("autorun", ("auto_run", "autorun", "src/autorun", "static/js/autorun")),
+    ("common", ("web/routes/account", "web/routes/admin", "web/routes/login",
+                "web/routes/settings", "web/routes/tenant_admin", "web/auth",
+                "web/tenancy", "web/services/feedback_store")),
+)
+# 1 機能がこの数以上の画面にまたがる場合、画面ではなくシステム直下に置く。
+SYSTEM_WIDE_SCREEN_THRESHOLD = 3
+RE_NAV_BUTTON = re.compile(r"<button[^>]*?>(.*?)</button>", re.S)
+RE_HEADING = re.compile(r"<h[12][^>]*>(.*?)</h[12]>", re.S)
+RE_TAGS = re.compile(r"<[^>]+>")
+
+
+def _screen_title(partial: str) -> str:
+    """ナビに項目が無い画面の名前を、テンプレートの見出しから拾う。"""
+    path = ROOT / partial
+    if not path.is_file():
+        return ""
+    match = RE_HEADING.search(path.read_text(encoding="utf-8", errors="replace"))
+    if not match:
+        return ""
+    return " ".join(RE_TAGS.sub(" ", match.group(1)).split())
+
+
+def nav_index() -> dict[str, tuple[str, str]]:
+    """`view 名 -> (系キー, 画面名)`。ナビ（正本）から機械的に作る。"""
+    index: dict[str, tuple[str, str]] = {}
+    nav = ROOT / "templates" / "partials" / "nav.html"
+    if not nav.is_file():
+        return index
+    text = nav.read_text(encoding="utf-8", errors="replace")
+    for match in RE_NAV_BUTTON.finditer(text):
+        tag = match.group(0)
+        view = re.search(r'data-view="([^"]+)"', tag)
+        system = re.search(r'data-system="([^"]+)"', tag)
+        if not view:
+            # 実行履歴のように data-view を持たず id で制御されるボタン。
+            # `nav-docs-run-history-btn` -> `run-history` を取り出す。
+            ident = re.search(r'id="nav-(?:docs-)?([a-z0-9-]+?)-btn"', tag)
+            if not ident:
+                continue
+            view = ident
+        label = " ".join(RE_TAGS.sub(" ", match.group(1)).split())
+        index.setdefault(view.group(1), (
+            (system.group(1) if system else "common"),
+            label or view.group(1),
+        ))
+    return index
+
+
+def screen_index() -> dict[str, tuple[str, str]]:
+    """`partial のパス -> (系キー, 画面名)`。
+
+    partial とナビを結ぶのはファイル名ではなく、partial 内の
+    `<section class="view" id="view-XXX">` の XXX（= ナビの data-view）。
+    `view-ta-plan.html` が `data-view="test-plan"` に対応するように、
+    ファイル名からは導けない。
+    """
+    nav = nav_index()
+    index: dict[str, tuple[str, str]] = {}
+    partials_dir = ROOT / "templates" / "partials"
+    if not partials_dir.is_dir():
+        return index
+    for path in sorted(partials_dir.glob("view-*.html")):
+        rel = str(path.relative_to(ROOT))
+        text = path.read_text(encoding="utf-8", errors="replace")
+        match = re.search(r'id="view-([A-Za-z0-9_-]+)"', text)
+        view = match.group(1) if match else path.stem[len("view-"):]
+        if view in nav:
+            index[rel] = nav[view]
+            continue
+        # ナビに項目が無い画面は、見出しを名前に使う。系はここでは決めず（None）、
+        # 機能側の実装パスから決める。既定を common にすると本体系の機能まで共通へ流れる。
+        index[rel] = ("", _screen_title(rel) or view)
+    return index
+
+
+def _safe(name: str) -> str:
+    """フォルダ名に使えない文字を落とす。"""
+    cleaned = re.sub(r'[/\\:*?"<>|]', "・", name).strip().strip(".")
+    cleaned = re.sub(r"\s+", " ", cleaned)
+    return cleaned[:60] or "未分類"
+
+
+def classify(feature: dict[str, Any], screens: dict[str, tuple[str, str]]) -> dict[str, Any]:
+    """機能を (システム, 画面) に割り当てる。
+
+    優先順位は 1) 契約の `system` / `screen`（人が明示したもの）
+    2) 登録された画面テンプレート 3) 実装ファイルのパス。
+    画面が特定できない機能も系までは決める（全部を「API」に落とすと分類の役に立たない）。
+    """
+    found = [screens[rel] for rel in feature.get("ui_files", []) if rel in screens]
+    if found:
+        keys = [k for k, _ in found if k]
+        system_key = max(set(keys), key=keys.count) if keys else _system_from_paths(feature)
+        unique = list(
+            dict.fromkeys(
+                label for key, label in found if key == system_key or not key
+            )
+        )
+        screen = "_システム全体" if len(unique) >= SYSTEM_WIDE_SCREEN_THRESHOLD else unique[0]
+    else:
+        system_key = _system_from_paths(feature)
+        unique = []
+        screen = NO_SCREEN
+
+    system_key = feature.get("system") or system_key
+    screen = feature.get("screen") or screen
+    return {
+        "system_key": system_key,
+        "system": SYSTEM_FOLDER.get(system_key, SYSTEM_FOLDER["docs"]),
+        "screen": screen,
+        "screens": unique,
+        "classified_by": "contract" if feature.get("system") else ("screen" if found else "path"),
+    }
+
+
+def _system_from_paths(feature: dict[str, Any]) -> str:
+    """画面が無い機能の系を、実装ファイルのパスから決める。"""
+    paths = [
+        rel
+        for key in ROLE_BY_KEY
+        for rel in feature.get(key, [])
+    ]
+    for system_key, needles in SYSTEM_BY_PATH:
+        if any(needle in rel for rel in paths for needle in needles):
+            return system_key
+    # パスに手掛かりが無い場合は機能名で判定する（例: 「AutoRun セキュリティカーネル」は
+    # egress_gateway.py という中立な名前のファイルしか持たない）。
+    name = feature.get("name", "")
+    if "AutoRun" in name or "自動実行" in name:
+        return "autorun"
+    if "テスト活動" in name:
+        return "testlab"
+    # どれにも当たらないものはドキュメント作成支援（本体系）とみなす。
+    return "docs"
+
+
 # --------------------------------------------------------------------------
 # 静的解析
 # --------------------------------------------------------------------------
@@ -674,22 +831,25 @@ def render_prompt(manifest: dict[str, Any]) -> str:
     add("")
     add("---")
     add("")
-    add(f"WebSpec2Doc から機能アセット `{fid}` を受け取った。このリポジトリへ組み込んでほしい。")
+    add(f"この機能「{feature['name']}」を、このリポジトリへ取り込んでほしい。")
+    add("WebSpec2Doc からの機能アセットで、必要なファイルと手順は同じフォルダに揃っている。")
     add("")
-    add(f"アセットの場所: `assets/{fid}/{manifest['version']}/`")
-    add("（GitHub の zip を展開したディレクトリの中にある）")
+    add("このフォルダ（`PROMPT.md` が置かれているディレクトリ）がアセット本体。")
+    add(f"システム: {manifest['placement']['system']}"
+        + (f" / 画面: {manifest['placement']['screen']}" if manifest["placement"]["screen"] else "")
+        + f" / feature_id: `{fid}` / 版: `{manifest['version']}`")
     add("")
     add("手順:")
     add("")
     add("1. そのディレクトリの `INTEGRATION.md` を読む。組み込み手順はそこに全部書いてある。")
     add("2. 配置の前に完全性を検証する:")
     add("   ```")
-    add(f"   python3 scripts/verify_feature_asset.py assets/{fid}/{manifest['version']} --against .")
+    add("   python3 scripts/verify_feature_asset.py <このフォルダのパス> --against .")
     add("   ```")
     add("   `[NG]` が出たら配置せず、何が足りないかを報告すること。")
     add("3. 合格したら `files/` をリポジトリのルートへ配置する（相対パスはそのまま）:")
     add("   ```")
-    add(f"   rsync -a assets/{fid}/{manifest['version']}/files/ ./")
+    add("   rsync -a <このフォルダのパス>/files/ ./")
     add("   ```")
     add("4. `INTEGRATION.md` 第 2 節に従って配線する"
         "（Blueprint 登録・`templates/index.html` への include / script / link）。")
@@ -817,6 +977,8 @@ def export(
     with_tests: bool,
     with_docs: bool,
     archive: bool,
+    screens: dict[str, tuple[str, str]] | None = None,
+    owners: dict[str, list[str]] | None = None,
 ) -> Path:
     feature_id = feature["feature_id"]
     docs = related_docs(feature_id) if with_docs else []
@@ -834,7 +996,9 @@ def export(
 
     acc = analyze_bundle(entries)
     deps = build_dependencies(entries, acc, requirements_index())
-    owners = ownership_index(load_contracts())
+    placement = classify(feature, screens if screens is not None else screen_index())
+    if owners is None:
+        owners = ownership_index(load_contracts())
     gaps, shared = detect_gaps(entries, owners, feature_id)
 
     warnings: list[str] = []
@@ -869,6 +1033,7 @@ def export(
             "contract_file": "quality/feature_contracts.yml",
         },
         "feature": feature,
+        "placement": placement,
         "files": entries,
         "wiring": {
             "blueprints": acc["blueprints"],
@@ -886,7 +1051,11 @@ def export(
         },
     }
 
-    bundle_dir = out_root / feature_id / version
+    parts = [placement["system"]]
+    if placement["screen"]:
+        parts.append(_safe(placement["screen"]))
+    parts.append(_safe(feature.get("name") or feature_id))
+    bundle_dir = out_root.joinpath(*parts)
     files_dir = bundle_dir / "files"
     if bundle_dir.exists():
         import shutil
@@ -918,6 +1087,53 @@ def export(
             tar.add(bundle_dir, arcname=f"{feature_id}-{version}")
 
     return bundle_dir
+
+
+def write_index(out_root: Path) -> None:
+    """assets/README.md に、システム → 画面 → 機能の目次を作る。"""
+    rows: list[tuple[str, str, str, Path, dict[str, Any]]] = []
+    for manifest_path in sorted(out_root.rglob("manifest.json")):
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        placement = manifest.get("placement", {})
+        rows.append(
+            (
+                placement.get("system", ""),
+                placement.get("screen", ""),
+                manifest["feature"]["name"],
+                manifest_path.parent,
+                manifest,
+            )
+        )
+
+    lines = [
+        "# 機能アセット一覧",
+        "",
+        "他環境へ渡すための機能アセット。**システム → 画面 → 機能**の順に並べてある。",
+        "",
+        "## 使い方（受け取る側）",
+        "",
+        "1. このリポジトリの zip を GitHub からダウンロードして展開する",
+        "2. 下の表から取り込みたい機能を探す",
+        "3. そのフォルダを開き、`PROMPT.md` の中身をコピーして Codex / Claude Code に貼る",
+        "",
+        "`PROMPT.md` に検証・配置・配線・受け入れ確認の手順が全部入っている。",
+        "",
+    ]
+    current_system = current_screen = None
+    for system, screen, name, path, manifest in sorted(rows, key=lambda r: (r[0], r[1], r[2])):
+        if system != current_system:
+            lines += ["", f"## {system}", ""]
+            current_system = system
+            current_screen = None
+        if screen != current_screen:
+            lines += [f"### {screen or '(画面なし)'}", "", "| 機能 | ファイル数 | 状態 |", "|---|---:|---|"]
+            current_screen = screen
+        warn = manifest.get("warnings", [])
+        state = "そのまま渡せる" if not warn else f"要確認（警告 {len(warn)} 件）"
+        rel = path.relative_to(out_root)
+        lines.append(f"| [{name}](<{rel}/PROMPT.md>) | {len(manifest['files'])} | {state} |")
+    lines.append("")
+    (out_root / "README.md").write_text("\n".join(lines), encoding="utf-8")
 
 
 def cmd_list(features: list[dict[str, Any]]) -> int:
@@ -1023,6 +1239,8 @@ def main(argv: list[str] | None = None) -> int:
         out_root = ROOT / out_root
 
     targets = features if args.all else [find_feature(features, args.feature_id)]
+    screens = screen_index()
+    owners = ownership_index(features)
     exit_code = 0
     for feature in targets:
         try:
@@ -1033,6 +1251,8 @@ def main(argv: list[str] | None = None) -> int:
                 with_tests=args.with_tests,
                 with_docs=args.with_docs,
                 archive=not args.no_archive,
+                screens=screens,
+                owners=owners,
             )
         except SystemExit as exc:
             print(f"[SKIP] {feature['feature_id']}: {exc}", file=sys.stderr)
@@ -1047,6 +1267,9 @@ def main(argv: list[str] | None = None) -> int:
         )
         for warning in manifest["warnings"]:
             print(f"      警告: {warning}")
+    if args.all:
+        write_index(out_root)
+        print(f"\n目次: {(out_root / 'README.md').relative_to(ROOT)}")
     return exit_code
 
 

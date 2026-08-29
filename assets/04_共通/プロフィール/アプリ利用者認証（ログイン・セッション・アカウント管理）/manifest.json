@@ -1,0 +1,311 @@
+{
+  "schema": "webspec2doc/feature-asset@1",
+  "version": "20260829-5345533",
+  "generated_at": "2026-08-29T07:50:11Z",
+  "source": {
+    "repository": "WebSpec2Doc",
+    "revision": "5345533",
+    "working_tree_dirty": true,
+    "contract_file": "quality/feature_contracts.yml"
+  },
+  "feature": {
+    "feature_id": "account_auth",
+    "name": "アプリ利用者認証（ログイン/セッション/アカウント管理）",
+    "risk_level": "critical",
+    "status": "implemented",
+    "ui_files": [
+      "templates/auth/login.html",
+      "templates/auth/setup.html",
+      "templates/partials/view-account.html",
+      "templates/auth/signup.html",
+      "static/css/auth.css",
+      "templates/auth/_shell.html"
+    ],
+    "route_files": [
+      "web/routes/account.py"
+    ],
+    "core_files": [
+      "web/services/auth_store.py",
+      "web/auth.py"
+    ],
+    "symbols": [
+      "authenticate",
+      "resolve_session",
+      "auth_guard",
+      "setup_initial",
+      "create_api_token"
+    ],
+    "outputs": [
+      "session cookie (ws2d_session)",
+      "login/setup/account pages",
+      "/api/auth/* JSON",
+      "audit_log"
+    ],
+    "persistence": [
+      "instance/auth.db",
+      "instance/secret_key"
+    ],
+    "failure_modes": [
+      "invalid_credentials",
+      "account_locked_after_repeated_failures",
+      "inactive_account",
+      "session_expired_or_revoked",
+      "weak_password_rejected",
+      "open_redirect_blocked",
+      "last_admin_protection"
+    ],
+    "required_tests": [
+      "happy_path",
+      "error_path",
+      "lockout_path",
+      "session_expiry_path",
+      "evidence"
+    ]
+  },
+  "placement": {
+    "system_key": "common",
+    "system": "04_共通",
+    "screen": "プロフィール",
+    "screens": [
+      "プロフィール"
+    ],
+    "classified_by": "screen"
+  },
+  "files": [
+    {
+      "path": "templates/auth/login.html",
+      "role": "ui",
+      "bytes": 3213,
+      "sha256": "90b38649e89c68f5db3124e5148bdad5878491d0a9dc9cdddf5c1b37cc6a99ad"
+    },
+    {
+      "path": "templates/auth/setup.html",
+      "role": "ui",
+      "bytes": 3372,
+      "sha256": "e89b20dfc6b7703dfea4b27b4bb83244556a4408d6f25b52a601c35739aa3284"
+    },
+    {
+      "path": "templates/partials/view-account.html",
+      "role": "ui",
+      "bytes": 3314,
+      "sha256": "966a1af61677344bb311042f4c9c30b4cc172daa3c786344baab26f84f1ce23b"
+    },
+    {
+      "path": "templates/auth/signup.html",
+      "role": "ui",
+      "bytes": 3119,
+      "sha256": "f24e1279b87899a57d3ef10a987bd13e393ccabb3175aa1e5c36a2f3404cf8f7"
+    },
+    {
+      "path": "static/css/auth.css",
+      "role": "ui",
+      "bytes": 5554,
+      "sha256": "4aecad153fa897bf11bc06ca40a486a440b72a45ff2067a8be2894fdd662b0c7"
+    },
+    {
+      "path": "templates/auth/_shell.html",
+      "role": "ui",
+      "bytes": 1420,
+      "sha256": "f2ba9b1f641712f998510245df1063576598360c92e16bfaf1d2350c3fa74432"
+    },
+    {
+      "path": "web/routes/account.py",
+      "role": "route",
+      "bytes": 15585,
+      "sha256": "b8080ea179776af0f3357e4b39b19ca42b35192ad8133b89f8324574d2ee9316"
+    },
+    {
+      "path": "web/services/auth_store.py",
+      "role": "core",
+      "bytes": 57641,
+      "sha256": "77d943ff75509823ff3d62dbe3ef41b6d749f95809219f082897210f728dbaab"
+    },
+    {
+      "path": "web/auth.py",
+      "role": "core",
+      "bytes": 9885,
+      "sha256": "d4a8a25cb6427afd94a0db1ce98bb00d876ff587d147c59b60886a21222c9bc3"
+    }
+  ],
+  "wiring": {
+    "blueprints": [
+      {
+        "file": "web/routes/account.py",
+        "name": "account",
+        "url_prefix": ""
+      }
+    ],
+    "provides_endpoints": [
+      {
+        "file": "web/routes/account.py",
+        "rule": "/auth/login",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/account.py",
+        "rule": "/auth/login",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/account.py",
+        "rule": "/auth/signup",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/account.py",
+        "rule": "/auth/signup",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/account.py",
+        "rule": "/auth/logout",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/account.py",
+        "rule": "/auth/setup",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/account.py",
+        "rule": "/auth/setup",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/account.py",
+        "rule": "/auth/account",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/account.py",
+        "rule": "/api/auth/me",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/account.py",
+        "rule": "/api/auth/tenants",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/account.py",
+        "rule": "/api/onboarding",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/account.py",
+        "rule": "/api/onboarding/complete",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/account.py",
+        "rule": "/api/auth/password",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/account.py",
+        "rule": "/api/auth/users",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/account.py",
+        "rule": "/api/auth/users",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/account.py",
+        "rule": "/api/auth/users/<user_id>",
+        "methods": [
+          "PATCH"
+        ]
+      },
+      {
+        "file": "web/routes/account.py",
+        "rule": "/api/auth/api-tokens",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/account.py",
+        "rule": "/api/auth/api-tokens",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/account.py",
+        "rule": "/api/auth/api-tokens/<token_id>",
+        "methods": [
+          "DELETE"
+        ]
+      }
+    ]
+  },
+  "dependencies": {
+    "internal_modules_not_bundled": [
+      "web/config.py",
+      "web/services/admin_audit.py",
+      "web/tenancy.py"
+    ],
+    "third_party_packages": [
+      {
+        "import": "flask",
+        "requirement": "flask==3.1.3",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "werkzeug",
+        "requirement": "",
+        "declared_in_requirements": false
+      }
+    ],
+    "env_vars": [],
+    "data_files": [],
+    "consumes_endpoints": [],
+    "window_globals": [],
+    "template_includes_not_bundled": [],
+    "static_refs_not_bundled": [
+      "static/css/tenant-auth.css",
+      "static/tokens.css"
+    ]
+  },
+  "gaps": [],
+  "shared_assets": [],
+  "warnings": [],
+  "verification": {
+    "static_analysis": "done",
+    "pytest": "not_run",
+    "verify_ui": "not_run",
+    "manual_screen_check": "not_run"
+  }
+}

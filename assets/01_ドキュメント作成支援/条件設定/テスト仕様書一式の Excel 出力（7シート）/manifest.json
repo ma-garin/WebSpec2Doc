@@ -1,0 +1,256 @@
+{
+  "schema": "webspec2doc/feature-asset@1",
+  "version": "20260829-5345533",
+  "generated_at": "2026-08-29T07:50:13Z",
+  "source": {
+    "repository": "WebSpec2Doc",
+    "revision": "5345533",
+    "working_tree_dirty": true,
+    "contract_file": "quality/feature_contracts.yml"
+  },
+  "feature": {
+    "feature_id": "spec_xlsx_full_export",
+    "name": "テスト仕様書一式の Excel 出力（7シート）",
+    "risk_level": "medium",
+    "status": "implemented",
+    "ui_files": [
+      "templates/partials/view-generate.html",
+      "static/js/results.js"
+    ],
+    "route_files": [
+      "web/routes/report.py"
+    ],
+    "core_files": [
+      "web/services/export_xlsx.py",
+      "web/services/screen_test_design.py",
+      "web/services/testcase_table_store.py",
+      "web/routes/report.py",
+      "src/graph/state_table.py",
+      "src/generator/excel_reporter.py"
+    ],
+    "symbols": [
+      "export_spec_xlsx",
+      "write_full_spec_xlsx",
+      "build_workbook",
+      "build_test_design_rows",
+      "build_testcase_rows",
+      "build_state_table_grid"
+    ],
+    "outputs": [
+      "spec.xlsx（画面一覧・フォーム・項目定義書・境界値データ・テスト設計・テストケース・遷移表）"
+    ],
+    "persistence": [
+      "output/{domain}/spec.xlsx"
+    ],
+    "failure_modes": [
+      "report_json_missing",
+      "report_json_unreadable",
+      "state_table_not_applicable",
+      "sheet_rows_diverge_from_ui",
+      "duplicate_sheets_on_reexport",
+      "invalid_domain"
+    ],
+    "required_tests": [
+      "happy_path",
+      "error_path",
+      "evidence"
+    ]
+  },
+  "placement": {
+    "system_key": "docs",
+    "system": "01_ドキュメント作成支援",
+    "screen": "条件設定",
+    "screens": [
+      "条件設定"
+    ],
+    "classified_by": "screen"
+  },
+  "files": [
+    {
+      "path": "templates/partials/view-generate.html",
+      "role": "ui",
+      "bytes": 21038,
+      "sha256": "da6646d5d332341e31a9b632b97fdc4bea9dcbc610813e801264292322ccf8fd"
+    },
+    {
+      "path": "static/js/results.js",
+      "role": "ui",
+      "bytes": 33264,
+      "sha256": "454d49c8a2415f32987d199797955eec83e75b3df16dd9f6db275755d9aae105"
+    },
+    {
+      "path": "web/routes/report.py",
+      "role": "route",
+      "bytes": 24514,
+      "sha256": "f1b9d3e492afe9ad356102cd9f83f5843a91b269adf478ecd75cefe697350297"
+    },
+    {
+      "path": "web/services/export_xlsx.py",
+      "role": "core",
+      "bytes": 10488,
+      "sha256": "71b274fca3a09160e9bf560146edb5d60b926e6e86c1c98dc89347ae68a27d27"
+    },
+    {
+      "path": "web/services/screen_test_design.py",
+      "role": "core",
+      "bytes": 16445,
+      "sha256": "1369bf1737f1f8819fab3710d12e15cebdda7347e1a733205e3f66f0f02b9da7"
+    },
+    {
+      "path": "web/services/testcase_table_store.py",
+      "role": "core",
+      "bytes": 15875,
+      "sha256": "d946a1027d64159eb727039b8c99c32f29fbffab760024f01ffc61e2a2423f82"
+    },
+    {
+      "path": "src/graph/state_table.py",
+      "role": "core",
+      "bytes": 22882,
+      "sha256": "70ef17a1b1d73ed366224c41105da7ee32a1196c37562af1e6d59e300eb6beba"
+    },
+    {
+      "path": "src/generator/excel_reporter.py",
+      "role": "core",
+      "bytes": 5657,
+      "sha256": "f15a55d2cb0aa8ed47740ca3bc6fa4f3a828a8a49092f45cca745c5b0f5fff3c"
+    }
+  ],
+  "wiring": {
+    "blueprints": [
+      {
+        "file": "web/routes/report.py",
+        "name": "report",
+        "url_prefix": ""
+      }
+    ],
+    "provides_endpoints": [
+      {
+        "file": "web/routes/report.py",
+        "rule": "/preview",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/report.py",
+        "rule": "/download",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/report.py",
+        "rule": "/api/export/spec-xlsx",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/report.py",
+        "rule": "/download-zip",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/report.py",
+        "rule": "/api/report/<domain>/spec-ts",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/report.py",
+        "rule": "/api/sample-report",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/report.py",
+        "rule": "/api/result",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/report.py",
+        "rule": "/api/state-table",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/report.py",
+        "rule": "/api/coverage-heatmap",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/report.py",
+        "rule": "/open",
+        "methods": [
+          "GET"
+        ]
+      }
+    ]
+  },
+  "dependencies": {
+    "internal_modules_not_bundled": [
+      "src/analyzer/bva.py",
+      "src/analyzer/html_analyzer.py",
+      "src/autorun/techniques.py",
+      "src/crawler/page_crawler.py",
+      "src/generator/feature_catalog.py",
+      "src/generator/heatmap_reporter.py",
+      "src/generator/test_design.py",
+      "src/generator/testcase_table.py",
+      "web/config.py",
+      "web/services/admin_audit.py",
+      "web/services/qa/helpers.py",
+      "web/services/run_store.py",
+      "web/services/spec_ts_generator.py",
+      "web/services/test_design_settings.py",
+      "web/summary.py",
+      "web/tenancy.py",
+      "web/validation.py"
+    ],
+    "third_party_packages": [
+      {
+        "import": "flask",
+        "requirement": "flask==3.1.3",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "openpyxl",
+        "requirement": "openpyxl==3.1.4",
+        "declared_in_requirements": true
+      }
+    ],
+    "env_vars": [],
+    "data_files": [],
+    "consumes_endpoints": [
+      "/api/",
+      "/api/doc-fusion",
+      "/api/export/spec-xlsx",
+      "/api/result",
+      "/api/snapshot-diff-summary",
+      "/api/snapshots",
+      "/api/testcases/count",
+      "/preview"
+    ],
+    "window_globals": [],
+    "template_includes_not_bundled": [],
+    "static_refs_not_bundled": []
+  },
+  "gaps": [],
+  "shared_assets": [],
+  "warnings": [],
+  "verification": {
+    "static_analysis": "done",
+    "pytest": "not_run",
+    "verify_ui": "not_run",
+    "manual_screen_check": "not_run"
+  }
+}

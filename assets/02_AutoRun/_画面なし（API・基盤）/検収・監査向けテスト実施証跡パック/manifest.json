@@ -1,0 +1,227 @@
+{
+  "schema": "webspec2doc/feature-asset@1",
+  "version": "20260829-5345533",
+  "generated_at": "2026-08-29T07:50:12Z",
+  "source": {
+    "repository": "WebSpec2Doc",
+    "revision": "5345533",
+    "working_tree_dirty": true,
+    "contract_file": "quality/feature_contracts.yml"
+  },
+  "feature": {
+    "feature_id": "evidence_pack",
+    "name": "検収・監査向けテスト実施証跡パック",
+    "risk_level": "high",
+    "status": "implemented",
+    "ui_files": [
+      "static/js/autorun.js"
+    ],
+    "route_files": [
+      "web/routes/auto_run.py"
+    ],
+    "core_files": [
+      "src/evidence/pack_model.py",
+      "src/evidence/pack_reporter.py",
+      "web/services/evidence_pack_service.py"
+    ],
+    "symbols": [
+      "build_evidence_pack",
+      "save_evidence_pack",
+      "attach_evidence_pack"
+    ],
+    "outputs": [
+      "evidence_pack.md",
+      "evidence_pack.html"
+    ],
+    "persistence": [
+      "output/{domain}/qa_process/evidence_pack.*"
+    ],
+    "failure_modes": [
+      "missing_report",
+      "missing_viewpoints",
+      "missing_screenshots",
+      "interrupted_run",
+      "generation_failure"
+    ],
+    "required_tests": [
+      "happy_path",
+      "missing_input_path",
+      "claim_scope",
+      "evidence"
+    ]
+  },
+  "placement": {
+    "system_key": "autorun",
+    "system": "02_AutoRun",
+    "screen": "_画面なし（API・基盤）",
+    "screens": [],
+    "classified_by": "path"
+  },
+  "files": [
+    {
+      "path": "static/js/autorun.js",
+      "role": "ui",
+      "bytes": 60389,
+      "sha256": "fd73d9bc299c1d292ae5aa13829507e26bc7b9749635923d010e07e591eb4184"
+    },
+    {
+      "path": "web/routes/auto_run.py",
+      "role": "route",
+      "bytes": 28109,
+      "sha256": "9d4beccc5ddd8f96f0ac799146cc80827e6f208ef072eb75211c0cfa9d27097d"
+    },
+    {
+      "path": "src/evidence/pack_model.py",
+      "role": "core",
+      "bytes": 8714,
+      "sha256": "be55c814f0ad0b6c26a0eff689eca6e9a2b84937753f5303f03ea9c910a52807"
+    },
+    {
+      "path": "src/evidence/pack_reporter.py",
+      "role": "core",
+      "bytes": 12372,
+      "sha256": "9b85ecdd14cd140ff7342ea4fff86e455e86b5a7268b5ac5e1b1c473888dba8d"
+    },
+    {
+      "path": "web/services/evidence_pack_service.py",
+      "role": "core",
+      "bytes": 5004,
+      "sha256": "dd179f4d9007e8052b4878139789bbcb3835a78cc204e608a74316f9784130d6"
+    }
+  ],
+  "wiring": {
+    "blueprints": [
+      {
+        "file": "web/routes/auto_run.py",
+        "name": "auto_run",
+        "url_prefix": ""
+      }
+    ],
+    "provides_endpoints": [
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/autorun/start",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/autorun/status",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/autorun/cancel",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/history/runs",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/autorun/submit-input",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/autorun/preview",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/autorun/approve",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/autorun/report",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/autorun/live-screenshot",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/autorun/jobs",
+        "methods": [
+          "GET"
+        ]
+      }
+    ]
+  },
+  "dependencies": {
+    "internal_modules_not_bundled": [
+      "src/autorun/stages.py",
+      "web/config.py",
+      "web/services/auto_run_config.py",
+      "web/services/auto_run_job.py",
+      "web/services/auto_run_pipeline.py",
+      "web/services/auto_run_preview.py",
+      "web/services/document_autorun.py",
+      "web/services/playwright_executor.py",
+      "web/services/usage_tracker.py",
+      "web/services/viewpoint_store.py",
+      "web/tenancy.py",
+      "web/validation.py"
+    ],
+    "third_party_packages": [
+      {
+        "import": "flask",
+        "requirement": "flask==3.1.3",
+        "declared_in_requirements": true
+      }
+    ],
+    "env_vars": [],
+    "data_files": [],
+    "consumes_endpoints": [
+      "/api/autorun/cancel",
+      "/api/autorun/jobs",
+      "/api/autorun/live-screenshot",
+      "/api/autorun/status",
+      "/api/autorun/submit-input",
+      "/api/history",
+      "/api/viewpoint-selection"
+    ],
+    "window_globals": [
+      "_autoRunLastData",
+      "autorunCancel",
+      "autorunLeadBar",
+      "autorunReview",
+      "autorunStages"
+    ],
+    "template_includes_not_bundled": [],
+    "static_refs_not_bundled": []
+  },
+  "gaps": [],
+  "shared_assets": [],
+  "warnings": [
+    "JS は同梱しているが画面テンプレート（.html）が、同梱にも他機能の共通資産にも見当たらない。契約の ui_files に登録漏れがないか確認すること。"
+  ],
+  "verification": {
+    "static_analysis": "done",
+    "pytest": "not_run",
+    "verify_ui": "not_run",
+    "manual_screen_check": "not_run"
+  }
+}

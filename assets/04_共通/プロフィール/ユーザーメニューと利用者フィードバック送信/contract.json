@@ -1,0 +1,50 @@
+{
+  "feature_id": "user_menu_feedback",
+  "name": "ユーザーメニューと利用者フィードバック送信",
+  "risk_level": "high",
+  "status": "implemented",
+  "ui_files": [
+    "templates/partials/topbar.html",
+    "templates/partials/view-account.html",
+    "templates/partials/view-feedback.html",
+    "static/css/user-menu.css",
+    "static/css/account-view.css",
+    "static/js/user-menu.js",
+    "static/js/account-view.js",
+    "static/js/feedback-view.js"
+  ],
+  "route_files": [
+    "web/routes/feedback.py"
+  ],
+  "core_files": [
+    "web/services/feedback_store.py"
+  ],
+  "symbols": [
+    "append_feedback",
+    "read_feedback",
+    "validate",
+    "FeedbackError"
+  ],
+  "outputs": [
+    "トップバーのユーザーメニュー（個人設定 / ユーザーガイド / フィードバック / ログアウト）",
+    "個人設定ビュー（/account）とフィードバックビュー（/feedback）",
+    "フィードバックの送信結果メッセージ",
+    "/api/feedback JSON"
+  ],
+  "persistence": [
+    "instance/tenants/{slug}/feedback.jsonl"
+  ],
+  "failure_modes": [
+    "empty_or_oversized_message_rejected",
+    "invalid_category_rejected",
+    "write_failure_reported_not_silently_dropped",
+    "identity_forged_by_client_ignored",
+    "broken_line_does_not_break_listing",
+    "non_admin_cannot_read_feedback"
+  ],
+  "required_tests": [
+    "happy_path",
+    "error_path",
+    "evidence"
+  ]
+}

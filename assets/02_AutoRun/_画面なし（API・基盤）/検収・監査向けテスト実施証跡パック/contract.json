@@ -1,0 +1,42 @@
+{
+  "feature_id": "evidence_pack",
+  "name": "検収・監査向けテスト実施証跡パック",
+  "risk_level": "high",
+  "status": "implemented",
+  "ui_files": [
+    "static/js/autorun.js"
+  ],
+  "route_files": [
+    "web/routes/auto_run.py"
+  ],
+  "core_files": [
+    "src/evidence/pack_model.py",
+    "src/evidence/pack_reporter.py",
+    "web/services/evidence_pack_service.py"
+  ],
+  "symbols": [
+    "build_evidence_pack",
+    "save_evidence_pack",
+    "attach_evidence_pack"
+  ],
+  "outputs": [
+    "evidence_pack.md",
+    "evidence_pack.html"
+  ],
+  "persistence": [
+    "output/{domain}/qa_process/evidence_pack.*"
+  ],
+  "failure_modes": [
+    "missing_report",
+    "missing_viewpoints",
+    "missing_screenshots",
+    "interrupted_run",
+    "generation_failure"
+  ],
+  "required_tests": [
+    "happy_path",
+    "missing_input_path",
+    "claim_scope",
+    "evidence"
+  ]
+}

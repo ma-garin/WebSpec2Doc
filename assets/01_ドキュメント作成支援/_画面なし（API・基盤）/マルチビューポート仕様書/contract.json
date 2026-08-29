@@ -1,0 +1,39 @@
+{
+  "feature_id": "multi_viewport",
+  "name": "マルチビューポート仕様書",
+  "risk_level": "medium",
+  "status": "implemented",
+  "ui_files": [],
+  "route_files": [],
+  "core_files": [
+    "src/viewport/profiles.py",
+    "src/viewport/comparison.py",
+    "src/viewport/reporter.py",
+    "src/viewport/runner.py",
+    "src/viewport/layout_failures.py"
+  ],
+  "symbols": [
+    "resolve_profiles",
+    "compare_viewports",
+    "save_viewport_report",
+    "run_multi_viewport",
+    "build_layout_failure_report"
+  ],
+  "outputs": [
+    "viewport_report.md/html/json",
+    "layout failure observations"
+  ],
+  "persistence": [
+    "output/{domain}/viewports/"
+  ],
+  "failure_modes": [
+    "unknown_viewport",
+    "baseline_not_observed",
+    "viewport_crawl_failure"
+  ],
+  "required_tests": [
+    "happy_path",
+    "error_path",
+    "evidence"
+  ]
+}

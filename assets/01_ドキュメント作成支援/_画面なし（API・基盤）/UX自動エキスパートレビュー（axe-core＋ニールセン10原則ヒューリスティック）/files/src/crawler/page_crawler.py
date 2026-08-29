@@ -1,0 +1,1532 @@
+"""Playwright を使った Web サイトクローラー。
+
+BFS でリンクを追跡し、各ページのメタ・フォーム・スクリーンショットと
+ネットワーク API 呼び出し・技術スタック情報を PageData として収集する。
+"""
+
+from __future__ import annotations
+
+import logging
+import os
+import time
+from collections.abc import Callable, Iterable, Iterator
+from contextlib import contextmanager
+from dataclasses import dataclass, replace
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
+from urllib.parse import urljoin, urlparse, urlunparse
+from urllib.robotparser import RobotFileParser
+
+from playwright.sync_api import Browser, Page, sync_playwright
+from playwright.sync_api import Error as PlaywrightError
+
+from crawler.playwright_runtime import configure_playwright_browsers_path
+from crawler.politeness import (
+    RETRYABLE_STATUS_CODES,
+    OriginRateLimiter,
+    RetryableHTTPError,
+    TokenBucketLimiter,
+    append_audit_log,
+    backoff_delays,
+    build_user_agent,
+    crawl_interval_from_env,
+    interval_for_target,
+    robots_crawl_delay,
+)
+from crawler.session_guard import SessionExpiredError
+from crawler.url_safety import is_safe_target
+
+if TYPE_CHECKING:
+    from analyzer.stack_detector import StackInfo
+    from ux.axe_runner import AxeViolation
+
+CRAWL_DELAY_SEC = 0
+DEFAULT_DEPTH = 3
+DEFAULT_MAX_PAGES = 50
+DEFAULT_TIMEOUT_MS = 30_000
+STABILITY_TIMEOUT_MS = 3_000
+# networkidle 安定待ちの上限（ms）を上書きする環境変数。長時間ポーリングや
+# 解析ビーコンを持つサイトで毎ページ上限まで待つのを避けたい場合に短縮できる。
+STABILITY_TIMEOUT_ENV = "WEBSPEC2DOC_STABILITY_TIMEOUT_MS"
+# 全体スクリーンショット（{id}_full.png）の取得を無効化する環境変数。
+# full_page キャプチャはページ全体の再描画を伴い長いページでは高コストのため、
+# 速度優先の運用では 0/false/off で表示用（ビューポート）のみに絞れる。
+FULL_SCREENSHOT_ENV = "WEBSPEC2DOC_FULL_SCREENSHOT"
+_FALSE_ENV_VALUES = frozenset({"0", "false", "off", "no"})
+HTTP_DEFAULT_PORT = 80
+HTTPS_DEFAULT_PORT = 443
+PAGE_ID_PREFIX = "P"
+PAGE_ID_WIDTH = 3
+SCREENSHOTS_DIR_NAME = "screenshots"
+
+# スクリーンショット撮影の再試行。描画途中や一時的な detach で 1 回だけ失敗することが
+# あるため、1 回の失敗で「証跡なし」の成果物を作らない。
+SCREENSHOT_MAX_ATTEMPTS = 3
+SCREENSHOT_RETRY_WAIT_SEC = 0.4
+USER_AGENT = build_user_agent()
+BROWSER_LOCALE = "ja-JP"
+# Chromium の HTML5 バリデーションメッセージ（validationMessage）は、UI 言語バンドルを
+# 基底言語コードで解決する。地域付き "ja-JP" では該当バンドルが存在せず validationMessage が
+# 空文字になり、必須未入力の実測が全滅する（en-US は存在するため機能するが ja-JP は不可）。
+# そのため --lang には基底サブタグ（"ja"）を渡す。context locale は "ja-JP" のまま維持する。
+BROWSER_UI_LANG = BROWSER_LOCALE.split("-", 1)[0]
+NEXT_DEPTH_INCREMENT = 1
+
+_SENSITIVE_KEYWORDS = ("payment", "checkout", "billing", "personal", "private")
+_DUMMY_EMAIL = "test@example.com"
+_DUMMY_PASSWORD = "Test1234!"
+_DUMMY_DATE = "2024-01-01"
+_DUMMY_NUMBER = "1"
+_DUMMY_TEXT = "テスト入力値"
+
+logger = logging.getLogger(__name__)
+
+CrawlEventCallback = Callable[[dict[str, object]], None]
+CheckpointCallback = Callable[[list["PageData"]], None]
+StopRequested = Callable[[], bool]
+# --ux-review 時、画面ごとの axe 検査結果をサイドチャネルで受け取るコールバック。
+# PageData のスキーマは変更しない（report.json 互換保護。SPEC-3-4 §5-2）
+UxResultCallback = Callable[[str, tuple["AxeViolation", ...]], None]
+
+
+class LoginWallDetected(RuntimeError):
+    def __init__(self, url: str, login_url: str, reasons: tuple[str, ...]) -> None:
+        super().__init__(f"ログインウォールを検出しました: {url}")
+        self.url = url
+        self.login_url = login_url
+        self.reasons = reasons
+
+
+@dataclass(frozen=True)
+class SourceEvidence:
+    """フィールドや観点の出所を示す根拠情報。
+
+    selector: 対象要素の CSS セレクタ
+    html_attribute: 根拠となった HTML 属性名（属性由来でない場合は None）
+    screenshot_path: 該当画面のスクリーンショットパス
+    bbox: スクリーンショット上の要素位置 (x, y, width, height)
+    """
+
+    selector: str
+    html_attribute: str | None = None
+    screenshot_path: str | None = None
+    bbox: tuple[int, int, int, int] | None = None
+
+
+def evidence_to_dict(evidence: SourceEvidence | None) -> dict[str, object] | None:
+    """SourceEvidence を JSON シリアライズ可能な dict に変換する（None はそのまま）。"""
+    if evidence is None:
+        return None
+    return {
+        "selector": evidence.selector,
+        "html_attribute": evidence.html_attribute,
+        "screenshot_path": evidence.screenshot_path,
+        "bbox": list(evidence.bbox) if evidence.bbox is not None else None,
+    }
+
+
+def evidence_from_dict(data: object) -> SourceEvidence | None:
+    """dict（JSON 由来）から SourceEvidence を復元する。不正・欠落時は None を返す。"""
+    if not isinstance(data, dict):
+        return None
+    raw_bbox = data.get("bbox")
+    bbox: tuple[int, int, int, int] | None = None
+    if isinstance(raw_bbox, list | tuple) and len(raw_bbox) == 4:
+        try:
+            bbox = (int(raw_bbox[0]), int(raw_bbox[1]), int(raw_bbox[2]), int(raw_bbox[3]))
+        except (TypeError, ValueError):
+            bbox = None
+    raw_attr = data.get("html_attribute")
+    raw_shot = data.get("screenshot_path")
+    return SourceEvidence(
+        selector=str(data.get("selector") or ""),
+        html_attribute=str(raw_attr) if raw_attr else None,
+        screenshot_path=str(raw_shot) if raw_shot else None,
+        bbox=bbox,
+    )
+
+
+@dataclass(frozen=True)
+class FieldData:
+    field_type: str
+    name: str
+    placeholder: str
+    required: bool
+    maxlength: int | None = None
+    minlength: int | None = None
+    min_value: str = ""
+    max_value: str = ""
+    pattern: str = ""
+    default: str = ""
+    options: tuple[str, ...] = ()
+    element_id: str = ""
+    aria_label: str = ""
+    aria_required: bool = False
+    role: str = ""
+    has_visible_label: bool = False
+    label_text: str = ""  # 画面に見えているラベル文言（テスト手順で欄を特定するために使う）
+    # DOM 実測由来のため confidence は 1.0 固定
+    evidence: SourceEvidence | None = None
+    confidence: float = 1.0
+
+
+@dataclass(frozen=True)
+class FormData:
+    action: str
+    method: str
+    fields: tuple[FieldData, ...]
+
+
+@dataclass(frozen=True)
+class ApiEndpoint:
+    """クロール中に傍受した API 呼び出しの記録。"""
+
+    method: str
+    path: str
+    status_code: int
+    content_type: str
+    sample_fields: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class PageState:
+    """ページ内アクション（クリック等）で出現した画面状態。"""
+
+    state_id: str  # DOM 状態シグネチャ
+    trigger_selector: str  # 状態を出現させた要素のセレクタ
+    kind: str  # "modal" / "tabpanel" / "accordion" / "dom_change"
+    description: str = ""
+
+
+@dataclass(frozen=True)
+class ValidationObservation:
+    """バリデーション実測（dry-run 送信）で観測されたメッセージ。"""
+
+    field_name: str
+    message: str
+    evidence: SourceEvidence | None = None
+    # 実測値のため confidence は 1.0 固定
+    confidence: float = 1.0
+
+
+@dataclass(frozen=True)
+class SpaTransition:
+    """pushState / replaceState / hashchange による SPA 遷移の記録。"""
+
+    from_url: str
+    to_url: str
+    kind: str  # "pushstate" / "replacestate" / "hashchange" / "dom_change"
+
+
+@dataclass(frozen=True)
+class EmbeddedFrame:
+    """ページ内 iframe・closed shadow root の記録。
+
+    readable=False は「検出したが読めない」ことを示す（evidence-only 原則:
+    無いことにせず、確認できなかった旨を明示する）。
+    src は iframe の場合は絶対 URL、closed shadow root の場合は
+    "shadow:<タグ名>" 形式。
+    """
+
+    src: str
+    readable: bool
+    note: str = ""
+
+
+@dataclass(frozen=True)
+class PageData:
+    url: str
+    title: str
+    headings: tuple[str, ...]
+    links: tuple[str, ...]
+    forms: tuple[FormData, ...]
+    screenshot_path: str | None
+    buttons: tuple[str, ...] = ()
+    api_calls: tuple[ApiEndpoint, ...] = ()
+    stack_info: StackInfo | None = None
+    state_id: str = "default"  # DOM シグネチャ由来の状態識別子
+    a11y_issues: tuple[str, ...] = ()
+    page_states: tuple[PageState, ...] = ()
+    validation_observations: tuple[ValidationObservation, ...] = ()
+    spa_transitions: tuple[SpaTransition, ...] = ()
+    embedded_frames: tuple[EmbeddedFrame, ...] = ()
+    # 技術ヘルスはクロール中の実測だけを保持する。未観測は 0 / 空タプル。
+    http_status: int = 0
+    console_errors: tuple[str, ...] = ()
+    mixed_content: tuple[str, ...] = ()
+    performance: Any | None = None  # PerformanceSample（欠測時 None）
+    element_boxes: tuple[dict[str, Any], ...] = ()  # レイアウト観測用（既定は空）
+    horizontal_overflow: bool = False
+
+
+@contextmanager
+def _browser_page(auth_state: Path | None, viewport: Any | None = None) -> Iterator[Page]:
+    """Open a Playwright Chromium page with shared context settings.
+
+    viewport に ViewportProfile を渡すと、その画面幅・UA で観測する
+    （マルチビューポート観測用。未指定なら従来どおりブラウザ既定）。
+    """
+    configure_playwright_browsers_path()
+    with sync_playwright() as playwright:
+        # --lang でブラウザ UI 言語を日本語にし、HTML5 バリデーション
+        # メッセージが日本語で得られるようにする（context の locale だけでは
+        # validationMessage の言語は変わらないため launch 引数で指定する）。
+        # 基底言語コード（BROWSER_UI_LANG="ja"）を渡す点に注意（"ja-JP" は不可）。
+        browser = playwright.chromium.launch(headless=True, args=[f"--lang={BROWSER_UI_LANG}"])
+        try:
+            context_options: dict[str, Any] = {
+                "user_agent": USER_AGENT,
+                "storage_state": str(auth_state) if auth_state else None,
+                # 日本語ロケール: HTML5 バリデーションメッセージ実測を
+                # 日本のエンドユーザーが目にする文言（日本語）で取得する
+                "locale": BROWSER_LOCALE,
+            }
+            if viewport is not None:
+                context_options["viewport"] = viewport.size
+                context_options["user_agent"] = viewport.user_agent
+                context_options["is_mobile"] = viewport.is_mobile
+                context_options["has_touch"] = viewport.is_mobile
+            context = browser.new_context(**context_options)
+            page = context.new_page()
+            page.set_default_timeout(DEFAULT_TIMEOUT_MS)
+            yield page
+        finally:
+            _close_browser(browser)
+
+
+def crawl_site(
+    url: str,
+    depth: int = DEFAULT_DEPTH,
+    max_pages: int = DEFAULT_MAX_PAGES,
+    output_dir: Path | None = None,
+    auth_state: Path | None = None,
+    on_event: CrawlEventCallback | None = None,
+    on_checkpoint: CheckpointCallback | None = None,
+    stop_requested: StopRequested | None = None,
+    ux_review: bool = False,
+    on_ux_result: UxResultCallback | None = None,
+    viewport: Any | None = None,
+    parallelism: int = 1,
+) -> list[PageData]:
+    base_url = normalize_url(url)
+    robots = _load_robots_parser(base_url)
+    limiter = _make_rate_limiter(robots, base_url)
+    worker_count = max(1, min(int(parallelism), max_pages))
+    visited: set[str] = set()
+    queue: list[tuple[str, int]] = [(base_url, 0)]
+    pages: list[PageData] = []
+    # 開始時点で判明している対象は起点 URL のみ。上限値を配信すると、実画面数より
+    # 大きい分母（例: 8画面のサイトで「0 / 30」）が最後まで残る。
+    _emit_event(on_event, "crawl_started", total=len(queue), parallelism=worker_count)
+    append_audit_log(
+        output_dir,
+        {
+            "event": "crawl_started",
+            "mode": "site",
+            "base_url": base_url,
+            "robots_allowed": robots.can_fetch(USER_AGENT, base_url),
+            "robots_crawl_delay_sec": robots_crawl_delay(robots, USER_AGENT),
+            "interval_sec": limiter.interval_sec,
+            "user_agent": USER_AGENT,
+            "depth": depth,
+            "max_pages": max_pages,
+            "parallelism": worker_count,
+            "mutations_allowed": _mutations_allowed_with_warning(),
+        },
+    )
+    if worker_count > 1:
+        # リンク追跡（auto）モードの並列 BFS。rate limiter は全ワーカー共有で、
+        # サイト全体のリクエスト間隔保証（礼儀制御）は直列時と変わらない。
+        from crawler.parallel_crawler import crawl_site_parallel
+
+        return crawl_site_parallel(
+            base_url,
+            depth=depth,
+            max_pages=max_pages,
+            output_dir=output_dir,
+            auth_state=auth_state,
+            worker_count=worker_count,
+            robots=robots,
+            limiter=limiter,
+            on_event=on_event,
+            on_checkpoint=on_checkpoint,
+            stop_requested=stop_requested,
+            ux_review=ux_review,
+            on_ux_result=on_ux_result,
+            viewport=viewport,
+        )
+
+    with _browser_page(auth_state, viewport) as page:
+        while queue and len(pages) < max_pages:
+            if stop_requested and stop_requested():
+                break
+            current_url, current_depth = queue.pop(0)
+            skip_reason = _skip_reason(current_url, current_depth, depth, visited, robots)
+            if skip_reason:
+                if skip_reason not in {"visited", "depth"}:
+                    _emit_event(on_event, "page_skipped", url=current_url, reason=skip_reason)
+                continue
+            visited.add(current_url)
+            page_id = _format_page_id(len(pages) + 1)
+            started_at = time.monotonic()
+            _emit_event(
+                on_event,
+                "page_started",
+                url=current_url,
+                index=len(pages) + 1,
+                total=known_total(
+                    len(pages), 1, queue, visited, max_pages, max_depth=depth, robots=robots
+                ),
+            )
+            limiter.acquire()
+            page_data = _crawl_page_with_id(
+                page,
+                current_url,
+                page_id,
+                output_dir,
+                auth_state=auth_state,
+                on_event=on_event,
+                ux_review=ux_review,
+                on_ux_result=on_ux_result,
+            )
+            if page_data is None:
+                _polite_delay(page)
+                continue
+            pages.append(page_data)
+            if on_checkpoint:
+                on_checkpoint(list(pages))
+            # 新たに見つかったリンクを先にキューへ入れてから進捗を配信する。
+            # 順序が逆だと、判明済み対象数がこのページ分だけ古いまま配信される。
+            queue.extend(_next_urls(page_data.links, current_depth, visited, depth))
+            _emit_event(
+                on_event,
+                "page_completed",
+                url=current_url,
+                completed=len(pages),
+                total=known_total(
+                    len(pages), 0, queue, visited, max_pages, max_depth=depth, robots=robots
+                ),
+                elapsed_sec=round(time.monotonic() - started_at, 3),
+                # 画面上で「何が取れたか」をその場で示すため、検出数を添える。
+                # 件数が無いと、進捗が数字だけで中身が見えない（利用者の指摘）。
+                forms=len(page_data.forms),
+                links=len(page_data.links),
+                required_inputs=sum(
+                    1 for form in page_data.forms for field in form.fields if field.required
+                ),
+            )
+            _polite_delay(page)
+
+    event = "crawl_cancelled" if stop_requested and stop_requested() else "crawl_completed"
+    # 終了時の total に上限値を載せると、収束していた分母が最後だけ跳ね上がる。
+    _emit_event(
+        on_event,
+        event,
+        completed=len(pages),
+        total=known_total(len(pages), 0, queue, visited, max_pages, max_depth=depth, robots=robots),
+    )
+    return pages
+
+
+def discover_pages(
+    url: str,
+    depth: int = DEFAULT_DEPTH,
+    max_pages: int = DEFAULT_MAX_PAGES,
+    auth_state: Path | None = None,
+    on_page_found: Callable[[dict[str, object]], None] | None = None,
+    on_event: CrawlEventCallback | None = None,
+    parallelism: int = 1,
+) -> list[dict[str, object]]:
+    """Lightweight BFS listing reachable pages (url + title + login wall 判定)
+    without screenshots or form extraction. Backs the GUI '画面リスト取得' step.
+
+    parallelism > 1 のとき、同じ深さの URL をまとめて取りに行く（深さはまたがない）。
+    """
+    base_url = normalize_url(url)
+    # 最初の 1 画面が出るまで約 1.2 秒あり、その間ずっと画面が無反応だった
+    # （経過秒だけが動く）。実測の内訳は robots.txt の取得とブラウザ起動。
+    # 実時間は変わらないが、何を待っているのかは出せる。推測ではなく
+    # 実際にこれから行う処理を、始める直前に知らせる。
+    _emit_event(on_event, "discover_started", url=base_url)
+    _emit_event(on_event, "robots_checking", url=base_url)
+    robots = _load_robots_parser(base_url)
+    visited: set[str] = set()
+    queue: list[tuple[str, int]] = [(base_url, 0)]
+    found: list[dict[str, object]] = []
+
+    # 同じ深さの URL は互いに依存しないので、まとめて取りに行ける。
+    # 直列だと 1 ページあたり実測 0.53 秒がそのまま積み上がっていた。
+    # 深さをまたぐ並列化はしない（次の深さの URL は今の深さの結果から決まる）。
+    worker_count = max(1, min(int(parallelism), max_pages))
+    if worker_count > 1 and max_pages > 1:
+        from crawler.parallel_crawler import discover_pages_parallel
+
+        return discover_pages_parallel(
+            base_url=base_url,
+            depth=depth,
+            max_pages=max_pages,
+            auth_state=auth_state,
+            robots=robots,
+            worker_count=worker_count,
+            on_page_found=on_page_found,
+            on_event=on_event,
+        )
+
+    _emit_event(on_event, "browser_starting")
+    with _browser_page(auth_state) as page:
+        _emit_event(on_event, "browser_ready")
+        while queue and len(found) < max_pages:
+            prev_count = len(found)
+            current_url, current_depth = queue.pop(0)
+            skip_reason = _skip_reason(current_url, current_depth, depth, visited, robots)
+            if skip_reason:
+                if skip_reason not in {"visited", "depth"}:
+                    _emit_event(on_event, "page_skipped", url=current_url, reason=skip_reason)
+                continue
+            visited.add(current_url)
+            links = _discover_one(page, current_url, found)
+            if on_page_found is not None and len(found) > prev_count:
+                on_page_found(found[-1])
+            queue.extend(_next_urls(links, current_depth, visited, depth))
+            _polite_delay(page)
+
+    return found
+
+
+def crawl_urls(
+    urls: list[str],
+    output_dir: Path | None = None,
+    auth_state: Path | None = None,
+    parallelism: int = 1,
+    respect_robots: bool = True,
+    on_event: CrawlEventCallback | None = None,
+    on_checkpoint: CheckpointCallback | None = None,
+    stop_requested: StopRequested | None = None,
+    ux_review: bool = False,
+    on_ux_result: UxResultCallback | None = None,
+) -> list[PageData]:
+    """Crawl an explicit list of URLs (no link following). Backs the GUI
+    'selected pages' / 'manual URL' modes."""
+    from crawler.network_interceptor import (
+        log_mutation_block_summary,
+        reset_mutation_log_state,
+    )
+
+    targets = list(dict.fromkeys(normalize_url(u) for u in urls if u.strip()))
+    requested_total = len(targets)
+    worker_count = max(1, min(parallelism, requested_total or 1))
+    # 遮断ログの抑制はクロール単位。前回の実行で出したオリジンを引き継がない。
+    reset_mutation_log_state()
+    _emit_event(on_event, "crawl_started", total=requested_total, parallelism=worker_count)
+    robots_skipped: list[str] = []
+    origin_delays: dict[str, float] = {}
+    if respect_robots:
+        targets, robots_skipped, origin_delays = _filter_robots_targets(targets, on_event)
+    # オリジンごとに独立した間隔制御（別サイトの Crawl-Delay に巻き込まれない）
+    limiter = OriginRateLimiter(crawl_interval_from_env())
+    for origin, delay in origin_delays.items():
+        limiter.set_crawl_delay(origin, delay)
+    max_delay = max(origin_delays.values(), default=None) if origin_delays else None
+    append_audit_log(
+        output_dir,
+        {
+            "event": "crawl_started",
+            "mode": "urls",
+            "target_urls": targets,
+            "respect_robots": respect_robots,
+            "robots_skipped_urls": robots_skipped,
+            "robots_crawl_delay_sec": max_delay,
+            "interval_sec": max(limiter.interval_sec, max_delay or 0.0),
+            "per_origin_crawl_delays": origin_delays,
+            "user_agent": USER_AGENT,
+            "parallelism": worker_count,
+            "mutations_allowed": _mutations_allowed_with_warning(),
+        },
+    )
+    if not targets:
+        _emit_event(on_event, "crawl_completed", completed=0, total=requested_total)
+        return []
+    worker_count = max(1, min(parallelism, len(targets) or 1))
+    if worker_count > 1:
+        from crawler.parallel_crawler import crawl_urls_parallel
+
+        return crawl_urls_parallel(
+            targets,
+            output_dir,
+            auth_state,
+            worker_count,
+            on_event,
+            on_checkpoint,
+            stop_requested,
+            limiter=limiter,
+            ux_review=ux_review,
+            on_ux_result=on_ux_result,
+        )
+
+    pages: list[PageData] = []
+    with _browser_page(auth_state) as page:
+        for index, target in enumerate(targets, 1):
+            if stop_requested and stop_requested():
+                break
+            page_id = _format_page_id(len(pages) + 1)
+            started_at = time.monotonic()
+            _emit_event(on_event, "page_started", url=target, index=index, total=len(targets))
+            limiter.acquire(target)
+            if auth_state is None and on_event is None and not ux_review:
+                page_data = _crawl_page_with_id(page, target, page_id, output_dir)
+            else:
+                page_data = _crawl_page_with_id(
+                    page,
+                    target,
+                    page_id,
+                    output_dir,
+                    auth_state=auth_state,
+                    on_event=on_event,
+                    ux_review=ux_review,
+                    on_ux_result=on_ux_result,
+                )
+            if page_data is not None:
+                pages.append(page_data)
+                if on_checkpoint:
+                    on_checkpoint(list(pages))
+                _emit_event(
+                    on_event,
+                    "page_completed",
+                    url=target,
+                    completed=len(pages),
+                    total=len(targets),
+                    elapsed_sec=round(time.monotonic() - started_at, 3),
+                )
+            _polite_delay(page)
+
+    # まとめた遮断の件数は最後に 1 行で出す。ページごとに出すと結局ログが埋まる。
+    log_mutation_block_summary()
+    event = "crawl_cancelled" if stop_requested and stop_requested() else "crawl_completed"
+    _emit_event(on_event, event, completed=len(pages), total=len(targets))
+    return pages
+
+
+def _stability_timeout_ms() -> int:
+    """networkidle 安定待ちの上限（ms）。環境変数で上書き可能・不正値は既定値。"""
+    raw = os.environ.get(STABILITY_TIMEOUT_ENV, "").strip()
+    if not raw:
+        return STABILITY_TIMEOUT_MS
+    try:
+        value = int(float(raw))
+    except ValueError:
+        value = -1
+    if value < 0:
+        logger.warning(
+            "%s の値が不正です（%r）。既定値 %d ms を使用します。",
+            STABILITY_TIMEOUT_ENV,
+            raw,
+            STABILITY_TIMEOUT_MS,
+        )
+        return STABILITY_TIMEOUT_MS
+    return value
+
+
+def _goto_stable(page: Page, url: str) -> Any:
+    """DOM構築を待って返し、networkidleは短時間だけ補助的に待つ。"""
+    response = page.goto(url, wait_until="domcontentloaded", timeout=DEFAULT_TIMEOUT_MS)
+    _wait_network_idle(page, url)
+    return response
+
+
+def _wait_network_idle(page: Page, url: str) -> None:
+    """networkidle を上限つきで待つ。打ち切りは失敗扱いにしない。"""
+    timeout_ms = _stability_timeout_ms()
+    if timeout_ms <= 0:
+        return
+    try:
+        page.wait_for_load_state("networkidle", timeout=timeout_ms)
+    except PlaywrightError:
+        logger.debug("networkidle待機を打ち切りました: %s", url)
+
+
+def _goto_for_discover(page: Page, url: str) -> Any:
+    """画面リスト取得用の遷移。まず DOM 構築だけで返す。
+
+    Playwright の networkidle は「500ms 間ネットワークが静止すること」を条件とするため、
+    ページが瞬時に読み終わっても 1 ページあたり必ず 500ms 以上かかる。discover は
+    URL・タイトル・ログイン壁の判定しか行わないため、初期 DOM で足りることが多い。
+    JS 描画後にしかリンクが現れない SPA を取り逃さないよう、リンクが 1 件も取れなかった
+    場合に限り networkidle まで待って再抽出する（呼び出し側が判断する）。
+    """
+    return page.goto(url, wait_until="domcontentloaded", timeout=DEFAULT_TIMEOUT_MS)
+
+
+# リンク数の安定待ち。JS 描画でリンクが後から増えるサイトを取り逃さないための上限と刻み。
+# MIN は「描画が始まる前に切り上げない」ための下限。実測で 300ms 後に描画する SPA を
+# 取り逃したため、安定判定だけでの早期打ち切りは行わない。
+LINK_SETTLE_STEP_MS = 120
+LINK_SETTLE_MIN_MS = 480
+LINK_SETTLE_MAX_MS = 960
+LINK_SETTLE_STABLE_ROUNDS = 2
+
+
+def _extract_links_settled(page: Page, url: str) -> tuple[str, ...]:
+    """リンクを抽出する。JS 描画で後から増える場合に備え、増加が止まるまで短時間待つ。
+
+    `networkidle` は「500ms 間ネットワークが静止すること」を条件とするため、瞬時に
+    読み終わるページにも必ず 500ms 以上の税がかかる。ここでは代わりにリンク数そのものを
+    観測し、増加が止まった時点で切り上げる。スクリプトを持たないページは後から
+    リンクが増えようがないため、待たずに返す。
+    """
+    from crawler.link_extractor import extract_internal_links
+
+    links = tuple(extract_internal_links(page, url))
+    try:
+        has_script = bool(page.evaluate("() => document.scripts.length > 0"))
+    except PlaywrightError:
+        has_script = True
+    if not has_script:
+        return links
+
+    waited_ms = 0
+    stable_rounds = 0
+    while waited_ms < LINK_SETTLE_MAX_MS:
+        page.wait_for_timeout(LINK_SETTLE_STEP_MS)
+        waited_ms += LINK_SETTLE_STEP_MS
+        current = tuple(extract_internal_links(page, url))
+        if len(current) > len(links):
+            links = current
+            stable_rounds = 0
+            continue
+        stable_rounds += 1
+        # 下限を満たす前に打ち切ると、遅れて描画される SPA を取り逃す。
+        if waited_ms >= LINK_SETTLE_MIN_MS and stable_rounds >= LINK_SETTLE_STABLE_ROUNDS:
+            break
+    return links
+
+
+def _guard_session(page: Page, url: str, auth_state: Path | None) -> None:
+    """認証付きクロールの入口で保存セッションの失効を確認する（#7）。
+    失効（login wall 検出）時は SessionExpiredError を送出しクロールを中断する。
+    中断により snapshot 保存に到達しないため、古い結果を上書きしない。"""
+    from analyzer.login_wall import PageAuthSignals
+    from crawler.link_extractor import has_password_field
+    from crawler.session_guard import SessionExpiredError, is_session_expired
+
+    if auth_state is None:
+        return
+    normalized = normalize_url(url)
+    try:
+        response = _goto_stable(page, normalized)
+    except PlaywrightError as exc:
+        logger.warning("セッション確認のためのアクセスに失敗しました: %s (%s)", url, exc)
+        return
+    signals = PageAuthSignals(
+        requested_url=normalized,
+        final_url=page.url,
+        status=response.status if response is not None else 0,
+        has_password_field=has_password_field(page),
+    )
+    if is_session_expired(auth_state, signals):
+        raise SessionExpiredError(f"保存セッションが失効しています: {url}")
+
+
+def _is_html_response(response: Any) -> bool:
+    """レスポンスが HTML 文書かを判定する。
+
+    JSON / Markdown / プレーンテキストを返す API エンドポイントを「画面」として
+    数えると、画面数が水増しされ、仕様書やテスト設計に画面でないものが混ざる
+    （自製品の UX 監査で `/api/...` が画面として解析され検出）。
+    content-type が取れない場合は誤って除外しないよう HTML とみなす。
+    """
+    if response is None:
+        return True
+    try:
+        headers = response.headers or {}
+        content_type = headers.get("content-type", "") if isinstance(headers, dict) else ""
+    except (AttributeError, TypeError, PlaywrightError):
+        return True
+    if not isinstance(content_type, str) or not content_type:
+        return True
+    return "html" in content_type.lower()
+
+
+def _discover_one(page: Page, url: str, found: list[dict[str, object]]) -> tuple[str, ...]:
+    from analyzer.login_wall import PageAuthSignals, detect_login_wall
+    from crawler.link_extractor import (
+        extract_internal_links,
+        extract_page_title,
+        has_password_field,
+    )
+
+    normalized = normalize_url(url)
+    try:
+        response = _goto_for_discover(page, normalized)
+    except PlaywrightError as exc:
+        logger.warning("画面リスト取得に失敗しました: %s (%s)", url, exc)
+        return ()
+    if not _is_html_response(response):
+        # API エンドポイント等は画面ではないため一覧に載せない。黙って捨てず記録する。
+        logger.info("HTML ではないため画面から除外しました: %s", normalized)
+        return ()
+    signals = PageAuthSignals(
+        requested_url=normalized,
+        final_url=page.url,
+        status=response.status if response is not None else 0,
+        has_password_field=has_password_field(page),
+    )
+    verdict = detect_login_wall(signals)
+    found.append(
+        {
+            "url": normalized,
+            "title": extract_page_title(page),
+            "login_required": verdict.is_login_required,
+            "login_reasons": list(verdict.reasons),
+            "login_url": signals.final_url if verdict.is_login_required else "",
+        }
+    )
+    if verdict.is_login_required:
+        return ()
+    if signals.status >= 400:
+        # エラーページ（404 等）はリンクが無いのが正常なので、待たずに返す。
+        return tuple(extract_internal_links(page, normalized))
+    return _extract_links_settled(page, normalized)
+
+
+_GEOMETRY_SCRIPT = """
+(() => {
+  const sel = 'a, button, input, select, textarea, h1, h2, h3, [role=button]';
+  const els = Array.from(document.querySelectorAll(sel)).slice(0, 200);
+  const boxes = els.map((el) => {
+    const r = el.getBoundingClientRect();
+    const interactive = ['A','BUTTON','INPUT','SELECT','TEXTAREA'].includes(el.tagName)
+      || el.getAttribute('role') === 'button';
+    return {
+      selector: el.id ? ('#' + el.id) : (el.tagName.toLowerCase()
+        + (el.className && typeof el.className === 'string'
+           ? '.' + el.className.trim().split(/\\s+/)[0] : '')),
+      x: r.x, y: r.y, w: r.width, h: r.height, interactive,
+    };
+  });
+  return {
+    boxes,
+    horizontal_overflow:
+      document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  };
+})()
+"""
+
+
+# マルチビューポート観測時のみ幾何採取を有効化するモジュールスコープの既定。
+# 通常クロールでは False のままで PageData は不変（回帰なし）。
+_CAPTURE_GEOMETRY_DEFAULT = False
+
+
+def set_capture_geometry_default(enabled: bool) -> None:
+    """幾何採取の既定を切り替える（viewport.runner が観測中のみ True にする）。"""
+    global _CAPTURE_GEOMETRY_DEFAULT
+    _CAPTURE_GEOMETRY_DEFAULT = bool(enabled)
+
+
+def _capture_geometry(page: Page) -> tuple[tuple[dict[str, Any], ...], bool]:
+    """主要要素のバウンディングボックスと横はみ出しを採取する。失敗時は空。"""
+    try:
+        result = page.evaluate(_GEOMETRY_SCRIPT)
+    except Exception:  # noqa: BLE001 - 観測はクロール本体を妨げない
+        return ((), False)
+    if not isinstance(result, dict):
+        return ((), False)
+    boxes = tuple(b for b in result.get("boxes", []) if isinstance(b, dict))
+    return boxes, bool(result.get("horizontal_overflow"))
+
+
+def crawl_page(
+    page: Page,
+    url: str,
+    output_dir: Path | None,
+    auth_state: Path | None = None,
+    ux_review: bool = False,
+    on_ux_result: UxResultCallback | None = None,
+    capture_geometry: bool = False,
+) -> PageData:
+    from analyzer.login_wall import PageAuthSignals, detect_login_wall
+    from analyzer.stack_detector import detect_stack
+    from crawler.action_explorer import explore_page_actions, measure_required_validation
+    from crawler.link_extractor import (
+        collect_embedded_frames,
+        compute_state_signature,
+        extract_a11y_issues,
+        extract_buttons_all_scopes,
+        extract_forms_including_frames,
+        extract_headings_all_scopes,
+        extract_links_all_scopes,
+        extract_page_title,
+        has_password_field,
+    )
+    from crawler.network_interceptor import MutationBlocker, NetworkCapture
+    from crawler.performance_probe import collect_performance, install_performance_observers
+    from crawler.spa_monitor import SpaTransitionMonitor
+
+    normalized_url = normalize_url(url)
+    # 性能観測（LCP/CLS）はナビゲーション前の登録が必要
+    install_performance_observers(page)
+    console_errors: list[str] = []
+    mixed_content: list[str] = []
+    status_code = 0
+
+    def on_console(message: Any) -> None:
+        if str(getattr(message, "type", "")) != "error" or len(console_errors) >= 50:
+            return
+        text_value = " ".join(str(getattr(message, "text", "")).split())[:500]
+        if text_value and text_value not in console_errors:
+            console_errors.append(text_value)
+
+    def on_request(request: Any) -> None:
+        if len(mixed_content) >= 50 or urlparse(normalized_url).scheme != "https":
+            return
+        request_url = str(getattr(request, "url", ""))
+        if urlparse(request_url).scheme != "http":
+            return
+        sanitized = _strip_query_for_audit(request_url)
+        if sanitized not in mixed_content:
+            mixed_content.append(sanitized)
+
+    capture = NetworkCapture()
+    blocker = MutationBlocker()
+    spa_monitor = SpaTransitionMonitor()
+    spa_monitor.attach(page)
+    page.on("console", on_console)
+    page.on("request", on_request)
+    capture.attach(page)
+    blocker.attach(page)
+    try:
+        response = _goto_stable(page, normalized_url)
+        status_code = int(response.status) if response is not None else 0
+        if response is not None and response.status in RETRYABLE_STATUS_CODES:
+            raise RetryableHTTPError(normalized_url, response.status)
+        signals = PageAuthSignals(
+            requested_url=normalized_url,
+            final_url=page.url,
+            status=response.status if response else 0,
+            has_password_field=has_password_field(page),
+        )
+        verdict = detect_login_wall(signals)
+        if verdict.is_login_required:
+            if auth_state is not None:
+                raise SessionExpiredError(f"保存セッションが失効しています: {normalized_url}")
+            raise LoginWallDetected(normalized_url, signals.final_url, verdict.reasons)
+        response_headers = dict(response.headers) if response else {}
+        page_id = str(getattr(page, "_webspec2doc_page_id", _format_page_id(1)))
+        screenshot_path = _save_screenshot(page, output_dir, page_id)
+        stack = detect_stack(page, response_headers)
+        title = extract_page_title(page)
+        headings = tuple(extract_headings_all_scopes(page, normalized_url))
+        links = tuple(extract_links_all_scopes(page, normalized_url))
+        forms = _attach_screenshot_evidence(
+            tuple(extract_forms_including_frames(page, normalized_url)), screenshot_path
+        )
+        buttons = tuple(extract_buttons_all_scopes(page, normalized_url))
+        a11y_issues = tuple(extract_a11y_issues(page))
+        embedded_frames = tuple(collect_embedded_frames(page, normalized_url))
+        if ux_review:
+            # axe-core 検査は既存抽出の後に実行する（AC-1〜3）。
+            # 結果は PageData に追加せず（スキーマ互換保護 §5-2）、
+            # コールバック経由のサイドチャネルで収集する。
+            from ux.axe_runner import run_axe
+
+            axe_violations = run_axe(page, screenshot_path)
+            if on_ux_result is not None:
+                on_ux_result(normalized_url, axe_violations)
+        page_html = page.content()
+        state_id = compute_state_signature(page_html)
+        # DOM を変更する探索・実測は静的抽出の完了後に行う
+        page_states = explore_page_actions(page)
+        validation_observations = measure_required_validation(page, forms, screenshot_path)
+        spa_transitions = spa_monitor.collect(page)
+    finally:
+        page.remove_listener("console", on_console)
+        page.remove_listener("request", on_request)
+        blocker.detach()
+        capture.detach()
+        _audit_mutation_blocked(output_dir, normalized_url, blocker.blocked)
+
+    performance_sample = collect_performance(page)
+    element_boxes, horizontal_overflow = (
+        _capture_geometry(page) if (capture_geometry or _CAPTURE_GEOMETRY_DEFAULT) else ((), False)
+    )
+    return PageData(
+        url=normalized_url,
+        title=title,
+        headings=headings,
+        links=links,
+        forms=forms,
+        screenshot_path=screenshot_path,
+        buttons=buttons,
+        api_calls=capture.finalize(),
+        stack_info=stack,
+        state_id=state_id,
+        a11y_issues=a11y_issues,
+        page_states=page_states,
+        validation_observations=validation_observations,
+        spa_transitions=spa_transitions,
+        embedded_frames=embedded_frames,
+        http_status=status_code,
+        console_errors=tuple(console_errors),
+        mixed_content=tuple(mixed_content),
+        performance=performance_sample,
+        element_boxes=element_boxes,
+        horizontal_overflow=horizontal_overflow,
+    )
+
+
+def _strip_query_for_audit(url: str) -> str:
+    """監査ログ用にクエリ文字列を除去する（トークン等の秘匿情報を残さないため）。"""
+    parsed = urlparse(url)
+    return urlunparse(
+        (parsed.scheme, parsed.netloc, parsed.path, parsed.params, "", parsed.fragment)
+    )
+
+
+def _audit_mutation_blocked(
+    output_dir: Path | None, page_url: str, blocked: list[tuple[str, str]]
+) -> Path | None:
+    """MutationBlocker が遮断した破壊的リクエストを audit.jsonl に記録する（AC-4）。
+
+    遮断ゼロのページではレコードを追加しない。遮断 URL のクエリはトークン等の
+    秘匿情報を含み得るため落として記録する（§8）。
+    """
+    if not blocked:
+        return None
+    return append_audit_log(
+        output_dir,
+        {
+            "event": "mutation_blocked",
+            "page_url": page_url,
+            "blocked": [
+                {"method": method, "url": _strip_query_for_audit(blocked_url)}
+                for method, blocked_url in blocked
+            ],
+        },
+    )
+
+
+def _attach_screenshot_evidence(
+    forms: tuple[FormData, ...],
+    screenshot_path: str | None,
+) -> tuple[FormData, ...]:
+    """抽出済みフォームの各フィールド evidence にスクリーンショットパスを補完する。"""
+    if screenshot_path is None:
+        return forms
+    updated_forms: list[FormData] = []
+    for form in forms:
+        fields = tuple(
+            (
+                replace(field, evidence=replace(field.evidence, screenshot_path=screenshot_path))
+                if field.evidence is not None
+                else field
+            )
+            for field in form.fields
+        )
+        updated_forms.append(replace(form, fields=fields))
+    return tuple(updated_forms)
+
+
+def is_internal_link(base_url: str, link_url: str) -> bool:
+    base = urlparse(normalize_url(base_url))
+    target = urlparse(normalize_url(urljoin(base_url, link_url)))
+    return _netloc_without_default_port(base) == _netloc_without_default_port(target)
+
+
+def normalize_url(url: str) -> str:
+    parsed = urlparse(url.strip())
+    scheme = parsed.scheme.lower() or "https"
+    netloc = parsed.netloc.lower()
+    path = parsed.path or "/"
+    normalized_path = path.rstrip("/") or "/"
+    return urlunparse((scheme, netloc, normalized_path, "", parsed.query, ""))
+
+
+def _crawl_page_with_id(
+    page: Page,
+    url: str,
+    page_id: str,
+    output_dir: Path | None,
+    auth_state: Path | None = None,
+    on_event: CrawlEventCallback | None = None,
+    ux_review: bool = False,
+    on_ux_result: UxResultCallback | None = None,
+) -> PageData | None:
+    try:
+        page._webspec2doc_page_id = page_id  # type: ignore[attr-defined,unused-ignore]
+        return _crawl_page_with_backoff(
+            page, url, output_dir, auth_state, on_event, ux_review, on_ux_result
+        )
+    except LoginWallDetected as exc:
+        logger.warning("ログインウォールによりスキップしました: %s", url)
+        _emit_event(
+            on_event,
+            "login_wall_detected",
+            url=exc.url,
+            login_url=exc.login_url,
+            reasons=list(exc.reasons),
+        )
+        # 「どこまで見た/見ていない」の証跡として audit.jsonl にも残す
+        # （generator.coverage_gap がカバレッジギャップ節に統合する・AC-5）。
+        append_audit_log(
+            output_dir,
+            {
+                "event": "login_wall_detected",
+                "url": exc.url,
+                "login_url": exc.login_url,
+                "reasons": list(exc.reasons),
+            },
+        )
+        return None
+    except RetryableHTTPError as exc:
+        logger.warning("リトライ上限に達したためスキップしました: %s (HTTP %d)", url, exc.status)
+        _emit_event(
+            on_event, "page_failed", url=url, reason="retry_exhausted", detail=str(exc.status)
+        )
+        return None
+    except PlaywrightError as exc:
+        logger.warning("ページのクロールに失敗しました: %s (%s)", url, exc)
+        _emit_event(on_event, "page_failed", url=url, reason="playwright", detail=str(exc))
+        return None
+
+
+def _crawl_page_with_backoff(
+    page: Page,
+    url: str,
+    output_dir: Path | None,
+    auth_state: Path | None,
+    on_event: CrawlEventCallback | None,
+    ux_review: bool = False,
+    on_ux_result: UxResultCallback | None = None,
+) -> PageData:
+    """HTTP 429/503 受信時に exponential backoff（初期2秒・最大60秒・最大5回）でリトライする。"""
+    delays = backoff_delays()
+    while True:
+        try:
+            return crawl_page(page, url, output_dir, auth_state, ux_review, on_ux_result)
+        except RetryableHTTPError as exc:
+            delay = next(delays, None)
+            if delay is None:
+                raise
+            logger.warning(
+                "HTTP %d を受信したため %.1f 秒待機してリトライします: %s",
+                exc.status,
+                delay,
+                url,
+            )
+            _emit_event(on_event, "page_retry", url=url, status=exc.status, wait_sec=delay)
+            time.sleep(delay)
+
+
+def _mutations_allowed_with_warning() -> bool:
+    """破壊的リクエスト許可状態を返し、許可時は警告ログを残す（監査ログ記録用）。"""
+    from crawler.network_interceptor import mutations_allowed
+
+    allowed = mutations_allowed()
+    if allowed:
+        logger.warning(
+            "WEBSPEC2DOC_ALLOW_MUTATION=1 が設定されています。"
+            "POST/PUT/DELETE/PATCH リクエストの遮断が解除されています。"
+        )
+    return allowed
+
+
+def _make_rate_limiter(
+    robots: RobotFileParser | None, base_url: str = ""
+) -> TokenBucketLimiter:
+    """環境変数の間隔設定と robots.txt の Crawl-Delay から rate limiter を構築する。
+
+    base_url が礼儀待ちの免除対象（ローカル許可済み）のときは、Crawl-Delay を
+    採用せず間隔も既定値に縛られない（politeness.interval_for_target を参照）。
+    """
+    parsed = urlparse(base_url) if base_url else None
+    origin = f"{parsed.scheme}://{parsed.netloc}" if parsed and parsed.netloc else ""
+    override = interval_for_target(origin)
+    limiter = TokenBucketLimiter(
+        crawl_interval_from_env() if override is None else override
+    )
+    if robots is not None:
+        limiter.apply_crawl_delay(robots_crawl_delay(robots, USER_AGENT), origin)
+    return limiter
+
+
+def _load_robots_parser(base_url: str) -> RobotFileParser:
+    robots_url = urljoin(base_url, "/robots.txt")
+    parser = RobotFileParser()
+    parser.set_url(robots_url)
+    try:
+        parser.read()
+    except OSError as exc:
+        logger.warning("robots.txt を取得できませんでした: %s (%s)", robots_url, exc)
+        parser.allow_all = True  # type: ignore[attr-defined]
+    return parser
+
+
+def _should_skip(
+    url: str,
+    current_depth: int,
+    max_depth: int,
+    visited: set[str],
+    robots: RobotFileParser,
+) -> bool:
+    return _skip_reason(url, current_depth, max_depth, visited, robots) is not None
+
+
+def _skip_reason(
+    url: str,
+    current_depth: int,
+    max_depth: int,
+    visited: set[str],
+    robots: RobotFileParser,
+) -> str | None:
+    if current_depth > max_depth:
+        return "depth"
+    if url in visited:
+        return "visited"
+    if not is_safe_target(url):
+        logger.warning("安全でない URL をスキップしました: %s", url)
+        return "unsafe_url"
+    if not robots.can_fetch(USER_AGENT, url):
+        logger.warning("robots.txt によりスキップしました: %s", url)
+        return "robots"
+    return None
+
+
+def _filter_robots_targets(
+    targets: list[str],
+    on_event: CrawlEventCallback | None,
+) -> tuple[list[str], list[str], dict[str, float]]:
+    """robots.txt で許可された URL・スキップされた URL・オリジン別 Crawl-Delay を返す。"""
+    parsers: dict[str, RobotFileParser] = {}
+    allowed: list[str] = []
+    skipped: list[str] = []
+    origin_delays: dict[str, float] = {}
+    for target in targets:
+        parsed = urlparse(target)
+        origin = f"{parsed.scheme}://{parsed.netloc}"
+        parser = parsers.get(origin)
+        if parser is None:
+            parser = _load_robots_parser(origin)
+            parsers[origin] = parser
+            delay = robots_crawl_delay(parser, USER_AGENT)
+            if delay is not None:
+                origin_delays[origin] = delay
+        reason = _skip_reason(target, 0, 0, set(), parser)
+        if reason:
+            skipped.append(target)
+            _emit_event(on_event, "page_skipped", url=target, reason=reason)
+        else:
+            allowed.append(target)
+    return allowed, skipped, origin_delays
+
+
+def _emit_event(callback: CrawlEventCallback | None, event: str, **details: object) -> None:
+    if callback is not None:
+        callback({"event": event, **details})
+
+
+def _polite_delay(page: Page) -> None:
+    if CRAWL_DELAY_SEC > 0:
+        page.wait_for_timeout(CRAWL_DELAY_SEC * 1000)
+
+
+def _next_urls(
+    links: tuple[str, ...],
+    current_depth: int,
+    visited: set[str],
+    max_depth: int,
+) -> list[tuple[str, int]]:
+    next_depth = current_depth + NEXT_DEPTH_INCREMENT
+    if next_depth > max_depth:
+        return []
+    return [(link, next_depth) for link in links if link not in visited]
+
+
+def _save_screenshot(page: Page, output_dir: Path | None, page_id: str) -> str | None:
+    if output_dir is None:
+        return None
+    screenshots_dir = output_dir / SCREENSHOTS_DIR_NAME
+    screenshots_dir.mkdir(parents=True, exist_ok=True)
+    # 表示用（レポート本文・画面詳細の evidence）はビューポートのみ（現状維持）。
+    # この 1 枚が欠けると「画面と仕様」で画面だけが出て証跡が無い状態になる。
+    # 1 回の失敗で諦めず、描画途中・一時的な detach を想定して短い間隔で再試行する。
+    screenshot_path = screenshots_dir / f"{page_id}.png"
+    last_error: Exception | None = None
+    for attempt in range(1, SCREENSHOT_MAX_ATTEMPTS + 1):
+        try:
+            page.screenshot(path=str(screenshot_path), full_page=False)
+            last_error = None
+            break
+        except PlaywrightError as exc:
+            last_error = exc
+            if attempt < SCREENSHOT_MAX_ATTEMPTS:
+                logger.warning(
+                    "スクリーンショット保存に失敗しました（%d/%d・再試行します）: %s (%s)",
+                    attempt,
+                    SCREENSHOT_MAX_ATTEMPTS,
+                    screenshot_path,
+                    exc,
+                )
+                time.sleep(SCREENSHOT_RETRY_WAIT_SEC)
+    if last_error is not None:
+        # 握りつぶすと、画面はあるのに証跡が無い成果物が黙って出来上がる。
+        # 復旧はできないので、少なくとも失敗したことを ERROR で残す。
+        logger.error(
+            "スクリーンショットを保存できませんでした（%d 回試行）: %s (%s)",
+            SCREENSHOT_MAX_ATTEMPTS,
+            screenshot_path,
+            last_error,
+        )
+        return None
+    # ギャラリーの拡大表示で画面が見切れる不具合の修正: 全体スクリーンショットを
+    # 別ファイルで追加保存する（失敗してもビューポート版は既に保存済みなので致命的ではない）。
+    if _full_screenshot_enabled():
+        full_screenshot_path = screenshots_dir / f"{page_id}_full.png"
+        try:
+            page.screenshot(path=str(full_screenshot_path), full_page=True)
+        except PlaywrightError as exc:
+            logger.warning(
+                "全体スクリーンショット保存に失敗しました: %s (%s)", full_screenshot_path, exc
+            )
+    return str(screenshot_path)
+
+
+def _full_screenshot_enabled() -> bool:
+    """全体スクリーンショットを保存するか。既定は有効（レポートの拡大表示用）。"""
+    raw = os.environ.get(FULL_SCREENSHOT_ENV, "").strip().lower()
+    return raw not in _FALSE_ENV_VALUES
+
+
+def known_total(
+    completed: int,
+    in_flight: int,
+    frontier: Iterable[tuple[str, int]],
+    visited: set[str],
+    max_pages: int,
+    *,
+    max_depth: int,
+    robots: RobotFileParser,
+) -> int:
+    """現時点で判明している対象画面数を返す（`max_pages` で頭打ち）。
+
+    リンク追跡（auto）モードでは全体数がクロール完了まで確定しない。以前は上限値
+    `max_pages` をそのまま進捗イベントの total として配信していたが、上限30・実画面8の
+    サイトで「8 / 30」「残り時間 約40秒」を完了の瞬間まで表示し続けた（実測: 残り時間の
+    誤差 中央値 +161%）。判明済みの対象数を配信することで、進捗も残り時間も実数へ収束する。
+
+    フロンティアには重複・訪問済み・depth 超過・robots 拒否が混ざる。これらを数に入れると
+    分母が実数より大きいまま残るため、取り出し時と同じ条件で絞ってから数える。判定内容は
+    `_skip_reason` と同じだが、集計のたびに警告ログを出さないようここでは静かに評価する。
+    """
+    pending: set[str] = set()
+    for url, url_depth in frontier:
+        if url_depth > max_depth or url in visited or url in pending:
+            continue
+        if not is_safe_target(url) or not robots.can_fetch(USER_AGENT, url):
+            continue
+        pending.add(url)
+    return max(1, min(max_pages, completed + in_flight + len(pending)))
+
+
+def _format_page_id(index: int) -> str:
+    return f"{PAGE_ID_PREFIX}{index:0{PAGE_ID_WIDTH}d}"
+
+
+def _netloc_without_default_port(parsed: Any) -> str:
+    hostname = parsed.hostname or ""
+    port = parsed.port
+    if (parsed.scheme == "http" and port == HTTP_DEFAULT_PORT) or (
+        parsed.scheme == "https" and port == HTTPS_DEFAULT_PORT
+    ):
+        return hostname
+    return f"{hostname}:{port}" if port else hostname
+
+
+def _is_spa_navigation(prev_url: str, new_url: str) -> bool:
+    """pushState/hashchange による同一ドメイン内の URL 変化かどうかを判定する。
+
+    host が同一でパス or ハッシュが変化した場合に True を返す。
+    """
+    prev = urlparse(normalize_url(prev_url))
+    new = urlparse(normalize_url(new_url))
+    same_host = _netloc_without_default_port(prev) == _netloc_without_default_port(new)
+    path_changed = prev.path != new.path
+    hash_changed = prev.fragment != new.fragment
+    return same_host and (path_changed or hash_changed)
+
+
+def _is_sensitive_form(form_data: FormData) -> bool:
+    """決済・個人情報フォームか判定する（action URL にキーワードが含まれる場合）。"""
+    action_lower = form_data.action.lower()
+    return any(kw in action_lower for kw in _SENSITIVE_KEYWORDS)
+
+
+def _dummy_value(field: FieldData) -> str:
+    """フィールド種別に応じたダミー値を返す。maxlength がある場合は truncate する。"""
+    ftype = field.field_type.lower()
+    if ftype == "email":
+        value = _DUMMY_EMAIL
+    elif ftype == "password":
+        value = _DUMMY_PASSWORD
+    elif ftype in ("number", "range"):
+        value = field.min_value if field.min_value else _DUMMY_NUMBER
+    elif ftype == "date":
+        value = _DUMMY_DATE
+    elif ftype == "checkbox":
+        value = "checked"
+    elif ftype == "select":
+        value = field.options[0] if field.options else ""
+    else:
+        value = _DUMMY_TEXT
+    if field.maxlength is not None and len(value) > field.maxlength:
+        value = value[: field.maxlength]
+    return value
+
+
+def _fill_form_fields(page: Page, form_data: FormData) -> None:
+    """フォームの各フィールドにダミー値を入力する。"""
+    for field in form_data.fields:
+        if not field.name and not field.element_id:
+            continue
+        selector = f"#{field.element_id}" if field.element_id else f"[name='{field.name}']"
+        ftype = field.field_type.lower()
+        try:
+            if ftype == "checkbox":
+                page.check(selector)
+            elif ftype == "select":
+                val = field.options[0] if field.options else None
+                if val:
+                    page.select_option(selector, val)
+            else:
+                dummy = _dummy_value(field)
+                if dummy:
+                    page.fill(selector, dummy)
+        except PlaywrightError as exc:
+            logger.warning("フィールド入力をスキップしました: %s (%s)", selector, exc)
+
+
+def crawl_form_flow(
+    page: Page,
+    form_data: FormData,
+    output_dir: Path | None = None,
+    page_id_prefix: str = "F",
+    dry_run: bool = True,
+) -> list[PageData]:
+    """フォームにダミー値を入力し送信後の画面を取得する。
+
+    dry_run=True: submit をインターセプトしてキャンセルし、確認画面への遷移は試みない。
+    dry_run=False: 実際に送信（副作用あり・本番環境での使用禁止）。
+    決済/個人情報フォームは action URL に "payment"/"checkout"/"billing"/"personal"/"private"
+    が含まれる場合は dry_run=True を強制する。
+    """
+    if _is_sensitive_form(form_data):
+        dry_run = True
+
+    try:
+        _fill_form_fields(page, form_data)
+    except PlaywrightError as exc:
+        logger.warning("フォームへの入力に失敗しました: %s", exc)
+        return []
+
+    if dry_run:
+        return _crawl_form_dry_run(page, form_data, output_dir, page_id_prefix)
+    return _crawl_form_submit(page, form_data, output_dir, page_id_prefix)
+
+
+def _crawl_form_dry_run(
+    page: Page,
+    form_data: FormData,
+    output_dir: Path | None,
+    page_id_prefix: str,
+) -> list[PageData]:
+    """submit をインターセプトしてキャンセルし、現在ページの PageData を返す。"""
+    prev_url = page.url
+
+    def _abort(route: Any) -> None:
+        try:
+            route.abort()
+        except PlaywrightError:
+            pass
+
+    try:
+        page.route("**", _abort)
+        selector = (
+            f"form[action='{form_data.action}'] [type=submit]"
+            if form_data.action
+            else "[type=submit]"
+        )
+        page.click(selector, timeout=3_000)
+    except PlaywrightError as exc:
+        logger.warning("dry_run submit クリックをスキップしました: %s", exc)
+    finally:
+        try:
+            page.unroute("**")
+        except PlaywrightError:
+            pass
+
+    try:
+        page_id = f"{page_id_prefix}001"
+        screenshot_path = _save_screenshot(page, output_dir, page_id)
+        return [
+            PageData(
+                url=page.url or prev_url,
+                title=page.title(),
+                headings=(),
+                links=(),
+                forms=(),
+                screenshot_path=screenshot_path,
+            )
+        ]
+    except PlaywrightError as exc:
+        logger.warning("dry_run PageData 取得に失敗しました: %s", exc)
+        return []
+
+
+def _crawl_form_submit(
+    page: Page,
+    form_data: FormData,
+    output_dir: Path | None,
+    page_id_prefix: str,
+) -> list[PageData]:
+    """実際に submit して遷移先の PageData を返す。"""
+    from crawler.link_extractor import extract_page_title
+
+    prev_url = page.url
+    try:
+        selector = (
+            f"form[action='{form_data.action}'] [type=submit]"
+            if form_data.action
+            else "[type=submit]"
+        )
+        page.click(selector, timeout=DEFAULT_TIMEOUT_MS)
+        page.wait_for_load_state("networkidle", timeout=DEFAULT_TIMEOUT_MS)
+    except PlaywrightError as exc:
+        logger.warning("フォーム送信に失敗しました: %s", exc)
+        return []
+
+    new_url = page.url
+    if new_url == prev_url:
+        return []
+
+    try:
+        page_id = f"{page_id_prefix}001"
+        screenshot_path = _save_screenshot(page, output_dir, page_id)
+        return [
+            PageData(
+                url=new_url,
+                title=extract_page_title(page),
+                headings=(),
+                links=(),
+                forms=(),
+                screenshot_path=screenshot_path,
+            )
+        ]
+    except PlaywrightError as exc:
+        logger.warning("フォーム送信後の PageData 取得に失敗しました: %s", exc)
+        return []
+
+
+def _close_browser(browser: Browser) -> None:
+    try:
+        browser.close()
+    except PlaywrightError as exc:
+        logger.warning("ブラウザ終了時にエラーが発生しました: %s", exc)

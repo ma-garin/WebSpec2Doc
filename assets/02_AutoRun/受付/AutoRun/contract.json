@@ -1,0 +1,57 @@
+{
+  "feature_id": "autorun",
+  "name": "AutoRun",
+  "risk_level": "high",
+  "status": "implemented",
+  "ui_files": [
+    "templates/partials/view-auto-run.html",
+    "static/js/autorun.js",
+    "static/js/autorun-approval.js",
+    "static/js/view-test-runs.js"
+  ],
+  "route_files": [
+    "web/routes/auto_run.py"
+  ],
+  "core_files": [
+    "web/services/spec_ts_generator.py",
+    "web/services/playwright_executor.py",
+    "web/services/auto_run_config.py",
+    "web/services/auto_run_job.py",
+    "web/services/auto_run_pipeline.py",
+    "web/services/auto_run_preview.py",
+    "web/services/failure_classifier.py",
+    "src/crawler/data_flow.py",
+    "src/crawler/form_navigator.py"
+  ],
+  "symbols": [
+    "track_reflections",
+    "form_submit_enabled"
+  ],
+  "outputs": [
+    "QA artifacts",
+    "Playwright candidates",
+    "execution logs",
+    "data reflection flows",
+    "page object spec.ts"
+  ],
+  "persistence": [
+    "output/{domain}/qa_process/"
+  ],
+  "failure_modes": [
+    "approval_timeout",
+    "login_wait_timeout",
+    "dependency_missing",
+    "cancel",
+    "execution_timeout_partial_result",
+    "result_parse_failure",
+    "form_submit_disabled_by_default"
+  ],
+  "required_tests": [
+    "happy_path",
+    "approval_path",
+    "cancel_path",
+    "error_path",
+    "timeout_path",
+    "evidence"
+  ]
+}

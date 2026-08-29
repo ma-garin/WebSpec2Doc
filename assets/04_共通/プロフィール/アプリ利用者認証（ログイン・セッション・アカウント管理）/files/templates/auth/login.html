@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <title>ログイン - WebSpec2Doc</title>
+  <!-- Google Fonts はローカル専用の CSP（style-src 'self'）でブロックされ読み込まれないため撤去。
+       描画は --font-main / --font-mono のシステムフォント・フォールバックで確定する。 -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tenant-auth.css') }}?v={{ _ver }}">
+</head>
+<body class="auth-body">
+<div class="auth-split">
+
+  <aside class="auth-brand-pane" aria-hidden="true">
+    <div class="auth-brand-logo">
+      <span class="auth-brand-mark">W</span>
+      <span>WebSpec2Doc</span>
+    </div>
+    <div class="auth-brand-copy">
+      <h2>Webサイトの仕様を、<br>そのままドキュメントに。</h2>
+      <p>URLを入力するだけで、画面仕様書・テスト観点・テストケース・画面遷移図を自動生成。QAチームのドキュメント作成を一つの土台で。</p>
+      <div class="auth-brand-stats">
+        <div class="stat"><b>5+</b><span>出力フォーマット</span></div>
+        <div class="stat"><b>ISO/ISTQB</b><span>準拠テスト観点</span></div>
+        <div class="stat"><b>AutoRun</b><span>テスト自動実行</span></div>
+      </div>
+    </div>
+    <div></div>
+  </aside>
+
+  <main class="auth-form-pane">
+    <div class="auth-form-box">
+      <h1>おかえりなさい</h1>
+      <p class="auth-form-lead">アカウントにログインして続けます。</p>
+
+      {% if error %}
+      <div class="auth-error" role="alert">
+        <b>ログインできませんでした</b>
+        <span>{{ error }}</span>
+      </div>
+      {% endif %}
+
+      {% if mock_auth %}
+      <div class="auth-mock-note" role="note">
+        社内モックとして動作しています。<br>
+        初期管理者は <b>admin</b> / <b>password</b> です。
+      </div>
+      {% endif %}
+
+      <form method="post" action="/auth/login" novalidate>
+        <div class="auth-field">
+          <label for="email">{% if mock_auth %}メールアドレス / ログインID{% else %}メールアドレス{% endif %}</label>
+          <input type="text" id="email" name="email" value="{{ email }}"
+                 autocomplete="username" required autofocus>
+        </div>
+        <div class="auth-field">
+          <label for="password">パスワード</label>
+          <input type="password" id="password" name="password"
+                 autocomplete="current-password" required>
+        </div>
+        <button type="submit" class="auth-submit">ログイン</button>
+      </form>
+
+      <p class="auth-foot">
+        アカウントがない場合は <a href="/auth/signup">新規登録</a> できます。<br>
+        テナントへの参加は管理者が割り当てます。
+      </p>
+    </div>
+  </main>
+
+</div>
+</body>
+</html>

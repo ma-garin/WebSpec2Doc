@@ -1,0 +1,39 @@
+{
+  "feature_id": "diff_severity",
+  "name": "差分の重要度判定と誤検知フィルタ",
+  "risk_level": "high",
+  "status": "implemented",
+  "ui_files": [],
+  "route_files": [],
+  "core_files": [
+    "src/diff/severity.py",
+    "src/diff/ignore_rules.py",
+    "src/generator/diff_reporter.py"
+  ],
+  "symbols": [
+    "score_changes",
+    "summarize_severity",
+    "apply_ignore_rules",
+    "load_ignore_rules",
+    "summarize_exclusions"
+  ],
+  "outputs": [
+    "diff_report.html（重要度・除外内訳・画像比較）"
+  ],
+  "persistence": [
+    "output/{domain}/diff_ignore.json"
+  ],
+  "failure_modes": [
+    "invalid_regex_rule",
+    "broken_rule_file",
+    "all_changes_excluded",
+    "missing_screenshot"
+  ],
+  "required_tests": [
+    "happy_path",
+    "determinism",
+    "immutability",
+    "exclusion_disclosure",
+    "evidence"
+  ]
+}

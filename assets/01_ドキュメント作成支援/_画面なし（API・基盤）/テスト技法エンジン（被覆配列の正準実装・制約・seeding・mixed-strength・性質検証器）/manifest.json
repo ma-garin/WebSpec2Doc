@@ -1,0 +1,122 @@
+{
+  "schema": "webspec2doc/feature-asset@1",
+  "version": "20260829-5345533",
+  "generated_at": "2026-08-29T07:50:12Z",
+  "source": {
+    "repository": "WebSpec2Doc",
+    "revision": "5345533",
+    "working_tree_dirty": true,
+    "contract_file": "quality/feature_contracts.yml"
+  },
+  "feature": {
+    "feature_id": "technique_engine",
+    "name": "テスト技法エンジン（被覆配列の正準実装・制約/seeding/mixed-strength・性質検証器）",
+    "risk_level": "high",
+    "status": "implemented",
+    "ui_files": [],
+    "route_files": [],
+    "core_files": [
+      "src/techniques/__init__.py",
+      "src/techniques/combinatorial.py",
+      "src/techniques/verify.py",
+      "src/generator/test_design.py",
+      "src/analyzer/test_conditions.py",
+      "src/mbt/pairwise.py"
+    ],
+    "symbols": [
+      "generate_covering_array",
+      "verify_t_way_coverage",
+      "CoverageRequirement",
+      "CoveringArrayResult"
+    ],
+    "outputs": [
+      "t-way 被覆配列（決定的・同一入力から同一出力）",
+      "制約により被覆不能となった t-tuple の全件記録",
+      "被覆率の機械検証レポート（未被覆組の列挙）"
+    ],
+    "persistence": [
+      "output/{domain}/qa_process/pairwise_cases.json"
+    ],
+    "failure_modes": [
+      "conflicting_constraints_make_tuples_uncoverable",
+      "strength_exceeds_factor_count",
+      "empty_domain"
+    ],
+    "required_tests": [
+      "happy_path",
+      "error_path",
+      "evidence"
+    ]
+  },
+  "placement": {
+    "system_key": "docs",
+    "system": "01_ドキュメント作成支援",
+    "screen": "_画面なし（API・基盤）",
+    "screens": [],
+    "classified_by": "path"
+  },
+  "files": [
+    {
+      "path": "src/techniques/__init__.py",
+      "role": "core",
+      "bytes": 1162,
+      "sha256": "faefd4867917c95b6aa604dc1946b5c419d1c8ac8e23d395517119746b1204c5"
+    },
+    {
+      "path": "src/techniques/combinatorial.py",
+      "role": "core",
+      "bytes": 9854,
+      "sha256": "ca774cbb687752f3071dcc2914fc0daa3ac9b92cd4478e474d8d1f190fb66d50"
+    },
+    {
+      "path": "src/techniques/verify.py",
+      "role": "core",
+      "bytes": 2218,
+      "sha256": "ce029835d29cf787ea3f437ab1d6608eba9325db51e5b0ad22b6ed0521b6d6e7"
+    },
+    {
+      "path": "src/generator/test_design.py",
+      "role": "core",
+      "bytes": 17422,
+      "sha256": "e053e11c002fea1961f15af478ae5b82418bc240ded457c5325bfb3dd2d9b3d5"
+    },
+    {
+      "path": "src/analyzer/test_conditions.py",
+      "role": "core",
+      "bytes": 9722,
+      "sha256": "47b3515d31e748796e574444e7c3fffd62237aa8c0ee78e56df83ee52c625f74"
+    },
+    {
+      "path": "src/mbt/pairwise.py",
+      "role": "core",
+      "bytes": 4140,
+      "sha256": "e39cab52619061347f8658637d38d5da7eb383f4fde1e9bb26a72de114eaf711"
+    }
+  ],
+  "wiring": {
+    "blueprints": [],
+    "provides_endpoints": []
+  },
+  "dependencies": {
+    "internal_modules_not_bundled": [
+      "src/crawler/page_crawler.py",
+      "src/ingest/models.py"
+    ],
+    "third_party_packages": [],
+    "env_vars": [],
+    "data_files": [],
+    "consumes_endpoints": [],
+    "window_globals": [],
+    "template_includes_not_bundled": [],
+    "static_refs_not_bundled": []
+  },
+  "gaps": [],
+  "shared_assets": [],
+  "warnings": [],
+  "verification": {
+    "static_analysis": "done",
+    "pytest": "not_run",
+    "verify_ui": "not_run",
+    "manual_screen_check": "not_run"
+  }
+}

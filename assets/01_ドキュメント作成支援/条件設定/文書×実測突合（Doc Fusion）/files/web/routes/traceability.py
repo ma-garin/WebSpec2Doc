@@ -1,0 +1,103 @@
+from __future__ import annotations
+
+import json
+import logging
+from pathlib import Path
+
+from flask import Blueprint, render_template, request
+
+from web.config import OUTPUT_DIR
+from web.services.traceability import build_matrix, matrix_to_dict
+from web.tenancy import scoped_output_dir
+from web.validation import _valid_domain
+
+logger = logging.getLogger(__name__)
+
+traceability_bp = Blueprint("traceability", __name__)
+
+
+def _out() -> Path:
+    """テナントスコープ済みの出力ディレクトリ（リクエスト毎に解決）。"""
+    return scoped_output_dir(OUTPUT_DIR)
+
+
+_REPORT_JSON = "report.json"
+_CANDIDATES_JSON = "playwright_candidates.json"
+_REQUIREMENT_TRACE_JSON = "requirement_trace.json"
+
+
+def _load_json_file(path_obj) -> dict | list | None:
+    """JSON ファイルを読み込む。失敗時は None を返す。"""
+    try:
+        return json.loads(path_obj.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning("JSON 読み込みに失敗: %s — %s", path_obj, exc)
+        return None
+
+
+@traceability_bp.get("/traceability/matrix")
+def api_traceability_matrix() -> tuple[dict, int] | dict:
+    """report.json + playwright_candidates.json を読んで TraceabilityMatrix を返す。"""
+    domain = request.args.get("domain", "").strip()
+    if not _valid_domain(domain):
+        return {"error": "invalid domain"}, 400
+
+    domain_dir = _out() / domain
+    report_path = domain_dir / _REPORT_JSON
+    candidates_path = domain_dir / _CANDIDATES_JSON
+
+    if not report_path.is_file():
+        return {"error": "report.json not found"}, 404
+
+    report_data = _load_json_file(report_path)
+    if report_data is None:
+        return {"error": "report.json の読み込みに失敗しました"}, 500
+
+    candidates_raw = None
+    if candidates_path.is_file():
+        candidates_raw = _load_json_file(candidates_path)
+
+    candidates: list[dict] = []
+    if isinstance(candidates_raw, dict):
+        candidates = list(candidates_raw.get("candidates", []))
+    elif isinstance(candidates_raw, list):
+        candidates = list(candidates_raw)
+
+    report_dict: dict = report_data if isinstance(report_data, dict) else {}
+    matrix = build_matrix(domain, report_dict, candidates, _load_test_metadata(domain_dir))
+    response = matrix_to_dict(matrix)
+
+    # requirement_trace.json（SPEC-1-3・src/ingest/req_tracer.py の出力）が存在する
+    # 場合のみ document_requirements を追加する。ファイルが無い場合は既存応答と
+    # 完全一致させる（オプトイン原則。AC-7）。build_matrix / RequirementLink（画面=要件と
+    # みなす暫定実装）はここでは一切変更しない。
+    trace_path = domain_dir / _REQUIREMENT_TRACE_JSON
+    if trace_path.is_file():
+        trace_data = _load_json_file(trace_path)
+        if isinstance(trace_data, dict):
+            response["document_requirements"] = trace_data
+    return response
+
+
+def _load_test_metadata(domain_dir) -> list[dict]:
+    """spec_ts_generator が併産したテストメタデータ JSON（tests リスト）を探索して返す。"""
+    meta_paths = sorted(domain_dir.glob("qa_process/*.meta.json")) + sorted(
+        domain_dir.glob("*.meta.json")
+    )
+    for meta_path in meta_paths:
+        data = _load_json_file(meta_path)
+        if isinstance(data, dict) and isinstance(data.get("tests"), list):
+            return list(data["tests"])
+    return []
+
+
+@traceability_bp.get("/traceability/view")
+def view_traceability() -> str:
+    """トレーサビリティマトリクスビューをレンダリングする。
+
+    以前は partial（section 断片）だけを返しており、CSS も JS も読み込まれないため
+    表が描画されず「読み込み中...」のまま止まっていた。単体ページとして完成した
+    HTML を返す。
+    """
+    domain = request.args.get("domain", "").strip()
+    return render_template("traceability.html", domain=domain)

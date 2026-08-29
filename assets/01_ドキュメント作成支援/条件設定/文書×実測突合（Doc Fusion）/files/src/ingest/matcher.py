@@ -1,0 +1,400 @@
+"""文書由来仕様と実測クロール結果の突合（Doc Fusion の中核）。
+
+突合結果は 3 分類で報告する:
+- 文書のみ（実装から消えた／未実装の疑い）
+- 実測のみ（文書化漏れ）
+- 両方にあるが記載が矛盾（必須・桁数の不一致）
+
+矛盾は隠さず両方の根拠（文書 evidence / 実測 evidence）とともに提示する。
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+
+from analyzer.canonicalizer import group_canonical_screens
+from analyzer.html_analyzer import AnalyzedPage
+from analyzer.text_similarity import name_similarity as _name_similarity
+from analyzer.text_similarity import normalize_path as _normalize_path
+from crawler.page_crawler import FieldData
+from ingest.models import DocumentBundle, DocumentedField, DocumentedRule, DocumentedScreen
+from ingest.tables import parse_max_length
+
+_SCREEN_NAME_THRESHOLD = 0.6
+_FIELD_NAME_THRESHOLD = 0.6
+_RULE_UNIT_WORDS = ("万", "千", "億")
+
+
+@dataclass(frozen=True)
+class ScreenMatch:
+    """文書上の画面と実測画面の対応。"""
+
+    page_id: str
+    page_url: str
+    page_title: str
+    screen: DocumentedScreen
+    score: float
+    method: str  # "url" / "name"
+
+
+@dataclass(frozen=True)
+class FieldGap:
+    """項目レベルのギャップ（文書のみ / 実測のみ / 矛盾）。"""
+
+    kind: str  # "doc_only" / "crawl_only" / "mismatch"
+    page_id: str
+    field_name: str
+    detail: str
+    doc_field: DocumentedField | None = None
+    crawl_selector: str = ""
+
+
+#: 文書にあるが実測に無い画面の理由。「未実装」と断定しない。
+#: 取得できなかっただけの画面を「未実装疑い」と報告すると、
+#: 存在する画面を欠陥として報告することになる（実測で発覚）。
+DOC_ONLY_UNIMPLEMENTED = "unimplemented"  # どこからもリンクされておらず取得もされていない
+DOC_ONLY_UNREACHED = "unreached"  # 実測ページからリンクはあるが取得していない
+DOC_ONLY_NO_URL = "no_url"  # 文書にURL記載が無く、対応づけ自体ができない
+
+
+@dataclass(frozen=True)
+class DocOnlyScreen:
+    """文書のみに存在する画面と、その判定理由。"""
+
+    screen: DocumentedScreen
+    reason: str
+    evidence: str = ""
+
+
+@dataclass(frozen=True)
+class FusionResult:
+    """突合結果一式。official_names は page_id → 文書上の正式画面名。"""
+
+    screen_matches: tuple[ScreenMatch, ...]
+    doc_only_screens: tuple[DocumentedScreen, ...]
+    crawl_only_page_ids: tuple[str, ...]
+    field_gaps: tuple[FieldGap, ...]
+    official_names: dict[str, str] = field(default_factory=dict)
+    #: doc_only_screens の判定理由。screen.name → DocOnlyScreen
+    doc_only_details: tuple[DocOnlyScreen, ...] = ()
+
+
+def fuse(pages: list[AnalyzedPage], bundle: DocumentBundle) -> FusionResult:
+    """実測ページ一覧と文書一式を突合する。"""
+    canonical_info = group_canonical_screens(pages)
+    canonical_pages = [p for p in pages if canonical_info[p.page_id].is_canonical]
+
+    matches = _match_screens(canonical_pages, bundle.screens)
+    matched_page_ids = {m.page_id for m in matches}
+    matched_screen_names = {m.screen.name for m in matches}
+
+    doc_only = tuple(s for s in bundle.screens if s.name not in matched_screen_names)
+    doc_only_details = _classify_doc_only(doc_only, pages)
+    crawl_only = tuple(p.page_id for p in canonical_pages if p.page_id not in matched_page_ids)
+
+    gaps: list[FieldGap] = []
+    for match in matches:
+        page = next(p for p in canonical_pages if p.page_id == match.page_id)
+        doc_fields = _fields_for_screen(bundle, match.screen)
+        gaps.extend(_match_fields(page, doc_fields))
+        if bundle.rules:
+            screen_keys = {match.screen.name, match.screen.screen_id} - {""}
+            screen_rules = [r for r in bundle.rules if r.screen_name in screen_keys]
+            gaps.extend(_rule_mismatches(match.page_id, screen_rules, _crawled_fields(page)))
+
+    official_names = {m.page_id: m.screen.name for m in matches}
+    return FusionResult(
+        screen_matches=tuple(matches),
+        doc_only_screens=doc_only,
+        crawl_only_page_ids=crawl_only,
+        field_gaps=tuple(gaps),
+        official_names=official_names,
+        doc_only_details=doc_only_details,
+    )
+
+
+def _classify_doc_only(
+    doc_only: tuple[DocumentedScreen, ...], pages: list[AnalyzedPage]
+) -> tuple[DocOnlyScreen, ...]:
+    """文書のみの画面を、判定できる根拠にもとづいて分類する。
+
+    取得できなかっただけの画面を「未実装」と断定しない。実測ページから
+    リンクされているなら、それは実装がある証拠であり、クロールが
+    到達しなかっただけである（ログインウォール・上限打ち切りなど）。
+    """
+    # 実測した全ページのリンク先とフォーム送信先（実装が存在する証拠）。
+    # フォームの action は、リンクを辿れない画面（確認・完了など）の
+    # 実装を示す唯一の手がかりになることが多い。
+    linked_paths: set[str] = set()
+    for page in pages:
+        for link in page.page_data.links:
+            linked_paths.add(_path_of(link))
+        for form in page.page_data.forms:
+            if form.action:
+                linked_paths.add(_path_of(form.action))
+
+    results: list[DocOnlyScreen] = []
+    for screen in doc_only:
+        hint = (screen.url_hint or "").strip()
+        if not hint:
+            results.append(
+                DocOnlyScreen(
+                    screen=screen,
+                    reason=DOC_ONLY_NO_URL,
+                    evidence="文書にURLの記載が無いため、実測との対応づけができません",
+                )
+            )
+            continue
+        path = _path_of(hint)
+        if path in linked_paths:
+            results.append(
+                DocOnlyScreen(
+                    screen=screen,
+                    reason=DOC_ONLY_UNREACHED,
+                    evidence=(
+                        f"実測したページから {path} への導線（リンクまたはフォーム送信先）"
+                        "を検出しています。"
+                        "実装は存在しますが、今回のクロールでは取得していません"
+                    ),
+                )
+            )
+            continue
+        results.append(
+            DocOnlyScreen(
+                screen=screen,
+                reason=DOC_ONLY_UNIMPLEMENTED,
+                evidence=(
+                    f"{path} は実測したどのページからもリンクされておらず、取得もできていません"
+                ),
+            )
+        )
+    return tuple(results)
+
+
+def _path_of(url: str) -> str:
+    """URL/パスをパス部分へ正規化する。末尾スラッシュの揺れを吸収する。"""
+    from urllib.parse import urlparse
+
+    parsed = urlparse(url)
+    path = parsed.path or "/"
+    if len(path) > 1 and path.endswith("/"):
+        path = path[:-1]
+    return path
+
+
+def _screen_score(page: AnalyzedPage, screen: DocumentedScreen) -> tuple[float, str]:
+    """画面同士の対応スコアを返す（URL 一致を最優先、次に名称類似）。"""
+    if screen.url_hint and _normalize_path(screen.url_hint) == _normalize_path(page.page_data.url):
+        return 1.0, "url"
+    title_score = _name_similarity(screen.name, page.page_data.title)
+    heading_score = max(
+        (_name_similarity(screen.name, h) for h in page.page_data.headings), default=0.0
+    )
+    return max(title_score, heading_score), "name"
+
+
+def _match_screens(
+    pages: list[AnalyzedPage], screens: tuple[DocumentedScreen, ...]
+) -> list[ScreenMatch]:
+    """スコア降順の貪欲法で 1 対 1 の画面対応を作る。"""
+    candidates: list[tuple[float, str, AnalyzedPage, DocumentedScreen]] = []
+    for page in pages:
+        for screen in screens:
+            score, method = _screen_score(page, screen)
+            if score >= _SCREEN_NAME_THRESHOLD:
+                candidates.append((score, method, page, screen))
+    candidates.sort(key=lambda item: item[0], reverse=True)
+    used_pages: set[str] = set()
+    used_screens: set[str] = set()
+    matches: list[ScreenMatch] = []
+    for score, method, page, screen in candidates:
+        if page.page_id in used_pages or screen.name in used_screens:
+            continue
+        used_pages.add(page.page_id)
+        used_screens.add(screen.name)
+        matches.append(
+            ScreenMatch(
+                page_id=page.page_id,
+                page_url=page.page_data.url,
+                page_title=page.page_data.title,
+                screen=screen,
+                score=round(score, 3),
+                method=method,
+            )
+        )
+    return matches
+
+
+def _fields_for_screen(bundle: DocumentBundle, screen: DocumentedScreen) -> list[DocumentedField]:
+    """文書上でこの画面に属する項目を集める。
+
+    画面参照が空の項目は、文書全体の画面が 1 つだけの場合に限りその画面に帰属させる。
+    """
+    keys = {screen.name, screen.screen_id} - {""}
+    fields = [f for f in bundle.fields if f.screen_name in keys]
+    if not fields and len(bundle.screens) == 1:
+        fields = [f for f in bundle.fields if not f.screen_name]
+    return fields
+
+
+def _crawled_fields(page: AnalyzedPage) -> list[FieldData]:
+    return [field for form in page.page_data.forms for field in form.fields]
+
+
+def _field_score(doc_field: DocumentedField, crawled: FieldData) -> float:
+    """項目同士の対応スコア（物理名の完全一致を最優先、次に論理名の類似）。"""
+    physical = doc_field.physical_name.strip().lower()
+    if physical and physical in (crawled.name.lower(), crawled.element_id.lower()):
+        return 1.0
+    return max(
+        _name_similarity(doc_field.name, crawled.aria_label),
+        _name_similarity(doc_field.name, crawled.placeholder),
+        _name_similarity(doc_field.name, crawled.name),
+    )
+
+
+def _match_fields(page: AnalyzedPage, doc_fields: list[DocumentedField]) -> list[FieldGap]:
+    crawled_fields = _crawled_fields(page)
+    candidates: list[tuple[float, DocumentedField, FieldData]] = []
+    for doc_field in doc_fields:
+        for crawled in crawled_fields:
+            score = _field_score(doc_field, crawled)
+            if score >= _FIELD_NAME_THRESHOLD:
+                candidates.append((score, doc_field, crawled))
+    candidates.sort(key=lambda item: item[0], reverse=True)
+    matched_doc: set[int] = set()
+    matched_crawl: set[int] = set()
+    pairs: list[tuple[DocumentedField, FieldData]] = []
+    for _score, doc_field, crawled in candidates:
+        if id(doc_field) in matched_doc or id(crawled) in matched_crawl:
+            continue
+        matched_doc.add(id(doc_field))
+        matched_crawl.add(id(crawled))
+        pairs.append((doc_field, crawled))
+
+    gaps: list[FieldGap] = []
+    for doc_field, crawled in pairs:
+        gaps.extend(_mismatches(page.page_id, doc_field, crawled))
+    for doc_field in doc_fields:
+        if id(doc_field) not in matched_doc:
+            gaps.append(
+                FieldGap(
+                    kind="doc_only",
+                    page_id=page.page_id,
+                    field_name=doc_field.name,
+                    detail="文書に記載があるが実測画面に見つからない（実装から消えた/未実装の疑い）",
+                    doc_field=doc_field,
+                )
+            )
+    for crawled in crawled_fields:
+        if id(crawled) not in matched_crawl:
+            selector = crawled.evidence.selector if crawled.evidence else ""
+            gaps.append(
+                FieldGap(
+                    kind="crawl_only",
+                    page_id=page.page_id,
+                    field_name=crawled.name or crawled.element_id or crawled.field_type,
+                    detail="実測画面に存在するが文書に記載がない（文書化漏れ）",
+                    crawl_selector=selector,
+                )
+            )
+    return gaps
+
+
+def _mismatches(page_id: str, doc_field: DocumentedField, crawled: FieldData) -> list[FieldGap]:
+    """対応づいた項目の記載と実測の矛盾を検出する（文書未記載の属性は比較しない）。"""
+    gaps: list[FieldGap] = []
+    selector = crawled.evidence.selector if crawled.evidence else ""
+    if doc_field.required is not None and doc_field.required != crawled.required:
+        doc_label = "必須" if doc_field.required else "任意"
+        crawl_label = "必須" if crawled.required else "任意"
+        gaps.append(
+            FieldGap(
+                kind="mismatch",
+                page_id=page_id,
+                field_name=doc_field.name,
+                detail=f"必須区分が矛盾: 文書では{doc_label}、実測では{crawl_label}",
+                doc_field=doc_field,
+                crawl_selector=selector,
+            )
+        )
+    if (
+        doc_field.max_length is not None
+        and crawled.maxlength is not None
+        and doc_field.max_length != crawled.maxlength
+    ):
+        gaps.append(
+            FieldGap(
+                kind="mismatch",
+                page_id=page_id,
+                field_name=doc_field.name,
+                detail=(
+                    f"桁数が矛盾: 文書では {doc_field.max_length}、" f"実測では {crawled.maxlength}"
+                ),
+                doc_field=doc_field,
+                crawl_selector=selector,
+            )
+        )
+    return gaps
+
+
+def _rule_mismatches(
+    page_id: str, rules: list[DocumentedRule], crawled: list[FieldData]
+) -> list[FieldGap]:
+    """limit ルールの数値と実測 maxlength/max_value の不一致を FieldGap(mismatch) にする。
+
+    単位語（万・千・億）を伴う expression は換算を推測せず比較対象から外す
+    （rule_injector.boundary_conditions_from_limit と同じ方針）。
+    """
+    gaps: list[FieldGap] = []
+    for rule in rules:
+        if rule.kind != "limit" or not rule.field_name:
+            continue
+        if any(unit in rule.expression for unit in _RULE_UNIT_WORDS):
+            continue
+        value = parse_max_length(rule.expression)
+        if value is None:
+            continue
+        best_field: FieldData | None = None
+        best_score = 0.0
+        for field_data in crawled:
+            score = max(
+                _name_similarity(rule.field_name, field_data.name),
+                _name_similarity(rule.field_name, field_data.aria_label),
+                _name_similarity(rule.field_name, field_data.placeholder),
+            )
+            if score > best_score:
+                best_score = score
+                best_field = field_data
+        if best_field is None or best_score < _FIELD_NAME_THRESHOLD:
+            continue
+        # 数値の限度値ルールは max_value（値の上限）、文字数のルールは maxlength
+        # （桁数の上限）とのみ比較する。両方と無条件に比較すると、桁数制限と
+        # 値制限という異なる単位の数値を突き合わせて偽の矛盾を生む。
+        numeric_attrs: list[tuple[str, int]] = []
+        if best_field.field_type in ("number", "range"):
+            if best_field.max_value:
+                parsed_max_value = parse_max_length(best_field.max_value)
+                if parsed_max_value is not None:
+                    numeric_attrs.append(("max_value", parsed_max_value))
+        elif best_field.maxlength is not None:
+            numeric_attrs.append(("maxlength", best_field.maxlength))
+        for attr_name, attr_value in numeric_attrs:
+            if attr_value != value:
+                selector = best_field.evidence.selector if best_field.evidence else ""
+                gaps.append(
+                    FieldGap(
+                        kind="mismatch",
+                        page_id=page_id,
+                        field_name=rule.field_name,
+                        detail=(
+                            f"限度値が矛盾: 文書では {value}（{rule.expression}・"
+                            f"出所: {rule.evidence.file if rule.evidence else ''} "
+                            f"{rule.evidence.location if rule.evidence else ''}）、"
+                            f"実測 {attr_name}={attr_value}"
+                        ),
+                        doc_field=None,
+                        crawl_selector=selector,
+                    )
+                )
+    return gaps

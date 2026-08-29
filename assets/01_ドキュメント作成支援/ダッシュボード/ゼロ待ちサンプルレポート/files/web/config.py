@@ -1,0 +1,69 @@
+from __future__ import annotations
+
+import os
+import re
+from pathlib import Path
+
+OUTPUT_DIR = Path("output")
+QA_VIEWPOINTS_CSV = Path(os.environ.get("QA_VIEWPOINTS_CSV", "data/qa_viewpoints_summary.csv"))
+DEFAULT_VIEWPOINTS_DB = "instance/viewpoints.db"
+VIEWPOINTS_DB = Path(os.environ.get("VIEWPOINTS_DB", DEFAULT_VIEWPOINTS_DB))
+
+
+def viewpoints_db_path() -> Path:
+    """観点DBの場所を、そのつど環境変数から解決する。
+
+    モジュール定数は import 時に一度だけ評価されるため、同一プロセス内で
+    環境変数を変えても効かない。テストが monkeypatch.setenv だけで隔離した
+    つもりになり、黙って同じDBを共有する事故が起きる（実際に test_tenancy は
+    setenv と setattr の両方を書かないと隔離できていない）。
+
+    既定値は定数 VIEWPOINTS_DB ではなくリテラルを使う。定数を既定にすると、
+    その定数自体が import 時の環境変数から作られているため、環境変数を
+    後から消しても最初の値が残り、既定へ戻らない。
+    空文字も未設定として扱う（`VIEWPOINTS_DB=` は「指定なし」の意図）。
+
+    定数 VIEWPOINTS_DB は既存の参照互換のために残す。新しい参照はこの関数を使う。
+    """
+    return Path(os.environ.get("VIEWPOINTS_DB", "").strip() or DEFAULT_VIEWPOINTS_DB)
+
+
+VIEWPOINT_TEMPLATES_DIR = Path(
+    os.environ.get("VIEWPOINT_TEMPLATES_DIR", "data/viewpoint_templates")
+)
+DATA_DIR = Path(os.environ.get("WEBSPEC2DOC_DATA_DIR", "data"))
+TEST_DESIGN_SETTINGS_FILE = Path(
+    os.environ.get("TEST_DESIGN_SETTINGS_FILE", "instance/test_design_settings.json")
+)
+SCREEN_ROW_RE = re.compile(r"^\|\s*\d+\s*\|")
+ENV_FILE = Path(".env")
+DEFAULT_OPENAI_MODEL = "gpt-5.4-mini"
+DISCOVER_TIMEOUT_SEC = 180
+LOGIN_FINISH_TIMEOUT_SEC = 60
+
+#: 同梱サンプルレポート（P3-1 ゼロ待ちサンプル）の実体。同梱デモサイトを解析した
+#: 事前生成の成果物で、クロールを待たずにレポートの仕上がりを見せるために使う。
+SAMPLE_REPORT_DIR = Path("demo/sample_report")
+#: サンプルを開いたときに使う予約ドメイン。利用者自身の解析結果と混ざらないよう、
+#: 解析履歴の一覧からは除外する（web/routes/history.py）。
+SAMPLE_DOMAIN = "sample.webspec2doc.local"
+
+ALLOWED_FORMATS = ("md", "html", "excel", "pdf", "json")
+DOMAIN_RE = re.compile(r"^[A-Za-z0-9._:\[\]-]{1,253}$")
+ENV_KEY_RE = re.compile(r"^[A-Z_][A-Z0-9_]*$")
+MAX_DEPTH = 10
+MAX_PAGES_LIMIT = 500
+#: クロールの並列数の上限。src/main.py の MAX_PARALLELISM と同じ値にする
+#: （GUI は subprocess で CLI を呼ぶため、片方だけ上げても実効値は上がらない）。
+MAX_PARALLELISM = 8
+
+_PREVIEW_MIME = {
+    ".html": "text/html; charset=utf-8",
+    ".pdf": "application/pdf",
+    ".json": "application/json; charset=utf-8",
+    ".md": "text/plain; charset=utf-8",
+    ".mmd": "text/plain; charset=utf-8",
+    ".png": "image/png",
+}
+
+PORT = int(os.environ.get("WEBSPEC2DOC_PORT", "8765"))

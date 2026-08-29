@@ -1,0 +1,295 @@
+{
+  "schema": "webspec2doc/feature-asset@1",
+  "version": "20260829-5345533",
+  "generated_at": "2026-08-29T07:50:12Z",
+  "source": {
+    "repository": "WebSpec2Doc",
+    "revision": "5345533",
+    "working_tree_dirty": true,
+    "contract_file": "quality/feature_contracts.yml"
+  },
+  "feature": {
+    "feature_id": "document_mbt",
+    "name": "文書駆動MBT（要件×実測からのテスト設計）",
+    "risk_level": "critical",
+    "status": "implemented",
+    "ui_files": [
+      "templates/partials/view-auto-run.html",
+      "static/js/autorun-document.js",
+      "static/css/autorun-document.css"
+    ],
+    "route_files": [
+      "web/routes/auto_run.py"
+    ],
+    "core_files": [
+      "src/mbt/document_model.py",
+      "src/mbt/manual_procedures.py",
+      "src/mbt/test_data.py",
+      "src/mbt/validation_observer.py",
+      "web/services/document_autorun.py",
+      "src/mbt/pairwise.py",
+      "src/mbt/metamorphic.py",
+      "src/mbt/trace_suggestions.py"
+    ],
+    "symbols": [
+      "build_document_mbt",
+      "build_manual_procedures",
+      "generate_test_data",
+      "run_validation_observation",
+      "generate_document_autorun_artifacts",
+      "build_pairwise_cases",
+      "build_metamorphic_candidates",
+      "build_document_mbt",
+      "suggest_matches"
+    ],
+    "outputs": [
+      "document_mbt.json",
+      "manual_procedures.md/xlsx",
+      "test_data.json/csv",
+      "validation_observations.json",
+      "pairwise_cases.json",
+      "metamorphic_checks.json",
+      "prime_path selection criterion",
+      "unmatched_requirement_suggestions"
+    ],
+    "persistence": [
+      "output/{domain}/qa_process/"
+    ],
+    "failure_modes": [
+      "missing_reference_docs",
+      "unmatched_requirements",
+      "no_reachable_path",
+      "path_limit_truncation",
+      "validation_browser_failure",
+      "empty_measured_graph"
+    ],
+    "required_tests": [
+      "happy_path",
+      "error_path",
+      "coverage_path",
+      "no_submit_guarantee",
+      "evidence"
+    ]
+  },
+  "placement": {
+    "system_key": "autorun",
+    "system": "02_AutoRun",
+    "screen": "受付",
+    "screens": [
+      "受付"
+    ],
+    "classified_by": "screen"
+  },
+  "files": [
+    {
+      "path": "templates/partials/view-auto-run.html",
+      "role": "ui",
+      "bytes": 27151,
+      "sha256": "1e5f7d80fcdd92e7055458b6519c6691e0ea381cf70f620d226726ec11b72250"
+    },
+    {
+      "path": "static/js/autorun-document.js",
+      "role": "ui",
+      "bytes": 10587,
+      "sha256": "ab4d325323cd146895275d5dbf3e0ca54afbcb6bd452b6194a0af7ada349649d"
+    },
+    {
+      "path": "static/css/autorun-document.css",
+      "role": "ui",
+      "bytes": 2424,
+      "sha256": "e52aba67269332f0395a34d75b6f57d5149ba0454e074c1d455372361e96c662"
+    },
+    {
+      "path": "web/routes/auto_run.py",
+      "role": "route",
+      "bytes": 28109,
+      "sha256": "9d4beccc5ddd8f96f0ac799146cc80827e6f208ef072eb75211c0cfa9d27097d"
+    },
+    {
+      "path": "src/mbt/document_model.py",
+      "role": "core",
+      "bytes": 15755,
+      "sha256": "1f0923d78baf11aba29820ffc58de70958a8f5df94334f9a01a79f4bb1854705"
+    },
+    {
+      "path": "src/mbt/manual_procedures.py",
+      "role": "core",
+      "bytes": 7503,
+      "sha256": "b1a5c23be00b25ad3e4352d3bb6bbe87078da8b37deba4446fa15818246cc068"
+    },
+    {
+      "path": "src/mbt/test_data.py",
+      "role": "core",
+      "bytes": 11830,
+      "sha256": "de54b0938d5e9998525fbf7ad90d23d748c64078febc136e1588afaa8b4e66af"
+    },
+    {
+      "path": "src/mbt/validation_observer.py",
+      "role": "core",
+      "bytes": 11280,
+      "sha256": "29499a0e94ae5dbe65a314e5ecdcad570f75335edef8e3098865245cde5298ce"
+    },
+    {
+      "path": "web/services/document_autorun.py",
+      "role": "core",
+      "bytes": 9494,
+      "sha256": "a330b19e1012338ba893b3886c0d141d41ae1c6af6003bed0e63b3b70f0b5123"
+    },
+    {
+      "path": "src/mbt/pairwise.py",
+      "role": "core",
+      "bytes": 4140,
+      "sha256": "e39cab52619061347f8658637d38d5da7eb383f4fde1e9bb26a72de114eaf711"
+    },
+    {
+      "path": "src/mbt/metamorphic.py",
+      "role": "core",
+      "bytes": 7050,
+      "sha256": "ce85292093787077b7008708d785b181ca5837dceffc7c0de0d242f7e55c35f2"
+    },
+    {
+      "path": "src/mbt/trace_suggestions.py",
+      "role": "core",
+      "bytes": 5802,
+      "sha256": "b78e441ae958d740c9e8f7dabb40a04e23e3cc8bf04cab411a48fe313798ec9a"
+    }
+  ],
+  "wiring": {
+    "blueprints": [
+      {
+        "file": "web/routes/auto_run.py",
+        "name": "auto_run",
+        "url_prefix": ""
+      }
+    ],
+    "provides_endpoints": [
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/autorun/start",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/autorun/status",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/autorun/cancel",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/history/runs",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/autorun/submit-input",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/autorun/preview",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/autorun/approve",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/autorun/report",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/autorun/live-screenshot",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/autorun/jobs",
+        "methods": [
+          "GET"
+        ]
+      }
+    ]
+  },
+  "dependencies": {
+    "internal_modules_not_bundled": [
+      "src/autorun/stages.py",
+      "src/techniques/combinatorial.py",
+      "web/config.py",
+      "web/services/auto_run_config.py",
+      "web/services/auto_run_job.py",
+      "web/services/auto_run_pipeline.py",
+      "web/services/auto_run_preview.py",
+      "web/services/playwright_executor.py",
+      "web/services/qa/helpers.py",
+      "web/services/usage_tracker.py",
+      "web/services/viewpoint_store.py",
+      "web/tenancy.py",
+      "web/validation.py"
+    ],
+    "third_party_packages": [
+      {
+        "import": "flask",
+        "requirement": "flask==3.1.3",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "networkx",
+        "requirement": "networkx==3.3",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "openpyxl",
+        "requirement": "openpyxl==3.1.4",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "playwright",
+        "requirement": "playwright==1.61.0",
+        "declared_in_requirements": true
+      }
+    ],
+    "env_vars": [],
+    "data_files": [],
+    "consumes_endpoints": [
+      "/api/autorun/start",
+      "/api/reference-docs"
+    ],
+    "window_globals": [],
+    "template_includes_not_bundled": [],
+    "static_refs_not_bundled": []
+  },
+  "gaps": [],
+  "shared_assets": [],
+  "warnings": [],
+  "verification": {
+    "static_analysis": "done",
+    "pytest": "not_run",
+    "verify_ui": "not_run",
+    "manual_screen_check": "not_run"
+  }
+}

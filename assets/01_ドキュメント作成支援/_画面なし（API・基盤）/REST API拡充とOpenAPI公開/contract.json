@@ -1,0 +1,40 @@
+{
+  "feature_id": "api_v1_openapi",
+  "name": "REST API拡充とOpenAPI公開",
+  "risk_level": "high",
+  "status": "implemented",
+  "ui_files": [],
+  "route_files": [
+    "web/routes/api_v1.py",
+    "web/routes/api_v1_schedule.py"
+  ],
+  "core_files": [
+    "web/services/openapi_spec.py",
+    "web/services/openapi_docs.py"
+  ],
+  "symbols": [
+    "build_openapi_spec",
+    "render_openapi_docs"
+  ],
+  "outputs": [
+    "/api/v1/openapi.json",
+    "/api/v1/docs"
+  ],
+  "persistence": [
+    "output/{domain}/schedule.json"
+  ],
+  "failure_modes": [
+    "invalid_domain",
+    "forbidden_non_admin",
+    "invalid_interval",
+    "invalid_notify_type",
+    "cross_tenant_access"
+  ],
+  "required_tests": [
+    "happy_path",
+    "error_path",
+    "authorization_path",
+    "implemented_paths_only",
+    "evidence"
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "feature_id": "account_auth",
+  "name": "アプリ利用者認証（ログイン/セッション/アカウント管理）",
+  "risk_level": "critical",
+  "status": "implemented",
+  "ui_files": [
+    "templates/auth/login.html",
+    "templates/auth/setup.html",
+    "templates/partials/view-account.html",
+    "templates/auth/signup.html",
+    "static/css/auth.css",
+    "templates/auth/_shell.html"
+  ],
+  "route_files": [
+    "web/routes/account.py"
+  ],
+  "core_files": [
+    "web/services/auth_store.py",
+    "web/auth.py"
+  ],
+  "symbols": [
+    "authenticate",
+    "resolve_session",
+    "auth_guard",
+    "setup_initial",
+    "create_api_token"
+  ],
+  "outputs": [
+    "session cookie (ws2d_session)",
+    "login/setup/account pages",
+    "/api/auth/* JSON",
+    "audit_log"
+  ],
+  "persistence": [
+    "instance/auth.db",
+    "instance/secret_key"
+  ],
+  "failure_modes": [
+    "invalid_credentials",
+    "account_locked_after_repeated_failures",
+    "inactive_account",
+    "session_expired_or_revoked",
+    "weak_password_rejected",
+    "open_redirect_blocked",
+    "last_admin_protection"
+  ],
+  "required_tests": [
+    "happy_path",
+    "error_path",
+    "lockout_path",
+    "session_expiry_path",
+    "evidence"
+  ]
+}

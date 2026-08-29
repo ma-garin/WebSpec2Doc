@@ -2486,8 +2486,12 @@
       "feature_id": "test_execution_reliability",
       "name": "自動テスト実行の信頼性（リトライ・フレーキー検出・自己修復・傾向集計）",
       "risk_level": "high",
-      "status": "partial",
-      "ui_files": [],
+      "status": "implemented",
+      "ui_files": [
+        "templates/partials/view-run-history.html",
+        "static/js/run-trends.js",
+        "static/css/run-trends.css"
+      ],
       "route_files": [
         "web/routes/runs.py"
       ],
@@ -2500,7 +2504,7 @@
         "collect",
         "_read_healing_records",
         "normalize_device",
-        "heal"
+        "_summary"
       ],
       "outputs": [
         "output/<domain>/qa_process/playwright_report.json",

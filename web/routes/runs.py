@@ -89,6 +89,27 @@ def api_runs(domain: str) -> dict | tuple[dict, int]:
     }
 
 
+@bp.get("/api/run-trends/sites")
+def api_run_trend_sites() -> dict:
+    """実行回が保存されているサイトの一覧。
+
+    実行履歴（/api/history/runs）は usage_log.jsonl 由来で、実行回の保管
+    （runs/<run_id>/）とは別系統。履歴側にだけ記録が無いサイトでも傾向は
+    出せるため、傾向パネルは自分でこの一覧を取る。
+    """
+    root = _out()
+    sites: list[dict[str, Any]] = []
+    if root.is_dir():
+        for child in sorted(root.iterdir()):
+            if not child.is_dir() or not _valid_domain(child.name):
+                continue
+            run_ids = list_run_ids(root, child.name)
+            if run_ids:
+                sites.append({"domain": child.name, "runs": len(run_ids)})
+    sites.sort(key=lambda s: (-s["runs"], s["domain"]))
+    return {"sites": sites, "total": len(sites)}
+
+
 @bp.get("/api/runs/<domain>/trends")
 def api_run_trends(domain: str) -> dict | tuple[dict, int]:
     """実行回を横断した傾向（パス率推移・フレーキー・継続失敗・自己修復）。

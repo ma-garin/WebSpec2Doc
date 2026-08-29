@@ -22,6 +22,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='viewpoints.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/test-activity.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ta-design-system.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/ta-automation.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/account-view.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='vendor/driver.js/driver.css') }}?v={{ _ver }}">
@@ -41,6 +42,7 @@
         <span data-system="testlab">テスト活動支援</span>
         {% endif %}
         <span data-system="autorun">AutoRun</span>
+        <span data-system="autotest">テスト自動化</span>
       </span>
     </a>
     <a href="/systems" class="sys-switcher" id="sys-switcher-link" title="システムを切り替える">
@@ -70,6 +72,7 @@
       <span data-system="testlab">仕様書・GitHub・コードからテスト条件を抽出し、設計から不具合分析まで支援します。</span>
       {% endif %}
       <span data-system="autorun">受領から実行完了レポートの納品までを止めずに回します。</span>
+      <span data-system="autotest">ステップを組み立てて実ブラウザで実行し、結果の傾向から保守します。</span>
     </div>
   </aside>
 
@@ -106,6 +109,11 @@
 {% include 'partials/view-ta-completion.html' %}
 {% include 'partials/view-ta-integrations.html' %}
 {% endif %}
+
+{# テスト自動化（System 05）。テスト活動支援と違い管理者限定にしない
+   （使う API 側に管理者限定の制限が無いため、画面だけ塞ぐと不整合になる）。 #}
+{% include 'partials/view-ta-automation.html' %}
+{% include 'partials/view-ta-steps.html' %}
 
 {% include 'partials/view-user-guide.html' %}
 {% include 'partials/view-references.html' %}
@@ -273,6 +281,8 @@
   <script src="{{ url_for('static', filename='js/ta-codefix.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/ta-integrations.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/ta-ai-panel.js') }}?v={{ _ver }}"></script>
+  {# テスト自動化（System 05）: ダッシュボード・実行環境の配線 #}
+  <script src="{{ url_for('static', filename='js/ta-automation.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/unimplemented-notice.js') }}?v={{ _ver }}"></script>
 
 </body>

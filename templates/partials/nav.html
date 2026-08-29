@@ -77,6 +77,26 @@
         <span class="nav-label">連携設定</span>
       </button>
       {% endif %}
+      {# テスト自動化（System 05）。テスト活動支援と違い管理者限定にしない
+         （このシステムが使う API 側にも管理者限定の制限が無いため、画面だけ塞ぐと不整合になる）。 #}
+      <button class="app-nav-item" data-view="test-automation" data-system="autotest">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 11.5L12 4l9 7.5"/><path d="M5.5 10v10h13V10M9.5 20v-6h5v6"/></svg>
+        <span class="nav-label">ダッシュボード</span>
+      </button>
+      <button class="app-nav-item" data-view="test-steps" data-system="autotest">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 6h4v4H4zM4 14h4v4H4z"/><path d="M10 8h10M10 16h10"/></svg>
+        <span class="nav-label">ステップ編集</span>
+      </button>
+      <button class="app-nav-item" data-view="test-environments" data-system="autotest">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/><path d="M7 7h.01M7 17h.01"/></svg>
+        <span class="nav-label">実行環境</span>
+      </button>
+      {# 実行履歴は複数システムが持つ共通画面。data-view で既存の run-history ビューへ渡す
+         （core.js が .app-nav-item[data-view] を switchView に配線済み）。 #}
+      <button class="app-nav-item" data-view="run-history" data-system="autotest">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5l3 2"/></svg>
+        <span class="nav-label">実行履歴</span>
+      </button>
       <div class="app-nav-group" data-system="common">サポート</div>
       <button class="app-nav-item" data-view="user-guide" data-system="common">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 4h7v16H4zM13 4h7v16h-7z"/></svg>

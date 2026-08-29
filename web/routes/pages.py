@@ -37,6 +37,11 @@ _VIEW_NAMES = frozenset(
         "code-fix",
         "test-completion",
         "integrations",
+        # テスト自動化（System 05）。TOP・ステップ編集・実行環境を直リンク可能にする。
+        # 実行履歴は既存の run-history を共用するため、ここには足さない。
+        "test-automation",
+        "test-steps",
+        "test-environments",
     }
 )
 _VIEW_ALIASES = {"home": "dashboard"}
@@ -59,6 +64,15 @@ _TESTLAB_VIEWS = frozenset(
         "integrations",
     }
 )
+
+# テスト自動化（System 05）の画面。_TESTLAB_VIEWS には入れない = 管理者限定にしない。
+# この系が使う API（/api/test-steps・/api/test-runs・/api/environments・/api/runs）は
+# いずれも管理者限定ではないため、画面だけ 403 にすると
+# 「API は叩けるのに画面が開かない」という食い違いになる。
+_AUTOTEST_VIEWS = frozenset({"test-automation", "test-steps", "test-environments"})
+# 保護する集合と保護しない集合が重ならないことを、定義した場所で見えるようにする。
+assert not (_TESTLAB_VIEWS & _AUTOTEST_VIEWS)
+assert _AUTOTEST_VIEWS <= _VIEW_NAMES
 
 
 # 設定画面のタブ（templates/partials/view-settings.html の data-tab と対応）。
@@ -90,7 +104,10 @@ def index() -> str:
 
 @bp.route("/systems")
 def systems() -> str:
-    """ログイン後のシステム選択ハブ。ドキュメント作成 / テスト活動支援 / AutoRun / CLI・API を選ぶ。"""
+    """ログイン後のシステム選択ハブ。
+
+    ドキュメント作成 / テスト活動支援 / AutoRun / CLI・API / テスト自動化 を選ぶ。
+    """
     return render_template("system-select.html")
 
 

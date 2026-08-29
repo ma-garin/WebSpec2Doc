@@ -16,51 +16,10 @@
           </div>
 
 
-          <!-- ===== ステップ編集（ノーコード） =====
-               生成された .spec.ts を直接編集すると、再生成のたびに消える。
-               編集の正本はステップ列（test_steps.json）とし、コードは常にそこから生成する。
-               動作の語彙は /api/test-steps/actions から取る（画面と保存側で二重定義しない）。 -->
-          <section class="ns-panel" id="ns-panel">
-            <div class="ns-head">
-              <h2 class="ns-title">ステップ編集</h2>
-              <span class="ns-sub">コードを書かずにテストを組み立てます。生成されるコードは常にここから作り直されます。</span>
-            </div>
+          <!-- ステップ編集はテスト自動化（System 05）へ移設した。黙って消すと
+               この画面の利用者が機能を見失うため、行き先を残す。 -->
+          <p class="ta-moved-note">ステップ編集は「テスト自動化」システムへ移動しました。<a href="/test-steps">ステップ編集を開く →</a></p>
 
-            <div class="ns-toolbar">
-              <label class="ns-label" for="ns-domain">対象サイト</label>
-              <select id="ns-domain" class="ns-select"></select>
-              <button type="button" class="btn-outline-sm" id="ns-import">解析結果から取り込む</button>
-              <button type="button" class="btn-outline-sm" id="ns-add-test">＋ テストを追加</button>
-              <span class="ns-spacer"></span>
-              <button type="button" class="btn-outline-sm" id="ns-save">保存</button>
-              <button type="button" class="btn-outline-sm" id="ns-generate">コードを生成</button>
-              <button type="button" class="btn-outline-sm ns-run-btn" id="ns-run">▶ 実行</button>
-            </div>
-
-            <p class="ns-message" id="ns-message" role="status" hidden></p>
-
-            <!-- 実行状況。投入直後（待機）・実行中（進捗）・終端（結果サマリ）を 1 か所に出す。
-                 進捗が取れないときは「未計測」と書き、0 件（実測して 0）と見た目を分ける。 -->
-            <div class="ns-run" id="ns-run-status" hidden>
-              <div class="ns-run-head">
-                <span class="ns-run-state" id="ns-run-state">—</span>
-                <span class="ns-run-job" id="ns-run-job"></span>
-                <span class="ns-spacer"></span>
-                <button type="button" class="ns-mini ns-mini-danger" id="ns-run-cancel" hidden>中止</button>
-              </div>
-              <div class="ns-run-bar" id="ns-run-bar" hidden aria-hidden="true">
-                <span class="ns-run-bar-fill" id="ns-run-bar-fill"></span>
-              </div>
-              <p class="ns-run-detail" id="ns-run-detail" role="status"></p>
-            </div>
-
-            <div class="ns-tests" id="ns-tests"></div>
-
-            <details class="ns-preview" id="ns-preview" hidden>
-              <summary class="ns-preview-sum">生成されたコード <span id="ns-preview-meta"></span></summary>
-              <pre class="ns-code" id="ns-code"></pre>
-            </details>
-          </section>
 
           <div class="ta-grid-3" aria-label="自動化の進捗">
             <div class="stat-card">

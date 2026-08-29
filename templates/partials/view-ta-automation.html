@@ -1,0 +1,136 @@
+        <!-- ===== テスト自動化（System 05）/ ダッシュボード =====
+             「今どうなっているか」だけを出す。値はすべて API の実測で、
+             取得していない状態・0 件・取得失敗を同じ見た目にしない
+             （未取得は「—」、実測 0 は「0」、失敗は理由付きの文言）。 -->
+        <section class="view" id="view-test-automation">
+          <div class="dash-hero">
+            <div class="dash-hero-main">
+              <h1 class="dash-hero-title">テスト自動化</h1>
+              <p class="dash-hero-sub">ステップを組み立てて実ブラウザで実行し、結果の傾向を見ながら保守します。対象サイトを選ぶと、そのサイトの現在の状態を表示します。</p>
+              <div class="dash-hero-steps" aria-label="自動化の流れ">
+                <span class="dash-hero-step"><b>1</b> ステップを編集</span>
+                <span class="dash-hero-arrow">→</span>
+                <span class="dash-hero-step"><b>2</b> 実行環境を選ぶ</span>
+                <span class="dash-hero-arrow">→</span>
+                <span class="dash-hero-step"><b>3</b> 実行して傾向を見る</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="au-toolbar">
+            <label class="au-label" for="au-domain">対象サイト</label>
+            <select id="au-domain" class="au-select"></select>
+            <button type="button" class="btn-outline-sm" id="au-reload">再読み込み</button>
+            <span class="au-spacer"></span>
+            <span class="au-updated" id="au-updated"></span>
+          </div>
+
+          <!-- サイトが 1 件も無い / 取得に失敗した場合はここに理由を出す。黙って空にしない。 -->
+          <p class="au-message" id="au-message" role="status" hidden></p>
+
+          <div class="au-stats" aria-label="現在の状態">
+            <div class="stat-card">
+              <div class="stat-card-value" id="au-stat-tests">—</div>
+              <div class="stat-card-label">テスト数</div>
+              <div class="au-stat-note" id="au-stat-tests-note">未取得</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-value is-pri" id="au-stat-passrate">—</div>
+              <div class="stat-card-label">最新パス率</div>
+              <div class="au-stat-note" id="au-stat-passrate-note">未取得</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-value" id="au-stat-flaky">—</div>
+              <div class="stat-card-label">不安定なテスト</div>
+              <div class="au-stat-note" id="au-stat-flaky-note">未取得</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-value" id="au-stat-failing">—</div>
+              <div class="stat-card-label">継続失敗</div>
+              <div class="au-stat-note" id="au-stat-failing-note">未取得</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-value" id="au-stat-envs">—</div>
+              <div class="stat-card-label">登録済み環境</div>
+              <div class="au-stat-note" id="au-stat-envs-note">未取得</div>
+            </div>
+          </div>
+
+          <div class="dashboard-section-head">
+            <div>
+              <h2 class="au-h2">直近の実行</h2>
+              <p class="dashboard-section-copy">このサイトで投入されたテスト実行のうち、新しいものから 5 件を表示します。</p>
+            </div>
+          </div>
+
+          <div class="ta-table-wrap">
+            <table class="ta-table">
+              <thead>
+                <tr>
+                  <th scope="col">状態</th>
+                  <th scope="col">件数</th>
+                  <th scope="col">実行回 ID</th>
+                  <th scope="col">実行環境</th>
+                  <th scope="col">投入</th>
+                </tr>
+              </thead>
+              <tbody id="au-runs-body">
+                <tr><td colspan="5"><div class="empty" id="au-runs-empty">未取得です。対象サイトを選ぶと読み込みます。</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="au-next" aria-label="次にやること">
+            <button type="button" class="au-nextcard" id="au-go-steps">
+              <span class="au-nextcard-title">ステップ編集へ</span>
+              <span class="au-nextcard-sub">テストを追加・修正して保存する</span>
+            </button>
+            <button type="button" class="au-nextcard" id="au-go-envs">
+              <span class="au-nextcard-title">実行環境へ</span>
+              <span class="au-nextcard-sub">dev / stg / prod の登録内容を確認する</span>
+            </button>
+            <button type="button" class="au-nextcard" id="au-go-history">
+              <span class="au-nextcard-title">実行履歴へ</span>
+              <span class="au-nextcard-sub">過去の実行結果と証跡を見る</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- ===== テスト自動化 / 実行環境 =====
+             専用の partial は作らず、TOP と同じファイルに置く（ナビ項目と実体を
+             1 対 1 で対応させるため、section 自体は必ず必要）。
+             ここは参照専用。登録・変更は未実装（PUT /api/environments/<domain> は
+             実装済みだがこの画面からは呼ばない）。 -->
+        <section class="view" id="view-test-environments">
+          <div class="dash-hero">
+            <div class="dash-hero-main">
+              <h1 class="dash-hero-title">実行環境</h1>
+              <p class="dash-hero-sub">テストを流す先（dev / stg / prod など）の登録内容です。この画面は参照専用で、追加・変更はまだできません。</p>
+            </div>
+          </div>
+
+          <div class="au-toolbar">
+            <label class="au-label" for="au-env-domain">対象サイト</label>
+            <select id="au-env-domain" class="au-select"></select>
+            <button type="button" class="btn-outline-sm" id="au-env-reload">再読み込み</button>
+          </div>
+
+          <p class="au-message" id="au-env-message" role="status" hidden></p>
+
+          <div class="ta-table-wrap">
+            <table class="ta-table">
+              <thead>
+                <tr>
+                  <th scope="col">環境 ID</th>
+                  <th scope="col">名前</th>
+                  <th scope="col">ベース URL</th>
+                  <th scope="col">認証状態</th>
+                  <th scope="col">既定</th>
+                </tr>
+              </thead>
+              <tbody id="au-env-body">
+                <tr><td colspan="5"><div class="empty" id="au-env-empty">未取得です。対象サイトを選ぶと読み込みます。</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>

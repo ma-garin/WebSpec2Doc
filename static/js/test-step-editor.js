@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  var state = { domain: '', doc: null, actions: [], dirty: false };
+  var state = { domain: '', doc: null, actions: [], dirty: false, jobId: '', pollTimer: null };
 
   function $(id) { return document.getElementById(id); }
   function esc(s) {
@@ -228,6 +228,177 @@
     }
   }
 
+  // ---- 実行 -------------------------------------------------------------
+  // 投入は 202（受け付けただけ）。結果は 1.5 秒間隔のポーリングで取る。
+  // 終端（complete/failed/cancelled）でポーリングを止める。止め忘れると
+  // 画面を開いたままのブラウザが延々と叩き続ける。
+  var POLL_MS = 1500;
+
+  function runBox(show) {
+    var box = $('ns-run-status');
+    if (box) box.hidden = !show;
+  }
+
+  function runView(stateText, detailText, opts) {
+    opts = opts || {};
+    var st = $('ns-run-state');
+    var detail = $('ns-run-detail');
+    var job = $('ns-run-job');
+    var bar = $('ns-run-bar');
+    var fill = $('ns-run-bar-fill');
+    var cancel = $('ns-run-cancel');
+    runBox(true);
+    if (st) {
+      st.textContent = stateText;
+      st.className = 'ns-run-state' + (opts.tone ? ' is-' + opts.tone : '');
+    }
+    if (detail) detail.textContent = detailText || '';
+    if (job) job.textContent = state.jobId ? 'job_id: ' + state.jobId : '';
+    if (cancel) cancel.hidden = !opts.cancellable;
+    if (bar && fill) {
+      // 進捗が未計測（NDJSON がまだ無い）ならバー自体を出さない。
+      // 0/0 を 0% のバーで描くと「1 件も通っていない」と読めてしまう。
+      if (opts.ratio == null) {
+        bar.hidden = true;
+      } else {
+        bar.hidden = false;
+        fill.style.width = Math.max(0, Math.min(100, Math.round(opts.ratio * 100))) + '%';
+      }
+    }
+  }
+
+  function stopPolling() {
+    if (state.pollTimer) { clearTimeout(state.pollTimer); state.pollTimer = null; }
+  }
+
+  async function doRun() {
+    if (!state.domain) return;
+    // 生成と同じ扱い。未保存のステップは実行対象にならない（実行は保存済みから生成する）。
+    if (state.dirty) { message('先に保存してください。実行は保存済みのステップから行います。', false); return; }
+    if (state.jobId) { message('すでに実行中です。完了か中止を待ってください。', false); return; }
+    stopPolling();
+    try {
+      var res = await fetch('/api/test-steps/' + encodeURIComponent(state.domain) + '/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ self_healing: true })
+      });
+      var data = await res.json();
+      if (res.status === 409) {
+        state.jobId = '';
+        runView('実行できません', '実行中のジョブがあります（job_id: '
+          + (data.running_job_id || '不明') + '）。完了を待つか、そのジョブを中止してください。',
+          { tone: 'ng' });
+        return;
+      }
+      if (!res.ok) {
+        state.jobId = '';
+        runView('実行できません', data.error || ('HTTP ' + res.status), { tone: 'ng' });
+        return;
+      }
+      state.jobId = data.job_id;
+      message('', true);
+      var pos = data.queued_position;
+      runView(pos > 0 ? '待機中' : '実行を開始しました',
+        data.tests + ' 件を実行します'
+        + (data.environment ? '（環境: ' + data.environment + '）' : '')
+        + (pos > 0 ? '。待ち順 ' + pos + ' 番目です。' : '。'),
+        { cancellable: true });
+      state.pollTimer = setTimeout(pollJob, POLL_MS);
+    } catch (e) {
+      state.jobId = '';
+      runView('実行できません', '実行を要求できませんでした: ' + e.message, { tone: 'ng' });
+    }
+  }
+
+  async function pollJob() {
+    if (!state.jobId) return;
+    try {
+      var res = await fetch('/api/test-runs/jobs/' + encodeURIComponent(state.jobId));
+      var data = await res.json();
+      if (res.status === 404) {
+        stopPolling();
+        state.jobId = '';
+        runView('状況を取得できません', 'ジョブが見つかりません（サーバ再起動などで失われた可能性があります）。実行履歴を確認してください。', { tone: 'ng' });
+        return;
+      }
+      if (!res.ok) { state.pollTimer = setTimeout(pollJob, POLL_MS); return; }
+      renderJob(data);
+    } catch (e) {
+      // 一時的な通信断でポーリングを止めない（次周期で回復する）
+      state.pollTimer = setTimeout(pollJob, POLL_MS);
+    }
+  }
+
+  function renderJob(job) {
+    var status = job.status;
+    if (status === 'queued') {
+      runView('待機中', '順番待ちです（待ち順 ' + (job.queued_position >= 0 ? job.queued_position : '?') + ' 番目）。',
+        { cancellable: true });
+      state.pollTimer = setTimeout(pollJob, POLL_MS);
+      return;
+    }
+    if (status === 'running') {
+      var p = job.progress;
+      if (!p) {
+        // 進捗ファイルがまだ無い＝未計測。件数を 0 と書かない。
+        runView('実行中', '起動中です（進捗は未計測）。経過 ' + (job.elapsed_sec || 0) + ' 秒。',
+          { cancellable: true });
+      } else {
+        var ratio = p.total ? p.done / p.total : null;
+        runView('実行中',
+          p.done + ' / ' + (p.total ? p.total + ' 件' : '件数は未計測')
+          + '・合格 ' + p.passed + '／失敗 ' + p.failed
+          + '・経過 ' + (job.elapsed_sec || 0) + ' 秒',
+          { cancellable: true, ratio: ratio });
+      }
+      state.pollTimer = setTimeout(pollJob, POLL_MS);
+      return;
+    }
+    // ---- 終端 ----
+    stopPolling();
+    state.jobId = '';
+    var r = job.result || {};
+    var hasCounts = r.total != null || r.passed != null;
+    var counts = hasCounts
+      ? '合格 ' + (r.passed || 0) + '／失敗 ' + (r.failed || 0)
+        + '／不安定 ' + (r.flaky || 0) + '（全 ' + (r.total || 0) + ' 件）'
+      : '件数は未計測です';
+    var tail = '。詳細は「実行履歴」画面で確認できます'
+      + (job.run_id ? '（実行回 ' + job.run_id + '）' : '') + '。';
+    if (status === 'complete') {
+      runView('完了', counts + tail, { tone: 'ok' });
+    } else if (status === 'cancelled') {
+      runView('中止しました', counts + tail, { tone: 'ng' });
+    } else {
+      runView('失敗', counts + (job.error ? '・' + job.error : '') + tail, { tone: 'ng' });
+    }
+  }
+
+  async function doCancel() {
+    if (!state.jobId) return;
+    var id = state.jobId;
+    try {
+      var res = await fetch('/api/test-runs/jobs/' + encodeURIComponent(id) + '/cancel', { method: 'POST' });
+      var data = await res.json();
+      if (res.status === 409) { runView('中止できません', 'このジョブはすでに終了しています。', { tone: 'ng' }); return; }
+      if (res.status === 404) {
+        stopPolling(); state.jobId = '';
+        runView('中止できません', 'ジョブが見つかりません。', { tone: 'ng' });
+        return;
+      }
+      if (!res.ok) { runView('中止できません', data.error || ('HTTP ' + res.status), { tone: 'ng' }); return; }
+      runView('中止を要求しました', '停止を待っています…', { cancellable: false });
+      // 終端の確定はポーリングに任せる（ここで完了扱いにすると、実際は
+      // まだ止まっていないのに「中止済み」と表示してしまう）。
+      stopPolling();
+      state.jobId = id;
+      state.pollTimer = setTimeout(pollJob, POLL_MS);
+    } catch (e) {
+      runView('中止できません', '中止を要求できませんでした: ' + e.message, { tone: 'ng' });
+    }
+  }
+
   async function loadDomains() {
     var sel = $('ns-domain');
     if (!sel) return;
@@ -257,10 +428,19 @@
     $('ns-tests').addEventListener('input', onInput);
     $('ns-tests').addEventListener('change', onInput);
     $('ns-tests').addEventListener('click', onClick);
-    $('ns-domain').addEventListener('change', function (e) { state.domain = e.target.value; loadDoc(); });
+    $('ns-domain').addEventListener('change', function (e) {
+      // サイトを切り替えたら、別サイトのジョブを見続けないようポーリングを止める。
+      stopPolling();
+      state.jobId = '';
+      runBox(false);
+      state.domain = e.target.value;
+      loadDoc();
+    });
     $('ns-import').addEventListener('click', doImport);
     $('ns-save').addEventListener('click', doSave);
     $('ns-generate').addEventListener('click', doGenerate);
+    if ($('ns-run')) $('ns-run').addEventListener('click', doRun);
+    if ($('ns-run-cancel')) $('ns-run-cancel').addEventListener('click', doCancel);
     $('ns-add-test').addEventListener('click', function () {
       if (!state.doc) state.doc = { version: 1, domain: state.domain, tests: [] };
       state.doc.tests.push({

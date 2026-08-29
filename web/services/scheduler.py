@@ -1,7 +1,13 @@
 """スケジュール実行デーモン。
 
-schedule.json の next_run_at に達したドメインのクロールを
+schedule.json の next_run_at に達したドメインの処理を
 バックグラウンドスレッドで自動実行する（ADR-0009）。
+
+実行する処理は schedule.json の `job_type` で決まる:
+
+- `"crawl"`（既定・キー欠落時もこれ）: 従来どおり src/main.py でクロールする。
+- `"test"`: ステップ編集（test_steps.json）から spec を生成し、
+  test_run_job のキューへテスト実行ジョブを投入する。
 """
 
 from __future__ import annotations
@@ -25,6 +31,20 @@ from web.services.metrics import record_crawl, set_schedule_delay
 
 SCHEDULER_POLL_INTERVAL = 60  # seconds
 INSTANCE_DIR = Path("instance")
+
+#: schedule.json の job_type。キーが無い既存ファイルは必ず "crawl" として扱う。
+JOB_TYPE_CRAWL = "crawl"
+JOB_TYPE_TEST = "test"
+VALID_JOB_TYPES = frozenset({JOB_TYPE_CRAWL, JOB_TYPE_TEST})
+
+#: スケジュールテストのジョブ終端を見張るスレッドが諦めるまでの時間（秒）。
+#: 待ち切れなかった場合も「結果不明」として履歴に残し、無記録にはしない。
+SCHEDULED_TEST_WAIT_TIMEOUT = 24 * 3600
+
+#: 生成した spec の置き場（output/<domain>/qa_process/edited.spec.ts）。
+#: ステップ編集画面の実行と同じ場所を使う。実行の成果物が 1 箇所に揃っていないと、
+#: 「どの spec を流した結果か」が追えなくなる。
+SCHEDULED_SPEC_RELATIVE = "qa_process/edited.spec.ts"
 
 _stop_event = threading.Event()
 _started_lock = threading.Lock()
@@ -171,17 +191,53 @@ def _maybe_run(
         _reschedule_missed_window(schedule_path, config, next_run, now)
         return
 
+    job_type = _resolve_job_type(config)
     site_url = str(config.get("site_url", "")).strip()
-    if not site_url:
+    # site_url が必須なのはクロールだけ。テストジョブは環境設定（environment）と
+    # ステップ定義から実行先を決めるため、ここで一律に弾いてはならない。
+    if job_type == JOB_TYPE_CRAWL and not site_url:
         logger.warning("site_url が未設定のためスキップ: domain=%s", domain)
         return
 
     # 予定時刻からの遅延を公開する（滞留・詰まりの検知用）
     set_schedule_delay((now - next_run).total_seconds())
-    logger.info("スケジュールクロール開始: domain=%s url=%s", domain, site_url)
 
     # 先にタイムスタンプを更新して二重実行を防止する
     _persist_timestamps(schedule_path, config, now)
+
+    # 二重実行防止の直後に job_type で分岐する。ここから先はクロールとテストで
+    # 処理を共有しない（リトライの意味も、成功/失敗の意味も別物のため）。
+    output_root = crawl_output or schedule_path.parent.parent
+    if job_type == JOB_TYPE_TEST:
+        start_scheduled_test(
+            domain,
+            schedule_path,
+            config,
+            output_root=output_root,
+            trigger="scheduled",
+            started_at=now,
+        )
+        return
+    if job_type not in VALID_JOB_TYPES:
+        # 未知の job_type でクロールへ倒すと、利用者の意図と違う処理が黙って走る。
+        # 実行はせず、なぜ動かなかったのかを履歴に名指しで残す。
+        logger.warning("未知の job_type のため実行しません: domain=%s value=%s", domain, job_type)
+        _append_schedule_history(
+            schedule_path,
+            {
+                "run_id": uuid.uuid4().hex,
+                "domain": domain,
+                "job_type": job_type,
+                "started_at": now.isoformat(timespec="seconds"),
+                "finished_at": now.isoformat(timespec="seconds"),
+                "status": "failed",
+                "trigger": "scheduled",
+                "error": f"job_type が不正です（crawl / test のいずれか）: {job_type}",
+            },
+        )
+        return
+
+    logger.info("スケジュールクロール開始: domain=%s url=%s", domain, site_url)
     retry_max = _bounded_int(config.get("retry_max"), default=2, minimum=0, maximum=5)
     backoff = _bounded_int(config.get("retry_backoff_seconds"), default=60, minimum=1, maximum=3600)
     active_sleeper = sleeper or time_module.sleep

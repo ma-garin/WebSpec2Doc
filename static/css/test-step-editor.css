@@ -61,3 +61,28 @@
   font-size: 11px; line-height: 1.5;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
+
+/* --- 実行状況（▶ 実行 → 待機/実行中/終端） -------------------------------
+   進捗が未計測のときはバーを出さない（0% のバーは「全部落ちた」に見える）。 */
+.ns-run {
+  margin: 10px 14px 0; padding: 8px 10px;
+  border: 1px solid var(--border, #e6e9ee); border-radius: 6px;
+  background: var(--surface-alt, #f8fafc);
+}
+.ns-run-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ns-run-state { font-size: 12px; font-weight: 600; }
+.ns-run-state.is-ok { color: #1a7f37; }
+.ns-run-state.is-ng { color: #b42318; }
+.ns-run-job {
+  font-size: 11px; color: var(--text-muted, #667);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.ns-run-bar {
+  display: block; height: 6px; margin-top: 8px; border-radius: 3px;
+  background: var(--border, #e6e9ee); overflow: hidden;
+}
+.ns-run-bar-fill {
+  display: block; height: 100%; width: 0; border-radius: 3px;
+  background: #1f6feb; transition: width 0.3s ease;
+}
+.ns-run-detail { margin: 6px 0 0; font-size: 12px; color: var(--text-muted, #667); }

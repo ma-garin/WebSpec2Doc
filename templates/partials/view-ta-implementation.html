@@ -34,9 +34,25 @@
               <span class="ns-spacer"></span>
               <button type="button" class="btn-outline-sm" id="ns-save">保存</button>
               <button type="button" class="btn-outline-sm" id="ns-generate">コードを生成</button>
+              <button type="button" class="btn-outline-sm ns-run-btn" id="ns-run">▶ 実行</button>
             </div>
 
             <p class="ns-message" id="ns-message" role="status" hidden></p>
+
+            <!-- 実行状況。投入直後（待機）・実行中（進捗）・終端（結果サマリ）を 1 か所に出す。
+                 進捗が取れないときは「未計測」と書き、0 件（実測して 0）と見た目を分ける。 -->
+            <div class="ns-run" id="ns-run-status" hidden>
+              <div class="ns-run-head">
+                <span class="ns-run-state" id="ns-run-state">—</span>
+                <span class="ns-run-job" id="ns-run-job"></span>
+                <span class="ns-spacer"></span>
+                <button type="button" class="ns-mini ns-mini-danger" id="ns-run-cancel" hidden>中止</button>
+              </div>
+              <div class="ns-run-bar" id="ns-run-bar" hidden aria-hidden="true">
+                <span class="ns-run-bar-fill" id="ns-run-bar-fill"></span>
+              </div>
+              <p class="ns-run-detail" id="ns-run-detail" role="status"></p>
+            </div>
 
             <div class="ns-tests" id="ns-tests"></div>
 

@@ -42,6 +42,7 @@ def create_app() -> Flask:
         site,
         tenant_admin,
         test_activity,
+        test_runs,
         traceability,
         usage,
         viewpoints,
@@ -114,6 +115,7 @@ def create_app() -> Flask:
     app.register_blueprint(auto_run.bp)
     app.register_blueprint(test_activity.bp)
     app.register_blueprint(test_steps.bp)
+    app.register_blueprint(test_runs.bp)
     app.register_blueprint(environments.bp)
     app.register_blueprint(review.bp)
     app.register_blueprint(runs.bp)

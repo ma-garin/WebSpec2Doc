@@ -26,6 +26,7 @@ def create_app() -> Flask:
         autorun_stages,
         crawl,
         discover,
+        environments,
         feedback,
         history,
         integrations,
@@ -113,6 +114,7 @@ def create_app() -> Flask:
     app.register_blueprint(auto_run.bp)
     app.register_blueprint(test_activity.bp)
     app.register_blueprint(test_steps.bp)
+    app.register_blueprint(environments.bp)
     app.register_blueprint(review.bp)
     app.register_blueprint(runs.bp)
     app.register_blueprint(schedule.bp)

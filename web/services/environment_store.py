@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import json
 import re
+from urllib.parse import urlparse
 from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -123,6 +124,12 @@ def _normalize_base_url(raw: Any, where: str) -> str:
         raise EnvironmentValidationError(
             f"{where}.base_url は http:// か https:// で始まる必要があります: {url!r}"
         )
+    # スキームだけの `https://` はホストが無く、実行時に無意味な URL になる。
+    # 保存できてしまうと「設定したのに動かない」を後工程で調べる羽目になる。
+    if not urlparse(url).netloc:
+        raise EnvironmentValidationError(
+            f"{where}.base_url にホスト名がありません: {url!r}"
+        )
     # 末尾スラッシュを落とす。実行系で base_url + パスを連結したときに
     # `//` が生まれ、リダイレクトやセレクタ待ちが揺れるため。
     return url.rstrip("/")
@@ -139,6 +146,12 @@ def _normalize_auth_path(raw: Any, where: str) -> str:
         )
     # Windows 形式の区切りとドライブレターも弾く。POSIX 判定だけだと
     # `C:\\secrets\\auth.json` が「相対パス」として通ってしまう。
+    # 改行・タブ・NUL などの制御文字を含むファイル名は、ログや外部コマンドへ
+    # 渡ったときに行が割れる。ここで弾く。
+    if any(ch < " " or ch == "\x7f" for ch in value):
+        raise EnvironmentValidationError(
+            f"{where}.auth_path に制御文字は使えません: {value!r}"
+        )
     normalized = value.replace("\\", "/")
     if normalized.startswith("/") or re.match(r"^[A-Za-z]:", normalized):
         raise EnvironmentValidationError(
@@ -274,7 +287,23 @@ def storage_state_path(
         relative = _normalize_auth_path(env.get("auth_path"), f"environments[{env.get('env_id')}]")
         if relative:
             candidate = base / relative
-            if candidate.is_file():
+            if _is_inside(candidate, base) and candidate.is_file():
                 return candidate
     shared = base / _SHARED_AUTH_NAME
-    return shared if shared.is_file() else None
+    return shared if _is_inside(shared, base) and shared.is_file() else None
+
+
+def _is_inside(candidate: Path, base: Path) -> bool:
+    """シンボリックリンクを解決したうえで、base 配下に収まっているか。
+
+    `..` はパス文字列の検証で弾いているが、シンボリックリンクは素通りする。
+    output/<domain>/auth.json → 他テナントの auth.json を指すリンクを置かれると、
+    テナント分離（scoped_output_dir）を迂回して他人のログイン状態で実行できてしまう。
+    リンクを辿った実体の位置で判定する。
+    """
+    try:
+        resolved = candidate.resolve()
+        base_resolved = base.resolve()
+    except OSError:
+        return False
+    return resolved == base_resolved or base_resolved in resolved.parents

@@ -1,4 +1,4 @@
-// システムスコープ: ログイン後の「システム選択」で選んだ系（ドキュメント作成 / テスト活動支援 / AutoRun）に応じて
+// システムスコープ: ログイン後の「システム選択」で選んだ系（ドキュメント作成 / テスト活動支援 / AutoRun / テスト自動化）に応じて
 // サイドバーを絞り込み、相手システムの画面を混ぜない。共通(common)は常に表示。
 // 系の判定は「現在のパス優先 → sessionStorage → 既定 docs」。切替はシステム選択画面へ戻る。
 (function () {
@@ -18,6 +18,12 @@
     '/manual-execution': 1, '/defect-analysis': 1, '/code-fix': 1,
     '/test-completion': 1, '/integrations': 1,
   };
+  // テスト自動化(autotest)も自前のパスしか持たないので、パスだけで系を確定できる。
+  // /run-history と /runs/... はここに入れない（上のコメントのとおり、複数システムが
+  // 持つ画面なので系を確定させない。保存値へ委ねる）。
+  var AUTOTEST_PATHS = {
+    '/test-automation': 1, '/test-steps': 1, '/test-environments': 1,
+  };
   var DOCS_PATHS = {
     '/': 1, '/home': 1, '/dashboard': 1, '/generate': 1,
     '/testcases': 1, '/qa-quality': 1, '/viewpoints': 1,
@@ -27,6 +33,7 @@
     var p = location.pathname;
     if (AUTORUN_PATHS[p]) return 'autorun';
     if (TESTLAB_PATHS[p]) return 'testlab';
+    if (AUTOTEST_PATHS[p]) return 'autotest';
     if (DOCS_PATHS[p]) return 'docs';
     // 共通ページ(/settings, /user-guide)と両系が持つページ(/run-history, /runs/...)
     // は判定不能 → 保存値にフォールバックする
@@ -38,7 +45,7 @@
     if (!sys) {
       try { sys = sessionStorage.getItem(KEY); } catch (e) { /* 非対応環境 */ }
     }
-    if (sys !== 'autorun' && sys !== 'docs' && sys !== 'testlab') sys = 'docs';
+    if (sys !== 'autorun' && sys !== 'docs' && sys !== 'testlab' && sys !== 'autotest') sys = 'docs';
     try { sessionStorage.setItem(KEY, sys); } catch (e) { /* 非対応環境 */ }
     return sys;
   }
@@ -49,8 +56,12 @@
   }
 
   // 系が増えるたびに三項演算子を継ぎ足すと分岐が読めなくなるため、対応表で引く。
-  var BRAND_HREF = { docs: '/', autorun: '/auto-run', testlab: '/test-activity' };
-  var SYSTEM_LABEL = { docs: 'ドキュメント作成', autorun: 'AutoRun', testlab: 'テスト活動支援' };
+  var BRAND_HREF = {
+    docs: '/', autorun: '/auto-run', testlab: '/test-activity', autotest: '/test-automation',
+  };
+  var SYSTEM_LABEL = {
+    docs: 'ドキュメント作成', autorun: 'AutoRun', testlab: 'テスト活動支援', autotest: 'テスト自動化',
+  };
 
   function apply(sys) {
     document.body.setAttribute('data-system', sys);

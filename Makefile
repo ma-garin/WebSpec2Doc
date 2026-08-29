@@ -19,8 +19,11 @@ export PLAYWRIGHT_BROWSERS_PATH
 E2E_DIR    := tests/e2e
 SHOT_DIR   := tests/e2e/screenshots
 MARKER     := .ui-verified
+# アセットのエクスポート／検証は標準ライブラリだけで動く。受け側が venv を
+# 用意していなくても検証できるよう、venv があれば使い、なければ python3 を使う。
+ASSET_PY   := $(shell [ -x venv/bin/python ] && echo venv/bin/python || echo python3)
 
-.PHONY: help setup setup-runtime check-runtime doctor test verify-ui quality-harness verify-all setup-hooks coverage lint clean check-venv demo security audit
+.PHONY: help setup setup-runtime check-runtime doctor test verify-ui quality-harness verify-all setup-hooks coverage lint clean check-venv demo security audit assets assets-list assets-audit assets-all assets-verify assets-clean
 
 # デフォルトターゲット
 help:
@@ -29,6 +32,11 @@ help:
 	@echo "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	@echo ""
 	@echo "  make quality-harness  L0: 機能契約・実行パス・未実装UI検査"
+	@echo "  make assets-list      他環境へ渡せる機能アセットを一覧する"
+	@echo "  make assets F=<機能ID> 機能アセットを1件エクスポートする"
+	@echo "  make assets-all       全機能アセットをエクスポートする"
+	@echo "  make assets-verify B=<パス> アセットのバンドルを検証する"
+	@echo "  make assets-audit     契約に未登録のUIファイルを洗い出す"
 	@echo "  make setup            Python依存・Chromium・git hookをセットアップ"
 	@echo "  make setup-runtime    対応Chromiumを導入して実起動確認"
 	@echo "  make check-runtime    Chromiumの実起動確認"
@@ -83,6 +91,37 @@ verify-all: quality-harness test verify-ui
 	@echo ""
 	@echo "  ✅ verify-all PASS（quality-harness + test + verify-ui）"
 	@echo ""
+
+# =============================================================================
+# 機能アセットの受け渡し（assets/）
+# 「機能単位で作り込み、他環境へフォルダごと渡す」ための出力。
+# 詳細は docs/process/asset-distribution.md
+# =============================================================================
+assets-list: ## 他環境へ渡せる機能アセットを一覧する
+	$(ASSET_PY) scripts/export_feature_asset.py --list
+
+assets-audit: ## どの機能契約にも属していない UI ファイルを洗い出す（渡す前の点検）
+	$(ASSET_PY) scripts/export_feature_asset.py --audit
+
+assets: ## 機能アセットを1件エクスポートする（make assets F=diff_history）
+	@if [ -z "$(F)" ]; then \
+		echo "  使い方: make assets F=<feature_id>  （一覧は make assets-list）"; \
+		exit 2; \
+	fi
+	$(ASSET_PY) scripts/export_feature_asset.py "$(F)" $(ASSET_FLAGS)
+
+assets-all: ## 全機能アセットをエクスポートする
+	$(ASSET_PY) scripts/export_feature_asset.py --all $(ASSET_FLAGS)
+
+assets-verify: ## アセットのバンドルを検証する（make assets-verify B=assets/... [T=受け側ルート]）
+	@if [ -z "$(B)" ]; then \
+		echo "  使い方: make assets-verify B=<バンドルのパス> [T=<受け側リポジトリのルート>]"; \
+		exit 2; \
+	fi
+	$(ASSET_PY) scripts/verify_feature_asset.py "$(B)" $(if $(T),--against "$(T)",)
+
+assets-clean: ## エクスポート済みアセットを消す
+	rm -rf assets
 
 # =============================================================================
 # 納品ドキュメント（docs/sdlc/）

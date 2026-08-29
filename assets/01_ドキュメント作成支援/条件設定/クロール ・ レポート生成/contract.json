@@ -1,0 +1,79 @@
+{
+  "feature_id": "crawl",
+  "name": "クロール / レポート生成",
+  "risk_level": "critical",
+  "status": "implemented",
+  "ui_files": [
+    "templates/partials/view-generate.html",
+    "static/js/execution.js",
+    "static/js/results.js",
+    "static/js/ui-states.js"
+  ],
+  "route_files": [
+    "web/routes/crawl.py"
+  ],
+  "core_files": [
+    "src/crawler/page_crawler.py",
+    "src/crawler/parallel_crawler.py",
+    "src/crawler/politeness.py",
+    "src/crawler/action_explorer.py",
+    "src/crawler/link_extractor.py",
+    "src/analyzer/canonicalizer.py",
+    "src/analyzer/form_analyzer.py",
+    "src/analyzer/html_analyzer.py",
+    "src/analyzer/stack_detector.py",
+    "src/crawler/network_interceptor.py",
+    "src/crawler/spa_monitor.py",
+    "src/graph/transition_graph.py",
+    "src/generator/markdown_generator.py",
+    "src/generator/markdown_util.py",
+    "src/generator/mermaid_generator.py",
+    "src/generator/excel_reporter.py",
+    "src/generator/csv_reporter.py",
+    "src/generator/pdf_reporter.py",
+    "src/generator/architecture_generator.py",
+    "src/generator/feature_catalog.py",
+    "src/generator/test_design.py",
+    "src/crawler/performance_probe.py"
+  ],
+  "symbols": [
+    "crawl_site",
+    "crawl_urls_parallel",
+    "extract_links_all_scopes",
+    "collect_embedded_frames",
+    "collect_performance",
+    "install_performance_observers"
+  ],
+  "outputs": [
+    "report.html",
+    "report.json",
+    "screenshots",
+    "snapshot",
+    "audit.jsonl",
+    "performance samples (LCP/CLS/TTFB)"
+  ],
+  "persistence": [
+    "output/{domain}/",
+    "output/{domain}/snapshots/"
+  ],
+  "failure_modes": [
+    "login_wall_during_crawl",
+    "restricted_url",
+    "timeout",
+    "cancel",
+    "partial_checkpoint",
+    "robots_disallowed",
+    "rate_limit_backoff",
+    "mutation_blocked",
+    "mutation_blocked_audit",
+    "cross_origin_iframe",
+    "closed_shadow_root"
+  ],
+  "required_tests": [
+    "happy_path",
+    "error_path",
+    "cancel_path",
+    "checkpoint_path",
+    "evidence"
+  ]
+}

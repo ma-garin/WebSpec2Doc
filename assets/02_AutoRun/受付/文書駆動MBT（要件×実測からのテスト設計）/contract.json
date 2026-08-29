@@ -1,0 +1,63 @@
+{
+  "feature_id": "document_mbt",
+  "name": "文書駆動MBT（要件×実測からのテスト設計）",
+  "risk_level": "critical",
+  "status": "implemented",
+  "ui_files": [
+    "templates/partials/view-auto-run.html",
+    "static/js/autorun-document.js",
+    "static/css/autorun-document.css"
+  ],
+  "route_files": [
+    "web/routes/auto_run.py"
+  ],
+  "core_files": [
+    "src/mbt/document_model.py",
+    "src/mbt/manual_procedures.py",
+    "src/mbt/test_data.py",
+    "src/mbt/validation_observer.py",
+    "web/services/document_autorun.py",
+    "src/mbt/pairwise.py",
+    "src/mbt/metamorphic.py",
+    "src/mbt/trace_suggestions.py"
+  ],
+  "symbols": [
+    "build_document_mbt",
+    "build_manual_procedures",
+    "generate_test_data",
+    "run_validation_observation",
+    "generate_document_autorun_artifacts",
+    "build_pairwise_cases",
+    "build_metamorphic_candidates",
+    "build_document_mbt",
+    "suggest_matches"
+  ],
+  "outputs": [
+    "document_mbt.json",
+    "manual_procedures.md/xlsx",
+    "test_data.json/csv",
+    "validation_observations.json",
+    "pairwise_cases.json",
+    "metamorphic_checks.json",
+    "prime_path selection criterion",
+    "unmatched_requirement_suggestions"
+  ],
+  "persistence": [
+    "output/{domain}/qa_process/"
+  ],
+  "failure_modes": [
+    "missing_reference_docs",
+    "unmatched_requirements",
+    "no_reachable_path",
+    "path_limit_truncation",
+    "validation_browser_failure",
+    "empty_measured_graph"
+  ],
+  "required_tests": [
+    "happy_path",
+    "error_path",
+    "coverage_path",
+    "no_submit_guarantee",
+    "evidence"
+  ]
+}

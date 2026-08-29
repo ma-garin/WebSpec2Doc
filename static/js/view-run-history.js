@@ -163,6 +163,13 @@ async function loadRunHistory() {
     _rhClearPendingDel();
     _rhShowError('');
     _rhRenderAll();
+    // 実行傾向パネルへサイト候補を渡す（このシステムに絞った一覧を使う）。
+    // 絞り込みでサイトを選んでいればそれを優先する。
+    if (typeof window.rtSetSites === 'function') {
+      const scoped = _rhScoped();
+      const sites = [...new Set(scoped.map(r => r.domain))].filter(Boolean);
+      window.rtSetSites(sites, RH.site || (scoped[0] && scoped[0].domain) || '');
+    }
   } catch (e) {
     tbody.innerHTML = '';
     if (empty) { empty.style.display = ''; empty.textContent = String(e.message); }

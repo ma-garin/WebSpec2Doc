@@ -1,0 +1,105 @@
+{
+  "schema": "webspec2doc/feature-asset@1",
+  "version": "20260829-81e4c84",
+  "generated_at": "2026-08-29T11:24:08Z",
+  "source": {
+    "repository": "WebSpec2Doc",
+    "revision": "81e4c84",
+    "working_tree_dirty": true,
+    "contract_file": "quality/feature_contracts.yml"
+  },
+  "feature": {
+    "feature_id": "diff_severity",
+    "name": "差分の重要度判定と誤検知フィルタ",
+    "risk_level": "high",
+    "status": "implemented",
+    "ui_files": [],
+    "route_files": [],
+    "core_files": [
+      "src/diff/severity.py",
+      "src/diff/ignore_rules.py",
+      "src/generator/diff_reporter.py"
+    ],
+    "symbols": [
+      "score_changes",
+      "summarize_severity",
+      "apply_ignore_rules",
+      "load_ignore_rules",
+      "summarize_exclusions"
+    ],
+    "outputs": [
+      "diff_report.html（重要度・除外内訳・画像比較）"
+    ],
+    "persistence": [
+      "output/{domain}/diff_ignore.json"
+    ],
+    "failure_modes": [
+      "invalid_regex_rule",
+      "broken_rule_file",
+      "all_changes_excluded",
+      "missing_screenshot"
+    ],
+    "required_tests": [
+      "happy_path",
+      "determinism",
+      "immutability",
+      "exclusion_disclosure",
+      "evidence"
+    ]
+  },
+  "placement": {
+    "system_key": "docs",
+    "system": "01_ドキュメント作成支援",
+    "screen": "_画面なし（API・基盤）",
+    "screens": [],
+    "classified_by": "path"
+  },
+  "files": [
+    {
+      "path": "src/diff/severity.py",
+      "role": "core",
+      "bytes": 8987,
+      "sha256": "ce20f886dbcb17573b0c2b12e7f0684945bdaf85e4823e4cf69f75f0599c6948"
+    },
+    {
+      "path": "src/diff/ignore_rules.py",
+      "role": "core",
+      "bytes": 8741,
+      "sha256": "d037620ad8b3e532c84beaf3361231add81827ad870d0d22c2175af3b7cdc2ef"
+    },
+    {
+      "path": "src/generator/diff_reporter.py",
+      "role": "core",
+      "bytes": 15980,
+      "sha256": "dd597e05c03811c7a16e836235f42fa837a0e1079034c3098bbc6a22f796329c"
+    }
+  ],
+  "wiring": {
+    "blueprints": [],
+    "provides_endpoints": []
+  },
+  "dependencies": {
+    "internal_modules_not_bundled": [
+      "src/diff/differ.py",
+      "src/diff/impact_analyzer.py"
+    ],
+    "third_party_packages": [],
+    "env_vars": [],
+    "data_files": [],
+    "consumes_endpoints": [],
+    "window_globals": [],
+    "template_includes_not_bundled": [],
+    "static_refs_not_bundled": []
+  },
+  "gaps": [],
+  "shared_assets": [],
+  "warnings": [
+    "解析できなかった: src/generator/diff_reporter.py: f-string expression part cannot include a backslash (<unknown>, line 157)"
+  ],
+  "verification": {
+    "static_analysis": "done",
+    "pytest": "not_run",
+    "verify_ui": "not_run",
+    "manual_screen_check": "not_run"
+  }
+}

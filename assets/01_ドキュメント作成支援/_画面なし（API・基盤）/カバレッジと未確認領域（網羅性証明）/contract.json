@@ -1,0 +1,37 @@
+{
+  "feature_id": "coverage_gap_report",
+  "name": "カバレッジと未確認領域（網羅性証明）",
+  "risk_level": "medium",
+  "status": "implemented",
+  "ui_files": [],
+  "route_files": [],
+  "core_files": [
+    "src/generator/coverage_gap.py",
+    "src/generator/html_reporter.py",
+    "src/crawler/page_crawler.py",
+    "src/generator/comparison_reporter.py",
+    "web/services/traceability.py",
+    "src/health/technical_health.py"
+  ],
+  "symbols": [
+    "collect_coverage_gaps",
+    "compute_coverage_summary"
+  ],
+  "outputs": [
+    "report.html「カバレッジと未確認領域」節",
+    "comparison.html「網羅性サマリ」節"
+  ],
+  "persistence": [],
+  "failure_modes": [
+    "audit_log_missing",
+    "audit_log_corrupt_line",
+    "coverage_missing",
+    "comparison_json_missing",
+    "stale_crawl_started_records"
+  ],
+  "required_tests": [
+    "happy_path",
+    "empty_path",
+    "evidence"
+  ]
+}

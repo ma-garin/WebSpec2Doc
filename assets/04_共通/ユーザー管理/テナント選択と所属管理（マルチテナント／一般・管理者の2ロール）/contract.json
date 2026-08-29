@@ -1,0 +1,55 @@
+{
+  "feature_id": "tenant_membership",
+  "name": "テナント選択と所属管理（マルチテナント／一般・管理者の2ロール）",
+  "risk_level": "critical",
+  "status": "implemented",
+  "ui_files": [
+    "templates/auth/tenant.html",
+    "templates/partials/view-user-management.html",
+    "templates/partials/modal-user-admin.html",
+    "templates/partials/view-tenant-management.html",
+    "templates/partials/modal-tenant-admin.html",
+    "static/css/tenant-auth.css",
+    "static/css/account-view.css",
+    "static/js/user-admin-view.js",
+    "static/js/tenant-admin-view.js"
+  ],
+  "route_files": [
+    "web/routes/tenant_admin.py",
+    "web/routes/account.py"
+  ],
+  "core_files": [
+    "web/services/auth_store.py",
+    "web/auth.py"
+  ],
+  "symbols": [
+    "list_memberships",
+    "set_memberships",
+    "bind_session_tenant",
+    "ensure_initial_admin",
+    "reset_password",
+    "delete_tenant"
+  ],
+  "outputs": [
+    "tenant selection page",
+    "admin console page",
+    "/api/admin/tenancy/* JSON",
+    "audit_log"
+  ],
+  "persistence": [
+    "instance/auth.db"
+  ],
+  "failure_modes": [
+    "no_membership_blocks_work",
+    "tenant_not_selected_redirect",
+    "not_a_member_rejected",
+    "last_admin_protection",
+    "last_tenant_cannot_be_deleted",
+    "non_admin_forbidden"
+  ],
+  "required_tests": [
+    "happy_path",
+    "error_path",
+    "evidence"
+  ]
+}

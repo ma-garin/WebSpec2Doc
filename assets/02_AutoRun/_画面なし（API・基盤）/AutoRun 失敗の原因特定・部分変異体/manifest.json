@@ -1,0 +1,203 @@
+{
+  "schema": "webspec2doc/feature-asset@1",
+  "version": "20260829-81e4c84",
+  "generated_at": "2026-08-29T11:24:09Z",
+  "source": {
+    "repository": "WebSpec2Doc",
+    "revision": "81e4c84",
+    "working_tree_dirty": true,
+    "contract_file": "quality/feature_contracts.yml"
+  },
+  "feature": {
+    "feature_id": "autorun_failure_triage",
+    "name": "AutoRun 失敗の原因特定・部分変異体",
+    "risk_level": "high",
+    "status": "implemented",
+    "ui_files": [],
+    "route_files": [
+      "web/routes/auto_run.py"
+    ],
+    "core_files": [
+      "web/services/failure_hypothesis.py",
+      "src/autorun/techniques.py"
+    ],
+    "symbols": [
+      "triage",
+      "match_hypotheses",
+      "equivalence_classes",
+      "boundary_values",
+      "decision_table"
+    ],
+    "outputs": [
+      "failure_hypotheses.json",
+      "原因候補",
+      "説明できない失敗の明示",
+      "技法適用結果"
+    ],
+    "persistence": [
+      "output/{domain}/qa_process/failure_hypotheses.json"
+    ],
+    "failure_modes": [
+      "unexplained_failure",
+      "environment_error",
+      "budget_exhausted"
+    ],
+    "required_tests": [
+      "happy_path",
+      "error_path",
+      "evidence"
+    ]
+  },
+  "placement": {
+    "system_key": "autorun",
+    "system": "02_AutoRun",
+    "screen": "_画面なし（API・基盤）",
+    "screens": [],
+    "classified_by": "path"
+  },
+  "files": [
+    {
+      "path": "web/routes/auto_run.py",
+      "role": "route",
+      "bytes": 28109,
+      "sha256": "9d4beccc5ddd8f96f0ac799146cc80827e6f208ef072eb75211c0cfa9d27097d"
+    },
+    {
+      "path": "web/services/failure_hypothesis.py",
+      "role": "core",
+      "bytes": 8430,
+      "sha256": "d7aae6d0511a6cafdc74015275032a05042d836b310d895f7f17bf7778b66f43"
+    },
+    {
+      "path": "src/autorun/techniques.py",
+      "role": "core",
+      "bytes": 16068,
+      "sha256": "74947c22ca8aee20d57c6a1eae52eb667872a2871e975538be1f31b9259e727b"
+    }
+  ],
+  "wiring": {
+    "blueprints": [
+      {
+        "file": "web/routes/auto_run.py",
+        "name": "auto_run",
+        "url_prefix": ""
+      }
+    ],
+    "provides_endpoints": [
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/autorun/start",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/autorun/status",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/autorun/cancel",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/history/runs",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/autorun/submit-input",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/autorun/preview",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/autorun/approve",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/autorun/report",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/autorun/live-screenshot",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/auto_run.py",
+        "rule": "/api/autorun/jobs",
+        "methods": [
+          "GET"
+        ]
+      }
+    ]
+  },
+  "dependencies": {
+    "internal_modules_not_bundled": [
+      "src/autorun/cause_effect.py",
+      "src/autorun/classification_tree.py",
+      "src/autorun/domain_analysis.py",
+      "src/autorun/error_guessing.py",
+      "src/autorun/orthogonal_array.py",
+      "src/autorun/stages.py",
+      "src/autorun/use_case_testing.py",
+      "web/config.py",
+      "web/services/auto_run_config.py",
+      "web/services/auto_run_job.py",
+      "web/services/auto_run_pipeline.py",
+      "web/services/auto_run_preview.py",
+      "web/services/document_autorun.py",
+      "web/services/playwright_executor.py",
+      "web/services/usage_tracker.py",
+      "web/services/viewpoint_store.py",
+      "web/tenancy.py",
+      "web/validation.py"
+    ],
+    "third_party_packages": [
+      {
+        "import": "flask",
+        "requirement": "flask==3.1.3",
+        "declared_in_requirements": true
+      }
+    ],
+    "env_vars": [],
+    "data_files": [],
+    "consumes_endpoints": [],
+    "window_globals": [],
+    "template_includes_not_bundled": [],
+    "static_refs_not_bundled": []
+  },
+  "gaps": [],
+  "shared_assets": [],
+  "warnings": [],
+  "verification": {
+    "static_analysis": "done",
+    "pytest": "not_run",
+    "verify_ui": "not_run",
+    "manual_screen_check": "not_run"
+  }
+}

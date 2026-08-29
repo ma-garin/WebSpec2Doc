@@ -1,0 +1,96 @@
+{
+  "schema": "webspec2doc/feature-asset@1",
+  "version": "20260829-81e4c84",
+  "generated_at": "2026-08-29T11:24:09Z",
+  "source": {
+    "repository": "WebSpec2Doc",
+    "revision": "81e4c84",
+    "working_tree_dirty": true,
+    "contract_file": "quality/feature_contracts.yml"
+  },
+  "feature": {
+    "feature_id": "autorun_security_kernel",
+    "name": "AutoRun セキュリティカーネル（送信ゲートウェイ・非信頼コンテンツ境界）",
+    "risk_level": "critical",
+    "status": "implemented",
+    "ui_files": [],
+    "route_files": [],
+    "core_files": [
+      "web/services/egress_gateway.py",
+      "web/services/untrusted_content.py"
+    ],
+    "symbols": [
+      "assert_target_allowed",
+      "write_egress_fixture",
+      "read_egress_report",
+      "build_llm_observation",
+      "scan_for_secrets",
+      "escape_untrusted"
+    ],
+    "outputs": [
+      "egress_log.ndjson",
+      "送信レポート（allowed/denied/予算切れ）",
+      "秘匿化済みの秘密検出結果"
+    ],
+    "persistence": [
+      "output/{domain}/qa_process/egress_log.ndjson"
+    ],
+    "failure_modes": [
+      "ssrf_attempt_denied",
+      "dns_rebinding_denied",
+      "self_origin_denied",
+      "budget_exhausted",
+      "prompt_injection_neutralized",
+      "secret_redacted"
+    ],
+    "required_tests": [
+      "happy_path",
+      "error_path",
+      "evidence"
+    ]
+  },
+  "placement": {
+    "system_key": "autorun",
+    "system": "02_AutoRun",
+    "screen": "_画面なし（API・基盤）",
+    "screens": [],
+    "classified_by": "path"
+  },
+  "files": [
+    {
+      "path": "web/services/egress_gateway.py",
+      "role": "core",
+      "bytes": 11036,
+      "sha256": "bc1ef1d340920dc43137c6ccf8aee85caed63dba1a383b7f679ec52f2aeae86a"
+    },
+    {
+      "path": "web/services/untrusted_content.py",
+      "role": "core",
+      "bytes": 7848,
+      "sha256": "bed1e82caf7f44e0ea3752b42e3346ef8cc89b4d64ac55487c264fb29a5efdd8"
+    }
+  ],
+  "wiring": {
+    "blueprints": [],
+    "provides_endpoints": []
+  },
+  "dependencies": {
+    "internal_modules_not_bundled": [],
+    "third_party_packages": [],
+    "env_vars": [],
+    "data_files": [],
+    "consumes_endpoints": [],
+    "window_globals": [],
+    "template_includes_not_bundled": [],
+    "static_refs_not_bundled": []
+  },
+  "gaps": [],
+  "shared_assets": [],
+  "warnings": [],
+  "verification": {
+    "static_analysis": "done",
+    "pytest": "not_run",
+    "verify_ui": "not_run",
+    "manual_screen_check": "not_run"
+  }
+}

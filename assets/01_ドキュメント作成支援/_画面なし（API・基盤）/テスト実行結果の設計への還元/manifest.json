@@ -1,0 +1,282 @@
+{
+  "schema": "webspec2doc/feature-asset@1",
+  "version": "20260829-81e4c84",
+  "generated_at": "2026-08-29T11:24:09Z",
+  "source": {
+    "repository": "WebSpec2Doc",
+    "revision": "81e4c84",
+    "working_tree_dirty": true,
+    "contract_file": "quality/feature_contracts.yml"
+  },
+  "feature": {
+    "feature_id": "condition_run_status",
+    "name": "テスト実行結果の設計への還元",
+    "risk_level": "medium",
+    "status": "implemented",
+    "ui_files": [
+      "static/js/view-design.js",
+      "static/app-report.css"
+    ],
+    "route_files": [
+      "web/routes/qa_process.py"
+    ],
+    "core_files": [
+      "web/services/condition_run_status.py",
+      "web/services/screen_test_design.py",
+      "web/services/testcase_table_store.py",
+      "web/routes/qa_process.py",
+      "static/js/view-design.js"
+    ],
+    "symbols": [
+      "attach_run_status",
+      "condition_id",
+      "_with_run_status",
+      "_tdsRunBadge",
+      "load_run_result"
+    ],
+    "outputs": [
+      "画面別設計の条件行に 検証済み / 失敗 / 未実行 / 対応なし のバッジ",
+      "「対応なし」の件数と理由の明示"
+    ],
+    "persistence": [
+      "output/{domain}/testcases/run_result.json"
+    ],
+    "failure_modes": [
+      "unrun_condition_shown_as_verified",
+      "no_case_confused_with_not_run",
+      "failure_diluted_by_passing_cases",
+      "run_result_unreadable_breaks_design_view",
+      "trace_id_rule_drifts_between_condition_and_testcase"
+    ],
+    "required_tests": [
+      "happy_path",
+      "error_path",
+      "evidence"
+    ]
+  },
+  "placement": {
+    "system_key": "docs",
+    "system": "01_ドキュメント作成支援",
+    "screen": "_画面なし（API・基盤）",
+    "screens": [],
+    "classified_by": "path"
+  },
+  "files": [
+    {
+      "path": "static/js/view-design.js",
+      "role": "ui",
+      "bytes": 41580,
+      "sha256": "212932283ccd6f9a33b74dccab29cb5eb345ebbdf9ae13042e376b41bcabd974"
+    },
+    {
+      "path": "static/app-report.css",
+      "role": "ui",
+      "bytes": 49653,
+      "sha256": "398642d43725e377b0803f251833d83db76b9e92997390860d430e4d06c7fdc6"
+    },
+    {
+      "path": "web/routes/qa_process.py",
+      "role": "route",
+      "bytes": 19970,
+      "sha256": "aeb59facf1aed705cb7ea7c8be9ca917ae31d43918a8d5ef77042cfc266f16ae"
+    },
+    {
+      "path": "web/services/condition_run_status.py",
+      "role": "core",
+      "bytes": 3304,
+      "sha256": "1284230507cec1a922d63304cd36327a7b883ae0545ad632f4961f432f790668"
+    },
+    {
+      "path": "web/services/screen_test_design.py",
+      "role": "core",
+      "bytes": 16445,
+      "sha256": "1369bf1737f1f8819fab3710d12e15cebdda7347e1a733205e3f66f0f02b9da7"
+    },
+    {
+      "path": "web/services/testcase_table_store.py",
+      "role": "core",
+      "bytes": 15875,
+      "sha256": "d946a1027d64159eb727039b8c99c32f29fbffab760024f01ffc61e2a2423f82"
+    }
+  ],
+  "wiring": {
+    "blueprints": [
+      {
+        "file": "web/routes/qa_process.py",
+        "name": "qa_process",
+        "url_prefix": ""
+      }
+    ],
+    "provides_endpoints": [
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/qa-process/input",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/qa-process/generate",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/qa-process/result",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/testcases",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/testcases/table",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/testcases/count",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/testcases/history",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/testcases/cell",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/testcases/cell/reset",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/testcases/run",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/testcases/live-progress",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/testcases/live-screenshot",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/testcases/row",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/test-design",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/test-design/by-screen",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/qa-process/advanced",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/qa-process/generate-advanced",
+        "methods": [
+          "POST"
+        ]
+      }
+    ]
+  },
+  "dependencies": {
+    "internal_modules_not_bundled": [
+      "src/autorun/techniques.py",
+      "src/crawler/url_safety.py",
+      "src/generator/test_design.py",
+      "src/generator/testcase_table.py",
+      "src/llm/viewpoint_generator.py",
+      "web/config.py",
+      "web/env_store.py",
+      "web/services/egress_gateway.py",
+      "web/services/openai_qa.py",
+      "web/services/playwright_executor.py",
+      "web/services/qa/advanced_generator.py",
+      "web/services/qa/doc_generator.py",
+      "web/services/qa/helpers.py",
+      "web/services/run_store.py",
+      "web/services/test_design_settings.py",
+      "web/services/testcase_spec_generator.py",
+      "web/services/usage_tracker.py",
+      "web/validation.py"
+    ],
+    "third_party_packages": [
+      {
+        "import": "flask",
+        "requirement": "flask==3.1.3",
+        "declared_in_requirements": true
+      }
+    ],
+    "env_vars": [],
+    "data_files": [],
+    "consumes_endpoints": [
+      "/api/coverage-heatmap",
+      "/api/test-design",
+      "/api/test-design/by-screen"
+    ],
+    "window_globals": [],
+    "template_includes_not_bundled": [],
+    "static_refs_not_bundled": []
+  },
+  "gaps": [],
+  "shared_assets": [],
+  "warnings": [
+    "JS は同梱しているが画面テンプレート（.html）が、同梱にも他機能の共通資産にも見当たらない。契約の ui_files に登録漏れがないか確認すること。"
+  ],
+  "verification": {
+    "static_analysis": "done",
+    "pytest": "not_run",
+    "verify_ui": "not_run",
+    "manual_screen_check": "not_run"
+  }
+}

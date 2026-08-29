@@ -1,0 +1,161 @@
+{
+  "schema": "webspec2doc/feature-asset@1",
+  "version": "20260829-81e4c84",
+  "generated_at": "2026-08-29T11:24:08Z",
+  "source": {
+    "repository": "WebSpec2Doc",
+    "revision": "81e4c84",
+    "working_tree_dirty": true,
+    "contract_file": "quality/feature_contracts.yml"
+  },
+  "feature": {
+    "feature_id": "finding_ticket",
+    "name": "気づきマーク → 再現手順付きバグ票（JSON/CSV エクスポート）",
+    "risk_level": "medium",
+    "status": "implemented",
+    "ui_files": [],
+    "route_files": [],
+    "core_files": [
+      "src/capture/finding_reporter.py",
+      "src/capture/session_recorder.py",
+      "src/main.py"
+    ],
+    "symbols": [
+      "build_finding_tickets",
+      "save_findings",
+      "SessionRecorder"
+    ],
+    "outputs": [
+      "findings.json",
+      "findings.csv"
+    ],
+    "persistence": [
+      "output/{domain}/findings.json",
+      "output/{domain}/findings.csv"
+    ],
+    "failure_modes": [
+      "widget_injection_failed",
+      "no_sessions",
+      "no_preceding_actions"
+    ],
+    "required_tests": [
+      "happy_path",
+      "error_path",
+      "state_join_key",
+      "evidence"
+    ]
+  },
+  "placement": {
+    "system_key": "docs",
+    "system": "01_ドキュメント作成支援",
+    "screen": "_画面なし（API・基盤）",
+    "screens": [],
+    "classified_by": "path"
+  },
+  "files": [
+    {
+      "path": "src/capture/finding_reporter.py",
+      "role": "core",
+      "bytes": 7693,
+      "sha256": "a4ca6ce75d7f3fdc77441b1f751c846c77a66632878a81bd27c6c10169597180"
+    },
+    {
+      "path": "src/capture/session_recorder.py",
+      "role": "core",
+      "bytes": 10498,
+      "sha256": "6826b1dc0996d7a94c5223781e5023eff668ac4c491dab63e225e981b610f515"
+    },
+    {
+      "path": "src/main.py",
+      "role": "core",
+      "bytes": 62520,
+      "sha256": "f051a3bef57a4d50a566f2cc311b7e43832295bd32b4a0678e6f5b28149ac240"
+    }
+  ],
+  "wiring": {
+    "blueprints": [],
+    "provides_endpoints": []
+  },
+  "dependencies": {
+    "internal_modules_not_bundled": [
+      "src/analyzer/form_analyzer.py",
+      "src/analyzer/html_analyzer.py",
+      "src/analyzer/rule_injector.py",
+      "src/capture/burndown.py",
+      "src/capture/coverage.py",
+      "src/capture/reverse_generator.py",
+      "src/ci_drift.py",
+      "src/crawler/action_explorer.py",
+      "src/crawler/auth.py",
+      "src/crawler/auth_recorder.py",
+      "src/crawler/auto_login.py",
+      "src/crawler/page_crawler.py",
+      "src/crawler/session_guard.py",
+      "src/crawler/url_safety.py",
+      "src/diff/comparison.py",
+      "src/diff/differ.py",
+      "src/diff/impact_analyzer.py",
+      "src/diff/snapshot.py",
+      "src/generator/accessibility_reporter.py",
+      "src/generator/architecture_generator.py",
+      "src/generator/comparison_reporter.py",
+      "src/generator/coverage_gap.py",
+      "src/generator/diff_reporter.py",
+      "src/generator/excel_reporter.py",
+      "src/generator/fusion_reporter.py",
+      "src/generator/html_reporter.py",
+      "src/generator/json_reporter.py",
+      "src/generator/markdown_generator.py",
+      "src/generator/mermaid_generator.py",
+      "src/generator/pdf_reporter.py",
+      "src/generator/refresh_reporter.py",
+      "src/generator/test_design.py",
+      "src/generator/test_plan_generator.py",
+      "src/generator/trace_reporter.py",
+      "src/generator/ux_reporter.py",
+      "src/graph/transition_graph.py",
+      "src/health/technical_health.py",
+      "src/ingest/loader.py",
+      "src/ingest/matcher.py",
+      "src/ingest/req_tracer.py",
+      "src/llm/provider.py",
+      "src/ux/axe_runner.py",
+      "src/viewport/runner.py"
+    ],
+    "third_party_packages": [
+      {
+        "import": "networkx",
+        "requirement": "networkx==3.3",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "playwright",
+        "requirement": "playwright==1.61.0",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "python-dotenv",
+        "requirement": "python-dotenv==1.2.2",
+        "declared_in_requirements": true
+      }
+    ],
+    "env_vars": [
+      "OPENAI_API_KEY",
+      "WEBSPEC2DOC_RECORD_HEADLESS"
+    ],
+    "data_files": [],
+    "consumes_endpoints": [],
+    "window_globals": [],
+    "template_includes_not_bundled": [],
+    "static_refs_not_bundled": []
+  },
+  "gaps": [],
+  "shared_assets": [],
+  "warnings": [],
+  "verification": {
+    "static_analysis": "done",
+    "pytest": "not_run",
+    "verify_ui": "not_run",
+    "manual_screen_check": "not_run"
+  }
+}

@@ -1,0 +1,527 @@
+{
+  "schema": "webspec2doc/feature-asset@1",
+  "version": "20260829-81e4c84",
+  "generated_at": "2026-08-29T11:24:09Z",
+  "source": {
+    "repository": "WebSpec2Doc",
+    "revision": "81e4c84",
+    "working_tree_dirty": true,
+    "contract_file": "quality/feature_contracts.yml"
+  },
+  "feature": {
+    "feature_id": "test_activity_support",
+    "name": "テスト活動支援（System 02・12工程）",
+    "risk_level": "high",
+    "status": "implemented",
+    "ui_files": [
+      "templates/partials/view-ta-analysis.html",
+      "templates/partials/view-ta-codefix.html",
+      "templates/partials/view-ta-completion.html",
+      "templates/partials/view-ta-defect.html",
+      "templates/partials/view-ta-design.html",
+      "templates/partials/view-ta-execution.html",
+      "templates/partials/view-ta-home.html",
+      "templates/partials/view-ta-implementation.html",
+      "templates/partials/view-ta-integrations.html",
+      "templates/partials/view-ta-manual.html",
+      "templates/partials/view-ta-plan.html",
+      "templates/partials/view-ta-strategy.html",
+      "static/js/ta-ai-panel.js",
+      "static/js/ta-analysis.js",
+      "static/js/ta-codefix.js",
+      "static/js/ta-completion.js",
+      "static/js/ta-defect.js",
+      "static/js/ta-design.js",
+      "static/js/ta-execution.js",
+      "static/js/ta-home.js",
+      "static/js/ta-implementation.js",
+      "static/js/ta-integrations.js",
+      "static/js/ta-manual.js",
+      "static/js/ta-plan.js",
+      "static/js/ta-process-gate.js",
+      "static/js/ta-process-nav.js",
+      "static/js/ta-strategy.js",
+      "static/css/ta-design-system.css",
+      "static/css/test-activity.css"
+    ],
+    "route_files": [
+      "web/routes/test_activity.py"
+    ],
+    "core_files": [
+      "web/services/completion_criteria.py",
+      "web/services/defect_store.py",
+      "web/services/manual_execution_store.py",
+      "web/services/process_gate.py",
+      "web/services/test_data_store.py",
+      "web/services/ta_ai.py"
+    ],
+    "symbols": [
+      "evaluate",
+      "list_defects",
+      "create_defect",
+      "can_transition",
+      "update_state",
+      "stats",
+      "append_record",
+      "list_records",
+      "latest_by_case",
+      "unlocked_index",
+      "status",
+      "can_enter",
+      "complete",
+      "reopen",
+      "list_datasets",
+      "get_dataset",
+      "save_dataset",
+      "delete_dataset",
+      "parse_csv",
+      "ProcessGateError",
+      "ManualExecutionError",
+      "TestDataError"
+    ],
+    "outputs": [
+      "output/<domain>/defects/",
+      "output/<domain>/process/",
+      "output/<domain>/qa_process/"
+    ],
+    "persistence": [
+      "output/<domain>/defects/*.json",
+      "output/<domain>/process/state.json"
+    ],
+    "failure_modes": [
+      "domain 未指定で 400 を返す",
+      "対象ドメインが存在しない場合に空の一覧を返す",
+      "工程ゲートで未到達工程をロックする",
+      "LLM 未設定時に 503 と理由を返す",
+      "外部連携（GitHub 等）の認証情報が未設定の場合は操作を無効化し理由を表示する"
+    ],
+    "required_tests": [
+      "tests/test_ta_process_gate.py",
+      "tests/test_ta_defect_store.py"
+    ]
+  },
+  "placement": {
+    "system_key": "testlab",
+    "system": "03_テスト活動支援",
+    "screen": "_システム全体",
+    "screens": [
+      "テスト基本設計",
+      "コード修正提案",
+      "テスト完了",
+      "不具合分析",
+      "テストケース実装",
+      "自動テスト実行",
+      "ダッシュボード",
+      "自動テストケース実装",
+      "連携設定",
+      "手動テスト実行",
+      "テスト計画",
+      "テスト詳細設計"
+    ],
+    "classified_by": "screen"
+  },
+  "files": [
+    {
+      "path": "templates/partials/view-ta-analysis.html",
+      "role": "ui",
+      "bytes": 7950,
+      "sha256": "2dac06d2993d1b8f78493f6082a02c78cf7333bd366f9dff62037cccf93dd08e"
+    },
+    {
+      "path": "templates/partials/view-ta-codefix.html",
+      "role": "ui",
+      "bytes": 7382,
+      "sha256": "705cdb7771118fe98b64f58b23ecf20416e9e63a21ac4a388be837c02f05705c"
+    },
+    {
+      "path": "templates/partials/view-ta-completion.html",
+      "role": "ui",
+      "bytes": 3392,
+      "sha256": "8aa0ffddff3096250ff0d76f51809da3cb7ade2bbb28ea0ef3867e6d653af73e"
+    },
+    {
+      "path": "templates/partials/view-ta-defect.html",
+      "role": "ui",
+      "bytes": 8222,
+      "sha256": "dd4187c7ca8ad4cedc9b78d6d68253c0443edbdaab0d29dd2f39d0fc3af93e88"
+    },
+    {
+      "path": "templates/partials/view-ta-design.html",
+      "role": "ui",
+      "bytes": 7208,
+      "sha256": "7320e2d5663108ccee2357dd9025b0761590302282fcebd3220cc6bcff5df5b8"
+    },
+    {
+      "path": "templates/partials/view-ta-execution.html",
+      "role": "ui",
+      "bytes": 6765,
+      "sha256": "b26318c89f0773e468e3acfd94dc07ec219b1ffb956b3381bc2d8b0617f1d726"
+    },
+    {
+      "path": "templates/partials/view-ta-home.html",
+      "role": "ui",
+      "bytes": 8705,
+      "sha256": "0046b42c2149c122c861fbf37221ee447478d1219499385c2a0d64ded1232875"
+    },
+    {
+      "path": "templates/partials/view-ta-implementation.html",
+      "role": "ui",
+      "bytes": 10443,
+      "sha256": "1a76d510045aa977a2aac14584ce405a0c7aee0c25849c51a648e5d02fe22642"
+    },
+    {
+      "path": "templates/partials/view-ta-integrations.html",
+      "role": "ui",
+      "bytes": 11884,
+      "sha256": "72330ae476c9315e08ed481c2a500a0415efeef1cb2eb607ccb08129876013a6"
+    },
+    {
+      "path": "templates/partials/view-ta-manual.html",
+      "role": "ui",
+      "bytes": 7805,
+      "sha256": "f0cf3c0fa1c067f260dee94df26c3134864852810268719ccf8ba89d2bdb498d"
+    },
+    {
+      "path": "templates/partials/view-ta-plan.html",
+      "role": "ui",
+      "bytes": 14360,
+      "sha256": "8637dd78286db4765c6f89998be9e9a50f5f09b6c2e3b6b7d3a866b6dbf5a81e"
+    },
+    {
+      "path": "templates/partials/view-ta-strategy.html",
+      "role": "ui",
+      "bytes": 4820,
+      "sha256": "cf205a7b892d74fbb5fe601318a477c1d17156fdb24b13a8a2e56afae3974010"
+    },
+    {
+      "path": "static/js/ta-ai-panel.js",
+      "role": "ui",
+      "bytes": 8812,
+      "sha256": "a0626611209f41ea7edc5e8c9e2916ff6ec9c9d2e3b7bd5dc00c9db0aacce53a"
+    },
+    {
+      "path": "static/js/ta-analysis.js",
+      "role": "ui",
+      "bytes": 20062,
+      "sha256": "5f843834acfcf7ee5bf84d7e2b39c69b6e58ea76dc93be342cee480b13322098"
+    },
+    {
+      "path": "static/js/ta-codefix.js",
+      "role": "ui",
+      "bytes": 10878,
+      "sha256": "1c3584e831bd751387a0f4bb7cecc5fb9227f3da4a022c7127aa39a947fdfb6e"
+    },
+    {
+      "path": "static/js/ta-completion.js",
+      "role": "ui",
+      "bytes": 9334,
+      "sha256": "e6e5520f816aa2cea08080c8ef392a84132a8b3ab098160114491c34811af49f"
+    },
+    {
+      "path": "static/js/ta-defect.js",
+      "role": "ui",
+      "bytes": 20482,
+      "sha256": "22978f7f93d8f248307fa869475afaafbe0e93ff7a3ba37cc6027b3e102221ab"
+    },
+    {
+      "path": "static/js/ta-design.js",
+      "role": "ui",
+      "bytes": 16479,
+      "sha256": "e8392501bce8be536c32fd1f5fafd141047ed0de05a5ccb94aa3fa5dca0f1cab"
+    },
+    {
+      "path": "static/js/ta-execution.js",
+      "role": "ui",
+      "bytes": 20220,
+      "sha256": "1ee66193fbe3df6991adbf85ac3db61b6962d5e6d92e608b3978c7de5fc3cf61"
+    },
+    {
+      "path": "static/js/ta-home.js",
+      "role": "ui",
+      "bytes": 13781,
+      "sha256": "79a7ec7427b585cc6efd4217276637fad6d4abaa9be69a9502c4e89c0b16a638"
+    },
+    {
+      "path": "static/js/ta-implementation.js",
+      "role": "ui",
+      "bytes": 8995,
+      "sha256": "b3157d316d683cf3cf0bdca6633d69a8abff627778e8a26ee7ab8b1b3f393742"
+    },
+    {
+      "path": "static/js/ta-integrations.js",
+      "role": "ui",
+      "bytes": 10496,
+      "sha256": "31f8f45bd2f7076892bf30f301fdaf570504001d79b0758dadfcaa375e016d98"
+    },
+    {
+      "path": "static/js/ta-manual.js",
+      "role": "ui",
+      "bytes": 15444,
+      "sha256": "77ae09c7151ca35c74b7a148ce361d699debf2958faecea0db124b8e596f1798"
+    },
+    {
+      "path": "static/js/ta-plan.js",
+      "role": "ui",
+      "bytes": 12834,
+      "sha256": "81b6d7c3d42ccc45816b9f64f08f4e72fafb79fa28ccb4eee50ca83837123535"
+    },
+    {
+      "path": "static/js/ta-process-gate.js",
+      "role": "ui",
+      "bytes": 7704,
+      "sha256": "f705d01d7c305c6b04f0a01c4dffa1e5d8dc00ddab20d6a86ceaf09a602d1f31"
+    },
+    {
+      "path": "static/js/ta-process-nav.js",
+      "role": "ui",
+      "bytes": 4564,
+      "sha256": "00549a9a76cd42a306fa9810e94a7a4c777c2e3ff8cb238a898afe79808f139a"
+    },
+    {
+      "path": "static/js/ta-strategy.js",
+      "role": "ui",
+      "bytes": 4649,
+      "sha256": "d4abf03d5447dd09370ab4a38e01ed746b6f3befb694300a9bdd17bfd47e2376"
+    },
+    {
+      "path": "static/css/ta-design-system.css",
+      "role": "ui",
+      "bytes": 26534,
+      "sha256": "0b0b89409ac10157b4c364f059b68897e4276437b89abf226650c8fcfd8788f1"
+    },
+    {
+      "path": "static/css/test-activity.css",
+      "role": "ui",
+      "bytes": 7236,
+      "sha256": "894b57acf7a285ad6406759a18b2dcb425bb9c5fb6f2b394078b44276c54bd22"
+    },
+    {
+      "path": "web/routes/test_activity.py",
+      "role": "route",
+      "bytes": 20388,
+      "sha256": "45de838ed3d9f7ac079f21b1d7950b7f6894b2419ced58bc790dc8b793c8b790"
+    },
+    {
+      "path": "web/services/completion_criteria.py",
+      "role": "core",
+      "bytes": 4486,
+      "sha256": "81346b50725018150f5867e710ac1133cf1f35905fce186e1ead4ea35df9b6ba"
+    },
+    {
+      "path": "web/services/defect_store.py",
+      "role": "core",
+      "bytes": 8234,
+      "sha256": "3fd468df07e0e78f2d36040b365e2d0247221c75c8d45b77d2bde8f22a3826d7"
+    },
+    {
+      "path": "web/services/manual_execution_store.py",
+      "role": "core",
+      "bytes": 6210,
+      "sha256": "6498633ce1011b61a8a69d241666eb803b84949b3474b99e5a8faa08895c3345"
+    },
+    {
+      "path": "web/services/process_gate.py",
+      "role": "core",
+      "bytes": 5992,
+      "sha256": "1d8e6c178852e10f36bc61ec9007e3d63194dc0c3909567672d8257eedbd6a96"
+    },
+    {
+      "path": "web/services/test_data_store.py",
+      "role": "core",
+      "bytes": 9464,
+      "sha256": "157bd83ff3c8bb516653cfac9571dc3b58f8e2787d0cf176b2b5866bd25882ad"
+    },
+    {
+      "path": "web/services/ta_ai.py",
+      "role": "core",
+      "bytes": 13870,
+      "sha256": "5ab480685bec156715a4490ec286c02bc07e84655dabfab2abfcd08081ad92c6"
+    }
+  ],
+  "wiring": {
+    "blueprints": [
+      {
+        "file": "web/routes/test_activity.py",
+        "name": "test_activity",
+        "url_prefix": ""
+      }
+    ],
+    "provides_endpoints": [
+      {
+        "file": "web/routes/test_activity.py",
+        "rule": "/api/ta/datasets",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/test_activity.py",
+        "rule": "/api/ta/datasets",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/test_activity.py",
+        "rule": "/api/ta/datasets/<dataset_id>",
+        "methods": [
+          "DELETE"
+        ]
+      },
+      {
+        "file": "web/routes/test_activity.py",
+        "rule": "/api/ta/manual-runs",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/test_activity.py",
+        "rule": "/api/ta/manual-runs",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/test_activity.py",
+        "rule": "/api/ta/defects",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/test_activity.py",
+        "rule": "/api/ta/defects",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/test_activity.py",
+        "rule": "/api/ta/defects/<defect_id>",
+        "methods": [
+          "PATCH"
+        ]
+      },
+      {
+        "file": "web/routes/test_activity.py",
+        "rule": "/api/ta/completion",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/test_activity.py",
+        "rule": "/api/ta/ai/generate",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/test_activity.py",
+        "rule": "/api/ta/rca",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/test_activity.py",
+        "rule": "/api/ta/export",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/test_activity.py",
+        "rule": "/api/ta/process",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/test_activity.py",
+        "rule": "/api/ta/process/complete",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/test_activity.py",
+        "rule": "/api/ta/process/reopen",
+        "methods": [
+          "POST"
+        ]
+      }
+    ]
+  },
+  "dependencies": {
+    "internal_modules_not_bundled": [
+      "src/llm/openai_client.py",
+      "src/llm/prompt_guard.py",
+      "web/auth.py",
+      "web/config.py",
+      "web/routes/qa_process.py",
+      "web/services/__init__.py",
+      "web/services/qa/helpers.py",
+      "web/services/testcase_table_store.py",
+      "web/tenancy.py",
+      "web/validation.py"
+    ],
+    "third_party_packages": [
+      {
+        "import": "flask",
+        "requirement": "flask==3.1.3",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "werkzeug",
+        "requirement": "",
+        "declared_in_requirements": false
+      }
+    ],
+    "env_vars": [],
+    "data_files": [],
+    "consumes_endpoints": [
+      "/api/doc-fusion",
+      "/api/history",
+      "/api/history/runs",
+      "/api/integrations",
+      "/api/integrations/jira/issues",
+      "/api/llm/chat",
+      "/api/reference-docs",
+      "/api/result",
+      "/api/settings/test-design",
+      "/api/ta/ai/generate",
+      "/api/ta/completion",
+      "/api/ta/datasets",
+      "/api/ta/defects",
+      "/api/ta/export",
+      "/api/ta/manual-runs",
+      "/api/ta/process",
+      "/api/ta/process/complete",
+      "/api/ta/process/reopen",
+      "/api/ta/rca",
+      "/api/testcases/live-progress",
+      "/api/testcases/run",
+      "/api/testcases/table",
+      "/preview"
+    ],
+    "window_globals": [
+      "TA_PROCESS",
+      "switchView",
+      "taAiPanel",
+      "taProcessGate"
+    ],
+    "template_includes_not_bundled": [],
+    "static_refs_not_bundled": []
+  },
+  "gaps": [],
+  "shared_assets": [],
+  "warnings": [],
+  "verification": {
+    "static_analysis": "done",
+    "pytest": "not_run",
+    "verify_ui": "not_run",
+    "manual_screen_check": "not_run"
+  }
+}

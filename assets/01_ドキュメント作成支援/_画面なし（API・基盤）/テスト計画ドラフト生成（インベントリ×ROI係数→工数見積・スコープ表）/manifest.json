@@ -1,0 +1,361 @@
+{
+  "schema": "webspec2doc/feature-asset@1",
+  "version": "20260829-81e4c84",
+  "generated_at": "2026-08-29T11:24:08Z",
+  "source": {
+    "repository": "WebSpec2Doc",
+    "revision": "81e4c84",
+    "working_tree_dirty": true,
+    "contract_file": "quality/feature_contracts.yml"
+  },
+  "feature": {
+    "feature_id": "test_plan",
+    "name": "テスト計画ドラフト生成（インベントリ×ROI係数→工数見積・スコープ表）",
+    "risk_level": "medium",
+    "status": "implemented",
+    "ui_files": [],
+    "route_files": [
+      "web/routes/qa_process.py"
+    ],
+    "core_files": [
+      "src/generator/test_plan_generator.py",
+      "src/main.py",
+      "web/services/qa/doc_generator.py",
+      "web/services/qa/advanced_generator.py",
+      "web/services/qa/advanced_html.py",
+      "web/services/qa/helpers.py",
+      "web/services/qa/markdown_lite.py",
+      "web/services/qa/testcase_docs.py",
+      "web/services/test_design_settings.py"
+    ],
+    "symbols": [
+      "compute_test_plan",
+      "load_plan_coefficients",
+      "save_test_plan",
+      "_generate_test_plan"
+    ],
+    "outputs": [
+      "test_plan.md",
+      "test_plan.xlsx"
+    ],
+    "persistence": [
+      "output/{domain}/test_plan.md",
+      "output/{domain}/test_plan.xlsx"
+    ],
+    "failure_modes": [
+      "no_inventory",
+      "report_corrupt",
+      "empty_screens",
+      "xlsx_write_failure",
+      "invalid_env_override"
+    ],
+    "required_tests": [
+      "happy_path",
+      "error_path",
+      "evidence"
+    ]
+  },
+  "placement": {
+    "system_key": "docs",
+    "system": "01_ドキュメント作成支援",
+    "screen": "_画面なし（API・基盤）",
+    "screens": [],
+    "classified_by": "path"
+  },
+  "files": [
+    {
+      "path": "web/routes/qa_process.py",
+      "role": "route",
+      "bytes": 19970,
+      "sha256": "aeb59facf1aed705cb7ea7c8be9ca917ae31d43918a8d5ef77042cfc266f16ae"
+    },
+    {
+      "path": "src/generator/test_plan_generator.py",
+      "role": "core",
+      "bytes": 13561,
+      "sha256": "ab26ac44e3fee43e4d1f6a6d31c3057a54bc58138ef78a24fe4b993ba866bbff"
+    },
+    {
+      "path": "src/main.py",
+      "role": "core",
+      "bytes": 62520,
+      "sha256": "f051a3bef57a4d50a566f2cc311b7e43832295bd32b4a0678e6f5b28149ac240"
+    },
+    {
+      "path": "web/services/qa/doc_generator.py",
+      "role": "core",
+      "bytes": 25108,
+      "sha256": "2d720b7e0b42cb8b89eea09dacf4c37219a2e140981af410d9fc3149c5b5e9e6"
+    },
+    {
+      "path": "web/services/qa/advanced_generator.py",
+      "role": "core",
+      "bytes": 17577,
+      "sha256": "99a88c51ed915967814168e6b68f4a9fc036d400145f6a9334f82810ef91235d"
+    },
+    {
+      "path": "web/services/qa/advanced_html.py",
+      "role": "core",
+      "bytes": 11168,
+      "sha256": "7b23fa9b0c4262368b6e79910631487cefd08264cd5cdfad70e9daae368c8327"
+    },
+    {
+      "path": "web/services/qa/helpers.py",
+      "role": "core",
+      "bytes": 16329,
+      "sha256": "80d8f1800eed80a415cf3e2c5efca494859330f406a7b610d3d67cbaa1749e72"
+    },
+    {
+      "path": "web/services/qa/markdown_lite.py",
+      "role": "core",
+      "bytes": 4991,
+      "sha256": "df124c8fdba167ff768067d9042aeca223cbb905f7474420246ebf20c120f9c7"
+    },
+    {
+      "path": "web/services/qa/testcase_docs.py",
+      "role": "core",
+      "bytes": 5442,
+      "sha256": "4835ada5afa3e1796f040438161705b718f1735c1ca74171b42850d80c53b6fa"
+    },
+    {
+      "path": "web/services/test_design_settings.py",
+      "role": "core",
+      "bytes": 8193,
+      "sha256": "762e502d9c58ceb5eae615dfa96bea63d60c93c48ba6c4c8045afc265ae5205d"
+    }
+  ],
+  "wiring": {
+    "blueprints": [
+      {
+        "file": "web/routes/qa_process.py",
+        "name": "qa_process",
+        "url_prefix": ""
+      }
+    ],
+    "provides_endpoints": [
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/qa-process/input",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/qa-process/generate",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/qa-process/result",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/testcases",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/testcases/table",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/testcases/count",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/testcases/history",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/testcases/cell",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/testcases/cell/reset",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/testcases/run",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/testcases/live-progress",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/testcases/live-screenshot",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/testcases/row",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/test-design",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/test-design/by-screen",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/qa-process/advanced",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/qa_process.py",
+        "rule": "/api/qa-process/generate-advanced",
+        "methods": [
+          "POST"
+        ]
+      }
+    ]
+  },
+  "dependencies": {
+    "internal_modules_not_bundled": [
+      "src/analyzer/form_analyzer.py",
+      "src/analyzer/html_analyzer.py",
+      "src/analyzer/rule_injector.py",
+      "src/capture/burndown.py",
+      "src/capture/coverage.py",
+      "src/capture/finding_reporter.py",
+      "src/capture/reverse_generator.py",
+      "src/capture/session_recorder.py",
+      "src/ci_drift.py",
+      "src/crawler/auth.py",
+      "src/crawler/auth_recorder.py",
+      "src/crawler/auto_login.py",
+      "src/crawler/page_crawler.py",
+      "src/crawler/session_guard.py",
+      "src/crawler/url_safety.py",
+      "src/diff/comparison.py",
+      "src/diff/differ.py",
+      "src/diff/impact_analyzer.py",
+      "src/diff/snapshot.py",
+      "src/generator/accessibility_reporter.py",
+      "src/generator/architecture_generator.py",
+      "src/generator/comparison_reporter.py",
+      "src/generator/coverage_gap.py",
+      "src/generator/diff_reporter.py",
+      "src/generator/excel_reporter.py",
+      "src/generator/fusion_reporter.py",
+      "src/generator/html_reporter.py",
+      "src/generator/json_reporter.py",
+      "src/generator/markdown_generator.py",
+      "src/generator/mermaid_generator.py",
+      "src/generator/pdf_reporter.py",
+      "src/generator/refresh_reporter.py",
+      "src/generator/test_design.py",
+      "src/generator/trace_reporter.py",
+      "src/generator/ux_reporter.py",
+      "src/graph/transition_graph.py",
+      "src/health/technical_health.py",
+      "src/ingest/loader.py",
+      "src/ingest/matcher.py",
+      "src/ingest/req_tracer.py",
+      "src/llm/provider.py",
+      "src/llm/screen_classifier.py",
+      "src/llm/viewpoint_generator.py",
+      "src/ux/axe_runner.py",
+      "src/viewport/runner.py",
+      "web/config.py",
+      "web/env_store.py",
+      "web/services/condition_run_status.py",
+      "web/services/egress_gateway.py",
+      "web/services/openai_qa.py",
+      "web/services/playwright_executor.py",
+      "web/services/run_store.py",
+      "web/services/screen_test_design.py",
+      "web/services/testcase_spec_generator.py",
+      "web/services/testcase_table_store.py",
+      "web/services/usage_tracker.py",
+      "web/services/viewpoint_store.py",
+      "web/summary.py",
+      "web/tenancy.py",
+      "web/validation.py"
+    ],
+    "third_party_packages": [
+      {
+        "import": "flask",
+        "requirement": "flask==3.1.3",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "networkx",
+        "requirement": "networkx==3.3",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "openpyxl",
+        "requirement": "openpyxl==3.1.4",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "python-dotenv",
+        "requirement": "python-dotenv==1.2.2",
+        "declared_in_requirements": true
+      }
+    ],
+    "env_vars": [
+      "OPENAI_API_KEY",
+      "WEBSPEC2DOC_RECORD_HEADLESS"
+    ],
+    "data_files": [],
+    "consumes_endpoints": [],
+    "window_globals": [],
+    "template_includes_not_bundled": [],
+    "static_refs_not_bundled": []
+  },
+  "gaps": [],
+  "shared_assets": [],
+  "warnings": [],
+  "verification": {
+    "static_analysis": "done",
+    "pytest": "not_run",
+    "verify_ui": "not_run",
+    "manual_screen_check": "not_run"
+  }
+}

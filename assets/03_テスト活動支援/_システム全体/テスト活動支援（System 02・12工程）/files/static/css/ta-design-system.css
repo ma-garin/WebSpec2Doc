@@ -1,0 +1,795 @@
+/* テスト活動支援（System 02）のデザインシステム。
+   2026-08-23 承認のモック（Tailwind + daisyUI 系）を移植したもの。
+
+   **すべて body[data-system="testlab"] にスコープする。**
+   System 01（ドキュメント作成）と共用するクラス（.card / .btn-primary / ケース表グリッド等）を
+   グローバルに書き換えると、承認範囲外の画面まで見た目が変わるため。
+   スコープを外すときは、共用側の回帰確認とセットで行うこと。 */
+
+body[data-system="testlab"] {
+  /* ── 色 ── daisyUI light 相当。primary は System 02 のアイデンティティ色 */
+  --d-primary: #570DF8;
+  --d-primary-hover: #4A0BD4;
+  --d-primary-pale: #EDE7FE;
+  --d-ink: #1F2937;
+  --d-ink-sub: #6B7280;
+  --d-ink-faint: #9CA3AF;
+  --d-line: #E5E7EB;
+  --d-line-soft: #F3F4F6;
+  --d-line-faint: #F9FAFB;
+  --d-surface: #FFFFFF;
+  --d-bg: #F2F2F5;
+  --d-ok: #36D399;
+  --d-ok-ink: #003320;
+  --d-ng: #F87272;
+  --d-ng-ink: #470000;
+  --d-wa: #FBBD23;
+  --d-wa-ink: #382800;
+  --d-info: #3ABFF8;
+  --d-info-ink: #002B3D;
+  --d-radius-card: 16px;
+  --d-radius-ctl: 8px;
+  --d-shadow: 0 1px 3px rgba(0, 0, 0, .06);
+  /* 文字色用の濃色（--d-ok/ng/wa は背景用の淡色のため、数値・本文には使えない） */
+  --d-ok-text: #0F9D6E;
+  --d-ng-text: #D93636;
+  --d-wa-text: #B77800;
+}
+
+/* ══════════════ シェル ══════════════ */
+
+body[data-system="testlab"] .app-content { background: var(--d-bg); }
+
+body[data-system="testlab"] .app-sidebar {
+  background: var(--d-surface);
+  border-right: 1px solid var(--d-line);
+}
+
+/* ナビ: 番号も進捗チェックも置かないフラットな一列（2026-08-23 承認） */
+body[data-system="testlab"] .app-nav-item[data-system="testlab"] {
+  width: 100%;
+  gap: 9px;
+  padding: 6px 11px;
+  border: 0;
+  border-radius: var(--d-radius-ctl);
+  background: none;
+  color: #374151;
+  font-size: 12.5px;
+  font-weight: 400;
+  text-align: left;
+}
+body[data-system="testlab"] .app-nav-item[data-system="testlab"] svg { width: 16px; height: 16px; opacity: .7; }
+body[data-system="testlab"] .app-nav-item[data-system="testlab"].is-active svg { opacity: 1; }
+
+/* グループ見出しは「工程の局面」を示す。押せる項目と紛れないよう小さく薄く置く。 */
+body[data-system="testlab"] .app-nav-group {
+  padding: 10px 11px 2px;
+  color: var(--d-ink-faint);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .06em;
+}
+body[data-system="testlab"] .app-nav-item[data-system="testlab"]:hover { background: var(--d-line-soft); }
+body[data-system="testlab"] .app-nav-item[data-system="testlab"].is-active {
+  background: var(--d-primary);
+  color: #fff;
+  font-weight: 600;
+}
+/* アイコンは持たせない。ラベルだけで読ませる */
+
+
+body[data-system="testlab"] .sidebar-primary-action {
+  border-radius: var(--d-radius-ctl);
+  background: var(--d-primary);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+body[data-system="testlab"] .sidebar-primary-action:hover { background: var(--d-primary-hover); }
+
+/* ══════════════ 見出し ══════════════ */
+
+body[data-system="testlab"] .dash-section-title {
+  color: var(--d-ink);
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+}
+body[data-system="testlab"] .dashboard-section-copy {
+  margin-top: 3px;
+  color: var(--d-ink-sub);
+  font-size: 12.5px;
+}
+body[data-system="testlab"] .dashboard-section-head {
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+body[data-system="testlab"] .dashboard-section-actions { gap: 8px; }
+
+/* ══════════════ ボタン（4種） ══════════════ */
+
+body[data-system="testlab"] .btn-primary {
+  padding: 8px 15px;
+  border: 1px solid transparent;
+  border-radius: var(--d-radius-ctl);
+  background: var(--d-primary);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+body[data-system="testlab"] .btn-primary:hover:not(:disabled) { background: var(--d-primary-hover); }
+body[data-system="testlab"] .btn-primary:disabled { opacity: .45; }
+
+body[data-system="testlab"] .btn-outline-sm {
+  padding: 8px 15px;
+  border: 1px solid #D1D5DB;
+  border-radius: var(--d-radius-ctl);
+  background: none;
+  color: #374151;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+body[data-system="testlab"] .btn-outline-sm:hover:not(:disabled) { background: var(--d-line-soft); }
+
+body[data-system="testlab"] .btn-danger-outline {
+  padding: 8px 15px;
+  border: 1px solid var(--d-ng);
+  border-radius: var(--d-radius-ctl);
+  background: none;
+  color: #E11D48;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+/* ══════════════ 統計（daisyUI stats: 連結ブロック） ══════════════ */
+
+body[data-system="testlab"] .ta-grid-3 {
+  display: flex;
+  gap: 0;
+  margin-bottom: 10px;
+  overflow: hidden;
+  border-radius: var(--d-radius-card);
+  background: var(--d-surface);
+  box-shadow: var(--d-shadow);
+}
+body[data-system="testlab"] .ta-grid-3 .stat-card {
+  flex: 1;
+  padding: 10px 22px;
+  border: 0;
+  border-right: 1px dashed var(--d-line);
+  border-radius: 0;
+  background: none;
+}
+body[data-system="testlab"] .ta-grid-3 .stat-card:last-child { border-right: 0; }
+body[data-system="testlab"] .stat-card-value {
+  color: var(--d-ink);
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -.02em;
+}
+body[data-system="testlab"] .ta-grid-3 .stat-card:first-child .stat-card-value { color: var(--d-primary); }
+body[data-system="testlab"] .stat-card-label {
+  color: var(--d-ink-sub);
+  font-size: 11.5px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* ══════════════ パネル ══════════════ */
+
+body[data-system="testlab"] .ta-panel {
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--d-radius-card);
+  background: var(--d-surface);
+  box-shadow: var(--d-shadow);
+}
+body[data-system="testlab"] .ta-panel-head {
+  gap: 10px;
+  padding: 9px 16px;
+  border-bottom: 1px solid var(--d-line-soft);
+  background: none;
+}
+body[data-system="testlab"] .ta-panel-title {
+  color: var(--d-ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+body[data-system="testlab"] .ta-panel-sub {
+  color: var(--d-ink-faint);
+  font-size: 11.5px;
+}
+body[data-system="testlab"] .ta-panel-body { padding: 10px 16px; }
+body[data-system="testlab"] .ta-panel-actions { gap: 8px; }
+
+/* ══════════════ 表 ══════════════ */
+
+body[data-system="testlab"] .ta-table { font-size: 12.5px; }
+body[data-system="testlab"] .ta-table th {
+  padding: 6px 16px;
+  border-bottom: 1px solid var(--d-line-soft);
+  background: none;
+  color: var(--d-ink-faint);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+body[data-system="testlab"] .ta-table td {
+  padding: 7px 16px;
+  border-bottom: 1px solid var(--d-line-faint);
+  vertical-align: top;
+}
+body[data-system="testlab"] .ta-table tbody tr:nth-child(even) { background: #FAFAFB; }
+body[data-system="testlab"] .ta-table tbody tr:last-child td { border-bottom: 0; }
+body[data-system="testlab"] .ta-table a {
+  color: var(--d-primary);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* ══════════════ バッジ（意味色4つ） ══════════════ */
+
+body[data-system="testlab"] .rh-status-badge,
+body[data-system="testlab"] .ta2-badge {
+  display: inline-block;
+  padding: 2.5px 11px;
+  border: 0;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+body[data-system="testlab"] .ta2-badge-ok,
+body[data-system="testlab"] .rh-status-complete { background: var(--d-ok); color: var(--d-ok-ink); }
+body[data-system="testlab"] .ta2-badge-ng,
+body[data-system="testlab"] .rh-status-failed { background: var(--d-ng); color: var(--d-ng-ink); }
+body[data-system="testlab"] .ta2-badge-wa,
+body[data-system="testlab"] .rh-status-cancelled { background: var(--d-wa); color: var(--d-wa-ink); }
+body[data-system="testlab"] .ta2-badge-info,
+body[data-system="testlab"] .rh-status-running { background: var(--d-info); color: var(--d-info-ink); }
+body[data-system="testlab"] .ta2-badge-muted { background: var(--d-line-soft); color: var(--d-ink-sub); }
+body[data-system="testlab"] .ta2-badge-pri { background: var(--d-primary-pale); color: var(--d-primary); }
+
+/* ══════════════ フォーム ══════════════ */
+
+body[data-system="testlab"] .input-compact,
+body[data-system="testlab"] .select-compact {
+  padding: 8px 12px;
+  border: 1px solid #D1D5DB;
+  border-radius: var(--d-radius-ctl);
+  background: var(--d-surface);
+  color: var(--d-ink);
+  font-size: 12.5px;
+}
+body[data-system="testlab"] .input-compact:focus,
+body[data-system="testlab"] .select-compact:focus {
+  border-color: var(--d-primary);
+  outline: 2px solid var(--d-primary-pale);
+}
+body[data-system="testlab"] .ta-kv-key label {
+  color: var(--d-ink-sub);
+  font-size: 12px;
+  font-weight: 600;
+}
+body[data-system="testlab"] .ta-kv-row { padding: 5px 0; border: 0; }
+
+/* ══════════════ チップ（選択トグル） ══════════════ */
+
+body[data-system="testlab"] .ta-chips { gap: 8px; }
+body[data-system="testlab"] .ta-chip,
+body[data-system="testlab"] .ta-chips button {
+  padding: 5px 14px;
+  border: 1px solid #D1D5DB;
+  border-radius: 999px;
+  background: var(--d-surface);
+  color: #4B5563;
+  font-size: 12px;
+  font-weight: 600;
+}
+body[data-system="testlab"] .ta-chip.is-on,
+body[data-system="testlab"] .ta-chips button.is-on,
+body[data-system="testlab"] .ta-chip[aria-pressed="true"],
+body[data-system="testlab"] .ta-chips button[aria-pressed="true"] {
+  border-color: var(--d-primary);
+  background: var(--d-primary);
+  color: #fff;
+}
+
+/* ══════════════ 工程ストリップ（ホーム・10工程） ══════════════ */
+
+body[data-system="testlab"] .ta-pipeline {
+  display: flex;
+  gap: 0;
+  padding: 12px 12px 6px;
+  margin-bottom: 0;
+}
+body[data-system="testlab"] .ta-pipeline-step {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  padding: 30px 2px 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: var(--d-ink-sub);
+  font-size: 10px;
+  line-height: 1.35;
+  text-align: center;
+  cursor: pointer;
+}
+body[data-system="testlab"] .ta-pipeline-step:hover { color: var(--d-primary); }
+/* 工程をつなぐ線 */
+body[data-system="testlab"] .ta-pipeline-step::before {
+  content: "";
+  position: absolute;
+  top: 12px;
+  left: -50%;
+  z-index: 0;
+  width: 100%;
+  height: 6px;
+  background: var(--d-line);
+}
+body[data-system="testlab"] .ta-pipeline-step:first-child::before { display: none; }
+/* 工程番号の丸 */
+body[data-system="testlab"] .ta-pipeline-step::after {
+  content: attr(data-step);
+  position: absolute;
+  top: 0;
+  left: 50%;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--d-line);
+  color: var(--d-ink-sub);
+  font-size: 11px;
+  font-weight: 700;
+  transform: translateX(-50%);
+}
+body[data-system="testlab"] .ta-pipeline-step.is-done { color: var(--d-ink); }
+body[data-system="testlab"] .ta-pipeline-step.is-done::before { background: var(--d-ok); }
+body[data-system="testlab"] .ta-pipeline-step.is-done::after {
+  content: "✓";
+  background: var(--d-ok);
+  color: var(--d-ok-ink);
+}
+body[data-system="testlab"] .ta-pipeline-step.is-current {
+  background: none;
+  color: var(--d-primary);
+  font-weight: 700;
+}
+body[data-system="testlab"] .ta-pipeline-step.is-current::before { background: var(--d-ok); }
+body[data-system="testlab"] .ta-pipeline-step.is-current::after {
+  background: var(--d-primary);
+  color: #fff;
+}
+
+/* ══════════════ 前後ナビ（JS が各工程画面の末尾へ挿す） ══════════════ */
+
+body[data-system="testlab"] .ta2-stepnav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+body[data-system="testlab"] .ta2-stepnav .ta2-pos {
+  color: var(--d-ink-faint);
+  font-size: 11.5px;
+}
+body[data-system="testlab"] .ta2-stepnav .ta2-spacer { flex: 1; }
+
+/* ══════════════ 補助 ══════════════ */
+
+body[data-system="testlab"] .ta-note,
+body[data-system="testlab"] .muted-copy {
+  color: var(--d-ink-faint);
+  font-size: 11.5px;
+}
+body[data-system="testlab"] .empty {
+  padding: 14px 0;
+  color: var(--d-ink-faint);
+  font-size: 12.5px;
+  text-align: center;
+}
+body[data-system="testlab"] .ta-code {
+  padding: 14px 18px;
+  border: 0;
+  border-radius: 12px;
+  background: #1F2430;
+  color: #C9D2E0;
+  font-size: 11.5px;
+  line-height: 1.75;
+}
+body[data-system="testlab"] .ta-source .ta-source-row { border-bottom: 1px solid var(--d-line-faint); }
+body[data-system="testlab"] .ta-source .ta-source-row:last-child { border-bottom: 0; }
+
+/* 件数バッジ（見出し脇） */
+body[data-system="testlab"] .ta2-count {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--d-primary-pale);
+  color: var(--d-primary);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* ══════════════ AIと相談（浮遊ボタン＋重ねて開くパネル） ══════════════ */
+
+/* 既定は非表示。テスト活動支援でだけ現れる（他システムへ持ち込まない） */
+.ta2-ai-fab,
+.ta2-ai-panel { display: none; }
+
+body[data-system="testlab"] .ta2-ai-fab {
+  position: fixed;
+  right: 24px;
+  bottom: 22px;
+  z-index: 60;
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  padding: 11px 19px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--d-primary);
+  box-shadow: 0 8px 24px rgba(87, 13, 248, .38);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+body[data-system="testlab"] .ta2-ai-fab:hover { background: var(--d-primary-hover); }
+body[data-system="testlab"] .ta2-ai-fab[hidden] { display: none; }
+
+/* 画面を圧迫しないよう、レイアウトに割り込まず上に重ねる */
+body[data-system="testlab"] .ta2-ai-panel {
+  position: fixed;
+  top: 76px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 61;
+  display: flex;
+  flex-direction: column;
+  width: 340px;
+  max-width: calc(100vw - 32px);
+  overflow: hidden;
+  border: 1px solid var(--d-line);
+  border-radius: var(--d-radius-card);
+  background: var(--d-surface);
+  box-shadow: 0 18px 50px rgba(16, 24, 40, .30);
+  animation: ta2-ai-slide .18s ease-out;
+}
+@keyframes ta2-ai-slide {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: none; }
+}
+
+body[data-system="testlab"] .ta2-ai-head {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--d-line-soft);
+}
+body[data-system="testlab"] .ta2-ai-title { flex: 1; font-size: 13px; font-weight: 700; }
+body[data-system="testlab"] .ta2-ai-ctx {
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--d-primary-pale);
+  color: var(--d-primary);
+  font-size: 10px;
+  font-weight: 700;
+}
+body[data-system="testlab"] .ta2-ai-close {
+  border: 0;
+  background: none;
+  color: var(--d-ink-faint);
+  font-size: 15px;
+  cursor: pointer;
+}
+
+body[data-system="testlab"] .ta2-ai-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  overflow-y: auto;
+}
+body[data-system="testlab"] .ta2-msg {
+  max-width: 92%;
+  padding: 9px 12px;
+  border-radius: 14px;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+body[data-system="testlab"] .ta2-msg-ai {
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
+  background: var(--d-line-soft);
+  color: var(--d-ink);
+}
+body[data-system="testlab"] .ta2-msg-me {
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+  background: var(--d-primary);
+  color: #fff;
+}
+/* 反映・遷移の操作。AI が勝手に実行せず、人が押して初めて効く */
+body[data-system="testlab"] .ta2-msg-act {
+  align-self: flex-start;
+  padding: 5px 12px;
+  border: 1px solid #D6C7FA;
+  border-radius: var(--d-radius-ctl);
+  background: #fff;
+  color: var(--d-primary);
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+body[data-system="testlab"] .ta2-msg-act:disabled { opacity: .5; cursor: default; }
+
+body[data-system="testlab"] .ta2-sugg-label {
+  color: var(--d-ink-faint);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+body[data-system="testlab"] .ta2-sugg {
+  padding: 7px 11px;
+  border: 1px solid var(--d-line);
+  border-radius: 10px;
+  background: #FCFCFD;
+  color: #4B5563;
+  font-size: 11.5px;
+  text-align: left;
+  cursor: pointer;
+}
+body[data-system="testlab"] .ta2-sugg:hover { border-color: #D6C7FA; color: var(--d-primary); }
+
+body[data-system="testlab"] .ta2-ai-foot {
+  display: flex;
+  gap: 8px;
+  padding: 11px 14px;
+  border-top: 1px solid var(--d-line-soft);
+}
+body[data-system="testlab"] .ta2-ai-foot input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 14px;
+  border: 1px solid #D1D5DB;
+  border-radius: 999px;
+  font-size: 12px;
+}
+body[data-system="testlab"] .ta2-ai-foot button {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--d-primary);
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* ══════════════ 工程ゲート（未到達の工程は押せない） ══════════════ */
+/* 押せない項目は隠さず、薄くして理由をツールチップで示す。
+   隠すと全体像が分からなくなり、何が残っているのかも読めなくなるため。 */
+
+body[data-system="testlab"] .app-nav-item.is-locked {
+  opacity: .42;
+  cursor: not-allowed;
+}
+body[data-system="testlab"] .app-nav-item.is-locked:hover { background: none; }
+/* 鍵の印。色を読めない環境でも、押せないことが形で分かるようにする */
+body[data-system="testlab"] .app-nav-item.is-locked::after {
+  content: "🔒";
+  margin-left: auto;
+  font-size: 10px;
+  opacity: .8;
+}
+
+body[data-system="testlab"] .ta-pipeline-step.is-locked {
+  opacity: .45;
+  cursor: not-allowed;
+}
+body[data-system="testlab"] .ta-pipeline-step.is-locked:hover { color: var(--d-ink-sub); }
+
+body[data-system="testlab"] .ta2-stepnav [data-sn-next]:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+/* 止めた理由を伝えるトースト。黙って止まると「壊れている」と受け取られる */
+.ta-gate-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 26px;
+  z-index: 70;
+  max-width: min(560px, calc(100vw - 48px));
+  padding: 11px 20px;
+  border-radius: 999px;
+  background: #1F2937;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .3);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+  opacity: 0;
+  transform: translateX(-50%) translateY(8px);
+  transition: opacity .18s ease, transform .18s ease;
+  pointer-events: none;
+}
+.ta-gate-toast.is-on { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ══════════════ 補助アクション（btn-outline-sm からの格下げ先） ══════════════
+   主アクション 1 個を際立たせるため、補助操作は枠を持たないテキストボタンにする。
+   btn-outline-sm と同じ機能・同じ hit area を保ちつつ、視覚的重みだけを落とす。 */
+body[data-system="testlab"] .ta-linkbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: var(--d-radius-ctl);
+  background: transparent;
+  color: var(--d-ink-sub);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  text-decoration: none;
+}
+body[data-system="testlab"] .ta-linkbtn:hover:not(:disabled) {
+  color: var(--d-primary);
+  background: var(--d-line-faint);
+  text-decoration: underline;
+}
+body[data-system="testlab"] .ta-linkbtn:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+/* ══════════════ 数値の状態色 ══════════════
+   実測: 失敗 1892 件・成功率 50% が黒文字で出ていた。数値は状態を語る要素なので色を持たせる。 */
+body[data-system="testlab"] .stat-card-value.is-ng,
+body[data-system="testlab"] .ta-num.is-ng { color: var(--d-ng-text); }
+body[data-system="testlab"] .stat-card-value.is-ok,
+body[data-system="testlab"] .ta-num.is-ok { color: var(--d-ok-text); }
+body[data-system="testlab"] .stat-card-value.is-wa,
+body[data-system="testlab"] .ta-num.is-wa { color: var(--d-wa-text); }
+body[data-system="testlab"] .stat-card-value.is-pri,
+body[data-system="testlab"] .ta-num.is-pri { color: var(--d-primary); }
+
+/* ══════════════ 準備中（未配線）の明示 ══════════════
+   押しても何も起きないボタンを黙って置かない。無効であることを見た目で示す。 */
+body[data-system="testlab"] [data-wip="1"] {
+  opacity: .45;
+  cursor: not-allowed;
+}
+body[data-system="testlab"] .ta-wip-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 7px;
+  border-radius: var(--radius-full, 999px);
+  background: var(--d-line-soft);
+  color: var(--d-ink-faint);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* ══════════════ 縦圧縮（2026-08-24 実測: 表示領域 826px に対し全画面が超過）══════════════
+   ISO/IEC 25010 使用性→認識性: 1画面内で工程の状態を認識できることを基準に、
+   情報を削らず余白と折返しだけを削る。 */
+body[data-system="testlab"] .ta-wip-note {
+  padding: 0 6px;
+  font-size: 10px;
+  line-height: 16px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+/* 設定系の縦積みを横並びへ: label と入力を1行に収め、行あたりの高さを固定する */
+body[data-system="testlab"] .ta-kv-row {
+  padding: 3px 0;
+  align-items: center;
+  min-height: 34px;
+}
+body[data-system="testlab"] .ta-panel { margin-bottom: 8px; }
+body[data-system="testlab"] .ta-note { padding: 6px 12px; font-size: 12px; }
+body[data-system="testlab"] .ta2-stepnav { margin-top: 8px; }
+body[data-system="testlab"] .dashboard-section-head { margin-bottom: 6px; }
+
+/* ══════════════ 表の高さ制限（2026-08-24 実測: 実行結果200行で 11,672px ＝ 14画面分）══════════════
+   実データを入れると表がページ全体を押し広げ、画面の他の要素（数値・ゲージ・次工程）が
+   スクロールの彼方へ消える。表は自分の枠内でスクロールさせ、ページは1画面に収める。
+   ISO/IEC 25010 使用性→認識性: 状態を1画面で認識できることを優先する。 */
+body[data-system="testlab"] .ta-table-wrap {
+  /* 固定値ではなく画面高に追従させる。画面が大きいほど多くの行が見え、
+     どの画面サイズでもページ自体はスクロールしない。 */
+  max-height: calc(100vh - 690px);
+  min-height: 200px;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+/* 表ヘッダを固定して、スクロール中も列の意味を見失わせない */
+body[data-system="testlab"] .ta-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--d-line-faint);
+}
+/* ログも同様に枠内スクロール（常時表示は維持したまま高さだけ抑える） */
+body[data-system="testlab"] .ta-log,
+body[data-system="testlab"] pre.ta-code,
+body[data-system="testlab"] .ta-panel pre {
+  max-height: 150px;
+  overflow-y: auto;
+}
+/* 共用テストケースグリッドも同様 */
+body[data-system="testlab"] .tcg-scroll,
+body[data-system="testlab"] .testcase-grid-scroll {
+  max-height: calc(100vh - 600px);
+  min-height: 220px;
+  overflow-y: auto;
+}
+
+/* 縦圧縮 第2弾（2026-08-24 実測: 9画面が 53〜314px 超過）*/
+body[data-system="testlab"] .ta-panel { margin-bottom: 6px; }
+body[data-system="testlab"] .ta-panel-head { padding: 7px 14px; }
+body[data-system="testlab"] .ta-panel-body { padding: 8px 14px; }
+body[data-system="testlab"] .ta-grid-3 { margin-bottom: 8px; }
+body[data-system="testlab"] .stat-card { padding: 8px 18px; }
+body[data-system="testlab"] .dashboard-section-head { margin-bottom: 4px; }
+body[data-system="testlab"] .ta-panel-sub { font-size: 11px; line-height: 1.35; }
+body[data-system="testlab"] .ta-note { padding: 5px 12px; }
+body[data-system="testlab"] .ta2-stepnav { margin-top: 6px; }
+body[data-system="testlab"] .ta-table th { padding: 5px 14px; }
+body[data-system="testlab"] .ta-table td { padding: 5px 14px; }
+
+/* details パネルの開閉インジケータ（.ta-panel-head の flex で既定マーカーが消えるため補う）*/
+body[data-system="testlab"] details.ta-panel > summary.ta-panel-head {
+  cursor: pointer;
+  list-style: none;
+  position: relative;
+  padding-right: 34px;
+}
+body[data-system="testlab"] details.ta-panel > summary.ta-panel-head::-webkit-details-marker { display: none; }
+body[data-system="testlab"] details.ta-panel > summary.ta-panel-head::after {
+  content: "";
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  margin-top: -5px;
+  border-right: 2px solid var(--d-ink-sub);
+  border-bottom: 2px solid var(--d-ink-sub);
+  transform: rotate(45deg);
+  transition: transform .15s;
+}
+body[data-system="testlab"] details.ta-panel[open] > summary.ta-panel-head::after {
+  transform: rotate(-135deg);
+  margin-top: -1px;
+}
+body[data-system="testlab"] details.ta-panel > summary.ta-panel-head:hover { background: var(--d-line-faint); }
+
+/* 残余の超過潰し（実測 11〜108px）*/
+body[data-system="testlab"] .ta-panel-title { font-size: 13px; }
+body[data-system="testlab"] .ta-panel-head { padding: 6px 14px; }
+body[data-system="testlab"] .ta-panel-body { padding: 7px 14px; }
+body[data-system="testlab"] .ta-panel { margin-bottom: 5px; }
+body[data-system="testlab"] .stat-card { padding: 7px 18px; }
+body[data-system="testlab"] .ta-pipeline { padding: 8px 12px 4px; }
+body[data-system="testlab"] .ta-source-item { padding: 5px 10px; }

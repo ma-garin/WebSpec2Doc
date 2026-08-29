@@ -1,0 +1,30 @@
+{
+  "feature_id": "ui_visual_complexity",
+  "name": "UI 視覚的複雑性の実測・回帰検知",
+  "risk_level": "medium",
+  "status": "implemented",
+  "ui_files": [],
+  "route_files": [],
+  "core_files": [
+    "web/services/visual_complexity.py"
+  ],
+  "symbols": [
+    "measure",
+    "VisualComplexity"
+  ],
+  "outputs": [
+    "compression_ratio",
+    "edge_density",
+    "colorfulness"
+  ],
+  "persistence": [],
+  "failure_modes": [
+    "empty_image",
+    "resolution_variance",
+    "grayscale_only"
+  ],
+  "required_tests": [
+    "happy_path",
+    "error_path"
+  ]
+}

@@ -1,0 +1,53 @@
+        <!-- ===== テナント管理ビュー（管理者専用） ===== -->
+        <!-- テナント（ワークスペース）そのものの管理。利用者の管理は
+             partials/view-user-management.html（/user-management）が担当する。
+             一覧・ツールバー・ダイアログの作りはユーザー管理と揃えている
+             （同じ .uadm-* を使い、2画面で操作の学習をやり直させない）。 -->
+        <section class="view" id="view-tenant-management"
+                 data-is-admin="{{ '1' if auth_user and auth_user.role == 'admin' else '0' }}">
+
+          <div class="input-card" id="tadm-denied-card" hidden>
+            <div class="wizard-page-header">
+              <h2>テナント管理</h2>
+              <p>この画面は管理者のみが利用できます。権限が必要な場合は、所属テナントの管理者に依頼してください。</p>
+            </div>
+          </div>
+
+          <div class="input-card tadm-admin-only">
+            <div class="wizard-page-header">
+              <h2>テナント（ワークスペース）一覧</h2>
+              <p>成果物と実行履歴の分離単位です。保存先は <code>output/tenants/{slug}/</code>・<code>instance/tenants/{slug}/</code>。
+                 誰がどのテナントに所属するかは<a href="/user-management">ユーザー管理</a>で設定します。</p>
+            </div>
+
+            <div class="uadm-toolbar">
+              <div class="uadm-toolbar-left">
+                <input type="search" id="tadm-search" class="uadm-search"
+                       placeholder="名前・slug で絞り込み" aria-label="テナントを絞り込み">
+                <span class="uadm-count" id="tadm-count" aria-live="polite"></span>
+              </div>
+              <button type="button" class="btn-primary uadm-add-btn" id="tadm-add-btn">新規登録</button>
+            </div>
+
+            <div class="account-table-wrap">
+              <table class="account-table uadm-table">
+                <colgroup>
+                  <col class="uadm-col-tname">
+                  <col class="uadm-col-slug">
+                  <col class="uadm-col-count">
+                  <col class="uadm-col-seen">
+                  <col class="uadm-col-act">
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>名前</th><th>slug</th><th>メンバー</th><th>作成日</th>
+                    <th class="uadm-th-act">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="tadm-rows"></tbody>
+              </table>
+            </div>
+            <div id="tadm-status" class="account-status" aria-live="polite"></div>
+          </div>
+
+        </section>

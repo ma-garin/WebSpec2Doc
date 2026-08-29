@@ -1,0 +1,44 @@
+{
+  "feature_id": "tenant_isolation",
+  "name": "テナント分離（出力・観点DB・APIトークンのワークスペース分離）",
+  "risk_level": "critical",
+  "status": "implemented",
+  "ui_files": [
+    "templates/partials/view-account.html"
+  ],
+  "route_files": [
+    "web/routes/account.py"
+  ],
+  "core_files": [
+    "web/tenancy.py",
+    "web/services/auth_store.py",
+    "web/services/viewpoint_store.py"
+  ],
+  "symbols": [
+    "scoped_output_dir",
+    "scoped_instance_path",
+    "create_tenant",
+    "get_viewpoint_store"
+  ],
+  "outputs": [
+    "tenant-scoped output tree",
+    "tenant-scoped viewpoints.db",
+    "tenant API tokens"
+  ],
+  "persistence": [
+    "output/tenants/{slug}/",
+    "instance/tenants/{slug}/viewpoints.db"
+  ],
+  "failure_modes": [
+    "invalid_tenant_slug_rejected",
+    "cross_tenant_path_traversal_blocked",
+    "background_job_without_request_context",
+    "shared_mode_lists_exclude_tenant_dirs"
+  ],
+  "required_tests": [
+    "happy_path",
+    "isolation_path",
+    "error_path",
+    "evidence"
+  ]
+}

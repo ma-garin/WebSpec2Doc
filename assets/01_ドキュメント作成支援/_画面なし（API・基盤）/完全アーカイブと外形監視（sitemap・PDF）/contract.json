@@ -1,0 +1,36 @@
+{
+  "feature_id": "full_archive",
+  "name": "完全アーカイブと外形監視（sitemap/PDF）",
+  "risk_level": "medium",
+  "status": "implemented",
+  "ui_files": [],
+  "route_files": [],
+  "core_files": [
+    "src/archive/full_archive.py",
+    "src/archive/external_monitor.py"
+  ],
+  "symbols": [
+    "create_full_archive",
+    "verify_archive",
+    "parse_sitemap",
+    "diff_documents"
+  ],
+  "outputs": [
+    "archive_*.zip（MANIFEST.json同梱）",
+    "sitemap/文書の差分"
+  ],
+  "persistence": [
+    "output/{domain}/archives/"
+  ],
+  "failure_modes": [
+    "missing_source",
+    "tampered_archive",
+    "broken_sitemap"
+  ],
+  "required_tests": [
+    "happy_path",
+    "tamper_detection",
+    "source_preserved",
+    "evidence"
+  ]
+}

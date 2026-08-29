@@ -1,0 +1,60 @@
+{
+  "feature_id": "testcase_table",
+  "name": "ローレベルテストケース表（9列生成・Excel風編集・編集履歴）",
+  "risk_level": "high",
+  "status": "implemented",
+  "ui_files": [
+    "templates/partials/view-generate.html",
+    "static/js/view-testcase-grid.js",
+    "static/js/testcase-grid-edit.js"
+  ],
+  "route_files": [
+    "web/routes/qa_process.py"
+  ],
+  "core_files": [
+    "src/generator/testcase_table.py",
+    "web/services/testcase_table_store.py",
+    "web/services/testcase_spec_generator.py",
+    "web/services/screen_test_design.py"
+  ],
+  "symbols": [
+    "build_testcase_table",
+    "compose",
+    "update_cell",
+    "reset_cell",
+    "add_row",
+    "delete_row",
+    "load_history",
+    "generate_spec",
+    "is_executable",
+    "save_run_result"
+  ],
+  "outputs": [
+    "10列テストケース表（ID/名称/画面/機能/観点/前提条件/手順/期待結果/自動化判定/結果）",
+    "編集履歴（変更前後の値）",
+    "testcases.spec.ts（表から生成した Playwright コード）",
+    "実行結果（ケース単位の PASS/FAIL）"
+  ],
+  "persistence": [
+    "output/{domain}/testcases/edits.json",
+    "output/{domain}/testcases/history.jsonl",
+    "output/{domain}/testcases/testcases.spec.ts",
+    "output/{domain}/testcases/run_result.json"
+  ],
+  "failure_modes": [
+    "report_corrupt",
+    "uneditable_column",
+    "unknown_case_id",
+    "concurrent_edit_overwrite",
+    "save_failure",
+    "no_executable_case",
+    "playwright_not_installed",
+    "egress_denied",
+    "execution_timeout"
+  ],
+  "required_tests": [
+    "happy_path",
+    "error_path",
+    "evidence"
+  ]
+}

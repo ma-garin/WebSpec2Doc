@@ -1,0 +1,114 @@
+{
+  "schema": "webspec2doc/feature-asset@1",
+  "version": "20260829-81e4c84",
+  "generated_at": "2026-08-29T11:24:08Z",
+  "source": {
+    "repository": "WebSpec2Doc",
+    "revision": "81e4c84",
+    "working_tree_dirty": true,
+    "contract_file": "quality/feature_contracts.yml"
+  },
+  "feature": {
+    "feature_id": "ci_warnings_cleanup",
+    "name": "CI警告一掃（pytest収集警告・Pillow非推奨警告の解消と再発防止）",
+    "risk_level": "low",
+    "status": "implemented",
+    "ui_files": [],
+    "route_files": [],
+    "core_files": [
+      "src/diff/screenshot_diff.py",
+      "src/llm/viewpoint_generator.py",
+      "src/analyzer/test_conditions.py"
+    ],
+    "symbols": [
+      "_count_nonzero_pixels"
+    ],
+    "outputs": [
+      "pytest実行ログ（警告0件）"
+    ],
+    "persistence": [],
+    "failure_modes": [
+      "collection_warning_regression",
+      "pillow_deprecation_regression"
+    ],
+    "required_tests": [
+      "parity",
+      "collection_guard",
+      "static_guard"
+    ]
+  },
+  "placement": {
+    "system_key": "docs",
+    "system": "01_ドキュメント作成支援",
+    "screen": "_画面なし（API・基盤）",
+    "screens": [],
+    "classified_by": "path"
+  },
+  "files": [
+    {
+      "path": "src/diff/screenshot_diff.py",
+      "role": "core",
+      "bytes": 23741,
+      "sha256": "4b18624aff685cf57a4111992b4de0b8d8fbb1fc2e097ae1150e4ae830364f73"
+    },
+    {
+      "path": "src/llm/viewpoint_generator.py",
+      "role": "core",
+      "bytes": 29456,
+      "sha256": "4b1ebe22e44aa7bda875e67b81baf1638441cc0ac52ac655c38386230b9568bb"
+    },
+    {
+      "path": "src/analyzer/test_conditions.py",
+      "role": "core",
+      "bytes": 9722,
+      "sha256": "47b3515d31e748796e574444e7c3fffd62237aa8c0ee78e56df83ee52c625f74"
+    }
+  ],
+  "wiring": {
+    "blueprints": [],
+    "provides_endpoints": []
+  },
+  "dependencies": {
+    "internal_modules_not_bundled": [
+      "src/crawler/page_crawler.py",
+      "src/ingest/models.py",
+      "src/llm/openai_client.py",
+      "src/llm/prompt_guard.py",
+      "src/llm/provider.py",
+      "src/llm/screen_classifier.py",
+      "src/techniques/combinatorial.py"
+    ],
+    "third_party_packages": [
+      {
+        "import": "Pillow",
+        "requirement": "Pillow>=11.0.0",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "numpy",
+        "requirement": "numpy>=2.0.0",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "playwright",
+        "requirement": "playwright==1.61.0",
+        "declared_in_requirements": true
+      }
+    ],
+    "env_vars": [],
+    "data_files": [],
+    "consumes_endpoints": [],
+    "window_globals": [],
+    "template_includes_not_bundled": [],
+    "static_refs_not_bundled": []
+  },
+  "gaps": [],
+  "shared_assets": [],
+  "warnings": [],
+  "verification": {
+    "static_analysis": "done",
+    "pytest": "not_run",
+    "verify_ui": "not_run",
+    "manual_screen_check": "not_run"
+  }
+}

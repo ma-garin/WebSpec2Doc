@@ -1,0 +1,193 @@
+        <!-- ===== テスト活動支援 / 連携設定 ===== -->
+        <section class="view" id="view-integrations">
+          <div class="dashboard-section-head">
+            <div>
+              <p class="dashboard-section-copy">テスト活動支援が参照する入力元を接続します。接続した情報はテスト設計・実装・不具合分析で使われます。</p>
+              <div class="stat-card-value is-ng" id="ta-int-summary">未接続 - / 3</div>
+            </div>
+            <div class="dashboard-section-actions">
+              <button type="button" class="btn-primary" id="ta-int-test-all">接続を確認</button>
+            </div>
+          </div>
+
+          <div class="ta-panel" id="ta-int-source-list">
+            <div class="ta-panel-head">
+              <div class="ta-panel-title" title="WebSpec2Doc のドキュメント作成で生成した画面仕様書・テスト設計を取り込みます。未接続だとテスト設計への自動取り込みができません。">ドキュメント</div>
+              <div class="ta-panel-actions">
+                <span class="ta2-badge ta2-badge-muted" id="ta-int-docs-badge">確認中</span>
+                <button type="button" class="ta-linkbtn" id="ta-int-docs-connect">接続</button>
+              </div>
+            </div>
+            <div class="ta-panel-head">
+              <div class="ta-panel-title" title="GitHub / GitLab / Bitbucket / Azure DevOps / 汎用 Git / ローカルパス / ZIP から参照元を選び、静的解析します。未接続だとコード変更に基づく影響範囲分析ができません。">ソースコード</div>
+              <div class="ta-panel-actions">
+                <span class="ta2-badge ta2-badge-ng" id="ta-int-code-badge">未接続</span>
+                <span class="ta-wip-note" id="ta-int-code-wip-note">認証情報が未設定のため利用できません</span>
+                <button type="button" class="ta-linkbtn" id="ta-int-code-connect" disabled data-wip="1">接続</button>
+              </div>
+            </div>
+            <div class="ta-panel-head">
+              <div class="ta-panel-title" title="コーディング規約・テスト規約の文書を、アップロード / URL / ローカルパスから登録し、生成コードを準拠させます。未接続だと生成コードの規約チェックができません。">開発標準</div>
+              <div class="ta-panel-actions">
+                <span class="ta2-badge ta2-badge-ng" id="ta-int-standard-badge">未接続</span>
+                <span class="ta-wip-note" id="ta-int-standard-wip-note">認証情報が未設定のため利用できません</span>
+                <button type="button" class="ta-linkbtn" id="ta-int-standard-connect" disabled data-wip="1">接続</button>
+              </div>
+            </div>
+          </div>
+
+          <details class="ta-panel">
+            <summary class="ta-panel-head">
+              <div>
+                <div class="ta-panel-title">ソースコード連携（未接続）</div>
+                <div class="ta-panel-sub">参照元を1つ選び、アクセス情報を設定します。<span class="ta-wip-note" id="ta-int-code-detail-note">認証情報が未設定のため利用できません</span></div>
+              </div>
+              <div class="ta-panel-actions">
+                <button type="button" class="ta-linkbtn" id="ta-int-code-save" disabled data-wip="1">接続</button>
+              </div>
+            </summary>
+            <div class="ta-panel-body">
+              <div class="ta-kv">
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key"><label for="ta-int-code-provider">参照元</label></div>
+                  <div class="ta-kv-val">
+                    <select class="select-compact" id="ta-int-code-provider">
+                      <option value="github">GitHub</option>
+                      <option value="gitlab">GitLab</option>
+                      <option value="bitbucket">Bitbucket</option>
+                      <option value="azure">Azure DevOps (Repos)</option>
+                      <option value="generic">汎用 Git</option>
+                      <option value="local">ローカルパス</option>
+                      <option value="zip">ZIP アップロード</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div class="ta-kv" id="ta-int-code-git-fields">
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key"><label for="ta-int-code-repo" id="ta-int-code-repo-label">リポジトリ</label></div>
+                  <div class="ta-kv-val">
+                    <input type="text" class="input-compact" id="ta-int-code-repo" placeholder="owner/repository" autocomplete="off" />
+                  </div>
+                </div>
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key"><label for="ta-int-code-host" id="ta-int-code-host-label">ホストURL</label></div>
+                  <div class="ta-kv-val">
+                    <input type="text" class="input-compact" id="ta-int-code-host" placeholder="github.com（既定）または自ホストURL" autocomplete="off" />
+                  </div>
+                </div>
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key"><label for="ta-int-code-auth-method">認証方式</label></div>
+                  <div class="ta-kv-val">
+                    <select class="select-compact" id="ta-int-code-auth-method">
+                      <option value="token">トークン</option>
+                      <option value="ssh">SSH鍵</option>
+                      <option value="userpass">ユーザー名とパスワード</option>
+                      <option value="anonymous">匿名（公開リポジトリ）</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="ta-kv-row" id="ta-int-code-username-row" hidden>
+                  <div class="ta-kv-key"><label for="ta-int-code-username">ユーザー名</label></div>
+                  <div class="ta-kv-val">
+                    <input type="text" class="input-compact" id="ta-int-code-username" autocomplete="off" />
+                  </div>
+                </div>
+                <div class="ta-kv-row" id="ta-int-code-secret-row">
+                  <div class="ta-kv-key"><label for="ta-int-code-secret" id="ta-int-code-secret-label">トークン</label></div>
+                  <div class="ta-kv-val">
+                    <input type="password" class="input-compact" id="ta-int-code-secret" placeholder="ghp_..." autocomplete="new-password" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="ta-kv" id="ta-int-code-local-fields" hidden>
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key"><label for="ta-int-code-local-path">ディレクトリパス</label></div>
+                  <div class="ta-kv-val">
+                    <input type="text" class="input-compact" id="ta-int-code-local-path" placeholder="/srv/repos/example" autocomplete="off" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="ta-kv" id="ta-int-code-zip-fields" hidden>
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key"><label for="ta-int-code-zip-file">ZIPファイル</label></div>
+                  <div class="ta-kv-val">
+                    <input type="file" class="input-compact" id="ta-int-code-zip-file" accept=".zip" data-wip="1" />
+                  </div>
+                </div>
+              </div>
+
+              <p class="ta-note">トークン・パスワード・鍵は環境変数またはシークレットマネージャで管理します。リポジトリには保存しません。</p>
+              <p class="ta-wip-note">入力内容を保存するAPIは未実装です。「接続」はローカルパス選択時のみ、バックエンドへの疎通確認を行います（パスの実在チェックは未実装）。</p>
+            </div>
+          </details>
+
+          <details class="ta-panel">
+            <summary class="ta-panel-head">
+              <div>
+                <div class="ta-panel-title">開発標準（未接続）</div>
+                <div class="ta-panel-sub">コーディング規約・テスト規約の文書を登録します。生成コードのレビュー基準にも使われます。<span class="ta-wip-note">準備中（登録APIが未実装）</span></div>
+              </div>
+              <div class="ta-panel-actions">
+                <button type="button" class="ta-linkbtn" id="ta-int-standard-upload" disabled data-wip="1">登録</button>
+              </div>
+            </summary>
+            <div class="ta-panel-body">
+              <div class="ta-kv">
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key"><label for="ta-int-standard-source">取り込み元</label></div>
+                  <div class="ta-kv-val">
+                    <select class="select-compact" id="ta-int-standard-source">
+                      <option value="upload">ファイルアップロード</option>
+                      <option value="url">URL指定</option>
+                      <option value="local">ローカルパス指定</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key"><label for="ta-int-standard-kind">種別</label></div>
+                  <div class="ta-kv-val">
+                    <select class="select-compact" id="ta-int-standard-kind" data-wip="1">
+                      <option value="coding">コーディング規約</option>
+                      <option value="test">テスト規約</option>
+                      <option value="review">レビュー基準</option>
+                      <option value="other">その他</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div class="ta-kv" id="ta-int-standard-upload-fields">
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key"><label for="ta-int-standard-file">標準文書</label></div>
+                  <div class="ta-kv-val">
+                    <input type="file" class="input-compact" id="ta-int-standard-file" accept=".md,.txt,.pdf,.docx" multiple data-wip="1" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="ta-kv" id="ta-int-standard-url-fields" hidden>
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key"><label for="ta-int-standard-url">URL</label></div>
+                  <div class="ta-kv-val">
+                    <input type="text" class="input-compact" id="ta-int-standard-url" placeholder="https://example.com/coding-standard.md" autocomplete="off" data-wip="1" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="ta-kv" id="ta-int-standard-local-fields" hidden>
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key"><label for="ta-int-standard-local-path">ディレクトリパス</label></div>
+                  <div class="ta-kv-val">
+                    <input type="text" class="input-compact" id="ta-int-standard-local-path" placeholder="/srv/docs/standards" autocomplete="off" data-wip="1" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="empty" id="ta-int-standard-body">開発標準の登録機能は準備中です。実装後、上の［登録］から登録するとここに表示されます。</div>
+            </div>
+          </details>
+        </section>

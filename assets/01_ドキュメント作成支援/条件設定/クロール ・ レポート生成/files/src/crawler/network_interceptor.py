@@ -1,0 +1,275 @@
+"""クロール中の XHR / fetch レスポンスを傍受して API エンドポイントを記録する。
+
+NetworkCapture を crawl_page() の前後で attach/detach することで、
+1 ページ分のリクエストのみを正確に収集する。
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import os
+from collections import Counter
+from collections.abc import Callable
+from typing import Any
+from urllib.parse import urlparse
+
+from playwright.sync_api import Page, Response
+
+# 監査ログと同じ短縮規則を使う。画面ログと audit.jsonl で URL の形が違うと
+# 突き合わせられなくなるため、切り詰め方は 1 箇所に持たせる。
+from crawler.page_crawler import ApiEndpoint, _strip_query_for_audit
+
+STATIC_EXTENSIONS = frozenset(
+    {
+        ".js",
+        ".css",
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".gif",
+        ".svg",
+        ".ico",
+        ".woff",
+        ".woff2",
+        ".ttf",
+        ".eot",
+        ".mp4",
+        ".webp",
+        ".map",
+        ".txt",
+        ".xml",
+    }
+)
+MAX_RESPONSE_BODY_BYTES = 32_768
+SAMPLE_FIELDS_LIMIT = 20
+
+# 破壊的操作（サーバ状態を変更しうる HTTP メソッド）
+MUTATION_METHODS = frozenset({"POST", "PUT", "DELETE", "PATCH"})
+ALLOW_MUTATION_ENV = "WEBSPEC2DOC_ALLOW_MUTATION"
+
+logger = logging.getLogger(__name__)
+
+
+def _origin_of(url: str) -> str:
+    """https://example.com/a?b=c → https://example.com。取れなければ元の文字列。"""
+    parsed = urlparse(url)
+    return f"{parsed.scheme}://{parsed.netloc}" if parsed.netloc else url
+
+
+# 遮断ログの抑制状態はクロール全体で共有する。MutationBlocker は 1 ページごとに
+# 作り直されるため、インスタンス変数に持たせると 300 ページで同じ行が 300 回出る。
+# 遮断そのものはページ単位で audit.jsonl に全件残るので、ここで間引くのは表示だけ。
+_LOGGED_ORIGINS: set[str] = set()
+_SUPPRESSED_BY_ORIGIN: Counter[str] = Counter()
+
+
+def reset_mutation_log_state() -> None:
+    """遮断ログの抑制状態を初期化する。クロール開始時に呼ぶ。"""
+    _LOGGED_ORIGINS.clear()
+    _SUPPRESSED_BY_ORIGIN.clear()
+
+
+def log_mutation_block_summary() -> None:
+    """抑制した遮断の件数をオリジン別に 1 行で出す。クロール終了時に呼ぶ。
+
+    「出さなかった」ではなく「まとめた」と分かる形で残す。
+    件数を伏せると、遮断が起きていないのか隠れているのか区別できなくなる。
+    """
+    if not _SUPPRESSED_BY_ORIGIN:
+        return
+    breakdown = "、".join(
+        f"{origin} ×{count}件" for origin, count in sorted(_SUPPRESSED_BY_ORIGIN.items())
+    )
+    logger.warning("破壊的リクエストの遮断（2件目以降をまとめました）: %s", breakdown)
+
+
+def mutations_allowed() -> bool:
+    """破壊的リクエスト（POST/PUT/DELETE/PATCH）の送出を許可するか（opt-in）。
+
+    既定は遮断。環境変数 WEBSPEC2DOC_ALLOW_MUTATION=1 でのみ解除する。
+    """
+    return os.environ.get(ALLOW_MUTATION_ENV, "") == "1"
+
+
+class MutationBlocker:
+    """POST/PUT/DELETE/PATCH リクエストを既定で遮断するルートハンドラ。
+
+    Usage::
+
+        blocker = MutationBlocker()
+        blocker.attach(page)
+        try:
+            ...
+        finally:
+            blocker.detach()
+    """
+
+    def __init__(self, allow: bool | None = None) -> None:
+        self._allow = mutations_allowed() if allow is None else allow
+        self._page: Page | None = None
+        self.blocked: list[tuple[str, str]] = []
+
+    @property
+    def allow(self) -> bool:
+        """破壊的リクエストを許可しているかを返す。"""
+        return self._allow
+
+    def _log_blocked(self, method: str, url: str) -> None:
+        """遮断を画面ログへ出す。同じオリジンの 2 件目以降は数えるだけにする。
+
+        アクセス解析のビーコン（GA / 広告タグ等）は 1 ページで何本も飛び、
+        クエリ文字列が数百文字あるため、そのまま出すと 1 件で 3〜4 行を占める。
+        300 ページ規模では実行ログが遮断ログだけで埋まり、進捗が読めなくなる。
+        遮断した事実は self.blocked と audit.jsonl に全件残るので、監査は落ちない。
+        """
+        origin = _origin_of(url)
+        if origin in _LOGGED_ORIGINS:
+            _SUPPRESSED_BY_ORIGIN[origin] += 1
+            return
+        _LOGGED_ORIGINS.add(origin)
+        logger.warning("破壊的リクエストを遮断しました: %s %s", method, _strip_query_for_audit(url))
+
+    def attach(self, page: Page) -> None:
+        """page の全リクエストルートにハンドラを登録する。"""
+        self._page = page
+        try:
+            page.route("**/*", self.handle_route)
+        except Exception as exc:
+            logger.warning("破壊的操作遮断のルート登録に失敗しました: %s", exc)
+            self._page = None
+
+    def detach(self) -> None:
+        """登録したルートハンドラを解除する。attach() 前に呼んでも安全。"""
+        if self._page is not None:
+            try:
+                self._page.unroute("**/*", self.handle_route)
+            except Exception as exc:
+                logger.warning("破壊的操作遮断のルート解除に失敗しました: %s", exc)
+        self._page = None
+
+    def handle_route(self, route: Any) -> None:
+        """破壊的メソッドのリクエストを abort し、それ以外は通過させる。"""
+        try:
+            method = str(route.request.method).upper()
+            url = str(route.request.url)
+        except Exception:
+            method, url = "GET", ""
+        if not self._allow and method in MUTATION_METHODS:
+            self.blocked.append((method, url))
+            self._log_blocked(method, url)
+            try:
+                route.abort()
+            except Exception as exc:
+                logger.debug("route.abort に失敗しました: %s", exc)
+            return
+        try:
+            route.continue_()
+        except Exception as exc:
+            logger.debug("route.continue_ に失敗しました: %s", exc)
+
+
+class NetworkCapture:
+    """ページに attach して XHR/fetch レスポンスを収集する。
+
+    Usage::
+
+        capture = NetworkCapture()
+        capture.attach(page)
+        try:
+            page.goto(url, ...)
+            ...
+        finally:
+            capture.detach()
+        endpoints = capture.finalize()
+    """
+
+    def __init__(self) -> None:
+        self._raw: list[tuple[str, str, int, str, tuple[str, ...]]] = []
+        self._page: Page | None = None
+        self._handler: Callable[[Response], None] | None = None
+
+    def attach(self, page: Page) -> None:
+        """page の response イベントにリスナーを登録する。"""
+        self._page = page
+
+        def _handler(response: Response) -> None:
+            try:
+                self._record(response)
+            except Exception as exc:
+                logger.debug("レスポンス記録エラー: %s", exc)
+
+        self._handler = _handler
+        page.on("response", _handler)
+
+    def detach(self) -> None:
+        """登録したリスナーを解除する。attach() 前に呼んでも安全。"""
+        if self._page is not None and self._handler is not None:
+            try:
+                self._page.remove_listener("response", self._handler)
+            except Exception as exc:
+                logger.warning("レスポンスリスナー解除時にエラーが発生しました: %s", exc)
+        self._page = None
+        self._handler = None
+
+    def finalize(self) -> tuple[ApiEndpoint, ...]:
+        """収集結果を重複除去（method+path+status）して返す。"""
+        seen: dict[tuple[str, str, int], ApiEndpoint] = {}
+        for method, path, status, ct, fields in self._raw:
+            key = (method, path, status)
+            if key not in seen:
+                seen[key] = ApiEndpoint(
+                    method=method,
+                    path=path,
+                    status_code=status,
+                    content_type=ct,
+                    sample_fields=fields,
+                )
+        return tuple(seen.values())
+
+    def _record(self, response: Response) -> None:
+        url = response.url
+        parsed = urlparse(url)
+        path = parsed.path or "/"
+
+        # 静的ファイルは除外
+        last_segment = path.split("/")[-1]
+        suffix = f".{last_segment.rsplit('.', 1)[-1].lower()}" if "." in last_segment else ""
+        if suffix in STATIC_EXTENSIONS:
+            return
+
+        ct = response.headers.get("content-type", "")
+        is_json = "json" in ct
+        is_form = "form" in ct
+
+        # HTML ナビゲーション（2xx）は除外し、API 応答のみ記録
+        if response.status < 300 and not (is_json or is_form):
+            return
+
+        try:
+            method = response.request.method.upper()
+        except Exception as exc:
+            logger.debug("リクエストメソッド取得エラー: %s", exc)
+            method = "GET"
+
+        sample_fields: tuple[str, ...] = ()
+        if is_json:
+            sample_fields = _extract_response_fields(response)
+
+        self._raw.append((method, path, response.status, ct.split(";")[0].strip(), sample_fields))
+
+
+def _extract_response_fields(response: Response) -> tuple[str, ...]:
+    """JSON レスポンスのトップレベルキーを最大 SAMPLE_FIELDS_LIMIT 個返す。"""
+    try:
+        body = response.body()
+        if len(body) > MAX_RESPONSE_BODY_BYTES:
+            return ()
+        data = json.loads(body.decode("utf-8", errors="replace"))
+        if isinstance(data, dict):
+            return tuple(list(data.keys())[:SAMPLE_FIELDS_LIMIT])
+        if isinstance(data, list) and data and isinstance(data[0], dict):
+            return tuple(list(data[0].keys())[:SAMPLE_FIELDS_LIMIT])
+    except Exception as exc:
+        logger.debug("JSON レスポンスフィールド抽出エラー: %s", exc)
+    return ()

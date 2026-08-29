@@ -1,0 +1,355 @@
+{
+  "schema": "webspec2doc/feature-asset@1",
+  "version": "20260829-81e4c84",
+  "generated_at": "2026-08-29T11:24:08Z",
+  "source": {
+    "repository": "WebSpec2Doc",
+    "revision": "81e4c84",
+    "working_tree_dirty": true,
+    "contract_file": "quality/feature_contracts.yml"
+  },
+  "feature": {
+    "feature_id": "old_new_comparison",
+    "name": "現新比較モード（移行検証支援）",
+    "risk_level": "high",
+    "status": "implemented",
+    "ui_files": [
+      "static/js/view-compare.js",
+      "static/js/results.js",
+      "static/app-report.css",
+      "templates/partials/view-generate.html"
+    ],
+    "route_files": [
+      "web/routes/history.py"
+    ],
+    "core_files": [
+      "src/diff/pair_matcher.py",
+      "src/diff/comparison.py",
+      "src/diff/link_checker.py",
+      "src/diff/screenshot_diff.py",
+      "src/diff/snapshot.py",
+      "src/diff/differ.py",
+      "src/generator/comparison_reporter.py",
+      "src/analyzer/text_similarity.py",
+      "web/services/comparison_workspace.py",
+      "src/main.py"
+    ],
+    "symbols": [
+      "match_page_pairs",
+      "run_old_new_comparison",
+      "check_links",
+      "compare_screenshots_masked",
+      "detect_dynamic_regions",
+      "compare_page_pair",
+      "save_comparison_outputs",
+      "compute_coverage_summary",
+      "save_diff_overlay",
+      "build_workspace",
+      "snapshot_shots_dir"
+    ],
+    "outputs": [
+      "comparison.json",
+      "comparison.html",
+      "old/dynamic_masks.json",
+      "comparison.html「網羅性サマリ」節",
+      "comparison.html「見た目の変化」節（before/after 並置＋変更領域の赤枠）",
+      "new/screenshot_diffs/{page_id}.png"
+    ],
+    "persistence": [
+      "output/{domain}/compare_*/old/",
+      "output/{domain}/compare_*/new/",
+      "output/{domain}/compare_*/new/screenshot_diffs/",
+      "output/{domain}/compare_*/comparison.json",
+      "output/{domain}/compare_*/comparison.html"
+    ],
+    "failure_modes": [
+      "one_side_empty",
+      "no_pairs",
+      "link_timeout",
+      "screenshot_missing",
+      "mask_detection_failed",
+      "diff_overlay_unavailable_without_pillow",
+      "insignificant_diff_shown_as_change",
+      "diff_boxes_cover_the_whole_page"
+    ],
+    "required_tests": [
+      "happy_path",
+      "error_path",
+      "evidence",
+      "unclassified_fallback"
+    ]
+  },
+  "placement": {
+    "system_key": "docs",
+    "system": "01_ドキュメント作成支援",
+    "screen": "条件設定",
+    "screens": [
+      "条件設定"
+    ],
+    "classified_by": "screen"
+  },
+  "files": [
+    {
+      "path": "static/js/view-compare.js",
+      "role": "ui",
+      "bytes": 19492,
+      "sha256": "9f9a579365a356931f19c0e7fe08934a872ce0a7f0a37a1e3ec63ed770353380"
+    },
+    {
+      "path": "static/js/results.js",
+      "role": "ui",
+      "bytes": 33264,
+      "sha256": "454d49c8a2415f32987d199797955eec83e75b3df16dd9f6db275755d9aae105"
+    },
+    {
+      "path": "static/app-report.css",
+      "role": "ui",
+      "bytes": 49653,
+      "sha256": "398642d43725e377b0803f251833d83db76b9e92997390860d430e4d06c7fdc6"
+    },
+    {
+      "path": "templates/partials/view-generate.html",
+      "role": "ui",
+      "bytes": 21038,
+      "sha256": "da6646d5d332341e31a9b632b97fdc4bea9dcbc610813e801264292322ccf8fd"
+    },
+    {
+      "path": "web/routes/history.py",
+      "role": "route",
+      "bytes": 14845,
+      "sha256": "6a74dcf728a7e4f2ece3f22150dfb0626d7d42e4750bc6728b47890006942d30"
+    },
+    {
+      "path": "src/diff/pair_matcher.py",
+      "role": "core",
+      "bytes": 5184,
+      "sha256": "c415d46aba9ea96ee49e1bb7bbd24450f9810748e7007d7ec9567f7a150bed4b"
+    },
+    {
+      "path": "src/diff/comparison.py",
+      "role": "core",
+      "bytes": 26226,
+      "sha256": "63724f9cc71adbb0fab4f66c58206cfeeee3439c1806235b0b569b7454c822db"
+    },
+    {
+      "path": "src/diff/link_checker.py",
+      "role": "core",
+      "bytes": 5408,
+      "sha256": "9a9f99ea83ce592ca9b1bf6526666e87c03de556d89ad7517d7e919321e18806"
+    },
+    {
+      "path": "src/diff/screenshot_diff.py",
+      "role": "core",
+      "bytes": 23741,
+      "sha256": "4b18624aff685cf57a4111992b4de0b8d8fbb1fc2e097ae1150e4ae830364f73"
+    },
+    {
+      "path": "src/diff/snapshot.py",
+      "role": "core",
+      "bytes": 10140,
+      "sha256": "fc1c8fabd4ee5887c9c2b15cdf8ad9739a41feb63564ea8c181748f002a505d7"
+    },
+    {
+      "path": "src/diff/differ.py",
+      "role": "core",
+      "bytes": 11714,
+      "sha256": "77dba116e9d8c779b84cee8df2dda5a3ef83cd46de4d57881b3acc75f4452ef7"
+    },
+    {
+      "path": "src/generator/comparison_reporter.py",
+      "role": "core",
+      "bytes": 14977,
+      "sha256": "77c0f977bf4701dcbf47f9d00b373d4da70591b050abebe3b50deee98de1143e"
+    },
+    {
+      "path": "src/analyzer/text_similarity.py",
+      "role": "core",
+      "bytes": 1048,
+      "sha256": "e18c10a4b2400e3684bd788491d13c33cf81abb3db52b3b5a3dcb654772fb047"
+    },
+    {
+      "path": "web/services/comparison_workspace.py",
+      "role": "core",
+      "bytes": 10226,
+      "sha256": "f3b98b1fb9a91316f721088fcb1ef9531fbecfc89b765d31a9579d067dfac578"
+    },
+    {
+      "path": "src/main.py",
+      "role": "core",
+      "bytes": 62520,
+      "sha256": "f051a3bef57a4d50a566f2cc311b7e43832295bd32b4a0678e6f5b28149ac240"
+    }
+  ],
+  "wiring": {
+    "blueprints": [
+      {
+        "file": "web/routes/history.py",
+        "name": "history",
+        "url_prefix": ""
+      }
+    ],
+    "provides_endpoints": [
+      {
+        "file": "web/routes/history.py",
+        "rule": "/api/history",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/history.py",
+        "rule": "/api/site/<domain>",
+        "methods": [
+          "DELETE"
+        ]
+      },
+      {
+        "file": "web/routes/history.py",
+        "rule": "/api/snapshots",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/history.py",
+        "rule": "/api/snapshot-diff",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/history.py",
+        "rule": "/api/snapshot-diff-summary",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/history.py",
+        "rule": "/api/snapshot-comparison",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/history.py",
+        "rule": "/api/snapshot-comparison.json",
+        "methods": [
+          "GET"
+        ]
+      }
+    ]
+  },
+  "dependencies": {
+    "internal_modules_not_bundled": [
+      "src/analyzer/canonicalizer.py",
+      "src/analyzer/form_analyzer.py",
+      "src/analyzer/html_analyzer.py",
+      "src/analyzer/rule_injector.py",
+      "src/analyzer/stack_detector.py",
+      "src/capture/burndown.py",
+      "src/capture/coverage.py",
+      "src/capture/finding_reporter.py",
+      "src/capture/reverse_generator.py",
+      "src/capture/session_recorder.py",
+      "src/ci_drift.py",
+      "src/crawler/auth.py",
+      "src/crawler/auth_recorder.py",
+      "src/crawler/auto_login.py",
+      "src/crawler/page_crawler.py",
+      "src/crawler/politeness.py",
+      "src/crawler/session_guard.py",
+      "src/crawler/url_safety.py",
+      "src/diff/impact_analyzer.py",
+      "src/generator/accessibility_reporter.py",
+      "src/generator/architecture_generator.py",
+      "src/generator/coverage_gap.py",
+      "src/generator/diff_reporter.py",
+      "src/generator/excel_reporter.py",
+      "src/generator/fusion_reporter.py",
+      "src/generator/html_reporter.py",
+      "src/generator/json_reporter.py",
+      "src/generator/markdown_generator.py",
+      "src/generator/mermaid_generator.py",
+      "src/generator/pdf_reporter.py",
+      "src/generator/refresh_reporter.py",
+      "src/generator/test_design.py",
+      "src/generator/test_plan_generator.py",
+      "src/generator/trace_reporter.py",
+      "src/generator/ux_reporter.py",
+      "src/graph/transition_graph.py",
+      "src/health/technical_health.py",
+      "src/ingest/loader.py",
+      "src/ingest/matcher.py",
+      "src/ingest/req_tracer.py",
+      "src/llm/provider.py",
+      "src/registry/site_registry.py",
+      "src/ux/axe_runner.py",
+      "src/viewport/runner.py",
+      "web/config.py",
+      "web/summary.py",
+      "web/tenancy.py",
+      "web/validation.py"
+    ],
+    "third_party_packages": [
+      {
+        "import": "Pillow",
+        "requirement": "Pillow>=11.0.0",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "flask",
+        "requirement": "flask==3.1.3",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "networkx",
+        "requirement": "networkx==3.3",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "numpy",
+        "requirement": "numpy>=2.0.0",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "playwright",
+        "requirement": "playwright==1.61.0",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "python-dotenv",
+        "requirement": "python-dotenv==1.2.2",
+        "declared_in_requirements": true
+      }
+    ],
+    "env_vars": [
+      "OPENAI_API_KEY",
+      "WEBSPEC2DOC_RECORD_HEADLESS"
+    ],
+    "data_files": [],
+    "consumes_endpoints": [
+      "/api/",
+      "/api/doc-fusion",
+      "/api/export/spec-xlsx",
+      "/api/result",
+      "/api/snapshot-comparison.json",
+      "/api/snapshot-diff-summary",
+      "/api/snapshots",
+      "/api/testcases/count",
+      "/preview"
+    ],
+    "window_globals": [],
+    "template_includes_not_bundled": [],
+    "static_refs_not_bundled": []
+  },
+  "gaps": [],
+  "shared_assets": [],
+  "warnings": [],
+  "verification": {
+    "static_analysis": "done",
+    "pytest": "not_run",
+    "verify_ui": "not_run",
+    "manual_screen_check": "not_run"
+  }
+}

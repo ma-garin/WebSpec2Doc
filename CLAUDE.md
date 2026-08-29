@@ -14,6 +14,26 @@
 加えて `.claude/rules/speed-harness.md`（2026-08-22 実測）を順守する。
 サーバ起動・認証オフ・検証の型・委譲の型・標準コマンドは**そこからコピーし、その場で探索しない**。
 
+## このリポジトリの役割（2026-08-29 ユーザー指示）
+
+開発は別環境でも進む。**このリポジトリは「機能単位で作り込み、他環境へアセットを渡す」場**とする。
+受け渡しのイメージは「実行履歴画面のフォルダを、そのまま渡す」。
+
+- 受け渡しの単位は `quality/feature_contracts.yml` の `feature_id`。新しい単位を作らない。
+- **機能を作り込んだら、必ず契約に登録する。**契約に無いものはアセットとして渡せない。
+  UI（テンプレート・JS・CSS）も `ui_files` に登録する。ハーネスは `.py` しか見ていないため、
+  登録漏れはゲートを素通りし、渡した先で「画面が出ない」になる。
+- 手順・形式・受け側の検証方法 → `docs/process/asset-distribution.md`
+
+受け渡しの流れは「送り側は push まで、受け側は zip を落として\n`assets/<システム>/<画面>/<機能>/PROMPT.md` を貼るだけ」。目次は `assets/README.md`。
+
+```bash
+make assets-audit                 # 契約に未登録の UI ファイルを洗い出す
+make assets F=<機能ID>            # 1 件エクスポート（assets/ に出る。git 管理下）
+make assets-verify B=<バンドル>   # 出荷前の検証（SHA-256 照合）
+git add assets/ && git commit && git push
+```
+
 ## 作業場所（重要）
 
 このリポジトリの正本は `/Users/fujimagariyuki/dev/active/webspec2doc`。セッションは必ずこのディレクトリで開く。

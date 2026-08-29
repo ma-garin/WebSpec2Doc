@@ -1,0 +1,281 @@
+/* テスト活動支援システムの画面用コンポーネント（.ta-*）。
+   色・余白・角丸・影は tokens.css と app.css の別名層に揃え、既存カードと同じ質感にする。 */
+
+/* ── 工程パイプライン ── */
+.ta-pipeline {
+  /* 8 工程は全部見えていないと「どこまで進んだか」が読めない。flex + overflow だと
+     PC 幅でも 07・08 が画面外に切れていたため、折り返すグリッドにする。 */
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  align-items: stretch;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-1) var(--space-3);
+  margin-bottom: var(--space-4);
+}
+.ta-pipeline-step {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--motion-fast) ease, background var(--motion-fast) ease;
+}
+.ta-pipeline-step.is-current {
+  border-color: var(--primary);
+  background: var(--primary-pale);
+}
+.ta-pipeline-step.is-done {
+  border-color: var(--ok-border);
+  background: var(--ok-bg);
+}
+.ta-step-no {
+  font-size: var(--text-xs);
+  font-weight: 800;
+  letter-spacing: .08em;
+  color: var(--text-muted);
+}
+.ta-step-name {
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--text);
+  line-height: var(--leading-tight);
+}
+.ta-step-state {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+/* ── グリッド ── */
+.ta-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--space-4);
+}
+.ta-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-3);
+}
+
+/* ── パネル（既存 .card と同質感） ── */
+.ta-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.ta-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+.ta-panel-title {
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--text);
+  line-height: var(--leading-tight);
+}
+.ta-panel-sub {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  line-height: var(--leading-normal);
+}
+.ta-panel-actions {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+.ta-panel-body {
+  padding: var(--space-4);
+}
+
+/* ── キーバリュー ── */
+.ta-kv {
+  display: flex;
+  flex-direction: column;
+}
+.ta-kv-row {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-divider);
+}
+.ta-kv-row:last-child {
+  border-bottom: 0;
+}
+.ta-kv-key {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+.ta-kv-val {
+  font-size: var(--text-base);
+  color: var(--text);
+  word-break: break-word;
+}
+
+/* ── テーブル ── */
+.ta-table-wrap {
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+}
+.ta-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+.ta-table thead th {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface-2);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-align: left;
+  white-space: nowrap;
+}
+.ta-table td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-divider);
+  color: var(--text);
+  text-align: left;
+  vertical-align: middle;
+}
+.ta-table tbody tr:hover td {
+  background: var(--surface-soft);
+}
+
+/* ── チップ ── */
+.ta-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.ta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  color: var(--text);
+  font-size: var(--text-sm);
+  line-height: var(--leading-tight);
+  cursor: pointer;
+  transition: border-color var(--motion-fast) ease, background var(--motion-fast) ease;
+}
+.ta-chip.is-on {
+  border-color: var(--primary);
+  background: var(--primary-pale);
+  color: var(--primary-dark);
+}
+
+/* ── 接続先 ── */
+.ta-source {
+  display: grid;
+  /* 連携ソースは 4 つ（ドキュメント / GitHub / ソースコード / 開発標準）。
+     3+1 に割れると 4 つ目だけ孤立して見えるので、PC 幅では 4 列に収める。 */
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-3);
+}
+/* 接続先カードの見出しは h2/h3 のまま置かれる。既定サイズだとパネル見出しより
+   目立ってしまうため、カード内の階層に合わせて下げる。 */
+.ta-source-item > h2,
+.ta-source-item > h3,
+.ta-source-item > h4,
+.ta-source-item .card-title {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 700;
+}
+.ta-source-item .card-subtitle { min-height: 2.6em; }
+.ta-source-item .badge,
+.ta-source-item .status { align-self: flex-start; }
+.ta-source-item .btn-outline-sm { align-self: flex-start; }
+.ta-source-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+/* ── 注記 ── */
+.ta-note {
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--info-border);
+  background: var(--surface-soft);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+/* ── 手順リスト ── */
+.ta-steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.ta-step {
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-8);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.ta-step-title {
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--text);
+}
+.ta-step-desc {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  line-height: var(--leading-normal);
+}
+
+/* ── コードブロック ── */
+.ta-code {
+  min-height: 120px;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+@media (max-width: 900px) {
+  .ta-grid-2,
+  .ta-grid-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 入力ソース: ファイル選択とアップロードボタンを 1 行に並べる */
+.ta-upload-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.ta-upload-row .input-compact { flex: 1 1 320px; }
+.ta-note.is-error { color: var(--danger, #c0392b); }

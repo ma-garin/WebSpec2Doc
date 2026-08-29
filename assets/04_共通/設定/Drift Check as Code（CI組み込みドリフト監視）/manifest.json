@@ -1,0 +1,250 @@
+{
+  "schema": "webspec2doc/feature-asset@1",
+  "version": "20260829-81e4c84",
+  "generated_at": "2026-08-29T11:24:08Z",
+  "source": {
+    "repository": "WebSpec2Doc",
+    "revision": "81e4c84",
+    "working_tree_dirty": true,
+    "contract_file": "quality/feature_contracts.yml"
+  },
+  "feature": {
+    "feature_id": "ci_drift_monitor",
+    "name": "Drift Check as Code（CI組み込みドリフト監視）",
+    "risk_level": "high",
+    "status": "implemented",
+    "ui_files": [
+      "templates/partials/view-settings.html",
+      "static/js/results.js",
+      "static/app.css"
+    ],
+    "route_files": [],
+    "core_files": [
+      "src/main.py",
+      "src/ci_drift.py",
+      "scripts/notify_drift.py",
+      "web/services/drift_summary.py",
+      "web/services/notifier.py",
+      "web/services/job_queue.py",
+      ".github/workflows/spec-drift.yml"
+    ],
+    "symbols": [
+      "save_drift_summary",
+      "emit_ci_summary",
+      "send_drift_notification",
+      "_try_slack_notify"
+    ],
+    "outputs": [
+      "drift_summary.json",
+      "CI_SUMMARY stdout record",
+      "Slack drift notification"
+    ],
+    "persistence": [
+      "output/{domain}/snapshots/",
+      "output/{domain}/drift_summary.json",
+      "GitHub Actions snapshot cache"
+    ],
+    "failure_modes": [
+      "missing_webhook",
+      "notify_http_error",
+      "missing_summary",
+      "first_run",
+      "session_expired",
+      "missing_target",
+      "accessibility_asset_error",
+      "crawl_execution_failure"
+    ],
+    "required_tests": [
+      "happy_path",
+      "error_path",
+      "no_change_path",
+      "exit_code_contract",
+      "evidence"
+    ]
+  },
+  "placement": {
+    "system_key": "common",
+    "system": "04_共通",
+    "screen": "設定",
+    "screens": [
+      "設定"
+    ],
+    "classified_by": "screen"
+  },
+  "files": [
+    {
+      "path": "templates/partials/view-settings.html",
+      "role": "ui",
+      "bytes": 39538,
+      "sha256": "8df7d8ecb0f037236d5a6d63722f2e57b7a4c985b9ed66d036b5b47547be829d"
+    },
+    {
+      "path": "static/js/results.js",
+      "role": "ui",
+      "bytes": 33264,
+      "sha256": "454d49c8a2415f32987d199797955eec83e75b3df16dd9f6db275755d9aae105"
+    },
+    {
+      "path": "static/app.css",
+      "role": "ui",
+      "bytes": 52176,
+      "sha256": "a8ecf80ce6e4da2c732da717577b7f247074712927ed3073b15cd68d32b87f08"
+    },
+    {
+      "path": "src/main.py",
+      "role": "core",
+      "bytes": 62520,
+      "sha256": "f051a3bef57a4d50a566f2cc311b7e43832295bd32b4a0678e6f5b28149ac240"
+    },
+    {
+      "path": "src/ci_drift.py",
+      "role": "core",
+      "bytes": 2897,
+      "sha256": "80f91df9e72fb4375287abc06812c4ee6b7681628f24e7fa5d5635aaa6891b2f"
+    },
+    {
+      "path": "scripts/notify_drift.py",
+      "role": "core",
+      "bytes": 2313,
+      "sha256": "2ebe97a0b30dfecd39f02396d000800a3141e36d7ef50bec54d4111d14440cd1"
+    },
+    {
+      "path": "web/services/drift_summary.py",
+      "role": "core",
+      "bytes": 898,
+      "sha256": "bda53e9aa0f1e993ea5711b4eda48dea94a86a581ea97caf9610d97b666aca0e"
+    },
+    {
+      "path": "web/services/notifier.py",
+      "role": "core",
+      "bytes": 14315,
+      "sha256": "e61d0747fc08011932ba6a385e6ced3645913695e276cf3f7e8089233dc58ed3"
+    },
+    {
+      "path": "web/services/job_queue.py",
+      "role": "core",
+      "bytes": 6917,
+      "sha256": "0a2eab674457ce894f8956057ec928ccecf07e9a94a67a963280aac7dafb95df"
+    },
+    {
+      "path": ".github/workflows/spec-drift.yml",
+      "role": "core",
+      "bytes": 3064,
+      "sha256": "764948c957b3728a8e2abb977019658649fefc59037b8cc32834d90b46773d84"
+    }
+  ],
+  "wiring": {
+    "blueprints": [],
+    "provides_endpoints": []
+  },
+  "dependencies": {
+    "internal_modules_not_bundled": [
+      "src/analyzer/form_analyzer.py",
+      "src/analyzer/html_analyzer.py",
+      "src/analyzer/rule_injector.py",
+      "src/capture/burndown.py",
+      "src/capture/coverage.py",
+      "src/capture/finding_reporter.py",
+      "src/capture/reverse_generator.py",
+      "src/capture/session_recorder.py",
+      "src/crawler/auth.py",
+      "src/crawler/auth_recorder.py",
+      "src/crawler/auto_login.py",
+      "src/crawler/page_crawler.py",
+      "src/crawler/session_guard.py",
+      "src/crawler/url_safety.py",
+      "src/diff/comparison.py",
+      "src/diff/differ.py",
+      "src/diff/impact_analyzer.py",
+      "src/diff/snapshot.py",
+      "src/generator/accessibility_reporter.py",
+      "src/generator/architecture_generator.py",
+      "src/generator/comparison_reporter.py",
+      "src/generator/coverage_gap.py",
+      "src/generator/diff_reporter.py",
+      "src/generator/excel_reporter.py",
+      "src/generator/fusion_reporter.py",
+      "src/generator/html_reporter.py",
+      "src/generator/json_reporter.py",
+      "src/generator/markdown_generator.py",
+      "src/generator/mermaid_generator.py",
+      "src/generator/pdf_reporter.py",
+      "src/generator/refresh_reporter.py",
+      "src/generator/test_design.py",
+      "src/generator/test_plan_generator.py",
+      "src/generator/trace_reporter.py",
+      "src/generator/ux_reporter.py",
+      "src/graph/transition_graph.py",
+      "src/health/technical_health.py",
+      "src/ingest/loader.py",
+      "src/ingest/matcher.py",
+      "src/ingest/req_tracer.py",
+      "src/llm/provider.py",
+      "src/ux/axe_runner.py",
+      "src/viewport/runner.py",
+      "web/services/metrics.py"
+    ],
+    "third_party_packages": [
+      {
+        "import": "jinja2",
+        "requirement": "jinja2==3.1.6",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "networkx",
+        "requirement": "networkx==3.3",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "python-dotenv",
+        "requirement": "python-dotenv==1.2.2",
+        "declared_in_requirements": true
+      }
+    ],
+    "env_vars": [
+      "OPENAI_API_KEY",
+      "SLACK_WEBHOOK_URL",
+      "SMTP_FROM",
+      "SMTP_HOST",
+      "SMTP_PASSWORD",
+      "SMTP_PORT",
+      "SMTP_TO",
+      "SMTP_USER",
+      "WEBSPEC2DOC_RECORD_HEADLESS"
+    ],
+    "data_files": [],
+    "consumes_endpoints": [
+      "/api/",
+      "/api/admin/backup-guide",
+      "/api/doc-fusion",
+      "/api/export/spec-xlsx",
+      "/api/result",
+      "/api/snapshot-diff-summary",
+      "/api/snapshots",
+      "/api/testcases/count",
+      "/preview"
+    ],
+    "window_globals": [],
+    "template_includes_not_bundled": [],
+    "static_refs_not_bundled": []
+  },
+  "gaps": [],
+  "shared_assets": [
+    {
+      "path": "static/js/settings.js",
+      "owned_by": [
+        "settings",
+        "snapshot_retention",
+        "admin_audit"
+      ],
+      "reason": "`templates/partials/view-settings.html` を動かす JS と見られるが未同梱"
+    }
+  ],
+  "warnings": [],
+  "verification": {
+    "static_analysis": "done",
+    "pytest": "not_run",
+    "verify_ui": "not_run",
+    "manual_screen_check": "not_run"
+  }
+}

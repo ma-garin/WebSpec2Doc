@@ -16,6 +16,7 @@ if str(_SRC) not in sys.path:
 def create_app() -> Flask:
     from web.auth import auth_guard, ensure_secret_key
     from web.routes import (
+        test_steps,
         account,
         admin,
         api_v1,
@@ -25,6 +26,7 @@ def create_app() -> Flask:
         autorun_stages,
         crawl,
         discover,
+        environments,
         feedback,
         history,
         integrations,
@@ -40,6 +42,7 @@ def create_app() -> Flask:
         site,
         tenant_admin,
         test_activity,
+        test_runs,
         traceability,
         usage,
         viewpoints,
@@ -111,6 +114,9 @@ def create_app() -> Flask:
     app.register_blueprint(crawl.bp)
     app.register_blueprint(auto_run.bp)
     app.register_blueprint(test_activity.bp)
+    app.register_blueprint(test_steps.bp)
+    app.register_blueprint(test_runs.bp)
+    app.register_blueprint(environments.bp)
     app.register_blueprint(review.bp)
     app.register_blueprint(runs.bp)
     app.register_blueprint(schedule.bp)
@@ -131,6 +137,8 @@ def create_app() -> Flask:
     get_viewpoint_store()
 
     from web.services.scheduler import start_scheduler
+    from web.services.test_run_job import start_workers as start_test_run_workers
 
     start_scheduler()
+    start_test_run_workers()
     return app

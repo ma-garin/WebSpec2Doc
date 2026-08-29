@@ -1,0 +1,236 @@
+{
+  "schema": "webspec2doc/feature-asset@1",
+  "version": "20260829-81e4c84",
+  "generated_at": "2026-08-29T11:24:07Z",
+  "source": {
+    "repository": "WebSpec2Doc",
+    "revision": "81e4c84",
+    "working_tree_dirty": true,
+    "contract_file": "quality/feature_contracts.yml"
+  },
+  "feature": {
+    "feature_id": "login",
+    "name": "ログイン / セッション",
+    "risk_level": "critical",
+    "status": "implemented",
+    "ui_files": [
+      "templates/partials/view-generate.html",
+      "static/js/wizard.js"
+    ],
+    "route_files": [
+      "web/routes/login.py"
+    ],
+    "core_files": [
+      "src/crawler/auto_login.py",
+      "src/analyzer/login_wall.py",
+      "src/crawler/auth_recorder.py",
+      "src/crawler/auth.py",
+      "src/crawler/login_signal.py",
+      "src/crawler/session_guard.py"
+    ],
+    "symbols": [
+      "submit_login_simple",
+      "detect_login_wall",
+      "record_auth_session",
+      "verify_auth_state"
+    ],
+    "outputs": [
+      "auth.json",
+      "login wall status",
+      "login record status (.login_status.json)"
+    ],
+    "persistence": [
+      "output/{domain}/auth.json",
+      "output/{domain}/.login_signal",
+      "output/{domain}/.login_status.json"
+    ],
+    "failure_modes": [
+      "invalid_credentials",
+      "mfa_required",
+      "session_expired",
+      "display_missing",
+      "recorder_timeout",
+      "browser_closed"
+    ],
+    "required_tests": [
+      "happy_path",
+      "error_path",
+      "session_expiry_path",
+      "evidence",
+      "timeout_path",
+      "cancel_path"
+    ]
+  },
+  "placement": {
+    "system_key": "common",
+    "system": "04_共通",
+    "screen": "条件設定",
+    "screens": [
+      "条件設定"
+    ],
+    "classified_by": "screen"
+  },
+  "files": [
+    {
+      "path": "templates/partials/view-generate.html",
+      "role": "ui",
+      "bytes": 21038,
+      "sha256": "da6646d5d332341e31a9b632b97fdc4bea9dcbc610813e801264292322ccf8fd"
+    },
+    {
+      "path": "static/js/wizard.js",
+      "role": "ui",
+      "bytes": 39556,
+      "sha256": "3d6ef279e60585e68d916467fdd4b093638c40cd20240fbe4c136887eb8e67c4"
+    },
+    {
+      "path": "web/routes/login.py",
+      "role": "route",
+      "bytes": 9843,
+      "sha256": "1af6d8415c0a5d52846220a1e6cf1431cedc03d308f6381ec47aa4ec7f0cfa3c"
+    },
+    {
+      "path": "src/crawler/auto_login.py",
+      "role": "core",
+      "bytes": 9774,
+      "sha256": "71f81db594f93cbb6598027c753da090a550f2586925e96893d7e551f3282a26"
+    },
+    {
+      "path": "src/analyzer/login_wall.py",
+      "role": "core",
+      "bytes": 1638,
+      "sha256": "505c882f611d99188fa35174945588dacb93d59ebc5731f9aa3e3b9f600d0a7b"
+    },
+    {
+      "path": "src/crawler/auth_recorder.py",
+      "role": "core",
+      "bytes": 13067,
+      "sha256": "99cd8b73890038f4417c6fd20f2c66b6a7c311236cd88f12e4dc6a85a69a7017"
+    },
+    {
+      "path": "src/crawler/auth.py",
+      "role": "core",
+      "bytes": 2430,
+      "sha256": "1f60e9992c24d5fa937cc82348a552adf61505e6a6e2ae5f89bf92900cffd7e8"
+    },
+    {
+      "path": "src/crawler/login_signal.py",
+      "role": "core",
+      "bytes": 864,
+      "sha256": "f029eef578f9dd28407d1f99985cc20bd4e65c3f63dc79e6776018ed1ca277d3"
+    },
+    {
+      "path": "src/crawler/session_guard.py",
+      "role": "core",
+      "bytes": 1088,
+      "sha256": "7212619600ba18ece7e5ec1b06216d5562295e4aa69362056970ad8b40ba1e07"
+    }
+  ],
+  "wiring": {
+    "blueprints": [
+      {
+        "file": "web/routes/login.py",
+        "name": "login",
+        "url_prefix": ""
+      }
+    ],
+    "provides_endpoints": [
+      {
+        "file": "web/routes/login.py",
+        "rule": "/api/login/simple",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/login.py",
+        "rule": "/api/login/scrape",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/login.py",
+        "rule": "/api/login/submit",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/login.py",
+        "rule": "/api/login/record/start",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/login.py",
+        "rule": "/api/login/record/status",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/login.py",
+        "rule": "/api/login/record/complete",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/login.py",
+        "rule": "/api/login/record/cancel",
+        "methods": [
+          "POST"
+        ]
+      }
+    ]
+  },
+  "dependencies": {
+    "internal_modules_not_bundled": [
+      "src/crawler/link_extractor.py",
+      "src/crawler/page_crawler.py",
+      "web/config.py",
+      "web/tenancy.py",
+      "web/validation.py"
+    ],
+    "third_party_packages": [
+      {
+        "import": "flask",
+        "requirement": "flask==3.1.3",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "playwright",
+        "requirement": "playwright==1.61.0",
+        "declared_in_requirements": true
+      }
+    ],
+    "env_vars": [],
+    "data_files": [],
+    "consumes_endpoints": [
+      "/api/cancel",
+      "/api/discover-stream",
+      "/api/login/record/cancel",
+      "/api/login/record/complete",
+      "/api/login/record/start",
+      "/api/login/record/status",
+      "/api/login/scrape",
+      "/api/login/simple",
+      "/api/login/submit",
+      "/api/reference-docs"
+    ],
+    "window_globals": [],
+    "template_includes_not_bundled": [],
+    "static_refs_not_bundled": []
+  },
+  "gaps": [],
+  "shared_assets": [],
+  "warnings": [],
+  "verification": {
+    "static_analysis": "done",
+    "pytest": "not_run",
+    "verify_ui": "not_run",
+    "manual_screen_check": "not_run"
+  }
+}

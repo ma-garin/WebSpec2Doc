@@ -1,0 +1,115 @@
+{
+  "schema": "webspec2doc/feature-asset@1",
+  "version": "20260829-81e4c84",
+  "generated_at": "2026-08-29T11:24:08Z",
+  "source": {
+    "repository": "WebSpec2Doc",
+    "revision": "81e4c84",
+    "working_tree_dirty": true,
+    "contract_file": "quality/feature_contracts.yml"
+  },
+  "feature": {
+    "feature_id": "multi_viewport",
+    "name": "マルチビューポート仕様書",
+    "risk_level": "medium",
+    "status": "implemented",
+    "ui_files": [],
+    "route_files": [],
+    "core_files": [
+      "src/viewport/profiles.py",
+      "src/viewport/comparison.py",
+      "src/viewport/reporter.py",
+      "src/viewport/runner.py",
+      "src/viewport/layout_failures.py"
+    ],
+    "symbols": [
+      "resolve_profiles",
+      "compare_viewports",
+      "save_viewport_report",
+      "run_multi_viewport",
+      "build_layout_failure_report"
+    ],
+    "outputs": [
+      "viewport_report.md/html/json",
+      "layout failure observations"
+    ],
+    "persistence": [
+      "output/{domain}/viewports/"
+    ],
+    "failure_modes": [
+      "unknown_viewport",
+      "baseline_not_observed",
+      "viewport_crawl_failure"
+    ],
+    "required_tests": [
+      "happy_path",
+      "error_path",
+      "evidence"
+    ]
+  },
+  "placement": {
+    "system_key": "docs",
+    "system": "01_ドキュメント作成支援",
+    "screen": "_画面なし（API・基盤）",
+    "screens": [],
+    "classified_by": "path"
+  },
+  "files": [
+    {
+      "path": "src/viewport/profiles.py",
+      "role": "core",
+      "bytes": 2706,
+      "sha256": "70d485456f917dc9fe95804bf848bb7705202a3d9c302caf90d4163f8c92afc1"
+    },
+    {
+      "path": "src/viewport/comparison.py",
+      "role": "core",
+      "bytes": 4735,
+      "sha256": "99040ac75df737053e0632026226182c7e05b53e99ed81bf8a45cb4a9751252b"
+    },
+    {
+      "path": "src/viewport/reporter.py",
+      "role": "core",
+      "bytes": 7718,
+      "sha256": "478b06f62bd3a8ff4e55c1c2ab23131fd63cd8063e236e3b5df8397e18d9ee99"
+    },
+    {
+      "path": "src/viewport/runner.py",
+      "role": "core",
+      "bytes": 4596,
+      "sha256": "128ef7fc367f8b22a6e74162b88e81d9975039de6e8cea86351a2f83166346a5"
+    },
+    {
+      "path": "src/viewport/layout_failures.py",
+      "role": "core",
+      "bytes": 5244,
+      "sha256": "7d3e74e42e57e1b5f3ddc4aabc41a1baf9ccbed8a1a959b1a408b12535bf5d12"
+    }
+  ],
+  "wiring": {
+    "blueprints": [],
+    "provides_endpoints": []
+  },
+  "dependencies": {
+    "internal_modules_not_bundled": [
+      "src/crawler/page_crawler.py",
+      "src/diff/differ.py"
+    ],
+    "third_party_packages": [],
+    "env_vars": [],
+    "data_files": [],
+    "consumes_endpoints": [],
+    "window_globals": [],
+    "template_includes_not_bundled": [],
+    "static_refs_not_bundled": []
+  },
+  "gaps": [],
+  "shared_assets": [],
+  "warnings": [],
+  "verification": {
+    "static_analysis": "done",
+    "pytest": "not_run",
+    "verify_ui": "not_run",
+    "manual_screen_check": "not_run"
+  }
+}

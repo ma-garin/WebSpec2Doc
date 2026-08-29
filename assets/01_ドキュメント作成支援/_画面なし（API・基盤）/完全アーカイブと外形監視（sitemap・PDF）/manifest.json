@@ -1,0 +1,97 @@
+{
+  "schema": "webspec2doc/feature-asset@1",
+  "version": "20260829-81e4c84",
+  "generated_at": "2026-08-29T11:24:09Z",
+  "source": {
+    "repository": "WebSpec2Doc",
+    "revision": "81e4c84",
+    "working_tree_dirty": true,
+    "contract_file": "quality/feature_contracts.yml"
+  },
+  "feature": {
+    "feature_id": "full_archive",
+    "name": "完全アーカイブと外形監視（sitemap/PDF）",
+    "risk_level": "medium",
+    "status": "implemented",
+    "ui_files": [],
+    "route_files": [],
+    "core_files": [
+      "src/archive/full_archive.py",
+      "src/archive/external_monitor.py"
+    ],
+    "symbols": [
+      "create_full_archive",
+      "verify_archive",
+      "parse_sitemap",
+      "diff_documents"
+    ],
+    "outputs": [
+      "archive_*.zip（MANIFEST.json同梱）",
+      "sitemap/文書の差分"
+    ],
+    "persistence": [
+      "output/{domain}/archives/"
+    ],
+    "failure_modes": [
+      "missing_source",
+      "tampered_archive",
+      "broken_sitemap"
+    ],
+    "required_tests": [
+      "happy_path",
+      "tamper_detection",
+      "source_preserved",
+      "evidence"
+    ]
+  },
+  "placement": {
+    "system_key": "docs",
+    "system": "01_ドキュメント作成支援",
+    "screen": "_画面なし（API・基盤）",
+    "screens": [],
+    "classified_by": "path"
+  },
+  "files": [
+    {
+      "path": "src/archive/full_archive.py",
+      "role": "core",
+      "bytes": 4947,
+      "sha256": "94832765aca4fd922fd5aeec80ed2c2bfb560c71ef54419ee71db2da5aa1bf77"
+    },
+    {
+      "path": "src/archive/external_monitor.py",
+      "role": "core",
+      "bytes": 3276,
+      "sha256": "fabecf93260eeb177e88253ffb7884db0c93837532e74577328a24ac7efe94bb"
+    }
+  ],
+  "wiring": {
+    "blueprints": [],
+    "provides_endpoints": []
+  },
+  "dependencies": {
+    "internal_modules_not_bundled": [],
+    "third_party_packages": [
+      {
+        "import": "defusedxml",
+        "requirement": "defusedxml==0.7.1",
+        "declared_in_requirements": true
+      }
+    ],
+    "env_vars": [],
+    "data_files": [],
+    "consumes_endpoints": [],
+    "window_globals": [],
+    "template_includes_not_bundled": [],
+    "static_refs_not_bundled": []
+  },
+  "gaps": [],
+  "shared_assets": [],
+  "warnings": [],
+  "verification": {
+    "static_analysis": "done",
+    "pytest": "not_run",
+    "verify_ui": "not_run",
+    "manual_screen_check": "not_run"
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "feature_id": "admin_audit",
+  "name": "管理操作のテナント監査ログ",
+  "risk_level": "high",
+  "status": "implemented",
+  "ui_files": [
+    "templates/partials/view-settings.html",
+    "static/js/settings.js",
+    "static/css/settings-admin.css"
+  ],
+  "route_files": [
+    "web/routes/admin.py",
+    "web/routes/report.py",
+    "web/routes/review.py",
+    "web/routes/schedule.py",
+    "web/routes/settings.py",
+    "web/routes/viewpoints.py"
+  ],
+  "core_files": [
+    "web/services/admin_audit.py",
+    "web/audit_context.py",
+    "web/services/auth_store.py"
+  ],
+  "symbols": [
+    "append_admin_audit",
+    "read_admin_audit",
+    "record_admin_event"
+  ],
+  "outputs": [
+    "admin_audit.jsonl",
+    "admin audit API and view"
+  ],
+  "persistence": [
+    "instance/tenants/{slug}/admin_audit.jsonl"
+  ],
+  "failure_modes": [
+    "malformed_line",
+    "secret_value",
+    "permission_denied",
+    "tenant_escape"
+  ],
+  "required_tests": [
+    "happy_path",
+    "error_path",
+    "tenant_isolation",
+    "authorization",
+    "evidence"
+  ]
+}

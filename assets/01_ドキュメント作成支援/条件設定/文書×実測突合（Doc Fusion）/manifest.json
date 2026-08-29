@@ -1,0 +1,408 @@
+{
+  "schema": "webspec2doc/feature-asset@1",
+  "version": "20260829-81e4c84",
+  "generated_at": "2026-08-29T11:24:08Z",
+  "source": {
+    "repository": "WebSpec2Doc",
+    "revision": "81e4c84",
+    "working_tree_dirty": true,
+    "contract_file": "quality/feature_contracts.yml"
+  },
+  "feature": {
+    "feature_id": "doc_fusion",
+    "name": "文書×実測突合（Doc Fusion）",
+    "risk_level": "high",
+    "status": "implemented",
+    "ui_files": [
+      "templates/partials/view-generate.html",
+      "static/js/wizard.js",
+      "static/js/execution.js",
+      "static/js/results.js",
+      "static/js/doc-fusion.js"
+    ],
+    "route_files": [
+      "web/routes/crawl.py",
+      "web/routes/traceability.py"
+    ],
+    "core_files": [
+      "src/ingest/loader.py",
+      "src/ingest/matcher.py",
+      "src/generator/fusion_reporter.py",
+      "src/ingest/llm_extractor.py",
+      "src/analyzer/rule_injector.py",
+      "src/generator/json_reporter.py",
+      "src/ingest/req_tracer.py",
+      "src/generator/trace_reporter.py",
+      "src/ingest/tables.py",
+      "src/generator/refresh_reporter.py",
+      "src/ingest/models.py",
+      "src/ingest/office_reader.py",
+      "src/ingest/text_reader.py",
+      "src/ingest/data_reader.py",
+      "src/ingest/excel_reader.py",
+      "src/ingest/gherkin_reader.py"
+    ],
+    "symbols": [
+      "load_reference_documents",
+      "fuse",
+      "save_fusion_outputs",
+      "extract_semantics",
+      "filter_hallucinations",
+      "build_rule_conditions",
+      "trace_requirements",
+      "save_trace_outputs",
+      "structure_requirement_table",
+      "build_refresh_entries",
+      "render_refreshed_markdown",
+      "save_refresh_outputs",
+      "parse_gherkin"
+    ],
+    "outputs": [
+      "doc_fusion.json",
+      "doc_fusion.md",
+      "official_name in report.json",
+      "documented_rules in doc_fusion.json",
+      "document_conditions/test_conditions_detail in report.json",
+      "requirement_trace.json",
+      "traceability_matrix.md",
+      "document_requirements in /traceability/matrix",
+      "refreshed_spec.md",
+      "refresh_log.json"
+    ],
+    "persistence": [
+      "output/{domain}/doc_fusion.json",
+      "output/{domain}/reference_docs/",
+      "output/{domain}/requirement_trace.json",
+      "output/{domain}/traceability_matrix.md",
+      "output/{domain}/refreshed_spec.md",
+      "output/{domain}/refresh_log.json"
+    ],
+    "failure_modes": [
+      "unsupported_format",
+      "missing_file",
+      "legacy_binary_format",
+      "no_match",
+      "llm_schema_reject",
+      "hallucinated_quote",
+      "rule_unmatched",
+      "rule_value_unparsable",
+      "upload_rejected",
+      "path_traversal_attempt",
+      "requirement_unmatched",
+      "duplicate_requirement_id",
+      "candidates_file_missing_or_corrupt",
+      "refresh_selector_lookup_failed",
+      "refresh_no_screens_skip",
+      "refresh_flag_without_reference_doc"
+    ],
+    "required_tests": [
+      "happy_path",
+      "error_path",
+      "mismatch_detection",
+      "evidence"
+    ]
+  },
+  "placement": {
+    "system_key": "docs",
+    "system": "01_ドキュメント作成支援",
+    "screen": "条件設定",
+    "screens": [
+      "条件設定"
+    ],
+    "classified_by": "screen"
+  },
+  "files": [
+    {
+      "path": "templates/partials/view-generate.html",
+      "role": "ui",
+      "bytes": 21038,
+      "sha256": "da6646d5d332341e31a9b632b97fdc4bea9dcbc610813e801264292322ccf8fd"
+    },
+    {
+      "path": "static/js/wizard.js",
+      "role": "ui",
+      "bytes": 39556,
+      "sha256": "3d6ef279e60585e68d916467fdd4b093638c40cd20240fbe4c136887eb8e67c4"
+    },
+    {
+      "path": "static/js/execution.js",
+      "role": "ui",
+      "bytes": 20310,
+      "sha256": "d56f390e4abbeaf30d27d74d083cb0e1a584338c751c5c672f1f7be07b3a449d"
+    },
+    {
+      "path": "static/js/results.js",
+      "role": "ui",
+      "bytes": 33264,
+      "sha256": "454d49c8a2415f32987d199797955eec83e75b3df16dd9f6db275755d9aae105"
+    },
+    {
+      "path": "static/js/doc-fusion.js",
+      "role": "ui",
+      "bytes": 2910,
+      "sha256": "4973a88ac1bd6318f4a7e9ec052aa6974da8b7b1d8e6213143d0ff0141e23ad7"
+    },
+    {
+      "path": "web/routes/crawl.py",
+      "role": "route",
+      "bytes": 9778,
+      "sha256": "9cb5a2303935eb24cf53dc71f2d8281c60af1f5c3f02fbc991f33e9aa613383f"
+    },
+    {
+      "path": "web/routes/traceability.py",
+      "role": "route",
+      "bytes": 4003,
+      "sha256": "f4345c811eb1ec80a3e0d44390289f29cd32231b31746dec270eaf4f044c1ddb"
+    },
+    {
+      "path": "src/ingest/loader.py",
+      "role": "core",
+      "bytes": 7680,
+      "sha256": "dd37badf07553af7c730930bc5eae131e06de323f214a1ae9b4453a1ada473ab"
+    },
+    {
+      "path": "src/ingest/matcher.py",
+      "role": "core",
+      "bytes": 16656,
+      "sha256": "dcb949b55c4f89e4b395d77bdac6ad92ade571becab656352a9323e4561ed408"
+    },
+    {
+      "path": "src/generator/fusion_reporter.py",
+      "role": "core",
+      "bytes": 9080,
+      "sha256": "3f176032925afe3126ae9500786fcdd7c5b4826c6e0e3e271c467a6a7b164398"
+    },
+    {
+      "path": "src/ingest/llm_extractor.py",
+      "role": "core",
+      "bytes": 10859,
+      "sha256": "98b0891a3010befaac5e33771e307cc9e3d703934eb5356168a00e8d85816e8b"
+    },
+    {
+      "path": "src/analyzer/rule_injector.py",
+      "role": "core",
+      "bytes": 5390,
+      "sha256": "6385472d07ed15d222e0a8881468ebe89f0c83decf7e5e0bddaa377a86141ba0"
+    },
+    {
+      "path": "src/generator/json_reporter.py",
+      "role": "core",
+      "bytes": 8823,
+      "sha256": "db852bb9ba7ddf18d4a48857f4d7f5ee86fbfde3e2fbc00b27d62832b77e5a50"
+    },
+    {
+      "path": "src/ingest/req_tracer.py",
+      "role": "core",
+      "bytes": 8112,
+      "sha256": "61227e1b9c4fa037b08a5d34739aa16e37e0a40795a92b6ff42a3aef7bfcee7b"
+    },
+    {
+      "path": "src/generator/trace_reporter.py",
+      "role": "core",
+      "bytes": 6745,
+      "sha256": "d30f742dc7fc20d63ddb95bfbb432fa22d0d4e85b79306c0dcf88ea8784b2889"
+    },
+    {
+      "path": "src/ingest/tables.py",
+      "role": "core",
+      "bytes": 11535,
+      "sha256": "e9761e9668f8f05290bd4f2af74a6d82d5679083f9e418d8a530105c0633265c"
+    },
+    {
+      "path": "src/generator/refresh_reporter.py",
+      "role": "core",
+      "bytes": 20539,
+      "sha256": "03e7e79b2ec3447e4652a6858ce4d0b25827f30cbba20d44125741d02f8bc6d9"
+    },
+    {
+      "path": "src/ingest/models.py",
+      "role": "core",
+      "bytes": 3267,
+      "sha256": "db0e93d734de751e898fb6ec360253d026e9432574099df279701c3b2d6912de"
+    },
+    {
+      "path": "src/ingest/office_reader.py",
+      "role": "core",
+      "bytes": 5035,
+      "sha256": "c1f34c3560e65ee11b11045c7033dc98349b1e917f6ccc172b4aadf3e539a103"
+    },
+    {
+      "path": "src/ingest/text_reader.py",
+      "role": "core",
+      "bytes": 3618,
+      "sha256": "206820e8e6a78e374a69c571d33773c95f127d9519ab4e70bc377558f86d8c65"
+    },
+    {
+      "path": "src/ingest/data_reader.py",
+      "role": "core",
+      "bytes": 6187,
+      "sha256": "67ac5ed88557594d5a7e6d8e0512ef03aea843f29cbef7313c89fc252a98c09b"
+    },
+    {
+      "path": "src/ingest/excel_reader.py",
+      "role": "core",
+      "bytes": 2269,
+      "sha256": "5ebdf8ed8b11f872a7d9948ba0e6c4b61ff09c06823296b1face410a7e532fc8"
+    },
+    {
+      "path": "src/ingest/gherkin_reader.py",
+      "role": "core",
+      "bytes": 4678,
+      "sha256": "a90c9f0dc243a71f6e97eec35580950a356a14bd9f7d57ccbf636e9567bf1e0a"
+    }
+  ],
+  "wiring": {
+    "blueprints": [
+      {
+        "file": "web/routes/crawl.py",
+        "name": "crawl",
+        "url_prefix": ""
+      },
+      {
+        "file": "web/routes/traceability.py",
+        "name": "traceability",
+        "url_prefix": ""
+      }
+    ],
+    "provides_endpoints": [
+      {
+        "file": "web/routes/crawl.py",
+        "rule": "/run",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/crawl.py",
+        "rule": "/api/cancel",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/crawl.py",
+        "rule": "/api/live-screenshot",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/crawl.py",
+        "rule": "/api/reference-docs",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/crawl.py",
+        "rule": "/api/doc-fusion",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/traceability.py",
+        "rule": "/traceability/matrix",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/traceability.py",
+        "rule": "/traceability/view",
+        "methods": [
+          "GET"
+        ]
+      }
+    ]
+  },
+  "dependencies": {
+    "internal_modules_not_bundled": [
+      "src/analyzer/canonicalizer.py",
+      "src/analyzer/html_analyzer.py",
+      "src/analyzer/test_conditions.py",
+      "src/analyzer/text_similarity.py",
+      "src/crawler/page_crawler.py",
+      "src/generator/markdown_util.py",
+      "src/llm/provider.py",
+      "web/config.py",
+      "web/process.py",
+      "web/routes/site.py",
+      "web/services/run_store.py",
+      "web/services/traceability.py",
+      "web/services/usage_tracker.py",
+      "web/summary.py",
+      "web/tenancy.py",
+      "web/validation.py"
+    ],
+    "third_party_packages": [
+      {
+        "import": "PyYAML",
+        "requirement": "PyYAML==6.0.1",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "defusedxml",
+        "requirement": "defusedxml==0.7.1",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "flask",
+        "requirement": "flask==3.1.3",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "networkx",
+        "requirement": "networkx==3.3",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "openpyxl",
+        "requirement": "openpyxl==3.1.4",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "pypdf",
+        "requirement": "pypdf==6.15.0",
+        "declared_in_requirements": true
+      }
+    ],
+    "env_vars": [],
+    "data_files": [],
+    "consumes_endpoints": [
+      "/api/",
+      "/api/cancel",
+      "/api/discover-stream",
+      "/api/doc-fusion",
+      "/api/export/spec-xlsx",
+      "/api/history",
+      "/api/live-screenshot",
+      "/api/login/record/cancel",
+      "/api/login/record/complete",
+      "/api/login/record/start",
+      "/api/login/record/status",
+      "/api/login/scrape",
+      "/api/login/simple",
+      "/api/login/submit",
+      "/api/reference-docs",
+      "/api/result",
+      "/api/snapshot-diff-summary",
+      "/api/snapshots",
+      "/api/testcases/count",
+      "/preview",
+      "/run"
+    ],
+    "window_globals": [],
+    "template_includes_not_bundled": [],
+    "static_refs_not_bundled": []
+  },
+  "gaps": [],
+  "shared_assets": [],
+  "warnings": [],
+  "verification": {
+    "static_analysis": "done",
+    "pytest": "not_run",
+    "verify_ui": "not_run",
+    "manual_screen_check": "not_run"
+  }
+}

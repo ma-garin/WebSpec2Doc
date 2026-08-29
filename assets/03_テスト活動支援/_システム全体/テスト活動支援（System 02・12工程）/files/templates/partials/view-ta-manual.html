@@ -1,0 +1,131 @@
+        <!-- ===== テスト活動支援 / 手動テスト実行 ===== -->
+        <section class="view" id="view-manual-execution">
+          <div class="dashboard-section-head">
+            <div>
+              <p class="dashboard-section-copy">自動化できないケースを人が実行し、結果と証跡を記録します。記録は消化率と完了判定に反映されます。</p>
+            </div>
+          </div>
+
+          <!-- 対象ドメインはこの画面自身で持つ。#ta-design-domain（設計ビュー）を間借りすると
+               他ビューが非表示のときに not visible で操作不能になるため、ここに実体を置く。 -->
+          <div id="ta-manual-bar" style="display:flex;align-items:center;flex-wrap:wrap;gap:var(--space-3);background:var(--d-ink,#1F2937);color:#fff;padding:var(--space-3) var(--space-4);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);margin-bottom:var(--space-3);">
+            <label for="ta-manual-domain" style="font-size:var(--text-sm);opacity:.85;">対象</label>
+            <select class="select-compact" id="ta-manual-domain" aria-label="対象ドメイン">
+              <option value="">ドメインを選択</option>
+            </select>
+            <span style="flex:1 1 auto;"></span>
+            <span style="font-size:var(--text-sm);">未消化 <b id="ta-manual-stat-open" style="font-size:var(--text-lg);">-</b> / 全 <b id="ta-manual-stat-total">-</b></span>
+            <button type="button" class="btn-primary" id="ta-manual-start">次のケースを開始</button>
+            <button type="button" class="ta-linkbtn" id="ta-manual-reload" style="color:#fff;">再読み込み</button>
+          </div>
+
+          <!-- 積み上げゲージ: 失敗（赤）/ ブロック（黄）/ 成功（緑）/ 未実行（灰）の1本 -->
+          <div id="ta-manual-gauge" role="img" aria-label="実施状況の内訳" style="display:flex;height:10px;border-radius:var(--radius-full,999px);overflow:hidden;background:var(--d-line-soft,#F3F4F6);margin-bottom:var(--space-3);">
+            <div id="ta-manual-gauge-failed" style="width:0%;background:var(--d-ng,#F87272);"></div>
+            <div id="ta-manual-gauge-blocked" style="width:0%;background:var(--d-wa,#FBBD23);"></div>
+            <div id="ta-manual-gauge-passed" style="width:0%;background:var(--d-ok,#36D399);"></div>
+            <div id="ta-manual-gauge-open" style="width:100%;background:var(--d-line,#E5E7EB);"></div>
+          </div>
+
+          <!-- 数値行: 失敗を最左に固定（見るべきは失敗） -->
+          <div style="display:flex;gap:var(--space-3);flex-wrap:wrap;margin-bottom:var(--space-4);">
+            <div class="stat-card">
+              <div class="stat-card-value is-ng" id="ta-manual-stat-failed">-</div>
+              <div class="stat-card-label">失敗</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-value is-wa" id="ta-manual-stat-blocked">-</div>
+              <div class="stat-card-label">ブロック</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-value is-ok" id="ta-manual-stat-passed">-</div>
+              <div class="stat-card-label">成功</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-value" id="ta-manual-stat-open2">-</div>
+              <div class="stat-card-label">未消化</div>
+            </div>
+            <div class="stat-card" style="border-left:2px solid var(--d-line,#E5E7EB);">
+              <div class="stat-card-value is-pri" id="ta-manual-stat-rate">-</div>
+              <div class="stat-card-label">消化率</div>
+            </div>
+          </div>
+
+          <div class="ta-panel">
+            <div class="ta-panel-head">
+              <div>
+                <div class="ta-panel-title">実行中のケース</div>
+                <div class="ta-panel-sub" id="ta-manual-current-sub">対象を選ぶと未消化のケースがここに出ます</div>
+              </div>
+              <div class="ta-panel-actions">
+                <select class="select-compact" id="ta-manual-case" aria-label="ケースを選ぶ">
+                  <option value="">ケースを選択</option>
+                </select>
+              </div>
+            </div>
+            <div class="ta-panel-body">
+              <div class="empty" id="ta-manual-current-empty">対象を選ぶと未消化のケースがここに出ます</div>
+              <div class="ta-kv" id="ta-manual-current-detail" style="display:none;">
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key">ケース</div>
+                  <div class="ta-kv-val"><b id="ta-manual-current-id"></b> <span id="ta-manual-current-name" class="muted-copy"></span></div>
+                </div>
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key">手順</div>
+                  <div class="ta-kv-val"><div class="ta-steps" id="ta-manual-current-steps"></div></div>
+                </div>
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key">期待結果</div>
+                  <div class="ta-kv-val" id="ta-manual-current-expected"></div>
+                </div>
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key">結果</div>
+                  <div class="ta-kv-val">
+                    <div class="ta-chips" id="ta-manual-result">
+                      <button type="button" class="ta-chip" data-value="passed">合格</button>
+                      <button type="button" class="ta-chip" data-value="failed">不合格</button>
+                      <button type="button" class="ta-chip" data-value="blocked">ブロック</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key"><label for="ta-manual-note">実測メモ</label></div>
+                  <div class="ta-kv-val"><input type="text" class="input-compact" id="ta-manual-note" placeholder="実測値・気づいたことを記録" /></div>
+                </div>
+                <div class="ta-kv-row">
+                  <div class="ta-kv-key"><label for="ta-manual-evidence">証跡</label></div>
+                  <div class="ta-kv-val"><input type="text" class="input-compact" id="ta-manual-evidence" placeholder="証跡ファイルのパス・URL（任意）" /></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ta-panel">
+            <div class="ta-panel-head">
+              <div>
+                <div class="ta-panel-title">実施記録</div>
+                <div class="ta-panel-sub">直近の記録です。失敗を上に固定して表示します。</div>
+              </div>
+            </div>
+            <div class="ta-panel-body">
+              <div class="ta-table-wrap">
+                <table class="ta-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">結果</th>
+                      <th scope="col">ケース</th>
+                      <th scope="col">メモ</th>
+                      <th scope="col">証跡</th>
+                      <th scope="col">日時</th>
+                    </tr>
+                  </thead>
+                  <tbody id="ta-manual-stream-body">
+                    <tr><td colspan="5"><div class="empty">対象を選ぶと実施記録がここに出ます</div></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <p class="ta-note">証跡は output 配下に保存した成果物へのパスまたは URL を記録します。</p>
+        </section>

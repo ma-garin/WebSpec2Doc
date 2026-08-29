@@ -102,3 +102,7 @@ _autorun_egress.ts
 
 # statusline用の一時進捗（セッション状態。コミットしない）
 .claude/progress.json
+
+# 機能アセット（assets/）は git 管理下に置く。GitHub の zip ダウンロードに含めるため。
+# tar.gz は zip があれば不要なのでコミットしない。
+/assets/*.tar.gz

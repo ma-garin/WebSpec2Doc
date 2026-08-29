@@ -1,0 +1,220 @@
+{
+  "schema": "webspec2doc/feature-asset@1",
+  "version": "20260829-81e4c84",
+  "generated_at": "2026-08-29T11:24:08Z",
+  "source": {
+    "repository": "WebSpec2Doc",
+    "revision": "81e4c84",
+    "working_tree_dirty": true,
+    "contract_file": "quality/feature_contracts.yml"
+  },
+  "feature": {
+    "feature_id": "ux_review",
+    "name": "UX自動エキスパートレビュー（axe-core＋ニールセン10原則ヒューリスティック）",
+    "risk_level": "medium",
+    "status": "implemented",
+    "ui_files": [],
+    "route_files": [],
+    "core_files": [
+      "src/ux/axe_runner.py",
+      "src/ux/heuristics.py",
+      "src/llm/provider.py",
+      "src/crawler/page_crawler.py",
+      "src/generator/ux_reporter.py",
+      "src/generator/html_reporter.py",
+      "src/main.py",
+      "src/generator/accessibility_reporter.py",
+      "src/ux/usability_smells.py"
+    ],
+    "symbols": [
+      "run_axe",
+      "verify_axe_asset",
+      "generate_ux_findings_by_rules",
+      "validate_ux_payload",
+      "filter_hallucinated_findings",
+      "build_ux_review",
+      "save_ux_outputs",
+      "detect_smells"
+    ],
+    "outputs": [
+      "ux_review.json",
+      "report.html「UX 所見」タブ",
+      "usability smells"
+    ],
+    "persistence": [
+      "output/{domain}/ux_review.json"
+    ],
+    "failure_modes": [
+      "axe_missing_asset",
+      "axe_runtime_error",
+      "llm_hallucination",
+      "llm_unavailable"
+    ],
+    "required_tests": [
+      "happy_path",
+      "error_path",
+      "evidence"
+    ]
+  },
+  "placement": {
+    "system_key": "docs",
+    "system": "01_ドキュメント作成支援",
+    "screen": "_画面なし（API・基盤）",
+    "screens": [],
+    "classified_by": "path"
+  },
+  "files": [
+    {
+      "path": "src/ux/axe_runner.py",
+      "role": "core",
+      "bytes": 7461,
+      "sha256": "46f033a13d4e17d1e4002d0c8f2b7a455525195380eefb08fa19fe77f1c78547"
+    },
+    {
+      "path": "src/ux/heuristics.py",
+      "role": "core",
+      "bytes": 11527,
+      "sha256": "02fc6624e1d594d65cf981ec6d7f7d7822add49dcf1b892d13ecaa0ca78ea35e"
+    },
+    {
+      "path": "src/llm/provider.py",
+      "role": "core",
+      "bytes": 11673,
+      "sha256": "cda82281e1717186b32176b699c0180043aeea6c776953e6b54251bf8e83b68a"
+    },
+    {
+      "path": "src/crawler/page_crawler.py",
+      "role": "core",
+      "bytes": 61123,
+      "sha256": "e90a414ce2beb35923866b6642b026d9b19da81dbdcf90152813d337ea50d5d5"
+    },
+    {
+      "path": "src/generator/ux_reporter.py",
+      "role": "core",
+      "bytes": 5059,
+      "sha256": "28214008619d691b3dbcbfbc8da631e1c32578e2c8d457b8dffb336beb639288"
+    },
+    {
+      "path": "src/generator/html_reporter.py",
+      "role": "core",
+      "bytes": 54598,
+      "sha256": "2e1e13c1f799bbf3d73b79b667bcfc3532e6652ba1a06efabf51a190cb56974b"
+    },
+    {
+      "path": "src/main.py",
+      "role": "core",
+      "bytes": 62520,
+      "sha256": "f051a3bef57a4d50a566f2cc311b7e43832295bd32b4a0678e6f5b28149ac240"
+    },
+    {
+      "path": "src/generator/accessibility_reporter.py",
+      "role": "core",
+      "bytes": 2184,
+      "sha256": "d7175f927fd8980572ebbb472ddbdea34e13a2ba11bfc25d5c10567d667126ab"
+    },
+    {
+      "path": "src/ux/usability_smells.py",
+      "role": "core",
+      "bytes": 7070,
+      "sha256": "54b4fb85b5061236e2fb54aaa6c0d3eeadab8ff013d87cefb9508955617b50e3"
+    }
+  ],
+  "wiring": {
+    "blueprints": [],
+    "provides_endpoints": []
+  },
+  "dependencies": {
+    "internal_modules_not_bundled": [
+      "src/analyzer/form_analyzer.py",
+      "src/analyzer/html_analyzer.py",
+      "src/analyzer/login_wall.py",
+      "src/analyzer/rule_injector.py",
+      "src/analyzer/stack_detector.py",
+      "src/analyzer/test_conditions.py",
+      "src/capture/burndown.py",
+      "src/capture/coverage.py",
+      "src/capture/finding_reporter.py",
+      "src/capture/reverse_generator.py",
+      "src/capture/session_recorder.py",
+      "src/ci_drift.py",
+      "src/crawler/action_explorer.py",
+      "src/crawler/auth.py",
+      "src/crawler/auth_recorder.py",
+      "src/crawler/auto_login.py",
+      "src/crawler/link_extractor.py",
+      "src/crawler/network_interceptor.py",
+      "src/crawler/parallel_crawler.py",
+      "src/crawler/performance_probe.py",
+      "src/crawler/playwright_runtime.py",
+      "src/crawler/politeness.py",
+      "src/crawler/session_guard.py",
+      "src/crawler/spa_monitor.py",
+      "src/crawler/url_safety.py",
+      "src/diff/comparison.py",
+      "src/diff/differ.py",
+      "src/diff/impact_analyzer.py",
+      "src/diff/snapshot.py",
+      "src/generator/architecture_generator.py",
+      "src/generator/comparison_reporter.py",
+      "src/generator/coverage_gap.py",
+      "src/generator/diff_reporter.py",
+      "src/generator/excel_reporter.py",
+      "src/generator/fusion_reporter.py",
+      "src/generator/json_reporter.py",
+      "src/generator/markdown_generator.py",
+      "src/generator/mermaid_generator.py",
+      "src/generator/pdf_reporter.py",
+      "src/generator/refresh_reporter.py",
+      "src/generator/test_design.py",
+      "src/generator/test_plan_generator.py",
+      "src/generator/trace_reporter.py",
+      "src/graph/transition_graph.py",
+      "src/health/technical_health.py",
+      "src/ingest/llm_extractor.py",
+      "src/ingest/loader.py",
+      "src/ingest/matcher.py",
+      "src/ingest/req_tracer.py",
+      "src/llm/openai_client.py",
+      "src/llm/prompt_guard.py",
+      "src/llm/screen_classifier.py",
+      "src/llm/viewpoint_generator.py",
+      "src/viewport/runner.py",
+      "web/services/openai_qa.py"
+    ],
+    "third_party_packages": [
+      {
+        "import": "networkx",
+        "requirement": "networkx==3.3",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "playwright",
+        "requirement": "playwright==1.61.0",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "python-dotenv",
+        "requirement": "python-dotenv==1.2.2",
+        "declared_in_requirements": true
+      }
+    ],
+    "env_vars": [
+      "OPENAI_API_KEY",
+      "WEBSPEC2DOC_RECORD_HEADLESS"
+    ],
+    "data_files": [],
+    "consumes_endpoints": [],
+    "window_globals": [],
+    "template_includes_not_bundled": [],
+    "static_refs_not_bundled": []
+  },
+  "gaps": [],
+  "shared_assets": [],
+  "warnings": [],
+  "verification": {
+    "static_analysis": "done",
+    "pytest": "not_run",
+    "verify_ui": "not_run",
+    "manual_screen_check": "not_run"
+  }
+}

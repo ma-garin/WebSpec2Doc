@@ -1,0 +1,461 @@
+"""モデルベースドテスト（MBT）設計エンジン（純関数・evidence-only）。
+
+`report.json`（`build_report` の出力 dict）を入力に、画面ごとのテスト設計を
+決定的に生成する。UI やファイル I/O は持たない純粋なデータ変換であり、
+出力はすべて frozen dataclass（不変）。
+
+対応技法:
+- bva  境界値分析      : maxlength/minlength/min_value/max_value の実測制約から境界ケース
+- dt   デシジョンテーブル: 必須フィールドの入力有無の全組み合わせ（2^k 真理値表）
+- pw   ペアワイズ       : 自前の貪欲 AETG 系アルゴリズム（決定的・乱数不使用）で t-way 被覆
+- st   状態遷移テスト   : 遷移グラフから N スイッチ経路を列挙
+
+evidence-only 原則:
+- 実測（report の制約・遷移グラフ）由来のケースは confidence=1.0（`EVIDENCE_MEASURED`）
+- テスト値カタログ（既知境界値の一般知識）由来は confidence=0.9（`EVIDENCE_CATALOG`）
+- 解析対象サイト固有のデータを捏造しない。
+"""
+
+from __future__ import annotations
+
+import json
+from collections.abc import Mapping
+from dataclasses import dataclass, field
+from itertools import product
+from pathlib import Path
+from typing import Any
+
+# ---- 確信度バッジ ----
+EVIDENCE_MEASURED = 1.0  # 実測データ由来（report の制約・遷移）
+EVIDENCE_CATALOG = 0.9  # テスト値カタログ（既知境界値の一般知識）由来
+
+SUPPORTED_TECHNIQUES: tuple[str, ...] = ("bva", "dt", "pw", "st")
+
+# 入力値として扱わないフィールド種別（view-design.js の SKIP と一致）
+_SKIP_FIELD_TYPES = frozenset({"hidden", "submit", "button", "reset", "image"})
+
+# フィールド種別 → 値カタログのカテゴリ（同一ストア instance/test_design_settings.json）
+_FIELD_TYPE_TO_CATALOG: dict[str, str] = {
+    "email": "email",
+    "tel": "phone_jp",
+    "date": "date",
+    "password": "password",
+}
+
+# カタログのラベルから期待結果を推定する決定的キーワード分類
+_INVALID_KEYWORDS = (
+    "+1",
+    "-1",
+    "超過",
+    "違反",
+    "不正",
+    "範囲外",
+    "未満",
+    "混入",
+    "文字種不足",
+    "空白",
+)
+_VALID_KEYWORDS = ("上限値", "下限値", "境界")
+
+
+# =========================================================================
+# パラメータ
+# =========================================================================
+@dataclass(frozen=True)
+class TestDesignParams:
+    """テスト設計の技法選択とパラメータ（設定 API と共有）。"""
+
+    enabled_techniques: tuple[str, ...] = SUPPORTED_TECHNIQUES
+    bva_offset: int = 1
+    pairwise_strength: int = 2  # 2（2-way）または 3（3-way）
+    n_switch: int = 0  # 0（0-switch）または 1（1-switch）
+    max_dt_conditions: int = 4
+    value_catalog: Mapping[str, list[dict[str, str]]] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        # frozen のため object.__setattr__ で正規化（不正値を安全側へ丸める）
+        object.__setattr__(self, "bva_offset", max(1, int(self.bva_offset)))
+        object.__setattr__(self, "pairwise_strength", 3 if int(self.pairwise_strength) >= 3 else 2)
+        object.__setattr__(self, "n_switch", 1 if int(self.n_switch) >= 1 else 0)
+        object.__setattr__(self, "max_dt_conditions", max(1, int(self.max_dt_conditions)))
+        object.__setattr__(
+            self,
+            "enabled_techniques",
+            tuple(t for t in self.enabled_techniques if t in SUPPORTED_TECHNIQUES),
+        )
+
+    def enabled(self, technique: str) -> bool:
+        return technique in self.enabled_techniques
+
+
+def load_params_from_file(path: Path) -> TestDesignParams:
+    """instance/test_design_settings.json から TestDesignParams を復元する。
+
+    ファイル欠損・壊れ・型不正はすべて既定値で継続する（解析全体を止めない）。
+    本モジュールは web/services へ依存しない（純関数・CLI からも呼べる）。
+    """
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return TestDesignParams()
+    if not isinstance(data, dict):
+        return TestDesignParams()
+    try:
+        raw_strength = int(data.get("pairwise_strength", 2))
+        return TestDesignParams(
+            enabled_techniques=tuple(data.get("enabled_techniques", ("bva", "dt", "pw", "st"))),
+            bva_offset=int(data.get("bva_offset", 1)),
+            pairwise_strength=raw_strength if raw_strength in (2, 3) else 2,
+            n_switch=1 if int(data.get("n_switch", 0)) == 1 else 0,
+            max_dt_conditions=min(
+                int(data.get("max_dt_conditions", 4)), 6
+            ),  # 2^6=64ルール上限（負荷予算）
+            value_catalog={k: list(v) for k, v in dict(data.get("value_catalog", {})).items()},
+        )
+    except (TypeError, ValueError, AttributeError):
+        return TestDesignParams()
+
+
+# =========================================================================
+# 結果モデル（すべて frozen）
+# =========================================================================
+@dataclass(frozen=True)
+class BvaCase:
+    field_name: str
+    label: str
+    value: str
+    expected: str  # "有効" / "無効" / "要確認"
+    confidence: float
+    evidence: str
+
+
+@dataclass(frozen=True)
+class BvaTable:
+    field_name: str
+    field_type: str
+    cases: tuple[BvaCase, ...]
+
+
+@dataclass(frozen=True)
+class DecisionRule:
+    conditions: tuple[bool, ...]  # 各条件（必須フィールド）の入力有無
+    action: str
+
+
+@dataclass(frozen=True)
+class DecisionTable:
+    conditions: tuple[str, ...]  # 条件ラベル（必須フィールド名）
+    rules: tuple[DecisionRule, ...]
+    confidence: float = EVIDENCE_MEASURED
+
+
+@dataclass(frozen=True)
+class PairwiseParam:
+    name: str
+    values: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class PairwiseTable:
+    params: tuple[PairwiseParam, ...]
+    rows: tuple[tuple[str, ...], ...]  # 各行はパラメータごとの値
+    strength: int
+    confidence: float = EVIDENCE_MEASURED
+
+
+@dataclass(frozen=True)
+class TransitionSequence:
+    steps: tuple[str, ...]  # 画面 ID の並び
+
+
+@dataclass(frozen=True)
+class StateTransitionSet:
+    n_switch: int
+    sequences: tuple[TransitionSequence, ...]
+    confidence: float = EVIDENCE_MEASURED
+
+
+@dataclass(frozen=True)
+class ScreenTestDesign:
+    page_id: str
+    title: str
+    bva: tuple[BvaTable, ...]
+    decision_table: DecisionTable | None
+    pairwise: PairwiseTable | None
+    state_transitions: StateTransitionSet | None
+
+    def is_empty(self) -> bool:
+        return not (self.bva or self.decision_table or self.pairwise or self.state_transitions)
+
+
+@dataclass(frozen=True)
+class TestDesign:
+    screens: tuple[ScreenTestDesign, ...]
+    params: TestDesignParams
+
+
+# =========================================================================
+# エントリポイント
+# =========================================================================
+def build_test_design(report: Mapping[str, Any], params: TestDesignParams) -> TestDesign:
+    """report(dict) から画面別のテスト設計を決定的に生成する純関数。"""
+    screens = report.get("screens") or []
+    succ = _successor_map(screens)
+    designs: list[ScreenTestDesign] = []
+    for screen in screens:
+        design = _design_for_screen(screen, params, succ)
+        if not design.is_empty():
+            designs.append(design)
+    return TestDesign(screens=tuple(designs), params=params)
+
+
+def _design_for_screen(
+    screen: Mapping[str, Any],
+    params: TestDesignParams,
+    succ: Mapping[str, tuple[str, ...]],
+) -> ScreenTestDesign:
+    fields = _input_fields(screen)
+    bva = _build_bva(fields, params) if params.enabled("bva") else ()
+    dt = _build_decision_table(fields, params) if params.enabled("dt") else None
+    pw = _build_pairwise(fields, params) if params.enabled("pw") else None
+    st = _build_state_transitions(screen, succ, params) if params.enabled("st") else None
+    return ScreenTestDesign(
+        page_id=str(screen.get("page_id", "")),
+        title=str(screen.get("title", "")),
+        bva=bva,
+        decision_table=dt,
+        pairwise=pw,
+        state_transitions=st,
+    )
+
+
+# =========================================================================
+# フィールド抽出ユーティリティ
+# =========================================================================
+def _input_fields(screen: Mapping[str, Any]) -> tuple[dict[str, Any], ...]:
+    out: list[dict[str, Any]] = []
+    for form in screen.get("forms") or []:
+        for fld in form.get("fields") or []:
+            if str(fld.get("field_type", "")) not in _SKIP_FIELD_TYPES:
+                out.append(fld)
+    return tuple(out)
+
+
+def _field_label(fld: Mapping[str, Any]) -> str:
+    return str(fld.get("name") or fld.get("field_type") or "field")
+
+
+def _option_values(fld: Mapping[str, Any]) -> tuple[str, ...]:
+    values: list[str] = []
+    for opt in fld.get("options") or []:
+        if isinstance(opt, Mapping):
+            values.append(str(opt.get("value") or opt.get("label") or ""))
+        else:
+            values.append(str(opt))
+    return tuple(v for v in values if v != "")
+
+
+# =========================================================================
+# 境界値分析（BVA）
+# =========================================================================
+def _build_bva(
+    fields: tuple[dict[str, Any], ...], params: TestDesignParams
+) -> tuple[BvaTable, ...]:
+    tables: list[BvaTable] = []
+    for fld in fields:
+        cases = _bva_cases(fld, params)
+        if cases:
+            tables.append(
+                BvaTable(
+                    field_name=_field_label(fld),
+                    field_type=str(fld.get("field_type", "")),
+                    cases=cases,
+                )
+            )
+    return tuple(tables)
+
+
+def _bva_cases(fld: Mapping[str, Any], params: TestDesignParams) -> tuple[BvaCase, ...]:
+    name = _field_label(fld)
+    off = params.bva_offset
+    cases: list[BvaCase] = []
+
+    def measured(label: str, value: str, expected: str, evidence: str) -> BvaCase:
+        return BvaCase(name, label, value, expected, EVIDENCE_MEASURED, evidence)
+
+    maxlength = _to_int(fld.get("maxlength"))
+    if maxlength is not None:
+        cases.append(measured("上限ちょうど", f"{maxlength}文字", "有効", f"maxlength={maxlength}"))
+        cases.append(
+            measured("上限超過", f"{maxlength + off}文字", "無効", f"maxlength={maxlength}")
+        )
+    minlength = _to_int(fld.get("minlength"))
+    if minlength is not None:
+        cases.append(measured("下限ちょうど", f"{minlength}文字", "有効", f"minlength={minlength}"))
+        if minlength - off >= 0:
+            cases.append(
+                measured("下限未満", f"{minlength - off}文字", "無効", f"minlength={minlength}")
+            )
+    min_value = _to_number(fld.get("min_value"))
+    if min_value is not None:
+        cases.append(measured("最小ちょうど", _num_str(min_value), "有効", f"min={min_value}"))
+        cases.append(measured("最小未満", _num_str(min_value - off), "無効", f"min={min_value}"))
+    max_value = _to_number(fld.get("max_value"))
+    if max_value is not None:
+        cases.append(measured("最大ちょうど", _num_str(max_value), "有効", f"max={max_value}"))
+        cases.append(measured("最大超過", _num_str(max_value + off), "無効", f"max={max_value}"))
+
+    cases.extend(_catalog_cases(fld, params))
+    return tuple(cases)
+
+
+def _catalog_cases(fld: Mapping[str, Any], params: TestDesignParams) -> tuple[BvaCase, ...]:
+    category = _FIELD_TYPE_TO_CATALOG.get(str(fld.get("field_type", "")))
+    if category is None:
+        return ()
+    entries = params.value_catalog.get(category) or []
+    name = _field_label(fld)
+    out: list[BvaCase] = []
+    for entry in entries:
+        label = str(entry.get("label", ""))
+        out.append(
+            BvaCase(
+                field_name=name,
+                label=label,
+                value=str(entry.get("value", "")),
+                expected=_classify_catalog(label),
+                confidence=EVIDENCE_CATALOG,
+                evidence=f"値カタログ:{category}",
+            )
+        )
+    return tuple(out)
+
+
+def _classify_catalog(label: str) -> str:
+    if any(k in label for k in _INVALID_KEYWORDS):
+        return "無効"
+    if any(k in label for k in _VALID_KEYWORDS):
+        return "有効"
+    return "要確認"
+
+
+# =========================================================================
+# デシジョンテーブル（必須フィールドの入力有無 2^k）
+# =========================================================================
+def _build_decision_table(
+    fields: tuple[dict[str, Any], ...], params: TestDesignParams
+) -> DecisionTable | None:
+    required = [f for f in fields if f.get("required")]
+    if len(required) < 2:
+        return None
+    chosen = required[: params.max_dt_conditions]
+    names = tuple(_field_label(f) for f in chosen)
+    rules: list[DecisionRule] = []
+    for combo in product((True, False), repeat=len(names)):
+        rules.append(DecisionRule(conditions=combo, action=_dt_action(names, combo)))
+    return DecisionTable(conditions=names, rules=tuple(rules))
+
+
+def _dt_action(names: tuple[str, ...], combo: tuple[bool, ...]) -> str:
+    missing = [n for n, present in zip(names, combo, strict=False) if not present]
+    if not missing:
+        return "送信成功"
+    return "エラー: " + "、".join(f"{n}未入力" for n in missing)
+
+
+# =========================================================================
+# ペアワイズ（正準実装は techniques.combinatorial — 本モジュールは委譲）
+# =========================================================================
+def _build_pairwise(
+    fields: tuple[dict[str, Any], ...], params: TestDesignParams
+) -> PairwiseTable | None:
+    from techniques.combinatorial import generate_covering_array
+
+    par = _pairwise_params(fields)
+    strength = params.pairwise_strength
+    if len(par) <= strength:
+        # パラメータが強度以下なら全数（デカルト積）で足りるため、ペアワイズ不要
+        return None
+    result = generate_covering_array([p.values for p in par], strength)
+    return PairwiseTable(params=tuple(par), rows=result.rows, strength=strength)
+
+
+def _pairwise_params(fields: tuple[dict[str, Any], ...]) -> list[PairwiseParam]:
+    par: list[PairwiseParam] = []
+    for fld in fields:
+        opts = _option_values(fld)
+        if len(opts) >= 2:
+            values = opts
+        else:
+            values = ("有効値", "無効値")  # 同値クラス（有効/無効の2値）
+        par.append(PairwiseParam(name=_field_label(fld), values=values))
+    return par
+
+
+# =========================================================================
+# 状態遷移テスト（N スイッチ経路列挙）
+# =========================================================================
+def _successor_map(screens: list[Mapping[str, Any]]) -> dict[str, tuple[str, ...]]:
+    succ: dict[str, tuple[str, ...]] = {}
+    for screen in screens:
+        pid = str(screen.get("page_id", ""))
+        to = screen.get("transitions", {}).get("to") or []
+        succ[pid] = tuple(str(t) for t in to if str(t) != pid)
+    return succ
+
+
+def _build_state_transitions(
+    screen: Mapping[str, Any],
+    succ: Mapping[str, tuple[str, ...]],
+    params: TestDesignParams,
+) -> StateTransitionSet | None:
+    pid = str(screen.get("page_id", ""))
+    if not succ.get(pid):
+        return None
+    depth = params.n_switch + 1  # スイッチ数 + 1 本の遷移（辺）を辿る
+    sequences = tuple(TransitionSequence(steps=path) for path in _enumerate_paths(pid, succ, depth))
+    if not sequences:
+        return None
+    return StateTransitionSet(n_switch=params.n_switch, sequences=sequences)
+
+
+def _enumerate_paths(
+    start: str, succ: Mapping[str, tuple[str, ...]], edges: int
+) -> list[tuple[str, ...]]:
+    """start から edges 本の遷移を辿る経路を決定的に列挙する（自己ループは除外）。"""
+    paths: list[tuple[str, ...]] = [(start,)]
+    for _ in range(edges):
+        extended: list[tuple[str, ...]] = []
+        for path in paths:
+            for nxt in succ.get(path[-1], ()):  # succ は挿入順を保持（決定的）
+                if nxt not in path:  # サイクルを避けて有限化
+                    extended.append(path + (nxt,))
+        paths = extended
+    return paths
+
+
+# =========================================================================
+# 数値パース補助
+# =========================================================================
+def _to_int(value: Any) -> int | None:
+    try:
+        if value is None or value == "":
+            return None
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _to_number(value: Any) -> float | None:
+    try:
+        if value is None or value == "":
+            return None
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _num_str(value: float) -> str:
+    if value == int(value):
+        return str(int(value))
+    return str(value)

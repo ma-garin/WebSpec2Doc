@@ -1,0 +1,40 @@
+{
+  "feature_id": "usage_roi",
+  "name": "ROIダッシュボード / 利用実績",
+  "risk_level": "medium",
+  "status": "implemented",
+  "ui_files": [
+    "templates/partials/view-usage.html"
+  ],
+  "route_files": [
+    "web/routes/usage.py"
+  ],
+  "core_files": [
+    "web/services/usage_tracker.py"
+  ],
+  "symbols": [
+    "record_usage",
+    "summarize_usage",
+    "record_comparison_from_report",
+    "record_ux_review_from_report"
+  ],
+  "outputs": [
+    "usage summary",
+    "estimated saved hours"
+  ],
+  "persistence": [
+    "output/usage_log.jsonl"
+  ],
+  "failure_modes": [
+    "missing_log",
+    "corrupt_log_line",
+    "invalid_coefficient_env",
+    "comparison_json_missing",
+    "ux_review_json_missing"
+  ],
+  "required_tests": [
+    "happy_path",
+    "empty_path",
+    "evidence"
+  ]
+}

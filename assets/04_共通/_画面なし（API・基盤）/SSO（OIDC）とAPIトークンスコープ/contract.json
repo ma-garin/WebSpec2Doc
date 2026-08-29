@@ -1,0 +1,44 @@
+{
+  "feature_id": "sso_oidc",
+  "name": "SSO（OIDC）とAPIトークンスコープ",
+  "risk_level": "critical",
+  "status": "implemented",
+  "ui_files": [],
+  "route_files": [
+    "web/routes/oidc.py"
+  ],
+  "core_files": [
+    "web/services/oidc.py",
+    "web/services/auth_store.py",
+    "web/auth.py"
+  ],
+  "symbols": [
+    "build_authorization_url",
+    "extract_identity",
+    "verify_state",
+    "find_active_user_by_email"
+  ],
+  "outputs": [
+    "SSOセッション",
+    "APIトークン（スコープ付き）"
+  ],
+  "persistence": [
+    "instance/auth.db"
+  ],
+  "failure_modes": [
+    "state_mismatch",
+    "issuer_mismatch",
+    "audience_mismatch",
+    "nonce_mismatch",
+    "unregistered_user",
+    "domain_not_allowed",
+    "readonly_token_mutation"
+  ],
+  "required_tests": [
+    "happy_path",
+    "error_path",
+    "authorization_path",
+    "token_validation",
+    "evidence"
+  ]
+}

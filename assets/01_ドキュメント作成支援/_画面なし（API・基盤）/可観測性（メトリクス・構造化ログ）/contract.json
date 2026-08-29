@@ -1,0 +1,37 @@
+{
+  "feature_id": "observability",
+  "name": "可観測性（メトリクス・構造化ログ）",
+  "risk_level": "medium",
+  "status": "implemented",
+  "ui_files": [],
+  "route_files": [
+    "web/routes/metrics.py"
+  ],
+  "core_files": [
+    "web/services/metrics.py",
+    "web/services/scheduler.py",
+    "web/services/notifier.py",
+    "web/services/job_queue.py"
+  ],
+  "symbols": [
+    "render_metrics",
+    "record_crawl",
+    "record_notification",
+    "set_schedule_delay",
+    "set_job_queue_depth"
+  ],
+  "outputs": [
+    "/metrics（Prometheus形式）",
+    "JSON構造化ログ"
+  ],
+  "persistence": [],
+  "failure_modes": [
+    "metric_record_failure",
+    "negative_value"
+  ],
+  "required_tests": [
+    "happy_path",
+    "failure_observable",
+    "evidence"
+  ]
+}

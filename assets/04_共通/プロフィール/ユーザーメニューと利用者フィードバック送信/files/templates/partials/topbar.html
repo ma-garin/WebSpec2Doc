@@ -1,0 +1,70 @@
+    <header class="app-topbar">
+      <div class="app-topbar-lead" style="min-width:0">
+        <div class="app-breadcrumb" id="topbar-breadcrumb"><span>WebSpec2Doc</span><span class="sep">/</span><span>ホーム</span></div>
+        <h1 class="app-topbar-title" id="topbar-title">QAドキュメント生成</h1>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:auto">
+        <div class="app-topbar-actions" id="topbar-actions"></div>
+        {# 認証オフ（未ログイン）でもプレースホルダのゲストアバターを常に出す。
+           auth_user が None のときだけ消えると開発時に「無い」ように見えるため。 #}
+        {% set u = auth_user or {'name': 'ゲスト', 'email': '', 'role': ''} %}
+        <div class="usermenu" id="usermenu">
+          <button type="button" class="usermenu-trigger" id="usermenu-trigger"
+                  aria-haspopup="true" aria-expanded="false" aria-controls="usermenu-pop"
+                  title="{{ 'アカウントメニュー（' + u.email + '）' if auth_user else 'アカウントメニュー（未ログイン）' }}">
+            <span class="usermenu-avatar">{{ u.name[:1] | upper }}</span>
+            <span class="usermenu-trigger-name">{{ u.name }}</span>
+            <svg class="usermenu-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+
+          <div class="usermenu-pop" id="usermenu-pop" role="menu" aria-labelledby="usermenu-trigger" hidden>
+            <div class="usermenu-head">
+              <span class="usermenu-avatar is-lg" aria-hidden="true">{{ u.name[:1] | upper }}</span>
+              <span class="usermenu-head-text">
+                <span class="usermenu-name">{{ u.name }}</span>
+                <span class="usermenu-mail">{{ u.email if auth_user else '未ログイン（認証オフ）' }}</span>
+              </span>
+            </div>
+
+            <div class="usermenu-sep" role="none"></div>
+
+            {% if auth_user %}
+            <button type="button" class="usermenu-item" role="menuitem" id="usermenu-account-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+              <span>個人設定</span>
+            </button>
+            {% endif %}
+            {% if u.role == 'admin' %}
+            {# 管理者だけに出す。押しても 403 になる項目を一般利用者に見せない。 #}
+            <button type="button" class="usermenu-item" role="menuitem" id="usermenu-users-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              <span>ユーザー管理</span>
+            </button>
+            <button type="button" class="usermenu-item" role="menuitem" id="usermenu-tenants-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/></svg>
+              <span>テナント管理</span>
+            </button>
+            {% endif %}
+            <button type="button" class="usermenu-item" role="menuitem" id="usermenu-guide-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 4h7v16H4zM13 4h7v16h-7z"/></svg>
+              <span>ユーザーガイド</span>
+            </button>
+            <button type="button" class="usermenu-item" role="menuitem" id="usermenu-feedback-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 12a8 8 0 0 1-8 8H7l-4 3v-5.5A8 8 0 0 1 11 4h2a8 8 0 0 1 8 8z"/></svg>
+              <span>フィードバック</span>
+            </button>
+
+            {% if auth_user %}
+            <div class="usermenu-sep" role="none"></div>
+
+            <form method="post" action="/auth/logout" class="usermenu-logout-form">
+              <button type="submit" class="usermenu-item is-danger" role="menuitem">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M15 17l5-5-5-5"/><path d="M20 12H9"/><path d="M12 3H5v18h7"/></svg>
+                <span>ログアウト</span>
+              </button>
+            </form>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </header>

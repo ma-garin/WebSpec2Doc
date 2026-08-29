@@ -55,6 +55,16 @@ _DEFAULT_TIMEZONE = "Asia/Tokyo"
 _MAX_RETRIES = 5
 _MAX_BACKOFF_SECONDS = 3600
 
+#: schedule.json の job_type。キー欠落は "crawl"（既存設定の後方互換）。
+_VALID_JOB_TYPES = frozenset({"crawl", "test"})
+#: 画面へ渡す選択肢の語彙。画面側に文言をハードコードさせないため API から配る。
+_JOB_TYPE_CHOICES = (
+    {"value": "crawl", "label": "クロール"},
+    {"value": "test", "label": "自動テスト"},
+)
+_MAX_ENVIRONMENT_LENGTH = 32
+_MAX_SCHEDULE_TEST_IDS = 200
+
 
 def _schedule_path(domain: str) -> Path:
     return _out() / domain / "schedule.json"
@@ -64,6 +74,11 @@ def _default_config(domain: str) -> dict:
     return {
         "domain": domain,
         "interval": "disabled",
+        # job_type を持たない既存 schedule.json は、この既定値によって
+        # 従来どおりクロールとして扱われる（後方互換）。
+        "job_type": "crawl",
+        "environment": "",
+        "schedule_test_ids": [],
         "notify_type": "none",
         "notify_endpoint": "",
         "severity_filter": "breaking",
@@ -122,8 +137,56 @@ def _calc_next_run_at(interval: str, config: dict | None = None) -> str | None:
     )
 
 
-def _operational_fields(body: dict) -> tuple[dict, str | None]:
-    """運用設定を正規化する。エラー時は利用者向けメッセージを返す。"""
+def _pick(body: dict, existing: dict | None, key: str, default: object) -> object:
+    """body にキーがあれば body、無ければ既存設定（さらに無ければ既定値）を採る。
+
+    未送信のキーを既定値で上書きすると、画面が job_type を送らない古い版のままでも
+    保存のたびに設定が "crawl" へ巻き戻る。送っていない項目は変更しない。
+    """
+    if key in body:
+        return body.get(key)
+    if existing and key in existing:
+        return existing.get(key)
+    return default
+
+
+def _job_execution_fields(body: dict, existing: dict | None) -> tuple[dict, str | None]:
+    """実行種別（job_type）まわりを正規化する。エラー時はメッセージを返す。"""
+    job_type = str(_pick(body, existing, "job_type", "crawl") or "crawl").strip()
+    if job_type not in _VALID_JOB_TYPES:
+        return {}, f"invalid job_type: {job_type}（crawl / test のいずれか）"
+
+    environment = str(_pick(body, existing, "environment", "") or "").strip()
+    if len(environment) > _MAX_ENVIRONMENT_LENGTH:
+        return {}, "invalid environment"
+
+    raw_ids = _pick(body, existing, "schedule_test_ids", []) or []
+    if not isinstance(raw_ids, list) or len(raw_ids) > _MAX_SCHEDULE_TEST_IDS:
+        return {}, "invalid schedule_test_ids"
+    if any(
+        isinstance(item, bool) or not isinstance(item, str) or not item.strip()
+        for item in raw_ids
+    ):
+        return {}, "invalid schedule_test_ids"
+
+    return {
+        "job_type": job_type,
+        "environment": environment,
+        "schedule_test_ids": [item.strip() for item in raw_ids],
+    }, None
+
+
+def _operational_fields(body: dict, existing: dict | None = None) -> tuple[dict, str | None]:
+    """運用設定を正規化する。エラー時は利用者向けメッセージを返す。
+
+    `web/routes/api_v1_schedule.py` からも同じ規則で呼ばれる（規則を二重に持たない）。
+    api_v1 側は既存設定と本文をマージした dict を body として渡すため、
+    existing を省略しても未送信キーは保持される。
+    """
+    execution, execution_error = _job_execution_fields(body, existing)
+    if execution_error:
+        return {}, execution_error
+
     timezone = str(body.get("timezone", _DEFAULT_TIMEZONE)).strip()
     try:
         ZoneInfo(timezone)
@@ -164,6 +227,7 @@ def _operational_fields(body: dict) -> tuple[dict, str | None]:
     ):
         return {}, "invalid retry_backoff_seconds"
     return {
+        **execution,
         "timezone": timezone,
         "weekdays": weekdays,
         "window_start": window_start,
@@ -178,7 +242,10 @@ def api_schedule_config_get() -> tuple[dict, int] | dict:
     domain = request.args.get("domain", "").strip()
     if not _valid_domain(domain):
         return {"error": "invalid domain"}, 400
-    return _public_config(_load_config(domain))
+    config = _public_config(_load_config(domain))
+    # 選択肢の語彙は API が配る（画面側に文言を持たせると増減時に不整合になる）。
+    config["job_types"] = [dict(choice) for choice in _JOB_TYPE_CHOICES]
+    return config
 
 
 @bp.post("/schedule/config")
@@ -221,7 +288,7 @@ def api_schedule_config_post() -> tuple[dict, int] | dict:
         or not 1 <= diff_summary_limit <= 20
     ):
         return {"error": "invalid diff_summary_limit"}, 400
-    operational, operational_error = _operational_fields(body)
+    operational, operational_error = _operational_fields(body, existing)
     if operational_error:
         return {"error": operational_error}, 400
 
@@ -260,22 +327,67 @@ def api_schedule_config_post() -> tuple[dict, int] | dict:
 
 @bp.post("/schedule/run-now")
 def api_schedule_run_now() -> tuple[dict, int] | dict:
+    """予定を待たずに今すぐ実行する。
+
+    以前はタイムスタンプを進めて「キューに追加しました」と返すだけで、
+    実際には何も起動していなかった（そのうえ next_run_at が未来へ押し出され、
+    次の定期実行が 1 周期飛んでいた）。ここで実際にジョブを起動する。
+    """
     body = request.get_json(silent=True) or {}
     domain = str(body.get("domain", "")).strip()
     if not _valid_domain(domain):
         return {"error": "invalid domain"}, 400
 
     config = _load_config(domain)
+    job_type = str(config.get("job_type", "crawl") or "crawl").strip().lower()
+    if job_type not in _VALID_JOB_TYPES:
+        return {"error": f"invalid job_type: {job_type}（crawl / test のいずれか）"}, 400
+
+    if job_type == "test":
+        from web.services.scheduler import start_scheduled_test
+
+        started = start_scheduled_test(
+            domain,
+            _schedule_path(domain),
+            config,
+            output_root=_out(),
+            trigger="manual",
+        )
+        if not started.ok:
+            # 起動できていないので last_run_at / next_run_at は進めない
+            # （進めると「実行していないのに次回が先送り」になる）。
+            return {"error": started.error, "domain": domain}, 400
+        job_id = started.job_id
+        message = "自動テストの実行を開始しました"
+    else:
+        site_url = str(config.get("site_url", "")).strip()
+        if not site_url:
+            return {"error": "site_url が未設定です。スケジュール設定で登録してください"}, 400
+        if not _valid_url(site_url):
+            return {"error": "invalid site_url: http/https のみ対応しています"}, 400
+
+        from web.services.job_queue import start_crawl_job
+
+        # 出力先はリクエスト内で解決する（ジョブスレッドからは
+        # テナントのリクエストコンテキストを参照できないため）。
+        job_id = start_crawl_job(domain=domain, site_url=site_url, output_dir=_out())
+        message = "クロールを開始しました"
+
+    # 二重実行防止の意味は定期実行と同じ。起動できた場合のみ進める。
     now_iso = datetime.now().isoformat(timespec="seconds")
     config["last_run_at"] = now_iso
     config["next_run_at"] = _calc_next_run_at(config.get("interval", "disabled"), config)
     _save_config(domain, config)
 
-    logger.info("schedule run-now queued: domain=%s", domain)
+    logger.info(
+        "schedule run-now started: domain=%s job_type=%s job_id=%s", domain, job_type, job_id
+    )
     return {
         "ok": True,
-        "message": "スケジュールクロールをキューに追加しました",
+        "message": message,
         "domain": domain,
+        "job_type": job_type,
+        "job_id": job_id,
     }
 
 

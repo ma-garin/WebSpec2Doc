@@ -1,0 +1,377 @@
+        <!-- ===== AutoRun ビュー（単一フロー: 受付→実行→納品が同じ列で変身） ===== -->
+        <section class="view" id="view-auto-run">
+          <div class="autorun-workspace">
+
+          <!-- 主導線バー: 現在地と次の操作を1箇所に常設する（autorun-leadbar.js が描画） -->
+          <div id="autorun-leadbar" class="autorun-leadbar" role="status" aria-live="polite" style="display:none"></div>
+
+          <div class="autorun-body">
+          <div class="autorun-work">
+
+            <!-- 停止操作は主導線バーの「中止する」に一本化した。
+                 「画面に出さないが要素は残す」を続けた結果、JS 側が
+                 display を戻して2つ目の停止ボタンが実際に表示されていた
+                 （利用者の指摘）。要素ごと削除する。 -->
+
+            <!-- 受付（idle）: フォームと説明を内包。実行開始で丸ごと切り替わる -->
+            <div id="autorun-idle-msg" class="autorun-intake">
+              <div class="autorun-intake-lead">
+                <div class="section-kicker">受付</div>
+                <h3 class="autorun-intake-title">URLか仕様書を渡すだけ。あとはベテランQAとして回します。</h3>
+                <!-- 「全自動」とだけ書くと、途中で確認を求められた時点で期待を裏切る。
+                     人が関わる点（要確認の提示・実行条件の確認）を先に言う。 -->
+                <p class="autorun-intake-sub">受領から実行完了レポートの納品まで、フルスペクトラムのQAを一貫して実施します。範囲は絞りません。技法・観点はシステム側が判断します。<strong>途中2回だけ止まります</strong>（ログインが必要なとき／実行条件の確認）。根拠が弱い項目は「要確認」として提示します。</p>
+              </div>
+
+              <div id="autorun-form-area" class="card autorun-form">
+                <fieldset class="autorun-mode-switch">
+                  <legend>生成モード</legend>
+                  <!-- 選択中モードの再掲は、各ラジオの説明文と同じ内容で二重になっていた。
+                       要素はJSの参照先として残し、支援技術向けの通知だけに使う。 -->
+                  <p class="autorun-mode-current visually-hidden" id="autorun-mode-current" aria-live="polite"></p>
+                  <div class="autorun-mode-options">
+                    <label for="autorun-mode-url" class="autorun-mode-option">
+                      <input type="radio" id="autorun-mode-url" name="autorun-mode" value="url" checked>
+                      <span><strong>URL駆動</strong><small>実測した画面からテストを生成</small></span>
+                    </label>
+                    <label for="autorun-mode-document" class="autorun-mode-option">
+                      <input type="radio" id="autorun-mode-document" name="autorun-mode" value="document">
+                      <span><strong>文書駆動</strong><small>要件文書と実測画面を結合</small></span>
+                    </label>
+                  </div>
+                </fieldset>
+                <div class="control-field">
+                  <label for="autorun-url">対象URL</label>
+                  <div class="autorun-url-row">
+                    <!-- 仕様4: 過去に解析したサイトから選べるようにする（AutoRun専用の候補） -->
+                    <input type="url" id="autorun-url" class="url-input input-compact" placeholder="https://example.com" autocomplete="url" list="autorun-url-suggestions" />
+                    <datalist id="autorun-url-suggestions"></datalist>
+                    <!-- 事前確認は明示操作でのみ実行する。URLを打っただけで対象サイトへ
+                         アクセスしないこと（相手先への無断アクセスを避ける）。 -->
+                    <button type="button" id="autorun-preflight-btn" class="btn-outline-sm autorun-preflight-btn">先に到達確認</button>
+                  </div>
+                  <p class="input-field-hint"><strong>そのまま「開始」で構いません。</strong>「先に到達確認」は任意です（到達可否と画面数だけを先に見たいとき。範囲は本実行と同じため、規模によっては時間がかかります）。押すまで対象サイトには一切アクセスしません。</p>
+                  <div id="autorun-preflight" class="autorun-preflight" aria-live="polite" hidden></div>
+                </div>
+                <div id="autorun-document-options" class="autorun-document-options" hidden>
+                  <div class="control-field">
+                    <label for="autorun-reference-doc-input">要件・仕様文書</label>
+                    <input type="file" id="autorun-reference-doc-input" multiple
+                           accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.md,.txt,.html,.htm,.json,.feature">
+                    <p class="input-field-hint">Gherkin（.feature）形式で書くと要件の抽出精度が上がります。</p>
+                    <ul id="autorun-reference-doc-list" class="autorun-reference-doc-list"></ul>
+                    <div id="autorun-reference-doc-status" class="input-field-message" aria-live="polite"></div>
+                  </div>
+                  <div class="control-field">
+                    <label for="autorun-selection-criterion">パス選定基準</label>
+                    <select id="autorun-selection-criterion" class="url-input select-compact">
+                      <option value="vertex_coverage">全画面を通る</option>
+                      <option value="edge_coverage">全遷移を通る</option>
+                      <option value="prime_path">全経路パターンを通る（プライムパス）</option>
+                      <option value="reached_target">指定画面へ到達する</option>
+                    </select>
+                  </div>
+                  <div id="autorun-target-page-field" class="control-field" hidden>
+                    <label for="autorun-target-page-id">到達する画面ID</label>
+                    <input type="text" id="autorun-target-page-id" class="url-input input-compact" placeholder="例: checkout_complete">
+                  </div>
+                  <label class="autorun-validation-option" for="autorun-observe-validation">
+                    <input type="checkbox" id="autorun-observe-validation">
+                    <span><strong>入力検証も解析する</strong><small id="autorun-validation-safety-note">フォームへ入力のみ・送信しません</small></span>
+                  </label>
+                </div>
+                <div class="control-field">
+                  <label for="autorun-viewpoint-set">観点セット<span class="info-tip" tabindex="0" role="img" aria-label="テスト観点の集合。サイドバーの「観点管理」で編集したものがここに出ます。" data-tip="テスト観点の集合。サイドバーの「観点管理」で編集したものがここに出ます。">ⓘ</span></label>
+                  <select id="autorun-viewpoint-set" class="url-input select-compact">
+                    <option value="">自動選択</option>
+                  </select>
+                  <div id="autorun-viewpoint-recommendation" class="autorun-viewpoint-recommendation" aria-live="polite">
+                    公開済み観点セットを確認しています…
+                  </div>
+                </div>
+                <!-- 既定値は折りたたみの中に隠さない。「全ページ対象」とだけ書かれても
+                     何画面・どこまで辿るのかが分からず、規模の見当がつかない。 -->
+                <p class="autorun-scope-default">既定の解析範囲: <strong>リンクを10回まで辿り、最大500画面</strong>（サイト全体）。狭めたいときは下で変更できます。</p>
+                <details class="autorun-advanced-options">
+                  <summary>解析範囲を変更する</summary>
+                  <div class="control-grid-2">
+                    <div class="control-field">
+                      <label for="autorun-depth">深さ<span class="info-tip" tabindex="0" role="img" aria-label="トップ画面からリンクを何回辿るか。既定は上限（10）で、サイト全体を対象にします。少なくすると解析範囲を絞れます。" data-tip="トップ画面からリンクを何回辿るか。既定は上限（10）で、サイト全体を対象にします。少なくすると解析範囲を絞れます。">ⓘ</span></label>
+                      <input type="number" id="autorun-depth" class="url-input input-compact" value="10" min="1" max="10" />
+                    </div>
+                    <div class="control-field">
+                      <label for="autorun-max-pages">最大画面数<span class="info-tip" tabindex="0" role="img" aria-label="解析・テスト対象にする画面数の上限。既定は上限（500）で、サイト全体を対象にします。この件数に達したら解析を打ち切ります。" data-tip="解析・テスト対象にする画面数の上限。既定は上限（500）で、サイト全体を対象にします。この件数に達したら解析を打ち切ります。">ⓘ</span></label>
+                      <input type="number" id="autorun-max-pages" class="url-input input-compact" value="500" min="1" max="500" />
+                    </div>
+                  </div>
+                </details>
+                <button type="button" id="autorun-start-btn" class="btn-primary btn-block">開始</button>
+                <div id="autorun-start-status" class="input-field-message autorun-start-status"></div>
+              </div>
+
+              <!-- 工程の数え方は1つに統一する。ここで独自に 11 段に割ると、
+                   実行中に見える 8 段階と一致せず、進捗を推定できなくなる。
+                   番号と名称は src/autorun/stages.py の STAGE_DEFINITIONS が正。 -->
+              <div class="autorun-intake-flow">
+                <div class="autorun-intake-phase">
+                  <div class="autorun-intake-phase-head">解析</div>
+                  <ol class="autorun-intake-steps">
+                    <li><span class="ai-n">–</span>受領（URL / 仕様書）</li>
+                    <li><span class="ai-n">–</span>悉皆解析（全画面・入力・遷移・データフロー）</li>
+                  </ol>
+                </div>
+                <div class="autorun-intake-phase">
+                  <div class="autorun-intake-phase-head">設計（8段階）</div>
+                  <ol class="autorun-intake-steps">
+                    <li><span class="ai-n">1</span>テスト目的</li>
+                    <li><span class="ai-n">2</span>テスト計画</li>
+                    <li><span class="ai-n">3</span>テストフィーチャー分析</li>
+                    <li><span class="ai-n">4</span>テスト観点分析</li>
+                    <li><span class="ai-n">5</span>テスト基本設計</li>
+                    <li><span class="ai-n">6</span>テスト詳細設計</li>
+                    <li><span class="ai-n">7</span>テストケース</li>
+                    <li><span class="ai-n">8</span>Playwright 自動化</li>
+                  </ol>
+                </div>
+                <div class="autorun-intake-phase">
+                  <div class="autorun-intake-phase-head">実行・納品</div>
+                  <ol class="autorun-intake-steps">
+                    <li><span class="ai-n">–</span>テスト実行（Playwright）</li>
+                    <li><span class="ai-n">–</span>評価（観測した事実と品質判断を分離）</li>
+                    <li><span class="ai-n">–</span>レポート納品＋回帰・ドリフト検知</li>
+                  </ol>
+                </div>
+              </div>
+
+              <div class="autorun-intake-deliverables">
+                <div class="section-kicker">成果物</div>
+                <div class="autorun-intake-chips">
+                  <span class="autorun-deliverable-chip">テスト計画</span>
+                  <span class="autorun-deliverable-chip">テスト分析</span>
+                  <span class="autorun-deliverable-chip">テスト設計</span>
+                  <span class="autorun-deliverable-chip">テストケース</span>
+                  <span class="autorun-deliverable-chip">Playwright実行結果</span>
+                  <span class="autorun-deliverable-chip">証跡パック</span>
+                  <span class="autorun-deliverable-chip">カバレッジ指標</span>
+                  <span class="autorun-deliverable-chip">品質観点マップ</span>
+                </div>
+              </div>
+
+              <div class="autorun-intake-scope" role="note">
+                <strong>報告の範囲について：</strong>検出できた範囲を証跡付きで報告します。検証できなかった領域は「未検証」と明記し、<em>欠陥が無いことの証明はしません</em>。現新比較は前回スナップショットがある場合のみ成立し、初回は基準確立のみです。
+              </div>
+            </div>
+
+            <!-- ログイン壁で止まったときの説明。判定根拠と選択肢を示し、
+                 無言で「取得できた範囲」を進めない（実行条件の決定と同じ扱い）。 -->
+            <div id="autorun-login-stop" class="autorun-stop-card" style="display:none"></div>
+
+            <!-- 承認待ちの案内。モーダルを勝手に出さず、確認を促してから実行へ進む -->
+
+            <!-- 要確認チェックリスト: AI 由来・高リスクの項目だけを人が確認する -->
+            <div id="autorun-review" class="autorun-review" style="display:none"></div>
+
+            <!-- 段階承認パイプライン（仕様7〜13）: 提示 → 個別修正 → 承認 -->
+            <div id="autorun-stages" class="autorun-stages" style="display:none">
+              <div class="autorun-stages-rail" id="autorun-stages-rail"></div>
+              <div class="autorun-stage-panel" id="autorun-stage-panel"></div>
+            </div>
+
+            <!-- コックピット: 横型ステッパー + 全体進捗バー（進捗表示はここに一本化） -->
+            <div id="autorun-steps" class="card autorun-cockpit" style="display:none">
+              <!-- 概要は1行に圧縮する。器を横に伸ばしただけで情報が増えない状態を避け、
+                   空いた縦をすべて実行ログへ渡す（利用者の指摘）。
+                   名称は受付の工程表と一致させる。ここだけ別の呼び方をすると
+                   「受付で見た工程」と「いま進んでいる工程」が突き合わせられない。 -->
+              <div class="autorun-step-row stepper">
+                <div class="autorun-step-item" id="ars-crawl">
+                  <span class="autorun-step-icon stepper-icon" aria-hidden="true"></span>
+                  <span class="autorun-step-label">解析</span>
+                  <span class="autorun-step-meta" id="ars-crawl-meta"></span>
+                </div>
+                <div class="autorun-step-item" id="ars-qa">
+                  <span class="autorun-step-icon stepper-icon" aria-hidden="true"></span>
+                  <span class="autorun-step-label">設計（8段階）</span>
+                  <span class="autorun-step-meta" id="ars-qa-meta"></span>
+                </div>
+                <div class="autorun-step-item" id="ars-scripts">
+                  <span class="autorun-step-icon stepper-icon" aria-hidden="true"></span>
+                  <span class="autorun-step-label">スクリプト</span>
+                  <span class="autorun-step-meta" id="ars-scripts-meta"></span>
+                </div>
+                <div class="autorun-step-item" id="ars-approval">
+                  <span class="autorun-step-icon stepper-icon" aria-hidden="true"></span>
+                  <span class="autorun-step-label">確認</span>
+                  <span class="autorun-step-meta" id="ars-approval-meta"></span>
+                </div>
+                <div class="autorun-step-item" id="ars-running">
+                  <span class="autorun-step-icon stepper-icon" aria-hidden="true"></span>
+                  <span class="autorun-step-label">テスト実行</span>
+                  <span class="autorun-step-meta" id="ars-running-meta"></span>
+                </div>
+                <div class="autorun-step-item" id="ars-done">
+                  <span class="autorun-step-icon stepper-icon" aria-hidden="true"></span>
+                  <span class="autorun-step-label">完了</span>
+                  <span class="autorun-step-meta" id="ars-done-meta"></span>
+                </div>
+              </div>
+              <div class="autorun-cockpit-tail">
+                <div class="autorun-progressbar" role="progressbar" aria-label="全体進捗"
+                     aria-valuemin="0" aria-valuemax="100" id="autorun-progressbar">
+                  <div id="autorun-progress-fill" class="autorun-progressbar-fill"></div>
+                </div>
+                <span id="autorun-phase-label" class="autorun-phase-label" aria-live="polite"></span>
+                <span id="autorun-elapsed" class="autorun-elapsed">0:00</span>
+              </div>
+              <div id="autorun-step-note" class="autorun-step-note" style="display:none"></div>
+            </div>
+
+            <!-- テスト実行中のライブプレビュー（screenshot:'on' で生成される最新PNGをポーリング表示） -->
+            <div id="autorun-preview-frame" class="execution-preview-frame" style="display:none">
+              <img id="autorun-preview-image" class="execution-preview-image" alt="テスト実行中のライブプレビュー" />
+              <div id="autorun-preview-placeholder" class="execution-preview-placeholder">
+                <div class="spinner"></div>
+                <p>ライブプレビューを準備しています…</p>
+              </div>
+            </div>
+
+            <!-- テスト実行中の実況（OK/NGがリアルタイムで流れる。R3-01） -->
+            <div id="autorun-live-tests-area"></div>
+
+            <!-- 完了カード（レポート「テスト実行」タブへの導線） -->
+            <div id="autorun-complete-card" class="card autorun-complete-card" style="display:none"></div>
+
+            <div id="autorun-failure-panel" class="card autorun-failure-panel" style="display:none">
+              <div class="autorun-panel-head">
+                <div>
+                  <div class="section-kicker">失敗の見立て</div>
+                  <p class="muted-copy">原因、部分成果、復旧アクションを確認できます。</p>
+                </div>
+              </div>
+              <div id="autorun-failure-body" class="autorun-failure-body"></div>
+            </div>
+
+            <div id="ar-log-section" class="card autorun-log-card" style="display:none">
+              <div class="autorun-panel-head autorun-log-head">
+                <span class="section-kicker">実行ログ</span>
+                <div class="autorun-log-tools">
+                  <div class="autorun-log-filter" role="group" aria-label="ログレベルフィルタ">
+                    <button type="button" class="autorun-log-filter-btn is-active" data-log-level="all">すべて</button>
+                    <button type="button" class="autorun-log-filter-btn" data-log-level="warn">警告以上</button>
+                    <button type="button" class="autorun-log-filter-btn" data-log-level="error">エラーのみ</button>
+                  </div>
+                  <label class="autorun-log-autoscroll"><input type="checkbox" id="autorun-log-autoscroll" checked> 自動スクロール</label>
+                  <label class="autorun-log-autoscroll"><input type="checkbox" id="autorun-log-show-raw"> 開発者向け詳細を表示</label>
+                  <button type="button" id="autorun-log-copy" class="btn-outline-sm autorun-log-copy">コピー</button>
+                </div>
+              </div>
+              <pre id="autorun-log" class="autorun-log"></pre>
+            </div>
+
+            <!-- 実行後: 新しく実行 / 成果物 / 最近の実行 -->
+            <div id="autorun-restart-area" class="autorun-inline-actions" style="display:none">
+              <button type="button" id="autorun-restart-btn" class="btn-outline-sm btn-block">新しく実行</button>
+            </div>
+
+
+            <div id="autorun-preview-panel" class="autorun-modal autorun-preview-modal" style="display:none">
+              <div class="autorun-modal-panel autorun-preview-panel">
+                <div class="autorun-modal-head">
+                  <span class="autorun-modal-title">テストケース・スクリプト確認</span>
+                  <div class="autorun-preview-head-actions">
+                    <span id="autorun-preview-loading" class="muted-copy"></span>
+                    <button type="button" onclick="arShowPreview()" class="autorun-modal-close" aria-label="閉じる">×</button>
+                  </div>
+                </div>
+                <div class="autorun-preview-tabs">
+                  <button class="result-tab is-active autorun-preview-tab" data-ptab="cases">テストケース一覧</button>
+                  <button class="result-tab autorun-preview-tab" data-ptab="script">スクリプト (.spec.ts)</button>
+                </div>
+                <div class="autorun-preview-body">
+                  <div id="autorun-ptab-cases">
+                    <div id="autorun-preview-summary" class="autorun-preview-summary"></div>
+                    <div id="autorun-preview-table-wrap" class="autorun-preview-table-wrap"></div>
+                  </div>
+                  <div id="autorun-ptab-script" style="display:none">
+                    <pre id="autorun-preview-spec" class="autorun-preview-spec"></pre>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div><!-- /.autorun-work -->
+
+          <!-- 右レール: 成果物と最近の実行。作業列の右の空きを使う -->
+          <aside class="autorun-rail" aria-label="成果物">
+            <div id="autorun-outputs-area" class="card autorun-panel" style="display:none">
+              <div class="autorun-panel-head">
+                <div class="section-kicker">成果物</div>
+              </div>
+              <div id="autorun-output-links" class="qa-output-list"></div>
+            </div>
+
+            <!-- 最近の実行（サーバープロセス生存中のジョブのみ。再起動で消えます） -->
+            <div id="autorun-recent-area" class="card autorun-panel" style="display:none">
+              <div class="autorun-panel-head">
+                <div class="section-kicker">最近の実行</div>
+              </div>
+              <div id="autorun-recent-list" class="autorun-recent-list"></div>
+              <p class="autorun-recent-note">サーバー再起動前の実行はここに表示されません。結果は各サイトのレポート「テスト実行」タブに保存されています。</p>
+            </div>
+
+          </aside>
+
+          </div><!-- /.autorun-body -->
+
+            <!-- 実行条件の確定（案C）。実行を押した時点で、人が決めるべきことだけを問う。
+                 段階ごとの承認と「要確認」チェックリストの代替。 -->
+            <div id="autorun-decisions" class="ard" style="display:none" role="dialog"
+                 aria-modal="true" aria-labelledby="autorun-decisions-title">
+              <div id="autorun-decisions-scrim" class="ard-scrim"></div>
+              <div class="ard-card">
+                <h3 id="autorun-decisions-title" class="ard-title">実行条件の確認</h3>
+                <p class="ard-subtitle">推奨のままで問題なければ、そのまま実行できます。</p>
+                <div id="autorun-decisions-body" class="ard-body"></div>
+                <p id="autorun-decisions-error" class="ard-error" role="alert" style="display:none"></p>
+                <div class="ard-actions">
+                  <button type="button" id="autorun-decisions-back" class="btn-outline-sm">戻る</button>
+                  <button type="button" id="autorun-decisions-go" class="btn-primary">この条件で実行する</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- QAアシスタント。常駐せず、呼び出したときだけ右から出るドロワー -->
+            <button type="button" id="autorun-chat-fab" class="autorun-chat-fab"
+                    aria-controls="autorun-chat" aria-expanded="false">QAアシスタント</button>
+            <div id="autorun-chat-scrim" class="autorun-chat-scrim" hidden></div>
+
+            <aside class="autorun-chat" id="autorun-chat" aria-label="QAアシスタント" aria-hidden="true">
+              <div class="autorun-chat-head">
+                <div>
+                  <div class="section-kicker">QAアシスタント</div>
+                  <p class="autorun-chat-sub" id="autorun-chat-context">受付</p>
+                </div>
+                <span class="autorun-chat-status" id="autorun-chat-status" aria-live="polite"></span>
+                <button type="button" id="autorun-chat-close" class="autorun-chat-close" aria-label="閉じる">×</button>
+              </div>
+
+              <!-- 何について相談しているかを見失わせないための固定表示 -->
+              <div id="autorun-chat-target" class="autorun-chat-target" style="display:none"></div>
+
+              <!-- フェーズ別の定型チップ（autorun-chat.js が差し替える） -->
+              <div class="autorun-chat-suggestions" id="autorun-chat-presets"></div>
+
+              <div class="autorun-chat-log" id="autorun-chat-log" role="log" aria-live="polite"></div>
+
+              <form class="autorun-chat-form" id="autorun-chat-form">
+                <textarea id="autorun-chat-input" class="autorun-chat-input" rows="2"
+                          placeholder="相談内容を入力（Enterで送信 / Shift+Enterで改行）"></textarea>
+                <div class="autorun-chat-actions">
+                  <span class="autorun-chat-note" id="autorun-chat-note">LLMの提案は補助です。採用の判断は人間が行います。</span>
+                  <button type="submit" id="autorun-chat-send" class="btn-primary autorun-chat-send">送信</button>
+                </div>
+              </form>
+            </aside>
+
+          </div><!-- /.autorun-workspace -->
+        </section>

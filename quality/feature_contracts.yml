@@ -229,7 +229,8 @@
         "templates/auth/setup.html",
         "templates/partials/view-account.html",
         "templates/auth/signup.html",
-        "static/css/auth.css"
+        "static/css/auth.css",
+        "templates/auth/_shell.html"
       ],
       "route_files": [
         "web/routes/account.py"
@@ -437,7 +438,10 @@
         "static/js/history.js",
         "static/js/recrawl.js",
         "static/js/results.js",
-        "static/js/view-run-result.js"
+        "static/js/view-run-result.js",
+        "templates/partials/view-run-history.html",
+        "templates/partials/view-run-result.html",
+        "static/js/view-run-history.js"
       ],
       "route_files": [
         "web/routes/history.py",
@@ -1670,7 +1674,8 @@
       "ui_files": [
         "templates/partials/view-auto-run.html",
         "static/js/autorun-stages.js",
-        "static/js/autorun-review.js"
+        "static/js/autorun-review.js",
+        "static/css/autorun-review.css"
       ],
       "route_files": [
         "web/routes/autorun_stages.py"
@@ -2475,6 +2480,297 @@
       "required_tests": [
         "tests/test_ta_process_gate.py",
         "tests/test_ta_defect_store.py"
+      ]
+    },
+    {
+      "feature_id": "test_execution_reliability",
+      "name": "自動テスト実行の信頼性（リトライ・フレーキー検出・自己修復・傾向集計）",
+      "risk_level": "high",
+      "status": "implemented",
+      "ui_files": [
+        "templates/partials/view-run-history.html",
+        "static/js/run-trends.js",
+        "static/css/run-trends.css"
+      ],
+      "route_files": [
+        "web/routes/runs.py"
+      ],
+      "core_files": [
+        "web/services/run_trends.py",
+        "web/services/playwright_executor.py",
+        "web/services/spec_ts_generator.py"
+      ],
+      "symbols": [
+        "collect",
+        "_read_healing_records",
+        "normalize_device",
+        "_summary"
+      ],
+      "outputs": [
+        "output/<domain>/qa_process/playwright_report.json",
+        "output/<domain>/qa_process/self_healing.json"
+      ],
+      "persistence": [
+        "output/<domain>/runs/<run_id>/qa_process/playwright_report.json"
+      ],
+      "failure_modes": [
+        "リトライで合格したテストを flaky として記録し、合格数に混ぜて隠さない",
+        "実行回に結果ファイルが無い場合は集計対象外として数え、0% と混同しない",
+        "自己修復の候補が全て見つからない場合は第1候補で実行し、例外にしない",
+        "self_healing.json が壊れている場合は空として扱い、実行結果を落とさない",
+        "総数 0 のときパス率を 0% ではなく未算出（null）として返す"
+      ],
+      "required_tests": [
+        "happy_path",
+        "flaky_path",
+        "error_path",
+        "evidence"
+      ]
+    },
+    {
+      "feature_id": "nocode_step_editor",
+      "name": "ステップ編集（ノーコードでテストを組み立てる）",
+      "risk_level": "high",
+      "status": "implemented",
+      "ui_files": [
+        "templates/partials/view-ta-implementation.html",
+        "static/js/test-step-editor.js",
+        "static/css/test-step-editor.css"
+      ],
+      "route_files": [
+        "web/routes/test_steps.py"
+      ],
+      "core_files": [
+        "web/services/test_step_store.py"
+      ],
+      "symbols": [
+        "validate",
+        "import_from_candidates",
+        "to_spec_ts",
+        "StepValidationError"
+      ],
+      "outputs": [
+        "output/<domain>/qa_process/test_steps.json",
+        "output/<domain>/qa_process/edited.spec.ts"
+      ],
+      "persistence": [
+        "output/<domain>/qa_process/test_steps.json"
+      ],
+      "failure_modes": [
+        "未知の動作・重複 test_id・空ステップは、どこが悪いか名指しして 400 で拒否する",
+        "対象や値が必要な動作でそれが空なら保存させない（画面側も入力欄を無効化する）",
+        "画面を開く の値が http(s) URL でなければ拒否する",
+        "保存済みファイルが壊れている場合は空として上書きせず 409 で知らせる",
+        "取り込みは保存せず候補を返すのみ（既存の編集を勝手に消さない）",
+        "未保存の状態で生成しようとした場合は先に保存を促す"
+      ],
+      "required_tests": [
+        "happy_path",
+        "validation_path",
+        "error_path",
+        "evidence"
+      ]
+    },
+    {
+      "feature_id": "test_run_job",
+      "name": "テスト実行ジョブ基盤（キュー・排他・キャンセル・通知）",
+      "risk_level": "critical",
+      "status": "implemented",
+      "ui_files": [
+        "templates/partials/view-ta-steps.html",
+        "static/js/test-step-editor.js",
+        "static/css/test-step-editor.css"
+      ],
+      "route_files": [
+        "web/routes/test_runs.py",
+        "web/routes/test_steps.py"
+      ],
+      "core_files": [
+        "web/services/test_run_job.py",
+        "web/services/run_notifier.py"
+      ],
+      "symbols": [
+        "enqueue_test_run",
+        "cancel_job",
+        "start_workers",
+        "DomainBusyError",
+        "notify_run_finished"
+      ],
+      "outputs": [
+        "output/<domain>/qa_process/test_run_history.jsonl",
+        "output/<domain>/qa_process/run-<id>.spec.ts"
+      ],
+      "persistence": [
+        "output/<domain>/runs/<run_id>/qa_process/playwright_report.json"
+      ],
+      "failure_modes": [
+        "同一ドメインの同時実行を拒否し、ぶつかっている job_id を名指しで返す",
+        "実行ごとに専用の spec を書き、実行中ジョブの spec を後続要求が上書きしない",
+        "実行対象 0 件では実行せず 400 を返す（成功 0 件の実行回を残さない）",
+        "指定された環境が見つからない場合は既定へ倒さず 400 で止める",
+        "終端処理は各段を個別に囲み、通知失敗で証跡（実行回・履歴）が消えない",
+        "キャンセルは登録済み子プロセスを terminate し、登録前の競合でも取りこぼさない"
+      ],
+      "required_tests": [
+        "happy_path",
+        "concurrency_path",
+        "cancel_path",
+        "evidence"
+      ]
+    },
+    {
+      "feature_id": "test_environments",
+      "name": "実行環境（dev/stg/prod）の管理",
+      "risk_level": "high",
+      "status": "implemented",
+      "ui_files": [
+        "templates/partials/view-ta-automation.html",
+        "static/js/ta-automation.js",
+        "static/css/ta-automation.css"
+      ],
+      "route_files": [
+        "web/routes/environments.py"
+      ],
+      "core_files": [
+        "web/services/environment_store.py"
+      ],
+      "symbols": [
+        "validate",
+        "resolve",
+        "storage_state_path",
+        "EnvironmentValidationError"
+      ],
+      "outputs": [
+        "output/<domain>/environments.json"
+      ],
+      "persistence": [
+        "output/<domain>/environments.json"
+      ],
+      "failure_modes": [
+        "env_id の不正・重複、name 空、http(s) でない base_url、ホスト名なし URL を名指しで 400",
+        "auth_path の絶対パス・'..'・制御文字を拒否する",
+        "シンボリックリンクで output/<domain> の外を指す storage_state を返さない（テナント分離の迂回防止）",
+        "環境は 10 個までに制限する",
+        "壊れた environments.json を空として上書きせず 409 で知らせる"
+      ],
+      "required_tests": [
+        "happy_path",
+        "validation_path",
+        "security_path",
+        "evidence"
+      ]
+    },
+    {
+      "feature_id": "scheduled_test_run",
+      "name": "スケジュールでの自動テスト実行",
+      "risk_level": "high",
+      "status": "implemented",
+      "ui_files": [
+        "templates/partials/view-settings.html"
+      ],
+      "route_files": [
+        "web/routes/schedule.py"
+      ],
+      "core_files": [
+        "web/services/scheduler.py"
+      ],
+      "symbols": [
+        "start_scheduled_test",
+        "_resolve_job_type",
+        "_maybe_run"
+      ],
+      "outputs": [
+        "output/<domain>/schedule_history.jsonl"
+      ],
+      "persistence": [
+        "output/<domain>/schedule.json"
+      ],
+      "failure_modes": [
+        "job_type 欠落は crawl として扱い、既存の schedule.json が無変更で動く",
+        "未知の job_type は実行せず履歴に failed と理由を残す（黙ってクロールへ倒さない）",
+        "ステップ未作成・環境不正・実行中衝突を履歴に failed として残す（無反応にしない）",
+        "テストは enqueue して待たない（長時間の spec がポーリングループを止めない）",
+        "run-now は実際にジョブを起動し、起動できたときだけ timestamps を更新する"
+      ],
+      "required_tests": [
+        "happy_path",
+        "backward_compat_path",
+        "error_path",
+        "evidence"
+      ]
+    },
+    {
+      "feature_id": "test_recorder",
+      "name": "操作の記録とステップへの変換（レコーダー）",
+      "risk_level": "high",
+      "status": "partial",
+      "ui_files": [],
+      "route_files": [],
+      "core_files": [
+        "src/capture/session_recorder.py",
+        "src/capture/step_converter.py"
+      ],
+      "symbols": [
+        "convert_events",
+        "conversion_report",
+        "ConversionError",
+        "record_exploration_session"
+      ],
+      "outputs": [
+        "output/<domain>/sessions/session_*.jsonl"
+      ],
+      "persistence": [
+        "output/<domain>/sessions/session_*.jsonl"
+      ],
+      "failure_modes": [
+        "パスワード・OTP・カード番号などの秘密情報を平文で記録しない（type=text へ切り替わる実装も含む）",
+        "画面遷移が記録されていない場合は変換せず理由を伝える",
+        "変換できなかったイベントを黙って捨てず件数を返す",
+        "マスクされた値は {{password}} と注意書きに置き換え、実行前の差し替えを促す"
+      ],
+      "required_tests": [
+        "happy_path",
+        "security_path",
+        "error_path",
+        "evidence"
+      ]
+    },
+    {
+      "feature_id": "test_automation_system",
+      "name": "テスト自動化システム（System 05・入口と画面）",
+      "risk_level": "high",
+      "status": "implemented",
+      "ui_files": [
+        "templates/system-select.html",
+        "templates/partials/view-ta-automation.html",
+        "templates/partials/view-ta-steps.html",
+        "templates/partials/nav.html",
+        "static/js/ta-automation.js",
+        "static/css/ta-automation.css",
+        "static/js/system-scope.js",
+        "static/css/system-select.css"
+      ],
+      "route_files": [
+        "web/routes/pages.py"
+      ],
+      "core_files": [
+        "web/services/run_trends.py"
+      ],
+      "symbols": [
+        "collect"
+      ],
+      "outputs": [],
+      "persistence": [],
+      "failure_modes": [
+        "ナビの項目はすべて対応する画面を持つ（押しても何も出ない項目を作らない）",
+        "0 件と未取得を別の表示にする（集計できない場合は未計測と明記）",
+        "取得に失敗した場合は空表示にせず理由を出す"
+      ],
+      "required_tests": [
+        "happy_path",
+        "empty_state_path",
+        "error_path",
+        "evidence"
       ]
     }
   ]

@@ -1,0 +1,749 @@
+{
+  "schema": "webspec2doc/feature-asset@1",
+  "version": "20260829-81e4c84",
+  "generated_at": "2026-08-29T11:24:08Z",
+  "source": {
+    "repository": "WebSpec2Doc",
+    "revision": "81e4c84",
+    "working_tree_dirty": true,
+    "contract_file": "quality/feature_contracts.yml"
+  },
+  "feature": {
+    "feature_id": "admin_audit",
+    "name": "管理操作のテナント監査ログ",
+    "risk_level": "high",
+    "status": "implemented",
+    "ui_files": [
+      "templates/partials/view-settings.html",
+      "static/js/settings.js",
+      "static/css/settings-admin.css"
+    ],
+    "route_files": [
+      "web/routes/admin.py",
+      "web/routes/report.py",
+      "web/routes/review.py",
+      "web/routes/schedule.py",
+      "web/routes/settings.py",
+      "web/routes/viewpoints.py"
+    ],
+    "core_files": [
+      "web/services/admin_audit.py",
+      "web/audit_context.py",
+      "web/services/auth_store.py"
+    ],
+    "symbols": [
+      "append_admin_audit",
+      "read_admin_audit",
+      "record_admin_event"
+    ],
+    "outputs": [
+      "admin_audit.jsonl",
+      "admin audit API and view"
+    ],
+    "persistence": [
+      "instance/tenants/{slug}/admin_audit.jsonl"
+    ],
+    "failure_modes": [
+      "malformed_line",
+      "secret_value",
+      "permission_denied",
+      "tenant_escape"
+    ],
+    "required_tests": [
+      "happy_path",
+      "error_path",
+      "tenant_isolation",
+      "authorization",
+      "evidence"
+    ]
+  },
+  "placement": {
+    "system_key": "common",
+    "system": "04_共通",
+    "screen": "設定",
+    "screens": [
+      "設定"
+    ],
+    "classified_by": "screen"
+  },
+  "files": [
+    {
+      "path": "templates/partials/view-settings.html",
+      "role": "ui",
+      "bytes": 39538,
+      "sha256": "8df7d8ecb0f037236d5a6d63722f2e57b7a4c985b9ed66d036b5b47547be829d"
+    },
+    {
+      "path": "static/js/settings.js",
+      "role": "ui",
+      "bytes": 46487,
+      "sha256": "b14d55dfd0c8d421af260613351c4985bba15dd1cc8fcd9b583ab16baa65617f"
+    },
+    {
+      "path": "static/css/settings-admin.css",
+      "role": "ui",
+      "bytes": 3488,
+      "sha256": "91f9a279ba03a502658e4d36d26faad57980a645d2ab50c5cac65708a645005d"
+    },
+    {
+      "path": "web/routes/admin.py",
+      "role": "route",
+      "bytes": 3348,
+      "sha256": "a2ae89a447ea41bc4ced8c9e02a224b4034bc208d34a37cd18964c26bb7ba730"
+    },
+    {
+      "path": "web/routes/report.py",
+      "role": "route",
+      "bytes": 24514,
+      "sha256": "f1b9d3e492afe9ad356102cd9f83f5843a91b269adf478ecd75cefe697350297"
+    },
+    {
+      "path": "web/routes/review.py",
+      "role": "route",
+      "bytes": 6386,
+      "sha256": "d79e5ce673d7676614d7cedde1ba4107c6e384d3c1565bf0f9b0273b35f7ae73"
+    },
+    {
+      "path": "web/routes/schedule.py",
+      "role": "route",
+      "bytes": 13381,
+      "sha256": "49e5f38f2154132400755338d342dada1f3424f878ad1387b9134d9bfd0fb8d7"
+    },
+    {
+      "path": "web/routes/settings.py",
+      "role": "route",
+      "bytes": 8583,
+      "sha256": "8188369acf081f4fd4d987c42194311947a9544144c02afa0ac94c8b01e0a54e"
+    },
+    {
+      "path": "web/routes/viewpoints.py",
+      "role": "route",
+      "bytes": 11748,
+      "sha256": "72e44c9252af2b467397dfaf57487ae263fc36fe908cfa1a42962ed8f7038963"
+    },
+    {
+      "path": "web/services/admin_audit.py",
+      "role": "core",
+      "bytes": 5876,
+      "sha256": "c7ac7cebf500ae3b4fa52e08da98d8912cce6c72dba75f449bf68f60dcf3467f"
+    },
+    {
+      "path": "web/audit_context.py",
+      "role": "core",
+      "bytes": 1196,
+      "sha256": "85c7e9676c3c03ead2688e73119d65947f677013223b7a46f9e66c5c056c8f87"
+    },
+    {
+      "path": "web/services/auth_store.py",
+      "role": "core",
+      "bytes": 57641,
+      "sha256": "77d943ff75509823ff3d62dbe3ef41b6d749f95809219f082897210f728dbaab"
+    }
+  ],
+  "wiring": {
+    "blueprints": [
+      {
+        "file": "web/routes/admin.py",
+        "name": "admin",
+        "url_prefix": "/api/admin"
+      },
+      {
+        "file": "web/routes/report.py",
+        "name": "report",
+        "url_prefix": ""
+      },
+      {
+        "file": "web/routes/review.py",
+        "name": "review",
+        "url_prefix": ""
+      },
+      {
+        "file": "web/routes/schedule.py",
+        "name": "schedule",
+        "url_prefix": ""
+      },
+      {
+        "file": "web/routes/settings.py",
+        "name": "settings",
+        "url_prefix": ""
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "name": "viewpoints",
+        "url_prefix": ""
+      }
+    ],
+    "provides_endpoints": [
+      {
+        "file": "web/routes/admin.py",
+        "rule": "/storage",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/admin.py",
+        "rule": "/backup-guide",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/admin.py",
+        "rule": "/audit",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/admin.py",
+        "rule": "/retention",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/admin.py",
+        "rule": "/retention",
+        "methods": [
+          "PUT"
+        ]
+      },
+      {
+        "file": "web/routes/report.py",
+        "rule": "/preview",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/report.py",
+        "rule": "/download",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/report.py",
+        "rule": "/api/export/spec-xlsx",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/report.py",
+        "rule": "/download-zip",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/report.py",
+        "rule": "/api/report/<domain>/spec-ts",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/report.py",
+        "rule": "/api/sample-report",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/report.py",
+        "rule": "/api/result",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/report.py",
+        "rule": "/api/state-table",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/report.py",
+        "rule": "/api/coverage-heatmap",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/report.py",
+        "rule": "/open",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/review.py",
+        "rule": "/review/cases",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/review.py",
+        "rule": "/review/update",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/review.py",
+        "rule": "/review/export",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/schedule.py",
+        "rule": "/schedule/config",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/schedule.py",
+        "rule": "/schedule/config",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/schedule.py",
+        "rule": "/schedule/run-now",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/schedule.py",
+        "rule": "/schedule/status",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/schedule.py",
+        "rule": "/schedule/history",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/schedule.py",
+        "rule": "/schedule/notify/test",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/settings.py",
+        "rule": "/api/settings",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/settings.py",
+        "rule": "/api/settings/llm-models",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/settings.py",
+        "rule": "/api/settings",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/settings.py",
+        "rule": "/api/settings/clear-key",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/settings.py",
+        "rule": "/api/settings/test-connection",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/settings.py",
+        "rule": "/api/settings/test-design",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/settings.py",
+        "rule": "/api/settings/test-design",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/settings.py",
+        "rule": "/api/settings/allow-local",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/settings.py",
+        "rule": "/api/settings/allow-local",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "rule": "/api/viewpoint-sets",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "rule": "/api/viewpoint-sets",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "rule": "/api/viewpoint-sets/<set_id>",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "rule": "/api/viewpoint-sets/<set_id>",
+        "methods": [
+          "PATCH"
+        ]
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "rule": "/api/viewpoint-sets/<set_id>",
+        "methods": [
+          "DELETE"
+        ]
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "rule": "/api/viewpoint-sets/<set_id>/restore",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "rule": "/api/viewpoint-sets/<set_id>/versions",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "rule": "/api/viewpoint-sets/<set_id>/versions",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "rule": "/api/viewpoint-sets/<set_id>/versions/<int:version>/items",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "rule": "/api/viewpoint-sets/<set_id>/versions/<int:version>/items",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "rule": "/api/viewpoint-items/<item_id>",
+        "methods": [
+          "PATCH"
+        ]
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "rule": "/api/viewpoint-items/<item_id>",
+        "methods": [
+          "DELETE"
+        ]
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "rule": "/api/viewpoint-items/<item_id>/restore",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "rule": "/api/viewpoint-items/bulk",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "rule": "/api/viewpoint-sets/<set_id>/versions/<int:version>/publish",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "rule": "/api/viewpoint-sets/<set_id>/versions/<int:version>/rollback",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "rule": "/api/viewpoint-sets/<set_id>/versions/diff",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "rule": "/api/viewpoint-sets/<set_id>/assignments",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "rule": "/api/viewpoint-sets/<set_id>/assignments",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "rule": "/api/viewpoint-assignments/<assignment_id>",
+        "methods": [
+          "PATCH"
+        ]
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "rule": "/api/viewpoint-assignments/<assignment_id>",
+        "methods": [
+          "DELETE"
+        ]
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "rule": "/api/viewpoint-sets/<set_id>/proposals",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "rule": "/api/viewpoint-sets/<set_id>/proposals",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "rule": "/api/viewpoint-proposals/<proposal_id>/decision",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "rule": "/api/viewpoint-sets/<set_id>/export",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "rule": "/api/viewpoint-sets/<set_id>/import",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "rule": "/api/viewpoint-sets/<set_id>/tree",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "rule": "/api/viewpoint-sets/<set_id>/folders",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "rule": "/api/viewpoint-templates",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "rule": "/api/viewpoint-sources",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "rule": "/api/viewpoint-sources/resolve",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "rule": "/api/viewpoint-sets/<set_id>/templates/<template_key>/apply",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "rule": "/api/viewpoint-templates/<template_key>/create-set",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "rule": "/api/viewpoint-items/<item_id>/move",
+        "methods": [
+          "PATCH"
+        ]
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "rule": "/api/viewpoint-sets/<set_id>/items/reorder",
+        "methods": [
+          "PATCH"
+        ]
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "rule": "/api/viewpoint-folders/<item_id>",
+        "methods": [
+          "DELETE"
+        ]
+      },
+      {
+        "file": "web/routes/viewpoints.py",
+        "rule": "/api/viewpoint-selection",
+        "methods": [
+          "GET"
+        ]
+      }
+    ]
+  },
+  "dependencies": {
+    "internal_modules_not_bundled": [
+      "src/generator/feature_catalog.py",
+      "src/generator/heatmap_reporter.py",
+      "src/graph/state_table.py",
+      "web/auth.py",
+      "web/config.py",
+      "web/env_store.py",
+      "web/services/export_xlsx.py",
+      "web/services/notifier.py",
+      "web/services/openai_qa.py",
+      "web/services/retention.py",
+      "web/services/run_store.py",
+      "web/services/scheduler.py",
+      "web/services/spec_ts_generator.py",
+      "web/services/test_design_settings.py",
+      "web/services/viewpoint_proposals.py",
+      "web/services/viewpoint_sources.py",
+      "web/services/viewpoint_store.py",
+      "web/services/viewpoint_templates.py",
+      "web/summary.py",
+      "web/tenancy.py",
+      "web/validation.py"
+    ],
+    "third_party_packages": [
+      {
+        "import": "flask",
+        "requirement": "flask==3.1.3",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "werkzeug",
+        "requirement": "",
+        "declared_in_requirements": false
+      }
+    ],
+    "env_vars": [],
+    "data_files": [],
+    "consumes_endpoints": [
+      "/api/admin/audit",
+      "/api/admin/backup-guide",
+      "/api/admin/retention",
+      "/api/admin/storage",
+      "/api/history",
+      "/api/integrations",
+      "/api/integrations/confluence",
+      "/api/integrations/confluence/test",
+      "/api/integrations/jira",
+      "/api/integrations/jira/test",
+      "/api/integrations/notion",
+      "/api/integrations/notion/test",
+      "/api/integrations/qualityforward",
+      "/api/integrations/qualityforward/test",
+      "/api/integrations/slack/test",
+      "/api/integrations/teams",
+      "/api/integrations/teams/test",
+      "/api/integrations/webhook",
+      "/api/settings",
+      "/api/settings/allow-local",
+      "/api/settings/clear-key",
+      "/api/settings/llm-models",
+      "/api/settings/test-connection",
+      "/api/settings/test-design",
+      "/schedule/config",
+      "/schedule/history",
+      "/schedule/notify/test"
+    ],
+    "window_globals": [],
+    "template_includes_not_bundled": [],
+    "static_refs_not_bundled": []
+  },
+  "gaps": [],
+  "shared_assets": [],
+  "warnings": [],
+  "verification": {
+    "static_analysis": "done",
+    "pytest": "not_run",
+    "verify_ui": "not_run",
+    "manual_screen_check": "not_run"
+  }
+}

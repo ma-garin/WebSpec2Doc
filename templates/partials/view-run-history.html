@@ -41,6 +41,80 @@
 
           <div class="rh-applied" id="rh-applied" hidden></div>
 
+          <!-- ===== 実行傾向 =====
+               1 回の結果だけでは「不安定なのか今回だけ落ちたのか」が分からない。
+               実行回を横断した集計（/api/runs/<domain>/trends）をここに出す。
+               サイト単位でしか意味を持たないため、対象サイトを選ばせる。 -->
+          <section class="rt-panel" id="rt-panel" hidden>
+            <div class="rt-head">
+              <h3 class="rt-title">実行傾向</h3>
+              <label class="rt-site-label" for="rt-site">対象サイト</label>
+              <select id="rt-site" class="rt-site"></select>
+              <label class="rt-site-label" for="rt-limit">集計範囲</label>
+              <select id="rt-limit" class="rt-site">
+                <option value="10">直近10回</option>
+                <option value="30" selected>直近30回</option>
+                <option value="100">直近100回</option>
+              </select>
+              <button type="button" class="btn-outline-sm" id="rt-reload">↺ 更新</button>
+            </div>
+
+            <div class="rt-body" id="rt-body">
+              <div class="rt-state" id="rt-state">対象サイトを選ぶと傾向を集計します。</div>
+
+              <div class="rt-tiles" id="rt-tiles" hidden>
+                <div class="rt-tile">
+                  <span class="rt-tile-label">最新パス率</span>
+                  <span class="rt-tile-value" id="rt-pass-rate">—</span>
+                  <span class="rt-tile-delta" id="rt-pass-delta"></span>
+                </div>
+                <div class="rt-tile">
+                  <span class="rt-tile-label">不安定なテスト</span>
+                  <span class="rt-tile-value" id="rt-unstable">—</span>
+                  <span class="rt-tile-note">リトライで通った</span>
+                </div>
+                <div class="rt-tile">
+                  <span class="rt-tile-label">継続失敗</span>
+                  <span class="rt-tile-value" id="rt-persist">—</span>
+                  <span class="rt-tile-note">2回以上連続</span>
+                </div>
+                <div class="rt-tile">
+                  <span class="rt-tile-label">自己修復</span>
+                  <span class="rt-tile-value" id="rt-healed">—</span>
+                  <span class="rt-tile-note">候補が変わった</span>
+                </div>
+              </div>
+
+              <figure class="rt-chart" id="rt-chart" hidden>
+                <figcaption class="rt-chart-cap">パス率の推移（左が古い）</figcaption>
+                <div class="rt-chart-area" id="rt-chart-area"></div>
+              </figure>
+
+              <div class="rt-tables" id="rt-tables" hidden>
+                <div class="rt-tablewrap">
+                  <h4 class="rt-subtitle">不安定なテスト</h4>
+                  <table class="rt-table"><thead><tr>
+                    <th>テスト</th><th class="rt-num">回数</th><th class="rt-num">率</th><th>直近の失敗理由</th>
+                  </tr></thead><tbody id="rt-flaky"></tbody></table>
+                </div>
+                <div class="rt-tablewrap">
+                  <h4 class="rt-subtitle">失敗が続いているテスト</h4>
+                  <table class="rt-table"><thead><tr>
+                    <th>テスト</th><th class="rt-num">連続</th><th class="rt-num">失敗率</th><th>直近の失敗理由</th>
+                  </tr></thead><tbody id="rt-failing"></tbody></table>
+                </div>
+                <div class="rt-tablewrap">
+                  <h4 class="rt-subtitle">自己修復したロケータ</h4>
+                  <table class="rt-table"><thead><tr>
+                    <th>本来の候補</th><th>実際に効いた候補</th><th class="rt-num">回数</th><th>対象</th>
+                  </tr></thead><tbody id="rt-healing"></tbody></table>
+                </div>
+              </div>
+
+              <p class="rt-note" id="rt-skipped" hidden></p>
+            </div>
+          </section>
+
           <div id="rh-container">
             <table class="rh-table">
               <thead>

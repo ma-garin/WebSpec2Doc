@@ -1,0 +1,35 @@
+{
+  "feature_id": "qa_assistant_chat",
+  "name": "QAアシスタント（LLMチャット）",
+  "risk_level": "medium",
+  "status": "implemented",
+  "ui_files": [
+    "templates/partials/view-auto-run.html",
+    "static/js/autorun-chat.js"
+  ],
+  "route_files": [
+    "web/routes/llm_chat.py"
+  ],
+  "core_files": [
+    "src/llm/openai_client.py"
+  ],
+  "symbols": [
+    "resolve_endpoint",
+    "request_structured_json"
+  ],
+  "outputs": [
+    "assistant reply",
+    "unavailable notice"
+  ],
+  "persistence": [],
+  "failure_modes": [
+    "llm_unavailable",
+    "timeout",
+    "invalid_input",
+    "http_error"
+  ],
+  "required_tests": [
+    "happy_path",
+    "error_path"
+  ]
+}

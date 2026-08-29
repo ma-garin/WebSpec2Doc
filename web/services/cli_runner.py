@@ -284,6 +284,32 @@ def run_testcases(
     # run_playwright は summary を包まず、集計値をそのまま返す（GUI も同じ形で使う）
     summary = result or {}
     save_run_result(domain, result, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
+    # CLI から実行しても GUI と同じ通知が飛ぶようにする。通知先は
+    # output/<domain>/schedule.json（無ければ .env）に従うため domain と出力ルートを渡す。
+    # 1 件も走っていない場合も「失敗」として通知する（黙って終わらせない）。
+    try:
+        from web.services.run_notifier import notify_run_finished
+
+        run_ok = bool(summary.get("ok")) and bool(summary.get("total"))
+        notify_run_finished(
+            site_url=str(report.get("site_url") or report.get("url") or f"https://{domain}"),
+            run_kind="testcase",
+            status="complete" if run_ok else "failed",
+            total=int(summary.get("total") or 0),
+            passed=int(summary.get("passed") or 0),
+            failed=int(summary.get("failed") or 0),
+            skipped=int(summary.get("skipped") or 0),
+            elapsed_sec=int(int(summary.get("duration_ms") or 0) / 1000),
+            error=str(summary.get("error") or summary.get("stderr_snippet") or ""),
+            domain=domain,
+            output_root=output_dir,
+        )
+    except Exception:  # noqa: BLE001
+        import logging as _logging
+
+        _logging.getLogger(__name__).warning("テスト実行の完了通知に失敗しました", exc_info=True)
+
     if not summary.get("total"):
         # 1 件も走っていないのに成功と見せない。原因を持ち帰る。
         return TestRunResult(

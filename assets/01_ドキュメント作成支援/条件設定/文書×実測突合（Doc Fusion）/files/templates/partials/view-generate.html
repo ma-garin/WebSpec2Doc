@@ -1,0 +1,302 @@
+        <!-- ===== 生成ビュー（4ステップウィザード） ===== -->
+        <section class="view" id="view-generate">
+
+          <!-- ウィザードステップインジケーター -->
+          <div class="wizard-progress" id="wizard-progress-bar" style="margin-bottom:16px;display:none">
+            <div class="wizard-step-node is-active" id="ws-1">
+              <div class="wizard-step-circle">1</div>
+              <span class="wizard-step-label">解析</span>
+            </div>
+            <div class="wizard-step-line" id="wl-1"></div>
+            <div class="wizard-step-node" id="ws-2">
+              <div class="wizard-step-circle">2</div>
+              <span class="wizard-step-label">条件設定</span>
+            </div>
+            <div class="wizard-step-line" id="wl-2"></div>
+            <div class="wizard-step-node" id="ws-3">
+              <div class="wizard-step-circle">3</div>
+              <span class="wizard-step-label">実行</span>
+            </div>
+            <div class="wizard-step-line" id="wl-3"></div>
+            <div class="wizard-step-node" id="ws-4">
+              <div class="wizard-step-circle">4</div>
+              <span class="wizard-step-label">レポート</span>
+            </div>
+          </div>
+
+          <div id="gen-panel">
+
+            <!-- ステップ1: URL入力・解析（語は AutoRun と揃えて「解析」に統一） -->
+            <div id="wizard-p1" class="input-card">
+              <label for="url-input" class="form-label">解析対象 URL <span style="color:var(--color-critical)">*</span></label>
+              <div class="input-row" style="gap:8px">
+                <input type="url" id="url-input" class="url-input" placeholder="https://example.com" autocomplete="url" list="url-history-list" style="flex:1" />
+                <datalist id="url-history-list"></datalist>
+                <button type="button" id="discover-btn" class="btn-primary" style="height:40px;padding:0 18px;font-size:13px;white-space:nowrap">画面解析</button>
+              </div>
+              <div id="url-input-message" class="input-field-message"></div>
+              <!-- 解析する範囲（Issue #15）。従来は depth=5 / max_pages=300 が固定で渡っており、
+                   300画面・15分規模になっても利用者には中断以外の手が無かった。
+                   数値の意味を知らなくても所要時間で選べるよう、プリセットを先に置く。 -->
+              <div class="discover-scope" id="discover-scope" role="group" aria-label="解析する範囲">
+                <span class="discover-scope-title">解析する範囲</span>
+                {#- プリセットは1箇所に列挙する。逐語コピーすると、ラベル・note・data-* の
+                    どれか1つの直し忘れが画面とテストの食い違いを生むため。 -#}
+                {%- set discover_presets = [
+                  {'id': 'single', 'value': 'one-page', 'label': 'この1画面のみ', 'note': '1画面', 'depth': 1, 'max': 1},
+                  {'id': 'standard', 'value': 'standard', 'label': '標準', 'note': '深さ2 / 最大30画面', 'depth': 2, 'max': 30, 'checked': true},
+                  {'id': 'wide', 'value': 'wide', 'label': '広め', 'note': '深さ5 / 最大300画面', 'depth': 5, 'max': 300}
+                ] -%}
+                <div class="discover-scope-chips">
+                  {% for p in discover_presets %}
+                  <label class="checkbox-chip">
+                    <input type="radio" name="discover-scope" id="discover-scope-{{ p.id }}" value="{{ p.value }}" data-depth="{{ p.depth }}" data-max="{{ p.max }}"{% if p.checked %} checked{% endif %}>
+                    {{ p.label }}<span class="discover-scope-note">{{ p.note }}</span>
+                  </label>
+                  {% endfor %}
+                  <label class="checkbox-chip">
+                    <input type="radio" name="discover-scope" id="discover-scope-custom" value="custom">
+                    カスタム
+                  </label>
+                </div>
+                <div class="discover-scope-fields" id="discover-scope-fields" style="display:none">
+                  <div class="control-field">
+                    <label for="discover-depth">深さ（開始ページが 0）</label>
+                    <input type="number" id="discover-depth" class="url-input input-compact" value="2" min="1" max="10" />
+                  </div>
+                  <div class="control-field">
+                    <label for="discover-max-pages">最大ページ</label>
+                    <input type="number" id="discover-max-pages" class="url-input input-compact" value="30" min="1" max="500" />
+                  </div>
+                </div>
+                <p class="discover-scope-est" id="discover-scope-est" role="status"></p>
+              </div>
+              <!-- オンボーディングヒント -->
+              <div class="wizard-p1-hints" style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                  <span style="font-size:12px;color:var(--text-muted)"
+                        title="同梱デモサイトでの実測（7画面16.6秒＝1画面2.4秒）に基づく目安です。対象サイトの応答速度や robots.txt の Crawl-Delay により長くなります。">
+                    ⏱ 目安: 1画面あたり約2〜3秒（10画面で30秒前後）
+                  </span>
+                  <button type="button" id="sample-url-btn"
+                    style="font-size:12px;padding:2px 10px;border:1px solid var(--border);border-radius:12px;background:var(--surface);color:var(--primary);cursor:pointer;white-space:nowrap">
+                    サンプルURL（example.com）で試す
+                  </button>
+                </div>
+                <p style="font-size:12px;color:var(--text-muted);margin:0">
+                  💡 ログインが必要な閉じた環境も対象にできます。画面解析でログインが必要と分かった時点で、この画面にログインの案内が出ます。
+                </p>
+              </div>
+              <div id="discover-loading" class="discover-live-card" style="display:none;margin-top:10px">
+                <div class="discover-live-header">
+                  <span class="spinner"></span>
+                  <!-- 最初の1画面が出るまで約1.2秒あり、その間ずっと無反応だった
+                       （経過秒だけが動く）。いま何を待っているのかをここに出す。
+                       文言はサーバが実際にその処理へ入る直前に送るイベントで差し替える。 -->
+                  <span id="discover-phase" aria-live="polite">対象サイトを確認しています…</span>
+                  <span id="discover-count-label" class="discover-live-count">0画面を発見</span>
+                  <span class="discover-live-elapsed-label">経過:</span>
+                  <span id="discover-elapsed" class="discover-live-elapsed"></span>
+                  <button type="button" id="discover-cancel-btn" class="btn-outline-sm btn-danger-outline" style="margin-left:auto">中断</button>
+                </div>
+                <div id="discover-live-feed" class="discover-live-feed"></div>
+              </div>
+              <div id="discover-status" class="discover-status"></div>
+              <!-- 解析完了サマリー -->
+              <div id="p1-summary" class="wizard-p1-summary" style="display:none">
+                <div class="p1-result-cards">
+                  <div class="p1-result-card p1-result-card--screens">
+                    <span class="p1-result-num" id="p1-screens-num">0</span>
+                    <span class="p1-result-label">画面を検出</span>
+                  </div>
+                  <div class="p1-result-card p1-result-card--login" id="p1-login-card" style="display:none">
+                    <span class="p1-result-num" id="p1-login-num">0</span>
+                    <span class="p1-result-label">ログイン必要</span>
+                  </div>
+                  <div class="p1-result-card p1-result-card--time" id="p1-time-card" style="display:none">
+                    <span class="p1-result-num" id="p1-elapsed-num">-</span>
+                    <span class="p1-result-label">解析時間</span>
+                  </div>
+                </div>
+                <span class="wizard-p1-summary-hint" id="p1-login-hint" style="display:none"></span>
+                <button type="button" id="p1-next-btn" class="btn-primary" style="height:44px;padding:0 28px;font-size:14px;margin-top:4px">条件設定へ →</button>
+              </div>
+
+              <!-- ログイン案内: 画面解析でログイン壁を検知したときだけ表示する。
+                   閉じた環境が例外ではなく通常の対象であるため、折りたたみに隠さない。 -->
+              <div id="login-required-card" class="input-card" style="display:none;margin-top:12px">
+                <h3 id="login-required-title" style="margin:0 0 6px;font-size:15px">🔒 このサイトはログインが必要です</h3>
+                <p class="input-hint" id="login-required-desc" style="margin:0 0 14px">認証の内側にある画面も対象にするには、ログインしてください。</p>
+
+                <div class="field" style="margin-bottom:8px">
+                  <label for="login-url">ログインURL</label>
+                  <div style="display:flex;gap:6px;align-items:center">
+                    <input type="url" id="login-url" class="url-input" style="flex:1" placeholder="https://example.com/login" />
+                    <button type="button" id="login-scrape-btn" class="btn-outline-sm">フォームを取得</button>
+                  </div>
+                </div>
+                <div id="login-loading" style="display:none" class="discover-loading"><span class="spinner"></span><span id="login-loading-msg">フォームを取得しています…</span></div>
+                <!-- 取得したログインフォームの入力欄はここに動的生成される。パスワード欄が
+                     form の外にあるとブラウザが警告を出し、パスワード管理も効かないため
+                     form で包む。送信は JS が行うので既定の送信は抑止する。 -->
+                <form id="login-fields-form" autocomplete="on" onsubmit="return false">
+                  <div id="login-fields-area"></div>
+                </form>
+                <div id="login-status" class="input-field-message" style="margin-top:6px"></div>
+
+                <!-- 認証フローレコーダー（SPEC-3-2）: 見えるブラウザで人が普通にログインし、ボタン一つで保存する -->
+                <div class="field" style="margin-top:10px;border-top:1px solid var(--border, #e5e5e5);padding-top:10px">
+                  <label>ブラウザでログインして保存（MFA・ソーシャルログインにも対応）</label>
+                  <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+                    <button type="button" id="login-record-start-btn" class="btn-outline-sm">ブラウザでログインして保存</button>
+                    <button type="button" id="login-record-complete-btn" class="btn-primary" style="display:none;height:28px;padding:0 12px;font-size:12px">ログイン完了</button>
+                    <button type="button" id="login-record-cancel-btn" class="btn-outline-sm" style="display:none">キャンセル</button>
+                  </div>
+                  <div id="login-record-status" class="input-field-message" style="margin-top:6px"></div>
+                </div>
+
+                <div class="field" style="margin-top:8px">
+                  <label for="auth-path">auth.json パス（CLI保存済みの場合）</label>
+                  <input type="text" id="auth-path" placeholder="output/example.com/auth.json" />
+                </div>
+              </div>
+            </div>
+
+            <!-- ステップ2: 条件設定 -->
+            <div id="wizard-p2" style="display:none">
+              <form id="form">
+                <div class="input-card">
+                  <div class="wizard-p2-header">
+                    <h2>条件設定</h2>
+                    <button type="button" id="p2-back-btn" class="btn-outline-sm">← 解析に戻る</button>
+                  </div>
+
+                  <!-- 解析方法（自動でリンクを辿る／選択したURLのみ） -->
+                  <div class="field" id="crawl-mode-field" style="margin-bottom:14px">
+                    <label class="form-label" style="margin-bottom:6px">解析方法</label>
+                    <div style="display:flex;gap:16px;flex-wrap:wrap">
+                      <label class="checkbox-chip">
+                        <input type="radio" name="crawl-target-mode" id="crawl-mode-selected" value="selected" checked>
+                        選択したURLのみ
+                      </label>
+                      <label class="checkbox-chip">
+                        <input type="radio" name="crawl-target-mode" id="crawl-mode-auto" value="auto">
+                        自動で辿る（リンクを追跡）
+                      </label>
+                    </div>
+                    <div id="crawl-mode-auto-fields" style="display:none;margin-top:10px;gap:16px;flex-wrap:wrap" class="control-grid-2">
+                      <div class="control-field">
+                        <label for="crawl-depth">深さ</label>
+                        <input type="number" id="crawl-depth" class="url-input input-compact" value="2" min="1" max="10" />
+                      </div>
+                      <div class="control-field">
+                        <label for="max-pages">最大ページ</label>
+                        <input type="number" id="max-pages" class="url-input input-compact" value="30" min="1" max="500" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 画面リスト + ログイン入力（ログイン必要時はリスト直下に表示） -->
+                  <div id="discovered-url-panel" class="discovered-url-panel" style="display:none;margin-bottom:14px">
+                    <div class="section-head">
+                      <p class="app-sidebar-section" style="padding:0">取得対象の画面</p>
+                      <div class="discovered-url-actions">
+                        <button type="button" id="select-all-btn" class="btn-outline-sm">全選択</button>
+                        <button type="button" id="clear-all-btn" class="btn-outline-sm">全解除</button>
+                      </div>
+                    </div>
+                    <div id="discovered-url-list" class="discovered-url-list"></div>
+                  </div>
+
+                  <!-- 参考文書（任意） -->
+                  <div class="field" id="reference-doc-block" style="margin-top:10px">
+                    <label for="reference-doc-input">参考文書（任意 — 既存の画面一覧・項目定義書など）</label>
+                    <input type="file" id="reference-doc-input" multiple
+                           accept=".xlsx,.xlsm,.docx,.pptx,.pdf,.md,.txt,.yaml,.yml,.json" />
+                    <ul id="reference-doc-list"></ul>
+                    <div id="reference-doc-status" class="input-field-message"></div>
+                  </div>
+
+                  <!-- オプション -->
+                  <div style="margin-top:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+                    <label class="checkbox-chip"><input type="checkbox" id="compare"> 前回との差分を出力</label>
+                    <!-- 並列数は毎回変える値ではないため、既定は設定画面（解析の既定値）で決める。
+                         ここは今回だけ変えたいときの上書き手段として残す。 -->
+                    <label class="control-field control-field-inline" for="crawl-parallelism">
+                      <span>並列数<span class="info-tip" tabindex="0" role="img" aria-label="同時にアクセスする画面数。増やすと解析時間は短くなりますが、対象サイトへの負荷が増えます。既定は設定画面で変更できます。" data-tip="同時にアクセスする画面数。増やすと解析時間は短くなりますが、対象サイトへの負荷が増えます。既定は設定画面で変更できます。">ⓘ</span></span>
+                      <select id="crawl-parallelism" class="url-input select-compact">
+                        <option value="1">1（順次）</option>
+                        <option value="2">2</option>
+                        <option value="4" selected>4（既定）</option>
+                        <option value="8">8（最大）</option>
+                      </select>
+                    </label>
+                  </div>
+
+                  <div class="wizard-footer" style="justify-content:flex-end">
+                    <button type="submit" class="btn-primary" id="submit-btn" style="height:44px;padding:0 28px;font-size:15px">解析開始</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- ステップ3: 実行 -->
+          <div id="execution-view" class="execution-view hidden">
+            <div class="execution-topbar">
+              <div class="execution-topbar-head">
+                <h2 class="execution-title" id="exec-title">解析中…</h2>
+                <span class="execution-elapsed" id="exec-elapsed">00:00</span>
+              </div>
+              <p class="execution-message" id="exec-message">対象を受け付けて、解析の準備を進めています。</p>
+              <div class="execution-progress"><div class="execution-progress-bar" id="exec-progress-bar"></div></div>
+              <div class="execution-steps">
+                <div class="execution-step is-active" id="estep-0">1. 受付</div>
+                <div class="execution-step" id="estep-1">2. ページ取得</div>
+                <div class="execution-step" id="estep-2">3. 解析</div>
+                <div class="execution-step" id="estep-3">4. 結果整理</div>
+              </div>
+            </div>
+            <div class="execution-preview-frame">
+              <img id="exec-preview-image" class="execution-preview-image" alt="解析中のライブプレビュー" />
+              <div id="exec-preview-placeholder" class="execution-preview-placeholder">
+                <div class="spinner"></div>
+                <p>ライブプレビューを準備しています…</p>
+              </div>
+            </div>
+            <pre class="execution-log" id="exec-log"></pre>
+            <div class="execution-error-card hidden" id="exec-error">エラーが発生しました。ログを確認してください。</div>
+            <div class="execution-bottombar">
+              <dl class="execution-meta-list">
+                <div class="execution-meta-item"><dt>対象</dt><dd id="exec-target">-</dd></div>
+                <div class="execution-meta-item"><dt>状態</dt><dd id="exec-phase">準備中</dd></div>
+                <div class="execution-meta-item"><dt>進捗</dt><dd id="exec-count">0 / 0</dd></div>
+                <div class="execution-meta-item"><dt>残り時間</dt><dd id="exec-eta">算出中</dd></div>
+                <div class="execution-meta-item"><dt>除外</dt><dd id="exec-skipped">0件</dd></div>
+                <div class="execution-meta-item"><dt>保存済み</dt><dd id="exec-saved">0件</dd></div>
+              </dl>
+              <div class="execution-bottombar-actions" id="exec-running-actions">
+                <button type="button" id="exec-stop-btn" class="btn-outline-sm">停止</button>
+              </div>
+              <div class="execution-bottombar-actions hidden" id="exec-actions">
+                <button type="button" id="exec-new-btn" class="btn-outline-sm">条件設定に戻る</button>
+                <button type="button" id="btn-view-report" class="btn-primary" style="display:none">レポートを見る →</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ステップ4: レポート -->
+          <script>
+          (function () {
+            const btn = document.getElementById('sample-url-btn');
+            if (!btn) return;
+            btn.addEventListener('click', function () {
+              const input = document.getElementById('url-input');
+              if (input) {
+                input.value = 'https://example.com';
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+              }
+            });
+          }());
+          </script>
+        </section>

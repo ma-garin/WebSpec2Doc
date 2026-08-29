@@ -1,0 +1,47 @@
+{
+  "feature_id": "test_plan",
+  "name": "テスト計画ドラフト生成（インベントリ×ROI係数→工数見積・スコープ表）",
+  "risk_level": "medium",
+  "status": "implemented",
+  "ui_files": [],
+  "route_files": [
+    "web/routes/qa_process.py"
+  ],
+  "core_files": [
+    "src/generator/test_plan_generator.py",
+    "src/main.py",
+    "web/services/qa/doc_generator.py",
+    "web/services/qa/advanced_generator.py",
+    "web/services/qa/advanced_html.py",
+    "web/services/qa/helpers.py",
+    "web/services/qa/markdown_lite.py",
+    "web/services/qa/testcase_docs.py",
+    "web/services/test_design_settings.py"
+  ],
+  "symbols": [
+    "compute_test_plan",
+    "load_plan_coefficients",
+    "save_test_plan",
+    "_generate_test_plan"
+  ],
+  "outputs": [
+    "test_plan.md",
+    "test_plan.xlsx"
+  ],
+  "persistence": [
+    "output/{domain}/test_plan.md",
+    "output/{domain}/test_plan.xlsx"
+  ],
+  "failure_modes": [
+    "no_inventory",
+    "report_corrupt",
+    "empty_screens",
+    "xlsx_write_failure",
+    "invalid_env_override"
+  ],
+  "required_tests": [
+    "happy_path",
+    "error_path",
+    "evidence"
+  ]
+}

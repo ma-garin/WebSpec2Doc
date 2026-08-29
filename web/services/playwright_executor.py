@@ -15,6 +15,9 @@ from typing import Any, Final
 
 # AutoRun が生成した .spec.ts を実行するための共有 node_modules の場所
 _PW_ENV_DIR = Path("output/.playwright_env")
+# 生成 spec の自己修復ロケータが「第2候補以降で復旧した」記録を書き出す先。
+# spec_ts_generator._HEAL_ENV と同じ名前でなければならない。
+_HEAL_ENV = "AUTORUN_HEAL_PATH"
 
 # Playwright HTML レポートのサブディレクトリ名
 _PW_HTML_SUBDIR = "playwright-report"
@@ -83,6 +86,14 @@ def run_playwright(
     browser: str = "chromium",
     headed: bool = False,
     on_proc: Callable[[Any], None] | None = None,
+    retries: int = 0,
+    video: str = "retain-on-failure",
+    storage_state: Path | None = None,
+    base_url: str | None = None,
+    matrix: list[dict[str, str]] | None = None,
+    snapshot_dir: Path | None = None,
+    update_snapshots: bool = False,
+    max_diff_pixel_ratio: float = 0.01,
 ) -> dict[str, Any]:
     """
     ローカル @playwright/test CLI でスペックを実行し、結果を返す。
@@ -107,6 +118,21 @@ def run_playwright(
         on_proc: 起動した子プロセス（Popen）を受け取るフック。AutoRun の中止は
             ジョブに登録された子プロセスしか殺せないため、中止可能にしたい呼び出し元は
             ここで登録する。省略時は従来どおり subprocess.run で実行する。
+        retries: 失敗したテストをやり直す回数。既定 0（従来どおり）。1 以上にすると
+            Playwright が「やり直して合格した」テストを flaky として報告するようになり、
+            フレーキーの検出が初めて可能になる。結果は `flaky` / `flaky_tests` に入る。
+        video: 動画の記録方針（off / on / retain-on-failure / on-first-retry）。
+        storage_state: ログイン状態の JSON（`src/crawler/auth.py` の
+            `capture_auth_state` が出すもの）。渡すとテストがログイン済みで始まる。
+        base_url: dev / stg / prod の切り替え用。生成テストが相対 URL を使う場合に効く。
+        matrix: [{"browser": "chromium", "device": "pc"}, ...] を渡すと projects を組み、
+            1 回の実行で複数構成を回す。渡さない場合は browser / device の単一構成。
+        snapshot_dir: ビジュアル回帰の基準画像を置くディレクトリ（サイト単位で固定）。
+            省略時は toHaveScreenshot 用の設定を書かない（従来どおり）。
+        update_snapshots: True で基準画像を作り直す（`--update-snapshots`）。
+            **比較ではなく上書き**なので、差分を確認したうえで人が選んだときだけ真にする。
+        max_diff_pixel_ratio: 許容する差分ピクセル比（既定 1%）。
+            0 にすると 1px のアンチエイリアス差でも落ちるため、既定は緩めに取る。
     """
     if device not in ("pc", "mobile"):
         device = "pc"
@@ -115,6 +141,9 @@ def run_playwright(
     fallback_html_path = output_dir / "playwright_report.html"
     pw_html_dir = output_dir / _PW_HTML_SUBDIR
     progress_path = output_dir / "playwright_progress.ndjson"
+    # 自己修復ロケータの記録先。生成 spec 側は環境変数が無ければ何も書かないため、
+    # 自己修復を使わない spec を実行しても副作用は無い。
+    heal_path = output_dir / "self_healing.json"
 
     def _log(msg: str) -> None:
         if add_log:
@@ -170,6 +199,13 @@ def run_playwright(
         device=device,
         workers=workers,
         browser=browser,
+        snapshot_dir=snapshot_dir,
+        max_diff_pixel_ratio=max_diff_pixel_ratio,
+        retries=retries,
+        video=video,
+        storage_state=storage_state,
+        base_url=base_url,
+        matrix=matrix,
     )
 
     resolved_timeout_sec = _resolve_timeout_sec(spec_path, per_test_timeout_sec, timeout_sec)
@@ -183,6 +219,10 @@ def run_playwright(
         cmd = [cli_cmd, "test", "--config", str(config_path.resolve())]
     if headed:
         cmd.append("--headed")
+    if update_snapshots:
+        # 比較ではなく上書き。人が差分を確認して「これが正」と決めたときだけ通る経路。
+        cmd.append("--update-snapshots")
+        _log("ビジュアル回帰: 基準画像を作り直します（比較ではありません）")
 
     expected_total = _count_tests_in_spec(spec_path)
     _log(
@@ -198,6 +238,7 @@ def run_playwright(
         from web.services.egress_gateway import POLICY_ENV
 
         env[POLICY_ENV] = policy.to_json()
+        env[_HEAL_ENV] = str(heal_path.resolve())
         proc = _spawn_and_wait(cmd, resolved_timeout_sec, env, on_proc)
     except subprocess.TimeoutExpired as exc:
         return _interrupted_result(
@@ -219,6 +260,12 @@ def run_playwright(
     from web.services.egress_gateway import read_egress_report
 
     result["egress"] = read_egress_report(egress_log_path).to_dict()
+    # 自己修復の記録。第1候補が効かず第2候補以降で通ったものは、
+    # 「まだ落ちていないが、画面が変わった」サインとして残す。
+    result["self_healing"] = _read_healing_records(heal_path)
+    result["visual"] = _visual_summary(
+        result, snapshot_dir, output_dir / _PW_HTML_SUBDIR, update_snapshots
+    )
     json_report_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     fallback_html_path.write_text(_build_html_report(result), encoding="utf-8")
     return result
@@ -316,6 +363,48 @@ module.exports = ProgressReporter;
     reporter_path.write_text(reporter_js, encoding="utf-8")
 
 
+# ビューポート/UA のプリセット。projects で複数構成を 1 実行に載せるため、
+# device ごとの use ブロックをここで一元管理する。
+DEVICE_PRESETS: Final = {
+    "pc": {},
+    "mobile": {
+        "viewport": {"width": 390, "height": 844},
+        "isMobile": True,
+        "hasTouch": True,
+        "deviceScaleFactor": 3,
+        "userAgent": (
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) "
+            "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+        ),
+    },
+    "tablet": {
+        "viewport": {"width": 820, "height": 1180},
+        "isMobile": True,
+        "hasTouch": True,
+        "deviceScaleFactor": 2,
+        "userAgent": (
+            "Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 "
+            "(KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+        ),
+    },
+}
+
+
+def normalize_device(raw: str) -> str:
+    return raw if raw in DEVICE_PRESETS else "pc"
+
+
+def _use_block(browser: str, device: str, storage_state: Path | None) -> dict[str, Any]:
+    """1 構成ぶんの Playwright `use` を組み立てる。"""
+    use: dict[str, Any] = {"browserName": browser}
+    use.update(DEVICE_PRESETS.get(device, {}))
+    if storage_state is not None:
+        # ログイン状態を再利用する。これが無いとログイン必須画面のテストが
+        # 毎回ログイン手順から始まり、遅くなるうえログイン自体の不調で全滅する。
+        use["storageState"] = str(storage_state.resolve())
+    return use
+
+
 def _write_pw_config(
     spec_path: Path,
     html_output_dir: Path,
@@ -325,21 +414,33 @@ def _write_pw_config(
     device: str = "pc",
     workers: int = 1,
     browser: str = "chromium",
+    retries: int = 0,
+    video: str = "retain-on-failure",
+    storage_state: Path | None = None,
+    base_url: str | None = None,
+    matrix: list[dict[str, str]] | None = None,
+    snapshot_dir: Path | None = None,
+    max_diff_pixel_ratio: float = 0.01,
 ) -> Path:
     """JS 形式の playwright config を生成する（TypeScript import 不要）。
 
-    device="mobile" 時のみ use ブロックに iPhone 13 相当のビューポート/UA を
-    追記する（R3-02: PC/モバイル選択）。ホワイトリスト外の値は "pc" として扱う。
+    matrix を渡すと `projects` を組み、1 回の実行で複数のブラウザ×デバイスを回す。
+    渡さない場合は従来どおり単一構成で動く（既存の呼び出しは影響を受けない）。
+
+    retries は「同じテストを落ちたときに何回やり直すか」。1 以上にすると
+    Playwright が retry で合格したテストを `flaky` として報告するようになり、
+    フレーキーの検出が初めて可能になる（0 のままでは永遠に検出できない）。
     """
-    if device not in ("pc", "mobile"):
-        device = "pc"
+    device = normalize_device(device)
     if browser not in SUPPORTED_BROWSERS:
         browser = "chromium"
+    if video not in ("off", "on", "retain-on-failure", "on-first-retry"):
+        video = "retain-on-failure"
     config_path = spec_path.parent / _PW_CONFIG_NAME
     reporter_path = spec_path.parent / _PW_PROGRESS_REPORTER_NAME
     spec_dir_abs = str(spec_path.parent.resolve())
     html_dir_abs = str(html_output_dir.resolve())
-    # テスト成果物（スクショ・トレース）の保存先
+    # テスト成果物（スクショ・トレース・動画）の保存先
     artifacts_dir_abs = str((html_output_dir.parent / "test-results").resolve())
     # アクションタイムアウト: per-test timeout の半分（最大 15s）
     action_timeout_ms = min(per_test_timeout_ms // 2, 15_000)
@@ -366,37 +467,67 @@ def _write_pw_config(
             + "],"
         )
 
-    mobile_use = (
-        (
-            "    viewport: { width: 390, height: 844 },\n"
-            "    isMobile: true,\n"
-            "    hasTouch: true,\n"
-            "    deviceScaleFactor: 3,\n"
-            "    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) "
-            "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',\n"
-        )
-        if device == "mobile"
-        else ""
-    )
+    base_use: dict[str, Any] = {
+        "screenshot": "on",
+        "trace": "retain-on-failure",
+        "video": video,
+        "actionTimeout": action_timeout_ms,
+        "navigationTimeout": nav_timeout_ms,
+    }
+    if base_url:
+        base_use["baseURL"] = base_url
 
+    if snapshot_dir is not None:
+        # 基準画像は実行回ごとの出力ではなくサイト単位の固定ディレクトリへ置く。
+        # 実行のたびに基準が入れ替わると、比較する意味が無くなる。
+        snapshot_dir.mkdir(parents=True, exist_ok=True)
+
+    config: dict[str, Any] = {
+        "testDir": spec_dir_abs,
+        "testMatch": spec_path.name,
+        "timeout": per_test_timeout_ms,
+        "workers": int(workers) if workers and workers > 0 else 1,
+        "retries": max(0, int(retries)),
+        "outputDir": artifacts_dir_abs,
+    }
+    if snapshot_dir is not None:
+        # projects を使うと {projectName} がパスに入り、構成ごとに基準が分かれる。
+        # ブラウザが違えばレンダリングも違うため、これは分けるのが正しい。
+        config["snapshotPathTemplate"] = str(
+            (snapshot_dir / "{projectName}" / "{arg}{ext}").resolve()
+        )
+        config["expect"] = {
+            "toHaveScreenshot": {
+                "maxDiffPixelRatio": max_diff_pixel_ratio,
+                "animations": "disabled",
+            }
+        }
+
+    if matrix:
+        projects = []
+        for entry in matrix:
+            entry_browser = entry.get("browser", browser)
+            if entry_browser not in SUPPORTED_BROWSERS:
+                entry_browser = "chromium"
+            entry_device = normalize_device(entry.get("device", "pc"))
+            projects.append(
+                {
+                    "name": f"{entry_browser}-{entry_device}",
+                    "use": {**base_use, **_use_block(entry_browser, entry_device, storage_state)},
+                }
+            )
+        config["projects"] = projects
+    else:
+        config["use"] = {**base_use, **_use_block(browser, device, storage_state)}
+
+    body = json.dumps(config, ensure_ascii=False, indent=2)
+    # reporter だけは JS の関数/相対パス表現を保つため、JSON 化せず差し込む。
     config_js = (
-        "module.exports = {\n"
-        f"  testDir: {json.dumps(spec_dir_abs)},\n"
-        f"  testMatch: {json.dumps(spec_path.name)},\n"
-        f"  timeout: {per_test_timeout_ms},\n"
-        f"  workers: {int(workers) if workers and workers > 0 else 1},\n"
-        f"  outputDir: {json.dumps(artifacts_dir_abs)},\n"
-        "  use: {\n"
-        f"    browserName: {json.dumps(browser)},\n"
-        "    screenshot: 'on',\n"
-        "    trace: 'retain-on-failure',\n"
-        f"    actionTimeout: {action_timeout_ms},\n"
-        f"    navigationTimeout: {nav_timeout_ms},\n"
-        f"{mobile_use}"
-        "  },\n"
-        "  reporter: [\n" + "\n".join(reporters) + "\n"
-        "  ],\n"
-        "};\n"
+        "module.exports = "
+        + body[:-1].rstrip()
+        + ",\n  reporter: [\n"
+        + "\n".join(reporters)
+        + "\n  ],\n};\n"
     )
     config_path.write_text(config_js, encoding="utf-8")
     return config_path
@@ -723,6 +854,57 @@ def _ensure_pw_env(env_dir: Path) -> tuple[bool, str]:
     return True, f"@playwright/test {target_ver or ''} のインストールが完了しました。"
 
 
+def _visual_summary(
+    result: dict[str, Any],
+    snapshot_dir: Path | None,
+    html_dir: Path,
+    update_snapshots: bool,
+) -> dict[str, Any]:
+    """ビジュアル回帰の結果を要約する。
+
+    Playwright は差分を `<outputDir>/.../*-diff.png` に出す。どのファイルを見れば
+    差分が分かるかを結果に含めないと、利用者は「落ちた」しか分からない。
+    """
+    if snapshot_dir is None:
+        return {"enabled": False, "baselines": 0, "diffs": [], "updated": False}
+    baselines = (
+        sum(1 for _ in snapshot_dir.rglob("*.png")) if snapshot_dir.is_dir() else 0
+    )
+    artifacts = html_dir.parent / "test-results"
+    diffs: list[dict[str, str]] = []
+    if artifacts.is_dir():
+        for path in sorted(artifacts.rglob("*-diff.png")):
+            diffs.append(
+                {
+                    "diff": str(path),
+                    "actual": str(path.with_name(path.name.replace("-diff.", "-actual."))),
+                    "expected": str(path.with_name(path.name.replace("-diff.", "-expected."))),
+                    "case": path.parent.name,
+                }
+            )
+    return {
+        "enabled": True,
+        "baselines": baselines,
+        "diffs": diffs[:100],
+        "diff_count": len(diffs),
+        "updated": update_snapshots,
+        "snapshot_dir": str(snapshot_dir),
+    }
+
+
+def _read_healing_records(heal_path: Path) -> dict[str, Any]:
+    """自己修復ロケータの記録を読む。無ければ空（自己修復なしの実行）。"""
+    if not heal_path.is_file():
+        return {"healed": 0, "records": []}
+    try:
+        records = json.loads(heal_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {"healed": 0, "records": []}
+    if not isinstance(records, list):
+        return {"healed": 0, "records": []}
+    return {"healed": len(records), "records": records[:200]}
+
+
 def _parse_results(
     raw: dict[str, Any], stdout: str, stderr: str, returncode: int
 ) -> dict[str, Any]:
@@ -748,6 +930,9 @@ def _parse_results(
             "total": 0,
             "duration_ms": 0,
             "tests": [],
+            "flaky": 0,
+            "flaky_tests": [],
+            "projects": [],
             "error": error,
             "stdout": stdout[:4000] if stdout else "",
             "stderr": stderr[:2000] if stderr else "",
@@ -758,21 +943,39 @@ def _parse_results(
     for suite in suites:
         for spec in suite.get("specs") or []:
             for run in spec.get("tests") or []:
-                status = _map_status(run.get("status", ""), run.get("results") or [])
+                results = run.get("results") or []
+                raw_status = run.get("status", "")
+                status = _map_status(raw_status, results)
+                # 「やり直して合格した」= flaky。合格扱いにするのは正しいが、
+                # そのまま捨てると不安定なテストが永久に見えなくなる。別建てで残す。
+                is_flaky = raw_status == "flaky" or (
+                    status == "passed"
+                    and len(results) > 1
+                    and any(r.get("status") in ("failed", "timedOut") for r in results)
+                )
                 tests.append(
                     {
                         "title": spec.get("title", ""),
                         "status": status,
-                        "duration_ms": sum(
-                            (r.get("duration") or 0) for r in (run.get("results") or [])
-                        ),
-                        "error": _first_error(run.get("results") or []),
+                        "flaky": is_flaky,
+                        "attempts": len(results),
+                        "project": run.get("projectName", ""),
+                        "duration_ms": sum((r.get("duration") or 0) for r in results),
+                        "error": _first_error(results),
+                        # flaky のときは「最終的には通った」ため error が空になる。
+                        # 何で落ちていたのかを残さないと原因追跡ができない。
+                        "flaky_error": _first_error(
+                            [r for r in results if r.get("status") in ("failed", "timedOut")]
+                        )
+                        if is_flaky
+                        else "",
                     }
                 )
 
     passed = sum(1 for t in tests if t["status"] == "passed")
     failed = sum(1 for t in tests if t["status"] == "failed")
     skipped = sum(1 for t in tests if t["status"] == "skipped")
+    flaky_tests = [t for t in tests if t.get("flaky")]
     total = len(tests) or int(stats.get("expected", 0)) + int(stats.get("unexpected", 0)) + int(
         stats.get("skipped", 0)
     )
@@ -786,6 +989,17 @@ def _parse_results(
         "total": total,
         "duration_ms": int(stats.get("duration", 0)),
         "tests": tests,
+        "flaky": len(flaky_tests),
+        "flaky_tests": [
+            {
+                "title": t["title"],
+                "attempts": t["attempts"],
+                "project": t["project"],
+                "error": t["flaky_error"],
+            }
+            for t in flaky_tests
+        ],
+        "projects": sorted({t["project"] for t in tests if t["project"]}),
         "stdout": stdout[:4000] if stdout else "",
         "stderr": stderr[:2000] if stderr else "",
         "stderr_snippet": stderr_snippet,
@@ -874,6 +1088,7 @@ def _interrupted_result(
     passed = sum(1 for t in tests if t["status"] == "passed")
     failed = sum(1 for t in tests if t["status"] == "failed")
     skipped = sum(1 for t in tests if t["status"] == "skipped")
+    flaky_tests = [t for t in tests if t.get("flaky")]
     ran = len(tests)
 
     if ran:

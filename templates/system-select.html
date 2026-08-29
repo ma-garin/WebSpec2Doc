@@ -35,7 +35,7 @@
     <div class="sysselect-head">
       <div class="sysselect-kicker">システム選択</div>
       <h1>どのシステムを使いますか？</h1>
-      <p>使うシステムを選んでください。4 つは独立したシステムです。CLI / API は画面を持たず、端末や外部システムから同じ機能を使います。</p>
+      <p>使うシステムを選んでください。5 つは独立したシステムです。CLI / API は画面を持たず、端末や外部システムから同じ機能を使います。</p>
     </div>
 
     <div class="sysselect-grid">
@@ -117,9 +117,33 @@
         <span class="syscard-open">CLI / API の使い方を見る →</span>
       </a>
 
+      <!-- テスト自動化（System 05）。TOP は自動化ダッシュボード。
+           ステップ編集・実行環境・実行履歴をこの系にまとめる。 -->
+      <a class="syscard syscard-auto" href="/test-automation">
+        <span class="syscard-accent" aria-hidden="true"></span>
+        <span class="syscard-badge">新規</span>
+        <span class="syscard-icon" aria-hidden="true">
+          <!-- 歯車（自動）＋循環の矢印（繰り返し実行）。他カードの図形とは重ねない。 -->
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M12 4.5V6M12 18v1.5M6.6 6.6l1.1 1.1M16.3 16.3l1.1 1.1M4.5 12H6M18 12h1.5M6.6 17.4l1.1-1.1M16.3 7.7l1.1-1.1"/>
+            <path d="M20.5 5.5V9h-3.5"/>
+            <path d="M3.5 18.5V15H7"/>
+          </svg>
+        </span>
+        <span class="syscard-no">System 05</span>
+        <span class="syscard-title">テスト自動化</span>
+        <span class="syscard-desc">コードを書かずにテストのステップを組み立て、実ブラウザで実行します。実行環境の切り替えと実行傾向の確認もここから。</span>
+        <span class="syscard-chips">
+          <span class="syscard-chip">ノーコード編集</span><span class="syscard-chip">自己修復</span>
+          <span class="syscard-chip">ビジュアル回帰</span><span class="syscard-chip">実行傾向</span>
+        </span>
+        <span class="syscard-open">テスト自動化を開く →</span>
+      </a>
+
     </div>
 
-    <p class="sysselect-note">4 つは別システムです。入口・世界観・ナビは独立し、共通はログインとアカウントだけ。いつでもこの画面に戻って切り替えられます。CLI / API は画面を持たず、端末や外部システムから同じ機能を使います。</p>
+    <p class="sysselect-note">5 つは別システムです。入口・世界観・ナビは独立し、共通はログインとアカウントだけ。いつでもこの画面に戻って切り替えられます。CLI / API は画面を持たず、端末や外部システムから同じ機能を使います。</p>
   </main>
 
 </body>

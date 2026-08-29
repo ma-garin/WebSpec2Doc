@@ -1,0 +1,180 @@
+        <!-- ===== テスト活動支援 / 実装（テスト自動化） ===== -->
+        <section class="view" id="view-test-implementation">
+          <div class="dash-hero">
+            <div class="dash-hero-main">
+              <h1 class="dash-hero-title">テストケースから自動化コードを生成</h1>
+              <p class="dash-hero-sub">設計で作成したテストケースと開発標準・既存コードをもとに、自動テストのコードを生成しリポジトリへ反映します。</p>
+              <div class="dash-hero-steps" aria-label="実装の流れ">
+                <span class="dash-hero-step"><b>1</b> 対象ケースを選ぶ</span>
+                <span class="dash-hero-arrow">→</span>
+                <span class="dash-hero-step"><b>2</b> 生成設定</span>
+                <span class="dash-hero-arrow">→</span>
+                <span class="dash-hero-step"><b>3</b> コード生成・PR</span>
+                <span class="dash-hero-note">生成後は差分を確認し、人の承認を経てPRを作成します。</span>
+              </div>
+            </div>
+          </div>
+
+
+          <!-- ===== ステップ編集（ノーコード） =====
+               生成された .spec.ts を直接編集すると、再生成のたびに消える。
+               編集の正本はステップ列（test_steps.json）とし、コードは常にそこから生成する。
+               動作の語彙は /api/test-steps/actions から取る（画面と保存側で二重定義しない）。 -->
+          <section class="ns-panel" id="ns-panel">
+            <div class="ns-head">
+              <h2 class="ns-title">ステップ編集</h2>
+              <span class="ns-sub">コードを書かずにテストを組み立てます。生成されるコードは常にここから作り直されます。</span>
+            </div>
+
+            <div class="ns-toolbar">
+              <label class="ns-label" for="ns-domain">対象サイト</label>
+              <select id="ns-domain" class="ns-select"></select>
+              <button type="button" class="btn-outline-sm" id="ns-import">解析結果から取り込む</button>
+              <button type="button" class="btn-outline-sm" id="ns-add-test">＋ テストを追加</button>
+              <span class="ns-spacer"></span>
+              <button type="button" class="btn-outline-sm" id="ns-save">保存</button>
+              <button type="button" class="btn-outline-sm" id="ns-generate">コードを生成</button>
+            </div>
+
+            <p class="ns-message" id="ns-message" role="status" hidden></p>
+
+            <div class="ns-tests" id="ns-tests"></div>
+
+            <details class="ns-preview" id="ns-preview" hidden>
+              <summary class="ns-preview-sum">生成されたコード <span id="ns-preview-meta"></span></summary>
+              <pre class="ns-code" id="ns-code"></pre>
+            </details>
+          </section>
+
+          <div class="ta-grid-3" aria-label="自動化の進捗">
+            <div class="stat-card">
+              <div class="stat-card-value" id="ta-impl-total-cases">—</div>
+              <div class="stat-card-label">対象ケース</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-value is-pri" id="ta-impl-automation-rate">—</div>
+              <div class="stat-card-label" id="ta-impl-automation-target">自動化率</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-value" id="ta-impl-automation-verdict">—</div>
+              <div class="stat-card-label">自動化可ケースの基準</div>
+            </div>
+            <div class="stat-card">
+              <button type="button" class="btn-primary" id="ta-impl-generate">AIでスクリプトを生成</button>
+              <div class="stat-card-label" id="ta-impl-generate-status"></div>
+            </div>
+          </div>
+
+          <div class="ta-chips" id="ta-impl-filter" role="group" aria-label="ケースの絞り込み">
+            <button type="button" class="ta-chip ta2-badge-pri" id="ta-impl-filter-all" aria-pressed="true">すべて（0）</button>
+            <button type="button" class="ta-chip ta2-badge-muted" id="ta-impl-filter-done" aria-pressed="false">自動化済（0）</button>
+            <button type="button" class="ta-chip ta2-badge-muted" id="ta-impl-filter-todo" aria-pressed="false">未自動化（0）</button>
+            <button type="button" class="ta-chip ta2-badge-muted" id="ta-impl-filter-failed" aria-pressed="false">失敗（0）</button>
+          </div>
+
+          <div class="dashboard-section-head">
+            <div>
+              <p class="dashboard-section-copy">自動化するケースを選び、フレームワークと出力先を指定してコードを生成します。</p>
+            </div>
+            <div class="dashboard-section-actions">
+              <button type="button" class="ta-linkbtn" id="ta-impl-reload">再読み込み</button>
+            </div>
+          </div>
+
+          <div class="ta-table-wrap">
+            <table class="ta-table">
+              <thead>
+                <tr>
+                  <th scope="col">選択</th>
+                  <th scope="col">ケースID</th>
+                  <th scope="col">目的</th>
+                  <th scope="col">自動化可否</th>
+                  <th scope="col">既存スクリプト</th>
+                </tr>
+              </thead>
+              <tbody id="ta-impl-case-body">
+                <tr data-ta-empty-row="1">
+                  <td colspan="5"><div class="empty">テストケース一覧の取り込みは準備中です。実装が完了すると、設計工程のケースがここに並びます。</div></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="dashboard-section-actions" style="margin: var(--space-2) 0 var(--space-4);">
+            <button type="button" class="ta-linkbtn" id="ta-impl-select-all" data-ta-selected="0">すべて選択</button>
+            <button type="button" class="ta-linkbtn" id="ta-impl-import" disabled data-wip="1">設計から取り込む</button>
+            <span class="ta-wip-note">「設計から取り込む」は準備中</span>
+          </div>
+
+          <details class="ta-panel">
+            <summary class="ta-panel-head">
+              <div>
+                <div class="ta-panel-title">生成設定（既定値・未変更）</div>
+                <div class="ta-panel-sub">生成するコードのフレームワーク・言語と、出力先のリポジトリを指定します。</div>
+              </div>
+            </summary>
+            <div class="ta-panel-body">
+              <div class="ta-grid-2">
+                <div class="ta-kv">
+                  <div class="ta-kv-row">
+                    <div class="ta-kv-key"><label for="ta-impl-framework">フレームワーク</label></div>
+                    <div class="ta-kv-val">
+                      <select class="select-compact" id="ta-impl-framework">
+                        <option value="playwright">Playwright</option>
+                        <option value="pytest">pytest</option>
+                        <option value="selenium">Selenium</option>
+                        <option value="cypress">Cypress</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="ta-kv-row">
+                    <div class="ta-kv-key"><label for="ta-impl-language">言語</label></div>
+                    <div class="ta-kv-val">
+                      <select class="select-compact" id="ta-impl-language">
+                        <option value="python">Python</option>
+                        <option value="typescript">TypeScript</option>
+                        <option value="javascript">JavaScript</option>
+                        <option value="java">Java</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <div class="ta-kv">
+                  <div class="ta-kv-row">
+                    <div class="ta-kv-key"><label for="ta-impl-repo">出力先リポジトリ</label></div>
+                    <div class="ta-kv-val">
+                      <input type="text" class="input-compact" id="ta-impl-repo" placeholder="owner/repository" autocomplete="off" />
+                    </div>
+                  </div>
+                  <div class="ta-kv-row">
+                    <div class="ta-kv-key"><label for="ta-impl-branch">ブランチ</label></div>
+                    <div class="ta-kv-val">
+                      <input type="text" class="input-compact" id="ta-impl-branch" placeholder="test/auto-generated" autocomplete="off" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="ta-chips" id="ta-impl-options" role="group" aria-label="生成オプション">
+                <button type="button" class="ta-chip is-on" data-ta-action="impl-toggle-standard">開発標準に従う</button>
+                <button type="button" class="ta-chip is-on" data-ta-action="impl-toggle-pageobject">既存のPage Objectを再利用</button>
+                <button type="button" class="ta-chip" data-ta-action="impl-toggle-testdata">テストデータを分離</button>
+              </div>
+            </div>
+          </details>
+
+          <details class="ta-panel">
+            <summary class="ta-panel-head">
+              <div>
+                <div class="ta-panel-title">生成コード（未生成）</div>
+                <div class="ta-panel-sub">生成された自動テストコードを確認し、問題がなければPRを作成します。</div>
+              </div>
+              <div class="ta-panel-actions">
+                <button type="button" class="ta-linkbtn" id="ta-impl-pr" disabled data-wip="1">PRを作成</button>
+                <span class="ta-wip-note">準備中</span>
+              </div>
+            </summary>
+            <div class="ta-panel-body">
+              <pre class="ta-code" id="ta-impl-code"></pre>
+              <div class="empty" id="ta-impl-code-empty">上の［AIでスクリプトを生成］が使えるようになると、ここに生成コードが表示されます。</div>
+            </div>
+          </details>
+        </section>

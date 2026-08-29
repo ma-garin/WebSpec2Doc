@@ -1,0 +1,146 @@
+{
+  "schema": "webspec2doc/feature-asset@1",
+  "version": "20260829-81e4c84",
+  "generated_at": "2026-08-29T11:24:08Z",
+  "source": {
+    "repository": "WebSpec2Doc",
+    "revision": "81e4c84",
+    "working_tree_dirty": true,
+    "contract_file": "quality/feature_contracts.yml"
+  },
+  "feature": {
+    "feature_id": "coverage_gap_report",
+    "name": "カバレッジと未確認領域（網羅性証明）",
+    "risk_level": "medium",
+    "status": "implemented",
+    "ui_files": [],
+    "route_files": [],
+    "core_files": [
+      "src/generator/coverage_gap.py",
+      "src/generator/html_reporter.py",
+      "src/crawler/page_crawler.py",
+      "src/generator/comparison_reporter.py",
+      "web/services/traceability.py",
+      "src/health/technical_health.py"
+    ],
+    "symbols": [
+      "collect_coverage_gaps",
+      "compute_coverage_summary"
+    ],
+    "outputs": [
+      "report.html「カバレッジと未確認領域」節",
+      "comparison.html「網羅性サマリ」節"
+    ],
+    "persistence": [],
+    "failure_modes": [
+      "audit_log_missing",
+      "audit_log_corrupt_line",
+      "coverage_missing",
+      "comparison_json_missing",
+      "stale_crawl_started_records"
+    ],
+    "required_tests": [
+      "happy_path",
+      "empty_path",
+      "evidence"
+    ]
+  },
+  "placement": {
+    "system_key": "docs",
+    "system": "01_ドキュメント作成支援",
+    "screen": "_画面なし（API・基盤）",
+    "screens": [],
+    "classified_by": "path"
+  },
+  "files": [
+    {
+      "path": "src/generator/coverage_gap.py",
+      "role": "core",
+      "bytes": 8041,
+      "sha256": "400019b64b706b5c1943515390a37a51d971fbfc04e5c1a2757bd51a2dd9c871"
+    },
+    {
+      "path": "src/generator/html_reporter.py",
+      "role": "core",
+      "bytes": 54598,
+      "sha256": "2e1e13c1f799bbf3d73b79b667bcfc3532e6652ba1a06efabf51a190cb56974b"
+    },
+    {
+      "path": "src/crawler/page_crawler.py",
+      "role": "core",
+      "bytes": 61123,
+      "sha256": "e90a414ce2beb35923866b6642b026d9b19da81dbdcf90152813d337ea50d5d5"
+    },
+    {
+      "path": "src/generator/comparison_reporter.py",
+      "role": "core",
+      "bytes": 14977,
+      "sha256": "77c0f977bf4701dcbf47f9d00b373d4da70591b050abebe3b50deee98de1143e"
+    },
+    {
+      "path": "web/services/traceability.py",
+      "role": "core",
+      "bytes": 5932,
+      "sha256": "4a8aa5b435ba5d37bd1b2a075297b7ceb1ea672f1a153e723c138788bf1f7ca7"
+    },
+    {
+      "path": "src/health/technical_health.py",
+      "role": "core",
+      "bytes": 2307,
+      "sha256": "6622385cea76aa666a73222f09c672d29340f60be6f5bab33878f14739f86d08"
+    }
+  ],
+  "wiring": {
+    "blueprints": [],
+    "provides_endpoints": []
+  },
+  "dependencies": {
+    "internal_modules_not_bundled": [
+      "src/analyzer/html_analyzer.py",
+      "src/analyzer/login_wall.py",
+      "src/analyzer/stack_detector.py",
+      "src/analyzer/test_conditions.py",
+      "src/crawler/action_explorer.py",
+      "src/crawler/link_extractor.py",
+      "src/crawler/network_interceptor.py",
+      "src/crawler/parallel_crawler.py",
+      "src/crawler/performance_probe.py",
+      "src/crawler/playwright_runtime.py",
+      "src/crawler/politeness.py",
+      "src/crawler/session_guard.py",
+      "src/crawler/spa_monitor.py",
+      "src/crawler/url_safety.py",
+      "src/diff/comparison.py",
+      "src/generator/architecture_generator.py",
+      "src/generator/test_design.py",
+      "src/ux/axe_runner.py"
+    ],
+    "third_party_packages": [
+      {
+        "import": "networkx",
+        "requirement": "networkx==3.3",
+        "declared_in_requirements": true
+      },
+      {
+        "import": "playwright",
+        "requirement": "playwright==1.61.0",
+        "declared_in_requirements": true
+      }
+    ],
+    "env_vars": [],
+    "data_files": [],
+    "consumes_endpoints": [],
+    "window_globals": [],
+    "template_includes_not_bundled": [],
+    "static_refs_not_bundled": []
+  },
+  "gaps": [],
+  "shared_assets": [],
+  "warnings": [],
+  "verification": {
+    "static_analysis": "done",
+    "pytest": "not_run",
+    "verify_ui": "not_run",
+    "manual_screen_check": "not_run"
+  }
+}

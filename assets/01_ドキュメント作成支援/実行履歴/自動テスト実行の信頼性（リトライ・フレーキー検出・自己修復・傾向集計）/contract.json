@@ -1,0 +1,45 @@
+{
+  "feature_id": "test_execution_reliability",
+  "name": "自動テスト実行の信頼性（リトライ・フレーキー検出・自己修復・傾向集計）",
+  "risk_level": "high",
+  "status": "implemented",
+  "ui_files": [
+    "templates/partials/view-run-history.html",
+    "static/js/run-trends.js",
+    "static/css/run-trends.css"
+  ],
+  "route_files": [
+    "web/routes/runs.py"
+  ],
+  "core_files": [
+    "web/services/run_trends.py",
+    "web/services/playwright_executor.py",
+    "web/services/spec_ts_generator.py"
+  ],
+  "symbols": [
+    "collect",
+    "_read_healing_records",
+    "normalize_device",
+    "_summary"
+  ],
+  "outputs": [
+    "output/<domain>/qa_process/playwright_report.json",
+    "output/<domain>/qa_process/self_healing.json"
+  ],
+  "persistence": [
+    "output/<domain>/runs/<run_id>/qa_process/playwright_report.json"
+  ],
+  "failure_modes": [
+    "リトライで合格したテストを flaky として記録し、合格数に混ぜて隠さない",
+    "実行回に結果ファイルが無い場合は集計対象外として数え、0% と混同しない",
+    "自己修復の候補が全て見つからない場合は第1候補で実行し、例外にしない",
+    "self_healing.json が壊れている場合は空として扱い、実行結果を落とさない",
+    "総数 0 のときパス率を 0% ではなく未算出（null）として返す"
+  ],
+  "required_tests": [
+    "happy_path",
+    "flaky_path",
+    "error_path",
+    "evidence"
+  ]
+}

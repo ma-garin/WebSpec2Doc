@@ -1,10 +1,10 @@
 {
   "schema": "webspec2doc/feature-asset@1",
-  "version": "20260829-5345533",
-  "generated_at": "2026-08-29T07:50:11Z",
+  "version": "20260829-34d52a3",
+  "generated_at": "2026-08-29T09:32:20Z",
   "source": {
     "repository": "WebSpec2Doc",
-    "revision": "5345533",
+    "revision": "34d52a3",
     "working_tree_dirty": true,
     "contract_file": "quality/feature_contracts.yml"
   },
@@ -104,8 +104,8 @@
     {
       "path": "templates/partials/view-run-history.html",
       "role": "ui",
-      "bytes": 3847,
-      "sha256": "9360321db4a9cb3d64d3c0b943a8ca7a259c8e4ac7351a03b031fc19a7eedaab"
+      "bytes": 7906,
+      "sha256": "ba96674f938031f5559094417515c07ea8e7ac473599c5aa52fc588996ee08b9"
     },
     {
       "path": "templates/partials/view-run-result.html",
@@ -116,8 +116,8 @@
     {
       "path": "static/js/view-run-history.js",
       "role": "ui",
-      "bytes": 24165,
-      "sha256": "dcc71fdb3420f62235e86b6e45e7d3abf261d577c12bbc516ea6684e68ca08fb"
+      "bytes": 24602,
+      "sha256": "d40199fe0efd8ef23cecaff18fb6bc863559fd37a483ad7f8784856a35fea1ca"
     },
     {
       "path": "web/routes/history.py",
@@ -134,8 +134,8 @@
     {
       "path": "web/routes/runs.py",
       "role": "route",
-      "bytes": 5832,
-      "sha256": "9039f808c369a61bb52c548c33cb4dc430ad6a09ce05962b8136452c9986f4c8"
+      "bytes": 7513,
+      "sha256": "e13e33a5b716930b8fd46d1072eb5ed425178033d08563af4ba19af56008bd7c"
     },
     {
       "path": "src/diff/snapshot.py",
@@ -259,6 +259,20 @@
       },
       {
         "file": "web/routes/runs.py",
+        "rule": "/api/run-trends/sites",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/runs.py",
+        "rule": "/api/runs/<domain>/trends",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/runs.py",
         "rule": "/api/runs/<domain>/<run_id>",
         "methods": [
           "GET"
@@ -290,7 +304,9 @@
       "src/generator/comparison_reporter.py",
       "src/generator/diff_reporter.py",
       "web/config.py",
+      "web/services/__init__.py",
       "web/services/comparison_workspace.py",
+      "web/services/run_trends.py",
       "web/summary.py",
       "web/tenancy.py",
       "web/validation.py"
@@ -321,7 +337,8 @@
       "/preview"
     ],
     "window_globals": [
-      "_appBooted"
+      "_appBooted",
+      "rtSetSites"
     ],
     "template_includes_not_bundled": [],
     "static_refs_not_bundled": []

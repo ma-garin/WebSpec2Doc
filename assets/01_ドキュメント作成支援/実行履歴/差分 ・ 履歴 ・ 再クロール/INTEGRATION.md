@@ -3,9 +3,9 @@
 | 項目 | 値 |
 |---|---|
 | feature_id | `diff_history` |
-| 版 | `20260829-5345533` |
-| 生成元 | `WebSpec2Doc` @ `5345533` |
-| 生成日時 (UTC) | 2026-08-29T07:50:11Z |
+| 版 | `20260829-34d52a3` |
+| 生成元 | `WebSpec2Doc` @ `34d52a3` |
+| 生成日時 (UTC) | 2026-08-29T09:32:20Z |
 | リスク / 状態 | critical / implemented |
 | 同梱ファイル数 | 15 |
 | 生成時の作業ツリー | **未コミットの変更あり**（再現性が落ちる。コミット後の再生成を推奨） |
@@ -35,7 +35,7 @@ rsync -a files/ <受け側リポジトリのルート>/
 |---|---:|---|
 | `web/routes/history.py` | 14845 | `6a74dcf728a7` |
 | `web/routes/site.py` | 2102 | `182d46fa54cd` |
-| `web/routes/runs.py` | 5832 | `9039f808c369` |
+| `web/routes/runs.py` | 7513 | `e13e33a5b716` |
 
 ### サービス / コア（5 件）
 
@@ -55,9 +55,9 @@ rsync -a files/ <受け側リポジトリのルート>/
 | `static/js/recrawl.js` | 6235 | `05cd6dfee467` |
 | `static/js/results.js` | 33264 | `454d49c8a241` |
 | `static/js/view-run-result.js` | 14233 | `79b50219af5d` |
-| `templates/partials/view-run-history.html` | 3847 | `9360321db4a9` |
+| `templates/partials/view-run-history.html` | 7906 | `ba96674f9380` |
 | `templates/partials/view-run-result.html` | 667 | `d1220bd5ae9e` |
-| `static/js/view-run-history.js` | 24165 | `dcc71fdb3420` |
+| `static/js/view-run-history.js` | 24602 | `d40199fe0efd` |
 
 ## 2. 配線する
 
@@ -119,7 +119,9 @@ app.register_blueprint(site.bp)
 - `src/generator/comparison_reporter.py`
 - `src/generator/diff_reporter.py`
 - `web/config.py`
+- `web/services/__init__.py`
 - `web/services/comparison_workspace.py`
+- `web/services/run_trends.py`
 - `web/summary.py`
 - `web/tenancy.py`
 - `web/validation.py`
@@ -164,6 +166,7 @@ app.register_blueprint(site.bp)
 他アセット由来のものが混ざっていれば、そのアセットも併せて受け渡す。
 
 - `_appBooted`
+- `rtSetSites`
 
 ## 3-8. 併せて渡す必要のある他機能の資産
 
@@ -186,6 +189,8 @@ app.register_blueprint(site.bp)
 | GET | `/api/site` | `web/routes/site.py` |
 | GET | `/runs/<domain>/<run_id>` | `web/routes/runs.py` |
 | GET | `/api/runs/<domain>` | `web/routes/runs.py` |
+| GET | `/api/run-trends/sites` | `web/routes/runs.py` |
+| GET | `/api/runs/<domain>/trends` | `web/routes/runs.py` |
 | GET | `/api/runs/<domain>/<run_id>` | `web/routes/runs.py` |
 | GET | `/api/runs/<domain>/<run_id>/exists` | `web/routes/runs.py` |
 | GET | `/api/runs/<domain>/<run_id>/artifact` | `web/routes/runs.py` |

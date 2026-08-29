@@ -1,10 +1,10 @@
 {
   "schema": "webspec2doc/feature-asset@1",
-  "version": "20260829-5345533",
-  "generated_at": "2026-08-29T07:50:11Z",
+  "version": "20260829-34d52a3",
+  "generated_at": "2026-08-29T09:32:20Z",
   "source": {
     "repository": "WebSpec2Doc",
-    "revision": "5345533",
+    "revision": "34d52a3",
     "working_tree_dirty": true,
     "contract_file": "quality/feature_contracts.yml"
   },
@@ -108,14 +108,14 @@
     {
       "path": "web/services/spec_ts_generator.py",
       "role": "core",
-      "bytes": 32817,
-      "sha256": "269e545eb992ae9eb1a8f9b5fe01702190fb34c64b2906d9a490a4fcc3d8e49e"
+      "bytes": 38349,
+      "sha256": "0acbd96cd31b8e559bed0777995e06feb178d809bf2039347c00635f65b9144e"
     },
     {
       "path": "web/services/playwright_executor.py",
       "role": "core",
-      "bytes": 45033,
-      "sha256": "14537e601aaaf7824955f5015ab9d26718d4f92d11a9e7b55079e0deb81c0f29"
+      "bytes": 51823,
+      "sha256": "5ccd1c84e703210b68e0d9bf41e336fece522e68c19a8f3e80066280ecea225e"
     },
     {
       "path": "web/services/auto_run_config.py",

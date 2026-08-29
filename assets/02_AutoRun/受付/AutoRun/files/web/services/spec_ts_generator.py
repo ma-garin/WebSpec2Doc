@@ -69,6 +69,8 @@ def generate_spec_ts(
         "// 送信は K1 ゲートウェイ（_autorun_egress.ts）を必ず経由する。",
         "",
     ]
+    if enable_self_healing:
+        lines += _self_healing_runtime()
 
     for item in filtered:
         _append_test_block(
@@ -245,7 +247,9 @@ def _append_test_block(
     # 揃っている場合のみ発動し、揃っていない候補（旧フィクスチャ等）には影響しない。
     field = item.get("field")
     if field and title in ("フォーム入力", "必須入力"):
-        _append_form_operations(lines, item, title, field, allow_submit)
+        _append_form_operations(
+            lines, item, title, field, allow_submit, enable_self_healing
+        )
     elif title == "画面遷移":
         _append_transition_assertion(lines, trace_id, screen_index)
     elif title == "画面表示スモーク":
@@ -277,6 +281,7 @@ def _append_form_operations(
     title: str,
     field: dict[str, Any],
     allow_submit: bool = False,
+    self_healing: bool = False,
 ) -> None:
     siblings: list[dict[str, Any]] = item.get("required_siblings") or []
     form_action = _safe_str(item.get("form_action", ""))
@@ -294,13 +299,24 @@ def _append_form_operations(
         else "  // このフォームには他に必須項目が無い"
     )
     for sib in siblings:
-        _append_fill_statement(lines, sib, _representative_value(sib, date_format), indent="  ")
+        _append_fill_statement(
+            lines, sib, _representative_value(sib, date_format), "  ", self_healing
+        )
 
-    field_locator = _field_locator_expr(field)
+    # 検証行（checkValidity）も自己修復対象にする。入力だけ修復して検証が
+    # 第1候補直書きだと、画面が変わったときに「入力はできたが検証で落ちる」になる。
+    if self_healing and len(_locator_candidates(field)) > 1:
+        arr = ", ".join(f"'{_esc(c)}'" for c in _locator_candidates(field))
+        lines.append(
+            f"  const __target = await heal(page, [{arr}], '{_esc(_field_label(field))}');"
+        )
+        field_locator = "__target"
+    else:
+        field_locator = _field_locator_expr(field)
     if title == "フォーム入力":
         value = _representative_value(field, date_format)
         lines.append(f"  // `{_esc(_field_label(field))}` に代表値を入力")
-        _append_fill_statement(lines, field, value, indent="  ")
+        _append_fill_statement(lines, field, value, "  ", self_healing)
         if form_selector:
             lines.append(
                 f"  const formValid = await page.locator('{form_selector}')"
@@ -319,7 +335,7 @@ def _append_form_operations(
             _append_submit_statement(lines, form_selector)
     else:  # 必須入力
         lines.append(f"  // `{_esc(_field_label(field))}` を空にする")
-        _append_clear_statement(lines, field, indent="  ")
+        _append_clear_statement(lines, field, "  ", self_healing)
         lines.append(
             f"  const fieldValid = await {field_locator}"
             ".evaluate((el) => (el as HTMLInputElement).checkValidity());"
@@ -407,14 +423,105 @@ def _append_smoke_assertion(
     lines.append(f"  expect(title).toContain('{_esc(snippet)}');")
 
 
+
+# ------------------------------------------------------------------
+# 自己修復ロケータ（Autify / MagicPod 相当の「画面が変わっても壊れにくい」挙動）
+#
+# 従来は locators[0] だけを使い、その 1 本が変わった時点でテストが落ちていた。
+# クローラは複数の候補（id / name / aria-label / テキスト）を実測しているのに、
+# 生成側が先頭以外を捨てていた。候補を順に試し、第 2 候補以降で解決した場合は
+# 「どの候補で復旧したか」を記録する。記録は画面変更の早期検知に使う。
+# ------------------------------------------------------------------
+_HEAL_ENV = "AUTORUN_HEAL_PATH"
+
+
+def _self_healing_runtime() -> list[str]:
+    """生成 spec の先頭に置くランタイムヘルパ（TS 固有構文を使わない）。"""
+    return [
+        "// --- 自己修復ロケータ -------------------------------------------------",
+        "// 候補を順に試し、最初に実在したものを使う。第2候補以降で解決したら記録する。",
+        "const __healRecords = [];",
+        "async function heal(page, candidates, name) {",
+        "  for (let i = 0; i < candidates.length; i++) {",
+        "    const loc = page.locator(candidates[i]).first();",
+        "    const found = await loc.count().then((c) => c > 0).catch(() => false);",
+        "    if (found) {",
+        "      if (i > 0) {",
+        "        __healRecords.push({",
+        "          name: name,",
+        "          used: candidates[i],",
+        "          primary: candidates[0],",
+        "          index: i,",
+        "          title: test.info().title,",
+        "        });",
+        "      }",
+        "      return loc;",
+        "    }",
+        "  }",
+        "  // どれも見つからない場合は第1候補を返す。ここで例外にすると、",
+        "  // 「要素が無い」ことを検証したいテストまで壊れる。",
+        "  return page.locator(candidates[0]).first();",
+        "}",
+        "test.afterAll(async () => {",
+        f"  const out = process.env['{_HEAL_ENV}'];",
+        "  if (!out || __healRecords.length === 0) return;",
+        "  try {",
+        "    const fs = require('fs');",
+        "    let prev = [];",
+        "    try { prev = JSON.parse(fs.readFileSync(out, 'utf-8')); } catch (e) { prev = []; }",
+        "    fs.writeFileSync(out, JSON.stringify(prev.concat(__healRecords), null, 2));",
+        "  } catch (e) {",
+        "    // 記録は best-effort。失敗してもテスト結果に影響させない。",
+        "  }",
+        "});",
+        "// ---------------------------------------------------------------------",
+        "",
+    ]
+
+
+def _locator_candidates(field: dict[str, Any]) -> list[str]:
+    """フィールドの候補ロケータを、重複を除いて優先順に返す。"""
+    raw: list[str] = [str(x) for x in (field.get("locators") or []) if str(x).strip()]
+    name = _safe_str(field.get("name"))
+    if name:
+        raw.append(f'[name="{name}"]')
+    seen: set[str] = set()
+    out: list[str] = []
+    for loc in raw:
+        if loc not in seen:
+            seen.add(loc)
+            out.append(loc)
+    return out or ['[name=""]']
+
+
 def _field_label(field: dict[str, Any]) -> str:
     return _safe_str(field.get("name")) or "unnamed"
 
 
 def _field_locator_expr(field: dict[str, Any]) -> str:
+    """単一ロケータ式（自己修復を使わない従来経路）。"""
     locators: list[str] = field.get("locators") or []
     primary = locators[0] if locators else f"[name=\"{field.get('name', '')}\"]"
     return f"page.locator('{_esc(primary)}')"
+
+
+def _emit_target_binding(
+    lines: list[str], field: dict[str, Any], indent: str, self_healing: bool
+) -> str:
+    """操作対象を変数へ束ねる行を出力し、その変数名を返す。
+
+    自己修復が有効なときは候補を順に試す `heal()` を経由する。無効なときは
+    従来どおり第1候補を直接使う（既存の生成結果と 1 行も変わらない挙動）。
+    """
+    if not self_healing:
+        return _field_locator_expr(field)
+    candidates = _locator_candidates(field)
+    if len(candidates) <= 1:
+        return f"page.locator('{_esc(candidates[0])}').first()"
+    arr = ", ".join(f"'{_esc(c)}'" for c in candidates)
+    label = _esc(_field_label(field))
+    lines.append(f"{indent}const __t = await heal(page, [{arr}], '{label}');")
+    return "__t"
 
 
 def _date_format_for_url(url: str) -> str:
@@ -488,12 +595,21 @@ def _looks_like_placeholder(option: str) -> bool:
 
 
 def _append_fill_statement(
-    lines: list[str], field: dict[str, Any], value: str, indent: str
+    lines: list[str],
+    field: dict[str, Any],
+    value: str,
+    indent: str,
+    self_healing: bool = False,
 ) -> None:
     field_type = _safe_str(field.get("field_type", "text"))
-    locator_expr = _field_locator_expr(field)
     if field_type == "hidden":
         return
+    # heal() は await を伴うためブロックで囲い、変数のスコープを閉じる。
+    block = self_healing and len(_locator_candidates(field)) > 1
+    if block:
+        lines.append(f"{indent}{{")
+        indent = indent + "  "
+    locator_expr = _emit_target_binding(lines, field, indent, self_healing)
     # 他の項目（例: 連絡方法の選択）に応じて disabled になる条件付きフィールドが
     # 実サイト検証で見つかった（email/tel は contact 選択に連動）。disabled な項目は
     # ブラウザの制約検証からも除外されるため、有効なときだけ操作すれば安全に対応できる。
@@ -521,11 +637,19 @@ def _append_fill_statement(
     else:
         lines.append(f"{inner}await {locator_expr}.fill('{_esc(value)}');")
     lines.append(f"{indent}}}")
+    if block:
+        lines.append(f"{indent[:-2]}}}")
 
 
-def _append_clear_statement(lines: list[str], field: dict[str, Any], indent: str) -> None:
+def _append_clear_statement(
+    lines: list[str], field: dict[str, Any], indent: str, self_healing: bool = False
+) -> None:
     field_type = _safe_str(field.get("field_type", "text"))
-    locator_expr = _field_locator_expr(field)
+    block = self_healing and len(_locator_candidates(field)) > 1
+    if block:
+        lines.append(f"{indent}{{")
+        indent = indent + "  "
+    locator_expr = _emit_target_binding(lines, field, indent, self_healing)
     if field_type == "select":
         options: list[str] = [str(o) for o in (field.get("options") or [])]
         placeholder = next((o for o in options if _looks_like_placeholder(o)), "")
@@ -537,6 +661,8 @@ def _append_clear_statement(lines: list[str], field: dict[str, Any], indent: str
         lines.append(f"{indent}await {locator_expr}.uncheck().catch(() => {{}});")
     else:
         lines.append(f"{indent}await {locator_expr}.fill('');")
+    if block:
+        lines.append(f"{indent[:-2]}}}")
 
 
 def _generate_strong_assertions(expected: str) -> list[str]:

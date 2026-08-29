@@ -1,10 +1,10 @@
 {
   "schema": "webspec2doc/feature-asset@1",
-  "version": "20260829-5345533",
-  "generated_at": "2026-08-29T07:50:12Z",
+  "version": "20260829-34d52a3",
+  "generated_at": "2026-08-29T09:32:21Z",
   "source": {
     "repository": "WebSpec2Doc",
-    "revision": "5345533",
+    "revision": "34d52a3",
     "working_tree_dirty": true,
     "contract_file": "quality/feature_contracts.yml"
   },

@@ -1,0 +1,218 @@
+{
+  "schema": "webspec2doc/feature-asset@1",
+  "version": "20260829-34d52a3",
+  "generated_at": "2026-08-29T09:32:21Z",
+  "source": {
+    "repository": "WebSpec2Doc",
+    "revision": "34d52a3",
+    "working_tree_dirty": true,
+    "contract_file": "quality/feature_contracts.yml"
+  },
+  "feature": {
+    "feature_id": "test_execution_reliability",
+    "name": "自動テスト実行の信頼性（リトライ・フレーキー検出・自己修復・傾向集計）",
+    "risk_level": "high",
+    "status": "implemented",
+    "ui_files": [
+      "templates/partials/view-run-history.html",
+      "static/js/run-trends.js",
+      "static/css/run-trends.css"
+    ],
+    "route_files": [
+      "web/routes/runs.py"
+    ],
+    "core_files": [
+      "web/services/run_trends.py",
+      "web/services/playwright_executor.py",
+      "web/services/spec_ts_generator.py"
+    ],
+    "symbols": [
+      "collect",
+      "_read_healing_records",
+      "normalize_device",
+      "_summary"
+    ],
+    "outputs": [
+      "output/<domain>/qa_process/playwright_report.json",
+      "output/<domain>/qa_process/self_healing.json"
+    ],
+    "persistence": [
+      "output/<domain>/runs/<run_id>/qa_process/playwright_report.json"
+    ],
+    "failure_modes": [
+      "リトライで合格したテストを flaky として記録し、合格数に混ぜて隠さない",
+      "実行回に結果ファイルが無い場合は集計対象外として数え、0% と混同しない",
+      "自己修復の候補が全て見つからない場合は第1候補で実行し、例外にしない",
+      "self_healing.json が壊れている場合は空として扱い、実行結果を落とさない",
+      "総数 0 のときパス率を 0% ではなく未算出（null）として返す"
+    ],
+    "required_tests": [
+      "happy_path",
+      "flaky_path",
+      "error_path",
+      "evidence"
+    ]
+  },
+  "placement": {
+    "system_key": "docs",
+    "system": "01_ドキュメント作成支援",
+    "screen": "実行履歴",
+    "screens": [
+      "実行履歴"
+    ],
+    "classified_by": "screen"
+  },
+  "files": [
+    {
+      "path": "templates/partials/view-run-history.html",
+      "role": "ui",
+      "bytes": 7906,
+      "sha256": "ba96674f938031f5559094417515c07ea8e7ac473599c5aa52fc588996ee08b9"
+    },
+    {
+      "path": "static/js/run-trends.js",
+      "role": "ui",
+      "bytes": 10306,
+      "sha256": "93be4e165de2995b31f63b871c6719101525d154d195e28e8242bde24dcb08e1"
+    },
+    {
+      "path": "static/css/run-trends.css",
+      "role": "ui",
+      "bytes": 2482,
+      "sha256": "ea3447654120c0daaac38ef7c8a3757a884a1f60cf66c1457957b39fe6f4a6cb"
+    },
+    {
+      "path": "web/routes/runs.py",
+      "role": "route",
+      "bytes": 7513,
+      "sha256": "e13e33a5b716930b8fd46d1072eb5ed425178033d08563af4ba19af56008bd7c"
+    },
+    {
+      "path": "web/services/run_trends.py",
+      "role": "core",
+      "bytes": 7788,
+      "sha256": "dbfed3e246b7c9d06bc66df48148a4037b1b55f04dfa675fc3835c6c23c4042c"
+    },
+    {
+      "path": "web/services/playwright_executor.py",
+      "role": "core",
+      "bytes": 51823,
+      "sha256": "5ccd1c84e703210b68e0d9bf41e336fece522e68c19a8f3e80066280ecea225e"
+    },
+    {
+      "path": "web/services/spec_ts_generator.py",
+      "role": "core",
+      "bytes": 38349,
+      "sha256": "0acbd96cd31b8e559bed0777995e06feb178d809bf2039347c00635f65b9144e"
+    }
+  ],
+  "wiring": {
+    "blueprints": [
+      {
+        "file": "web/routes/runs.py",
+        "name": "runs",
+        "url_prefix": ""
+      }
+    ],
+    "provides_endpoints": [
+      {
+        "file": "web/routes/runs.py",
+        "rule": "/runs/<domain>/<run_id>",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/runs.py",
+        "rule": "/api/runs/<domain>",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/runs.py",
+        "rule": "/api/run-trends/sites",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/runs.py",
+        "rule": "/api/runs/<domain>/trends",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/runs.py",
+        "rule": "/api/runs/<domain>/<run_id>",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/runs.py",
+        "rule": "/api/runs/<domain>/<run_id>/exists",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "file": "web/routes/runs.py",
+        "rule": "/api/runs/<domain>/<run_id>/artifact",
+        "methods": [
+          "GET"
+        ]
+      }
+    ]
+  },
+  "dependencies": {
+    "internal_modules_not_bundled": [
+      "src/crawler/playwright_runtime.py",
+      "web/config.py",
+      "web/services/__init__.py",
+      "web/services/egress_gateway.py",
+      "web/services/run_store.py",
+      "web/tenancy.py",
+      "web/validation.py"
+    ],
+    "third_party_packages": [
+      {
+        "import": "flask",
+        "requirement": "flask==3.1.3",
+        "declared_in_requirements": true
+      }
+    ],
+    "env_vars": [
+      "WEBSPEC2DOC_PW_MAX_EXEC_SEC"
+    ],
+    "data_files": [],
+    "consumes_endpoints": [
+      "/api/run-trends/sites",
+      "/api/runs/"
+    ],
+    "window_globals": [
+      "rtReload",
+      "rtSetSites"
+    ],
+    "template_includes_not_bundled": [],
+    "static_refs_not_bundled": []
+  },
+  "gaps": [],
+  "shared_assets": [
+    {
+      "path": "static/js/view-run-history.js",
+      "owned_by": [
+        "diff_history"
+      ],
+      "reason": "`templates/partials/view-run-history.html` を動かす JS と見られるが未同梱"
+    }
+  ],
+  "warnings": [],
+  "verification": {
+    "static_analysis": "done",
+    "pytest": "not_run",
+    "verify_ui": "not_run",
+    "manual_screen_check": "not_run"
+  }
+}

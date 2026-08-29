@@ -310,6 +310,30 @@ def api_testcases_run() -> dict | tuple[dict, int]:
         )
     except Exception:  # noqa: BLE001
         logging.warning("テスト実行の履歴記録に失敗しました（応答は継続）", exc_info=True)
+
+    # 実行完了通知。通知先は output/<domain>/schedule.json（無ければ .env）に従うため、
+    # domain と出力ルートを渡す。通知の成否は API 応答に影響させない。
+    try:
+        from web.services.qa.helpers import _output_dir
+        from web.services.run_notifier import notify_run_finished
+
+        run_summary = (saved or {}).get("summary") or {}
+        notify_run_finished(
+            site_url=str(report.get("site_url") or report.get("url") or f"https://{domain}"),
+            run_kind="testcase",
+            status="complete" if result.get("ok") else "failed",
+            total=int(run_summary.get("total", 0) or 0),
+            passed=int(run_summary.get("passed", 0) or 0),
+            failed=int(run_summary.get("failed", 0) or 0),
+            skipped=int(run_summary.get("skipped", 0) or 0),
+            elapsed_sec=int((int(result.get("duration_ms") or 0)) / 1000),
+            error=str(result.get("error") or ""),
+            domain=domain,
+            output_root=_output_dir(),
+        )
+    except Exception:  # noqa: BLE001
+        logging.warning("テスト実行の完了通知に失敗しました（応答は継続）", exc_info=True)
+
     return {
         "ok": bool(result.get("ok")),
         "generated": gen,

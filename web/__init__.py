@@ -133,6 +133,8 @@ def create_app() -> Flask:
     get_viewpoint_store()
 
     from web.services.scheduler import start_scheduler
+    from web.services.test_run_job import start_workers as start_test_run_workers
 
     start_scheduler()
+    start_test_run_workers()
     return app

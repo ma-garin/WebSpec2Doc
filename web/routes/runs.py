@@ -23,6 +23,7 @@ from typing import Any
 from flask import Blueprint, abort, render_template, request
 
 from web.config import OUTPUT_DIR
+from web.services import run_trends
 from web.services.run_store import (
     ARTIFACT_PROBES,
     RESULT_FILE_MAP,
@@ -86,6 +87,23 @@ def api_runs(domain: str) -> dict | tuple[dict, int]:
         "current_run_id": str(runs[0]["run_id"]) if runs else "",
         "total": len(runs),
     }
+
+
+@bp.get("/api/runs/<domain>/trends")
+def api_run_trends(domain: str) -> dict | tuple[dict, int]:
+    """実行回を横断した傾向（パス率推移・フレーキー・継続失敗・自己修復）。
+
+    1 回の結果だけでは「不安定なのか今回だけなのか」が判別できないため、
+    実行回をまたいで集計する。`limit` で読む実行回数を指定する（既定 30・上限 100）。
+    """
+    if not _valid_domain(domain):
+        return {"error": "not found"}, 404
+    try:
+        limit = int(request.args.get("limit", run_trends.DEFAULT_LIMIT))
+    except (TypeError, ValueError):
+        limit = run_trends.DEFAULT_LIMIT
+    limit = max(1, min(limit, 100))
+    return run_trends.collect(_out(), domain, limit)
 
 
 @bp.get("/api/runs/<domain>/<run_id>")

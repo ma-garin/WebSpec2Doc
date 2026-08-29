@@ -25,11 +25,13 @@
   登録漏れはゲートを素通りし、渡した先で「画面が出ない」になる。
 - 手順・形式・受け側の検証方法 → `docs/process/asset-distribution.md`
 
+受け渡しの流れは「送り側は push まで、受け側は zip を落として `PROMPT.md` を貼るだけ」。
+
 ```bash
-make assets-list                  # 渡せる機能の一覧
-make assets F=<機能ID>            # 1 件エクスポート（dist/assets/ に出る）
-make assets-verify B=<バンドル>   # 出荷前 / 受け入れ時の検証（SHA-256 照合）
 make assets-audit                 # 契約に未登録の UI ファイルを洗い出す
+make assets F=<機能ID>            # 1 件エクスポート（assets/ に出る。git 管理下）
+make assets-verify B=<バンドル>   # 出荷前の検証（SHA-256 照合）
+git add assets/ && git commit && git push
 ```
 
 ## 作業場所（重要）

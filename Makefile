@@ -93,7 +93,7 @@ verify-all: quality-harness test verify-ui
 	@echo ""
 
 # =============================================================================
-# 機能アセットの受け渡し（dist/assets/）
+# 機能アセットの受け渡し（assets/）
 # 「機能単位で作り込み、他環境へフォルダごと渡す」ための出力。
 # 詳細は docs/process/asset-distribution.md
 # =============================================================================
@@ -113,7 +113,7 @@ assets: ## 機能アセットを1件エクスポートする（make assets F=dif
 assets-all: ## 全機能アセットをエクスポートする
 	$(ASSET_PY) scripts/export_feature_asset.py --all $(ASSET_FLAGS)
 
-assets-verify: ## アセットのバンドルを検証する（make assets-verify B=dist/assets/... [T=受け側ルート]）
+assets-verify: ## アセットのバンドルを検証する（make assets-verify B=assets/... [T=受け側ルート]）
 	@if [ -z "$(B)" ]; then \
 		echo "  使い方: make assets-verify B=<バンドルのパス> [T=<受け側リポジトリのルート>]"; \
 		exit 2; \
@@ -121,7 +121,7 @@ assets-verify: ## アセットのバンドルを検証する（make assets-verif
 	$(ASSET_PY) scripts/verify_feature_asset.py "$(B)" $(if $(T),--against "$(T)",)
 
 assets-clean: ## エクスポート済みアセットを消す
-	rm -rf dist/assets
+	rm -rf assets
 
 # =============================================================================
 # 納品ドキュメント（docs/sdlc/）

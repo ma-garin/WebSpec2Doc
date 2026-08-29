@@ -17,8 +17,8 @@
     python3 scripts/export_feature_asset.py --all
 
 出力:
-    dist/assets/<feature_id>/<version>/manifest.json / INTEGRATION.md / contract.json / files/...
-    dist/assets/<feature_id>-<version>.tar.gz
+    assets/<feature_id>/<version>/manifest.json / INTEGRATION.md / contract.json / files/...
+    assets/<feature_id>-<version>.tar.gz
 
 注意: 本スクリプトが行うのは静的解析による棚卸しである。実行時の動作確認は行わない
 （`.claude/rules/speed-harness.md` H-7）。実行検証が要る場合は受け側で行う。
@@ -41,7 +41,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_FILE = ROOT / "quality" / "feature_contracts.yml"
-DEFAULT_OUT = ROOT / "dist" / "assets"
+DEFAULT_OUT = ROOT / "assets"
 
 # contract のキー -> バンドル内での役割。受け側の配置手順はこの役割で分岐する。
 ROLE_BY_KEY = {
@@ -657,6 +657,80 @@ def ownership_index(features: list[dict[str, Any]]) -> dict[str, list[str]]:
     return owners
 
 
+def render_prompt(manifest: dict[str, Any]) -> str:
+    """別環境の AI エージェントへそのまま貼る指示文。
+
+    受け側の人間が手順を組み立てなくて済むよう、1 枚で完結させる。
+    """
+    feature = manifest["feature"]
+    deps = manifest["dependencies"]
+    fid = feature["feature_id"]
+    lines: list[str] = []
+    add = lines.append
+
+    add(f"# 別環境へ貼る指示文（{feature['name']}）")
+    add("")
+    add("以下をそのままコピーして、受け側の Claude Code / Codex に貼る。")
+    add("")
+    add("---")
+    add("")
+    add(f"WebSpec2Doc から機能アセット `{fid}` を受け取った。このリポジトリへ組み込んでほしい。")
+    add("")
+    add(f"アセットの場所: `assets/{fid}/{manifest['version']}/`")
+    add("（GitHub の zip を展開したディレクトリの中にある）")
+    add("")
+    add("手順:")
+    add("")
+    add("1. そのディレクトリの `INTEGRATION.md` を読む。組み込み手順はそこに全部書いてある。")
+    add("2. 配置の前に完全性を検証する:")
+    add("   ```")
+    add(f"   python3 scripts/verify_feature_asset.py assets/{fid}/{manifest['version']} --against .")
+    add("   ```")
+    add("   `[NG]` が出たら配置せず、何が足りないかを報告すること。")
+    add("3. 合格したら `files/` をリポジトリのルートへ配置する（相対パスはそのまま）:")
+    add("   ```")
+    add(f"   rsync -a assets/{fid}/{manifest['version']}/files/ ./")
+    add("   ```")
+    add("4. `INTEGRATION.md` 第 2 節に従って配線する"
+        "（Blueprint 登録・`templates/index.html` への include / script / link）。")
+    add("5. `INTEGRATION.md` 第 5 節の受け入れ確認を実行する。"
+        "出力・永続化・失敗経路を実際に踏むこと。**送り側では未実行**。")
+    add("")
+
+    blockers: list[str] = []
+    if deps["internal_modules_not_bundled"]:
+        blockers.append(
+            "同梱外の内部モジュールが "
+            f"{len(deps['internal_modules_not_bundled'])} 件ある"
+            "（手順 2 の検証で受け側に無ければ `[NG]` として出る）"
+        )
+    if manifest["shared_assets"]:
+        others = sorted({o for s in manifest["shared_assets"] for o in s["owned_by"]})
+        blockers.append(
+            "他機能の資産に依存している: "
+            + ", ".join(f"`{o}`" for o in others)
+            + "。受け側に無ければ、その機能のアセットも送り側へ請求すること"
+        )
+    if deps["env_vars"]:
+        blockers.append("必要な環境変数: " + ", ".join(f"`{e}`" for e in deps["env_vars"]))
+    if manifest["warnings"]:
+        blockers.append(
+            f"送り側で警告が {len(manifest['warnings'])} 件残っている"
+            "（`INTEGRATION.md` 第 6 節を読むこと）"
+        )
+
+    add("注意:")
+    add("")
+    if blockers:
+        for item in blockers:
+            add(f"- {item}")
+    else:
+        add("- 特になし。")
+    add("- 判断に迷ったら勝手に決めず、送り側（WebSpec2Doc 側）へ確認すること。")
+    add("")
+    return "\n".join(lines)
+
+
 def detect_gaps(
     entries: list[dict[str, Any]],
     owners: dict[str, list[str]],
@@ -836,6 +910,7 @@ def export(
     (bundle_dir / "INTEGRATION.md").write_text(
         render_integration(manifest), encoding="utf-8"
     )
+    (bundle_dir / "PROMPT.md").write_text(render_prompt(manifest), encoding="utf-8")
 
     if archive:
         tar_path = out_root / f"{feature_id}-{version}.tar.gz"

@@ -24,7 +24,8 @@
 `scripts/export_feature_asset.py` が次の構造を出力する。
 
 ```
-dist/assets/<feature_id>/<版>/
+assets/<feature_id>/<版>/
+    PROMPT.md          受け側の AI エージェントへそのまま貼る指示文
     manifest.json      機械可読（ファイル一覧・SHA-256・依存・提供API・警告）
     INTEGRATION.md     受け側が読む組み込み手順（配置・配線・依存・受け入れ確認）
     contract.json      quality/feature_contracts.yml から切り出した当該機能の契約
@@ -32,7 +33,7 @@ dist/assets/<feature_id>/<版>/
         web/routes/history.py
         static/js/history.js
         ...
-dist/assets/<feature_id>-<版>.tar.gz
+assets/<feature_id>-<版>.tar.gz  （zip 経由なら不要）
 ```
 
 ### なぜこの形式が確実か
@@ -49,56 +50,47 @@ dist/assets/<feature_id>-<版>.tar.gz
 別リポジトリへの push や submodule は採らない。権限・CI・履歴の同期という失敗点が増え、
 受け渡しそのものより運用の面倒が大きい。バンドルは経路非依存なので、後から git に載せることもできる。
 
-## 3. 送る側の手順
+## 3. 送る側の手順（3 コマンド）
 
 ```bash
-# 1. 渡せる機能を一覧する
-make assets-list
+# 1. 機能を作り込んだら、契約に登録されているか点検する
+make assets-audit
 
-# 2. 1 件エクスポートする
+# 2. アセットを出す（assets/ 配下に出る。git 管理下なので zip に入る）
 make assets F=diff_history
 
-# テスト・関連ドキュメントも同梱する場合
-make assets F=diff_history ASSET_FLAGS="--with-tests --with-docs"
-
-# 3. 出荷前に自分で検証する（警告も落とす場合は --strict）
-make assets-verify B=dist/assets/diff_history/<版>
-
-# 4. tar.gz を渡す
-#    dist/assets/diff_history-<版>.tar.gz
+# 3. 出荷前に自分で検証してから、コミット & push
+make assets-verify B=assets/diff_history/<版>
+git add assets/ && git commit && git push
 ```
 
-**警告が 0 になってから渡す。** 警告は「渡した先で画面が出ない」に直結する。
-とくに次の 2 つは契約の登録漏れであり、契約を直してから再エクスポートする。
+**警告が 0 になってから push する。** 警告は「渡した先で画面が出ない」に直結する。
+作業ツリーが汚れていると manifest に `working_tree_dirty: true` が立つので、
+**コミットしてからエクスポートする**。
 
-- `JS は同梱しているが画面テンプレート（.html）が 1 つも含まれていない`
-- `... の画面テンプレートと見られるが未同梱` / `... と対の CSS と見られるが未同梱`
+## 4. 受け取る側の手順（zip 前提）
 
-作業ツリーが汚れていると manifest に `working_tree_dirty: true` が立つ。
-版と中身の対応が追えなくなるので、**コミットしてからエクスポートする**。
+送る側がやることは push まで。受け側は GitHub の zip を落として、
+バンドル内の `PROMPT.md` を AI エージェントに貼るだけでよい。
 
-## 4. 受け取る側の手順
-
-```bash
-# 1. 展開して、まず検証する（配置より先）
-tar xzf diff_history-<版>.tar.gz
-python3 scripts/verify_feature_asset.py diff_history-<版>
-
-# 2. 受け側リポジトリで依存が満たされているかを見る
-python3 scripts/verify_feature_asset.py diff_history-<版> --against /path/to/受け側
-
-# 3. 合格したら配置する
-rsync -a diff_history-<版>/files/ /path/to/受け側/
-
-# 4. INTEGRATION.md の第 2 節に従って配線する
-#    - Blueprint を web/__init__.py に登録
-#    - テンプレート / JS / CSS を templates/index.html に差し込む
+```
+GitHub → Code → Download ZIP → 展開
+  → assets/<機能ID>/<版>/PROMPT.md を開く
+  → 中身を受け側の Claude Code / Codex にコピペ
 ```
 
-検証スクリプトは標準ライブラリだけで動く。受け側に venv がなくても走る。
+`PROMPT.md` はエクスポート時に自動生成される。次を含む。
 
-`--against` が報告する `[NG] 受け側に内部モジュールがない` は、**そのモジュールも渡す必要がある**という意味。
-別の feature_id に属していれば、そのアセットも併せてエクスポートする。
+- 検証コマンド（`verify_feature_asset.py ... --against .`）と「`[NG]` なら配置するな」の指示
+- 配置コマンド（`rsync -a .../files/ ./`）
+- 配線は `INTEGRATION.md` 第 2 節を読ませる
+- 受け入れ確認は `INTEGRATION.md` 第 5 節（**送り側では未実行**であることを明示）
+- その機能固有の注意（同梱外の内部モジュール数・依存する他機能・必要な環境変数・残っている警告）
+
+検証スクリプトは標準ライブラリだけで動くため、受け側に venv がなくても走る。
+
+`--against` が報告する `[NG] 受け側に内部モジュールがない` は、**そのモジュールも渡す必要がある**
+という意味。別の feature_id に属していれば、そのアセットも併せてエクスポートして push する。
 
 ## 5. 渡してはいけないもの・そのまま使ってはいけないもの
 

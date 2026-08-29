@@ -10,7 +10,7 @@
     5. （--against 指定時）受け側リポジトリで同梱外依存が満たされているか
 
 使い方:
-    python3 scripts/verify_feature_asset.py dist/assets/diff_history/20260829-abc1234
+    python3 scripts/verify_feature_asset.py assets/diff_history/20260829-abc1234
     python3 scripts/verify_feature_asset.py <bundle.tar.gz>
     python3 scripts/verify_feature_asset.py <bundle> --against /path/to/other-repo
 
@@ -75,7 +75,7 @@ def verify_bundle(bundle: Path) -> tuple[list[str], list[str], dict[str, Any]]:
     if manifest.get("schema") != SCHEMA:
         errors.append(f"未知のスキーマ: {manifest.get('schema')!r}（期待: {SCHEMA!r}）")
 
-    for name in ("INTEGRATION.md", "contract.json"):
+    for name in ("INTEGRATION.md", "PROMPT.md", "contract.json"):
         if not (bundle / name).is_file():
             errors.append(f"必須ファイルがない: {name}")
 

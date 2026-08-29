@@ -1,0 +1,52 @@
+== web/routes/crawl.py funcs=9 over50=2 max_nest=2@L163 swallowed_except=[238] bare_except=[] mutable_default=[]
+   OVER50 run L78 len=126
+   OVER50 generate L128 len=74
+== web/routes/discover.py funcs=3 over50=1 max_nest=3@L97 swallowed_except=[] bare_except=[] mutable_default=[]
+   OVER50 api_discover_stream L50 len=66
+== web/routes/report.py funcs=25 over50=1 max_nest=5@L468 swallowed_except=[199] bare_except=[] mutable_default=[]
+   OVER50 api_result L314 len=89
+== web/routes/login.py funcs=8 over50=0 max_nest=2@L176 swallowed_except=[249, 178] bare_except=[] mutable_default=[]
+== web/routes/site.py funcs=2 over50=0 max_nest=1@L35 swallowed_except=[] bare_except=[] mutable_default=[]
+== web/routes/runs.py funcs=8 over50=0 max_nest=1@L58 swallowed_except=[] bare_except=[] mutable_default=[]
+== web/config.py funcs=1 over50=0 max_nest=0@L0 swallowed_except=[] bare_except=[] mutable_default=[]
+== web/security.py funcs=5 over50=0 max_nest=2@L89 swallowed_except=[] bare_except=[] mutable_default=[]
+== web/tenancy.py funcs=5 over50=0 max_nest=1@L26 swallowed_except=[] bare_except=[] mutable_default=[]
+== web/validation.py funcs=11 over50=0 max_nest=2@L51 swallowed_except=[78] bare_except=[] mutable_default=[]
+== src/main.py funcs=45 over50=5 max_nest=3@L584 swallowed_except=[] bare_except=[] mutable_default=[]
+   OVER50 _run_crawl L557 len=232
+   OVER50 parse_args L88 len=212
+   OVER50 save_outputs L1301 len=71
+   OVER50 _save_html_outputs L1402 len=59
+   OVER50 _run_doc_fusion L1155 len=53
+== src/crawler/__init__.py funcs=0 over50=0 max_nest=0@L0 swallowed_except=[] bare_except=[] mutable_default=[]
+== src/crawler/action_explorer.py funcs=11 over50=2 max_nest=3@L230 swallowed_except=[296, 226] bare_except=[] mutable_default=[]
+   OVER50 explore_page_actions L191 len=67
+   OVER50 _dry_run_form_validation L321 len=53
+== src/crawler/auth_recorder.py funcs=7 over50=2 max_nest=3@L89 swallowed_except=[215] bare_except=[] mutable_default=[]
+   OVER50 _run_recorder_loop L116 len=74
+   OVER50 record_auth_session L60 len=54
+== src/crawler/auth.py funcs=3 over50=0 max_nest=3@L25 swallowed_except=[] bare_except=[] mutable_default=[]
+== src/crawler/auto_login.py funcs=7 over50=2 max_nest=4@L113 swallowed_except=[] bare_except=[] mutable_default=[]
+   OVER50 submit_login_form L72 len=68
+   OVER50 submit_login_simple L142 len=52
+== src/crawler/data_flow.py funcs=3 over50=0 max_nest=3@L72 swallowed_except=[] bare_except=[] mutable_default=[]
+== src/crawler/form_navigator.py funcs=6 over50=0 max_nest=2@L101 swallowed_except=[] bare_except=[] mutable_default=[]
+== src/crawler/link_extractor.py funcs=23 over50=0 max_nest=3@L217 swallowed_except=[] bare_except=[] mutable_default=[]
+== src/crawler/login_signal.py funcs=1 over50=0 max_nest=2@L24 swallowed_except=[] bare_except=[] mutable_default=[]
+== src/crawler/network_interceptor.py funcs=17 over50=0 max_nest=2@L145 swallowed_except=[] bare_except=[] mutable_default=[]
+== src/crawler/page_crawler.py funcs=50 over50=4 max_nest=6@L1376 swallowed_except=[1447, 1463] bare_except=[] mutable_default=[]
+   OVER50 crawl_page L838 len=137
+   OVER50 crawl_site L297 len=132
+   OVER50 crawl_urls L496 len=111
+   OVER50 discover_pages L431 len=63
+== src/crawler/parallel_crawler.py funcs=13 over50=4 max_nest=6@L103 swallowed_except=[] bare_except=[] mutable_default=[]
+   OVER50 crawl_site_parallel L133 len=156
+   OVER50 discover_pages_parallel L326 len=118
+   OVER50 crawl_urls_parallel L30 len=101
+   OVER50 worker L60 len=58
+== src/crawler/performance_probe.py funcs=3 over50=0 max_nest=1@L90 swallowed_except=[] bare_except=[] mutable_default=[]
+== src/crawler/playwright_runtime.py funcs=2 over50=0 max_nest=3@L43 swallowed_except=[] bare_except=[] mutable_default=[]
+== src/crawler/politeness.py funcs=19 over50=0 max_nest=2@L175 swallowed_except=[] bare_except=[] mutable_default=[]
+== src/crawler/session_guard.py funcs=1 over50=0 max_nest=1@L25 swallowed_except=[] bare_except=[] mutable_default=[]
+== src/crawler/spa_monitor.py funcs=3 over50=0 max_nest=1@L59 swallowed_except=[] bare_except=[] mutable_default=[]
+== src/crawler/url_safety.py funcs=7 over50=0 max_nest=1@L21 swallowed_except=[] bare_except=[] mutable_default=[]

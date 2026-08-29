@@ -1,0 +1,80 @@
+# JS top-level function decl lines (length approx = gap to next decl)
+== static/js/wizard.js
+8:function showStep(n) { wizardStep = n; }
+12:function validateUrlInput() {
+23:function setUrlMessage(msg, isError) {
+32:function loginDomain() {
+36:function setLoginStatus(msg, isError) {
+41:function setLoginLoading(show, msg) {
+104:function renderLoginFields(fields, currentUrl) {
+120:async function submitLogin() {
+170:function loginRecordStatusEl() { return document.getElementById('login-record-status'); }
+172:function setLoginRecordUI(phase) {
+182:function stopLoginRecordPolling() {
+186:async function pollLoginRecordStatus(domain) {
+275:function _setDiscoverPhase(text) {
+282:function _startDiscoverTimer() {
+292:function _stopDiscoverTimer() {
+305:function showLoginPrompt(kind) {
+362:function _clampInt(value, { min, max, fallback }) {
+368:function _checkedDiscoverScope() {
+373:function discoverScope(sel = _checkedDiscoverScope()) {
+391:function discoverScopePreset(sel = _checkedDiscoverScope()) {
+400:function _syncDiscoverScope() {
+425:async function discoverUrls(skipLoginSection) {
+585:function renderDiscovered() {
+671:function stopDiscoverInFlight() {
+684:function resetDiscoverUI() {
+697:function _abortDiscover() {
+712:function clearDiscovered() {
+718:function setAllDiscovered(v) { document.querySelectorAll('.discovered-cb').forEach(cb => { cb.checked = v; }); }
+719:function selectedDiscovered() { return [...document.querySelectorAll('.discovered-cb:checked')].map(cb => cb.value); }
+724:function crawlTargetMode() {
+727:function setCrawlTargetMode(mode) {
+732:function _syncCrawlModeFields() {
+743:function buildTargetUrls() {
+756:function setReferenceDocStatus(msg, isError) {
+762:function renderReferenceDocList() {
+== static/js/execution.js
+26:function domainOf(url) { try { return new URL(url).host; } catch { return ''; } }
+27:function startTimer() { startTime = Date.now(); timer = setInterval(() => { const s = Math.floor((Date.now() - startTime) / 1000); execElapsed.textContent = String(Math.floor(s / 60)).padStart(2,'0') + ':' + String(s % 60).padStart(2,'0'); }, 500); }
+28:function stopTimer() { clearInterval(timer); }
+29:function setStep(idx) { estep.forEach((el, i) => { el.className = 'execution-step' + (i < idx ? ' is-complete' : i === idx ? ' is-active' : ''); }); execProgressBar.style.width = (8 + idx * 23) + '%'; }
+30:function guessStep(line) {
+36:function startPreviewPolling() {
+45:function stopPreviewPolling() { clearInterval(previewTimer); }
+47:function resetCrawlProgress(total) {
+63:function formatEta(seconds) {
+70:function updateCrawlProgress() {
+108:function handleCrawlEvent(event) {
+166:function _urlHistoryLimit() { return Number(getSettings().urlHistoryLimit ?? 10); }
+167:function saveUrlHistory(url) {
+180:async function loadServerUrlHistory() {
+188:function populateUrlHistory() {
+256:async function runWith(bodyStr, domain, label, urlCount) {
+== static/js/recrawl.js
+10:function initialReportTabFor(domain) {
+16:async function recrawlSite(domain) {
+84:async function openResultsForDomain(domain, tab, sub) {
+== static/js/doc-fusion.js
+5:async function renderDocFusion() {
+== static/js/results.js
+42:async function showResults(domain, tab, sub, runId) {
+152:function _updateKpiHero(s, required, data) {
+201:function _buildExportDropdown(data) {
+234:function _closeExportDropdown({ refocus = false } = {}) {
+277:function _normalizeTab(tab, sub) {
+286:function _switchPanels(tab, sub) {
+320:function _writeReportHash() {
+331:function selectResultTab(tab, sub) {
+347:async function renderTimeline() {
+390:function _bindCiCopy() {
+441:function _ciSnippetText(domain) {
+446:function _ciGuidanceCard(domain) {
+471:function _setDiffBasis(text, noChange) {
+480:async function _annotateNoChange(from, to) {
+495:async function showTimelineDiff() {
+544:function _applyTableDensity(compact) {
+560:function _toggleMaximize() {
+575:function _showCompletionPopup(elapsedSec) {
+591:async function refreshRunResults() {

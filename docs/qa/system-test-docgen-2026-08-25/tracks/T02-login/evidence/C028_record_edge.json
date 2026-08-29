@@ -1,0 +1,29 @@
+{
+  "nondigit_pid": {
+    "status": 400,
+    "resp": {
+      "error": "pidを指定してください",
+      "success": false
+    }
+  },
+  "nonexistent_pid": {
+    "status": 200,
+    "resp": {
+      "success": true
+    }
+  },
+  "empty_pid": {
+    "status": 400,
+    "resp": {
+      "error": "pidを指定してください",
+      "success": false
+    }
+  },
+  "status_bad_domain": {
+    "status": 400,
+    "resp": {
+      "error": "ドメインを指定してください",
+      "success": false
+    }
+  }
+}

@@ -363,12 +363,16 @@
   // 出力済み件数（_lastCompleted）との差分だけを末尾から取り出して追記する。
   let _running = false;
   let _lastCompleted = 0;
+  // 実行中のサーバ側 run_id。停止 API に渡す。live-progress が実行中だけ返す。
+  let _execRunId = '';
   async function pollProgress(domain) {
     try {
       const res = await fetch(`/api/testcases/live-progress?domain=${encodeURIComponent(domain)}`);
       const data = await res.json();
       // 応答が実行完了後に届いた分は捨てる（要約行の後にケース行が混ざらないように）
       if (!res.ok || !_running) return;
+      // run_id が届いて初めてサーバ側の実行を止められる（それ以前は止める相手がいない）。
+      if (data.run_id) _execRunId = String(data.run_id);
       const completed = Number(data.done) || 0;
       const total = Number(data.total) || 0;
       // slice(-0) は全件コピーになるため、差分 0 件は明示的に空にする
@@ -399,6 +403,7 @@
     runBtn.textContent = '実行中…';
     _running = true;
     _lastCompleted = 0;
+    _execRunId = '';
     appendLog(`実行を開始します: ${domain}（環境: ${env} / 並列度: ${parallel}）`);
     showRunBadge();
     _runAbort = new AbortController();
@@ -437,11 +442,31 @@
     }
   }
 
-  // 実行の停止: サーバ側は同期実行のため処理自体は止まらないが、フロントは待たずに
-  // fetch を abort し、実行中フラグとポーリングを即座に落とす（要件はこれで満たす）。
-  stopBtn?.addEventListener('click', () => {
-    if (!_running || !_runAbort) return;
-    _runAbort.abort();
+  // 実行の停止。以前はフロントの fetch を abort するだけで、サーバ側の Playwright は
+  // 走り続けていた（画面上は止まったように見えるだけの偽の停止）。いまは先に
+  // /api/testcases/cancel でサーバ側のプロセスを落としてから abort する。
+  stopBtn?.addEventListener('click', async () => {
+    if (!_running) return;
+    stopBtn.disabled = true;
+    const label = stopBtn.textContent;
+    stopBtn.textContent = '停止中…';
+    try {
+      if (_execRunId) {
+        const body = new URLSearchParams({ run_id: _execRunId });
+        const res = await fetch('/api/testcases/cancel', { method: 'POST', body });
+        const data = await res.json().catch(() => ({}));
+        // 止める相手がいなかったことは隠さない（既に終わっていた場合など）。
+        if (!data || !data.ok) appendLog('サーバ側の実行は見つかりませんでした（既に終了した可能性があります）');
+      } else {
+        appendLog('実行の識別子がまだ届いていないため、サーバ側は停止できませんでした');
+      }
+    } catch (e) {
+      appendLog(`停止要求に失敗しました: ${String(e && e.message ? e.message : e)}`);
+    } finally {
+      stopBtn.disabled = false;
+      stopBtn.textContent = label;
+      if (_runAbort) _runAbort.abort();
+    }
   });
 
   if (typeof onViewEnter === 'function') {

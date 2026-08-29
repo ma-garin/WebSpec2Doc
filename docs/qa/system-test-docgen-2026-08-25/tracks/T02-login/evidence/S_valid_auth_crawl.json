@@ -1,0 +1,8 @@
+{
+  "status": 200,
+  "report_path": "",
+  "secret_in_stream": false,
+  "secret_in_report_file": null,
+  "newest_run_dir": "/Users/fujimagariyuki/dev/active/webspec2doc/output/127.0.0.1:9102/runs",
+  "login_wall_in_stream": false
+}

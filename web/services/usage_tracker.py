@@ -47,6 +47,28 @@ _EVENT_COMPARISON = "comparison"
 _EVENT_UX_REVIEW = "ux_review"
 _EVENTS_WITH_EXTRA_KEYS = frozenset({_EVENT_COMPARISON, _EVENT_UX_REVIEW})
 
+# 実行条件（解析範囲）プリセットの表示名。値→ラベルの対応はここだけに置き、
+# 履歴 API（_run_from_record）が解決する。記録側は値だけを持たせ、
+# 表示名を変えても過去の行を書き換えずに済むようにする。
+_SCOPE_PRESET_LABELS = {
+    "one-page": "この1画面のみ",
+    "standard": "標準",
+    "wide": "広め",
+    "custom": "カスタム",
+    "": "",
+}
+
+# 実行条件として usage_log.jsonl の crawl 行に書きうるキー。
+# 1 つも持たない行は「範囲の記録が無い既存行」であり、履歴に scope を付けない。
+_SCOPE_RECORD_KEYS = (
+    "scope_preset",
+    "scope_depth",
+    "scope_max_pages",
+    "crawl_mode",
+    "target_url_count",
+    "skipped_count",
+)
+
 
 @dataclass(frozen=True)
 class SavingCoefficients:
@@ -96,6 +118,12 @@ def record_usage(
     compare_screen_count: int = 0,
     finding_count: int = 0,
     run_id: str = "",
+    scope_preset: str = "",
+    scope_depth: int = 0,
+    scope_max_pages: int = 0,
+    crawl_mode: str = "",
+    target_url_count: int = 0,
+    skipped_count: int = 0,
 ) -> Path | None:
     """利用実績を output_root/usage_log.jsonl に 1 行追記する。
 
@@ -120,6 +148,19 @@ def record_usage(
     if event in _EVENTS_WITH_EXTRA_KEYS:
         entry["compare_screen_count"] = int(compare_screen_count)
         entry["finding_count"] = int(finding_count)
+    # 実行条件（解析範囲）も同じオプトイン方針で足す。値が空/0 のキーは書かない
+    # ため、既存イベントや条件を渡さない呼び出し元の行は従来の構成のまま残る。
+    entry = {
+        **entry,
+        **_scope_entry_keys(
+            scope_preset=scope_preset,
+            scope_depth=scope_depth,
+            scope_max_pages=scope_max_pages,
+            crawl_mode=crawl_mode,
+            target_url_count=target_url_count,
+            skipped_count=skipped_count,
+        ),
+    }
     # 実行回を一意に指す識別子。成果物を runs/<run_id>/ に退避できた実行だけが持つ。
     # 既存行は持たないため、読み手は空文字を「その実行回の成果物は無い」と扱う。
     if run_id:
@@ -135,16 +176,79 @@ def record_usage(
     return log_path
 
 
+def _scope_entry_keys(
+    *,
+    scope_preset: str = "",
+    scope_depth: int = 0,
+    scope_max_pages: int = 0,
+    crawl_mode: str = "",
+    target_url_count: int = 0,
+    skipped_count: int = 0,
+) -> dict[str, object]:
+    """実行条件のうち、値が意味を持つキーだけを新しい辞書で返す。
+
+    未指定（空文字・0）はキーごと落とす。「指定されなかった」と「0 と指定された」を
+    JSONL 上で区別する必要がなく、既存行と同じ形を保てるため
+    （読み手の _scope_from_record が欠けたキーを 0 / "" で埋める）。
+    プリセットは許可リストに無い値を捨てる（表示側でラベルが引けないため）。
+    """
+    keys: dict[str, object] = {}
+    if scope_preset and scope_preset in _SCOPE_PRESET_LABELS:
+        keys["scope_preset"] = scope_preset
+    if int(scope_depth) > 0:
+        keys["scope_depth"] = int(scope_depth)
+    if int(scope_max_pages) > 0:
+        keys["scope_max_pages"] = int(scope_max_pages)
+    if crawl_mode:
+        keys["crawl_mode"] = str(crawl_mode)
+    if int(target_url_count) > 0:
+        keys["target_url_count"] = int(target_url_count)
+    # 0 件は「スキップが無かった」であり、表示する価値が無いので書かない。
+    if int(skipped_count) > 0:
+        keys["skipped_count"] = int(skipped_count)
+    return keys
+
+
+def _scope_from_record(record: dict) -> dict[str, object]:
+    """crawl 行から実行条件（解析範囲）を取り出す。
+
+    実行条件のキーを 1 つも持たない行では空辞書を返す。呼び出し側はその場合
+    scope キー自体を付けない（記録が始まる前の履歴に、範囲を捏造しないため）。
+    """
+    if not any(key in record for key in _SCOPE_RECORD_KEYS):
+        return {}
+    preset = str(record.get("scope_preset", ""))
+    return {
+        "preset": preset,
+        "label": _SCOPE_PRESET_LABELS.get(preset, ""),
+        "depth": int(record.get("scope_depth", 0) or 0),
+        "max_pages": int(record.get("scope_max_pages", 0) or 0),
+        "mode": str(record.get("crawl_mode", "")),
+        "target_url_count": int(record.get("target_url_count", 0) or 0),
+        "skipped_count": int(record.get("skipped_count", 0) or 0),
+    }
+
+
 def record_crawl_from_report(
     output_root: Path,
     domain: str,
     *,
     diff_run: bool = False,
     run_id: str = "",
+    scope_preset: str = "",
+    scope_depth: int = 0,
+    scope_max_pages: int = 0,
+    crawl_mode: str = "",
+    target_url_count: int = 0,
+    skipped_count: int = 0,
 ) -> Path | None:
     """クロール完了後、生成された report.json から実績を集計して記録する。
 
     report.json が無い場合は screen_count=0 で記録する（=クロール自体は計上）。
+
+    scope_* / crawl_mode / target_url_count / skipped_count は実行条件（解析範囲）で、
+    渡された分だけ JSONL 行に載る（既定値のままなら従来の行と同じ形になるため、
+    条件を持たない既存の呼び出し元は影響を受けない）。
     """
     report_path = output_root / domain / "report.json"
     screen_count = 0
@@ -179,6 +283,12 @@ def record_crawl_from_report(
         document_count=document_count,
         diff_run=diff_run,
         run_id=run_id,
+        scope_preset=scope_preset,
+        scope_depth=scope_depth,
+        scope_max_pages=scope_max_pages,
+        crawl_mode=crawl_mode,
+        target_url_count=target_url_count,
+        skipped_count=skipped_count,
     )
 
 
@@ -325,6 +435,8 @@ def _run_from_record(output_root: Path, record: dict) -> dict:
     # 現新比較や UX レビューを 1 度でも実行すると末尾の `if report_url:` で
     # UnboundLocalError になり、実行履歴の API 全体が 500 で落ちていた。
     report_url = ""
+    # 実行条件も同様に分岐の前で初期化する（crawl 以外の枝でも末尾で参照するため）。
+    scope: dict[str, object] = {}
     if event == "autorun":
         status = str(record.get("status") or "complete")
         summary = {
@@ -357,6 +469,8 @@ def _run_from_record(output_root: Path, record: dict) -> dict:
             "document_count": int(record.get("document_count", 0)),
         }
         link = _existing_path(domain_dir / "report.html")
+        # どの範囲を解析した結果かは成果物からは復元できないため、記録がある行だけ返す。
+        scope = _scope_from_record(record)
     entry = {
         "type": event,
         "type_label": _RUN_TYPE_LABELS.get(event, event),
@@ -375,6 +489,8 @@ def _run_from_record(output_root: Path, record: dict) -> dict:
         entry["result_url"] = f"/runs/{domain}/{run_id}"
     if report_url:
         entry["report_url"] = report_url
+    if scope:
+        entry["scope"] = scope
     return entry
 
 

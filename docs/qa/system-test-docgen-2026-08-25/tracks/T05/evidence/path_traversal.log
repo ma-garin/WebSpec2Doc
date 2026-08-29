@@ -1,0 +1,16 @@
+===== C040 traversal: ../../evil.md =====
+{"ok":true,"saved":[{"name":"evil.md","path":"/Users/fujimagariyuki/dev/active/webspec2doc/output/127.0.0.1:9105/reference_docs/evil.md"}]}
+
+[HTTP 200]
+===== C041 traversal: ..%2f..%2fpasswd.md =====
+{"ok":true,"saved":[{"name":"..%2f..%2fpasswd.md","path":"/Users/fujimagariyuki/dev/active/webspec2doc/output/127.0.0.1:9105/reference_docs/..%2f..%2fpasswd.md"}]}
+
+[HTTP 200]
+===== C042 traversal: 絶対パス名 /tmp/abs_evil.md =====
+{"ok":true,"saved":[{"name":"abs_evil.md","path":"/Users/fujimagariyuki/dev/active/webspec2doc/output/127.0.0.1:9105/reference_docs/abs_evil.md"}]}
+
+[HTTP 200]
+===== C043 traversal: バックスラッシュ ..\..\win.md =====
+{"ok":true,"saved":[{"name":"..\\..\\win.md","path":"/Users/fujimagariyuki/dev/active/webspec2doc/output/127.0.0.1:9105/reference_docs/..\\..\\win.md"}]}
+
+[HTTP 200]

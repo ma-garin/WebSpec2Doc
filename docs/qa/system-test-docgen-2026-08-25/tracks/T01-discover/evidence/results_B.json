@@ -1,0 +1,52 @@
+[
+  {
+    "case": "T01-C005",
+    "verdict": "PASS",
+    "detail": "http=400 n_pages=0 err=[] skip=[] t=0.0s"
+  },
+  {
+    "case": "T01-C006",
+    "verdict": "PASS",
+    "detail": "http=400 n_pages=0 err=[] skip=[] t=0.0s"
+  },
+  {
+    "case": "T01-C007",
+    "verdict": "PASS-slow",
+    "detail": "http=EXC n_pages=0 err=['__client_exception__ TimeoutError: timed out'] skip=[] t=45.3s"
+  },
+  {
+    "case": "T01-C008",
+    "verdict": "PASS",
+    "detail": "http=200 n_pages=0 err=['画面リスト取得に失敗しました'] skip=[] t=1.5s"
+  },
+  {
+    "case": "T01-C009",
+    "verdict": "PASS",
+    "detail": "http=200 n_pages=0 err=['画面リスト取得に失敗しました'] skip=[] t=2.1s"
+  },
+  {
+    "case": "T01-C010",
+    "verdict": "PASS",
+    "detail": "http=200 n_pages=0 err=[] skip=[{'url': 'https:127.0.0.1:9101/about', 'reason': 'unsafe_url'}] t=1.7s"
+  },
+  {
+    "case": "T01-C011",
+    "verdict": "PASS",
+    "detail": "http=200 n_pages=0 err=['画面リスト取得に失敗しました'] skip=[] t=0.5s"
+  },
+  {
+    "case": "T01-C012",
+    "verdict": "FAIL",
+    "detail": "http=200 n_pages=3 err=[] skip=[] t=1.5s"
+  },
+  {
+    "case": "T01-C013",
+    "verdict": "FAIL",
+    "detail": "http=200 n_pages=3 err=[] skip=[] t=0.9s"
+  },
+  {
+    "case": "T01-C014",
+    "verdict": "PASS",
+    "detail": "http=200 n_pages=0 err=['画面リスト取得に失敗しました'] skip=[] t=0.3s"
+  }
+]

@@ -1,0 +1,19 @@
+#!/bin/bash
+# T11 static analysis driver. Read-only. Run from repo root.
+set -u
+T=docs/qa/system-test-docgen-2026-08-25/tracks/T11
+EV=$T/evidence
+PY="templates/partials/view-generate.html static/js/wizard.js static/js/execution.js static/js/recrawl.js static/js/doc-fusion.js static/js/results.js web/routes/crawl.py web/routes/discover.py web/routes/report.py web/routes/login.py web/routes/site.py web/routes/runs.py web/config.py web/security.py web/tenancy.py web/validation.py src/main.py"
+CR=$(ls src/crawler/*.py 2>/dev/null)
+PYONLY=""; for f in $PY $CR; do [[ $f == *.py && -f $f ]] && PYONLY="$PYONLY $f"; done
+{ echo "# wc -l (working tree, $(date +%F) $(git rev-parse --short HEAD))"; for f in $PY $CR; do [ -f "$f" ] && wc -l "$f" || echo "MISSING $f"; done; } > $EV/01-wc.txt
+venv/bin/python $T/scripts/py_metrics.py $PYONLY > $EV/02-py-metrics.txt 2>&1
+{ echo "# JS top-level function decl lines (length approx = gap to next decl)"; for f in static/js/wizard.js static/js/execution.js static/js/recrawl.js static/js/doc-fusion.js static/js/results.js; do [ -f $f ] || continue; echo "== $f"; grep -nE "^(async )?function [A-Za-z_]" $f; done; } > $EV/03-js-funcs.txt
+{ echo "# logging vs print (py) / console.* (js)"; for f in $PY $CR; do [ -f "$f" ] || continue; if [[ $f == *.py ]]; then p=$(grep -c "print(" $f); l=$(grep -cE "logger\.|logging\.|current_app\.logger" $f); echo "$f print=$p logging=$l"; elif [[ $f == *.js ]]; then c=$(grep -cE "console\.(log|error|warn|debug)" $f); echo "$f console=$c"; fi; done; } > $EV/04-logging.txt
+{ echo "# hardcoded ports/hosts/timeouts/paths"; grep -nE "8765|127\.0\.0\.1|localhost" web/config.py web/routes/*.py src/main.py app.py 2>/dev/null; echo "--- timeout literals ---"; grep -nE "timeout[_a-z]*\s*[=:]\s*[0-9]+|wait_for_timeout\([0-9]|sleep\([0-9.]+\)" web/routes/crawl.py web/routes/discover.py src/main.py $CR 2>/dev/null; echo "--- output/ CWD-relative ---"; grep -rnE "[\"']output[\"'/]|Path\([\"']output" web/ src/ app.py 2>/dev/null | grep -v ".pyc"; } > $EV/05-hardcode.txt
+{ echo "# env vars referenced (web/ src/ app.py)"; grep -rhoE "environ(\.get)?\(?\[?[\"'][A-Z0-9_]+" web/ src/ app.py 2>/dev/null | grep -oE "[A-Z0-9_]+$" | sort | uniq -c | sort -rn; echo "--- getenv sites in config.py ---"; grep -n "environ\|getenv" web/config.py; } > $EV/06-env.txt
+{ echo "# deps / browser assumptions"; [ -f requirements.txt ] && cat requirements.txt; echo "--- chromium/playwright refs ---"; grep -rn "chromium\|firefox\|webkit\|playwright" requirements.txt src/crawler/*.py src/main.py 2>/dev/null | grep -vi "^Binary" | head -40; echo "--- venvs present ---"; ls -d venv src/venv 2>/dev/null; } > $EV/07-deps.txt
+{ echo "# tests inventory"; ls tests/ tests/e2e 2>/dev/null; echo "--- files mentioning discover/crawl/generate/wizard ---"; grep -rlE "discover|/run|crawl|view-generate|wizard" tests/ 2>/dev/null | sort; echo "--- counts per file ---"; grep -rcE "discover|crawl" tests/*.py tests/e2e/*.py 2>/dev/null | grep -v ":0"; } > $EV/08-tests.txt
+{ echo "# encoding / OS-dependency"; echo "--- open() without encoding (py, approx) ---"; grep -rn "open(" web/routes/*.py web/config.py src/main.py $CR 2>/dev/null | grep -v "encoding=" | grep -vE "\.open\(|urlopen|popen|# " | head -30; echo "--- encoding= usage count ---"; grep -rc "encoding=" web/routes/*.py src/main.py $CR 2>/dev/null | grep -v ":0"; echo "--- darwin/mac-only commands ---"; grep -rnE "osascript|open -a|darwin|/usr/bin/say|lsof" web/ src/ app.py 2>/dev/null | grep -v Binary | head -20; echo "--- webbrowser.open ---"; grep -rn "webbrowser" app.py web/ src/ 2>/dev/null; } > $EV/09-compat.txt
+{ echo "# output formats interop"; ls src/generator/ 2>/dev/null; grep -rniE "def .*(xlsx|pdf|html|json|markdown|md)|to_excel|openpyxl|reportlab|weasyprint" src/generator/*.py 2>/dev/null | head -30; } > $EV/10-formats.txt
+echo DONE

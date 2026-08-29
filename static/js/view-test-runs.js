@@ -181,6 +181,10 @@ function _renderRunsLive(host, headed) {
     '<span class="spinner"></span>' +
     '<strong id="runs-live-title">実行を準備しています…</strong>' +
     `<span class="muted-copy">${headed ? 'ブラウザ表示あり' : 'ヘッドレス'}／完了までこのタブを開いたままにしてください</span>` +
+    // 停止手段が無く、始めたら終わるまで待つしかなかった（クロール側には
+    // 以前からある）。run_id は live-progress が返すので、届くまでは押させない。
+    '<button type="button" id="runs-stop-btn" class="btn-outline-sm btn-danger-outline" ' +
+    'style="margin-left:auto" disabled>停止</button>' +
     '</div>' +
     '<div class="runs-live-body">' +
     '<figure class="runs-live-shot">' +
@@ -191,9 +195,33 @@ function _renderRunsLive(host, headed) {
     '</div></div></div>';
 }
 
+// 実行中の run_id。停止 API に渡す。live-progress が実行中だけ返す。
+let _runsExecRunId = '';
+
+// 停止を要求する。実行 API 側は returncode < 0 を「停止」と解釈し、
+// 結果の保存をスキップする（失敗件数を水増ししないため）。
+async function _cancelRunningTests() {
+  const btn = document.getElementById('runs-stop-btn');
+  if (!_runsExecRunId) return;
+  if (btn) { btn.disabled = true; btn.textContent = '停止中…'; }
+  const title = document.getElementById('runs-live-title');
+  if (title) title.textContent = '停止要求を送信しています…';
+  try {
+    const body = new URLSearchParams({ run_id: _runsExecRunId });
+    await fetch('/api/testcases/cancel', { method: 'POST', body });
+  } catch (e) {
+    // 停止要求が届かなかったことは隠さない。実行はそのまま続く。
+    if (btn) { btn.disabled = false; btn.textContent = '停止'; }
+    if (title) title.textContent = '停止できませんでした（実行は続いています）';
+  }
+}
+
 function _startRunsPolling(domain, started) {
   const STATUS_MARK = { passed: '✓', failed: '✗', skipped: '−' };
   let lastShotAt = 0;
+  _runsExecRunId = '';
+  document.getElementById('runs-stop-btn')
+    ?.addEventListener('click', _cancelRunningTests, { once: false });
 
   return setInterval(async () => {
     const elapsed = Math.round((Date.now() - started) / 1000);
@@ -202,6 +230,13 @@ function _startRunsPolling(domain, started) {
       p = await fetch('/api/testcases/live-progress?domain=' + encodeURIComponent(domain))
         .then(r => r.ok ? r.json() : null);
     } catch (e) { /* 実行中の一時的な失敗は次の周期で拾う */ }
+
+    // run_id が届いた時点で初めて停止できる（それ以前は止める相手がいない）。
+    if (p && p.run_id && p.run_id !== _runsExecRunId) {
+      _runsExecRunId = p.run_id;
+      const stopBtn = document.getElementById('runs-stop-btn');
+      if (stopBtn && stopBtn.textContent === '停止') stopBtn.disabled = false;
+    }
 
     const title = document.getElementById('runs-live-title');
     if (title) {
@@ -268,6 +303,13 @@ async function runTestsFromRunsTab() {
       body: JSON.stringify({ domain, headed }),
     });
     const data = await res.json();
+    // 停止は失敗ではない。ok:false のまま cancelled が立つので先に分ける。
+    if (data && data.cancelled) {
+      clearInterval(tick);
+      showToast('実行を停止しました', 'info');
+      await showResults(domain, 'runs');
+      return;
+    }
     if (!res.ok) throw new Error(data.error || '実行に失敗しました');
     const s = (data.run && data.run.summary) || {};
     showToast(

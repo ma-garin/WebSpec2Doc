@@ -36,8 +36,15 @@ function renderOverview() {
       '<p style="color:var(--text-muted);font-size:13px;margin:0 0 8px">画面・フォーム・遷移から導出したシステム機能の一覧です。</p>' +
       `<button type="button" class="qa-output-btn qa-preview-btn" data-path="${escHtml(featuresMdPath)}" data-label="機能一覧 (features.md)">features.md を開く</button>`
     : '';
+  // 選択URLモード（--urls）はリンク追跡をしないため、深さ・最大ページは実行条件ではない。
+  // 以前は meta に入った argparse 既定値をそのまま出し、「深さ3・最大50ページ」と誤表示していた。
+  // crawl_mode を持たない旧レポートは従来の文言を維持する。
+  const selectedCount = Number(meta.target_url_count) > 0 ? Number(meta.target_url_count) : 0;
+  const crawlCondText = meta.crawl_mode === 'selected'
+    ? (selectedCount > 0 ? `選択した ${selectedCount} 画面` : '選択した画面')
+    : `クロール: 深さ${meta.crawl_depth ?? '-'} ・最大${meta.max_pages ?? '-'}ページ`;
   resultHero.innerHTML = '<div class="hero-pad">' +
-    `<p style="color:var(--text-muted);font-size:13px;margin-bottom:12px">対象 ${escHtml(meta.target_url || '')} ／ クロール: 深さ${meta.crawl_depth ?? '-'} ・最大${meta.max_pages ?? '-'}ページ ／ ${escHtml(meta.crawled_at || '')}</p>` +
+    `<p style="color:var(--text-muted);font-size:13px;margin-bottom:12px">対象 ${escHtml(meta.target_url || '')} ／ ${escHtml(crawlCondText)} ／ ${escHtml(meta.crawled_at || '')}</p>` +
     `<div class="next-steps-cta">
       <span class="next-steps-label">次のステップ</span>
       <button type="button" class="next-step-btn" onclick="selectResultTab('test-design','matrix')">テスト条件を確認する →</button>

@@ -1,0 +1,26 @@
+{
+  "status": 200,
+  "resp": {
+    "current_url": "http://127.0.0.1:9102/login",
+    "error": "",
+    "fields": [
+      {
+        "element_id": "",
+        "field_type": "text",
+        "label": "username",
+        "name": "username",
+        "placeholder": "",
+        "required": false
+      },
+      {
+        "element_id": "",
+        "field_type": "password",
+        "label": "password",
+        "name": "password",
+        "placeholder": "",
+        "required": false
+      }
+    ],
+    "ok": true
+  }
+}

@@ -10,6 +10,7 @@ from pathlib import Path
 from flask import Blueprint, Response, jsonify, request
 
 from web.config import OUTPUT_DIR, SAMPLE_DOMAIN
+from web.services import run_store
 from web.summary import _fmt_snap_ts, _summary_for_domain
 from web.tenancy import scoped_output_dir
 from web.validation import _safe_output_path, _valid_domain
@@ -335,3 +336,124 @@ def api_snapshot_comparison_json() -> Response | tuple[dict, int]:
     resp = jsonify(payload)
     resp.headers["Cache-Control"] = "no-store"
     return resp
+
+
+# ---- 実行履歴の 1 行削除 ----
+# 削除するのは「その実行回に固有のもの」だけ:
+#   1. usage_log.jsonl の該当 1 行
+#   2. output/<domain>/runs/<run_id>/
+# current 側の成果物（output/<domain>/report.html など）は削除しない。あれは「最新」として
+# 他の実行回と共有されており、消すと成果物を持たない履歴行まで開けなくなるため。
+
+# run_id を持たない古い行を指すための予約語。パスに空文字は置けないため 1 文字で表す。
+_NO_RUN_ID = "-"
+# timestamp は完全一致でしか使わないが、異常に長い値を読み込ませない上限を設ける。
+_MAX_TIMESTAMP_LEN = 64
+
+
+def _usage_log_path(out_dir: Path) -> Path:
+    """利用実績ログの実体（テナントスコープ済み出力ディレクトリ直下）。"""
+    from web.services.usage_tracker import USAGE_LOG_FILE_NAME
+
+    return out_dir / USAGE_LOG_FILE_NAME
+
+
+def _match_usage_line(record: dict, domain: str, run_id: str, timestamp: str) -> bool:
+    """その JSONL 行が削除対象かを判定する。"""
+    if str(record.get("domain", "")) != domain:
+        return False
+    if run_id:
+        return str(record.get("run_id", "")) == run_id
+    # run_id を持たない古い行。timestamp は完全一致のみで見る。前方一致にすると
+    # 同じ日の別の実行まで巻き込んで消してしまう。
+    return bool(timestamp) and str(record.get("timestamp", "")) == timestamp
+
+
+def _remove_usage_log_lines(out_dir: Path, domain: str, run_id: str, timestamp: str) -> int:
+    """usage_log.jsonl から該当行を取り除き、除いた件数を返す。
+
+    残す行は元の文字列のまま書き戻す（再シリアライズしない）。他の行のキー順や
+    表記が削除のたびに変わると、履歴全体の diff が読めなくなるため。
+    """
+    log_path = _usage_log_path(out_dir)
+    if not log_path.is_file():
+        return 0
+    original = log_path.read_text(encoding="utf-8").splitlines()
+    kept: list[str] = []
+    removed = 0
+    for line in original:
+        text = line.strip()
+        # timestamp だけを手掛かりに消す場合は 1 行で打ち切る（同時刻の別行を巻き込まない）。
+        done = removed >= 1 and not run_id
+        if text and not done:
+            try:
+                record = json.loads(text)
+            except json.JSONDecodeError:
+                record = None
+            if isinstance(record, dict) and _match_usage_line(record, domain, run_id, timestamp):
+                removed += 1
+                continue
+        kept.append(line)
+    if removed == 0:
+        return 0
+    # 書き込み中断で履歴全体を失わないよう、tmp へ書いてから差し替える（原子的置換）。
+    tmp_path = log_path.with_name(log_path.name + ".tmp")
+    body = "\n".join(kept)
+    tmp_path.write_text(f"{body}\n" if body else "", encoding="utf-8")
+    tmp_path.replace(log_path)
+    return removed
+
+
+def _remove_run_dir(out_dir: Path, domain: str, run_id: str) -> bool:
+    """runs/<run_id>/ を削除する。消せる範囲をそこだけに限定する。"""
+    target = run_store.run_dir(out_dir, domain, run_id)
+    if target is None or not target.is_dir():
+        return False
+    # シンボリックリンクは辿らない（リンク先の実体を消させない）。
+    if target.is_symlink():
+        return False
+    try:
+        resolved = target.resolve()
+        root = run_store.runs_root(out_dir, domain).resolve()
+    except (OSError, ValueError):
+        return False
+    # 実体パスが runs/ の直下でなければ消さない。相対指定・リンク経由で
+    # output/<domain>/ 本体や他サイトへ届く余地を残さないための最終確認。
+    if resolved.parent != root or resolved.name != run_id:
+        return False
+    shutil.rmtree(str(resolved))
+    return True
+
+
+@bp.delete("/api/history/runs/<domain>/<run_id>")
+def api_delete_run(domain: str, run_id: str) -> dict | tuple[dict, int]:
+    """実行履歴の 1 行を削除する。
+
+    run_id が無い古い行は run_id に "-" を、クエリ ``timestamp`` に元の ISO 文字列を渡す。
+    """
+    if not _valid_domain(domain):
+        return {"ok": False, "error": "invalid domain"}, 400
+    timestamp = (request.args.get("timestamp") or "").strip()
+    if len(timestamp) > _MAX_TIMESTAMP_LEN:
+        return {"ok": False, "error": "invalid timestamp"}, 400
+    has_run_id = run_id != _NO_RUN_ID
+    if has_run_id and not run_store.valid_run_id(run_id):
+        return {"ok": False, "error": "invalid run_id"}, 400
+    if not has_run_id and not timestamp:
+        # 手掛かりが 1 つも無い状態で消しに行かせない（どの行が消えるか決まらない）。
+        return {"ok": False, "error": "timestamp required"}, 400
+    out_dir = _out()
+    try:
+        removed_lines = _remove_usage_log_lines(
+            out_dir, domain, run_id if has_run_id else "", timestamp
+        )
+        # 一致行が 0 件でも成果物の削除は試みる。ログと成果物の片方だけが残った
+        # 状態（退避後にログを消した等）を、この操作で解消できるようにする。
+        removed_dir = _remove_run_dir(out_dir, domain, run_id) if has_run_id else False
+    except Exception as exc:  # noqa: BLE001  # 破壊操作の失敗要因は事前に絞れない
+        logger.exception(
+            "実行履歴の削除に失敗しました: domain=%s run_id=%s (%s)", domain, run_id, exc
+        )
+        # 500 で落とすと画面側が理由を出せない。失敗も JSON で返して握りつぶさない。
+        return {"ok": False, "error": "削除に失敗しました。ログを確認してください。"}
+    return {"ok": True, "removed_log_lines": removed_lines, "removed_dir": removed_dir}

@@ -1,0 +1,20 @@
+[
+  {
+    "id": "T02-C036",
+    "result": "FAIL",
+    "observed": "authed /dashboard crawl: SECRET-AFTER-LOGIN in_stream=False in_report=None",
+    "evidence": "evidence/S_valid_auth_crawl.json"
+  },
+  {
+    "id": "T02-C037",
+    "result": "PASS",
+    "observed": "expired cookie crawl: SECRET_reachable=False wall/expiry_signal=True",
+    "evidence": "evidence/S_session_expired.json"
+  },
+  {
+    "id": "T02-C038",
+    "result": "PASS",
+    "observed": "out-of-set login_url dropped: evil_present_in_site=False stored=[]",
+    "evidence": "evidence/S_login_urls_subset.json"
+  }
+]

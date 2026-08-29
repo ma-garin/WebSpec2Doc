@@ -1,0 +1,6 @@
+top_keys=['meta', 'screens']
+http://127.0.0.1:9104/ forms=0 login_required=None
+http://127.0.0.1:9104/about forms=0 login_required=None
+http://127.0.0.1:9104/products forms=0 login_required=None
+http://127.0.0.1:9104/contact forms=1 login_required=None
+http://127.0.0.1:9104/form forms=1 login_required=None

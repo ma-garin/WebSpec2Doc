@@ -1,0 +1,66 @@
+===== C001 正常: .md =====
+### md
+{"ok":true,"saved":[{"name":"ref.md","path":"/Users/fujimagariyuki/dev/active/webspec2doc/output/127.0.0.1:9105/reference_docs/ref.md"}]}
+
+[HTTP 200]
+
+===== C002 正常: .txt/.pdf 複数 ====
+### multi
+{"ok":true,"saved":[{"name":"ref.txt","path":"/Users/fujimagariyuki/dev/active/webspec2doc/output/127.0.0.1:9105/reference_docs/ref.txt"},{"name":"ref.pdf","path":"/Users/fujimagariyuki/dev/active/webspec2doc/output/127.0.0.1:9105/reference_docs/ref.pdf"}]}
+
+[HTTP 200]
+
+===== C003 正常: .docx =====
+### docx
+{"ok":true,"saved":[{"name":"ref.docx","path":"/Users/fujimagariyuki/dev/active/webspec2doc/output/127.0.0.1:9105/reference_docs/ref.docx"}]}
+
+[HTTP 200]
+
+===== C004 正常: .xlsx =====
+### xlsx
+{"ok":true,"saved":[{"name":"ref.xlsx","path":"/Users/fujimagariyuki/dev/active/webspec2doc/output/127.0.0.1:9105/reference_docs/ref.xlsx"}]}
+
+[HTTP 200]
+
+===== C005 正常: .feature/.json/.yaml =
+### ext
+{"ok":true,"saved":[{"name":"ref.feature","path":"/Users/fujimagariyuki/dev/active/webspec2doc/output/127.0.0.1:9105/reference_docs/ref.feature"},{"name":"ref.json","path":"/Users/fujimagariyuki/dev/active/webspec2doc/output/127.0.0.1:9105/reference_docs/ref.json"},{"name":"ref.yaml","path":"/Users/fujimagariyuki/dev/active/webspec2doc/output/127.0.0.1:9105/reference_docs/ref.yaml"}]}
+
+[HTTP 200]
+
+===== C010 legacy .doc =====
+### doc
+{"error":"\u65e7\u30d0\u30a4\u30ca\u30ea\u5f62\u5f0f\uff08.doc\uff09\u306f\u672a\u5bfe\u5fdc\u3067\u3059\u3002.docx \u5f62\u5f0f\u306b\u5909\u63db\u3057\u3066\u304b\u3089\u6307\u5b9a\u3057\u3066\u304f\u3060\u3055\u3044: legacy.doc","ok":false}
+
+[HTTP 400]
+
+===== C011 legacy .xls =====
+### xls
+{"error":"\u65e7\u30d0\u30a4\u30ca\u30ea\u5f62\u5f0f\uff08.xls\uff09\u306f\u672a\u5bfe\u5fdc\u3067\u3059\u3002.xlsx \u5f62\u5f0f\u306b\u5909\u63db\u3057\u3066\u304b\u3089\u6307\u5b9a\u3057\u3066\u304f\u3060\u3055\u3044: legacy.xls","ok":false}
+
+[HTTP 400]
+
+===== C012 legacy .ppt =====
+### ppt
+{"error":"\u65e7\u30d0\u30a4\u30ca\u30ea\u5f62\u5f0f\uff08.ppt\uff09\u306f\u672a\u5bfe\u5fdc\u3067\u3059\u3002.pptx \u5f62\u5f0f\u306b\u5909\u63db\u3057\u3066\u304b\u3089\u6307\u5b9a\u3057\u3066\u304f\u3060\u3055\u3044: legacy.ppt","ok":false}
+
+[HTTP 400]
+
+===== C020 unsupported .exe =====
+### exe
+{"error":"\u672a\u5bfe\u5fdc\u306e\u6587\u66f8\u5f62\u5f0f\u3067\u3059: bad.exe\uff08\u5bfe\u5fdc\u5f62\u5f0f: .xlsx, .xlsm, .docx, .pptx, .pdf, .md, .txt, .feature, .yaml, .yml, .json\uff09","ok":false}
+
+[HTTP 400]
+
+===== C021 unsupported .zip =====
+### zip
+{"error":"\u672a\u5bfe\u5fdc\u306e\u6587\u66f8\u5f62\u5f0f\u3067\u3059: bad.zip\uff08\u5bfe\u5fdc\u5f62\u5f0f: .xlsx, .xlsm, .docx, .pptx, .pdf, .md, .txt, .feature, .yaml, .yml, .json\uff09","ok":false}
+
+[HTTP 400]
+
+===== C022 unsupported .svg =====
+### svg
+{"error":"\u672a\u5bfe\u5fdc\u306e\u6587\u66f8\u5f62\u5f0f\u3067\u3059: bad.svg\uff08\u5bfe\u5fdc\u5f62\u5f0f: .xlsx, .xlsm, .docx, .pptx, .pdf, .md, .txt, .feature, .yaml, .yml, .json\uff09","ok":false}
+
+[HTTP 400]
+

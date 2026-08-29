@@ -1,0 +1,40 @@
+# output formats interop
+__init__.py
+__pycache__
+accessibility_reporter.py
+architecture_generator.py
+burndown_reporter.py
+comparison_reporter.py
+coverage_gap.py
+csv_reporter.py
+diff_reporter.py
+excel_reporter.py
+feature_catalog.py
+fusion_reporter.py
+heatmap_reporter.py
+html_reporter.py
+json_reporter.py
+markdown_generator.py
+markdown_util.py
+mermaid_generator.py
+pdf_reporter.py
+refresh_reporter.py
+test_design.py
+test_plan_generator.py
+testcase_table.py
+trace_reporter.py
+ux_reporter.py
+src/generator/burndown_reporter.py:84:def generate_burndown_html(burndown: dict[str, Any]) -> str:
+src/generator/comparison_reporter.py:111:def generate_comparison_json(result: ComparisonResult) -> str:
+src/generator/comparison_reporter.py:116:def generate_comparison_html(result: ComparisonResult, base_dir: Path | None = None) -> str:
+src/generator/diff_reporter.py:178:def _html_head() -> str:
+src/generator/excel_reporter.py:7:import openpyxl
+src/generator/excel_reporter.py:21:    wb = openpyxl.Workbook()
+src/generator/excel_reporter.py:39:    ws: openpyxl.worksheet.worksheet.Worksheet, pages: list[AnalyzedPage]
+src/generator/excel_reporter.py:49:    ws: openpyxl.worksheet.worksheet.Worksheet,
+src/generator/excel_reporter.py:69:    ws: openpyxl.worksheet.worksheet.Worksheet,
+src/generator/excel_reporter.py:126:def _write_bva_sheet(ws: openpyxl.worksheet.worksheet.Worksheet, pages: list[AnalyzedPage]) -> None:
+src/generator/feature_catalog.py:68:def generate_features_markdown(screens: list[dict[str, Any]]) -> str:
+src/generator/fusion_reporter.py:108:def _render_markdown(data: dict) -> str:
+src/generator/heatmap_reporter.py:42:def generate_heatmap_html(coverage: dict[str, Any]) -> str:
+src/generator/heatmap_reporter.py:334:def generate_analysis_coverage_html(screens: list[dict[str, Any]]) -> str:

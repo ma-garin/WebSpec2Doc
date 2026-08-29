@@ -1,0 +1,72 @@
+RUN_ID:6859afeaa61c4bcb892a92a71d15d4ab
+INFO:crawler.politeness:ローカル対象のため robots.txt の Crawl-Delay (0.0 秒) は適用しません: http://127.0.0.1:9103
+CRAWL_EVENT:{"event": "crawl_started", "total": 1, "parallelism": 4}
+CRAWL_EVENT:{"event": "page_started", "url": "http://127.0.0.1:9103/", "index": 1, "total": 1}
+CRAWL_EVENT:{"event": "page_started", "url": "http://127.0.0.1:9103/about", "index": 2, "total": 10}
+CRAWL_EVENT:{"event": "page_started", "url": "http://127.0.0.1:9103/products", "index": 3, "total": 10}
+CRAWL_EVENT:{"event": "page_started", "url": "http://127.0.0.1:9103/contact", "index": 4, "total": 10}
+CRAWL_EVENT:{"event": "checkpoint_saved", "saved_count": 1, "path": "output/127.0.0.1:9103/work/current-checkpoint.json"}
+CRAWL_EVENT:{"event": "page_completed", "url": "http://127.0.0.1:9103/", "completed": 1, "total": 10, "elapsed_sec": 0.778}
+CRAWL_EVENT:{"event": "page_started", "url": "http://127.0.0.1:9103/login", "index": 5, "total": 10}
+WARNING:crawler.page_crawler:ログインウォールによりスキップしました: http://127.0.0.1:9103/login
+CRAWL_EVENT:{"event": "login_wall_detected", "url": "http://127.0.0.1:9103/login", "login_url": "http://127.0.0.1:9103/login", "reasons": ["password_field"]}
+CRAWL_EVENT:{"event": "page_started", "url": "http://127.0.0.1:9103/form", "index": 6, "total": 10}
+CRAWL_EVENT:{"event": "checkpoint_saved", "saved_count": 2, "path": "output/127.0.0.1:9103/work/current-checkpoint.json"}
+CRAWL_EVENT:{"event": "page_completed", "url": "http://127.0.0.1:9103/about", "completed": 2, "total": 10, "elapsed_sec": 0.723}
+CRAWL_EVENT:{"event": "page_started", "url": "http://127.0.0.1:9103/slow", "index": 7, "total": 10}
+CRAWL_EVENT:{"event": "checkpoint_saved", "saved_count": 3, "path": "output/127.0.0.1:9103/work/current-checkpoint.json"}
+CRAWL_EVENT:{"event": "page_completed", "url": "http://127.0.0.1:9103/products", "completed": 3, "total": 10, "elapsed_sec": 0.742}
+CRAWL_EVENT:{"event": "page_started", "url": "http://127.0.0.1:9103/xss", "index": 8, "total": 10}
+CRAWL_EVENT:{"event": "checkpoint_saved", "saved_count": 4, "path": "output/127.0.0.1:9103/work/current-checkpoint.json"}
+CRAWL_EVENT:{"event": "page_completed", "url": "http://127.0.0.1:9103/contact", "completed": 4, "total": 10, "elapsed_sec": 0.793}
+CRAWL_EVENT:{"event": "page_started", "url": "http://127.0.0.1:9103/iframe", "index": 9, "total": 10}
+CRAWL_EVENT:{"event": "checkpoint_saved", "saved_count": 5, "path": "output/127.0.0.1:9103/work/current-checkpoint.json"}
+CRAWL_EVENT:{"event": "page_completed", "url": "http://127.0.0.1:9103/xss", "completed": 5, "total": 10, "elapsed_sec": 0.691}
+CRAWL_EVENT:{"event": "page_started", "url": "http://127.0.0.1:9103/shadow", "index": 10, "total": 10}
+CRAWL_EVENT:{"event": "checkpoint_saved", "saved_count": 6, "path": "output/127.0.0.1:9103/work/current-checkpoint.json"}
+CRAWL_EVENT:{"event": "page_completed", "url": "http://127.0.0.1:9103/form", "completed": 6, "total": 10, "elapsed_sec": 1.144}
+WARNING:crawler.page_crawler:robots.txt によりスキップしました: http://127.0.0.1:9103/private/secret
+CRAWL_EVENT:{"event": "page_skipped", "url": "http://127.0.0.1:9103/private/secret", "reason": "robots"}
+CRAWL_EVENT:{"event": "page_started", "url": "http://127.0.0.1:9103/redirect-internal", "index": 11, "total": 10}
+WARNING:crawler.page_crawler:ページのクロールに失敗しました: http://127.0.0.1:9103/redirect-internal (Page.goto: net::ERR_ADDRESS_UNREACHABLE at http://127.0.0.1:9103/redirect-internal
+Call log:
+  - navigating to "http://127.0.0.1:9103/redirect-internal", waiting until "domcontentloaded"
+)
+CRAWL_EVENT:{"event": "page_failed", "url": "http://127.0.0.1:9103/redirect-internal", "reason": "playwright", "detail": "Page.goto: net::ERR_ADDRESS_UNREACHABLE at http://127.0.0.1:9103/redirect-internal\nCall log:\n  - navigating to \"http://127.0.0.1:9103/redirect-internal\", waiting until \"domcontentloaded\"\n"}
+CRAWL_EVENT:{"event": "page_started", "url": "http://127.0.0.1:9103/redirect-file", "index": 12, "total": 10}
+WARNING:crawler.page_crawler:ページのクロールに失敗しました: http://127.0.0.1:9103/redirect-file (Page.goto: net::ERR_UNSAFE_REDIRECT at http://127.0.0.1:9103/redirect-file
+Call log:
+  - navigating to "http://127.0.0.1:9103/redirect-file", waiting until "domcontentloaded"
+)
+CRAWL_EVENT:{"event": "page_failed", "url": "http://127.0.0.1:9103/redirect-file", "reason": "playwright", "detail": "Page.goto: net::ERR_UNSAFE_REDIRECT at http://127.0.0.1:9103/redirect-file\nCall log:\n  - navigating to \"http://127.0.0.1:9103/redirect-file\", waiting until \"domcontentloaded\"\n"}
+CRAWL_EVENT:{"event": "page_started", "url": "http://127.0.0.1:9103/rate-limited", "index": 13, "total": 10}
+CRAWL_EVENT:{"event": "checkpoint_saved", "saved_count": 7, "path": "output/127.0.0.1:9103/work/current-checkpoint.json"}
+CRAWL_EVENT:{"event": "page_completed", "url": "http://127.0.0.1:9103/iframe", "completed": 7, "total": 10, "elapsed_sec": 1.195}
+CRAWL_EVENT:{"event": "checkpoint_saved", "saved_count": 8, "path": "output/127.0.0.1:9103/work/current-checkpoint.json"}
+CRAWL_EVENT:{"event": "page_completed", "url": "http://127.0.0.1:9103/shadow", "completed": 8, "total": 10, "elapsed_sec": 0.663}
+CRAWL_EVENT:{"event": "checkpoint_saved", "saved_count": 9, "path": "output/127.0.0.1:9103/work/current-checkpoint.json"}
+CRAWL_EVENT:{"event": "page_completed", "url": "http://127.0.0.1:9103/rate-limited", "completed": 9, "total": 10, "elapsed_sec": 0.768}
+CRAWL_EVENT:{"event": "checkpoint_saved", "saved_count": 10, "path": "output/127.0.0.1:9103/work/current-checkpoint.json"}
+CRAWL_EVENT:{"event": "page_completed", "url": "http://127.0.0.1:9103/slow", "completed": 10, "total": 10, "elapsed_sec": 4.689}
+CRAWL_EVENT:{"event": "crawl_completed", "completed": 10, "total": 10}
+CRAWL_EVENT:{"event": "generate_started", "total_steps": 7}
+CRAWL_EVENT:{"event": "generate_step", "step": "transition", "label": "遷移の品質を評価", "index": 0, "total_steps": 7}
+CRAWL_EVENT:{"event": "generate_completed", "step": "transition", "label": "遷移の品質を評価", "index": 1, "total_steps": 7}
+CRAWL_EVENT:{"event": "generate_step", "step": "impact", "label": "影響範囲を算出", "index": 1, "total_steps": 7}
+CRAWL_EVENT:{"event": "generate_completed", "step": "impact", "label": "影響範囲を算出", "index": 2, "total_steps": 7}
+CRAWL_EVENT:{"event": "generate_step", "step": "doc_fusion", "label": "文書と実測を突合", "index": 2, "total_steps": 7}
+CRAWL_EVENT:{"event": "generate_completed", "step": "doc_fusion", "label": "文書と実測を突合", "index": 3, "total_steps": 7}
+CRAWL_EVENT:{"event": "generate_step", "step": "ux", "label": "UX・アクセシビリティを評価", "index": 3, "total_steps": 7}
+CRAWL_EVENT:{"event": "generate_completed", "step": "ux", "label": "UX・アクセシビリティを評価", "index": 4, "total_steps": 7}
+CRAWL_EVENT:{"event": "generate_step", "step": "snapshot", "label": "スナップショットを保存", "index": 4, "total_steps": 7}
+CRAWL_EVENT:{"event": "generate_completed", "step": "snapshot", "label": "スナップショットを保存", "index": 5, "total_steps": 7}
+CRAWL_EVENT:{"event": "generate_step", "step": "diff", "label": "差分レポートを作成", "index": 5, "total_steps": 7}
+CRAWL_EVENT:{"event": "generate_completed", "step": "diff", "label": "差分レポートを作成", "index": 6, "total_steps": 7}
+CRAWL_EVENT:{"event": "generate_step", "step": "outputs", "label": "成果物を書き出し", "index": 6, "total_steps": 7}
+INFO:analyzer.canonicalizer:Grouped 10 pages into 10 canonical screens
+INFO:analyzer.canonicalizer:Grouped 10 pages into 10 canonical screens
+CRAWL_EVENT:{"event": "generate_completed", "step": "outputs", "label": "成果物を書き出し", "index": 7, "total_steps": 7}
+INFO:__main__:出力が完了しました: output/127.0.0.1:9103
+REPORT_PATH:/Users/fujimagariyuki/dev/active/webspec2doc/output/127.0.0.1:9103/report.html
+SUMMARY:{"screens": 10, "forms": 2, "fields": 13, "buttons": 3}
+--- exit=0 ---

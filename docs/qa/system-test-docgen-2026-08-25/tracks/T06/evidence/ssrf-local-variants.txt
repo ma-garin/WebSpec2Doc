@@ -1,0 +1,5 @@
+# local-variant / non-HTTP-port probes (ALLOW_LOCAL=1)  2026-08-24T15:19:08Z
+  127.0.0.1:22 (SSH port)          -> HTTP 200  {"pages":[]}  
+  http://[::1]/                    -> HTTP 200  {"pages":[]}  
+  http://0.0.0.0/                  -> HTTP 200  {"pages":[]}  
+  http://spoofed.local/            -> HTTP 200  {"pages":[]}  

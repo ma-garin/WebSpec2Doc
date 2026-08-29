@@ -1,0 +1,112 @@
+data: {"run_id": "6fa21aef0bc6455f94e65baf2aa98bc9"}
+
+data: {"crawl_event": {"event": "discover_started", "url": "http://127.0.0.1:9101/huge"}}
+
+data: {"crawl_event": {"event": "robots_checking", "url": "http://127.0.0.1:9101/huge"}}
+
+data: {"crawl_event": {"event": "browser_starting"}}
+
+data: {"crawl_event": {"event": "browser_ready"}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge", "title": "Huge", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/", "title": "Mock Home", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/about", "title": "About", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/products", "title": "Products", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/contact", "title": "Contact", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/login", "title": "Login", "login_required": true, "login_reasons": ["password_field"], "login_url": "http://127.0.0.1:9101/login"}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/1", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/2", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/3", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/4", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/5", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/6", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/7", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/8", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/9", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/10", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/11", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/12", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/13", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/14", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/15", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/16", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/17", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/18", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/19", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/20", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/21", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/22", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/23", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/24", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/25", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/26", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/27", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/28", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/29", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/30", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/31", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/32", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/33", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/34", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/35", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/36", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/37", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/38", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/39", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/40", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/41", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/42", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/43", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/huge/44", "title": "Huge item", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"done": true, "total": 50}
+

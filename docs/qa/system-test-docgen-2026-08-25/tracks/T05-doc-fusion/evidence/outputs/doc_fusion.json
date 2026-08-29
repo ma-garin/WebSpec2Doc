@@ -1,0 +1,95 @@
+{
+  "meta": {
+    "source_files": [
+      "ref_good.md"
+    ],
+    "documented_screens": 3,
+    "documented_fields": 4,
+    "matched_screens": 3,
+    "doc_only_screens": 0,
+    "doc_only_unimplemented": 0,
+    "doc_only_unreached": 0,
+    "crawl_only_screens": 0,
+    "field_gaps": 3
+  },
+  "screen_matches": [
+    {
+      "page_id": "P001",
+      "page_url": "http://127.0.0.1:9105/",
+      "page_title": "Mock Home",
+      "official_name": "トップページ",
+      "screen_id": "",
+      "score": 1.0,
+      "method": "url",
+      "doc_evidence": {
+        "file": "ref_good.md",
+        "location": "line 7",
+        "quote": "トップページ"
+      }
+    },
+    {
+      "page_id": "P002",
+      "page_url": "http://127.0.0.1:9105/about",
+      "page_title": "About",
+      "official_name": "会社概要",
+      "screen_id": "",
+      "score": 1.0,
+      "method": "url",
+      "doc_evidence": {
+        "file": "ref_good.md",
+        "location": "line 8",
+        "quote": "会社概要"
+      }
+    },
+    {
+      "page_id": "P003",
+      "page_url": "http://127.0.0.1:9105/contact",
+      "page_title": "Contact",
+      "official_name": "お問い合わせ",
+      "screen_id": "",
+      "score": 1.0,
+      "method": "url",
+      "doc_evidence": {
+        "file": "ref_good.md",
+        "location": "line 9",
+        "quote": "お問い合わせ"
+      }
+    }
+  ],
+  "doc_only_screens": [],
+  "crawl_only_page_ids": [],
+  "field_gaps": [
+    {
+      "kind": "mismatch",
+      "page_id": "P003",
+      "field_name": "name",
+      "detail": "桁数が矛盾: 文書では 20、実測では 40",
+      "doc_evidence": {
+        "file": "ref_good.md",
+        "location": "line 15",
+        "quote": "name"
+      },
+      "crawl_selector": "[name='name']"
+    },
+    {
+      "kind": "doc_only",
+      "page_id": "P003",
+      "field_name": "存在しない項目X",
+      "detail": "文書に記載があるが実測画面に見つからない（実装から消えた/未実装の疑い）",
+      "doc_evidence": {
+        "file": "ref_good.md",
+        "location": "line 17",
+        "quote": "存在しない項目X"
+      },
+      "crawl_selector": ""
+    },
+    {
+      "kind": "crawl_only",
+      "page_id": "P003",
+      "field_name": "body",
+      "detail": "実測画面に存在するが文書に記載がない（文書化漏れ）",
+      "doc_evidence": null,
+      "crawl_selector": "[name='body']"
+    }
+  ]
+}

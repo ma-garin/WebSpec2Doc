@@ -1,0 +1,6 @@
+{
+  "phase": "timeout",
+  "duration_s": 2.8,
+  "status_file": "{\"phase\": \"timeout\", \"current_url\": \"http://127.0.0.1:9102/login\", \"detail\": \"時間切れです。もう一度お試しください\", \"verified\": null}",
+  "auth_saved": false
+}

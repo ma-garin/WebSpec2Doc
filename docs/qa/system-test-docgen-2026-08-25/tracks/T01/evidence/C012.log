@@ -1,0 +1,14 @@
+data: {"run_id": "7e742b8516024b9ebab677d7e9c3ce4d"}
+
+data: {"crawl_event": {"event": "discover_started", "url": "http://127.0.0.1:9101/dashboard"}}
+
+data: {"crawl_event": {"event": "robots_checking", "url": "http://127.0.0.1:9101/dashboard"}}
+
+data: {"crawl_event": {"event": "browser_starting"}}
+
+data: {"crawl_event": {"event": "browser_ready"}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/dashboard", "title": "Login", "login_required": true, "login_reasons": ["redirect_to_login", "password_field"], "login_url": "http://127.0.0.1:9101/login?next=/dashboard"}}
+
+data: {"done": true, "total": 1}
+

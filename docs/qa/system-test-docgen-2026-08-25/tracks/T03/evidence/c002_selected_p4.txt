@@ -1,0 +1,34 @@
+RUN_ID:6a3158635ea64d99924d882364cf6717
+CRAWL_EVENT:{"event": "crawl_started", "total": 3, "parallelism": 3}
+CRAWL_EVENT:{"event": "page_started", "url": "http://127.0.0.1:9103/", "index": 1, "total": 3}
+INFO:crawler.politeness:ローカル対象のため robots.txt の Crawl-Delay (0.0 秒) は適用しません: http://127.0.0.1:9103
+CRAWL_EVENT:{"event": "page_started", "url": "http://127.0.0.1:9103/about", "index": 2, "total": 3}
+CRAWL_EVENT:{"event": "page_started", "url": "http://127.0.0.1:9103/products", "index": 3, "total": 3}
+CRAWL_EVENT:{"event": "checkpoint_saved", "saved_count": 1, "path": "output/127.0.0.1:9103/work/current-checkpoint.json"}
+CRAWL_EVENT:{"event": "page_completed", "url": "http://127.0.0.1:9103/about", "completed": 1, "total": 3, "elapsed_sec": 0.842}
+CRAWL_EVENT:{"event": "checkpoint_saved", "saved_count": 3, "path": "output/127.0.0.1:9103/work/current-checkpoint.json"}
+CRAWL_EVENT:{"event": "page_completed", "url": "http://127.0.0.1:9103/", "completed": 2, "total": 3, "elapsed_sec": 0.843}
+CRAWL_EVENT:{"event": "checkpoint_saved", "saved_count": 3, "path": "output/127.0.0.1:9103/work/current-checkpoint.json"}
+CRAWL_EVENT:{"event": "page_completed", "url": "http://127.0.0.1:9103/products", "completed": 3, "total": 3, "elapsed_sec": 0.843}
+CRAWL_EVENT:{"event": "crawl_completed", "completed": 3, "total": 3}
+CRAWL_EVENT:{"event": "generate_started", "total_steps": 7}
+CRAWL_EVENT:{"event": "generate_step", "step": "transition", "label": "遷移の品質を評価", "index": 0, "total_steps": 7}
+CRAWL_EVENT:{"event": "generate_completed", "step": "transition", "label": "遷移の品質を評価", "index": 1, "total_steps": 7}
+CRAWL_EVENT:{"event": "generate_step", "step": "impact", "label": "影響範囲を算出", "index": 1, "total_steps": 7}
+CRAWL_EVENT:{"event": "generate_completed", "step": "impact", "label": "影響範囲を算出", "index": 2, "total_steps": 7}
+CRAWL_EVENT:{"event": "generate_step", "step": "doc_fusion", "label": "文書と実測を突合", "index": 2, "total_steps": 7}
+CRAWL_EVENT:{"event": "generate_completed", "step": "doc_fusion", "label": "文書と実測を突合", "index": 3, "total_steps": 7}
+CRAWL_EVENT:{"event": "generate_step", "step": "ux", "label": "UX・アクセシビリティを評価", "index": 3, "total_steps": 7}
+CRAWL_EVENT:{"event": "generate_completed", "step": "ux", "label": "UX・アクセシビリティを評価", "index": 4, "total_steps": 7}
+CRAWL_EVENT:{"event": "generate_step", "step": "snapshot", "label": "スナップショットを保存", "index": 4, "total_steps": 7}
+CRAWL_EVENT:{"event": "generate_completed", "step": "snapshot", "label": "スナップショットを保存", "index": 5, "total_steps": 7}
+CRAWL_EVENT:{"event": "generate_step", "step": "diff", "label": "差分レポートを作成", "index": 5, "total_steps": 7}
+CRAWL_EVENT:{"event": "generate_completed", "step": "diff", "label": "差分レポートを作成", "index": 6, "total_steps": 7}
+CRAWL_EVENT:{"event": "generate_step", "step": "outputs", "label": "成果物を書き出し", "index": 6, "total_steps": 7}
+INFO:analyzer.canonicalizer:Grouped 3 pages into 3 canonical screens
+INFO:analyzer.canonicalizer:Grouped 3 pages into 3 canonical screens
+CRAWL_EVENT:{"event": "generate_completed", "step": "outputs", "label": "成果物を書き出し", "index": 7, "total_steps": 7}
+INFO:__main__:出力が完了しました: output/127.0.0.1:9103
+REPORT_PATH:/Users/fujimagariyuki/dev/active/webspec2doc/output/127.0.0.1:9103/report.html
+SUMMARY:{"screens": 3, "forms": 0, "fields": 0, "buttons": 0}
+--- exit=0 ---

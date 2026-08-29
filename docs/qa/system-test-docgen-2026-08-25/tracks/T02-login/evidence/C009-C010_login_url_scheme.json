@@ -1,0 +1,31 @@
+[
+  {
+    "id": "T02-C009",
+    "label": "file scheme",
+    "url": "file:///etc/passwd",
+    "status": 200,
+    "resp": {
+      "auth_path": "/Users/fujimagariyuki/dev/active/webspec2doc/output/127.0.0.1:9102/auth.json",
+      "current_url": "file:///etc/passwd",
+      "error": "",
+      "fields": [],
+      "needs_more_fields": false,
+      "success": true
+    },
+    "safe": false
+  },
+  {
+    "id": "T02-C010",
+    "label": "javascript scheme",
+    "url": "javascript:alert(1)",
+    "status": 200,
+    "resp": {
+      "current_url": "javascript:alert(1)",
+      "error": "Page.goto: net::ERR_ABORTED at javascript:alert(1)\nCall log:\n  - navigating to \"javascript:alert(1)\", waiting until \"networkidle\"\n",
+      "fields": [],
+      "needs_more_fields": false,
+      "success": false
+    },
+    "safe": true
+  }
+]

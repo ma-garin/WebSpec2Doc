@@ -1,0 +1,42 @@
+[
+  {
+    "case": "T01-C001",
+    "verdict": "PASS",
+    "detail": "order=['run_id', 'discover_started', 'robots_checking', 'browser_starting', 'browser_ready', 'page', 'page_skipped', 'page', 'page', 'page', 'page', 'page'] errors=[] elapsed=6.5s"
+  },
+  {
+    "case": "T01-C002",
+    "verdict": "PASS",
+    "detail": "sample_keys=['login_reasons', 'login_required', 'login_url', 'title', 'url']"
+  },
+  {
+    "case": "T01-C003",
+    "verdict": "PASS",
+    "detail": "done.total=30 n_pages=30"
+  },
+  {
+    "case": "T01-C004",
+    "verdict": "PASS",
+    "detail": "login_map={'about': (False, ''), 'login': (True, 'http://127.0.0.1:9101/login'), 'dashboard': (True, 'http://127.0.0.1:9101/login?next=/dashboard')}"
+  },
+  {
+    "case": "T01-C026",
+    "verdict": "PASS",
+    "detail": "dashboard={'url': 'http://127.0.0.1:9101/dashboard', 'title': 'Login', 'login_required': True, 'login_reasons': ['redirect_to_login', 'password_field'], 'login_url': 'http://127.0.0.1:9101/login?next=/dashboard'}"
+  },
+  {
+    "case": "T01-C043",
+    "verdict": "PASS",
+    "detail": "private_secret_in_pages=False skipped_robots_event=True skipped=[{'url': 'http://127.0.0.1:9101/private/secret', 'reason': 'robots'}]"
+  },
+  {
+    "case": "T01-C050",
+    "verdict": "PASS",
+    "detail": "sync=['http://127.0.0.1:9101/', 'http://127.0.0.1:9101/about', 'http://127.0.0.1:9101/about/team', 'http://127.0.0.1:9101/contact', 'http://127.0.0.1:9101/login', 'http://127.0.0.1:9101/privacy', 'http://127.0.0.1:9101/products'] sse=['http://127.0.0.1:9101/', 'http://127.0.0.1:9101/about', 'http://127.0.0.1:9101/about/team', 'http://127.0.0.1:9101/contact', 'http://127.0.0.1:9101/login', 'http://127.0.0.1:9101/privacy', 'http://127.0.0.1:9101/products']"
+  },
+  {
+    "case": "T01-C052",
+    "verdict": "PASS",
+    "detail": "status=403"
+  }
+]

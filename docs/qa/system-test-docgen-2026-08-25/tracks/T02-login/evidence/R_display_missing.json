@@ -1,0 +1,10 @@
+{
+  "phase": "error",
+  "detail": "この機能はローカル環境で GUI ブラウザを使います",
+  "status_file": {
+    "phase": "error",
+    "current_url": "http://127.0.0.1:9102/login",
+    "detail": "この機能はローカル環境で GUI ブラウザを使います",
+    "verified": null
+  }
+}

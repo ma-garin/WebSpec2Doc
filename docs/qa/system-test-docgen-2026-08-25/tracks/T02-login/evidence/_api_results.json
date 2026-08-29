@@ -1,0 +1,188 @@
+[
+  {
+    "id": "T02-C001",
+    "result": "PASS",
+    "observed": "success=True, auth_exists=True, plaintext_pw=False, perms=-rw-------@",
+    "evidence": "evidence/C001_simple_happy.json"
+  },
+  {
+    "id": "T02-C002",
+    "result": "FAIL",
+    "observed": "success=True, msg=, auth_unchanged=False",
+    "evidence": "evidence/C002_simple_invalid.json"
+  },
+  {
+    "id": "T02-C003",
+    "result": "PASS",
+    "observed": "secret_in_ps=False, log=False, audit=(absent), auth=False, tree_hits=0",
+    "evidence": "evidence/C003_leak.json"
+  },
+  {
+    "id": "T02-C004",
+    "result": "PASS",
+    "observed": "domain=../etc -> status=400 success=False",
+    "evidence": "evidence/C004-C008_validation.json"
+  },
+  {
+    "id": "T02-C005",
+    "result": "PASS",
+    "observed": "domain=/abs/path -> status=400 success=False",
+    "evidence": "evidence/C004-C008_validation.json"
+  },
+  {
+    "id": "T02-C006",
+    "result": "PASS",
+    "observed": "domain=empty -> status=400 success=False",
+    "evidence": "evidence/C004-C008_validation.json"
+  },
+  {
+    "id": "T02-C007",
+    "result": "PASS",
+    "observed": "domain=host/../x -> status=400 success=False",
+    "evidence": "evidence/C004-C008_validation.json"
+  },
+  {
+    "id": "T02-C008",
+    "result": "PASS",
+    "observed": "login_url=empty -> status=400 success=False",
+    "evidence": "evidence/C004-C008_validation.json"
+  },
+  {
+    "id": "T02-C009",
+    "result": "FAIL",
+    "observed": "file scheme -> success=True err=",
+    "evidence": "evidence/C009-C010_login_url_scheme.json"
+  },
+  {
+    "id": "T02-C010",
+    "result": "PASS",
+    "observed": "javascript scheme -> success=False err=Page.goto: net::ERR_ABORTED at javascript:alert(1)",
+    "evidence": "evidence/C009-C010_login_url_scheme.json"
+  },
+  {
+    "id": "T02-C011",
+    "result": "PASS",
+    "observed": "login form: ok=True n_fields=2 types=['text', 'password'] has_pw=True",
+    "evidence": "evidence/C011-13_scrape_login.json"
+  },
+  {
+    "id": "T02-C012",
+    "result": "PASS",
+    "observed": "mfa form: ok=True n_fields=2 types=['text', 'password'] has_pw=True",
+    "evidence": "evidence/C011-13_scrape_mfa.json"
+  },
+  {
+    "id": "T02-C013",
+    "result": "PASS",
+    "observed": "non-login form: ok=True n_fields=8 types=['text', 'number', 'date', 'select', 'radio', 'checkbox', 'tel', 'file'] has_pw=False",
+    "evidence": "evidence/C011-13_scrape_form.json"
+  },
+  {
+    "id": "T02-C014",
+    "result": "PASS",
+    "observed": "empty url -> status=400",
+    "evidence": "evidence/C014-C015_scrape_invalid.json"
+  },
+  {
+    "id": "T02-C015",
+    "result": "PASS",
+    "observed": "bad domain -> status=400",
+    "evidence": "evidence/C014-C015_scrape_invalid.json"
+  },
+  {
+    "id": "T02-C016",
+    "result": "PASS",
+    "observed": "valid json (login) -> status=200 success=True err=",
+    "evidence": "evidence/C016-C021_submit.json"
+  },
+  {
+    "id": "T02-C017",
+    "result": "PASS",
+    "observed": "invalid json -> status=400 success=False err=フィールドデータが不正です",
+    "evidence": "evidence/C016-C021_submit.json"
+  },
+  {
+    "id": "T02-C018",
+    "result": "PASS",
+    "observed": "extra keys -> status=200 success=True err=",
+    "evidence": "evidence/C016-C021_submit.json"
+  },
+  {
+    "id": "T02-C019",
+    "result": "PASS",
+    "observed": "huge value 200k -> status=200 success=True err=",
+    "evidence": "evidence/C016-C021_submit.json"
+  },
+  {
+    "id": "T02-C020",
+    "result": "PASS",
+    "observed": "bad domain -> status=400 success=False err=ドメインとURLを指定してください",
+    "evidence": "evidence/C016-C021_submit.json"
+  },
+  {
+    "id": "T02-C021",
+    "result": "PASS",
+    "observed": "missing current_url -> status=400 success=False err=ドメインとURLを指定してください",
+    "evidence": "evidence/C016-C021_submit.json"
+  },
+  {
+    "id": "T02-C022",
+    "result": "PASS",
+    "observed": "start success=True pid=7674",
+    "evidence": "evidence/C022_record_flow.json"
+  },
+  {
+    "id": "T02-C023",
+    "result": "PASS",
+    "observed": "status phase=waiting",
+    "evidence": "evidence/C022_record_flow.json"
+  },
+  {
+    "id": "T02-C024",
+    "result": "FAIL",
+    "observed": ".login_status.json exists=False content=(missing)",
+    "evidence": "evidence/C022_record_flow.json"
+  },
+  {
+    "id": "T02-C025",
+    "result": "PASS",
+    "observed": "double start -> new pid=7725 (no lock; second recorder spawned)",
+    "evidence": "evidence/C022_record_flow.json"
+  },
+  {
+    "id": "T02-C026",
+    "result": "PASS",
+    "observed": "cancel results=[(7674, True), (7725, True)]",
+    "evidence": "evidence/C022_record_flow.json"
+  },
+  {
+    "id": "T02-C027",
+    "result": "PASS",
+    "observed": "complete success=True signal_exists=True",
+    "evidence": "evidence/C028_record_edge.json"
+  },
+  {
+    "id": "T02-C028",
+    "result": "PASS",
+    "observed": "non-digit pid -> status=400",
+    "evidence": "evidence/C028_record_edge.json"
+  },
+  {
+    "id": "T02-C029",
+    "result": "PASS",
+    "observed": "nonexistent pid 999999 -> success=True (ProcessLookup swallowed)",
+    "evidence": "evidence/C028_record_edge.json"
+  },
+  {
+    "id": "T02-C030",
+    "result": "PASS",
+    "observed": "empty pid -> status=400",
+    "evidence": "evidence/C028_record_edge.json"
+  },
+  {
+    "id": "T02-C031",
+    "result": "PASS",
+    "observed": "status bad domain -> status=400",
+    "evidence": "evidence/C028_record_edge.json"
+  }
+]

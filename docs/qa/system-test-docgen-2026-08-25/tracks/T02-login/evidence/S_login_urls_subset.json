@@ -1,0 +1,8 @@
+{
+  "sent_login_urls": "http://127.0.0.1:9102/dashboard,http://127.0.0.1:9102/evil-not-in-urls",
+  "site_status": 200,
+  "stored_login_urls": [],
+  "site_json_keys": [
+    "site"
+  ]
+}

@@ -37,6 +37,8 @@ def generate_json_report(
     target_url: str,
     crawl_depth: int = DEFAULT_DEPTH,
     crawl_max_pages: int = DEFAULT_MAX_PAGES,
+    crawl_mode: str = "auto",
+    target_url_count: int = 0,
     crawled_at: str = "",
     transition_coverage: dict | None = None,
     business_flows: list[dict] | None = None,
@@ -55,6 +57,12 @@ def generate_json_report(
         "target_url": target_url,
         "crawl_depth": crawl_depth,
         "max_pages": crawl_max_pages,
+        # 選択URLモード（--urls）ではリンク追跡をしないため、深さ・最大ページはそもそも
+        # 意味を持たない。にもかかわらず上の 2 キーには argparse の既定値がそのまま入り、
+        # 実行結果ページが実際と違うクロール条件（深さ3・最大50）を表示していた。
+        # 既存キーの消費者を壊さないよう上は残し、実際のモードと対象件数をここで明示する。
+        "crawl_mode": crawl_mode,
+        "target_url_count": target_url_count,
         "crawled_at": crawled_at,
         "page_count": len(pages),
         "screen_count": sum(1 for info in canonical_screens.values() if info.is_canonical),

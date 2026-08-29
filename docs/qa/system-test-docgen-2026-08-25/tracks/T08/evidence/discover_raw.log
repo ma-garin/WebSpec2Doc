@@ -1,0 +1,294 @@
+
+===== label=disc_d1mp5_p4 url=http://127.0.0.1:9108/ depth=1 max_pages=5 parallelism=4 started=2026-08-25 00:17:53 =====
+--- run 1/3 ---
+    0.015 data: {"run_id": "639b4e5690ef4ceb89cefd76dc0c5af6"}
+    0.015 
+    0.263 data: {"crawl_event": {"event": "discover_started", "url": "http://127.0.0.1:9108/"}}
+    0.263 
+    0.263 data: {"crawl_event": {"event": "robots_checking", "url": "http://127.0.0.1:9108/"}}
+    0.263 
+    0.283 data: {"crawl_event": {"event": "browser_starting"}}
+    0.283 
+    0.681 data: {"crawl_event": {"event": "browser_ready"}}
+    0.681 
+    0.681 data: {"page": {"url": "http://127.0.0.1:9108/", "title": "Mock Home", "login_required": false, "login_reasons": [], "login_url": ""}}
+    0.681 
+    2.131 data: {"page": {"url": "http://127.0.0.1:9108/about", "title": "About", "login_required": false, "login_reasons": [], "login_url": ""}}
+    2.131 
+    2.131 data: {"page": {"url": "http://127.0.0.1:9108/products", "title": "Products", "login_required": false, "login_reasons": [], "login_url": ""}}
+    2.131 
+    2.131 data: {"page": {"url": "http://127.0.0.1:9108/contact", "title": "Contact", "login_required": false, "login_reasons": [], "login_url": ""}}
+    2.131 
+    2.131 data: {"page": {"url": "http://127.0.0.1:9108/login", "title": "Login", "login_required": true, "login_reasons": ["password_field"], "login_url": "http://127.0.0.1:9108/login"}}
+    2.131 
+    2.131 data: {"done": true, "total": 5}
+--- run 2/3 ---
+    0.009 data: {"run_id": "67a4a3f117a64bf68b9c00e50de3bf14"}
+    0.009 
+    0.401 data: {"crawl_event": {"event": "discover_started", "url": "http://127.0.0.1:9108/"}}
+    0.401 
+    0.401 data: {"crawl_event": {"event": "robots_checking", "url": "http://127.0.0.1:9108/"}}
+    0.401 
+    0.413 data: {"crawl_event": {"event": "browser_starting"}}
+    0.413 
+    0.875 data: {"crawl_event": {"event": "browser_ready"}}
+    0.875 
+    0.875 data: {"page": {"url": "http://127.0.0.1:9108/", "title": "Mock Home", "login_required": false, "login_reasons": [], "login_url": ""}}
+    0.875 
+    2.396 data: {"page": {"url": "http://127.0.0.1:9108/about", "title": "About", "login_required": false, "login_reasons": [], "login_url": ""}}
+    2.397 
+    2.397 data: {"page": {"url": "http://127.0.0.1:9108/products", "title": "Products", "login_required": false, "login_reasons": [], "login_url": ""}}
+    2.397 
+    2.397 data: {"page": {"url": "http://127.0.0.1:9108/contact", "title": "Contact", "login_required": false, "login_reasons": [], "login_url": ""}}
+    2.397 
+    2.397 data: {"page": {"url": "http://127.0.0.1:9108/login", "title": "Login", "login_required": true, "login_reasons": ["password_field"], "login_url": "http://127.0.0.1:9108/login"}}
+    2.397 
+    2.397 data: {"done": true, "total": 5}
+--- run 3/3 ---
+    0.030 data: {"run_id": "ddb56f874a3441e5ae8f43c94f9c5e37"}
+    0.030 
+    0.640 data: {"crawl_event": {"event": "discover_started", "url": "http://127.0.0.1:9108/"}}
+    0.640 
+    0.640 data: {"crawl_event": {"event": "robots_checking", "url": "http://127.0.0.1:9108/"}}
+    0.640 
+    1.259 data: {"crawl_event": {"event": "browser_starting"}}
+    1.259 
+    2.524 data: {"crawl_event": {"event": "browser_ready"}}
+    2.524 
+    2.524 data: {"page": {"url": "http://127.0.0.1:9108/", "title": "Mock Home", "login_required": false, "login_reasons": [], "login_url": ""}}
+    2.524 
+    3.550 data: {"page": {"url": "http://127.0.0.1:9108/about", "title": "About", "login_required": false, "login_reasons": [], "login_url": ""}}
+    3.550 
+    3.550 data: {"page": {"url": "http://127.0.0.1:9108/products", "title": "Products", "login_required": false, "login_reasons": [], "login_url": ""}}
+    3.550 
+    3.550 data: {"page": {"url": "http://127.0.0.1:9108/contact", "title": "Contact", "login_required": false, "login_reasons": [], "login_url": ""}}
+    3.550 
+    3.550 data: {"page": {"url": "http://127.0.0.1:9108/login", "title": "Login", "login_required": true, "login_reasons": ["password_field"], "login_url": "http://127.0.0.1:9108/login"}}
+    3.550 
+    3.550 data: {"done": true, "total": 5}
+SUMMARY {"label": "disc_d1mp5_p4", "n_ok": 3, "median_dur_s": 2.387, "min_dur_s": 2.116, "max_dur_s": 3.52, "median_ttfe_s": 0.866, "median_s_per_page": 0.477}
+
+===== label=disc_d2mp30_p4 url=http://127.0.0.1:9108/ depth=2 max_pages=30 parallelism=4 started=2026-08-25 00:18:02 =====
+--- run 1/3 ---
+    0.028 data: {"run_id": "52b69a7161e741a482aef3204080dfdc"}
+    0.028 
+    0.387 data: {"crawl_event": {"event": "discover_started", "url": "http://127.0.0.1:9108/"}}
+    0.387 
+    0.387 data: {"crawl_event": {"event": "robots_checking", "url": "http://127.0.0.1:9108/"}}
+    0.387 
+    0.402 data: {"crawl_event": {"event": "browser_starting"}}
+    0.402 
+    0.858 data: {"crawl_event": {"event": "browser_ready"}}
+    0.858 
+    0.858 data: {"page": {"url": "http://127.0.0.1:9108/", "title": "Mock Home", "login_required": false, "login_reasons": [], "login_url": ""}}
+    0.858 
+    0.858 data: {"crawl_event": {"event": "page_skipped", "url": "http://127.0.0.1:9108/private/secret", "reason": "robots"}}
+    0.858 
+    5.770 data: {"page": {"url": "http://127.0.0.1:9108/about", "title": "About", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.770 
+    5.770 data: {"page": {"url": "http://127.0.0.1:9108/products", "title": "Products", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.770 
+    5.770 data: {"page": {"url": "http://127.0.0.1:9108/contact", "title": "Contact", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.770 
+    5.770 data: {"page": {"url": "http://127.0.0.1:9108/login", "title": "Login", "login_required": true, "login_reasons": ["password_field"], "login_url": "http://127.0.0.1:9108/login"}}
+    5.770 
+    5.770 data: {"page": {"url": "http://127.0.0.1:9108/form", "title": "Form", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.770 
+    5.770 data: {"page": {"url": "http://127.0.0.1:9108/slow", "title": "Slow", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.770 
+    5.770 data: {"page": {"url": "http://127.0.0.1:9108/xss", "title": "XSS-EXEC", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.770 
+    5.770 data: {"page": {"url": "http://127.0.0.1:9108/iframe", "title": "Iframe", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.770 
+    5.770 data: {"page": {"url": "http://127.0.0.1:9108/shadow", "title": "Shadow", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.770 
+    5.770 data: {"page": {"url": "http://127.0.0.1:9108/rate-limited", "title": "Rate", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.770 
+    5.770 data: {"page": {"url": "http://127.0.0.1:9108/mutation", "title": "Mutation", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.770 
+    5.770 data: {"page": {"url": "http://127.0.0.1:9108/broken-link", "title": "Broken", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.770 
+    5.770 data: {"page": {"url": "http://127.0.0.1:9108/deep/1", "title": "Deep 1", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.770 
+    5.770 data: {"page": {"url": "http://127.0.0.1:9108/huge", "title": "Huge", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.770 
+    5.770 data: {"page": {"url": "http://127.0.0.1:9108/mfa", "title": "MFA Login", "login_required": true, "login_reasons": ["password_field"], "login_url": "http://127.0.0.1:9108/mfa"}}
+    5.770 
+    5.770 data: {"page": {"url": "http://127.0.0.1:9108/dashboard", "title": "Login", "login_required": true, "login_reasons": ["redirect_to_login", "password_field"], "login_url": "http://127.0.0.1:9108/login?next=/dashboard"}}
+    5.770 
+    5.770 data: {"page": {"url": "http://127.0.0.1:9108/unicode/%E6%97%A5%E6%9C%AC%E8%AA%9E%E3%83%9A%E3%83%BC%E3%82%B8", "title": "日本語", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.770 
+    5.770 data: {"page": {"url": "http://127.0.0.1:9108/privacy", "title": "Privacy", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.770 
+    6.476 data: {"page": {"url": "http://127.0.0.1:9108/about/team", "title": "Team", "login_required": false, "login_reasons": [], "login_url": ""}}
+    6.476 
+    6.476 data: {"page": {"url": "http://127.0.0.1:9108/products/1", "title": "商品1", "login_required": false, "login_reasons": [], "login_url": ""}}
+    6.476 
+    6.476 data: {"page": {"url": "http://127.0.0.1:9108/products/2", "title": "商品2", "login_required": false, "login_reasons": [], "login_url": ""}}
+    6.476 
+    6.476 data: {"page": {"url": "http://127.0.0.1:9108/products/3", "title": "商品3", "login_required": false, "login_reasons": [], "login_url": ""}}
+    6.476 
+    6.476 data: {"page": {"url": "http://127.0.0.1:9108/products/4", "title": "商品4", "login_required": false, "login_reasons": [], "login_url": ""}}
+    6.476 
+    6.476 data: {"page": {"url": "http://127.0.0.1:9108/products/5", "title": "商品5", "login_required": false, "login_reasons": [], "login_url": ""}}
+    6.476 
+    6.476 data: {"page": {"url": "http://127.0.0.1:9108/products/6", "title": "商品6", "login_required": false, "login_reasons": [], "login_url": ""}}
+    6.476 
+    6.476 data: {"page": {"url": "http://127.0.0.1:9108/products/7", "title": "商品7", "login_required": false, "login_reasons": [], "login_url": ""}}
+    6.476 
+    6.476 data: {"page": {"url": "http://127.0.0.1:9108/products/8", "title": "商品8", "login_required": false, "login_reasons": [], "login_url": ""}}
+    6.476 
+    6.476 data: {"page": {"url": "http://127.0.0.1:9108/products/9", "title": "商品9", "login_required": false, "login_reasons": [], "login_url": ""}}
+    6.476 
+    6.476 data: {"page": {"url": "http://127.0.0.1:9108/products/10", "title": "商品10", "login_required": false, "login_reasons": [], "login_url": ""}}
+    6.476 
+    6.476 data: {"done": true, "total": 30}
+--- run 2/3 ---
+    0.004 data: {"run_id": "2a203a9bd9d74357b0498b215b7314f9"}
+    0.004 
+    0.251 data: {"crawl_event": {"event": "discover_started", "url": "http://127.0.0.1:9108/"}}
+    0.251 
+    0.251 data: {"crawl_event": {"event": "robots_checking", "url": "http://127.0.0.1:9108/"}}
+    0.251 
+    0.263 data: {"crawl_event": {"event": "browser_starting"}}
+    0.263 
+    0.621 data: {"crawl_event": {"event": "browser_ready"}}
+    0.621 
+    0.621 data: {"page": {"url": "http://127.0.0.1:9108/", "title": "Mock Home", "login_required": false, "login_reasons": [], "login_url": ""}}
+    0.621 
+    0.621 data: {"crawl_event": {"event": "page_skipped", "url": "http://127.0.0.1:9108/private/secret", "reason": "robots"}}
+    0.621 
+    5.281 data: {"page": {"url": "http://127.0.0.1:9108/about", "title": "About", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.281 
+    5.281 data: {"page": {"url": "http://127.0.0.1:9108/products", "title": "Products", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.281 
+    5.281 data: {"page": {"url": "http://127.0.0.1:9108/contact", "title": "Contact", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.281 
+    5.281 data: {"page": {"url": "http://127.0.0.1:9108/login", "title": "Login", "login_required": true, "login_reasons": ["password_field"], "login_url": "http://127.0.0.1:9108/login"}}
+    5.281 
+    5.281 data: {"page": {"url": "http://127.0.0.1:9108/form", "title": "Form", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.281 
+    5.281 data: {"page": {"url": "http://127.0.0.1:9108/slow", "title": "Slow", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.281 
+    5.281 data: {"page": {"url": "http://127.0.0.1:9108/xss", "title": "XSS-EXEC", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.281 
+    5.281 data: {"page": {"url": "http://127.0.0.1:9108/iframe", "title": "Iframe", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.281 
+    5.281 data: {"page": {"url": "http://127.0.0.1:9108/shadow", "title": "Shadow", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.281 
+    5.281 data: {"page": {"url": "http://127.0.0.1:9108/rate-limited", "title": "Rate", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.281 
+    5.281 data: {"page": {"url": "http://127.0.0.1:9108/mutation", "title": "Mutation", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.282 
+    5.282 data: {"page": {"url": "http://127.0.0.1:9108/broken-link", "title": "Broken", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.282 
+    5.282 data: {"page": {"url": "http://127.0.0.1:9108/deep/1", "title": "Deep 1", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.282 
+    5.282 data: {"page": {"url": "http://127.0.0.1:9108/huge", "title": "Huge", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.282 
+    5.282 data: {"page": {"url": "http://127.0.0.1:9108/mfa", "title": "MFA Login", "login_required": true, "login_reasons": ["password_field"], "login_url": "http://127.0.0.1:9108/mfa"}}
+    5.282 
+    5.282 data: {"page": {"url": "http://127.0.0.1:9108/dashboard", "title": "Login", "login_required": true, "login_reasons": ["redirect_to_login", "password_field"], "login_url": "http://127.0.0.1:9108/login?next=/dashboard"}}
+    5.282 
+    5.282 data: {"page": {"url": "http://127.0.0.1:9108/unicode/%E6%97%A5%E6%9C%AC%E8%AA%9E%E3%83%9A%E3%83%BC%E3%82%B8", "title": "日本語", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.282 
+    5.282 data: {"page": {"url": "http://127.0.0.1:9108/privacy", "title": "Privacy", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.282 
+    6.034 data: {"page": {"url": "http://127.0.0.1:9108/about/team", "title": "Team", "login_required": false, "login_reasons": [], "login_url": ""}}
+    6.034 
+    6.034 data: {"page": {"url": "http://127.0.0.1:9108/products/1", "title": "商品1", "login_required": false, "login_reasons": [], "login_url": ""}}
+    6.034 
+    6.034 data: {"page": {"url": "http://127.0.0.1:9108/products/2", "title": "商品2", "login_required": false, "login_reasons": [], "login_url": ""}}
+    6.034 
+    6.034 data: {"page": {"url": "http://127.0.0.1:9108/products/3", "title": "商品3", "login_required": false, "login_reasons": [], "login_url": ""}}
+    6.034 
+    6.034 data: {"page": {"url": "http://127.0.0.1:9108/products/4", "title": "商品4", "login_required": false, "login_reasons": [], "login_url": ""}}
+    6.034 
+    6.034 data: {"page": {"url": "http://127.0.0.1:9108/products/5", "title": "商品5", "login_required": false, "login_reasons": [], "login_url": ""}}
+    6.034 
+    6.034 data: {"page": {"url": "http://127.0.0.1:9108/products/6", "title": "商品6", "login_required": false, "login_reasons": [], "login_url": ""}}
+    6.034 
+    6.034 data: {"page": {"url": "http://127.0.0.1:9108/products/7", "title": "商品7", "login_required": false, "login_reasons": [], "login_url": ""}}
+    6.034 
+    6.034 data: {"page": {"url": "http://127.0.0.1:9108/products/8", "title": "商品8", "login_required": false, "login_reasons": [], "login_url": ""}}
+    6.034 
+    6.035 data: {"page": {"url": "http://127.0.0.1:9108/products/9", "title": "商品9", "login_required": false, "login_reasons": [], "login_url": ""}}
+    6.035 
+    6.035 data: {"page": {"url": "http://127.0.0.1:9108/products/10", "title": "商品10", "login_required": false, "login_reasons": [], "login_url": ""}}
+    6.035 
+    6.035 data: {"done": true, "total": 30}
+--- run 3/3 ---
+    0.006 data: {"run_id": "1513e7f3b2594f869ee0b7c846c7adae"}
+    0.007 
+    0.311 data: {"crawl_event": {"event": "discover_started", "url": "http://127.0.0.1:9108/"}}
+    0.311 
+    0.311 data: {"crawl_event": {"event": "robots_checking", "url": "http://127.0.0.1:9108/"}}
+    0.311 
+    0.324 data: {"crawl_event": {"event": "browser_starting"}}
+    0.324 
+    0.679 data: {"crawl_event": {"event": "browser_ready"}}
+    0.679 
+    0.679 data: {"page": {"url": "http://127.0.0.1:9108/", "title": "Mock Home", "login_required": false, "login_reasons": [], "login_url": ""}}
+    0.679 
+    0.679 data: {"crawl_event": {"event": "page_skipped", "url": "http://127.0.0.1:9108/private/secret", "reason": "robots"}}
+    0.679 
+    5.357 data: {"page": {"url": "http://127.0.0.1:9108/about", "title": "About", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.357 
+    5.357 data: {"page": {"url": "http://127.0.0.1:9108/products", "title": "Products", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.357 
+    5.357 data: {"page": {"url": "http://127.0.0.1:9108/contact", "title": "Contact", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.357 
+    5.357 data: {"page": {"url": "http://127.0.0.1:9108/login", "title": "Login", "login_required": true, "login_reasons": ["password_field"], "login_url": "http://127.0.0.1:9108/login"}}
+    5.357 
+    5.357 data: {"page": {"url": "http://127.0.0.1:9108/form", "title": "Form", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.357 
+    5.357 data: {"page": {"url": "http://127.0.0.1:9108/slow", "title": "Slow", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.357 
+    5.357 data: {"page": {"url": "http://127.0.0.1:9108/xss", "title": "XSS-EXEC", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.357 
+    5.357 data: {"page": {"url": "http://127.0.0.1:9108/iframe", "title": "Iframe", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.357 
+    5.357 data: {"page": {"url": "http://127.0.0.1:9108/shadow", "title": "Shadow", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.357 
+    5.357 data: {"page": {"url": "http://127.0.0.1:9108/mutation", "title": "Mutation", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.357 
+    5.357 data: {"page": {"url": "http://127.0.0.1:9108/broken-link", "title": "Broken", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.357 
+    5.357 data: {"page": {"url": "http://127.0.0.1:9108/deep/1", "title": "Deep 1", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.357 
+    5.357 data: {"page": {"url": "http://127.0.0.1:9108/huge", "title": "Huge", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.357 
+    5.358 data: {"page": {"url": "http://127.0.0.1:9108/mfa", "title": "MFA Login", "login_required": true, "login_reasons": ["password_field"], "login_url": "http://127.0.0.1:9108/mfa"}}
+    5.358 
+    5.358 data: {"page": {"url": "http://127.0.0.1:9108/dashboard", "title": "Login", "login_required": true, "login_reasons": ["redirect_to_login", "password_field"], "login_url": "http://127.0.0.1:9108/login?next=/dashboard"}}
+    5.358 
+    5.358 data: {"page": {"url": "http://127.0.0.1:9108/unicode/%E6%97%A5%E6%9C%AC%E8%AA%9E%E3%83%9A%E3%83%BC%E3%82%B8", "title": "日本語", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.358 
+    5.358 data: {"page": {"url": "http://127.0.0.1:9108/privacy", "title": "Privacy", "login_required": false, "login_reasons": [], "login_url": ""}}
+    5.358 
+    6.034 data: {"page": {"url": "http://127.0.0.1:9108/about/team", "title": "Team", "login_required": false, "login_reasons": [], "login_url": ""}}
+    6.034 
+    6.034 data: {"page": {"url": "http://127.0.0.1:9108/products/1", "title": "商品1", "login_required": false, "login_reasons": [], "login_url": ""}}
+    6.034 
+    6.034 data: {"page": {"url": "http://127.0.0.1:9108/products/2", "title": "商品2", "login_required": false, "login_reasons": [], "login_url": ""}}
+    6.034 
+    6.034 data: {"page": {"url": "http://127.0.0.1:9108/products/3", "title": "商品3", "login_required": false, "login_reasons": [], "login_url": ""}}
+    6.034 
+    6.034 data: {"page": {"url": "http://127.0.0.1:9108/products/4", "title": "商品4", "login_required": false, "login_reasons": [], "login_url": ""}}
+    6.034 
+    6.034 data: {"page": {"url": "http://127.0.0.1:9108/products/5", "title": "商品5", "login_required": false, "login_reasons": [], "login_url": ""}}
+    6.034 
+    6.034 data: {"page": {"url": "http://127.0.0.1:9108/products/6", "title": "商品6", "login_required": false, "login_reasons": [], "login_url": ""}}
+    6.034 
+    6.034 data: {"page": {"url": "http://127.0.0.1:9108/products/7", "title": "商品7", "login_required": false, "login_reasons": [], "login_url": ""}}
+    6.034 
+    6.034 data: {"page": {"url": "http://127.0.0.1:9108/products/8", "title": "商品8", "login_required": false, "login_reasons": [], "login_url": ""}}
+    6.034 
+    6.034 data: {"page": {"url": "http://127.0.0.1:9108/products/9", "title": "商品9", "login_required": false, "login_reasons": [], "login_url": ""}}
+    6.034 
+    6.034 data: {"page": {"url": "http://127.0.0.1:9108/products/10", "title": "商品10", "login_required": false, "login_reasons": [], "login_url": ""}}
+    6.034 
+    6.034 data: {"page": {"url": "http://127.0.0.1:9108/products/11", "title": "商品11", "login_required": false, "login_reasons": [], "login_url": ""}}
+    6.034 
+    6.034 data: {"done": true, "total": 30}
+SUMMARY {"label": "disc_d2mp30_p4", "n_ok": 3, "median_dur_s": 6.03, "min_dur_s": 6.028, "max_dur_s": 6.447, "median_ttfe_s": 0.672, "median_s_per_page": 0.201}

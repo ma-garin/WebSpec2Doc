@@ -1,0 +1,22 @@
+data: {"run_id": "ee74e1bf04624e51875274b5dd4305c4"}
+
+data: {"crawl_event": {"event": "discover_started", "url": "http://127.0.0.1:9101/"}}
+
+data: {"crawl_event": {"event": "robots_checking", "url": "http://127.0.0.1:9101/"}}
+
+data: {"crawl_event": {"event": "browser_starting"}}
+
+data: {"crawl_event": {"event": "browser_ready"}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/", "title": "Mock Home", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/about", "title": "About", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/products", "title": "Products", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/contact", "title": "Contact", "login_required": false, "login_reasons": [], "login_url": ""}}
+
+data: {"page": {"url": "http://127.0.0.1:9101/login", "title": "Login", "login_required": true, "login_reasons": ["password_field"], "login_url": "http://127.0.0.1:9101/login"}}
+
+data: {"done": true, "total": 5}
+

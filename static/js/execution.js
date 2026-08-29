@@ -228,6 +228,10 @@ document.getElementById('form').addEventListener('submit', (e) => {
   const loginUrls = discovered.filter(p => p.login_required && loginUrlSet.has(p.url)).map(p => p.url);
   const loginLandingUrl = discovered.find(p => p.login_required && p.login_url)?.login_url
     || document.getElementById('login-url').value.trim();
+  // 実行履歴に「どの範囲で解析したか」を残すため、選択したプリセットと実効値を添える。
+  // 下の depth / max_pages はドキュメント化のクロール設定で、scope_* はウィザードの
+  // 「解析する範囲」の選択。由来が別物なので既存フィールドに寄せず、独立して送る。
+  const scope = discoverScope();
   const body = new URLSearchParams({
     urls: urls.join(','),
     depth: document.getElementById('crawl-depth').value,
@@ -240,6 +244,9 @@ document.getElementById('form').addEventListener('submit', (e) => {
     reference_docs: referenceDocPaths.map(d => d.path).join(','),
     login_urls: loginUrls.join(','),
     login_landing_url: loginLandingUrl,
+    scope_preset: discoverScopePreset(),
+    scope_depth: String(scope.depth),
+    scope_max_pages: String(scope.max_pages),
   });
   const label = urls.length > 1 ? `${urls[0]} ほか ${urls.length - 1}件` : urls[0];
   saveUrlHistory(url);

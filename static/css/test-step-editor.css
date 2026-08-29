@@ -77,6 +77,9 @@
   font-size: 11px; color: var(--text-muted, #667);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
+/* hidden 属性を display:block が打ち消さないようにする。打ち消すと、
+   進捗が未計測でもバー（0%）が出て「1 件も通っていない」と読めてしまう。 */
+.ns-run-bar[hidden], .ns-run[hidden] { display: none; }
 .ns-run-bar {
   display: block; height: 6px; margin-top: 8px; border-radius: 3px;
   background: var(--border, #e6e9ee); overflow: hidden;

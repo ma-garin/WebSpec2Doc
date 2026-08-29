@@ -318,6 +318,271 @@ def _maybe_run(
         _notify_final_failure(config, site_url, attempts, last_result.error, now)
 
 
+def _resolve_job_type(config: dict[str, Any]) -> str:
+    """schedule.json から job_type を取り出す。
+
+    **キー欠落・空文字・None は必ず "crawl"**（後方互換: job_type を知らない
+    既存の schedule.json は 1 文字も変えずに従来どおり動く必要がある）。
+    値が入っているが未知の場合は正規化した文字列をそのまま返し、
+    呼び出し側で「不正」として扱えるようにする（黙ってクロールへ倒さない）。
+    """
+    raw = config.get("job_type", JOB_TYPE_CRAWL)
+    if raw is None:
+        return JOB_TYPE_CRAWL
+    value = str(raw).strip().lower()
+    return value or JOB_TYPE_CRAWL
+
+
+@dataclass(frozen=True)
+class ScheduledTestStart:
+    """テスト実行ジョブの投入結果。ok が False のとき error に利用者向けの理由。"""
+
+    ok: bool
+    job_id: str = ""
+    error: str = ""
+
+
+def start_scheduled_test(
+    domain: str,
+    schedule_path: Path,
+    config: dict[str, Any],
+    *,
+    output_root: Path,
+    trigger: str = "scheduled",
+    started_at: datetime | None = None,
+) -> ScheduledTestStart:
+    """スケジュール設定に従ってテスト実行ジョブをキューへ投入する。
+
+    スケジューラー（trigger="scheduled"）と run-now（trigger="manual"）の
+    両方から呼ぶ共通経路。投入までを行い、**完了は待たない**。
+
+    起動できなかった場合は必ず `schedule_history.jsonl` へ status:"failed" と
+    理由を残す。黙ってスキップすると、利用者から見えるのは「予定時刻を過ぎたのに
+    何も起きない」だけで、原因を追う手掛かりが 1 つも残らない。
+
+    リトライ（retry_max / retry_backoff_seconds）はテストには適用しない。
+    テストの失敗はクロールの失敗と違って「システムの不調」ではなく「結果」であり、
+    落ちたテストを自動で走らせ直すと不合格を握り潰すことになる。
+    不安定さ（フレーキー）の検出は run_playwright の retries が担当する。
+    """
+    from web.services import environment_store, test_run_job, test_step_store
+
+    root = Path(output_root)
+    began = started_at or datetime.now().astimezone()
+
+    def fail(reason: str) -> ScheduledTestStart:
+        logger.warning("スケジュールテストを開始できません: domain=%s reason=%s", domain, reason)
+        _append_schedule_history(
+            schedule_path,
+            _test_history_record(
+                domain=domain,
+                config=config,
+                started_at=began,
+                status="failed",
+                trigger=trigger,
+                error=reason,
+            ),
+        )
+        return ScheduledTestStart(False, "", _sanitize_error(reason))
+
+    # ① ステップ定義を読む
+    try:
+        document = test_step_store.load(root, domain)
+    except Exception as exc:  # noqa: BLE001 - 読めない理由をそのまま利用者へ返す
+        return fail(f"ステップ定義を読めません: {exc}")
+
+    # ② 実行対象を絞る（schedule_test_ids が空なら enabled 全件）
+    selected = {
+        str(item).strip()
+        for item in (config.get("schedule_test_ids") or [])
+        if str(item).strip()
+    }
+    tests = [
+        test
+        for test in document.get("tests", [])
+        if isinstance(test, dict) and test.get("enabled", True)
+    ]
+    if selected:
+        tests = [test for test in tests if str(test.get("test_id", "")) in selected]
+    if not tests:
+        reason = "ステップが未作成のため実行できません"
+        if selected:
+            reason += "（指定された test_id に一致する有効なステップがありません）"
+        return fail(reason)
+
+    # ③ spec を書き出す（正本はステップ。spec は毎回作り直す）
+    output_dir = root / domain / "qa_process"
+    spec_path = root / domain / SCHEDULED_SPEC_RELATIVE
+    try:
+        spec_path.parent.mkdir(parents=True, exist_ok=True)
+        spec_path.write_text(
+            test_step_store.to_spec_ts({**document, "tests": tests}), encoding="utf-8"
+        )
+    except (OSError, KeyError, TypeError, ValueError) as exc:
+        return fail(f"spec を生成できません: {exc}")
+
+    # ④ 環境を解決する。指定した環境が無いときは既定へ倒さず失敗させる
+    #    （指定と違う環境へテストが流れる方が危険。environment_store.resolve と同じ方針）。
+    env_id = str(config.get("environment", "") or "").strip()
+    try:
+        environment = environment_store.resolve(root, domain, env_id)
+    except Exception as exc:  # noqa: BLE001
+        return fail(f"環境設定を読めません: {exc}")
+    if env_id and environment is None:
+        return fail(f"指定された環境が見つかりません: {env_id}")
+    base_url = str((environment or {}).get("base_url") or "").strip() or None
+    try:
+        storage_state = environment_store.storage_state_path(root, domain, environment)
+    except Exception:  # noqa: BLE001 - ログイン状態が無くても実行自体は可能
+        logger.warning("storage state を解決できませんでした: domain=%s", domain, exc_info=True)
+        storage_state = None
+
+    # ⑤ キューへ投入する
+    try:
+        from crawler.url_safety import _local_targets_allowed
+        from web.services.egress_gateway import EgressPolicy
+
+        policy = EgressPolicy(allow_local=_local_targets_allowed())
+    except Exception:  # noqa: BLE001 - 方針を作れない場合は executor の既定に委ねる
+        logger.warning("送信ポリシーを構成できませんでした: domain=%s", domain, exc_info=True)
+        policy = None
+
+    try:
+        job = test_run_job.enqueue_test_run(
+            domain=domain,
+            kind="schedule",
+            spec_path=spec_path,
+            output_dir=output_dir,
+            output_root=root,
+            environment=str((environment or {}).get("env_id") or ""),
+            per_test_timeout_sec=_bounded_int(
+                config.get("per_test_timeout_sec"), default=30, minimum=5, maximum=600
+            ),
+            retries=_bounded_int(config.get("retries"), default=1, minimum=0, maximum=3),
+            base_url=base_url,
+            storage_state=storage_state,
+            egress_policy=policy,
+            schedule_context={"trigger": trigger, "schedule_path": str(schedule_path)},
+        )
+    except test_run_job.DomainBusyError as exc:
+        return fail(str(exc))
+    except Exception as exc:  # noqa: BLE001
+        return fail(f"テスト実行を開始できません: {type(exc).__name__}: {exc}")
+
+    logger.info(
+        "スケジュールテストを投入: domain=%s job_id=%s trigger=%s tests=%d",
+        domain,
+        job.job_id,
+        trigger,
+        len(tests),
+    )
+    # **enqueue したら待たずに返す。** 7 時間かかる spec をここで待つと、
+    # ポーリングループ（_scheduler_loop）がその間停止し、他ドメインの予定も
+    # run-now の応答も全部止まる。結果は下の見張りスレッドが履歴へ書く。
+    _watch_scheduled_test(
+        job,
+        schedule_path=schedule_path,
+        domain=domain,
+        config=config,
+        started_at=began,
+        trigger=trigger,
+    )
+    return ScheduledTestStart(True, job.job_id, "")
+
+
+def _watch_scheduled_test(
+    job: Any,
+    *,
+    schedule_path: Path,
+    domain: str,
+    config: dict[str, Any],
+    started_at: datetime,
+    trigger: str,
+) -> None:
+    """ジョブの終端を別スレッドで待ち、schedule_history.jsonl へ 1 行残す。
+
+    デーモンスレッドにするのは、待っている最中のプロセス終了を妨げないため。
+    その場合は履歴が残らないが、テスト実行自体の証跡は test_run_history.jsonl
+    （test_run_job 側で永続化）に残るので、実行が丸ごと闇に消えることはない。
+    """
+
+    def _wait() -> None:
+        try:
+            finished = job.wait(SCHEDULED_TEST_WAIT_TIMEOUT)
+            status = str(getattr(job, "status", "") or "failed")
+            error = str(getattr(job, "error", "") or "")
+            if not finished:
+                status = "failed"
+                error = error or "実行の完了を確認できませんでした（待機時間を超過）"
+            result = getattr(job, "result", {}) or {}
+            _append_schedule_history(
+                schedule_path,
+                _test_history_record(
+                    domain=domain,
+                    config=config,
+                    started_at=started_at,
+                    status=status,
+                    trigger=trigger,
+                    error=error,
+                    job_id=str(getattr(job, "job_id", "")),
+                    run_id_value=str(getattr(job, "run_id", "") or ""),
+                    duration_sec=float(getattr(job, "elapsed_sec", lambda: 0)() or 0),
+                    summary={
+                        "total": int(result.get("total") or 0),
+                        "passed": int(result.get("passed") or 0),
+                        "failed": int(result.get("failed") or 0),
+                        "flaky": int(result.get("flaky") or 0),
+                    },
+                ),
+            )
+        except Exception:
+            logger.warning(
+                "スケジュールテストの履歴を残せませんでした: domain=%s", domain, exc_info=True
+            )
+
+    threading.Thread(
+        target=_wait,
+        daemon=True,
+        name=f"ScheduleTestWatch-{str(getattr(job, 'job_id', ''))[:8]}",
+    ).start()
+
+
+def _test_history_record(
+    *,
+    domain: str,
+    config: dict[str, Any],
+    started_at: datetime,
+    status: str,
+    trigger: str,
+    error: str = "",
+    job_id: str = "",
+    run_id_value: str = "",
+    duration_sec: float = 0.0,
+    summary: dict[str, int] | None = None,
+) -> dict[str, object]:
+    """schedule_history.jsonl の 1 行を作る（テストジョブ用）。
+
+    クロールの記録と同じキー（run_id / status / trigger / error）を維持し、
+    画面（/schedule/history）が job_type を知らなくても表示できるようにする。
+    """
+    return {
+        "run_id": run_id_value or uuid.uuid4().hex,
+        "domain": domain,
+        "job_type": JOB_TYPE_TEST,
+        "job_id": job_id,
+        "site_url": str(config.get("site_url", "") or ""),
+        "environment": str(config.get("environment", "") or ""),
+        "started_at": started_at.isoformat(timespec="seconds"),
+        "finished_at": datetime.now(tz=started_at.tzinfo).isoformat(timespec="seconds"),
+        "status": status,
+        "attempts": 1,  # テストはリトライしない（start_scheduled_test の docstring 参照）
+        "duration_sec": round(float(duration_sec), 3),
+        "trigger": trigger,
+        "summary": summary or {"total": 0, "passed": 0, "failed": 0, "flaky": 0},
+        "error": "" if status == "complete" else _sanitize_error(error),
+    }
+
+
 def _notify_final_failure(
     config: dict[str, Any],
     site_url: str,

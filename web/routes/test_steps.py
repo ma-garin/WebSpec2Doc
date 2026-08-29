@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import logging
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -138,19 +139,47 @@ def _write_spec(
     *,
     self_healing: bool = True,
     egress_gateway: bool = True,
+    filename: str = "",
 ) -> tuple[Path, str]:
     """ドキュメントから spec.ts を生成して書き出す。(パス, ソース) を返す。
 
     生成（/generate）と実行（/run）で同じ経路を通す。別々に書くと、片方だけ
     オプションが増えたときに「プレビューで見たコードと実行したコードが違う」が起きる。
+
+    filename を渡すと qa_process/ 配下のその名前で書く。実行時に固定名を使わない
+    のは、実行中のジョブが読む spec を後続の要求が上書きしてしまうため（下記）。
+    生成される spec は `./_autorun_egress` を相対 import するので、置き場所は
+    qa_process/ 配下から動かせない。
     """
     source = test_step_store.to_spec_ts(
         document, self_healing=self_healing, egress_gateway=egress_gateway
     )
-    path = _out() / domain / _SPEC_RELATIVE
+    if filename:
+        path = _out() / domain / "qa_process" / filename
+    else:
+        path = _out() / domain / _SPEC_RELATIVE
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(source, encoding="utf-8")
     return path, source
+
+
+#: 1 ドメインあたりに残す実行用 spec の数。実行のたびに 1 つ増えるので、
+#: 直近だけ残して掃除する（失敗した実行のコードを後から読めるようにするため
+#: 0 にはしない）。
+_RUN_SPEC_KEEP = 10
+
+
+def _prune_run_specs(domain: str) -> None:
+    """古い実行用 spec を掃除する。失敗しても実行を止めない（best-effort）。"""
+    try:
+        qa = _out() / domain / "qa_process"
+        specs = sorted(
+            qa.glob("run-*.spec.ts"), key=lambda p: p.stat().st_mtime, reverse=True
+        )
+        for stale in specs[_RUN_SPEC_KEEP:]:
+            stale.unlink(missing_ok=True)
+    except OSError:
+        pass
 
 
 @bp.post("/api/test-steps/<domain>/generate")
@@ -237,13 +266,20 @@ def api_run_steps(domain: str) -> dict | tuple[dict, int]:
     if env_id and env is None:
         return {"error": f"指定された環境が見つかりません: {env_id}"}, 400
 
-    # ③ spec を書く（生成と同じ経路）。
+    # ③ spec を書く（生成と同じ経路）。ただし**実行ごとに別名**にする。
+    #    固定名（edited.spec.ts）に書くと、実行中のジョブがまだ spec を読む前に
+    #    後続の要求が同じファイルを上書きし、別のテストが実行されてしまう。
+    #    実際に「409 で弾かれた 2 回目の要求が、実行中ジョブの spec を書き換える」
+    #    ことを再現して確認したため、実行用は必ず専用ファイルにする。
+    run_spec_name = f"run-{uuid.uuid4().hex[:12]}.spec.ts"
     spec_path, _source = _write_spec(
         domain,
         target_doc,
         self_healing=bool(body.get("self_healing", True)),
         egress_gateway=True,
+        filename=run_spec_name,
     )
+    _prune_run_specs(domain)
 
     output_dir = _out() / domain / "qa_process"
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -277,6 +313,8 @@ def api_run_steps(domain: str) -> dict | tuple[dict, int]:
             egress_policy=EgressPolicy(allow_local=_local_targets_allowed()),
         )
     except test_run_job.DomainBusyError as exc:
+        # 実行に至らなかった spec は残さない（読まれないファイルが溜まるだけ）。
+        spec_path.unlink(missing_ok=True)
         # どの実行とぶつかっているかを名指しで返す。「今は実行できません」だけでは
         # 待てばよいのか壊れたのか利用者が判断できない。
         return {"error": str(exc), "running_job_id": exc.job_id}, 409

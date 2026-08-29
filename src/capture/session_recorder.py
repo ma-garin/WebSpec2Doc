@@ -115,14 +115,27 @@ _RECORDER_JS = """
     if (el && WIDGET_IDS.indexOf(el.id) >= 0) return;
     pushWithSelectors({ type: 'click' }, el);
   }, true);
+  // type="password" だけを見ると取りこぼす秘密情報がある。実際に多いのは
+  // 「パスワードを表示」トグルで type が text に変わる実装で、この瞬間に
+  // 平文が記録されてしまう。名前・id・autocomplete からも秘密情報を判定する。
+  // 判定は広めに倒す（記録できない項目が増える方が、平文が残るより安全）。
+  const SECRET_HINT = /pass|passwd|pwd|secret|token|otp|one-?time|cvv|cvc|card|credit|\bcc[-_]?(num|number)?\b|pin|security-?code|credential|ssn|social-?security/i;
+  const isSecretField = (el) => {
+    const probe = [
+      attr(el, 'name'), el.id || '', attr(el, 'autocomplete'),
+      attr(el, 'aria-label'), attr(el, 'data-testid'),
+    ].join(' ');
+    return SECRET_HINT.test(probe);
+  };
+
   document.addEventListener('change', (event) => {
     const el = event.target;
     if (!el || !el.tagName) return;
     const tag = el.tagName.toLowerCase();
     const inputType = (attr(el, 'type') || '').toLowerCase();
     const payload = { type: 'input', tag: tag, input_type: inputType };
-    if (inputType === 'password') {
-      // 必須要件: 平文パスワードを JSONL に残さない。値を持たず masked のみを記録する。
+    if (inputType === 'password' || isSecretField(el)) {
+      // 必須要件: 平文の秘密情報を JSONL に残さない。値を持たず masked のみを記録する。
       payload.masked = true;
     } else if (inputType === 'checkbox' || inputType === 'radio') {
       payload.checked = !!el.checked;

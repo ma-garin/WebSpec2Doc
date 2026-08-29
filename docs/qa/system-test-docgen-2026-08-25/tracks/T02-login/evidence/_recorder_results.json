@@ -1,0 +1,26 @@
+[
+  {
+    "id": "T02-C032",
+    "result": "PASS",
+    "observed": "phase=timeout dur=2.8s auth_saved=False",
+    "evidence": "evidence/R_timeout.json"
+  },
+  {
+    "id": "T02-C033",
+    "result": "PASS",
+    "observed": "phases=['saved', 'waiting'] final=saved auth_saved=True verified=False",
+    "evidence": "evidence/R_saved.json"
+  },
+  {
+    "id": "T02-C034",
+    "result": "PASS",
+    "observed": "phase=closed auth_saved=False",
+    "evidence": "evidence/R_closed.json"
+  },
+  {
+    "id": "T02-C035",
+    "result": "PASS",
+    "observed": "phase=error detail=この機能はローカル環境で GUI ブラウザを使います auth_saved=False",
+    "evidence": "evidence/R_display_missing.json"
+  }
+]

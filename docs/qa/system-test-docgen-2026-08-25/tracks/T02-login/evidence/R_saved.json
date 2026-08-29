@@ -1,0 +1,27 @@
+{
+  "phases_seen": [
+    "waiting",
+    "waiting",
+    "waiting",
+    "waiting",
+    "waiting",
+    "waiting",
+    "waiting",
+    "waiting",
+    "waiting",
+    "waiting",
+    "waiting",
+    "waiting",
+    "waiting",
+    "waiting",
+    "saved"
+  ],
+  "final_status": {
+    "phase": "saved",
+    "current_url": "http://127.0.0.1:9102/login",
+    "detail": "保存しました（動作確認は未確認）",
+    "verified": false
+  },
+  "auth_saved": true,
+  "exit_code": 0
+}

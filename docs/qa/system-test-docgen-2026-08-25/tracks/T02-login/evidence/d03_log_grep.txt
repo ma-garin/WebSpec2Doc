@@ -1,0 +1,31 @@
+--- ws2d.log tail (login関連, マスク) ---
+127.0.0.1 - - [25/Aug/2026 00:15:01] "[31m[1mGET /api/login/record/status?domain=../x HTTP/1.1[0m" 400 -
+INFO:crawler.auth_recorder:ログインページを開きました: http://127.0.0.1:9102/login
+INFO:crawler.auth_recorder:ログインページを開きました: http://127.0.0.1:9102/login
+127.0.0.1 - - [25/Aug/2026 00:16:06] "POST /api/login/simple HTTP/1.1" 200 -
+127.0.0.1 - - [25/Aug/2026 00:16:17] "[31m[1mPOST /api/login/simple HTTP/1.1[0m" 400 -
+127.0.0.1 - - [25/Aug/2026 00:16:17] "[31m[1mPOST /api/login/simple HTTP/1.1[0m" 403 -
+127.0.0.1 - - [25/Aug/2026 00:16:17] "[31m[1mPOST /api/login/simple HTTP/1.1[0m" 403 -
+127.0.0.1 - - [25/Aug/2026 00:16:17] "[31m[1mPOST /api/login/simple HTTP/1.1[0m" 403 -
+127.0.0.1 - - [25/Aug/2026 00:16:17] "[31m[1mPOST /api/login/simple HTTP/1.1[0m" 400 -
+127.0.0.1 - - [25/Aug/2026 00:16:59] "[31m[1mPOST /api/login/simple HTTP/1.1[0m" 403 -
+127.0.0.1 - - [25/Aug/2026 00:16:59] "[31m[1mPOST /api/login/simple HTTP/1.1[0m" 403 -
+127.0.0.1 - - [25/Aug/2026 00:16:59] "[31m[1mPOST /api/login/simple HTTP/1.1[0m" 400 -
+127.0.0.1 - - [25/Aug/2026 00:17:28] "[31m[1mPOST /api/login/simple HTTP/1.1[0m" 400 -
+127.0.0.1 - - [25/Aug/2026 00:17:30] "[31m[1mPOST /api/login/simple HTTP/1.1[0m" 400 -
+127.0.0.1 - - [25/Aug/2026 00:17:30] "[31m[1mPOST /api/login/simple HTTP/1.1[0m" 400 -
+127.0.0.1 - - [25/Aug/2026 00:17:30] "[31m[1mPOST /api/login/simple HTTP/1.1[0m" 400 -
+127.0.0.1 - - [25/Aug/2026 00:17:30] "[31m[1mPOST /api/login/scrape HTTP/1.1[0m" 400 -
+127.0.0.1 - - [25/Aug/2026 00:17:31] "POST /api/login/simple HTTP/1.1" 200 -
+127.0.0.1 - - [25/Aug/2026 00:17:36] "POST /api/login/simple HTTP/1.1" 200 -
+127.0.0.1 - - [25/Aug/2026 00:17:38] "POST /api/login/simple HTTP/1.1" 200 -
+127.0.0.1 - - [25/Aug/2026 00:17:39] "POST /api/login/scrape HTTP/1.1" 200 -
+127.0.0.1 - - [25/Aug/2026 00:17:41] "POST /api/login/scrape HTTP/1.1" 200 -
+127.0.0.1 - - [25/Aug/2026 00:17:41] "[31m[1mPOST /api/login/record/start HTTP/1.1[0m" 400 -
+127.0.0.1 - - [25/Aug/2026 00:17:41] "GET /api/login/record/status?domain=127.0.0.1:9102 HTTP/1.1" 200 -
+127.0.0.1 - - [25/Aug/2026 00:17:41] "[31m[1mPOST /api/login/record/cancel HTTP/1.1[0m" 400 -
+127.0.0.1 - - [25/Aug/2026 00:17:41] "POST /api/login/record/cancel HTTP/1.1" 200 -
+127.0.0.1 - - [25/Aug/2026 00:17:41] "[31m[1mPOST /api/login/record/cancel HTTP/1.1[0m" 400 -
+127.0.0.1 - - [25/Aug/2026 00:17:48] "POST /api/login/simple HTTP/1.1" 200 -
+127.0.0.1 - - [25/Aug/2026 00:17:55] "POST /api/login/simple HTTP/1.1" 200 -
+127.0.0.1 - - [25/Aug/2026 00:19:18] "POST /api/login/simple HTTP/1.1" 200 -

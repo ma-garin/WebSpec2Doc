@@ -1,0 +1,30 @@
+{
+  "run_id": "897a4b13cd1f48b4bd0dd82362a1cbe3",
+  "n_pages": 30,
+  "done": {
+    "done": true,
+    "total": 30
+  },
+  "cancelled": false,
+  "errors": [],
+  "skipped": [
+    {
+      "url": "http://127.0.0.1:9101/private/secret",
+      "reason": "robots"
+    }
+  ],
+  "event_order": [
+    "run_id",
+    "discover_started",
+    "robots_checking",
+    "browser_starting",
+    "browser_ready",
+    "page",
+    "page_skipped",
+    "page",
+    "page",
+    "page",
+    "page",
+    "page"
+  ]
+}

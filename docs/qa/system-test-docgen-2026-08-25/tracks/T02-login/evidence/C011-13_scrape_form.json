@@ -1,0 +1,74 @@
+{
+  "status": 200,
+  "resp": {
+    "current_url": "http://127.0.0.1:9102/form",
+    "error": "",
+    "fields": [
+      {
+        "element_id": "",
+        "field_type": "text",
+        "label": "英字",
+        "name": "t",
+        "placeholder": "英字",
+        "required": true
+      },
+      {
+        "element_id": "",
+        "field_type": "number",
+        "label": "n",
+        "name": "n",
+        "placeholder": "",
+        "required": false
+      },
+      {
+        "element_id": "",
+        "field_type": "date",
+        "label": "d",
+        "name": "d",
+        "placeholder": "",
+        "required": false
+      },
+      {
+        "element_id": "",
+        "field_type": "select",
+        "label": "s",
+        "name": "s",
+        "placeholder": "",
+        "required": false
+      },
+      {
+        "element_id": "",
+        "field_type": "radio",
+        "label": "r",
+        "name": "r",
+        "placeholder": "",
+        "required": false
+      },
+      {
+        "element_id": "",
+        "field_type": "checkbox",
+        "label": "c",
+        "name": "c",
+        "placeholder": "",
+        "required": false
+      },
+      {
+        "element_id": "",
+        "field_type": "tel",
+        "label": "tel",
+        "name": "tel",
+        "placeholder": "",
+        "required": false
+      },
+      {
+        "element_id": "",
+        "field_type": "file",
+        "label": "f",
+        "name": "f",
+        "placeholder": "",
+        "required": false
+      }
+    ],
+    "ok": true
+  }
+}

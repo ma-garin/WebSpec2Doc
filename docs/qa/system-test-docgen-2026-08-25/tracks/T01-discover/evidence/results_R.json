@@ -1,0 +1,82 @@
+[
+  {
+    "case": "T01-C015",
+    "verdict": "PASS",
+    "detail": "reached=0pages skip=[] err=False t=0.7s"
+  },
+  {
+    "case": "T01-C016",
+    "verdict": "PASS",
+    "detail": "reached=0pages skip=[] err=True t=50.3s"
+  },
+  {
+    "case": "T01-C017",
+    "verdict": "PASS",
+    "detail": "reached=0pages skip=[] err=False t=0.9s"
+  },
+  {
+    "case": "T01-C018",
+    "verdict": "PASS",
+    "detail": "reached=0pages skip=[] err=False t=0.7s"
+  },
+  {
+    "case": "T01-C019",
+    "verdict": "PASS",
+    "detail": "reached=0pages skip=[] err=False t=0.6s"
+  },
+  {
+    "case": "T01-C020",
+    "verdict": "PASS",
+    "detail": "reached=0pages skip=[] err=False t=0.6s"
+  },
+  {
+    "case": "T01-C021",
+    "verdict": "PASS",
+    "detail": "pages=[] leaked=False skip=[]"
+  },
+  {
+    "case": "T01-C022",
+    "verdict": "PASS",
+    "detail": "pages=[] leaked=False skip=[]"
+  },
+  {
+    "case": "T01-C023",
+    "verdict": "PASS",
+    "detail": "done=True n=0 t=30.8s (cap 90)"
+  },
+  {
+    "case": "T01-C024",
+    "verdict": "PASS",
+    "detail": "done=True n=3 t=4.8s (cap 60)"
+  },
+  {
+    "case": "T01-C044",
+    "verdict": "PASS",
+    "detail": "done=True n=0 t=0.6s (cap 45)"
+  },
+  {
+    "case": "T01-C045",
+    "verdict": "PASS",
+    "detail": "done=True n=5 t=0.7s (cap 90)"
+  },
+  {
+    "case": "T01-C046",
+    "verdict": "PASS",
+    "detail": "pages=['http://127.0.0.1:9101/unicode/日本語ページ', 'http://127.0.0.1:9101/']"
+  },
+  {
+    "case": "T01-C047",
+    "verdict": "PASS",
+    "detail": "pages=['http://127.0.0.1:9101/about']"
+  },
+  {
+    "case": "T01-C048",
+    "verdict": "PASS",
+    "detail": "pages=['http://127.0.0.1:9101/about']"
+  },
+  {
+    "case": "T01-C049",
+    "verdict": "PASS",
+    "detail": "pages=['http://127.0.0.1:9101/about?x=1']"
+  }
+]

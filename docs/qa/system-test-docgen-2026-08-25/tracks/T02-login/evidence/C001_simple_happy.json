@@ -1,0 +1,16 @@
+{
+  "status": 200,
+  "resp": {
+    "auth_path": "/Users/fujimagariyuki/dev/active/webspec2doc/output/127.0.0.1:9102/auth.json",
+    "current_url": "http://127.0.0.1:9102/dashboard",
+    "error": "",
+    "fields": [],
+    "needs_more_fields": false,
+    "success": true
+  },
+  "cookies": [
+    "session=ok"
+  ],
+  "auth_perm": "0o600",
+  "plaintext_secret_in_auth": false
+}

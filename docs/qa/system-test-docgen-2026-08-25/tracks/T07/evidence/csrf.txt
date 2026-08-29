@@ -1,0 +1,6 @@
+=== [CSRF] Origin: null POST -> expect 403 ===
+status=403
+=== [CSRF] Origin: http://evil.com POST -> expect 403 ===
+status=403
+=== [CSRF] no Origin/Referer (curl) POST -> expect allowed(400 validation) ===
+status=400

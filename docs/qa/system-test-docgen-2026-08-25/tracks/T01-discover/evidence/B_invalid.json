@@ -1,0 +1,165 @@
+{
+  "T01-C005": {
+    "url": "",
+    "http": 400,
+    "n_pages": 0,
+    "errors": [],
+    "skipped": [],
+    "elapsed": 0.0,
+    "event_order": [],
+    "hung": false
+  },
+  "T01-C006": {
+    "url": "   ",
+    "http": 400,
+    "n_pages": 0,
+    "errors": [],
+    "skipped": [],
+    "elapsed": 0.0,
+    "event_order": [],
+    "hung": false
+  },
+  "T01-C007": {
+    "url": "ftp://127.0.0.1:9101/",
+    "http": "EXC",
+    "n_pages": 0,
+    "errors": [
+      "__client_exception__ TimeoutError: timed out"
+    ],
+    "skipped": [],
+    "elapsed": 45.3,
+    "event_order": [
+      "error"
+    ],
+    "hung": true
+  },
+  "T01-C008": {
+    "url": "javascript:alert(1)",
+    "http": 200,
+    "n_pages": 0,
+    "errors": [
+      "画面リスト取得に失敗しました"
+    ],
+    "skipped": [],
+    "elapsed": 1.5,
+    "event_order": [
+      "run_id",
+      "discover_started",
+      "robots_checking",
+      "error"
+    ],
+    "hung": false
+  },
+  "T01-C009": {
+    "url": "data:text/html,<h1>x</h1>",
+    "http": 200,
+    "n_pages": 0,
+    "errors": [
+      "画面リスト取得に失敗しました"
+    ],
+    "skipped": [],
+    "elapsed": 2.1,
+    "event_order": [
+      "run_id",
+      "discover_started",
+      "robots_checking",
+      "error"
+    ],
+    "hung": false
+  },
+  "T01-C010": {
+    "url": "127.0.0.1:9101/about",
+    "http": 200,
+    "n_pages": 0,
+    "errors": [],
+    "skipped": [
+      {
+        "url": "https:127.0.0.1:9101/about",
+        "reason": "unsafe_url"
+      }
+    ],
+    "elapsed": 1.7,
+    "event_order": [
+      "run_id",
+      "discover_started",
+      "robots_checking",
+      "browser_starting",
+      "browser_ready",
+      "page_skipped",
+      "done"
+    ],
+    "hung": false
+  },
+  "T01-C011": {
+    "url": "http://テスト.invalid/",
+    "http": 200,
+    "n_pages": 0,
+    "errors": [
+      "画面リスト取得に失敗しました"
+    ],
+    "skipped": [],
+    "elapsed": 0.5,
+    "event_order": [
+      "run_id",
+      "discover_started",
+      "robots_checking",
+      "error"
+    ],
+    "hung": false
+  },
+  "T01-C012": {
+    "url": "http://127.0.0.1:9101/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "http": 200,
+    "n_pages": 3,
+    "errors": [],
+    "skipped": [],
+    "elapsed": 1.5,
+    "event_order": [
+      "run_id",
+      "discover_started",
+      "robots_checking",
+      "browser_starting",
+      "browser_ready",
+      "page",
+      "page",
+      "page",
+      "done"
+    ],
+    "hung": false
+  },
+  "T01-C013": {
+    "url": "http://127.0.0.1:9101/\nfoo",
+    "http": 200,
+    "n_pages": 3,
+    "errors": [],
+    "skipped": [],
+    "elapsed": 0.9,
+    "event_order": [
+      "run_id",
+      "discover_started",
+      "robots_checking",
+      "browser_starting",
+      "browser_ready",
+      "page",
+      "page",
+      "page",
+      "done"
+    ],
+    "hung": false
+  },
+  "T01-C014": {
+    "url": "--version",
+    "http": 200,
+    "n_pages": 0,
+    "errors": [
+      "画面リスト取得に失敗しました"
+    ],
+    "skipped": [],
+    "elapsed": 0.3,
+    "event_order": [
+      "run_id",
+      "error"
+    ],
+    "hung": false
+  }
+}

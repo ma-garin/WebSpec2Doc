@@ -1,0 +1,5 @@
+=== ps snapshot 1 ===
+=== ps snapshot 2 ===
+13747 /opt/homebrew/Cellar/python@3.12/3.12.13_2/Frameworks/Python.framework/Versions/3.12/Resources/Python.app/Contents/MacOS/Python src/main.py --login-simple --login-simple-url http://127.0.0.1:9102/slow --auth output/127.0.0.1:9102/auth.json
+=== ps snapshot 3 ===
+13747 /opt/homebrew/Cellar/python@3.12/3.12.13_2/Frameworks/Python.framework/Versions/3.12/Resources/Python.app/Contents/MacOS/Python src/main.py --login-simple --login-simple-url http://127.0.0.1:9102/slow --auth output/127.0.0.1:9102/auth.json

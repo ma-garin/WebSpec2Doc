@@ -16,6 +16,7 @@ if str(_SRC) not in sys.path:
 def create_app() -> Flask:
     from web.auth import auth_guard, ensure_secret_key
     from web.routes import (
+        test_steps,
         account,
         admin,
         api_v1,
@@ -111,6 +112,7 @@ def create_app() -> Flask:
     app.register_blueprint(crawl.bp)
     app.register_blueprint(auto_run.bp)
     app.register_blueprint(test_activity.bp)
+    app.register_blueprint(test_steps.bp)
     app.register_blueprint(review.bp)
     app.register_blueprint(runs.bp)
     app.register_blueprint(schedule.bp)

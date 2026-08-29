@@ -2526,6 +2526,50 @@
         "error_path",
         "evidence"
       ]
+    },
+    {
+      "feature_id": "nocode_step_editor",
+      "name": "ステップ編集（ノーコードでテストを組み立てる）",
+      "risk_level": "high",
+      "status": "implemented",
+      "ui_files": [
+        "templates/partials/view-ta-implementation.html",
+        "static/js/test-step-editor.js",
+        "static/css/test-step-editor.css"
+      ],
+      "route_files": [
+        "web/routes/test_steps.py"
+      ],
+      "core_files": [
+        "web/services/test_step_store.py"
+      ],
+      "symbols": [
+        "validate",
+        "import_from_candidates",
+        "to_spec_ts",
+        "StepValidationError"
+      ],
+      "outputs": [
+        "output/<domain>/qa_process/test_steps.json",
+        "output/<domain>/qa_process/edited.spec.ts"
+      ],
+      "persistence": [
+        "output/<domain>/qa_process/test_steps.json"
+      ],
+      "failure_modes": [
+        "未知の動作・重複 test_id・空ステップは、どこが悪いか名指しして 400 で拒否する",
+        "対象や値が必要な動作でそれが空なら保存させない（画面側も入力欄を無効化する）",
+        "画面を開く の値が http(s) URL でなければ拒否する",
+        "保存済みファイルが壊れている場合は空として上書きせず 409 で知らせる",
+        "取り込みは保存せず候補を返すのみ（既存の編集を勝手に消さない）",
+        "未保存の状態で生成しようとした場合は先に保存を促す"
+      ],
+      "required_tests": [
+        "happy_path",
+        "validation_path",
+        "error_path",
+        "evidence"
+      ]
     }
   ]
 }

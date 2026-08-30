@@ -159,11 +159,38 @@ def notifier_config_from_mapping(values: dict[str, Any]) -> NotifierConfig | Non
     )
 
 
+# 通知を外へ出してはいけない状況。ここで止めないと、テストや検証のたびに
+# 実在の Slack / メール宛先へ「AutoRun失敗: https://example.com」が飛ぶ。
+# 実際にこの取りこぼしで、開発中ずっと通知を送り続けていた。
+_SUPPRESS_ENV = "WEBSPEC2DOC_DISABLE_NOTIFY"
+
+
+#: 通知そのものを検証するテストだけが立てる。実際の宛先へは送らず、
+#: 送信関数をモックしたうえでこの旗を立てること。
+ALLOW_ENV = "WEBSPEC2DOC_ALLOW_NOTIFY_IN_TEST"
+
+
+def notifications_suppressed() -> tuple[bool, str]:
+    """外部への通知を止めるべきかと、その理由を返す。"""
+    if os.environ.get(ALLOW_ENV, "").strip().lower() in ("1", "true", "on", "yes"):
+        return False, ""
+    if os.environ.get("PYTEST_CURRENT_TEST"):
+        return True, "テスト実行中（PYTEST_CURRENT_TEST）"
+    raw = os.environ.get(_SUPPRESS_ENV, "").strip().lower()
+    if raw in ("1", "true", "on", "yes"):
+        return True, f"{_SUPPRESS_ENV} により無効化"
+    return False, ""
+
+
 def _send_notification(
     config: NotifierConfig,
     notification: AnyNotification,
     event_type: str,
 ) -> bool:
+    suppressed, why = notifications_suppressed()
+    if suppressed:
+        logger.info("通知を送信しません（%s）: %s", why, event_type)
+        return False
     dispatch = {
         NOTIFIER_SLACK: _send_text_webhook,
         NOTIFIER_TEAMS: _send_text_webhook,

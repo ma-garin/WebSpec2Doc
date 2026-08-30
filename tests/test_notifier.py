@@ -5,6 +5,19 @@ from dataclasses import dataclass
 from unittest.mock import MagicMock
 
 import pytest
+
+from web.services.notifier import ALLOW_ENV as _ALLOW_ENV
+
+
+@pytest.fixture(autouse=True)
+def _allow_notify_in_this_module(monkeypatch):
+    """このモジュールだけ通知の抑止を解除する。
+
+    通常のテストでは外部へ送らない（開発中、実在の Slack へ
+    「AutoRun失敗」が飛び続けた）。ここは送信関数そのものを
+    検証するため、モック済みの経路に限り通す。
+    """
+    monkeypatch.setenv(_ALLOW_ENV, "1")
 from web.services.notifier import (
     NOTIFIER_EMAIL,
     NOTIFIER_SLACK,

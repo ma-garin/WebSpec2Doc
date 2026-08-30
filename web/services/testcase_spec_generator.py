@@ -79,6 +79,11 @@ def _action_lines(action: Mapping[str, Any]) -> list[str]:
         return [
             f"  await selectByValueOrLabel(page, {_ts(locator)}, {value});",
         ]
+    if kind == "click":
+        # 編集されたロケータをそのまま使う。無い場合だけラベル一致に落とす。
+        if locator:
+            return [f"  await page.locator({_ts(locator)}).first().click();"]
+        return [f"  await clickByLabel(page, {_ts(action.get('text'))});"]
     if kind == "click_text":
         return [f"  await clickByLabel(page, {_ts(action.get('text'))});"]
     if kind == "click_link_to":
@@ -210,7 +215,10 @@ def generate_spec(rows: Sequence[Mapping[str, Any]], out_dir: Path) -> dict[str,
         emitted_after_input = False
         for action in row.get("actions") or []:
             # 送信を押す前に「入力がどうなったか」を見る検証を差し込む
-            if after_input and not emitted_after_input and action.get("type") == "click_text":
+            if after_input and not emitted_after_input and action.get("type") in {
+                "click_text",
+                "click",
+            }:
                 for assertion in after_input:
                     lines.extend(_assertion_lines(assertion))
                 emitted_after_input = True

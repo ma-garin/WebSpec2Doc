@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>案01 Mission Control — テスト自動化</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0A0E14;--bg2:#10151D;--bg3:#161C26;--line:#1F2733;--line2:#2A3441;
+  --tx:#E6EBF2;--tx2:#8B97A8;--tx3:#5A6675;
+  --ok:#3DDC97;--ng:#FF5C5C;--wa:#FFB547;--info:#5AA9FF;
+  --ok-dim:rgba(61,220,151,.14);--ng-dim:rgba(255,92,92,.14);--wa-dim:rgba(255,181,71,.14);
+  --sans:'Inter','Noto Sans JP',system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--sans);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.idea{position:fixed;top:0;left:0;right:0;height:26px;background:#000;color:#9AA4B2;font-size:11px;display:flex;align-items:center;justify-content:center;gap:16px;z-index:9;letter-spacing:.02em}
+.idea b{color:#fff}
+.app{position:absolute;top:26px;left:0;right:0;bottom:0;display:grid;grid-template-rows:52px 1fr;overflow:hidden}
+
+/* top */
+.top{display:flex;align-items:center;gap:20px;padding:0 22px;border-bottom:1px solid var(--line);background:var(--bg2)}
+.logo{display:flex;align-items:center;gap:9px;font-weight:600;letter-spacing:-.01em}
+.logo i{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,var(--ok),var(--info));display:block}
+.site{display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--line2);border-radius:7px;background:var(--bg3);font-weight:500}
+.site .mono{color:var(--tx2)}
+.top .sp{flex:1}
+.live{display:flex;align-items:center;gap:8px;color:var(--ok);font-family:var(--mono);font-size:12px}
+.live i{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 4px var(--ok-dim);animation:p 1.6s infinite}
+@keyframes p{50%{box-shadow:0 0 0 7px transparent}}
+.btn{padding:7px 13px;border-radius:7px;border:1px solid var(--line2);background:var(--bg3);color:var(--tx);font:inherit;font-weight:500;cursor:pointer}
+.btn.pri{background:var(--ok);color:#052A1B;border-color:transparent;font-weight:600}
+.mono{font-family:var(--mono)}
+
+/* grid */
+.grid{display:grid;grid-template-columns:300px 1fr 340px;grid-template-rows:150px 1fr;gap:1px;background:var(--line);overflow:hidden}
+.cell{background:var(--bg);padding:18px 20px;overflow:hidden;display:flex;flex-direction:column;min-height:0}
+.h{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px}
+.h b{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);font-weight:600}
+.h span{font-size:11px;color:var(--tx3);font-family:var(--mono)}
+
+/* KPI strip */
+.kpis{grid-column:1/4;display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--line);padding:0}
+.kpi{background:var(--bg);padding:20px 22px;display:flex;flex-direction:column;justify-content:center}
+.kpi small{font-size:11px;color:var(--tx3);letter-spacing:.06em;text-transform:uppercase;font-weight:600}
+.kpi big{font-size:34px;font-weight:600;letter-spacing:-.03em;line-height:1.1;margin:6px 0 4px;font-variant-numeric:tabular-nums}
+.kpi em{font-style:normal;font-size:12px;color:var(--tx2);font-family:var(--mono)}
+.kpi.ok big{color:var(--ok)}.kpi.ng big{color:var(--ng)}.kpi.wa big{color:var(--wa)}
+.spark{display:flex;gap:3px;align-items:flex-end;height:26px;margin-top:8px}
+.spark i{flex:1;background:var(--ok);border-radius:1px;opacity:.7}
+.spark i.d{background:var(--ng)}
+
+/* suites (left) */
+.suite{padding:10px 0;border-bottom:1px solid var(--line)}
+.suite:last-child{border:0}
+.suite .n{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.suite .n b{font-weight:500}
+.suite .n span{font-family:var(--mono);font-size:11px;color:var(--tx2)}
+.bar{height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;display:flex}
+.bar i{display:block;height:100%}
+.bar .g{background:var(--ok)}.bar .r{background:var(--ng)}.bar .y{background:var(--wa)}.bar .run{background:var(--info);animation:sh 1.2s infinite linear;background:repeating-linear-gradient(90deg,var(--info) 0 6px,transparent 6px 12px)}
+@keyframes sh{to{background-position:24px 0}}
+
+/* failures (center) */
+.fl{display:flex;flex-direction:column;gap:8px;overflow:auto;min-height:0}
+.f{display:grid;grid-template-columns:132px 1fr auto;gap:14px;padding:12px 14px;border:1px solid var(--line);border-radius:9px;background:var(--bg2)}
+.f:hover{border-color:var(--line2)}
+.f.sel{border-color:var(--ng);background:var(--ng-dim)}
+.shot{width:132px;height:82px;border-radius:5px;background:#1C2430;border:1px solid var(--line2);position:relative;overflow:hidden}
+.shot::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 60%,rgba(0,0,0,.5))}
+.shot .box{position:absolute;border:2px solid var(--ng);border-radius:3px;box-shadow:0 0 0 2px rgba(255,92,92,.25)}
+.shot .ui{position:absolute;left:8px;right:8px;height:6px;border-radius:2px;background:#2A3441}
+.f .t{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.f .t code{font-family:var(--mono);font-size:11px;color:var(--tx2)}
+.f .t b{font-weight:500}
+.tag{font-size:10px;padding:2px 7px;border-radius:4px;font-weight:600;letter-spacing:.03em}
+.tag.ng{background:var(--ng-dim);color:var(--ng)}.tag.wa{background:var(--wa-dim);color:var(--wa)}.tag.ok{background:var(--ok-dim);color:var(--ok)}.tag.mute{background:var(--bg3);color:var(--tx2)}
+.f p{color:var(--tx2);font-size:12px}
+.f p code{font-family:var(--mono);color:var(--tx);background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:11px}
+.f .act{display:flex;flex-direction:column;gap:6px;justify-content:center}
+.f .act .btn{padding:5px 10px;font-size:12px;white-space:nowrap}
+
+/* right: drift + log */
+.right{display:grid;grid-template-rows:auto 1fr;gap:0;padding:0}
+.drift{padding:18px 20px;border-bottom:1px solid var(--line)}
+.d{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);align-items:flex-start}
+.d:last-child{border:0}
+.d i{width:8px;height:8px;border-radius:50%;margin-top:6px;flex:none}
+.d .ng{background:var(--ng)}.d .wa{background:var(--wa)}.d .info{background:var(--info)}
+.d b{font-weight:500;display:block}
+.d span{font-size:11px;color:var(--tx2)}
+.log{padding:14px 20px;font-family:var(--mono);font-size:11px;color:var(--tx2);overflow:auto;line-height:1.7;background:#070A0F}
+.log .t{color:var(--tx3)}.log .ok{color:var(--ok)}.log .ng{color:var(--ng)}.log .k{color:var(--info)}
+</style>
+</head>
+<body>
+<div class="idea"><b>案 01 — Mission Control</b> テストは「監視」である。運用画面の文法で、今この瞬間の健全性を一画面に。ダーク・高密度・数字が主役</div>
+<div class="app">
+  <div class="top">
+    <div class="logo"><i></i>WebSpec2Doc</div>
+    <div class="site">DemoMart <span class="mono">127.0.0.1:8766</span> ▾</div>
+    <div class="sp"></div>
+    <div class="live"><i></i>RUN #418 実行中 · 71 / 116 · 1:42</div>
+    <button class="btn">失敗のみ再実行</button>
+    <button class="btn pri">▶ 全件実行</button>
+  </div>
+
+  <div class="grid">
+    <div class="kpis">
+      <div class="kpi ok"><small>成功率 · 直近30回</small><big>94.0%</big><em>▲ 1.7pt vs 先週</em>
+        <div class="spark"><i style="height:60%"></i><i style="height:70%"></i><i style="height:65%"></i><i style="height:80%"></i><i class="d" style="height:40%"></i><i style="height:85%"></i><i style="height:90%"></i><i style="height:88%"></i><i class="d" style="height:50%"></i><i style="height:92%"></i><i style="height:95%"></i><i style="height:94%"></i></div></div>
+      <div class="kpi ng"><small>失敗 · 今回</small><big>7</big><em>同一原因 4 · 個別 3</em></div>
+      <div class="kpi wa"><small>不安定 Flaky</small><big>2</big><em>再試行で回復 · 要修正</em></div>
+      <div class="kpi"><small>未対応の変更</small><big>3</big><em>drift 検知 · 影響 4 テスト</em></div>
+      <div class="kpi"><small>平均所要 · 並列 4</small><big>4:12</big><em>P95 6.8s / test</em></div>
+    </div>
+
+    <div class="cell">
+      <div class="h"><b>スイート</b><span>7 画面 · 116 tests</span></div>
+      <div class="suite"><div class="n"><b>P004 決済</b><span>27/31 · 3 ng</span></div><div class="bar"><i class="g" style="width:78%"></i><i class="r" style="width:10%"></i><i class="y" style="width:4%"></i></div></div>
+      <div class="suite"><div class="n"><b>P006 ログイン</b><span>実行中</span></div><div class="bar"><i class="g" style="width:55%"></i><i class="run" style="width:45%"></i></div></div>
+      <div class="suite"><div class="n"><b>P003 商品一覧</b><span>24/24</span></div><div class="bar"><i class="g" style="width:100%"></i></div></div>
+      <div class="suite"><div class="n"><b>P005 問い合わせ</b><span>26/28 · 2 ng</span></div><div class="bar"><i class="g" style="width:93%"></i><i class="r" style="width:7%"></i></div></div>
+      <div class="suite"><div class="n"><b>P001 トップ</b><span>12/12</span></div><div class="bar"><i class="g" style="width:100%"></i></div></div>
+      <div class="suite"><div class="n"><b>P007 マイページ</b><span>0 · 未作成</span></div><div class="bar"></div></div>
+      <div class="suite"><div class="n"><b>P002 キャンペーン</b><span>0 · 未作成</span></div><div class="bar"></div></div>
+    </div>
+
+    <div class="cell">
+      <div class="h"><b>失敗 · 原因でまとめて表示</b><span>7 tests · 4 causes</span></div>
+      <div class="fl">
+        <div class="f sel">
+          <div class="shot"><span class="ui" style="top:12px"></span><span class="ui" style="top:26px;width:60%"></span><span class="ui" style="top:40px"></span><span class="box" style="left:70px;top:54px;width:50px;height:16px"></span></div>
+          <div>
+            <div class="t"><span class="tag ng">4 tests</span><code>P004</code><b>送信ボタンが見つからない</b></div>
+            <p>ロケータ <code>button[name="submit_order"]</code> が 0 件。8/29 のクロールで同位置に <code>name="place_order"</code> を検出（一致 0.94）。<b style="color:var(--tx)">仕様変更の可能性</b>。</p>
+            <p style="margin-top:4px;color:var(--tx3)">PW-0041 · 0043 · 0045 · 0048</p>
+          </div>
+          <div class="act"><button class="btn pri">修正案を適用</button><button class="btn">Trace</button></div>
+        </div>
+        <div class="f">
+          <div class="shot"><span class="ui" style="top:12px"></span><span class="ui" style="top:26px;width:40%"></span><span class="box" style="left:20px;top:44px;width:90px;height:22px"></span></div>
+          <div>
+            <div class="t"><span class="tag ng">2 tests</span><code>P005</code><b>送信後のメッセージが出ない</b></div>
+            <p>期待 <code>お問い合わせを受け付けました</code> · 実際 空。応答 3.2s で検証タイムアウト 3.0s を超過。</p>
+            <p style="margin-top:4px;color:var(--tx3)">PW-0072 · 0075</p>
+          </div>
+          <div class="act"><button class="btn">待機を延長</button><button class="btn">Trace</button></div>
+        </div>
+        <div class="f">
+          <div class="shot"><span class="ui" style="top:12px"></span><span class="ui" style="top:26px"></span><span class="box" style="left:8px;top:40px;width:116px;height:12px"></span></div>
+          <div>
+            <div class="t"><span class="tag wa">Flaky</span><code>P004</code><b>合計金額の検証が不安定</b></div>
+            <p>5 回中 2 回失敗。金額の非同期計算を待たずに検証。ロケータは CSS パス依存（安定度 低）。</p>
+            <p style="margin-top:4px;color:var(--tx3)">PW-0044</p>
+          </div>
+          <div class="act"><button class="btn">待機条件を修正</button><button class="btn">Trace</button></div>
+        </div>
+        <div class="f">
+          <div class="shot"><span class="ui" style="top:12px;width:30%"></span><span class="ui" style="top:26px"></span><span class="ui" style="top:40px"></span></div>
+          <div>
+            <div class="t"><span class="tag ng">1 test</span><code>P006</code><b>ログイン後の遷移先が違う</b></div>
+            <p>期待 <code>/mypage.html</code> · 実際 <code>/index.html</code>。リダイレクトが変わった可能性。</p>
+            <p style="margin-top:4px;color:var(--tx3)">PW-0091</p>
+          </div>
+          <div class="act"><button class="btn">期待値を更新</button><button class="btn">Trace</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cell right">
+      <div class="drift">
+        <div class="h"><b>サイトの変更 · 実行前に検知</b><span>8/29 22:40</span></div>
+        <div class="d"><i class="ng"></i><div><b>P004 送信ボタンの name 変更</b><span>submit_order → place_order · 4 tests に影響</span></div></div>
+        <div class="d"><i class="info"></i><div><b>P008 注文完了 画面が追加</b><span>到達するテスト 0 · 生成を提案</span></div></div>
+        <div class="d"><i class="wa"></i><div><b>P001 見出し文言の変更</b><span>影響なし · 確認のみ</span></div></div>
+      </div>
+      <div class="log">
+<div><span class="t">23:14:02</span> <span class="k">run</span> #418 start · chromium · workers=4 · retries=2</div>
+<div><span class="t">23:14:03</span> <span class="ok">pass</span> PW-0001 トップ表示 <span class="t">412ms</span></div>
+<div><span class="t">23:14:03</span> <span class="ok">pass</span> PW-0002 ナビ遷移 <span class="t">688ms</span></div>
+<div><span class="t">23:14:05</span> <span class="ng">fail</span> PW-0041 決済 16桁 <span class="t">15.2s timeout</span></div>
+<div><span class="t">23:14:05</span>   locator button[name="submit_order"] → 0 matches</div>
+<div><span class="t">23:14:05</span>   similar: button[name="place_order"] (score 0.94)</div>
+<div><span class="t">23:14:06</span> <span class="ok">pass</span> PW-0021 一覧ソート <span class="t">1.1s</span></div>
+<div><span class="t">23:14:07</span> <span class="ng">fail</span> PW-0043 必須空送信 <span class="t">15.0s timeout</span></div>
+<div><span class="t">23:14:09</span> <span class="ok">pass</span> PW-0044 合計金額 <span class="t">retry 1/2 · 2.3s</span></div>
+<div><span class="t">23:14:11</span> <span class="k">run</span> P006 ログイン 12/21 …</div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

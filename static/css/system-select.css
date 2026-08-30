@@ -84,7 +84,7 @@ a.sysselect-text-btn { display: inline-flex; align-items: center; text-decoratio
 
 .sysselect-grid {
   display: grid;
-  /* カードは 4 枚（01 ドキュメント作成 / 02 テスト活動支援 / 03 AutoRun / 04 CLI・API）。
+  /* カードは 4 枚（01 ドキュメント作成 / 02 テスト自動化 / 03 AutoRun / 04 CLI・API）。
      PC 幅では 4 枚が横一列に収まり、狭い幅では自動で折り返す。 */
   grid-template-columns: repeat(auto-fit, minmax(272px, 1fr));
   gap: var(--space-4);

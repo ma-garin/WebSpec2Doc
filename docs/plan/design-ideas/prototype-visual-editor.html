@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1440">
+<title>WebSpec2Doc テスト自動化 — 操作プロトタイプ</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F6F7F9;--sf:#FFFFFF;--line:#E4E7EC;--line2:#D0D5DD;
+  --tx:#101828;--tx2:#475467;--tx3:#98A2B3;
+  --ac:#2563EB;--ac-bg:#EFF4FF;--ac-dk:#1D4ED8;
+  --ok:#12B76A;--ok-bg:#DCFAE6;--ok-tx:#067647;
+  --ng:#F04438;--ng-bg:#FEE4E2;--ng-tx:#B42318;
+  --wa:#F79009;--wa-bg:#FEF0C7;--wa-tx:#B54708;
+  --sans:'Inter','Noto Sans JP',system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--sans);font-size:13px;line-height:1.5;overflow:hidden}
+button{font:inherit;cursor:pointer}
+input,select{font:inherit}
+code{font-family:var(--mono);font-size:11px}
+.app{position:absolute;inset:0;display:grid;grid-template-columns:56px 280px 1fr}
+
+/* ---------- rail ---------- */
+.rail{background:var(--sf);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:6px}
+.rail .lg{width:30px;height:30px;border-radius:8px;background:var(--tx);color:#fff;display:grid;place-items:center;font-weight:700;margin-bottom:12px;font-size:14px}
+.rail button{width:38px;height:38px;border-radius:9px;border:0;background:none;color:var(--tx3);font-size:16px;position:relative}
+.rail button:hover{background:var(--bg);color:var(--tx)}
+.rail button.on{background:var(--ac-bg);color:var(--ac)}
+.rail button .bd{position:absolute;top:4px;right:4px;min-width:16px;height:16px;border-radius:8px;background:var(--ng);color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center;padding:0 4px;font-family:var(--mono)}
+.rail button .bd.wa{background:var(--wa)}
+.rail .sp{flex:1}
+.rail .tip{position:absolute;left:46px;top:50%;transform:translateY(-50%);background:var(--tx);color:#fff;font-size:11px;padding:4px 8px;border-radius:6px;white-space:nowrap;opacity:0;pointer-events:none;transition:.12s}
+.rail button:hover .tip{opacity:1}
+
+/* ---------- list ---------- */
+.list{background:var(--sf);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.list-h{padding:16px 16px 10px}
+.list-h h2{font-size:15px;font-weight:700;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
+.list-h h2 span{font-size:11px;color:var(--tx3);font-weight:500;font-family:var(--mono)}
+.list-h p{font-size:12px;color:var(--tx3);margin-top:2px}
+.search{margin:0 12px 8px;position:relative}
+.search input{width:100%;padding:8px 44px 8px 10px;border:1px solid var(--line);border-radius:8px;font-size:12.5px;outline:none}
+.search input:focus{border-color:var(--ac);box-shadow:0 0 0 3px var(--ac-bg)}
+.search kbd{position:absolute;right:8px;top:8px;font-family:var(--mono);font-size:10px;border:1px solid var(--line);border-radius:4px;padding:1px 5px;color:var(--tx3);background:#fff}
+.fchips{display:flex;gap:4px;padding:0 12px 8px;flex-wrap:wrap}
+.fchip{font-size:11px;padding:3px 8px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--tx2);font-weight:500;display:inline-flex;gap:5px;align-items:center}
+.fchip.on{background:var(--tx);color:#fff;border-color:var(--tx)}
+.fchip i{width:6px;height:6px;border-radius:50%}
+.items{overflow:auto;flex:1;min-height:0;padding-bottom:8px}
+.grp{padding:10px 16px 4px;font-size:11px;font-weight:600;color:var(--tx3);letter-spacing:.06em;display:flex;justify-content:space-between;align-items:center}
+.grp span{font-weight:400;font-family:var(--mono)}
+.it{display:flex;align-items:center;gap:10px;padding:8px 16px;cursor:pointer;border-left:2px solid transparent;user-select:none}
+.it:hover{background:var(--bg)}
+.it.on{background:var(--ac-bg);border-left-color:var(--ac)}
+.it i{width:8px;height:8px;border-radius:50%;flex:none}
+.i-pass{background:var(--ok)}.i-fail{background:var(--ng)}.i-flaky{background:var(--wa)}.i-new{background:var(--line2)}.i-fixed{background:var(--ac)}.i-running{background:var(--ac);animation:blink .8s infinite}
+@keyframes blink{50%{opacity:.25}}
+.it b{font-weight:500;font-size:12.5px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.it code{color:var(--tx3);font-size:10px}
+.it.empty{color:var(--tx3);cursor:default}
+.list-f{padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px}
+.btn{padding:8px 12px;border-radius:8px;border:1px solid var(--line2);background:var(--sf);font-weight:500;color:var(--tx);font-size:12.5px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{border-color:var(--tx3);background:#fff}
+.btn.pri{background:var(--ac);border-color:var(--ac);color:#fff}
+.btn.pri:hover{background:var(--ac-dk)}
+.btn.ok{background:var(--ok-tx);border-color:var(--ok-tx);color:#fff}
+.btn.sm{padding:5px 9px;font-size:12px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.ghost{border-color:transparent;background:transparent}
+
+/* ---------- editor ---------- */
+.main{display:grid;grid-template-rows:56px 1fr;min-height:0;position:relative}
+.ed-h{display:flex;align-items:center;gap:12px;padding:0 22px;background:var(--sf);border-bottom:1px solid var(--line)}
+.ed-h h1{font-size:16px;font-weight:700;letter-spacing:-.01em;max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ed-h h1[contenteditable]:focus{outline:2px solid var(--ac);border-radius:4px;padding:0 4px}
+.ed-h code{color:var(--tx3)}
+.pill{font-size:11px;padding:3px 9px;border-radius:999px;font-weight:600;white-space:nowrap}
+.p-fail{background:var(--ng-bg);color:var(--ng-tx)}.p-pass{background:var(--ok-bg);color:var(--ok-tx)}.p-flaky{background:var(--wa-bg);color:var(--wa-tx)}.p-new{background:#F2F4F7;color:var(--tx2)}.p-fixed{background:var(--ac-bg);color:var(--ac)}.p-running{background:var(--ac-bg);color:var(--ac)}
+.sp{flex:1}
+.hist{display:flex;gap:3px;align-items:center}
+.hist i{width:9px;height:18px;border-radius:2px;background:var(--line)}
+.hist i.p{background:var(--ok)}.hist i.f{background:var(--ng)}.hist i.w{background:var(--wa)}
+.hist span{font-size:11px;color:var(--tx3);margin-left:6px}
+
+.ed-b{display:grid;grid-template-columns:400px 1fr;min-height:0}
+.steps{padding:16px 18px 18px 22px;overflow:auto;border-right:1px solid var(--line);background:var(--sf)}
+.sec{font-size:11px;font-weight:600;color:var(--tx3);letter-spacing:.06em;margin:6px 0 8px;display:flex;justify-content:space-between}
+.st{display:grid;grid-template-columns:24px 1fr auto;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:var(--sf);cursor:pointer;position:relative}
+.st:hover{border-color:var(--line2)}
+.st.on{border-color:var(--ac);box-shadow:0 0 0 3px var(--ac-bg)}
+.st.ng{border-color:var(--ng);background:#FFFBFA}
+.st.run{border-color:var(--ac);background:var(--ac-bg)}
+.st.done .n{background:var(--ok-bg);color:var(--ok-tx)}
+.st .n{width:24px;height:24px;border-radius:50%;background:var(--bg);display:grid;place-items:center;font-size:11px;font-weight:600;color:var(--tx2);font-family:var(--mono)}
+.st.ng .n{background:var(--ng);color:#fff}
+.st.run .n{background:var(--ac);color:#fff}
+.st .v{font-weight:600;font-size:13px}
+.st .v em{font-style:normal;color:var(--ac);font-weight:500}
+.st .loc{font-family:var(--mono);font-size:11px;color:var(--tx2);margin-top:3px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.h{font-size:10px;padding:1px 6px;border-radius:4px;font-family:var(--sans);font-weight:600;white-space:nowrap}
+.h-high{background:var(--ok-bg);color:var(--ok-tx)}.h-mid{background:var(--wa-bg);color:var(--wa-tx)}.h-low{background:var(--ng-bg);color:var(--ng-tx)}
+.st .err{grid-column:2/4;margin-top:6px;padding:8px 10px;background:var(--ng-bg);border-radius:7px;color:var(--ng-tx);font-size:12px;line-height:1.55}
+.st .err b{display:block;color:#7A271A}
+.st .fix{grid-column:2/4;margin-top:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.st .fix code{background:var(--ok-bg);color:var(--ok-tx);padding:2px 6px;border-radius:4px}
+.st .fixed-note{grid-column:2/4;margin-top:6px;font-size:11.5px;color:var(--ac);font-weight:500}
+.st .x{opacity:0;border:0;background:none;color:var(--tx3);font-size:14px;width:22px;height:22px;border-radius:5px}
+.st:hover .x{opacity:1}.st .x:hover{background:var(--ng-bg);color:var(--ng-tx)}
+.add{border:1px dashed var(--line2);border-radius:10px;padding:10px;text-align:center;color:var(--tx3);font-size:12px;cursor:pointer;background:none;width:100%}
+.add:hover{border-color:var(--ac);color:var(--ac);background:var(--ac-bg)}
+.add.on{border-color:var(--ac);color:var(--ac);background:var(--ac-bg);border-style:solid}
+
+.view{display:grid;grid-template-rows:40px 1fr;min-height:0;background:#EEF0F3;position:relative}
+.view-h{display:flex;align-items:center;gap:10px;padding:0 18px;font-size:12px;color:var(--tx2);border-bottom:1px solid var(--line);background:var(--sf)}
+.seg{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.seg button{padding:4px 10px;font-weight:500;border:0;background:#fff;color:var(--tx2);font-size:12px}
+.seg button.on{background:var(--tx);color:#fff}
+.stage{padding:22px;display:grid;place-items:center;min-height:0;position:relative}
+.browser{width:100%;max-width:820px;height:520px;background:#fff;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.06),0 12px 32px rgba(16,24,40,.12);overflow:hidden;position:relative;border:1px solid var(--line);display:flex;flex-direction:column}
+.browser .bar{height:30px;background:#F9FAFB;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:6px;padding:0 12px;flex:none}
+.browser .bar i{width:9px;height:9px;border-radius:50%;background:#E4E7EC}
+.browser .bar span{margin-left:8px;font-family:var(--mono);font-size:10px;color:var(--tx3);background:#fff;border:1px solid var(--line);border-radius:5px;padding:2px 10px;flex:1}
+.page{padding:22px 28px;font-size:12px;color:var(--tx2);position:relative;flex:1;overflow:hidden}
+.page h3{font-size:16px;color:var(--tx);margin-bottom:12px}
+.page .fld{display:grid;grid-template-columns:110px 1fr;gap:8px;align-items:center;margin-bottom:9px}
+.page .inp{height:28px;border:1px solid var(--line2);border-radius:5px;background:#fff;padding:0 8px;display:flex;align-items:center;color:var(--tx);font-size:12px}
+.page .inp.focus{border-color:var(--ac);box-shadow:0 0 0 2px var(--ac-bg)}
+.page .inp.err{border-color:var(--ng)}
+.page .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.page .cta{margin-top:12px;display:inline-block;padding:8px 18px;background:#111;color:#fff;border-radius:6px;font-weight:600;font-size:12px}
+.page .cta.sec{background:#fff;color:#111;border:1px solid #111;margin-left:8px}
+.page .alert{margin-top:10px;padding:8px 12px;border-radius:6px;background:var(--ng-bg);color:var(--ng-tx);font-weight:500;font-size:12px}
+.page .alert.ok{background:var(--ok-bg);color:var(--ok-tx)}
+.page .alert.hidden{visibility:hidden}
+.page .nav{display:flex;gap:14px;font-size:12px;margin-bottom:14px;color:var(--tx)}
+.page .nav span{padding:2px 0;border-bottom:2px solid transparent}
+.page .hero{height:70px;border-radius:8px;background:linear-gradient(90deg,#EFF4FF,#F6F7F9);margin-bottom:14px;display:flex;align-items:center;padding:0 16px;color:var(--tx);font-weight:700;font-size:14px}
+.page .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.page .card{border:1px solid var(--line);border-radius:8px;padding:10px;font-size:11px;color:var(--tx)}
+.page .card i{display:block;height:44px;background:#F2F4F7;border-radius:5px;margin-bottom:6px}
+.page .card b{display:block}
+.page .price{color:var(--tx2)}
+.page .total{display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid var(--line);margin-top:10px;font-weight:600;color:var(--tx)}
+.page table{width:100%;border-collapse:collapse;font-size:11px;color:var(--tx)}
+.page td,.page th{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left}
+.page [data-el]{position:relative}
+.page.pick [data-el]{cursor:crosshair}
+.page.pick [data-el]:hover{outline:2px dashed var(--ac);outline-offset:2px}
+.hl{position:absolute;border:2px solid var(--ac);border-radius:6px;pointer-events:none;box-shadow:0 0 0 4px rgba(37,99,235,.15);transition:all .18s;z-index:3}
+.hl::before{content:attr(data-l);position:absolute;top:-22px;left:-2px;background:var(--ac);color:#fff;font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:4px;white-space:nowrap}
+.hl.ng{border-color:var(--ng);box-shadow:0 0 0 4px rgba(240,68,56,.18);border-style:dashed}.hl.ng::before{background:var(--ng)}
+.hl.ok{border-color:var(--ok);box-shadow:0 0 0 4px rgba(18,183,106,.18)}.hl.ok::before{background:var(--ok)}
+.hl.hide{display:none}
+.strip{position:absolute;bottom:14px;left:22px;right:22px;display:flex;gap:6px;align-items:center;background:rgba(255,255,255,.94);backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:10px;padding:8px 10px;z-index:4}
+.strip .th{width:56px;height:36px;border-radius:5px;background:#E4E7EC;border:1px solid var(--line2);position:relative;cursor:pointer;flex:none}
+.strip .th:hover{border-color:var(--tx3)}
+.strip .th.on{outline:2px solid var(--ac)}
+.strip .th.ng{outline:2px solid var(--ng)}
+.strip .th.na{opacity:.4}
+.strip .th b{position:absolute;bottom:-1px;left:-1px;font-size:9px;font-family:var(--mono);background:#fff;padding:0 3px;border-radius:3px 0 0 0;color:var(--tx3)}
+.strip .lab{margin-left:auto;font-size:11px;color:var(--tx2)}
+.pickbar{position:absolute;top:52px;left:50%;transform:translateX(-50%);background:var(--tx);color:#fff;padding:8px 14px;border-radius:999px;font-size:12px;z-index:5;display:flex;gap:12px;align-items:center;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+.pickbar button{background:rgba(255,255,255,.15);border:0;color:#fff;border-radius:6px;padding:3px 9px;font-size:11px}
+
+/* popover for picked element */
+.pop{position:absolute;z-index:6;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 32px rgba(16,24,40,.18);padding:12px;width:300px}
+.pop h6{font-size:11px;color:var(--tx3);letter-spacing:.05em;margin-bottom:6px}
+.pop code{display:block;background:var(--bg);padding:4px 7px;border-radius:5px;margin-bottom:8px;color:var(--tx)}
+.pop select,.pop input{width:100%;padding:7px 9px;border:1px solid var(--line2);border-radius:7px;margin-bottom:8px;font-size:12.5px}
+.pop .r{display:flex;gap:6px;justify-content:flex-end}
+
+/* ---------- panels (run / drift / site) ---------- */
+.panel{position:absolute;inset:0;background:var(--bg);display:none;grid-template-rows:56px 1fr;min-height:0;z-index:10}
+.panel.on{display:grid}
+.panel .ph{display:flex;align-items:center;gap:12px;padding:0 22px;background:var(--sf);border-bottom:1px solid var(--line)}
+.panel .ph h1{font-size:16px;font-weight:700}
+.panel .pb{padding:20px 22px;overflow:auto;min-height:0}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.kpi{background:var(--sf);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.kpi b{display:block;font-size:26px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.2}
+.kpi span{font-size:11px;color:var(--tx3)}
+.kpi.ok b{color:var(--ok-tx)}.kpi.ng b{color:var(--ng-tx)}.kpi.wa b{color:var(--wa-tx)}
+.prog{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin:6px 0 16px;display:none}
+.prog i{display:block;height:100%;background:var(--ac);width:0;transition:width .15s}
+.prog.on{display:block}
+.tbl{background:var(--sf);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.tbl table{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-size:11px;color:var(--tx3);font-weight:600;padding:9px 12px;border-bottom:1px solid var(--line);background:#FAFBFC}
+.tbl td{padding:9px 12px;border-bottom:1px solid var(--line);font-size:12.5px;vertical-align:middle}
+.tbl tr:last-child td{border:0}
+.tbl tr.rw{cursor:pointer}.tbl tr.rw:hover td{background:var(--bg)}
+.tbl .mono{color:var(--tx3);white-space:nowrap}
+.tbl .dur{font-family:var(--mono);font-size:11px;color:var(--tx2);text-align:right}
+.drift{background:var(--sf);border:1px solid var(--line);border-radius:12px;margin-bottom:12px;overflow:hidden}
+.drift .dh{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line);background:#FAFBFC}
+.drift .dh b{font-size:13.5px}
+.drift .db{padding:14px 16px}
+.ba{display:grid;grid-template-columns:1fr 24px 1fr;gap:8px;align-items:center;margin-bottom:12px}
+.ba div{border-radius:7px;padding:8px 10px;font-family:var(--mono);font-size:11px;word-break:break-all}
+.ba .o{background:var(--ng-bg);color:var(--ng-tx)}.ba .n{background:var(--ok-bg);color:var(--ok-tx)}
+.ba span{text-align:center;color:var(--tx3)}
+.drift ul{margin:0 0 12px 18px;font-size:12.5px;color:var(--tx2);line-height:1.8}
+.drift .act{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.drift .act .why{font-size:11.5px;color:var(--tx3);flex:1;min-width:200px}
+.drift.done{opacity:.55}
+.scr{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.scard{background:var(--sf);border:1px solid var(--line);border-radius:12px;padding:14px 16px;cursor:pointer}
+.scard:hover{border-color:var(--ac)}
+.scard .id{font-family:var(--mono);font-size:10px;color:var(--tx3)}
+.scard b{display:block;font-size:14px;margin:2px 0 8px}
+.scard .bar{height:5px;background:var(--line);border-radius:3px;overflow:hidden;margin-bottom:6px}
+.scard .bar i{display:block;height:100%}
+.scard small{font-size:11px;color:var(--tx2);display:flex;justify-content:space-between}
+
+/* ---------- modal / toast ---------- */
+.ov{position:fixed;inset:0;background:rgba(16,24,40,.45);display:none;place-items:center;z-index:50}
+.ov.on{display:grid}
+.md{background:#fff;border-radius:14px;width:640px;max-height:82vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,.3)}
+.md.wide{width:900px}
+.md .mh{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.md .mh h3{font-size:15px;font-weight:700}
+.md .mb{padding:18px 20px;overflow:auto}
+.md .mf{padding:12px 20px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;align-items:center}
+.md label{display:block;font-size:11px;font-weight:600;color:var(--tx3);letter-spacing:.05em;margin:10px 0 5px}
+.md select,.md input[type=text]{width:100%;padding:9px 10px;border:1px solid var(--line2);border-radius:8px;font-size:13px}
+.gap{display:flex;gap:9px;align-items:flex-start;padding:9px 10px;border:1px solid var(--line);border-radius:8px;margin-bottom:7px;cursor:pointer}
+.gap:hover{border-color:var(--ac)}
+.gap input{margin-top:3px}
+.gap b{font-size:12.5px;font-weight:600;display:block}
+.gap span{font-size:11px;color:var(--tx2)}
+.trace{font-family:var(--mono);font-size:11.5px}
+.trace .tr{display:grid;grid-template-columns:70px 24px 1fr 80px 80px;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);align-items:center}
+.trace .tr .th{height:34px;border-radius:4px;background:#E4E7EC;border:1px solid var(--line2)}
+.trace .tr.ng{background:#FFFBFA}
+.trace .tr .s{color:var(--tx3)}
+.trace .tr .ok{color:var(--ok-tx)}.trace .tr .fl{color:var(--ng-tx)}
+.trace h6{font-family:var(--sans);font-size:11px;color:var(--tx3);letter-spacing:.05em;margin:14px 0 6px}
+.trace pre{background:#0F172A;color:#CBD5E1;padding:10px 12px;border-radius:8px;font-size:11px;line-height:1.6;white-space:pre-wrap}
+.toasts{position:fixed;bottom:18px;right:18px;display:flex;flex-direction:column;gap:8px;z-index:60}
+.toast{background:var(--tx);color:#fff;padding:10px 14px;border-radius:10px;font-size:12.5px;box-shadow:0 8px 24px rgba(0,0,0,.25);animation:up .18s;max-width:360px}
+.toast.ok{background:var(--ok-tx)}.toast.ng{background:var(--ng-tx)}
+@keyframes up{from{transform:translateY(8px);opacity:0}}
+.proto{font-size:10px;color:var(--tx3);font-family:var(--mono);letter-spacing:.04em}
+.help-list{font-size:13px;line-height:1.8}
+.help-list li{margin-left:18px}
+.help-list kbd{font-family:var(--mono);font-size:10.5px;border:1px solid var(--line2);border-radius:4px;padding:0 5px}
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="rail">
+    <div class="lg">W</div>
+    <button class="on" data-view="test">▤<span class="tip">テスト</span></button>
+    <button data-view="run">▶<span class="bd" id="bd-fail">7</span><span class="tip">実行と結果</span></button>
+    <button data-view="drift">◈<span class="bd wa" id="bd-drift">3</span><span class="tip">サイトの変更</span></button>
+    <button data-view="site">⌂<span class="tip">サイトの地図</span></button>
+    <div class="sp"></div>
+    <button id="help-btn">?<span class="tip">使い方</span></button>
+    <button id="reset-btn">↺<span class="tip">初期状態に戻す</span></button>
+  </nav>
+
+  <aside class="list">
+    <div class="list-h"><h2>DemoMart <span id="cnt-all"></span></h2><p id="list-sub"></p></div>
+    <div class="search"><input id="q" placeholder="検索 / 絞り込み"><kbd>⌘K</kbd></div>
+    <div class="fchips" id="fchips">
+      <span class="fchip on" data-f="all">すべて</span>
+      <span class="fchip" data-f="fail"><i style="background:var(--ng)"></i>失敗</span>
+      <span class="fchip" data-f="flaky"><i style="background:var(--wa)"></i>不安定</span>
+      <span class="fchip" data-f="fixed"><i style="background:var(--ac)"></i>修正済</span>
+      <span class="fchip" data-f="pass"><i style="background:var(--ok)"></i>成功</span>
+    </div>
+    <div class="items" id="items"></div>
+    <div class="list-f"><button class="btn pri" style="flex:1" id="new-btn">＋ 新しいテスト</button><button class="btn" id="run-all-btn" title="全件実行">▶</button></div>
+  </aside>
+
+  <main class="main">
+    <div class="ed-h" id="ed-h"></div>
+    <div class="ed-b">
+      <div class="steps" id="steps"></div>
+      <div class="view">
+        <div class="view-h">
+          <div class="seg" id="seg"><button data-m="fail" class="on">失敗時</button><button data-m="expect">期待</button><button data-m="now">いま</button></div>
+          <span id="view-info"></span>
+          <div class="sp"></div>
+          <span>Chromium 1280×800</span><span class="proto">· PROTOTYPE</span>
+        </div>
+        <div class="stage">
+          <div class="browser">
+            <div class="bar"><i></i><i></i><i></i><span id="url"></span></div>
+            <div class="page" id="page"></div>
+            <div class="hl hide" id="hl"></div>
+          </div>
+          <div class="strip" id="strip"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 実行と結果 -->
+    <section class="panel" id="p-run">
+      <div class="ph"><h1>実行と結果</h1><span id="run-meta" style="color:var(--tx3);font-size:12px"></span><div class="sp"></div>
+        <button class="btn" id="export-btn">証跡をまとめて書き出す</button><button class="btn" id="junit-btn">JUnit XML</button>
+        <button class="btn" id="rerun-fail-btn">失敗のみ再実行</button><button class="btn pri" id="run-all-btn2">▶ 全件実行</button></div>
+      <div class="pb">
+        <div class="kpis" id="kpis"></div>
+        <div class="prog" id="prog"><i></i></div>
+        <div class="tbl"><table><thead><tr><th style="width:34px"></th><th style="width:86px">ID</th><th>テスト</th><th style="width:130px">画面</th><th style="width:150px">直近 10 回</th><th style="width:70px;text-align:right">所要</th><th style="width:220px">結果</th></tr></thead><tbody id="run-rows"></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- サイトの変更 -->
+    <section class="panel" id="p-drift">
+      <div class="ph"><h1>サイトの変更</h1><span style="color:var(--tx3);font-size:12px">8/29 22:40 の再クロールで検出 · まだ実行していないので失敗は起きていません</span><div class="sp"></div><button class="btn" id="recrawl-btn">再クロール</button></div>
+      <div class="pb" id="drift-body"></div>
+    </section>
+
+    <!-- サイトの地図 -->
+    <section class="panel" id="p-site">
+      <div class="ph"><h1>サイトの地図</h1><span style="color:var(--tx3);font-size:12px">クロール済み 7 画面 · カードを押すと、その画面のテストを生成できます</span></div>
+      <div class="pb"><div class="scr" id="scr"></div></div>
+    </section>
+  </main>
+</div>
+
+<!-- modals -->
+<div class="ov" id="ov-new"><div class="md">
+  <div class="mh"><h3>新しいテスト</h3><div class="sp"></div><button class="btn ghost" data-close>✕</button></div>
+  <div class="mb">
+    <label>画面</label><select id="new-screen"></select>
+    <label>地図から見つかった、まだテストされていない箇所</label>
+    <div id="new-gaps"></div>
+    <label>または、名前を決めて空のテストを作る</label>
+    <input type="text" id="new-name" placeholder="例: クーポンコードが適用される">
+  </div>
+  <div class="mf"><span style="font-size:11.5px;color:var(--tx3);flex:1">生成されるのは Playwright の実コードです。ステップ表で直せます。</span><button class="btn" data-close>キャンセル</button><button class="btn pri" id="new-ok">生成</button></div>
+</div></div>
+
+<div class="ov" id="ov-trace"><div class="md wide">
+  <div class="mh"><h3>Trace</h3><span id="trace-title" style="color:var(--tx3);font-size:12px"></span><div class="sp"></div><button class="btn sm" id="trace-dl">単体ファイルで保存</button><button class="btn ghost" data-close>✕</button></div>
+  <div class="mb trace" id="trace-body"></div>
+</div></div>
+
+<div class="ov" id="ov-help"><div class="md">
+  <div class="mh"><h3>このプロトタイプで試せること</h3><div class="sp"></div><button class="btn ghost" data-close>✕</button></div>
+  <div class="mb help-list"><ul>
+    <li>左の一覧からテストを選ぶ。検索・状態チップで絞り込む（<kbd>⌘K</kbd> で検索、<kbd>↑</kbd><kbd>↓</kbd> で移動）</li>
+    <li>ステップを押すと、右の実画面で対象の要素を指す。下のフィルム（サムネイル）からも移動できる</li>
+    <li>赤いステップの「適用」で修正案を取り込む。そのあと「このテストを実行」（<kbd>R</kbd>）で結果が変わる</li>
+    <li>「＋ ステップを追加」→ 右の画面上の要素をクリック → 操作を選んで追加</li>
+    <li>「＋ 新しいテスト」で、画面の“まだテストされていない箇所”からテストを生成</li>
+    <li>左レール ▶ で全体の結果。◈ でサイトの変更（一括修正）。⌂ で画面ごとのカバレッジ</li>
+    <li>タイトルは直接編集できる。状態は保存され、↺ で初期状態に戻る</li>
+  </ul></div>
+  <div class="mf"><button class="btn pri" data-close>閉じる</button></div>
+</div></div>
+
+<div class="toasts" id="toasts"></div>
+
+<script>
+/* ==================== データ ==================== */
+const SCREENS = {
+  P001:{name:'トップ',path:'/index.html'},
+  P003:{name:'商品一覧',path:'/products.html'},
+  P004:{name:'お支払い・決済',path:'/checkout.html'},
+  P005:{name:'お問い合わせ',path:'/contact.html'},
+  P006:{name:'ログイン',path:'/login.html'},
+  P007:{name:'マイページ',path:'/mypage.html'},
+  P002:{name:'キャンペーン',path:'/campaign.html'},
+};
+const ORDER=['P004','P006','P005','P003','P001','P007','P002'];
+
+// 各画面の要素（ロケータ安定度つき）。ステップ追加の候補にも使う
+const ELS = {
+  P004:{name:{l:'input[name="name"]',s:'high',t:'input',label:'氏名'},email:{l:'input[name="email"]',s:'high',t:'input',label:'メールアドレス'},card:{l:'[data-testid="card-number"]',s:'high',t:'input',label:'カード番号'},exp:{l:'input[name="exp"]',s:'mid',t:'input',label:'有効期限'},cvc:{l:'input[name="cvc"]',s:'mid',t:'input',label:'CVC'},submit:{l:'button[name="submit_order"]',s:'mid',t:'button',label:'注文を確定する',drift:{found:'name="place_order"',fix:'[data-testid="place-order"]',fixS:'high',score:0.94}},alert:{l:'[role="alert"]',s:'high',t:'text',label:'エラー表示'},total:{l:'.summary .total',s:'low',t:'text',label:'合計金額'}},
+  P005:{name:{l:'input[name="name"]',s:'high',t:'input',label:'氏名'},email:{l:'input[name="email"]',s:'high',t:'input',label:'メール'},body:{l:'textarea[name="body"]',s:'high',t:'input',label:'本文'},submit:{l:'button[type="submit"]',s:'high',t:'button',label:'送信'},alert:{l:'[role="status"]',s:'high',t:'text',label:'受付メッセージ'}},
+  P006:{id:{l:'[data-testid="login-id"]',s:'high',t:'input',label:'ID'},pw:{l:'[data-testid="login-pw"]',s:'high',t:'input',label:'パスワード'},submit:{l:'[data-testid="login-submit"]',s:'high',t:'button',label:'ログイン'},alert:{l:'[role="alert"]',s:'high',t:'text',label:'エラー表示'}},
+  P003:{sort:{l:'select[name="sort"]',s:'high',t:'select',label:'並び順'},item:{l:'.product-card:first-child',s:'mid',t:'button',label:'商品カード'},cart:{l:'[data-testid="add-cart"]',s:'high',t:'button',label:'カートに入れる'},badge:{l:'.cart-badge',s:'low',t:'text',label:'カート件数'}},
+  P001:{hero:{l:'h1',s:'high',t:'text',label:'見出し'},nav:{l:'nav a[href="/products.html"]',s:'mid',t:'button',label:'商品一覧リンク'},login:{l:'nav a[href="/login.html"]',s:'mid',t:'button',label:'ログインリンク'}},
+  P007:{hero:{l:'h1',s:'high',t:'text',label:'見出し'},orders:{l:'table.orders',s:'mid',t:'text',label:'注文履歴'},logout:{l:'button[name="logout"]',s:'mid',t:'button',label:'ログアウト'}},
+  P002:{hero:{l:'h1',s:'high',t:'text',label:'見出し'},cta:{l:'a.campaign-cta',s:'low',t:'button',label:'今すぐ見る'}},
+};
+
+// 画面ごとの「穴」（新規テスト生成の候補）
+const GAPS = {
+  P004:[{t:'クレジットカード番号の境界値（15/16/17桁）',d:'入力欄 maxlength=16 を検出',steps:['open','fill:card:1234567890123456','click:submit','see:alert:カード番号を確認してください']},{t:'有効期限が過去だとエラー',d:'exp 欄の形式 MM/YY',steps:['open','fill:exp:01/20','click:submit','see:alert:有効期限を確認してください']},{t:'決済失敗時のエラー表示',d:'エラー領域の要素は検出済み',steps:['open','fill:card:4000000000000002','click:submit','see:alert:決済に失敗しました']}],
+  P005:[{t:'本文が空だと送信できない',d:'textarea required を検出',steps:['open','fill:name:山田 太郎','click:submit','see:alert:本文を入力してください']},{t:'本文 1000 文字の境界',d:'maxlength=1000',steps:['open','fill:body:（1000文字）','click:submit','see:alert:お問い合わせを受け付けました']}],
+  P006:[{t:'パスワード空で送信',d:'required を検出',steps:['open','fill:id:demo','click:submit','see:alert:パスワードを入力してください']},{t:'5回失敗でロック表示',d:'エラー領域の要素は検出済み',steps:['open','fill:id:demo','fill:pw:wrong','click:submit','see:alert:一定回数失敗したためロックされました']}],
+  P003:[{t:'価格順で並び替えできる',d:'select[name=sort] を検出',steps:['open','select:sort:価格が安い順','see:item:¥1,200']},{t:'カートに入れると件数が増える',d:'cart-badge を検出',steps:['open','click:cart','see:badge:1']}],
+  P001:[{t:'商品一覧へ遷移できる',d:'遷移表 TP001',steps:['open','click:nav','url:/products.html']},{t:'ログインへ遷移できる',d:'遷移表 TP005',steps:['open','click:login','url:/login.html']}],
+  P007:[{t:'ログイン後にマイページが表示される',d:'遷移表 TP021',steps:['open','see:hero:マイページ']},{t:'注文履歴が表示される',d:'table.orders を検出',steps:['open','see:orders:注文履歴']},{t:'ログアウトでトップへ戻る',d:'button[name=logout]',steps:['open','click:logout','url:/index.html']}],
+  P002:[{t:'キャンペーン画面が表示される',d:'h1 を検出',steps:['open','see:hero:キャンペーン']},{t:'「今すぐ見る」で商品一覧へ',d:'遷移表 TP030',steps:['open','click:cta','url:/products.html']}],
+};
+
+function mkStep(scr, spec){
+  const [k,el,arg]=spec.split(':');
+  const E=ELS[scr]; const p=SCREENS[scr].path;
+  if(k==='open')return{kind:'pre',action:'開く',target:'page',arg:p,loc:'page.goto'};
+  if(k==='url')return{kind:'ver',action:'URL が',target:'page',arg:el+(arg?':'+arg:''),loc:'page.url'};
+  const e=E[el]||{l:el,s:'mid'};
+  const base={target:el,loc:e.l,stab:e.s};
+  if(k==='fill')return{...base,kind:'act',action:'入力する',arg};
+  if(k==='empty')return{...base,kind:'act',action:'入力欄を空のままにする',arg:e.label};
+  if(k==='click')return{...base,kind:'act',action:'押す',arg:e.label};
+  if(k==='select')return{...base,kind:'act',action:'選ぶ',arg};
+  if(k==='see')return{...base,kind:'ver',action:'表示される',arg};
+  return{...base,kind:'act',action:k,arg};
+}
+function mkTest(id,scr,name,tech,specs,opt={}){
+  const steps=specs.map(s=>mkStep(scr,s));
+  if(opt.issue){const i=opt.issue; steps[i.step].issue={...i}; }
+  return{id,screen:scr,name,technique:tech,steps,history:opt.history||[1,1,1,1,1,1,1,1,1,1],status:opt.status||'pass',last:opt.last||{dur:'1.8s',t:'23:14'}};
+}
+const H_FAIL3=[1,1,1,1,1,1,1,0,0,0], H_FAIL1=[1,1,1,1,1,1,1,1,1,0], H_FAIL2=[1,1,1,1,1,1,1,1,0,0], H_FLAKY=[1,0,1,1,0,1,1,2,1,1];
+const submitIssue=(step)=>({step,type:'missing',msg:'要素が見つからない · 15.0s でタイムアウト',detail:'8/29 のクロールで同じ位置に name="place_order" を検出。一致度 0.94。',fix:'[data-testid="place-order"]',fixS:'high',key:'submit_order'});
+
+function initialTests(){return[
+  mkTest('PW-0041','P004','カード番号 16 桁で決済できる','境界値',['open','fill:name:山田 太郎','fill:email:taro@example.com','fill:card:4242424242424242','click:submit','url:/order_done.html'],{issue:submitIssue(4),history:H_FAIL3,status:'fail',last:{dur:'15.2s',t:'23:14',step:4}}),
+  mkTest('PW-0042','P004','カード番号 15 桁でエラーになる','境界値',['open','fill:card:424242424242424','click:submit','see:alert:カード番号を確認してください'],{issue:submitIssue(2),history:[1,1,1,1,1,1,1,1,1,1],status:'pass',last:{dur:'1.8s',t:'23:14'}}),
+  mkTest('PW-0043','P004','必須項目が空だと送信できない','同値分割',['open','empty:name','empty:email','click:submit','see:alert:必須項目を入力してください','url:/checkout.html'],{issue:submitIssue(3),history:H_FAIL3,status:'fail',last:{dur:'15.0s',t:'23:14',step:3}}),
+  mkTest('PW-0044','P004','合計金額が正しく表示される','デシジョン',['open','fill:card:4242424242424242','see:total:¥3,600'],{issue:{step:2,type:'flaky',msg:'5 回中 2 回失敗 · 再試行で回復',detail:'金額の非同期計算を待たずに検証している。ロケータは CSS パス依存（安定度 低）。',fix:'待機条件を「金額が表示されるまで」に変更 + [data-testid="order-total"]',fixS:'high'},history:H_FLAKY,status:'flaky',last:{dur:'2.3s',t:'23:14'}}),
+  mkTest('PW-0045','P004','二重送信されない','状態遷移',['open','fill:card:4242424242424242','click:submit','see:submit:disabled'],{issue:submitIssue(2),history:H_FAIL3,status:'fail',last:{dur:'15.1s',t:'23:14',step:2}}),
+  mkTest('PW-0046','P004','有効期限が過去だとエラー','境界値',['open','fill:exp:01/20','click:submit','see:alert:有効期限を確認してください'],{issue:submitIssue(2),history:[1,1,1,1,1,1,1,1,1,1],status:'pass',last:{dur:'1.6s',t:'23:14'}}),
+  mkTest('PW-0048','P004','決済失敗時にエラーが出る','同値分割',['open','fill:card:4000000000000002','click:submit','see:alert:決済に失敗しました'],{issue:submitIssue(2),history:H_FAIL3,status:'fail',last:{dur:'15.0s',t:'23:14',step:2}}),
+  mkTest('PW-0088','P006','正しい資格情報でログインできる','同値分割',['open','fill:id:demo','fill:pw:••••••••','click:submit','url:/index.html'],{last:{dur:'2.1s',t:'23:14'}}),
+  mkTest('PW-0089','P006','誤ったパスワードで拒否される','同値分割',['open','fill:id:demo','fill:pw:wrong','click:submit','see:alert:ID またはパスワードが違います'],{last:{dur:'1.9s',t:'23:14'}}),
+  mkTest('PW-0090','P006','ID 空で送信するとエラー','同値分割',['open','fill:pw:••••••••','click:submit','see:alert:ID を入力してください'],{last:{dur:'1.4s',t:'23:14'}}),
+  mkTest('PW-0091','P006','ログイン後にマイページへ遷移する','状態遷移',['open','fill:id:demo','fill:pw:••••••••','click:submit','url:/mypage.html'],{issue:{step:4,type:'expect',msg:'期待 /mypage.html · 実際 /index.html',detail:'ログイン後のリダイレクト先が変わった可能性。8/29 のクロールでは login → index の遷移を観測。',fix:'期待値を /index.html に更新',fixS:'high'},history:H_FAIL1,status:'fail',last:{dur:'2.9s',t:'23:14',step:4}}),
+  mkTest('PW-0072','P005','送信後に受付メッセージが出る','同値分割',['open','fill:name:山田 太郎','fill:email:taro@example.com','fill:body:テスト送信です','click:submit','see:alert:お問い合わせを受け付けました'],{issue:{step:5,type:'timeout',msg:'3.0s 以内に表示されない（3.2s で出現）',detail:'アプリ側は正常。テストの待機時間が短いだけ。',fix:'待機を 5.0s に延長',fixS:'high'},history:H_FAIL2,status:'fail',last:{dur:'3.2s',t:'23:14',step:5}}),
+  mkTest('PW-0073','P005','メール形式が不正だとエラー','同値分割',['open','fill:email:not-an-email','click:submit','see:alert:メールアドレスの形式が正しくありません'],{last:{dur:'1.4s',t:'23:14'}}),
+  mkTest('PW-0074','P005','氏名が空だとエラー','同値分割',['open','empty:name','click:submit','see:alert:氏名を入力してください'],{last:{dur:'1.3s',t:'23:14'}}),
+  mkTest('PW-0075','P005','送信後にフォームがクリアされる','状態遷移',['open','fill:name:山田 太郎','fill:body:テスト','click:submit','see:alert:お問い合わせを受け付けました','see:name:'],{issue:{step:4,type:'timeout',msg:'3.0s 以内に表示されない（3.2s で出現）',detail:'PW-0072 と同じ原因。',fix:'待機を 5.0s に延長',fixS:'high'},history:H_FAIL2,status:'fail',last:{dur:'3.1s',t:'23:14',step:4}}),
+  mkTest('PW-0021','P003','商品一覧が表示される','スモーク',['open','see:item:商品'],{last:{dur:'0.9s',t:'23:14'}}),
+  mkTest('PW-0022','P003','名前順で並び替えできる','同値分割',['open','select:sort:名前順','see:item:アロマキャンドル'],{last:{dur:'1.1s',t:'23:14'}}),
+  mkTest('PW-0023','P003','商品カードから詳細へ遷移する','状態遷移',['open','click:item','url:/product_detail.html'],{last:{dur:'1.2s',t:'23:14'}}),
+  mkTest('PW-0001','P001','トップが表示される','スモーク',['open','see:hero:DemoMart'],{last:{dur:'0.4s',t:'23:14'}}),
+  mkTest('PW-0002','P001','ナビから商品一覧へ遷移する','状態遷移',['open','click:nav','url:/products.html'],{last:{dur:'0.7s',t:'23:14'}}),
+];}
+
+const DRIFTS0=[
+  {id:'d1',kind:'ng',kindLabel:'要素が変わった',screen:'P004',title:'「注文を確定する」ボタンの name が変更',old:'<button name="submit_order">注文を確定する</button>',now:'<button name="place_order" data-testid="place-order">注文を確定する</button>',impactKey:'submit_order',why:'修正案: name="submit_order" → [data-testid="place-order"]（安定度 中 → 高）',done:false},
+  {id:'d2',kind:'info',kindLabel:'画面が増えた',screen:'P008',title:'注文完了（order_done.html）が追加',old:null,now:'決済（P004）から遷移する新しい画面。フォーム 0 · リンク 3',why:'到達するテストが 0 件。決済成功の確認が途中で終わっています。',gen:true,done:false},
+  {id:'d3',kind:'mute',kindLabel:'文言が変わった',screen:'P001',title:'トップの見出し文言',old:'今週のおすすめ',now:'今月のおすすめ',why:'この文言を検証しているテストはありません。対応不要です。',done:false},
+];
+
+/* ==================== 状態 ==================== */
+const KEY='ws2d-proto-v1';
+let S;
+function fresh(){return{tests:initialTests(),drifts:JSON.parse(JSON.stringify(DRIFTS0)),sel:'PW-0043',step:3,mode:'fail',filter:'all',q:'',view:'test',runNo:418,nextId:100}}
+function load(){try{const j=localStorage.getItem(KEY);if(j){S=JSON.parse(j);return}}catch(e){} S=fresh()}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+load();
+
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const T=id=>S.tests.find(t=>t.id===id);
+const cur=()=>T(S.sel);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function toast(msg,cls=''){const d=document.createElement('div');d.className='toast '+cls;d.textContent=msg;$('#toasts').appendChild(d);setTimeout(()=>d.remove(),2600)}
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const stabLabel={high:'安定 高',mid:'安定 中',low:'安定 低'};
+const statusLabel={pass:'成功',fail:'失敗',flaky:'不安定',new:'未実行',fixed:'修正済 · 未実行',running:'実行中'};
+
+/* ==================== 一覧 ==================== */
+function counts(){const c={all:S.tests.length,fail:0,flaky:0,fixed:0,pass:0,new:0};S.tests.forEach(t=>c[t.status]=(c[t.status]||0)+1);return c}
+function renderList(){
+  const c=counts();
+  $('#cnt-all').textContent=c.all+' tests';
+  $('#list-sub').textContent=`${c.pass} 成功 · ${c.fail} 失敗 · ${c.flaky} 不安定 · ${c.fixed+c.new} 未実行`;
+  $('#bd-fail').textContent=c.fail; $('#bd-fail').style.display=c.fail?'':'none';
+  const nd=S.drifts.filter(d=>!d.done).length; $('#bd-drift').textContent=nd; $('#bd-drift').style.display=nd?'':'none';
+  $$('#fchips .fchip').forEach(ch=>ch.classList.toggle('on',ch.dataset.f===S.filter));
+  const q=S.q.trim().toLowerCase();
+  let html='';
+  ORDER.forEach(scr=>{
+    const ts=S.tests.filter(t=>t.screen===scr&&(S.filter==='all'||t.status===S.filter)&&(!q||(t.name+t.id+SCREENS[scr].name).toLowerCase().includes(q)));
+    if(!ts.length&&(S.filter!=='all'||q))return;
+    html+=`<div class="grp">${scr} ${esc(SCREENS[scr].name)}<span>${ts.length}</span></div>`;
+    if(!ts.length){html+=`<div class="it empty" data-gen="${scr}"><i class="i-new"></i><b>未作成 · 地図から生成</b></div>`;return}
+    ts.forEach(t=>{html+=`<div class="it ${t.id===S.sel?'on':''}" data-id="${t.id}"><i class="i-${t.status}"></i><b>${esc(t.name)}</b><code>${t.id.slice(3)}</code></div>`});
+  });
+  $('#items').innerHTML=html||'<div class="it empty"><b>該当なし</b></div>';
+  const on=$('#items .it.on'); if(on)on.scrollIntoView({block:'nearest'});
+}
+$('#items').addEventListener('click',e=>{
+  const it=e.target.closest('.it'); if(!it)return;
+  if(it.dataset.gen){openNew(it.dataset.gen);return}
+  if(it.dataset.id){select(it.dataset.id)}
+});
+$$('#fchips .fchip').forEach(ch=>ch.onclick=()=>{S.filter=ch.dataset.f;renderList();save()});
+$('#q').addEventListener('input',e=>{S.q=e.target.value;renderList()});
+function select(id){S.sel=id;const t=T(id);S.step=t.last&&t.last.step!=null?t.last.step:0;S.mode=t.status==='fail'?'fail':'now';setView('test');renderAll();save()}
+
+/* ==================== エディタ ==================== */
+function renderHeader(){
+  const t=cur(); if(!t){$('#ed-h').innerHTML='';return}
+  const h=t.history.map(v=>`<i class="${v===1?'p':v===0?'f':'w'}"></i>`).join('');
+  $('#ed-h').innerHTML=`<h1 contenteditable="true" spellcheck="false" id="ttl">${esc(t.name)}</h1><code>${t.id} · ${t.screen}</code>
+    <span class="pill p-${t.status}">${statusLabel[t.status]}${t.status==='fail'&&t.history.slice(-3).every(v=>v===0)?' · 3回連続':''}</span>
+    <div class="sp"></div><div class="hist">${h}<span>直近10回</span></div>
+    <button class="btn sm" id="trace-btn">Trace</button><button class="btn sm" id="dup-btn" title="複製">⧉</button><button class="btn sm pri" id="run-btn">▶ このテストを実行</button>`;
+  $('#ttl').addEventListener('blur',e=>{const v=e.target.textContent.trim();if(v&&v!==t.name){t.name=v;renderList();save();toast('名前を保存しました')}});
+  $('#ttl').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();e.target.blur()}});
+  $('#run-btn').onclick=()=>runTest(t.id);
+  $('#trace-btn').onclick=()=>openTrace(t);
+  $('#dup-btn').onclick=()=>{const n=JSON.parse(JSON.stringify(t));n.id='PW-'+String(S.nextId++).padStart(4,'0');n.name=t.name+'（複製）';n.status='new';n.history=[];n.last={dur:'—',t:'—'};S.tests.push(n);select(n.id);toast('複製しました')};
+}
+function stepLine(t,i){
+  const s=t.steps[i]; const isIssue=s.issue&&!s.fixed; const on=i===S.step;
+  const cls=['st',on?'on':'',isIssue&&(t.status==='fail'||t.status==='flaky')?'ng':'',s._run?'run':'',s._done?'done':''].join(' ');
+  const loc=s.loc==='page.goto'||s.loc==='page.url'?`<span>${esc(s.loc)}</span>`:`<span>${esc(s.fixed&&s.issue?.fix&&s.issue.type==='missing'?s.issue.fix:s.loc)}</span>${s.stab?`<span class="h h-${s.fixed&&s.issue?.fixS?s.issue.fixS:s.stab}">${stabLabel[s.fixed&&s.issue?.fixS?s.issue.fixS:s.stab]}</span>`:''}`;
+  const n=s.kind==='pre'?'–':i;
+  let extra='';
+  if(isIssue&&(t.status==='fail'||t.status==='flaky')){
+    extra=`<div class="err"><b>${esc(s.issue.msg)}</b>${esc(s.issue.detail)}</div>
+      <div class="fix">修正案 <code>${esc(s.issue.fix)}</code>${s.issue.fixS?`<span class="h h-${s.issue.fixS}">${stabLabel[s.issue.fixS]}</span>`:''}<button class="btn sm pri" data-fix="${i}" style="margin-left:auto">適用</button></div>`;
+  }else if(s.fixed){extra=`<div class="fixed-note">✓ 修正を適用済み · 実行して確認してください</div>`}
+  return `<div class="${cls}" data-i="${i}"><div class="n">${n}</div><div><div class="v">${esc(s.action)} <em>${esc(s.arg||'')}</em></div><div class="loc">${loc}${s._ms?`<span style="color:var(--tx3)">${s._ms}</span>`:''}</div></div><button class="x" data-del="${i}" title="ステップを削除">✕</button>${extra}</div>`;
+}
+function renderSteps(){
+  const t=cur(); if(!t){$('#steps').innerHTML='';return}
+  const groups=[['前提','pre'],['操作','act'],['検証','ver']];
+  let html='';
+  groups.forEach(([lab,k])=>{const idx=t.steps.map((s,i)=>[s,i]).filter(([s])=>s.kind===k);if(!idx.length)return;html+=`<div class="sec">${lab}<span>${idx.length}</span></div>`;idx.forEach(([s,i])=>html+=stepLine(t,i))});
+  html+=`<button class="add" id="add-step">＋ ステップを追加 · 右の画面上の要素を選ぶ</button>`;
+  $('#steps').innerHTML=html;
+  $('#add-step').onclick=startPick;
+}
+$('#steps').addEventListener('click',e=>{
+  const fx=e.target.closest('[data-fix]'); if(fx){applyFix(cur(),+fx.dataset.fix);return}
+  const dl=e.target.closest('[data-del]'); if(dl){const t=cur();if(t.steps.length<=1)return;t.steps.splice(+dl.dataset.del,1);S.step=Math.min(S.step,t.steps.length-1);markDirty(t);renderAll();save();toast('ステップを削除しました');return}
+  const st=e.target.closest('.st'); if(st){S.step=+st.dataset.i;renderSteps();renderView();save()}
+});
+function markDirty(t){if(t.status==='pass'||t.status==='fail'||t.status==='flaky'){t.status='fixed'}}
+function applyFix(t,i){
+  const s=t.steps[i]; if(!s.issue)return;
+  s.fixed=true; t.status='fixed';
+  if(s.issue.type==='expect'){s.arg='/index.html'}
+  if(s.issue.type==='timeout'){s.wait='5.0s'}
+  renderAll();save();toast('修正案を適用しました。実行して確認してください','ok');
+}
+function applyFixByKey(key){let n=0;S.tests.forEach(t=>t.steps.forEach(s=>{if(s.issue&&s.issue.key===key&&!s.fixed){s.fixed=true;n++;if(t.status==='fail'||t.status==='pass')t.status='fixed'}}));return n}
+
+/* ==================== 実画面 ==================== */
+function pageHTML(scr,ctx){
+  const t=ctx.test, mode=S.mode, step=t?t.steps[S.step]:null;
+  const failed=t&&t.status==='fail'&&t.last.step!=null;
+  const v=(el,def='')=>{ // 現在ステップまでの入力値を反映
+    if(!t)return def; let val=def;
+    t.steps.slice(0,S.step+1).forEach(s=>{if(s.target===el){if(s.action==='入力する'||s.action==='選ぶ')val=s.arg;if(s.action==='入力欄を空のままにする')val=''}});
+    return val;
+  };
+  const focus=el=>step&&step.target===el?' focus':'';
+  const alertVis=()=>{ // 検証ステップの alert は 期待モード or 成功状態で表示
+    const st=t&&t.steps[S.step]; if(!st||st.target!=='alert')return{cls:'hidden',txt:''};
+    if(mode==='expect'||t.status==='pass'||(mode==='now'&&t.status!=='fail'))return{cls:'',txt:st.arg};
+    return{cls:'hidden',txt:st.arg};
+  };
+  if(scr==='P004'){
+    const a=alertVis(); const newBtn=mode!=='expect';
+    return `<h3>お支払い・決済</h3>
+      <div class="fld">氏名<div class="inp${focus('name')}" data-el="name">${esc(v('name'))}</div></div>
+      <div class="fld">メールアドレス<div class="inp${focus('email')}" data-el="email">${esc(v('email'))}</div></div>
+      <div class="fld">カード番号<div class="inp${focus('card')}" data-el="card">${esc(v('card'))}</div></div>
+      <div class="row2"><div class="fld">有効期限<div class="inp${focus('exp')}" data-el="exp">${esc(v('exp','12/28'))}</div></div><div class="fld">CVC<div class="inp${focus('cvc')}" data-el="cvc">${esc(v('cvc','123'))}</div></div></div>
+      <div class="total" data-el="total"><span>合計</span><span>${mode==='fail'&&t&&t.id==='PW-0044'?'':'¥3,600'}</span></div>
+      <span class="cta" data-el="submit" data-attr="${newBtn?'name=place_order · data-testid=place-order':'name=submit_order'}">注文を確定する</span>
+      <div class="alert ${a.cls}" data-el="alert">${esc(a.txt||'必須項目を入力してください')}</div>`;
+  }
+  if(scr==='P005'){const a=alertVis();return `<h3>お問い合わせ</h3>
+      <div class="fld">氏名<div class="inp${focus('name')}" data-el="name">${esc(v('name'))}</div></div>
+      <div class="fld">メール<div class="inp${focus('email')}" data-el="email">${esc(v('email'))}</div></div>
+      <div class="fld" style="align-items:start">本文<div class="inp${focus('body')}" data-el="body" style="height:64px;align-items:flex-start;padding-top:6px">${esc(v('body'))}</div></div>
+      <span class="cta" data-el="submit">送信</span>
+      <div class="alert ok ${a.cls}" data-el="alert">${esc(a.txt||'お問い合わせを受け付けました')}</div>`}
+  if(scr==='P006'){const a=alertVis();return `<h3>ログイン</h3>
+      <div class="fld">ID<div class="inp${focus('id')}" data-el="id">${esc(v('id'))}</div></div>
+      <div class="fld">パスワード<div class="inp${focus('pw')}" data-el="pw">${esc(v('pw'))}</div></div>
+      <span class="cta" data-el="submit">ログイン</span><span class="cta sec">新規登録</span>
+      <div class="alert ${a.cls}" data-el="alert">${esc(a.txt||'ID またはパスワードが違います')}</div>`}
+  if(scr==='P003'){return `<div class="nav"><span>トップ</span><span style="border-color:#111">商品一覧</span><span>お問い合わせ</span><span data-el="badge" style="margin-left:auto">カート (${v('badge','0')})</span></div>
+      <div class="fld" style="grid-template-columns:60px 180px">並び順<div class="inp${focus('sort')}" data-el="sort">${esc(v('sort','おすすめ順'))} ▾</div></div>
+      <div class="cards"><div class="card" data-el="item"><i></i><b>アロマキャンドル</b><span class="price">¥1,200</span></div><div class="card"><i></i><b>ハンドソープ</b><span class="price">¥800</span></div><div class="card"><i></i><b>バスタオル</b><span class="price">¥1,600</span></div></div>
+      <span class="cta" data-el="cart" style="margin-top:14px">カートに入れる</span>`}
+  if(scr==='P001'){return `<div class="nav"><span style="border-color:#111">トップ</span><span data-el="nav">商品一覧</span><span>お問い合わせ</span><span data-el="login" style="margin-left:auto">ログイン</span></div>
+      <div class="hero" data-el="hero">DemoMart — 今月のおすすめ</div>
+      <div class="cards"><div class="card"><i></i><b>アロマキャンドル</b></div><div class="card"><i></i><b>ハンドソープ</b></div><div class="card"><i></i><b>バスタオル</b></div></div>`}
+  if(scr==='P007'){return `<div class="nav"><span>トップ</span><span>商品一覧</span><span style="margin-left:auto;border-color:#111">マイページ</span></div>
+      <h3 data-el="hero" style="display:inline-block">マイページ</h3>
+      <table class="orders" data-el="orders" style="margin-top:8px"><tr><th>注文番号</th><th>日付</th><th>金額</th></tr><tr><td>#10231</td><td>2026-08-20</td><td>¥3,600</td></tr><tr><td>#10198</td><td>2026-08-02</td><td>¥800</td></tr></table>
+      <span class="cta sec" data-el="logout" style="margin:14px 0 0">ログアウト</span>`}
+  if(scr==='P002'){return `<div class="nav"><span>トップ</span><span>商品一覧</span></div><div class="hero" data-el="hero" style="background:linear-gradient(90deg,#FEF0C7,#FFF)">夏のキャンペーン — 最大 30% OFF</div><span class="cta" data-el="cta">今すぐ見る</span>`}
+  return `<h3>${esc(SCREENS[scr]?.name||scr)}</h3>`;
+}
+function renderView(){
+  const t=cur(); if(!t)return;
+  const scr=t.screen;
+  $('#url').textContent='127.0.0.1:8766'+SCREENS[scr].path;
+  $('#page').innerHTML=pageHTML(scr,{test:t});
+  $$('#seg button').forEach(b=>b.classList.toggle('on',b.dataset.m===S.mode));
+  const st=t.steps[S.step];
+  const when=t.status==='fail'?`ステップ ${S.step} で撮影 · 2026-08-29 ${t.last.t}:05`:t.status==='pass'?`ステップ ${S.step} · 直近の実行 ${t.last.t}`:`ステップ ${S.step} · 未実行（クロール時の画面）`;
+  $('#view-info').textContent=when;
+  // highlight
+  const hl=$('#hl'); const el=st&&st.target!=='page'?$(`#page [data-el="${st.target}"]`):null;
+  if(el){const pr=$('.browser').getBoundingClientRect(),r=el.getBoundingClientRect();
+    hl.style.left=(r.left-pr.left-3)+'px';hl.style.top=(r.top-pr.top-3)+'px';hl.style.width=(r.width+6)+'px';hl.style.height=(r.height+6)+'px';
+    const issue=st.issue&&!st.fixed&&t.status==='fail'; const fixedNow=st.fixed;
+    hl.className='hl'+(issue?' ng':fixedNow?' ok':'');
+    hl.dataset.l=issue&&st.issue.type==='missing'?`見つかった: ${st.issue.key==='submit_order'?'name="place_order"':''}`:issue?st.issue.msg.split(' ·')[0]:fixedNow?`修正後: ${st.issue?.fix||st.loc}`:st.loc;
+  }else hl.className='hl hide';
+  // strip
+  $('#strip').innerHTML=t.steps.map((s,i)=>{const reached=t.status!=='fail'||t.last.step==null||i<=t.last.step;const ng=t.status==='fail'&&i===t.last.step;return `<div class="th ${i===S.step?'on':''} ${ng?'ng':''} ${reached?'':'na'}" data-i="${i}"><b>${s.kind==='pre'?'開':i}</b></div>`}).join('')+`<span class="lab">ステップごとの Before / After を保存</span>`;
+}
+$('#strip').addEventListener('click',e=>{const th=e.target.closest('.th');if(th){S.step=+th.dataset.i;renderSteps();renderView();save()}});
+$$('#seg button').forEach(b=>b.onclick=()=>{S.mode=b.dataset.m;renderView();save()});
+window.addEventListener('resize',()=>renderView());
+
+/* ---- 要素ピッカー ---- */
+let picking=false, pop=null;
+function startPick(){
+  if(picking){stopPick();return}
+  picking=true;$('#page').classList.add('pick');$('#add-step').classList.add('on');$('#add-step').textContent='右の画面で要素をクリックしてください（Esc で中止）';
+  const bar=document.createElement('div');bar.className='pickbar';bar.id='pickbar';bar.innerHTML='画面上の要素を選ぶと、ステップの候補が出ます <button id="pick-cancel">中止</button>';$('.view').appendChild(bar);$('#pick-cancel').onclick=stopPick;
+}
+function stopPick(){picking=false;$('#page').classList.remove('pick');const b=$('#pickbar');if(b)b.remove();if(pop){pop.remove();pop=null}renderSteps()}
+$('#page').addEventListener('click',e=>{
+  if(!picking)return; const el=e.target.closest('[data-el]'); if(!el)return;
+  e.stopPropagation(); const t=cur(); const key=el.dataset.el; const meta=ELS[t.screen][key]||{l:key,s:'mid',t:'text',label:key};
+  if(pop)pop.remove();
+  pop=document.createElement('div');pop.className='pop';
+  const pr=$('.stage').getBoundingClientRect(),r=el.getBoundingClientRect();
+  pop.style.left=Math.min(r.left-pr.left,pr.width-320)+'px';pop.style.top=(r.bottom-pr.top+8)+'px';
+  const acts=meta.t==='input'?['入力する','入力欄を空のままにする','表示される']:meta.t==='select'?['選ぶ','表示される']:meta.t==='button'?['押す','表示される','無効になっている']:['表示される','含む'];
+  pop.innerHTML=`<h6>${esc(meta.label)}</h6><code>${esc(meta.l)} <span class="h h-${meta.s}">${stabLabel[meta.s]}</span></code>
+    <select id="pk-act">${acts.map(a=>`<option>${a}</option>`).join('')}</select>
+    <input id="pk-arg" placeholder="値・期待する文言（任意）">
+    <div class="r"><button class="btn sm" id="pk-x">やめる</button><button class="btn sm pri" id="pk-ok">ステップに追加</button></div>`;
+  $('.stage').appendChild(pop);
+  $('#pk-x').onclick=stopPick;
+  $('#pk-ok').onclick=()=>{
+    const act=$('#pk-act').value,arg=$('#pk-arg').value.trim();
+    const kind=/表示|含む|無効/.test(act)?'ver':'act';
+    const s={kind,action:act,target:key,arg:arg||(act==='押す'?meta.label:''),loc:meta.l,stab:meta.s};
+    // 挿入位置: 検証は末尾、操作は最後の操作の後
+    let at=t.steps.length; if(kind==='act'){const li=t.steps.map(x=>x.kind).lastIndexOf('act');at=li>=0?li+1:t.steps.findIndex(x=>x.kind==='ver')}
+    if(at<0)at=t.steps.length; t.steps.splice(at,0,s); S.step=at; markDirty(t);
+    stopPick(); renderAll(); save(); toast('ステップを追加しました','ok');
+  };
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){if(picking)stopPick();$$('.ov.on').forEach(o=>o.classList.remove('on'));return}
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();$('#q').focus();$('#q').select();return}
+  const tag=document.activeElement?.tagName; if(tag==='INPUT'||tag==='SELECT'||document.activeElement?.isContentEditable)return;
+  if(S.view!=='test')return;
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();const ids=$$('#items .it[data-id]').map(x=>x.dataset.id);const i=ids.indexOf(S.sel);const n=ids[i+(e.key==='ArrowDown'?1:-1)];if(n)select(n)}
+  if(e.key.toLowerCase()==='r'){runTest(S.sel)}
+  if(e.key.toLowerCase()==='t'){openTrace(cur())}
+});
+
+/* ==================== 実行シミュレーション ==================== */
+let running=false;
+async function runTest(id,{quiet=false,speed=1}={}){
+  const t=T(id); if(!t||running&&!quiet)return; if(!quiet)running=true;
+  t.status='running'; t.steps.forEach(s=>{s._run=false;s._done=false;s._ms=''});
+  if(!quiet){setView('test');S.sel=id;renderAll()}
+  let failedAt=null, total=0;
+  for(let i=0;i<t.steps.length;i++){
+    const s=t.steps[i]; s._run=true; if(!quiet){S.step=i;renderSteps();renderView()}
+    const issue=s.issue&&!s.fixed;
+    let ms=s.kind==='pre'?400:s.action==='押す'?700:s.kind==='ver'?500:150;
+    if(issue&&s.issue.type==='missing')ms=15000; if(issue&&s.issue.type==='timeout')ms=3000; if(issue&&s.issue.type==='flaky'){ms=Math.random()<.4?3000:900}
+    if(issue&&s.issue.type==='expect')ms=300;
+    await sleep(Math.min(ms,quiet?40:900)/speed);
+    total+=ms; s._run=false; s._ms=(ms/1000).toFixed(1)+'s';
+    let fail=issue&&(s.issue.type!=='flaky'||ms===3000);
+    if(fail){failedAt=i;s._done=false;break}
+    s._done=true;
+  }
+  const pass=failedAt==null;
+  t.history=[...t.history.slice(-9),pass?1:0];
+  const wasFlakyIssue=t.steps.some(s=>s.issue&&s.issue.type==='flaky'&&!s.fixed);
+  t.status=pass?(wasFlakyIssue?'flaky':'pass'):'fail';
+  const now=new Date();t.last={dur:(total/1000).toFixed(1)+'s',t:`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`,step:pass?null:failedAt};
+  t.steps.forEach(s=>{s._run=false});
+  if(!quiet){running=false;S.step=pass?t.steps.length-1:failedAt;S.mode=pass?'now':'fail';renderAll();save();toast(pass?`${t.id} 成功 · ${t.last.dur}`:`${t.id} 失敗 · ステップ ${failedAt} で停止`,pass?'ok':'ng')}
+  return pass;
+}
+async function runMany(ids){
+  if(running||!ids.length)return; running=true; S.runNo++;
+  setView('run'); const prog=$('#prog'); prog.classList.add('on');
+  for(let i=0;i<ids.length;i++){await runTest(ids[i],{quiet:true});prog.querySelector('i').style.width=((i+1)/ids.length*100)+'%';renderRun();renderList()}
+  await sleep(300); prog.classList.remove('on'); prog.querySelector('i').style.width='0';
+  running=false; save(); renderAll(); const c=counts(); toast(`実行 #${S.runNo} 完了 · 成功 ${c.pass+c.flaky} / 失敗 ${c.fail}`,c.fail?'ng':'ok');
+}
+$('#run-all-btn').onclick=$('#run-all-btn2').onclick=()=>runMany(S.tests.map(t=>t.id));
+$('#rerun-fail-btn').onclick=()=>runMany(S.tests.filter(t=>t.status==='fail'||t.status==='fixed').map(t=>t.id));
+$('#export-btn').onclick=()=>toast('証跡 ZIP（trace / screenshot / DOM / 動画）の生成を開始しました。完了すると保存ダイアログが出ます');
+$('#junit-btn').onclick=()=>toast('results.xml（JUnit 形式）を書き出しました');
+
+/* ==================== 実行と結果パネル ==================== */
+function renderRun(){
+  const c=counts(); const durs=S.tests.map(t=>parseFloat(t.last?.dur)||0); const tot=durs.reduce((a,b)=>a+b,0);
+  $('#run-meta').textContent=`実行 #${S.runNo} · Chromium · 並列 4 · 再試行 2`;
+  $('#kpis').innerHTML=`<div class="kpi ok"><b>${c.pass}</b><span>成功</span></div><div class="kpi ng"><b>${c.fail}</b><span>失敗</span></div><div class="kpi wa"><b>${c.flaky}</b><span>不安定（Flaky）</span></div><div class="kpi"><b>${Math.floor(tot/4/60)}:${String(Math.round(tot/4%60)).padStart(2,'0')}</b><span>所要（並列 4 換算）</span></div>`;
+  const order={running:0,fail:1,flaky:2,fixed:3,new:4,pass:5};
+  const rows=[...S.tests].sort((a,b)=>order[a.status]-order[b.status]||a.id.localeCompare(b.id));
+  $('#run-rows').innerHTML=rows.map(t=>{const fs=t.status==='fail'&&t.last.step!=null?t.steps[t.last.step]:null;
+    const res=t.status==='fail'?`<span class="pill p-fail">失敗</span> <span style="color:var(--tx2)">ステップ ${t.last.step} · ${esc(fs?.issue?.msg?.split(' ·')[0]||fs?.action||'')}</span>`:t.status==='flaky'?`<span class="pill p-flaky">不安定</span> <span style="color:var(--tx2)">再試行で回復</span>`:t.status==='fixed'?`<span class="pill p-fixed">修正済 · 未実行</span>`:t.status==='new'?`<span class="pill p-new">未実行</span>`:t.status==='running'?`<span class="pill p-running">実行中</span>`:`<span class="pill p-pass">成功</span>`;
+    return `<tr class="rw" data-id="${t.id}"><td><i class="i-${t.status}" style="display:inline-block;width:8px;height:8px;border-radius:50%"></i></td><td class="mono">${t.id}</td><td>${esc(t.name)}</td><td style="color:var(--tx2)">${t.screen} ${esc(SCREENS[t.screen].name)}</td><td><span class="hist">${t.history.map(v=>`<i class="${v===1?'p':v===0?'f':'w'}"></i>`).join('')}</span></td><td class="dur">${esc(t.last?.dur||'—')}</td><td>${res}</td></tr>`}).join('');
+}
+$('#run-rows').addEventListener('click',e=>{const r=e.target.closest('tr[data-id]');if(r)select(r.dataset.id)});
+
+/* ==================== 変更パネル ==================== */
+function renderDrift(){
+  $('#drift-body').innerHTML=S.drifts.map(d=>{
+    const impacted=d.impactKey?S.tests.filter(t=>t.steps.some(s=>s.issue?.key===d.impactKey)):[];
+    const open=impacted.filter(t=>t.steps.some(s=>s.issue?.key===d.impactKey&&!s.fixed));
+    const chip=d.kind==='ng'?`<span class="pill p-fail">${d.kindLabel}</span>`:d.kind==='info'?`<span class="pill p-fixed">${d.kindLabel}</span>`:`<span class="pill p-new">${d.kindLabel}</span>`;
+    const right=d.done?`<span class="pill p-pass">対応済み</span>`:d.impactKey?`<span class="pill p-flaky">テスト ${open.length} 件に影響</span>`:d.gen?`<span class="pill p-new">テストなし</span>`:`<span class="pill p-new">影響なし</span>`;
+    const ba=d.old!=null?`<div class="ba"><div class="o">${esc(d.old)}</div><span>→</span><div class="n">${esc(d.now)}</div></div>`:`<ul><li>${esc(d.now)}</li></ul>`;
+    const list=impacted.length?`<ul>${impacted.map(t=>`<li><code>${t.id}</code> ${esc(t.name)}${t.steps.some(s=>s.issue?.key===d.impactKey&&s.fixed)?' <span style="color:var(--ok-tx)">✓ 修正済</span>':''}</li>`).join('')}</ul>`:'';
+    const act=d.done?'':d.impactKey?`<button class="btn pri" data-fixall="${d.id}">${open.length} 件のセレクタをまとめて修正</button><button class="btn" data-one="${impacted[0]?.id||''}">1 件ずつ確認する</button><button class="btn sm" data-ignore="${d.id}">この変更を無視</button>`:d.gen?`<button class="btn pri" data-gen8="${d.id}">この画面のテストを生成</button><button class="btn sm" data-ignore="${d.id}">あとで</button>`:`<button class="btn" data-ignore="${d.id}">確認済みにする</button>`;
+    return `<div class="drift ${d.done?'done':''}"><div class="dh">${chip}<b>${esc(d.screen)} ${esc(d.title)}</b><div class="sp"></div>${right}</div><div class="db">${ba}${list}<div class="act">${act}<span class="why">${esc(d.why)}</span></div></div></div>`;
+  }).join('');
+}
+$('#drift-body').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  if(b.dataset.fixall){const d=S.drifts.find(x=>x.id===b.dataset.fixall);const n=applyFixByKey(d.impactKey);d.done=true;renderAll();save();toast(`${n} 件のテストに修正を適用しました。実行して確認してください`,'ok')}
+  if(b.dataset.one){select(b.dataset.one)}
+  if(b.dataset.ignore){const d=S.drifts.find(x=>x.id===b.dataset.ignore);d.done=true;renderAll();save();toast('確認済みにしました')}
+  if(b.dataset.gen8){const d=S.drifts.find(x=>x.id===b.dataset.gen8);SCREENS.P008={name:'注文完了',path:'/order_done.html'};if(!ORDER.includes('P008'))ORDER.splice(1,0,'P008');ELS.P008={hero:{l:'h1',s:'high',t:'text',label:'見出し'},no:{l:'[data-testid="order-no"]',s:'high',t:'text',label:'注文番号'},top:{l:'a[href="/index.html"]',s:'mid',t:'button',label:'トップへ戻る'}};
+    const specs=[['注文完了画面が表示される',['open','see:hero:ご注文ありがとうございます']],['注文番号が表示される',['open','see:no:#']],['トップへ戻れる',['open','click:top','url:/index.html']]];
+    specs.forEach(([n,sp])=>{const t=mkTest('PW-'+String(S.nextId++).padStart(4,'0'),'P008',n,'スモーク',sp,{status:'new',history:[],last:{dur:'—',t:'—'}});S.tests.push(t)});
+    d.done=true;renderAll();save();toast('P008 のテストを 3 件生成しました','ok');select(S.tests[S.tests.length-3].id)}
+});
+$('#recrawl-btn').onclick=async()=>{const b=$('#recrawl-btn');b.disabled=true;b.textContent='クロール中…';await sleep(1400);b.disabled=false;b.textContent='再クロール';toast('再クロール完了 · 新しい変更はありません','ok')};
+
+/* ==================== サイトの地図 ==================== */
+function renderSite(){
+  const all=[...ORDER];
+  $('#scr').innerHTML=all.map(scr=>{const ts=S.tests.filter(t=>t.screen===scr);const gaps=(GAPS[scr]||[]).length;const cov=ts.length?Math.round(ts.length/(ts.length+gaps)*100):0;const col=cov>=90?'var(--ok)':cov>0?'var(--wa)':'var(--ng)';
+    return `<div class="scard" data-scr="${scr}"><div class="id">${scr} · ${esc(SCREENS[scr].path)}</div><b>${esc(SCREENS[scr].name)}</b><div class="bar"><i style="width:${cov}%;background:${col}"></i></div><small><span>${ts.length} テスト · 失敗 ${ts.filter(t=>t.status==='fail').length}</span><span>${gaps?`穴 ${gaps} 件`:'網羅'}</span></small></div>`}).join('');
+}
+$('#scr').addEventListener('click',e=>{const c=e.target.closest('.scard');if(c)openNew(c.dataset.scr)});
+
+/* ==================== 新規テスト ==================== */
+function openNew(scr){
+  const sel=$('#new-screen'); sel.innerHTML=ORDER.map(s=>`<option value="${s}" ${s===scr?'selected':''}>${s} ${esc(SCREENS[s].name)}</option>`).join('');
+  const fill=()=>{const s=sel.value;const g=GAPS[s]||[];$('#new-gaps').innerHTML=g.length?g.map((x,i)=>`<label class="gap"><input type="checkbox" value="${i}" ${i<2?'checked':''}><div><b>${esc(x.t)}</b><span>${esc(x.d)}</span></div></label>`).join(''):'<div style="color:var(--tx3);font-size:12px;padding:6px 0">この画面は網羅されています</div>'};
+  sel.onchange=fill; fill(); $('#new-name').value=''; $('#ov-new').classList.add('on');
+}
+$('#new-btn').onclick=()=>openNew(cur()?.screen||'P004');
+$('#new-ok').onclick=()=>{
+  const scr=$('#new-screen').value; const picks=$$('#new-gaps input:checked').map(i=>GAPS[scr][+i.value]); const name=$('#new-name').value.trim();
+  if(!picks.length&&!name){toast('候補を選ぶか、名前を入力してください','ng');return}
+  let first=null;
+  picks.forEach(g=>{const t=mkTest('PW-'+String(S.nextId++).padStart(4,'0'),scr,g.t,'生成',g.steps,{status:'new',history:[],last:{dur:'—',t:'—'}});S.tests.push(t);first=first||t.id;
+    const gi=GAPS[scr].indexOf(g); if(gi>=0)GAPS[scr].splice(gi,1)});
+  if(name){const t=mkTest('PW-'+String(S.nextId++).padStart(4,'0'),scr,name,'手動',['open'],{status:'new',history:[],last:{dur:'—',t:'—'}});S.tests.push(t);first=first||t.id}
+  $('#ov-new').classList.remove('on'); select(first); toast(`${picks.length+(name?1:0)} 件のテストを生成しました。Playwright コードは自動生成済みです`,'ok');
+};
+
+/* ==================== Trace ==================== */
+function openTrace(t){
+  $('#trace-title').textContent=`${t.id} · ${t.name} · ${t.last.t}`;
+  let acc=0;
+  const rows=t.steps.map((s,i)=>{const issue=s.issue&&!s.fixed&&t.status==='fail'&&t.last.step===i;const reached=t.status!=='fail'||t.last.step==null||i<=t.last.step;const ms=s._ms||(issue?(s.issue.type==='missing'?'15.0s':'3.0s'):s.kind==='pre'?'0.4s':'0.2s');acc+=parseFloat(ms);
+    return `<div class="tr ${issue?'ng':''}"><span class="s">${acc.toFixed(1)}s</span><span class="${issue?'fl':reached?'ok':'s'}">${issue?'✕':reached?'✓':'·'}</span><span>${esc(s.action)} ${esc(s.arg||'')} <span class="s">${esc(s.loc)}</span>${issue?`<br><span class="fl">${esc(s.issue.msg)}</span>`:''}</span><div class="th"></div><div class="th" ${reached&&!issue?'':'style="opacity:.3"'}></div></div>`}).join('');
+  const fs=t.status==='fail'?t.steps[t.last.step]:null;
+  $('#trace-body').innerHTML=`<div class="tr" style="color:var(--tx3);font-family:var(--sans);font-size:11px"><span>時刻</span><span></span><span>ステップ</span><span>Before</span><span>After</span></div>${rows}
+    <h6>console</h6><pre>${fs?`[error] locator.click: Timeout 15000ms exceeded.\n  waiting for ${esc(fs.loc)}\n[info]  similar element found: ${esc(fs.issue?.key==='submit_order'?'button[name="place_order"]':'-')} (score 0.94)`:'[info] no errors'}</pre>
+    <h6>network（抜粋）</h6><pre>GET  ${esc(SCREENS[t.screen].path)}                200  412ms\nGET  /static/app.css                  200   38ms\n${t.screen==='P004'?'POST /api/checkout/total            200  118ms':t.screen==='P005'?'POST /api/contact                   200 3184ms':'GET  /api/session                   200   61ms'}</pre>`;
+  $('#ov-trace').classList.add('on');
+}
+$('#trace-dl').onclick=()=>toast('trace.zip を保存しました（Playwright Trace Viewer で開けます）');
+
+/* ==================== 共通 ==================== */
+function setView(v){S.view=v;$$('.rail [data-view]').forEach(b=>b.classList.toggle('on',b.dataset.view===v));$$('.panel').forEach(p=>p.classList.toggle('on',p.id==='p-'+v))}
+$$('.rail [data-view]').forEach(b=>b.onclick=()=>{setView(b.dataset.view);renderAll();save()});
+$('#help-btn').onclick=()=>$('#ov-help').classList.add('on');
+$('#reset-btn').onclick=()=>{if(confirm('初期状態に戻しますか？（追加したテストや修正は消えます）')){localStorage.removeItem(KEY);location.reload()}};
+$$('[data-close]').forEach(b=>b.onclick=()=>b.closest('.ov').classList.remove('on'));
+$$('.ov').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('on')}));
+function renderAll(){if(!T(S.sel))S.sel=S.tests[0].id;renderList();renderHeader();renderSteps();renderView();renderRun();renderDrift();renderSite();setView(S.view)}
+renderAll();
+if(!localStorage.getItem(KEY+'-seen')){$('#ov-help').classList.add('on');try{localStorage.setItem(KEY+'-seen','1')}catch(e){}}
+</script>
+</body>
+</html>

@@ -18,8 +18,6 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/report-v2.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/testcase-grid.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='viewpoints.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/test-activity.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/ta-design-system.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/account-view.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='vendor/driver.js/driver.css') }}?v={{ _ver }}">
@@ -31,13 +29,10 @@
   <aside class="app-sidebar">
     <a href="/" class="app-brand">
       <span class="app-brand-mark">W</span>
-      {# 副題はシステムごとに違う。docs のままだとテスト活動支援でも「QAドキュメント生成」と
+      {# 副題はシステムごとに違う。docs のままだとテスト自動化でも「QAドキュメント生成」と
          名乗ってしまい、どのシステムにいるのか名前が嘘をつく。 #}
       <span class="app-brand-text"><strong>WebSpec2Doc</strong>
         <span data-system="docs">QAドキュメント生成</span>
-        {% if not auth_user or auth_user.role == 'admin' %}
-        <span data-system="testlab">テスト活動支援</span>
-        {% endif %}
         <span data-system="autorun">AutoRun</span>
       </span>
     </a>
@@ -50,12 +45,6 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="16" height="16"><path d="M12 5v14M5 12h14"/></svg>
       <span class="add-site-label">新規解析</span>
     </button>
-    {% if not auth_user or auth_user.role == 'admin' %}
-    <button type="button" class="btn-primary sidebar-primary-action" id="ta-new-btn" data-system="testlab">
-      <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" width="14" height="14" aria-hidden="true"><path d="M6 4l14 8-14 8z"/></svg>
-      <span class="add-site-label">はじめる</span>
-    </button>
-    {% endif %}
 {% include 'partials/nav.html' %}
     <button type="button" id="sidebar-toggle-btn" class="sidebar-toggle-btn" title="サイドバーを折りたたむ">
       <svg class="icon-collapse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
@@ -64,9 +53,6 @@
     </button>
     <div class="app-sidebar-foot">
       <span data-system="docs">URLから画面仕様書・テスト設計・画面遷移図を生成します。</span>
-      {% if not auth_user or auth_user.role == 'admin' %}
-      <span data-system="testlab">仕様書・GitHub・コードからテスト条件を抽出し、設計から不具合分析まで支援します。</span>
-      {% endif %}
       <span data-system="autorun">受領から実行完了レポートの納品までを止めずに回します。</span>
     </div>
   </aside>
@@ -89,21 +75,6 @@
 {% include 'partials/view-run-history.html' %}
 {% include 'partials/view-run-result.html' %}
 
-{# テスト活動支援（System 02） #}
-{% if not auth_user or auth_user.role == 'admin' %}
-{% include 'partials/view-ta-home.html' %}
-{% include 'partials/view-ta-plan.html' %}
-{% include 'partials/view-ta-analysis.html' %}
-{% include 'partials/view-ta-strategy.html' %}
-{% include 'partials/view-ta-design.html' %}
-{% include 'partials/view-ta-implementation.html' %}
-{% include 'partials/view-ta-execution.html' %}
-{% include 'partials/view-ta-manual.html' %}
-{% include 'partials/view-ta-defect.html' %}
-{% include 'partials/view-ta-codefix.html' %}
-{% include 'partials/view-ta-completion.html' %}
-{% include 'partials/view-ta-integrations.html' %}
-{% endif %}
 
 {% include 'partials/view-user-guide.html' %}
 {% include 'partials/view-references.html' %}
@@ -252,23 +223,6 @@
   <script src="{{ url_for('static', filename='js/user-admin-view.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/tenant-admin-view.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/feedback-view.js') }}?v={{ _ver }}"></script>
-  {# テスト活動支援（System 02）: 既存データ（解析・テストケース・実行履歴）への読み取り配線 #}
-  <script src="{{ url_for('static', filename='js/ta-analysis.js') }}?v={{ _ver }}"></script>
-  <script src="{{ url_for('static', filename='js/ta-design.js') }}?v={{ _ver }}"></script>
-  <script src="{{ url_for('static', filename='js/ta-execution.js') }}?v={{ _ver }}"></script>
-  <script src="{{ url_for('static', filename='js/ta-process-nav.js') }}?v={{ _ver }}"></script>
-  <script src="{{ url_for('static', filename='js/ta-process-gate.js') }}?v={{ _ver }}"></script>
-  <script src="{{ url_for('static', filename='js/ta-manual.js') }}?v={{ _ver }}"></script>
-  <script src="{{ url_for('static', filename='js/ta-completion.js') }}?v={{ _ver }}"></script>
-  {# 各工程画面の配線（2026-08-24 追加: 未配線だった 7 画面）#}
-  <script src="{{ url_for('static', filename='js/ta-home.js') }}?v={{ _ver }}"></script>
-  <script src="{{ url_for('static', filename='js/ta-plan.js') }}?v={{ _ver }}"></script>
-  <script src="{{ url_for('static', filename='js/ta-strategy.js') }}?v={{ _ver }}"></script>
-  <script src="{{ url_for('static', filename='js/ta-implementation.js') }}?v={{ _ver }}"></script>
-  <script src="{{ url_for('static', filename='js/ta-defect.js') }}?v={{ _ver }}"></script>
-  <script src="{{ url_for('static', filename='js/ta-codefix.js') }}?v={{ _ver }}"></script>
-  <script src="{{ url_for('static', filename='js/ta-integrations.js') }}?v={{ _ver }}"></script>
-  <script src="{{ url_for('static', filename='js/ta-ai-panel.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/unimplemented-notice.js') }}?v={{ _ver }}"></script>
 
 </body>

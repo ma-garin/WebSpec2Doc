@@ -175,3 +175,9 @@ a.btn{text-decoration:none}
 /* 解析が失敗・停止で終わったときは、ログだけを残して全幅で読ませる。
    進行中の部品（スクショ枠・進捗・KPI）を畳んだ後に空白が残らないようにする。 */
 .stage-wrap.is-log-only{grid-template-columns:1fr}
+
+/* テスト名の見出し。1280 では右のボタン群に押されて 180px ほどに潰れる。
+   余った幅を優先して受け取らせる（min-width は 0 のまま。固定値を入れると
+   1280 で横スクロールが出る）。 */
+.ed-h h1{flex:1 1 auto;max-width:none}
+.ed-h code{flex:none;white-space:nowrap}

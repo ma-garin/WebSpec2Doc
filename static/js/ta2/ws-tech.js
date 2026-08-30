@@ -25,6 +25,37 @@
   var ORDER = ['classification_tree', 'decision_table', 'cause_effect', 'pairwise',
                'orthogonal_array', 'domain_analysis', 'error_guessing'];
 
+  /* 状態遷移モデル（MBT）。29119-4 は MBT を独立技法とせず、技法を
+     test model（3.54）経由で定義する。ここでは状態遷移モデルから
+     導いた遷移列を、モデルとして見せる。 */
+  var MODEL_CACHE = {};
+  function loadModel(domain) {
+    if (MODEL_CACHE[domain]) return Promise.resolve(MODEL_CACHE[domain]);
+    return T.api.get('/api/test-design?domain=' + encodeURIComponent(domain))
+      .then(function (r) { MODEL_CACHE[domain] = (r && r.screens) || []; return MODEL_CACHE[domain]; })
+      .catch(function () { return []; });
+  }
+
+  function modelCardHtml(md) {
+    if (!md) return '';
+    var st = md.state_transitions || {};
+    var seqs = st.sequences || [];
+    if (!seqs.length) {
+      return '<div class="card tech-card is-na"><h3>状態遷移モデル（MBT）</h3>'
+        + '<div class="sub">ISO/IEC/IEEE 29119-4 5.2.8・3.54 test model</div>'
+        + '<p class="tech-na">この画面から導ける遷移がありません</p></div>';
+    }
+    var lines = seqs.slice(0, 3).map(function (q) {
+      return (q.steps || []).join(' → ');
+    });
+    return '<div class="card tech-card"><h3>状態遷移モデル（MBT）</h3>'
+      + '<div class="sub">ISO/IEC/IEEE 29119-4 5.2.8・3.54 test model</div>'
+      + '<p class="tech-n"><b>' + num(seqs.length) + '</b> 本の遷移列</p>'
+      + '<p class="tech-cov">' + esc(st.n_switch != null ? st.n_switch + '-スイッチ被覆（ISTQB: 有効な遷移をすべて 1 回以上通る）' : '') + '</p>'
+      + '<ul class="cond">' + lines.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>'
+      + '</div>';
+  }
+
   var cache = {};   // domain -> screens[]
 
   function load(domain) {
@@ -126,13 +157,18 @@
           + '<div class="sub">解析結果に含まれていない画面です。</div></div>';
         return;
       }
-      host.innerHTML = '<div class="tech-head">'
-        + '<b>' + esc(res.title || res.page_id) + '</b>'
-        + '<span>この画面から導いたテスト設計の内訳です。件数はケース数で、'
-        + '同じケースが複数の技法から導かれることがあります。</span></div>'
-        + '<div class="tech-grid">'
-        + ORDER.map(function (k) { return cardHtml(res, k); }).join('')
-        + '</div>';
+      loadModel(domain).then(function (models) {
+        var md = null;
+        models.forEach(function (m) { if (String(m.page_id) === String(pid)) md = m; });
+        host.innerHTML = '<div class="tech-head">'
+          + '<b>' + esc(res.title || res.page_id) + '</b>'
+          + '<span>この画面から導いたテスト設計の内訳です。件数はケース数で、'
+          + '同じケースが複数の技法から導かれることがあります。</span></div>'
+          + '<div class="tech-grid">'
+          + modelCardHtml(md)
+          + ORDER.map(function (k) { return cardHtml(res, k); }).join('')
+          + '</div>';
+      });
     }, function (e) {
       host.innerHTML = '<div class="card"><h3>読み込めませんでした</h3>'
         + '<div class="sub">' + esc((e && e.message) || '') + '</div></div>';

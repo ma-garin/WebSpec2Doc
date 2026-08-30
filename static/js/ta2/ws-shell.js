@@ -84,16 +84,38 @@
     return null;
   }
 
+  var ctxTried = false;   // 履歴の再取得は 1 回だけ（循環防止）
+
   function renderCtx() {
     var box = $('#ctx-card');
     if (!box) return;
-    var it = historyItem(S.domain);
-    if (!it) {
-      box.innerHTML = '<h4>' + esc(S.domain || 'サイト') + '</h4>'
-        + '<dl><dt>状態</dt><dd>解析結果を読み込んでいます…</dd></dl>';
-      loadHistory().then(function () { if (modeOf(S.view) === 'ctx') renderCtx(); });
+    /* サイトを選んでいない画面（/team など）では、探しても見つからないのが
+       正しい状態。ここで読み込みに行くと、見つからない→読み込む→見つからない
+       の循環になり、ブラウザが固まる。 */
+    if (!S.domain) {
+      box.innerHTML = '<h4>ワークスペース全体</h4>'
+        + '<dl><dt>対象</dt><dd>この画面はサイトに属しません</dd></dl>'
+        + '<a class="btn" style="width:100%;justify-content:center;margin-top:10px" href="/">'
+        + 'サイト一覧へ</a>';
       return;
     }
+    var it = historyItem(S.domain);
+    if (!it) {
+      box.innerHTML = '<h4>' + esc(S.domain) + '</h4>'
+        + '<dl><dt>状態</dt><dd>解析結果を読み込んでいます…</dd></dl>';
+      /* 一度だけ取りに行く。取れてもこのサイトが無い場合に再取得しない。 */
+      if (!ctxTried) {
+        ctxTried = true;
+        loadHistory().then(function () { if (modeOf(S.view) === 'ctx') renderCtx(); });
+      } else {
+        box.innerHTML = '<h4>' + esc(S.domain) + '</h4>'
+          + '<dl><dt>状態</dt><dd>このサイトの解析結果が見つかりません</dd></dl>'
+          + '<a class="btn" style="width:100%;justify-content:center;margin-top:10px" href="/">'
+          + 'サイト一覧へ</a>';
+      }
+      return;
+    }
+    ctxTried = false;
     var fails = 0;
     S.tests.forEach(function (t) { if (t.status === 'fail') fails++; });
     box.innerHTML = '<h4>' + esc(it.domain) + '</h4><dl>'

@@ -208,7 +208,10 @@
 
   function pathFor(v) {
     var seg = PATH_OF[v];
-    if (!seg || !state.domain) return '/';
+    if (!seg) return '/';
+    /* チームはワークスペース全体の設定で、サイトに属さない。
+       サイト未選択でもここへ入れないと、サイトが 0 件のテナントは同僚を招けない。 */
+    if (!state.domain) return v === 'team' ? '/team' : '/';
     return '/sites/' + enc(state.domain) + '/' + seg;
   }
 

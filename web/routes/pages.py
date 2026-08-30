@@ -93,6 +93,16 @@ def index() -> str:
     return render_template("workspace.html", ws="home", domain="")
 
 
+@bp.route("/team")
+def team() -> str:
+    """チーム（メンバー・API トークン）。
+
+    ワークスペース全体の設定であってサイトには属さない。サイトを 1 件も
+    持たないテナントでも同僚を招けるよう、サイト無しで開ける経路を持たせる。
+    """
+    return render_template("workspace.html", ws="team", domain="")
+
+
 @bp.route("/sites/<domain>")
 def site_root(domain: str) -> Response:
     """サイトの入口。主役の価値は仕様なので、既定で仕様ワークスペースへ送る。"""

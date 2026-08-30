@@ -158,12 +158,13 @@
     var ws = bodyWs();
     var wanted = paramDomain();
 
-    // ホームはサイト一覧だけで成立する。テストは対象サイトが決まってから読む
-    if (ws === 'home') {
+    // ホームとチームはサイト一覧だけで成立する。チームはワークスペース全体の
+    // 設定で、サイトが 1 件も無いテナントでも開けなければ同僚を招けない。
+    if (ws === 'home' || (ws === 'team' && !wanted)) {
       return T.loadSites().catch(function () { S.sites = []; return S.sites; }).then(function () {
         S.ready = true;
         T.setDomain('');
-        T.setView('home');
+        T.setView(ws === 'team' ? 'team' : 'home');
         T.render();
         T.emit('boot');
       });

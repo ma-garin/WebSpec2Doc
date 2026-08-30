@@ -267,7 +267,13 @@ def _screenshot_gap(target: Path, copied: list[str]) -> list[str]:
     except (OSError, ValueError):
         return []
     have = {Path(rel).stem for rel in copied}
-    return [pid for s in screens if (pid := str(s.get("page_id") or "")) and pid not in have]
+    # screens の要素が dict でない report.json（壊れた成果物・別形式）でも落とさない。
+    # 退避は成果物を残すための処理で、ここで例外を出すと実行回ごと失われる。
+    return [
+        pid
+        for s in screens
+        if isinstance(s, dict) and (pid := str(s.get("page_id") or "")) and pid not in have
+    ]
 
 
 # 退避対象の全相対パス。artifact_file() が呼ばれるたびに組み直さないよう

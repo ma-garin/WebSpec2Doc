@@ -773,7 +773,13 @@ def api_ta2_recrawl() -> dict:
     # スレッド内ではリクエストコンテキストを参照できないため、
     # テナントスコープ済みの出力先をここで解決して渡す（/api/ta2/run と同じ）。
     out_dir = _out()
-    from web.services.job_queue import start_crawl_job
+    from web.services.job_queue import list_jobs_for_domain, start_crawl_job
+
+    # 同じサイトへ 2 本のクロールを同時に走らせない。並走すると同じ
+    # report.json / snapshots を互いに上書きし、成果物が壊れる。
+    running = [j for j in list_jobs_for_domain(domain) if j.status in ("queued", "running")]
+    if running:
+        raise Ta2Error(f"このサイトは再クロール中です（job_id={running[0].job_id}）", 409)
 
     job_id = start_crawl_job(
         domain,

@@ -138,14 +138,15 @@ class TestSnapshot:
         assert meta is not None
         assert meta["summary"]["screen_count"] == 6
 
-    def test_screenshots_are_not_copied(self, tmp_path: Path) -> None:
-        """容量が上限なく膨らまないよう、スクリーンショットは退避しない。"""
+    def test_screenshots_are_copied(self, tmp_path: Path) -> None:
+        """実行回ごとに証跡を残す。共有すると、過去の実行の画面が後の実行で置き換わる。"""
         d = _make_artifacts(tmp_path)
         shots = d / "screenshots"
         shots.mkdir()
         (shots / "P001.png").write_bytes(b"\x89PNG")
         rid = snapshot_run(tmp_path, DOMAIN, event="crawl")
-        assert not (tmp_path / DOMAIN / "runs" / str(rid) / "screenshots").exists()
+        saved = tmp_path / DOMAIN / "runs" / str(rid) / "screenshots" / "P001.png"
+        assert saved.is_file()
 
 
 class TestListing:

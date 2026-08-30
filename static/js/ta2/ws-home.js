@@ -32,6 +32,7 @@
   /* ------------------------------------------------------------------ 一覧 */
   function itemsOf() { return S.history || []; }
 
+  var lastUrl = '';          // 直近に投入した URL（失敗後に打ち直させないため保持）
   var query = '';            // 一覧の絞り込み文字列
   var filterMounted = false;
 
@@ -301,6 +302,20 @@
     if (pill) { pill.className = 'pill ' + (cls === 'ng' ? 'p-fail' : 'p-pass'); pill.textContent = msg; }
     var cancel = $('#home-cancel');
     if (cancel) { cancel.disabled = true; cancel.title = '解析は終了しています'; }
+    /* 失敗・停止で終わったときは、途中経過を見せる部品を畳む。
+       0 のままの KPI・0% の進捗バー・「取得中…」のスクショ枠が残ると、
+       まだ何かが動いているように読めて、理由と次の一手が埋もれる。 */
+    setStageNoise(cls !== 'ng');
+  }
+
+  /** 進行中だけ見せる部品（スクショ枠・進捗バー・KPI）の表示を切り替える */
+  function setStageNoise(show) {
+    ['home-shot-wrap', 'home-prog', 'home-kpis'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.hidden = !show;
+    });
+    var wrap = document.querySelector('#home-stage .stage-wrap');
+    if (wrap) wrap.classList.toggle('is-log-only', !show);
   }
 
   /* ---------------------------------------------------- 画面発見（discover） */
@@ -459,6 +474,7 @@
     counts = { found: 0, done: 0, skipped: 0, saved: 0 };
     var log = $('#home-log');
     if (log) log.textContent = '';
+    lastUrl = url;
     var existing = matchExistingDomain(url);
     var title = $('#home-stage-title');
     if (title) {
@@ -469,6 +485,7 @@
     if (pill) { pill.className = 'pill p-running'; pill.textContent = '実行中'; }
     var cancel = $('#home-cancel');
     if (cancel) { cancel.disabled = false; cancel.title = ''; }
+    setStageNoise(true);
     renderStageKpis();
     renderProgress();
     stage('stage');
@@ -529,8 +546,12 @@
     var btn = $('#home-cancel');
     if (btn && btn.textContent === '入力に戻る') {
       btn.textContent = '停止';
-      stage(itemsOf().length ? 'summary' : 'empty');
-      if (!itemsOf().length) { var i = $('#home-url'); if (i) i.focus(); }
+      /* 失敗の直後は「サイト一覧」ではなく URL 入力へ戻す。直前に打った URL を
+         残したまま直せるようにする（一覧へ戻すと、追加ボタンを押し直して
+         打ち直しになる）。 */
+      stage('empty');
+      var i = $('#home-url');
+      if (i) { i.value = lastUrl || i.value; i.focus(); i.select(); }
       return;
     }
     cancelled = true;

@@ -171,3 +171,7 @@ a.btn{text-decoration:none}
 /* ---------- 定期実行 WS（C1） ---------- */
 #p-schedule .next-run{margin-bottom:10px}
 #sched-history td{font-size:12px}
+
+/* 解析が失敗・停止で終わったときは、ログだけを残して全幅で読ませる。
+   進行中の部品（スクショ枠・進捗・KPI）を畳んだ後に空白が残らないようにする。 */
+.stage-wrap.is-log-only{grid-template-columns:1fr}

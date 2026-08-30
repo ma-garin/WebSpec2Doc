@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from flask import Blueprint, abort, render_template
+from flask import Blueprint, Response, abort, redirect, render_template
 
 bp = Blueprint("pages", __name__)
 
@@ -24,7 +24,8 @@ _VIEW_NAMES = frozenset(
         "user-management",
         "tenant-management",
         "feedback",
-        # テスト活動支援（System 02）。12 画面すべてを直リンク可能にする。
+        # テスト自動化（System 02）の旧 12 画面。新シェル /test-automation へ 302 で送る。
+        # 名前を残すのは、既存のブックマーク・共有リンクを 404 にしないため。
         "test-activity",
         "test-plan",
         "test-analysis",
@@ -41,8 +42,8 @@ _VIEW_NAMES = frozenset(
 )
 _VIEW_ALIASES = {"home": "dashboard"}
 
-# テスト活動支援（System 02）の画面。管理者のみが開ける。
-# ここを 1 箇所にまとめておかないと、画面を足したときに保護漏れが出る。
+# テスト自動化（System 02）の旧画面。中身は /test-automation に統合済みで、
+# ここに載っている名前はすべて 302 で新シェルへ送るだけになる。
 _TESTLAB_VIEWS = frozenset(
     {
         "test-activity",
@@ -70,7 +71,7 @@ _SETTINGS_TABS = frozenset(
 
 
 def _may_use_testlab() -> bool:
-    """テスト活動支援を使えるか。認証オフの開発環境では制限しない。"""
+    """テスト自動化を使えるか。認証オフの開発環境では制限しない。"""
     from flask import g
 
     from web.auth import auth_enabled
@@ -88,9 +89,18 @@ def index() -> str:
     return render_template("index.html")
 
 
+@bp.route("/test-automation")
+def test_automation() -> str:
+    """テスト自動化（System 02）。index.html とは別の独立シェルを返す。"""
+    if not _may_use_testlab():
+        # 存在は隠さず 403 にする。404 にすると権限の問題か綴り違いか切り分けられない。
+        abort(403)
+    return render_template("test-automation.html")
+
+
 @bp.route("/systems")
 def systems() -> str:
-    """ログイン後のシステム選択ハブ。ドキュメント作成 / テスト活動支援 / AutoRun / CLI・API を選ぶ。"""
+    """ログイン後のシステム選択ハブ。ドキュメント作成 / テスト自動化 / AutoRun / CLI・API を選ぶ。"""
     return render_template("system-select.html")
 
 
@@ -129,13 +139,13 @@ def settings_tab(tab: str) -> str:
 
 
 @bp.route("/<view_name>")
-def view(view_name: str) -> str:
+def view(view_name: str) -> str | Response:
     resolved = _VIEW_ALIASES.get(view_name, view_name)
     if resolved not in _VIEW_NAMES:
         abort(404)
-    if resolved in _TESTLAB_VIEWS and not _may_use_testlab():
-        # 存在は隠さず 403 にする。404 にすると管理者にも「無い」と見え、
-        # 権限の問題なのか綴り違いなのか切り分けられない。
-        abort(403)
+    if resolved in _TESTLAB_VIEWS:
+        # 旧 12 画面は /test-automation に統合済み。権限判定は移送先で行う。
+        # ここでも 403 を出すと判定が 2 箇所に散り、片方だけ直し忘れる。
+        return redirect("/test-automation")
     # 実際の画面切替はクライアント側の switchView() が location.pathname を見て行う。
     return render_template("index.html")

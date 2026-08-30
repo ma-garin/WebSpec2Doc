@@ -59,10 +59,10 @@
         <span class="syscard-open">ドキュメント作成を開く →</span>
       </a>
 
-      {# テスト活動支援（System 02）は管理者のみ。押しても 403 になるカードは並べない。 #}
+      {# テスト自動化（System 02）は管理者のみ。押しても 403 になるカードは並べない。 #}
       {% if not auth_user or auth_user.role == 'admin' %}
-      <!-- テスト活動支援（System 02）。TOP はテスト活動ダッシュボード。 -->
-      <a class="syscard syscard-test" href="/test-activity">
+      <!-- テスト自動化（System 02）。TOP は /test-automation の独立シェル。 -->
+      <a class="syscard syscard-test" href="/test-automation">
         <span class="syscard-accent" aria-hidden="true"></span>
         <span class="syscard-badge">新規</span>
         <span class="syscard-icon" aria-hidden="true">
@@ -71,13 +71,14 @@
           </svg>
         </span>
         <span class="syscard-no">System 02</span>
-        <span class="syscard-title">テスト活動支援</span>
-        <span class="syscard-desc">仕様書・GitHub・ソースコード・開発標準を読み取り、テスト条件とテストケースを設計します。計画から不具合分析・コード修正までを一気通貫で。</span>
+        <span class="syscard-title">テスト自動化</span>
+        <span class="syscard-desc">解析結果とテストケース表からテストを組み立て、<b>自動テストコードの生成と実行</b>までを画面上で行います。対象サイトの変更は実行前に検知し、どのテストが壊れるかを先に示します。</span>
         <span class="syscard-chips">
-          <span class="syscard-chip">テスト設計</span><span class="syscard-chip">トレーサビリティ</span>
-          <span class="syscard-chip">GitHub 連携</span><span class="syscard-chip">不具合分析</span>
+          <span class="syscard-chip">テスト設計</span><span class="syscard-chip">コード生成</span>
+          <span class="syscard-chip">自動テスト実行</span><span class="syscard-chip">変更の事前検知</span>
+          <span class="syscard-chip">トレーサビリティ</span>
         </span>
-        <span class="syscard-open">テスト活動支援を開く →</span>
+        <span class="syscard-open">テスト自動化を開く →</span>
       </a>
       {% endif %}
 

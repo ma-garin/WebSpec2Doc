@@ -38,6 +38,7 @@ def create_app() -> Flask:
         schedule,
         settings,
         site,
+        ta2,
         tenant_admin,
         test_activity,
         traceability,
@@ -111,6 +112,7 @@ def create_app() -> Flask:
     app.register_blueprint(crawl.bp)
     app.register_blueprint(auto_run.bp)
     app.register_blueprint(test_activity.bp)
+    app.register_blueprint(ta2.bp)
     app.register_blueprint(review.bp)
     app.register_blueprint(runs.bp)
     app.register_blueprint(schedule.bp)

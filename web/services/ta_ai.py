@@ -1,4 +1,4 @@
-"""テスト活動支援（TA）の AI 生成と、その一部の永続化。
+"""テスト自動化（TA）の AI 生成と、その一部の永続化。
 
 - LLM への HTTP 呼び出しは新しく作らない。既存の `src/llm/openai_client.py`
   （OpenAI / Ollama 両対応・Structured Outputs・アクティビティログ記録済み）をそのまま使う。

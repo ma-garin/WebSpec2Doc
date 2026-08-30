@@ -830,6 +830,9 @@ def _report_screens(domain: str, report: dict[str, Any], tests: list[dict[str, A
             {
                 "id": sid,
                 "name": str(screen.get("name") or ""),
+                # 画面名はサイトによって全画面共通のことがある（<title> が同じ）。
+                # 報告を受け取る側が見分けられるよう、パスも渡す。
+                "path": str(screen.get("path") or ""),
                 "tests": len(mine),
                 "fails": sum(1 for t in mine if t.get("status") == "fail"),
                 "coverage": round(100 * len(mine) / denominator) if denominator else 0,

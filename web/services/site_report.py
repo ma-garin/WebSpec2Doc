@@ -11,6 +11,7 @@ I/O を行わない。呼び出し側（`web/routes/ta2.py`）が読み出した
 from __future__ import annotations
 
 import html
+import re
 from collections.abc import Iterable, Mapping, Sequence
 from datetime import datetime
 from typing import Any
@@ -52,11 +53,21 @@ _KIND_LABEL = {
 _EMPTY = "—"
 
 
+# 実行ログには端末の色付け（ANSI エスケープ）がそのまま混じる。
+# HTML に出すと "[31m" のような文字列が読み手に見えるだけなので落とす。
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]|\[(?:3[0-9]|9[0-9]|0)m")
+
+
+def _plain(value: Any) -> str:
+    """端末制御文字を除いた素のテキスト。"""
+    return _ANSI_RE.sub("", str(value if value is not None else ""))
+
+
 def _e(value: Any) -> str:
     """None と数値も含めてエスケープする（テンプレートに素の値を通さない）。"""
     if value is None:
         return ""
-    return html.escape(str(value), quote=True)
+    return html.escape(_plain(value), quote=True)
 
 
 def _items(value: Any) -> list[Any]:
@@ -119,7 +130,7 @@ def _style() -> str:
         "line-height:1.6;padding:28px 20px}\n"
         f"main{{max-width:900px;margin:0 auto;background:{_SF};border:1px solid {_LINE};"
         "border-radius:12px;padding:26px 30px}\n"
-        "h1{font-size:20px;font-weight:700;letter-spacing:-.02em;margin-bottom:4px}\n"
+        ".sub{color:#98A2B3;font-size:10.5px;font-family:'JetBrains Mono',monospace}\nh1{font-size:20px;font-weight:700;letter-spacing:-.02em;margin-bottom:4px}\n"
         f".meta{{color:{_TX3};font-size:11.5px;margin-bottom:18px;font-family:{_MONO};"
         "word-break:break-all}\n"
         f"h2{{font-size:12px;letter-spacing:.06em;color:{_TX3};font-weight:700;"
@@ -248,9 +259,15 @@ def _section_coverage(screens: Sequence[Mapping[str, Any]]) -> str:
         tests = _int(screen.get("tests"))
         coverage = f'{_int(screen.get("coverage"))}%' if tests else "未着手"
         fails = _num(screen.get("fails")) if tests else _EMPTY
+        # 画面名はサイトによっては全画面で同じことがある（<title> が共通）。
+        # 名前だけでは見分けられないので、分かるときはパスを添える。
+        path = _str(screen.get("path")) or _str(screen.get("url"))
+        label = _e(_str(screen.get("name")) or _str(screen.get("id")))
+        if path:
+            label += f'<br><span class="sub">{_e(path)}</span>'
         rows.append(
             f"<tr><td>{_e(_str(screen.get('id')) or _EMPTY)}</td>"
-            f"<td>{_e(_str(screen.get('name')) or _str(screen.get('id')))}</td>"
+            f"<td>{label}</td>"
             f"<td>{_num(tests)}</td><td>{_e(fails)}</td><td>{_e(coverage)}</td></tr>"
         )
     note = (

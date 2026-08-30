@@ -203,3 +203,39 @@ a.btn{text-decoration:none}
 .main > .ed-h{grid-row:2}
 .main > .ed-b{grid-row:3}
 .ws-top{grid-row:1}
+
+/* ------------------------------------------------------------------ レール
+   記号 7 つだけでは、分析・設計と自動化の区別がアイコンから読めない。
+   文字を添え、作業のまとまりを区切り線で示す。 */
+.app{grid-template-columns:84px 280px 1fr}
+.rail{padding:14px 6px}
+.rail button{width:72px;height:auto;padding:7px 2px 5px;display:flex;flex-direction:column;align-items:center;gap:3px;line-height:1.2}
+.rail button .ic{font-size:16px;line-height:1}
+.rail button .lb{font-size:10px;font-weight:600;letter-spacing:.01em;white-space:nowrap}
+.rail button .bd{top:2px;right:8px}
+.rail .rail-link{width:72px;height:auto;padding:7px 2px 5px}
+.rail .rail-sep{width:44px;height:1px;background:var(--line);margin:5px 0}
+.rail .tip{left:78px}
+.rail .lg{margin-bottom:10px}
+
+/* ------------------------------------------------ ホーム「次にやること」
+   サイトを選んだだけでは右側がほぼ空白で、何ができる製品なのか読めない。
+   分析・設計／自動化／変更／報告を、実データの言葉で並べる。 */
+.next-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:18px}
+.next-card{display:flex;flex-direction:column;gap:5px;background:var(--sf);border:1px solid var(--line);
+  border-radius:12px;padding:15px 17px;text-decoration:none;color:var(--tx)}
+.next-card:hover{border-color:var(--ac);box-shadow:0 1px 3px rgba(16,24,40,.06)}
+.next-card b{font-size:14px;font-weight:700}
+.next-card .lead{font-size:12.5px;color:var(--tx2);line-height:1.55}
+.next-card .sub{font-size:11.5px;color:var(--tx3);line-height:1.55}
+.next-card .go{font-size:12px;color:var(--ac);font-weight:600;margin-top:2px}
+.next-card.wa{border-color:#F5D89A;background:#FFFDF6}
+.next-card.wa .lead{color:var(--wa-tx);font-weight:500}
+
+/* 仕様画面「この画面のテスト」。分析の先（設計・自動化）が別モードに
+   隠れたままにならないよう、同じ画面に件数と足りない箇所を出す。 */
+.spec-tests-row{display:flex;gap:16px;align-items:baseline;font-size:13px;color:var(--tx2)}
+.spec-tests-row b{font-size:18px;font-weight:700;color:var(--tx);font-variant-numeric:tabular-nums}
+.spec-tests-row .ng b{color:var(--ng-tx)}
+.spec-tests-row .tx3{color:var(--tx3);font-size:12px}
+.spec-tests-act{display:flex;gap:8px;margin-top:12px}

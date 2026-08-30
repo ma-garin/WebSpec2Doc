@@ -168,8 +168,8 @@
       kpis.innerHTML =
         kpi(it.screens, '画面') +
         kpi(it.fields, '入力項目') +
-        kpi(it.snapshot_count, '解析回数') +
-        kpi(it.has_diff ? 'あり' : 'なし', '未確認の変更', it.has_diff ? 'wa' : '');
+        kpi(it.snapshot_count, '解析した回数') +
+        kpi(it.has_diff ? '要確認' : 'なし', '前回からの変更', it.has_diff ? 'wa' : '');
     }
     setHref('#home-cta-spec', '/sites/' + encodeURIComponent(it.domain) + '/spec');
     setHref('#home-cta-tests', '/sites/' + encodeURIComponent(it.domain) + '/tests');
@@ -180,6 +180,41 @@
         + (it.site_url ? ' · 対象 ' + it.site_url : '');
     }
     stage('summary');
+    renderNext(it);
+  }
+
+  /* ------------------------------------------------------ 次にやること
+   * サイトを選んだだけでは画面の大半が空く。このサイトで何ができるのか、
+   * いま何が足りないのかを、実データだけで並べる（推測で埋めない）。 */
+  function renderNext(it) {
+    var host = $('#home-next');
+    if (!host) return;
+    var d = encodeURIComponent(it.domain);
+    host.innerHTML = '<div class="next-grid" id="next-grid"></div>';
+    var grid = $('#next-grid', host);
+    var cards = [
+      card('分析・設計', '/sites/' + d + '/spec',
+           it.screens + ' 画面の仕様と、そこから設計したテストケース',
+           'ページ要素・入力項目・制約・遷移。テストケースは表で直せます'),
+      card('自動化', '/sites/' + d + '/tests',
+           '設計したケースを実行できるコードにして走らせる',
+           '失敗は理由・止まったステップ・証跡まで残ります'),
+      card('変更', '/sites/' + d + '/changes',
+           it.has_diff ? '前回の解析から変わった箇所があります' : '前回の解析からの差分',
+           '壊れる前に、影響するテストをまとめて直せます', it.has_diff ? 'wa' : ''),
+      card('報告', '/sites/' + d + '/report',
+           'このツールが無くても開ける 1 枚の HTML',
+           '成功率・失敗・カバレッジ・変更・削減工数')
+    ];
+    grid.innerHTML = cards.join('');
+  }
+
+  function card(title, href, lead, sub, cls) {
+    return '<a class="next-card ' + (cls || '') + '" href="' + href + '">'
+      + '<b>' + esc(title) + '</b>'
+      + '<span class="lead">' + esc(lead) + '</span>'
+      + '<span class="sub">' + esc(sub) + '</span>'
+      + '<span class="go">開く →</span></a>';
   }
 
   function kpi(value, label, cls) {

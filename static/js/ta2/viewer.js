@@ -113,16 +113,38 @@
 
   function renderFailShot(page, t) {
     if (!hasRun(t)) { page.innerHTML = noEvidence('この実行の証跡はありません（まだ実行していません）'); return; }
-    var url = T.api.artifactUrl(S.domain, t.id, 'screenshot');
-    page.innerHTML = '<img id="fail-shot" src="' + esc(url) + '" alt="失敗時のスクリーンショット"'
-      + ' style="display:block;width:100%;height:100%;object-fit:contain;object-position:top center">';
-    var img = $('#fail-shot', page);
-    if (img) {
-      img.addEventListener('error', function () {
-        page.innerHTML = noEvidence('この実行の証跡はありません');
-      });
+    /* 証跡は最新の実行分しか残らない。過去の実行での失敗を開いたときに
+       取りに行くと、必ず 404 になってコンソールを汚す。実行 ID を先に
+       突き合わせ、残っていないと分かっている場合は要求しない。 */
+    var latest = (S.runs && S.runs.length) ? String(S.runs[0].run_id || '') : '';
+    var mine = String((t.last || {}).run_id || '');
+    if (latest && mine && mine !== latest) {
+      page.innerHTML = noEvidence('この失敗は過去の実行のものです。証跡は最新の実行分だけ残ります');
+      return;
     }
+    var url = T.api.artifactUrl(S.domain, t.id, 'screenshot');
+    var token = ++failShotSeq;
+    page.innerHTML = noEvidence('証跡を読み込んでいます…');
+    fetch(url, { credentials: 'same-origin' }).then(function (r) {
+      if (token !== failShotSeq) return null;          // 別のテストへ移った後の応答は捨てる
+      if (!r.ok) { page.innerHTML = noEvidence('この実行の証跡はありません'); return null; }
+      return r.blob();
+    }).then(function (blob) {
+      if (!blob || token !== failShotSeq) return;
+      var src = URL.createObjectURL(blob);
+      page.innerHTML = '<img id="fail-shot" alt="失敗時のスクリーンショット"'
+        + ' style="display:block;width:100%;height:100%;object-fit:contain;object-position:top center">';
+      var img = $('#fail-shot', page);
+      if (img) {
+        img.addEventListener('load', function () { URL.revokeObjectURL(src); });
+        img.src = src;
+      }
+    }).catch(function () {
+      if (token === failShotSeq) page.innerHTML = noEvidence('この実行の証跡を読み込めませんでした');
+    });
   }
+
+  var failShotSeq = 0;   // 連続で選び替えたとき、古い応答で上書きしないための世代番号
 
   /* ------------------------------------------------------------ 描画本体 */
   function renderHighlight(t) {

@@ -677,6 +677,51 @@ def api_ta2_screenshot() -> Any:
 # =========================================================================
 # 地図と変更
 # =========================================================================
+@bp.get("/api/ta2/techniques")
+@_guard
+def api_ta2_techniques() -> dict:
+    """画面ごとのテスト技法の適用結果。
+
+    ISO/IEC/IEEE 29119-4:2021 が定める仕様ベース技法のうち、この製品が
+    画面の解析結果から導けるものを返す（5.2.1 同値分割 / 5.2.2 分類ツリー /
+    5.2.3 境界値分析 / 5.2.5 組合せ / 5.2.6 デシジョンテーブル /
+    5.2.7 原因結果グラフ / 5.2.8 状態遷移）。加えて経験ベースの
+    エラー推測（5.4）とドメイン分析を含む。
+
+    適用できない技法は applicable=False と理由を返す。黙って省くと
+    「その技法を検討していない」のか「対象が無い」のかが分からなくなる。
+    """
+    domain = _domain()
+    report = _report(domain)
+    screen_id = str(request.args.get("screen") or "").strip()
+
+    import sys
+    from pathlib import Path as _Path
+
+    src = str((_Path(__file__).resolve().parents[2] / "src"))
+    if src not in sys.path:
+        sys.path.insert(0, src)
+    from autorun.techniques import apply_all
+
+    screens = [s for s in (report.get("screens") or []) if isinstance(s, dict)]
+    if screen_id:
+        screens = [s for s in screens if str(s.get("page_id") or "") == screen_id]
+        if not screens:
+            raise Ta2Error("その画面は解析結果にありません", 404)
+
+    out: list[dict[str, Any]] = []
+    for sc in screens:
+        try:
+            res = apply_all(sc)
+        except Exception as exc:  # noqa: BLE001  技法側の失敗で画面ごと落とさない
+            logger.warning("技法の適用に失敗: %s (%s)", sc.get("page_id"), exc)
+            continue
+        res["title"] = str(sc.get("title") or "")
+        res["url"] = str(sc.get("url") or "")
+        out.append(res)
+    return {"domain": domain, "screens": out}
+
+
 @bp.get("/api/ta2/map")
 @_guard
 def api_ta2_map() -> dict:

@@ -257,3 +257,21 @@ a.btn{text-decoration:none}
    h2 をパネル見出しとして使うので、従来 h1 だった見た目を保つ。 */
 .ph h2,#spec-title{font-size:16px;font-weight:700;letter-spacing:-.01em}
 #home-empty h2{font-size:26px;font-weight:700;letter-spacing:-.02em;line-height:1.35;margin-bottom:8px}
+
+/* 分析・設計 ＞ 技法。適用できない技法も理由つきで並べる。 */
+.tech-head{margin-bottom:14px}
+.tech-head b{font-size:15px;font-weight:700;display:block}
+.tech-head span{font-size:12px;color:var(--tx3)}
+.tech-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.tech-card h3{font-size:14px}
+.tech-card .tech-n{font-size:13px;color:var(--tx2);margin-bottom:6px}
+.tech-card .tech-n b{font-size:20px;font-weight:700;color:var(--tx);font-variant-numeric:tabular-nums}
+.tech-card .tech-na{font-size:12px;color:var(--tx3)}
+.tech-card.is-na{background:#FBFBFC}
+.tech-card .tech-cov{font-size:11.5px;color:var(--tx2);line-height:1.6;margin-bottom:6px}
+
+/* 技法一覧は縦に伸びるため、パネル本体がスクロール領域になる。
+   キーボードだけの利用者が中身へ到達できるよう、フォーカスを受け取れるようにする
+   （axe: scrollable-region-focusable / WCAG 2.1.1 Keyboard）。 */
+#spec-tech{overflow:auto;min-height:0}
+#spec-tech:focus-visible{outline:2px solid var(--ac);outline-offset:-2px}

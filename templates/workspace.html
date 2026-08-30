@@ -170,7 +170,7 @@
     <section class="panel" id="p-spec">
       <div class="ph">
         <h2 id="spec-title">仕様</h2><code id="spec-sub"></code>
-        <div class="seg" id="spec-seg" style="margin-left:10px"><button data-m="screen" class="on">画面仕様</button><button data-m="cases">テストケース</button><button data-m="map">地図</button></div>
+        <div class="seg" id="spec-seg" style="margin-left:10px"><button data-m="screen" class="on">画面仕様</button><button data-m="cases">テストケース</button><button data-m="tech">技法</button><button data-m="map">地図</button></div>
         <div class="sp"></div>
         <div class="pop-wrap"><button type="button" class="btn" id="spec-export-btn" aria-haspopup="true" aria-expanded="false" aria-controls="spec-export-pop">書き出し ▾</button>
           <div class="upop" id="spec-export-pop" role="menu" hidden></div>
@@ -180,6 +180,7 @@
       <div class="pb">
         <div class="spec-grid" id="spec-screen"></div>
         <div id="spec-cases" hidden></div>
+          <div id="spec-tech" tabindex="0" role="region" aria-label="この画面に適用したテスト技法" hidden></div>
       </div>
     </section>
 
@@ -398,6 +399,7 @@
 <script src="{{ url_for('static', filename='js/ta2/ws-report.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/ta2/ws-team.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/ta2/ws-resync.js') }}?v={{ _ver }}"></script>
+<script src="{{ url_for('static', filename='js/ta2/ws-tech.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/ta2/ws-context.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/ta2/app.js') }}?v={{ _ver }}"></script>
 </body>

@@ -337,6 +337,7 @@
     screensOf().forEach(function (sc) { if (sc.page_id === pid) target = sc; });
     if (!target) return;
     sp.sel = pid;
+    if (mode === 'tech' && T.techRender) T.techRender(pid);
     var box = $('#screen-items');
     if (box) {
       Array.prototype.forEach.call(box.querySelectorAll('.it'), function (el) {
@@ -352,16 +353,19 @@
     mode = m;
     var screen = $('#spec-screen'), cases = $('#spec-cases');
     // hidden 属性だけだとパネル側の display 指定に負けることがあるため両方で切る
+    var tech = $('#spec-tech');
     if (screen) { screen.hidden = (m !== 'screen'); screen.style.display = m === 'screen' ? '' : 'none'; }
     if (cases) { cases.hidden = (m !== 'cases'); cases.style.display = m === 'cases' ? '' : 'none'; }
+    if (tech) { tech.hidden = (m !== 'tech'); tech.style.display = m === 'tech' ? '' : 'none'; }
     var seg = $('#spec-seg');
     if (seg) {
       Array.prototype.forEach.call(seg.querySelectorAll('button'), function (b, i) {
-        var key = b.dataset.m || ['screen', 'cases', 'map'][i];
+        var key = b.dataset.m || ['screen', 'cases', 'tech', 'map'][i];
         b.classList.toggle('on', key === m);
       });
     }
     if (m === 'cases') mountCases();
+    if (m === 'tech' && T.techRender) T.techRender((T.state.spec || {}).sel || '');
   }
 
   function mountCases() {

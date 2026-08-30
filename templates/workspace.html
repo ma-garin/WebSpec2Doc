@@ -78,6 +78,18 @@
   </aside>
 
   <main class="main">
+    {# 製品名・現在地・作業名を常に出す。アイコンのレールだけだと、
+       いま何のツールの、どの作業をしているのかが読めない。 #}
+    <header class="ws-top">
+      <div class="ws-top-lead">
+        <a class="ws-brand" href="/">WebSpec2Doc</a>
+        <nav class="ws-crumb" id="ws-crumb" aria-label="現在地"></nav>
+      </div>
+      <div class="ws-top-main">
+        <h1 class="ws-task" id="ws-task">ホーム</h1>
+        <p class="ws-lead" id="ws-lead"></p>
+      </div>
+    </header>
     <div class="ed-h" id="ed-h"></div>
     <div class="ed-b">
       <div class="steps" id="steps"></div>
@@ -381,6 +393,7 @@
 <script src="{{ url_for('static', filename='js/ta2/ws-report.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/ta2/ws-team.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/ta2/ws-resync.js') }}?v={{ _ver }}"></script>
+<script src="{{ url_for('static', filename='js/ta2/ws-context.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/ta2/app.js') }}?v={{ _ver }}"></script>
 </body>
 </html>

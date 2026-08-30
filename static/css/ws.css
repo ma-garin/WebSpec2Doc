@@ -181,3 +181,25 @@ a.btn{text-decoration:none}
    1280 で横スクロールが出る）。 */
 .ed-h h1{flex:1 1 auto;max-width:none}
 .ed-h code{flex:none;white-space:nowrap}
+
+/* ------------------------------------------------------------------ 現在地
+   レールのアイコンだけでは「何のツールの、どの作業か」が読めない。
+   製品名・パンくず・作業名・1行説明を常に出す（旧シェルのトップバー相当）。 */
+.main{grid-template-rows:auto auto minmax(0,1fr)}
+.ws-top{background:var(--sf);border-bottom:1px solid var(--line);padding:10px 22px 12px}
+.ws-top-lead{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--tx3);margin-bottom:4px}
+.ws-brand{color:var(--tx2);font-weight:700;text-decoration:none;letter-spacing:-.01em}
+.ws-brand:hover{color:var(--ac)}
+.ws-crumb{display:flex;align-items:center;gap:8px;min-width:0}
+.ws-crumb a,.ws-crumb span{color:var(--tx3);text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ws-crumb a:hover{color:var(--ac)}
+.ws-crumb .cur{color:var(--tx2);font-weight:500}
+.ws-top-main{display:flex;align-items:baseline;gap:12px;min-width:0}
+.ws-task{font-size:18px;font-weight:700;letter-spacing:-.02em;white-space:nowrap}
+.ws-lead{font-size:12px;color:var(--tx3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* パネルは .main の 3 行目（作業面）に置く。inset:0 のままだと現在地バーを
+   覆うため、grid-row を明示して重ならないようにする。 */
+.main > .panel{position:relative;inset:auto;grid-row:3;grid-column:1}
+.main > .ed-h{grid-row:2}
+.main > .ed-b{grid-row:3}
+.ws-top{grid-row:1}

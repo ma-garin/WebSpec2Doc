@@ -80,6 +80,8 @@ class TestCaseRow:
 def build_testcase_table(report: Mapping[str, Any], design: TestDesign) -> tuple[TestCaseRow, ...]:
     """report と TestDesign から、画面順・技法順に並んだテストケース表を作る。"""
     screens = {str(s.get("page_id", "")): s for s in report.get("screens") or []}
+    global _SITE_PREFIX
+    _SITE_PREFIX = _common_title_prefix(screens)
     designs = {d.page_id: d for d in design.screens}
     rows: list[TestCaseRow] = []
     for page_id, screen in screens.items():
@@ -146,10 +148,49 @@ class _ScreenContext:
         )
 
 
+# 全画面のタイトルに共通して付くサイト名。テスト名に何度も出ると
+# 「DemoMart - トップ → DemoMart - 商品一覧」のように読む場所が埋まるため、
+# 表を組み立てるたびに求めて落とす。
+_SITE_PREFIX = ""
+
+
+def _common_title_prefix(screens: Mapping[str, Mapping[str, Any]]) -> str:
+    """全画面のタイトルが共有する接頭辞（「DemoMart - 」など）。
+
+    2 画面以上で、区切り文字（- – — : ｜ |）まで一致する場合だけ返す。
+    途中で切ると意味が壊れるので、区切りの位置でしか落とさない。
+    """
+    titles = [
+        str(s.get("title") or "").split("|")[0].strip()
+        for s in screens.values()
+        if str(s.get("title") or "").strip()
+    ]
+    if len(titles) < 2:
+        return ""
+    first = titles[0]
+    end = len(first)
+    for other in titles[1:]:
+        i = 0
+        while i < end and i < len(other) and first[i] == other[i]:
+            i += 1
+        end = i
+        if not end:
+            return ""
+    head = first[:end]
+    for sep in (" - ", " – ", " — ", ": ", "："):
+        pos = head.rfind(sep)
+        if pos > 0:
+            return head[: pos + len(sep)]
+    return ""
+
+
 def _screen_title(screen: Mapping[str, Any]) -> str:
     title = str(screen.get("title") or "")
     # 「商品一覧 | QAストア会員注文システム」→「商品一覧」（サイト名は全画面共通で冗長）
-    return title.split("|")[0].strip() or str(screen.get("page_id", ""))
+    title = title.split("|")[0].strip()
+    if _SITE_PREFIX and title.startswith(_SITE_PREFIX) and len(title) > len(_SITE_PREFIX):
+        title = title[len(_SITE_PREFIX):].strip()
+    return title or str(screen.get("page_id", ""))
 
 
 def _input_fields(screen: Mapping[str, Any]) -> list[dict[str, Any]]:

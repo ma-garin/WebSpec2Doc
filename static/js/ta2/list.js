@@ -11,23 +11,6 @@
     return c;
   }
 
-  /** 一覧は画面ごとに見出しを立てているので、名前の先頭に同じ画面名が
-   *  繰り返されると、限られた幅がその分だけ潰れて区別がつかなくなる。
-   *  見出しと重なる部分だけを落とす（一致しなければ原文のまま）。 */
-  function shortName(name, screenName) {
-    var n = String(name || '');
-    var s = String(screenName || '').trim();
-    if (!s || s.length < 3) return n;
-    if (n.indexOf(s) === 0) {
-      var rest = n.slice(s.length).replace(/^[\s:：·・\-−—]+/, '');
-      if (rest) return rest;
-    }
-    /* 「画面遷移: <この画面> → <次の画面>」のように途中に挟まる形も畳む */
-    var arrow = n.indexOf(s + ' →');
-    if (arrow >= 0) return (n.slice(0, arrow) + n.slice(arrow + s.length + 2)).replace(/\s+/g, ' ').trim();
-    return n;
-  }
-
   /** 画面の並び。screens に無い画面のテストも落とさない */
   function screenOrder() {
     var order = S.screens.map(function (s) { return s.id; });
@@ -124,8 +107,7 @@
         html += '<div class="it ' + (on ? 'on' : '') + '" data-id="' + esc(t.id) + '"'
           + ' role="option" aria-selected="' + (on ? 'true' : 'false') + '" tabindex="' + (on ? '0' : '-1') + '"'
           + ' title="' + esc(t.name) + ' · ' + esc(T.statusLabel[t.status] || t.status) + '">'
-          + '<i class="i-' + esc(t.status) + '"></i><b>'
-          + esc(shortName(t.name, meta.name)) + '</b>'
+          + '<i class="i-' + esc(t.status) + '"></i><b>' + esc(t.name) + '</b>'
           + '<code>' + esc(String(t.id).replace(/^PW-/, '')) + '</code></div>';
       });
     });

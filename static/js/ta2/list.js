@@ -56,14 +56,34 @@
     var cnt = $('#cnt-all'); if (cnt) cnt.textContent = c.all + ' tests';
     var sub = $('#list-sub');
     if (sub) {
-      sub.textContent = c.pass + ' 成功 · ' + c.fail + ' 失敗 · ' + c.flaky + ' 不安定 · '
+      // 数だけ出しても次の一手が分からない。失敗があるなら、そこへ入る導線をこの行に置く
+      var txt = c.pass + ' 成功 · ' + c.fail + ' 失敗 · ' + c.flaky + ' 不安定 · '
         + (c.fixed + c['new']) + ' 未実行';
+      var next = c.fail ? '<button class="sublink" id="go-fail">失敗 ' + c.fail + ' 件から直す</button>'
+        : c.flaky ? '<button class="sublink" id="go-flaky">不安定 ' + c.flaky + ' 件を確認</button>'
+          : (c.fixed + c['new']) ? '<button class="sublink" id="go-run">▶ 全件実行</button>' : '';
+      sub.innerHTML = esc(txt) + (next ? '<br>' + next : '');
     }
     renderBadge('#bd-fail', c.fail);
     renderBadge('#bd-drift', openDriftCount());
     renderSiteSelector();
 
-    $$('#fchips .fchip').forEach(function (ch) { ch.classList.toggle('on', ch.dataset.f === S.filter); });
+    if (items) {
+    items.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+      var it = e.target.closest && e.target.closest('.it');
+      if (!it) return;
+      e.preventDefault();
+      if (it.dataset.gen) { T.emit('new', { screen: it.dataset.gen }); return; }
+      if (it.dataset.id) T.select(it.dataset.id);
+    });
+  }
+
+  $$('#fchips .fchip').forEach(function (ch) {
+      var on = ch.dataset.f === S.filter;
+      ch.classList.toggle('on', on);
+      ch.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
 
     var q = S.q.trim().toLowerCase();
     var html = '';
@@ -78,21 +98,47 @@
       if (!ts.length && (S.filter !== 'all' || q)) return;
       html += '<div class="grp">' + esc(scr) + ' ' + esc(meta.name || '') + '<span>' + ts.length + '</span></div>';
       if (!ts.length) {
-        html += '<div class="it empty" data-gen="' + esc(scr) + '"><i class="i-new"></i><b>未作成 · 地図から生成</b></div>';
+        html += '<div class="it empty" data-gen="' + esc(scr) + '" role="button" tabindex="0">'
+          + '<i class="i-new"></i><b>未作成 · 地図から生成</b></div>';
         return;
       }
       ts.forEach(function (t) {
-        html += '<div class="it ' + (t.id === S.sel ? 'on' : '') + '" data-id="' + esc(t.id) + '">'
+        var on = t.id === S.sel;
+        html += '<div class="it ' + (on ? 'on' : '') + '" data-id="' + esc(t.id) + '"'
+          + ' role="option" aria-selected="' + (on ? 'true' : 'false') + '" tabindex="' + (on ? '0' : '-1') + '"'
+          + ' title="' + esc(t.name) + ' · ' + esc(T.statusLabel[t.status] || t.status) + '">'
           + '<i class="i-' + esc(t.status) + '"></i><b>' + esc(t.name) + '</b>'
           + '<code>' + esc(String(t.id).replace(/^PW-/, '')) + '</code></div>';
       });
     });
     var items = $('#items');
     if (items) {
-      items.innerHTML = html || '<div class="it empty"><b>' + (S.ready ? '該当なし' : '読み込み中…') + '</b></div>';
+      items.innerHTML = html || emptyHTML();
       var on = $('#items .it.on');
       if (on) on.scrollIntoView({ block: 'nearest' });
     }
+  }
+
+  /** 0 件のときは「なぜ 0 件か」と「戻し方」を出す。「該当なし」だけだと手詰まりに見える */
+  function emptyHTML() {
+    if (!S.ready) return '<div class="it empty"><b>読み込み中…</b></div>';
+    if (!S.tests.length) {
+      return '<div class="it empty" style="display:block;padding:14px 16px;line-height:1.7">'
+        + '<b>このサイトのテストはまだありません</b>'
+        + '<div style="font-size:11.5px">下の「＋ 新しいテスト」か、⌂ サイトの地図から作れます</div></div>';
+    }
+    var why = [];
+    if (S.filter !== 'all') why.push('状態「' + esc(chipLabel(S.filter)) + '」');
+    if (S.q.trim()) why.push('検索「' + esc(S.q.trim()) + '」');
+    return '<div class="it empty" style="display:block;padding:14px 16px;line-height:1.7">'
+      + '<b>条件に合うテストがありません</b>'
+      + '<div style="font-size:11.5px">' + (why.length ? why.join(' · ') + ' で ' : '')
+      + S.tests.length + ' 件中 0 件</div>'
+      + '<button class="clearf" id="clear-filters" style="margin:6px 0 0">絞り込みを解除</button></div>';
+  }
+  function chipLabel(f) {
+    var el = $('#fchips .fchip[data-f="' + f + '"]');
+    return el ? el.textContent.trim() : f;
   }
 
   var draw = T.repaint(render);
@@ -105,6 +151,14 @@
   var items = $('#items');
   if (items) {
     items.addEventListener('click', function (e) {
+      if (e.target.closest('#go-fail')) { S.filter = 'fail'; draw(); return; }
+      if (e.target.closest('#go-flaky')) { S.filter = 'flaky'; draw(); return; }
+      if (e.target.closest('#clear-filters')) {
+        S.filter = 'all'; S.q = '';
+        var qi = $('#q'); if (qi) qi.value = '';
+        draw();
+        return;
+      }
       var it = e.target.closest('.it');
       if (!it) return;
       if (it.dataset.gen) { T.emit('new', { screen: it.dataset.gen }); return; }
@@ -112,8 +166,26 @@
     });
   }
 
+  if (items) {
+    items.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+      var it = e.target.closest && e.target.closest('.it');
+      if (!it) return;
+      e.preventDefault();
+      if (it.dataset.gen) { T.emit('new', { screen: it.dataset.gen }); return; }
+      if (it.dataset.id) T.select(it.dataset.id);
+    });
+  }
+
   $$('#fchips .fchip').forEach(function (ch) {
     ch.addEventListener('click', function () { S.filter = ch.dataset.f; draw(); });
+    // role="button" にしたので Enter / Space でも押せるようにする
+    ch.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+      e.preventDefault();
+      S.filter = ch.dataset.f;
+      draw();
+    });
   });
 
   var q = $('#q');
@@ -159,6 +231,16 @@
     var ids = $$('#items .it[data-id]').map(function (x) { return x.dataset.id; });
     var i = ids.indexOf(S.sel);
     var next = ids[i + (e.key === 'ArrowDown' ? 1 : -1)];
-    if (next) T.select(next);
+    if (!next) return;
+    var inList = !!(document.activeElement && document.activeElement.closest
+      && document.activeElement.closest('#items'));
+    T.select(next);
+    // 一覧を Tab で辿っている最中は、選択と一緒にフォーカスも移す（roving tabindex）
+    if (inList) {
+      requestAnimationFrame(function () {
+        var el = $('#items .it[data-id="' + (window.CSS && CSS.escape ? CSS.escape(next) : next) + '"]');
+        if (el) el.focus();
+      });
+    }
   });
 })();

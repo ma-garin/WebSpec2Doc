@@ -114,8 +114,9 @@
     if (t.status === 'fail') {
       var where = last.step != null ? 'ステップ ' + last.step : 'ステップ不明';
       var msg = String(last.error || '').split('\n')[0];
-      return '<span class="pill p-fail">失敗</span> <span style="color:var(--tx2)">' +
-        esc(where) + (msg ? ' · ' + esc(msg.slice(0, 60)) : '') + '</span>';
+      return '<span class="pill p-fail">失敗</span> <span style="color:var(--tx2)" title="' +
+        esc(String(last.error || '')) + '">' +
+        esc(where) + (msg ? ' · ' + esc(msg.slice(0, 60)) + (msg.length > 60 ? '…' : '') : '') + '</span>';
     }
     if (t.status === 'flaky') return '<span class="pill p-flaky">不安定</span> <span style="color:var(--tx2)">再試行で回復</span>';
     if (t.status === 'fixed') return '<span class="pill p-fixed">修正済 · 未実行</span>';
@@ -182,8 +183,8 @@
           return '<tr class="rw skip" data-id="' + esc(id) + '">' +
             '<td><i class="i-new" style="display:inline-block;width:8px;height:8px;border-radius:50%"></i></td>' +
             '<td class="mono">' + esc(id) + '</td>' +
-            '<td>' + esc((t && t.name) || '') + '</td>' +
-            '<td style="color:var(--tx2)">' + esc((t && t.screen) || '') + ' ' +
+            '<td class="nm" title="' + esc((t && t.name) || '') + '">' + esc((t && t.name) || '') + '</td>' +
+            '<td class="scr" style="color:var(--tx2)">' + esc((t && t.screen) || '') + ' ' +
             esc(t ? screenName(t.screen) : '') + '</td>' +
             '<td>' + histHTML(t && t.history) + '</td>' +
             '<td class="dur">—</td>' +
@@ -193,11 +194,11 @@
     }
     body.innerHTML = skipHTML + rows.map(function (t) {
       var last = t.last || {};
-      return '<tr class="rw" data-id="' + esc(t.id) + '">' +
+      return '<tr class="rw ' + esc(t.status) + '" data-id="' + esc(t.id) + '">' +
         '<td><i class="i-' + esc(t.status) + '" style="display:inline-block;width:8px;height:8px;border-radius:50%"></i></td>' +
         '<td class="mono">' + esc(t.id) + '</td>' +
-        '<td>' + esc(t.name) + '</td>' +
-        '<td style="color:var(--tx2)">' + esc(t.screen) + ' ' + esc(screenName(t.screen)) + '</td>' +
+        '<td class="nm" title="' + esc(t.name) + '">' + esc(t.name) + '</td>' +
+        '<td class="scr" style="color:var(--tx2)" title="' + esc(t.screen + ' ' + screenName(t.screen)) + '">' + esc(t.screen) + ' ' + esc(screenName(t.screen)) + '</td>' +
         '<td>' + histHTML(t.history) + '</td>' +
         '<td class="dur">' + esc(fmtDur(last.dur_ms)) + '</td>' +
         '<td>' + resultCell(t) + '</td></tr>';
@@ -225,7 +226,9 @@
     if (data.reason) return data.reason;
     if (!data.loaded) return withPeriod ? '読み込み中です…' : '';
     if (data.baseline_at) return '前回のクロールとの差分はありません' + (withPeriod ? '。' : '');
-    return '比較の基準となる前回のクロールがありません';
+    // 「ありません」で終えると手が止まる。基準の作り方をその場に書く
+    return '比較の基準となる前回のクロールがありません'
+      + (withPeriod ? '。右上の「再クロール」を押すと、いまのサイトを基準として記録します。次回以降は、変わった要素だけがここに並びます。' : '');
   }
   function testName(id) {
     var list = tests();
@@ -413,8 +416,19 @@
         return loadRuns(true);
       }).then(function () {
         if (TA().render) TA().render(); else render();
-        toast('実行完了 · 成功 ' + (st.passed || 0) + ' / 失敗 ' + (st.failed || 0),
+        toast('実行完了 · 成功 ' + (st.passed || 0) + ' / 失敗 ' + (st.failed || 0)
+          + (st.failed ? '。最初の失敗を下に出しています' : ''),
           (st.failed ? 'ng' : 'ok'));
+        // 失敗があるなら最初の失敗行まで送る（結果表の先頭は失敗順に並ぶ）
+        if (st.failed) {
+          // tr.rw には「実行できなかった」行も含まれる。失敗そのものの先頭へ送る
+          var first = $('#run-rows tr.rw.fail') || $('#run-rows tr.rw:not(.skip)');
+          if (first) {
+            if (first.scrollIntoView) first.scrollIntoView({ block: 'center' });
+            first.classList.add('flash');
+            setTimeout(function () { first.classList.remove('flash'); }, 2000);
+          }
+        }
       });
     }, function (e) {
       stopPolling();
@@ -459,7 +473,7 @@
     var ids = tests().filter(function (t) {
       return t.status === 'fail' || t.status === 'flaky' || t.status === 'fixed';
     }).map(function (t) { return t.id; });
-    if (!ids.length) { toast('失敗・不安定・修正済みのテストはありません'); return; }
+    if (!ids.length) { toast('再実行の対象がありません（失敗・不安定・修正済 が 0 件）'); return; }
     startRun(ids, '再実行');
   }
   function exportEvidence() {
@@ -500,7 +514,7 @@
       var btn = t.closest && t.closest('button');
       if (!btn) return;
 
-      if (btn.id === 'run-all-btn' || btn.id === 'run-all-btn2') { runAll(); return; }
+      if (btn.id === 'run-all-btn' || btn.id === 'run-all-btn2' || btn.id === 'go-run') { runAll(); return; }
       if (btn.id === 'rerun-fail-btn') { rerunFailed(); return; }
       if (btn.id === 'export-btn') { exportEvidence(); return; }
       if (btn.id === 'recrawl-btn') { recrawl(btn); return; }

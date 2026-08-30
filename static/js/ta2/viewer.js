@@ -155,8 +155,11 @@
     strip.innerHTML = (t.steps || []).map(function (s, i) {
       var reached = failStep === null || i <= failStep;
       var ng = failStep !== null && i === failStep;
+      var lab = (s.kind === 'pre' ? '前提' : 'ステップ ' + i) + ' · ' + (s.action || '')
+        + (s.arg ? ' ' + s.arg : '') + (ng ? ' · ここで停止' : reached ? '' : ' · ここまで届いていない');
       return '<div class="th ' + (i === S.step ? 'on' : '') + ' ' + (ng ? 'ng' : '') + ' ' + (reached ? '' : 'na') + '"'
-        + ' data-i="' + i + '"><b>' + (s.kind === 'pre' ? '開' : i) + '</b></div>';
+        + ' data-i="' + i + '" role="button" tabindex="0" title="' + esc(lab) + '" aria-label="' + esc(lab) + '">'
+        + '<b>' + (s.kind === 'pre' ? '開' : i) + '</b></div>';
     }).join('') + '<span class="lab">' + n + ' ステップ</span>';
   }
 
@@ -209,6 +212,14 @@
     strip.addEventListener('click', function (e) {
       var th = e.target.closest('.th');
       if (!th) return;
+      S.step = +th.dataset.i;
+      T.emit('select', T.current());
+    });
+    strip.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+      var th = e.target.closest && e.target.closest('.th');
+      if (!th) return;
+      e.preventDefault();
       S.step = +th.dataset.i;
       T.emit('select', T.current());
     });

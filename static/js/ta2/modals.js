@@ -23,8 +23,39 @@
   function tests() { return Array.isArray(state().tests) ? state().tests : []; }
   function toast(m, c) { if (TA() && TA().toast) TA().toast(m, c || ''); }
   function errText(e) { return (e && e.message) || 'サーバに接続できません'; }
-  function open(id) { var o = $(id); if (o) o.classList.add('on'); }
-  function close(id) { var o = $(id); if (o) o.classList.remove('on'); }
+  /* モーダルを開いたらフォーカスをモーダルの中へ移す。
+     移さないと Tab が背後の画面を巡り、Enter が背後のボタンを押してしまう */
+  var lastFocus = null;
+  var FOCUSABLE = 'input,select,textarea,button:not([data-close]),a[href],[tabindex]:not([tabindex="-1"])';
+  function focusInto(o) {
+    var md = o.querySelector('.md');
+    if (!md) return;
+    var el = md.querySelector(FOCUSABLE) || md.querySelector('button');
+    if (el) { try { el.focus(); } catch (e) { /* 隠れている要素は諦める */ } }
+  }
+  function open(id) {
+    var o = $(id);
+    if (!o) return;
+    if (!o.classList.contains('on')) lastFocus = document.activeElement;
+    o.classList.add('on');
+    setTimeout(function () { focusInto(o); }, 0);
+  }
+  function close(id) {
+    var o = $(id);
+    if (o) o.classList.remove('on');
+    restoreFocus();
+  }
+  function restoreFocus() {
+    if (!lastFocus) return;
+    var el = lastFocus;
+    lastFocus = null;
+    if (el && el.isConnected && typeof el.focus === 'function') { try { el.focus(); } catch (e) { /* noop */ } }
+  }
+  function closeAll() {
+    var any = $$('.ov.on');
+    any.forEach(function (o) { o.classList.remove('on'); });
+    if (any.length) restoreFocus();
+  }
 
   function mapScreens() {
     var m = state().map;
@@ -108,7 +139,7 @@
     var name = $('#new-name'); if (name) name.value = '';
     var box = $('#new-gaps');
     if (box) box.innerHTML = '<div style="color:var(--tx3);font-size:12px;padding:6px 0">読み込み中です…</div>';
-    ov.classList.add('on');
+    open('#ov-new');
     var want = scrId || (currentTest() || {}).screen || '';
     ensureMap(false).then(function () { fillNew(want); });
   }
@@ -210,11 +241,12 @@
   var HELP_HTML = '<ul>' +
     '<li>左の一覧からテストを選ぶ。検索・状態チップで絞り込む（<kbd>⌘K</kbd> で検索、<kbd>↑</kbd><kbd>↓</kbd> で移動）</li>' +
     '<li>ステップを押すと、右の画面で対象の要素を指す。下のフィルムからも移動できる</li>' +
-    '<li>赤いステップの「適用」で修正案を取り込み、「このテストを実行」（<kbd>R</kbd>）で実際に Playwright を走らせて結果を確かめる</li>' +
+    '<li>失敗したテストは、ステップ表の先頭に「なぜ止まったか」が出る。赤いステップの「適用」で修正案を取り込み、「▶ このテストを実行」（<kbd>R</kbd>）で確かめる</li>' +
+    '<li>ステップのロケータ・値は文字を押すとその場で直せる（<kbd>Enter</kbd> 保存 / <kbd>Esc</kbd> 取り消し）</li>' +
     '<li>「＋ ステップを追加」→ 右の画面上の要素をクリック → 操作を選ぶと、その場で保存される</li>' +
     '<li>「＋ 新しいテスト」で、サイトの地図が見つけた「まだテストされていない箇所」からテストを生成する</li>' +
     '<li>左レール ▶ で全件実行と結果一覧。◈ でサイトの変更（影響するテストのセレクタを一括修正）。⌂ で画面ごとのカバレッジ</li>' +
-    '<li>タイトルは直接編集できる。状態はサーバに保存され、URL（#/tests/&lt;id&gt;）で画面を共有できる</li>' +
+    '<li>タイトルは直接編集できる。「⧉ 複製」で複製、「削除」で削除（確認あり）。状態はサーバに保存され、URL（#/tests/&lt;id&gt;）で共有できる</li>' +
     '</ul>';
   function openHelp() {
     var ov = $('#ov-help');
@@ -223,7 +255,7 @@
     if (h) h.textContent = '使い方';
     var b = ov.querySelector('.mb');
     if (b) b.innerHTML = HELP_HTML;
-    ov.classList.add('on');
+    open('#ov-help');
   }
 
   /* ==================== 配線 ==================== */
@@ -231,11 +263,11 @@
     document.addEventListener('click', function (e) {
       var t = e.target;
       var ov = t.classList && t.classList.contains('ov') ? t : null;
-      if (ov) { ov.classList.remove('on'); return; }
+      if (ov) { ov.classList.remove('on'); restoreFocus(); return; }
       var closer = t.closest && t.closest('[data-close]');
       if (closer) {
         var host = closer.closest('.ov');
-        if (host) host.classList.remove('on');
+        if (host) { host.classList.remove('on'); restoreFocus(); }
         return;
       }
       var btn = t.closest && t.closest('button');
@@ -253,7 +285,7 @@
       if (it) openNew(it.getAttribute('data-gen'));
     });
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') { $$('.ov.on').forEach(function (o) { o.classList.remove('on'); }); }
+      if (e.key === 'Escape') closeAll();
     });
   }
 

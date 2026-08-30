@@ -8,6 +8,7 @@
   'use strict';
   var T = window.TA2;
   if (!T) return;
+  var S = T.state, esc = T.esc;
 
   /* テストケース表（view-testcase-grid.js / testcase-grid-edit.js）は core.js の
      グローバルを前提にしている。core.js は旧シェル専用で読み込めないため、
@@ -234,6 +235,42 @@
       '<div class="im" id="spec-shot">' + body + '</div></div>';
   }
 
+
+  /** この画面から設計されたテストの要約。仕様だけ見せて終わると
+   *  「分析したその先」が別モードに隠れたままになる。件数と技法、
+   *  まだテストしていない箇所を、同じ画面で示す。 */
+  function testsCardHtml(sc) {
+    var pid = String(sc.page_id || '');
+    var sp = T.state.spec || {};
+    var m = ((sp.map && sp.map.screens) || []).filter(function (x) { return x.id === pid; })[0];
+    if (!m) return '';
+    var gaps = m.gaps || [];
+    var body;
+    if (!m.tests) {
+      body = '<div class="sub">この画面のテストはまだありません。'
+        + '地図から生成できます。</div>';
+    } else {
+      body = '<div class="spec-tests-row">'
+        + '<span><b>' + m.tests + '</b> 件のテスト</span>'
+        + (m.fails ? '<span class="ng"><b>' + m.fails + '</b> 件が失敗</span>' : '')
+        + '<span class="tx3">網羅 ' + m.coverage + '%</span>'
+        + '</div>';
+    }
+    var holes = gaps.length
+      ? '<div class="sub" style="margin-top:8px">まだテストしていない箇所（' + gaps.length + '）</div>'
+        + '<ul class="cond">' + gaps.slice(0, 4).map(function (g) {
+            return '<li>' + esc(g.title || '') + '</li>';
+          }).join('') + '</ul>'
+      : '';
+    return '<div class="card"><h3>この画面のテスト</h3>'
+      + '<div class="sub">設計したケースと、足りていない箇所</div>'
+      + body + holes
+      + '<div class="spec-tests-act">'
+      + '<a class="btn sm" href="/sites/' + encodeURIComponent(S.domain) + '/tests">テストを見る</a>'
+      + '<button type="button" class="btn sm" data-spec-mode="cases">テストケース表を開く</button>'
+      + '</div></div>';
+  }
+
   function renderDetail(sc) {
     var host = $('#spec-screen');
     if (!host) return;
@@ -244,7 +281,8 @@
     }
     // #spec-screen 自身が .spec-grid（左＝仕様カード列 / 右＝実画面）
     host.innerHTML =
-      '<div style="overflow:auto;min-height:0">' + fieldsCardHtml(sc) + transitionsCardHtml(sc) + '</div>' +
+      '<div style="overflow:auto;min-height:0">' + fieldsCardHtml(sc)
+        + testsCardHtml(sc) + transitionsCardHtml(sc) + '</div>' +
       shotCardHtml(sc);
     // 証跡が無いことを黙って隠さない（撮れていないのか出せていないのかが分からなくなるため）
     var img = host.querySelector('#spec-shot-img');
@@ -271,6 +309,21 @@
       host.innerHTML = '<div class="card"><h3>仕様を読み込めませんでした</h3>' +
         '<div class="sub">' + T.esc(msg || '通信エラー') + '</div></div>';
     }
+  }
+
+
+  /** 最初に開く画面。並び順の先頭は入力フォームが無いトップページのことが多く、
+   *  「ページ要素 4 行」だけの画面が最初に出ると、何ができるツールなのか伝わらない。
+   *  入力項目を持つ画面があれば、その中で項目が最も多いものを開く。 */
+  function firstInformative(list) {
+    var best = null, bestN = 0;
+    (list || []).forEach(function (sc) {
+      var n = 0;
+      (sc.forms || []).forEach(function (f) { n += ((f && f.fields) || []).length; });
+      if (n > bestN) { bestN = n; best = sc; }
+    });
+    if (best) return best.page_id;
+    return (list && list[0] && list[0].page_id) || '';
   }
 
   function selectScreen(pid) {
@@ -366,6 +419,12 @@
   }
 
   function bindOnce() {
+    /* spec-mode-delegate: カード内から表モードへ移れるようにする */
+    document.addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('[data-spec-mode]');
+      if (b) { e.preventDefault(); setMode(b.getAttribute('data-spec-mode')); }
+    });
+
     if (bound) return;
     bound = true;
     var box = $('#screen-items');
@@ -408,7 +467,7 @@
       renderList();
       if (!withDetail) return;
       var list = screensOf();
-      var sel = sp.sel || (list[0] && list[0].page_id) || '';
+      var sel = sp.sel || firstInformative(list) || '';
       setMode(mode);
       if (sel) selectScreen(sel); else renderDetail(null);
     }, function (e) {

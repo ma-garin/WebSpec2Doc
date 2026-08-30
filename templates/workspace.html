@@ -17,13 +17,16 @@
   {% set u = auth_user or {'name': 'ゲスト', 'email': '', 'role': ''} %}
   <nav class="rail">
     <a class="lg" href="/" title="ホーム（サイト一覧）">W<span class="tip">ホーム（サイト一覧）</span></a>
-    <button data-view="home">⌂<span class="tip">ホーム（サイト一覧）</span></button>
-    <button data-view="spec">▤<span class="tip">仕様</span></button>
-    <button data-view="test">✓<span class="bd" id="bd-fail" style="display:none">0</span><span class="tip">テスト</span></button>
-    <button data-view="drift">◈<span class="bd wa" id="bd-drift" style="display:none">0</span><span class="tip">変更</span></button>
-    <button data-view="schedule">◔<span class="tip">定期実行と通知</span></button>
-    <button data-view="report">⎙<span class="tip">報告</span></button>
-    <button data-view="team">◉<span class="tip">チーム</span></button>
+    {# 記号だけでは分析・設計と自動化の区別が読めない。文字を添える。 #}
+    <button data-view="home"><span class="ic">⌂</span><span class="lb">ホーム</span><span class="tip">サイト一覧</span></button>
+    <div class="rail-sep" aria-hidden="true"></div>
+    <button data-view="spec"><span class="ic">▤</span><span class="lb">分析・設計</span><span class="tip">画面仕様・テストケース・地図</span></button>
+    <button data-view="test"><span class="ic">✓</span><span class="lb">自動化</span><span class="bd" id="bd-fail" style="display:none">0</span><span class="tip">テストの実装と実行</span></button>
+    <button data-view="drift"><span class="ic">◈</span><span class="lb">変更</span><span class="bd wa" id="bd-drift" style="display:none">0</span><span class="tip">サイトの変更と影響</span></button>
+    <div class="rail-sep" aria-hidden="true"></div>
+    <button data-view="schedule"><span class="ic">◔</span><span class="lb">定期実行</span><span class="tip">定期実行と通知</span></button>
+    <button data-view="report"><span class="ic">⎙</span><span class="lb">報告</span><span class="tip">単一 HTML の報告</span></button>
+    <button data-view="team"><span class="ic">◉</span><span class="lb">チーム</span><span class="tip">メンバーと API トークン</span></button>
     <div class="sp"></div>
     <a class="rail-link" id="rail-settings" href="/settings/crawl" title="設定">⚙<span class="tip">設定</span></a>
     <div class="ta-user" id="ta-user">
@@ -78,6 +81,18 @@
   </aside>
 
   <main class="main">
+    {# 製品名・現在地・作業名を常に出す。アイコンのレールだけだと、
+       いま何のツールの、どの作業をしているのかが読めない。 #}
+    <header class="ws-top">
+      <div class="ws-top-lead">
+        <a class="ws-brand" href="/">WebSpec2Doc</a>
+        <nav class="ws-crumb" id="ws-crumb" aria-label="現在地"></nav>
+      </div>
+      <div class="ws-top-main">
+        <h1 class="ws-task" id="ws-task">ホーム</h1>
+        <p class="ws-lead" id="ws-lead"></p>
+      </div>
+    </header>
     <div class="ed-h" id="ed-h"></div>
     <div class="ed-b">
       <div class="steps" id="steps"></div>
@@ -144,6 +159,8 @@
             <a class="btn" id="home-cta-drift" href="/">変更を確認する</a>
             <span class="why" id="home-cta-why"></span>
           </div>
+          {# サイトを選んだだけでは画面の大半が空く。何ができるかをここで見せる。 #}
+          <div id="home-next"></div>
         </div>
 
       </div>
@@ -381,6 +398,7 @@
 <script src="{{ url_for('static', filename='js/ta2/ws-report.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/ta2/ws-team.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/ta2/ws-resync.js') }}?v={{ _ver }}"></script>
+<script src="{{ url_for('static', filename='js/ta2/ws-context.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/ta2/app.js') }}?v={{ _ver }}"></script>
 </body>
 </html>

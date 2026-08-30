@@ -12,13 +12,38 @@
 </head>
 <body>
 <div class="app">
+  {# 認証オフ（未ログイン）でもゲストとして出す。topbar.html と同じ項目・同じ並び #}
+  {% set u = auth_user or {'name': 'ゲスト', 'email': '', 'role': ''} %}
   <nav class="rail">
-    <div class="lg">W</div>
+    <a class="lg" href="/systems" title="システム選択へ戻る">W<span class="tip">システム選択へ戻る</span></a>
+    <a class="sysbtn" href="/systems" title="システムを切り替える"><b>TA</b><span class="tip">テスト自動化 · システムを切り替える</span></a>
+    <div class="rail-sep"></div>
     <button class="on" data-view="test">▤<span class="tip">テスト</span></button>
     <button data-view="run">▶<span class="bd" id="bd-fail" style="display:none">0</span><span class="tip">実行と結果</span></button>
     <button data-view="drift">◈<span class="bd wa" id="bd-drift" style="display:none">0</span><span class="tip">サイトの変更</span></button>
     <button data-view="site">⌂<span class="tip">サイトの地図</span></button>
     <div class="sp"></div>
+    <div class="ta-user" id="ta-user">
+      <button type="button" id="user-btn" aria-haspopup="true" aria-expanded="false" aria-controls="user-pop"
+              title="{{ 'アカウントメニュー（' + u.email + '）' if auth_user else 'アカウントメニュー（未ログイン）' }}">
+        <span class="ava">{{ u.name[:1] | upper }}</span><span class="tip">アカウント</span>
+      </button>
+      <div class="upop" id="user-pop" role="menu" aria-labelledby="user-btn" hidden>
+        <div class="uhead">
+          <span class="ava lg" aria-hidden="true">{{ u.name[:1] | upper }}</span>
+          <span class="utxt"><b>{{ u.name }}</b><small>{{ u.email if auth_user else '未ログイン（認証オフ）' }}</small></span>
+        </div>
+        <div class="usep" role="none"></div>
+        {% if auth_user %}<a class="uitem" role="menuitem" href="/account">個人設定</a>{% endif %}
+        <a class="uitem" role="menuitem" href="/user-guide">ユーザーガイド</a>
+        <a class="uitem" role="menuitem" href="/feedback">フィードバック</a>
+        <a class="uitem" role="menuitem" href="/systems">システムを切り替える</a>
+        {% if auth_user %}
+        <div class="usep" role="none"></div>
+        <form method="post" action="/auth/logout"><button type="submit" class="uitem danger" role="menuitem">ログアウト</button></form>
+        {% endif %}
+      </div>
+    </div>
     <button id="help-btn">?<span class="tip">使い方</span></button>
     <button id="reset-btn">↺<span class="tip">サーバから再読み込み</span></button>
   </nav>
@@ -32,14 +57,14 @@
     </div>
     <div class="search"><input id="q" placeholder="検索 / 絞り込み"><kbd>⌘K</kbd></div>
     <div class="fchips" id="fchips">
-      <span class="fchip on" data-f="all">すべて</span>
-      <span class="fchip" data-f="fail"><i style="background:var(--ng)"></i>失敗</span>
-      <span class="fchip" data-f="flaky"><i style="background:var(--wa)"></i>不安定</span>
-      <span class="fchip" data-f="fixed"><i style="background:var(--ac)"></i>修正済</span>
-      <span class="fchip" data-f="pass"><i style="background:var(--ok)"></i>成功</span>
+      <span class="fchip on" data-f="all" role="button" tabindex="0" aria-pressed="true">すべて</span>
+      <span class="fchip" data-f="fail" role="button" tabindex="0" aria-pressed="false"><i style="background:var(--ng)"></i>失敗</span>
+      <span class="fchip" data-f="flaky" role="button" tabindex="0" aria-pressed="false"><i style="background:var(--wa)"></i>不安定</span>
+      <span class="fchip" data-f="fixed" role="button" tabindex="0" aria-pressed="false"><i style="background:var(--ac)"></i>修正済</span>
+      <span class="fchip" data-f="pass" role="button" tabindex="0" aria-pressed="false"><i style="background:var(--ok)"></i>成功</span>
     </div>
-    <div class="items" id="items"></div>
-    <div class="list-f"><button class="btn pri" style="flex:1" id="new-btn">＋ 新しいテスト</button><button class="btn" id="run-all-btn" title="全件実行">▶</button></div>
+    <div class="items" id="items" tabindex="-1" role="listbox" aria-label="テスト一覧"></div>
+    <div class="list-f"><button class="btn pri" style="flex:1" id="new-btn">＋ 新しいテスト</button><button class="btn" id="run-all-btn" title="このサイトのテストを全件実行" aria-label="全件実行">▶</button></div>
   </aside>
 
   <main class="main">
@@ -102,11 +127,11 @@
     <label>または、名前を決めて空のテストを作る</label>
     <input type="text" id="new-name" placeholder="例: クーポンコードが適用される">
   </div>
-  <div class="mf"><span style="font-size:11.5px;color:var(--tx3);flex:1">生成されるのは Playwright の実コードです。ステップ表で直せます。</span><button class="btn" data-close>キャンセル</button><button class="btn pri" id="new-ok">生成</button></div>
+  <div class="mf"><span style="font-size:11.5px;color:var(--tx3);flex:1">生成されるのは Playwright の実コードです。ステップ表で直せます。</span><button class="btn" data-close>キャンセル</button><button class="btn pri" id="new-ok">テストを生成</button></div>
 </div></div>
 
 <div class="ov" id="ov-trace"><div class="md wide">
-  <div class="mh"><h3>Trace</h3><span id="trace-title" style="color:var(--tx3);font-size:12px"></span><div class="sp"></div><button class="btn sm" id="trace-dl">単体ファイルで保存</button><button class="btn ghost" data-close>✕</button></div>
+  <div class="mh"><h3>Trace</h3><span id="trace-title" style="color:var(--tx3);font-size:12px"></span><div class="sp"></div><button class="btn sm" id="trace-dl">trace.zip を保存</button><button class="btn ghost" data-close>✕</button></div>
   <div class="mb trace" id="trace-body"></div>
 </div></div>
 
@@ -115,11 +140,12 @@
   <div class="mb help-list"><ul>
     <li>左の一覧からテストを選ぶ。検索・状態チップで絞り込む（<kbd>⌘K</kbd> で検索、<kbd>↑</kbd><kbd>↓</kbd> で移動）</li>
     <li>ステップを押すと、右の画面で対象の要素を指す。下のフィルム（サムネイル）からも移動できる</li>
-    <li>赤いステップの「適用」で修正案を取り込む。そのあと「このテストを実行」（<kbd>R</kbd>）で結果が変わる</li>
+    <li>失敗したテストは、ステップ表の先頭に理由が出る。赤いステップの「適用」で修正案を取り込み、「▶ このテストを実行」（<kbd>R</kbd>）で確かめる</li>
+    <li>ステップのロケータ・値は文字を押すとその場で直せる（<kbd>Enter</kbd> 保存 / <kbd>Esc</kbd> 取り消し）</li>
     <li>「＋ ステップを追加」→ 右の画面上の要素をクリック → 操作を選んで追加</li>
     <li>「＋ 新しいテスト」で、画面の“まだテストされていない箇所”からテストを生成</li>
     <li>左レール ▶ で全体の結果。◈ でサイトの変更（一括修正）。⌂ で画面ごとのカバレッジ</li>
-    <li>タイトルは直接編集できる。保存先はサーバで、<kbd>↺</kbd> でサーバから読み直す</li>
+    <li>タイトルは直接編集できる。「⧉ 複製」で複製、「削除」で削除（確認あり）。保存先はサーバで、<kbd>↺</kbd> で読み直す</li>
   </ul></div>
   <div class="mf"><button class="btn pri" data-close>閉じる</button></div>
 </div></div>

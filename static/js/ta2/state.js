@@ -164,14 +164,27 @@
   }
   function stepsOf(t) { return (t && t.steps) || []; }
 
-  function toast(msg, cls) {
+  /** toast(msg, cls, action)
+   *  action = {label, fn} … 取り消しなど、その場でやり直せる操作を 1 つだけ添える。
+   *  操作付きのときは消えるまでを長めにする（読んで押す時間が要るため）。 */
+  function toast(msg, cls, action) {
     var box = $('#toasts');
     if (box) {
       var d = document.createElement('div');
       d.className = 'toast ' + (cls || '');
-      d.textContent = msg;
+      var s = document.createElement('span');
+      s.textContent = msg;
+      d.appendChild(s);
+      if (action && action.label && typeof action.fn === 'function') {
+        var b = document.createElement('button');
+        b.className = 'tact';
+        b.type = 'button';
+        b.textContent = action.label;
+        b.addEventListener('click', function () { d.remove(); action.fn(); });
+        d.appendChild(b);
+      }
       box.appendChild(d);
-      setTimeout(function () { d.remove(); }, 2600);
+      setTimeout(function () { d.remove(); }, action ? 7000 : 2600);
     }
     emit('toast', { msg: msg, cls: cls || '' });
   }

@@ -32,6 +32,46 @@
     T.toast(msg, 'ng');
   }
 
+  /** 一覧ヘッダの下に、消えない案内を 1 本だけ置く（list.js は触らない領域） */
+  function notice(msg) {
+    var host = document.querySelector('.list-h');
+    if (!host) { T.toast(msg, 'ng'); return; }
+    var box = $('#ta2-notice');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'ta2-notice';
+      box.style.cssText = 'margin:8px 0 0;padding:8px 10px;border-radius:8px;background:var(--wa-bg);'
+        + 'color:var(--wa-tx);font-size:11.5px;line-height:1.6';
+      host.appendChild(box);
+    }
+    box.textContent = msg;
+    // サイトを選び直せるように、候補が 1 件でも選択欄は出す
+    var sel = $('#site-sel');
+    if (sel) sel.style.display = '';
+  }
+
+  /** レール下部のアカウントメニュー（Escape / 外側クリックで閉じる） */
+  function bindUserMenu() {
+    var btn = $('#user-btn'), pop = $('#user-pop');
+    if (!btn || !pop) return;
+    function setOpen(v) {
+      pop.hidden = !v;
+      btn.setAttribute('aria-expanded', v ? 'true' : 'false');
+      if (v) { var f = pop.querySelector('a,button'); if (f) f.focus(); }
+    }
+    btn.addEventListener('click', function (e) { e.stopPropagation(); setOpen(pop.hidden); });
+    document.addEventListener('click', function (e) {
+      if (pop.hidden) return;
+      if (e.target.closest && e.target.closest('#ta-user')) return;
+      setOpen(false);
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape' || pop.hidden) return;
+      setOpen(false);
+      btn.focus();
+    });
+  }
+
   function bindRail() {
     $$('.rail [data-view]').forEach(function (b) {
       b.addEventListener('click', function () {
@@ -93,6 +133,7 @@
     bindReset();
     bindHash();
     bindOverlayEscape();
+    bindUserMenu();
 
     var h = parseHash();
     var wanted = paramDomain();
@@ -104,7 +145,17 @@
       }
       var domain = '';
       sites.forEach(function (s) { if (s.domain === wanted) domain = s.domain; });
-      if (!domain) domain = sites[0].domain;
+      if (!domain) {
+        domain = sites[0].domain;
+        // 指定されたドメインが無いときに黙って別サイトを出さない。
+        // 何を見ているのかが分からないまま操作させるのが一番危ない
+        if (wanted) {
+          notice('「' + wanted + '」のクロール結果がありません。'
+            + '代わりに「' + domain + '」を表示しています。'
+            + (sites.length > 1 ? '上の選択欄でサイトを変えられます。' : ''));
+          T.toast('「' + wanted + '」は見つかりませんでした', 'ng');
+        }
+      }
       T.setDomain(domain);
       return T.loadTests();
     }).then(function (r) {

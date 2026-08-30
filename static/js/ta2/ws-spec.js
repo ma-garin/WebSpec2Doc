@@ -138,7 +138,11 @@
       var cv = coverageOf(sc.page_id) || {};
       var pct = Math.max(0, Math.min(100, Number(cv.coverage || 0)));
       var color = pct >= 80 ? 'var(--ok)' : (pct > 0 ? 'var(--wa)' : 'var(--line2)');
-      return '<div class="it' + (sc.page_id === sel ? ' on' : '') + '" role="button" tabindex="0"' +
+      // 親が role="listbox" なので、子は role="option" でなければならない（WCAG 1.3.1）。
+      // role="button" を入れると支援技術には「選べる一覧」として伝わらない。
+      return '<div class="it' + (sc.page_id === sel ? ' on' : '')
+        + '" role="option" aria-selected="' + (sc.page_id === sel ? 'true' : 'false')
+        + '" tabindex="' + (sc.page_id === sel ? '0' : '-1') + '"' +
         ' data-pid="' + T.esc(sc.page_id) + '">' +
         '<span class="cov"><i style="width:' + pct + '%;background:' + color + '"></i></span>' +
         '<span class="grow"><b>' + T.esc(sc.title || sc.page_id) + '</b>' +

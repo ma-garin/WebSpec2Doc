@@ -28,7 +28,8 @@ a.btn{text-decoration:none}
 .it .grow{flex:1;min-width:0}
 .it .grow b{display:block;font-weight:500;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .it .grow small{display:block;color:var(--tx3);font-size:10.5px;font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.it .del{opacity:0;border:0;background:none;color:var(--tx3);width:22px;height:22px;border-radius:5px;font-size:13px}
+/* 2.5.8 Target Size (Minimum)（AA）: 24×24 CSS px 以上 */
+.it .del{opacity:0;border:0;background:none;color:var(--tx3);width:26px;height:26px;border-radius:5px;font-size:13px}
 .it:hover .del{opacity:1}.it .del:hover{background:var(--ng-bg);color:var(--ng-tx)}
 .it .del:focus-visible{opacity:1}
 .cov{width:34px;height:4px;border-radius:2px;background:var(--line);overflow:hidden;flex:none}
@@ -68,8 +69,12 @@ a.btn{text-decoration:none}
 #site-items .grp b{font-weight:700;font-size:11px;color:var(--tx2)}
 #site-items .grp span{font-family:var(--mono)}
 #site-items .grp small{flex-basis:100%;font-size:10.5px;color:var(--tx3);line-height:1.5}
-#site-items .it.dim{opacity:.55}
-#site-items .it.dim:hover,#site-items .it.dim.on{opacity:1}
+/* 重複・解析できていないサイトは控えめに見せるが、opacity で薄くすると
+   文字のコントラストが 2.17:1 まで落ち、WCAG 1.4.3（AA）を割る。
+   透明度ではなく、基準を満たす色そのものを指定する。 */
+#site-items .it.dim .it-main b{color:var(--tx2)}
+#site-items .it.dim .it-main small{color:var(--tx3)}
+#site-items .it.dim .it-main i{opacity:.5}
 #site-items .it .grow small+small{color:var(--tx3);font-family:var(--sans)}
 .list-empty{padding:16px;font-size:12px;color:var(--tx3)}
 .cta-row .why{font-size:11.5px;color:var(--tx3)}
@@ -239,3 +244,16 @@ a.btn{text-decoration:none}
 .spec-tests-row .ng b{color:var(--ng-tx)}
 .spec-tests-row .tx3{color:var(--tx3);font-size:12px}
 .spec-tests-act{display:flex;gap:8px;margin-top:12px}
+
+/* サイト一覧の行。選択と削除はそれぞれ独立したボタン（入れ子にしない）。
+   見た目は従来の 1 行のまま保つ。 */
+.it .it-main{flex:1;min-width:0;display:flex;align-items:center;gap:10px;background:none;border:0;
+  padding:0;margin:0;text-align:left;color:inherit;font:inherit;cursor:pointer}
+.it .it-main:focus-visible{outline:2px solid var(--ac);outline-offset:2px;border-radius:6px}
+#site-items .it{cursor:default}
+#site-items .it:has(.it-main[aria-current="true"]){background:var(--ac-bg);border-left-color:var(--ac)}
+
+/* 見出しの階層を h1（現在地）→ h2（パネル）→ h3（カード）に揃えた。
+   h2 をパネル見出しとして使うので、従来 h1 だった見た目を保つ。 */
+.ph h2,#spec-title{font-size:16px;font-weight:700;letter-spacing:-.01em}
+#home-empty h2{font-size:26px;font-weight:700;letter-spacing:-.02em;line-height:1.35;margin-bottom:8px}

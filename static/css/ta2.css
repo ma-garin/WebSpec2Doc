@@ -1,6 +1,9 @@
 :root{
   --bg:#F6F7F9;--sf:#FFFFFF;--line:#E4E7EC;--line2:#D0D5DD;
-  --tx:#101828;--tx2:#475467;--tx3:#98A2B3;
+  /* --tx3 は補助文字色。#98A2B3 は白地 2.58:1 で WCAG 2.2 の 1.4.3（AA・4.5:1）
+     を満たさず、axe-core で 164 箇所の color-contrast 違反になっていた。
+     #667085 は白地 4.97:1 / 画面地 #F6F7F9 で 4.64:1（実測）。 */
+  --tx:#101828;--tx2:#475467;--tx3:#667085;
   --ac:#2563EB;--ac-bg:#EFF4FF;--ac-dk:#1D4ED8;
   --ok:#12B76A;--ok-bg:#DCFAE6;--ok-tx:#067647;
   --ng:#F04438;--ng-bg:#FEE4E2;--ng-tx:#B42318;
@@ -98,7 +101,9 @@ code{font-family:var(--mono);font-size:11px}
 .st .fix{grid-column:2/4;margin-top:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .st .fix code{background:var(--ok-bg);color:var(--ok-tx);padding:2px 6px;border-radius:4px}
 .st .fixed-note{grid-column:2/4;margin-top:6px;font-size:11.5px;color:var(--ac);font-weight:500}
-.st .x{opacity:0;border:0;background:none;color:var(--tx3);font-size:14px;width:22px;height:22px;border-radius:5px}
+/* WCAG 2.2 の 2.5.8 Target Size (Minimum)（AA）は 24×24 CSS px 以上。
+   行そのものが操作対象なので、間隔の例外は使えない。 */
+.st .x{opacity:0;border:0;background:none;color:var(--tx3);font-size:14px;width:26px;height:26px;border-radius:5px}
 .st:hover .x{opacity:1}.st .x:hover{background:var(--ng-bg);color:var(--ng-tx)}
 .add{border:1px dashed var(--line2);border-radius:10px;padding:10px;text-align:center;color:var(--tx3);font-size:12px;cursor:pointer;background:none;width:100%}
 .add:hover{border-color:var(--ac);color:var(--ac);background:var(--ac-bg)}

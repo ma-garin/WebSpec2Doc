@@ -82,14 +82,19 @@
     opts = opts || {};
     var on = it.domain === selected ? ' on' : '';
     var foot = opts.reason || (esc(it.screens) + ' 画面 · ' + esc(it.updated || '—'));
-    return '<div class="it' + on + (opts.dim ? ' dim' : '') + '" data-domain="' + esc(it.domain) + '"'
-      + ' role="option" tabindex="0" aria-selected="' + (on ? 'true' : 'false') + '">'
+    /* 行に削除ボタンを持つため listbox/option にはできない（option の中に
+       操作できる要素を置けない = WCAG 4.1.2）。リスト項目の中に、選択用と
+       削除用の 2 つのボタンを並べる。 */
+    return '<div class="it' + on + (opts.dim ? ' dim' : '') + '" role="listitem">'
+      + '<button type="button" class="it-main" data-domain="' + esc(it.domain) + '"'
+      + ' aria-current="' + (on ? 'true' : 'false') + '">'
       + '<i class="' + (hasScreens(it) ? 'i-pass' : 'i-new') + '"></i>'
       + '<span class="grow"><b>' + esc(it.domain) + '</b>'
       + (it.site_url ? '<small>' + esc(it.site_url) + '</small>' : '')
       + '<small>' + (opts.reason ? esc(foot) : foot) + '</small></span>'
+      + '</button>'
       + '<button type="button" class="del" data-del="' + esc(it.domain) + '"'
-      + ' title="「' + esc(it.domain) + '」の解析結果を削除" aria-label="削除">✕</button>'
+      + ' title="「' + esc(it.domain) + '」の解析結果を削除" aria-label="「' + esc(it.domain) + '」を削除">✕</button>'
       + '</div>';
   }
 
@@ -643,16 +648,11 @@
       list.addEventListener('click', function (e) {
         var del = e.target.closest && e.target.closest('[data-del]');
         if (del) { e.stopPropagation(); doDelete(del.dataset.del, del); return; }
-        var it = e.target.closest && e.target.closest('.it[data-domain]');
+        var it = e.target.closest && e.target.closest('[data-domain]');
         if (it) pick(it.dataset.domain);
       });
-      list.addEventListener('keydown', function (e) {
-        if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
-        var it = e.target.closest && e.target.closest('.it[data-domain]');
-        if (!it) return;
-        e.preventDefault();
-        pick(it.dataset.domain);
-      });
+      /* 選択は <button> になったので Enter / Space はブラウザが click に
+         変換する。ここで拾うと二重に発火するため、キー処理は持たない。 */
     }
   }
 

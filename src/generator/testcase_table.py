@@ -14,7 +14,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -80,8 +80,9 @@ class TestCaseRow:
 def build_testcase_table(report: Mapping[str, Any], design: TestDesign) -> tuple[TestCaseRow, ...]:
     """report と TestDesign から、画面順・技法順に並んだテストケース表を作る。"""
     screens = {str(s.get("page_id", "")): s for s in report.get("screens") or []}
-    global _SITE_PREFIX
+    global _SITE_PREFIX, _DUP_TITLES
     _SITE_PREFIX = _common_title_prefix(screens)
+    _DUP_TITLES = _duplicate_titles(screens)
     designs = {d.page_id: d for d in design.screens}
     rows: list[TestCaseRow] = []
     for page_id, screen in screens.items():
@@ -184,14 +185,45 @@ def _common_title_prefix(screens: Mapping[str, Mapping[str, Any]]) -> str:
     return ""
 
 
+# 同じ <title> を持つ画面が複数あると、名前だけでは見分けがつかない
+# （「トップ → トップ」に見えてしまう）。表を組み立てるたびに求める。
+_DUP_TITLES: frozenset[str] = frozenset()
+
+
 def _screen_title(screen: Mapping[str, Any]) -> str:
     title = str(screen.get("title") or "")
     # 「商品一覧 | QAストア会員注文システム」→「商品一覧」（サイト名は全画面共通で冗長）
     title = title.split("|")[0].strip()
     if _SITE_PREFIX and title.startswith(_SITE_PREFIX) and len(title) > len(_SITE_PREFIX):
         title = title[len(_SITE_PREFIX):].strip()
-    return title or str(screen.get("page_id", ""))
+    title = title or str(screen.get("page_id", ""))
+    if title in _DUP_TITLES:
+        path = _url_path(str(screen.get("url") or ""))
+        if path:
+            title = f"{title}（{path}）"
+    return title
 
+
+
+def _url_path(url: str) -> str:
+    """URL のパス部分。見分け用の短い手掛かりにする。"""
+    if not url:
+        return ""
+    body = url.split("://", 1)[-1]
+    slash = body.find("/")
+    return body[slash:] if slash >= 0 else "/"
+
+
+def _duplicate_titles(screens: Mapping[str, Mapping[str, Any]]) -> frozenset[str]:
+    """2 画面以上で共有されているタイトル。"""
+    seen: dict[str, int] = {}
+    for sc in screens.values():
+        t = str(sc.get("title") or "").split("|")[0].strip()
+        if _SITE_PREFIX and t.startswith(_SITE_PREFIX):
+            t = t[len(_SITE_PREFIX):].strip()
+        if t:
+            seen[t] = seen.get(t, 0) + 1
+    return frozenset(k for k, n in seen.items() if n > 1)
 
 def _input_fields(screen: Mapping[str, Any]) -> list[dict[str, Any]]:
     skip = {"hidden", "submit", "button", "reset", "image"}
@@ -542,8 +574,60 @@ _NAME_HINTS: tuple[tuple[tuple[str, ...], str], ...] = (
 )
 
 
+# 画面が申告している書式（pattern）から、実際に通る値を組み立てるための対応表。
+# 「テスト」のような通らない値を入れると、そのケースは何も確かめられない。
+_PATTERN_SAMPLES: tuple[tuple[str, str], ...] = (
+    # カード番号など「数字と空白の 13〜19 桁」
+    (r"[0-9 ]{13,19}", "4242424242424242"),
+    (r"[0-9]{13,19}", "4242424242424242"),
+    # 有効期限 MM/YY
+    (r"(0[1-9]|1[0-2])/[0-9]{2}", "12/28"),
+    (r"[0-9]{2}/[0-9]{2}", "12/28"),
+)
+
+
+def _digits_only(pattern: str) -> int:
+    """`[0-9]{n}` 形式の桁数。取れなければ 0。"""
+    m = re.search(r"\[0-9\]\{(\d+)(?:,(\d+))?\}", pattern)
+    if not m:
+        return 0
+    return int(m.group(2) or m.group(1))
+
+
+
+def _matches(pattern: str, value: str) -> bool:
+    """value が pattern（HTML の pattern 属性）を満たすか。壊れた式は満たさない扱い。"""
+    try:
+        return re.fullmatch(pattern, value) is not None
+    except re.error:
+        return False
+
+def _value_from_pattern(pattern: str, maxlength: Any) -> str:
+    """pattern から、それを満たす値を作る。作れなければ空文字を返す（でっち上げない）。"""
+    if not pattern:
+        return ""
+    compact = pattern.replace("^", "").replace("$", "").strip()
+    for sig, sample in _PATTERN_SAMPLES:
+        if sig in compact:
+            return sample
+    n = _digits_only(compact)
+    if n:
+        if isinstance(maxlength, int) and 0 < maxlength < n:
+            n = maxlength
+        return "1" * n
+    if re.fullmatch(r"[A-Za-z ]\{?\d*,?\d*\}?", compact or "x"):
+        return ""
+    return ""
+
+
 def _sample_value(fld: Mapping[str, Any] | None) -> str:
-    """必須チェック用の既定値。型と項目名から固定値を返す（実行者による揺れを防ぐ）。"""
+    """必須チェック用の既定値。
+
+    画面が申告している制約（pattern・型・min/max・選択肢）を優先して、
+    **実際にその欄を通る値**を返す。制約を無視した固定文字列を入れると、
+    「必須チェックが働くか」を確かめるはずのケースが、書式エラーで
+    落ちるだけになり、何も確かめられなくなる。
+    """
     if fld is None:
         return "テスト"
     field_type = str(fld.get("field_type", ""))
@@ -554,15 +638,33 @@ def _sample_value(fld: Mapping[str, Any] | None) -> str:
     if field_type == "email":
         return "test@example.com"
     if field_type == "number":
-        return str(fld.get("min_value") or "1")
+        lo = fld.get("min_value")
+        hi = fld.get("max_value")
+        for cand in (lo, hi):
+            if str(cand or "").strip():
+                return str(cand).strip()
+        return "1"
 
+    maxlength = fld.get("maxlength")
+    pattern = str(fld.get("pattern") or "")
+    placeholder = str(fld.get("placeholder") or "").strip()
+    fits_len = not (isinstance(maxlength, int) and maxlength > 0 and len(placeholder) > maxlength)
+    # 1) 画面に書かれた例（placeholder）が書式を満たすなら、それが一番良い見本。
+    #    作り物の値より、その欄で実際に想定されている形が伝わる。
+    if placeholder and fits_len and not re.search(r"[ぁ-んァ-ヶ一-龠]", placeholder):
+        if not pattern or _matches(pattern, placeholder):
+            return placeholder
+    # 2) 例が無い・満たさないときは、書式から組み立てる
+    from_pattern = _value_from_pattern(pattern, maxlength)
+    if from_pattern:
+        return from_pattern
+    # 3) 項目名からの既定値
     key = f"{_field_key(fld)} {fld.get('label_text') or ''}".lower()
     value = "テスト"
     for keywords, sample in _NAME_HINTS:
         if any(k in key for k in keywords):
             value = sample
             break
-    maxlength = fld.get("maxlength")
     if isinstance(maxlength, int) and maxlength > 0 and len(value) > maxlength:
         value = value[:maxlength]
     return value
@@ -592,10 +694,7 @@ def _pairwise_rows(ctx: _ScreenContext, sd: ScreenTestDesign) -> list[TestCaseRo
                 viewpoint=f"ペアワイズ（{pw.strength}-way）／組み合わせ",
                 preconditions=ctx.preconditions(),
                 steps=texts,
-                expected=(
-                    "入力した組み合わせで処理が実行され、システムエラー（500 等）が出ない",
-                    "選択・入力した値が、送信後の画面にそのまま反映されている",
-                ),
+                expected=_pairwise_expected(values),
                 automation=AUTOMATION_AUTO,
                 automation_reason="入力値の組み合わせのみで完結するため",
                 trace_id=f"{ctx.page_id}:PW",
@@ -606,6 +705,26 @@ def _pairwise_rows(ctx: _ScreenContext, sd: ScreenTestDesign) -> list[TestCaseRo
     return rows
 
 
+
+def _pairwise_expected(values: Sequence[Any]) -> tuple[str, ...]:
+    """組み合わせに応じた期待結果。
+
+    無効値を 1 つでも含むなら、通ってはいけない。全ケースに
+    「処理が実行される」と書くと、落ちるべきケースが通っても気づけない。
+    """
+    has_invalid = any("無効" in str(v) for v in values)
+    if has_invalid:
+        return (
+            "無効な値を入れた項目にエラーメッセージが表示される",
+            "送信は行われず、同じ画面に留まる",
+            "システムエラー（500 等）にはならない",
+        )
+    return (
+        "入力した組み合わせで処理が実行され、次の状態へ進む",
+        "システムエラー（500 等）が出ない",
+        "入力した値が、送信後の画面にそのまま反映されている",
+    )
+
 def _state_rows(
     ctx: _ScreenContext, sd: ScreenTestDesign, screens: Mapping[str, Mapping[str, Any]]
 ) -> list[TestCaseRow]:
@@ -613,7 +732,13 @@ def _state_rows(
     if st is None:
         return []
     rows: list[TestCaseRow] = []
-    for idx, seq in enumerate(st.sequences, start=1):
+    idx = 0
+    for seq in st.sequences:
+        # 同じ画面へ戻るだけの並びは、遷移として確かめるものが無い。
+        # 「トップ → トップ」のようなケースが混ざると、一覧の信頼が落ちる。
+        if _is_meaningless_sequence(seq.steps, ctx.page_id, screens):
+            continue
+        idx += 1
         steps = [ctx.open_step()]
         last_url = ""
         for nxt in seq.steps[1:]:
@@ -653,6 +778,28 @@ def _state_rows(
         )
     return rows
 
+
+
+def _is_meaningless_sequence(
+    steps: Sequence[str], page_id: str, screens: Mapping[str, Mapping[str, Any]]
+) -> bool:
+    """確かめるものが無い遷移か。
+
+    - 遷移先が 1 つも無い
+    - 自分自身へ戻るだけ
+    - 同じ URL の別 page_id（解析上の重複画面）へ移るだけ
+    """
+    tail = [str(x) for x in list(steps)[1:] if str(x)]
+    if not tail:
+        return True
+    here = str((screens.get(page_id) or {}).get("url") or "")
+    for nxt in tail:
+        if nxt == page_id:
+            continue
+        url = str((screens.get(nxt) or {}).get("url") or "")
+        if not here or not url or url != here:
+            return False
+    return True
 
 def _transition_rows(
     ctx: _ScreenContext, screens: Mapping[str, Mapping[str, Any]]

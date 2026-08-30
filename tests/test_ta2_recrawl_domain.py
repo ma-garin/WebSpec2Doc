@@ -122,6 +122,19 @@ class TestJobQueue:
 class TestRecrawlRoute:
     """POST /api/ta2/recrawl が見ている画面のディレクトリを渡す。"""
 
+    @pytest.fixture(autouse=True)
+    def _clear_job_registry(self):
+        """ジョブ台帳はモジュール共有なので、テストごとに空にする。
+
+        残っていると「このサイトは再クロール中です」の 409 ガードが
+        前のテストのジョブを見て発火し、無関係な失敗になる。
+        """
+        from web.services import job_queue
+
+        job_queue._JOBS.clear()
+        yield
+        job_queue._JOBS.clear()
+
     def test_recrawl_passes_the_domain_through(self, monkeypatch, tmp_path: Path) -> None:
         calls: list[dict] = []
 

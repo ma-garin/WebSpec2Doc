@@ -613,6 +613,19 @@ class TestArtifacts:
 class TestRecrawl:
     """再クロールはバックグラウンドのクロールジョブに委ねる（B2）。"""
 
+    @pytest.fixture(autouse=True)
+    def _clear_job_registry(self):
+        """ジョブ台帳はモジュール共有なので、テストごとに空にする。
+
+        残っていると「このサイトは再クロール中です」の 409 ガードが
+        前のテストのジョブを見て発火し、無関係な失敗になる。
+        """
+        from web.services import job_queue
+
+        job_queue._JOBS.clear()
+        yield
+        job_queue._JOBS.clear()
+
     @staticmethod
     def _patch_start(monkeypatch, calls: list) -> None:
         def fake_start(domain, site_url, **kwargs):

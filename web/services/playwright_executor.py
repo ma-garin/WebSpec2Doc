@@ -286,7 +286,18 @@ const fs = require('fs');
 class ProgressReporter {
   constructor(options) {
     this._path = (options && options.progressPath) || 'playwright_progress.ndjson';
+    this._failedStep = {};
     fs.writeFileSync(this._path, '');
+  }
+  _key(test) {
+    return String((test && (test.id || test.title)) || '');
+  }
+  // 生成 spec は 1 手順を test.step('S<n>') で包む。最初に失敗した境界だけを覚える。
+  onStepEnd(test, result, step) {
+    if (!step || !step.error) return;
+    if (step.category !== 'test.step') return;
+    const key = this._key(test);
+    if (!this._failedStep[key]) this._failedStep[key] = String(step.title || '');
   }
   _append(obj) {
     fs.appendFileSync(this._path, JSON.stringify(obj) + '\\n');
@@ -307,6 +318,7 @@ class ProgressReporter {
       status: result.status,
       duration: result.duration || 0,
       error: message,
+      failed_step: this._failedStep[this._key(test)] || '',
     });
   }
 }
@@ -723,6 +735,34 @@ def _ensure_pw_env(env_dir: Path) -> tuple[bool, str]:
     return True, f"@playwright/test {target_ver or ''} のインストールが完了しました。"
 
 
+_STEP_TITLE_RE = re.compile(r"^S\d+$")
+
+
+def _scan_failed_step(steps: Any) -> str:
+    """`S<n>` という題名の失敗ステップを、外側から順に探す。"""
+    for step in steps or []:
+        if not isinstance(step, dict):
+            continue
+        title = str(step.get("title") or "")
+        if step.get("error") and _STEP_TITLE_RE.match(title):
+            return title
+        nested = _scan_failed_step(step.get("steps") or [])
+        if nested:
+            return nested
+    return ""
+
+
+def _failed_step_title(results: Any) -> str:
+    """JSON レポータの結果から、最初に失敗したステップ境界（`S<n>`）を取り出す。"""
+    for result in results or []:
+        if not isinstance(result, dict):
+            continue
+        found = _scan_failed_step(result.get("steps") or [])
+        if found:
+            return found
+    return ""
+
+
 def _parse_results(
     raw: dict[str, Any], stdout: str, stderr: str, returncode: int
 ) -> dict[str, Any]:
@@ -767,6 +807,7 @@ def _parse_results(
                             (r.get("duration") or 0) for r in (run.get("results") or [])
                         ),
                         "error": _first_error(run.get("results") or []),
+                        "failed_step": _failed_step_title(run.get("results") or []),
                     }
                 )
 
@@ -847,6 +888,7 @@ def _read_progress_ndjson(progress_path: Path) -> tuple[int | None, list[dict[st
                         "status": _map_status(str(obj.get("status", "")), []),
                         "duration_ms": int(obj.get("duration") or 0),
                         "error": str(obj.get("error", "")),
+                        "failed_step": str(obj.get("failed_step", "")),
                     }
                 )
     except OSError:

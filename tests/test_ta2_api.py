@@ -11,6 +11,7 @@ import json
 import sys
 import threading
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -610,7 +611,88 @@ class TestArtifacts:
 
 
 class TestRecrawl:
-    def test_recrawl_is_not_implemented_yet(self, client) -> None:
+    """再クロールはバックグラウンドのクロールジョブに委ねる（B2）。"""
+
+    @staticmethod
+    def _patch_start(monkeypatch, calls: list) -> None:
+        def fake_start(domain, site_url, **kwargs):
+            calls.append({"domain": domain, "site_url": site_url, **kwargs})
+            return "job-1"
+
+        monkeypatch.setattr("web.services.job_queue.start_crawl_job", fake_start)
+
+    def test_recrawl_starts_job_with_report_url(self, client, monkeypatch) -> None:
+        calls: list = []
+        self._patch_start(monkeypatch, calls)
+
         resp = client.post("/api/ta2/recrawl", json={"domain": DOMAIN})
-        assert resp.status_code == 501
+
+        assert resp.status_code == 200
+        assert resp.get_json()["job_id"] == "job-1"
+        assert len(calls) == 1
+        assert calls[0]["site_url"]
+        assert calls[0]["formats"] == ["md", "html", "json"]
+        assert calls[0]["compare"] is True
+        assert calls[0]["output_dir"] is not None
+        assert callable(calls[0]["on_done"])
+
+    def test_recrawl_records_usage_when_completed(self, client, monkeypatch) -> None:
+        calls: list = []
+        self._patch_start(monkeypatch, calls)
+        recorded: list = []
+        monkeypatch.setattr(
+            "web.routes.crawl._record_usage_safely",
+            lambda domain, compare, out_dir: recorded.append((domain, compare, out_dir)),
+        )
+        client.post("/api/ta2/recrawl", json={"domain": DOMAIN})
+        on_done = calls[0]["on_done"]
+
+        on_done(SimpleNamespace(status="failed"))
+        assert recorded == []
+
+        on_done(SimpleNamespace(status="completed"))
+        assert len(recorded) == 1
+        assert recorded[0][0] == DOMAIN
+        assert recorded[0][1] is True
+
+    def test_recrawl_rejects_missing_target_url(self, client, monkeypatch) -> None:
+        monkeypatch.setattr("web.routes.ta2._report", lambda domain: {"meta": {}, "screens": []})
+        resp = client.post("/api/ta2/recrawl", json={"domain": DOMAIN})
+        assert resp.status_code == 400
+        assert resp.get_json()["error"] == "対象 URL が report.json にありません"
+
+    def test_recrawl_rejects_bad_domain(self, client) -> None:
+        resp = client.post("/api/ta2/recrawl", json={"domain": "../etc"})
+        assert resp.status_code == 400
+        assert resp.get_json()["error"]
+
+
+class TestRecrawlStatus:
+    def test_status_returns_job_fields(self, client, monkeypatch) -> None:
+        job = SimpleNamespace(
+            status="completed",
+            finished_at="2026-08-30T10:00:00",
+            exit_code=0,
+            log_tail="x" * 500,
+        )
+        monkeypatch.setattr("web.services.job_queue.get_job", lambda job_id: job)
+
+        resp = client.get(f"/api/ta2/recrawl/status?domain={DOMAIN}&job_id=job-1")
+
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["status"] == "completed"
+        assert data["finished_at"] == "2026-08-30T10:00:00"
+        assert data["exit_code"] == 0
+        assert len(data["log_tail"]) == 300
+
+    def test_status_requires_job_id(self, client) -> None:
+        resp = client.get(f"/api/ta2/recrawl/status?domain={DOMAIN}")
+        assert resp.status_code == 400
+        assert resp.get_json()["error"]
+
+    def test_status_unknown_job_is_404(self, client, monkeypatch) -> None:
+        monkeypatch.setattr("web.services.job_queue.get_job", lambda job_id: None)
+        resp = client.get(f"/api/ta2/recrawl/status?domain={DOMAIN}&job_id=nope")
+        assert resp.status_code == 404
         assert resp.get_json()["error"]

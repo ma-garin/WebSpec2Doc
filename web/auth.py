@@ -29,7 +29,7 @@ SESSION_COOKIE_NAME = "ws2d_session"
 # ログイン後は必ずこの順で進む。順序を変えるときはここだけを見ればよいように、
 # 2つのパスを並べて置く。
 TENANT_SELECT_PATH = "/auth/tenant"
-SYSTEM_SELECT_PATH = "/systems"
+SYSTEM_SELECT_PATH = "/"
 
 # 個人設定はアプリ内のビュー。旧 /auth/account はここへ転送する。
 ACCOUNT_VIEW_PATH = "/account"

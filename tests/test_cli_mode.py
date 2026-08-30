@@ -198,18 +198,17 @@ class TestReadCommands:
 
 
 class TestCliModePage:
-    """入り口に System 03 が並び、案内ページが開けること。"""
+    """CLI の案内ページが開けること（入口のハブは統合ワークスペースに一本化済み）。"""
 
     @pytest.fixture
     def client(self):
         return appmod.app.test_client()
 
-    def test_systems_page_offers_three_systems(self, client) -> None:
-        html = client.get("/systems", headers=H).get_data(as_text=True)
-        assert "System 01" in html
-        assert "System 02" in html
-        assert "System 03" in html
-        assert 'href="/cli"' in html
+    def test_systems_page_redirects_to_workspace_home(self, client) -> None:
+        """製品統合でシステム選択ハブは廃止。旧 URL はホームへ送る。"""
+        response = client.get("/systems", headers=H)
+        assert response.status_code == 302
+        assert response.headers["Location"] == "/"
 
     def test_cli_page_renders(self, client) -> None:
         res = client.get("/cli", headers=H)

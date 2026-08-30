@@ -2387,41 +2387,22 @@
     },
     {
       "feature_id": "test_activity_support",
-      "name": "テスト活動支援（System 02・12工程）",
+      "name": "テスト自動化ワークスペース（旧 System 02）",
       "risk_level": "high",
       "status": "implemented",
       "ui_files": [
-        "templates/partials/view-ta-analysis.html",
-        "templates/partials/view-ta-codefix.html",
-        "templates/partials/view-ta-completion.html",
-        "templates/partials/view-ta-defect.html",
-        "templates/partials/view-ta-design.html",
-        "templates/partials/view-ta-execution.html",
-        "templates/partials/view-ta-home.html",
-        "templates/partials/view-ta-implementation.html",
-        "templates/partials/view-ta-integrations.html",
-        "templates/partials/view-ta-manual.html",
-        "templates/partials/view-ta-plan.html",
-        "templates/partials/view-ta-strategy.html",
-        "static/js/ta-ai-panel.js",
-        "static/js/ta-analysis.js",
-        "static/js/ta-codefix.js",
-        "static/js/ta-completion.js",
-        "static/js/ta-defect.js",
-        "static/js/ta-design.js",
-        "static/js/ta-execution.js",
-        "static/js/ta-home.js",
-        "static/js/ta-implementation.js",
-        "static/js/ta-integrations.js",
-        "static/js/ta-manual.js",
-        "static/js/ta-plan.js",
-        "static/js/ta-process-gate.js",
-        "static/js/ta-process-nav.js",
-        "static/js/ta-strategy.js",
-        "static/css/ta-design-system.css",
-        "static/css/test-activity.css"
+        "templates/workspace.html",
+        "static/css/ta2.css",
+        "static/js/ta2/app.js",
+        "static/js/ta2/state.js",
+        "static/js/ta2/list.js",
+        "static/js/ta2/editor.js",
+        "static/js/ta2/viewer.js",
+        "static/js/ta2/panels.js",
+        "static/js/ta2/modals.js"
       ],
       "route_files": [
+        "web/routes/ta2.py",
         "web/routes/test_activity.py"
       ],
       "core_files": [
@@ -2429,8 +2410,9 @@
         "web/services/defect_store.py",
         "web/services/manual_execution_store.py",
         "web/services/process_gate.py",
-        "web/services/test_data_store.py",
-        "web/services/ta_ai.py"
+        "web/services/ta2_store.py",
+        "web/services/ta_ai.py",
+        "web/services/test_data_store.py"
       ],
       "symbols": [
         "evaluate",
@@ -2475,6 +2457,132 @@
       "required_tests": [
         "tests/test_ta_process_gate.py",
         "tests/test_ta_defect_store.py"
+      ]
+    },
+    {
+      "feature_id": "workspace_shell",
+      "name": "統合ワークスペースのシェル（ホーム / 仕様 / テスト / 変更 / 定期実行 / 報告 / チーム）",
+      "risk_level": "critical",
+      "status": "implemented",
+      "ui_files": [
+        "templates/workspace.html",
+        "static/css/ws.css",
+        "static/js/ta2/ws-shell.js",
+        "static/js/ta2/ws-home.js",
+        "static/js/ta2/ws-spec.js",
+        "static/js/ta2/ws-drift.js",
+        "static/js/ta2/ws-schedule.js",
+        "static/js/ta2/ws-report.js",
+        "static/js/ta2/ws-team.js",
+        "static/js/ta2/ws-resync.js"
+      ],
+      "route_files": [
+        "web/routes/pages.py"
+      ],
+      "core_files": [],
+      "symbols": [],
+      "outputs": [
+        "ホーム（サイト一覧・0 件なら URL 入力だけの空状態）",
+        "/sites/<domain>/{spec,tests,changes,schedule,report,team} の各ワークスペース",
+        "56px レール（7 ワークスペース＋設定リンク）と現在地の強調",
+        "旧 URL（/systems・/test-automation・/home）からの 302"
+      ],
+      "persistence": [
+        "output/<domain>/report.json（ワークスペースを開ける条件）"
+      ],
+      "failure_modes": [
+        "unanalyzed_domain_redirects_home_not_404",
+        "invalid_domain_rejected_as_404",
+        "unknown_workspace_rejected_as_404",
+        "non_admin_gets_403_not_404",
+        "legacy_urls_redirect_instead_of_breaking",
+        "no_placeholder_screens"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "evidence"
+      ],
+      "tests": [
+        "tests/test_ui_contract.py",
+        "tests/test_pages_routes.py",
+        "tests/e2e/test_workspace_shell_e2e.py"
+      ]
+    },
+    {
+      "feature_id": "site_report_html",
+      "name": "サイト報告（単体 HTML の持ち出し）",
+      "risk_level": "high",
+      "status": "implemented",
+      "ui_files": [
+        "templates/workspace.html",
+        "static/js/ta2/ws-report.js",
+        "static/css/ws.css"
+      ],
+      "route_files": [
+        "web/routes/ta2.py"
+      ],
+      "core_files": [
+        "web/services/site_report.py"
+      ],
+      "symbols": [
+        "build_site_report_html",
+        "ALL_SECTIONS"
+      ],
+      "outputs": [
+        "GET /api/ta2/report?domain=&sections=[&download=1]（単体 HTML）",
+        "報告 WS のプレビュー iframe と「HTML を保存」"
+      ],
+      "persistence": [
+        "なし（毎回その場で組み立てる。保存はブラウザのダウンロード）"
+      ],
+      "failure_modes": [
+        "domain 未指定・不正で 400 を返す",
+        "report.json が無い場合は 404 と理由を返す",
+        "実行・テスト・変更・利用実績が空でも例外を出さず「記録なし」と明記する",
+        "外部由来の文字列を html.escape でエスケープする",
+        "外部読み込み（<script src / <link）を一切含めない"
+      ],
+      "required_tests": [
+        "tests/test_site_report.py"
+      ]
+    },
+    {
+      "feature_id": "external_integrations",
+      "name": "外部サービス連携（Jira / Confluence / Notion / QualityForward）と通知・CI ゲート",
+      "risk_level": "high",
+      "status": "implemented",
+      "ui_files": [
+        "templates/partials/view-settings.html"
+      ],
+      "route_files": [
+        "web/routes/integrations.py"
+      ],
+      "core_files": [
+        "web/services/jira_client.py",
+        "web/services/confluence_client.py",
+        "web/services/notion_client.py",
+        "web/services/qualityforward_client.py",
+        "web/services/run_notifier.py",
+        "src/ci_gate.py"
+      ],
+      "symbols": [],
+      "outputs": [
+        "連携先への課題・ページ・テスト結果の送信",
+        "実行結果の通知（Slack / Teams / Email / Webhook）",
+        "CI ゲートの終了コード"
+      ],
+      "persistence": [
+        "instance/tenants/{slug}/settings.json（連携設定）"
+      ],
+      "failure_modes": [
+        "missing_credentials_reported_not_silently_skipped",
+        "remote_error_does_not_break_the_run",
+        "secrets_not_written_to_logs"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path"
       ]
     }
   ]

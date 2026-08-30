@@ -6,19 +6,37 @@
   'use strict';
   var T = window.TA2, S = T.state, $ = T.$, $$ = T.$$;
 
+  /** ワークスペース（URL パス）→ 初期 view */
+  var WS_VIEW = {
+    home: 'home', spec: 'spec', tests: 'test', changes: 'drift',
+    schedule: 'schedule', report: 'report', team: 'team'
+  };
+
+  function bodyWs() {
+    return (document.body.dataset.ws || 'home');
+  }
+
+  /** 対象ドメイン。パス（/sites/<domain>/…）が正で、?domain= は後方互換 */
   function paramDomain() {
+    var d = document.body.dataset.domain || '';
+    if (d) return d;
     try { return new URLSearchParams(location.search).get('domain') || ''; }
     catch (e) { return ''; }
   }
 
   /** ハッシュから初期の view と選択 id を取り出す（tests 読み込み前でも使える） */
   function parseHash() {
-    var m = /^#\/(tests|run|drift|site)(?:\/(.+))?$/.exec(location.hash || '');
-    if (!m) return { view: 'test', id: null };
-    return {
-      view: m[1] === 'tests' ? 'test' : m[1],
-      id: m[2] ? decodeURIComponent(m[2]) : null
-    };
+    var m = /^#\/(tests|run|drift|site|map|home|spec|schedule|report|team)(?:\/(.+))?$/.exec(location.hash || '');
+    if (!m) return { view: null, id: null, hashed: false };
+    var v = m[1] === 'tests' ? 'test' : (m[1] === 'map' ? 'site' : m[1]);
+    return { view: v, id: m[2] ? decodeURIComponent(m[2]) : null, hashed: true };
+  }
+
+  /** 初期 view。ハッシュがあればそれが優先、無ければパスの ws から決める */
+  function initialView() {
+    var h = parseHash();
+    if (h.hashed) return h.view;
+    return WS_VIEW[bodyWs()] || 'test';
   }
 
   function fatal(msg) {
@@ -100,6 +118,7 @@
     window.addEventListener('hashchange', function () {
       if (T.isHashLocked()) return;
       var h = parseHash();
+      if (!h.hashed) return;
       if (h.view === 'test' && h.id && h.id !== S.sel && T.byId(h.id)) {
         T.select(h.id);
         return;
@@ -136,25 +155,27 @@
     bindUserMenu();
 
     var h = parseHash();
+    var ws = bodyWs();
     var wanted = paramDomain();
 
+    // ホームはサイト一覧だけで成立する。テストは対象サイトが決まってから読む
+    if (ws === 'home') {
+      return T.loadSites().catch(function () { S.sites = []; return S.sites; }).then(function () {
+        S.ready = true;
+        T.setDomain('');
+        T.setView('home');
+        T.render();
+        T.emit('boot');
+      });
+    }
+
     return T.loadSites().then(function (sites) {
-      if (!sites.length) {
-        fatal('クロール済みのサイトがありません。先にドキュメント作成でサイトを取り込んでください。');
-        return null;
-      }
       var domain = '';
       sites.forEach(function (s) { if (s.domain === wanted) domain = s.domain; });
       if (!domain) {
-        domain = sites[0].domain;
-        // 指定されたドメインが無いときに黙って別サイトを出さない。
-        // 何を見ているのかが分からないまま操作させるのが一番危ない
-        if (wanted) {
-          notice('「' + wanted + '」のクロール結果がありません。'
-            + '代わりに「' + domain + '」を表示しています。'
-            + (sites.length > 1 ? '上の選択欄でサイトを変えられます。' : ''));
-          T.toast('「' + wanted + '」は見つかりませんでした', 'ng');
-        }
+        // 何を見ているのか分からないまま別サイトを出さない。ホームで選び直してもらう
+        location.replace('/');
+        return null;
       }
       T.setDomain(domain);
       return T.loadTests();
@@ -170,8 +191,9 @@
         if (S.step >= n) S.step = Math.max(0, n - 1);
         S.mode = t.status === 'fail' ? 'fail' : 'now';
       }
-      T.setView(h.view);
+      T.setView(initialView());
       T.render();
+      T.emit('boot');
       // 一覧が出たあとで、パネル用のデータを取りに行く
       return Promise.all([T.loadDrift(), T.loadMap(), T.loadRuns()]).then(function () {
         T.render();

@@ -97,7 +97,12 @@ def run() -> Response:
     auth = _safe_auth_path(request.form.get("auth", "").strip())
     crawl_mode = request.form.get("crawl_mode", "").strip()
     parallelism = str(_clean_int(request.form.get("parallelism", "4"), 4, 1, MAX_PARALLELISM))
-    domain = _domain_of(urls.split(",")[0]) if urls else ""
+    # 既存サイトの再解析では、呼び出し側が既にディレクトリ名を知っている。
+    # それを渡してもらい、URL のホストから作り直して別サイトを増やすのを防ぐ。
+    domain_name = request.form.get("domain_name", "").strip()
+    if domain_name in {".", ".."} or "/" in domain_name or "\\" in domain_name:
+        domain_name = ""
+    domain = domain_name or (_domain_of(urls.split(",")[0]) if urls else "")
     reference_docs = _safe_reference_doc_paths(request.form.get("reference_docs", ""), domain)
 
     # 実行条件（解析範囲）。実行履歴に「どの範囲を解析した結果か」を残すためだけの値で、
@@ -145,6 +150,8 @@ def run() -> Response:
             "--output",
             str(out_dir),
         ]
+        if domain_name:
+            cmd += ["--domain-name", domain_name]
         if compare:
             cmd.append("--compare")
         if auth:

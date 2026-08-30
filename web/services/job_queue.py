@@ -11,6 +11,7 @@ import os
 import subprocess
 import sys
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -51,11 +52,18 @@ def start_crawl_job(
     compare: bool = True,
     auth_path: str = "",
     output_dir: Path | None = None,
+    on_done: Callable[[CrawlJob], None] | None = None,
+    domain_name: str = "",
 ) -> str:
     """バックグラウンドスレッドでクロールを開始し、job_id を返す。
 
     output_dir: テナントスコープ済み出力先。スレッド内ではリクエスト
     コンテキストを参照できないため、呼び出し元（ルート）が解決して渡す。
+    domain_name: 出力先ディレクトリ名。既定は domain（サイトのディレクトリ
+    ラベル）で、再クロールが必ず同じディレクトリへ書き戻るようにする。
+    on_done: ジョブが終了（completed / failed）した直後にジョブを渡して呼ぶ。
+    スレッド内で実行されるため、リクエストコンテキストは参照できない。
+    例外は握りつぶしてログに残す（クロール自体の結果に影響させない）。
     """
     import uuid
 
@@ -78,6 +86,8 @@ def start_crawl_job(
             compare,
             auth_path,
             output_dir,
+            on_done,
+            (domain_name or domain),
         ),
         daemon=True,
         name=f"CrawlJob-{job_id[:8]}",
@@ -116,6 +126,8 @@ def _run_job(
     compare: bool,
     auth_path: str,
     output_dir: Path | None = None,
+    on_done: Callable[[CrawlJob], None] | None = None,
+    domain_name: str = "",
 ) -> None:
     cmd = [
         sys.executable,
@@ -131,6 +143,8 @@ def _run_job(
     ]
     if output_dir is not None:
         cmd += ["--output", str(output_dir)]
+    if domain_name:
+        cmd += ["--domain-name", domain_name]
     if compare:
         cmd.append("--compare")
     if auth_path:
@@ -150,11 +164,23 @@ def _run_job(
         log_text = "".join(log_buf)[-MAX_LOG_BYTES:]
         status: JobStatus = "completed" if proc.returncode == 0 else "failed"
         _update(job, status=status, exit_code=proc.returncode, log_tail=log_text)
+        _notify_done(job, on_done)
         if status == "completed" and compare:
             _try_slack_notify(job, output_dir)
     except OSError as exc:
         logger.error("クロールジョブ起動失敗: job_id=%s, %s", job.job_id, exc)
         _update(job, status="failed", exit_code=-1, log_tail=str(exc))
+        _notify_done(job, on_done)
+
+
+def _notify_done(job: CrawlJob, on_done: Callable[[CrawlJob], None] | None) -> None:
+    """終了コールバックを呼ぶ。失敗してもジョブ結果には影響させない。"""
+    if on_done is None:
+        return
+    try:
+        on_done(job)
+    except Exception:  # noqa: BLE001 - コールバックの失敗でクロール結果を捨てない
+        logger.warning("on_done failed: job_id=%s", job.job_id, exc_info=True)
 
 
 def _try_slack_notify(job: CrawlJob, output_dir: Path | None = None) -> None:

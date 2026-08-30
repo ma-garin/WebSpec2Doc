@@ -59,7 +59,8 @@ _RESET_INITIAL_PASSWORD = "e2e-reset-initial-1"
 _RESET_NEW_PASSWORD = "e2e-reset-updated-2"
 
 TENANT_SELECT = "/auth/tenant"
-SYSTEM_SELECT = "/systems"
+# 製品統合でシステム選択ハブは廃止。ログイン後の着地点はホーム（サイト一覧）。
+SYSTEM_SELECT = "/"
 
 
 def _wait_for_health(url: str, timeout: float = 20.0) -> bool:
@@ -115,7 +116,7 @@ def auth_server() -> Generator[str, None, None]:
 
 
 def _login_as(page: Page, base_url: str, email: str, password: str) -> None:
-    """ログイン→テナント選択を経て /systems に到達する（ID＋パスワード認証）。"""
+    """ログイン→テナント選択を経てホーム（"/"）に到達する（ID＋パスワード認証）。"""
     page.goto(f"{base_url}/auth/login")
     page.locator("#email").fill(email)
     page.locator("#password").fill(password)
@@ -144,7 +145,7 @@ class TestAccountAuth:
         page.locator("#password").fill(_ADMIN_PASSWORD)
         page.locator("#password_confirm").fill(_ADMIN_PASSWORD)
         page.locator("button.auth-submit").click()
-        # setup_submit はセッションを即座に発行し、テナントも決定済みで /systems へ進む
+        # setup_submit はセッションを即座に発行し、テナントも決定済みでホームへ進む
         expect(page).to_have_url(f"{auth_server}{SYSTEM_SELECT}")
 
         # ログアウト（ログアウトフォームは複数画面に重複して存在するため、
@@ -209,7 +210,7 @@ class TestTenantMembership:
         page.request.post(f"{auth_server}/auth/logout")
         _login_as(page, auth_server, _MEMBER_EMAIL, _MEMBER_PASSWORD)
 
-        # 一般メンバーは旧URLからも到達できず /systems へ戻される
+        # 一般メンバーは旧URLからも到達できずホームへ戻される
         # （権限による操作の出し分け＝ tenant_admin.py console_page のガード）
         page.goto(f"{auth_server}/admin/console")
         expect(page).to_have_url(f"{auth_server}{SYSTEM_SELECT}")

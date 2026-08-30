@@ -15,10 +15,13 @@ def _client():
 
 
 class TestPageRoutes:
-    def test_root_renders_index(self) -> None:
+    def test_root_renders_workspace_shell(self) -> None:
+        """"/" は統合ワークスペースのホーム（サイト一覧）。"""
         response = _client().get("/", headers={"Host": "127.0.0.1"})
         assert response.status_code == 200
-        assert 'id="view-dashboard"' in response.get_data(as_text=True)
+        html = response.get_data(as_text=True)
+        assert 'data-ws="home"' in html
+        assert 'data-view="home"' in html
 
     def test_known_view_paths_render_index(self) -> None:
         client = _client()
@@ -35,10 +38,11 @@ class TestPageRoutes:
             assert response.status_code == 200, path
             assert 'id="app-content"' in response.get_data(as_text=True)
 
-    def test_home_alias_renders_index(self) -> None:
+    def test_home_alias_redirects_to_root(self) -> None:
+        """旧ホーム（ダッシュボード）は統合ワークスペースのホームへ置き換わった。"""
         response = _client().get("/home", headers={"Host": "127.0.0.1"})
-        assert response.status_code == 200
-        assert 'id="view-dashboard"' in response.get_data(as_text=True)
+        assert response.status_code == 302
+        assert response.headers["Location"] == "/"
 
     def test_unknown_view_path_returns_404(self) -> None:
         response = _client().get("/not-a-real-view", headers={"Host": "127.0.0.1"})

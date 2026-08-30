@@ -45,14 +45,18 @@ def _html(path: str) -> str:
 
 @pytest.fixture(scope="module")
 def spa() -> str:
-    """SPA 本体（全ビューを内包する index.html）。"""
-    return _html("/")
+    """旧シェル本体（AutoRun・観点管理・設定を内包する index.html）。
+
+    統合ワークスペース化で "/" は workspace.html に置き換わった。index.html は
+    /auto-run 等の画面別 URL から配られ続けるため、そこから取得する。
+    """
+    return _html("/auto-run")
 
 
 @pytest.fixture(scope="module")
-def systems() -> str:
-    """システム選択ハブ。"""
-    return _html("/systems")
+def workspace() -> str:
+    """統合ワークスペースのシェル（"/" = サイト一覧）。"""
+    return _html("/")
 
 
 # ---------------------------------------------------------------- SPA の骨格
@@ -114,38 +118,44 @@ class TestSystemScoping:
         assert 'id="sys-current-name"' in spa
 
 
-# ---------------------------------------------------------------- システム選択
+# ---------------------------------------------------------------- 統合ワークスペース
 
 
-class TestSystemSelect:
-    """ログイン後のシステム選択ハブ。"""
+# レール（templates/workspace.html）のワークスペース。順序も含めて契約とする。
+RAIL_VIEWS = ["home", "spec", "test", "drift", "schedule", "report", "team"]
 
-    def test_offers_exactly_four_systems(self, systems: str) -> None:
-        """01 ドキュメント作成 / 02 テスト活動支援 / 03 AutoRun / 04 CLI・API の 4 系統。"""
-        cards = re.findall(r'class="syscard syscard-(\w+)"', systems)
-        assert sorted(cards) == ["cli", "doc", "run", "test"]
 
-    def test_links_to_each_system(self, systems: str) -> None:
-        """各カードはそのシステムの TOP を指す。作業画面（/generate）へ直行しない。"""
-        assert 'href="/dashboard"' in systems
-        assert 'href="/test-activity"' in systems
-        assert 'href="/auto-run"' in systems
-        assert 'href="/cli"' in systems
-        assert 'href="/generate"' not in systems
+class TestWorkspaceShell:
+    """統合ワークスペースのシェル。
 
-    def test_names_all_systems(self, systems: str) -> None:
-        assert "ドキュメント作成" in systems
-        assert "テスト活動支援" in systems
-        assert "AutoRun" in systems
-        assert "CLI / API" in systems
+    製品を 1 つに統合したため、旧システム選択ハブ（/systems・4 カード）は廃止した。
+    ログイン後の着地点は "/"（サイト一覧）1 箇所だけになる。
+    """
 
-    def test_cli_card_states_it_has_no_screen(self, systems: str) -> None:
-        """CLI は画面を持たない。開いたら画面が出ると誤解させない。"""
-        assert "画面なし" in systems
+    def test_systems_hub_redirects_to_home(self) -> None:
+        """旧 URL は 404 にせずホームへ送る（ブックマーク・共有リンクを切らない）。"""
+        res = appmod.app.test_client().get("/systems")
+        assert res.status_code == 302
+        assert res.headers["Location"] == "/"
 
-    def test_declares_claim_scope_boundary(self, systems: str) -> None:
-        """AutoRun カードは「不在を証明しない」姿勢を明示すること。"""
-        assert "未検証" in systems and "証明しません" in systems
+    def test_test_automation_hub_redirects_to_home(self) -> None:
+        """旧テスト自動化シェルも同様。domain 無しならホームへ。"""
+        res = appmod.app.test_client().get("/test-automation")
+        assert res.status_code == 302
+        assert res.headers["Location"] == "/"
+
+    def test_rail_offers_exactly_seven_workspaces(self, workspace: str) -> None:
+        """レールは 7 つ（ホーム/仕様/テスト/変更/定期実行/報告/チーム）だけを出す。"""
+        views = re.findall(r'data-view="(\w+)"', workspace)
+        assert views == RAIL_VIEWS, f"レールのワークスペースが想定と違う: {views}"
+        assert workspace.count('data-view="') == len(RAIL_VIEWS)
+
+    def test_shell_has_no_placeholder_screens(self, workspace: str) -> None:
+        """「準備中」を出さない。押せない導線を並べないという方針の表れ。"""
+        assert "準備中" not in workspace
+
+    def test_shell_does_not_link_back_to_removed_hub(self, workspace: str) -> None:
+        assert "/systems" not in workspace
 
 
 # ---------------------------------------------------------------- AutoRun 受付

@@ -135,6 +135,41 @@ class TestGeneration:
         for row in _rows():
             assert "https://" in row.steps[0], f"{row.case_id}: 開くURLが手順に無い"
 
+    def test_state_transition_names_use_screen_titles(self) -> None:
+        """状態遷移の名前は画面 ID（P001）ではなく画面名で読めること。"""
+        rows = [r for r in _rows() if "-ST-" in r.case_id]
+        assert rows, "状態遷移のケースが生成されていない"
+        for row in rows:
+            assert "P00" not in row.name, f"{row.case_id}: 画面IDが出ている: {row.name}"
+
+    def test_bva_names_start_with_the_field_label(self) -> None:
+        """境界値の名前は name 属性ではなく画面のラベルで始まること。"""
+        labels: dict[str, str] = {}
+        for screen in _report().get("screens") or []:
+            for form in screen.get("forms") or []:
+                for fld in form.get("fields") or []:
+                    key = str(fld.get("name") or "")
+                    label = str(fld.get("label_text") or fld.get("aria_label") or "").strip()
+                    if key and label:
+                        labels[key] = label
+        assert labels, "ラベル付きの入力欄が実データに無い"
+
+        checked = 0
+        for row in _rows():
+            if "-BVA-" not in row.case_id:
+                continue
+            label = labels.get(row.trace_id.split(":")[-1])
+            if not label:
+                continue
+            checked += 1
+            assert row.name.startswith(f"{label}:"), f"{row.case_id}: {row.name}"
+        assert checked > 0, "ラベル付き欄の境界値ケースが 1 件も無い"
+
+    def test_names_have_no_vague_wording(self) -> None:
+        for row in _rows():
+            for word in _VAGUE_WORDS:
+                assert word not in row.name, f"{row.case_id}: 曖昧語『{word}』: {row.name}"
+
     def test_steps_have_no_vague_wording(self) -> None:
         """「適切な値」のような、実行者に判断を委ねる語を含まないこと。"""
         for row in _rows():
@@ -144,7 +179,7 @@ class TestGeneration:
 
     def test_input_steps_name_both_label_and_locator(self) -> None:
         bva = [r for r in _rows() if "境界値分析" in r.viewpoint]
-        target = next(r for r in bva if "user_name" in r.name)
+        target = next(r for r in bva if r.trace_id.endswith(":user_name"))
         input_step = next(s for s in target.steps if "を入力する" in s)
         assert "「氏名」欄" in input_step  # 画面上のラベル
         assert "#user_name" in input_step  # 自動化用ロケータ

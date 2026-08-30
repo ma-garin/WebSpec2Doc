@@ -321,6 +321,19 @@ def api_ta2_tests_duplicate(test_id: str) -> dict:
     return {"test": test}
 
 
+@bp.post("/api/ta2/tests/resync")
+@_guard
+def api_ta2_tests_resync() -> dict:
+    """テストケース表の変更をテスト一覧へ取り込む。
+
+    既存テストの手順・実行結果・履歴は保つ。利用者が名前を変えたテストは
+    名前も変えない（`name_edited`）。表から消えた行は削除せず `orphan` を立てる。
+    消してしまうと、実行実績ごと失われて取り返しがつかないため。
+    """
+    domain = _domain()
+    return _store().resync(domain, _report(domain))
+
+
 @bp.post("/api/ta2/tests/<test_id>/fix")
 @_guard
 def api_ta2_tests_fix(test_id: str) -> dict:
@@ -654,7 +667,8 @@ def api_ta2_screenshot() -> Any:
     screen = request.args.get("screen", "")
     if not _SCREEN_RE.match(screen):
         raise Ta2Error("screen が不正です", 400)
-    path = _out() / domain / "screenshots" / f"{screen}.png"
+    # send_file は相対パスを Blueprint の root_path（web/）基準で解決するため、必ず絶対パスにする。
+    path = (_out() / domain / "screenshots" / f"{screen}.png").resolve()
     if not path.is_file():
         raise Ta2Error("この画面のスクリーンショットはありません", 404)
     return send_file(str(path))
@@ -733,10 +747,150 @@ def api_ta2_drift_dismiss(item_id: str) -> dict:
     return {"ok": True}
 
 
+def _after_recrawl(domain: str, out_dir: Path, job: Any) -> None:
+    """再クロール完了時に成果物の退避と利用実績の記録を行う。
+
+    クロールのバックグラウンドスレッドから呼ばれるためリクエスト
+    コンテキストが無い。出力先は起動時に解決したものを受け取る。
+    """
+    if getattr(job, "status", "") != "completed":
+        return
+    from web.routes.crawl import _record_usage_safely
+
+    _record_usage_safely(domain, True, out_dir)
+
+
 @bp.post("/api/ta2/recrawl")
 @_guard
 def api_ta2_recrawl() -> dict:
-    # web/routes/crawl.py の再クロールはストリーミング応答（POST /run）だけで、
-    # サーバ内から呼べる再クロール API が無い。契約 §3 に従い 501 を返す。
+    domain = _domain()
+    report = _report(domain)
+    meta = report.get("meta") or {}
+    url = str((meta.get("target_url") if isinstance(meta, dict) else "") or "").strip()
+    if not url:
+        raise Ta2Error("対象 URL が report.json にありません", 400)
+
+    # スレッド内ではリクエストコンテキストを参照できないため、
+    # テナントスコープ済みの出力先をここで解決して渡す（/api/ta2/run と同じ）。
+    out_dir = _out()
+    from web.services.job_queue import start_crawl_job
+
+    job_id = start_crawl_job(
+        domain,
+        url,
+        formats=["md", "html", "json"],
+        compare=True,
+        output_dir=out_dir,
+        on_done=lambda job: _after_recrawl(domain, out_dir, job),
+        domain_name=domain,
+    )
+    return {"job_id": job_id}
+
+
+@bp.get("/api/ta2/recrawl/status")
+@_guard
+def api_ta2_recrawl_status() -> dict:
     _domain()
-    raise Ta2Error("この画面から再クロールはできません。画面分析から再実行してください", 501)
+    job_id = str(request.args.get("job_id") or "").strip()
+    if not job_id:
+        raise Ta2Error("job_id を指定してください", 400)
+    from web.services.job_queue import get_job
+
+    job = get_job(job_id)
+    if job is None:
+        raise Ta2Error("その再クロールは見つかりません", 404)
+    return {
+        "status": job.status,
+        "finished_at": job.finished_at,
+        "exit_code": job.exit_code,
+        "log_tail": (job.log_tail or "")[-300:],
+    }
+
+
+# =========================================================================
+# 報告（C3）— 単体 HTML。組み立ては web/services/site_report.py（純関数）が行う
+# =========================================================================
+def _report_screens(domain: str, report: dict[str, Any], tests: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """カバレッジ表のための画面ごとの集計（/api/ta2/map と同じ数え方）。"""
+    st = _store()
+    gaps = st.gaps_of(domain, report, tests) or []
+    screens: list[dict[str, Any]] = []
+    for screen in st.screens_of(report) or []:
+        sid = str(screen.get("id") or "")
+        mine = [t for t in tests if str(t.get("screen") or "") == sid]
+        holes = [g for g in gaps if str(g.get("screen") or "") == sid]
+        denominator = len(mine) + len(holes)
+        screens.append(
+            {
+                "id": sid,
+                "name": str(screen.get("name") or ""),
+                "tests": len(mine),
+                "fails": sum(1 for t in mine if t.get("status") == "fail"),
+                "coverage": round(100 * len(mine) / denominator) if denominator else 0,
+            }
+        )
+    return screens
+
+
+def _report_usage(out_dir: Path, domain: str = "") -> dict[str, Any]:
+    """利用実績の集計。記録が無ければ空 dict（推定値を作らない）。
+
+    domain を渡すと usage_log.jsonl の domain 列でそのサイトの行だけに絞る。
+    サイト名義の報告書にワークスペース全体の金額を載せないため（絞れた場合は
+    集計に domain を添え、報告側が「このサイトのみ」と明示できるようにする）。
+    """
+    try:
+        from web.services.usage_tracker import load_usage, summarize_usage
+
+        records = load_usage(out_dir)
+        if domain:
+            records = [r for r in records if str(r.get("domain") or "") == domain]
+        if not records:
+            return {}
+        return {**summarize_usage(records), "domain": domain} if domain else summarize_usage(records)
+    except Exception:  # noqa: BLE001 — 報告本体は落とさない
+        logger.warning("報告: 利用実績の集計に失敗しました", exc_info=True)
+        return {}
+
+
+@bp.get("/api/ta2/report")
+@_guard
+def api_ta2_report() -> Any:
+    from flask import Response
+
+    from web.services.site_report import ALL_SECTIONS, build_site_report_html
+
+    domain = _domain()
+    report = _report(domain)
+    tests = _tests_of(domain)
+
+    raw_sections = str(request.args.get("sections") or "").strip()
+    sections = (
+        [s for s in (x.strip() for x in raw_sections.split(",")) if s in ALL_SECTIONS]
+        if raw_sections
+        else list(ALL_SECTIONS)
+    )
+
+    try:
+        drift = _store().drift_items(domain)
+    except Exception:  # noqa: BLE001 — 変更が読めなくても報告は出す
+        logger.warning("報告: drift_items に失敗しました domain=%s", domain, exc_info=True)
+        drift = {"items": []}
+
+    html_text = build_site_report_html(
+        domain,
+        report=report,
+        tests=tests,
+        runs=_load_runs(domain),
+        drift=drift,
+        map_screens=_report_screens(domain, report, tests),
+        usage=_report_usage(_out(), domain),
+        base_url=request.url_root.rstrip("/"),
+        sections=sections,
+    )
+    response = Response(html_text, mimetype="text/html; charset=utf-8")
+    if request.args.get("download") == "1":
+        response.headers["Content-Disposition"] = (
+            f'attachment; filename="{domain}-report.html"'
+        )
+    return response

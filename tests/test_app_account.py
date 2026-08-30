@@ -330,7 +330,8 @@ def test_account_view_is_served_in_app_shell() -> None:
 def test_topbar_shows_user_menu_when_logged_in() -> None:
     c = _client()
     _setup_owner(c)
-    html = c.get("/", headers=H).get_data(as_text=True)
+    # "/" は統合ワークスペース。旧シェルのトップバーは画面別 URL から配られる。
+    html = c.get("/account", headers=H).get_data(as_text=True)
     assert 'id="usermenu-account-btn"' in html
     assert 'id="usermenu-feedback-btn"' in html
 
@@ -376,13 +377,13 @@ def test_user_management_menu_item_is_admin_only() -> None:
         },
         headers=H,
     )
-    admin_html = c.get("/", headers=H).get_data(as_text=True)
+    admin_html = c.get("/account", headers=H).get_data(as_text=True)
     assert 'id="usermenu-users-btn"' in admin_html
     assert 'id="usermenu-tenants-btn"' in admin_html
 
     mc = _client()
     _login(mc, email="member@example.com", password="member-pass-123")
-    member_html = mc.get("/", headers=H).get_data(as_text=True)
+    member_html = mc.get("/account", headers=H).get_data(as_text=True)
     assert 'id="usermenu-users-btn"' not in member_html
     assert 'id="usermenu-tenants-btn"' not in member_html
     # 画面の出し分けだけに頼らず、ビュー側も管理者以外には操作させない

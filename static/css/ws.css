@@ -1,0 +1,173 @@
+/* ============================================================================
+ * ws.css — 統合ワークスペースの追加スタイル
+ * 出典: docs/plan/design-ideas/workspace-mockup.html の <style>（承認済みモック）
+ * ta2.css のトークンだけを使う。:root の再定義・新しい色の追加は禁止。
+ * ========================================================================== */
+
+/* リンクをボタンとして使うとき、下線が残ると押せる要素に見えない */
+a.btn{text-decoration:none}
+
+/* .items{display:...} などレイアウト用の display が UA の [hidden] に勝ってしまい、
+   hidden を付けても消えない要素がある。左ペインの切替が効くよう明示的に落とす */
+[hidden]{display:none !important}
+
+/* rail */
+.rail .rail-link{width:38px;height:38px;border-radius:9px;display:grid;place-items:center;color:var(--tx3);font-size:16px;position:relative;text-decoration:none}
+.rail .rail-link:hover{background:var(--bg);color:var(--tx)}
+.rail .rail-link:hover .tip{opacity:1}
+.rail .lg{text-decoration:none}
+.rail .av{width:30px;height:30px;border-radius:50%;background:var(--ac);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:700;border:0;position:relative}
+
+/* list variants */
+.list-h .sub{font-size:12px;color:var(--tx3);margin-top:2px}
+#ctx-card{padding:14px 16px;border-bottom:1px solid var(--line)}
+#ctx-card h4{font-size:13px;font-weight:700;margin-bottom:6px}
+#ctx-card dl{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:11.5px}
+#ctx-card dt{color:var(--tx3)}
+#ctx-card dd{color:var(--tx2);word-break:break-all}
+.it .grow{flex:1;min-width:0}
+.it .grow b{display:block;font-weight:500;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.it .grow small{display:block;color:var(--tx3);font-size:10.5px;font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.it .del{opacity:0;border:0;background:none;color:var(--tx3);width:22px;height:22px;border-radius:5px;font-size:13px}
+.it:hover .del{opacity:1}.it .del:hover{background:var(--ng-bg);color:var(--ng-tx)}
+.it .del:focus-visible{opacity:1}
+.cov{width:34px;height:4px;border-radius:2px;background:var(--line);overflow:hidden;flex:none}
+.cov i{display:block;height:100%}
+
+/* home */
+#home-empty{display:grid;place-items:center;height:100%;text-align:center}
+.hero{max-width:560px}
+.hero h1{font-size:26px;font-weight:700;letter-spacing:-.02em;line-height:1.35;margin-bottom:8px}
+.hero p{color:var(--tx2);font-size:14px;margin-bottom:22px}
+.hero form{display:flex;gap:8px;margin-bottom:14px}
+.hero input{flex:1;padding:11px 13px;border:1px solid var(--line2);border-radius:9px;font-size:14px;outline:none}
+.hero input:focus{border-color:var(--ac);box-shadow:0 0 0 3px var(--ac-bg)}
+.hero .btn{padding:11px 18px;font-size:13.5px}
+.hero .steps{display:flex;gap:8px;justify-content:center;color:var(--tx3);font-size:11.5px;align-items:center}
+.hero .steps b{color:var(--ac);font-family:var(--mono)}
+.hero .foot{margin-top:26px;font-size:11.5px;color:var(--tx3)}
+.hero .foot a{color:var(--tx2)}
+.stage-head{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.stage-head b{font-size:14px}
+.stage-wrap{display:grid;grid-template-columns:1fr 380px;gap:16px;min-height:0}
+#home-shot-wrap{background:var(--sf);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;min-height:0}
+#home-shot{flex:1;border:1px solid var(--line);border-radius:8px;background:var(--bg);display:grid;place-items:center;color:var(--tx3);font-size:12px;overflow:hidden;min-height:0}
+#home-shot img{width:100%;height:100%;object-fit:contain;object-position:top}
+.logbox{background:var(--sf);border:1px solid var(--line);border-radius:12px;padding:0;overflow:auto;min-height:0;font-family:var(--mono);font-size:11px}
+.logbox div{padding:6px 12px;border-bottom:1px solid var(--line);color:var(--tx2);display:flex;gap:8px}
+.logbox div:last-child{border:0}
+.logbox .t{color:var(--tx3);flex:none}
+.logbox .ok{color:var(--ok-tx)}
+.logbox .ng{color:var(--ng-tx)}
+.hero .url-hint{font-size:11.5px;color:var(--ac-dk);background:var(--ac-bg);border-radius:7px;padding:7px 10px;margin:-6px 0 12px;text-align:left}
+.cta-row{display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap}
+
+/* ホームのサイト一覧: 解析できたサイトと、0 画面の残骸を分けて見せる */
+#site-search{border-bottom:1px solid var(--line)}
+#site-items .grp{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;padding:9px 16px 5px;font-size:10.5px;color:var(--tx3);letter-spacing:.04em}
+#site-items .grp b{font-weight:700;font-size:11px;color:var(--tx2)}
+#site-items .grp span{font-family:var(--mono)}
+#site-items .grp small{flex-basis:100%;font-size:10.5px;color:var(--tx3);line-height:1.5}
+#site-items .it.dim{opacity:.55}
+#site-items .it.dim:hover,#site-items .it.dim.on{opacity:1}
+#site-items .it .grow small+small{color:var(--tx3);font-family:var(--sans)}
+.list-empty{padding:16px;font-size:12px;color:var(--tx3)}
+.cta-row .why{font-size:11.5px;color:var(--tx3)}
+
+/* spec */
+.spec-grid{display:grid;grid-template-columns:1fr 400px;gap:16px;min-height:0;height:100%}
+.card{background:var(--sf);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.card h3{font-size:14px;font-weight:700;margin-bottom:2px}
+.card .sub{font-size:11.5px;color:var(--tx3);margin-bottom:12px}
+.fields{width:100%;border-collapse:collapse}
+.fields th{text-align:left;font-size:10.5px;color:var(--tx3);font-weight:600;padding:7px 8px;border-bottom:1px solid var(--line);background:#FAFBFC}
+.fields td{padding:8px;border-bottom:1px solid var(--line);font-size:12px;vertical-align:top}
+.fields tr:last-child td{border:0}
+.req{font-size:10px;padding:1px 6px;border-radius:4px;background:var(--ng-bg);color:var(--ng-tx);font-weight:600}
+.opt{font-size:10px;padding:1px 6px;border-radius:4px;background:var(--bg);color:var(--tx3);font-weight:600}
+.cond{margin:0;padding-left:15px;color:var(--tx2);font-size:11.5px;line-height:1.7}
+.shot-card{background:var(--sf);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;min-height:0}
+.shot-card .ph2{font-size:11px;color:var(--tx3);margin-bottom:8px;display:flex;justify-content:space-between}
+.shot-card .im{flex:1;border:1px solid var(--line);border-radius:8px;background:var(--bg);min-height:0;position:relative;overflow:hidden}
+.shot-card .im .fake{position:absolute;left:14px;right:14px;border-radius:4px;background:#E7EAEE}
+.pop-wrap{position:relative}
+.pop-wrap .upop{position:absolute;top:44px;right:0;left:auto;bottom:auto;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 32px rgba(16,24,40,.18);padding:6px;width:250px;z-index:40}
+.pop-wrap .upop a{display:flex;justify-content:space-between;gap:10px;padding:8px 10px;border-radius:7px;color:var(--tx);text-decoration:none;font-size:12.5px}
+.pop-wrap .upop a:hover{background:var(--bg)}
+.pop-wrap .upop a small{color:var(--tx3);font-size:10.5px;font-family:var(--mono)}
+
+/* forms (schedule / team) */
+.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+.fld{margin-bottom:12px}
+.fld label{display:block;font-size:11px;font-weight:600;color:var(--tx3);letter-spacing:.04em;margin-bottom:5px}
+.fld input,.fld select,.fld textarea{width:100%;padding:8px 10px;border:1px solid var(--line2);border-radius:8px;font-size:12.5px;outline:none;background:#fff;font-family:var(--sans)}
+.fld input:focus,.fld select:focus,.fld textarea:focus{border-color:var(--ac);box-shadow:0 0 0 3px var(--ac-bg)}
+.fld input:disabled,.fld select:disabled,.fld textarea:disabled{background:var(--bg);color:var(--tx3);cursor:not-allowed}
+.fld .hint{font-size:11px;color:var(--tx3);margin-top:4px}
+.days{display:flex;gap:5px}
+.days label{display:flex;align-items:center;justify-content:center;width:32px;height:30px;border:1px solid var(--line2);border-radius:7px;font-size:11.5px;color:var(--tx2);cursor:pointer;margin:0;font-weight:500}
+.days input{display:none}
+.days input:checked+span{color:#fff}
+.days label:has(input:checked){background:var(--ac);border-color:var(--ac);color:#fff}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.save-row{display:flex;gap:8px;align-items:center;margin-top:4px}
+.save-row .why{font-size:11.5px;color:var(--tx3)}
+.next-run{background:var(--ac-bg);border:1px solid #C7DAFE;border-radius:10px;padding:10px 13px;font-size:12.5px;color:var(--ac-dk);margin-bottom:14px;display:flex;gap:10px;align-items:center}
+.note-box{background:var(--wa-bg);border:1px solid #F5D89A;border-radius:10px;padding:10px 13px;font-size:12px;color:var(--wa-tx);margin-bottom:14px}
+
+/* report */
+.rep-wrap{display:grid;grid-template-columns:1fr 300px;gap:16px;height:100%;min-height:0}
+.rep-frame{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:auto;min-height:0;padding:26px 30px}
+.rep-frame h1{font-size:20px;font-weight:700;letter-spacing:-.02em;margin-bottom:4px}
+.rep-frame .meta{color:var(--tx3);font-size:11.5px;margin-bottom:18px;font-family:var(--mono)}
+.rep-frame h2{font-size:12px;letter-spacing:.06em;color:var(--tx3);font-weight:700;margin:20px 0 8px;border-top:1px solid var(--line);padding-top:14px}
+.rep-frame h2:first-of-type{border:0;padding-top:0;margin-top:0}
+.rep-kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.rep-kpi div{border:1px solid var(--line);border-radius:9px;padding:10px 12px}
+.rep-kpi b{display:block;font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+.rep-kpi span{font-size:10.5px;color:var(--tx3)}
+.rep-frame table{width:100%;border-collapse:collapse;font-size:11.5px}
+.rep-frame td,.rep-frame th{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left}
+.rep-frame th{color:var(--tx3);font-size:10.5px;font-weight:600}
+.rep-side .card{margin-bottom:12px}
+.rep-side ul{margin:0;padding-left:16px;font-size:12px;color:var(--tx2);line-height:1.9}
+#report-preview{width:100%;height:100%;border:1px solid var(--line);border-radius:12px;background:#fff}
+
+/* team */
+.avatar{width:26px;height:26px;border-radius:50%;background:var(--ac-bg);color:var(--ac);display:grid;place-items:center;font-size:11px;font-weight:700;flex:none}
+.tok{font-family:var(--mono);font-size:11px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:3px 8px;display:inline-block}
+
+/* ---------- 仕様WS: テストケース表（testcase-grid.css の受け皿。#spec-cases 内だけに効かせる） ---------- */
+/* testcase-grid.css は旧シェルの tokens.css / app.css の変数を前提にしている。
+   ta2.css の :root は触らず、必要な変数をこのスコープ内でだけ ta2 トークンへ写す。 */
+#spec-cases{
+  --border:var(--line);--surface:var(--sf);--surface-soft:var(--bg);
+  --text:var(--tx);--text-muted:var(--tx3);--radius:8px;--font-mono:var(--mono);
+  --primary:var(--ac);--primary-light:var(--ac-bg);--color-primary-light:var(--ac-bg);
+  --color-critical:var(--ng);--color-warning:var(--wa);--color-info:var(--ac);--color-low:var(--tx3);
+  background:var(--sf);border:1px solid var(--line);border-radius:12px;min-height:0;
+}
+#spec-cases .tcg-wrap{padding:14px 16px 10px}
+#spec-cases .btn-primary{height:30px;padding:0 12px;border:1px solid var(--ac);border-radius:8px;background:var(--ac);color:#fff;font-size:12px;font-weight:600}
+#spec-cases .btn-primary:hover{background:var(--ac-dk);border-color:var(--ac-dk)}
+#spec-cases .btn-primary:disabled{opacity:.55;cursor:not-allowed}
+#spec-cases .btn-outline-sm{height:28px;padding:0 10px;border:1px solid var(--line2);border-radius:7px;background:var(--sf);color:var(--tx2);font-size:12px}
+#spec-cases .btn-outline-sm:hover{background:var(--bg);color:var(--tx)}
+#spec-cases .tc-search{height:28px;padding:0 8px;border:1px solid var(--line2);border-radius:7px;background:var(--sf);color:var(--tx);font-size:12px;min-width:180px}
+
+/* ---------- 報告 WS（C3）: 節の選択リストと、iframe を左に置く 2 段組み ---------- */
+/* .rep-wrap は上のモック由来。実装ではプレビューを iframe に置き換えている。 */
+#p-report .rep-wrap{grid-template-columns:1fr 300px}
+.rep-side .seclist{list-style:none;padding:0;margin:0;font-size:12.5px;line-height:2}
+.rep-side .seclist label{display:flex;align-items:center;gap:7px;cursor:pointer;color:var(--tx2)}
+.rep-side .seclist input{accent-color:var(--ac);width:14px;height:14px}
+
+/* ---------- チーム WS（C4） ---------- */
+#team-rows td{vertical-align:middle}
+#team-rows small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px}
+#team-rows .pill{display:inline-block;margin-top:4px}
+#token-issued .tok{word-break:break-all}
+
+/* ---------- 定期実行 WS（C1） ---------- */
+#p-schedule .next-run{margin-bottom:10px}
+#sched-history td{font-size:12px}

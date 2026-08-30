@@ -59,10 +59,11 @@ class TestStMemberViews:
         """ST-029: 個人設定で自分のパスワードを変更し、新パスワードで再ログインできる。"""
         new_password = "st-member2-updated-9"
         login(page, system_server, PW_CHANGE_MEMBER)
-        # システム選択画面の個人設定導線は .sysselect-account 内のアンカー
-        # <a class="sysselect-text-btn" href="/account">（templates/system-select.html:26）。
-        # .sysselect-account 自体はコンテナ div（同 21 行目）で、クリックしても遷移しない。
-        page.locator('.sysselect-account a[href="/account"]').click()
+        # システム選択画面は廃止された。個人設定は統合ワークスペースの
+        # ユーザーメニュー内アンカー（templates/workspace.html の a.uitem[href="/account"]）
+        # から開く。メニューの開閉は JS 依存なので、ここでは URL で直接開く
+        # （このテストの目的はパスワード変更であり、導線ではない）。
+        page.goto(f"{system_server}/account")
         expect(page.locator("#view-account")).to_be_visible()
         page.locator("#pw-current").fill(PW_CHANGE_MEMBER.password)
         page.locator("#pw-new").fill(new_password)

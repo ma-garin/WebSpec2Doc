@@ -120,6 +120,43 @@ def _assertion_lines(assertion: Mapping[str, Any]) -> list[str]:
     return [f"  // 未対応の検証のためスキップ: {json.dumps(dict(assertion), ensure_ascii=False)}"]
 
 
+def _step_indexes(row: Mapping[str, Any]) -> tuple[list[int | None], list[int | None]]:
+    """`ta2_store.steps_from_row` と同じ 0 起点 index を、行の操作/検証ごとに返す。
+
+    steps に変換されない要素は `None`（ステップ境界を作らない）。この番号が
+    `last.step` にそのまま入るため、`steps_from_row` の順序と必ず一致させる。
+    """
+    from web.services.ta2_store import _action_to_step, _assertion_to_step
+
+    seq = 0
+    actions: list[int | None] = []
+    for action in row.get("actions") or []:
+        if _action_to_step(action) is None:
+            actions.append(None)
+            continue
+        actions.append(seq)
+        seq += 1
+    assertions: list[int | None] = []
+    for assertion in row.get("assertions") or []:
+        if _assertion_to_step(assertion) is None:
+            assertions.append(None)
+            continue
+        assertions.append(seq)
+        seq += 1
+    return actions, assertions
+
+
+def _as_step(index: int | None, body: list[str]) -> list[str]:
+    """1 手順を `test.step('S<n>')` で包む。どの手順で止まったかを結果から特定するため。"""
+    if index is None:
+        return body
+    return (
+        [f"  await test.step('S{index}', async () => {{"]
+        + ["  " + line for line in body]
+        + ["  });"]
+    )
+
+
 _HELPERS = f"""
 const ERROR_SELECTOR = {_ts(_ERROR_SELECTOR)};
 
@@ -209,25 +246,28 @@ def generate_spec(rows: Sequence[Mapping[str, Any]], out_dir: Path) -> dict[str,
         mapping.append({"test_title": title, "case_id": str(row.get("case_id", ""))})
         lines.append("")
         assertions = list(row.get("assertions") or [])
-        after_input = [a for a in assertions if a.get("stage") == "after_input"]
-        at_end = [a for a in assertions if a.get("stage") != "after_input"]
+        action_ix, assertion_ix = _step_indexes(row)
+        after_input = [
+            (i, a) for i, a in enumerate(assertions) if a.get("stage") == "after_input"
+        ]
+        at_end = [(i, a) for i, a in enumerate(assertions) if a.get("stage") != "after_input"]
         lines.append(f"test({_ts(title)}, async ({{ page }}) => {{")
         emitted_after_input = False
-        for action in row.get("actions") or []:
+        for index, action in enumerate(row.get("actions") or []):
             # 送信を押す前に「入力がどうなったか」を見る検証を差し込む
             if after_input and not emitted_after_input and action.get("type") in {
                 "click_text",
                 "click",
             }:
-                for assertion in after_input:
-                    lines.extend(_assertion_lines(assertion))
+                for i, assertion in after_input:
+                    lines.extend(_as_step(assertion_ix[i], _assertion_lines(assertion)))
                 emitted_after_input = True
-            lines.extend(_action_lines(action))
+            lines.extend(_as_step(action_ix[index], _action_lines(action)))
         if after_input and not emitted_after_input:
-            for assertion in after_input:
-                lines.extend(_assertion_lines(assertion))
-        for assertion in at_end:
-            lines.extend(_assertion_lines(assertion))
+            for i, assertion in after_input:
+                lines.extend(_as_step(assertion_ix[i], _assertion_lines(assertion)))
+        for i, assertion in at_end:
+            lines.extend(_as_step(assertion_ix[i], _assertion_lines(assertion)))
         lines.append("});")
 
     spec_path = out_dir / SPEC_FILE_NAME

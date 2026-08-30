@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>WebSpec2Doc 統合ワークスペース — 画面案</title>
+<link rel="stylesheet" href="../../../static/css/ta2.css">
+<style>
+/* ===== ws.css の元になる追加スタイルだけをここに置く（ta2.css のトークンのみ使用） ===== */
+.mock-note{position:fixed;top:0;left:0;right:0;height:26px;background:#101828;color:#98A2B3;font-size:11px;display:flex;align-items:center;justify-content:center;gap:14px;z-index:99}
+.mock-note b{color:#fff}
+.app{top:26px}
+
+/* rail */
+.rail .rail-link{width:38px;height:38px;border-radius:9px;display:grid;place-items:center;color:var(--tx3);font-size:16px;position:relative;text-decoration:none}
+.rail .rail-link:hover{background:var(--bg);color:var(--tx)}
+.rail .lg{text-decoration:none}
+.rail .av{width:30px;height:30px;border-radius:50%;background:var(--ac);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:700;border:0;position:relative}
+
+/* list variants */
+.list-h .sub{font-size:12px;color:var(--tx3);margin-top:2px}
+#ctx-card{padding:14px 16px;border-bottom:1px solid var(--line)}
+#ctx-card h4{font-size:13px;font-weight:700;margin-bottom:6px}
+#ctx-card dl{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:11.5px}
+#ctx-card dt{color:var(--tx3)}
+#ctx-card dd{color:var(--tx2);word-break:break-all}
+.it .grow{flex:1;min-width:0}
+.it .grow b{display:block;font-weight:500;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.it .grow small{display:block;color:var(--tx3);font-size:10.5px;font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.it .del{opacity:0;border:0;background:none;color:var(--tx3);width:22px;height:22px;border-radius:5px;font-size:13px}
+.it:hover .del{opacity:1}.it .del:hover{background:var(--ng-bg);color:var(--ng-tx)}
+.cov{width:34px;height:4px;border-radius:2px;background:var(--line);overflow:hidden;flex:none}
+.cov i{display:block;height:100%}
+
+/* home */
+#home-empty{display:grid;place-items:center;height:100%;text-align:center}
+.hero{max-width:560px}
+.hero h1{font-size:26px;font-weight:700;letter-spacing:-.02em;line-height:1.35;margin-bottom:8px}
+.hero p{color:var(--tx2);font-size:14px;margin-bottom:22px}
+.hero form{display:flex;gap:8px;margin-bottom:14px}
+.hero input{flex:1;padding:11px 13px;border:1px solid var(--line2);border-radius:9px;font-size:14px;outline:none}
+.hero input:focus{border-color:var(--ac);box-shadow:0 0 0 3px var(--ac-bg)}
+.hero .btn{padding:11px 18px;font-size:13.5px}
+.hero .steps{display:flex;gap:8px;justify-content:center;color:var(--tx3);font-size:11.5px;align-items:center}
+.hero .steps b{color:var(--ac);font-family:var(--mono)}
+.hero .foot{margin-top:26px;font-size:11.5px;color:var(--tx3)}
+.hero .foot a{color:var(--tx2)}
+.stage-head{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.stage-head b{font-size:14px}
+.stage-wrap{display:grid;grid-template-columns:1fr 380px;gap:16px;min-height:0}
+#home-shot-wrap{background:var(--sf);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;min-height:0}
+#home-shot{flex:1;border:1px solid var(--line);border-radius:8px;background:var(--bg);display:grid;place-items:center;color:var(--tx3);font-size:12px;overflow:hidden;min-height:0}
+.logbox{background:var(--sf);border:1px solid var(--line);border-radius:12px;padding:0;overflow:auto;min-height:0;font-family:var(--mono);font-size:11px}
+.logbox div{padding:6px 12px;border-bottom:1px solid var(--line);color:var(--tx2);display:flex;gap:8px}
+.logbox div:last-child{border:0}
+.logbox .t{color:var(--tx3);flex:none}
+.logbox .ok{color:var(--ok-tx)}
+.cta-row{display:flex;gap:10px;align-items:center;margin-top:16px}
+.cta-row .why{font-size:11.5px;color:var(--tx3)}
+
+/* spec */
+.spec-grid{display:grid;grid-template-columns:1fr 400px;gap:16px;min-height:0;height:100%}
+.card{background:var(--sf);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.card h3{font-size:14px;font-weight:700;margin-bottom:2px}
+.card .sub{font-size:11.5px;color:var(--tx3);margin-bottom:12px}
+.fields{width:100%;border-collapse:collapse}
+.fields th{text-align:left;font-size:10.5px;color:var(--tx3);font-weight:600;padding:7px 8px;border-bottom:1px solid var(--line);background:#FAFBFC}
+.fields td{padding:8px;border-bottom:1px solid var(--line);font-size:12px;vertical-align:top}
+.fields tr:last-child td{border:0}
+.req{font-size:10px;padding:1px 6px;border-radius:4px;background:var(--ng-bg);color:var(--ng-tx);font-weight:600}
+.opt{font-size:10px;padding:1px 6px;border-radius:4px;background:var(--bg);color:var(--tx3);font-weight:600}
+.cond{margin:0;padding-left:15px;color:var(--tx2);font-size:11.5px;line-height:1.7}
+.shot-card{background:var(--sf);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;min-height:0}
+.shot-card .ph2{font-size:11px;color:var(--tx3);margin-bottom:8px;display:flex;justify-content:space-between}
+.shot-card .im{flex:1;border:1px solid var(--line);border-radius:8px;background:var(--bg);min-height:0;position:relative;overflow:hidden}
+.shot-card .im .fake{position:absolute;left:14px;right:14px;border-radius:4px;background:#E7EAEE}
+.upop{position:absolute;top:44px;right:0;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 32px rgba(16,24,40,.18);padding:6px;width:250px;z-index:40}
+.upop a{display:flex;justify-content:space-between;gap:10px;padding:8px 10px;border-radius:7px;color:var(--tx);text-decoration:none;font-size:12.5px}
+.upop a:hover{background:var(--bg)}
+.upop a small{color:var(--tx3);font-size:10.5px;font-family:var(--mono)}
+.pop-wrap{position:relative}
+
+/* forms (schedule / team) */
+.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+.fld{margin-bottom:12px}
+.fld label{display:block;font-size:11px;font-weight:600;color:var(--tx3);letter-spacing:.04em;margin-bottom:5px}
+.fld input,.fld select,.fld textarea{width:100%;padding:8px 10px;border:1px solid var(--line2);border-radius:8px;font-size:12.5px;outline:none;background:#fff;font-family:var(--sans)}
+.fld input:focus,.fld select:focus,.fld textarea:focus{border-color:var(--ac);box-shadow:0 0 0 3px var(--ac-bg)}
+.fld input:disabled,.fld select:disabled{background:var(--bg);color:var(--tx3);cursor:not-allowed}
+.fld .hint{font-size:11px;color:var(--tx3);margin-top:4px}
+.days{display:flex;gap:5px}
+.days label{display:flex;align-items:center;justify-content:center;width:32px;height:30px;border:1px solid var(--line2);border-radius:7px;font-size:11.5px;color:var(--tx2);cursor:pointer;margin:0;font-weight:500}
+.days input{display:none}
+.days input:checked+span{color:#fff}
+.days label:has(input:checked){background:var(--ac);border-color:var(--ac);color:#fff}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.save-row{display:flex;gap:8px;align-items:center;margin-top:4px}
+.save-row .why{font-size:11.5px;color:var(--tx3)}
+.next-run{background:var(--ac-bg);border:1px solid #C7DAFE;border-radius:10px;padding:10px 13px;font-size:12.5px;color:var(--ac-dk);margin-bottom:14px;display:flex;gap:10px;align-items:center}
+.note-box{background:var(--wa-bg);border:1px solid #F5D89A;border-radius:10px;padding:10px 13px;font-size:12px;color:var(--wa-tx);margin-bottom:14px}
+
+/* report */
+.rep-wrap{display:grid;grid-template-columns:1fr 300px;gap:16px;height:100%;min-height:0}
+.rep-frame{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:auto;min-height:0;padding:26px 30px}
+.rep-frame h1{font-size:20px;font-weight:700;letter-spacing:-.02em;margin-bottom:4px}
+.rep-frame .meta{color:var(--tx3);font-size:11.5px;margin-bottom:18px;font-family:var(--mono)}
+.rep-frame h2{font-size:12px;letter-spacing:.06em;color:var(--tx3);font-weight:700;margin:20px 0 8px;border-top:1px solid var(--line);padding-top:14px}
+.rep-frame h2:first-of-type{border:0;padding-top:0;margin-top:0}
+.rep-kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.rep-kpi div{border:1px solid var(--line);border-radius:9px;padding:10px 12px}
+.rep-kpi b{display:block;font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+.rep-kpi span{font-size:10.5px;color:var(--tx3)}
+.rep-frame table{width:100%;border-collapse:collapse;font-size:11.5px}
+.rep-frame td,.rep-frame th{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left}
+.rep-frame th{color:var(--tx3);font-size:10.5px;font-weight:600}
+.rep-side .card{margin-bottom:12px}
+.rep-side ul{margin:0;padding-left:16px;font-size:12px;color:var(--tx2);line-height:1.9}
+
+/* team */
+.avatar{width:26px;height:26px;border-radius:50%;background:var(--ac-bg);color:var(--ac);display:grid;place-items:center;font-size:11px;font-weight:700;flex:none}
+.tok{font-family:var(--mono);font-size:11px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:3px 8px;display:inline-block}
+</style>
+</head>
+<body>
+<div class="mock-note"><b>Phase 0 — 統合ワークスペース 画面案</b>レールで全画面を切り替えられます（モック・データは DemoMart 実データ相当）</div>
+
+<div class="app">
+  <!-- ============ RAIL ============ -->
+  <nav class="rail">
+    <a class="lg" href="#" title="ホーム">W<span class="tip">ホーム（サイト一覧）</span></a>
+    <button data-v="home" class="on">⌂<span class="tip">ホーム（サイト一覧）</span></button>
+    <button data-v="spec">▤<span class="tip">仕様</span></button>
+    <button data-v="test">✓<span class="bd" id="bd-fail">1</span><span class="tip">テスト</span></button>
+    <button data-v="drift">◈<span class="bd wa">3</span><span class="tip">変更</span></button>
+    <button data-v="schedule">◔<span class="tip">定期実行と通知</span></button>
+    <button data-v="report">⎙<span class="tip">報告</span></button>
+    <button data-v="team">◉<span class="tip">チーム</span></button>
+    <div class="sp"></div>
+    <a class="rail-link" href="#">⚙<span class="tip">設定</span></a>
+    <button class="av">ゲ<span class="tip">アカウント</span></button>
+    <button>?<span class="tip">使い方</span></button>
+  </nav>
+
+  <!-- ============ LIST ============ -->
+  <aside class="list">
+    <div class="list-h"><h2 id="l-title">サイト</h2><div class="sub" id="l-sub">2 サイト</div></div>
+
+    <!-- home -->
+    <div class="items" id="site-items">
+      <div class="it on"><i class="i-pass"></i><span class="grow"><b>demomart</b><small>7 画面 · 3分前</small></span><button class="del">✕</button></div>
+      <div class="it"><i class="i-new"></i><span class="grow"><b>hotel-example-site.takeyaqa.dev</b><small>12 画面 · 昨日</small></span><button class="del">✕</button></div>
+    </div>
+
+    <!-- spec -->
+    <div class="items" id="screen-items" hidden>
+      <div class="it on"><span class="cov"><i style="width:100%;background:var(--ok)"></i></span><span class="grow"><b>お支払い・決済</b><small>P004 · /checkout.html</small></span></div>
+      <div class="it"><span class="cov"><i style="width:100%;background:var(--ok)"></i></span><span class="grow"><b>DemoMart - デモストア トップ</b><small>P001 · /</small></span></div>
+      <div class="it"><span class="cov"><i style="width:100%;background:var(--ok)"></i></span><span class="grow"><b>商品一覧</b><small>P003 · /products.html</small></span></div>
+      <div class="it"><span class="cov"><i style="width:72%;background:var(--wa)"></i></span><span class="grow"><b>お問い合わせ</b><small>P005 · /contact.html</small></span></div>
+      <div class="it"><span class="cov"><i style="width:100%;background:var(--ok)"></i></span><span class="grow"><b>ログイン</b><small>P006 · /login.html</small></span></div>
+      <div class="it"><span class="cov"><i style="width:0"></i></span><span class="grow"><b>マイページ</b><small>P007 · /mypage.html</small></span></div>
+      <div class="it"><span class="cov"><i style="width:0"></i></span><span class="grow"><b>キャンペーン</b><small>P002 · /campaign.html</small></span></div>
+    </div>
+
+    <!-- context (drift/schedule/report/team) -->
+    <div id="ctx-card" hidden>
+      <h4>demomart</h4>
+      <dl>
+        <dt>対象</dt><dd>http://127.0.0.1:8766/</dd>
+        <dt>画面</dt><dd>7</dd>
+        <dt>テスト</dt><dd>125（失敗 1）</dd>
+        <dt>最終解析</dt><dd>08/30 14:03</dd>
+      </dl>
+      <a class="btn" style="width:100%;justify-content:center;margin-top:10px" href="#" data-go="spec">仕様を開く</a>
+    </div>
+
+    <div class="list-f" id="list-f-home"><button class="btn pri" style="flex:1;justify-content:center">＋ サイトを追加</button></div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main class="main">
+    <div class="ed-h" id="topbar">
+      <h1 id="t-title">ホーム</h1>
+      <code id="t-sub"></code>
+      <div class="sp"></div>
+      <div id="t-actions"></div>
+    </div>
+
+    <div class="ed-b" style="grid-template-columns:1fr">
+      <!-- ---------- HOME: empty ---------- -->
+      <section class="panel on" id="p-home" style="position:relative;grid-template-rows:1fr">
+        <div class="pb" style="padding:0;overflow:hidden;display:grid">
+
+          <div id="home-empty" hidden>
+            <div class="hero">
+              <h1>既存サイトの仕様書が、3 分で出ます。</h1>
+              <p>URL を入れるだけ。画面仕様・遷移図・項目定義を自動でつくり、そのままテストの自動化まで進めます。</p>
+              <form onsubmit="return false">
+                <input type="url" placeholder="https://example.com/" value="">
+                <button class="btn pri">仕様書をつくる</button>
+              </form>
+              <div class="steps"><b>1</b> 画面を見つける <span>→</span> <b>2</b> 仕様をつくる <span>→</span> <b>3</b> テストにする</div>
+              <div class="foot">ログインが必要なサイトは <a href="#">詳細設定</a> から認証情報を登録できます。</div>
+            </div>
+          </div>
+
+          <div id="home-stage" hidden style="padding:20px 22px;display:grid;grid-template-rows:auto auto 1fr;gap:0;min-height:0">
+            <div class="stage-head">
+              <b>http://127.0.0.1:8766/ を解析しています</b>
+              <span class="pill p-running">実行中</span>
+              <span style="color:var(--tx3);font-size:12px">経過 0:48 · 残り およそ 1:10</span>
+              <div class="sp" style="flex:1"></div>
+              <button class="btn">停止</button>
+            </div>
+            <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+              <div class="kpi"><b>7</b><span>見つけた画面</span></div>
+              <div class="kpi"><b>5</b><span>解析済み</span></div>
+              <div class="kpi"><b>10</b><span>フォーム項目</span></div>
+              <div class="kpi"><b>0</b><span>スキップ</span></div>
+            </div>
+            <div class="prog on" style="margin:0 0 16px"><i style="width:71%"></i></div>
+            <div class="stage-wrap">
+              <div id="home-shot-wrap">
+                <div class="ph2" style="font-size:11px;color:var(--tx3);margin-bottom:8px;display:flex;justify-content:space-between"><span>いま見ている画面</span><span>/checkout.html</span></div>
+                <div id="home-shot">スクリーンショットを取得中…</div>
+              </div>
+              <div class="logbox">
+                <div><span class="t">0:48</span><span class="ok">✓</span><span>P005 お問い合わせ を解析（フォーム 1・項目 4）</span></div>
+                <div><span class="t">0:39</span><span class="ok">✓</span><span>P004 お支払い・決済 を解析（フォーム 1・項目 5）</span></div>
+                <div><span class="t">0:27</span><span class="ok">✓</span><span>P003 商品一覧 を解析</span></div>
+                <div><span class="t">0:14</span><span class="ok">✓</span><span>P001 トップ を解析</span></div>
+                <div><span class="t">0:02</span><span>·</span><span>7 画面を発見しました</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div id="home-summary" style="padding:20px 22px;overflow:auto">
+            <div class="kpis">
+              <div class="kpi"><b>7</b><span>画面</span></div>
+              <div class="kpi"><b>10</b><span>入力項目</span></div>
+              <div class="kpi"><b>125</b><span>テストケース</span></div>
+              <div class="kpi ng"><b>3</b><span>未対応の変更</span></div>
+            </div>
+            <div class="cta-row">
+              <a class="btn pri" href="#" data-go="spec">仕様を見る</a>
+              <a class="btn" href="#" data-go="test">テストを自動化する</a>
+              <a class="btn" href="#" data-go="drift">変更を確認する</a>
+              <span class="why">最終解析 08/30 14:03 · 対象 http://127.0.0.1:8766/</span>
+            </div>
+            <div class="card" style="margin-top:16px">
+              <h3>この 30 日</h3>
+              <div class="sub">解析と実行の実績から、削減できた工数を見積もっています。</div>
+              <div class="rep-kpi">
+                <div><b>18</b><span>解析回数</span></div>
+                <div><b>1,240</b><span>実行したテスト</span></div>
+                <div><b>36.5h</b><span>削減できた工数（推定）</span></div>
+                <div><b>¥182,500</b><span>金額換算（¥5,000/h）</span></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ---------- SPEC ---------- -->
+      <section class="panel" id="p-spec">
+        <div class="ph">
+          <h1>お支払い・決済</h1><code>P004 · /checkout.html</code>
+          <div class="seg" style="margin-left:10px"><button class="on">画面仕様</button><button>テストケース</button><button>地図</button></div>
+          <div class="sp"></div>
+          <div class="pop-wrap"><button class="btn" id="ex-btn">書き出し ▾</button>
+            <div class="upop" id="ex-pop" hidden>
+              <a href="#">Excel（仕様書）<small>.xlsx</small></a>
+              <a href="#">全成果物<small>.zip</small></a>
+              <a href="#">Playwright 用スペック<small>.spec.ts</small></a>
+            </div>
+          </div>
+          <a class="btn pri" href="#" data-go="test">テストを自動化する</a>
+        </div>
+        <div class="pb">
+          <div class="spec-grid">
+            <div style="overflow:auto;min-height:0">
+              <div class="card" style="margin-bottom:14px">
+                <h3>入力項目</h3><div class="sub">5 項目 · 必須 3 · フォーム送信先 /payment/confirm（POST）</div>
+                <table class="fields">
+                  <thead><tr><th style="width:130px">項目</th><th style="width:70px">種別</th><th style="width:60px">必須</th><th>制約とテスト条件</th></tr></thead>
+                  <tbody>
+                    <tr><td><b>カード番号</b><br><code>card_number</code></td><td>text</td><td><span class="req">必須</span></td>
+                      <td><code>#card-number</code> · 最大 19 桁 · <code>[0-9 ]{13,19}</code>
+                        <ul class="cond"><li>未入力で送信（必須チェック）</li><li>最大長: 18/19/20 文字</li><li>パターン適合 / 不適合</li></ul></td></tr>
+                    <tr><td><b>有効期限</b><br><code>exp</code></td><td>text</td><td><span class="req">必須</span></td>
+                      <td><code>input[name="exp"]</code> · <code>MM/YY</code><ul class="cond"><li>過去日付を入力</li><li>形式不正を入力</li></ul></td></tr>
+                    <tr><td><b>CVC</b><br><code>cvc</code></td><td>text</td><td><span class="req">必須</span></td>
+                      <td><code>input[name="cvc"]</code> · 3 桁<ul class="cond"><li>境界値: 2/3/4 桁</li></ul></td></tr>
+                    <tr><td><b>氏名</b><br><code>name</code></td><td>text</td><td><span class="opt">任意</span></td>
+                      <td><code>input[name="name"]</code><ul class="cond"><li>最大長: 79/80/81 文字</li></ul></td></tr>
+                    <tr><td><b>メールアドレス</b><br><code>email</code></td><td>email</td><td><span class="opt">任意</span></td>
+                      <td><code>input[name="email"]</code><ul class="cond"><li>形式不正を入力</li></ul></td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="card">
+                <h3>この画面から / この画面へ</h3><div class="sub">遷移表より</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;font-size:12.5px">
+                  <div><b style="font-size:11px;color:var(--tx3)">遷移先</b>
+                    <ul class="cond" style="padding-left:15px"><li>注文完了</li><li>商品一覧</li></ul></div>
+                  <div><b style="font-size:11px;color:var(--tx3)">遷移元</b>
+                    <ul class="cond" style="padding-left:15px"><li>商品一覧</li><li>DemoMart - デモストア トップ</li></ul></div>
+                </div>
+              </div>
+            </div>
+            <div class="shot-card">
+              <div class="ph2"><span>実画面</span><span>1280×800 · 08/30 14:03</span></div>
+              <div class="im">
+                <span class="fake" style="top:18px;height:14px;width:40%"></span>
+                <span class="fake" style="top:48px;height:26px"></span>
+                <span class="fake" style="top:84px;height:26px"></span>
+                <span class="fake" style="top:120px;height:26px;background:#DCE3FB"></span>
+                <span class="fake" style="top:156px;height:26px;width:45%"></span>
+                <span class="fake" style="top:200px;height:30px;width:120px;background:#101828"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- SCHEDULE ---------- -->
+      <section class="panel" id="p-schedule">
+        <div class="ph"><h1>定期実行と通知</h1><span style="color:var(--tx3);font-size:12px">決めた時刻に解析して、変化があったら知らせます</span><div class="sp"></div>
+          <button class="btn">通知をテスト送信</button><button class="btn pri">保存</button></div>
+        <div class="pb">
+          <div class="next-run">◔ 次回 2026-08-31 07:00（Asia/Tokyo）· 前回 08/30 07:00 は変更 3 件を検出して Slack に通知しました</div>
+          <div class="form-grid">
+            <div class="card">
+              <h3>いつ回すか</h3><div class="sub">対象サイトを自動でクロールします</div>
+              <div class="fld"><label>間隔</label><select><option>停止</option><option selected>毎日</option><option>毎週</option><option>毎月</option></select></div>
+              <div class="fld"><label>曜日（毎週のとき）</label>
+                <div class="days">
+                  <label><input type="checkbox"><span>月</span></label><label><input type="checkbox"><span>火</span></label>
+                  <label><input type="checkbox"><span>水</span></label><label><input type="checkbox"><span>木</span></label>
+                  <label><input type="checkbox"><span>金</span></label><label><input type="checkbox"><span>土</span></label>
+                  <label><input type="checkbox"><span>日</span></label>
+                </div>
+                <div class="hint">間隔が「毎週」のときだけ使われます。</div>
+              </div>
+              <div class="fld"><label>実行してよい時間帯</label>
+                <div class="row2"><input type="time" value="07:00"><input type="time" value="09:00"></div>
+                <div class="hint">対象サイトの負荷が低い時間に寄せられます。空欄なら制限しません。</div></div>
+              <div class="row2">
+                <div class="fld"><label>タイムゾーン</label><input type="text" value="Asia/Tokyo"></div>
+                <div class="fld"><label>失敗時の再試行</label><input type="number" value="2" min="0" max="5"></div>
+              </div>
+            </div>
+            <div class="card">
+              <h3>どこに知らせるか</h3><div class="sub">変化を検出したときだけ送ります</div>
+              <div class="fld"><label>通知先</label><select><option>送らない</option><option selected>Slack</option><option>Microsoft Teams</option><option>メール</option><option>Webhook</option></select></div>
+              <div class="fld"><label>宛先</label><input type="text" placeholder="https://hooks.slack.com/services/..." value="https://hooks.slack.com/services/T000/B000/xxxx">
+                <div class="hint">保存済みの値は伏せて表示されます。変更するときだけ入力してください。</div></div>
+              <div class="fld"><label>知らせる範囲</label><select><option>壊れる変更だけ</option><option selected>壊れる変更と警告</option><option>すべての変更</option></select></div>
+              <div class="fld"><label>本文のテンプレート</label><textarea rows="4">【{domain}】{count} 件の変更を検出しました
+{summary}
+{url}</textarea>
+                <div class="hint">使える差し込み: {domain} {count} {summary} {url}</div></div>
+              <div class="save-row"><button class="btn">通知をテスト送信</button><span class="why">いまの設定で 1 通だけ送ります</span></div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:16px">
+            <h3>実行の履歴</h3><div class="sub">直近 20 件</div>
+            <div class="tbl" style="border:0">
+              <table>
+                <thead><tr><th style="width:150px">日時</th><th style="width:90px">結果</th><th style="width:110px">変更</th><th>通知</th></tr></thead>
+                <tbody>
+                  <tr><td>08/30 07:00</td><td><span class="pill p-pass">成功</span></td><td>3 件</td><td>Slack へ送信</td></tr>
+                  <tr><td>08/29 07:00</td><td><span class="pill p-pass">成功</span></td><td>0 件</td><td>—（変更なし）</td></tr>
+                  <tr><td>08/28 07:00</td><td><span class="pill p-fail">失敗</span></td><td>—</td><td>Slack へ送信（失敗を通知）</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- REPORT ---------- -->
+      <section class="panel" id="p-report">
+        <div class="ph"><h1>報告</h1><span style="color:var(--tx3);font-size:12px">このツールが無くても開ける 1 枚の HTML です</span><div class="sp"></div>
+          <button class="btn">印刷</button><button class="btn pri">HTML を保存</button></div>
+        <div class="pb">
+          <div class="rep-wrap">
+            <div class="rep-frame">
+              <h1>demomart — テスト自動化レポート</h1>
+              <div class="meta">http://127.0.0.1:8766/ · 生成 2026-08-30 18:10 · 最終解析 08/30 14:03</div>
+
+              <h2>直近の実行</h2>
+              <div class="rep-kpi">
+                <div><b style="color:var(--ok-tx)">124</b><span>成功</span></div>
+                <div><b style="color:var(--ng-tx)">1</b><span>失敗</span></div>
+                <div><b>125</b><span>合計</span></div>
+                <div><b>4:12</b><span>所要</span></div>
+              </div>
+
+              <h2>失敗したテスト</h2>
+              <table>
+                <thead><tr><th style="width:80px">ID</th><th>テスト</th><th style="width:110px">画面</th><th style="width:120px">証跡</th></tr></thead>
+                <tbody><tr><td>PW-0082</td><td>email: 上限値+1（80 文字超）<br><span style="color:var(--ng-tx)">送信されてしまいました（URL が /contact/send に変化）</span></td><td>お問い合わせ</td><td><a href="#">スクショ</a> / <a href="#">Trace</a></td></tr></tbody>
+              </table>
+
+              <h2>画面ごとのカバレッジ</h2>
+              <table>
+                <thead><tr><th>画面</th><th style="width:70px">テスト</th><th style="width:70px">失敗</th><th style="width:90px">カバレッジ</th></tr></thead>
+                <tbody>
+                  <tr><td>お支払い・決済</td><td>31</td><td>0</td><td>100%</td></tr>
+                  <tr><td>お問い合わせ</td><td>28</td><td>1</td><td>72%</td></tr>
+                  <tr><td>商品一覧</td><td>24</td><td>0</td><td>100%</td></tr>
+                  <tr><td>マイページ</td><td>0</td><td>—</td><td>未着手</td></tr>
+                </tbody>
+              </table>
+
+              <h2>検出した変更（未対応 3 件）</h2>
+              <table>
+                <thead><tr><th style="width:110px">種類</th><th>内容</th><th style="width:110px">影響</th></tr></thead>
+                <tbody>
+                  <tr><td>要素が変わった</td><td>お支払い・決済「注文を確定する」の name が submit_order → place_order</td><td>テスト 4 件</td></tr>
+                  <tr><td>画面が増えた</td><td>注文完了（/order_done.html）</td><td>テストなし</td></tr>
+                  <tr><td>文言が変わった</td><td>トップの見出し「今週のおすすめ」→「今月のおすすめ」</td><td>影響なし</td></tr>
+                </tbody>
+              </table>
+
+              <h2>削減できた工数（推定）</h2>
+              <p style="font-size:12px;color:var(--tx2);line-height:1.8">解析 18 回・画面 126・テスト条件 1,240 件から <b>36.5 時間</b>（¥182,500 相当・¥5,000/h）。係数は設定で変更できます。この値は推定であり、実測ではありません。</p>
+            </div>
+            <div class="rep-side">
+              <div class="card"><h3>含めるもの</h3><div class="sub">チェックした節だけ出力します</div>
+                <ul class="cond" style="list-style:none;padding:0">
+                  <li><label><input type="checkbox" checked> 直近の実行</label></li>
+                  <li><label><input type="checkbox" checked> 失敗したテスト</label></li>
+                  <li><label><input type="checkbox" checked> カバレッジ</label></li>
+                  <li><label><input type="checkbox" checked> 検出した変更</label></li>
+                  <li><label><input type="checkbox" checked> 削減工数の推定</label></li>
+                </ul>
+              </div>
+              <div class="card"><h3>渡し方</h3>
+                <ul>
+                  <li>HTML 1 枚。外部読み込みなし</li>
+                  <li>受け取った人はブラウザで開くだけ</li>
+                  <li>証跡（スクショ・Trace）はリンク。同梱したい場合は ZIP を使ってください</li>
+                </ul>
+                <a class="btn" href="#" style="width:100%;justify-content:center;margin-top:10px">証跡ごと ZIP で保存</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- TEAM ---------- -->
+      <section class="panel" id="p-team">
+        <div class="ph"><h1>チーム</h1><span style="color:var(--tx3);font-size:12px">同じサイトを一緒に見るメンバーを追加します</span><div class="sp"></div></div>
+        <div class="pb">
+          <div class="note-box">招待メールは送りません。作成後に表示される初期パスワードを、本人に直接お伝えください。</div>
+          <div class="form-grid">
+            <div class="card">
+              <h3>メンバー</h3><div class="sub">3 人</div>
+              <div class="tbl" style="border:0">
+                <table>
+                  <thead><tr><th style="width:36px"></th><th>名前</th><th style="width:110px">権限</th><th style="width:90px">状態</th></tr></thead>
+                  <tbody>
+                    <tr><td><span class="avatar">フ</span></td><td>藤曲 <br><small style="color:var(--tx3)">yuki@example.com</small></td>
+                      <td><select style="padding:4px 8px;border:1px solid var(--line2);border-radius:6px;font-size:12px"><option selected>管理者</option><option>メンバー</option></select></td>
+                      <td><span class="pill p-pass">有効</span></td></tr>
+                    <tr><td><span class="avatar">サ</span></td><td>佐藤<br><small style="color:var(--tx3)">sato@example.com</small></td>
+                      <td><select style="padding:4px 8px;border:1px solid var(--line2);border-radius:6px;font-size:12px"><option>管理者</option><option selected>メンバー</option></select></td>
+                      <td><span class="pill p-pass">有効</span></td></tr>
+                    <tr><td><span class="avatar">タ</span></td><td>田中<br><small style="color:var(--tx3)">tanaka@example.com</small></td>
+                      <td><select style="padding:4px 8px;border:1px solid var(--line2);border-radius:6px;font-size:12px"><option>管理者</option><option selected>メンバー</option></select></td>
+                      <td><span class="pill p-new">停止中</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <h3 style="margin-top:18px">メンバーを追加</h3>
+              <div class="row2"><div class="fld"><label>名前</label><input type="text" placeholder="山田 太郎"></div>
+                <div class="fld"><label>メールアドレス</label><input type="email" placeholder="taro@example.com"></div></div>
+              <div class="row2"><div class="fld"><label>初期パスワード</label><input type="text" placeholder="8 文字以上"></div>
+                <div class="fld"><label>権限</label><select><option>メンバー</option><option>管理者</option></select></div></div>
+              <div class="save-row"><button class="btn pri">追加する</button><span class="why">追加後、初期パスワードを本人に共有してください</span></div>
+            </div>
+            <div class="card">
+              <h3>API トークン</h3><div class="sub">CI から解析やテスト実行を呼び出すときに使います</div>
+              <div class="tbl" style="border:0">
+                <table>
+                  <thead><tr><th>名前</th><th style="width:130px">作成</th><th style="width:70px"></th></tr></thead>
+                  <tbody>
+                    <tr><td>GitHub Actions</td><td>08/12</td><td><button class="btn sm">削除</button></td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="fld" style="margin-top:14px"><label>新しいトークンの名前</label><input type="text" placeholder="例: nightly-ci"></div>
+              <div class="save-row"><button class="btn">発行する</button><span class="why">トークンは発行直後の 1 回だけ表示されます</span></div>
+              <div style="margin-top:12px;padding:10px 12px;background:var(--ok-bg);border-radius:9px">
+                <div style="font-size:11px;color:var(--ok-tx);font-weight:700;margin-bottom:5px">発行しました（この 1 回だけ表示されます）</div>
+                <span class="tok">ws2d_live_8f2b…c41a</span> <button class="btn sm" style="margin-left:6px">コピー</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script>
+var TITLES={home:['ホーム',''],spec:['仕様','demomart'],test:['テスト','demomart'],drift:['変更','demomart'],schedule:['定期実行と通知','demomart'],report:['報告','demomart'],team:['チーム','demomart']};
+var LIST={home:['サイト','2 サイト'],spec:['demomart','7 画面'],test:['demomart','125 tests'],drift:['demomart','変更 3 件'],schedule:['demomart',''],report:['demomart',''],team:['demomart','']};
+function show(v){
+  document.querySelectorAll('.rail [data-v]').forEach(function(b){b.classList.toggle('on',b.dataset.v===v)});
+  document.querySelectorAll('.panel').forEach(function(p){p.classList.toggle('on',p.id==='p-'+(v==='test'||v==='drift'?'spec':v))});
+  // test / drift はモック対象外なので仕様パネルを流用して注記
+  document.getElementById('t-title').textContent=TITLES[v][0];
+  document.getElementById('t-sub').textContent=TITLES[v][1];
+  document.getElementById('l-title').textContent=LIST[v][0];
+  document.getElementById('l-sub').textContent=LIST[v][1];
+  document.getElementById('site-items').hidden = v!=='home';
+  document.getElementById('screen-items').hidden = !(v==='spec');
+  document.getElementById('ctx-card').hidden = !(v==='schedule'||v==='report'||v==='team'||v==='drift');
+  document.getElementById('list-f-home').hidden = v!=='home';
+  document.getElementById('topbar').style.display = (v==='home')?'flex':'none';
+  if(v==='test'||v==='drift'){ alert('テスト／変更は出荷済み画面（/test-automation）をそのまま使います。'); }
+}
+document.querySelectorAll('.rail [data-v]').forEach(function(b){b.onclick=function(){show(b.dataset.v)}});
+document.querySelectorAll('[data-go]').forEach(function(a){a.onclick=function(e){e.preventDefault();show(a.dataset.go)}});
+document.getElementById('ex-btn').onclick=function(){var p=document.getElementById('ex-pop');p.hidden=!p.hidden};
+// ホームの3状態を切り替えるデモ用ボタン
+var states=['summary','empty','stage'],si=0;
+document.addEventListener('keydown',function(e){
+  if(e.key==='h'){si=(si+1)%3;
+    document.getElementById('home-empty').hidden=states[si]!=='empty';
+    document.getElementById('home-stage').hidden=states[si]!=='stage';
+    document.getElementById('home-summary').hidden=states[si]!=='summary';}
+});
+show('home');
+</script>
+</body>
+</html>

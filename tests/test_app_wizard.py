@@ -81,7 +81,12 @@ def _discover_payload(*, login_required: bool = False) -> str:
 
 
 def _index_html() -> str:
-    return appmod.app.test_client().get("/").get_data(as_text=True)
+    """旧シェル（index.html）の HTML。
+
+    統合ワークスペース化で "/" は workspace.html に置き換わった。index.html は
+    /generate 等の画面別 URL から配られ続ける（SPA なので全ビューを含む）。
+    """
+    return appmod.app.test_client().get("/generate").get_data(as_text=True)
 
 
 def test_first_wave_operations_controls_are_wired() -> None:

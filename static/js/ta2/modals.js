@@ -292,7 +292,7 @@
   function maybeAutoHelp() {
     if (helpShown) return;
     helpShown = true;
-    if (!ENTRY_HASH) openHelp();          // 初回（ハッシュ無しの素の入り口）だけ出す。localStorage は使わない
+    // 使い方は ? ボタンからだけ開く。毎回自動で出すと、作業のたびに画面を覆って邪魔になる。
   }
 
   function init() {

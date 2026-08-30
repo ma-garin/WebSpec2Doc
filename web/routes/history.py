@@ -24,6 +24,18 @@ def _out() -> Path:
     return scoped_output_dir(OUTPUT_DIR)
 
 
+
+def _target_url_of(domain_dir: Path) -> str:
+    """report.json の meta.target_url を返す。読めなければ空文字（推測しない）。"""
+    path = domain_dir / "report.json"
+    if not path.is_file():
+        return ""
+    try:
+        meta = json.loads(path.read_text(encoding="utf-8")).get("meta") or {}
+    except (OSError, ValueError):
+        return ""
+    return str(meta.get("target_url") or "")
+
 @bp.get("/api/history")
 def api_history() -> dict:
     items: list[dict] = []
@@ -49,6 +61,10 @@ def api_history() -> dict:
             summary = _summary_for_domain(d.name, out_dir)
             site = load_site(d.name, out_dir)
             site_url = site.urls[0] if site and site.urls else ""
+            if not site_url:
+                # site.json を持たない古い出力でも、何を解析したのかは report.json が知っている。
+                # URL を出せないと、一覧でディレクトリ名しか手掛かりが無くなる。
+                site_url = _target_url_of(d)
             formats = [
                 name
                 for name, fname in (

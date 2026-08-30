@@ -398,7 +398,9 @@ def test_live_progress_without_run_returns_zero(tmp_path: Path, monkeypatch) -> 
     (tmp_path / "example.com").mkdir()
     data = _client().get("/api/testcases/live-progress?domain=example.com").get_json()
 
-    assert data == {"total": 0, "done": 0, "passed": 0, "failed": 0, "tests": []}
+    # run_id は実行中だけ非空になる（画面が /api/testcases/cancel へ渡す）。
+    # 未実行では空文字を返し、件数は 0 のまま推測で埋めない。
+    assert data == {"run_id": "", "total": 0, "done": 0, "passed": 0, "failed": 0, "tests": []}
 
 
 def test_live_progress_rejects_invalid_domain(tmp_path: Path, monkeypatch) -> None:

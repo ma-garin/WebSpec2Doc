@@ -27,9 +27,15 @@ def _client_view_paths() -> dict[str, str]:
 
 
 def _server_view_names() -> set[str]:
-    from web.routes.pages import _VIEW_NAMES
+    """core.js と突き合わせる対象のビュー名。
 
-    return set(_VIEW_NAMES)
+    _TESTLAB_VIEWS（旧 System 02 の 12 画面）は中身が統合ワークスペースへ移り、
+    ルートは 302 を返すだけになった。core.js は組み立てないので比較から外す
+    （既存のブックマークを 404 にしないために名前だけ残している）。
+    """
+    from web.routes.pages import _TESTLAB_VIEWS, _VIEW_NAMES
+
+    return set(_VIEW_NAMES) - set(_TESTLAB_VIEWS)
 
 
 def test_client_and_server_agree_on_view_names() -> None:

@@ -1,10 +1,14 @@
 from __future__ import annotations
 
-from flask import Blueprint, Response, abort, redirect, render_template
+from flask import Blueprint, Response, abort, redirect, render_template, request
 
 bp = Blueprint("pages", __name__)
 
-# サイドバーの各画面（templates/partials/nav.html の data-view と対応）。
+# 統合ワークスペース（workspace.html）のワークスペース名。
+# URL は /sites/<domain>/<ws> の 1 系統だけで、レール・パネルの初期表示を <body data-ws> で決める。
+_WS = frozenset({"spec", "tests", "changes", "schedule", "report", "team"})
+
+# 旧シェル（index.html）に残っている画面（templates/partials/nav.html の data-view と対応）。
 # ブックマーク/共有/リロードでも同じ画面を開けるよう、画面名ごとに URL を割り当てる。
 _VIEW_NAMES = frozenset(
     {
@@ -24,7 +28,7 @@ _VIEW_NAMES = frozenset(
         "user-management",
         "tenant-management",
         "feedback",
-        # テスト自動化（System 02）の旧 12 画面。新シェル /test-automation へ 302 で送る。
+        # テスト自動化（System 02）の旧 12 画面。/test-automation 経由でホームへ 302 で送る。
         # 名前を残すのは、既存のブックマーク・共有リンクを 404 にしないため。
         "test-activity",
         "test-plan",
@@ -40,10 +44,10 @@ _VIEW_NAMES = frozenset(
         "integrations",
     }
 )
-_VIEW_ALIASES = {"home": "dashboard"}
 
-# テスト自動化（System 02）の旧画面。中身は /test-automation に統合済みで、
-# ここに載っている名前はすべて 302 で新シェルへ送るだけになる。
+# テスト自動化（System 02）の旧画面。中身は統合ワークスペースに移ったため、
+# ここに載っている名前はすべて /test-automation へ 302 で送るだけになる
+# （/test-automation 自身も domain 付きなら /sites/<domain>/tests、無ければ / へ 302）。
 _TESTLAB_VIEWS = frozenset(
     {
         "test-activity",
@@ -69,7 +73,6 @@ _SETTINGS_TABS = frozenset(
 )
 
 
-
 def _may_use_testlab() -> bool:
     """テスト自動化を使えるか。認証オフの開発環境では制限しない。"""
     from flask import g
@@ -86,22 +89,60 @@ def _may_use_testlab() -> bool:
 
 @bp.route("/")
 def index() -> str:
-    return render_template("index.html")
+    """ホーム = サイト一覧。サイトが 0 件なら URL 入力だけの空状態を出す（画面側で判定）。"""
+    return render_template("workspace.html", ws="home", domain="")
 
 
-@bp.route("/test-automation")
-def test_automation() -> str:
-    """テスト自動化（System 02）。index.html とは別の独立シェルを返す。"""
+@bp.route("/team")
+def team() -> str:
+    """チーム（メンバー・API トークン）。
+
+    ワークスペース全体の設定であってサイトには属さない。サイトを 1 件も
+    持たないテナントでも同僚を招けるよう、サイト無しで開ける経路を持たせる。
+    """
+    return render_template("workspace.html", ws="team", domain="")
+
+
+@bp.route("/sites/<domain>")
+def site_root(domain: str) -> Response:
+    """サイトの入口。主役の価値は仕様なので、既定で仕様ワークスペースへ送る。"""
+    return redirect(f"/sites/{domain}/spec")
+
+
+@bp.route("/sites/<domain>/<ws>")
+def site_workspace(domain: str, ws: str) -> str | Response:
+    """サイト単位のワークスペース（仕様 / テスト / 変更 / 定期実行 / 報告 / チーム）。
+
+    未解析のドメインをここで開いても見せるものが無いため、ホームへ戻して
+    「URL を入れる」導線に着地させる（404 にすると行き止まりになる）。
+    """
+    from web.config import OUTPUT_DIR
+    from web.tenancy import scoped_output_dir
+    from web.validation import _valid_domain
+
+    if ws not in _WS:
+        abort(404)
+    if not _valid_domain(domain):
+        abort(404)
     if not _may_use_testlab():
         # 存在は隠さず 403 にする。404 にすると権限の問題か綴り違いか切り分けられない。
         abort(403)
-    return render_template("test-automation.html")
+    if not (scoped_output_dir(OUTPUT_DIR) / domain / "report.json").is_file():
+        return redirect("/")
+    return render_template("workspace.html", ws=ws, domain=domain)
+
+
+@bp.route("/test-automation")
+def test_automation() -> Response:
+    """旧テスト自動化シェル。統合ワークスペースの該当サイトへ送る。"""
+    domain = request.args.get("domain", "")
+    return redirect(f"/sites/{domain}/tests" if domain else "/")
 
 
 @bp.route("/systems")
-def systems() -> str:
-    """ログイン後のシステム選択ハブ。ドキュメント作成 / テスト自動化 / AutoRun / CLI・API を選ぶ。"""
-    return render_template("system-select.html")
+def systems() -> Response:
+    """旧システム選択ハブ。製品を 1 つに統合したので選ばせる意味が無く、ホームへ送る。"""
+    return redirect("/")
 
 
 @bp.route("/cli")
@@ -140,10 +181,12 @@ def settings_tab(tab: str) -> str:
 
 @bp.route("/<view_name>")
 def view(view_name: str) -> str | Response:
-    resolved = _VIEW_ALIASES.get(view_name, view_name)
-    if resolved not in _VIEW_NAMES:
+    if view_name == "home":
+        # 旧ホーム（ダッシュボード）は統合ワークスペースのホームに置き換わった。
+        return redirect("/")
+    if view_name not in _VIEW_NAMES:
         abort(404)
-    if resolved in _TESTLAB_VIEWS:
+    if view_name in _TESTLAB_VIEWS:
         # 旧 12 画面は /test-automation に統合済み。権限判定は移送先で行う。
         # ここでも 403 を出すと判定が 2 箇所に散り、片方だけ直し忘れる。
         return redirect("/test-automation")

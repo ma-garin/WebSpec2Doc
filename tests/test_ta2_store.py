@@ -885,3 +885,154 @@ class TestFailedStepIndex:
             DOMAIN, {"cases": {"PW-0001": {"status": "failed", "error": "unknown failure"}}}
         )
         assert data["tests"][0]["last"]["step"] is None
+
+
+# =========================================================================
+# B5 再同期（表の変更を取り込む）
+# =========================================================================
+class TestResync:
+    def _seed(self) -> dict:
+        return store.derive_initial(DOMAIN, _report())
+
+    def _table(self):
+        from web.services import testcase_table_store as tstore
+
+        return tstore
+
+    def test_unchanged_table_reports_only_kept(self, output_dir: Path) -> None:
+        seeded = self._seed()
+        out = store.resync(DOMAIN, _report())
+        assert out["added"] == []
+        assert out["renamed"] == []
+        assert out["orphaned"] == []
+        assert out["kept"] == len(seeded["tests"])
+
+    def test_is_idempotent(self, output_dir: Path) -> None:
+        self._seed()
+        store.resync(DOMAIN, _report())
+        first = json.dumps(store.load(DOMAIN), ensure_ascii=False, sort_keys=True)
+        second_result = store.resync(DOMAIN, _report())
+        assert second_result["added"] == []
+        assert second_result["renamed"] == []
+        assert json.dumps(store.load(DOMAIN), ensure_ascii=False, sort_keys=True) == first
+
+    def test_new_row_is_added_and_run_history_is_kept(self, output_dir: Path) -> None:
+        seeded = self._seed()
+        target = seeded["tests"][0]["id"]
+        store.apply_run_result(DOMAIN, {"cases": {target: {"status": "passed"}}}, "r1", "t1")
+        added_row = self._table().add_row(DOMAIN, _report())
+
+        out = store.resync(DOMAIN, _report())
+
+        assert len(out["added"]) == 1
+        created = next(t for t in store.load(DOMAIN)["tests"] if t["id"] == out["added"][0])
+        assert created["case_id"] == added_row["row"]["case_id"]
+        assert created["source"] == "table"
+        assert created["status"] == "new"
+        kept = next(t for t in store.load(DOMAIN)["tests"] if t["id"] == target)
+        assert kept["history"] == [1]
+        assert kept["last"]["run_id"] == "r1"
+
+    def test_table_rename_updates_the_test_name(self, output_dir: Path) -> None:
+        seeded = self._seed()
+        target = next(t for t in seeded["tests"] if t["case_id"])
+        self._table().update_cell(DOMAIN, _report(), target["case_id"], "name", "表で直した名前")
+
+        out = store.resync(DOMAIN, _report())
+
+        assert target["id"] in out["renamed"]
+        updated = next(t for t in store.load(DOMAIN)["tests"] if t["id"] == target["id"])
+        assert updated["name"] == "表で直した名前"
+        assert updated["steps"] == target["steps"]
+
+    def test_user_renamed_test_is_not_overwritten(self, output_dir: Path) -> None:
+        seeded = self._seed()
+        target = next(t for t in seeded["tests"] if t["case_id"])
+        store.update_test(DOMAIN, target["id"], {"name": "私がつけた名前"})
+        self._table().update_cell(DOMAIN, _report(), target["case_id"], "name", "表で直した名前")
+
+        out = store.resync(DOMAIN, _report())
+
+        assert target["id"] not in out["renamed"]
+        updated = next(t for t in store.load(DOMAIN)["tests"] if t["id"] == target["id"])
+        assert updated["name"] == "私がつけた名前"
+        assert updated["name_edited"] is True
+
+    def test_row_removed_from_table_is_marked_orphan_not_deleted(self, output_dir: Path) -> None:
+        seeded = self._seed()
+        target = next(t for t in seeded["tests"] if t["case_id"])
+        self._table().delete_row(DOMAIN, target["case_id"])
+
+        out = store.resync(DOMAIN, _report())
+
+        assert target["id"] in out["orphaned"]
+        tests = store.load(DOMAIN)["tests"]
+        assert len(tests) == len(seeded["tests"])  # 削除しない
+        assert next(t for t in tests if t["id"] == target["id"])["orphan"] is True
+
+    def test_restored_row_clears_the_orphan_mark(self, output_dir: Path) -> None:
+        seeded = self._seed()
+        target = next(t for t in seeded["tests"] if t["case_id"])
+        self._table().delete_row(DOMAIN, target["case_id"])
+        store.resync(DOMAIN, _report())
+        self._table().restore_row(DOMAIN, target["case_id"])
+
+        out = store.resync(DOMAIN, _report())
+
+        assert target["id"] not in out["orphaned"]
+        assert "orphan" not in next(
+            t for t in store.load(DOMAIN)["tests"] if t["id"] == target["id"]
+        )
+
+
+# =========================================================================
+# B6 失敗ステップの確実な特定
+# =========================================================================
+class TestFailedStepFromReporter:
+    def test_reporter_step_title_wins(self, output_dir: Path) -> None:
+        tests = store.derive_initial(DOMAIN, _report())["tests"]
+        target = next(t for t in tests if len(t["steps"]) > 3)
+        data = store.apply_run_result(
+            DOMAIN,
+            {
+                "cases": {
+                    target["id"]: {
+                        "status": "failed",
+                        "error": "Error: なにかが起きた",
+                        "failed_step": "S3",
+                    }
+                }
+            },
+        )
+        assert next(t for t in data["tests"] if t["id"] == target["id"])["last"]["step"] == 3
+
+    def test_out_of_range_step_falls_back(self, output_dir: Path) -> None:
+        tests = store.derive_initial(DOMAIN, _report())["tests"]
+        target = next(t for t in tests if any(s.get("loc") == "#card-number" for s in t["steps"]))
+        error = 'Timeout 15000ms exceeded.\nwaiting for locator("#card-number")'
+        data = store.apply_run_result(
+            DOMAIN,
+            {"cases": {target["id"]: {"status": "failed", "error": error, "failed_step": "S999"}}},
+        )
+        updated = next(t for t in data["tests"] if t["id"] == target["id"])
+        index = updated["last"]["step"]
+        assert index is not None
+        assert updated["steps"][index]["loc"] == "#card-number"
+
+    def test_raw_playwright_result_carries_failed_step(self, output_dir: Path) -> None:
+        tests = store.derive_initial(DOMAIN, _report())["tests"]
+        target = next(t for t in tests if len(t["steps"]) > 2)
+        data = store.apply_run_result(
+            DOMAIN,
+            {
+                "tests": [
+                    {
+                        "title": f"{target['id']} なにか",
+                        "status": "failed",
+                        "error": "Error",
+                        "failed_step": "S2",
+                    }
+                ]
+            },
+        )
+        assert next(t for t in data["tests"] if t["id"] == target["id"])["last"]["step"] == 2

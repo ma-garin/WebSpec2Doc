@@ -145,6 +145,11 @@ def parse_args() -> argparse.Namespace:
         help="最大クロールページ数",
     )
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT_DIR, help="出力先")
+    parser.add_argument(
+        "--domain-name",
+        default="",
+        help="出力先ディレクトリ名（省略時は URL のホストから決める）",
+    )
     parser.add_argument("--llm", action="store_true", help="LLM解析を有効化")
     parser.add_argument(
         "--format", default=DEFAULT_FORMATS, help="出力形式: md,html,excel,pdf,json"
@@ -399,7 +404,7 @@ def _record_session(args: argparse.Namespace) -> None:
     if not url:
         logger.error("--record-session には --url が必要です")
         return
-    output_dir = Path(args.output) / _domain_name(url)
+    output_dir = _out_dir(args, url)
     headless = os.environ.get("WEBSPEC2DOC_RECORD_HEADLESS", "") == "1"
     logger.info("記録を開始します。ブラウザを閉じるとセッションを保存します: %s", url)
     session_path = record_exploration_session(
@@ -443,7 +448,7 @@ def _exploration_coverage(args: argparse.Namespace) -> None:
     if not url:
         logger.error("--exploration-coverage には --url が必要です")
         return
-    output_dir = Path(args.output) / _domain_name(url)
+    output_dir = _out_dir(args, url)
     report_path = output_dir / JSON_REPORT_FILE_NAME
     report = _load_report_json(report_path)
     if report is None:
@@ -485,7 +490,7 @@ def _reverse_assets(args: argparse.Namespace) -> None:
     if not url:
         logger.error("--reverse-assets には --url が必要です")
         return
-    output_dir = Path(args.output) / _domain_name(url)
+    output_dir = _out_dir(args, url)
     report_path = output_dir / JSON_REPORT_FILE_NAME
     report = _load_report_json(report_path)
     if report is None:
@@ -513,7 +518,7 @@ def _export_findings(args: argparse.Namespace) -> None:
     if not url:
         logger.error("--export-findings には --url が必要です")
         return
-    output_dir = Path(args.output) / _domain_name(url)
+    output_dir = _out_dir(args, url)
     events = load_session_events(output_dir)
     if not events:
         logger.error("探索セッションがありません（先に --record-session で操作を記録してください）")
@@ -538,7 +543,7 @@ def _generate_test_plan(args: argparse.Namespace) -> None:
     if not url:
         logger.error("--test-plan には --url が必要です")
         return
-    output_dir = Path(args.output) / _domain_name(url)
+    output_dir = _out_dir(args, url)
     report_path = output_dir / JSON_REPORT_FILE_NAME
     report = _load_report_json(report_path)
     if report is None:
@@ -586,7 +591,7 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
             sys.exit(2)
 
     formats = _parse_formats(str(args.format))
-    output_dir = Path(args.output) / _domain_name(primary_url)
+    output_dir = _out_dir(args, primary_url)
     prior_snapshot = latest_snapshot(output_dir)
     crawled_at = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
     auth_state = Path(auth_path) if auth_path else None
@@ -1560,6 +1565,19 @@ def _domain_name(url: str) -> str:
     return domain_key_from_url(url)
 
 
+def _out_dir(args: argparse.Namespace, url: str) -> Path:
+    """成果物の出力先。--domain-name があればそれを、無ければ URL のホストを使う。
+
+    再クロールでは呼び出し側（Web）が既にサイトのディレクトリ名を知っているため、
+    ホスト名から作り直すと別ディレクトリに書いてしまい差分の基準が育たない。
+    ディレクトリ名として危険な値は無視して従来どおりホスト名にフォールバックする。
+    """
+    override = str(getattr(args, "domain_name", "") or "").strip()
+    if override in {".", ".."} or "/" in override or "\\" in override:
+        override = ""
+    return Path(args.output) / (override or _domain_name(url))
+
+
 if __name__ == "__main__":
     main()
 
@@ -1569,8 +1587,8 @@ def _multi_viewport(args: argparse.Namespace, viewports_arg: str, auth_path: Pat
     from viewport.runner import run_multi_viewport
 
     names = [name.strip() for name in viewports_arg.split(",") if name.strip()]
-    domain = _domain_name(str(args.url))
-    out_dir = Path(args.output) / domain
+    out_dir = _out_dir(args, str(args.url))
+    domain = out_dir.name
     report = run_multi_viewport(
         str(args.url),
         out_dir,

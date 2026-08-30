@@ -126,6 +126,9 @@
   var POST = function (u, b) { return request('POST', u, b || {}); };
 
   var api = {
+    /* ws-*.js が /api/ta2 以外の既存 API を叩くための素の口。応答の error は throw される */
+    get: GET,
+    post: POST,
     sites: function () { return GET('/api/ta2/sites'); },
     tests: function (d) { return GET('/api/ta2/tests?domain=' + enc(d)); },
     create: function (d, body) { return POST('/api/ta2/tests', Object.assign({ domain: d }, body || {})); },
@@ -192,26 +195,52 @@
   /* ----------------------------------------------------------- navigation */
   var hashLock = false;
 
-  function hashFor() {
-    if (state.view === 'test') return state.sel ? '#/tests/' + state.sel : '#/tests';
-    return '#/' + state.view;
+  /** view → URL パス。同じパスを共有する view はハッシュで見分ける（hashFor）。 */
+  var PATH_OF = {
+    home: null,           // 常に '/'
+    spec: 'spec', site: 'spec',
+    test: 'tests', run: 'tests',
+    drift: 'changes',
+    schedule: 'schedule', report: 'report', team: 'team'
+  };
+  /** レールのボタンは親の WS に寄せる（地図は仕様の中、実行結果はテストの中） */
+  var RAIL_OF = { site: 'spec', run: 'test' };
+
+  function pathFor(v) {
+    var seg = PATH_OF[v];
+    if (!seg) return '/';
+    /* チームはワークスペース全体の設定で、サイトに属さない。
+       サイト未選択でもここへ入れないと、サイトが 0 件のテナントは同僚を招けない。 */
+    if (!state.domain) return v === 'team' ? '/team' : '/';
+    return '/sites/' + enc(state.domain) + '/' + seg;
   }
-  function syncHash() {
-    var want = hashFor();
-    if (location.hash === want) return;
+
+  function hashFor() {
+    if (state.view === 'test') return state.sel ? '#/tests/' + state.sel : '';
+    if (state.view === 'run') return '#/run';
+    if (state.view === 'site') return '#/map';
+    return '';
+  }
+
+  /** パスとハッシュを現在の view に合わせる。履歴は増やさない（replaceState） */
+  function syncUrl() {
+    var want = pathFor(state.view) + hashFor();
+    if (location.pathname + location.hash === want) return;
     hashLock = true;
-    location.hash = want;
+    try { history.replaceState(null, '', want); }
+    catch (e) { location.hash = hashFor(); }
     setTimeout(function () { hashLock = false; }, 0);
   }
+
   /** URL ハッシュを読んで state.view / state.sel を決める。戻り値: 変化したか */
   function readHash() {
-    var m = /^#\/(tests|run|drift|site)(?:\/(.+))?$/.exec(location.hash || '');
+    var m = /^#\/(tests|run|drift|site|map|home|spec|schedule|report|team)(?:\/(.+))?$/.exec(location.hash || '');
     if (!m) return false;
     if (m[1] === 'tests') {
       state.view = 'test';
       if (m[2] && byId(decodeURIComponent(m[2]))) state.sel = decodeURIComponent(m[2]);
     } else {
-      state.view = m[1];
+      state.view = m[1] === 'map' ? 'site' : m[1];
     }
     return true;
   }
@@ -219,9 +248,21 @@
 
   function setView(v) {
     state.view = v;
-    $$('.rail [data-view]').forEach(function (b) { b.classList.toggle('on', b.dataset.view === v); });
-    $$('.panel').forEach(function (p) { p.classList.toggle('on', p.id === 'p-' + v); });
-    syncHash();
+    var rail = RAIL_OF[v] || v;
+    $$('.rail [data-view]').forEach(function (b) { b.classList.toggle('on', b.dataset.view === rail); });
+    /* 非表示のビューは class だけでなく hidden も落とす。
+       display:none だけだと将来のレイアウト用 display に負けて中身が
+       innerText・支援技術・Playwright の可視判定に漏れる（検証ループ1 B-4）。 */
+    $$('.panel').forEach(function (p) {
+      var on = p.id === 'p-' + v;
+      p.classList.toggle('on', on);
+      p.hidden = !on;
+    });
+    /* テスト編集ペインはパネルの下に敷かれたまま残るため、
+       テスト以外のビューでは明示的に畳む（同 B-4 の実害はここ）。 */
+    var edOn = (v === 'test');
+    $$('.main > .ed-h, .main > .ed-b').forEach(function (e) { e.hidden = !edOn; });
+    syncUrl();
     emit('view', v);
   }
 
@@ -446,7 +487,8 @@
     runIds: runIds, cancelRun: cancelRun,
     startPolling: startPolling, stopPolling: stopPolling,
 
-    // URL ハッシュ
-    syncHash: syncHash, readHash: readHash, isHashLocked: isHashLocked
+    // URL（パス＋ハッシュ）
+    syncUrl: syncUrl, syncHash: syncUrl, pathFor: pathFor, RAIL_OF: RAIL_OF,
+    readHash: readHash, isHashLocked: isHashLocked
   };
 })();

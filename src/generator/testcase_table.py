@@ -166,6 +166,21 @@ def _field_key(fld: Mapping[str, Any]) -> str:
     return str(fld.get("name") or fld.get("field_type") or "field")
 
 
+# 欄名として使える属性（優先順）。placeholder は「入力例」であって欄名ではないため使わない。
+_LABEL_KEYS = ("label", "label_text", "aria_label", "title")
+
+
+def _field_label(fld: Mapping[str, Any] | None, fallback: str) -> str:
+    """画面に見えている欄名を返す。取得できなければ fallback（name 属性など）。"""
+    if fld is None:
+        return str(fallback)
+    for key in _LABEL_KEYS:
+        value = str(fld.get(key) or "").strip()
+        if value:
+            return value
+    return str(fallback)
+
+
 # =========================================================================
 # 手順の文言（作業者が迷わない粒度に固定する）
 # =========================================================================
@@ -344,7 +359,7 @@ def _bva_rows(ctx: _ScreenContext, sd: ScreenTestDesign) -> list[TestCaseRow]:
             rows.append(
                 TestCaseRow(
                     case_id=f"TC-{ctx.page_id}-BVA-{seq:03d}",
-                    name=f"{table.field_name}: {case.label}（{case.value}）",
+                    name=f"{_field_label(fld, table.field_name)}: {case.label}（{case.value}）",
                     screen=ctx.label,
                     function=ctx.function,
                     viewpoint=f"境界値分析／{case.label}",
@@ -574,7 +589,10 @@ def _state_rows(
         rows.append(
             TestCaseRow(
                 case_id=f"TC-{ctx.page_id}-ST-{idx:03d}",
-                name="画面遷移の連続操作: " + " → ".join(seq.steps),
+                name="画面遷移の連続操作: "
+                + " → ".join(
+                    _screen_title(screens.get(page) or {}) or page for page in seq.steps
+                ),
                 screen=ctx.label,
                 function="画面遷移",
                 viewpoint=f"状態遷移テスト（{st.n_switch}-スイッチ）",

@@ -53,7 +53,7 @@ class TestStAuth:
         """ST-005: ログアウト後は認証後ページへ戻れない。"""
         login(page, system_server, MEMBER)
         page.request.post(f"{system_server}/auth/logout")
-        page.goto(f"{system_server}/systems")
+        page.goto(f"{system_server}/dashboard")
         expect(page).to_have_url(re.compile(r"/auth/login"))
 
     def test_st032_session_invalidation_blocks_access(

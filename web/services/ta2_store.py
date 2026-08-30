@@ -667,6 +667,94 @@ def derive_initial(domain: str, report: Mapping[str, Any]) -> dict[str, Any]:
     return save(domain, data)
 
 
+def _new_test_from_row(
+    data: dict[str, Any], row: Mapping[str, Any], report: Mapping[str, Any]
+) -> dict[str, Any]:
+    """表の 1 行から新しいテスト定義を作る（`derive_initial` と同じ形）。"""
+    return {
+        "id": _next_id(data),
+        "case_id": str(row.get("case_id") or ""),
+        "screen": _page_id_of_row(row, report),
+        "name": str(row.get("name") or ""),
+        "technique": _technique_of_row(row),
+        "source": "table",
+        "steps": steps_from_row(row),
+        "status": "new",
+        "history": [],
+        "last": {},
+        "updated_at": _now(),
+    }
+
+
+def resync(domain: str, report: Mapping[str, Any]) -> dict[str, Any]:
+    """テストケース表の変更を tests.json に取り込む（契約 B5）。
+
+    突合は由来のテストケース ID（`case_id`）。実行結果と手順は**壊さない**:
+
+    - 表にも tests.json にもある → `steps/status/history/last` は触らない。
+      `name` は表側が変わっていて、かつ利用者が名前を編集していない
+      （`name_edited` が立っていない）ときだけ更新する
+    - 表にあって tests.json に無い → 新規作成（`source:"table"`）
+    - tests.json にあって表に無い → **削除しない**。`orphan:true` を立てるだけ
+
+    2 回目以降の呼び出しでは何も変わらない（冪等）。
+    """
+    from web.services.testcase_table_store import compose
+
+    rows = compose(domain, report).get("rows") or []
+    row_by_case: dict[str, Mapping[str, Any]] = {}
+    for row in rows:
+        case_id = str(row.get("case_id") or "")
+        if case_id and case_id not in row_by_case:
+            row_by_case[case_id] = row
+
+    data = _loaded(domain)
+    added: list[str] = []
+    renamed: list[str] = []
+    orphaned: list[str] = []
+    kept = 0
+    tests: list[dict[str, Any]] = []
+    matched: set[str] = set()
+
+    for raw in data.get("tests") or []:
+        test = dict(raw)
+        test_id = str(test.get("id") or "")
+        case_id = str(test.get("case_id") or "")
+        row = row_by_case.get(case_id) if case_id else None
+        if row is None:
+            if test.get("orphan"):
+                orphaned.append(test_id)
+            elif str(test.get("source") or "") == "table":
+                test["orphan"] = True
+                test["updated_at"] = _now()
+                orphaned.append(test_id)
+            tests.append(test)
+            continue
+        matched.add(case_id)
+        kept += 1
+        if test.get("orphan"):
+            # 表に戻ってきたので印を外す
+            test = {k: v for k, v in test.items() if k != "orphan"}
+            test["updated_at"] = _now()
+        name = str(row.get("name") or "")
+        if name and name != str(test.get("name") or "") and not test.get("name_edited"):
+            test["name"] = name
+            test["updated_at"] = _now()
+            renamed.append(test_id)
+        tests.append(test)
+
+    working = {**data, "tests": tests}
+    for case_id, row in row_by_case.items():
+        if case_id in matched:
+            continue
+        created = _new_test_from_row(working, row, report)
+        tests.append(created)
+        added.append(str(created["id"]))
+
+    save(domain, {**working, "tests": tests})
+    return {"added": added, "renamed": renamed, "kept": kept, "orphaned": orphaned}
+
+
 # =========================================================================
 # 実行結果の反映（契約 §3.1）
 # =========================================================================
@@ -702,11 +790,29 @@ def _cases_of(result: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
             "status": str(test.get("status") or ""),
             "duration_ms": int(test.get("duration_ms") or 0),
             "error": str(test.get("error") or ""),
+            "failed_step": str(test.get("failed_step") or ""),
         }
     return out
 
 
 _GENERIC_LOCS = {"page.goto", "page.url", "title", "body"}
+
+
+_STEP_TITLE_RE = re.compile(r"^S(\d+)$")
+
+
+def _failed_step_from_title(steps: Sequence[Mapping[str, Any]], title: Any) -> int | None:
+    """レポータが記録した失敗ステップ名（`S3`）を steps[] の index として採用する。
+
+    生成された spec は 1 手順を `test.step('S<n>')` で包んでいるため、
+    エラー文の文字列一致より確実に「どこで止まったか」が分かる。
+    範囲外の値は採用しない（捏造しない・呼び出し側が従来の推定に落ちる）。
+    """
+    match = _STEP_TITLE_RE.match(str(title or "").strip())
+    if not match:
+        return None
+    index = int(match.group(1))
+    return index if 0 <= index < len(steps) else None
 
 
 def _failed_step_index(steps: Sequence[Mapping[str, Any]], error: str) -> int | None:
@@ -797,7 +903,12 @@ def apply_run_result(
         status = _run_status(str(entry.get("status") or ""))
         error = str(entry.get("error") or "")
         steps = [dict(s) for s in test.get("steps") or []]
-        failed_index = _failed_step_index(steps, error) if status == "fail" else None
+        failed_index: int | None = None
+        if status == "fail":
+            # レポータが記録した S<n> を最優先。無いときだけエラー文の一致に落とす。
+            failed_index = _failed_step_from_title(steps, entry.get("failed_step"))
+            if failed_index is None:
+                failed_index = _failed_step_index(steps, error)
         issue_index: int | None = None
         if status == "fail":
             screen_elements = elements.get(str(test.get("screen") or "")) or {}
@@ -1517,8 +1628,12 @@ def update_test(domain: str, test_id: str, patch: Mapping[str, Any]) -> dict[str
             continue
         if key == "steps":
             updated["steps"] = _validated_steps(patch["steps"])
-        else:
-            updated[key] = str(patch[key])
+            continue
+        value = str(patch[key])
+        # 利用者が名前を変えたら印を残す（再同期が表の名前で上書きしないため）
+        if key == "name" and value != str(updated.get("name") or ""):
+            updated["name_edited"] = True
+        updated[key] = value
     if str(updated.get("status")) in {"pass", "fail", "flaky"}:
         updated["status"] = "fixed"
     updated["updated_at"] = _now()

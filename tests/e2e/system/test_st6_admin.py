@@ -97,7 +97,7 @@ class TestStAdminOperations:
             assert resp.ok, f"パスワード再設定失敗: {resp.status} {resp.text()}"
 
             # 既存セッションは失効している
-            page2.goto(f"{system_server}/systems")
+            page2.goto(f"{system_server}/dashboard")
             expect(page2).to_have_url(re.compile(r"/auth/login"))
             # 新パスワードでログインできる
             login(page2, system_server, replace(target, password=new_password))

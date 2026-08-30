@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>案03 Grid — テスト自動化</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FFFFFF;--bg2:#FAFAFA;--line:#EBEBEB;--line2:#DCDCDC;
+  --tx:#1A1A1A;--tx2:#666;--tx3:#9A9A9A;
+  --ok:#16A34A;--ng:#DC2626;--wa:#D97706;--ac:#1A1A1A;
+  --sans:'Inter','Noto Sans JP',system-ui,sans-serif;--mono:'JetBrains Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--sans);font-size:12.5px;line-height:1.45}
+.idea{position:fixed;top:0;left:0;right:0;height:26px;background:#1A1A1A;color:#9A9A9A;font-size:11px;display:flex;align-items:center;justify-content:center;gap:16px;z-index:9}
+.idea b{color:#fff}
+.app{position:absolute;top:26px;left:0;right:0;bottom:0;display:grid;grid-template-rows:44px 40px 1fr 32px;overflow:hidden}
+
+.top{display:flex;align-items:center;gap:18px;padding:0 18px;border-bottom:1px solid var(--line)}
+.top b{font-weight:600}
+.crumb{display:flex;gap:8px;align-items:center;color:var(--tx2)}
+.crumb .cur{color:var(--tx);font-weight:500}
+.sp{flex:1}
+kbd{font-family:var(--mono);font-size:10px;border:1px solid var(--line2);border-bottom-width:2px;border-radius:4px;padding:0 5px;color:var(--tx2);background:#fff}
+.btn{height:28px;padding:0 10px;border:1px solid var(--line2);border-radius:6px;background:#fff;font:inherit;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:6px;color:var(--tx)}
+.btn.pri{background:var(--ac);border-color:var(--ac);color:#fff}
+.btn.xs{height:24px;padding:0 8px;font-size:11.5px}
+
+.filt{display:flex;align-items:center;gap:6px;padding:0 18px;border-bottom:1px solid var(--line);background:var(--bg2)}
+.chip{height:26px;padding:0 10px;border:1px solid var(--line2);border-radius:6px;background:#fff;display:inline-flex;align-items:center;gap:6px;font-weight:500;color:var(--tx2)}
+.chip.on{background:var(--tx);color:#fff;border-color:var(--tx)}
+.chip i{width:7px;height:7px;border-radius:50%}
+.chip .n{font-family:var(--mono);font-size:11px;opacity:.8}
+.filt .sep{width:1px;height:18px;background:var(--line2);margin:0 6px}
+.filt .sort{margin-left:auto;color:var(--tx2);display:flex;gap:10px;align-items:center}
+
+.tbl{overflow:auto;min-height:0}
+table{width:100%;border-collapse:collapse;table-layout:fixed}
+thead th{position:sticky;top:0;background:#fff;text-align:left;font-weight:500;color:var(--tx3);font-size:11px;padding:0 10px;height:30px;border-bottom:1px solid var(--line);letter-spacing:.02em}
+tbody td{height:36px;padding:0 10px;border-bottom:1px solid var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:middle}
+tbody tr:hover td{background:var(--bg2)}
+tbody tr.sel td{background:#F3F3F3}
+tbody tr.grp td{height:30px;background:#fff;color:var(--tx2);font-weight:600;font-size:11px;letter-spacing:.04em;border-bottom:1px solid var(--line)}
+tbody tr.grp td span{font-weight:400;font-family:var(--mono);margin-left:8px;color:var(--tx3)}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;vertical-align:-1px}
+.d-ok{background:var(--ok)}.d-ng{background:var(--ng)}.d-wa{background:var(--wa)}.d-mute{background:var(--line2)}
+td.id{font-family:var(--mono);font-size:11px;color:var(--tx3)}
+td.nm{font-weight:500}
+.hm{display:inline-flex;gap:2px}
+.hm i{width:8px;height:14px;border-radius:2px;background:var(--ok);opacity:.85}
+.hm i.ng{background:var(--ng)}.hm i.wa{background:var(--wa)}.hm i.na{background:var(--line)}
+td.num{font-family:var(--mono);font-size:11px;color:var(--tx2);text-align:right}
+.lv{font-size:10.5px;padding:1px 6px;border-radius:4px;font-weight:600}
+.lv-hi{background:#DCFCE7;color:#166534}.lv-mid{background:#FEF3C7;color:#92400E}.lv-lo{background:#FEE2E2;color:#991B1B}
+td.act{text-align:right}
+td.act .btn{opacity:0}
+tr:hover td.act .btn,tr.sel td.act .btn{opacity:1}
+
+/* expand */
+tr.ex td{height:auto;padding:0;background:#FAFAFA;white-space:normal;border-bottom:1px solid var(--line2)}
+.ex-in{display:grid;grid-template-columns:1.2fr 1fr 1fr auto;gap:0;padding:14px 18px 14px 40px}
+.ex-in>div{padding:0 18px 0 0;border-right:1px solid var(--line);margin-right:18px}
+.ex-in>div:last-child{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;justify-content:center}
+.ex-in h6{font-size:10.5px;letter-spacing:.06em;color:var(--tx3);margin-bottom:6px;font-weight:600}
+.ex-in p{color:var(--tx2);font-size:12px;line-height:1.55}
+.ex-in code{font-family:var(--mono);font-size:11px;background:#fff;border:1px solid var(--line);padding:1px 5px;border-radius:4px;color:var(--tx)}
+.ex-in .ba{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;margin-top:6px;font-family:var(--mono);font-size:11px}
+.ex-in .ba .o{background:#FEE2E2;color:#991B1B;padding:4px 7px;border-radius:4px;text-decoration:line-through}
+.ex-in .ba .nw{background:#DCFCE7;color:#166534;padding:4px 7px;border-radius:4px}
+
+.foot{display:flex;align-items:center;gap:16px;padding:0 18px;border-top:1px solid var(--line);font-size:11px;color:var(--tx2);background:var(--bg2)}
+.foot .sel{color:var(--tx);font-weight:500}
+.foot .k{display:flex;gap:10px;margin-left:auto}
+</style>
+</head>
+<body>
+<div class="idea"><b>案 03 — Grid</b> テストは「一覧」である。数百件を1画面で捌く。キーボード主導・白黒・行を開けばその場で直せる</div>
+<div class="app">
+  <div class="top">
+    <b>WebSpec2Doc</b>
+    <div class="crumb">DemoMart <span>›</span> <span class="cur">テスト</span></div>
+    <div class="sp"></div>
+    <span style="color:var(--tx2)">直近の実行 <b style="font-weight:500;color:var(--tx)">#418</b> · 3分前 · 109 / 116</span>
+    <button class="btn">検索 <kbd>⌘K</kbd></button>
+    <button class="btn">失敗 7 件を再実行</button>
+    <button class="btn pri">▶ 実行</button>
+  </div>
+
+  <div class="filt">
+    <span class="chip on">すべて <span class="n">116</span></span>
+    <span class="chip"><i class="dot d-ng"></i>失敗 <span class="n">7</span></span>
+    <span class="chip"><i class="dot d-wa"></i>不安定 <span class="n">2</span></span>
+    <span class="chip"><i class="dot d-ok"></i>成功 <span class="n">107</span></span>
+    <span class="sep"></span>
+    <span class="chip">画面 ▾</span><span class="chip">ロケータ安定度 ▾</span><span class="chip">変更の影響 <span class="n">4</span></span>
+    <div class="sort">グループ: 画面 ▾ <span>·</span> 並び: 状態 ▾</div>
+  </div>
+
+  <div class="tbl">
+    <table>
+      <colgroup><col style="width:34px"><col style="width:76px"><col><col style="width:130px"><col style="width:118px"><col style="width:70px"><col style="width:96px"><col style="width:120px"><col style="width:140px"></colgroup>
+      <thead><tr><th></th><th>ID</th><th>テスト</th><th>技法</th><th>直近 10 回</th><th style="text-align:right">所要</th><th>ロケータ</th><th>最終実行</th><th></th></tr></thead>
+      <tbody>
+        <tr class="grp"><td colspan="9">P004 お支払い・決済 <span>31 · 3 fail · 1 flaky</span></td></tr>
+        <tr class="sel">
+          <td><i class="dot d-ng"></i></td><td class="id">PW-0043</td><td class="nm">必須項目が空だと送信できない</td><td>同値分割</td>
+          <td><span class="hm"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i class="ng"></i><i class="ng"></i><i class="ng"></i></span></td>
+          <td class="num">15.0s</td><td><span class="lv lv-mid">中 name</span></td><td class="num" style="text-align:left">23:14 · 3回連続</td>
+          <td class="act"><button class="btn xs">Trace</button> <button class="btn xs pri">修正</button></td>
+        </tr>
+        <tr class="ex"><td colspan="9"><div class="ex-in">
+          <div><h6>観測した事実</h6><p>ステップ 3「注文を確定する」を押す で要素 0 件。15.0s でタイムアウト。同ページに類似要素 1 件。</p><p style="margin-top:4px"><code>button[name="submit_order"]</code></p></div>
+          <div><h6>判断 · 根拠</h6><p>ボタンの name が変わった。8/29 クロールで同位置・同ラベルを検出（一致 0.94）。</p><div class="ba"><span class="o">name="submit_order"</span><span>→</span><span class="nw">[data-testid="place-order"]</span></div></div>
+          <div><h6>未検証</h6><p>意図した仕様変更か不具合かは判定していない。決済処理自体の成否は本テストの範囲外。</p></div>
+          <div><button class="btn pri">修正案を適用して再実行</button><button class="btn">同じ原因の 4 件にまとめて適用</button><button class="btn">失敗時のスクショ</button></div>
+        </div></td></tr>
+        <tr>
+          <td><i class="dot d-ng"></i></td><td class="id">PW-0041</td><td class="nm">カード番号 16 桁で決済できる</td><td>境界値</td>
+          <td><span class="hm"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i class="ng"></i><i class="ng"></i><i class="ng"></i></span></td>
+          <td class="num">15.2s</td><td><span class="lv lv-mid">中 name</span></td><td class="num" style="text-align:left">23:14 · 同一原因</td>
+          <td class="act"><button class="btn xs">Trace</button> <button class="btn xs pri">修正</button></td>
+        </tr>
+        <tr>
+          <td><i class="dot d-ng"></i></td><td class="id">PW-0045</td><td class="nm">二重送信されない</td><td>状態遷移</td>
+          <td><span class="hm"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i class="ng"></i><i class="ng"></i><i class="ng"></i></span></td>
+          <td class="num">15.1s</td><td><span class="lv lv-mid">中 name</span></td><td class="num" style="text-align:left">23:14 · 同一原因</td>
+          <td class="act"><button class="btn xs">Trace</button> <button class="btn xs pri">修正</button></td>
+        </tr>
+        <tr>
+          <td><i class="dot d-wa"></i></td><td class="id">PW-0044</td><td class="nm">合計金額が正しく表示される</td><td>デシジョン</td>
+          <td><span class="hm"><i></i><i class="ng"></i><i></i><i></i><i class="ng"></i><i></i><i></i><i class="wa"></i><i></i><i></i></span></td>
+          <td class="num">2.3s</td><td><span class="lv lv-lo">低 CSS</span></td><td class="num" style="text-align:left">23:14 · 再試行で回復</td>
+          <td class="act"><button class="btn xs">Trace</button> <button class="btn xs">待機を修正</button></td>
+        </tr>
+        <tr>
+          <td><i class="dot d-ok"></i></td><td class="id">PW-0042</td><td class="nm">カード番号 15 桁でエラーになる</td><td>境界値</td>
+          <td><span class="hm"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></td>
+          <td class="num">1.8s</td><td><span class="lv lv-hi">高 testid</span></td><td class="num" style="text-align:left">23:14</td><td class="act"><button class="btn xs">Trace</button></td>
+        </tr>
+        <tr>
+          <td><i class="dot d-ok"></i></td><td class="id">PW-0046</td><td class="nm">有効期限が過去だとエラー</td><td>境界値</td>
+          <td><span class="hm"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></td>
+          <td class="num">1.6s</td><td><span class="lv lv-hi">高 testid</span></td><td class="num" style="text-align:left">23:14</td><td class="act"><button class="btn xs">Trace</button></td>
+        </tr>
+        <tr class="grp"><td colspan="9">P006 ログイン <span>21 · 1 fail</span></td></tr>
+        <tr>
+          <td><i class="dot d-ng"></i></td><td class="id">PW-0091</td><td class="nm">ログイン後にマイページへ遷移する</td><td>状態遷移</td>
+          <td><span class="hm"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i class="ng"></i></span></td>
+          <td class="num">2.9s</td><td><span class="lv lv-hi">高 testid</span></td><td class="num" style="text-align:left">23:14 · 初回</td>
+          <td class="act"><button class="btn xs">Trace</button> <button class="btn xs">期待値を更新</button></td>
+        </tr>
+        <tr>
+          <td><i class="dot d-ok"></i></td><td class="id">PW-0088</td><td class="nm">正しい資格情報でログインできる</td><td>同値分割</td>
+          <td><span class="hm"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></td>
+          <td class="num">2.1s</td><td><span class="lv lv-hi">高 testid</span></td><td class="num" style="text-align:left">23:14</td><td class="act"><button class="btn xs">Trace</button></td>
+        </tr>
+        <tr>
+          <td><i class="dot d-ok"></i></td><td class="id">PW-0089</td><td class="nm">誤ったパスワードで拒否される</td><td>同値分割</td>
+          <td><span class="hm"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></td>
+          <td class="num">1.9s</td><td><span class="lv lv-hi">高 testid</span></td><td class="num" style="text-align:left">23:14</td><td class="act"><button class="btn xs">Trace</button></td>
+        </tr>
+        <tr class="grp"><td colspan="9">P005 お問い合わせ <span>28 · 2 fail</span></td></tr>
+        <tr>
+          <td><i class="dot d-ng"></i></td><td class="id">PW-0072</td><td class="nm">送信後に受付メッセージが出る</td><td>同値分割</td>
+          <td><span class="hm"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i class="ng"></i><i class="ng"></i></span></td>
+          <td class="num">3.2s</td><td><span class="lv lv-hi">高 role</span></td><td class="num" style="text-align:left">23:14 · 応答遅延</td>
+          <td class="act"><button class="btn xs">Trace</button> <button class="btn xs">待機を延長</button></td>
+        </tr>
+        <tr>
+          <td><i class="dot d-ok"></i></td><td class="id">PW-0073</td><td class="nm">メール形式が不正だとエラー</td><td>同値分割</td>
+          <td><span class="hm"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></td>
+          <td class="num">1.4s</td><td><span class="lv lv-hi">高 testid</span></td><td class="num" style="text-align:left">23:14</td><td class="act"><button class="btn xs">Trace</button></td>
+        </tr>
+        <tr class="grp"><td colspan="9">P007 マイページ <span>0 · 未作成</span></td></tr>
+        <tr><td><i class="dot d-mute"></i></td><td class="id">—</td><td class="nm" style="color:var(--tx3);font-weight:400">この画面のテストはまだありません</td><td colspan="5"></td><td class="act"><button class="btn xs pri" style="opacity:1">地図から 5 件を生成</button></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="foot">
+    <span class="sel">1 件選択</span><span>PW-0043</span>
+    <div class="k"><span><kbd>↑</kbd><kbd>↓</kbd> 移動</span><span><kbd>Enter</kbd> 開く</span><span><kbd>R</kbd> 実行</span><span><kbd>F</kbd> 修正</span><span><kbd>T</kbd> Trace</span></div>
+  </div>
+</div>
+</body>
+</html>

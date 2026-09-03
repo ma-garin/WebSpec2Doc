@@ -9,6 +9,22 @@ import re
 import sys
 from pathlib import Path
 
+# 図版キー → 書き出した PNG のファイル名（記事中の登場順）
+FIGURE_FILES = {
+    "attrs": "01_属性からテスト条件",
+    "pipeline": "02_パイプライン全体",
+    "coverage": "03_確認できる範囲",
+    "guard": "04_データと指示の分離",
+    "promptmap": "05_プロンプトの依存関係",
+    "handson": "06_30分ハンズオン",
+    "bvaline": "07_境界値の数直線",
+    "dt": "08_デシジョンテーブル",
+    "pairwise": "09_全数とペアワイズ",
+    "switch": "10_0switchと1switch",
+    "technique": "11_技法の選択",
+    "ladder": "12_画面種別の判定",
+}
+
 SRC = Path("docs/prompt-library/url-to-testdesign-prompts.md")
 OUT = Path(sys.argv[1])
 
@@ -58,10 +74,14 @@ def convert(md: str) -> str:
             i += 1
             continue
         if not in_code:
-            fig = re.match(r"^\[\[FIG:[a-z]+\|(.+?)\]\]$", line.strip())
+            fig = re.match(r"^\[\[FIG:([a-z]+)\|(.+?)\]\]$", line.strip())
             if fig:
-                # note 版は図を持てないため、図が示していた内容を1行で残す
-                out.append(f"（図: {fig.group(1)}）")
+                # note は画像を個別にアップロードするため、
+                # 挿入位置と対応するファイル名を本文に残す
+                key, caption = fig.group(1), fig.group(2)
+                name = FIGURE_FILES.get(key, key)
+                out.append(f"［ここに画像を挿入: figures/{name}.png］")
+                out.append(f"図: {caption}")
                 i += 1
                 continue
         if (
@@ -87,6 +107,15 @@ def convert(md: str) -> str:
 
 
 HEADER = """※ この記事は社内メンバー向けの限定公開です。外部への転載はしないでください。
+
+---
+【note へ貼るときの手順】
+1. 本文をこのままコピーして note の本文へ貼る
+2. 「［ここに画像を挿入: figures/XX_….png］」の行を、対応する画像に差し替える
+   （画像は figures/ フォルダに 01〜12 の連番で入っています）
+3. コードブロック（プロンプト本体）は note の「コード」ブロックに入れると崩れません
+4. 見出しの「## 」「### 」は note の見出し設定に置き換えてください
+---
 
 """
 

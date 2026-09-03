@@ -293,7 +293,7 @@ FIGURES["pairwise"] = f'''<svg viewBox="0 0 760 270" role="img"
   f'<circle cx="{368 + (i % 9) * 34}" cy="72" r="7" fill="var(--accent)" fill-opacity=".9"/>'
   for i in range(9)
 )}
-<text x="356" y="122" font-size="11.5" fill="currentColor" fill-opacity=".7">3因子が7個に増えると 3⁷ = 2187 件 → ペアワイズなら十数件</text>
+<text x="356" y="122" font-size="11.5" fill="currentColor" fill-opacity=".7">因子が7個に増えると 3⁷ = 2187 件 → ペアワイズなら十数件</text>
 <text x="356" y="146" font-size="11.5" fill="currentColor" fill-opacity=".7">因子は8個・ケースは20件で打ち切る（打ち切ったら明記する）</text>
 <rect x="356" y="166" width="396" height="46" rx="3" fill="none" stroke="var(--signal)" stroke-width="1.5"/>
 <text x="370" y="186" font-size="11.5" fill="var(--signal)">打ち切りが起きた表は「2-way 完全被覆に達していない」</text>

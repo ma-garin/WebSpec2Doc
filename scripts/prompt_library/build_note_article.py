@@ -57,6 +57,13 @@ def convert(md: str) -> str:
             out.append(line)
             i += 1
             continue
+        if not in_code:
+            fig = re.match(r"^\[\[FIG:[a-z]+\|(.+?)\]\]$", line.strip())
+            if fig:
+                # note 版は図を持てないため、図が示していた内容を1行で残す
+                out.append(f"（図: {fig.group(1)}）")
+                i += 1
+                continue
         if (
             not in_code
             and line.startswith("|")

@@ -7,12 +7,18 @@ ChatGPT / Claude のチャットで同等の成果物を得るためのプロン
 |---|---|
 | `url-to-testdesign-prompts.md` | 原本。GitHub・社内 wiki 用（表組みそのまま） |
 | `note-article.md` | note 限定公開記事への貼り付け用（表を箇条書きへ変換済み） |
+| `note-article.html` | 図解12点入りの完成版 HTML（生成物。配布・閲覧用） |
 
 `note-article.md` は原本から生成する。原本を直したら次を実行して再生成する。
 
 ```bash
 python3 scripts/prompt_library/build_note_article.py docs/prompt-library/note-article.md
+python3 scripts/prompt_library/build_html_article.py docs/prompt-library/note-article.html
 ```
+
+図版（インライン SVG）は `scripts/prompt_library/figures.py`、ページの外枠は
+`scripts/prompt_library/article_template.html`。本文中の `[[FIG:キー|キャプション]]` が
+図の差し込み位置で、HTML 版は SVG に、note 版は「（図: キャプション）」の1行になる。
 
 ## 内容の出所
 

@@ -10,9 +10,14 @@
 
 {% block content %}
 <div class="tsel-stage">
+  {% if memberships and memberships|length == 1 %}
+  <h1>テナントを開く</h1>
+  <p class="tsel-lead">所属しているテナント（組織・チーム単位の作業スペース）は 1 件です。内容を確認して開いてください。</p>
+  {% else %}
   <p class="tsel-kicker">STEP 1 / 2</p>
   <h1>どのテナントで作業しますか？</h1>
-  <p class="tsel-lead">テナントごとに、生成したドキュメント・AutoRun の実行履歴・観点セットは分離されています。</p>
+  <p class="tsel-lead">テナント（組織・チーム単位の作業スペース）ごとに、生成したドキュメント・AutoRun の実行履歴・観点セットは分離されています。</p>
+  {% endif %}
 
   {% if error %}
   <div class="auth-error" role="alert">
@@ -22,6 +27,12 @@
   {% endif %}
 
   {% if memberships %}
+  {% if memberships|length > 6 %}
+  <div class="auth-field tsel-filter">
+    <label for="tsel-filter">テナントを検索</label>
+    <input type="search" id="tsel-filter" placeholder="テナント名・スラッグで検索" autocomplete="off">
+  </div>
+  {% endif %}
   <div class="tsel-grid">
     {% for membership in memberships %}
     <form method="post" action="/auth/tenant">
@@ -65,4 +76,23 @@
   </div>
   {% endif %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+{% if memberships and memberships|length > 6 %}
+<script>
+(function () {
+  var filterInput = document.getElementById('tsel-filter');
+  if (!filterInput) { return; }
+  var cards = Array.prototype.slice.call(document.querySelectorAll('.tsel-grid > form'));
+  filterInput.addEventListener('input', function () {
+    var q = filterInput.value.trim().toLowerCase();
+    cards.forEach(function (form) {
+      var text = form.textContent.toLowerCase();
+      form.style.display = (!q || text.indexOf(q) !== -1) ? '' : 'none';
+    });
+  });
+})();
+</script>
+{% endif %}
 {% endblock %}

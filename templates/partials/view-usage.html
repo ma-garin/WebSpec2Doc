@@ -2,9 +2,6 @@
 <section class="view" id="view-usage">
   <style>
     /* 色はすべて tokens 参照でライト/ダーク自動追従（生 hex を持たない） */
-    .usage-header { margin-bottom: 16px; }
-    .usage-header h2 { margin: 0 0 4px; font-size: 18px; }
-    .usage-sub { font-size: 13px; color: var(--text-muted); }
     .usage-cards { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
     .usage-card {
       flex: 1; min-width: 160px; background: var(--surface);
@@ -19,31 +16,31 @@
     .usage-coef code { background: var(--surface-subtle); padding: 1px 5px; border-radius: var(--radius-sm); }
   </style>
 
-  <div class="usage-header">
+  <div class="wizard-page-header">
     <h2>ROI ダッシュボード（利用実績・削減工数）</h2>
-    <div class="usage-sub">
+    <p>
       本ツールの累計利用実績と、手作業なら要した工数の推定値です。採用後の効果測定レポートになります。
-    </div>
+    </p>
   </div>
 
   <div class="usage-cards">
-    <div class="usage-card"><div class="num" id="usage-crawls">–</div><div class="label">解析回数</div></div>
-    <div class="usage-card"><div class="num" id="usage-screens">–</div><div class="label">生成した画面仕様</div></div>
-    <div class="usage-card"><div class="num" id="usage-conditions">–</div><div class="label">導出テスト条件</div></div>
-    <div class="usage-card"><div class="num" id="usage-documents">–</div><div class="label">生成文書</div></div>
+    <div class="usage-card"><div class="num" id="usage-crawls">読み込み中…</div><div class="label">解析回数</div></div>
+    <div class="usage-card"><div class="num" id="usage-screens">読み込み中…</div><div class="label">生成した画面仕様</div></div>
+    <div class="usage-card"><div class="num" id="usage-conditions">読み込み中…</div><div class="label">導出テスト条件</div></div>
+    <div class="usage-card"><div class="num" id="usage-documents">読み込み中…</div><div class="label">生成文書</div></div>
   </div>
 
   <div class="usage-cards">
-    <div class="usage-card"><div class="num" id="usage-compare-screens">–</div><div class="label">現新比較・UX 対象画面</div></div>
-    <div class="usage-card"><div class="num" id="usage-findings">–</div><div class="label">比較/UX 検出指摘</div></div>
+    <div class="usage-card"><div class="num" id="usage-compare-screens">読み込み中…</div><div class="label">現新比較・UX 対象画面</div></div>
+    <div class="usage-card"><div class="num" id="usage-findings">読み込み中…</div><div class="label">比較/UX 検出指摘</div></div>
   </div>
 
   <div class="usage-cards">
     <div class="usage-card highlight">
-      <div class="num" id="usage-hours">–</div><div class="label">推定削減工数（時間）</div>
+      <div class="num" id="usage-hours">読み込み中…</div><div class="label">推定削減工数（時間）</div>
     </div>
     <div class="usage-card highlight">
-      <div class="num" id="usage-yen">–</div><div class="label">推定削減額（円）</div>
+      <div class="num" id="usage-yen">読み込み中…</div><div class="label">推定削減額（円）</div>
     </div>
   </div>
 
@@ -53,6 +50,14 @@
   <script>
     (function () {
       const fmt = (n) => Number(n).toLocaleString('ja-JP');
+      const cardIds = [
+        'usage-crawls', 'usage-screens', 'usage-conditions', 'usage-documents',
+        'usage-compare-screens', 'usage-findings', 'usage-hours', 'usage-yen',
+      ];
+      const setCards = (text) => {
+        cardIds.forEach((id) => { document.getElementById(id).textContent = text; });
+      };
+
       fetch('/api/usage')
         .then((r) => r.json())
         .then((d) => {
@@ -64,7 +69,18 @@
           document.getElementById('usage-findings').textContent = fmt(d.total_findings || 0);
           document.getElementById('usage-hours').textContent = fmt(d.estimated_saved_hours || 0);
           document.getElementById('usage-yen').textContent = '¥' + fmt(d.estimated_saved_yen || 0);
-          document.getElementById('usage-disclaimer').textContent = d.disclaimer || '';
+
+          const hasAnyRecord = Boolean(
+            d.total_crawls || d.total_screens || d.total_test_conditions || d.total_documents
+            || d.total_compare_screens || d.total_findings
+          );
+          if (hasAnyRecord) {
+            document.getElementById('usage-disclaimer').textContent = d.disclaimer || '';
+          } else {
+            document.getElementById('usage-disclaimer').textContent = d.disclaimer
+              || 'まだ利用実績がありません。URLを解析して画面仕様やテスト条件を生成すると、ここに実績が記録されます。';
+          }
+
           const c = d.coefficients || {};
           document.getElementById('usage-coef').innerHTML =
             '推定係数: 画面仕様1枚=<code>' + (c.minutes_per_screen ?? '-') + '分</code>' +
@@ -75,7 +91,9 @@
             ' / 時間単価=<code>¥' + (c.hourly_rate_yen ?? '-') + '</code>';
         })
         .catch(() => {
-          document.getElementById('usage-disclaimer').textContent = '利用実績を取得できませんでした。';
+          setCards('—');
+          document.getElementById('usage-disclaimer').textContent =
+            '利用実績を取得できませんでした。時間をおいてページを再読み込みしてください。解消しない場合は管理者にお問い合わせください。';
         });
     })();
   </script>

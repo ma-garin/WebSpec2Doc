@@ -1,0 +1,348 @@
+/* System 05 オートヒーリング。ta2.css / ws.css のトークン体系を土台に、system-select.css と同じ質感で組む。
+   ここで :root は再定義しない。System 05 の識別色（#B45309 / #FEF3C7 / #92400E）は変数を増やさず
+   各規則にリテラル値で置く（system-select.css の System 02/03/04 と同じやり方）。 */
+
+.hl-body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--tx);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* topbar は templates/partials/topbar.html（.app-topbar）に統一。ここに独自定義は置かない。 */
+
+/* ---- エラーバナー ---- */
+.hl-banner {
+  margin: 12px 32px 0;
+  padding: 10px 16px;
+  border: 1px solid var(--er);
+  background: #FEF2F2;
+  color: var(--er);
+  border-radius: 8px;
+  font-size: 12.5px;
+}
+
+/* ---- 3 ペイン ----
+   body を flex column にし、hl-stage を flex:1 で残り高さいっぱいに広げる。
+   topbar の実高さを固定値で仮定せずに「calc(100vh - topbar高さ)」と等価な結果を得るための構成。
+   各ペインは min-height:0 + overflow-y:auto で個別スクロールにする。 */
+.hl-stage {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr) 340px;
+  gap: 16px;
+  padding: 16px 32px 24px;
+  /* start にすると 3 ペインが中身の高さで止まり、下に大きな空白が残って
+     「置き場所が決まっていない画面」に見える。stretch で 3 本の柱として立てる。 */
+  align-items: stretch;
+}
+
+.hl-rail, .hl-main, .hl-side {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* 左右のペインは枠のあるパネルにする。中央だけがカードで左右が地の色のままだと、
+   何がひとまとまりなのかが読めず、要素が宙に浮いて見える（実画面で確認）。 */
+.hl-rail, .hl-side {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--sf);
+  box-shadow: 0 1px 3px rgba(16,24,40,.06);
+  padding: 16px;
+}
+
+/* ---- 左レール ---- */
+.hl-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.hl-rail-head { font-size: 13px; font-weight: 800; margin: 4px 0 0; color: var(--tx); }
+
+.hl-projects { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+
+.hl-project-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 12px 12px 14px;
+  border: 1px solid var(--line);
+  border-left: 3px solid transparent;
+  border-radius: 8px;
+  background: var(--sf);
+  box-shadow: 0 1px 3px rgba(16,24,40,.06);
+  cursor: pointer;
+  text-align: left;
+}
+.hl-project-card:hover { border-color: #B45309; }
+.hl-project-card.is-selected { border-left-color: #B45309; border-color: #B45309; background: #FEF3C7; }
+
+.hl-pc-name { font-size: 13px; font-weight: 700; }
+.hl-pc-path { font-size: 11px; color: var(--tx2); max-width: 100%; }
+.hl-pc-status { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--tx2); }
+.hl-pc-last-run { font-size: 11px; color: var(--tx3); }
+
+.hl-dot { width: 8px; height: 8px; border-radius: 999px; flex: none; display: inline-block; }
+.hl-dot.is-ok { background: var(--ok); }
+.hl-dot.is-bad { background: var(--er); }
+.hl-dot.is-unknown { background: var(--tx3); }
+
+.hl-add-btn {
+  margin-top: 4px;
+  padding: 9px 12px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--tx2);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.hl-add-btn:hover { border-color: #B45309; color: #92400E; }
+
+/* ---- 空状態 ---- */
+.hl-empty, .hl-empty-sm {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--sf);
+  color: var(--tx2);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+.hl-empty { padding: 32px 24px; text-align: center; }
+.hl-empty-sm { padding: 14px 16px; margin-bottom: 4px; }
+.hl-empty p, .hl-empty-sm p { margin: 4px 0; }
+
+/* ---- 汎用 ---- */
+.hl-mono { font-family: var(--mono); }
+.hl-ellipsis { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+
+.hl-btn-primary, .hl-btn-sub, .hl-btn-danger {
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 9px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.hl-btn-primary { background: #B45309; color: #fff; }
+.hl-btn-primary:hover { background: #92400E; }
+.hl-btn-sub { background: var(--sf); color: var(--tx); border-color: var(--line); }
+.hl-btn-sub:hover { border-color: #B45309; color: #92400E; }
+.hl-btn-danger { background: #FEE4E2; color: #B42318; border-color: #FDA29B; }
+.hl-btn-danger:hover { background: #B42318; color: #fff; }
+
+.hl-btn-primary:disabled, .hl-btn-sub:disabled, .hl-btn-danger:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+  background: var(--bg);
+  color: var(--tx3);
+  border-color: var(--line);
+}
+
+/* ---- 中央: 接続フォーム ---- */
+.hl-form {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--sf);
+  box-shadow: 0 1px 3px rgba(16,24,40,.06);
+  padding: 24px;
+}
+.hl-form-title { font-size: 16px; font-weight: 800; margin: 0 0 12px; }
+.hl-allowed-roots-lead { font-size: 12px; color: var(--tx2); margin: 0 0 4px; }
+.hl-allowed-roots-list {
+  list-style: none; margin: 0 0 16px; padding: 10px 12px;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--bg);
+  font-size: 11.5px; color: var(--tx2); display: flex; flex-direction: column; gap: 3px;
+}
+
+.hl-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
+.hl-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 700; color: var(--tx2); }
+.hl-field input, .hl-field select {
+  font: inherit; font-size: 13px; font-weight: 400; color: var(--tx);
+  padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg);
+}
+.hl-field input:focus, .hl-field select:focus, textarea:focus { outline: 2px solid #B45309; outline-offset: 1px; }
+.hl-form-note { font-size: 11px; font-weight: 400; color: var(--tx3); }
+.hl-form-actions { display: flex; gap: 10px; margin-top: 20px; }
+
+/* ---- 中央: プロジェクト詳細 ---- */
+.hl-project-view { display: flex; flex-direction: column; gap: 16px; }
+
+.hl-project-header {
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+  padding: 16px 20px; border: 1px solid var(--line); border-radius: 12px;
+  background: var(--sf); box-shadow: 0 1px 3px rgba(16,24,40,.06);
+}
+.hl-project-header-text { min-width: 0; }
+.hl-project-header h2 { font-size: 16px; margin: 0 0 6px; }
+.hl-project-meta { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11.5px; color: var(--tx2); max-width: 100%; }
+.hl-project-meta span { max-width: 260px; }
+
+.hl-checks {
+  list-style: none; margin: 0; padding: 0;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--sf); overflow: hidden;
+}
+.hl-check-row { display: flex; align-items: baseline; gap: 10px; padding: 10px 14px; font-size: 12.5px; border-bottom: 1px solid var(--line); }
+.hl-check-row:last-child { border-bottom: none; }
+.hl-check-icon { flex: none; font-weight: 800; width: 16px; text-align: center; }
+.hl-check-icon.is-ok { color: var(--ok); }
+.hl-check-icon.is-bad { color: var(--er); }
+.hl-check-label { flex: none; font-weight: 700; width: 96px; }
+.hl-check-detail { color: var(--tx2); overflow-wrap: anywhere; }
+
+.hl-start-block {
+  border: 1px solid var(--line); border-radius: 12px; background: var(--sf);
+  box-shadow: 0 1px 3px rgba(16,24,40,.06); padding: 16px 20px; display: flex; flex-direction: column; gap: 8px;
+}
+.hl-start-block label { font-size: 12px; font-weight: 700; color: var(--tx2); }
+.hl-start-block textarea {
+  font: inherit; font-size: 13px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--bg); color: var(--tx); resize: vertical;
+}
+.hl-start-block .hl-btn-primary { align-self: flex-start; }
+.hl-hint { margin: 0; font-size: 11.5px; color: var(--tx3); }
+
+/* ---- ループ表示 ---- */
+.hl-loop { display: flex; flex-direction: column; gap: 16px; }
+.hl-iter {
+  border: 1px solid var(--line); border-radius: 12px; background: var(--sf);
+  box-shadow: 0 1px 3px rgba(16,24,40,.06); padding: 16px 20px; display: flex; flex-direction: column; gap: 12px;
+}
+.hl-iter-head { font-size: 13px; font-weight: 800; margin: 0; }
+
+.hl-stepper { display: flex; align-items: center; gap: 4px; }
+.hl-step {
+  flex: 1; display: flex; align-items: center; gap: 6px; padding: 6px 10px;
+  border: 1px solid var(--line); border-radius: 999px; font-size: 11px; font-weight: 700; color: var(--tx3);
+}
+.hl-step .hl-step-dot { width: 7px; height: 7px; border-radius: 999px; background: var(--line); flex: none; }
+.hl-step.is-done { color: var(--ok); border-color: var(--ok); }
+.hl-step.is-done .hl-step-dot { background: var(--ok); }
+.hl-step.is-current { color: #92400E; border-color: #B45309; background: #FEF3C7; }
+.hl-step.is-current .hl-step-dot { background: #B45309; }
+.hl-step.is-pending { color: var(--tx3); border-color: var(--line); }
+
+.hl-verify-result { font-size: 12.5px; color: var(--tx2); display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.hl-verify-result b { color: var(--tx); }
+
+table.hl-defects-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+table.hl-defects-table th, table.hl-defects-table td {
+  text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top;
+}
+table.hl-defects-table th { color: var(--tx3); font-weight: 700; font-size: 11px; }
+table.hl-defects-table td.hl-td-file, table.hl-defects-table td.hl-td-test { max-width: 220px; }
+
+.hl-badge-sev { display: inline-block; font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 999px; }
+.hl-badge-sev-critical { background: #FEE4E2; color: #B42318; }
+.hl-badge-sev-high { background: #FEF0C7; color: #B54708; }
+.hl-badge-sev-medium { background: #D1E9FF; color: #175CD3; }
+.hl-badge-sev-low { background: #F2F4F7; color: #475467; }
+
+.hl-proposals { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.hl-proposal-row { display: flex; align-items: center; gap: 10px; font-size: 12.5px; flex-wrap: wrap; }
+.hl-proposal-agent { font-weight: 700; width: 80px; flex: none; }
+.hl-proposal-summary { flex: 1; min-width: 160px; color: var(--tx2); }
+.hl-proposal-files { color: var(--tx3); font-size: 11.5px; }
+.hl-diff-toggle { background: none; border: none; color: #B45309; font-weight: 700; font-size: 12px; cursor: pointer; padding: 2px 4px; }
+.hl-diff-toggle:hover { text-decoration: underline; }
+
+.hl-badge-proposal { font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 999px; }
+.hl-badge-proposal-proposed { background: #D1E9FF; color: #175CD3; }
+.hl-badge-proposal-applied { background: #DCF5EE; color: #0A7359; }
+.hl-badge-proposal-failed { background: #FEE4E2; color: #B42318; }
+.hl-badge-proposal-skipped { background: #F2F4F7; color: #475467; }
+.hl-badge-proposal-timeout { background: #FEF0C7; color: #B54708; }
+
+.hl-diff {
+  margin: 6px 0 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--bg); font-family: var(--mono); font-size: 11px; line-height: 1.5;
+  overflow-x: auto; white-space: pre;
+}
+.hl-diff-line { display: block; }
+.hl-diff-add { color: var(--ok); background: #DCF5EE; display: block; }
+.hl-diff-del { color: var(--er); background: #FEE4E2; display: block; }
+.hl-diff-ctx { color: var(--tx2); display: block; }
+
+/* ---- 実行ログ（常時表示・折りたたみ禁止） ---- */
+.hl-log-block { display: flex; flex-direction: column; gap: 6px; }
+.hl-log-block h3 { font-size: 12.5px; margin: 0; color: var(--tx2); }
+.hl-log {
+  height: 200px; overflow: auto; padding: 10px 12px;
+  border: 1px solid var(--line); border-radius: 8px; background: #1F2937;
+  font-family: var(--mono); font-size: 11px; color: #E5E7EB; line-height: 1.6;
+}
+.hl-log-line { white-space: pre-wrap; word-break: break-all; }
+.hl-log-placeholder { color: #9CA3AF; font-style: normal; }
+
+/* ---- 右ペイン ---- */
+.hl-side { display: flex; flex-direction: column; gap: 16px; }
+/* 右ペイン自体がパネルになったので、中の PR ブロックは二重枠にしない。 */
+.hl-side .hl-pr-block { border: none; box-shadow: none; padding: 0; }
+.hl-side .hl-pr-block:not(:empty) { border-top: 1px solid var(--line); padding-top: 14px; }
+
+.hl-status-badge {
+  align-self: flex-start; font-size: 12.5px; font-weight: 800; padding: 8px 16px; border-radius: 999px;
+  background: var(--bg); color: var(--tx2); border: 1px solid var(--line);
+}
+.hl-status-badge.is-running { background: #FEF3C7; color: #92400E; border-color: #B45309; }
+.hl-status-badge.is-done { background: #DCF5EE; color: #0A7359; border-color: var(--ok); }
+.hl-status-badge.is-failed { background: #FEE4E2; color: #B42318; border-color: var(--er); }
+.hl-status-badge.is-waiting { background: #FEF0C7; color: #B54708; border-color: var(--wa); }
+.hl-status-badge.is-cancelled { background: var(--bg); color: var(--tx3); border-color: var(--line); }
+
+.hl-pr-block {
+  border: 1px solid var(--line); border-radius: 12px; background: var(--sf);
+  box-shadow: 0 1px 3px rgba(16,24,40,.06); padding: 16px; display: flex; flex-direction: column; gap: 12px;
+}
+.hl-pr-block:empty { display: none; }
+.hl-pr-empty p { margin: 0 0 10px; font-size: 12.5px; color: var(--tx2); }
+.hl-pr-warn { margin: 6px 0 0; font-size: 11px; color: var(--tx3); }
+
+.hl-pr-info { display: flex; flex-direction: column; gap: 4px; }
+.hl-pr-info-title { font-size: 13px; font-weight: 700; }
+.hl-pr-info-link { font-size: 12px; color: #B45309; }
+.hl-badge-pr { align-self: flex-start; font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: #DCF5EE; color: #0A7359; }
+
+.hl-decisions { display: flex; flex-direction: column; gap: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+.hl-decision-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+.hl-decisions textarea {
+  font: inherit; font-size: 12.5px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--bg); color: var(--tx); resize: vertical;
+}
+.hl-merge-confirm {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px;
+  padding: 8px 10px; border: 1px solid #FDA29B; background: #FEE4E2; border-radius: 8px; color: #B42318;
+}
+.hl-decision-history { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.hl-decision-history li { font-size: 11px; color: var(--tx3); }
+
+.hl-unverified {
+  border: 1px solid var(--wa); border-radius: 10px; background: #FEF0C7; padding: 12px 14px;
+}
+.hl-unverified h3 { margin: 0 0 6px; font-size: 12.5px; color: #B54708; }
+.hl-unverified ul { margin: 0; padding-left: 18px; font-size: 12px; color: #92400E; }
+
+.hl-runs-block h3 { font-size: 12.5px; margin: 0 0 8px; color: var(--tx2); }
+.hl-runs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.hl-run-row {
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--line);
+  border-radius: 8px; background: var(--sf); font-size: 11.5px; cursor: pointer;
+}
+.hl-run-row:hover { border-color: #B45309; }
+.hl-run-row.is-selected { border-color: #B45309; background: #FEF3C7; }
+.hl-run-time { color: var(--tx2); flex: 1; }
+.hl-run-pr { color: var(--tx3); }
+
+/* 差分・パス等はそれぞれのコンテナ内で横スクロールし、body には横スクロールを出さない。 */
+
+/* 検証そのものが動かなかったときの表示。件数 0 と見分けが付くようにする。 */
+.hl-verify-error { color: #B42318; }
+.hl-verify-error-detail { color: #B42318; font-size: 12px; overflow-wrap: anywhere; }

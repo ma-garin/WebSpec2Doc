@@ -1,0 +1,152 @@
+# オートヒーリング（System 05）
+
+検証を回して不具合を見つけ、コードを直し、PR を出して**人の判断を待つ**までを画面上で完結させる。
+
+入口は `/healing`。システム選択（`/systems`）の 5 枚目のカードから開く。
+
+---
+
+## 何をするものか
+
+1. 登録したリポジトリで**利用者が指定した検証コマンド**を実行する
+2. 失敗を 1 件ずつ**不具合（Defect）**として構造化する
+3. 不具合ごとに**別々の作業ツリー（git worktree）で別々のエージェント**を並列に走らせて直す
+4. 直った分を統合ブランチへマージし、**もう一度検証する**
+5. 緑になっても・ならなくても、**PR は自動で作らない。**人が押したときだけ作る
+6. マージも人の操作だけで行う
+
+「直ったかどうか」はエージェントの自己申告では判定しない。必ず検証コマンドの結果で判定する。
+
+---
+
+## 使い方
+
+### 1. コードベースを接続する
+
+`/healing` →「＋ コードベースを接続」。
+
+| 項目 | 説明 |
+|---|---|
+| 名前 | 画面上の表示名 |
+| リポジトリのパス | ローカルの絶対パス。**許可ルート配下のみ**（後述） |
+| 既定ブランチ | 統合ブランチを切る起点。既定 `main` |
+| 検証コマンド | リポジトリ直下で実行する。例: `venv/bin/python -m pytest tests -q` |
+| リモート名 | 既定 `origin` |
+| GitHub リポジトリ | `owner/name`。空なら remote から自動判定 |
+| 使うエージェント | `claude` / `codex` / `dryrun`（後述） |
+| 上限周回数 | 緑にならなくてもこの回数で打ち切る。既定 3 |
+| 同時実行エージェント数 | 並列に走らせるエージェントの本数。既定 3 |
+
+「接続を確認」で、リポジトリ・git・リモート・GitHub・検証コマンドの 5 項目を実際に確かめる。
+失敗した項目は理由が出る。
+
+### 2. 実行する
+
+「ヒーリングを開始」。進行は 2 秒間隔で更新される。実行ログは常時表示。
+
+「追加の指示（任意）」に書いた内容は、各エージェントへのプロンプトにそのまま渡る。
+例:「DB に依存するテストは対象外にしてください」。
+
+### 3. 判断する
+
+実行が終わると右ペインで止まる。
+
+- **PR を作成** — 統合ブランチを push して PR を作る。本文には検出した不具合・修正内容・
+  検証結果（実行前/実行後）・未検証の事項が入る。そのままバグレポートとして読める
+- **承認（記録のみ）** — 判断を証跡に残すだけ。状態は変えない
+- **マージ** — PR をマージする。押す前にインラインの確認が出る
+- **却下** — 実行を中止扱いにする
+
+---
+
+## 安全のための約束
+
+- **利用者の作業ツリーには触らない。** 全ての作業は分離した git worktree の中で行う。
+  メインリポジトリの HEAD は最後まで動かさない
+- 手元に未コミットの変更があっても**止めない**。ただし「検証に含まれていない」ことを
+  未検証の事項として必ず記録する
+- 既定ブランチには一切コミットしない。常に `healing/<run_id>` を切る
+- `--force` push はしない。main への直接 push を行う関数を持たない
+- PR の作成もマージも、**人が画面で押したときにしか実行しない**
+- 検証コマンドは危険な操作（`rm -rf` / `git push` / `sudo` / パイプからのシェル実行など）を
+  含む場合に拒否する。コマンドは `shell=False` で実行するため `;` や `&&` による連結は効かない
+- 変更を伴う操作（接続の作成・削除、実行の開始、PR 作成、マージ、却下）は**管理者のみ**
+
+### 許可ルート
+
+接続できるのは `WEBSPEC2DOC_HEALING_ROOTS`（`:` 区切り）で指定した場所の配下だけ。
+未設定ならサーバのカレントディレクトリのみ。任意ディレクトリの読み取りを防ぐ唯一のガード。
+
+```bash
+WEBSPEC2DOC_HEALING_ROOTS=/Users/me/dev:/Users/me/work venv/bin/python app.py
+```
+
+---
+
+## エージェント
+
+| 名前 | 実体 | 備考 |
+|---|---|---|
+| `claude` | `claude -p --permission-mode acceptEdits --output-format json` | 既定 |
+| `codex` | `codex exec --full-auto` | |
+| `dryrun` | 外部プロセスを起動しない | エージェント未導入の環境でも必ず動く。コードは変えない |
+
+追加するには `web/services/healing/agents.py` の `_AGENT_CLASSES` に
+`types.HealingAgent` プロトコル（`name` / `is_available()` / `propose_fix(task)`）を
+満たすクラスを登録する。`propose_fix` は**例外を投げてはならない**（失敗は `FixProposal.status` で表す）。
+
+エージェントは `AgentTask.workdir`（自分専用の worktree）の中しか触らない。
+これが並列化と切り出しの境界で、別プロセス・別マシンへ出す場合もこの境界を守る。
+
+---
+
+## 置き場所
+
+| 何 | どこ |
+|---|---|
+| 接続したプロジェクト | `output/<tenant>/.healing/projects.json` |
+| 実行結果 | `output/<tenant>/.healing/runs/<run_id>.json` |
+| 作業ツリー（worktree） | OS の一時ディレクトリ配下 `webspec2doc-healing/<run_id>/` |
+
+作業ツリーを WebSpec2Doc のディレクトリ内に置いてはならない。
+対象リポジトリのテストをその中で走らせるため、pytest の rootdir 判定や `conftest.py`・
+`pyproject.toml` が WebSpec2Doc 側のものを拾い、対象のテストが別プロジェクトの中で動いてしまう。
+置き場所は `WEBSPEC2DOC_HEALING_WORKTREE_DIR` で変えられる。
+
+---
+
+## API
+
+| メソッド | パス | 用途 |
+|---|---|---|
+| GET | `/api/healing/projects` | 接続先の一覧 |
+| POST | `/api/healing/projects` | 接続（管理者のみ） |
+| PATCH / DELETE | `/api/healing/projects/<pid>` | 変更・削除（管理者のみ） |
+| POST | `/api/healing/projects/<pid>/check` | 接続確認 |
+| GET | `/api/healing/runs?project_id=` | 実行の一覧 |
+| POST | `/api/healing/runs` | 実行の開始（202・非同期／管理者のみ） |
+| GET | `/api/healing/runs/<run_id>` | 実行の詳細（画面のポーリング先） |
+| POST | `/api/healing/runs/<run_id>/cancel` | 中止（管理者のみ） |
+| POST | `/api/healing/runs/<run_id>/pull-request` | PR 作成（管理者のみ） |
+| POST | `/api/healing/runs/<run_id>/decision` | 人の判断（管理者のみ） |
+| GET | `/api/healing/agents` | 使えるエージェントの一覧 |
+
+---
+
+## 構成
+
+```
+web/services/healing/
+  types.py          型契約（副作用を持たない）
+  project_store.py  接続先の登録・許可ルート・接続確認
+  run_store.py      実行結果の永続化
+  git_ops.py        worktree による分離と git 操作
+  github_client.py  PR の作成・取得・マージ、PR 本文（バグレポート）の組み立て
+  verification.py   検証コマンドの実行と失敗の構造化
+  agents.py         修正エージェントの差し替え層
+  orchestrator.py   ループエンジン
+web/routes/healing.py       画面と API
+templates/healing.html      画面
+static/css/healing.css
+static/js/healing.js
+```

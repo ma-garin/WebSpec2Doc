@@ -7,35 +7,26 @@
   <title>システム選択 - WebSpec2Doc</title>
   <!-- Google Fonts はローカル専用の CSP（style-src 'self'）でブロックされ読み込まれないため撤去。
        描画は --font-main / --font-mono のシステムフォント・フォールバックで確定する。 -->
+  {# 他 4 画面（topbar.html を使う側）と同じ topbar を出すための依存 CSS。
+     app.css が :root で --bg/--ok/--ok-bg を再定義するため、ta2.css/ws.css より
+     先に読み、ta2/ws のトークンを最後に勝たせる（workspace.html と同じ順序・同じ理由）。 #}
   <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/ta2.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/ws.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/system-select.css') }}?v={{ _ver }}">
 </head>
 <body class="sysselect-body">
 
-  <header class="sysselect-topbar">
-    <div class="sysselect-brand">
-      <span class="sysselect-brand-mark">W</span>
-      <span class="sysselect-brand-name">WebSpec2Doc</span>
-      <span class="sysselect-brand-tag">プラットフォーム</span>
-    </div>
-    <div class="sysselect-account">
-      {% if auth_user %}
-      <span class="sysselect-who">{{ auth_user.email }}</span>
-      {# この画面はアプリシェルの外なので、作業画面のユーザーメニューが使えない。
-         個人設定への導線がここに無いと、システムを選ぶまでパスワードも変えられない。 #}
-      <a class="sysselect-text-btn" href="/account">個人設定</a>
-      <form method="post" action="/auth/logout" class="sysselect-logout-form">
-        <button type="submit" class="sysselect-text-btn">ログアウト</button>
-      </form>
-      {% endif %}
-    </div>
-  </header>
+  {% set topbar_crumb = 'システム選択' %}
+  {% set topbar_title = 'どのシステムを使いますか？' %}
+  {% include 'partials/topbar.html' %}
 
   <main class="sysselect-stage">
+    {# 見出しは共通ヘッダー（topbar）が出す。ここで繰り返すと h1 が二重になる。 #}
     <div class="sysselect-head">
-      <div class="sysselect-kicker">システム選択</div>
-      <h1>どのシステムを使いますか？</h1>
-      <p>使うシステムを選んでください。4 つは独立したシステムです。CLI / API は画面を持たず、端末や外部システムから同じ機能を使います。</p>
+      <p>使うシステムを選んでください。4 つは独立したシステムで、入口・ナビは別です。CLI / API は画面を持たず、端末や外部システムから同じ機能を使います。</p>
     </div>
 
     <div class="sysselect-grid">
@@ -110,7 +101,7 @@
         </span>
         <span class="syscard-no">System 04</span>
         <span class="syscard-title">CLI / API</span>
-        <span class="syscard-desc">同じ機能を端末と REST API から。ブラウザを開かずに解析・AutoRun・テスト実行まで回せます。CI や外部システムからの呼び出しに。</span>
+        <span class="syscard-desc">ブラウザを開かずに解析・AutoRun・テスト実行まで回せます。CI パイプラインからの呼び出しに。</span>
         <span class="syscard-chips">
           <span class="syscard-chip">CI 組み込み</span><span class="syscard-chip">REST API</span>
           <span class="syscard-chip">JSON 出力</span><span class="syscard-chip">終了コード</span>
@@ -120,8 +111,9 @@
 
     </div>
 
-    <p class="sysselect-note">4 つは別システムです。入口・世界観・ナビは独立し、共通はログインとアカウントだけ。いつでもこの画面に戻って切り替えられます。CLI / API は画面を持たず、端末や外部システムから同じ機能を使います。</p>
+    <p class="sysselect-note">いつでもこの画面に戻って切り替えられます。</p>
   </main>
 
+  <script src="{{ url_for('static', filename='js/user-menu.js') }}?v={{ _ver }}"></script>
 </body>
 </html>

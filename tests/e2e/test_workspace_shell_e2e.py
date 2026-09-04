@@ -35,7 +35,9 @@ VIEWPORTS = ((1440, 900), (1280, 800))
 
 
 def _paths() -> list[str]:
-    return ["/"] + [f"/sites/{DOMAIN}/{ws}" for ws in WORKSPACES]
+    # "/" はアプリシェル（index.html）に戻ったため、レールを持つ workspace.html は
+    # /team とサイト別ワークスペース URL から開く。
+    return ["/team"] + [f"/sites/{DOMAIN}/{ws}" for ws in WORKSPACES]
 
 
 @pytest.fixture(scope="module", autouse=True)

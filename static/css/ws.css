@@ -12,11 +12,11 @@ a.btn{text-decoration:none}
 [hidden]{display:none !important}
 
 /* rail */
-.rail .rail-link{width:38px;height:38px;border-radius:9px;display:grid;place-items:center;color:var(--tx3);font-size:16px;position:relative;text-decoration:none}
-.rail .rail-link:hover{background:var(--bg);color:var(--tx)}
-.rail .rail-link:hover .tip{opacity:1}
-.rail .lg{text-decoration:none}
-.rail .av{width:30px;height:30px;border-radius:50%;background:var(--ac);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:700;border:0;position:relative}
+.rail:not(.app-sidebar) .rail-link{width:38px;height:38px;border-radius:9px;display:grid;place-items:center;color:var(--tx3);font-size:16px;position:relative;text-decoration:none}
+.rail:not(.app-sidebar) .rail-link:hover{background:var(--bg);color:var(--tx)}
+.rail:not(.app-sidebar) .rail-link:hover .tip{opacity:1}
+.rail:not(.app-sidebar) .lg{text-decoration:none}
+.rail:not(.app-sidebar) .ava{width:30px;height:30px;border-radius:50%;background:var(--ac);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:700;border:0;position:relative}
 
 /* list variants */
 .list-h .sub{font-size:12px;color:var(--tx3);margin-top:2px}
@@ -213,15 +213,15 @@ a.btn{text-decoration:none}
    記号 7 つだけでは、分析・設計と自動化の区別がアイコンから読めない。
    文字を添え、作業のまとまりを区切り線で示す。 */
 .app{grid-template-columns:84px 280px 1fr}
-.rail{padding:14px 6px}
-.rail button{width:72px;height:auto;padding:7px 2px 5px;display:flex;flex-direction:column;align-items:center;gap:3px;line-height:1.2}
-.rail button .ic{font-size:16px;line-height:1}
-.rail button .lb{font-size:10px;font-weight:600;letter-spacing:.01em;white-space:nowrap}
-.rail button .bd{top:2px;right:8px}
-.rail .rail-link{width:72px;height:auto;padding:7px 2px 5px}
-.rail .rail-sep{width:44px;height:1px;background:var(--line);margin:5px 0}
-.rail .tip{left:78px}
-.rail .lg{margin-bottom:10px}
+.rail:not(.app-sidebar){padding:14px 6px}
+.rail:not(.app-sidebar) button{width:72px;height:auto;padding:7px 2px 5px;display:flex;flex-direction:column;align-items:center;gap:3px;line-height:1.2}
+.rail:not(.app-sidebar) button .ic{font-size:16px;line-height:1}
+.rail:not(.app-sidebar) button .lb{font-size:10px;font-weight:600;letter-spacing:.01em;white-space:nowrap}
+.rail:not(.app-sidebar) button .bd{top:2px;right:8px}
+.rail:not(.app-sidebar) .rail-link{width:72px;height:auto;padding:7px 2px 5px}
+.rail:not(.app-sidebar) .rail-sep{width:44px;height:1px;background:var(--line);margin:5px 0}
+.rail:not(.app-sidebar) .tip{left:78px}
+.rail:not(.app-sidebar) .lg{margin-bottom:10px}
 
 /* ------------------------------------------------ ホーム「次にやること」
    サイトを選んだだけでは右側がほぼ空白で、何ができる製品なのか読めない。
@@ -275,3 +275,63 @@ a.btn{text-decoration:none}
    （axe: scrollable-region-focusable / WCAG 2.1.1 Keyboard）。 */
 #spec-tech{overflow:auto;min-height:0}
 #spec-tech:focus-visible{outline:2px solid var(--ac);outline-offset:-2px}
+
+/* ============================================================
+   サイドバー統一（他画面 partials/nav.html と同じ見た目にする）
+   JS が `.rail [data-view]` を見ているためクラス rail は残す。
+   ta2.css / 上の .rail 系ルールの方が詳細度で勝つため、ここで打ち消す。
+   色は app.css / tokens.css の既存トークンだけを使う（新設しない）。
+   ============================================================ */
+.app{grid-template-columns:var(--sidebar-w) 280px 1fr}
+
+.rail.app-sidebar{
+  display:flex;flex-direction:column;align-items:stretch;
+  gap:14px;padding:16px 12px;height:100vh;overflow:auto;
+  background:var(--surface);border-right:1px solid var(--border);
+}
+.rail.app-sidebar .app-brand{margin:0}
+.rail.app-sidebar .app-nav{display:grid;gap:2px}
+
+/* 行型のメニュー項目（app.css の .app-nav-item と同じ見た目に戻す） */
+.rail.app-sidebar button.app-nav-item,
+.rail.app-sidebar a.app-nav-item,
+.rail.app-sidebar a.app-nav-item.rail-link{
+  display:flex;flex-direction:row;align-items:center;gap:10px;
+  width:100%;height:auto;min-height:38px;padding:0 10px;
+  border:0;border-radius:var(--radius);background:transparent;
+  color:var(--text-muted);font-size:13.5px;font-weight:600;line-height:1.3;
+  text-align:left;text-decoration:none;position:relative;
+}
+.rail.app-sidebar .app-nav-item svg{width:17px;height:17px;flex-shrink:0;opacity:.85}
+.rail.app-sidebar .nav-label{
+  flex:1;min-width:0;font-size:13.5px;font-weight:600;letter-spacing:normal;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;
+}
+.rail.app-sidebar button.app-nav-item:hover,
+.rail.app-sidebar a.app-nav-item:hover,
+.rail.app-sidebar a.app-nav-item.rail-link:hover{
+  background:var(--surface-subtle);color:var(--text);
+}
+.rail.app-sidebar button.app-nav-item.on,
+.rail.app-sidebar button.app-nav-item.is-active{
+  background:var(--info-bg);color:var(--primary-dark);
+}
+.rail.app-sidebar .app-nav-item.on svg,
+.rail.app-sidebar .app-nav-item.is-active svg{opacity:1}
+.rail.app-sidebar .app-nav-group{
+  font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--text-muted);padding:10px 10px 2px;
+}
+
+/* バッジは行の右端に置く（アイコン列だった頃の絶対配置をやめる） */
+.rail.app-sidebar .app-nav-item .bd{
+  position:static;top:auto;right:auto;margin-left:auto;flex:none;
+}
+
+/* 下寄せ用のスペーサ */
+.rail.app-sidebar .sp{flex:1;min-height:8px}
+
+/* アカウント行もメニュー項目と同じ行型にする */
+.rail.app-sidebar .ta-user{display:block;position:relative}
+.rail.app-sidebar .ta-user .ava{flex:none}
+.rail.app-sidebar .upop{left:0;right:0;bottom:44px;width:auto}

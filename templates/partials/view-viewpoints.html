@@ -5,8 +5,8 @@
             <div id="vp-feedback" class="vp-feedback" role="status" aria-live="polite" hidden>
               <span class="vp-feedback-icon" aria-hidden="true">✓</span>
               <span id="vp-feedback-text"></span>
-              <button type="button" id="vp-feedback-action" class="vp-feedback-action" hidden></button>
-              <button type="button" id="vp-feedback-close" class="vp-feedback-close" aria-label="通知を閉じる">×</button>
+              <button type="button" id="vp-feedback-action" class="vp-feedback-action" style="padding:8px 4px;" hidden></button>
+              <button type="button" id="vp-feedback-close" class="vp-feedback-close" aria-label="通知を閉じる" style="padding:8px;">×</button>
             </div>
 
             <!-- タブバー -->
@@ -38,7 +38,7 @@
                 <div class="vp-assignment-box">
                   <div class="vp-assignment-head">
                     <strong>適用ルール</strong>
-                    <button type="button" id="vp-new-assignment" class="vp-link-button">＋ 追加</button>
+                    <button type="button" id="vp-new-assignment" class="vp-link-button" style="padding:6px 8px;">＋ 追加</button>
                   </div>
                   <div id="vp-assignment-list" class="vp-assignment-list"></div>
                 </div>
@@ -49,9 +49,9 @@
                   <span id="vp-set-target" class="vp-set-target"></span>
                   <div class="vp-set-footer-actions">
                     <button type="button" id="vp-make-default" class="btn-outline-sm vp-default-action">既定にする</button>
-                    <button type="button" id="vp-edit-set" class="vp-link-button">設定</button>
+                    <button type="button" id="vp-edit-set" class="vp-link-button" style="padding:6px 8px;">設定</button>
                     <span class="vp-footer-divider" aria-hidden="true"></span>
-                    <button type="button" id="vp-delete-set" class="vp-link-button vp-danger-link">削除</button>
+                    <button type="button" id="vp-delete-set" class="vp-link-button vp-danger-link" style="padding:6px 8px;">削除</button>
                   </div>
                 </div>
               </aside>
@@ -59,7 +59,7 @@
               <!-- ペイン2: ツリーパネル -->
               <nav class="vp-tree-panel" id="vp-tree-panel" aria-label="分類ツリー">
                 <div class="vp-tree-panel-head">
-                  <span class="vp-tree-panel-title">分類</span>
+                  <span class="vp-tree-panel-title" role="heading" aria-level="3">分類</span>
                   <div class="vp-tree-head-actions">
                     <button type="button" id="vp-add-folder" class="vp-icon-btn" title="フォルダを追加">＋</button>
                     <button type="button" id="vp-tree-template-btn" class="vp-icon-btn" title="標準テンプレートを読み込む" aria-haspopup="menu" aria-expanded="false" aria-controls="vp-template-menu">📋</button>
@@ -83,7 +83,7 @@
               <section class="vp-table-panel" aria-label="観点一覧">
 
                 <div id="vp-standard-toolbar" class="vp-standard-toolbar vp-table-toolbar">
-                  <nav class="vp-breadcrumb" id="vp-breadcrumb" aria-label="現在位置">
+                  <nav class="vp-breadcrumb" id="vp-breadcrumb" aria-label="分類ツリー内の現在位置">
                     <span class="vp-breadcrumb-root">すべて</span>
                   </nav>
                   <div class="vp-table-toolbar-actions">
@@ -129,7 +129,7 @@
                         <th class="vp-col-risk" scope="col">リスク</th>
                         <th class="vp-col-auto" scope="col">自動化</th>
                         <th class="vp-col-state" scope="col">状態</th>
-                        <th class="vp-col-actions" scope="col"></th>
+                        <th class="vp-col-actions" scope="col" aria-label="操作"></th>
                       </tr>
                     </thead>
                     <tbody id="vp-table-body"></tbody>
@@ -173,7 +173,7 @@
                 </div>
                 <div class="vp-editor-head-status">
                   <span id="vp-editor-state" class="vp-editor-state">保存済み</span>
-                  <button type="button" id="vp-editor-close" class="vp-editor-close" aria-label="編集画面を閉じる">×</button>
+                  <button type="button" id="vp-editor-close" class="vp-editor-close" aria-label="編集画面を閉じる" title="保存していない変更は失われる場合があります">×</button>
                 </div>
               </div>
 

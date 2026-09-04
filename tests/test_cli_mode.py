@@ -204,11 +204,13 @@ class TestCliModePage:
     def client(self):
         return appmod.app.test_client()
 
-    def test_systems_page_redirects_to_workspace_home(self, client) -> None:
-        """製品統合でシステム選択ハブは廃止。旧 URL はホームへ送る。"""
+    def test_systems_page_shows_selection_cards(self, client) -> None:
+        """システム選択ハブは復活済み。ドキュメント作成・テスト自動化の 2 カードを出す。"""
         response = client.get("/systems", headers=H)
-        assert response.status_code == 302
-        assert response.headers["Location"] == "/"
+        assert response.status_code == 200
+        html = response.get_data(as_text=True)
+        assert "ドキュメント作成" in html
+        assert "テスト自動化" in html
 
     def test_cli_page_renders(self, client) -> None:
         res = client.get("/cli", headers=H)

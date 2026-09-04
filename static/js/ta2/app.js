@@ -173,11 +173,14 @@
     return T.loadSites().then(function (sites) {
       var domain = '';
       sites.forEach(function (s) { if (s.domain === wanted) domain = s.domain; });
-      if (!domain) {
-        // 何を見ているのか分からないまま別サイトを出さない。ホームで選び直してもらう
+      if (!domain && wanted) {
+        // 指定されたサイトが見つからないときだけ戻す。何を見ているのか
+        // 分からないまま別サイトを出さない。
         location.replace('/');
         return null;
       }
+      // domain 指定なしで開いた場合（/test-automation など）はこの画面に留まる。
+      if (!domain) return null;
       T.setDomain(domain);
       return T.loadTests();
     }).then(function (r) {

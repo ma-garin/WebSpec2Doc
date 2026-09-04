@@ -108,8 +108,8 @@ def test_user_select_route_is_gone() -> None:
     assert client.post("/auth/user", data={"user_id": ""}, headers=H).status_code == 404
 
 
-def test_login_leads_through_tenant_then_home() -> None:
-    """期待する順序: ログイン → テナント選択 → ホーム（サイト一覧）。"""
+def test_login_leads_through_tenant_then_system_select() -> None:
+    """期待する順序: ログイン → テナント選択 → システム選択（/systems・2 カード）。"""
     _setup_admin(_client())
     client = _client()
     response = _login(client, "admin@example.com")
@@ -118,7 +118,7 @@ def test_login_leads_through_tenant_then_home() -> None:
 
     tenant_id = _store().list_tenants()[0]["id"]
     selected = client.post("/auth/tenant", data={"tenant_id": tenant_id}, headers=H)
-    assert selected.headers["Location"] == "/"
+    assert selected.headers["Location"] == "/systems"
     assert client.get("/api/auth/me", headers=H).get_json()["tenant"]["slug"] == "tenant-a"
 
 
@@ -136,14 +136,16 @@ def test_login_never_lands_on_document_wizard() -> None:
     assert response.headers["Location"] == "/auth/tenant"
 
 
-def test_system_select_hub_is_gone_and_redirects_home() -> None:
-    """製品統合でシステム選択ハブは廃止。旧 URL はホームへ送るだけにする。"""
+def test_system_select_hub_shows_cards() -> None:
+    """システム選択ハブは復活済み。ドキュメント作成・テスト自動化の 2 カードを出す。"""
     client = _client()
     _setup_admin(client)
     _login_and_work(client, "admin@example.com")
     response = client.get("/systems", headers=H)
-    assert response.status_code == 302
-    assert response.headers["Location"] == "/"
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "ドキュメント作成" in html
+    assert "テスト自動化" in html
 
 
 def test_login_rejects_unknown_email() -> None:
@@ -201,7 +203,7 @@ def test_initial_admin_logs_in_with_password() -> None:
     tenant_id = _store().list_tenants()[0]["id"]
     assert (
         client.post("/auth/tenant", data={"tenant_id": tenant_id}, headers=H).headers["Location"]
-        == "/"
+        == "/systems"
     )
     me = client.get("/api/auth/me", headers=H).get_json()
     assert me["user"]["role"] == "admin"
@@ -333,7 +335,7 @@ def test_multi_tenant_user_must_choose() -> None:
     assert "Tenant B" in page
 
     selected = client.post("/auth/tenant", data={"tenant_id": tenant_a}, headers=H)
-    assert selected.headers["Location"] == "/"
+    assert selected.headers["Location"] == "/systems"
     assert client.get("/api/auth/me", headers=H).get_json()["tenant"]["slug"] == "tenant-a"
 
 
@@ -358,11 +360,11 @@ def test_role_follows_selected_tenant() -> None:
 
     client.post("/auth/tenant", data={"tenant_id": tenant_a}, headers=H)
     assert client.get("/api/auth/me", headers=H).get_json()["user"]["role"] == "member"
-    assert client.get("/admin/console", headers=H).headers["Location"] == "/"
+    assert client.get("/admin/console", headers=H).headers["Location"] == "/systems"
 
     client.post("/auth/tenant", data={"tenant_id": tenant_b}, headers=H)
     assert client.get("/api/auth/me", headers=H).get_json()["user"]["role"] == "admin"
-    # 管理画面はユーザー管理ビューへ統合済み。管理者は転送され、一般はホームへ戻る
+    # 管理画面はユーザー管理ビューへ統合済み。管理者は転送され、一般はシステム選択へ戻る
     assert client.get("/admin/console", headers=H).headers["Location"] == "/user-management"
 
 

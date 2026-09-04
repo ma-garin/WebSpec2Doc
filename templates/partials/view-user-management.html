@@ -20,16 +20,16 @@
 
           <div class="input-card uadm-admin-only">
             <div class="wizard-page-header">
-              <h2>ユーザー一覧</h2>
+              <h2>ユーザー一覧 <span class="badge-role is-admin">管理者専用</span></h2>
               <p>1人が複数のテナントに所属でき、ロールはテナントごとに持ちます。
                  テナントそのものの追加・削除は<a href="/tenant-management">テナント管理</a>で行います。</p>
             </div>
 
             <div class="uadm-toolbar">
               <div class="uadm-toolbar-left">
+                <label for="uadm-user-search" class="sr-only">ユーザーを絞り込み</label>
                 <input type="search" id="uadm-user-search" class="uadm-search"
-                       placeholder="名前・ログインID・テナントで絞り込み"
-                       aria-label="ユーザーを絞り込み">
+                       placeholder="名前・ログインID・テナントで絞り込み">
                 <span class="uadm-count" id="uadm-user-count" aria-live="polite"></span>
               </div>
               <button type="button" class="btn-primary uadm-add-btn" id="uadm-add-btn">新規登録</button>

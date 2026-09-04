@@ -41,7 +41,7 @@
                   </div>
                 </fieldset>
                 <div class="control-field">
-                  <label for="autorun-url">対象URL</label>
+                  <label for="autorun-url">解析対象URL</label>
                   <div class="autorun-url-row">
                     <!-- 仕様4: 過去に解析したサイトから選べるようにする（AutoRun専用の候補） -->
                     <input type="url" id="autorun-url" class="url-input input-compact" placeholder="https://example.com" autocomplete="url" list="autorun-url-suggestions" />
@@ -158,7 +158,7 @@
               </div>
 
               <div class="autorun-intake-scope" role="note">
-                <strong>報告の範囲について：</strong>検出できた範囲を証跡付きで報告します。検証できなかった領域は「未検証」と明記し、<em>欠陥が無いことの証明はしません</em>。現新比較は前回スナップショットがある場合のみ成立し、初回は基準確立のみです。
+                <strong>報告の範囲について：</strong>検出できた範囲を証跡付きで報告します。確認できなかった範囲は「未検証」と明記します（<em>未検証＝問題なし、という意味ではありません</em>）。現新比較は前回スナップショットがある場合のみ成立し、初回は基準確立のみです。
               </div>
             </div>
 
@@ -352,7 +352,7 @@
                   <p class="autorun-chat-sub" id="autorun-chat-context">受付</p>
                 </div>
                 <span class="autorun-chat-status" id="autorun-chat-status" aria-live="polite"></span>
-                <button type="button" id="autorun-chat-close" class="autorun-chat-close" aria-label="閉じる">×</button>
+                <button type="button" id="autorun-chat-close" class="autorun-chat-close" aria-label="閉じる" style="min-width:24px;min-height:24px;">×</button>
               </div>
 
               <!-- 何について相談しているかを見失わせないための固定表示 -->

@@ -24,14 +24,13 @@ from tests.e2e.system.helpers import (
 class TestStNavigation:
     """テナント選択・システム選択カード・全ビュー描画。"""
 
-    def test_st006_tenant_gate_leads_to_workspace_home(
+    def test_st006_tenant_gate_leads_to_system_select(
         self, page: Page, system_server: str
     ) -> None:
-        """ST-006: ログイン後、テナント選択を通過してホーム（サイト一覧）へ到達する。
+        """ST-006: ログイン後、テナント選択を通過してシステム選択（/systems）へ到達する。
 
         所属が 1 件のみの構成ではテナント選択が省略されることを許容する
-        （その場合も "/" へ直行することを検証する）。製品統合により、
-        旧システム選択ハブ（/systems・4 カード）は "/" へ 302 になった。
+        （その場合も /systems へ直行することを検証する）。
         """
         page.goto(f"{system_server}/auth/login")
         page.locator("#email").fill(MEMBER.email)
@@ -42,16 +41,16 @@ class TestStNavigation:
             tenant_form = page.locator('form[action="/auth/tenant"] button[type="submit"]')
             expect(tenant_form.first).to_be_visible()
             tenant_form.first.click()
-        expect(page).to_have_url(f"{system_server}/")
+        expect(page).to_have_url(f"{system_server}/systems")
 
-    def test_st007_home_shows_unified_workspace_rail(self, page: Page, system_server: str) -> None:
-        """ST-007: ホームは統合ワークスペースのシェル（7 ワークスペースのレール）。
+    def test_st007_workspace_shell_shows_rail(self, page: Page, system_server: str) -> None:
+        """ST-007: 統合ワークスペースのシェルは 7 ワークスペースのレールを出す。
 
-        旧「ドキュメント作成」カード（.syscard-doc）はハブごと廃止されたため、
-        カードの押下ではなくホームの骨格を検証する。旧シェルの各画面へは
-        画面別 URL（/dashboard 等）から到達する。
+        "/" はアプリシェル（index.html）に戻ったため、workspace.html は
+        /team 等のワークスペース URL から開く。
         """
         login(page, system_server, MEMBER)
+        page.goto(f"{system_server}/team")
         expect(page.locator('.rail [data-view="home"]')).to_be_visible()
         assert page.locator(".rail [data-view]").count() == 7
         assert page.locator(".rail [data-view].on").count() == 1

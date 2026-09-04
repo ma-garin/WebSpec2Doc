@@ -96,7 +96,7 @@ function _buildStats(items) {
         <div class="stat-card-num">${fields}</div><div class="stat-card-sub">抽出された入力項目の合計</div>
       </div>
       <div class="stat-card">
-        <div class="stat-card-head"><span class="stat-card-icon ${driftClass}">${icon('<path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>')}</span><span class="stat-card-label">差分あり</span></div>
+        <div class="stat-card-head"><span class="stat-card-icon ${driftClass}">${icon('<path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>')}</span><span class="stat-card-label">差分件数</span></div>
         <div class="stat-card-num">${drift}</div><div class="stat-card-sub">${driftSub}</div>
       </div>
     </div>`;

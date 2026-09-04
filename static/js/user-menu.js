@@ -60,3 +60,42 @@
   // 「どの画面から来たか」は switchView が覚えているので、ここでは控えない
   document.getElementById('usermenu-feedback-btn')?.addEventListener('click', () => go('feedback'));
 })();
+
+/* 現在テナントの表示。
+ *
+ * テナントはテンプレート変数に渡っていない（context_processor が渡すのは auth_user だけ）ため、
+ * /api/auth/me から取得してヘッダーのチップ・サイドメニュー・ユーザーメニューへ流し込む。
+ * 上の IIFE とは独立させてあるので、ユーザーメニューが無い画面でも動く。
+ */
+(function () {
+  'use strict';
+
+  const chip = document.getElementById('topbar-tenant');
+  const chipName = document.getElementById('topbar-tenant-name');
+  const navName = document.getElementById('nav-tenant-name');
+  const menuName = document.getElementById('usermenu-tenant-name');
+  // 認証オフのときはどの要素も描画されない（{% if auth_user %} で囲ってある）
+  if (!chip && !navName && !menuName) return;
+
+  fetch('/api/auth/me', { credentials: 'same-origin' })
+    .then((res) => (res.ok ? res.json() : null))
+    .then((data) => {
+      const tenant = data && data.tenant;
+      const label = tenant && (tenant.name || tenant.slug);
+      // テナント未選択（/auth/tenant へ行く前）は既定表示のままにする
+      if (!label) return;
+      if (navName) navName.textContent = label;
+      if (menuName) {
+        menuName.textContent = 'テナント: ' + label;
+        menuName.hidden = false;
+      }
+      if (chip && chipName) {
+        chipName.textContent = label;
+        chip.style.display = 'inline-flex';
+        chip.title = 'テナント: ' + label + '（クリックで切り替え）';
+      }
+    })
+    .catch(() => {
+      /* 表示が埋まらないだけで操作は妨げない（リンク自体は素の href で機能する） */
+    });
+})();

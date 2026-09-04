@@ -18,16 +18,16 @@ code{font-family:var(--mono);font-size:11px}
 .app{position:absolute;inset:0;display:grid;grid-template-columns:56px 280px 1fr}
 
 /* ---------- rail ---------- */
-.rail{background:var(--sf);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:6px;position:relative;z-index:20}
-.rail .lg{width:30px;height:30px;border-radius:8px;background:var(--tx);color:#fff;display:grid;place-items:center;font-weight:700;margin-bottom:12px;font-size:14px}
-.rail button{width:38px;height:38px;border-radius:9px;border:0;background:none;color:var(--tx3);font-size:16px;position:relative}
-.rail button:hover{background:var(--bg);color:var(--tx)}
-.rail button.on{background:var(--ac-bg);color:var(--ac)}
-.rail button .bd{position:absolute;top:4px;right:4px;min-width:16px;height:16px;border-radius:8px;background:var(--ng);color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center;padding:0 4px;font-family:var(--mono)}
-.rail button .bd.wa{background:var(--wa)}
-.rail .sp{flex:1}
-.rail .tip{position:absolute;left:46px;top:50%;transform:translateY(-50%);background:var(--tx);color:#fff;font-size:11px;padding:4px 8px;border-radius:6px;white-space:nowrap;opacity:0;pointer-events:none;transition:.12s;z-index:30;box-shadow:0 4px 12px rgba(16,24,40,.18)}
-.rail button:hover .tip{opacity:1}
+.rail:not(.app-sidebar){background:var(--sf);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:6px;position:relative;z-index:20}
+.rail:not(.app-sidebar) .lg{width:30px;height:30px;border-radius:8px;background:var(--tx);color:#fff;display:grid;place-items:center;font-weight:700;margin-bottom:12px;font-size:14px}
+.rail:not(.app-sidebar) button{width:38px;height:38px;border-radius:9px;border:0;background:none;color:var(--tx3);font-size:16px;position:relative}
+.rail:not(.app-sidebar) button:hover{background:var(--bg);color:var(--tx)}
+.rail:not(.app-sidebar) button.on{background:var(--ac-bg);color:var(--ac)}
+.rail:not(.app-sidebar) button .bd{position:absolute;top:4px;right:4px;min-width:16px;height:16px;border-radius:8px;background:var(--ng);color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center;padding:0 4px;font-family:var(--mono)}
+.rail:not(.app-sidebar) button .bd.wa{background:var(--wa)}
+.rail:not(.app-sidebar) .sp{flex:1}
+.rail:not(.app-sidebar) .tip{position:absolute;left:46px;top:50%;transform:translateY(-50%);background:var(--tx);color:#fff;font-size:11px;padding:4px 8px;border-radius:6px;white-space:nowrap;opacity:0;pointer-events:none;transition:.12s;z-index:30;box-shadow:0 4px 12px rgba(16,24,40,.18)}
+.rail:not(.app-sidebar) button:hover .tip{opacity:1}
 
 /* ---------- list ---------- */
 .list{background:var(--sf);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
@@ -148,7 +148,7 @@ code{font-family:var(--mono);font-size:11px}
 .hl{position:absolute;border:2px solid var(--ac);border-radius:6px;pointer-events:none;box-shadow:0 0 0 4px rgba(37,99,235,.15);transition:all .18s;z-index:3}
 .hl::before{content:attr(data-l);position:absolute;top:-22px;left:-2px;background:var(--ac);color:#fff;font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:4px;white-space:nowrap}
 .hl.ng{border-color:var(--ng);box-shadow:0 0 0 4px rgba(240,68,56,.18);border-style:dashed}.hl.ng::before{background:var(--ng)}
-.hl.ok{border-color:var(--ok);box-shadow:0 0 0 4px rgba(18,183,106,.18)}.hl.ok::before{background:var(--ok)}
+.hl.ok{border-color:var(--ok);box-shadow:0 0 0 4px color-mix(in srgb,var(--ok) 18%,transparent)}.hl.ok::before{background:var(--ok)}
 .hl.hide{display:none}
 .strip{position:absolute;bottom:14px;left:22px;right:22px;display:flex;gap:6px;align-items:center;background:rgba(255,255,255,.94);backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:10px;padding:8px 10px;z-index:4}
 .strip .th{width:56px;height:36px;border-radius:5px;background:#E4E7EC;border:1px solid var(--line2);position:relative;cursor:pointer;flex:none}
@@ -260,7 +260,7 @@ code{font-family:var(--mono);font-size:11px}
 
 /* V-2 フォーカスリング。既定の UA リングは角丸ボタンで欠けるため --ac で統一する */
 :focus-visible{outline:2px solid var(--ac);outline-offset:2px;border-radius:6px}
-.rail button:focus-visible,.rail a:focus-visible{outline-offset:-2px}
+.rail:not(.app-sidebar) button:focus-visible,.rail:not(.app-sidebar) a:focus-visible{outline-offset:-2px}
 .it:focus-visible,.st:focus-visible,.strip .th:focus-visible,.scard:focus-visible,.fchip:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
 .st:focus-within .x,.st .x:focus-visible{opacity:1}
 .search input:focus-visible{outline:none}
@@ -322,13 +322,13 @@ code{font-family:var(--mono);font-size:11px}
 .md .mb{min-height:0}
 
 /* ---------------------------------------------------------- 共通導線（レール） */
-.rail .lg{text-decoration:none;position:relative}
-.rail a:hover .tip,.rail a:focus-visible .tip{opacity:1}
-.rail .lg:hover{background:var(--ac);color:#fff}
-.rail .sysbtn{width:38px;height:38px;border-radius:9px;border:1px solid var(--line);background:var(--bg);
+.rail:not(.app-sidebar) .lg{text-decoration:none;position:relative}
+.rail:not(.app-sidebar) a:hover .tip,.rail:not(.app-sidebar) a:focus-visible .tip{opacity:1}
+.rail:not(.app-sidebar) .lg:hover{background:var(--ac);color:#fff}
+.rail:not(.app-sidebar) .sysbtn{width:38px;height:38px;border-radius:9px;border:1px solid var(--line);background:var(--bg);
   color:var(--tx2);display:grid;place-items:center;text-decoration:none;position:relative;margin-bottom:6px}
-.rail .sysbtn b{font-size:11px;font-weight:700;letter-spacing:.02em}
-.rail .sysbtn:hover{border-color:var(--ac);color:var(--ac);background:var(--ac-bg)}
+.rail:not(.app-sidebar) .sysbtn b{font-size:11px;font-weight:700;letter-spacing:.02em}
+.rail:not(.app-sidebar) .sysbtn:hover{border-color:var(--ac);color:var(--ac);background:var(--ac-bg)}
 .rail-sep{width:24px;height:1px;background:var(--line);margin:2px 0 6px}
 .ta-user{position:relative;display:flex;justify-content:center}
 .ta-user .ava{width:26px;height:26px;border-radius:50%;background:var(--ac);color:#fff;

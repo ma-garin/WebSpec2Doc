@@ -15,15 +15,16 @@
 
           <div class="input-card tadm-admin-only">
             <div class="wizard-page-header">
-              <h2>テナント（ワークスペース）一覧</h2>
+              <h2>テナント（ワークスペース）一覧 <span class="badge-role is-admin">管理者専用</span></h2>
               <p>成果物と実行履歴の分離単位です。保存先は <code>output/tenants/{slug}/</code>・<code>instance/tenants/{slug}/</code>。
                  誰がどのテナントに所属するかは<a href="/user-management">ユーザー管理</a>で設定します。</p>
             </div>
 
             <div class="uadm-toolbar">
               <div class="uadm-toolbar-left">
+                <label for="tadm-search" class="sr-only">テナントを絞り込み</label>
                 <input type="search" id="tadm-search" class="uadm-search"
-                       placeholder="名前・slug で絞り込み" aria-label="テナントを絞り込み">
+                       placeholder="名前・slug で絞り込み">
                 <span class="uadm-count" id="tadm-count" aria-live="polite"></span>
               </div>
               <button type="button" class="btn-primary uadm-add-btn" id="tadm-add-btn">新規登録</button>

@@ -15,13 +15,22 @@ def _client():
 
 
 class TestPageRoutes:
-    def test_root_renders_workspace_shell(self) -> None:
-        """"/" は統合ワークスペースのホーム（サイト一覧）。"""
+    def test_root_redirects_to_dashboard(self) -> None:
+        """"/" は /dashboard へ送る。
+
+        / と /dashboard が同じ画面を返すと URL とビューが 1:1 にならず、
+        ブラウザの戻る・ブックマークが壊れるため実体を /dashboard に一本化した。
+        システム選択は /systems に分離してある。
+        """
         response = _client().get("/", headers={"Host": "127.0.0.1"})
+        assert response.status_code == 302
+        assert response.headers["Location"] == "/dashboard"
+
+    def test_dashboard_renders_app_shell(self) -> None:
+        """/dashboard がアプリシェル（index.html）の実体。"""
+        response = _client().get("/dashboard", headers={"Host": "127.0.0.1"})
         assert response.status_code == 200
-        html = response.get_data(as_text=True)
-        assert 'data-ws="home"' in html
-        assert 'data-view="home"' in html
+        assert 'id="app-content"' in response.get_data(as_text=True)
 
     def test_known_view_paths_render_index(self) -> None:
         client = _client()

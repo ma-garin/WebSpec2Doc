@@ -423,17 +423,17 @@
 .vp-cell-tags { display: block; margin-top: 1px; color: var(--text-muted); font-size: 9.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .vp-risk-badge { font-weight: 800; }
 .vp-risk-badge[data-risk="5"] { color: var(--critical); }
-.vp-risk-badge[data-risk="4"] { color: #d96500; }
+.vp-risk-badge[data-risk="4"] { color: #b35400; }
 .vp-risk-badge[data-risk="3"] { color: #8c6500; }
 .vp-auto-badge { font-weight: 700; font-size: 10.5px; }
 .vp-auto-badge[data-value="automated"]     { color: var(--success, #14804a); }
-.vp-auto-badge[data-value="semi_automated"] { color: #d96500; }
+.vp-auto-badge[data-value="semi_automated"] { color: #b35400; }
 .vp-state-dot {
   display: inline-flex; align-items: center; gap: 5px;
   color: var(--success, #14804a); font-size: 10.5px;
 }
 .vp-state-dot::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-.vp-state-dot.is-disabled { color: var(--text-subtle); }
+.vp-state-dot.is-disabled { color: var(--text-muted); }
 
 .vp-row-action {
   width: 28px; height: 28px; padding: 0;
@@ -507,7 +507,7 @@
 .vp-proposal-btn-reject { color: var(--critical); border-color: var(--critical-border, #fca5a5); }
 .vp-proposal-status-badge { padding: 3px 7px; border-radius: 4px; font-size: 10px; font-weight: 700; }
 .vp-proposal-status-badge.is-adopted { color: var(--success, #14804a); background: var(--success-bg, #eefbf3); }
-.vp-proposal-status-badge.is-rejected { color: var(--text-subtle); background: var(--surface-subtle); }
+.vp-proposal-status-badge.is-rejected { color: var(--text-muted); background: var(--surface-subtle); }
 .vp-proposal-confidence { padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: 800; }
 .vp-conf-high { color: #14804a; background: #eefbf3; }
 .vp-conf-mid  { color: #9a5b00; background: #fff8ed; }
@@ -627,7 +627,7 @@ body.vp-modal-open { overflow: hidden; }
 .vp-field input[aria-invalid="true"] { border-color: var(--critical); box-shadow: 0 0 0 1px var(--critical); }
 .vp-field-grid { display: grid; grid-template-columns: minmax(0, 1fr) 140px; gap: 12px; }
 .vp-condition-row { display: grid; grid-template-columns: 1fr 108px 1fr; gap: 8px; }
-.vp-field-help { margin-top: 6px; color: var(--text-subtle); font-size: 9.5px; }
+.vp-field-help { margin-top: 6px; color: var(--text-muted); font-size: 9.5px; }
 .vp-field-error { color: var(--critical); font-size: 10px; font-weight: 700; line-height: 1.5; }
 .vp-enabled-check { margin-top: 14px; display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 11px; font-weight: 600; }
 

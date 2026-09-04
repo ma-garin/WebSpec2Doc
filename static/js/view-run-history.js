@@ -414,7 +414,7 @@ function _rhDelButton(run) {
   const key = _rhDelKey(run);
   const pending = RH.pendingDel === key;
   // 確認待ちは文言と色で示す。専用 CSS を足さずに済むよう配色だけ直接指定する。
-  const style = pending ? ' style="border-color:#c0392b;color:#c0392b"' : '';
+  const style = pending ? ' style="border-color:var(--color-critical);color:var(--color-critical)"' : '';
   const label = pending ? '本当に削除？' : '削除';
   const title = pending
     ? 'もう一度押すと削除します（数秒で元に戻ります）'

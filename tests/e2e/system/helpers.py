@@ -29,12 +29,12 @@ MEMBER = StUser("st-member@example.com", "st-member-pass-123", "ST Member", "mem
 PW_CHANGE_MEMBER = StUser("st-member2@example.com", "st-member2-pass-123", "ST Member2", "member")
 
 
-# 製品統合後のログイン着地点。旧システム選択ハブ（/systems）は "/" へ 302 になった。
-LANDING_URL_RE = re.compile(r"/auth/tenant$|/$")
+# ログイン着地点。テナント選択（/auth/tenant）を経てシステム選択（/systems）へ着地する。
+LANDING_URL_RE = re.compile(r"/auth/tenant$|/systems$")
 
 
 def login(page: Page, base_url: str, user: StUser) -> None:
-    """ログイン→（テナント選択画面があれば通過）→ ホーム（"/"）到達まで。"""
+    """ログイン→（テナント選択画面があれば通過）→ システム選択（/systems）到達まで。"""
     page.goto(f"{base_url}/auth/login")
     page.locator("#email").fill(user.email)
     page.locator("#password").fill(user.password)
@@ -42,13 +42,13 @@ def login(page: Page, base_url: str, user: StUser) -> None:
     page.wait_for_url(LANDING_URL_RE)
     if "/auth/tenant" in page.url:
         page.locator('form[action="/auth/tenant"] button[type="submit"]').first.click()
-    expect(page).to_have_url(f"{base_url}/")
+    expect(page).to_have_url(f"{base_url}/systems")
 
 
 def open_docs_system(page: Page, base_url: str, user: StUser) -> None:
     """ログインして旧シェル（AutoRun・観点管理・設定を持つ index.html）を開く。
 
-    "/" は統合ワークスペースに置き換わったため、旧シェルの画面は
+    ログイン着地点は /systems になったため、旧シェルの画面は
     /dashboard 等の画面別 URL から開く。
     """
     login(page, base_url, user)

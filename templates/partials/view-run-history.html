@@ -47,24 +47,29 @@
 
           <div id="rh-container">
             <table class="rh-table">
+              <caption class="visually-hidden">実行履歴の一覧。列見出しをクリックすると並び替えられます。</caption>
               <thead>
                 <!-- 実測 880px 幅に合わせる。固定幅の合計を抑え、サイト名（最長
                      hotel-example-site.takeyaqa.dev）が折り返さない幅を可変列へ残す。 -->
                 <tr>
-                  <th class="rh-col-type">種別</th>
-                  <th class="rh-sortable rh-col-site" data-sort="domain">サイト<span class="rh-arrow"></span></th>
-                  <th class="rh-col-scope">範囲</th>
-                  <th class="rh-sortable rh-col-ts" data-sort="ts">日時<span class="rh-arrow"></span></th>
-                  <th class="rh-col-status">状態</th>
-                  <th class="rh-sortable rh-num rh-col-n" data-sort="screens">画面<span class="rh-arrow"></span></th>
-                  <th class="rh-sortable rh-num rh-col-n" data-sort="conds">条件<span class="rh-arrow"></span></th>
-                  <th class="rh-sortable rh-num rh-col-n" data-sort="docs">成果物<span class="rh-arrow"></span></th>
-                  <th class="rh-col-act">操作</th>
+                  <th class="rh-col-type" scope="col">種別</th>
+                  <th class="rh-sortable rh-col-site" data-sort="domain" scope="col">サイト<span class="rh-arrow"></span></th>
+                  <th class="rh-col-scope" scope="col">範囲</th>
+                  <th class="rh-sortable rh-col-ts" data-sort="ts" scope="col">日時<span class="rh-arrow"></span></th>
+                  <th class="rh-col-status" scope="col">状態</th>
+                  <th class="rh-sortable rh-num rh-col-n" data-sort="screens" scope="col">画面<span class="rh-arrow"></span></th>
+                  <th class="rh-sortable rh-num rh-col-n" data-sort="conds" scope="col">条件<span class="rh-arrow"></span></th>
+                  <th class="rh-sortable rh-num rh-col-n" data-sort="docs" scope="col">成果物<span class="rh-arrow"></span></th>
+                  <th class="rh-col-act" scope="col">操作</th>
                 </tr>
               </thead>
               <tbody id="rh-tbody"></tbody>
             </table>
-            <div id="rh-empty" style="display:none">実行履歴がありません。</div>
+            <!-- 空状態: 0件をそのまま伝えるだけでなく、次に何をすれば埋まるかを添える。 -->
+            <div id="rh-empty" style="display:none">
+              <div>実行履歴がありません。</div>
+              <div class="rh-sub">サイトを登録してクロールまたは AutoRun を実行すると、ここに一覧が表示されます。</div>
+            </div>
             <div id="rh-pager" class="pager-wrap"></div>
           </div>
         </section>

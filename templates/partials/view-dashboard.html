@@ -5,7 +5,8 @@
               <h1 class="dash-hero-title">URLからQAドキュメントを自動生成</h1>
               <p class="dash-hero-sub">稼働中のWebシステムを解析し、画面仕様書・テスト設計・画面遷移図をまとめて作成します。</p>
               <div class="dash-hero-form">
-                <input type="url" id="hero-url" class="url-input dash-hero-input" placeholder="https://example.com　解析したいURLを入力" autocomplete="url" list="url-history-list" />
+                <label for="hero-url" class="visually-hidden">解析したいURLを入力してください</label>
+                <input type="url" id="hero-url" class="url-input dash-hero-input" placeholder="https://example.com" autocomplete="url" list="url-history-list" />
                 <button type="button" id="hero-start-btn" class="btn-primary dash-hero-start">解析を始める</button>
               </div>
               <div class="dash-hero-steps" aria-label="ドキュメント生成の流れ">
@@ -30,27 +31,27 @@
             <ol class="onboarding-checklist-steps">
               <li id="onboarding-site-registered" data-onboarding-state="site_registered">
                 <span class="onboarding-check" aria-hidden="true">1</span>
-                <span><strong>サイトを登録</strong><small>解析したいURLを入力します</small></span>
+                <span><strong><span class="visually-hidden">ステップ1: </span>サイトを登録</strong><small>解析したいURLを入力します</small></span>
               </li>
               <li id="onboarding-first-crawl" data-onboarding-state="first_crawl">
                 <span class="onboarding-check" aria-hidden="true">2</span>
-                <span><strong>初回解析</strong><small>画面と入力項目を収集します</small></span>
+                <span><strong><span class="visually-hidden">ステップ2: </span>初回解析</strong><small>画面と入力項目を収集します</small></span>
               </li>
               <li id="onboarding-report-viewed" data-onboarding-state="report_viewed">
                 <span class="onboarding-check" aria-hidden="true">3</span>
-                <span><strong>レポートを確認</strong><small>仕様書とテスト設計を開きます</small></span>
+                <span><strong><span class="visually-hidden">ステップ3: </span>レポートを確認</strong><small>仕様書とテスト設計を開きます</small></span>
               </li>
             </ol>
             <p class="onboarding-demo-hint">デモ利用時は、ターミナルで <code>make demo</code> を実行してください。APIキーなしでも試せます。</p>
           </section>
           <div class="dashboard-section-head">
             <div>
-              <h2 class="dash-section-title">解析履歴</h2>
+              <h2 class="dash-section-title">解析済みサイト</h2>
               <p class="dashboard-section-copy">過去に解析したサイトのドキュメント確認や再解析ができます。</p>
             </div>
             <div class="dashboard-section-actions">
               <button class="btn-outline-sm" id="reload-history">再読み込み</button>
-              <button class="btn-primary dashboard-add-site-btn" id="add-site-btn-2">+　新規解析</button>
+              <button class="btn-outline-sm dashboard-add-site-btn" id="add-site-btn-2">+ 新規解析</button>
             </div>
           </div>
           <div id="history-body"><div class="empty">読み込み中...</div></div>

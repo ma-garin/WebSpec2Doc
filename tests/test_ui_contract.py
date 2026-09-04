@@ -55,8 +55,12 @@ def spa() -> str:
 
 @pytest.fixture(scope="module")
 def workspace() -> str:
-    """統合ワークスペースのシェル（"/" = サイト一覧）。"""
-    return _html("/")
+    """統合ワークスペースのシェル（workspace.html）。
+
+    "/" はアプリシェル（index.html）に戻ったため、workspace.html を
+    フル機能モードで配る /team から取得する。
+    """
+    return _html("/team")
 
 
 # ---------------------------------------------------------------- SPA の骨格
@@ -128,21 +132,22 @@ RAIL_VIEWS = ["home", "spec", "test", "drift", "schedule", "report", "team"]
 class TestWorkspaceShell:
     """統合ワークスペースのシェル。
 
-    製品を 1 つに統合したため、旧システム選択ハブ（/systems・4 カード）は廃止した。
-    ログイン後の着地点は "/"（サイト一覧）1 箇所だけになる。
+    システム選択ハブ（/systems）は復活済みで、ログイン後の着地点は /systems。
+    そこからドキュメント作成（"/"）・テスト自動化（/test-automation）を選ぶ。
     """
 
-    def test_systems_hub_redirects_to_home(self) -> None:
-        """旧 URL は 404 にせずホームへ送る（ブックマーク・共有リンクを切らない）。"""
+    def test_systems_hub_shows_selection_cards(self) -> None:
+        """/systems はシステム選択画面（ドキュメント作成・テスト自動化の 2 カード）を返す。"""
         res = appmod.app.test_client().get("/systems")
-        assert res.status_code == 302
-        assert res.headers["Location"] == "/"
+        assert res.status_code == 200
+        html = res.get_data(as_text=True)
+        assert "ドキュメント作成" in html
+        assert "テスト自動化" in html
 
-    def test_test_automation_hub_redirects_to_home(self) -> None:
-        """旧テスト自動化シェルも同様。domain 無しならホームへ。"""
+    def test_test_automation_renders_workspace_in_test_only_mode(self) -> None:
+        """/test-automation は統合ワークスペースをテスト系パネルだけに絞って開く。"""
         res = appmod.app.test_client().get("/test-automation")
-        assert res.status_code == 302
-        assert res.headers["Location"] == "/"
+        assert res.status_code == 200
 
     def test_rail_offers_exactly_seven_workspaces(self, workspace: str) -> None:
         """レールは 7 つ（ホーム/仕様/テスト/変更/定期実行/報告/チーム）だけを出す。"""
@@ -154,7 +159,9 @@ class TestWorkspaceShell:
         """「準備中」を出さない。押せない導線を並べないという方針の表れ。"""
         assert "準備中" not in workspace
 
-    def test_shell_does_not_link_back_to_removed_hub(self, workspace: str) -> None:
+    def test_full_mode_shell_does_not_link_to_system_select(self, workspace: str) -> None:
+        """フル機能（ドキュメント作成）のシェルは自分がホームなので戻り先を出さない。
+        テスト自動化専用シェル（mode=test-only）だけがシステム選択へ戻る。"""
         assert "/systems" not in workspace
 
 

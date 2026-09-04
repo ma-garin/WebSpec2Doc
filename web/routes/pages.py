@@ -88,9 +88,11 @@ def _may_use_testlab() -> bool:
 
 
 @bp.route("/")
-def index() -> str:
-    """ホーム = サイト一覧。サイトが 0 件なら URL 入力だけの空状態を出す（画面側で判定）。"""
-    return render_template("workspace.html", ws="home", domain="")
+def index() -> Response:
+    """ドキュメント作成（System 01）の入口。実体は /dashboard に一本化する。
+    / と /dashboard が同じ画面を返していると、URL とビューが 1:1 にならず
+    ブラウザの戻る・ブックマークが壊れる。"""
+    return redirect("/dashboard")
 
 
 @bp.route("/team")
@@ -100,7 +102,7 @@ def team() -> str:
     ワークスペース全体の設定であってサイトには属さない。サイトを 1 件も
     持たないテナントでも同僚を招けるよう、サイト無しで開ける経路を持たせる。
     """
-    return render_template("workspace.html", ws="team", domain="")
+    return render_template("workspace.html", ws="team", domain="", mode="full")
 
 
 @bp.route("/sites/<domain>")
@@ -129,20 +131,19 @@ def site_workspace(domain: str, ws: str) -> str | Response:
         abort(403)
     if not (scoped_output_dir(OUTPUT_DIR) / domain / "report.json").is_file():
         return redirect("/")
-    return render_template("workspace.html", ws=ws, domain=domain)
+    return render_template("workspace.html", ws=ws, domain=domain, mode="full")
 
 
 @bp.route("/test-automation")
-def test_automation() -> Response:
-    """旧テスト自動化シェル。統合ワークスペースの該当サイトへ送る。"""
-    domain = request.args.get("domain", "")
-    return redirect(f"/sites/{domain}/tests" if domain else "/")
+def test_automation() -> str:
+    """テスト自動化単体モード。統合ワークスペースをテスト系パネルだけに絞って開く。"""
+    return render_template("workspace.html", ws="home", domain="", mode="test-only")
 
 
 @bp.route("/systems")
-def systems() -> Response:
-    """旧システム選択ハブ。製品を 1 つに統合したので選ばせる意味が無く、ホームへ送る。"""
-    return redirect("/")
+def systems() -> str:
+    """システム選択ハブ。ドキュメント作成／テスト自動化のどちらを開くか選ばせる。"""
+    return render_template("system-select.html")
 
 
 @bp.route("/cli")

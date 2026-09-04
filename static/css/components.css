@@ -1349,7 +1349,7 @@
 
 .autorun-step-row .autorun-step-item.is-active { color: var(--primary); }
 .autorun-step-row .autorun-step-item.is-active .autorun-step-label { font-weight: 800; }
-.autorun-step-row .autorun-step-item.is-waiting { color: var(--warning-border); }
+.autorun-step-row .autorun-step-item.is-waiting { color: var(--warning); }
 .autorun-step-row .autorun-step-item.is-done { color: var(--ok); }
 .autorun-step-row .autorun-step-item.is-error { color: var(--critical); }
 .autorun-step-row .autorun-step-meta { display: none; }
@@ -2051,7 +2051,7 @@
 .rh-type-schedule { --c: var(--primary); }
 .rh-status-complete { --c: var(--color-low); }
 .rh-status-failed { --c: var(--color-critical); }
-.rh-status-cancelled { --c: var(--text-muted); }
+.rh-status-cancelled { --c: var(--color-medium); }
 .rh-status-running { --c: var(--color-high); }
 
 /* ==================== 運用監視設定 ====================
@@ -2644,6 +2644,9 @@
 .rh-table td.rh-num { font-weight: 700; }
 .rh-site { font-weight: 700; }
 .rh-table tbody tr[data-act] { cursor: pointer; }
+/* 操作列（開く/削除ボタン）は行クリックと役割が競合するため、
+   ここだけ既定カーソルに戻し、行クリックとの境界を視覚的に示す。 */
+.rh-table td .rh-act-cell { cursor: default; }
 /* 日付区切り。同じ日に何度実行したかが見える */
 .rh-day td { background: var(--surface-soft); font-size: 11.5px; font-weight: 700; color: var(--text-muted); padding: 6px 10px; }
 .rh-day-n { color: var(--text-subtle); font-weight: 400; margin-left: 8px; }
@@ -2655,7 +2658,7 @@
    固定幅の合計を 470px 台に抑え、サイト名と日時へ余白を回す。 */
 /* 種別バッジは行内で最も情報量が少ない。幅を詰めてサイト名へ回す。 */
 .rh-table th.rh-col-type { width: 96px; }
-.rh-table td .rh-type-badge { font-size: 10px; padding: 2px 7px; }
+.rh-table td .rh-type-badge { font-size: 12px; padding: 2px 8px; }
 .rh-table th.rh-col-site { min-width: 210px; }
 .rh-table th.rh-col-ts { width: 156px; }
 .rh-table th.rh-col-status { width: 64px; }
@@ -2666,7 +2669,9 @@
 .rh-table td.rh-site { max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* 種別バッジと操作ボタンも折り返さない */
 .rh-table td .rh-type-badge, .rh-table td .btn-outline-sm { white-space: nowrap; }
-.rh-table th, .rh-table td { white-space: nowrap; }
+/* 全列一律の nowrap は狭いウィンドウで表がはみ出す原因になるため廃止。
+   折り返し不可にしたい列（サイト名・種別バッジ・操作ボタン・muted-copy）は
+   それぞれ個別に white-space:nowrap を持っており、ここでは何もしない。 */
 .rh-table td .muted-copy { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* 導出対象が無かった値。測って 0 だったのとは違うので、数値ではなく — で示す */
 .rh-table td .rh-none { color: var(--text-subtle); font-weight: 400; }

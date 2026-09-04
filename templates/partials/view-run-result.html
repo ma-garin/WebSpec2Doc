@@ -3,8 +3,10 @@
              3 つの成果物すべてがその回のものに揃う。
              1 実行結果 / 2 解析結果 / 3 実行結果レポート -->
         <section class="view" id="view-run-result">
-          <div id="rr-runbar" class="rr-runbar"></div>
-          <div id="rr-notice"></div>
+          <div id="rr-runbar" class="rr-runbar" role="navigation" aria-label="実行回の切り替え"></div>
+          <!-- 失敗（未保存の実行回など）を含む通知。文字での告知に加え、
+               支援技術にも変化を伝える（色だけに頼らない）。 -->
+          <div id="rr-notice" role="status" aria-live="polite"></div>
           <div id="rr-artifacts" class="rr-artifacts" role="tablist" aria-label="この実行回の成果物"></div>
           <div id="rr-body" class="rr-body"></div>
         </section>

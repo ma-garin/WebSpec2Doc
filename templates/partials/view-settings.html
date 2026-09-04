@@ -78,8 +78,9 @@
                 <button class="btn-outline-sm" id="test-connection" type="button">疎通確認</button>
                 <button class="btn-outline-sm" id="reload-ollama-models" type="button" style="display:none">モデル一覧を再取得</button>
                 <!-- 消す操作は決定のとなりに置かない。並べると保存のつもりで削除を押せてしまう。 -->
-                <button class="btn-outline-sm set-danger" id="clear-api-key" type="button" data-llm-only="openai">API キーを削除</button>
+                <button class="btn-outline-sm set-danger" id="clear-api-key" type="button" data-llm-only="openai" title="この操作は取り消せません">API キーを削除</button>
               </div>
+              <p class="set-help" id="clear-api-key-warning" style="margin-top:8px;color:var(--danger,#B42318)">「API キーを削除」は取り消せません。削除すると再入力が必要になります。</p>
               <div class="settings-msg" id="api-msg">保存しました</div>
               <div class="settings-msg" id="api-status-msg" style="margin-top:12px"></div>
               <div class="settings-msg" id="test-connection-msg" style="margin-top:12px"></div>
@@ -119,7 +120,7 @@
                 </div>
                 <div class="set-form">
                   <div class="field full">
-                    <label for="jira-base-url">サイトURL</label>
+                    <label for="jira-base-url">Jira サイトURL</label>
                     <input type="text" id="jira-base-url" placeholder="https://your-domain.atlassian.net" autocomplete="off" style="width:100%">
                   </div>
                   <div class="field">
@@ -274,8 +275,12 @@
               <h2 class="set-card-title">解析の既定値</h2>
               <p class="input-hint" style="margin-top:0;margin-bottom:14px">このブラウザに保存され、生成ウィザードの初期値に反映されます。</p>
               <div class="options-grid">
-                <div class="field"><label for="set-depth">階層数（既定）</label><input type="number" id="set-depth" min="1" max="5"></div>
-                <div class="field"><label for="set-max">最大ページ数（既定）</label><input type="number" id="set-max" min="1" max="300"></div>
+                <div class="field"><label for="set-depth">階層数（既定）</label><input type="number" id="set-depth" min="1" max="5">
+                  <p class="input-hint" style="margin:4px 0 0">起点URLから何階層先までページを辿るかの初期値です。</p>
+                </div>
+                <div class="field"><label for="set-max">最大ページ数（既定）</label><input type="number" id="set-max" min="1" max="300">
+                  <p class="input-hint" style="margin:4px 0 0">1回の解析で取得するページ数の上限の初期値です。</p>
+                </div>
                 <div class="field"><label for="set-parallelism">並列数（既定）</label>
                   <select id="set-parallelism">
                     <option value="1">1（順次）</option><option value="2">2</option>
@@ -283,15 +288,21 @@
                   </select>
                   <p class="input-hint" style="margin:4px 0 0">同時にアクセスする画面数。多いほど速いが、対象サイトへの負荷が増えます。</p>
                 </div>
-                <div class="field"><label for="set-case-minutes">1テストケースあたりの想定分数</label><input type="number" id="set-case-minutes" min="1" max="120" placeholder="10"></div>
+                <div class="field"><label for="set-case-minutes">1テストケースあたりの想定分数</label><input type="number" id="set-case-minutes" min="1" max="120" placeholder="10">
+                  <p class="input-hint" style="margin:4px 0 0">レポートの想定工数（テストケース数×この分数）の算出に使います。</p>
+                </div>
                 <div class="field"><label for="set-url-history-limit">URL履歴の保持件数</label>
                   <select id="set-url-history-limit">
                     <option value="0">0（無効）</option><option value="5">5</option>
                     <option value="10" selected>10</option><option value="30">30</option>
                     <option value="50">50</option><option value="100">100</option>
-                  </select></div>
+                  </select>
+                  <p class="input-hint" style="margin:4px 0 0">URL入力欄の入力候補として保持する件数です。</p>
+                </div>
 
-                <div class="field full"><label for="set-auth">認証セッション auth.json パス（任意）</label><input type="text" id="set-auth" placeholder="auth.json"></div>
+                <div class="field full"><label for="set-auth">認証セッション auth.json パス（任意）</label><input type="text" id="set-auth" placeholder="auth.json">
+                  <p class="input-hint" style="margin:4px 0 0">ログインが必要なサイトを解析する際に使う、保存済み認証情報（Cookie等）ファイルのパスです。</p>
+                </div>
               </div>
               <div class="field full" style="margin-top:18px;padding-top:18px;border-top:1px solid var(--border)">
                 <label class="checkbox-chip" style="align-items:flex-start;gap:10px;height:auto;padding:10px 12px">
@@ -323,7 +334,7 @@
                   <label for="ops-site">対象サイト</label>
                   <select id="ops-site" class="url-input"><option value="">サイトを選択してください</option></select>
                 </div>
-                <div class="field"><label for="ops-site-url">サイトURL</label><input type="url" id="ops-site-url" placeholder="https://example.com"></div>
+                <div class="field"><label for="ops-site-url">解析対象URL</label><input type="url" id="ops-site-url" placeholder="https://example.com"></div>
               </div>
 
               <section class="ops-section">
@@ -334,7 +345,9 @@
                   <div class="field"><label for="ops-window-start">開始時刻（任意）</label><input type="time" id="ops-window-start"></div>
                   <div class="field"><label for="ops-window-end">終了時刻（任意）</label><input type="time" id="ops-window-end"></div>
                   <div class="field"><label for="ops-retry-max">再試行回数</label><input type="number" id="ops-retry-max" min="0" max="5" value="2"></div>
-                  <div class="field"><label for="ops-backoff">初回バックオフ（秒）</label><input type="number" id="ops-backoff" min="1" max="3600" value="60"></div>
+                  <div class="field"><label for="ops-backoff">初回バックオフ（秒）</label><input type="number" id="ops-backoff" min="1" max="3600" value="60">
+                    <p class="input-hint" style="margin:4px 0 0">失敗時、最初の再試行までの待機秒数です。以降の再試行は倍々に延びます。</p>
+                  </div>
                   <fieldset class="field full ops-weekdays">
                     <legend>実行曜日（未選択は毎日）</legend>
                     <div class="ops-weekday-list">
@@ -348,7 +361,9 @@
                 <h3 class="ops-section-title">通知</h3>
                 <div class="ops-grid">
                   <div class="field"><label for="ops-notify-type">通知チャネル</label><select id="ops-notify-type"><option value="none">通知しない</option><option value="slack">Slack</option><option value="teams">Microsoft Teams Workflows</option><option value="webhook">Webhook</option><option value="email">Email（SMTP環境設定）</option></select></div>
-                  <div class="field"><label for="ops-summary-limit">差分表示件数</label><input type="number" id="ops-summary-limit" min="1" max="20" value="5"></div>
+                  <div class="field"><label for="ops-summary-limit">差分表示件数</label><input type="number" id="ops-summary-limit" min="1" max="20" value="5">
+                    <p class="input-hint" style="margin:4px 0 0">通知本文に表示する差分（追加/削除ページ等）の最大件数です。</p>
+                  </div>
                   <div class="field full"><label for="ops-endpoint">Webhook URL / SMTPホスト</label><input type="password" id="ops-endpoint" autocomplete="off" placeholder="https://..."></div>
                   <div class="field full"><label for="ops-template">通知テンプレート（Jinja2・任意）</label><textarea id="ops-template" rows="4" placeholder="{{ site_url }} で変更を検知しました"></textarea><p class="input-hint ops-token-hint">利用可能: site_url / added_pages / removed_pages / field_changes / api_changes / added_page_names / removed_page_names</p></div>
                 </div>
@@ -481,12 +496,20 @@
               </div>
 
               <div class="options-grid">
-                <div class="field"><label for="td-bva-offset">境界値オフセット</label><input type="number" id="td-bva-offset" min="1" max="5" value="1"></div>
+                <div class="field"><label for="td-bva-offset">境界値オフセット</label><input type="number" id="td-bva-offset" min="1" max="5" value="1">
+                  <p class="input-hint" style="margin:4px 0 0">境界値の前後にずらす幅です（例: 1なら境界±1の値を生成）。</p>
+                </div>
                 <div class="field"><label for="td-pw-strength">ペアワイズ強度</label>
-                  <select id="td-pw-strength" class="url-input" style="height:40px"><option value="2">2-way</option><option value="3">3-way</option></select></div>
+                  <select id="td-pw-strength" class="url-input" style="height:40px"><option value="2">2-way</option><option value="3">3-way</option></select>
+                  <p class="input-hint" style="margin:4px 0 0">同時に組み合わせる条件の数です。3-wayは網羅性が上がる分、ケース数も増えます。</p>
+                </div>
                 <div class="field"><label for="td-n-switch">状態遷移 Nスイッチ</label>
-                  <select id="td-n-switch" class="url-input" style="height:40px"><option value="0">0-switch</option><option value="1">1-switch</option></select></div>
-                <div class="field"><label for="td-max-dt">DT 最大条件数</label><input type="number" id="td-max-dt" min="1" max="6" value="4"></div>
+                  <select id="td-n-switch" class="url-input" style="height:40px"><option value="0">0-switch</option><option value="1">1-switch</option></select>
+                  <p class="input-hint" style="margin:4px 0 0">状態遷移テストで連続して確認する遷移の回数です。</p>
+                </div>
+                <div class="field"><label for="td-max-dt">DT 最大条件数</label><input type="number" id="td-max-dt" min="1" max="6" value="4">
+                  <p class="input-hint" style="margin:4px 0 0">デシジョンテーブルに含める条件（列）の最大数です。</p>
+                </div>
               </div>
 
               <div class="field full" style="margin-top:18px">

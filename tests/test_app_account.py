@@ -63,8 +63,14 @@ def _login(client, email="owner@example.com", password="secret-pass-123"):
 
 
 def test_open_access_while_no_user_exists() -> None:
+    """利用者が 1 人も居ない間は認証を挟まない。
+
+    "/" は /dashboard へ送るだけになったので、認証ガードに捕まっていない
+    ことを見るには移送先まで追う（ログイン画面へ飛ばされたら失敗）。
+    """
     c = _client()
-    assert c.get("/", headers=H).status_code == 200
+    assert c.get("/", headers=H, follow_redirects=True).status_code == 200
+    assert c.get("/dashboard", headers=H).status_code == 200
     assert c.get("/api/history", headers=H).status_code == 200
 
 
@@ -151,7 +157,8 @@ def test_off_mode_disables_auth_even_with_users(monkeypatch) -> None:
     _setup_owner(c)
     monkeypatch.setenv("WEBSPEC2DOC_AUTH_MODE", "off")
     anon = _client()
-    assert anon.get("/", headers=H).status_code == 200
+    # "/" は /dashboard へ送るだけ。認証オフが効いているかは移送先で見る。
+    assert anon.get("/dashboard", headers=H).status_code == 200
     # ログイン画面はトップへ戻す
     res = anon.get("/auth/login", headers=H)
     assert res.status_code == 302 and res.headers["Location"] == "/"

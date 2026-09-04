@@ -196,7 +196,9 @@ class TestAutoRunIntake:
         end = spa.index('id="autorun-steps"')
         intake = spa[start:end]
         assert "未検証" in intake
-        assert "欠陥が無いことの証明はしません" in intake
+        # 「欠陥が無いことの証明はしません」から、読み手に伝わる言い方へ改めた（2026-09-05）。
+        # 主張の中身（不在は証明しない）は同じなので、意味を担保する側で検証する。
+        assert "未検証＝問題なし、という意味ではありません" in intake
 
     def test_preflight_requires_explicit_click(self, spa: str) -> None:
         """URL を打っただけで対象サイトへアクセスしないこと。

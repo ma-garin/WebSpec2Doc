@@ -448,3 +448,23 @@ kbd.kbd {
 @media (max-width: 860px) {
   .app-sidebar-foot { display: none; }
 }
+
+/* ---- ボタン統一(監査対応 2026-09-05) ----
+   app.css の .btn-primary:disabled / .btn-outline-sm:disabled は opacity で
+   ブランド色を薄めるだけで、活性の淡い状態と見分けがつかなかった
+   （AutoRun の唯一の主CTA「開始」が押せないボタンに見える不具合の原因）。
+   ここで同じ詳細度の宣言をグレー専用に固定する。app.css より後に読み込むため勝つ。
+   既存トークン（--surface-subtle/--text-muted/--border）のみを使用し、新規トークンは追加しない。 ---- */
+.btn-primary:disabled,
+.btn-primary[disabled],
+.btn-outline-sm:disabled,
+.btn-outline-sm[disabled],
+button:disabled,
+[aria-disabled="true"] {
+  background: var(--surface-subtle);
+  color: var(--text-muted);
+  border-color: var(--border);
+  opacity: 1;
+  cursor: not-allowed;
+  box-shadow: none;
+}

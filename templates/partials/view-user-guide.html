@@ -6,6 +6,21 @@
               <p>URL解析からレポート確認、品質観点レビューまで、画面上で確認できる操作ガイドです。</p>
             </div>
 
+            <nav class="qa-readable-section" aria-label="目次">
+              <h3>目次</h3>
+              <ul class="qa-check-list">
+                <li><a href="#guide-report-tabs">レポートの読み方 — どのタブで何が分かるか</a></li>
+                <li><a href="#guide-technique-flow">テスト技法が推奨されたら — 実際の作業フロー</a></li>
+                <li><a href="#guide-4step-analysis">4ステップURL解析</a></li>
+                <li><a href="#guide-quality-viewpoints">品質観点</a></li>
+                <li><a href="#guide-output-files">出力ファイル</a></li>
+                <li><a href="#guide-sample-site">動作検証用のサンプルサイトと仕様書（同梱）</a></li>
+                <li><a href="#guide-cli">CLIの使い方（画面を使わずコマンドで実行する）</a></li>
+                <li><a href="#guide-cicd">CI/CD 連携（仕様ドリフトの自動監視）</a></li>
+                <li><a href="#guide-faq">よくある確認</a></li>
+              </ul>
+            </nav>
+
             <div class="qa-card-grid">
               <div class="qa-mini-card"><strong>1. 新規解析</strong><span>左上の「新規解析」から解析対象URLを入力します。</span></div>
               <div class="qa-mini-card"><strong>2. 画面解析</strong><span>「画面解析」で取得対象ページを検出します。</span></div>
@@ -15,7 +30,7 @@
             </div>
 
             <div class="qa-readable-section">
-              <h3>レポートの読み方 — どのタブで何が分かるか</h3>
+              <h3 id="guide-report-tabs">レポートの読み方 — どのタブで何が分かるか</h3>
               <table class="data">
                 <thead><tr><th>タブ</th><th>何が分かるか</th><th>使い方のポイント</th></tr></thead>
                 <tbody>
@@ -49,7 +64,7 @@
             </div>
 
             <div class="qa-readable-section">
-              <h3>テスト技法が推奨されたら — 実際の作業フロー</h3>
+              <h3 id="guide-technique-flow">テスト技法が推奨されたら — 実際の作業フロー</h3>
               <table class="data">
                 <thead><tr><th>推奨技法</th><th>典型的な状況</th><th>次のアクション</th></tr></thead>
                 <tbody>
@@ -63,7 +78,7 @@
             </div>
 
             <div class="qa-readable-section">
-              <h3>4ステップURL解析</h3>
+              <h3 id="guide-4step-analysis">4ステップURL解析</h3>
               <table class="data">
                 <thead><tr><th>Step</th><th>画面</th><th>操作</th></tr></thead>
                 <tbody>
@@ -76,7 +91,7 @@
             </div>
 
             <div class="qa-readable-section">
-              <h3>品質観点</h3>
+              <h3 id="guide-quality-viewpoints">品質観点</h3>
               <table class="data">
                 <thead><tr><th>メニュー</th><th>内容</th><th>外部API</th></tr></thead>
                 <tbody>
@@ -86,7 +101,7 @@
             </div>
 
             <div class="qa-readable-section">
-              <h3>出力ファイル</h3>
+              <h3 id="guide-output-files">出力ファイル</h3>
               <ul class="qa-check-list">
                 <li><strong>通常レポート:</strong> report.html / report.json / spec.xlsx / report.pdf / screens.md / forms.md</li>
                 <li><strong>差分:</strong> diff_report.html / snapshots/</li>
@@ -96,7 +111,7 @@
             </div>
 
             <div class="qa-readable-section">
-              <h3>動作検証用のサンプルサイトと仕様書（同梱）</h3>
+              <h3 id="guide-sample-site">動作検証用のサンプルサイトと仕様書（同梱）</h3>
               <p style="font-size:13px;color:var(--text-muted);margin-bottom:8px">
                 本ツールの挙動を自分の目で確かめるための、<strong>ローカル完結</strong>のサンプル一式を同梱しています。
                 外部サイトに迷惑をかけずに、ドキュメント生成・文書駆動・仕様ドリフト検知を一通り試せます。
@@ -125,37 +140,27 @@
             </div>
 
             <div class="qa-readable-section">
-              <h3>CLIの使い方（画面を使わずコマンドで実行する）</h3>
+              <h3 id="guide-cli">CLIの使い方（画面を使わずコマンドで実行する）</h3>
               <p style="font-size:13px;color:var(--text-muted);margin-bottom:8px">
                 画面と同じ処理は <code>python src/main.py</code> からコマンドラインでも実行できます。バッチ処理・自動化・CI連携に使います。
                 実行前にリポジトリのルートで <code>source venv/bin/activate</code> を行ってください。
               </p>
-              <table class="data">
-                <thead><tr><th>オプション</th><th>役割</th><th>例</th></tr></thead>
-                <tbody>
-                  <tr><td><code>--url</code></td><td>解析対象URL（解析の起点）</td><td><code>--url https://example.com/</code></td></tr>
-                  <tr><td><code>--format</code></td><td>出力形式（指定可能: md,html,excel,pdf,json。既定は md のみ）。カンマ区切りで複数指定可</td><td><code>--format html,pdf,excel,json,md</code></td></tr>
-                  <tr><td><code>--compare</code></td><td>前回の解析結果（スナップショット）と比較し、仕様ドリフトを検出する</td><td><code>--compare</code></td></tr>
-                  <tr><td><code>--fail-on-drift</code></td><td>ドリフト検出時に exit code 1 で終了する（CIでの失敗判定に使う）</td><td><code>--compare --fail-on-drift</code></td></tr>
-                  <tr><td><code>--login-record</code></td><td>見えるブラウザでログイン操作を記録し、認証セッション（<code>auth.json</code>）を保存する。<code>--login-record-url</code>（ログインページ）と <code>--login-signal</code>（完了シグナルファイル）を併用する</td><td><code>--login-record --login-record-url https://example.com/login --login-signal .signal</code></td></tr>
-                  <tr><td><code>--auth</code></td><td>保存済みの認証セッションファイル（auth.json）を指定して解析する</td><td><code>--auth auth.json</code></td></tr>
-                  <tr><td><code>--depth</code></td><td>リンクをたどる階層数（既定 2）</td><td><code>--depth 3</code></td></tr>
-                  <tr><td><code>--max-pages</code></td><td>取得する最大ページ数（既定 30）</td><td><code>--max-pages 50</code></td></tr>
-                </tbody>
-              </table>
-              <p style="font-size:13px;color:var(--text-muted);margin:8px 0 4px">代表的な使い方の流れ:</p>
-              <ol class="qa-check-list" style="padding-left:18px;list-style:decimal">
-                <li>初回解析（仕様書一式を生成）: <code>python src/main.py --url https://example.com/ --format html,pdf,excel,json,md</code></li>
-                <li>ログインが必要なサイトは、画面の「ログイン情報の設定」またはCLIの <code>--login-record</code> で先にセッションを記録する</li>
-                <li>記録した認証情報で解析: <code>python src/main.py --url https://example.com/mypage --auth auth.json</code></li>
-                <li>リリース後の再解析で仕様ドリフトを検知: <code>python src/main.py --url https://example.com/ --compare</code></li>
-                <li>CIパイプラインでドリフトを失敗判定にする: <code>python src/main.py --url https://example.com/ --compare --fail-on-drift</code></li>
-              </ol>
-              <p class="input-hint" style="margin-top:8px">全オプション一覧は <code>python src/main.py --help</code> で確認できます。ログイン記録CLIの詳細フラグは複雑なため、通常は画面（設定 →「ログイン情報の設定」）からの記録を推奨します。</p>
+              <p style="font-size:13px;color:var(--text-muted);margin-bottom:8px">
+                最初の1コマンド（仕様書一式を生成）: <code>python src/main.py --url https://example.com/ --format html,pdf,excel,json,md</code>
+              </p>
+              <p class="input-hint" style="margin-top:8px">
+                オプション一覧・コマンドの組み立ては <a href="/cli">使い方ページ</a> を参照してください。
+                ただし次のオプションは使い方ページに未掲載のため、ここに残します:
+                <code>--compare</code>（前回スナップショットとの差分検出）、
+                <code>--fail-on-drift</code>（ドリフト検出時に exit code 1 で終了）、
+                <code>--login-record</code> / <code>--login-record-url</code> / <code>--login-signal</code>（ログイン操作を記録し認証セッション auth.json を保存）、
+                <code>--auth</code>（保存済み認証セッションを指定して解析）。
+                全オプション一覧は <code>python src/main.py --help</code> でも確認できます。ログイン記録CLIの詳細フラグは複雑なため、通常は画面（設定 →「ログイン情報の設定」）からの記録を推奨します。
+              </p>
             </div>
 
             <div class="qa-readable-section">
-              <h3>CI/CD 連携（仕様ドリフトの自動監視）</h3>
+              <h3 id="guide-cicd">CI/CD 連携（仕様ドリフトの自動監視）</h3>
               <p style="font-size:13px;color:var(--text-muted);margin-bottom:8px">
                 デプロイのたびに仕様ドリフトを自動検知できます。差分があると exit code 1 で終了するため、パイプラインで検知可能です。
               </p>
@@ -168,7 +173,7 @@
             </div>
 
             <div class="qa-readable-section">
-              <h3>よくある確認</h3>
+              <h3 id="guide-faq">よくある確認</h3>
               <ul class="qa-check-list qa-question-list">
                 <li>品質観点に対象サイトが出ない場合は、先にサイトを解析して report.json を生成してください。</li>
                 <li>ログインが必要な画面は、条件設定で認証情報を入力してから解析してください。</li>

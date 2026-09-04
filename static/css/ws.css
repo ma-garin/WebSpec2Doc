@@ -155,9 +155,10 @@ a.btn{text-decoration:none}
 #spec-cases .tcg-wrap{padding:14px 16px 10px}
 #spec-cases .btn-primary{height:30px;padding:0 12px;border:1px solid var(--ac);border-radius:8px;background:var(--ac);color:#fff;font-size:12px;font-weight:600}
 #spec-cases .btn-primary:hover{background:var(--ac-dk);border-color:var(--ac-dk)}
-#spec-cases .btn-primary:disabled{opacity:.55;cursor:not-allowed}
+#spec-cases .btn-primary:disabled{background:var(--bg);color:var(--tx3);border-color:var(--line2);opacity:1;cursor:not-allowed}
 #spec-cases .btn-outline-sm{height:28px;padding:0 10px;border:1px solid var(--line2);border-radius:7px;background:var(--sf);color:var(--tx2);font-size:12px}
 #spec-cases .btn-outline-sm:hover{background:var(--bg);color:var(--tx)}
+#spec-cases .btn-outline-sm:disabled{background:var(--bg);color:var(--tx3);border-color:var(--line2);opacity:1;cursor:not-allowed}
 #spec-cases .tc-search{height:28px;padding:0 8px;border:1px solid var(--line2);border-radius:7px;background:var(--sf);color:var(--tx);font-size:12px;min-width:180px}
 
 /* ---------- 報告 WS（C3）: 節の選択リストと、iframe を左に置く 2 段組み ---------- */

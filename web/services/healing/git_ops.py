@@ -242,3 +242,56 @@ def merge_branch_into_worktree(workdir: Path, source_branch: str) -> GitResult:
     if not merge_result.ok:
         run_git(workdir, ["merge", "--abort"], timeout=15)
     return merge_result
+
+
+#: 削除を絶対に許さないブランチ名。利用者の主ブランチを消す事故を防ぐ最終防波堤。
+_PROTECTED_BRANCHES = frozenset({"main", "master"})
+
+
+def delete_branch(repo: Path, branch: str) -> GitResult:
+    """統合・欠陥ブランチを削除する（後片付け用。利用者のブランチを消しうる唯一の関数）。
+
+    main/master と、現在チェックアウト中のブランチは削除を実行せず即座に
+    ok=False を返す。ここで弾かないと「片付けのつもりでメインリポジトリの
+    作業中ブランチを消す」事故が起きうるため、ガードを他関数へ委譲しない。
+    """
+    if branch in _PROTECTED_BRANCHES or branch == current_branch(repo):
+        return GitResult(
+            ok=False, stdout="", stderr=f"保護されたブランチは削除しません: {branch}", exit_code=1
+        )
+    return run_git(repo, ["branch", "-D", branch], timeout=15)
+
+
+def prune_worktrees(repo: Path) -> GitResult:
+    """登録済みだが実体ディレクトリが既に消えた worktree を掃除する。
+
+    remove_worktree を使わずディレクトリだけ消したケース（利用者による手動削除等）を
+    ここで拾う。実体が残る worktree には触れない（prune は git 側で安全に保証される）。
+    """
+    return run_git(repo, ["worktree", "prune"], timeout=30)
+
+
+def list_branches(repo: Path, prefix: str = "") -> list[str]:
+    """ローカルブランチ名の一覧。prefix 指定時はその接頭辞のものだけに絞る。
+
+    取得に失敗しても例外は投げず空リストを返す（後片付けの一覧取得を
+    落ちない前提にするため。呼び出し側は「対象がなかった」と区別しなくてよい）。
+    """
+    result = run_git(repo, ["for-each-ref", "--format=%(refname:short)", "refs/heads/"], timeout=15)
+    if not result.ok:
+        return []
+    names = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    if not prefix:
+        return names
+    return [name for name in names if name.startswith(prefix)]
+
+
+def branch_is_merged_into(repo: Path, branch: str, target: str) -> bool:
+    """branch が target へ既に取り込まれているか（削除してよい判定に使う）。
+
+    `merge-base --is-ancestor` の終了コードで判定する。取得失敗（比較不能）は
+    False を返す。「マージ済みか分からないものは削除させない」という安全側に
+    倒すためで、真偽不明を True 扱いにしない。
+    """
+    result = run_git(repo, ["merge-base", "--is-ancestor", branch, target], timeout=15)
+    return result.ok

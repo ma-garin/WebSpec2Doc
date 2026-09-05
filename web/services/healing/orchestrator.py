@@ -14,6 +14,7 @@ try/except で包み、失敗しても run.status="failed" として必ず保存
 
 from __future__ import annotations
 
+import logging
 import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -38,7 +39,19 @@ from web.services.healing.types import (
 )
 
 #: record_decision が受け付ける操作。これ以外は HealingError にする。
+logger = logging.getLogger(__name__)
+
 DECISION_ACTIONS = ("approve", "reject", "rerun", "merge")
+
+#: バックグラウンドのループがまだ動いている状態。ここに居る run に対して
+#: 人の操作（再検証・マージ）を許すと、ループと同じ worktree を同時に触ることになる。
+ACTIVE_STATUSES = frozenset(
+    {"queued", "preparing", "verifying", "analyzing", "fixing", "reverifying"}
+)
+
+#: worktree とブランチを残しておく実行の数（プロジェクトごと）。
+#: 人が差分を見に来るため直近は残すが、無制限に増やさない。
+KEEP_RUN_ARTIFACTS = 5
 
 # ─────────────────────────── 実行中の状態 ───────────────────────────
 
@@ -70,6 +83,14 @@ def _update(out_dir: Path, run: HealingRun, *, status: str | None = None, step_l
     存在しないのと同じ。ここを通した遷移は必ず save_run するまでが 1 セット。
     """
     with _RUNS_LOCK:
+        if run.status == "cancelled" and status not in (None, "cancelled"):
+            # 中止は人が下した最終決定。バックグラウンドのループがまだ走っていて
+            # あとから succeeded / failed を書き込むと、中止が黙って無かったことになる。
+            # 中止から他の状態へは戻さない（ログにだけ痕跡を残す）。
+            _add_log(run, f"中止済みのため状態変更を無視しました: {status}")
+            _RUNS[run.run_id] = run
+            run_store.save_run(out_dir, run)
+            return
         if status is not None:
             run.status = status
         if step_label:
@@ -107,6 +128,13 @@ def start_run(*, out_dir: Path, project: HealingProject, actor: str = "", extra_
         _RUNS[run_id] = run
     run_store.save_run(out_dir, run)
 
+    # 古い実行の作業ツリーとブランチを片付ける。実行のたびに増え続けるものなので、
+    # 「増やした側」が減らす責任を持つ。片付けに失敗しても新しい実行は止めない。
+    try:
+        _cleanup_old_run_artifacts(out_dir, project)
+    except Exception:  # noqa: BLE001 - 後片付けの失敗で実行を止めない
+        logger.warning("古い実行の後片付けに失敗しました", exc_info=True)
+
     thread = threading.Thread(
         target=_run_loop,
         args=(out_dir, run, project, extra_instructions),
@@ -115,6 +143,48 @@ def start_run(*, out_dir: Path, project: HealingProject, actor: str = "", extra_
     )
     thread.start()
     return run
+
+
+def _cleanup_old_run_artifacts(out_dir: Path, project: HealingProject) -> None:
+    """直近 KEEP_RUN_ARTIFACTS 件より古い実行の worktree と統合ブランチを消す。
+
+    差分は人が後から見に来るので直近は残す。ただし残し続けると、
+    実行のたびに worktree（ディスク）とブランチ（対象リポジトリ）が積もる。
+
+    統合ブランチを消すのは **PR を出していない実行だけ**にする。PR を出した実行の
+    ブランチを消すと GitHub 側の PR が壊れる。判断が付かないものは残す（安全側）。
+    """
+    import shutil
+
+    repo = Path(project.repo_path)
+    runs = run_store.list_runs(out_dir, project.project_id, limit=200)
+    stale = [r for r in runs[KEEP_RUN_ARTIFACTS:] if r.status not in ACTIVE_STATUSES]
+    if not stale:
+        return
+
+    root = project_store.worktree_root()
+    removed = 0
+    for old in stale:
+        workdir = root / old.run_id
+        if workdir.exists():
+            shutil.rmtree(workdir, ignore_errors=True)
+            removed += 1
+        # 競合などでマージできなかった欠陥ブランチは、その場では消せない
+        # （未マージのものを消さないのが安全側の判断）。ただし実行が古くなれば
+        # 中身は統合ブランチにも PR にも入っておらず、残しても使い道がない。
+        # 実行 ID を接頭辞に持つブランチはその実行専用なので、ここでまとめて消す。
+        for leftover in git_ops.list_branches(repo, prefix=f"healing/{old.run_id}-"):
+            git_ops.delete_branch(repo, leftover)
+
+        # PR を出していて、まだ open のものは統合ブランチを残す（消すと PR が壊れる）。
+        pr = old.pull_request
+        if pr is not None and pr.state not in ("merged", "closed"):
+            continue
+        if old.branch:
+            git_ops.delete_branch(repo, old.branch)
+    git_ops.prune_worktrees(repo)
+    if removed:
+        logger.info("古い実行の作業ツリーを %d 件片付けました", removed)
 
 
 def get_run(out_dir: Path, run_id: str) -> HealingRun | None:
@@ -164,6 +234,10 @@ def record_decision(out_dir: Path, run_id: str, *, action: str, note: str = "", 
         return run
 
     if action == "reject":
+        # 走っている最中の却下は、まずループへ中止を伝える。これをしないと
+        # ループが次の段階へ進んで状態を上書きし、却下が無かったことになる。
+        if run.status in ACTIVE_STATUSES:
+            cancel_run(run_id)
         _update(out_dir, run, status="cancelled", note=f"{actor or '人'} が却下しました" + (f"（{note}）" if note else ""))
         return run
 
@@ -171,6 +245,8 @@ def record_decision(out_dir: Path, run_id: str, *, action: str, note: str = "", 
         return rerun_verification(out_dir, run_id)
 
     # action == "merge"
+    if run.status in ACTIVE_STATUSES:
+        raise HealingError("実行中はマージできません。終わるまで待つか、中止してください")
     project = project_store.get_project(out_dir, run.project_id)
     if project is None:
         raise HealingError(f"プロジェクト {run.project_id} が見つかりません")
@@ -202,6 +278,10 @@ def rerun_verification(out_dir: Path, run_id: str) -> HealingRun:
         raise HealingError(f"プロジェクト {run.project_id} が見つかりません")
     if not run.branch:
         raise HealingError("統合ブランチが未作成のため再検証できません")
+    if run.status in ACTIVE_STATUSES:
+        # ループ自身が同じ worktree で検証コマンドを走らせている最中に、
+        # 手動の再検証を重ねると同じディレクトリで 2 本のテストが同時に動く。
+        raise HealingError("実行中は再検証できません。終わるまで待つか、中止してください")
 
     integration_dir = (project_store.worktree_root() / run.run_id / "integration").resolve()
     if not integration_dir.exists():
@@ -401,16 +481,18 @@ def _run_loop_inner(out_dir: Path, run: HealingRun, project: HealingProject, ext
         if previous_iteration is not None:
             previous_iteration.verify_after = verify_result
 
+        # 中止の確認は「結果を採用する前」に置く。緑判定の後ろに置くと、
+        # 検証中に中止しても、たまたま緑だったときだけ中止が無視される。
+        if _cancelled(run.run_id):
+            _update(out_dir, run, status="cancelled", step_label="中止")
+            return
+
         if verify_result.ok:
             iteration.verify_after = verify_result
             iteration.finished_at = _now_iso()
             run.status = "no_defects" if i == 1 else "succeeded"
             _update(out_dir, run, status=run.status, step_label="検証が緑になりました")
             break
-
-        if _cancelled(run.run_id):
-            _update(out_dir, run, status="cancelled", step_label="中止")
-            return
 
         # analyzing
         _update(out_dir, run, status="analyzing", step_label=f"欠陥の切り出し（{i} 周目）")
@@ -437,7 +519,24 @@ def _run_loop_inner(out_dir: Path, run: HealingRun, project: HealingProject, ext
 
         applied = [p for p in proposals if p.status == "applied"]
         if not applied:
-            run.error = "修正案が 1 件も適用できませんでした"
+            # 「1 件も適用できませんでした」だけでは、エージェントが修正不要と判断した（skipped）のか、
+            # 落ちた（failed）のか、時間切れ（timeout）なのかが失われる。内訳を残す。
+            counts: dict[str, int] = {}
+            for proposal in proposals:
+                counts[proposal.status] = counts.get(proposal.status, 0) + 1
+            labels = {
+                "skipped": "変更なし",
+                "failed": "失敗",
+                "timeout": "時間切れ",
+                "proposed": "提案のみ（未適用）",
+            }
+            breakdown = "・".join(
+                f"{labels.get(key, key)} {value} 件" for key, value in sorted(counts.items())
+            )
+            reasons = [p.error for p in proposals if p.error]
+            run.error = f"修正が 1 件も適用されませんでした（{breakdown}）"
+            if reasons:
+                run.error += "。理由: " + " / ".join(dict.fromkeys(reasons))
             _update(out_dir, run, status="failed", step_label="失敗")
             return
 
@@ -445,9 +544,38 @@ def _run_loop_inner(out_dir: Path, run: HealingRun, project: HealingProject, ext
         _add_log(run, f"{len(applied)} 件の修正を統合ブランチへ反映しました")
         previous_iteration = iteration
     else:
-        # for-else: break せずにループを終えた = 上限に達しても緑にならなかった。
-        run.unverified.append(f"検証は緑になっていません。{project.max_iterations} 周で打ち切りました")
-        _update(out_dir, run, status="awaiting_human", step_label="人の判断待ち（上限到達）")
+        # for-else: break せずにループを終えた = 上限に達した。
+        #
+        # ここで必ずもう 1 回検証する。ループは「検証 → 修正」の順なので、
+        # 最終周回の修正のあとには検証が入らない。これを省くと、実際には
+        # 緑になっていても「緑になっていません」と報告することになる
+        # （実測: 欠陥 4 件のうち最後の 1 件を直した直後に打ち切り、
+        #  統合ブランチは 4 passed だったのに失敗として報告していた）。
+        # 成功を失敗として報告するのは、失敗を見逃すのと同じくらい悪い。
+        final_result = None
+        if applied_any and not _cancelled(run.run_id):
+            _update(out_dir, run, status="reverifying", step_label="最終確認の検証")
+            final_result = verification.run_verification(
+                repo=integration_dir,
+                command=project.verify_command,
+                timeout_sec=project.verify_timeout_sec,
+            )
+            if previous_iteration is not None:
+                previous_iteration.verify_after = final_result
+                previous_iteration.finished_at = _now_iso()
+
+        if _cancelled(run.run_id):
+            _update(out_dir, run, status="cancelled", step_label="中止")
+            return
+
+        if final_result is not None and final_result.ok:
+            run.status = "succeeded"
+            _update(out_dir, run, status="succeeded", step_label="検証が緑になりました")
+        else:
+            run.unverified.append(
+                f"検証は緑になっていません。{project.max_iterations} 周で打ち切りました"
+            )
+            _update(out_dir, run, status="awaiting_human", step_label="人の判断待ち（上限到達）")
 
     # PR は自動で出さない。適用済みの修正がある成功時は、人の判断待ちで止める。
     if run.status == "succeeded" and applied_any:
@@ -544,6 +672,14 @@ def _fix_defects(
             remove_result = git_ops.remove_worktree(repo, workdir)
             if not remove_result.ok:
                 _add_log(run, f"worktree の後片付けに失敗しました（{workdir}）: {remove_result.stderr}")
+
+        # 統合ブランチへ取り込めた欠陥ブランチは、内容が統合側に残るので消してよい。
+        # 残すと 1 実行あたり「欠陥数 × 周回数」本のブランチが対象リポジトリに永久に積もる。
+        # マージできたかを git 自身に確認してから消す（自分の記録だけを根拠にしない）。
+        if git_ops.branch_is_merged_into(repo, branch, integration_branch):
+            delete_result = git_ops.delete_branch(repo, branch)
+            if not delete_result.ok:
+                _add_log(run, f"欠陥ブランチを削除できませんでした（{branch}）: {delete_result.stderr}")
 
         ordered.append(proposal)
 

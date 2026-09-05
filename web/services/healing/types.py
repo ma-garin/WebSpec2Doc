@@ -167,6 +167,10 @@ class Defect:
     #: 該当しそうなファイル（相対パス）。推定なので「候補」として扱う。
     suspect_files: tuple[str, ...] = ()
     detected_at: str = ""
+    #: 限局の根拠。localization.LocationEvidence を dict にしたもの
+    #: （path / reason / score / detail）。既定は空。
+    #: 既存の位置引数の順序を壊さないよう、必ず末尾に足す（古い履歴も読める）。
+    locations: tuple[dict[str, Any], ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         from dataclasses import asdict
@@ -201,6 +205,10 @@ class FixProposal:
     log_tail: str = ""
     duration_sec: float = 0.0
     error: str = ""
+    #: risk.RiskSignal を dict にしたもの（code / label / detail / severity）。
+    risks: tuple[dict[str, Any], ...] = ()
+    #: report.build_report が作った人向け Markdown。空なら未生成。
+    report_md: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         from dataclasses import asdict

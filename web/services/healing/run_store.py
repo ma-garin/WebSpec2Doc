@@ -92,9 +92,20 @@ def _verify_result_from_dict(data: Any) -> VerifyResult | None:
     )
 
 
+def _dict_tuple(value: Any) -> tuple[dict[str, Any], ...]:
+    """JSON 由来の list[dict] をタプルへ。
+
+    キーが無い / 型が違う古い実行履歴でも落ちないよう、必ず空タプルへ落とす。
+    """
+    if not isinstance(value, (list, tuple)):
+        return ()
+    return tuple(dict(item) for item in value if isinstance(item, Mapping))
+
+
 def _defect_to_dict(d: Defect) -> dict[str, Any]:
     data = asdict(d)
     data["suspect_files"] = list(d.suspect_files)
+    data["locations"] = [dict(loc) for loc in d.locations]
     return data
 
 
@@ -110,12 +121,15 @@ def _defect_from_dict(data: Mapping[str, Any]) -> Defect:
         evidence=str(data.get("evidence") or ""),
         suspect_files=tuple(str(s) for s in suspect),
         detected_at=str(data.get("detected_at") or ""),
+        # 新フィールド。古い JSON には無いので既定値（空）へフォールバックする。
+        locations=_dict_tuple(data.get("locations")),
     )
 
 
 def _fix_proposal_to_dict(p: FixProposal) -> dict[str, Any]:
     data = asdict(p)
     data["files_changed"] = list(p.files_changed)
+    data["risks"] = [dict(r) for r in p.risks]
     return data
 
 
@@ -132,6 +146,9 @@ def _fix_proposal_from_dict(data: Mapping[str, Any]) -> FixProposal:
         log_tail=str(data.get("log_tail") or ""),
         duration_sec=float(data.get("duration_sec") or 0.0),
         error=str(data.get("error") or ""),
+        # 新フィールド。古い JSON には無いので既定値へフォールバックする。
+        risks=_dict_tuple(data.get("risks")),
+        report_md=str(data.get("report_md") or ""),
     )
 
 

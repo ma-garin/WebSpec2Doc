@@ -239,3 +239,69 @@ textarea.hl-field { resize: vertical; }
 .hl-col-actions { width: 1%; white-space: nowrap; }
 .hl-row-actions { display: flex; gap: 6px; flex-wrap: nowrap; }
 .hl-more-row { margin-top: 12px; text-align: center; }
+
+/* ── 該当箇所の根拠（欠陥の 1 行下に置く） ──
+   「該当しそうなファイル」だけだと、なぜそのファイルなのかが分からない。
+   確度の降順で並べ、判断の材料を出す。断定はしない。 */
+.hl-evidence-row > td { background: var(--bg); border-top: 0; padding-top: 0; }
+.hl-evidence { margin: 0 0 2px; }
+.hl-evidence-head { font-size: 11.5px; font-weight: 800; color: var(--tx2); margin-bottom: 6px; }
+.hl-evidence-empty { margin: 0; font-size: 12px; color: var(--tx3); }
+.hl-evidence-table { width: 100%; table-layout: fixed; }
+.hl-evidence-table th, .hl-evidence-table td {
+  font-size: 11.5px; padding: 5px 8px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.hl-evidence-table th:nth-child(1), .hl-evidence-table td:nth-child(1) { width: 58%; }
+.hl-evidence-table th:nth-child(2), .hl-evidence-table td:nth-child(2) { width: 26%; }
+.hl-evidence-table th:nth-child(3), .hl-evidence-table td:nth-child(3) { width: 16%; text-align: right; }
+
+/* ── 修正案の詳細行（確認が必要な点 ＋ バグレポート） ──
+   colspan セルに列幅（96px・nowrap）が効いてしまうので、この行だけ解除する。 */
+.hl-detail-row > td { width: auto !important; white-space: normal; background: var(--sf); }
+
+/* ── 確認が必要な点 ──
+   高＝赤 / 中＝黄 / 低＝灰。既存の .hl-sev（高が黄・中が青）とは別系統にして、
+   既存の重大度バッジの見た目を変えない。 */
+.hl-risk { margin: 0 0 10px; }
+.hl-risk-head { font-size: 11.5px; font-weight: 800; color: var(--tx2); margin-bottom: 6px; }
+.hl-risk-none { margin: 0; font-size: 12px; color: var(--tx2); line-height: 1.7; }
+.hl-risk-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.hl-risk-item { border-left: 3px solid var(--line); padding: 2px 0 2px 10px; }
+.hl-risk-item.is-critical, .hl-risk-item.is-high { border-left-color: #FDA29B; }
+.hl-risk-item.is-medium { border-left-color: #FEC84B; }
+.hl-risk-item.is-low { border-left-color: var(--line); }
+.hl-risk-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.hl-risk-badge {
+  display: inline-block; font-size: 10.5px; font-weight: 800;
+  padding: 2px 9px; border-radius: 999px; white-space: nowrap;
+}
+.hl-risk-badge.is-critical, .hl-risk-badge.is-high { background: #FEE4E2; color: #B42318; }
+.hl-risk-badge.is-medium { background: #FEF0C7; color: #B54708; }
+.hl-risk-badge.is-low { background: #F2F4F7; color: #475467; }
+.hl-risk-label { font-size: 12.5px; font-weight: 700; color: var(--tx); }
+.hl-risk-detail { font-size: 12px; color: var(--tx2); margin-top: 2px; overflow-wrap: anywhere; }
+
+/* ── バグレポート（Markdown を最小変換して表示・既定は閉じる） ── */
+.hl-report { margin-top: 4px; }
+.hl-report-body {
+  margin-top: 8px; padding: 12px 14px;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--bg);
+  font-size: 12.5px; line-height: 1.75; color: var(--tx);
+}
+.hl-report-head { margin: 12px 0 6px; font-size: 12.5px; font-weight: 800; }
+.hl-report-body > .hl-report-head:first-child { margin-top: 0; }
+.hl-report-p { margin: 0 0 8px; overflow-wrap: anywhere; }
+.hl-report-list { margin: 0 0 8px; padding-left: 18px; }
+.hl-report-table { width: 100%; margin: 0 0 8px; }
+.hl-report-table th, .hl-report-table td { font-size: 12px; padding: 6px 8px; vertical-align: top; }
+.hl-report-code {
+  margin: 0 0 8px; padding: 10px 12px; border-radius: 6px;
+  background: #111827; color: #E5E7EB;
+  font-family: var(--mono); font-size: 11px; line-height: 1.6;
+  overflow-x: auto; white-space: pre;
+}
+.hl-report-inline-code {
+  font-family: var(--mono); font-size: 11.5px;
+  background: var(--sf); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px;
+}

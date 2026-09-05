@@ -657,15 +657,23 @@ table.hl-projects-table td { padding-top: 6px; padding-bottom: 6px; }
 /* ── 接続するリポジトリの選択リスト ──
    許可ルートは長大な絶対パスで、手入力は現実的でない。サーバが列挙した候補から選ばせる。
    一覧が使えないときはパス手入力へ落ちるので、ここは「選べるときだけ」の体裁。 */
-.hl-repo-picker { margin-bottom: 16px; }
+.hl-repo-picker { position: relative; margin-bottom: 16px; }
+.hl-repo-picker::after {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 24px;
+  background: linear-gradient(to top, var(--sf, #fff), transparent);
+  border-radius: 0 0 8px 8px; pointer-events: none;
+}
 .hl-repo-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .hl-repo-count { font-size: 11px; color: var(--tx3, #667085); white-space: nowrap; }
 .hl-repo-filter { margin-bottom: 8px; }
 .hl-repo-list {
-  max-height: 320px; overflow-y: auto;
+  max-height: 360px; overflow-y: auto; scrollbar-gutter: stable;
   border: 1px solid var(--line, #E4E7EC); border-radius: 8px;
   background: var(--sf, #FFFFFF);
 }
+.hl-repo-list::-webkit-scrollbar { width: 8px; }
+.hl-repo-list::-webkit-scrollbar-thumb { background: var(--line, #D0D5DD); border-radius: 4px; }
+.hl-repo-list::-webkit-scrollbar-track { background: transparent; }
 .hl-repo-item {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   width: 100%; min-height: 48px; padding: 7px 12px;

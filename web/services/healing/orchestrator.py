@@ -514,10 +514,16 @@ def _run_loop_inner(out_dir: Path, run: HealingRun, project: HealingProject, ext
         defects = _localize_defects(run, defects, repo=repo)
         iteration.defects = list(defects)
         if not defects:
-            # 「不在の証明」はしない: 失敗を構造化できなかった事実だけを記録して止まる。
-            run.unverified.append(f"{i} 周目: 検証は失敗しましたが、失敗を欠陥として構造化できませんでした")
+            # 「不在の証明」はしない: 原因を特定できなかった事実だけを記録して止まる。
+            # 画面に出る文言なので「構造化」のような内部用語を使わない（2026-09-05）。
+            run.unverified.append(
+                f"{i} 周目: 検証は失敗しましたが、どのテストが原因かを特定できませんでした"
+            )
             iteration.finished_at = _now_iso()
-            run.error = "検証失敗を欠陥として構造化できませんでした"
+            run.error = (
+                "検証は失敗しましたが、原因となるテストを特定できませんでした。"
+                "検証コマンドの出力を実行ログで確認してください"
+            )
             _update(out_dir, run, status="failed", step_label="失敗")
             return
         _add_log(run, f"{len(defects)} 件の欠陥を検出しました")

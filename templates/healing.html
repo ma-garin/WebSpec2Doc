@@ -250,14 +250,10 @@
         {% if hl_admin %}
         <section class="card hl-form" id="hl-connect-form" hidden>
           <h3 class="hl-form-title" id="hl-form-title">コードベースを接続する</h3>
-          <p class="hl-form-note">接続できるのは次の場所の中だけです。</p>
-          <div class="hl-kv hl-roots">
-            {% for root in allowed_roots %}<div class="hl-tail" title="{{ root }}">{{ root }}</div>{% endfor %}
-          </div>
 
           <div class="hl-form-grid">
             <div><label class="hl-field-label" for="hl-f-name">名前 <span class="hl-req" aria-hidden="true">必須</span></label><input class="hl-field" type="text" id="hl-f-name" required aria-required="true" placeholder="例: webspec2doc 本体"></div>
-            <div><label class="hl-field-label" for="hl-f-path">リポジトリのパス <span class="hl-req" aria-hidden="true">必須</span></label><input class="hl-field hl-kv" type="text" id="hl-f-path" required aria-required="true" placeholder="/Users/.../repo"></div>
+            <div><label class="hl-field-label" for="hl-f-path">リポジトリのパス <span class="hl-req" aria-hidden="true">必須</span></label><input class="hl-field hl-kv" type="text" id="hl-f-path" required aria-required="true" placeholder="許可された場所の絶対パス"></div>
             <div><label class="hl-field-label" for="hl-f-branch">既定ブランチ</label><input class="hl-field" type="text" id="hl-f-branch" value="main"></div>
             <div><label class="hl-field-label" for="hl-f-cmd">検証コマンド <span class="hl-req" aria-hidden="true">必須</span></label><input class="hl-field hl-kv" type="text" id="hl-f-cmd" required aria-required="true" placeholder="venv/bin/python -m pytest tests -q"></div>
             <div><label class="hl-field-label" for="hl-f-remote">リモート名</label><input class="hl-field" type="text" id="hl-f-remote" value="origin"></div>

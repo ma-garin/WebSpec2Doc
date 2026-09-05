@@ -265,6 +265,26 @@
     return '実行ログを確認し、接続先の設定を見直してから再実行してください。';
   }
 
+  /* 利用者向けエラーメッセージに言い換える。内部用語・技術用語を避ける。 */
+  function humanizeError(text) {
+    var s = String(text == null ? '' : text);
+    /* 「構造化」「シリアライズ」などの内部用語を排除 */
+    if (/構造化|シリアライズ|パース/.test(s)) {
+      /* 内部用語が含まれている場合、その文をそのまま出さず、
+         実行ログ確認を勧める（正確な原因はログにある）。 */
+      return '検証は失敗しましたが、原因を特定できませんでした';
+    }
+    /* 「No such file or directory」の場合、コマンドが見つからないと言い換える */
+    var m = s.match(/No such file or directory:\s*['"](.*?)['"]/);
+    if (m) {
+      return '検証コマンドが見つかりません: ' + m[1];
+    }
+    if (/No such file or directory/.test(s)) {
+      return '検証コマンドが見つかりません';
+    }
+    return s;
+  }
+
   function showError(message) {
     $['hl-error'].textContent = message;
     $['hl-error'].hidden = false;
@@ -1416,15 +1436,23 @@
     renderRunError(run);
   }
 
-  // エラー文は括弧の入れ子をほどき、次にとる行動を 1 行添える。
+  // エラー文は括弧の入れ子をほどき、内部用語を言い換え、次にとる行動を 1 行添える。
+  // box を作り直すので重複は起きない。「次にすること」は消さない——
+  // 何が起きたかだけ伝えて、どうすればよいかを伝えないのは不親切（2026-09-05）。
   function renderRunError(run) {
     var box = $['hl-run-error'];
     box.textContent = '';
     var raw = run && run.error ? String(run.error) : '';
     if (!raw) { box.hidden = true; return; }
     box.hidden = false;
-    box.appendChild(el('div', 'hl-run-error-msg', flattenParens(raw)));
-    box.appendChild(el('div', 'hl-run-error-next', '次にすること: ' + nextActionFor(raw)));
+    var flat = flattenParens(raw);
+    var msg = el('div', 'hl-run-error-msg');
+    msg.textContent = humanizeError(flat);
+    box.appendChild(msg);
+    var next = nextActionFor(flat);
+    if (next) {
+      box.appendChild(el('div', 'hl-run-error-next', '次にすること: ' + next));
+    }
   }
 
   // 押せない操作は disabled で並べず、表示から外す（選べないものを見せない）。
@@ -2107,7 +2135,7 @@
     });
     // 失敗の理由はバナーだけでなくログの末尾にも残す（後から読み返す先はログのため）。
     if (errorText) {
-      logEl.appendChild(el('div', 'hl-log-line hl-log-error', '失敗の理由: ' + errorText));
+      logEl.appendChild(el('div', 'hl-log-line hl-log-error', '失敗の理由: ' + humanizeError(flattenParens(errorText))));
     }
     logEl.scrollTop = logEl.scrollHeight;
   }
@@ -2173,7 +2201,10 @@
     block.hidden = false;
     $['hl-unverified-list'].textContent = '';
     list.forEach(function (item) {
-      $['hl-unverified-list'].appendChild(el('li', null, item));
+      // 過去の実行データには内部用語のままの文言が残っている。表示側でも言い換える。
+      $['hl-unverified-list'].appendChild(
+        el('li', null, humanizeError(flattenParens(String(item))))
+      );
     });
   }
 
@@ -2243,7 +2274,7 @@
       tdStatus.appendChild(el('span', 'hl-badge ' + statusBadgeClass(r.status), STATUS_LABELS[r.status] || r.status));
       // 失敗は理由が無いと次の手が決まらない。冒頭だけ出し、全文は title に入れる。
       if (r.status === 'failed' && r.error) {
-        var reason = el('div', 'hl-run-reason', String(r.error).slice(0, 60));
+        var reason = el('div', 'hl-run-reason', humanizeError(flattenParens(String(r.error))).slice(0, 60));
         reason.title = String(r.error);
         tdStatus.appendChild(reason);
       }

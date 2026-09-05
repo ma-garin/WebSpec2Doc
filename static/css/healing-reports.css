@@ -1,0 +1,185 @@
+/* 報告書の画面。
+ *
+ * 色は ta2.css の :root トークンを使う。healing.html が ta2.css を読み損ねて
+ * トークンが全滅した事故があったため、ここではすべてフォールバック付きで書く。
+ * PC 専用。メディアクエリは足さない。
+ */
+
+/* ── 1 画面に収める（ta2.css の .main / .ed-b と同じ型）──────────
+   このファイルは設定画面（healing.html）でもサイドバーのバッジのために
+   読まれる。レイアウトまで効かせると設定画面の余白が変わるので、
+   報告書の画面だけに限定する。 */
+.hl-page-reports .app-content {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 12px;
+  padding: 16px 20px;
+}
+
+/* ── 絞り込み ──────────────────────────────── */
+.hl-list-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+.hl-spacer { flex: 1; }
+.hl-chips { display: flex; gap: 6px; }
+.hl-chip {
+  border: 1px solid var(--line, #D0D5DD);
+  background: var(--sf, #fff);
+  color: var(--tx2, #475467);
+  border-radius: 7px;
+  padding: 4px 11px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.hl-chip:hover { background: var(--bg, #F9FAFB); }
+.hl-chip.is-on {
+  border-color: var(--ac, #1570EF);
+  color: var(--ac, #1570EF);
+  background: var(--ac-bg, #EAF2FF);
+  font-weight: 600;
+}
+.hl-chip:focus-visible,
+.hl-btn:focus-visible,
+.hl-select:focus-visible {
+  outline: 2px solid var(--ac, #1570EF);
+  outline-offset: 1px;
+}
+.hl-filter-label { font-size: 12px; color: var(--tx3, #667085); }
+.hl-select {
+  border: 1px solid var(--line, #D0D5DD);
+  background: var(--sf, #fff);
+  color: var(--tx, #101828);
+  border-radius: 7px;
+  height: 30px;
+  padding: 0 8px;
+  font-size: 12.5px;
+  min-width: 180px;
+}
+
+/* ── 一覧 ──────────────────────────────────── */
+.hl-table-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  background: var(--sf, #fff);
+  border: 1px solid var(--line, #D0D5DD);
+  border-radius: 9px;
+}
+.hl-reports-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.hl-reports-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--sf, #fff);
+  text-align: left;
+  font-weight: 500;
+  font-size: 11px;
+  color: var(--tx3, #667085);
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--line, #D0D5DD);
+  white-space: nowrap;
+}
+.hl-reports-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line, #D0D5DD);
+  vertical-align: middle;
+  color: var(--tx, #101828);
+}
+.hl-reports-table tbody tr { cursor: pointer; }
+.hl-reports-table tbody tr:hover > td { background: var(--bg, #F9FAFB); }
+.hl-reports-table tbody tr:focus-visible {
+  outline: 2px solid var(--ac, #1570EF);
+  outline-offset: -2px;
+}
+.hl-cell-name b { display: block; font-weight: 600; }
+.hl-cell-name small {
+  display: block;
+  color: var(--tx3, #667085);
+  font-size: 10.5px;
+  margin-top: 1px;
+}
+.hl-cell-when { color: var(--tx3, #667085); white-space: nowrap; }
+.hl-cell-action { text-align: right; white-space: nowrap; }
+
+/* ── バッジ ────────────────────────────────── */
+.hl-badge {
+  display: inline-block;
+  border-radius: 5px;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.hl-badge.is-ok { background: var(--ok-bg, #ECFDF3); color: var(--ok, #067647); }
+.hl-badge.is-err { background: var(--er-bg, #FEF3F2); color: var(--er, #D92D20); }
+.hl-badge.is-warn { background: var(--wn-bg, #FFFAEB); color: var(--wn, #B54708); }
+.hl-badge.is-mute {
+  background: var(--bg, #F9FAFB);
+  color: var(--tx3, #667085);
+  border: 1px solid var(--line, #D0D5DD);
+}
+.hl-badge.is-ac { background: var(--ac-bg, #EAF2FF); color: var(--ac, #1570EF); }
+
+/* ── ボタン ────────────────────────────────── */
+.hl-btn {
+  border: 1px solid var(--line, #D0D5DD);
+  background: var(--sf, #fff);
+  color: var(--tx, #101828);
+  border-radius: 7px;
+  padding: 6px 13px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.hl-btn:hover { background: var(--bg, #F9FAFB); }
+.hl-btn.hl-btn-sm { padding: 4px 10px; font-size: 11.5px; }
+.hl-btn.is-primary {
+  background: var(--ac, #1570EF);
+  border-color: var(--ac, #1570EF);
+  color: #fff;
+}
+.hl-btn.is-primary:hover { filter: brightness(0.95); }
+.hl-btn.is-danger { color: var(--er, #D92D20); }
+.hl-btn:disabled { color: var(--tx3, #667085); background: var(--bg, #F9FAFB); cursor: default; }
+
+/* ── サイドバーの件数バッジ ───────────────────── */
+.hl-nav-count {
+  margin-left: auto;
+  background: var(--er, #D92D20);
+  color: #fff;
+  border-radius: 10px;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 0 6px;
+  min-width: 18px;
+  text-align: center;
+}
+
+/* ── 空状態・凡例・エラー ─────────────────────── */
+.hl-empty {
+  margin: 0;
+  padding: 32px 24px;
+  text-align: center;
+  color: var(--tx3, #667085);
+  font-size: 13px;
+}
+.hl-legend {
+  margin: 0;
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--tx3, #667085);
+}
+.hl-banner {
+  flex: 0 0 auto;
+  border: 1px solid #F5B5B0;
+  background: var(--er-bg, #FEF3F2);
+  color: var(--er, #D92D20);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 12.5px;
+}

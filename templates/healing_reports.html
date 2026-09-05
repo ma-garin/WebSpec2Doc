@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>報告書 - オートヒーリング - WebSpec2Doc</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  {% set _ver = config.get('ASSET_VERSION', '1') %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app-components.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/ta2.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/healing-reports.css') }}?v={{ _ver }}">
+</head>
+<body class="app-page hl-page-reports" data-hl-admin="{{ 'true' if (not auth_user or auth_user.role == 'admin') else 'false' }}">
+<a href="#app-content" class="skip-link">本文へスキップ</a>
+<div class="app-shell">
+
+  {% with active = 'reports' %}{% include 'partials/healing-sidebar.html' %}{% endwith %}
+
+  <div class="app-main">
+    {% set topbar_crumb = 'オートヒーリング' %}
+    {% set topbar_title = '報告書' %}
+    {% include 'partials/topbar.html' %}
+
+    <main class="app-content" id="app-content">
+      <div id="hl-error" class="hl-banner" role="alert" hidden></div>
+
+      <div class="hl-list-head">
+        <div class="hl-chips" role="group" aria-label="状態で絞り込む">
+          <button type="button" class="hl-chip is-on" data-status="awaiting">承認待ち</button>
+          <button type="button" class="hl-chip" data-status="approved">提出済み</button>
+          <button type="button" class="hl-chip" data-status="returned">差し戻し</button>
+          <button type="button" class="hl-chip" data-status="rejected">却下</button>
+        </div>
+        <span class="hl-spacer"></span>
+        <label class="hl-filter-label" for="hl-project-filter">案件</label>
+        <select id="hl-project-filter" class="hl-select">
+          <option value="">すべて</option>
+        </select>
+      </div>
+
+      <div class="hl-table-wrap">
+        <table class="hl-reports-table" id="hl-reports-table">
+          <thead>
+            <tr>
+              <th>案件</th>
+              <th>件名</th>
+              <th>検証</th>
+              <th>確認が必要な点</th>
+              <th>下書き</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="hl-reports-body"></tbody>
+        </table>
+        <p class="hl-empty" id="hl-reports-empty" hidden>承認待ちの報告書はありません。</p>
+      </div>
+
+      <p class="hl-legend">「直っていません」は、機械が直せなかったもの。原因の報告書だけが下書きされ、対応は人が書きます。</p>
+    </main>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/healing-reports.js') }}?v={{ _ver }}"></script>
+</body>
+</html>

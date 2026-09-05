@@ -115,8 +115,8 @@
         <div class="hl-start-block">
           <label for="hl-instructions">追加の指示（任意）</label>
           <textarea id="hl-instructions" rows="3" placeholder="例: DB に依存するテストは対象外にしてください"></textarea>
-          <button type="button" id="hl-start" class="hl-btn-primary">ヒーリングを開始</button>
-          <p class="hl-hint">検証を回して失敗を見つけ、修正して、PR を出すところまで自動で進みます。<b>マージはしません。</b></p>
+          <button type="button" id="hl-start" class="hl-btn-primary hl-start-btn">ヒーリングを開始</button>
+          <p class="hl-hint hl-hint-warn">接続したリポジトリのファイルを実際に書き換え、検証・修正を繰り返して PR を出すところまで自動で進みます。<b>PR の作成までで、マージはしません（マージするかどうかは人が判断します）。</b></p>
         </div>
 
         <div id="hl-loop-empty" class="hl-empty-sm" hidden>
@@ -136,6 +136,13 @@
     <!-- 右ペイン: 判断 -->
     <aside class="hl-side">
       <div id="hl-status" class="hl-status-badge">未選択</div>
+
+      <button type="button" id="hl-cancel" class="hl-btn-danger" hidden>実行を中止</button>
+      <div id="hl-cancel-confirm" class="hl-merge-confirm" hidden>
+        <span>本当に中止しますか？</span>
+        <button type="button" id="hl-cancel-yes" class="hl-btn-danger">はい、中止する</button>
+        <button type="button" id="hl-cancel-no" class="hl-btn-sub">やめる</button>
+      </div>
 
       <div id="hl-pr" class="hl-pr-block"></div>
 

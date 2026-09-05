@@ -208,7 +208,13 @@
   background: var(--bg); color: var(--tx); resize: vertical;
 }
 .hl-start-block .hl-btn-primary { align-self: flex-start; }
+/* 「ヒーリングを開始」は実リポジトリを書き換える最も影響の大きい操作。
+   「接続する」「PR を作成」と同じ hl-btn-primary の並びに埋もれないよう、
+   既存の警告トーン（#B45309 / #FEF3C7、他の規則で使用中）でリングを足す。 */
+.hl-start-btn { box-shadow: 0 0 0 3px #FEF3C7; border-color: #B45309; }
+.hl-start-btn:hover { box-shadow: 0 0 0 3px #FEF3C7; }
 .hl-hint { margin: 0; font-size: 11.5px; color: var(--tx3); }
+.hl-hint-warn { color: #92400E; font-weight: 700; }
 
 /* ---- ループ表示 ---- */
 .hl-loop { display: flex; flex-direction: column; gap: 16px; }
@@ -251,7 +257,8 @@ table.hl-defects-table td.hl-td-file, table.hl-defects-table td.hl-td-test { max
 .hl-proposal-agent { font-weight: 700; width: 80px; flex: none; }
 .hl-proposal-summary { flex: 1; min-width: 160px; color: var(--tx2); }
 .hl-proposal-files { color: var(--tx3); font-size: 11.5px; }
-.hl-diff-toggle { background: none; border: none; color: #B45309; font-weight: 700; font-size: 12px; cursor: pointer; padding: 2px 4px; }
+/* WCAG 2.5.8: 押せる領域は 24x24px 以上。min-height + inline-flex で高さを確保する。 */
+.hl-diff-toggle { background: none; border: none; color: #B45309; font-weight: 700; font-size: 12px; cursor: pointer; padding: 6px 8px; min-height: 24px; display: inline-flex; align-items: center; }
 .hl-diff-toggle:hover { text-decoration: underline; }
 
 .hl-badge-proposal { font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 999px; }

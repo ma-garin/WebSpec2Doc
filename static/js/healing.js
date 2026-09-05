@@ -50,7 +50,8 @@
       'hl-project-name', 'hl-project-path', 'hl-project-branch', 'hl-project-cmd',
       'hl-check-btn', 'hl-checks', 'hl-instructions', 'hl-start',
       'hl-loop-empty', 'hl-loop', 'hl-log',
-      'hl-status', 'hl-pr', 'hl-unverified', 'hl-unverified-list',
+      'hl-status', 'hl-cancel', 'hl-cancel-confirm', 'hl-cancel-yes', 'hl-cancel-no',
+      'hl-pr', 'hl-unverified', 'hl-unverified-list',
       'hl-runs-empty', 'hl-runs'
     ];
     ids.forEach(function (id) { $[id] = document.getElementById(id); });
@@ -381,7 +382,12 @@
   function renderStatusBadge(run) {
     var badge = $['hl-status'];
     badge.className = 'hl-status-badge';
-    if (!run) { badge.textContent = '未選択'; return; }
+    if (!run) {
+      badge.textContent = '未選択';
+      $['hl-cancel'].hidden = true;
+      $['hl-cancel-confirm'].hidden = true;
+      return;
+    }
     badge.classList.add(statusBadgeClass(run.status));
     var label = STATUS_LABELS[run.status] || run.status || '';
     var step = run.step_label || '';
@@ -393,6 +399,10 @@
     } else {
       badge.textContent = label + (step ? '（' + step + '）' : '');
     }
+    // 中止ボタンは実行が終わっていない間だけ出す（succeeded/no_defects/failed/cancelled 以外）。
+    var isRunning = TERMINAL_STATUSES.indexOf(run.status) === -1;
+    $['hl-cancel'].hidden = !isRunning;
+    if (!isRunning) { $['hl-cancel-confirm'].hidden = true; }
   }
 
   /* ---------------- ループ表示 ---------------- */
@@ -654,6 +664,14 @@
       .catch(function (e) { showError('PR の作成に失敗しました: ' + e.message); });
   }
 
+  function cancelRun() {
+    if (!state.selectedRunId) { return; }
+    clearError();
+    apiFetch('/runs/' + state.selectedRunId + '/cancel', { method: 'POST', body: JSON.stringify({}) })
+      .then(function () { return fetchAndRenderRun(state.selectedRunId); })
+      .catch(function (e) { showError('実行の中止に失敗しました: ' + e.message); });
+  }
+
   function submitDecision(action) {
     if (!state.selectedRunId) { return; }
     clearError();
@@ -693,6 +711,9 @@
     $['hl-connect-submit'].addEventListener('click', submitConnectForm);
     $['hl-check-btn'].addEventListener('click', runCheck);
     $['hl-start'].addEventListener('click', startRun);
+    $['hl-cancel'].addEventListener('click', function () { $['hl-cancel-confirm'].hidden = false; });
+    $['hl-cancel-yes'].addEventListener('click', function () { $['hl-cancel-confirm'].hidden = true; cancelRun(); });
+    $['hl-cancel-no'].addEventListener('click', function () { $['hl-cancel-confirm'].hidden = true; });
 
     loadProjects();
   }

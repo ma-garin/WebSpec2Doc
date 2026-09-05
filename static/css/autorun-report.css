@@ -237,3 +237,75 @@
   padding: var(--space-3) var(--space-4);
   font-size: var(--text-sm);
 }
+
+/* ── オートヒーリングへの受け渡し ─────────────────
+   失敗した E2E から保守報告書を起こす導線。ここが「壊れたら直る」の入口。 */
+.arep-healing-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 12px 0 8px;
+  padding: 10px 14px;
+  border: 1px solid var(--er, #D92D20);
+  background: var(--er-bg, #FEF3F2);
+  border-radius: 8px;
+  font-size: 12.5px;
+}
+.arep-healing-count { color: var(--er, #D92D20); font-weight: 600; }
+.arep-healing-bar .arep-healing-btn { margin-left: auto; }
+
+.arep-healing-btn {
+  border: 1px solid var(--line, #D0D5DD);
+  background: var(--sf, #fff);
+  color: var(--tx, #101828);
+  border-radius: 7px;
+  padding: 4px 11px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.arep-healing-btn:hover { background: var(--bg, #F9FAFB); }
+.arep-healing-btn.is-primary {
+  background: var(--ac, #1570EF);
+  border-color: var(--ac, #1570EF);
+  color: #fff;
+}
+.arep-healing-btn:disabled {
+  color: var(--tx3, #667085);
+  background: var(--bg, #F9FAFB);
+  border-color: var(--line, #D0D5DD);
+  cursor: default;
+}
+.arep-healing-btn:focus-visible { outline: 2px solid var(--ac, #1570EF); outline-offset: 1px; }
+
+/* 行内のボタンは右端。失敗行にだけ出る。
+   .arep-result-error は flex-basis:100% で「次の行に落とす」設計なので、
+   親に flex-wrap が無いとタイトルが潰れる。ボタンを足して幅が増えた分で
+   それが顕在化したため、ここで折り返しを効かせる。 */
+.arep-result-row { flex-wrap: wrap; }
+.arep-result-row .arep-result-title { flex: 1 1 auto; }
+.arep-result-row .arep-healing-btn { margin-left: auto; flex: 0 0 auto; align-self: center; }
+
+.arep-healing-note {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  font-size: 11.5px;
+  color: var(--er, #D92D20);
+}
+
+.arep-healing-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  background: var(--tx, #101828);
+  color: #fff;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-size: 12.5px;
+  z-index: 60;
+  box-shadow: 0 8px 24px rgba(16, 24, 40, .18);
+}

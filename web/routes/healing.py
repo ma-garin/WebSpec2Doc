@@ -19,6 +19,7 @@ from web.auth import require_admin
 from web.config import OUTPUT_DIR
 from web.services.healing import agents as healing_agents
 from web.services.healing import (
+    autorun_bridge,
     orchestrator,
     project_store,
     report_doc,
@@ -551,6 +552,62 @@ def api_start_run():
         return _error_response(exc)
     except Exception:
         logger.exception("healing: start_run に失敗しました")
+        return {"error": "処理に失敗しました"}, 500
+
+
+@bp.post("/api/healing/runs/from-autorun")
+def api_start_run_from_autorun():
+    """02/03 の失敗から報告書を起こす。
+
+    「壊れたら直る」の入口。検証コマンドの結果から欠陥を切り出すのではなく、
+    E2E が落ちた事実（画面 ID・URL・スクリーンショット）を保ったまま渡す。
+    """
+    guard = require_admin()
+    if guard is not None:
+        return guard
+    data = _body()
+    project_id = _clean_short_text(data.get("project_id"), "", 64)
+    domain = _clean_short_text(data.get("domain"), "", 253)
+    run_id = _clean_short_text(data.get("run_id"), "", 64)
+    if not _ID_RE.match(project_id):
+        return {"error": "project_id が不正です。"}, 400
+    if not domain:
+        return {"error": "domain を指定してください。"}, 400
+    raw_ids = data.get("test_ids") or []
+    test_ids = [_clean_short_text(t, "", 64) for t in raw_ids if isinstance(t, str)][:50]
+
+    try:
+        out_dir = _out()
+        project = project_store.get_project(out_dir, project_id)
+        if project is None:
+            return {"error": "接続先が見つかりません"}, 404
+        # domain は接続先に紐づける。次回からは指定しなくてよい。
+        if project.domain != domain:
+            project = project_store.update_project(
+                out_dir, project_id, {"domain": domain}
+            )
+
+        defects = autorun_bridge.load_failures(
+            out_dir, domain, run_id=run_id, test_ids=test_ids
+        )
+        if not defects:
+            return {"error": "失敗したテストがありません"}, 400
+
+        run = orchestrator.start_run(
+            out_dir=out_dir,
+            project=project,
+            actor="autorun",
+            defects=defects,
+        )
+        _record_audit(
+            "healing.run.from_autorun",
+            {"project_id": project_id, "domain": domain, "defects": len(defects)},
+        )
+        return {"run": run_store.run_to_dict(run), "defects": len(defects)}, 202
+    except HealingError as exc:
+        return _error_response(exc)
+    except Exception:
+        logger.exception("healing: AutoRun からの実行開始に失敗しました")
         return {"error": "処理に失敗しました"}, 500
 
 

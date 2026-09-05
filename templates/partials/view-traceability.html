@@ -2,29 +2,41 @@
         <section class="view" id="view-traceability">
           <div class="traceability-header">
             <h2>トレーサビリティマトリクス</h2>
-            <div id="traceability-summary">
+            <div id="traceability-summary" role="status" aria-live="polite">
               <!-- カバレッジ率・件数サマリー（JS で更新） -->
             </div>
           </div>
+          <p class="muted-copy" style="margin:-8px 0 16px;">
+            要件（実装対象の画面・機能）と、それを確認するテストケースの対応表です。「カバレッジ」は要件に対してテストが割り当てられている割合を表します。
+          </p>
 
           <!-- カバレッジ割合バー（JS で描画） -->
           <div id="traceability-coverage-bar"></div>
+          <!-- バー自体は色のみの表現のため、同じ色分けの凡例を文字付きで併記する（WCAG 1.4.1 色のみに頼らない） -->
+          <div style="display:flex; flex-wrap:wrap; gap:8px; margin:8px 0 16px;">
+            <span class="coverage-badge coverage-covered">カバー済み</span>
+            <span class="coverage-badge coverage-partial">部分カバー</span>
+            <span class="coverage-badge coverage-uncovered">未カバー</span>
+          </div>
 
-          <!-- マトリクステーブル -->
-          <table class="traceability-table">
-            <thead>
-              <tr>
-                <th>要件 ID</th>
-                <th>要件タイトル</th>
-                <th>URL</th>
-                <th>テストケース</th>
-                <th>カバレッジ</th>
-              </tr>
-            </thead>
-            <tbody id="traceability-tbody">
-              <!-- JS で描画 -->
-            </tbody>
-          </table>
+          <!-- マトリクステーブル。列数が多い環境でも崩れないよう横スクロールを許可する -->
+          <div style="overflow-x:auto;">
+            <table class="traceability-table">
+              <caption class="visually-hidden">要件とテストケースの対応関係、および各要件のカバレッジ状況</caption>
+              <thead>
+                <tr>
+                  <th scope="col">要件 ID</th>
+                  <th scope="col">要件タイトル</th>
+                  <th scope="col">URL</th>
+                  <th scope="col">テストケース</th>
+                  <th scope="col">カバレッジ</th>
+                </tr>
+              </thead>
+              <tbody id="traceability-tbody">
+                <!-- JS で描画 -->
+              </tbody>
+            </table>
+          </div>
 
-          <div id="traceability-loading">読み込み中...</div>
+          <div id="traceability-loading" role="status" aria-live="polite">読み込み中...</div>
         </section>

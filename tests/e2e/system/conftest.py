@@ -129,10 +129,11 @@ def _bootstrap_tenant_and_users(browser: Browser, base_url: str) -> None:
         page.locator("#password").fill(OWNER.password)
         page.locator("#password_confirm").fill(OWNER.password)
         page.locator("button.auth-submit").click()
-        page.wait_for_url(re.compile(r"/auth/tenant$|/$"))
+        # テナント確定後の着地点はシステム選択（/systems）。helpers.LANDING_URL_RE と同じ。
+        page.wait_for_url(re.compile(r"/auth/tenant$|/systems$"))
         if "/auth/tenant" in page.url:
             page.locator('form[action="/auth/tenant"] button[type="submit"]').first.click()
-            page.wait_for_url(f"{base_url}/")
+            page.wait_for_url(f"{base_url}/systems")
         for user in (ADMIN, MEMBER, PW_CHANGE_MEMBER):
             create_user(page, base_url, user)
     finally:

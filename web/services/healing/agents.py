@@ -71,6 +71,47 @@ def build_prompt(task: AgentTask) -> str:
 # ─────────────────────────── 共通ヘルパー ───────────────────────────
 
 
+def _extract_json_object(text: str) -> str:
+    """モデル応答から JSON オブジェクトを取り出す。
+
+    小さいモデルは前置き・後書き・```json フェンスを付けてくることがあり、
+    応答全体をそのまま json.loads すると必ず壊れる（2026-09-05 実機で確認）。
+    フェンスを剥がし、最初の { から対応する } までを波括弧の対応で切り出す。
+    """
+    body = text.strip()
+    if "```" in body:
+        parts = body.split("```")
+        for part in parts:
+            candidate = part[4:] if part.lstrip().lower().startswith("json") else part
+            if "{" in candidate:
+                body = candidate
+                break
+    start = body.find("{")
+    if start < 0:
+        return body
+    depth = 0
+    in_str = False
+    escaped = False
+    for i, ch in enumerate(body[start:], start):
+        if in_str:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == '"':
+                in_str = False
+            continue
+        if ch == '"':
+            in_str = True
+        elif ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return body[start : i + 1]
+    return body[start:]
+
+
 def _tail(text: str, limit: int = 4000) -> str:
     if len(text) <= limit:
         return text
@@ -398,13 +439,19 @@ def _parse_llm_payload(text: str) -> dict[str, Any]:
     try:
         data: Any = json.loads(body)
     except json.JSONDecodeError:
-        start, end = body.find("{"), body.rfind("}")
-        if start < 0 or end <= start:
-            raise ValueError("モデル応答をJSONとして解釈できませんでした。") from None
+        # find/rfind の素朴な切り出しは、後書きに } が混ざると壊れる。
+        # 波括弧の対応を数えて最初の 1 オブジェクトだけを取り出す。
+        candidate = _extract_json_object(body)
         try:
-            data = json.loads(body[start : end + 1])
+            # strict=False は文字列中の生の改行・タブを許す。小さいモデルは
+            # ファイル全文を \n へエスケープせずそのまま入れてくる（2026-09-05 実機で確認）。
+            data = json.loads(candidate, strict=False)
         except json.JSONDecodeError:
-            raise ValueError("モデル応答のJSONが壊れています。") from None
+            raise ValueError(
+                "モデル応答をJSONとして解釈できませんでした（先頭200字: "
+                + candidate[:200].replace("\n", " ")
+                + "）"
+            ) from None
     if not isinstance(data, dict):
         raise ValueError("モデル応答のJSONがオブジェクトではありません。")
     return data
@@ -479,7 +526,10 @@ def _run_json_fix(agent_name: str, task: AgentTask, call: Callable[[str, float],
     return FixProposal(
         defect_id=task.defect.defect_id,
         agent=agent_name,
-        status="proposed",
+        # 変更はすでに worktree のファイルへ書き込まれているので "applied"。
+        # "proposed" にすると統合段（orchestrator）が拾わず、直っているのに
+        # 「修正が 1 件も適用されませんでした」で失敗する（2026-09-05 実機で確認）。
+        status="applied",
         summary=summary or "LLMが修正案を作成しました",
         rationale=rationale,
         diff=diff,

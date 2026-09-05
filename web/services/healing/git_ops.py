@@ -169,6 +169,7 @@ def _link_untracked_dirs(repo: Path, workdir: Path) -> None:
     # リンク先は必ず絶対パスにする。相対パスのまま張ると、worktree の中から見て
     # 自分自身を指すリンクになり、venv/bin/python に到達できない（実測で確認）。
     repo_abs = Path(repo).expanduser().resolve()
+    linked: list[str] = []
     for name in _LINKED_UNTRACKED_DIRS:
         src = repo_abs / name
         dst = workdir / name
@@ -176,8 +177,42 @@ def _link_untracked_dirs(repo: Path, workdir: Path) -> None:
             continue
         try:
             os.symlink(src, dst)
+            linked.append(name)
         except OSError as exc:
             logger.warning("環境ディレクトリのリンクに失敗しました: %s (%s)", name, exc)
+    if linked:
+        _ignore_locally(workdir, linked)
+
+
+def _ignore_locally(workdir: Path, names: Sequence[str]) -> None:
+    """張ったリンクを、この worktree の中だけで git の対象外にする。
+
+    対象リポジトリの .gitignore が `node_modules/`（末尾スラッシュ）と書いていると
+    ディレクトリしか無視されず、**シンボリックリンクはファイル扱いで無視されない**。
+    その結果 `git add -A` でリンクがコミットされ、統合ブランチへのマージが
+    「untracked working tree files would be overwritten」で必ず失敗する（実測）。
+
+    対象リポジトリの .gitignore は書き換えない（利用者のファイルを勝手に変えない）。
+    worktree 固有の .git/info/exclude に書けば、この作業ツリーの中でだけ効く。
+    """
+    try:
+        # worktree では .git はファイルで、本体の gitdir を指している。
+        info_dir = Path(
+            run_git(workdir, ["rev-parse", "--git-path", "info"], timeout=10).stdout.strip()
+        )
+        if not info_dir.is_absolute():
+            info_dir = workdir / info_dir
+        info_dir.mkdir(parents=True, exist_ok=True)
+        exclude = info_dir / "exclude"
+        current = exclude.read_text(encoding="utf-8") if exclude.is_file() else ""
+        add = [n for n in names if f"\n/{n}\n" not in f"\n{current}\n"]
+        if add:
+            exclude.write_text(
+                current.rstrip("\n") + "\n" + "\n".join(f"/{n}" for n in add) + "\n",
+                encoding="utf-8",
+            )
+    except OSError as exc:
+        logger.warning("worktree の除外設定に失敗しました: %s", exc)
 
 
 def remove_worktree(repo: Path, workdir: Path) -> GitResult:

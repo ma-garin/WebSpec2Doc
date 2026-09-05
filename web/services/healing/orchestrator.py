@@ -27,6 +27,7 @@ from typing import Any
 
 from web.services.healing import agents as healing_agents
 from web.services.healing import report as healing_report
+from web.services.healing import report_doc
 from web.services.healing import (
     git_ops,
     github_client,
@@ -123,7 +124,20 @@ def _cancelled(run_id: str) -> bool:
 # ─────────────────────────── 公開 API ───────────────────────────
 
 
-def start_run(*, out_dir: Path, project: HealingProject, actor: str = "", extra_instructions: str = "") -> HealingRun:
+def start_run(
+    *,
+    out_dir: Path,
+    project: HealingProject,
+    actor: str = "",
+    extra_instructions: str = "",
+    defects: Sequence[Defect] | None = None,
+) -> HealingRun:
+    """ヒーリングを 1 本起こす。
+
+    defects を渡すと、検証コマンドの失敗から欠陥を切り出す代わりにそれを使う。
+    E2E（02/03）の失敗や、差し戻しで同じ欠陥を直させる経路がこれを通る。
+    渡した場合も検証は実行する（修正前後の比較に要るため）。
+    """
     run_id = f"heal-{uuid.uuid4().hex[:12]}"
     run = HealingRun(
         run_id=run_id,
@@ -148,7 +162,7 @@ def start_run(*, out_dir: Path, project: HealingProject, actor: str = "", extra_
 
     thread = threading.Thread(
         target=_run_loop,
-        args=(out_dir, run, project, extra_instructions),
+        args=(out_dir, run, project, extra_instructions, list(defects or [])),
         name=f"healing-{run_id}",
         daemon=True,
     )
@@ -385,9 +399,15 @@ def create_pull_request_for_run(out_dir: Path, run_id: str, *, draft: bool = Fal
 # ─────────────────────────── ループ本体 ───────────────────────────
 
 
-def _run_loop(out_dir: Path, run: HealingRun, project: HealingProject, extra_instructions: str) -> None:
+def _run_loop(
+    out_dir: Path,
+    run: HealingRun,
+    project: HealingProject,
+    extra_instructions: str,
+    given_defects: list[Defect] | None = None,
+) -> None:
     try:
-        _run_loop_inner(out_dir, run, project, extra_instructions)
+        _run_loop_inner(out_dir, run, project, extra_instructions, given_defects or [])
     except Exception as exc:  # noqa: BLE001 - 依存モジュールの想定外の失敗でループ全体を落とさない最終防波堤
         run.status = "failed"
         run.error = f"想定外のエラーで停止しました: {exc}"
@@ -400,11 +420,25 @@ def _run_loop(out_dir: Path, run: HealingRun, project: HealingProject, extra_ins
         except Exception:  # noqa: BLE001 - 保存自体が失敗してもプロセスは落とさない
             pass
     finally:
+        # 報告書はどの終わり方でも作る。直せなかった実行にも「事象と原因」の
+        # 報告書は要る（対応欄だけを人が埋めて顧客に出す）。
+        # ここは全ての return と例外を通るので、個別の遷移に挿し込むより漏れない。
+        try:
+            _write_reports(out_dir, run, project)
+            run_store.save_run(out_dir, run)
+        except Exception:  # noqa: BLE001 - 報告書の失敗で実行の記録を壊さない
+            logger.warning("報告書の保存に失敗しました", exc_info=True)
         with _RUNS_LOCK:
             _CANCEL.discard(run.run_id)
 
 
-def _run_loop_inner(out_dir: Path, run: HealingRun, project: HealingProject, extra_instructions: str) -> None:
+def _run_loop_inner(
+    out_dir: Path,
+    run: HealingRun,
+    project: HealingProject,
+    extra_instructions: str,
+    given_defects: list[Defect] | None = None,
+) -> None:
     repo = Path(project.repo_path)
 
     # --- preparing ---
@@ -509,7 +543,16 @@ def _run_loop_inner(out_dir: Path, run: HealingRun, project: HealingProject, ext
 
         # analyzing
         _update(out_dir, run, status="analyzing", step_label=f"欠陥の切り出し（{i} 周目）")
-        defects = verification.failures_to_defects(verify_result.failures, repo=integration_dir, source="verify")
+        if given_defects and i == 1:
+            # 外から渡された欠陥（E2E の失敗・差し戻し）を使う。
+            # 検証は「修正前の状態」を記録するために実行しており、
+            # そこから欠陥を切り出し直すと画面 ID やスクリーンショットが失われる。
+            defects = list(given_defects)
+            _add_log(run, f"外部から {len(defects)} 件の欠陥を受け取りました")
+        else:
+            defects = verification.failures_to_defects(
+                verify_result.failures, repo=integration_dir, source="verify"
+            )
         # 「どこが怪しいか」をここで確定させ、以降の修正指示と PR レポートに載せる。
         defects = _localize_defects(run, defects, repo=repo)
         iteration.defects = list(defects)
@@ -684,8 +727,14 @@ def _fix_defects(
             else:
                 merge_result = git_ops.merge_branch_into_worktree(integration_dir, branch)
                 if not merge_result.ok:
-                    # 黙って捨てず、競合の事実を proposal に残す。
-                    proposal = _replace_status(proposal, status="failed", error="他の修正と競合しました")
+                    # 競合の事実だけでは何と競合したのか分からず、直しようがない。
+                    # git の出力を添える（2026-09-05 実測で原因を特定できなかった）。
+                    detail = (merge_result.stderr or merge_result.stdout or "").strip()
+                    proposal = _replace_status(
+                        proposal,
+                        status="failed",
+                        error="他の修正と競合しました" + (f"（{detail[:200]}）" if detail else ""),
+                    )
                 else:
                     _add_log(run, f"欠陥 {defect_id} の修正を統合しました")
 
@@ -722,6 +771,37 @@ def _replace_status(proposal: FixProposal, *, status: str, error: str) -> FixPro
 # localization / risk / report は修正そのものではなく「判断材料」を作る。
 # したがってここでの失敗はループを止めない。ただし握り潰さず、
 # logger と run.log の両方へ日本語 1 行を必ず残す。
+
+
+def _write_reports(out_dir: Path, run: HealingRun, project: HealingProject) -> None:
+    """この実行の各欠陥について、保守対応報告書を作る（既にあれば更新する）。
+
+    報告書はこのシステムの成果物そのもの。ただし報告書づくりが失敗しても
+    修正と検証は成立しているので、ループは止めない（記録だけ残す）。
+    """
+    for iteration in run.iterations:
+        by_defect = {p.defect_id: p for p in iteration.proposals}
+        for defect in iteration.defects:
+            try:
+                fresh = report_doc.build_maintenance_report(
+                    run=run,
+                    iteration=iteration,
+                    defect=defect,
+                    proposal=by_defect.get(defect.defect_id),
+                    project=project,
+                )
+                existing = report_doc.find_report(
+                    out_dir, run_id=run.run_id, defect_id=defect.defect_id
+                )
+                report = (
+                    report_doc.merge_report(existing, fresh) if existing else fresh
+                )
+                report_doc.save_report(out_dir, report)
+                if report.report_id not in run.report_ids:
+                    run.report_ids.append(report.report_id)
+            except Exception:  # noqa: BLE001 - 報告書の失敗で修正の成果を捨てない
+                logger.warning("報告書の作成に失敗しました", exc_info=True)
+                _add_log(run, "報告書の作成に失敗しました。実行の結果には影響しません")
 
 
 def _localize_defects(run: HealingRun, defects: Sequence[Defect], *, repo: Path) -> list[Defect]:

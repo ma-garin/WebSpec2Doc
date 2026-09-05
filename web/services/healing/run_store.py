@@ -123,6 +123,11 @@ def _defect_from_dict(data: Mapping[str, Any]) -> Defect:
         detected_at=str(data.get("detected_at") or ""),
         # 新フィールド。古い JSON には無いので既定値（空）へフォールバックする。
         locations=_dict_tuple(data.get("locations")),
+        url=str(data.get("url") or ""),
+        screen_id=str(data.get("screen_id") or ""),
+        screen_name=str(data.get("screen_name") or ""),
+        test_title=str(data.get("test_title") or ""),
+        screenshot=str(data.get("screenshot") or ""),
     )
 
 
@@ -210,6 +215,7 @@ def run_to_dict(run: HealingRun) -> dict[str, Any]:
         "finished_at": run.finished_at,
         "unverified": list(run.unverified),
         "decisions": [dict(d) for d in run.decisions],
+        "report_ids": list(run.report_ids),
     }
 
 
@@ -233,6 +239,7 @@ def run_from_dict(data: Mapping[str, Any]) -> HealingRun:
         finished_at=str(data.get("finished_at") or ""),
         unverified=[str(x) for x in (data.get("unverified") or [])],
         decisions=[dict(d) for d in decisions_raw if isinstance(d, Mapping)],
+        report_ids=[str(x) for x in (data.get("report_ids") or [])],
     )
 
 

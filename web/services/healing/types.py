@@ -100,6 +100,11 @@ class HealingProject:
     verify_timeout_sec: int = 1800
     created_at: str = ""
     updated_at: str = ""
+    #: 01/02/03 が使う <domain>（output/<domain>）。E2E 起点の接続に必要。
+    #: 空なら pytest 等のコマンド起点のみで、画面仕様との照合はできない。
+    domain: str = ""
+    #: 報告書の「報告」欄に出す組織名（「株式会社△△ 保守チーム」等）。
+    report_org: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         from dataclasses import asdict
@@ -186,6 +191,16 @@ class Defect:
     #: （path / reason / score / detail）。既定は空。
     #: 既存の位置引数の順序を壊さないよう、必ず末尾に足す（古い履歴も読める）。
     locations: tuple[dict[str, Any], ...] = ()
+    #: 失敗した画面の URL。E2E（02/03）起点のときだけ入る。pytest 起点では空。
+    url: str = ""
+    #: 画面 ID（P001 等）。01 が生成した画面仕様と突き合わせる鍵。
+    screen_id: str = ""
+    #: 画面名（「予約確認」等）。報告書の件名を人の言葉にするために使う。
+    screen_name: str = ""
+    #: テスト名から TC-ID を除いた部分（「予約を確定できる」等）。
+    test_title: str = ""
+    #: 失敗時のスクリーンショット。out_dir からの相対パス。無ければ空。
+    screenshot: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         from dataclasses import asdict
@@ -300,6 +315,25 @@ class HealingRun:
     unverified: list[str] = field(default_factory=list)
     #: 人が下した判断の履歴（approve / reject / rerun）。
     decisions: list[dict[str, Any]] = field(default_factory=list)
+    #: この実行から起こした保守対応報告書の ID。1 欠陥 = 1 報告書。
+    report_ids: list[str] = field(default_factory=list)
+
+
+#: 保守対応報告書の状態。
+#: draft     … 下書き中（生成の途中）
+#: awaiting  … 承認待ち。人が読んで判断する
+#: approved  … 承認済み。PR を作成した
+#: returned  … 差し戻し。指示つきで再修正を走らせた
+#: rejected  … 却下
+#: submitted … 顧客へ提出済み
+REPORT_STATUSES: tuple[str, ...] = (
+    "draft",
+    "awaiting",
+    "approved",
+    "returned",
+    "rejected",
+    "submitted",
+)
 
 
 class HealingError(Exception):

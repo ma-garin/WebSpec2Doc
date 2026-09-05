@@ -334,6 +334,106 @@ def rerun_verification(out_dir: Path, run_id: str) -> HealingRun:
     return run
 
 
+#: 報告書に対して人が下せる判断。
+REPORT_ACTIONS = ("approve", "return", "reject")
+
+
+def decide_report(
+    out_dir: Path,
+    report_id: str,
+    *,
+    action: str,
+    note: str = "",
+    actor: str = "",
+) -> "report_doc.MaintenanceReport":
+    """報告書に対する人の判断を記録する。
+
+    承認とは「この報告書を顧客に出してよい」という判断で、PR の作成はその副産物。
+    差し戻しは、指示を添えて同じ欠陥をもう一度直させる（新しい実行を起こす）。
+    """
+    if action not in REPORT_ACTIONS:
+        raise HealingError(f"不正な操作です: {action}")
+    report = report_doc.load_report(out_dir, report_id)
+    if report is None:
+        raise HealingError(f"報告書 {report_id} が見つかりません")
+    if report.status != "awaiting":
+        raise HealingError(
+            f"この報告書は既に「{_REPORT_STATUS_LABELS.get(report.status, report.status)}」です"
+        )
+
+    now = _now_iso()
+    if action == "approve":
+        run = create_pull_request_for_run(out_dir, report.run_id)
+        record_decision(out_dir, report.run_id, action="approve", note=note, actor=actor)
+        pr = run.pull_request
+        report = replace(
+            report,
+            status="approved",
+            pr_number=pr.number if pr else 0,
+            pr_url=pr.url if pr else "",
+            approvals=report.approvals
+            + ({"role": "approved", "who": actor or "担当者", "at": now, "note": note},),
+            updated_at=now,
+        )
+    elif action == "return":
+        if not note.strip():
+            raise HealingError("差し戻すときは、どう直してほしいかをメモに書いてください")
+        project = project_store.get_project(out_dir, report.project_id)
+        if project is None:
+            raise HealingError(f"プロジェクト {report.project_id} が見つかりません")
+        defect = _find_defect(out_dir, report.run_id, report.defect_id)
+        if defect is None:
+            raise HealingError("差し戻す対象の不具合が見つかりません")
+        start_run(
+            out_dir=out_dir,
+            project=project,
+            actor=actor,
+            extra_instructions=note,
+            defects=[defect],
+        )
+        report = replace(
+            report,
+            status="returned",
+            approvals=report.approvals
+            + ({"role": "returned", "who": actor or "担当者", "at": now, "note": note},),
+            updated_at=now,
+        )
+    else:  # reject
+        record_decision(out_dir, report.run_id, action="reject", note=note, actor=actor)
+        report = replace(
+            report,
+            status="rejected",
+            approvals=report.approvals
+            + ({"role": "rejected", "who": actor or "担当者", "at": now, "note": note},),
+            updated_at=now,
+        )
+
+    report_doc.save_report(out_dir, report)
+    return report
+
+
+#: 判断済みの報告書に再度判断しようとしたときの表示。
+_REPORT_STATUS_LABELS = {
+    "approved": "承認済み",
+    "returned": "差し戻し済み",
+    "rejected": "却下済み",
+    "submitted": "提出済み",
+    "draft": "下書き",
+}
+
+
+def _find_defect(out_dir: Path, run_id: str, defect_id: str) -> Defect | None:
+    """実行の中から欠陥 1 件を取り出す。差し戻しで同じ欠陥を渡すために使う。"""
+    run = get_run(out_dir, run_id)
+    if run is None:
+        return None
+    for iteration in run.iterations:
+        for defect in iteration.defects:
+            if defect.defect_id == defect_id:
+                return defect
+    return None
+
+
 def create_pull_request_for_run(out_dir: Path, run_id: str, *, draft: bool = False) -> HealingRun:
     run = get_run(out_dir, run_id)
     if run is None:

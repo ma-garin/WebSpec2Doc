@@ -18,8 +18,14 @@ from web.audit_context import record_admin_event
 from web.auth import require_admin
 from web.config import OUTPUT_DIR
 from web.services.healing import agents as healing_agents
-from web.services.healing import orchestrator, project_store, run_store, verification
-from web.services.healing.orchestrator import DECISION_ACTIONS
+from web.services.healing import (
+    orchestrator,
+    project_store,
+    report_doc,
+    run_store,
+    verification,
+)
+from web.services.healing.orchestrator import DECISION_ACTIONS, REPORT_ACTIONS
 from web.services.healing.types import HealingError
 from web.tenancy import scoped_output_dir
 
@@ -583,4 +589,193 @@ def api_list_agents():
         return _error_response(exc)
     except Exception:
         logger.exception("healing: describe_agents に失敗しました")
+        return {"error": "処理に失敗しました"}, 500
+
+
+# ─────────────────────────── API: 報告書 ───────────────────────────
+#
+# 報告書はこのシステムの成果物そのもの。実行（run）は報告書を作るための工程で、
+# 画面の主語は報告書になる。ルートの登録順に注意: /reports/count は
+# /reports/<report_id> より前に置く（count が ID として解釈されないように）。
+
+
+def _report_summary(report: report_doc.MaintenanceReport) -> dict[str, Any]:
+    """一覧に出す最小限。差分や根拠は詳細でしか返さない（一覧を重くしない）。"""
+    attention = list(report.attention)
+    return {
+        "report_id": report.report_id,
+        "run_id": report.run_id,
+        "project_id": report.project_id,
+        "project_name": report.project_name,
+        "target_url": report.target_url,
+        "title": report.title,
+        "status": report.status,
+        "verify_after": report.verify_after,
+        "verify_after_ok": report.verify_after_ok,
+        "attention_count": len(attention),
+        "attention_high": sum(1 for a in attention if a.get("severity") == "high"),
+        "action_empty": not report.action_text,
+        "incident_source": report.incident_source,
+        "incident_screen_id": report.incident_screen_id,
+        "incident_screen_name": report.incident_screen_name,
+        "created_at": report.created_at,
+        "updated_at": report.updated_at,
+    }
+
+
+@bp.get("/api/healing/reports/count")
+def api_count_reports():
+    status = _clean_short_text(request.args.get("status"), "", 32)
+    try:
+        reports = report_doc.list_reports(_out(), status=status, limit=1000)
+        return {"count": len(reports)}
+    except Exception:
+        logger.exception("healing: 報告書の件数取得に失敗しました")
+        return {"error": "処理に失敗しました"}, 500
+
+
+@bp.get("/api/healing/reports")
+def api_list_reports():
+    status = _clean_short_text(request.args.get("status"), "", 32)
+    project_id = str(request.args.get("project_id", "")).strip()
+    if project_id and not _ID_RE.match(project_id):
+        return {"error": "project_id が不正です。"}, 400
+    limit = _clean_int(request.args.get("limit"), 100, 1, 500)
+    try:
+        reports = report_doc.list_reports(
+            _out(), status=status, project_id=project_id, limit=limit
+        )
+        return {"reports": [_report_summary(r) for r in reports]}
+    except Exception:
+        logger.exception("healing: 報告書の一覧取得に失敗しました")
+        return {"error": "処理に失敗しました"}, 500
+
+
+@bp.get("/api/healing/reports/<report_id>")
+def api_get_report(report_id: str):
+    if not _ID_RE.match(report_id):
+        abort(404)
+    try:
+        out_dir = _out()
+        report = report_doc.load_report(out_dir, report_id)
+        if report is None:
+            return {"error": "報告書が見つかりません"}, 404
+        run = orchestrator.get_run(out_dir, report.run_id)
+        proposal = _proposal_of(run, report.defect_id)
+        return {
+            "report": report_doc.to_dict(report),
+            "proposal": proposal,
+            "run": run_store.run_summary(run) if run is not None else None,
+        }
+    except Exception:
+        logger.exception("healing: 報告書の取得に失敗しました")
+        return {"error": "処理に失敗しました"}, 500
+
+
+def _proposal_of(run: Any, defect_id: str) -> dict[str, Any] | None:
+    """報告書に対応する修正案。差分と根拠は折りたたみの中でしか使わない。"""
+    if run is None:
+        return None
+    for iteration in run.iterations:
+        for proposal in iteration.proposals:
+            if proposal.defect_id != defect_id:
+                continue
+            locations: list[dict[str, Any]] = []
+            for defect in iteration.defects:
+                if defect.defect_id == defect_id:
+                    locations = [dict(loc) for loc in defect.locations]
+                    break
+            return {
+                "diff": proposal.diff,
+                "files_changed": list(proposal.files_changed),
+                "rationale": proposal.rationale,
+                "agent": proposal.agent,
+                "status": proposal.status,
+                "locations": locations,
+            }
+    return None
+
+
+@bp.patch("/api/healing/reports/<report_id>")
+def api_update_report(report_id: str):
+    """人が対応欄・原因欄を書き足す。自動では直せなかった報告書で使う。"""
+    guard = require_admin()
+    if guard is not None:
+        return guard
+    if not _ID_RE.match(report_id):
+        abort(404)
+    data = _body()
+    try:
+        from dataclasses import replace as _replace
+
+        out_dir = _out()
+        report = report_doc.load_report(out_dir, report_id)
+        if report is None:
+            return {"error": "報告書が見つかりません"}, 404
+        changes: dict[str, Any] = {}
+        if "action_text" in data:
+            changes["action_text"] = _clean_note(data.get("action_text"))
+        if "cause_text" in data:
+            changes["cause_text"] = _clean_note(data.get("cause_text"))
+        if not changes:
+            return {"error": "更新する項目がありません"}, 400
+        report = _replace(report, **changes, updated_at=report.updated_at)
+        report_doc.save_report(out_dir, report)
+        _record_audit("healing.report.update", {"report_id": report_id})
+        return {"report": report_doc.to_dict(report)}
+    except HealingError as exc:
+        return _error_response(exc)
+    except Exception:
+        logger.exception("healing: 報告書の更新に失敗しました")
+        return {"error": "処理に失敗しました"}, 500
+
+
+@bp.post("/api/healing/reports/<report_id>/decision")
+def api_decide_report(report_id: str):
+    """承認・差し戻し・却下。承認したときだけ PR を作る。"""
+    guard = require_admin()
+    if guard is not None:
+        return guard
+    if not _ID_RE.match(report_id):
+        abort(404)
+    data = _body()
+    action = _clean_short_text(data.get("action"), "", 16)
+    if action not in REPORT_ACTIONS:
+        return {"error": f"不正な操作です: {action}"}, 400
+    try:
+        note = _clean_note(data.get("note"))
+        actor = _clean_short_text(data.get("actor"), "", 64)
+        report = orchestrator.decide_report(
+            _out(), report_id, action=action, note=note, actor=actor
+        )
+        _record_audit(
+            "healing.report.decision",
+            {"report_id": report_id, "action": action, "actor": actor},
+        )
+        return {"report": report_doc.to_dict(report)}
+    except HealingError as exc:
+        return _error_response(exc)
+    except Exception:
+        logger.exception("healing: 報告書の判断に失敗しました")
+        return {"error": "処理に失敗しました"}, 500
+
+
+@bp.get("/api/healing/reports/<report_id>/export")
+def api_export_report(report_id: str):
+    """顧客に出す形で書き出す。承認前でも下書きとして出せる。"""
+    if not _ID_RE.match(report_id):
+        abort(404)
+    fmt = _clean_short_text(request.args.get("format"), "md", 8)
+    try:
+        report = report_doc.load_report(_out(), report_id)
+        if report is None:
+            return {"error": "報告書が見つかりません"}, 404
+        if fmt == "json":
+            return {"report": report_doc.to_dict(report)}
+        if fmt == "md":
+            body = report_doc.render_markdown(report)
+            return body, 200, {"Content-Type": "text/markdown; charset=utf-8"}
+        return {"error": f"未対応の形式です: {fmt}"}, 400
+    except Exception:
+        logger.exception("healing: 報告書の書き出しに失敗しました")
         return {"error": "処理に失敗しました"}, 500

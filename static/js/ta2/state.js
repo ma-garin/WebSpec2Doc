@@ -206,12 +206,20 @@
   /** レールのボタンは親の WS に寄せる（地図は仕様の中、実行結果はテストの中） */
   var RAIL_OF = { site: 'spec', run: 'test' };
 
+  /* テスト自動化専用シェル（/test-automation）で開いたか。
+     ここで開いた画面の URL を "/" に書き換えると、リロード・ブックマーク・
+     共有で /dashboard（ドキュメント作成）に着地してしまい、元の画面に戻れない。 */
+  function isTestOnly() {
+    return document.body && document.body.dataset.mode === 'test-only';
+  }
+
   function pathFor(v) {
     var seg = PATH_OF[v];
-    if (!seg) return '/';
+    var home = isTestOnly() ? '/test-automation' : '/';
+    if (!seg) return home;
     /* チームはワークスペース全体の設定で、サイトに属さない。
        サイト未選択でもここへ入れないと、サイトが 0 件のテナントは同僚を招けない。 */
-    if (!state.domain) return v === 'team' ? '/team' : '/';
+    if (!state.domain) return v === 'team' ? '/team' : home;
     return '/sites/' + enc(state.domain) + '/' + seg;
   }
 

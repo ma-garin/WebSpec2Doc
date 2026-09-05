@@ -18,7 +18,10 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/ta2.css') }}?v={{ _ver }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/ws.css') }}?v={{ _ver }}">
 </head>
-<body data-ws="{{ ws }}" data-domain="{{ domain }}">
+{# data-mode は state.js が URL の書き換え先を決めるのに使う。
+   test-only のとき "/" に書き換えると、リロードで /dashboard に着地して
+   テスト自動化の画面に戻れなくなる。 #}
+<body data-ws="{{ ws }}" data-domain="{{ domain }}" data-mode="{{ mode or 'full' }}">
 <div class="app">
   {# 認証オフ（未ログイン）でもゲストとして出す。topbar.html と同じ項目・同じ並び #}
   {% set u = auth_user or {'name': 'ゲスト', 'email': '', 'role': ''} %}

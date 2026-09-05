@@ -7,4 +7,4 @@ PR 作成・マージの経路を実データで確認するための一時的�
 
 def add(a: int, b: int) -> int:
     """2 つの数を足す。"""
-    return a - b
+    return a + b

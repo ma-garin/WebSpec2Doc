@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <title>オートヒーリング - WebSpec2Doc</title>
+  {# Google Fonts は CSP でブロックされるため使わない。system-select.html と同じ理由・同じ順序で読み込む
+     （app.css が :root の --bg/--ok/--ok-bg を再定義するため、ta2.css/ws.css より先に読み、
+     ta2/ws のトークンを最後に勝たせる）。 #}
+  <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/ta2.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/ws.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/healing.css') }}?v={{ _ver }}">
+</head>
+<body class="hl-body" data-focus-run-id="{{ focus_run_id or '' }}">
+
+  {% set topbar_crumb = 'オートヒーリング' %}
+  {% set topbar_title = 'コードを直して PR を出す' %}
+  {% include 'partials/topbar.html' %}
+
+  <div id="hl-error" class="hl-banner" role="alert" hidden></div>
+
+  <main class="hl-stage">
+
+    <!-- 左レール: 接続先 -->
+    <aside class="hl-rail">
+      <h2 class="hl-rail-head">接続したコードベース</h2>
+      <div id="hl-projects-empty" class="hl-empty-sm" hidden>
+        <p>まだ接続したコードベースがありません。</p>
+        <p>下の「＋ コードベースを接続」から、検証コマンドが通るリポジトリを1つ登録してください。</p>
+      </div>
+      <ul id="hl-projects" class="hl-projects"></ul>
+      <button type="button" id="hl-add-project" class="hl-add-btn">＋ コードベースを接続</button>
+    </aside>
+
+    <!-- 中央: 実行 -->
+    <section class="hl-main">
+
+      <div id="hl-main-empty" class="hl-empty">
+        <p>左でコードベースを選ぶか、新しく接続してください。</p>
+        <p>接続すると、検証コマンドを実際に走らせて失敗を見つけ、修正して PR を出すところまでを自動で進められます。</p>
+      </div>
+
+      <div id="hl-connect-form" class="hl-form" hidden>
+        <h2 class="hl-form-title">コードベースを接続する</h2>
+
+        <p class="hl-allowed-roots-lead">接続できるのは次の場所の中だけです。</p>
+        <ul class="hl-allowed-roots-list hl-mono">
+          {% for root in allowed_roots %}
+          <li>{{ root }}</li>
+          {% else %}
+          <li>（許可された接続先がありません。管理者に確認してください）</li>
+          {% endfor %}
+        </ul>
+
+        <div class="hl-form-grid">
+          <label class="hl-field">名前
+            <input type="text" id="hl-f-name" placeholder="例: webspec2doc 本体">
+          </label>
+          <label class="hl-field">リポジトリのパス
+            <input type="text" id="hl-f-path" class="hl-mono" placeholder="/Users/.../repo">
+          </label>
+          <label class="hl-field">既定ブランチ
+            <input type="text" id="hl-f-branch" value="main">
+          </label>
+          <label class="hl-field">検証コマンド
+            <input type="text" id="hl-f-cmd" class="hl-mono" placeholder="make test">
+          </label>
+          <label class="hl-field">リモート名
+            <input type="text" id="hl-f-remote" value="origin">
+          </label>
+          <label class="hl-field">GitHub リポジトリ（任意）
+            <input type="text" id="hl-f-github" placeholder="owner/name">
+            <span class="hl-form-note">空欄なら remote から自動判定します。</span>
+          </label>
+          <label class="hl-field">使うエージェント
+            <select id="hl-f-agent">
+              {% for a in agents %}
+              <option value="{{ a.name }}" {% if not a.available %}disabled{% endif %}>{{ a.label }}{% if not a.available %}（未導入）{% endif %}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="hl-field">上限周回数
+            <input type="number" id="hl-f-max-iter" value="3" min="1" max="20">
+          </label>
+          <label class="hl-field">同時実行エージェント数
+            <input type="number" id="hl-f-concurrency" value="3" min="1" max="10">
+          </label>
+        </div>
+
+        <div class="hl-form-actions">
+          <button type="button" id="hl-connect-submit" class="hl-btn-primary">接続する</button>
+          <button type="button" id="hl-connect-cancel" class="hl-btn-sub">やめる</button>
+        </div>
+      </div>
+
+      <div id="hl-project-view" class="hl-project-view" hidden>
+        <header class="hl-project-header">
+          <div class="hl-project-header-text">
+            <h2 id="hl-project-name"></h2>
+            <p class="hl-project-meta">
+              <span id="hl-project-path" class="hl-mono hl-ellipsis"></span>
+              <span id="hl-project-branch"></span>
+              <span id="hl-project-cmd" class="hl-mono hl-ellipsis"></span>
+            </p>
+          </div>
+          <button type="button" id="hl-check-btn" class="hl-btn-sub">接続を確認</button>
+        </header>
+
+        <ul id="hl-checks" class="hl-checks"></ul>
+
+        <div class="hl-start-block">
+          <label for="hl-instructions">追加の指示（任意）</label>
+          <textarea id="hl-instructions" rows="3" placeholder="例: DB に依存するテストは対象外にしてください"></textarea>
+          <button type="button" id="hl-start" class="hl-btn-primary">ヒーリングを開始</button>
+          <p class="hl-hint">検証を回して失敗を見つけ、修正して、PR を出すところまで自動で進みます。<b>マージはしません。</b></p>
+        </div>
+
+        <div id="hl-loop-empty" class="hl-empty-sm" hidden>
+          <p>まだ実行がありません。</p>
+          <p>「ヒーリングを開始」を押すと、ここに検証と修正のループが表示されます。</p>
+        </div>
+
+        <div id="hl-loop" class="hl-loop"></div>
+
+        <div class="hl-log-block">
+          <h3>実行ログ</h3>
+          <div id="hl-log" class="hl-log"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 右ペイン: 判断 -->
+    <aside class="hl-side">
+      <div id="hl-status" class="hl-status-badge">未選択</div>
+
+      <div id="hl-pr" class="hl-pr-block"></div>
+
+      <div id="hl-unverified" class="hl-unverified" hidden>
+        <h3>未検証の事項</h3>
+        <ul id="hl-unverified-list"></ul>
+      </div>
+
+      <div class="hl-runs-block">
+        <h3>過去の実行</h3>
+        <div id="hl-runs-empty" class="hl-empty-sm" hidden>
+          <p>実行履歴がありません。</p>
+        </div>
+        <ul id="hl-runs" class="hl-runs"></ul>
+      </div>
+    </aside>
+
+  </main>
+
+  <script src="{{ url_for('static', filename='js/user-menu.js') }}?v={{ _ver }}"></script>
+  <script src="{{ url_for('static', filename='js/healing.js') }}?v={{ _ver }}"></script>
+</body>
+</html>

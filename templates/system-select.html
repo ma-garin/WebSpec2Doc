@@ -26,7 +26,7 @@
   <main class="sysselect-stage">
     {# 見出しは共通ヘッダー（topbar）が出す。ここで繰り返すと h1 が二重になる。 #}
     <div class="sysselect-head">
-      <p>使うシステムを選んでください。4 つは独立したシステムで、入口・ナビは別です。CLI / API は画面を持たず、端末や外部システムから同じ機能を使います。</p>
+      <p>使うシステムを選んでください。5 つは独立したシステムで、入口・ナビは別です。CLI / API は画面を持たず、端末や外部システムから同じ機能を使います。</p>
     </div>
 
     <div class="sysselect-grid">
@@ -108,6 +108,33 @@
         </span>
         <span class="syscard-open">CLI / API の使い方を見る →</span>
       </a>
+
+      {# オートヒーリング（System 05）は対象リポジトリのコードを書き換える。
+         実行できるのは管理者だけなので、押しても 403 になるカードは並べない
+         （System 02 と同じ判断）。 #}
+      {% if not auth_user or auth_user.role == 'admin' %}
+      <!-- オートヒーリング（System 05）。TOP は /healing の独立シェル。 -->
+      <a class="syscard syscard-heal" href="/healing">
+        <span class="syscard-accent" aria-hidden="true"></span>
+        <span class="syscard-badge">新規</span>
+        <span class="syscard-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3.6 12a8.4 8.4 0 0 1 14.1-6.2l2.3 2.1"/><path d="M20.4 3.7V8h-4.3"/>
+            <path d="M20.4 12a8.4 8.4 0 0 1-14.1 6.2L4 16.1"/><path d="M3.6 20.3V16h4.3"/>
+            <path d="M9.4 11.9l1.9 1.9 3.4-3.6"/>
+          </svg>
+        </span>
+        <span class="syscard-no">System 05</span>
+        <span class="syscard-title">オートヒーリング</span>
+        <span class="syscard-desc">コードのある場所をつなぐと、検証を回して不具合を見つけ、<b>原因の判断と修正差分</b>まで作ります。PR を出したあとは<b>マージせず人の判断を待ちます</b>。直らなければ検証からやり直します。</span>
+        <span class="syscard-chips">
+          <span class="syscard-chip">不具合の検出</span><span class="syscard-chip">バグレポート</span>
+          <span class="syscard-chip">コード修正</span><span class="syscard-chip">PR 作成</span>
+          <span class="syscard-chip">再テストのループ</span>
+        </span>
+        <span class="syscard-open">オートヒーリングを開く →</span>
+      </a>
+      {% endif %}
 
     </div>
 

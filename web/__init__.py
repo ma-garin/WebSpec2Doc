@@ -26,6 +26,7 @@ def create_app() -> Flask:
         crawl,
         discover,
         feedback,
+        healing,
         history,
         integrations,
         llm_chat,
@@ -127,6 +128,8 @@ def create_app() -> Flask:
     app.register_blueprint(autorun_report.bp)
     app.register_blueprint(viewpoints.bp)
     app.register_blueprint(feedback.bp)
+    # オートヒーリング（System 05）。他システムと同様、独立した入口 /healing を持つ。
+    app.register_blueprint(healing.bp)
 
     from web.services.viewpoint_store import get_viewpoint_store
 

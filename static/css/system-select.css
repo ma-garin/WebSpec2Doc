@@ -5,7 +5,8 @@
      System 01 ドキュメント作成 = ta2 の --ac 系（#2563EB / #EFF4FF / #1D4ED8）
      System 02 テスト自動化     = #6D4AC4 / #EDE7FB / #4A2E93
      System 03 AutoRun          = #0E9C7A / #DCF5EE / #0A7359
-     System 04 CLI・API         = #4B5563 / #E5E7EB / #1F2937 */
+     System 04 CLI・API         = #4B5563 / #E5E7EB / #1F2937
+     System 05 オートヒーリング = #B45309 / #FEF3C7 / #92400E */
 
 .sysselect-body {
   margin: 0;
@@ -39,12 +40,13 @@
 
 .sysselect-grid {
   display: grid;
-  /* カードは 4 枚（01 ドキュメント作成 / 02 テスト自動化 / 03 AutoRun / 04 CLI・API）。
-     PC 幅では 4 枚が横一列に収まり、狭い幅では自動で折り返す。 */
-  grid-template-columns: repeat(auto-fit, minmax(272px, 1fr));
+  /* カードは 5 枚（01 ドキュメント作成 / 02 テスト自動化 / 03 AutoRun / 04 CLI・API /
+     05 オートヒーリング）。auto-fit に任せると幅によって「2 段目に 1 枚だけ」が生まれ、
+     余った 1 枚を目で拾い直すことになる。段の割れ方を幅ごとに決め打ちする。 */
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 16px;
   width: 100%;
-  max-width: 1420px;
+  max-width: 1500px;
 }
 
 .syscard {
@@ -73,6 +75,8 @@
 .syscard-test .syscard-accent { background: #6D4AC4; }
 .syscard-cli:hover { border-color: #4B5563; }
 .syscard-cli .syscard-accent { background: #4B5563; }
+.syscard-heal:hover { border-color: #B45309; }
+.syscard-heal .syscard-accent { background: #B45309; }
 
 .syscard-icon {
   width: 48px; height: 48px; border-radius: 10px;
@@ -82,6 +86,7 @@
 .syscard-run .syscard-icon { background: #DCF5EE; color: #0A7359; }
 .syscard-test .syscard-icon { background: #EDE7FB; color: #4A2E93; }
 .syscard-cli .syscard-icon { background: #E5E7EB; color: #1F2937; }
+.syscard-heal .syscard-icon { background: #FEF3C7; color: #92400E; }
 
 .syscard-no {
   font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
@@ -90,11 +95,15 @@
 .syscard-run .syscard-no { color: #0A7359; }
 .syscard-test .syscard-no { color: #4A2E93; }
 .syscard-cli .syscard-no { color: #1F2937; }
+.syscard-heal .syscard-no { color: #92400E; }
 
 .syscard-title { font-size: 18px; font-weight: 800; }
 .syscard-desc {
   font-size: 12.5px; color: var(--tx2); line-height: 1.5;
-  min-height: 68px;
+  /* 5 列に増えてカード 1 枚が細くなり、説明文が 4〜6 行に伸びた。68px のままだと
+     短い説明のカードだけチップが上に浮くので、実測の行数に合わせて底上げする。
+     行数が揃わない分は .syscard-open の margin-top:auto が吸収する。 */
+  min-height: 92px;
 }
 .syscard-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .syscard-chip {
@@ -113,6 +122,7 @@
 /* CLI / API だけ .syscard-open の色指定が無く、本文と同じ色で沈んでいた。4 枚を並べると
    ここだけ導線に見えないので、他の 3 枚と同じ規則を与える。 */
 .syscard-cli .syscard-open { color: #1F2937; }
+.syscard-heal .syscard-open { color: #92400E; }
 
 .syscard-badge {
   position: absolute; top: 16px; right: 16px;
@@ -134,8 +144,14 @@
   color: var(--tx3);
 }
 
-/* 4 枚が 2 段になる幅では、1 段目 2 枚・2 段目 2 枚に割れて読みやすい。
-   さらに狭い PC ウィンドウでは 1 列に落とす。 */
+/* 5 枚を横一列に置けるのは十分に広い PC ウィンドウだけ。狭くなるにつれて
+   3 枚 + 2 枚 → 2 枚ずつ → 1 列と落とす。どの段でも「1 枚だけ余る」形を避ける。 */
+@media (max-width: 1420px) {
+  .sysselect-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 1040px) {
+  .sysselect-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 @media (max-width: 720px) {
   .sysselect-grid { grid-template-columns: 1fr; }
 }

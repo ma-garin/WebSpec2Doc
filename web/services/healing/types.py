@@ -1,0 +1,283 @@
+"""オートヒーリング（System 05）の型契約。
+
+このモジュールは他のヒーリング用モジュールが共通で依存する「言葉の定義」だけを持つ。
+処理は持たない。ここに副作用のあるコードを足すと、store / git / agent が
+互いを import し合って循環参照になる。
+
+用語:
+    Project     ヒーリング対象のコードベース（ローカル git リポジトリ 1 個）
+    Run         1 回のヒーリング実行。中に複数の Iteration（ループの周回）を持つ
+    Iteration   検証 → 欠陥抽出 → 修正 → 再検証 の 1 周
+    Defect      検証で観測された不具合 1 件（事実）
+    FixProposal 1 件の Defect に対してエージェントが出した修正（判断）
+
+「事実」と「判断」を型で分けている。Defect は観測結果しか持たず、
+原因や修正方針は必ず FixProposal 側に置く（AutoRun と同じ方針）。
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import Any, Protocol
+
+# ─────────────────────────── 状態語彙 ───────────────────────────
+
+#: Run の状態。左から右へ進む。terminal 以外へは戻れる（ループするため）。
+RUN_STATUSES: tuple[str, ...] = (
+    "queued",  # 受付済み・未着手
+    "preparing",  # worktree 作成・ブランチ作成
+    "verifying",  # 検証コマンド実行（1 周目）
+    "analyzing",  # 失敗を欠陥として構造化
+    "fixing",  # エージェントが並列で修正中
+    "reverifying",  # 修正後の再検証
+    "awaiting_human",  # PR を出して人の判断待ち（終端ではない）
+    "succeeded",  # 検証が緑になって完了
+    "no_defects",  # 最初から緑。直すものが無い
+    "failed",  # 実行そのものが失敗
+    "cancelled",  # 人が止めた
+)
+
+#: これ以上自動では進まない状態。
+TERMINAL_RUN_STATUSES = frozenset({"succeeded", "no_defects", "failed", "cancelled"})
+
+RUN_STATUS_LABELS: dict[str, str] = {
+    "queued": "受付",
+    "preparing": "準備",
+    "verifying": "検証",
+    "analyzing": "欠陥の切り出し",
+    "fixing": "修正",
+    "reverifying": "再検証",
+    "awaiting_human": "人の判断待ち",
+    "succeeded": "完了",
+    "no_defects": "不具合なし",
+    "failed": "失敗",
+    "cancelled": "中止",
+}
+
+#: defect_store.py と同じ語彙を使う（重大 / 高 / 中 / 低）。
+SEVERITIES: tuple[str, ...] = ("critical", "high", "medium", "low")
+
+#: FixProposal の状態。
+PROPOSAL_STATUSES: tuple[str, ...] = (
+    "proposed",  # 修正案は出たが作業ツリーには入っていない
+    "applied",  # 作業ツリーへ適用済み
+    "failed",  # エージェントが失敗した
+    "skipped",  # 対象外と判断された
+    "timeout",  # 時間切れ
+)
+
+
+# ─────────────────────────── プロジェクト ───────────────────────────
+
+
+@dataclass(frozen=True)
+class HealingProject:
+    """ヒーリング対象のコードベース 1 件。
+
+    repo_path はローカル絶対パス。許可ルート配下かどうかの検証は
+    project_store 側で必ず行う（この型は検証しない）。
+    github_repo が空の場合、PR は作れず「差分の提示」までで止まる。
+    """
+
+    project_id: str
+    name: str
+    repo_path: str
+    default_branch: str = "main"
+    #: 検証コマンド。リポジトリルートで実行する。空なら検証できない。
+    verify_command: str = ""
+    remote: str = "origin"
+    #: "owner/name" 形式。空なら PR 機能を無効にする。
+    github_repo: str = ""
+    #: agents.py のレジストリキー（"claude" / "codex" / "dryrun"）。
+    agent: str = "claude"
+    #: ループの上限周回数。ここに達したら緑でなくても止める。
+    max_iterations: int = 3
+    #: 同時に走らせるエージェント数。1 欠陥 1 エージェント 1 worktree。
+    max_parallel_agents: int = 3
+    #: エージェント 1 本あたりの上限秒数。
+    agent_timeout_sec: int = 900
+    #: 検証コマンド 1 回あたりの上限秒数。
+    verify_timeout_sec: int = 1800
+    created_at: str = ""
+    updated_at: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        from dataclasses import asdict
+
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class ConnectionCheck:
+    """接続確認 1 項目の結果。「押したら動くのか」を先に見せるために使う。"""
+
+    key: str  # "repo" | "git" | "remote" | "github" | "verify_command" | "agent"
+    label: str
+    ok: bool
+    detail: str = ""
+
+
+# ─────────────────────────── 検証 ───────────────────────────
+
+
+@dataclass(frozen=True)
+class VerifyFailure:
+    """検証で落ちた 1 件。観測できた事実のみを持つ。"""
+
+    test_id: str
+    message: str
+    file: str = ""
+    line: int = 0
+    traceback_tail: str = ""
+
+
+@dataclass(frozen=True)
+class VerifyResult:
+    """検証コマンド 1 回分の結果。"""
+
+    ok: bool
+    command: str
+    exit_code: int
+    duration_sec: float
+    total: int = 0
+    passed: int = 0
+    failed: int = 0
+    failures: tuple[VerifyFailure, ...] = ()
+    log_tail: str = ""
+    started_at: str = ""
+    finished_at: str = ""
+    #: 検証そのものが実行できなかった理由（コマンド未設定・起動失敗など）。
+    error: str = ""
+
+
+# ─────────────────────────── 欠陥と修正 ───────────────────────────
+
+
+@dataclass(frozen=True)
+class Defect:
+    """観測された不具合 1 件。原因や直し方はここに書かない（判断は FixProposal）。"""
+
+    defect_id: str
+    title: str
+    severity: str = "medium"
+    source: str = "verify"  # "verify" | "static" | "manual"
+    test_id: str = ""
+    message: str = ""
+    evidence: str = ""
+    #: 該当しそうなファイル（相対パス）。推定なので「候補」として扱う。
+    suspect_files: tuple[str, ...] = ()
+    detected_at: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        from dataclasses import asdict
+
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class AgentTask:
+    """エージェント 1 本に渡す仕事。エージェントはこれ以外の文脈を持たない。"""
+
+    defect: Defect
+    #: 分離済み作業ディレクトリ（git worktree）の絶対パス。ここだけ書き換えてよい。
+    workdir: str
+    repo_root: str
+    verify_command: str
+    timeout_sec: int = 900
+    extra_instructions: str = ""
+
+
+@dataclass(frozen=True)
+class FixProposal:
+    """1 件の Defect に対する修正の結果（判断）。"""
+
+    defect_id: str
+    agent: str
+    status: str = "proposed"
+    summary: str = ""
+    rationale: str = ""
+    diff: str = ""
+    files_changed: tuple[str, ...] = ()
+    log_tail: str = ""
+    duration_sec: float = 0.0
+    error: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        from dataclasses import asdict
+
+        return asdict(self)
+
+
+class HealingAgent(Protocol):
+    """修正エージェントの契約。
+
+    実装は別プロセス（claude / codex CLI）でも、プロセス内でもよい。
+    orchestrator はこの Protocol にしか依存しない。差し替え・並列化・
+    外部への切り出しはすべてこの境界で行う。
+    """
+
+    name: str
+
+    def is_available(self) -> ConnectionCheck:
+        """このエージェントが今この環境で実行可能かを返す。"""
+        ...
+
+    def propose_fix(self, task: AgentTask) -> FixProposal:
+        """task.workdir の中だけを書き換えて修正案を返す。例外は投げない。"""
+        ...
+
+
+# ─────────────────────────── PR とループ ───────────────────────────
+
+
+@dataclass(frozen=True)
+class PullRequestRef:
+    """作成した PR の参照。人の判断はここで待つ。"""
+
+    number: int = 0
+    url: str = ""
+    state: str = "open"  # open | merged | closed | draft
+    title: str = ""
+    branch: str = ""
+    checks: str = ""  # "" は未取得。取得できたら success/failure/pending
+    created_at: str = ""
+
+
+@dataclass
+class HealingIteration:
+    """ループ 1 周（検証 → 欠陥 → 修正 → 再検証）。可変（進行に応じて埋まる）。"""
+
+    index: int
+    verify_before: VerifyResult | None = None
+    defects: list[Defect] = field(default_factory=list)
+    proposals: list[FixProposal] = field(default_factory=list)
+    verify_after: VerifyResult | None = None
+    started_at: str = ""
+    finished_at: str = ""
+
+
+@dataclass
+class HealingRun:
+    """ヒーリング実行 1 回。画面はこのオブジェクトをポーリングして描く。"""
+
+    run_id: str
+    project_id: str
+    project_name: str = ""
+    status: str = "queued"
+    step_label: str = ""
+    branch: str = ""
+    base_branch: str = "main"
+    iterations: list[HealingIteration] = field(default_factory=list)
+    pull_request: PullRequestRef | None = None
+    log: list[str] = field(default_factory=list)
+    error: str = ""
+    started_at: str = ""
+    finished_at: str = ""
+    #: 人の確認を経ていない事項。空でない限り「全部確認した」と書いてはならない。
+    unverified: list[str] = field(default_factory=list)
+    #: 人が下した判断の履歴（approve / reject / rerun）。
+    decisions: list[dict[str, Any]] = field(default_factory=list)
+
+
+class HealingError(Exception):
+    """ヒーリング処理の想定内の失敗。利用者に見せてよいメッセージだけを持つ。"""

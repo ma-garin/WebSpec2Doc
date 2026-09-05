@@ -468,7 +468,10 @@ def _suggest_verify_command(repo: Path) -> str:
     """実在するファイルだけを根拠に検証コマンドを推定する（推測では埋めない）。"""
     tests = next((n for n in ("tests", "test") if (repo / n).is_dir()), "")
     if tests and (repo / "venv" / "bin" / "python").is_file():
-        return f"venv/bin/python -m pytest {tests} -q"
+        # venv は git 管理外で worktree にコピーされない。git_ops が symlink を
+        # 張って相対パスでも通るようにしているが、symlink を作れない環境でも
+        # 確実に起動できるよう、提案は絶対パスにする（2026-09-05 実測の失敗対応）。
+        return f"{repo / 'venv' / 'bin' / 'python'} -m pytest {tests} -q"
     if _has_npm_test(repo):
         return "npm test"
     if any(line.startswith("test:") for line in _read_text(repo / "Makefile").splitlines()):

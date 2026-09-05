@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import PurePosixPath
 import re
 
 from web.services.healing.types import FixProposal
@@ -467,12 +468,18 @@ def _is_annotated_def(line: str) -> bool:
 
 
 def _is_test_file(path: str) -> bool:
-    """ファイルパスがテストファイルかを判定する。"""
+    """ファイルパスがテストファイルかを判定する。
+
+    ディレクトリ名では判定しない。tests/ 配下に置かれた製品コード
+    （tests/healing_demo/demo_calc.py 等）をテスト扱いすると、
+    製品コードだけを直した修正が「テストだけを書き換えている」と
+    誤って警告される（2026-09-05 実測）。判定はファイル名で行う。
+    """
+    name = PurePosixPath(path).name
     return (
-        path.startswith("test_")
-        or path.startswith("tests/")
-        or path.endswith("_test.py")
-        or "/tests/" in path
+        name.startswith("test_")
+        or name.endswith("_test.py")
+        or name == "conftest.py"
     )
 
 

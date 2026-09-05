@@ -57,7 +57,10 @@ textarea.hl-field { height: auto; min-height: 68px; resize: vertical; }
 .hl-hero-lead { margin: 0 0 18px; color: var(--tx2); font-size: 13px; line-height: 1.7; max-width: 860px; }
 .hl-hero-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
 .hl-hero-actions { margin-top: 18px; }
+/* .hl-kv（189 行）と詳細度が同じだと、後勝ちで等幅に戻る。
+   クラスを 2 つ重ねて詳細度を上げる（!important は使わない）。 */
 .hl-project-meta { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; }
+.hl-kv.hl-project-meta { font-family: var(--sans, 'Inter', 'Noto Sans JP', system-ui, -apple-system, 'Segoe UI', sans-serif); font-size: 13px; }
 .hl-meta-item { display: inline-flex; align-items: baseline; gap: 6px; }
 .hl-meta-key { font-size: 12px; color: var(--tx3, #667085); white-space: nowrap; }
 .hl-meta-val { font-size: 13px; color: var(--tx, #101828); font-family: inherit; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 560px; }
@@ -112,11 +115,55 @@ textarea.hl-field { height: auto; min-height: 68px; resize: vertical; }
   padding: 10px 14px; font-size: 12.5px; border-top: 1px solid var(--line); background: var(--sf);
 }
 .hl-check-row:first-child { border-top: 0; }
+.hl-check-row-blocking {
+  border-left: 3px solid var(--er); background: #FEF3F2;
+}
+.hl-check-row-warn {
+  border-left: 3px solid var(--wn); background: #FFFAEB;
+}
 .hl-check-icon { font-weight: 800; }
 .hl-check-icon.is-ok { color: var(--ok); }
 .hl-check-icon.is-bad { color: var(--er); }
+.hl-check-icon.is-warn { color: var(--wn, #B54708); }
 .hl-check-label { font-weight: 700; }
 .hl-check-detail { color: var(--tx2); overflow-wrap: anywhere; }
+.hl-check-tag {
+  display: inline-block; font-size: 11px; font-weight: 600;
+  padding: 1px 6px; border-radius: 4px; border: 1px solid var(--line);
+  background: var(--bg); color: var(--tx); white-space: nowrap;
+}
+.hl-check-tag.is-bad {
+  background: #FEE4E2; color: var(--er); border-color: #FDA29B;
+}
+.hl-check-tag.is-warn {
+  background: #FFFAEB; color: var(--wn); border-color: #FEC84B;
+}
+.hl-check-summary-box:not([hidden]) {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border-radius: 8px; margin-bottom: 12px;
+  border: 1px solid var(--wa); background: #FFFAEB;
+}
+.hl-check-summary-box.is-blocking:not([hidden]) {
+  border-color: var(--er); background: #FEF3F2;
+}
+.hl-check-summary {
+  border: none; background: none; color: inherit;
+  font-family: inherit; font-size: inherit; padding: 0;
+  cursor: pointer; text-decoration: none;
+}
+.hl-check-summary:hover {
+  text-decoration: underline;
+}
+.hl-check-summary:focus-visible {
+  outline: 2px solid var(--ac); outline-offset: 2px;
+}
+.hl-check-blocked-note {
+  font-size: 12px; color: var(--tx3, #667085);
+  margin: 6px 0 0; overflow-wrap: break-word;
+}
+#hl-start:disabled {
+  background: var(--bg); color: var(--tx3); cursor: not-allowed;
+}
 
 /* ── ループ（周回） ── */
 .hl-loop-card { padding: 20px 24px; margin-bottom: 24px; }
@@ -321,25 +368,26 @@ table.hl-projects-table td { padding-top: 6px; padding-bottom: 6px; }
 .hl-risk-detail { font-size: 12px; color: var(--tx3, #667085); grid-column: 2; overflow-wrap: anywhere; }
 
 /* ── リスク要約（判断ボタン直前・クリックで該当箇所へ） ── */
-.hl-risk-summary {
+.hl-risk-summary:not([hidden]) {
   display: flex; align-items: center; gap: 8px;
-  padding: 10px 14px; border-radius: 8px; font-size: 13px; cursor: pointer;
+  width: 100%; box-sizing: border-box;
+  padding: 12px 14px; border-radius: 8px; font-size: 13px; cursor: pointer;
 }
-.hl-risk-summary-high {
+.hl-risk-summary:not([hidden]).hl-risk-summary-high {
   background: #FEF3F2; color: #B42318; border: 1px solid #FDA29B;
 }
-.hl-risk-summary-high:hover { background: #FEE4E2; }
-.hl-risk-summary-high:focus-visible { outline: 2px solid #FDA29B; outline-offset: 2px; }
-.hl-risk-summary-medium {
+.hl-risk-summary:not([hidden]).hl-risk-summary-high:hover { background: #FEE4E2; }
+.hl-risk-summary:not([hidden]).hl-risk-summary-high:focus-visible { outline: 2px solid #FDA29B; outline-offset: 2px; }
+.hl-risk-summary:not([hidden]).hl-risk-summary-medium {
   background: #FFFAEB; color: #B54708; border: 1px solid #FEC84B;
 }
-.hl-risk-summary-medium:hover { background: #FEF0C7; }
-.hl-risk-summary-medium:focus-visible { outline: 2px solid #FEC84B; outline-offset: 2px; }
-.hl-risk-summary-none {
+.hl-risk-summary:not([hidden]).hl-risk-summary-medium:hover { background: #FEF0C7; }
+.hl-risk-summary:not([hidden]).hl-risk-summary-medium:focus-visible { outline: 2px solid #FEC84B; outline-offset: 2px; }
+.hl-risk-summary:not([hidden]).hl-risk-summary-none {
   background: none; color: var(--tx3, #667085); border: none;
 }
-.hl-risk-summary-none:hover { background: var(--bg, #F6F7F9); }
-.hl-risk-summary-none:focus-visible { outline: 2px solid var(--tx3); outline-offset: 2px; }
+.hl-risk-summary:not([hidden]).hl-risk-summary-none:hover { background: var(--bg, #F6F7F9); }
+.hl-risk-summary:not([hidden]).hl-risk-summary-none:focus-visible { outline: 2px solid var(--tx3); outline-offset: 2px; }
 
 /* ── バッジ修飾（高危険） ── */
 .hl-badge-attention {
@@ -605,3 +653,235 @@ table.hl-projects-table td { padding-top: 6px; padding-bottom: 6px; }
 .hl-report-ol li {
   margin: 4px 0;
 }
+
+/* ── 接続するリポジトリの選択リスト ──
+   許可ルートは長大な絶対パスで、手入力は現実的でない。サーバが列挙した候補から選ばせる。
+   一覧が使えないときはパス手入力へ落ちるので、ここは「選べるときだけ」の体裁。 */
+.hl-repo-picker { margin-bottom: 16px; }
+.hl-repo-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.hl-repo-count { font-size: 11px; color: var(--tx3, #667085); white-space: nowrap; }
+.hl-repo-filter { margin-bottom: 8px; }
+.hl-repo-list {
+  max-height: 320px; overflow-y: auto;
+  border: 1px solid var(--line, #E4E7EC); border-radius: 8px;
+  background: var(--sf, #FFFFFF);
+}
+.hl-repo-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  width: 100%; min-height: 48px; padding: 7px 12px;
+  border: 0; border-top: 1px solid var(--line, #E4E7EC); border-radius: 0;
+  background: none; color: var(--tx, #101828); text-align: left; cursor: pointer;
+}
+.hl-repo-item:first-child { border-top: 0; }
+.hl-repo-item:hover:not(:disabled) { background: var(--bg, #F6F7F9); }
+.hl-repo-item:focus-visible { outline: 2px solid var(--ac, #2563EB); outline-offset: -2px; }
+/* 接続済みは押せない。薄くし、押せそうな手応え（カーソル・hover）も出さない。 */
+.hl-repo-item:disabled { color: var(--tx3, #667085); cursor: default; }
+.hl-repo-item.is-picked { background: var(--ac-bg, #EFF4FF); box-shadow: inset 3px 0 0 0 var(--ac, #2563EB); }
+.hl-repo-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.hl-repo-name {
+  font-size: 13px; font-weight: 700;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.hl-repo-path {
+  font-family: var(--mono); font-size: 11px; color: var(--tx3, #667085);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.hl-repo-cmd {
+  font-size: 11px; color: var(--tx3, #667085);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.hl-repo-badges { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.hl-repo-badge {
+  font-size: 10.5px; font-weight: 700; line-height: 1; padding: 4px 8px; border-radius: 999px;
+  border: 1px solid var(--line2, #D0D5DD); background: var(--bg, #F6F7F9); color: var(--tx2, #475467);
+  white-space: nowrap;
+}
+.hl-repo-badge.is-connected {
+  border-color: var(--line, #E4E7EC); background: var(--sf, #FFFFFF); color: var(--tx3, #667085);
+}
+.hl-repo-status { margin: 8px 0 0; font-size: 12px; color: var(--tx3, #667085); }
+.hl-repo-manual-toggle {
+  margin-top: 8px; padding: 0; border: 0; background: none;
+  font-size: 12px; color: var(--ac, #2563EB); text-decoration: underline; cursor: pointer;
+}
+.hl-repo-manual-toggle:hover { color: var(--ac-tx, #1D4ED8); }
+.hl-repo-manual-toggle:focus-visible { outline: 2px solid var(--ac, #2563EB); outline-offset: 2px; border-radius: 4px; }
+
+/* ── 名前セル ──
+   重複の注記を名前と同じ行に並べると、幅 14% の列で名前の方が先に切れる。
+   主情報を切らせないため注記は下の行へ落とし、詳しい内訳は title に残す。 */
+.hl-name-cell { white-space: normal; }
+.hl-proj-name { font-size: 13px; }
+.hl-dup-note {
+  display: block; margin-left: 0; margin-top: 2px;
+  font-size: 10.5px; color: var(--tx3, #667085);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.hl-row-added > td { background: var(--ok-bg, #ECFDF3); }
+.hl-row-added > td:first-child { box-shadow: inset 3px 0 0 0 var(--ok, #12B76A); }
+
+/* 行内メニューは開くあいだだけ body 直下へ出し、表のはみ出し制御から逃がす
+   （末尾行＝登録直後の行で切り取られて開かないように見えていた）。 */
+.hl-row-menu-list.hl-row-menu-float {
+  position: fixed; top: 0; left: 0; right: auto; margin-top: 0; z-index: 80;
+}
+
+/* ── 完了の知らせ ── */
+.hl-toast {
+  position: fixed; right: 20px; bottom: 20px; z-index: 90;
+  display: flex; align-items: flex-start; gap: 10px;
+  max-width: 420px; padding: 10px 12px;
+  border: 1px solid var(--line, #E4E7EC); border-radius: 8px;
+  background: var(--sf, #FFFFFF); color: var(--tx, #101828);
+  font-size: 12.5px; line-height: 1.5;
+  box-shadow: 0 8px 24px rgba(16, 24, 40, .16);
+}
+.hl-toast-text { min-width: 0; }
+.hl-toast-close {
+  flex-shrink: 0; width: 22px; height: 22px; padding: 0;
+  border: 0; border-radius: 4px; background: none; color: var(--tx3, #667085);
+  font-size: 14px; line-height: 1; cursor: pointer;
+}
+.hl-toast-close:hover { background: var(--bg, #F6F7F9); color: var(--tx, #101828); }
+.hl-toast-close:focus-visible { outline: 2px solid var(--ac, #2563EB); outline-offset: 1px; }
+
+/* ══════════════════════════════════════════════════════════════════
+   1 画面に収める（縦スクロールを出さない）
+   他システム（static/css/ta2.css）の作りをそのまま写している:
+     .main{display:grid;grid-template-rows:56px 1fr;min-height:0}  → #hl-view-run
+     .ed-b{display:grid;grid-template-columns:400px 1fr;min-height:0} → .hl-run-panes
+     .steps{overflow:auto} / .items{overflow:auto;min-height:0}     → 各 pane
+   外側（main.app-content）はスクロールさせない。スクロールするのは内側の
+   限られた領域だけ、という点が他システムと同じであることの本体。
+   ══════════════════════════════════════════════════════════════════ */
+
+/* app.css の .app-content{flex:1;overflow:auto;padding:28px 30px} を打ち消す。
+   healing.css は最後に読まれるので同じ詳細度で後勝ちする。 */
+.app-content {
+  overflow: hidden;
+  min-height: 0;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+}
+.app-content > .hl-banner { flex: 0 0 auto; }
+/* .card や .dashboard-section-head の display 指定は UA の [hidden]{display:none} に
+   勝ってしまう。この画面では hidden 属性を常に正とする（JS の style 直書きに頼らない）。 */
+#hl-view-run [hidden] { display: none; }
+#hl-view-run, #hl-view-projects, #hl-view-history { flex: 1 1 auto; min-height: 0; }
+
+/* ── 実行ビュー: 上（受付・統計・判断）固定 ／ 下（周回・実行ログ）だけ内側スクロール ── */
+#hl-view-run { display: grid; grid-template-rows: minmax(0, auto) minmax(0, 1fr); min-height: 0; }
+/* 既定は content の高さ（＝固定）。接続確認の結果などで縦に伸びた時だけ自分の中で
+   スクロールする。外側に逃がすと画面全体が縦スクロールに戻るため逃がさない。 */
+.hl-run-top { min-height: 0; overflow: auto; }
+
+.hl-run-panes {
+  display: grid; grid-template-columns: minmax(0, 1fr) 440px;
+  gap: 16px; min-height: 0;
+}
+/* 左列も右列と同じ「見出し固定＋中身だけスクロール」にする（見出しの有無を揃える）。 */
+.hl-run-loop-pane { display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0; }
+.hl-loop-scroll { min-height: 0; overflow: auto; }
+.hl-run-log-pane { display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0; }
+
+/* 実行が選ばれていない間は実行ログ（見出しごと hidden）が空の列を残さないよう畳む。 */
+.hl-run-panes:has(.hl-log-card[hidden]) { grid-template-columns: minmax(0, 1fr); }
+.hl-run-panes:has(.hl-log-card[hidden]) .hl-run-log-pane { display: none; }
+
+/* pane の中では下余白を持たせない（pane 自身が区切り）。 */
+.hl-run-loop-pane > .dashboard-section-head { margin: 0 0 8px; }
+.hl-loop-scroll > .hl-loop-card { margin-bottom: 16px; }
+.hl-loop-scroll > .hl-note { margin-bottom: 4px; }
+.hl-run-log-pane .dashboard-section-head { margin: 0 0 8px; }
+.hl-run-log-pane .hl-log-card { align-self: stretch; min-height: 0; margin-bottom: 0; display: grid; }
+/* ログは常時表示のまま、右列の高さいっぱいを使って自分の中でスクロールする。 */
+.hl-run-log-pane .hl-log { max-height: none; height: 100%; min-height: 0; }
+
+/* ── 上部を詰める（判断に使う下段の可視領域を最優先で確保する） ──
+   1440×900 の実測で上部 590px / 下部 295px と比率が逆になっていた。
+   上部は「いま何を判断するか」だけを残し、読む領域を下へ渡す。 */
+#hl-view-run .hl-hero { padding: 14px 18px; margin-bottom: 12px; }
+#hl-view-run .hl-hero-actions { margin-top: 12px; }
+#hl-view-run textarea.hl-field { min-height: 52px; }
+
+/* 統計 4 枚は数値 1 つと短い語しか持たないのに 106px を使っていた。
+   枠を外して 1 行の横並び要約に畳む（HTML・id はそのまま。JS の
+   setStat / setStatSub / setStatHint はこの形でもそのまま効く）。 */
+#hl-view-run .stat-cards {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: 4px 16px; margin-bottom: 10px; padding: 6px 14px;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--sf);
+}
+#hl-view-run .stat-card {
+  flex: 0 0 auto; flex-direction: row; align-items: baseline; gap: 6px;
+  padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none;
+}
+#hl-view-run .stat-card + .stat-card { padding-left: 16px; border-left: 1px solid var(--line); }
+#hl-view-run .stat-card-head { gap: 6px; }
+#hl-view-run .stat-card-icon { width: 18px; height: 18px; border-radius: 5px; }
+#hl-view-run .stat-card-icon svg { width: 12px; height: 12px; }
+#hl-view-run .stat-card-label { font-size: 12px; }
+#hl-view-run .stat-card-num { font-size: 15px; line-height: 1.2; }
+#hl-view-run .stat-card-sub { font-size: 11.5px; }
+
+/* 「この実行」は見出しと対象名で 2 行使っていた。1 行に畳む。 */
+#hl-view-run .hl-run-top .dashboard-section-head {
+  display: flex; align-items: center; gap: 12px; margin: 0 0 8px;
+}
+#hl-view-run .hl-run-top .dashboard-section-head > div:first-child {
+  display: flex; align-items: baseline; gap: 10px; min-width: 0; flex: 1 1 auto;
+}
+#hl-view-run .hl-run-top .dash-section-title { margin: 0; font-size: 15px; white-space: nowrap; }
+#hl-view-run .hl-run-top .dashboard-section-copy {
+  margin: 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#hl-view-run .hl-toolbar { flex: 0 0 auto; }
+
+/* リスク要約が左端・全幅、判断ボタンが右端だと、読んでから押すまで視線が横断する。
+   要約とメモをボタンと同じ右端に寄せ、判断に要るものを 1 つの縦の並びにする。 */
+#hl-view-run .hl-run-top > .hl-risk-summary {
+  width: 100%; box-sizing: border-box; margin: 10px 0 0;
+}
+#hl-view-run .hl-decision-note-row {
+  width: 100%; margin-top: 10px;
+}
+#hl-view-run .hl-decision-note-row .hl-field { width: 100%; max-width: 560px; }
+#hl-view-run .hl-decision-note-row .hl-field-label { margin: 0; white-space: nowrap; }
+
+/* 実行を開いている間、受付は次を始めるための 1 行に畳む（読んでいる最中は使わない領域）。
+   判定は実行ログの表示状態に相乗りする。JS が実行の有無で付け外しする唯一の印であり、
+   すぐ下の .hl-run-panes:has(.hl-log-card[hidden]) と同じ条件で揃う。 */
+#hl-view-run:has(.hl-log-card:not([hidden])) .hl-hero {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+  padding: 8px 14px; margin-bottom: 8px;
+}
+#hl-view-run:has(.hl-log-card:not([hidden])) .hl-hero-grid {
+  display: flex; align-items: center; gap: 8px; min-width: 0;
+}
+#hl-view-run:has(.hl-log-card:not([hidden])) .hl-hero-grid > div {
+  display: flex; align-items: center; gap: 8px; min-width: 0;
+}
+#hl-view-run:has(.hl-log-card:not([hidden])) .hl-hero-grid > div + div { display: none; }
+#hl-view-run:has(.hl-log-card:not([hidden])) .hl-hero-grid .hl-field-label {
+  margin: 0; white-space: nowrap;
+}
+#hl-view-run:has(.hl-log-card:not([hidden])) .hl-hero-grid select.hl-field { width: 240px; }
+#hl-view-run:has(.hl-log-card:not([hidden])) .hl-project-meta { display: none; }
+#hl-view-run:has(.hl-log-card:not([hidden])) .hl-hero-actions { margin-top: 0; flex: 1 1 auto; }
+#hl-view-run:has(.hl-log-card:not([hidden])) .hl-confirm,
+#hl-view-run:has(.hl-log-card:not([hidden])) .hl-checks:not([hidden]) {
+  flex: 0 0 100%; margin-top: 0;
+}
+
+/* ── 接続先・実行履歴: 見出しは固定、表の領域だけが内側スクロール ──
+   ヘッダー固定は共通の .dashboard-table thead th{position:sticky;top:0} が
+   そのまま効く（スクロールする箱が .hl-table-wrap に変わるため）。 */
+#hl-view-projects, #hl-view-history { display: flex; flex-direction: column; }
+#hl-view-projects > .hl-table-wrap, #hl-view-history > .hl-table-wrap {
+  flex: 1 1 auto; min-height: 0; overflow: auto; margin-bottom: 12px;
+}
+#hl-view-projects > .dashboard-section-head, #hl-view-history > .dashboard-section-head,
+#hl-view-projects > .hl-form, #hl-view-projects > .hl-list-meta,
+#hl-view-history > .hl-list-meta, #hl-view-history > .hl-more-row { flex: 0 0 auto; }

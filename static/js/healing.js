@@ -383,9 +383,12 @@
     ['run', 'projects', 'history'].forEach(function (v) {
       $['hl-view-' + v].hidden = v !== view;
     });
-    $['hl-nav-run'].classList.toggle('active', view === 'run');
-    $['hl-nav-projects'].classList.toggle('active', view === 'projects');
-    $['hl-nav-history'].classList.toggle('active', view === 'history');
+    // サイドバーは共通部品（報告書 / 設定）に置き換わり、ビュー切替のナビは
+    // この画面には無い。要素が無くても落とさない。
+    ['run', 'projects', 'history'].forEach(function (v) {
+      var nav = $['hl-nav-' + v];
+      if (nav && nav.classList) { nav.classList.toggle('active', view === v); }
+    });
   }
 
   /* ---------------- 統計 ---------------- */

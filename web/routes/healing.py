@@ -267,6 +267,13 @@ def _project_dict(project: Any) -> dict[str, Any]:
 
 @bp.get("/healing")
 def healing_page():
+    """入口は報告書。毎日見るのは「今日出す報告書があるか」だけ。"""
+    return render_template("healing_reports.html")
+
+
+@bp.get("/healing/settings")
+def healing_settings_page():
+    """接続先と実行の設定。月に一度しか触らないので、入口からは外す。"""
     return render_template(
         "healing.html",
         agents=healing_agents.describe_agents(),

@@ -18,6 +18,8 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ta2.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/healing.css') }}?v={{ _ver }}">
+  {# サイドバー共通部品（件数バッジ）のためだけに読む。順序は healing.css の後。 #}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/healing-reports.css') }}?v={{ _ver }}">
 </head>
 <body class="app-page" data-focus-run-id="{{ focus_run_id or '' }}" data-hl-admin="{{ 'true' if hl_admin else 'false' }}">
 {# web/routes/healing.py は接続の作成/変更/削除・実行の開始/中止・PR 作成・判断に
@@ -31,40 +33,10 @@
      index.html を共用しないのは、ヒーリングが独立システムで、view 切替機構
      （data-system / switchView）に相乗りすると入口とナビが混ざるため
      （テスト自動化が workspace.html を別に持つのと同じ判断）。 #}
-  <aside class="app-sidebar">
-    <a href="/systems" class="app-brand">
-      <span class="app-brand-mark">W</span>
-      <span class="app-brand-text"><strong>WebSpec2Doc</strong><span>オートヒーリング</span></span>
-    </a>
-    <a href="/systems" class="sys-switcher" title="システムを切り替える">
-      <span class="sys-switcher-label">システム</span>
-      <span class="sys-switcher-cur">オートヒーリング</span>
-      <span class="sys-switcher-swap">切替</span>
-    </a>
-    {# 接続の操作ボタンは「接続先」ビュー右上（#hl-add-project-2）に一本化した。
-       サイドバーは移動のためのもので、操作ボタンは置かない。
-       hidden スタブ #hl-add-project は JS 側の参照が消えたため削除済み。 #}
-
-    <nav class="app-nav" aria-label="メインナビゲーション">
-      <div class="app-nav-group">オートヒーリング</div>
-      <button class="app-nav-item active" type="button" id="hl-nav-run">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3.6 12a8.4 8.4 0 0 1 14.1-6.2l2.3 2.1"/><path d="M20.4 3.7V8h-4.3"/><path d="M20.4 12a8.4 8.4 0 0 1-14.1 6.2L4 16.1"/><path d="M3.6 20.3V16h4.3"/></svg>
-        <span class="nav-label">実行</span>
-      </button>
-      <button class="app-nav-item" type="button" id="hl-nav-projects">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 6a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/></svg>
-        <span class="nav-label">接続先</span>
-      </button>
-      <button class="app-nav-item" type="button" id="hl-nav-history">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5l3 2"/></svg>
-        <span class="nav-label">実行履歴</span>
-      </button>
-      {# 「サポート」区分（/user-guide・/settings）はここに置かない。
-         どちらも System 01 の画面で、押すと別システムへ飛んで文脈が切れる。
-         ユーザーガイドはトップバーのユーザーメニュー（#usermenu-guide-btn）に
-         全システム共通の導線として既にある。 #}
-    </nav>
-  </aside>
+  {# サイドバーは報告書一覧と共通。ここは設定画面なので active='settings'。
+     旧「実行 / 接続先 / 実行履歴」はナビから外し、下のビューは残す
+     （実行の直リンク /healing/runs/<id> がまだ生きているため）。 #}
+  {% with active = 'settings' %}{% include 'partials/healing-sidebar.html' %}{% endwith %}
 
   <div class="app-main">
     {% set topbar_crumb = 'オートヒーリング' %}

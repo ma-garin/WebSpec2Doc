@@ -18,7 +18,7 @@ from web.audit_context import record_admin_event
 from web.auth import require_admin
 from web.config import OUTPUT_DIR
 from web.services.healing import agents as healing_agents
-from web.services.healing import orchestrator, project_store, run_store
+from web.services.healing import orchestrator, project_store, run_store, verification
 from web.services.healing.orchestrator import DECISION_ACTIONS
 from web.services.healing.types import HealingError
 from web.tenancy import scoped_output_dir
@@ -54,6 +54,30 @@ def _record_audit(action: str, detail: dict[str, Any]) -> None:
         record_admin_event(action, detail)
     except Exception:
         logger.exception("healing: 監査ログの記録に失敗しました (action=%s)", action)
+
+
+#: エラー文へ実パスが混ざったときに伏せる値（内部構造・利用者名の露出防止）。
+_HOME_PATHS: tuple[str, ...] = tuple(
+    dict.fromkeys(
+        p for p in (str(Path.home()).rstrip("/"), str(Path.home().resolve()).rstrip("/")) if p
+    )
+)
+_HOME_USER: str = Path.home().name
+
+
+def _mask_home(text: str) -> str:
+    """エラー文からホームディレクトリの実パスと利用者名を取り除く。"""
+    masked = text
+    for home in _HOME_PATHS:
+        masked = masked.replace(home, "~")
+    if len(_HOME_USER) >= 3:
+        masked = masked.replace(_HOME_USER, "~")
+    return masked
+
+
+def _error_response(exc: Exception) -> tuple[dict[str, Any], int]:
+    """利用者へ返す 400 応答。理由は残しつつ実パスだけを伏せる。"""
+    return {"error": _mask_home(str(exc))}, 400
 
 
 def _body() -> dict[str, Any]:
@@ -93,9 +117,23 @@ def _clean_repo_path(value: Any) -> str:
 
 
 def _clean_verify_command(value: Any) -> str:
+    """検証コマンドを整形し、危険なコマンドを「入口」で拒否する。
+
+    repo_path を許可ルートで弾くのと同じく境界で検証する。実行直前の
+    orchestrator 側チェックは最後の砦であって、入口の代わりではない。
+    """
     text = _strip_control(value)
     if len(text) > 1000:
         raise HealingError("verify_command は1000文字以内で指定してください。")
+    if not text.strip():
+        return text
+    allowed, reason = verification.is_command_allowed(text)
+    if not allowed:
+        _record_audit(
+            "healing.project.verify_command.rejected",
+            {"reason": reason, "command": text[:200]},
+        )
+        raise HealingError(f"verify_command を拒否しました: {reason}。")
     return text
 
 
@@ -253,7 +291,7 @@ def api_list_projects():
         projects = project_store.list_projects(out_dir)
         return {"projects": [_project_dict(p) for p in projects]}
     except HealingError as exc:
-        return {"error": str(exc)}, 400
+        return _error_response(exc)
     except Exception:
         logger.exception("healing: list_projects に失敗しました")
         return {"error": "処理に失敗しました"}, 500
@@ -274,7 +312,7 @@ def api_create_project():
         )
         return {"project": _project_dict(project)}, 201
     except HealingError as exc:
-        return {"error": str(exc)}, 400
+        return _error_response(exc)
     except Exception:
         logger.exception("healing: create_project に失敗しました")
         return {"error": "処理に失敗しました"}, 500
@@ -291,7 +329,7 @@ def api_get_project(project_id: str):
             return {"error": "プロジェクトが見つかりません。"}, 404
         return {"project": _project_dict(project)}
     except HealingError as exc:
-        return {"error": str(exc)}, 400
+        return _error_response(exc)
     except Exception:
         logger.exception("healing: get_project に失敗しました")
         return {"error": "処理に失敗しました"}, 500
@@ -314,7 +352,7 @@ def api_update_project(project_id: str):
         )
         return {"project": _project_dict(project)}
     except HealingError as exc:
-        return {"error": str(exc)}, 400
+        return _error_response(exc)
     except Exception:
         logger.exception("healing: update_project に失敗しました")
         return {"error": "処理に失敗しました"}, 500
@@ -335,7 +373,7 @@ def api_delete_project(project_id: str):
         )
         return {"deleted": bool(deleted)}
     except HealingError as exc:
-        return {"error": str(exc)}, 400
+        return _error_response(exc)
     except Exception:
         logger.exception("healing: delete_project に失敗しました")
         return {"error": "処理に失敗しました"}, 500
@@ -356,7 +394,7 @@ def api_check_project(project_id: str):
         ]
         return {"checks": checks_data, "ok": all(c.ok for c in checks)}
     except HealingError as exc:
-        return {"error": str(exc)}, 400
+        return _error_response(exc)
     except Exception:
         logger.exception("healing: check_connection に失敗しました")
         return {"error": "処理に失敗しました"}, 500
@@ -376,7 +414,7 @@ def api_list_runs():
         runs = orchestrator.list_run_summaries(out_dir, project_id=project_id, limit=limit)
         return {"runs": runs}
     except HealingError as exc:
-        return {"error": str(exc)}, 400
+        return _error_response(exc)
     except Exception:
         logger.exception("healing: list_run_summaries に失敗しました")
         return {"error": "処理に失敗しました"}, 500
@@ -405,7 +443,7 @@ def api_start_run():
         )
         return {"run": run_store.run_to_dict(run)}, 202
     except HealingError as exc:
-        return {"error": str(exc)}, 400
+        return _error_response(exc)
     except Exception:
         logger.exception("healing: start_run に失敗しました")
         return {"error": "処理に失敗しました"}, 500
@@ -422,7 +460,7 @@ def api_get_run(run_id: str):
             return {"error": "実行が見つかりません。"}, 404
         return {"run": run_store.run_to_dict(run)}
     except HealingError as exc:
-        return {"error": str(exc)}, 400
+        return _error_response(exc)
     except Exception:
         logger.exception("healing: get_run に失敗しました")
         return {"error": "処理に失敗しました"}, 500
@@ -440,7 +478,7 @@ def api_cancel_run(run_id: str):
         _record_audit("healing.run.cancel", {"run_id": run_id, "cancelled": bool(cancelled)})
         return {"cancelled": bool(cancelled)}
     except HealingError as exc:
-        return {"error": str(exc)}, 400
+        return _error_response(exc)
     except Exception:
         logger.exception("healing: cancel_run に失敗しました")
         return {"error": "処理に失敗しました"}, 500
@@ -461,7 +499,7 @@ def api_create_pull_request(run_id: str):
         _record_audit("healing.run.pull_request", {"run_id": run_id, "draft": draft})
         return {"run": run_store.run_to_dict(run)}
     except HealingError as exc:
-        return {"error": str(exc)}, 400
+        return _error_response(exc)
     except Exception:
         logger.exception("healing: create_pull_request_for_run に失敗しました")
         return {"error": "処理に失敗しました"}, 500
@@ -489,7 +527,7 @@ def api_record_decision(run_id: str):
         )
         return {"run": run_store.run_to_dict(run)}
     except HealingError as exc:
-        return {"error": str(exc)}, 400
+        return _error_response(exc)
     except Exception:
         logger.exception("healing: record_decision に失敗しました")
         return {"error": "処理に失敗しました"}, 500
@@ -500,7 +538,7 @@ def api_list_agents():
     try:
         return {"agents": healing_agents.describe_agents()}
     except HealingError as exc:
-        return {"error": str(exc)}, 400
+        return _error_response(exc)
     except Exception:
         logger.exception("healing: describe_agents に失敗しました")
         return {"error": "処理に失敗しました"}, 500

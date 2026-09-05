@@ -24,28 +24,47 @@
 
 /* ── 入力（共通 CSS にフォーム部品が無いので、ここで最小限そろえる） ── */
 .hl-field-label { display: block; font-size: 12px; font-weight: 700; color: var(--tx2); margin-bottom: 6px; }
+/* 必須は塗らない。ラベルの読み順を壊さない大きさで、色だけで示す。 */
+.hl-req { margin-left: 6px; font-size: 10.5px; font-weight: 700; color: var(--ng-tx, #B42318); background: none; }
 .hl-field {
   width: 100%;
   box-sizing: border-box;
+  height: 34px;
   font: inherit;
   font-size: 13px;
-  padding: 9px 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--sf);
-  color: var(--tx);
+  padding: 8px 10px;
+  border: 1px solid var(--line2, #D0D5DD);
+  border-radius: 6px;
+  background: var(--sf, #FFFFFF);
+  color: var(--tx, #101828);
+  transition: border-color .12s ease, box-shadow .12s ease;
 }
-.hl-field:focus { outline: 2px solid var(--ac); outline-offset: 1px; }
-textarea.hl-field { resize: vertical; }
+/* 実値（main / origin / 3）は --tx の濃さ、未入力のプレースホルダは --tx3。
+   この差が「入っている値」と「例示」の区別そのものなので薄めない。 */
+.hl-field::placeholder { color: var(--tx3, #667085); opacity: 1; }
+.hl-field:hover:not(:disabled) { border-color: var(--tx3, #667085); }
+.hl-field:focus { outline: none; border-color: var(--ac, #2563EB); box-shadow: 0 0 0 3px var(--ac-bg, #EFF4FF); }
+.hl-field:focus-visible { outline: none; border-color: var(--ac, #2563EB); box-shadow: 0 0 0 3px var(--ac-bg, #EFF4FF); }
+.hl-field:disabled { background: var(--bg, #F6F7F9); color: var(--tx3, #667085); cursor: not-allowed; }
+/* 右端の矢印に文字が重ならないだけの余白を空ける。 */
+select.hl-field { padding-right: 28px; }
+textarea.hl-field { height: auto; min-height: 68px; resize: vertical; }
 
 /* ── 受付（ヒーロー）。AutoRun の受付と同じ形。 ── */
-.hl-hero { padding: 24px 28px; margin-bottom: 16px; }
+.hl-hero { padding: 24px 28px; margin-bottom: 24px; }
 .hl-hero-kicker { font-size: 12px; font-weight: 800; color: var(--ac-dk); margin-bottom: 6px; }
 .hl-hero-title { font-size: 22px; margin: 0 0 8px; }
 .hl-hero-lead { margin: 0 0 18px; color: var(--tx2); font-size: 13px; line-height: 1.7; max-width: 860px; }
 .hl-hero-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
 .hl-hero-actions { margin-top: 18px; }
-.hl-project-meta { margin-top: 8px; }
+.hl-project-meta { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; }
+.hl-meta-item { display: inline-flex; align-items: baseline; gap: 6px; }
+.hl-meta-key { font-size: 12px; color: var(--tx3, #667085); white-space: nowrap; }
+.hl-meta-val { font-size: 13px; color: var(--tx, #101828); font-family: inherit; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 560px; }
+.hl-meta-val.is-code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.hl-project-meta .hl-meta-key { font-family: var(--sans, 'Inter', 'Noto Sans JP', system-ui, -apple-system, 'Segoe UI', sans-serif); font-size: 12px; }
+.hl-project-meta .hl-meta-val { font-family: var(--sans, 'Inter', 'Noto Sans JP', system-ui, -apple-system, 'Segoe UI', sans-serif); font-size: 13px; max-width: 560px; }
+.hl-project-meta .hl-meta-val.is-code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .hl-caution { font-size: 12px; color: var(--tx3); }
 
 /* ── ツールバー（セクション見出しの右に判断ボタンを横一列で置く） ── */
@@ -86,7 +105,7 @@ textarea.hl-field { resize: vertical; }
 .hl-badge.is-cancelled { background: var(--bg); color: var(--tx3); border-color: var(--line); }
 
 /* ── 接続確認 ── */
-.hl-checks { list-style: none; margin: 16px 0 0; padding: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.hl-checks:not([hidden]) { list-style: none; margin: 16px 0 0; padding: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
 .hl-checks:empty { display: none; }
 .hl-check-row {
   display: grid; grid-template-columns: 22px 120px 1fr; align-items: center; gap: 10px;
@@ -100,7 +119,7 @@ textarea.hl-field { resize: vertical; }
 .hl-check-detail { color: var(--tx2); overflow-wrap: anywhere; }
 
 /* ── ループ（周回） ── */
-.hl-loop-card { padding: 20px 24px; margin-bottom: 16px; }
+.hl-loop-card { padding: 20px 24px; margin-bottom: 24px; }
 .hl-iter { border: 1px solid var(--line); border-radius: 10px; padding: 16px; background: var(--sf); margin-bottom: 12px; }
 .hl-iter:last-child { margin-bottom: 0; }
 .hl-iter-head { font-size: 13px; font-weight: 800; margin: 0 0 2px; }
@@ -125,6 +144,13 @@ textarea.hl-field { resize: vertical; }
 /* ── 等幅 ── */
 .hl-kv, .hl-mono { font-family: var(--mono); font-size: 11.5px; color: var(--tx2); }
 .hl-ellipsis { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+/* flex/grid の子は min-width:auto で内容幅を主張し、隣を押し潰す。1 行前提なら 0 に落とす。 */
+.hl-tail { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── JS が新設するクラスに体裁を与える ── */
+.hl-muted { color: var(--tx3, #667085); }
+.hl-dup-note { font-size: 11px; color: var(--tx3, #667085); margin-left: 6px; }
+.hl-stat-hint { font-size: 11px; color: var(--tx3, #667085); margin-top: 8px; }
 
 /* ── バッジ（重大度・修正の状態） ── */
 .hl-sev, .hl-pill { display: inline-block; font-size: 10.5px; font-weight: 800; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
@@ -158,8 +184,9 @@ textarea.hl-field { resize: vertical; }
   overflow-x: auto; white-space: pre;
 }
 .hl-diff span { display: block; }
-.hl-diff-add { background: #E7F8F0; }
-.hl-diff-del { background: #FEECEB; }
+.hl-diff-add { background: #E7F8F0; color: #05603A; box-shadow: inset 3px 0 0 0 #12B76A; }
+.hl-diff-del { background: #FEECEB; color: #912018; box-shadow: inset 3px 0 0 0 #F04438; }
+.hl-diff-meta { color: var(--tx3); }
 
 /* ── PR ── */
 .hl-pr-info {
@@ -171,11 +198,12 @@ textarea.hl-field { resize: vertical; }
 .hl-pr-info-link { color: var(--ac-dk); }
 
 /* ── 実行ログ（常時表示。折りたたまない） ── */
-.hl-log-card { padding: 16px; margin-bottom: 16px; }
+.hl-log-card { padding: 16px; margin-bottom: 24px; }
 .hl-log {
-  height: 190px; overflow: auto; padding: 12px 14px; border-radius: 8px;
-  background: #111827; color: #E5E7EB;
-  font-family: var(--mono); font-size: 11px; line-height: 1.65;
+  min-height: 120px; max-height: 320px; overflow-y: auto; overflow-x: hidden;
+  padding: 12px 16px; border-radius: 8px;
+  background: #1F2430; color: #E5E7EB;
+  font-family: var(--mono); font-size: 11.5px; line-height: 1.6;
 }
 .hl-log-line { white-space: pre-wrap; word-break: break-all; }
 .hl-log-placeholder { color: #9CA3AF; }
@@ -186,18 +214,22 @@ textarea.hl-field { resize: vertical; }
 
 /* ── 空状態 ── */
 .hl-empty {
-  border: 1px dashed var(--line); border-radius: 10px; background: var(--sf);
-  padding: 28px 24px; text-align: center; color: var(--tx2); font-size: 12.5px; line-height: 1.8;
+  border: 0; background: none; border-radius: 0;
+  padding: 32px 24px; text-align: center; color: var(--tx3, #667085); font-size: 12.5px; line-height: 1.8;
 }
+.hl-empty > button, .hl-empty .btn-primary, .hl-empty .btn-outline-sm { margin-top: 16px; }
 
 /* ── 接続フォーム ── */
-.hl-form { padding: 20px 24px; margin-bottom: 16px; }
+.hl-form { padding: 20px 24px 16px; margin-bottom: 24px; }
 .hl-form-title { font-size: 15px; font-weight: 800; margin: 0 0 6px; }
 .hl-form-note { margin: 0 0 6px; font-size: 12px; color: var(--tx2); }
 .hl-roots { margin-bottom: 16px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
 .hl-form-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 16px; }
 .hl-form-hint { margin-top: 4px; font-size: 11px; color: var(--tx3); }
-.hl-form-actions { margin-top: 18px; }
+.hl-form-actions {
+  margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line, #E4E7EC);
+  display: flex; gap: 8px; justify-content: flex-end;
+}
 
 /* ── 表 ── */
 /* 長いパス・検証コマンドで表が横に押し出され、右端の「操作」列が画面外へ出る。
@@ -206,18 +238,23 @@ textarea.hl-field { resize: vertical; }
    全文は title 属性で読ませる。 */
 .hl-projects-table, .hl-runs-table { table-layout: fixed; width: 100%; }
 .hl-projects-table td, .hl-runs-table td { vertical-align: middle; }
-.hl-projects-table td, .hl-runs-table td,
-.hl-projects-table th, .hl-runs-table th { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hl-projects-table td, .hl-runs-table td { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* ヘッダーは省略しない。「エージェ…」では列の意味そのものが読めなくなる。 */
+.hl-projects-table th, .hl-runs-table th { white-space: nowrap; overflow: visible; text-overflow: clip; }
 
 /* 操作列には 4 つのボタン（対象にする / 接続を確認 / 編集 / 削除）が並ぶ。
    幅が足りないと右端の「削除」が見えなくなり、押せる操作が存在しないのと同じになる。
    実測で 4 つ入り切る幅を確保し、そのぶんパスと検証コマンドを省略側に寄せる。 */
 .hl-projects-table th:nth-child(1), .hl-projects-table td:nth-child(1) { width: 14%; }
-.hl-projects-table th:nth-child(2), .hl-projects-table td:nth-child(2) { width: 21%; }
-.hl-projects-table th:nth-child(3), .hl-projects-table td:nth-child(3) { width: 7%; }
-.hl-projects-table th:nth-child(4), .hl-projects-table td:nth-child(4) { width: 18%; }
-.hl-projects-table th:nth-child(5), .hl-projects-table td:nth-child(5) { width: 8%; }
-.hl-projects-table th:nth-child(6), .hl-projects-table td:nth-child(6) { width: 32%; overflow: visible; }
+.hl-projects-table th:nth-child(2), .hl-projects-table td:nth-child(2) { width: 26%; }
+.hl-projects-table th:nth-child(3), .hl-projects-table td:nth-child(3) { width: 8%; }
+.hl-projects-table th:nth-child(4), .hl-projects-table td:nth-child(4) { width: 26%; }
+.hl-projects-table th:nth-child(5), .hl-projects-table td:nth-child(5) { width: 10%; }
+.hl-projects-table th:nth-child(6), .hl-projects-table td:nth-child(6) { width: 16%; overflow: visible; }
+/* ボタン数が変わらない列を % で切ると、幅が縮んだときだけ押せなくなる。px で固定する。 */
+.hl-projects-table th:last-child, .hl-projects-table td:last-child { width: 168px; overflow: visible; }
+/* 10: 行高 53px → 40px 前後。行内ボタン 28px + 上下 6px + 罫線。 */
+table.hl-projects-table td { padding-top: 6px; padding-bottom: 6px; }
 
 .hl-runs-table th:nth-child(1), .hl-runs-table td:nth-child(1) { width: 15%; }
 .hl-runs-table th:nth-child(2), .hl-runs-table td:nth-child(2) { width: 18%; }
@@ -237,7 +274,7 @@ textarea.hl-field { resize: vertical; }
 .hl-proposals-table th:nth-child(5), .hl-proposals-table td:nth-child(5) { width: 116px; white-space: nowrap; }
 .hl-col-diff { width: 118px; }
 .hl-col-actions { width: 1%; white-space: nowrap; }
-.hl-row-actions { display: flex; gap: 6px; flex-wrap: nowrap; }
+.hl-row-actions { display: flex; gap: 6px; flex-wrap: nowrap; justify-content: flex-end; white-space: nowrap; }
 .hl-more-row { margin-top: 12px; text-align: center; }
 
 /* ── 該当箇所の根拠（欠陥の 1 行下に置く） ──
@@ -267,41 +304,304 @@ textarea.hl-field { resize: vertical; }
 .hl-risk-head { font-size: 11.5px; font-weight: 800; color: var(--tx2); margin-bottom: 6px; }
 .hl-risk-none { margin: 0; font-size: 12px; color: var(--tx2); line-height: 1.7; }
 .hl-risk-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.hl-risk-item { border-left: 3px solid var(--line); padding: 2px 0 2px 10px; }
-.hl-risk-item.is-critical, .hl-risk-item.is-high { border-left-color: #FDA29B; }
-.hl-risk-item.is-medium { border-left-color: #FEC84B; }
-.hl-risk-item.is-low { border-left-color: var(--line); }
+.hl-risk-item { display: grid; grid-template-columns: 40px 1fr; gap: 4px 10px; }
+.hl-risk-item.is-critical, .hl-risk-item.is-high { }
+.hl-risk-item.is-medium { }
+.hl-risk-item.is-low { }
 .hl-risk-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .hl-risk-badge {
-  display: inline-block; font-size: 10.5px; font-weight: 800;
-  padding: 2px 9px; border-radius: 999px; white-space: nowrap;
+  display: flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; font-size: 10.5px; font-weight: 800;
+  border-radius: 4px; white-space: nowrap;
 }
 .hl-risk-badge.is-critical, .hl-risk-badge.is-high { background: #FEE4E2; color: #B42318; }
 .hl-risk-badge.is-medium { background: #FEF0C7; color: #B54708; }
 .hl-risk-badge.is-low { background: #F2F4F7; color: #475467; }
-.hl-risk-label { font-size: 12.5px; font-weight: 700; color: var(--tx); }
-.hl-risk-detail { font-size: 12px; color: var(--tx2); margin-top: 2px; overflow-wrap: anywhere; }
+.hl-risk-label { font-size: 13px; font-weight: 700; color: var(--tx); grid-column: 2; }
+.hl-risk-detail { font-size: 12px; color: var(--tx3, #667085); grid-column: 2; overflow-wrap: anywhere; }
+
+/* ── リスク要約（判断ボタン直前・クリックで該当箇所へ） ── */
+.hl-risk-summary {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; border-radius: 8px; font-size: 13px; cursor: pointer;
+}
+.hl-risk-summary-high {
+  background: #FEF3F2; color: #B42318; border: 1px solid #FDA29B;
+}
+.hl-risk-summary-high:hover { background: #FEE4E2; }
+.hl-risk-summary-high:focus-visible { outline: 2px solid #FDA29B; outline-offset: 2px; }
+.hl-risk-summary-medium {
+  background: #FFFAEB; color: #B54708; border: 1px solid #FEC84B;
+}
+.hl-risk-summary-medium:hover { background: #FEF0C7; }
+.hl-risk-summary-medium:focus-visible { outline: 2px solid #FEC84B; outline-offset: 2px; }
+.hl-risk-summary-none {
+  background: none; color: var(--tx3, #667085); border: none;
+}
+.hl-risk-summary-none:hover { background: var(--bg, #F6F7F9); }
+.hl-risk-summary-none:focus-visible { outline: 2px solid var(--tx3); outline-offset: 2px; }
+
+/* ── バッジ修飾（高危険） ── */
+.hl-badge-attention {
+  position: relative;
+}
+.hl-badge-attention::before {
+  content: ''; display: block; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 3px; background: #B42318; border-radius: 2px 0 0 2px;
+}
+
+/* ── 統計カード（高さ統一） ── */
+.stat-cards { align-items: stretch; }
 
 /* ── バグレポート（Markdown を最小変換して表示・既定は閉じる） ── */
 .hl-report { margin-top: 4px; }
 .hl-report-body {
   margin-top: 8px; padding: 12px 14px;
-  border: 1px solid var(--line); border-radius: 8px; background: var(--bg);
-  font-size: 12.5px; line-height: 1.75; color: var(--tx);
+  border: 1px solid var(--line); border-radius: 8px; background: var(--sf);
+  font-size: 12.5px; line-height: 1.7; color: var(--tx);
+  width: 100%;
 }
+.hl-report-h { font-size: 13px; font-weight: 600; color: var(--tx); margin: 16px 0 6px; }
+.hl-report-body > .hl-report-h:first-child { margin-top: 0; }
 .hl-report-head { margin: 12px 0 6px; font-size: 12.5px; font-weight: 800; }
 .hl-report-body > .hl-report-head:first-child { margin-top: 0; }
-.hl-report-p { margin: 0 0 8px; overflow-wrap: anywhere; }
+.hl-report-p { margin: 0 0 8px; overflow-wrap: anywhere; font-size: 13px; line-height: 1.7; color: var(--tx); }
+.hl-report-ul { margin: 0 0 8px; padding-left: 20px; list-style: disc; }
+.hl-report-ul li { margin: 4px 0; }
+.hl-report-quote { margin: 0 0 8px; padding: 0 0 0 12px; border-left: 3px solid var(--line2); color: var(--tx3); }
 .hl-report-list { margin: 0 0 8px; padding-left: 18px; }
-.hl-report-table { width: 100%; margin: 0 0 8px; }
-.hl-report-table th, .hl-report-table td { font-size: 12px; padding: 6px 8px; vertical-align: top; }
+.hl-report-table { width: 100%; margin: 0 0 8px; table-layout: auto; }
+.hl-report-table { border-collapse: collapse; }
+.hl-report-table th, .hl-report-table td {
+  font-size: 13px; padding: 4px 6px; vertical-align: top;
+  border: 1px solid var(--line); text-align: left; word-break: normal; overflow-wrap: anywhere;
+}
+.hl-report-table th { background: var(--bg); font-weight: 700; color: var(--tx2); padding: 6px 8px; }
+.hl-report-table td { line-height: 1.5; }
 .hl-report-code {
   margin: 0 0 8px; padding: 10px 12px; border-radius: 6px;
-  background: #111827; color: #E5E7EB;
+  background: var(--bg); color: var(--tx);
   font-family: var(--mono); font-size: 11px; line-height: 1.6;
-  overflow-x: auto; white-space: pre;
+  overflow-x: auto; white-space: pre; border: 1px solid var(--line);
 }
 .hl-report-inline-code {
   font-family: var(--mono); font-size: 11.5px;
   background: var(--sf); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px;
+}
+
+
+/* ══════════════ UI/UX レビュー対応（2026-09-05） ══════════════
+   色・角丸・影は ta2.css の :root トークンに揃える。ここで :root は再定義しない。 */
+
+/* ── 表のはみ出しをページ全体に出さない ──
+   table-layout:fixed で列は収まるが、JS が長い実体を入れた場合の逃げ道として
+   包みコンテナ側でスクロールさせる。body は横スクロールしない。 */
+.hl-table-wrap { width: 100%; max-width: 100%; overflow-x: auto; margin-bottom: 16px; scrollbar-width: thin; }
+/* table-layout:fixed + width:100% だけだと、器に合わせて列が潰れるだけで
+   スクロールは絶対に出ない。読める下限を min-width で先に決める。 */
+.hl-table-wrap > table { margin-bottom: 0; min-width: 980px; }
+.hl-table-wrap::-webkit-scrollbar { height: 8px; }
+.hl-table-wrap::-webkit-scrollbar-track { background: transparent; }
+.hl-table-wrap::-webkit-scrollbar-thumb { background: var(--line2, #D0D5DD); border-radius: 999px; }
+.hl-projects-table, .hl-runs-table, .hl-proposals-table { max-width: 100%; }
+
+/* ── 行内ボタン ──
+   塗りボタンが縦に並ぶと視線が右端に固定され、行の内容（パス・コマンド）が読まれない。
+   既定は輪郭・小さめ。破壊操作は文字色だけで危険を示し、塗って誘導はしない。 */
+.hl-row-actions > button,
+.hl-row-actions .hl-row-menu > button,
+.hl-row-actions > a {
+  height: 28px; padding: 0 10px; font-size: 12px; line-height: 1;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--line2); border-radius: 6px;
+  background: var(--sf); color: var(--tx2); white-space: nowrap; text-decoration: none;
+}
+.hl-row-actions > button:hover:not(:disabled),
+.hl-row-actions .hl-row-menu > button:hover:not(:disabled),
+.hl-row-actions > a:hover { background: var(--bg); color: var(--tx); border-color: var(--tx3); }
+.hl-row-actions > button:disabled {
+  background: var(--bg, #F6F7F9); color: var(--tx2, #475467); cursor: default;
+}
+.hl-row-actions .hl-btn-danger,
+.hl-btn-danger { background: var(--sf); color: var(--ng-tx); border-color: #FDA29B; }
+.hl-btn-danger:hover:not(:disabled) { background: var(--ng-bg); color: var(--ng-tx); }
+
+/* ── 行内の「…」メニュー ──
+   1280px では行内に 4 つのボタンは入らない。2 つ＋この中に畳む。
+   置き場所は行の右端なので、リストは右揃えで下へ開く。 */
+.hl-row-menu { position: relative; display: inline-flex; }
+.hl-row-menu-list,
+.hl-row-menu [role="menu"] {
+  position: absolute; right: 0; top: 100%; margin-top: 4px; z-index: 40;
+  min-width: 160px; padding: 4px;
+  background: var(--sf, #FFFFFF); border: 1px solid var(--line, #E4E7EC); border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(16, 24, 40, .12);
+}
+.hl-row-menu-list button, .hl-row-menu-list a,
+.hl-row-menu [role="menu"] button, .hl-row-menu [role="menu"] a {
+  display: flex; align-items: center; width: 100%; height: 32px; padding: 0 10px;
+  border: 0; border-radius: 6px; background: none; color: var(--tx2, #475467);
+  font-size: 12px; line-height: 1; text-align: left; text-decoration: none;
+  white-space: nowrap; cursor: pointer;
+}
+.hl-row-menu-list button:hover, .hl-row-menu-list a:hover,
+.hl-row-menu [role="menu"] button:hover, .hl-row-menu [role="menu"] a:hover {
+  background: var(--bg, #F6F7F9); color: var(--tx, #101828);
+}
+.hl-row-menu-list .hl-btn-danger, .hl-row-menu [role="menu"] .hl-btn-danger {
+  color: var(--ng-tx, #B42318); border-color: transparent;
+}
+
+/* ── 行内メニュー項目 ── */
+.hl-row-menu-item {
+  height: 32px; padding: 0 12px; font-size: 13px; line-height: 1; text-align: left;
+  width: 100%; border: 0; background: none; color: var(--tx, #101828);
+  cursor: pointer; border-radius: 6px; display: flex; align-items: center;
+}
+.hl-row-menu-item:hover:not(:disabled) { background: var(--bg, #F6F7F9); color: var(--tx, #101828); }
+.hl-row-menu-item:focus-visible { outline: 2px solid var(--ac, #2563EB); outline-offset: -2px; }
+.hl-row-menu-item.hl-btn-danger { color: var(--ng-tx, #B42318); }
+
+/* 選択行は「薄い背景＋左のアクセント帯」。行全体を塗らない。 */
+.hl-row-selected > td { background: var(--ac-bg); }
+.hl-row-selected > td:first-child { box-shadow: inset 3px 0 0 0 var(--ac); }
+
+/* ── ステップ状態（4 状態が一目で違って見えること） ── */
+.hl-step-idle, .hl-step-done, .hl-step-active, .hl-step-failed {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px;
+  font-size: 12.5px; min-width: 0;
+}
+.hl-step-idle   { background: var(--bg);     color: var(--tx3);    border-color: var(--line); }
+.hl-step-done   { background: #F0FBF7;       color: var(--ok-tx);  border-color: #6CE9C0; font-weight: 700; }
+.hl-step-active { background: var(--ac-bg);  color: var(--ac-dk);  border-color: var(--ac); font-weight: 800;
+                  animation: hl-step-pulse 1.8s ease-in-out infinite; }
+.hl-step-failed { background: var(--ng-bg);  color: var(--ng-tx);  border-color: #FDA29B; font-weight: 700; }
+@keyframes hl-step-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, .26); }
+  50%      { box-shadow: 0 0 0 4px rgba(37, 99, 235, 0); }
+}
+@media (prefers-reduced-motion: reduce) { .hl-step-active { animation: none; } }
+
+/* ── 状態バッジ（薄い背景・濃い文字。塗りつぶさない） ── */
+.hl-badge-ok, .hl-badge-warn, .hl-badge-err, .hl-badge-mute {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; font-weight: 600; line-height: 1.5; padding: 2px 8px;
+  border: 1px solid transparent; border-radius: 6px; white-space: nowrap;
+}
+.hl-badge-ok   { background: var(--ok-bg); color: var(--ok-tx); border-color: var(--ok); }
+.hl-badge-warn { background: var(--wa-bg); color: var(--wa-tx); border-color: var(--wa); }
+.hl-badge-err  { background: var(--ng-bg); color: var(--ng-tx); border-color: var(--ng); }
+.hl-badge-mute { background: var(--bg);    color: var(--tx2);   border-color: var(--line2); }
+
+/* ── 根拠（入れ子テーブルをやめ、行の並びにする） ── */
+/* ファイル名 / 理由 / 確度 を 3 カラム固定にする。折り返すと対応が読めなくなる。 */
+.hl-evidence {
+  display: grid; gap: 4px; margin: 0 0 12px;
+  padding: 12px 16px; border-radius: 0 8px 8px 0;
+  background: var(--sf); border-left: 2px solid var(--ac);
+}
+.hl-evidence-head,
+.hl-evidence-item {
+  display: grid; grid-template-columns: minmax(0, 1fr) 120px 160px;
+  align-items: center; gap: 12px;
+}
+.hl-evidence-head {
+  font-size: 11px; font-weight: 700; color: var(--tx3);
+  margin-bottom: 2px; padding-bottom: 5px; border-bottom: 1px solid var(--line);
+}
+.hl-evidence-item { padding: 5px 0; border: 0; background: transparent; }
+.hl-evidence-item + .hl-evidence-item { border-top: 1px solid var(--line); }
+.hl-evidence-path {
+  min-width: 0; font-family: var(--mono); font-size: 11.5px; color: var(--tx);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.hl-evidence-why {
+  grid-column: auto; min-width: 0; font-size: 11.5px; color: var(--tx2);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* 確度はバー（器）＋塗り＋数値を 1 行に収める。 */
+.hl-evidence-score {
+  grid-column: auto; display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+  font-family: var(--mono); font-size: 11.5px; color: var(--tx2);
+}
+.hl-evidence-bar {
+  grid-column: auto; flex: 1 1 auto; min-width: 0;
+  height: 6px; border-radius: 999px;
+  background: var(--line); overflow: hidden;
+}
+.hl-evidence-bar-fill,
+.hl-evidence-bar > span, .hl-evidence-bar > i, .hl-evidence-bar > div {
+  display: block; height: 100%; border-radius: 999px; background: var(--ac);
+}
+
+/* ── リスク（severity 別。高＝赤 / 中＝黄 / 低＝灰） ── */
+.hl-risk-high, .hl-risk-medium, .hl-risk-low {
+  border-left: 3px solid var(--line); padding: 2px 0 2px 10px;
+}
+.hl-risk-high   { border-left-color: var(--ng); }
+.hl-risk-medium { border-left-color: var(--wa); }
+.hl-risk-low    { border-left-color: var(--line2); }
+.hl-risk-high .hl-risk-label   { color: var(--ng-tx); }
+.hl-risk-medium .hl-risk-label { color: var(--wa-tx); }
+
+/* ── 垂直リズム（16 = 要素間 / 24 = ブロック間 / 32 = セクション間） ── */
+.hl-projects-table, .hl-runs-table { margin-bottom: 24px; }
+.hl-more-row { margin-top: 16px; margin-bottom: 32px; }
+.hl-stepper { margin: 16px 0 24px; }
+/* 中身が少ないときにカードが縦へ伸びないようにする。 */
+.hl-hero, .hl-form, .hl-loop-card, .hl-log-card { align-self: start; }
+.hl-hero-grid, .hl-form-grid { align-items: start; }
+.hl-checks { margin-top: 16px; }
+
+/* ── 履歴テーブル: 行そのものを開く導線にする ── */
+.hl-runs-table tbody tr { cursor: pointer; }
+.hl-runs-table tbody tr:hover > td { background: var(--ac-bg); }
+.hl-runs-table tbody tr:focus-visible { outline: 2px solid var(--ac); outline-offset: -2px; }
+
+/* ── 補助テキスト・ゴーストボタン ── */
+.hl-run-reason { margin: 4px 0 0; font-size: 12px; color: var(--ng-tx); overflow-wrap: anywhere; }
+.hl-list-meta { margin: 0 0 8px; font-size: 11.5px; color: var(--tx3); }
+.hl-subhead { margin: 16px 0 6px; font-size: 13px; font-weight: 700; color: var(--tx); }
+.hl-log-elapsed { font-size: 11.5px; color: var(--tx3); }
+.hl-btn-ghost {
+  border: 1px solid transparent; background: transparent; color: var(--ac-dk);
+  font-size: 12px; font-weight: 700; padding: 4px 8px; border-radius: 6px; cursor: pointer;
+}
+.hl-btn-ghost:hover:not(:disabled) { background: var(--ac-bg); }
+.hl-btn-ghost:focus-visible { outline: 2px solid var(--ac); outline-offset: 2px; }
+
+/* ── バグレポート: Markdown 要素の追加スタイル ── */
+/* diff ブロック。黒背景の .hl-diff と異なり、明るい背景で表示。 */
+.hl-report-diff {
+  margin: 0 0 8px; padding: 10px 12px; border-radius: 6px;
+  background: var(--bg); color: var(--tx);
+  font-family: var(--mono); font-size: 12px; line-height: 1.6;
+  overflow-x: auto; white-space: pre; border: 1px solid var(--line);
+}
+.hl-report-diff .hl-diff-add { background: #E7F8F0; color: #05603A; }
+.hl-report-diff .hl-diff-del { background: #FEECEB; color: #912018; }
+.hl-report-diff .hl-diff-meta { color: var(--tx3); }
+
+/* 引用の 1 行。複数行の引用を div 積み重ねで表現するときの行間・高さ調整。 */
+.hl-report-quote-line {
+  margin: 0; line-height: 1.6; min-height: 1.2em;
+}
+
+/* レポート内の表。既存の .hl-report-table th/td に準じる。 */
+.hl-report-tr { }
+.hl-report-th {
+  text-align: left; color: var(--tx2); background: var(--bg);
+  font-size: 13px; font-weight: 700; padding: 6px 8px; border: 1px solid var(--line);
+}
+.hl-report-td {
+  color: var(--tx); font-size: 13px; padding: 4px 6px; border: 1px solid var(--line);
+}
+
+/* レポート内の順序付きリスト。.hl-report-ul に揃える。 */
+.hl-report-ol {
+  margin: 0 0 8px; padding-left: 20px; list-style: decimal;
+}
+.hl-report-ol li {
+  margin: 4px 0;
 }

@@ -219,81 +219,167 @@ def delete_project(out_dir: Path, project_id: str) -> bool:
 # ─────────────────────────── 接続確認 ───────────────────────────
 
 
-def check_connection(project: HealingProject) -> list[ConnectionCheck]:
-    """「押したら動くのか」を先に見せるための 5 項目チェック。
+def _mask_home(text: str) -> str:
+    """表示用にホームディレクトリを ~ へ置き換える（判定は必ず実パスで行う）。"""
+    home = str(Path.home())
+    return text.replace(home, "~") if home else text
 
-    git_ops / github_client は別エージェントが並行実装中のため、ここでは
-    契約として渡された署名だけを信じて呼ぶ。import 失敗・実行時例外は
-    1 項目ずつ握りつぶし、他の項目の判定に波及させない。
-    """
-    checks: list[ConnectionCheck] = []
-    repo_path = Path(project.repo_path) if project.repo_path else None
 
-    # repo: パスが存在し許可ルート配下か
+def _short_path(path: Path | None) -> str:
+    """画面で切れないよう、末尾 3 セグメントだけを残した表示用パスを返す。"""
+    if path is None:
+        return "(未設定)"
+    masked = _mask_home(str(path))
+    parts = Path(masked).parts
+    if len(parts) <= 3:
+        return masked
+    return "…/" + "/".join(parts[-3:])
+
+
+def _with_action(detail: str, action: str) -> str:
+    """原因の後ろに対処を 1 文だけ足す。長い説明は書かない。"""
+    text = _mask_home(str(detail or "")).strip()
+    if not text:
+        return action
+    if not text.endswith(("。", ".", "!", "?")):
+        text += "。"
+    return f"{text}{action}"
+
+
+def _check_repo(repo_path: Path | None) -> ConnectionCheck:
+    """パスが存在し、許可ルート配下かどうか（NG なら実行できない）。"""
+    label = "リポジトリパス"
     try:
         roots = allowed_roots()
         exists = bool(repo_path and repo_path.exists())
         in_roots = bool(repo_path) and any(
             repo_path == root or root in repo_path.parents for root in roots
         )
-        ok = exists and in_roots
-        checks.append(
-            ConnectionCheck(
-                key="repo",
-                label="リポジトリパス",
-                ok=ok,
-                detail=str(repo_path) if ok else f"存在={exists} 許可ルート内={in_roots}",
+        if exists and in_roots:
+            detail = f"リポジトリを確認しました: {_short_path(repo_path)}"
+        elif not exists:
+            detail = _with_action(
+                f"パスが見つかりません: {_short_path(repo_path)}",
+                "接続の編集で正しいリポジトリパスを入力してください。",
             )
+        else:
+            detail = _with_action(
+                f"許可ルートの外です: {_short_path(repo_path)}",
+                f"{ENV_ALLOWED_ROOTS} に親ディレクトリを追加してください。",
+            )
+        return ConnectionCheck(
+            key="repo", label=label, ok=exists and in_roots, detail=detail, severity="required"
         )
     except Exception as exc:  # noqa: BLE001 - 1項目の失敗で全体を落とさない
-        checks.append(ConnectionCheck(key="repo", label="リポジトリパス", ok=False, detail=str(exc)))
+        detail = _with_action(str(exc), "接続の編集でリポジトリパスを確認してください。")
+        return ConnectionCheck(key="repo", label=label, ok=False, detail=detail, severity="required")
 
-    # git: is_git_repo と現在ブランチ
+
+def _check_git(repo_path: Path | None) -> ConnectionCheck:
+    """git リポジトリとして読めるか（NG なら実行できない）。"""
+    label = "git リポジトリ"
     try:
         from web.services.healing import git_ops
 
         is_repo = bool(repo_path) and git_ops.is_git_repo(repo_path)
-        branch = git_ops.current_branch(repo_path) if is_repo else ""
-        checks.append(
-            ConnectionCheck(key="git", label="git リポジトリ", ok=is_repo, detail=str(branch or ""))
-        )
+        branch = str(git_ops.current_branch(repo_path) or "") if is_repo else ""
+        if is_repo:
+            detail = (
+                f"git リポジトリを確認しました（現在のブランチ {branch}）"
+                if branch
+                else "git リポジトリを確認しました"
+            )
+        else:
+            detail = _with_action(
+                f"git リポジトリではありません: {_short_path(repo_path)}",
+                "git init 済みのディレクトリを指定してください。",
+            )
+        return ConnectionCheck(key="git", label=label, ok=is_repo, detail=detail, severity="required")
     except Exception as exc:  # noqa: BLE001
-        checks.append(ConnectionCheck(key="git", label="git リポジトリ", ok=False, detail=str(exc)))
+        detail = _with_action(str(exc), "git コマンドが使えるかを確認してください。")
+        return ConnectionCheck(key="git", label=label, ok=False, detail=detail, severity="required")
 
-    # remote: remote_url が取れるか、そこから owner/name が取れるか
+
+def _check_remote(repo_path: Path | None, remote: str) -> ConnectionCheck:
+    """リモートから owner/name が取れるか（NG でもループは動く。PR だけ困る）。"""
+    label = "リモート"
     try:
         from web.services.healing import git_ops
 
-        url = git_ops.remote_url(repo_path, project.remote) if repo_path else ""
-        owner_name = git_ops.github_repo_from_remote(url) if url else ""
-        ok = bool(url and owner_name)
-        detail = f"{url} -> {owner_name}" if url else f"remote '{project.remote}' が見つかりません"
-        checks.append(ConnectionCheck(key="remote", label="リモート", ok=ok, detail=detail))
+        url = str(git_ops.remote_url(repo_path, remote) or "") if repo_path else ""
+        owner_name = str(git_ops.github_repo_from_remote(url) or "") if url else ""
+        if url and owner_name:
+            detail = f"リモート '{remote}' を確認しました（{owner_name}）"
+        elif url:
+            detail = _with_action(
+                f"リモート '{remote}' から owner/name を取り出せません",
+                "接続の編集で github_repo を直接入力してください。",
+            )
+        else:
+            detail = _with_action(
+                f"remote '{remote}' が見つかりません",
+                "PR を作るにはリモートの設定が必要です。",
+            )
+        return ConnectionCheck(
+            key="remote", label=label, ok=bool(url and owner_name), detail=detail, severity="optional"
+        )
     except Exception as exc:  # noqa: BLE001
-        checks.append(ConnectionCheck(key="remote", label="リモート", ok=False, detail=str(exc)))
+        detail = _with_action(str(exc), "PR を作るにはリモートの設定が必要です。")
+        return ConnectionCheck(key="remote", label=label, ok=False, detail=detail, severity="optional")
 
-    # github: verify_connection の結果をそのまま使う
+
+def _check_github(github_repo: str, repo_path: Path | None) -> ConnectionCheck:
+    """GitHub へ到達できるか（NG でもループは動く。PR だけ困る）。"""
+    label = "GitHub"
+    action = "接続の編集で owner/name を入れるか、リモートを設定してください。"
     try:
         from web.services.healing import github_client
 
-        config = github_client.github_config_from_env(project.github_repo)
+        config = github_client.github_config_from_env(github_repo)
         result = github_client.verify_connection(config, repo_path)
-        if isinstance(result, ConnectionCheck):
-            checks.append(replace(result, key="github", label=result.label or "GitHub"))
-        else:
-            checks.append(ConnectionCheck(key="github", label="GitHub", ok=bool(result), detail=str(result)))
+        ok = bool(result.ok) if isinstance(result, ConnectionCheck) else bool(result)
+        raw = result.detail if isinstance(result, ConnectionCheck) else str(result)
+        if isinstance(result, ConnectionCheck) and result.label:
+            label = result.label
+        detail = _mask_home(str(raw or "")) if ok else _with_action(str(raw or ""), action)
+        return ConnectionCheck(key="github", label=label, ok=ok, detail=detail, severity="optional")
     except Exception as exc:  # noqa: BLE001
-        checks.append(ConnectionCheck(key="github", label="GitHub", ok=False, detail=str(exc)))
+        return ConnectionCheck(
+            key="github", label=label, ok=False, detail=_with_action(str(exc), action), severity="optional"
+        )
 
-    # verify_command: 空なら検証できない
-    has_command = bool(str(project.verify_command or "").strip())
-    checks.append(
-        ConnectionCheck(
-            key="verify_command",
-            label="検証コマンド",
-            ok=has_command,
-            detail=project.verify_command if has_command else "検証コマンドが未設定です",
+
+def _check_verify_command(verify_command: str) -> ConnectionCheck:
+    """検証コマンドが設定されているか（NG なら実行できない）。"""
+    command = str(verify_command or "").strip()
+    detail = (
+        f"検証コマンドを確認しました: {_mask_home(command)}"
+        if command
+        else _with_action(
+            "検証コマンドが未設定です",
+            "接続の編集で pytest などの実行コマンドを入力してください。",
         )
     )
+    return ConnectionCheck(
+        key="verify_command", label="検証コマンド", ok=bool(command), detail=detail, severity="required"
+    )
 
-    return checks
+
+def check_connection(project: HealingProject) -> list[ConnectionCheck]:
+    """「押したら動くのか」を先に見せるための 5 項目チェック。
+
+    severity="required" が 1 つでも NG なら実行そのものが成立しない。
+    severity="optional"（remote / github）は NG でも検証・修正ループは動き、
+    PR を作るときにだけ効いてくる。detail は必ず「原因 + 対処 1 文」で書く。
+
+    git_ops / github_client の import 失敗・実行時例外は 1 項目ずつ握りつぶし、
+    他の項目の判定に波及させない。
+    """
+    repo_path = Path(project.repo_path) if project.repo_path else None
+    return [
+        _check_repo(repo_path),
+        _check_git(repo_path),
+        _check_remote(repo_path, project.remote),
+        _check_github(project.github_repo, repo_path),
+        _check_verify_command(project.verify_command),
+    ]

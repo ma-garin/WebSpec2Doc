@@ -7,15 +7,23 @@
   <title>オートヒーリング - WebSpec2Doc</title>
   {# 読み込む CSS と順序は index.html（ドキュメント作成 / AutoRun）と同じにする。
      ここだけ独自の順序にすると、同じクラス名なのに見え方が変わる。
+     ta2.css は workspace.html と同じく user-menu.css の直後に読む。
+     --line / --sf / --tx / --ac などの色トークンはここの :root にしかなく、
+     読まないと healing.css の var(--line) が全部無効になり入力欄の枠線が消える。
      healing.css は最後に読み、この画面固有の差分だけを足す。 #}
   <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='app-components.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/ta2.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/healing.css') }}?v={{ _ver }}">
 </head>
-<body class="app-page" data-focus-run-id="{{ focus_run_id or '' }}">
+<body class="app-page" data-focus-run-id="{{ focus_run_id or '' }}" data-hl-admin="{{ 'true' if hl_admin else 'false' }}">
+{# web/routes/healing.py は接続の作成/変更/削除・実行の開始/中止・PR 作成・判断に
+   require_admin() を掛けている。押しても 403 になる操作はそもそも描画しない
+   （system-select.html と同じ分岐の形）。閲覧は誰でもできるので残す。 #}
+{% set hl_admin = (not auth_user or auth_user.role == 'admin') %}
 <a href="#app-content" class="skip-link">本文へスキップ</a>
 <div class="app-shell">
 
@@ -33,10 +41,9 @@
       <span class="sys-switcher-cur">オートヒーリング</span>
       <span class="sys-switcher-swap">切替</span>
     </a>
-    <button type="button" class="btn-primary sidebar-primary-action" id="hl-add-project">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="16" height="16"><path d="M12 5v14M5 12h14"/></svg>
-      <span class="nav-label">コードベースを接続</span>
-    </button>
+    {# 接続の操作ボタンは「接続先」ビュー右上（#hl-add-project-2）に一本化した。
+       サイドバーは移動のためのもので、操作ボタンは置かない。
+       hidden スタブ #hl-add-project は JS 側の参照が消えたため削除済み。 #}
 
     <nav class="app-nav" aria-label="メインナビゲーション">
       <div class="app-nav-group">オートヒーリング</div>
@@ -62,13 +69,11 @@
         <span class="nav-label">設定</span>
       </a>
     </nav>
-
-    <div class="app-sidebar-foot">検証を回して不具合を見つけ、直して PR を出すところまで進めます。マージは人が判断します。</div>
   </aside>
 
   <div class="app-main">
     {% set topbar_crumb = 'オートヒーリング' %}
-    {% set topbar_title = 'オートヒーリング — コードを直して PR を出す' %}
+    {% set topbar_title = 'オートヒーリング' %}
     {% include 'partials/topbar.html' %}
 
     <main class="app-content" id="app-content">
@@ -80,8 +85,6 @@
 
         {# 受付。操作に必要なものだけを置く。機能の説明文は画面に載せない。 #}
         <section class="card hl-hero">
-          <h2 class="hl-hero-title">実行</h2>
-
           <div class="hl-hero-grid">
             <div>
               <label class="hl-field-label" for="hl-project-select">対象のコードベース</label>
@@ -95,18 +98,29 @@
           </div>
 
           <div class="hl-toolbar hl-hero-actions">
+            {% if hl_admin %}
             <button type="button" class="btn-primary" id="hl-start">ヒーリングを開始</button>
+            {% endif %}
             <button type="button" class="btn-outline-sm" id="hl-check-btn">接続を確認</button>
             <span class="hl-toolbar-spacer"></span>
+            {% if hl_admin %}
             <span class="hl-caution">接続したリポジトリのファイルを実際に書き換えます。</span>
+            {% else %}
+            <span class="hl-caution">操作するには管理者権限が必要です。</span>
+            {% endif %}
           </div>
 
-          {# ブラウザの confirm() は自動化を止めるため使わない。確認は必ずこのインライン行で行う。 #}
-          <div class="hl-confirm" id="hl-start-confirm" hidden>
-            <span>対象リポジトリのコードを書き換えます。始めますか？</span>
+          {# ブラウザの confirm() は自動化を止めるため使わない。確認は必ずこのインライン行で行う。
+             hidden だけでは Tab でボタンに到達し Enter で破壊操作が走りうるため inert を併用する。
+             【JS 担当へ】確認行を出すときは hidden を外すのと同時に inert も外し、
+             閉じるときは hidden と inert を同時に戻すこと（片方だけだと操作不能／到達可能になる）。 #}
+          {% if hl_admin %}
+          <div class="hl-confirm" id="hl-start-confirm" hidden inert>
+            <span>対象リポジトリ <b id="hl-confirm-target"></b> のコードを書き換えます。始めますか？</span>
             <button type="button" class="btn-primary" id="hl-start-yes">はい、始める</button>
-            <button type="button" class="btn-outline-sm" id="hl-start-no">やめる</button>
+            <button type="button" class="btn-outline-sm" id="hl-start-no" aria-label="開始をやめる">やめる</button>
           </div>
+          {% endif %}
 
           <ul class="hl-checks" id="hl-checks"></ul>
         </section>
@@ -120,11 +134,11 @@
             <div class="stat-card-head"><span class="stat-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5l3 2"/></svg></span><span class="stat-card-label">実行回数</span></div>
             <div class="stat-card-num" id="hl-stat-runs">-</div><div class="stat-card-sub">この接続先の実行</div>
           </div>
-          <div class="stat-card">
+          <div class="stat-card" data-empty-hint="まだありません">
             <div class="stat-card-head"><span class="stat-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span><span class="stat-card-label">直した不具合</span></div>
             <div class="stat-card-num" id="hl-stat-fixed">-</div><div class="stat-card-sub">統合ブランチに反映済み</div>
           </div>
-          <div class="stat-card">
+          <div class="stat-card" data-empty-hint="まだありません">
             <div class="stat-card-head"><span class="stat-card-icon is-warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg></span><span class="stat-card-label">判断待ちの PR</span></div>
             <div class="stat-card-num" id="hl-stat-pr">-</div><div class="stat-card-sub">人の確認が要ります</div>
           </div>
@@ -137,51 +151,53 @@
           </div>
           <div class="dashboard-section-actions hl-toolbar">
             <span class="hl-badge" id="hl-status">未実行</span>
+            {% if hl_admin %}
             <button type="button" class="btn-primary" id="hl-create-pr" disabled>PR を作成</button>
             <button type="button" class="btn-outline-sm" id="hl-rerun" disabled>再検証</button>
             <button type="button" class="btn-outline-sm" id="hl-approve" disabled>承認</button>
             <button type="button" class="btn-outline-sm" id="hl-merge" disabled hidden>マージ</button>
             <button type="button" class="btn-outline-sm" id="hl-reject" disabled>却下</button>
             <button type="button" class="btn-outline-sm hl-btn-stop" id="hl-cancel" disabled hidden>実行を中止</button>
+            {% endif %}
           </div>
         </div>
 
-        <div class="hl-confirm" id="hl-merge-confirm" hidden>
+        {% if hl_admin %}
+        <div class="hl-confirm" id="hl-merge-confirm" hidden inert>
           <span>PR をマージします。取り消せません。よろしいですか？</span>
           <button type="button" class="btn-primary" id="hl-merge-yes">はい、マージする</button>
-          <button type="button" class="btn-outline-sm" id="hl-merge-no">やめる</button>
+          <button type="button" class="btn-outline-sm" id="hl-merge-no" aria-label="マージをやめる">やめる</button>
         </div>
-        <div class="hl-confirm" id="hl-reject-confirm" hidden>
+        <div class="hl-confirm" id="hl-reject-confirm" hidden inert>
           <span>この実行を却下し、中止扱いにします。よろしいですか？</span>
           <button type="button" class="btn-primary" id="hl-reject-yes">はい、却下する</button>
-          <button type="button" class="btn-outline-sm" id="hl-reject-no">やめる</button>
+          <button type="button" class="btn-outline-sm" id="hl-reject-no" aria-label="却下をやめる">やめる</button>
         </div>
-        <div class="hl-confirm" id="hl-cancel-confirm" hidden>
+        <div class="hl-confirm" id="hl-cancel-confirm" hidden inert>
           <span>実行中のヒーリングを止めます。よろしいですか？</span>
           <button type="button" class="btn-primary" id="hl-cancel-yes">はい、止める</button>
-          <button type="button" class="btn-outline-sm" id="hl-cancel-no">やめる</button>
+          <button type="button" class="btn-outline-sm" id="hl-cancel-no" aria-label="中止をやめる">やめる</button>
         </div>
 
         <div class="hl-decision-note-row">
-          <label class="hl-field-label" for="hl-decision-note">判断のメモ（任意・証跡に残ります）</label>
+          <label class="hl-field-label" for="hl-decision-note">判断のメモ（任意）</label>
           <input type="text" class="hl-field" id="hl-decision-note" placeholder="例: 変更範囲を確認済み。リリース前に再テストする">
         </div>
+        {% endif %}
 
         <div class="hl-run-error" id="hl-run-error" hidden></div>
         <div class="hl-pr-info" id="hl-pr-info" hidden></div>
 
         <section class="card hl-loop-card">
           <div id="hl-loop"></div>
-          <div class="hl-empty" id="hl-loop-empty">
-            まだ実行がありません。<br>
-            上の「ヒーリングを開始」を押すと、ここに検証と修正のループが出ます。
+          <div class="hl-empty" id="hl-loop-empty" hidden>
+            まだ実行がありません。
           </div>
         </section>
 
         <div class="dashboard-section-head">
           <div>
             <h2 class="dash-section-title">実行ログ</h2>
-            <p class="dashboard-section-copy">常時表示します。折りたたみません。</p>
           </div>
         </div>
         <section class="card hl-log-card">
@@ -199,25 +215,29 @@
         <div class="dashboard-section-head">
           <div>
             <h2 class="dash-section-title">接続したコードベース</h2>
-            <p class="dashboard-section-copy">ヒーリングの対象になるローカルの git リポジトリです。</p>
           </div>
           <div class="dashboard-section-actions">
+            {% if hl_admin %}
             <button type="button" class="btn-outline-sm" id="hl-add-project-2">+ コードベースを接続</button>
+            {% else %}
+            <span class="hl-caution">操作するには管理者権限が必要です。</span>
+            {% endif %}
           </div>
         </div>
 
+        {% if hl_admin %}
         <section class="card hl-form" id="hl-connect-form" hidden>
           <h3 class="hl-form-title" id="hl-form-title">コードベースを接続する</h3>
           <p class="hl-form-note">接続できるのは次の場所の中だけです。</p>
           <div class="hl-kv hl-roots">
-            {% for root in allowed_roots %}<div>{{ root }}</div>{% endfor %}
+            {% for root in allowed_roots %}<div class="hl-tail" title="{{ root }}">{{ root }}</div>{% endfor %}
           </div>
 
           <div class="hl-form-grid">
-            <div><label class="hl-field-label" for="hl-f-name">名前</label><input class="hl-field" type="text" id="hl-f-name" placeholder="例: webspec2doc 本体"></div>
-            <div><label class="hl-field-label" for="hl-f-path">リポジトリのパス</label><input class="hl-field hl-kv" type="text" id="hl-f-path" placeholder="/Users/.../repo"></div>
+            <div><label class="hl-field-label" for="hl-f-name">名前 <span class="hl-req" aria-hidden="true">必須</span></label><input class="hl-field" type="text" id="hl-f-name" required aria-required="true" placeholder="例: webspec2doc 本体"></div>
+            <div><label class="hl-field-label" for="hl-f-path">リポジトリのパス <span class="hl-req" aria-hidden="true">必須</span></label><input class="hl-field hl-kv" type="text" id="hl-f-path" required aria-required="true" placeholder="/Users/.../repo"></div>
             <div><label class="hl-field-label" for="hl-f-branch">既定ブランチ</label><input class="hl-field" type="text" id="hl-f-branch" value="main"></div>
-            <div><label class="hl-field-label" for="hl-f-cmd">検証コマンド</label><input class="hl-field hl-kv" type="text" id="hl-f-cmd" placeholder="venv/bin/python -m pytest tests -q"></div>
+            <div><label class="hl-field-label" for="hl-f-cmd">検証コマンド <span class="hl-req" aria-hidden="true">必須</span></label><input class="hl-field hl-kv" type="text" id="hl-f-cmd" required aria-required="true" placeholder="venv/bin/python -m pytest tests -q"></div>
             <div><label class="hl-field-label" for="hl-f-remote">リモート名</label><input class="hl-field" type="text" id="hl-f-remote" value="origin"></div>
             <div>
               <label class="hl-field-label" for="hl-f-github">GitHub リポジトリ（任意）</label>
@@ -241,14 +261,23 @@
             <button type="button" class="btn-outline-sm" id="hl-connect-cancel">やめる</button>
           </div>
         </section>
+        {% endif %}
 
-        <table class="data dashboard-table hl-projects-table">
-          <thead><tr><th>名前</th><th>リポジトリ</th><th>ブランチ</th><th>検証コマンド</th><th>エージェント</th><th>操作</th></tr></thead>
-          <tbody id="hl-projects"></tbody>
-        </table>
+        <div class="hl-table-wrap">
+          <table class="data dashboard-table hl-projects-table">
+            <thead><tr><th class="hl-th-nowrap">名前</th><th class="hl-th-nowrap">リポジトリ</th><th class="hl-th-nowrap">ブランチ</th><th class="hl-th-nowrap">検証コマンド</th><th class="hl-th-nowrap">実行者</th><th class="hl-th-nowrap">操作</th></tr></thead>
+            <tbody id="hl-projects"></tbody>
+          </table>
+        </div>
         <div class="hl-empty" id="hl-projects-empty" hidden>
           まだ接続したコードベースがありません。<br>
-          左上の「＋ コードベースを接続」から、検証コマンドが通るリポジトリを 1 つ登録してください。
+          検証コマンドが通るリポジトリを 1 つ登録してください。
+          {# 【JS 担当へ】この空状態のボタンにも #hl-add-project-2 と同じ showConnectForm(null) を配線すること。 #}
+          {% if hl_admin %}
+          <div class="hl-empty-actions">
+            <button type="button" class="btn-primary" id="hl-projects-empty-add">＋ コードベースを接続</button>
+          </div>
+          {% endif %}
         </div>
       </section>
 
@@ -257,14 +286,18 @@
         <div class="dashboard-section-head">
           <div>
             <h2 class="dash-section-title">実行履歴</h2>
-            <p class="dashboard-section-copy">過去のヒーリング実行の結果と PR の状態です。</p>
           </div>
         </div>
-        <table class="data dashboard-table hl-runs-table">
-          <thead><tr><th>状態</th><th>開始</th><th>対象</th><th class="num">周回</th><th class="num">直した件数</th><th>PR</th><th>操作</th></tr></thead>
-          <tbody id="hl-runs"></tbody>
-        </table>
-        <div class="hl-empty" id="hl-runs-empty" hidden>まだ実行がありません。</div>
+        <div class="hl-table-wrap">
+          <table class="data dashboard-table hl-runs-table">
+            <thead><tr><th>状態</th><th>開始</th><th class="num">所要時間</th><th>対象</th><th class="num">周回</th><th class="num">直した件数</th><th>PR</th><th>操作</th></tr></thead>
+            <tbody id="hl-runs"></tbody>
+          </table>
+        </div>
+        <div class="hl-empty" id="hl-runs-empty" hidden>
+          まだ実行がありません。<br>
+          「実行」で対象のコードベースを選び、ヒーリングを開始してください。
+        </div>
         <div class="hl-more-row"><button type="button" class="btn-outline-sm" id="hl-runs-more" hidden>もっと見る</button></div>
       </section>
 

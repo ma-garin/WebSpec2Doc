@@ -107,6 +107,13 @@ class HealingProject:
         return asdict(self)
 
 
+#: 接続確認 1 項目の重み。NG のときに「実行できないのか」「PR だけ困るのか」を分ける。
+CHECK_SEVERITIES: tuple[str, ...] = (
+    "required",  # NG なら実行そのものが成立しない
+    "optional",  # NG でも検証・修正ループは動く（PR 作成時にだけ必要）
+)
+
+
 @dataclass(frozen=True)
 class ConnectionCheck:
     """接続確認 1 項目の結果。「押したら動くのか」を先に見せるために使う。"""
@@ -115,6 +122,14 @@ class ConnectionCheck:
     label: str
     ok: bool
     detail: str = ""
+    #: CHECK_SEVERITIES のいずれか。既定は "required"。
+    #: 既存の位置引数の順序を壊さないよう、必ず末尾に足す。
+    severity: str = "required"
+
+    def to_dict(self) -> dict[str, Any]:
+        from dataclasses import asdict
+
+        return asdict(self)
 
 
 # ─────────────────────────── 検証 ───────────────────────────

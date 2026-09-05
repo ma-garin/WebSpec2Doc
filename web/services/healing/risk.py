@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Pattern
 import re
 
 from web.services.healing.types import FixProposal
@@ -33,43 +32,143 @@ class RiskSignal:
 
 
 # ─────────────────────────────────────────────────────────────────
+# 行単位の正規表現（複数行をまたがせない。必ず 1 行ずつ当てる）
+# ─────────────────────────────────────────────────────────────────
+
+_DEF_RE = re.compile(r"^\s*(?:async\s+)?def\s+([A-Za-z_][A-Za-z0-9_]*)")
+_CLASS_RE = re.compile(r"^\s*class\s+([A-Za-z_][A-Za-z0-9_]*)")
+_HUNK_RE = re.compile(r"^@@\s+-(\d+)(?:,(\d+))?\s+\+(\d+)(?:,(\d+))?\s+@@")
+_FENCE_RE = re.compile(r"^\s*```")
+_SKIP_PATTERNS = (r"@pytest\.mark\.skip", r"@unittest\.skip", r"pytest\.xfail")
+
+#: 全面書き換えとみなす削除比率（元行数比）。
+_FULL_REWRITE_RATIO = 0.8
+#: 元行数が取れない場合の代替しきい値。
+_FALLBACK_REMOVED_LINES = 20
+_FALLBACK_REMOVED_RATIO = 0.6
+
+
+# ─────────────────────────────────────────────────────────────────
 # diff パース
 # ─────────────────────────────────────────────────────────────────
+
+
+@dataclass(frozen=True)
+class _Hunk:
+    """統一 diff のハンクヘッダ 1 個分（@@ -old_start,old_count +new_start,new_count @@）。"""
+
+    old_start: int
+    old_count: int
+    new_start: int
+    new_count: int
+
+
+@dataclass(frozen=True)
+class _FileDiff:
+    """1 ファイル分の diff。追加行・削除行は先頭の +/- を除いた内容だけを持つ。"""
+
+    path: str
+    added: tuple[str, ...]
+    removed: tuple[str, ...]
+    hunks: tuple[_Hunk, ...]
 
 
 def parse_diff_stats(diff: str) -> dict[str, dict[str, int]]:
     """統一 diff をファイル別の {"added": n, "removed": n} に分解する。
 
+    `diff --git` 形式と `--- a/` 単独形式の両方に対応している。
+
     Args:
-        diff: git diff 形式の文字列
+        diff: diff 形式の文字列
 
     Returns:
         {ファイルパス: {"added": 行数, "removed": 行数}}
     """
+    # _parse_file_diffs で完全にパースして、結果から統計を導出する
+    files = _parse_file_diffs(diff)
     stats: dict[str, dict[str, int]] = {}
-    current_file = ""
+    for file_diff in files:
+        stats[file_diff.path] = {
+            "added": len(file_diff.added),
+            "removed": len(file_diff.removed),
+        }
+    return stats
+
+
+def _new_block(path: str) -> dict:
+    """パース途中のファイルブロック 1 個を作る。"""
+    return {"path": path, "added": [], "removed": [], "hunks": [], "seen": False}
+
+
+def _path_from_git_line(line: str) -> str:
+    """`diff --git a/x b/x` から b/ 側のパスを取る。取れなければ空文字。"""
+    parts = line.split(" b/", 1)
+    return parts[1].strip() if len(parts) == 2 else ""
+
+
+def _strip_ab(text: str) -> str:
+    """`--- a/path` / `+++ b/path` の値からプレフィクスと日時を落とす。"""
+    path = text.strip().split("\t", 1)[0].strip()
+    if path in ("", "/dev/null"):
+        return ""
+    if path.startswith(("a/", "b/")):
+        return path[2:]
+    return path
+
+
+def _parse_hunk(line: str) -> _Hunk | None:
+    """ハンクヘッダ 1 行を _Hunk にする。形式が合わなければ None。"""
+    match = _HUNK_RE.match(line)
+    if match is None:
+        return None
+    old_start, old_count, new_start, new_count = match.groups()
+    return _Hunk(
+        old_start=int(old_start),
+        old_count=int(old_count) if old_count is not None else 1,
+        new_start=int(new_start),
+        new_count=int(new_count) if new_count is not None else 1,
+    )
+
+
+def _parse_file_diffs(diff: str) -> tuple[_FileDiff, ...]:
+    """統一 diff をファイル単位（追加行・削除行・ハンク）に分解する。1 行ずつ処理する。"""
+    blocks: list[dict] = []
+    current: dict | None = None
 
     for line in diff.splitlines():
-        # diff --git の行でファイル名を抽出
         if line.startswith("diff --git"):
-            # "diff --git a/path/to/file b/path/to/file" から b/ の側を抽出
-            parts = line.split(" b/", 1)
-            if len(parts) == 2:
-                current_file = parts[1]
-                if current_file not in stats:
-                    stats[current_file] = {"added": 0, "removed": 0}
+            current = _new_block(_path_from_git_line(line))
+            blocks.append(current)
+        elif line.startswith("--- "):
+            if current is None or current["seen"]:
+                current = _new_block("")
+                blocks.append(current)
+            if not current["path"]:
+                current["path"] = _strip_ab(line[4:])
+        elif line.startswith("+++ "):
+            if current is not None and not current["path"]:
+                current["path"] = _strip_ab(line[4:])
+        elif line.startswith("@@"):
+            hunk = _parse_hunk(line)
+            if current is not None and hunk is not None:
+                current["hunks"].append(hunk)
+                current["seen"] = True
+        elif line.startswith("+") and current is not None:
+            current["added"].append(line[1:])
+            current["seen"] = True
+        elif line.startswith("-") and current is not None:
+            current["removed"].append(line[1:])
+            current["seen"] = True
 
-        # +++ / --- で区切られた位置に統一 diff の行カウント開始
-        if line.startswith("@@"):
-            continue
-
-        # 実際の追加・削除行をカウント（+/- で始まる行）
-        if current_file and line.startswith("+") and not line.startswith("+++"):
-            stats[current_file]["added"] += 1
-        elif current_file and line.startswith("-") and not line.startswith("---"):
-            stats[current_file]["removed"] += 1
-
-    return stats
+    return tuple(
+        _FileDiff(
+            path=block["path"] or "(ファイル名不明)",
+            added=tuple(block["added"]),
+            removed=tuple(block["removed"]),
+            hunks=tuple(block["hunks"]),
+        )
+        for block in blocks
+    )
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -84,7 +183,7 @@ def assess(proposal: FixProposal) -> tuple[RiskSignal, ...]:
         proposal: 修正案
 
     Returns:
-        検出された RiskSignal のタプル（降順で並ぶ）
+        検出された RiskSignal のタプル（severity 降順・同 severity 内は code 昇順）
     """
     signals: list[RiskSignal] = []
 
@@ -100,9 +199,20 @@ def assess(proposal: FixProposal) -> tuple[RiskSignal, ...]:
         )
         # diff が空なら以降の検出は飛ばす
         if not proposal.diff:
-            return tuple(_sort_by_severity(signals))
+            return tuple(_sort_signals(signals))
 
-    # diff をパース
+    files = _parse_file_diffs(proposal.diff)
+
+    signals.extend(_assess_file_scope(proposal))
+    signals.extend(_assess_diff_content(proposal.diff))
+    signals.extend(_assess_rewrite(files))
+
+    return tuple(_sort_signals(signals))
+
+
+def _assess_file_scope(proposal: FixProposal) -> list[RiskSignal]:
+    """変更ファイルの構成と変更量から出る兆候（tests-only / test-modified / large-diff）。"""
+    signals: list[RiskSignal] = []
     diff_stats = parse_diff_stats(proposal.diff)
 
     # 兆候 2: tests-only (high)
@@ -143,8 +253,15 @@ def assess(proposal: FixProposal) -> tuple[RiskSignal, ...]:
             )
         )
 
+    return signals
+
+
+def _assess_diff_content(diff: str) -> list[RiskSignal]:
+    """diff の中身から出る兆候（assert-removed / skip-added / exception-swallowed）。"""
+    signals: list[RiskSignal] = []
+
     # 兆候 5: assert-removed (high)
-    if _has_removed_assert(proposal.diff):
+    if _has_removed_assert(diff):
         signals.append(
             RiskSignal(
                 code="assert-removed",
@@ -155,7 +272,7 @@ def assess(proposal: FixProposal) -> tuple[RiskSignal, ...]:
         )
 
     # 兆候 6: skip-added (high)
-    if _has_skip_added(proposal.diff):
+    if _has_skip_added(diff):
         signals.append(
             RiskSignal(
                 code="skip-added",
@@ -166,7 +283,7 @@ def assess(proposal: FixProposal) -> tuple[RiskSignal, ...]:
         )
 
     # 兆候 7: exception-swallowed (medium)
-    if _has_exception_swallowed(proposal.diff):
+    if _has_exception_swallowed(diff):
         signals.append(
             RiskSignal(
                 code="exception-swallowed",
@@ -176,12 +293,177 @@ def assess(proposal: FixProposal) -> tuple[RiskSignal, ...]:
             )
         )
 
-    return tuple(_sort_by_severity(signals))
+    return signals
+
+
+def _assess_rewrite(files: tuple[_FileDiff, ...]) -> list[RiskSignal]:
+    """書き換え方から出る兆候（symbol-removed / code-fence-written / full-rewrite / ... ）。"""
+    detected = (
+        _detect_symbol_removed(files),
+        _detect_code_fence_written(files),
+        _detect_full_rewrite(files),
+        _detect_unrelated_addition(files),
+        _detect_type_hints_dropped(files),
+    )
+    return [signal for signal in detected if signal is not None]
+
+
+# ─────────────────────────────────────────────────────────────────
+# 新規兆候の検出
+# ─────────────────────────────────────────────────────────────────
+
+
+def _detect_symbol_removed(files: tuple[_FileDiff, ...]) -> RiskSignal | None:
+    """兆候 8: 削除行にあった def / class が、追加行に同名で現れない (high)。"""
+    lost: list[str] = []
+    for file_diff in files:
+        added_names = set(_defined_names(file_diff.added))
+        for name in _defined_names(file_diff.removed):
+            if name not in added_names:
+                lost.append(f"{file_diff.path}: {name}")
+    if not lost:
+        return None
+    return RiskSignal(
+        code="symbol-removed",
+        label="既存の関数・クラスが削除されています",
+        detail="追加行に同名の定義が無い: " + ", ".join(lost),
+        severity="high",
+    )
+
+
+def _detect_code_fence_written(files: tuple[_FileDiff, ...]) -> RiskSignal | None:
+    """兆候 9: 追加行に ``` で始まる行がある (high)。"""
+    hits: list[str] = []
+    for file_diff in files:
+        count = sum(1 for line in file_diff.added if _FENCE_RE.match(line))
+        if count:
+            hits.append(f"{file_diff.path}: {count} 行")
+    if not hits:
+        return None
+    return RiskSignal(
+        code="code-fence-written",
+        label="モデルがコードフェンスをファイルに書き込んでいます",
+        detail="``` で始まる追加行 — " + ", ".join(hits),
+        severity="high",
+    )
+
+
+def _detect_full_rewrite(files: tuple[_FileDiff, ...]) -> RiskSignal | None:
+    """兆候 10: 1 ファイルがほぼ全面的に書き換えられている (high)。"""
+    reasons: list[str] = []
+    for file_diff in files:
+        removed = len(file_diff.removed)
+        added = len(file_diff.added)
+        original = sum(hunk.old_count for hunk in file_diff.hunks)
+        whole = _whole_file_hunk(file_diff)
+        if original > 0 and removed >= original * _FULL_REWRITE_RATIO:
+            reasons.append(f"{file_diff.path}: 元 {original} 行のうち {removed} 行を削除")
+        elif whole is not None:
+            reasons.append(
+                f"{file_diff.path}: 先頭からの 1 ハンクで元 {whole.old_count} 行を"
+                f" {whole.new_count} 行に置換"
+            )
+        elif (
+            original == 0
+            and removed >= _FALLBACK_REMOVED_LINES
+            and removed >= added * _FALLBACK_REMOVED_RATIO
+        ):
+            reasons.append(f"{file_diff.path}: 削除 {removed} 行 / 追加 {added} 行（元行数は不明）")
+    if not reasons:
+        return None
+    return RiskSignal(
+        code="full-rewrite",
+        label="ファイルがほぼ全面的に書き換えられています",
+        detail=", ".join(reasons),
+        severity="high",
+    )
+
+
+def _whole_file_hunk(file_diff: _FileDiff) -> _Hunk | None:
+    """ファイル全体が 1 ハンクで置き換えられ、行数が 2 倍以上に膨らんでいれば返す。"""
+    if len(file_diff.hunks) != 1:
+        return None
+    hunk = file_diff.hunks[0]
+    if hunk.old_start > 1 or hunk.old_count <= 0:
+        return None
+    if hunk.new_count < hunk.old_count * 2:
+        return None
+    return hunk
+
+
+def _detect_unrelated_addition(files: tuple[_FileDiff, ...]) -> RiskSignal | None:
+    """兆候 11: 削除行に無い新しい def / class が 2 個以上追加されている (medium)。"""
+    new_symbols: list[str] = []
+    for file_diff in files:
+        removed_names = set(_defined_names(file_diff.removed))
+        for name in _defined_names(file_diff.added):
+            if name not in removed_names:
+                new_symbols.append(f"{file_diff.path}: {name}")
+    if len(new_symbols) < 2:
+        return None
+    return RiskSignal(
+        code="unrelated-addition",
+        label="欠陥と関係のない定義が追加されている可能性があります",
+        detail=f"削除行に無い新しい定義 {len(new_symbols)} 個: " + ", ".join(new_symbols),
+        severity="medium",
+    )
+
+
+def _detect_type_hints_dropped(files: tuple[_FileDiff, ...]) -> RiskSignal | None:
+    """兆候 12: 型注釈付きの関数が、同名の注釈なし関数に置き換わっている (low)。"""
+    dropped: list[str] = []
+    for file_diff in files:
+        added_defs = _def_annotations(file_diff.added)
+        for name, annotated in _def_annotations(file_diff.removed).items():
+            if annotated and added_defs.get(name) is False:
+                dropped.append(f"{file_diff.path}: {name}")
+    if not dropped:
+        return None
+    return RiskSignal(
+        code="type-hints-dropped",
+        label="関数の型注釈が失われています",
+        detail="削除行では注釈あり・追加行では注釈なし: " + ", ".join(dropped),
+        severity="low",
+    )
 
 
 # ─────────────────────────────────────────────────────────────────
 # ヘルパー関数
 # ─────────────────────────────────────────────────────────────────
+
+
+def _defined_names(lines: tuple[str, ...]) -> list[str]:
+    """行の集合から def / class の名前を出現順・重複なしで取り出す。"""
+    names: list[str] = []
+    for line in lines:
+        match = _DEF_RE.match(line) or _CLASS_RE.match(line)
+        if match is not None and match.group(1) not in names:
+            names.append(match.group(1))
+    return names
+
+
+def _def_annotations(lines: tuple[str, ...]) -> dict[str, bool]:
+    """def 行から {関数名: 型注釈があるか} を作る。同名が複数あれば「注釈あり」を優先する。"""
+    result: dict[str, bool] = {}
+    for line in lines:
+        match = _DEF_RE.match(line)
+        if match is None:
+            continue
+        name = match.group(1)
+        annotated = _is_annotated_def(line)
+        result[name] = result.get(name, False) or annotated
+    return result
+
+
+def _is_annotated_def(line: str) -> bool:
+    """def 行 1 行に引数注釈または戻り値注釈があるかを判定する。"""
+    open_paren = line.find("(")
+    close_paren = line.rfind(")")
+    if open_paren < 0 or close_paren < open_paren:
+        return False
+    params = line[open_paren + 1 : close_paren]
+    tail = line[close_paren + 1 :]
+    return ":" in params or "->" in tail
 
 
 def _is_test_file(path: str) -> bool:
@@ -207,15 +489,10 @@ def _has_removed_assert(diff: str) -> bool:
 
 def _has_skip_added(diff: str) -> bool:
     """追加行にテストスキップ指示を含むかを判定する。"""
-    patterns = [
-        r"@pytest\.mark\.skip",
-        r"@unittest\.skip",
-        r"pytest\.xfail",
-    ]
     for line in diff.splitlines():
         if line.startswith("+") and not line.startswith("+++"):
             content = line[1:]
-            for pattern in patterns:
+            for pattern in _SKIP_PATTERNS:
                 if re.search(pattern, content):
                     return True
     return False
@@ -238,7 +515,12 @@ def _has_exception_swallowed(diff: str) -> bool:
     return False
 
 
-def _sort_by_severity(signals: list[RiskSignal]) -> list[RiskSignal]:
-    """重大度順（high → medium → low）にソートする。"""
+def _sort_signals(signals: list[RiskSignal]) -> list[RiskSignal]:
+    """重大度順（high → medium → low）、同 severity 内は code 昇順で安定させる。"""
     severity_order = {"high": 0, "medium": 1, "low": 2}
-    return sorted(signals, key=lambda s: severity_order.get(s.severity, 3))
+    return sorted(signals, key=lambda s: (severity_order.get(s.severity, 3), s.code))
+
+
+def _sort_by_severity(signals: list[RiskSignal]) -> list[RiskSignal]:
+    """後方互換のための別名。_sort_signals を使うこと。"""
+    return _sort_signals(signals)

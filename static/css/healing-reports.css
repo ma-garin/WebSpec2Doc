@@ -183,3 +183,228 @@
   padding: 9px 12px;
   font-size: 12.5px;
 }
+
+/* ═══════════ 報告書の本文 ═══════════ */
+
+.hl-page-report .app-content {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 16px 20px;
+  gap: 12px;
+}
+.hl-doc-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 240px;
+  gap: 16px;
+  align-items: start;
+  overflow: auto;
+}
+
+/* ── 報告書そのもの ─────────────────────────── */
+.hl-doc {
+  background: var(--sf, #fff);
+  border: 1px solid var(--line, #D0D5DD);
+  border-radius: 9px;
+  padding: 24px 28px;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--tx, #101828);
+}
+.hl-doc-loading { color: var(--tx3, #667085); margin: 0; }
+.hl-doc-title { font-size: 16px; font-weight: 700; margin: 0 0 4px; letter-spacing: -.01em; }
+.hl-doc-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  align-items: center;
+  margin: 0 0 16px;
+  font-size: 11px;
+  color: var(--tx3, #667085);
+}
+/* 節見出し。報告書の様式なので数字つきの小さな見出しにする。 */
+.hl-doc-h {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  color: var(--tx2, #475467);
+  margin: 18px 0 6px;
+}
+.hl-doc-h:first-of-type { margin-top: 0; }
+.hl-doc-p { margin: 0 0 6px; }
+.hl-doc-note { margin: 2px 0 0; font-size: 11px; color: var(--tx3, #667085); }
+.hl-doc-note code {
+  font-family: var(--mono, ui-monospace, Menlo, monospace);
+  font-size: 10.5px;
+  background: var(--bg, #F9FAFB);
+  border-radius: 3px;
+  padding: 0 4px;
+}
+.hl-sign { font-size: 11px; color: var(--tx3, #667085); }
+
+/* 節の本文＋スクリーンショット。画像が無い節は 1 列。 */
+.hl-doc-sec {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 176px;
+  gap: 14px;
+  align-items: start;
+}
+.hl-doc-sec.is-single { grid-template-columns: minmax(0, 1fr); }
+.hl-doc-shot {
+  border: 1px solid var(--line, #D0D5DD);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bg, #F9FAFB);
+}
+.hl-doc-shot img { display: block; width: 100%; height: auto; }
+.hl-action-edit { width: 100%; margin-top: 6px; }
+
+/* ── 検証の 3 枠 ────────────────────────────── */
+.hl-verify { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 4px 0 2px; }
+.hl-verify-box {
+  border: 1px solid var(--line, #D0D5DD);
+  border-radius: 7px;
+  padding: 8px 10px;
+}
+.hl-verify-box small { display: block; font-size: 10.5px; color: var(--tx3, #667085); }
+.hl-verify-box b { font-size: 13px; font-weight: 600; }
+.hl-verify-box.is-ok b { color: var(--ok, #067647); }
+.hl-verify-box.is-err b { color: var(--er, #D92D20); }
+.hl-verify-box.is-mute b { color: var(--tx3, #667085); }
+
+/* ── 折りたたみ ─────────────────────────────── */
+.hl-doc details {
+  border: 1px solid var(--line, #D0D5DD);
+  border-radius: 7px;
+  margin-top: 10px;
+}
+.hl-doc summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  list-style: none;
+}
+.hl-doc summary::-webkit-details-marker { display: none; }
+.hl-doc summary:focus-visible { outline: 2px solid var(--ac, #1570EF); outline-offset: -2px; }
+.hl-sum-tri { color: var(--tx3, #667085); transition: transform .12s; }
+.hl-doc details[open] .hl-sum-tri { transform: rotate(90deg); }
+.hl-sum-note { margin-left: auto; font-size: 11px; color: var(--tx3, #667085); }
+.hl-doc details > *:not(summary) { padding: 0 12px 12px; }
+
+/* 確認が必要な点 */
+.hl-attn { list-style: none; margin: 0; padding: 0 12px 12px; display: flex; flex-direction: column; gap: 8px; }
+.hl-attn li { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 10px; align-items: start; }
+.hl-attn b { font-weight: 600; display: block; }
+.hl-attn small { display: block; color: var(--tx3, #667085); font-size: 11px; }
+
+/* 差分 */
+.hl-diff {
+  margin: 0;
+  font-family: var(--mono, ui-monospace, Menlo, monospace);
+  font-size: 10.5px;
+  line-height: 1.6;
+  background: var(--bg, #F9FAFB);
+  border: 1px solid var(--line, #D0D5DD);
+  border-radius: 6px;
+  overflow-x: auto;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.hl-diff-line { padding: 0 10px; white-space: pre; }
+.hl-diff-line.is-add { background: #ECFDF3; color: #05603A; }
+.hl-diff-line.is-del { background: #FEF3F2; color: #B42318; }
+.hl-diff-line.is-meta { color: var(--tx3, #667085); }
+
+/* 根拠 */
+.hl-evidence { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+.hl-evidence th {
+  text-align: left;
+  font-weight: 500;
+  font-size: 10.5px;
+  color: var(--tx3, #667085);
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--line, #D0D5DD);
+}
+.hl-evidence td { padding: 5px 6px; border-bottom: 1px solid var(--line, #D0D5DD); }
+.hl-ev-path { font-family: var(--mono, ui-monospace, Menlo, monospace); font-size: 10.5px; }
+.hl-ev-score { white-space: nowrap; }
+.hl-bar {
+  display: inline-block;
+  width: 56px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--line, #D0D5DD);
+  overflow: hidden;
+  vertical-align: middle;
+}
+.hl-bar i { display: block; height: 100%; background: var(--ac, #1570EF); }
+.hl-ev-score small { margin-left: 6px; color: var(--tx3, #667085); font-size: 10.5px; }
+.hl-quote {
+  margin: 8px 0 0;
+  padding: 2px 0 2px 10px;
+  border-left: 3px solid var(--line, #D0D5DD);
+  color: var(--tx2, #475467);
+  font-size: 11.5px;
+}
+
+/* ── 右の判断エリア ─────────────────────────── */
+.hl-doc-actions {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.hl-field {
+  border: 1px solid var(--line, #D0D5DD);
+  border-radius: 7px;
+  padding: 7px 9px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--tx, #101828);
+  background: var(--sf, #fff);
+  resize: vertical;
+}
+.hl-field:focus-visible { outline: 2px solid var(--ac, #1570EF); outline-offset: 1px; }
+.hl-doc-actions .hl-btn { text-align: center; }
+.hl-confirm {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 11.5px;
+  border: 1px solid var(--er, #D92D20);
+  border-radius: 7px;
+  padding: 7px 9px;
+  color: var(--er, #D92D20);
+}
+.hl-out {
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line, #D0D5DD);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.hl-out .hl-btn { background: var(--bg, #F9FAFB); text-decoration: none; }
+
+/* ── トースト ──────────────────────────────── */
+.hl-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  background: var(--tx, #101828);
+  color: #fff;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-size: 12.5px;
+  z-index: 60;
+  box-shadow: 0 8px 24px rgba(16, 24, 40, .18);
+}

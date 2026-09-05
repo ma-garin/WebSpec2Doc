@@ -60,7 +60,16 @@
     historyLimit: 20,
     editingProjectId: null,
     focusRunId: '',
-    activeView: 'run'
+    activeView: 'run',
+    //: 許可ルート配下のリポジトリ一覧（GET /discover）。null は未取得。
+    discoverRepos: null,
+    discoverLoading: false,
+    discoverFailed: false,
+    discoverTruncated: false,
+    //: 選択リストで選んだリポジトリのパス（見た目の選択状態にだけ使う）。
+    selectedRepoPath: '',
+    //: 登録直後の行に付ける目印。選択（実行対象）とは別物。
+    highlightProjectId: null
   };
 
   var $ = {};
@@ -175,12 +184,40 @@
     setConfirmOpen(node, true);
   }
 
+  /* メニューは表のはみ出し制御（overflow）を持つラッパの中にある。行が末尾にあると
+     下へ開いたリストが切り取られ、「…」を押しても何も出ないように見える
+     （登録直後の行は必ず末尾に来るため、そこだけ再現していた）。
+     開くあいだだけ body 直下へ移し、position: fixed で座標を与えて切り取りを避ける。 */
   function closeRowMenu() {
     if (!openRowMenu) { return; }
-    openRowMenu.list.hidden = true;
-    openRowMenu.list.setAttribute('inert', '');
-    openRowMenu.btn.setAttribute('aria-expanded', 'false');
+    var m = openRowMenu;
     openRowMenu = null;
+    m.list.hidden = true;
+    m.list.setAttribute('inert', '');
+    m.list.classList.remove('hl-row-menu-float');
+    m.list.style.top = '';
+    m.list.style.left = '';
+    if (m.wrap && m.list.parentNode !== m.wrap) { m.wrap.appendChild(m.list); }
+    m.btn.setAttribute('aria-expanded', 'false');
+  }
+
+  function openRowMenuAt(wrap, btn, list) {
+    closeRowMenu();
+    list.hidden = false;
+    list.removeAttribute('inert');
+    list.classList.add('hl-row-menu-float');
+    document.body.appendChild(list);
+    var r = btn.getBoundingClientRect();
+    var w = list.offsetWidth || 160;
+    var h = list.offsetHeight || 0;
+    var left = Math.max(8, Math.min(r.right - w, window.innerWidth - w - 8));
+    var top = r.bottom + 4;
+    // 下に入らないときはボタンの上へ開く。画面外の項目は存在しないのと同じ。
+    if (h && top + h > window.innerHeight - 8) { top = Math.max(8, r.top - h - 4); }
+    list.style.left = left + 'px';
+    list.style.top = top + 'px';
+    btn.setAttribute('aria-expanded', 'true');
+    openRowMenu = { wrap: wrap, btn: btn, list: list };
   }
 
   function selectedProjectName() {
@@ -334,13 +371,18 @@
   /* ---------------- 統計 ---------------- */
 
   /* data-empty-hint は「0 のときだけ」意味を持つ補助テキスト。値が入ったら必ず消す。 */
-  function setStatHint(id, text) {
+  function setStatHint(id, text, title) {
     var num = $[id];
     var card = num && num.closest ? num.closest('.stat-card') : null;
     if (!card) { return; }
     var old = card.querySelector('.hl-stat-hint');
     if (old && old.parentNode) { old.parentNode.removeChild(old); }
-    if (text) { card.appendChild(el('div', 'hl-stat-hint', text)); }
+    if (!text) { return; }
+    /* 補助文はカード幅を超えると 2 行になって数字を押し下げる。本文は短く保ち、
+       省いた説明は title に入れる（読みたい人はホバーで読める）。 */
+    var hint = el('div', 'hl-stat-hint', text);
+    if (title) { hint.title = title; }
+    card.appendChild(hint);
   }
 
   function setStat(id, value, isEmpty) {
@@ -352,29 +394,86 @@
     setStatHint(id, isEmpty ? card.getAttribute('data-empty-hint') : '');
   }
 
-  /* 「直した不具合 N」は件数だけで質を示さない。要確認が残っていることを同じカードに出す。 */
+  /* 「直した不具合」カードの内訳。再検証が緑になった実行だけを数え、
+     そうでない実行の修正件数は別に持って補助テキストへ出す。 */
+  var statFixedValue = 0;
+  var statFixedUnverified = 0;
+
+  /* 「直した不具合 N」は件数だけで質を示さない。要確認が残っていること、
+     再検証が通らず数に入れなかった修正があることを同じカードに出す。 */
   function applyFixedHint() {
-    var n = riskCounts().high;
-    if (n > 0) { setStatHint('hl-stat-fixed', 'うち要確認 ' + n + ' 件'); }
+    var parts = [];
+    var high = riskCounts().high;
+    if (statFixedValue > 0 && high > 0) { parts.push('うち要確認 ' + high + ' 件'); }
+    var title = '';
+    if (statFixedUnverified > 0) {
+      title = '再検証が通っていない修正 ' + statFixedUnverified + ' 件は数えていません';
+      parts.push(parts.length ? ('未計上 ' + statFixedUnverified + ' 件')
+        : ('未計上 ' + statFixedUnverified + ' 件（再検証が未通過）'));
+    }
+    if (parts.length) { setStatHint('hl-stat-fixed', parts.join(' / '), title); }
+  }
+
+  /* カードの見出しは HTML 側にあるが、数える対象を変えたら見出しも一緒に変える。
+     「PR の数」と「人が待たされている実行の数」は別物で、後者が利用者の関心。 */
+  function setStatLabel(id, text) {
+    var num = $[id];
+    var card = num && num.closest ? num.closest('.stat-card') : null;
+    var label = card ? card.querySelector('.stat-card-label') : null;
+    if (label) { label.textContent = text; }
+  }
+
+  /* 補助文は「どの範囲を数えたか」の宣言。数える範囲を変えたら必ず一緒に変える。 */
+  function setStatSub(id, text) {
+    var num = $[id];
+    var card = num && num.closest ? num.closest('.stat-card') : null;
+    var sub = card ? card.querySelector('.stat-card-sub') : null;
+    if (sub) { sub.textContent = text; }
   }
 
   function loadStats() {
     setStat('hl-stat-projects', state.projects.length, state.projects.length === 0);
-    apiFetch('/runs?limit=200').then(function (data) {
+    /* 実行・直した不具合・判断待ちは「選択中の接続先」で絞る。全体の数を出しながら
+       「この接続先の実行」と書くとラベルが嘘になる。未選択のときは全体を出し、
+       補助文も「全体の実行」に変える（ラベルと中身のどちらかを必ず合わせる）。 */
+    var pid = state.selectedProjectId || '';
+    setStatSub('hl-stat-runs', pid ? 'この接続先の実行' : '全体の実行');
+    var statUrl = '/runs?limit=200' + (pid ? '&project_id=' + encodeURIComponent(pid) : '');
+    apiFetch(statUrl).then(function (data) {
+      // 集計の途中で接続先が切り替わったら、古い範囲の数字は書かない。
+      if ((state.selectedProjectId || '') !== pid) { return; }
       var runs = asList(data, 'runs');
+      // 「直した」は再検証が緑になった実行（status: succeeded）だけを数える。
+      // 修正を当てただけの実行を足すと、テストが壊れたままでも直ったと読めてしまう。
       var fixed = 0;
-      var waitingPr = 0;
+      // 判断待ちは PR の有無ではなく実行の状態で数える。PR が無くても人は待っている。
+      var awaiting = 0;
+      // 実行回数だけを出すと、成功しなかった回が画面から消える。
+      var lost = 0;
+      statFixedUnverified = 0;
       runs.forEach(function (r) {
-        fixed += (r.fixed_count || 0);
-        if (r.pr_number && r.pr_state === 'open') { waitingPr += 1; }
+        var applied = r.fixed_count || 0;
+        if (applied > 0) {
+          if (r.status === 'succeeded') { fixed += applied; }
+          else { statFixedUnverified += applied; }
+        }
+        if (r.status === 'awaiting_human') { awaiting += 1; }
+        if (r.status === 'failed' || r.status === 'cancelled') { lost += 1; }
       });
       setStat('hl-stat-runs', runs.length, runs.length === 0);
+      if (lost > 0) { setStatHint('hl-stat-runs', 'うち失敗 ' + lost + ' 件'); }
+      statFixedValue = fixed;
       setStat('hl-stat-fixed', fixed, fixed === 0);
-      setStat('hl-stat-pr', waitingPr, waitingPr === 0);
+      setStatLabel('hl-stat-pr', '判断待ちの実行');
+      setStat('hl-stat-pr', awaiting, awaiting === 0);
       applyFixedHint();
     }).catch(function () {
+      if ((state.selectedProjectId || '') !== pid) { return; }
+      statFixedValue = 0;
+      statFixedUnverified = 0;
       setStat('hl-stat-runs', '-', false);
       setStat('hl-stat-fixed', '-', false);
+      setStatLabel('hl-stat-pr', '判断待ちの実行');
       setStat('hl-stat-pr', '-', false);
       applyFixedHint();
     });
@@ -395,6 +494,12 @@
     var sel = $['hl-project-select'];
     var prevValue = sel.value;
     sel.textContent = '';
+    // 未選択なのに先頭の接続先が選ばれて見えると、一覧の「対象」表示と食い違う。
+    if (!state.selectedProjectId) {
+      var ph = el('option', null, '（未選択）');
+      ph.value = '';
+      sel.appendChild(ph);
+    }
     state.projects.forEach(function (p) {
       var opt = el('option', null, p.name || p.project_id);
       opt.value = p.project_id;
@@ -451,15 +556,22 @@
     state.projects.forEach(function (p) {
       // 選択は塗りボタンではなく行そのもので示す（塗りが縦に並ぶと名前もパスも読めない）。
       var isSelected = p.project_id === state.selectedProjectId;
-      var tr = el('tr', isSelected ? 'hl-row-selected' : null);
+      var rowClass = isSelected ? 'hl-row-selected' : '';
+      // 登録直後の行は「選択」ではなく目印で示す。選んでいないものを選択扱いにしない。
+      if (p.project_id === state.highlightProjectId) { rowClass += (rowClass ? ' ' : '') + 'hl-row-added'; }
+      var tr = el('tr', rowClass || null);
       var pLabel = p.name || p.project_id || '(名称未設定)';
-      var tdName = el('td');
-      tdName.appendChild(document.createTextNode(pLabel));
+      var tdName = el('td', 'hl-name-cell');
+      // 名前が主情報。注記を同じ行に並べると名前が先に切れて読めなくなるので下の行へ落とす。
+      var nameLine = el('div', 'hl-proj-name hl-tail', pLabel);
+      nameLine.title = pLabel;
+      tdName.appendChild(nameLine);
       var repoKey = String(p.repo_path == null ? '' : p.repo_path).trim();
       var peers = (repoKey ? (repoPeers[repoKey] || []) : []).filter(function (x) { return x.id !== p.project_id; });
       if (peers.length) {
-        var dupNote = el('span', 'hl-dup-note', '同じリポジトリの接続が他に ' + peers.length + ' 件');
-        dupNote.title = peers.map(function (x) { return x.label; }).join('\n');
+        var dupNote = el('div', 'hl-dup-note', '重複 ' + peers.length + ' 件');
+        dupNote.title = '同じリポジトリを指す接続が他に ' + peers.length + ' 件あります:\n'
+          + peers.map(function (x) { return x.label; }).join('\n');
         tdName.appendChild(dupNote);
       }
       tr.appendChild(tdName);
@@ -534,10 +646,7 @@
           var wasOpen = !!openRowMenu && openRowMenu.list === menuList;
           closeRowMenu();
           if (wasOpen) { return; }
-          menuList.hidden = false;
-          menuList.removeAttribute('inert');
-          menuBtn.setAttribute('aria-expanded', 'true');
-          openRowMenu = { wrap: menuWrap, btn: menuBtn, list: menuList };
+          openRowMenuAt(menuWrap, menuBtn, menuList);
         });
         menuWrap.appendChild(menuBtn);
         menuWrap.appendChild(menuList);
@@ -566,6 +675,7 @@
   function showConnectForm(project) {
     state.editingProjectId = project ? project.project_id : null;
     $['hl-connect-form'].hidden = false;
+    setupRepoPicker(!project);
     if (project) {
       $['hl-form-title'].textContent = '接続を編集する';
       $['hl-connect-submit'].textContent = '保存する';
@@ -593,6 +703,223 @@
   }
   function hideConnectForm() {
     $['hl-connect-form'].hidden = true;
+  }
+
+  /* ---------------- 接続するリポジトリの選択リスト ----------------
+     許可ルートは長大な絶対パスで、手入力は現実的でない。サーバが列挙した候補
+     （GET /api/healing/discover）から選ばせる。API が無い・落ちている間は
+     従来どおりパス手入力に落ちる（一覧が出ないだけで接続はできる）。 */
+
+  var repoPickerUi = null;
+
+  function setIdIfFree(node, id) {
+    if (!document.getElementById(id)) { node.id = id; }
+    return node;
+  }
+
+  function pathFieldWrap() {
+    var input = $['hl-f-path'];
+    return input && input.parentNode ? input.parentNode : null;
+  }
+
+  function ensureRepoPicker() {
+    if (repoPickerUi) { return repoPickerUi; }
+    var form = $['hl-connect-form'];
+    var grid = form ? form.querySelector('.hl-form-grid') : null;
+    if (!form || !grid) { return null; }
+
+    var box = el('div', 'hl-repo-picker');
+    setIdIfFree(box, 'hl-repo-picker');
+    box.hidden = true;
+
+    var head = el('div', 'hl-repo-head');
+    var label = el('label', 'hl-field-label', '接続するリポジトリ');
+    var count = el('span', 'hl-repo-count');
+    head.appendChild(label);
+    head.appendChild(count);
+
+    var filter = el('input', 'hl-field hl-repo-filter');
+    filter.type = 'search';
+    filter.placeholder = '名前・パスで絞り込む';
+    filter.autocomplete = 'off';
+    setIdIfFree(filter, 'hl-repo-filter');
+    if (filter.id) { label.setAttribute('for', filter.id); }
+
+    var list = el('div', 'hl-repo-list');
+    list.setAttribute('role', 'list');
+
+    var status = el('p', 'hl-repo-status');
+    status.hidden = true;
+
+    var manual = el('button', 'hl-repo-manual-toggle', '一覧に無い場所を指定する');
+    manual.type = 'button';
+    setIdIfFree(manual, 'hl-repo-manual-toggle');
+
+    box.appendChild(head);
+    box.appendChild(filter);
+    box.appendChild(list);
+    box.appendChild(status);
+    box.appendChild(manual);
+    form.insertBefore(box, grid);
+
+    filter.addEventListener('input', function () { renderRepoList(); });
+    manual.addEventListener('click', function () { setManualPath(true); });
+
+    repoPickerUi = { box: box, filter: filter, list: list, count: count, status: status, manual: manual };
+    return repoPickerUi;
+  }
+
+  /* パス入力欄は消さない。選択リストが使えるときだけ既定で畳む。 */
+  function setManualPath(open) {
+    var wrap = pathFieldWrap();
+    if (wrap) { wrap.hidden = !open; }
+    if (repoPickerUi) { repoPickerUi.manual.hidden = open; }
+    if (open && $['hl-f-path'] && $['hl-f-path'].focus) { $['hl-f-path'].focus(); }
+  }
+
+  function connectedPaths() {
+    var used = {};
+    state.projects.forEach(function (p) {
+      var k = String(p.repo_path == null ? '' : p.repo_path).trim();
+      if (k) { used[k] = true; }
+    });
+    return used;
+  }
+
+  /* 埋めるだけ。どの欄も編集可能なまま残す（提案を上書きできないと使えない）。 */
+  function fillFormFromRepo(repo) {
+    if ($['hl-f-name']) { $['hl-f-name'].value = repo.name || ''; }
+    if ($['hl-f-path']) { $['hl-f-path'].value = repo.path || ''; }
+    if ($['hl-f-branch'] && repo.branch) { $['hl-f-branch'].value = repo.branch; }
+    if ($['hl-f-cmd'] && repo.suggested_command) { $['hl-f-cmd'].value = repo.suggested_command; }
+    if ($['hl-f-github'] && repo.github_repo) { $['hl-f-github'].value = repo.github_repo; }
+    state.selectedRepoPath = repo.path || '';
+    renderRepoList();
+  }
+
+  function renderRepoList() {
+    var ui = ensureRepoPicker();
+    if (!ui) { return; }
+    var repos = state.discoverRepos || [];
+    var q = ui.filter.value.trim().toLowerCase();
+    var used = connectedPaths();
+    var shown = repos.filter(function (r) {
+      if (!q) { return true; }
+      var hay = (String(r.name || '') + ' ' + String(r.display_path || r.path || '')).toLowerCase();
+      return hay.indexOf(q) !== -1;
+    });
+    var countText = q ? (shown.length + ' / ' + repos.length + ' 件') : (repos.length + ' 件');
+    ui.count.textContent = countText + (state.discoverTruncated ? '（一部のみ）' : '');
+    ui.list.textContent = '';
+    if (!shown.length) {
+      ui.status.hidden = false;
+      ui.status.textContent = repos.length
+        ? '絞り込みに一致するリポジトリがありません。'
+        : '許可された場所にリポジトリが見つかりませんでした。';
+      return;
+    }
+    ui.status.hidden = true;
+    shown.forEach(function (r) {
+      var connected = r.already_connected === true || used[String(r.path || '')] === true;
+      var item = el('button', 'hl-repo-item');
+      item.type = 'button';
+      item.setAttribute('role', 'listitem');
+      if (state.selectedRepoPath && state.selectedRepoPath === r.path) { item.classList.add('is-picked'); }
+      var main = el('span', 'hl-repo-main');
+      main.appendChild(el('span', 'hl-repo-name', r.name || r.path || ''));
+      main.appendChild(setPathTail(el('span', 'hl-repo-path'), r.display_path || r.path || '', 54));
+      if (r.suggested_command) {
+        main.appendChild(setTail(el('span', 'hl-repo-cmd'), '検証: ' + r.suggested_command, 52));
+      }
+      item.appendChild(main);
+      var badges = el('span', 'hl-repo-badges');
+      if (r.branch) { badges.appendChild(el('span', 'hl-repo-badge', r.branch)); }
+      if (connected) { badges.appendChild(el('span', 'hl-repo-badge is-connected', '接続済み')); }
+      item.appendChild(badges);
+      if (connected) {
+        item.disabled = true;
+        item.title = String(r.path || '') + '\nこの場所はすでに接続済みです。';
+      } else {
+        item.title = String(r.path || '');
+        item.addEventListener('click', function () { fillFormFromRepo(r); });
+      }
+      ui.list.appendChild(item);
+    });
+  }
+
+  function applyDiscoverState() {
+    var ui = ensureRepoPicker();
+    if (!ui) { return; }
+    var repos = state.discoverRepos || [];
+    // 一覧が使えないときは空のリストを見せず、従来のパス手入力へ落とす。
+    if (state.discoverFailed || !repos.length) {
+      ui.box.hidden = true;
+      setManualPath(true);
+      return;
+    }
+    ui.box.hidden = false;
+    setManualPath(false);
+    renderRepoList();
+  }
+
+  function loadDiscover() {
+    if (state.discoverLoading) { return; }
+    state.discoverLoading = true;
+    apiFetch('/discover').then(function (data) {
+      state.discoverLoading = false;
+      state.discoverFailed = false;
+      state.discoverRepos = asList(data, 'repos');
+      state.discoverTruncated = !!(data && data.truncated);
+      applyDiscoverState();
+    }).catch(function () {
+      state.discoverLoading = false;
+      state.discoverFailed = true;
+      state.discoverRepos = [];
+      applyDiscoverState();
+    });
+  }
+
+  /* 編集中は一覧を出さない（既存の接続先のパスを直す操作なので手入力が正しい）。 */
+  function setupRepoPicker(isNew) {
+    state.selectedRepoPath = '';
+    var ui = ensureRepoPicker();
+    if (!ui) { return; }
+    if (!isNew) {
+      ui.box.hidden = true;
+      setManualPath(true);
+      return;
+    }
+    ui.filter.value = '';
+    if (state.discoverRepos || state.discoverFailed) { applyDiscoverState(); return; }
+    ui.box.hidden = false;
+    ui.list.textContent = '';
+    ui.status.hidden = false;
+    ui.status.textContent = 'リポジトリを探しています…';
+    setManualPath(false);
+    loadDiscover();
+  }
+
+  /* 成功を知らせる。hl-error は失敗専用のバナーなので流用しない。 */
+  var toastTimer = null;
+  function showToast(text) {
+    var host = document.getElementById('hl-toast');
+    if (!host) {
+      host = el('div', 'hl-toast');
+      host.id = 'hl-toast';
+      host.setAttribute('role', 'status');
+      host.setAttribute('aria-live', 'polite');
+      document.body.appendChild(host);
+    }
+    host.textContent = '';
+    host.appendChild(el('span', 'hl-toast-text', text));
+    var close = el('button', 'hl-toast-close', '×');
+    close.type = 'button';
+    close.setAttribute('aria-label', '閉じる');
+    close.addEventListener('click', function () { host.hidden = true; });
+    host.appendChild(close);
+    host.hidden = false;
+    if (toastTimer) { clearTimeout(toastTimer); }
+    toastTimer = setTimeout(function () { host.hidden = true; }, 4000);
   }
 
   /* 選択肢に利用可否を出す。取得に失敗したらサーバ描画のまま残す（落とさない）。 */
@@ -639,14 +966,17 @@
       : apiFetch('/projects', { method: 'POST', body: JSON.stringify(payload) });
     req.then(function (data) {
       hideConnectForm();
+      var created = editingId ? null : asObj(data, 'project');
+      var newId = (created && created.project_id) ? created.project_id : null;
+      // 登録しただけで実行対象を勝手に差し替えない。一覧で目印を出し、選ぶのは利用者。
+      state.highlightProjectId = editingId || newId || null;
       return loadProjects().then(function () {
         loadStats();
-        if (editingId) {
-          selectProject(editingId);
-        } else {
-          var created = asObj(data, 'project');
-          if (created && created.project_id) { selectProject(created.project_id); }
-        }
+        showToast(editingId
+          ? ('「' + name + '」の接続を更新しました。')
+          : ('「' + name + '」を接続しました。実行するには一覧で「対象にする」を押してください。'));
+        var row = $['hl-projects'] ? $['hl-projects'].querySelector('.hl-row-added') : null;
+        if (row && row.scrollIntoView) { row.scrollIntoView({ block: 'nearest' }); }
       });
     }).catch(function (e) { showError((editingId ? '更新' : '接続') + 'に失敗しました: ' + e.message); });
   }
@@ -851,8 +1181,11 @@
 
   function selectProject(id, opts) {
     opts = opts || {};
+    state.highlightProjectId = null;
     state.selectedProjectId = id || null;
     if ($['hl-project-select']) { $['hl-project-select'].value = id || ''; }
+    // 統計は選択中の接続先で絞るので、切り替えのたびに数え直す。
+    loadStats();
     // 選択中の行の見た目を入れ替えるため、接続先の表を描き直す。
     if ($['hl-projects']) { renderProjects(); }
     clearRunView();
@@ -963,7 +1296,8 @@
     iterations.forEach(function (iter) {
       (iter.proposals || []).forEach(function (p) {
         (p.risks || []).forEach(function (r) {
-          var sev = r.severity || 'low';
+          // severity は大文字で来ることがある。取りこぼすと「重大 0 件」と誤って出る。
+          var sev = String(r.severity || 'low').toLowerCase();
           counts.total += 1;
           if (sev === 'critical' || sev === 'high') { counts.high += 1; }
           else if (sev === 'medium') { counts.medium += 1; }
@@ -1021,17 +1355,38 @@
     btn.type = 'button';
     btn.setAttribute('data-testid', 'hl-risk-summary');
     btn.addEventListener('click', revealFirstRisk);
-    head.parentNode.insertBefore(btn, head.nextSibling);
+    /* 判断ボタン群の直下・「判断のメモ」より前に置く。メモは label と input が
+       1 組で意味を持つので、その間には絶対に割り込ませない（行ごと前に入れる）。 */
+    var noteRow = head.parentNode.querySelector('.hl-decision-note-row');
+    var anchor = (noteRow && noteRow.parentNode === head.parentNode) ? noteRow : head.nextSibling;
+    head.parentNode.insertBefore(btn, anchor);
   }
 
   /* 実行が 1 件も選ばれていないのに「未選択」バッジと対象名を出すと、
      直下の空状態（まだ実行がありません）と矛盾する。見出しごと隠す。 */
+  /* 実行が 1 件も選ばれていないと、空の黒い箱だけが 140px 居座る。見出しごと隠す。
+     実行を選んだ／開始した時点で表示に戻し、実行中・実行後は常時表示のまま（折りたたまない）。 */
+  function setLogSectionVisible(visible) {
+    var logEl = $['hl-log'];
+    var card = logEl && logEl.closest ? logEl.closest('.hl-log-card') : null;
+    if (!card) { return; }
+    card.hidden = !visible;
+    // .card 側の display 指定に hidden が負けることがあるため、表示も明示で落とす。
+    card.style.display = visible ? '' : 'none';
+    var head = card.previousElementSibling;
+    if (head && head.classList && head.classList.contains('dashboard-section-head')) {
+      head.hidden = !visible;
+      head.style.display = visible ? '' : 'none';
+    }
+  }
+
   function setRunSectionVisible(visible) {
     var badge = $['hl-status'];
     var head = badge && badge.closest ? badge.closest('.dashboard-section-head') : null;
     if (head) { head.hidden = !visible; }
     var noteRow = document.querySelector('.hl-decision-note-row');
     if (noteRow) { noteRow.hidden = !visible; }
+    setLogSectionVisible(visible);
   }
 
   function renderStatusBadge(run) {
@@ -1044,8 +1399,9 @@
       return;
     }
     badge.classList.add(statusBadgeClass(run.status));
-    // 判断待ちでも、危険な兆候の有無で見た目を変える（同じ色で並べない）。
-    if (run.status === 'awaiting_human' && riskCounts().high > 0) {
+    /* 高リスクが 1 件でもあるなら、状態が何であれ危険でない実行と同じ見た目にしない。
+       状態で絞ると「人の判断待ち（上限到達）」のように status が別名の実行で付かない。 */
+    if (riskCounts().high > 0) {
       badge.classList.add('hl-badge-attention');
     }
     var label = STATUS_LABELS[run.status] || run.status || '';
@@ -1095,6 +1451,32 @@
     return map;
   }
 
+  /* 判断ボタンが全部同じ見た目だと、何を選べばよいかが画面から読み取れない。
+     並びは「承認 / PR を作成 / 再検証 | 却下」。破壊的な却下だけを間隔で離す。 */
+  var TOOLBAR_ORDER = ['hl-approve', 'hl-create-pr', 'hl-rerun', 'hl-merge'];
+  var toolbarLaidOut = false;
+
+  function setBtnWeight(btn, primary) {
+    if (!btn) { return; }
+    btn.classList.remove('btn-primary');
+    btn.classList.remove('btn-outline-sm');
+    btn.classList.add(primary ? 'btn-primary' : 'btn-outline-sm');
+  }
+
+  /* 並べ替えは 1 度だけ。ポーリングのたびに DOM を動かすとフォーカスが飛ぶ。 */
+  function layoutToolbar() {
+    if (toolbarLaidOut) { return; }
+    var reject = $['hl-reject'];
+    var bar = reject && reject.parentNode ? reject.parentNode : null;
+    if (!bar) { toolbarLaidOut = true; return; }
+    TOOLBAR_ORDER.forEach(function (id) { if ($[id]) { bar.appendChild($[id]); } });
+    var spacer = bar.querySelector('.hl-toolbar-spacer') || el('span', 'hl-toolbar-spacer');
+    bar.appendChild(spacer);
+    bar.appendChild(reject);
+    if ($['hl-cancel']) { bar.appendChild($['hl-cancel']); }
+    toolbarLaidOut = true;
+  }
+
   function updateActionButtons(run) {
     var map = actionAvailability(run);
     Object.keys(map).forEach(function (id) {
@@ -1103,16 +1485,18 @@
       btn.disabled = false;
       btn.hidden = !map[id];
     });
+    layoutToolbar();
 
-    // 失敗・中止した実行、および高リスクが残る実行で「PR を作成」を塗って誘導しない。
-    // 押すこと自体は妨げない（判断は人がする）。誘導の強さだけを下げる。
-    var prBtn = $['hl-create-pr'];
-    var lost = !!(run && (run.status === 'failed' || run.status === 'cancelled'));
+    // 高リスクが残るなら「承認」を塗って誘導しない。押すこと自体は妨げない（判断は人がする）。
     var risky = riskCounts().high > 0;
-    if (prBtn) {
-      prBtn.classList.remove('btn-primary');
-      prBtn.classList.remove('btn-outline-sm');
-      prBtn.classList.add((lost || risky) ? 'btn-outline-sm' : 'btn-primary');
+    setBtnWeight($['hl-approve'], !risky);
+    // PR 作成・再検証は主動線ではない。常に輪郭のままにする。
+    setBtnWeight($['hl-create-pr'], false);
+    setBtnWeight($['hl-rerun'], false);
+    // 却下は取り消せない。塗らずに文字色だけで破壊的だと示す。
+    if ($['hl-reject']) {
+      setBtnWeight($['hl-reject'], false);
+      $['hl-reject'].classList.add('hl-btn-danger');
     }
 
     if (!$['hl-cancel'] || $['hl-cancel'].hidden) { setConfirmOpen($['hl-cancel-confirm'], false); }
@@ -1132,9 +1516,14 @@
   // 失敗したままの再検証・打ち切られた実行まで緑（完了）になる。
   function verifyFailed(v) {
     if (!v) { return false; }
-    if (v.error) { return true; }
     if (v.ok === false) { return true; }
     return typeof v.failed === 'number' && v.failed > 0;
+  }
+
+  /* 「走らなかった」を「落ちた」と描かない。上限到達で再検証していない実行まで
+     赤（失敗）にすると、直っていないのか実行していないのかが判別できなくなる。 */
+  function verifyRan(v) {
+    return !!v && !v.error;
   }
 
   // 済み / 実行中 / 未実行 / 失敗 の 4 状態を返す。同じ色で並べると
@@ -1150,7 +1539,7 @@
     else { s1 = iter.verify_before.error ? 'failed' : 'done'; }
     var s2 = next(s1, iter.defects, false);
     var s3 = next(s2, iter.proposals, allProposalsFailed(iter.proposals));
-    var s4 = next(s3, iter.verify_after, verifyFailed(iter.verify_after));
+    var s4 = next(s3, verifyRan(iter.verify_after) ? iter.verify_after : null, verifyFailed(iter.verify_after));
     return [s1, s2, s3, s4];
   }
 
@@ -1176,13 +1565,64 @@
     if (v.error) {
       wrap.appendChild(el('b', 'hl-verify-error', '検証を実行できませんでした'));
       wrap.appendChild(el('span', 'hl-verify-error-detail', v.error));
-      if (v.command) { wrap.appendChild(setPathTail(el('span', 'hl-kv hl-tail'), v.command, 64)); }
+      if (v.command) { wrap.title = v.command; }
       return wrap;
     }
     var summary = '失敗 ' + (v.failed != null ? v.failed : '?') + ' / 全 ' + (v.total != null ? v.total : '?');
     if (typeof v.duration_sec === 'number') { summary += '（' + v.duration_sec.toFixed(1) + ' 秒）'; }
     wrap.appendChild(el('b', null, summary));
-    if (v.command) { wrap.appendChild(setPathTail(el('span', 'hl-kv hl-tail'), v.command, 64)); }
+    // 検証コマンドはメタ情報に既に出ている。同じ値を 2 箇所に出さず title に残す。
+    if (v.command) { wrap.title = v.command; }
+    return wrap;
+  }
+
+  /* pytest の終了コードのうち意味が確定しているものだけを 1 行にする。
+     知らないコードに勝手な意味を付けると、事実でない説明が画面に出る。 */
+  var VERIFY_EXIT_NOTES = {
+    2: 'テストを収集できませんでした（終了コード 2）。テストの読み込み自体が失敗しています。',
+    5: '実行できるテストが 1 件もありませんでした（終了コード 5）。'
+  };
+
+  /* 収集できたテストの件数が前後で変われば、それ自体が異常の兆候。
+     数字を並べるだけでは見落とされるので、文で出す。 */
+  function totalShiftNote(before, after) {
+    if (!before || !after) { return ''; }
+    if (typeof before.total !== 'number' || typeof after.total !== 'number') { return ''; }
+    if (before.total === after.total) { return ''; }
+    var head = '収集できたテストが ' + before.total + ' 件 → ' + after.total + ' 件に';
+    if (after.total < before.total) {
+      return head + '減っています。テストが壊れている可能性があります。';
+    }
+    return head + '増えています。検証の対象が変わっている可能性があります。';
+  }
+
+  /* 再検証は「直ったのか」を利用者が知る唯一の場所。未実行・失敗・件数の変化を
+     すべてここに出す。出さないと、修正を当てただけで直ったと読まれる。 */
+  function renderReverifyResult(iter) {
+    var wrap = el('div', 'hl-verify-after');
+    var v = iter.verify_after;
+    if (!v) {
+      wrap.appendChild(el('div', 'hl-verify-result hl-muted', '再検証: 未実行'));
+      return wrap;
+    }
+    if (v.error) {
+      wrap.appendChild(renderVerifyResult(v));
+      return wrap;
+    }
+    var failed = typeof v.failed === 'number' ? v.failed : null;
+    var summary = '再検証: 失敗 ' + (failed != null ? failed : '?')
+      + ' / 全 ' + (v.total != null ? v.total : '?');
+    if (typeof v.duration_sec === 'number') { summary += '（' + v.duration_sec.toFixed(1) + ' 秒）'; }
+    var passed = failed === 0 && v.ok !== false;
+    var line = el('div', 'hl-verify-result');
+    var badge = el('b', passed ? 'hl-verify-ok hl-badge-ok' : 'hl-verify-bad hl-badge-err', summary);
+    if (v.command) { badge.title = v.command; }
+    line.appendChild(badge);
+    wrap.appendChild(line);
+    var shift = totalShiftNote(iter.verify_before, v);
+    if (shift) { wrap.appendChild(el('div', 'hl-verify-warn hl-note', shift)); }
+    var note = VERIFY_EXIT_NOTES[v.exit_code];
+    if (typeof note === 'string') { wrap.appendChild(el('div', 'hl-verify-note hl-muted', note)); }
     return wrap;
   }
 
@@ -1632,10 +2072,9 @@
         block.appendChild(el('h4', 'hl-sub', '修正'));
         block.appendChild(renderProposalsTable(iter.proposals));
       }
-      if (iter.verify_after) {
-        block.appendChild(el('h4', 'hl-sub', '再検証結果'));
-        block.appendChild(renderVerifyResult(iter.verify_after));
-      }
+      // 再検証は「無い」ことも情報。ブロックごと消すと、直ったのか実行していないのかが分からない。
+      block.appendChild(el('h4', 'hl-sub', '再検証結果'));
+      block.appendChild(renderReverifyResult(iter));
       loopEl.appendChild(block);
     });
   }
@@ -1889,8 +2328,13 @@
     if (addOnEmpty) { addOnEmpty.addEventListener('click', function () { showConnectForm(null); }); }
 
     document.addEventListener('click', function (ev) {
-      if (openRowMenu && !openRowMenu.wrap.contains(ev.target)) { closeRowMenu(); }
+      if (!openRowMenu) { return; }
+      if (openRowMenu.wrap.contains(ev.target) || openRowMenu.list.contains(ev.target)) { return; }
+      closeRowMenu();
     });
+    // body 直下・position: fixed で開くため、スクロールやリサイズで座標がずれる。追従させず閉じる。
+    window.addEventListener('scroll', function () { closeRowMenu(); }, true);
+    window.addEventListener('resize', function () { closeRowMenu(); });
     document.addEventListener('keydown', function (ev) {
       if (ev.key === 'Escape' || ev.key === 'Esc') { closeRowMenu(); }
     });

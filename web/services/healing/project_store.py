@@ -11,10 +11,14 @@ resolve_repo_path() での検証を弱めてはならない。
 from __future__ import annotations
 
 import json
+import logging
 import os
+import subprocess
+import time
 import uuid
+from collections import deque
 from collections.abc import Mapping
-from dataclasses import fields, replace
+from dataclasses import dataclass, fields, replace
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -28,6 +32,8 @@ HEALING_DIR_NAME = ".healing"
 
 #: ヒーリング対象として許可するリポジトリの親ディレクトリ一覧（os.pathsep 区切り）。
 ENV_ALLOWED_ROOTS = "WEBSPEC2DOC_HEALING_ROOTS"
+
+logger = logging.getLogger(__name__)
 
 _PROJECTS_FILE = "projects.json"
 _PROJECT_FIELDS = {f.name for f in fields(HealingProject)}
@@ -383,3 +389,169 @@ def check_connection(project: HealingProject) -> list[ConnectionCheck]:
         _check_github(project.github_repo, repo_path),
         _check_verify_command(project.verify_command),
     ]
+
+
+# ─────────────────────────── リポジトリ探索 ───────────────────────────
+
+_DISCOVER_MAX_DEPTH = 3  #: 許可ルートからの探索深さ上限
+_DISCOVER_TIMEOUT_SEC = 5.0  #: 走査全体の打ち切り時間（画面を固まらせないための保険）
+#: 降りても無意味・重いだけのディレクトリ名。
+_DISCOVER_SKIP_DIRS = frozenset({
+    ".git", "node_modules", "venv", ".venv", "site-packages",
+    "__pycache__", ".tox", "dist", "build",
+    # 退避・バックアップ用の置き場。中身は古いクローンで、直す対象ではない。
+    # 候補に出すと利用者が誤って選ぶ（2026-09-05 実画面で _rescue が出ていた）。
+    "_rescue", "_archive", "_backup", "_old", ".Trash", "Backup",
+})
+
+
+@dataclass(frozen=True)
+class DiscoveredRepo:
+    """許可ルート配下で見つかった git リポジトリ 1 件（接続フォームの候補）。"""
+
+    path: str  #: 絶対パス（判定用・登録時に repo_path として送る）
+    display_path: str  #: 画面表示用（ホームと利用者名を伏せた値）
+    name: str
+    root: str
+    branch: str = ""
+    remote: str = ""
+    github_repo: str = ""
+    suggested_command: str = ""
+    already_connected: bool = False
+
+
+def _display_path(path: Path | str) -> str:
+    """表示用パス。ホームを ~ にし、残った利用者名も伏せる。"""
+    masked = _mask_home(str(path))
+    user = Path.home().name
+    return masked.replace(user, "~") if len(user) >= 3 else masked
+
+
+def _git_output(repo: Path, args: list[str]) -> str:
+    """git を 1 回だけ叩いて標準出力を返す。失敗しても空文字にして落とさない。"""
+    try:
+        proc = subprocess.run(  # noqa: S603 - shell=False・引数は固定・cwd は検証済み
+            ["git", *args],
+            cwd=str(repo), capture_output=True, text=True,
+            timeout=3, shell=False, check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        logger.info("healing: git %s に失敗しました (%s): %s", " ".join(args), repo, exc)
+        return ""
+    return proc.stdout.strip() if proc.returncode == 0 else ""
+
+
+def _read_text(path: Path) -> str:
+    """テキストを読む。読めなければ空文字（理由はログに残す）。"""
+    try:
+        return path.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        logger.info("healing: %s を読めませんでした: %s", path, exc)
+        return ""
+
+
+def _has_npm_test(repo: Path) -> bool:
+    """package.json に中身のある test スクリプトがあるか。"""
+    raw = _read_text(repo / "package.json")
+    if not raw:
+        return False
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        logger.info("healing: package.json を解釈できません (%s): %s", repo, exc)
+        return False
+    scripts = data.get("scripts") if isinstance(data, dict) else None
+    return bool(isinstance(scripts, dict) and str(scripts.get("test") or "").strip())
+
+
+def _suggest_verify_command(repo: Path) -> str:
+    """実在するファイルだけを根拠に検証コマンドを推定する（推測では埋めない）。"""
+    tests = next((n for n in ("tests", "test") if (repo / n).is_dir()), "")
+    if tests and (repo / "venv" / "bin" / "python").is_file():
+        return f"venv/bin/python -m pytest {tests} -q"
+    if _has_npm_test(repo):
+        return "npm test"
+    if any(line.startswith("test:") for line in _read_text(repo / "Makefile").splitlines()):
+        return "make test"
+    if tests and ((repo / "pyproject.toml").is_file() or (repo / "setup.py").is_file()):
+        return f"python -m pytest {tests} -q"
+    return ""
+
+
+def _scan_root(root: Path, deadline: float, remaining: int) -> list[Path]:
+    """許可ルート 1 つを深さ制限つきで走査し、.git を持つディレクトリを返す。"""
+    found: list[Path] = []
+    queue: deque[tuple[Path, int]] = deque([(root, 0)])
+    while queue and len(found) < remaining and time.monotonic() < deadline:
+        current, depth = queue.popleft()
+        if (current / ".git").exists():
+            found.append(current)
+            continue  # 候補が見つかったらその配下へは降りない
+        if depth >= _DISCOVER_MAX_DEPTH:
+            continue
+        try:
+            children = sorted(p for p in current.iterdir() if p.is_dir() and not p.is_symlink())
+        except OSError as exc:
+            logger.info("healing: ディレクトリを読めませんでした (%s): %s", current, exc)
+            continue
+        queue.extend((c, depth + 1) for c in children if c.name not in _DISCOVER_SKIP_DIRS)
+    return found
+
+
+def _describe_repo(
+    repo: Path, root: Path, connected: frozenset[str], with_git: bool
+) -> DiscoveredRepo:
+    """候補 1 件をメタ情報つきで組み立てる。git 情報は取れなければ空のまま。"""
+    branch = _git_output(repo, ["rev-parse", "--abbrev-ref", "HEAD"]) if with_git else ""
+    remote = _git_output(repo, ["config", "--get", "remote.origin.url"]) if with_git else ""
+    github_repo = ""
+    if remote:
+        try:
+            from web.services.healing import git_ops
+
+            github_repo = str(git_ops.github_repo_from_remote(remote) or "")
+        except Exception as exc:  # noqa: BLE001 - 1件の失敗で一覧を落とさない
+            logger.info("healing: remote から owner/name を取れません (%s): %s", repo, exc)
+    return DiscoveredRepo(
+        path=str(repo),
+        display_path=_display_path(repo),
+        name=repo.name,
+        root=_display_path(root),
+        branch=branch,
+        remote=remote,
+        github_repo=github_repo,
+        suggested_command=_suggest_verify_command(repo),
+        already_connected=str(repo) in connected,
+    )
+
+
+def discover_repos(out_dir: Path, *, limit: int = 200) -> tuple[DiscoveredRepo, ...]:
+    """許可ルート配下の git リポジトリを探して返す。
+
+    利用者に絶対パスを手入力させないための候補一覧。各許可ルートから深さ
+    _DISCOVER_MAX_DEPTH まで走査し、全体で _DISCOVER_TIMEOUT_SEC 秒で打ち切る
+    （途中まででも返す）。limit 件で頭打ちにする。
+    """
+    deadline = time.monotonic() + _DISCOVER_TIMEOUT_SEC
+    try:
+        connected = frozenset(
+            str(p.repo_path) for p in list_projects(Path(out_dir)) if p.repo_path
+        )
+    except Exception as exc:  # noqa: BLE001 - 接続済み判定の失敗で一覧を止めない
+        logger.info("healing: 接続済み一覧を読めませんでした: %s", exc)
+        connected = frozenset()
+
+    pairs: list[tuple[Path, Path]] = []
+    seen: set[str] = set()
+    for root in allowed_roots():
+        if len(pairs) >= limit or time.monotonic() >= deadline:
+            break
+        for repo in _scan_root(root, deadline, limit - len(pairs)):
+            if str(repo) not in seen:
+                seen.add(str(repo))
+                pairs.append((repo, root))
+    pairs.sort(key=lambda item: (str(item[1]), str(item[0])))
+    return tuple(
+        _describe_repo(repo, root, connected, time.monotonic() < deadline)
+        for repo, root in pairs
+    )

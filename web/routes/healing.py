@@ -400,6 +400,48 @@ def api_check_project(project_id: str):
         return {"error": "処理に失敗しました"}, 500
 
 
+def _discovered_dict(repo: project_store.DiscoveredRepo) -> dict[str, Any]:
+    """探索結果を JSON 化する。display_path / root は表示用（ホームと利用者名を伏せ済み）。
+
+    path だけは実パスを返す。登録は既存の POST /api/healing/projects が
+    repo_path（実パス文字列）を要求しており、そのシグネチャを変えない方針のため。
+    利用者名を伏せた表示用パスは expanduser で元へ戻せず、識別子だけを渡す設計にできない。
+    この API は require_admin() 済みで、返す先は接続を作成できる管理者に限られる。
+    """
+    return {
+        "path": repo.path,
+        "display_path": repo.display_path,
+        "name": repo.name,
+        "root": repo.root,
+        "branch": repo.branch,
+        "remote": repo.remote,
+        "github_repo": repo.github_repo,
+        "suggested_command": repo.suggested_command,
+        "already_connected": repo.already_connected,
+    }
+
+
+@bp.get("/api/healing/discover")
+def api_discover_repos():
+    """許可ルート配下の git リポジトリ候補を返す（絶対パスの手入力をなくすため）。"""
+    guard = require_admin()
+    if guard is not None:
+        return guard
+    try:
+        limit = _clean_int(request.args.get("limit"), 200, 1, 500)
+        repos = project_store.discover_repos(_out(), limit=limit)
+        _record_audit("healing.project.discover", {"count": len(repos), "limit": limit})
+        return {
+            "repos": [_discovered_dict(r) for r in repos],
+            "truncated": len(repos) >= limit,
+        }
+    except HealingError as exc:
+        return _error_response(exc)
+    except Exception:
+        logger.exception("healing: discover_repos に失敗しました")
+        return {"error": "処理に失敗しました"}, 500
+
+
 # ─────────────────────────── API: runs ───────────────────────────
 
 

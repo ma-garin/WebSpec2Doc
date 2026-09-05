@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>保守対応報告書 - {{ report.project_name }}</title>
+  {# 印刷用。サイドバーもトップバーも無い。A4 に収める。
+     PDF はブラウザの「PDF に保存」で出す（専用ライブラリを足さない）。 #}
+  <style>
+    :root {
+      --tx: #101828; --tx2: #475467; --tx3: #667085; --line: #D0D5DD;
+      --ok: #067647; --er: #D92D20; --wn: #B54708; --bg: #F9FAFB;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px;
+      background: #fff;
+      color: var(--tx);
+      font-family: 'Inter', 'Noto Sans JP', system-ui, -apple-system, sans-serif;
+      font-size: 12px;
+      line-height: 1.7;
+    }
+    .sheet { max-width: 760px; margin: 0 auto; }
+    .no-print { margin: 0 auto 20px; max-width: 760px; display: flex; gap: 8px; align-items: center; }
+    .no-print button, .no-print a {
+      border: 1px solid var(--line); background: #fff; color: var(--tx);
+      border-radius: 7px; padding: 6px 14px; font-size: 12px; font-weight: 600;
+      cursor: pointer; text-decoration: none;
+    }
+    .no-print .primary { background: #1570EF; border-color: #1570EF; color: #fff; }
+    .no-print small { color: var(--tx3); }
+
+    h1 { font-size: 17px; font-weight: 700; margin: 0 0 4px; }
+    .meta { color: var(--tx3); font-size: 11px; margin: 0 0 18px; display: flex; flex-wrap: wrap; gap: 4px 14px; }
+    h2 { font-size: 11.5px; font-weight: 700; letter-spacing: .05em; color: var(--tx2); margin: 16px 0 6px; }
+    p { margin: 0 0 6px; }
+    .note { font-size: 11px; color: var(--tx3); margin: 2px 0 0; }
+    code { font-family: ui-monospace, Menlo, monospace; font-size: 10.5px; background: var(--bg); padding: 0 4px; border-radius: 3px; }
+    blockquote { margin: 0 0 6px; padding: 2px 0 2px 10px; border-left: 3px solid var(--line); color: var(--tx2); }
+
+    table { width: 100%; border-collapse: collapse; font-size: 11.5px; margin: 4px 0 8px; }
+    td, th { border: 1px solid var(--line); padding: 5px 8px; text-align: left; vertical-align: top; }
+    th { background: var(--bg); color: var(--tx3); font-weight: 500; width: 132px; }
+    .ok { color: var(--ok); font-weight: 600; }
+    .er { color: var(--er); font-weight: 600; }
+    .mute { color: var(--tx3); }
+
+    ul { margin: 0 0 8px; padding-left: 18px; }
+    li { margin: 0 0 4px; }
+    li .sev { font-weight: 600; }
+    li .sev.high { color: var(--er); }
+    li .sev.medium { color: var(--wn); }
+    li .sev.low { color: var(--tx3); }
+    li small { display: block; color: var(--tx3); font-size: 10.5px; }
+
+    .shot { border: 1px solid var(--line); border-radius: 5px; max-width: 320px; margin: 6px 0; }
+    .shot img { display: block; width: 100%; height: auto; }
+    .sign { font-size: 11px; color: var(--tx3); }
+
+    @page { size: A4; margin: 18mm; }
+    @media print {
+      .no-print { display: none; }
+      body { padding: 0; }
+      h2 { break-after: avoid; }
+      table, ul, blockquote { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="no-print">
+  <button type="button" class="primary" onclick="window.print()">印刷 / PDF に保存</button>
+  <a href="/healing/reports/{{ report.report_id }}">報告書に戻る</a>
+  <small>ブラウザの「PDF に保存」で PDF になります。</small>
+</div>
+
+<div class="sheet">
+  <h1>保守対応報告書</h1>
+  <p class="meta">
+    <span>案件: {{ report.project_name }}</span>
+    {% if report.target_url %}<span>対象: {{ report.target_url }}</span>{% endif %}
+    {% if report.incident_detected_at %}<span>対応日: {{ report.incident_detected_at[:10] }}</span>{% endif %}
+    {% if report.pr_number %}<span>PR: #{{ report.pr_number }}</span>{% endif %}
+  </p>
+
+  <h2>1. 事象</h2>
+  <p>{{ report.incident_text or '記録なし' }}</p>
+  {% set incident_note = [report.incident_screen_name, report.incident_test_id, report.incident_verify] | select | join(' ／ ') %}
+  {% if incident_note %}<p class="note">{{ incident_note }}</p>{% endif %}
+  {% if report.incident_screenshot %}
+  <div class="shot"><img src="/api/healing/reports/{{ report.report_id }}/screenshot?path={{ report.incident_screenshot | urlencode }}" alt="修正前の画面"></div>
+  {% endif %}
+
+  <h2>2. 原因</h2>
+  <p>{{ report.cause_text or '—' }}</p>
+  {% if report.cause_location %}<p class="note">箇所: <code>{{ report.cause_location }}</code></p>{% endif %}
+
+  <h2>3. 対応</h2>
+  {% if report.action_text %}
+  <p>{{ report.action_text }}</p>
+  {% set action_note = [report.action_by, report.action_diff_stats] | select | join(' ／ ') %}
+  {% if action_note %}<p class="note">{{ action_note }}</p>{% endif %}
+  {% else %}
+  <p>自動では直せませんでした。対応は担当者が記入してください。</p>
+  {% endif %}
+  {% if report.action_screenshot %}
+  <div class="shot"><img src="/api/healing/reports/{{ report.report_id }}/screenshot?path={{ report.action_screenshot | urlencode }}" alt="修正後の画面"></div>
+  {% endif %}
+
+  <h2>4. 検証</h2>
+  <table>
+    <tr><th>修正前</th><td class="er">{{ report.verify_before or '—' }}</td></tr>
+    <tr><th>修正後</th><td class="{{ 'ok' if report.verify_after_ok else ('er' if report.verify_after_ok is not none else 'mute') }}">{{ report.verify_after or '—' }}</td></tr>
+    <tr><th>画面仕様との照合</th><td class="{{ 'mute' if report.spec_match == '未照合' else 'ok' }}">{{ report.spec_match }}</td></tr>
+  </table>
+
+  <h2>確認が必要な点</h2>
+  {% if report.attention %}
+  <ul>
+    {% for item in report.attention %}
+    <li>
+      <span class="sev {{ item.severity }}">{{ {'high': '高', 'medium': '中', 'low': '低'}.get(item.severity, item.severity) }}</span>
+      {{ item.label }}
+      {% if item.detail %}<small>{{ item.detail }}</small>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p>機械的に検出できる兆候はありませんでした。テストの通過は正しさを保証しません。差分を確認してください。</p>
+  {% endif %}
+
+  <h2>5. 承認</h2>
+  <p class="sign">
+    {%- set roles = {'proposed': '提案', 'approved': '承認', 'returned': '差し戻し', 'rejected': '却下', 'customer': '顧客確認'} -%}
+    {%- set parts = [] -%}
+    {%- for a in report.approvals -%}
+      {%- set _ = parts.append(roles.get(a.role, a.role) ~ ': ' ~ (a.who or '—') ~ ' ' ~ (a.at or '')[:16] | replace('T', ' ')) -%}
+    {%- endfor -%}
+    {%- set _ = parts.append('PR: #' ~ report.pr_number if report.pr_number else 'PR: 承認後に作成') -%}
+    {{ parts | join(' ／ ') }}
+  </p>
+</div>
+
+</body>
+</html>

@@ -290,6 +290,22 @@ def healing_report_page(report_id: str):
     return render_template("healing_report.html", report_id=report_id)
 
 
+@bp.get("/healing/reports/<report_id>/print")
+def healing_report_print(report_id: str):
+    """印刷用。サイドバーもトップバーも無い A4 の様式。
+
+    PDF はブラウザの「PDF に保存」で出す。専用ライブラリを足さない
+    （src/generator/pdf_reporter.py は Playwright を起動するため、
+    画面から同期で呼ぶには重い）。
+    """
+    if not _ID_RE.match(report_id):
+        abort(404)
+    report = report_doc.load_report(_out(), report_id)
+    if report is None:
+        abort(404)
+    return render_template("healing_report_print.html", report=report_doc.to_dict(report))
+
+
 @bp.get("/api/healing/reports/<report_id>/screenshot")
 def api_report_screenshot(report_id: str):
     """報告書に添える画面のスクリーンショット。
@@ -816,6 +832,10 @@ def api_export_report(report_id: str):
         if fmt == "md":
             body = report_doc.render_markdown(report)
             return body, 200, {"Content-Type": "text/markdown; charset=utf-8"}
+        if fmt == "html":
+            return render_template(
+                "healing_report_print.html", report=report_doc.to_dict(report)
+            )
         return {"error": f"未対応の形式です: {fmt}"}, 400
     except Exception:
         logger.exception("healing: 報告書の書き出しに失敗しました")

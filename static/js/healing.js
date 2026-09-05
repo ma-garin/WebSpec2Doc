@@ -31,28 +31,41 @@
     //: 直近に描画した run の JSON 文字列。同じなら描き直さない。
     lastRenderedRun: null,
     selectedProjectId: null,
-    runs: [],
     selectedRunId: null,
     currentRun: null,
     pollRunId: null,
-    pollTimer: null
+    pollTimer: null,
+    historyRuns: [],
+    historyLimit: 20,
+    editingProjectId: null,
+    focusRunId: '',
+    activeView: 'run'
   };
 
   var $ = {};
 
   function cacheDom() {
     var ids = [
-      'hl-error', 'hl-projects-empty', 'hl-projects', 'hl-add-project',
-      'hl-main-empty', 'hl-connect-form', 'hl-project-view',
+      'hl-error', 'hl-nav-run', 'hl-nav-projects', 'hl-nav-history', 'hl-add-project',
+      'hl-view-run', 'hl-view-projects', 'hl-view-history',
+      'hl-project-select', 'hl-project-meta', 'hl-instructions', 'hl-start',
+      'hl-start-confirm', 'hl-start-yes', 'hl-start-no',
+      'hl-check-btn', 'hl-checks',
+      'hl-stat-projects', 'hl-stat-runs', 'hl-stat-fixed', 'hl-stat-pr',
+      'hl-run-sub', 'hl-status',
+      'hl-create-pr', 'hl-rerun', 'hl-approve', 'hl-merge', 'hl-reject', 'hl-cancel',
+      'hl-merge-confirm', 'hl-merge-yes', 'hl-merge-no',
+      'hl-reject-confirm', 'hl-reject-yes', 'hl-reject-no',
+      'hl-cancel-confirm', 'hl-cancel-yes', 'hl-cancel-no',
+      'hl-decision-note', 'hl-pr-info', 'hl-run-error',
+      'hl-loop', 'hl-loop-empty', 'hl-log',
+      'hl-unverified', 'hl-unverified-list',
+      'hl-projects', 'hl-projects-empty',
+      'hl-connect-form', 'hl-form-title',
       'hl-f-name', 'hl-f-path', 'hl-f-branch', 'hl-f-cmd', 'hl-f-remote',
       'hl-f-github', 'hl-f-agent', 'hl-f-max-iter', 'hl-f-concurrency',
       'hl-connect-submit', 'hl-connect-cancel',
-      'hl-project-name', 'hl-project-path', 'hl-project-branch', 'hl-project-cmd',
-      'hl-check-btn', 'hl-checks', 'hl-instructions', 'hl-start',
-      'hl-loop-empty', 'hl-loop', 'hl-log',
-      'hl-status', 'hl-cancel', 'hl-cancel-confirm', 'hl-cancel-yes', 'hl-cancel-no',
-      'hl-pr', 'hl-unverified', 'hl-unverified-list',
-      'hl-runs-empty', 'hl-runs'
+      'hl-runs', 'hl-runs-empty', 'hl-runs-more'
     ];
     ids.forEach(function (id) { $[id] = document.getElementById(id); });
   }
@@ -106,110 +119,95 @@
     return String(s).replace('T', ' ').slice(0, 19);
   }
 
-  /* ---------------- プロジェクト ---------------- */
+  function statusBadgeClass(status) {
+    if (status === 'succeeded' || status === 'no_defects') { return 'is-done'; }
+    if (status === 'failed') { return 'is-failed'; }
+    if (status === 'cancelled') { return 'is-cancelled'; }
+    if (status === 'awaiting_human') { return 'is-waiting'; }
+    return 'is-running';
+  }
+
+  function getProject(id) {
+    var found = null;
+    state.projects.forEach(function (p) { if (p.project_id === id) { found = p; } });
+    return found;
+  }
+
+  /* ---------------- ビュー切り替え ---------------- */
+
+  function switchView(view) {
+    state.activeView = view;
+    ['run', 'projects', 'history'].forEach(function (v) {
+      $['hl-view-' + v].hidden = v !== view;
+    });
+    $['hl-nav-run'].classList.toggle('active', view === 'run');
+    $['hl-nav-projects'].classList.toggle('active', view === 'projects');
+    $['hl-nav-history'].classList.toggle('active', view === 'history');
+  }
+
+  /* ---------------- 統計 ---------------- */
+
+  function loadStats() {
+    $['hl-stat-projects'].textContent = String(state.projects.length);
+    apiFetch('/runs?limit=200').then(function (data) {
+      var runs = asList(data, 'runs');
+      var fixed = 0;
+      var waitingPr = 0;
+      runs.forEach(function (r) {
+        fixed += (r.fixed_count || 0);
+        if (r.pr_number && r.pr_state === 'open') { waitingPr += 1; }
+      });
+      $['hl-stat-runs'].textContent = String(runs.length);
+      $['hl-stat-fixed'].textContent = String(fixed);
+      $['hl-stat-pr'].textContent = String(waitingPr);
+    }).catch(function () {
+      $['hl-stat-runs'].textContent = '-';
+      $['hl-stat-fixed'].textContent = '-';
+      $['hl-stat-pr'].textContent = '-';
+    });
+  }
+
+  /* ---------------- 接続先（プロジェクト） ---------------- */
 
   function loadProjects() {
     return apiFetch('/projects').then(function (data) {
       state.projects = asList(data, 'projects');
       renderProjects();
+      renderProjectSelect();
+      if (state.selectedProjectId) { updateProjectMeta(); }
     }).catch(function (e) { showError('接続先の一覧を取得できませんでした: ' + e.message); });
   }
 
-  function renderProjects() {
-    var ul = $['hl-projects'];
-    ul.textContent = '';
-    $['hl-projects-empty'].hidden = state.projects.length > 0;
+  function renderProjectSelect() {
+    var sel = $['hl-project-select'];
+    var prevValue = sel.value;
+    sel.textContent = '';
     state.projects.forEach(function (p) {
-      var li = el('li', 'hl-project-card');
-      if (p.project_id === state.selectedProjectId) { li.classList.add('is-selected'); }
-      li.appendChild(el('div', 'hl-pc-name', p.name || p.project_id || '(名称未設定)'));
-      li.appendChild(el('div', 'hl-pc-path hl-mono hl-ellipsis', p.repo_path || ''));
-      li.lastChild.title = p.repo_path || '';
-
-      var statusRow = el('div', 'hl-pc-status');
-      var dot = el('span', 'hl-dot');
-      var connected = state.checkResults[p.project_id];
-      dot.classList.add(connected === true ? 'is-ok' : (connected === false ? 'is-bad' : 'is-unknown'));
-      statusRow.appendChild(dot);
-      statusRow.appendChild(el('span', null, connected === true ? '接続OK' : (connected === false ? '接続エラー' : '未確認')));
-      li.appendChild(statusRow);
-
-      if (p.last_run_status) {
-        li.appendChild(el('div', 'hl-pc-last-run', '前回: ' + (STATUS_LABELS[p.last_run_status] || p.last_run_status)));
-      }
-
-      li.addEventListener('click', function () { selectProject(p.project_id); });
-      ul.appendChild(li);
+      var opt = el('option', null, p.name || p.project_id);
+      opt.value = p.project_id;
+      sel.appendChild(opt);
     });
+    if (state.selectedProjectId && getProject(state.selectedProjectId)) {
+      sel.value = state.selectedProjectId;
+    } else if (prevValue && getProject(prevValue)) {
+      sel.value = prevValue;
+    }
   }
 
-  function selectProject(id) {
-    state.selectedProjectId = id;
-    state.selectedRunId = null;
-    state.currentRun = null;
-    stopPolling();
-    hideConnectForm();
-    renderProjects();
-    var project = state.projects.filter(function (p) { return p.project_id === id; })[0];
-    if (!project) { return; }
-
-    $['hl-main-empty'].hidden = true;
-    $['hl-project-view'].hidden = false;
-    $['hl-project-name'].textContent = project.name || project.project_id;
-    $['hl-project-path'].textContent = project.repo_path || '';
-    $['hl-project-path'].title = project.repo_path || '';
-    $['hl-project-branch'].textContent = project.branch || project.default_branch || '';
-    $['hl-project-cmd'].textContent = project.verify_command || '';
-    $['hl-project-cmd'].title = project.verify_command || '';
-
-    $['hl-checks'].textContent = '';
-    renderLoop(null);
-    renderLogLines([]);
-    renderStatusBadge(null);
-    renderPrBlock(null);
-    renderUnverified(null);
-
-    loadRuns(id);
-  }
-
-  function showConnectForm() {
-    $['hl-main-empty'].hidden = true;
-    $['hl-project-view'].hidden = true;
-    $['hl-connect-form'].hidden = false;
-  }
-  function hideConnectForm() {
-    $['hl-connect-form'].hidden = true;
-  }
-
-  function submitConnectForm() {
-    var name = $['hl-f-name'].value.trim();
-    var path = $['hl-f-path'].value.trim();
-    if (!name || !path) { showError('名前とリポジトリのパスは必須です。'); return; }
-    // キー名は API（web/routes/healing.py）の受け口と 1 文字も違えられない。
-    // path/branch/concurrency のような「短い呼び方」で送ると 400 になる。
-    var payload = {
-      name: name,
-      repo_path: path,
-      default_branch: $['hl-f-branch'].value.trim() || 'main',
-      verify_command: $['hl-f-cmd'].value.trim(),
-      remote: $['hl-f-remote'].value.trim() || 'origin',
-      // 空欄は null ではなく空文字。null は「owner/name の形式違反」として弾かれる。
-      github_repo: $['hl-f-github'].value.trim(),
-      agent: $['hl-f-agent'].value,
-      max_iterations: parseInt($['hl-f-max-iter'].value, 10) || 3,
-      max_parallel_agents: parseInt($['hl-f-concurrency'].value, 10) || 3
-    };
-    clearError();
-    apiFetch('/projects', { method: 'POST', body: JSON.stringify(payload) }).then(function (data) {
-      hideConnectForm();
-      return loadProjects().then(function () {
-        var created = asObj(data, 'project');
-        if (created && created.project_id) { selectProject(created.project_id); }
+  function checkProject(projectId) {
+    return apiFetch('/projects/' + projectId + '/check', { method: 'POST', body: JSON.stringify({}) })
+      .then(function (data) {
+        var list = asList(data, 'checks');
+        if (!list.length) {
+          list = CHECK_DEFS.map(function (def) {
+            return getCheckItem(data, def.key) || { key: def.key, label: def.label, ok: false, detail: '' };
+          });
+        }
+        var okAll = list.length > 0 && list.every(function (item) { return item.ok === true; });
+        state.checkResults[projectId] = okAll;
+        return { list: list, okAll: okAll };
       });
-    }).catch(function (e) { showError('接続に失敗しました: ' + e.message); });
   }
-
-  /* ---------------- 接続確認 ---------------- */
 
   function getCheckItem(data, key) {
     var list = asList(data, 'checks');
@@ -220,28 +218,190 @@
     return null;
   }
 
+  function renderProjects() {
+    var tbody = $['hl-projects'];
+    tbody.textContent = '';
+    $['hl-projects-empty'].hidden = state.projects.length > 0;
+    state.projects.forEach(function (p) {
+      var tr = el('tr');
+      tr.appendChild(el('td', null, p.name || p.project_id || '(名称未設定)'));
+      var tdPath = el('td', 'hl-kv', p.repo_path || '');
+      tdPath.title = p.repo_path || '';
+      tr.appendChild(tdPath);
+      tr.appendChild(el('td', null, p.default_branch || p.branch || ''));
+      var tdCmd = el('td', 'hl-kv', p.verify_command || '');
+      tdCmd.title = p.verify_command || '';
+      tr.appendChild(tdCmd);
+      tr.appendChild(el('td', null, p.agent || ''));
+
+      var tdActions = el('td', 'hl-row-actions');
+      var useBtn = el('button', 'btn-primary', '対象にする');
+      useBtn.type = 'button';
+      useBtn.addEventListener('click', function () { selectProject(p.project_id); switchView('run'); });
+
+      var checkBtn = el('button', 'btn-outline-sm', '接続を確認');
+      checkBtn.type = 'button';
+      var checkResult = el('span', 'hl-row-check-result');
+      checkBtn.addEventListener('click', function () {
+        checkResult.textContent = '確認中…';
+        checkProject(p.project_id).then(function (result) {
+          checkResult.textContent = result.okAll ? '接続OK' : '接続エラー';
+        }).catch(function (e) {
+          checkResult.textContent = '確認失敗';
+          showError('接続確認に失敗しました: ' + e.message);
+        });
+      });
+
+      var editBtn = el('button', 'btn-outline-sm', '編集');
+      editBtn.type = 'button';
+      editBtn.addEventListener('click', function () { showConnectForm(p); });
+
+      var deleteBtn = el('button', 'btn-outline-sm', '削除');
+      deleteBtn.type = 'button';
+
+      var deleteConfirm = el('div', 'hl-merge-confirm');
+      deleteConfirm.hidden = true;
+      deleteConfirm.appendChild(el('span', null, '本当に削除しますか？'));
+      var delYes = el('button', 'btn-primary', 'はい、削除する');
+      delYes.type = 'button';
+      delYes.addEventListener('click', function () { deleteConfirm.hidden = true; deleteProject(p.project_id); });
+      var delNo = el('button', 'btn-outline-sm', 'やめる');
+      delNo.type = 'button';
+      delNo.addEventListener('click', function () { deleteConfirm.hidden = true; });
+      deleteConfirm.appendChild(delYes);
+      deleteConfirm.appendChild(delNo);
+      deleteBtn.addEventListener('click', function () { deleteConfirm.hidden = false; });
+
+      tdActions.appendChild(useBtn);
+      tdActions.appendChild(checkBtn);
+      tdActions.appendChild(checkResult);
+      tdActions.appendChild(editBtn);
+      tdActions.appendChild(deleteBtn);
+      tdActions.appendChild(deleteConfirm);
+      tr.appendChild(tdActions);
+      tbody.appendChild(tr);
+    });
+  }
+
+  function showConnectForm(project) {
+    state.editingProjectId = project ? project.project_id : null;
+    $['hl-connect-form'].hidden = false;
+    if (project) {
+      $['hl-form-title'].textContent = '接続を編集する';
+      $['hl-connect-submit'].textContent = '保存する';
+      $['hl-f-name'].value = project.name || '';
+      $['hl-f-path'].value = project.repo_path || '';
+      $['hl-f-branch'].value = project.default_branch || project.branch || 'main';
+      $['hl-f-cmd'].value = project.verify_command || '';
+      $['hl-f-remote'].value = project.remote || 'origin';
+      $['hl-f-github'].value = project.github_repo || '';
+      if (project.agent) { $['hl-f-agent'].value = project.agent; }
+      $['hl-f-max-iter'].value = project.max_iterations || 3;
+      $['hl-f-concurrency'].value = project.max_parallel_agents || 3;
+    } else {
+      $['hl-form-title'].textContent = 'コードベースを接続する';
+      $['hl-connect-submit'].textContent = '接続する';
+      $['hl-f-name'].value = '';
+      $['hl-f-path'].value = '';
+      $['hl-f-branch'].value = 'main';
+      $['hl-f-cmd'].value = '';
+      $['hl-f-remote'].value = 'origin';
+      $['hl-f-github'].value = '';
+      $['hl-f-max-iter'].value = 3;
+      $['hl-f-concurrency'].value = 3;
+    }
+  }
+  function hideConnectForm() {
+    $['hl-connect-form'].hidden = true;
+  }
+
+  function submitConnectForm() {
+    var name = $['hl-f-name'].value.trim();
+    var path = $['hl-f-path'].value.trim();
+    if (!name || !path) { showError('名前とリポジトリのパスは必須です。'); return; }
+    // キー名は API（web/routes/healing.py）の受け口と 1 文字も違えられない。
+    var payload = {
+      name: name,
+      repo_path: path,
+      default_branch: $['hl-f-branch'].value.trim() || 'main',
+      verify_command: $['hl-f-cmd'].value.trim(),
+      remote: $['hl-f-remote'].value.trim() || 'origin',
+      github_repo: $['hl-f-github'].value.trim(),
+      agent: $['hl-f-agent'].value,
+      max_iterations: parseInt($['hl-f-max-iter'].value, 10) || 3,
+      max_parallel_agents: parseInt($['hl-f-concurrency'].value, 10) || 3
+    };
+    clearError();
+    var editingId = state.editingProjectId;
+    var req = editingId
+      ? apiFetch('/projects/' + editingId, { method: 'PATCH', body: JSON.stringify(payload) })
+      : apiFetch('/projects', { method: 'POST', body: JSON.stringify(payload) });
+    req.then(function (data) {
+      hideConnectForm();
+      return loadProjects().then(function () {
+        loadStats();
+        if (editingId) {
+          selectProject(editingId);
+        } else {
+          var created = asObj(data, 'project');
+          if (created && created.project_id) { selectProject(created.project_id); }
+        }
+      });
+    }).catch(function (e) { showError((editingId ? '更新' : '接続') + 'に失敗しました: ' + e.message); });
+  }
+
+  function deleteProject(projectId) {
+    clearError();
+    apiFetch('/projects/' + projectId, { method: 'DELETE' }).then(function () {
+      return loadProjects().then(function () {
+        loadStats();
+        if (state.selectedProjectId === projectId) {
+          if (state.projects.length) {
+            selectProject(state.projects[0].project_id);
+          } else {
+            state.selectedProjectId = null;
+            clearRunView();
+          }
+        }
+      });
+    }).catch(function (e) { showError('接続の削除に失敗しました: ' + e.message); });
+  }
+
+  /* ---------------- 実行ビュー: 対象・接続確認 ---------------- */
+
+  function updateProjectMeta() {
+    var p = getProject(state.selectedProjectId);
+    if (!p) { $['hl-project-meta'].textContent = ''; return; }
+    var parts = [
+      p.default_branch || p.branch || '',
+      p.verify_command || '',
+      p.agent || '',
+      '最大' + (p.max_iterations || 3) + '周 / 同時' + (p.max_parallel_agents || 3) + '本'
+    ];
+    $['hl-project-meta'].textContent = parts.filter(function (v) { return v; }).join(' ・ ');
+  }
+
+  function updateRunSub(run) {
+    if (run) {
+      $['hl-run-sub'].textContent = (run.project_name || '') + '・ブランチ ' + (run.branch || '');
+      return;
+    }
+    var p = getProject(state.selectedProjectId);
+    $['hl-run-sub'].textContent = p ? ((p.name || '') + '・ブランチ ' + (p.default_branch || p.branch || '')) : '';
+  }
+
   function runCheck() {
     if (!state.selectedProjectId) { return; }
     clearError();
     $['hl-checks'].textContent = '';
-    apiFetch('/projects/' + state.selectedProjectId + '/check', { method: 'POST', body: JSON.stringify({}) })
-      .then(function (data) { renderChecks(data); })
-      .catch(function (e) { showError('接続確認に失敗しました: ' + e.message); });
+    checkProject(state.selectedProjectId).then(function (result) {
+      renderChecksList(result.list);
+    }).catch(function (e) { showError('接続確認に失敗しました: ' + e.message); });
   }
 
-  function renderChecks(data) {
+  function renderChecksList(list) {
     var ul = $['hl-checks'];
     ul.textContent = '';
-    // サーバが返した項目をそのまま、返ってきた順に描く。
-    // 画面側で項目名（key）を持って突き合わせると、片方の名前が変わっただけで
-    // 「✕ 確認できませんでした」と出て、実際は成功しているのに失敗に見える
-    // （実画面で repo / repository の食い違いにより発生）。ラベルもサーバの値を使う。
-    var list = asList(data, 'checks');
-    if (!list.length) {
-      list = CHECK_DEFS.map(function (def) {
-        return getCheckItem(data, def.key) || { key: def.key, label: def.label, ok: false, detail: '' };
-      });
-    }
     list.forEach(function (item) {
       var ok = item.ok === true;
       var li = el('li', 'hl-check-row');
@@ -252,42 +412,45 @@
       li.title = detail;
       ul.appendChild(li);
     });
-    // 左レールのカードにも結果を反映する。確認したのに「未確認」のままだと、
-    // 押した操作が効いていないように見える。
-    var okAll = list.length > 0 && list.every(function (item) { return item.ok === true; });
-    state.checkResults[state.selectedProjectId] = okAll;
-    renderProjects();
   }
 
-  /* ---------------- 実行 ---------------- */
+  /* ---------------- 実行の選択・切り替え ---------------- */
 
-  function loadRuns(projectId) {
-    return apiFetch('/runs?project_id=' + encodeURIComponent(projectId)).then(function (data) {
-      state.runs = asList(data, 'runs').slice(0, 10);
-      renderRunsList();
-      if (state.focusRunId && state.runs.some(function (r) { return r.run_id === state.focusRunId; })) {
-        openRun(state.focusRunId);
-      } else if (state.runs.length > 0) {
-        openRun(state.runs[0].run_id);
-      }
-    }).catch(function (e) { showError('実行履歴を取得できませんでした: ' + e.message); });
+  function hideAllConfirms() {
+    $['hl-start-confirm'].hidden = true;
+    $['hl-cancel-confirm'].hidden = true;
+    $['hl-merge-confirm'].hidden = true;
+    $['hl-reject-confirm'].hidden = true;
   }
 
-  function renderRunsList() {
-    var ul = $['hl-runs'];
-    ul.textContent = '';
-    $['hl-runs-empty'].hidden = state.runs.length > 0;
-    state.runs.forEach(function (r) {
-      var li = el('li', 'hl-run-row');
-      if (r.run_id === state.selectedRunId) { li.classList.add('is-selected'); }
-      var badge = el('span', 'hl-status-badge ' + statusBadgeClass(r.status), STATUS_LABELS[r.status] || r.status);
-      li.appendChild(badge);
-      li.appendChild(el('span', 'hl-run-time', fmtTime(r.started_at)));
-      var prNo = r.pull_request && r.pull_request.number;
-      li.appendChild(el('span', 'hl-run-pr', prNo ? ('PR #' + prNo) : ''));
-      li.addEventListener('click', function () { openRun(r.run_id); });
-      ul.appendChild(li);
-    });
+  function clearRunView() {
+    state.selectedRunId = null;
+    state.currentRun = null;
+    state.lastRenderedRun = null;
+    stopPolling();
+    hideAllConfirms();
+    $['hl-checks'].textContent = '';
+    updateProjectMeta();
+    updateRunSub(null);
+    renderLoop(null);
+    renderLogLines([]);
+    renderStatusBadge(null);
+    renderPrInfo(null);
+    renderUnverified(null);
+    updateActionButtons(null);
+  }
+
+  function selectProject(id, opts) {
+    opts = opts || {};
+    state.selectedProjectId = id || null;
+    if ($['hl-project-select']) { $['hl-project-select'].value = id || ''; }
+    clearRunView();
+    if (!id) { return; }
+    if (opts.openRunId) { openRun(opts.openRunId); return; }
+    apiFetch('/runs?project_id=' + encodeURIComponent(id) + '&limit=1').then(function (data) {
+      var runs = asList(data, 'runs');
+      if (runs.length) { openRun(runs[0].run_id); }
+    }).catch(function (e) { showError('実行状況の取得に失敗しました: ' + e.message); });
   }
 
   function startRun() {
@@ -297,14 +460,14 @@
       project_id: state.selectedProjectId,
       extra_instructions: ($['hl-instructions'] ? $['hl-instructions'].value.trim() : '')
     };
-    var instructions = $['hl-instructions'].value.trim();
-    if (instructions) { payload.instructions = instructions; }
     $['hl-start'].disabled = true;
     apiFetch('/runs', { method: 'POST', body: JSON.stringify(payload) }).then(function (data) {
       $['hl-start'].disabled = false;
       var run = asObj(data, 'run');
       if (run && run.run_id) {
-        return loadRuns(state.selectedProjectId).then(function () { openRun(run.run_id); });
+        openRun(run.run_id);
+        loadStats();
+        loadHistory(state.historyLimit || 20);
       }
     }).catch(function (e) {
       $['hl-start'].disabled = false;
@@ -314,6 +477,7 @@
 
   function openRun(runId) {
     state.selectedRunId = runId;
+    hideAllConfirms();
     stopPolling();
     // 別の実行を開くときは前回の署名を捨てる（同じ内容でも描き直す必要がある）。
     state.lastRenderedRun = null;
@@ -330,7 +494,7 @@
       if (signature !== state.lastRenderedRun) {
         state.lastRenderedRun = signature;
         renderRun(run);
-        renderRunsList();
+        loadStats();
       }
       if (POLL_STOP_STATUSES.indexOf(run.status) === -1) {
         startPolling(runId);
@@ -363,46 +527,92 @@
     }
   });
 
-  function statusBadgeClass(status) {
-    if (status === 'succeeded' || status === 'no_defects') { return 'is-done'; }
-    if (status === 'failed') { return 'is-failed'; }
-    if (status === 'cancelled') { return 'is-cancelled'; }
-    if (status === 'awaiting_human') { return 'is-waiting'; }
-    return 'is-running';
-  }
+  /* ---------------- 実行の描画 ---------------- */
 
   function renderRun(run) {
     renderStatusBadge(run);
+    updateRunSub(run);
     renderLoop(run);
     renderLogLines(run.log || []);
-    renderPrBlock(run);
+    renderPrInfo(run);
     renderUnverified(run);
+    updateActionButtons(run);
   }
 
   function renderStatusBadge(run) {
     var badge = $['hl-status'];
-    badge.className = 'hl-status-badge';
+    badge.className = 'hl-badge';
     if (!run) {
       badge.textContent = '未選択';
-      $['hl-cancel'].hidden = true;
-      $['hl-cancel-confirm'].hidden = true;
+      $['hl-run-error'].hidden = true;
+      $['hl-run-error'].textContent = '';
       return;
     }
     badge.classList.add(statusBadgeClass(run.status));
     var label = STATUS_LABELS[run.status] || run.status || '';
     var step = run.step_label || '';
     // step_label は状態名で始まることが多い（status=fixing / step_label="修正（1周目・1件）"）。
-    // そのまま連結すると「修正（修正（1周目・1件））」と二重になる。
-    // 細かい方（step_label）が状態名を含んでいるなら、そちらだけを出す。
+    // そのまま連結すると二重になるため、細かい方が状態名を含むならそちらだけを出す。
     if (step && step.indexOf(label) === 0) {
       badge.textContent = step;
     } else {
       badge.textContent = label + (step ? '（' + step + '）' : '');
     }
-    // 中止ボタンは実行が終わっていない間だけ出す（succeeded/no_defects/failed/cancelled 以外）。
-    var isRunning = TERMINAL_STATUSES.indexOf(run.status) === -1;
-    $['hl-cancel'].hidden = !isRunning;
-    if (!isRunning) { $['hl-cancel-confirm'].hidden = true; }
+    if (run.error) {
+      $['hl-run-error'].textContent = run.error;
+      $['hl-run-error'].hidden = false;
+    } else {
+      $['hl-run-error'].textContent = '';
+      $['hl-run-error'].hidden = true;
+    }
+  }
+
+  function updateActionButtons(run) {
+    var ids = ['hl-create-pr', 'hl-rerun', 'hl-approve', 'hl-merge', 'hl-reject', 'hl-cancel'];
+    ids.forEach(function (id) { $[id].hidden = false; });
+
+    if (!run) {
+      ids.forEach(function (id) { $[id].disabled = true; });
+    } else {
+      var status = run.status;
+      var hasPr = !!(run.pull_request && run.pull_request.number);
+      var isTerminal = TERMINAL_STATUSES.indexOf(status) !== -1;
+      var isAwaiting = status === 'awaiting_human';
+      var isRunning = !isTerminal && !isAwaiting;
+
+      if (isRunning) {
+        $['hl-cancel'].disabled = false;
+        $['hl-create-pr'].disabled = true;
+        $['hl-rerun'].disabled = true;
+        $['hl-approve'].disabled = true;
+        $['hl-merge'].disabled = true;
+        $['hl-reject'].disabled = true;
+      } else if (isAwaiting) {
+        $['hl-cancel'].hidden = true;
+        $['hl-create-pr'].disabled = hasPr;
+        $['hl-rerun'].disabled = false;
+        $['hl-approve'].disabled = false;
+        $['hl-reject'].disabled = false;
+        $['hl-merge'].disabled = !hasPr;
+      } else {
+        // 終端（succeeded/no_defects/failed/cancelled）
+        $['hl-cancel'].hidden = true;
+        $['hl-rerun'].disabled = false;
+        $['hl-create-pr'].disabled = hasPr;
+        $['hl-approve'].disabled = true;
+        $['hl-reject'].disabled = true;
+        $['hl-merge'].disabled = !hasPr;
+      }
+
+      if (hasPr) {
+        $['hl-create-pr'].hidden = true;
+        $['hl-merge'].disabled = false;
+      }
+    }
+
+    if ($['hl-cancel'].hidden) { $['hl-cancel-confirm'].hidden = true; }
+    if ($['hl-merge'].hidden || $['hl-merge'].disabled) { $['hl-merge-confirm'].hidden = true; }
+    if ($['hl-reject'].hidden || $['hl-reject'].disabled) { $['hl-reject-confirm'].hidden = true; }
   }
 
   /* ---------------- ループ表示 ---------------- */
@@ -419,7 +629,8 @@
     var labels = ['検証', '欠陥', '修正', '再検証'];
     var wrap = el('div', 'hl-stepper');
     states.forEach(function (st, i) {
-      var step = el('div', 'hl-step is-' + st);
+      var cls = 'hl-step' + (st === 'pending' ? '' : ' is-' + st);
+      var step = el('div', cls);
       step.appendChild(el('span', 'hl-step-dot'));
       step.appendChild(el('span', null, labels[i]));
       wrap.appendChild(step);
@@ -430,19 +641,18 @@
   function renderVerifyResult(v) {
     var wrap = el('div', 'hl-verify-result');
     if (!v) { wrap.appendChild(el('span', null, '未実行')); return wrap; }
-    // 検証そのものが動かなかった場合、件数（失敗 0 / 全 0）だけを出すと
-    // 「不具合が無かった」と読めてしまう。理由を最初に、目立つ形で出す。
+    // 検証そのものが動かなかった場合、件数だけを出すと「不具合が無かった」と読めてしまう。
+    // 理由を最初に、目立つ形で出す。
     if (v.error) {
       wrap.appendChild(el('b', 'hl-verify-error', '検証を実行できませんでした'));
       wrap.appendChild(el('span', 'hl-verify-error-detail', v.error));
-      if (v.command) { wrap.appendChild(el('span', 'hl-mono', v.command)); }
+      if (v.command) { wrap.appendChild(el('span', 'hl-kv', v.command)); }
       return wrap;
     }
     var summary = '失敗 ' + (v.failed != null ? v.failed : '?') + ' / 全 ' + (v.total != null ? v.total : '?');
-    // 生の浮動小数（0.0015079999575391412 秒）は読めない。小数 1 桁に丸める。
     if (typeof v.duration_sec === 'number') { summary += '（' + v.duration_sec.toFixed(1) + ' 秒）'; }
     wrap.appendChild(el('b', null, summary));
-    if (v.command) { wrap.appendChild(el('span', 'hl-mono', v.command)); }
+    if (v.command) { wrap.appendChild(el('span', 'hl-kv', v.command)); }
     return wrap;
   }
 
@@ -450,7 +660,7 @@
     if (!defects || defects.length === 0) {
       return el('p', 'hl-hint', '検出した不具合はありません。');
     }
-    var table = el('table', 'hl-defects-table');
+    var table = el('table', 'data dashboard-table');
     var thead = el('thead');
     var trh = el('tr');
     ['重大度', '事象', '失敗したテスト', '該当しそうなファイル'].forEach(function (t) { trh.appendChild(el('th', null, t)); });
@@ -460,14 +670,14 @@
     defects.forEach(function (d) {
       var tr = el('tr');
       var tdSev = el('td');
-      tdSev.appendChild(el('span', 'hl-badge-sev hl-badge-sev-' + d.severity, SEVERITY_LABELS[d.severity] || d.severity));
+      tdSev.appendChild(el('span', 'hl-sev is-' + d.severity, SEVERITY_LABELS[d.severity] || d.severity));
       tr.appendChild(tdSev);
       tr.appendChild(el('td', null, d.title || d.message || ''));
-      var tdTest = el('td', 'hl-td-test hl-mono hl-ellipsis', d.test_id || '');
+      var tdTest = el('td', 'hl-kv hl-ellipsis', d.test_id || '');
       tdTest.title = d.test_id || '';
       tr.appendChild(tdTest);
       var files = (d.suspect_files || []).join(', ');
-      var tdFile = el('td', 'hl-td-file hl-mono hl-ellipsis', files);
+      var tdFile = el('td', 'hl-kv hl-ellipsis', files);
       tdFile.title = files;
       tr.appendChild(tdFile);
       tbody.appendChild(tr);
@@ -478,49 +688,76 @@
 
   function buildDiffElement(diffText) {
     var pre = el('pre', 'hl-diff');
-    pre.hidden = true;
     (diffText || '').split('\n').forEach(function (line) {
-      var cls = 'hl-diff-ctx';
-      if (line.indexOf('+') === 0 && line.indexOf('+++') !== 0) { cls = 'hl-diff-add'; }
-      else if (line.indexOf('-') === 0 && line.indexOf('---') !== 0) { cls = 'hl-diff-del'; }
-      pre.appendChild(el('span', cls, line));
+      var span;
+      if (line.indexOf('+') === 0 && line.indexOf('+++') !== 0) { span = el('span', 'add', line); }
+      else if (line.indexOf('-') === 0 && line.indexOf('---') !== 0) { span = el('span', 'del', line); }
+      else { span = el('span', null, line); }
+      pre.appendChild(span);
     });
     return pre;
   }
 
-  function renderProposals(proposals) {
-    var wrap = el('div');
+  function pillEl(status) {
+    return el('span', 'hl-pill ' + status, PROPOSAL_STATUS_LABELS[status] || status);
+  }
+
+  function renderProposalsTable(proposals) {
     if (!proposals || proposals.length === 0) {
-      wrap.appendChild(el('p', 'hl-hint', '修正はまだありません。'));
-      return wrap;
+      return el('p', 'hl-hint', '修正はまだありません。');
     }
-    var list = el('ul', 'hl-proposals');
+    // 列幅は CSS で決める（「差分を見る」が 3 行に折れないだけの幅が要る）。
+    var table = el('table', 'data dashboard-table hl-proposals-table');
+    var thead = el('thead');
+    var trh = el('tr');
+    ['エージェント', '状態', '何をどう直したか', '変更ファイル', '差分'].forEach(function (t) { trh.appendChild(el('th', null, t)); });
+    thead.appendChild(trh);
+    table.appendChild(thead);
+    var tbody = el('tbody');
     proposals.forEach(function (p) {
-      var row = el('li', 'hl-proposal-row');
-      row.appendChild(el('span', 'hl-proposal-agent', p.agent || ''));
-      row.appendChild(el('span', 'hl-badge-proposal hl-badge-proposal-' + p.status, PROPOSAL_STATUS_LABELS[p.status] || p.status));
-      row.appendChild(el('span', 'hl-proposal-summary', p.summary || ''));
+      var tr = el('tr');
+      var tdAgent = el('td', null, p.agent || '');
+      tdAgent.title = p.agent || '';
+      tr.appendChild(tdAgent);
+
+      var tdStatus = el('td');
+      tdStatus.appendChild(pillEl(p.status));
+      tr.appendChild(tdStatus);
+
+      var tdSummary = el('td');
+      tdSummary.appendChild(document.createTextNode(p.summary || ''));
+      // 失敗/時間切れ/変更なしの理由は必ず出す（2 エージェントの競合など、他に出典が無いため）。
+      if ((p.status === 'failed' || p.status === 'timeout' || p.status === 'skipped') && p.error) {
+        var errEl = el('div', 'hl-err', p.error);
+        tdSummary.appendChild(errEl);
+      }
+      tr.appendChild(tdSummary);
+
       var filesN = (p.files_changed || []).length;
-      row.appendChild(el('span', 'hl-proposal-files', filesN + ' ファイル変更'));
+      tr.appendChild(el('td', null, filesN + ' ファイル変更'));
+
+      var tdDiff = el('td');
+      tr.appendChild(tdDiff);
+      tbody.appendChild(tr);
       if (p.diff) {
-        var diffEl = buildDiffElement(p.diff);
-        var toggle = el('button', 'hl-diff-toggle', '差分を見る');
+        var toggle = el('button', 'btn-outline-sm', '差分を見る');
         toggle.type = 'button';
+        tdDiff.appendChild(toggle);
+        var diffTr = el('tr');
+        diffTr.hidden = true;
+        var diffTd = el('td');
+        diffTd.colSpan = 5;
+        diffTd.appendChild(buildDiffElement(p.diff));
+        diffTr.appendChild(diffTd);
+        tbody.appendChild(diffTr);
         toggle.addEventListener('click', function () {
-          diffEl.hidden = !diffEl.hidden;
-          toggle.textContent = diffEl.hidden ? '差分を見る' : '差分を隠す';
+          diffTr.hidden = !diffTr.hidden;
+          toggle.textContent = diffTr.hidden ? '差分を見る' : '差分を隠す';
         });
-        row.appendChild(toggle);
-        list.appendChild(row);
-        var diffLi = el('li');
-        diffLi.appendChild(diffEl);
-        list.appendChild(diffLi);
-      } else {
-        list.appendChild(row);
       }
     });
-    wrap.appendChild(list);
-    return wrap;
+    table.appendChild(tbody);
+    return table;
   }
 
   function renderLoop(run) {
@@ -536,18 +773,18 @@
       var block = el('div', 'hl-iter');
       block.appendChild(el('h3', 'hl-iter-head', '第 ' + iter.index + ' 周'));
       block.appendChild(renderStepper(stepStates(iter, isActive)));
-      block.appendChild(el('h4', 'hl-hint', '検証結果'));
+      block.appendChild(el('h4', 'hl-sub', '検証結果'));
       block.appendChild(renderVerifyResult(iter.verify_before));
       if (iter.defects) {
-        block.appendChild(el('h4', 'hl-hint', '検出した不具合'));
+        block.appendChild(el('h4', 'hl-sub', '検出した不具合'));
         block.appendChild(renderDefectsTable(iter.defects));
       }
       if (iter.proposals) {
-        block.appendChild(el('h4', 'hl-hint', '修正'));
-        block.appendChild(renderProposals(iter.proposals));
+        block.appendChild(el('h4', 'hl-sub', '修正'));
+        block.appendChild(renderProposalsTable(iter.proposals));
       }
       if (iter.verify_after) {
-        block.appendChild(el('h4', 'hl-hint', '再検証結果'));
+        block.appendChild(el('h4', 'hl-sub', '再検証結果'));
         block.appendChild(renderVerifyResult(iter.verify_after));
       }
       loopEl.appendChild(block);
@@ -570,90 +807,28 @@
 
   /* ---------------- PR・判断 ---------------- */
 
-  function renderPrBlock(run) {
-    var wrap = $['hl-pr'];
+  function renderPrInfo(run) {
+    var wrap = $['hl-pr-info'];
     wrap.textContent = '';
-    if (!run) { return; }
-    var pr = run.pull_request;
-
-    if (!pr || !pr.number) {
-      var empty = el('div', 'hl-pr-empty');
-      empty.appendChild(el('p', null, 'まだ PR は作成されていません。'));
-      var btn = el('button', 'hl-btn-primary', 'PR を作成');
-      btn.type = 'button';
-      btn.id = 'hl-create-pr';
-      btn.disabled = !isAwaitingOrDone(run.status);
-      btn.addEventListener('click', createPullRequest);
-      empty.appendChild(btn);
-      empty.appendChild(el('p', 'hl-pr-warn', '作成前に差分を確認してください。'));
-      wrap.appendChild(empty);
-      return;
-    }
-
-    var info = el('div', 'hl-pr-info');
-    info.appendChild(el('span', 'hl-badge-pr', pr.state || ''));
-    info.appendChild(el('div', 'hl-pr-info-title', '#' + pr.number + ' ' + (pr.title || '')));
-    var link = el('a', 'hl-pr-info-link', pr.url || '');
+    var pr = run && run.pull_request;
+    if (!pr || !pr.number) { wrap.hidden = true; return; }
+    wrap.hidden = false;
+    wrap.appendChild(el('span', 'hl-badge', pr.state || ''));
+    wrap.appendChild(el('div', null, '#' + pr.number + ' ' + (pr.title || '')));
+    var link = el('a', null, pr.url || '');
     link.href = pr.url || '#';
     link.target = '_blank';
     link.rel = 'noopener noreferrer';
-    info.appendChild(link);
-    wrap.appendChild(info);
-
-    var decisions = el('div', 'hl-decisions');
-    var buttons = el('div', 'hl-decision-buttons');
-
-    var approveBtn = el('button', 'hl-btn-sub', '承認（記録のみ）');
-    approveBtn.type = 'button'; approveBtn.id = 'hl-approve';
-    approveBtn.addEventListener('click', function () { submitDecision('approve'); });
-
-    var mergeBtn = el('button', 'hl-btn-danger', 'マージ');
-    mergeBtn.type = 'button'; mergeBtn.id = 'hl-merge';
-
-    var rejectBtn = el('button', 'hl-btn-sub', '却下');
-    rejectBtn.type = 'button'; rejectBtn.id = 'hl-reject';
-    rejectBtn.addEventListener('click', function () { submitDecision('reject'); });
-
-    buttons.appendChild(approveBtn);
-    buttons.appendChild(mergeBtn);
-    buttons.appendChild(rejectBtn);
-    decisions.appendChild(buttons);
-
-    var confirmRow = el('div', 'hl-merge-confirm');
-    confirmRow.hidden = true;
-    confirmRow.appendChild(el('span', null, '本当にマージしますか？'));
-    var yesBtn = el('button', 'hl-btn-danger', 'はい、マージする');
-    yesBtn.type = 'button';
-    yesBtn.addEventListener('click', function () { confirmRow.hidden = true; submitDecision('merge'); });
-    var noBtn = el('button', 'hl-btn-sub', 'やめる');
-    noBtn.type = 'button';
-    noBtn.addEventListener('click', function () { confirmRow.hidden = true; });
-    confirmRow.appendChild(yesBtn);
-    confirmRow.appendChild(noBtn);
-    mergeBtn.addEventListener('click', function () { confirmRow.hidden = false; });
-    decisions.appendChild(confirmRow);
-
-    var note = el('textarea');
-    note.id = 'hl-decision-note';
-    note.rows = 2;
-    note.placeholder = 'メモ（任意）';
-    decisions.appendChild(note);
-
+    wrap.appendChild(link);
     if (run.decisions && run.decisions.length > 0) {
-      var hist = el('ul', 'hl-decision-history');
+      var hist = el('ul');
       run.decisions.forEach(function (d) {
         var actionLabel = d.action === 'approve' ? '承認' : (d.action === 'merge' ? 'マージ' : (d.action === 'reject' ? '却下' : d.action));
         var text = fmtTime(d.at) + ' ' + actionLabel + (d.actor ? '（' + d.actor + '）' : '') + (d.note ? ': ' + d.note : '');
         hist.appendChild(el('li', null, text));
       });
-      decisions.appendChild(hist);
+      wrap.appendChild(hist);
     }
-
-    wrap.appendChild(decisions);
-  }
-
-  function isAwaitingOrDone(status) {
-    return status === 'awaiting_human' || status === 'succeeded' || status === 'no_defects';
   }
 
   function createPullRequest() {
@@ -675,10 +850,12 @@
   function submitDecision(action) {
     if (!state.selectedRunId) { return; }
     clearError();
-    var noteEl = document.getElementById('hl-decision-note');
-    var note = noteEl ? noteEl.value.trim() : '';
+    var note = $['hl-decision-note'] ? $['hl-decision-note'].value.trim() : '';
     apiFetch('/runs/' + state.selectedRunId + '/decision', { method: 'POST', body: JSON.stringify({ action: action, note: note }) })
-      .then(function () { return fetchAndRenderRun(state.selectedRunId); })
+      .then(function () {
+        if ($['hl-decision-note']) { $['hl-decision-note'].value = ''; }
+        return fetchAndRenderRun(state.selectedRunId);
+      })
       .catch(function (e) { showError('判断の記録に失敗しました: ' + e.message); });
   }
 
@@ -693,29 +870,112 @@
     });
   }
 
+  /* ---------------- 実行履歴ビュー ---------------- */
+
+  function loadHistory(limit) {
+    limit = limit || 20;
+    state.historyLimit = limit;
+    return apiFetch('/runs?limit=' + limit).then(function (data) {
+      state.historyRuns = asList(data, 'runs');
+      renderHistory();
+    }).catch(function (e) { showError('実行履歴を取得できませんでした: ' + e.message); });
+  }
+
+  function renderHistory() {
+    var tbody = $['hl-runs'];
+    tbody.textContent = '';
+    var runs = state.historyRuns || [];
+    $['hl-runs-empty'].hidden = runs.length > 0;
+    $['hl-runs-more'].hidden = runs.length < (state.historyLimit || 20);
+    runs.forEach(function (r) {
+      var tr = el('tr');
+      var tdStatus = el('td');
+      tdStatus.appendChild(el('span', 'hl-badge ' + statusBadgeClass(r.status), STATUS_LABELS[r.status] || r.status));
+      tr.appendChild(tdStatus);
+      tr.appendChild(el('td', null, fmtTime(r.started_at)));
+      tr.appendChild(el('td', null, r.project_name || r.project_id || ''));
+      tr.appendChild(el('td', 'num', r.iterations != null ? String(r.iterations) : ''));
+      tr.appendChild(el('td', 'num', r.fixed_count != null ? String(r.fixed_count) : ''));
+      var prText = r.pr_number ? ('#' + r.pr_number + (r.pr_state ? '（' + r.pr_state + '）' : '')) : '';
+      tr.appendChild(el('td', null, prText));
+
+      var tdActions = el('td');
+      var openBtn = el('button', 'btn-outline-sm', '開く');
+      openBtn.type = 'button';
+      openBtn.addEventListener('click', function () {
+        selectProject(r.project_id, { openRunId: r.run_id });
+        switchView('run');
+      });
+      tdActions.appendChild(openBtn);
+      tr.appendChild(tdActions);
+
+      tbody.appendChild(tr);
+    });
+  }
+
   /* ---------------- 初期化 ---------------- */
 
   function init() {
     cacheDom();
     state.focusRunId = document.body.getAttribute('data-focus-run-id') || '';
 
-    $['hl-add-project'].addEventListener('click', showConnectForm);
-    $['hl-connect-cancel'].addEventListener('click', function () {
-      hideConnectForm();
-      if (state.selectedProjectId) {
-        $['hl-project-view'].hidden = false;
-      } else {
-        $['hl-main-empty'].hidden = false;
-      }
-    });
+    $['hl-nav-run'].addEventListener('click', function () { switchView('run'); });
+    $['hl-nav-projects'].addEventListener('click', function () { switchView('projects'); });
+    $['hl-nav-history'].addEventListener('click', function () { switchView('history'); });
+    $['hl-add-project'].addEventListener('click', function () { switchView('projects'); showConnectForm(null); });
+    // 接続先ビューにも同じ入口を置いてある。サイドバーまで戻らせないため。
+    var addOnList = document.getElementById('hl-add-project-2');
+    if (addOnList) { addOnList.addEventListener('click', function () { showConnectForm(null); }); }
+
+    $['hl-project-select'].addEventListener('change', function () { selectProject(this.value); });
+
     $['hl-connect-submit'].addEventListener('click', submitConnectForm);
+    $['hl-connect-cancel'].addEventListener('click', hideConnectForm);
+
     $['hl-check-btn'].addEventListener('click', runCheck);
-    $['hl-start'].addEventListener('click', startRun);
+
+    $['hl-start'].addEventListener('click', function () { $['hl-start-confirm'].hidden = false; });
+    $['hl-start-yes'].addEventListener('click', function () { $['hl-start-confirm'].hidden = true; startRun(); });
+    $['hl-start-no'].addEventListener('click', function () { $['hl-start-confirm'].hidden = true; });
+
     $['hl-cancel'].addEventListener('click', function () { $['hl-cancel-confirm'].hidden = false; });
     $['hl-cancel-yes'].addEventListener('click', function () { $['hl-cancel-confirm'].hidden = true; cancelRun(); });
     $['hl-cancel-no'].addEventListener('click', function () { $['hl-cancel-confirm'].hidden = true; });
 
-    loadProjects();
+    $['hl-merge'].addEventListener('click', function () { $['hl-merge-confirm'].hidden = false; });
+    $['hl-merge-yes'].addEventListener('click', function () { $['hl-merge-confirm'].hidden = true; submitDecision('merge'); });
+    $['hl-merge-no'].addEventListener('click', function () { $['hl-merge-confirm'].hidden = true; });
+
+    $['hl-reject'].addEventListener('click', function () { $['hl-reject-confirm'].hidden = false; });
+    $['hl-reject-yes'].addEventListener('click', function () { $['hl-reject-confirm'].hidden = true; submitDecision('reject'); });
+    $['hl-reject-no'].addEventListener('click', function () { $['hl-reject-confirm'].hidden = true; });
+
+    $['hl-approve'].addEventListener('click', function () { submitDecision('approve'); });
+    $['hl-create-pr'].addEventListener('click', createPullRequest);
+    $['hl-rerun'].addEventListener('click', function () { submitDecision('rerun'); });
+
+    $['hl-runs-more'].addEventListener('click', function () {
+      loadHistory((state.historyLimit || 20) + 20);
+    });
+
+    switchView('run');
+
+    loadProjects().then(function () {
+      loadStats();
+      if (!state.projects.length) { clearRunView(); return; }
+      if (state.focusRunId) {
+        var fid = state.focusRunId;
+        state.focusRunId = '';
+        apiFetch('/runs/' + encodeURIComponent(fid)).then(function (data) {
+          var run = asObj(data, 'run');
+          selectProject(run.project_id || state.projects[0].project_id, { openRunId: fid });
+        }).catch(function () { selectProject(state.projects[0].project_id); });
+      } else {
+        selectProject(state.projects[0].project_id);
+      }
+    });
+
+    loadHistory(20);
   }
 
   document.addEventListener('DOMContentLoaded', init);

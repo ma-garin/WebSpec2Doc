@@ -1,23 +1,19 @@
-/* System 05 オートヒーリング。ta2.css / ws.css のトークン体系を土台に、system-select.css と同じ質感で組む。
-   ここで :root は再定義しない。System 05 の識別色（#B45309 / #FEF3C7 / #92400E）は変数を増やさず
-   各規則にリテラル値で置く（system-select.css の System 02/03/04 と同じやり方）。 */
+/* オートヒーリング（System 05）。
+   骨格・配色・ボタン・表は index.html と同じ共通デザイン（tokens.css / app.css /
+   app-components.css / css/components.css）に載せる。ここに置くのは **その差分だけ**。
 
-.hl-body {
-  margin: 0;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background: var(--bg);
-  color: var(--tx);
-  font-family: var(--sans);
-  -webkit-font-smoothing: antialiased;
-}
+   ここで :root を再定義しない。System 05 の識別色（#B45309 系）は
+   システム選択のカードだけで使い、画面の中は他システムと同じ青（--ac）で統一する
+   （AutoRun も画面内は青。識別色を画面まで持ち込むと同じ製品に見えなくなる）。 */
 
-/* topbar は templates/partials/topbar.html（.app-topbar）に統一。ここに独自定義は置かない。 */
+/* hidden 属性を必ず効かせる。この画面は display:flex / display:grid を持つ要素を
+   hidden で出し分けるが、作者スタイルの display は UA の [hidden]{display:none} に
+   勝つため、指定しないと「隠したつもりの確認行が全部見えている」状態になる（実画面で確認）。 */
+[hidden] { display: none !important; }
 
-/* ---- エラーバナー ---- */
+/* ── エラーバナー ── */
 .hl-banner {
-  margin: 12px 32px 0;
+  margin: 0 0 16px;
   padding: 10px 16px;
   border: 1px solid var(--er);
   background: #FEF2F2;
@@ -26,330 +22,220 @@
   font-size: 12.5px;
 }
 
-/* ---- 3 ペイン ----
-   body を flex column にし、hl-stage を flex:1 で残り高さいっぱいに広げる。
-   topbar の実高さを固定値で仮定せずに「calc(100vh - topbar高さ)」と等価な結果を得るための構成。
-   各ペインは min-height:0 + overflow-y:auto で個別スクロールにする。 */
-.hl-stage {
-  flex: 1;
-  min-height: 0;
-  display: grid;
-  grid-template-columns: 300px minmax(0, 1fr) 340px;
-  gap: 16px;
-  padding: 16px 32px 24px;
-  /* start にすると 3 ペインが中身の高さで止まり、下に大きな空白が残って
-     「置き場所が決まっていない画面」に見える。stretch で 3 本の柱として立てる。 */
-  align-items: stretch;
-}
-
-.hl-rail, .hl-main, .hl-side {
-  min-height: 0;
-  overflow-y: auto;
-}
-
-/* 左右のペインは枠のあるパネルにする。中央だけがカードで左右が地の色のままだと、
-   何がひとまとまりなのかが読めず、要素が宙に浮いて見える（実画面で確認）。 */
-.hl-rail, .hl-side {
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--sf);
-  box-shadow: 0 1px 3px rgba(16,24,40,.06);
-  padding: 16px;
-}
-
-/* ---- 左レール ---- */
-.hl-rail {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.hl-rail-head { font-size: 13px; font-weight: 800; margin: 4px 0 0; color: var(--tx); }
-
-.hl-projects { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-
-.hl-project-card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 12px 12px 12px 14px;
-  border: 1px solid var(--line);
-  border-left: 3px solid transparent;
-  border-radius: 8px;
-  background: var(--sf);
-  box-shadow: 0 1px 3px rgba(16,24,40,.06);
-  cursor: pointer;
-  text-align: left;
-}
-.hl-project-card:hover { border-color: #B45309; }
-.hl-project-card.is-selected { border-left-color: #B45309; border-color: #B45309; background: #FEF3C7; }
-
-.hl-pc-name { font-size: 13px; font-weight: 700; }
-.hl-pc-path { font-size: 11px; color: var(--tx2); max-width: 100%; }
-.hl-pc-status { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--tx2); }
-.hl-pc-last-run { font-size: 11px; color: var(--tx3); }
-
-.hl-dot { width: 8px; height: 8px; border-radius: 999px; flex: none; display: inline-block; }
-.hl-dot.is-ok { background: var(--ok); }
-.hl-dot.is-bad { background: var(--er); }
-.hl-dot.is-unknown { background: var(--tx3); }
-
-.hl-add-btn {
-  margin-top: 4px;
+/* ── 入力（共通 CSS にフォーム部品が無いので、ここで最小限そろえる） ── */
+.hl-field-label { display: block; font-size: 12px; font-weight: 700; color: var(--tx2); margin-bottom: 6px; }
+.hl-field {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 13px;
   padding: 9px 12px;
-  border: 1px dashed var(--line);
-  border-radius: 8px;
-  background: var(--bg);
-  color: var(--tx2);
-  font-size: 12.5px;
-  font-weight: 700;
-  cursor: pointer;
-}
-.hl-add-btn:hover { border-color: #B45309; color: #92400E; }
-
-/* ---- 空状態 ---- */
-.hl-empty, .hl-empty-sm {
   border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--sf);
-  color: var(--tx2);
-  font-size: 12.5px;
-  line-height: 1.6;
-}
-.hl-empty { padding: 32px 24px; text-align: center; }
-.hl-empty-sm { padding: 14px 16px; margin-bottom: 4px; }
-.hl-empty p, .hl-empty-sm p { margin: 4px 0; }
-
-/* ---- 汎用 ---- */
-.hl-mono { font-family: var(--mono); }
-.hl-ellipsis { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
-
-.hl-btn-primary, .hl-btn-sub, .hl-btn-danger {
-  font-size: 12.5px;
-  font-weight: 700;
-  padding: 9px 16px;
   border-radius: 8px;
-  cursor: pointer;
-  border: 1px solid transparent;
-}
-.hl-btn-primary { background: #B45309; color: #fff; }
-.hl-btn-primary:hover { background: #92400E; }
-.hl-btn-sub { background: var(--sf); color: var(--tx); border-color: var(--line); }
-.hl-btn-sub:hover { border-color: #B45309; color: #92400E; }
-.hl-btn-danger { background: #FEE4E2; color: #B42318; border-color: #FDA29B; }
-.hl-btn-danger:hover { background: #B42318; color: #fff; }
-
-.hl-btn-primary:disabled, .hl-btn-sub:disabled, .hl-btn-danger:disabled {
-  opacity: .5;
-  cursor: not-allowed;
-  background: var(--bg);
-  color: var(--tx3);
-  border-color: var(--line);
-}
-
-/* ---- 中央: 接続フォーム ---- */
-.hl-form {
-  border: 1px solid var(--line);
-  border-radius: 12px;
   background: var(--sf);
-  box-shadow: 0 1px 3px rgba(16,24,40,.06);
-  padding: 24px;
+  color: var(--tx);
 }
-.hl-form-title { font-size: 16px; font-weight: 800; margin: 0 0 12px; }
-.hl-allowed-roots-lead { font-size: 12px; color: var(--tx2); margin: 0 0 4px; }
-.hl-allowed-roots-list {
-  list-style: none; margin: 0 0 16px; padding: 10px 12px;
-  border: 1px solid var(--line); border-radius: 8px; background: var(--bg);
-  font-size: 11.5px; color: var(--tx2); display: flex; flex-direction: column; gap: 3px;
+.hl-field:focus { outline: 2px solid var(--ac); outline-offset: 1px; }
+textarea.hl-field { resize: vertical; }
+
+/* ── 受付（ヒーロー）。AutoRun の受付と同じ形。 ── */
+.hl-hero { padding: 24px 28px; margin-bottom: 16px; }
+.hl-hero-kicker { font-size: 12px; font-weight: 800; color: var(--ac-dk); margin-bottom: 6px; }
+.hl-hero-title { font-size: 22px; margin: 0 0 8px; }
+.hl-hero-lead { margin: 0 0 18px; color: var(--tx2); font-size: 13px; line-height: 1.7; max-width: 860px; }
+.hl-hero-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+.hl-hero-actions { margin-top: 18px; }
+.hl-project-meta { margin-top: 8px; }
+.hl-caution { font-size: 12px; color: var(--tx3); }
+
+/* ── ツールバー（セクション見出しの右に判断ボタンを横一列で置く） ── */
+.hl-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.hl-toolbar-spacer { flex: 1; }
+/* 実行を止める操作は他の副ボタンと同じ見た目だと見つからない。危険度を色で示す。 */
+.hl-btn-stop { border-color: #FDA29B; color: #B42318; }
+.hl-btn-stop:hover:not(:disabled) { background: #FEF2F2; }
+/* 押せないボタンは「押せないように見える」ことまでを含めて disabled にする。 */
+.hl-toolbar button:disabled,
+.hl-form-actions button:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ── インラインの確認行（confirm() はこの環境では使えないので必ずこの形） ── */
+.hl-confirm {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border: 1px solid #FDA29B;
+  background: #FEF3F2;
+  border-radius: 8px;
+  font-size: 12.5px;
+  color: #B42318;
 }
 
-.hl-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
-.hl-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 700; color: var(--tx2); }
-.hl-field input, .hl-field select {
-  font: inherit; font-size: 13px; font-weight: 400; color: var(--tx);
-  padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg);
-}
-.hl-field input:focus, .hl-field select:focus, textarea:focus { outline: 2px solid #B45309; outline-offset: 1px; }
-.hl-form-note { font-size: 11px; font-weight: 400; color: var(--tx3); }
-.hl-form-actions { display: flex; gap: 10px; margin-top: 20px; }
+.hl-decision-note-row { margin: 0 0 16px; max-width: 560px; }
 
-/* ---- 中央: プロジェクト詳細 ---- */
-.hl-project-view { display: flex; flex-direction: column; gap: 16px; }
-
-.hl-project-header {
-  display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
-  padding: 16px 20px; border: 1px solid var(--line); border-radius: 12px;
-  background: var(--sf); box-shadow: 0 1px 3px rgba(16,24,40,.06);
+/* ── 状態バッジ ── */
+.hl-badge {
+  display: inline-flex; align-items: center;
+  font-size: 12px; font-weight: 800; padding: 5px 12px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--tx2);
+  white-space: nowrap;
 }
-.hl-project-header-text { min-width: 0; }
-.hl-project-header h2 { font-size: 16px; margin: 0 0 6px; }
-.hl-project-meta { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11.5px; color: var(--tx2); max-width: 100%; }
-.hl-project-meta span { max-width: 260px; }
+.hl-badge.is-running   { background: var(--ac-bg); color: var(--ac-dk); border-color: var(--ac); }
+.hl-badge.is-done      { background: #DCF5EE; color: #0A7359; border-color: #6CE9C0; }
+.hl-badge.is-failed    { background: #FEE4E2; color: #B42318; border-color: #FDA29B; }
+.hl-badge.is-waiting   { background: #FEF0C7; color: #B54708; border-color: #FEC84B; }
+.hl-badge.is-cancelled { background: var(--bg); color: var(--tx3); border-color: var(--line); }
 
-.hl-checks {
-  list-style: none; margin: 0; padding: 0;
-  border: 1px solid var(--line); border-radius: 10px; background: var(--sf); overflow: hidden;
+/* ── 接続確認 ── */
+.hl-checks { list-style: none; margin: 16px 0 0; padding: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.hl-checks:empty { display: none; }
+.hl-check-row {
+  display: grid; grid-template-columns: 22px 120px 1fr; align-items: center; gap: 10px;
+  padding: 10px 14px; font-size: 12.5px; border-top: 1px solid var(--line); background: var(--sf);
 }
-.hl-check-row { display: flex; align-items: baseline; gap: 10px; padding: 10px 14px; font-size: 12.5px; border-bottom: 1px solid var(--line); }
-.hl-check-row:last-child { border-bottom: none; }
-.hl-check-icon { flex: none; font-weight: 800; width: 16px; text-align: center; }
+.hl-check-row:first-child { border-top: 0; }
+.hl-check-icon { font-weight: 800; }
 .hl-check-icon.is-ok { color: var(--ok); }
 .hl-check-icon.is-bad { color: var(--er); }
-.hl-check-label { flex: none; font-weight: 700; width: 96px; }
+.hl-check-label { font-weight: 700; }
 .hl-check-detail { color: var(--tx2); overflow-wrap: anywhere; }
 
-.hl-start-block {
-  border: 1px solid var(--line); border-radius: 12px; background: var(--sf);
-  box-shadow: 0 1px 3px rgba(16,24,40,.06); padding: 16px 20px; display: flex; flex-direction: column; gap: 8px;
-}
-.hl-start-block label { font-size: 12px; font-weight: 700; color: var(--tx2); }
-.hl-start-block textarea {
-  font: inherit; font-size: 13px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px;
-  background: var(--bg); color: var(--tx); resize: vertical;
-}
-.hl-start-block .hl-btn-primary { align-self: flex-start; }
-/* 「ヒーリングを開始」は実リポジトリを書き換える最も影響の大きい操作。
-   「接続する」「PR を作成」と同じ hl-btn-primary の並びに埋もれないよう、
-   既存の警告トーン（#B45309 / #FEF3C7、他の規則で使用中）でリングを足す。 */
-.hl-start-btn { box-shadow: 0 0 0 3px #FEF3C7; border-color: #B45309; }
-.hl-start-btn:hover { box-shadow: 0 0 0 3px #FEF3C7; }
-.hl-hint { margin: 0; font-size: 11.5px; color: var(--tx3); }
-.hl-hint-warn { color: #92400E; font-weight: 700; }
-
-/* ---- ループ表示 ---- */
-.hl-loop { display: flex; flex-direction: column; gap: 16px; }
-.hl-iter {
-  border: 1px solid var(--line); border-radius: 12px; background: var(--sf);
-  box-shadow: 0 1px 3px rgba(16,24,40,.06); padding: 16px 20px; display: flex; flex-direction: column; gap: 12px;
-}
-.hl-iter-head { font-size: 13px; font-weight: 800; margin: 0; }
-
-.hl-stepper { display: flex; align-items: center; gap: 4px; }
+/* ── ループ（周回） ── */
+.hl-loop-card { padding: 20px 24px; margin-bottom: 16px; }
+.hl-iter { border: 1px solid var(--line); border-radius: 10px; padding: 16px; background: var(--sf); margin-bottom: 12px; }
+.hl-iter:last-child { margin-bottom: 0; }
+.hl-iter-head { font-size: 13px; font-weight: 800; margin: 0 0 2px; }
+.hl-stepper { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 14px 0 16px; }
 .hl-step {
-  flex: 1; display: flex; align-items: center; gap: 6px; padding: 6px 10px;
-  border: 1px solid var(--line); border-radius: 999px; font-size: 11px; font-weight: 700; color: var(--tx3);
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px;
+  font-size: 12.5px; color: var(--tx3); background: var(--bg);
 }
-.hl-step .hl-step-dot { width: 7px; height: 7px; border-radius: 999px; background: var(--line); flex: none; }
-.hl-step.is-done { color: var(--ok); border-color: var(--ok); }
-.hl-step.is-done .hl-step-dot { background: var(--ok); }
-.hl-step.is-current { color: #92400E; border-color: #B45309; background: #FEF3C7; }
-.hl-step.is-current .hl-step-dot { background: #B45309; }
-.hl-step.is-pending { color: var(--tx3); border-color: var(--line); }
+.hl-step.is-done    { border-color: #6CE9C0; color: #0A7359; background: #F0FBF7; }
+.hl-step.is-current { border-color: var(--ac); color: var(--ac-dk); background: var(--ac-bg); font-weight: 700; }
+.hl-step-dot { width: 7px; height: 7px; border-radius: 999px; background: currentColor; flex: none; }
+.hl-sub { font-size: 12px; font-weight: 700; color: var(--tx2); margin: 16px 0 6px; }
+.hl-hint { font-size: 12.5px; color: var(--tx2); margin: 0; }
 
-.hl-verify-result { font-size: 12.5px; color: var(--tx2); display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
-.hl-verify-result b { color: var(--tx); }
-
-table.hl-defects-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-table.hl-defects-table th, table.hl-defects-table td {
-  text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top;
-}
-table.hl-defects-table th { color: var(--tx3); font-weight: 700; font-size: 11px; }
-table.hl-defects-table td.hl-td-file, table.hl-defects-table td.hl-td-test { max-width: 220px; }
-
-.hl-badge-sev { display: inline-block; font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 999px; }
-.hl-badge-sev-critical { background: #FEE4E2; color: #B42318; }
-.hl-badge-sev-high { background: #FEF0C7; color: #B54708; }
-.hl-badge-sev-medium { background: #D1E9FF; color: #175CD3; }
-.hl-badge-sev-low { background: #F2F4F7; color: #475467; }
-
-.hl-proposals { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.hl-proposal-row { display: flex; align-items: center; gap: 10px; font-size: 12.5px; flex-wrap: wrap; }
-.hl-proposal-agent { font-weight: 700; width: 80px; flex: none; }
-.hl-proposal-summary { flex: 1; min-width: 160px; color: var(--tx2); }
-.hl-proposal-files { color: var(--tx3); font-size: 11.5px; }
-/* WCAG 2.5.8: 押せる領域は 24x24px 以上。min-height + inline-flex で高さを確保する。 */
-.hl-diff-toggle { background: none; border: none; color: #B45309; font-weight: 700; font-size: 12px; cursor: pointer; padding: 6px 8px; min-height: 24px; display: inline-flex; align-items: center; }
-.hl-diff-toggle:hover { text-decoration: underline; }
-
-.hl-badge-proposal { font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 999px; }
-.hl-badge-proposal-proposed { background: #D1E9FF; color: #175CD3; }
-.hl-badge-proposal-applied { background: #DCF5EE; color: #0A7359; }
-.hl-badge-proposal-failed { background: #FEE4E2; color: #B42318; }
-.hl-badge-proposal-skipped { background: #F2F4F7; color: #475467; }
-.hl-badge-proposal-timeout { background: #FEF0C7; color: #B54708; }
-
-.hl-diff {
-  margin: 6px 0 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px;
-  background: var(--bg); font-family: var(--mono); font-size: 11px; line-height: 1.5;
-  overflow-x: auto; white-space: pre;
-}
-.hl-diff-line { display: block; }
-.hl-diff-add { color: var(--ok); background: #DCF5EE; display: block; }
-.hl-diff-del { color: var(--er); background: #FEE4E2; display: block; }
-.hl-diff-ctx { color: var(--tx2); display: block; }
-
-/* ---- 実行ログ（常時表示・折りたたみ禁止） ---- */
-.hl-log-block { display: flex; flex-direction: column; gap: 6px; }
-.hl-log-block h3 { font-size: 12.5px; margin: 0; color: var(--tx2); }
-.hl-log {
-  height: 200px; overflow: auto; padding: 10px 12px;
-  border: 1px solid var(--line); border-radius: 8px; background: #1F2937;
-  font-family: var(--mono); font-size: 11px; color: #E5E7EB; line-height: 1.6;
-}
-.hl-log-line { white-space: pre-wrap; word-break: break-all; }
-.hl-log-placeholder { color: #9CA3AF; font-style: normal; }
-
-/* ---- 右ペイン ---- */
-.hl-side { display: flex; flex-direction: column; gap: 16px; }
-/* 右ペイン自体がパネルになったので、中の PR ブロックは二重枠にしない。 */
-.hl-side .hl-pr-block { border: none; box-shadow: none; padding: 0; }
-.hl-side .hl-pr-block:not(:empty) { border-top: 1px solid var(--line); padding-top: 14px; }
-
-.hl-status-badge {
-  align-self: flex-start; font-size: 12.5px; font-weight: 800; padding: 8px 16px; border-radius: 999px;
-  background: var(--bg); color: var(--tx2); border: 1px solid var(--line);
-}
-.hl-status-badge.is-running { background: #FEF3C7; color: #92400E; border-color: #B45309; }
-.hl-status-badge.is-done { background: #DCF5EE; color: #0A7359; border-color: var(--ok); }
-.hl-status-badge.is-failed { background: #FEE4E2; color: #B42318; border-color: var(--er); }
-.hl-status-badge.is-waiting { background: #FEF0C7; color: #B54708; border-color: var(--wa); }
-.hl-status-badge.is-cancelled { background: var(--bg); color: var(--tx3); border-color: var(--line); }
-
-.hl-pr-block {
-  border: 1px solid var(--line); border-radius: 12px; background: var(--sf);
-  box-shadow: 0 1px 3px rgba(16,24,40,.06); padding: 16px; display: flex; flex-direction: column; gap: 12px;
-}
-.hl-pr-block:empty { display: none; }
-.hl-pr-empty p { margin: 0 0 10px; font-size: 12.5px; color: var(--tx2); }
-.hl-pr-warn { margin: 6px 0 0; font-size: 11px; color: var(--tx3); }
-
-.hl-pr-info { display: flex; flex-direction: column; gap: 4px; }
-.hl-pr-info-title { font-size: 13px; font-weight: 700; }
-.hl-pr-info-link { font-size: 12px; color: #B45309; }
-.hl-badge-pr { align-self: flex-start; font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: #DCF5EE; color: #0A7359; }
-
-.hl-decisions { display: flex; flex-direction: column; gap: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
-.hl-decision-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
-.hl-decisions textarea {
-  font: inherit; font-size: 12.5px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px;
-  background: var(--bg); color: var(--tx); resize: vertical;
-}
-.hl-merge-confirm {
-  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px;
-  padding: 8px 10px; border: 1px solid #FDA29B; background: #FEE4E2; border-radius: 8px; color: #B42318;
-}
-.hl-decision-history { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
-.hl-decision-history li { font-size: 11px; color: var(--tx3); }
-
-.hl-unverified {
-  border: 1px solid var(--wa); border-radius: 10px; background: #FEF0C7; padding: 12px 14px;
-}
-.hl-unverified h3 { margin: 0 0 6px; font-size: 12.5px; color: #B54708; }
-.hl-unverified ul { margin: 0; padding-left: 18px; font-size: 12px; color: #92400E; }
-
-.hl-runs-block h3 { font-size: 12.5px; margin: 0 0 8px; color: var(--tx2); }
-.hl-runs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.hl-run-row {
-  display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--line);
-  border-radius: 8px; background: var(--sf); font-size: 11.5px; cursor: pointer;
-}
-.hl-run-row:hover { border-color: #B45309; }
-.hl-run-row.is-selected { border-color: #B45309; background: #FEF3C7; }
-.hl-run-time { color: var(--tx2); flex: 1; }
-.hl-run-pr { color: var(--tx3); }
-
-/* 差分・パス等はそれぞれのコンテナ内で横スクロールし、body には横スクロールを出さない。 */
-
-/* 検証そのものが動かなかったときの表示。件数 0 と見分けが付くようにする。 */
+/* ── 検証結果 ── */
+.hl-verify-result { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; font-size: 13px; }
+/* 検証そのものが動かなかったときは、件数（失敗 0 / 全 0）と見分けが付くようにする。 */
 .hl-verify-error { color: #B42318; }
 .hl-verify-error-detail { color: #B42318; font-size: 12px; overflow-wrap: anywhere; }
+
+/* ── 等幅 ── */
+.hl-kv, .hl-mono { font-family: var(--mono); font-size: 11.5px; color: var(--tx2); }
+.hl-ellipsis { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+
+/* ── バッジ（重大度・修正の状態） ── */
+.hl-sev, .hl-pill { display: inline-block; font-size: 10.5px; font-weight: 800; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+.hl-sev.is-critical { background: #FEE4E2; color: #B42318; }
+.hl-sev.is-high     { background: #FEF0C7; color: #B54708; }
+.hl-sev.is-medium   { background: #D1E9FF; color: #175CD3; }
+.hl-sev.is-low      { background: #F2F4F7; color: #475467; }
+.hl-pill.applied  { background: #DCF5EE; color: #0A7359; }
+.hl-pill.failed   { background: #FEE4E2; color: #B42318; }
+.hl-pill.timeout  { background: #FEF0C7; color: #B54708; }
+.hl-pill.skipped  { background: #F2F4F7; color: #475467; }
+.hl-pill.proposed { background: #EFF4FF; color: #3538CD; }
+
+/* 失敗理由は必ず読める場所に出す。状態バッジだけだと「なぜ」が分からない。 */
+.hl-err { color: #B42318; }
+.hl-proposal-error { display: block; margin-top: 4px; font-size: 12px; }
+.hl-proposal-error-failed  { color: #B42318; }
+.hl-proposal-error-timeout { color: #B54708; }
+.hl-proposal-error-skipped { color: var(--tx3); }
+.hl-run-error {
+  margin: 0 0 16px; padding: 10px 14px;
+  border: 1px solid #FDA29B; background: #FEF3F2; border-radius: 8px;
+  font-size: 12.5px; color: #B42318;
+}
+
+/* ── 差分 ── */
+/* 差分は自分の中で横スクロールさせる。body に横スクロールを出さない。 */
+.hl-diff {
+  margin-top: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg);
+  padding: 10px 12px; font-family: var(--mono); font-size: 11px; line-height: 1.5;
+  overflow-x: auto; white-space: pre;
+}
+.hl-diff span { display: block; }
+.hl-diff-add { background: #E7F8F0; }
+.hl-diff-del { background: #FEECEB; }
+
+/* ── PR ── */
+.hl-pr-info {
+  margin: 0 0 16px; padding: 12px 16px;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--sf);
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 12.5px;
+}
+.hl-pr-info-title { font-weight: 700; }
+.hl-pr-info-link { color: var(--ac-dk); }
+
+/* ── 実行ログ（常時表示。折りたたまない） ── */
+.hl-log-card { padding: 16px; margin-bottom: 16px; }
+.hl-log {
+  height: 190px; overflow: auto; padding: 12px 14px; border-radius: 8px;
+  background: #111827; color: #E5E7EB;
+  font-family: var(--mono); font-size: 11px; line-height: 1.65;
+}
+.hl-log-line { white-space: pre-wrap; word-break: break-all; }
+.hl-log-placeholder { color: #9CA3AF; }
+
+/* ── 未検証の事項 ── */
+.hl-note { border: 1px solid #FEC84B; background: #FFFAEB; border-radius: 8px; padding: 12px 14px; font-size: 12.5px; color: #B54708; }
+.hl-note ul { margin: 6px 0 0; padding-left: 18px; }
+
+/* ── 空状態 ── */
+.hl-empty {
+  border: 1px dashed var(--line); border-radius: 10px; background: var(--sf);
+  padding: 28px 24px; text-align: center; color: var(--tx2); font-size: 12.5px; line-height: 1.8;
+}
+
+/* ── 接続フォーム ── */
+.hl-form { padding: 20px 24px; margin-bottom: 16px; }
+.hl-form-title { font-size: 15px; font-weight: 800; margin: 0 0 6px; }
+.hl-form-note { margin: 0 0 6px; font-size: 12px; color: var(--tx2); }
+.hl-roots { margin-bottom: 16px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+.hl-form-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 16px; }
+.hl-form-hint { margin-top: 4px; font-size: 11px; color: var(--tx3); }
+.hl-form-actions { margin-top: 18px; }
+
+/* ── 表 ── */
+/* 長いパス・検証コマンドで表が横に押し出され、右端の「操作」列が画面外へ出る。
+   セルに display:inline-block を当てても表セルでは効かないので、
+   table-layout:fixed で列幅を先に決め、はみ出しはセル自身で省略する。
+   全文は title 属性で読ませる。 */
+.hl-projects-table, .hl-runs-table { table-layout: fixed; width: 100%; }
+.hl-projects-table td, .hl-runs-table td { vertical-align: middle; }
+.hl-projects-table td, .hl-runs-table td,
+.hl-projects-table th, .hl-runs-table th { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 操作列には 4 つのボタン（対象にする / 接続を確認 / 編集 / 削除）が並ぶ。
+   幅が足りないと右端の「削除」が見えなくなり、押せる操作が存在しないのと同じになる。
+   実測で 4 つ入り切る幅を確保し、そのぶんパスと検証コマンドを省略側に寄せる。 */
+.hl-projects-table th:nth-child(1), .hl-projects-table td:nth-child(1) { width: 14%; }
+.hl-projects-table th:nth-child(2), .hl-projects-table td:nth-child(2) { width: 21%; }
+.hl-projects-table th:nth-child(3), .hl-projects-table td:nth-child(3) { width: 7%; }
+.hl-projects-table th:nth-child(4), .hl-projects-table td:nth-child(4) { width: 18%; }
+.hl-projects-table th:nth-child(5), .hl-projects-table td:nth-child(5) { width: 8%; }
+.hl-projects-table th:nth-child(6), .hl-projects-table td:nth-child(6) { width: 32%; overflow: visible; }
+
+.hl-runs-table th:nth-child(1), .hl-runs-table td:nth-child(1) { width: 15%; }
+.hl-runs-table th:nth-child(2), .hl-runs-table td:nth-child(2) { width: 18%; }
+.hl-runs-table th:nth-child(3), .hl-runs-table td:nth-child(3) { width: 26%; }
+.hl-runs-table th:nth-child(4), .hl-runs-table td:nth-child(4) { width: 8%; }
+.hl-runs-table th:nth-child(5), .hl-runs-table td:nth-child(5) { width: 11%; }
+.hl-runs-table th:nth-child(6), .hl-runs-table td:nth-child(6) { width: 12%; }
+.hl-runs-table th:nth-child(7), .hl-runs-table td:nth-child(7) { width: 10%; overflow: visible; }
+
+.hl-cell-ellipsis { display: block; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hl-proposal-agent { display: block; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 「差分を見る」と「1 ファイル変更」が折り返さないだけの幅を確保する。
+   幅を決めないと最右列が 40px 前後まで潰れ、ボタンの文字が 1 文字ずつ縦に並ぶ。 */
+.hl-proposals-table th:nth-child(1), .hl-proposals-table td:nth-child(1) { width: 96px; }
+.hl-proposals-table th:nth-child(2), .hl-proposals-table td:nth-child(2) { width: 72px; }
+.hl-proposals-table th:nth-child(4), .hl-proposals-table td:nth-child(4) { width: 118px; white-space: nowrap; }
+.hl-proposals-table th:nth-child(5), .hl-proposals-table td:nth-child(5) { width: 116px; white-space: nowrap; }
+.hl-col-diff { width: 118px; }
+.hl-col-actions { width: 1%; white-space: nowrap; }
+.hl-row-actions { display: flex; gap: 6px; flex-wrap: nowrap; }
+.hl-more-row { margin-top: 12px; text-align: center; }

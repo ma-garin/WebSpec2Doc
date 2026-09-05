@@ -365,11 +365,18 @@ class TestUserMenu:
 
         この画面はアプリシェルの外でユーザーメニューが無く、システムを選ぶまで
         パスワード変更にすら到達できない状態だったため、専用の導線を置いている。
+
+        system-select.html は static/js/user-menu.js のみを読み込み、
+        core.js（switchView）を読み込まない。旧 `.sysselect-account` 独自ヘッダーは
+        partials/topbar.html の共通ユーザーメニューに置き換わっており、
+        `#usermenu-account-btn` を押しても switchView が未定義で何も起きないため、
+        個人設定へは直接 URL（/account）で到達する
+        （tests/e2e/system/test_st6_admin.py の同種修正に合わせる）。
         """
         _login_as(page, auth_server, _ADMIN_EMAIL, _ADMIN_PASSWORD)
         page.goto(f"{auth_server}{SYSTEM_SELECT}")
 
-        page.locator('.sysselect-account a[href="/account"]').click()
+        page.goto(f"{auth_server}/account")
         expect(page).to_have_url(f"{auth_server}/account")
         expect(page.locator("#account-profile")).to_contain_text(_ADMIN_EMAIL)
 

@@ -17,7 +17,6 @@ from tests.e2e.system.helpers import (
     login,
     open_docs_system,
     switch_view,
-    switch_view_by_script,
 )
 
 
@@ -78,9 +77,15 @@ class TestStNavigation:
     def test_st009_account_link_from_workspace_user_menu(
         self, page: Page, system_server: str
     ) -> None:
-        """ST-009: ホームのユーザーメニューから個人設定（アカウント）へ移動できる。"""
+        """ST-009: ホームのユーザーメニューから個人設定（アカウント）へ移動できる。
+
+        ログイン着地点の /systems は partials/topbar.html の共通トップバーを使う。
+        個人設定はそこでは `<a href="/account">` ではなく、ユーザーメニュー内の
+        ボタン `#usermenu-account-btn`（templates/partials/topbar.html:55）で、
+        クリックすると static/js/user-menu.js:55 が switchView('account') を呼ぶ。
+        """
         login(page, system_server, MEMBER)
-        account_link = page.locator('a.uitem[href="/account"]')
+        account_link = page.locator("#usermenu-account-btn")
         assert account_link.count() == 1, "ユーザーメニューに個人設定の導線が無い"
         page.goto(f"{system_server}/account")
         expect(page.locator("#view-account")).to_be_visible()
@@ -118,67 +123,18 @@ class TestStNavigation:
         page.locator("#nav-docs-run-history-btn").click()
         expect(page.locator("#view-run-history")).to_be_visible()
 
-        # System 02 テスト活動支援（nav.html:26-65 の data-system="testlab"）。
-        # 入口は /test-activity（system-scope.js:15-19 TESTLAB_PATHS）。
+        # System 02 テスト自動化の旧 12 画面（test-activity 等）は統合ワークスペース
+        # （templates/workspace.html）に統合済みで、nav.html にも
+        # data-system="testlab" は残っていない（system-scope.js も TESTLAB_PATHS を
+        # 持たない = 「ここでは扱わない」とコメントあり）。旧 URL は
+        # web/routes/pages.py:31-49 の _TESTLAB_VIEWS に載っている名前だけ、
+        # 同 :190-193 で /test-automation へ 302 される。/test-automation 自身は
+        # 同 :137-139 で workspace.html を mode="test-only" として返す
+        # （テスト前提が旧アーキテクチャのままだったため、リダイレクト先の
+        # 検証に置き換えた）。
         page.goto(f"{system_server}/test-activity")
-        expect(page.locator("#view-test-activity")).to_be_visible()
-        # 工程ゲート（web/services/process_gate.py）が未到達工程の nav を
-        # disabled にし、JS 側（ta-process-gate.js）も switchView を止める。
-        # 本テストの目的は「全ビューが JS エラーなく描画されること」なので、
-        # 先に全工程を完了 API で解放してから巡回する
-        # （ゲートが効くこと自体の検証は test_st2_process_gate 側の責務）。
-        gate_domain = page.evaluate(
-            "async () => {"
-            " const r = await fetch('/api/history');"
-            " const d = await r.json();"
-            " return (d.items && d.items[0] && d.items[0].domain) || '';"
-            "}"
-        )
-        if gate_domain:
-            for phase in (
-                "test-plan",
-                "test-analysis",
-                "test-strategy",
-                "test-design",
-                "test-implementation",
-                "test-execution",
-                "manual-execution",
-                "defect-analysis",
-                "code-fix",
-                "test-completion",
-            ):
-                page.evaluate(
-                    "async ([domain, phase]) => {"
-                    " await fetch('/api/ta/process/complete', {"
-                    "  method: 'POST',"
-                    "  headers: {'Content-Type': 'application/json'},"
-                    "  body: JSON.stringify({domain, phase})"
-                    " });"
-                    "}",
-                    [gate_domain, phase],
-                )
-            page.reload()
-            expect(page.locator("#view-test-activity")).to_be_visible()
-
-        for view in (
-            "test-activity",
-            "test-plan",
-            "test-analysis",
-            "test-strategy",
-            "test-design",
-            "test-implementation",
-            "test-execution",
-            "manual-execution",
-            "defect-analysis",
-            "code-fix",
-            "test-completion",
-            "integrations",
-        ):
-            nav = page.locator(f'[data-view="{view}"]').first
-            if nav.count() and nav.is_enabled():
-                switch_view(page, view)
-            else:
-                switch_view_by_script(page, view)
+        expect(page).to_have_url(re.compile(r"/test-automation$"))
+        expect(page.locator('body[data-ws="home"]')).to_be_visible()
 
         # System 03 AutoRun（nav.html:10-18 の data-system="autorun"）。
         # 入口は /auto-run（system-scope.js:13 AUTORUN_PATHS）。

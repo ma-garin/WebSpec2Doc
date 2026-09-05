@@ -210,7 +210,13 @@ class TestStAdminOperations:
         token_name = "st-e2e-token"
         api_url = f"{system_server}/api/v1/sites"
         login(page, system_server, ADMIN)
-        page.locator(".sysselect-account").click()
+        # ログイン着地点 /systems（system-select.html）は user-menu.js のみを読み込み、
+        # core.js（switchView）を読み込まない。そのため `#usermenu-account-btn`
+        # （旧 `.sysselect-account`。system-select.html 独自ヘッダーは廃止済みで、
+        # partials/topbar.html の共通ユーザーメニューに置き換わった）を押しても
+        # switchView が未定義で何も起きない。個人設定（トークン発行）へは
+        # 直接 URL（/account）で到達する。
+        page.goto(f"{system_server}/account")
         expect(page.locator("#token-form")).to_be_visible()
         page.locator("#token-name").fill(token_name)
         page.locator('#token-form button[type="submit"]').click()

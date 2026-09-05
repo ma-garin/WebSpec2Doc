@@ -59,8 +59,8 @@ _RESET_INITIAL_PASSWORD = "e2e-reset-initial-1"
 _RESET_NEW_PASSWORD = "e2e-reset-updated-2"
 
 TENANT_SELECT = "/auth/tenant"
-# 製品統合でシステム選択ハブは廃止。ログイン後の着地点はホーム（サイト一覧）。
-SYSTEM_SELECT = "/"
+# テナント確定後の着地点はシステム選択画面（/systems）。
+SYSTEM_SELECT = "/systems"
 
 
 def _wait_for_health(url: str, timeout: float = 20.0) -> bool:
@@ -116,7 +116,7 @@ def auth_server() -> Generator[str, None, None]:
 
 
 def _login_as(page: Page, base_url: str, email: str, password: str) -> None:
-    """ログイン→テナント選択を経てホーム（"/"）に到達する（ID＋パスワード認証）。"""
+    """ログイン→テナント選択を経てシステム選択（"/systems"）に到達する（ID＋パスワード認証）。"""
     page.goto(f"{base_url}/auth/login")
     page.locator("#email").fill(email)
     page.locator("#password").fill(password)

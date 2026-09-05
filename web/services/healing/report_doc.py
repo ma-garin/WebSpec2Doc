@@ -370,6 +370,10 @@ def to_dict(report: MaintenanceReport) -> dict[str, Any]:
     data = asdict(report)
     data["attention"] = [dict(a) for a in report.attention]
     data["approvals"] = [dict(a) for a in report.approvals]
+    # 装飾を落とすようになる前に作られた報告書が残っている。保存済みの本文を
+    # 書き換えるのではなく、出すときに落とす（過去のデータを改変しない）。
+    for key in ("cause_text", "action_text"):
+        data[key] = " ".join(_strip_markup(data.get(key) or "").split())
     return data
 
 

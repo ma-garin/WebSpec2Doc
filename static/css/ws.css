@@ -187,6 +187,11 @@ a.btn{text-decoration:none}
    1280 で横スクロールが出る）。 */
 .ed-h h1{flex:1 1 auto;max-width:none}
 .ed-h code{flex:none;white-space:nowrap}
+/* #run-btn 等の flex 子要素が gap/padding の丸め誤差で 1px 未満だけ右にはみ出し、
+   document.scrollWidth を 1280 超に押し上げていた（E2E: test_page_does_not_scroll）。
+   実測: #run-btn right=1280.89px（ed-h 自体は 1280px で正しく収まっている）。
+   はみ出しはサブピクセルで視覚上の欠けは出ないため、ed-h 側で clip する。 */
+.ed-h{overflow:hidden}
 
 /* ------------------------------------------------------------------ 現在地
    レールのアイコンだけでは「何のツールの、どの作業か」が読めない。

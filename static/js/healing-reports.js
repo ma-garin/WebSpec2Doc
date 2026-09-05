@@ -72,7 +72,7 @@
 
   /* ---------------- 一覧 ---------------- */
 
-  var state = { status: 'awaiting', projectId: '' };
+  var state = { status: 'awaiting', projectId: '', reportId: '' };
 
   function verifyBadge(report) {
     if (report.verify_after_ok === true) { return el('span', 'hl-badge is-ok', report.verify_after); }
@@ -202,7 +202,369 @@
     });
   }
 
+  /* ---------------- 報告書の本文 ---------------- */
+
+  var SEVERITY_LABELS = { high: '高', medium: '中', low: '低' };
+  var REASON_LABELS = {
+    traceback: '実行時トレース',
+    'import': 'import 関係',
+    'recent-change': '直近の変更',
+    'test-name': 'テスト名',
+    selector: '画面の文言',
+    route: 'URL のルート',
+    screen: '画面仕様'
+  };
+  var STATUS_LABELS = {
+    awaiting: '承認待ち', approved: '承認済み', returned: '差し戻し',
+    rejected: '却下', submitted: '提出済み', draft: '下書き'
+  };
+
+  function section(title) {
+    return el('h2', 'hl-doc-h', title);
+  }
+
+  /* 節の本文＋右のスクリーンショット。画像が無ければ 1 列で組む。 */
+  function sectionBody(nodes, shotPath) {
+    var wrap = el('div', 'hl-doc-sec' + (shotPath ? '' : ' is-single'));
+    var main = el('div');
+    nodes.forEach(function (n) { if (n) { main.appendChild(n); } });
+    wrap.appendChild(main);
+    if (shotPath) {
+      var box = el('div', 'hl-doc-shot');
+      var img = document.createElement('img');
+      img.src = '/api/healing/reports/' + encodeURIComponent(state.reportId) +
+                '/screenshot?path=' + encodeURIComponent(shotPath);
+      img.alt = '画面の状態';
+      img.loading = 'lazy';
+      img.addEventListener('error', function () { box.remove(); });
+      box.appendChild(img);
+      wrap.appendChild(box);
+    }
+    return wrap;
+  }
+
+  function verifyBox(label, text, kind) {
+    var box = el('div', 'hl-verify-box is-' + kind);
+    box.appendChild(el('small', null, label));
+    box.appendChild(el('b', null, text || '—'));
+    return box;
+  }
+
+  function details(summaryText, badgeText, open) {
+    var d = document.createElement('details');
+    if (open) { d.open = true; }
+    var sum = document.createElement('summary');
+    sum.appendChild(el('span', 'hl-sum-tri', '▸'));
+    sum.appendChild(el('b', null, summaryText));
+    if (badgeText) { sum.appendChild(el('span', 'hl-sum-note', badgeText)); }
+    d.appendChild(sum);
+    return d;
+  }
+
+  function renderAttention(report) {
+    var high = report.attention.filter(function (a) { return a.severity === 'high'; }).length;
+    var d = details('確認が必要な点 ' + report.attention.length + ' 件',
+                    high > 0 ? '重大 ' + high : '', true);
+    if (!report.attention.length) {
+      d.appendChild(el('p', 'hl-doc-p',
+        '機械的に検出できる兆候はありませんでした。テストの通過は正しさを保証しません。差分を確認してください。'));
+      return d;
+    }
+    var ul = el('ul', 'hl-attn');
+    report.attention.forEach(function (a) {
+      var li = el('li');
+      li.appendChild(el('span', 'hl-badge is-' +
+        (a.severity === 'high' ? 'err' : a.severity === 'medium' ? 'warn' : 'mute'),
+        SEVERITY_LABELS[a.severity] || a.severity));
+      var body = el('div');
+      body.appendChild(el('b', null, a.label || ''));
+      if (a.detail) { body.appendChild(el('small', null, a.detail)); }
+      li.appendChild(body);
+      ul.appendChild(li);
+    });
+    d.appendChild(ul);
+    return d;
+  }
+
+  function renderDiff(proposal) {
+    var files = (proposal && proposal.files_changed) || [];
+    var d = details('変更内容（差分 ' + files.length + ' ファイル）', '開発者向け', false);
+    if (!proposal || !proposal.diff) {
+      d.appendChild(el('p', 'hl-doc-p', '差分はありません。'));
+      return d;
+    }
+    var pre = el('pre', 'hl-diff');
+    proposal.diff.split('\n').forEach(function (line) {
+      var cls = 'hl-diff-line';
+      if (line.startsWith('+++') || line.startsWith('---') || line.startsWith('@@') ||
+          line.startsWith('diff ') || line.startsWith('index ')) { cls += ' is-meta'; }
+      else if (line.startsWith('+')) { cls += ' is-add'; }
+      else if (line.startsWith('-')) { cls += ' is-del'; }
+      pre.appendChild(el('div', cls, line));
+    });
+    d.appendChild(pre);
+    return d;
+  }
+
+  function renderEvidence(proposal) {
+    var d = details('該当箇所の根拠と、AI の説明', '開発者向け', false);
+    var locations = (proposal && proposal.locations) || [];
+    if (locations.length) {
+      var table = el('table', 'hl-evidence');
+      var thead = el('thead'), htr = el('tr');
+      ['ファイル', '根拠', '強さ'].forEach(function (t) { htr.appendChild(el('th', null, t)); });
+      thead.appendChild(htr); table.appendChild(thead);
+      var tbody = el('tbody');
+      locations.slice().sort(function (a, b) { return (b.score || 0) - (a.score || 0); })
+        .forEach(function (loc) {
+          var tr = el('tr');
+          tr.appendChild(el('td', 'hl-ev-path', loc.path || ''));
+          tr.appendChild(el('td', null, REASON_LABELS[loc.reason] || loc.reason || ''));
+          var td = el('td', 'hl-ev-score');
+          var bar = el('span', 'hl-bar');
+          var fill = el('i');
+          fill.style.width = Math.round((loc.score || 0) * 100) + '%';
+          bar.appendChild(fill);
+          td.appendChild(bar);
+          td.appendChild(el('small', null, Math.round((loc.score || 0) * 100) + '%'));
+          tr.appendChild(td);
+          tbody.appendChild(tr);
+        });
+      table.appendChild(tbody);
+      d.appendChild(table);
+    } else {
+      d.appendChild(el('p', 'hl-doc-p', '該当箇所を特定できませんでした。'));
+    }
+    if (proposal && proposal.rationale) {
+      d.appendChild(el('blockquote', 'hl-quote', proposal.rationale));
+      d.appendChild(el('p', 'hl-doc-note', 'AI の自己申告です。差分で確認してください。'));
+    }
+    return d;
+  }
+
+  function renderApprovals(report) {
+    var roles = { proposed: '提案', approved: '承認', returned: '差し戻し', rejected: '却下', customer: '顧客確認' };
+    var parts = report.approvals.map(function (a) {
+      return (roles[a.role] || a.role) + ': ' + (a.who || '—') + ' ' + (a.at || '').slice(0, 16).replace('T', ' ');
+    });
+    parts.push(report.pr_number ? 'PR: #' + report.pr_number : 'PR: 承認後に作成');
+    return el('p', 'hl-doc-p hl-sign', parts.join(' ／ '));
+  }
+
+  function renderDoc(data) {
+    var report = data.report;
+    var proposal = data.proposal;
+    var doc = document.getElementById('hl-doc');
+    doc.textContent = '';
+    doc.setAttribute('aria-busy', 'false');
+
+    doc.appendChild(el('h1', 'hl-doc-title', '保守対応報告書'));
+    var meta = el('p', 'hl-doc-meta');
+    [
+      '案件: ' + (report.project_name || '—'),
+      report.target_url ? '対象: ' + report.target_url : '',
+      report.incident_detected_at ? '対応日: ' + report.incident_detected_at.slice(0, 10) : ''
+    ].filter(Boolean).forEach(function (t) { meta.appendChild(el('span', null, t)); });
+    meta.appendChild(el('span', 'hl-badge is-ac', STATUS_LABELS[report.status] || report.status));
+    doc.appendChild(meta);
+
+    // 1. 事象
+    doc.appendChild(section('1. 事象'));
+    doc.appendChild(sectionBody([
+      el('p', 'hl-doc-p', report.incident_text || '記録なし'),
+      el('p', 'hl-doc-note',
+        [report.incident_screen_name, report.incident_test_id, report.incident_verify]
+          .filter(Boolean).join(' ／ '))
+    ], report.incident_screenshot));
+
+    // 2. 原因
+    doc.appendChild(section('2. 原因'));
+    var causeNodes = [el('p', 'hl-doc-p', report.cause_text || '—')];
+    if (report.cause_location) {
+      var loc = el('p', 'hl-doc-note');
+      loc.appendChild(document.createTextNode('箇所: '));
+      loc.appendChild(el('code', null, report.cause_location));
+      causeNodes.push(loc);
+    }
+    doc.appendChild(sectionBody(causeNodes, ''));
+
+    // 3. 対応
+    doc.appendChild(section('3. 対応'));
+    var actionNodes = [];
+    if (report.action_text) {
+      actionNodes.push(el('p', 'hl-doc-p', report.action_text));
+      var info = [report.action_by, report.action_diff_stats].filter(Boolean).join(' ／ ');
+      if (info) { actionNodes.push(el('p', 'hl-doc-note', info)); }
+    } else {
+      actionNodes.push(el('p', 'hl-doc-p', '自動では直せませんでした。対応は担当者が記入してください。'));
+      if (IS_ADMIN) {
+        var ta = el('textarea', 'hl-field hl-action-edit');
+        ta.id = 'hl-action-edit';
+        ta.rows = 3;
+        ta.placeholder = '例: 手順を確認し、設定値を修正しました';
+        ta.addEventListener('blur', function () { saveAction(ta.value); });
+        actionNodes.push(ta);
+      }
+    }
+    doc.appendChild(sectionBody(actionNodes, report.action_screenshot));
+
+    // 4. 検証
+    doc.appendChild(section('4. 検証'));
+    var ver = el('div', 'hl-verify');
+    ver.appendChild(verifyBox('修正前', report.verify_before, 'err'));
+    ver.appendChild(verifyBox('修正後', report.verify_after,
+      report.verify_after_ok === true ? 'ok' : report.verify_after_ok === false ? 'err' : 'mute'));
+    ver.appendChild(verifyBox('画面仕様との照合', report.spec_match,
+      report.spec_match === '未照合' ? 'mute' : 'ok'));
+    doc.appendChild(ver);
+
+    // 折りたたみ 3 つ
+    doc.appendChild(renderAttention(report));
+    doc.appendChild(renderDiff(proposal));
+    doc.appendChild(renderEvidence(proposal));
+
+    // 5. 承認
+    doc.appendChild(section('5. 承認'));
+    doc.appendChild(renderApprovals(report));
+
+    renderActions(report);
+  }
+
+  function saveAction(text) {
+    api('/api/healing/reports/' + encodeURIComponent(state.reportId), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action_text: text })
+    }).then(function () { toast('対応を保存しました'); })
+      .catch(function (e) { showError('保存できませんでした: ' + e.message); });
+  }
+
+  function toast(message) {
+    var box = document.getElementById('hl-toast');
+    if (!box) { return; }
+    box.textContent = message;
+    box.hidden = false;
+    setTimeout(function () { box.hidden = true; }, 3000);
+  }
+
+  function renderActions(report) {
+    var box = document.getElementById('hl-doc-actions');
+    if (!box) { return; }
+    box.textContent = '';
+    var high = report.attention.filter(function (a) { return a.severity === 'high'; }).length;
+    var canDecide = IS_ADMIN && report.status === 'awaiting';
+    box.hidden = false;
+
+    if (canDecide) {
+      var note = el('textarea', 'hl-field');
+      note.id = 'hl-report-note';
+      note.rows = 3;
+      note.placeholder = '承認のメモ（報告書と証跡に残ります）';
+      box.appendChild(note);
+
+      var approve = el('button', 'hl-btn' + (high > 0 ? '' : ' is-primary'), '承認して PR を作る');
+      approve.type = 'button';
+      approve.addEventListener('click', function () { decide('approve', note.value, approve); });
+      box.appendChild(approve);
+
+      var back = el('button', 'hl-btn', '差し戻す');
+      back.type = 'button';
+      back.addEventListener('click', function () {
+        if (!note.value.trim()) {
+          showError('差し戻すときは、どう直してほしいかをメモに書いてください。');
+          note.focus();
+          return;
+        }
+        decide('return', note.value, back);
+      });
+      box.appendChild(back);
+
+      var reject = el('button', 'hl-btn is-danger', '却下');
+      reject.type = 'button';
+      var confirm = el('div', 'hl-confirm');
+      confirm.hidden = true;
+      confirm.setAttribute('inert', '');
+      confirm.appendChild(el('span', null, '本当に却下しますか？'));
+      var yes = el('button', 'hl-btn hl-btn-sm is-danger', '却下する');
+      yes.type = 'button';
+      yes.addEventListener('click', function () { decide('reject', note.value, yes); });
+      var no = el('button', 'hl-btn hl-btn-sm', 'やめる');
+      no.type = 'button';
+      no.addEventListener('click', function () {
+        confirm.hidden = true; confirm.setAttribute('inert', '');
+      });
+      confirm.appendChild(yes); confirm.appendChild(no);
+      reject.addEventListener('click', function () {
+        confirm.hidden = false; confirm.removeAttribute('inert');
+      });
+      box.appendChild(reject);
+      box.appendChild(confirm);
+
+      if (high > 0) {
+        box.appendChild(el('p', 'hl-doc-note', '確認が必要な点が残っているため、承認は強調していません。'));
+      }
+    } else if (!IS_ADMIN) {
+      box.appendChild(el('p', 'hl-doc-note', '判断するには管理者権限が必要です。'));
+    } else {
+      box.appendChild(el('p', 'hl-doc-note',
+        'この報告書は「' + (STATUS_LABELS[report.status] || report.status) + '」です。'));
+    }
+
+    var out = el('div', 'hl-out');
+    ['md', 'json'].forEach(function (fmt) {
+      var a = el('a', 'hl-btn hl-btn-sm', fmt === 'md' ? 'Markdown' : 'JSON（証跡）');
+      a.href = '/api/healing/reports/' + encodeURIComponent(state.reportId) + '/export?format=' + fmt;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      out.appendChild(a);
+    });
+    var print = el('a', 'hl-btn hl-btn-sm', '印刷 / PDF');
+    print.href = '/healing/reports/' + encodeURIComponent(state.reportId) + '/print';
+    print.target = '_blank';
+    print.rel = 'noopener';
+    out.appendChild(print);
+    out.appendChild(el('p', 'hl-doc-note', '承認前でも下書きとして出力できます。承認欄は空のままです。'));
+    box.appendChild(out);
+  }
+
+  function decide(action, note, button) {
+    clearError();
+    if (button) { button.disabled = true; }
+    api('/api/healing/reports/' + encodeURIComponent(state.reportId) + '/decision', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: action, note: note || '', actor: '' })
+    }).then(function (data) {
+      var r = data.report;
+      var msg = action === 'approve'
+        ? (r.pr_number ? '承認しました。PR #' + r.pr_number + ' を作成しました' : '承認しました')
+        : action === 'return' ? '差し戻しました。修正をやり直します' : '却下しました';
+      toast(msg);
+      setTimeout(function () { window.location.href = '/healing'; }, 2000);
+    }).catch(function (e) {
+      if (button) { button.disabled = false; }
+      showError(e.message);
+    });
+  }
+
+  function loadDoc() {
+    api('/api/healing/reports/' + encodeURIComponent(state.reportId))
+      .then(renderDoc)
+      .catch(function (e) {
+        var doc = document.getElementById('hl-doc');
+        if (doc) { doc.textContent = ''; doc.appendChild(el('p', 'hl-doc-p', '報告書を読み込めませんでした。')); }
+        showError(e.message);
+      });
+  }
+
   function init() {
+    var reportId = document.body.getAttribute('data-report-id');
+    if (reportId) {
+      state.reportId = reportId;
+      loadCount();
+      loadDoc();
+      return;
+    }
     if (!document.getElementById('hl-reports-table')) { return; }
     bindChips();
     on('hl-project-filter', 'change', function (ev) {

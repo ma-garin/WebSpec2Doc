@@ -12,7 +12,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from flask import Blueprint, abort, render_template, request
+from flask import Blueprint, abort, render_template, request, send_file
 
 from web.audit_context import record_admin_event
 from web.auth import require_admin
@@ -280,6 +280,40 @@ def healing_settings_page():
         allowed_roots=[str(p) for p in project_store.allowed_roots()],
         focus_run_id=None,
     )
+
+
+@bp.get("/healing/reports/<report_id>")
+def healing_report_page(report_id: str):
+    """報告書 1 件。読んで、承認するかを決める画面。"""
+    if not _ID_RE.match(report_id):
+        abort(404)
+    return render_template("healing_report.html", report_id=report_id)
+
+
+@bp.get("/api/healing/reports/<report_id>/screenshot")
+def api_report_screenshot(report_id: str):
+    """報告書に添える画面のスクリーンショット。
+
+    パスは報告書が持っているものだけを配信する。クエリで受け取った値を
+    そのままファイルパスにすると、任意のファイルを読み出せてしまう。
+    """
+    if not _ID_RE.match(report_id):
+        abort(404)
+    requested = str(request.args.get("path", "")).strip()
+    try:
+        out_dir = _out()
+        report = report_doc.load_report(out_dir, report_id)
+        if report is None:
+            abort(404)
+        allowed = {report.incident_screenshot, report.action_screenshot} - {""}
+        if requested not in allowed:
+            abort(404)
+        target = (Path(out_dir) / requested).resolve()
+        if not str(target).startswith(str(Path(out_dir).resolve())) or not target.is_file():
+            abort(404)
+        return send_file(target)
+    except HealingError:
+        abort(404)
 
 
 @bp.get("/healing/runs/<run_id>")

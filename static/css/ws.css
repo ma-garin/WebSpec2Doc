@@ -283,7 +283,11 @@ a.btn{text-decoration:none}
    ta2.css / 上の .rail 系ルールの方が詳細度で勝つため、ここで打ち消す。
    色は app.css / tokens.css の既存トークンだけを使う（新設しない）。
    ============================================================ */
-.app{grid-template-columns:var(--sidebar-w) 280px 1fr}
+/* 1fr は既定 minmax(auto,1fr) のため、列内コンテンツの min-content 幅が
+   残り幅を超えるとグリッド全体が押し出されて 1px はみ出す
+   （サイドバーを --sidebar-w=256px 相当に広げた際に /tests で発生）。
+   minmax(0,1fr) でトラック自体の下限を 0 にし、はみ出しは列内 overflow に委ねる。 */
+.app{grid-template-columns:var(--sidebar-w) 280px minmax(0,1fr)}
 
 .rail.app-sidebar{
   display:flex;flex-direction:column;align-items:stretch;

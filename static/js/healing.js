@@ -656,6 +656,223 @@
     return wrap;
   }
 
+  // 該当箇所の根拠に付く理由コードの和訳。API が知らないコードを返しても
+  // そのまま出す（空欄にすると「根拠が無い」と読めてしまう）。
+  var REASON_LABELS = {
+    traceback: '実行時トレース',
+    'import': 'import 関係',
+    'recent-change': '直近の変更',
+    'test-name': 'テスト名'
+  };
+  var SEVERITY_RANK = { critical: 0, high: 1, medium: 2, low: 3 };
+
+  function severityRank(sev) {
+    var r = SEVERITY_RANK[sev];
+    return r === undefined ? 9 : r;
+  }
+
+  /* 該当箇所の根拠。locations は古い実行履歴には存在しないので undefined 前提で守る。 */
+  function renderEvidence(locations) {
+    var wrap = el('div', 'hl-evidence');
+    wrap.appendChild(el('div', 'hl-evidence-head', '該当箇所の根拠'));
+    var list = (locations || []).slice();
+    if (list.length === 0) {
+      wrap.appendChild(el('p', 'hl-evidence-empty', '根拠を特定できませんでした。'));
+      return wrap;
+    }
+    list.sort(function (a, b) { return (b.score || 0) - (a.score || 0); });
+    var table = el('table', 'data hl-evidence-table');
+    var thead = el('thead');
+    var trh = el('tr');
+    ['ファイル', '根拠', '確度'].forEach(function (t) { trh.appendChild(el('th', null, t)); });
+    thead.appendChild(trh);
+    table.appendChild(thead);
+    var tbody = el('tbody');
+    list.forEach(function (loc) {
+      var tr = el('tr');
+      var path = loc.path || '';
+      var tdPath = el('td', 'hl-kv hl-ellipsis', path);
+      tdPath.title = loc.detail ? (path + ' — ' + loc.detail) : path;
+      tr.appendChild(tdPath);
+      var tdReason = el('td', null, REASON_LABELS[loc.reason] || loc.reason || '不明');
+      if (loc.detail) { tdReason.title = loc.detail; }
+      tr.appendChild(tdReason);
+      // score は 0〜1 で来る想定だが、0〜100 で来ても壊さない。
+      var pct = null;
+      if (typeof loc.score === 'number' && isFinite(loc.score)) {
+        pct = loc.score <= 1 ? Math.round(loc.score * 100) : Math.round(loc.score);
+      }
+      tr.appendChild(el('td', 'num', pct === null ? '—' : pct + '%'));
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+    return wrap;
+  }
+
+  /* 確認が必要な点。risks が空でも黙らない（「兆候が無い＝正しい」ではないため）。 */
+  function renderRisks(risks) {
+    var wrap = el('div', 'hl-risk');
+    wrap.appendChild(el('div', 'hl-risk-head', '確認が必要な点'));
+    var list = (risks || []).slice();
+    if (list.length === 0) {
+      wrap.appendChild(el('p', 'hl-risk-none',
+        '機械的な兆候はありませんでした。テストの通過は正しさを保証しません。差分を確認してください。'));
+      return wrap;
+    }
+    list.sort(function (a, b) { return severityRank(a.severity) - severityRank(b.severity); });
+    var ul = el('ul', 'hl-risk-list');
+    list.forEach(function (r) {
+      var sev = r.severity || 'low';
+      var li = el('li', 'hl-risk-item is-' + sev);
+      var line = el('div', 'hl-risk-line');
+      line.appendChild(el('span', 'hl-risk-badge is-' + sev, SEVERITY_LABELS[sev] || sev));
+      line.appendChild(el('span', 'hl-risk-label', r.label || r.code || ''));
+      li.appendChild(line);
+      if (r.detail) { li.appendChild(el('div', 'hl-risk-detail', r.detail)); }
+      ul.appendChild(li);
+    });
+    wrap.appendChild(ul);
+    return wrap;
+  }
+
+  /* ---------------- 最小の Markdown 変換（見出し・表・箇条書き・コードフェンスのみ） ----------------
+     ライブラリも CDN も足さない。innerHTML を一切使わず DOM を組み立てるため、
+     レポート本文がマークアップとして解釈されることはない（XSS 防止）。 */
+
+  function appendInline(parent, text) {
+    var rest = String(text == null ? '' : text);
+    var re = /(`[^`]+`|\*\*[^*]+\*\*)/;
+    while (rest) {
+      var m = re.exec(rest);
+      if (!m) { parent.appendChild(document.createTextNode(rest)); break; }
+      if (m.index > 0) { parent.appendChild(document.createTextNode(rest.slice(0, m.index))); }
+      var token = m[0];
+      if (token.charAt(0) === '`') {
+        parent.appendChild(el('code', 'hl-report-inline-code', token.slice(1, -1)));
+      } else {
+        parent.appendChild(el('b', null, token.slice(2, -2)));
+      }
+      rest = rest.slice(m.index + token.length);
+    }
+  }
+
+  function isTableDivider(line) {
+    return /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(line);
+  }
+  function splitTableRow(line) {
+    return line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|')
+      .map(function (c) { return c.trim(); });
+  }
+
+  function buildReportTable(rows) {
+    var table = el('table', 'data hl-report-table');
+    var tbody = el('tbody');
+    var headDone = false;
+    rows.forEach(function (raw, idx) {
+      if (isTableDivider(raw)) { return; }
+      var isHead = !headDone && idx === 0;
+      var tr = el('tr');
+      splitTableRow(raw).forEach(function (c) {
+        var cell = el(isHead ? 'th' : 'td');
+        appendInline(cell, c);
+        tr.appendChild(cell);
+      });
+      if (isHead) {
+        var thead = el('thead');
+        thead.appendChild(tr);
+        table.appendChild(thead);
+        headDone = true;
+      } else {
+        tbody.appendChild(tr);
+      }
+    });
+    table.appendChild(tbody);
+    return table;
+  }
+
+  function renderMarkdown(md) {
+    var root = el('div', 'hl-report-body');
+    var lines = String(md || '').split('\n');
+    var i = 0;
+    while (i < lines.length) {
+      var line = lines[i];
+
+      if (/^\s*```/.test(line)) {
+        i += 1;
+        var code = [];
+        while (i < lines.length && !/^\s*```/.test(lines[i])) { code.push(lines[i]); i += 1; }
+        i += 1;
+        root.appendChild(el('pre', 'hl-report-code', code.join('\n')));
+        continue;
+      }
+
+      var h = /^\s*(#{1,6})\s+(.*)$/.exec(line);
+      if (h) {
+        // レポートは画面の一部なので、見出しレベルは h3 以下に押し下げる。
+        var head = el('h' + Math.min(6, h[1].length + 2), 'hl-report-head');
+        appendInline(head, h[2]);
+        root.appendChild(head);
+        i += 1;
+        continue;
+      }
+
+      if (/^\s*\|/.test(line)) {
+        var rows = [];
+        while (i < lines.length && /^\s*\|/.test(lines[i])) { rows.push(lines[i]); i += 1; }
+        root.appendChild(buildReportTable(rows));
+        continue;
+      }
+
+      if (/^\s*[-*+]\s+/.test(line) || /^\s*\d+[.)]\s+/.test(line)) {
+        var ordered = /^\s*\d+[.)]\s+/.test(line);
+        var listEl = el(ordered ? 'ol' : 'ul', 'hl-report-list');
+        var itemRe = ordered ? /^\s*\d+[.)]\s+/ : /^\s*[-*+]\s+/;
+        while (i < lines.length && itemRe.test(lines[i])) {
+          var li = el('li');
+          appendInline(li, lines[i].replace(itemRe, ''));
+          listEl.appendChild(li);
+          i += 1;
+        }
+        root.appendChild(listEl);
+        continue;
+      }
+
+      if (!line.trim()) { i += 1; continue; }
+
+      var para = [];
+      while (i < lines.length && lines[i].trim()
+             && !/^\s*(```|#{1,6}\s|[-*+]\s|\d+[.)]\s|\|)/.test(lines[i])) {
+        para.push(lines[i].trim());
+        i += 1;
+      }
+      if (para.length) {
+        var p = el('p', 'hl-report-p');
+        appendInline(p, para.join(' '));
+        root.appendChild(p);
+      } else {
+        i += 1;
+      }
+    }
+    return root;
+  }
+
+  /* バグレポート。開閉は「差分を見る」と同じ形にそろえる。 */
+  function buildReportBlock(reportMd) {
+    var wrap = el('div', 'hl-report');
+    var toggle = el('button', 'btn-outline-sm', 'バグレポートを見る');
+    toggle.type = 'button';
+    var body = renderMarkdown(reportMd);
+    body.hidden = true;
+    toggle.addEventListener('click', function () {
+      body.hidden = !body.hidden;
+      toggle.textContent = body.hidden ? 'バグレポートを見る' : 'バグレポートを隠す';
+    });
+    wrap.appendChild(toggle);
+    wrap.appendChild(body);
+    return wrap;
+  }
+
   function renderDefectsTable(defects) {
     if (!defects || defects.length === 0) {
       return el('p', 'hl-hint', '検出した不具合はありません。');
@@ -681,6 +898,14 @@
       tdFile.title = files;
       tr.appendChild(tdFile);
       tbody.appendChild(tr);
+
+      // なぜそのファイルが疑われるのかを、欠陥のすぐ下に出す。
+      var evTr = el('tr', 'hl-evidence-row');
+      var evTd = el('td');
+      evTd.colSpan = 4;
+      evTd.appendChild(renderEvidence(d.locations));
+      evTr.appendChild(evTd);
+      tbody.appendChild(evTr);
     });
     table.appendChild(tbody);
     return table;
@@ -755,6 +980,16 @@
           toggle.textContent = diffTr.hidden ? '差分を見る' : '差分を隠す';
         });
       }
+
+      // 確認が必要な点は常に出す（空でも「兆候が無かった」と書く）。
+      // バグレポートは差分と同じ形のトグルで開閉する。
+      var detailTr = el('tr', 'hl-detail-row');
+      var detailTd = el('td');
+      detailTd.colSpan = 5;
+      detailTd.appendChild(renderRisks(p.risks));
+      if (p.report_md) { detailTd.appendChild(buildReportBlock(p.report_md)); }
+      detailTr.appendChild(detailTd);
+      tbody.appendChild(detailTr);
     });
     table.appendChild(tbody);
     return table;

@@ -17,14 +17,25 @@ from __future__ import annotations
 import logging
 import threading
 import uuid
+from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FuturesTimeoutError
+from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from web.services.healing import agents as healing_agents
-from web.services.healing import git_ops, github_client, project_store, run_store, verification
+from web.services.healing import report as healing_report
+from web.services.healing import (
+    git_ops,
+    github_client,
+    localization,
+    project_store,
+    risk,
+    run_store,
+    verification,
+)
 from web.services.healing.types import (
     AgentTask,
     Defect,
@@ -351,6 +362,8 @@ def create_pull_request_for_run(out_dir: Path, run_id: str, *, draft: bool = Fal
         verify_before=verify_before,
         verify_after=verify_after,
     )
+    # 修正 1 件ごとの Markdown レポートを本文末尾に足す（github_client 側は触らない）。
+    body = _append_reports(body, proposals)
     pr_ref: PullRequestRef = github_client.create_pull_request(
         cfg,
         repo_path=repo,
@@ -497,6 +510,8 @@ def _run_loop_inner(out_dir: Path, run: HealingRun, project: HealingProject, ext
         # analyzing
         _update(out_dir, run, status="analyzing", step_label=f"欠陥の切り出し（{i} 周目）")
         defects = verification.failures_to_defects(verify_result.failures, repo=integration_dir, source="verify")
+        # 「どこが怪しいか」をここで確定させ、以降の修正指示と PR レポートに載せる。
+        defects = _localize_defects(run, defects, repo=repo)
         iteration.defects = list(defects)
         if not defects:
             # 「不在の証明」はしない: 失敗を構造化できなかった事実だけを記録して止まる。
@@ -634,7 +649,7 @@ def _fix_defects(
                 repo_root=str(repo),
                 verify_command=project.verify_command,
                 timeout_sec=project.agent_timeout_sec,
-                extra_instructions=extra_instructions,
+                extra_instructions=_instructions_with_locations(extra_instructions, defect),
             )
             futures[pool.submit(agent.propose_fix, task)] = defect_id
 
@@ -681,22 +696,150 @@ def _fix_defects(
             if not delete_result.ok:
                 _add_log(run, f"欠陥ブランチを削除できませんでした（{branch}）: {delete_result.stderr}")
 
-        ordered.append(proposal)
+        # リスクとレポートは最終状態が決まってから載せる（人の判断材料のため）。
+        ordered.append(_enrich_proposal(run, defect, proposal))
 
     return ordered
 
 
 def _replace_status(proposal: FixProposal, *, status: str, error: str) -> FixProposal:
-    """FixProposal は frozen dataclass なので、状態変更は新しいコピーで行う（不変データ方針）。"""
-    return FixProposal(
-        defect_id=proposal.defect_id,
-        agent=proposal.agent,
-        status=status,
-        summary=proposal.summary,
-        rationale=proposal.rationale,
-        diff=proposal.diff,
-        files_changed=proposal.files_changed,
-        log_tail=proposal.log_tail,
-        duration_sec=proposal.duration_sec,
-        error=error,
+    """FixProposal は frozen dataclass なので、状態変更は新しいコピーで行う（不変データ方針）。
+
+    フィールドを列挙して作り直すと、後から足したフィールド（risks / report_md）が
+    黙って落ちる。dataclasses.replace で「変える所だけ」を指定する。
+    """
+    return replace(proposal, status=status, error=error)
+
+
+# ────────────── 限局・リスク・レポート（人が判断するための材料） ──────────────
+#
+# localization / risk / report は修正そのものではなく「判断材料」を作る。
+# したがってここでの失敗はループを止めない。ただし握り潰さず、
+# logger と run.log の両方へ日本語 1 行を必ず残す。
+
+
+def _localize_defects(run: HealingRun, defects: Sequence[Defect], *, repo: Path) -> list[Defect]:
+    """欠陥ごとに限局を求め、結果を載せた新しい Defect の一覧を返す（元は書き換えない）。"""
+    located: list[Defect] = []
+    for defect in defects:
+        try:
+            located.append(_with_locations(defect, localization.locate(defect, repo=repo)))
+        except Exception as exc:  # noqa: BLE001 - 限局の失敗で修正ループを止めない
+            logger.warning("欠陥 %s の限局に失敗しました: %s", defect.defect_id, exc, exc_info=True)
+            _add_log(run, f"欠陥 {defect.defect_id} の限局に失敗しました（修正はそのまま続けます）")
+            located.append(defect)
+    return located
+
+
+def _with_locations(defect: Defect, evidence: Sequence[Any]) -> Defect:
+    """限局結果を dict 化して Defect に載せる。frozen なので新しいオブジェクトを返す。"""
+    locations = tuple(
+        {
+            "path": str(getattr(item, "path", "") or ""),
+            "reason": str(getattr(item, "reason", "") or ""),
+            "score": float(getattr(item, "score", 0.0) or 0.0),
+            "detail": str(getattr(item, "detail", "") or ""),
+        }
+        for item in evidence
     )
+    locations = tuple(loc for loc in locations if loc["path"])
+    if not locations:
+        return defect
+    # 既存の suspect_files を先頭に残したまま、限局で挙がったパスを重複なく足す。
+    merged = list(defect.suspect_files) + [loc["path"] for loc in locations]
+    return replace(
+        defect,
+        suspect_files=tuple(dict.fromkeys(path for path in merged if path)),
+        locations=locations,
+    )
+
+
+def _instructions_with_locations(base: str, defect: Defect) -> str:
+    """利用者の指示を保持したまま、限局の根拠を日本語 1〜5 行だけ追記する。"""
+    lines: list[str] = []
+    for loc in defect.locations[:5]:
+        path = str(loc.get("path") or "")
+        if not path:
+            continue
+        reason = str(loc.get("reason") or "根拠不明")
+        try:
+            score = float(loc.get("score") or 0.0)
+        except (TypeError, ValueError):
+            score = 0.0
+        percent = score * 100 if score <= 1.0 else score
+        lines.append(f"- {path}（{reason}・確度 {percent:.0f}%）")
+    if not lines:
+        return base
+    hint = "該当が疑われるファイル（自動限局・確度の高い順）:\n" + "\n".join(lines)
+    return f"{base}\n\n{hint}" if base else hint
+
+
+def _risk_signal_to_dict(signal: Any) -> dict[str, Any]:
+    """RiskSignal を保存可能な dict にする。"""
+    return {
+        "code": str(getattr(signal, "code", "") or ""),
+        "label": str(getattr(signal, "label", "") or ""),
+        "detail": str(getattr(signal, "detail", "") or ""),
+        "severity": str(getattr(signal, "severity", "") or ""),
+    }
+
+
+def _assess_risks(run: HealingRun, defect: Defect, proposal: FixProposal) -> tuple[Any, ...]:
+    """修正案のリスク評価。失敗しても修正は捨てず、空のまま続行する。"""
+    try:
+        return tuple(risk.assess(proposal))
+    except Exception as exc:  # noqa: BLE001 - リスク評価の失敗で修正を捨てない
+        logger.warning("欠陥 %s のリスク評価に失敗しました: %s", defect.defect_id, exc, exc_info=True)
+        _add_log(run, f"欠陥 {defect.defect_id} のリスク評価に失敗しました（修正は保持します）")
+        return ()
+
+
+def _location_evidence(defect: Defect) -> tuple[Any, ...]:
+    """保存済みの dict を LocationEvidence へ戻す（レポート生成に渡すため）。"""
+    try:
+        return tuple(
+            localization.LocationEvidence(
+                path=str(loc.get("path") or ""),
+                reason=str(loc.get("reason") or ""),
+                score=float(loc.get("score") or 0.0),
+                detail=str(loc.get("detail") or ""),
+            )
+            for loc in defect.locations
+        )
+    except Exception as exc:  # noqa: BLE001 - 復元できなくてもレポートは作る
+        logger.warning("欠陥 %s の限局根拠を復元できませんでした: %s", defect.defect_id, exc)
+        return ()
+
+
+def _enrich_proposal(run: HealingRun, defect: Defect, proposal: FixProposal) -> FixProposal:
+    """修正案にリスク評価と Markdown レポートを載せた新しい FixProposal を返す。"""
+    signals = _assess_risks(run, defect, proposal)
+    report_md = ""
+    try:
+        report_md = str(
+            healing_report.build_report(
+                defect, proposal, evidence=_location_evidence(defect), risks=signals
+            )
+            or ""
+        )
+    except Exception as exc:  # noqa: BLE001 - レポート生成の失敗で修正を捨てない
+        logger.warning("欠陥 %s のレポート生成に失敗しました: %s", defect.defect_id, exc, exc_info=True)
+        _add_log(run, f"欠陥 {defect.defect_id} のレポート生成に失敗しました（修正は保持します）")
+    return replace(
+        proposal,
+        risks=tuple(_risk_signal_to_dict(signal) for signal in signals),
+        report_md=report_md,
+    )
+
+
+def _append_reports(body: str, proposals: Sequence[FixProposal]) -> str:
+    """PR 本文の末尾へ修正レポートを足す。失敗しても既存の本文は壊さない。"""
+    reports = [p.report_md for p in proposals if p.report_md]
+    if not reports:
+        return body
+    try:
+        section = str(healing_report.build_pr_section(reports) or "")
+    except Exception as exc:  # noqa: BLE001 - レポート追記の失敗で PR 作成を止めない
+        logger.warning("PR 本文への修正レポート追記に失敗しました: %s", exc, exc_info=True)
+        return body
+    return f"{body}\n\n{section}" if section else body

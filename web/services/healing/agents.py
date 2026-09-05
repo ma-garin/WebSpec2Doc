@@ -9,9 +9,13 @@ orchestrator は types.HealingAgent Protocol にしか依存しないため、
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess  # nosec B404 - shell=False固定・固定コマンド列のみ実行
 import time
+import urllib.error
+import urllib.request
+from collections.abc import Callable
 from typing import Any
 
 from web.services.healing.types import (
@@ -325,11 +329,286 @@ class DryRunAgent:
         )
 
 
+# ─────────────────── LLM API エージェント共通（OpenAI / Ollama） ───────────────────
+
+_OPENAI_DEFAULT_MODEL = "gpt-4o-mini"
+_OLLAMA_DEFAULT_MODEL = "qwen2.5:3b"
+_OLLAMA_DEFAULT_HOST = "http://127.0.0.1:11434"
+_OPENAI_ENDPOINT = "https://api.openai.com/v1/chat/completions"
+
+_SYSTEM_PROMPT = "あなたは熟練のソフトウェアエンジニアです。指示された JSON 以外を出力してはいけません。"
+
+# CLI エージェントと違いファイルを直接編集できないため、修正後の全文を JSON で返させる。
+_JSON_OUTPUT_INSTRUCTION = """
+
+# 出力形式（厳守）
+あなたはファイルを直接編集できません。修正後のファイル全文を JSON で返してください。
+形式:
+{"summary": "3行以内の要約", "rationale": "原因と対処", "files": [{"path": "相対パス", "content": "修正後のファイル全文"}]}
+- JSON のみを返す。説明文・前置き・コードフェンスを付けない。
+- path はリポジトリルートからの相対パスのみ。絶対パスや `..` を含めない。
+- content は差分ではなくファイル全文。
+- 修正の必要がなければ files を空配列にする。
+"""
+
+
+def _llm_prompt(task: AgentTask) -> str:
+    """既存の指示文に JSON 出力の縛りを足す。"""
+    return build_prompt(task) + _JSON_OUTPUT_INSTRUCTION
+
+
+def _redact(text: str) -> str:
+    """APIキーが混入していても外へ出さない。"""
+    key = os.environ.get("OPENAI_API_KEY", "").strip()
+    if key and len(key) >= 8:
+        return text.replace(key, "***")
+    return text
+
+
+def _safe_error(exc: BaseException) -> str:
+    """例外を日本語の短い文言に畳み、鍵を伏せる。"""
+    return _redact(_tail(f"{type(exc).__name__}: {exc}", 500))
+
+
+def _post_json(url: str, payload: dict[str, Any], headers: dict[str, str], timeout: float) -> dict[str, Any]:
+    """urllib だけで JSON を POST する（外部ライブラリを足さない）。"""
+    req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), method="POST")
+    req.add_header("Content-Type", "application/json")
+    for name, value in headers.items():
+        req.add_header(name, value)
+    with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec B310 - httpsまたはローカルhttpのみ
+        raw = resp.read().decode("utf-8", errors="replace")
+    data = json.loads(raw)
+    if not isinstance(data, dict):
+        raise ValueError("APIの応答がJSONオブジェクトではありません。")
+    return data
+
+
+def _parse_llm_payload(text: str) -> dict[str, Any]:
+    """モデル応答から JSON を取り出す。コードフェンス付き・前後の散文にも耐える。"""
+    body = (text or "").strip()
+    if body.startswith("```"):
+        body = body.split("\n", 1)[1] if "\n" in body else ""
+        body = body.rstrip()
+        if body.endswith("```"):
+            body = body[:-3]
+        body = body.strip()
+    if not body:
+        raise ValueError("モデル応答が空でした。")
+    try:
+        data: Any = json.loads(body)
+    except json.JSONDecodeError:
+        start, end = body.find("{"), body.rfind("}")
+        if start < 0 or end <= start:
+            raise ValueError("モデル応答をJSONとして解釈できませんでした。") from None
+        try:
+            data = json.loads(body[start : end + 1])
+        except json.JSONDecodeError:
+            raise ValueError("モデル応答のJSONが壊れています。") from None
+    if not isinstance(data, dict):
+        raise ValueError("モデル応答のJSONがオブジェクトではありません。")
+    return data
+
+
+def _resolve_in_workdir(root: str, rel: str) -> str:
+    """workdir 配下に収まる書き込み先だけを許す。外を指したら ValueError。"""
+    if not isinstance(rel, str) or not rel.strip():
+        raise ValueError("filesのpathが空です。")
+    parts = rel.replace("\\", "/").split("/")
+    if os.path.isabs(rel) or ".." in parts:
+        raise ValueError(f"ワークツリー外への書き込みを拒否しました: {rel}")
+    target = os.path.realpath(os.path.join(root, rel))
+    if target != root and not target.startswith(root + os.sep):
+        raise ValueError(f"ワークツリー外への書き込みを拒否しました: {rel}")
+    return target
+
+
+def _write_files(workdir: str, files: Any) -> int:
+    """JSON の files を workdir へ書き出す。書けない要素があれば例外で止める。"""
+    if files is None:
+        return 0
+    if not isinstance(files, list):
+        raise ValueError("filesが配列ではありません。")
+    root = os.path.realpath(workdir)
+    written = 0
+    for item in files:
+        if not isinstance(item, dict):
+            raise ValueError("filesの要素がオブジェクトではありません。")
+        content = item.get("content")
+        if not isinstance(content, str):
+            raise ValueError("filesのcontentが文字列ではありません。")
+        target = _resolve_in_workdir(root, item.get("path"))
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        with open(target, "w", encoding="utf-8") as fp:
+            fp.write(content)
+        written += 1
+    return written
+
+
+def _run_json_fix(agent_name: str, task: AgentTask, call: Callable[[str, float], tuple[str, str]]) -> FixProposal:
+    """LLM を呼び、返ってきた全文を書き戻して差分を回収する。例外は投げない。"""
+    start = time.monotonic()
+    try:
+        content, log = call(_llm_prompt(task), float(task.timeout_sec))
+        payload = _parse_llm_payload(content)
+        _write_files(task.workdir, payload.get("files"))
+    except Exception as exc:  # noqa: BLE001 - どんな失敗もFixProposalへ畳む（落とさない）
+        return FixProposal(
+            defect_id=task.defect.defect_id,
+            agent=agent_name,
+            status="failed",
+            summary="修正案の生成に失敗しました",
+            duration_sec=time.monotonic() - start,
+            error=_safe_error(exc),
+        )
+
+    duration = time.monotonic() - start
+    diff, changed = _collect_worktree_change(task.workdir)
+    summary = str(payload.get("summary") or "").strip()
+    rationale = _redact(str(payload.get("rationale") or "").strip())
+    if not diff:
+        return FixProposal(
+            defect_id=task.defect.defect_id,
+            agent=agent_name,
+            status="skipped",
+            summary=summary or "変更なし（モデルは修正不要と判断した）",
+            rationale=rationale,
+            log_tail=_tail(_redact(log)),
+            duration_sec=duration,
+        )
+    return FixProposal(
+        defect_id=task.defect.defect_id,
+        agent=agent_name,
+        status="proposed",
+        summary=summary or "LLMが修正案を作成しました",
+        rationale=rationale,
+        diff=diff,
+        files_changed=changed,
+        log_tail=_tail(_redact(log)),
+        duration_sec=duration,
+    )
+
+
+class OpenAIAgent:
+    """OpenAI Chat Completions API に修正後の全文を作らせるエージェント。"""
+
+    name = "openai"
+    label = "OpenAI API"
+
+    def is_available(self) -> ConnectionCheck:
+        if os.environ.get("OPENAI_API_KEY", "").strip():
+            model = os.environ.get("WEBSPEC2DOC_HEALING_OPENAI_MODEL", _OPENAI_DEFAULT_MODEL)
+            return ConnectionCheck(key="agent", label=self.label, ok=True, detail=f"モデル: {model}")
+        return ConnectionCheck(
+            key="agent",
+            label=self.label,
+            ok=False,
+            detail="環境変数 OPENAI_API_KEY が設定されていません",
+        )
+
+    def propose_fix(self, task: AgentTask) -> FixProposal:
+        """例外は投げない。失敗時も必ず FixProposal を返す。"""
+        return _run_json_fix(self.name, task, self._call)
+
+    def _call(self, prompt: str, timeout: float) -> tuple[str, str]:
+        api_key = os.environ.get("OPENAI_API_KEY", "").strip()
+        if not api_key:
+            raise ValueError("環境変数 OPENAI_API_KEY が設定されていません。")
+        model = os.environ.get("WEBSPEC2DOC_HEALING_OPENAI_MODEL", _OPENAI_DEFAULT_MODEL)
+        data = _post_json(
+            _OPENAI_ENDPOINT,
+            {
+                "model": model,
+                "temperature": 0,
+                "response_format": {"type": "json_object"},
+                "messages": [
+                    {"role": "system", "content": _SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt},
+                ],
+            },
+            {"Authorization": f"Bearer {api_key}"},  # 鍵はヘッダのみ。ログ・戻り値には載せない
+            timeout,
+        )
+        choices = data.get("choices")
+        if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
+            raise ValueError("OpenAI APIの応答に choices がありません。")
+        message = choices[0].get("message")
+        content = message.get("content") if isinstance(message, dict) else None
+        if not isinstance(content, str) or not content.strip():
+            raise ValueError("OpenAI APIの応答が空でした。")
+        return content, f"model={model} finish_reason={choices[0].get('finish_reason')}"
+
+
+def _ollama_host() -> str:
+    """Ollama のエンドポイント（末尾スラッシュを落とす）。"""
+    return os.environ.get("WEBSPEC2DOC_HEALING_OLLAMA_HOST", _OLLAMA_DEFAULT_HOST).rstrip("/")
+
+
+class OllamaAgent:
+    """ローカルの Ollama に修正後の全文を作らせるエージェント。"""
+
+    name = "ollama"
+    label = "Ollama（ローカルLLM）"
+
+    def is_available(self) -> ConnectionCheck:
+        host = _ollama_host()
+        try:
+            req = urllib.request.Request(f"{host}/api/tags", method="GET")
+            with urllib.request.urlopen(req, timeout=3) as resp:  # nosec B310 - ローカルの固定エンドポイント
+                status = getattr(resp, "status", 0)
+        except Exception as exc:  # noqa: BLE001 - 疎通確認の失敗は理由付きで ok=False に畳む
+            return ConnectionCheck(
+                key="agent",
+                label=self.label,
+                ok=False,
+                detail=f"{host} に接続できません（{type(exc).__name__}）",
+            )
+        if status != 200:
+            return ConnectionCheck(
+                key="agent",
+                label=self.label,
+                ok=False,
+                detail=f"{host}/api/tags が HTTP {status} を返しました",
+            )
+        model = os.environ.get("WEBSPEC2DOC_HEALING_OLLAMA_MODEL", _OLLAMA_DEFAULT_MODEL)
+        return ConnectionCheck(key="agent", label=self.label, ok=True, detail=f"{host} / モデル: {model}")
+
+    def propose_fix(self, task: AgentTask) -> FixProposal:
+        """例外は投げない。失敗時も必ず FixProposal を返す。"""
+        return _run_json_fix(self.name, task, self._call)
+
+    def _call(self, prompt: str, timeout: float) -> tuple[str, str]:
+        host = _ollama_host()
+        model = os.environ.get("WEBSPEC2DOC_HEALING_OLLAMA_MODEL", _OLLAMA_DEFAULT_MODEL)
+        data = _post_json(
+            f"{host}/api/chat",
+            {
+                "model": model,
+                "stream": False,
+                "format": "json",
+                "options": {"temperature": 0},
+                "messages": [
+                    {"role": "system", "content": _SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt},
+                ],
+            },
+            {},
+            timeout,
+        )
+        message = data.get("message")
+        content = message.get("content") if isinstance(message, dict) else None
+        if not isinstance(content, str) or not content.strip():
+            raise ValueError("Ollamaの応答が空でした。")
+        return content, f"host={host} model={model} done_reason={data.get('done_reason')}"
+
+
 # ─────────────────────────── レジストリ ───────────────────────────
 
 _AGENT_CLASSES: dict[str, type[HealingAgent]] = {
     "claude": ClaudeCodeAgent,
     "codex": CodexAgent,
+    "openai": OpenAIAgent,
+    "ollama": OllamaAgent,
     "dryrun": DryRunAgent,
 }
 

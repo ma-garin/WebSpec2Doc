@@ -33,12 +33,16 @@ class LocationEvidence:
 
 
 def _is_test_file(path: str) -> bool:
-    """テストファイルかどうか判定する。"""
+    """テストファイルかどうか判定する。
+
+    ディレクトリ名では判定しない。tests/ 配下に置かれた製品コードを
+    テスト扱いすると、修正候補から誤って除外される（risk.py と同じ規則）。
+    """
     name = Path(path).name
     return (
         name.startswith("test_")
         or name.endswith("_test.py")
-        or "tests" in Path(path).parts
+        or name == "conftest.py"
     )
 
 

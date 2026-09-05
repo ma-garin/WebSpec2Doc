@@ -142,18 +142,28 @@ def _build_explanation(proposal: types.FixProposal | None) -> list[str]:
     return lines
 
 
+#: 根拠として PR 本文に載せる件数の上限。
+#: 限局は候補を広めに出すため、全件を並べると無関係なファイルが混ざって
+#: 「該当箇所」の意味が薄れる（2026-09-05 実測で 5 件中 3 件が無関係だった）。
+_EVIDENCE_LIMIT = 3
+
+
 def _build_evidence(evidence: Sequence[localization.LocationEvidence]) -> list[str]:
-    """該当箇所の根拠節。スコア降順で並べる。"""
+    """該当箇所の根拠節。スコア降順の上位 3 件だけを出す。"""
     lines = ["**該当箇所の根拠**"]
     if not evidence:
         return lines + ["根拠を特定できませんでした", ""]
+    ranked = sorted(evidence, key=lambda e: e.score, reverse=True)
     lines += ["| ファイル | 根拠 | 確度 |", "|---|---|---|"]
-    for ev in sorted(evidence, key=lambda e: e.score, reverse=True):
+    for ev in ranked[:_EVIDENCE_LIMIT]:
         reason_label = _REASON_LABELS.get(ev.reason, ev.reason)
         lines.append(
             f"| {_escape_pipe(ev.path)} | {_escape_pipe(reason_label)} |"
             f" {int(ev.score * 100)}% |"
         )
+    if len(ranked) > _EVIDENCE_LIMIT:
+        lines.append("")
+        lines.append(f"（確度の低い候補 {len(ranked) - _EVIDENCE_LIMIT} 件は省略）")
     lines.append("")
     return lines
 

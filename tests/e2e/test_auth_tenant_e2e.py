@@ -128,6 +128,49 @@ def _login_as(page: Page, base_url: str, email: str, password: str) -> None:
     expect(page).to_have_url(f"{base_url}{SYSTEM_SELECT}")
 
 
+def _ensure_member_and_tenant_b(page: Page, base_url: str) -> None:
+    """テナントBと一般メンバー(_MEMBER_EMAIL)の存在を保証する（無ければ作る）。
+
+    従来は TestTenantMembership.test_user_management_lists_members_and_restricts_by_role
+    の中でのみ作られる副作用で、他のテスト（本クラスの2件・TestTenantIsolation・
+    TestUserMenu 等）はクラス横断の暗黙の実行順序に依存して「再利用」していた。
+    単独実行・部分選択でも成立させるため、存在確認してから無ければ作る形にする。
+
+    呼び出し時のログイン状態は問わない（内部でいったんログアウトしてから管理者で
+    ログインする）。呼び出し後は管理者としてログイン済みの状態で返る。
+    """
+    page.request.post(f"{base_url}/auth/logout")
+    _login_as(page, base_url, _ADMIN_EMAIL, _ADMIN_PASSWORD)
+
+    snapshot = page.request.get(f"{base_url}/api/admin/tenancy").json()
+    tenant_b = next(
+        (t for t in snapshot["tenants"] if t.get("slug") == _TENANT_B_SLUG), None
+    )
+    if tenant_b is None:
+        tenant_resp = page.request.post(
+            f"{base_url}/api/admin/tenancy/tenants",
+            data={"name": _TENANT_B_NAME, "slug": _TENANT_B_SLUG},
+        )
+        assert tenant_resp.ok, tenant_resp.text()
+        tenant_b_id = tenant_resp.json()["tenant"]["id"]
+    else:
+        tenant_b_id = tenant_b["id"]
+
+    member_exists = any(u.get("email") == _MEMBER_EMAIL for u in snapshot["users"])
+    if not member_exists:
+        user_resp = page.request.post(
+            f"{base_url}/api/admin/tenancy/users",
+            data={
+                "name": "E2E Member",
+                "email": _MEMBER_EMAIL,
+                "role": "member",
+                "tenant_id": tenant_b_id,
+                "password": _MEMBER_PASSWORD,
+            },
+        )
+        assert user_resp.ok, user_resp.text()
+
+
 class TestAccountAuth:
     """account_auth: 本システムのログイン認証（L3/E2E 初検証）。"""
 
@@ -553,6 +596,7 @@ class TestUserManagement:
         self, page: Page, auth_server: str
     ) -> None:
         """一般メンバーにはメニュー項目を出さず、URL直打ちでも操作させない。"""
+        _ensure_member_and_tenant_b(page, auth_server)
         _login_as(page, auth_server, _MEMBER_EMAIL, _MEMBER_PASSWORD)
         page.goto(f"{auth_server}/")
 
@@ -570,6 +614,7 @@ class TestUserManagement:
 
     def test_password_reset_api_rejects_non_admin(self, page: Page, auth_server: str) -> None:
         """画面を隠すだけでなく、APIそのものが一般メンバーを拒否する。"""
+        _ensure_member_and_tenant_b(page, auth_server)
         _login_as(page, auth_server, _MEMBER_EMAIL, _MEMBER_PASSWORD)
         resp = page.request.post(
             f"{auth_server}/api/admin/tenancy/users/anything/password",

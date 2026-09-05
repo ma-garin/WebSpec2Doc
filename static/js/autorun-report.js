@@ -161,6 +161,97 @@
     return nodes;
   }
 
+  /* ---------------- オートヒーリングへの受け渡し ----------------
+   * 失敗したテストから保守報告書を起こす。ここが「壊れたら直る」の入口。
+   * 接続先が未設定なら、その場で何をすればよいかを 1 行で示す。
+   */
+
+  var healingProjects = null;  // 一度だけ取る
+
+  function fetchHealingProjects() {
+    if (healingProjects) { return Promise.resolve(healingProjects); }
+    return fetch('/api/healing/projects')
+      .then(function (r) { return r.ok ? r.json() : { projects: [] }; })
+      .then(function (d) { healingProjects = d.projects || []; return healingProjects; })
+      .catch(function () { healingProjects = []; return healingProjects; });
+  }
+
+  function currentDomain() {
+    var m = window.location.pathname.match(/\/autorun\/report\/([^/]+)/);
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+
+  function healingToast(message) {
+    var box = document.getElementById('arep-healing-toast');
+    if (!box) {
+      box = el('div', 'arep-healing-toast');
+      box.id = 'arep-healing-toast';
+      document.body.appendChild(box);
+    }
+    box.textContent = message;
+    box.hidden = false;
+    setTimeout(function () { box.hidden = true; }, 4000);
+  }
+
+  function startHealing(tests, button, noteHost) {
+    var domain = currentDomain();
+    if (!domain) { return; }
+    button.disabled = true;
+    var original = button.textContent;
+    button.textContent = '下書き中…';
+    fetchHealingProjects().then(function (projects) {
+      var project = projects.filter(function (p) { return p.domain === domain; })[0];
+      if (!project) {
+        button.disabled = false;
+        button.textContent = original;
+        var note = el('span', 'arep-healing-note',
+          'このサイトのリポジトリが未接続です。「ヒーリング › 設定」で接続してください。');
+        (noteHost || button.parentNode).appendChild(note);
+        return;
+      }
+      var ids = tests.map(function (t) {
+        var title = String(t.title || t.name || '');
+        var m = title.match(/^TC-[A-Z0-9-]+/);
+        return m ? m[0] : title;
+      });
+      return fetch('/api/healing/runs/from-autorun', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project_id: project.project_id, domain: domain, test_ids: ids })
+      }).then(function (r) {
+        return r.json().then(function (d) {
+          if (!r.ok) { throw new Error(d.error || '起動できませんでした'); }
+          return d;
+        });
+      }).then(function (d) {
+        button.textContent = '下書き中…';
+        healingToast('報告書を下書きしています。数分後に「ヒーリング › 報告書」に出ます（' + d.defects + ' 件）');
+      });
+    }).catch(function (e) {
+      button.disabled = false;
+      button.textContent = original;
+      healingToast('起動できませんでした: ' + e.message);
+    });
+  }
+
+  function buildHealingButton(tests) {
+    var btn = el('button', 'arep-healing-btn', 'この失敗の報告書を作る');
+    btn.type = 'button';
+    btn.addEventListener('click', function () { startHealing(tests, btn); });
+    return btn;
+  }
+
+  function buildHealingHeader(failedTests) {
+    var bar = el('div', 'arep-healing-bar');
+    bar.appendChild(el('span', 'arep-healing-count', '失敗 ' + failedTests.length + ' 件'));
+    var btn = el('button', 'arep-healing-btn is-primary',
+      '失敗 ' + failedTests.length + ' 件の報告書を作る');
+    btn.type = 'button';
+    btn.addEventListener('click', function () { startHealing(failedTests, btn, bar); });
+    bar.appendChild(btn);
+    return bar;
+  }
+
   function renderResults(data, source) {
     if (!data) return notGenerated(source);
     var nodes = [];
@@ -179,15 +270,26 @@
 
     var tests = data.tests || data.results || [];
     if (Array.isArray(tests) && tests.length) {
+      var failedTests = tests.filter(function (t) {
+        var st = String(t.status || t.outcome || '');
+        return st && st !== 'passed' && st !== 'skipped';
+      });
+      if (failedTests.length) {
+        nodes.push(buildHealingHeader(failedTests));
+      }
       var list = el('div', 'arep-results');
       tests.slice(0, 300).forEach(function (t) {
         var row = el('div', 'arep-result-row');
         var status = String(t.status || t.outcome || '');
+        var isFail = status && status !== 'passed' && status !== 'skipped';
         var badge = el('span', 'arep-result-badge is-' + (status === 'passed' ? 'pass' : status === 'failed' ? 'fail' : 'other'), status || '—');
         row.appendChild(badge);
         row.appendChild(el('span', 'arep-result-title', String(t.title || t.name || '')));
         if (t.error || t.message) {
           row.appendChild(el('span', 'arep-result-error', String(t.error || t.message)));
+        }
+        if (isFail) {
+          row.appendChild(buildHealingButton([t]));
         }
         list.appendChild(row);
       });

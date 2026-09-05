@@ -26,18 +26,19 @@ from pathlib import Path
 from typing import Any
 
 from web.services.healing import agents as healing_agents
-from web.services.healing import report as healing_report
-from web.services.healing import report_doc
 from web.services.healing import (
     git_ops,
     github_client,
     localization,
     project_store,
+    report_doc,
     risk,
     run_store,
     verification,
 )
+from web.services.healing import report as healing_report
 from web.services.healing.types import (
+    TERMINAL_RUN_STATUSES,
     AgentTask,
     Defect,
     FixProposal,
@@ -46,7 +47,6 @@ from web.services.healing.types import (
     HealingProject,
     HealingRun,
     PullRequestRef,
-    TERMINAL_RUN_STATUSES,
     VerifyResult,
 )
 
@@ -345,7 +345,7 @@ def decide_report(
     action: str,
     note: str = "",
     actor: str = "",
-) -> "report_doc.MaintenanceReport":
+) -> report_doc.MaintenanceReport:
     """報告書に対する人の判断を記録する。
 
     承認とは「この報告書を顧客に出してよい」という判断で、PR の作成はその副産物。
@@ -654,7 +654,9 @@ def _run_loop_inner(
                 verify_result.failures, repo=integration_dir, source="verify"
             )
         # 「どこが怪しいか」をここで確定させ、以降の修正指示と PR レポートに載せる。
-        defects = _localize_defects(run, defects, repo=repo)
+        defects = _localize_defects(
+            run, defects, repo=repo, project=project, out_dir=out_dir
+        )
         iteration.defects = list(defects)
         if not defects:
             # 「不在の証明」はしない: 原因を特定できなかった事実だけを記録して止まる。
@@ -904,12 +906,30 @@ def _write_reports(out_dir: Path, run: HealingRun, project: HealingProject) -> N
                 _add_log(run, "報告書の作成に失敗しました。実行の結果には影響しません")
 
 
-def _localize_defects(run: HealingRun, defects: Sequence[Defect], *, repo: Path) -> list[Defect]:
-    """欠陥ごとに限局を求め、結果を載せた新しい Defect の一覧を返す（元は書き換えない）。"""
+def _localize_defects(
+    run: HealingRun,
+    defects: Sequence[Defect],
+    *,
+    repo: Path,
+    project: HealingProject | None = None,
+    out_dir: Path | None = None,
+) -> list[Defect]:
+    """欠陥ごとに限局を求め、結果を載せた新しい Defect の一覧を返す（元は書き換えない）。
+
+    project と out_dir を渡すのは、E2E の失敗に製品コードのファイル名が
+    1 つも含まれないため。URL・セレクタ・画面仕様から辿るには両方が要る。
+    """
     located: list[Defect] = []
     for defect in defects:
         try:
-            located.append(_with_locations(defect, localization.locate(defect, repo=repo)))
+            located.append(
+                _with_locations(
+                    defect,
+                    localization.locate(
+                        defect, repo=repo, project=project, out_dir=out_dir
+                    ),
+                )
+            )
         except Exception as exc:  # noqa: BLE001 - 限局の失敗で修正ループを止めない
             logger.warning("欠陥 %s の限局に失敗しました: %s", defect.defect_id, exc, exc_info=True)
             _add_log(run, f"欠陥 {defect.defect_id} の限局に失敗しました（修正はそのまま続けます）")

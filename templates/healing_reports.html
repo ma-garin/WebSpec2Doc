@@ -29,12 +29,7 @@
       <div id="hl-error" class="hl-banner" role="alert" hidden></div>
 
       <div class="hl-list-head">
-        <div class="hl-chips" role="group" aria-label="状態で絞り込む">
-          <button type="button" class="hl-chip is-on" data-status="awaiting">承認待ち</button>
-          <button type="button" class="hl-chip" data-status="approved">提出済み</button>
-          <button type="button" class="hl-chip" data-status="returned">差し戻し</button>
-          <button type="button" class="hl-chip" data-status="rejected">却下</button>
-        </div>
+        <div class="hl-chips" id="hl-chips" role="group" aria-label="状態で絞り込む"></div>
         <span class="hl-spacer"></span>
         <label class="hl-filter-label" for="hl-project-filter">案件</label>
         <select id="hl-project-filter" class="hl-select">
@@ -46,11 +41,13 @@
         <table class="hl-reports-table" id="hl-reports-table">
           <thead>
             <tr>
+              <th></th>
               <th>案件</th>
-              <th>件名</th>
+              <th>画面 × 観点</th>
+              <th>件数</th>
               <th>検証</th>
               <th>確認が必要な点</th>
-              <th>下書き</th>
+              <th>更新</th>
               <th></th>
             </tr>
           </thead>
@@ -59,7 +56,7 @@
         <p class="hl-empty" id="hl-reports-empty" hidden>承認待ちの報告書はありません。</p>
       </div>
 
-      <p class="hl-legend">「直っていません」は、機械が直せなかったもの。原因の報告書だけが下書きされ、対応は人が書きます。</p>
+      <p class="hl-legend">1 行は画面 × 観点で束ねた単位。開くと個票（1 欠陥 = 1 報告書）が並びます。「直っていません」は、機械が直せなかったもの。原因の報告書だけが下書きされ、対応は人が書きます。</p>
     </main>
   </div>
 </div>

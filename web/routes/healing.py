@@ -355,6 +355,18 @@ def healing_report_page(report_id: str):
     return render_template("healing_report.html", report_id=report_id)
 
 
+@bp.get("/healing/bundles/<bundle_id>")
+def healing_bundle_page(bundle_id: str):
+    """束（画面 × 観点）1 件。個票を束ねて 1 回で判断する画面。
+
+    本文の描画は healing_report.html と healing-reports.js を共用する
+    （data-bundle-id が付いているときだけ JS が束モードで描く）。
+    """
+    if not _ID_RE.match(bundle_id):
+        abort(404)
+    return render_template("healing_report.html", bundle_id=bundle_id)
+
+
 @bp.get("/healing/reports/<report_id>/print")
 def healing_report_print(report_id: str):
     """印刷用。サイドバーもトップバーも無い A4 の様式。
@@ -922,7 +934,9 @@ def api_list_agents():
 # /reports/<report_id> より前に置く（count が ID として解釈されないように）。
 
 
-def _report_summary(report: report_doc.MaintenanceReport) -> dict[str, Any]:
+def _report_summary(
+    report: report_doc.MaintenanceReport, sources: dict[str, str] | None = None
+) -> dict[str, Any]:
     """一覧に出す最小限。差分や根拠は詳細でしか返さない（一覧を重くしない）。"""
     attention = list(report.attention)
     return {
@@ -944,6 +958,7 @@ def _report_summary(report: report_doc.MaintenanceReport) -> dict[str, Any]:
         "created_at": report.created_at,
         "updated_at": report.updated_at,
         "fix_target": report.fix_target,
+        "sources": sources or {},
     }
 
 
@@ -966,12 +981,114 @@ def api_list_reports():
         return {"error": "project_id が不正です。"}, 400
     limit = _clean_int(request.args.get("limit"), 100, 1, 500)
     try:
-        reports = report_doc.list_reports(
+        pairs = report_doc.list_reports_with_sources(
             _out(), status=status, project_id=project_id, limit=limit
         )
-        return {"reports": [_report_summary(r) for r in reports]}
+        return {"reports": [_report_summary(r, s) for r, s in pairs]}
     except Exception:
         logger.exception("healing: 報告書の一覧取得に失敗しました")
+        return {"error": "処理に失敗しました"}, 500
+
+
+# ─────────────────────────── API: 束（画面 × 観点） ───────────────────────────
+#
+# 顧客に出す単位は画面×観点。個票（1 欠陥 = 1 報告書）は束の中の折りたたみとして
+# 一覧の奥に残る。束は永続化しない（report_doc.list_bundles が毎回計算する）。
+
+
+@bp.get("/api/healing/bundles")
+def api_list_bundles():
+    status = _clean_short_text(request.args.get("status"), "", 32)
+    project_id = str(request.args.get("project_id", "")).strip()
+    if project_id and not _ID_RE.match(project_id):
+        return {"error": "project_id が不正です。"}, 400
+    try:
+        bundles = report_doc.list_bundles(_out(), status=status, project_id=project_id)
+        return {"bundles": [report_doc.bundle_to_dict(b) for b in bundles]}
+    except Exception:
+        logger.exception("healing: 束の一覧取得に失敗しました")
+        return {"error": "処理に失敗しました"}, 500
+
+
+@bp.get("/api/healing/bundles/<bundle_id>")
+def api_get_bundle(bundle_id: str):
+    if not _ID_RE.match(bundle_id):
+        abort(404)
+    try:
+        out_dir = _out()
+        bundle = report_doc.find_bundle(out_dir, bundle_id)
+        if bundle is None:
+            return {"error": "束が見つかりません"}, 404
+        reports: list[dict[str, Any]] = []
+        for report_id in bundle.report_ids:
+            pair = report_doc.report_with_sources(out_dir, report_id)
+            if pair is None:
+                continue
+            reports.append(_report_summary(pair[0], pair[1]))
+        return {"bundle": report_doc.bundle_to_dict(bundle), "reports": reports}
+    except Exception:
+        logger.exception("healing: 束の取得に失敗しました")
+        return {"error": "処理に失敗しました"}, 500
+
+
+@bp.post("/api/healing/bundles/<bundle_id>/decision")
+def api_decide_bundle(bundle_id: str):
+    """束ごとの判断。束の中の承認待ち個票へ順に decide_report を適用する。
+
+    同じ run の個票が複数あっても、decide_report → create_pull_request_for_run は
+    run.pull_request が既にあれば作り直さず既存を返すため、2 通目以降は同じ PR に
+    乗る（orchestrator.create_pull_request_for_run 参照。二重に PR は出ない）。
+    """
+    guard = require_admin()
+    if guard is not None:
+        return guard
+    if not _ID_RE.match(bundle_id):
+        abort(404)
+    data = _body()
+    action = _clean_short_text(data.get("action"), "", 16)
+    if action not in REPORT_ACTIONS:
+        return {"error": f"不正な操作です: {action}"}, 400
+    try:
+        out_dir = _out()
+        bundle = report_doc.find_bundle(out_dir, bundle_id)
+        if bundle is None:
+            return {"error": "束が見つかりません"}, 404
+        note = _clean_note(data.get("note"))
+        actor = _clean_short_text(data.get("actor"), "", 64)
+        decided = 0
+        pr_number = 0
+        last_error = ""
+        for report_id in bundle.report_ids:
+            current = report_doc.load_report(out_dir, report_id)
+            if current is None or current.status != "awaiting":
+                continue
+            try:
+                decided_report = orchestrator.decide_report(
+                    out_dir, report_id, action=action, note=note, actor=actor
+                )
+            except HealingError as exc:
+                last_error = str(exc)
+                continue
+            decided += 1
+            if decided_report.pr_number:
+                pr_number = decided_report.pr_number
+        _record_audit(
+            "healing.bundle.decision",
+            {"bundle_id": bundle_id, "action": action, "actor": actor, "decided": decided},
+        )
+        fresh = report_doc.find_bundle(out_dir, bundle_id)
+        result: dict[str, Any] = {
+            "bundle": report_doc.bundle_to_dict(fresh) if fresh else None,
+            "decided": decided,
+            "pr_number": pr_number,
+        }
+        if decided == 0 and last_error:
+            result["error"] = last_error
+        return result
+    except HealingError as exc:
+        return _error_response(exc)
+    except Exception:
+        logger.exception("healing: 束の判断に失敗しました")
         return {"error": "処理に失敗しました"}, 500
 
 

@@ -5,6 +5,9 @@
  * 作り直している（重複より、片方を直したときにもう片方が壊れる方が高くつく）。
  *
  * innerHTML は使わない。値は必ず textContent で入れる。
+ *
+ * 一覧の既定表示は束（画面 × 観点）。個票（1 欠陥 = 1 報告書）は束の行を
+ * 開いたときに現れる折りたたみと、束の本文ページの表にだけ出る。
  */
 (function () {
   'use strict';
@@ -70,9 +73,20 @@
     return '…' + s.slice(s.length - max + 1);
   }
 
-  /* ---------------- 一覧 ---------------- */
+  /* ---------------- 一覧（束 = 画面 × 観点） ---------------- */
 
-  var state = { status: 'awaiting', projectId: '', reportId: '' };
+  var state = {
+    status: 'awaiting', projectId: '', reportId: '', bundleId: '',
+    allBundles: [], expanded: {}
+  };
+
+  var STATUS_LABELS = {
+    awaiting: '承認待ち', approved: '承認済み', returned: '差し戻し',
+    rejected: '却下', submitted: '提出済み', draft: '下書き'
+  };
+  /* チップに出す順。0 件のものは並べない（該当 0 件の選択肢は出さない）。 */
+  var STATUS_CHIP_LABELS = { awaiting: '承認待ち', returned: '差し戻し', approved: '提出済み', rejected: '却下' };
+  var STATUS_CHIP_ORDER = ['awaiting', 'returned', 'approved', 'rejected'];
 
   function verifyBadge(report) {
     if (report.verify_after_ok === true) { return el('span', 'hl-badge is-ok', report.verify_after); }
@@ -93,7 +107,8 @@
     return el('span', 'hl-badge is-mute', 'なし');
   }
 
-  function renderRow(report) {
+  /* 個票 1 行。束の折りたたみの中でも、束の本文ページでも使う共通部品。 */
+  function renderReportRow(report) {
     var tr = el('tr');
     tr.setAttribute('role', 'link');
     tr.setAttribute('tabindex', '0');
@@ -103,13 +118,6 @@
     tr.addEventListener('keydown', function (ev) {
       if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); open(); }
     });
-
-    var tdProject = el('td', 'hl-cell-name');
-    tdProject.appendChild(el('b', null, report.project_name || '—'));
-    if (report.target_url) {
-      tdProject.appendChild(el('small', null, tailPath(report.target_url, 34)));
-    }
-    tr.appendChild(tdProject);
 
     var tdTitle = el('td', 'hl-cell-name');
     tdTitle.appendChild(el('b', null, report.title || '（件名なし）'));
@@ -125,8 +133,8 @@
     tdAttention.appendChild(attentionCell(report));
     tr.appendChild(tdAttention);
 
-    var tdWhen = el('td', 'hl-cell-when', relTime(report.created_at));
-    tdWhen.title = report.created_at || '';
+    var tdWhen = el('td', 'hl-cell-when', relTime(report.updated_at || report.created_at));
+    tdWhen.title = report.updated_at || report.created_at || '';
     tr.appendChild(tdWhen);
 
     var tdAction = el('td', 'hl-cell-action');
@@ -138,13 +146,126 @@
     return tr;
   }
 
-  function renderReports(reports) {
+  function renderReportTable(reports) {
+    var wrap = el('div', 'hl-nested-wrap');
+    var table = el('table', 'hl-nested-table');
+    var thead = el('thead'), htr = el('tr');
+    ['件名', '検証', '確認が必要な点', '更新', ''].forEach(function (t) { htr.appendChild(el('th', null, t)); });
+    thead.appendChild(htr); table.appendChild(thead);
+    var tbody = el('tbody');
+    if (reports && reports.length) {
+      reports.forEach(function (r) { tbody.appendChild(renderReportRow(r)); });
+    }
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+    if (!reports || !reports.length) {
+      wrap.appendChild(el('p', 'hl-doc-note', '個票がありません。'));
+    }
+    return wrap;
+  }
+
+  function bundleAttentionCell(bundle) {
+    if (bundle.attention_high > 0) {
+      return el('span', 'hl-badge is-err', bundle.attention_high + ' 件');
+    }
+    return el('span', 'hl-badge is-mute', 'なし');
+  }
+
+  function toggleBundleRow(bundle, toggle, holderRow) {
+    var willOpen = holderRow.hidden;
+    if (!willOpen) {
+      holderRow.hidden = true;
+      toggle.textContent = '▸';
+      return;
+    }
+    holderRow.hidden = false;
+    toggle.textContent = '▾';
+    if (state.expanded[bundle.bundle_id]) { return; }  // 取得済みなので読み直さない
+    var cell = holderRow.firstChild;
+    cell.textContent = '';
+    cell.appendChild(el('p', 'hl-doc-note', '読み込んでいます…'));
+    api('/api/healing/bundles/' + encodeURIComponent(bundle.bundle_id))
+      .then(function (data) {
+        state.expanded[bundle.bundle_id] = true;
+        cell.textContent = '';
+        cell.appendChild(renderReportTable(data.reports || []));
+      })
+      .catch(function (e) {
+        cell.textContent = '';
+        cell.appendChild(el('p', 'hl-doc-note', '個票を読み込めませんでした: ' + e.message));
+      });
+  }
+
+  function renderBundleRow(bundle) {
+    var frag = document.createDocumentFragment();
+    var tr = el('tr');
+    var href = '/healing/bundles/' + encodeURIComponent(bundle.bundle_id);
+
+    var tdToggle = el('td', 'hl-cell-toggle');
+    var toggle = el('button', 'hl-btn hl-btn-sm hl-toggle', '▸');
+    toggle.type = 'button';
+    toggle.setAttribute('aria-label', '個票を開く');
+    tdToggle.appendChild(toggle);
+    tr.appendChild(tdToggle);
+
+    var tdProject = el('td', 'hl-cell-name');
+    tdProject.appendChild(el('b', null, bundle.project_name || '—'));
+    if (bundle.target_url) { tdProject.appendChild(el('small', null, tailPath(bundle.target_url, 34))); }
+    tr.appendChild(tdProject);
+
+    var tdTitle = el('td', 'hl-cell-name');
+    var titleLink = el('a', null, bundle.title || '（画面不明）');
+    titleLink.href = href;
+    tdTitle.appendChild(titleLink);
+    tr.appendChild(tdTitle);
+
+    var tdCount = el('td');
+    tdCount.appendChild(el('b', null, bundle.count + ' 件'));
+    if (bundle.awaiting_count > 0) {
+      tdCount.appendChild(el('span', 'hl-badge is-warn hl-inline-badge', '承認待ち ' + bundle.awaiting_count));
+    }
+    tr.appendChild(tdCount);
+
+    var tdVerify = el('td', null, '通過 ' + bundle.verify_after_ok_count + ' / ' + bundle.count);
+    tr.appendChild(tdVerify);
+
+    var tdAttention = el('td');
+    tdAttention.appendChild(bundleAttentionCell(bundle));
+    tr.appendChild(tdAttention);
+
+    var tdWhen = el('td', 'hl-cell-when', relTime(bundle.updated_at));
+    tdWhen.title = bundle.updated_at || '';
+    tr.appendChild(tdWhen);
+
+    var tdAction = el('td', 'hl-cell-action');
+    var readBtn = el('button', 'hl-btn hl-btn-sm', '読む');
+    readBtn.type = 'button';
+    readBtn.addEventListener('click', function () { window.location.href = href; });
+    tdAction.appendChild(readBtn);
+    tr.appendChild(tdAction);
+
+    frag.appendChild(tr);
+
+    var holderRow = el('tr', 'hl-nested-row');
+    holderRow.hidden = true;
+    var holderCell = el('td');
+    holderCell.colSpan = 8;
+    holderRow.appendChild(holderCell);
+    frag.appendChild(holderRow);
+
+    toggle.addEventListener('click', function () { toggleBundleRow(bundle, toggle, holderRow); });
+
+    return frag;
+  }
+
+  function renderBundleList() {
     var body = document.getElementById('hl-reports-body');
     var empty = document.getElementById('hl-reports-empty');
     var table = document.getElementById('hl-reports-table');
     if (!body) { return; }
     body.textContent = '';
-    var has = reports && reports.length > 0;
+    var bundles = state.allBundles.filter(function (b) { return b.status === state.status; });
+    var has = bundles.length > 0;
     if (table) { table.hidden = !has; }
     if (empty) {
       empty.hidden = has;
@@ -152,15 +273,46 @@
         ? '承認待ちの報告書はありません。'
         : 'この状態の報告書はありません。';
     }
-    (reports || []).forEach(function (r) { body.appendChild(renderRow(r)); });
+    state.expanded = {};
+    bundles.forEach(function (b) { body.appendChild(renderBundleRow(b)); });
   }
 
-  function loadReports() {
+  /* 0 件のチップは出さない（該当 0 件の選択肢は並べない）。 */
+  function renderChips() {
+    var wrap = document.getElementById('hl-chips');
+    if (!wrap) { return; }
+    wrap.textContent = '';
+    var counts = {};
+    state.allBundles.forEach(function (b) { counts[b.status] = (counts[b.status] || 0) + 1; });
+    var visible = STATUS_CHIP_ORDER.filter(function (s) { return counts[s] > 0; });
+    if (visible.length && visible.indexOf(state.status) === -1) { state.status = visible[0]; }
+    visible.forEach(function (s) {
+      var chip = el('button', 'hl-chip' + (s === state.status ? ' is-on' : ''),
+        STATUS_CHIP_LABELS[s] + ' ' + counts[s]);
+      chip.type = 'button';
+      chip.addEventListener('click', function () {
+        state.status = s;
+        renderChips();
+        renderBundleList();
+      });
+      wrap.appendChild(chip);
+    });
+    if (!visible.length) {
+      wrap.appendChild(el('span', 'hl-filter-label', '報告書はありません'));
+    }
+  }
+
+  function loadBundleList() {
     clearError();
-    var params = new URLSearchParams({ status: state.status, limit: '200' });
+    var params = new URLSearchParams();
     if (state.projectId) { params.set('project_id', state.projectId); }
-    api('/api/healing/reports?' + params.toString())
-      .then(function (data) { renderReports(data.reports || []); })
+    var qs = params.toString();
+    api('/api/healing/bundles' + (qs ? '?' + qs : ''))
+      .then(function (data) {
+        state.allBundles = data.bundles || [];
+        renderChips();
+        renderBundleList();
+      })
       .catch(function (e) { showError('報告書を読み込めませんでした: ' + e.message); });
   }
 
@@ -190,18 +342,6 @@
       .catch(function () { /* 絞り込みが効かないだけ */ });
   }
 
-  function bindChips() {
-    var chips = document.querySelectorAll('.hl-chip[data-status]');
-    Array.prototype.forEach.call(chips, function (chip) {
-      chip.addEventListener('click', function () {
-        Array.prototype.forEach.call(chips, function (c) { c.classList.remove('is-on'); });
-        chip.classList.add('is-on');
-        state.status = chip.getAttribute('data-status') || 'awaiting';
-        loadReports();
-      });
-    });
-  }
-
   /* ---------------- 報告書の本文 ---------------- */
 
   var SEVERITY_LABELS = { high: '高', medium: '中', low: '低' };
@@ -214,13 +354,16 @@
     route: 'URL のルート',
     screen: '画面仕様'
   };
-  var STATUS_LABELS = {
-    awaiting: '承認待ち', approved: '承認済み', returned: '差し戻し',
-    rejected: '却下', submitted: '提出済み', draft: '下書き'
-  };
+  /* 出所ラベル。節見出しの右に薄字で置く（AI か実測か人の入力かを自分で確かめずに区別できるように）。 */
+  var SOURCE_LABELS = { measured: '実測', user: '入力', llm: 'AIの提案', assumed: '前提', unverified: '未確認' };
 
-  function section(title) {
-    return el('h2', 'hl-doc-h', title);
+  function section(title, sourceKey) {
+    var h = el('h2', 'hl-doc-h');
+    h.appendChild(document.createTextNode(title));
+    if (sourceKey) {
+      h.appendChild(el('span', 'hl-src', SOURCE_LABELS[sourceKey] || sourceKey));
+    }
+    return h;
   }
 
   /* 節の本文＋右のスクリーンショット。画像が無ければ 1 列で組む。 */
@@ -321,7 +464,7 @@
     var kept = [];
     body.split('\n').forEach(function (line) {
       if (/^\s*\|/.test(line)) { return; }                    // 表の行
-      if (/^\s*[\u2500-\u257f=_*-]{3,}\s*$/.test(line)) { return; }  // 罫線
+      if (/^\s*[─-╿=_*-]{3,}\s*$/.test(line)) { return; }  // 罫線
       var table = line.match(/\|[^|\n]*\|/);
       kept.push(table ? line.slice(0, table.index).replace(/\s+$/, '') : line);
     });
@@ -414,6 +557,7 @@
   function renderDoc(data) {
     var report = data.report;
     var proposal = data.proposal;
+    var sources = report.sources || {};
     var doc = document.getElementById('hl-doc');
     doc.textContent = '';
     doc.setAttribute('aria-busy', 'false');
@@ -429,7 +573,7 @@
     doc.appendChild(meta);
 
     // 1. 事象
-    doc.appendChild(section('1. 事象'));
+    doc.appendChild(section('1. 事象', sources.incident));
     doc.appendChild(sectionBody([
       el('p', 'hl-doc-p', report.incident_text || '記録なし'),
       el('p', 'hl-doc-note',
@@ -438,7 +582,7 @@
     ], report.incident_screenshot));
 
     // 2. 原因
-    doc.appendChild(section('2. 原因'));
+    doc.appendChild(section('2. 原因', sources.cause));
     var causeNodes = [];
     if (canEditDoc(report)) {
       /* 編集欄は顧客に出る文そのもの。人が仕上げるのはこの文なので 1 つだけ置く。
@@ -460,7 +604,7 @@
     doc.appendChild(sectionBody(causeNodes, ''));
 
     // 3. 対応
-    doc.appendChild(section('3. 対応'));
+    doc.appendChild(section('3. 対応', sources.action));
     var actionNodes = [];
     if (canEditDoc(report)) {
       /* 対応が書かれていない報告書では、表示文はこちらで足したもの。編集欄は
@@ -482,7 +626,7 @@
     doc.appendChild(sectionBody(actionNodes, report.action_screenshot));
 
     // 4. 検証
-    doc.appendChild(section('4. 検証'));
+    doc.appendChild(section('4. 検証', sources.verify));
     var ver = el('div', 'hl-verify');
     ver.appendChild(verifyBox('修正前', report.verify_before, 'err'));
     ver.appendChild(verifyBox('修正後', report.verify_after,
@@ -596,7 +740,6 @@
       yes.type = 'button';
       yes.addEventListener('click', function () { decide('reject', note.value, yes); });
       var no = el('button', 'hl-btn hl-btn-sm', 'やめる');
-      no.type = 'button';
       no.addEventListener('click', function () {
         confirm.hidden = true; confirm.setAttribute('inert', '');
       });
@@ -664,7 +807,131 @@
       });
   }
 
+  /* ---------------- 束の本文 ---------------- */
+
+  function renderBundleDoc(data) {
+    var bundle = data.bundle;
+    var reports = data.reports || [];
+    var doc = document.getElementById('hl-doc');
+    doc.textContent = '';
+    doc.setAttribute('aria-busy', 'false');
+
+    doc.appendChild(el('h1', 'hl-doc-title', bundle.title || '（画面不明）'));
+    var meta = el('p', 'hl-doc-meta');
+    [
+      '案件: ' + (bundle.project_name || '—'),
+      bundle.target_url ? '対象: ' + bundle.target_url : '',
+      '件数: ' + bundle.count + ' 件'
+    ].filter(Boolean).forEach(function (t) { meta.appendChild(el('span', null, t)); });
+    meta.appendChild(el('span', 'hl-badge is-ac', STATUS_LABELS[bundle.status] || bundle.status));
+    doc.appendChild(meta);
+
+    doc.appendChild(section('個票 ' + reports.length + ' 件（うち承認待ち ' + bundle.awaiting_count + '）'));
+    doc.appendChild(renderReportTable(reports));
+
+    renderBundleActions(bundle);
+  }
+
+  function renderBundleActions(bundle) {
+    var box = document.getElementById('hl-doc-actions');
+    if (!box) { return; }
+    box.textContent = '';
+    var canDecide = IS_ADMIN && bundle.awaiting_count > 0;
+    box.hidden = false;
+
+    if (canDecide) {
+      var note = el('textarea', 'hl-field');
+      note.id = 'hl-bundle-note';
+      note.rows = 3;
+      note.placeholder = '承認のメモ（束の中の承認待ち個票すべてに残ります）';
+      box.appendChild(note);
+
+      var fixTargets = bundle.fix_targets || [];
+      var scriptOnly = fixTargets.length > 0 && fixTargets.every(function (t) { return t === 'script'; });
+      var approveLabel = scriptOnly ? '承認' : '承認して PR を作る';
+      var approve = el('button', 'hl-btn' + (bundle.attention_high > 0 ? '' : ' is-primary'), approveLabel);
+      approve.type = 'button';
+      approve.addEventListener('click', function () { decideBundle('approve', note.value, approve); });
+      box.appendChild(approve);
+
+      var back = el('button', 'hl-btn', '差し戻す');
+      back.type = 'button';
+      back.addEventListener('click', function () {
+        if (!note.value.trim()) {
+          showError('差し戻すときは、どう直してほしいかをメモに書いてください。');
+          note.focus();
+          return;
+        }
+        decideBundle('return', note.value, back);
+      });
+      box.appendChild(back);
+
+      var reject = el('button', 'hl-btn is-danger', '却下');
+      reject.type = 'button';
+      var confirm = el('div', 'hl-confirm');
+      confirm.hidden = true;
+      confirm.setAttribute('inert', '');
+      confirm.appendChild(el('span', null, '束の中の承認待ち個票をすべて却下しますか？'));
+      var yes = el('button', 'hl-btn hl-btn-sm is-danger', '却下する');
+      yes.type = 'button';
+      yes.addEventListener('click', function () { decideBundle('reject', note.value, yes); });
+      var no = el('button', 'hl-btn hl-btn-sm', 'やめる');
+      no.addEventListener('click', function () { confirm.hidden = true; confirm.setAttribute('inert', ''); });
+      confirm.appendChild(yes); confirm.appendChild(no);
+      reject.addEventListener('click', function () { confirm.hidden = false; confirm.removeAttribute('inert'); });
+      box.appendChild(reject);
+      box.appendChild(confirm);
+
+      if (bundle.attention_high > 0) {
+        box.appendChild(el('p', 'hl-doc-note', '確認が必要な点が残っているため、承認は強調していません。'));
+      }
+    } else if (!IS_ADMIN) {
+      box.appendChild(el('p', 'hl-doc-note', '判断するには管理者権限が必要です。'));
+    } else {
+      box.appendChild(el('p', 'hl-doc-note', 'この束に承認待ちの個票はありません。'));
+    }
+  }
+
+  function decideBundle(action, note, button) {
+    clearError();
+    if (button) { button.disabled = true; }
+    api('/api/healing/bundles/' + encodeURIComponent(state.bundleId) + '/decision', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: action, note: note || '', actor: '' })
+    }).then(function (data) {
+      var n = data.decided || 0;
+      var msg = action === 'approve'
+        ? (data.pr_number ? '承認しました（' + n + ' 件）。PR #' + data.pr_number + ' を作成しました'
+                          : '承認しました（' + n + ' 件）')
+        : action === 'return' ? '差し戻しました（' + n + ' 件）。修正をやり直します'
+                               : '却下しました（' + n + ' 件）';
+      toast(msg);
+      setTimeout(function () { window.location.href = '/healing'; }, 2000);
+    }).catch(function (e) {
+      if (button) { button.disabled = false; }
+      showError(e.message);
+    });
+  }
+
+  function loadBundleDoc() {
+    api('/api/healing/bundles/' + encodeURIComponent(state.bundleId))
+      .then(renderBundleDoc)
+      .catch(function (e) {
+        var doc = document.getElementById('hl-doc');
+        if (doc) { doc.textContent = ''; doc.appendChild(el('p', 'hl-doc-p', '束を読み込めませんでした。')); }
+        showError(e.message);
+      });
+  }
+
   function init() {
+    var bundleId = document.body.getAttribute('data-bundle-id');
+    if (bundleId) {
+      state.bundleId = bundleId;
+      loadCount();
+      loadBundleDoc();
+      return;
+    }
     var reportId = document.body.getAttribute('data-report-id');
     if (reportId) {
       state.reportId = reportId;
@@ -673,13 +940,12 @@
       return;
     }
     if (!document.getElementById('hl-reports-table')) { return; }
-    bindChips();
     on('hl-project-filter', 'change', function (ev) {
       state.projectId = ev.target.value || '';
-      loadReports();
+      loadBundleList();
     });
     loadProjects();
-    loadReports();
+    loadBundleList();
     loadCount();
   }
 

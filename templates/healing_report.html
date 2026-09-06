@@ -15,7 +15,8 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/healing-reports.css') }}?v={{ _ver }}">
 </head>
 <body class="app-page hl-page-report"
-      data-report-id="{{ report_id }}"
+      data-report-id="{{ report_id or '' }}"
+      data-bundle-id="{{ bundle_id or '' }}"
       data-hl-admin="{{ 'true' if (not auth_user or auth_user.role == 'admin') else 'false' }}">
 <a href="#app-content" class="skip-link">本文へスキップ</a>
 <div class="app-shell">

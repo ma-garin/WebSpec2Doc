@@ -33,28 +33,28 @@
       </header>
 
       <ol id="cw-stepper" class="cw-stepper" aria-label="工程">
-        <li class="cw-step" data-key="setup" data-state="todo">
-          <span class="cw-step-no">1</span><span class="cw-step-label">サイトとコードを指定</span><span class="cw-step-state"></span>
+        <li class="cw-step" data-key="analyze" data-state="todo">
+          <span class="cw-step-no">1</span><span class="cw-step-label">解析</span><span class="cw-step-state"></span>
         </li>
-        <li class="cw-step" data-key="observe" data-state="todo">
-          <span class="cw-step-no">2</span><span class="cw-step-label">観測</span><span class="cw-step-state"></span>
-        </li>
-        <li class="cw-step" data-key="tests" data-state="todo">
-          <span class="cw-step-no">3</span><span class="cw-step-label">テストを作る</span><span class="cw-step-state"></span>
+        <li class="cw-step" data-key="design" data-state="todo">
+          <span class="cw-step-no">2</span><span class="cw-step-label">テスト設計</span><span class="cw-step-state"></span>
         </li>
         <li class="cw-step" data-key="run" data-state="todo">
-          <span class="cw-step-no">4</span><span class="cw-step-label">実行</span><span class="cw-step-state"></span>
+          <span class="cw-step-no">3</span><span class="cw-step-label">実行</span><span class="cw-step-state"></span>
         </li>
-        <li class="cw-step" data-key="analyze" data-state="todo">
-          <span class="cw-step-no">5</span><span class="cw-step-label">分析して直す</span><span class="cw-step-state"></span>
+        <li class="cw-step" data-key="fix" data-state="todo">
+          <span class="cw-step-no">4</span><span class="cw-step-label">分析して直す</span><span class="cw-step-state"></span>
         </li>
         <li class="cw-step" data-key="decide" data-state="todo">
-          <span class="cw-step-no">6</span><span class="cw-step-label">判断</span><span class="cw-step-state"></span>
+          <span class="cw-step-no">5</span><span class="cw-step-label">判断</span><span class="cw-step-state"></span>
         </li>
       </ol>
 
       <section id="cw-card" class="cw-card" aria-live="polite">
-        <h2 id="cw-card-title" class="cw-card-title"></h2>
+        <div class="cw-card-head">
+          <h2 id="cw-card-title" class="cw-card-title"></h2>
+          <span id="cw-card-src" class="cw-src" hidden></span>
+        </div>
         <p id="cw-card-text" class="cw-card-text">読み込み中…</p>
         <div id="cw-card-body" class="cw-card-body"></div>
         <p id="cw-card-error" class="cw-card-error" hidden></p>

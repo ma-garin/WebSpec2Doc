@@ -19,9 +19,13 @@ from web.services.orchestration.registry import get_agent
 GOALS: dict[str, tuple[str, ...]] = {
     "daily": ("run", "healing"),
     "onboard": ("docs", "tests", "run", "healing"),
-    #: 観点承認のあと、観測をやり直さずに続ける（ワークフロー画面の
-    #: approve_viewpoints から起こす）。
+    #: 段階承認のあと、解析をやり直さずに続ける（ワークフロー画面の
+    #: approve_stage から起こす）。
     "continue": ("tests", "run", "healing"),
+    #: 「分析して直す」でコードの場所が無いと分かり、接続先を作った直後に
+    #: 起こす（ワークフロー画面の connect から起こす）。解析・テスト設計・
+    #: 実行はやり直さず、healing だけをやり直す。
+    "heal": ("healing",),
 }
 
 #: 目標の見出し。画面にそのまま出るので内部用語を使わない。
@@ -29,10 +33,11 @@ GOAL_LABELS: dict[str, str] = {
     "daily": "今すぐ全部回す",
     "onboard": "保守下に置く",
     "continue": "続きから",
+    "heal": "分析して直す",
 }
 
 #: いま通せる目標。ここに無いものは API が 400 で断る。
-AVAILABLE_GOALS: tuple[str, ...] = ("daily", "onboard", "continue")
+AVAILABLE_GOALS: tuple[str, ...] = ("daily", "onboard", "continue", "heal")
 
 #: まだ通せない目標があるときの理由。人が読む 1 文。
 UNAVAILABLE_REASON = "この目標はまだ使えません"

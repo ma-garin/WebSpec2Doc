@@ -49,7 +49,7 @@
 .cw-link:hover { color: var(--tx2, #475467); }
 .cw-link:focus-visible { outline: 2px solid var(--ac, #1570EF); outline-offset: 1px; }
 
-/* ── ステッパー（6 工程） ───────────────────────────── */
+/* ── ステッパー（5 工程） ───────────────────────────── */
 .cw-stepper {
   flex: 0 0 auto;
   display: flex;
@@ -131,8 +131,12 @@
   line-height: 1.7;
   color: var(--tx, #101828);
 }
+.cw-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .cw-card-title { font-size: 16px; font-weight: 700; margin: 0 0 6px; letter-spacing: -.01em; }
 .cw-card-text { margin: 0 0 14px; font-size: 13px; color: var(--tx2, #475467); }
+/* 出所（実測 / 入力 / AIの提案 / 前提 / 未確認）。カード見出し脇にも、報告書の
+   各 dd 末尾にも同じ 1 クラスで出す。目立たせない薄い文字色。 */
+.cw-src { font-size: 10.5px; font-weight: 600; color: var(--tx3, #667085); white-space: nowrap; }
 .cw-card-error {
   margin: 10px 0 0;
   font-size: 11.5px;
@@ -181,6 +185,55 @@ textarea.cw-input { height: auto; padding: 7px 9px; resize: vertical; }
 /* ── 観点の例 ──────────────────────────────────── */
 .cw-list { margin: 0; padding-left: 18px; }
 .cw-list li { margin-bottom: 4px; }
+
+/* ── 開始カードの下の案内 1 行 ───────────────────── */
+.cw-hint { margin: 12px 0 0; font-size: 11px; color: var(--tx3, #667085); }
+
+/* ── テスト設計: 8 段階の一覧 ───────────────────── */
+.cw-stage-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; }
+.cw-stage {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  color: var(--tx3, #667085);
+  flex-wrap: wrap;
+}
+.cw-stage-no {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  background: var(--bg, #F9FAFB);
+  color: var(--tx3, #667085);
+  border: 1px solid var(--line2, #D0D5DD);
+}
+.cw-stage-name { font-weight: 600; color: var(--tx2, #475467); }
+.cw-stage-state { margin-left: auto; font-size: 11px; }
+.cw-stage-count { margin-left: auto; font-size: 11px; color: var(--tx3, #667085); }
+.cw-stage-actions { display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 6px; }
+.cw-stage[data-status="approved"] .cw-stage-no {
+  background: var(--ok-bg, #DCFAE6);
+  color: var(--ok-tx, #067647);
+  border-color: var(--ok-bg, #DCFAE6);
+}
+.cw-stage[data-status="current"] {
+  background: var(--ac-bg, #EFF4FF);
+  color: var(--ac, #2563EB);
+}
+.cw-stage[data-status="current"] .cw-stage-name { color: var(--ac, #2563EB); }
+.cw-stage[data-status="current"] .cw-stage-no {
+  background: var(--ac, #2563EB);
+  color: #fff;
+  border-color: var(--ac, #2563EB);
+}
 
 /* ── 待つだけ（進行中） ─────────────────────────── */
 .cw-waiting {

@@ -5,6 +5,9 @@
  * 追加していく形）。healing-reports.js とはヘルパーを共有しない（IIFE の中に
  * 閉じていて外から呼べないため、必要な分だけこちらにも作る）。
  *
+ * 工程は 5 つ（解析 → テスト設計 → 実行 → 分析して直す → 判断）。setup は
+ * 工程ではなく、サイト未登録のときだけ出す開始カードの状態（current.key）。
+ *
  * HTML 文字列の直接組み込みは使わない。値は必ず textContent で入れ、要素は createElement で組む。
  */
 (function () {
@@ -13,8 +16,10 @@
   var IS_ADMIN = document.body.getAttribute('data-hl-admin') === 'true';
 
   var STEP_STATE_WORD = { done: '完了', active: '進行中', human: 'あなたの番', todo: '未着手' };
+  var STAGE_STATUS_WORD = { approved: '承認済み', skipped: '飛ばした', current: '確認待ち', pending: '未着手' };
+  /* current.text_source / report.sources.* の出所ラベル。実測 > 入力 > AIの提案 > 前提 > 未確認。 */
+  var SRC_LABEL = { measured: '実測', user: '入力', llm: 'AIの提案', assumed: '前提', unverified: '未確認' };
   var WATCH_TIMES = ['7:00', '8:00', '9:00', '12:00', '18:00'];
-  var ROUND_OPTIONS = [1, 2, 3, 4, 5];
 
   /* ---------------- 小さなヘルパー ---------------- */
 
@@ -101,10 +106,10 @@
     }
 
     /* 任意（無くても致命的ではない）要素 */
+    DOM.src = byId('cw-card-src');
     DOM.site = byId('cw-site');
     DOM.rounds = byId('cw-rounds');
     DOM.restart = byId('cw-restart');
-    DOM.navWaiting = byId('cw-nav-waiting');
     return true;
   }
 
@@ -200,7 +205,6 @@
     renderRounds(data);
     renderRestart(data);
     renderStepper(data);
-    renderNavWaiting(data);
     renderCard(data);
   }
 
@@ -244,8 +248,16 @@
     DOM.restart.hidden = !hasProgress;
   }
 
+  /* サイト未登録（current.key === 'setup'）のときは進める工程が無いので、
+     ステッパーごと隠す（setup は工程ではなく開始カードの状態のため）。 */
   function renderStepper(data) {
+    var current = data.current || {};
     var steps = data.steps || [];
+    if (current.key === 'setup' || !steps.length) {
+      DOM.stepper.hidden = true;
+      return;
+    }
+    DOM.stepper.hidden = false;
     var byKey = {};
     steps.forEach(function (s) { byKey[s.key] = s; });
     var items = document.querySelectorAll('#cw-stepper > li.cw-step[data-key]');
@@ -305,17 +317,16 @@
     node.textContent = step.summary || '';
   }
 
-  /* サイドバーの確認待ちバッジ。GET は現在のサイトしか詳細を返さないため、
-     分かる範囲＝現在のサイトが human なら 1 とする（複数サイトの集計は未対応）。 */
-  function renderNavWaiting(data) {
-    if (!DOM.navWaiting) { return; }
-    var current = data.current || {};
-    var n = current.state === 'human' ? 1 : 0;
-    DOM.navWaiting.textContent = n > 0 ? String(n) : '';
-    DOM.navWaiting.hidden = n === 0;
-  }
-
   /* ---------------- 描画: カード ---------------- */
+
+  /* カード本文の右上に出す出所（実測 / 入力 / AIの提案 / 前提 / 未確認）。
+     current.text_source が無い・未知の値なら何も出さない（嘘の出所を作らない）。 */
+  function renderSourceLabel(current) {
+    if (!DOM.src) { return; }
+    var label = SRC_LABEL[current.text_source] || '';
+    DOM.src.textContent = label;
+    DOM.src.hidden = !label;
+  }
 
   function renderCard(data) {
     var current = data.current || {};
@@ -324,6 +335,7 @@
     DOM.text.textContent = current.text || '';
     DOM.body.textContent = '';
     DOM.actions.textContent = '';
+    renderSourceLabel(current);
 
     var isRetry = current.state === 'failed' || current.state === 'cancelled';
     if (isRetry) {
@@ -369,14 +381,12 @@
     switch (action.kind) {
       case 'start': return renderStartBody(data);
       case 'login': return renderLoginBody();
-      case 'approve_viewpoints': return renderApproveViewpointsBody(action);
+      case 'approve_stage': return renderDesignBody(action);
+      case 'connect': return renderConnectBody(action);
       case 'decide_report': return renderDecideReportBody(action);
-      default: return; /* another_round / monitor(本体は無し) / none: 追加の本文は無い */
+      case 'monitor': return renderMonitorBody(action);
+      default: return; /* another_round / none: 追加の本文は無い */
     }
-  }
-
-  function renderMonitorBodyIfNeeded(current, data) {
-    if ((current.action || {}).kind === 'monitor') { renderMonitorBody(current.action); }
   }
 
   function renderActions(current, data, isRetry) {
@@ -384,26 +394,24 @@
     switch (action.kind) {
       case 'start': return renderStartActions(action);
       case 'login': return renderLoginActions(action);
-      case 'approve_viewpoints': return renderApproveViewpointsActions(action);
+      case 'approve_stage': return; /* 承認・差し戻しボタンは現在の段階の行の中 */
+      case 'connect': return renderConnectActions(action);
       case 'decide_report': return; /* 判断ボタンは各 article.cw-report の中 */
       case 'another_round': return renderAnotherRoundActions(action, isRetry);
-      case 'monitor':
-        renderMonitorBody(action);
-        return renderMonitorActions(action);
+      case 'monitor': return renderMonitorActions(action);
       default:
         if (isRetry) { renderAnotherRoundActions(action, true); }
         return;
     }
   }
 
-  /* ---- kind: start（① 場所を指定） ---- */
+  /* ---- kind: start（サイトの URL を 1 本だけ聞く） ---- */
 
-  function renderStartBody(data) {
-    var repos = data.repos || [];
+  function renderStartBody() {
     var form = el('form', 'cw-form');
     form.id = 'cw-start-form';
 
-    var urlField = el('label', 'cw-field');
+    var urlField = el('label', 'cw-field cw-wide');
     urlField.appendChild(el('span', 'cw-field-label', 'サイトの URL'));
     var urlInput = document.createElement('input');
     urlInput.type = 'url';
@@ -413,75 +421,13 @@
     urlField.appendChild(urlInput);
     form.appendChild(urlField);
 
-    var repoField = el('label', 'cw-field');
-    repoField.appendChild(el('span', 'cw-field-label', 'コードの場所'));
-    var repoSelect = document.createElement('select');
-    repoSelect.className = 'cw-input';
-    repoSelect.id = 'cw-f-repo';
-    repos.forEach(function (r) {
-      var opt = el('option', null, r.label || r.path);
-      opt.value = r.path;
-      repoSelect.appendChild(opt);
-    });
-    var ghOpt = el('option', null, 'GitHub のリンクを貼る');
-    ghOpt.value = 'gh';
-    repoSelect.appendChild(ghOpt);
-    repoField.appendChild(repoSelect);
-    form.appendChild(repoField);
-
-    var ghField = el('label', 'cw-field');
-    ghField.id = 'cw-f-gh-row';
-    ghField.hidden = true;
-    ghField.appendChild(el('span', 'cw-field-label', 'GitHub のリンク'));
-    var ghInput = document.createElement('input');
-    ghInput.type = 'text';
-    ghInput.className = 'cw-input';
-    ghInput.id = 'cw-f-gh';
-    ghInput.placeholder = 'https://github.com/example/repo';
-    ghField.appendChild(ghInput);
-    form.appendChild(ghField);
-
-    var roundsField = el('label', 'cw-field');
-    roundsField.appendChild(el('span', 'cw-field-label', '回数'));
-    var roundsSelect = document.createElement('select');
-    roundsSelect.className = 'cw-input';
-    roundsSelect.id = 'cw-f-rounds';
-    ROUND_OPTIONS.forEach(function (n) {
-      var opt = el('option', null, String(n));
-      opt.value = String(n);
-      if (n === 1) { opt.selected = true; }
-      roundsSelect.appendChild(opt);
-    });
-    roundsField.appendChild(roundsSelect);
-    form.appendChild(roundsField);
-
-    var details = document.createElement('details');
-    details.className = 'cw-details';
-    var summary = document.createElement('summary');
-    summary.textContent = '詳しい設定';
-    details.appendChild(summary);
-    var verifyField = el('label', 'cw-field');
-    verifyField.appendChild(el('span', 'cw-field-label', '検証コマンド'));
-    var verifyInput = document.createElement('input');
-    verifyInput.type = 'text';
-    verifyInput.className = 'cw-input';
-    verifyInput.id = 'cw-f-verify';
-    verifyInput.value = (repos[0] && repos[0].verify_command) || '';
-    verifyField.appendChild(verifyInput);
-    details.appendChild(verifyField);
-    form.appendChild(details);
-
-    on(repoSelect, 'change', function () {
-      ghField.hidden = repoSelect.value !== 'gh';
-      var repo = repos.filter(function (r) { return r.path === repoSelect.value; })[0];
-      verifyInput.value = repo ? (repo.verify_command || '') : '';
-    });
-
     DOM.body.appendChild(form);
+    DOM.body.appendChild(el('p', 'cw-hint',
+      '解析 → テスト設計 → 実行 → 分析して直す → 判断 の順に進みます。必要な情報はその時に聞きます'));
   }
 
   function renderStartActions(action) {
-    var btn = el('button', 'btn-primary', action.primary || '始める');
+    var btn = el('button', 'btn-primary', action.primary || '解析を始める');
     btn.type = 'button';
     on(btn, 'click', function () { submitStart(btn); });
     DOM.actions.appendChild(btn);
@@ -490,48 +436,12 @@
   function submitStart(button) {
     var url = (byId('cw-f-url') || {}).value || '';
     if (!url.trim()) { showCardError('サイトの URL を入れてください。'); return; }
-    var repoSelect = byId('cw-f-repo');
-    var repo = repoSelect ? repoSelect.value : '';
-    if (repo === 'gh') {
-      var gh = byId('cw-f-gh');
-      if (!gh || !gh.value.trim()) { showCardError('GitHub のリンクを入れてください。'); return; }
-      repo = gh.value.trim();
-    }
-    var roundsSelect = byId('cw-f-rounds');
-    var rounds = parseInt(roundsSelect ? roundsSelect.value : '1', 10) || 1;
-    var verifyInput = byId('cw-f-verify');
-    /* 新規サイト登録なので site は必ず空で送る（切替コンボの現在値を使わない）。 */
-    sendAction('start', {
-      site: '',
-      url: url.trim(),
-      repo: repo,
-      verify_command: verifyInput ? verifyInput.value : '',
-      rounds: rounds
-    }, button).catch(function (e) {
-      showVerifyCommandErrorIfNeeded((e && e.message) || '');
-    });
+    /* 新規サイト登録なので site は必ず空で送る（切替コンボの現在値を使わない）。
+       契約どおり body は {site, kind, url} だけ。 */
+    sendAction('start', { site: '', url: url.trim() }, button);
   }
 
-  /* 検証コマンドが決められなかった 400 のときは、「詳しい設定」を開いて
-     その直下にも理由を出す（折りたたみの中にある必須項目のため）。 */
-  function showVerifyCommandErrorIfNeeded(message) {
-    if (message.indexOf('検証コマンド') === -1) { return; }
-    var form = byId('cw-start-form');
-    var details = form ? form.querySelector('.cw-details') : null;
-    if (!details) { return; }
-    details.open = true;
-    var note = byId('cw-verify-error');
-    if (!note) {
-      note = el('p', 'cw-field-error');
-      note.id = 'cw-verify-error';
-      details.parentNode.insertBefore(note, details.nextSibling);
-    }
-    note.textContent = message;
-    /* 同じ文をカード下の赤字と二重に出さない（通し検証で指摘） */
-    if (DOM.error) { DOM.error.textContent = ''; DOM.error.hidden = true; }
-  }
-
-  /* ---- kind: login（② 観測・ログイン待ち） ---- */
+  /* ---- kind: login（解析中・ログイン待ち） ---- */
 
   function renderLoginBody() {
     DOM.body.appendChild(el('p', 'cw-waiting', 'ログイン画面を開いてから、ログインしたボタンを押してください。'));
@@ -554,37 +464,167 @@
     DOM.actions.appendChild(doneBtn);
   }
 
-  /* ---- kind: approve_viewpoints（③ テストを作る） ---- */
+  /* ---- kind: approve_stage（テスト設計・8 段階を要確認キュー越しに出す） ---- */
 
-  function renderApproveViewpointsBody(action) {
+  function renderDesignBody(action) {
     var items = extractItems(action);
-    var ul = el('ul', 'cw-list');
-    items.slice(0, 3).forEach(function (it) {
-      ul.appendChild(el('li', null, it.text));
+    var list = el('ol', 'cw-stage-list');
+    items.forEach(function (stage) {
+      list.appendChild(buildStageRow(stage));
     });
-    DOM.body.appendChild(ul);
+    DOM.body.appendChild(list);
   }
 
-  function renderApproveViewpointsActions(action) {
-    var approveBtn = el('button', 'btn-primary', action.primary || '承認して続ける');
+  /* 「自動で確認済み」: 段階そのものが要確認 0 件のまま承認された（＝人が
+     個別に見る必要が無かった）ことを表す語。approved かつ review_count===0
+     かつ auto_approved>0（自動承認の対象が実際にあった）のときだけ出す。 */
+  function stageStateText(stage) {
+    if (stage.status === 'approved' && !(stage.review_count || 0) && (stage.auto_approved || 0) > 0) {
+      return '自動で確認済み';
+    }
+    return STAGE_STATUS_WORD[stage.status] || '';
+  }
+
+  function buildAutoApprovedLine(stage) {
+    return el('p', 'cw-hint', '自動で確認済み ' + (stage.auto_approved || 0) + '件');
+  }
+
+  /* 要確認の項目だけを列挙する（理由は薄字: cw-hint を流用）。 */
+  function buildReviewList(stage) {
+    var box = el('div', 'cw-stage-review');
+    (stage.review || []).forEach(function (item) {
+      var line = el('p', 'cw-stage-review-item');
+      line.appendChild(el('span', null, item.text));
+      line.appendChild(el('span', 'cw-hint', '　' + item.reason));
+      box.appendChild(line);
+    });
+    return box;
+  }
+
+  function buildStageRow(stage) {
+    var li = el('li', 'cw-stage');
+    li.setAttribute('data-status', stage.status);
+    li.appendChild(el('span', 'cw-stage-no', stage.no));
+    li.appendChild(el('span', 'cw-stage-name', stage.name));
+
+    if (stage.status === 'current') {
+      var count = (stage.approved_count || 0) + ' / ' + (stage.item_count || 0) + ' 件承認';
+      li.appendChild(el('span', 'cw-stage-count', count));
+      li.appendChild(buildAutoApprovedLine(stage));
+      li.appendChild(buildReviewList(stage));
+      li.appendChild(buildStageActions(stage));
+    } else {
+      li.appendChild(el('span', 'cw-stage-state', stageStateText(stage)));
+    }
+    return li;
+  }
+
+  function buildStageActions(stage) {
+    var box = el('div', 'cw-stage-actions');
+
+    var approveBtn = el('button', 'btn-primary', '確認して次へ');
     approveBtn.type = 'button';
     on(approveBtn, 'click', function () {
-      sendAction('approve_viewpoints', {}, approveBtn, '観点を承認しました');
+      sendAction('approve_stage', { stage_id: stage.stage_id }, approveBtn, '承認しました');
     });
-    DOM.actions.appendChild(approveBtn);
+    box.appendChild(approveBtn);
 
-    var returnBtn = el('button', 'btn-outline-sm', action.secondary || '差し戻す');
+    var returnBtn = el('button', 'btn-outline-sm', '差し戻す（メモ）');
     returnBtn.type = 'button';
     var memoBox = buildMemoBox(function (note) {
-      sendAction('return_viewpoints', { note: note }, returnBtn, '差し戻しました。作り直します');
+      sendAction('return_stage', { stage_id: stage.stage_id, note: note }, returnBtn, '差し戻しました。作り直します');
     });
     memoBox.hidden = true;
     on(returnBtn, 'click', function () { memoBox.hidden = !memoBox.hidden; });
-    DOM.actions.appendChild(returnBtn);
-    DOM.actions.appendChild(memoBox);
+    box.appendChild(returnBtn);
+    box.appendChild(memoBox);
+    return box;
   }
 
-  /* ---- kind: decide_report（⑥ 判断） ---- */
+  /* ---- kind: connect（分析して直す・コードの場所を聞く） ---- */
+
+  function renderConnectBody(action) {
+    var items = extractItems(action);
+    var form = el('form', 'cw-form');
+    form.id = 'cw-connect-form';
+
+    var repoField = el('label', 'cw-field cw-wide');
+    repoField.appendChild(el('span', 'cw-field-label', 'コードの場所'));
+    var select = document.createElement('select');
+    select.className = 'cw-input';
+    select.id = 'cw-f-connect-repo';
+    items.forEach(function (it) {
+      var opt = el('option', null, it.label || it.path);
+      opt.value = it.path;
+      select.appendChild(opt);
+    });
+    repoField.appendChild(select);
+    form.appendChild(repoField);
+
+    var details = document.createElement('details');
+    details.className = 'cw-details';
+    var summary = document.createElement('summary');
+    summary.textContent = '詳しい設定';
+    details.appendChild(summary);
+    var verifyField = el('label', 'cw-field');
+    verifyField.appendChild(el('span', 'cw-field-label', '検証コマンド'));
+    var verifyInput = document.createElement('input');
+    verifyInput.type = 'text';
+    verifyInput.className = 'cw-input';
+    verifyInput.id = 'cw-f-connect-verify';
+    verifyInput.value = (items[0] && items[0].verify_command) || '';
+    verifyField.appendChild(verifyInput);
+    details.appendChild(verifyField);
+    form.appendChild(details);
+
+    on(select, 'change', function () {
+      var repo = items.filter(function (r) { return r.path === select.value; })[0];
+      verifyInput.value = repo ? (repo.verify_command || '') : '';
+    });
+
+    DOM.body.appendChild(form);
+  }
+
+  function renderConnectActions(action) {
+    var btn = el('button', 'btn-primary', action.primary || 'この場所を使う');
+    btn.type = 'button';
+    on(btn, 'click', function () { submitConnect(btn); });
+    DOM.actions.appendChild(btn);
+  }
+
+  function submitConnect(button) {
+    var select = byId('cw-f-connect-repo');
+    var repo = select ? select.value : '';
+    if (!repo) { showCardError('コードの場所を選んでください。'); return; }
+    var verifyInput = byId('cw-f-connect-verify');
+    sendAction('connect', {
+      repo: repo,
+      verify_command: verifyInput ? verifyInput.value : ''
+    }, button).catch(function (e) {
+      showDetailsErrorIfNeeded('cw-connect-form', (e && e.message) || '');
+    });
+  }
+
+  /* 検証コマンドが決められなかった 400 のときは、「詳しい設定」を開いて
+     その直下にも理由を出す（折りたたみの中にある必須項目のため）。 */
+  function showDetailsErrorIfNeeded(formId, message) {
+    if (message.indexOf('検証コマンド') === -1) { return; }
+    var form = byId(formId);
+    var details = form ? form.querySelector('.cw-details') : null;
+    if (!details) { return; }
+    details.open = true;
+    var note = byId('cw-details-error');
+    if (!note) {
+      note = el('p', 'cw-field-error');
+      note.id = 'cw-details-error';
+      details.parentNode.insertBefore(note, details.nextSibling);
+    }
+    note.textContent = message;
+    /* 同じ文をカード下の赤字と二重に出さない（通し検証で指摘） */
+    if (DOM.error) { DOM.error.textContent = ''; DOM.error.hidden = true; }
+  }
+
+  /* ---- kind: decide_report（判断） ---- */
 
   function renderDecideReportBody(action) {
     var items = extractItems(action);
@@ -593,18 +633,27 @@
     });
   }
 
+  function buildFactRow(dl, label, text, srcWord) {
+    dl.appendChild(el('dt', null, label));
+    var dd = el('dd');
+    dd.appendChild(document.createTextNode(text || '—'));
+    if (srcWord) {
+      dd.appendChild(document.createTextNode(' '));
+      dd.appendChild(el('span', 'cw-src', srcWord));
+    }
+    dl.appendChild(dd);
+  }
+
   function buildReportArticle(report) {
+    var sources = report.sources || {};
     var art = el('article', 'cw-report');
     art.setAttribute('data-report-id', report.report_id);
     art.appendChild(el('h3', 'cw-report-title', report.title || '（件名なし）'));
 
     var dl = el('dl', 'cw-report-facts');
-    dl.appendChild(el('dt', null, '事象'));
-    dl.appendChild(el('dd', null, report.incident_text || '—'));
-    dl.appendChild(el('dt', null, '原因'));
-    dl.appendChild(el('dd', null, report.cause_text || '—'));
-    dl.appendChild(el('dt', null, '対応'));
-    dl.appendChild(el('dd', null, report.action_text || '—'));
+    buildFactRow(dl, '事象', report.incident_text, SRC_LABEL[sources.incident]);
+    buildFactRow(dl, '原因', report.cause_text, SRC_LABEL[sources.cause]);
+    buildFactRow(dl, '対応', report.action_text, SRC_LABEL[sources.action]);
     art.appendChild(dl);
 
     var verifyP = el('p', 'cw-report-verify');
@@ -613,6 +662,11 @@
     verifyP.appendChild(document.createTextNode(' → 修正後 '));
     var afterCls = report.verify_after_ok === false ? 'cw-badge-err' : 'cw-badge-ok';
     verifyP.appendChild(el('span', afterCls, report.verify_after || '—'));
+    var verifySrc = SRC_LABEL[sources.verify];
+    if (verifySrc) {
+      verifyP.appendChild(document.createTextNode(' '));
+      verifyP.appendChild(el('span', 'cw-src', verifySrc));
+    }
     art.appendChild(verifyP);
 
     if (report.fix_target === 'script') {
@@ -661,18 +715,22 @@
     return box;
   }
 
-  /* 差し戻し共通: メモ欄＋確定ボタン。空なら送らない。 */
+  /* 差し戻し共通: メモ欄＋確定ボタン。空なら送らない（通し検証で「無反応」と指摘された箇所）。 */
   function buildMemoBox(onSubmit) {
     var wrap = el('div', 'cw-memo-box');
     var ta = document.createElement('textarea');
     ta.className = 'cw-input';
-    ta.placeholder = 'どこを直してほしいかを書いてください';
+    ta.placeholder = 'どう直してほしいかを書いてください';
     wrap.appendChild(ta);
     var confirmBtn = el('button', 'btn-outline-sm', 'この内容で差し戻す');
     confirmBtn.type = 'button';
     on(confirmBtn, 'click', function () {
       var note = ta.value.trim();
-      if (!note) { showCardError('差し戻す理由を書いてください。'); ta.focus(); return; }
+      if (!note) {
+        showCardError('差し戻すときは、どう直してほしいかをメモに書いてください。');
+        ta.focus();
+        return;
+      }
       onSubmit(note);
     });
     wrap.appendChild(confirmBtn);

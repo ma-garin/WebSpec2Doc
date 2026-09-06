@@ -1,5 +1,6 @@
-{# 指揮（オーケストレーション）のサイドバー。8 項目。
-   active には 'site' / 'waiting' / 'history' / 'reports' / 'monitor' / 'code' / 'guide' / 'settings' を渡す。
+{# 指揮（オーケストレーション）のサイドバー。7 項目。
+   active には 'site' / 'history' / 'reports' / 'monitor' / 'code' / 'guide' / 'settings' を渡す。
+   承認待ちの置き場は /healing の 1 か所に寄せたため、ここに「確認待ち」は置かない。
    選択中の強調は .is-active（static/app.css が実際に持つクラス。healing-sidebar.html の
    .active は対応する CSS が無い死んだクラスなので、ここでは使わない）。 #}
 <aside class="app-sidebar">
@@ -18,12 +19,6 @@
     <a class="app-nav-item{% if active == 'site' %} is-active{% endif %}" href="/orchestration"{% if active == 'site' %} aria-current="page"{% endif %}>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.5 2.7 2.5 15.3 0 18c-2.5-2.7-2.5-15.3 0-18z"/></svg>
       <span class="nav-label">サイト</span>
-    </a>
-    <a class="app-nav-item{% if active == 'waiting' %} is-active{% endif %}" href="/orchestration?filter=waiting"{% if active == 'waiting' %} aria-current="page"{% endif %}>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6l7-3z"/><path d="M9 12l2 2 4-5"/></svg>
-      <span class="nav-label">確認待ち</span>
-      {# 確認待ちの件数。JS が入れるまでは出さない（0 と書いて嘘にしない）。 #}
-      <span id="cw-nav-waiting" class="hl-nav-count" hidden></span>
     </a>
     <a class="app-nav-item{% if active == 'history' %} is-active{% endif %}" href="/orchestration/d"{% if active == 'history' %} aria-current="page"{% endif %}>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5l3 2"/></svg>

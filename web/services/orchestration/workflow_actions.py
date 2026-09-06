@@ -57,6 +57,13 @@ def _current_record(run):
 
 
 def _start(out_dir: Path, domain: str, body: dict[str, Any], actor: str) -> str:
+    """url 1 本だけで始める（案1・T2）。
+
+    repo / verify_command / rounds は渡ってきても使わない——コードの場所は
+    「分析して直す」で必要だと分かった時点で connect 操作から聞く
+    （onboarding.connect）。rounds は常に 1 とし、繰り返しは「もう 1 周」
+    （another_round）に任せる。接続先がまだ無くても解析は始められる。
+    """
     url = str(body.get("url") or "").strip()
     if not url:
         raise ActionError("url を指定してください。")
@@ -68,18 +75,7 @@ def _start(out_dir: Path, domain: str, body: dict[str, Any], actor: str) -> str:
     if conductor.has_active_run(out_dir, derived):
         raise ActionError(_BUSY)
 
-    repo = str(body.get("repo") or "")
-    verify_command = str(body.get("verify_command") or "")
-    rounds = _clamp_rounds(body.get("rounds", 1))
-    try:
-        plan = onboarding.prepare(
-            out_dir, url=url, repo=repo, verify_command=verify_command,
-            rounds=rounds, actor=actor,
-        )
-    except ValueError as exc:
-        raise ActionError(str(exc)) from exc
-
-    params: dict[str, Any] = {"url": url, "rounds": rounds}
+    params: dict[str, Any] = {"url": url, "rounds": 1}
     for key in ("depth", "max_pages"):
         if key in body:
             try:
@@ -87,16 +83,21 @@ def _start(out_dir: Path, domain: str, body: dict[str, Any], actor: str) -> str:
             except (TypeError, ValueError):
                 raise ActionError(f"{key} は整数で指定してください。") from None
 
+    # 既に接続先があるサイト（domain 一致）なら使い回す。無ければ project_id
+    # は空のまま始め、「分析して直す」で必要になった時点で connect が作る。
+    project_id = next(
+        (p.project_id for p in project_store.list_projects(out_dir) if p.domain == derived), ""
+    )
     run = conductor.start_if_idle(
-        out_dir=out_dir, domain=plan.domain, goal="onboard",
-        project_id=plan.project_id, actor=actor, params=params,
+        out_dir=out_dir, domain=derived, goal="onboard",
+        project_id=project_id, actor=actor, params=params,
     )
     if run is None:
         raise ActionError(_BUSY)
+    return derived
 
 
 # ─────────────────────────── login_done ───────────────────────────
-    return derived
 
 def _login_done(out_dir: Path, domain: str, body: dict[str, Any], actor: str) -> None:
     run = _require_run(out_dir, domain)
@@ -110,7 +111,7 @@ def _login_done(out_dir: Path, domain: str, body: dict[str, Any], actor: str) ->
     with autorun_lock:
         job = autorun_jobs.get(str(record.handle or "").strip())
     if job is None:
-        raise ActionError("観測の記録が見つかりません。")
+        raise ActionError("解析の記録が見つかりません。")
     if str(getattr(job, "status", "") or "") != "awaiting_input":
         raise ActionError("いまはログイン入力待ちではありません。")
 
@@ -120,41 +121,77 @@ def _login_done(out_dir: Path, domain: str, body: dict[str, Any], actor: str) ->
     job._input_event.set()
 
 
-# ─────────────────────────── approve_viewpoints / return_viewpoints ───────────────────────────
+# ─────────────────────────── approve_stage / return_stage ───────────────────────────
 
 
-def _approve_viewpoints(out_dir: Path, domain: str, body: dict[str, Any], actor: str) -> None:
+def _approve_stage(out_dir: Path, domain: str, body: dict[str, Any], actor: str) -> None:
+    """01 の段階を 1 つ承認する（案2・案5）。stage_id は画面の 8 段階一覧から選ぶ。
+
+    item_ids があれば、画面に「要確認」として出ている項目のうち指定した分
+    だけを確認する（残りは要確認のまま、段階はまだ承認しない）。無ければ
+    段階に残る項目を全部確認してから、段階そのものを承認する。
+
+    段階が承認できたら、後続の段階も要確認が 0 件である限り連続で進める
+    （advance_design_stages・案2）。全段階が揃えば continue を起こす。
+    """
     from autorun.stages import STATUS_APPROVED
 
-    stage_id, _stage = workflow_view._pending_design_stage(out_dir, domain)
-    if stage_id is None:
-        raise ActionError("承認する観点がありません。")
+    stage_id = str(body.get("stage_id") or "").strip()
+    if not stage_id:
+        raise ActionError("stage_id を指定してください。")
     pipeline = workflow_view.load_pipeline(out_dir, domain)
     stage = pipeline.get(stage_id)
-    if stage is None or not stage.can_approve:
+    if stage is None:
+        raise ActionError(f"未知の段階です: {stage_id}")
+
+    raw_item_ids = body.get("item_ids") or []
+    item_ids = [str(i) for i in raw_item_ids if str(i or "").strip()] if isinstance(raw_item_ids, list) else []
+    targets = set(item_ids) if item_ids else {item.item_id for item in stage.items if not item.approved}
+    approved_now = [item for item in stage.items if item.item_id in targets and not item.approved]
+    if approved_now:
+        updated = stage
+        for item in approved_now:
+            updated = updated.with_item(item.with_approval(True))
+        pipeline = pipeline.replaced(updated).recorded(
+            "item_approve", stage_id, f"{len(approved_now)}項目を確認", actor,
+        )
+        stage = pipeline.get(stage_id)
+
+    if item_ids:
+        # 個別の項目だけを確認した呼び出し。段階の承認は残りが揃うまで待つ。
+        workflow_view.save_pipeline(out_dir, domain, pipeline)
+        return
+
+    if not stage.can_approve:
         raise ActionError("この段階はまだ承認できません。全ての項目を承認してから、段階を承認してください。")
 
     pipeline = pipeline.replaced(stage.with_status(STATUS_APPROVED)).recorded(
         "approve", stage_id, f"{len(stage.items)}項目を承認", actor,
     )
     workflow_view.save_pipeline(out_dir, domain, pipeline)
-    # 続き（テスト作成の残り→実行→分析）を観測をやり直さずに起こす。
-    conductor.start_if_idle(out_dir=out_dir, domain=domain, goal="continue", actor=actor, params={})
+
+    # 次の段階も要確認 0 なら、連続で進める（案2）。8 段階すべてが揃うまでは
+    # continue を起こさない——途中で起こすと、まだ承認していない段階を
+    # 追い越して実行してしまう。
+    subject, _review_pending = workflow_view.advance_design_stages(out_dir, domain, actor=actor)
+    if not subject:
+        conductor.start_if_idle(out_dir=out_dir, domain=domain, goal="continue", actor=actor, params={})
 
 
-def _return_viewpoints(out_dir: Path, domain: str, body: dict[str, Any], actor: str) -> None:
+def _return_stage(out_dir: Path, domain: str, body: dict[str, Any], actor: str) -> None:
+    """01 の段階を 1 つ差し戻す。差し戻す理由（note）を必ず記録する。"""
     from autorun.stages import STATUS_PENDING
 
+    stage_id = str(body.get("stage_id") or "").strip()
     note = str(body.get("note") or "").strip()
+    if not stage_id:
+        raise ActionError("stage_id を指定してください。")
     if not note:
         raise ActionError("差し戻すときは、どこを直してほしいかを書いてください。")
-    stage_id, _stage = workflow_view._pending_design_stage(out_dir, domain)
-    if stage_id is None:
-        raise ActionError("差し戻す観点がありません。")
     pipeline = workflow_view.load_pipeline(out_dir, domain)
     stage = pipeline.get(stage_id)
     if stage is None:
-        raise ActionError("差し戻す観点がありません。")
+        raise ActionError(f"未知の段階です: {stage_id}")
     # 段階を pending に戻して差し戻しの理由を記録する。02 には「note を読んで
     # 作り直す」処理が無いため、作り直しそのものは次にこの段階を生成する側
     # （02 の画面 / 再実行）に委ねる（詳細は impl_wf_backend.md の未解決）。
@@ -162,6 +199,32 @@ def _return_viewpoints(out_dir: Path, domain: str, body: dict[str, Any], actor: 
         "return", stage_id, note, actor,
     )
     workflow_view.save_pipeline(out_dir, domain, pipeline)
+
+
+def _removed_kind(out_dir: Path, domain: str, body: dict[str, Any], actor: str) -> None:
+    """旧 kind（approve_viewpoints / return_viewpoints）への互換応答。"""
+    raise ActionError("この操作は無くなりました")
+
+
+# ─────────────────────────── connect ───────────────────────────
+
+
+def _connect(out_dir: Path, domain: str, body: dict[str, Any], actor: str) -> None:
+    """「分析して直す」でコードの場所が要ると分かった時点で接続先を作る（T2）。"""
+    if not domain:
+        raise ActionError("サイトが決まっていません。")
+    repo = str(body.get("repo") or "")
+    verify_command = str(body.get("verify_command") or "")
+    try:
+        plan = onboarding.connect(
+            out_dir, domain=domain, repo=repo, verify_command=verify_command, actor=actor,
+        )
+    except ValueError as exc:
+        raise ActionError(str(exc)) from exc
+    conductor.start_if_idle(
+        out_dir=out_dir, domain=domain, goal="heal",
+        project_id=plan.project_id, actor=actor, params={},
+    )
 
 
 # ─────────────────────────── decide_report ───────────────────────────
@@ -233,12 +296,16 @@ def _monitor(out_dir: Path, domain: str, body: dict[str, Any], actor: str) -> No
 _HANDLERS = {
     "start": _start,
     "login_done": _login_done,
-    "approve_viewpoints": _approve_viewpoints,
-    "return_viewpoints": _return_viewpoints,
+    "approve_stage": _approve_stage,
+    "return_stage": _return_stage,
+    "connect": _connect,
     "decide_report": _decide_report,
     "another_round": _another_round,
     "cancel": _cancel,
     "monitor": _monitor,
+    # 旧 kind。UI の切り替え漏れ・古いタブに 400 で理由を返す。
+    "approve_viewpoints": _removed_kind,
+    "return_viewpoints": _removed_kind,
 }
 
 

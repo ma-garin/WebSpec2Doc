@@ -10,14 +10,17 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess  # nosec B404 - shell=False固定・固定コマンド列のみ実行
 import time
 import urllib.error
 import urllib.request
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
+from web.services.healing import git_ops
 from web.services.healing.types import (
     AgentTask,
     ConnectionCheck,
@@ -77,47 +80,6 @@ def build_prompt(task: AgentTask) -> str:
 
 
 # ─────────────────────────── 共通ヘルパー ───────────────────────────
-
-
-def _extract_json_object(text: str) -> str:
-    """モデル応答から JSON オブジェクトを取り出す。
-
-    小さいモデルは前置き・後書き・```json フェンスを付けてくることがあり、
-    応答全体をそのまま json.loads すると必ず壊れる（2026-09-05 実機で確認）。
-    フェンスを剥がし、最初の { から対応する } までを波括弧の対応で切り出す。
-    """
-    body = text.strip()
-    if "```" in body:
-        parts = body.split("```")
-        for part in parts:
-            candidate = part[4:] if part.lstrip().lower().startswith("json") else part
-            if "{" in candidate:
-                body = candidate
-                break
-    start = body.find("{")
-    if start < 0:
-        return body
-    depth = 0
-    in_str = False
-    escaped = False
-    for i, ch in enumerate(body[start:], start):
-        if in_str:
-            if escaped:
-                escaped = False
-            elif ch == "\\":
-                escaped = True
-            elif ch == '"':
-                in_str = False
-            continue
-        if ch == '"':
-            in_str = True
-        elif ch == "{":
-            depth += 1
-        elif ch == "}":
-            depth -= 1
-            if depth == 0:
-                return body[start : i + 1]
-    return body[start:]
 
 
 def _tail(text: str, limit: int = 4000) -> str:
@@ -381,29 +343,55 @@ class DryRunAgent:
 # ─────────────────── LLM API エージェント共通（OpenAI / Ollama） ───────────────────
 
 _OPENAI_DEFAULT_MODEL = "gpt-4o-mini"
-_OLLAMA_DEFAULT_MODEL = "qwen2.5:3b"
+_OLLAMA_DEFAULT_MODEL = "qwen2.5-coder:7b"
 _OLLAMA_DEFAULT_HOST = "http://127.0.0.1:11434"
 _OPENAI_ENDPOINT = "https://api.openai.com/v1/chat/completions"
 
-_SYSTEM_PROMPT = "あなたは熟練のソフトウェアエンジニアです。指示された JSON 以外を出力してはいけません。"
+_SYSTEM_PROMPT = (
+    "あなたは熟練のソフトウェアエンジニアです。"
+    "変更は unified diff だけで返し、説明文やファイル全文を出してはいけません。"
+)
 
-# CLI エージェントと違いファイルを直接編集できないため、修正後の全文を JSON で返させる。
-_JSON_OUTPUT_INSTRUCTION = """
+# ファイル全文を JSON で返させると、モデルは長い出力の途中で JSON を壊す。
+# 壊れれば修正はまるごと失われ、しかも「何を直そうとしたか」も残らない。
+# diff なら出力が短く、当たらなければ git 自身が理由を教えてくれる。
+_DIFF_FORMAT_INSTRUCTIONS = """
 
 # 出力形式（厳守）
-あなたはファイルを直接編集できません。修正後のファイル全文を JSON で返してください。
+変更は unified diff だけを ```diff で囲んで返してください。
 形式:
-{"summary": "3行以内の要約", "rationale": "原因と対処", "files": [{"path": "相対パス", "content": "修正後のファイル全文"}]}
-- JSON のみを返す。説明文・前置き・コードフェンスを付けない。
-- path はリポジトリルートからの相対パスのみ。絶対パスや `..` を含めない。
-- content は差分ではなくファイル全文。
-- 修正の必要がなければ files を空配列にする。
+```diff
+--- a/相対パス
++++ b/相対パス
+@@ -開始行,行数 +開始行,行数 @@
+ 変えない行
+-消す行
++足す行
+```
+- diff 以外を出力しない。説明文・前置き・ファイル全文・JSON を付けない。
+- パスはリポジトリルートからの相対パスのみ。絶対パスや `..` を含めない。
+- 変更が必要ない場合は、空の ```diff ``` を返す。
 """
+
+#: 応答から diff を取り出す。フェンスが無い応答も拾う。
+_DIFF_FENCE_RE = re.compile(r"```(?:diff|patch)?\s*\n(.*?)```", re.DOTALL)
+#: diff の始まりらしい行。フェンスが無いときはここから末尾までを使う。
+_DIFF_START_RE = re.compile(r"^(?:diff --git |--- )", re.MULTILINE)
+
+
+def _extract_diff(text: str) -> str:
+    """モデルの応答から unified diff を取り出す。無ければ空文字。"""
+    for match in _DIFF_FENCE_RE.finditer(text or ""):
+        body = match.group(1)
+        if _DIFF_START_RE.search(body):
+            return body.strip("\n")
+    match = _DIFF_START_RE.search(text or "")
+    return (text[match.start():]).strip("\n") if match else ""
 
 
 def _llm_prompt(task: AgentTask) -> str:
-    """既存の指示文に JSON 出力の縛りを足す。"""
-    return build_prompt(task) + _JSON_OUTPUT_INSTRUCTION
+    """既存の指示文に diff 出力の縛りを足す。"""
+    return build_prompt(task) + _DIFF_FORMAT_INSTRUCTIONS
 
 
 def _redact(text: str) -> str:
@@ -433,81 +421,68 @@ def _post_json(url: str, payload: dict[str, Any], headers: dict[str, str], timeo
     return data
 
 
-def _parse_llm_payload(text: str) -> dict[str, Any]:
-    """モデル応答から JSON を取り出す。コードフェンス付き・前後の散文にも耐える。"""
-    body = (text or "").strip()
-    if body.startswith("```"):
-        body = body.split("\n", 1)[1] if "\n" in body else ""
-        body = body.rstrip()
-        if body.endswith("```"):
-            body = body[:-3]
-        body = body.strip()
-    if not body:
-        raise ValueError("モデル応答が空でした。")
-    try:
-        data: Any = json.loads(body)
-    except json.JSONDecodeError:
-        # find/rfind の素朴な切り出しは、後書きに } が混ざると壊れる。
-        # 波括弧の対応を数えて最初の 1 オブジェクトだけを取り出す。
-        candidate = _extract_json_object(body)
-        try:
-            # strict=False は文字列中の生の改行・タブを許す。小さいモデルは
-            # ファイル全文を \n へエスケープせずそのまま入れてくる（2026-09-05 実機で確認）。
-            data = json.loads(candidate, strict=False)
-        except json.JSONDecodeError:
-            raise ValueError(
-                "モデル応答をJSONとして解釈できませんでした（先頭200字: "
-                + candidate[:200].replace("\n", " ")
-                + "）"
-            ) from None
-    if not isinstance(data, dict):
-        raise ValueError("モデル応答のJSONがオブジェクトではありません。")
-    return data
+def _apply_with_retry(
+    agent_name: str,
+    task: AgentTask,
+    call: Callable[[str, float], tuple[str, str]],
+) -> tuple[str, str, str]:
+    """モデルに diff を作らせて当てる。返すのは (応答, ログ, 失敗理由)。
+
+    当たらなかったときは、git のエラーをそのまま添えて 1 度だけ聞き直す。
+    人が同じことをするからで、モデルは行番号のずれをこれで直せることが多い。
+    2 度目も当たらなければ諦める（3 度目が当たる見込みは薄く、時間だけ延びる）。
+    """
+    prompt = _llm_prompt(task)
+    content, log = call(prompt, float(task.timeout_sec))
+    diff = _extract_diff(content)
+    if not diff:
+        return content, log, "差分が返ってきませんでした"
+
+    ok, detail = git_ops.apply_patch(Path(task.workdir), diff)
+    if ok:
+        return content, log, ""
+
+    retry_prompt = (
+        prompt
+        + "\n\n# 直前の差分が当たりませんでした\n"
+        + "git apply の出力:\n"
+        + detail
+        + "\n同じ内容を、当たる形の unified diff で出し直してください。"
+    )
+    content2, log2 = call(retry_prompt, float(task.timeout_sec))
+    diff2 = _extract_diff(content2)
+    if not diff2:
+        return content2, f"{log} / 再試行: {log2}", f"差分を当てられませんでした（{detail}）"
+    ok2, detail2 = git_ops.apply_patch(Path(task.workdir), diff2)
+    if ok2:
+        return content2, f"{log} / 再試行: {log2}", ""
+    return content2, f"{log} / 再試行: {log2}", f"差分を当てられませんでした（{detail2}）"
 
 
-def _resolve_in_workdir(root: str, rel: str) -> str:
-    """workdir 配下に収まる書き込み先だけを許す。外を指したら ValueError。"""
-    if not isinstance(rel, str) or not rel.strip():
-        raise ValueError("filesのpathが空です。")
-    parts = rel.replace("\\", "/").split("/")
-    if os.path.isabs(rel) or ".." in parts:
-        raise ValueError(f"ワークツリー外への書き込みを拒否しました: {rel}")
-    target = os.path.realpath(os.path.join(root, rel))
-    if target != root and not target.startswith(root + os.sep):
-        raise ValueError(f"ワークツリー外への書き込みを拒否しました: {rel}")
-    return target
+def _summary_from(content: str) -> tuple[str, str]:
+    """diff の前に書かれた文があれば、要約と説明として拾う。
+
+    出力形式では禁じているが、モデルは前置きを書くことがある。
+    捨てずに使う（人が読む「対応」の材料になる）。
+    """
+    match = _DIFF_FENCE_RE.search(content or "") or _DIFF_START_RE.search(content or "")
+    head = (content or "")[: match.start()].strip() if match else ""
+    if not head:
+        return "", ""
+    lines = [line.strip() for line in head.splitlines() if line.strip()]
+    if not lines:
+        return "", ""
+    return lines[0][:200], " ".join(lines)[:1000]
 
 
-def _write_files(workdir: str, files: Any) -> int:
-    """JSON の files を workdir へ書き出す。書けない要素があれば例外で止める。"""
-    if files is None:
-        return 0
-    if not isinstance(files, list):
-        raise ValueError("filesが配列ではありません。")
-    root = os.path.realpath(workdir)
-    written = 0
-    for item in files:
-        if not isinstance(item, dict):
-            raise ValueError("filesの要素がオブジェクトではありません。")
-        content = item.get("content")
-        if not isinstance(content, str):
-            raise ValueError("filesのcontentが文字列ではありません。")
-        target = _resolve_in_workdir(root, item.get("path"))
-        os.makedirs(os.path.dirname(target), exist_ok=True)
-        with open(target, "w", encoding="utf-8") as fp:
-            fp.write(content)
-        written += 1
-    return written
-
-
-def _run_json_fix(agent_name: str, task: AgentTask, call: Callable[[str, float], tuple[str, str]]) -> FixProposal:
-    """LLM を呼び、返ってきた全文を書き戻して差分を回収する。例外は投げない。"""
+def _run_diff_fix(
+    agent_name: str, task: AgentTask, call: Callable[[str, float], tuple[str, str]]
+) -> FixProposal:
+    """LLM に unified diff を作らせて当て、差分を回収する。例外は投げない。"""
     start = time.monotonic()
     try:
-        content, log = call(_llm_prompt(task), float(task.timeout_sec))
-        payload = _parse_llm_payload(content)
-        _write_files(task.workdir, payload.get("files"))
-    except Exception as exc:  # noqa: BLE001 - どんな失敗もFixProposalへ畳む（落とさない）
+        content, log, failure = _apply_with_retry(agent_name, task, call)
+    except Exception as exc:  # noqa: BLE001 - どんな失敗も FixProposal へ畳む
         return FixProposal(
             defect_id=task.defect.defect_id,
             agent=agent_name,
@@ -518,9 +493,21 @@ def _run_json_fix(agent_name: str, task: AgentTask, call: Callable[[str, float],
         )
 
     duration = time.monotonic() - start
+    summary, rationale = _summary_from(content)
+    rationale = _redact(rationale)
+    if failure:
+        return FixProposal(
+            defect_id=task.defect.defect_id,
+            agent=agent_name,
+            status="failed",
+            summary="修正を適用できませんでした",
+            rationale=rationale,
+            log_tail=_tail(_redact(log)),
+            duration_sec=duration,
+            error=failure[:300],
+        )
+
     diff, changed = _collect_worktree_change(task.workdir)
-    summary = str(payload.get("summary") or "").strip()
-    rationale = _redact(str(payload.get("rationale") or "").strip())
     if not diff:
         return FixProposal(
             defect_id=task.defect.defect_id,
@@ -534,7 +521,7 @@ def _run_json_fix(agent_name: str, task: AgentTask, call: Callable[[str, float],
     return FixProposal(
         defect_id=task.defect.defect_id,
         agent=agent_name,
-        # 変更はすでに worktree のファイルへ書き込まれているので "applied"。
+        # 変更はすでに worktree のファイルへ当たっているので "applied"。
         # "proposed" にすると統合段（orchestrator）が拾わず、直っているのに
         # 「修正が 1 件も適用されませんでした」で失敗する（2026-09-05 実機で確認）。
         status="applied",
@@ -566,7 +553,7 @@ class OpenAIAgent:
 
     def propose_fix(self, task: AgentTask) -> FixProposal:
         """例外は投げない。失敗時も必ず FixProposal を返す。"""
-        return _run_json_fix(self.name, task, self._call)
+        return _run_diff_fix(self.name, task, self._call)
 
     def _call(self, prompt: str, timeout: float) -> tuple[str, str]:
         api_key = os.environ.get("OPENAI_API_KEY", "").strip()
@@ -602,6 +589,19 @@ def _ollama_host() -> str:
     return os.environ.get("WEBSPEC2DOC_HEALING_OLLAMA_HOST", _OLLAMA_DEFAULT_HOST).rstrip("/")
 
 
+def _has_model(tags_body: str, model: str) -> bool:
+    """/api/tags の応答に、そのモデルがあるか。
+
+    Ollama は "qwen2.5-coder:7b" を "qwen2.5-coder:7b" として返すが、
+    タグ無しで指定されることもあるので前方一致も見る。
+    """
+    try:
+        names = [str(m.get("name") or "") for m in json.loads(tags_body).get("models") or []]
+    except (ValueError, AttributeError, TypeError):
+        return True  # 読めないときは止めない（実行時のエラーに任せる）
+    return any(name == model or name.split(":")[0] == model for name in names)
+
+
 class OllamaAgent:
     """ローカルの Ollama に修正後の全文を作らせるエージェント。"""
 
@@ -614,6 +614,7 @@ class OllamaAgent:
             req = urllib.request.Request(f"{host}/api/tags", method="GET")
             with urllib.request.urlopen(req, timeout=3) as resp:  # nosec B310 - ローカルの固定エンドポイント
                 status = getattr(resp, "status", 0)
+                body = resp.read().decode("utf-8", "ignore")
         except Exception as exc:  # noqa: BLE001 - 疎通確認の失敗は理由付きで ok=False に畳む
             return ConnectionCheck(
                 key="agent",
@@ -629,11 +630,20 @@ class OllamaAgent:
                 detail=f"{host}/api/tags が HTTP {status} を返しました",
             )
         model = os.environ.get("WEBSPEC2DOC_HEALING_OLLAMA_MODEL", _OLLAMA_DEFAULT_MODEL)
+        # 繋がっていてもモデルが無ければ実行時に必ず失敗する。
+        # 「接続 OK」と出したあとで失敗させるより、ここで手順まで示す。
+        if not _has_model(body, model):
+            return ConnectionCheck(
+                key="agent",
+                label=self.label,
+                ok=False,
+                detail=f"モデル {model} がありません。ollama pull {model} を実行してください",
+            )
         return ConnectionCheck(key="agent", label=self.label, ok=True, detail=f"{host} / モデル: {model}")
 
     def propose_fix(self, task: AgentTask) -> FixProposal:
         """例外は投げない。失敗時も必ず FixProposal を返す。"""
-        return _run_json_fix(self.name, task, self._call)
+        return _run_diff_fix(self.name, task, self._call)
 
     def _call(self, prompt: str, timeout: float) -> tuple[str, str]:
         host = _ollama_host()
@@ -643,7 +653,6 @@ class OllamaAgent:
             {
                 "model": model,
                 "stream": False,
-                "format": "json",
                 "options": {"temperature": 0},
                 "messages": [
                     {"role": "system", "content": _SYSTEM_PROMPT},

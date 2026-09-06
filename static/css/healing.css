@@ -776,7 +776,9 @@ table.hl-projects-table td { padding-top: 6px; padding-bottom: 6px; }
 .app-content > .hl-banner { flex: 0 0 auto; }
 /* .card や .dashboard-section-head の display 指定は UA の [hidden]{display:none} に
    勝ってしまう。この画面では hidden 属性を常に正とする（JS の style 直書きに頼らない）。 */
-#hl-view-run [hidden] { display: none; }
+/* 接続先ビューが設定画面の既定になったので、run 以外でも hidden を正とする。
+   .card / .dashboard-section-head の display 指定が UA の [hidden] に勝つのを打ち消す。 */
+#hl-view-run [hidden], #hl-view-projects [hidden], #hl-view-history [hidden] { display: none; }
 #hl-view-run, #hl-view-projects, #hl-view-history { flex: 1 1 auto; min-height: 0; }
 
 /* ── 実行ビュー: 上（受付・統計・判断）固定 ／ 下（周回・実行ログ）だけ内側スクロール ── */
@@ -893,6 +895,9 @@ table.hl-projects-table td { padding-top: 6px; padding-bottom: 6px; }
 #hl-view-projects > .dashboard-section-head, #hl-view-history > .dashboard-section-head,
 #hl-view-projects > .hl-form, #hl-view-projects > .hl-list-meta,
 #hl-view-history > .hl-list-meta, #hl-view-history > .hl-more-row { flex: 0 0 auto; }
+/* 登録フォームを開いた状態でも main.app-content は溢れさせない。画面が低いときは
+   フォーム自身の中でスクロールさせ、表の領域まで押し出さない。 */
+#hl-view-projects > .hl-form { flex: 0 1 auto; min-height: 0; overflow: auto; }
 
 /* 毎日の見張り列。トグル・時刻・今すぐ を 1 行に置き、状態は下の行に書く。
    「設定値」ではなく「次に何が起きるか」を読ませたいので、注記を主にする。 */

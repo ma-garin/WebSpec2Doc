@@ -7,8 +7,10 @@ web.services.healing 配下（project_store / orchestrator / run_store / agents�
 
 from __future__ import annotations
 
+import json
 import logging
 import re
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -37,6 +39,9 @@ bp = Blueprint("healing", __name__)
 
 logger = logging.getLogger(__name__)
 
+#: 監査ログの置き場。他ルート（settings.py / admin.py / review.py）と同じ規約。
+INSTANCE_DIR = Path("instance")
+
 _ID_RE = re.compile(r"^[0-9a-zA-Z_-]{1,64}$")
 _GITHUB_REPO_RE = re.compile(r"^[\w.-]+/[\w.-]+$")
 _CONTROL_CHARS_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
@@ -62,11 +67,44 @@ def _out() -> Path:
     return scoped_output_dir(OUTPUT_DIR)
 
 
+def _audit_target(action: str, detail: dict[str, Any]) -> tuple[str, str]:
+    """監査ログの対象（種類・ID）を action と detail から決める。
+
+    action は "healing.<対象>.<動作>" の形なので 2 語目がそのまま対象の種類になる。
+    ID は detail が持つ識別子を優先する（無い操作＝一覧・探索は "current"）。
+    """
+    parts = action.split(".")
+    target_type = parts[1] if len(parts) >= 2 and parts[1] else "healing"
+    for key in ("project_id", "run_id", "report_id"):
+        value = detail.get(key)
+        if value:
+            return target_type, str(value)
+    return target_type, "current"
+
+
 def _record_audit(action: str, detail: dict[str, Any]) -> None:
+    """管理操作の証跡を残す。
+
+    証跡が無いと「誰が何を直したか」を後から示せない。本処理は止めないが、
+    記録できなかったことは必ずログに残す（黙って落とすと欠落に気づけない）。
+    """
+    target_type, target_id = _audit_target(action, detail)
     try:
-        record_admin_event(action, detail)
+        record_admin_event(
+            INSTANCE_DIR,
+            action=action,
+            target_type=target_type,
+            target_id=target_id,
+            detail=detail,
+        )
     except Exception:
-        logger.exception("healing: 監査ログの記録に失敗しました (action=%s)", action)
+        logger.warning(
+            "healing: 監査ログの記録に失敗しました (action=%s target=%s/%s)",
+            action,
+            target_type,
+            target_id,
+            exc_info=True,
+        )
 
 
 #: エラー文へ実パスが混ざったときに伏せる値（内部構造・利用者名の露出防止）。
@@ -568,6 +606,69 @@ def api_discover_repos():
         return {"error": "処理に失敗しました"}, 500
 
 
+#: サイト一覧から外す出力先。報告書・実行の保存先とテナント分離用で、
+#: どちらも「01 が解析したサイト」ではない。
+_SITE_EXCLUDE_DIRS = frozenset({".healing", "tenants"})
+
+
+def _site_dict(entry: Path) -> dict[str, Any] | None:
+    """1 サイト分の要約。読めない report.json は一覧から外す（画面を落とさない）。"""
+    report = entry / "report.json"
+    try:
+        data = json.loads(report.read_text(encoding="utf-8"))
+    except Exception:
+        logger.warning(
+            "healing: 読めない report.json をサイト一覧から除きます (%s)",
+            entry.name,
+            exc_info=True,
+        )
+        return None
+    raw = data.get("screens") if isinstance(data, dict) else None
+    screens = raw if isinstance(raw, list) else []
+    title = ""
+    if screens and isinstance(screens[0], dict):
+        title = _clean_short_text(screens[0].get("title"), "")
+    try:
+        updated_at = datetime.fromtimestamp(report.stat().st_mtime).isoformat(timespec="seconds")
+    except OSError:
+        updated_at = ""
+    return {
+        "domain": entry.name,
+        "title": title,
+        "screens": len(screens),
+        "updated_at": updated_at,
+    }
+
+
+@bp.get("/api/healing/sites")
+def api_list_sites():
+    """01 が解析したサイトを列挙する（接続先の「サイト」欄の候補）。
+
+    手入力させると綴りのずれで毎日の見張りも画面仕様との照合も静かに効かなく
+    なるため、実在するものだけを選ばせる。選ぶだけの一覧なので閲覧権限で返す。
+    """
+    try:
+        out_dir = _out()
+        sites: list[dict[str, Any]] = []
+        if out_dir.is_dir():
+            for entry in sorted(out_dir.iterdir(), key=lambda p: p.name):
+                if not entry.is_dir():
+                    continue
+                if entry.name.startswith(".") or entry.name in _SITE_EXCLUDE_DIRS:
+                    continue
+                if not (entry / "report.json").is_file():
+                    continue
+                site = _site_dict(entry)
+                if site is not None:
+                    sites.append(site)
+        return {"sites": sites}
+    except HealingError as exc:
+        return _error_response(exc)
+    except Exception:
+        logger.exception("healing: サイト一覧の取得に失敗しました")
+        return {"error": "処理に失敗しました"}, 500
+
+
 # ─────────────────────────── API: runs ───────────────────────────
 
 
@@ -895,7 +996,13 @@ def api_update_report(report_id: str):
             changes["cause_text"] = _clean_note(data.get("cause_text"))
         if not changes:
             return {"error": "更新する項目がありません"}, 400
-        report = _replace(report, **changes, updated_at=report.updated_at)
+        # 中身が変わったときだけ最終更新日時を進める。同じ値で保存し直しただけの
+        # PATCH で日時が動くと「いつ人が手を入れたか」の証跡として読めなくなる。
+        touched = any(getattr(report, key) != value for key, value in changes.items())
+        updated_at = (
+            datetime.now().isoformat(timespec="seconds") if touched else report.updated_at
+        )
+        report = _replace(report, **changes, updated_at=updated_at)
         report_doc.save_report(out_dir, report)
         _record_audit("healing.report.update", {"report_id": report_id})
         return {"report": report_doc.to_dict(report)}

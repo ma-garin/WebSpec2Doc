@@ -20,6 +20,13 @@ from pathlib import Path
 from typing import Any
 
 from web.services.healing import spec_match
+from web.services.healing.report_present import CAUSE_MAX_CHARS as _CAUSE_MAX_CHARS
+from web.services.healing.report_present import contradiction_note as _contradiction_note
+from web.services.healing.report_present import display_report as _display_report
+from web.services.healing.report_present import title_from_test_id, to_view_dict
+from web.services.healing.report_present import truncate_sentences as _truncate_sentences
+from web.services.healing.report_present import with_note as _with_note
+from web.services.healing.risk import _parse_file_diffs
 from web.services.healing.types import (
     Defect,
     FixProposal,
@@ -40,8 +47,8 @@ _AGENT_LABELS: dict[str, str] = {
     "dryrun": "動作確認用",
 }
 
-#: 原因の説明に載せる上限。長い自己申告をそのまま顧客に出さない。
-_CAUSE_MAX_CHARS = 200
+#: 本文の整形・字数・食い違いの判定は report_present に集約している。
+#: この層は「保存する形」だけを持ち、表示のために作り直すことはしない。
 
 
 @dataclass(frozen=True)
@@ -134,43 +141,9 @@ def humanize_title(defect: Defect) -> str:
         return f"{screen}からの遷移先が期待と異なる" if screen else f"{fallback} の遷移先が期待と異なる"
 
     if re.search(r"AssertionError|^\s*assert ", text, re.MULTILINE):
-        return f"{fallback} が失敗する"
+        return title_from_test_id(defect.test_id, defect.message or "") or f"{fallback} が失敗する"
 
     return f"{screen}: {fallback} が失敗" if screen else f"{fallback} が失敗"
-
-
-def _strip_markup(text: str) -> str:
-    """エージェントが混ぜてくる Markdown の装飾を落とす。
-
-    報告書は節の構造を報告書側が持つ。本文に **見出し:** やコードフェンスが
-    入ると二重の構造になり、顧客に出す様式として崩れる（実測で混入した）。
-    """
-    body = text or ""
-    body = re.sub(r"```[\s\S]*?```", " ", body)  # コードフェンスごと落とす
-    # 表の行（| で始まる行）ごと落とす。報告書の表は報告書側が組む。
-    body = "\n".join(
-        line for line in body.splitlines() if not line.lstrip().startswith("|")
-    )
-    body = re.sub(r"\*\*([^*]+)\*\*", r"\1", body)  # 太字を平文へ
-    body = re.sub(r"`([^`]+)`", r"\1", body)  # インラインコードを平文へ
-    body = re.sub(r"^\s*[-*+]\s+", "", body, flags=re.MULTILINE)  # 箇条書きの記号
-    body = re.sub(r"^#{1,6}\s*", "", body, flags=re.MULTILINE)
-    return body
-
-
-def _truncate_sentences(text: str, limit: int) -> str:
-    """文の途中で切らずに limit 字以内へ収める。和文・英文の両方を区切る。"""
-    body = " ".join(_strip_markup(text).split())
-    if len(body) <= limit:
-        return body
-    out = ""
-    for sentence in re.split(r"(?<=[。.!?])\s*", body):
-        if not sentence:
-            continue
-        if len(out) + len(sentence) > limit:
-            break
-        out += sentence
-    return (out or body[:limit]).strip()
 
 
 def _hunk_lines(diff: str) -> str:
@@ -190,29 +163,81 @@ def _hunk_lines(diff: str) -> str:
     return f"{start}〜{end} 行" if end > start else f"{start} 行"
 
 
+def _cause_path(proposal: FixProposal | None, defect: Defect) -> str:
+    """原因の箇所に使うファイル。特定できなければ空。"""
+    first = defect.locations[0] if defect.locations else None
+    if isinstance(first, Mapping) and first.get("path"):
+        return str(first["path"])
+    if proposal and proposal.files_changed:
+        return proposal.files_changed[0]
+    return defect.suspect_files[0] if defect.suspect_files else ""
+
+
+def _enclosing_def(diff: str) -> str:
+    """差分が入っている関数の名前。取れなければ空。
+
+    ハンクヘッダの末尾は当てにならない（実測ではモジュールの説明文が入っていた）。
+    文脈行を上から読み、最初の変更行にぶつかった時点の定義名を採る。
+    """
+    name = ""
+    for line in (diff or "").splitlines():
+        if line.startswith(("diff ", "index ", "--- ", "+++ ")):
+            continue
+        found = re.match(r"^[ +\-]\s*(?:async\s+)?(?:def|function)\s+([A-Za-z_]\w*)", line)
+        if found:
+            name = found.group(1)
+        elif line.startswith("@@"):
+            name = ""
+        elif line.startswith(("-", "+")):
+            return name
+    return name
+
+
+def _code_snippet(lines: Sequence[str], limit: int = 60) -> str:
+    """変更行を 1 行の引用にする。長ければ切る。"""
+    text = " / ".join(x for x in lines if x)
+    return text if len(text) <= limit else f"{text[:limit].rstrip()}…"
+
+
+def _cause_from_diff(proposal: FixProposal | None, location: str) -> str:
+    """差分という事実から原因を書く。差分が無ければ空。"""
+    if proposal is None or not (proposal.diff or "").strip():
+        return ""
+    files = [f for f in _parse_file_diffs(proposal.diff) if f.added or f.removed]
+    if not files:
+        return ""
+    head = files[0]
+    func = _enclosing_def(proposal.diff)
+    where = f"{head.path} の {func}" if func else (head.path or location)
+    changed = sum(len(f.added) + len(f.removed) for f in files)
+    if len(files) > 1:
+        others = len(files) - 1
+        return f"{where} ほか {others} ファイルの実装が期待と異なっていました（{changed} 行を修正）。"
+    removed = [x.strip() for x in head.removed if x.strip()]
+    added = [x.strip() for x in head.added if x.strip()]
+    if removed and added and len(removed) <= 3 and len(added) <= 3:
+        verb = "を返していました" if removed[0].startswith("return ") else "でした"
+        return f"{where} が {_code_snippet(removed)} {verb}（{_code_snippet(added)} に修正）。"
+    if removed and not added:
+        return f"{where} に不要な処理が残っていました（{len(removed)} 行を削除）。"
+    if added and not removed:
+        return f"{where} に必要な処理がありませんでした（{len(added)} 行を追加）。"
+    return f"{where} の実装が期待と異なっていました（{changed} 行を修正）。"
+
+
 def humanize_cause(proposal: FixProposal | None, defect: Defect) -> tuple[str, str]:
     """原因の説明と、その箇所を返す。
 
-    エージェントの自己申告をそのまま出すが、長さは抑える。
-    「原因」と言い切れる保証はないので、画面側で自己申告である旨を添える。
+    説明は AI の自己申告ではなく本体が持つ事実（差分・欠陥）から組み立てる。
+    自己申告は自分の実行環境の話を書き、検証結果と食い違う（実測）。
     """
-    rationale = (proposal.rationale if proposal else "") or ""
-    cause = _truncate_sentences(rationale, _CAUSE_MAX_CHARS)
-    if not cause:
-        cause = "原因を特定できませんでした。検証ログを確認してください。"
-
-    path = ""
-    if defect.locations:
-        first = defect.locations[0]
-        path = str(first.get("path") or "") if isinstance(first, Mapping) else ""
-    if not path and proposal and proposal.files_changed:
-        path = proposal.files_changed[0]
-    if not path and defect.suspect_files:
-        path = defect.suspect_files[0]
-
+    path = _cause_path(proposal, defect)
     lines = _hunk_lines(proposal.diff if proposal else "")
     location = f"{path} {lines}".strip() if path else ""
-    return cause, location
+    cause = _cause_from_diff(proposal, location)
+    if not cause:
+        cause = "原因を特定できませんでした。検証ログを確認してください。"
+    return _truncate_sentences(cause, _CAUSE_MAX_CHARS), location
 
 
 def _action_text(proposal: FixProposal | None, cause_text: str) -> str:
@@ -337,7 +362,7 @@ def build_maintenance_report(
         title=humanize_title(defect),
         status="awaiting",
         incident_text=(defect.message or defect.title or "").strip(),
-        incident_detected_at=run.started_at or run.created_at or _now(),
+        incident_detected_at=run.started_at or getattr(run, "created_at", "") or _now(),
         incident_source=_incident_source(run),
         incident_screen_id=defect.screen_id,
         incident_screen_name=defect.screen_name,
@@ -357,7 +382,12 @@ def build_maintenance_report(
         verify_after=verify_after,
         verify_after_ok=after_ok,
         spec_match=_spec_match_text(defect, proposal, project, out_dir),
-        attention=tuple(dict(r) for r in (proposal.risks if proposal else ())),
+        attention=_with_note(
+            tuple(dict(r) for r in (proposal.risks if proposal else ())),
+            _contradiction_note(
+                (proposal.rationale if proposal else "") or "", verify_after, after_ok
+            ),
+        ),
         approvals=(
             {
                 "role": "proposed",
@@ -395,15 +425,21 @@ def _incident_source(run: HealingRun) -> str:
 # ─────────────────────────── 入出力 ───────────────────────────
 
 
-def to_dict(report: MaintenanceReport) -> dict[str, Any]:
+def to_save_dict(report: MaintenanceReport) -> dict[str, Any]:
+    """保存する形。整形しない。
+
+    ここに表示用の作り直しを入れると、保存のたびに JSON が書き換わり、
+    「AI が何と言ったか」を証跡から復元できなくなる（2026-09-05 に実際に壊した）。
+    """
     data = asdict(report)
     data["attention"] = [dict(a) for a in report.attention]
     data["approvals"] = [dict(a) for a in report.approvals]
-    # 装飾を落とすようになる前に作られた報告書が残っている。保存済みの本文を
-    # 書き換えるのではなく、出すときに落とす（過去のデータを改変しない）。
-    for key in ("cause_text", "action_text"):
-        data[key] = " ".join(_strip_markup(data.get(key) or "").split())
     return data
+
+
+def to_dict(report: MaintenanceReport) -> dict[str, Any]:
+    """画面・API・書き出しが受け取る形。表示用に作り直したもので、保存には使わない。"""
+    return to_view_dict(report)
 
 
 def from_dict(data: Mapping[str, Any]) -> MaintenanceReport:
@@ -460,12 +496,17 @@ def save_report(out_dir: Path, report: MaintenanceReport) -> Path:
     target.mkdir(parents=True, exist_ok=True)
     path = target / f"{report.report_id}.json"
     path.write_text(
-        json.dumps(to_dict(report), ensure_ascii=False, indent=1), encoding="utf-8"
+        json.dumps(to_save_dict(report), ensure_ascii=False, indent=1), encoding="utf-8"
     )
     return path
 
 
 def load_report(out_dir: Path, report_id: str) -> MaintenanceReport | None:
+    """保存されたままの報告書を返す。整形しない。
+
+    人が書き足した内容を保存し直す経路（PATCH・承認）がこれを使うため、
+    ここで表示用に作り直すと、その作り直しがそのままディスクへ焼き付く。
+    """
     path = reports_dir(out_dir) / f"{report_id}.json"
     if not path.is_file():
         return None
@@ -476,10 +517,10 @@ def load_report(out_dir: Path, report_id: str) -> MaintenanceReport | None:
         return None
 
 
-def list_reports(
+def _read_reports(
     out_dir: Path, *, status: str = "", project_id: str = "", limit: int = 100
 ) -> list[MaintenanceReport]:
-    """報告書を新しい順に返す。壊れたファイルは読み飛ばす。"""
+    """保存されたままの報告書を新しい順に返す。壊れたファイルは読み飛ばす。"""
     target = reports_dir(out_dir)
     if not target.is_dir():
         return []
@@ -499,11 +540,26 @@ def list_reports(
     return found[:limit]
 
 
+def list_reports(
+    out_dir: Path, *, status: str = "", project_id: str = "", limit: int = 100
+) -> list[MaintenanceReport]:
+    """一覧に出す形。件名と本文を表示用に直したものを返す（保存には使わない）。"""
+    return [
+        _display_report(r)
+        for r in _read_reports(
+            out_dir, status=status, project_id=project_id, limit=limit
+        )
+    ]
+
+
 def find_report(
     out_dir: Path, *, run_id: str, defect_id: str
 ) -> MaintenanceReport | None:
-    """同じ実行・同じ欠陥の報告書を探す。周回ごとの上書きに使う。"""
-    for report in list_reports(out_dir, limit=1000):
+    """同じ実行・同じ欠陥の報告書を探す。周回ごとの上書きに使う。
+
+    書き戻す経路なので、保存されたままのものを返す（表示用に直さない）。
+    """
+    for report in _read_reports(out_dir, limit=1000):
         if report.run_id == run_id and report.defect_id == defect_id:
             return report
     return None
@@ -512,8 +568,11 @@ def find_report(
 def merge_report(
     existing: MaintenanceReport, fresh: MaintenanceReport
 ) -> MaintenanceReport:
-    """既存の報告書を新しい内容で更新する。ID と作成時刻と人の判断は保つ。"""
-    data = to_dict(fresh)
+    """既存の報告書を新しい内容で更新する。ID と作成時刻と人の判断は保つ。
+
+    保存に回るので、表示用ではなく保存形式で取り出す。
+    """
+    data = to_save_dict(fresh)
     for key in ("report_id", "created_at"):
         data.pop(key, None)
     # 人が下した判断は機械の再生成で消さない。
@@ -553,6 +612,7 @@ _SEVERITY_LABELS = {"high": "高", "medium": "中", "low": "低"}
 
 def render_markdown(report: MaintenanceReport) -> str:
     """顧客に出す様式で Markdown を組み立てる。画面・PDF と同じ節構成。"""
+    report = _display_report(report)
     lines: list[str] = ["## 保守対応報告書", ""]
     meta = [f"案件: {report.project_name}"]
     if report.target_url:

@@ -21,7 +21,7 @@ from flask import Blueprint, g, render_template, request
 from web.audit_context import record_admin_event
 from web.auth import require_admin
 from web.config import OUTPUT_DIR
-from web.services.orchestration import conductor, goals, run_store
+from web.services.orchestration import conductor, goals, onboarding, run_store
 from web.tenancy import scoped_output_dir
 from web.validation import _domain_of
 
@@ -271,18 +271,50 @@ def api_start_run():
     domain = str(data.get("domain") or "").strip()
     goal = str(data.get("goal") or "").strip()
     project_id = str(data.get("project_id") or "").strip()
-    if not _DOMAIN_RE.match(domain):
-        return {"error": "サイトの指定が不正です。"}, 400
     if goal not in goals.AVAILABLE_GOALS:
         return {"error": "目標を指定してください（daily か onboard）"}, 400
     if project_id and not _PROJECT_ID_RE.match(project_id):
         return {"error": "project_id が不正です。"}, 400
+
+    raw_params = data.get("params")
+    raw_params = raw_params if isinstance(raw_params, Mapping) else {}
+    rounds_value = data.get("rounds", raw_params.get("rounds"))
+    rounds = 1
+    if rounds_value is not None:
+        rounds = _strict_int(rounds_value)
+        if rounds is None or not (1 <= rounds <= 5):
+            return {"error": "rounds は 1〜5 の整数で指定してください。"}, 400
+
+    out_dir = _out()
+    created_project = False
+
+    # domain 省略時、初めてのサイトでも url から起こせるように接続先を用意する。
+    if goal == "onboard" and not domain:
+        verify_command = str(data.get("verify_command") or "")
+        if len(verify_command) > 500:
+            return {"error": "verify_command は 500 字以内で指定してください。"}, 400
+        try:
+            plan = onboarding.prepare(
+                out_dir, url=str(raw_params.get("url") or ""),
+                repo=str(data.get("repo") or ""), verify_command=verify_command,
+                rounds=rounds, actor=_actor(),
+            )
+        except ValueError as exc:
+            return _error_response(exc)
+        domain = plan.domain
+        project_id = project_id or plan.project_id
+        created_project = plan.created_project
+
+    if not _DOMAIN_RE.match(domain):
+        return {"error": "サイトの指定が不正です。"}, 400
     params, params_error = _clean_params(data, domain)
     if params_error:
         return {"error": params_error}, 400
+    params["rounds"] = rounds
+
     try:
         run = conductor.start_if_idle(
-            out_dir=_out(), domain=domain, goal=goal,
+            out_dir=out_dir, domain=domain, goal=goal,
             project_id=project_id, actor=_actor(), params=params,
         )
     except ValueError as exc:  # 未知・未対応の目標。理由をそのまま返す
@@ -296,7 +328,11 @@ def api_start_run():
         "orchestration.run.start",
         {"run_id": run.run_id, "domain": domain, "goal": goal, "project_id": project_id},
     )
-    return {"run": run_store.run_to_dict(run)}, 202
+    return {
+        "run": run_store.run_to_dict(run),
+        "project_id": project_id,
+        "created_project": created_project,
+    }, 202
 
 
 @bp.get("/api/orchestration/runs/<run_id>")

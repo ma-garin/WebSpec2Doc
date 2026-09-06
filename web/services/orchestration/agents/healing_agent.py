@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from web.services.healing import autorun_bridge, orchestrator, project_store
+from web.services.healing import autorun_bridge, orchestrator, project_store, report_doc
 from web.services.healing.types import HealingProject
 from web.services.orchestration.ports import (
     Context,
@@ -136,6 +136,24 @@ class HealingAgent:
                 status="failed", summary="実行結果を読めませんでした",
                 error=f"失敗の読み取りに失敗しました: {exc}",
             )
+        if defects:
+            # 前の周回で下書き済み・承認済みの報告書と同じ欠陥は二重に出さない
+            # （2 周目以降、テストが変わらず落ち続けているだけの場合に起きる）。
+            try:
+                already = {
+                    r.defect_id for r in
+                    report_doc.list_reports(ctx.out_dir, project_id=project.project_id, limit=500)
+                    if r.status in ("awaiting", "approved")
+                }
+            except Exception:  # noqa: BLE001 - 照合の失敗で修正そのものは止めない
+                already = set()
+            if already:
+                before = len(defects)
+                defects = [d for d in defects if d.defect_id not in already]
+                removed = before - len(defects)
+                if removed:
+                    ctx.log(f"既に報告書がある {removed} 件を除外しました")
+
         if not defects:
             ctx.log("失敗はありません。報告書は作りません")
             return StepResult(

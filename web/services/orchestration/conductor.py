@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import atexit
 import logging
+import re
 import threading
 import time
 import uuid
@@ -40,6 +41,22 @@ ORPHAN_CANDIDATE_STATUSES = frozenset({"queued", "running"})
 ORPHAN_RUN_ERROR = "指揮の途中でプロセスが止まりました（サーバの再起動など）。もう一度実行してください"
 
 _CANCEL_NOTE = "利用者の指示で中止しました"
+
+#: 周回つきの表示名（goals.step_names_and_labels が付ける）から周回番号を拾う。
+_ROUND_RE = re.compile(r"（(\d+)\s*周目）")
+
+
+def _round_no(record: StepRecord) -> str:
+    m = _ROUND_RE.search(record.label or "")
+    return m.group(1) if m else "?"
+
+
+def _rounds_from(params: Mapping[str, Any] | None) -> int:
+    try:
+        rounds = int(dict(params or {}).get("rounds", 1))
+    except (TypeError, ValueError):
+        rounds = 1
+    return max(1, min(5, rounds))
 
 _RUNS: dict[str, ConductorRun] = {}
 _RUNS_LOCK = threading.RLock()
@@ -120,11 +137,12 @@ def start(*, out_dir: Path, domain: str, goal: str, project_id: str = "",
     site = str(domain or "").strip()
     if not site:
         raise ValueError("サイトを指定してください")
-    agents = [registry.get_agent(name) for name in goals.steps_for(goal)]
+    rounds = _rounds_from(params)
+    pairs = goals.step_names_and_labels(goal, rounds)
     run = ConductorRun(
         run_id=f"cond-{uuid.uuid4().hex[:12]}", domain=site, goal=str(goal).strip(),
         project_id=str(project_id or "").strip(), status="queued",
-        steps=[StepRecord(name=a.name, label=a.label) for a in agents],
+        steps=[StepRecord(name=name, label=label) for name, label in pairs],
         started_at=_now_iso(), actor=actor, params=dict(params or {}),
     )
     with _RUNS_LOCK:
@@ -138,18 +156,41 @@ def start(*, out_dir: Path, domain: str, goal: str, project_id: str = "",
 
 
 def _loop(out_dir: Path, run: ConductorRun) -> None:
-    """段を順に進める。どの経路で抜けても必ず保存する。"""
+    """段を順に進める。どの経路で抜けても必ず保存する。
+
+    healing 段だけは周回をまたいで続けられる（goals._REPEAT_TAIL の対象）。
+    waiting_human は残りの周回があれば続け（pending_human_action に持ち越す）、
+    skipped（新しい失敗が無い）は残りの周回があればそこで打ち切る。どちらも
+    「周回が無ければ従来どおり」（最後の段なら通常どおり終端する）。
+    """
     try:
         run.status = "running"
         _save(out_dir, run, note="指揮を始めます")
+        pending_human_action = ""
         for index, record in enumerate(run.steps):
             run.step_index = index
             if _cancelled(run.run_id):
                 _finish(out_dir, run, "cancelled", note=_CANCEL_NOTE)
                 return
-            if not _run_step(out_dir, run, record):
+            outcome = _run_step(out_dir, run, record)
+            if outcome == "stop":
+                return  # _run_step が既に _finish 済み
+            if outcome == "waiting_continue":
+                pending_human_action = record.human_action
+                continue
+            if outcome == "early_finish":
+                note = f"失敗が無くなったので {_round_no(record)} 周目で終了"
+                if pending_human_action:
+                    _finish(out_dir, run, "waiting_human",
+                           human_action=pending_human_action, note=note)
+                else:
+                    _finish(out_dir, run, "succeeded", note=note)
                 return
-        _finish(out_dir, run, "succeeded", note="すべての段が終わりました")
+        if pending_human_action:
+            _finish(out_dir, run, "waiting_human", human_action=pending_human_action,
+                    note="人待ちが残っています")
+        else:
+            _finish(out_dir, run, "succeeded", note="すべての段が終わりました")
     except Exception as exc:  # noqa: BLE001 - 例外で実行を宙づりにしない
         logger.exception("指揮 %s が異常終了しました", run.run_id)
         _finish(out_dir, run, "failed", error=f"指揮の途中で問題が起きました: {exc}",
@@ -164,8 +205,13 @@ def _loop(out_dir: Path, run: ConductorRun) -> None:
             logger.warning("指揮 %s の保存に失敗しました", run.run_id, exc_info=True)
 
 
-def _run_step(out_dir: Path, run: ConductorRun, record: StepRecord) -> bool:
-    """1 段を進める。次の段へ進んでよければ True。"""
+def _run_step(out_dir: Path, run: ConductorRun, record: StepRecord) -> str:
+    """1 段を進める。戻り値は _loop への進行指示。
+
+    "continue" 次の段へ進んでよい／"stop" 既に _finish 済みで抜けてよい／
+    "waiting_continue" healing が人待ちだが周回が残っているので続ける／
+    "early_finish" healing に新しい失敗が無く、周回を打ち切ってよい。
+    """
     agent = registry.get_agent(record.name)
     ctx = Context(
         out_dir=out_dir, domain=run.domain, project_id=run.project_id, params=run.params,
@@ -226,24 +272,33 @@ def _await_step(out_dir: Path, run: ConductorRun, record: StepRecord,
 
 def _settle(out_dir: Path, run: ConductorRun, record: StepRecord, status: str, *,
             label: str = "", summary: str = "", error: str = "",
-            human_action: str = "") -> bool:
-    """段の結果を書き、実行を続けてよいかを返す。"""
+            human_action: str = "") -> str:
+    """段の結果を書き、_loop への進行指示（_run_step の docstring 参照）を返す。"""
     record.status = status
     record.summary = summary
     record.error = error
     record.human_action = human_action
     record.finished_at = _now_iso()
     note = f"{label}: {summary or error or status}"
+    has_more = run.step_index < len(run.steps) - 1
+    is_healing = record.name == "healing"
+
+    if status == "waiting_human" and is_healing and has_more:
+        _save(out_dir, run, note=note)
+        return "waiting_continue"
+    if status == "skipped" and is_healing and has_more:
+        _save(out_dir, run, note=note)
+        return "early_finish"
     if status in ("succeeded", "skipped"):
         _save(out_dir, run, note=note)
-        return True
+        return "continue"
     if status == "waiting_human":
         _finish(out_dir, run, "waiting_human", human_action=human_action, note=note)
     elif status == "cancelled":
         _finish(out_dir, run, "cancelled", note=note)
     else:
         _finish(out_dir, run, "failed", error=error or summary or "段が失敗しました", note=note)
-    return False
+    return "stop"
 
 
 def get(out_dir: Path, run_id: str) -> ConductorRun | None:

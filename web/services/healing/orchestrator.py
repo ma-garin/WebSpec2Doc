@@ -488,11 +488,9 @@ def decide_report(
         run = get_run(out_dir, report.run_id)
         if run is None:
             raise HealingError(f"実行 {report.run_id} が見つかりません")
-        needs_pr = any(
-            p.status == "applied" and p.agent != "script"
-            for it in run.iterations
-            for p in it.proposals
-        )
+        # この報告書の対応がテスト側なら PR は不要。製品側の欠陥が同じ run に
+        # 混在していても、PR はその報告書を承認したときに作る（画面の表示と一致させる）
+        needs_pr = report.fix_target != "script"
         if needs_pr:
             run = create_pull_request_for_run(out_dir, report.run_id)
         record_decision(out_dir, report.run_id, action="approve", note=note, actor=actor)
@@ -980,7 +978,8 @@ def _fix_script_defect(
     test_title = defect.test_title or defect.test_id
     backup_dir = spec_path.parent / ".healing-backups"
     fix = script_fix.replace_in_test(
-        spec_path, test_title, result.needle, new_text, backup_dir=backup_dir
+        spec_path, test_title, result.needle, new_text, backup_dir=backup_dir,
+        test_id=defect.test_id,
     )
     if not fix.ok:
         return FixProposal(
@@ -991,7 +990,9 @@ def _fix_script_defect(
             error=fix.message,
         )
 
-    passed, summary = script_fix.rerun_single(spec_path, spec_path.parent, test_title)
+    passed, summary = script_fix.rerun_single(
+        spec_path, spec_path.parent, test_title, test_id=defect.test_id
+    )
     if not passed:
         script_fix.restore(fix)
         return FixProposal(

@@ -19,6 +19,8 @@
 from __future__ import annotations
 
 import difflib
+import re
+import unicodedata
 import urllib.error
 import urllib.request
 from collections.abc import Sequence
@@ -106,6 +108,16 @@ def _spec_texts(out_dir: Path, domain: str, page_id: str) -> tuple[str, ...]:
     return spec.headings + spec.buttons + spec.form_labels
 
 
+def _norm(text: str) -> str:
+    """比較用の正規化。全角/半角・連続空白・大文字小文字の違いを吸収する。"""
+    return re.sub(r"\s+", " ", unicodedata.normalize("NFKC", text)).strip().casefold()
+
+
+def _matches(needle: str, texts: Sequence[str]) -> bool:
+    key = _norm(needle)
+    return bool(key) and any(key in _norm(t) for t in texts)
+
+
 def _candidates(needle: str, pool: Sequence[str]) -> tuple[str, ...]:
     """置き換え候補。似ている順・最大 5 件。"""
     scored: list[tuple[float, str]] = []
@@ -114,10 +126,11 @@ def _candidates(needle: str, pool: Sequence[str]) -> tuple[str, ...]:
         text = raw.strip()
         if not (_MIN_CANDIDATE_LEN <= len(text) <= _MAX_CANDIDATE_LEN):
             continue
-        if text == needle or text in seen:
+        key, nkey = _norm(text), _norm(needle)
+        if key == nkey or text in seen:
             continue
-        ratio = difflib.SequenceMatcher(None, needle, text).ratio()
-        if ratio >= _MIN_RATIO or needle in text or text in needle:
+        ratio = difflib.SequenceMatcher(None, nkey, key).ratio()
+        if ratio >= _MIN_RATIO or nkey in key or key in nkey:
             scored.append((ratio, text))
             seen.add(text)
     scored.sort(key=lambda item: -item[0])
@@ -136,7 +149,7 @@ def classify(defect: Defect, *, out_dir: Path, domain: str) -> Triage:
 
     needle = needles[0][0]
     page = page_texts(defect.url)
-    if any(needle in line for line in page):
+    if _matches(needle, page):
         return Triage(
             kind="product",
             reason=f"画面に「{needle}」はあるが、テストの期待と一致しない（表示内容か遷移の問題）",
@@ -144,7 +157,7 @@ def classify(defect: Defect, *, out_dir: Path, domain: str) -> Triage:
         )
 
     spec_texts = _spec_texts(out_dir, domain, defect.screen_id)
-    if needle in spec_texts:
+    if _matches(needle, spec_texts):
         return Triage(
             kind="product",
             reason=f"画面仕様にある「{needle}」が画面から消えている",

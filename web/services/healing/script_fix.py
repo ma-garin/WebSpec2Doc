@@ -53,19 +53,36 @@ def find_spec(out_dir: Path, domain: str) -> Path | None:
     return None
 
 
-def _find_test_block(text: str, test_title: str) -> tuple[int, int] | None:
-    """test_title を含む test( ... ) ブロックの (開始, 終了) 位置。
+def _title_pattern(test_title: str, test_id: str = "") -> str:
+    """test('...') の引用文字列に対する正規表現。
 
-    test_title は TC-ID を含む場合も含まない場合もあるため、タイトル文字列の
-    部分一致で `test("...")` の呼び出しを探す（先頭一致は要求しない）。
+    題名は「文字列全体」か「空白で区切られた末尾の語」として一致させる。
+    部分一致だと TC-P001-DSP-001 が TC-P001-DSP-0010 に当たる（2026-09-06 実測）。
+    test_id があれば、引用文字列がその ID を語として含むことも要求する。
+    """
+    title = re.escape(test_title)
+    if test_id:
+        tid = re.escape(test_id)
+        return (
+            r"""test\(\s*(['"])(?:""" + tid + r"""(?:\s[^'"]*)?\s)?"""
+            + title + r"""(?:\s[^'"]*)?\1"""
+        )
+    return r"""test\(\s*(['"])(?:[^'"]*\s)?""" + title + r"""(?:\s[^'"]*)?\1"""
+
+
+def _find_test_block(
+    text: str, test_title: str, test_id: str = ""
+) -> tuple[int, int] | None:
+    """test_title の test( ... ) ブロックの (開始, 終了) 位置。
+
+    題名は語の境界で一致させる（部分一致にしない）。
     次の test( 呼び出し、無ければファイル末尾までを 1 ブロックとする。
     """
     if not test_title:
         return None
-    pattern = re.compile(
-        r"""test\(\s*['"][^'"]*""" + re.escape(test_title) + r"""[^'"]*['"]"""
-    )
-    match = pattern.search(text)
+    match = re.compile(_title_pattern(test_title, test_id)).search(text)
+    if not match and test_id:
+        match = re.compile(_title_pattern(test_title)).search(text)
     if not match:
         return None
     start = match.start()
@@ -75,7 +92,13 @@ def _find_test_block(text: str, test_title: str) -> tuple[int, int] | None:
 
 
 def replace_in_test(
-    spec_path: Path, test_title: str, old: str, new: str, *, backup_dir: Path
+    spec_path: Path,
+    test_title: str,
+    old: str,
+    new: str,
+    *,
+    backup_dir: Path,
+    test_id: str = "",
 ) -> ScriptFix:
     """test_title のブロック内だけで old → new に置き換える。
 
@@ -90,7 +113,7 @@ def replace_in_test(
     except OSError as exc:
         return ScriptFix(False, spec_key, old, new, "", f"テストファイルを読めません: {exc}")
 
-    bounds = _find_test_block(text, test_title)
+    bounds = _find_test_block(text, test_title, test_id)
     if bounds is None:
         return ScriptFix(False, spec_key, old, new, "", f"テスト「{test_title}」が見つかりません")
     start, end = bounds
@@ -117,13 +140,16 @@ def restore(fix: ScriptFix) -> None:
         shutil.copy2(backup, Path(fix.spec_path))
 
 
-def rerun_single(spec_path: Path, output_dir: Path, test_title: str) -> tuple[bool, str]:
+def rerun_single(
+    spec_path: Path, output_dir: Path, test_title: str, *, test_id: str = ""
+) -> tuple[bool, str]:
     """その test_title の 1 件だけを再実行する。
 
     返り値の文字列は report_doc._verify_text と同じ「通過 1 / 1」の形にし、
     そのまま報告書の検証欄へ出せるようにする。
     """
-    grep = re.escape(test_title)
+    # 語の境界と末尾で固定する。部分一致だと TC-…-001 が TC-…-0010 も走らせる
+    grep = r"(^|\s)" + re.escape(test_title) + "$"
     # 対象がローカル開発サーバ（127.0.0.1 等）のとき、K1 送信ゲートウェイの既定
     # （allow_local=False）のままだと再実行そのものが net::ERR_FAILED で必ず失敗する。
     # 02/03 と同じ判断（WEBSPEC2DOC_ALLOW_LOCAL）に揃える。

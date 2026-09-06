@@ -116,7 +116,7 @@ def _last_touched(run: ConductorRun, name: str) -> StepRecord | None:
 def _site_label(site: dict[str, Any]) -> str:
     """切替コンボに出す表示名。domain は必ず含める（衝突しても区別できるように）。
 
-    観測で得た題名（report.json の title）が domain と違えば「題名（domain）」、
+    解析で得た題名（report.json の title）が domain と違えば「題名（domain）」、
     無ければ domain だけ。永続データ（接続先の name 等）は書き換えない——
     ここは site 一覧を都度組み立てる読み取り専用の変換。
     """
@@ -128,7 +128,7 @@ def _site_label(site: dict[str, Any]) -> str:
 
 
 def _list_sites(out_dir: Path) -> list[dict[str, str]]:
-    """接続・観測・指揮のいずれかが存在するサイトの一覧（選ばせるための一覧）。"""
+    """接続・解析・指揮のいずれかが存在するサイトの一覧（選ばせるための一覧）。"""
     from web.routes.healing import (
         _SITE_EXCLUDE_DIRS,
         _conductor_domains,
@@ -221,7 +221,7 @@ def save_pipeline(out_dir: Path, domain: str, pipeline: Any) -> None:
 
 
 def _page_report(out_dir: Path, domain: str) -> dict[str, Any] | None:
-    """01 の観測結果（report.json）。review_queue のリスク判定が画面 URL を
+    """01 の解析結果（report.json）。review_queue のリスク判定が画面 URL を
     見るために読む。無ければ None（page_urls_from_report が空辞書に変換する）。
     """
     path = Path(out_dir) / domain / "report.json"
@@ -419,7 +419,7 @@ def _action(kind: str, primary: str = "", secondary: str = "",
 
 def _current_for_setup() -> _Current:
     return _Current(key="setup", state="human", headline="サイトを指定", text=_SETUP_TEXT,
-                     text_source="user", action=_action("start", primary="始める"))
+                     text_source="user", action=_action("start", primary="解析を始める"))
 
 
 def _current_for_waiting(out_dir: Path, run: ConductorRun, record: StepRecord) -> _Current:

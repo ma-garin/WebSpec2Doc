@@ -39,7 +39,7 @@ from web.services.orchestration.ports import (
     StepStatus,
 )
 
-_NO_REPORT = "先にこのサイトの画面を観測してください（「保守下に置く」で始まります）"
+_NO_REPORT = "先にこのサイトの画面を解析してください（「保守下に置く」で始まります）"
 _NO_HANDLE = "テスト作成の記録がありません"
 _NO_EXECUTABLE = "自動実行できるテストケースがありません。テストケース表を確認してください"
 #: 段階承認が残っているときの依頼文。{subject} に「テスト観点」等が入る。
@@ -204,7 +204,7 @@ def _build(handle: str, ctx: Context, job: object) -> None:
 
         report = _load_report(_report_path(ctx))
         if report is None:
-            _finish(handle, state="failed", label="観測結果を読めません",
+            _finish(handle, state="failed", label="解析結果を読めません",
                     summary=_NO_REPORT, error=_NO_REPORT)
             return
 
@@ -229,7 +229,7 @@ def _build(handle: str, ctx: Context, job: object) -> None:
 
 
 class TestsAgent:
-    """02: 観測結果からテストを作り、Playwright のスクリプトへ落とす。"""
+    """02: 解析結果からテストを作り、Playwright のスクリプトへ落とす。"""
 
     name = "tests"
     label = "テストの作成"
@@ -239,15 +239,15 @@ class TestsAgent:
         if report is None:
             return Readiness(
                 ok=False, human_action=_NO_REPORT,
-                detail=f"{ctx.domain} の観測結果がありません",
+                detail=f"{ctx.domain} の解析結果がありません",
             )
         screens = len(report.get("screens") or [])
         if screens == 0:
             return Readiness(
                 ok=False, human_action=_NO_REPORT,
-                detail=f"{ctx.domain} は 1 画面も観測できていません",
+                detail=f"{ctx.domain} は 1 画面も解析できていません",
             )
-        return Readiness(ok=True, detail=f"観測済み {screens} 画面")
+        return Readiness(ok=True, detail=f"解析済み {screens} 画面")
 
     def run(self, ctx: Context) -> StepResult:
         from web.services.auto_run_job import AutoRunJob
@@ -255,7 +255,7 @@ class TestsAgent:
         report = _load_report(_report_path(ctx))
         if report is None:
             return StepResult(
-                status="waiting_human", summary="観測結果がありません",
+                status="waiting_human", summary="解析結果がありません",
                 human_action=_NO_REPORT,
             )
 

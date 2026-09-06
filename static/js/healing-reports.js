@@ -306,7 +306,62 @@
     return d;
   }
 
-  function renderEvidence(proposal) {
+  /* AI の説明の原文をここに置く。顧客向けの本文は言い直したものを出すため、
+     元の文面（英語のまま・環境の言い訳つき）を読む場所が要る。 */
+  function appendOriginal(box, label, text) {
+    if (!text) { return; }
+    box.appendChild(el('p', 'hl-doc-note', label));
+    box.appendChild(el('blockquote', 'hl-quote', text));
+  }
+
+  /* 原文をそのまま出すと Markdown の装飾が画面に漏れる（** ` # 表 罫線）。
+     規則は report_present.strip_markup と同じものを画面側にも持つ。 */
+  function stripMarkup(text) {
+    var body = String(text || '').replace(/```[\s\S]*?```/g, ' ');
+    var kept = [];
+    body.split('\n').forEach(function (line) {
+      if (/^\s*\|/.test(line)) { return; }                    // 表の行
+      if (/^\s*[\u2500-\u257f=_*-]{3,}\s*$/.test(line)) { return; }  // 罫線
+      var table = line.match(/\|[^|\n]*\|/);
+      kept.push(table ? line.slice(0, table.index).replace(/\s+$/, '') : line);
+    });
+    return kept.join('\n')
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/`([^`]+)`/g, '$1')
+      .replace(/^\s*[-*+]\s+/gm, '')
+      .replace(/^#{1,6}\s*/gm, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+
+  /* 同じ説明が原因欄・対応欄・実行ログの 3 か所に入っていることがある。
+     先頭 80 字が同じものは 1 つにまとめ（長いほうを残し）、何の原文かを名乗らせる。 */
+  function originalTexts(proposal, report) {
+    var rows = [
+      { label: '原因欄の原文（AI の説明）', text: stripMarkup(report && report.cause_text_original) },
+      { label: '対応欄の原文（AI の説明）', text: stripMarkup(report && report.action_text_original) },
+      { label: 'AI の説明（実行時の全文）', text: stripMarkup(proposal && proposal.rationale) }
+    ];
+    var seen = {}, out = [];
+    rows.forEach(function (row) {
+      if (!row.text) { return; }
+      var key = 'k' + row.text.replace(/\s+/g, ' ').slice(0, 80);
+      if (!(key in seen)) {
+        row.labels = [row.label];
+        seen[key] = row;
+        out.push(row);
+        return;
+      }
+      var kept = seen[key];
+      kept.labels.push(row.label);  // 同じ文が何の原文でもあることを名乗らせる
+      if (row.text.length > kept.text.length) { kept.text = row.text; }  // 詰めていないほうを残す
+    });
+    return out.map(function (row) {
+      return { label: row.labels.join('・'), text: row.text };
+    });
+  }
+
+  function renderEvidence(proposal, report) {
     var d = details('該当箇所の根拠と、AI の説明', '開発者向け', false);
     var locations = (proposal && proposal.locations) || [];
     if (locations.length) {
@@ -335,8 +390,9 @@
     } else {
       d.appendChild(el('p', 'hl-doc-p', '該当箇所を特定できませんでした。'));
     }
-    if (proposal && proposal.rationale) {
-      d.appendChild(el('blockquote', 'hl-quote', proposal.rationale));
+    var origins = originalTexts(proposal, report);
+    origins.forEach(function (row) { appendOriginal(d, row.label, row.text); });
+    if (origins.length) {
       d.appendChild(el('p', 'hl-doc-note', 'AI の自己申告です。差分で確認してください。'));
     }
     return d;
@@ -379,7 +435,18 @@
 
     // 2. 原因
     doc.appendChild(section('2. 原因'));
-    var causeNodes = [el('p', 'hl-doc-p', report.cause_text || '—')];
+    var causeNodes = [];
+    if (canEditDoc(report)) {
+      /* 編集欄は顧客に出る文そのもの。人が仕上げるのはこの文なので 1 つだけ置く。
+         AI の説明の原文は折りたたみ「該当箇所の根拠と、AI の説明」に出し続ける。 */
+      causeNodes.push(fieldEditor('hl-cause-edit', report.cause_text || '',
+        '例: 合計金額の計算で税率が適用されていませんでした', saveCause));
+      causeNodes.push(el('p', 'hl-doc-note', report.cause_text_original
+        ? 'この文面はそのまま顧客に出ます。AI の説明の原文は下の「該当箇所の根拠と、AI の説明」にあります。書き直すと保存されます。'
+        : 'この文面はそのまま顧客に出ます。書き直すと保存されます。'));
+    } else {
+      causeNodes.push(el('p', 'hl-doc-p', report.cause_text || '—'));
+    }
     if (report.cause_location) {
       var loc = el('p', 'hl-doc-note');
       loc.appendChild(document.createTextNode('箇所: '));
@@ -391,21 +458,20 @@
     // 3. 対応
     doc.appendChild(section('3. 対応'));
     var actionNodes = [];
-    if (report.action_text) {
-      actionNodes.push(el('p', 'hl-doc-p', report.action_text));
-      var info = [report.action_by, report.action_diff_stats].filter(Boolean).join(' ／ ');
-      if (info) { actionNodes.push(el('p', 'hl-doc-note', info)); }
+    if (canEditDoc(report)) {
+      /* 対応が書かれていない報告書では、表示文はこちらで足したもの。編集欄は
+         空で始めて、消し忘れたまま保存されないようにする。 */
+      actionNodes.push(fieldEditor('hl-action-edit',
+        report.action_text_generated ? '' : (report.action_text || ''),
+        '例: 手順を確認し、設定値を修正しました', saveAction));
+      actionNodes.push(el('p', 'hl-doc-note', report.action_text_generated
+        ? '空のままだと「' + report.action_text + '」と顧客に出ます。書き直すと保存されます。'
+        : 'この文面はそのまま顧客に出ます。書き直すと保存されます。'));
     } else {
-      actionNodes.push(el('p', 'hl-doc-p', '自動では直せませんでした。対応は担当者が記入してください。'));
-      if (IS_ADMIN) {
-        var ta = el('textarea', 'hl-field hl-action-edit');
-        ta.id = 'hl-action-edit';
-        ta.rows = 3;
-        ta.placeholder = '例: 手順を確認し、設定値を修正しました';
-        ta.addEventListener('blur', function () { saveAction(ta.value); });
-        actionNodes.push(ta);
-      }
+      actionNodes.push(el('p', 'hl-doc-p', report.action_text || '—'));
     }
+    var actionInfo = [report.action_by, report.action_diff_stats].filter(Boolean).join(' ／ ');
+    if (actionInfo) { actionNodes.push(el('p', 'hl-doc-note', actionInfo)); }
     doc.appendChild(sectionBody(actionNodes, report.action_screenshot));
 
     // 4. 検証
@@ -421,13 +487,46 @@
     // 折りたたみ 3 つ
     doc.appendChild(renderAttention(report));
     doc.appendChild(renderDiff(proposal));
-    doc.appendChild(renderEvidence(proposal));
+    doc.appendChild(renderEvidence(proposal, report));
 
     // 5. 承認
     doc.appendChild(section('5. 承認'));
     doc.appendChild(renderApprovals(report));
 
     renderActions(report);
+  }
+
+  /* 書き直せるのは承認待ちの報告書だけ。承認・差し戻しの後に本文が動くと、
+     顧客に出した文と証跡が食い違う。原因欄と対応欄で同じ判定を使う。 */
+  function canEditDoc(report) {
+    return IS_ADMIN && report.status === 'awaiting';
+  }
+
+  /* 顧客に出る文面を人が仕上げる欄。原因と対応で作りを共有する。
+     値が変わっていない blur では保存しない（同じ内容で監査ログが増えるため）。
+     クラス hl-action-edit は幅の指定を借りているだけ（CSS は別担当のファイル）。 */
+  function fieldEditor(id, text, placeholder, save) {
+    var ta = el('textarea', 'hl-field hl-action-edit');
+    ta.id = id;
+    ta.rows = 3;
+    ta.value = text || '';
+    ta.placeholder = placeholder;
+    var saved = ta.value;
+    ta.addEventListener('blur', function () {
+      if (ta.value === saved) { return; }
+      saved = ta.value;
+      save(ta.value);
+    });
+    return ta;
+  }
+
+  function saveCause(text) {
+    api('/api/healing/reports/' + encodeURIComponent(state.reportId), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cause_text: text })
+    }).then(function () { toast('原因を保存しました'); })
+      .catch(function (e) { showError('保存できませんでした: ' + e.message); });
   }
 
   function saveAction(text) {

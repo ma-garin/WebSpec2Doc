@@ -21,7 +21,10 @@
   {# サイドバー共通部品（件数バッジ）のためだけに読む。順序は healing.css の後。 #}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/healing-reports.css') }}?v={{ _ver }}">
 </head>
-<body class="app-page" data-focus-run-id="{{ focus_run_id or '' }}" data-hl-admin="{{ 'true' if hl_admin else 'false' }}">
+{# 起動時にどのビューを開くかはサーバが決める。設定画面（/healing/settings）は
+   接続先の一覧が入口で、実行の直リンク（/healing/runs/<id>）だけが実行ビューで開く。
+   属性が無い場合の既定は healing.js 側で「実行」。 #}
+<body class="app-page" data-default-view="{{ 'run' if focus_run_id else 'projects' }}" data-focus-run-id="{{ focus_run_id or '' }}" data-hl-admin="{{ 'true' if (not auth_user or auth_user.role == 'admin') else 'false' }}">
 {# web/routes/healing.py は接続の作成/変更/削除・実行の開始/中止・PR 作成・判断に
    require_admin() を掛けている。押しても 403 になる操作はそもそも描画しない
    （system-select.html と同じ分岐の形）。閲覧は誰でもできるので残す。 #}
@@ -74,6 +77,9 @@
             <button type="button" class="btn-primary" id="hl-start">ヒーリングを開始</button>
             {% endif %}
             <button type="button" class="btn-outline-sm" id="hl-check-btn">接続を確認</button>
+            {# 接続先の一覧へ戻る唯一の導線。サイドバーには実行／接続先の切替が無いため、
+               ここを消すと登録フォームに二度と辿り着けなくなる。 #}
+            <button type="button" class="btn-outline-sm" id="hl-back-to-projects">接続先の一覧へ</button>
             <span class="hl-toolbar-spacer"></span>
             {% if hl_admin %}
             <span class="hl-caution">接続したリポジトリのファイルを実際に書き換えます。</span>
@@ -219,6 +225,9 @@
           </div>
         </div>
 
+        {# 見出しとフォームは固定、表（.hl-table-wrap）だけが内側でスクロールする。
+           healing.css の「接続先・実行履歴: 見出しは固定、表の領域だけが内側スクロール」が
+           直下の子を前提にしているため、ここに包む要素を足さないこと。 #}
         {% if hl_admin %}
         <section class="card hl-form" id="hl-connect-form" hidden>
           <h3 class="hl-form-title" id="hl-form-title">コードベースを接続する</h3>
@@ -227,6 +236,14 @@
             <div><label class="hl-field-label" for="hl-f-name">名前 <span class="hl-req" aria-hidden="true">必須</span></label><input class="hl-field" type="text" id="hl-f-name" required aria-required="true" placeholder="例: webspec2doc 本体"></div>
             <div><label class="hl-field-label" for="hl-f-path">リポジトリのパス <span class="hl-req" aria-hidden="true">必須</span></label><input class="hl-field hl-kv" type="text" id="hl-f-path" required aria-required="true" placeholder="許可された場所の絶対パス"></div>
             <div><label class="hl-field-label" for="hl-f-branch">既定ブランチ</label><input class="hl-field" type="text" id="hl-f-branch" value="main"></div>
+            <div>
+              <label class="hl-field-label" for="hl-f-domain">サイト</label>
+              <select class="hl-field" id="hl-f-domain">
+                <option value="">（未設定）</option>
+              </select>
+              <div class="hl-form-hint">01 で解析したサイトを選ぶと、毎日の見張りと画面仕様との照合が使えるようになります。</div>
+              <div class="hl-form-hint" id="hl-f-domain-status" hidden></div>
+            </div>
             <div><label class="hl-field-label" for="hl-f-cmd">検証コマンド <span class="hl-req" aria-hidden="true">必須</span></label><input class="hl-field hl-kv" type="text" id="hl-f-cmd" required aria-required="true" placeholder="venv/bin/python -m pytest tests -q"></div>
             <div><label class="hl-field-label" for="hl-f-remote">リモート名</label><input class="hl-field" type="text" id="hl-f-remote" value="origin"></div>
             <div>

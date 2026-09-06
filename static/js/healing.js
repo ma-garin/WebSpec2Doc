@@ -94,7 +94,8 @@
       'hl-connect-form', 'hl-form-title',
       'hl-f-name', 'hl-f-path', 'hl-f-branch', 'hl-f-cmd', 'hl-f-remote',
       'hl-f-github', 'hl-f-agent', 'hl-f-max-iter', 'hl-f-concurrency',
-      'hl-connect-submit', 'hl-connect-cancel',
+      'hl-f-domain', 'hl-f-domain-status',
+      'hl-connect-submit', 'hl-connect-cancel', 'hl-back-to-projects',
       'hl-runs', 'hl-runs-empty', 'hl-runs-more'
     ];
     ids.forEach(function (id) { $[id] = document.getElementById(id); });
@@ -378,14 +379,19 @@
 
   /* ---------------- ビュー切り替え ---------------- */
 
+  var VIEW_NAMES = ['run', 'projects', 'history'];
+
   function switchView(view) {
     state.activeView = view;
-    ['run', 'projects', 'history'].forEach(function (v) {
-      $['hl-view-' + v].hidden = v !== view;
+    // ビューそのものも要素の有無を確かめてから触る。テンプレート側で 1 つでも
+    // 外れると、以降の初期化ごと落ちて画面が白くなるため。
+    VIEW_NAMES.forEach(function (v) {
+      var sec = $['hl-view-' + v];
+      if (sec) { sec.hidden = v !== view; }
     });
     // サイドバーは共通部品（報告書 / 設定）に置き換わり、ビュー切替のナビは
     // この画面には無い。要素が無くても落とさない。
-    ['run', 'projects', 'history'].forEach(function (v) {
+    VIEW_NAMES.forEach(function (v) {
       var nav = $['hl-nav-' + v];
       if (nav && nav.classList) { nav.classList.toggle('active', view === v); }
     });
@@ -699,6 +705,13 @@
       var nameLine = el('div', 'hl-proj-name hl-tail', pLabel);
       nameLine.title = pLabel;
       tdName.appendChild(nameLine);
+      // サイトが未設定だと見張りも照合も動かない。設定済みかを一覧で分かるようにする。
+      var siteName = String(p.domain == null ? '' : p.domain).trim();
+      if (siteName) {
+        var siteLine = el('div', 'hl-dup-note', siteName);
+        siteLine.title = 'サイト: ' + siteName;
+        tdName.appendChild(siteLine);
+      }
       var repoKey = String(p.repo_path == null ? '' : p.repo_path).trim();
       var peers = (repoKey ? (repoPeers[repoKey] || []) : []).filter(function (x) { return x.id !== p.project_id; });
       if (peers.length) {
@@ -834,9 +847,66 @@
       $['hl-f-max-iter'].value = 3;
       $['hl-f-concurrency'].value = 3;
     }
+    loadSiteOptions(project ? (project.domain || '') : '');
   }
   function hideConnectForm() {
     $['hl-connect-form'].hidden = true;
+  }
+
+  /* ---------------- サイトの選択リスト ----------------
+     サイト（01 の解析結果）は毎日の見張り・画面仕様との照合・失敗箇所の限局が
+     使う。手入力させると綴りのずれで全部が静かに効かなくなるので、サーバが
+     列挙した候補（GET /api/healing/sites）から選ばせる。 */
+
+  function siteOptionLabel(site) {
+    var domain = String(site.domain == null ? '' : site.domain).trim();
+    var title = String(site.title == null ? '' : site.title).trim();
+    var screens = parseInt(site.screens, 10);
+    var notes = [];
+    if (title) { notes.push(title); }
+    if (screens > 0) { notes.push(screens + ' 画面'); }
+    return notes.length ? (domain + '（' + notes.join('・') + '）') : domain;
+  }
+
+  function setSiteOptions(sites, current) {
+    var select = $['hl-f-domain'];
+    if (!select) { return; }
+    var selected = String(current == null ? '' : current).trim();
+    select.textContent = '';
+    var none = el('option', null, '（未設定）');
+    none.value = '';
+    select.appendChild(none);
+    var known = false;
+    sites.forEach(function (site) {
+      var domain = String(site.domain == null ? '' : site.domain).trim();
+      if (!domain) { return; }
+      if (domain === selected) { known = true; }
+      var opt = el('option', null, siteOptionLabel(site));
+      opt.value = domain;
+      if (site.updated_at) { opt.title = '最終更新 ' + String(site.updated_at).replace('T', ' '); }
+      select.appendChild(opt);
+    });
+    // 保存済みの値は候補に無くても残す。解析結果を消しただけで設定が消えるのは事故。
+    if (selected && !known) {
+      var kept = el('option', null, selected + '（一覧にありません）');
+      kept.value = selected;
+      select.appendChild(kept);
+    }
+    select.value = selected;
+    var status = $['hl-f-domain-status'];
+    if (status) {
+      var empty = !sites.length && !selected;
+      status.hidden = !empty;
+      status.textContent = empty ? '01 で解析したサイトがまだありません。' : '';
+    }
+  }
+
+  function loadSiteOptions(current) {
+    setSiteOptions(state.sites || [], current);
+    return apiFetch('/sites').then(function (data) {
+      state.sites = (data && Array.isArray(data.sites)) ? data.sites : [];
+      setSiteOptions(state.sites, current);
+    }).catch(function () { /* 取れなくても保存済みの値は選べるまま残す */ });
   }
 
   /* ---------------- 接続するリポジトリの選択リスト ----------------
@@ -1089,6 +1159,7 @@
       verify_command: $['hl-f-cmd'].value.trim(),
       remote: $['hl-f-remote'].value.trim() || 'origin',
       github_repo: $['hl-f-github'].value.trim(),
+      domain: $['hl-f-domain'] ? $['hl-f-domain'].value.trim() : '',
       agent: $['hl-f-agent'].value,
       max_iterations: parseInt($['hl-f-max-iter'].value, 10) || 3,
       max_parallel_agents: parseInt($['hl-f-concurrency'].value, 10) || 3
@@ -2464,6 +2535,9 @@
     on('hl-nav-run', 'click', function () { switchView('run'); });
     on('hl-nav-projects', 'click', function () { switchView('projects'); });
     on('hl-nav-history', 'click', function () { switchView('history'); });
+    // 実行ビューから接続先の一覧へ戻る導線。サイドバーに切替が無いので、
+    // これが無いと「対象にする」で実行へ移った後、登録フォームへ戻れない。
+    on('hl-back-to-projects', 'click', function () { switchView('projects'); });
     // 接続先ビューの右上が正規の入口。空状態にも同じ入口を置く。
     var addOnList = document.getElementById('hl-add-project-2');
     if (addOnList) { addOnList.addEventListener('click', function () { showConnectForm(null); }); }
@@ -2520,7 +2594,11 @@
     });
 
     loadAgentOptions();
-    switchView('run');
+    // 起動時にどのビューを開くかはサーバが決める（body の data-default-view）。
+    // 設定画面は接続先の一覧、実行の直リンクは実行ビュー。属性が無い / 未知の値なら
+    // 従来どおり実行ビューにする。
+    var defaultView = (document.body.dataset && document.body.dataset.defaultView) || '';
+    switchView(VIEW_NAMES.indexOf(defaultView) >= 0 ? defaultView : 'run');
 
     loadProjects().then(function () {
       loadStats();

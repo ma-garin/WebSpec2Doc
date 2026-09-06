@@ -186,6 +186,12 @@ def prepare(
 
     if not verify_cmd:
         verify_cmd = project_store._suggest_verify_command(repo_path)
+    if not verify_cmd:
+        raise ValueError(
+            "検証コマンドが決められませんでした。"
+            "「詳しい設定」を開いて、テストを実行するコマンドを入れてください"
+            "（例: npm test / pytest）"
+        )
     ok, reason = verification.is_command_allowed(verify_cmd)
     if not ok:
         raise ValueError(f"検証コマンドを使えません: {reason}")

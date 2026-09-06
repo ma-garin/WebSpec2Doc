@@ -100,7 +100,17 @@ def _last_touched(run: ConductorRun, name: str) -> StepRecord | None:
 
 
 def _site_label(site: dict[str, Any]) -> str:
-    return str(site.get("title") or site.get("domain") or "")
+    """切替コンボに出す表示名。domain は必ず含める（衝突しても区別できるように）。
+
+    観測で得た題名（report.json の title）が domain と違えば「題名（domain）」、
+    無ければ domain だけ。永続データ（接続先の name 等）は書き換えない——
+    ここは site 一覧を都度組み立てる読み取り専用の変換。
+    """
+    domain = str(site.get("domain") or "")
+    title = str(site.get("title") or "").strip()
+    if title and title != domain:
+        return f"{title}（{domain}）"
+    return domain
 
 
 def _list_sites(out_dir: Path) -> list[dict[str, str]]:
@@ -436,6 +446,12 @@ def build(out_dir: Path, domain: str) -> dict[str, Any]:
     steps = _steps_list(run, current)
     rounds = _rounds(run, current)
 
+    # 2 周目以降は見出しに周回を付ける（経過タイマーが無言で巻き戻って
+    # 見える問題への対策。finished は text 側で既に周回を伝えているため除く）。
+    headline = current.headline
+    if current.key != "finished" and rounds.get("current", 1) >= 2:
+        headline = f"{headline}（{rounds['current']} 周目 / {rounds['total']}）"
+
     return {
         "domain": resolved_domain,
         "sites": sites,
@@ -443,7 +459,7 @@ def build(out_dir: Path, domain: str) -> dict[str, Any]:
         "rounds": rounds,
         "steps": steps,
         "current": {
-            "key": current.key, "state": current.state, "headline": current.headline,
+            "key": current.key, "state": current.state, "headline": headline,
             "text": current.text, "elapsed_sec": current.elapsed_sec, "error": current.error,
             "action": current.action or _action("none"),
         },

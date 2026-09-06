@@ -115,7 +115,8 @@
     data: null,
     pollTimer: null,
     elapsedTimer: null,
-    elapsedSec: 0
+    elapsedSec: 0,
+    roundsCurrent: 0
   };
 
   function siteFromLocation() {
@@ -177,6 +178,10 @@
     var body = Object.assign({ site: state.site, kind: kind }, extra || {});
     return postJSON('/api/orchestration/workflow/actions', body).then(function (data) {
       state.data = data;
+      if (data.domain && data.domain !== state.site) {
+        state.site = data.domain;
+        setSiteParam(data.domain);
+      }
       render(data);
       if (successMessage) { toast(successMessage); }
       return data;
@@ -190,12 +195,25 @@
   /* ---------------- 描画: ルート ---------------- */
 
   function render(data) {
+    maybeToastRoundChange(data);
     renderSiteSwitcher(data);
     renderRounds(data);
     renderRestart(data);
     renderStepper(data);
     renderNavWaiting(data);
     renderCard(data);
+  }
+
+  /* 周回（rounds.current）が前回描画より増えていたら、無言で経過が
+     巻き戻ったように見えないよう一言添える。初回読み込み（roundsCurrent
+     が未設定の 0）では出さない。 */
+  function maybeToastRoundChange(data) {
+    var r = data.rounds || {};
+    var current = r.current || 1;
+    if (state.roundsCurrent && current > state.roundsCurrent) {
+      toast(current + ' 周目に入りました');
+    }
+    state.roundsCurrent = current;
   }
 
   function renderSiteSwitcher(data) {
@@ -330,10 +348,11 @@
     managePolling(current);
   }
 
+  /* #cw-card-text に工程の 1 文が既に出ているため、ここでは経過だけを出す
+     （同じ文を二重に表示しない）。 */
   function renderRunningBody(current) {
-    var p = el('p', 'cw-waiting', current.text || '実行しています');
+    var p = el('p', 'cw-waiting', '経過 ');
     var span = el('span', 'cw-elapsed', fmtElapsed(current.elapsed_sec || 0));
-    p.appendChild(document.createTextNode(' '));
     p.appendChild(span);
     DOM.body.appendChild(p);
   }
@@ -481,12 +500,33 @@
     var roundsSelect = byId('cw-f-rounds');
     var rounds = parseInt(roundsSelect ? roundsSelect.value : '1', 10) || 1;
     var verifyInput = byId('cw-f-verify');
+    /* 新規サイト登録なので site は必ず空で送る（切替コンボの現在値を使わない）。 */
     sendAction('start', {
+      site: '',
       url: url.trim(),
       repo: repo,
       verify_command: verifyInput ? verifyInput.value : '',
       rounds: rounds
-    }, button);
+    }, button).catch(function (e) {
+      showVerifyCommandErrorIfNeeded((e && e.message) || '');
+    });
+  }
+
+  /* 検証コマンドが決められなかった 400 のときは、「詳しい設定」を開いて
+     その直下にも理由を出す（折りたたみの中にある必須項目のため）。 */
+  function showVerifyCommandErrorIfNeeded(message) {
+    if (message.indexOf('検証コマンド') === -1) { return; }
+    var form = byId('cw-start-form');
+    var details = form ? form.querySelector('.cw-details') : null;
+    if (!details) { return; }
+    details.open = true;
+    var note = byId('cw-verify-error');
+    if (!note) {
+      note = el('p', 'cw-field-error');
+      note.id = 'cw-verify-error';
+      details.parentNode.insertBefore(note, details.nextSibling);
+    }
+    note.textContent = message;
   }
 
   /* ---- kind: login（② 観測・ログイン待ち） ---- */

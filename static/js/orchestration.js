@@ -15,7 +15,17 @@
 
   var IS_ADMIN = document.body.getAttribute('data-hl-admin') === 'true';
 
-  var STEP_STATE_WORD = { done: '完了', active: '進行中', human: 'あなたの番', todo: '未着手' };
+  var STEP_STATE_WORD = {
+    done: '完了', active: '進行中', human: 'あなたの番', todo: '未着手',
+    running: '実行中', cancelled: '中止', failed: '失敗'
+  };
+  /* 01（view-generate.html）の discover_presets と同じ depth/max_pages（案・T8）。
+     既定は「この1画面だけ」——初回は速く1周させ、次に広げる（T2）。 */
+  var SCOPE_PRESETS = [
+    { id: 'single', label: 'この1画面だけ（目安 1分）', depth: 1, max: 1, checked: true },
+    { id: 'standard', label: '標準（深さ2・最大30画面・目安 10分）', depth: 2, max: 30 },
+    { id: 'wide', label: '広め（目安 30分）', depth: 5, max: 300 }
+  ];
   var STAGE_STATUS_WORD = { approved: '承認済み', skipped: '飛ばした', current: '確認待ち', pending: '未着手' };
   /* current.text_source / report.sources.* の出所ラベル。実測 > 入力 > AIの提案 > 前提 > 未確認。 */
   var SRC_LABEL = { measured: '実測', user: '入力', llm: 'AIの提案', assumed: '前提', unverified: '未確認' };
@@ -384,6 +394,7 @@
       case 'approve_stage': return renderDesignBody(action);
       case 'connect': return renderConnectBody(action);
       case 'decide_report': return renderDecideReportBody(action);
+      case 'decide_bundle': return renderDecideBundleBody(action);
       case 'monitor': return renderMonitorBody(action);
       default: return; /* another_round / none: 追加の本文は無い */
     }
@@ -397,6 +408,7 @@
       case 'approve_stage': return; /* 承認・差し戻しボタンは現在の段階の行の中 */
       case 'connect': return renderConnectActions(action);
       case 'decide_report': return; /* 判断ボタンは各 article.cw-report の中 */
+      case 'decide_bundle': return; /* 判断ボタンは各 article.cw-report の中 */
       case 'another_round': return renderAnotherRoundActions(action, isRetry);
       case 'monitor': return renderMonitorActions(action);
       default:
@@ -421,6 +433,26 @@
     urlField.appendChild(urlInput);
     form.appendChild(urlField);
 
+    var scopeField = el('div', 'cw-field cw-wide');
+    scopeField.appendChild(el('span', 'cw-field-label', '解析する範囲'));
+    var scopeGroup = el('div', 'cw-scope-group');
+    SCOPE_PRESETS.forEach(function (preset, i) {
+      var label = el('label', 'cw-scope-option');
+      var input = document.createElement('input');
+      input.type = 'radio';
+      input.name = 'cw-scope';
+      input.id = 'cw-f-scope-' + preset.id;
+      input.value = preset.id;
+      input.checked = !!preset.checked;
+      input.setAttribute('data-depth', String(preset.depth));
+      input.setAttribute('data-max', String(preset.max));
+      label.appendChild(input);
+      label.appendChild(document.createTextNode(' ' + preset.label));
+      scopeGroup.appendChild(label);
+    });
+    scopeField.appendChild(scopeGroup);
+    form.appendChild(scopeField);
+
     DOM.body.appendChild(form);
     DOM.body.appendChild(el('p', 'cw-hint',
       '解析 → テスト設計 → 実行 → 分析して直す → 判断 の順に進みます。必要な情報はその時に聞きます'));
@@ -437,8 +469,14 @@
     var url = (byId('cw-f-url') || {}).value || '';
     if (!url.trim()) { showCardError('サイトの URL を入れてください。'); return; }
     /* 新規サイト登録なので site は必ず空で送る（切替コンボの現在値を使わない）。
-       契約どおり body は {site, kind, url} だけ。 */
-    sendAction('start', { site: '', url: url.trim() }, button);
+       契約どおり body は {site, kind, url, depth, max_pages}。 */
+    var body = { site: '', url: url.trim() };
+    var scope = document.querySelector('input[name="cw-scope"]:checked');
+    if (scope) {
+      body.depth = parseInt(scope.getAttribute('data-depth'), 10);
+      body.max_pages = parseInt(scope.getAttribute('data-max'), 10);
+    }
+    sendAction('start', body, button);
   }
 
   /* ---- kind: login（解析中・ログイン待ち） ---- */
@@ -681,14 +719,17 @@
   function buildReportActions(report) {
     var box = el('div', 'cw-report-actions');
 
-    var approveLabel = report.primary || (report.fix_target === 'script' ? '承認' : '承認して PR を作る');
+    var approveLabel = report.primary || (report.fix_target === 'script' ? '承認' : '承認して修正を送る');
     var approveBtn = el('button', 'btn-primary', approveLabel);
     approveBtn.type = 'button';
     on(approveBtn, 'click', function () {
-      var msg = report.fix_target === 'script' ? '承認しました' : '承認しました。PR を作成します';
+      var msg = report.fix_target === 'script' ? '承認しました' : '承認しました。開発者に修正を送ります';
       sendAction('decide_report', { report_id: report.report_id, action: 'approve', note: '' }, approveBtn, msg);
     });
     box.appendChild(approveBtn);
+    if (report.fix_target !== 'script') {
+      box.appendChild(el('p', 'cw-hint', '開発者には PR として届きます'));
+    }
 
     var returnBtn = el('button', 'btn-outline-sm', '差し戻す');
     returnBtn.type = 'button';
@@ -704,6 +745,83 @@
     rejectBtn.type = 'button';
     var confirmBox = buildConfirmBox('本当に却下しますか？', function () {
       sendAction('decide_report', { report_id: report.report_id, action: 'reject', note: '' },
+        rejectBtn, '却下しました');
+    });
+    confirmBox.hidden = true;
+    on(rejectBtn, 'click', function () { confirmBox.hidden = !confirmBox.hidden; });
+    box.appendChild(rejectBtn);
+
+    box.appendChild(memoBox);
+    box.appendChild(confirmBox);
+    return box;
+  }
+
+  /* ---- kind: decide_bundle（判断・画面 × 観点の束単位。案3） ---- */
+
+  function renderDecideBundleBody(action) {
+    var items = extractItems(action);
+    items.forEach(function (bundle) {
+      DOM.body.appendChild(buildBundleArticle(bundle));
+    });
+  }
+
+  function buildBundleArticle(bundle) {
+    var sources = bundle.sources || {};
+    var art = el('article', 'cw-report');
+    art.setAttribute('data-bundle-id', bundle.bundle_id);
+    art.appendChild(el('h3', 'cw-report-title', bundle.title || '（画面不明）'));
+
+    var dl = el('dl', 'cw-report-facts');
+    buildFactRow(dl, '件数',
+      (bundle.count || 0) + ' 件（うち承認待ち ' + (bundle.awaiting_count || 0) + '）', '');
+    buildFactRow(dl, '理由', bundle.review_reason, SRC_LABEL[sources.cause]);
+    buildFactRow(dl, '検証',
+      (bundle.verify_after_ok_count || 0) + ' / ' + (bundle.count || 0) + ' 件が通過',
+      SRC_LABEL[sources.verify]);
+    art.appendChild(dl);
+
+    var link = el('a', 'cw-link', '個票を見る');
+    link.href = '/healing/bundles/' + encodeURIComponent(bundle.bundle_id);
+    link.target = '_blank';
+    link.rel = 'noopener';
+    art.appendChild(link);
+
+    art.appendChild(buildBundleActions(bundle));
+    return art;
+  }
+
+  function buildBundleActions(bundle) {
+    var box = el('div', 'cw-report-actions');
+    var fixTargets = bundle.fix_targets || [];
+    var scriptOnly = fixTargets.length > 0 && fixTargets.every(function (t) { return t === 'script'; });
+
+    var approveLabel = bundle.primary || (scriptOnly ? '承認' : '承認して修正を送る');
+    var approveBtn = el('button', 'btn-primary', approveLabel);
+    approveBtn.type = 'button';
+    on(approveBtn, 'click', function () {
+      var msg = scriptOnly ? '承認しました' : '承認しました。開発者に修正を送ります';
+      sendAction('decide_bundle', { bundle_id: bundle.bundle_id, action: 'approve', note: '' },
+        approveBtn, msg);
+    });
+    box.appendChild(approveBtn);
+    if (!scriptOnly) {
+      box.appendChild(el('p', 'cw-hint', '開発者には PR として届きます'));
+    }
+
+    var returnBtn = el('button', 'btn-outline-sm', '差し戻す');
+    returnBtn.type = 'button';
+    var memoBox = buildMemoBox(function (note) {
+      sendAction('decide_bundle', { bundle_id: bundle.bundle_id, action: 'return', note: note },
+        returnBtn, '差し戻しました。作り直します');
+    });
+    memoBox.hidden = true;
+    on(returnBtn, 'click', function () { memoBox.hidden = !memoBox.hidden; });
+    box.appendChild(returnBtn);
+
+    var rejectBtn = el('button', 'hl-btn-danger', '却下');
+    rejectBtn.type = 'button';
+    var confirmBox = buildConfirmBox('束の中の承認待ち個票をすべて却下しますか？', function () {
+      sendAction('decide_bundle', { bundle_id: bundle.bundle_id, action: 'reject', note: '' },
         rejectBtn, '却下しました');
     });
     confirmBox.hidden = true;

@@ -771,11 +771,14 @@
       note.placeholder = '承認のメモ（報告書と証跡に残ります）';
       box.appendChild(note);
 
-      var approveLabel = report.fix_target === 'script' ? '承認' : '承認して PR を作る';
+      var approveLabel = report.fix_target === 'script' ? '承認' : '承認して修正を送る';
       var approve = el('button', 'hl-btn' + (high > 0 ? '' : ' is-primary'), approveLabel);
       approve.type = 'button';
       approve.addEventListener('click', function () { decide('approve', note.value, approve); });
       box.appendChild(approve);
+      if (report.fix_target !== 'script') {
+        box.appendChild(el('p', 'hl-doc-note', '開発者には PR として届きます'));
+      }
 
       var back = el('button', 'hl-btn', '差し戻す');
       back.type = 'button';
@@ -908,11 +911,14 @@
 
       var fixTargets = bundle.fix_targets || [];
       var scriptOnly = fixTargets.length > 0 && fixTargets.every(function (t) { return t === 'script'; });
-      var approveLabel = scriptOnly ? '承認' : '承認して PR を作る';
+      var approveLabel = scriptOnly ? '承認' : '承認して修正を送る';
       var approve = el('button', 'hl-btn' + (bundle.attention_high > 0 ? '' : ' is-primary'), approveLabel);
       approve.type = 'button';
       approve.addEventListener('click', function () { decideBundle('approve', note.value, approve); });
       box.appendChild(approve);
+      if (!scriptOnly) {
+        box.appendChild(el('p', 'hl-doc-note', '開発者には PR として届きます'));
+      }
 
       var back = el('button', 'hl-btn', '差し戻す');
       back.type = 'button';

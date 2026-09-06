@@ -385,7 +385,9 @@ def _report_sources(report: report_doc.MaintenanceReport) -> dict[str, str]:
 
 
 def _report_item(report: report_doc.MaintenanceReport) -> dict[str, Any]:
-    primary = "承認して PR を作る" if report.fix_target != "script" else "承認"
+    # 「PR」は開発者用語（T8）。利用者には「修正を送る」、届いた先の説明は
+    # 画面側で薄字 1 行として添える。
+    primary = "承認して修正を送る" if report.fix_target != "script" else "承認"
     return {
         "report_id": report.report_id,
         "title": report.title,
@@ -398,6 +400,45 @@ def _report_item(report: report_doc.MaintenanceReport) -> dict[str, Any]:
         "fix_target": report.fix_target,
         "primary": primary,
         "sources": _report_sources(report),
+    }
+
+
+def _awaiting_bundles(out_dir: Path, project_id: str) -> list[report_doc.Bundle]:
+    """判断カードの単位（案3）。801 通の個票ではなく、画面 × 観点の束で見せる。"""
+    if not project_id:
+        return []
+    return report_doc.list_bundles(out_dir, project_id=project_id, status="awaiting")
+
+
+def _bundle_sources(bundle: report_doc.Bundle) -> dict[str, str]:
+    """束の出所（T3）。_report_sources と同じ考え方を束の粒度に広げる——
+    束の中身が全部テスト側の修正（script）なら実測、1 件でも製品側（repo）が
+    混じれば AI の提案。検証は、束の中に未実行が 1 件でも残れば未検証。
+    """
+    measured_cause = bool(bundle.fix_targets) and bundle.fix_targets <= {"script"}
+    unverified = bundle.count > bundle.verify_after_ok_count
+    return {
+        "incident": "measured",
+        "cause": "measured" if measured_cause else "llm",
+        "action": "measured" if measured_cause else "llm",
+        "verify": "unverified" if unverified else "measured",
+    }
+
+
+def _bundle_item(bundle: report_doc.Bundle) -> dict[str, Any]:
+    scripts_only = bool(bundle.fix_targets) and bundle.fix_targets <= {"script"}
+    primary = "承認" if scripts_only else "承認して修正を送る"
+    return {
+        "bundle_id": bundle.bundle_id,
+        "title": bundle.title,
+        "count": bundle.count,
+        "awaiting_count": bundle.awaiting_count,
+        "needs_review": bundle.needs_review,
+        "review_reason": bundle.review_reason,
+        "verify_after_ok_count": bundle.verify_after_ok_count,
+        "fix_targets": sorted(bundle.fix_targets),
+        "sources": _bundle_sources(bundle),
+        "primary": primary,
     }
 
 
@@ -463,14 +504,16 @@ def _current_for_waiting(out_dir: Path, run: ConductorRun, record: StepRecord) -
                 text=f"失敗が {count} 件ありました。直すにはコードの場所が要ります",
                 action=_action("connect", primary="接続する", items=_list_repos(out_dir)),
             )
-        reports = _awaiting_reports(out_dir, run.project_id)
-        if reports:
+        bundles = _awaiting_bundles(out_dir, run.project_id)
+        if bundles:
+            total = sum(b.awaiting_count for b in bundles)
             return _Current(
                 key="decide", state="human", headline="判断",
-                text=f"報告書が {len(reports)} 通あります。内容を確認して判断してください。",
-                action=_action("decide_report", primary=_report_item(reports[0])["primary"],
+                text=f"確認が要る束が {len(bundles)} 件（報告書 {total} 通）あります。"
+                     "内容を確認して判断してください。",
+                action=_action("decide_bundle", primary=_bundle_item(bundles[0])["primary"],
                                secondary="差し戻す・却下",
-                               items=[_report_item(r) for r in reports]),
+                               items=[_bundle_item(b) for b in bundles]),
             )
         return _Current(key="fix", state="human", headline="分析して直す",
                          text=record.human_action or record.summary or "",
@@ -500,11 +543,34 @@ def _login_url_of(job_id: str) -> str:
         return ""
 
 
-def _current_for_running(run: ConductorRun, record: StepRecord) -> _Current:
+def _run_progress_text(out_dir: Path, run: ConductorRun, record: StepRecord) -> str:
+    """実行中の見込み・進捗（案・T2/T8）。
+
+    conductor._await_step は非同期の段を 10 秒毎に見ているが、記録
+    （record.summary）へ書き戻すのは段が終わったとき（_settle）だけ——
+    running の間はここを読んでも更新されない。件数・目安は run_agent.status
+    が実測（メタ件数・進捗 ndjson）から作るので、ここで直接呼んで読みに行く。
+    """
+    from web.services.orchestration import registry
+    from web.services.orchestration.ports import Context
+
+    try:
+        agent = registry.get_agent("run")
+        ctx = Context(out_dir=out_dir, domain=run.domain, project_id=run.project_id,
+                      params=run.params)
+        status = agent.status(ctx, record.handle)
+    except Exception:  # noqa: BLE001 - 進捗が読めなくても既定の文言で表示は続ける
+        return ""
+    return status.summary or ""
+
+
+def _current_for_running(out_dir: Path, run: ConductorRun, record: StepRecord) -> _Current:
     step_key = _AGENT_OF_STEP.get(record.name, "observe")
     headline = dict(_STEP_DEFS).get(step_key, step_key)
-    return _Current(key=step_key, state="running", headline=headline,
-                     text=record.summary or f"{headline}を進めています",
+    text = record.summary or f"{headline}を進めています"
+    if record.name == "run" and record.handle:
+        text = _run_progress_text(out_dir, run, record) or text
+    return _Current(key=step_key, state="running", headline=headline, text=text,
                      elapsed_sec=_elapsed_sec(record.started_at))
 
 
@@ -545,7 +611,7 @@ def _current_of(out_dir: Path, run: ConductorRun | None) -> _Current:
     if run.status == "waiting_human":
         return _current_for_waiting(out_dir, run, record)
     if run.status in ("running", "queued"):
-        return _current_for_running(run, record)
+        return _current_for_running(out_dir, run, record)
     return _current_for_terminal(run, record, out_dir)
 
 
@@ -576,7 +642,13 @@ def _steps_list(run: ConductorRun | None, current: _Current) -> list[dict[str, A
         if i < idx:
             state = "done"
         elif i == idx:
-            state = current.state if current.state in ("human", "running") else "done"
+            # human / running はそのまま。cancelled・failed も現在の工程の実情
+            # として出す——done に丸めると、中止・失敗が完了に見えてしまう
+            # （通し検証で指摘された表示矛盾）。それ以外（succeeded 等）は done。
+            if current.state in ("human", "running", "cancelled", "failed"):
+                state = current.state
+            else:
+                state = "done"
         else:
             state = "todo"
         result.append({

@@ -261,6 +261,61 @@ def _decide_report(out_dir: Path, domain: str, body: dict[str, Any], actor: str)
         )
 
 
+# ─────────────────────────── decide_bundle ───────────────────────────
+
+
+def _decide_bundle(out_dir: Path, domain: str, body: dict[str, Any], actor: str) -> None:
+    """束（画面 × 観点）ごとの判断（案3）。
+
+    web/routes/healing.py::api_decide_bundle と同じ手順（束の中の承認待ち個票へ
+    順に decide_report を適用する）を、route を import せずにここで再現する。
+    1 件が失敗しても残りは続ける——束のどれか 1 件の事情で他の個票の判断まで
+    止めない。全滅したときだけ最後のエラーを利用者に見せる。
+    """
+    bundle_id = str(body.get("bundle_id") or "").strip()
+    action = str(body.get("action") or "").strip()
+    note = str(body.get("note") or "")
+    if not bundle_id:
+        raise ActionError("bundle_id を指定してください。")
+    bundle = report_doc.find_bundle(out_dir, bundle_id)
+    if bundle is None:
+        raise ActionError("束が見つかりません。")
+
+    decided = 0
+    last_error = ""
+    for report_id in bundle.report_ids:
+        current = report_doc.load_report(out_dir, report_id)
+        if current is None or current.status != "awaiting":
+            continue
+        try:
+            healing_orchestrator.decide_report(
+                out_dir, report_id, action=action, note=note, actor=actor,
+            )
+        except HealingError as exc:
+            last_error = str(exc)
+            continue
+        decided += 1
+    if decided == 0 and last_error:
+        raise ActionError(last_error)
+
+    run = workflow_view._latest_run(out_dir, domain)
+    if run is None:
+        return
+    remaining = workflow_view._awaiting_bundles(out_dir, bundle.project_id)
+    if remaining:
+        return
+    total = _clamp_rounds(dict(run.params or {}).get("rounds", 1))
+    last_healing = workflow_view._last_touched(run, "healing")
+    try:
+        current_no = int(workflow_view._round_no(last_healing))
+    except ValueError:
+        current_no = 1
+    if current_no < total:
+        conductor.start_if_idle(
+            out_dir=out_dir, domain=domain, goal="daily", actor=actor, params={"rounds": 1},
+        )
+
+
 # ─────────────────────────── another_round / cancel / monitor ───────────────────────────
 
 
@@ -300,6 +355,7 @@ _HANDLERS = {
     "return_stage": _return_stage,
     "connect": _connect,
     "decide_report": _decide_report,
+    "decide_bundle": _decide_bundle,
     "another_round": _another_round,
     "cancel": _cancel,
     "monitor": _monitor,

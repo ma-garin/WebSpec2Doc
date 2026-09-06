@@ -59,6 +59,10 @@ _STALE = "テスト結果が更新されませんでした（前の実行の結�
 #: 1 回の実行に許す時間。指揮者の段の上限（params）をそのまま使う。
 _DEFAULT_TIMEOUT_SEC = 7200
 
+#: 実行中カードの見込み表示（案・T2/T8）。1 件あたりの目安秒数
+#: （実測: 801 件 ≒ 10 分 → 801*0.75秒 ≒ 600秒）。
+_SEC_PER_TEST = 0.75
+
 _STATE_DIR = ".run"
 _HANDLE_PREFIX = "run-"
 _HEX = frozenset("0123456789abcdef")
@@ -79,6 +83,50 @@ def _spec_path(out_dir: Path, domain: str) -> Path | None:
 def _report_relpath(domain: str) -> str:
     """結果ファイルの out_dir からの相対パス。画面もこのファイルを読む。"""
     return f"{domain}/qa_process/playwright_report.json"
+
+
+def _meta_path(out_dir: Path, domain: str) -> Path:
+    """02 が生成したテストケース表のメタ（総件数）。spec と同じ場所に並ぶ。"""
+    return out_dir / domain / "testcases" / "testcases.spec.meta.json"
+
+
+def _progress_path(out_dir: Path, domain: str) -> Path:
+    """Playwright 実行の進捗 ndjson。run() が使う output_dir と同じ場所
+    （playwright_executor.run_playwright が 1 件終わるごとに 1 行追記する）。
+    """
+    return out_dir / domain / "qa_process" / "playwright_progress.ndjson"
+
+
+def _test_total(out_dir: Path, domain: str) -> int:
+    """テストの総件数。読めなければ 0（無いことを『多い』と誤解させない）。"""
+    try:
+        data = json.loads(_meta_path(out_dir, domain).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return 0
+    tests = data.get("tests") if isinstance(data, dict) else None
+    return len(tests) if isinstance(tests, list) else 0
+
+
+def _test_done(out_dir: Path, domain: str) -> int:
+    """終わった件数。進捗 ndjson は 1 行 = 1 件の完了通知なので行数で数える。"""
+    try:
+        with _progress_path(out_dir, domain).open("r", encoding="utf-8") as fh:
+            return sum(1 for _ in fh)
+    except OSError:
+        return 0
+
+
+def _progress_summary(out_dir: Path, domain: str) -> str:
+    """実行中カードの 1 文（案・T2/T8）。総件数が分からなければ空文字を返し、
+    呼び出し側の既定文言（テストを実行しています）に任せる——0 件と言い切ると
+    「進んでいない」と誤読される。
+    """
+    total = _test_total(out_dir, domain)
+    if total <= 0:
+        return ""
+    done = min(_test_done(out_dir, domain), total)
+    eta_min = max(1, round(total * _SEC_PER_TEST / 60))
+    return f"テスト {total} 件を実行中（済み {done} 件・目安 約 {eta_min} 分）"
 
 
 def _state_path(out_dir: Path, domain: str, handle: str) -> Path | None:
@@ -388,7 +436,8 @@ class RunAgent:
                              error=_PROC_GONE, finished_at=_now())
                 return StepStatus(state="failed", label="実行が止まりました",
                                   summary=_PROC_GONE, error=_PROC_GONE)
-            return StepStatus(state="running", label="テスト実行中", summary=summary)
+            progress = _progress_summary(ctx.out_dir, ctx.domain)
+            return StepStatus(state="running", label="テスト実行中", summary=progress or summary)
         if state == "cancelled":
             return StepStatus(state="cancelled", label="テスト実行 中止", summary=summary)
         if state == "succeeded":

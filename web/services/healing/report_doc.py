@@ -157,6 +157,10 @@ class Bundle:
     fix_targets: frozenset[str]
     report_ids: tuple[str, ...]
     updated_at: str
+    #: 人が見るべき束か。T4「人が止まるのは例外だけ」——理由が決まっているものだけ True。
+    needs_review: bool = False
+    #: needs_review の理由を 1 文で。False のときも「なぜ止めなくてよいか」を書く。
+    review_reason: str = ""
 
 
 # ─────────────────────────── 人の言葉にする ───────────────────────────
@@ -743,6 +747,26 @@ def _heaviest_status(statuses: Sequence[str]) -> str:
     return ranked[0] if ranked else "awaiting"
 
 
+def _bundle_review(
+    *, fix_targets: frozenset[str], unverified_count: int, attention_high: int
+) -> tuple[bool, str]:
+    """要確認かどうかと、その理由を 1 文で返す（T4「人が止まるのは例外だけ」）。
+
+    review_queue.review_reason（src/autorun）と同じ考え方: 止まってよい理由を先に決め、
+    それ以外は自動で通す。ここでの理由は 1) AI が製品コードを直した（llm 由来）、
+    2) 検証が通っていない個票が残っている、3) 確認が必要な点が高で残っている、の
+    優先順（review_queue が「AI 由来」を「リスク」より先に見るのと揃えた）。
+    どれにも当たらなければ、テスト側だけの修正で検証も通っている——止める理由がない。
+    """
+    if "repo" in fix_targets:
+        return True, "AI がコードを変えています。"
+    if unverified_count > 0:
+        return True, f"検証が通っていない個票が{unverified_count}件あります。"
+    if attention_high > 0:
+        return True, f"確認が必要な点が高{attention_high}件あります。"
+    return False, "テストの探し方だけを直し、検証も通っています。"
+
+
 def list_bundles(
     out_dir: Path, *, status: str = "", project_id: str = ""
 ) -> list[Bundle]:
@@ -767,6 +791,15 @@ def list_bundles(
         viewpoint_name = _VIEWPOINT_NAMES.get(viewpoint_code, viewpoint_code)
         screen_name = next((m.incident_screen_name for m in members if m.incident_screen_name), "")
         ordered = sorted(members, key=lambda m: m.updated_at or m.created_at, reverse=True)
+        count = len(members)
+        verify_after_ok_count = sum(1 for m in members if m.verify_after_ok is True)
+        attention_high = sum(sum(1 for a in m.attention if a.get("severity") == "high") for m in members)
+        fix_targets = frozenset(m.fix_target for m in members)
+        needs_review, review_reason = _bundle_review(
+            fix_targets=fix_targets,
+            unverified_count=count - verify_after_ok_count,
+            attention_high=attention_high,
+        )
         bundles.append(
             Bundle(
                 bundle_id=hashlib.sha1(f"{proj_id}{key}".encode("utf-8")).hexdigest()[:12],
@@ -779,15 +812,15 @@ def list_bundles(
                 viewpoint_name=viewpoint_name,
                 title=_bundle_title(first.incident_screen_id, screen_name, viewpoint_code, viewpoint_name),
                 status=_heaviest_status([m.status for m in members]),
-                count=len(members),
+                count=count,
                 awaiting_count=sum(1 for m in members if m.status == "awaiting"),
-                verify_after_ok_count=sum(1 for m in members if m.verify_after_ok is True),
-                attention_high=sum(
-                    sum(1 for a in m.attention if a.get("severity") == "high") for m in members
-                ),
-                fix_targets=frozenset(m.fix_target for m in members),
+                verify_after_ok_count=verify_after_ok_count,
+                attention_high=attention_high,
+                fix_targets=fix_targets,
                 report_ids=tuple(m.report_id for m in ordered),
                 updated_at=ordered[0].updated_at or ordered[0].created_at if ordered else "",
+                needs_review=needs_review,
+                review_reason=review_reason,
             )
         )
 
@@ -825,6 +858,8 @@ def bundle_to_dict(bundle: Bundle) -> dict[str, Any]:
         "fix_targets": sorted(bundle.fix_targets),
         "report_ids": list(bundle.report_ids),
         "updated_at": bundle.updated_at,
+        "needs_review": bundle.needs_review,
+        "review_reason": bundle.review_reason,
     }
 
 

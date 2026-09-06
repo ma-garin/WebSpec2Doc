@@ -110,6 +110,28 @@
 
 /* ── 束の折りたたみ（個票） ───────────────────── */
 .hl-toggle { padding: 2px 7px; font-size: 11px; }
+/* ── 一覧: 確認不要の束（既定では畳む） ─────────── */
+.hl-collapse {
+  margin-top: 10px;
+  border: 1px solid var(--line, #D0D5DD);
+  border-radius: 7px;
+}
+.hl-collapse-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--tx3, #667085);
+  list-style: none;
+}
+.hl-collapse-summary::-webkit-details-marker { display: none; }
+.hl-collapse-summary:focus-visible { outline: 2px solid var(--ac, #1570EF); outline-offset: -2px; }
+.hl-collapse-tri { color: var(--tx3, #667085); transition: transform .12s; }
+.hl-collapse[open] .hl-collapse-tri { transform: rotate(90deg); }
+.hl-collapse .hl-table-wrap { padding: 0 12px 12px; }
+
 .hl-nested-row > td { padding: 0; border-bottom: 1px solid var(--line, #D0D5DD); }
 .hl-nested-wrap { padding: 8px 12px 12px 40px; background: var(--bg, #F9FAFB); }
 .hl-nested-table { width: 100%; border-collapse: collapse; font-size: 12px; }

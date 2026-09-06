@@ -76,7 +76,7 @@
   /* ---------------- 一覧（束 = 画面 × 観点） ---------------- */
 
   var state = {
-    status: 'awaiting', projectId: '', reportId: '', bundleId: '',
+    view: 'needs_review', projectId: '', reportId: '', bundleId: '',
     allBundles: [], expanded: {}
   };
 
@@ -84,9 +84,16 @@
     awaiting: '承認待ち', approved: '承認済み', returned: '差し戻し',
     rejected: '却下', submitted: '提出済み', draft: '下書き'
   };
-  /* チップに出す順。0 件のものは並べない（該当 0 件の選択肢は出さない）。 */
-  var STATUS_CHIP_LABELS = { awaiting: '承認待ち', returned: '差し戻し', approved: '提出済み', rejected: '却下' };
-  var STATUS_CHIP_ORDER = ['awaiting', 'returned', 'approved', 'rejected'];
+  /* 一覧の絞り込みは状態そのものではなく「要確認か」で分ける（T4）。
+   * 決着済み（提出済み・却下）は従来どおり状態で分ける。0 件のものは並べない。 */
+  var VIEW_LABELS = { needs_review: '要確認', no_review: '確認不要', submitted: '提出済み', rejected: '却下' };
+  var VIEW_ORDER = ['needs_review', 'no_review', 'submitted', 'rejected'];
+
+  function bundleView(bundle) {
+    if (bundle.status === 'rejected') { return 'rejected'; }
+    if (bundle.status === 'approved' || bundle.status === 'submitted') { return 'submitted'; }
+    return bundle.needs_review ? 'needs_review' : 'no_review';
+  }
 
   function verifyBadge(report) {
     if (report.verify_after_ok === true) { return el('span', 'hl-badge is-ok', report.verify_after); }
@@ -217,6 +224,7 @@
     var titleLink = el('a', null, bundle.title || '（画面不明）');
     titleLink.href = href;
     tdTitle.appendChild(titleLink);
+    if (bundle.review_reason) { tdTitle.appendChild(el('small', null, bundle.review_reason)); }
     tr.appendChild(tdTitle);
 
     var tdCount = el('td');
@@ -258,23 +266,74 @@
     return frag;
   }
 
+  /* 「確認不要」束を、開くまで畳んでおく 1 行。一覧の既定表示（要確認のみ）の下に置く。
+   * 開いたときの列は本文表と同じ（renderBundleRow を共用）。 */
+  function ensureNoReviewHost() {
+    var existing = document.getElementById('hl-no-review');
+    if (existing) { return existing; }
+    var table = document.getElementById('hl-reports-table');
+    if (!table || !table.parentNode || !table.parentNode.parentNode) { return null; }
+    var details = el('details', 'hl-collapse');
+    details.id = 'hl-no-review';
+    var summary = el('summary', 'hl-collapse-summary');
+    summary.appendChild(el('span', 'hl-collapse-tri', '▸'));
+    var label = el('span', null, '');
+    label.id = 'hl-no-review-label';
+    summary.appendChild(label);
+    details.appendChild(summary);
+    details.addEventListener('toggle', function () {
+      var tri = details.querySelector('.hl-collapse-tri');
+      if (tri) { tri.textContent = details.open ? '▾' : '▸'; }
+    });
+    var innerWrap = el('div', 'hl-table-wrap');
+    var innerTable = el('table', 'hl-reports-table');
+    innerTable.appendChild(table.querySelector('thead').cloneNode(true));
+    var tbody = el('tbody');
+    tbody.id = 'hl-no-review-body';
+    innerTable.appendChild(tbody);
+    innerWrap.appendChild(innerTable);
+    details.appendChild(innerWrap);
+    table.parentNode.insertAdjacentElement('afterend', details);
+    return details;
+  }
+
+  function renderNoReviewCollapse() {
+    var details = document.getElementById('hl-no-review');
+    if (state.view !== 'needs_review') {
+      if (details) { details.hidden = true; }
+      return;
+    }
+    details = ensureNoReviewHost();
+    if (!details) { return; }
+    var bundles = state.allBundles.filter(function (b) { return bundleView(b) === 'no_review'; });
+    details.hidden = bundles.length === 0;
+    var label = document.getElementById('hl-no-review-label');
+    if (label) { label.textContent = '確認の要らない束 ' + bundles.length + ' 件（テスト側の修正・検証済み）'; }
+    var tbody = document.getElementById('hl-no-review-body');
+    if (tbody) {
+      tbody.textContent = '';
+      bundles.forEach(function (b) { tbody.appendChild(renderBundleRow(b)); });
+    }
+  }
+
   function renderBundleList() {
     var body = document.getElementById('hl-reports-body');
     var empty = document.getElementById('hl-reports-empty');
     var table = document.getElementById('hl-reports-table');
     if (!body) { return; }
     body.textContent = '';
-    var bundles = state.allBundles.filter(function (b) { return b.status === state.status; });
+    var bundles = state.allBundles.filter(function (b) { return bundleView(b) === state.view; });
     var has = bundles.length > 0;
     if (table) { table.hidden = !has; }
     if (empty) {
       empty.hidden = has;
-      empty.textContent = state.status === 'awaiting'
-        ? '承認待ちの報告書はありません。'
+      empty.textContent = state.view === 'needs_review'
+        ? '要確認の報告書はありません。'
         : 'この状態の報告書はありません。';
     }
     state.expanded = {};
     bundles.forEach(function (b) { body.appendChild(renderBundleRow(b)); });
+    renderNoReviewCollapse();
   }
 
   /* 0 件のチップは出さない（該当 0 件の選択肢は並べない）。 */
@@ -283,15 +342,15 @@
     if (!wrap) { return; }
     wrap.textContent = '';
     var counts = {};
-    state.allBundles.forEach(function (b) { counts[b.status] = (counts[b.status] || 0) + 1; });
-    var visible = STATUS_CHIP_ORDER.filter(function (s) { return counts[s] > 0; });
-    if (visible.length && visible.indexOf(state.status) === -1) { state.status = visible[0]; }
+    state.allBundles.forEach(function (b) { var v = bundleView(b); counts[v] = (counts[v] || 0) + 1; });
+    var visible = VIEW_ORDER.filter(function (s) { return counts[s] > 0; });
+    if (visible.length && visible.indexOf(state.view) === -1) { state.view = visible[0]; }
     visible.forEach(function (s) {
-      var chip = el('button', 'hl-chip' + (s === state.status ? ' is-on' : ''),
-        STATUS_CHIP_LABELS[s] + ' ' + counts[s]);
+      var chip = el('button', 'hl-chip' + (s === state.view ? ' is-on' : ''),
+        VIEW_LABELS[s] + ' ' + counts[s]);
       chip.type = 'button';
       chip.addEventListener('click', function () {
-        state.status = s;
+        state.view = s;
         renderChips();
         renderBundleList();
       });
@@ -817,6 +876,7 @@
     doc.setAttribute('aria-busy', 'false');
 
     doc.appendChild(el('h1', 'hl-doc-title', bundle.title || '（画面不明）'));
+    if (bundle.review_reason) { doc.appendChild(el('p', 'hl-doc-note', bundle.review_reason)); }
     var meta = el('p', 'hl-doc-meta');
     [
       '案件: ' + (bundle.project_name || '—'),

@@ -17,11 +17,14 @@ from pathlib import Path
 from typing import Any
 
 from flask import Blueprint, g, render_template, request
+from jinja2 import TemplateNotFound
 
 from web.audit_context import record_admin_event
 from web.auth import require_admin
 from web.config import OUTPUT_DIR
 from web.services.orchestration import conductor, goals, onboarding, run_store
+from web.services.orchestration import workflow_actions, workflow_view
+from web.services.orchestration.workflow_actions import ActionError
 from web.tenancy import scoped_output_dir
 from web.validation import _domain_of
 
@@ -185,16 +188,16 @@ def _render_variant(variant: str, site: str = "") -> str:
 
 @bp.get("/orchestration")
 def orchestration_page():
-    """指揮の入口。常に一覧（案 B）を出す。
+    """指揮の入口。ワークフロー画面（6 工程のステッパー）を出す。
 
-    A/B の振り分けと cookie は廃止した（B 採用）。記録は /orchestration/d へ
-    B の各行から辿る。?v= の強制だけ開発・レビュー用に残す。
+    旧案（b / 一覧・d / サイト別記録）は /orchestration/<variant> にまだ残る
+    （開発・比較用）。ここは新画面のテンプレートが無ければ 404 を返す
+    （別担当が同時に作っているため）。
     """
-    forced = str(request.args.get("v", "")).strip().lower()
-    if forced in _VARIANTS:
-        _record_audit("orchestration.variant.assign", {"variant": forced, "forced": True})
-        return _render_variant(forced, _site_arg())
-    return _render_variant(_DEFAULT_VARIANT, _site_arg())
+    try:
+        return render_template("orchestration.html", site=_site_arg())
+    except TemplateNotFound:
+        return {"error": "画面がまだありません。"}, 404
 
 
 @bp.get("/orchestration/<variant>")
@@ -396,3 +399,41 @@ def api_cancel_run(run_id: str):
         return {"error": "実行が見つかりません。"}, 404
     _record_audit("orchestration.run.cancel", {"run_id": run_id, "cancelled": bool(cancelled)})
     return {"run": run_store.run_to_dict(run), "cancelled": bool(cancelled)}
+
+
+# ─────────────────────────── ワークフロー画面（新 UI） ───────────────────────────
+
+
+@bp.get("/api/orchestration/workflow")
+def api_workflow_state():
+    """ワークフロー画面 1 画面分の状態。domain が空なら最初のサイトを開く。"""
+    site = str(request.args.get("site", "")).strip()
+    if site and not _DOMAIN_RE.match(site):
+        return {"error": "サイトの指定が不正です。"}, 400
+    try:
+        return workflow_view.build(_out(), site)
+    except Exception:
+        logger.exception("orchestration: workflow の組み立てに失敗しました")
+        return {"error": "処理に失敗しました"}, 500
+
+
+@bp.post("/api/orchestration/workflow/actions")
+def api_workflow_action():
+    """ワークフロー画面のボタン 1 つを実行し、最新の状態を返す。"""
+    guard = require_admin()
+    if guard is not None:
+        return guard
+    data = _body()
+    site = str(data.get("site") or "").strip()
+    if site and not _DOMAIN_RE.match(site):
+        return {"error": "サイトの指定が不正です。"}, 400
+    kind = str(data.get("kind") or "").strip()
+    try:
+        result = workflow_actions.perform(_out(), site, kind, data, _actor())
+    except ActionError as exc:
+        return {"error": str(exc)}, 400
+    except Exception:
+        logger.exception("orchestration: workflow アクションに失敗しました (kind=%s)", kind)
+        return {"error": "処理に失敗しました"}, 500
+    _record_audit("orchestration.workflow.action", {"domain": site, "kind": kind})
+    return result

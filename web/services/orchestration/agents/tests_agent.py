@@ -91,7 +91,7 @@ def _pending_gate(ctx: Context) -> str:
     if not stages_path.is_file():
         return ""
     try:
-        from autorun.stages import DESIGN_STAGE_IDS, Pipeline
+        from autorun.stages import DESIGN_STAGE_IDS, STATUS_APPROVED, STATUS_SKIPPED, Pipeline
         from web.services.auto_run_pipeline import _GATE_MESSAGES
 
         pipeline = Pipeline.from_dict(json.loads(stages_path.read_text(encoding="utf-8")))
@@ -99,7 +99,7 @@ def _pending_gate(ctx: Context) -> str:
             return ""
         for stage_id in DESIGN_STAGE_IDS:
             stage = pipeline.get(stage_id)
-            if stage is not None and not stage.is_approved:
+            if stage is not None and stage.status not in (STATUS_APPROVED, STATUS_SKIPPED):
                 return _GATE_MESSAGES.get(stage_id, ("", "", "テスト設計"))[2]
         return "テスト設計"
     except Exception:  # noqa: BLE001 - 読めないものを「未承認」と決めつけない

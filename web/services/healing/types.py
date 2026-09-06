@@ -207,6 +207,10 @@ class Defect:
     test_title: str = ""
     #: 失敗時のスクリーンショット。out_dir からの相対パス。無ければ空。
     screenshot: str = ""
+    #: この欠陥を起こしたテストが定義されている .spec.ts の絶対パス（あれば）。
+    #: テスト側の不具合と判定したときに、どのファイルを直すかの手がかりにする。
+    #: 既存の位置引数の順序を壊さないよう、必ず末尾に足す。
+    spec_path: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         from dataclasses import asdict

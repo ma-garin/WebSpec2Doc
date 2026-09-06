@@ -897,6 +897,7 @@ def _report_summary(report: report_doc.MaintenanceReport) -> dict[str, Any]:
         "incident_screen_name": report.incident_screen_name,
         "created_at": report.created_at,
         "updated_at": report.updated_at,
+        "fix_target": report.fix_target,
     }
 
 

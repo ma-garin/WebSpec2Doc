@@ -34,7 +34,9 @@ from web.services.healing import (
     report_doc,
     risk,
     run_store,
+    script_fix,
     spec_match,
+    triage,
     verification,
 )
 from web.services.healing import report as healing_report
@@ -483,16 +485,24 @@ def decide_report(
 
     now = _now_iso()
     if action == "approve":
-        run = create_pull_request_for_run(out_dir, report.run_id)
+        run = get_run(out_dir, report.run_id)
+        if run is None:
+            raise HealingError(f"実行 {report.run_id} が見つかりません")
+        # この報告書の対応がテスト側なら PR は不要。製品側の欠陥が同じ run に
+        # 混在していても、PR はその報告書を承認したときに作る（画面の表示と一致させる）
+        needs_pr = report.fix_target != "script"
+        if needs_pr:
+            run = create_pull_request_for_run(out_dir, report.run_id)
         record_decision(out_dir, report.run_id, action="approve", note=note, actor=actor)
         pr = run.pull_request
+        approval_note = note if needs_pr else "PR 不要（テスト側の修正）" + (f"・{note}" if note else "")
         report = replace(
             report,
             status="approved",
             pr_number=pr.number if pr else 0,
             pr_url=pr.url if pr else "",
             approvals=report.approvals
-            + ({"role": "approved", "who": actor or "担当者", "at": now, "note": note},),
+            + ({"role": "approved", "who": actor or "担当者", "at": now, "note": approval_note},),
             updated_at=now,
         )
     elif action == "return":
@@ -773,11 +783,6 @@ def _run_loop_inner(
             defects = verification.failures_to_defects(
                 verify_result.failures, repo=integration_dir, source="verify"
             )
-        # 「どこが怪しいか」をここで確定させ、以降の修正指示と PR レポートに載せる。
-        defects = _localize_defects(
-            run, defects, repo=repo, project=project, out_dir=out_dir
-        )
-        iteration.defects = list(defects)
         if not defects:
             # 「不在の証明」はしない: 原因を特定できなかった事実だけを記録して止まる。
             # 画面に出る文言なので「構造化」のような内部用語を使わない（2026-09-05）。
@@ -791,24 +796,66 @@ def _run_loop_inner(
             )
             _update(out_dir, run, status="failed", step_label="失敗")
             return
-        _add_log(run, f"{len(defects)} 件の欠陥を検出しました")
+
+        # テスト側の不具合をここで判別する。サイトは正しいのにテストの探し方が
+        # 古いだけの欠陥は、製品コードの修正対象（限局・エージェント）から外し、
+        # テストファイルだけを直接直す（サイト側には一切触れない）。
+        script_defects, other_defects, script_proposals = _triage_script_defects(
+            out_dir, run, project, defects
+        )
+
+        # 「どこが怪しいか」をここで確定させ、以降の修正指示と PR レポートに載せる。
+        located = (
+            _localize_defects(run, other_defects, repo=repo, project=project, out_dir=out_dir)
+            if other_defects
+            else []
+        )
+        iteration.defects = list(script_defects) + list(located)
+
+        if not located:
+            # 全欠陥がテスト側の問題だった。製品コードを直す対象が無いため、
+            # verify_command を再実行する通常のループへは進めない
+            # （verify_command はサイト側リポジトリの検証で、テストファイルの
+            #  書き換えとは無関係。ここで回しても意味のある結果にならない）。
+            iteration.proposals = list(script_proposals)
+            iteration.finished_at = _now_iso()
+            applied_scripts = [p for p in script_proposals if p.status == "applied"]
+            if not applied_scripts:
+                reasons = [p.error for p in script_proposals if p.error]
+                run.error = "テスト側の修正を適用できませんでした" + (
+                    "。理由: " + " / ".join(dict.fromkeys(reasons)) if reasons else ""
+                )
+                _update(out_dir, run, status="failed", step_label="失敗")
+                return
+            _add_log(
+                run,
+                f"{len(applied_scripts)} 件のテストを直接修正しました（サイトのコードは変更していません）",
+            )
+            _update(
+                out_dir,
+                run,
+                status="awaiting_human",
+                step_label="人の判断待ち（テスト側の修正のみ・PR不要）",
+            )
+            return
+        _add_log(run, f"{len(located)} 件の欠陥を検出しました")
 
         if _cancelled(run.run_id):
             _update(out_dir, run, status="cancelled", step_label="中止")
             return
 
         # fixing
-        _update(out_dir, run, status="fixing", step_label=f"修正（{i} 周目・{len(defects)} 件）")
-        proposals = _fix_defects(out_dir, run, project, integration_dir, branch, i, defects, extra_instructions)
-        iteration.proposals = list(proposals)
+        _update(out_dir, run, status="fixing", step_label=f"修正（{i} 周目・{len(located)} 件）")
+        proposals = _fix_defects(out_dir, run, project, integration_dir, branch, i, located, extra_instructions)
+        iteration.proposals = list(proposals) + list(script_proposals)
         iteration.finished_at = _now_iso()
 
-        applied = [p for p in proposals if p.status == "applied"]
+        applied = [p for p in iteration.proposals if p.status == "applied"]
         if not applied:
             # 「1 件も適用できませんでした」だけでは、エージェントが修正不要と判断した（skipped）のか、
             # 落ちた（failed）のか、時間切れ（timeout）なのかが失われる。内訳を残す。
             counts: dict[str, int] = {}
-            for proposal in proposals:
+            for proposal in iteration.proposals:
                 counts[proposal.status] = counts.get(proposal.status, 0) + 1
             labels = {
                 "skipped": "変更なし",
@@ -819,7 +866,7 @@ def _run_loop_inner(
             breakdown = "・".join(
                 f"{labels.get(key, key)} {value} 件" for key, value in sorted(counts.items())
             )
-            reasons = [p.error for p in proposals if p.error]
+            reasons = [p.error for p in iteration.proposals if p.error]
             run.error = f"修正が 1 件も適用されませんでした（{breakdown}）"
             if reasons:
                 run.error += "。理由: " + " / ".join(dict.fromkeys(reasons))
@@ -866,6 +913,112 @@ def _run_loop_inner(
     # PR は自動で出さない。適用済みの修正がある成功時は、人の判断待ちで止める。
     if run.status == "succeeded" and applied_any:
         _update(out_dir, run, status="awaiting_human", step_label="人の判断待ち（修正あり・PR未作成）")
+
+
+def _triage_script_defects(
+    out_dir: Path,
+    run: HealingRun,
+    project: HealingProject,
+    defects: Sequence[Defect],
+) -> tuple[list[Defect], list[Defect], list[FixProposal]]:
+    """欠陥をテスト側／製品側に振り分け、テスト側はここで直接直す。
+
+    戻り値は (テスト側と判定した欠陥, 製品側へ回す欠陥, テスト側の FixProposal)。
+    テスト側は worktree もエージェントも使わず、テストファイル自身を書き換えて
+    その場で再実行するところまでをここで完結させる。
+    """
+    domain = str(getattr(project, "domain", "") or "")
+    script_defects: list[Defect] = []
+    other_defects: list[Defect] = []
+    proposals: list[FixProposal] = []
+    for defect in defects:
+        result = triage.classify(defect, out_dir=out_dir, domain=domain)
+        if result.kind != "script":
+            other_defects.append(defect)
+            continue
+        script_defects.append(defect)
+        _add_log(run, f"テスト側の不具合と判定しました: {result.reason}")
+        if not result.candidates:
+            proposals.append(
+                FixProposal(
+                    defect_id=defect.defect_id,
+                    agent="script",
+                    status="failed",
+                    rationale=result.reason,
+                    error=(
+                        f"テストが探す「{result.needle}」の置き換え候補が"
+                        "見つかりません。テストを見直してください"
+                    ),
+                )
+            )
+            continue
+        proposals.append(_fix_script_defect(out_dir, project, defect, result))
+    return script_defects, other_defects, proposals
+
+
+def _fix_script_defect(
+    out_dir: Path,
+    project: HealingProject,
+    defect: Defect,
+    result: triage.Triage,
+) -> FixProposal:
+    """テストファイルを書き換え、その 1 件だけ再実行して結果を FixProposal にする。"""
+    domain = str(getattr(project, "domain", "") or "")
+    new_text = result.candidates[0]
+    spec_path = Path(defect.spec_path) if defect.spec_path else script_fix.find_spec(out_dir, domain)
+    if spec_path is None or not Path(spec_path).is_file():
+        return FixProposal(
+            defect_id=defect.defect_id,
+            agent="script",
+            status="failed",
+            rationale=result.reason,
+            error="テストファイルが見つかりません",
+        )
+    spec_path = Path(spec_path)
+    test_title = defect.test_title or defect.test_id
+    backup_dir = spec_path.parent / ".healing-backups"
+    fix = script_fix.replace_in_test(
+        spec_path, test_title, result.needle, new_text, backup_dir=backup_dir,
+        test_id=defect.test_id,
+    )
+    if not fix.ok:
+        return FixProposal(
+            defect_id=defect.defect_id,
+            agent="script",
+            status="failed",
+            rationale=result.reason,
+            error=fix.message,
+        )
+
+    passed, summary = script_fix.rerun_single(
+        spec_path, spec_path.parent, test_title, test_id=defect.test_id
+    )
+    if not passed:
+        script_fix.restore(fix)
+        return FixProposal(
+            defect_id=defect.defect_id,
+            agent="script",
+            status="failed",
+            rationale=result.reason,
+            error=f"修正後も再実行に失敗しました（{summary}）",
+        )
+
+    try:
+        rel_spec = str(spec_path.resolve().relative_to(Path(out_dir).resolve()))
+    except ValueError:
+        rel_spec = str(spec_path)
+    return FixProposal(
+        defect_id=defect.defect_id,
+        agent="script",
+        status="applied",
+        summary=(
+            f"テストを修正しました（「{result.needle}」→「{new_text}」）。"
+            "サイトのコードは変更していません"
+        ),
+        rationale=result.reason,
+        files_changed=(rel_spec,),
+        log_tail=summary,
+    )
 
 
 def _fix_defects(
@@ -1007,14 +1160,22 @@ def _write_reports(out_dir: Path, run: HealingRun, project: HealingProject) -> N
         by_defect = {p.defect_id: p for p in iteration.proposals}
         for defect in iteration.defects:
             try:
-                fresh = report_doc.build_maintenance_report(
-                    run=run,
-                    iteration=iteration,
-                    defect=defect,
-                    proposal=by_defect.get(defect.defect_id),
-                    project=project,
-                    out_dir=out_dir,
-                )
+                proposal = by_defect.get(defect.defect_id)
+                if proposal is not None and proposal.agent == "script":
+                    # テスト側の修正は差分が製品コードではなく .spec.ts なので、
+                    # 通常の（diff から原因・検証を組み立てる）経路とは別に作る。
+                    fresh = report_doc.build_script_report(
+                        run=run, defect=defect, proposal=proposal, project=project
+                    )
+                else:
+                    fresh = report_doc.build_maintenance_report(
+                        run=run,
+                        iteration=iteration,
+                        defect=defect,
+                        proposal=proposal,
+                        project=project,
+                        out_dir=out_dir,
+                    )
                 existing = report_doc.find_report(
                     out_dir, run_id=run.run_id, defect_id=defect.defect_id
                 )

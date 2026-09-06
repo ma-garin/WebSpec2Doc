@@ -83,6 +83,7 @@ def run_playwright(
     browser: str = "chromium",
     headed: bool = False,
     on_proc: Callable[[Any], None] | None = None,
+    grep: str = "",
 ) -> dict[str, Any]:
     """
     ローカル @playwright/test CLI でスペックを実行し、結果を返す。
@@ -107,6 +108,8 @@ def run_playwright(
         on_proc: 起動した子プロセス（Popen）を受け取るフック。AutoRun の中止は
             ジョブに登録された子プロセスしか殺せないため、中止可能にしたい呼び出し元は
             ここで登録する。省略時は従来どおり subprocess.run で実行する。
+        grep: 指定するとその文字列（正規表現）にタイトルが一致するテストだけを
+            実行する（Playwright の --grep）。空なら従来どおり spec 内の全件。
     """
     if device not in ("pc", "mobile"):
         device = "pc"
@@ -183,6 +186,8 @@ def run_playwright(
         cmd = [cli_cmd, "test", "--config", str(config_path.resolve())]
     if headed:
         cmd.append("--headed")
+    if grep:
+        cmd.extend(["--grep", grep])
 
     expected_total = _count_tests_in_spec(spec_path)
     _log(

@@ -45,6 +45,7 @@ _AGENT_LABELS: dict[str, str] = {
     "openai": "AI（OpenAI）",
     "ollama": "AI（Ollama・ローカル）",
     "dryrun": "動作確認用",
+    "script": "自動（テスト側の修正）",
 }
 
 #: 本文の整形・字数・食い違いの判定は report_present に集約している。
@@ -98,6 +99,10 @@ class MaintenanceReport:
     pr_url: str = ""
     created_at: str = ""
     updated_at: str = ""
+    #: "repo"（製品コードを直した・既定） | "script"（テストファイル自身を直した）。
+    #: script のときは画面側で PR 関連の文言・承認ボタンの表記を変える。
+    #: 既存の位置引数の順序を壊さないよう、必ず末尾に足す（古い報告書も読める）。
+    fix_target: str = "repo"
 
 
 # ─────────────────────────── 人の言葉にする ───────────────────────────
@@ -230,7 +235,16 @@ def humanize_cause(proposal: FixProposal | None, defect: Defect) -> tuple[str, s
 
     説明は AI の自己申告ではなく本体が持つ事実（差分・欠陥）から組み立てる。
     自己申告は自分の実行環境の話を書き、検証結果と食い違う（実測）。
+
+    テスト側の修正（agent == "script"）は製品コードの差分を持たないため、
+    差分から原因を組み立てる通常の経路が使えない。triage.classify が出した
+    判断（rationale）をそのまま原因として使う——これは自己申告ではなく、
+    画面・画面仕様という本体の事実と突き合わせた判定である。
     """
+    if proposal is not None and proposal.agent == "script":
+        location = proposal.files_changed[0] if proposal.files_changed else ""
+        cause = proposal.rationale or "テストの書き方が古くなっていました。"
+        return _truncate_sentences(cause, _CAUSE_MAX_CHARS), location
     path = _cause_path(proposal, defect)
     lines = _hunk_lines(proposal.diff if proposal else "")
     location = f"{path} {lines}".strip() if path else ""
@@ -407,6 +421,74 @@ def build_maintenance_report(
     )
 
 
+def build_script_report(
+    *,
+    run: HealingRun,
+    defect: Defect,
+    proposal: FixProposal,
+    project: HealingProject,
+) -> MaintenanceReport:
+    """テスト側の修正（fix_target="script"）の報告書。
+
+    build_maintenance_report とは組み立て方が異なる: 差分は製品コードではなく
+    .spec.ts の 1 行なので「検証」欄は iteration 全体の verify_before/after
+    （E2E 全体の集計）ではなく、rerun_single がその場で確認した「この 1 件だけ」
+    の結果（proposal.log_tail に "通過 1 / 1" の形で入っている）を使う。
+    """
+    now = _now()
+    applied = proposal.status == "applied"
+    verify_after = proposal.log_tail or ("未実施" if not applied else "")
+    action_text = proposal.summary or (
+        proposal.error or "テストを修正できませんでした"
+    )
+    cause_text, cause_location = humanize_cause(proposal, defect)
+    return MaintenanceReport(
+        report_id="rep-" + secrets.token_hex(6),
+        project_id=project.project_id,
+        project_name=project.name,
+        target_url=_target_url(project),
+        run_id=run.run_id,
+        defect_id=defect.defect_id,
+        title=humanize_title(defect),
+        status="awaiting",
+        incident_text=(defect.message or defect.title or "").strip(),
+        incident_detected_at=run.started_at or now,
+        incident_source=_incident_source(run),
+        incident_screen_id=defect.screen_id,
+        incident_screen_name=defect.screen_name,
+        incident_test_id=defect.test_id,
+        incident_screenshot=defect.screenshot,
+        incident_verify="",
+        cause_text=cause_text,
+        cause_location=cause_location,
+        action_text=action_text,
+        action_by=_AGENT_LABELS.get("script", "自動（テスト側の修正）"),
+        action_at=now,
+        action_diff_stats="",
+        action_screenshot="",
+        verify_before="未実行",
+        verify_after=verify_after,
+        verify_after_ok=applied,
+        spec_match="未照合",
+        attention=(),
+        approvals=(
+            {
+                "role": "proposed",
+                "who": _AGENT_LABELS.get("script", "自動（テスト側の修正）"),
+                "at": now,
+                "note": "",
+            },
+        )
+        if applied
+        else (),
+        pr_number=0,
+        pr_url="",
+        created_at=now,
+        updated_at=now,
+        fix_target="script",
+    )
+
+
 def _incident_source(run: HealingRun) -> str:
     """検知の経路。監視・指揮者が起こしたのか、人が押したのかを報告書に残す。"""
     actor = str(getattr(run, "actor", "") or "")
@@ -488,6 +570,7 @@ def from_dict(data: Mapping[str, Any]) -> MaintenanceReport:
         pr_url=str(data.get("pr_url") or ""),
         created_at=str(data.get("created_at") or ""),
         updated_at=str(data.get("updated_at") or ""),
+        fix_target=str(data.get("fix_target") or "repo"),
     )
 
 

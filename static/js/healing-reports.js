@@ -403,7 +403,11 @@
     var parts = report.approvals.map(function (a) {
       return (roles[a.role] || a.role) + ': ' + (a.who || '—') + ' ' + (a.at || '').slice(0, 16).replace('T', ' ');
     });
-    parts.push(report.pr_number ? 'PR: #' + report.pr_number : 'PR: 承認後に作成');
+    if (report.fix_target === 'script') {
+      parts.push('PR: 不要（テスト側の修正）');
+    } else {
+      parts.push(report.pr_number ? 'PR: #' + report.pr_number : 'PR: 承認後に作成');
+    }
     return el('p', 'hl-doc-p hl-sign', parts.join(' ／ '));
   }
 
@@ -472,6 +476,9 @@
     }
     var actionInfo = [report.action_by, report.action_diff_stats].filter(Boolean).join(' ／ ');
     if (actionInfo) { actionNodes.push(el('p', 'hl-doc-note', actionInfo)); }
+    if (report.fix_target === 'script') {
+      actionNodes.push(el('p', 'hl-doc-note', 'サイトのコードは変更していません。テストの探し方だけを直しました'));
+    }
     doc.appendChild(sectionBody(actionNodes, report.action_screenshot));
 
     // 4. 検証
@@ -561,7 +568,8 @@
       note.placeholder = '承認のメモ（報告書と証跡に残ります）';
       box.appendChild(note);
 
-      var approve = el('button', 'hl-btn' + (high > 0 ? '' : ' is-primary'), '承認して PR を作る');
+      var approveLabel = report.fix_target === 'script' ? '承認' : '承認して PR を作る';
+      var approve = el('button', 'hl-btn' + (high > 0 ? '' : ' is-primary'), approveLabel);
       approve.type = 'button';
       approve.addEventListener('click', function () { decide('approve', note.value, approve); });
       box.appendChild(approve);

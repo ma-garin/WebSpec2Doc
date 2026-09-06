@@ -33,9 +33,28 @@ AVAILABLE_GOALS: tuple[str, ...] = ("daily", "onboard")
 #: まだ通せない目標があるときの理由。人が読む 1 文。
 UNAVAILABLE_REASON = "この目標はまだ使えません"
 
+#: 目標ごとに「周回」として繰り返す末尾の段の数。daily は全 2 段、onboard は
+#: 末尾の run・healing の 2 段だけを繰り返す（docs・tests は初回だけでよい）。
+_REPEAT_TAIL: dict[str, int] = {"daily": 2, "onboard": 2}
 
-def steps_for(goal: str) -> tuple[str, ...]:
-    """目標の段の列を返す。未知・未対応の目標は日本語で断る。"""
+_MIN_ROUNDS = 1
+_MAX_ROUNDS = 5
+
+
+def _clamp_rounds(rounds: int) -> int:
+    try:
+        n = int(rounds)
+    except (TypeError, ValueError):
+        n = 1
+    return max(_MIN_ROUNDS, min(_MAX_ROUNDS, n))
+
+
+def steps_for(goal: str, rounds: int = 1) -> tuple[str, ...]:
+    """目標の段の列を返す。未知・未対応の目標は日本語で断る。
+
+    rounds > 1 なら、周回対象の末尾段（_REPEAT_TAIL）を rounds 回繰り返す。
+    既定の rounds=1 では従来と同じ列を返す。
+    """
     key = str(goal or "").strip()
     if key not in GOALS:
         known = "・".join(sorted(GOALS))
@@ -43,7 +62,35 @@ def steps_for(goal: str) -> tuple[str, ...]:
     if key not in AVAILABLE_GOALS:
         label = GOAL_LABELS.get(key, key)
         raise ValueError(f"「{label}」はまだ使えません。{UNAVAILABLE_REASON}")
-    return GOALS[key]
+    base = GOALS[key]
+    tail_len = _REPEAT_TAIL.get(key, 0)
+    n = _clamp_rounds(rounds)
+    if tail_len <= 0 or n <= 1:
+        return base
+    head, tail = base[:-tail_len], base[-tail_len:]
+    return head + tail * n
+
+
+def step_names_and_labels(goal: str, rounds: int = 1) -> list[tuple[str, str]]:
+    """段の名前と表示名の列。周回対象の段には「（N 周目）」を付ける。
+
+    conductor.start がここから StepRecord を組み立てる。表示名の作り直しを
+    2 か所に置かないよう、周回の見出しはここでしか作らない。
+    """
+    key = str(goal or "").strip()
+    names = steps_for(goal, rounds)
+    tail_len = _REPEAT_TAIL.get(key, 0)
+    n = _clamp_rounds(rounds)
+    multi = tail_len > 0 and n > 1
+    head_count = len(names) - tail_len * n if multi else len(names)
+    result: list[tuple[str, str]] = []
+    for index, name in enumerate(names):
+        label = get_agent(name).label
+        if multi and index >= head_count:
+            round_no = (index - head_count) // tail_len + 1
+            label = f"{label}（{round_no} 周目）"
+        result.append((name, label))
+    return result
 
 
 def step_labels(goal: str) -> list[str]:

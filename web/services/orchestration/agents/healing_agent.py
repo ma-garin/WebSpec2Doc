@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from web.services.healing import autorun_bridge, orchestrator, project_store
+from web.services.healing import autorun_bridge, orchestrator, project_store, report_doc
 from web.services.healing.types import HealingProject
 from web.services.orchestration.ports import (
     Context,
@@ -79,6 +79,12 @@ def _connection_gap(project: HealingProject) -> str:
 #: 前の実行がまだ動いているときの説明。画面にそのまま出る。
 _STILL_RUNNING = "前の実行がまだ終わっていません"
 
+#: 「もう報告書がある」とみなす報告書の状態（types.REPORT_STATUSES の部分集合）。
+#: returned（差し戻し）は「人が直しを求めて戻した」ので作り直す側に残す。
+#: rejected（却下）を含めるのは、直さないと決めた欠陥を毎日また報告書に
+#: しないため。含めないと人は同じ却下を無限に繰り返すことになる。
+_REPORTED_STATES = ("awaiting", "approved", "rejected", "submitted")
+
 
 def _reaped_note(count: int) -> str:
     """片付けた実行の件数を人に伝える 1 文（0 件なら空）。
@@ -127,7 +133,8 @@ class HealingAgent:
             ctx.log(note)
 
         if orchestrator.has_active_run(ctx.out_dir, project.project_id):
-            return StepResult(status="skipped", summary=note + _STILL_RUNNING)
+            return StepResult(status="skipped", summary=note + _STILL_RUNNING,
+                              reason="busy")
 
         try:
             defects = autorun_bridge.load_failures(ctx.out_dir, ctx.domain)
@@ -140,6 +147,44 @@ class HealingAgent:
             ctx.log("失敗はありません。報告書は作りません")
             return StepResult(
                 status="skipped", summary=note + "失敗はありません。報告書は作りません",
+                reason="no_defects",
+            )
+
+        # 前の周回で報告書になった欠陥は二重に出さない（2 周目以降、テストが
+        # 変わらず落ち続けているだけの場合に起きる）。
+        try:
+            reported = {
+                r.defect_id: str(r.status or "")
+                for r in report_doc.list_reports(
+                    ctx.out_dir, project_id=project.project_id, limit=500
+                )
+                if r.status in _REPORTED_STATES
+            }
+        except Exception:  # noqa: BLE001 - 照合の失敗で修正そのものは止めない
+            reported = {}
+        excluded = [d for d in defects if d.defect_id in reported]
+        if excluded:
+            defects = [d for d in defects if d.defect_id not in reported]
+            ctx.log(f"既に報告書がある {len(excluded)} 件を除外しました")
+
+        if not defects:
+            # 報告書があること＝失敗が無いこと、ではない。テストは落ち続けている。
+            # ここを「失敗はありません」で畳むと、承認待ちが溜まったサイトが
+            # 毎日「異常なし・成功」と表示される。人の番であることを状態で出す。
+            states = [reported[d.defect_id] for d in excluded]
+            waiting = states.count("awaiting")
+            if waiting:
+                action = f"承認待ちの報告書 {waiting} 件を確認してください"
+            elif any(s in ("approved", "submitted") for s in states):
+                action = "PR のマージ待ちです"
+            else:
+                action = (f"却下した失敗 {len(states)} 件が続いています。"
+                          "直さないままでよいか確認してください")
+            summary = note + f"失敗 {len(excluded)} 件は報告書があります"
+            ctx.log(summary)
+            return StepResult(
+                status="waiting_human", summary=summary,
+                human_action=action, reason="already_reported",
             )
 
         # 出どころを指揮を起こした側に付け替える。autorun_bridge は画面から
@@ -164,7 +209,8 @@ class HealingAgent:
                 error=f"ヒーリングの起動に失敗しました: {exc}",
             )
         if run is None:
-            return StepResult(status="skipped", summary=note + _STILL_RUNNING)
+            return StepResult(status="skipped", summary=note + _STILL_RUNNING,
+                              reason="busy")
         return StepResult(status="running", summary=summary, handle=run.run_id)
 
     def status(self, ctx: Context, handle: str) -> StepStatus:

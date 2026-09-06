@@ -640,16 +640,58 @@ def _site_dict(entry: Path) -> dict[str, Any] | None:
     }
 
 
+def _unobserved_site(domain: str) -> dict[str, Any]:
+    """01 でまだ観測していないサイトの空の要約（接続・指揮だけが先にある場合）。"""
+    return {"domain": domain, "title": "", "screens": 0, "updated_at": "", "observed": False}
+
+
+def _connected_domains(out_dir: Path) -> set[str]:
+    """接続先（HealingProject）が持つ domain の集合。空の domain は含めない。"""
+    try:
+        return {p.domain for p in project_store.list_projects(out_dir) if p.domain}
+    except Exception:  # noqa: BLE001 - 一覧の失敗でサイト一覧全体を落とさない
+        logger.warning("healing: 接続先一覧を読めませんでした", exc_info=True)
+        return set()
+
+
+#: 指揮 run だけを根拠にサイト一覧へ出してよい状態。失敗・中止で終わった run を
+#: 出すと、接続先も観測結果も無い残骸（onboard に失敗した domain）が一覧に
+#: 並び続け、選ぶと必ずエラーになる項目になる。
+_ACTIVE_RUN_STATES = frozenset({"running", "queued", "waiting_human"})
+
+
+def _conductor_domains(out_dir: Path) -> set[str]:
+    """いま動いている指揮（O2）run が持つ domain の集合。
+
+    conductor.list_summaries はプロセス内の全 out_dir 分の実行をメモリ上に
+    持ち続け、domain 指定が無いとテナントを跨いで混ざる（実測で確認済み）。
+    ここは domain を横断して集めるための呼び出しなので、その混入を避け、
+    必ず out_dir 配下のディスク保存分だけを読む run_store を直接使う。
+    """
+    try:
+        from web.services.orchestration import run_store as _orch_run_store
+
+        return {
+            r.domain
+            for r in _orch_run_store.list_runs(out_dir, limit=200)
+            if r.domain and str(r.status or "") in _ACTIVE_RUN_STATES
+        }
+    except Exception:  # noqa: BLE001 - 一覧の失敗でサイト一覧全体を落とさない
+        logger.warning("healing: 指揮の一覧を読めませんでした", exc_info=True)
+        return set()
+
+
 @bp.get("/api/healing/sites")
 def api_list_sites():
-    """01 が解析したサイトを列挙する（接続先の「サイト」欄の候補）。
+    """サイトを列挙する（接続先の「サイト」欄の候補）。
 
-    手入力させると綴りのずれで毎日の見張りも画面仕様との照合も静かに効かなく
-    なるため、実在するものだけを選ばせる。選ぶだけの一覧なので閲覧権限で返す。
+    01 が解析済みのサイトに加え、接続先（project_store）と指揮（conductor）が
+    持つ domain も合わせて返す。observed=False は「まだ 01 を通していない」印で、
+    綴りのずれを防ぐため一覧からしか選べない方針は変えない（手入力はさせない）。
     """
     try:
         out_dir = _out()
-        sites: list[dict[str, Any]] = []
+        sites: dict[str, dict[str, Any]] = {}
         if out_dir.is_dir():
             for entry in sorted(out_dir.iterdir(), key=lambda p: p.name):
                 if not entry.is_dir():
@@ -660,8 +702,12 @@ def api_list_sites():
                     continue
                 site = _site_dict(entry)
                 if site is not None:
-                    sites.append(site)
-        return {"sites": sites}
+                    site["observed"] = True
+                    sites[site["domain"]] = site
+        for domain in _connected_domains(out_dir) | _conductor_domains(out_dir):
+            if domain not in sites:
+                sites[domain] = _unobserved_site(domain)
+        return {"sites": sorted(sites.values(), key=lambda s: str(s.get("domain") or ""))}
     except HealingError as exc:
         return _error_response(exc)
     except Exception:

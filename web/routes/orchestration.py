@@ -21,7 +21,7 @@ from flask import Blueprint, g, render_template, request
 from web.audit_context import record_admin_event
 from web.auth import require_admin
 from web.config import OUTPUT_DIR
-from web.services.orchestration import conductor, goals, run_store
+from web.services.orchestration import conductor, goals, onboarding, run_store
 from web.tenancy import scoped_output_dir
 from web.validation import _domain_of
 
@@ -34,7 +34,9 @@ INSTANCE_DIR = Path("instance")
 
 #: run_id は指揮者が作る形だけを受け付ける（ファイル名に直結するため）。
 _ID_RE = re.compile(r"^cond-[0-9a-f]{12}$")
-_DOMAIN_RE = re.compile(r"^[0-9a-zA-Z][0-9a-zA-Z._-]{0,252}$")
+#: ポート付き（localhost:3000 等）も受ける。開発中のサイトを保守下に置くのは
+#: 「初めてのサイト」の主戦場で、ここで弾くと API から一切 onboard できない。
+_DOMAIN_RE = re.compile(r"^[0-9a-zA-Z][0-9a-zA-Z._-]{0,252}(?::\d{1,5})?$")
 _PROJECT_ID_RE = re.compile(r"^[0-9a-zA-Z_-]{1,64}$")
 
 _BUSY = "このサイトの指揮はまだ終わっていません"
@@ -42,6 +44,8 @@ _BUSY = "このサイトの指揮はまだ終わっていません"
 #: 段へ渡す params で受け付けるキーと境界。それ以外のキーは黙って捨てる。
 _URL_RE = re.compile(r"^https?://", re.IGNORECASE)
 _MAX_URL_LEN = 2000
+_MAX_REPO_LEN = 1000
+_MAX_VERIFY_LEN = 500
 
 
 def _out() -> Path:
@@ -271,18 +275,74 @@ def api_start_run():
     domain = str(data.get("domain") or "").strip()
     goal = str(data.get("goal") or "").strip()
     project_id = str(data.get("project_id") or "").strip()
-    if not _DOMAIN_RE.match(domain):
-        return {"error": "サイトの指定が不正です。"}, 400
     if goal not in goals.AVAILABLE_GOALS:
         return {"error": "目標を指定してください（daily か onboard）"}, 400
     if project_id and not _PROJECT_ID_RE.match(project_id):
         return {"error": "project_id が不正です。"}, 400
-    params, params_error = _clean_params(data, domain)
-    if params_error:
-        return {"error": params_error}, 400
+
+    raw_params = data.get("params")
+    raw_params = raw_params if isinstance(raw_params, Mapping) else {}
+    rounds_value = data.get("rounds", raw_params.get("rounds"))
+    rounds = 1
+    if rounds_value is not None:
+        rounds = _strict_int(rounds_value)
+        if rounds is None or not (1 <= rounds <= 5):
+            return {"error": "rounds は 1〜5 の整数で指定してください。"}, 400
+
+    out_dir = _out()
+    created_project = False
+
+    # 初めてのサイトは url から接続先を用意する。順序が肝心——検証を全部
+    # 済ませてから作る。作ってから検証すると、400 を返したあとにも接続先
+    # （GitHub なら clone 済みのコード）だけが残り、サイト一覧に「選ぶと必ず
+    # エラーになる項目」として並び続ける。
+    repo = str(data.get("repo") or "")
+    verify_command = str(data.get("verify_command") or "")
+    params: dict[str, Any] | None = None
+    if goal == "onboard" and (not domain or repo or verify_command):
+        url = str(raw_params.get("url") or "").strip()
+        if len(repo) > _MAX_REPO_LEN:
+            return {"error": f"コードの場所は {_MAX_REPO_LEN} 字以内で指定してください。"}, 400
+        if len(verify_command) > _MAX_VERIFY_LEN:
+            return {"error": f"verify_command は {_MAX_VERIFY_LEN} 字以内で指定してください。"}, 400
+        if not url or not _URL_RE.match(url) or len(url) > _MAX_URL_LEN:
+            return {"error": "url は http:// か https:// で始まる 2000 字以内で指定してください。"}, 400
+        derived = _domain_of(url)
+        if not derived or not _DOMAIN_RE.match(derived):
+            return {"error": "サイトの指定が不正です。"}, 400
+        if domain and domain != derived:
+            return {"error": "URL のサイトと domain が一致しません。"}, 400
+        if conductor.has_active_run(out_dir, derived):
+            return {"error": _BUSY}, 409
+        # depth / max_pages の検査も接続先を作る前に済ませる（再検証で判明）
+        params, params_error = _clean_params(data, derived)
+        if params_error:
+            return {"error": params_error}, 400
+        try:
+            plan = onboarding.prepare(
+                out_dir, url=url, repo=repo, verify_command=verify_command,
+                rounds=rounds, actor=_actor(),
+            )
+        except ValueError as exc:
+            return _error_response(exc)
+        except OSError:  # 長すぎる名前など OS 由来の失敗。500 にしない
+            logger.warning("orchestration: 接続先を用意できませんでした", exc_info=True)
+            return {"error": "コードの場所を確認できませんでした。指定を見直してください。"}, 400
+        domain = plan.domain
+        project_id = project_id or plan.project_id
+        created_project = plan.created_project
+
+    if not _DOMAIN_RE.match(domain):
+        return {"error": "サイトの指定が不正です。"}, 400
+    if params is None:
+        params, params_error = _clean_params(data, domain)
+        if params_error:
+            return {"error": params_error}, 400
+    params["rounds"] = rounds
+
     try:
         run = conductor.start_if_idle(
-            out_dir=_out(), domain=domain, goal=goal,
+            out_dir=out_dir, domain=domain, goal=goal,
             project_id=project_id, actor=_actor(), params=params,
         )
     except ValueError as exc:  # 未知・未対応の目標。理由をそのまま返す
@@ -296,7 +356,11 @@ def api_start_run():
         "orchestration.run.start",
         {"run_id": run.run_id, "domain": domain, "goal": goal, "project_id": project_id},
     )
-    return {"run": run_store.run_to_dict(run)}, 202
+    return {
+        "run": run_store.run_to_dict(run),
+        "project_id": project_id,
+        "created_project": created_project,
+    }, 202
 
 
 @bp.get("/api/orchestration/runs/<run_id>")

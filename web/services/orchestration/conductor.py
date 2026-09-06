@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import atexit
 import logging
+import re
 import threading
 import time
 import uuid
@@ -40,6 +41,22 @@ ORPHAN_CANDIDATE_STATUSES = frozenset({"queued", "running"})
 ORPHAN_RUN_ERROR = "指揮の途中でプロセスが止まりました（サーバの再起動など）。もう一度実行してください"
 
 _CANCEL_NOTE = "利用者の指示で中止しました"
+
+#: 周回つきの表示名（goals.step_names_and_labels が付ける）から周回番号を拾う。
+_ROUND_RE = re.compile(r"（(\d+)\s*周目）")
+
+
+def _round_no(record: StepRecord) -> str:
+    m = _ROUND_RE.search(record.label or "")
+    return m.group(1) if m else "?"
+
+
+def _rounds_from(params: Mapping[str, Any] | None) -> int:
+    try:
+        rounds = int(dict(params or {}).get("rounds", 1))
+    except (TypeError, ValueError):
+        rounds = 1
+    return max(1, min(5, rounds))
 
 _RUNS: dict[str, ConductorRun] = {}
 _RUNS_LOCK = threading.RLock()
@@ -77,9 +94,23 @@ def _finish(out_dir: Path, run: ConductorRun, status: str, *, error: str = "",
             human_action: str = "", note: str = "") -> None:
     run.status = status
     run.error = error or run.error
-    run.human_action = human_action
+    # 人待ちの案内を新しい結末で消さない。1 周目に出た「報告書を確認して…」は
+    # 2 周目が失敗しても有効な依頼で、画面は run 側を見出しにする。
+    run.human_action = human_action or run.human_action
     run.finished_at = run.finished_at or _now_iso()
     _save(out_dir, run, note=note)
+
+
+def _skip_remaining(run: ConductorRun, summary: str) -> None:
+    """走らせないと決めた残りの段を queued のままにしない。
+
+    queued は「これから走る」の意味なので、終わった実行の下に残すと画面が
+    「終わったのに待機中の段が 4 つある」と読める。
+    """
+    for record in list(run.steps or [])[int(run.step_index or 0) + 1:]:
+        if record.status == "queued":
+            record.status = "skipped"
+            record.summary = summary
 
 
 def _cancelled(run_id: str) -> bool:
@@ -120,11 +151,12 @@ def start(*, out_dir: Path, domain: str, goal: str, project_id: str = "",
     site = str(domain or "").strip()
     if not site:
         raise ValueError("サイトを指定してください")
-    agents = [registry.get_agent(name) for name in goals.steps_for(goal)]
+    rounds = _rounds_from(params)
+    pairs = goals.step_names_and_labels(goal, rounds)
     run = ConductorRun(
         run_id=f"cond-{uuid.uuid4().hex[:12]}", domain=site, goal=str(goal).strip(),
         project_id=str(project_id or "").strip(), status="queued",
-        steps=[StepRecord(name=a.name, label=a.label) for a in agents],
+        steps=[StepRecord(name=name, label=label) for name, label in pairs],
         started_at=_now_iso(), actor=actor, params=dict(params or {}),
     )
     with _RUNS_LOCK:
@@ -138,18 +170,48 @@ def start(*, out_dir: Path, domain: str, goal: str, project_id: str = "",
 
 
 def _loop(out_dir: Path, run: ConductorRun) -> None:
-    """段を順に進める。どの経路で抜けても必ず保存する。"""
+    """段を順に進める。どの経路で抜けても必ず保存する。
+
+    healing 段だけは周回をまたいで続けられる（goals._REPEAT_TAIL の対象）。
+    続けるか打ち切るかは status ではなく StepResult.reason で決める——
+    skipped は「失敗が無い（no_defects）」と「前の実行がまだ動いている（busy）」で
+    意味が正反対だからである。waiting_human は残りの周回があれば続けるが、
+    「報告書があるので何も起きない（already_reported）」ときは続けない。
+    どれも「周回が無ければ従来どおり」（最後の段なら通常どおり終端する）。
+    """
     try:
         run.status = "running"
         _save(out_dir, run, note="指揮を始めます")
+        pending_human_action = ""
         for index, record in enumerate(run.steps):
             run.step_index = index
             if _cancelled(run.run_id):
                 _finish(out_dir, run, "cancelled", note=_CANCEL_NOTE)
                 return
-            if not _run_step(out_dir, run, record):
+            outcome = _run_step(out_dir, run, record)
+            if outcome == "stop":
+                return  # _run_step が既に _finish 済み
+            if outcome == "waiting_continue":
+                pending_human_action = record.human_action
+                # 持ち越している間も「人の番であること」を実行の先頭に出す。
+                # 段の記録だけに書くと、一覧・詳細（run を見る）から消える。
+                run.human_action = pending_human_action
+                _save(out_dir, run)
+                continue
+            if outcome == "early_finish":
+                note = f"失敗が無くなったので {_round_no(record)} 周目で終了"
+                _skip_remaining(run, "失敗が無くなったため実行しませんでした")
+                if pending_human_action:
+                    _finish(out_dir, run, "waiting_human",
+                           human_action=pending_human_action, note=note)
+                else:
+                    _finish(out_dir, run, "succeeded", note=note)
                 return
-        _finish(out_dir, run, "succeeded", note="すべての段が終わりました")
+        if pending_human_action:
+            _finish(out_dir, run, "waiting_human", human_action=pending_human_action,
+                    note="人待ちが残っています")
+        else:
+            _finish(out_dir, run, "succeeded", note="すべての段が終わりました")
     except Exception as exc:  # noqa: BLE001 - 例外で実行を宙づりにしない
         logger.exception("指揮 %s が異常終了しました", run.run_id)
         _finish(out_dir, run, "failed", error=f"指揮の途中で問題が起きました: {exc}",
@@ -164,8 +226,16 @@ def _loop(out_dir: Path, run: ConductorRun) -> None:
             logger.warning("指揮 %s の保存に失敗しました", run.run_id, exc_info=True)
 
 
-def _run_step(out_dir: Path, run: ConductorRun, record: StepRecord) -> bool:
-    """1 段を進める。次の段へ進んでよければ True。"""
+def _run_step(out_dir: Path, run: ConductorRun, record: StepRecord) -> str:
+    """1 段を進める。戻り値は _loop への進行指示。
+
+    "continue" 次の段へ進んでよい／"stop" 既に _finish 済みで抜けてよい／
+    "waiting_continue" healing が人待ちだが周回が残っているので続ける／
+    "early_finish" healing に失敗が無く、周回を打ち切ってよい。
+
+    早期終了は StepResult.reason == "no_defects" のときだけ。理由を見ずに
+    skipped を畳むと、何も走っていない実行を「失敗が無くなった」と報告する。
+    """
     agent = registry.get_agent(record.name)
     ctx = Context(
         out_dir=out_dir, domain=run.domain, project_id=run.project_id, params=run.params,
@@ -190,7 +260,8 @@ def _run_step(out_dir: Path, run: ConductorRun, record: StepRecord) -> bool:
     if result.status != "running":
         return _settle(out_dir, run, record, result.status, label=agent.label,
                        summary=result.summary, error=result.error,
-                       human_action=result.human_action)
+                       human_action=result.human_action,
+                       reason=getattr(result, "reason", ""))
     status = _await_step(out_dir, run, record, agent, ctx)
     record.artifacts.update({str(k): str(v) for k, v in dict(status.artifacts).items()})
     return _settle(out_dir, run, record, status.state, label=agent.label,
@@ -226,24 +297,48 @@ def _await_step(out_dir: Path, run: ConductorRun, record: StepRecord,
 
 def _settle(out_dir: Path, run: ConductorRun, record: StepRecord, status: str, *,
             label: str = "", summary: str = "", error: str = "",
-            human_action: str = "") -> bool:
-    """段の結果を書き、実行を続けてよいかを返す。"""
+            human_action: str = "", reason: str = "") -> str:
+    """段の結果を書き、_loop への進行指示（_run_step の docstring 参照）を返す。"""
     record.status = status
     record.summary = summary
     record.error = error
     record.human_action = human_action
     record.finished_at = _now_iso()
     note = f"{label}: {summary or error or status}"
+    has_more = run.step_index < len(run.steps) - 1
+    is_healing = record.name == "healing"
+
+    if (status == "waiting_human" and is_healing and has_more
+            and reason != "already_reported"):
+        # already_reported は「残りを回しても同じ報告書が出るだけ」なので
+        # 持ち越さずここで止める。人が判断するまで新しい事実は増えない。
+        _save(out_dir, run, note=note)
+        return "waiting_continue"
+    if status == "skipped" and is_healing:
+        # skipped は理由で意味が正反対になる。「失敗が無い」だけが早期終了に
+        # 値し、「前の実行が動いている」は何も走っていないので成功ではない。
+        if reason == "busy":
+            _skip_remaining(run, "前の修正が終わっていないため実行しませんでした")
+            _finish(out_dir, run, "skipped",
+                    note=f"{note}／前の修正の完了を待つため、この指揮は行いませんでした")
+            return "stop"
+        if reason == "no_defects" and has_more:
+            _save(out_dir, run, note=note)
+            return "early_finish"
     if status in ("succeeded", "skipped"):
         _save(out_dir, run, note=note)
-        return True
+        return "continue"
     if status == "waiting_human":
+        if reason == "already_reported":
+            # 残りの周回を回しても同じ報告書が出るだけ。走らないと決めた段を
+            # queued（これから走る）のまま残さない。
+            _skip_remaining(run, "報告書の判断を待つため実行しませんでした")
         _finish(out_dir, run, "waiting_human", human_action=human_action, note=note)
     elif status == "cancelled":
         _finish(out_dir, run, "cancelled", note=note)
     else:
         _finish(out_dir, run, "failed", error=error or summary or "段が失敗しました", note=note)
-    return False
+    return "stop"
 
 
 def get(out_dir: Path, run_id: str) -> ConductorRun | None:

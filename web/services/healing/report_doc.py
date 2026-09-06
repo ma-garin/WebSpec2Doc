@@ -13,11 +13,13 @@ import json
 import logging
 import re
 import secrets
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass, replace
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any
 
+from web.services.healing import spec_match
 from web.services.healing.types import (
     Defect,
     FixProposal,
@@ -276,6 +278,32 @@ def _now() -> str:
 # ─────────────────────────── 組み立て ───────────────────────────
 
 
+def _spec_match_text(
+    defect: Defect,
+    proposal: FixProposal | None,
+    project: HealingProject,
+    out_dir: Path | None,
+) -> str:
+    """「画面仕様との照合」欄の 1 行。
+
+    照合できなかったときは「未照合」。照合して不一致が無かったときは
+    対象件数を出す。この 2 つを同じ文言にすると、確認していないことが
+    確認済みに見える。
+    """
+    if proposal is None or out_dir is None or not defect.screen_id:
+        return "未照合"
+    domain = str(getattr(project, "domain", "") or "")
+    if not domain:
+        return "未照合"
+    try:
+        spec = spec_match.load_screen_spec(out_dir, domain, defect.screen_id)
+        signals = spec_match.assess_spec(proposal, spec)
+        return spec_match.summarize(proposal, spec, signals)
+    except Exception:  # noqa: BLE001 - 照合の失敗で報告書を落とさない
+        logger.warning("画面仕様との照合に失敗しました", exc_info=True)
+        return "未照合"
+
+
 def build_maintenance_report(
     *,
     run: HealingRun,
@@ -283,6 +311,7 @@ def build_maintenance_report(
     defect: Defect,
     proposal: FixProposal | None,
     project: HealingProject,
+    out_dir: Path | None = None,
 ) -> MaintenanceReport:
     """1 欠陥ぶんの報告書を組み立てる。直せなかった場合も報告書は作る。"""
     verify_before, _ = _verify_text(getattr(iteration, "verify_before", None))
@@ -327,7 +356,7 @@ def build_maintenance_report(
         verify_before=verify_before,
         verify_after=verify_after,
         verify_after_ok=after_ok,
-        spec_match="未照合",
+        spec_match=_spec_match_text(defect, proposal, project, out_dir),
         attention=tuple(dict(r) for r in (proposal.risks if proposal else ())),
         approvals=(
             {

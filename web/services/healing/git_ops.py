@@ -38,6 +38,11 @@ class GitResult:
     exit_code: int
 
 
+def _strip_ansi(text: str) -> str:
+    """git の色付き出力から装飾を落とす。画面と PR 本文にそのまま出るため。"""
+    return re.sub(r"\x1b\[[0-9;]*m", "", text or "")
+
+
 def run_git(repo: Path, args: Sequence[str], timeout: int = 120) -> GitResult:
     """`git -C <repo> <args>` を実行する。
 
@@ -53,7 +58,7 @@ def run_git(repo: Path, args: Sequence[str], timeout: int = 120) -> GitResult:
         # ANSI エスケープシーケンスをエラーメッセージから除去する。
         # 対象リポジトリの pre-commit フックが出力する色付けやフォーマット指示を
         # 画面表示用の結果から削る（worktree 環境での失敗メッセージをクリーンにするため）。
-        clean_stderr = re.sub(r"\x1b\[[0-9;]*m", "", proc.stderr)
+        clean_stderr = _strip_ansi(proc.stderr)
         return GitResult(
             ok=proc.returncode == 0,
             stdout=proc.stdout,
@@ -376,3 +381,55 @@ def branch_is_merged_into(repo: Path, branch: str, target: str) -> bool:
     """
     result = run_git(repo, ["merge-base", "--is-ancestor", branch, target], timeout=15)
     return result.ok
+
+
+def apply_patch(workdir: Path, patch_text: str) -> tuple[bool, str]:
+    """unified diff を worktree に当てる。成功したかと、失敗理由を返す。
+
+    当て方を 3 段で試す。モデルが出す差分は index 行を持たず、行番号も
+    1〜2 行ずれることが多い。1 つの当て方だけだと、直っている修正を
+    「当たらない」で捨てることになる。
+
+    1. そのまま（最も厳密。当たればこれが一番安全）
+    2. --3way（index 行を持つ差分向け。blob が無ければ git 自身が諦める）
+    3. -C1（文脈の一致を 1 行に緩める。行番号のずれを吸収する）
+
+    git apply は当たらなければ何も書かないので、失敗しても木は汚れない。
+    ただし --3way だけは競合マーカーを残すことがあるため、最後に置かず
+    2 番目に置き、その後に必ず -C1 を試す。
+    """
+    text = patch_text if patch_text.endswith("\n") else patch_text + "\n"
+    attempts = (
+        ["--whitespace=nowarn"],
+        ["--3way", "--whitespace=nowarn"],
+        ["-C1", "--whitespace=nowarn"],
+    )
+    first_detail = ""
+    for extra in attempts:
+        try:
+            result = subprocess.run(  # noqa: S603 - 引数は固定、入力は stdin
+                ["git", "apply", *extra, "-"],
+                cwd=str(workdir),
+                input=text,
+                capture_output=True,
+                text=True,
+                timeout=60,
+                shell=False,
+            )
+        except (OSError, subprocess.SubprocessError) as exc:
+            return False, f"git apply を実行できませんでした: {exc}"
+        if result.returncode == 0:
+            return True, ""
+        detail = _strip_ansi((result.stderr or result.stdout or "").strip())
+        if not first_detail:
+            first_detail = detail
+    # 途中の --3way が競合マーカーを残していることがあるので、必ず戻す。
+    subprocess.run(  # noqa: S603 - 固定コマンド
+        ["git", "checkout", "--", "."],
+        cwd=str(workdir),
+        capture_output=True,
+        text=True,
+        timeout=30,
+        shell=False,
+    )
+    return False, first_detail[:500]

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>指揮 - WebSpec2Doc</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  {% set _ver = config.get('ASSET_VERSION', '1') %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app-components.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/ta2.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/orchestration-d.css') }}?v={{ _ver }}">
+</head>
+<body class="app-page" data-variant="d" data-site="{{ site or '' }}">
+<a href="#cd-body" class="skip-link">本文へスキップ</a>
+<div class="cd-shell">
+
+  {# ここは指揮（/orchestration）から辿る「サイト別の記録」。戻り先を必ず見せる。 #}
+  {% set topbar_crumb = '<a href="/systems">システム選択</a> › <a href="/orchestration">指揮</a> › 記録'|safe %}
+  {% set topbar_title = '記録' %}
+  {% include 'partials/topbar.html' %}
+
+  <div id="cd-error" class="cd-banner" role="alert" hidden></div>
+
+  <main class="cd-main">
+
+    <!-- 左: 保守しているサイト（要対応が上）-->
+    <section class="cd-card cd-sites">
+      {# 戻り導線は左上に 1 つだけ。折り返せるようにして 340px 幅を溢れさせない。 #}
+      <div class="cd-sites-head" style="flex-wrap:wrap">
+        <a class="cd-btn" href="/orchestration" style="flex-basis:100%">← 指揮に戻る</a>
+        <h2>保守しているサイト</h2>
+        <span class="cd-count" id="cd-count">0 件</span>
+        <button type="button" class="cd-add" id="cd-add">保守下に置く</button>
+      </div>
+      <div class="cd-list" id="cd-list"></div>
+    </section>
+
+    <!-- 右: 選んだサイトの日々の記録 -->
+    <section class="cd-card cd-log">
+      <div class="cd-log-head">
+        <div style="min-width:0">
+          <h2 id="cd-log-title">記録</h2>
+          <p class="cd-now" id="cd-now"></p>
+        </div>
+        <span class="cd-cta-slot" id="cd-cta-slot"></span>
+      </div>
+
+      <div class="cd-days">
+        <div class="cd-strip" id="cd-strip" aria-label="過去 14 日の記録"></div>
+        <div class="cd-legend">
+          <span><i></i>異常なし</span>
+          <span><i class="ng"></i>壊れを見つけて直した</span>
+          <span><i class="wt"></i>あなたの判断待ち</span>
+          <span><i class="no"></i>実行なし</span>
+        </div>
+      </div>
+
+      <div class="cd-body" id="cd-body"></div>
+    </section>
+
+  </main>
+</div>
+
+<dialog class="cd-dialog" id="cd-dialog" aria-label="保守下に置く">
+  <form method="dialog" id="cd-add-form">
+    <h2>保守下に置く</h2>
+    <label for="cd-add-site">サイト
+      <select id="cd-add-site"></select>
+    </label>
+    <label for="cd-add-url">入り口のページ
+      <input type="url" id="cd-add-url" placeholder="http://example.jp/">
+    </label>
+    <div class="cd-dialog-acts">
+      <button type="button" class="cd-btn" id="cd-add-cancel">やめる</button>
+      <button type="submit" class="cd-btn is-key">はじめる</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="{{ url_for('static', filename='js/user-menu.js') }}?v={{ _ver }}"></script>
+<script src="{{ url_for('static', filename='js/orchestration-d.js') }}?v={{ _ver }}"></script>
+</body>
+</html>

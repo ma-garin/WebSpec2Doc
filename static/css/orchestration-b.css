@@ -1,0 +1,141 @@
+/* ── 指揮 案B：主役は「サイト一覧」 ─────────────────────────────
+   朝いちばんに開いて、担当する全サイトの状態が 1 表で分かる。
+   1 行 = 1 サイト。要対応が上。行をクリックすると 4 段が行の下に開く。
+   1 画面構造は ta2.css の型に合わせる（html,body{overflow:hidden} /
+   grid-template-rows / min-height:0 / 内側だけ overflow:auto）。
+   表は <table> を使わず grid で組む（行の下への展開を素直に書けるため）。
+   承認済みの案（static/mock/conductor-b.html）の <style> をそのまま移し、
+   JS が出す状態（読み込み中・空・通信失敗・追加フォーム）だけを足している。 */
+html, body { overflow: hidden; }
+.cb-shell { position: absolute; inset: 0; display: grid; grid-template-rows: auto 1fr; min-height: 0; }
+.cb-main {
+  min-height: 0; overflow: hidden; background: var(--color-bg);
+  display: grid; grid-template-rows: auto 1fr; gap: 14px; padding: 18px 28px 22px;
+}
+
+/* ── 見出し行：今日やることの件数と「保守下に置く」 ───────────── */
+.cb-head { display: flex; align-items: center; gap: 16px; }
+.cb-head h2 { margin: 0; font-size: 20px; font-weight: 700; color: var(--color-text); letter-spacing: .01em; }
+.cb-head p { margin: 0; font-size: 13px; color: var(--color-text-secondary); }
+.cb-head p b { color: var(--color-critical); font-weight: 700; }
+.cb-head .cb-add { margin-left: auto; }
+.cb-add {
+  display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 16px;
+  border: 0; border-radius: var(--radius-md); cursor: pointer;
+  background: var(--color-primary); color: var(--color-on-primary);
+  font-size: 13px; font-weight: 700; font-family: inherit; box-shadow: var(--shadow-sm);
+}
+.cb-add:disabled { opacity: .55; cursor: default; }
+
+/* ── 一覧本体 ─────────────────────────────────────────── */
+.cb-table {
+  min-height: 0; overflow: auto; background: var(--color-surface);
+  border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+}
+.cb-row {
+  display: grid; grid-template-columns: 300px 116px minmax(0, 1fr) 176px 132px;
+  align-items: center; gap: 18px; padding: 0 20px; min-height: 62px;
+  border-top: 1px solid var(--color-divider);
+}
+.cb-colhead {
+  position: sticky; top: 0; z-index: 1; min-height: 38px; border-top: 0;
+  background: var(--color-surface-2); border-bottom: 1px solid var(--color-border);
+  font-size: 11px; font-weight: 700; color: var(--color-text-secondary); letter-spacing: .04em;
+}
+.cb-row.cb-clickable { cursor: pointer; }
+.cb-row.cb-clickable:hover { background: var(--color-surface-3); }
+.cb-row.cb-clickable:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+.cb-row.cb-open { background: var(--color-high-bg); border-bottom: 0; }
+
+.cb-site { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.cb-caret { flex: none; width: 12px; color: var(--color-text-secondary); font-size: 13px; line-height: 1; }
+.cb-open .cb-caret { color: var(--color-high); }
+.cb-site-name { min-width: 0; }
+.cb-site-name span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cb-site-name .cb-t { font-size: 14px; font-weight: 700; color: var(--color-text); }
+.cb-site-name .cb-u { font-size: 11px; color: var(--color-text-disabled); font-family: var(--font-mono); margin-top: 1px; }
+
+.cb-state {
+  display: inline-flex; align-items: center; gap: 6px; justify-self: start;
+  height: 24px; padding: 0 11px; border-radius: var(--radius-full);
+  font-size: 12px; font-weight: 700; border: 1px solid transparent;
+}
+.cb-state::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.cb-s-act { color: var(--color-critical); background: var(--color-critical-bg); border-color: var(--color-critical-border); }
+.cb-s-wait { color: #B45309; background: var(--color-high-bg); border-color: var(--color-high-border); }
+.cb-s-ok { color: var(--color-low); background: var(--color-low-bg); border-color: var(--color-low-border); }
+.cb-s-idle { color: var(--color-text-secondary); background: var(--color-surface-2); border-color: var(--color-border); }
+
+.cb-row p {
+  margin: 0; min-width: 0; font-size: 13px; line-height: 1.45; color: var(--color-text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.cb-row p.cb-quiet { color: var(--color-text-disabled); }
+
+.cb-do {
+  height: 32px; padding: 0 14px; border-radius: var(--radius-md); cursor: pointer;
+  font-size: 12.5px; font-weight: 700; font-family: inherit; justify-self: start;
+  border: 1px solid var(--color-border-strong); background: var(--color-surface); color: var(--color-text);
+  text-decoration: none; display: inline-flex; align-items: center;
+}
+.cb-do.cb-do-act { border-color: var(--color-critical); background: var(--color-critical); color: #fff; }
+.cb-do.cb-do-wait { border-color: #B45309; background: #B45309; color: #fff; }
+.cb-do:disabled { opacity: .55; cursor: default; }
+.cb-when { font-size: 12px; color: var(--color-text-secondary); justify-self: end; text-align: right; }
+.cb-when i { font-style: normal; display: block; font-size: 10.5px; color: var(--color-text-disabled); }
+
+/* ── 展開：1 本の線と 4 つの点 ──────────────────────────── */
+.cb-panel {
+  background: var(--color-high-bg); border-bottom: 1px solid var(--color-high-border);
+  padding: 4px 20px 20px 42px;
+}
+.cb-track { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); max-width: 880px; margin: 10px 0 14px; }
+.cb-track::before {
+  content: ""; position: absolute; left: 12.5%; right: 12.5%; top: 7px; height: 2px;
+  background: var(--color-high-border);
+}
+.cb-dot { position: relative; text-align: center; font-size: 12px; color: var(--color-text-disabled); }
+.cb-dot::before {
+  content: ""; display: block; width: 16px; height: 16px; margin: 0 auto 8px; border-radius: 50%;
+  background: var(--color-surface); border: 2px solid var(--color-high-border);
+}
+.cb-dot.is-done { color: var(--color-text-secondary); }
+.cb-dot.is-done::before { background: var(--color-low); border-color: var(--color-low); }
+.cb-dot.is-now { color: #B45309; font-weight: 700; }
+.cb-dot.is-now::before { background: #B45309; border-color: #B45309; box-shadow: 0 0 0 5px rgba(180,83,9,.16); }
+
+.cb-panel-foot { display: flex; align-items: center; gap: 16px; }
+.cb-panel p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--color-text); }
+.cb-panel .cb-do { flex: none; }
+.cb-panel a { font-size: 12px; color: var(--color-primary-dark); }
+
+/* ── JS が出す状態：通信失敗・読み込み中・空・追加フォーム ───────── */
+.cb-alert {
+  margin: 0; padding: 10px 14px; border-radius: var(--radius-md);
+  background: var(--color-critical-bg); border: 1px solid var(--color-critical-border);
+  color: var(--color-critical); font-size: 13px; font-weight: 700;
+}
+.cb-alert[hidden] { display: none; }
+
+.cb-blank { padding: 48px 24px; text-align: center; }
+.cb-blank p { margin: 0 0 16px; font-size: 13px; color: var(--color-text-secondary); }
+
+.cb-form {
+  display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap;
+  padding: 14px 16px; border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+.cb-form[hidden] { display: none; }
+.cb-field { display: grid; gap: 4px; min-width: 0; }
+.cb-field span { font-size: 11px; font-weight: 700; color: var(--color-text-secondary); }
+.cb-field select, .cb-field input {
+  height: 34px; padding: 0 10px; font-size: 13px; font-family: inherit;
+  border: 1px solid var(--color-border-strong); border-radius: var(--radius-md);
+  background: var(--color-surface); color: var(--color-text);
+}
+.cb-field input { min-width: 300px; }
+.cb-form .cb-cancel {
+  height: 34px; padding: 0 12px; border-radius: var(--radius-md); cursor: pointer;
+  border: 1px solid var(--color-border-strong); background: var(--color-surface);
+  color: var(--color-text-secondary); font-size: 12.5px; font-family: inherit;
+}

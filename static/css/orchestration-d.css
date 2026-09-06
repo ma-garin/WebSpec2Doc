@@ -1,0 +1,131 @@
+/* 指揮（案D: 日々の記録が主役）。
+   主役は「日々の記録（証跡）」。左=サイト / 右=そのサイトの 14 日。
+   1 画面構造は ta2.css の型（html,body{overflow:hidden} / grid-template-rows /
+   min-height:0 / 内側だけ overflow:auto）に合わせる。 */
+html, body { overflow: hidden; }
+.cd-shell { position: absolute; inset: 0; display: grid; grid-template-rows: auto auto 1fr; min-height: 0; }
+.cd-main {
+  min-height: 0; overflow: hidden; padding: 14px 20px 16px; gap: 14px;
+  display: grid; grid-template-columns: 340px minmax(0, 1fr);
+}
+.cd-card { background: var(--sf); border: 1px solid var(--line); border-radius: 10px; min-height: 0; }
+
+/* 通信に失敗したときの 1 行（上部）*/
+.cd-banner {
+  margin: 10px 20px 0; padding: 9px 12px; border-radius: 8px;
+  border: 1px solid #FCA5A5; background: #FEF2F2; color: #991B1B;
+  font-size: 12px; font-weight: 600;
+}
+
+/* ── 左: サイトの一覧（要対応が上）────────────────────────── */
+.cd-sites { display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0; }
+.cd-sites-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.cd-sites-head h2 { margin: 0; font-size: 13px; font-weight: 700; color: var(--tx); }
+.cd-sites-head .cd-count { font-size: 11px; color: var(--tx3); }
+.cd-list { min-height: 0; overflow: auto; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+.cd-site {
+  display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; align-items: center; gap: 9px;
+  padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--bg); text-decoration: none; color: inherit;
+  width: 100%; text-align: left; font: inherit; cursor: pointer;
+}
+.cd-site:focus-visible { outline: 2px solid var(--ac); outline-offset: 1px; }
+.cd-site .cd-flag { width: 8px; height: 26px; border-radius: 4px; background: #16A34A; }
+.cd-site .cd-nm { display: block; font-size: 12.5px; font-weight: 600; color: var(--tx); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cd-site .cd-sub { display: block; font-size: 10.5px; color: var(--tx3); margin-top: 2px; }
+.cd-tag { font-size: 10px; font-weight: 700; border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+.cd-tag.is-act { color: #fff; background: #B91C1C; }
+.cd-tag.is-wait { color: #fff; background: #B45309; }
+.cd-tag.is-ok { color: var(--tx3); background: var(--line); }
+.cd-tag.is-off { color: var(--tx3); background: var(--bg); border: 1px solid var(--line2); }
+.cd-site.is-act .cd-flag { background: #DC2626; }
+.cd-site.is-wait .cd-flag { background: #D97706; }
+.cd-site.is-off .cd-flag { background: var(--line2); }
+.cd-site.is-on { border-color: var(--ac); background: var(--ac-bg); box-shadow: inset 3px 0 0 var(--ac); }
+.cd-add {
+  height: 28px; padding: 0 11px; margin-left: auto; border: 1px solid var(--ac);
+  background: var(--ac); color: #fff; border-radius: 7px; font-size: 11.5px; font-weight: 700; cursor: pointer;
+}
+.cd-empty { margin: 10px 4px; font-size: 12px; color: var(--tx3); line-height: 1.7; }
+
+/* ── 右: そのサイトの日々の記録 ─────────────────────────── */
+.cd-log { display: grid; grid-template-rows: auto auto minmax(0, 1fr); min-height: 0; }
+.cd-log-head { display: flex; align-items: center; gap: 14px; padding: 11px 14px; border-bottom: 1px solid var(--line); }
+.cd-log-head h2 { margin: 0; font-size: 14px; font-weight: 700; color: var(--tx); }
+.cd-now { margin: 3px 0 0; font-size: 12px; color: var(--tx2); }
+.cd-now b { color: #B45309; }
+.cd-cta {
+  margin-left: auto; display: inline-flex; align-items: center; height: 34px; padding: 0 16px;
+  border-radius: 8px; background: var(--ac); color: #fff; font-size: 12.5px; font-weight: 700;
+  text-decoration: none; white-space: nowrap; border: 1px solid var(--ac); cursor: pointer; font-family: inherit;
+}
+.cd-cta.is-sub { background: var(--sf); color: var(--tx); border-color: var(--line2); }
+.cd-cta:focus-visible { outline: 2px solid var(--tx); outline-offset: 2px; }
+
+/* 14 日の点 */
+.cd-days { padding: 12px 14px 10px; border-bottom: 1px solid var(--line); }
+.cd-strip { display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); gap: 6px; }
+.cd-day {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  background: none; border: 0; padding: 0; font: inherit; cursor: pointer;
+}
+.cd-day:focus-visible { outline: 2px solid var(--ac); outline-offset: 2px; border-radius: 8px; }
+.cd-day .cd-d { font-size: 10px; color: var(--tx3); }
+.cd-day .cd-dot { width: 100%; height: 34px; border-radius: 7px; background: #16A34A; }
+.cd-day.is-ng .cd-dot { background: #DC2626; }
+.cd-day.is-none .cd-dot { background: var(--line); }
+.cd-day.is-wait .cd-dot { background: #D97706; }
+.cd-day.is-on { position: relative; }
+.cd-day.is-on .cd-dot { outline: 2px solid var(--tx); outline-offset: 2px; }
+.cd-day.is-on .cd-d { color: var(--tx); font-weight: 700; }
+.cd-legend { display: flex; gap: 14px; margin-top: 9px; font-size: 10.5px; color: var(--tx3); }
+.cd-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.cd-legend i { width: 9px; height: 9px; border-radius: 3px; background: #16A34A; }
+.cd-legend i.ng { background: #DC2626; } .cd-legend i.no { background: var(--line2); } .cd-legend i.wt { background: #D97706; }
+
+/* 選んだ日の中身 */
+.cd-body { min-height: 0; overflow: auto; padding: 12px 14px 14px; }
+.cd-sel { border: 1px solid var(--line); border-left: 3px solid #D97706; border-radius: 9px; padding: 11px 13px; background: var(--bg); }
+.cd-sel.is-ok { border-left-color: #16A34A; }
+.cd-sel.is-ng { border-left-color: #DC2626; }
+.cd-sel h3 { margin: 0; font-size: 12.5px; font-weight: 700; color: var(--tx); }
+.cd-line { margin: 6px 0 0; font-size: 12.5px; color: var(--tx); line-height: 1.6; }
+.cd-line em { font-style: normal; color: #B91C1C; font-weight: 700; }
+.cd-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 10px 0 0; padding: 0; list-style: none; }
+.cd-steps li {
+  font-size: 11px; color: var(--tx2); background: var(--sf); border: 1px solid var(--line);
+  border-radius: 7px; padding: 6px 9px;
+}
+.cd-steps li.done { color: var(--tx3); }
+.cd-steps li.done::before { content: "✓ "; color: #16A34A; font-weight: 700; }
+.cd-steps li.now { border-color: #D97706; background: #FEF6E7; color: #92400E; font-weight: 700; }
+.cd-steps li.now::before { content: "● "; }
+.cd-acts { display: flex; gap: 8px; margin-top: 11px; }
+.cd-btn {
+  display: inline-flex; align-items: center; height: 31px; padding: 0 13px; border-radius: 7px;
+  border: 1px solid var(--line2); background: var(--sf); color: var(--tx);
+  font-size: 12px; font-weight: 600; text-decoration: none; cursor: pointer; font-family: inherit;
+}
+.cd-btn.is-key { border-color: #B45309; background: #B45309; color: #fff; }
+.cd-past { margin: 14px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.cd-past li {
+  font-size: 12px; color: var(--tx2); border: 1px solid var(--line); border-left: 3px solid #DC2626;
+  border-radius: 8px; padding: 8px 11px; background: var(--sf);
+}
+.cd-past li b { color: var(--tx); font-weight: 700; }
+.cd-past li.ok { border-left-color: #16A34A; color: var(--tx3); }
+.cd-foot { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+.cd-foot p { margin: 0; font-size: 11.5px; color: var(--tx3); }
+
+/* 保守下に置く（小さな入力） */
+.cd-dialog { border: 1px solid var(--line); border-radius: 10px; padding: 0; background: var(--sf); color: var(--tx); width: 380px; max-width: 92vw; }
+.cd-dialog::backdrop { background: rgba(16, 24, 40, 0.35); }
+.cd-dialog form { margin: 0; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.cd-dialog h2 { margin: 0; font-size: 14px; font-weight: 700; }
+.cd-dialog label { font-size: 11.5px; font-weight: 600; color: var(--tx2); display: flex; flex-direction: column; gap: 4px; }
+.cd-dialog select, .cd-dialog input {
+  height: 32px; border: 1px solid var(--line2); border-radius: 7px; padding: 0 9px;
+  font-size: 12.5px; font-family: inherit; color: var(--tx); background: var(--sf);
+}
+.cd-dialog-acts { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+.cd-cta-slot { margin-left: auto; display: inline-flex; align-items: center; }

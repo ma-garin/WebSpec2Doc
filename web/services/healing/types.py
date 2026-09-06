@@ -105,6 +105,12 @@ class HealingProject:
     domain: str = ""
     #: 報告書の「報告」欄に出す組織名（「株式会社△△ 保守チーム」等）。
     report_org: str = ""
+    #: 毎日きまった時刻に 02 のテストを回すか。
+    monitor_enabled: bool = False
+    #: 回す時刻（"HH:MM"・サーバのローカル時刻）。空なら回さない。
+    monitor_time: str = ""
+    #: 最後に回した日（"YYYY-MM-DD"）。同じ日に二度回さないための記録。
+    monitor_last_run_on: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         from dataclasses import asdict
@@ -317,6 +323,10 @@ class HealingRun:
     decisions: list[dict[str, Any]] = field(default_factory=list)
     #: この実行から起こした保守対応報告書の ID。1 欠陥 = 1 報告書。
     report_ids: list[str] = field(default_factory=list)
+    #: この実行を起こした主体。"" は画面からの手動、"autorun" は 02/03 の
+    #: 失敗から、"monitor" は毎日の見張りから。ログの文言だけに頼ると
+    #: 一覧で絞り込めないので、値として持つ。
+    actor: str = ""
 
 
 #: 保守対応報告書の状態。

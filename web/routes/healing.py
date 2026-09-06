@@ -26,6 +26,9 @@ from web.services.healing import (
     run_store,
     verification,
 )
+from web.services.healing import (
+    monitor as healing_monitor,
+)
 from web.services.healing.orchestrator import DECISION_ACTIONS, REPORT_ACTIONS
 from web.services.healing.types import HealingError
 from web.tenancy import scoped_output_dir
@@ -37,6 +40,9 @@ logger = logging.getLogger(__name__)
 _ID_RE = re.compile(r"^[0-9a-zA-Z_-]{1,64}$")
 _GITHUB_REPO_RE = re.compile(r"^[\w.-]+/[\w.-]+$")
 _CONTROL_CHARS_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+
+#: 監視の時刻。境界で弾く（値の検証は保存の直前ではなく入口で行う）。
+_MONITOR_TIME_RE = re.compile(r"^\d{2}:\d{2}$")
 
 _PROJECT_DEFAULTS: dict[str, Any] = {
     "default_branch": "main",
@@ -252,7 +258,27 @@ def _project_update_fields(data: dict[str, Any], valid_agents: set[str]) -> dict
         updates["verify_timeout_sec"] = _clean_int(
             data.get("verify_timeout_sec"), _PROJECT_DEFAULTS["verify_timeout_sec"], 60, 7200
         )
+    # 対象サイトと報告先。E2E 起点の実行と画面仕様との照合に要る。
+    if "domain" in data:
+        updates["domain"] = _clean_short_text(data.get("domain"), "")
+    if "report_org" in data:
+        updates["report_org"] = _clean_short_text(data.get("report_org"), "")
+    if "monitor_enabled" in data:
+        updates["monitor_enabled"] = bool(data.get("monitor_enabled"))
+    if "monitor_time" in data:
+        updates["monitor_time"] = _clean_monitor_time(data.get("monitor_time"))
     return updates
+
+
+def _clean_monitor_time(value: Any) -> str:
+    """監視の時刻。"HH:MM" 以外は受け取らない（空にして監視を止める）。"""
+    text = str(value or "").strip()
+    if not _MONITOR_TIME_RE.match(text):
+        return ""
+    hour, minute = text.split(":")
+    if int(hour) > 23 or int(minute) > 59:
+        return ""
+    return text
 
 
 def _project_dict(project: Any) -> dict[str, Any]:
@@ -440,6 +466,42 @@ def api_delete_project(project_id: str):
         return _error_response(exc)
     except Exception:
         logger.exception("healing: delete_project に失敗しました")
+        return {"error": "処理に失敗しました"}, 500
+
+
+@bp.post("/api/healing/projects/<project_id>/monitor/run-now")
+def api_monitor_run_now(project_id: str):
+    """毎日の見張りを、待たずに今すぐ 1 回だけ回す。
+
+    設定した時刻を待たずに動作を確かめられないと、監視は
+    「設定したが動いているか分からない」状態のまま放置される。
+    """
+    if not _ID_RE.match(project_id):
+        return {"error": "project_id が不正です。"}, 400
+    guard = require_admin()
+    if guard is not None:
+        return guard
+    try:
+        out_dir = _out()
+        project = project_store.get_project(out_dir, project_id)
+        if project is None:
+            return {"error": "プロジェクトが見つかりません。"}, 404
+        if not project.domain:
+            return {
+                "error": "対象サイトが設定されていません。接続先の「サイト」を設定してください。"
+            }, 400
+        run = healing_monitor.run_now(out_dir, project)
+        _record_audit(
+            "healing.monitor.run_now",
+            {"project_id": project_id, "run_id": run.run_id if run else ""},
+        )
+        if run is None:
+            return {"run": None, "message": "テストは全部通りました。報告書は作りません。"}
+        return {"run": run_store.run_summary(run)}, 202
+    except HealingError as exc:
+        return _error_response(exc)
+    except Exception:
+        logger.exception("healing: monitor/run-now に失敗しました")
         return {"error": "処理に失敗しました"}, 500
 
 

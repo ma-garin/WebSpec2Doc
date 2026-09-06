@@ -559,6 +559,116 @@
     return null;
   }
 
+
+  /* ---------------- 毎日の見張り ---------------- */
+
+  /* 人がテストを回すまで、壊れていることは誰も知らない。時刻を決めておけば
+     朝いちばんに報告書の下書きが出ている、という状態を作るための列。 */
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+
+  function todayStr() {
+    var d = new Date();
+    return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+  }
+
+  function nowHHMM() {
+    var d = new Date();
+    return pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+  }
+
+  /* 「次はいつ動くのか」を、設定値ではなく起きることで書く。 */
+  function monitorNextLabel(p) {
+    if (!p.domain) { return 'サイト未設定'; }
+    if (!p.monitor_enabled || !p.monitor_time) { return '見張っていません'; }
+    if (p.monitor_last_run_on === todayStr()) {
+      return '今日は実行済み・次は明日 ' + p.monitor_time;
+    }
+    if (nowHHMM() < p.monitor_time) { return '今日 ' + p.monitor_time + ' に実行'; }
+    return 'まもなく実行します';
+  }
+
+  function saveMonitor(p, updates, note) {
+    return apiFetch('/projects/' + encodeURIComponent(p.project_id), {
+      method: 'PATCH',
+      body: JSON.stringify(updates)
+    }).then(function (data) {
+      var saved = asObj(data, 'project');
+      for (var i = 0; i < state.projects.length; i += 1) {
+        if (state.projects[i].project_id === p.project_id) {
+          state.projects[i] = saved || state.projects[i];
+          break;
+        }
+      }
+      if (note) { note.textContent = monitorNextLabel(saved || p); }
+      showToast('毎日の見張りを保存しました');
+    }).catch(function (e) { showError(e.message); });
+  }
+
+  function buildMonitorCell(p) {
+    var td = el('td', 'hl-monitor-cell');
+    var note = el('div', 'hl-monitor-note', monitorNextLabel(p));
+    if (!IS_ADMIN) {
+      td.appendChild(note);
+      return td;
+    }
+
+    var row = el('div', 'hl-monitor-row');
+    var label = el('label', 'hl-monitor-toggle');
+    var box = document.createElement('input');
+    box.type = 'checkbox';
+    box.checked = !!p.monitor_enabled;
+    box.setAttribute('aria-label', (p.name || p.project_id) + ' を毎日見張る');
+    label.appendChild(box);
+    label.appendChild(el('span', null, '見張る'));
+
+    var time = document.createElement('input');
+    time.type = 'time';
+    time.className = 'hl-monitor-time';
+    time.value = p.monitor_time || '09:00';
+    time.setAttribute('aria-label', '見張る時刻');
+
+    box.addEventListener('change', function () {
+      p.monitor_enabled = box.checked;
+      p.monitor_time = time.value || '09:00';
+      saveMonitor(p, { monitor_enabled: box.checked, monitor_time: p.monitor_time }, note);
+    });
+    time.addEventListener('change', function () {
+      p.monitor_time = time.value;
+      saveMonitor(p, { monitor_time: time.value }, note);
+    });
+
+    var nowBtn = el('button', 'btn-outline-sm hl-monitor-now', '今すぐ');
+    nowBtn.type = 'button';
+    nowBtn.title = '時刻を待たずに 1 回だけ回します';
+    nowBtn.addEventListener('click', function () {
+      // 押した直後に何も起きないように見えると、二度押しで二重に回る。
+      nowBtn.disabled = true;
+      nowBtn.textContent = '実行中…';
+      apiFetch('/projects/' + encodeURIComponent(p.project_id) + '/monitor/run-now', {
+        method: 'POST',
+        body: '{}'
+      }).then(function (data) {
+        if (data && data.run) {
+          showToast('失敗を見つけました。報告書を下書きしています');
+        } else {
+          showToast((data && data.message) || 'テストは全部通りました');
+        }
+      }).catch(function (e) {
+        showError(e.message);
+      }).then(function () {
+        nowBtn.disabled = false;
+        nowBtn.textContent = '今すぐ';
+      });
+    });
+
+    row.appendChild(label);
+    row.appendChild(time);
+    row.appendChild(nowBtn);
+    td.appendChild(row);
+    td.appendChild(note);
+    return td;
+  }
+
   function renderProjects() {
     var tbody = $['hl-projects'];
     tbody.textContent = '';
@@ -607,6 +717,7 @@
       var tdAgent = el('td', null, p.agent ? agentDisplayName(p.agent) : '');
       if (p.agent) { tdAgent.title = p.agent; }
       tr.appendChild(tdAgent);
+      tr.appendChild(buildMonitorCell(p));
 
       // 行内は 2 つまで。4 つ並べると 1280px で押し出されて押せなくなる。
       var tdActions = el('td', 'hl-row-actions');

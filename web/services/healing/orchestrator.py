@@ -148,6 +148,7 @@ def start_run(
         step_label="受付",
         base_branch=project.default_branch,
         started_at=_now_iso(),
+        actor=actor,
     )
     _add_log(run, f"受付しました（actor={actor or '不明'}）")
     with _RUNS_LOCK:

@@ -216,6 +216,7 @@ def run_to_dict(run: HealingRun) -> dict[str, Any]:
         "unverified": list(run.unverified),
         "decisions": [dict(d) for d in run.decisions],
         "report_ids": list(run.report_ids),
+        "actor": run.actor,
     }
 
 
@@ -240,6 +241,7 @@ def run_from_dict(data: Mapping[str, Any]) -> HealingRun:
         unverified=[str(x) for x in (data.get("unverified") or [])],
         decisions=[dict(d) for d in decisions_raw if isinstance(d, Mapping)],
         report_ids=[str(x) for x in (data.get("report_ids") or [])],
+        actor=str(data.get("actor") or ""),
     )
 
 
@@ -351,4 +353,5 @@ def run_summary(run: HealingRun) -> dict[str, Any]:
         "pr_url": pr.url if pr else "",
         "pr_state": pr.state if pr else "",
         "error": run.error,
+        "actor": run.actor,
     }

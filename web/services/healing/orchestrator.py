@@ -34,6 +34,7 @@ from web.services.healing import (
     report_doc,
     risk,
     run_store,
+    spec_match,
     verification,
 )
 from web.services.healing import report as healing_report
@@ -854,7 +855,9 @@ def _fix_defects(
                 _add_log(run, f"欠陥ブランチを削除できませんでした（{branch}）: {delete_result.stderr}")
 
         # リスクとレポートは最終状態が決まってから載せる（人の判断材料のため）。
-        ordered.append(_enrich_proposal(run, defect, proposal))
+        ordered.append(
+            _enrich_proposal(run, defect, proposal, project=project, out_dir=out_dir)
+        )
 
     return ordered
 
@@ -891,6 +894,7 @@ def _write_reports(out_dir: Path, run: HealingRun, project: HealingProject) -> N
                     defect=defect,
                     proposal=by_defect.get(defect.defect_id),
                     project=project,
+                    out_dir=out_dir,
                 )
                 existing = report_doc.find_report(
                     out_dir, run_id=run.run_id, defect_id=defect.defect_id
@@ -1017,9 +1021,17 @@ def _location_evidence(defect: Defect) -> tuple[Any, ...]:
         return ()
 
 
-def _enrich_proposal(run: HealingRun, defect: Defect, proposal: FixProposal) -> FixProposal:
+def _enrich_proposal(
+    run: HealingRun,
+    defect: Defect,
+    proposal: FixProposal,
+    *,
+    project: HealingProject | None = None,
+    out_dir: Path | None = None,
+) -> FixProposal:
     """修正案にリスク評価と Markdown レポートを載せた新しい FixProposal を返す。"""
-    signals = _assess_risks(run, defect, proposal)
+    signals = list(_assess_risks(run, defect, proposal))
+    signals.extend(_assess_spec(run, defect, proposal, project=project, out_dir=out_dir))
     report_md = ""
     try:
         report_md = str(
@@ -1036,6 +1048,35 @@ def _enrich_proposal(run: HealingRun, defect: Defect, proposal: FixProposal) -> 
         risks=tuple(_risk_signal_to_dict(signal) for signal in signals),
         report_md=report_md,
     )
+
+
+def _assess_spec(
+    run: HealingRun,
+    defect: Defect,
+    proposal: FixProposal,
+    *,
+    project: HealingProject | None,
+    out_dir: Path | None,
+) -> list[Any]:
+    """修正差分を 01 の画面仕様と突き合わせる。
+
+    テストが通ったことは正しく直ったことを意味しない。落ちたテストを
+    黙らせる修正でも検証は緑になるため、テストとは別の出どころである
+    画面仕様と照らす。照合できない場合は黙って何も出さない
+    （「不一致なし」と「未照合」を混同させない）。
+    """
+    if project is None or out_dir is None or not defect.screen_id:
+        return []
+    domain = str(getattr(project, "domain", "") or "")
+    if not domain:
+        return []
+    try:
+        spec = spec_match.load_screen_spec(out_dir, domain, defect.screen_id)
+        return list(spec_match.assess_spec(proposal, spec))
+    except Exception as exc:  # noqa: BLE001 - 照合の失敗で修正を捨てない
+        logger.warning("欠陥 %s の仕様照合に失敗しました: %s", defect.defect_id, exc, exc_info=True)
+        _add_log(run, f"欠陥 {defect.defect_id} の画面仕様との照合に失敗しました（修正は保持します）")
+        return []
 
 
 def _append_reports(body: str, proposals: Sequence[FixProposal]) -> str:

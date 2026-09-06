@@ -6,12 +6,15 @@
 
 from __future__ import annotations
 
+from web.services.orchestration.agents.docs_agent import DocsAgent
 from web.services.orchestration.agents.healing_agent import HealingAgent
 from web.services.orchestration.agents.run_agent import RunAgent
+from web.services.orchestration.agents.tests_agent import TestsAgent
 from web.services.orchestration.ports import SystemAgent
 
-#: O3 で "docs"（01）と "tests"（02）が足される。
 AGENTS: dict[str, SystemAgent] = {
+    "docs": DocsAgent(),
+    "tests": TestsAgent(),
     "run": RunAgent(),
     "healing": HealingAgent(),
 }

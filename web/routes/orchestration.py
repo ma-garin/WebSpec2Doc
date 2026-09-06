@@ -1,0 +1,248 @@
+"""指揮者（O2）の API。
+
+5 つのシステムを 1 本の実行として束ねる入口。書き方は healing.py に揃える
+（_out / require_admin / _body / _record_audit / _error_response / ID の検証）。
+状態機械そのものは web/services/orchestration/conductor.py が持ち、ここは
+入力の検証と、結果を JSON にして返すことだけを行う。
+"""
+
+from __future__ import annotations
+
+import logging
+import re
+from collections.abc import Mapping
+from pathlib import Path
+from typing import Any
+
+from flask import Blueprint, g, request
+
+from web.audit_context import record_admin_event
+from web.auth import require_admin
+from web.config import OUTPUT_DIR
+from web.services.orchestration import conductor, goals, run_store
+from web.tenancy import scoped_output_dir
+from web.validation import _domain_of
+
+bp = Blueprint("orchestration", __name__)
+
+logger = logging.getLogger(__name__)
+
+#: 監査ログの置き場。他ルート（healing.py / settings.py）と同じ規約。
+INSTANCE_DIR = Path("instance")
+
+#: run_id は指揮者が作る形だけを受け付ける（ファイル名に直結するため）。
+_ID_RE = re.compile(r"^cond-[0-9a-f]{12}$")
+_DOMAIN_RE = re.compile(r"^[0-9a-zA-Z][0-9a-zA-Z._-]{0,252}$")
+_PROJECT_ID_RE = re.compile(r"^[0-9a-zA-Z_-]{1,64}$")
+
+_BUSY = "このサイトの指揮はまだ終わっていません"
+
+#: 段へ渡す params で受け付けるキーと境界。それ以外のキーは黙って捨てる。
+_URL_RE = re.compile(r"^https?://", re.IGNORECASE)
+_MAX_URL_LEN = 2000
+
+
+def _out() -> Path:
+    """テナントスコープ済みの出力ディレクトリ（リクエスト毎に解決）。"""
+    return scoped_output_dir(OUTPUT_DIR)
+
+
+def _body() -> dict[str, Any]:
+    data: dict[str, Any] = {}
+    if request.form:
+        data.update(request.form.to_dict())
+    json_data = request.get_json(silent=True)
+    if isinstance(json_data, dict):
+        data.update(json_data)
+    return data
+
+
+def _actor() -> str:
+    """実行を起こした人。認証オフなら空（記録は「不明」と読める）。"""
+    user = getattr(g, "auth_user", None)
+    if not isinstance(user, dict):
+        return ""
+    return str(user.get("email") or user.get("name") or "")
+
+
+def _record_audit(action: str, detail: dict[str, Any]) -> None:
+    """管理操作の証跡を残す。記録できなくても本処理は止めない（黙って落とさない）。"""
+    target_type = action.split(".")[1] if len(action.split(".")) >= 2 else "orchestration"
+    target_id = str(detail.get("run_id") or detail.get("domain") or "current")
+    try:
+        record_admin_event(
+            INSTANCE_DIR, action=action, target_type=target_type,
+            target_id=target_id, detail=detail,
+        )
+    except Exception:
+        logger.warning(
+            "orchestration: 監査ログの記録に失敗しました (action=%s target=%s/%s)",
+            action, target_type, target_id, exc_info=True,
+        )
+
+
+_HOME_PATHS: tuple[str, ...] = tuple(
+    dict.fromkeys(
+        p for p in (str(Path.home()).rstrip("/"), str(Path.home().resolve()).rstrip("/")) if p
+    )
+)
+_HOME_USER: str = Path.home().name
+
+
+def _error_response(exc: Exception) -> tuple[dict[str, Any], int]:
+    """利用者へ返す 400 応答。理由は残しつつ実パスと利用者名だけを伏せる。"""
+    masked = str(exc)
+    for home in _HOME_PATHS:
+        masked = masked.replace(home, "~")
+    if len(_HOME_USER) >= 3:
+        masked = masked.replace(_HOME_USER, "~")
+    return {"error": masked}, 400
+
+
+def _clean_int(value: Any, default: int, low: int, high: int) -> int:
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        return default
+    return max(low, min(high, number))
+
+
+def _strict_int(value: Any) -> int | None:
+    """範囲外・型違いは None（呼び出し側が 400 にする。既定値へ丸めない）。"""
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _clean_params(data: dict[str, Any], domain: str) -> tuple[dict[str, Any], str]:
+    """段へ渡す params を検証する。合格した params と、不合格なら理由（日本語）を返す。
+
+    受け付けるキーは url / depth / max_pages だけ。それ以外は黙って捨てる
+    （docs_agent.DEFAULT_DEPTH / DEFAULT_MAX_PAGES がそのまま既定値になる）。
+    """
+    raw = data.get("params")
+    if not isinstance(raw, Mapping):
+        return {}, ""
+    params: dict[str, Any] = {}
+    if "url" in raw:
+        url = str(raw.get("url") or "").strip()
+        if not url or not _URL_RE.match(url) or len(url) > _MAX_URL_LEN:
+            return {}, "url は http:// か https:// で始まる 2000 字以内で指定してください。"
+        if _domain_of(url) != domain:
+            return {}, "URL のサイトと domain が一致しません。"
+        params["url"] = url
+    if "depth" in raw:
+        depth = _strict_int(raw.get("depth"))
+        if depth is None or not (1 <= depth <= 3):
+            return {}, "depth は 1〜3 の整数で指定してください。"
+        params["depth"] = depth
+    if "max_pages" in raw:
+        max_pages = _strict_int(raw.get("max_pages"))
+        if max_pages is None or not (1 <= max_pages <= 50):
+            return {}, "max_pages は 1〜50 の整数で指定してください。"
+        params["max_pages"] = max_pages
+    return params, ""
+
+
+@bp.get("/api/orchestration/goals")
+def api_list_goals():
+    """目標の一覧。まだ通せない目標も理由つきで返す。"""
+    try:
+        return {"goals": goals.catalog()}
+    except Exception:
+        logger.exception("orchestration: 目標一覧の作成に失敗しました")
+        return {"error": "処理に失敗しました"}, 500
+
+
+@bp.get("/api/orchestration/runs")
+def api_list_runs():
+    domain = str(request.args.get("domain", "")).strip()
+    if domain and not _DOMAIN_RE.match(domain):
+        return {"error": "サイトの指定が不正です。"}, 400
+    limit = _clean_int(request.args.get("limit"), 50, 1, 200)
+    try:
+        out_dir = _out()
+        reaped = conductor.reap_orphans(out_dir)
+        if reaped:
+            logger.info("orchestration: 止まった指揮を %d 件片付けました (%s)",
+                        len(reaped), ", ".join(reaped))
+        return {"runs": conductor.list_summaries(out_dir, domain=domain, limit=limit)}
+    except Exception:
+        logger.exception("orchestration: list_summaries に失敗しました")
+        return {"error": "処理に失敗しました"}, 500
+
+
+@bp.post("/api/orchestration/runs")
+def api_start_run():
+    """指揮を 1 本起こす。同じサイトで 2 本は走らせない（409）。"""
+    guard = require_admin()
+    if guard is not None:
+        return guard
+    data = _body()
+    domain = str(data.get("domain") or "").strip()
+    goal = str(data.get("goal") or "").strip()
+    project_id = str(data.get("project_id") or "").strip()
+    if not _DOMAIN_RE.match(domain):
+        return {"error": "サイトの指定が不正です。"}, 400
+    if goal not in goals.AVAILABLE_GOALS:
+        return {"error": "目標を指定してください（daily か onboard）"}, 400
+    if project_id and not _PROJECT_ID_RE.match(project_id):
+        return {"error": "project_id が不正です。"}, 400
+    params, params_error = _clean_params(data, domain)
+    if params_error:
+        return {"error": params_error}, 400
+    try:
+        run = conductor.start_if_idle(
+            out_dir=_out(), domain=domain, goal=goal,
+            project_id=project_id, actor=_actor(), params=params,
+        )
+    except ValueError as exc:  # 未知・未対応の目標。理由をそのまま返す
+        return _error_response(exc)
+    except Exception:
+        logger.exception("orchestration: start_if_idle に失敗しました")
+        return {"error": "処理に失敗しました"}, 500
+    if run is None:
+        return {"error": _BUSY}, 409
+    _record_audit(
+        "orchestration.run.start",
+        {"run_id": run.run_id, "domain": domain, "goal": goal, "project_id": project_id},
+    )
+    return {"run": run_store.run_to_dict(run)}, 202
+
+
+@bp.get("/api/orchestration/runs/<run_id>")
+def api_get_run(run_id: str):
+    if not _ID_RE.match(run_id):
+        return {"error": "run_id が不正です。"}, 400
+    try:
+        run = conductor.get(_out(), run_id)
+    except Exception:
+        logger.exception("orchestration: get に失敗しました")
+        return {"error": "処理に失敗しました"}, 500
+    if run is None:
+        return {"error": "実行が見つかりません。"}, 404
+    return {"run": run_store.run_to_dict(run)}
+
+
+@bp.post("/api/orchestration/runs/<run_id>/cancel")
+def api_cancel_run(run_id: str):
+    """中止を伝える。走っている段そのものは止めない（次の確認で止まる）。"""
+    if not _ID_RE.match(run_id):
+        return {"error": "run_id が不正です。"}, 400
+    guard = require_admin()
+    if guard is not None:
+        return guard
+    try:
+        out_dir = _out()
+        cancelled = conductor.cancel(out_dir, run_id)
+        run = conductor.get(out_dir, run_id)
+    except Exception:
+        logger.exception("orchestration: cancel に失敗しました")
+        return {"error": "処理に失敗しました"}, 500
+    if run is None:
+        return {"error": "実行が見つかりません。"}, 404
+    _record_audit("orchestration.run.cancel", {"run_id": run_id, "cancelled": bool(cancelled)})
+    return {"run": run_store.run_to_dict(run), "cancelled": bool(cancelled)}

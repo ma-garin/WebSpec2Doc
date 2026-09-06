@@ -408,17 +408,21 @@ def build_maintenance_report(
 
 
 def _incident_source(run: HealingRun) -> str:
-    """検知の経路。監視が起こしたのか、人が押したのかを報告書に残す。"""
-    actor = ""
+    """検知の経路。監視・指揮者が起こしたのか、人が押したのかを報告書に残す。"""
+    actor = str(getattr(run, "actor", "") or "")
     for entry in run.decisions or []:
         if isinstance(entry, Mapping) and entry.get("actor"):
             actor = str(entry["actor"])
             break
     if actor == "monitor":
         return "monitor"
+    if actor == "conductor":
+        return "conductor"
     for line in run.log or []:
         if "actor=monitor" in str(line):
             return "monitor"
+        if "actor=conductor" in str(line):
+            return "conductor"
     return "manual"
 
 

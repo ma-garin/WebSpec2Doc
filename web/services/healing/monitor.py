@@ -22,11 +22,7 @@ from datetime import datetime
 from pathlib import Path
 
 from web.services.healing import autorun_bridge, orchestrator, project_store
-from web.services.healing.types import (
-    TERMINAL_RUN_STATUSES,
-    HealingProject,
-    HealingRun,
-)
+from web.services.healing.types import HealingProject, HealingRun
 
 logger = logging.getLogger(__name__)
 
@@ -146,17 +142,11 @@ def _spec_path(out_dir: Path, domain: str) -> Path | None:
 def _has_active_run(out_dir: Path, project_id: str) -> bool:
     """まだ終わっていない実行があるか。二重に走らせない。
 
-    awaiting_human も「終わっていない」に含める。人の判断を待っている間に
-    次の実行を起こすと、同じ欠陥の報告書が毎日積み上がる。
+    判定そのものは orchestrator に置いてある。ここと指揮者アダプタに
+    同じ判定を 2 つ持っていたため、「プロセスごと止まった実行の片付け」を
+    足したときに片方だけ直る形になっていた。
     """
-    try:
-        summaries = orchestrator.list_run_summaries(out_dir, project_id=project_id)
-    except Exception:  # noqa: BLE001 - 判定できないときは走らせない側に倒す
-        logger.warning("実行一覧を取得できませんでした", exc_info=True)
-        return True
-    return any(
-        str(s.get("status") or "") not in TERMINAL_RUN_STATUSES for s in summaries
-    )
+    return orchestrator.has_active_run(out_dir, project_id)
 
 
 def _mark_ran(out_dir: Path, project: HealingProject, now: datetime) -> None:
@@ -214,6 +204,14 @@ def run_now(out_dir: Path, project: HealingProject) -> HealingRun | None:
     defects = [replace(d, source="monitor") for d in defects]
 
     logger.info("監視: %s", autorun_bridge.summarize_failures(defects))
-    return orchestrator.start_run(
+    # 上の _has_active_run から時間が経っている（テストを 1 本走らせている）。
+    # その間に画面や指揮者から実行が起きうるので、確認と開始が一体になった
+    # start_run_if_idle で起こす。
+    run = orchestrator.start_run_if_idle(
         out_dir=out_dir, project=project, actor="monitor", defects=defects
     )
+    if run is None:
+        logger.info(
+            "監視: まだ終わっていない実行があるため飛ばします (%s)", project.project_id
+        )
+    return run

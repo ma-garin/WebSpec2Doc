@@ -73,6 +73,30 @@ KEEP_RUN_ARTIFACTS = 5
 _RUNS: dict[str, HealingRun] = {}
 _RUNS_LOCK = threading.RLock()
 
+#: 「終わっていない実行があるか確認 → 無ければ始める」を割り込ませないための錠。
+#: _RUNS_LOCK と分けるのは、start_run が内部で _RUNS_LOCK を取るため。
+#: 同じ錠に相乗りさせると「メモリの保護」と「起動の排他」という別々の目的が
+#: 1 つの錠に混ざり、どちらの理由で握っているのか読めなくなる。
+_START_LOCK = threading.Lock()
+
+#: 孤児かどうかを問う対象の状態。「進めるスレッドが居るのが正常」な状態だけを並べる。
+#:
+#: awaiting_human を**入れない**。人の判断待ちは、ループが仕事を終えて
+#: スレッドが消えたあとの正常な姿であり、承認は画面（API）から入ってくる。
+#: ここに入れると、サーバを再起動しただけで承認待ちの実行が全部「失敗」に化ける
+#: （実測: 本番の output に awaiting_human が 5 件あり、次の巡回で全滅する状態だった）。
+#:
+#: 「動いているか」の判定（has_active_run）とは別の集合であることに注意。
+#: あちらは awaiting_human も「終わっていない」に含める（人待ちの間に次を起こさない）。
+ORPHAN_CANDIDATE_STATUSES = frozenset(
+    {"queued", "preparing", "verifying", "analyzing", "fixing", "reverifying"}
+)
+
+#: 進める者がいなくなった実行に書く理由。画面にそのまま出るので内部用語を使わない。
+ORPHAN_RUN_ERROR = (
+    "実行中にプロセスが止まりました（サーバの再起動など）。もう一度実行してください"
+)
+
 #: cancel_run が入れる集合。ループは各段階の頭でここを見て自発的に止まる。
 #: 実行中のサブプロセス（検証コマンド・エージェント CLI）を強制終了する
 #: 仕組みは持たない。timeout はエージェント側・verification 側に委ねる。
@@ -232,6 +256,100 @@ def list_run_summaries(out_dir: Path, project_id: str = "", limit: int = 50) -> 
             merged[run_id] = run  # メモリ側が最新なので永続化分を上書きする
     ordered = sorted(merged.values(), key=lambda r: r.started_at or "", reverse=True)[:limit]
     return [run_store.run_summary(run) for run in ordered]
+
+
+def reap_orphans(out_dir: Path, *, project_id: str = "") -> list[str]:
+    """進める者がいなくなった実行を「失敗」として片付け、その run_id を返す。
+
+    対象は ORPHAN_CANDIDATE_STATUSES だけ。awaiting_human は「スレッドが無いのが
+    正常」な状態なので含めない（含めると承認待ちが全部失敗に化ける）。
+
+    実行を進めるのは start_run が起こしたスレッドで、その存在は _RUNS に現れる。
+    永続化された実行がこの集合に居るのに _RUNS に居ないなら、そのスレッドは
+    このプロセスに居ない（サーバの再起動、プロセスの終了、短命なスクリプトからの呼び出し）。
+
+    放置すると has_active_run が永久に True を返し、その接続先のヒーリングは
+    二度と起きない。人が JSON を手で書き換えるしか復旧手段が無くなる。
+    「動いていないものを動いていると言い続ける」のが最悪なので、事実を書き戻す。
+
+    報告書は作らない。この実行は何も検証しておらず、報告する事実がない。
+    """
+    try:
+        stored = run_store.list_runs(out_dir, project_id=project_id, limit=200)
+    except Exception:  # noqa: BLE001 - 片付けの失敗で呼び出し元を止めない
+        logger.warning("実行一覧を読めなかったため停止した実行の片付けを飛ばしました", exc_info=True)
+        return []
+
+    reaped: list[str] = []
+    for run in stored:
+        if run.status not in ORPHAN_CANDIDATE_STATUSES:
+            continue
+        with _RUNS_LOCK:
+            if run.run_id in _RUNS:
+                continue  # このプロセスのスレッドが進めている
+        # list_runs が読み直した別インスタンスなので、_RUNS には入れない。
+        run.status = "failed"
+        run.error = ORPHAN_RUN_ERROR
+        run.finished_at = run.finished_at or _now_iso()
+        _add_log(run, ORPHAN_RUN_ERROR)
+        try:
+            run_store.save_run(out_dir, run)
+        except Exception:  # noqa: BLE001 - 1 件の保存失敗で他を諦めない
+            logger.warning("停止した実行 %s の保存に失敗しました", run.run_id, exc_info=True)
+            continue
+        reaped.append(run.run_id)
+    if reaped:
+        logger.info("停止した実行を %d 件、失敗として片付けました", len(reaped))
+    return reaped
+
+
+def has_active_run(out_dir: Path, project_id: str) -> bool:
+    """まだ終わっていない実行があるか。判定の前に停止した実行を片付ける。
+
+    awaiting_human も「終わっていない」に含める。人の判断を待っている間に
+    次を起こすと、同じ欠陥の報告書が積み上がって承認待ちの一覧が意味を失う。
+    **回収（ORPHAN_CANDIDATE_STATUSES）とは別の集合**である点に注意:
+    awaiting_human は「片付けない・けれど次も起こさない」が正しい扱い。
+
+    判定をここに集約するのは、monitor と指揮者アダプタが同じ判断を
+    別々に持っていたため。片方だけ直る形にすると、直っていない側から
+    永久に skipped が返り続ける。
+    """
+    try:
+        reap_orphans(out_dir, project_id=project_id)
+        summaries = list_run_summaries(out_dir, project_id=project_id)
+    except Exception:  # noqa: BLE001 - 判定できないときは走らせない側に倒す
+        logger.warning("実行一覧を取得できませんでした", exc_info=True)
+        return True
+    return any(
+        str(s.get("status") or "") not in TERMINAL_RUN_STATUSES for s in summaries
+    )
+
+
+def start_run_if_idle(
+    *,
+    out_dir: Path,
+    project: HealingProject,
+    actor: str = "",
+    defects: Sequence[Defect] | None = None,
+    extra_instructions: str = "",
+) -> HealingRun | None:
+    """終わっていない実行が無ければ 1 本起こす。あれば None を返す。
+
+    「確認してから開始」を呼ぶ側それぞれに書かせると、確認と開始の間に
+    別スレッド（毎日の見張りと指揮者は別々に呼ぶ）が割り込んで二重に起きる。
+    確認と開始を 1 つの錠の中に閉じ込め、呼ぶ側から順序の責任を外す。
+    """
+    with _START_LOCK:
+        if has_active_run(out_dir, project.project_id):
+            return None
+        return start_run(
+            out_dir=out_dir,
+            project=project,
+            actor=actor,
+            extra_instructions=extra_instructions,
+            defects=defects,
+        )
 
 
 def cancel_run(run_id: str) -> bool:

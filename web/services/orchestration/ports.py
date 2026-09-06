@@ -58,6 +58,10 @@ class Context:
     project_id: str = ""
     params: Mapping[str, Any] = field(default_factory=dict)
     log: Callable[[str], None] = _no_log
+    #: 誰がこの指揮を起こしたか（"monitor" / "cli" / 利用者名）。段が残す記録の
+    #: 出どころに使う。ここを空のままにすると、監視が起こしたものも画面から
+    #: 押されたものも同じ出どころになり、あとから経緯を追えなくなる。
+    actor: str = ""
 
 
 @dataclass(frozen=True)

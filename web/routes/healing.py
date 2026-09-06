@@ -654,8 +654,14 @@ def _connected_domains(out_dir: Path) -> set[str]:
         return set()
 
 
+#: 指揮 run だけを根拠にサイト一覧へ出してよい状態。失敗・中止で終わった run を
+#: 出すと、接続先も観測結果も無い残骸（onboard に失敗した domain）が一覧に
+#: 並び続け、選ぶと必ずエラーになる項目になる。
+_ACTIVE_RUN_STATES = frozenset({"running", "queued", "waiting_human"})
+
+
 def _conductor_domains(out_dir: Path) -> set[str]:
-    """指揮（O2）run が持つ domain の集合。まだ 01 を通していない domain も拾う。
+    """いま動いている指揮（O2）run が持つ domain の集合。
 
     conductor.list_summaries はプロセス内の全 out_dir 分の実行をメモリ上に
     持ち続け、domain 指定が無いとテナントを跨いで混ざる（実測で確認済み）。
@@ -666,7 +672,9 @@ def _conductor_domains(out_dir: Path) -> set[str]:
         from web.services.orchestration import run_store as _orch_run_store
 
         return {
-            r.domain for r in _orch_run_store.list_runs(out_dir, limit=200) if r.domain
+            r.domain
+            for r in _orch_run_store.list_runs(out_dir, limit=200)
+            if r.domain and str(r.status or "") in _ACTIVE_RUN_STATES
         }
     except Exception:  # noqa: BLE001 - 一覧の失敗でサイト一覧全体を落とさない
         logger.warning("healing: 指揮の一覧を読めませんでした", exc_info=True)

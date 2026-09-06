@@ -34,7 +34,9 @@ INSTANCE_DIR = Path("instance")
 
 #: run_id は指揮者が作る形だけを受け付ける（ファイル名に直結するため）。
 _ID_RE = re.compile(r"^cond-[0-9a-f]{12}$")
-_DOMAIN_RE = re.compile(r"^[0-9a-zA-Z][0-9a-zA-Z._-]{0,252}$")
+#: ポート付き（localhost:3000 等）も受ける。開発中のサイトを保守下に置くのは
+#: 「初めてのサイト」の主戦場で、ここで弾くと API から一切 onboard できない。
+_DOMAIN_RE = re.compile(r"^[0-9a-zA-Z][0-9a-zA-Z._-]{0,252}(?::\d{1,5})?$")
 _PROJECT_ID_RE = re.compile(r"^[0-9a-zA-Z_-]{1,64}$")
 
 _BUSY = "このサイトの指揮はまだ終わっていません"
@@ -42,6 +44,8 @@ _BUSY = "このサイトの指揮はまだ終わっていません"
 #: 段へ渡す params で受け付けるキーと境界。それ以外のキーは黙って捨てる。
 _URL_RE = re.compile(r"^https?://", re.IGNORECASE)
 _MAX_URL_LEN = 2000
+_MAX_REPO_LEN = 1000
+_MAX_VERIFY_LEN = 500
 
 
 def _out() -> Path:
@@ -288,19 +292,37 @@ def api_start_run():
     out_dir = _out()
     created_project = False
 
-    # domain 省略時、初めてのサイトでも url から起こせるように接続先を用意する。
-    if goal == "onboard" and not domain:
-        verify_command = str(data.get("verify_command") or "")
-        if len(verify_command) > 500:
-            return {"error": "verify_command は 500 字以内で指定してください。"}, 400
+    # 初めてのサイトは url から接続先を用意する。順序が肝心——検証を全部
+    # 済ませてから作る。作ってから検証すると、400 を返したあとにも接続先
+    # （GitHub なら clone 済みのコード）だけが残り、サイト一覧に「選ぶと必ず
+    # エラーになる項目」として並び続ける。
+    repo = str(data.get("repo") or "")
+    verify_command = str(data.get("verify_command") or "")
+    if goal == "onboard" and (not domain or repo or verify_command):
+        url = str(raw_params.get("url") or "").strip()
+        if len(repo) > _MAX_REPO_LEN:
+            return {"error": f"コードの場所は {_MAX_REPO_LEN} 字以内で指定してください。"}, 400
+        if len(verify_command) > _MAX_VERIFY_LEN:
+            return {"error": f"verify_command は {_MAX_VERIFY_LEN} 字以内で指定してください。"}, 400
+        if not url or not _URL_RE.match(url) or len(url) > _MAX_URL_LEN:
+            return {"error": "url は http:// か https:// で始まる 2000 字以内で指定してください。"}, 400
+        derived = _domain_of(url)
+        if not derived or not _DOMAIN_RE.match(derived):
+            return {"error": "サイトの指定が不正です。"}, 400
+        if domain and domain != derived:
+            return {"error": "URL のサイトと domain が一致しません。"}, 400
+        if conductor.has_active_run(out_dir, derived):
+            return {"error": _BUSY}, 409
         try:
             plan = onboarding.prepare(
-                out_dir, url=str(raw_params.get("url") or ""),
-                repo=str(data.get("repo") or ""), verify_command=verify_command,
+                out_dir, url=url, repo=repo, verify_command=verify_command,
                 rounds=rounds, actor=_actor(),
             )
         except ValueError as exc:
             return _error_response(exc)
+        except OSError:  # 長すぎる名前など OS 由来の失敗。500 にしない
+            logger.warning("orchestration: 接続先を用意できませんでした", exc_info=True)
+            return {"error": "コードの場所を確認できませんでした。指定を見直してください。"}, 400
         domain = plan.domain
         project_id = project_id or plan.project_id
         created_project = plan.created_project

@@ -33,11 +33,11 @@ from web.services.orchestration.ports import (
     StepStatus,
 )
 
-_NO_REPORT = "01 ドキュメントでこのサイトを観測してください"
+_NO_REPORT = "先にこのサイトの画面を観測してください（「保守下に置く」で始まります）"
 _NO_HANDLE = "テスト作成の記録がありません"
 _NO_EXECUTABLE = "自動実行できるテストケースがありません。テストケース表を確認してください"
 #: 段階承認が残っているときの依頼文。{subject} に「テスト観点」等が入る。
-_APPROVE_ACTION = "03 AutoRun の画面で{subject}を承認してください"
+_APPROVE_ACTION = "{subject}を承認してください"
 #: 誰も承認していないまま作ったことを、成果物の外へ出すための 1 文。
 _UNAPPROVED_NOTE = "テスト観点・設計の承認は経ていません（03 AutoRun の画面で確認できます）"
 

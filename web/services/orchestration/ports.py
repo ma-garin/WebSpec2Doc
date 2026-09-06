@@ -99,6 +99,11 @@ class StepResult:
     handle: str = ""
     error: str = ""
     human_action: str = ""
+    #: 機械可読の理由。同じ status でも結末の意味が違うものを指揮者が
+    #: 見分けるために持つ（05 の skipped は「失敗が無い」と「前の実行が
+    #: まだ動いている」で意味が正反対で、status だけでは分けられない）。
+    #: 語彙: "no_defects" / "busy" / "already_reported"。空なら理由なし。
+    reason: str = ""
 
 
 @dataclass(frozen=True)

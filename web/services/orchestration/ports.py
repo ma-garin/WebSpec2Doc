@@ -22,14 +22,20 @@ from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
 #: 進行状態の語彙。これ以外の文字列を使わない。
-#: 指揮者（O2）はこの 5 つだけを見て次の遷移を決めるので、
+#: 指揮者（O2）はこの語彙だけを見て次の遷移を決めるので、
 #: ここに語を足すと状態機械の分岐が漏れる。
+#:
+#: queued（まだ始めていない）と cancelled（人が止めた）は段そのものは返さないが、
+#: 指揮者の実行と段の記録が同じ語彙を使えるようにここへ置く。語彙を 2 か所に
+#: 分けると、画面が「どちらの表を見ればよいか」を持たなければならなくなる。
 STEP_STATES: tuple[str, ...] = (
+    "queued",
     "succeeded",
     "failed",
     "running",
     "skipped",
     "waiting_human",
+    "cancelled",
 )
 
 
@@ -93,13 +99,19 @@ class StepResult:
 
 @dataclass(frozen=True)
 class StepStatus:
-    """走っている途中／終わったあとの状態。"""
+    """走っている途中／終わったあとの状態。
+
+    human_action は state == "waiting_human" のとき、人がやることを 1 文で持つ。
+    Readiness と同じく画面にそのまま出るので内部用語を出さない。summary（事実）と
+    分けるのは、指揮者が「人に何をしてほしいか」だけを実行の先頭へ写すため。
+    """
 
     state: str
     label: str
     summary: str = ""
     artifacts: Mapping[str, str] = field(default_factory=dict)
     error: str = ""
+    human_action: str = ""
 
 
 @runtime_checkable

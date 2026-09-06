@@ -1,0 +1,242 @@
+"""02 テスト自動化を指揮者から呼ぶためのアダプタ（QA 生成 → Playwright 化）。
+
+01→02→03 の連鎖にある _phase_generate_qa（QA 成果物の生成）をそのまま呼び、
+そのあとテストケース表を Playwright の .spec.ts へ落とす。パイプラインに
+「どこまで走らせるか」を指定する仕組みは無いので、フェーズ関数を自分の
+スレッドから順に呼ぶ。
+
+Playwright 化に _phase_generate_scripts を使わないのは、あれが 03 AutoRun 用の
+qa_process/autorun.spec.ts を作るものだからで、02 の成果物は
+testcases/testcases.spec.ts（03 も 05 もこちらを先に読む）。同じ表から 2 つの
+スクリプトを作ると、どちらが回ったのか結果から判別できなくなる。
+
+人の承認は代行しない。03 AutoRun の段階承認（観点・設計）が未承認のまま
+残っているサイトでは waiting_human を返して止まる。承認そのものは
+待たない——承認を待って 2 時間ブロックすると、指揮者から見て「動いている」段と
+「人待ちの段」の区別がつかなくなる。
+"""
+
+from __future__ import annotations
+
+import json
+import threading
+import uuid
+from dataclasses import dataclass, field
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+from web.services.orchestration.ports import (
+    Context,
+    Readiness,
+    StepResult,
+    StepStatus,
+)
+
+_NO_REPORT = "01 ドキュメントでこのサイトを観測してください"
+_NO_HANDLE = "テスト作成の記録がありません"
+_NO_EXECUTABLE = "自動実行できるテストケースがありません。テストケース表を確認してください"
+#: 段階承認が残っているときの依頼文。{subject} に「テスト観点」等が入る。
+_APPROVE_ACTION = "03 AutoRun の画面で{subject}を承認してください"
+#: 誰も承認していないまま作ったことを、成果物の外へ出すための 1 文。
+_UNAPPROVED_NOTE = "テスト観点・設計の承認は経ていません（03 AutoRun の画面で確認できます）"
+
+_SPEC_RELPATH = "testcases/testcases.spec.ts"
+
+
+@dataclass
+class _Work:
+    """1 回のテスト作成。status() は handle が指すこれだけを見る。"""
+
+    state: str = "running"
+    label: str = "テストを作成中"
+    summary: str = ""
+    error: str = ""
+    human_action: str = ""
+    artifacts: dict[str, str] = field(default_factory=dict)
+
+
+_WORKS: dict[str, _Work] = {}
+_WORKS_LOCK = threading.Lock()
+
+
+def _report_path(ctx: Context) -> Path:
+    return ctx.out_dir / ctx.domain / "report.json"
+
+
+def _load_report(path: Path) -> dict[str, Any] | None:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(data, dict) or not isinstance(data.get("screens"), list):
+        return None
+    return data
+
+
+def _pending_gate(ctx: Context) -> str:
+    """未承認のまま残っている段階の名前。全部承認済み・未使用なら空文字。
+
+    stages.json が無いのは「03 AutoRun でこのサイトの段階承認をまだ一度も
+    使っていない」という意味で、承認を待っている人は居ない。無いことを
+    「未承認」と読むと、01→02 だけを使う経路が永久に止まる。
+    """
+    stages_path = ctx.out_dir / ctx.domain / "qa_process" / "stages.json"
+    if not stages_path.is_file():
+        return ""
+    try:
+        from autorun.stages import DESIGN_STAGE_IDS, Pipeline
+        from web.services.auto_run_pipeline import _GATE_MESSAGES
+
+        pipeline = Pipeline.from_dict(json.loads(stages_path.read_text(encoding="utf-8")))
+        if pipeline.all_approved:
+            return ""
+        for stage_id in DESIGN_STAGE_IDS:
+            stage = pipeline.get(stage_id)
+            if stage is not None and not stage.is_approved:
+                return _GATE_MESSAGES.get(stage_id, ("", "", "テスト設計"))[2]
+        return "テスト設計"
+    except Exception:  # noqa: BLE001 - 読めないものを「未承認」と決めつけない
+        return ""
+
+
+def _finish(handle: str, **fields: Any) -> None:
+    with _WORKS_LOCK:
+        work = _WORKS.get(handle)
+        if work is None:
+            return
+        for key, value in fields.items():
+            setattr(work, key, value)
+
+
+def _generate_qa(job: object, ctx: Context) -> str:
+    """QA 成果物を生成する（01→02→03 の連鎖と同じ関数）。失敗の説明を返す。"""
+    from web.services.auto_run_pipeline import _phase_generate_qa
+    from web.services.viewpoint_store import get_viewpoint_store
+
+    snapshot = get_viewpoint_store().select_snapshot({"url": job.url})
+    job._viewpoint_snapshot = snapshot
+    job.viewpoint_set_id = snapshot["set_id"]
+    job.viewpoint_set_name = snapshot["set_name"]
+    job.viewpoint_version = int(snapshot["version"])
+    job.viewpoint_checksum = snapshot["checksum"]
+    job.viewpoint_selection_reason = snapshot["selection_reason"]
+    ctx.log(f"観点セットを固定しました（{job.viewpoint_set_name} v{job.viewpoint_version}）")
+    _phase_generate_qa(job)
+    if job.status == "failed":
+        return str(job.error or "QA 成果物を生成できませんでした")
+    return ""
+
+
+def _build(handle: str, ctx: Context, job: object) -> None:
+    """QA 生成 →（未承認の確認）→ Playwright 化。どの経路でも状態を必ず書く。"""
+    from web.services.testcase_spec_generator import (
+        SpecGenerationError,
+        generate_spec,
+        is_executable,
+    )
+    from web.services.testcase_table_store import build_rows
+
+    try:
+        failure = _generate_qa(job, ctx)
+        if failure:
+            _finish(handle, state="failed", label="QA 成果物の生成に失敗",
+                    summary="テストの材料を作れませんでした", error=failure)
+            return
+
+        subject = _pending_gate(ctx)
+        if subject:
+            action = _APPROVE_ACTION.format(subject=subject)
+            _finish(handle, state="waiting_human", label=f"{subject}の承認待ち",
+                    summary=f"{subject}が承認されていません", human_action=action)
+            return
+
+        report = _load_report(_report_path(ctx))
+        if report is None:
+            _finish(handle, state="failed", label="観測結果を読めません",
+                    summary=_NO_REPORT, error=_NO_REPORT)
+            return
+
+        rows = build_rows(report)
+        spec_dir = ctx.out_dir / ctx.domain / "testcases"
+        try:
+            generate_spec(rows, spec_dir)
+        except SpecGenerationError as exc:
+            _finish(handle, state="failed", label="テストを作れません",
+                    summary=_NO_EXECUTABLE, error=str(exc))
+            return
+
+        count = sum(1 for row in rows if is_executable(row))
+        ctx.log(_UNAPPROVED_NOTE)
+        _finish(handle, state="succeeded", label="テスト作成 完了",
+                summary=f"テスト {count} 件を作成",
+                artifacts={"spec": f"{ctx.domain}/{_SPEC_RELPATH}"})
+    except Exception as exc:  # noqa: BLE001 - 例外でスレッドを黙って終わらせない
+        _finish(handle, state="failed", label="テスト作成に失敗",
+                summary="テストを作れませんでした",
+                error=f"テストの作成中に問題が起きました: {exc}")
+
+
+class TestsAgent:
+    """02: 観測結果からテストを作り、Playwright のスクリプトへ落とす。"""
+
+    name = "tests"
+    label = "テストの作成"
+
+    def ready(self, ctx: Context) -> Readiness:
+        report = _load_report(_report_path(ctx))
+        if report is None:
+            return Readiness(
+                ok=False, human_action=_NO_REPORT,
+                detail=f"{ctx.domain} の観測結果がありません",
+            )
+        screens = len(report.get("screens") or [])
+        if screens == 0:
+            return Readiness(
+                ok=False, human_action=_NO_REPORT,
+                detail=f"{ctx.domain} は 1 画面も観測できていません",
+            )
+        return Readiness(ok=True, detail=f"観測済み {screens} 画面")
+
+    def run(self, ctx: Context) -> StepResult:
+        from web.services.auto_run_job import AutoRunJob
+
+        report = _load_report(_report_path(ctx))
+        if report is None:
+            return StepResult(
+                status="waiting_human", summary="観測結果がありません",
+                human_action=_NO_REPORT,
+            )
+
+        url = str(report.get("site_url") or "").strip() or f"http://{ctx.domain}/"
+        job = AutoRunJob(
+            job_id=uuid.uuid4().hex, url=url, domain=ctx.domain,
+            started_at=datetime.now().isoformat(timespec="seconds"),
+        )
+        job._output_dir = ctx.out_dir
+        # 段階承認はここでは待たない（_pending_gate が未承認を waiting_human に写す）。
+        job.require_stage_approval = False
+
+        handle = job.job_id
+        with _WORKS_LOCK:
+            _WORKS[handle] = _Work()
+        summary = f"{len(report.get('screens') or [])} 画面からテストを作ります"
+        ctx.log(summary)
+        threading.Thread(
+            target=_build, args=(handle, ctx, job),
+            name=f"tests-{handle[:8]}", daemon=True,
+        ).start()
+        return StepResult(status="running", summary=summary, handle=handle)
+
+    def status(self, ctx: Context, handle: str) -> StepStatus:
+        with _WORKS_LOCK:
+            work = _WORKS.get(str(handle or "").strip())
+        if work is None:
+            return StepStatus(
+                state="failed", label="記録なし", summary=_NO_HANDLE, error=_NO_HANDLE,
+            )
+        return StepStatus(
+            state=work.state, label=work.label, summary=work.summary,
+            artifacts=dict(work.artifacts), error=work.error,
+            human_action=work.human_action,
+        )

@@ -176,14 +176,17 @@ class HealingAgent:
             )
         raw = str(getattr(run, "status", "") or "")
         state = _STATE_MAP.get(raw, "running")
-        summary = _APPROVE_REPORT if state == "waiting_human" else ""
+        report_ids = list(getattr(run, "report_ids", None) or [])
+        waiting = state == "waiting_human"
         return StepStatus(
             state=state,
             label=str(getattr(run, "step_label", "") or raw),
-            summary=summary,
+            # summary は事実、human_action は依頼。混ぜると画面が
+            # 「何が起きたか」と「何をすればよいか」を出し分けられない。
+            summary=f"報告書 {len(report_ids)} 件が承認待ちです" if waiting else "",
             artifacts={
-                f"report:{rid}": f".healing/reports/{rid}.json"
-                for rid in (getattr(run, "report_ids", None) or [])
+                f"report:{rid}": f".healing/reports/{rid}.json" for rid in report_ids
             },
             error=str(getattr(run, "error", "") or ""),
+            human_action=_APPROVE_REPORT if waiting else "",
         )

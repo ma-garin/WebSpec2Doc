@@ -31,6 +31,7 @@ def create_app() -> Flask:
         integrations,
         llm_chat,
         login,
+        orchestration,
         pages,
         qa_process,
         report,
@@ -130,6 +131,8 @@ def create_app() -> Flask:
     app.register_blueprint(feedback.bp)
     # オートヒーリング（System 05）。他システムと同様、独立した入口 /healing を持つ。
     app.register_blueprint(healing.bp)
+    # 指揮者（O2）。5 システムを 1 本の実行として束ねる API。
+    app.register_blueprint(orchestration.bp)
 
     from web.services.viewpoint_store import get_viewpoint_store
 

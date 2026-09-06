@@ -23,8 +23,14 @@ from web.services.orchestration.ports import (
     StepStatus,
 )
 
-#: 指揮者が起こしたことを示す出どころ。monitor.py の "monitor" に対応する。
+#: 指揮者が起こしたことを示す出どころ。実行者が分からないときの既定値で、
+#: 監視が起こしたものは ctx.actor（"monitor"）がそのまま出どころになる。
 CONDUCTOR_SOURCE = "conductor"
+
+
+def _source(ctx: Context) -> str:
+    """記録に残す出どころ。指揮を起こした人・仕組みの名前をそのまま使う。"""
+    return str(getattr(ctx, "actor", "") or "").strip() or CONDUCTOR_SOURCE
 
 _NOT_CONNECTED = "オートヒーリング › 設定で、このサイトのリポジトリを接続してください"
 _APPROVE_REPORT = "報告書を確認して、承認・差し戻し・却下を決めてください"
@@ -136,9 +142,11 @@ class HealingAgent:
                 status="skipped", summary=note + "失敗はありません。報告書は作りません",
             )
 
-        # 出どころを指揮者に付け替える。autorun_bridge は画面から押されたときと
-        # 同じ Defect を作るので、そのままだと「人が押した」と読める記録が残る。
-        defects = [replace(d, source=CONDUCTOR_SOURCE) for d in defects]
+        # 出どころを指揮を起こした側に付け替える。autorun_bridge は画面から
+        # 押されたときと同じ Defect を作るので、そのままだと「人が押した」と
+        # 読める記録が残る。
+        source = _source(ctx)
+        defects = [replace(d, source=source) for d in defects]
         summary = note + f"{len(defects)} 件の失敗から報告書を下書きしています"
         ctx.log(summary)
         try:
@@ -147,7 +155,7 @@ class HealingAgent:
             run = orchestrator.start_run_if_idle(
                 out_dir=ctx.out_dir,
                 project=project,
-                actor=CONDUCTOR_SOURCE,
+                actor=source,
                 defects=defects,
             )
         except Exception as exc:  # noqa: BLE001 - 例外は握らず結果として返す

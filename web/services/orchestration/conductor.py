@@ -136,6 +136,7 @@ def _run_step(out_dir: Path, run: ConductorRun, record: StepRecord) -> bool:
     agent = registry.get_agent(record.name)
     ctx = Context(
         out_dir=out_dir, domain=run.domain, project_id=run.project_id, params=run.params,
+        actor=run.actor,
         log=lambda message: _save(out_dir, run, note=f"{agent.label}: {message}"),
     )
     record.status = "running"

@@ -94,6 +94,7 @@
           <tr><td><code>test</code></td><td>テストケース表から Playwright を実行して結果を保存</td><td>レポートの「テスト実行」</td><td><code>python src/cli.py test --domain example.com</code></td></tr>
           <tr><td><code>sites</code></td><td>解析済みサイトと画面数・項目数・履歴数の一覧</td><td>ホームの解析履歴</td><td><code>python src/cli.py sites</code></td></tr>
           <tr><td><code>show</code></td><td>1 サイトの成果物の場所と、テスト実行の実績</td><td>レポートのエクスポート</td><td><code>python src/cli.py show --domain example.com</code></td></tr>
+          <tr><td><code>orchestrate</code></td><td>1 本の流れ（回す → 直す → 報告書）を起こして終わるまで待つ</td><td>指揮（全システム連携）</td><td><code>python -m web.services.cli_orchestration orchestrate --domain example.com --goal daily</code></td></tr>
           <tr><td><code>viewpoints</code></td><td>観点セットの一覧（名称・公開版・観点数）</td><td>観点管理</td><td><code>python src/cli.py viewpoints</code></td></tr>
         </tbody>
       </table>

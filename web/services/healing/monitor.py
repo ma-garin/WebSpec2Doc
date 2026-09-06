@@ -17,12 +17,13 @@ from __future__ import annotations
 
 import logging
 import threading
-from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
 
-from web.services.healing import autorun_bridge, orchestrator, project_store
-from web.services.healing.types import HealingProject, HealingRun
+from web.services.healing import project_store
+from web.services.healing.types import HealingProject
+from web.services.orchestration import conductor
+from web.services.orchestration.run_store import ConductorRun
 
 logger = logging.getLogger(__name__)
 
@@ -127,28 +128,6 @@ def is_due(project: HealingProject, *, now: datetime | None = None) -> bool:
     )
 
 
-def _spec_path(out_dir: Path, domain: str) -> Path | None:
-    """回すテストファイル。02 が作ったものを優先し、無ければ 03 のものを使う。"""
-    for relative in (
-        Path("testcases") / "testcases.spec.ts",
-        Path("qa_process") / "autorun.spec.ts",
-    ):
-        candidate = out_dir / domain / relative
-        if candidate.is_file():
-            return candidate
-    return None
-
-
-def _has_active_run(out_dir: Path, project_id: str) -> bool:
-    """まだ終わっていない実行があるか。二重に走らせない。
-
-    判定そのものは orchestrator に置いてある。ここと指揮者アダプタに
-    同じ判定を 2 つ持っていたため、「プロセスごと止まった実行の片付け」を
-    足したときに片方だけ直る形になっていた。
-    """
-    return orchestrator.has_active_run(out_dir, project_id)
-
-
 def _mark_ran(out_dir: Path, project: HealingProject, now: datetime) -> None:
     """その日は回した、と記録する。失敗しても実行そのものは成立している。"""
     try:
@@ -163,11 +142,15 @@ def _mark_ran(out_dir: Path, project: HealingProject, now: datetime) -> None:
         )
 
 
-def run_now(out_dir: Path, project: HealingProject) -> HealingRun | None:
-    """1 接続先ぶんの監視を今すぐ回す。失敗が無ければ None を返す。
+def run_now(out_dir: Path, project: HealingProject) -> ConductorRun | None:
+    """1 接続先ぶんの監視を今すぐ起こす。指揮が始まらなければ None を返す。
 
-    テストが全部通っていれば、報告書は作らない。出すものが無いのに
-    報告書だけ増えると、承認待ちの一覧が意味を失う。
+    テストを回すのも、落ちた分から報告書を下書きするのも指揮者の段が行う。
+    ここが自分で Playwright を回していた頃は同じ手順が 2 か所にあり、
+    片方だけ直る形になっていた（起こす側は「起こす」だけを持つ）。
+
+    その日は回した、という記録は指揮を起こせたときだけ付ける。起こせなかった
+    日に記録すると、翌日まで監視が動かない。
     """
     domain = str(getattr(project, "domain", "") or "")
     now = datetime.now()
@@ -175,43 +158,21 @@ def run_now(out_dir: Path, project: HealingProject) -> HealingRun | None:
         logger.info("監視: サイトが未設定のため飛ばします (%s)", project.project_id)
         return None
 
-    spec = _spec_path(out_dir, domain)
-    if spec is None:
-        logger.info("監視: 回せるテストがありません (%s / %s)", project.project_id, domain)
-        _mark_ran(out_dir, project, now)
-        return None
-
-    if _has_active_run(out_dir, project.project_id):
-        logger.info("監視: まだ終わっていない実行があるため飛ばします (%s)", project.project_id)
-        return None
-
-    # 実行結果は 03 と同じ場所へ置く。画面の「実行結果」からも同じものが見える。
-    from web.services.playwright_executor import run_playwright
-
-    output_dir = out_dir / domain / "qa_process"
-    output_dir.mkdir(parents=True, exist_ok=True)
-    run_playwright(spec_path=spec, output_dir=output_dir)
-
-    defects = autorun_bridge.load_failures(out_dir, domain)
-    _mark_ran(out_dir, project, now)
-    if not defects:
-        logger.info("監視: %s は全部通りました", domain)
-        return None
-
-    # 出どころを監視に付け替える。autorun_bridge は 02/03 の画面から
-    # 押されたときと同じ Defect を作るので、そのままだと報告書の
-    # 「事象」欄に「人が押した」と読める記録が残る。
-    defects = [replace(d, source="monitor") for d in defects]
-
-    logger.info("監視: %s", autorun_bridge.summarize_failures(defects))
-    # 上の _has_active_run から時間が経っている（テストを 1 本走らせている）。
-    # その間に画面や指揮者から実行が起きうるので、確認と開始が一体になった
-    # start_run_if_idle で起こす。
-    run = orchestrator.start_run_if_idle(
-        out_dir=out_dir, project=project, actor="monitor", defects=defects
+    # 確認と開始が一体になった関数で起こす。監視・画面・API は別スレッドから
+    # 呼ぶので、確認と開始が分かれていると同じサイトの指揮が二重に立つ。
+    run = conductor.start_if_idle(
+        out_dir=out_dir,
+        domain=domain,
+        goal="daily",
+        project_id=project.project_id,
+        actor="monitor",
     )
     if run is None:
         logger.info(
             "監視: まだ終わっていない実行があるため飛ばします (%s)", project.project_id
         )
+        return None
+
+    _mark_ran(out_dir, project, now)
+    logger.info("監視: %s の指揮を始めました (%s)", domain, run.run_id)
     return run

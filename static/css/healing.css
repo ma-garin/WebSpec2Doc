@@ -893,3 +893,20 @@ table.hl-projects-table td { padding-top: 6px; padding-bottom: 6px; }
 #hl-view-projects > .dashboard-section-head, #hl-view-history > .dashboard-section-head,
 #hl-view-projects > .hl-form, #hl-view-projects > .hl-list-meta,
 #hl-view-history > .hl-list-meta, #hl-view-history > .hl-more-row { flex: 0 0 auto; }
+
+/* 毎日の見張り列。トグル・時刻・今すぐ を 1 行に置き、状態は下の行に書く。
+   「設定値」ではなく「次に何が起きるか」を読ませたいので、注記を主にする。 */
+.hl-monitor-cell { white-space: nowrap; }
+.hl-monitor-row { display: flex; align-items: center; gap: 6px; }
+.hl-monitor-toggle {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12px; cursor: pointer;
+}
+.hl-monitor-toggle input { margin: 0; cursor: pointer; }
+.hl-monitor-time {
+  font: inherit; font-size: 12px; padding: 2px 4px;
+  border: 1px solid var(--hl-line, #D0D5DD); border-radius: 5px;
+  background: var(--hl-surface, #fff); color: inherit;
+}
+.hl-monitor-now { padding: 2px 8px; font-size: 12px; }
+.hl-monitor-note { margin-top: 3px; font-size: 11px; color: var(--hl-text-3, #667085); }

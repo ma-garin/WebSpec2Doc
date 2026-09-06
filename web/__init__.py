@@ -138,4 +138,12 @@ def create_app() -> Flask:
     from web.services.scheduler import start_scheduler
 
     start_scheduler()
+
+    # 監視は「壊れたら直る」を人の起動なしに成立させる部分。
+    # テストや一部の運用では止めたいので、環境変数で切れるようにする。
+    if os.environ.get("WEBSPEC2DOC_HEALING_MONITOR", "1") == "1":
+        from web.config import OUTPUT_DIR
+        from web.services.healing.monitor import start_monitor
+
+        start_monitor(OUTPUT_DIR)
     return app

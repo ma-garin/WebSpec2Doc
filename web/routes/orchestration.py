@@ -298,6 +298,7 @@ def api_start_run():
     # エラーになる項目」として並び続ける。
     repo = str(data.get("repo") or "")
     verify_command = str(data.get("verify_command") or "")
+    params: dict[str, Any] | None = None
     if goal == "onboard" and (not domain or repo or verify_command):
         url = str(raw_params.get("url") or "").strip()
         if len(repo) > _MAX_REPO_LEN:
@@ -313,6 +314,10 @@ def api_start_run():
             return {"error": "URL のサイトと domain が一致しません。"}, 400
         if conductor.has_active_run(out_dir, derived):
             return {"error": _BUSY}, 409
+        # depth / max_pages の検査も接続先を作る前に済ませる（再検証で判明）
+        params, params_error = _clean_params(data, derived)
+        if params_error:
+            return {"error": params_error}, 400
         try:
             plan = onboarding.prepare(
                 out_dir, url=url, repo=repo, verify_command=verify_command,
@@ -329,9 +334,10 @@ def api_start_run():
 
     if not _DOMAIN_RE.match(domain):
         return {"error": "サイトの指定が不正です。"}, 400
-    params, params_error = _clean_params(data, domain)
-    if params_error:
-        return {"error": params_error}, 400
+    if params is None:
+        params, params_error = _clean_params(data, domain)
+        if params_error:
+            return {"error": params_error}, 400
     params["rounds"] = rounds
 
     try:

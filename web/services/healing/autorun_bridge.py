@@ -107,12 +107,26 @@ def _find_screenshot(out_dir: Path, domain: str, title: str) -> str:
         return ""
 
 
+def _spec_path_for_report(report_path: Path) -> str:
+    """使った実行結果 JSON と同じディレクトリにある .spec.ts を探す。
+
+    見つからなければ空にする（フォールバック探索は script_fix.find_spec 側が持つ）。
+    """
+    folder = report_path.parent
+    for name in ("testcases.spec.ts", "autorun.spec.ts"):
+        candidate = folder / name
+        if candidate.is_file():
+            return str(candidate)
+    return ""
+
+
 def _defect_from_test(
     test: Mapping[str, Any],
     *,
     screens: Mapping[str, Mapping[str, str]],
     out_dir: Path,
     domain: str,
+    spec_path: str = "",
 ) -> Defect:
     title = str(test.get("title") or "")
     error = str(test.get("error") or "")
@@ -138,6 +152,7 @@ def _defect_from_test(
         screen_name=screen.get("title", ""),
         test_title=test_title,
         screenshot=_find_screenshot(out_dir, domain, title),
+        spec_path=spec_path,
     )
 
 
@@ -153,15 +168,18 @@ def load_failures(
     test_ids を渡すと、その TC-ID を含むテストだけに絞る。
     """
     report: dict[str, Any] | None = None
+    matched_path: Path | None = None
     for path in _report_candidates(out_dir, domain, run_id):
         report = _load_json(path)
         if report is not None and report.get("tests") is not None:
             logger.info("実行結果を読みました: %s", path)
+            matched_path = path
             break
         report = None
     if report is None:
         return []
 
+    spec_path = _spec_path_for_report(matched_path) if matched_path else ""
     wanted = {str(t) for t in test_ids if str(t).strip()}
     screens = _screen_index(out_dir, domain)
     defects: list[Defect] = []
@@ -174,7 +192,9 @@ def load_failures(
         if wanted and not any(tid in title for tid in wanted):
             continue
         defects.append(
-            _defect_from_test(test, screens=screens, out_dir=out_dir, domain=domain)
+            _defect_from_test(
+                test, screens=screens, out_dir=out_dir, domain=domain, spec_path=spec_path
+            )
         )
     return defects
 

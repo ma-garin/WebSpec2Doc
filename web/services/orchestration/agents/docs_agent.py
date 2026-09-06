@@ -250,3 +250,25 @@ class DocsAgent:
             summary=f"画面 {screens} 件を観測",
             artifacts={"report": f"{ctx.domain}/report.json"},
         )
+
+    def cancel(self, ctx: Context, handle: str) -> bool:
+        """観測に中止を伝える。走っているスレッドは横から止められない。
+
+        観測は AutoRun のフェーズ関数の中で進んでおり、外から割り込めない。
+        できるのは合図（job.cancel）を立てて、ログイン入力待ちで止まっている
+        スレッドを解くことだけ。フェーズの切れ目で止まる。
+        """
+        with _JOBS_LOCK:
+            job = _JOBS.get(str(handle or "").strip())
+        if job is None:
+            return False
+        try:
+            job.cancel()  # _cancelled を立て、待ちの合図も解く
+        except Exception as exc:  # noqa: BLE001 - 中止の失敗で呼び出し元を落とさない
+            ctx.log(f"観測の中止に失敗しました: {exc}")
+            return False
+        event = getattr(job, "_input_event", None)
+        if event is not None:
+            event.set()  # 入力待ちで眠っているスレッドを起こす
+        ctx.log("観測の中止を伝えました（進行中の処理は区切りで止まります）")
+        return True

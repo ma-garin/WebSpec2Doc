@@ -11,6 +11,7 @@ dict と daemon スレッドで進め、画面は永続化された JSON を読�
 
 from __future__ import annotations
 
+import atexit
 import logging
 import threading
 import time
@@ -48,6 +49,10 @@ _START_LOCK = threading.Lock()
 
 _CANCEL: dict[str, threading.Event] = {}
 
+#: run_id → 出力先。中止とプロセス終了時の片付けが、走行中の段へ
+#: 同じ Context を組み立て直すために要る（ConductorRun は持っていない）。
+_OUT_DIRS: dict[str, Path] = {}
+
 
 def _now_iso() -> str:
     return datetime.now().isoformat(timespec="seconds")
@@ -83,6 +88,32 @@ def _cancelled(run_id: str) -> bool:
     return event is not None and event.is_set()  # 段の切れ目と 10 秒ごとに見る
 
 
+def _stop_step(out_dir: Path, run: ConductorRun) -> None:
+    """走行中の段そのものに中止を頼む。
+
+    記録だけを cancelled にしても、段が起こした子プロセス（Playwright の node、
+    05 の修正）は走り続ける。実測で、指揮者のプロセスが終わったあとも
+    playwright test が孤児として残った。止めるのは段を持つ側の責任なので、
+    指揮者は agent.cancel に頼み、結果をログに残す。
+    """
+    steps = list(run.steps or [])
+    index = int(run.step_index or 0)
+    record = steps[index] if 0 <= index < len(steps) else None
+    if record is None or record.status != "running" or not record.name:
+        return
+    try:
+        agent = registry.get_agent(record.name)
+        ctx = Context(out_dir=out_dir, domain=run.domain, project_id=run.project_id,
+                      params=run.params, actor=run.actor)
+        stopped = bool(agent.cancel(ctx, record.handle))
+    except Exception:  # noqa: BLE001 - 片付けの失敗で中止そのものを失敗にしない
+        logger.warning("段 %s を止められませんでした", record.name, exc_info=True)
+        _save(out_dir, run, note=f"{record.label}を止められませんでした")
+        return
+    _save(out_dir, run, note=(f"{record.label}を中止しました" if stopped else
+                              f"{record.label}は今すぐ止まりません（区切りで止まります）"))
+
+
 def start(*, out_dir: Path, domain: str, goal: str, project_id: str = "",
           actor: str = "", params: Mapping[str, Any] | None = None) -> ConductorRun:
     """指揮を 1 本起こす。目標が未対応なら日本語の ValueError。"""
@@ -98,6 +129,7 @@ def start(*, out_dir: Path, domain: str, goal: str, project_id: str = "",
     )
     with _RUNS_LOCK:
         _CANCEL[run.run_id] = threading.Event()
+        _OUT_DIRS[run.run_id] = Path(out_dir)
     label = goals.GOAL_LABELS.get(run.goal, run.goal)
     _save(out_dir, run, note=f"受付しました（目標: {label} / 実行者: {actor or '不明'}）")
     threading.Thread(target=_loop, args=(Path(out_dir), run),
@@ -125,6 +157,7 @@ def _loop(out_dir: Path, run: ConductorRun) -> None:
     finally:
         with _RUNS_LOCK:
             _CANCEL.pop(run.run_id, None)
+            _OUT_DIRS.pop(run.run_id, None)
         try:
             run_store.save_run(out_dir, run)
         except Exception:  # noqa: BLE001 - 保存の失敗でスレッドを落とさない
@@ -172,12 +205,8 @@ def _await_step(out_dir: Path, run: ConductorRun, record: StepRecord,
     last_state = ""
     while True:
         if _cancelled(run.run_id):
-            note = _CANCEL_NOTE
-            if record.name == "healing":
-                # 05 の実行は 05 の持ち物。指揮者が代わりに止めない。
-                note += "（オートヒーリング側の実行は動いています。"
-                note += "止めるには 05 の画面で操作してください）"
-            return StepStatus(state="cancelled", label="中止", summary=note)
+            _stop_step(out_dir, run)  # 段の実体も止める（記録だけ止めない）
+            return StepStatus(state="cancelled", label="中止", summary=_CANCEL_NOTE)
         try:
             status = agent.status(ctx, record.handle)
         except Exception as exc:  # noqa: BLE001 - 例外は握らず結果として返す
@@ -190,6 +219,7 @@ def _await_step(out_dir: Path, run: ConductorRun, record: StepRecord,
             return status
         if time.monotonic() >= deadline:
             message = f"{agent.label} が 2 時間で終わりませんでした"
+            _stop_step(out_dir, run)  # 諦めた実行を走らせたままにしない
             return StepStatus(state="failed", label="時間切れ", summary=message, error=message)
         time.sleep(POLL_INTERVAL_SEC)
 
@@ -291,10 +321,38 @@ def start_if_idle(*, out_dir: Path, domain: str, goal: str, project_id: str = ""
 
 
 def cancel(out_dir: Path, run_id: str) -> bool:
-    """次の確認で止まるように合図する。走っている段そのものは止めない。"""
+    """中止を合図し、走っている段そのものにも中止を頼む。
+
+    合図だけでは、段が起こした子プロセスは走り続ける。10 秒後の確認を待たずに
+    ここで止めるのは、待っている間ブラウザが動き続けるのを見せないため。
+    """
     with _RUNS_LOCK:
         event = _CANCEL.get(run_id)
-        if event is None:
-            return False
-        event.set()
+        run = _RUNS.get(run_id)
+    if event is None:
+        return False
+    event.set()
+    if run is not None:
+        _stop_step(Path(out_dir), run)
     return True
+
+
+def _stop_running_steps() -> None:
+    """プロセス終了時に、走行中の段を止める（孤児プロセスを残さない）。
+
+    デーモンスレッドはプロセスと一緒に消えるが、そのスレッドが起こした
+    子プロセス（node）は消えない。消す責任はここにしかない。
+    """
+    with _RUNS_LOCK:
+        pending = [(r, _OUT_DIRS.get(r.run_id)) for r in _RUNS.values()
+                   if r.status not in TERMINAL_STATUSES]
+    for run, out_dir in pending:
+        if out_dir is None:
+            continue
+        try:
+            _stop_step(out_dir, run)
+        except Exception:  # noqa: BLE001 - 終了処理で例外を投げない
+            logger.warning("指揮 %s の片付けに失敗しました", run.run_id, exc_info=True)
+
+
+atexit.register(_stop_running_steps)

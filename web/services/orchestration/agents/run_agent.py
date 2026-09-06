@@ -5,16 +5,30 @@ playwright_executor が持っており、ここは呼び方を monitor.py::run_n
 揃える以上のことをしない。同じ実行を 2 通りの呼び方で持つと、
 結果の置き場所がずれて「実行結果」画面から見えなくなる。
 
-同期で終わるが handle は返す。中身は結果ファイル（out_dir からの相対パス）と
-その更新時刻で、status() は指定されたファイルだけを読み、更新時刻が合わなければ
-「あとの実行に上書きされた」と答える。「そのドメインの最新の結果」を返す作りだと、
-同じドメインで 2 回目を回した後に 1 回目の handle で追いかけたとき、
-無関係な結果を「その実行の結果」として返してしまう。
+**非同期で走る。**run() は Playwright の完了を待たずに handle を返し、続きは
+スレッドが進める。同期で待っていたとき、指揮者の `_await_step`（10 秒ごとの
+確認・2 時間の上限・中止の確認）が一度も通らず、801 件のテストで数時間
+ブロックし、その間の中止が効かなかった（実測）。
+
+進捗と結果は `<domain>/qa_process/.run/<handle>.json` に書く。プロセスを跨いで
+読めるものだけが「起きたこと」であり、メモリの上だけの状態は再起動で消える。
+子プロセスの pid も同じ JSON に書く。書いておかないと、指揮者のプロセスが
+落ちたあとに node（playwright test）を止める手段が誰にも無くなる。
 """
 
 from __future__ import annotations
 
+import atexit
 import json
+import logging
+import os
+import signal
+import subprocess
+import threading
+import time
+import uuid
+from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -25,8 +39,9 @@ from web.services.orchestration.ports import (
     StepStatus,
 )
 
+logger = logging.getLogger(__name__)
+
 #: 回すテストファイル。02 が作ったものを優先し、無ければ 03 のものを使う。
-#: monitor.py::_spec_path と同じ順序。
 _SPEC_CANDIDATES: tuple[tuple[str, ...], ...] = (
     ("testcases", "testcases.spec.ts"),
     ("qa_process", "autorun.spec.ts"),
@@ -36,6 +51,21 @@ _NO_SPEC = "02 テスト自動化でこのサイトのテストを作ってく�
 _NO_HANDLE = "実行の記録がありません"
 _NO_TESTS = "テストが 1 件も実行されませんでした。テストファイルを確認してください"
 _UNREADABLE = "テスト結果を読めませんでした（{path}）"
+_RUNNING = "テストを実行しています"
+_PROC_GONE = "実行中にプロセスが止まりました。もう一度実行してください"
+_CANCELLED = "テスト実行を中止しました"
+_STALE = "テスト結果が更新されませんでした（前の実行の結果が残っています）"
+
+#: 1 回の実行に許す時間。指揮者の段の上限（params）をそのまま使う。
+_DEFAULT_TIMEOUT_SEC = 7200
+
+_STATE_DIR = ".run"
+_HANDLE_PREFIX = "run-"
+_HEX = frozenset("0123456789abcdef")
+
+
+def _now() -> str:
+    return datetime.now().isoformat(timespec="seconds")
 
 
 def _spec_path(out_dir: Path, domain: str) -> Path | None:
@@ -51,62 +81,39 @@ def _report_relpath(domain: str) -> str:
     return f"{domain}/qa_process/playwright_report.json"
 
 
-#: handle の中で「どの実行か」を表す部分の区切り。
-_HANDLE_SEP = "@"
+def _state_path(out_dir: Path, domain: str, handle: str) -> Path | None:
+    """handle が指す進捗ファイル。形が違えば None（外から来た文字列なので）。"""
+    text = str(handle or "").strip()
+    ident = text[len(_HANDLE_PREFIX):] if text.startswith(_HANDLE_PREFIX) else ""
+    if not ident or not set(ident) <= _HEX:
+        return None
+    return out_dir / domain / "qa_process" / _STATE_DIR / f"{text}.json"
 
-#: 追いかけている実行の結果が、あとの実行に上書きされていたときの説明。
-_OVERWRITTEN = "この実行の結果は、あとの実行に上書きされました。最新の結果を見てください"
 
-
-def _make_handle(domain: str, report_path: Path) -> str:
-    """結果ファイルの相対パスに、その時点の更新時刻を添えたもの。
-
-    同じサイトの結果は毎回同じファイルへ上書きされる。パスだけを handle に
-    すると、2 回目を回したあとに 1 回目の handle で status() を追いかけたとき、
-    別の実行の結果を「その実行の結果」として返してしまう（実測で確認済み）。
-    更新時刻を添えておき、合わなければ「上書きされた」と正直に言う。
-    """
-    relative = _report_relpath(domain)
+def _load_state(path: Path) -> dict[str, Any] | None:
     try:
-        return f"{relative}{_HANDLE_SEP}{report_path.stat().st_mtime_ns}"
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _patch_state(path: Path, **fields: Any) -> None:
+    """進捗ファイルを書き換える。ここを通した変更だけが外から見える。"""
+    data = _load_state(path) or {}
+    data.update(fields)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     except OSError:
-        return relative
-
-
-def _split_handle(handle: str) -> tuple[str, int | None]:
-    """handle を (相対パス, 実行を表す更新時刻) に分ける。
-
-    更新時刻が付いていない handle（artifacts["report"] のパスそのもの）も
-    受け付ける。その場合は「どの実行か」を問わず、今ある結果を読む。
-    """
-    text = str(handle or "").strip()
-    path, sep, stamp = text.rpartition(_HANDLE_SEP)
-    if not sep or not stamp.isdigit():
-        return text, None
-    return path, int(stamp)
-
-
-def _resolve_report(out_dir: Path, handle: str) -> Path | None:
-    """handle（out_dir からの相対パス）を実ファイルへ解決する。
-
-    絶対パスや上位への参照は受け付けない。handle は外から渡ってくる文字列で、
-    そのまま結合すると out_dir の外を読ませられる。
-    """
-    text = str(handle or "").strip()
-    if not text:
-        return None
-    candidate = Path(text)
-    if candidate.is_absolute() or ".." in candidate.parts:
-        return None
-    return out_dir / candidate
+        logger.warning("テスト実行の記録を保存できませんでした（%s）", path, exc_info=True)
 
 
 def _read_report(report_path: Path) -> tuple[dict[str, Any] | None, str]:
     """保存された結果を読む。読めなければ (None, 人が読む理由)。
 
     「読めなかった」を 0 件として返してはいけない。0 件は「全部通った」と
-    同じ形になり、結果が壊れている事実が消える（実測で、壊れた JSON を
-    「0 件中 0 件失敗・succeeded」と報告していた）。
+    同じ形になり、結果が壊れている事実が消える。
     """
     try:
         data = json.loads(report_path.read_text(encoding="utf-8"))
@@ -117,10 +124,25 @@ def _read_report(report_path: Path) -> tuple[dict[str, Any] | None, str]:
     return data, ""
 
 
-def _report_data(result: Any, report_path: Path) -> tuple[dict[str, Any] | None, str]:
-    """実行の戻り値を優先し、壊れていたら保存された JSON を読み直す。"""
+def _mtime_ns(path: Path) -> int:
+    try:
+        return path.stat().st_mtime_ns
+    except OSError:
+        return -1
+
+
+def _report_data(result: Any, report_path: Path,
+                 before_ns: int) -> tuple[dict[str, Any] | None, str]:
+    """実行の戻り値を優先し、壊れていたら保存された JSON を読み直す。
+
+    結果ファイルは毎回同じ場所へ上書きされる。更新されていないものを読むと、
+    前の実行の成否を今回の成否として報告することになる（実測で、中止した
+    実行が前回の「1 件中 1 件失敗」を自分の結果として拾った）。
+    """
     if isinstance(result, dict) and isinstance(result.get("tests"), list):
         return result, ""
+    if _mtime_ns(report_path) == before_ns:
+        return None, _STALE
     return _read_report(report_path)
 
 
@@ -132,26 +154,182 @@ def _int(value: Any) -> int:
 
 
 def _judge(data: dict[str, Any]) -> tuple[str, str, str]:
-    """読めた結果から (状態, 人が読む 1 文, エラー) を決める。
-
-    run() と status() が別々の判断を持つと、同じ結果ファイルに対して
-    片方だけが失敗を見つける（実際に status() 側にだけ防御が無かった）。
-    """
+    """読めた結果から (状態, 人が読む 1 文, エラー) を決める。"""
     error = str(data.get("error") or "")
     tests = data.get("tests") or []
     total = _int(data.get("total")) or len(tests)
     failed = _int(data.get("failed"))
     if total == 0:
         # 0 件を succeeded にすると「テストが 1 件も無い」と「全部通った」が
-        # 同じ報告になる。前者はテストが壊れている合図なので、区別して失敗にする。
+        # 同じ報告になる。前者はテストが壊れている合図なので失敗にする。
         if error:
             return "failed", "実行結果を読み取れませんでした", error
         return "failed", _NO_TESTS, _NO_TESTS
     return "succeeded", f"{total} 件中 {failed} 件失敗", error
 
 
+def _alive(pid: int) -> bool:
+    """そのプロセスがまだ居るか。権限が無い＝居る（他人のもの）。"""
+    if pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return True
+    return True
+
+
+def _descendants(pid: int) -> list[int]:
+    """pid とその子孫。playwright は node の下にワーカーとブラウザを持つ。
+
+    Popen は start_new_session を使っていない（playwright_executor 側）ので
+    プロセスグループごとの kill は自分自身を巻き込む。pgrep で辿る。
+    """
+    found = [pid]
+    frontier = [pid]
+    while frontier:
+        children: list[int] = []
+        for parent in frontier:
+            try:
+                out = subprocess.run(["pgrep", "-P", str(parent)], capture_output=True,
+                                     text=True, timeout=5).stdout
+            except (OSError, subprocess.SubprocessError):
+                continue
+            children += [int(t) for t in out.split() if t.isdigit() and int(t) not in found]
+        found += children
+        frontier = children
+    return found
+
+
+def _kill_tree(pid: int) -> None:
+    """子孫ごと止める。SIGTERM → 3 秒 → SIGKILL。"""
+    if pid <= 0:
+        return
+    targets = _descendants(pid)
+    for sig in (signal.SIGTERM, signal.SIGKILL):
+        alive = [p for p in targets if _alive(p)]
+        if not alive:
+            return
+        for target in alive:
+            try:
+                os.kill(target, sig)
+            except OSError:
+                pass
+        if sig is signal.SIGTERM:
+            deadline = time.monotonic() + 3
+            while time.monotonic() < deadline and any(_alive(p) for p in targets):
+                time.sleep(0.2)
+
+
+@dataclass
+class _Live:
+    """このプロセスが進めている実行。status() の孤児判定にも使う。"""
+
+    path: Path
+    proc: Any = None
+    cancelled: bool = False
+
+
+_LIVE: dict[str, _Live] = {}
+_LIVE_LOCK = threading.Lock()
+_SHUTDOWN = threading.Event()
+
+
+def _attach(handle: str, path: Path, proc: Any) -> None:
+    """起動した子プロセスを記録する。中止と孤児検知はこの pid が頼り。"""
+    pid = _int(getattr(proc, "pid", 0))
+    with _LIVE_LOCK:
+        live = _LIVE.get(handle)
+        if live is not None:
+            live.proc = proc
+        cancelled = bool(live is not None and live.cancelled)
+    _patch_state(path, pid=pid)
+    if cancelled:  # 起動前に中止された。起動した瞬間に止める
+        _kill_tree(pid)
+
+
+def _finish(handle: str, path: Path, **fields: Any) -> bool:
+    """終わりを書く。中止済み・プロセス終了中なら書かない（上書きしない）。"""
+    if _SHUTDOWN.is_set():
+        return False
+    with _LIVE_LOCK:
+        live = _LIVE.get(handle)
+        if live is not None and live.cancelled:
+            return False
+    _patch_state(path, finished_at=_now(), **fields)
+    return True
+
+
+def _execute(handle: str, path: Path, ctx: Context, spec: Path, output_dir: Path,
+             timeout_sec: int) -> None:
+    """Playwright を回して結果を書く。どの経路で抜けても状態を必ず書く。"""
+    from web.services.playwright_executor import run_playwright
+
+    report_path = output_dir / "playwright_report.json"
+    before_ns = _mtime_ns(report_path)
+    try:
+        result = run_playwright(spec_path=spec, output_dir=output_dir,
+                                timeout_sec=timeout_sec,
+                                on_proc=lambda proc: _attach(handle, path, proc))
+    except Exception as exc:  # noqa: BLE001 - 例外は握らず結果として書く
+        _finish(handle, path, state="failed", summary="テストを実行できませんでした",
+                error=f"テストの実行に失敗しました: {exc}", artifacts={})
+    else:
+        artifacts = {"report": _report_relpath(ctx.domain)} if report_path.is_file() else {}
+        data, read_error = _report_data(result, report_path, before_ns)
+        if data is None:
+            _finish(handle, path, state="failed", summary="テスト結果を読めませんでした",
+                    error=read_error, artifacts=artifacts)
+        else:
+            state, summary, error = _judge(data)
+            # 書けたときだけ報告する。中止された実行の結果を「終わりました」と
+            # 言うと、止めた人には止まっていないように見える。
+            if _finish(handle, path, state=state, summary=summary, error=error,
+                       artifacts=artifacts):
+                try:
+                    ctx.log(summary)
+                except Exception:  # noqa: BLE001 - ログの失敗で結果を失わない
+                    logger.warning("テスト実行の報告に失敗しました", exc_info=True)
+    finally:
+        with _LIVE_LOCK:
+            _LIVE.pop(handle, None)
+
+
+def _shutdown() -> None:
+    """プロセス終了時に、走っている Playwright を残さない。
+
+    進捗ファイルは running のまま残す。次に status() を読んだ人が
+    「プロセスが止まった」と正しく知れるのは、この記録が残っているから。
+    """
+    _SHUTDOWN.set()
+    with _LIVE_LOCK:
+        procs = [live.proc for live in _LIVE.values() if live.proc is not None]
+        _LIVE.clear()
+    for proc in procs:
+        _kill_tree(_int(getattr(proc, "pid", 0)))
+
+
+atexit.register(_shutdown)
+
+
+def _stopped(handle: str, data: dict[str, Any]) -> bool:
+    """running と書いてあるのに、進める者が居なくなっていないか。"""
+    owner = _int(data.get("owner_pid"))
+    if owner == os.getpid():
+        with _LIVE_LOCK:
+            return handle not in _LIVE  # 自分のスレッドが結果を書かずに消えた
+    if owner > 0 and not _alive(owner):
+        return True
+    pid = _int(data.get("pid"))
+    return pid > 0 and not _alive(pid)
+
+
 class RunAgent:
-    """03: 作ってあるテストを 1 回まわす。"""
+    """03: 作ってあるテストを 1 回まわす（非同期）。"""
 
     name = "run"
     label = "テスト実行"
@@ -173,84 +351,71 @@ class RunAgent:
                 status="waiting_human", summary="回せるテストがありません",
                 human_action=_NO_SPEC,
             )
-
         # 実行結果は 03 と同じ場所へ置く。画面の「実行結果」からも同じものが見える。
-        from web.services.playwright_executor import run_playwright
-
         output_dir = ctx.out_dir / ctx.domain / "qa_process"
         output_dir.mkdir(parents=True, exist_ok=True)
-        report_path = output_dir / "playwright_report.json"
+        handle = f"{_HANDLE_PREFIX}{uuid.uuid4().hex[:12]}"
+        path = _state_path(ctx.out_dir, ctx.domain, handle)
+        if path is None:  # 起こりえないが、書けない場所へ書きに行かない
+            return StepResult(status="failed", summary="実行の記録を作れませんでした",
+                              error=_NO_HANDLE)
+        _patch_state(path, state="running", started_at=_now(), finished_at="",
+                     pid=0, owner_pid=os.getpid(), summary=_RUNNING,
+                     artifacts={}, error="")
+        with _LIVE_LOCK:
+            _LIVE[handle] = _Live(path=path)
         ctx.log(f"テストを実行します（{spec.name}）")
-        try:
-            result = run_playwright(spec_path=spec, output_dir=output_dir)
-        except Exception as exc:  # noqa: BLE001 - 例外は握らず結果として返す
-            return StepResult(
-                status="failed", summary="テストを実行できませんでした",
-                error=f"テストの実行に失敗しました: {exc}",
-            )
-
-        data, read_error = _report_data(result, report_path)
-        if data is None:
-            return StepResult(
-                status="failed", summary="テスト結果を読めませんでした", error=read_error,
-                artifacts=self._artifacts(ctx, report_path),
-                evidence=self._evidence(output_dir),
-                handle=self._handle(ctx, report_path),
-            )
-
-        state, summary, error = _judge(data)
-        ctx.log(summary)
-        return StepResult(
-            status=state,
-            summary=summary,
-            artifacts=self._artifacts(ctx, report_path),
-            evidence=self._evidence(output_dir),
-            handle=self._handle(ctx, report_path),
-            error=error,
-        )
+        timeout_sec = _int(ctx.params.get("step_timeout_sec")) or _DEFAULT_TIMEOUT_SEC
+        threading.Thread(
+            target=_execute, args=(handle, path, ctx, spec, output_dir, timeout_sec),
+            name=f"run-{handle}", daemon=True,
+        ).start()
+        return StepResult(status="running", summary=_RUNNING, handle=handle)
 
     def status(self, ctx: Context, handle: str) -> StepStatus:
-        """handle が指す結果ファイルを読んで返す（同期なので保存済みが全て）。"""
-        relative, stamp = _split_handle(handle)
-        report_path = _resolve_report(ctx.out_dir, relative)
-        if report_path is None or not report_path.is_file():
-            return StepStatus(
-                state="failed", label="実行の記録なし",
-                summary=_NO_HANDLE, error=_NO_HANDLE,
-            )
-        if stamp is not None and report_path.stat().st_mtime_ns != stamp:
-            # 別の実行が同じファイルへ上書きした。最新の結果を、指定された
-            # 実行の結果として返すと、無関係な成否を報告することになる。
-            return StepStatus(
-                state="failed", label="結果が残っていません",
-                summary=_OVERWRITTEN, error=_OVERWRITTEN,
-                artifacts={"report": relative},
-            )
-        data, read_error = _read_report(report_path)
-        if data is None:
-            return StepStatus(
-                state="failed", label="結果を読めません",
-                summary="テスト結果を読めませんでした", error=read_error,
-                artifacts={"report": relative},
-            )
-        state, summary, error = _judge(data)
-        return StepStatus(
-            state=state,
-            label="テスト実行 完了" if state == "succeeded" else "テスト実行 失敗",
-            summary=summary,
-            artifacts={"report": relative},
-            error=error,
-        )
+        path = _state_path(ctx.out_dir, ctx.domain, handle)
+        data = _load_state(path) if path is not None else None
+        if path is None or not data:
+            return StepStatus(state="failed", label="実行の記録なし",
+                              summary=_NO_HANDLE, error=_NO_HANDLE)
+        state = str(data.get("state") or "")
+        summary = str(data.get("summary") or "")
+        error = str(data.get("error") or "")
+        artifacts = {str(k): str(v) for k, v in dict(data.get("artifacts") or {}).items()}
+        if state == "running":
+            if _stopped(handle, data):
+                _patch_state(path, state="failed", summary=_PROC_GONE,
+                             error=_PROC_GONE, finished_at=_now())
+                return StepStatus(state="failed", label="実行が止まりました",
+                                  summary=_PROC_GONE, error=_PROC_GONE)
+            return StepStatus(state="running", label="テスト実行中", summary=summary)
+        if state == "cancelled":
+            return StepStatus(state="cancelled", label="テスト実行 中止", summary=summary)
+        if state == "succeeded":
+            return StepStatus(state="succeeded", label="テスト実行 完了",
+                              summary=summary, artifacts=artifacts, error=error)
+        return StepStatus(state="failed", label="テスト実行 失敗",
+                          summary=summary or _NO_HANDLE,
+                          artifacts=artifacts, error=error or summary or _NO_HANDLE)
 
-    def _handle(self, ctx: Context, report_path: Path) -> str:
-        """status() で追うための handle。結果ファイルが無ければ空。"""
-        return _make_handle(ctx.domain, report_path) if report_path.is_file() else ""
+    def cancel(self, ctx: Context, handle: str) -> bool:
+        """走っている Playwright を子孫ごと止める。
 
-    def _artifacts(self, ctx: Context, report_path: Path) -> dict[str, str]:
-        if not report_path.is_file():
-            return {}
-        return {"report": _report_relpath(ctx.domain)}
-
-    def _evidence(self, output_dir: Path) -> tuple[str, ...]:
-        results_dir = output_dir / "test-results"
-        return (str(results_dir),) if results_dir.is_dir() else ()
+        指揮の記録だけを cancelled にして子プロセスを放置すると、node が
+        孤児として残り CPU を食い続ける（実測で確認）。止めてから記録する。
+        """
+        path = _state_path(ctx.out_dir, ctx.domain, handle)
+        if path is None:
+            return False
+        key = str(handle).strip()
+        with _LIVE_LOCK:
+            live = _LIVE.get(key)
+            if live is not None:
+                live.cancelled = True
+            pid = _int(getattr(getattr(live, "proc", None), "pid", 0))
+        data = _load_state(path)
+        if data is None and live is None:
+            return False
+        _kill_tree(pid or _int((data or {}).get("pid")))
+        _patch_state(path, state="cancelled", summary=_CANCELLED, finished_at=_now())
+        return True

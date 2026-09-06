@@ -122,9 +122,8 @@ class StepStatus:
 class SystemAgent(Protocol):
     """1 システムを指揮者から見た姿。
 
-    同期のエージェント（03）は status() で run() の結果をそのまま返す。
-    非同期のエージェント（05）は handle を返し、status() で追う。
-    呼ぶ側はどちらかを知らずに済む。
+    どのエージェントも run() は handle を返し、続きは status() で追う。
+    呼ぶ側は中で何が動いているかを知らずに済む。
 
     非同期のエージェントはスレッドで進む。したがって run() は、サーバのような
     長命なプロセス（指揮者のデーモンスレッド）から呼ぶこと。短命なスクリプトから
@@ -144,3 +143,15 @@ class SystemAgent(Protocol):
     def run(self, ctx: Context) -> StepResult: ...
 
     def status(self, ctx: Context, handle: str) -> StepStatus: ...
+
+    def cancel(self, ctx: Context, handle: str) -> bool:
+        """走っているものを止める。止められたら True。
+
+        省略できることにしない。止め方を持たないシステムが 1 つでもあると、
+        指揮者は「記録だけ cancelled・実体は動き続け」を作る。実測では
+        Playwright の node がプロセス終了後も走り続けた（孤児化）。
+
+        今すぐ止められないもの（人の承認待ちでブロックしているスレッドなど）は
+        合図だけ立てて False を返す。止まったふりをしない。
+        """
+        ...

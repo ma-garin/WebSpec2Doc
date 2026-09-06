@@ -42,6 +42,7 @@ _APPROVE_ACTION = "03 AutoRun の画面で{subject}を承認してください"
 _UNAPPROVED_NOTE = "テスト観点・設計の承認は経ていません（03 AutoRun の画面で確認できます）"
 
 _SPEC_RELPATH = "testcases/testcases.spec.ts"
+_CANCEL_NOTE = "テスト作成を中止しました"
 
 
 @dataclass
@@ -54,6 +55,11 @@ class _Work:
     error: str = ""
     human_action: str = ""
     artifacts: dict[str, str] = field(default_factory=dict)
+    #: 中止を頼まれたか。作成スレッドは横から止められないので、あとから来る
+    #: 結果でこの状態を上書きしないための印として持つ。
+    cancelled: bool = False
+    #: 作成に使っている AutoRunJob（中止の合図を渡すため）。
+    job: Any = None
 
 
 _WORKS: dict[str, _Work] = {}
@@ -103,8 +109,8 @@ def _pending_gate(ctx: Context) -> str:
 def _finish(handle: str, **fields: Any) -> None:
     with _WORKS_LOCK:
         work = _WORKS.get(handle)
-        if work is None:
-            return
+        if work is None or work.cancelled:
+            return  # 中止が先。あとから来た結果で中止を消さない
         for key, value in fields.items():
             setattr(work, key, value)
 
@@ -219,7 +225,7 @@ class TestsAgent:
 
         handle = job.job_id
         with _WORKS_LOCK:
-            _WORKS[handle] = _Work()
+            _WORKS[handle] = _Work(job=job)
         summary = f"{len(report.get('screens') or [])} 画面からテストを作ります"
         ctx.log(summary)
         threading.Thread(
@@ -240,3 +246,29 @@ class TestsAgent:
             artifacts=dict(work.artifacts), error=work.error,
             human_action=work.human_action,
         )
+
+    def cancel(self, ctx: Context, handle: str) -> bool:
+        """テスト作成に中止を伝える。生成中のスレッドは横から止められない。
+
+        作成は QA 生成（LLM を含む）の中で進んでおり、割り込めない。できるのは
+        中止の印を立てて、承認待ちで眠っているスレッドを起こすことだけ。
+        印は _finish より強い（あとから来る結果で中止を消さない）。
+        """
+        key = str(handle or "").strip()
+        with _WORKS_LOCK:
+            work = _WORKS.get(key)
+            if work is None:
+                return False
+            work.cancelled = True
+            work.state = "cancelled"
+            work.label = "テスト作成 中止"
+            work.summary = _CANCEL_NOTE
+            work.human_action = ""
+            job = work.job
+        if job is not None:
+            try:
+                job.cancel()  # 承認・入力待ちで眠っているスレッドを起こす
+            except Exception:  # noqa: BLE001 - 合図の失敗で中止そのものを失敗にしない
+                pass
+        ctx.log("テスト作成の中止を伝えました（生成中の処理は区切りで止まります）")
+        return True

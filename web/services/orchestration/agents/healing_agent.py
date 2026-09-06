@@ -198,3 +198,22 @@ class HealingAgent:
             error=str(getattr(run, "error", "") or ""),
             human_action=_APPROVE_REPORT if waiting else "",
         )
+
+    def cancel(self, ctx: Context, handle: str) -> bool:
+        """05 側の実行を止める。中止の手段は 05 に 1 つだけ置く。
+
+        指揮者が代わりに止めずにいると、指揮の記録だけが cancelled になり、
+        修正エージェントは worktree を触り続ける。同じ実行に 2 つの止め方を
+        作らないため、画面の中止と同じ関数（cancel_run）を呼ぶ。
+        """
+        run_id = str(handle or "").strip()
+        if not run_id:
+            return False
+        try:
+            stopped = bool(orchestrator.cancel_run(run_id))
+        except Exception as exc:  # noqa: BLE001 - 中止の失敗で呼び出し元を落とさない
+            ctx.log(f"修正の中止に失敗しました: {exc}")
+            return False
+        if not stopped:
+            ctx.log("この実行はもう動いていません")
+        return stopped

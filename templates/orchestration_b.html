@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>指揮 - WebSpec2Doc</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  {# 承認済みの案（static/mock/conductor-b.html）と同じ順序で読む。
+     案の <style> は static/css/orchestration-b.css へそのまま移した。 #}
+  <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app-components.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/ta2.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/orchestration-b.css') }}?v={{ _ver }}">
+</head>
+<body class="cb-body" data-variant="b">
+<div class="cb-shell">
+
+  {# パンくずは「システム選択 › 指揮」。partials/topbar.html は 1 段しか持たないので、
+     戻り先のリンクごと Markup で渡す（案の見た目をそのまま保つ）。 #}
+  {% set topbar_crumb = '<a href="/systems">システム選択</a> › 指揮'|safe %}
+  {% set topbar_title = '指揮' %}
+  {% include 'partials/topbar.html' %}
+
+  <main class="cb-main">
+
+    <div class="cb-head">
+      <h2 id="cb-count">担当サイトを読み込んでいます</h2>
+      <p id="cb-lead">少しお待ちください。</p>
+      <button type="button" class="cb-add" id="cb-add">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        サイトを保守下に置く
+      </button>
+    </div>
+
+    <div class="cb-alert" id="cb-alert" role="alert" hidden></div>
+
+    <form class="cb-form" id="cb-form" hidden>
+      <label class="cb-field">
+        <span>サイト</span>
+        <select id="cb-form-site"></select>
+      </label>
+      <label class="cb-field">
+        <span>入口のアドレス</span>
+        <input type="url" id="cb-form-url" placeholder="http://example.jp/">
+      </label>
+      <button type="submit" class="cb-add" id="cb-form-go">保守下に置く</button>
+      <button type="button" class="cb-cancel" id="cb-form-cancel">やめる</button>
+    </form>
+
+    <div class="cb-table" id="cb-table">
+
+      <div class="cb-row cb-colhead">
+        <span>サイト</span><span>状態</span><span>次にやること</span><span>手を動かす</span><span style="justify-self:end">最終確認</span>
+      </div>
+
+      {# ここから下（1 行 = 1 サイト、開いた行の下の 4 段）は
+         static/js/orchestration-b.js が実データから組み立てる。 #}
+      <div id="cb-rows"></div>
+
+    </div>
+
+  </main>
+</div>
+
+<script src="{{ url_for('static', filename='js/user-menu.js') }}?v={{ _ver }}"></script>
+<script src="{{ url_for('static', filename='js/orchestration-b.js') }}?v={{ _ver }}"></script>
+</body>
+</html>

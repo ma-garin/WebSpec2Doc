@@ -16,6 +16,21 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ta2.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ws.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/system-select.css') }}?v={{ _ver }}">
+  {# 「指揮」を 1 枚足したぶんだけ列を増やす。system-select.css は他画面と共有の資産なので
+     触らず、この画面だけの上書きをここに置く。6 枚は 6 / 3+3 / 2+2+2 / 1 と割れるので、
+     どの幅でも「2 段目に 1 枚だけ余る」形にならない（1440×900 で 1 段に収まる）。 #}
+  <style>
+    .sysselect-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+    @media (max-width: 1420px) { .sysselect-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    @media (max-width: 1040px) { .sysselect-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 720px)  { .sysselect-grid { grid-template-columns: 1fr; } }
+    /* 指揮 = #3730A3 / #E0E7FF / #312E81。既存 5 システムのどの識別色とも重ならない。 */
+    .syscard-cond:hover { border-color: #3730A3; }
+    .syscard-cond .syscard-accent { background: #3730A3; }
+    .syscard-cond .syscard-icon { background: #E0E7FF; color: #312E81; }
+    .syscard-cond .syscard-no { color: #312E81; }
+    .syscard-cond .syscard-open { color: #312E81; }
+  </style>
 </head>
 <body class="sysselect-body">
 
@@ -30,6 +45,27 @@
     </div>
 
     <div class="sysselect-grid">
+
+      {# 指揮。5 つのシステムを 1 本に束ねて毎日回す入口。既存 5 枚と同じ部品・同じ大きさで、
+         先頭に 1 枚だけ足す（既存カードの HTML・順序・文言はそのまま）。 #}
+      <a class="syscard syscard-cond" href="/orchestration">
+        <span class="syscard-accent" aria-hidden="true"></span>
+        <span class="syscard-badge">新規</span>
+        <span class="syscard-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 20l6.5-9"/><path d="M13 8.5l6.5-4.5"/><circle cx="11.8" cy="9.8" r="1.8"/>
+            <path d="M3 6h3M3 11h3M3 16h3"/><path d="M18 14v6M15 17h6"/>
+          </svg>
+        </span>
+        <span class="syscard-no">まとめ役</span>
+        <span class="syscard-title">指揮</span>
+        <span class="syscard-desc">全サイトを毎日見張り、直して、報告書を下書きする。5 つのシステムを 1 本につないで回すので、あなたは<b>承認だけ</b>で済みます。</span>
+        <span class="syscard-chips">
+          <span class="syscard-chip">全サイト一覧</span><span class="syscard-chip">毎日の見張り</span>
+          <span class="syscard-chip">自動の修正</span><span class="syscard-chip">報告書の下書き</span>
+        </span>
+        <span class="syscard-open">指揮を開く →</span>
+      </a>
 
       <!-- 各システムの TOP へ送る。ドキュメント作成はダッシュボード（ホーム）が TOP。
            /generate は「サイトを追加」の作業画面なので、入口にはしない。 -->

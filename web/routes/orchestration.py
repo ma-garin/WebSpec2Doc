@@ -8,13 +8,15 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 from collections.abc import Mapping
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from flask import Blueprint, g, request
+from flask import Blueprint, g, render_template, request
 
 from web.audit_context import record_admin_event
 from web.auth import require_admin
@@ -145,6 +147,90 @@ def _clean_params(data: dict[str, Any], domain: str) -> tuple[dict[str, Any], st
             return {}, "max_pages は 1〜50 の整数で指定してください。"
         params["max_pages"] = max_pages
     return params, ""
+
+
+#: 画面は 2 つ。b = 指揮（一覧・既定）、d = サイト別の記録。
+_VARIANTS: tuple[str, ...] = ("b", "d")
+
+#: /orchestration は必ずこれを出す。A/B の振り分けと cookie は廃止した。
+_DEFAULT_VARIANT = "b"
+
+#: ?site= のサイト名。保守対象は "127.0.0.1:8765" のように :port を持つ。
+_SITE_RE = re.compile(r"^[0-9a-zA-Z][0-9a-zA-Z._-]{0,252}(?::[0-9]{1,5})?$")
+
+#: 計測イベント。増やすときはここへ 1 つ足す（画面と API の 2 か所に散らさない）。
+_AB_EVENTS: tuple[str, ...] = ("first_action", "view")
+_AB_MAX_MS = 600_000
+_AB_MAX_TARGET = 80
+_AB_LOG = INSTANCE_DIR / "ab_events.jsonl"
+
+
+def _site_arg() -> str:
+    """?site= のサイト名。形が違えば空にする（画面は先頭のサイトを開く）。"""
+    site = str(request.args.get("site", "")).strip()
+    return site if _SITE_RE.match(site) else ""
+
+
+def _render_variant(variant: str, site: str = "") -> str:
+    """画面のテンプレートをそのまま描画する。リダイレクトしない。
+
+    site は案 D（サイト別の記録）が最初に開くサイト。空なら画面が先頭を選ぶ。
+    """
+    return render_template(f"orchestration_{variant}.html", variant=variant, site=site)
+
+
+@bp.get("/orchestration")
+def orchestration_page():
+    """指揮の入口。常に一覧（案 B）を出す。
+
+    A/B の振り分けと cookie は廃止した（B 採用）。記録は /orchestration/d へ
+    B の各行から辿る。?v= の強制だけ開発・レビュー用に残す。
+    """
+    forced = str(request.args.get("v", "")).strip().lower()
+    if forced in _VARIANTS:
+        _record_audit("orchestration.variant.assign", {"variant": forced, "forced": True})
+        return _render_variant(forced, _site_arg())
+    return _render_variant(_DEFAULT_VARIANT, _site_arg())
+
+
+@bp.get("/orchestration/<variant>")
+def orchestration_variant_page(variant: str):
+    """画面を名指しで開く。d は ?site= でそのサイトの記録を開く。"""
+    key = str(variant or "").strip().lower()
+    if key not in _VARIANTS:
+        return {"error": "その案はありません。"}, 404
+    return _render_variant(key, _site_arg())
+
+
+@bp.post("/api/orchestration/ab")
+def api_ab_event():
+    """A/B の計測を 1 行足す。閲覧できる人なら誰でも記録できる（管理者に限らない）。"""
+    data = _body()
+    variant = str(data.get("variant") or "").strip().lower()
+    event = str(data.get("event") or "").strip()
+    target = str(data.get("target") or "")
+    ms = _strict_int(data.get("ms"))
+    if variant not in _VARIANTS:
+        return {"error": "案の指定が不正です。"}, 400
+    if event not in _AB_EVENTS:
+        return {"error": "計測の種類が不正です。"}, 400
+    if ms is None or not (0 <= ms <= _AB_MAX_MS):
+        return {"error": "経過時間の指定が不正です。"}, 400
+    if len(target) > _AB_MAX_TARGET:
+        return {"error": "対象の名前が長すぎます。"}, 400
+    record = {
+        "at": datetime.now(UTC).isoformat(timespec="seconds"),
+        "variant": variant, "event": event, "ms": ms,
+        "target": target, "user": _actor(),
+    }
+    try:
+        INSTANCE_DIR.mkdir(parents=True, exist_ok=True)
+        with _AB_LOG.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+    except Exception:
+        logger.exception("orchestration: A/B の記録に失敗しました")
+        return {"error": "処理に失敗しました"}, 500
+    return {"ok": True}
 
 
 @bp.get("/api/orchestration/goals")

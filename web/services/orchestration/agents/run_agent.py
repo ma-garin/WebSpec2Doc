@@ -315,13 +315,23 @@ def _finish(handle: str, path: Path, **fields: Any) -> bool:
 def _execute(handle: str, path: Path, ctx: Context, spec: Path, output_dir: Path,
              timeout_sec: int) -> None:
     """Playwright を回して結果を書く。どの経路で抜けても状態を必ず書く。"""
+    from web.services.egress_gateway import EgressPolicy
     from web.services.playwright_executor import run_playwright
+    try:
+        from crawler.url_safety import _local_targets_allowed
+    except ImportError:  # noqa: BLE001 - src が sys.path に無い経路への保険
+        def _local_targets_allowed() -> bool:
+            return False
 
     report_path = output_dir / "playwright_report.json"
     before_ns = _mtime_ns(report_path)
     try:
+        # 02/03 と同じ通信ポリシー。無いとローカルの対象へ一切つながらず
+        # 全テストが net::ERR_FAILED になる（2026-09-07 実測 257/257）
+        policy = EgressPolicy(allow_local=_local_targets_allowed())
         result = run_playwright(spec_path=spec, output_dir=output_dir,
                                 timeout_sec=timeout_sec,
+                                egress_policy=policy,
                                 on_proc=lambda proc: _attach(handle, path, proc))
     except Exception as exc:  # noqa: BLE001 - 例外は握らず結果として書く
         _finish(handle, path, state="failed", summary="テストを実行できませんでした",

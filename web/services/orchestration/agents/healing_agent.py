@@ -32,6 +32,8 @@ def _source(ctx: Context) -> str:
     """記録に残す出どころ。指揮を起こした人・仕組みの名前をそのまま使う。"""
     return str(getattr(ctx, "actor", "") or "").strip() or CONDUCTOR_SOURCE
 
+#: 1 回の「分析して直す」で扱う失敗の上限。超えた分は次の周に回す
+_MAX_DEFECTS_PER_RUN = 30
 _NOT_CONNECTED = "オートヒーリング › 設定で、このサイトのリポジトリを接続してください"
 _APPROVE_REPORT = "報告書を確認して、承認・差し戻し・却下を決めてください"
 
@@ -192,6 +194,10 @@ class HealingAgent:
         # 読める記録が残る。
         source = _source(ctx)
         defects = [replace(d, source=source) for d in defects]
+        if len(defects) > _MAX_DEFECTS_PER_RUN:
+            rest = len(defects) - _MAX_DEFECTS_PER_RUN
+            defects = defects[:_MAX_DEFECTS_PER_RUN]
+            note = note + f"失敗が多いので {_MAX_DEFECTS_PER_RUN} 件ずつ扱います（残り {rest} 件は次の周で）。"
         summary = note + f"{len(defects)} 件の失敗から報告書を下書きしています"
         ctx.log(summary)
         try:

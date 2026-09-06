@@ -527,6 +527,8 @@
       details.parentNode.insertBefore(note, details.nextSibling);
     }
     note.textContent = message;
+    /* 同じ文をカード下の赤字と二重に出さない（通し検証で指摘） */
+    if (DOM.error) { DOM.error.textContent = ''; DOM.error.hidden = true; }
   }
 
   /* ---- kind: login（② 観測・ログイン待ち） ---- */

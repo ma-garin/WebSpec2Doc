@@ -56,7 +56,7 @@ def _current_record(run):
 # ─────────────────────────── start ───────────────────────────
 
 
-def _start(out_dir: Path, domain: str, body: dict[str, Any], actor: str) -> None:
+def _start(out_dir: Path, domain: str, body: dict[str, Any], actor: str) -> str:
     url = str(body.get("url") or "").strip()
     if not url:
         raise ActionError("url を指定してください。")
@@ -96,7 +96,7 @@ def _start(out_dir: Path, domain: str, body: dict[str, Any], actor: str) -> None
 
 
 # ─────────────────────────── login_done ───────────────────────────
-
+    return derived
 
 def _login_done(out_dir: Path, domain: str, body: dict[str, Any], actor: str) -> None:
     run = _require_run(out_dir, domain)
@@ -247,5 +247,9 @@ def perform(out_dir: Path, domain: str, kind: str, body: dict[str, Any], actor: 
     handler = _HANDLERS.get(str(kind or "").strip())
     if handler is None:
         raise ActionError(f"「{kind}」という操作はありません。")
-    handler(out_dir, domain, body, actor)
+    result = handler(out_dir, domain, body, actor)
+    # start は新しいサイトを作るので、送られてきた（空の）site ではなく
+    # 作ったサイトの状態を返す。空のまま組むと「最初のサイト」の ① に戻って見える
+    if isinstance(result, str) and result:
+        domain = result
     return workflow_view.build(out_dir, domain)

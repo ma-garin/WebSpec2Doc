@@ -742,6 +742,14 @@ def _bundle_title(screen_id: str, screen_name: str, viewpoint_code: str, viewpoi
     return label
 
 
+def _effective_statuses(members: Sequence["MaintenanceReport"]) -> list[str]:
+    """束の状態に使う個票の状態。差し戻し（returned）は、同じ欠陥に新しい
+    報告書（承認待ち・承認済み等）があれば「作り直し済み」なので数えない。
+    古い差し戻しが束全体を returned に見せていた（2026-09-07 実測）。"""
+    superseded = {m.defect_id for m in members if m.status != "returned"}
+    return [m.status for m in members if not (m.status == "returned" and m.defect_id in superseded)]
+
+
 def _heaviest_status(statuses: Sequence[str]) -> str:
     ranked = sorted(statuses, key=lambda s: _BUNDLE_STATUS_RANK.get(s, 99))
     return ranked[0] if ranked else "awaiting"
@@ -811,7 +819,7 @@ def list_bundles(
                 viewpoint_code=viewpoint_code,
                 viewpoint_name=viewpoint_name,
                 title=_bundle_title(first.incident_screen_id, screen_name, viewpoint_code, viewpoint_name),
-                status=_heaviest_status([m.status for m in members]),
+                status=_heaviest_status(_effective_statuses(members)),
                 count=count,
                 awaiting_count=sum(1 for m in members if m.status == "awaiting"),
                 verify_after_ok_count=verify_after_ok_count,

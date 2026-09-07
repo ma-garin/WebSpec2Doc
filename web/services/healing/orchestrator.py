@@ -494,12 +494,30 @@ def decide_report(
             raise HealingError(f"実行 {report.run_id} が見つかりません")
         # この報告書の対応がテスト側なら PR は不要。製品側の欠陥が同じ run に
         # 混在していても、PR はその報告書を承認したときに作る（画面の表示と一致させる）
-        needs_pr = report.fix_target != "script"
+        applied = any(
+            p.defect_id == report.defect_id and p.status == "applied" and p.agent != "script"
+            for it in run.iterations for p in it.proposals
+        )
+        # 適用済みの修正が無い（提案のみ・直っていない）報告書の承認は
+        # 「報告書を顧客に出してよい」の判断であり、送る修正が無いので PR は作らない。
+        # 作ろうとすると存在しないブランチを push して 47 秒後に失敗する（2026-09-07 実測）
+        needs_pr = report.fix_target != "script" and applied
         if needs_pr:
-            run = create_pull_request_for_run(out_dir, report.run_id)
+            try:
+                run = create_pull_request_for_run(out_dir, report.run_id)
+            except HealingError as exc:
+                raise HealingError(
+                    "修正を送れませんでした。GitHub への接続と権限を確認してください。\n"
+                    f"詳細: {exc}"
+                ) from exc
         record_decision(out_dir, report.run_id, action="approve", note=note, actor=actor)
         pr = run.pull_request
-        approval_note = note if needs_pr else "PR 不要（テスト側の修正）" + (f"・{note}" if note else "")
+        if needs_pr:
+            approval_note = note
+        elif report.fix_target == "script":
+            approval_note = "PR 不要（テスト側の修正）" + (f"・{note}" if note else "")
+        else:
+            approval_note = "PR なし（適用済みの修正が無い）" + (f"・{note}" if note else "")
         report = replace(
             report,
             status="approved",

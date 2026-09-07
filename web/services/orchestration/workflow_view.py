@@ -588,6 +588,21 @@ def _decide_current(out_dir: Path, project_id: str, domain: str = "") -> _Curren
     )
 
 
+def _decided_count(out_dir: Path, run: ConductorRun) -> int:
+    """この run に紐づく報告書のうち、判断が済んだ通数。"""
+    project_id = run.project_id
+    if not project_id:
+        project = _project_for(out_dir, run.domain)
+        project_id = getattr(project, "project_id", "") if project else ""
+    if not project_id:
+        return 0
+    try:
+        reports = report_doc.list_reports(out_dir, project_id=project_id, limit=1000)
+    except Exception:  # noqa: BLE001 - 読めなければ 0（判断済みとは言わない）
+        return 0
+    return sum(1 for r in reports if r.status in ("approved", "rejected", "returned", "submitted"))
+
+
 def _current_for_terminal(run: ConductorRun, record: StepRecord, out_dir: Path) -> _Current:
     step_key = _AGENT_OF_STEP.get(record.name, "observe")
     headline = dict(_STEP_DEFS).get(step_key, step_key)
@@ -602,6 +617,18 @@ def _current_for_terminal(run: ConductorRun, record: StepRecord, out_dir: Path) 
         decide = _decide_current(out_dir, run.project_id, run.domain)
         if decide is not None:
             return decide
+        decided = _decided_count(out_dir, run)
+        if decided:
+            # 報告書は全部判断済み。修正が適用されていなくても、この周の仕事は終わり
+            project = _project_for(out_dir, run.domain)
+            monitor_time = str(getattr(project, "monitor_time", "") or _DEFAULT_MONITOR_TIME)
+            return _Current(
+                key="finished", state="done", headline="完了",
+                text=f"報告書 {decided} 通を判断しました。適用された修正は無いので、サイトは変わっていません。"
+                     f"明日から毎朝 {monitor_time} に見張ります。",
+                text_source="measured",
+                action=_action("monitor", primary="見張りの時刻を変える", secondary="最初から",
+                               items=[_monitor_item(project)]))
     # failed / skipped（前の修正が終わっていない、等）
     return _Current(key=step_key, state="failed", headline=headline,
                      text=record.summary or run.error or "",

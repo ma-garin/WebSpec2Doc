@@ -61,7 +61,7 @@ _DEFAULT_TIMEOUT_SEC = 7200
 
 #: 実行中カードの見込み表示（案・T2/T8）。1 件あたりの目安秒数
 #: （実測: 801 件 ≒ 10 分 → 801*0.75秒 ≒ 600秒）。
-_SEC_PER_TEST = 0.75
+_SEC_PER_TEST = 15.0  # 2026-09-07 実測 14.7 秒/件（localhost:8765・257 件）
 
 _STATE_DIR = ".run"
 _HANDLE_PREFIX = "run-"

@@ -22,9 +22,9 @@
   /* 01（view-generate.html）の discover_presets と同じ depth/max_pages（案・T8）。
      既定は「この1画面だけ」——初回は速く1周させ、次に広げる（T2）。 */
   var SCOPE_PRESETS = [
-    { id: 'single', label: 'この1画面だけ（目安 1分）', depth: 1, max: 1, checked: true },
-    { id: 'standard', label: '標準（深さ2・最大30画面・目安 10分）', depth: 2, max: 30 },
-    { id: 'wide', label: '広め（目安 30分）', depth: 5, max: 300 }
+    { id: 'single', label: 'この1画面だけ（目安 1時間・約 250 件）', depth: 1, max: 1, checked: true },
+    { id: 'standard', label: '標準（深さ2・最大30画面・目安 半日以上）', depth: 2, max: 30 },
+    { id: 'wide', label: '広め（目安 1日以上）', depth: 5, max: 300 }
   ];
   var STAGE_STATUS_WORD = { approved: '承認済み', skipped: '飛ばした', current: '確認待ち', pending: '未着手' };
   /* current.text_source / report.sources.* の出所ラベル。実測 > 入力 > AIの提案 > 前提 > 未確認。 */

@@ -2584,6 +2584,152 @@
         "happy_path",
         "error_path"
       ]
+    },
+    {
+      "feature_id": "auto_healing",
+      "name": "オートヒーリング（保守対応報告書・修正・PR）",
+      "risk_level": "critical",
+      "status": "implemented",
+      "ui_files": [
+        "templates/healing.html",
+        "templates/healing_reports.html",
+        "templates/healing_report.html",
+        "templates/healing_report_print.html",
+        "templates/partials/healing-sidebar.html",
+        "static/js/healing.js",
+        "static/js/healing-reports.js",
+        "static/css/healing.css",
+        "static/css/healing-reports.css"
+      ],
+      "route_files": [
+        "web/routes/healing.py"
+      ],
+      "core_files": [
+        "web/services/healing/orchestrator.py",
+        "web/services/healing/report_doc.py",
+        "web/services/healing/report_present.py",
+        "web/services/healing/triage.py",
+        "web/services/healing/script_fix.py",
+        "web/services/healing/autorun_bridge.py",
+        "web/services/healing/localization.py",
+        "web/services/healing/spec_match.py",
+        "web/services/healing/risk.py",
+        "web/services/healing/report.py",
+        "web/services/healing/agents.py",
+        "web/services/healing/git_ops.py",
+        "web/services/healing/github_client.py",
+        "web/services/healing/verification.py",
+        "web/services/healing/project_store.py",
+        "web/services/healing/run_store.py",
+        "web/services/healing/monitor.py",
+        "web/services/healing/types.py"
+      ],
+      "symbols": [
+        "start_run",
+        "decide_report",
+        "create_pull_request_for_run",
+        "list_bundles",
+        "classify",
+        "replace_in_test",
+        "load_failures",
+        "locate",
+        "assess_spec"
+      ],
+      "outputs": [
+        "報告書一覧（画面 × 観点の束・要確認だけ既定表示）と束の本文・個票・印刷",
+        "承認で PR（適用済みの修正があるときだけ）・差し戻しで再修正・却下",
+        "/api/healing/reports, /api/healing/bundles, /api/healing/runs, /api/healing/projects JSON"
+      ],
+      "persistence": [
+        "output/.healing/reports/*.json",
+        "output/.healing/runs/*.json",
+        "output/.healing/projects.json",
+        "output/<domain>/testcases/.healing-backups/"
+      ],
+      "failure_modes": [
+        "verify_command_not_allowed_rejected",
+        "repo_outside_allowed_roots_rejected",
+        "no_applied_fix_approves_without_pr",
+        "push_failure_reported_in_user_terms",
+        "orphan_runs_reaped_not_left_active",
+        "awaiting_human_does_not_block_next_run",
+        "test_side_defect_fixes_test_not_product",
+        "already_reported_defects_not_duplicated"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "evidence"
+      ]
+    },
+    {
+      "feature_id": "conductor",
+      "name": "指揮（解析 → テスト設計 → 実行 → 分析して直す → 判断）",
+      "risk_level": "critical",
+      "status": "implemented",
+      "ui_files": [
+        "templates/orchestration.html",
+        "templates/partials/conductor-sidebar.html",
+        "static/js/orchestration.js",
+        "static/css/orchestration.css",
+        "templates/orchestration_b.html",
+        "static/js/orchestration-b.js",
+        "static/css/orchestration-b.css",
+        "templates/orchestration_d.html",
+        "static/js/orchestration-d.js",
+        "static/css/orchestration-d.css"
+      ],
+      "route_files": [
+        "web/routes/orchestration.py"
+      ],
+      "core_files": [
+        "web/services/orchestration/conductor.py",
+        "web/services/orchestration/goals.py",
+        "web/services/orchestration/onboarding.py",
+        "web/services/orchestration/workflow_view.py",
+        "web/services/orchestration/workflow_actions.py",
+        "web/services/orchestration/ports.py",
+        "web/services/orchestration/registry.py",
+        "web/services/orchestration/run_store.py",
+        "web/services/orchestration/agents/docs_agent.py",
+        "web/services/orchestration/agents/tests_agent.py",
+        "web/services/orchestration/agents/run_agent.py",
+        "web/services/orchestration/agents/healing_agent.py",
+        "web/services/cli_orchestration.py"
+      ],
+      "symbols": [
+        "start_if_idle",
+        "steps_for",
+        "prepare",
+        "build",
+        "perform",
+        "reap_orphans",
+        "cancel"
+      ],
+      "outputs": [
+        "5 工程のステッパーと今いる工程のカード（URL 1 本で開始・コードの場所は必要時・要確認だけ人が止まる・束で判断）",
+        "/api/orchestration/workflow, /api/orchestration/workflow/actions, /api/orchestration/runs JSON",
+        "CLI orchestrate の終了コード 0/1/2/3"
+      ],
+      "persistence": [
+        "output/.orchestration/runs/*.json",
+        "output/<domain>/qa_process/.run/*.json"
+      ],
+      "failure_modes": [
+        "duplicate_start_same_site_rejected_409",
+        "url_domain_mismatch_rejected",
+        "params_validated_before_project_creation",
+        "orphan_runs_marked_failed_on_restart",
+        "cancel_kills_playwright_descendants",
+        "waiting_human_is_terminal_with_human_action",
+        "healing_skipped_busy_not_reported_as_success",
+        "local_targets_allowed_in_run_step"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "evidence"
+      ]
     }
   ]
 }

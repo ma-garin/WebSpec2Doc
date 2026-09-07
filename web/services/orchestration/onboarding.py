@@ -1,7 +1,7 @@
 """初めてのサイトを 1 画面から始めるための下ごしらえ（オンボーディング）。
 
 「保守下に置く」(onboard) 目標は healing 段で接続先（HealingProject）を要求する。
-接続先が無いサイトを 01 で観測する前から始められるようにするのがここの役目——
+接続先が無いサイトを 01 で解析する前から始められるようにするのがここの役目——
 url だけを受け取り、domain を導き、接続先が無ければリポジトリ（ローカルパス
 または GitHub）から 1 件作る。
 
@@ -186,6 +186,12 @@ def prepare(
 
     if not verify_cmd:
         verify_cmd = project_store._suggest_verify_command(repo_path)
+    if not verify_cmd:
+        raise ValueError(
+            "検証コマンドが決められませんでした。"
+            "「詳しい設定」を開いて、テストを実行するコマンドを入れてください"
+            "（例: npm test / pytest）"
+        )
     ok, reason = verification.is_command_allowed(verify_cmd)
     if not ok:
         raise ValueError(f"検証コマンドを使えません: {reason}")
@@ -203,5 +209,80 @@ def prepare(
     return OnboardPlan(
         domain=domain, project_id=project.project_id,
         params={"url": text_url, "rounds": n}, created_project=True,
+        message=f"接続先「{project.name}」を新規作成しました",
+    )
+
+
+def connect(
+    out_dir: Path, *, domain: str, repo: str, verify_command: str = "", actor: str = "",
+) -> OnboardPlan:
+    """既に分かっているサイトへ、あとから接続先を作る。
+
+    「分析して直す」で失敗が見つかり、コードの場所が無いと分かった時点で
+    呼ばれる（T2）。url は要らない——サイトは解析済みで domain が定まっている。
+    既存の接続先があれば作り直さずそれを使う。
+    """
+    text_domain = str(domain or "").strip()
+    if not text_domain:
+        raise ValueError("domain を指定してください。")
+
+    existing = next(
+        (p for p in project_store.list_projects(out_dir) if p.domain == text_domain), None
+    )
+    if existing is not None:
+        return OnboardPlan(
+            domain=text_domain, project_id=existing.project_id,
+            params={}, created_project=False,
+            message=f"既存の接続先「{existing.name}」を使います",
+        )
+
+    repo_text = str(repo or "").strip()
+    if not repo_text:
+        raise ValueError("修正するリポジトリを指定してください")
+    if len(repo_text) > _MAX_REPO_LEN:
+        raise ValueError(f"コードの場所は {_MAX_REPO_LEN} 字以内で指定してください。")
+    verify_cmd = str(verify_command or "").strip()
+    if len(verify_cmd) > _MAX_VERIFY_LEN:
+        raise ValueError(f"verify_command は {_MAX_VERIFY_LEN} 字以内で指定してください。")
+
+    local_path, github_repo = parse_repo(repo_text)
+    if local_path:
+        if not Path(local_path).expanduser().is_absolute():
+            raise ValueError(_NOT_ABSOLUTE)
+        try:
+            resolved = project_store.resolve_repo_path(local_path)
+        except HealingError as exc:
+            raise ValueError(str(exc)) from exc
+        except OSError as exc:  # 長すぎる名前など。500 にしない
+            raise ValueError(f"コードの場所を確認できませんでした: {exc.strerror or exc}") from exc
+        repo_path = resolved
+    else:
+        repo_path = _ensure_clone(github_repo)
+
+    if not verify_cmd:
+        verify_cmd = project_store._suggest_verify_command(repo_path)
+    if not verify_cmd:
+        raise ValueError(
+            "検証コマンドが決められませんでした。"
+            "「詳しい設定」を開いて、テストを実行するコマンドを入れてください"
+            "（例: npm test / pytest）"
+        )
+    ok, reason = verification.is_command_allowed(verify_cmd)
+    if not ok:
+        raise ValueError(f"検証コマンドを使えません: {reason}")
+
+    try:
+        project = project_store.create_project(
+            out_dir, name=text_domain, domain=text_domain, repo_path=str(repo_path),
+            github_repo=github_repo, verify_command=verify_cmd,
+        )
+    except HealingError as exc:
+        raise ValueError(str(exc)) from exc
+
+    logger.info("onboarding: 接続先を作成しました (domain=%s project_id=%s actor=%s)",
+                text_domain, project.project_id, actor or "不明")
+    return OnboardPlan(
+        domain=text_domain, project_id=project.project_id,
+        params={}, created_project=True,
         message=f"接続先「{project.name}」を新規作成しました",
     )

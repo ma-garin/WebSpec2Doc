@@ -1,0 +1,317 @@
+/* 指揮（オーケストレーション）の画面。
+ *
+ * 色は ta2.css の :root トークンを使う。healing-reports.css と同じ理由で、
+ * すべてフォールバック付きで書く（--er / --wn は ta2.css の実トークンではないが、
+ * healing-reports.css がこの名前でフォールバック運用しているため揃える）。
+ * PC 専用。メディアクエリは足さない。強制上書き修飾子は使わない。
+ */
+
+/* ── hidden 属性を必ず勝たせる ─────────────────────────────
+   このファイルの他の規則が同じ要素に display を指定しても、
+   .cw-page [hidden] の詳細度（0,2,0）が単一クラス規則（0,1,0）を上回るため、
+   強制上書き修飾子なしで hidden が常に勝つ。 */
+.cw-page [hidden] { display: none; }
+
+/* ── 1 画面に収める ──────────────────────────────── */
+.cw-page .app-content {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 12px;
+  padding: 16px 20px;
+}
+
+/* ── ヘッダー行（サイト切替・周回・最初から） ─────────── */
+.cw-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.cw-head:empty { display: none; }
+.cw-rounds {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--tx2, #475467);
+  white-space: nowrap;
+}
+.cw-link {
+  border: 0;
+  background: none;
+  padding: 2px 0;
+  margin-left: auto;
+  color: var(--tx3, #667085);
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.cw-link:hover { color: var(--tx2, #475467); }
+.cw-link:focus-visible { outline: 2px solid var(--ac, #1570EF); outline-offset: 1px; }
+
+/* ── ステッパー（5 工程） ───────────────────────────── */
+.cw-stepper {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  list-style: none;
+  margin: 0;
+  padding: 8px 14px;
+  background: var(--sf, #fff);
+  border: 1px solid var(--line, #D0D5DD);
+  border-radius: 9px;
+}
+.cw-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 7px;
+  color: var(--tx3, #667085);
+}
+.cw-step:not(:last-child) {
+  margin-right: 8px;
+  border-right: 1px solid var(--line, #E4E7EC);
+  padding-right: 16px;
+}
+.cw-step-no {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--bg, #F9FAFB);
+  color: var(--tx3, #667085);
+  border: 1px solid var(--line2, #D0D5DD);
+}
+.cw-step-label { font-size: 12px; font-weight: 700; white-space: nowrap; }
+.cw-step-state { font-size: 10.5px; font-weight: 600; margin-left: 2px; }
+
+/* 4 状態: done / active / human / todo。human だけ強調色（あなたの番）。 */
+.cw-step[data-state="done"] { color: var(--tx2, #475467); }
+.cw-step[data-state="done"] .cw-step-no {
+  background: var(--ok-bg, #DCFAE6);
+  color: var(--ok-tx, #067647);
+  border-color: var(--ok-bg, #DCFAE6);
+}
+.cw-step[data-state="active"] { color: var(--ac, #2563EB); }
+.cw-step[data-state="active"] .cw-step-no {
+  background: var(--ac-bg, #EFF4FF);
+  color: var(--ac, #2563EB);
+  border-color: var(--ac-bg, #EFF4FF);
+}
+.cw-step[data-state="human"] {
+  color: var(--wa-tx, #B54708);
+  background: var(--wa-bg, #FEF0C7);
+}
+.cw-step[data-state="human"] .cw-step-no {
+  background: var(--wa, #F79009);
+  color: #fff;
+  border-color: var(--wa, #F79009);
+}
+.cw-step[data-state="todo"] { color: var(--tx3, #667085); }
+
+/* ── カード 1 枚（今いる工程） ─────────────────────── */
+.cw-card {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  background: var(--sf, #fff);
+  border: 1px solid var(--line, #D0D5DD);
+  border-radius: 9px;
+  padding: 24px 28px;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--tx, #101828);
+}
+.cw-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.cw-card-title { font-size: 16px; font-weight: 700; margin: 0 0 6px; letter-spacing: -.01em; }
+.cw-card-text { margin: 0 0 14px; font-size: 13px; color: var(--tx2, #475467); }
+/* 出所（実測 / 入力 / AIの提案 / 前提 / 未確認）。カード見出し脇にも、報告書の
+   各 dd 末尾にも同じ 1 クラスで出す。目立たせない薄い文字色。 */
+.cw-src { font-size: 10.5px; font-weight: 600; color: var(--tx3, #667085); white-space: nowrap; }
+.cw-card-error {
+  margin: 10px 0 0;
+  font-size: 11.5px;
+  color: var(--ng-tx, #B42318);
+}
+.cw-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line, #E4E7EC);
+}
+
+/* ── フォーム（サイトとコードの指定） ───────────────── */
+.cw-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+.cw-field { display: grid; gap: 4px; font-size: 11px; color: var(--tx3, #667085); font-weight: 600; }
+.cw-field.cw-wide { grid-column: 1 / -1; }
+.cw-field-label { display: block; }
+.cw-input {
+  width: 100%;
+  border: 1px solid var(--line, #D0D5DD);
+  background: var(--sf, #fff);
+  color: var(--tx, #101828);
+  border-radius: 7px;
+  height: 32px;
+  padding: 0 9px;
+  font-size: 12.5px;
+  font-family: inherit;
+}
+textarea.cw-input { height: auto; padding: 7px 9px; resize: vertical; }
+.cw-input:focus-visible { outline: 2px solid var(--ac, #1570EF); outline-offset: 1px; }
+.cw-details { grid-column: 1 / -1; margin-top: 4px; }
+.cw-details summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--tx3, #667085);
+  list-style: none;
+  padding: 2px 0;
+}
+.cw-details summary::-webkit-details-marker { display: none; }
+.cw-details summary:focus-visible { outline: 2px solid var(--ac, #1570EF); outline-offset: 1px; }
+.cw-details[open] summary { color: var(--tx2, #475467); }
+.cw-details > *:not(summary) { margin-top: 8px; }
+
+/* ── 観点の例 ──────────────────────────────────── */
+.cw-list { margin: 0; padding-left: 18px; }
+.cw-list li { margin-bottom: 4px; }
+
+/* ── 開始カードの下の案内 1 行 ───────────────────── */
+.cw-hint { margin: 12px 0 0; font-size: 11px; color: var(--tx3, #667085); }
+
+/* ── テスト設計: 8 段階の一覧 ───────────────────── */
+.cw-stage-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; }
+.cw-stage {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  color: var(--tx3, #667085);
+  flex-wrap: wrap;
+}
+.cw-stage-no {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  background: var(--bg, #F9FAFB);
+  color: var(--tx3, #667085);
+  border: 1px solid var(--line2, #D0D5DD);
+}
+.cw-stage-name { font-weight: 600; color: var(--tx2, #475467); }
+.cw-stage-state { margin-left: auto; font-size: 11px; }
+.cw-stage-count { margin-left: auto; font-size: 11px; color: var(--tx3, #667085); }
+.cw-stage-actions { display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 6px; }
+.cw-stage[data-status="approved"] .cw-stage-no {
+  background: var(--ok-bg, #DCFAE6);
+  color: var(--ok-tx, #067647);
+  border-color: var(--ok-bg, #DCFAE6);
+}
+.cw-stage[data-status="current"] {
+  background: var(--ac-bg, #EFF4FF);
+  color: var(--ac, #2563EB);
+}
+.cw-stage[data-status="current"] .cw-stage-name { color: var(--ac, #2563EB); }
+.cw-stage[data-status="current"] .cw-stage-no {
+  background: var(--ac, #2563EB);
+  color: #fff;
+  border-color: var(--ac, #2563EB);
+}
+
+/* ── 待つだけ（進行中） ─────────────────────────── */
+.cw-waiting {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+  color: var(--tx3, #667085);
+}
+.cw-waiting::before {
+  content: '';
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  border: 2px solid var(--line, #D0D5DD);
+  border-top-color: var(--ac, #2563EB);
+  animation: cw-spin .8s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cw-waiting::before { animation: none; }
+}
+@keyframes cw-spin { to { transform: rotate(360deg); } }
+.cw-elapsed { margin-left: auto; color: var(--tx3, #667085); font-size: 11.5px; white-space: nowrap; }
+
+/* ── 報告書 ────────────────────────────────────── */
+.cw-report-title { font-size: 14px; font-weight: 700; margin: 0 0 8px; }
+.cw-report-facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 6px 14px;
+  margin: 0 0 10px;
+  font-size: 12.5px;
+}
+.cw-report-facts dt { font-weight: 700; color: var(--tx2, #475467); }
+.cw-report-facts dd { margin: 0; color: var(--tx, #101828); }
+.cw-report-verify { margin: 4px 0 8px; font-size: 12.5px; }
+.cw-badge-ok, .cw-badge-err {
+  display: inline-block;
+  border-radius: 5px;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.cw-badge-ok { background: var(--ok-bg, #ECFDF3); color: var(--ok-tx, #067647); }
+.cw-badge-err { background: var(--er-bg, #FEF3F2); color: var(--er, #D92D20); }
+.cw-report-note { margin: 4px 0 0; font-size: 11px; color: var(--tx3, #667085); }
+.cw-report-actions { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+
+/* ── ボタン ────────────────────────────────────── */
+/* .btn-primary / .btn-outline-sm は app.css に定義済み（このページも読み込む）。
+   .hl-btn-danger は css/healing.css にあるが、そのファイルは .app-content を
+   無条件に上書きするため（このページの 1 画面構造と衝突する）ここでは読み込まない。
+   同じ見た目だけをこのクラス名に対して複製する。 */
+.hl-btn-danger {
+  border: 1px solid #FDA29B;
+  background: var(--sf, #fff);
+  color: var(--ng-tx, #B42318);
+  border-radius: 7px;
+  padding: 6px 13px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.hl-btn-danger:hover:not(:disabled) { background: var(--ng-bg, #FEE4E2); }
+.hl-btn-danger:focus-visible { outline: 2px solid var(--ac, #1570EF); outline-offset: 1px; }
+
+/* ── トースト ──────────────────────────────────── */
+.cw-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  background: var(--tx, #101828);
+  color: #fff;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-size: 12.5px;
+  z-index: 60;
+}

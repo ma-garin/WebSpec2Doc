@@ -351,6 +351,46 @@ def _field_text(
     return cleaned
 
 
+def _sources(report: Any, extras: dict[str, str]) -> dict[str, str]:
+    """節ごとの出所ラベル（measured / user / llm / assumed / unverified）。
+
+    事象・検証は本体が観測した事実なので measured（検証は未実行なら unverified）。
+    原因・対応は fix_target=script（差分から機械的に判定）なら measured、それ以外は
+    AI の提案（llm）。表示のために書き直した・人が書き足した痕跡（cause_text_original /
+    action_text_original が extras に残る）があれば user とする。
+
+    注意（既知の限界）: extras は「保存値をそのまま出せなかった」印であり、本当に
+    人が編集したかどうかを追跡する専用フィールドは持たない。長すぎて詰めた場合も
+    同じ印が付くため、"user" は「人が編集した」ではなく「保存値と表示値が違う」の
+    近似でしかない。
+    """
+    fix_target = str(getattr(report, "fix_target", "") or "repo")
+    verify_after = str(getattr(report, "verify_after", "") or "")
+
+    def _field_source(key: str) -> str:
+        if fix_target == "script":
+            return "measured"
+        return "user" if extras.get(key) else "llm"
+
+    return {
+        "incident": "measured",
+        "verify": "unverified" if verify_after in ("", "未実行") else "measured",
+        "cause": _field_source("cause_text_original"),
+        "action": _field_source("action_text_original"),
+    }
+
+
+def display_with_sources(report: Any) -> tuple[Any, dict[str, str]]:
+    """表示用の報告書と出所ラベルを 1 回の present() で作る。
+
+    present() を保存済み（raw）の報告書に対して呼ばないと、書き直しの痕跡
+    （extras）が失われて "user" を検出できない。表示済みの報告書に対して
+    二度目の present() を呼ぶ経路を作らないよう、raw から作る側だけに使う。
+    """
+    view, extras = present(report)
+    return view, _sources(report, extras)
+
+
 def present(report: Any) -> tuple[Any, dict[str, str]]:
     """表示用の報告書と、折りたたみに置く原文を返す。保存には使わない。
 
@@ -421,4 +461,5 @@ def to_view_dict(report: Any) -> dict[str, Any]:
     # 対応欄が保存されていない（表示文をこちらで足した）ことを画面へ渡す。
     # 編集欄をこの定型文で初期化すると、担当者が消し忘れたまま保存してしまう。
     data["action_text_generated"] = not (report.action_text or "").strip()
+    data["sources"] = _sources(report, extras)
     return data

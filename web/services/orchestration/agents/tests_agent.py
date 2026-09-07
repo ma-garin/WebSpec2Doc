@@ -14,6 +14,12 @@ testcases/testcases.spec.ts（03 も 05 もこちらを先に読む）。同じ�
 残っているサイトでは waiting_human を返して止まる。承認そのものは
 待たない——承認を待って 2 時間ブロックすると、指揮者から見て「動いている」段と
 「人待ちの段」の区別がつかなくなる。
+
+要確認だけ止める（案2）: 段階の成果物が出ている時点で review_queue（信頼度×
+リスク）を通し、要確認でない項目は自動承認する。要確認が 0 件の段階は
+人を待たずに次へ進む（workflow_view.advance_design_stages）。要確認が
+1 件以上残る段階だけ waiting_human で止まる。WEBSPEC2DOC_STAGE_REVIEW=all
+で、案2 適用前の「全段階を人が見る」動作に戻せる。
 """
 
 from __future__ import annotations
@@ -33,7 +39,7 @@ from web.services.orchestration.ports import (
     StepStatus,
 )
 
-_NO_REPORT = "先にこのサイトの画面を観測してください（「保守下に置く」で始まります）"
+_NO_REPORT = "先にこのサイトの画面を解析してください（「保守下に置く」で始まります）"
 _NO_HANDLE = "テスト作成の記録がありません"
 _NO_EXECUTABLE = "自動実行できるテストケースがありません。テストケース表を確認してください"
 #: 段階承認が残っているときの依頼文。{subject} に「テスト観点」等が入る。
@@ -80,30 +86,66 @@ def _load_report(path: Path) -> dict[str, Any] | None:
     return data
 
 
-def _pending_gate(ctx: Context) -> str:
-    """未承認のまま残っている段階の名前。全部承認済み・未使用なら空文字。
+def _stage_review_mode() -> str:
+    """WEBSPEC2DOC_STAGE_REVIEW の値。既定は "review"（要確認だけ止める・案2）。
+
+    "all" にすると案2適用前の挙動（全段階を人の承認待ちにする）へ戻せる
+    余地を残す。テナントではなくプロセス単位の環境変数。
+    """
+    import os
+
+    return str(os.environ.get("WEBSPEC2DOC_STAGE_REVIEW") or "review").strip().lower()
+
+
+def _legacy_pending_gate(pipeline: Any) -> str:
+    """WEBSPEC2DOC_STAGE_REVIEW=all のときの旧動作（案2 適用前）。
+
+    自動承認は一切せず、8 段階を順に見て最初の未承認段階の名前を返す。
+    """
+    from autorun.stages import DESIGN_STAGE_IDS, STATUS_APPROVED, STATUS_SKIPPED
+    from web.services.auto_run_pipeline import _GATE_MESSAGES
+
+    if pipeline.all_approved:
+        return ""
+    for stage_id in DESIGN_STAGE_IDS:
+        stage = pipeline.get(stage_id)
+        if stage is not None and stage.status not in (STATUS_APPROVED, STATUS_SKIPPED):
+            return _GATE_MESSAGES.get(stage_id, ("", "", "テスト設計"))[2]
+    return "テスト設計"
+
+
+def _pending_gate(ctx: Context) -> tuple[str, int]:
+    """未承認のまま残っている段階の名前と、確認が要る項目数を返す（案2）。
+
+    既定（WEBSPEC2DOC_STAGE_REVIEW=review、未設定時も同じ）では
+    workflow_view.advance_design_stages に判定を委ねる——各段階の成果物が
+    出ている時点で review_queue（信頼度×リスク）を通し、要確認でない項目は
+    自動承認したうえで、要確認が 0 件の段階は次へ進める。要確認が 1 件以上
+    残る段階だけで止まり、その段階名と件数を返す。
+
+    WEBSPEC2DOC_STAGE_REVIEW=all では自動承認をせず、案2 適用前の挙動
+    （最初の未承認段階の名前だけを返す・件数は常に 0）に戻す。
 
     stages.json が無いのは「03 AutoRun でこのサイトの段階承認をまだ一度も
     使っていない」という意味で、承認を待っている人は居ない。無いことを
-    「未承認」と読むと、01→02 だけを使う経路が永久に止まる。
+    「未承認」と読むと、01→02 だけを使う経路が永久に止まる。空文字なら
+    通過済み（進めてよい）。
     """
     stages_path = ctx.out_dir / ctx.domain / "qa_process" / "stages.json"
     if not stages_path.is_file():
-        return ""
+        return "", 0
     try:
-        from autorun.stages import DESIGN_STAGE_IDS, Pipeline
-        from web.services.auto_run_pipeline import _GATE_MESSAGES
+        if _stage_review_mode() == "all":
+            from autorun.stages import Pipeline
 
-        pipeline = Pipeline.from_dict(json.loads(stages_path.read_text(encoding="utf-8")))
-        if pipeline.all_approved:
-            return ""
-        for stage_id in DESIGN_STAGE_IDS:
-            stage = pipeline.get(stage_id)
-            if stage is not None and not stage.is_approved:
-                return _GATE_MESSAGES.get(stage_id, ("", "", "テスト設計"))[2]
-        return "テスト設計"
+            pipeline = Pipeline.from_dict(json.loads(stages_path.read_text(encoding="utf-8")))
+            return _legacy_pending_gate(pipeline), 0
+
+        from web.services.orchestration import workflow_view
+
+        return workflow_view.advance_design_stages(ctx.out_dir, ctx.domain, actor="system")
     except Exception:  # noqa: BLE001 - 読めないものを「未承認」と決めつけない
-        return ""
+        return "", 0
 
 
 def _finish(handle: str, **fields: Any) -> None:
@@ -150,16 +192,19 @@ def _build(handle: str, ctx: Context, job: object) -> None:
                     summary="テストの材料を作れませんでした", error=failure)
             return
 
-        subject = _pending_gate(ctx)
+        subject, review_count = _pending_gate(ctx)
         if subject:
-            action = _APPROVE_ACTION.format(subject=subject)
+            action = (
+                f"テスト設計「{subject}」に確認が要る項目が{review_count}件あります"
+                if review_count else _APPROVE_ACTION.format(subject=subject)
+            )
             _finish(handle, state="waiting_human", label=f"{subject}の承認待ち",
                     summary=f"{subject}が承認されていません", human_action=action)
             return
 
         report = _load_report(_report_path(ctx))
         if report is None:
-            _finish(handle, state="failed", label="観測結果を読めません",
+            _finish(handle, state="failed", label="解析結果を読めません",
                     summary=_NO_REPORT, error=_NO_REPORT)
             return
 
@@ -184,7 +229,7 @@ def _build(handle: str, ctx: Context, job: object) -> None:
 
 
 class TestsAgent:
-    """02: 観測結果からテストを作り、Playwright のスクリプトへ落とす。"""
+    """02: 解析結果からテストを作り、Playwright のスクリプトへ落とす。"""
 
     name = "tests"
     label = "テストの作成"
@@ -194,15 +239,15 @@ class TestsAgent:
         if report is None:
             return Readiness(
                 ok=False, human_action=_NO_REPORT,
-                detail=f"{ctx.domain} の観測結果がありません",
+                detail=f"{ctx.domain} の解析結果がありません",
             )
         screens = len(report.get("screens") or [])
         if screens == 0:
             return Readiness(
                 ok=False, human_action=_NO_REPORT,
-                detail=f"{ctx.domain} は 1 画面も観測できていません",
+                detail=f"{ctx.domain} は 1 画面も解析できていません",
             )
-        return Readiness(ok=True, detail=f"観測済み {screens} 画面")
+        return Readiness(ok=True, detail=f"解析済み {screens} 画面")
 
     def run(self, ctx: Context) -> StepResult:
         from web.services.auto_run_job import AutoRunJob
@@ -210,7 +255,7 @@ class TestsAgent:
         report = _load_report(_report_path(ctx))
         if report is None:
             return StepResult(
-                status="waiting_human", summary="観測結果がありません",
+                status="waiting_human", summary="解析結果がありません",
                 human_action=_NO_REPORT,
             )
 

@@ -105,6 +105,52 @@
 }
 .hl-cell-when { color: var(--tx3, #667085); white-space: nowrap; }
 .hl-cell-action { text-align: right; white-space: nowrap; }
+.hl-cell-toggle { width: 28px; text-align: center; }
+.hl-inline-badge { margin-left: 6px; }
+
+/* ── 束の折りたたみ（個票） ───────────────────── */
+.hl-toggle { padding: 2px 7px; font-size: 11px; }
+/* ── 一覧: 確認不要の束（既定では畳む） ─────────── */
+.hl-collapse {
+  margin-top: 10px;
+  border: 1px solid var(--line, #D0D5DD);
+  border-radius: 7px;
+}
+.hl-collapse-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--tx3, #667085);
+  list-style: none;
+}
+.hl-collapse-summary::-webkit-details-marker { display: none; }
+.hl-collapse-summary:focus-visible { outline: 2px solid var(--ac, #1570EF); outline-offset: -2px; }
+.hl-collapse-tri { color: var(--tx3, #667085); transition: transform .12s; }
+.hl-collapse[open] .hl-collapse-tri { transform: rotate(90deg); }
+.hl-collapse .hl-table-wrap { padding: 0 12px 12px; }
+
+.hl-nested-row > td { padding: 0; border-bottom: 1px solid var(--line, #D0D5DD); }
+.hl-nested-wrap { padding: 8px 12px 12px 40px; background: var(--bg, #F9FAFB); }
+.hl-nested-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.hl-nested-table th {
+  text-align: left;
+  font-weight: 500;
+  font-size: 10.5px;
+  color: var(--tx3, #667085);
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line, #D0D5DD);
+}
+.hl-nested-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--line, #D0D5DD);
+  vertical-align: middle;
+}
+.hl-nested-table tbody tr { cursor: pointer; background: var(--sf, #fff); }
+.hl-nested-table tbody tr:hover > td { background: var(--bg, #F9FAFB); }
+.hl-nested-table tbody tr:last-child td { border-bottom: none; }
 
 /* ── バッジ ────────────────────────────────── */
 .hl-badge {
@@ -234,6 +280,19 @@
   margin: 18px 0 6px;
 }
 .hl-doc-h:first-of-type { margin-top: 0; }
+/* 出所ラベル（実測 / 入力 / AIの提案 / 前提 / 未確認）。節見出しの右に薄字で置く。 */
+.hl-src {
+  margin-left: 8px;
+  font-weight: 500;
+  letter-spacing: 0;
+  font-size: 10px;
+  color: var(--tx3, #667085);
+  background: var(--bg, #F9FAFB);
+  border: 1px solid var(--line, #D0D5DD);
+  border-radius: 4px;
+  padding: 0 5px;
+  vertical-align: middle;
+}
 .hl-doc-p { margin: 0 0 6px; }
 .hl-doc-note { margin: 2px 0 0; font-size: 11px; color: var(--tx3, #667085); }
 .hl-doc-note code {

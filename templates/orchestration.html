@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>指揮 - WebSpec2Doc</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  {% set _ver = config.get('ASSET_VERSION', '1') %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app-components.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/ta2.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/orchestration.css') }}?v={{ _ver }}">
+</head>
+<body class="app-page cw-page" data-site="{{ site }}" data-hl-admin="{{ 'true' if (not auth_user or auth_user.role == 'admin') else 'false' }}">
+<a href="#app-content" class="skip-link">本文へスキップ</a>
+<div class="app-shell">
+
+  {% with active = 'site' %}{% include 'partials/conductor-sidebar.html' %}{% endwith %}
+
+  <div class="app-main">
+    {% set topbar_crumb = '指揮' %}
+    {% set topbar_title = 'サイト' %}
+    {% include 'partials/topbar.html' %}
+
+    <main class="app-content" id="app-content">
+      <header class="cw-head">
+        <select id="cw-site" class="hl-select" hidden></select>
+        <span id="cw-rounds" class="cw-rounds"></span>
+        <a id="cw-restart" class="cw-link" href="/orchestration" hidden>最初から</a>
+      </header>
+
+      <ol id="cw-stepper" class="cw-stepper" aria-label="工程">
+        <li class="cw-step" data-key="analyze" data-state="todo">
+          <span class="cw-step-no">1</span><span class="cw-step-label">解析</span><span class="cw-step-state"></span>
+        </li>
+        <li class="cw-step" data-key="design" data-state="todo">
+          <span class="cw-step-no">2</span><span class="cw-step-label">テスト設計</span><span class="cw-step-state"></span>
+        </li>
+        <li class="cw-step" data-key="run" data-state="todo">
+          <span class="cw-step-no">3</span><span class="cw-step-label">実行</span><span class="cw-step-state"></span>
+        </li>
+        <li class="cw-step" data-key="fix" data-state="todo">
+          <span class="cw-step-no">4</span><span class="cw-step-label">分析して直す</span><span class="cw-step-state"></span>
+        </li>
+        <li class="cw-step" data-key="decide" data-state="todo">
+          <span class="cw-step-no">5</span><span class="cw-step-label">判断</span><span class="cw-step-state"></span>
+        </li>
+      </ol>
+
+      <section id="cw-card" class="cw-card" aria-live="polite">
+        <div class="cw-card-head">
+          <h2 id="cw-card-title" class="cw-card-title"></h2>
+          <span id="cw-card-src" class="cw-src" hidden></span>
+        </div>
+        <p id="cw-card-text" class="cw-card-text">読み込み中…</p>
+        <div id="cw-card-body" class="cw-card-body"></div>
+        <p id="cw-card-error" class="cw-card-error" hidden></p>
+        <div id="cw-card-actions" class="cw-card-actions"></div>
+      </section>
+
+      <div id="cw-toast" class="cw-toast" hidden></div>
+    </main>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/orchestration.js') }}?v={{ _ver }}"></script>
+</body>
+</html>

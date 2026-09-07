@@ -19,6 +19,7 @@
 from __future__ import annotations
 
 import difflib
+import time
 import re
 import unicodedata
 import urllib.error
@@ -77,10 +78,27 @@ class _VisibleTextExtractor(HTMLParser):
             self.lines.append(text)
 
 
+_PAGE_CACHE: dict[str, tuple[float, tuple[str, ...]]] = {}
+_PAGE_CACHE_SEC = 120.0
+
+
 def page_texts(url: str, *, timeout: float = 5.0) -> tuple[str, ...]:
-    """URL を取得し、可視テキストを行ごとに返す。取得できなければ空。"""
+    """URL を取得し、可視テキストを行ごとに返す。取得できなければ空。
+
+    同じ URL は 120 秒キャッシュする。1 画面の失敗 257 件で 257 回取得すると
+    分析だけで数分かかる（2026-09-07 実測）。
+    """
     if not url:
         return ()
+    cached = _PAGE_CACHE.get(url)
+    if cached and time.monotonic() - cached[0] < _PAGE_CACHE_SEC:
+        return cached[1]
+    texts = _fetch_page_texts(url, timeout=timeout)
+    _PAGE_CACHE[url] = (time.monotonic(), texts)
+    return texts
+
+
+def _fetch_page_texts(url: str, *, timeout: float) -> tuple[str, ...]:
     try:
         with urllib.request.urlopen(url, timeout=timeout) as resp:  # noqa: S310 - 対象は自ドメインのみ想定
             charset = resp.headers.get_content_charset() or "utf-8"

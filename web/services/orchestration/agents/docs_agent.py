@@ -1,18 +1,18 @@
-"""01 ドキュメントを指揮者から呼ぶためのアダプタ（画面の観測）。
+"""01 ドキュメントを指揮者から呼ぶためのアダプタ（画面の解析）。
 
 01→02→03 の連鎖は web/services/auto_run_pipeline.py::_run_job に既にある。
 ここはそれを作り直さず、**先頭の 3 フェーズだけを同じ順で呼ぶ**:
 
-    _phase_discover（到達確認）→ ログイン入力待ち →（_do_login）→ _phase_crawl（観測）
+    _phase_discover（到達確認）→ ログイン入力待ち →（_do_login）→ _phase_crawl（解析）
 
 パイプラインに「どこまで走らせるか」を指定する仕組みは無い（mode / stop_after /
 phases のいずれも存在しない）ので、_run_job が呼んでいるものと同じ関数を同じ順で
-自分のスレッドから呼ぶ。ここに観測の手順を書き写すと、01 の仕様がこの 1 ファイルに
+自分のスレッドから呼ぶ。ここに解析の手順を書き写すと、01 の仕様がこの 1 ファイルに
 複製され、片方だけが直る。
 
 人の入力は代行しない。ログイン情報の入力待ちで止まったら waiting_human と
 「サイトにログインしてください」を返し、スレッドは待たせたまま
-にする（人が入力すれば、その待ちが解けて観測が続く）。
+にする（人が入力すれば、その待ちが解けて解析が続く）。
 
 出力先は ctx.out_dir に固定する（job._output_dir）。出力ディレクトリ名は 01 が
 URL のホストから決めるため、ctx.domain と一致しない URL は ready() で断る——
@@ -38,12 +38,12 @@ from web.services.orchestration.ports import (
 #: 番号（03 / 02）を出すと、指揮の 1 画面から始めた人はどこへ行けばよいか
 #: 分からず、戻り方も分からない。
 _LOGIN_ACTION = "サイトにログインしてください"
-_APPROVE_ACTION = "画面の観測結果を承認してください"
-_NO_HANDLE = "観測の記録がありません"
-_NO_DOMAIN = "観測するサイトを指定してください"
-_NO_REPORT = "観測結果（画面の一覧）が保存されていません"
+_APPROVE_ACTION = "画面の解析結果を承認してください"
+_NO_HANDLE = "解析の記録がありません"
+_NO_DOMAIN = "解析するサイトを指定してください"
+_NO_REPORT = "解析結果（画面の一覧）が保存されていません"
 
-#: 既定の観測範囲。指揮者は params を渡さないので、この既定がそのまま効く。
+#: 既定の解析範囲。指揮者は params を渡さないので、この既定がそのまま効く。
 DEFAULT_DEPTH = 1
 DEFAULT_MAX_PAGES = 5
 
@@ -62,7 +62,7 @@ _HUMAN_ACTION = {
     "awaiting_approval": _APPROVE_ACTION,
 }
 
-#: 起こした観測（job_id → AutoRunJob）。status() は handle が指すものだけを見る。
+#: 起こした解析（job_id → AutoRunJob）。status() は handle が指すものだけを見る。
 _JOBS: dict[str, object] = {}
 _JOBS_LOCK = threading.Lock()
 
@@ -76,7 +76,7 @@ def _int_param(ctx: Context, key: str, default: int) -> int:
 
 
 def _url_of(ctx: Context) -> str:
-    """観測する URL。指定が無ければサイト名から推定する。"""
+    """解析する URL。指定が無ければサイト名から推定する。"""
     given = str(ctx.params.get("url") or "").strip()
     return given or f"http://{ctx.domain}/"
 
@@ -96,7 +96,7 @@ def _report_path(ctx: Context) -> Path:
 
 
 def _screen_count(path: Path) -> int:
-    """保存された観測結果の画面数。読めなければ -1（0 件と区別する）。"""
+    """保存された解析結果の画面数。読めなければ -1（0 件と区別する）。"""
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -106,7 +106,7 @@ def _screen_count(path: Path) -> int:
 
 
 def _observe(job: object, depth: int, max_pages: int) -> None:
-    """_run_job の前半（到達確認 → ログイン → 観測）だけを同じ順で進める。"""
+    """_run_job の前半（到達確認 → ログイン → 解析）だけを同じ順で進める。"""
     import time
 
     from web.services.auto_run_pipeline import (
@@ -143,17 +143,17 @@ def _observe(job: object, depth: int, max_pages: int) -> None:
         if job.status in ("failed", "cancelled"):
             return
         job.status = "complete"
-        job.step_label = "観測完了"
+        job.step_label = "解析完了"
         job.finished_at = datetime.now().isoformat(timespec="seconds")
     except Exception as exc:  # noqa: BLE001 - 例外でスレッドを黙って終わらせない
         job.status = "failed"
-        job.error = f"観測の途中で問題が起きました: {exc}"
+        job.error = f"解析の途中で問題が起きました: {exc}"
         job.finished_at = datetime.now().isoformat(timespec="seconds")
         job.add_log(job.error)
 
 
 def _publish_to_autorun(job: object) -> None:
-    """03 AutoRun の画面から見えるようにジョブを登録する（失敗しても観測は続ける）。
+    """03 AutoRun の画面から見えるようにジョブを登録する（失敗しても解析は続ける）。
 
     ログイン情報の入力・承認は 03 の画面から行う。登録しないと human_action が
     「03 の画面で入力してください」と言っておいて、その画面に何も出ない。
@@ -164,15 +164,15 @@ def _publish_to_autorun(job: object) -> None:
 
         with autorun_lock:
             autorun_jobs[job.job_id] = job
-    except Exception:  # noqa: BLE001 - 画面への露出は付加価値。観測を止めない
-        job.add_log("03 AutoRun の画面への登録に失敗しました（観測はこのまま進みます）")
+    except Exception:  # noqa: BLE001 - 画面への露出は付加価値。解析を止めない
+        job.add_log("03 AutoRun の画面への登録に失敗しました（解析はこのまま進みます）")
 
 
 class DocsAgent:
-    """01: サイトを観測して画面の一覧（report.json）を作る。"""
+    """01: サイトを解析して画面の一覧（report.json）を作る。"""
 
     name = "docs"
-    label = "画面の観測"
+    label = "画面の解析"
 
     def ready(self, ctx: Context) -> Readiness:
         if not str(ctx.domain or "").strip():
@@ -182,10 +182,10 @@ class DocsAgent:
         if mismatch:
             return Readiness(
                 ok=False,
-                human_action="観測したいサイトと同じ URL を指定してください",
+                human_action="解析したいサイトと同じ URL を指定してください",
                 detail=mismatch,
             )
-        return Readiness(ok=True, detail=f"観測対象: {url}")
+        return Readiness(ok=True, detail=f"解析対象: {url}")
 
     def run(self, ctx: Context) -> StepResult:
         from web.services.auto_run_job import AutoRunJob
@@ -195,7 +195,7 @@ class DocsAgent:
         if mismatch:
             return StepResult(
                 status="waiting_human", summary=mismatch,
-                human_action="観測したいサイトと同じ URL を指定してください",
+                human_action="解析したいサイトと同じ URL を指定してください",
             )
         depth = _int_param(ctx, "depth", DEFAULT_DEPTH)
         max_pages = _int_param(ctx, "max_pages", DEFAULT_MAX_PAGES)
@@ -212,7 +212,7 @@ class DocsAgent:
             _JOBS[job.job_id] = job
         _publish_to_autorun(job)
 
-        summary = f"{url} を観測します（深さ {depth} / 最大 {max_pages} 画面）"
+        summary = f"{url} を解析します（深さ {depth} / 最大 {max_pages} 画面）"
         ctx.log(summary)
         threading.Thread(
             target=_observe, args=(job, depth, max_pages),
@@ -225,7 +225,7 @@ class DocsAgent:
             job = _JOBS.get(str(handle or "").strip())
         if job is None:
             return StepStatus(
-                state="failed", label="観測の記録なし", summary=_NO_HANDLE, error=_NO_HANDLE,
+                state="failed", label="解析の記録なし", summary=_NO_HANDLE, error=_NO_HANDLE,
             )
         raw = str(getattr(job, "status", "") or "")
         state = _STATE_MAP.get(raw)
@@ -238,26 +238,26 @@ class DocsAgent:
                 human_action=_HUMAN_ACTION.get(raw, ""),
             )
         if raw != "complete":
-            return StepStatus(state="running", label=str(job.step_label or "観測中"))
+            return StepStatus(state="running", label=str(job.step_label or "解析中"))
 
         report = _report_path(ctx)
         screens = _screen_count(report)
         if screens < 0:
             return StepStatus(
-                state="failed", label="観測結果を読めません",
+                state="failed", label="解析結果を読めません",
                 summary=_NO_REPORT, error=_NO_REPORT,
             )
         return StepStatus(
             state="succeeded",
-            label="観測完了",
-            summary=f"画面 {screens} 件を観測",
+            label="解析完了",
+            summary=f"画面 {screens} 件を解析",
             artifacts={"report": f"{ctx.domain}/report.json"},
         )
 
     def cancel(self, ctx: Context, handle: str) -> bool:
-        """観測に中止を伝える。走っているスレッドは横から止められない。
+        """解析に中止を伝える。走っているスレッドは横から止められない。
 
-        観測は AutoRun のフェーズ関数の中で進んでおり、外から割り込めない。
+        解析は AutoRun のフェーズ関数の中で進んでおり、外から割り込めない。
         できるのは合図（job.cancel）を立てて、ログイン入力待ちで止まっている
         スレッドを解くことだけ。フェーズの切れ目で止まる。
         """
@@ -268,10 +268,10 @@ class DocsAgent:
         try:
             job.cancel()  # _cancelled を立て、待ちの合図も解く
         except Exception as exc:  # noqa: BLE001 - 中止の失敗で呼び出し元を落とさない
-            ctx.log(f"観測の中止に失敗しました: {exc}")
+            ctx.log(f"解析の中止に失敗しました: {exc}")
             return False
         event = getattr(job, "_input_event", None)
         if event is not None:
             event.set()  # 入力待ちで眠っているスレッドを起こす
-        ctx.log("観測の中止を伝えました（進行中の処理は区切りで止まります）")
+        ctx.log("解析の中止を伝えました（進行中の処理は区切りで止まります）")
         return True

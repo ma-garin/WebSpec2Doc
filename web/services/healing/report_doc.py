@@ -9,6 +9,7 @@ report.py（PR 本文用の Markdown）とは別物。あちらは開発者が G
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import re
@@ -23,6 +24,7 @@ from web.services.healing import spec_match
 from web.services.healing.report_present import CAUSE_MAX_CHARS as _CAUSE_MAX_CHARS
 from web.services.healing.report_present import contradiction_note as _contradiction_note
 from web.services.healing.report_present import display_report as _display_report
+from web.services.healing.report_present import display_with_sources as _display_with_sources
 from web.services.healing.report_present import title_from_test_id, to_view_dict
 from web.services.healing.report_present import truncate_sentences as _truncate_sentences
 from web.services.healing.report_present import with_note as _with_note
@@ -50,6 +52,31 @@ _AGENT_LABELS: dict[str, str] = {
 
 #: 本文の整形・字数・食い違いの判定は report_present に集約している。
 #: この層は「保存する形」だけを持ち、表示のために作り直すことはしない。
+
+#: テストケース ID `TC-{画面ID}-{観点略号}-{連番}` から観点略号を取り出す。
+#: `src/generator/testcase_table.py` が case_id を組み立てているときの略号と揃える。
+_TEST_ID_VIEWPOINT_RE = re.compile(r"^TC-[^-]+-([A-Za-z]+)-\d+")
+
+#: 観点略号 → 表示名。`src/generator/testcase_table.py` の `viewpoint=` 実装から
+#: 逆引きした（02 側に専用の対応表は無い）。無い略号はそのまま出す。
+_VIEWPOINT_NAMES: dict[str, str] = {
+    "DSP": "画面表示確認",
+    "BVA": "境界値分析",
+    "DT": "デシジョンテーブル",
+    "PW": "ペアワイズ",
+    "ST": "状態遷移テスト",
+    "TRN": "画面遷移",
+}
+
+#: 束の状態のうち、どれが「一番重い」か（先が重い）。1 通でも承認待ちが残っていれば
+#: 束全体を承認待ちとして扱う——review_queue が「例外だけ止める」のと同じ考え方。
+_BUNDLE_STATUS_RANK: dict[str, int] = {
+    "awaiting": 0,
+    "returned": 1,
+    "approved": 2,
+    "rejected": 3,
+    "submitted": 4,
+}
 
 
 @dataclass(frozen=True)
@@ -103,6 +130,37 @@ class MaintenanceReport:
     #: script のときは画面側で PR 関連の文言・承認ボタンの表記を変える。
     #: 既存の位置引数の順序を壊さないよう、必ず末尾に足す（古い報告書も読める）。
     fix_target: str = "repo"
+
+
+@dataclass(frozen=True)
+class Bundle:
+    """顧客に出す単位＝画面 × 観点。801 件の個票をこの単位で 1 回承認する。
+
+    永続化しない（list_bundles が呼ばれるたびに個票から計算する）。個票側の
+    判断が真実で、束はそれを集計した見え方でしかない。
+    """
+
+    bundle_id: str
+    project_id: str
+    project_name: str
+    target_url: str
+    screen_id: str
+    screen_name: str
+    viewpoint_code: str
+    viewpoint_name: str
+    title: str
+    status: str
+    count: int
+    awaiting_count: int
+    verify_after_ok_count: int
+    attention_high: int
+    fix_targets: frozenset[str]
+    report_ids: tuple[str, ...]
+    updated_at: str
+    #: 人が見るべき束か。T4「人が止まるのは例外だけ」——理由が決まっているものだけ True。
+    needs_review: bool = False
+    #: needs_review の理由を 1 文で。False のときも「なぜ止めなくてよいか」を書く。
+    review_reason: str = ""
 
 
 # ─────────────────────────── 人の言葉にする ───────────────────────────
@@ -637,6 +695,172 @@ def list_reports(
             out_dir, status=status, project_id=project_id, limit=limit
         )
     ]
+
+
+def list_reports_with_sources(
+    out_dir: Path, *, status: str = "", project_id: str = "", limit: int = 100
+) -> list[tuple[MaintenanceReport, dict[str, str]]]:
+    """一覧に出す形＋出所ラベル。1 件ずつ raw から present() するので list_reports と
+    二重に計算するが、出所は raw でなければ検出できない（display_with_sources 参照）。
+    """
+    return [
+        _display_with_sources(r)
+        for r in _read_reports(out_dir, status=status, project_id=project_id, limit=limit)
+    ]
+
+
+def report_with_sources(
+    out_dir: Path, report_id: str
+) -> tuple[MaintenanceReport, dict[str, str]] | None:
+    """報告書 1 件を表示用の形＋出所ラベルで返す。束の本文一覧から使う。"""
+    raw = load_report(out_dir, report_id)
+    if raw is None:
+        return None
+    return _display_with_sources(raw)
+
+
+# ─────────────────────────── 束ねる（画面 × 観点） ───────────────────────────
+
+
+def bundle_key(report: MaintenanceReport) -> str:
+    """束ねる軸。`{画面ID}×{観点略号}`。取れない分は `画面ID` だけ、それも無ければ「その他」。"""
+    screen = (report.incident_screen_id or "").strip()
+    match = _TEST_ID_VIEWPOINT_RE.match(report.incident_test_id or "")
+    code = match.group(1).upper() if match else ""
+    if screen and code:
+        return f"{screen}×{code}"
+    return screen or "その他"
+
+
+def _bundle_title(screen_id: str, screen_name: str, viewpoint_code: str, viewpoint_name: str) -> str:
+    """`{画面名} × {観点名}`。画面・観点のどちらかが分からなければその分だけ落とす。"""
+    if not screen_id and not viewpoint_code:
+        return "その他"
+    label = (screen_name or screen_id or "画面不明").strip()
+    if viewpoint_code:
+        return f"{label} × {viewpoint_name or viewpoint_code}"
+    return label
+
+
+def _heaviest_status(statuses: Sequence[str]) -> str:
+    ranked = sorted(statuses, key=lambda s: _BUNDLE_STATUS_RANK.get(s, 99))
+    return ranked[0] if ranked else "awaiting"
+
+
+def _bundle_review(
+    *, fix_targets: frozenset[str], unverified_count: int, attention_high: int
+) -> tuple[bool, str]:
+    """要確認かどうかと、その理由を 1 文で返す（T4「人が止まるのは例外だけ」）。
+
+    review_queue.review_reason（src/autorun）と同じ考え方: 止まってよい理由を先に決め、
+    それ以外は自動で通す。ここでの理由は 1) AI が製品コードを直した（llm 由来）、
+    2) 検証が通っていない個票が残っている、3) 確認が必要な点が高で残っている、の
+    優先順（review_queue が「AI 由来」を「リスク」より先に見るのと揃えた）。
+    どれにも当たらなければ、テスト側だけの修正で検証も通っている——止める理由がない。
+    """
+    if "repo" in fix_targets:
+        return True, "AI がコードを変えています。"
+    if unverified_count > 0:
+        return True, f"検証が通っていない個票が{unverified_count}件あります。"
+    if attention_high > 0:
+        return True, f"確認が必要な点が高{attention_high}件あります。"
+    return False, "テストの探し方だけを直し、検証も通っています。"
+
+
+def list_bundles(
+    out_dir: Path, *, status: str = "", project_id: str = ""
+) -> list[Bundle]:
+    """束の一覧。永続化しない——呼ぶたびに全個票から計算する。
+
+    status で絞るのは「束が今どちらの状態か」（束の中で最も重い状態）であって、
+    個票の絞り込みではない。承認待ちで絞っても、返る束の count・awaiting_count は
+    その束が持つ全個票（承認済み・却下済みを含む）を数える——一覧の「件数（うち
+    承認待ち n）」をそのまま出せるようにするため。
+    """
+    reports = _read_reports(out_dir, project_id=project_id, limit=1_000_000)
+    groups: dict[tuple[str, str], list[MaintenanceReport]] = {}
+    for report in reports:
+        key = (report.project_id, bundle_key(report))
+        groups.setdefault(key, []).append(report)
+
+    bundles: list[Bundle] = []
+    for (proj_id, key), members in groups.items():
+        first = members[0]
+        match = _TEST_ID_VIEWPOINT_RE.match(first.incident_test_id or "")
+        viewpoint_code = match.group(1).upper() if match else ""
+        viewpoint_name = _VIEWPOINT_NAMES.get(viewpoint_code, viewpoint_code)
+        screen_name = next((m.incident_screen_name for m in members if m.incident_screen_name), "")
+        ordered = sorted(members, key=lambda m: m.updated_at or m.created_at, reverse=True)
+        count = len(members)
+        verify_after_ok_count = sum(1 for m in members if m.verify_after_ok is True)
+        attention_high = sum(sum(1 for a in m.attention if a.get("severity") == "high") for m in members)
+        fix_targets = frozenset(m.fix_target for m in members)
+        needs_review, review_reason = _bundle_review(
+            fix_targets=fix_targets,
+            unverified_count=count - verify_after_ok_count,
+            attention_high=attention_high,
+        )
+        bundles.append(
+            Bundle(
+                bundle_id=hashlib.sha1(f"{proj_id}{key}".encode("utf-8")).hexdigest()[:12],
+                project_id=proj_id,
+                project_name=first.project_name,
+                target_url=first.target_url,
+                screen_id=first.incident_screen_id,
+                screen_name=screen_name,
+                viewpoint_code=viewpoint_code,
+                viewpoint_name=viewpoint_name,
+                title=_bundle_title(first.incident_screen_id, screen_name, viewpoint_code, viewpoint_name),
+                status=_heaviest_status([m.status for m in members]),
+                count=count,
+                awaiting_count=sum(1 for m in members if m.status == "awaiting"),
+                verify_after_ok_count=verify_after_ok_count,
+                attention_high=attention_high,
+                fix_targets=fix_targets,
+                report_ids=tuple(m.report_id for m in ordered),
+                updated_at=ordered[0].updated_at or ordered[0].created_at if ordered else "",
+                needs_review=needs_review,
+                review_reason=review_reason,
+            )
+        )
+
+    if status:
+        bundles = [b for b in bundles if b.status == status]
+    bundles.sort(key=lambda b: b.updated_at, reverse=True)
+    return bundles
+
+
+def find_bundle(out_dir: Path, bundle_id: str) -> Bundle | None:
+    """bundle_id は project_id を含んだハッシュなので、全プロジェクトを見て探す。"""
+    for bundle in list_bundles(out_dir):
+        if bundle.bundle_id == bundle_id:
+            return bundle
+    return None
+
+
+def bundle_to_dict(bundle: Bundle) -> dict[str, Any]:
+    """API が返す形。frozenset はそのままだと JSON にならないので並び替えて出す。"""
+    return {
+        "bundle_id": bundle.bundle_id,
+        "project_id": bundle.project_id,
+        "project_name": bundle.project_name,
+        "target_url": bundle.target_url,
+        "screen_id": bundle.screen_id,
+        "screen_name": bundle.screen_name,
+        "viewpoint_code": bundle.viewpoint_code,
+        "viewpoint_name": bundle.viewpoint_name,
+        "title": bundle.title,
+        "status": bundle.status,
+        "count": bundle.count,
+        "awaiting_count": bundle.awaiting_count,
+        "verify_after_ok_count": bundle.verify_after_ok_count,
+        "attention_high": bundle.attention_high,
+        "fix_targets": sorted(bundle.fix_targets),
+        "report_ids": list(bundle.report_ids),
+        "updated_at": bundle.updated_at,
+        "needs_review": bundle.needs_review,
+        "review_reason": bundle.review_reason,
+    }
 
 
 def find_report(

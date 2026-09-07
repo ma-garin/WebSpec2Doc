@@ -588,19 +588,24 @@ def _decide_current(out_dir: Path, project_id: str, domain: str = "") -> _Curren
     )
 
 
-def _decided_count(out_dir: Path, run: ConductorRun) -> int:
-    """この run に紐づく報告書のうち、判断が済んだ通数。"""
+def _decided_count(out_dir: Path, run: ConductorRun) -> tuple[int, list[int]]:
+    """判断が済んだ報告書の通数と、承認で出来た PR 番号（重複なし）。"""
     project_id = run.project_id
     if not project_id:
         project = _project_for(out_dir, run.domain)
         project_id = getattr(project, "project_id", "") if project else ""
     if not project_id:
-        return 0
+        return 0, []
     try:
         reports = report_doc.list_reports(out_dir, project_id=project_id, limit=1000)
     except Exception:  # noqa: BLE001 - 読めなければ 0（判断済みとは言わない）
-        return 0
-    return sum(1 for r in reports if r.status in ("approved", "rejected", "returned", "submitted"))
+        return 0, []
+    since = str(run.started_at or "")
+    decided = [r for r in reports
+               if r.status in ("approved", "rejected", "returned", "submitted")
+               and (not since or str(r.updated_at or "") >= since)]
+    prs = sorted({int(r.pr_number) for r in decided if getattr(r, "pr_number", 0)})
+    return len(decided), prs
 
 
 def _current_for_terminal(run: ConductorRun, record: StepRecord, out_dir: Path) -> _Current:
@@ -617,14 +622,19 @@ def _current_for_terminal(run: ConductorRun, record: StepRecord, out_dir: Path) 
         decide = _decide_current(out_dir, run.project_id, run.domain)
         if decide is not None:
             return decide
-        decided = _decided_count(out_dir, run)
+        decided, prs = _decided_count(out_dir, run)
         if decided:
-            # 報告書は全部判断済み。修正が適用されていなくても、この周の仕事は終わり
+            # 報告書は全部判断済み。この周の仕事は終わり
             project = _project_for(out_dir, run.domain)
             monitor_time = str(getattr(project, "monitor_time", "") or _DEFAULT_MONITOR_TIME)
+            if prs:
+                sent = "・".join(f"#{n}" for n in prs)
+                middle = f"修正を送りました（PR {sent}）。開発者が取り込むとサイトに反映されます。"
+            else:
+                middle = "適用された修正は無いので、サイトは変わっていません。"
             return _Current(
                 key="finished", state="done", headline="完了",
-                text=f"報告書 {decided} 通を判断しました。適用された修正は無いので、サイトは変わっていません。"
+                text=f"報告書 {decided} 通を判断しました。{middle}"
                      f"明日から毎朝 {monitor_time} に見張ります。",
                 text_source="measured",
                 action=_action("monitor", primary="見張りの時刻を変える", secondary="最初から",

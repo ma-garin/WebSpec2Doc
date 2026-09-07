@@ -504,17 +504,9 @@ def _current_for_waiting(out_dir: Path, run: ConductorRun, record: StepRecord) -
                 text=f"失敗が {count} 件ありました。直すにはコードの場所が要ります",
                 action=_action("connect", primary="接続する", items=_list_repos(out_dir)),
             )
-        bundles = _awaiting_bundles(out_dir, run.project_id)
-        if bundles:
-            total = sum(b.awaiting_count for b in bundles)
-            return _Current(
-                key="decide", state="human", headline="判断",
-                text=f"確認が要る束が {len(bundles)} 件（報告書 {total} 通）あります。"
-                     "内容を確認して判断してください。",
-                action=_action("decide_bundle", primary=_bundle_item(bundles[0])["primary"],
-                               secondary="差し戻す・却下",
-                               items=[_bundle_item(b) for b in bundles]),
-            )
+        decide = _decide_current(out_dir, run.project_id, run.domain)
+        if decide is not None:
+            return decide
         return _Current(key="fix", state="human", headline="分析して直す",
                          text=record.human_action or record.summary or "",
                          action=_action("none"))
@@ -574,6 +566,43 @@ def _current_for_running(out_dir: Path, run: ConductorRun, record: StepRecord) -
                      elapsed_sec=_elapsed_sec(record.started_at))
 
 
+def _decide_current(out_dir: Path, project_id: str, domain: str = "") -> _Current | None:
+    """承認待ちの束があれば「判断」のカード。無ければ None。
+
+    run に接続先 ID が無いとき（domain だけで起こした run）は domain から引く。
+    """
+    if not project_id and domain:
+        project = _project_for(out_dir, domain)
+        project_id = getattr(project, "project_id", "") if project else ""
+    bundles = _awaiting_bundles(out_dir, project_id)
+    if not bundles:
+        return None
+    total = sum(b.awaiting_count for b in bundles)
+    return _Current(
+        key="decide", state="human", headline="判断",
+        text=f"確認が要る束が {len(bundles)} 件（報告書 {total} 通）あります。"
+             "内容を確認して判断してください。",
+        action=_action("decide_bundle", primary=_bundle_item(bundles[0])["primary"],
+                       secondary="差し戻す・却下",
+                       items=[_bundle_item(b) for b in bundles]),
+    )
+
+
+def _decided_count(out_dir: Path, run: ConductorRun) -> int:
+    """この run に紐づく報告書のうち、判断が済んだ通数。"""
+    project_id = run.project_id
+    if not project_id:
+        project = _project_for(out_dir, run.domain)
+        project_id = getattr(project, "project_id", "") if project else ""
+    if not project_id:
+        return 0
+    try:
+        reports = report_doc.list_reports(out_dir, project_id=project_id, limit=1000)
+    except Exception:  # noqa: BLE001 - 読めなければ 0（判断済みとは言わない）
+        return 0
+    return sum(1 for r in reports if r.status in ("approved", "rejected", "returned", "submitted"))
+
+
 def _current_for_terminal(run: ConductorRun, record: StepRecord, out_dir: Path) -> _Current:
     step_key = _AGENT_OF_STEP.get(record.name, "observe")
     headline = dict(_STEP_DEFS).get(step_key, step_key)
@@ -582,6 +611,24 @@ def _current_for_terminal(run: ConductorRun, record: StepRecord, out_dir: Path) 
                          text="ここまでの結果は残っています。もう一度始めると、"
                               "指定したところからやり直します。",
                          action=_action("start", primary="もう一度始める"))
+    # 修正が 1 件も適用できず failed で終わっても、下書きされた報告書
+    # （「直っていません」）は人が判断するもの（T7）。報告書があれば判断へ
+    if record.name == "healing":
+        decide = _decide_current(out_dir, run.project_id, run.domain)
+        if decide is not None:
+            return decide
+        decided = _decided_count(out_dir, run)
+        if decided:
+            # 報告書は全部判断済み。修正が適用されていなくても、この周の仕事は終わり
+            project = _project_for(out_dir, run.domain)
+            monitor_time = str(getattr(project, "monitor_time", "") or _DEFAULT_MONITOR_TIME)
+            return _Current(
+                key="finished", state="done", headline="完了",
+                text=f"報告書 {decided} 通を判断しました。適用された修正は無いので、サイトは変わっていません。"
+                     f"明日から毎朝 {monitor_time} に見張ります。",
+                text_source="measured",
+                action=_action("monitor", primary="見張りの時刻を変える", secondary="最初から",
+                               items=[_monitor_item(project)]))
     # failed / skipped（前の修正が終わっていない、等）
     return _Current(key=step_key, state="failed", headline=headline,
                      text=record.summary or run.error or "",

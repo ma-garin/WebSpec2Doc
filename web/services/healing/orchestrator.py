@@ -308,10 +308,9 @@ def reap_orphans(out_dir: Path, *, project_id: str = "") -> list[str]:
 def has_active_run(out_dir: Path, project_id: str) -> bool:
     """まだ終わっていない実行があるか。判定の前に停止した実行を片付ける。
 
-    awaiting_human も「終わっていない」に含める。人の判断を待っている間に
-    次を起こすと、同じ欠陥の報告書が積み上がって承認待ちの一覧が意味を失う。
-    **回収（ORPHAN_CANDIDATE_STATUSES）とは別の集合**である点に注意:
-    awaiting_human は「片付けない・けれど次も起こさない」が正しい扱い。
+    awaiting_human は「終わっていない」に含めない。同じ欠陥の重複は
+    healing_agent が報告書の有無で除くため、人待ちが次の修正を塞ぐ必要はない。
+    **回収（ORPHAN_CANDIDATE_STATUSES）とは別の集合**である点に注意。
 
     判定をここに集約するのは、monitor と指揮者アダプタが同じ判断を
     別々に持っていたため。片方だけ直る形にすると、直っていない側から
@@ -323,8 +322,13 @@ def has_active_run(out_dir: Path, project_id: str) -> bool:
     except Exception:  # noqa: BLE001 - 判定できないときは走らせない側に倒す
         logger.warning("実行一覧を取得できませんでした", exc_info=True)
         return True
+    # awaiting_human は塞がない（2026-09-07 変更）。同じ欠陥の報告書の重複は
+    # healing_agent が「報告書のある欠陥を除く」で防いでおり、人待ちの実行が
+    # 残っている間ずっと次の修正が起きないと、見張りも指揮も永久に止まる。
     return any(
-        str(s.get("status") or "") not in TERMINAL_RUN_STATUSES for s in summaries
+        str(s.get("status") or "") not in TERMINAL_RUN_STATUSES
+        and str(s.get("status") or "") != "awaiting_human"
+        for s in summaries
     )
 
 
@@ -490,12 +494,30 @@ def decide_report(
             raise HealingError(f"実行 {report.run_id} が見つかりません")
         # この報告書の対応がテスト側なら PR は不要。製品側の欠陥が同じ run に
         # 混在していても、PR はその報告書を承認したときに作る（画面の表示と一致させる）
-        needs_pr = report.fix_target != "script"
+        applied = any(
+            p.defect_id == report.defect_id and p.status == "applied" and p.agent != "script"
+            for it in run.iterations for p in it.proposals
+        )
+        # 適用済みの修正が無い（提案のみ・直っていない）報告書の承認は
+        # 「報告書を顧客に出してよい」の判断であり、送る修正が無いので PR は作らない。
+        # 作ろうとすると存在しないブランチを push して 47 秒後に失敗する（2026-09-07 実測）
+        needs_pr = report.fix_target != "script" and applied
         if needs_pr:
-            run = create_pull_request_for_run(out_dir, report.run_id)
+            try:
+                run = create_pull_request_for_run(out_dir, report.run_id)
+            except HealingError as exc:
+                raise HealingError(
+                    "修正を送れませんでした。GitHub への接続と権限を確認してください。\n"
+                    f"詳細: {exc}"
+                ) from exc
         record_decision(out_dir, report.run_id, action="approve", note=note, actor=actor)
         pr = run.pull_request
-        approval_note = note if needs_pr else "PR 不要（テスト側の修正）" + (f"・{note}" if note else "")
+        if needs_pr:
+            approval_note = note
+        elif report.fix_target == "script":
+            approval_note = "PR 不要（テスト側の修正）" + (f"・{note}" if note else "")
+        else:
+            approval_note = "PR なし（適用済みの修正が無い）" + (f"・{note}" if note else "")
         report = replace(
             report,
             status="approved",

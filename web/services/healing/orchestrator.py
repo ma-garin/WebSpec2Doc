@@ -308,10 +308,9 @@ def reap_orphans(out_dir: Path, *, project_id: str = "") -> list[str]:
 def has_active_run(out_dir: Path, project_id: str) -> bool:
     """まだ終わっていない実行があるか。判定の前に停止した実行を片付ける。
 
-    awaiting_human も「終わっていない」に含める。人の判断を待っている間に
-    次を起こすと、同じ欠陥の報告書が積み上がって承認待ちの一覧が意味を失う。
-    **回収（ORPHAN_CANDIDATE_STATUSES）とは別の集合**である点に注意:
-    awaiting_human は「片付けない・けれど次も起こさない」が正しい扱い。
+    awaiting_human は「終わっていない」に含めない。同じ欠陥の重複は
+    healing_agent が報告書の有無で除くため、人待ちが次の修正を塞ぐ必要はない。
+    **回収（ORPHAN_CANDIDATE_STATUSES）とは別の集合**である点に注意。
 
     判定をここに集約するのは、monitor と指揮者アダプタが同じ判断を
     別々に持っていたため。片方だけ直る形にすると、直っていない側から
@@ -323,8 +322,13 @@ def has_active_run(out_dir: Path, project_id: str) -> bool:
     except Exception:  # noqa: BLE001 - 判定できないときは走らせない側に倒す
         logger.warning("実行一覧を取得できませんでした", exc_info=True)
         return True
+    # awaiting_human は塞がない（2026-09-07 変更）。同じ欠陥の報告書の重複は
+    # healing_agent が「報告書のある欠陥を除く」で防いでおり、人待ちの実行が
+    # 残っている間ずっと次の修正が起きないと、見張りも指揮も永久に止まる。
     return any(
-        str(s.get("status") or "") not in TERMINAL_RUN_STATUSES for s in summaries
+        str(s.get("status") or "") not in TERMINAL_RUN_STATUSES
+        and str(s.get("status") or "") != "awaiting_human"
+        for s in summaries
     )
 
 

@@ -1203,40 +1203,55 @@ def _run_code_fusion(
     import tempfile
 
     with tempfile.TemporaryDirectory(prefix="webspec2doc-src-") as work_dir:
-        targets, labels = _resolve_source_targets(source_dirs, source_repos, Path(work_dir))
-        if not targets:
+        targets, labels, failures = _resolve_source_targets(
+            source_dirs, source_repos, Path(work_dir)
+        )
+        if not targets and not failures:
             return
-        _fuse_source_targets(pages, targets, labels, output_dir)
+        _fuse_source_targets(pages, targets, labels, output_dir, failures)
 
 
 def _resolve_source_targets(
     source_dirs: list[Path] | None,
     source_repos: list[str] | None,
     work_dir: Path,
-) -> tuple[list[Path], dict[str, str]]:
-    """走査対象のローカルパス一覧と、表示用ラベル（解決済みパス → 表示名）を返す。
+) -> tuple[list[Path], dict[str, str], list[str]]:
+    """走査対象のローカルパス一覧・表示用ラベル・取得失敗の記録を返す。
 
     リポジトリ指定は clone に失敗しても他の対象を捨てない（警告に留める）。
+    失敗はレポートにも残す（黙って対象が減ると利用者に伝わらない）。
     """
-    from ingest.repo_fetcher import RepositoryFetchError, fetch_repository
+    from ingest.repo_fetcher import (
+        RepositoryFetchError,
+        fetch_repository,
+        normalize_repo_url,
+        redact,
+        split_repo_ref,
+    )
 
     targets: list[Path] = list(source_dirs or [])
     labels: dict[str, str] = {}
+    failures: list[str] = []
+    seen: set[tuple[str, str]] = set()
     for index, raw in enumerate(source_repos or []):
-        url, _, ref = str(raw).partition("@")
-        # scp 記法（git@host:owner/repo）の '@' をブランチ区切りと誤認しない
-        if url.count("/") == 0 and ref:
-            url, ref = str(raw), ""
+        url, ref = split_repo_ref(str(raw))
         try:
+            # 重複判定を clone の前に置く（後ろに置くと同じリポジトリを 2 回取得する）
+            key = (normalize_repo_url(url), ref)
+            if key in seen:
+                logger.warning("同じリポジトリが重複指定されています（無視）: %s", redact(url))
+                continue
+            seen.add(key)
             fetched = fetch_repository(url, work_dir / f"repo{index}", ref=ref)
         except RepositoryFetchError as exc:
             logger.warning("リポジトリの取得に失敗しました（この対象をスキップ）: %s", exc)
+            failures.append(f"{redact(url)}: 取得失敗（{exc}）")
             continue
         targets.append(fetched.path)
         labels[str(fetched.path.resolve())] = (
             f"{fetched.url}@{fetched.ref}" if fetched.ref else fetched.url
         )
-    return targets, labels
+    return targets, labels, failures
 
 
 def _fuse_source_targets(
@@ -1244,8 +1259,13 @@ def _fuse_source_targets(
     source_dirs: list[Path],
     labels: dict[str, str],
     output_dir: Path,
+    failures: list[str] | None = None,
 ) -> None:
-    """走査対象を 1 つのバンドルに束ねて突合し、レポートを出力する。"""
+    """走査対象を 1 つのバンドルに束ねて突合し、レポートを出力する。
+
+    取得に失敗した対象（failures）も skipped として持ち回る。
+    ルートが 1 件も取れなくても、失敗があればレポートを出して痕跡を残す。
+    """
     from generator.code_fusion_reporter import save_code_fusion_outputs
     from ingest.code_models import CodeBundle
     from ingest.code_reader import scan_source_tree
@@ -1256,7 +1276,7 @@ def _fuse_source_targets(
     source_files: list[str] = []
     seen_files: set[str] = set()
     frameworks: set[str] = set()
-    skipped: list[str] = []
+    skipped: list[str] = list(failures or [])
     roots: list[str] = []
     for source_dir in source_dirs:
         try:
@@ -1291,10 +1311,10 @@ def _fuse_source_targets(
                 source_files.append(name)
         frameworks.update(bundle.frameworks)
         skipped.extend(bundle.skipped)
-    if not roots:
+    if not roots and not skipped:
         return
     merged = CodeBundle(
-        root=" / ".join(roots),
+        root=" / ".join(roots) if roots else "（取得に失敗）",
         routes=tuple(routes),
         source_files=tuple(source_files),
         frameworks=tuple(sorted(frameworks)),
@@ -1303,9 +1323,11 @@ def _fuse_source_targets(
     if not merged.routes:
         logger.warning(
             "ソースからルート定義を検出できませんでした（未対応フレームワークの可能性）: %s",
-            merged.root,
+            merged.root or "（走査対象なし）",
         )
-        return
+        if not merged.skipped:
+            return
+        # 走査できなかった理由があるなら、レポートを出して利用者に見える形で残す
     try:
         result = fuse_code(pages, merged)
         save_code_fusion_outputs(result, merged, output_dir)

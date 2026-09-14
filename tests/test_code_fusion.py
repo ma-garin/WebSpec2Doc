@@ -25,6 +25,8 @@ from ingest.repo_fetcher import (
     fetch_repository,
     normalize_repo_url,
     redact,
+    scrub_text,
+    split_repo_ref,
 )
 from ingest.route_matcher import (
     REASON_API,
@@ -345,3 +347,46 @@ class TestRepoFetcher:
             assert "ブランチ" in str(exc)
             return
         raise AssertionError("拒否されなかった")
+
+    def test_ref_split_does_not_break_urls_containing_at(self) -> None:
+        """ssh URL や scp 記法の '@' をブランチ区切りと誤認すると常に clone に失敗する。"""
+        assert split_repo_ref("ssh://git@host/a/b") == ("ssh://git@host/a/b", "")
+        assert split_repo_ref("https://user@github.com/a/b") == (
+            "https://user@github.com/a/b",
+            "",
+        )
+        assert split_repo_ref("git@github.com:a/b.git") == ("git@github.com:a/b.git", "")
+        assert split_repo_ref("git@github.com:a/b.git@v1.0") == (
+            "git@github.com:a/b.git",
+            "v1.0",
+        )
+        assert split_repo_ref("owner/repo@v1.0") == ("owner/repo", "v1.0")
+        assert split_repo_ref("owner/repo") == ("owner/repo", "")
+
+    def test_redact_covers_scp_user_and_query(self) -> None:
+        """伏字漏れが 1 か所でもあるとトークンがログとレポートに載る。"""
+        assert "SECRET" not in redact("ghp_SECRET@host:owner/repo.git")
+        assert "SECRET" not in redact("https://host/a/b?private_token=SECRET")
+        assert "SECRET" not in redact("https://u:SECRET@github.com/a/b")
+
+    def test_scrub_text_cleans_git_stderr(self) -> None:
+        dirty = "fatal: could not read from https://u:ghp_SECRET@github.com/a/b token=SECRET2"
+        cleaned = scrub_text(dirty)
+        assert "ghp_SECRET" not in cleaned
+        assert "SECRET2" not in cleaned
+
+    def test_unparsable_url_raises_fetch_error_not_value_error(self) -> None:
+        """ValueError が漏れると突合段でランごと落ちる。"""
+        try:
+            normalize_repo_url("https://[abc/x")
+        except RepositoryFetchError:
+            return
+        raise AssertionError("RepositoryFetchError にならなかった")
+
+    def test_relative_path_is_not_turned_into_github_url(self) -> None:
+        for bad in ("../..", ".../...", "./x"):
+            try:
+                normalize_repo_url(bad)
+            except RepositoryFetchError:
+                continue
+            raise AssertionError(f"GitHub URL に変換された: {bad!r}")

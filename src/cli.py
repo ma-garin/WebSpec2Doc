@@ -277,6 +277,7 @@ def cmd_show(args: argparse.Namespace, _extra: list[str]) -> int:
         ("forms.md", "フォーム（Markdown）"),
         ("transition.mmd", "遷移図（Mermaid）"),
         ("doc_fusion.md", "文書突合"),
+        ("code_fusion.md", "ソース突合"),
         ("testcases/run_result.json", "テスト実行結果"),
     ]
     files = [{"path": str(d / n), "label": label, "exists": (d / n).exists()} for n, label in known]

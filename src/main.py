@@ -194,6 +194,16 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--source-dir",
+        type=Path,
+        action="append",
+        help=(
+            "ソースコードのルートディレクトリ。ルート定義を抽出して実測クロールと突合し、"
+            "未到達ルート（テストできていない画面）を code_fusion.md に出力する。複数指定可。"
+            "対応: Flask / FastAPI / Django / Express / Next.js"
+        ),
+    )
+    parser.add_argument(
         "--record-session",
         action="store_true",
         help=(
@@ -670,6 +680,7 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
         ("transition", "遷移の品質を評価"),
         ("impact", "影響範囲を算出"),
         ("doc_fusion", "文書と実測を突合"),
+        ("code_fusion", "ソースと実測を突合"),
         ("ux", "UX・アクセシビリティを評価"),
         ("snapshot", "スナップショットを保存"),
         ("diff", "差分レポートを作成"),
@@ -712,6 +723,10 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
         refresh_doc=bool(getattr(args, "refresh_doc", False)),
     )
     emit_generate("doc_fusion", "文書と実測を突合", done=True)
+
+    emit_generate("code_fusion", "ソースと実測を突合")
+    _run_code_fusion(analyzed_pages, getattr(args, "source_dir", None), output_dir)
+    emit_generate("code_fusion", "ソースと実測を突合", done=True)
 
     emit_generate("ux", "UX・アクセシビリティを評価")
     exploration_coverage = _load_exploration_coverage(output_dir)
@@ -1154,6 +1169,64 @@ def _save_diff_summary(diff: object, output_dir: Path) -> None:
     }
     (output_dir / "diff_summary.json").write_text(
         json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+
+
+def _run_code_fusion(
+    pages: list[AnalyzedPage],
+    source_dirs: list[Path] | None,
+    output_dir: Path,
+) -> None:
+    """ソースディレクトリがあればルート定義を抽出し、実測結果と突合する。
+
+    突合結果は code_fusion.json / code_fusion.md として出力する。
+    走査失敗はクロール成果を無駄にしないため警告に留める（文書突合と同じ方針）。
+    """
+    if not source_dirs:
+        return
+    from generator.code_fusion_reporter import save_code_fusion_outputs
+    from ingest.code_models import CodeBundle
+    from ingest.code_reader import scan_source_tree
+    from ingest.route_matcher import fuse_code
+
+    routes: list = []
+    source_files: list[str] = []
+    frameworks: set[str] = set()
+    skipped: list[str] = []
+    roots: list[str] = []
+    for source_dir in source_dirs:
+        try:
+            bundle = scan_source_tree(Path(source_dir))
+        except (FileNotFoundError, ValueError, OSError) as exc:
+            logger.warning("ソース走査に失敗しました（突合をスキップ）: %s: %s", source_dir, exc)
+            continue
+        roots.append(bundle.root)
+        routes.extend(bundle.routes)
+        source_files.extend(bundle.source_files)
+        frameworks.update(bundle.frameworks)
+        skipped.extend(bundle.skipped)
+    if not roots:
+        return
+    merged = CodeBundle(
+        root=" / ".join(roots),
+        routes=tuple(routes),
+        source_files=tuple(source_files),
+        frameworks=tuple(sorted(frameworks)),
+        skipped=tuple(skipped),
+    )
+    if not merged.routes:
+        logger.warning(
+            "ソースからルート定義を検出できませんでした（未対応フレームワークの可能性）: %s",
+            merged.root,
+        )
+        return
+    result = fuse_code(pages, merged)
+    save_code_fusion_outputs(result, merged, output_dir)
+    logger.info(
+        "ソース×実測の突合が完了しました: ルート %d 件・対応 %d 件・未到達 %d 件（code_fusion.md）",
+        len(merged.routes),
+        len(result.matches),
+        len(result.unreached),
     )
 
 

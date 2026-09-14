@@ -327,3 +327,22 @@ def api_doc_fusion() -> tuple[dict, int]:
         return json.loads(path.read_text(encoding="utf-8")), 200
     except (OSError, json.JSONDecodeError):
         return {"error": "doc_fusion.json を読み込めませんでした"}, 500
+
+
+@bp.get("/api/code-fusion")
+def api_code_fusion() -> tuple[dict, int]:
+    """output/{domain}/code_fusion.json をそのまま返す（無ければ 404）。
+
+    api_doc_fusion と同じ寛容な読み方。ソース突合を実行していない run では
+    ファイルが存在しないため、404 を異常として扱わない。
+    """
+    domain = request.args.get("domain", "")
+    if not _valid_domain(domain):
+        return {"error": "not found"}, 404
+    path = _out() / domain / "code_fusion.json"
+    if not path.is_file():
+        return {"error": "code_fusion.json not found"}, 404
+    try:
+        return json.loads(path.read_text(encoding="utf-8")), 200
+    except (OSError, json.JSONDecodeError):
+        return {"error": "code_fusion.json を読み込めませんでした"}, 500

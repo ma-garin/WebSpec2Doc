@@ -204,6 +204,15 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--source-repo",
+        action="append",
+        help=(
+            "ソースコードの Git リポジトリ。shallow clone して --source-dir と同じ突合を行う。"
+            "owner/repo の短縮指定、https URL、ssh URL に対応。"
+            "'URL@ブランチ名' でブランチ／タグを指定できる。複数指定可"
+        ),
+    )
+    parser.add_argument(
         "--record-session",
         action="store_true",
         help=(
@@ -725,7 +734,12 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
     emit_generate("doc_fusion", "文書と実測を突合", done=True)
 
     emit_generate("code_fusion", "ソースと実測を突合")
-    _run_code_fusion(analyzed_pages, getattr(args, "source_dir", None), output_dir)
+    _run_code_fusion(
+        analyzed_pages,
+        getattr(args, "source_dir", None),
+        output_dir,
+        source_repos=getattr(args, "source_repo", None),
+    )
     emit_generate("code_fusion", "ソースと実測を突合", done=True)
 
     emit_generate("ux", "UX・アクセシビリティを評価")
@@ -1176,14 +1190,62 @@ def _run_code_fusion(
     pages: list[AnalyzedPage],
     source_dirs: list[Path] | None,
     output_dir: Path,
+    source_repos: list[str] | None = None,
 ) -> None:
-    """ソースディレクトリがあればルート定義を抽出し、実測結果と突合する。
+    """ソースディレクトリ／リポジトリがあればルート定義を抽出し、実測結果と突合する。
 
     突合結果は code_fusion.json / code_fusion.md として出力する。
     走査失敗はクロール成果を無駄にしないため警告に留める（文書突合と同じ方針）。
+    リポジトリは一時ディレクトリへ shallow clone し、突合後に破棄する。
     """
-    if not source_dirs:
+    if not source_dirs and not source_repos:
         return
+    import tempfile
+
+    with tempfile.TemporaryDirectory(prefix="webspec2doc-src-") as work_dir:
+        targets, labels = _resolve_source_targets(source_dirs, source_repos, Path(work_dir))
+        if not targets:
+            return
+        _fuse_source_targets(pages, targets, labels, output_dir)
+
+
+def _resolve_source_targets(
+    source_dirs: list[Path] | None,
+    source_repos: list[str] | None,
+    work_dir: Path,
+) -> tuple[list[Path], dict[str, str]]:
+    """走査対象のローカルパス一覧と、表示用ラベル（解決済みパス → 表示名）を返す。
+
+    リポジトリ指定は clone に失敗しても他の対象を捨てない（警告に留める）。
+    """
+    from ingest.repo_fetcher import RepositoryFetchError, fetch_repository
+
+    targets: list[Path] = list(source_dirs or [])
+    labels: dict[str, str] = {}
+    for index, raw in enumerate(source_repos or []):
+        url, _, ref = str(raw).partition("@")
+        # scp 記法（git@host:owner/repo）の '@' をブランチ区切りと誤認しない
+        if url.count("/") == 0 and ref:
+            url, ref = str(raw), ""
+        try:
+            fetched = fetch_repository(url, work_dir / f"repo{index}", ref=ref)
+        except RepositoryFetchError as exc:
+            logger.warning("リポジトリの取得に失敗しました（この対象をスキップ）: %s", exc)
+            continue
+        targets.append(fetched.path)
+        labels[str(fetched.path.resolve())] = (
+            f"{fetched.url}@{fetched.ref}" if fetched.ref else fetched.url
+        )
+    return targets, labels
+
+
+def _fuse_source_targets(
+    pages: list[AnalyzedPage],
+    source_dirs: list[Path],
+    labels: dict[str, str],
+    output_dir: Path,
+) -> None:
+    """走査対象を 1 つのバンドルに束ねて突合し、レポートを出力する。"""
     from generator.code_fusion_reporter import save_code_fusion_outputs
     from ingest.code_models import CodeBundle
     from ingest.code_reader import scan_source_tree
@@ -1202,10 +1264,11 @@ def _run_code_fusion(
         except (FileNotFoundError, ValueError, OSError) as exc:
             logger.warning("ソース走査に失敗しました（突合をスキップ）: %s: %s", source_dir, exc)
             continue
-        if bundle.root in roots:
-            logger.warning("同じソースディレクトリが重複指定されています（無視）: %s", bundle.root)
+        label = labels.get(str(Path(source_dir).resolve()), bundle.root)
+        if label in roots:
+            logger.warning("同じソースディレクトリが重複指定されています（無視）: %s", label)
             continue
-        roots.append(bundle.root)
+        roots.append(label)
         # 重複・入れ子指定（--source-dir . --source-dir ./web 等）でルートが多重計上され、
         # 到達率が指定回数分の 1 になるのを防ぐ。scan_source_tree が単一バンドル内で
         # 行っている dedup と同じキーで、バンドル結合時にも畳む。

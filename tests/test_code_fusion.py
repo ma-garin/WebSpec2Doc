@@ -20,6 +20,12 @@ from generator.code_fusion_reporter import (
 )
 from ingest.code_models import KIND_API, KIND_PAGE, CodeBundle, CodeEvidence, CodeRoute
 from ingest.code_reader import scan_source_tree
+from ingest.repo_fetcher import (
+    RepositoryFetchError,
+    fetch_repository,
+    normalize_repo_url,
+    redact,
+)
 from ingest.route_matcher import (
     REASON_API,
     REASON_AUTH,
@@ -284,3 +290,58 @@ class TestReporter:
         assert (out / CODE_FUSION_MD_NAME).is_file()
         loaded = json.loads((out / CODE_FUSION_JSON_NAME).read_text(encoding="utf-8"))
         assert loaded["frameworks"] == ["flask"]
+
+
+# ---------- リポジトリ取得 ----------
+
+
+class TestRepoFetcher:
+    def test_shorthand_becomes_github_https(self) -> None:
+        assert normalize_repo_url("ma-garin/WebSpec2Doc") == (
+            "https://github.com/ma-garin/WebSpec2Doc"
+        )
+
+    def test_scp_like_url_is_kept(self) -> None:
+        url = "git@github.com:ma-garin/WebSpec2Doc.git"
+        assert normalize_repo_url(url) == url
+
+    def test_local_and_command_transports_are_rejected(self) -> None:
+        """file:// / ext:: はローカル実行・任意コマンド実行につながるため拒否する。"""
+        for bad in ("file:///etc", "ext::sh -c whoami", "", "   "):
+            try:
+                normalize_repo_url(bad)
+            except RepositoryFetchError:
+                continue
+            raise AssertionError(f"拒否されなかった: {bad!r}")
+
+    def test_option_like_value_is_rejected(self) -> None:
+        """先頭が - の値は git のオプションとして解釈されうる。"""
+        try:
+            normalize_repo_url("--upload-pack=evil")
+        except RepositoryFetchError:
+            return
+        raise AssertionError("拒否されなかった")
+
+    def test_credentials_are_redacted(self) -> None:
+        masked = redact("https://x-access-token:secret@github.com/a/b.git")
+        assert "secret" not in masked
+        assert masked == "https://***@github.com/a/b.git"
+
+    def test_existing_destination_is_not_overwritten(self, tmp_path: Path) -> None:
+        dest = tmp_path / "already"
+        dest.mkdir()
+        (dest / "keep.txt").write_text("keep", encoding="utf-8")
+        try:
+            fetch_repository("owner/repo", dest)
+        except RepositoryFetchError:
+            assert (dest / "keep.txt").read_text(encoding="utf-8") == "keep"
+            return
+        raise AssertionError("既存ディレクトリを上書きした")
+
+    def test_invalid_ref_is_rejected(self, tmp_path: Path) -> None:
+        try:
+            fetch_repository("owner/repo", tmp_path / "x", ref="main; rm -rf /")
+        except RepositoryFetchError as exc:
+            assert "ブランチ" in str(exc)
+            return
+        raise AssertionError("拒否されなかった")

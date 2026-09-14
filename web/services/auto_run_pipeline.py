@@ -509,6 +509,9 @@ def _phase_crawl(job: AutoRunJob, depth: int, max_pages: int) -> None:
     if job.mode == "document":
         for doc_path in job._reference_docs:
             cmd += ["--reference-doc", doc_path]
+    # ソース突合（--source-repo / --source-dir）は AutoRun では実行されない。
+    # 通常クロール（/run）でのみ指定できる。ここへ足す場合、上の
+    # `job.mode == "document"` の内側に置かないこと（ソース突合は URL 駆動でも成立する）。
 
     try:
         proc = subprocess.Popen(

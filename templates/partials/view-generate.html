@@ -217,6 +217,14 @@
                     <div id="reference-doc-status" class="input-field-message"></div>
                   </div>
 
+                  <!-- ソースコードのリポジトリ（任意） -->
+                  <div class="field" id="source-repo-block" style="margin-top:8px">
+                    <label for="source-repo">ソースコードのリポジトリ（任意 — 未到達画面の洗い出し）</label>
+                    <input type="text" id="source-repo" class="url-input"
+                           placeholder="owner/repo または https://github.com/owner/repo" />
+                    <div class="input-field-message">指定すると、クロールで到達できなかった画面をソースのルート定義から洗い出します。ブランチは <code>URL@ブランチ名</code> で指定できます。</div>
+                  </div>
+
                   <!-- オプション -->
                   <div style="margin-top:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
                     <label class="checkbox-chip"><input type="checkbox" id="compare"> 前回との差分を出力</label>

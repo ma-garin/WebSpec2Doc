@@ -34,15 +34,29 @@ REASON_PARAM = "パラメータ必須のため入口URLから到達できない�
 REASON_NO_LINK = "未到達（クロール導線なし、またはデッドコード）"
 REASON_NON_GET = "GET 以外のメソッドのみのため、画面遷移では到達しない可能性"
 REASON_DUPLICATE = "同一パスの別定義が既に実測と対応済み（重複定義）"
+REASON_UNKNOWN_METHOD = "未到達（許可メソッドを静的に解決できず、画面かどうか不明）"
 
 HINT_AUTH = "管理者アカウントで再クロールする"
 HINT_PARAM = "具体値を含む URL をシードに追加する"
 HINT_NO_LINK = "リンク元の有無を確認する。到達できなければ実装が使われていない疑い"
 HINT_NON_GET = "フォーム送信後の画面かどうかを確認する"
 HINT_DUPLICATE = "どちらの定義が実際に配線されているか確認する"
+HINT_UNKNOWN_METHOD = "定義箇所を開き、GET で開ける画面かどうかを確認する"
 
 #: 権限で弾かれた可能性を示唆するパス片
-_PRIVILEGED_SEGMENTS = ("admin", "manage")
+#: 権限が要る領域とみなすパスセグメント（完全一致のみ）
+_PRIVILEGED_SEGMENTS = frozenset({"admin", "administrator", "manage", "management"})
+
+
+def _has_privileged_segment(path: str) -> bool:
+    """パスの**セグメントが丸ごと** admin / manage 相当かを判定する。
+
+    部分文字列一致や接頭辞一致にすると /documents/admin-guide や /management-report の
+    ような公開画面まで「権限により未到達」と誤判定し、利用者を
+    「管理者アカウントで再クロールする」という誤った次アクションへ誘導する。
+    取りこぼしより誤誘導を避ける側に倒し、完全一致に限る。
+    """
+    return any(segment in _PRIVILEGED_SEGMENTS for segment in path.lower().split("/"))
 #: 残り全部を飲み込む記法（Flask <path:>, Next.js [...slug], Express *）
 _HAS_CATCH_ALL_RE = re.compile(r"<path:|\[\.\.\.|\*")
 
@@ -61,9 +75,10 @@ class RouteMatch:
     """ソース上のルートと実測ページの対応 1 件。"""
 
     route: CodeRoute
-    page_id: str
+    page_id: str  # 代表 1 件（同じルートに複数ページが当たることがある）
     page_url: str
     method: str  # "exact"（正規化パス完全一致）/ "pattern"（パラメータ展開一致）
+    page_count: int = 1  # このルートに対応づいた実測ページ数
 
 
 @dataclass(frozen=True)
@@ -193,12 +208,15 @@ def _reason_for(
         return REASON_API, ""
     if exact_duplicate:
         return REASON_DUPLICATE, HINT_DUPLICATE
-    effective = effective_path(route).lower()
-    if any(segment in effective for segment in _PRIVILEGED_SEGMENTS):
+    if _has_privileged_segment(effective_path(route)):
         return REASON_AUTH, HINT_AUTH
     if PARAM_TOKEN in normalize_route_pattern(effective_path(route)) and not pattern_reached:
         return REASON_PARAM, HINT_PARAM
     methods = tuple(m.upper() for m in route.methods)
+    if not methods:
+        # scanner が methods を静的に解決できなかった場合（空タプル = 不明）。
+        # GET と断定するとデッドコード疑いの誤報になるため、不明として出す。
+        return REASON_UNKNOWN_METHOD, HINT_UNKNOWN_METHOD
     if "GET" in methods:
         return REASON_NO_LINK, HINT_NO_LINK
     return REASON_NON_GET, HINT_NON_GET
@@ -223,13 +241,15 @@ def fuse_code(pages: list[AnalyzedPage], bundle: CodeBundle) -> CodeFusionResult
     """実測ページ一覧とソース由来ルート一式を突合し、未到達ルートを出す。
 
     1. ``group_canonical_screens`` で正準画面に絞る（matcher.fuse と同じ流儀）。
-    2. 正規化パスの完全一致（method="exact"）を先に取る。
-    3. 残りを ``route_to_regex`` の ``fullmatch`` で照合（method="pattern"）。
-       このとき catch-all が具体ルートの実測を横取りしないよう具体度順に当てる。
-    4. どのルートにも当たらなかったページが crawl_only_page_ids。
+    2. **ページごとに、当たるルートのうち最も具体的な 1 本**へ対応づける。
+    3. 1 本も当たらなかったページが crawl_only_page_ids（ソースに定義が無い画面）。
+    4. 1 ページも当たらなかったルートが unreached（未到達）。
 
-    1 ページは最大 1 ルートにしか対応づけない（先着順・exact 優先）。
-    これをしないと catch-all ルート（``/<view_name>`` 等）が実測済みページを吸い、
+    ルート→ページは 1:N である（``/sites/<domain>`` は /sites/aaa と /sites/bbb の
+    両方に対応する）。これを 1:1 に畳むと、定義済みのページが
+    「ソースに定義が無い画面」として誤報される。
+    一方でページ→ルートは 1:1 に決める。具体度順に当てないと catch-all
+    （``/<view_name>`` / ``/<path:name>``）が具体ルートの実測を横取りし、
     到達率が水増しされて本来未到達のルートが「到達済み」に化ける。
     """
     canonical_info = group_canonical_screens(pages)
@@ -239,41 +259,39 @@ def fuse_code(pages: list[AnalyzedPage], bundle: CodeBundle) -> CodeFusionResult
         for page in canonical_pages
     ]
 
-    matches: list[RouteMatch] = []
-    matched_page_ids: set[str] = set()
-    matched_routes: set[int] = set()
+    # 具体度順（静的セグメントが多くパラメータが少ないものを先に当てる）。
+    # sorted は安定なので、同一具体度ならソース定義順が保たれる。
+    ordered_routes = sorted(bundle.routes, key=_specificity_key)
+    compiled = [(route, route_to_regex(effective_path(route))) for route in ordered_routes]
 
-    # 1 周目: 正規化パスの完全一致（大文字小文字は区別する）
-    for route in bundle.routes:
-        normalized = normalize_route_pattern(effective_path(route))
-        if PARAM_TOKEN in normalized:
-            continue
-        for page_id, page_url, path in page_paths:
-            if page_id in matched_page_ids:
-                continue
-            if path == normalized:
-                matches.append(
-                    RouteMatch(route=route, page_id=page_id, page_url=page_url, method="exact")
-                )
-                matched_routes.add(id(route))
-                matched_page_ids.add(page_id)
-                break
+    # ルート（id）→ 対応づいた実測ページ
+    route_pages: dict[int, list[tuple[str, str]]] = {}
+    crawl_only: list[str] = []
 
-    # 2 周目: パラメータ展開一致（具体的なルートから順に当てる）
-    for route in sorted(bundle.routes, key=_specificity_key):
-        if id(route) in matched_routes:
-            continue
-        regex = route_to_regex(effective_path(route))
-        for page_id, page_url, path in page_paths:
-            if page_id in matched_page_ids:
-                continue
+    for page_id, page_url, path in page_paths:
+        for route, regex in compiled:
             if regex.fullmatch(path):
-                matches.append(
-                    RouteMatch(route=route, page_id=page_id, page_url=page_url, method="pattern")
-                )
-                matched_routes.add(id(route))
-                matched_page_ids.add(page_id)
+                route_pages.setdefault(id(route), []).append((page_id, page_url))
                 break
+        else:
+            crawl_only.append(page_id)
+
+    matches: list[RouteMatch] = []
+    for route in bundle.routes:  # 出力はソース定義順に戻す
+        hits = route_pages.get(id(route))
+        if not hits:
+            continue
+        normalized = normalize_route_pattern(effective_path(route))
+        first_page_id, first_page_url = hits[0]
+        matches.append(
+            RouteMatch(
+                route=route,
+                page_id=first_page_id,
+                page_url=first_page_url,
+                method="exact" if PARAM_TOKEN not in normalized else "pattern",
+                page_count=len(hits),
+            )
+        )
 
     # 同一の正規化パターンを持つ仲間のうち 1 本でも実測があるか
     reached_patterns = {normalize_route_pattern(effective_path(m.route)) for m in matches}
@@ -284,17 +302,13 @@ def fuse_code(pages: list[AnalyzedPage], bundle: CodeBundle) -> CodeFusionResult
 
     unreached: list[UnreachedRoute] = []
     for route in bundle.routes:
-        if id(route) in matched_routes:
+        if route_pages.get(id(route)):
             continue
         normalized = normalize_route_pattern(effective_path(route))
         pattern_reached = normalized in reached_patterns
         exact_duplicate = PARAM_TOKEN not in normalized and normalized in reached_exact_paths
         reason, hint = _reason_for(route, pattern_reached, exact_duplicate=exact_duplicate)
         unreached.append(UnreachedRoute(route=route, reason=reason, hint=hint))
-
-    crawl_only = tuple(
-        page_id for page_id, _url, _path in page_paths if page_id not in matched_page_ids
-    )
 
     page_route_total = sum(1 for route in bundle.routes if route.kind == KIND_PAGE)
     page_matched = sum(1 for match in matches if match.route.kind == KIND_PAGE)
@@ -303,8 +317,7 @@ def fuse_code(pages: list[AnalyzedPage], bundle: CodeBundle) -> CodeFusionResult
     return CodeFusionResult(
         matches=tuple(matches),
         unreached=tuple(unreached),
-        crawl_only_page_ids=crawl_only,
+        crawl_only_page_ids=tuple(crawl_only),
         page_route_total=page_route_total,
         reached_ratio=reached_ratio,
-        claim_notice=CLAIM_NOTICE,
     )

@@ -1190,7 +1190,9 @@ def _run_code_fusion(
     from ingest.route_matcher import fuse_code
 
     routes: list = []
+    seen_routes: set[tuple] = set()
     source_files: list[str] = []
+    seen_files: set[str] = set()
     frameworks: set[str] = set()
     skipped: list[str] = []
     roots: list[str] = []
@@ -1200,9 +1202,30 @@ def _run_code_fusion(
         except (FileNotFoundError, ValueError, OSError) as exc:
             logger.warning("ソース走査に失敗しました（突合をスキップ）: %s: %s", source_dir, exc)
             continue
+        if bundle.root in roots:
+            logger.warning("同じソースディレクトリが重複指定されています（無視）: %s", bundle.root)
+            continue
         roots.append(bundle.root)
-        routes.extend(bundle.routes)
-        source_files.extend(bundle.source_files)
+        # 重複・入れ子指定（--source-dir . --source-dir ./web 等）でルートが多重計上され、
+        # 到達率が指定回数分の 1 になるのを防ぐ。scan_source_tree が単一バンドル内で
+        # 行っている dedup と同じキーで、バンドル結合時にも畳む。
+        for route in bundle.routes:
+            evidence = route.evidence
+            key = (
+                route.prefix,
+                route.path,
+                route.methods,
+                evidence.file if evidence else "",
+                evidence.line if evidence else 0,
+            )
+            if key in seen_routes:
+                continue
+            seen_routes.add(key)
+            routes.append(route)
+        for name in bundle.source_files:
+            if name not in seen_files:
+                seen_files.add(name)
+                source_files.append(name)
         frameworks.update(bundle.frameworks)
         skipped.extend(bundle.skipped)
     if not roots:
@@ -1212,7 +1235,7 @@ def _run_code_fusion(
         routes=tuple(routes),
         source_files=tuple(source_files),
         frameworks=tuple(sorted(frameworks)),
-        skipped=tuple(skipped),
+        skipped=tuple(dict.fromkeys(skipped)),
     )
     if not merged.routes:
         logger.warning(
@@ -1220,8 +1243,13 @@ def _run_code_fusion(
             merged.root,
         )
         return
-    result = fuse_code(pages, merged)
-    save_code_fusion_outputs(result, merged, output_dir)
+    try:
+        result = fuse_code(pages, merged)
+        save_code_fusion_outputs(result, merged, output_dir)
+    except (OSError, ValueError, KeyError) as exc:
+        # docstring の宣言どおり、突合・出力の失敗でクロール成果ごとランを落とさない。
+        logger.warning("ソース突合の出力に失敗しました（スキップ）: %s", exc)
+        return
     logger.info(
         "ソース×実測の突合が完了しました: ルート %d 件・対応 %d 件・未到達 %d 件（code_fusion.md）",
         len(merged.routes),

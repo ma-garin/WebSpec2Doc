@@ -24,7 +24,9 @@ from ingest.route_matcher import (
     REASON_API,
     REASON_AUTH,
     REASON_DUPLICATE,
+    REASON_NO_LINK,
     REASON_PARAM,
+    REASON_UNKNOWN_METHOD,
     effective_path,
     fuse_code,
     normalize_route_pattern,
@@ -158,6 +160,44 @@ class TestFuseCode:
         result = fuse_code(pages, bundle)
         assert result.page_route_total == 1
         assert result.reached_ratio == 1.0
+
+    def test_one_route_covers_many_pages(self) -> None:
+        """ルート→ページは 1:N。1:1 に畳むと定義済みページが未定義と誤報される。"""
+        pages = analyze_pages(
+            [
+                _page("https://example.com/sites/aaa", "A"),
+                _page("https://example.com/sites/bbb", "B"),
+                _page("https://example.com/sites/ccc", "C"),
+            ]
+        )
+        bundle = CodeBundle(root=".", routes=(_route("/sites/<domain>"),), frameworks=("flask",))
+        result = fuse_code(pages, bundle)
+        assert result.crawl_only_page_ids == ()
+        assert len(result.matches) == 1
+        assert result.matches[0].page_count == 3
+        assert result.reached_ratio == 1.0
+
+    def test_privileged_reason_needs_a_whole_segment(self) -> None:
+        """部分文字列一致だと公開画面を「権限により未到達」と誤判定する。"""
+        pages = analyze_pages([_page("https://example.com/", "ホーム")])
+        bundle = CodeBundle(
+            root=".",
+            routes=(_route("/documents/admin-guide"), _route("/admin/console")),
+            frameworks=("flask",),
+        )
+        result = fuse_code(pages, bundle)
+        reasons = {u.route.path: u.reason for u in result.unreached}
+        assert reasons["/documents/admin-guide"] == REASON_NO_LINK
+        assert reasons["/admin/console"] == REASON_AUTH
+
+    def test_unknown_methods_are_not_assumed_to_be_get(self) -> None:
+        """methods を静的に解決できない場合に GET と断定するとデッドコード誤報になる。"""
+        pages = analyze_pages([_page("https://example.com/", "ホーム")])
+        bundle = CodeBundle(
+            root=".", routes=(_route("/unknown", methods=()),), frameworks=("flask",)
+        )
+        result = fuse_code(pages, bundle)
+        assert result.unreached[0].reason == REASON_UNKNOWN_METHOD
 
     def test_crawl_only_page_is_reported(self) -> None:
         pages = analyze_pages([_page("https://example.com/ghost", "謎")])

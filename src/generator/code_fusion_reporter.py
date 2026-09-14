@@ -23,8 +23,9 @@ from ingest.code_models import (
     CodeRoute,
     code_route_to_dict,
 )
+from ingest.route_matcher import effective_path
 
-if TYPE_CHECKING:  # pragma: no cover - 型参照のみ（route_matcher は並行実装中）
+if TYPE_CHECKING:  # pragma: no cover - 型参照のみ
     from ingest.route_matcher import CodeFusionResult
 
 logger = logging.getLogger(__name__)
@@ -35,16 +36,6 @@ _JSON_INDENT = 2
 #: 「対応が取れたルート」表に載せる最大件数（超過分は件数のみ示す）
 _MATCH_TABLE_LIMIT = 50
 _EMPTY_CELL = "-"
-
-
-def _effective_path(route: CodeRoute) -> str:
-    """prefix と path を結合し、二重スラッシュを潰した実効パスを返す。"""
-    combined = f"{route.prefix or ''}{route.path or ''}"
-    if not combined:
-        return ""
-    while "//" in combined:
-        combined = combined.replace("//", "/")
-    return combined
 
 
 def _cell(value: object) -> str:
@@ -154,7 +145,7 @@ def _render_unreached_table(items: Iterable[Any]) -> list[str]:
     for item in items:
         route = item.route
         lines.append(
-            f"| {_cell(_effective_path(route))} "
+            f"| {_cell(effective_path(route))} "
             f"| {_cell(_methods_text(route))} "
             f"| {_cell(item.reason)} "
             f"| {_cell(getattr(item, 'hint', ''))} "
@@ -212,13 +203,20 @@ def _render_matches(result: "CodeFusionResult") -> list[str]:
         lines += ["実測と対応づいたルートは無い。", ""]
         return lines
     lines += [
+        "定義箇所は同一パスの候補のうち先着 1 件であり、"
+        "実際に配線された定義である保証は無い。",
+        "同一パスが複数箇所で定義されている場合は"
+        "「未到達ルート」節の重複定義も併せて確認する。",
+        "",
+    ]
+    lines += [
         "| ルート | 実測URL | 一致方法 | 定義箇所 |",
         "|---|---|---|---|",
     ]
     for item in matches[:_MATCH_TABLE_LIMIT]:
         route = item.route
         lines.append(
-            f"| {_cell(_effective_path(route))} "
+            f"| {_cell(effective_path(route))} "
             f"| {_cell(item.page_url)} "
             f"| {_cell(item.method)} "
             f"| {_cell(_evidence_location(route))} |"
@@ -245,7 +243,12 @@ def build_code_fusion_markdown(result: "CodeFusionResult", bundle: CodeBundle) -
     lines += _render_matches(result)
     skipped = tuple(bundle.skipped or ())
     if skipped:
-        lines += ["## 走査できなかったファイル", ""]
+        lines += [
+            "## 走査できなかった箇所",
+            "",
+            "この一覧は網羅ではない。下記は走査できず、ルート一覧に含まれていない。",
+            "",
+        ]
         lines += [f"- {item}" for item in skipped]
         lines.append("")
     return "\n".join(lines)

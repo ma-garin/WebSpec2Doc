@@ -295,9 +295,18 @@ class TestSafeSourceRepo:
             assert reject, bad
 
     def test_invalid_ref_is_rejected(self) -> None:
-        url, reject = _safe_source_repo("https://github.com/o/r@main;rm -rf /")
+        """ref に使えない文字は弾く。
+
+        末尾に "/" を含む値（"main;rm -rf /"）は split_repo_ref が ref とみなさず
+        URL 側へ回るため、理由はパス形式の側で出る。どちらの経路でも拒否はされる。
+        """
+        url, reject = _safe_source_repo("https://github.com/o/r@main;rm")
         assert url == ""
         assert "ブランチ" in reject
+
+        url, reject = _safe_source_repo("https://github.com/o/r@main;rm -rf /")
+        assert url == ""
+        assert reject
 
     def test_empty_input_is_not_an_error(self) -> None:
         assert _safe_source_repo("") == ("", "")

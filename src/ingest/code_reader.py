@@ -90,15 +90,30 @@ _PY_DECORATOR_RE = re.compile(
 )
 
 _ADD_URL_RULE_RE = re.compile(
-    r"""add_url_rule\s*\(\s*(?:[rbuf]{1,2})?(?P<q>['"])
+    r"""(?:(?P<obj>[A-Za-z_][\w.]*)\s*\.\s*)?add_url_rule\s*\(\s*(?:[rbuf]{1,2})?(?P<q>['"])
         (?P<path>(?:\\.|(?!(?P=q)).)*)(?P=q)(?P<rest>.*)""",
     re.VERBOSE | re.DOTALL,
 )
 
+#: 文字列リテラル以外のパス（定数・変数）を渡しているデコレータの検出用。
+#: 例: ``@bp.get(TENANT_SELECT_PATH)``。黙って落とすと欠落が利用者に伝わらないため、
+#: これを検出して `skipped` に積む（モジュール定数の解決まではしない）。
+_PY_DECORATOR_HEAD_RE = re.compile(
+    r"""^\s*@\s*(?P<obj>[A-Za-z_][\w.]*)\s*\.\s*
+        (?P<verb>route|get|post|put|patch|delete|head|options)\s*\(\s*(?P<arg>[^)]*)""",
+    re.VERBOSE,
+)
+
 _METHODS_RE = re.compile(r"methods\s*=\s*[\[(](?P<body>[^\])]*)[\])]", re.DOTALL)
+#: `methods=` の存在自体（値がリテラルでない場合の検出に使う）
+_METHODS_PRESENT_RE = re.compile(r"\bmethods\s*=")
 
 _BLUEPRINT_RE = re.compile(r"\bBlueprint\s*\(")
 _APIROUTER_RE = re.compile(r"\bAPIRouter\s*\(")
+#: ``名前 = Blueprint(...)`` / ``名前 = APIRouter(...)`` の代入先を取る
+_PY_ROUTER_ASSIGN_RE = re.compile(
+    r"^\s*(?P<name>[A-Za-z_]\w*)\s*=\s*(?:[\w.]+\.)?(?:Blueprint|APIRouter)\s*\("
+)
 _URL_PREFIX_RE = re.compile(r"url_prefix\s*=\s*(?:[rbuf]{1,2})?['\"](?P<v>[^'\"]*)['\"]")
 _PREFIX_RE = re.compile(r"\bprefix\s*=\s*(?:[rbuf]{1,2})?['\"](?P<v>[^'\"]*)['\"]")
 
@@ -137,8 +152,160 @@ _NEXT_CONFIG_NAMES: tuple[str, ...] = (
 
 _NEXT_DEP_RE = re.compile(r'"next"\s*:')
 
+# --- kind 判定の材料 ------------------------------------------------------
+
+#: ハンドラ本体にこれがあれば「画面ではなく応答体を直接返している」とみなす。
+#: `make_response(` を含めるのは、`/open` のように副作用だけ実行して
+#: `make_response(redirect(...))` を返す操作系エンドポイントが画面として
+#: QA の未到達リストに載っていたため（実測で確認した誤計上）。
+_API_BODY_RE = re.compile(r"\b(?:jsonify|make_response|send_file|send_from_directory|Response)\s*\(")
+
+#: ハンドラ本体にこれがあれば HTML 応答（画面）とみなし、上の判定より優先する。
+#: `send_from_directory(SITE_DIR, "index.html")` のように静的 HTML を返す
+#: 画面ルートを API に落とさないため。
+_HTML_BODY_RE = re.compile(r"render_template|\.html\b|\.htm\b|text/html")
+
+#: ハンドラ名がこれに該当したら API（本リポの `api_review_cases` 等の実例に対応）
+_API_HANDLER_PREFIX = "api_"
+_API_HANDLER_SUFFIX = "_api"
+
+#: パス末尾がこれらの拡張子なら静的・データ応答とみなす（.html / .htm は除く）
+_API_PATH_SUFFIXES: frozenset[str] = frozenset(
+    {
+        ".json",
+        ".xml",
+        ".txt",
+        ".csv",
+        ".tsv",
+        ".ico",
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".gif",
+        ".svg",
+        ".webp",
+        ".css",
+        ".js",
+        ".map",
+        ".pdf",
+        ".zip",
+        ".yaml",
+        ".yml",
+        ".xlsx",
+    }
+)
+
+#: `/api` を「パス区切りで独立したセグメント」として判定する。
+#: 単純な startswith だと `/apidocs` `/apiary` まで API に落ちるため。
+_API_SEGMENT_RE = re.compile(r"(?:^|/)api(?:/|$)")
+
+#: ハンドラ本体を読む最大行数（デコレータから次の定義まで）
+_BODY_MAX_LINES: int = 200
+
 
 # --- 内部ユーティリティ ---------------------------------------------------
+
+
+def _blank_python_noncode(text: str) -> str:
+    """Python ソースの三重引用符ブロックと `#` コメントを空白化する。
+
+    docstring 中の ``@bp.route("/only-documentation")`` が実ルートとして
+    計上されていたため（実測で確認）。行番号が evidence とずれないよう、
+    除去部分は同じ長さの空白と改行に置き換える（行数・列位置は不変）。
+    単一行の文字列リテラルは実際のパス指定そのものなので触らない。
+    """
+    out: list[str] = []
+    index = 0
+    length = len(text)
+    while index < length:
+        char = text[index]
+        if char == "#":
+            while index < length and text[index] != "\n":
+                out.append(" ")
+                index += 1
+            continue
+        if char in "\"'":
+            triple = text[index : index + 3]
+            if triple in ('"""', "'''"):
+                closing = triple
+                index += 3
+                out.append("   ")
+                while index < length and text[index : index + 3] != closing:
+                    out.append("\n" if text[index] == "\n" else " ")
+                    index += 1
+                if index < length:
+                    index += 3
+                    out.append("   ")
+                continue
+            quote = char
+            out.append(char)
+            index += 1
+            while index < length and text[index] != quote:
+                if text[index] == "\\" and index + 1 < length:
+                    out.append(text[index])
+                    index += 1
+                    if index >= length:
+                        break
+                if text[index] == "\n":  # 閉じないままの行末（構文エラー等）は打ち切る
+                    break
+                out.append(text[index])
+                index += 1
+            if index < length and text[index] == quote:
+                out.append(quote)
+                index += 1
+            continue
+        out.append(char)
+        index += 1
+    return "".join(out)
+
+
+def _blank_js_noncode(text: str) -> str:
+    """js/ts ソースのブロックコメント `/* */` と行コメント `//` を空白化する。
+
+    Python 側と同じ理由（コメント内の擬似ルートの誤計上）。`"https://x"` の
+    `//` をコメントと誤認しないよう、文字列・テンプレートリテラルの中は
+    そのまま残す。正規表現リテラルは判別しないため触らない。
+    """
+    out: list[str] = []
+    index = 0
+    length = len(text)
+    while index < length:
+        pair = text[index : index + 2]
+        if pair == "//":
+            while index < length and text[index] != "\n":
+                out.append(" ")
+                index += 1
+            continue
+        if pair == "/*":
+            index += 2
+            out.append("  ")
+            while index < length and text[index : index + 2] != "*/":
+                out.append("\n" if text[index] == "\n" else " ")
+                index += 1
+            if index < length:
+                index += 2
+                out.append("  ")
+            continue
+        char = text[index]
+        if char in "\"'`":
+            quote = char
+            out.append(char)
+            index += 1
+            while index < length and text[index] != quote:
+                if text[index] == "\\" and index + 1 < length:
+                    out.append(text[index])
+                    index += 1
+                if text[index] == "\n" and quote != "`":
+                    break
+                out.append(text[index])
+                index += 1
+            if index < length and text[index] == quote:
+                out.append(quote)
+                index += 1
+            continue
+        out.append(char)
+        index += 1
+    return "".join(out)
 
 
 def _quote_of(line: str) -> str:
@@ -159,16 +326,23 @@ def _join_statement(lines: list[str], index: int) -> str:
 
 
 def _parse_methods(text: str, default: tuple[str, ...]) -> tuple[str, ...]:
-    """`methods=[...]` を抽出して大文字タプルにする（重複は順序保持で除去）。"""
+    """`methods=[...]` を抽出して大文字タプルにする（重複は順序保持で除去）。
+
+    `methods=` はあるが値がリテラルでない場合（``methods=POST_ONLY`` /
+    ``methods=[*POST_ONLY]``）は **空タプル（= 不明）** を返す。
+    ここで `("GET",)` と断定すると POST 専用 API が画面ルート扱いになり
+    「デッドコードの疑い」と誤報されるため、GET と断定しない。
+    """
     match = _METHODS_RE.search(text)
     if match is None:
-        return default
+        # `methods=` 自体が無ければ既定（省略時の挙動）。あるなら不明。
+        return default if _METHODS_PRESENT_RE.search(text) is None else ()
     found: list[str] = []
     for raw in re.findall(r"['\"]([A-Za-z]+)['\"]", match.group("body")):
         verb = raw.upper()
         if verb not in found:
             found.append(verb)
-    return tuple(found) if found else default
+    return tuple(found) if found else ()
 
 
 def _find_handler(lines: list[str], index: int) -> str:
@@ -198,6 +372,35 @@ def _ensure_leading_slash(path: str) -> str:
     return cleaned
 
 
+def _handler_body(lines: list[str], index: int) -> str:
+    """デコレータ行 `index` に続くハンドラ本体のテキストを返す。
+
+    デコレータの連なりと関数定義行を読み飛ばし、デコレータより深い
+    インデントの行を本体として集める（次の `def` / `@` / dedent で打ち切る）。
+    kind 判定のため「何を返しているか」だけを見る用途なので、この粒度で足りる。
+    """
+    decorator_indent = len(lines[index]) - len(lines[index].lstrip())
+    collected: list[str] = []
+    seen_def = False
+    for cursor in range(index + 1, min(len(lines), index + 1 + _BODY_MAX_LINES)):
+        line = lines[cursor]
+        if not line.strip():
+            continue
+        indent = len(line) - len(line.lstrip())
+        if not seen_def:
+            if _DEF_RE.match(line) is not None:
+                seen_def = True
+                collected.append(line)
+                continue
+            if line.lstrip().startswith("@"):
+                continue
+            break
+        if indent <= decorator_indent:
+            break
+        collected.append(line)
+    return "\n".join(collected)
+
+
 def _decide_kind(
     path: str,
     prefix: str,
@@ -205,14 +408,32 @@ def _decide_kind(
     framework: str,
     *,
     force_api: bool = False,
+    handler: str = "",
+    body: str = "",
 ) -> str:
-    """ルート種別（page / api）を判定する。"""
+    """ルート種別（page / api）を判定する。
+
+    JSON・ファイル・メトリクスを返すエンドポイントが page に混ざると、
+    QA の未到達リストと到達率の母数が汚れる（本リポで 11 件の実測）。
+    そのためパス以外に **ハンドラ名・パス拡張子・ハンドラ本体**も材料にする。
+    `methods` が空タプルのときは「不明」であり、GET と断定できない以上
+    画面ルートの母数には入れない。
+    """
     if force_api:
         return KIND_API
     combined = f"{prefix}{path}" if prefix else path
-    if combined.startswith("/api"):
+
+    if handler.startswith(_API_HANDLER_PREFIX) or handler.endswith(_API_HANDLER_SUFFIX):
         return KIND_API
-    if framework in (FRAMEWORK_FASTAPI, FRAMEWORK_EXPRESS) and "/api" in combined:
+    if Path(combined.split("?", 1)[0]).suffix.lower() in _API_PATH_SUFFIXES:
+        return KIND_API
+    if body and _API_BODY_RE.search(body) is not None and _HTML_BODY_RE.search(body) is None:
+        return KIND_API
+
+    # `/api` そのもの、または `/api/...` のみを API とする（`/apidocs` は対象外）。
+    if combined == "/api" or combined.startswith("/api/"):
+        return KIND_API
+    if framework in (FRAMEWORK_FASTAPI, FRAMEWORK_EXPRESS) and _API_SEGMENT_RE.search(combined):
         return KIND_API
     if not ({"GET", "HEAD"} & set(methods)):
         return KIND_API
@@ -226,29 +447,50 @@ def _python_framework(text: str) -> tuple[bool, bool]:
     return is_flask, is_fastapi
 
 
-def _python_prefix(lines: list[str], pattern: re.Pattern[str], value_re: re.Pattern[str]) -> str:
-    """Blueprint / APIRouter 宣言から prefix 文字列を取り出す（最初の 1 件）。"""
+def _python_prefix_map(lines: list[str]) -> dict[str, str]:
+    """`変数名 -> prefix` の対応表を Blueprint / APIRouter 宣言から作る。
+
+    以前は「url_prefix を持つ最初の 1 件」を返していたため、同一ファイルに
+    ``pages_bp = Blueprint(...)`` と ``api_bp = Blueprint(..., url_prefix="/api/v2")``
+    が並ぶと `@pages_bp.route("/dashboard")` にまで `/api/v2` が付いていた。
+    デコレータのオブジェクト名で引き当て、引き当たらなければ prefix は "" とする。
+    """
+    mapping: dict[str, str] = {}
     for index, line in enumerate(lines):
-        if pattern.search(line) is None:
+        if _BLUEPRINT_RE.search(line) is None and _APIROUTER_RE.search(line) is None:
+            continue
+        assign = _PY_ROUTER_ASSIGN_RE.match(line)
+        if assign is None:
             continue
         statement = _join_statement(lines, index)
-        match = value_re.search(statement)
-        if match is not None:
-            return match.group("v")
-    return ""
+        # Blueprint は url_prefix=、APIRouter は prefix= を使う
+        match = _URL_PREFIX_RE.search(statement) or _PREFIX_RE.search(statement)
+        mapping[assign.group("name")] = match.group("v") if match is not None else ""
+    return mapping
 
 
 # --- フレームワーク別の抽出 -----------------------------------------------
 
 
-def _scan_python(rel_path: str, text: str) -> list[CodeRoute]:
-    """Python ソースから flask / fastapi / django のルート定義を抽出する。"""
+def _scan_python(rel_path: str, raw_text: str) -> tuple[list[CodeRoute], list[str]]:
+    """Python ソースから flask / fastapi / django のルート定義を抽出する。
+
+    Returns:
+        (抽出したルート, スキップ理由のリスト)。パスが文字列リテラルでない
+        デコレータは抽出できないが、黙って落とすと利用者に欠落が伝わらないため
+        ``"<相対パス>:<行>: dynamic path"`` として 2 つ目に返す。
+    """
+    original = raw_text.splitlines()
+    text = _blank_python_noncode(raw_text)  # docstring / コメント内の擬似ルートを除去
     lines = text.splitlines()
     routes: list[CodeRoute] = []
+    skipped: list[str] = []
     is_flask, is_fastapi = _python_framework(text)
 
-    flask_prefix = _python_prefix(lines, _BLUEPRINT_RE, _URL_PREFIX_RE) if is_flask else ""
-    fastapi_prefix = _python_prefix(lines, _APIROUTER_RE, _PREFIX_RE) if is_fastapi else ""
+    prefix_map = _python_prefix_map(lines)
+
+    def _quote_at(position: int) -> str:
+        return _quote_of(original[position]) if position < len(original) else ""
 
     for index, line in enumerate(lines):
         if line.lstrip().startswith("#"):
@@ -256,6 +498,11 @@ def _scan_python(rel_path: str, text: str) -> list[CodeRoute]:
         statement = _join_statement(lines, index)
 
         match = _PY_DECORATOR_RE.match(statement)
+        if match is None and (is_flask or is_fastapi):
+            head = _PY_DECORATOR_HEAD_RE.match(statement)
+            if head is not None and not head.group("arg").lstrip().startswith(("'", '"')):
+                skipped.append(f"{rel_path}:{index + 1}: dynamic path")
+                continue
         if match is not None:
             verb = match.group("verb")
             if verb == "route":
@@ -270,45 +517,59 @@ def _scan_python(rel_path: str, text: str) -> list[CodeRoute]:
                     # 双方の痕跡が無い/両方ある場合は短縮形の慣習で fastapi 寄せ
                     framework = FRAMEWORK_FASTAPI if is_fastapi else FRAMEWORK_FLASK
                 methods = (verb.upper(),)
-            prefix = fastapi_prefix if framework == FRAMEWORK_FASTAPI else flask_prefix
+            # デコレータのオブジェクト名で Blueprint / APIRouter を引き当てる
+            prefix = prefix_map.get(match.group("obj").split(".")[-1], "")
             path = match.group("path")
+            handler = _find_handler(lines, index)
             routes.append(
                 CodeRoute(
                     path=path,
                     methods=methods,
                     framework=framework,
-                    handler=_find_handler(lines, index),
-                    kind=_decide_kind(path, prefix, methods, framework),
+                    handler=handler,
+                    kind=_decide_kind(
+                        path,
+                        prefix,
+                        methods,
+                        framework,
+                        handler=handler,
+                        body=_handler_body(lines, index),
+                    ),
                     prefix=prefix,
-                    evidence=CodeEvidence(file=rel_path, line=index + 1, quote=_quote_of(line)),
+                    evidence=CodeEvidence(file=rel_path, line=index + 1, quote=_quote_at(index)),
                 )
             )
             continue
 
         if "add_url_rule" in line:
             rule = _ADD_URL_RULE_RE.search(statement)
-            if rule is not None:
-                path = rule.group("path")
-                methods = _parse_methods(statement, ("GET",))
-                handler = ""
-                rest = rule.group("rest")
-                args = [a for a in re.split(r",", rest) if a.strip()]
-                if args:
-                    handler = _clean_identifier(args[0])
-                routes.append(
-                    CodeRoute(
-                        path=path,
-                        methods=methods,
-                        framework=FRAMEWORK_FLASK,
-                        handler=handler,
-                        kind=_decide_kind(path, flask_prefix, methods, FRAMEWORK_FLASK),
-                        prefix=flask_prefix,
-                        evidence=CodeEvidence(
-                            file=rel_path, line=index + 1, quote=_quote_of(line)
-                        ),
-                    )
-                )
+            if rule is None:
+                if is_flask or is_fastapi:
+                    skipped.append(f"{rel_path}:{index + 1}: dynamic path")
                 continue
+            path = rule.group("path")
+            methods = _parse_methods(statement, ("GET",))
+            handler = ""
+            rest = rule.group("rest")
+            args = [a for a in re.split(r",", rest) if a.strip()]
+            if args:
+                handler = _clean_identifier(args[0])
+            obj = rule.group("obj") or ""
+            prefix = prefix_map.get(obj.split(".")[-1], "") if obj else ""
+            routes.append(
+                CodeRoute(
+                    path=path,
+                    methods=methods,
+                    framework=FRAMEWORK_FLASK,
+                    handler=handler,
+                    kind=_decide_kind(
+                        path, prefix, methods, FRAMEWORK_FLASK, handler=handler
+                    ),
+                    prefix=prefix,
+                    evidence=CodeEvidence(file=rel_path, line=index + 1, quote=_quote_at(index)),
+                )
+            )
+            continue
 
         if "urlpatterns" in text and ("path(" in line or "re_path(" in line):
             if line.lstrip().startswith("#"):
@@ -323,20 +584,31 @@ def _scan_python(rel_path: str, text: str) -> list[CodeRoute]:
                         methods=methods,
                         framework=FRAMEWORK_DJANGO,
                         handler=_clean_identifier(django.group("view")),
-                        kind=_decide_kind(path, "", methods, FRAMEWORK_DJANGO),
+                        kind=_decide_kind(
+                            path,
+                            "",
+                            methods,
+                            FRAMEWORK_DJANGO,
+                            handler=_clean_identifier(django.group("view")),
+                        ),
                         prefix="",
                         evidence=CodeEvidence(
-                            file=rel_path, line=index + 1, quote=_quote_of(line)
+                            file=rel_path, line=index + 1, quote=_quote_at(index)
                         ),
                     )
                 )
 
-    return routes
+    return routes, skipped
 
 
-def _scan_javascript(rel_path: str, text: str) -> list[CodeRoute]:
-    """js/ts ソースから express のルート定義を抽出する。"""
-    lines = text.splitlines()
+def _scan_javascript(rel_path: str, raw_text: str) -> list[CodeRoute]:
+    """js/ts ソースから express のルート定義を抽出する。
+
+    コメント内の擬似ルートを実ルートとして計上しないよう、走査前に
+    ブロックコメント・行コメントを空白化する（行番号は保つ）。
+    """
+    original = raw_text.splitlines()
+    lines = _blank_js_noncode(raw_text).splitlines()
     routes: list[CodeRoute] = []
     for index, line in enumerate(lines):
         stripped = line.lstrip()
@@ -348,15 +620,20 @@ def _scan_javascript(rel_path: str, text: str) -> list[CodeRoute]:
             if not path.startswith("/"):
                 continue
             methods = (match.group("verb").upper(),)
+            handler = _clean_identifier(match.group("view"))
             routes.append(
                 CodeRoute(
                     path=path,
                     methods=methods,
                     framework=FRAMEWORK_EXPRESS,
-                    handler=_clean_identifier(match.group("view")),
-                    kind=_decide_kind(path, "", methods, FRAMEWORK_EXPRESS),
+                    handler=handler,
+                    kind=_decide_kind(path, "", methods, FRAMEWORK_EXPRESS, handler=handler),
                     prefix="",
-                    evidence=CodeEvidence(file=rel_path, line=index + 1, quote=_quote_of(line)),
+                    evidence=CodeEvidence(
+                        file=rel_path,
+                        line=index + 1,
+                        quote=_quote_of(original[index]) if index < len(original) else "",
+                    ),
                 )
             )
     return routes
@@ -461,6 +738,14 @@ def scan_source_tree(root: Path, *, max_files: int = 3000) -> CodeBundle:
     Returns:
         検出したルート・検出のあったファイル・検出のあった FW・スキップ理由。
 
+        `skipped` にはファイル単位の理由に加え、パスが文字列リテラルでない
+        デコレータ（``@bp.get(TENANT_SELECT_PATH)`` 等）を
+        ``"<相対パス>:<行>: dynamic path"`` として積む。抽出できないものを
+        黙って落とすと、利用者に欠落そのものが伝わらないため。
+
+        `CodeRoute.methods` は **空タプルなら「不明」** を意味する
+        （``methods=POST_ONLY`` のように解決できない場合）。GET と断定しない。
+
     Raises:
         FileNotFoundError: `root` が存在しない場合。
         ValueError: `root` がディレクトリでない場合。
@@ -514,7 +799,9 @@ def scan_source_tree(root: Path, *, max_files: int = 3000) -> CodeBundle:
 
             suffix = Path(filename).suffix
             if suffix == ".py":
-                routes.extend(_scan_python(rel_path, text))
+                py_routes, py_skipped = _scan_python(rel_path, text)
+                routes.extend(py_routes)
+                skipped.extend(py_skipped)
             else:
                 routes.extend(_scan_javascript(rel_path, text))
                 next_route = _nextjs_route(root, rel_path, text, next_memo)

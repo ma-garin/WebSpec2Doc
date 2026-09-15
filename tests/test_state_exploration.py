@@ -13,6 +13,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from analyzer.canonicalizer import (
+    DEFAULT_FINGERPRINT_VERSION,
     FINGERPRINT_VERSION_STATE,
     FINGERPRINT_VERSION_STRUCTURE,
     group_canonical_screens,
@@ -377,7 +378,7 @@ class TestStateBasedFingerprint:
         ]
         grouped = group_canonical_screens(pages)
         assert grouped["P001"].canonical_key != grouped["P002"].canonical_key
-        assert grouped["P001"].fingerprint_version == FINGERPRINT_VERSION_STATE
+        assert grouped["P001"].fingerprint_version == DEFAULT_FINGERPRINT_VERSION
 
     def test_v1_snapshot_diff_backward_compatible(self, tmp_path: Any) -> None:
         """fingerprint v1 時代のスナップショット（state_id なし）との diff が破綻しない。"""

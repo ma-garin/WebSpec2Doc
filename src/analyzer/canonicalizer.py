@@ -8,7 +8,7 @@ import re
 from collections import defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass
-from urllib.parse import parse_qsl, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, quote, urlsplit, urlunsplit
 
 from analyzer.html_analyzer import AnalyzedPage
 from crawler.page_crawler import FieldData, FormData
@@ -19,9 +19,13 @@ logger = logging.getLogger(__name__)
 # fingerprint バージョン:
 #   v1: 正規化URL＋フォーム構造
 #   v2: 正規化URL＋DOM状態シグネチャ（landmark構造＋開閉状態）＋フォーム構造
+#   v3: v2 の正規化URLがクエリを丸ごと捨てていたのを、画面同定に効くクエリだけ
+#       残す方式に変更（PHP の index.php?page=login・.NET の Default.aspx?tabid=55 が
+#       1 画面に潰れる不具合の修正）。v1/v2 は旧レポートを再現できるよう据え置く。
 FINGERPRINT_VERSION_STRUCTURE = 1
 FINGERPRINT_VERSION_STATE = 2
-DEFAULT_FINGERPRINT_VERSION = FINGERPRINT_VERSION_STATE
+FINGERPRINT_VERSION_QUERY = 3
+DEFAULT_FINGERPRINT_VERSION = FINGERPRINT_VERSION_QUERY
 
 
 @dataclass(frozen=True)
@@ -44,8 +48,8 @@ def screen_fingerprint(
     （DOM 状態シグネチャを追加）。既存スナップショット（state_id="default"）でも
     v2 は v1 と同等の粒度に退化するため後方互換が保たれる。
     """
-    normalized_url = _normalize_url(page.page_data.url)
-    structure_signature = _structure_signature(page.page_data.forms)
+    normalized_url = _normalize_url(page.page_data.url, version)
+    structure_signature = _structure_signature(page.page_data.forms, version)
     if version == FINGERPRINT_VERSION_STRUCTURE:
         raw_fingerprint = f"{normalized_url}\n{structure_signature}"
     else:
@@ -147,6 +151,44 @@ _VOLATILE_PARAMS: frozenset[str] = frozenset(
 #: utm_* と ASP.NET の __VIEWSTATE / __EVENTTARGET 等はまとめて前方一致で落とす。
 _VOLATILE_PARAM_PREFIXES = ("utm_", "__")
 
+#: 値の形に関わらず伏せるキー。検索語・OAuth の code/state・戻り先 URL は
+#: 同じ画面でもアクセスのたびに変わるため、値を残すと 1 画面が無限に分裂する。
+#: キー名は残すので「検索結果画面」と「クエリなしの一覧画面」は別画面のままになる。
+_OPAQUE_VALUE_PARAMS: frozenset[str] = frozenset(
+    {
+        "q",
+        "query",
+        "keyword",
+        "keywords",
+        "search",
+        "s",
+        "code",
+        "state",
+        "nonce",
+        "ticket",
+        "token",
+        "access_token",
+        "id_token",
+        "signature",
+        "sig",
+        "redirect",
+        "redirect_uri",
+        "redirecturl",
+        "redirect_url",
+        "returnurl",
+        "return_url",
+        "returnto",
+        "return_to",
+        "next",
+        "back",
+        "url",
+        "email",
+        "mail",
+    }
+)
+#: これより長い値・URL を含む値は、画面名ではなくデータとみなして伏せる。
+_MAX_SIGNIFICANT_VALUE_LENGTH = 40
+
 #: 値が数値でも「どの画面か」を決めるクエリキー。ASP.NET / DNN の Default.aspx?tabid=55
 #: のように、.NET 系 CMS は画面 ID を数値で持つ。ここに無いと全画面が 1 画面に潰れる。
 _DEFAULT_ROUTING_PARAMS: frozenset[str] = frozenset(
@@ -192,22 +234,45 @@ def _normalize_query(query: str) -> str:
         lowered = key.lower()
         if lowered in _VOLATILE_PARAMS or lowered.startswith(_VOLATILE_PARAM_PREFIXES):
             continue
-        if lowered not in routing_params and _RECORD_VALUE_PATTERN.match(value):
-            normalized.append(f"{lowered}={_MASKED_VALUE}")
+        if lowered in routing_params:
+            kept = value
+        elif _is_opaque_value(lowered, value):
+            kept = _MASKED_VALUE
         else:
-            normalized.append(f"{lowered}={value}")
+            kept = value
+        # 値に含まれる & や = をそのまま連結すると、note=x%26y%3Dz（1 個）と
+        # note=x&y=z（2 個）が同じ文字列になり別画面が誤って統合される。
+        normalized.append(f"{quote(lowered, safe='')}={quote(kept, safe='')}")
     return "&".join(sorted(normalized))
 
 
-def _normalize_url(url: str) -> str:
+def _is_opaque_value(lowered_key: str, value: str) -> bool:
+    """値が「どの画面か」ではなく「どのデータか」を指しているか。"""
+    if lowered_key in _OPAQUE_VALUE_PARAMS:
+        return True
+    if len(value) > _MAX_SIGNIFICANT_VALUE_LENGTH or "://" in value:
+        return True
+    return bool(_RECORD_VALUE_PATTERN.match(value))
+
+
+def _normalize_url(url: str, version: int = DEFAULT_FINGERPRINT_VERSION) -> str:
+    """画面同定用に URL を正規化する。
+
+    v3 未満はクエリを丸ごと捨てる旧規則のままにして、過去に出力した
+    report.json の fingerprint を再現できるようにする。
+    """
     parts = urlsplit(url)
-    return urlunsplit((parts.scheme, parts.netloc, parts.path, _normalize_query(parts.query), ""))
+    query = _normalize_query(parts.query) if version >= FINGERPRINT_VERSION_QUERY else ""
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, query, ""))
 
 
-def _structure_signature(forms: tuple[FormData, ...]) -> str:
+def _structure_signature(
+    forms: tuple[FormData, ...],
+    version: int = DEFAULT_FINGERPRINT_VERSION,
+) -> str:
     normalized_forms = [
         {
-            "action": _normalize_url(form.action),
+            "action": _normalize_url(form.action, version),
             "method": form.method.lower(),
             "fields": [
                 (field.field_type, field.name, field.required)

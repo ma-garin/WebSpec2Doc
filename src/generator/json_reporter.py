@@ -139,7 +139,6 @@ def _screen_dict(
                 "target": nav.target,
                 "argument": nav.argument,
                 "selector": nav.selector,
-                "kind": nav.kind,
             }
             for nav in pd.postback_navigations
         ]

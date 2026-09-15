@@ -42,7 +42,7 @@ def _postback_section(pages: list[AnalyzedPage]) -> list[str]:
         for nav in page.page_data.postback_navigations:
             target = f"{nav.target}:{nav.argument}" if nav.argument else nav.target
             rows.append(
-                f"| {page.page_id} | {_cell(nav.label)} | {_cell(nav.kind)} | "
+                f"| {page.page_id} | {_cell(nav.label)} | "
                 f"{_cell(target)} | {_cell(nav.selector)} |"
             )
     if not rows:
@@ -53,8 +53,8 @@ def _postback_section(pages: list[AnalyzedPage]) -> list[str]:
         "",
         "これらの遷移はリンクではなくポストバックのため、クロール対象外（未追跡）です。",
         "",
-        "| 画面ID | ラベル | 種別 | 遷移先(target:argument) | セレクタ |",
-        "|---|---|---|---|---|",
+        "| 画面ID | ラベル | 遷移先(target:argument) | セレクタ |",
+        "|---|---|---|---|",
         *rows,
     ]
 

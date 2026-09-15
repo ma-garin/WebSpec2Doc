@@ -273,7 +273,13 @@ _JAVASCRIPT_HREF_SCRIPT = """
   .map((a) => ({
     href: (a.getAttribute('href') || '').trim(),
     label: (a.innerText || a.textContent || a.getAttribute('title') || '').trim().slice(0, 120),
-    selector: a.id ? '#' + a.id : (a.getAttribute('name') ? 'a[name="' + a.getAttribute('name') + '"]' : 'a'),
+    // WebForms の id は ctl00$Menu$Item2 のように $ を含み '#id' では
+    // 無効な CSS セレクタになるため、属性セレクタで組む。
+    selector: a.id
+      ? '[id="' + a.id.replace(/["\\\\]/g, '\\\\$&') + '"]'
+      : (a.getAttribute('name')
+          ? '[name="' + a.getAttribute('name').replace(/["\\\\]/g, '\\\\$&') + '"]'
+          : 'a'),
   }))
 """
 
@@ -297,37 +303,36 @@ def extract_postback_navigations(page: Page, base_url: str) -> list[PostbackNavi
         return []
 
     navigations: list[PostbackNavigation] = []
-    seen: set[tuple[str, str, str]] = set()
+    seen: set[tuple[str, str]] = set()
     for entry in raw:
         href = str(entry.get("href") or EMPTY_TEXT)
         matched = _POSTBACK_TARGET_PATTERN.search(href)
-        target = matched.group("target") if matched else href[len("javascript:") :].strip()[:200]
+        # javascript:void(0) のような慣用句は遷移ではないので対象外。
+        if matched is None:
+            continue
+        target = matched.group("target")
         if not target:
             continue
-        argument = (matched.group("argument") or EMPTY_TEXT) if matched else EMPTY_TEXT
-        kind = "postback" if matched else "javascript"
-        label = str(entry.get("label") or EMPTY_TEXT)
-        key = (kind, target, argument)
+        argument = matched.group("argument") or EMPTY_TEXT
+        key = (target, argument)
         if key in seen:
             continue
         seen.add(key)
         navigations.append(
             PostbackNavigation(
-                label=label,
+                label=str(entry.get("label") or EMPTY_TEXT),
                 target=target,
                 selector=str(entry.get("selector") or "a"),
-                kind=kind,
                 argument=argument,
             )
         )
         if len(navigations) >= MAX_POSTBACK_NAVIGATIONS:
             break
 
-    postback_count = sum(1 for nav in navigations if nav.kind == "postback")
-    if postback_count:
+    if navigations:
         logger.warning(
             "ポストバック遷移を %d 件検出しました（href が javascript: のためクロール対象外）",
-            postback_count,
+            len(navigations),
         )
     return navigations
 

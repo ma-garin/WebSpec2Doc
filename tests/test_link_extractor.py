@@ -599,7 +599,6 @@ def test_extract_postback_navigations_reads_dopostback_target_and_argument() -> 
     navigations = extract_postback_navigations(page, _BASE_URL)
 
     assert len(navigations) == 1
-    assert navigations[0].kind == "postback"
     assert navigations[0].target == "ctl00$Menu"
     assert navigations[0].argument == "Item2"
     assert navigations[0].label == "受注一覧"
@@ -620,16 +619,19 @@ def test_extract_postback_navigations_keeps_same_target_with_different_argument(
     assert [nav.argument for nav in navigations] == ["Item1", "Item2"]
 
 
-def test_extract_postback_navigations_marks_plain_javascript_href_separately() -> None:
+def test_extract_postback_navigations_ignores_plain_javascript_href() -> None:
+    """javascript:void(0) は遷移ではないので拾わない。
+
+    拾ってしまうと .NET と無関係なサイトでもレポートに「未追跡の遷移」節が
+    出て report_hash まで変わる。
+    """
     page = MagicMock()
     page.eval_on_selector_all.return_value = [
-        {"href": "javascript:void(0)", "label": "その他", "selector": "a"}
+        {"href": "javascript:void(0)", "label": "その他", "selector": "a"},
+        {"href": "javascript:toggleMenu()", "label": "メニュー", "selector": "a"},
     ]
 
-    navigations = extract_postback_navigations(page, _BASE_URL)
-
-    assert [nav.kind for nav in navigations] == ["javascript"]
-    assert navigations[0].target == "void(0)"
+    assert extract_postback_navigations(page, _BASE_URL) == []
 
 
 def test_extract_postback_navigations_returns_empty_on_evaluation_error() -> None:

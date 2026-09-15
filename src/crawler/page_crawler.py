@@ -243,14 +243,14 @@ class PostbackNavigation:
     無かったことにせず「未追跡の遷移がここにある」証跡として残す
     （evidence-only 原則）。
 
-    kind は "postback"（__doPostBack 系）と "javascript"（その他の
-    javascript: href）を区別する。
+    対象は __doPostBack / WebForm_PostBackOptions を呼ぶ href に限る。
+    javascript:void(0) のような慣用句まで拾うと、.NET と無関係なサイトでも
+    この記録が非空になりレポートが汚れる。
     """
 
     label: str
     target: str
     selector: str
-    kind: str = "postback"
     #: __doPostBack の第 2 引数（eventArgument）。DNN のメニューは target が
     #: 同じまま argument だけで遷移先を変えるため、これが無いと別遷移が潰れる。
     argument: str = ""

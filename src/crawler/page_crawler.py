@@ -234,6 +234,29 @@ class EmbeddedFrame:
 
 
 @dataclass(frozen=True)
+class PostbackNavigation:
+    """href が javascript: のポストバック遷移の記録（ASP.NET WebForms 等）。
+
+    WebForms は <a href="javascript:__doPostBack('ctl00$Menu','Item2')"> で
+    画面遷移する。href が URL ではないためリンク抽出では拾えず、POST は
+    MutationBlocker が既定で遮断するのでクロールも追えない。追えないものを
+    無かったことにせず「未追跡の遷移がここにある」証跡として残す
+    （evidence-only 原則）。
+
+    kind は "postback"（__doPostBack 系）と "javascript"（その他の
+    javascript: href）を区別する。
+    """
+
+    label: str
+    target: str
+    selector: str
+    kind: str = "postback"
+    #: __doPostBack の第 2 引数（eventArgument）。DNN のメニューは target が
+    #: 同じまま argument だけで遷移先を変えるため、これが無いと別遷移が潰れる。
+    argument: str = ""
+
+
+@dataclass(frozen=True)
 class PageData:
     url: str
     title: str
@@ -257,6 +280,8 @@ class PageData:
     performance: Any | None = None  # PerformanceSample（欠測時 None）
     element_boxes: tuple[dict[str, Any], ...] = ()  # レイアウト観測用（既定は空）
     horizontal_overflow: bool = False
+    # href が javascript: のためリンクとして追えなかった遷移（.NET WebForms 等）
+    postback_navigations: tuple[PostbackNavigation, ...] = ()
 
 
 @contextmanager
@@ -856,6 +881,7 @@ def crawl_page(
         extract_headings_all_scopes,
         extract_links_all_scopes,
         extract_page_title,
+        extract_postback_navigations,
         has_password_field,
     )
     from crawler.network_interceptor import MutationBlocker, NetworkCapture
@@ -917,6 +943,7 @@ def crawl_page(
         title = extract_page_title(page)
         headings = tuple(extract_headings_all_scopes(page, normalized_url))
         links = tuple(extract_links_all_scopes(page, normalized_url))
+        postback_navigations = tuple(extract_postback_navigations(page, normalized_url))
         forms = _attach_screenshot_evidence(
             tuple(extract_forms_including_frames(page, normalized_url)), screenshot_path
         )
@@ -971,6 +998,7 @@ def crawl_page(
         performance=performance_sample,
         element_boxes=element_boxes,
         horizontal_overflow=horizontal_overflow,
+        postback_navigations=postback_navigations,
     )
 
 

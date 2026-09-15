@@ -130,6 +130,19 @@ def _screen_dict(
     official = (official_names or {}).get(pid, "")
     if official:
         screen["official_name"] = official
+    # href が javascript: のため追えなかった遷移がある画面にのみ付与する
+    # （.NET WebForms の __doPostBack 等。検出なし時は report_hash を変えない）
+    if pd.postback_navigations:
+        screen["postback_navigations"] = [
+            {
+                "label": nav.label,
+                "target": nav.target,
+                "argument": nav.argument,
+                "selector": nav.selector,
+                "kind": nav.kind,
+            }
+            for nav in pd.postback_navigations
+        ]
     # iframe・closed shadow root が検出された画面にのみ付与する
     # （検出なし時は既存のレポート構造・report_hash を変えない）
     if pd.embedded_frames:

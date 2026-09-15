@@ -22,6 +22,7 @@ from crawler.link_extractor import (
     extract_internal_links,
     extract_links_all_scopes,
     extract_page_title,
+    extract_postback_navigations,
     has_password_field,
 )
 from crawler.page_crawler import EmbeddedFrame
@@ -577,3 +578,62 @@ class TestFormScriptShadowPiercing:
         # collectFields ヘルパーと再帰呼び出しが構文として存在することを確認する
         assert "collectFields" in _FORM_SCRIPT
         assert "shadowRoot" in _FORM_SCRIPT
+
+
+# ---------- extract_postback_navigations（.NET WebForms 対策） ----------
+
+_BASE_URL = "https://corp.example.com/Default.aspx"
+
+
+def test_extract_postback_navigations_reads_dopostback_target_and_argument() -> None:
+    """__doPostBack の遷移先とイベント引数を証跡として取り出す。"""
+    page = MagicMock()
+    page.eval_on_selector_all.return_value = [
+        {
+            "href": "javascript:__doPostBack('ctl00$Menu','Item2')",
+            "label": "受注一覧",
+            "selector": "#ctl00_Menu_Item2",
+        }
+    ]
+
+    navigations = extract_postback_navigations(page, _BASE_URL)
+
+    assert len(navigations) == 1
+    assert navigations[0].kind == "postback"
+    assert navigations[0].target == "ctl00$Menu"
+    assert navigations[0].argument == "Item2"
+    assert navigations[0].label == "受注一覧"
+    assert navigations[0].selector == "#ctl00_Menu_Item2"
+
+
+def test_extract_postback_navigations_keeps_same_target_with_different_argument() -> None:
+    """DNN のメニューは target 共通・argument 違いなので別遷移として残す。"""
+    page = MagicMock()
+    page.eval_on_selector_all.return_value = [
+        {"href": "javascript:__doPostBack('ctl00$Menu','Item1')", "label": "一覧", "selector": "a"},
+        {"href": "javascript:__doPostBack('ctl00$Menu','Item2')", "label": "登録", "selector": "a"},
+        {"href": "javascript:__doPostBack('ctl00$Menu','Item2')", "label": "登録", "selector": "a"},
+    ]
+
+    navigations = extract_postback_navigations(page, _BASE_URL)
+
+    assert [nav.argument for nav in navigations] == ["Item1", "Item2"]
+
+
+def test_extract_postback_navigations_marks_plain_javascript_href_separately() -> None:
+    page = MagicMock()
+    page.eval_on_selector_all.return_value = [
+        {"href": "javascript:void(0)", "label": "その他", "selector": "a"}
+    ]
+
+    navigations = extract_postback_navigations(page, _BASE_URL)
+
+    assert [nav.kind for nav in navigations] == ["javascript"]
+    assert navigations[0].target == "void(0)"
+
+
+def test_extract_postback_navigations_returns_empty_on_evaluation_error() -> None:
+    page = MagicMock()
+    page.eval_on_selector_all.side_effect = RuntimeError("boom")
+
+    assert extract_postback_navigations(page, _BASE_URL) == []

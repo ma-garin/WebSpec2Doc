@@ -133,3 +133,61 @@ def test_generate_json_report_adds_screen_count_without_dropping_raw_screens() -
         "https://hotel.example.com/reserve.html?plan-id=5",
         "https://hotel.example.com/reserve.html?plan-id=6",
     ]
+
+
+def test_group_canonical_screens_keeps_php_query_routed_screens_separate() -> None:
+    """index.php?page=xxx でルーティングする PHP サイトが 1 画面に潰れないこと。"""
+    pages = analyze_pages(
+        [
+            _page("https://shop.example.com/index.php?page=login", (_form(),)),
+            _page("https://shop.example.com/index.php?page=cart", (_form(),)),
+            _page("https://shop.example.com/index.php?page=mypage", (_form(),)),
+        ]
+    )
+
+    grouped = group_canonical_screens(pages)
+
+    assert sum(1 for info in grouped.values() if info.is_canonical) == 3
+
+
+def test_group_canonical_screens_keeps_aspnet_tabid_screens_separate() -> None:
+    """Default.aspx?tabid=NN で画面を切り替える .NET/DNN が 1 画面に潰れないこと。"""
+    pages = analyze_pages(
+        [
+            _page("https://corp.example.com/Default.aspx?tabid=55", (_form(),)),
+            _page("https://corp.example.com/Default.aspx?tabid=72", (_form(),)),
+        ]
+    )
+
+    grouped = group_canonical_screens(pages)
+
+    assert sum(1 for info in grouped.values() if info.is_canonical) == 2
+
+
+def test_group_canonical_screens_ignores_session_and_tracking_params() -> None:
+    """PHPSESSID・utm_*・__VIEWSTATE は同じ画面を別画面に増やさないこと。"""
+    pages = analyze_pages(
+        [
+            _page("https://shop.example.com/index.php?page=cart&PHPSESSID=abc123", (_form(),)),
+            _page("https://shop.example.com/index.php?page=cart&utm_source=mail", (_form(),)),
+            _page("https://shop.example.com/index.php?page=cart&__VIEWSTATE=zzz", (_form(),)),
+        ]
+    )
+
+    grouped = group_canonical_screens(pages)
+
+    assert sum(1 for info in grouped.values() if info.is_canonical) == 1
+
+
+def test_group_canonical_screens_ignores_query_order() -> None:
+    """クエリの並び順だけが違う URL は同じ画面として扱う。"""
+    pages = analyze_pages(
+        [
+            _page("https://shop.example.com/index.php?page=cart&mode=edit", (_form(),)),
+            _page("https://shop.example.com/index.php?mode=edit&page=cart", (_form(),)),
+        ]
+    )
+
+    grouped = group_canonical_screens(pages)
+
+    assert sum(1 for info in grouped.values() if info.is_canonical) == 1

@@ -3,10 +3,12 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
+import re
 from collections import defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import parse_qsl, urlsplit, urlunsplit
 
 from analyzer.html_analyzer import AnalyzedPage
 from crawler.page_crawler import FieldData, FormData
@@ -96,9 +98,110 @@ def group_canonical_screens(
     return canonical_map
 
 
+#: レコードを選ぶだけのクエリ値の形（連番 ID・UUID・ハッシュ・日付）。
+#: reserve.html?plan-id=4 と ?plan-id=0 は同じ画面なので、この形の値は
+#: キー名だけ残して値を伏せる（従来どおり 1 画面にまとめる）。
+_RECORD_VALUE_PATTERN = re.compile(
+    r"^(?:\d+"
+    r"|[0-9a-fA-F]{8,}"
+    r"|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
+    r"|\d{4}[-/]\d{1,2}(?:[-/]\d{1,2})?"
+    r")$"
+)
+_MASKED_VALUE = "*"
+
+#: 画面同定から丸ごと落とすクエリキー。セッション ID・計測タグ・キャッシュ避け・
+#: CSRF トークンは同じ画面でもアクセスのたびに変わるため、残すと画面が無限に増える。
+_VOLATILE_PARAMS: frozenset[str] = frozenset(
+    {
+        "phpsessid",
+        "jsessionid",
+        "aspsessionid",
+        "sid",
+        "sessionid",
+        "session_id",
+        "fbclid",
+        "gclid",
+        "msclkid",
+        "yclid",
+        "_ga",
+        "_gl",
+        "mc_cid",
+        "mc_eid",
+        "cb",
+        "cachebuster",
+        "nocache",
+        "_",
+        "ts",
+        "timestamp",
+        "ver",
+        "rev",
+        "csrf",
+        "csrftoken",
+        "csrf_token",
+        "_token",
+        "authenticity_token",
+        "requestverificationtoken",
+    }
+)
+#: utm_* と ASP.NET の __VIEWSTATE / __EVENTTARGET 等はまとめて前方一致で落とす。
+_VOLATILE_PARAM_PREFIXES = ("utm_", "__")
+
+#: 値が数値でも「どの画面か」を決めるクエリキー。ASP.NET / DNN の Default.aspx?tabid=55
+#: のように、.NET 系 CMS は画面 ID を数値で持つ。ここに無いと全画面が 1 画面に潰れる。
+_DEFAULT_ROUTING_PARAMS: frozenset[str] = frozenset(
+    {
+        "tabid",
+        "pageid",
+        "page_id",
+        "screenid",
+        "screen_id",
+        "viewid",
+        "view_id",
+        "menuid",
+        "menu_id",
+        "nodeid",
+        "node_id",
+    }
+)
+#: 対象サイト固有のルーティングキーを足すための環境変数（カンマ区切り）。
+ROUTING_PARAMS_ENV = "WEBSPEC2DOC_ROUTING_PARAMS"
+
+
+def _routing_params() -> frozenset[str]:
+    extra = os.environ.get(ROUTING_PARAMS_ENV, "")
+    if not extra.strip():
+        return _DEFAULT_ROUTING_PARAMS
+    added = {token.strip().lower() for token in extra.split(",") if token.strip()}
+    return _DEFAULT_ROUTING_PARAMS | added
+
+
+def _normalize_query(query: str) -> str:
+    """画面同定に効くクエリだけを残して正規化する。
+
+    クエリを丸ごと捨てると、ルーティングをクエリで行うサイト
+    （PHP の index.php?page=login、ASP.NET の Default.aspx?tabid=55）で
+    全画面が 1 画面に潰れる。逆に丸ごと残すと明細 ?id=1..N が別画面に増える。
+    そこで「値の形がレコード ID なら値を伏せ、それ以外は残す」で分ける。
+    """
+    if not query:
+        return ""
+    normalized: list[str] = []
+    routing_params = _routing_params()
+    for key, value in parse_qsl(query, keep_blank_values=True):
+        lowered = key.lower()
+        if lowered in _VOLATILE_PARAMS or lowered.startswith(_VOLATILE_PARAM_PREFIXES):
+            continue
+        if lowered not in routing_params and _RECORD_VALUE_PATTERN.match(value):
+            normalized.append(f"{lowered}={_MASKED_VALUE}")
+        else:
+            normalized.append(f"{lowered}={value}")
+    return "&".join(sorted(normalized))
+
+
 def _normalize_url(url: str) -> str:
     parts = urlsplit(url)
-    return urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, _normalize_query(parts.query), ""))
 
 
 def _structure_signature(forms: tuple[FormData, ...]) -> str:

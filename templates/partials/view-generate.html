@@ -28,9 +28,32 @@
 
             <!-- ステップ1: URL入力・解析（語は AutoRun と揃えて「解析」に統一） -->
             <div id="wizard-p1" class="input-card">
+              {% if app_mode %}
+              {# ドキュメント作成(app): URL の代わりにアプリを指定する。値は #url-input に
+                 https://app.<package> として同期し（doc-app-mode.js）、以降の画面解析・実行・
+                 レポートは URL 版と同じ経路を通る。 #}
+              <label class="form-label">解析対象アプリ <span style="color:var(--color-critical)">*</span></label>
+              <div class="discover-scope-chips" role="radiogroup" aria-label="プラットフォーム" style="margin-bottom:8px">
+                <label class="checkbox-chip"><input type="radio" name="app-platform" value="android" checked> Android（.apk / .aab）</label>
+                <label class="checkbox-chip"><input type="radio" name="app-platform" value="ios"> iOS（.app・シミュレータ専用）</label>
+              </div>
+              <div class="input-row" style="gap:8px;margin-bottom:8px">
+                <label for="app-package" class="visually-hidden">アプリ</label>
+                <select id="app-package" class="url-input" style="flex:1">
+                  <option value="com.example.sampleshop">SampleShop（com.example.sampleshop）</option>
+                </select>
+                <label for="app-file" class="visually-hidden">アプリファイル</label>
+                <input type="file" id="app-file" accept=".apk,.aab" style="flex:1;font-size:12px" />
+                <label for="app-device" class="visually-hidden">実行先</label>
+                <select id="app-device" class="url-input" style="flex:1">
+                  <option>エミュレータ Pixel 8 (API 34)</option><option>実機 (adb 接続)</option>
+                </select>
+              </div>
+              {% else %}
               <label for="url-input" class="form-label">解析対象URL <span style="color:var(--color-critical)">*</span></label>
+              {% endif %}
               <div class="input-row" style="gap:8px">
-                <input type="url" id="url-input" class="url-input" placeholder="https://example.com" autocomplete="url" list="url-history-list" style="flex:1" />
+                <input type="url" id="url-input" class="url-input" placeholder="https://example.com" autocomplete="url" list="url-history-list" style="flex:1"{% if app_mode %} hidden{% endif %} />
                 <datalist id="url-history-list"></datalist>
                 <button type="button" id="discover-btn" class="btn-primary" style="height:40px;padding:0 16px;font-size:13px;white-space:nowrap">画面解析</button>
               </div>

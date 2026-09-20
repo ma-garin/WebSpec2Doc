@@ -10,6 +10,7 @@ from flask import Blueprint, Response, request, send_file
 
 from web.config import MAX_DEPTH, MAX_PAGES_LIMIT, MAX_PARALLELISM, OUTPUT_DIR
 from web.process import _RUNNING_PROCS, _terminate_proc
+from web.services import app_mock
 from web.summary import _summary_for_domain
 from web.tenancy import scoped_output_dir
 from web.validation import (
@@ -129,6 +130,13 @@ def run() -> Response:
     # ストリーミング応答のジェネレータはリクエストコンテキスト外で実行されるため、
     # テナントスコープ済みの出力先はここ（リクエスト処理中）で解決して閉じ込める。
     out_dir = _out()
+    if app_mock.is_app_target(urls.split(",")[0] if urls else ""):
+        # ドキュメント作成(app) のモック。成果物は実物と同じ場所に置くので、以降の
+        # /api/result・/api/live-screenshot・レポート画面はそのまま動く。
+        return Response(
+            app_mock.run_stream(run_id, domain, out_dir, urls, _summary_for_domain),
+            mimetype="text/plain",
+        )
 
     def generate():
         # crawl_mode == "auto": 起点URLからリンクを辿って自動探索する（--url + depth）。

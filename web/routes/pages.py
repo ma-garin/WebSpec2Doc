@@ -150,11 +150,11 @@ def systems() -> str:
 def doc_app() -> str:
     """ドキュメント作成(app)。System 01 をスマホアプリ（APK / .app）向けに特化した入口。
 
-    現段階はモック: 入力と 4 ステップ（アプリ解析 → 条件設定 → 実行 → レポート）の流れだけを
-    画面で確認する。解析・生成の API は未実装で、JS も fetch を一切しない。
-    index.html を共用しないのは healing / test-automation と同じ判断（独立シェル）。
+    画面はドキュメント作成そのもの（index.html: 解析 → 条件設定 → 実行 → レポート）を共用し、
+    ステップ 1 の入力だけをアプリ向けに差し替える（app_mode）。対象は ``https://app.<package>``
+    という擬似 URL で流し、サーバ側（web/services/app_mock.py）がモック実行に切り替える。
     """
-    return render_template("doc-app.html")
+    return render_template("index.html", app_mode=True)
 
 
 @bp.route("/cli")

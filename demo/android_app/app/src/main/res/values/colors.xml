@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="skybook_primary">#1E5EFF</color>
+    <color name="skybook_primary_dark">#1440B8</color>
+    <color name="skybook_bg">#F5F7FB</color>
+    <color name="skybook_error">#D32F2F</color>
+</resources>

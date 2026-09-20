@@ -1,0 +1,294 @@
+/* SkyBook — 共通スタイル。モバイル幅(最大430px)基準、PC幅では中央寄せカード表示。 */
+
+:root {
+  --accent: #1a73e8;
+  --accent-dark: #0f52ac;
+  --error: #d32f2f;
+  --bg: #f2f4f7;
+  --card-bg: #ffffff;
+  --text: #1c1f24;
+  --muted: #6b7280;
+  --border: #e1e4e9;
+  --radius: 12px;
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; margin: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Yu Gothic", Meiryo, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.app-shell {
+  max-width: 430px;
+  min-height: 100vh;
+  margin: 0 auto;
+  background: var(--card-bg);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+@media (min-width: 431px) {
+  body { background: #dde1e7; }
+  .app-shell { min-height: 100vh; box-shadow: 0 0 24px rgba(0, 0, 0, 0.12); }
+}
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--accent);
+  color: #fff;
+  padding: 14px 16px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.screen-body {
+  flex: 1;
+  padding: 16px;
+  padding-bottom: 88px;
+}
+
+.screen-body.no-nav {
+  padding-bottom: 24px;
+}
+
+.bottom-nav {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  border-top: 1px solid var(--border);
+  background: #fff;
+}
+
+.bottom-nav a {
+  flex: 1;
+  text-align: center;
+  padding: 10px 4px 8px;
+  font-size: 12px;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.bottom-nav a.active { color: var(--accent); font-weight: 600; }
+
+.nav-icon { display: block; font-size: 18px; margin-bottom: 2px; }
+
+/* フォーム */
+.field { margin-bottom: 16px; }
+
+.field label,
+.field-label-standalone {
+  display: block;
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="date"],
+input[type="number"],
+input[type="tel"],
+select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 15px;
+  background: #fff;
+  color: var(--text);
+}
+
+input:focus, select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.error {
+  color: var(--error);
+  font-size: 12px;
+  margin: 4px 0 0;
+  min-height: 14px;
+}
+
+/* ボタン */
+.btn {
+  display: inline-block;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 15px;
+  cursor: pointer;
+  text-align: center;
+  font-family: inherit;
+}
+
+.btn-primary { background: var(--accent); color: #fff; width: 100%; }
+.btn-secondary { background: #fff; color: var(--accent); border: 1px solid var(--accent); width: 100%; }
+.btn-block { width: 100%; margin-top: 8px; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ラジオグループ */
+.radio-group { display: flex; gap: 8px; }
+.radio-option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 4px;
+  text-align: center;
+  font-size: 13px;
+}
+
+/* 人数ステッパー */
+.stepper { display: flex; align-items: center; gap: 10px; }
+.stepper button {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: #fff;
+  font-size: 18px;
+  cursor: pointer;
+}
+.stepper input { width: 56px; text-align: center; }
+
+/* アコーディオン */
+.accordion-toggle {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--border);
+  padding: 12px 0;
+  font-size: 14px;
+  color: var(--accent);
+  cursor: pointer;
+  font-family: inherit;
+}
+.accordion-panel { padding: 4px 0 12px; }
+.accordion-panel[hidden] { display: none; }
+
+/* タブ */
+.tabs { display: flex; gap: 4px; margin-bottom: 10px; }
+.tab {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* チップ */
+.chips { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+.chip {
+  padding: 6px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: #fff;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* 便カード／便情報 */
+.flight-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+.flight-id { font-weight: 600; font-size: 15px; }
+.flight-route-line {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 13px;
+  margin: 4px 0;
+}
+.flight-price { font-size: 18px; font-weight: 700; color: var(--accent-dark); margin: 6px 0; }
+
+/* 空状態 */
+.empty-state { text-align: center; padding: 40px 16px; color: var(--muted); }
+.empty-state[hidden] { display: none; }
+
+/* ダイアログ／座席選択 */
+dialog {
+  border: none;
+  border-radius: 12px;
+  padding: 0;
+  max-width: 360px;
+  width: 90%;
+}
+dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
+.seat-dialog-body { padding: 16px; }
+.seat-grid { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; }
+.seat-row { display: flex; justify-content: center; gap: 6px; align-items: center; }
+.seat-aisle-gap { width: 14px; }
+.seat-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #fff;
+  font-size: 11px;
+  cursor: pointer;
+}
+.seat-btn.occupied { background: #eee; color: #aaa; cursor: not-allowed; }
+.seat-btn.selected { background: var(--accent); color: #fff; border-color: var(--accent); }
+.seat-dialog-actions { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--border); }
+.seat-dialog-actions .btn { flex: 1; }
+
+/* 汎用 */
+.muted { color: var(--muted); font-size: 13px; }
+.summary-box {
+  background: #f6f8fb;
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.notice {
+  background: #fff4e5;
+  color: #8a5300;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+.notice[hidden] { display: none; }
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---- 後半ページ（passenger / payment / complete / mypage / settings / debug）が使う補助クラス ---- */
+.app-header h1 { font-size: inherit; font-weight: inherit; margin: 0; }
+.list-item { background: #fff; border: 1px solid #E3E8F0; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
+.list-item .btn { margin-top: 8px; }
+.badge { display: inline-block; font-size: 12px; padding: 2px 10px; border-radius: 999px; background: #E8F0FF; color: #1440B8; }
+.badge.is-cancelled { background: #F3F4F6; color: #6B7280; }
+pre { white-space: pre-wrap; word-break: break-all; font-size: 12px; background: #F3F4F6; padding: 10px; border-radius: 8px; }

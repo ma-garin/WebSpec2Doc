@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="SkyBook"
+        android:theme="@style/Theme.SkyBook">
+
+        <activity
+            android:name="com.example.skybook.ui.LoginActivity"
+            android:exported="true"
+            android:label="ログイン">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name="com.example.skybook.ui.SearchActivity"
+            android:exported="false"
+            android:label="検索" />
+
+        <activity
+            android:name="com.example.skybook.ui.ResultsActivity"
+            android:exported="false"
+            android:label="便一覧" />
+
+        <activity
+            android:name="com.example.skybook.ui.FlightDetailActivity"
+            android:exported="false"
+            android:label="便詳細" />
+
+        <activity
+            android:name="com.example.skybook.ui.PassengerActivity"
+            android:exported="false"
+            android:label="搭乗者情報" />
+
+        <activity
+            android:name="com.example.skybook.ui.PaymentActivity"
+            android:exported="false"
+            android:label="支払い" />
+
+        <activity
+            android:name="com.example.skybook.ui.CompleteActivity"
+            android:exported="false"
+            android:label="予約完了" />
+
+        <activity
+            android:name="com.example.skybook.ui.MyPageActivity"
+            android:exported="false"
+            android:label="マイページ" />
+
+        <activity
+            android:name="com.example.skybook.ui.SettingsActivity"
+            android:exported="false"
+            android:label="設定" />
+
+        <activity
+            android:name="com.example.skybook.ui.DebugActivity"
+            android:exported="false"
+            android:label="デバッグ" />
+
+    </application>
+
+</manifest>

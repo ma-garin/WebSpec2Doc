@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SkyBook - 搭乗者情報</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="app-shell">
+  <header class="app-header"><h1>搭乗者情報</h1></header>
+  <main class="screen-body">
+    <form id="pax_form" novalidate>
+      <div id="pax_fields"></div>
+      <div class="card field">
+        <label>
+          <input type="checkbox" id="pax_terms" data-testid="pax_terms" required>
+          利用規約に同意する
+        </label>
+        <div class="error" id="pax_terms_error" data-testid="pax_terms_error"></div>
+      </div>
+      <div class="field">
+        <button type="button" id="pax_back" data-testid="pax_back" class="btn btn-secondary">戻る</button>
+        <button type="button" id="pax_next" data-testid="pax_next" class="btn btn-primary">支払いへ</button>
+      </div>
+    </form>
+  </main>
+</div>
+<script src="js/app.js"></script>
+<script>
+(function () {
+  var KANA_RE = /^[ァ-ヶー]{1,20}$/;
+  var PHONE_RE = /^[0-9]{10,11}$/;
+  var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+  function isoDate(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+
+  function birthBounds() {
+    var today = new Date();
+    var min = new Date(today.getFullYear() - 120, today.getMonth(), today.getDate());
+    var max = new Date(today.getFullYear() - 12, today.getMonth(), today.getDate());
+    return { min: isoDate(min), max: isoDate(max) };
+  }
+
+  function ageOn(birthIso) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(birthIso || '');
+    if (!m) return null;
+    var birth = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    if (isNaN(birth.getTime())) return null;
+    var today = new Date();
+    var age = today.getFullYear() - birth.getFullYear();
+    var beforeBirthday = (today.getMonth() < birth.getMonth()) ||
+      (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate());
+    if (beforeBirthday) age -= 1;
+    return age;
+  }
+
+  function block(n, isPrimary) {
+    var bounds = birthBounds();
+    var html = '';
+    html += '<div class="summary-box">';
+    html += '<h2>搭乗者 ' + n + '</h2>';
+    html += '<div class="field"><label for="pax_last_kana_' + n + '">姓（カナ）</label>' +
+      '<input type="text" id="pax_last_kana_' + n + '" data-testid="pax_last_kana_' + n + '" ' +
+      'required maxlength="20" minlength="1" pattern="[ァ-ヶー]{1,20}">' +
+      '<div class="error" id="pax_last_kana_' + n + '_error" data-testid="pax_last_kana_' + n + '_error"></div></div>';
+    html += '<div class="field"><label for="pax_first_kana_' + n + '">名（カナ）</label>' +
+      '<input type="text" id="pax_first_kana_' + n + '" data-testid="pax_first_kana_' + n + '" ' +
+      'required maxlength="20" minlength="1" pattern="[ァ-ヶー]{1,20}">' +
+      '<div class="error" id="pax_first_kana_' + n + '_error" data-testid="pax_first_kana_' + n + '_error"></div></div>';
+    html += '<div class="field"><label for="pax_birth_' + n + '">生年月日</label>' +
+      '<input type="date" id="pax_birth_' + n + '" data-testid="pax_birth_' + n + '" ' +
+      'required min="' + bounds.min + '" max="' + bounds.max + '">' +
+      '<div class="error" id="pax_birth_' + n + '_error" data-testid="pax_birth_' + n + '_error"></div></div>';
+    html += '<div class="field"><span>性別</span>' +
+      '<label><input type="radio" name="pax_gender_' + n + '" id="pax_gender_male_' + n + '" data-testid="pax_gender_male_' + n + '" value="male" required>男性</label>' +
+      '<label><input type="radio" name="pax_gender_' + n + '" id="pax_gender_female_' + n + '" data-testid="pax_gender_female_' + n + '" value="female" required>女性</label>' +
+      '<label><input type="radio" name="pax_gender_' + n + '" id="pax_gender_other_' + n + '" data-testid="pax_gender_other_' + n + '" value="other" required>その他</label>' +
+      '<div class="error" id="pax_gender_' + n + '_error" data-testid="pax_gender_' + n + '_error"></div></div>';
+    if (isPrimary) {
+      html += '<div class="field"><label for="pax_phone_1">電話番号</label>' +
+        '<input type="tel" id="pax_phone_1" data-testid="pax_phone_1" required pattern="[0-9]{10,11}" maxlength="11">' +
+        '<div class="error" id="pax_phone_1_error" data-testid="pax_phone_1_error"></div></div>';
+      html += '<div class="field"><label for="pax_email_1">メールアドレス</label>' +
+        '<input type="email" id="pax_email_1" data-testid="pax_email_1" required maxlength="64">' +
+        '<div class="error" id="pax_email_1_error" data-testid="pax_email_1_error"></div></div>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function render() {
+    var s = SkyBook.state();
+    var count = (s.search && s.search.adults) ? s.search.adults : 1;
+    var html = '';
+    for (var i = 1; i <= count; i++) {
+      html += block(i, i === 1);
+    }
+    document.getElementById('pax_fields').innerHTML = html;
+    return count;
+  }
+
+  var passengerCount = render();
+
+  function setErr(id, msg) { SkyBook.setError(id, msg); }
+
+  function validateOne(n) {
+    var ok = true;
+    var last = document.getElementById('pax_last_kana_' + n).value.trim();
+    if (!KANA_RE.test(last)) { setErr('pax_last_kana_' + n, '全角カタカナで入力してください（1〜20文字）'); ok = false; }
+    else setErr('pax_last_kana_' + n, '');
+
+    var first = document.getElementById('pax_first_kana_' + n).value.trim();
+    if (!KANA_RE.test(first)) { setErr('pax_first_kana_' + n, '全角カタカナで入力してください（1〜20文字）'); ok = false; }
+    else setErr('pax_first_kana_' + n, '');
+
+    var birth = document.getElementById('pax_birth_' + n).value;
+    var age = ageOn(birth);
+    if (!birth || age === null || age < 12 || age > 120) {
+      setErr('pax_birth_' + n, '生年月日を正しく入力してください（12歳〜120歳）'); ok = false;
+    } else setErr('pax_birth_' + n, '');
+
+    var genderChecked = document.querySelector('input[name="pax_gender_' + n + '"]:checked');
+    if (!genderChecked) { setErr('pax_gender_' + n, '性別を選択してください'); ok = false; }
+    else setErr('pax_gender_' + n, '');
+
+    var result = { lastKana: last, firstKana: first, birth: birth, gender: genderChecked ? genderChecked.value : '' };
+
+    if (n === 1) {
+      var phone = document.getElementById('pax_phone_1').value.trim();
+      if (!PHONE_RE.test(phone)) { setErr('pax_phone_1', '電話番号は10〜11桁の数字で入力してください'); ok = false; }
+      else setErr('pax_phone_1', '');
+      var email = document.getElementById('pax_email_1').value.trim();
+      if (!EMAIL_RE.test(email)) { setErr('pax_email_1', 'メールアドレスの形式が正しくありません'); ok = false; }
+      else setErr('pax_email_1', '');
+      result.phone = phone;
+      result.email = email;
+    }
+
+    return { ok: ok, data: result };
+  }
+
+  document.getElementById('pax_back').addEventListener('click', function () {
+    location.href = 'flight.html';
+  });
+
+  document.getElementById('pax_next').addEventListener('click', function () {
+    SkyBook.clearErrors(document.getElementById('pax_form'));
+    var allOk = true;
+    var firstInvalidId = null;
+    var passengers = [];
+    for (var i = 1; i <= passengerCount; i++) {
+      var r = validateOne(i);
+      if (!r.ok && !firstInvalidId) {
+        firstInvalidId = document.querySelector('#pax_last_kana_' + i + '.error, #pax_last_kana_' + i);
+      }
+      if (!r.ok) allOk = false;
+      passengers.push(r.data);
+    }
+    var termsEl = document.getElementById('pax_terms');
+    if (!termsEl.checked) {
+      setErr('pax_terms', '利用規約への同意が必要です');
+      allOk = false;
+    } else {
+      setErr('pax_terms', '');
+    }
+
+    if (!allOk) {
+      for (var j = 1; j <= passengerCount; j++) {
+        var ids = ['pax_last_kana_' + j, 'pax_first_kana_' + j, 'pax_birth_' + j];
+        for (var k = 0; k < ids.length; k++) {
+          var errEl = document.getElementById(ids[k] + '_error');
+          if (errEl && errEl.textContent) { document.getElementById(ids[k]).focus(); return; }
+        }
+        var genderErr = document.getElementById('pax_gender_' + j + '_error');
+        if (genderErr && genderErr.textContent) {
+          document.getElementById('pax_gender_male_' + j).focus();
+          return;
+        }
+      }
+      if (document.getElementById('pax_phone_1_error').textContent) { document.getElementById('pax_phone_1').focus(); return; }
+      if (document.getElementById('pax_email_1_error').textContent) { document.getElementById('pax_email_1').focus(); return; }
+      if (document.getElementById('pax_terms_error').textContent) { document.getElementById('pax_terms').focus(); return; }
+      return;
+    }
+
+    SkyBook.save({ passengers: passengers });
+    location.href = 'payment.html';
+  });
+})();
+</script>
+</body>
+</html>

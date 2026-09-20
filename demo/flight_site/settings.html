@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SkyBook - 設定</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="app-shell">
+  <header class="app-header"><h1>設定</h1></header>
+  <main class="screen-body">
+    <div class="card field">
+      <label for="settings_language">言語</label>
+      <select id="settings_language" data-testid="settings_language" disabled>
+        <option value="ja" selected>日本語</option>
+        <option value="en">English</option>
+      </select>
+    </div>
+    <div class="card field">
+      <label>
+        <input type="checkbox" id="settings_notify" data-testid="settings_notify" checked>
+        通知を受け取る
+      </label>
+    </div>
+    <div class="card field">
+      <button type="button" id="settings_version" data-testid="settings_version" class="btn btn-secondary">バージョン 1.0.0</button>
+    </div>
+    <a id="settings_debug_link" data-testid="settings_debug_link" class="btn btn-secondary" href="debug.html" hidden>デバッグメニュー</a>
+  </main>
+
+  <nav class="bottom-nav">
+    <a id="nav_search" data-testid="nav_search" class="tab" href="index.html">検索</a>
+    <a id="nav_mypage" data-testid="nav_mypage" class="tab" href="mypage.html">マイページ</a>
+    <a id="nav_settings" data-testid="nav_settings" class="tab" href="settings.html">設定</a>
+  </nav>
+</div>
+<script src="js/app.js"></script>
+<script>
+(function () {
+  SkyBook.initNav('settings');
+
+  var tapCount = 0;
+  document.getElementById('settings_version').addEventListener('click', function () {
+    tapCount += 1;
+    if (tapCount >= 7) {
+      document.getElementById('settings_debug_link').hidden = false;
+    }
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SkyBook - 検索結果</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="app-shell">
+  <header class="app-header">検索結果</header>
+  <main class="screen-body no-nav">
+    <p class="summary-box" id="results_summary" data-testid="results_summary"></p>
+
+    <div class="tabs">
+      <button type="button" class="tab active" id="results_tab_recommend" data-testid="results_tab_recommend">おすすめ</button>
+      <button type="button" class="tab" id="results_tab_cheapest" data-testid="results_tab_cheapest">最安</button>
+      <button type="button" class="tab" id="results_tab_fastest" data-testid="results_tab_fastest">最速</button>
+    </div>
+
+    <div class="chips">
+      <button type="button" class="chip" id="results_filter_direct" data-testid="results_filter_direct">直行のみ</button>
+      <button type="button" class="chip" id="results_filter_morning" data-testid="results_filter_morning">午前発</button>
+      <button type="button" class="chip" id="results_filter_evening" data-testid="results_filter_evening">夕方以降</button>
+    </div>
+
+    <div id="results_list" data-testid="results_list"></div>
+
+    <div class="empty-state" id="results_empty" data-testid="results_empty" hidden>
+      <p>該当する便がありません</p>
+      <button type="button" id="results_back" data-testid="results_back" class="btn btn-secondary">条件を変える</button>
+    </div>
+  </main>
+</div>
+<script src="js/app.js"></script>
+<script>
+(function () {
+  var s = SkyBook.state();
+  var classLabel = { economy: 'エコノミー', premium: 'プレミアム', business: 'ビジネス' };
+
+  function airportName(code) {
+    var a = SkyBook.AIRPORTS.find(function (x) { return x.code === code; });
+    return a ? a.name : code;
+  }
+
+  document.getElementById('results_summary').textContent =
+    airportName(s.search.from) + ' → ' + airportName(s.search.to) +
+    (s.search.depart ? ' ・ ' + s.search.depart : '') +
+    ' ・ 大人' + s.search.adults + '名 ・ ' + (classLabel[s.search.seatClass] || 'エコノミー');
+
+  var sortMode = 'recommend';
+  var activeFilters = { direct: false, morning: false, evening: false };
+
+  function toMinutes(hhmm) {
+    var parts = hhmm.split(':');
+    return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+  }
+  function duration(f) {
+    var d = toMinutes(f.arr) - toMinutes(f.dep);
+    return d < 0 ? d + 1440 : d;
+  }
+  function matched() {
+    return SkyBook.FLIGHTS.filter(function (f) {
+      return f.from === s.search.from && f.to === s.search.to;
+    });
+  }
+  function applyFiltersAndSort(list) {
+    var out = list.filter(function (f) {
+      if (activeFilters.direct && !f.direct) return false;
+      if (activeFilters.morning && toMinutes(f.dep) >= 720) return false;
+      if (activeFilters.evening && toMinutes(f.dep) < 1020) return false;
+      return true;
+    });
+    if (sortMode === 'cheapest') {
+      out = out.slice().sort(function (a, b) { return a.price - b.price; });
+    } else if (sortMode === 'fastest') {
+      out = out.slice().sort(function (a, b) { return duration(a) - duration(b); });
+    }
+    return out;
+  }
+
+  var listEl = document.getElementById('results_list');
+  var emptyEl = document.getElementById('results_empty');
+
+  function render() {
+    var flights = applyFiltersAndSort(matched());
+    listEl.innerHTML = '';
+    if (flights.length === 0) {
+      emptyEl.hidden = false;
+      listEl.hidden = true;
+      return;
+    }
+    emptyEl.hidden = true;
+    listEl.hidden = false;
+
+    flights.forEach(function (f) {
+      var card = document.createElement('div');
+      card.className = 'flight-card';
+      card.id = 'results_item_' + f.id;
+      card.setAttribute('data-testid', 'results_item_' + f.id);
+
+      var idLine = document.createElement('div');
+      idLine.className = 'flight-id';
+      idLine.textContent = f.id + '　' + airportName(f.from) + ' → ' + airportName(f.to) +
+        (f.direct ? '' : '（' + airportName(f.via) + '経由）');
+      card.appendChild(idLine);
+
+      var routeLine = document.createElement('div');
+      routeLine.className = 'flight-route-line';
+      var t1 = document.createElement('span');
+      t1.textContent = f.dep + ' - ' + f.arr;
+      var t2 = document.createElement('span');
+      t2.textContent = f.direct ? '直行' : '経由1回';
+      routeLine.appendChild(t1);
+      routeLine.appendChild(t2);
+      card.appendChild(routeLine);
+
+      var priceLine = document.createElement('div');
+      priceLine.className = 'flight-price';
+      priceLine.textContent = SkyBook.yen(f.price);
+      card.appendChild(priceLine);
+
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn btn-primary';
+      btn.id = 'results_select_' + f.id;
+      btn.setAttribute('data-testid', 'results_select_' + f.id);
+      btn.textContent = '選択';
+      btn.addEventListener('click', function () {
+        SkyBook.save({ flight: f });
+        location.href = 'flight.html';
+      });
+      card.appendChild(btn);
+
+      listEl.appendChild(card);
+    });
+  }
+
+  function setSort(mode, btn) {
+    sortMode = mode;
+    document.querySelectorAll('.tab').forEach(function (t) { t.classList.remove('active'); });
+    btn.classList.add('active');
+    render();
+  }
+  document.getElementById('results_tab_recommend').addEventListener('click', function (e) { setSort('recommend', e.currentTarget); });
+  document.getElementById('results_tab_cheapest').addEventListener('click', function (e) { setSort('cheapest', e.currentTarget); });
+  document.getElementById('results_tab_fastest').addEventListener('click', function (e) { setSort('fastest', e.currentTarget); });
+
+  function toggleFilter(key, btn) {
+    activeFilters[key] = !activeFilters[key];
+    btn.classList.toggle('active', activeFilters[key]);
+    render();
+  }
+  document.getElementById('results_filter_direct').addEventListener('click', function (e) { toggleFilter('direct', e.currentTarget); });
+  document.getElementById('results_filter_morning').addEventListener('click', function (e) { toggleFilter('morning', e.currentTarget); });
+  document.getElementById('results_filter_evening').addEventListener('click', function (e) { toggleFilter('evening', e.currentTarget); });
+
+  document.getElementById('results_back').addEventListener('click', function () {
+    location.href = 'index.html';
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

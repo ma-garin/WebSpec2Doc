@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SkyBook - マイページ</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="app-shell">
+  <header class="app-header"><h1>マイページ</h1></header>
+  <main class="screen-body">
+    <div class="tabs">
+      <button type="button" id="mypage_tab_bookings" data-testid="mypage_tab_bookings" class="tab">予約一覧</button>
+      <button type="button" id="mypage_tab_profile" data-testid="mypage_tab_profile" class="tab">プロフィール</button>
+    </div>
+
+    <div id="mypage_bookings_panel">
+      <div id="mypage_bookings_list"></div>
+      <div class="summary-box" id="mypage_empty" data-testid="mypage_empty" hidden>予約はありません</div>
+    </div>
+
+    <div id="mypage_profile_panel" hidden>
+      <div class="card field" id="mypage_profile_email" data-testid="mypage_profile_email"></div>
+      <button type="button" id="mypage_logout" data-testid="mypage_logout" class="btn btn-secondary">ログアウト</button>
+    </div>
+  </main>
+
+  <dialog id="mypage_cancel_dialog" data-testid="mypage_cancel_dialog">
+    <p>この予約を取り消しますか？</p>
+    <button type="button" id="mypage_cancel_ok" data-testid="mypage_cancel_ok" class="btn btn-primary">取り消す</button>
+    <button type="button" id="mypage_cancel_cancel" data-testid="mypage_cancel_cancel" class="btn btn-secondary">戻る</button>
+  </dialog>
+
+  <nav class="bottom-nav">
+    <a id="nav_search" data-testid="nav_search" class="tab" href="index.html">検索</a>
+    <a id="nav_mypage" data-testid="nav_mypage" class="tab" href="mypage.html">マイページ</a>
+    <a id="nav_settings" data-testid="nav_settings" class="tab" href="settings.html">設定</a>
+  </nav>
+</div>
+<script src="js/app.js"></script>
+<script>
+(function () {
+  var s0 = SkyBook.state();
+  if (!s0.loggedIn) {
+    location.href = 'login.html?login_required=1';
+    return;
+  }
+
+  SkyBook.initNav('mypage');
+
+  var pendingPnr = null;
+
+  function showBookings() {
+    document.getElementById('mypage_bookings_panel').hidden = false;
+    document.getElementById('mypage_profile_panel').hidden = true;
+    document.getElementById('mypage_tab_bookings').classList.add('active');
+    document.getElementById('mypage_tab_profile').classList.remove('active');
+  }
+  function showProfile() {
+    document.getElementById('mypage_bookings_panel').hidden = true;
+    document.getElementById('mypage_profile_panel').hidden = false;
+    document.getElementById('mypage_tab_bookings').classList.remove('active');
+    document.getElementById('mypage_tab_profile').classList.add('active');
+  }
+
+  document.getElementById('mypage_tab_bookings').addEventListener('click', showBookings);
+  document.getElementById('mypage_tab_profile').addEventListener('click', showProfile);
+
+  function renderBookings() {
+    var s = SkyBook.state();
+    var bookings = s.bookings || [];
+    var listEl = document.getElementById('mypage_bookings_list');
+    var emptyEl = document.getElementById('mypage_empty');
+    if (bookings.length === 0) {
+      listEl.innerHTML = '';
+      emptyEl.hidden = false;
+      return;
+    }
+    emptyEl.hidden = true;
+    var html = '';
+    bookings.forEach(function (b) {
+      var flight = SkyBook.FLIGHTS.find(function (f) { return f.id === b.flightId; });
+      var route = flight ? (flight.from + ' → ' + flight.to) : b.flightId;
+      html += '<div class="list-item" id="mypage_booking_' + b.pnr + '" data-testid="mypage_booking_' + b.pnr + '">';
+      html += '<div>' + b.pnr + '　' + route + '</div>';
+      html += '<div>搭乗日: ' + b.date + '　座席: ' + b.seat + '　合計: ' + SkyBook.yen(b.total) + '</div>';
+      html += '<span class="badge" id="mypage_status_' + b.pnr + '" data-testid="mypage_status_' + b.pnr + '">' + b.status + '</span>';
+      if (b.status === '確定') {
+        html += ' <button type="button" id="mypage_cancel_' + b.pnr + '" data-testid="mypage_cancel_' + b.pnr + '" class="btn btn-secondary">取消</button>';
+      }
+      html += '</div>';
+    });
+    listEl.innerHTML = html;
+
+    bookings.forEach(function (b) {
+      if (b.status === '確定') {
+        var btn = document.getElementById('mypage_cancel_' + b.pnr);
+        if (btn) {
+          btn.addEventListener('click', function () {
+            pendingPnr = b.pnr;
+            SkyBook.openDialog('mypage_cancel_dialog');
+          });
+        }
+      }
+    });
+  }
+
+  document.getElementById('mypage_cancel_ok').addEventListener('click', function () {
+    if (pendingPnr) {
+      var s = SkyBook.state();
+      var bookings = (s.bookings || []).map(function (b) {
+        if (b.pnr === pendingPnr) {
+          return { pnr: b.pnr, flightId: b.flightId, date: b.date, seat: b.seat, total: b.total, status: '取消済' };
+        }
+        return b;
+      });
+      SkyBook.save({ bookings: bookings });
+      pendingPnr = null;
+      renderBookings();
+    }
+    SkyBook.closeDialog('mypage_cancel_dialog');
+  });
+
+  document.getElementById('mypage_cancel_cancel').addEventListener('click', function () {
+    pendingPnr = null;
+    SkyBook.closeDialog('mypage_cancel_dialog');
+  });
+
+  function renderProfile() {
+    var s = SkyBook.state();
+    document.getElementById('mypage_profile_email').textContent = s.email ? s.email : 'ゲスト';
+  }
+
+  document.getElementById('mypage_logout').addEventListener('click', function () {
+    SkyBook.save({ loggedIn: false, email: '' });
+    location.href = 'login.html';
+  });
+
+  renderBookings();
+  renderProfile();
+  showBookings();
+})();
+</script>
+</body>
+</html>

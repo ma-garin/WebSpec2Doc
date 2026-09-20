@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/flight_toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="?attr/colorPrimary"
+            app:title="便の詳細"
+            app:titleTextColor="@android:color/white" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:id="@+id/flight_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:contentDescription="flight_title" />
+
+            <TextView
+                android:id="@+id/flight_route"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textSize="16sp"
+                android:contentDescription="flight_route" />
+
+            <TextView
+                android:id="@+id/flight_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textSize="16sp"
+                android:contentDescription="flight_time" />
+
+            <TextView
+                android:id="@+id/flight_price"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:contentDescription="flight_price" />
+
+            <Button
+                android:id="@+id/flight_rules_toggle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="運賃規則"
+                android:contentDescription="flight_rules_toggle" />
+
+            <TextView
+                android:id="@+id/flight_rules_panel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:padding="12dp"
+                android:background="#F0F0F0"
+                android:text="・出発前の変更は手数料がかかります。\n・払い戻しは出発の24時間前まで可能です。\n・預け荷物は1人1個まで無料です。"
+                android:visibility="gone"
+                android:contentDescription="flight_rules_panel" />
+
+            <Button
+                android:id="@+id/flight_seat_open"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="座席を選ぶ"
+                android:contentDescription="flight_seat_open" />
+
+            <TextView
+                android:id="@+id/flight_seat_selected"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textSize="16sp"
+                android:contentDescription="flight_seat_selected" />
+
+            <TextView
+                android:id="@+id/flight_seat_error"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="#D32F2F"
+                android:visibility="gone"
+                android:contentDescription="flight_seat_error" />
+
+            <Button
+                android:id="@+id/flight_next"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="この便で進む"
+                android:contentDescription="flight_next" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</ScrollView>

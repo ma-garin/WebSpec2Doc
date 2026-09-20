@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SkyBook - 予約完了</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="app-shell">
+  <header class="app-header"><h1>予約完了</h1></header>
+  <main class="screen-body">
+    <div class="card summary">
+      <p>ご予約が完了しました。</p>
+      <div class="badge" id="complete_pnr" data-testid="complete_pnr"></div>
+    </div>
+    <div class="summary-box" id="complete_summary" data-testid="complete_summary"></div>
+    <div class="field">
+      <button type="button" id="complete_to_mypage" data-testid="complete_to_mypage" class="btn btn-primary">マイページへ</button>
+      <button type="button" id="complete_to_home" data-testid="complete_to_home" class="btn btn-secondary">ホームへ</button>
+    </div>
+  </main>
+</div>
+<script src="js/app.js"></script>
+<script>
+(function () {
+  var pnr = new URLSearchParams(location.search).get('pnr') || '';
+  document.getElementById('complete_pnr').textContent = 'PNR: ' + pnr;
+
+  var s = SkyBook.state();
+  var booking = (s.bookings || []).find(function (b) { return b.pnr === pnr; });
+  var summaryEl = document.getElementById('complete_summary');
+  if (booking) {
+    var flight = SkyBook.FLIGHTS.find(function (f) { return f.id === booking.flightId; });
+    var lines = [];
+    if (flight) lines.push(flight.id + '　' + flight.from + ' → ' + flight.to);
+    lines.push('搭乗日: ' + booking.date);
+    lines.push('座席: ' + booking.seat);
+    lines.push('合計: ' + SkyBook.yen(booking.total));
+    lines.push('状態: ' + booking.status);
+    summaryEl.innerHTML = lines.map(function (l) { return '<div>' + l + '</div>'; }).join('');
+  } else {
+    summaryEl.textContent = '予約情報が見つかりませんでした。';
+  }
+
+  document.getElementById('complete_to_mypage').addEventListener('click', function () {
+    location.href = 'mypage.html';
+  });
+  document.getElementById('complete_to_home').addEventListener('click', function () {
+    location.href = 'index.html';
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SkyBook - 便詳細</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="app-shell">
+  <header class="app-header">便詳細</header>
+  <main class="screen-body no-nav">
+    <div class="summary-box">
+      <div id="flight_title" data-testid="flight_title" class="flight-id"></div>
+      <div id="flight_route" data-testid="flight_route"></div>
+      <div id="flight_time" data-testid="flight_time"></div>
+      <div id="flight_price" data-testid="flight_price" class="flight-price"></div>
+    </div>
+
+    <button type="button" id="flight_rules_toggle" data-testid="flight_rules_toggle" class="accordion-toggle" aria-expanded="false">運賃規則</button>
+    <div id="flight_rules_panel" data-testid="flight_rules_panel" class="accordion-panel" hidden>
+      <p class="muted">出発時刻の24時間前までは無料で変更可能です。それ以降の変更・払戻には手数料がかかります。預け入れ手荷物は1個まで無料です。</p>
+    </div>
+
+    <div class="field">
+      <button type="button" id="flight_seat_open" data-testid="flight_seat_open" class="btn btn-secondary">座席を選ぶ</button>
+      <p id="flight_seat_selected" data-testid="flight_seat_selected" class="muted"></p>
+      <p class="error" id="flight_seat_error" data-testid="flight_seat_error"></p>
+    </div>
+
+    <button type="button" id="flight_next" data-testid="flight_next" class="btn btn-primary btn-block">この便で進む</button>
+
+    <dialog id="seat_dialog" data-testid="seat_dialog">
+      <div class="seat-dialog-body">
+        <h2>座席を選択</h2>
+        <div class="seat-grid" id="seat_grid"></div>
+        <p class="muted">グレーの座席は予約済みで選択できません</p>
+      </div>
+      <div class="seat-dialog-actions">
+        <button type="button" id="seat_cancel" data-testid="seat_cancel" class="btn btn-secondary">キャンセル</button>
+        <button type="button" id="seat_confirm" data-testid="seat_confirm" class="btn btn-primary">決定</button>
+      </div>
+    </dialog>
+  </main>
+</div>
+<script src="js/app.js"></script>
+<script>
+(function () {
+  var s = SkyBook.state();
+  var flight = s.flight;
+  if (!flight) {
+    location.href = 'results.html';
+    return;
+  }
+
+  function airportName(code) {
+    var a = SkyBook.AIRPORTS.find(function (x) { return x.code === code; });
+    return a ? a.name : code;
+  }
+
+  document.getElementById('flight_title').textContent = flight.id;
+  document.getElementById('flight_route').textContent =
+    airportName(flight.from) + ' → ' + airportName(flight.to) +
+    (flight.direct ? '' : '（' + airportName(flight.via) + '経由）');
+  document.getElementById('flight_time').textContent = flight.dep + ' - ' + flight.arr;
+  document.getElementById('flight_price').textContent = SkyBook.yen(SkyBook.subtotal());
+
+  var rulesToggle = document.getElementById('flight_rules_toggle');
+  var rulesPanel = document.getElementById('flight_rules_panel');
+  rulesToggle.addEventListener('click', function () {
+    var willShow = rulesPanel.hidden;
+    rulesPanel.hidden = !willShow;
+    rulesToggle.setAttribute('aria-expanded', String(willShow));
+  });
+
+  var OCCUPIED = ['1A', '1B', '2C', '3D', '4F', '5E'];
+  var ROWS = [1, 2, 3, 4, 5, 6];
+  var LEFT = ['A', 'B', 'C'];
+  var RIGHT = ['D', 'E', 'F'];
+  var grid = document.getElementById('seat_grid');
+  var pendingSeat = s.seat || '';
+
+  function seatLabel(seat) {
+    var col = seat.charAt(seat.length - 1);
+    if (col === 'A' || col === 'F') return seat + '（窓側）';
+    if (col === 'C' || col === 'D') return seat + '（通路側）';
+    return seat;
+  }
+
+  function buildGrid() {
+    grid.innerHTML = '';
+    ROWS.forEach(function (row) {
+      var rowEl = document.createElement('div');
+      rowEl.className = 'seat-row';
+      LEFT.concat(['GAP']).concat(RIGHT).forEach(function (col) {
+        if (col === 'GAP') {
+          var gap = document.createElement('span');
+          gap.className = 'seat-aisle-gap';
+          rowEl.appendChild(gap);
+          return;
+        }
+        var seatId = row + col;
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.id = 'seat_' + seatId;
+        btn.setAttribute('data-testid', 'seat_' + seatId);
+        btn.className = 'seat-btn';
+        btn.textContent = seatId;
+        if (OCCUPIED.indexOf(seatId) !== -1) {
+          btn.disabled = true;
+          btn.classList.add('occupied');
+        }
+        if (seatId === pendingSeat) {
+          btn.classList.add('selected');
+        }
+        btn.addEventListener('click', function () {
+          pendingSeat = seatId;
+          grid.querySelectorAll('.seat-btn').forEach(function (b) { b.classList.remove('selected'); });
+          btn.classList.add('selected');
+        });
+        rowEl.appendChild(btn);
+      });
+      grid.appendChild(rowEl);
+    });
+  }
+  buildGrid();
+
+  function refreshSelectedLabel() {
+    var current = SkyBook.state().seat;
+    document.getElementById('flight_seat_selected').textContent = current ? seatLabel(current) : '';
+  }
+  refreshSelectedLabel();
+
+  document.getElementById('flight_seat_open').addEventListener('click', function () {
+    pendingSeat = SkyBook.state().seat || '';
+    buildGrid();
+    SkyBook.openDialog('seat_dialog');
+  });
+
+  document.getElementById('seat_confirm').addEventListener('click', function () {
+    if (pendingSeat) {
+      SkyBook.save({ seat: pendingSeat });
+      SkyBook.setError('flight_seat', '');
+    }
+    refreshSelectedLabel();
+    SkyBook.closeDialog('seat_dialog');
+  });
+
+  document.getElementById('seat_cancel').addEventListener('click', function () {
+    pendingSeat = SkyBook.state().seat || '';
+    SkyBook.closeDialog('seat_dialog');
+  });
+
+  document.getElementById('flight_next').addEventListener('click', function () {
+    var current = SkyBook.state().seat;
+    if (!current) {
+      SkyBook.setError('flight_seat', '座席を選んでください');
+      return;
+    }
+    SkyBook.setError('flight_seat', '');
+    location.href = 'passenger.html';
+  });
+})();
+</script>
+</body>
+</html>

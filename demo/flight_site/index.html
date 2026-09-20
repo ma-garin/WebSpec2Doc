@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SkyBook - 検索</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="app-shell">
+  <header class="app-header">検索</header>
+  <main class="screen-body">
+    <form id="search_form" novalidate>
+      <div class="field">
+        <label for="search_from">出発地</label>
+        <select id="search_from" name="search_from" data-testid="search_from" required></select>
+      </div>
+      <div class="field">
+        <label for="search_to">到着地</label>
+        <select id="search_to" name="search_to" data-testid="search_to" required></select>
+        <p class="error" id="search_to_error" data-testid="search_to_error"></p>
+      </div>
+      <div class="field">
+        <label for="search_depart">出発日</label>
+        <input type="date" id="search_depart" name="search_depart" data-testid="search_depart" required>
+        <p class="error" id="search_depart_error" data-testid="search_depart_error"></p>
+      </div>
+      <div class="field">
+        <label for="search_return">復路日（任意）</label>
+        <input type="date" id="search_return" name="search_return" data-testid="search_return">
+        <p class="error" id="search_return_error" data-testid="search_return_error"></p>
+      </div>
+      <div class="field">
+        <label for="search_adults">人数</label>
+        <div class="stepper">
+          <button type="button" id="search_adults_minus" data-testid="search_adults_minus" aria-label="人数を減らす">−</button>
+          <input type="number" id="search_adults" name="search_adults" data-testid="search_adults" min="1" max="9" value="1">
+          <button type="button" id="search_adults_plus" data-testid="search_adults_plus" aria-label="人数を増やす">＋</button>
+        </div>
+        <p class="error" id="search_adults_error" data-testid="search_adults_error"></p>
+      </div>
+      <div class="field">
+        <span class="field-label-standalone">座席クラス</span>
+        <div class="radio-group">
+          <label class="radio-option">
+            <input type="radio" id="search_class_economy" name="search_class" data-testid="search_class_economy" value="economy" checked> エコノミー
+          </label>
+          <label class="radio-option">
+            <input type="radio" id="search_class_premium" name="search_class" data-testid="search_class_premium" value="premium"> プレミアム
+          </label>
+          <label class="radio-option">
+            <input type="radio" id="search_class_business" name="search_class" data-testid="search_class_business" value="business"> ビジネス
+          </label>
+        </div>
+      </div>
+
+      <button type="button" id="search_advanced_toggle" data-testid="search_advanced_toggle" class="accordion-toggle" aria-expanded="false">詳細条件</button>
+      <div id="search_advanced_panel" data-testid="search_advanced_panel" class="accordion-panel" hidden>
+        <div class="field">
+          <label>
+            <input type="checkbox" id="search_direct_only" data-testid="search_direct_only"> 直行のみ
+          </label>
+        </div>
+        <div class="field">
+          <label for="search_max_price">上限価格（任意）</label>
+          <input type="number" id="search_max_price" name="search_max_price" data-testid="search_max_price" min="5000" max="100000">
+          <p class="error" id="search_max_price_error" data-testid="search_max_price_error"></p>
+        </div>
+      </div>
+
+      <button type="button" id="search_submit" data-testid="search_submit" class="btn btn-primary btn-block">検索</button>
+    </form>
+  </main>
+  <nav class="bottom-nav">
+    <a href="index.html" id="nav_search" data-testid="nav_search"><span class="nav-icon">✈</span>検索</a>
+    <a href="mypage.html" id="nav_mypage" data-testid="nav_mypage"><span class="nav-icon">🗂</span>マイページ</a>
+    <a href="settings.html" id="nav_settings" data-testid="nav_settings"><span class="nav-icon">⚙</span>設定</a>
+  </nav>
+</div>
+<script src="js/app.js"></script>
+<script>
+(function () {
+  var s = SkyBook.state();
+  var fromSel = document.getElementById('search_from');
+  var toSel = document.getElementById('search_to');
+
+  SkyBook.AIRPORTS.forEach(function (a) {
+    var label = a.name + '（' + a.code + '）';
+    var o1 = document.createElement('option');
+    o1.value = a.code; o1.textContent = label;
+    fromSel.appendChild(o1);
+    var o2 = document.createElement('option');
+    o2.value = a.code; o2.textContent = label;
+    toSel.appendChild(o2);
+  });
+
+  fromSel.value = s.search.from;
+  toSel.value = s.search.to;
+  document.getElementById('search_depart').value = s.search.depart || '';
+  document.getElementById('search_return').value = s.search.return || '';
+  document.getElementById('search_adults').value = s.search.adults;
+  var classRadio = document.getElementById('search_class_' + s.search.seatClass);
+  if (classRadio) classRadio.checked = true;
+
+  SkyBook.initNav('search');
+
+  var adultsInput = document.getElementById('search_adults');
+  document.getElementById('search_adults_minus').addEventListener('click', function () {
+    var v = parseInt(adultsInput.value, 10) || 1;
+    if (v > 1) adultsInput.value = v - 1;
+  });
+  document.getElementById('search_adults_plus').addEventListener('click', function () {
+    var v = parseInt(adultsInput.value, 10) || 1;
+    if (v < 9) adultsInput.value = v + 1;
+  });
+
+  var toggle = document.getElementById('search_advanced_toggle');
+  var panel = document.getElementById('search_advanced_panel');
+  toggle.addEventListener('click', function () {
+    var willShow = panel.hidden;
+    panel.hidden = !willShow;
+    toggle.setAttribute('aria-expanded', String(willShow));
+  });
+
+  function todayIso() {
+    return new Date().toISOString().slice(0, 10);
+  }
+  function addDaysIso(iso, days) {
+    var d = new Date(iso + 'T00:00:00');
+    d.setDate(d.getDate() + days);
+    return d.toISOString().slice(0, 10);
+  }
+
+  var form = document.getElementById('search_form');
+  document.getElementById('search_submit').addEventListener('click', function () {
+    SkyBook.clearErrors(form);
+    var firstInvalid = null;
+
+    var from = fromSel.value;
+    var to = toSel.value;
+    var depart = document.getElementById('search_depart').value;
+    var returnEl = document.getElementById('search_return');
+    var ret = returnEl.value;
+    var adultsRaw = adultsInput.value;
+    var adults = parseInt(adultsRaw, 10);
+    var maxPriceEl = document.getElementById('search_max_price');
+    var maxPrice = maxPriceEl.value;
+    var seatClassEl = document.querySelector('input[name="search_class"]:checked');
+    var seatClass = seatClassEl ? seatClassEl.value : 'economy';
+
+    if (from === to) {
+      SkyBook.setError('search_to', '出発地と到着地が同じです');
+      firstInvalid = firstInvalid || toSel;
+    }
+
+    var today = todayIso();
+    var maxDate = addDaysIso(today, 330);
+    if (!depart) {
+      SkyBook.setError('search_depart', '出発日を入力してください');
+      firstInvalid = firstInvalid || document.getElementById('search_depart');
+    } else if (depart < today || depart > maxDate) {
+      SkyBook.setError('search_depart', '出発日は本日から330日以内で入力してください');
+      firstInvalid = firstInvalid || document.getElementById('search_depart');
+    }
+
+    if (ret && depart && ret < depart) {
+      SkyBook.setError('search_return', '復路日は出発日以降にしてください');
+      firstInvalid = firstInvalid || returnEl;
+    }
+
+    if (!adultsRaw || isNaN(adults) || adults < 1 || adults > 9) {
+      SkyBook.setError('search_adults', '人数は1〜9名で入力してください');
+      firstInvalid = firstInvalid || adultsInput;
+      adults = 1;
+    }
+
+    if (maxPrice !== '' && (Number(maxPrice) < 5000 || Number(maxPrice) > 100000)) {
+      SkyBook.setError('search_max_price', '上限価格は5000〜100000で入力してください');
+      firstInvalid = firstInvalid || maxPriceEl;
+    }
+
+    if (firstInvalid) {
+      firstInvalid.focus();
+      return;
+    }
+
+    SkyBook.save({
+      search: { from: from, to: to, depart: depart, return: ret, adults: adults, seatClass: seatClass }
+    });
+    location.href = 'results.html';
+  });
+})();
+</script>
+</body>
+</html>

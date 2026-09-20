@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SkyBook - デバッグメニュー</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="app-shell">
+  <header class="app-header"><h1>デバッグメニュー</h1></header>
+  <main class="screen-body">
+    <div class="field">
+      <button type="button" id="debug_reset" data-testid="debug_reset" class="btn btn-primary">状態をリセット</button>
+    </div>
+    <pre class="summary-box" id="debug_dump" data-testid="debug_dump"></pre>
+  </main>
+</div>
+<script src="js/app.js"></script>
+<script>
+(function () {
+  function renderDump() {
+    document.getElementById('debug_dump').textContent = JSON.stringify(SkyBook.state(), null, 2);
+  }
+
+  document.getElementById('debug_reset').addEventListener('click', function () {
+    SkyBook.resetState();
+    renderDump();
+  });
+
+  renderDump();
+})();
+</script>
+</body>
+</html>

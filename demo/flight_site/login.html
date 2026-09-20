@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SkyBook - ログイン</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="app-shell">
+  <header class="app-header">ログイン</header>
+  <main class="screen-body no-nav">
+    <p class="notice" id="mypage_login_notice" data-testid="mypage_login_notice" hidden>ログインが必要です</p>
+    <form id="login_form" novalidate>
+      <div class="field">
+        <label for="login_email">メールアドレス</label>
+        <input type="email" id="login_email" name="login_email" data-testid="login_email"
+               required maxlength="64" autocomplete="email">
+        <p class="error" id="login_email_error" data-testid="login_email_error"></p>
+      </div>
+      <div class="field">
+        <label for="login_password">パスワード</label>
+        <input type="password" id="login_password" name="login_password" data-testid="login_password"
+               required minlength="8" maxlength="32" autocomplete="current-password">
+        <p class="error" id="login_password_error" data-testid="login_password_error"></p>
+      </div>
+      <p class="error" id="login_form_error" data-testid="login_form_error"></p>
+      <button type="button" id="login_submit" data-testid="login_submit" class="btn btn-primary">ログイン</button>
+      <button type="button" id="login_guest" data-testid="login_guest" class="btn btn-secondary btn-block">ゲストとして続ける</button>
+    </form>
+  </main>
+</div>
+<script src="js/app.js"></script>
+<script>
+(function () {
+  var params = new URLSearchParams(location.search);
+  var notice = document.getElementById('mypage_login_notice');
+  if (params.get('login_required') === '1' && notice) {
+    notice.hidden = false;
+  }
+
+  var form = document.getElementById('login_form');
+  var emailInput = document.getElementById('login_email');
+  var passwordInput = document.getElementById('login_password');
+  var emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  function validate() {
+    SkyBook.clearErrors(form);
+    var email = emailInput.value.trim();
+    var password = passwordInput.value;
+    var firstInvalid = null;
+
+    if (!email) {
+      SkyBook.setError('login_email', 'メールアドレスを入力してください');
+      firstInvalid = firstInvalid || emailInput;
+    } else if (email.length > 64 || !emailRe.test(email)) {
+      SkyBook.setError('login_email', 'メールアドレスの形式が正しくありません');
+      firstInvalid = firstInvalid || emailInput;
+    }
+
+    if (!password) {
+      SkyBook.setError('login_password', 'パスワードを入力してください');
+      firstInvalid = firstInvalid || passwordInput;
+    } else if (password.length < 8 || password.length > 32) {
+      SkyBook.setError('login_password', 'パスワードは8〜32文字で入力してください');
+      firstInvalid = firstInvalid || passwordInput;
+    }
+
+    if (firstInvalid) {
+      firstInvalid.focus();
+      return null;
+    }
+    return { email: email, password: password };
+  }
+
+  document.getElementById('login_submit').addEventListener('click', function () {
+    var data = validate();
+    if (!data) return;
+    if (data.password === 'password123') {
+      SkyBook.save({ loggedIn: true, email: data.email });
+      location.href = 'index.html';
+    } else {
+      SkyBook.setError('login_form', 'メールアドレスまたはパスワードが違います');
+      emailInput.focus();
+    }
+  });
+
+  document.getElementById('login_guest').addEventListener('click', function () {
+    SkyBook.save({ loggedIn: false });
+    location.href = 'index.html';
+  });
+})();
+</script>
+</body>
+</html>

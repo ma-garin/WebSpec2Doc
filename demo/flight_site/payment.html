@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SkyBook - お支払い</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="app-shell">
+  <header class="app-header"><h1>お支払い</h1></header>
+  <main class="screen-body">
+    <div class="card summary" id="payment_summary" data-testid="payment_summary"></div>
+
+    <div class="card field">
+      <label for="payment_coupon">クーポンコード</label>
+      <input type="text" id="payment_coupon" data-testid="payment_coupon" maxlength="20">
+      <button type="button" id="payment_coupon_apply" data-testid="payment_coupon_apply" class="btn btn-secondary">適用</button>
+      <div class="error" id="payment_coupon_error" data-testid="payment_coupon_error"></div>
+      <div class="badge" id="payment_discount" data-testid="payment_discount" hidden></div>
+    </div>
+
+    <div class="summary-box" id="payment_total" data-testid="payment_total"></div>
+
+    <form id="payment_form" novalidate>
+      <div class="card field">
+        <span>お支払い方法</span>
+        <label><input type="radio" name="payment_method" id="payment_method_card" data-testid="payment_method_card" value="card" checked>クレジットカード</label>
+        <label><input type="radio" name="payment_method" id="payment_method_conv" data-testid="payment_method_conv" value="conv">コンビニ払い</label>
+        <label><input type="radio" name="payment_method" id="payment_method_bank" data-testid="payment_method_bank" value="bank">銀行振込</label>
+      </div>
+
+      <div class="summary-box" id="payment_card_panel" data-testid="payment_card_panel">
+        <div class="field">
+          <label for="payment_card_number">カード番号</label>
+          <input type="text" id="payment_card_number" data-testid="payment_card_number" inputmode="numeric" pattern="[0-9]{16}" maxlength="16">
+          <div class="error" id="payment_card_number_error" data-testid="payment_card_number_error"></div>
+        </div>
+        <div class="field">
+          <label for="payment_card_expiry">有効期限（MM/YY）</label>
+          <input type="text" id="payment_card_expiry" data-testid="payment_card_expiry" pattern="(0[1-9]|1[0-2])/[0-9]{2}" maxlength="5" placeholder="MM/YY">
+          <div class="error" id="payment_card_expiry_error" data-testid="payment_card_expiry_error"></div>
+        </div>
+        <div class="field">
+          <label for="payment_card_cvv">セキュリティコード</label>
+          <input type="text" id="payment_card_cvv" data-testid="payment_card_cvv" inputmode="numeric" pattern="[0-9]{3}" maxlength="3">
+          <div class="error" id="payment_card_cvv_error" data-testid="payment_card_cvv_error"></div>
+        </div>
+        <div class="field">
+          <label for="payment_card_name">カード名義（英字）</label>
+          <input type="text" id="payment_card_name" data-testid="payment_card_name" pattern="[A-Z ]+" maxlength="40">
+          <div class="error" id="payment_card_name_error" data-testid="payment_card_name_error"></div>
+        </div>
+      </div>
+
+      <div class="summary-box" id="payment_conv_panel" data-testid="payment_conv_panel" hidden>
+        <div class="field">
+          <label for="payment_conv_store">お支払い店舗</label>
+          <select id="payment_conv_store" data-testid="payment_conv_store">
+            <option value="">選択してください</option>
+            <option value="seven">セブン-イレブン</option>
+            <option value="lawson">ローソン</option>
+            <option value="familymart">ファミリーマート</option>
+          </select>
+          <div class="error" id="payment_conv_store_error" data-testid="payment_conv_store_error"></div>
+        </div>
+      </div>
+
+      <div class="summary-box" id="payment_bank_panel" data-testid="payment_bank_panel" hidden>
+        <p>予約確定後に表示される振込先へ、3日以内にお振込みください。</p>
+      </div>
+
+      <button type="button" id="payment_submit" data-testid="payment_submit" class="btn btn-primary">予約を確定</button>
+    </form>
+  </main>
+
+  <dialog id="payment_confirm_dialog" data-testid="payment_confirm_dialog">
+    <p>この内容で予約を確定しますか？</p>
+    <button type="button" id="payment_confirm_ok" data-testid="payment_confirm_ok" class="btn btn-primary">確定する</button>
+    <button type="button" id="payment_confirm_cancel" data-testid="payment_confirm_cancel" class="btn btn-secondary">キャンセル</button>
+  </dialog>
+</div>
+<script src="js/app.js"></script>
+<script>
+(function () {
+  var CARD_NUM_RE = /^[0-9]{16}$/;
+  var EXPIRY_RE = /^(0[1-9]|1[0-2])\/([0-9]{2})$/;
+  var CVV_RE = /^[0-9]{3}$/;
+  var NAME_RE = /^[A-Z ]+$/;
+
+  function renderSummary() {
+    var s = SkyBook.state();
+    var flight = s.flight;
+    var adults = (s.search && s.search.adults) ? s.search.adults : 1;
+    var lines = [];
+    if (flight) {
+      lines.push(flight.id + '　' + flight.from + ' → ' + flight.to);
+    }
+    lines.push('人数: ' + adults + '名');
+    lines.push('座席: ' + (s.seat || '未選択'));
+    lines.push('小計: ' + SkyBook.yen(SkyBook.subtotal()));
+    document.getElementById('payment_summary').innerHTML = lines.map(function (l) { return '<div>' + l + '</div>'; }).join('');
+    renderTotal();
+  }
+
+  function renderTotal() {
+    document.getElementById('payment_total').textContent = '合計: ' + SkyBook.yen(SkyBook.total());
+  }
+
+  renderSummary();
+
+  document.getElementById('payment_coupon_apply').addEventListener('click', function () {
+    var code = document.getElementById('payment_coupon').value.trim().toUpperCase();
+    var discountEl = document.getElementById('payment_discount');
+    if (code === 'SKY10') {
+      SkyBook.save({ couponApplied: true });
+      SkyBook.setError('payment_coupon', '');
+      discountEl.hidden = false;
+      discountEl.textContent = 'クーポン適用: 10%OFF';
+    } else {
+      SkyBook.save({ couponApplied: false });
+      discountEl.hidden = true;
+      SkyBook.setError('payment_coupon', '無効なクーポンです');
+    }
+    renderTotal();
+  });
+
+  var panels = {
+    card: document.getElementById('payment_card_panel'),
+    conv: document.getElementById('payment_conv_panel'),
+    bank: document.getElementById('payment_bank_panel')
+  };
+  function switchPanel(method) {
+    panels.card.hidden = method !== 'card';
+    panels.conv.hidden = method !== 'conv';
+    panels.bank.hidden = method !== 'bank';
+  }
+  document.getElementById('payment_method_card').addEventListener('change', function () { switchPanel('card'); });
+  document.getElementById('payment_method_conv').addEventListener('change', function () { switchPanel('conv'); });
+  document.getElementById('payment_method_bank').addEventListener('change', function () { switchPanel('bank'); });
+  switchPanel('card');
+
+  function validateCard() {
+    var ok = true;
+    var num = document.getElementById('payment_card_number').value.trim();
+    if (!CARD_NUM_RE.test(num)) {
+      SkyBook.setError('payment_card_number', 'カード番号は16桁の数字で入力してください'); ok = false;
+    } else if (num !== '4242424242424242') {
+      SkyBook.setError('payment_card_number', 'カードが承認されませんでした'); ok = false;
+    } else {
+      SkyBook.setError('payment_card_number', '');
+    }
+
+    var expiry = document.getElementById('payment_card_expiry').value.trim();
+    var m = EXPIRY_RE.exec(expiry);
+    if (!m) {
+      SkyBook.setError('payment_card_expiry', '有効期限はMM/YY形式で入力してください'); ok = false;
+    } else {
+      var mm = Number(m[1]);
+      var yy = Number(m[2]);
+      var now = new Date();
+      var curYY = now.getFullYear() % 100;
+      var curMM = now.getMonth() + 1;
+      if (yy < curYY || (yy === curYY && mm <= curMM)) {
+        SkyBook.setError('payment_card_expiry', '有効期限が過ぎています'); ok = false;
+      } else {
+        SkyBook.setError('payment_card_expiry', '');
+      }
+    }
+
+    var cvv = document.getElementById('payment_card_cvv').value.trim();
+    if (!CVV_RE.test(cvv)) {
+      SkyBook.setError('payment_card_cvv', 'セキュリティコードは3桁の数字で入力してください'); ok = false;
+    } else {
+      SkyBook.setError('payment_card_cvv', '');
+    }
+
+    var name = document.getElementById('payment_card_name').value.trim();
+    if (!name || !NAME_RE.test(name)) {
+      SkyBook.setError('payment_card_name', '英大文字とスペースのみで入力してください'); ok = false;
+    } else {
+      SkyBook.setError('payment_card_name', '');
+    }
+    return ok;
+  }
+
+  function validateConv() {
+    var store = document.getElementById('payment_conv_store').value;
+    if (!store) {
+      SkyBook.setError('payment_conv_store', '店舗を選択してください');
+      return false;
+    }
+    SkyBook.setError('payment_conv_store', '');
+    return true;
+  }
+
+  document.getElementById('payment_submit').addEventListener('click', function () {
+    var method = document.querySelector('input[name="payment_method"]:checked').value;
+    var ok = true;
+    if (method === 'card') ok = validateCard();
+    else if (method === 'conv') ok = validateConv();
+
+    if (!ok) return;
+
+    renderTotal();
+    SkyBook.openDialog('payment_confirm_dialog');
+  });
+
+  document.getElementById('payment_confirm_ok').addEventListener('click', function () {
+    var s = SkyBook.state();
+    var booking = {
+      pnr: SkyBook.newPnr(),
+      flightId: s.flight ? s.flight.id : '',
+      date: s.search ? s.search.depart : '',
+      seat: s.seat,
+      total: SkyBook.total(),
+      status: '確定'
+    };
+    var bookings = (s.bookings || []).slice();
+    bookings.push(booking);
+    SkyBook.save({ bookings: bookings });
+    SkyBook.closeDialog('payment_confirm_dialog');
+    location.href = 'complete.html?pnr=' + encodeURIComponent(booking.pnr);
+  });
+
+  document.getElementById('payment_confirm_cancel').addEventListener('click', function () {
+    SkyBook.closeDialog('payment_confirm_dialog');
+  });
+})();
+</script>
+</body>
+</html>

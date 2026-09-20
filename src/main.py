@@ -208,6 +208,47 @@ def parse_args() -> argparse.Namespace:
         help="--record-session の最大記録時間（秒）。未指定はブラウザを閉じるまで",
     )
     parser.add_argument(
+        "--record-signal",
+        type=Path,
+        default=None,
+        help="--record-session: このパスが出現したら記録を終了する（Web UI の停止ボタン用）",
+    )
+    parser.add_argument(
+        "--record-status",
+        type=Path,
+        default=None,
+        help="--record-session: 進行状態(JSON)の出力先。Web UI が1秒間隔でポーリングする",
+    )
+    parser.add_argument(
+        "--replay-session",
+        default=None,
+        help="リプレイモード: user-flow JSON のパス、または 'latest'（最新セッションを再生）",
+    )
+    parser.add_argument(
+        "--replay-base-url",
+        default=None,
+        help="--replay-session: navigate 先 URL のホスト部をこの URL のものに差し替える",
+    )
+    parser.add_argument(
+        "--replay-headless",
+        dest="replay_headless",
+        action="store_true",
+        default=True,
+        help="--replay-session をヘッドレスで実行する（既定）",
+    )
+    parser.add_argument(
+        "--no-replay-headless",
+        dest="replay_headless",
+        action="store_false",
+        help="--replay-session をヘッドあり（画面表示）で実行する",
+    )
+    parser.add_argument(
+        "--import-recording",
+        type=Path,
+        default=None,
+        help="Chrome DevTools Recorder(.json)/Selenium IDE(.side) の記録を取り込む",
+    )
+    parser.add_argument(
         "--exploration-coverage",
         action="store_true",
         help=(
@@ -328,6 +369,12 @@ def run(args: argparse.Namespace) -> None:
     if bool(getattr(args, "record_session", False)):
         _record_session(args)
         return
+    if getattr(args, "replay_session", None):
+        _replay_session(args)
+        return
+    if getattr(args, "import_recording", None):
+        _import_recording(args)
+        return
     if bool(getattr(args, "exploration_coverage", False)):
         _exploration_coverage(args)
         return
@@ -406,14 +453,93 @@ def _record_session(args: argparse.Namespace) -> None:
         return
     output_dir = _out_dir(args, url)
     headless = os.environ.get("WEBSPEC2DOC_RECORD_HEADLESS", "") == "1"
+    auth_state = getattr(args, "auth", None)
     logger.info("記録を開始します。ブラウザを閉じるとセッションを保存します: %s", url)
     session_path = record_exploration_session(
         url,
         output_dir,
         duration_sec=getattr(args, "record_duration", None),
         headless=headless,
+        storage_state=auth_state,
+        signal_path=getattr(args, "record_signal", None),
+        status_path=getattr(args, "record_status", None),
     )
     logger.info("探索セッションを保存しました: %s", session_path)
+
+
+def _replay_session(args: argparse.Namespace) -> None:
+    """リプレイモード（キャプチャ&リプレイ Phase 2）。結果 summary を stdout に 1 行 JSON で出す。"""
+    from capture.replayer import latest_session_flow, replay_user_flow
+
+    replay_session_arg = str(getattr(args, "replay_session", "") or "")
+    url = str(args.url or "")
+    output_dir = _out_dir(args, url)
+    if replay_session_arg == "latest":
+        flow_path = latest_session_flow(output_dir)
+        if flow_path is None:
+            logger.error("記録済みセッションがありません（先に --record-session で記録してください）")
+            return
+    else:
+        flow_path = Path(replay_session_arg)
+    if not flow_path.exists():
+        logger.error("user-flow JSON が見つかりません: %s", flow_path)
+        return
+    flow = json.loads(flow_path.read_text(encoding="utf-8"))
+    replay_name = _next_replay_name(output_dir)
+    result = replay_user_flow(
+        flow,
+        output_dir=output_dir,
+        replay_name=replay_name,
+        headless=bool(getattr(args, "replay_headless", True)),
+        auth_state=getattr(args, "auth", None),
+        base_url=getattr(args, "replay_base_url", None),
+    )
+    print(json.dumps(result, ensure_ascii=False))
+
+
+def _next_replay_name(output_dir: Path) -> str:
+    """replays/replay_NNN の次の空き番号を返す。"""
+    replays_dir = output_dir / "replays"
+    existing = {p.stem for p in replays_dir.glob("replay_*.json")} if replays_dir.exists() else set()
+    index = 1
+    while f"replay_{index:03d}" in existing:
+        index += 1
+    return f"replay_{index:03d}"
+
+
+def _import_recording(args: argparse.Namespace) -> None:
+    """Recorder(.json)/Selenium IDE(.side) の記録を取り込み、session_NNN.flow.json + .jsonl を書く。"""
+    from capture.userflow import (
+        load_recording,
+        save_user_flow,
+        user_flow_to_events,
+    )
+
+    from capture.session_recorder import SESSIONS_DIR_NAME
+
+    path = Path(str(getattr(args, "import_recording", "") or ""))
+    if not path.exists():
+        logger.error("取り込み対象のファイルがありません: %s", path)
+        return
+    url = str(args.url or "")
+    output_dir = _out_dir(args, url)
+    sessions_dir = output_dir / SESSIONS_DIR_NAME
+    sessions_dir.mkdir(parents=True, exist_ok=True)
+    index = len(list(sessions_dir.glob("session_*.jsonl"))) + 1
+    session_path = sessions_dir / f"session_{index:03d}.jsonl"
+    session = session_path.stem
+    flow, source = load_recording(path)
+    flow.setdefault("ws2d", {})
+    flow["ws2d"]["session"] = session
+    flow["ws2d"].setdefault("source", source)
+    events = user_flow_to_events(flow, session=session)
+    session_path.parent.mkdir(parents=True, exist_ok=True)
+    with session_path.open("w", encoding="utf-8") as handle:
+        for event in events:
+            handle.write(json.dumps(event, ensure_ascii=False) + "\n")
+    flow_path = output_dir / SESSIONS_DIR_NAME / f"{session}.flow.json"
+    save_user_flow(flow, flow_path)
+    logger.info("記録を取り込みました: %s（イベント %d 件・%s）", flow_path, len(events), source)
 
 
 def _load_report_json(report_path: Path) -> dict | None:
@@ -500,13 +626,49 @@ def _reverse_assets(args: argparse.Namespace) -> None:
         logger.error("探索セッションがありません（先に --record-session で操作を記録してください）")
         return
     assets = generate_recorded_assets(report, events)
-    save_recorded_assets(assets, output_dir)
+    save_recorded_assets(assets, output_dir, events=events)
     logger.info(
         "リバース生成が完了しました: テストケース %d 件・記録フロー %d 件"
         "（recorded_assets.json / recorded_candidates.json）",
         len(assets["test_cases"]),
         len(assets["flows"]),
     )
+    _merge_recorded_candidates(output_dir)
+
+
+def _merge_recorded_candidates(output_dir: Path) -> None:
+    """recorded_candidates.json の candidates を playwright_candidates.json に id 重複なしで追記する。
+
+    playwright_candidates.json が存在しない場合は何もしない（System 02 のコード生成が
+    先に走っていない環境では合流対象がないため）。
+    """
+    pw_path = output_dir / "playwright_candidates.json"
+    recorded_path = output_dir / "recorded_candidates.json"
+    if not pw_path.exists() or not recorded_path.exists():
+        return
+    try:
+        pw_data = json.loads(pw_path.read_text(encoding="utf-8"))
+        recorded_data = json.loads(recorded_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning("recorded_candidates.json の合流をスキップしました: %s", exc)
+        return
+    pw_candidates = list(pw_data.get("candidates") or [])
+    known_ids = {str(candidate.get("id")) for candidate in pw_candidates if isinstance(candidate, dict)}
+    added = 0
+    for candidate in recorded_data.get("candidates") or []:
+        if not isinstance(candidate, dict):
+            continue
+        candidate_id = str(candidate.get("id"))
+        if candidate_id in known_ids:
+            continue
+        known_ids.add(candidate_id)
+        pw_candidates.append(candidate)
+        added += 1
+    if added == 0:
+        return
+    pw_data["candidates"] = pw_candidates
+    pw_path.write_text(json.dumps(pw_data, ensure_ascii=False, indent=2), encoding="utf-8")
+    logger.info("recorded_candidates.json から %d 件を playwright_candidates.json に合流しました", added)
 
 
 def _export_findings(args: argparse.Namespace) -> None:

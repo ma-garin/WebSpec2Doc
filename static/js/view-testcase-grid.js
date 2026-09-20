@@ -436,10 +436,17 @@ function tcgMaybeAppendChunk() {
 
 function _tcgRowEl(row, index) {
   const el = document.createElement('div');
-  el.className = 'tcg-tr' + (row.origin === 'manual' ? ' is-manual' : '');
+  el.className = 'tcg-tr' + (row.origin === 'manual' ? ' is-manual' : '')
+    + (row.origin === 'recorded' ? ' is-recorded' : '');
   el.dataset.index = String(index);
   el.appendChild(_tcgCheckCell(row));
   TCG.columns.forEach((c, ci) => el.appendChild(_tcgCellEl(row, c, ci)));
+  if (row.origin === 'recorded') {
+    const badge = document.createElement('span');
+    badge.className = 'tcg-badge-recorded';
+    badge.textContent = '実演';
+    el.firstChild.appendChild(badge);
+  }
   return el;
 }
 

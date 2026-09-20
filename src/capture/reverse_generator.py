@@ -87,10 +87,18 @@ def generate_recorded_assets(
     }
 
 
-def save_recorded_assets(assets: dict[str, Any], output_dir: Path, domain: str = "") -> None:
+def save_recorded_assets(
+    assets: dict[str, Any],
+    output_dir: Path,
+    domain: str = "",
+    *,
+    events: list[dict[str, Any]] | None = None,
+) -> None:
     """recorded_assets.json と recorded_candidates.json を出力する。
 
     domain 省略時は出力先ディレクトリ名を使う（クロール出力の慣例と同じ）。
+    events を渡した場合のみ、assets["test_cases"] にあるセッションごとに
+    `sessions/<session>.md`（実演手順の Markdown）を追加で書き出す。
     """
     import json
 
@@ -111,6 +119,70 @@ def save_recorded_assets(assets: dict[str, Any], output_dir: Path, domain: str =
         ),
         encoding="utf-8",
     )
+
+    if events is None:
+        return
+    sessions = {str(case.get("session") or "") for case in assets["test_cases"]}
+    sessions.discard("")
+    for session in sorted(sessions):
+        save_recorded_markdown(assets, events, output_dir, session)
+
+
+def save_recorded_markdown(
+    assets: dict[str, Any], events: list[dict[str, Any]], output_dir: Path, session: str
+) -> Path:
+    """1 記録セッションの手順を Markdown（手順表 + 気づき一覧）として書き出す。
+
+    手順表: No / 画面 / 操作 / 入力値（masked は ***）/ 観察 / スクショ相対リンク。
+    events は元のセッション JSONL 相当（action の value/masked/screenshot、
+    finding の note を使う）。assets["test_cases"] から該当 session の
+    RecordedTestCase 相当 dict を探し、手順の description/observed を使う。
+    """
+    session_dir = output_dir / "sessions"
+    session_dir.mkdir(parents=True, exist_ok=True)
+    # events の session はファイル名（session_001.jsonl）で来ることがある。拡張子は落とす
+    out_path = session_dir / f"{Path(str(session)).stem}.md"
+
+    case = next(
+        (c for c in assets["test_cases"] if str(c.get("session") or "") == session),
+        None,
+    )
+    steps = (case or {}).get("steps") or []
+    session_events = [e for e in events if str(e.get("session") or "") == session]
+    action_events = [e for e in session_events if e.get("kind") == "action"]
+    findings = [e for e in session_events if e.get("kind") == "finding"]
+
+    lines: list[str] = [f"# {Path(str(session)).stem} 実演手順", ""]
+    lines.append("| No | 画面 | 操作 | 入力値 | 観察 | スクショ |")
+    lines.append("| --- | --- | --- | --- | --- | --- |")
+    for i, step in enumerate(steps):
+        event = action_events[i] if i < len(action_events) else {}
+        value = event.get("value")
+        if event.get("masked"):
+            value = "***"
+        value_cell = "" if value is None else str(value)
+        screenshot = str(event.get("screenshot") or "")
+        lines.append(
+            "| {no} | {url} | {op} | {value} | {observed} | {shot} |".format(
+                no=step.get("order", i + 1),
+                url=step.get("url", ""),
+                op=step.get("description", ""),
+                value=value_cell,
+                observed=step.get("observed", ""),
+                shot=screenshot,
+            )
+        )
+
+    lines.append("")
+    lines.append("## 気づき")
+    if findings:
+        for finding in findings:
+            lines.append(f"- {finding.get('note', '')}")
+    else:
+        lines.append("- （なし）")
+
+    out_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return out_path
 
 
 def _build_screen_indices(
@@ -135,6 +207,26 @@ def _build_screen_indices(
         classification = classify_screen_by_rules(title, headings, field_names)
         screen_type_by_path.setdefault(path, classification.screen_type)
     return path_index, screen_type_by_path
+
+
+def _describe_action(event: dict[str, Any], selector: str, verb: str) -> str:
+    """操作 1 件を人が読む手順文にする（記録された事実だけを使う）。
+
+    要素名は selectors の `aria/` 候補（ラベル・aria-label・可視テキスト）を優先し、
+    無ければセレクタをそのまま出す。入力値は masked なら *** のまま出す。
+    """
+    label = selector
+    for candidate in event.get("selectors") or []:
+        if isinstance(candidate, list) and candidate and str(candidate[0]).startswith("aria/"):
+            label = str(candidate[0])[len("aria/") :]
+            break
+    action_type = str(event.get("action_type") or "")
+    if action_type == "input":
+        value = str(event.get("value") or "")
+        return f"「{label}」に「{value}」を入力"
+    if action_type == "keydown":
+        return f"「{label}」で {event.get('key') or ''} キーを押下"
+    return f"「{label}」を{verb}"
 
 
 def _build_case(
@@ -181,7 +273,7 @@ def _build_case(
             verb = _ACTION_VERBS.get(str(event.get("action_type") or ""), "操作")
             pending = RecordedStep(
                 order=order,
-                description=f"「{selector}」を{verb}",
+                description=_describe_action(event, selector, verb),
                 selector=selector,
                 url=str(event.get("url") or ""),
             )

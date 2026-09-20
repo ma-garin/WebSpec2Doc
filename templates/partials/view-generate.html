@@ -58,6 +58,32 @@
                 <button type="button" id="discover-btn" class="btn-primary" style="height:40px;padding:0 16px;font-size:13px;white-space:nowrap">画面解析</button>
               </div>
               <div id="url-input-message" class="input-field-message"></div>
+
+              <!-- 記録＆リプレイ（「操作を記録して作る」）: URL/アプリのどちらの入力方式でも
+                   その直下に置き、第3の入力方式として選べるようにする。 -->
+              <div id="record-mode" class="record-mode input-card" style="margin-top:12px">
+                <h3 style="margin:0 0 8px;font-size:15px">🎬 操作を記録して作る</h3>
+                <p class="input-hint" style="margin:0 0 12px">見えるブラウザで実際に操作すると、その手順からテストケースとレポートを作成します。</p>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                  <button type="button" id="record-start-btn" class="btn-outline-sm">記録用ブラウザを開く</button>
+                  <button type="button" id="record-stop-btn" class="btn-primary" style="display:none;height:28px;padding:0 12px;font-size:12px">記録を終了</button>
+                </div>
+                <div id="record-status" class="input-field-message" style="margin-top:8px"></div>
+                <img id="record-last-shot" style="display:none;max-width:240px;border:1px solid var(--border,#e5e5e5);border-radius:4px;margin-top:8px" alt="直近の操作のスクリーンショット" />
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px">
+                  <button type="button" id="record-finalize-btn" class="btn-primary" style="display:none;height:32px;padding:0 16px;font-size:13px">この記録から文書を作る</button>
+                  <button type="button" id="record-replay-btn" class="btn-outline-sm" style="display:none">リプレイして検証</button>
+                </div>
+                <div class="field" style="margin-top:10px;border-top:1px solid var(--border,#e5e5e5);padding-top:10px">
+                  <label for="record-import-input">Recorder / Selenium IDE の記録を取り込む</label>
+                  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                    <input type="file" id="record-import-input" accept=".json,.side" />
+                    <button type="button" id="record-import-btn" class="btn-outline-sm">取り込む</button>
+                  </div>
+                </div>
+                <div id="record-result" style="margin-top:8px"></div>
+              </div>
+
               <!-- 解析する範囲（Issue #15）。従来は depth=5 / max_pages=300 が固定で渡っており、
                    300画面・15分規模になっても利用者には中断以外の手が無かった。
                    数値の意味を知らなくても所要時間で選べるよう、プリセットを先に置く。 -->

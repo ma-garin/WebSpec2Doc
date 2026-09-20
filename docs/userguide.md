@@ -404,3 +404,14 @@ python src/main.py --url https://example.com --auth auth.json
 
 **Q: P1 の画面分析がタイムアウトする**
 → 画面分析（discover）のタイムアウトは 180 秒です。ネットワークが遅い環境や大規模サイトでは超過する場合があります。対象 URL を絞るか、ステップ 2 の手動 URL 入力モードを使用してください。
+
+
+# 操作を記録して作る（キャプチャ＆リプレイ）
+
+クローラが辿れない導線（ログイン後のテナント選択、検索条件を人が決める画面など）は、人が操作した記録から文書を作れます。
+
+1. 新規解析の URL を入れ、「記録用ブラウザを開く」を押す。開いたブラウザで自由に操作する（右下の「⚑ 気づき」で所見を残せる）。
+2. 「記録を終了」→「この記録から文書を作る」。訪れた画面のクロール（未解析なら）、実演由来テストケース（`recorded_assets.json`・テストケース表の「実演」行）、探索カバレッジ、気づき一覧、手順書 `sessions/session_NNN.md`（入力値・観察・スクショ付き）ができる。
+3. 「リプレイして検証」で同じ操作を自動再現し、ステップごとの合否とスクショを `replays/` に残す。パスワード等のマスク値は環境変数 `WS2D_REPLAY_SECRET_<入力の name か id を大文字化>` で与える（無ければそのステップは skipped）。
+
+記録の形式は Chrome DevTools Recorder の user-flow JSON（`sessions/session_NNN.flow.json`）で、Chrome の Recorder パネルからの書き出しや Selenium IDE の `.side` も「取り込む」ボタンから読み込めます。CLI は `--record-session` / `--replay-session latest` / `--import-recording <file>`。

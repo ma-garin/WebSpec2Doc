@@ -34,6 +34,7 @@ def create_app() -> Flask:
         orchestration,
         pages,
         qa_process,
+        record,
         report,
         review,
         runs,
@@ -106,6 +107,7 @@ def create_app() -> Flask:
     app.register_blueprint(discover.bp)
     app.register_blueprint(site.bp)
     app.register_blueprint(login.bp)
+    app.register_blueprint(record.bp)
     app.register_blueprint(report.bp)
     app.register_blueprint(qa_process.bp)
     app.register_blueprint(history.bp)

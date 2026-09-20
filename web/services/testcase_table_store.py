@@ -168,8 +168,12 @@ def load_history(domain: str, limit: int = 200) -> list[dict[str, Any]]:
 # =========================================================================
 # 生成 + 編集の合成
 # =========================================================================
-def build_rows(report: Mapping[str, Any]) -> list[dict[str, Any]]:
-    """report からテストケース表の生成値を作る（編集は未適用）。"""
+def build_rows(report: Mapping[str, Any], domain: str = "") -> list[dict[str, Any]]:
+    """report からテストケース表の生成値を作る（編集は未適用）。
+
+    domain の recorded_assets.json（記録セッションからの逆生成資産）があれば、
+    その test_cases も「実演（記録）」行として末尾に追加する。
+    """
     from generator.test_design import build_test_design
     from generator.testcase_table import build_testcase_table
 
@@ -179,7 +183,58 @@ def build_rows(report: Mapping[str, Any]) -> list[dict[str, Any]]:
 
     params = _test_design_params(get_test_design_settings())
     design = build_test_design(report, params)
-    return [asdict(row) for row in build_testcase_table(report, design)]
+    rows = [asdict(row) for row in build_testcase_table(report, design)]
+    # Web の report.json は meta/screens だけで domain を持たないため、呼び出し側から受け取る
+    domain = domain or str(report.get("domain") or "")
+    if domain:
+        rows.extend(_recorded_rows(domain))
+    return rows
+
+
+def _recorded_rows(domain: str) -> list[dict[str, Any]]:
+    """recorded_assets.json（あれば）から「実演（記録）」行を作る。"""
+    import json
+    import logging
+
+    from web.services.qa.helpers import _output_dir
+
+    logger = logging.getLogger(__name__)
+    path = _output_dir() / domain / "recorded_assets.json"
+    if not path.exists():
+        return []
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        logger.warning("recorded_assets.json の読み込みに失敗しました: %s: %s", path, exc)
+        return []
+
+    rows: list[dict[str, Any]] = []
+    for case in data.get("test_cases") or []:
+        if not isinstance(case, dict):
+            continue
+        steps = case.get("steps") or []
+        step_lines = [str(s.get("description") or "") for s in steps if isinstance(s, dict)]
+        observed_lines = [
+            str(s.get("observed") or "") for s in steps if isinstance(s, dict) and s.get("observed")
+        ]
+        page_ids = case.get("page_ids") or []
+        rows.append(
+            {
+                "case_id": str(case.get("case_id") or ""),
+                "name": str(case.get("title") or ""),
+                "screen": str(page_ids[0]) if page_ids else "",
+                "function": "実演（記録）",
+                "viewpoint": "探索セッション",
+                "preconditions": [str(case.get("first_url") or "")],
+                "steps": ["\n".join(step_lines)],
+                "expected": ["\n".join(observed_lines)] if observed_lines else ["記録時の画面状態と一致すること"],
+                "automation": "candidate",
+                "automation_reason": "記録セッションからの逆生成",
+                "trace_id": "",
+                "origin": "recorded",
+            }
+        )
+    return rows
 
 
 def compose(domain: str, report: Mapping[str, Any]) -> dict[str, Any]:
@@ -189,7 +244,7 @@ def compose(domain: str, report: Mapping[str, Any]) -> dict[str, Any]:
     deleted = set(str(x) for x in edits["deleted"])
 
     rows: list[dict[str, Any]] = []
-    for row in build_rows(report):
+    for row in build_rows(report, domain):
         case_id = row["case_id"]
         if case_id in deleted:
             continue

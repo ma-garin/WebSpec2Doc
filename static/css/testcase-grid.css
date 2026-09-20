@@ -44,6 +44,11 @@
 .tcg-tr:nth-child(even) { background: var(--surface-soft); }
 .tcg-tr.is-selrow { background: var(--color-primary-light, #eef4ff); }
 .tcg-tr.is-manual .tcg-td:first-child { box-shadow: inset 3px 0 0 var(--color-info, #3b82f6); }
+.tcg-tr.is-recorded .tcg-td:first-child { box-shadow: inset 3px 0 0 var(--color-success, #16a34a); }
+.tcg-badge-recorded {
+  display: inline-block; margin-left: 4px; padding: 0 4px; border-radius: 3px;
+  background: var(--color-success, #16a34a); color: #fff; font-size: 10px; line-height: 1.6; vertical-align: middle;
+}
 
 .tcg-td {
   padding: 8px 10px; border-right: 1px solid var(--border);

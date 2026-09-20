@@ -2757,6 +2757,56 @@
         "run_stream"
       ],
       "notes": "モック段階。/doc-app はドキュメント作成の画面（index.html）を共用し、対象を https://app.<package> として流す。web/services/app_mock.py が画面解析と実行を肩代わりし、demo/sample_report_app を成果物として置く。実装時は app_mock を uiautomator2 / WebDriverAgent のアダプタに差し替え、PageData を生成する。"
+    },
+    {
+      "feature_id": "capture_replay",
+      "name": "操作を記録して作る（キャプチャ＆リプレイ: 記録 → 逆生成 → リプレイ → 証跡）",
+      "risk_level": "high",
+      "status": "implemented",
+      "ui_files": [
+        "templates/partials/view-generate.html",
+        "templates/index.html",
+        "static/js/record-mode.js",
+        "static/js/view-testcase-grid.js",
+        "static/css/testcase-grid.css"
+      ],
+      "route_files": [
+        "web/routes/record.py",
+        "web/services/testcase_table_store.py"
+      ],
+      "core_files": [
+        "src/capture/session_recorder.py",
+        "src/capture/userflow.py",
+        "src/capture/replayer.py",
+        "src/capture/reverse_generator.py",
+        "src/main.py"
+      ],
+      "symbols": [
+        "record_exploration_session",
+        "events_to_user_flow",
+        "user_flow_to_events",
+        "side_to_user_flow",
+        "load_recording",
+        "replay_user_flow",
+        "latest_session_flow",
+        "save_recorded_markdown",
+        "generate_recorded_assets"
+      ],
+      "failure_modes": [
+        "browser_closed_by_user_flushes_session",
+        "navigation_loses_no_events_same_origin",
+        "masked_secret_never_written",
+        "replay_step_failure_continues_and_is_recorded",
+        "replay_secret_missing_is_skipped_not_failed",
+        "finalize_stage_failure_reported_not_raised",
+        "import_rejects_non_json_side"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "evidence"
+      ],
+      "notes": "正本形式は Chrome DevTools Recorder の user-flow JSON（@puppeteer/replay Schema 互換、独自情報は ws2d キー）。Selenium IDE .side は取り込みのみ。記録は window バッファ + sessionStorage（同一オリジン遷移で欠落しない）。同一の JSONL を既存の coverage / findings が読む。"
     }
   ]
 }

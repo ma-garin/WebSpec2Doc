@@ -89,8 +89,73 @@
     discoverTimer: null,
     discoverDone: false,
     selectedScreens: [],
-    runTimer: null
+    runTimer: null,
+    discoverClock: null,
+    runClock: null
   };
+
+  // 端末画面のモック描画。実装では /api/live-screenshot 相当の画像に置き換わる。
+  var FIELD_LABELS = {
+    'ログイン': ['メールアドレス', 'パスワード'],
+    'ホーム': ['検索'],
+    '商品一覧': ['絞り込み'],
+    '商品詳細': ['数量'],
+    'カート': ['クーポンコード'],
+    '購入手続き': ['氏名', '郵便番号', '住所', '電話番号', 'カード番号'],
+    '設定': ['通知', '言語', 'テーマ']
+  };
+  var SCREEN_BUTTONS = {
+    'ログイン': 'ログイン', '商品詳細': 'カートに入れる', 'カート': '購入手続きへ',
+    '購入手続き': '注文を確定', '注文完了': 'ホームへ戻る', '設定': '保存'
+  };
+
+  function escHtml(v) {
+    return String(v).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+
+  function renderPhone(containerId, screen) {
+    var el = $(containerId);
+    if (!el) return;
+    var isIos = state.platform === 'ios';
+    var labels = FIELD_LABELS[screen.name] || [];
+    var h = '';
+    h += '<div class="da-ms-status"><span>' + (isIos ? '9:41' : '12:30') + '</span><span>▲ ▮</span></div>';
+    h += '<div class="da-ms-appbar">' + (isIos ? '<span class="da-ms-icon">‹</span>' : '<span class="da-ms-icon">≡</span>') +
+      '<span class="da-ms-title">' + escHtml(screen.name) + '</span></div>';
+    h += '<div class="da-ms-body">';
+    if (screen.name === 'スプラッシュ') {
+      h += '<div class="da-ms-logo">' + escHtml(currentMock().name) + '</div>';
+    } else if (screen.name === '注文完了') {
+      h += '<div class="da-ms-done">✓</div><div class="da-ms-text">ご注文ありがとうございます</div>';
+    } else if (screen.name === 'ホーム' || screen.name === '商品一覧') {
+      h += '<div class="da-ms-field is-search">' + escHtml(labels[0] || '検索') + '</div>';
+      for (var i = 0; i < 4; i++) h += '<div class="da-ms-card"><span class="da-ms-thumb"></span><span class="da-ms-lines"><span></span><span></span></span></div>';
+    } else {
+      for (var j = 0; j < labels.length; j++) {
+        h += '<div class="da-ms-label">' + escHtml(labels[j]) + '</div><div class="da-ms-field"></div>';
+      }
+    }
+    var btn = SCREEN_BUTTONS[screen.name];
+    if (btn) h += '<div class="da-ms-btn">' + escHtml(btn) + '</div>';
+    h += '</div>';
+    h += '<div class="da-ms-nav"><span class="is-on">ホーム</span><span>検索</span><span>カート</span><span>設定</span></div>';
+    el.innerHTML = h;
+    el.className = 'da-phone-screen' + (isIos ? ' is-ios' : '');
+  }
+
+  function formatClock(sec) {
+    var m = Math.floor(sec / 60), s = sec % 60;
+    return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  function stopTimers() {
+    if (state.discoverTimer) { clearInterval(state.discoverTimer); state.discoverTimer = null; }
+    if (state.discoverClock) { clearInterval(state.discoverClock); state.discoverClock = null; }
+    if (state.runTimer) { clearInterval(state.runTimer); state.runTimer = null; }
+    if (state.runClock) { clearInterval(state.runClock); state.runClock = null; }
+  }
 
   function $(id) {
     return document.getElementById(id);
@@ -265,33 +330,66 @@
       showError('アプリファイルを選択するか、端末のアプリを選択してください。');
       return;
     }
-
+    stopTimers();
+    setHidden($('da-p1-summary'), true);
     setHidden($('da-discover-progress'), false);
+    // 入力欄が長く、ライブカードは画面下にある。開始した瞬間に見える位置へ寄せる（実物は URL 欄の直下に出る）。
+    var card = $('da-discover-progress');
+    if (card && card.scrollIntoView) card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     var btn = $('da-discover-btn');
     if (btn) btn.disabled = true;
     setHidden($('da-discover-cancel-btn'), false);
+    setHidden($('da-discover-spinner'), false);
     var log = $('da-discover-log');
     if (log) log.innerHTML = '';
     var bar = $('da-discover-bar');
     if (bar) bar.style.width = '0%';
+    setText('da-discover-count', '0画面を発見');
+    setText('da-discover-elapsed', '0秒');
+    var preview = $('da-discover-preview');
+    if (preview) preview.innerHTML = '<div class="da-ms-boot">起動中…</div>';
+
+    // 実物と同じ順: 受付 → 起動 → 静的解析 → 1 画面ずつ探索（ここでプレビューが切り替わる）→ 照合
+    var mock = currentMock();
+    var plan = [
+      { phase: 'アプリをインストールしています…' },
+      { phase: '起動して初期画面を取得しています…' },
+      { phase: 'マニフェストから Activity 一覧を抽出しています（静的）…' }
+    ];
+    for (var i = 0; i < mock.screens.length; i++) plan.push({ phase: '画面を探索しています: ' + mock.screens[i].name, screen: mock.screens[i], n: i + 1 });
+    plan.push({ phase: '未到達 Activity を照合しています…' });
+    plan.push({ phase: '完了', done: true });
+
+    var started = Date.now();
+    state.discoverClock = setInterval(function () {
+      setText('da-discover-elapsed', Math.round((Date.now() - started) / 1000) + '秒');
+    }, 1000);
 
     var idx = 0;
-    var total = DISCOVER_LOG_STEPS.length;
     state.discoverTimer = setInterval(function () {
-      if (idx >= total) {
-        clearInterval(state.discoverTimer);
-        state.discoverTimer = null;
-        finishDiscover();
-        return;
-      }
-      if (log) {
-        var li = document.createElement('li');
-        li.textContent = DISCOVER_LOG_STEPS[idx];
-        log.appendChild(li);
+      var step = plan[idx];
+      setText('da-discover-phase', step.phase);
+      if (step.screen) {
+        renderPhone('da-discover-preview', step.screen);
+        setText('da-discover-caption', 'ライブプレビュー: ' + step.screen.cls);
+        setText('da-discover-count', step.n + '画面を発見');
+        if (log) {
+          var li = document.createElement('li');
+          li.className = 'da-feed-row';
+          li.innerHTML = '<span class="da-feed-no">' + step.n + '</span><span class="da-feed-name">' + escHtml(step.screen.name) + '</span>' +
+            '<code class="da-feed-cls">' + escHtml(step.screen.cls) + '</code><span class="da-feed-meta">入力 ' + step.screen.fields + '</span>';
+          log.appendChild(li);
+          log.scrollTop = log.scrollHeight;
+        }
       }
       idx++;
-      if (bar) bar.style.width = Math.round((idx / total) * 100) + '%';
-    }, 350);
+      if (bar) bar.style.width = Math.round((idx / plan.length) * 100) + '%';
+      if (step.done) {
+        clearInterval(state.discoverTimer); state.discoverTimer = null;
+        clearInterval(state.discoverClock); state.discoverClock = null;
+        finishDiscover();
+      }
+    }, 380);
   }
 
   function finishDiscover() {
@@ -299,6 +397,7 @@
     var btn = $('da-discover-btn');
     if (btn) btn.disabled = false;
     setHidden($('da-discover-cancel-btn'), true);
+    setHidden($('da-discover-spinner'), true);
     var mock = currentMock();
     var totalFields = 0;
     for (var i = 0; i < mock.screens.length; i++) {
@@ -312,10 +411,7 @@
   }
 
   function cancelDiscover() {
-    if (state.discoverTimer) {
-      clearInterval(state.discoverTimer);
-      state.discoverTimer = null;
-    }
+    stopTimers();
     resetDiscoverUI();
   }
 
@@ -447,36 +543,105 @@
   }
 
   function resetRunUI() {
-    setText('da-run-stage', '');
+    setText('da-exec-title', '生成中…');
+    setText('da-exec-elapsed', '00:00');
+    setText('da-exec-message', '対象を受け付けて、生成の準備を進めています。');
+    setText('da-exec-phase', '準備中');
+    setText('da-exec-count', '0 / 0');
+    setText('da-exec-eta', '算出中');
+    setText('da-exec-unreached', '0件');
+    setText('da-exec-saved', '0件');
     var bar = $('da-run-bar');
-    if (bar) bar.style.width = '0%';
+    if (bar) bar.style.width = '4%';
     var log = $('da-run-log');
-    if (log) log.innerHTML = '';
+    if (log) log.textContent = '';
+    for (var i = 0; i < 4; i++) {
+      var st = $('da-estep-' + i);
+      if (st) { st.classList.remove('is-active', 'is-complete'); if (i === 0) st.classList.add('is-active'); }
+    }
+    setHidden($('da-run-phone'), true);
+    setHidden($('da-run-caption'), true);
+    var ph = $('da-run-preview-placeholder');
+    if (ph) ph.classList.remove('hidden');
+    var running = $('da-exec-running-actions');
+    if (running) running.classList.remove('hidden');
+    var done = $('da-exec-actions');
+    if (done) done.classList.add('hidden');
   }
 
   function startGenerate() {
+    stopTimers();
     setStep(3);
     resetRunUI();
-    var idx = 0;
-    var total = RUN_STAGES.length;
+    var mock = currentMock();
+    var selected = [];
+    for (var i = 0; i < mock.screens.length; i++) if (state.selectedScreens[i]) selected.push(mock.screens[i]);
+    var deviceSel = $('da-device');
+    var device = deviceSel && deviceSel.value ? deviceSel.value : '';
+    var appId = ($('da-app-id') && $('da-app-id').value) || mock.id;
+    setText('da-exec-target', appId + (device ? '（' + device + '）' : ''));
+    setText('da-exec-count', '0 / ' + selected.length);
+    setText('da-exec-unreached', mock.unreached.length + '件');
+
+    // 実物の 4 工程（受付 → 画面取得 → 解析 → 結果整理）に対応させる。画面取得の間だけプレビューが動く。
+    var plan = [{ estep: 0, phase: '受付', msg: '対象を受け付けて、生成の準備を進めています。', log: '[受付] ' + appId + ' / ' + (device || '実行先未指定') }];
+    for (var j = 0; j < selected.length; j++) {
+      plan.push({ estep: 1, phase: '画面取得', msg: '画面を取得しています: ' + selected[j].name, screen: selected[j], n: j + 1,
+        log: '[取得] ' + selected[j].name + ' (' + selected[j].cls + ') 入力 ' + selected[j].fields + ' 件' });
+    }
+    plan.push({ estep: 2, phase: '解析', msg: 'フォーム項目と遷移を解析しています…', log: '[解析] 遷移 ' + mock.transitions + ' 件を確定' });
+    plan.push({ estep: 2, phase: '解析', msg: 'テスト条件を組み立てています…', log: '[解析] テスト条件を組み立て（同値分割・境界値・状態遷移）' });
+    plan.push({ estep: 3, phase: '結果整理', msg: '文書を書き出しています…', log: '[出力] report.html / transition.mmd / spec.xlsx' });
+    plan.push({ estep: 3, phase: '結果整理', msg: '文書を書き出しています…', log: '[出力] 未到達 Activity ' + mock.unreached.length + ' 件を一覧化', done: true });
+
+    var TICK = 600;
+    var started = Date.now();
+    state.runClock = setInterval(function () {
+      setText('da-exec-elapsed', formatClock(Math.round((Date.now() - started) / 1000)));
+    }, 1000);
+
     var log = $('da-run-log');
     var bar = $('da-run-bar');
+    var idx = 0;
     state.runTimer = setInterval(function () {
-      if (idx >= total) {
-        clearInterval(state.runTimer);
-        state.runTimer = null;
-        finishGenerate();
-        return;
+      var step = plan[idx];
+      for (var k = 0; k < 4; k++) {
+        var st = $('da-estep-' + k);
+        if (!st) continue;
+        st.classList.remove('is-active', 'is-complete');
+        if (k < step.estep) st.classList.add('is-complete');
+        if (k === step.estep) st.classList.add('is-active');
       }
-      setText('da-run-stage', RUN_STAGES[idx]);
-      if (log) {
-        var li = document.createElement('li');
-        li.textContent = RUN_STAGES[idx];
-        log.appendChild(li);
+      setText('da-exec-phase', step.phase);
+      setText('da-exec-message', step.msg);
+      if (step.screen) {
+        var ph = $('da-run-preview-placeholder');
+        if (ph) ph.classList.add('hidden');
+        setHidden($('da-run-phone'), false);
+        setHidden($('da-run-caption'), false);
+        renderPhone('da-run-preview', step.screen);
+        setText('da-run-caption', step.screen.name + ' — ' + step.screen.cls);
+        setText('da-exec-count', step.n + ' / ' + selected.length);
+        setText('da-exec-saved', step.n + '件');
       }
+      if (log) { log.textContent += (log.textContent ? '\n' : '') + step.log; log.scrollTop = log.scrollHeight; }
       idx++;
-      if (bar) bar.style.width = Math.round((idx / total) * 100) + '%';
-    }, 700);
+      var remain = Math.ceil(((plan.length - idx) * TICK) / 1000);
+      setText('da-exec-eta', remain > 0 ? '約 ' + remain + ' 秒' : '-');
+      if (bar) bar.style.width = Math.max(4, Math.round((idx / plan.length) * 100)) + '%';
+      if (step.done) {
+        clearInterval(state.runTimer); state.runTimer = null;
+        clearInterval(state.runClock); state.runClock = null;
+        for (var m = 0; m < 4; m++) { var s2 = $('da-estep-' + m); if (s2) { s2.classList.remove('is-active'); s2.classList.add('is-complete'); } }
+        setText('da-exec-title', '生成完了');
+        setText('da-exec-phase', '完了');
+        setText('da-exec-message', '文書を書き出しました。「レポートを見る」で結果を確認できます。');
+        var running = $('da-exec-running-actions');
+        if (running) running.classList.add('hidden');
+        var done = $('da-exec-actions');
+        if (done) done.classList.remove('hidden');
+      }
+    }, TICK);
   }
 
   function finishGenerate() {
@@ -497,16 +662,17 @@
   }
 
   function cancelGenerate() {
-    if (state.runTimer) {
-      clearInterval(state.runTimer);
-      state.runTimer = null;
-    }
+    stopTimers();
     setStep(2);
   }
 
   function bindPanel3() {
     var cancelBtn = $('da-run-cancel-btn');
     if (cancelBtn) cancelBtn.addEventListener('click', cancelGenerate);
+    var newBtn = $('da-exec-new-btn');
+    if (newBtn) newBtn.addEventListener('click', cancelGenerate);
+    var reportBtn = $('da-exec-report-btn');
+    if (reportBtn) reportBtn.addEventListener('click', finishGenerate);
   }
 
   function bindGenerateBtn() {
@@ -515,6 +681,7 @@
   }
 
   function resetAll() {
+    stopTimers();
     if (state.discoverTimer) {
       clearInterval(state.discoverTimer);
       state.discoverTimer = null;

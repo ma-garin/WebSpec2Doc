@@ -4802,6 +4802,58 @@ code{font-family:var(--mono);font-size:11px}
 /* システム名が長く（ドキュメント作成(app)）、「切替」が 2 行に折れるのを防ぐ。 */
 .sys-switcher-swap { white-space: nowrap; }
 
+/* ── ライブプレビュー（ドキュメント作成の実行画面と同じ構成に、端末画面のモックを載せる）── */
+.da-live-grid { display: grid; grid-template-columns: minmax(0, 1fr) 236px; gap: 14px; align-items: start; }
+.da-live-main { min-width: 0; }
+.da-live-side { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.da-feed { list-style: none; margin: 10px 0 0; padding: 0; max-height: 156px; overflow-y: auto; display: flex; flex-direction: column; gap: 1px; }
+.da-feed-row { display: flex; align-items: center; gap: 8px; padding: 4px 6px; font-size: 12px; background: var(--sf); border-radius: 4px; }
+.da-feed-no { width: 18px; text-align: right; color: var(--tx2); font-variant-numeric: tabular-nums; }
+.da-feed-name { font-weight: 600; }
+.da-feed-cls { font-size: 11px; color: var(--tx2); }
+.da-feed-meta { margin-left: auto; font-size: 11px; color: var(--tx2); white-space: nowrap; }
+.da-preview-caption { font-size: 11px; color: var(--tx2); text-align: center; }
+.da-preview-caption-float { position: absolute; left: 12px; bottom: 10px; background: rgba(255,255,255,.9); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; }
+
+/* 実行画面はドキュメント作成と同じく 1 画面完結。パネルを .da-panels の内容高さいっぱいに広げ、
+   app.css の .execution-view（height:100% / preview flex:1）がそのまま効くようにする。
+   端末フレームはプレビュー枠の高さに合わせて縮む（縦横比固定）。 */
+#da-panel-3 { height: 100%; }
+.da-preview-frame { position: relative; }
+
+/* 端末フレーム */
+.da-phone { width: 210px; height: 420px; border-radius: 26px; background: #111; padding: 10px; box-shadow: 0 6px 18px rgba(0,0,0,.25); flex: none; }
+.da-phone-screen { width: 100%; height: 100%; border-radius: 18px; background: #F5F6F8; overflow: hidden; display: flex; flex-direction: column; font-size: 10px; color: #1F2937; }
+.da-ms-boot { flex: 1; display: grid; place-items: center; color: #6B7280; }
+.da-ms-status { display: flex; justify-content: space-between; padding: 4px 10px 2px; font-size: 9px; color: #374151; }
+.da-ms-appbar { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: #2563EB; color: #fff; font-weight: 700; }
+.da-phone-screen.is-ios .da-ms-appbar { background: #F5F6F8; color: #111; border-bottom: 1px solid #E5E7EB; justify-content: center; position: relative; }
+.da-phone-screen.is-ios .da-ms-icon { position: absolute; left: 10px; color: #2563EB; font-size: 14px; }
+.da-ms-icon { font-size: 13px; }
+.da-ms-body { flex: 1; padding: 10px; display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
+.da-ms-label { font-size: 9px; color: #6B7280; margin-top: 2px; }
+.da-ms-field { height: 22px; border: 1px solid #D1D5DB; border-radius: 6px; background: #fff; }
+.da-ms-field.is-search { display: flex; align-items: center; padding: 0 8px; color: #9CA3AF; border-radius: 999px; }
+.da-ms-btn { margin-top: auto; height: 26px; border-radius: 6px; background: #2563EB; color: #fff; display: grid; place-items: center; font-weight: 700; }
+.da-phone-screen.is-ios .da-ms-btn { border-radius: 10px; }
+.da-ms-card { display: flex; gap: 8px; align-items: center; padding: 6px; background: #fff; border: 1px solid #E5E7EB; border-radius: 8px; }
+.da-ms-thumb { width: 34px; height: 34px; border-radius: 6px; background: #E5E7EB; flex: none; }
+.da-ms-lines { display: flex; flex-direction: column; gap: 5px; flex: 1; }
+.da-ms-lines span { display: block; height: 6px; border-radius: 3px; background: #E5E7EB; }
+.da-ms-lines span:last-child { width: 60%; }
+.da-ms-logo { flex: 1; display: grid; place-items: center; font-size: 16px; font-weight: 800; color: #2563EB; }
+.da-ms-done { margin-top: 30px; width: 40px; height: 40px; border-radius: 50%; background: #DCF5EE; color: #0A7359; display: grid; place-items: center; font-size: 20px; align-self: center; }
+.da-ms-text { text-align: center; color: #374151; }
+.da-ms-nav { display: flex; justify-content: space-around; padding: 6px 4px; border-top: 1px solid #E5E7EB; background: #fff; font-size: 8px; color: #6B7280; }
+.da-ms-nav .is-on { color: #2563EB; font-weight: 700; }
+@media (max-width: 900px) { .da-live-grid { grid-template-columns: 1fr; } .da-live-side { align-items: flex-start; } }
+
+/* .da-phone（固定 210×420）より後に置いて上書きする。実行画面ではプレビュー枠の高さに合わせて縮む。 */
+.da-phone-lg { height: 100%; max-height: 440px; width: auto; aspect-ratio: 1 / 2; }
+
+/* ログが伸びるとプレビュー枠（flex:1）が押し潰されて端末が読めなくなる。ログは 4〜5 行に抑え、残りは内側でスクロール。 */
+.da-exec .execution-log { max-height: 96px; }
+
 </style>
 </head>
 <body class="app-page">
@@ -4991,9 +5043,25 @@ code{font-family:var(--mono);font-size:11px}
               <button type="button" id="da-discover-cancel-btn" class="btn-outline-sm btn-danger-outline" hidden>中断</button>
             </div>
 
-            <div id="da-discover-progress" hidden>
-              <div class="da-bar"><div class="da-bar-fill" id="da-discover-bar"></div></div>
-              <ul id="da-discover-log" class="da-log"></ul>
+            
+            <div id="da-discover-progress" class="discover-live-card da-live" hidden>
+              <div class="da-live-grid">
+                <div class="da-live-main">
+                  <div class="discover-live-header">
+                    <span class="spinner" id="da-discover-spinner"></span>
+                    <span id="da-discover-phase" aria-live="polite">対象アプリを確認しています…</span>
+                    <span id="da-discover-count" class="discover-live-count">0画面を発見</span>
+                    <span class="discover-live-elapsed-label">経過:</span>
+                    <span id="da-discover-elapsed" class="discover-live-elapsed">0秒</span>
+                  </div>
+                  <div class="da-bar"><div class="da-bar-fill" id="da-discover-bar"></div></div>
+                  <ul id="da-discover-log" class="da-feed" aria-label="発見した画面"></ul>
+                </div>
+                <div class="da-live-side">
+                  <div class="da-phone"><div class="da-phone-screen" id="da-discover-preview"></div></div>
+                  <div class="da-preview-caption" id="da-discover-caption">ライブプレビュー（エミュレータ）</div>
+                </div>
+              </div>
             </div>
 
             <div id="da-p1-summary" class="stat-cards" hidden>
@@ -5074,12 +5142,50 @@ code{font-family:var(--mono);font-size:11px}
           </section>
 
           <!-- ═══════════ パネル3: 実行 ═══════════ -->
-          <section class="da-panel card" id="da-panel-3" hidden>
-            <h2>実行</h2>
-            <strong id="da-run-stage"></strong>
-            <div class="da-bar"><div class="da-bar-fill" id="da-run-bar"></div></div>
-            <ul id="da-run-log" class="da-log"></ul>
-            <button type="button" id="da-run-cancel-btn" class="btn-outline-sm btn-danger-outline">中断</button>
+          
+          <section class="da-panel" id="da-panel-3" hidden>
+            <div class="execution-view da-exec">
+              <div class="execution-topbar">
+                <div class="execution-topbar-head">
+                  <h2 class="execution-title" id="da-exec-title">生成中…</h2>
+                  <span class="execution-elapsed" id="da-exec-elapsed">00:00</span>
+                </div>
+                <p class="execution-message" id="da-exec-message">対象を受け付けて、生成の準備を進めています。</p>
+                <div class="execution-progress"><div class="execution-progress-bar" id="da-run-bar"></div></div>
+                <div class="execution-steps">
+                  <div class="execution-step is-active" id="da-estep-0">1. 受付</div>
+                  <div class="execution-step" id="da-estep-1">2. 画面取得</div>
+                  <div class="execution-step" id="da-estep-2">3. 解析</div>
+                  <div class="execution-step" id="da-estep-3">4. 結果整理</div>
+                </div>
+              </div>
+              <div class="execution-preview-frame da-preview-frame">
+                <div class="da-phone da-phone-lg" id="da-run-phone" hidden><div class="da-phone-screen" id="da-run-preview"></div></div>
+                <div id="da-run-preview-placeholder" class="execution-preview-placeholder">
+                  <div class="spinner"></div>
+                  <p>ライブプレビューを準備しています…</p>
+                </div>
+                <div class="da-preview-caption da-preview-caption-float" id="da-run-caption" hidden></div>
+              </div>
+              <pre class="execution-log" id="da-run-log"></pre>
+              <div class="execution-bottombar">
+                <dl class="execution-meta-list">
+                  <div class="execution-meta-item"><dt>対象</dt><dd id="da-exec-target">-</dd></div>
+                  <div class="execution-meta-item"><dt>状態</dt><dd id="da-exec-phase">準備中</dd></div>
+                  <div class="execution-meta-item"><dt>進捗</dt><dd id="da-exec-count">0 / 0</dd></div>
+                  <div class="execution-meta-item"><dt>残り時間</dt><dd id="da-exec-eta">算出中</dd></div>
+                  <div class="execution-meta-item"><dt>未到達</dt><dd id="da-exec-unreached">0件</dd></div>
+                  <div class="execution-meta-item"><dt>保存済み</dt><dd id="da-exec-saved">0件</dd></div>
+                </dl>
+                <div class="execution-bottombar-actions" id="da-exec-running-actions">
+                  <button type="button" id="da-run-cancel-btn" class="btn-outline-sm">停止</button>
+                </div>
+                <div class="execution-bottombar-actions hidden" id="da-exec-actions">
+                  <button type="button" id="da-exec-new-btn" class="btn-outline-sm">条件設定に戻る</button>
+                  <button type="button" id="da-exec-report-btn" class="btn-primary">レポートを見る →</button>
+                </div>
+              </div>
+            </div>
           </section>
 
           <!-- ═══════════ パネル4: レポート ═══════════ -->
@@ -5219,8 +5325,73 @@ code{font-family:var(--mono);font-size:11px}
     discoverTimer: null,
     discoverDone: false,
     selectedScreens: [],
-    runTimer: null
+    runTimer: null,
+    discoverClock: null,
+    runClock: null
   };
+
+  // 端末画面のモック描画。実装では /api/live-screenshot 相当の画像に置き換わる。
+  var FIELD_LABELS = {
+    'ログイン': ['メールアドレス', 'パスワード'],
+    'ホーム': ['検索'],
+    '商品一覧': ['絞り込み'],
+    '商品詳細': ['数量'],
+    'カート': ['クーポンコード'],
+    '購入手続き': ['氏名', '郵便番号', '住所', '電話番号', 'カード番号'],
+    '設定': ['通知', '言語', 'テーマ']
+  };
+  var SCREEN_BUTTONS = {
+    'ログイン': 'ログイン', '商品詳細': 'カートに入れる', 'カート': '購入手続きへ',
+    '購入手続き': '注文を確定', '注文完了': 'ホームへ戻る', '設定': '保存'
+  };
+
+  function escHtml(v) {
+    return String(v).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+
+  function renderPhone(containerId, screen) {
+    var el = $(containerId);
+    if (!el) return;
+    var isIos = state.platform === 'ios';
+    var labels = FIELD_LABELS[screen.name] || [];
+    var h = '';
+    h += '<div class="da-ms-status"><span>' + (isIos ? '9:41' : '12:30') + '</span><span>▲ ▮</span></div>';
+    h += '<div class="da-ms-appbar">' + (isIos ? '<span class="da-ms-icon">‹</span>' : '<span class="da-ms-icon">≡</span>') +
+      '<span class="da-ms-title">' + escHtml(screen.name) + '</span></div>';
+    h += '<div class="da-ms-body">';
+    if (screen.name === 'スプラッシュ') {
+      h += '<div class="da-ms-logo">' + escHtml(currentMock().name) + '</div>';
+    } else if (screen.name === '注文完了') {
+      h += '<div class="da-ms-done">✓</div><div class="da-ms-text">ご注文ありがとうございます</div>';
+    } else if (screen.name === 'ホーム' || screen.name === '商品一覧') {
+      h += '<div class="da-ms-field is-search">' + escHtml(labels[0] || '検索') + '</div>';
+      for (var i = 0; i < 4; i++) h += '<div class="da-ms-card"><span class="da-ms-thumb"></span><span class="da-ms-lines"><span></span><span></span></span></div>';
+    } else {
+      for (var j = 0; j < labels.length; j++) {
+        h += '<div class="da-ms-label">' + escHtml(labels[j]) + '</div><div class="da-ms-field"></div>';
+      }
+    }
+    var btn = SCREEN_BUTTONS[screen.name];
+    if (btn) h += '<div class="da-ms-btn">' + escHtml(btn) + '</div>';
+    h += '</div>';
+    h += '<div class="da-ms-nav"><span class="is-on">ホーム</span><span>検索</span><span>カート</span><span>設定</span></div>';
+    el.innerHTML = h;
+    el.className = 'da-phone-screen' + (isIos ? ' is-ios' : '');
+  }
+
+  function formatClock(sec) {
+    var m = Math.floor(sec / 60), s = sec % 60;
+    return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  function stopTimers() {
+    if (state.discoverTimer) { clearInterval(state.discoverTimer); state.discoverTimer = null; }
+    if (state.discoverClock) { clearInterval(state.discoverClock); state.discoverClock = null; }
+    if (state.runTimer) { clearInterval(state.runTimer); state.runTimer = null; }
+    if (state.runClock) { clearInterval(state.runClock); state.runClock = null; }
+  }
 
   function $(id) {
     return document.getElementById(id);
@@ -5395,33 +5566,66 @@ code{font-family:var(--mono);font-size:11px}
       showError('アプリファイルを選択するか、端末のアプリを選択してください。');
       return;
     }
-
+    stopTimers();
+    setHidden($('da-p1-summary'), true);
     setHidden($('da-discover-progress'), false);
+    // 入力欄が長く、ライブカードは画面下にある。開始した瞬間に見える位置へ寄せる（実物は URL 欄の直下に出る）。
+    var card = $('da-discover-progress');
+    if (card && card.scrollIntoView) card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     var btn = $('da-discover-btn');
     if (btn) btn.disabled = true;
     setHidden($('da-discover-cancel-btn'), false);
+    setHidden($('da-discover-spinner'), false);
     var log = $('da-discover-log');
     if (log) log.innerHTML = '';
     var bar = $('da-discover-bar');
     if (bar) bar.style.width = '0%';
+    setText('da-discover-count', '0画面を発見');
+    setText('da-discover-elapsed', '0秒');
+    var preview = $('da-discover-preview');
+    if (preview) preview.innerHTML = '<div class="da-ms-boot">起動中…</div>';
+
+    // 実物と同じ順: 受付 → 起動 → 静的解析 → 1 画面ずつ探索（ここでプレビューが切り替わる）→ 照合
+    var mock = currentMock();
+    var plan = [
+      { phase: 'アプリをインストールしています…' },
+      { phase: '起動して初期画面を取得しています…' },
+      { phase: 'マニフェストから Activity 一覧を抽出しています（静的）…' }
+    ];
+    for (var i = 0; i < mock.screens.length; i++) plan.push({ phase: '画面を探索しています: ' + mock.screens[i].name, screen: mock.screens[i], n: i + 1 });
+    plan.push({ phase: '未到達 Activity を照合しています…' });
+    plan.push({ phase: '完了', done: true });
+
+    var started = Date.now();
+    state.discoverClock = setInterval(function () {
+      setText('da-discover-elapsed', Math.round((Date.now() - started) / 1000) + '秒');
+    }, 1000);
 
     var idx = 0;
-    var total = DISCOVER_LOG_STEPS.length;
     state.discoverTimer = setInterval(function () {
-      if (idx >= total) {
-        clearInterval(state.discoverTimer);
-        state.discoverTimer = null;
-        finishDiscover();
-        return;
-      }
-      if (log) {
-        var li = document.createElement('li');
-        li.textContent = DISCOVER_LOG_STEPS[idx];
-        log.appendChild(li);
+      var step = plan[idx];
+      setText('da-discover-phase', step.phase);
+      if (step.screen) {
+        renderPhone('da-discover-preview', step.screen);
+        setText('da-discover-caption', 'ライブプレビュー: ' + step.screen.cls);
+        setText('da-discover-count', step.n + '画面を発見');
+        if (log) {
+          var li = document.createElement('li');
+          li.className = 'da-feed-row';
+          li.innerHTML = '<span class="da-feed-no">' + step.n + '</span><span class="da-feed-name">' + escHtml(step.screen.name) + '</span>' +
+            '<code class="da-feed-cls">' + escHtml(step.screen.cls) + '</code><span class="da-feed-meta">入力 ' + step.screen.fields + '</span>';
+          log.appendChild(li);
+          log.scrollTop = log.scrollHeight;
+        }
       }
       idx++;
-      if (bar) bar.style.width = Math.round((idx / total) * 100) + '%';
-    }, 350);
+      if (bar) bar.style.width = Math.round((idx / plan.length) * 100) + '%';
+      if (step.done) {
+        clearInterval(state.discoverTimer); state.discoverTimer = null;
+        clearInterval(state.discoverClock); state.discoverClock = null;
+        finishDiscover();
+      }
+    }, 380);
   }
 
   function finishDiscover() {
@@ -5429,6 +5633,7 @@ code{font-family:var(--mono);font-size:11px}
     var btn = $('da-discover-btn');
     if (btn) btn.disabled = false;
     setHidden($('da-discover-cancel-btn'), true);
+    setHidden($('da-discover-spinner'), true);
     var mock = currentMock();
     var totalFields = 0;
     for (var i = 0; i < mock.screens.length; i++) {
@@ -5442,10 +5647,7 @@ code{font-family:var(--mono);font-size:11px}
   }
 
   function cancelDiscover() {
-    if (state.discoverTimer) {
-      clearInterval(state.discoverTimer);
-      state.discoverTimer = null;
-    }
+    stopTimers();
     resetDiscoverUI();
   }
 
@@ -5577,36 +5779,105 @@ code{font-family:var(--mono);font-size:11px}
   }
 
   function resetRunUI() {
-    setText('da-run-stage', '');
+    setText('da-exec-title', '生成中…');
+    setText('da-exec-elapsed', '00:00');
+    setText('da-exec-message', '対象を受け付けて、生成の準備を進めています。');
+    setText('da-exec-phase', '準備中');
+    setText('da-exec-count', '0 / 0');
+    setText('da-exec-eta', '算出中');
+    setText('da-exec-unreached', '0件');
+    setText('da-exec-saved', '0件');
     var bar = $('da-run-bar');
-    if (bar) bar.style.width = '0%';
+    if (bar) bar.style.width = '4%';
     var log = $('da-run-log');
-    if (log) log.innerHTML = '';
+    if (log) log.textContent = '';
+    for (var i = 0; i < 4; i++) {
+      var st = $('da-estep-' + i);
+      if (st) { st.classList.remove('is-active', 'is-complete'); if (i === 0) st.classList.add('is-active'); }
+    }
+    setHidden($('da-run-phone'), true);
+    setHidden($('da-run-caption'), true);
+    var ph = $('da-run-preview-placeholder');
+    if (ph) ph.classList.remove('hidden');
+    var running = $('da-exec-running-actions');
+    if (running) running.classList.remove('hidden');
+    var done = $('da-exec-actions');
+    if (done) done.classList.add('hidden');
   }
 
   function startGenerate() {
+    stopTimers();
     setStep(3);
     resetRunUI();
-    var idx = 0;
-    var total = RUN_STAGES.length;
+    var mock = currentMock();
+    var selected = [];
+    for (var i = 0; i < mock.screens.length; i++) if (state.selectedScreens[i]) selected.push(mock.screens[i]);
+    var deviceSel = $('da-device');
+    var device = deviceSel && deviceSel.value ? deviceSel.value : '';
+    var appId = ($('da-app-id') && $('da-app-id').value) || mock.id;
+    setText('da-exec-target', appId + (device ? '（' + device + '）' : ''));
+    setText('da-exec-count', '0 / ' + selected.length);
+    setText('da-exec-unreached', mock.unreached.length + '件');
+
+    // 実物の 4 工程（受付 → 画面取得 → 解析 → 結果整理）に対応させる。画面取得の間だけプレビューが動く。
+    var plan = [{ estep: 0, phase: '受付', msg: '対象を受け付けて、生成の準備を進めています。', log: '[受付] ' + appId + ' / ' + (device || '実行先未指定') }];
+    for (var j = 0; j < selected.length; j++) {
+      plan.push({ estep: 1, phase: '画面取得', msg: '画面を取得しています: ' + selected[j].name, screen: selected[j], n: j + 1,
+        log: '[取得] ' + selected[j].name + ' (' + selected[j].cls + ') 入力 ' + selected[j].fields + ' 件' });
+    }
+    plan.push({ estep: 2, phase: '解析', msg: 'フォーム項目と遷移を解析しています…', log: '[解析] 遷移 ' + mock.transitions + ' 件を確定' });
+    plan.push({ estep: 2, phase: '解析', msg: 'テスト条件を組み立てています…', log: '[解析] テスト条件を組み立て（同値分割・境界値・状態遷移）' });
+    plan.push({ estep: 3, phase: '結果整理', msg: '文書を書き出しています…', log: '[出力] report.html / transition.mmd / spec.xlsx' });
+    plan.push({ estep: 3, phase: '結果整理', msg: '文書を書き出しています…', log: '[出力] 未到達 Activity ' + mock.unreached.length + ' 件を一覧化', done: true });
+
+    var TICK = 600;
+    var started = Date.now();
+    state.runClock = setInterval(function () {
+      setText('da-exec-elapsed', formatClock(Math.round((Date.now() - started) / 1000)));
+    }, 1000);
+
     var log = $('da-run-log');
     var bar = $('da-run-bar');
+    var idx = 0;
     state.runTimer = setInterval(function () {
-      if (idx >= total) {
-        clearInterval(state.runTimer);
-        state.runTimer = null;
-        finishGenerate();
-        return;
+      var step = plan[idx];
+      for (var k = 0; k < 4; k++) {
+        var st = $('da-estep-' + k);
+        if (!st) continue;
+        st.classList.remove('is-active', 'is-complete');
+        if (k < step.estep) st.classList.add('is-complete');
+        if (k === step.estep) st.classList.add('is-active');
       }
-      setText('da-run-stage', RUN_STAGES[idx]);
-      if (log) {
-        var li = document.createElement('li');
-        li.textContent = RUN_STAGES[idx];
-        log.appendChild(li);
+      setText('da-exec-phase', step.phase);
+      setText('da-exec-message', step.msg);
+      if (step.screen) {
+        var ph = $('da-run-preview-placeholder');
+        if (ph) ph.classList.add('hidden');
+        setHidden($('da-run-phone'), false);
+        setHidden($('da-run-caption'), false);
+        renderPhone('da-run-preview', step.screen);
+        setText('da-run-caption', step.screen.name + ' — ' + step.screen.cls);
+        setText('da-exec-count', step.n + ' / ' + selected.length);
+        setText('da-exec-saved', step.n + '件');
       }
+      if (log) { log.textContent += (log.textContent ? '\n' : '') + step.log; log.scrollTop = log.scrollHeight; }
       idx++;
-      if (bar) bar.style.width = Math.round((idx / total) * 100) + '%';
-    }, 700);
+      var remain = Math.ceil(((plan.length - idx) * TICK) / 1000);
+      setText('da-exec-eta', remain > 0 ? '約 ' + remain + ' 秒' : '-');
+      if (bar) bar.style.width = Math.max(4, Math.round((idx / plan.length) * 100)) + '%';
+      if (step.done) {
+        clearInterval(state.runTimer); state.runTimer = null;
+        clearInterval(state.runClock); state.runClock = null;
+        for (var m = 0; m < 4; m++) { var s2 = $('da-estep-' + m); if (s2) { s2.classList.remove('is-active'); s2.classList.add('is-complete'); } }
+        setText('da-exec-title', '生成完了');
+        setText('da-exec-phase', '完了');
+        setText('da-exec-message', '文書を書き出しました。「レポートを見る」で結果を確認できます。');
+        var running = $('da-exec-running-actions');
+        if (running) running.classList.add('hidden');
+        var done = $('da-exec-actions');
+        if (done) done.classList.remove('hidden');
+      }
+    }, TICK);
   }
 
   function finishGenerate() {
@@ -5627,16 +5898,17 @@ code{font-family:var(--mono);font-size:11px}
   }
 
   function cancelGenerate() {
-    if (state.runTimer) {
-      clearInterval(state.runTimer);
-      state.runTimer = null;
-    }
+    stopTimers();
     setStep(2);
   }
 
   function bindPanel3() {
     var cancelBtn = $('da-run-cancel-btn');
     if (cancelBtn) cancelBtn.addEventListener('click', cancelGenerate);
+    var newBtn = $('da-exec-new-btn');
+    if (newBtn) newBtn.addEventListener('click', cancelGenerate);
+    var reportBtn = $('da-exec-report-btn');
+    if (reportBtn) reportBtn.addEventListener('click', finishGenerate);
   }
 
   function bindGenerateBtn() {
@@ -5645,6 +5917,7 @@ code{font-family:var(--mono);font-size:11px}
   }
 
   function resetAll() {
+    stopTimers();
     if (state.discoverTimer) {
       clearInterval(state.discoverTimer);
       state.discoverTimer = null;

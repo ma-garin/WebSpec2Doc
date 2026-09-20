@@ -154,9 +154,26 @@
               <button type="button" id="da-discover-cancel-btn" class="btn-outline-sm btn-danger-outline" hidden>中断</button>
             </div>
 
-            <div id="da-discover-progress" hidden>
-              <div class="da-bar"><div class="da-bar-fill" id="da-discover-bar"></div></div>
-              <ul id="da-discover-log" class="da-log"></ul>
+            {# ドキュメント作成の「画面解析」中と同じ作り（discover-live-card: 進行中の文言・発見数・経過・途中経過の
+               リスト）。アプリはエミュレータ上で探索するので、右にその画面のライブプレビューを並べる。 #}
+            <div id="da-discover-progress" class="discover-live-card da-live" hidden>
+              <div class="da-live-grid">
+                <div class="da-live-main">
+                  <div class="discover-live-header">
+                    <span class="spinner" id="da-discover-spinner"></span>
+                    <span id="da-discover-phase" aria-live="polite">対象アプリを確認しています…</span>
+                    <span id="da-discover-count" class="discover-live-count">0画面を発見</span>
+                    <span class="discover-live-elapsed-label">経過:</span>
+                    <span id="da-discover-elapsed" class="discover-live-elapsed">0秒</span>
+                  </div>
+                  <div class="da-bar"><div class="da-bar-fill" id="da-discover-bar"></div></div>
+                  <ul id="da-discover-log" class="da-feed" aria-label="発見した画面"></ul>
+                </div>
+                <div class="da-live-side">
+                  <div class="da-phone"><div class="da-phone-screen" id="da-discover-preview"></div></div>
+                  <div class="da-preview-caption" id="da-discover-caption">ライブプレビュー（エミュレータ）</div>
+                </div>
+              </div>
             </div>
 
             <div id="da-p1-summary" class="stat-cards" hidden>
@@ -237,12 +254,53 @@
           </section>
 
           <!-- ═══════════ パネル3: 実行 ═══════════ -->
-          <section class="da-panel card" id="da-panel-3" hidden>
-            <h2>実行</h2>
-            <strong id="da-run-stage"></strong>
-            <div class="da-bar"><div class="da-bar-fill" id="da-run-bar"></div></div>
-            <ul id="da-run-log" class="da-log"></ul>
-            <button type="button" id="da-run-cancel-btn" class="btn-outline-sm btn-danger-outline">中断</button>
+          {# ドキュメント作成の実行画面（partials/view-generate.html の #execution-view）と同じ構成:
+             上に題名・経過・進捗バー・4 工程、中央にライブプレビュー、下にログとメタ情報・停止。
+             クラスも同じ execution-* を使い、見え方を揃える。プレビューは画像 API の代わりに
+             端末画面のモックを描く。 #}
+          <section class="da-panel" id="da-panel-3" hidden>
+            <div class="execution-view da-exec">
+              <div class="execution-topbar">
+                <div class="execution-topbar-head">
+                  <h2 class="execution-title" id="da-exec-title">生成中…</h2>
+                  <span class="execution-elapsed" id="da-exec-elapsed">00:00</span>
+                </div>
+                <p class="execution-message" id="da-exec-message">対象を受け付けて、生成の準備を進めています。</p>
+                <div class="execution-progress"><div class="execution-progress-bar" id="da-run-bar"></div></div>
+                <div class="execution-steps">
+                  <div class="execution-step is-active" id="da-estep-0">1. 受付</div>
+                  <div class="execution-step" id="da-estep-1">2. 画面取得</div>
+                  <div class="execution-step" id="da-estep-2">3. 解析</div>
+                  <div class="execution-step" id="da-estep-3">4. 結果整理</div>
+                </div>
+              </div>
+              <div class="execution-preview-frame da-preview-frame">
+                <div class="da-phone da-phone-lg" id="da-run-phone" hidden><div class="da-phone-screen" id="da-run-preview"></div></div>
+                <div id="da-run-preview-placeholder" class="execution-preview-placeholder">
+                  <div class="spinner"></div>
+                  <p>ライブプレビューを準備しています…</p>
+                </div>
+                <div class="da-preview-caption da-preview-caption-float" id="da-run-caption" hidden></div>
+              </div>
+              <pre class="execution-log" id="da-run-log"></pre>
+              <div class="execution-bottombar">
+                <dl class="execution-meta-list">
+                  <div class="execution-meta-item"><dt>対象</dt><dd id="da-exec-target">-</dd></div>
+                  <div class="execution-meta-item"><dt>状態</dt><dd id="da-exec-phase">準備中</dd></div>
+                  <div class="execution-meta-item"><dt>進捗</dt><dd id="da-exec-count">0 / 0</dd></div>
+                  <div class="execution-meta-item"><dt>残り時間</dt><dd id="da-exec-eta">算出中</dd></div>
+                  <div class="execution-meta-item"><dt>未到達</dt><dd id="da-exec-unreached">0件</dd></div>
+                  <div class="execution-meta-item"><dt>保存済み</dt><dd id="da-exec-saved">0件</dd></div>
+                </dl>
+                <div class="execution-bottombar-actions" id="da-exec-running-actions">
+                  <button type="button" id="da-run-cancel-btn" class="btn-outline-sm">停止</button>
+                </div>
+                <div class="execution-bottombar-actions hidden" id="da-exec-actions">
+                  <button type="button" id="da-exec-new-btn" class="btn-outline-sm">条件設定に戻る</button>
+                  <button type="button" id="da-exec-report-btn" class="btn-primary">レポートを見る →</button>
+                </div>
+              </div>
+            </div>
           </section>
 
           <!-- ═══════════ パネル4: レポート ═══════════ -->

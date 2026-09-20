@@ -310,3 +310,55 @@
 
 /* システム名が長く（ドキュメント作成(app)）、「切替」が 2 行に折れるのを防ぐ。 */
 .sys-switcher-swap { white-space: nowrap; }
+
+/* ── ライブプレビュー（ドキュメント作成の実行画面と同じ構成に、端末画面のモックを載せる）── */
+.da-live-grid { display: grid; grid-template-columns: minmax(0, 1fr) 236px; gap: 14px; align-items: start; }
+.da-live-main { min-width: 0; }
+.da-live-side { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.da-feed { list-style: none; margin: 10px 0 0; padding: 0; max-height: 156px; overflow-y: auto; display: flex; flex-direction: column; gap: 1px; }
+.da-feed-row { display: flex; align-items: center; gap: 8px; padding: 4px 6px; font-size: 12px; background: var(--sf); border-radius: 4px; }
+.da-feed-no { width: 18px; text-align: right; color: var(--tx2); font-variant-numeric: tabular-nums; }
+.da-feed-name { font-weight: 600; }
+.da-feed-cls { font-size: 11px; color: var(--tx2); }
+.da-feed-meta { margin-left: auto; font-size: 11px; color: var(--tx2); white-space: nowrap; }
+.da-preview-caption { font-size: 11px; color: var(--tx2); text-align: center; }
+.da-preview-caption-float { position: absolute; left: 12px; bottom: 10px; background: rgba(255,255,255,.9); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; }
+
+/* 実行画面はドキュメント作成と同じく 1 画面完結。パネルを .da-panels の内容高さいっぱいに広げ、
+   app.css の .execution-view（height:100% / preview flex:1）がそのまま効くようにする。
+   端末フレームはプレビュー枠の高さに合わせて縮む（縦横比固定）。 */
+#da-panel-3 { height: 100%; }
+.da-preview-frame { position: relative; }
+
+/* 端末フレーム */
+.da-phone { width: 210px; height: 420px; border-radius: 26px; background: #111; padding: 10px; box-shadow: 0 6px 18px rgba(0,0,0,.25); flex: none; }
+.da-phone-screen { width: 100%; height: 100%; border-radius: 18px; background: #F5F6F8; overflow: hidden; display: flex; flex-direction: column; font-size: 10px; color: #1F2937; }
+.da-ms-boot { flex: 1; display: grid; place-items: center; color: #6B7280; }
+.da-ms-status { display: flex; justify-content: space-between; padding: 4px 10px 2px; font-size: 9px; color: #374151; }
+.da-ms-appbar { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: #2563EB; color: #fff; font-weight: 700; }
+.da-phone-screen.is-ios .da-ms-appbar { background: #F5F6F8; color: #111; border-bottom: 1px solid #E5E7EB; justify-content: center; position: relative; }
+.da-phone-screen.is-ios .da-ms-icon { position: absolute; left: 10px; color: #2563EB; font-size: 14px; }
+.da-ms-icon { font-size: 13px; }
+.da-ms-body { flex: 1; padding: 10px; display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
+.da-ms-label { font-size: 9px; color: #6B7280; margin-top: 2px; }
+.da-ms-field { height: 22px; border: 1px solid #D1D5DB; border-radius: 6px; background: #fff; }
+.da-ms-field.is-search { display: flex; align-items: center; padding: 0 8px; color: #9CA3AF; border-radius: 999px; }
+.da-ms-btn { margin-top: auto; height: 26px; border-radius: 6px; background: #2563EB; color: #fff; display: grid; place-items: center; font-weight: 700; }
+.da-phone-screen.is-ios .da-ms-btn { border-radius: 10px; }
+.da-ms-card { display: flex; gap: 8px; align-items: center; padding: 6px; background: #fff; border: 1px solid #E5E7EB; border-radius: 8px; }
+.da-ms-thumb { width: 34px; height: 34px; border-radius: 6px; background: #E5E7EB; flex: none; }
+.da-ms-lines { display: flex; flex-direction: column; gap: 5px; flex: 1; }
+.da-ms-lines span { display: block; height: 6px; border-radius: 3px; background: #E5E7EB; }
+.da-ms-lines span:last-child { width: 60%; }
+.da-ms-logo { flex: 1; display: grid; place-items: center; font-size: 16px; font-weight: 800; color: #2563EB; }
+.da-ms-done { margin-top: 30px; width: 40px; height: 40px; border-radius: 50%; background: #DCF5EE; color: #0A7359; display: grid; place-items: center; font-size: 20px; align-self: center; }
+.da-ms-text { text-align: center; color: #374151; }
+.da-ms-nav { display: flex; justify-content: space-around; padding: 6px 4px; border-top: 1px solid #E5E7EB; background: #fff; font-size: 8px; color: #6B7280; }
+.da-ms-nav .is-on { color: #2563EB; font-weight: 700; }
+@media (max-width: 900px) { .da-live-grid { grid-template-columns: 1fr; } .da-live-side { align-items: flex-start; } }
+
+/* .da-phone（固定 210×420）より後に置いて上書きする。実行画面ではプレビュー枠の高さに合わせて縮む。 */
+.da-phone-lg { height: 100%; max-height: 440px; width: auto; aspect-ratio: 1 / 2; }
+
+/* ログが伸びるとプレビュー枠（flex:1）が押し潰されて端末が読めなくなる。ログは 4〜5 行に抑え、残りは内側でスクロール。 */
+.da-exec .execution-log { max-height: 96px; }

@@ -1,0 +1,294 @@
+{# モック・実行なし: 既存「ドキュメント作成」をスマホアプリ（APK / .app）向けに特化したモック画面。
+   fetch は行わず、入力と画面遷移の確認のみを目的とする。 #}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <title>ドキュメント作成(app) - WebSpec2Doc</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app-components.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/ta2.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/doc-app.css') }}?v={{ _ver }}">
+</head>
+<body class="app-page">
+<a href="#app-content" class="skip-link">本文へスキップ</a>
+<div class="app-shell">
+
+  <aside class="app-sidebar">
+    <a class="app-brand" href="/systems">
+      <span class="app-brand-mark">DA</span>
+      <span class="app-brand-text">WebSpec2Doc
+        <small>QAドキュメント生成（app）</small>
+      </span>
+    </a>
+    <a class="sys-switcher" href="/systems">
+      <span class="sys-switcher-label">システム</span>
+      <span class="sys-switcher-cur" id="sys-current-name">ドキュメント作成(app)</span>
+      <span class="sys-switcher-swap">切替</span>
+    </a>
+    <nav class="app-nav">
+      <div class="app-nav-group">
+        <p class="app-nav-group-label">アプリ</p>
+        <a class="app-nav-item is-active" id="da-nav-new" href="/doc-app">新規解析（アプリ）</a>
+        <a class="app-nav-item" id="da-nav-history" href="#" aria-disabled="true" title="モックのため未実装">実行履歴</a>
+      </div>
+      <div class="app-nav-group">
+        <p class="app-nav-group-label">サポート</p>
+        <a class="app-nav-item" href="/user-guide">利用ガイド</a>
+      </div>
+    </nav>
+    <p class="app-sidebar-foot">APK / .app から画面仕様書・テスト設計・画面遷移図を生成します（モック）。</p>
+  </aside>
+
+  <div class="app-main">
+    {% set topbar_crumb = 'ドキュメント作成(app)' %}
+    {% set topbar_title = 'ドキュメント作成(app)' %}
+    {% include 'partials/topbar.html' %}
+
+    <main class="app-content" id="app-content">
+      <div class="da-content">
+
+        <div>
+          <div id="da-mock-banner" class="da-mock-banner">モック画面: 入力と画面の流れだけを確認できます。解析・生成は実行しません。</div>
+          <div id="da-error" class="da-banner-error" role="alert" hidden></div>
+
+          <div class="wizard-progress" id="da-wizard-progress">
+            <div class="wizard-step-node is-active" id="da-ws-1">
+              <div class="wizard-step-circle">1</div>
+              <span class="wizard-step-label">アプリ解析</span>
+            </div>
+            <div class="wizard-step-line" id="da-wl-1"></div>
+            <div class="wizard-step-node" id="da-ws-2">
+              <div class="wizard-step-circle">2</div>
+              <span class="wizard-step-label">条件設定</span>
+            </div>
+            <div class="wizard-step-line" id="da-wl-2"></div>
+            <div class="wizard-step-node" id="da-ws-3">
+              <div class="wizard-step-circle">3</div>
+              <span class="wizard-step-label">実行</span>
+            </div>
+            <div class="wizard-step-line" id="da-wl-3"></div>
+            <div class="wizard-step-node" id="da-ws-4">
+              <div class="wizard-step-circle">4</div>
+              <span class="wizard-step-label">レポート</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="da-panels">
+
+          <!-- ═══════════ パネル1: アプリ解析 ═══════════ -->
+          <section class="da-panel card" id="da-panel-1">
+            <h2>アプリ解析</h2>
+
+            <p class="form-label">プラットフォーム</p>
+            <label class="checkbox-chip" for="da-platform-android">
+              <input type="radio" id="da-platform-android" name="da-platform" value="android" checked>
+              Android（.apk / .aab）
+            </label>
+            <label class="checkbox-chip" for="da-platform-ios">
+              <input type="radio" id="da-platform-ios" name="da-platform" value="ios">
+              iOS（.app / .zip・シミュレータ専用）
+            </label>
+
+            <p class="form-label">入力方式</p>
+            <label class="checkbox-chip" for="da-source-r-file">
+              <input type="radio" id="da-source-r-file" name="da-source" value="file" checked>
+              アプリファイルを選ぶ
+            </label>
+            <label class="checkbox-chip" for="da-source-r-device">
+              <input type="radio" id="da-source-r-device" name="da-source" value="device">
+              端末に入っているアプリから選ぶ
+            </label>
+
+            <div id="da-source-file">
+              <label class="form-label" for="da-file">アプリファイル</label>
+              <input type="file" id="da-file" accept=".apk,.aab">
+              <span id="da-file-name"></span>
+            </div>
+            <div id="da-source-device" hidden>
+              <label class="form-label" for="da-device-app">端末内アプリ</label>
+              <select id="da-device-app" class="input-compact"></select>
+            </div>
+
+            <label class="form-label" for="da-app-id">パッケージ名 / バンドル ID</label>
+            <input type="text" id="da-app-id" class="url-input" placeholder="com.example.app">
+
+            <label class="form-label" for="da-device">実行先</label>
+            <select id="da-device" class="input-compact"></select>
+
+            <p class="form-label">探索範囲</p>
+            <label class="checkbox-chip" for="da-scope-r-quick">
+              <input type="radio" id="da-scope-r-quick" name="da-scope" value="quick">
+              主要画面（深さ2・20画面）
+            </label>
+            <label class="checkbox-chip" for="da-scope-r-standard">
+              <input type="radio" id="da-scope-r-standard" name="da-scope" value="standard" checked>
+              標準（深さ3・50画面）
+            </label>
+            <label class="checkbox-chip" for="da-scope-r-custom">
+              <input type="radio" id="da-scope-r-custom" name="da-scope" value="custom">
+              カスタム
+            </label>
+            <div id="da-scope-custom-fields" hidden>
+              <label class="form-label" for="da-depth">深さ</label>
+              <input type="number" id="da-depth" class="input-compact" value="3">
+              <label class="form-label" for="da-max-screens">上限画面数</label>
+              <input type="number" id="da-max-screens" class="input-compact" value="50">
+            </div>
+
+            <p class="form-label">ログイン（任意）</p>
+            <label class="form-label" for="da-login-user">ユーザー名</label>
+            <input type="text" id="da-login-user" class="input-compact">
+            <label class="form-label" for="da-login-pass">パスワード</label>
+            <input type="password" id="da-login-pass" class="input-compact">
+            <button type="button" id="da-login-record-btn" class="btn-outline-sm">端末でログインして保存</button>
+
+            <div>
+              <button type="button" id="da-discover-btn" class="btn-primary">アプリ解析</button>
+              <button type="button" id="da-discover-cancel-btn" class="btn-outline-sm btn-danger-outline" hidden>中断</button>
+            </div>
+
+            <div id="da-discover-progress" hidden>
+              <div class="da-bar"><div class="da-bar-fill" id="da-discover-bar"></div></div>
+              <ul id="da-discover-log" class="da-log"></ul>
+            </div>
+
+            <div id="da-p1-summary" class="stat-cards" hidden>
+              <div class="stat-card">
+                <div class="stat-card-head"><span class="stat-card-icon">■</span><span class="stat-card-label">検出画面</span></div>
+                <div class="stat-card-num" id="da-stat-screens">0</div>
+                <div class="stat-card-sub"></div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-card-head"><span class="stat-card-icon">■</span><span class="stat-card-label">遷移</span></div>
+                <div class="stat-card-num" id="da-stat-transitions">0</div>
+                <div class="stat-card-sub"></div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-card-head"><span class="stat-card-icon">■</span><span class="stat-card-label">入力項目</span></div>
+                <div class="stat-card-num" id="da-stat-fields">0</div>
+                <div class="stat-card-sub"></div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-card-head"><span class="stat-card-icon">■</span><span class="stat-card-label">未到達 Activity</span></div>
+                <div class="stat-card-num" id="da-stat-unreached">0</div>
+                <div class="stat-card-sub"></div>
+              </div>
+            </div>
+            <button type="button" id="da-p1-next-btn" class="btn-primary hidden">条件設定へ →</button>
+          </section>
+
+          <!-- ═══════════ パネル2: 条件設定 ═══════════ -->
+          <section class="da-panel card" id="da-panel-2" hidden>
+            <h2>条件設定
+              <button type="button" id="da-p2-back-btn" class="btn-outline-sm">← アプリ解析に戻る</button>
+            </h2>
+
+            <p class="form-label">解析方法</p>
+            <label class="checkbox-chip" for="da-mode-r-selected">
+              <input type="radio" id="da-mode-r-selected" name="da-mode" value="selected" checked>
+              選んだ画面だけ
+            </label>
+            <label class="checkbox-chip" for="da-mode-r-auto">
+              <input type="radio" id="da-mode-r-auto" name="da-mode" value="auto">
+              自動探索（深さ・上限で打ち切り）
+            </label>
+
+            <label class="form-label" for="da-crawl-depth">深さ</label>
+            <input type="number" id="da-crawl-depth" class="input-compact" value="3">
+            <label class="form-label" for="da-crawl-max">上限画面数</label>
+            <input type="number" id="da-crawl-max" class="input-compact" value="50">
+
+            <div>
+              <button type="button" id="da-select-all-btn" class="btn-outline-sm">全選択</button>
+              <button type="button" id="da-clear-all-btn" class="btn-outline-sm">全解除</button>
+              <span id="da-selected-count"></span>
+            </div>
+            <div id="da-screen-list" class="da-screen-list"></div>
+
+            <label class="form-label" for="da-reference-doc">参考文書</label>
+            <input type="file" id="da-reference-doc" multiple>
+
+            <p class="form-label">出力形式</p>
+            <label class="checkbox-chip" for="da-format-html">
+              <input type="checkbox" id="da-format-html" name="da-format" value="html" checked>
+              HTML
+            </label>
+            <label class="checkbox-chip" for="da-format-md">
+              <input type="checkbox" id="da-format-md" name="da-format" value="md" checked>
+              Markdown
+            </label>
+            <label class="checkbox-chip" for="da-format-json">
+              <input type="checkbox" id="da-format-json" name="da-format" value="json" checked>
+              JSON
+            </label>
+            <label class="checkbox-chip" for="da-format-xlsx">
+              <input type="checkbox" id="da-format-xlsx" name="da-format" value="xlsx">
+              Excel
+            </label>
+
+            <button type="button" id="da-generate-btn" class="btn-primary">生成開始</button>
+          </section>
+
+          <!-- ═══════════ パネル3: 実行 ═══════════ -->
+          <section class="da-panel card" id="da-panel-3" hidden>
+            <h2>実行</h2>
+            <strong id="da-run-stage"></strong>
+            <div class="da-bar"><div class="da-bar-fill" id="da-run-bar"></div></div>
+            <ul id="da-run-log" class="da-log"></ul>
+            <button type="button" id="da-run-cancel-btn" class="btn-outline-sm btn-danger-outline">中断</button>
+          </section>
+
+          <!-- ═══════════ パネル4: レポート ═══════════ -->
+          <section class="da-panel card" id="da-panel-4" hidden>
+            <h2>レポート</h2>
+            <div class="stat-cards">
+              <div class="stat-card">
+                <div class="stat-card-head"><span class="stat-card-icon">■</span><span class="stat-card-label">検出画面</span></div>
+                <div class="stat-card-num" id="da-result-screens">0</div>
+                <div class="stat-card-sub"></div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-card-head"><span class="stat-card-icon">■</span><span class="stat-card-label">遷移</span></div>
+                <div class="stat-card-num" id="da-result-transitions">0</div>
+                <div class="stat-card-sub"></div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-card-head"><span class="stat-card-icon">■</span><span class="stat-card-label">入力項目</span></div>
+                <div class="stat-card-num" id="da-result-fields">0</div>
+                <div class="stat-card-sub"></div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-card-head"><span class="stat-card-icon">■</span><span class="stat-card-label">未到達 Activity</span></div>
+                <div class="stat-card-num" id="da-result-unreached">0</div>
+                <div class="stat-card-sub"></div>
+              </div>
+            </div>
+
+            <div id="da-report-links" class="da-report-links">
+              <button type="button" class="btn-outline-sm" disabled title="モックのため未生成">画面仕様書 (report.html)</button>
+              <button type="button" class="btn-outline-sm" disabled title="モックのため未生成">遷移図 (transition.mmd)</button>
+              <button type="button" class="btn-outline-sm" disabled title="モックのため未生成">項目定義 (spec.xlsx)</button>
+              <button type="button" class="btn-outline-sm" disabled title="モックのため未生成">未到達 Activity 一覧</button>
+            </div>
+
+            <button type="button" id="da-restart-btn" class="btn-outline-sm">最初から</button>
+          </section>
+
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+{# core.js はダッシュボード専用（#add-site-btn 等を前提に addEventListener する）ため読まない。healing.html と同じ構成。 #}
+<script src="{{ url_for('static', filename='js/user-menu.js') }}?v={{ _ver }}"></script>
+<script src="{{ url_for('static', filename='js/doc-app.js') }}?v={{ _ver }}"></script>
+</body>
+</html>

@@ -1,0 +1,312 @@
+/* ドキュメント作成（アプリ解析）モック画面の差分 CSS。
+   ta2.css の 1 画面完結構造（overflow:hidden / grid-template-rows）に載せた独自規則。 */
+
+/* hidden 属性を必ず効かせる。display:flex / display:grid を持つ要素を hidden で出し分けるため。 */
+[hidden] { display: none !important; }
+
+/* ── コンテナレイアウト ── */
+.da-content {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 0;
+  height: 100%;
+}
+
+.da-panels {
+  min-height: 0;
+  overflow: auto;
+  padding: 16px 22px 24px;
+}
+
+/* ── パネル基本 ── */
+/* パネルの表示切替は hidden 属性（JS の setStep）に一本化する。クラスで二重管理しない。 */
+
+.da-panel .card {
+  margin: 0 0 20px;
+}
+.da-panel .card:last-child {
+  margin-bottom: 0;
+}
+
+/* ── モック情報バナー ── */
+.da-mock-banner {
+  margin: 0 0 16px;
+  padding: 8px 14px;
+  border-left: 3px solid var(--ac);
+  background: var(--ac-bg);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--tx);
+}
+
+.da-banner-error {
+  border-left-color: #991B1B;
+  background: #FEE2E2;
+  color: #991B1B;
+}
+
+/* ── フォームフィールド ── */
+.da-field-label {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--tx2);
+  margin-bottom: 4px;
+}
+
+/* 必須マーク */
+.da-field-req {
+  font-size: 10px;
+  color: #B42318;
+  margin-left: 4px;
+}
+
+/* ── グリッドレイアウト ── */
+.da-grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 20px;
+}
+
+@media (max-width: 900px) {
+  .da-grid2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── チップ行 ── */
+.da-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ── プログレスバー ── */
+.da-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.da-bar-fill {
+  height: 100%;
+  width: 0;
+  background: var(--ac);
+  transition: width 0.3s ease;
+}
+
+/* ── ログリスト ── */
+.da-log {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 12px;
+  max-height: 180px;
+  overflow: auto;
+  color: var(--tx);
+}
+
+.da-log li {
+  padding: 4px 0;
+  line-height: 1.5;
+}
+
+.da-log li.is-done::before {
+  content: "✓ ";
+  color: #10B981;
+  font-weight: 700;
+  margin-right: 6px;
+}
+
+/* ── 画面一覧 ── */
+.da-screen-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 320px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  background: var(--sf);
+}
+
+.da-screen-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.da-screen-row:hover {
+  background: var(--bg);
+}
+
+.da-screen-row input[type="checkbox"] {
+  margin: 0;
+}
+
+.da-screen-name {
+  font-size: 13px;
+  color: var(--tx);
+  flex: 0 0 auto;
+  min-width: 120px;
+}
+
+.da-screen-cls {
+  font-size: 11px;
+  color: var(--tx2);
+  flex: 0 0 auto;
+}
+
+.da-screen-fields {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--tx2);
+  flex: 0 0 auto;
+}
+
+/* ── レポートボタン行 ── */
+.da-report-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.da-report-links button {
+  cursor: pointer;
+}
+
+.da-report-links button[disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ── ナビゲーション ── */
+.app-nav-item[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── 統計カード ── */
+.stat-card {
+  min-height: 100px;
+}
+
+/* ── ウィザード進捗（共通スタイルを補完） ── */
+.wizard-progress {
+  padding: 12px 22px;
+  border-bottom: 1px solid var(--line);
+  background: var(--sf);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.wizard-step-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.wizard-step-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--tx2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  border: 2px solid var(--line);
+  transition: all 0.2s ease;
+}
+
+.wizard-step-node.is-active .wizard-step-circle {
+  background: var(--ac);
+  color: white;
+  border-color: var(--ac);
+}
+
+.wizard-step-node.is-done .wizard-step-circle {
+  background: #10B981;
+  color: white;
+  border-color: #10B981;
+}
+
+.wizard-step-node.is-done .wizard-step-circle::after {
+  content: "✓";
+}
+
+.wizard-step-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--tx2);
+  text-align: center;
+  max-width: 80px;
+}
+
+.wizard-step-node.is-active .wizard-step-label {
+  color: var(--ac);
+}
+
+.wizard-step-line {
+  flex: 1;
+  height: 2px;
+  background: var(--line);
+  margin: 0 8px;
+  align-self: flex-start;
+  margin-top: 18px;
+}
+
+.wizard-step-node.is-done ~ .wizard-step-line {
+  background: #10B981;
+}
+
+/* ── 選択状態の視認性 ── */
+.da-screen-row.is-selected {
+  background: var(--ac-bg);
+}
+
+.da-screen-row.is-selected .da-screen-name {
+  font-weight: 700;
+  color: var(--ac);
+}
+
+/* ── セクション見出し ── */
+.da-section-head {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--tx);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.da-section-head .btn-outline-sm {
+  margin-left: auto;
+}
+
+/* ── 小ラベルとメタ情報 ── */
+.da-meta-item {
+  font-size: 12px;
+  color: var(--tx2);
+}
+
+.da-meta-val {
+  font-family: ui-monospace, monospace;
+  color: var(--tx);
+}
+
+/* システム名が長く（ドキュメント作成(app)）、「切替」が 2 行に折れるのを防ぐ。 */
+.sys-switcher-swap { white-space: nowrap; }

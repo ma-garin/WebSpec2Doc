@@ -6,7 +6,8 @@
      System 02 テスト自動化     = #6D4AC4 / #EDE7FB / #4A2E93
      System 03 AutoRun          = #0E9C7A / #DCF5EE / #0A7359
      System 04 CLI・API         = #4B5563 / #E5E7EB / #1F2937
-     System 05 オートヒーリング = #B45309 / #FEF3C7 / #92400E */
+     System 05 オートヒーリング = #B45309 / #FEF3C7 / #92400E
+     System 01·app ドキュメント作成(app) = #0891B2 / #CFFAFE / #155E75（01 の派生。青系で近づけつつ区別） */
 
 .sysselect-body {
   margin: 0;
@@ -40,10 +41,12 @@
 
 .sysselect-grid {
   display: grid;
-  /* カードは 5 枚（01 ドキュメント作成 / 02 テスト自動化 / 03 AutoRun / 04 CLI・API /
-     05 オートヒーリング）。auto-fit に任せると幅によって「2 段目に 1 枚だけ」が生まれ、
-     余った 1 枚を目で拾い直すことになる。段の割れ方を幅ごとに決め打ちする。 */
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  /* カードは 7 枚（指揮 / 01 ドキュメント作成 / 01·app ドキュメント作成(app) / 02 テスト自動化 /
+     03 AutoRun / 04 CLI・API / 05 オートヒーリング）。auto-fit に任せると幅によって
+     「2 段目に 1 枚だけ」が生まれ、余った 1 枚を目で拾い直すことになる。
+     7 枚は 4 + 3 で割り、段の割れ方を幅ごとに決め打ちする（system-select.html 冒頭の
+     インライン上書きも同じ値にしてある）。 */
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
   width: 100%;
   max-width: 1500px;
@@ -77,6 +80,8 @@
 .syscard-cli .syscard-accent { background: #4B5563; }
 .syscard-heal:hover { border-color: #B45309; }
 .syscard-heal .syscard-accent { background: #B45309; }
+.syscard-app:hover { border-color: #0891B2; }
+.syscard-app .syscard-accent { background: #0891B2; }
 
 .syscard-icon {
   width: 48px; height: 48px; border-radius: 10px;
@@ -96,6 +101,8 @@
 .syscard-test .syscard-no { color: #4A2E93; }
 .syscard-cli .syscard-no { color: #1F2937; }
 .syscard-heal .syscard-no { color: #92400E; }
+.syscard-app .syscard-icon { background: #CFFAFE; color: #155E75; }
+.syscard-app .syscard-no { color: #155E75; }
 
 .syscard-title { font-size: 18px; font-weight: 800; }
 .syscard-desc {
@@ -123,6 +130,7 @@
    ここだけ導線に見えないので、他の 3 枚と同じ規則を与える。 */
 .syscard-cli .syscard-open { color: #1F2937; }
 .syscard-heal .syscard-open { color: #92400E; }
+.syscard-app .syscard-open { color: #155E75; }
 
 .syscard-badge {
   position: absolute; top: 16px; right: 16px;
@@ -144,11 +152,7 @@
   color: var(--tx3);
 }
 
-/* 5 枚を横一列に置けるのは十分に広い PC ウィンドウだけ。狭くなるにつれて
-   3 枚 + 2 枚 → 2 枚ずつ → 1 列と落とす。どの段でも「1 枚だけ余る」形を避ける。 */
-@media (max-width: 1420px) {
-  .sysselect-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-}
+/* 7 枚は広い PC ウィンドウで 4 + 3。狭くなるにつれて 2 枚ずつ → 1 列と落とす。 */
 @media (max-width: 1040px) {
   .sysselect-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

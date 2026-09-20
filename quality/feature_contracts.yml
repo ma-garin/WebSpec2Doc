@@ -2730,6 +2730,25 @@
         "error_path",
         "evidence"
       ]
+    },
+    {
+      "feature_id": "doc_app_mock",
+      "name": "ドキュメント作成(app)（スマホアプリ向け入口・モック）",
+      "risk_level": "low",
+      "status": "planned",
+      "ui_files": [
+        "templates/system-select.html",
+        "templates/doc-app.html",
+        "static/css/system-select.css",
+        "static/css/doc-app.css",
+        "static/js/doc-app.js"
+      ],
+      "route_files": [
+        "web/routes/pages.py"
+      ],
+      "core_files": [],
+      "symbols": [],
+      "notes": "モック段階。/doc-app は画面と 4 ステップの流れだけを描き、解析・生成 API（/api/app-discover, /api/app-generate）は未実装。実装時は src/crawler の PageData に落とすモバイルアダプタを core_files に追加し status を partial/implemented に上げる。"
     }
   ]
 }

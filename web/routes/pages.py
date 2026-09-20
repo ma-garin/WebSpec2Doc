@@ -146,6 +146,17 @@ def systems() -> str:
     return render_template("system-select.html")
 
 
+@bp.route("/doc-app")
+def doc_app() -> str:
+    """ドキュメント作成(app)。System 01 をスマホアプリ（APK / .app）向けに特化した入口。
+
+    現段階はモック: 入力と 4 ステップ（アプリ解析 → 条件設定 → 実行 → レポート）の流れだけを
+    画面で確認する。解析・生成の API は未実装で、JS も fetch を一切しない。
+    index.html を共用しないのは healing / test-automation と同じ判断（独立シェル）。
+    """
+    return render_template("doc-app.html")
+
+
 @bp.route("/cli")
 def cli_mode() -> str:
     """CLI モード（System 03）の案内。

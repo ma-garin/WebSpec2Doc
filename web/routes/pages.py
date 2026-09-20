@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from flask import Blueprint, Response, abort, redirect, render_template, request
+from flask import Blueprint, Response, abort, redirect, render_template
 
 bp = Blueprint("pages", __name__)
 

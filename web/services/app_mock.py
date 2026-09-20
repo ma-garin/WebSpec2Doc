@@ -42,7 +42,9 @@ def _base(url: str) -> str:
     return f"{parts.scheme}://{parts.hostname}"
 
 
-def discover_sse(url: str, run_id: str, sleep: Callable[[float], None] = time.sleep) -> Iterator[str]:
+def discover_sse(
+    url: str, run_id: str, sleep: Callable[[float], None] = time.sleep
+) -> Iterator[str]:
     """/api/discover-stream と同じ SSE 行を返す（run_id → 進行イベント → page → done）。"""
     base = _base(url)
     yield f"data: {json.dumps({'run_id': run_id})}\n\n"
@@ -96,7 +98,15 @@ def run_stream(
             if src.is_file():
                 shutil.copyfile(src, shots_dir / name)
         sleep(0.9)
-        yield ev({"event": "page_completed", "index": index, "url": url, "total": total, "elapsed_sec": 0.9})
+        yield ev(
+            {
+                "event": "page_completed",
+                "index": index,
+                "url": url,
+                "total": total,
+                "elapsed_sec": 0.9,
+            }
+        )
         # execution.js は saved_count で保存数を数える（0 件だと「取得できた画面がありません」になる）
         yield ev({"event": "checkpoint_saved", "saved_count": index, "total": total})
     # 生成フェーズも実物と同じイベント（generate_started → generate_completed × n）で進捗を出す
@@ -107,7 +117,14 @@ def run_stream(
         sleep(0.5)
         if index == len(steps):
             shutil.copytree(FIXTURE_DIR, domain_dir, dirs_exist_ok=True)
-        yield ev({"event": "generate_completed", "index": index, "label": label, "total_steps": len(steps)})
+        yield ev(
+            {
+                "event": "generate_completed",
+                "index": index,
+                "label": label,
+                "total_steps": len(steps),
+            }
+        )
     yield "出力: report.html / report.json / spec.xlsx / transition.mmd\n"
     yield "完了\n"
     report = domain_dir / "report.html"

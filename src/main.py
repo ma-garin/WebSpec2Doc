@@ -509,13 +509,12 @@ def _next_replay_name(output_dir: Path) -> str:
 
 def _import_recording(args: argparse.Namespace) -> None:
     """Recorder(.json)/Selenium IDE(.side) の記録を取り込み、session_NNN.flow.json + .jsonl を書く。"""
+    from capture.session_recorder import SESSIONS_DIR_NAME
     from capture.userflow import (
         load_recording,
         save_user_flow,
         user_flow_to_events,
     )
-
-    from capture.session_recorder import SESSIONS_DIR_NAME
 
     path = Path(str(getattr(args, "import_recording", "") or ""))
     if not path.exists():

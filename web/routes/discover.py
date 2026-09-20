@@ -9,6 +9,7 @@ from flask import Blueprint, Response, request
 
 from web.config import DISCOVER_TIMEOUT_SEC, MAX_DEPTH, MAX_PAGES_LIMIT, MAX_PARALLELISM
 from web.process import _RUNNING_PROCS, _terminate_proc
+from web.services import app_mock
 from web.validation import _clean_int, _safe_auth_path
 
 bp = Blueprint("discover", __name__)
@@ -50,6 +51,13 @@ def api_discover() -> Response | tuple[dict, int] | dict:
 def api_discover_stream() -> Response | tuple[dict, int]:
     """発見ページを SSE（text/event-stream）でリアルタイム配信する。"""
     url = request.form.get("url", "").strip()
+    if app_mock.is_app_target(url):
+        # ドキュメント作成(app) のモック。画面側は同じ SSE を読むだけで分岐しない。
+        return Response(
+            app_mock.discover_sse(url, uuid.uuid4().hex),
+            mimetype="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
     depth = str(_clean_int(request.form.get("depth", "2"), 2, 1, MAX_DEPTH))
     max_pages = str(_clean_int(request.form.get("max_pages", "30"), 30, 1, MAX_PAGES_LIMIT))
     auth = _safe_auth_path(request.form.get("auth", "").strip())

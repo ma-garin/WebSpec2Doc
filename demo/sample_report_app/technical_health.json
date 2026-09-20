@@ -1,0 +1,71 @@
+{
+  "claim_boundary": "クロール中に到達・観測できた対象のみ",
+  "summary": {
+    "page_http_errors": 0,
+    "broken_links": 0,
+    "console_errors": 0,
+    "mixed_content": 0
+  },
+  "screens": [
+    {
+      "url": "https://app.sampleshop/HomeActivity",
+      "title": "SampleShop - ホーム",
+      "status_code": 200,
+      "http_error": false,
+      "broken_links": [],
+      "console_errors": [],
+      "mixed_content": [],
+      "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P001.png"
+    },
+    {
+      "url": "https://app.sampleshop/ProductListActivity",
+      "title": "SampleShop - 商品一覧",
+      "status_code": 200,
+      "http_error": false,
+      "broken_links": [],
+      "console_errors": [],
+      "mixed_content": [],
+      "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P002.png"
+    },
+    {
+      "url": "https://app.sampleshop/CheckoutActivity",
+      "title": "SampleShop - お支払い・決済",
+      "status_code": 200,
+      "http_error": false,
+      "broken_links": [],
+      "console_errors": [],
+      "mixed_content": [],
+      "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P003.png"
+    },
+    {
+      "url": "https://app.sampleshop/ContactActivity",
+      "title": "SampleShop - お問い合わせ",
+      "status_code": 200,
+      "http_error": false,
+      "broken_links": [],
+      "console_errors": [],
+      "mixed_content": [],
+      "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P004.png"
+    },
+    {
+      "url": "https://app.sampleshop/MyPageActivity",
+      "title": "SampleShop - マイページ",
+      "status_code": 200,
+      "http_error": false,
+      "broken_links": [],
+      "console_errors": [],
+      "mixed_content": [],
+      "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P005.png"
+    },
+    {
+      "url": "https://app.sampleshop/CampaignActivity",
+      "title": "SampleShop - キャンペーン",
+      "status_code": 200,
+      "http_error": false,
+      "broken_links": [],
+      "console_errors": [],
+      "mixed_content": [],
+      "screenshot_path": "/tmp/claude-0/-home-user-WebSpec2Doc/b27e42ae-a7fd-520d-be02-c03a23f47118/scratchpad/sample_gen/127.0.0.1:8767/screenshots/P006.png"
+    }
+  ]
+}

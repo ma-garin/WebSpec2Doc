@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from flask import Blueprint, Response, abort, redirect, render_template, request
+from flask import Blueprint, Response, abort, redirect, render_template
 
 bp = Blueprint("pages", __name__)
 
@@ -144,6 +144,17 @@ def test_automation() -> str:
 def systems() -> str:
     """システム選択ハブ。ドキュメント作成／テスト自動化のどちらを開くか選ばせる。"""
     return render_template("system-select.html")
+
+
+@bp.route("/doc-app")
+def doc_app() -> str:
+    """ドキュメント作成(app)。System 01 をスマホアプリ（APK / .app）向けに特化した入口。
+
+    画面はドキュメント作成そのもの（index.html: 解析 → 条件設定 → 実行 → レポート）を共用し、
+    ステップ 1 の入力だけをアプリ向けに差し替える（app_mode）。対象は ``https://app.<package>``
+    という擬似 URL で流し、サーバ側（web/services/app_mock.py）がモック実行に切り替える。
+    """
+    return render_template("index.html", app_mode=True)
 
 
 @bp.route("/cli")

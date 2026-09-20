@@ -22,7 +22,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/account-view.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='vendor/driver.js/driver.css') }}?v={{ _ver }}">
 </head>
-<body class="app-page">
+<body class="app-page"{% if app_mode %} data-app-mode="1"{% endif %}>
 <a href="#app-content" class="skip-link">本文へスキップ</a>
 <div class="app-shell">
 
@@ -32,7 +32,7 @@
       {# 副題はシステムごとに違う。docs のままだとテスト自動化でも「QAドキュメント生成」と
          名乗ってしまい、どのシステムにいるのか名前が嘘をつく。 #}
       <span class="app-brand-text"><strong>WebSpec2Doc</strong>
-        <span data-system="docs">QAドキュメント生成</span>
+        <span data-system="docs">{{ 'QAドキュメント生成（app）' if app_mode else 'QAドキュメント生成' }}</span>
         <span data-system="autorun">AutoRun</span>
       </span>
     </a>
@@ -52,7 +52,7 @@
       <span class="nav-label">折りたたむ</span>
     </button>
     <div class="app-sidebar-foot">
-      <span data-system="docs">URLから画面仕様書・テスト設計・画面遷移図を生成します。</span>
+      <span data-system="docs">{{ 'APK / .app から画面仕様書・テスト設計・画面遷移図を生成します。' if app_mode else 'URLから画面仕様書・テスト設計・画面遷移図を生成します。' }}</span>
       <span data-system="autorun">受領から実行完了レポートの納品までを止めずに回します。</span>
     </div>
   </aside>
@@ -224,6 +224,9 @@
   <script src="{{ url_for('static', filename='js/tenant-admin-view.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/feedback-view.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/unimplemented-notice.js') }}?v={{ _ver }}"></script>
+{% if app_mode %}
+  <script src="{{ url_for('static', filename='js/doc-app-mode.js') }}?v={{ _ver }}"></script>
+{% endif %}
 
 </body>
 </html>

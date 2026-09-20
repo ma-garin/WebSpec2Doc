@@ -16,12 +16,10 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ta2.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ws.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/system-select.css') }}?v={{ _ver }}">
-  {# 「指揮」を 1 枚足したぶんだけ列を増やす。system-select.css は他画面と共有の資産なので
-     触らず、この画面だけの上書きをここに置く。6 枚は 6 / 3+3 / 2+2+2 / 1 と割れるので、
-     どの幅でも「2 段目に 1 枚だけ余る」形にならない（1440×900 で 1 段に収まる）。 #}
+  {# カードは 7 枚（指揮 + 01 + 01·app + 02 + 03 + 04 + 05）。6 列のままだと 1440×900 で
+     2 段目に 1 枚だけ余るので 4 + 3 に割る。system-select.css の基底も同じ値にしてある。 #}
   <style>
-    .sysselect-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-    @media (max-width: 1420px) { .sysselect-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    .sysselect-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     @media (max-width: 1040px) { .sysselect-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     @media (max-width: 720px)  { .sysselect-grid { grid-template-columns: 1fr; } }
     /* 指揮 = #3730A3 / #E0E7FF / #312E81。既存 5 システムのどの識別色とも重ならない。 */
@@ -84,6 +82,26 @@
           <span class="syscard-chip">フォーム定義</span><span class="syscard-chip">差分</span>
         </span>
         <span class="syscard-open">ドキュメント作成を開く →</span>
+      </a>
+
+      {# ドキュメント作成(app)。System 01 の派生で、URL ではなくスマホアプリ（APK / .app）を
+         対象にする。現段階はモック（入力と画面の流れだけ・解析は実行しない）。 #}
+      <a class="syscard syscard-app" href="/doc-app">
+        <span class="syscard-accent" aria-hidden="true"></span>
+        <span class="syscard-badge">モック</span>
+        <span class="syscard-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/><path d="M10 2.5h4"/>
+          </svg>
+        </span>
+        <span class="syscard-no">System 01 · app</span>
+        <span class="syscard-title">ドキュメント作成(app)</span>
+        <span class="syscard-desc">APK / .app を渡すと、画面仕様書・遷移図・項目定義を生成します。エミュレータ・シミュレータで探索し、未到達 Activity も洗い出す。スマホアプリの仕様化に。</span>
+        <span class="syscard-chips">
+          <span class="syscard-chip">画面仕様書</span><span class="syscard-chip">遷移図</span>
+          <span class="syscard-chip">フォーム定義</span><span class="syscard-chip">未到達 Activity</span>
+        </span>
+        <span class="syscard-open">ドキュメント作成(app)を開く →</span>
       </a>
 
       {# テスト自動化（System 02）は管理者のみ。押しても 403 になるカードは並べない。 #}

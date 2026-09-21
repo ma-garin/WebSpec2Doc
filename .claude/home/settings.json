@@ -1,0 +1,21 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/.claude/hooks/block-ci.py\"",
+            "timeout": 10,
+            "statusMessage": "CI・自己ウェイクの禁止を確認中"
+          }
+        ]
+      }
+    ]
+  },
+  "env": {
+    "CLAUDE_CODE_GOAL_CHECKIN_MINUTES": "0"
+  },
+  "bashOutputMaxChars": 12000
+}

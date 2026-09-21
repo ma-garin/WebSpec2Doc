@@ -35,5 +35,9 @@
     "command": "python3 \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/statusline.py\"",
     "refreshInterval": 5,
     "padding": 2
-  }
+  },
+  "env": {
+    "CLAUDE_CODE_GOAL_CHECKIN_MINUTES": "0"
+  },
+  "bashOutputMaxChars": 12000
 }

@@ -1,0 +1,30 @@
+# Claude が自律探索（Glob / Grep / Read）で読み込むのを物理的に防ぐ。
+# 根拠: 読み込んだ内容はコンテキストに入り、以降の全ターンで再読される
+#（.claude/rules/no-ci-no-wakeup.md の「再読の乗数」）。
+node_modules/
+venv/
+.venv/
+dist/
+build/
+.gradle/
+output/
+*.lock
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+*.log
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.pdf
+*.xlsx
+*.zip
+*.apk
+*.map
+*.min.js
+*.min.css
+demo/sample_report/
+demo/sample_report_app/
+docs/mockups/
+tests/e2e/screenshots/

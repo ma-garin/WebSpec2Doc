@@ -47,6 +47,6 @@ spec-initの一文の質が全体を決める。requirements後のレビュー�
 ## ECC導入時
 ```
 ./install.sh python typescript   # 必要言語のみ選択的導入
-npx ecc-agentshield scan         # CIに組み込み継続検査
+npx ecc-agentshield scan         # 必要時に手元で実行（CI には組み込まない）
 ```
 不要な言語スキルは入れない。SQLite追跡で増分更新・ロールバック可能。

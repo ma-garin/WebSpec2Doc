@@ -1,6 +1,6 @@
 ---
 name: test-automation
-description: 成果物に対する実際のテストコードを生成・実行するスキル。「動作確認」「テストを書いて」「スモークテスト」「E2E」「pytest」「Playwright」「回帰テスト」への言及、done-gateで「動作確認した」を人力でなくCI判定に置き換えたい場合は必ずこのスキルを使うこと。PWA/HTMLツールはPlaywright、Streamlit/Pythonはpytestをベースにこのキットの規約で生成する。
+description: 成果物に対する実際のテストコードを生成・実行するスキル。「動作確認」「テストを書いて」「スモークテスト」「E2E」「pytest」「Playwright」「回帰テスト」への言及、done-gateで「動作確認した」を手元の実行結果で裏付けたい場合は必ずこのスキルを使うこと。PWA/HTMLツールはPlaywright、Streamlit/Pythonはpytestをベースにこのキットの規約で生成する。
 ---
 
 # テスト自動化
@@ -37,7 +37,7 @@ pytest tests/ -v                      # Python/Streamlit
 pytest tests/test_smoke.py            # Playwright（要 playwright install）
 
 # done-gate: 「動作確認した」項目はこのテストのpassで代替する
-# pre-commit: 軽量スモークのみ実行（重いE2EはCIで）
+# pre-commit: 軽量スモークのみ実行（重い E2E は必要時に手元で実行する。CI は使わない）
 ```
 
 ## LLMを含むロジックの扱い
@@ -47,3 +47,8 @@ pytest tests/test_smoke.py            # Playwright（要 playwright install）
 ## 注意
 - テストは実装と独立に書く（Verifier原則）。実装に合わせてテストを緩めない
 - flaky test（待ち時間依存）はexpect/wait_forで明示的に待つ。time.sleep禁止
+
+## CI は使わない（2026-09-21）
+
+生成したテストを GitHub Actions 等で自動実行する設定は作らない。
+実行は手元で行い、実行していないものは「未実行」と明記する。詳細は `.claude/rules/no-ci-no-wakeup.md`。

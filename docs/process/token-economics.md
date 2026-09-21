@@ -131,3 +131,22 @@ https://platform.claude.com/docs/en/build-with-claude/context-windows
 
 `.claude/rules/speed-harness.md` の旧 H-4「複数並列起動を必須」は、この損益を
 見ていなかったため撤回済み。既定は「自分でやる」。
+
+## 8. 再現手順（この文書の数字を自分で検証する）
+
+```bash
+python3 scripts/token_report.py             # 最新セッションの消費構造
+python3 scripts/token_report.py --all       # 対象セッションの一覧
+python3 scripts/selftest/test_block_ci.py   # CI 厳禁フックの動作検証（52 件）
+```
+
+依存なし・ネットワーク不要・API キー不要。**規約の文章ではなく、この出力で判断すること。**
+INC-2026-002 の原因分析は 1 回目が 160 倍、2 回目が支配項の取り違えで外れた。
+どちらも推測で語ったためである。
+
+`scripts/selftest/test_block_ci.py` 実測（2026-09-21）: **PASS 52 件**
+（拒否 20 種 × プロジェクト/ホーム 2 箇所、許可 6 種 × 2 箇所）。
+設定変更後もフックが生きていることを、この実行で確認している。
+
+なお本テストは**シェルのヒアドキュメントでは書き出せない**。
+ワークフローパスの文字列を含むため block-ci.py が拒否する。これも装置が働いている証拠である。

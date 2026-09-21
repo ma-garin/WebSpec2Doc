@@ -33,17 +33,24 @@
 
 ## 開発速度（着手前に必ず読む）
 
-`AGENTS.md` の「開発速度の規律」を順守する。2026-08-01 の実測から特定した無駄への対処。
-
-最重要は次の 3 つ:
+最重要は次の 3 つ。これで足りる。`AGENTS.md` と
+`docs/process/speed-harness-history.md` は**必要になった時だけ**開く
+（全文を読む往復そのものが数十万トークンになる）。
 
 1. **実装の前に実データを 1 回叩く**（S-1）。手戻りの最大要因。着手 2〜3 分 vs 手戻り 15〜25 分。
 2. **pytest / make test / make verify-ui / make lint はユーザーが要求した時のみ実行する**（H-7・2026-08-22）。
    コミットは `--no-verify` で直行する。無断のゲート実行はフック（.claude/hooks/block-gates.py）が物理的に拒否する。
 3. **検証を省いた箇所は「未実行」と明記して納品する。**黙って省くのと明示して省くのは別物。
 
-加えて `.claude/rules/speed-harness.md`（2026-08-22 実測）を順守する。
+加えて `.claude/rules/speed-harness.md` を順守する。
 サーバ起動・認証オフ・検証の型・委譲の型・標準コマンドは**そこからコピーし、その場で探索しない**。
+
+## 自己点検（実行で確認する。文章を信用しない）
+
+```bash
+python3 scripts/selftest/test_block_ci.py   # CI 厳禁フックが生きているか（52 件）
+python3 scripts/token_report.py             # このセッションの消費構造を実測
+```
 
 ## 作業場所（重要）
 

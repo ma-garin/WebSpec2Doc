@@ -37,3 +37,5 @@ prometheus-client==0.21.1
 
 # SSO（OIDC RP）
 Authlib==1.7.2
+python-docx>=1.1  # System 06（ドキュメント検証）の docx 読み取り
+pdfminer.six>=20231228  # System 06 の PDF 読み取り（pypdf は日本語 CID フォントで文字化けする）

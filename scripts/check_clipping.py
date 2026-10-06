@@ -70,7 +70,15 @@ def _routes() -> list[str]:
 
 def main() -> int:
     base = sys.argv[1].rstrip("/") if len(sys.argv) > 1 else "http://127.0.0.1:8766"
-    pages = sys.argv[2:] or _routes()
+    args = sys.argv[2:]
+    review = None
+    if "--docverify-review" in args:  # System 06 のレビュー内の画面（開いたレビューが要る）も見る
+        i = args.index("--docverify-review")
+        review = args[i + 1]
+        args = args[:i] + args[i + 2:]
+    pages = args or _routes()
+    if review:
+        pages = pages + [f"/docverify#{v}" for v in ("plan", "read", "triage", "questions", "followup", "screen", "gate")]
     total = 0
     with sync_playwright() as p:
         try:
@@ -81,7 +89,12 @@ def main() -> int:
             page = browser.new_page(viewport={"width": w, "height": h})
             for path in pages:
                 try:
-                    resp = page.goto(base + path, wait_until="networkidle", timeout=15000)
+                    if review and "#" in path:
+                        page.goto(base + "/docverify", wait_until="load", timeout=15000)
+                        page.evaluate(f"sessionStorage.setItem('dv-review', '{review}')")
+                    resp = page.goto(base + path, wait_until="load", timeout=15000)
+                    if review and "#" in path:
+                        page.reload(wait_until="load"); page.wait_for_timeout(800)
                 except Exception as exc:  # 開けない画面は見切れ以前の問題として数える
                     print(f"NG {w}x{h} {path}: 開けない（{type(exc).__name__}）")
                     total += 1

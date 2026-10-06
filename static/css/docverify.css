@@ -1,0 +1,184 @@
+/* ドキュメント検証（System 06）。識別色 #BE185D / #FCE7F3 / #9D174D。見本: docverify-v2（2026-10-06 承認）。
+ * ta2.css の html,body{overflow:hidden} の内側で、.dv-content だけを縦スクロールさせる。 */
+.dv-content { overflow-y: auto; min-height: 0; padding: 20px 28px 40px; }
+.dv-grp { padding: 14px 10px 2px; font-size: 11px; font-weight: 800; color: var(--color-text-secondary); letter-spacing: .04em; }
+.dv-grp-review { color: #9D174D; text-transform: none; letter-spacing: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dv-page .app-nav-item.active { background: #FCE7F3; color: #9D174D; font-weight: 700; }
+.dv-n { margin-left: auto; font-size: 11px; border-radius: 999px; padding: 0 7px; background: var(--color-surface-3); }
+.dv-n:empty { display: none; }
+.dv-n.red { background: var(--color-critical-bg); color: var(--color-critical); }
+
+.dv-banner { border: 1px solid var(--color-critical-border); background: var(--color-critical-bg); color: var(--color-critical); border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; font-size: 13px; }
+.dv-toast { position: fixed; right: 24px; bottom: 24px; background: #111827; color: #fff; border-radius: 8px; padding: 10px 16px; font-size: 13px; z-index: 50; box-shadow: var(--shadow-lg); }
+
+.dv-steps { display: flex; margin: 0 0 14px; font-size: 12px; flex-wrap: wrap; }
+.dv-steps span { padding: 6px 12px; border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-secondary); margin-left: -1px; }
+.dv-steps span:first-child { border-radius: 8px 0 0 8px; margin-left: 0; }
+.dv-steps span:last-child { border-radius: 0 8px 8px 0; }
+.dv-steps .done { color: #047857; }
+.dv-steps .now { background: #FCE7F3; color: #9D174D; font-weight: 700; border-color: #F9A8D4; position: relative; }
+
+.dv-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 10px; }
+.dv-card > h3 { margin: 0; padding: 10px 14px; border-bottom: 1px solid var(--color-border); font-size: 13px; display: flex; gap: 8px; align-items: center; }
+.dv-card-body { padding: 14px; }
+.dv-split { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.dv-muted { color: var(--color-text-secondary); font-size: 12px; }
+.dv-empty { padding: 28px; text-align: center; color: var(--color-text-secondary); font-size: 13px; }
+.dv-loading { padding: 20px; color: var(--color-text-secondary); font-size: 13px; }
+
+.dv-table { width: 100%; border-collapse: collapse; font-size: 13px; background: var(--color-surface); }
+.dv-table th { text-align: left; padding: 8px 12px; color: var(--color-text-secondary); font-weight: 600; border-bottom: 1px solid var(--color-border); background: var(--color-surface-2); white-space: nowrap; }
+.dv-table td { padding: 9px 12px; border-bottom: 1px solid var(--color-divider); vertical-align: top; }
+.dv-table tr.dv-click { cursor: pointer; }
+.dv-table tr.dv-click:hover td { background: #FDF2F8; }
+
+.dv-chip { display: inline-block; font-size: 11px; border-radius: 5px; padding: 1px 7px; font-weight: 700; white-space: nowrap; }
+.dv-sev-critical { background: var(--color-critical-bg); color: var(--color-critical); }
+.dv-sev-major { background: var(--color-medium-bg); color: var(--color-medium); }
+.dv-sev-minor { background: var(--color-info-bg); color: var(--color-info); }
+.dv-st { background: var(--color-surface-3); color: var(--color-text-secondary); font-weight: 600; }
+
+.dv-btn { font: inherit; font-size: 12px; font-weight: 600; border-radius: 7px; padding: 6px 12px; border: 1px solid var(--color-border-strong); background: var(--color-surface); color: var(--color-text); cursor: pointer; }
+.dv-btn:hover { border-color: #9D174D; }
+.dv-btn-primary { background: #BE185D; border-color: #BE185D; color: #fff; }
+.dv-btn-primary:hover { background: #9D174D; }
+.dv-btn:disabled { opacity: .45; cursor: not-allowed; }
+.dv-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.dv-field { display: grid; gap: 4px; font-size: 12px; color: var(--color-text-secondary); }
+.dv-field input, .dv-field select, .dv-field textarea, .dv-input { font: inherit; font-size: 13px; color: var(--color-text); border: 1px solid var(--color-border-strong); border-radius: 7px; padding: 7px 10px; background: var(--color-surface); }
+.dv-tabs { display: flex; gap: 4px; padding: 8px 10px; border-bottom: 1px solid var(--color-border); }
+.dv-tabs button { font: inherit; font-size: 12px; padding: 4px 10px; border-radius: 999px; color: var(--color-text-secondary); background: none; border: 0; cursor: pointer; }
+.dv-tabs button[aria-selected="true"] { background: #FCE7F3; color: #9D174D; font-weight: 700; }
+
+/* docverify-global（全体・管理画面） */
+.dvg-h{font-size:var(--text-lg);margin:0 0 var(--space-2)}
+.dvg-h3{font-size:var(--text-md);margin:var(--space-4) 0 var(--space-2)}
+.dvg-cards{display:flex;gap:var(--space-3);flex-wrap:wrap}
+.dvg-card{min-width:140px;padding:var(--space-3)}
+.dvg-num{font-size:var(--text-xl);font-weight:700}
+.dvg-form{display:flex;flex-direction:column;gap:var(--space-2);padding:var(--space-3);margin-bottom:var(--space-3)}
+.dvg-filters{display:flex;gap:var(--space-3);align-items:center;flex-wrap:wrap;margin:var(--space-3) 0}
+.dvg-empty{padding:var(--space-4);text-align:center}
+.dvg-items li{margin:4px 0}.dvg-item{width:min(560px,80%)}
+.dvg-bar{display:inline-block;height:10px;background:var(--color-primary);border-radius:var(--radius-full);min-width:2px}
+.dvg-bl{width:200px}.dvg-bn{width:60px;text-align:right}
+.dvg-list{margin:0;padding-left:1.2em;font-size:var(--text-sm)}
+
+/* --- レビューの中の画面（docverify-review.js） --- */
+.dvr-view{display:flex;flex-direction:column;min-height:0;height:100%}
+.dvr-view[hidden]{display:none}
+.dvr-head{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.dvr-title{font-size:16px;margin:0}
+.dvr-head-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+.dvr-body{flex:1;min-height:0;overflow:auto}
+.dvr-msg:empty{display:none}
+.dvr-msg{padding:8px 12px;border-radius:8px;margin-bottom:8px;font-size:13px;background:var(--color-surface-2);border:1px solid var(--color-border)}
+.dvr-msg.err{background:var(--color-critical-bg);color:var(--color-critical);border-color:var(--color-critical-border)}
+.dvr-empty{padding:24px;text-align:center;color:var(--color-text-secondary);font-size:13px}
+.dvr-form{display:grid;grid-template-columns:140px minmax(0,1fr);gap:10px 12px;align-items:center;font-size:13px;max-width:760px}
+.dvr-form input[type=text],.dvr-form input[type=date],.dvr-form input[type=number],.dvr-form select{font:inherit;padding:6px 8px;border:1px solid var(--color-border-strong);border-radius:6px}
+.dvr-row{display:flex;gap:6px;align-items:center;margin-bottom:4px}
+.dvr-row input,.dvr-row select{font:inherit;font-size:12px;padding:4px 6px;border:1px solid var(--color-border-strong);border-radius:6px}
+.dvr-actions{display:flex;gap:8px;margin-top:16px}
+.dvr-wrap{height:100%;min-height:0}
+.dvr-wrap .card,.dvr-view .wrap .card{display:flex;flex-direction:column;min-height:0}
+.dvr-wrap .doc{max-height:none;flex:1;min-height:0}
+.dvr-scroll{flex:1;min-height:0;overflow:auto}
+.dvr-view .doc .ln{cursor:pointer}.dvr-view .doc .ln:hover{background:var(--color-surface-2)}.dvr-view .doc .ln.sel{outline:2px solid #BE185D;outline-offset:-2px}
+.dvr-view .tabs button{font:inherit;font-size:12px;padding:4px 10px;border-radius:999px;border:0;background:none;color:var(--color-text-secondary);cursor:pointer}
+.dvr-view .tabs button.on{background:#FCE7F3;color:#9D174D;font-weight:700}
+.dvr-add{padding:8px 14px 10px 78px;background:#FDF2F8;border-bottom:1px solid var(--color-divider);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.dvr-add select,.dvr-add input{font:inherit;font-size:12px;padding:4px 6px;border:1px solid var(--color-border-strong);border-radius:6px}
+.dvr-add input[type=text]{flex:1;min-width:220px}
+.dvr-kpi{display:flex;gap:12px;margin-bottom:12px}
+.dvr-kpi div{background:var(--color-surface);border:1px solid var(--color-border);border-radius:8px;padding:10px 14px;font-size:12px}
+.dvr-kpi b{display:block;font-size:20px}
+
+/* レビュー内の画面（docverify-review.js が見本 v2 のクラス名で描く）。見本 v2 の規則を .dvr-view の中に限って当てる */
+.dvr-view .steps { display: flex; margin: 0 0 14px; font-size: 12px; flex-wrap: wrap; }
+.dvr-view .steps span { padding: 6px 12px; border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-secondary); margin-left: -1px; }
+.dvr-view .steps span:first-child { border-radius: 8px 0 0 8px; margin-left: 0; }
+.dvr-view .steps span:last-child { border-radius: 0 8px 8px 0; }
+.dvr-view .steps .done { color: #047857; }
+.dvr-view .steps .now { background: #FCE7F3; color: #9D174D; font-weight: 700; border-color: #F9A8D4; }
+.dvr-view .dvr-head { display: flex; justify-content: space-between; align-items: center; margin: 4px 0 12px; }
+.dvr-view .dvr-title { font-size: 15px; margin: 0; }
+.dvr-view .dvr-head-right { display: flex; gap: 10px; align-items: center; font-size: 12px; color: var(--color-text-secondary); }
+.dvr-view .wrap { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.dvr-view .card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 10px; }
+.dvr-view .card h3 { margin: 0; padding: 10px 14px; border-bottom: 1px solid var(--color-border); font-size: 13px; display: flex; gap: 8px; align-items: center; }
+.dvr-view .doc { padding: 6px 0; font-size: 13px; line-height: 1.85; max-height: calc(100vh - 260px); overflow: auto; }
+.dvr-view .doc .ln { display: grid; grid-template-columns: 76px 1fr; padding: 2px 14px; cursor: pointer; }
+.dvr-view .doc .ln:hover { background: #FDF2F8; }
+.dvr-view .doc .ln .no { color: var(--color-text-disabled); font-family: var(--font-mono); font-size: 11px; }
+.dvr-view .doc .ln.hit { background: #FFF7ED; }
+.dvr-view .doc mark { background: #FDE68A; border-bottom: 2px solid #D97706; }
+.dvr-view .doc .pin { display: inline-block; font-size: 10px; font-weight: 700; background: #9D174D; color: #fff; border-radius: 999px; padding: 0 6px; margin-left: 6px; }
+.dvr-view .f { padding: 10px 14px; border-bottom: 1px solid var(--color-divider); font-size: 13px; }
+.dvr-view .f .top { display: flex; gap: 6px; align-items: center; margin-bottom: 4px; }
+.dvr-view .chip { font-size: 11px; border-radius: 5px; padding: 1px 7px; font-weight: 700; }
+.dvr-view .c-crit { background: var(--color-critical-bg); color: var(--color-critical); }
+.dvr-view .c-maj { background: var(--color-medium-bg); color: var(--color-medium); }
+.dvr-view .c-min { background: var(--color-info-bg); color: var(--color-info); }
+.dvr-view .c-auto { background: var(--color-surface-3); color: var(--color-text-secondary); font-weight: 600; }
+.dvr-view .f .loc { font-family: var(--font-mono); font-size: 11px; color: var(--color-text-secondary); margin-left: auto; }
+.dvr-view .f .ck { font-size: 11px; color: #9D174D; }
+.dvr-view .f .act, .dvr-view .act { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.dvr-view .b { font: inherit; font-size: 12px; font-weight: 600; border-radius: 7px; padding: 5px 10px; border: 1px solid var(--color-border-strong); background: #fff; color: var(--color-text); cursor: pointer; }
+.dvr-view .b:hover { border-color: #9D174D; }
+.dvr-view .b.p { background: #BE185D; border-color: #BE185D; color: #fff; }
+.dvr-view .b:disabled { opacity: .45; cursor: not-allowed; }
+.dvr-view .tabs { display: flex; gap: 4px; padding: 8px 10px; border-bottom: 1px solid var(--color-border); }
+.dvr-view .tabs > * { font: inherit; font-size: 12px; padding: 4px 10px; border-radius: 999px; color: var(--color-text-secondary); background: none; border: 0; cursor: pointer; }
+.dvr-view .tabs .on, .dvr-view .tabs [aria-selected="true"] { background: #FCE7F3; color: #9D174D; font-weight: 700; }
+.dvr-view .role { font-size: 12px; color: var(--color-text-secondary); }
+.dvr-view .dv-t { width: 100%; border-collapse: collapse; font-size: 13px; background: var(--color-surface); }
+.dvr-view .dv-t th { text-align: left; padding: 8px 12px; color: var(--color-text-secondary); font-weight: 600; border-bottom: 1px solid var(--color-border); background: var(--color-surface-2); }
+.dvr-view .dv-t td { padding: 9px 12px; border-bottom: 1px solid var(--color-divider); vertical-align: top; }
+.dvr-view .dv-panel { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 10px; padding: 16px; }
+
+/* 全体・管理の画面にも同じ部品（表・カード・チップ・ボタン）を当てる */
+[data-view]:not(.dvr-view) .wrap { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+[data-view]:not(.dvr-view) .card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 10px; }
+[data-view]:not(.dvr-view) .card h3 { margin: 0; padding: 10px 14px; border-bottom: 1px solid var(--color-border); font-size: 13px; display: flex; gap: 8px; align-items: center; }
+[data-view]:not(.dvr-view) .f { padding: 10px 14px; border-bottom: 1px solid var(--color-divider); font-size: 13px; }
+[data-view]:not(.dvr-view) .f .top { display: flex; gap: 6px; align-items: center; margin-bottom: 4px; }
+[data-view]:not(.dvr-view) .chip { font-size: 11px; border-radius: 5px; padding: 1px 7px; font-weight: 700; }
+[data-view]:not(.dvr-view) .c-crit { background: var(--color-critical-bg); color: var(--color-critical); }
+[data-view]:not(.dvr-view) .c-maj { background: var(--color-medium-bg); color: var(--color-medium); }
+[data-view]:not(.dvr-view) .c-min { background: var(--color-info-bg); color: var(--color-info); }
+[data-view]:not(.dvr-view) .c-auto { background: var(--color-surface-3); color: var(--color-text-secondary); font-weight: 600; }
+[data-view]:not(.dvr-view) .f .loc { font-family: var(--font-mono); font-size: 11px; color: var(--color-text-secondary); margin-left: auto; }
+[data-view]:not(.dvr-view) .f .ck { font-size: 11px; color: #9D174D; }
+[data-view]:not(.dvr-view) .f .act, [data-view]:not(.dvr-view) .act { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+[data-view]:not(.dvr-view) .b { font: inherit; font-size: 12px; font-weight: 600; border-radius: 7px; padding: 5px 10px; border: 1px solid var(--color-border-strong); background: #fff; color: var(--color-text); cursor: pointer; }
+[data-view]:not(.dvr-view) .b:hover { border-color: #9D174D; }
+[data-view]:not(.dvr-view) .b.p { background: #BE185D; border-color: #BE185D; color: #fff; }
+[data-view]:not(.dvr-view) .b:disabled { opacity: .45; cursor: not-allowed; }
+[data-view]:not(.dvr-view) .tabs { display: flex; gap: 4px; padding: 8px 10px; border-bottom: 1px solid var(--color-border); }
+[data-view]:not(.dvr-view) .tabs > * { font: inherit; font-size: 12px; padding: 4px 10px; border-radius: 999px; color: var(--color-text-secondary); background: none; border: 0; cursor: pointer; }
+[data-view]:not(.dvr-view) .tabs .on, [data-view]:not(.dvr-view) .tabs [aria-selected="true"] { background: #FCE7F3; color: #9D174D; font-weight: 700; }
+[data-view]:not(.dvr-view) .role { font-size: 12px; color: var(--color-text-secondary); }
+[data-view]:not(.dvr-view) .dv-t { width: 100%; border-collapse: collapse; font-size: 13px; background: var(--color-surface); }
+[data-view]:not(.dvr-view) .dv-t th { text-align: left; padding: 8px 12px; color: var(--color-text-secondary); font-weight: 600; border-bottom: 1px solid var(--color-border); background: var(--color-surface-2); }
+[data-view]:not(.dvr-view) .dv-t td { padding: 9px 12px; border-bottom: 1px solid var(--color-divider); vertical-align: top; }
+[data-view]:not(.dvr-view) .dv-panel { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 10px; padding: 16px; }
+[data-view]:not(.dvr-view) .dv-t tr[data-id] { cursor: pointer; }
+[data-view]:not(.dvr-view) .dv-t tr[data-id]:hover td { background: #FDF2F8; }
+.dvg-card { padding: 12px 14px; min-width: 150px; }
+.dvg-num { font-size: 22px; font-weight: 700; margin-top: 2px; }
+.dvg-bar { display: inline-block; height: 10px; min-width: 4px; background: #BE185D; border-radius: 3px; vertical-align: middle; }
+.dvg-bl { width: 200px; }
+.dvg-bn { width: 60px; text-align: right; }
+[data-view]:not(.dvr-view) .dv-t td:nth-child(2) .dvg-bar { max-width: 100%; }
+[data-view]:not(.dvr-view) h2 { font-size: 15px; margin: 0 0 6px; }
+[data-view]:not(.dvr-view) h3 { font-size: 13px; margin: 18px 0 8px; }
+[data-view]:not(.dvr-view) select, [data-view]:not(.dvr-view) input[type=text], [data-view]:not(.dvr-view) input[type=date] { font: inherit; font-size: 13px; border: 1px solid var(--color-border-strong); border-radius: 7px; padding: 6px 9px; background: var(--color-surface); }
+.dvr-view select, .dvr-view input[type=text], .dvr-view input[type=date], .dvr-view input[type=number] { font: inherit; font-size: 13px; border: 1px solid var(--color-border-strong); border-radius: 7px; padding: 6px 9px; background: var(--color-surface); }
+td.dvg-bl + td { width: 360px; }
+
+/* ファイル選択をブラウザ素の部品のまま出さない（2026-10-06 指摘の再発防止） */
+.dv-page input[type=file] { font: inherit; font-size: 12px; color: var(--color-text-secondary); }
+.dv-page input[type=file]::file-selector-button { font: inherit; font-size: 12px; font-weight: 600; border-radius: 7px; padding: 6px 12px; margin-right: 10px; border: 1px solid var(--color-border-strong); background: var(--color-surface); color: var(--color-text); cursor: pointer; }
+.dv-page input[type=file]::file-selector-button:hover { border-color: #9D174D; color: #9D174D; }
+

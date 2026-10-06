@@ -1,198 +1,65 @@
-{% set _ver = config.get('ASSET_VERSION', 1) %}<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ドキュメント検証 - WebSpec2Doc</title>
-<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}?v={{ _ver }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='app-components.css') }}?v={{ _ver }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}?v={{ _ver }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/ta2.css') }}?v={{ _ver }}">
-<style>
-  .dv-doc{display:flex;gap:var(--space-4);align-items:center;padding:var(--space-3) var(--space-4);background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);font-size:var(--text-sm)}
-  .dv-doc strong{font-size:var(--text-md)} .mut{color:var(--color-text-secondary)} .dv-ok{color:#047857;font-weight:600}
-  .dv-body{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:var(--space-4);margin-top:var(--space-3)}
-  .dv-chips{display:flex;gap:var(--space-2);margin:var(--space-3) 0}
-  .dv-chip{border:1px solid var(--color-border);background:var(--color-surface);border-radius:var(--radius-full);padding:4px 12px;font-size:var(--text-sm);cursor:pointer}
-  .dv-chip[aria-pressed=true]{border-color:var(--color-primary);background:var(--color-primary-light);color:var(--color-primary-dark);font-weight:600}
-  table.dv-t{width:100%;border-collapse:collapse;background:var(--color-surface);border:1px solid var(--color-border);font-size:var(--text-sm)}
-  .dv-t th{text-align:left;padding:8px 12px;color:var(--color-text-secondary);font-weight:600;border-bottom:1px solid var(--color-border);background:var(--color-surface-2)}
-  .dv-t td{padding:10px 12px;border-bottom:1px solid var(--color-divider);vertical-align:top}
-  .dv-t tbody tr{cursor:pointer} .dv-t tr.sel td{background:var(--color-primary-light)}
-  .sev{display:inline-block;padding:2px 8px;border-radius:var(--radius-sm);font-size:var(--text-xs);font-weight:700;white-space:nowrap;background:var(--color-medium-bg);color:var(--color-medium);border:1px solid var(--color-medium-border)}
-  .loc{font-family:var(--font-mono);font-size:var(--text-xs);color:var(--color-text-secondary)}
-  .dv-side{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--space-4);font-size:var(--text-sm);align-self:start}
-  .dv-side h2{font-size:var(--text-md);margin:6px 0 var(--space-3)}
-  .dv-quote{border-left:3px solid var(--color-medium);background:var(--color-surface-2);padding:8px 12px;margin:var(--space-2) 0 var(--space-4);line-height:var(--leading-normal);white-space:pre-wrap}
-  .dv-panel{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--space-6);margin-top:var(--space-3)}
-  .dv-err{border:1px solid var(--color-critical-border);background:var(--color-critical-bg);color:var(--color-critical);border-radius:var(--radius-md);padding:var(--space-3) var(--space-4);margin-bottom:var(--space-3)}
-  .dv-drop{border:2px dashed var(--color-border-strong);border-radius:var(--radius-lg);padding:56px var(--space-8);text-align:center;background:var(--color-surface);display:flex;flex-direction:column;align-items:center;gap:var(--space-3)}
-  .dv-drop p{margin:0}.dv-drop-ico{width:48px;height:48px;border-radius:12px;background:#FCE7F3;color:#9D174D;display:grid;place-items:center}
-  .dv-drop-title{font-size:var(--text-lg);font-weight:700}.dv-pick{display:flex;gap:var(--space-3);align-items:center;margin-top:var(--space-2)}
-  .dv-file-name{font-size:var(--text-sm);color:var(--color-text-secondary);max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .dv-visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
-  .dv-drop.over{border-color:var(--color-primary);background:var(--color-primary-light)}
-  .btn{font:inherit;font-size:var(--text-sm);font-weight:600;border-radius:var(--radius-md);padding:8px 14px;cursor:pointer;border:1px solid var(--color-border-strong);background:var(--color-surface);color:var(--color-text)}
-  .btn-primary{background:var(--color-primary);border-color:var(--color-primary);color:var(--color-on-primary)} .btn:disabled{opacity:.45;cursor:not-allowed}
-  .dv-tools{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);margin-top:var(--space-4)}
-  .dv-tool{display:block;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-5);color:inherit;text-decoration:none}
-  .dv-tool:hover{border-color:#BE185D}.dv-tool h3{margin:0 0 6px;font-size:var(--text-md)}.dv-tool p{margin:0 0 10px;font-size:var(--text-sm);color:var(--color-text-secondary);line-height:var(--leading-normal)}
-  .dv-tool .go{font-size:var(--text-sm);font-weight:700;color:#9D174D}
-  table.dv-t{align-self:start}
-  .app-nav-item.active{background:var(--color-primary-light);color:var(--color-primary-dark);font-weight:700}
-  .app-nav-group.dv-file{text-transform:none;letter-spacing:0}
-  .app-nav-item .cnt{margin-left:auto;font-size:11px;background:var(--color-medium-bg);color:var(--color-medium);border-radius:999px;padding:0 7px}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ドキュメント検証 - WebSpec2Doc</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app-components.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/ta2.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify.css') }}?v={{ dv_ver }}">
 </head>
-<body class="app-page">
+<body class="app-page dv-page">
 <a href="#app-content" class="skip-link">本文へスキップ</a>
 <div class="app-shell">
-<aside class="app-sidebar">
-  <a href="/systems" class="app-brand"><span class="app-brand-mark">W</span><span class="app-brand-text"><strong>WebSpec2Doc</strong><span>ドキュメント検証</span></span></a>
-  <a href="/systems" class="sys-switcher" title="システムを切り替える"><span class="sys-switcher-label">システム</span><span class="sys-switcher-cur">ドキュメント検証</span><span class="sys-switcher-swap">切替</span></a>
-  <nav class="app-nav" aria-label="メインナビゲーション">
-    <div class="app-nav-group">ドキュメント検証</div>
-    <a class="app-nav-item active" href="#" data-nav="upload"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v4h16v-4"/></svg><span class="nav-label">取り込み</span></a>
-    <div class="app-nav-group dv-file" id="dv-nav-file" hidden></div>
-    <a class="app-nav-item" href="#" data-nav="inspect" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg><span class="nav-label">インスペクション</span><span class="cnt" id="dv-cnt-f"></span></a>
-    <a class="app-nav-item" href="#" data-nav="questions" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 9a3 3 0 1 1 4 2.8c-.6.3-1 .9-1 1.6V14"/><rect x="3" y="3" width="18" height="18" rx="3"/></svg><span class="nav-label">質問票</span><span class="cnt" id="dv-cnt-q"></span></a>
-  </nav>
-</aside>
-<div class="app-main">
-  <header class="app-topbar">
-    <div class="app-topbar-lead" style="min-width:0">
-      <div class="app-breadcrumb"><span>WebSpec2Doc</span><span class="sep">/</span><span>ドキュメント検証</span></div>
-      <h1 class="app-topbar-title" id="dv-title">取り込み</h1>
-    </div>
-  </header>
-  <main class="app-content" id="app-content">
-    <div class="dv-err" id="dv-err" role="alert" hidden></div>
+  {# ドキュメント検証（System 06）。IEEE 1028 のインスペクション工程に沿ったメニュー（2026-10-06 承認の見本 v2）。 #}
+  <aside class="app-sidebar">
+    <a href="/systems" class="app-brand"><span class="app-brand-mark">W</span><span class="app-brand-text"><strong>WebSpec2Doc</strong><span>ドキュメント検証</span></span></a>
+    <a href="/systems" class="sys-switcher" title="システムを切り替える"><span class="sys-switcher-label">システム</span><span class="sys-switcher-cur">ドキュメント検証</span><span class="sys-switcher-swap">切替</span></a>
+    <nav class="app-nav" aria-label="メインナビゲーション">
+      <div class="dv-grp">ドキュメント検証</div>
+      <a class="app-nav-item" href="#home" data-nav="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg><span class="nav-label">ホーム</span></a>
+      <a class="app-nav-item" href="#mine" data-nav="mine"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 5-6 8-6s6.5 2 8 6"/></svg><span class="nav-label">自分の担当</span><span class="dv-n" data-count="mine"></span></a>
+      <a class="app-nav-item" href="#reviews" data-nav="reviews"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span class="nav-label">レビュー一覧</span></a>
+      <a class="app-nav-item" href="#findings" data-nav="findings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v5M12 16h.01"/></svg><span class="nav-label">指摘一覧</span><span class="dv-n red" data-count="open"></span></a>
 
-    <section data-view="upload">
-      <form id="dv-form" class="dv-drop">
-        <span class="dv-drop-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v4h16v-4"/></svg></span>
-        <p class="dv-drop-title">検証する仕様書をここにドロップ</p>
-        <p class="mut">Word（.docx）・Excel（.xlsx）・PDF・テキスト（.txt / .md）。20 MB まで。</p>
-        <input type="file" id="dv-file" class="dv-visually-hidden" accept=".txt,.md,.docx,.xlsx,.pdf">
-        <div class="dv-pick">
-          <label class="btn" for="dv-file">ファイルを選ぶ</label>
-          <span class="dv-file-name" id="dv-file-name">まだ選ばれていません</span>
-        </div>
-        <button class="btn btn-primary" type="submit" id="dv-submit" disabled>検証する</button>
-        <p class="mut" id="dv-busy" hidden>読み取って検証しています…</p>
-      </form>
-      <div class="dv-tools">
-        <a class="dv-tool" href="{{ reverse_doc_url }}" target="_blank" rel="noopener">
-          <h3>仕様書の逆起こし（reverse_doc）</h3>
-          <p>ソースコード・稼働中の画面・既存の文書から、要求仕様書・基本設計書・詳細設計書・テスト仕様書を根拠と確度つきで作ります。要確認への回答・版の差分・評価・Word / Excel 出力まで。</p>
-          <span class="go">逆起こしを開く →</span>
-        </a>
-        <a class="dv-tool" href="{{ doc2ai_url }}" target="_blank" rel="noopener">
-          <h3>文書の AI 向け変換と検査（Doc2AI）</h3>
-          <p>PDF・Word・Excel・PowerPoint を構造化し、Lint・根拠付きの仕様 QA・要求の構造化・状態モデル候補・テストケース生成（Gherkin ほか）まで行います。</p>
-          <span class="go">Doc2AI を開く →</span>
-        </a>
+      <div class="dv-grp dv-grp-review" id="dv-review-name" hidden></div>
+      <div id="dv-review-nav" hidden>
+        <a class="app-nav-item" href="#plan" data-nav="plan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></svg><span class="nav-label">計画</span></a>
+        <a class="app-nav-item" href="#read" data-nav="read"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 5h7a2 2 0 0 1 2 2v13a2 2 0 0 0-2-2H4z"/><path d="M20 5h-7a2 2 0 0 0-2 2v13a2 2 0 0 1 2-2h7z"/></svg><span class="nav-label">文書を読む</span><span class="dv-n" data-count="candidates"></span></a>
+        <a class="app-nav-item" href="#triage" data-nav="triage"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="8" cy="9" r="3"/><circle cx="16" cy="9" r="3"/><path d="M3 19c1-3 3-4 5-4s4 1 5 4M11 19c1-3 3-4 5-4s4 1 5 4"/></svg><span class="nav-label">指摘の検討</span><span class="dv-n" data-count="adopted"></span></a>
+        <a class="app-nav-item" href="#questions" data-nav="questions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 9a3 3 0 1 1 4 2.8c-.6.3-1 .9-1 1.6V14"/></svg><span class="nav-label">質問票</span></a>
+        <a class="app-nav-item" href="#followup" data-nav="followup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8 3v18M16 3v18M3 8h5M16 16h5"/></svg><span class="nav-label">修正版の確認</span></a>
+        <a class="app-nav-item" href="#screen" data-nav="screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8"/></svg><span class="nav-label">実画面との照合</span></a>
+        <a class="app-nav-item" href="#gate" data-nav="gate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 12l4 4 10-10"/></svg><span class="nav-label">判定と記録</span></a>
       </div>
-    </section>
 
-    <section data-view="inspect" hidden>
-      <div class="dv-doc" id="dv-doc"></div>
-      <div id="dv-result"></div>
-    </section>
+      <div class="dv-grp">管理</div>
+      <a class="app-nav-item" href="#checklists" data-nav="checklists"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2"/></svg><span class="nav-label">観点チェックリスト</span></a>
+      <a class="app-nav-item" href="#metrics" data-nav="metrics"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span class="nav-label">メトリクス</span></a>
+      <a class="app-nav-item" href="#settings" data-nav="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg><span class="nav-label">設定</span></a>
+    </nav>
+  </aside>
 
-    <section data-view="questions" hidden>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-3)">
-        <span class="mut">確度が「要確認」の指摘から作った、文書の作成者への質問です。</span>
-        <button class="btn" type="button" id="dv-csv">CSV で書き出す</button>
-      </div>
-      <div id="dv-qs"></div>
-    </section>
-  </main>
+  <div class="app-main">
+    {% set topbar_crumb = 'ドキュメント検証' %}{% set topbar_title = 'ホーム' %}
+    {% include 'partials/topbar.html' %}
+    <main class="app-content dv-content" id="app-content">
+      <div class="dv-banner" id="dv-banner" role="alert" hidden></div>
+      <div class="dv-toast" id="dv-toast" role="status" hidden></div>
+      {% include 'docverify/_global.html' %}
+      {% include 'docverify/_review.html' %}
+    </main>
+  </div>
 </div>
-</div>
-<script>
-(() => {
-  const $ = s => document.querySelector(s);
-  const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const TITLES = {upload: '取り込み', inspect: 'インスペクション', questions: '質問票'};
-  let st = null, sel = 0;
-
-  function show(view) {
-    document.querySelectorAll('[data-view]').forEach(v => v.hidden = v.dataset.view !== view);
-    document.querySelectorAll('[data-nav]').forEach(a => a.classList.toggle('active', a.dataset.nav === view));
-    $('#dv-title').textContent = TITLES[view];
-  }
-  function error(msg) { const e = $('#dv-err'); e.textContent = msg || ''; e.hidden = !msg; }
-
-  function renderInspect() {
-    const d = st.document, f = st.findings;
-    $('#dv-doc').innerHTML = `<strong>${esc(d.name)}</strong><span class="mut">${esc(d.format.toUpperCase())} ・ ${d.passages} 断片</span><span class="dv-ok">✓ 読み取りました</span>`;
-    if (!f.length) {
-      $('#dv-result').innerHTML = `<div class="dv-panel"><strong>確認した範囲では指摘はありません。</strong><p class="mut">${st.checked.passages} 断片を、観点「${esc(st.checked.viewpoints.join('・'))}」で確認しました。図の中の文字は確認していません。</p></div>`;
-      return;
-    }
-    const x = f[sel];
-    $('#dv-result').innerHTML = `
-      <p class="mut" style="margin:var(--space-3) 0">指摘 ${f.length} 件。行を選ぶと右に根拠の原文が出ます。</p>
-      <div class="dv-body">
-        <table class="dv-t"><thead><tr><th>重大度</th><th>指摘</th><th>場所</th><th>観点</th><th>確度</th></tr></thead><tbody>
-        ${f.map((r, i) => `<tr data-i="${i}" class="${i === sel ? 'sel' : ''}"><td><span class="sev">警告</span></td><td>${esc(r.message)}</td><td class="loc">${esc(r.location)}</td><td>${esc(r.viewpoint)}</td><td>${esc(r.certainty)}</td></tr>`).join('')}
-        </tbody></table>
-        <aside class="dv-side"><span class="sev">警告</span><span class="loc" style="margin-left:8px">${esc(x.location)}</span>
-          <h2>${esc(x.message)}</h2><div>根拠（原文）</div><div class="dv-quote">${esc(x.quote)}</div>
-          <div><span class="mut">確度</span> <strong>${esc(x.certainty)}</strong>（作成者に確かめる必要があります）</div>
-          <div style="margin-top:var(--space-4)"><button class="btn btn-primary" type="button" data-go="questions">質問票を見る</button></div>
-        </aside>
-      </div>`;
-  }
-  function renderQuestions() {
-    const q = st.questions;
-    $('#dv-qs').innerHTML = q.length
-      ? `<table class="dv-t"><thead><tr><th>No.</th><th>場所</th><th>質問</th></tr></thead><tbody>${q.map(r => `<tr><td>${esc(r.id)}</td><td class="loc">${esc(r.location)}</td><td>${esc(r.question)}</td></tr>`).join('')}</tbody></table>`
-      : '<div class="dv-panel">確かめる必要のある点はありません。</div>';
-    $('#dv-csv').disabled = !q.length;
-  }
-
-  $('#dv-form').addEventListener('submit', async ev => {
-    ev.preventDefault();
-    const file = $('#dv-file').files[0];
-    if (!file) { error('ファイルが選ばれていません。検証する文書を選んでください。'); return; }
-    error(''); $('#dv-submit').disabled = true; $('#dv-busy').hidden = false;
-    try {
-      const fd = new FormData(); fd.append('file', file);
-      const r = await fetch('/api/docverify/inspect', {method: 'POST', body: fd});
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) { error(j.error || 'サーバに接続できませんでした。少し待ってから、もう一度お試しください。'); return; }
-      st = j; sel = 0;
-      $('#dv-nav-file').textContent = j.document.name; $('#dv-nav-file').hidden = false;
-      document.querySelectorAll('[data-nav=inspect],[data-nav=questions]').forEach(a => a.hidden = false);
-      $('#dv-cnt-f').textContent = j.findings.length; $('#dv-cnt-q').textContent = j.questions.length;
-      renderInspect(); renderQuestions(); show('inspect');
-    } catch (e) {
-      error('サーバに接続できませんでした。少し待ってから、もう一度お試しください。');
-    } finally { $('#dv-submit').disabled = !$('#dv-file').files[0]; $('#dv-busy').hidden = true; }
-  });
-  const picked = () => { const f = $('#dv-file').files[0]; $('#dv-file-name').textContent = f ? f.name : 'まだ選ばれていません'; $('#dv-submit').disabled = !f; };
-  $('#dv-file').addEventListener('change', picked);
-  const drop = $('#dv-form');
-  drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
-  drop.addEventListener('dragleave', () => drop.classList.remove('over'));
-  drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); $('#dv-file').files = e.dataTransfer.files; picked(); });
-  document.querySelectorAll('[data-nav]').forEach(a => a.addEventListener('click', e => { e.preventDefault(); show(a.dataset.nav); }));
-  $('#dv-result').addEventListener('click', e => {
-    if (e.target.closest('[data-go]')) { show('questions'); return; }
-    const tr = e.target.closest('tr[data-i]'); if (tr) { sel = +tr.dataset.i; renderInspect(); }
-  });
-  $('#dv-csv').addEventListener('click', () => {
-    const rows = [['No.', '場所', '質問'], ...st.questions.map(q => [q.id, q.location, q.question])];
-    const csv = '﻿' + rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv'}));
-    a.download = `質問票_${st.document.name}.csv`; a.click(); URL.revokeObjectURL(a.href);
-  });
-})();
-</script>
+<script src="{{ url_for('static', filename='js/user-menu.js') }}?v={{ _ver }}"></script>
+<script src="{{ url_for('static', filename='js/docverify-core.js') }}?v={{ dv_ver }}"></script>
+<script src="{{ url_for('static', filename='js/docverify-global.js') }}?v={{ dv_ver }}"></script>
+<script src="{{ url_for('static', filename='js/docverify-review.js') }}?v={{ dv_ver }}"></script>
+<script>DV.start();</script>
 </body>
 </html>

@@ -36,6 +36,28 @@ def _err(message: str, status: int):
     return jsonify(error=message), status
 
 
+def _unlock_pdf(path: Path) -> bool:
+    """閲覧は自由で印刷・編集だけ制限した PDF（空のユーザーパスワードで暗号化）を、保護を外したコピーに置き換える。
+
+    reverse_doc は暗号化された PDF を一律に「パスワードで保護」として弾くため、読む前にここで外す（2026-10-06）。
+    開くのに本当にパスワードが要る PDF だけ False を返す。暗号化されていなければ何もしない。
+    """
+    from pypdf import PdfReader, PdfWriter
+    reader = PdfReader(str(path))
+    if not reader.is_encrypted:
+        return True
+    try:
+        if not reader.decrypt(""):
+            return False
+    except Exception:
+        log.exception("PDF の復号に失敗")
+        return False
+    writer = PdfWriter(clone_from=reader)
+    with open(path, "wb") as f:
+        writer.write(f)
+    return True
+
+
 def _findings(doc, ambiguous_words) -> list[dict]:
     out: list[dict] = []
     for p in doc.passages:
@@ -80,6 +102,8 @@ def inspect():
     with tempfile.TemporaryDirectory() as d:
         path = Path(d) / f"upload{suffix}"
         path.write_bytes(data)
+        if suffix == ".pdf" and not _unlock_pdf(path):
+            return _err(f"「{display}」は開くのにパスワードが要ります。パスワードを外したコピーを取り込んでください。", 400)
         try:
             doc = read_document(path)
         except DocumentError as e:

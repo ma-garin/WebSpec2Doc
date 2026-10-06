@@ -131,6 +131,12 @@
 .syscard-cli .syscard-open { color: #1F2937; }
 .syscard-heal .syscard-open { color: #92400E; }
 .syscard-app .syscard-open { color: #155E75; }
+/* ドキュメント検証（System 06）= #BE185D / #FCE7F3 / #9D174D。既存のどの識別色とも重ならない。 */
+.syscard-dv:hover { border-color: #BE185D; }
+.syscard-dv .syscard-accent { background: #BE185D; }
+.syscard-dv .syscard-icon { background: #FCE7F3; color: #9D174D; }
+.syscard-dv .syscard-no { color: #9D174D; }
+.syscard-dv .syscard-open { color: #9D174D; }
 
 .syscard-badge {
   position: absolute; top: 16px; right: 16px;

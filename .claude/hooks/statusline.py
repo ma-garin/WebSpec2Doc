@@ -155,8 +155,28 @@ def _fallback_part(stdin_raw: str) -> str:
     return os.path.basename(os.getcwd())
 
 
+_GLOBAL = pathlib.Path.home() / ".claude" / "hooks" / "statusline.py"
+
+
+def _delegate(stdin_raw: str) -> str:
+    """ホームの共通ステータスライン（応答 ID で重複を除いた Σ・API 換算・ctx）があればそれを使う。
+    本ファイルの集計は同じ応答を重複して数え、Σ が数倍に膨らむ（2026-10-06）。"""
+    if not _GLOBAL.exists():
+        return ""
+    try:
+        out = subprocess.run([sys.executable, str(_GLOBAL)], input=stdin_raw,
+                             capture_output=True, text=True, timeout=8)
+        return out.stdout.rstrip("\n")
+    except (subprocess.TimeoutExpired, OSError):
+        return ""
+
+
 def main() -> int:
     stdin_raw = sys.stdin.read()
+    delegated = _delegate(stdin_raw)
+    if delegated:
+        print(delegated)
+        return 0
     try:
         tokens = _tokens_part(stdin_raw)
     except Exception:       # ステータスラインは何があっても落とさない

@@ -79,7 +79,11 @@ def _questions(findings: list[dict]) -> list[dict]:
 
 @bp.route("/docverify")
 def page() -> str:
-    return render_template("doc_verify.html")
+    return render_template(
+        "doc_verify.html",
+        reverse_doc_url=os.environ.get("WEBSPEC2DOC_REVERSE_DOC_URL", "http://127.0.0.1:5173/"),
+        doc2ai_url=os.environ.get("WEBSPEC2DOC_DOC2AI_URL", "http://127.0.0.1:4173/"),
+    )
 
 
 @bp.route("/api/docverify/inspect", methods=["POST"])

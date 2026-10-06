@@ -36,6 +36,10 @@
   .dv-drop.over{border-color:var(--color-primary);background:var(--color-primary-light)}
   .btn{font:inherit;font-size:var(--text-sm);font-weight:600;border-radius:var(--radius-md);padding:8px 14px;cursor:pointer;border:1px solid var(--color-border-strong);background:var(--color-surface);color:var(--color-text)}
   .btn-primary{background:var(--color-primary);border-color:var(--color-primary);color:var(--color-on-primary)} .btn:disabled{opacity:.45;cursor:not-allowed}
+  .dv-tools{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);margin-top:var(--space-4)}
+  .dv-tool{display:block;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-5);color:inherit;text-decoration:none}
+  .dv-tool:hover{border-color:#BE185D}.dv-tool h3{margin:0 0 6px;font-size:var(--text-md)}.dv-tool p{margin:0 0 10px;font-size:var(--text-sm);color:var(--color-text-secondary);line-height:var(--leading-normal)}
+  .dv-tool .go{font-size:var(--text-sm);font-weight:700;color:#9D174D}
   table.dv-t{align-self:start}
   .app-nav-item.active{background:var(--color-primary-light);color:var(--color-primary-dark);font-weight:700}
   .app-nav-group.dv-file{text-transform:none;letter-spacing:0}
@@ -79,6 +83,18 @@
         <button class="btn btn-primary" type="submit" id="dv-submit" disabled>検証する</button>
         <p class="mut" id="dv-busy" hidden>読み取って検証しています…</p>
       </form>
+      <div class="dv-tools">
+        <a class="dv-tool" href="{{ reverse_doc_url }}" target="_blank" rel="noopener">
+          <h3>仕様書の逆起こし（reverse_doc）</h3>
+          <p>ソースコード・稼働中の画面・既存の文書から、要求仕様書・基本設計書・詳細設計書・テスト仕様書を根拠と確度つきで作ります。要確認への回答・版の差分・評価・Word / Excel 出力まで。</p>
+          <span class="go">逆起こしを開く →</span>
+        </a>
+        <a class="dv-tool" href="{{ doc2ai_url }}" target="_blank" rel="noopener">
+          <h3>文書の AI 向け変換と検査（Doc2AI）</h3>
+          <p>PDF・Word・Excel・PowerPoint を構造化し、Lint・根拠付きの仕様 QA・要求の構造化・状態モデル候補・テストケース生成（Gherkin ほか）まで行います。</p>
+          <span class="go">Doc2AI を開く →</span>
+        </a>
+      </div>
     </section>
 
     <section data-view="inspect" hidden>

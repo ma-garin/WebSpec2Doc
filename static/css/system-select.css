@@ -165,3 +165,6 @@
 @media (max-width: 720px) {
   .sysselect-grid { grid-template-columns: 1fr; }
 }
+
+/* ta2.css の html,body{overflow:hidden} で 2 段目が切れる（8 枚になって 1440x900 に収まらない）。この画面だけ縦スクロールを許す */
+html:has(body.sysselect-body), body.sysselect-body { overflow-y: auto; height: auto; }

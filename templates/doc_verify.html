@@ -28,10 +28,16 @@
   .dv-quote{border-left:3px solid var(--color-medium);background:var(--color-surface-2);padding:8px 12px;margin:var(--space-2) 0 var(--space-4);line-height:var(--leading-normal);white-space:pre-wrap}
   .dv-panel{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--space-6);margin-top:var(--space-3)}
   .dv-err{border:1px solid var(--color-critical-border);background:var(--color-critical-bg);color:var(--color-critical);border-radius:var(--radius-md);padding:var(--space-3) var(--space-4);margin-bottom:var(--space-3)}
-  .dv-drop{border:2px dashed var(--color-border-strong);border-radius:var(--radius-lg);padding:var(--space-8);text-align:center;background:var(--color-surface)}
+  .dv-drop{border:2px dashed var(--color-border-strong);border-radius:var(--radius-lg);padding:56px var(--space-8);text-align:center;background:var(--color-surface);display:flex;flex-direction:column;align-items:center;gap:var(--space-3)}
+  .dv-drop p{margin:0}.dv-drop-ico{width:48px;height:48px;border-radius:12px;background:#FCE7F3;color:#9D174D;display:grid;place-items:center}
+  .dv-drop-title{font-size:var(--text-lg);font-weight:700}.dv-pick{display:flex;gap:var(--space-3);align-items:center;margin-top:var(--space-2)}
+  .dv-file-name{font-size:var(--text-sm);color:var(--color-text-secondary);max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .dv-visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
   .dv-drop.over{border-color:var(--color-primary);background:var(--color-primary-light)}
   .btn{font:inherit;font-size:var(--text-sm);font-weight:600;border-radius:var(--radius-md);padding:8px 14px;cursor:pointer;border:1px solid var(--color-border-strong);background:var(--color-surface);color:var(--color-text)}
   .btn-primary{background:var(--color-primary);border-color:var(--color-primary);color:var(--color-on-primary)} .btn:disabled{opacity:.45;cursor:not-allowed}
+  table.dv-t{align-self:start}
+  .app-nav-item.active{background:var(--color-primary-light);color:var(--color-primary-dark);font-weight:700}
   .app-nav-group.dv-file{text-transform:none;letter-spacing:0}
   .app-nav-item .cnt{margin-left:auto;font-size:11px;background:var(--color-medium-bg);color:var(--color-medium);border-radius:999px;padding:0 7px}
 </style>
@@ -62,10 +68,15 @@
 
     <section data-view="upload">
       <form id="dv-form" class="dv-drop">
-        <p><strong>検証する仕様書を選んでください</strong></p>
+        <span class="dv-drop-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v4h16v-4"/></svg></span>
+        <p class="dv-drop-title">検証する仕様書をここにドロップ</p>
         <p class="mut">Word（.docx）・Excel（.xlsx）・PDF・テキスト（.txt / .md）。20 MB まで。</p>
-        <p><input type="file" id="dv-file" accept=".txt,.md,.docx,.xlsx,.pdf"></p>
-        <button class="btn btn-primary" type="submit" id="dv-submit">検証する</button>
+        <input type="file" id="dv-file" class="dv-visually-hidden" accept=".txt,.md,.docx,.xlsx,.pdf">
+        <div class="dv-pick">
+          <label class="btn" for="dv-file">ファイルを選ぶ</label>
+          <span class="dv-file-name" id="dv-file-name">まだ選ばれていません</span>
+        </div>
+        <button class="btn btn-primary" type="submit" id="dv-submit" disabled>検証する</button>
         <p class="mut" id="dv-busy" hidden>読み取って検証しています…</p>
       </form>
     </section>
@@ -108,7 +119,7 @@
     }
     const x = f[sel];
     $('#dv-result').innerHTML = `
-      <div class="dv-chips"><span class="dv-chip" aria-pressed="true">すべて ${f.length}</span><span class="dv-chip" aria-pressed="false">警告 ${f.length}</span></div>
+      <p class="mut" style="margin:var(--space-3) 0">指摘 ${f.length} 件。行を選ぶと右に根拠の原文が出ます。</p>
       <div class="dv-body">
         <table class="dv-t"><thead><tr><th>重大度</th><th>指摘</th><th>場所</th><th>観点</th><th>確度</th></tr></thead><tbody>
         ${f.map((r, i) => `<tr data-i="${i}" class="${i === sel ? 'sel' : ''}"><td><span class="sev">警告</span></td><td>${esc(r.message)}</td><td class="loc">${esc(r.location)}</td><td>${esc(r.viewpoint)}</td><td>${esc(r.certainty)}</td></tr>`).join('')}
@@ -145,12 +156,14 @@
       renderInspect(); renderQuestions(); show('inspect');
     } catch (e) {
       error('サーバに接続できませんでした。少し待ってから、もう一度お試しください。');
-    } finally { $('#dv-submit').disabled = false; $('#dv-busy').hidden = true; }
+    } finally { $('#dv-submit').disabled = !$('#dv-file').files[0]; $('#dv-busy').hidden = true; }
   });
+  const picked = () => { const f = $('#dv-file').files[0]; $('#dv-file-name').textContent = f ? f.name : 'まだ選ばれていません'; $('#dv-submit').disabled = !f; };
+  $('#dv-file').addEventListener('change', picked);
   const drop = $('#dv-form');
   drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
   drop.addEventListener('dragleave', () => drop.classList.remove('over'));
-  drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); $('#dv-file').files = e.dataTransfer.files; });
+  drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); $('#dv-file').files = e.dataTransfer.files; picked(); });
   document.querySelectorAll('[data-nav]').forEach(a => a.addEventListener('click', e => { e.preventDefault(); show(a.dataset.nav); }));
   $('#dv-result').addEventListener('click', e => {
     if (e.target.closest('[data-go]')) { show('questions'); return; }

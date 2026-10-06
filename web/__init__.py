@@ -27,6 +27,7 @@ def create_app() -> Flask:
         discover,
         feedback,
         healing,
+        doc_verify,
         history,
         integrations,
         llm_chat,
@@ -133,6 +134,8 @@ def create_app() -> Flask:
     app.register_blueprint(feedback.bp)
     # オートヒーリング（System 05）。他システムと同様、独立した入口 /healing を持つ。
     app.register_blueprint(healing.bp)
+    # ドキュメント検証（System 06）。独立した入口 /docverify を持つ。
+    app.register_blueprint(doc_verify.bp)
     # 指揮者（O2）。5 システムを 1 本の実行として束ねる API。
     app.register_blueprint(orchestration.bp)
 

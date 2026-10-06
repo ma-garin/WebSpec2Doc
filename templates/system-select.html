@@ -16,8 +16,8 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ta2.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ws.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/system-select.css') }}?v={{ _ver }}">
-  {# カードは 7 枚（指揮 + 01 + 01·app + 02 + 03 + 04 + 05）。6 列のままだと 1440×900 で
-     2 段目に 1 枚だけ余るので 4 + 3 に割る。system-select.css の基底も同じ値にしてある。 #}
+  {# カードは 8 枚（指揮 + 01 + 01·app + 02 + 03 + 04 + 05 + 06）。6 列のままだと 1440×900 で
+     2 段目に 2 枚だけ余るので 4 + 4 に割る。system-select.css の基底も同じ値にしてある。 #}
   <style>
     .sysselect-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     @media (max-width: 1040px) { .sysselect-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -39,7 +39,7 @@
   <main class="sysselect-stage">
     {# 見出しは共通ヘッダー（topbar）が出す。ここで繰り返すと h1 が二重になる。 #}
     <div class="sysselect-head">
-      <p>使うシステムを選んでください。5 つは独立したシステムで、入口・ナビは別です。CLI / API は画面を持たず、端末や外部システムから同じ機能を使います。</p>
+      <p>使うシステムを選んでください。6 つは独立したシステムで、入口・ナビは別です。CLI / API は画面を持たず、端末や外部システムから同じ機能を使います。</p>
     </div>
 
     <div class="sysselect-grid">
@@ -189,6 +189,26 @@
         <span class="syscard-open">オートヒーリングを開く →</span>
       </a>
       {% endif %}
+
+      <!-- ドキュメント検証（System 06）。TOP は /docverify の独立シェル。読み取り・曖昧語は reverse_doc。Doc2AI-Friendly は新版ができてから接続する。 -->
+      <a class="syscard syscard-dv" href="/docverify">
+        <span class="syscard-accent" aria-hidden="true"></span>
+        <span class="syscard-badge">新規</span>
+        <span class="syscard-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4"/><path d="M14 3v5h5v3"/><circle cx="16.5" cy="16.5" r="3.5"/><path d="M19 19l2.5 2.5"/>
+          </svg>
+        </span>
+        <span class="syscard-no">System 06</span>
+        <span class="syscard-title">ドキュメント検証</span>
+        <span class="syscard-desc">Word・Excel・PDF の仕様書を取り込み、<b>曖昧な表現・食い違い・抜け</b>を根拠の位置付きで指摘します。確かめたい点は<b>質問票</b>にまとめて作成者に返せます。</span>
+        <span class="syscard-chips">
+          <span class="syscard-chip">文書インスペクション</span><span class="syscard-chip">確度</span>
+          <span class="syscard-chip">質問票</span><span class="syscard-chip">根拠の位置</span>
+        </span>
+        <span class="syscard-open">ドキュメント検証を開く →</span>
+      </a>
+
 
     </div>
 

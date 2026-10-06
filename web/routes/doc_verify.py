@@ -1,125 +1,499 @@
-"""ドキュメント検証（System 06）。文書の読み取りと曖昧語の検出は reverse_doc を使う。
+"""ドキュメント検証（System 06）。検査（インスペクション）を 1 件ずつ保存して進める。
 
-第 1 段は保存しない: 取り込み 1 回で指摘と質問票を返す（保存しないのでテナントをまたぐ漏れも起きない）。
-Doc2AI-Friendly は新版ができてから接続する（旧 MVP は 2026-10-06 に退避された）。
-reverse_doc の場所は WEBSPEC2DOC_REVERSE_DOC_SRC（既定はリポジトリと同じ階層の reverse_doc/src）。
+契約: docs/process/docverify-contract.md の「API」。処理の中身は web/services/docverify/ にある。
 """
 from __future__ import annotations
 
 import logging
-import os
-import sys
+import re
 import tempfile
 from pathlib import Path
 
-from flask import Blueprint, jsonify, render_template, request
+from flask import Blueprint, Response, jsonify, render_template, request
 
 bp = Blueprint("doc_verify", __name__)
 log = logging.getLogger(__name__)
 
-_MAX_BYTES = 20 * 1024 * 1024
-_SUFFIXES = (".txt", ".md", ".docx", ".xlsx", ".pdf")
-_DEFAULT_SRC = Path(__file__).resolve().parents[2].parent / "reverse_doc" / "src"
-_VIEWPOINTS = ["曖昧な表現"]
-
-
-def _reverse_doc():
-    src = os.environ.get("WEBSPEC2DOC_REVERSE_DOC_SRC") or str(_DEFAULT_SRC)
-    if src not in sys.path:
-        sys.path.append(src)
-    from reverse_doc.ambiguity import ambiguous_words
-    from reverse_doc.docs_ingest.readers import DocumentError, read_document
-    return ambiguous_words, DocumentError, read_document
+_IID = re.compile(r"^[0-9a-f]{12}$")
+_STATUSES = ("candidate", "adopted", "rejected", "fixed", "verified")
+_SEVERITIES = ("critical", "major", "minor")
+_PHASES = ("plan", "individual", "triage", "rework", "followup", "closed")
+_ROLES = ("author", "moderator", "reviewer", "approver")
+_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
 def _err(message: str, status: int):
     return jsonify(error=message), status
 
 
-def _unlock_pdf(path: Path) -> bool:
-    """閲覧は自由で印刷・編集だけ制限した PDF（空のユーザーパスワードで暗号化）を、保護を外したコピーに置き換える。
-
-    reverse_doc は暗号化された PDF を一律に「パスワードで保護」として弾くため、読む前にここで外す（2026-10-06）。
-    開くのに本当にパスワードが要る PDF だけ False を返す。暗号化されていなければ何もしない。
-    """
-    from pypdf import PdfReader, PdfWriter
-    reader = PdfReader(str(path))
-    if not reader.is_encrypted:
-        return True
+def _load(iid: str):
+    """検査を読む。無い・形が違うときは (None, 404 応答)。"""
+    from web.services.docverify import store
+    if not _IID.match(iid or ""):
+        return None, _err("検査が見つかりません。検査一覧から開き直してください。", 404)
     try:
-        if not reader.decrypt(""):
-            return False
-    except Exception:
-        log.exception("PDF の復号に失敗")
-        return False
-    writer = PdfWriter(clone_from=reader)
-    with open(path, "wb") as f:
-        writer.write(f)
-    return True
+        return store.load(iid), None
+    except KeyError:
+        return None, _err("検査が見つかりません。検査一覧から開き直してください。", 404)
 
 
-def _findings(doc, ambiguous_words) -> list[dict]:
-    out: list[dict] = []
-    for p in doc.passages:
-        for word in ambiguous_words(p.text):
-            out.append({
-                "id": f"F{len(out) + 1}", "severity": "warning", "viewpoint": "曖昧な表現",
-                "certainty": "要確認", "word": word, "location": p.locator.label(),
-                "message": f"「{word}」は合否を判定できない。具体的な条件や数値が要る",
-                "quote": p.text[:400],
-            })
-    return out
+def _respond(insp: dict, status: int = 200, **extra):
+    from web.services.docverify import metrics
+    return jsonify(inspection=insp, summary=metrics.summary(insp), **extra), status
 
 
-def _questions(findings: list[dict]) -> list[dict]:
-    return [{"id": f"Q{i}", "finding_id": f["id"], "location": f["location"],
-             "question": f"{f['location']}の「{f['word']}」は、具体的にどの条件・数値を指しますか。"}
-            for i, f in enumerate(findings, 1)]
+def _renumber(existing: list[dict], new: list[dict]) -> list[dict]:
+    """新しい指摘に既存と重ならない F 番号を振る（元の dict は変えない）。"""
+    nums = [int(f["id"][1:]) for f in existing if str(f.get("id", "")).startswith("F") and f["id"][1:].isdigit()]
+    start = max(nums, default=0)
+    from web.services.docverify.store import upgrade_finding
+    return [upgrade_finding({**f, "id": f"F{start + i + 1}"}) for i, f in enumerate(new)]
+
+
+def _norm(text: str) -> str:
+    return re.sub(r"\s+", "", text or "")
 
 
 @bp.route("/docverify")
 def page() -> str:
-    return render_template(
-        "doc_verify.html",
-        reverse_doc_url=os.environ.get("WEBSPEC2DOC_REVERSE_DOC_URL", "http://127.0.0.1:5173/"),
-        doc2ai_url=os.environ.get("WEBSPEC2DOC_DOC2AI_URL", "http://127.0.0.1:4173/"),
-    )
+    # 静的ファイルの更新が古い版の読み込みで隠れないよう、JS/CSS の更新時刻を URL に付ける
+    static = Path(__file__).resolve().parents[2] / "static"
+    files = ["js/docverify-core.js", "js/docverify-global.js", "js/docverify-review.js", "css/docverify.css"]
+    dv_ver = max(int((static / f).stat().st_mtime) for f in files if (static / f).exists())
+    return render_template("doc_verify.html", dv_ver=dv_ver)
 
 
-@bp.route("/api/docverify/inspect", methods=["POST"])
-def inspect():
-    f = request.files.get("file")
-    if f is None or not f.filename:
-        return _err("ファイルが選ばれていません。検証する文書を選んでください。", 400)
-    display = Path(f.filename).name[:120]
-    suffix = Path(display).suffix.lower()
-    if suffix not in _SUFFIXES:
-        return _err(f"「{display}」は取り込めない形式です。{' / '.join(_SUFFIXES)} のいずれかを選んでください。", 400)
-    data = f.read(_MAX_BYTES + 1)
-    if len(data) > _MAX_BYTES:
-        return _err(f"「{display}」は 20 MB を超えています。必要な部分だけにして取り込んでください。", 400)
+@bp.route("/api/docverify/inspections", methods=["GET"])
+def list_inspections():
+    from web.services.docverify import store
     try:
-        ambiguous_words, DocumentError, read_document = _reverse_doc()
-    except ImportError:
-        log.exception("reverse_doc を読み込めない")
-        return _err("検証の部品を読み込めませんでした。管理者に連絡してください。", 503)
-    with tempfile.TemporaryDirectory() as d:
-        path = Path(d) / f"upload{suffix}"
-        path.write_bytes(data)
-        if suffix == ".pdf" and not _unlock_pdf(path):
-            return _err(f"「{display}」は開くのにパスワードが要ります。パスワードを外したコピーを取り込んでください。", 400)
+        return jsonify(inspections=store.list_all())
+    except Exception:
+        log.exception("検査一覧の取得に失敗")
+        return _err("検査一覧を読めませんでした。時間をおいて再読み込みしてください。", 500)
+
+
+@bp.route("/api/docverify/inspections", methods=["POST"])
+def create_inspection():
+    from web.services.docverify import store
+    body = request.get_json(silent=True) or {}
+    name = str(body.get("name") or "").strip()
+    if not name:
+        return _err("検査の名前を入力してください。", 400)
+    try:
+        from web.services.docverify.settings import current_user
+        # 作った人を進行役として参加者に入れる（入れないと「あなたの役割: 未登録」になる）
+        insp = {**store.new(name), "goal": str(body.get("goal") or "").strip(),
+                "participants": [{"name": current_user(), "role": "moderator", "done": False}]}
+        store.save(insp)  # 目的が空でも必ず保存する（空のとき保存せず、直後の読み込みが 404 になっていた）
+    except Exception:
+        log.exception("検査の作成に失敗")
+        return _err("検査を作れませんでした。もう一度お試しください。", 500)
+    return _respond(insp, 201)
+
+
+@bp.route("/api/docverify/inspections/<iid>", methods=["GET"])
+def get_inspection(iid: str):
+    insp, err = _load(iid)
+    return err or _respond(insp)
+
+
+@bp.route("/api/docverify/inspections/<iid>/document", methods=["POST"])
+def upload_document(iid: str):
+    from web.services.docverify import checks, diff, ingest, store
+    insp, err = _load(iid)
+    if err:
+        return err
+    file = request.files.get("file")
+    if file is None or not file.filename:
+        return _err("文書ファイルを選んでください。", 400)
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            document, passages = ingest.ingest(file.filename, file.read(), Path(tmp))
+    except ingest.IngestError as e:
+        return _err(str(e), 400)
+    except Exception:
+        log.exception("文書の取り込みに失敗")
+        return _err("文書を読めませんでした。別の形式で保存し直してから取り込んでください。", 500)
+
+    old_passages = insp.get("passages") or []
+    old_findings = insp.get("findings") or []
+    version = len(insp.get("versions") or []) + 1
+    document = {**document, "version": version}
+    try:
+        if insp.get("document") is None:
+            findings = _renumber([], checks.candidates(passages))
+            changes = None
+        else:
+            changes = diff.compare(old_passages, passages)
+            carried = diff.carry_findings(old_findings, old_passages, passages)
+            old_texts = {_norm(p["text"]) for p in old_passages}
+            fresh = [p for p in passages if _norm(p["text"]) not in old_texts]
+            findings = carried + _renumber(carried, checks.candidates(fresh))
+    except Exception:
+        log.exception("指摘候補の生成に失敗")
+        return _err("指摘の候補を作れませんでした。もう一度取り込んでください。", 500)
+
+    from datetime import datetime, timezone
+    entry = {"version": version, "name": document.get("name"),
+             "uploaded_at": datetime.now(timezone.utc).isoformat(), "passages": len(passages)}
+    updated = {**insp, "document": document, "passages": passages, "findings": findings,
+               "versions": [*(insp.get("versions") or []), entry], "diff": changes,
+               "status": "reviewing",
+               # 文書を取り込んだら個別レビューへ進める（計画のままだと工程表示が実態と合わない）
+               "phase": "individual" if insp.get("phase", "plan") == "plan" else insp.get("phase")}
+    store.save(updated)
+    return _respond(updated)
+
+
+@bp.route("/api/docverify/inspections/<iid>/findings/<fid>", methods=["POST"])
+def update_finding(iid: str, fid: str):
+    from web.services.docverify import store
+    insp, err = _load(iid)
+    if err:
+        return err
+    body = request.get_json(silent=True) or {}
+    changes = {}
+    if "status" in body:
+        if body["status"] not in _STATUSES:
+            return _err("指摘の状態が正しくありません。画面を再読み込みしてやり直してください。", 400)
+        changes["status"] = body["status"]
+    if "severity" in body:
+        from web.services.docverify.settings import normalize_severity
+        sev = normalize_severity(body["severity"])
+        if sev not in _SEVERITIES:
+            return _err("重大度を選び直してください。", 400)
+        changes["severity"] = sev
+    if "certainty" in body:  # 「作成者に質問」で要確認にする（質問票に載る）
+        if body["certainty"] not in ("事実", "推定", "要確認"):
+            return _err("確度を選び直してください。", 400)
+        changes["certainty"] = body["certainty"]
+    for key in ("checklist_item", "disposition"):
+        if key in body:
+            v = body[key]
+            if v is not None and not isinstance(v, str):
+                return _err("入力の形が正しくありません。画面を再読み込みしてやり直してください。", 400)
+            changes[key] = (v.strip() or None) if isinstance(v, str) else None
+    if not changes:
+        return _err("変更する項目がありません。画面を再読み込みしてやり直してください。", 400)
+    if not any(f.get("id") == fid for f in insp.get("findings") or []):
+        return _err("指摘が見つかりません。画面を再読み込みしてください。", 404)
+    findings = [{**f, **changes} if f.get("id") == fid else f for f in insp["findings"]]
+    updated = {**insp, "findings": findings}
+    store.save(updated)
+    return _respond(updated)
+
+
+@bp.route("/api/docverify/inspections/<iid>/findings", methods=["POST"])
+def add_finding(iid: str):
+    from web.services.docverify import store
+    insp, err = _load(iid)
+    if err:
+        return err
+    body = request.get_json(silent=True) or {}
+    pid = body.get("passage_id")
+    passage = next((p for p in insp.get("passages") or [] if p.get("id") == pid), None)
+    if passage is None:
+        return _err("指摘する箇所を選んでください。", 400)
+    from web.services.docverify.settings import current_user, normalize_severity
+    severity = normalize_severity(body.get("severity"))
+    if severity not in _SEVERITIES:
+        return _err("重大度を選んでください。", 400)
+    message = str(body.get("message") or "").strip()
+    viewpoint = str(body.get("viewpoint") or "").strip()
+    if not message or not viewpoint:
+        return _err("観点と指摘の文を入力してください。", 400)
+    new = _renumber(insp.get("findings") or [], [{
+        "rule": "HUMAN", "severity": severity, "viewpoint": viewpoint, "message": message,
+        "location": passage.get("location"), "passage_id": pid, "quote": passage.get("text", "")[:200],
+        "certainty": "事実", "status": "adopted", "answer": None, "origin": "human",
+        "raised_by": current_user(), "checklist_item": (str(body.get("checklist_item")).strip() or None)
+        if body.get("checklist_item") else None, "disposition": None}])
+    updated = {**insp, "findings": [*(insp.get("findings") or []), *new]}
+    store.save(updated)
+    return _respond(updated, 201)
+
+
+@bp.route("/api/docverify/inspections/<iid>/questions.csv")
+def questions_csv(iid: str):
+    from web.services.docverify import questions
+    insp, err = _load(iid)
+    if err:
+        return err
+    text = questions.to_csv(questions.build(insp.get("findings") or []))
+    return Response(text, mimetype="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": f"attachment; filename=questions-{iid}.csv"})
+
+
+@bp.route("/api/docverify/inspections/<iid>/questions.xlsx")
+def questions_xlsx(iid: str):
+    from web.services.docverify import questions
+    insp, err = _load(iid)
+    if err:
+        return err
+    data = questions.to_xlsx(questions.build(insp.get("findings") or []))
+    return Response(data, mimetype=_XLSX,
+                    headers={"Content-Disposition": f"attachment; filename=questions-{iid}.xlsx"})
+
+
+@bp.route("/api/docverify/inspections/<iid>/answers", methods=["POST"])
+def import_answers(iid: str):
+    from web.services.docverify import questions, store
+    insp, err = _load(iid)
+    if err:
+        return err
+    file = request.files.get("file")
+    if file is None or not file.filename:
+        return _err("回答を書き込んだ CSV ファイルを選んでください。", 400)
+    try:
+        text = file.read().decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return _err("CSV を読めませんでした。UTF-8 で保存し直してから取り込んでください。", 400)
+    updated = {**insp, "findings": [dict(f) for f in insp.get("findings") or []]}
+    try:
+        applied = questions.import_answers(updated, text)
+    except ValueError as e:
+        return _err(str(e) or "CSV の形が違います。出力した質問票に回答を書き込んで取り込んでください。", 400)
+    except Exception:
+        log.exception("回答の取り込みに失敗")
+        return _err("回答を取り込めませんでした。出力した質問票に回答を書き込んで取り込んでください。", 400)
+    store.save(updated)
+    return _respond(updated, applied=applied)
+
+
+@bp.route("/api/docverify/domains")
+def domains():
+    from web.services.docverify import match
+    try:
+        return jsonify(domains=match.domains())
+    except Exception:
+        log.exception("巡回済みサイトの取得に失敗")
+        return _err("巡回済みのサイトを読めませんでした。時間をおいて再読み込みしてください。", 500)
+
+
+@bp.route("/api/docverify/inspections/<iid>/match", methods=["POST"])
+def match_screens(iid: str):
+    from web.services.docverify import match, store
+    insp, err = _load(iid)
+    if err:
+        return err
+    domain = str((request.get_json(silent=True) or {}).get("domain") or "").strip()
+    if not domain:
+        return _err("照合するサイトを選んでください。", 400)
+    try:
+        found = match.match(insp.get("passages") or [], domain)
+    except ValueError:
+        return _err("まず System 01 で対象サイトを巡回してください。", 400)
+    except Exception:
+        log.exception("実画面との照合に失敗")
+        return _err("照合できませんでした。もう一度お試しください。", 500)
+    viewpoints = {f.get("viewpoint") for f in found}
+    kept = [f for f in insp.get("findings") or []
+            if not (f.get("status") == "candidate" and f.get("viewpoint") in viewpoints)]
+    updated = {**insp, "findings": kept + _renumber(insp.get("findings") or [], found)}
+    store.save(updated)
+    return _respond(updated)
+
+
+@bp.route("/api/docverify/inspections/<iid>/close", methods=["POST"])
+def close(iid: str):
+    from web.services.docverify import metrics, store
+    insp, err = _load(iid)
+    if err:
+        return err
+    summary = metrics.summary(insp)
+    if not summary.get("exit_ok"):
+        return jsonify(error="終了条件を満たしていません。理由を確認して対応してください。",
+                       reasons=summary.get("reasons", [])), 409
+    updated = {**insp, "status": "closed"}
+    store.save(updated)
+    return _respond(updated)
+
+
+@bp.route("/api/docverify/inspections/<iid>/report.xlsx")
+def report_xlsx(iid: str):
+    from web.services.docverify import metrics
+    insp, err = _load(iid)
+    if err:
+        return err
+    return Response(metrics.to_xlsx(insp), mimetype=_XLSX,
+                    headers={"Content-Disposition": f"attachment; filename=inspection-{iid}.xlsx"})
+
+
+# ---- v2 追補 ----------------------------------------------------------------
+
+def _all_full() -> list[dict]:
+    """全レビューを指摘・断片込みで読む（壊れたものは飛ばす）。"""
+    from web.services.docverify import store
+    out = []
+    for item in store.list_all():
         try:
-            doc = read_document(path)
-        except DocumentError as e:
-            return _err(str(e).replace(path.name, display), 400)
-        except Exception:
-            log.exception("文書の読み取りに失敗")
-            return _err(f"「{display}」を読み取れませんでした。別のコピーで取り込み直してください。", 500)
-    if not doc.passages:
-        return _err(f"「{display}」から文字を読み取れませんでした。文字を選択できる PDF か、元の Word で取り込み直してください。", 400)
-    findings = _findings(doc, ambiguous_words)
-    return jsonify(
-        document={"name": display, "format": suffix[1:], "passages": len(doc.passages)},
-        findings=findings, questions=_questions(findings),
-        checked={"passages": len(doc.passages), "viewpoints": _VIEWPOINTS},
-    )
+            out.append(store.load(item["id"]))
+        except (KeyError, ValueError, OSError):
+            continue
+    return out
+
+
+@bp.route("/api/docverify/home")
+def home():
+    from web.services.docverify.settings import current_user
+    try:
+        me = current_user()
+        reviews = _all_full()
+    except Exception:
+        log.exception("ホームの取得に失敗")
+        return _err("ホームを読めませんでした。時間をおいて再読み込みしてください。", 500)
+    mine = [{"review_id": r["id"], "review_name": r.get("name"), "role": p.get("role"),
+             "done": bool(p.get("done")), "phase": r.get("phase"), "due": r.get("due")}
+            for r in reviews for p in r.get("participants") or [] if p.get("name") == me]
+    active = [{"review_id": r["id"], "review_name": r.get("name"), "phase": r.get("phase"), "due": r.get("due"),
+               "findings": len(r.get("findings") or [])} for r in reviews if r.get("phase") != "closed"]
+    open_f = [f for r in reviews for f in r.get("findings") or [] if f.get("status") == "adopted"]  # 判定と記録と同じく、候補は未対応に数えない
+    counts = {"mine": sum(1 for m in mine if not m["done"]), "active": len(active),
+              "open_findings": len(open_f), "open_critical": sum(1 for f in open_f if f.get("severity") == "critical")}
+    return jsonify(me=me, mine=mine, active=active, counts=counts)
+
+
+@bp.route("/api/docverify/findings")
+def all_findings():
+    status, severity, review = (request.args.get(k) or "" for k in ("status", "severity", "review"))
+    from web.services.docverify.settings import normalize_severity
+    severity = normalize_severity(severity)
+    try:
+        reviews = _all_full()
+    except Exception:
+        log.exception("指摘一覧の取得に失敗")
+        return _err("指摘一覧を読めませんでした。時間をおいて再読み込みしてください。", 500)
+    rows = [{**f, "review_id": r["id"], "review_name": r.get("name")}
+            for r in reviews if not review or r["id"] == review
+            for f in r.get("findings") or []
+            if (not status or f.get("status") == status) and (not severity or f.get("severity") == severity)]
+    return jsonify(findings=rows)
+
+
+def _valid_participants(value):
+    if not isinstance(value, list):
+        return None
+    out = []
+    for p in value:
+        if not isinstance(p, dict) or not str(p.get("name") or "").strip() or p.get("role") not in _ROLES:
+            return None
+        out.append({"name": str(p["name"]).strip(), "role": p["role"], "done": bool(p.get("done"))})
+    return out
+
+
+@bp.route("/api/docverify/inspections/<iid>", methods=["PATCH"])
+def patch_inspection(iid: str):
+    from web.services.docverify import store
+    insp, err = _load(iid)
+    if err:
+        return err
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        return _err("入力の形が正しくありません。画面を再読み込みしてやり直してください。", 400)
+    changes = {}
+    for key in ("name", "goal"):
+        if key in body:
+            v = str(body[key] or "").strip()
+            if key == "name" and not v:
+                return _err("レビューの名前を入力してください。", 400)
+            changes[key] = v
+    if "due" in body:
+        due = body["due"] or None
+        if due is not None and not (isinstance(due, str) and _DATE.match(due)):
+            return _err("期限は年-月-日の形で入力してください。", 400)
+        changes["due"] = due
+    if "participants" in body:
+        ps = _valid_participants(body["participants"])
+        if ps is None:
+            return _err("参加者の名前と役割を入力してください。", 400)
+        changes["participants"] = ps
+    if "checklist_id" in body:
+        cid = body["checklist_id"] or None
+        if cid is not None:
+            from web.services.docverify.settings import load_checklists
+            if cid not in {c.get("id") for c in load_checklists()}:
+                return _err("観点チェックリストを選び直してください。", 400)
+        changes["checklist_id"] = cid
+    if "checks" in body:
+        if not isinstance(body["checks"], dict):
+            return _err("チェックの形が正しくありません。画面を再読み込みしてやり直してください。", 400)
+        changes["checks"] = {str(k): bool(v) for k, v in body["checks"].items()}
+    if "exit_criteria" in body:
+        ec = body["exit_criteria"]
+        if not isinstance(ec, dict) or not all(isinstance(v, int) and v >= 0 for v in ec.values()):
+            return _err("終了条件の件数は 0 以上の整数で入力してください。", 400)
+        changes["exit_criteria"] = {**(insp.get("exit_criteria") or {}), **ec}
+    if "phase" in body:
+        if body["phase"] not in _PHASES:
+            return _err("工程が正しくありません。画面を再読み込みしてやり直してください。", 400)
+        changes["phase"] = body["phase"]
+        if body["phase"] == "closed":
+            changes["status"] = "closed"
+    if "approval" in body:
+        # 承認欄は人が入れた値を保存するだけ。サーバは自動で埋めない。
+        ap = body["approval"]
+        if not isinstance(ap, dict) or not all(v is None or isinstance(v, str) for v in ap.values()):
+            return _err("承認者の名前と日時を入力してください。", 400)
+        changes["approval"] = {"approver": (ap.get("approver") or "").strip() or None,
+                               "decided_at": (ap.get("decided_at") or "").strip() or None}
+    if not changes:
+        return _err("変更する項目がありません。画面を再読み込みしてやり直してください。", 400)
+    updated = {**insp, **changes}
+    store.save(updated)
+    return _respond(updated)
+
+
+@bp.route("/api/docverify/inspections/<iid>/participants/me/done", methods=["POST"])
+def participant_done(iid: str):
+    from web.services.docverify import store
+    from web.services.docverify.settings import current_user
+    insp, err = _load(iid)
+    if err:
+        return err
+    me = current_user()
+    ps = insp.get("participants") or []
+    if not any(p.get("name") == me for p in ps):
+        return _err("このレビューの参加者に入っていません。計画の画面で参加者に追加してください。", 403)
+    updated = {**insp, "participants": [{**p, "done": True} if p.get("name") == me else p for p in ps]}
+    store.save(updated)
+    return _respond(updated)
+
+
+@bp.route("/api/docverify/checklists", methods=["GET", "PUT"])
+def checklists():
+    from web.services.docverify import settings
+    try:
+        if request.method == "GET":
+            return jsonify(checklists=settings.load_checklists())
+        return jsonify(checklists=settings.save_checklists(request.get_json(silent=True)))
+    except ValueError as e:
+        return _err(str(e), 400)
+    except Exception:
+        log.exception("チェックリストの読み書きに失敗")
+        return _err("チェックリストを保存できませんでした。もう一度お試しください。", 500)
+
+
+@bp.route("/api/docverify/settings", methods=["GET", "PUT"])
+def settings_api():
+    from web.services.docverify import settings
+    try:
+        if request.method == "GET":
+            return jsonify(settings=settings.load_settings())
+        return jsonify(settings=settings.save_settings(request.get_json(silent=True)))
+    except ValueError as e:
+        return _err(str(e), 400)
+    except Exception:
+        log.exception("設定の読み書きに失敗")
+        return _err("設定を保存できませんでした。もう一度お試しください。", 500)
+
+
+@bp.route("/api/docverify/metrics")
+def metrics_api():
+    from web.services.docverify import metrics
+    try:
+        return jsonify(metrics=metrics.overall(_all_full()))
+    except Exception:
+        log.exception("メトリクスの集計に失敗")
+        return _err("メトリクスを集計できませんでした。時間をおいて再読み込みしてください。", 500)

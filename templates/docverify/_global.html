@@ -1,0 +1,61 @@
+<section class="dv-view" data-view="home" hidden>
+  <h2 class="dvg-h">ホーム</h2>
+  <p class="mut">自分の担当と、進行中のレビューをまとめて見られます。</p>
+  <div id="dvgHomeCounts" class="dvg-cards"></div>
+  <h3 class="dvg-h3">自分の担当</h3>
+  <div id="dvgHomeMine"></div>
+  <h3 class="dvg-h3">進行中のレビュー</h3>
+  <div id="dvgHomeActive"></div>
+</section>
+
+<section class="dv-view" data-view="mine" hidden>
+  <h2 class="dvg-h">自分の担当</h2>
+  <p class="mut">行を押すとそのレビューを開きます。</p>
+  <div id="dvgMine"></div>
+</section>
+
+<section class="dv-view" data-view="reviews" hidden>
+  <h2 class="dvg-h">レビュー一覧</h2>
+  <form id="dvgNewForm" class="card dvg-form">
+    <strong>新しいレビューを作る</strong>
+    <label>レビュー名 <input name="name" required maxlength="100" placeholder="例: 会員登録 要求仕様 v1.2"></label>
+    <label>対象の文書 <input name="file" type="file" required></label>
+    <label>観点チェックリスト <select name="checklist_id" id="dvgNewChecklist"><option value="">使わない</option></select></label>
+    <label>期限 <input name="due" type="date"></label>
+    <button class="btn btn-primary" type="submit">作成して開く</button>
+  </form>
+  <div id="dvgReviews"></div>
+</section>
+
+<section class="dv-view" data-view="findings" hidden>
+  <h2 class="dvg-h">指摘一覧</h2>
+  <p class="mut">すべてのレビューの指摘です。行を押すと「指摘の検討」を開きます。</p>
+  <div class="dvg-filters">
+    <label>状態 <select id="dvgFStatus"><option value="">すべて</option><option value="open">未対応</option><option value="accepted">採用</option><option value="rejected">不採用</option><option value="fixed">修正済み</option></select></label>
+    <label>重大度 <select id="dvgFSeverity"><option value="">すべて</option><option value="critical">重大</option><option value="major">主要</option><option value="minor">軽微</option></select></label>
+    <label>レビュー <select id="dvgFReview"><option value="">すべて</option></select></label>
+  </div>
+  <div id="dvgFindings"></div>
+</section>
+
+<section class="dv-view" data-view="checklists" hidden>
+  <h2 class="dvg-h">観点チェックリスト</h2>
+  <p class="mut">レビューで確かめる観点の一覧です。項目を直したら「保存」を押してください。</p>
+  <div class="dvg-filters">
+    <label>チェックリスト <select id="dvgClSel"></select></label>
+    <button class="btn" type="button" id="dvgClNew">新しいリスト</button>
+  </div>
+  <div id="dvgClEdit"></div>
+</section>
+
+<section class="dv-view" data-view="metrics" hidden>
+  <h2 class="dvg-h">メトリクス</h2>
+  <p class="mut">指摘の件数と修正の進み具合です。</p>
+  <div id="dvgMetrics"></div>
+</section>
+
+<section class="dv-view" data-view="settings" hidden>
+  <h2 class="dvg-h">設定</h2>
+  <p class="mut">レビューで使う言葉と基準の説明です。</p>
+  <div id="dvgSettings"></div>
+</section>

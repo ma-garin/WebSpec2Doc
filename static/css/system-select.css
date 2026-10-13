@@ -137,6 +137,12 @@
 .syscard-dv .syscard-icon { background: #FCE7F3; color: #9D174D; }
 .syscard-dv .syscard-no { color: #9D174D; }
 .syscard-dv .syscard-open { color: #9D174D; }
+/* System 07 バッチ・スクリプトのテスト。既存の識別色と重ならない緑。 */
+.syscard-batch:hover { border-color: #4D7C0F; }
+.syscard-batch .syscard-accent { background: #4D7C0F; }
+.syscard-batch .syscard-icon { background: #ECFCCB; color: #3F6212; }
+.syscard-batch .syscard-no { color: #3F6212; }
+.syscard-batch .syscard-open { color: #3F6212; }
 
 .syscard-badge {
   position: absolute; top: 16px; right: 16px;

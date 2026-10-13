@@ -15,7 +15,7 @@
 </head>
 {# バッチ・スクリプトのテスト（System 07）。骨格はテスト自動化（workspace.html）と同じ
    サイドバー / 案件一覧 / 本体の 3 列。工程は 取り込み → 観点とケース表 → テストコード → 書き出し。
-   いまは画面だけで、表示は batch-test.js の見本データ。取り込みと生成の API は未接続。 #}
+   API は web/routes/batch_test.py、処理は web/services/batchtest/。 #}
 <body class="bt-page">
 <a href="#bt-content" class="skip-link">本文へスキップ</a>
 <div class="app">
@@ -62,6 +62,11 @@
       <h2 class="list-title">案件 <span id="bt-cnt"></span></h2>
       <p>テストする処理ごとに 1 件</p>
     </div>
+    <form class="bt-newform" id="bt-newform" hidden>
+      <input id="bt-newname" maxlength="100" placeholder="例: 月次締めバッチ" aria-label="案件名" required>
+      <button type="submit" class="btn pri sm">作成</button>
+      <button type="button" class="btn sm ghost" id="bt-newcancel">やめる</button>
+    </form>
     <div class="search"><input id="bt-q" placeholder="案件名・ファイル名で絞り込み" aria-label="案件の絞り込み"></div>
     <div class="items" id="bt-jobs" role="list" aria-label="案件一覧"></div>
     <div class="list-f"><button type="button" class="btn pri" style="flex:1;justify-content:center" id="bt-new">＋ 新しい案件</button></div>
@@ -72,39 +77,46 @@
     {% include 'partials/topbar.html' %}
     <div class="bt-steps" id="bt-steps" role="tablist" aria-label="工程"></div>
     <div class="bt-content" id="bt-content">
-      <p class="bt-sample" role="note">見本のデータで表示しています。取り込み・生成はまだつながっていません。</p>
+      <div class="bt-banner" id="bt-banner" role="alert" hidden></div>
+
+      <section class="bt-empty" id="bt-empty" hidden>
+        <h2>テストするバッチ・スクリプトを選んでください</h2>
+        <p>左の一覧から案件を選ぶか、「＋ 新しい案件」で作ります。1 案件 = スクリプト 1 本です。</p>
+        <ol><li>スクリプトと仕様書を取り込む</li><li>引数・終了コード・入出力を読み取る</li><li>観点とケース表を作る</li><li>テストコードを生成して書き出す</li></ol>
+      </section>
 
       {# ① 取り込み #}
       <section class="bt-panel" data-panel="intake" hidden>
         <div class="bt-grid2">
           <div class="bt-card">
             <h3>取り込むもの</h3>
-            <label class="bt-drop" for="bt-file">
-              <b>ファイルをここへ落とす</b>
-              <span>スクリプト（.bat / .cmd / .sh / .ps1）・仕様書（.xlsx / .docx / .md）・入出力のサンプル（.csv / .txt）</span>
+            <label class="bt-drop" id="bt-drop" for="bt-file">
+              <b>ファイルをここへ落とすか、押して選ぶ</b>
+              <span>スクリプト（.bat / .cmd / .sh / .ps1）・仕様書（.xlsx / .docx / .md / .txt / .pdf）・入出力のサンプル（.csv / .txt）</span>
               <input id="bt-file" type="file" multiple hidden>
             </label>
             <table class="bt-tbl" aria-label="取り込んだファイル">
-              <thead><tr><th>ファイル</th><th>種類</th><th>大きさ</th></tr></thead>
+              <thead><tr><th>ファイル</th><th>種類</th><th>大きさ</th><th><span class="sr-only">操作</span></th></tr></thead>
               <tbody id="bt-files"></tbody>
             </table>
           </div>
           <div class="bt-card">
             <h3>実行のしかた</h3>
             <label class="bt-field">実行する環境
-              <select id="bt-env"><option>Windows（cmd）</option><option>Linux / Mac（sh）</option><option>PowerShell</option></select></label>
+              <select id="bt-env"><option value="cmd">Windows（cmd）</option><option value="sh">Linux / Mac（sh）</option><option value="pwsh">PowerShell</option></select></label>
             <label class="bt-field">生成するテストコード
-              <select id="bt-fw"><option>pytest（Windows・Linux・Mac で動く）</option><option>Pester（PowerShell）</option><option>bats（sh）</option></select></label>
+              <select id="bt-fw"><option value="pytest">pytest（Windows・Linux・Mac で動く）</option><option value="pester">Pester（PowerShell）</option><option value="bats">bats（sh）</option></select></label>
             <label class="bt-field">起動コマンド
-              <input id="bt-cmd" value="monthly_close.bat {対象年月}"></label>
+              <input id="bt-cmd" maxlength="300" placeholder="読み取ると自動で入ります"></label>
             <p class="bt-hint">{対象年月} のように波かっこで囲んだ所が、ケースごとに変わる引数です。</p>
           </div>
         </div>
         <div class="bt-card">
-          <div class="bt-card-h"><h3>読み取った内容</h3><span class="pill p-new">確かめてから次へ</span></div>
+          <div class="bt-card-h"><h3>読み取った内容</h3><span class="pill p-new" id="bt-facts-pill">未読み取り</span><span class="sp"></span>
+            <button type="button" class="btn sm" id="bt-analyze">読み取る</button></div>
           <div class="bt-facts" id="bt-facts"></div>
         </div>
-        <div class="bt-actions"><button type="button" class="btn pri" data-go="cases">観点とケース表を作る →</button></div>
+        <div class="bt-actions"><span class="bt-mut" id="bt-intake-note"></span><span class="sp"></span><button type="button" class="btn pri" id="bt-make-cases">観点とケース表を作る →</button></div>
       </section>
 
       {# ② 観点とケース表 #}
@@ -117,8 +129,16 @@
         <div class="bt-card bt-card-flush">
           <div class="bt-card-h"><h3>ケース表 <span class="bt-mut" id="bt-shown"></span></h3>
             <span class="sp"></span>
-            <button type="button" class="btn sm">＋ ケースを追加</button>
+            <button type="button" class="btn sm" id="bt-add-open">＋ ケースを追加</button>
           </div>
+          <form class="bt-addform" id="bt-addform" hidden>
+            <input name="obs" maxlength="20" placeholder="観点（例: 権限）" aria-label="観点">
+            <input name="pre" maxlength="200" placeholder="前提・入力" aria-label="前提・入力" required>
+            <input name="args" maxlength="200" placeholder="引数（空白区切り）" aria-label="引数">
+            <input name="exp" maxlength="300" placeholder="期待結果" aria-label="期待結果" required>
+            <input name="code" maxlength="3" inputmode="numeric" placeholder="終了コード" aria-label="終了コード">
+            <button type="submit" class="btn pri sm">追加</button><button type="button" class="btn sm ghost" id="bt-add-cancel">やめる</button>
+          </form>
           <div class="bt-tblwrap">
             <table class="bt-tbl bt-cases" aria-label="テストケース">
               <thead><tr><th>ID</th><th>観点</th><th>技法</th><th>前提・入力</th><th>実行</th><th>期待結果</th><th>根拠</th><th>状態</th></tr></thead>
@@ -128,8 +148,8 @@
         </div>
         <div class="bt-actions">
           <span class="bt-mut" id="bt-ask-note"></span><span class="sp"></span>
-          <button type="button" class="btn" data-go="intake">← 取り込みへ</button>
-          <button type="button" class="btn pri" data-go="code">テストコードを生成 →</button>
+          <button type="button" class="btn" id="bt-redesign" title="自分で追加したケースは残ります">作り直す</button>
+          <button type="button" class="btn pri" id="bt-make-code">テストコードを生成 →</button>
         </div>
       </section>
 
@@ -154,7 +174,11 @@
 
       {# ④ 書き出し #}
       <section class="bt-panel" data-panel="export" hidden>
-        <div class="bt-grid3" id="bt-outs"></div>
+        <div class="bt-grid3">
+          <div class="bt-card bt-out"><h3>ケース表</h3><p>Excel（.xlsx）。ID・観点・技法・期待結果・根拠の列。そのままレビューに回せます。</p><a class="btn" id="bt-dl-cases" download>ケース表を書き出す</a></div>
+          <div class="bt-card bt-out"><h3>テストコード一式</h3><p>テストコード・README・取り込んだスクリプトとサンプル（fixtures/）をまとめた zip。</p><a class="btn" id="bt-dl-code" download>zip を書き出す</a></div>
+          <div class="bt-card bt-out"><h3>要確認の質問票</h3><p>仕様に書かれていないケースを質問にまとめた CSV。仕様の担当者に渡して回答をもらいます。</p><a class="btn" id="bt-dl-q" download>質問票を書き出す</a></div>
+        </div>
         <div class="bt-card">
           <h3>受け渡しの前に</h3>
           <ul class="bt-list" id="bt-checks"></ul>

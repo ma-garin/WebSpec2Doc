@@ -2807,6 +2807,61 @@
         "evidence"
       ],
       "notes": "正本形式は Chrome DevTools Recorder の user-flow JSON（@puppeteer/replay Schema 互換、独自情報は ws2d キー）。Selenium IDE .side は取り込みのみ。記録は window バッファ + sessionStorage（同一オリジン遷移で欠落しない）。同一の JSONL を既存の coverage / findings が読む。"
+    },
+    {
+      "feature_id": "batch_script_test",
+      "name": "バッチ・スクリプトのテスト（System 07）",
+      "risk_level": "high",
+      "status": "implemented",
+      "ui_files": [
+        "templates/batch_test.html",
+        "static/css/batch-test.css",
+        "static/js/batch-test.js",
+        "templates/system-select.html"
+      ],
+      "route_files": [
+        "web/routes/batch_test.py"
+      ],
+      "core_files": [
+        "web/services/batchtest/store.py",
+        "web/services/batchtest/parse.py",
+        "web/services/batchtest/design.py",
+        "web/services/batchtest/codegen.py",
+        "web/services/batchtest/export.py"
+      ],
+      "symbols": [
+        "analyze",
+        "design",
+        "generate",
+        "cases_xlsx",
+        "code_zip",
+        "questions_csv",
+        "add_file"
+      ],
+      "outputs": [
+        "読み取った引数・終了コード・入出力・環境変数",
+        "ケース表（要確認つき）",
+        "pytest / Pester / bats のテストコード",
+        "ケース表 xlsx・テストコード zip・質問票 CSV"
+      ],
+      "persistence": [
+        "data/tenants/{slug}/batchtest/{job_id}/job.json",
+        "data/tenants/{slug}/batchtest/{job_id}/files/"
+      ],
+      "failure_modes": [
+        "no_script_rejected_with_message",
+        "multiple_scripts_rejected",
+        "empty_or_oversized_file_rejected",
+        "unknown_job_404",
+        "unknown_expectation_marked_ask_not_guessed",
+        "spec_unreadable_reported_as_note",
+        "export_before_generation_rejected"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "evidence"
+      ]
     }
   ]
 }

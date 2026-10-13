@@ -16,10 +16,10 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ta2.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ws.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/system-select.css') }}?v={{ _ver }}">
-  {# カードは 8 枚（指揮 + 01 + 01·app + 02 + 03 + 04 + 05 + 06）。6 列のままだと 1440×900 で
-     2 段目に 2 枚だけ余るので 4 + 4 に割る。system-select.css の基底も同じ値にしてある。 #}
+  {# カードは 9 枚（指揮 + 01 + 01·app + 02 + 03 + 04 + 05 + 06 + 07）。4 列だと 3 段目に 1 枚だけ
+     余るので 3 + 3 + 3 に割る。 #}
   <style>
-    .sysselect-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .sysselect-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     @media (max-width: 1040px) { .sysselect-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     @media (max-width: 720px)  { .sysselect-grid { grid-template-columns: 1fr; } }
     /* 指揮 = #3730A3 / #E0E7FF / #312E81。既存 5 システムのどの識別色とも重ならない。 */
@@ -39,7 +39,7 @@
   <main class="sysselect-stage">
     {# 見出しは共通ヘッダー（topbar）が出す。ここで繰り返すと h1 が二重になる。 #}
     <div class="sysselect-head">
-      <p>使うシステムを選んでください。6 つは独立したシステムで、入口・ナビは別です。CLI / API は画面を持たず、端末や外部システムから同じ機能を使います。</p>
+      <p>使うシステムを選んでください。7 つは独立したシステムで、入口・ナビは別です。CLI / API は画面を持たず、端末や外部システムから同じ機能を使います。</p>
     </div>
 
     <div class="sysselect-grid">
@@ -209,6 +209,25 @@
         <span class="syscard-open">ドキュメント検証を開く →</span>
       </a>
 
+
+          <!-- バッチ・スクリプトのテスト（System 07）。TOP は /batch-test の独立シェル。画面のない処理（.bat / .sh / .ps1）が対象。 -->
+      <a class="syscard syscard-batch" href="/batch-test">
+        <span class="syscard-accent" aria-hidden="true"></span>
+        <span class="syscard-badge">新規</span>
+        <span class="syscard-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 4h10l4 4v12H5z"/><path d="M15 4v4h4"/><path d="M8 12l2 2-2 2"/><path d="M12 16h4"/>
+          </svg>
+        </span>
+        <span class="syscard-no">System 07</span>
+        <span class="syscard-title">バッチ・スクリプトのテスト</span>
+        <span class="syscard-desc">.bat / .sh / .ps1 と仕様書を渡すと、<b>引数・入力ファイル・終了コード・出力・ログ</b>の観点でケース表を作り、<b>実行用のテストコード</b>まで生成します。画面のない処理のテストに。</span>
+        <span class="syscard-chips">
+          <span class="syscard-chip">テスト設計</span><span class="syscard-chip">ケース表</span>
+          <span class="syscard-chip">終了コード・出力</span><span class="syscard-chip">コード生成</span>
+        </span>
+        <span class="syscard-open">バッチ・スクリプトのテストを開く →</span>
+      </a>
 
     </div>
 

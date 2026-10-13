@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>バッチ・スクリプトのテスト - WebSpec2Doc</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}?v={{ _ver }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}?v={{ _ver }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ta2.css') }}?v={{ _ver }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ws.css') }}?v={{ _ver }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/batch-test.css') }}?v={{ _ver }}">
+</head>
+{# バッチ・スクリプトのテスト（System 07）。骨格はテスト自動化（workspace.html）と同じ
+   サイドバー / 案件一覧 / 本体の 3 列。工程は 取り込み → 観点とケース表 → テストコード → 書き出し。
+   いまは画面だけで、表示は batch-test.js の見本データ。取り込みと生成の API は未接続。 #}
+<body class="bt-page">
+<a href="#bt-content" class="skip-link">本文へスキップ</a>
+<div class="app">
+  <aside class="app-sidebar rail">
+    <a class="app-brand" href="/systems" title="システム選択に戻る">
+      <span class="app-brand-mark">W</span>
+      <span class="app-brand-text"><strong>WebSpec2Doc</strong><span>バッチのテスト</span></span>
+    </a>
+    <a href="/systems" class="sys-switcher" title="システムを切り替える"><span class="sys-switcher-label">システム</span><span class="sys-switcher-cur">バッチのテスト</span><span class="sys-switcher-swap">切替</span></a>
+
+    <nav class="app-nav" aria-label="工程">
+      <div class="app-nav-group">つくる</div>
+      <button type="button" class="app-nav-item" data-step="intake">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5"/><path d="M4 17v3h16v-3"/></svg>
+        <span class="nav-label">取り込み</span>
+      </button>
+      <button type="button" class="app-nav-item" data-step="cases">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M10 10v10"/></svg>
+        <span class="nav-label">観点とケース表</span>
+        <span class="bd wa" id="bt-bd-ask" hidden>0</span>
+      </button>
+      <button type="button" class="app-nav-item" data-step="code">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8 8l-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14"/></svg>
+        <span class="nav-label">テストコード</span>
+      </button>
+      <div class="app-nav-group">わたす</div>
+      <button type="button" class="app-nav-item" data-step="export">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 15V4M7 9l5-5 5 5"/><path d="M4 17v3h16v-3"/></svg>
+        <span class="nav-label">書き出し</span>
+      </button>
+    </nav>
+    <div class="sp"></div>
+    <nav class="app-nav" aria-label="サポート">
+      <div class="app-nav-group">サポート</div>
+      <a class="app-nav-item" href="/user-guide">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.2 2.4c-.6.2-.8.7-.8 1.4"/><path d="M12 16.6h.01"/></svg>
+        <span class="nav-label">使い方</span>
+      </a>
+    </nav>
+  </aside>
+
+  <aside class="list">
+    <div class="list-h">
+      <h2 class="list-title">案件 <span id="bt-cnt"></span></h2>
+      <p>テストする処理ごとに 1 件</p>
+    </div>
+    <div class="search"><input id="bt-q" placeholder="案件名・ファイル名で絞り込み" aria-label="案件の絞り込み"></div>
+    <div class="items" id="bt-jobs" role="list" aria-label="案件一覧"></div>
+    <div class="list-f"><button type="button" class="btn pri" style="flex:1;justify-content:center" id="bt-new">＋ 新しい案件</button></div>
+  </aside>
+
+  <main class="main bt-main">
+    {% set topbar_crumb = 'バッチ・スクリプトのテスト' %}{% set topbar_title = '取り込み' %}
+    {% include 'partials/topbar.html' %}
+    <div class="bt-steps" id="bt-steps" role="tablist" aria-label="工程"></div>
+    <div class="bt-content" id="bt-content">
+      <p class="bt-sample" role="note">見本のデータで表示しています。取り込み・生成はまだつながっていません。</p>
+
+      {# ① 取り込み #}
+      <section class="bt-panel" data-panel="intake" hidden>
+        <div class="bt-grid2">
+          <div class="bt-card">
+            <h3>取り込むもの</h3>
+            <label class="bt-drop" for="bt-file">
+              <b>ファイルをここへ落とす</b>
+              <span>スクリプト（.bat / .cmd / .sh / .ps1）・仕様書（.xlsx / .docx / .md）・入出力のサンプル（.csv / .txt）</span>
+              <input id="bt-file" type="file" multiple hidden>
+            </label>
+            <table class="bt-tbl" aria-label="取り込んだファイル">
+              <thead><tr><th>ファイル</th><th>種類</th><th>大きさ</th></tr></thead>
+              <tbody id="bt-files"></tbody>
+            </table>
+          </div>
+          <div class="bt-card">
+            <h3>実行のしかた</h3>
+            <label class="bt-field">実行する環境
+              <select id="bt-env"><option>Windows（cmd）</option><option>Linux / Mac（sh）</option><option>PowerShell</option></select></label>
+            <label class="bt-field">生成するテストコード
+              <select id="bt-fw"><option>pytest（Windows・Linux・Mac で動く）</option><option>Pester（PowerShell）</option><option>bats（sh）</option></select></label>
+            <label class="bt-field">起動コマンド
+              <input id="bt-cmd" value="monthly_close.bat {対象年月}"></label>
+            <p class="bt-hint">{対象年月} のように波かっこで囲んだ所が、ケースごとに変わる引数です。</p>
+          </div>
+        </div>
+        <div class="bt-card">
+          <div class="bt-card-h"><h3>読み取った内容</h3><span class="pill p-new">確かめてから次へ</span></div>
+          <div class="bt-facts" id="bt-facts"></div>
+        </div>
+        <div class="bt-actions"><button type="button" class="btn pri" data-go="cases">観点とケース表を作る →</button></div>
+      </section>
+
+      {# ② 観点とケース表 #}
+      <section class="bt-panel" data-panel="cases" hidden>
+        <div class="kpis" id="bt-kpis"></div>
+        <div class="bt-card">
+          <div class="bt-card-h"><h3>観点</h3><span class="bt-mut">ISO/IEC/IEEE 29119-4 の技法を当てています。押すとその観点だけ表示します</span></div>
+          <div class="fchips bt-obs" id="bt-obs"></div>
+        </div>
+        <div class="bt-card bt-card-flush">
+          <div class="bt-card-h"><h3>ケース表 <span class="bt-mut" id="bt-shown"></span></h3>
+            <span class="sp"></span>
+            <button type="button" class="btn sm">＋ ケースを追加</button>
+          </div>
+          <div class="bt-tblwrap">
+            <table class="bt-tbl bt-cases" aria-label="テストケース">
+              <thead><tr><th>ID</th><th>観点</th><th>技法</th><th>前提・入力</th><th>実行</th><th>期待結果</th><th>根拠</th><th>状態</th></tr></thead>
+              <tbody id="bt-rows"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="bt-actions">
+          <span class="bt-mut" id="bt-ask-note"></span><span class="sp"></span>
+          <button type="button" class="btn" data-go="intake">← 取り込みへ</button>
+          <button type="button" class="btn pri" data-go="code">テストコードを生成 →</button>
+        </div>
+      </section>
+
+      {# ③ テストコード #}
+      <section class="bt-panel" data-panel="code" hidden>
+        <div class="bt-code">
+          <div class="bt-card bt-card-flush">
+            <div class="bt-card-h"><h3>生成したファイル</h3></div>
+            <div class="items" id="bt-srcs" role="list"></div>
+          </div>
+          <div class="bt-card bt-card-flush">
+            <div class="bt-card-h"><h3 id="bt-src-name"></h3><span class="sp"></span><span class="bt-mut" id="bt-src-map"></span></div>
+            <pre class="bt-pre" id="bt-src"></pre>
+          </div>
+        </div>
+        <div class="bt-actions">
+          <span class="bt-mut">テストコードはお使いの環境で実行してください。この画面では実行しません。</span><span class="sp"></span>
+          <button type="button" class="btn" data-go="cases">← ケース表へ</button>
+          <button type="button" class="btn pri" data-go="export">書き出しへ →</button>
+        </div>
+      </section>
+
+      {# ④ 書き出し #}
+      <section class="bt-panel" data-panel="export" hidden>
+        <div class="bt-grid3" id="bt-outs"></div>
+        <div class="bt-card">
+          <h3>受け渡しの前に</h3>
+          <ul class="bt-list" id="bt-checks"></ul>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+<div class="dv-toast bt-toast" id="bt-toast" role="status" hidden></div>
+<script src="{{ url_for('static', filename='js/user-menu.js') }}?v={{ _ver }}"></script>
+<script src="{{ url_for('static', filename='js/batch-test.js') }}?v={{ _ver }}"></script>
+</body>
+</html>

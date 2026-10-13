@@ -140,6 +140,12 @@ def test_automation() -> str:
     return render_template("workspace.html", ws="home", domain="", mode="test-only")
 
 
+@bp.route("/batch-test")
+def batch_test() -> str:
+    """バッチ・スクリプトのテスト（System 07）。いまは画面のみで、表示は見本データ。"""
+    return render_template("batch_test.html")
+
+
 @bp.route("/systems")
 def systems() -> str:
     """システム選択ハブ。ドキュメント作成／テスト自動化のどちらを開くか選ばせる。"""

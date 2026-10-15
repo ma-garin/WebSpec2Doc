@@ -7,7 +7,7 @@ visit/action イベントを再現手順として自動生成し、汎用 JSON/C
 言い換えをせず記録されたイベント列をそのまま転記する）。
 
 再現手順の手順文字列化（アクション種別→動詞）は capture.reverse_generator の
-変換テーブルを再利用し、二重実装しない（docs/specs/CONVENTIONS.md §1-3）。
+変換テーブルを再利用し、二重実装しない（docs/design/specs/CONVENTIONS.md §1-3）。
 
 CSV の文字エンコーディングは generator.csv_reporter.CSV_ENCODING と同じ値
 （utf-8-sig）を使うが、src/capture（入力層）から src/generator（出力層）への

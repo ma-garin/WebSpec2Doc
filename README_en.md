@@ -6,7 +6,7 @@ Just point it at the URL of a running web system, and it automatically generates
 
 > Even in a workplace where the answer is "there's no documentation, so just click around and learn it," this gets you to a state where you can begin test design on day one.
 
-> New here? A plain-language, jargon-free guide is available → [docs/GUIDE_en.md](docs/GUIDE_en.md). 日本語の README は [README.md](README.md)。
+> New here? A plain-language, jargon-free guide is available → [docs/guide/GUIDE_en.md](docs/guide/GUIDE_en.md). 日本語の README は [README.md](README.md)。
 
 ---
 
@@ -184,10 +184,10 @@ If `WEBSPEC2DOC_TRUSTED_HOSTS` is unset, it stays localhost-only as before.
 
 **[docs/README.md](docs/README.md) is the index of all documents** (with current/historical status). Main entry points:
 
-- [Plain-language guide (for non-engineers)](docs/GUIDE_en.md) / [日本語](docs/GUIDE_ja.md)
-- [Quick-start guide](docs/userguide.md)
-- [Developer handbook](docs/DEVELOPMENT.md)
-- [Feature-expansion roadmap](docs/11_機能拡張ロードマップ_現新比較とUX検証.md)
+- [Plain-language guide (for non-engineers)](docs/guide/GUIDE_en.md) / [日本語](docs/guide/GUIDE_ja.md)
+- [Quick-start guide](docs/guide/userguide.md)
+- [Developer handbook](docs/process/DEVELOPMENT.md)
+- [Feature-expansion roadmap](docs/plans/11_機能拡張ロードマップ_現新比較とUX検証.md)
 - [Demo script](docs/demo/DEMO_SCRIPT.md)
 
 ---

@@ -1,4 +1,4 @@
-"""システムテスト（docs/system_test_cases.csv）共通ヘルパー。
+"""システムテスト（docs/process/quality/system_test_cases.csv）共通ヘルパー。
 
 セレクタ・APIパスはすべて templates/ と既存 E2E（test_auth_tenant_e2e.py 等）
 から実測したものを使う。推測セレクタをここに追加しないこと。

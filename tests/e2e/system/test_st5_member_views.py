@@ -1,5 +1,5 @@
 """システムテスト L3: メンバー利用ビュー
-（docs/system_test_cases.csv ST-018〜ST-021, ST-029, ST-030）。
+（docs/process/quality/system_test_cases.csv ST-018〜ST-021, ST-029, ST-030）。
 
 実行方法:
     make e2e-system

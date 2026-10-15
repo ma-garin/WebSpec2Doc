@@ -65,10 +65,10 @@ _Avoid_: 認証情報（credentials はパスワード本体を連想させる�
 ### 利用者・ワークスペース
 
 アプリ利用者の識別と、作業単位の切り替えに関する概念。上の「サイト認証」（対象サイトへのログイン）とは完全に別物。
-商用/共有サーバ向け機能で、`WEBSPEC2DOC_AUTH_MODE`（既定 `auto`）で制御する。実装: `web/auth.py`＋`web/services/auth_store.py`＋`web/tenancy.py`＋`web/routes/account.py`（詳細 `docs/AUTH_TENANCY.md`）。
+商用/共有サーバ向け機能で、`WEBSPEC2DOC_AUTH_MODE`（既定 `auto`）で制御する。実装: `web/auth.py`＋`web/services/auth_store.py`＋`web/tenancy.py`＋`web/routes/account.py`（詳細 `docs/process/AUTH_TENANCY.md`）。
 
 **利用者ログイン**:
-アプリ利用者本人が WebSpec2Doc に入るための認証。商用/共有サーバ向けに、パスワード・ロックアウト・アカウント管理・API トークンを備える（実装 `web/auth.py` ほか、`docs/AUTH_TENANCY.md`）。セッションに利用者とテナントを保持する。
+アプリ利用者本人が WebSpec2Doc に入るための認証。商用/共有サーバ向けに、パスワード・ロックアウト・アカウント管理・API トークンを備える（実装 `web/auth.py` ほか、`docs/process/AUTH_TENANCY.md`）。セッションに利用者とテナントを保持する。
 _Avoid_: 認証（「認証」は対象サイトへのサイト認証を指すため、利用者側には使わない）／サインイン
 
 **利用者**:

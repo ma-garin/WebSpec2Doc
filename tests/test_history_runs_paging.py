@@ -3,7 +3,7 @@
 実行履歴は使うほど増える。全件返却のままだと応答サイズ・DOM 行数が利用量に
 比例して劣化するため、既定で直近 N 件に絞る契約を固定する。
 
-対応するインシデント: docs/quality/iso29119-incident-report.md の INC-P01
+対応するインシデント: docs/process/quality/iso29119-incident-report.md の INC-P01
 """
 
 from __future__ import annotations

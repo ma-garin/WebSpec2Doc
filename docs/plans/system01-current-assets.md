@@ -28,7 +28,7 @@
 | ルート | `web/routes/pages.py`(206)・`crawl.py`(337)・`report.py`(557)・`history.py`(475)・`viewpoints.py`(330)・`record.py`(455)・`settings.py`(231)・`traceability.py` |
 | コア | `src/crawler`(4,769)・`src/generator`(6,461。`html_reporter` 1,228・`testcase_table` 842)・`src/analyzer`(1,148)・`src/diff`(2,889)・`src/capture`(2,354)・`src/ingest`(2,054)・`src/llm`(1,694)・`src/mbt`(1,671) |
 | サービス | `web/services/site_report.py`・`run_store.py`・`export_xlsx.py`・`app_mock.py`・`screen_test_design.py` |
-| 仕様 | `docs/specs/spec-1-1`〜`1-5`、`quality/feature_contracts.yml`（doc-fusion・doc-app） |
+| 仕様 | `docs/design/specs/spec-1-1`〜`1-5`、`quality/feature_contracts.yml`（doc-fusion・doc-app） |
 
 ## 確認中に見つけた事象
 

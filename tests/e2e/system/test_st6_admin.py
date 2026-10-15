@@ -1,5 +1,5 @@
 """システムテスト L3: 権限境界・管理機能
-（docs/system_test_cases.csv ST-022〜ST-028）。
+（docs/process/quality/system_test_cases.csv ST-022〜ST-028）。
 
 実行方法:
     make e2e-system
@@ -202,7 +202,7 @@ class TestStAdminOperations:
 
         失効は論理削除で、`revoked_at` を立てるだけ（auth_store.py:1255-1262）。
         一覧は `revoked_at` で絞り込まない（同 1244-1253）ため「一覧から消える」ことは
-        期待しない。仕様（docs/system_test_cases.csv:29）の合否基準は
+        期待しない。仕様（docs/process/quality/system_test_cases.csv:29）の合否基準は
         「削除後はそのトークンでのAPIアクセスが拒否される」であり、
         `resolve_api_token` が revoked を None 扱いにし（auth_store.py:1233-1234）、
         web/auth.py:136-139 が 401 を返すことで満たされる。

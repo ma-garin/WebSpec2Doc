@@ -1,4 +1,4 @@
-"""システムテスト L3: ドキュメント作成（docs/system_test_cases.csv ST-010〜ST-013)。
+"""システムテスト L3: ドキュメント作成（docs/process/quality/system_test_cases.csv ST-010〜ST-013)。
 
 実行方法:
     make e2e-system

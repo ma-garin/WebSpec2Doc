@@ -2,7 +2,7 @@
 
 - 文書ID: WS2D-CS-001
 - 版数: 2.0 / 作成日: 2026-08-02
-- 実体は `pyproject.toml`（black・ruff・mypy・pytest 設定）＋ `docs/specs/CONVENTIONS.md`（実装規約・既知の罠10件）＋ `.claude/rules/`（AIエージェント向け共通規約）。本書はこれらを統合し、`docs/sdlc/_asbuilt/modules.json`（実装237モジュールの実測）を根拠に具体的な数値基準を追加した統合ビューである。
+- 実体は `pyproject.toml`（black・ruff・mypy・pytest 設定）＋ `docs/design/specs/CONVENTIONS.md`（実装規約・既知の罠10件）＋ `.claude/rules/`（AIエージェント向け共通規約）。本書はこれらを統合し、`docs/sdlc/_asbuilt/modules.json`（実装237モジュールの実測）を根拠に具体的な数値基準を追加した統合ビューである。
 
 ## 1. 目的と適用範囲
 
@@ -14,15 +14,15 @@
 
 適用範囲外: `docs/sdlc/_asbuilt/` 配下の自動生成JSON、`static/vendor/` 配下のサードパーティ資産（driver.js・mermaid、いずれも `ASSET.md` にライセンス記録済み）。これらは本規約の対象としない。
 
-新規にコードを書く・既存コードを変更するすべての作業（人間・Claude・Codex等のAIエージェントを問わず）が本書の適用対象であり、`docs/specs/CONVENTIONS.md` と矛盾する場合は CONVENTIONS.md を優先する（本書はその要約・統合ビューであり、一次情報源ではない）。
+新規にコードを書く・既存コードを変更するすべての作業（人間・Claude・Codex等のAIエージェントを問わず）が本書の適用対象であり、`docs/design/specs/CONVENTIONS.md` と矛盾する場合は CONVENTIONS.md を優先する（本書はその要約・統合ビューであり、一次情報源ではない）。
 
 ## 2. Python コーディング規約（PEP 8 準拠）
 
 ### 2-1. 基本方針
 
-- Python 3.11〜3.12 のみを対象とする（`docs/specs/CONVENTIONS.md` §2）。3.13 非対応の理由は playwright 1.44.0 の wheel 制約であり、`src/doctor.py` の `PLAYWRIGHT_PYTHON_SUPPORT` 対応表で機械検証する。3.13対応の判断基準は `docs/specs/spec-6-2_dependency_update_strategy.md` を参照。
+- Python 3.11〜3.12 のみを対象とする（`docs/design/specs/CONVENTIONS.md` §2）。3.13 非対応の理由は playwright 1.44.0 の wheel 制約であり、`src/doctor.py` の `PLAYWRIGHT_PYTHON_SUPPORT` 対応表で機械検証する。3.13対応の判断基準は `docs/design/specs/spec-6-2_dependency_update_strategy.md` を参照。
 - PEP 8 に準拠し、行長は black（line-length=100）に委ねる。ruff 側は `E501`（行長超過）を意図的に ignore 設定にしている（`pyproject.toml`）——二重に指摘される状態を避けるため、権威を black 側に一本化している。
-- コメント・docstring・エラーメッセージ・ログ出力はすべて日本語で書く（`docs/specs/CONVENTIONS.md` §2 で明記された既存方針）。変数名・関数名等の識別子は英語（PEP 8 準拠のsnake_case/PascalCase）。
+- コメント・docstring・エラーメッセージ・ログ出力はすべて日本語で書く（`docs/design/specs/CONVENTIONS.md` §2 で明記された既存方針）。変数名・関数名等の識別子は英語（PEP 8 準拠のsnake_case/PascalCase）。
 
 ### 2-2. 命名規則（種別ごと）
 
@@ -49,7 +49,7 @@
 ## 3. 型ヒントの方針
 
 - 全 Python ファイルの先頭に `from __future__ import annotations` を置く。実例: `web/routes/account.py`, `web/routes/login.py`, `src/ci_drift.py`, `scripts/quality_harness.py` はすべてこの1行がファイル冒頭（docstring直後）にある。
-- 型ヒントは必須。`docs/specs/CONVENTIONS.md` §2 は「型ヒント必須（mypy strict 相当で通ること）」と明記している。mypy 設定（`pyproject.toml`）は `warn_unused_ignores=true`・`warn_redundant_casts=true`・`no_implicit_optional=true` を有効化しており、曖昧な型抑制を許さない。
+- 型ヒントは必須。`docs/design/specs/CONVENTIONS.md` §2 は「型ヒント必須（mypy strict 相当で通ること）」と明記している。mypy 設定（`pyproject.toml`）は `warn_unused_ignores=true`・`warn_redundant_casts=true`・`no_implicit_optional=true` を有効化しており、曖昧な型抑制を許さない。
 - 戻り値注釈は原則すべての関数（public・private問わず）に付与する。実測サンプルでは `def _out() -> Path`、`def check_python_version(...) -> CheckResult`、`def count(name: str) -> int` のように、1行の小さなヘルパー関数にも戻り値注釈が付いている。戻り値が無い場合も `-> None` を明示する。
 - **機械検証の対象は `src/`・`web/`・`app.py` に限る**（`pyproject.toml` の `[tool.mypy] files`）。`tests/` と `scripts/` は mypy の対象外であり、この節の規定は努力目標として扱う。
   - 理由: 2026-08-16 実測で `tests/` を mypy にかけると 43 ファイル・99 件のエラーが出る。戻り値注釈の欠落だけでなく、テスト特有の型（モンキーパッチした偽プロセス、`None` 初期化など）に起因するものを含む。一括解消の目処が立たないまま規約だけを残すと、「違反しているが誰も気づけない」状態が固定される。
@@ -59,7 +59,7 @@
 
 ## 4. docstring 規約
 
-- **日本語で書く。** これは例外のないプロジェクト全体の方針である（`docs/specs/CONVENTIONS.md` §2）。
+- **日本語で書く。** これは例外のないプロジェクト全体の方針である（`docs/design/specs/CONVENTIONS.md` §2）。
 - 形式は Google/NumPy 形式のような `Args:`/`Returns:` セクション構造を厳密には強制していない。実態は「1行の要約」＋（必要なら）空行を挟んで「設計背景・理由・引用文献」を続ける自由記述形式が主流。実例: `src/mbt/pairwise.py` は要約1行の後に「方針:」の箇条書きで設計判断を説明し、`src/techniques/combinatorial.py` は一次出典（Cohen et al. 1997、Kuhn et al. 2004、NIST SP 800-142 等）を著者・年・タイトル付きで明記している。
 - **「主張境界」の明記慣行**: 本プロダクトはevidence-only原則（後述§12）を持つため、多くのモジュールdocstringに「主張境界:」という定型見出しで、そのモジュールが**主張しないこと**を明示する慣行がある。実例: `src/apispec/__init__.py`「クロール中に発火した呼び出しのみ。APIの網羅は主張しない」、`src/diff/severity.py`「変更が安全か危険かの判断ではない」、`src/viewport/__init__.py`「未選択の画面幅や実機固有の挙動については何も言わない」。新規モジュールも、判定・分類・スコアリングを行う場合はこの慣行に倣うこと。
 - 必須範囲: 新規モジュールは module docstring を必須とする。実測では `src/main.py`, `src/llm/provider.py`, `src/analyzer/canonicalizer.py`, `src/diff/differ.py` 等、旧来のモジュールに docstring 欠如が残っている（`(no module docstring)` を実際に確認したもの）。これは是正対象であり、新規追加分での欠如は許容しない。
@@ -98,7 +98,7 @@
 
 ## 7. 例外処理の規約
 
-- 境界（ユーザー入力・API応答・ファイルI/O）では必ず検証し、フェイルファストで失敗する。`docs/specs/CONVENTIONS.md` の既知の罠にも「環境依存テスト」等、失敗を握りつぶさず可視化する設計が繰り返し要求されている。
+- 境界（ユーザー入力・API応答・ファイルI/O）では必ず検証し、フェイルファストで失敗する。`docs/design/specs/CONVENTIONS.md` の既知の罠にも「環境依存テスト」等、失敗を握りつぶさず可視化する設計が繰り返し要求されている。
 - **エラーを黙殺しない。** 実例: `scripts/quality_harness.py` の `_read_contracts()` は `json.JSONDecodeError` を捕捉し、`AssertionError` に変換して原因を明示するメッセージへ再送出する。`web/routes/login.py` の `api_login_simple` は `subprocess.TimeoutExpired` と `json.JSONDecodeError` の両方を個別に捕捉し、利用者向けの日本語メッセージ＋適切なHTTPステータス（504・500）を返す。
 - 例外を握りつぶす（`except Exception: pass`）ような実装は禁止。フォールバック処理を行う場合でも、`src/llm/activity_log.py` のようにフォールバックの発生自体を記録する（「記録の失敗はLLM呼び出し自体を妨げないbest-effort」）。
 - UI/APIでは利用者向けの日本語メッセージ、サーバ側ログには文脈付きの詳細情報を出す、という二層構成を徹底する。
@@ -106,9 +106,9 @@
 
 ## 8. イミュータブル方針
 
-- **既存オブジェクトを破壊せず、新しいオブジェクトを返す。** `docs/specs/CONVENTIONS.md` §1-1: 「層をまたぐデータは frozen dataclass（`@dataclass(frozen=True)`・コレクションは `tuple`）で受け渡す」。`src/autorun/stages.py` のdocstringにも設計方針として明記: 「不変データ。更新は必ず新しいオブジェクトを返す。」
+- **既存オブジェクトを破壊せず、新しいオブジェクトを返す。** `docs/design/specs/CONVENTIONS.md` §1-1: 「層をまたぐデータは frozen dataclass（`@dataclass(frozen=True)`・コレクションは `tuple`）で受け渡す」。`src/autorun/stages.py` のdocstringにも設計方針として明記: 「不変データ。更新は必ず新しいオブジェクトを返す。」
 - 採用実績（`frozen=True` / `NamedTuple` / `@dataclass` の使用を実際に確認したファイル、2026-08-02 grep実測）: `src/doctor.py`, `src/capture/session_recorder.py`, `src/capture/finding_reporter.py`, `src/capture/burndown.py`, `src/llm/industry_template.py`, `src/wording/consistency.py`, `src/capture/reverse_generator.py`, `src/llm/viewpoint_generator.py`, `src/llm/screen_classifier.py`, `src/llm/openai_client.py`, `src/viewport/profiles.py`, `src/archive/full_archive.py`, `src/autorun/qf_schema.py`, `src/autorun/techniques.py`, `src/autorun/stages.py` 他、計22ファイル以上で確認。全体（237モジュール）への普及率としては部分採用の段階であり、「全面適用済み」ではない点は正直に記録する。
-- **既知の罠**（`docs/specs/CONVENTIONS.md` §4 罠10）: frozen dataclass に `dict` フィールドを持たせるとハッシュ不能になる。原則 `tuple` を使い、`dict` がどうしても必要な場合は `field(default_factory=dict)` を使い、hash に依存しない用途に限定する。
+- **既知の罠**（`docs/design/specs/CONVENTIONS.md` §4 罠10）: frozen dataclass に `dict` フィールドを持たせるとハッシュ不能になる。原則 `tuple` を使い、`dict` がどうしても必要な場合は `field(default_factory=dict)` を使い、hash に依存しない用途に限定する。
 - ミューテーションパターンの代替として `.with_xxx()` スタイルの更新メソッドを使う（新しいインスタンスを返す）。既存オブジェクトのフィールドを直接書き換えるコードは新規追加しない。
 
 ## 9. ログ出力規約
@@ -128,11 +128,11 @@
 - **非信頼コンテンツ境界**: クロール対象サイト由来のデータ（`<title>`・placeholder等）は全て汚染済みとして扱う（`web/services/untrusted_content.py`）。LLMへの埋め込みはプロンプトインジェクション対策込みの区切り（`src/llm/prompt_guard.py: untrusted_block`）を必ず使う。
 - **XSS対策**: フロントエンドのDOM生成で文字列連結を行う場合は必ず `escHtml`（`core.js`）でエスケープする。
 - **XML攻撃対策**: Office文書（.docx/.pptx）の読み込みは `defusedxml` を使う（`src/ingest/office_reader.py`）。標準の `xml` モジュールを直接使わない。
-- **静的セキュリティ解析**: `make security`（bandit `-ll`＝Medium以上ゼロ必須、pip-audit）。bandit抑制コメント（`# nosec`）とruff抑制コメント（`# noqa`）は別物であり、抑制する場合は両方を併記する必要がある（`docs/specs/CONVENTIONS.md` §4 罠1）。原則は抑制ではなく正攻法（例: XML→defusedxml、0.0.0.0→環境変数ゲート）。
+- **静的セキュリティ解析**: `make security`（bandit `-ll`＝Medium以上ゼロ必須、pip-audit）。bandit抑制コメント（`# nosec`）とruff抑制コメント（`# noqa`）は別物であり、抑制する場合は両方を併記する必要がある（`docs/design/specs/CONVENTIONS.md` §4 罠1）。原則は抑制ではなく正攻法（例: XML→defusedxml、0.0.0.0→環境変数ゲート）。
 
 ## 11. 層分離とアーキテクチャの掟
 
-`docs/specs/CONVENTIONS.md` §1-1 が定める依存方向:
+`docs/design/specs/CONVENTIONS.md` §1-1 が定める依存方向:
 
 ```text
 web/ (routes → services)          … Flask UI・API。src の関数を呼ぶ
@@ -216,7 +216,7 @@ python scripts/check_e2e_conventions.py
 python scripts/check_fetch_error_handling.py --fail-on-missing
 ```
 
-すなわち `make lint` は ruff・mypy に加え、E2Eテストの規約チェック（`check_e2e_conventions.py`）と fetch のエラー処理チェック（`check_fetch_error_handling.py`、P0-3対応）という2本の独自スクリプトも実行する。black は `make lint` には含まれておらず、`docs/specs/CONVENTIONS.md` §3 の品質ゲート手順で個別に `venv/bin/python -m black <変更ファイル>` を実行する必要がある（**既知の罠4**: 「black未適用のままpush（ruffは通る）」）。
+すなわち `make lint` は ruff・mypy に加え、E2Eテストの規約チェック（`check_e2e_conventions.py`）と fetch のエラー処理チェック（`check_fetch_error_handling.py`、P0-3対応）という2本の独自スクリプトも実行する。black は `make lint` には含まれておらず、`docs/design/specs/CONVENTIONS.md` §3 の品質ゲート手順で個別に `venv/bin/python -m black <変更ファイル>` を実行する必要がある（**既知の罠4**: 「black未適用のままpush（ruffは通る）」）。
 
 **pre-commit hookが機械的に強制する範囲**（`.githooks/pre-commit`、実際のスクリプト内容を確認）は次の3点のみである。
 
@@ -244,7 +244,7 @@ python scripts/check_fetch_error_handling.py --fail-on-missing
 ## 19. 依存関係管理
 
 - Python依存は `requirements.txt`（本番相当・実行に必須）と `requirements-dev.txt`（開発専用: pytest・black・ruff・mypy・bandit等）に分離する。
-- playwrightは`1.44.0`固定（`docs/specs/spec-6-2_dependency_update_strategy.md`）。バージョン更新自体は本書の管轄外であり、`WS2D-RL-001`（リリース手順書）§5の判断基準・移行検証手順に従う。
+- playwrightは`1.44.0`固定（`docs/design/specs/spec-6-2_dependency_update_strategy.md`）。バージョン更新自体は本書の管轄外であり、`WS2D-RL-001`（リリース手順書）§5の判断基準・移行検証手順に従う。
 - 依存の脆弱性監査は `make audit`（`pip_audit`。AutoRun実行時に生成される`output/.playwright_env`のnpm環境も対象）で行う。critical/highの脆弱性は`docs/security/`の記録に従って対応する（`Makefile`のauditターゲットのコメントより）。
 - 新規の依存追加は最小限にする方針。実例: `src/diff/link_checker.py`のdocstringは「標準ライブラリ（urllib）のみで実装し、新規外部依存（requests等）は追加しない」と明記している。標準ライブラリで実現できる場合は依存を増やさない。
 - フロントエンドのサードパーティ資産（`static/vendor/driver.js`, `static/vendor/mermaid`）はnpm経由ではなく同梱配布とし、`ASSET.md`にライセンスを記録する。CDN取得は行わない（オフライン完結の方針）。

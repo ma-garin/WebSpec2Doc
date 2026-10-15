@@ -8,7 +8,7 @@
 #   - touch による偽造・コード変更後の古いマーカーを機械的に検出
 #
 # インストール: make setup-hooks
-# 参照: docs/DEFINITION_OF_DONE.md
+# 参照: docs/process/DEFINITION_OF_DONE.md
 # =============================================================================
 
 set -euo pipefail
@@ -124,7 +124,7 @@ elif $UI_CHANGED; then
     log_blocked "E2E テスト未実行（.ui-verified が存在しません）"
     echo ""
     echo "    実行してください:  make verify-ui"
-    echo "    参照:              docs/DEFINITION_OF_DONE.md Type B"
+    echo "    参照:              docs/process/DEFINITION_OF_DONE.md Type B"
     echo ""
     exit 1
   fi

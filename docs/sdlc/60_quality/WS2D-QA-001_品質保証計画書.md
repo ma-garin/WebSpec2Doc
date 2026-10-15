@@ -47,7 +47,7 @@ ISO/IEC 25010 が定める8つの品質特性それぞれについて、本プ�
 | 構文チェック | `py_compile` | pre-commit内 | 全コミット時 | 機械強制 |
 | verify-all | quality-harness + test + verify-ui の合成 | `make verify-all` | 手動（コミット直前1回を推奨） | 手動実行が前提 |
 
-**重要な発見（本書改訂で明らかになったギャップ）**: `docs/specs/CONVENTIONS.md` §3が定める品質ゲート順序（black→ruff→mypy→bandit→pytest→quality_harness→verify-ui）は「開発者が手動で通すべき順序」であり、pre-commit hookが機械的に強制するのは「構文チェック」「pytest L1/L2」「UI変更時のハッシュ照合」の3点のみである。black・ruff・mypy・banditの未実行は、コミット自体をブロックしない。CIでの強制の有無は `.github/workflows/ci.yml` の詳細な中身を本書執筆時点で読み込んでおらず、**未確認**。これは重要な監査対象であり、CI設定ファイルの内容確認を次回の品質保証活動の課題とする。
+**重要な発見（本書改訂で明らかになったギャップ）**: `docs/design/specs/CONVENTIONS.md` §3が定める品質ゲート順序（black→ruff→mypy→bandit→pytest→quality_harness→verify-ui）は「開発者が手動で通すべき順序」であり、pre-commit hookが機械的に強制するのは「構文チェック」「pytest L1/L2」「UI変更時のハッシュ照合」の3点のみである。black・ruff・mypy・banditの未実行は、コミット自体をブロックしない。CIでの強制の有無は `.github/workflows/ci.yml` の詳細な中身を本書執筆時点で読み込んでおらず、**未確認**。これは重要な監査対象であり、CI設定ファイルの内容確認を次回の品質保証活動の課題とする。
 
 ## 4. Definition of Done（完了の定義）
 
@@ -108,7 +108,7 @@ UI → API → backend route → service/core → output → persistence → err
 - **静的解析**: ruff（`E,F,W,I,UP,B`）・mypy（py3.12、`warn_unused_ignores`等）・bandit（`-ll`＝Medium以上）を`pyproject.toml`で設定。実行は`make lint`／`make security`。
 - **動的解析**: pytest（単体・結合、`tests/`）とPlaywright実ブラウザE2E（`tests/e2e/`）。テストピラミッドは「単体（フェイク注入・高速）→結合（実ファイルI/O・tmp_path）→実ブラウザE2E（専用スレッド・デモサイト標的）」の3層。
 - フェイクの前例: `_FakeRecorderPage`（`tests/test_capture.py`）、`_FakeClock`・`_WaitProbePage`（`tests/test_real_site_resilience.py`）。新規フェイクはこれらのパターンに倣う。
-- 環境依存テストの罠（`docs/specs/CONVENTIONS.md`既知の罠3）: CIのunitジョブはvenvなし・ブラウザ未導入。「この環境なら全PASS」型のテストはCIで落ちる。環境不変の性質（例:「FAIL項目には必ずfixが付く」）を検証する設計にする。
+- 環境依存テストの罠（`docs/design/specs/CONVENTIONS.md`既知の罠3）: CIのunitジョブはvenvなし・ブラウザ未導入。「この環境なら全PASS」型のテストはCIで落ちる。環境不変の性質（例:「FAIL項目には必ずfixが付く」）を検証する設計にする。
 
 ## 8. テスト戦略の概要
 
@@ -156,7 +156,7 @@ UI → API → backend route → service/core → output → persistence → err
 
 - ADR（Architecture Decision Record、`docs/adr/0001`〜）でアーキテクチャ判断を記録する。
 - レトロの学びは`retro`スキル経由で蓄積する（プロセス改善知見、実装詳細とは別に管理）。
-- 依存更新戦略（`docs/specs/spec-6-2_dependency_update_strategy.md`）のような「意図的に技術的負債を先送りし、判断基準を明文化する」アプローチは、品質保証における継続的改善の一形態として位置づける（playwright 1.44.0固定の判断基準表・四半期レビューサイクル）。
+- 依存更新戦略（`docs/design/specs/spec-6-2_dependency_update_strategy.md`）のような「意図的に技術的負債を先送りし、判断基準を明文化する」アプローチは、品質保証における継続的改善の一形態として位置づける（playwright 1.44.0固定の判断基準表・四半期レビューサイクル）。
 - 本書自体が「実測に基づく統合ビュー」であることの帰結として、次回改訂時は§2の「未測定」項目を優先的に埋めることを推奨する。
 
 ## 13. 妥当性確認と検証（Verification & Validation）
@@ -234,7 +234,7 @@ IEEE/ISO用語における「検証（Verification）」と「妥当性確認（
 
 ## 21. 品質保証活動の運用サイクル
 
-- 依存更新の四半期レビュー（`docs/specs/spec-6-2_dependency_update_strategy.md`の更新判断基準表）に合わせ、品質保証活動も四半期単位で棚卸しすることを推奨する。
+- 依存更新の四半期レビュー（`docs/design/specs/spec-6-2_dependency_update_strategy.md`の更新判断基準表）に合わせ、品質保証活動も四半期単位で棚卸しすることを推奨する。
 - 棚卸し対象: §2の「未測定」項目の解消状況、§10のメトリクス推移、quarantineテストの有無、`feature_contracts.yml`の`feature_id`数と実装済み機能数の整合。
 - レトロ（`retro`スキル）の実施タイミングと合わせることで、プロセス改善（§12継続的改善）と品質保証の棚卸しを同時に行い、往復コストを下げる。
 - 棚卸しの結果、本書の版数を更新する場合は改訂履歴に理由を明記する（本書自身がその実例である）。

@@ -7,7 +7,7 @@ INC-P01（実行履歴 API が 3,770 件・1.76MB を全件返す）を検出で
 測るのは応答時間ではなく応答サイズ。時間は実行環境で揺れて flaky になるが、
 サイズは決定的で、肥大の原因（件数無制限・全件埋め込み）を直接示す。
 
-ベースライン実測: docs/quality/evidence/perf-baseline.csv（2026-08-23）
+ベースライン実測: docs/process/quality/evidence/perf-baseline.csv（2026-08-23）
 """
 
 from __future__ import annotations

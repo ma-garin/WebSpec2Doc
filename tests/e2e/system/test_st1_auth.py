@@ -1,4 +1,4 @@
-"""システムテスト L3: 認証（docs/system_test_cases.csv ST-001〜ST-005, ST-032）。
+"""システムテスト L3: 認証（docs/process/quality/system_test_cases.csv ST-001〜ST-005, ST-032）。
 
 実行方法:
     make e2e-system

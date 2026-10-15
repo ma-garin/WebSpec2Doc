@@ -13,9 +13,9 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/batch-test.css') }}?v={{ _ver }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/impact.css') }}?v={{ _ver }}">
 </head>
-{# 影響度分析（System 09）。骨格・部品はドキュメント作成（index.html の app-shell / dash-hero /
-   dashboard-section-head / dashboard-empty）と同じ。表示は 3 つ: ホーム（入口と分析の一覧）・文書庫・分析（3 工程）。
-   API は web/routes/impact.py、処理は web/services/impact/。 #}
+{# 影響度分析（System 09・商用版）。契約は docs/lifecycle/system09-impact/03-detailed-design.md の DD-006〜DD-008。
+   骨格・部品はドキュメント作成（index.html の app-shell / sidebar / dash-hero / dashboard-section-head / dashboard-empty）と同じ。
+   本文は static/js/impact/*.js が #im-root に描く。全遷移を /impact 内で完結する（システム切替 /systems だけ例外）。 #}
 <body class="app-page im-page">
 <a href="#app-content" class="skip-link">本文へスキップ</a>
 <div class="app-shell">
@@ -27,199 +27,120 @@
     <a href="/systems" class="sys-switcher" title="システムを切り替える">
       <span class="sys-switcher-label">システム</span><span class="sys-switcher-cur">影響度分析</span><span class="sys-switcher-swap">切替</span>
     </a>
-    <button type="button" class="btn-primary sidebar-primary-action" data-act="new">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="16" height="16"><path d="M12 5v14M5 12h14"/></svg>
-      <span class="add-site-label">新しい分析</span>
+    <button type="button" class="btn-primary sidebar-primary-action" data-act="new-sys-side">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="16" height="16" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      <span class="add-site-label">新しい対象システム</span>
     </button>
     <nav class="app-nav" aria-label="メインナビゲーション">
-      <button type="button" class="app-nav-item" data-view="home">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 11.5L12 4l9 7.5"/><path d="M5.5 10v10h13V10M9.5 20v-6h5v6"/></svg>
-        <span class="nav-label">ダッシュボード</span>
+      <button type="button" class="app-nav-item" data-nav="home">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 11.5L12 4l9 7.5"/><path d="M5.5 10v10h13V10"/></svg>
+        <span class="nav-label">対象システム一覧</span>
       </button>
-      <button type="button" class="app-nav-item" data-view="library">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 5a2 2 0 0 1 2-2h5v18H6a2 2 0 0 1-2-2z"/><path d="M11 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7"/></svg>
-        <span class="nav-label">文書庫</span><span class="bd" id="im-libbd" hidden>0</span>
+      <div class="app-nav-group" data-scope="sys" hidden id="im-nav-sysname">対象システム</div>
+      <button type="button" class="app-nav-item" data-scope="sys" data-tab="overview" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/></svg>
+        <span class="nav-label">概要</span>
       </button>
-      <div class="app-nav-group" id="im-navjob-h" hidden>開いている分析</div>
-      <button type="button" class="app-nav-item" data-step="intake" hidden>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5"/><path d="M4 17v3h16v-3"/></svg>
-        <span class="nav-label">入力</span>
+      <button type="button" class="app-nav-item" data-scope="sys" data-tab="docs" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg>
+        <span class="nav-label">文書</span>
       </button>
-      <button type="button" class="app-nav-item" data-step="search" hidden>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg>
-        <span class="nav-label">変更点と検索</span>
+      <button type="button" class="app-nav-item" data-scope="sys" data-tab="baselines" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7l8-4 8 4-8 4z"/><path d="M4 12l8 4 8-4M4 17l8 4 8-4"/></svg>
+        <span class="nav-label">ベースライン</span>
       </button>
-      <button type="button" class="app-nav-item" data-step="impact" hidden>
+      <button type="button" class="app-nav-item" data-scope="sys" data-tab="links" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>
+        <span class="nav-label">つながり</span>
+      </button>
+      <button type="button" class="app-nav-item" data-scope="sys" data-tab="crs" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 4h14v16H5z"/><path d="M9 9h6M9 13h6M9 17h3"/></svg>
+        <span class="nav-label">変更要求</span>
+      </button>
+      <button type="button" class="app-nav-item" data-scope="sys" data-tab="settings" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>
+        <span class="nav-label">設定</span>
+      </button>
+      <button type="button" class="app-nav-item" data-scope="sys" data-tab="members" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6"/></svg>
+        <span class="nav-label">メンバー</span>
+      </button>
+      <button type="button" class="app-nav-item" data-scope="sys" data-tab="audit" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg>
+        <span class="nav-label">監査</span>
+      </button>
+      <div class="app-nav-group" data-scope="cr" hidden id="im-nav-crname">変更要求</div>
+      <button type="button" class="app-nav-item" data-scope="cr" data-tab="changes" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7h11M4 12h16M4 17h8"/><path d="M18 4l3 3-3 3"/></svg>
+        <span class="nav-label">変更内容</span>
+      </button>
+      <button type="button" class="app-nav-item" data-scope="cr" data-tab="impacts" hidden>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="2.5"/><circle cx="12" cy="12" r="7"/></svg>
-        <span class="nav-label">影響と優先度</span><span class="bd ng" id="im-p1bd" hidden>0</span>
+        <span class="nav-label">影響</span>
+      </button>
+      <button type="button" class="app-nav-item" data-scope="cr" data-tab="graph" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="19" cy="18" r="2"/><path d="M7 11l10-4M7 13l10 4"/></svg>
+        <span class="nav-label">関係図</span>
+      </button>
+      <button type="button" class="app-nav-item" data-scope="cr" data-tab="matrix" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="1"/><path d="M4 10h16M4 15h16M10 4v16M15 4v16"/></svg>
+        <span class="nav-label">マトリクス</span>
+      </button>
+      <button type="button" class="app-nav-item" data-scope="cr" data-tab="tests" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4a2 2 0 0 0 1.8-3l-5-9V3"/></svg>
+        <span class="nav-label">テスト</span>
+      </button>
+      <button type="button" class="app-nav-item" data-scope="cr" data-tab="approval" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg>
+        <span class="nav-label">承認</span>
+      </button>
+      <button type="button" class="app-nav-item" data-scope="cr" data-tab="review" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+        <span class="nav-label">改修後レビュー</span>
       </button>
       <div class="app-nav-group">サポート</div>
-      <a class="app-nav-item" href="/user-guide">
+      <button type="button" class="app-nav-item" data-nav="guide">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 4h7v16H4zM13 4h7v16h-7z"/></svg>
         <span class="nav-label">ユーザーガイド</span>
-      </a>
+      </button>
     </nav>
-    <button type="button" id="sidebar-toggle-btn" class="sidebar-toggle-btn" title="サイドバーを折りたたむ">
-      <svg class="icon-collapse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-      <svg class="icon-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+    <button type="button" id="sidebar-toggle-btn" class="sidebar-toggle-btn" title="サイドバーを折りたたむ" aria-label="サイドバーを折りたたむ">
+      <svg class="icon-collapse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+      <svg class="icon-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
       <span class="nav-label">折りたたむ</span>
     </button>
-    <div class="app-sidebar-foot"><span>仕様書の変更から、影響範囲とテストの優先度を根拠つきで出します。</span></div>
+    <div class="app-sidebar-foot"><span>仕様の変更から、影響範囲・リスク・確かめるテストを根拠つきで出します。</span></div>
   </aside>
 
   <div class="app-main">
-    {% set topbar_crumb = '影響度分析' %}{% set topbar_title = 'ダッシュボード' %}
+    {% set topbar_crumb = '影響度分析' %}{% set topbar_title = '対象システム一覧' %}
     {% include 'partials/topbar.html' %}
     <main class="app-content" id="app-content" tabindex="-1">
       <div class="app-content-inner">
         <div class="bt-banner" id="bt-banner" role="alert" hidden></div>
-
-        {# ===== ホーム ===== #}
-        <section class="im-view" data-view-panel="home" hidden>
-          <div class="dash-hero">
-            <div class="dash-hero-main">
-              <h1 class="dash-hero-title">仕様の変更から、テストすべき影響範囲を洗い出す</h1>
-              <p class="dash-hero-sub">変更の内容と仕様書を渡すと、設計書・画面仕様書・既存テストケースを検索し、影響範囲とテストの優先度を根拠の文書つきで示します。</p>
-              <form class="im-hero-form" id="im-hero-form">
-                <label class="visually-hidden" for="im-hero-order">変更の内容</label>
-                <textarea id="im-hero-order" class="im-hero-input" rows="2" maxlength="2000" placeholder="例: 会員登録の電話番号を任意から必須にし、桁数を 10〜11 桁にする。" required></textarea>
-                <button type="submit" class="btn-primary dash-hero-start">分析を始める</button>
-              </form>
-              <div class="dash-hero-steps" aria-label="影響度分析の流れ">
-                <span class="dash-hero-step"><b>1</b> 変更と文書を入れる</span><span class="dash-hero-arrow">→</span>
-                <span class="dash-hero-step"><b>2</b> 変更点を抜き出して検索</span><span class="dash-hero-arrow">→</span>
-                <span class="dash-hero-step"><b>3</b> 影響と優先度を判断</span>
-                <span class="dash-hero-note" id="im-hero-engine"></span>
-                <button type="button" class="dash-hero-sample" data-act="sample">見本で試す<span class="sample-zero">文書なし</span></button>
-              </div>
-            </div>
-          </div>
-          <div class="dashboard-section-head">
-            <div>
-              <h2 class="dash-section-title">分析した変更</h2>
-              <p class="dashboard-section-copy">変更 1 件ごとに 1 分析。開くと影響範囲の確認・判断・書き出しができます。</p>
-            </div>
-            <div class="dashboard-section-actions">
-              <button type="button" class="btn-outline-sm" data-act="reload">再読み込み</button>
-              <button type="button" class="btn-outline-sm" data-act="new">+ 新しい分析</button>
-            </div>
-          </div>
-          <div id="im-home-body"><div class="empty">読み込み中...</div></div>
-        </section>
-
-        {# ===== 文書庫 ===== #}
-        <section class="im-view" data-view-panel="library" hidden>
-          <div class="dashboard-section-head">
-            <div>
-              <h2 class="dash-section-title">文書庫</h2>
-              <p class="dashboard-section-copy">ここに入れた設計書・画面仕様書・既存テストケースは、どの分析でも検索先として使われます。版が変わったら入れ直してください。</p>
-            </div>
-            <div class="dashboard-section-actions">
-              <label class="btn-primary im-libup" for="im-libfile">文書を入れる<input id="im-libfile" type="file" multiple hidden accept=".xlsx,.docx,.md,.txt,.pdf"></label>
-            </div>
-          </div>
-          <div class="im-libsum" id="im-libsum"></div>
-          <div id="im-lib-body"></div>
-        </section>
-
-        {# ===== 分析 ===== #}
-        <section class="im-view" data-view-panel="job" hidden>
-          <div class="im-jobhead">
-            <div class="im-jobtitle"><h2 id="im-jobname"></h2><span class="bt-mut" id="im-jobmeta"></span></div>
-            <span class="pill p-new" id="im-engine" hidden></span>
-          </div>
-          <div class="bt-steps im-steps" id="im-steps" role="tablist" aria-label="工程"></div>
-          <div class="bt-sample" id="im-notes" hidden></div>
-
-          {# ① 入力: 入力受付・文書確認 #}
-          <section class="bt-panel" data-panel="intake" hidden>
-            <div class="bt-grid2">
-              <div class="bt-card">
-                <h3>変更の内容</h3>
-                <label class="bt-field">どういう変更をしたいか
-                  <textarea id="im-order" rows="3" class="im-ta" maxlength="2000" placeholder="例: 会員登録の電話番号を任意から必須にし、桁数を 10〜11 桁にする。"></textarea></label>
-                <label class="bt-drop" id="im-drop" for="im-file">
-                  <b>文書をここへ落とすか、押して選ぶ</b>
-                  <span>変更後・変更前の仕様書と、この変更だけで使う検索先（.xlsx / .docx / .md / .txt / .pdf）</span>
-                  <input id="im-file" type="file" multiple hidden accept=".xlsx,.docx,.md,.txt,.pdf">
-                </label>
-                <table class="bt-tbl" aria-label="取り込んだ文書">
-                  <thead><tr><th>文書</th><th>使い方</th><th>種類</th><th>断片</th><th><span class="visually-hidden">文書庫</span></th><th><span class="visually-hidden">削除</span></th></tr></thead>
-                  <tbody id="im-docs"></tbody>
-                </table>
-                <p class="bt-hint">名前に「旧・変更前」があれば変更前、「新・変更後」があれば変更後として扱います。違うときは選び直してください。</p>
-              </div>
-              <div class="bt-card">
-                <h3>検索先の文書</h3>
-                <p class="bt-hint im-gap">影響を探しにいく先です。足りない種類があると見落とします。</p>
-                <ul class="im-stores" id="im-stores"></ul>
-                <p class="bt-hint im-libnote">文書庫の文書 <b id="im-libcnt">0</b> 件も検索先に含めます。<button type="button" class="im-link" data-view="library">文書庫を開く</button></p>
-              </div>
-            </div>
-            <div class="bt-actions"><span class="bt-mut" id="im-intake-note"></span><span class="sp"></span>
-              <button type="button" class="btn-primary im-run" id="im-run">分析する →</button></div>
-          </section>
-
-          {# ② 変更点と検索: クエリ生成・文書検索・検索結果の統合 #}
-          <section class="bt-panel" data-panel="search" hidden>
-            <div class="bt-card">
-              <div class="bt-card-h"><h3>抜き出した変更箇所</h3><span class="bt-mut">変更前の版と比べた差分、または変更の指示</span></div>
-              <div class="im-diffs" id="im-diffs"></div>
-            </div>
-            <div class="bt-card bt-card-flush">
-              <div class="bt-card-h"><h3>検索クエリと結果</h3><span class="bt-mut" id="im-qsum"></span></div>
-              <div class="bt-tblwrap">
-                <table class="bt-tbl" aria-label="検索クエリ">
-                  <thead><tr><th>ID</th><th>元の変更</th><th>主題の語</th><th>変わった語と言い換え</th><th>検索先</th><th>ヒット</th><th>統合後</th></tr></thead>
-                  <tbody id="im-queries"></tbody>
-                </table>
-              </div>
-            </div>
-            <div class="bt-actions"><span class="bt-mut">同じ箇所に複数のクエリが当たったものは 1 件にまとめています。</span><span class="sp"></span>
-              <button type="button" class="btn-outline-sm" data-go="intake">← 入力へ</button>
-              <button type="button" class="btn-primary im-run" data-go="impact">影響と優先度へ →</button></div>
-          </section>
-
-          {# ③ 影響と優先度: 影響度の判定・対応優先度の判定・根拠 #}
-          <section class="bt-panel" data-panel="impact" hidden>
-            <div class="kpis" id="im-kpis"></div>
-            <div class="bt-card bt-card-flush">
-              <div class="bt-card-h im-tblh"><h3>影響範囲 <span class="bt-mut" id="im-shown"></span></h3><span class="sp"></span>
-                <div class="fchips im-filter" id="im-filter"></div>
-                <a class="btn-outline-sm" id="im-xlsx" download>Excel で書き出す</a><a class="btn-outline-sm" id="im-csv" download>CSV</a></div>
-              <div class="bt-tblwrap">
-                <table class="bt-tbl im-tbl" aria-label="影響範囲">
-                  <thead><tr><th>優先度</th><th>影響を受ける箇所</th><th>影響度</th><th>判断</th><th>根拠の文書</th><th>確かめるテスト</th><th>あなたの判断</th></tr></thead>
-                  <tbody id="im-rows"></tbody>
-                </table>
-              </div>
-            </div>
-            <details class="bt-card im-rules">
-              <summary>判定の基準</summary>
-              <ul class="bt-list">
-                <li><b>影響度</b>: 主題の語だけ一致＝小、変わった規則の語（値・条件とその言い換え）も一致＝大、「共通・同じ・参照」など同じ部品を使う記述で一段上げ、お金・認証・一括取込など害の大きい語があれば致命。</li>
-                <li><b>優先度</b>: P1＝致命（お金・個人情報・データ消失・止まる）、P2＝主要な業務の流れ、P3＝表示や文言。テストの順番に使います。</li>
-                <li>根拠の文書が見つからない箇所は「影響なし」とせず「未確認」と表示します。</li>
-                <li><b>AI</b> の行は LLM が断片を読んで判定したもの、<b>規則</b> の行は語の一致で判定したものです。どちらも採否と優先度はあなたが決めます。再分析しても判断は残ります。</li>
-              </ul>
-            </details>
-          </section>
-        </section>
+        <div id="im-root" class="im-root"><div class="im-state" role="status">読み込み中…</div></div>
       </div>
     </main>
   </div>
 </div>
 
 <div class="im-modal" id="im-modal" role="dialog" aria-modal="true" aria-labelledby="im-modal-t" hidden>
-  <form class="im-modal-box" id="im-newform">
-    <h2 id="im-modal-t">新しい分析</h2>
-    <label class="bt-field">分析の名前<input id="im-newname" maxlength="100" placeholder="例: 電話番号を必須に" required></label>
-    <label class="bt-field">変更の内容（あとで書いても構いません）<textarea id="im-neworder" rows="3" maxlength="2000" class="im-ta"></textarea></label>
-    <div class="bt-actions"><span class="sp"></span><button type="button" class="btn-outline-sm" data-act="close">やめる</button><button type="submit" class="btn-primary">作成</button></div>
+  <form class="im-modal-box" id="im-modal-form" novalidate>
+    <h2 id="im-modal-t"></h2>
+    <div id="im-modal-body"></div>
+    <p class="im-modal-err" id="im-modal-err" role="alert" hidden></p>
+    <div class="bt-actions"><span class="sp"></span>
+      <button type="button" class="btn-outline-sm" id="im-modal-cancel">やめる</button>
+      <button type="submit" class="btn-primary" id="im-modal-ok">実行</button>
+    </div>
   </form>
 </div>
-<div class="dv-toast bt-toast" id="bt-toast" role="status" hidden></div>
+<div class="dv-toast bt-toast" id="bt-toast" role="status" aria-live="polite" hidden></div>
 <script src="{{ url_for('static', filename='js/user-menu.js') }}?v={{ _ver }}"></script>
-<script src="{{ url_for('static', filename='js/impact.js') }}?v={{ _ver }}"></script>
+<script src="{{ url_for('static', filename='js/impact/api.js') }}?v={{ _ver }}"></script>
+<script src="{{ url_for('static', filename='js/impact/graph.js') }}?v={{ _ver }}"></script>
+<script src="{{ url_for('static', filename='js/impact/app.js') }}?v={{ _ver }}"></script>
+<script src="{{ url_for('static', filename='js/impact/system.js') }}?v={{ _ver }}"></script>
+<script src="{{ url_for('static', filename='js/impact/cr.js') }}?v={{ _ver }}"></script>
 </body>
 </html>

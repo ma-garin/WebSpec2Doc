@@ -145,6 +145,9 @@ def create_app() -> Flask:
     app.register_blueprint(backend_test.bp)
     # 影響度分析（System 08）。独立した入口 /impact を持つ。
     app.register_blueprint(impact.bp)
+    # 影響度分析 v2（対象システム・変更要求・ジョブ）。impact_api_cr は同じ bp に経路を足す。
+    from web.routes import impact_api, impact_api_cr  # noqa: F401
+    app.register_blueprint(impact_api.bp)
     # 指揮者（O2）。5 システムを 1 本の実行として束ねる API。
     app.register_blueprint(orchestration.bp)
 

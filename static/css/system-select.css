@@ -143,6 +143,12 @@
 .syscard-batch .syscard-icon { background: #ECFCCB; color: #3F6212; }
 .syscard-batch .syscard-no { color: #3F6212; }
 .syscard-batch .syscard-open { color: #3F6212; }
+/* System 08 バッチ・バックエンドのテスト。ドキュメント作成と同じアクセント系トークンを使う。 */
+.syscard-backend:hover { border-color: var(--ac); }
+.syscard-backend .syscard-accent { background: var(--ac); }
+.syscard-backend .syscard-icon { background: var(--ac-bg); color: var(--ac-dk); }
+.syscard-backend .syscard-no { color: var(--ac-dk); }
+.syscard-backend .syscard-open { color: var(--ac-dk); }
 
 .syscard-badge {
   position: absolute; top: 16px; right: 16px;

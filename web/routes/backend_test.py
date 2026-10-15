@@ -1,0 +1,403 @@
+"""バッチ・バックエンドのテスト（System 08）の画面・案件・資料・対象・接続先。処理は web/services/backendtest/。
+段階は backend_test_stages.py、実行・判定は backend_test_run.py が同じ bp に足す。接続のパスワードは保存しない。"""
+from __future__ import annotations
+
+import logging
+import re
+
+from flask import Blueprint, g, jsonify, render_template, request
+
+from web.services.backendtest import dbconn, intake, redact, store
+
+bp = Blueprint("backend_test", __name__)
+log = logging.getLogger(__name__)
+API = "/api/backend-test/jobs"
+SENIOR = "senior_qa"
+ROLES = ("qa", SENIOR)
+LLM_PROVIDERS = ("openai", "ollama")
+SSLMODES = ("disable", "allow", "prefer", "require", "verify-ca", "verify-full")
+MAX_ITEMS = 20         # 対象・接続先それぞれの上限
+LOCAL_ACTOR = "local"   # 認証オフのときの操作者名（作成者もこの名前で members に入る）
+_SECRET_KEY = re.compile(r"pass(word|wd)?|secret|token|api_?key|credential|private_?key", re.I)
+_NO_SECRET = ("接続のパスワードやトークンは保存できません。"
+              "パスワードを外して保存し、接続確認や実行のときに入れてください。")
+
+
+def err(message: str, status: int):
+    return jsonify(error=message), status
+
+
+def actor() -> str:
+    """操作した人。認証オフ・未ログインでは LOCAL_ACTOR。段階・実行のルートもこれを使う。"""
+    user = getattr(g, "auth_user", None)
+    name = str(user.get("email") or user.get("name") or "") if isinstance(user, dict) else ""
+    return name or LOCAL_ACTOR
+
+
+def body() -> dict:
+    return data if isinstance(data := request.get_json(silent=True), dict) else {}
+
+
+def load_job(jid: str):
+    try:
+        return store.load(jid), None
+    except (KeyError, store.StoreError):
+        return None, err("案件が見つかりません。一覧から選び直してください。", 404)
+    except (ValueError, OSError):
+        log.exception("案件の読み込みに失敗 %s", jid)
+        return None, err("案件を読めませんでした。時間をおいて再読み込みしてください。", 500)
+
+
+def respond(job: dict, status: int = 200, **extra):
+    """保存して {job, ...extra} を返す。保存できない理由（秘密の混入など）は 400。"""
+    try:
+        return jsonify(job=store.save(job), **extra), status
+    except store.StoreError as exc:
+        return err(str(exc), 400)
+    except OSError:
+        log.exception("案件の保存に失敗 %s", job.get("id"))
+        return err("保存できませんでした。時間をおいてもう一度操作してください。", 500)
+
+
+def _without_secret(value):
+    """秘密らしいキーを除いた新しい値（元の dict は変えない）。"""
+    if isinstance(value, dict):
+        return {k: _without_secret(v) for k, v in value.items() if not _SECRET_KEY.search(str(k))}
+    if isinstance(value, list):
+        return [_without_secret(v) for v in value]
+    return value
+
+
+def _str_list(value, limit: int = 50) -> list[str]:
+    items = value if isinstance(value, list) else []
+    return [str(v).strip()[:300] for v in items if str(v).strip()][:limit]
+
+
+def _next_id(used: set, prefix: str) -> str:
+    return next(f"{prefix}{n}" for n in range(1, 10000) if f"{prefix}{n}" not in used)
+
+
+def _assign_ids(raws: list, prefix: str) -> list[str]:
+    """渡された id を活かし、無い・重複・形が違うものだけ空き番号を振る。"""
+    given = [str(r.get("id") or "") if isinstance(r, dict) else "" for r in raws]
+    ids: list[str] = []
+    for rid in given:
+        ok = re.fullmatch(prefix + r"\d{1,4}", rid) and rid not in ids
+        ids.append(rid if ok else _next_id(set(ids) | set(given), prefix))
+    return ids
+
+
+@bp.route("/backend-test")
+def page() -> str:
+    return render_template("backend_test.html")
+
+
+@bp.route(API, methods=["GET"])
+def list_jobs():
+    try:
+        return jsonify(jobs=store.list_all())
+    except OSError:
+        log.exception("案件一覧の取得に失敗")
+        return err("案件の一覧を読めませんでした。時間をおいて再読み込みしてください。", 500)
+
+
+@bp.route(API, methods=["POST"])
+def create_job():
+    data = body()
+    name = str(data.get("name") or "").strip()
+    if not name or len(name) > 100:
+        return err("案件名を 1〜100 文字で入れてください。", 400)
+    try:
+        text = {k: str(data.get(k) or "").strip()[:2000] for k in ("purpose", "scope")}
+        job = store.new(name, str(data.get("target_kind") or "batch"), str(data.get("level") or ""), **text)
+    except store.StoreError as exc:
+        return err(str(exc), 400)
+    return respond({**job, "members": {actor(): SENIOR}}, 201)
+
+
+@bp.route(API + "/<jid>", methods=["GET"])
+def get_job(jid: str):
+    job, e = load_job(jid)
+    return e or jsonify(job=job)
+
+
+def _int_in(value, low: int, high: int, message: str) -> int:
+    if isinstance(value, bool) or not re.fullmatch(r"\d{1,6}", str(value)) or not low <= int(value) <= high:
+        raise store.StoreError(message)
+    return int(value)
+
+
+def _apply_patch(job: dict, data: dict) -> dict:
+    """PATCH の項目を当てた新しい job。不正な値は StoreError。"""
+    out = dict(job)
+    if "name" in data:
+        name = str(data["name"] or "").strip()
+        if not name or len(name) > 100:
+            raise store.StoreError("案件名を 1〜100 文字で入れてください。")
+        out["name"] = name
+    for key in ("purpose", "scope"):
+        if key in data:
+            out[key] = str(data[key] or "").strip()[:2000]
+    if "level" in data:
+        if data["level"] not in store.LEVELS:
+            raise store.StoreError("テストレベルを一覧から選び直してください。")
+        out["level"] = data["level"]
+    if "retention_days" in data:
+        out["retention_days"] = _int_in(data["retention_days"], 1, 3650, "保存期間は 1〜3650 日の数で入れてください。")
+    if "llm" in data:
+        provider = (data["llm"] or {}).get("provider") if isinstance(data["llm"], dict) else None
+        if provider not in LLM_PROVIDERS:
+            raise store.StoreError("AI の送り先を一覧から選び直してください。")
+        out["llm"] = {**job["llm"], "provider": provider}   # 外部へ送る範囲は変えられない
+    if "approver_roles" in data:
+        roles = data["approver_roles"]
+        if not isinstance(roles, dict) or any(k not in store.STAGE_NOS or v not in ROLES for k, v in roles.items()):
+            raise store.StoreError("承認する役割が読めません。段階ごとに QA かシニア QA を選び直してください。")
+        out["approver_roles"] = {**job["approver_roles"], **roles}
+    return out
+
+
+@bp.route(API + "/<jid>", methods=["PATCH"])
+def update_job(jid: str):
+    job, e = load_job(jid)
+    if e:
+        return e
+    data = body()
+    if "approver_roles" in data and (job.get("members") or {}).get(actor()) != SENIOR:
+        return err("承認する役割を変えられるのはシニア QA だけです。シニア QA に依頼してください。", 403)
+    try:
+        job = _apply_patch(job, data)
+    except store.StoreError as exc:
+        return err(str(exc), 400)
+    return respond(job)
+
+
+@bp.route(API + "/<jid>", methods=["DELETE"])
+def delete_job(jid: str):
+    try:
+        store.delete(jid)
+    except (KeyError, FileNotFoundError):
+        return err("案件が見つかりません。一覧を再読み込みしてください。", 404)
+    except store.StoreError as exc:
+        return err(str(exc), 409)
+    except OSError:
+        log.exception("案件の削除に失敗 %s", jid)
+        return err("案件を削除できませんでした。時間をおいてもう一度操作してください。", 500)
+    return jsonify(ok=True)
+
+
+def _reread(job: dict, extra_values=()):
+    """資料を読み直して facts・questions を更新し保存する。段階 2 が承認済みなら置き換えず古い印を付ける。"""
+    try:
+        got = intake.read_all(job, extra_values)
+    except store.StoreError as exc:
+        return err(str(exc), 400)
+    files = [{**f, "redactions": got["redactions"].get(f["name"], [])} for f in job["files"]]
+    job = {**job, "files": files}
+    stage2 = (job.get("stages") or {}).get("2") or {}
+    notes = []
+    if stage2.get("status") == "approved":
+        job = {**job, "stages": {**job["stages"], "2": {**stage2, "stale": True}}}
+        notes.append("対象の読み取りは承認済みのため事実は置き換えていません。反映するには段階 2 を作り直してください。")
+    else:
+        answers = {q["text"]: q.get("answer") for q in job.get("questions") or [] if q.get("answer")}
+        questions = [{**q, "answer": answers.get(q["text"], q.get("answer"))} for q in got["questions"]]
+        job = {**job, "facts": got["facts"], "questions": questions}
+    return respond(job, unread=got["unread"], notes=notes)
+
+
+@bp.route(API + "/<jid>/files", methods=["POST"])
+def upload(jid: str):
+    job, e = load_job(jid)
+    if e:
+        return e
+    uploads = request.files.getlist("files")
+    if not uploads:
+        return err("ファイルが選ばれていません。DDL・ジョブ定義・仕様書・ソースを選んでください。", 400)
+    try:
+        for f in uploads:
+            data = f.read()
+            if len(data) > store.MAX_FILE_BYTES:
+                return err(f"{f.filename} が 20MB を超えています。小さくしてから取り込んでください。", 413)
+            job = store.add_file(job, f.filename or "", data)
+    except store.StoreError as exc:
+        return err(str(exc), 400)
+    except OSError:
+        log.exception("資料の取り込みに失敗 %s", jid)
+        return err("ファイルを保存できませんでした。もう一度取り込んでください。", 500)
+    return _reread(job)
+
+
+def _change_file(job: dict, name: str, data: dict) -> tuple[dict, list[str]]:
+    """種類の変更と追加の伏せ字（値は保存しない）。不正なら StoreError、無ければ KeyError。"""
+    if not any(f["name"] == name for f in job["files"]):
+        raise KeyError(name)
+    kind = data.get("kind")
+    if kind is not None:
+        if kind not in store.FILE_KINDS:
+            raise store.StoreError("種類を一覧から選び直してください。")
+        job = {**job, "files": [{**f, "kind": kind} if f["name"] == name else f for f in job["files"]]}
+    extra = data.get("redactions_add") or []
+    if not isinstance(extra, list) or not all(isinstance(v, str) for v in extra):
+        raise store.StoreError("伏せ字にする値が読めません。値を 1 つずつ入れ直してください。")
+    return job, [v for v in extra if v.strip()]
+
+
+@bp.route(API + "/<jid>/files/<path:name>", methods=["PATCH", "DELETE"])
+def change_file(jid: str, name: str):
+    job, e = load_job(jid)
+    if e:
+        return e
+    extra: list[str] = []
+    try:
+        if request.method == "DELETE":
+            job = store.remove_file(job, name)
+        else:
+            job, extra = _change_file(job, name, body())
+    except KeyError:
+        return err("そのファイルは取り込まれていません。一覧を再読み込みしてください。", 404)
+    except store.StoreError as exc:
+        return err(str(exc), 400)
+    except OSError:
+        log.exception("資料の削除に失敗 %s %s", jid, name)
+        return err("ファイルを外せませんでした。時間をおいてもう一度操作してください。", 500)
+    return _reread(job, extra)
+
+
+def _target(raw, tid: str) -> dict:
+    if not isinstance(raw, dict):
+        raise store.StoreError("対象の形式が読めません。画面から入れ直してください。")
+    if _without_secret(raw) != raw:
+        raise store.StoreError(_NO_SECRET)
+    kind = raw.get("kind") or "batch"
+    if kind not in store.TARGET_KINDS:
+        raise store.StoreError("この対象の種類にはまだ対応していません。バッチジョブを選んでください。")
+    command = str(raw.get("command") or "").strip()
+    if not command or len(command) > 300:
+        raise store.StoreError("起動コマンドを 1〜300 文字で入れてください。")
+    if any(h["kind"] == redact.KIND_SECRET for h in redact.scan(command)):
+        raise store.StoreError("起動コマンドにパスワードらしい値があります。値を外し、実行のときに入れる形にしてください。")
+    return {"id": tid, "kind": kind, "launch": "command", "command": command,
+            "inputs": _str_list(raw.get("inputs")), "outputs": _str_list(raw.get("outputs"))}
+
+
+@bp.route(API + "/<jid>/targets", methods=["PUT", "POST"])
+def put_targets(jid: str):   # PUT は一覧ごと置き換え（targets[]）、POST は 1 件追加
+    job, e = load_job(jid)
+    if e:
+        return e
+    data = body()
+    try:
+        if request.method == "PUT":
+            raws = data.get("targets")
+            if not isinstance(raws, list) or len(raws) > MAX_ITEMS:
+                return err(f"対象は 0〜{MAX_ITEMS} 件で送ってください。画面を再読み込みしてやり直してください。", 400)
+            targets = [_target(r, i) for r, i in zip(raws, _assign_ids(raws, "t"))]
+        else:
+            if len(job["targets"]) >= MAX_ITEMS:
+                return err(f"対象は {MAX_ITEMS} 件までです。不要な対象を外してください。", 400)
+            tid = _next_id({t["id"] for t in job["targets"]}, "t")
+            targets = job["targets"] + [_target(data, tid)]
+    except store.StoreError as exc:
+        return err(str(exc), 400)
+    return respond({**job, "targets": targets}, 201 if request.method == "POST" else 200)
+
+
+def _classified(env: dict) -> dict:
+    got = dbconn.classify(env, env["declared_production"], env.get("in_recovery", False))
+    return {**env, "production": bool(got.get("production")),
+            "production_reasons": list(got.get("reasons") or [])}
+
+
+def _env(raw, eid: str, old: dict | None = None) -> dict:
+    """接続先を正規化し本番判定を付ける。秘密は受け取らない前提（呼び出し側で除く）。"""
+    if not isinstance(raw, dict):
+        raise store.StoreError("接続先の形式が読めません。画面から入れ直してください。")
+    name = str(raw.get("name") or "").strip()
+    if not name or len(name) > 100:
+        raise store.StoreError("接続先の名前を 1〜100 文字で入れてください。")
+    db = raw.get("db") if isinstance(raw.get("db"), dict) else {}
+    sslmode = db.get("sslmode") or "prefer"
+    if sslmode not in SSLMODES:
+        raise store.StoreError("暗号化の方式を一覧から選び直してください。")
+    env = {"id": eid, "name": name,
+           "db": {"kind": "postgresql", "host": str(db.get("host") or "").strip()[:255],
+                  "port": _int_in(db.get("port") or 5432, 1, 65535, "ポートは 1〜65535 の数で入れてください。"), "dbname": str(db.get("dbname") or "").strip()[:63],
+                  "user": str(db.get("user") or "").strip()[:63], "sslmode": sslmode},
+           "file_root": str(raw.get("file_root") or "").strip()[:500],
+           "writable": raw.get("writable") is not False,
+           "declared_production": raw.get("declared_production") is True,
+           "in_recovery": bool((old or {}).get("in_recovery"))}
+    return _classified(env)
+
+
+def _run_check(env: dict, secret: str | None) -> tuple[dict, dict]:
+    """接続確認。秘密は引数でだけ受け、どこにも残さない。戻り値は（判定し直した env, 応答）。"""
+    result = dbconn.check(env, secret)
+    env = _classified({**env, "in_recovery": bool(result.get("in_recovery")) or bool(env.get("in_recovery"))})
+    return env, {"reachable": bool(result.get("reachable")), "auth": bool(result.get("auth")),
+                 "privilege": result.get("privilege"), "in_recovery": env["in_recovery"],
+                 "production": env["production"], "production_reasons": env["production_reasons"],
+                 "read_only": dbconn.must_read_only(env), "message": str(result.get("message") or "")}
+
+
+def _secret_of(data: dict) -> str | None:
+    db = data.get("db") if isinstance(data.get("db"), dict) else {}
+    value = data.get("secret") or data.get("password") or db.get("password")
+    if value is not None and not isinstance(value, str):
+        raise store.StoreError("パスワードが読めません。文字で入れ直してください。")
+    return value or None
+
+
+def _replace_envs(job: dict, data: dict):
+    """PUT: 一覧ごと置き換え。秘密を含めたら 400（BD 8 章）。"""
+    raws = data.get("envs")
+    if not isinstance(raws, list) or len(raws) > MAX_ITEMS:
+        return err(f"接続先は 0〜{MAX_ITEMS} 件で送ってください。画面を再読み込みしてやり直してください。", 400)
+    if _without_secret(data) != data:
+        return err(_NO_SECRET, 400)
+    old, ids = {x["id"]: x for x in job["envs"]}, _assign_ids(raws, "e")
+    envs = [_env(r, i, old.get(i)) for r, i in zip(raws, ids)]
+    current = data.get("current_env", job.get("current_env"))
+    return respond({**job, "envs": envs, "current_env": current if current in ids else (ids[0] if ids else None)})
+
+
+def _add_env(job: dict, data: dict):
+    """POST: 1 件追加。本文のパスワードは接続確認にだけ使い、保存しない。"""
+    if len(job["envs"]) >= MAX_ITEMS:
+        return err(f"接続先は {MAX_ITEMS} 件までです。不要な接続先を外してください。", 400)
+    secret, check = _secret_of(data), None
+    env = _env(_without_secret(data), _next_id({x["id"] for x in job["envs"]}, "e"))
+    if secret:
+        env, check = _run_check(env, secret)
+    return respond({**job, "envs": job["envs"] + [env], "current_env": job.get("current_env") or env["id"]},
+                   201, check=check)
+
+
+@bp.route(API + "/<jid>/envs", methods=["PUT", "POST"])
+def put_envs(jid: str):
+    job, e = load_job(jid)
+    if e:
+        return e
+    try:
+        return (_replace_envs if request.method == "PUT" else _add_env)(job, body())
+    except store.StoreError as exc:
+        return err(str(exc), 400)
+
+
+@bp.route(API + "/<jid>/envs/<eid>/check", methods=["POST"])
+def check_env(jid: str, eid: str):
+    job, e = load_job(jid)
+    if e:
+        return e
+    env = next((x for x in job["envs"] if x["id"] == eid), None)
+    if env is None:
+        return err("その接続先は登録されていません。接続先の一覧を再読み込みしてください。", 404)
+    try:
+        env, result = _run_check(env, _secret_of(body()))
+    except store.StoreError as exc:
+        return err(str(exc), 400)
+    return respond({**job, "envs": [env if x["id"] == eid else x for x in job["envs"]]}, **result)
+
+
+from web.routes import backend_test_stages, backend_test_run  # noqa: E402,F401  段階・実行のルートを同じ bp に載せる

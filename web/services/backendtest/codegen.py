@@ -71,7 +71,11 @@ def _test_names(cases: list[dict]) -> dict[str, str]:
     names: dict[str, str] = {}
     used: set[str] = set()
     for case in cases:
-        base = "test_" + (re.sub(r"\W+", "_", str(case["id"]), flags=re.ASCII).strip("_").lower() or "case")
+        # test_<ケース ID 小文字>_<slug>。runner は -k "test_<id>_" で選ぶので、ID の直後は必ず "_"
+        # （C001 で C0010 を拾う部分一致の取り違えを防ぐ）
+        cid = re.sub(r"\W+", "_", str(case["id"]), flags=re.ASCII).strip("_").lower() or "case"
+        slug = re.sub(r"\W+", "_", str(case.get("title") or ""), flags=re.ASCII).strip("_").lower()[:40].strip("_")
+        base = f"test_{cid}_{slug or 'case'}"
         name, n = base, 2
         while name in used:
             name, n = f"{base}_{n}", n + 1

@@ -28,6 +28,7 @@ def create_app() -> Flask:
         feedback,
         healing,
         batch_test,
+        impact,
         doc_verify,
         history,
         integrations,
@@ -139,6 +140,8 @@ def create_app() -> Flask:
     app.register_blueprint(doc_verify.bp)
     # バッチ・スクリプトのテスト（System 07）。独立した入口 /batch-test を持つ。
     app.register_blueprint(batch_test.bp)
+    # 影響度分析（System 08）。独立した入口 /impact を持つ。
+    app.register_blueprint(impact.bp)
     # 指揮者（O2）。5 システムを 1 本の実行として束ねる API。
     app.register_blueprint(orchestration.bp)
 

@@ -48,8 +48,8 @@ def verdict(summary: dict) -> dict:
         return {"verdict": "不合格", "reason": f"不合格 {fail} 件", "unverified": unverified}
     if unverified > 0:
         return {
-            "verdict": "判定保留",
-            "reason": f"未検証 {unverified} 件",
+            "verdict": f"保留（未検証 {unverified} 件）",
+            "reason": f"未検証 {unverified} 件（合格に数えていません）",
             "unverified": unverified,
         }
     if total > 0 and passed == total:
@@ -77,6 +77,7 @@ def _observed_facts(result: dict) -> dict:
         "observed": fact.get("observed"),
         "diff_counts": _diff_counts(fact),
         "diff_path": fact.get("diff"),
+        "stderr_tail": fact.get("stderr_tail") or "",
         "cause": result.get("cause"),
     }
 

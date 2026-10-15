@@ -31,13 +31,14 @@
   }
   function reviewRow(r) {
     var rid = r.id || r.review_id;  // 一覧は id/name、ホームは review_id/review_name で返る
-    return '<tr data-id="' + esc(rid) + '" class="dv-click"><td>' + esc(r.name || r.review_name || rid) + '</td><td>' + (r.role ? lbl(ROLE, r.role) : '-') +
+    return '<tr data-id="' + esc(rid) + '" class="dv-click" data-key-open><td>' + esc(r.name || r.review_name || rid) + '</td><td>' + (r.role ? lbl(ROLE, r.role) : '-') +
       '</td><td>' + lbl(PHASE, r.phase) + '</td><td>' + esc(r.due || '-') + '</td></tr>';
   }
   function reviewTable(el, list, msg) {
     if (!list || !list.length) return empty(el, msg);
     el.innerHTML = table(['レビュー', '役割', '工程', '期限'], list.map(reviewRow));
     bindRows(el, DV.openReview);
+    DV.keyOpen(el);
   }
 
   // ISO/IEC/IEEE 29148 の品質特性（チェックリスト項目 id → 表示名）
@@ -45,19 +46,91 @@
   function relabel(obj) { var o = {}; Object.keys(obj || {}).forEach(function (k) { o[CK_LABEL[k] || k] = obj[k]; }); return o; }
 
   /* home */
-  DV.on('home', function () {
-    var c = $('dvgHomeCounts'); var m = $('dvgHomeMine'); var a = $('dvgHomeActive');
-    loading(m); loading(a); c.innerHTML = '';
-    DV.api('/api/docverify/home').then(function (d) {
-      var counts = d.counts || {};
-      c.innerHTML = Object.keys(counts).map(function (k) {
-        var COUNT_LABEL = { active: '進行中のレビュー', mine: '自分の担当', open_critical: '未対応の重大な指摘', open_findings: '未対応の指摘' };
-        return '<div class="card dvg-card"><div class="mut">' + esc(COUNT_LABEL[k] || k) + '</div><div class="dvg-num">' + esc(counts[k]) + '</div></div>';
-      }).join('');
-      reviewTable(m, d.mine, 'いま担当しているレビューはありません。');
-      reviewTable(a, d.active, '進行中のレビューはありません。「レビュー一覧」から作成できます。');
-    }).catch(function () { failed(m); failed(a); });
-  });
+  var TODO_SCOPE = { mine: '自分の担当から', active: '進行中のレビューから' };
+  function isNum(v) { return v !== null && v !== undefined && !isNaN(+v); }
+  function statCard(key, label, num, sub, warn) {
+    return '<div class="stat-card' + (warn ? ' is-warn' : '') + '" data-stat="' + key + '"><div class="stat-card-head"><span class="stat-card-label">' +
+      esc(label) + '</span></div><div class="stat-card-num">' + esc(num) + '</div>' + (sub ? '<div class="stat-card-sub">' + esc(sub) + '</div>' : '') + '</div>';
+  }
+  function homeStats(d) {
+    var c = d.counts || {}; var q = d.quality || {};
+    var crit = +c.open_critical || 0;
+    var qOk = isNum(q.overall);
+    return statCard('active', '進行中のレビュー', +c.active || 0, '', false) +
+      statCard('critical', '未対応の重大な指摘', crit, '', crit > 0) +
+      statCard('answers', '回答待ちの質問', +c.awaiting_answers || 0, '', false) +
+      statCard('quality', '品質スコア', DV.scoreText(q.overall), qOk ? '算出できた ' + (+q.n_scored || 0) + ' 件の平均' : DV.NO_SCORE, false);
+  }
+  function homeQuality(q) {
+    q = q || {};
+    var head = '<h3>特性別の品質スコア</h3>';
+    if (!(+q.n_scored)) return head + '<p class="sub">' + esc(DV.NO_SCORE) + '</p>';
+    var items = q.items || {};
+    var rows = Object.keys(items).map(function (k) { return { label: items[k].label || CK_LABEL[k] || k, score: items[k].score }; });
+    rows.sort(function (a, b) {
+      var an = !isNum(a.score); var bn = !isNum(b.score);
+      if (an || bn) return an === bn ? 0 : (an ? 1 : -1);
+      return a.score - b.score;
+    });
+    return head + '<p class="sub">' + esc('算出できた ' + (+q.n_scored) + ' 件の平均') + '</p>' + rows.map(function (r) {
+      return '<div class="dv-qrow"><span class="dv-ellipsis" title="' + esc(r.label) + '">' + esc(r.label) + '</span>' +
+        DV.scoreBar(r.score, r.label) + '<b>' + esc(DV.scoreText(r.score)) + '</b></div>';
+    }).join('');
+  }
+  function homeTodo(list, scope) {
+    var head = '<h3>次にやること</h3><p class="sub">' + esc(TODO_SCOPE[scope] || TODO_SCOPE.active) + '</p>';
+    if (!list || !list.length) return head + '<p class="mut dvg-empty">いまやることはありません。</p>';
+    return head + '<ul class="dv-todo">' + list.map(function (t) {
+      var name = t.review_name || t.review_id;
+      return '<li><span class="dv-ellipsis" title="' + esc(name) + '">' + esc(name) + '</span><button type="button" class="dv-link" data-review="' +
+        esc(t.review_id) + '" data-view="' + esc(t.view || 'read') + '">' + esc(t.label) + '</button></li>';
+    }).join('') + '</ul>';
+  }
+  function homeRow(r) {
+    var doc = r.document_name || r.review_name || r.review_id;
+    var crit = +r.open_critical || 0;
+    var stage = '<span class="dv-stage' + (r.phase === 'closed' ? ' is-done' : '') + '">' + lbl(PHASE, r.phase) + '</span>';
+    var score = '<span class="dv-score">' + DV.scoreBar(r.quality_overall, '品質スコア') + '<b>' + esc(DV.scoreText(r.quality_overall)) + '</b></span>';
+    var open = esc(+r.open || 0) + (crit > 0 ? ' <span class="dv-sev c">重大 ' + esc(crit) + '</span>' : '');
+    var upd = r.updated_at ? String(r.updated_at).slice(0, 16).replace('T', ' ') : '-';
+    return '<tr data-id="' + esc(r.review_id) + '" data-key-open><td class="site-cell"><span class="dv-ellipsis" title="' + esc(doc) + '">' + esc(doc) + '</span>' +
+      ((+r.versions || 0) > 1 ? '<span class="diff-badge">改版あり</span>' : '') + '</td><td>' + stage + '</td><td>' + score +
+      '</td><td class="num">' + open + '</td><td>' + esc(upd) + '</td><td><button type="button" class="btn-outline-sm">開く</button></td></tr>';
+  }
+  function homeTable(active) {
+    if (!active || !active.length) return '<p class="mut dvg-empty">進行中のレビューはありません。「＋ 新しいレビュー」から始められます。</p>';
+    return '<table class="data dashboard-table"><thead><tr><th>文書</th><th>工程</th><th>品質スコア</th><th>未対応</th><th>更新</th><th>操作</th></tr></thead><tbody>' +
+      active.map(homeRow).join('') + '</tbody></table>';
+  }
+  function renderHome(d) {
+    d = d || {};
+    $('dvgHomeStats').innerHTML = homeStats(d);
+    $('dvgHomeQuality').innerHTML = homeQuality(d.quality);
+    $('dvgHomeTodo').innerHTML = homeTodo(d.next_actions, d.next_scope);
+    var tbl = $('dvgHomeTable');
+    tbl.innerHTML = homeTable(d.active);
+    bindRows(tbl, function (id) { DV.openReview(id, 'read').catch(function () {}); });
+    $('dvgHomeTodo').querySelectorAll('button[data-review]').forEach(function (b) {
+      b.addEventListener('click', function () { DV.openReview(b.dataset.review, b.dataset.view).catch(function () {}); });
+    });
+    DV.keyOpen(tbl);
+    DV.keyOpen($('dvgHomeTodo'));
+  }
+  function loadHome() {
+    var ids = ['dvgHomeQuality', 'dvgHomeTodo', 'dvgHomeTable'];
+    $('dvgHomeStats').innerHTML = '';
+    ids.forEach(function (id) { loading($(id)); });
+    return DV.api('/api/docverify/home').then(renderHome).catch(function (e) { ids.forEach(function (id) { failed($(id)); }); throw e; });
+  }
+  DV.on('home', function () { loadHome().catch(function () {}); });
+  var homeReload = $('dvgHomeReload');
+  if (homeReload) homeReload.addEventListener('click', function () { DV.busy(homeReload, loadHome, '読み込み中…').catch(function () {}); });
+  function startNew() {
+    DV.show('reviews');
+    var input = document.querySelector('#dvgNewForm [name=name]');
+    if (input) input.focus();
+  }
+  ['dv-new-review', 'dvgHeroStart', 'dvgHomeNew'].forEach(function (id) { var b = $(id); if (b) b.addEventListener('click', startNew); });
 
   /* mine */
   DV.on('mine', function () {
@@ -80,19 +153,16 @@
       var list = Array.isArray(d) ? d : (d.inspections || d.items || []);
       if (!list.length) return empty(el, 'レビューはまだありません。上の欄から作成してください。');
       el.innerHTML = table(['レビュー', '工程', '期限', '指摘'], list.map(function (r) {
-        return '<tr data-id="' + esc(r.id) + '"><td>' + esc(r.name || r.id) + '</td><td>' + lbl(PHASE, r.phase) +
+        return '<tr data-id="' + esc(r.id) + '" data-key-open><td>' + esc(r.name || r.id) + '</td><td>' + lbl(PHASE, r.phase) +
           '</td><td>' + esc(r.due || '-') + '</td><td>' + esc(r.findings_count != null ? r.findings_count : (r.findings || []).length) + '</td></tr>';
       }));
       bindRows(el, DV.openReview);
+      DV.keyOpen(el);
     });
   });
   var form = $('dvgNewForm');
-  if (form) form.addEventListener('submit', function (e) {
-    e.preventDefault();
-    var btn = form.querySelector('button[type=submit]');
-    btn.disabled = true; btn.textContent = '作成中…';
-    var fd = new FormData(form);
-    DV.api('/api/docverify/inspections', { method: 'POST', json: { name: fd.get('name') || '', goal: fd.get('goal') || '' } }).then(function (r) {
+  function createReview(fd) {
+    return DV.api('/api/docverify/inspections', { method: 'POST', json: { name: fd.get('name') || '', goal: fd.get('goal') || '' } }).then(function (r) {
       var iid = r.id || (r.inspection && r.inspection.id);
       var extra = {};
       if (fd.get('checklist_id')) extra.checklist_id = fd.get('checklist_id');
@@ -100,9 +170,17 @@
       var p = Object.keys(extra).length ? DV.api('/api/docverify/inspections/' + encodeURIComponent(iid), {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(extra) }) : Promise.resolve();
       var file = fd.get('file');  // 作成と同時に対象の文書を取り込む（取り込むと自動の候補が並ぶ）
-      var up = function () { if (!file || !file.size) return Promise.resolve(); var f2 = new FormData(); f2.append('file', file); btn.textContent = '文書を読み取り中…'; return DV.api('/api/docverify/inspections/' + encodeURIComponent(iid) + '/document', { method: 'POST', form: f2 }); };
-      return p.then(up).then(function () { form.reset(); DV.toast('レビューを作成しました'); DV.openReview(iid, file && file.size ? 'read' : 'plan'); });
-    }).catch(function () {}).then(function () { btn.disabled = false; btn.textContent = '作成して開く'; });
+      var hasFile = !!(file && file.size);
+      var up = function () { if (!hasFile) return Promise.resolve(); var f2 = new FormData(); f2.append('file', file); return DV.api('/api/docverify/inspections/' + encodeURIComponent(iid) + '/document', { method: 'POST', form: f2 }); };
+      return p.then(up).then(function () { form.reset(); DV.toast('レビューを作成しました'); return DV.openReview(iid, hasFile ? 'read' : 'plan'); });
+    });
+  }
+  if (form) form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var btn = form.querySelector('button[type=submit]');
+    var fd = new FormData(form);
+    // 失敗時は入力を残す（form.reset しない）。文言は帯（#dv-banner）に出る
+    DV.busy(btn, function () { return createReview(fd); }, '文書を読み取り中…').catch(function () {});
   });
 
   /* findings */
@@ -123,13 +201,14 @@
       }
       if (!list.length) return empty(el, '条件に合う指摘はありません。');
       el.innerHTML = table(['重大度', '内容', 'レビュー', '状態', '指摘者'], list.map(function (f, i) {
-        return '<tr data-id="' + i + '"><td>' + sevChip(f.severity) + '</td><td>' + esc(f.message || f.text || f.title || '') +
+        return '<tr data-id="' + i + '" data-key-open><td>' + sevChip(f.severity) + '</td><td>' + esc(f.message || f.text || f.title || '') +
           '</td><td>' + esc(f.review_name || f.review_id) + '</td><td>' + lbl(STATUS, f.status) + '</td><td>' + esc(f.raised_by || '-') + '</td></tr>';
       }));
       bindRows(el, function (i) {
         var f = list[+i];
         DV.openReview(f.review_id, 'triage');
       });
+      DV.keyOpen(el);
     });
   }
   ['dvgFStatus', 'dvgFSeverity', 'dvgFReview'].forEach(function (id) { var s = $(id); if (s) s.addEventListener('change', loadFindings); });

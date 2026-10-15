@@ -214,7 +214,7 @@ def api_stage_generate(jid: str, n: int):
     job, err = _save(job)
     if err:
         return err
-    return jsonify(stage=_stage_view(job, n), job=store.summary(job), **extra)
+    return jsonify(stage=_stage_view(job, n), job={**job, **store.summary(job)}, **extra)
 
 
 # ---- 承認・差し戻し --------------------------------------------------------------
@@ -240,7 +240,7 @@ def api_stage_approve(jid: str, n: int):
     job, err = _save(job)
     if err:
         return err
-    return jsonify(stage=_stage_view(job, n), job=store.summary(job))
+    return jsonify(stage=_stage_view(job, n), job={**job, **store.summary(job)})
 
 
 @bp.post(API + "/stages/<int:n>/reject")
@@ -262,7 +262,7 @@ def api_stage_reject(jid: str, n: int):
     job, err = _save(job)
     if err:
         return err
-    return jsonify(stage=_stage_view(job, n), job=store.summary(job))
+    return jsonify(stage=_stage_view(job, n), job={**job, **store.summary(job)})
 
 
 # ---- 項目の人手修正 --------------------------------------------------------------
@@ -306,7 +306,7 @@ def api_stage_item(jid: str, n: int, item_id: str):
     job, err = _save(job)
     if err:
         return err
-    return jsonify(stage=_stage_view(job, n), job=store.summary(job))
+    return jsonify(stage=_stage_view(job, n), job={**job, **store.summary(job)})
 
 
 # ---- 期待値（oracle）とゴールデン ---------------------------------------------------

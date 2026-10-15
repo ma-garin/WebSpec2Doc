@@ -37,7 +37,13 @@
     let res;
     try { res = await fetch(path, init); } catch (e) { banner(NET_ERR); throw e; }
     if (opts.raw) {
-      if (!res.ok) { banner(NET_ERR); throw new Error(String(res.status)); }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        banner(data.error || NET_ERR);
+        const err = new Error(data.error || String(res.status));
+        err.status = res.status; err.data = data;
+        throw err;
+      }
       return res;
     }
     const data = await res.json().catch(() => ({}));
@@ -110,8 +116,122 @@
     show(location.hash.slice(1) || 'home');
   }
 
+  const NO_SCORE = '— 文書を取り込むと表示されます。';
+
+  // 実行中はボタンを無効にし、終わるまでの 2 回目の押下は同じ Promise を返す
+  function busy(btn, p, label) {
+    const run = () => Promise.resolve().then(() => (typeof p === 'function' ? p() : p));
+    if (!btn) return run();
+    if (btn.dataset.busy === '1' && btn._dvBusy) return btn._dvBusy;
+    const orig = btn.textContent;
+    btn.dataset.busy = '1';
+    btn.disabled = true;
+    btn.setAttribute('aria-busy', 'true');
+    if (label) btn.textContent = label;
+    const done = run().finally(() => {
+      btn.textContent = orig;
+      btn.disabled = false;
+      btn.removeAttribute('aria-busy');
+      delete btn.dataset.busy;
+      btn._dvBusy = null;
+    });
+    btn._dvBusy = done;
+    return done;
+  }
+
+  const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+  function trapTab(dlg, e) {
+    if (e.key !== 'Tab') return;
+    const f = Array.from(dlg.querySelectorAll(FOCUSABLE)).filter((el) => !el.hidden && !el.disabled && el.offsetParent !== null);
+    e.preventDefault();
+    if (!f.length) return;
+    const i = f.indexOf(document.activeElement);
+    const next = e.shiftKey ? (i <= 0 ? f.length - 1 : i - 1) : (i < 0 || i >= f.length - 1 ? 0 : i + 1);
+    f[next].focus();
+  }
+
+  let modalOpen = null;
+  function modal(opt) {
+    const dlg = $('#dv-modal');
+    if (!dlg || typeof dlg.showModal !== 'function') return Promise.resolve(false);
+    if (modalOpen) return modalOpen;
+    const o = opt || {};
+    const okBtn = dlg.querySelector('[data-modal="ok"]');
+    const cancelBtn = dlg.querySelector('[data-modal="cancel"]');
+    $('#dv-modal-title').textContent = o.title || '';
+    $('#dv-modal-body').innerHTML = o.html || '';  // 呼び出し側が esc() 済みの HTML を渡す
+    okBtn.hidden = o.ok == null;
+    okBtn.textContent = o.ok == null ? '' : o.ok;
+    cancelBtn.textContent = o.cancel || '閉じる';
+    const opener = document.activeElement;
+    modalOpen = new Promise((resolve) => {
+      const onKey = (e) => trapTab(dlg, e);
+      const onCancel = (e) => { e.preventDefault(); finish(false); };
+      function finish(v) {
+        dlg.removeEventListener('keydown', onKey);
+        dlg.removeEventListener('cancel', onCancel);
+        okBtn.onclick = null; cancelBtn.onclick = null;
+        if (dlg.open) dlg.close();
+        modalOpen = null;
+        if (opener && typeof opener.focus === 'function' && document.contains(opener)) opener.focus();
+        resolve(v);
+      }
+      dlg.addEventListener('keydown', onKey);
+      dlg.addEventListener('cancel', onCancel);
+      okBtn.onclick = () => finish(true);
+      cancelBtn.onclick = () => finish(false);
+      dlg.showModal();
+      (o.ok == null ? cancelBtn : okBtn).focus();
+    });
+    return modalOpen;
+  }
+
+  async function download(path, filename) {
+    const res = await api(path, { raw: true });
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename || '';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    banner('');
+  }
+
+  const emptyFindings = (n) => `確認した範囲では指摘はありません。${Number(n) || 0} 断片を確認しました。網羅性は未検証です。`;
+  const scoreText = (v) => (v === null || v === undefined || Number.isNaN(+v) ? '—' : String(Math.round(+v)));
+  function scoreClass(v) {
+    if (v === null || v === undefined || Number.isNaN(+v)) return 'is-none';
+    if (+v < 60) return 'is-bad';
+    if (+v < 80) return 'is-warn';
+    return '';
+  }
+  function scoreBar(v, label) {
+    const none = v === null || v === undefined || Number.isNaN(+v);
+    const w = none ? 0 : Math.max(0, Math.min(100, Math.round(+v)));
+    return `<span class="dv-score-bar" role="img" aria-label="${esc(label)} ${esc(scoreText(v))}"><i class="${scoreClass(v)}" style="width:${w}%"></i></span>`;
+  }
+
+  // [data-key-open] を Tab で選べるようにし、Enter / Space で開く
+  function keyOpen(root) {
+    if (!root) return;
+    root.querySelectorAll('[data-key-open]').forEach((el) => {
+      if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
+      if (el.dataset.keyBound === '1') return;
+      el.dataset.keyBound = '1';
+      el.addEventListener('keydown', (e) => {
+        if (e.target !== el || (e.key !== 'Enter' && e.key !== ' ')) return;
+        e.preventDefault();
+        el.click();
+      });
+    });
+  }
+
   window.DV = {
     api, esc, show, toast, openReview, setReview, start, banner,
+    busy, modal, download, emptyFindings, scoreText, scoreClass, scoreBar, keyOpen, NO_SCORE,
     state: { review: null, summary: null },
     on(view, fn) { (handlers[view] = handlers[view] || []).push(fn); },
     refreshNav: renderReviewNav,

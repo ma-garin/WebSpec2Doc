@@ -139,13 +139,13 @@ def can_generate(job: dict, n: int) -> tuple[bool, str]:
     return True, ""
 
 
-def put_generated(job: dict, n: int, artifact: dict, actor: str) -> dict:
-    """生成結果を置く。承認済みの段階は成果物を変えず proposals に積む。"""
+def put_generated(job: dict, n: int, artifact: dict, actor: str, *, reopen: bool = False) -> dict:
+    """生成結果を置く。承認済みの段階は成果物を変えず proposals に積む（reopen なら承認を外して置き換える）。"""
     ok, reason = can_generate(job, n)
     if not ok:
         raise StoreError(reason)
     st = _stage(job, n)
-    if st["status"] == "approved":
+    if st["status"] == "approved" and not reopen:
         return _propose(job, n, st, artifact, actor)
     new_job = _apply_artifact(job, n, artifact)
     st = {**st, "status": "generated", "version": st["version"] + 1, "stale": False,

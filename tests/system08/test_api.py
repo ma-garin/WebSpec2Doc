@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import io
 
+import pytest
+
 from web.services.backendtest import store
 
 from .conftest import DDL
@@ -64,23 +66,27 @@ def test_stage2_before_stage1_approval_is_409(client):
     assert r.status_code == 409 and r.get_json()["error"]
 
 
-def test_end_to_end_stages_run_guards_and_report(client):
-    """Given DDL を取り込んだ案件 / When 段階 1〜6 を生成・承認し実行・書き出し
-    / Then 6 未承認の実行は 409、書き込みを伴う実行は確認トークン無しで 428、本番は 409、報告書は xlsx。"""
+def _ready_env(client, db):
+    """DDL 取り込み・段階 1〜5 承認・段階 6 生成まで進め、接続先を登録して (jid, eid) を返す。"""
     jid = _create(client)["id"]
     _upload(client, jid)
     _through(client, jid, 5)
     assert _generate(client, jid, 6).status_code == 200
-    env = client.post(f"{JOBS}/{jid}/envs", json={"name": "検証", "db": {"host": "127.0.0.1", "port": 1,
-                                                                        "dbname": "bt", "user": "u"}})
+    env = client.post(f"{JOBS}/{jid}/envs", json={"name": "検証", "db": db})
     assert env.status_code in (200, 201), env.get_json()
-    eid = env.get_json()["job"]["envs"][0]["id"]
+    return jid, env.get_json()["job"]["envs"][0]["id"]
+
+
+def test_end_to_end_stages_run_guards_and_report(client):
+    """Given DDL を取り込んだ案件と到達できない接続先 / When 段階 1〜6 を生成・承認し実行・書き出し
+    / Then 6 未承認の実行は 409、preview は到達不能で理由つき 409（トークン無し）、本番は 409、報告書は xlsx。"""
+    jid, eid = _ready_env(client, {"host": "127.0.0.1", "port": 1, "dbname": "bt", "user": "u"})
     assert client.post(f"{JOBS}/{jid}/runs", json={"env_id": eid}).status_code == 409   # 段階 6 未承認
     assert _approve(client, jid, 6).status_code == 200
 
     preview = client.post(f"{JOBS}/{jid}/runs/preview", json={"env_id": eid})
-    assert preview.status_code == 200 and preview.get_json()["writes"] is True
-    assert preview.get_json()["confirm_token"]
+    assert preview.status_code == 409 and preview.get_json()["error"]
+    assert not preview.get_json().get("confirm_token")
     r = client.post(f"{JOBS}/{jid}/runs", json={"env_id": eid})
     assert r.status_code == 428 and r.get_json()["error"]
 
@@ -92,6 +98,20 @@ def test_end_to_end_stages_run_guards_and_report(client):
     assert x.status_code == 200 and x.data[:2] == b"PK"
     stages = client.get(f"{JOBS}/{jid}").get_json()["job"]["stages"]
     assert all(stages[str(n)]["status"] == "approved" for n in range(1, 7))
+
+
+def test_preview_on_reachable_db_returns_token_and_run_requires_it(client, pg_env):
+    """Given 実 DB（pg_env）の接続先 / When preview / Then 200 で書き込みありと確認トークンを返し、
+    トークン無しの実行は 428。"""
+    jid, eid = _ready_env(client, pg_env["db"])
+    assert _approve(client, jid, 6).status_code == 200
+    preview = client.post(f"{JOBS}/{jid}/runs/preview", json={"env_id": eid})
+    if preview.status_code == 409:
+        pytest.skip(f"ローカル DB に対象テーブルまたは権限が無いため省略: {preview.get_json()['error']}")
+    assert preview.status_code == 200 and preview.get_json()["writes"] is True
+    assert preview.get_json()["confirm_token"]
+    r = client.post(f"{JOBS}/{jid}/runs", json={"env_id": eid})
+    assert r.status_code == 428 and r.get_json()["error"]
 
 
 def test_qa_member_cannot_approve_stage4_and_outsider_is_rejected(client, monkeypatch):

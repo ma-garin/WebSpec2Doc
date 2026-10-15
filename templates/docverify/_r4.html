@@ -1,0 +1,84 @@
+{# System 06 R4: レビュー工程・工数と指標・プリセット・判定と記録。docverify-r4.js が各画面（計画・指摘の検討・質問票・判定と記録）へ差し込む。 #}
+<div id="dvR4Parts" hidden>
+  <section class="dv-card dv-r4" id="dvR4-plan" data-r4-view="plan" aria-labelledby="dvR4PlanTitle">
+    <h3 class="dv-r4-title" id="dvR4PlanTitle">レビューの種別と工程</h3>
+    <p class="dv-r4-hint" id="dvR4Legacy" hidden></p>
+    <div class="dv-r4-row">
+      <label for="dvR4Type">種別</label>
+      <select id="dvR4Type"></select>
+      <span class="dv-r4-muted" id="dvR4Required"></span>
+    </div>
+    <div class="dv-r4-row"><span class="dv-r4-label">参加者と役割</span></div>
+    <div class="dv-tscroll"><table class="dv-r4-table" id="dvR4People"></table></div>
+    <div class="dv-r4-row">
+      <button type="button" class="btn-outline-sm" id="dvR4AddPerson">＋ 参加者を追加</button>
+    </div>
+    <fieldset class="dv-r4-fieldset">
+      <legend>進め方と出口基準</legend>
+      <label><input type="checkbox" id="dvR4Independent"> 個別レビュー中は他の人の指摘を見せない</label>
+      <label><input type="checkbox" id="dvR4ExitVerified"> 修正済みの指摘がすべて確認済みであること</label>
+      <label><input type="checkbox" id="dvR4ExitDone"> レビュアー全員が個別レビューを終えていること</label>
+    </fieldset>
+    <div class="dv-r4-row">
+      <label for="dvR4Preset">観点プリセット</label>
+      <select id="dvR4Preset"></select>
+      <button type="button" class="btn-outline-sm" id="dvR4PresetUse">このプリセットを使う</button>
+      <button type="button" class="btn-outline-sm" id="dvR4PresetCopy">複製する</button>
+      <button type="button" class="btn-outline-sm" id="dvR4PresetDelete">削除する</button>
+    </div>
+    <div class="dv-r4-row"><button type="button" class="btn-primary" id="dvR4PlanSave">計画を保存</button></div>
+    <h3 class="dv-r4-title">工程</h3>
+    <ul class="dv-r4-errors" id="dvR4Entry" aria-live="polite"></ul>
+    <div class="dv-r4-row"><button type="button" class="btn-primary" id="dvR4Advance">次の工程へ進める</button></div>
+    <div class="dv-tscroll"><table class="dv-r4-table" id="dvR4Log"></table></div>
+    <h3 class="dv-r4-title">工数と指標</h3>
+    <div class="dv-r4-grid" id="dvR4Prep"></div>
+    <div class="dv-r4-row">
+      <label for="dvR4Meeting">会議時間（分）</label><input type="number" min="0" step="1" id="dvR4Meeting">
+      <label for="dvR4Pages">文書の頁数</label><input type="number" min="1" step="1" id="dvR4Pages">
+      <label for="dvR4Kind">文書の種類</label>
+      <select id="dvR4Kind"><option value="">比較しない</option><option value="basic">基本設計</option><option value="detail">詳細設計</option></select>
+      <button type="button" class="btn-outline-sm" id="dvR4EffortSave">工数を保存</button>
+    </div>
+    <div class="dv-r4-metrics" id="dvR4Metrics" aria-live="polite"></div>
+  </section>
+
+  <section class="dv-card dv-r4" id="dvR4-triage" data-r4-view="triage" aria-labelledby="dvR4KindTitle">
+    <h3 class="dv-r4-title" id="dvR4KindTitle">指摘の種別</h3>
+    <p class="dv-r4-hint" id="dvR4Hidden" hidden>個別レビュー中のため、他の人の指摘は表示していません。個別レビューを終えると表示されます。</p>
+    <div class="dv-tscroll"><table class="dv-r4-table" id="dvR4Kinds"></table></div>
+  </section>
+
+  <section class="dv-card dv-r4" id="dvR4-questions" data-r4-view="questions" aria-labelledby="dvR4AnsTitle">
+    <h3 class="dv-r4-title" id="dvR4AnsTitle">回答の取り込み（CSV・Excel）</h3>
+    <div class="dv-r4-row">
+      <label for="dvR4AnsFile">回答を書いた質問票</label>
+      <input type="file" id="dvR4AnsFile" accept=".csv,.xlsx">
+      <button type="button" class="btn-outline-sm" id="dvR4AnsImport">取り込む</button>
+    </div>
+    <p class="dv-r4-result" id="dvR4AnsResult" aria-live="polite"></p>
+  </section>
+
+  <section class="dv-card dv-r4" id="dvR4-gate" data-r4-view="gate" aria-labelledby="dvR4GateTitle">
+    <h3 class="dv-r4-title" id="dvR4GateTitle">判定と承認</h3>
+    <p class="dv-r4-warn" id="dvR4Stale" role="alert" hidden></p>
+    <div class="dv-r4-row">
+      <label for="dvR4Verdict">判定</label><select id="dvR4Verdict"></select>
+      <label for="dvR4Approver">承認者</label><input type="text" id="dvR4Approver" maxlength="80">
+      <label for="dvR4Decided">日時</label><input type="text" id="dvR4Decided" maxlength="40" placeholder="2026-10-15 10:00">
+      <button type="button" class="btn-primary" id="dvR4VerdictSave">判定を記録</button>
+    </div>
+    <h3 class="dv-r4-title">未確認のチェック項目</h3>
+    <ul class="dv-r4-list" id="dvR4Unchecked"></ul>
+    <h3 class="dv-r4-title">レビュー記録</h3>
+    <div class="dv-tscroll"><table class="dv-r4-table" id="dvR4Record"></table></div>
+    <div class="dv-r4-row">
+      <button type="button" class="btn-outline-sm" id="dvR4RecordXlsx">レビュー記録を出力</button>
+      <button type="button" class="btn-outline-sm" id="dvR4AuditVerify">操作記録の食い違いを調べる</button>
+      <span class="dv-r4-muted" id="dvR4AuditResult" aria-live="polite"></span>
+    </div>
+    <h3 class="dv-r4-title">参照した規格・資料</h3>
+    <ul class="dv-r4-list" id="dvR4Standards"></ul>
+    <p class="dv-r4-muted" id="dvR4StandardsNote"></p>
+  </section>
+</div>

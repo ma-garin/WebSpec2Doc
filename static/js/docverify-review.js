@@ -102,7 +102,7 @@
   }
   function scopeTables(sc) {
     sc = sc || {};
-    return '<div class="dvr-scope"><h3>検査した範囲</h3>' + scopeRows(sc.checked) + '<h3>検査していないこと</h3>' + scopeRows(sc.unchecked) + '</div>';
+    return '<div class="dvr-scope"><h3>検査した範囲</h3>' + scopeRows(sc.checked) + '<h3>検査していないこと</h3>' + scopeRows(sc.unchecked) + '<p class="mut">自動検出の規則ごとの精度は <a href="#accuracy">精度ページ</a> にあります。</p></div>';
   }
   function showScoreHelp(q) {
     var note = (q && q.note) || [];

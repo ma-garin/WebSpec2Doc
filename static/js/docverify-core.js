@@ -2,11 +2,11 @@
  * 各画面は docverify-global.js / docverify-review.js が DV.on(view, fn) で描く。 */
 (() => {
   'use strict';
-  const REVIEW_VIEWS = ['plan', 'read', 'triage', 'questions', 'followup', 'screen', 'gate'];
+  const REVIEW_VIEWS = ['plan', 'read', 'triage', 'questions', 'followup', 'screen', 'gate', 'setcheck'];
   const TITLES = {
     home: 'ホーム', mine: '自分の担当', reviews: 'レビュー一覧', findings: '指摘一覧',
     plan: '計画', read: '文書を読む', triage: '指摘の検討', questions: '質問票', followup: '修正版の確認',
-    screen: '実画面との照合', gate: '判定と記録', checklists: '観点チェックリスト', metrics: 'メトリクス', settings: '設定',
+    screen: '実画面との照合', gate: '判定と記録', setcheck: '集合の検査・追跡', checklists: '観点チェックリスト', metrics: 'メトリクス', accuracy: '精度', settings: '設定',
   };
   const NET_ERR = 'サーバに接続できませんでした。少し待ってから、もう一度お試しください。';
   const handlers = {};

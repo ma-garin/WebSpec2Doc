@@ -1,0 +1,99 @@
+{"id": "JA-001", "text": "システムは、ログイン要求を受けてから3秒以内に結果画面を表示する。", "labels": [], "method": "injected", "role": "base", "base": "B01"}
+{"id": "JA-002", "text": "利用者は、検索条件として商品名を指定できる。", "labels": [], "method": "injected", "role": "base", "base": "B02"}
+{"id": "JA-003", "text": "システムは、パスワードを8文字以上20文字以下で受け付ける。", "labels": [], "method": "injected", "role": "base", "base": "B03"}
+{"id": "JA-004", "text": "管理者は、利用者アカウントを停止できる。", "labels": [], "method": "injected", "role": "base", "base": "B04"}
+{"id": "JA-005", "text": "システムは、注文確定時に確認メールを登録済みのメールアドレスへ送信する。", "labels": [], "method": "injected", "role": "base", "base": "B05"}
+{"id": "JA-006", "text": "システムは、操作ログを90日間保持する。", "labels": [], "method": "injected", "role": "base", "base": "B06"}
+{"id": "JA-007", "text": "システムは、CSV形式で売上一覧を出力できる。", "labels": [], "method": "injected", "role": "base", "base": "B07"}
+{"id": "JA-008", "text": "システムは、入力された郵便番号が7桁でない場合に入力エラーを表示する。", "labels": [], "method": "injected", "role": "base", "base": "B08"}
+{"id": "JA-009", "text": "システムは、同時に100人の利用者が接続しても応答時間を2秒以内に保つ。", "labels": [], "method": "injected", "role": "base", "base": "B09"}
+{"id": "JA-010", "text": "利用者は、自分の注文履歴を過去12か月分まで閲覧できる。", "labels": [], "method": "injected", "role": "base", "base": "B10"}
+{"id": "JA-011", "text": "システムは、毎日午前2時にデータベースのバックアップを取得する。", "labels": [], "method": "injected", "role": "base", "base": "B11"}
+{"id": "JA-012", "text": "システムは、セッションが30分間操作されなかった場合にログアウトさせる。", "labels": [], "method": "injected", "role": "base", "base": "B12"}
+{"id": "JA-013", "text": "システムは、帳票をPDF形式で印刷できる。", "labels": [], "method": "injected", "role": "base", "base": "B13"}
+{"id": "JA-014", "text": "システムは、ファイルのアップロードを1件あたり10MB以下に制限する。", "labels": [], "method": "injected", "role": "base", "base": "B14"}
+{"id": "JA-015", "text": "システムは、ログイン要求を受けてから速やかに結果画面を表示する。", "labels": ["AMBIGUOUS", "REQ.MEASURABILITY"], "method": "injected", "role": "variant", "base": "B01"}
+{"id": "JA-016", "text": "システムは、ログイン要求を受けてから一定時間以内に結果画面を表示する。", "labels": ["AMBIGUOUS", "REQ.MEASURABILITY"], "method": "injected", "role": "variant", "base": "B01"}
+{"id": "JA-017", "text": "システムは、ログイン要求を受けてから約3秒で結果画面を表示する。", "labels": ["AMBIGUOUS"], "method": "injected", "role": "variant", "base": "B01"}
+{"id": "JA-018", "text": "システムは、ログイン要求を受けてから3秒程度で結果画面を表示する。", "labels": ["AMBIGUOUS"], "method": "injected", "role": "variant", "base": "B01"}
+{"id": "JA-019", "text": "システムは、ログイン要求を受けてから常に3秒以内に結果画面を表示する。", "labels": ["REQ.UNIVERSAL"], "method": "injected", "role": "variant", "base": "B01"}
+{"id": "JA-020", "text": "システムは、ログイン要求を受けてから所定の時間以内に結果画面を表示する。", "labels": ["AMBIGUOUS", "REQ.MEASURABILITY"], "method": "injected", "role": "variant", "base": "B01"}
+{"id": "JA-021", "text": "利用者は、検索条件として商品名、カテゴリ等を指定できる。", "labels": ["REQ.OPEN_ENDED"], "method": "injected", "role": "variant", "base": "B02"}
+{"id": "JA-022", "text": "利用者は、検索条件として商品名などを指定できる。", "labels": ["REQ.OPEN_ENDED"], "method": "injected", "role": "variant", "base": "B02"}
+{"id": "JA-023", "text": "利用者は、検索条件として商品名および/またはカテゴリを指定できる。", "labels": ["REQ.AND_OR"], "method": "injected", "role": "variant", "base": "B02"}
+{"id": "JA-024", "text": "利用者は、検索条件として商品名を簡単に指定できる。", "labels": ["AMBIGUOUS"], "method": "injected", "role": "variant", "base": "B02"}
+{"id": "JA-025", "text": "利用者は、検索条件として商品名を指定でき、検索結果を価格順に並べ替えできる。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "method": "injected", "role": "variant", "base": "B02"}
+{"id": "JA-026", "text": "システムは、パスワードを十分な長さで受け付ける。", "labels": ["AMBIGUOUS", "REQ.MEASURABILITY"], "method": "injected", "role": "variant", "base": "B03"}
+{"id": "JA-027", "text": "システムは、パスワードの最小文字数をTBDとする。", "labels": ["REQ.INCOMPLETE"], "method": "injected", "role": "variant", "base": "B03"}
+{"id": "JA-028", "text": "システムは、パスワードの文字数の上限を別途定める値とする。", "labels": ["REQ.INCOMPLETE"], "method": "injected", "role": "variant", "base": "B03"}
+{"id": "JA-029", "text": "システムは、パスワードを8文字以上で受け付け、20文字を超える入力を拒否し、拒否した理由を表示する。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "method": "injected", "role": "variant", "base": "B03"}
+{"id": "JA-030", "text": "システムは、パスワードを???文字以上で受け付ける。", "labels": ["REQ.INCOMPLETE"], "method": "injected", "role": "variant", "base": "B03"}
+{"id": "JA-031", "text": "管理者は、必要に応じて利用者アカウントを停止できる。", "labels": ["AMBIGUOUS"], "method": "injected", "role": "variant", "base": "B04"}
+{"id": "JA-032", "text": "管理者は、適宜利用者アカウントを停止できる。", "labels": ["AMBIGUOUS"], "method": "injected", "role": "variant", "base": "B04"}
+{"id": "JA-033", "text": "管理者は、すべての利用者アカウントを一括で停止できる。", "labels": [], "method": "injected", "role": "variant", "base": "B04"}
+{"id": "JA-034", "text": "システムは、注文確定時に確認メールをすぐに送信する。", "labels": ["AMBIGUOUS", "REQ.MEASURABILITY"], "method": "injected", "role": "variant", "base": "B05"}
+{"id": "JA-035", "text": "システムは、注文確定時に確認メールを必ず送信する。", "labels": ["REQ.UNIVERSAL"], "method": "injected", "role": "variant", "base": "B05"}
+{"id": "JA-036", "text": "システムは、注文確定時に確認メールやSMS等で通知する。", "labels": ["REQ.OPEN_ENDED"], "method": "injected", "role": "variant", "base": "B05"}
+{"id": "JA-037", "text": "システムは、注文確定時に確認メールを送信し、在庫数を減算し、配送依頼を作成する。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "method": "injected", "role": "variant", "base": "B05"}
+{"id": "JA-038", "text": "システムは、操作ログを一定期間保持する。", "labels": ["AMBIGUOUS", "REQ.MEASURABILITY"], "method": "injected", "role": "variant", "base": "B06"}
+{"id": "JA-039", "text": "システムは、操作ログを当面の間保持する。", "labels": ["AMBIGUOUS", "REQ.MEASURABILITY"], "method": "injected", "role": "variant", "base": "B06"}
+{"id": "JA-040", "text": "システムは、操作ログの保持期間を未定とする。", "labels": ["REQ.INCOMPLETE"], "method": "injected", "role": "variant", "base": "B06"}
+{"id": "JA-041", "text": "システムは、操作ログを90日間保持し、保持期間を過ぎたログを削除する。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "method": "injected", "role": "variant", "base": "B06"}
+{"id": "JA-042", "text": "システムは、操作ログを90日間保持し、保持期間を過ぎたログを毎日午前3時に削除する。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "method": "injected", "role": "variant", "base": "B06"}
+{"id": "JA-043", "text": "システムは、CSV形式その他の形式で売上一覧を出力できる。", "labels": ["REQ.OPEN_ENDED"], "method": "injected", "role": "variant", "base": "B07"}
+{"id": "JA-044", "text": "システムは、CSV形式またはExcel形式で売上一覧を出力できる。", "labels": [], "method": "injected", "role": "variant", "base": "B07"}
+{"id": "JA-045", "text": "システムは、CSV形式で売上一覧を効率的に出力できる。", "labels": ["AMBIGUOUS"], "method": "injected", "role": "variant", "base": "B07"}
+{"id": "JA-046", "text": "システムは、入力された郵便番号が正しくない場合に入力エラーを表示する。", "labels": ["AMBIGUOUS"], "method": "injected", "role": "variant", "base": "B08"}
+{"id": "JA-047", "text": "システムは、入力された郵便番号が7桁でない場合にエラーをなるべく分かりやすく表示する。", "labels": ["AMBIGUOUS"], "method": "injected", "role": "variant", "base": "B08"}
+{"id": "JA-048", "text": "システムは、同時に多数の利用者が接続しても応答時間を2秒以内に保つ。", "labels": ["AMBIGUOUS"], "method": "injected", "role": "variant", "base": "B09"}
+{"id": "JA-049", "text": "システムは、同時に100人の利用者が接続しても高速に応答する。", "labels": ["AMBIGUOUS", "REQ.MEASURABILITY"], "method": "injected", "role": "variant", "base": "B09"}
+{"id": "JA-050", "text": "システムは、同時に100人の利用者が接続しても応答時間を最小限に抑える。", "labels": ["AMBIGUOUS", "REQ.MEASURABILITY"], "method": "injected", "role": "variant", "base": "B09"}
+{"id": "JA-051", "text": "利用者は、自分の注文履歴を過去数か月分まで閲覧できる。", "labels": ["AMBIGUOUS", "REQ.MEASURABILITY"], "method": "injected", "role": "variant", "base": "B10"}
+{"id": "JA-052", "text": "利用者は、自分の注文履歴をできるだけ長い期間閲覧できる。", "labels": ["AMBIGUOUS", "REQ.MEASURABILITY"], "method": "injected", "role": "variant", "base": "B10"}
+{"id": "JA-053", "text": "システムは、毎日夜間にデータベースのバックアップを取得する。", "labels": ["AMBIGUOUS", "REQ.MEASURABILITY"], "method": "injected", "role": "variant", "base": "B11"}
+{"id": "JA-054", "text": "システムは、定期的にデータベースのバックアップを取得する。", "labels": ["AMBIGUOUS", "REQ.MEASURABILITY"], "method": "injected", "role": "variant", "base": "B11"}
+{"id": "JA-055", "text": "システムは、データベースのバックアップを一定間隔で取得する。", "labels": ["AMBIGUOUS", "REQ.MEASURABILITY"], "method": "injected", "role": "variant", "base": "B11"}
+{"id": "JA-056", "text": "システムは、バックアップの取得時刻を後日決定する。", "labels": ["REQ.INCOMPLETE"], "method": "injected", "role": "variant", "base": "B11"}
+{"id": "JA-057", "text": "システムは、セッションがしばらく操作されなかった場合にログアウトさせる。", "labels": ["AMBIGUOUS", "REQ.MEASURABILITY"], "method": "injected", "role": "variant", "base": "B12"}
+{"id": "JA-058", "text": "システムは、セッションのタイムアウト時間を検討中とする。", "labels": ["REQ.INCOMPLETE"], "method": "injected", "role": "variant", "base": "B12"}
+{"id": "JA-059", "text": "システムは、帳票をPDF形式等で印刷できる。", "labels": ["REQ.OPEN_ENDED"], "method": "injected", "role": "variant", "base": "B13"}
+{"id": "JA-060", "text": "システムは、帳票を正確に印刷できる。", "labels": ["AMBIGUOUS"], "method": "injected", "role": "variant", "base": "B13"}
+{"id": "JA-061", "text": "システムは、帳票を最適なレイアウトで印刷できる。", "labels": ["AMBIGUOUS"], "method": "injected", "role": "variant", "base": "B13"}
+{"id": "JA-062", "text": "システムは、ファイルのアップロードを適当なサイズに制限する。", "labels": ["AMBIGUOUS", "REQ.MEASURABILITY"], "method": "injected", "role": "variant", "base": "B14"}
+{"id": "JA-063", "text": "システムは、ファイルのアップロードを1件あたり10MB以下に制限し、超えた場合はエラーを表示し、管理者に通知する。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "method": "injected", "role": "variant", "base": "B14"}
+{"id": "JA-064", "text": "システムは、ファイルのアップロードをXXXMB以下に制限する。", "labels": ["REQ.INCOMPLETE"], "method": "injected", "role": "variant", "base": "B14"}
+{"id": "JA-065", "text": "システムは、いかなる場合もアップロードされたファイルを外部に公開しない。", "labels": ["REQ.UNIVERSAL"], "method": "injected", "role": "variant", "base": "B14"}
+{"id": "JA-066", "text": "システムは、決して利用者のパスワードを平文で保存しない。", "labels": ["REQ.UNIVERSAL"], "method": "authored", "role": "authored", "base": null}
+{"id": "JA-067", "text": "システムは、要約欄に入力された文字数を表示する。", "labels": [], "method": "authored", "role": "authored", "base": null}
+{"id": "JA-068", "text": "システムは、制約条件を満たさない入力を拒否する。", "labels": [], "method": "authored", "role": "authored", "base": null}
+{"id": "JA-069", "text": "システムは、検索結果を10件ずつ表示する。", "labels": [], "method": "authored", "role": "authored", "base": null}
+{"id": "JA-070", "text": "システムは、エラー発生時に5秒以内に管理者へ通知する。", "labels": [], "method": "authored", "role": "authored", "base": null}
+{"id": "JA-071", "text": "利用者は、配送先住所を3件まで登録できる。", "labels": [], "method": "authored", "role": "authored", "base": null}
+{"id": "JA-072", "text": "システムは、不適当な入力値を拒否する。", "labels": ["AMBIGUOUS"], "method": "authored", "role": "authored", "base": null}
+{"id": "JA-073", "text": "システムは、権限の無い操作を拒否し、拒否した操作を操作ログに記録する。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "method": "authored", "role": "authored", "base": null}
+{"id": "JA-074", "text": "システムは、在庫数が0の商品を購入不可として表示する。", "labels": [], "method": "authored", "role": "authored", "base": null}
+{"id": "JA-075", "text": "システムは、ログイン失敗が5回連続した場合にアカウントを30分間ロックする。", "labels": [], "method": "authored", "role": "authored", "base": null}
+{"id": "JA-076", "text": "システムは、画面の文字サイズを利用者が選択できるようにする。", "labels": [], "method": "authored", "role": "authored", "base": null}
+{"id": "JA-077", "text": "システムは、受注データを1時間以内に基幹システムへ連携する。", "labels": [], "method": "authored", "role": "authored", "base": null}
+{"id": "JA-078", "text": "システムは、問い合わせフォームの送信後に受付番号を表示する。", "labels": [], "method": "authored", "role": "authored", "base": null}
+{"id": "JA-079", "text": "本章では、画面の構成について説明する。", "labels": [], "method": "authored", "role": "authored", "base": null}
+{"id": "JA-080", "text": "システムは、ユーザーフレンドリーな画面を提供する。", "labels": ["AMBIGUOUS"], "method": "authored", "role": "authored", "base": null}
+{"id": "JA-081", "text": "システムは、きちんと入力値を検証する。", "labels": ["AMBIGUOUS"], "method": "authored", "role": "authored", "base": null}
+{"id": "JA-082", "text": "システムは、確実にデータを保存する。", "labels": ["AMBIGUOUS"], "method": "authored", "role": "authored", "base": null}
+{"id": "JA-083", "text": "システムは、若干の遅延を許容する。", "labels": ["AMBIGUOUS", "REQ.MEASURABILITY"], "method": "authored", "role": "authored", "base": null}
+{"id": "JA-084", "text": "システムは、原則として土日にメンテナンスを行わない。", "labels": ["AMBIGUOUS"], "method": "authored", "role": "authored", "base": null}
+{"id": "JA-085", "text": "システムは、基本的に日本語で画面を表示する。", "labels": ["AMBIGUOUS"], "method": "authored", "role": "authored", "base": null}
+{"id": "JA-086", "text": "システムは、容易に設定を変更できる画面を提供する。", "labels": ["AMBIGUOUS"], "method": "authored", "role": "authored", "base": null}
+{"id": "JA-087", "text": "システムは、直ちに異常を管理者へ通知する。", "labels": ["AMBIGUOUS", "REQ.MEASURABILITY"], "method": "authored", "role": "authored", "base": null}
+{"id": "JA-088", "text": "システムは、異常を検知してから10秒以内に管理者へ通知する。", "labels": [], "method": "authored", "role": "authored", "base": null}
+{"id": "JA-089", "text": "システムは、会員情報の項目を別途協議のうえ決定する。", "labels": ["REQ.INCOMPLETE"], "method": "authored", "role": "authored", "base": null}
+{"id": "JA-090", "text": "システムは、対応ブラウザを調整中とする。", "labels": ["REQ.INCOMPLETE"], "method": "authored", "role": "authored", "base": null}
+{"id": "JA-091", "text": "システムは、Chrome、Edge、Firefoxの最新版で動作する。", "labels": [], "method": "authored", "role": "authored", "base": null}
+{"id": "JA-092", "text": "システムは、Chrome、Edgeなどの主要なブラウザで動作する。", "labels": ["AMBIGUOUS", "REQ.OPEN_ENDED"], "method": "authored", "role": "authored", "base": null}
+{"id": "JA-093", "text": "システムは、売上データを月次で集計し、集計結果を管理者に送信し、前月との差を表示する。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "method": "authored", "role": "authored", "base": null}
+{"id": "JA-094", "text": "システムは、アップロードされた画像の縦横比を保ったまま縮小する。", "labels": [], "method": "authored", "role": "authored", "base": null}
+{"id": "JA-095", "text": "システムは、氏名および住所を必須項目とする。", "labels": [], "method": "authored", "role": "authored", "base": null}
+{"id": "JA-096", "text": "システムは、氏名および/または電話番号で会員を検索できる。", "labels": ["REQ.AND_OR"], "method": "authored", "role": "authored", "base": null}
+{"id": "JA-097", "text": "システムは、障害発生時に必ず管理者へ通知し、復旧後に復旧報告を送信する。", "labels": ["REQ.MULTIPLE_REQUIREMENTS", "REQ.UNIVERSAL"], "method": "authored", "role": "authored", "base": null}
+{"id": "JA-098", "text": "システムは、会員登録、退会ほかの手続きを画面で受け付ける。", "labels": ["REQ.OPEN_ENDED"], "method": "authored", "role": "authored", "base": null}
+{"id": "JA-099", "text": "システムは、印刷前にプレビュー画面を表示する。", "labels": [], "method": "authored", "role": "authored", "base": null}

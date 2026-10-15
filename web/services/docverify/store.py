@@ -91,8 +91,23 @@ def upgrade(insp: dict) -> dict:
     }
 
 
-def save(insp: dict) -> dict:
-    """更新時刻を付けた新しい dict を保存して返す（引数は変更しない）。"""
+def save(insp: dict, expected_rev=None) -> dict:
+    """更新時刻を付けた新しい dict を保存して返す（引数は変更しない）。expected_rev を渡すと版番号を照合する（NFR-06-21）。"""
+    if expected_rev is not None:
+        from web.services.docverify import perm
+        with perm.locked(doc_dir(insp["id"])):
+            try:
+                cur = load(insp["id"])
+            except KeyError:
+                cur = {}
+            msg = perm.check_rev(cur, expected_rev)
+            if msg:
+                raise perm.Conflict(msg)
+            return _write(perm.bump(insp))
+    return _write(insp)
+
+
+def _write(insp: dict) -> dict:
     insp = {**insp, "updated_at": datetime.now(timezone.utc).isoformat()}
     directory = doc_dir(insp["id"])
     directory.mkdir(parents=True, exist_ok=True)

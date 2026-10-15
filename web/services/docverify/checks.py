@@ -140,10 +140,14 @@ def _check_passage(p: dict) -> list[dict]:
 
 
 def candidates(passages: list[dict]) -> list[dict]:
+    from web.services.docverify.accuracy import disabled_rules
+    _disabled = disabled_rules()
     seen: set[tuple[str, str, str]] = set()
     result = []
     for p in passages:
         for f in _check_passage(p):
+            if f["rule"] in _disabled:
+                continue  # 適合率 0.7 未満の規則は既定で無効（FR-06-170）
             key = (f["passage_id"], f["rule"] if f["rule"] not in ("RD.AMBIGUOUS", "REQ.AMBIGUOUS_TERM") else "A",
                    f["message"] + f["quote"])
             if key in seen:

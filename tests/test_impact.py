@@ -83,8 +83,10 @@ def client(tmp_path, monkeypatch):
     return appmod.app.test_client()
 
 
-def test_api_end_to_end(client):
+def test_api_end_to_end(client, monkeypatch):
     """作成 → 取り込み → 分析 → CSV → 削除 が API で通り、結果が保存される。"""
+    from web.services.impact import llm
+    monkeypatch.setattr(llm, "judge", lambda c, k: None)
     jid = client.post("/api/impact/jobs", json={"name": "電話番号"}).get_json()["job"]["id"]
     files = [(io.BytesIO(t.encode()), n) for n, t in DOCS.items()]
     r = client.post(f"/api/impact/jobs/{jid}/docs", data={"files": files}, content_type="multipart/form-data")
@@ -111,3 +113,87 @@ def test_api_errors_tell_the_next_action(client):
     assert r.status_code == 400 and "いずれかを選んでください" in r.get_json()["error"]
     assert client.get("/api/impact/jobs/000000000000").status_code == 404
     assert client.post("/api/impact/jobs", json={"name": ""}).status_code == 400
+
+
+def test_llm_verdicts_replace_rule_and_drop_unrelated():
+    """Given LLM が 1 件を無関係・1 件を致命と判定 When 分析 Then 無関係は消え、致命は P1・判定=AI になる。"""
+    def fake(changes, candidates):
+        out = []
+        for c in candidates:
+            if "TC-REG-031" in c["text"]:
+                out.append({"key": c["key"], "related": False, "level": 1, "why": "", "test": ""})
+            elif "確認画面" in c["place"] or "未入力" in c["text"]:
+                out.append({"key": c["key"], "related": True, "level": 4, "why": "必須化で表示が変わる", "test": "確認画面を開く"})
+        return out
+    result = analyze.run("電話番号を必須にする", _docs(), lambda n: _passages(DOCS[n]), fake)
+    assert result["engine"]["mode"] == "llm"
+    assert not any("TC-REG-031" in r["quote"] for r in result["impacts"])
+    row = next(r for r in result["impacts"] if "未入力" in r["quote"])
+    assert row["method"] == "llm" and row["priority"] == 1 and row["why"] == "必須化で表示が変わる"
+
+
+def test_llm_unavailable_falls_back_to_rule_and_says_so():
+    """Given LLM に接続できない When 分析 Then 規則の判定のまま、理由が engine に残る。"""
+    result = analyze.run("電話番号を必須にする", _docs(), lambda n: _passages(DOCS[n]), lambda c, k: None)
+    assert result["engine"]["mode"] == "rule" and "LLM" in result["engine"]["reason"]
+    assert result["impacts"][0]["priority"] == 1
+
+
+def _job_with_docs(client):
+    jid = client.post("/api/impact/jobs", json={"name": "電話番号"}).get_json()["job"]["id"]
+    files = [(io.BytesIO(t.encode()), n) for n, t in DOCS.items()]
+    client.post(f"/api/impact/jobs/{jid}/docs", data={"files": files}, content_type="multipart/form-data")
+    return jid
+
+
+def test_review_survives_reanalysis_and_reaches_export(client, monkeypatch):
+    """Given 人が採用・P を直した When 再分析・書き出し Then 判断が残り、Excel に人の判断と直した P が出る。"""
+    from openpyxl import load_workbook
+    from web.services.impact import llm
+    monkeypatch.setattr(llm, "judge", lambda c, k: None)
+    jid = _job_with_docs(client)
+    job = client.post(f"/api/impact/jobs/{jid}/analyze", json={"order": "電話番号を必須にする"}).get_json()["job"]
+    iid = job["impacts"][1]["id"]
+    r = client.patch(f"/api/impact/jobs/{jid}/impacts/{iid}", json={"status": "accepted", "priority": 1, "note": "要件側に確認済み"})
+    assert r.status_code == 200
+    job = client.post(f"/api/impact/jobs/{jid}/analyze", json={}).get_json()["job"]
+    kept = [x for x in job["impacts"] if x.get("review")]
+    assert len(kept) == 1 and kept[0]["review"]["note"] == "要件側に確認済み"
+    wb = load_workbook(io.BytesIO(client.get(f"/api/impact/jobs/{jid}/export.xlsx").get_data()))
+    rows = list(wb["影響範囲"].iter_rows(values_only=True))
+    assert rows[0][:5] == ("ID", "優先度", "影響度", "判定", "人の判断")
+    assert any(r[4] == "採用" and r[1] == "P1" and r[5] == "要件側に確認済み" for r in rows[1:])
+    assert client.patch(f"/api/impact/jobs/{jid}/impacts/{iid}", json={"status": "maybe"}).status_code == 400
+
+
+def test_library_docs_are_searched_by_every_analysis(client, monkeypatch):
+    """Given 設計書を文書庫に入れた When 文書を持たない別の分析 Then 文書庫の設計書から影響が見つかる。"""
+    from web.services.impact import llm
+    monkeypatch.setattr(llm, "judge", lambda c, k: None)
+    r = client.post("/api/impact/library", data={"files": [(io.BytesIO(DESIGN.encode()), "基本設計書_会員管理.md")]},
+                    content_type="multipart/form-data")
+    assert r.status_code == 200 and r.get_json()["library"]["docs"][0]["store"] == "設計書"
+    jid = client.post("/api/impact/jobs", json={"name": "別"}).get_json()["job"]["id"]
+    job = client.post(f"/api/impact/jobs/{jid}/analyze", json={"order": "電話番号の桁数を11桁までにする。"}).get_json()["job"]
+    assert any(x["doc"] == "基本設計書_会員管理.md" for x in job["impacts"])
+    assert client.delete("/api/impact/library/基本設計書_会員管理.md").get_json()["library"]["docs"] == []
+
+
+def test_job_doc_can_move_to_library(client):
+    """Given 分析の検索先の文書 When 文書庫へ Then 分析から消え、文書庫に入る。変更後の文書は入れられない。"""
+    jid = _job_with_docs(client)
+    r = client.post(f"/api/impact/jobs/{jid}/docs/基本設計書_会員管理.md/library")
+    assert r.status_code == 200
+    assert [d["name"] for d in r.get_json()["library"]["docs"]] == ["基本設計書_会員管理.md"]
+    assert all(d["name"] != "基本設計書_会員管理.md" for d in r.get_json()["job"]["docs"])
+    assert client.post(f"/api/impact/jobs/{jid}/docs/画面仕様書_会員登録_新.md/library").status_code == 400
+
+
+def test_sample_creates_an_analyzed_job(client, monkeypatch):
+    """見本で試す: 文書なしで 1 クリック → 分析済みの見本ができ、P1 がある。"""
+    from web.services.impact import llm
+    monkeypatch.setattr(llm, "judge", lambda c, k: None)
+    r = client.post("/api/impact/sample")
+    job = r.get_json()["job"]
+    assert r.status_code == 201 and job["analyzed_at"] and len(job["docs"]) == 4
+    assert job["impacts"][0]["priority"] == 1

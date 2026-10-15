@@ -184,7 +184,7 @@ def judge(changes: list[dict], hits: list[dict]) -> list[dict]:
                      "where": where, "doc": m["doc"], "store": m["store"], "location": m["location"],
                      "changes": m["changes"], "queries": m["queries"], "why": why,
                      "quote": _clip(m["text"], 160), "test": _test_for(m["store"], m.get("section") or m["location"], change), "place": place,
-                     "score": m["score"], "confirmed": True})
+                     "score": m["score"], "confirmed": True, "method": "rule"})
     found = {c for r in rows for c in r["changes"]}
     for c in changes:
         if c["id"] not in found:
@@ -192,13 +192,43 @@ def judge(changes: list[dict], hits: list[dict]) -> list[dict]:
                          "location": c["location"], "place": c["location"], "changes": [c["id"]], "queries": [],
                          "why": "検索先の文書に関係する記述が見つからない。影響なしとは言えないため、担当者に確かめる。",
                          "quote": "", "test": "影響範囲を担当者に確かめ、検索先に足りない文書があれば取り込んで再分析する",
-                         "score": 0, "confirmed": False})
+                         "score": 0, "confirmed": False, "method": "rule"})
     rows.sort(key=lambda r: (r["priority"], -r["level"], -r["score"]))
     return [{**r, "id": f"I{i}"} for i, r in enumerate(rows, start=1)]
 
 
-def run(order: str, docs: list[dict], read) -> dict:
-    """docs は job["docs"]、read(name) は断片の一覧を返す関数。"""
+def _apply_llm(changes: list[dict], hits: list[dict], impacts: list[dict], llm_judge) -> tuple[list[dict], dict]:
+    """規則の候補を LLM に判定させ、関係なしは落とし、影響度・理由・テストを置き換える。"""
+    by_key: dict[str, dict] = {}
+    for h in sorted(hits, key=lambda h: -h["score"]):
+        if h["key"] not in by_key:
+            place = f"{h['section']}（{h['location']}）" if h.get("section") else h["location"]
+            by_key[h["key"]] = {"key": h["key"], "doc": h["doc"], "place": place, "text": h["text"]}
+    verdicts = llm_judge(changes, list(by_key.values()))
+    if verdicts is None:
+        return impacts, {"mode": "rule", "reason": "LLM に接続できないため、語の一致による規則で判定しました。"}
+    v = {x["key"]: x for x in verdicts}
+    out = []
+    for r in impacts:
+        key = f"{r['doc']}|{r['location']}"
+        x = v.get(key)
+        if not r["confirmed"] or x is None:
+            out.append({**r, "method": "rule"})
+            continue
+        if not x["related"]:
+            continue
+        lv = int(x["level"])
+        if r["store"] == "テストケース":
+            lv = min(lv, 3)
+        out.append({**r, "level": lv, "level_name": LEVELS[lv], "priority": 1 if lv == 4 else 2 if lv == 3 else 3,
+                    "why": x["why"].strip() or r["why"], "test": x["test"].strip() or r["test"], "method": "llm"})
+    out.sort(key=lambda r: (r["priority"], -r["level"], -r["score"]))
+    return [{**r, "id": f"I{i}"} for i, r in enumerate(out, start=1)], {"mode": "llm", "reason": ""}
+
+
+def run(order: str, docs: list[dict], read, llm_judge=None) -> dict:
+    """docs は job["docs"]（文書庫の文書を含む）、read(name) は断片の一覧を返す関数。
+    llm_judge を渡すと、規則の候補を LLM で判定し直す（失敗時は規則のまま）。"""
     def tagged(d):
         out, section = [], ""
         for p in read(d["name"]):
@@ -219,13 +249,16 @@ def run(order: str, docs: list[dict], read) -> dict:
         notes.append("検索先の文書（設計書・画面仕様書・既存テストケース）がありません。変更後の文書の中だけを検索しました。")
     changes = extract_changes(order, old, new)
     if not changes:
-        return {"changes": [], "queries": [], "impacts": [],
+        return {"changes": [], "queries": [], "impacts": [], "engine": {"mode": "rule", "reason": ""},
                 "notes": notes + ["変更箇所を見つけられませんでした。変更前の文書か、変更の指示を入れてください。"]}
     queries = make_queries(changes, order)
     exclude = {f"{p['doc']}|{p['location']}" for p in new
                if any(_norm(c["after"])[:60] and _norm(c["after"])[:60] in _norm(p["text"]) for c in changes)}
     hits = search(queries, corpus, exclude)
     impacts = judge(changes, hits)
+    engine = {"mode": "rule", "reason": "語の一致による規則で判定しました。"}
+    if llm_judge is not None:
+        impacts, engine = _apply_llm(changes, hits, impacts, llm_judge)
     for q in queries:
         q["merged"] = len({r["id"] for r in impacts if q["id"] in r["queries"]})
-    return {"changes": changes, "queries": queries, "impacts": impacts, "notes": notes}
+    return {"changes": changes, "queries": queries, "impacts": impacts, "notes": notes, "engine": engine}

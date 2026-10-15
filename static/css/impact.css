@@ -1,22 +1,77 @@
-/* 影響度分析（System 08）。部品は batch-test.css を共用し、ここは差分だけ。
-   識別色は system-select.css の syscard-impact と同じ #C2410C / #FFEDD5 / #9A3412。 */
-.im-steps{grid-template-columns:repeat(3,minmax(0,1fr))}
+/* 影響度分析（System 08）。骨格・部品は app.css / app-components.css（ドキュメント作成と同じ）、
+   本体のカード・表は batch-test.css を共用し、ここは差分だけ。識別色は #C2410C / #FFEDD5 / #9A3412。 */
+/* batch-test.css の部品が使う色（ta2.css と同じ値）。ta2.css 本体は骨格が違うので読み込まない。 */
+.im-page{--bg:#F6F7F9;--sf:#FFFFFF;--line:#E4E7EC;--line2:#D0D5DD;--tx:#101828;--tx2:#475467;--tx3:#667085;
+  --ok-bg:#DCFAE6;--ok-tx:#067647;--ng:#F04438;--ng-bg:#FEE4E2;--ng-tx:#B42318;--wa-bg:#FEF0C7;--wa-tx:#B54708;
+  --mono:'JetBrains Mono',ui-monospace,monospace}
+.im-view[hidden],.bt-panel[hidden],.app-nav-item[hidden],.app-nav-group[hidden]{display:none!important}
+.im-page .sp{flex:1}
+.im-page .kpis{display:grid;gap:12px}
+.im-page .kpi{background:var(--sf);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.im-page .kpi b{display:block;font-size:26px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.2}
+.im-page .kpi span{display:block;font-size:11.5px;color:var(--tx3)}
+.im-page .kpi.ng b{color:var(--ng-tx)}
+.im-page .pill{font-size:11px;padding:3px 9px;border-radius:999px;font-weight:600;white-space:nowrap}
+.im-page .p-fail{background:var(--ng-bg);color:var(--ng-tx)}.im-page .p-pass{background:var(--ok-bg);color:var(--ok-tx)}
+.im-page .p-new{background:#F2F4F7;color:var(--tx2)}
+.im-page .fchips{display:flex;gap:4px;flex-wrap:wrap}
+.im-page .fchip{font-size:12px;padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--tx2);font-weight:500;display:inline-flex;gap:5px;align-items:center;cursor:pointer}
+.im-page .fchip.on{background:var(--tx);color:#fff;border-color:var(--tx)}
+.im-page .bd{margin-left:auto;font-size:11px;font-weight:700;min-width:20px;height:20px;padding:0 6px;border-radius:999px;display:inline-grid;place-items:center;background:#F2F4F7;color:var(--tx2)}
+.im-page .bd.ng{background:var(--ng-bg);color:var(--ng-tx)}
+.im-page .bt-toast{background:#101828;color:#fff;box-shadow:0 8px 24px rgba(15,23,42,.2)}
+.im-page .bt-x{border:0;background:none;color:var(--tx3);padding:2px 8px;border-radius:6px;cursor:pointer;font-size:14px}
+.im-page .bt-x:hover{background:var(--ng-bg);color:var(--ng-tx)}
+.im-page .bt-tbl select{padding:4px 8px;border:1px solid var(--line2);border-radius:6px;font-size:12px;background:#fff}
+.im-page a[aria-disabled=true]{opacity:.45;pointer-events:none}
+.im-page .bt-busy{opacity:.6;pointer-events:none}
+.im-tblh .btn-outline-sm{white-space:nowrap}
+.im-view{display:flex;flex-direction:column;gap:16px}
+.im-hero-form{display:flex;gap:10px;align-items:stretch;margin:14px 0 12px}
+.im-hero-input{flex:1;min-width:0;padding:10px 12px;border:1px solid var(--border,var(--line2));border-radius:8px;font:inherit;font-size:14px;resize:vertical;min-height:44px;background:var(--surface,#fff);color:var(--text,var(--tx))}
+.im-hero-input:focus{outline:2px solid var(--primary);outline-offset:1px}
+.im-bigbtn{height:44px;padding:0 28px;font-size:15px;margin-top:8px;display:inline-flex;align-items:center;cursor:pointer}
+.im-hint{font-size:12px;color:var(--text-muted,var(--tx3));margin-top:4px}
+.im-link{border:0;background:none;color:var(--primary);padding:0;font:inherit;cursor:pointer;text-decoration:underline}
+/* 分析の一覧（カード） */
+.im-jobs{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.im-jobcard{position:relative;background:var(--surface,#fff);border:1px solid var(--border,var(--line));border-radius:12px;transition:border-color .15s,box-shadow .15s}
+.im-jobcard:hover{border-color:#C2410C;box-shadow:0 2px 8px rgba(15,23,42,.06)}
+.im-jobmain{display:flex;flex-direction:column;gap:6px;width:100%;text-align:left;border:0;background:none;padding:16px 44px 14px 18px;cursor:pointer;font:inherit;color:inherit}
+.im-jobname{font-size:15px;font-weight:700}
+.im-joborder{font-size:12.5px;color:var(--text-secondary,var(--tx2));display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.im-jobfoot{display:flex;flex-wrap:wrap;align-items:center;gap:10px;font-size:12px;color:var(--text-muted,var(--tx3));margin-top:4px}
+.im-jobdel{position:absolute;top:10px;right:10px}
+/* 分析の見出し */
+.im-jobhead{display:flex;align-items:center;gap:12px}
+.im-jobtitle{display:flex;align-items:baseline;gap:12px;flex:1;min-width:0}
+.im-jobtitle h2{display:none}
+.im-jobtitle .bt-mut{font-size:12.5px}
+.im-steps{grid-template-columns:repeat(3,minmax(0,1fr));padding:0;border:0;background:none}
+.im-page .bt-step{cursor:pointer;background:var(--surface,#fff)}
+.im-page .bt-step:disabled{opacity:.5;cursor:not-allowed}
 .im-page .bt-step.done b{background:#FFEDD5;color:#9A3412}
 .im-page .bt-step.on{border-color:#C2410C;background:#FFF7ED;color:#9A3412}
-.im-page .bt-step.on b{background:#C2410C}
-.im-page .bt-drop:hover{border-color:#C2410C;background:#FFF7ED}
+.im-page .bt-step.on b{background:#C2410C;color:#fff}
+.im-page .bt-drop:hover,.im-page .bt-drop.over{border-color:#C2410C;background:#FFF7ED}
+.im-run{min-width:140px;justify-content:center}
 .im-ta{padding:7px 10px;border:1px solid var(--line2);border-radius:8px;font-size:12.5px;color:var(--tx);resize:vertical;font-family:inherit}
 .im-gap{margin-bottom:10px}
 .im-stores{display:flex;flex-direction:column;gap:8px}
 .im-stores li{list-style:none;display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:12.5px}
-.im-stores li b{flex:none;font-weight:600;white-space:nowrap}
+.im-stores li b{flex:none;font-weight:600;white-space:nowrap;min-width:84px}
 .im-stores small{flex:1;min-width:0;color:var(--tx3);font-size:11.5px}
+.im-libnote{margin-top:12px}
 .im-diffs{display:flex;flex-direction:column;gap:8px}
-.im-diff{display:grid;grid-template-columns:56px 160px minmax(0,1fr) minmax(0,1fr);gap:10px;align-items:start;font-size:12.5px;border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+.im-diff{display:grid;grid-template-columns:72px 200px minmax(0,1fr) minmax(0,1fr);gap:10px;align-items:start;font-size:12.5px;border:1px solid var(--line);border-radius:10px;padding:8px 12px}
 .im-diff code{font-size:11.5px;color:var(--tx2)}
 .im-diff del{color:var(--ng-tx);background:var(--ng-bg);text-decoration:line-through;border-radius:4px;padding:0 4px}
-.im-diff ins{color:var(--ok-tx,#0A7359);background:var(--ok-bg,#DCF5EE);text-decoration:none;border-radius:4px;padding:0 4px}
+.im-diff ins{color:#0A7359;background:#DCF5EE;text-decoration:none;border-radius:4px;padding:0 4px}
+/* 影響範囲の表 */
+.im-tblh{flex-wrap:wrap}
+.im-tbl{min-width:1080px}
 .im-tbl td:first-child{white-space:nowrap}
+.im-tbl th:nth-child(4),.im-tbl td:nth-child(4){min-width:220px}
 .im-tbl small{display:block;color:var(--tx3);font-size:11.5px;margin-top:2px}
 .im-tbl q{display:block;font-size:11.5px;color:var(--tx2);border-left:2px solid var(--line2);padding-left:6px;margin-top:4px}
 .im-pri{display:inline-block;font-family:var(--mono);font-size:11.5px;font-weight:700;border-radius:6px;padding:2px 7px}
@@ -24,12 +79,29 @@
 .im-pri.p2{background:var(--wa-bg);color:var(--wa-tx)}
 .im-pri.p3{background:var(--bg);color:var(--tx2)}
 .im-lv{font-size:12px;font-weight:600;white-space:nowrap}
-.im-lv.l4{color:var(--ng-tx)}.im-lv.l3{color:#C2410C}.im-lv.l2{color:var(--wa-tx)}.im-lv.l1{color:var(--tx3)}
+.im-lv.l4{color:var(--ng-tx)}.im-lv.l3{color:#C2410C}.im-lv.l2{color:var(--wa-tx)}.im-lv.l1,.im-lv.l0{color:var(--tx3)}
 .im-filter{padding:0}
 .im-filter .fchip{cursor:pointer;font-size:12px;padding:4px 10px}
-@media (max-width:1200px){.im-diff{grid-template-columns:56px minmax(0,1fr)}}
-.im-lv.l0{color:var(--tx3);font-weight:500}
-.im-page .bt-drop.over{border-color:#C2410C;background:#FFF7ED}
-.im-page .kpis{grid-template-columns:repeat(5,minmax(0,1fr))}
-.im-page .bt-step:disabled{opacity:.5;cursor:default}
-.im-tbl{min-width:960px}.im-tbl th:nth-child(4),.im-tbl td:nth-child(4){min-width:200px}
+.im-filter .fchip em{font-style:normal;font-family:var(--mono);font-size:11px;opacity:.7}
+.im-rv{display:flex;flex-wrap:wrap;gap:4px;width:168px}
+.im-rvbtn{border:1px solid var(--line2);background:var(--surface,#fff);border-radius:6px;padding:3px 10px;font-size:12px;cursor:pointer;color:var(--tx2)}
+.im-rvbtn:hover{border-color:var(--tx3)}
+.im-rvbtn.on.accepted{background:#DCF5EE;border-color:#0A7359;color:#0A7359;font-weight:600}
+.im-rvbtn.on.rejected{background:var(--ng-bg);border-color:var(--ng-tx);color:var(--ng-tx);font-weight:600}
+.im-rv select{padding:3px 6px;border:1px solid var(--line2);border-radius:6px;font-size:12px;background:#fff}
+.im-rv input{flex:1 1 100%;min-width:0;padding:4px 6px;border:1px solid var(--line2);border-radius:6px;font-size:12px}
+.im-rej td{opacity:.5}
+.im-rej td:last-child{opacity:1}
+.im-rules summary{cursor:pointer;font-weight:600;font-size:13.5px}
+.im-rules[open] summary{margin-bottom:8px}
+.im-page .kpis{grid-template-columns:repeat(5,minmax(0,1fr));margin-bottom:0}
+.im-libsum .kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
+.im-libup{cursor:pointer;display:inline-flex;align-items:center}
+/* 新しい分析（モーダル） */
+.im-modal{position:fixed;inset:0;background:rgba(15,23,42,.45);display:grid;place-items:center;z-index:100}
+.im-modal[hidden]{display:none}
+.im-modal-box{background:var(--surface,#fff);border-radius:14px;padding:22px 24px;width:min(520px,calc(100vw - 32px));box-shadow:0 20px 50px rgba(15,23,42,.25)}
+.im-modal-box h2{font-size:17px;margin-bottom:14px}
+.im-modal-box .bt-field input{font-family:inherit;font-size:13px}
+.im-modal-box .bt-actions{margin-top:6px}
+@media (max-width:1200px){.im-diff{grid-template-columns:72px minmax(0,1fr)}}

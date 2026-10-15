@@ -145,15 +145,19 @@ def upload_document(iid: str):
     versions = metrics.freeze_current(insp)  # 旧の断片・指摘で前の版のスコアを確定する
     # document は ingest の unread（読めなかった要素の数）をそのまま持つ
     base = {**insp, "document": document, "passages": passages, "findings": findings, "diff": changes,
-            "status": "reviewing",
-            # 文書を取り込んだら個別レビューへ進める（計画のままだと工程表示が実態と合わない）
-            "phase": "individual" if insp.get("phase", "plan") == "plan" else insp.get("phase")}
+            "status": "reviewing"}
+    # 文書を取り込んだら個別レビューへ進める（計画のままだと工程表示が実態と合わない）。
+    # R4 の種別が設定済みなら入口基準（FR-06-142）を満たすときだけ進める。旧形式は従来どおり進める。
+    from web.services.docverify import process
+    in_plan = insp.get("phase", "plan") == "plan"
+    entry_errs = process.entry_errors(base, "individual") if in_plan and not process.type_info(insp)["legacy"] else []
+    base = {**base, "phase": "individual" if in_plan and not entry_errs else insp.get("phase", "plan")}
     entry = {"version": version, "name": document.get("name"),
              "uploaded_at": datetime.now(timezone.utc).isoformat(), "passages": len(passages),
              "quality": metrics.quality_brief(base, False)}
     updated = {**base, "versions": [*versions, entry]}
     store.save(updated)
-    return _respond(updated)
+    return _respond(updated, **({"entry_errors": entry_errs} if entry_errs else {}))
 
 
 @bp.route("/api/docverify/inspections/<iid>/findings/<fid>", methods=["POST"])
@@ -191,6 +195,7 @@ def update_finding(iid: str, fid: str):
     findings = [{**f, **changes} if f.get("id") == fid else f for f in insp["findings"]]
     updated = {**insp, "findings": findings}
     store.save(updated)
+    _perm.record("finding_update", f"{iid}/{fid}", changes)
     return _respond(updated)
 
 
@@ -222,6 +227,7 @@ def add_finding(iid: str):
         if body.get("checklist_item") else None, "disposition": None}])
     updated = {**insp, "findings": [*(insp.get("findings") or []), *new]}
     store.save(updated)
+    _perm.record("finding", f"{iid}/{new[0]['id']}", {"status": new[0].get("status")})
     return _respond(updated, 201)
 
 
@@ -451,6 +457,9 @@ def patch_inspection(iid: str):
         return _err("変更する項目がありません。画面を再読み込みしてやり直してください。", 400)
     updated = {**insp, **changes}
     store.save(updated)
+    if "approval" in changes:
+        _perm.record("approval", iid, {"status": "approved" if changes["approval"]["approver"] else None,
+                                       **changes["approval"]})
     return _respond(updated)
 
 

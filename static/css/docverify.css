@@ -94,7 +94,7 @@
 .dvr-kpi b{display:block;font-size:20px}
 
 /* レビュー内の画面（docverify-review.js が見本 v2 のクラス名で描く）。見本 v2 の規則を .dvr-view の中に限って当てる */
-.dvr-view .steps { display: flex; margin: 0 0 14px; font-size: 12px; flex-wrap: wrap; }
+.dvr-view .steps { display: flex; margin: 0 0 14px; font-size: 12px; flex-wrap: wrap; flex: none; overflow: visible; padding: 0; border-right: 0; background: none; } /* ta2.css の汎用 .steps（overflow:auto）で縮んで切れるのを打ち消す */
 .dvr-view .steps span { padding: 6px 12px; border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-secondary); margin-left: -1px; }
 .dvr-view .steps span:first-child { border-radius: 8px 0 0 8px; margin-left: 0; }
 .dvr-view .steps span:last-child { border-radius: 0 8px 8px 0; }

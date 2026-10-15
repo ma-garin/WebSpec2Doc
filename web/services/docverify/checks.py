@@ -51,6 +51,11 @@ _REQ_CORE = re.compile(r"しなければならない|ならない|すること|�
 _QUANT = re.compile(r"以内|までに|以上|以下(?!の|に示|のとおり|のよう)|未満|超え|速やか|すぐ|直ちに|即時|即座|周期|間隔|頻度|タイムアウト|待機|保持時間")
 _NUM = re.compile(r"[0-9０-９]")
 _TOC = re.compile(r"\.{3,}|…{2,}|・{3,}|目次|^\s*(?:第?[0-9０-９]+(?:[.．][0-9０-９]+)*[章節.]?)\s*[^。\s]{0,30}\s*$|^\s*[-–]?\s*\d+\s*[-–]?\s*$|^\s*(?:page|p\.)\s*\d+", re.I)
+# 29148 5.2.5 完全（未決定のまま残った記述）・INCOSE GtWR の不定な列挙/絶対表現/and-or。
+_TBD = re.compile(r"TBD|TBA|TBC|未定|検討中|調整中|別途(?:定める|決定|協議|検討)|後日|要検討|[？?]{2,}|[Xx]{3,}")
+_OPEN_END = re.compile(rf"(?:(?<![{_K}])(?:等|他)|など|ほか)(?:の|を|に|で|は|が|、|。)")
+_UNIVERSAL = re.compile(rf"(?<![{_K}])(?:すべて|全て|常に|必ず|絶対に|決して|いかなる)")
+_AND_OR = re.compile(r"および/または|及び/又は|and/or|又は/及び", re.I)
 _MULTI = re.compile(r"(?:し|でき|とし)、.{4,}?(?:する|できる|とする|しない)[。]?$")
 
 
@@ -89,12 +94,32 @@ def _ambiguous(s: str) -> list[tuple[str, str]]:
 def _check_sentence(p: dict, s: str) -> list[dict]:
     found = []
     crit = bool(_CRITICAL.search(s))
-    for rule, word in _ambiguous(s):
+    amb = _ambiguous(s)
+    for rule, word in amb:
         sev = "critical" if crit else "major"
         found.append(_finding(rule, sev, "unambiguous", "曖昧さ",
                               f"「{word}」は解釈が分かれます。具体的な条件や値にしてください。", p, s[:80], "要確認"))
+    tbd = _TBD.search(s)
+    if tbd:
+        found.append(_finding("REQ.INCOMPLETE", "critical" if crit else "major", "complete", "完全性",
+                              f"「{tbd.group(0)}」が残っています。決めた内容を書くか、決める人と期限を書いてください。",
+                              p, s[:80], "要確認"))
     if not _is_req(s):
         return found
+    oe = _OPEN_END.search(s)
+    if oe and not any(w in oe.group(0) for _, w in amb):  # 曖昧語として指摘済みの「等」「など」は重ねない
+        found.append(_finding("REQ.OPEN_ENDED", "minor", "unambiguous", "曖昧さ",
+                              f"「{oe.group(0)[:-1] or oe.group(0)}」で列挙が閉じていません。対象をすべて挙げてください。",
+                              p, s[:80], "推定"))
+    un = _UNIVERSAL.search(s)
+    if un:
+        found.append(_finding("REQ.UNIVERSAL", "minor", "verifiable", "検証可能性",
+                              f"「{un.group(0)}」は例外の無いことを求めます。例外の有無と範囲を書いてください。",
+                              p, s[:80], "推定"))
+    if _AND_OR.search(s):
+        found.append(_finding("REQ.AND_OR", "minor", "unambiguous", "曖昧さ",
+                              "「および/または」はどちらを求めるかが定まりません。片方に決めて書いてください。",
+                              p, s[:80], "推定"))
     q = _QUANT.search(s)
     if q and not _NUM.search(s):
         found.append(_finding("REQ.MEASURABILITY", "critical" if crit else "major", "verifiable", "検証可能性",

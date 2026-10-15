@@ -30,11 +30,29 @@ def summary(insp: dict) -> dict:
         reasons.append(f"未対応の重大な指摘が {open_critical} 件あります（上限 {max_c} 件）。")
     if open_major > max_w:
         reasons.append(f"未対応の主要な指摘が {open_major} 件あります（上限 {max_w} 件）。")
-    return {"by_status": by_status, "by_severity": by_severity,
+    return {"by_status": by_status, "by_severity": by_severity, "quality": quality(insp),
             "density": round(adopted / n, 3) if n else 0.0,
             "open_critical": open_critical, "open_major": open_major,
             "open_warning": open_major,  # v1 画面との互換
             "exit_ok": not reasons, "reasons": reasons}
+
+
+_ITEMS = ("necessary", "unambiguous", "complete", "consistent", "feasible", "verifiable", "traceable", "singular")
+_LIVE = {"candidate", "adopted"}  # 却下・修正済みは減点しない
+
+
+def quality(insp: dict) -> dict:
+    """29148 の特性ごとに「未解決の指摘が無い断片の割合」を 0〜100 で返す。指摘の無い特性は検査対象外と区別しない。"""
+    passages = insp.get("passages", []) or []
+    n = len(passages)
+    live = [f for f in insp.get("findings", []) or [] if f.get("status") in _LIVE and f.get("checklist_item")]
+    items = {}
+    for item in _ITEMS:
+        hit = {f.get("passage_id") for f in live if f["checklist_item"] == item}
+        items[item] = {"open": sum(1 for f in live if f["checklist_item"] == item),
+                       "score": round(100 * (1 - len(hit) / n)) if n else None}
+    hit_any = {f.get("passage_id") for f in live}
+    return {"items": items, "overall": round(100 * (1 - len(hit_any) / n)) if n else None, "passages": n}
 
 
 def _safe(v):
@@ -61,6 +79,9 @@ def to_xlsx(insp: dict) -> bytes:
     ws2.append(["断片あたりの採用指摘", s["density"]])
     ws2.append(["未対応の重大", s["open_critical"]])
     ws2.append(["未対応の主要", s["open_major"]])
+    ws2.append(["品質スコア（全体）", s["quality"]["overall"]])
+    for k, v in s["quality"]["items"].items():
+        ws2.append([f"品質スコア: {_ITEM_LABEL.get(k, k)}", v["score"]])
     ws2.append(["終了判定", "可" if s["exit_ok"] else "不可"])
     for r in s["reasons"]:
         ws2.append(["理由", r])
@@ -69,6 +90,8 @@ def to_xlsx(insp: dict) -> bytes:
     return buf.getvalue()
 
 
+_ITEM_LABEL = {"necessary": "必要", "unambiguous": "曖昧でない", "complete": "完全", "consistent": "一貫",
+               "feasible": "実現可能", "verifiable": "検証可能", "traceable": "追跡可能", "singular": "単一"}
 _LABEL = {"critical": "重大", "major": "主要", "minor": "軽微"}
 
 

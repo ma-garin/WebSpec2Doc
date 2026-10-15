@@ -29,8 +29,10 @@ _KEY = _secrets.token_bytes(32)          # 確認トークンの HMAC 鍵（プ�
 _TOKENS: dict[str, dict] = {}            # token -> {"sig", "expires"}
 _TOKEN_LOCK = threading.Lock()
 _EXPORTS = {"report.xlsx": (export.report_xlsx, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
-            "report.md": (export.report_md, "text/markdown; charset=utf-8"),
-            "code.zip": (export.code_zip, "application/zip")}
+            "report.md": (export.report_md, "text/markdown"),
+            "code.zip": (export.code_zip, "application/zip"),
+            "trace.csv": (export.trace_csv, "text/csv"),
+            "evidence.zip": (lambda j: export.evidence_zip(j, request.args.get("run", "")), "application/zip")}
 
 
 # ---------------------------------------------------------------- 共通
@@ -370,11 +372,13 @@ def export_job(jid, kind):
     if err:
         return err
     if kind not in _EXPORTS:
-        return _err("この形式の書き出しには対応していません。Excel・Markdown・コードの ZIP から選んでください。", 400)
+        return _err("この形式の書き出しには対応していません。Excel・Markdown・追跡表・コードか証跡の ZIP から選んでください。", 400)
     build, mime = _EXPORTS[kind]
     try:
         data = build(job)
-    except (OSError, ValueError, KeyError):
+    except (OSError, ValueError, KeyError) as e:
+        if kind == "evidence.zip" and isinstance(e, KeyError):
+            return _err("その実行の証跡が見つかりません。実行の一覧から選び直してください。", 404)
         log.exception("書き出しに失敗 %s %s", jid, kind)
         return _err("書き出しに失敗しました。時間をおいてやり直してください。", 500)
     _job, err = _save(store.audit(job, "export", None, kind, _actor()))

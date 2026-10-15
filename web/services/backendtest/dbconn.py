@@ -286,6 +286,59 @@ def check(env: dict, secret: str | None) -> dict:
             "in_recovery": rec, "message": msg}
 
 
+_TABLE_PRIV_SQL = """
+SELECT to_regclass(%(t)s) IS NOT NULL AS found,
+       has_table_privilege(to_regclass(%(t)s), 'SELECT') AS can_select,
+       has_table_privilege(to_regclass(%(t)s), 'INSERT') AS can_insert,
+       has_table_privilege(to_regclass(%(t)s), 'UPDATE') AS can_update
+"""
+
+
+def preflight(env: dict, secret: str | None, tables: list[str], writes: bool) -> str | None:
+    """実行前の確認。到達不能・認証失敗・対象テーブルの権限不足の理由＋次の行動を返す（問題無しは None。書き込みはしない）."""
+    try:
+        params = _conn_params(env)
+    except StoreError as e:
+        return str(e)
+    try:
+        conn = psycopg.connect(password=secret or None, connect_timeout=CONNECT_TIMEOUT_SEC,
+                               application_name="webspec2doc-backendtest", **params)
+    except psycopg.Error as e:
+        log.info("backendtest preflight failed: %s", _scrub(e, secret))
+        return _user_message(e)[0]
+    try:
+        conn.read_only = True
+        rows = []
+        with conn.cursor(row_factory=dict_row) as cur:
+            for t in tables:
+                cur.execute(_TABLE_PRIV_SQL, {"t": str(t)})
+                rows.append((str(t), cur.fetchone() or {}))
+            cur.execute("SELECT pg_is_in_recovery() AS rec")
+            rec = bool((cur.fetchone() or {}).get("rec"))
+        conn.rollback()
+    except psycopg.Error as e:
+        log.info("backendtest preflight privilege check failed: %s", _scrub(e, secret))
+        return "接続はできましたが権限を確かめられませんでした。DB 管理者に対象テーブルの参照権限を確認してください。"
+    finally:
+        conn.close()
+    return _privilege_problem(rows, rec, writes)
+
+
+def _privilege_problem(rows: list[tuple[str, dict]], rec: bool, writes: bool) -> str | None:
+    def names(ts: list[str]) -> str:
+        return "・".join(ts[:5])
+    if missing := [t for t, r in rows if not r.get("found")]:
+        return f"対象のテーブル {names(missing)} が接続先にありません。接続先の DB 名・スキーマを確かめてください。"
+    if no_read := [t for t, r in rows if not r.get("can_select")]:
+        return f"このユーザーにはテーブル {names(no_read)} の参照権限（SELECT）がありません。DB 管理者に参照権限を依頼してください。"
+    if writes and rec:
+        return "接続先は読み取り専用（レプリカ）です。データ投入やジョブ起動を含むケースは、書き込みできる接続先で実行してください。"
+    if writes and (no_write := [t for t, r in rows if not (r.get("can_insert") and r.get("can_update"))]):
+        return (f"このユーザーにはテーブル {names(no_write)} の書き込み権限（INSERT・UPDATE）がありません。"
+                "DB 管理者に権限を依頼するか、書き込みできるユーザーで実行してください。")
+    return None
+
+
 # ---------------------------------------------------------------- スナップショット
 
 def _ident(name: str, what: str) -> pgsql.Identifier:

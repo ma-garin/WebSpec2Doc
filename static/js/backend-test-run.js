@@ -24,7 +24,7 @@
     if (body) { opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body); }
     return fetch(API + '/' + encodeURIComponent(jid()) + path, opt).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (d) {
-        if (!r.ok) throw new Error(d.error || '処理できませんでした（' + r.status + '）。時間をおいてもう一度お試しください。');
+        if (!r.ok) { var er = new Error(d.error || '処理できませんでした（' + r.status + '）。時間をおいてもう一度お試しください。'); er.status = r.status; throw er; }
         return d; });
     }, function () { throw new Error('サーバにつながりません。画面を再読み込みしてください。'); }); }
   function showError(msg) { var b = $('#bs-banner'); if (!b) return toast(msg);
@@ -152,13 +152,14 @@
     if (!body.env_id) return showError('接続先が選ばれていません。接続先を選んでから実行してください。');
     if (!body.business_date) return showError('業務日付が入っていません。業務日付を入れてから実行してください。');
     busy(btn, true);
-    api('POST', '/runs/preview', body).then(function (d) { S.preview = d;
+    api('POST', '/runs/preview', Object.assign({}, body, { secret: $('#bs-secret').value })).then(function (d) { S.preview = d;
       renderProd({ name: d.env_name, production: d.production }, d.production_reasons);
       if (d.production && d.writes) { throw new Error('本番らしい接続先では、データを書き換える実行はできません。テスト用の接続先を選んでください。'); }
       if (!d.writes) return launch(body, null);
       openConfirm({ env: d.env_name, tables: d.affected_tables, action: function () { return launch(body, d.confirm_token); } });
-    }).catch(function (e) { showError(e.message); }).then(function () { busy(btn, false); renderRunSetup(); }); }
+    }).catch(function (e) { showError(e.message); if (e.status === 409) { var s = $('#bs-secret'); s.value = ''; s.focus(); } }).then(function () { busy(btn, false); renderRunSetup(); }); }
   function launch(body, token) { var payload = Object.assign({}, body, { secret: $('#bs-secret').value, confirm_token: token });
+    $('#bs-secret').value = '';
     return api('POST', '/runs', payload).then(function (d) { S.run = d.run || d; renderRun(); renderRunSetup(); poll(); toast('実行を始めました。'); }); }
   function openConfirm(o) { var ul = $('#bs-confirm-tables'); ul.innerHTML = '';
     $('#bs-confirm-env').textContent = o.env || '';

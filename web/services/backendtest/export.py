@@ -9,6 +9,7 @@ import csv
 import io
 import re
 import zipfile
+from pathlib import Path
 
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
@@ -108,9 +109,22 @@ def _data_specs(job: dict) -> tuple[tuple, list[list]]:
     return head, rows
 
 
-def _fact_cell(r: dict) -> tuple[str, str]:
+def _rel(job: dict, value) -> str:
+    """サーバの絶対パスを出さない。案件フォルダからの相対名にする（案件外は末尾の名前だけ。N9）。"""
+    text = _s(value)
+    if not text.startswith("/"):
+        return text
+    parts, jid = Path(text).parts, str(job.get("id") or "")
+    return "/".join(parts[parts.index(jid) + 1:]) if jid in parts else Path(text).name
+
+
+def _fact_cell(job: dict, r: dict) -> tuple[str, str]:
     fact = r.get("fact") or {}
-    return ("" if fact.get("rc") is None else str(fact.get("rc"))), _s(fact.get("diff"))
+    tables = "・".join(f"{t}: 追加 {d.get('added', 0)}・削除 {d.get('removed', 0)}・変更 {d.get('updated', 0)}"
+                      for t, d in (fact.get("diff_tables") or {}).items() if isinstance(d, dict))
+    diff = _rel(job, fact.get("diff")) + (f"（{tables}）" if tables else "")
+    note = f" ※{fact['isolation']}" if fact.get("isolation") else ""
+    return ("" if fact.get("rc") is None else str(fact.get("rc"))), diff + note
 
 
 def _results(job: dict) -> tuple[tuple, list[list]]:
@@ -122,7 +136,7 @@ def _results(job: dict) -> tuple[tuple, list[list]]:
             rows.append([c.get("id"), "", "", "", "", "", "", "未実行（実行結果がありません）", "", "", "未実行", ""])
     for rs in index.values():
         for r in rs:
-            rc, diff = _fact_cell(r)
+            rc, diff = _fact_cell(job, r)
             auto, human = r.get("auto") or {}, r.get("human") or {}
             rows.append([r.get("case"), r.get("run"), rc, diff, auto.get("verdict") or "未判定", auto.get("rule"),
                          human.get("verdict") or "未判定", human.get("reason"), human.get("by"), human.get("at"),
@@ -136,7 +150,7 @@ def _defects(job: dict) -> tuple[tuple, list[list]]:
     for d in job.get("defects") or []:
         rp = d.get("repro") or {}
         rows.append([d.get("id"), d.get("run"), d.get("case"), d.get("title"), d.get("severity"),
-                     d.get("priority"), rp.get("input"), rp.get("steps"), rp.get("diff")])
+                     d.get("priority"), rp.get("input"), rp.get("steps"), _rel(job, rp.get("diff"))])
     return head, rows
 
 

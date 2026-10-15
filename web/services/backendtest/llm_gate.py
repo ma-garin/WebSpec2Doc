@@ -195,14 +195,26 @@ def _block_message(provider: str, inspection: dict) -> str:
     return f"{reason}（{places}）。該当箇所を伏せ字にしてから、もう一度生成してください。"
 
 
+def model_name(provider: str) -> str:
+    """llm_log に残す利用モデル名（FR-08-113）。送り先の呼び出しと同じ規則で決める。"""
+    try:
+        env = _read_env()
+    except (OSError, ValueError):
+        env = {}
+    if provider == PROVIDER_OPENAI:
+        return env.get("OPENAI_MODEL", "").strip() or DEFAULT_OPENAI_MODEL
+    return env.get("WEBSPEC2DOC_LLM_MODEL", "").strip() or OLLAMA_DEFAULT_MODEL
+
+
 def make_record(stage: int, purpose: str, provider: str, kinds: list[str],
-                body: str, inspection: dict, sent: bool) -> dict:
-    """llm_log の 1 件（本文は持たず sha256 だけ）。"""
+                body: str, inspection: dict, sent: bool, llm: str = "") -> dict:
+    """llm_log の 1 件（本文は持たず sha256 だけ）。llm は利用したモデル名。"""
     return {
         "at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "stage": stage,
         "purpose": purpose,
         "provider": provider,
+        "llm": llm or None,
         "kinds": list(kinds),
         "sha256": hashlib.sha256(body.encode("utf-8")).hexdigest(),
         "inspection": dict(inspection),
@@ -248,10 +260,11 @@ def send(
         [inspect(str(payload[k]), secrets, data_values, source=k) for k in kinds]
     )
     body = build_body(payload)
+    model = model_name(provider)
     if _blocking(provider, inspection):
-        record = make_record(stage, purpose, provider, kinds, body, inspection, sent=False)
+        record = make_record(stage, purpose, provider, kinds, body, inspection, sent=False, llm=model)
         raise GateBlocked(_block_message(provider, inspection), record)
-    record = make_record(stage, purpose, provider, kinds, body, inspection, sent=True)
+    record = make_record(stage, purpose, provider, kinds, body, inspection, sent=True, llm=model)
     try:
         text = (transport or _default_transport)(provider, instructions, body)
     except (openai_qa.OpenAIQAError, OSError, ValueError) as exc:

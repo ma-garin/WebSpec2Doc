@@ -15,10 +15,10 @@ import time
 
 from flask import Response, jsonify, request
 
-from web.services.backendtest import dbconn, export, judge, results, run_prep, runner, stages, store
-
-from web.routes.backend_test import actor as _case_actor
+from web.routes.backend_test import actor as _actor  # 作成者を members に入れる案件ルートと同じ規則
+from web.routes.backend_test import body as _body
 from web.routes.backend_test import bp
+from web.services.backendtest import dbconn, export, judge, results, run_prep, runner, stages, store
 
 log = logging.getLogger(__name__)
 
@@ -39,11 +39,6 @@ _EXPORTS = {"report.xlsx": (export.report_xlsx, "application/vnd.openxmlformats-
 
 def _err(message: str, status: int):
     return jsonify(error=message), status
-
-
-def _actor() -> str:
-    """操作者名。作成者を members に入れる案件ルートと同じ規則（backend_test.actor）に揃える。"""
-    return _case_actor()
 
 
 def _load(jid: str):
@@ -68,11 +63,6 @@ def _save(job: dict):
         return None, _err("案件を保存できませんでした。時間をおいてやり直してください。", 500)
 
 
-def _body() -> dict:
-    data = request.get_json(silent=True)
-    return data if isinstance(data, dict) else {}
-
-
 def _find_env(job: dict, env_id) -> dict | None:
     eid = env_id or job.get("current_env")
     return next((e for e in job.get("envs") or [] if e.get("id") == eid), None)
@@ -91,7 +81,7 @@ def _selected(job: dict, case_ids) -> list[str]:
     """選んだケース。"remaining" は前回までの未実行・実行不能・不合格。省略は全件。"""
     all_ids = [str(c.get("id")) for c in job.get("cases") or [] if c.get("id")]
     if case_ids == "remaining":
-        latest = _latest_states(job)
+        latest = {str(r.get("case")): r.get("state") for r in job.get("results") or []}
         return [c for c in all_ids if latest.get(c) not in ("pass",)]
     if not case_ids:
         return all_ids
@@ -101,13 +91,6 @@ def _selected(job: dict, case_ids) -> list[str]:
     if unknown:
         raise store.StoreError(f"ケース {', '.join(map(str, unknown[:5]))} が見つかりません。ケース表を確認してください。")
     return [str(c) for c in case_ids]
-
-
-def _latest_states(job: dict) -> dict:
-    states: dict[str, str] = {}
-    for r in job.get("results") or []:
-        states[str(r.get("case"))] = r.get("state")
-    return states
 
 
 def _plan(job: dict, env: dict, chosen: list[str]) -> dict:
@@ -183,13 +166,17 @@ def run_preview(jid):
     job, err = _load(jid)
     if err:
         return err
+    if (msg := run_prep.member_error(job, _actor())):
+        return _err(msg, 403)
     if (msg := _code_ready(job)):
         return _err(msg, 409)
     data = _body()
     prepared, err = _prepare(job, data)
     if err:
         return err
-    _env, plan = prepared
+    env, plan = prepared
+    if (msg := run_prep.preflight(env, plan, run_prep.secret_of(data))):  # 到達不能・権限不足は実行前に止める
+        return _err(msg, 409)
     out = {k: v for k, v in plan.items() if k != "k_terms"}
     if plan["writes"] and not plan["production"]:
         out["confirm_token"] = _issue_token(_signature(jid, plan, str(data.get("business_date") or "")))
@@ -213,6 +200,8 @@ def run_start(jid):
     job, err = _load(jid)
     if err:
         return err
+    if (msg := run_prep.member_error(job, _actor())):
+        return _err(msg, 403)
     if (msg := _code_ready(job)):
         return _err(msg, 409)
     data = _body()
@@ -222,6 +211,8 @@ def run_start(jid):
     env, plan = prepared
     if (gate := _run_gate(jid, plan, data)):
         return gate
+    if (msg := run_prep.preflight(env, plan, run_prep.secret_of(data))):
+        return _err(msg, 409)
     run_env = {**env, "production": plan["production"],
                "writable": bool(env.get("writable")) and not plan["read_only"]}
     try:
@@ -229,7 +220,7 @@ def run_start(jid):
     except (store.StoreError, OSError) as exc:
         log.error("テストコードを置けません %s: %s", jid, exc)
         return _err(str(exc) if isinstance(exc, store.StoreError) else "テストコードを置けませんでした。時間をおいて再実行してください。", 409)
-    password = str(data.get("secret") or data.get("password") or "")
+    password = run_prep.secret_of(data)
     try:
         rid = runner.start(jid, run_env, {"password": password} if password else None,
                            int(data.get("timeout_sec") or runner.DEFAULT_TIMEOUT_SEC),
@@ -302,6 +293,8 @@ def run_cancel(jid, rid):
         return err
     if _stored_run(job, rid) is None:
         return _err("実行が見つかりません。実行一覧から選び直してください。", 404)
+    if (msg := run_prep.member_error(job, _actor(), "停止")):
+        return _err(msg, 403)
     try:
         if runner.status(rid).get("status") not in runner.ACTIVE:  # 終わった実行の停止は受け付けない
             raise KeyError(rid)
@@ -310,7 +303,7 @@ def run_cancel(jid, rid):
         return _err("この実行はすでに終わっています。結果を確認してください。", 409)
     summary = _summary(raw, (_stored_run(job, rid) or {}).get("case_ids") or [])
     job = store.audit(run_prep.finish_stage(_with_run(job, summary), summary.get("status"), _actor()),
-                      "cancel", RUN_STAGE, rid, _actor())
+                      "cancel", RUN_STAGE, run_prep.cancel_note(rid, _body()), _actor())
     _job, err = _save(job)
     if err:
         return err
@@ -343,8 +336,8 @@ def judge_job(jid):
     if err:
         return err
     actor = _actor()
-    if job.get("members") and actor and actor not in job["members"]:
-        return _err("この案件のメンバーではないため判定できません。管理者にメンバー追加を依頼してください。", 403)
+    if (msg := run_prep.member_error(job, actor, "判定")):
+        return _err(msg, 403)
     if any(r.get("status") in runner.ACTIVE for r in job.get("runs") or []):
         return _err("実行中です。実行が終わってから判定してください。", 409)
     try:
@@ -355,7 +348,8 @@ def judge_job(jid):
     found = [{**d, "id": f"BUG-{i:03d}"} for i, d in enumerate(judge.defects(merged, cases), 1)]
     summary = judge.summarize(merged)
     try:
-        job = stages.put_generated(job, REPORT_STAGE, {"results": merged, "defects": found}, actor)
+        job = stages.put_generated(job, REPORT_STAGE, {"results": merged, "defects": found}, actor,
+                                   reopen=run_prep.report_stale(job))
     except store.StoreError as exc:
         return _err(str(exc), 409)
     job = {**job, "judgement": {**judge.verdict(summary), "summary": summary, "at": store.now(), "by": actor}}

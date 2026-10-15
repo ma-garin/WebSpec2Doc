@@ -68,6 +68,13 @@ def _diff_summary(directory) -> dict:
     return {k: sum(len(d.get(k) or []) for d in tables) for k in ("added", "removed", "updated")}
 
 
+def _diff_tables(directory) -> dict:
+    """表ごとの差分件数。判定に使った表以外（出力表など）の変化も事実として見せる（N10）。"""
+    data = _read_json(directory / "diff.json") if directory else None
+    return {str(t): {k: len(d.get(k) or []) for k in ("added", "removed", "updated")}
+            for t, d in (data or {}).items() if isinstance(d, dict)}
+
+
 def _stderr_tail(directory, limit: int = 300) -> str:
     path = directory / "stderr.txt" if directory else None
     return path.read_text(encoding="utf-8", errors="replace")[-limit:].strip() if path and path.is_file() else ""
@@ -127,7 +134,7 @@ def _record(jid: str, rid: str, row: dict, case: dict, ok: list[int] = (0,)) -> 
     counts = (auto.get("detail") or {}).get("counts") or {}
     return {"run": rid, "case": row.get("case"), "state": state,
             "fact": {"rc": (bad or rcs or [None])[-1 if not bad else 0], "rcs": rcs, "outcome": facts.get("outcome"),
-                     "stderr_tail": tail, "diff_summary": _diff_summary(directory),
+                     "stderr_tail": tail, "diff_summary": _diff_summary(directory), "diff_tables": _diff_tables(directory),
                      "business_date": facts.get("business_date"),
                      "diff": facts.get("evidence") or "", "observed": counts, "alt_sql": observed.get("alt_sql"),
                      "duration": facts.get("duration"), "message": facts.get("message") or ""},
@@ -140,12 +147,35 @@ def records(job: dict, run: dict) -> list[dict]:
     by_id = {str(c.get("id")): c for c in job.get("cases") or []}
     rows = evidence.read_results(evidence.run_dir(jid, rid))
     ok = codegen.ok_codes(job)
-    out = [_record(jid, rid, r, by_id.get(str(r.get("case"))) or {}, ok) for r in rows]
+    out = _with_isolation([_record(jid, rid, r, by_id.get(str(r.get("case"))) or {}, ok) for r in rows])
     if run.get("status") not in runner.ACTIVE:
         seen = {str(r["case"]) for r in out}
         state = "cancelled" if run.get("status") == "cancelled" else "not_run"
-        out += [{"run": rid, "case": c, "state": state, "fact": {}, "auto": {}, "cause": run.get("reason") or ""}
+        out += [_unrun(rid, c, by_id.get(str(c)) or {}, state, run.get("reason") or "")
                 for c in run.get("case_ids") or [] if c not in seen]
+    return out
+
+
+def _unrun(rid: str, cid, case: dict, state: str, reason: str) -> dict:
+    """止めた・途中で終わった実行で結果の無いケース。期待値が未確定のケースは元から判定しないので未判定のまま（N11）。"""
+    if (case.get("oracle") or {}).get("state") not in ("auto", "human"):
+        return {"run": rid, "case": cid, "state": "undetermined", "fact": {}, "auto": {},
+                "cause": "期待値が未確定のため判定していません。期待値を確定してから実行してください。"}
+    return {"run": rid, "case": cid, "state": state, "fact": {}, "auto": {}, "cause": reason}
+
+
+def _with_isolation(recs: list[dict]) -> list[dict]:
+    """ケースごとに DB を戻さないため、同じ実行で先に動いたケースを事実に残す（差分は各ケースの開始時点が基準。N7）。"""
+    prior: list[str] = []
+    out = []
+    for rec in recs:
+        if prior and rec["state"] not in _UNRUN:
+            note = (f"同じ実行で先に動いたケース（{'・'.join(prior[-5:])}）の後の DB から始めています。"
+                    "前のケースの影響を受ける可能性があります（差分はこのケースの開始時点との比較）。")
+            rec = {**rec, "fact": {**rec["fact"], "prior_cases": list(prior), "isolation": note}}
+        if rec["state"] not in _UNRUN:
+            prior.append(str(rec["case"]))
+        out.append(rec)
     return out
 
 

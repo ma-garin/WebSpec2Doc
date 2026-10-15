@@ -8,7 +8,7 @@ import pytest
 
 from web.services.backendtest import llm_gate, redact, store
 
-RECORD_KEYS = {"at", "stage", "purpose", "provider", "kinds", "sha256", "inspection", "sent"}
+RECORD_KEYS = {"at", "stage", "purpose", "provider", "llm", "kinds", "sha256", "inspection", "sent"}
 
 
 class Spy:

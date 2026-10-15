@@ -101,7 +101,7 @@ flowchart LR
  "results":[{"run":"r..","case":"C001","fact":{"diff":"evidence/..","rc":0},"auto":{"verdict":"","rule":""},
              "human":{"verdict":null,"reason":"","by":null,"at":null},"state":"pass|fail|undetermined|not_run|error","cause":null}],
  "defects":[{"id":"BUG-001","run":"","case":"","title":"","severity":"","priority":"","repro":{"input":"","steps":"","diff":""}}],
- "llm_log":[{"at":"","stage":3,"purpose":"viewpoints","provider":"openai","kinds":["schema","spec"],"sha256":"",
+ "llm_log":[{"at":"","stage":3,"purpose":"viewpoints","provider":"openai","llm":"","kinds":["schema","spec"],"sha256":"",
              "inspection":{"secret_hits":0,"data_hits":0,"rules":[],"locations":[]},"sent":true}],
  "audit":[{"at":"","actor":"","action":"generate|approve|reject|revert|confirm|run|cancel|rollback|judge|export","stage":3,"version":2,"detail":""}],
  "notices":[]}

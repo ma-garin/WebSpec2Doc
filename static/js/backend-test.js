@@ -1,7 +1,7 @@
 /* バッチ・バックエンドのテスト（System 08）の画面。API: /api/backend-test/jobs（BD-008 5 章）。
  * ここで描くのは 案件一覧・段階ナビ・承認バー・段階 1〜5（段階 6 の「作る」も受ける）。段階 7・8 などは
  * backend-test-run.js（window.BackendTestRun）が描く。案件の更新は 'bs:job' イベントで知らせる。
- * 選んだ案件は ?job=、段階は #s<n> に持つ。 */
+ * 表示は ホーム／実行履歴／観点カタログ／案件。URL ハッシュは #job=<id>&stage=<n>・#runs・#catalog。 */
 (function () {
   'use strict';
   var $ = function (s, r) { return (r || document).querySelector(s); };
@@ -15,7 +15,7 @@
   var DESC = { draft: 'まだ作っていません。内容を作ってから承認します。', generated: '内容を確かめて、承認するか理由を書いて差し戻してください。',
     approved: '承認済みです。直すときは理由を書いて差し戻してください。', rejected: '差し戻しました。直して作り直してから承認します。' };
   var METHODS = { db_diff: '実行前後のデータを比べる', alt_sql: '別の計算で求めた値と比べる', golden: '承認済みの期待値と比べる', schema: 'テーブル定義に合うか確かめる' };
-  var ORACLE_ST = { auto: ['機械が判定', 'p-pass'], human: ['人が確定', 'p-fixed'], unconfirmed: ['確定待ち', 'p-flaky'] };
+  var ORACLE_ST = { auto: ['機械判定', 'badge-info'], human: ['人が確定', 'badge-low'], unconfirmed: ['確定待ち', 'badge-high'] };
   var TECHS = ['同値分割法（5.2.1）', '分類木法（5.2.2）', '境界値分析（5.2.3）', '構文テスト（5.2.4）', '組合せテスト（5.2.5）', 'デシジョンテーブルテスト（5.2.6）',
     '原因結果グラフ（5.2.7）', '状態遷移テスト（5.2.8）', 'シナリオテスト（5.2.9）', 'ランダムテスト（5.2.10）', 'メタモルフィックテスト（5.2.11）', '要件ベーステスト（5.2.12）', '技法なし（経験ベース）'];
   /* 優先度は案件の値の種類（MoSCoW か 高中低）に合わせて選択肢を出す */
@@ -24,7 +24,7 @@
   var REASON_NEEDED = { excluded: 1, discarded: 1 };
   var RANK = { qa: 1, senior_qa: 2 };
   var LOCK = '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
-  var state = { jobs: [], job: null, stage: 1, me: '', role: '', meAsked: false, adding: false, oracleFor: '' };
+  var state = { jobs: [], job: null, stage: 1, me: '', role: '', meAsked: false, adding: false, oracleFor: '', detailFor: '', view: 'home', summary: null };
   var renderers = {};
 
   /* ---- 共通 ---- */
@@ -98,6 +98,8 @@
     fail: '<circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/>',
     minus: '<circle cx="12" cy="12" r="9"/><path d="M8 12h8"/>',
     flag: '<path d="M5 21V4h11l-2 4 2 4H5"/>',
+    folder: '<path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z"/>',
+    play: '<path d="M7 4.5v15l12-7.5z"/>',
     eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>'
   };
   function kpis(el, list) {
@@ -120,7 +122,7 @@
   }
   /* ---- 表の絞り込みとページ分け（状態は画面内だけに持つ。50 件ごと） ---- */
   var PAGE = 50, DEC_LABEL = { emit: '出す', adopted: '採用', edited: '修正して採用', excluded: '対象外', discarded: '破棄' }, flt;
-  function resetFlt() { flt = { 3: { cat: '', pri: '', dec: '', page: 0 }, 4: { cat: '', method: '', st: '', page: 0 } }; }
+  function resetFlt() { flt = { 3: { cat: '', pri: '', dec: '', page: 0 }, 4: { chip: '', q: '', shown: 50 } }; }
   resetFlt();
   function priLabel(p) { var set = PRI_SETS.filter(function (x) { return p in x; })[0]; return set ? set[p] : p; }
   function fillFilter(n, key, opts, all) {
@@ -147,7 +149,7 @@
     var n = +t.closest('.bs-panel').dataset.stage, f = flt[n];
     if (act === 'flt-clear') Object.keys(f).forEach(function (k) { f[k] = k === 'page' ? 0 : ''; }); else f.page += act === 'pg-next' ? 1 : -1;
     renderPanel();
-    var c = $('#bs-content'), card = $('#bs-stage-' + n + ' .bs-filter'), bar = $('#bs-approve');
+    var c = $('#app-content'), card = $('#bs-stage-' + n + ' .bs-filter'), bar = $('#bs-approve');
     if (act !== 'flt-clear' && c && card) c.scrollTop += card.getBoundingClientRect().top - c.getBoundingClientRect().top - (bar ? bar.offsetHeight : 0) - 24;
   }
   function li(head, body, foot) {
@@ -171,38 +173,186 @@
   }
 
   /* ---- 案件と権限 ---- */
+  var STEP_LABEL = { draft: '未着手', generated: '承認待ち', approved: '承認済み', rejected: '差し戻し' };
+  var LEVEL_FULL = { integration_internal: '結合テスト（内部）', integration_external: '結合テスト（外部）', system: 'システムテスト', acceptance: '受け入れテスト' };
+  var CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  var RUN_ST = { running: ['実行中', 'badge-info'], queued: ['待機中', 'badge-info'], done: ['終了', 'badge-low'], error: ['失敗', 'badge-critical'], cancelled: ['キャンセル', 'badge-muted'] };
+  var TITLES = { home: 'ホーム', runs: '実行履歴', catalog: '観点カタログ' };
   function stageOf(job, n) { return (job && job.stages && job.stages[n]) || { status: 'draft', version: 0 }; }
   function currentStage(job) { for (var n = 1; n <= 8; n++) { if (stageOf(job, n).status !== 'approved') return n; } return 8; }
   function myRole() { var j = state.job || {}; return j.my_role || state.role || (j.members || {})[state.me] || ''; }
   function required(n) { return ((state.job || {}).approver_roles || {})[n] || (n === 4 || n === 8 ? 'senior_qa' : 'qa'); }
   function isSenior() { return myRole() === 'senior_qa'; }
-  function loadJobs() { return api('GET', API).then(function (d) { state.jobs = d.jobs || []; renderJobs(); }).catch(notify); }
-  function jobState(j) {
-    if (!j.stages) return '';
-    var n = currentStage(j), st = stageOf(j, n);
-    return '段階 ' + n + ' ' + NAMES[n] + '・' + (st.stale ? '前段が変わりました' : (STATUS[st.status] || STATUS.draft)[0]);
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function lastRun(j) { var r = j.runs || []; return r[r.length - 1] || null; }
+  function isRunning(j) { var r = lastRun(j); return !!(j.running || (r && /^(running|queued|starting)$/.test(r.status || ''))); }
+  /* 実行ボタンを押せない理由（押せるときは空） */
+  function runBlock(j) {
+    if (isRunning(j)) return '実行中です';
+    for (var n = 1; n <= 6; n++) { if (stageOf(j, n).status !== 'approved') return '段階 6 のテストコードを承認すると実行できます'; }
+    return '';
   }
-  function renderJobs() {
-    var q = ($('#bs-q').value || '').trim().toLowerCase(), box = $('#bs-jobs'), cur = state.job && state.job.id;
-    var list = state.jobs.filter(function (j) { return !q || String(j.name || '').toLowerCase().indexOf(q) >= 0; });
-    $('#bs-cnt').textContent = state.jobs.length; box.innerHTML = '';
-    if (!list.length) {
-      var p = document.createElement('div'); p.className = 'item empty';
-      p.textContent = state.jobs.length ? '一致する案件はありません' : 'まだ案件がありません'; box.appendChild(p);
+  function targetText(j) {
+    var tg = ((state.summary || {}).targets || {})[j.id];
+    if (!j.targets && tg != null) return tg;
+    var t = (j.targets || [])[0] || {};
+    var nm = function (l) { return (l || []).map(function (x) { return x && typeof x === 'object' ? (x.name || x.table || x.path || '') : String(x || ''); }).filter(Boolean).join('・'); };
+    var i = nm(t.inputs), o = nm(t.outputs);
+    return i || o ? (i || '入力未設定') + ' → ' + (o || '出力未設定') : (t.command || tg || '');
+  }
+  function envName(j) { var e = (j.envs || []).filter(function (x) { return x.id === j.current_env; })[0]; return e ? (e.name || e.id) : ''; }
+  function fresh(t) {
+    var d = t ? new Date(t) : null;
+    if (!d || isNaN(d)) return ['', ''];
+    var now = new Date(), days = Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 864e5);
+    if (days <= 0) return ['fresh-today', '今日 ' + d.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })];
+    return [days < 7 ? 'fresh-week' : 'fresh-month', days + '日前'];
+  }
+  function progressHtml(j) {
+    var cur = currentStage(j), running = isRunning(j), p = (lastRun(j) || {}).progress || {}, cells = '', all = true, t;
+    for (var n = 1; n <= 8; n++) {
+      var st = stageOf(j, n), cls = st.stale || st.status === 'rejected' ? 'is-back' : st.status === 'approved' ? 'is-done' : st.status === 'generated' ? 'is-wait' : '';
+      var lab = st.stale ? '前段が変わりました' : STEP_LABEL[st.status] || STEP_LABEL.draft;
+      if (n === 7 && running) { cls = 'is-run'; lab = '実行中'; }
+      if (st.status !== 'approved') all = false;
+      cells += '<i class="' + cls + '" title="段階 ' + n + ' ' + NAMES[n] + ': ' + lab + '"></i>';
     }
-    list.forEach(function (j) {
-      var it = fill('bs-tpl-job', { name: j.name || '名前のない案件', level: LEVELS[j.level] || '', state: jobState(j) });
-      it.dataset.job = j.id; it.classList.toggle('on', j.id === cur); it.setAttribute('aria-current', String(j.id === cur)); box.appendChild(it);
+    var cs = stageOf(j, cur);
+    if (all) t = '<b>完了</b>・8 段階すべて承認済み';
+    else if (running) t = '<b>段階 7 実行</b>・実行中' + (p.total ? ' ' + (p.done || 0) + ' / ' + p.total + ' 件' : '');
+    else if (cs.stale || cs.status === 'rejected') t = '<span class="is-back">段階 ' + cur + ' ' + NAMES[cur] + '・' + (cs.stale ? '前段が変わりました' : '差し戻し') + '</span>';
+    else t = '<b>段階 ' + cur + ' ' + NAMES[cur] + '</b>・' + (STEP_LABEL[cs.status] || STEP_LABEL.draft);
+    return '<div class="s8-prog" role="img" aria-label="' + (all ? '8 段階すべて承認済み' : '段階 ' + cur + ' ' + NAMES[cur]) + '">' + cells + '</div><div class="s8-prog-t">' + t + '</div>';
+  }
+  function resultsHtml(j) {
+    var s = (j.judgement || {}).summary, out = '';
+    if (s) {
+      if (s.pass) out += '<span class="badge badge-low">合格 ' + (+s.pass) + '</span>';
+      if (s.fail) out += '<span class="badge badge-critical">不合格 ' + (+s.fail) + '</span>';
+      if (s.unverified) out += '<span class="badge badge-muted">未検証 ' + (+s.unverified) + '</span>';
+    }
+    if (!out) out = '<span class="s8-none">' + (isRunning(j) ? '実行中です' : (j.runs || []).length ? 'まだ判定していません' : 'まだ実行していません') + '</span>';
+    return '<div class="s8-results">' + out + '</div>';
+  }
+  function loadJobs() { return api('GET', API).then(function (d) { state.jobs = d.jobs || []; renderHome(); renderRuns(); }).catch(notify); }
+  function loadSummary() {
+    return api('GET', '/api/backend-test/summary').then(function (d) { state.summary = d; renderHome(); renderCatalog(); })
+      .catch(function (e) { console.warn('BackendTest: まとめを取得できませんでした', e); renderCatalog(); });
+  }
+
+  /* ---- ホーム（KPI・案件一覧）・実行履歴・観点カタログ ---- */
+  function renderHome() {
+    var js = state.jobs, body = $('#s8-jobs'), running = js.filter(isRunning), fail = 0, uv = 0;
+    js.forEach(function (j) { var s = (j.judgement || {}).summary || {}; fail += +s.fail || 0; uv += +s.unverified || 0; });
+    var r0 = running[0], p = r0 ? ((lastRun(r0) || {}).progress || {}) : {};
+    kpis($('#s8-home-kpis'), [[js.length, '案件', '', '登録済みの案件数', 'folder'],
+      [running.length, '実行中', '', r0 ? (r0.name || '名前のない案件') + (p.total ? '（' + (p.done || 0) + ' / ' + p.total + ' 件）' : '') : '実行中の案件はありません', 'play'],
+      [fail, '不合格', 'wa', '直近の実行で不合格のケース', 'fail'], [uv, '未検証', 'wa', '確かめられなかったケース', 'warn']]);
+    $('#s8-sample').hidden = !js.length;
+    if (!js.length) return noneRow(body, 5, 'まだ案件がありません。上の「案件を作る」から始めます。');
+    body.innerHTML = '';
+    js.forEach(function (j) {
+      var tr = document.createElement('tr'), f = fresh(j.updated_at), why = runBlock(j), sub = targetText(j), lv = LEVELS[j.level] || '';
+      tr.innerHTML = '<td><div class="s8-name"><strong></strong>' + (lv ? '<span class="badge badge-info">' + esc(lv) + '</span>' : '') + '</div><div class="s8-sub"></div></td>'
+        + '<td>' + progressHtml(j) + '</td><td><span class="freshness ' + f[0] + '">' + esc(f[1]) + '</span></td><td>' + resultsHtml(j) + '</td>'
+        + '<td><div class="history-actions"><button type="button" class="btn-primary is-sm" data-open>開く</button>'
+        + '<button type="button" class="btn-outline-sm" data-run' + (why ? ' disabled title="' + esc(why) + '"' : '') + '>実行</button>'
+        + '<button type="button" class="btn-outline-sm" data-del>削除</button></div></td>';
+      $('strong', tr).textContent = j.name || '名前のない案件';
+      $('.s8-sub', tr).textContent = sub; $('.s8-sub', tr).hidden = !sub;
+      $$('[data-open],[data-run],[data-del]', tr).forEach(function (b) { b.dataset.id = j.id; });
+      body.appendChild(tr);
     });
-    $('#bs-empty').hidden = !!state.job;
-    $('#bs-empty h2').textContent = state.jobs.length ? '左の一覧から案件を選んでください' : 'テストするバッチを登録してください';
+  }
+  function renderRuns() {
+    var body = $('#s8-runs'), rows = [];
+    state.jobs.forEach(function (j) { (j.runs || []).forEach(function (r) { rows.push([j, r]); }); });
+    rows.sort(function (a, b) { return String(b[1].started_at || '').localeCompare(String(a[1].started_at || '')); });
+    if (!rows.length) return noneRow(body, 7, 'まだ実行した案件はありません。案件の段階 7 で実行すると、ここに並びます。');
+    body.innerHTML = '';
+    rows.forEach(function (x) {
+      var j = x[0], r = x[1], p = r.progress || {}, s = RUN_ST[r.status] || [r.status || '不明', 'badge-muted'], tr = document.createElement('tr');
+      tr.innerHTML = '<td><strong></strong></td><td></td><td></td><td></td><td><span class="badge ' + s[1] + '"></span></td><td></td><td><button type="button" class="btn-outline-sm" data-run>開く</button></td>';
+      var td = tr.children;
+      $('strong', tr).textContent = j.name || '名前のない案件'; td[1].textContent = fmtTime(r.started_at); td[2].textContent = r.env_name || r.env || '';
+      td[3].textContent = r.business_date || ''; $('.badge', tr).textContent = s[0]; td[5].textContent = p.total ? (p.done || 0) + ' / ' + p.total + ' 件' : '';
+      $('[data-run]', tr).dataset.id = j.id; body.appendChild(tr);
+    });
+  }
+  function renderCatalog() {
+    var body = $('#s8-catalog'), list = (state.summary || {}).catalog || [], q = ($('#s8-cat-q').value || '').trim().toLowerCase();
+    var rows = list.filter(function (v) { return !q || [v.id, v.cat_name, v.name, v.technique].join(' ').toLowerCase().indexOf(q) >= 0; });
+    $('#s8-cat-count').textContent = list.length ? rows.length + ' / ' + list.length + ' 件' : '';
+    if (!rows.length) return noneRow(body, 6, list.length ? '条件に合う観点はありません。探す言葉を変えてください。' : '観点カタログを読み込めませんでした。画面を再読み込みしてください。');
+    body.innerHTML = '';
+    rows.forEach(function (v) {
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td class="s8-id"></td><td></td><td><strong></strong></td><td></td><td></td><td></td>';
+      var td = tr.children;
+      td[0].textContent = v.id; td[1].textContent = v.cat_name || ''; $('strong', tr).textContent = v.name || '';
+      td[3].textContent = v.technique || ''; td[4].textContent = priLabel(v.priority || '');
+      td[5].textContent = (v.levels || []).map(function (l) { return LEVELS[l] || l; }).join('・');
+      body.appendChild(tr);
+    });
+  }
+
+  /* ---- 表示の切り替え（ホーム／実行履歴／観点カタログ／案件）と URL ハッシュ ---- */
+  function setHash(h) { history.replaceState(null, '', location.pathname + (h ? '#' + h : '')); }
+  function setView(v, navKey) {
+    state.view = v;
+    $$('.s8-view').forEach(function (s) { s.classList.toggle('is-active', s.id === 'view-' + v); });
+    var nav = navKey || (v === 'job' ? 'jobs' : v);
+    $$('.app-nav-item[data-nav]').forEach(function (a) {
+      var on = a.dataset.nav === nav;
+      a.classList.toggle('is-active', on);
+      if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+    });
+    if (v !== 'job' && state.job) { state.job = null; if (window.BackendTestRun && window.BackendTestRun.stop) window.BackendTestRun.stop(); }
+    if (v !== 'job') { $('#bs-prod-banner').hidden = true; $('#bs-approve').hidden = true; }
+    renderTop();
+  }
+  function goNav(v) {
+    var c = $('#app-content');
+    if (v === 'home' || v === 'jobs') {
+      setHash(''); setView('home', v); renderHome();
+      if (v === 'jobs') $('#jobs').scrollIntoView({ block: 'start' }); else c.scrollTop = 0;
+      return;
+    }
+    setHash(v); setView(v); c.scrollTop = 0;
+    if (v === 'catalog' && !state.summary) loadSummary();
+  }
+  function route() {
+    var h = location.hash.replace(/^#/, ''), p = new URLSearchParams(h), old = /^s([1-8])$/.exec(h);
+    var jid = p.get('job') || new URLSearchParams(location.search).get('job');
+    if (jid) return openJob(jid, p.get('stage') || (old && old[1]));
+    if (h === 'runs' || h === 'catalog') return setView(h);
+    setView('home');
+  }
+  function renderTop() {
+    var j = state.view === 'job' ? state.job : null, crumb = $('#topbar-breadcrumb'), chips = $('#s8-chips'), act = $('#s8-head-actions');
+    if (!j) {
+      crumb.innerHTML = '<span>WebSpec2Doc</span><span class="sep">/</span><span></span>';
+      crumb.lastChild.textContent = TITLES[state.view] || 'ホーム';
+      $('#topbar-title').textContent = 'バッチ・バックエンドのテスト'; chips.innerHTML = ''; act.hidden = true;
+      document.title = 'バッチ・バックエンドのテスト | WebSpec2Doc';
+      return;
+    }
+    var nm = j.name || '名前のない案件', why = runBlock(j), env = envName(j), tg = targetText(j), rb = $('#s8-run-head');
+    crumb.innerHTML = '<span><a href="#" data-nav="home">ホーム</a></span><span class="sep">/</span><span><a href="#" data-nav="jobs">案件</a></span><span class="sep">/</span><span></span>';
+    crumb.lastChild.textContent = nm; $('#topbar-title').textContent = nm; document.title = nm + ' | WebSpec2Doc';
+    chips.innerHTML = '';
+    [['badge-info', LEVEL_FULL[j.level] || ''], ['badge-muted', '対象: ' + (tg || '未設定')], ['badge-muted', '接続先: ' + (env || '未設定')]].forEach(function (c) {
+      if (!c[1]) return;
+      var s = document.createElement('span'); s.className = 'badge ' + c[0]; s.textContent = c[1]; chips.appendChild(s);
+    });
+    act.hidden = false; rb.disabled = !!why; rb.title = why;
   }
   function openJob(id, stage) {
     notify('');
     return api('GET', API + '/' + encodeURIComponent(id)).then(function (d) {
-      if (!state.job || state.job.id !== d.job.id) resetFlt();
+      if (!state.job || state.job.id !== d.job.id) { resetFlt(); state.detailFor = ''; }
       state.role = d.my_role || '';
-      state.stage = +(stage || currentStage(d.job)); setJob(d.job); showStage(state.stage);
+      state.view = 'job'; state.stage = +(stage || currentStage(d.job)); setJob(d.job); setView('job'); showStage(state.stage);
       /* 役割が応答に無いとき（古いサーバ）だけ利用者名を問い合わせて members と突き合わせる */
       if (!d.my_role && !state.meAsked) { state.meAsked = true; loadMe().then(function () { if (state.job) renderAll(); }); }
     }).catch(notify);
@@ -218,47 +368,46 @@
     if (window.BackendTestRun && window.BackendTestRun.setJob) window.BackendTestRun.setJob(job);
   }
 
-  /* ---- 段階ナビ・見出し・承認バー ---- */
-  function renderNav() {
-    var j = state.job;
-    $$('#bs-nav [data-stage]').forEach(function (b) {
-      var n = +b.dataset.stage, st = j ? stageOf(j, n) : null, s = st ? (STATUS[st.status] || STATUS.draft) : STATUS.draft;
-      var on = !!j && n === state.stage, cls = st && st.stale ? 'back' : s[2], num = $('[data-num]', b), lab = $('[data-state]', b);
-      b.disabled = !j; b.classList.toggle('on', on);
-      if (on) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current');
-      num.className = 'bs-num' + (on ? ' on' : cls ? ' ' + cls : '');
-      if (st && st.status === 'approved') num.innerHTML = LOCK; else num.textContent = n;
-      lab.className = 'bs-navst' + (cls && cls !== 'ok' ? ' ' + cls : '');
-      lab.textContent = !st || st.status === 'draft' ? '' : st.stale ? '前段変更' : s[0];
-      b.title = NAMES[n] + (st ? '：' + (st.stale ? '前段が変わりました' : s[0]) : '');
-    });
-  }
-  function renderHead() {
-    var n = state.stage, st = stageOf(state.job, n), s = STATUS[st.status] || STATUS.draft, pill = $('#bs-stage-pill');
-    $('#bs-stage-no').textContent = '段階 ' + n; $('#bs-stage-name').textContent = NAMES[n];
-    pill.className = 'pill ' + s[1]; pill.textContent = s[0]; $('#bs-stage-stale').hidden = !st.stale;
-    $('#bs-stage-meta').textContent = st.version ? '版 ' + st.version + (st.approved_at ? '・承認 ' + fmtTime(st.approved_at) : '') : '';
+  /* ---- ステッパー・承認バー ---- */
+  function renderStepper() {
+    var j = state.job, ol = $('#s8-stepper');
+    ol.innerHTML = '';
+    if (!j) return;
+    for (var n = 1; n <= 8; n++) {
+      var st = stageOf(j, n), cur = n === state.stage, back = st.stale || st.status === 'rejected', done = st.status === 'approved' && !st.stale;
+      var lab = st.stale ? '前段が変わりました' : STEP_LABEL[st.status] || STEP_LABEL.draft, li = document.createElement('li');
+      li.className = 's8-step' + (cur ? ' is-current' : back ? ' is-back' : done ? ' is-done' : '');
+      li.dataset.step = n; li.tabIndex = 0; li.setAttribute('role', 'button');
+      li.title = '段階 ' + n + ' ' + NAMES[n] + '：' + lab;
+      if (cur) li.setAttribute('aria-current', 'step');
+      li.innerHTML = '<span class="s8-step-n">' + (done && !cur ? CHECK : n) + '</span><span><span class="s8-step-name"></span><span class="s8-step-st"></span></span>';
+      $('.s8-step-name', li).textContent = NAMES[n]; $('.s8-step-st', li).textContent = lab;
+      ol.appendChild(li);
+    }
   }
   function renderApprove() {
     var j = state.job, n = state.stage, st = stageOf(j, n), bar = $('#bs-approve'), mine = myRole(), lock = $('#bs-approve-lock');
     var allowed = (RANK[mine] || 0) >= (RANK[required(n)] || 1), ready = st.status === 'generated' || (n === 1 && st.status !== 'approved');
-    var canReject = st.status === 'generated' || st.status === 'approved';
-    var open = n === 4 ? (j.cases || []).filter(function (c) { return !c.oracle || c.oracle.state === 'unconfirmed'; }).length : 0;
+    var canReject = st.status === 'generated' || st.status === 'approved', cases = j.cases || [];
+    var open = n === 4 ? cases.filter(function (c) { return !c.oracle || c.oracle.state === 'unconfirmed'; }).length : 0;
+    var rej = +st.reject_count || +st.rejections || 0;
     bar.dataset.stage = n; bar.dataset.version = st.version || 0;
-    $('#bs-approve-title').textContent = '段階 ' + n + '「' + NAMES[n] + '」の承認';
-    $('#bs-approve-desc').textContent = st.stale ? '前の段階が変わりました。内容を確かめてから承認し直してください。'
-      : n === 1 && st.status === 'draft' ? '目的と範囲を選んだら承認してください。' : DESC[st.status] || DESC.draft;
-    $('#bs-approve-version').textContent = st.version || '-'; $('#bs-approve-open').textContent = open;
-    var next = st.status === 'approved' && n < 8, btn = $('#bs-approve-btn');
+    $('#bs-approve-title').textContent = '段階 ' + n + ' ' + NAMES[n] + ' の承認';
+    var meta = st.version ? '第 ' + st.version + ' 版' + (rej ? '（差し戻し ' + rej + ' 回）' : '') : 'まだ作っていません';
+    if (n === 4 && cases.length) meta += '・確定 <b>' + (cases.length - open) + ' / ' + cases.length + '</b> 件・人の確定待ち <b>' + open + '</b> 件';
+    $('#bs-approve-desc').innerHTML = meta;
+    var next = st.status === 'approved' && n < 8, btn = $('#bs-approve-btn'), waitOpen = n === 4 && open > 0 && !next;
     btn.textContent = next ? '次の段階へ' : '承認して次へ';
-    btn.disabled = next ? false : (!allowed || !ready);
-    lock.hidden = next || (allowed && ready);
-    lock.textContent = !allowed ? (mine ? 'この段階の承認はシニア QA が行います。気づいたことは理由を書いて差し戻せます。'
+    btn.disabled = next ? false : (!allowed || !ready || waitOpen);
+    var msg = next ? '' : !allowed ? (mine ? 'この段階の承認はシニア QA が行います。気づいたことは理由を書いて差し戻せます。'
       : 'この案件のメンバーではないため承認できません。承認が必要なら案件の作成者に依頼してください。')
-      : st.status === 'rejected' ? '差し戻し中のため承認できません。内容を直して作り直すと承認できます。'
       : st.status === 'approved' ? 'すべての段階を承認しました。報告書は下の「書き出し」から取り出せます。'
-      : n === 7 ? 'まだ実行していないため承認できません。下の「実行する」で実行が終わると承認できます。'
-      : 'まだ内容がないため承認できません。下の「作る」ボタンで内容を作ると承認できます。';
+      : st.status === 'rejected' ? '差し戻し中のため承認できません。内容を直して作り直すと承認できます。'
+      : waitOpen ? '確定待ちが ' + open + ' 件あります。すべて確定すると承認できます。'
+      : !ready ? (n === 7 ? 'まだ実行していないため承認できません。下の「実行する」で実行が終わると承認できます。'
+        : 'まだ内容がないため承認できません。下の「作る」ボタンで内容を作ると承認できます。')
+      : st.stale ? '前の段階が変わりました。内容を確かめてから承認してください。' : '';
+    lock.textContent = msg; lock.hidden = !msg;
     bar.classList.toggle('locked', !allowed && !next);
     $('#bs-reject').disabled = !canReject; $('#bs-reject-reason').disabled = !canReject;
     $('#bs-revert').hidden = !((st.version || 0) >= 2);
@@ -269,22 +418,24 @@
     if (on) { $('#bs-prod-env').textContent = env.name || ''; $('#bs-prod-reasons').textContent = text(env.production_reasons || []); }
   }
   function renderPanel() {
-    var j = state.job, n = state.stage, fn = renderers[n];
+    var j = state.view === 'job' ? state.job : null, n = state.stage, fn = renderers[n];
     $$('.bs-panel').forEach(function (p) { p.hidden = !j || +p.dataset.stage !== n; });
-    $('#bs-stagehead').hidden = !j; $('#bs-approve').hidden = !j;
-    $('#topbar-title').textContent = j ? (j.name || '名前のない案件') : '案件を選んでください';
+    $('#bs-approve').hidden = !j;
     if (!j) return;
-    renderHead(); renderApprove();
+    renderApprove();
     if (!fn) return;
     try { fn(j, n); } catch (e) { console.error('BackendTest stage ' + n, e); notify('画面の一部を表示できませんでした。画面を再読み込みしてください。'); }
   }
-  function renderAll() { renderJobs(); renderNav(); renderProd(); renderPanel(); }
+  function renderAll() {
+    if (state.view === 'job' && state.job) { renderStepper(); renderProd(); renderPanel(); }
+    renderTop(); renderHome(); renderRuns();
+  }
   function showStage(n) {
     n = Math.min(8, Math.max(1, parseInt(n, 10) || 1));
-    state.stage = n; state.oracleFor = ''; state.adding = false;
-    if (state.job) history.replaceState(null, '', '?job=' + encodeURIComponent(state.job.id) + '#s' + n);
-    renderNav(); renderPanel();
-    var c = $('#bs-content'); if (c) c.scrollTop = 0;
+    state.stage = n; state.oracleFor = ''; state.adding = false; state.detailFor = '';
+    if (state.job) setHash('job=' + encodeURIComponent(state.job.id) + '&stage=' + n);
+    renderStepper(); renderPanel();
+    var c = $('#app-content'); if (c) c.scrollTop = 0;
     if (n >= 6 && state.job && window.BackendTestRun && window.BackendTestRun.show) window.BackendTestRun.show(n);
   }
 
@@ -394,12 +545,22 @@
     run(null, api('PATCH', jobPath('/stages/3/items/' + encodeURIComponent(tr.dataset.vp)), body), '観点を更新しました');
   }
 
-  /* ---- 段階 4 ケース表 ---- */
+  /* ---- 段階 4 ケース表（見本 job.html: 絞り込みチップ＋検索＋7 列の表＋読み方） ---- */
+  var METHOD_SHORT = { db_diff: '前後比較', alt_sql: '別の計算', golden: '承認済みの期待値', schema: '定義の検査' };
   function summary(j, c) {
     var o = c.oracle || {}, sums = (j.code && j.code.summaries) || {};
     if (c.summary || c.summary_ja || sums[c.id]) return c.summary || c.summary_ja || sums[c.id];
     return (c.pre ? '「' + text(c.pre) + '」の状態で、' : '') + ((c.steps || []).length ? c.steps.length + ' つの手順を行い、' : '')
       + '期待値を「' + (METHODS[o.method] || '未設定の方法') + '」で確かめます。' + (o.alt_sql_ja ? '別の計算: ' + o.alt_sql_ja : '');
+  }
+  function howSub(o) {
+    var key = o.key || [], ex = o.exclude || [];
+    if (o.method === 'alt_sql') return o.tolerance != null && o.tolerance !== '' ? '許す差: ' + text(o.tolerance) : '';
+    if (o.method === 'golden') return o.state === 'unconfirmed' ? '期待値: 確定待ち' : '';
+    if (o.method === 'schema') return '';
+    if (key.length) return '突き合わせ: ' + key.join('・') + (ex.length ? '／比べない列: ' + ex.join('・') : '');
+    if (ex.length) return '比べない列: ' + ex.join('・');
+    return o.method === 'db_diff' ? '件数で比べる' : '';
   }
   function oracleRow(c) {
     var o = c.oracle || {}, tr = document.createElement('tr'), td = document.createElement('td');
@@ -407,34 +568,59 @@
     f.dataset.case = c.id; E('method').value = o.method || 'db_diff'; E('key').value = (o.key || []).join(', '); E('exclude').value = (o.exclude || []).join(', ');
     E('tolerance').value = typeof o.tolerance === 'string' ? o.tolerance : text(o.tolerance);
     $('[data-f="warn"]', f).textContent = text(o.warnings || []);
-    td.colSpan = 8; td.appendChild(f); tr.appendChild(td); return tr;
+    td.colSpan = 7; td.appendChild(f); tr.appendChild(td); return tr;
+  }
+  function detailRow(j, c) {
+    var tr = document.createElement('tr'), td = document.createElement('td'), dl = document.createElement('dl'), o = c.oracle || {};
+    td.colSpan = 7; dl.className = 's8-detail';
+    [['前提データ', text(c.pre)], ['要約', summary(j, c)], ['別の計算', o.alt_sql || ''], ['根拠の事実', text(c.req_ids)]].forEach(function (x) {
+      if (!x[1]) return;
+      var dt = document.createElement('dt'), dd = document.createElement('dd'); dt.textContent = x[0]; dd.textContent = x[1]; dl.appendChild(dt); dl.appendChild(dd);
+    });
+    td.appendChild(dl); tr.appendChild(td); return tr;
   }
   renderers[4] = function (j) {
-    var cases = j.cases || [], senior = isSenior(), body = $('#bs-cases'), cnt = { auto: 0, human: 0, unconfirmed: 0 }, f = flt[4];
-    var vmap = {}, cats = {}, meths = {}, sts = {};
+    var cases = j.cases || [], senior = isSenior(), body = $('#bs-cases'), f = flt[4], vmap = {}, cnt = { auto: 0, human: 0, unconfirmed: 0 }, meth = {}, st4 = stageOf(j, 4);
     (j.viewpoints || []).forEach(function (v) { vmap[v.id] = v; });
     var stOf = function (c) { var s = (c.oracle || {}).state; return ORACLE_ST[s] ? s : 'unconfirmed'; };
-    var catOf = function (c) { var v = vmap[c.viewpoint]; return v ? (v.cat_name || v.cat || '') : ''; };
-    cases.forEach(function (c) { var m = (c.oracle || {}).method, k = catOf(c), s = stOf(c); cnt[s]++;
-      if (k) cats[k] = k; if (m) meths[m] = METHODS[m] || m; sts[s] = ORACLE_ST[s][0]; });
-    fillFilter(4, 'cat', cats, 'すべてのカテゴリ'); fillFilter(4, 'method', meths, 'すべての確かめ方'); fillFilter(4, 'st', sts, 'すべての確定状態');
-    var rows = cases.filter(function (c) { return (!f.cat || catOf(c) === f.cat) && (!f.method || (c.oracle || {}).method === f.method) && (!f.st || stOf(c) === f.st); });
-    table(4, cases.length, rows, body, 8, 'まだケースがありません。観点表を承認してから「ケースを作る」を押してください。', '条件に合うケースはありません。「絞り込みを解除」を押すと全件に戻ります。')
-      .forEach(function (c) {
-        var o = c.oracle || {}, sk = stOf(c);
-        var tr = fill('bs-tpl-case', { id: c.id, viewpoint: c.viewpoint, pre: c.pre, expected: c.expected, method: METHODS[o.method] || '未設定', summary: summary(j, c) });
-        var ol = $('[data-f="steps"]', tr), sql = $('[data-f="sql"]', tr), pill = $('[data-f="state"]', tr), b = $('[data-act="oracle"]', tr);
-        tr.dataset.case = c.id;
-        (c.steps || []).forEach(function (s) { ol.appendChild(li('', text(s))); });
-        sql.textContent = o.alt_sql || ''; sql.hidden = !o.alt_sql;
-        pill.textContent = ORACLE_ST[sk][0]; pill.className = 'pill ' + ORACLE_ST[sk][1];
-        b.hidden = !senior || sk !== 'unconfirmed'; b.dataset.case = c.id;
-        body.appendChild(tr);
-        if (state.oracleFor === c.id) body.appendChild(oracleRow(c));
-      });
-    kpis($('#bs-case-kpis'), [[cases.length, 'ケース', '', '観点表から作ったケース', 'list'], [cnt.auto, '機械が判定', cnt.auto ? 'ok' : '', '期待値を機械で確かめる', 'cpu'],
-      [cnt.human, '人が確定', '', 'シニア QA が確定した期待値', 'user'],
-      [cnt.unconfirmed, '確定待ち', cnt.unconfirmed ? 'wa' : '', senior ? 'あなたの確定を待っています' : 'シニア QA が確定します', 'clock']]);
+    cases.forEach(function (c) { cnt[stOf(c)]++; var m = (c.oracle || {}).method; if (m) meth[m] = (meth[m] || 0) + 1; });
+    var chips = [['', 'すべて', cases.length], ['st:unconfirmed', '確定待ち', cnt.unconfirmed], ['st:human', '人が確定', cnt.human], ['st:auto', '機械判定', cnt.auto]];
+    Object.keys(METHOD_SHORT).forEach(function (m) { if (meth[m]) chips.push(['m:' + m, METHOD_SHORT[m], meth[m]]); });
+    if (!chips.some(function (c) { return c[0] === f.chip; })) f.chip = '';
+    var box = $('#s8-case-chips'); box.innerHTML = ''; box.hidden = !cases.length; $('#s8-q').hidden = !cases.length;
+    chips.forEach(function (c) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'fchip' + (c[0] === f.chip ? ' on' : ''); b.dataset.chip = c[0];
+      b.setAttribute('aria-pressed', String(c[0] === f.chip)); b.textContent = c[1] + ' ' + c[2]; box.appendChild(b);
+    });
+    $('#bs-stage-4 [data-act="generate"]').hidden = st4.status === 'approved' || (st4.status === 'generated' && cases.length > 0);
+    var q = (f.q || '').trim().toLowerCase();
+    var rows = cases.filter(function (c) {
+      var o = c.oracle || {}, ok = !f.chip || (f.chip.indexOf('st:') === 0 ? stOf(c) === f.chip.slice(3) : o.method === f.chip.slice(2));
+      if (!ok || !q) return ok;
+      return [c.id, c.viewpoint, (vmap[c.viewpoint] || {}).name, text(c.expected)].join(' ').toLowerCase().indexOf(q) >= 0;
+    });
+    var shown = rows.slice(0, f.shown || PAGE);
+    if (!cases.length) noneRow(body, 7, 'まだケースがありません。観点表を承認してから「ケースを作る」を押してください。');
+    else if (!rows.length) noneRow(body, 7, '条件に合うケースはありません。「すべて」を押すと全件に戻ります。');
+    else body.innerHTML = '';
+    shown.forEach(function (c) {
+      var o = c.oracle || {}, sk = stOf(c), v = vmap[c.viewpoint] || {};
+      var tr = fill('bs-tpl-case', { id: c.id, vpname: v.name || c.viewpoint || '', technique: v.technique || '', expected: c.expected, method: METHODS[o.method] || '確かめ方が未設定', howsub: howSub(o) });
+      var ol = $('[data-f="steps"]', tr), pill = $('[data-f="state"]', tr), b = $('[data-act="oracle"]', tr), d = $('[data-act="case-detail"]', tr);
+      tr.dataset.case = c.id;
+      (c.steps || []).forEach(function (s) { ol.appendChild(li('', text(s))); });
+      pill.textContent = ORACLE_ST[sk][0]; pill.className = 'badge ' + ORACLE_ST[sk][1];
+      b.hidden = !senior || sk !== 'unconfirmed'; b.dataset.case = c.id;
+      d.hidden = !b.hidden; d.dataset.case = c.id; d.setAttribute('aria-expanded', String(state.detailFor === c.id));
+      body.appendChild(tr);
+      if (state.oracleFor === c.id) body.appendChild(oracleRow(c));
+      if (state.detailFor === c.id) body.appendChild(detailRow(j, c));
+    });
+    $('#s8-case-count').textContent = cases.length ? rows.length + ' 件中 ' + shown.length + ' 件を表示' : '';
+    $('#s8-case-more').hidden = shown.length >= rows.length;
+    var vpn = (j.viewpoints || []).filter(function (v) { return !REASON_NEEDED[v.decision]; }).length;
+    kpis($('#bs-case-kpis'), [[cases.length, 'ケース', '', '観点 ' + vpn + ' 件から作成', 'list'], [cnt.auto, '機械判定', 'ok', '冪等性・件数・前後比較・定義の検査', 'cpu'],
+      [cnt.human, '人が確定', '', '業務判断を含む期待値', 'user'], [cnt.unconfirmed, '確定待ち', 'wa', 'シニア QA の確定が必要', 'clock']]);
   };
   function submitOracle(f) {
     var E = function (n) { return f.elements.namedItem(n); };
@@ -479,36 +665,57 @@
   }
 
   /* ---- イベント ---- */
-  function openNew() { $('#bs-newform').hidden = false; $('#bs-newname').focus(); }
+  function focusNew() { goNav('home'); var i = $('#s8-name'); i.scrollIntoView({ block: 'center' }); i.focus(); }
+  function createJob(btn) {
+    var nameEl = $('#s8-name'), name = nameEl.value.trim();
+    if (!name) { notify('バッチ名が空です。テストするバッチの名前を入れてから「案件を作る」を押してください。', '案件を作れませんでした'); nameEl.focus(); return; }
+    run(btn, api('POST', API, { name: name, target_kind: 'batch', level: $('#s8-level').value, purpose: '', scope: '' }), '案件を作りました')
+      .then(function (d) { if (d && d.job) { nameEl.value = ''; resetFlt(); state.view = 'job'; setView('job'); showStage(1); renderTop(); } });
+  }
+  function delJob(id, btn) {
+    var j = state.jobs.filter(function (x) { return x.id === id; })[0] || {};
+    if (!window.confirm('「' + (j.name || '名前のない案件') + '」を削除します。資料・ケース・実行の記録もすべて消え、元に戻せません。削除しますか。')) return;
+    notify(''); busy(btn, true);
+    api('DELETE', API + '/' + encodeURIComponent(id)).then(function () {
+      state.jobs = state.jobs.filter(function (x) { return x.id !== id; }); renderHome(); renderRuns(); toast('案件を削除しました');
+    }).catch(notify).then(function () { busy(btn, false); });
+  }
   var CLICK = {
-    'bs-new': openNew, 'bs-empty-new': openNew, 'bs-newcancel': function () { $('#bs-newform').hidden = true; },
     'bs-approve-btn': approve, 'bs-reject': reject,
     'bs-revert': function (t) { run(t, api('POST', jobPath('/stages/' + state.stage + '/revert')), '前の版に戻しました'); },
     'bs-vp-add': function () { state.adding = true; renderPanel(); var i = $('#bs-vp-addform input'); if (i) i.focus(); },
-    'bs-banner-retry': function () { return state.job ? openJob(state.job.id, state.stage) : loadJobs(); }
+    'bs-banner-retry': function () { return state.job ? openJob(state.job.id, state.stage) : loadJobs(); },
+    's8-create': createJob,
+    's8-reload': function (t) { busy(t, true); loadJobs().then(function () { busy(t, false); }); },
+    's8-case-more': function () { flt[4].shown = (flt[4].shown || PAGE) + PAGE; renderPanel(); },
+    's8-run-head': function () { showStage(7); },
+    's8-export-head': function () { showStage(8); var e = $('#s8-export'); if (e) e.scrollIntoView({ block: 'start' }); }
   };
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('button, [data-job]'), act = t && t.dataset.act;
+    var t = e.target.closest('button, a[data-nav], a[data-new], a[data-act], [data-step]'), act = t && t.dataset.act;
     if (!t || t.disabled) return;
-    if (t.dataset.job) return openJob(t.dataset.job);
-    if (t.dataset.stage && t.closest('#bs-nav')) return showStage(t.dataset.stage);
+    if (t.dataset.nav) { e.preventDefault(); return goNav(t.dataset.nav); }
+    if ('new' in t.dataset) { e.preventDefault(); return focusNew(); }
+    if (act === 'sample') { e.preventDefault(); return state.jobs[0] && openJob(state.jobs[0].id); }
+    if (t.dataset.step) return showStage(t.dataset.step);
+    if ('open' in t.dataset) return openJob(t.dataset.id);
+    if ('run' in t.dataset) return openJob(t.dataset.id, 7);
+    if ('del' in t.dataset) return delJob(t.dataset.id, t);
+    if ('chip' in t.dataset) { flt[4].chip = t.dataset.chip; flt[4].shown = PAGE; return renderPanel(); }
     if (t.dataset.level) return patch({ level: t.dataset.level }, 'テストレベルを保存しました');
     if (act === 'generate' && +t.dataset.stage <= 6) return generate(t);
     if (act === 'file-del') return run(t, api('DELETE', jobPath('/files/' + encodeURIComponent(t.dataset.file))), '資料を取り除きました');
     if (act === 'oracle' || act === 'oracle-cancel') { state.oracleFor = act === 'oracle' ? t.dataset.case : ''; return renderPanel(); }
+    if (act === 'case-detail') { state.detailFor = state.detailFor === t.dataset.case ? '' : t.dataset.case; return renderPanel(); }
     if (act === 'vp-add-cancel') { state.adding = false; return renderPanel(); }
     if (act === 'flt-clear' || act === 'pg-prev' || act === 'pg-next') return pageAct(t, act);
     if (CLICK[t.id]) CLICK[t.id](t);
   });
   document.addEventListener('keydown', function (e) {
-    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('[data-job]')) { e.preventDefault(); openJob(e.target.dataset.job); }
+    var t = e.target;
+    if ((e.key === 'Enter' || e.key === ' ') && t.matches && t.matches('[data-step]')) { e.preventDefault(); showStage(t.dataset.step); }
+    if (e.key === 'Enter' && t.id === 's8-name' && !e.isComposing) { e.preventDefault(); createJob($('#s8-create')); }
   });
-  function submitNew(f) {
-    var name = $('#bs-newname').value.trim();
-    if (!name) return notify('案件名が空です。テストするバッチの名前を入れてください。', '作成できませんでした');
-    run(f.querySelector('[type=submit]'), api('POST', API, { name: name, target_kind: 'batch', level: 'system', purpose: '', scope: '' }), '案件を作りました')
-      .then(function (d) { if (d && d.job) { f.hidden = true; $('#bs-newname').value = ''; showStage(1); } });
-  }
   function submitVp(f) {
     var name = f.elements.namedItem('name').value.trim();
     if (!name) return notify('観点が空です。確かめたいことを 1 行で書いてください。', '追加できませんでした');
@@ -517,12 +724,16 @@
       .then(function (d) { if (d && d.job) { state.adding = false; renderPanel(); } });
   }
   document.addEventListener('submit', function (e) {
-    var f = e.target, fn = f.id === 'bs-newform' ? submitNew : f.id === 'bs-vp-addform' ? submitVp : f.classList.contains('bs-oracle') ? submitOracle : null;
+    var f = e.target, fn = f.id === 'bs-vp-addform' ? submitVp : f.classList.contains('bs-oracle') ? submitOracle : null;
     if (fn) { e.preventDefault(); fn(f); }
+  });
+  document.addEventListener('input', function (e) {
+    if (e.target.id === 's8-q') { flt[4].q = e.target.value; flt[4].shown = PAGE; renderPanel(); }
+    if (e.target.id === 's8-cat-q') renderCatalog();
   });
   document.addEventListener('change', function (e) {
     var t = e.target;
-    if (!state.job || t.closest('#bs-vp-addform')) return;
+    if (!state.job || t.closest('#bs-vp-addform') || t.id === 's8-q') return;
     if (t.dataset.flt) return onFilter(t);
     if (t.id === 'bs-file') { upload(t.files); t.value = ''; return; }
     if (t.dataset.f === 'kind' && t.dataset.file) return run(null, api('PATCH', jobPath('/files/' + encodeURIComponent(t.dataset.file)), { kind: t.value }), '資料の種類を変えました');
@@ -533,8 +744,7 @@
   ['dragenter', 'dragover'].forEach(function (n) { drop.addEventListener(n, function (e) { e.preventDefault(); drop.classList.add('over'); }); });
   ['dragleave', 'drop'].forEach(function (n) { drop.addEventListener(n, function (e) { e.preventDefault(); drop.classList.remove('over'); }); });
   drop.addEventListener('drop', function (e) { upload(e.dataTransfer.files); });
-  $('#bs-q').addEventListener('input', renderJobs);
-  window.addEventListener('hashchange', function () { var m = /^#s([1-8])$/.exec(location.hash); if (m && state.job) showStage(m[1]); });
+  window.addEventListener('hashchange', route);
 
   /* 段階 6〜8 の担当（backend-test-run.js）が使う共通の入口。role は setJob のたびに更新する文字列 */
   Object.assign(NS, {
@@ -551,6 +761,12 @@
       .then(function (d) { var u = (d && d.user) || {}; state.me = u.username || u.email || u.id || ''; })
       .catch(function (e) { console.warn('BackendTest: 利用者情報を取得できませんでした', e); });
   }
-  var jid = new URLSearchParams(location.search).get('job'), hm = /^#s([1-8])$/.exec(location.hash);
-  loadJobs().then(function () { if (jid) return openJob(jid, hm && hm[1]); renderAll(); });
+  /* 見本の見出し行: 題名の横にチップ、右に書き出し・実行する（共通の上部バーに差し込む） */
+  (function () {
+    var h1 = $('#topbar-title'), row = document.createElement('div');
+    row.className = 's8-title-row'; h1.parentNode.insertBefore(row, h1); row.appendChild(h1); row.appendChild($('#s8-chips'));
+    var slot = $('#topbar-actions'); if (slot) slot.appendChild($('#s8-head-actions'));
+  })();
+  setView('home');
+  loadJobs().then(route); loadSummary();
 })();

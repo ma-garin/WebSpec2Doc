@@ -321,7 +321,7 @@ def _eval_compare(oracle: Mapping, observed: Mapping, ref_key: str, rule: str, w
     """別経路 SQL・ゴールデン: 期待側の行と対象の出力を突合キー・許容差で比べる。"""
     if ref_key not in observed or "actual" not in observed:
         return _result(UNDETERMINED, rule, "%sか対象の出力がありません。実行し直してください。" % what)
-    if not oracle.get("key"):
+    if not oracle.get("key") and rule != "alt_sql":  # 別経路は変わった行だけを比べるので、キーが無ければ全列で比べる
         return _result(UNDETERMINED, rule, "突合キーが設定されていません。突合キーを選んでください。")
     d = _run_diff(oracle, observed[ref_key] or [], observed["actual"] or [],
                   _aggregate_cols(oracle, observed))

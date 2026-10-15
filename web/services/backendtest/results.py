@@ -88,6 +88,10 @@ def _observed(jid: str, case: dict, row: dict) -> dict:
         observed.update(before=before, after=after)
     if after is not None:
         observed["actual"] = after
+    alt = _read_json(directory / "alt_sql.json") if cfg.get("method") == "alt_sql" else None
+    if isinstance(alt, dict):  # 別経路: この起動で変わった行だけを出力側にする（削除は件数だけ）
+        observed.update(expected=list(alt.get("expected") or []), actual=list(alt.get("changed") or []),
+                        alt_sql={**(alt.get("counts") or {}), "removed": alt.get("removed_count", 0)})
     golden_file = Path(str((cfg.get("golden") or {}).get("file") or "")).name
     if golden_file:
         rows = _read_json(root / "code" / "golden" / golden_file)
@@ -125,7 +129,7 @@ def _record(jid: str, rid: str, row: dict, case: dict, ok: list[int] = (0,)) -> 
             "fact": {"rc": (bad or rcs or [None])[-1 if not bad else 0], "rcs": rcs, "outcome": facts.get("outcome"),
                      "stderr_tail": tail, "diff_summary": _diff_summary(directory),
                      "business_date": facts.get("business_date"),
-                     "diff": facts.get("evidence") or "", "observed": counts,
+                     "diff": facts.get("evidence") or "", "observed": counts, "alt_sql": observed.get("alt_sql"),
                      "duration": facts.get("duration"), "message": facts.get("message") or ""},
             "auto": {"verdict": auto["verdict"], "rule": auto.get("rule"), "reason": auto.get("reason")},
             "cause": f"対象が異常終了しました（終了コード {bad[0]}）" if bad and state == "fail" else facts.get("reason") or ""}

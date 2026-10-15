@@ -17,6 +17,11 @@ _BASE_YEAR = 2026
 _DATE_WORDS = ("date", "time", "日付", "日時", "年月")
 _UNCONFIRMED = "期待値は未確定です。シニア QA が確定するまで合格に数えません"
 _NO_KEY = "突合キーが決まっていません。対象の読み取りで主キーを確かめてください"
+# 本文に事実を持たない観点を、分類ごとの語で業務規則・入出力・終了コードの事実へ結び付ける（#9）
+_LINK_WORDS = {"A-1": ("再実行", "冪等", "リスタート", "二重"), "A-2": ("異常終了", "エラー", "リトライ", "ロールバック"),
+               "A-3": ("多重", "排他", "並列", "同時"), "A-4": ("業務日付",), "A-5": ("件数", "必須", "null", "空"),
+               "A-6": ("出力", "入力"), "A-7": ("出力", "件数", "集計"), "A-8": ("終了コード", "リターンコード", "ログ")}
+_LINK_KINDS = ("rule", "formula", "date_rule", "io", "rc")
 
 
 def _v(variant, pre, steps, expected, summary, kind=None, facts=()):
@@ -237,9 +242,9 @@ def _aggregate(vp, facts):
     rules = [f for f in facts if f.get("kind") in ("rule", "formula")]
     rules = rules or [{"id": None, "subject": "出力の集計値", "value": ""}]
     return [_human(f"集計:{f['subject']}", "集計の元になる入力を用意する",
-                   ["ジョブを実行する", f"{f['subject']} を別の SQL で計算して出力と突き合わせる"],
+                   ["ジョブを実行する", f"この実行で変わった行の {f['subject']} を、別の SQL で計算した値と比べる"],
                    f"{f['subject']} が仕様の規則どおりの値になる",
-                   f"{f['subject']}を別の計算で求め、出力と一致するかを確かめます（計算式は人が承認します）。",
+                   f"この実行で変わった行の{f['subject']}を、別の計算で求めた値と比べます（前の実行で残った行は比べません。計算式は人が承認します）。",
                    [f["id"]] if f.get("id") else [])
             for f in rules]
 
@@ -312,8 +317,29 @@ def build(viewpoints, facts, level):
         if vp.get("decision") not in USED:
             continue
         bodies = _specific(vp, usable, lv) or _generic(vp)
-        out.extend(_case(vp, b, lv, ctx) for b in bodies)
-    return renumber(out)
+        linked = _link(vp, usable)
+        out.extend({**c, "req_ids": c["req_ids"] or linked} for c in (_case(vp, b, lv, ctx) for b in bodies))
+    return renumber(_dedupe(out))
+
+
+def _link(vp, facts):
+    words = _LINK_WORDS.get(str(vp.get("cat") or vp.get("id") or "")[:3], ())
+    return [f["id"] for f in facts
+            if f.get("id") and f.get("kind") in _LINK_KINDS and any(w in _text(f) for w in words)]
+
+
+def _dedupe(cases):
+    """同じ観点で中身が同じケースは 1 件にまとめ、根拠の事実 ID を合わせる（#8）。"""
+    out, seen = [], {}
+    for c in cases:
+        key = (c["viewpoint"], c["variant"], c.get("check")) + _content(c)
+        if key not in seen:
+            seen[key] = len(out)
+            out.append(c)
+            continue
+        kept = out[seen[key]]
+        out[seen[key]] = {**kept, "req_ids": kept["req_ids"] + [r for r in c["req_ids"] if r not in kept["req_ids"]]}
+    return out
 
 
 def renumber(cases):

@@ -289,12 +289,14 @@ def _case(vp, body, level, ctx):
     warnings = [] if kind else [_UNCONFIRMED]
     if method == "db_diff" and not ctx["key"]:
         warnings.append(_NO_KEY)
-    oracle = {"method": method, "state": "auto" if kind else "unconfirmed", "tables": list(ctx["tables"]),
+    # 突合キーの無い前後比較は自動確定しない（冪等性は行全体の個数で比べられるので例外）
+    auto = bool(kind) and (method != "db_diff" or bool(ctx["key"]) or kind == "rerun")
+    oracle = {"method": method, "state": "auto" if auto else "unconfirmed", "tables": list(ctx["tables"]),
               "key": list(ctx["key"]), "exclude": [], "tolerance": {}, "mask": list(ctx["mask"]),
               "count_formula": None, "alt_sql": None, "alt_sql_ja": "", "golden": None,
               "confirmed_by": None, "warnings": warnings}
     return {"id": "", "viewpoint": vp["id"], "variant": body["variant"], "technique": vp.get("technique", ""),
-            "level": level, "req_ids": [i for i in body["facts"] if i], "pre": body["pre"],
+            "level": level, "check": kind, "req_ids": [i for i in body["facts"] if i], "pre": body["pre"],
             "steps": body["steps"], "expected": body["expected"], "oracle": oracle,
             "basis": f"観点 {vp['id']}「{vp.get('name', '')}」 {vp.get('basis', '')}".strip(),
             "summary_ja": body["summary"], "origin": "generated", "history": []}

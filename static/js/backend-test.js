@@ -18,12 +18,13 @@
   var ORACLE_ST = { auto: ['機械が判定', 'p-pass'], human: ['人が確定', 'p-fixed'], unconfirmed: ['確定待ち', 'p-flaky'] };
   var TECHS = ['同値分割法（5.2.1）', '分類木法（5.2.2）', '境界値分析（5.2.3）', '構文テスト（5.2.4）', '組合せテスト（5.2.5）', 'デシジョンテーブルテスト（5.2.6）',
     '原因結果グラフ（5.2.7）', '状態遷移テスト（5.2.8）', 'シナリオテスト（5.2.9）', 'ランダムテスト（5.2.10）', 'メタモルフィックテスト（5.2.11）', '要件ベーステスト（5.2.12）', '技法なし（経験ベース）'];
-  var PRIORITY = { high: '優先度 高', medium: '優先度 中', low: '優先度 低' };
+  /* 優先度は案件の値の種類（MoSCoW か 高中低）に合わせて選択肢を出す */
+  var PRI_SETS = [{ Must: '必須', Should: '推奨', Could: '余力があれば', "Won't": '今回は見送り' }, { high: '高', medium: '中', low: '低' }];
   var KIND_LABEL = { table: 'テーブル', column: '列', constraint: '制約', jobarg: 'ジョブの引数', io: '入出力', rc: '終了コード', commit: 'コミット', rule: '業務ルール', formula: '計算式', date_rule: '日付の規則' };
   var REASON_NEEDED = { excluded: 1, discarded: 1 };
   var RANK = { qa: 1, senior_qa: 2 };
   var LOCK = '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
-  var state = { jobs: [], job: null, stage: 1, me: '', adding: false, oracleFor: '' };
+  var state = { jobs: [], job: null, stage: 1, me: '', role: '', meAsked: false, adding: false, oracleFor: '' };
   var renderers = {};
 
   /* ---- 共通 ---- */
@@ -64,7 +65,7 @@
   function busy(el, on) { if (el) { el.classList.toggle('bs-busy', on); if ('disabled' in el) el.disabled = on; } }
   function run(el, p, okMsg) {
     notify(''); busy(el, true);
-    return p.then(function (d) { if (d && d.job) setJob(d.job); if (okMsg) toast(okMsg); return d; })
+    return p.then(function (d) { if (d && d.my_role) state.role = d.my_role; if (d && d.job) setJob(d.job); if (okMsg) toast(okMsg); return d; })
       .catch(function (e) { notify(e); }).then(function (d) { busy(el, false); return d; });
   }
   function jobPath(suffix) { return API + '/' + encodeURIComponent(state.job.id) + (suffix || ''); }
@@ -83,12 +84,71 @@
     var tr = document.createElement('tr'), td = document.createElement('td');
     td.colSpan = cols; td.className = 'bs-none'; td.textContent = msg; tr.appendChild(td); tbody.innerHTML = ''; tbody.appendChild(tr);
   }
+  /* KPI は System 01 と同じ部品（アイコン・見出し・数・補足）。k = [数, 見出し, 'ok'|'wa'|'ng'|'', 補足, アイコン名] */
+  var ICONS = {
+    file: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/>',
+    check: '<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
+    help: '<circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.2 2.4c-.6.2-.8.7-.8 1.4"/><path d="M12 16.6h.01"/>',
+    warn: '<path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>',
+    list: '<path d="M4 6h16M4 12h16M4 18h10"/>',
+    cpu: '<rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/>',
+    user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    pass: '<circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/>',
+    fail: '<circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/>',
+    minus: '<circle cx="12" cy="12" r="9"/><path d="M8 12h8"/>',
+    flag: '<path d="M5 21V4h11l-2 4 2 4H5"/>',
+    eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>'
+  };
   function kpis(el, list) {
     el.innerHTML = '';
     list.forEach(function (k) {
-      var d = document.createElement('div'), b = document.createElement('b'), s = document.createElement('span');
-      d.className = 'kpi' + (k[2] ? ' ' + k[2] : ''); b.textContent = k[0]; s.textContent = k[1]; d.appendChild(b); d.appendChild(s); el.appendChild(d);
+      var d = document.createElement('div'), tone = k[2] === 'ok' ? ' is-ok' : k[2] ? ' is-warn' : '';
+      d.className = 'stat-card';
+      d.innerHTML = '<div class="stat-card-head"><span class="stat-card-icon' + tone + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+        + (ICONS[k[4]] || ICONS.list) + '</svg></span><span class="stat-card-label"></span></div><div class="stat-card-num"></div><div class="stat-card-sub"></div>';
+      $('.stat-card-label', d).textContent = k[1]; $('.stat-card-num', d).textContent = k[0]; $('.stat-card-sub', d).textContent = k[3] || '';
+      el.appendChild(d);
     });
+  }
+  /* 根拠の内部表記（調査の番号・[S1] などの出典番号）は画面に出さない。古い案件の観点は分類名で示す */
+  function cleanBasis(v, cat) {
+    var s = text(v).replace(/^根拠[:：]\s*/, '');
+    if (!/調査\s*\d|\[S\d+b?\]/.test(s)) return s;
+    if (cat) return '実務観点: ' + cat;
+    return s.replace(/調査\s*\d+\s*[\d.]*\s*/g, '').replace(/\[S\d+b?\]/g, '').replace(/[（(][^）)]*[）)]/g, '').replace(/\s*根拠[:：]\s*$/, '').trim() || '実務観点';
+  }
+  /* ---- 表の絞り込みとページ分け（状態は画面内だけに持つ。50 件ごと） ---- */
+  var PAGE = 50, DEC_LABEL = { emit: '出す', adopted: '採用', edited: '修正して採用', excluded: '対象外', discarded: '破棄' }, flt;
+  function resetFlt() { flt = { 3: { cat: '', pri: '', dec: '', page: 0 }, 4: { cat: '', method: '', st: '', page: 0 } }; }
+  resetFlt();
+  function priLabel(p) { var set = PRI_SETS.filter(function (x) { return p in x; })[0]; return set ? set[p] : p; }
+  function fillFilter(n, key, opts, all) {
+    var s = $('#bs-stage-' + n + ' [data-flt="' + key + '"]'), cur = flt[n][key];
+    s.innerHTML = ''; s.appendChild(new Option(all, ''));
+    Object.keys(opts).forEach(function (v) { s.appendChild(new Option(opts[v], v)); });
+    if (!Object.prototype.hasOwnProperty.call(opts, cur)) flt[n][key] = cur = '';
+    s.value = cur;
+  }
+  function table(n, all, rows, body, cols, emptyAll, emptyFlt) {
+    var f = flt[n], panel = $('#bs-stage-' + n), pg = $('.bs-pager', panel), bar = $('.bs-filter', panel);
+    var pages = Math.max(1, Math.ceil(rows.length / PAGE)), active = Object.keys(f).some(function (k) { return k !== 'page' && f[k]; });
+    if (f.page >= pages) f.page = pages - 1;
+    if (f.page < 0) f.page = 0;
+    var start = f.page * PAGE, part = rows.slice(start, start + PAGE);
+    bar.hidden = !all; pg.hidden = !all; $('[data-act="flt-clear"]', bar).disabled = !active;
+    $('[data-pg="count"]', pg).textContent = rows.length ? (start + 1) + '–' + (start + part.length) + ' / ' + rows.length + ' 件' + (active ? '（全 ' + all + ' 件から絞り込み）' : '') : '0 / ' + all + ' 件';
+    $('[data-act="pg-prev"]', pg).disabled = f.page <= 0; $('[data-act="pg-next"]', pg).disabled = f.page >= pages - 1;
+    if (!all) noneRow(body, cols, emptyAll); else if (!rows.length) noneRow(body, cols, emptyFlt); else body.innerHTML = '';
+    return part;
+  }
+  function onFilter(t) { var n = +t.closest('.bs-panel').dataset.stage; flt[n][t.dataset.flt] = t.value; flt[n].page = 0; renderPanel(); }
+  function pageAct(t, act) {
+    var n = +t.closest('.bs-panel').dataset.stage, f = flt[n];
+    if (act === 'flt-clear') Object.keys(f).forEach(function (k) { f[k] = k === 'page' ? 0 : ''; }); else f.page += act === 'pg-next' ? 1 : -1;
+    renderPanel();
+    var c = $('#bs-content'), card = $('#bs-stage-' + n + ' .bs-filter'), bar = $('#bs-approve');
+    if (act !== 'flt-clear' && c && card) c.scrollTop += card.getBoundingClientRect().top - c.getBoundingClientRect().top - (bar ? bar.offsetHeight : 0) - 24;
   }
   function li(head, body, foot) {
     var el = document.createElement('li');
@@ -113,7 +173,7 @@
   /* ---- 案件と権限 ---- */
   function stageOf(job, n) { return (job && job.stages && job.stages[n]) || { status: 'draft', version: 0 }; }
   function currentStage(job) { for (var n = 1; n <= 8; n++) { if (stageOf(job, n).status !== 'approved') return n; } return 8; }
-  function myRole() { var j = state.job || {}; return j.my_role || (j.members || {})[state.me] || ''; }
+  function myRole() { var j = state.job || {}; return j.my_role || state.role || (j.members || {})[state.me] || ''; }
   function required(n) { return ((state.job || {}).approver_roles || {})[n] || (n === 4 || n === 8 ? 'senior_qa' : 'qa'); }
   function isSenior() { return myRole() === 'senior_qa'; }
   function loadJobs() { return api('GET', API).then(function (d) { state.jobs = d.jobs || []; renderJobs(); }).catch(notify); }
@@ -140,7 +200,11 @@
   function openJob(id, stage) {
     notify('');
     return api('GET', API + '/' + encodeURIComponent(id)).then(function (d) {
+      if (!state.job || state.job.id !== d.job.id) resetFlt();
+      state.role = d.my_role || '';
       state.stage = +(stage || currentStage(d.job)); setJob(d.job); showStage(state.stage);
+      /* 役割が応答に無いとき（古いサーバ）だけ利用者名を問い合わせて members と突き合わせる */
+      if (!d.my_role && !state.meAsked) { state.meAsked = true; loadMe().then(function () { if (state.job) renderAll(); }); }
     }).catch(notify);
   }
   /* 案件を読み込む・更新するたびに通る。段階 6〜8 の担当へも同じ案件を渡す */
@@ -185,9 +249,17 @@
     $('#bs-approve-desc').textContent = st.stale ? '前の段階が変わりました。内容を確かめてから承認し直してください。'
       : n === 1 && st.status === 'draft' ? '目的と範囲を選んだら承認してください。' : DESC[st.status] || DESC.draft;
     $('#bs-approve-version').textContent = st.version || '-'; $('#bs-approve-open').textContent = open;
-    $('#bs-approve-btn').disabled = !allowed || !ready; lock.hidden = allowed;
-    lock.textContent = mine ? 'この段階の承認はシニア QA が行います。気づいたことは理由を書いて差し戻せます。'
-      : 'この案件のメンバーではないため承認できません。承認が必要なら案件の作成者に依頼してください。';
+    var next = st.status === 'approved' && n < 8, btn = $('#bs-approve-btn');
+    btn.textContent = next ? '次の段階へ' : '承認して次へ';
+    btn.disabled = next ? false : (!allowed || !ready);
+    lock.hidden = next || (allowed && ready);
+    lock.textContent = !allowed ? (mine ? 'この段階の承認はシニア QA が行います。気づいたことは理由を書いて差し戻せます。'
+      : 'この案件のメンバーではないため承認できません。承認が必要なら案件の作成者に依頼してください。')
+      : st.status === 'rejected' ? '差し戻し中のため承認できません。内容を直して作り直すと承認できます。'
+      : st.status === 'approved' ? 'すべての段階を承認しました。報告書は下の「書き出し」から取り出せます。'
+      : n === 7 ? 'まだ実行していないため承認できません。下の「実行する」で実行が終わると承認できます。'
+      : 'まだ内容がないため承認できません。下の「作る」ボタンで内容を作ると承認できます。';
+    bar.classList.toggle('locked', !allowed && !next);
     $('#bs-reject').disabled = !canReject; $('#bs-reject-reason').disabled = !canReject;
     $('#bs-revert').hidden = !((st.version || 0) >= 2);
   }
@@ -256,12 +328,12 @@
         file: s.file || '根拠の資料なし', line: s.line ? s.line + ' 行目' : '', quote: s.text || '' }));
     });
     $('#bs-facts-none').hidden = facts.length > 0;
-    fillList('#bs-questions', qs, function (q) { return li('確認したいこと', text(q.text), where(q.source)); }, '確認したいことはありません。');
+    fillList('#bs-questions', qs, function (q) { return li(q.id || '', text(q.text), where(q.source)); }, '確認したいことはありません。');
     fillList('#bs-unread', un, function (u) {
       return typeof u === 'string' ? li('', u) : li('', text(u.reason || u.text || u.file), where(u.source || u));
     }, '読めなかった資料はありません。');
-    kpis($('#bs-facts-kpis'), [[files.length, '資料'], [facts.length, '読み取った事実', facts.length ? 'ok' : ''],
-      [qs.length, '確認したいこと', qs.length ? 'wa' : ''], [un.length, '読めなかった文', un.length ? 'wa' : '']]);
+    kpis($('#bs-facts-kpis'), [[files.length, '資料', '', '取り込んだファイル', 'file'], [facts.length, '読み取った事実', facts.length ? 'ok' : '', '根拠の行が付いた事実', 'check'],
+      [qs.length, '確認したいこと', qs.length ? 'wa' : '', '業務の担当者に確かめること', 'help'], [un.length, '読めなかった文', un.length ? 'wa' : '', '取り込めなかった資料・文', 'warn']]);
   };
   function upload(files) {
     if (!files || !files.length || !state.job) return;
@@ -284,16 +356,22 @@
     var emit = vps.filter(function (v) { return !REASON_NEEDED[v.decision]; }).length;
     $('#bs-vp-count').textContent = vps.length ? vps.length + ' 件（出す ' + emit + '・対象外と破棄 ' + (vps.length - emit) + '）' : '';
     add.disabled = !senior || !edit; add.title = !senior ? '観点の追加はシニア QA が行います' : !edit ? '承認待ちの段階でだけ追加できます' : '';
-    if (!vps.length) noneRow(body, 6, 'まだ観点がありません。前の段階を承認してから「観点を作る」を押してください。'); else body.innerHTML = '';
-    vps.forEach(function (v) { body.appendChild(vpRow(v, edit)); });
+    var f = flt[3], cats = {}, pris = {}, decs = {};
+    vps.forEach(function (v) { var k = v.cat_name || v.cat; if (k) cats[k] = k; if (v.priority) pris[v.priority] = priLabel(v.priority); if (v.decision) decs[v.decision] = DEC_LABEL[v.decision] || v.decision; });
+    fillFilter(3, 'cat', cats, 'すべてのカテゴリ'); fillFilter(3, 'pri', pris, 'すべての優先度'); fillFilter(3, 'dec', decs, 'すべての扱い');
+    var rows = vps.filter(function (v) { return (!f.cat || (v.cat_name || v.cat) === f.cat) && (!f.pri || v.priority === f.pri) && (!f.dec || v.decision === f.dec); });
+    table(3, vps.length, rows, body, 7, 'まだ観点がありません。前の段階を承認してから「観点を作る」を押してください。', '条件に合う観点はありません。「絞り込みを解除」を押すと全件に戻ります。')
+      .forEach(function (v) { body.appendChild(vpRow(v, edit)); });
     if (state.adding) body.insertBefore(addRow(), body.firstChild);
   };
   function vpRow(v, edit) {
-    var tr = fill('bs-tpl-viewpoint', { id: v.id, name: v.name, basis: v.basis }), tech = $('[data-f="technique"]', tr);
+    var tr = fill('bs-tpl-viewpoint', { id: v.id, name: v.name, basis: cleanBasis(v.basis, v.cat_name) }), tech = $('[data-f="technique"]', tr);
     var dec = $('[data-f="decision"]', tr), rs = $('[data-f="reason"]', tr);
     tr.dataset.vp = v.id; tech.textContent = '';
     tech.appendChild(select(TECHS.indexOf(v.technique) >= 0 ? TECHS : [v.technique || ''].concat(TECHS), v.technique || '', 'technique', '技法', !edit));
-    $('[data-f="name"]', tr).appendChild(select(Object.keys(PRIORITY), v.priority || 'medium', 'priority', '優先度', !edit, PRIORITY));
+    var set = PRI_SETS.filter(function (s) { return v.priority in s; })[0] || PRI_SETS[0], keys = Object.keys(set), labels = Object.assign({ '': '未設定' }, set);
+    if (!v.priority) keys = [''].concat(keys); else if (!(v.priority in labels)) { keys = [v.priority].concat(keys); labels[v.priority] = v.priority; }
+    $('[data-f="priority"]', tr).appendChild(select(keys, v.priority || '', 'priority', '優先度', !edit, labels));
     dec.value = v.decision; dec.disabled = !edit; rs.value = v.reason || ''; rs.disabled = !edit;
     $('[data-f="unverified"]', tr).hidden = !v.unverified;
     return tr;
@@ -302,7 +380,7 @@
     var tr = document.createElement('tr'), td = document.createElement('td'), f = document.createElement('form');
     var mk = function (name, ph) { var i = document.createElement('input'); i.name = name; i.maxLength = 200; i.placeholder = ph; i.setAttribute('aria-label', ph); return i; };
     var bt = function (type, cls, label, act) { var b = document.createElement('button'); b.type = type; b.className = cls; b.textContent = label; if (act) b.dataset.act = act; return b; };
-    td.colSpan = 6; f.id = 'bs-vp-addform'; f.className = 'bs-row';
+    td.colSpan = 7; f.id = 'bs-vp-addform'; f.className = 'bs-row';
     [mk('name', '観点（例: 締め日が月末の土日にあたる）'), select(TECHS, TECHS[2], 'technique', '技法'), mk('basis', '根拠（例: 仕様書 3.2 締め日の規則）'),
       bt('submit', 'btn sm pri', '追加する'), bt('button', 'btn sm ghost', 'やめる', 'vp-add-cancel')].forEach(function (el) { f.appendChild(el); });
     td.appendChild(f); tr.appendChild(td); return tr;
@@ -319,7 +397,7 @@
   /* ---- 段階 4 ケース表 ---- */
   function summary(j, c) {
     var o = c.oracle || {}, sums = (j.code && j.code.summaries) || {};
-    if (c.summary || sums[c.id]) return c.summary || sums[c.id];
+    if (c.summary || c.summary_ja || sums[c.id]) return c.summary || c.summary_ja || sums[c.id];
     return (c.pre ? '「' + text(c.pre) + '」の状態で、' : '') + ((c.steps || []).length ? c.steps.length + ' つの手順を行い、' : '')
       + '期待値を「' + (METHODS[o.method] || '未設定の方法') + '」で確かめます。' + (o.alt_sql_ja ? '別の計算: ' + o.alt_sql_ja : '');
   }
@@ -332,29 +410,40 @@
     td.colSpan = 8; td.appendChild(f); tr.appendChild(td); return tr;
   }
   renderers[4] = function (j) {
-    var cases = j.cases || [], senior = isSenior(), body = $('#bs-cases'), cnt = { auto: 0, human: 0, unconfirmed: 0 };
-    if (!cases.length) noneRow(body, 8, 'まだケースがありません。観点表を承認してから「ケースを作る」を押してください。'); else body.innerHTML = '';
-    cases.forEach(function (c) {
-      var o = c.oracle || {}, sk = ORACLE_ST[o.state] ? o.state : 'unconfirmed';
-      var tr = fill('bs-tpl-case', { id: c.id, viewpoint: c.viewpoint, pre: c.pre, expected: c.expected, method: METHODS[o.method] || '未設定', summary: summary(j, c) });
-      var ol = $('[data-f="steps"]', tr), sql = $('[data-f="sql"]', tr), pill = $('[data-f="state"]', tr), b = $('[data-act="oracle"]', tr);
-      cnt[sk]++; tr.dataset.case = c.id;
-      (c.steps || []).forEach(function (s) { ol.appendChild(li('', text(s))); });
-      sql.textContent = o.alt_sql || ''; sql.hidden = !o.alt_sql;
-      pill.textContent = ORACLE_ST[sk][0]; pill.className = 'pill ' + ORACLE_ST[sk][1];
-      b.hidden = !senior || sk !== 'unconfirmed'; b.dataset.case = c.id;
-      body.appendChild(tr);
-      if (state.oracleFor === c.id) body.appendChild(oracleRow(c));
-    });
-    kpis($('#bs-case-kpis'), [[cases.length, 'ケース'], [cnt.auto, '機械が判定', cnt.auto ? 'ok' : ''], [cnt.human, '人が確定'],
-      [cnt.unconfirmed, senior ? '確定待ち' : '確定待ち（シニア QA が確定）', cnt.unconfirmed ? 'wa' : '']]);
+    var cases = j.cases || [], senior = isSenior(), body = $('#bs-cases'), cnt = { auto: 0, human: 0, unconfirmed: 0 }, f = flt[4];
+    var vmap = {}, cats = {}, meths = {}, sts = {};
+    (j.viewpoints || []).forEach(function (v) { vmap[v.id] = v; });
+    var stOf = function (c) { var s = (c.oracle || {}).state; return ORACLE_ST[s] ? s : 'unconfirmed'; };
+    var catOf = function (c) { var v = vmap[c.viewpoint]; return v ? (v.cat_name || v.cat || '') : ''; };
+    cases.forEach(function (c) { var m = (c.oracle || {}).method, k = catOf(c), s = stOf(c); cnt[s]++;
+      if (k) cats[k] = k; if (m) meths[m] = METHODS[m] || m; sts[s] = ORACLE_ST[s][0]; });
+    fillFilter(4, 'cat', cats, 'すべてのカテゴリ'); fillFilter(4, 'method', meths, 'すべての確かめ方'); fillFilter(4, 'st', sts, 'すべての確定状態');
+    var rows = cases.filter(function (c) { return (!f.cat || catOf(c) === f.cat) && (!f.method || (c.oracle || {}).method === f.method) && (!f.st || stOf(c) === f.st); });
+    table(4, cases.length, rows, body, 8, 'まだケースがありません。観点表を承認してから「ケースを作る」を押してください。', '条件に合うケースはありません。「絞り込みを解除」を押すと全件に戻ります。')
+      .forEach(function (c) {
+        var o = c.oracle || {}, sk = stOf(c);
+        var tr = fill('bs-tpl-case', { id: c.id, viewpoint: c.viewpoint, pre: c.pre, expected: c.expected, method: METHODS[o.method] || '未設定', summary: summary(j, c) });
+        var ol = $('[data-f="steps"]', tr), sql = $('[data-f="sql"]', tr), pill = $('[data-f="state"]', tr), b = $('[data-act="oracle"]', tr);
+        tr.dataset.case = c.id;
+        (c.steps || []).forEach(function (s) { ol.appendChild(li('', text(s))); });
+        sql.textContent = o.alt_sql || ''; sql.hidden = !o.alt_sql;
+        pill.textContent = ORACLE_ST[sk][0]; pill.className = 'pill ' + ORACLE_ST[sk][1];
+        b.hidden = !senior || sk !== 'unconfirmed'; b.dataset.case = c.id;
+        body.appendChild(tr);
+        if (state.oracleFor === c.id) body.appendChild(oracleRow(c));
+      });
+    kpis($('#bs-case-kpis'), [[cases.length, 'ケース', '', '観点表から作ったケース', 'list'], [cnt.auto, '機械が判定', cnt.auto ? 'ok' : '', '期待値を機械で確かめる', 'cpu'],
+      [cnt.human, '人が確定', '', 'シニア QA が確定した期待値', 'user'],
+      [cnt.unconfirmed, '確定待ち', cnt.unconfirmed ? 'wa' : '', senior ? 'あなたの確定を待っています' : 'シニア QA が確定します', 'clock']]);
   };
   function submitOracle(f) {
     var E = function (n) { return f.elements.namedItem(n); };
     var split = function (s) { return s.split(/[,、]/).map(function (x) { return x.trim(); }).filter(Boolean); };
     var method = E('method').value, key = split(E('key').value);
     if (method === 'db_diff' && !key.length) { notify('行を突き合わせる列が空です。例のように列名をカンマで区切って入れてください。', '確定できませんでした'); E('key').focus(); return; }
-    var body = { method: method, config: { key: key, exclude: split(E('exclude').value), tolerance: E('tolerance').value.trim() }, confirm: true };
+    var tol = E('tolerance').value.trim().replace(/[，,]/g, ''), body = { method: method, config: { key: key, exclude: split(E('exclude').value) }, confirm: true };
+    if (tol && !isFinite(Number(tol))) { notify('許す差は数で入れてください（例: 1）。数を直してもう一度「確定する」を押してください。', '確定できませんでした'); E('tolerance').focus(); return; }
+    if (tol) body.tolerance = Number(tol);
     run(f.querySelector('[type=submit]'), api('PATCH', jobPath('/cases/' + encodeURIComponent(f.dataset.case) + '/oracle'), body), '期待値を確定しました')
       .then(function (d) { if (d && d.job) { state.oracleFor = ''; renderPanel(); } });
   }
@@ -366,7 +455,7 @@
     body.innerHTML = '';
     ds.forEach(function (d) {
       body.appendChild(fill('bs-tpl-dataspec', { id: d.id, case: d.case, table: d.table, conditions: d.conditions, rows: d.rows,
-        encoding: d.encoding, mask: (d.mask_cols || []).length ? d.mask_cols : 'なし', basis: d.basis }));
+        encoding: d.encoding, mask: (d.mask_cols || []).length ? d.mask_cols : 'なし', basis: cleanBasis(d.basis) }));
     });
   };
 
@@ -377,6 +466,7 @@
   }
   function approve(btn) {
     var n = state.stage, st = stageOf(state.job, n);
+    if (st.status === 'approved' && n < 8) return showStage(n + 1);
     var first = n === 1 && st.status !== 'generated' ? api('POST', jobPath('/stages/1/generate')) : Promise.resolve({ job: state.job });
     var p = first.then(function (d) { return api('POST', jobPath('/stages/' + n + '/approve'), { version: stageOf(d.job, n).version }); });
     return run(btn, p, '段階 ' + n + ' を承認しました').then(function (d) { if (d && d.job && n < 8) showStage(n + 1); });
@@ -407,6 +497,7 @@
     if (act === 'file-del') return run(t, api('DELETE', jobPath('/files/' + encodeURIComponent(t.dataset.file))), '資料を取り除きました');
     if (act === 'oracle' || act === 'oracle-cancel') { state.oracleFor = act === 'oracle' ? t.dataset.case : ''; return renderPanel(); }
     if (act === 'vp-add-cancel') { state.adding = false; return renderPanel(); }
+    if (act === 'flt-clear' || act === 'pg-prev' || act === 'pg-next') return pageAct(t, act);
     if (CLICK[t.id]) CLICK[t.id](t);
   });
   document.addEventListener('keydown', function (e) {
@@ -432,6 +523,7 @@
   document.addEventListener('change', function (e) {
     var t = e.target;
     if (!state.job || t.closest('#bs-vp-addform')) return;
+    if (t.dataset.flt) return onFilter(t);
     if (t.id === 'bs-file') { upload(t.files); t.value = ''; return; }
     if (t.dataset.f === 'kind' && t.dataset.file) return run(null, api('PATCH', jobPath('/files/' + encodeURIComponent(t.dataset.file)), { kind: t.value }), '資料の種類を変えました');
     if (t.closest('#bs-stage-1')) return changeS1(t);
@@ -446,7 +538,7 @@
 
   /* 段階 6〜8 の担当（backend-test-run.js）が使う共通の入口。role は setJob のたびに更新する文字列 */
   Object.assign(NS, {
-    api: api, run: run, notify: notify, toast: toast, fill: fill, text: text, kpis: kpis, noneRow: noneRow, li: li, fmtTime: fmtTime,
+    cleanBasis: cleanBasis, api: api, run: run, notify: notify, toast: toast, fill: fill, text: text, kpis: kpis, noneRow: noneRow, li: li, fmtTime: fmtTime,
     fmtSize: fmtSize, jobPath: jobPath, stageOf: stageOf, isSenior: isSenior, showStage: showStage, setJob: setJob, generate: generate, role: '',
     job: function () { return state.job; }, stage: function () { return state.stage; },
     refresh: function () { return state.job ? openJob(state.job.id, state.stage) : loadJobs(); },
@@ -460,5 +552,5 @@
       .catch(function (e) { console.warn('BackendTest: 利用者情報を取得できませんでした', e); });
   }
   var jid = new URLSearchParams(location.search).get('job'), hm = /^#s([1-8])$/.exec(location.hash);
-  Promise.all([loadMe(), loadJobs()]).then(function () { if (jid) return openJob(jid, hm && hm[1]); renderAll(); });
+  loadJobs().then(function () { if (jid) return openJob(jid, hm && hm[1]); renderAll(); });
 })();

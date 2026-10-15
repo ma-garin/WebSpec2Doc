@@ -160,7 +160,7 @@
             <tbody id="bs-files"></tbody>
           </table></div>
         </div>
-        <div class="kpis" id="bs-facts-kpis"></div>
+        <div class="stat-cards" id="bs-facts-kpis"></div>
         <div class="bs-card bs-card-flush">
           <div class="bs-card-h"><h3>読み取った事実</h3><span class="bs-mut">どの事実にも根拠の行が付きます。根拠の無い推測は載せません</span></div>
           <div class="bs-tblwrap"><table class="bs-tbl" aria-label="読み取った事実">
@@ -170,7 +170,7 @@
           <p class="bs-none" id="bs-facts-none" hidden>まだ読み取っていません。資料を入れて「読み取る」を押してください。</p>
         </div>
         <div class="bs-grid2">
-          <div class="bs-card"><h3>仕様に記載が無いこと</h3><ul class="bs-list" id="bs-questions"></ul></div>
+          <div class="bs-card"><h3>確認したいこと</h3><p class="bs-hint bs-sub">資料に書かれていないため、業務の担当者に確かめたいことです</p><ul class="bs-list" id="bs-questions"></ul></div>
           <div class="bs-card"><h3>読めなかった資料・文</h3><ul class="bs-list" id="bs-unread"></ul></div>
         </div>
       </section>
@@ -185,23 +185,27 @@
         <div class="bs-card bs-card-flush">
           <div class="bs-card-h"><h3>観点表</h3><span class="bs-mut" id="bs-vp-count"></span><span class="sp"></span>
             <button type="button" class="btn sm" id="bs-vp-add">＋ 観点を追加</button></div>
+          <div class="bs-filter" id="bs-vp-filter" role="group" aria-label="絞り込み"><span class="bs-mut">絞り込み</span><select data-flt="cat" aria-label="観点カテゴリ"></select><select data-flt="pri" aria-label="優先度"></select><select data-flt="dec" aria-label="扱い"></select><button type="button" class="btn sm ghost" data-act="flt-clear">絞り込みを解除</button></div>
           <div class="bs-tblwrap"><table class="bs-tbl" aria-label="観点表">
-            <thead><tr><th>ID</th><th>観点</th><th>技法</th><th>根拠</th><th>扱い</th><th>理由</th></tr></thead>
+            <thead><tr><th>ID</th><th>観点</th><th>優先度</th><th>技法</th><th>根拠</th><th>扱い</th><th>理由</th></tr></thead>
             <tbody id="bs-viewpoints"></tbody>
           </table></div>
+          <div class="bs-pager"><span class="bs-mut" data-pg="count"></span><span class="sp"></span><button type="button" class="btn sm" data-act="pg-prev">前の 50 件</button><button type="button" class="btn sm" data-act="pg-next">次の 50 件</button></div>
         </div>
       </section>
 
       {# 段階 4 ケース表 #}
       <section class="bs-panel" id="bs-stage-4" data-stage="4" hidden>
-        <div class="kpis" id="bs-case-kpis"></div>
+        <div class="stat-cards" id="bs-case-kpis"></div>
         <div class="bs-card bs-card-flush">
           <div class="bs-card-h"><h3>ケース表</h3><span class="bs-mut">期待値は「機械が判定」か「人が確定」のどちらかです。人の確定はシニア QA が行います</span><span class="sp"></span>
             <button type="button" class="btn sm pri" data-act="generate" data-stage="4">ケースを作る</button></div>
+          <div class="bs-filter" id="bs-case-filter" role="group" aria-label="絞り込み"><span class="bs-mut">絞り込み</span><select data-flt="cat" aria-label="観点カテゴリ"></select><select data-flt="method" aria-label="期待値の確かめ方"></select><select data-flt="st" aria-label="確定状態"></select><button type="button" class="btn sm ghost" data-act="flt-clear">絞り込みを解除</button></div>
           <div class="bs-tblwrap"><table class="bs-tbl bs-cases" aria-label="テストケース">
             <thead><tr><th>ID</th><th>観点</th><th>前提データ</th><th>手順</th><th>期待値</th><th>確かめ方</th><th>確定</th><th>日本語の要約</th></tr></thead>
             <tbody id="bs-cases"></tbody>
           </table></div>
+          <div class="bs-pager"><span class="bs-mut" data-pg="count"></span><span class="sp"></span><button type="button" class="btn sm" data-act="pg-prev">前の 50 件</button><button type="button" class="btn sm" data-act="pg-next">次の 50 件</button></div>
         </div>
       </section>
 
@@ -226,7 +230,7 @@
           <div class="bs-tabs fchips" id="bs-code-tabs" role="tablist" aria-label="生成したファイル"></div>
           <div class="bs-codepair">
             <pre class="bs-pre" id="bs-code" tabindex="0" aria-label="テストコード"></pre>
-            <div class="bs-sum" id="bs-code-sum" aria-label="日本語の要約"></div>
+            <aside class="bs-sum" aria-labelledby="bs-code-sum-h"><h4 id="bs-code-sum-h">このコードが何をするか</h4><div class="bs-sumbody" id="bs-code-sum"></div></aside>
           </div>
           <form class="bs-code-edit" id="bs-code-edit" hidden>
             <textarea id="bs-code-text" spellcheck="false" aria-label="テストコードの編集"></textarea>
@@ -272,7 +276,7 @@
 
       {# 段階 8 判定・報告（事実／判断／未検証） #}
       <section class="bs-panel" id="bs-stage-8" data-stage="8" hidden>
-        <div class="kpis" id="bs-result-kpis"></div>
+        <div class="stat-cards" id="bs-result-kpis"></div>
         <div class="bs-split">
           <div class="bs-card"><span class="bs-tag fact">事実 — 実行で確かめたこと</span><ul class="bs-list" id="bs-judge-facts"></ul></div>
           <div class="bs-card"><span class="bs-tag judge">判断 — QA の評価</span><ul class="bs-list" id="bs-judge-human"></ul></div>
@@ -331,9 +335,9 @@
 <template id="bs-tpl-job"><div class="item" role="listitem" tabindex="0"><div class="item-t" data-f="name"></div><div class="item-s"><span data-f="level"></span><span class="bs-itst" data-f="state"></span></div></div></template>
 <template id="bs-tpl-file"><tr><td data-f="name"></td><td><select data-f="kind" aria-label="資料の種類"><option value="ddl">テーブル定義</option><option value="jobdef">ジョブ定義</option><option value="spec">仕様書</option><option value="source">ソース</option><option value="io">入出力のサンプル</option><option value="golden">承認済みの期待値</option><option value="other">その他</option></select></td><td data-f="size"></td><td data-f="redactions"></td><td><button type="button" class="bs-x" data-act="file-del" aria-label="取り除く">×</button></td></tr></template>
 <template id="bs-tpl-fact"><tr><td data-f="id"></td><td data-f="text"></td><td><span class="bs-src"><span data-f="file"></span><small data-f="line"></small></span></td><td><div class="bs-quote" data-f="quote"></div></td></tr></template>
-<template id="bs-tpl-viewpoint"><tr><td data-f="id"></td><td data-f="name"></td><td class="bs-mut" data-f="technique"></td><td data-f="basis"></td><td><select data-f="decision" aria-label="扱い"><option value="emit">出す</option><option value="adopted">採用</option><option value="edited">修正して採用</option><option value="excluded">対象外</option><option value="discarded">破棄</option></select><span class="pill p-flaky" data-f="unverified" hidden>未検証</span></td><td><input data-f="reason" maxlength="200" placeholder="対象外・破棄の理由" aria-label="理由"></td></tr></template>
+<template id="bs-tpl-viewpoint"><tr><td data-f="id"></td><td data-f="name"></td><td data-f="priority"></td><td class="bs-mut" data-f="technique"></td><td data-f="basis"></td><td><select data-f="decision" aria-label="扱い"><option value="emit">出す</option><option value="adopted">採用</option><option value="edited">修正して採用</option><option value="excluded">対象外</option><option value="discarded">破棄</option></select><span class="pill p-flaky" data-f="unverified" hidden>未検証</span></td><td><input data-f="reason" maxlength="200" placeholder="対象外・破棄の理由" aria-label="理由"></td></tr></template>
 <template id="bs-tpl-case"><tr><td data-f="id"></td><td data-f="viewpoint"></td><td data-f="pre"></td><td><ol class="bs-steps" data-f="steps"></ol></td><td data-f="expected"></td><td><span data-f="method"></span><code class="bs-sql" data-f="sql" hidden></code></td><td><span class="pill" data-f="state"></span><button type="button" class="btn sm" data-act="oracle" hidden>確定する</button></td><td class="bs-ja" data-f="summary"></td></tr></template>
-<template id="bs-tpl-oracle"><form class="bs-oracle"><label class="bs-field">確かめ方<select name="method"><option value="db_diff">実行前後のデータを比べる</option><option value="alt_sql">別の計算で求めた値と比べる</option><option value="golden">承認済みの期待値と比べる</option><option value="schema">テーブル定義に合うか確かめる</option></select></label><label class="bs-field">行を突き合わせる列<input name="key" maxlength="200" placeholder="例: 顧客番号, 請求月"></label><label class="bs-field">比べない列<input name="exclude" maxlength="200" placeholder="例: 更新日時"></label><label class="bs-field">許す差<input name="tolerance" maxlength="100" placeholder="例: 請求金額は 1 円まで"></label><p class="bs-hint" data-f="warn"></p><div class="bs-actions"><span class="sp"></span><button type="button" class="btn sm ghost" data-act="oracle-cancel">やめる</button><button type="submit" class="btn sm pri">確定する</button></div></form></template>
+<template id="bs-tpl-oracle"><form class="bs-oracle"><label class="bs-field">確かめ方<select name="method"><option value="db_diff">実行前後のデータを比べる</option><option value="alt_sql">別の計算で求めた値と比べる</option><option value="golden">承認済みの期待値と比べる</option><option value="schema">テーブル定義に合うか確かめる</option></select></label><label class="bs-field">行を突き合わせる列<input name="key" maxlength="200" placeholder="例: 顧客番号, 請求月"></label><label class="bs-field">比べない列<input name="exclude" maxlength="200" placeholder="例: 更新日時"></label><label class="bs-field">許す差<input name="tolerance" maxlength="100" placeholder="例: 1（この差までは同じとみなす）" inputmode="decimal"></label><p class="bs-hint" data-f="warn"></p><div class="bs-actions"><span class="sp"></span><button type="button" class="btn sm ghost" data-act="oracle-cancel">やめる</button><button type="submit" class="btn sm pri">確定する</button></div></form></template>
 <template id="bs-tpl-dataspec"><tr><td data-f="id"></td><td data-f="case"></td><td data-f="table"></td><td data-f="conditions"></td><td data-f="rows"></td><td data-f="encoding"></td><td data-f="mask"></td><td data-f="basis"></td></tr></template>
 <template id="bs-tpl-codetab"><button type="button" class="fchip" role="tab" aria-selected="false" data-f="path"></button></template>
 <template id="bs-tpl-run"><tr><td data-f="id"></td><td data-f="name"></td><td><span class="pill" data-f="state"></span></td><td data-f="time"></td><td data-f="actual"></td></tr></template>

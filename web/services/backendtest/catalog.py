@@ -4,6 +4,8 @@
 技法名は ISO/IEC/IEEE 29119-4 の節番号付き。当てはまる技法が無い観点は「技法なし（経験ベース）」。
 """
 
+import re
+
 # --- 技法名（FR-08-034） ---
 EP = "同値分割（5.2.1）"
 BVA = "境界値分析（5.2.3）"
@@ -151,6 +153,39 @@ _ROWS = {
     ],
 }
 
+# 出典の利用者向けの名前（docs/research/system08/04_QA実務観点.md の出典一覧 [Sn]）。画面には番号でなくこの名前を出す
+SOURCE_NAMES = {
+    "S1": "バッチ処理を作る際の勘所（Zenn）",
+    "S2": "バッチ処理と冪等性（メルペイ）",
+    "S3": "JP1 の再実行仕様",
+    "S4": "Spring Batch のリスタート仕様",
+    "S5": "Stripe API の冪等リクエスト仕様",
+    "S6": "Google Cloud Spanner のデータ検証",
+    "S7": "他システム連携のテストの解説",
+    "S8": "他システム連携テスト項目書の作り方",
+    "S9": "情報処理学会の研究発表（三菱電機）",
+    "S10": "現新比較テストの事例（ベリサーブ）",
+    "S11": "IPA ソフトウェア開発分析データ集",
+    "S12": "冪等キーの解説記事",
+    "S13": "API のページングとレート制限の解説（Cisco DevNet ほか）",
+    "S14": "ISTQB 用語集",
+    "S15": "多重起動防止と排他制御の解説記事",
+    "S16": "電力広域機関のシステム仕様書（結合テスト区分）",
+    "S17": "日付項目のテストチェックリスト",
+    "S18": "TestArchitect の月加算の補正仕様",
+    "S19": "テスト観点の勉強会資料（Zenn）",
+    "S20": "Unicode サロゲートペアの解説",
+}
+
+
+def _basis(cat_name, src):
+    """画面に出す根拠の文。「実務観点: 分類名（出典名 ほか。注記）」。調査の章番号・[Sn] は出さない。"""
+    names = [SOURCE_NAMES[k] for k in ("S" + n for n in re.findall(r"\[S(\d+)b?\]", src)) if k in SOURCE_NAMES]
+    note = re.sub(r"\[S\d+b?\]|\[一般\]", "", src).strip().strip("（）")
+    note = {"項目名のみ": "出典は項目名のみ"}.get(note, note)
+    head = (names[0] + (" ほか" if len(names) > 1 else "")) if names else "実務の一般知識"
+    return f"実務観点: {cat_name}（{head}{'。' + note if note else ''}）"
+
 
 def _levels_of(cat, vid):
     """そのカテゴリ・観点番号が既定で扱われるテストレベルの tuple（LEVEL_DEFAULTS から導出）。"""
@@ -167,7 +202,7 @@ def _levels_of(cat, vid):
 def _make(cat, no, row):
     name, tech, oracle, pri, fr, src, unv, needs, human = row
     vid = f"{cat}-{no:02d}"
-    cat_name, section, kinds = CATEGORIES[cat]
+    cat_name, _section, kinds = CATEGORIES[cat]
     return {
         "id": vid,
         "cat": cat,
@@ -182,7 +217,7 @@ def _make(cat, no, row):
         "levels": _levels_of(cat, vid),
         "kinds": kinds,
         "needs": needs,
-        "basis": f"調査4 {section} {src}",
+        "basis": _basis(cat_name, src),
         "unverified": unv,
     }
 

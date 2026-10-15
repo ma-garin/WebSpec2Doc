@@ -161,8 +161,11 @@
     });
   });
   var form = $('dvgNewForm');
+  var DEFAULT_REVIEW_TYPE = 'informal';
   function createReview(fd) {
-    return DV.api('/api/docverify/inspections', { method: 'POST', json: { name: fd.get('name') || '', goal: fd.get('goal') || '' } }).then(function (r) {
+    // 種別は作成時に必須（FR-06-140）。この画面に選択欄が無ければ既定の種別で作り、計画の画面で変更できる
+    var rtype = fd.get('review_type') || DEFAULT_REVIEW_TYPE;
+    return DV.api('/api/docverify/r4/inspections', { method: 'POST', json: { name: fd.get('name') || '', goal: fd.get('goal') || '', review_type: rtype } }).then(function (r) {
       var iid = r.id || (r.inspection && r.inspection.id);
       var extra = {};
       if (fd.get('checklist_id')) extra.checklist_id = fd.get('checklist_id');

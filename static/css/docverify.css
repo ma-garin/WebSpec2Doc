@@ -1,9 +1,8 @@
-/* ドキュメント検証（System 06）。識別色 #BE185D / #FCE7F3 / #9D174D。見本: docverify-v2（2026-10-06 承認）。
+/* ドキュメント検証（System 06）。識別色 var(--color-primary) / var(--color-primary-light) / var(--color-primary-dark)。見本: docverify-v2（2026-10-06 承認）。
  * ta2.css の html,body{overflow:hidden} の内側で、.dv-content だけを縦スクロールさせる。 */
 .dv-content { overflow-y: auto; min-height: 0; padding: 20px 28px 40px; }
 .dv-grp { padding: 14px 10px 2px; font-size: 11px; font-weight: 800; color: var(--color-text-secondary); letter-spacing: .04em; }
-.dv-grp-review { color: #9D174D; text-transform: none; letter-spacing: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dv-page .app-nav-item.active { background: #FCE7F3; color: #9D174D; font-weight: 700; }
+.dv-grp-review { color: var(--color-primary-dark); text-transform: none; letter-spacing: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dv-n { margin-left: auto; font-size: 11px; border-radius: 999px; padding: 0 7px; background: var(--color-surface-3); }
 .dv-n:empty { display: none; }
 .dv-n.red { background: var(--color-critical-bg); color: var(--color-critical); }
@@ -16,7 +15,7 @@
 .dv-steps span:first-child { border-radius: 8px 0 0 8px; margin-left: 0; }
 .dv-steps span:last-child { border-radius: 0 8px 8px 0; }
 .dv-steps .done { color: #047857; }
-.dv-steps .now { background: #FCE7F3; color: #9D174D; font-weight: 700; border-color: #F9A8D4; position: relative; }
+.dv-steps .now { background: var(--color-primary-light); color: var(--color-primary-dark); font-weight: 700; border-color: var(--color-primary-light); position: relative; }
 
 .dv-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 10px; }
 .dv-card > h3 { margin: 0; padding: 10px 14px; border-bottom: 1px solid var(--color-border); font-size: 13px; display: flex; gap: 8px; align-items: center; }
@@ -30,7 +29,7 @@
 .dv-table th { text-align: left; padding: 8px 12px; color: var(--color-text-secondary); font-weight: 600; border-bottom: 1px solid var(--color-border); background: var(--color-surface-2); white-space: nowrap; }
 .dv-table td { padding: 9px 12px; border-bottom: 1px solid var(--color-divider); vertical-align: top; }
 .dv-table tr.dv-click { cursor: pointer; }
-.dv-table tr.dv-click:hover td { background: #FDF2F8; }
+.dv-table tr.dv-click:hover td { background: var(--color-primary-light); }
 
 .dv-chip { display: inline-block; font-size: 11px; border-radius: 5px; padding: 1px 7px; font-weight: 700; white-space: nowrap; }
 .dv-sev-critical { background: var(--color-critical-bg); color: var(--color-critical); }
@@ -39,16 +38,16 @@
 .dv-st { background: var(--color-surface-3); color: var(--color-text-secondary); font-weight: 600; }
 
 .dv-btn { font: inherit; font-size: 12px; font-weight: 600; border-radius: 7px; padding: 6px 12px; border: 1px solid var(--color-border-strong); background: var(--color-surface); color: var(--color-text); cursor: pointer; }
-.dv-btn:hover { border-color: #9D174D; }
-.dv-btn-primary { background: #BE185D; border-color: #BE185D; color: #fff; }
-.dv-btn-primary:hover { background: #9D174D; }
+.dv-btn:hover { border-color: var(--color-primary-dark); }
+.dv-btn-primary { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+.dv-btn-primary:hover { background: var(--color-primary-dark); }
 .dv-btn:disabled { opacity: .45; cursor: not-allowed; }
 .dv-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .dv-field { display: grid; gap: 4px; font-size: 12px; color: var(--color-text-secondary); }
 .dv-field input, .dv-field select, .dv-field textarea, .dv-input { font: inherit; font-size: 13px; color: var(--color-text); border: 1px solid var(--color-border-strong); border-radius: 7px; padding: 7px 10px; background: var(--color-surface); }
 .dv-tabs { display: flex; gap: 4px; padding: 8px 10px; border-bottom: 1px solid var(--color-border); }
 .dv-tabs button { font: inherit; font-size: 12px; padding: 4px 10px; border-radius: 999px; color: var(--color-text-secondary); background: none; border: 0; cursor: pointer; }
-.dv-tabs button[aria-selected="true"] { background: #FCE7F3; color: #9D174D; font-weight: 700; }
+.dv-tabs button[aria-selected="true"] { background: var(--color-primary-light); color: var(--color-primary-dark); font-weight: 700; }
 
 /* docverify-global（全体・管理画面） */
 .dvg-h{font-size:var(--text-lg);margin:0 0 var(--space-2)}
@@ -84,10 +83,10 @@
 .dvr-wrap .card,.dvr-view .wrap .card{display:flex;flex-direction:column;min-height:0}
 .dvr-wrap .doc{max-height:none;flex:1;min-height:0}
 .dvr-scroll{flex:1;min-height:0;overflow:auto}
-.dvr-view .doc .ln{cursor:pointer}.dvr-view .doc .ln:hover{background:var(--color-surface-2)}.dvr-view .doc .ln.sel{outline:2px solid #BE185D;outline-offset:-2px}
+.dvr-view .doc .ln{cursor:pointer}.dvr-view .doc .ln:hover{background:var(--color-surface-2)}.dvr-view .doc .ln.sel{outline:2px solid var(--color-primary);outline-offset:-2px}
 .dvr-view .tabs button{font:inherit;font-size:12px;padding:4px 10px;border-radius:999px;border:0;background:none;color:var(--color-text-secondary);cursor:pointer}
-.dvr-view .tabs button.on{background:#FCE7F3;color:#9D174D;font-weight:700}
-.dvr-add{padding:8px 14px 10px 78px;background:#FDF2F8;border-bottom:1px solid var(--color-divider);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.dvr-view .tabs button.on{background:var(--color-primary-light);color:var(--color-primary-dark);font-weight:700}
+.dvr-add{padding:8px 14px 10px 78px;background:var(--color-primary-light);border-bottom:1px solid var(--color-divider);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .dvr-add select,.dvr-add input{font:inherit;font-size:12px;padding:4px 6px;border:1px solid var(--color-border-strong);border-radius:6px}
 .dvr-add input[type=text]{flex:1;min-width:220px}
 .dvr-kpi{display:flex;gap:12px;margin-bottom:12px}
@@ -100,7 +99,7 @@
 .dvr-view .steps span:first-child { border-radius: 8px 0 0 8px; margin-left: 0; }
 .dvr-view .steps span:last-child { border-radius: 0 8px 8px 0; }
 .dvr-view .steps .done { color: #047857; }
-.dvr-view .steps .now { background: #FCE7F3; color: #9D174D; font-weight: 700; border-color: #F9A8D4; }
+.dvr-view .steps .now { background: var(--color-primary-light); color: var(--color-primary-dark); font-weight: 700; border-color: var(--color-primary-light); }
 .dvr-view .dvr-head { display: flex; justify-content: space-between; align-items: center; margin: 4px 0 12px; }
 .dvr-view .dvr-title { font-size: 15px; margin: 0; }
 .dvr-view .dvr-head-right { display: flex; gap: 10px; align-items: center; font-size: 12px; color: var(--color-text-secondary); }
@@ -109,11 +108,11 @@
 .dvr-view .card h3 { margin: 0; padding: 10px 14px; border-bottom: 1px solid var(--color-border); font-size: 13px; display: flex; gap: 8px; align-items: center; }
 .dvr-view .doc { padding: 6px 0; font-size: 13px; line-height: 1.85; max-height: calc(100vh - 260px); overflow: auto; }
 .dvr-view .doc .ln { display: grid; grid-template-columns: 76px 1fr; padding: 2px 14px; cursor: pointer; }
-.dvr-view .doc .ln:hover { background: #FDF2F8; }
+.dvr-view .doc .ln:hover { background: var(--color-primary-light); }
 .dvr-view .doc .ln .no { color: var(--color-text-disabled); font-family: var(--font-mono); font-size: 11px; }
 .dvr-view .doc .ln.hit { background: #FFF7ED; }
 .dvr-view .doc mark { background: #FDE68A; border-bottom: 2px solid #D97706; }
-.dvr-view .doc .pin { display: inline-block; font-size: 10px; font-weight: 700; background: #9D174D; color: #fff; border-radius: 999px; padding: 0 6px; margin-left: 6px; }
+.dvr-view .doc .pin { display: inline-block; font-size: 10px; font-weight: 700; background: var(--color-primary-dark); color: #fff; border-radius: 999px; padding: 0 6px; margin-left: 6px; }
 .dvr-view .f { padding: 10px 14px; border-bottom: 1px solid var(--color-divider); font-size: 13px; }
 .dvr-view .f .top { display: flex; gap: 6px; align-items: center; margin-bottom: 4px; }
 .dvr-view .chip { font-size: 11px; border-radius: 5px; padding: 1px 7px; font-weight: 700; }
@@ -122,15 +121,15 @@
 .dvr-view .c-min { background: var(--color-info-bg); color: var(--color-info); }
 .dvr-view .c-auto { background: var(--color-surface-3); color: var(--color-text-secondary); font-weight: 600; }
 .dvr-view .f .loc { font-family: var(--font-mono); font-size: 11px; color: var(--color-text-secondary); margin-left: auto; }
-.dvr-view .f .ck { font-size: 11px; color: #9D174D; }
+.dvr-view .f .ck { font-size: 11px; color: var(--color-primary-dark); }
 .dvr-view .f .act, .dvr-view .act { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
 .dvr-view .b { font: inherit; font-size: 12px; font-weight: 600; border-radius: 7px; padding: 5px 10px; border: 1px solid var(--color-border-strong); background: #fff; color: var(--color-text); cursor: pointer; }
-.dvr-view .b:hover { border-color: #9D174D; }
-.dvr-view .b.p { background: #BE185D; border-color: #BE185D; color: #fff; }
+.dvr-view .b:hover { border-color: var(--color-primary-dark); }
+.dvr-view .b.p { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
 .dvr-view .b:disabled { opacity: .45; cursor: not-allowed; }
 .dvr-view .tabs { display: flex; gap: 4px; padding: 8px 10px; border-bottom: 1px solid var(--color-border); }
 .dvr-view .tabs > * { font: inherit; font-size: 12px; padding: 4px 10px; border-radius: 999px; color: var(--color-text-secondary); background: none; border: 0; cursor: pointer; }
-.dvr-view .tabs .on, .dvr-view .tabs [aria-selected="true"] { background: #FCE7F3; color: #9D174D; font-weight: 700; }
+.dvr-view .tabs .on, .dvr-view .tabs [aria-selected="true"] { background: var(--color-primary-light); color: var(--color-primary-dark); font-weight: 700; }
 .dvr-view .role { font-size: 12px; color: var(--color-text-secondary); }
 .dvr-view .dv-t { width: 100%; border-collapse: collapse; font-size: 13px; background: var(--color-surface); }
 .dvr-view .dv-t th { text-align: left; padding: 8px 12px; color: var(--color-text-secondary); font-weight: 600; border-bottom: 1px solid var(--color-border); background: var(--color-surface-2); }
@@ -149,25 +148,25 @@
 [data-view]:not(.dvr-view) .c-min { background: var(--color-info-bg); color: var(--color-info); }
 [data-view]:not(.dvr-view) .c-auto { background: var(--color-surface-3); color: var(--color-text-secondary); font-weight: 600; }
 [data-view]:not(.dvr-view) .f .loc { font-family: var(--font-mono); font-size: 11px; color: var(--color-text-secondary); margin-left: auto; }
-[data-view]:not(.dvr-view) .f .ck { font-size: 11px; color: #9D174D; }
+[data-view]:not(.dvr-view) .f .ck { font-size: 11px; color: var(--color-primary-dark); }
 [data-view]:not(.dvr-view) .f .act, [data-view]:not(.dvr-view) .act { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
 [data-view]:not(.dvr-view) .b { font: inherit; font-size: 12px; font-weight: 600; border-radius: 7px; padding: 5px 10px; border: 1px solid var(--color-border-strong); background: #fff; color: var(--color-text); cursor: pointer; }
-[data-view]:not(.dvr-view) .b:hover { border-color: #9D174D; }
-[data-view]:not(.dvr-view) .b.p { background: #BE185D; border-color: #BE185D; color: #fff; }
+[data-view]:not(.dvr-view) .b:hover { border-color: var(--color-primary-dark); }
+[data-view]:not(.dvr-view) .b.p { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
 [data-view]:not(.dvr-view) .b:disabled { opacity: .45; cursor: not-allowed; }
 [data-view]:not(.dvr-view) .tabs { display: flex; gap: 4px; padding: 8px 10px; border-bottom: 1px solid var(--color-border); }
 [data-view]:not(.dvr-view) .tabs > * { font: inherit; font-size: 12px; padding: 4px 10px; border-radius: 999px; color: var(--color-text-secondary); background: none; border: 0; cursor: pointer; }
-[data-view]:not(.dvr-view) .tabs .on, [data-view]:not(.dvr-view) .tabs [aria-selected="true"] { background: #FCE7F3; color: #9D174D; font-weight: 700; }
+[data-view]:not(.dvr-view) .tabs .on, [data-view]:not(.dvr-view) .tabs [aria-selected="true"] { background: var(--color-primary-light); color: var(--color-primary-dark); font-weight: 700; }
 [data-view]:not(.dvr-view) .role { font-size: 12px; color: var(--color-text-secondary); }
 [data-view]:not(.dvr-view) .dv-t { width: 100%; border-collapse: collapse; font-size: 13px; background: var(--color-surface); }
 [data-view]:not(.dvr-view) .dv-t th { text-align: left; padding: 8px 12px; color: var(--color-text-secondary); font-weight: 600; border-bottom: 1px solid var(--color-border); background: var(--color-surface-2); }
 [data-view]:not(.dvr-view) .dv-t td { padding: 9px 12px; border-bottom: 1px solid var(--color-divider); vertical-align: top; }
 [data-view]:not(.dvr-view) .dv-panel { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 10px; padding: 16px; }
 [data-view]:not(.dvr-view) .dv-t tr[data-id] { cursor: pointer; }
-[data-view]:not(.dvr-view) .dv-t tr[data-id]:hover td { background: #FDF2F8; }
+[data-view]:not(.dvr-view) .dv-t tr[data-id]:hover td { background: var(--color-primary-light); }
 .dvg-card { padding: 12px 14px; min-width: 150px; }
 .dvg-num { font-size: 22px; font-weight: 700; margin-top: 2px; }
-.dvg-bar { display: inline-block; height: 10px; min-width: 4px; background: #BE185D; border-radius: 3px; vertical-align: middle; }
+.dvg-bar { display: inline-block; height: 10px; min-width: 4px; background: var(--color-primary); border-radius: 3px; vertical-align: middle; }
 .dvg-bl { width: 200px; }
 .dvg-bn { width: 60px; text-align: right; }
 [data-view]:not(.dvr-view) .dv-t td:nth-child(2) .dvg-bar { max-width: 100%; }
@@ -180,5 +179,71 @@ td.dvg-bl + td { width: 360px; }
 /* ファイル選択をブラウザ素の部品のまま出さない（2026-10-06 指摘の再発防止） */
 .dv-page input[type=file] { font: inherit; font-size: 12px; color: var(--color-text-secondary); }
 .dv-page input[type=file]::file-selector-button { font: inherit; font-size: 12px; font-weight: 600; border-radius: 7px; padding: 6px 12px; margin-right: 10px; border: 1px solid var(--color-border-strong); background: var(--color-surface); color: var(--color-text); cursor: pointer; }
-.dv-page input[type=file]::file-selector-button:hover { border-color: #9D174D; color: #9D174D; }
+.dv-page input[type=file]::file-selector-button:hover { border-color: var(--color-primary-dark); color: var(--color-primary-dark); }
 
+
+/* R1（WS2D-DD-006 8.6）。値は tokens の変数のみ。サイドバーの選択色は app.css（dashboard と同じ青）に従う。 */
+.dv-grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-4); margin: var(--space-4) 0; }
+.dv-grid2 > .dv-card { background: var(--color-surface); border: 1px solid var(--color-border); padding: var(--space-4); min-width: 0; }
+.dv-grid2 > .dv-card > h3 { margin: 0 0 4px; padding: 0; border: 0; font-size: 15px; }
+.dv-card p.sub { margin: 0 0 var(--space-3); color: var(--color-text-secondary); font-size: 13px; }
+.dv-qrow { display: grid; grid-template-columns: 96px 1fr 40px; align-items: center; gap: var(--space-3); padding: 6px 0; font-size: 13px; }
+.dv-qrow .dv-score-bar { width: 100%; }
+.dv-qrow b { text-align: right; font-variant-numeric: tabular-nums; }
+.dv-score { display: inline-flex; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; min-width: 0; }
+.dv-score-bar { display: inline-block; width: 72px; height: 6px; border-radius: 3px; background: var(--color-surface-2); overflow: hidden; flex: none; }
+.dv-score-bar > i { display: block; height: 100%; background: var(--color-primary); }
+.dv-score-bar > i.is-warn { background: var(--color-medium); }
+.dv-score-bar > i.is-bad { background: var(--color-critical); }
+.dv-score-bar > i.is-none { width: 0 !important; }
+.dv-stage { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; background: var(--color-primary-light); color: var(--color-primary-dark); white-space: nowrap; }
+.dv-stage.is-done { background: var(--color-low-bg); color: var(--color-text); }
+.dv-sev { font-weight: 700; }
+.dv-sev.c { color: var(--color-critical); }
+.stat-card.is-warn { border-left: 3px solid var(--color-critical); }
+.dv-todo { list-style: none; margin: 0; padding: 0; }
+.dv-todo li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 9px 0; border-bottom: 1px solid var(--color-divider); font-size: 13px; min-width: 0; }
+.dv-link { font: inherit; font-weight: 600; background: none; border: 0; padding: 0; color: var(--color-primary-dark); cursor: pointer; text-decoration: none; white-space: nowrap; flex: none; }
+.dv-link:hover, .dv-link:focus-visible { text-decoration: underline; }
+.dv-tscroll { overflow-x: hidden; min-width: 0; }
+.dv-tscroll table { width: 100%; table-layout: fixed; }
+.dv-tscroll td, .dv-tscroll th { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dv-tscroll .site-cell { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.dv-ellipsis { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.dvr-docband { display: flex; flex-wrap: wrap; align-items: center; gap: 8px var(--space-3); background: var(--color-surface-2); border-radius: 8px; padding: var(--space-3); margin-bottom: var(--space-3); font-size: 13px; min-width: 0; }
+.dvr-docband > strong.dv-ellipsis { flex: 1 1 200px; }
+.dv-unread { flex-basis: 100%; margin: 0; color: var(--color-text-secondary); }
+.dv-unread .is-warn { display: block; color: var(--color-text); border-left: 3px solid var(--color-medium); padding-left: 8px; }
+.dv-scoreband { display: flex; align-items: center; gap: var(--space-4); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: var(--space-3); margin-bottom: var(--space-3); }
+.dv-score-big { font-size: var(--text-xl); font-weight: 700; font-variant-numeric: tabular-nums; flex: none; }
+.dv-mini { list-style: none; margin: 0; padding: 0; flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px var(--space-3); font-size: 12px; }
+.dv-mini li { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.dv-mini .dv-score-bar { width: 48px; }
+.dvr-quality, .dvr-history, .dvr-scope, .dvr-gap { margin-top: var(--space-3); }
+.dvr-scope h3 { margin: var(--space-3) 0 6px; font-size: 13px; }
+.dv-unverified { display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: 4px; font-size: 11px; font-weight: 700; background: var(--color-medium-bg); color: var(--color-text); }
+.dv-err-text { color: var(--color-critical); }
+.dv-modal { background: var(--color-surface); color: var(--color-text); border: 1px solid var(--color-border); border-radius: 10px; box-shadow: var(--shadow-lg); padding: 0; width: calc(100% - 48px); max-width: 560px; max-height: calc(100vh - 96px); }
+.dv-modal[open] { display: flex; flex-direction: column; }
+.dv-modal::backdrop { background: var(--color-text); opacity: .4; }
+.dv-modal-title { margin: 0; padding: var(--space-4) var(--space-4) var(--space-3); font-size: 15px; }
+.dv-modal-body { flex: 1; min-height: 0; overflow: auto; padding: 0 var(--space-4); font-size: 13px; }
+.dv-modal-body p { margin: 0 0 var(--space-3); }
+.dv-modal-actions { display: flex; justify-content: flex-end; gap: 8px; padding: var(--space-3) var(--space-4) var(--space-4); }
+.dv-modal-actions [hidden] { display: none; }
+.dv-modal .b { font: inherit; font-size: 13px; font-weight: 600; border-radius: 7px; padding: 6px 14px; border: 1px solid var(--color-border-strong); background: var(--color-surface); color: var(--color-text); cursor: pointer; }
+.dv-modal .b.p { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-surface); }
+.dv-modal .b:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+[aria-busy="true"] { cursor: progress; }
+[data-key-open] { cursor: pointer; }
+[data-key-open]:focus-visible, .dv-link:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+
+/* SCR-06-26 長文: パンくずは 1 行で省略（全文はレビュー名の見出しで読める） */
+.dv-page .app-topbar-lead { min-width: 0; overflow: hidden; }
+.dv-page .app-breadcrumb { flex-wrap: nowrap; min-width: 0; overflow: hidden; }
+.dv-page .app-breadcrumb span { white-space: nowrap; flex: none; }
+.dv-page .app-breadcrumb span:last-child { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* SCR-06-24 狭い画面: サイドバーの主ボタンを縮めない */
+.dv-page .sidebar-primary-action { flex: none; }
+.dvr-quality .dv-score-total { display: flex; align-items: baseline; gap: 8px; margin: 0 0 8px; }
+.dvr-quality .dv-score-total b { font-size: 28px; }

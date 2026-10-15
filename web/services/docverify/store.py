@@ -91,7 +91,9 @@ def upgrade(insp: dict) -> dict:
     }
 
 
-def save(insp: dict) -> None:
+def save(insp: dict) -> dict:
+    """更新時刻を付けた新しい dict を保存して返す（引数は変更しない）。"""
+    insp = {**insp, "updated_at": datetime.now(timezone.utc).isoformat()}
     directory = doc_dir(insp["id"])
     directory.mkdir(parents=True, exist_ok=True)
     fd, tmp = tempfile.mkstemp(dir=directory, suffix=".tmp")
@@ -102,6 +104,7 @@ def save(insp: dict) -> None:
     except BaseException:
         Path(tmp).unlink(missing_ok=True)
         raise
+    return insp
 
 
 def list_all() -> list[dict]:

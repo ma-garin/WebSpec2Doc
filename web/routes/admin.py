@@ -19,7 +19,7 @@ bp = Blueprint("admin", __name__, url_prefix="/api/admin")
 
 OUTPUT_DIR = Path("output")
 INSTANCE_DIR = Path("instance")
-BACKUP_GUIDE_PATH = Path(__file__).resolve().parents[2] / "docs" / "OPERATIONS_BACKUP.md"
+BACKUP_GUIDE_PATH = Path(__file__).resolve().parents[2] / "docs" / "process" / "OPERATIONS_BACKUP.md"
 
 
 @bp.before_request

@@ -42,10 +42,79 @@
   }
   function empty(text) { return '<div class="dvr-empty">' + esc(text) + '</div>'; }
 
-  /* 二重送信防止つきで実行 */
-  function busy(btn, p) {
-    if (btn) { if (btn.disabled) return Promise.resolve(); btn.disabled = true; }
-    return Promise.resolve(p).finally(function () { if (btn) btn.disabled = false; });
+  /* 二重送信防止つきで実行（DV.busy へ委ねる） */
+  function busy(btn, p, label) {
+    if (!btn) return Promise.resolve(typeof p === 'function' ? p() : p);
+    return E().busy(btn, p, label || btn.textContent);
+  }
+
+  /* ---------- 文書の帯・スコア・版・検査範囲（FR-06-015・075・100〜104） ---------- */
+  var CK_ORDER = Object.keys(CK_LABEL);
+  function qItems(q) {
+    var items = (q && q.items) || {};
+    var keys = CK_ORDER.filter(function (k) { return items[k]; });
+    Object.keys(items).forEach(function (k) { if (keys.indexOf(k) < 0) keys.push(k); });
+    return keys.map(function (k) { return { key: k, label: items[k].label || CK_LABEL[k] || k, score: items[k].score, open: items[k].open }; });
+  }
+  function helpBtn() { return '<button type="button" class="dv-link" data-act="score-help">スコアの意味</button>'; }
+  function docBand(r, s) {
+    var d = (r && r.document) || {}, lines = (s && s.unread_lines) || [];
+    var n = d.passages != null ? d.passages : ((r && r.passages) || []).length;
+    var unread = lines.map(function (x) {
+      return '<span' + (String(x).indexOf('読んでいません') >= 0 ? ' class="is-warn"' : '') + '>' + esc(x) + '</span>';
+    }).join('<br>');
+    return '<div class="dvr-docband"><strong class="dv-ellipsis" title="' + esc(d.name) + '">' + esc(d.name) + '</strong>' +
+      '<span class="chip">' + esc(d.format) + '</span><span>' + esc(n) + ' 断片</span><span>版 ' + esc(d.version) + '</span>' +
+      (lines.length ? '<p class="dv-unread">' + unread + '</p>' : '') + '</div>';
+  }
+  function scoreBand(q) {
+    if (!q || q.overall == null) return '<div class="dv-scoreband"><p>' + esc(E().NO_SCORE) + '</p></div>';
+    return '<div class="dv-scoreband"><div class="dv-score-big">' + esc(E().scoreText(q.overall)) + '</div><ul class="dv-mini">' +
+      qItems(q).map(function (it) { return '<li><span class="dv-ellipsis">' + esc(it.label) + '</span>' + E().scoreBar(it.score, it.label) + '</li>'; }).join('') +
+      '</ul>' + helpBtn() + '</div>';
+  }
+  function qualityTable(q) {
+    var none = !q || q.overall == null;
+    return '<div class="dvr-quality">' + (none ? '<p class="role">' + esc(E().NO_SCORE) + '</p>' :
+      '<div class="dv-score-total"><span>総合</span><b>' + esc(E().scoreText(q.overall)) + '</b></div>') +
+      '<table class="dv-t"><thead><tr><th>特性</th><th>スコア</th><th>未解決</th></tr></thead><tbody>' +
+      qItems(q).map(function (it) {
+        return '<tr><td>' + esc(it.label) + '</td><td>' + E().scoreBar(it.score, it.label) + ' <b>' + esc(E().scoreText(it.score)) + '</b></td><td class="num">' + esc(it.open != null ? it.open : '—') + '</td></tr>';
+      }).join('') + '</tbody></table>' + helpBtn() + '</div>';
+  }
+  function historyTable(h) {
+    if (!h || !h.length) return '<div class="dvr-history">' + empty('まだ版がありません。文書を取り込むと記録されます。') + '</div>';
+    return '<div class="dvr-history"><table class="dv-t"><thead><tr><th>版</th><th>文書名</th><th>取り込み日</th><th>総合</th><th>状態</th></tr></thead><tbody>' +
+      h.map(function (v) {
+        var st = v.current ? '現在' : (v.final ? '確定' : '');
+        return '<tr><td>' + esc(v.version) + '</td><td><span class="dv-ellipsis" title="' + esc(v.name) + '">' + esc(v.name) + '</span></td><td>' +
+          esc(String(v.uploaded_at || '').slice(0, 10)) + '</td><td>' + esc(E().scoreText(v.overall)) + '</td><td>' + esc(st) + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+  }
+  function scopeValue(v) {
+    var t = String(v == null ? '' : v), m = /^(未検証|未測定)/.exec(t);
+    return m ? '<span class="dv-unverified">' + esc(m[1]) + '</span>' + esc(t.slice(m[1].length)) : esc(t);
+  }
+  function scopeRows(rows) {
+    return '<table class="dv-t"><thead><tr><th>項目</th><th>内容</th></tr></thead><tbody>' + (rows || []).map(function (x) {
+      return '<tr><td>' + esc(x.label) + '</td><td>' + scopeValue(x.value) + '</td></tr>';
+    }).join('') + '</tbody></table>';
+  }
+  function scopeTables(sc) {
+    sc = sc || {};
+    return '<div class="dvr-scope"><h3>検査した範囲</h3>' + scopeRows(sc.checked) + '<h3>検査していないこと</h3>' + scopeRows(sc.unchecked) + '</div>';
+  }
+  function showScoreHelp(q) {
+    var note = (q && q.note) || [];
+    return E().modal({ title: 'スコアの意味', html: note.map(function (x) { return '<p>' + esc(x) + '</p>'; }).join(''), ok: null, cancel: '閉じる' });
+  }
+  function confirmClose() {
+    return E().modal({ title: 'レビューを終えますか', html: '<p>' + esc('終えると判定と記録が確定します。指摘の状態はこのあとも変えられます。') + '</p>', ok: '終える', cancel: '取りやめる' });
+  }
+  function scoreHelpClicked(ev) {
+    if (!ev.target.closest('[data-act="score-help"]')) return false;
+    showScoreHelp((E().state.summary || {}).quality);
+    return true;
   }
 
   function setReview(d) {
@@ -232,7 +301,7 @@
       var lines = ps.map(function (p) {
         var hit = byP[p.id] || [];
         var words = hit.map(function (f) { return f.quote; }).filter(function (q) { return q && q.length < 30; });
-        return '<div class="ln' + (hit.length ? ' hit' : '') + (ui.selLine === p.id ? ' sel' : '') + '" data-pid="' + esc(p.id) + '"><span class="no">' + esc(p.location) + '</span><span>' +
+        return '<div class="ln' + (hit.length ? ' hit' : '') + (ui.selLine === p.id ? ' sel' : '') + '" data-pid="' + esc(p.id) + '" data-key-open role="button"><span class="no">' + esc(p.location) + '</span><span>' +
           hl(p.text, words) + hit.map(function (f) { return '<span class="pin">' + esc(f.id) + '</span>'; }).join('') + '</span></div>';
       }).join('');
       var cl = currentChecklist(lists), checks = r.checks || {};
@@ -250,15 +319,18 @@
       } else {
         var list = ui.tab === 'mine' ? mineList : fs;
         side = list.length ? list.map(function (f) { return findingCard(f, true); }).join('')
-          : empty('確認した範囲では指摘はありません。' + ps.length + ' 文を確認しました。');
+          : empty(E().emptyFindings(ps.length));
       }
-      part(view, 'body').innerHTML = '<div class="wrap dvr-wrap">' +
+      var sum = E().state.summary || {};
+      part(view, 'body').innerHTML = docBand(r, sum) + scoreBand(sum.quality) + '<div class="wrap dvr-wrap">' +
         '<section class="card"><h3>本文 <span class="role">' + ps.length + ' 文 ・ 自動候補 ' + autoN + ' 件をハイライト ・ 文を押すと指摘を追加</span></h3><div class="doc" data-doc>' + lines + '</div></section>' +
         '<section class="card">' + tabs + '<div class="dvr-scroll">' + side +
         '<div class="f"><b>指摘を追加</b><div class="role">本文の文を押して選び、重大度・観点を選んで 1 行で書く</div></div></div></section></div>';
       if (ui.selLine) openAdd(view, ui.selLine, cl);
       var body = part(view, 'body');
+      E().keyOpen(body);
       body.onclick = function (ev) {
+        if (scoreHelpClicked(ev)) return;
         var t = ev.target.closest('[data-tab]');
         if (t) { ui.tab = t.getAttribute('data-tab'); return rerender(view, renderRead); }
         var a = ev.target.closest('[data-fa]');
@@ -425,19 +497,26 @@
   function renderGate(view) {
     var s = E().state.summary || {}, r = rv(), ap = r.approval || {};
     var reasons = s.reasons || [];
-    part(view, 'headright').innerHTML = '<a class="b" href="' + esc(base() + '/report.xlsx') + '">報告を Excel で出力</a>';
+    part(view, 'headright').innerHTML = '<button type="button" class="b" data-act="report">報告を Excel で出力</button>';
+    part(view, 'headright').onclick = function (ev) {
+      var b = ev.target.closest('[data-act="report"]'); if (!b) return;
+      E().busy(b, function () { return E().download(base() + '/report.xlsx', 'inspection-' + rv().id + '.xlsx'); }, '報告を作成中…');
+    };
     part(view, 'body').innerHTML =
       '<div class="dvr-kpi"><div>未対応の重大<b>' + esc(s.open_critical != null ? s.open_critical : '-') + '</b></div><div>未対応の主要<b>' + esc(s.open_warning != null ? s.open_warning : '-') + '</b></div>' +
       '<div>指摘密度（1 文あたり）<b>' + esc(s.density != null ? Number(s.density).toFixed(2) : '-') + '</b></div>' +
-      '<div>出口基準<b class="' + (s.exit_ok ? 'dv-ok' : '') + '" style="' + (s.exit_ok ? '' : 'color:var(--color-critical)') + '">' + (s.exit_ok ? '満たす' : '満たさない') + '</b></div></div>' +
-      '<div class="dv-panel' + (s.exit_ok ? '' : ' dv-err') + '" style="margin:0 0 12px"><b>判定の理由</b>' +
+      '<div>出口基準<b class="' + (s.exit_ok ? 'dv-ok' : 'dv-err-text') + '">' + (s.exit_ok ? '満たす' : '満たさない') + '</b></div></div>' +
+      qualityTable(s.quality) + historyTable(s.history) +
+      '<div class="dv-panel dvr-gap' + (s.exit_ok ? '' : ' dv-err') + '"><b>判定の理由</b>' +
       (reasons.length ? '<ul>' + reasons.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '<div class="role">理由はありません。</div>') + '</div>' +
-      '<div class="dv-panel" style="margin:0 0 12px"><b>承認</b><div class="role">承認者が自分で名前と日付を記入します。</div><div class="dvr-form" style="margin-top:8px">' +
+      scopeTables(s.scope) +
+      '<div class="dv-panel dvr-gap"><b>承認</b><div class="role">承認者が自分で名前と日付を記入します。</div><div class="dvr-form dvr-gap">' +
       '<label for="dvr-apn">承認者名</label><input type="text" id="dvr-apn" value="' + esc(ap.approver || '') + '">' +
       '<label for="dvr-apd">承認日</label><input type="date" id="dvr-apd" value="' + esc((ap.decided_at || '').slice(0, 10)) + '"></div>' +
       '<div class="dvr-actions"><button type="button" class="b" data-act="ap">承認欄を保存</button></div></div>' +
       '<div class="dvr-actions"><button type="button" class="b p" data-act="close"' + (r.status === 'closed' ? ' disabled' : '') + '>' + (r.status === 'closed' ? '終了しています' : 'レビューを終える') + '</button></div>';
     part(view, 'body').onclick = function (ev) {
+      if (scoreHelpClicked(ev)) return;
       var b = ev.target.closest('[data-act]'); if (!b) return;
       if (b.getAttribute('data-act') === 'ap') {
         var n = part(view, 'body').querySelector('#dvr-apn').value.trim(), dt = part(view, 'body').querySelector('#dvr-apd').value;
@@ -445,15 +524,23 @@
         return busy(b, E().api(base(), json('PATCH', { approval: { approver: n, decided_at: dt } })).then(setReview)
           .then(function () { E().toast('承認欄を保存しました'); return rerender(view, renderGate); }).catch(function (e) { msg(view, errText(e), true); }));
       }
-      busy(b, E().api(base() + '/close', { method: 'POST' }).then(function () { return reload(); })
-        .then(function () { E().toast('レビューを終えました'); return rerender(view, renderGate); })
-        .catch(function (e) {
-          return reload().then(function () { return rerender(view, renderGate); }).then(function () {
-            msg(view, errText(e) + (e && e.reasons ? ' ' + e.reasons.join('／') : ''), true);
-          });
-        }));
+      if (b.getAttribute('data-act') !== 'close') return;
+      return confirmClose().then(function (ok) {
+        if (!ok) return;
+        return busy(b, function () { return closeReview(view); });
+      });
     };
     return Promise.resolve();
+  }
+
+  function closeReview(view) {
+    return E().api(base() + '/close', { method: 'POST' }).then(function () { return reload(); })
+      .then(function () { E().toast('レビューを終えました'); return rerender(view, renderGate); })
+      .catch(function (e) {
+        return reload().then(function () { return rerender(view, renderGate); }).then(function () {
+          msg(view, errText(e) + (e && e.reasons ? ' ' + e.reasons.join('／') : ''), true);
+        });
+      });
   }
 
   function init() {

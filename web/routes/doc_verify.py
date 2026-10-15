@@ -136,13 +136,17 @@ def upload_document(iid: str):
         return _err("指摘の候補を作れませんでした。もう一度取り込んでください。", 500)
 
     from datetime import datetime, timezone
+    from web.services.docverify import metrics
+    versions = metrics.freeze_current(insp)  # 旧の断片・指摘で前の版のスコアを確定する
+    # document は ingest の unread（読めなかった要素の数）をそのまま持つ
+    base = {**insp, "document": document, "passages": passages, "findings": findings, "diff": changes,
+            "status": "reviewing",
+            # 文書を取り込んだら個別レビューへ進める（計画のままだと工程表示が実態と合わない）
+            "phase": "individual" if insp.get("phase", "plan") == "plan" else insp.get("phase")}
     entry = {"version": version, "name": document.get("name"),
-             "uploaded_at": datetime.now(timezone.utc).isoformat(), "passages": len(passages)}
-    updated = {**insp, "document": document, "passages": passages, "findings": findings,
-               "versions": [*(insp.get("versions") or []), entry], "diff": changes,
-               "status": "reviewing",
-               # 文書を取り込んだら個別レビューへ進める（計画のままだと工程表示が実態と合わない）
-               "phase": "individual" if insp.get("phase", "plan") == "plan" else insp.get("phase")}
+             "uploaded_at": datetime.now(timezone.utc).isoformat(), "passages": len(passages),
+             "quality": metrics.quality_brief(base, False)}
+    updated = {**base, "versions": [*versions, entry]}
     store.save(updated)
     return _respond(updated)
 
@@ -306,7 +310,7 @@ def close(iid: str):
     if not summary.get("exit_ok"):
         return jsonify(error="終了条件を満たしていません。理由を確認して対応してください。",
                        reasons=summary.get("reasons", [])), 409
-    updated = {**insp, "status": "closed"}
+    updated = {**insp, "status": "closed", "versions": metrics.freeze_current(insp)}
     store.save(updated)
     return _respond(updated)
 
@@ -317,7 +321,12 @@ def report_xlsx(iid: str):
     insp, err = _load(iid)
     if err:
         return err
-    return Response(metrics.to_xlsx(insp), mimetype=_XLSX,
+    try:
+        data = metrics.to_xlsx(insp)
+    except Exception:
+        log.exception("報告の作成に失敗")
+        return _err("報告を作れませんでした。もう一度出力してください。", 500)
+    return Response(data, mimetype=_XLSX,
                     headers={"Content-Disposition": f"attachment; filename=inspection-{iid}.xlsx"})
 
 
@@ -337,22 +346,13 @@ def _all_full() -> list[dict]:
 
 @bp.route("/api/docverify/home")
 def home():
+    from web.services.docverify import home as home_svc
     from web.services.docverify.settings import current_user
     try:
-        me = current_user()
-        reviews = _all_full()
+        return jsonify(home_svc.build(_all_full(), current_user()))
     except Exception:
         log.exception("ホームの取得に失敗")
         return _err("ホームを読めませんでした。時間をおいて再読み込みしてください。", 500)
-    mine = [{"review_id": r["id"], "review_name": r.get("name"), "role": p.get("role"),
-             "done": bool(p.get("done")), "phase": r.get("phase"), "due": r.get("due")}
-            for r in reviews for p in r.get("participants") or [] if p.get("name") == me]
-    active = [{"review_id": r["id"], "review_name": r.get("name"), "phase": r.get("phase"), "due": r.get("due"),
-               "findings": len(r.get("findings") or [])} for r in reviews if r.get("phase") != "closed"]
-    open_f = [f for r in reviews for f in r.get("findings") or [] if f.get("status") == "adopted"]  # 判定と記録と同じく、候補は未対応に数えない
-    counts = {"mine": sum(1 for m in mine if not m["done"]), "active": len(active),
-              "open_findings": len(open_f), "open_critical": sum(1 for f in open_f if f.get("severity") == "critical")}
-    return jsonify(me=me, mine=mine, active=active, counts=counts)
 
 
 @bp.route("/api/docverify/findings")

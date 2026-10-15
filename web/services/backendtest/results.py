@@ -30,6 +30,14 @@ def _rows_of(snap, oracle_cfg: dict):
     return list(entry.get("rows") or [])
 
 
+def _order_tables(cfg: dict, before, after) -> list:
+    """判定に使うテーブルの順。指定（table）→ 前後で変わったテーブル → 残り。"""
+    tables = list(cfg.get("tables") or [])
+    b, a = (before if isinstance(before, dict) else {}), (after if isinstance(after, dict) else {})
+    changed = [t for t in tables if b.get(t) != a.get(t)]
+    return list(dict.fromkeys(([cfg["table"]] if cfg.get("table") else []) + changed + tables))
+
+
 def _observed(jid: str, case: dict, row: dict) -> dict:
     """bt_runtime の証跡を oracle.evaluate の observed のキーに合わせる。"""
     cfg = case.get("oracle") or {}
@@ -42,8 +50,9 @@ def _observed(jid: str, case: dict, row: dict) -> dict:
         return {}
     if not raw or not directory.is_dir():
         return {}
-    before = _rows_of(_read_json(directory / "before.json"), cfg)
-    after = _rows_of(_read_json(directory / "after.json"), cfg)
+    b_snap, a_snap = _read_json(directory / "before.json"), _read_json(directory / "after.json")
+    order = _order_tables(cfg, b_snap, a_snap)
+    before, after = _rows_of(b_snap, {**cfg, "tables": order}), _rows_of(a_snap, {**cfg, "tables": order})
     observed: dict = {}
     if before is not None and after is not None:
         observed.update(before=before, after=after)

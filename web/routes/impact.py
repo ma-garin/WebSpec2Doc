@@ -1,4 +1,4 @@
-"""影響度分析（System 08）。処理の中身は web/services/impact/ にある。"""
+"""影響度分析（System 09）。処理の中身は web/services/impact/ にある。"""
 from __future__ import annotations
 
 import csv

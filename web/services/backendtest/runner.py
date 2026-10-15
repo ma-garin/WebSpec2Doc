@@ -30,7 +30,7 @@ RLIMIT_FSIZE_BYTES = 200 * 1024 * 1024
 RLIMIT_AS_BYTES = 2 * 1024 ** 3
 RUNNING_FILE = ".running"
 ACTIVE = ("queued", "running")
-_DONE_RC = (0, 1, 5)  # 0=全合格 1=不合格あり 5=該当テスト 0 件。いずれも実行としては完走
+_DONE_RC = (0, 1)  # 0=全合格 1=不合格あり。5（該当テスト 0 件）と結果 0 件は完走に数えない
 _ENV_KEEP = ("PATH", "LANG", "TZ")
 _CASE = re.compile(r"^[A-Za-z0-9_\-]{1,64}$")
 _READ_CHUNK = 64 * 1024
@@ -55,10 +55,7 @@ class _Run:
         self.status, self.reason, self.rc = "queued", "", None
         self.started_at, self.ended_at = store.now(), ""
         self.t0, self.elapsed = time.monotonic(), None
-        self.cancel_event = threading.Event()
-        self.stop_cause = ""
-        self.limited = False
-        self.written = 0
+        self.cancel_event, self.stop_cause, self.limited, self.written = threading.Event(), "", False, 0
         self.secrets: list[str] = []
         self.proc: subprocess.Popen | None = None
         self.thread: threading.Thread | None = None
@@ -75,7 +72,7 @@ def start(jid: str, env: dict, secrets=None, timeout_sec: int = DEFAULT_TIMEOUT_
     secrets: {"password": ...} の dict（文字列・文字列のリストも可）。メモリ内だけで扱う。
     workdir: 案件フォルダ。省略時は store.job_dir(jid)（検証用に一時フォルダを渡せる）。
     """
-    root = Path(workdir) if workdir else store.job_dir(jid)
+    root = (Path(workdir) if workdir else store.job_dir(jid)).resolve()  # 子は cwd が変わるので絶対パスで渡す
     if not (root / "code").is_dir():
         raise store.StoreError("テストコードがまだありません。段階 6 でテストコードを生成してから実行してください。")
     timeout, cases = _check_timeout(timeout_sec), _check_cases(case_ids)
@@ -348,8 +345,10 @@ def _final_state(run: _Run, rc: int) -> tuple[str, str, int]:
     }
     if run.stop_cause in stops:
         return (*stops[run.stop_cause], rc)
-    if rc in _DONE_RC:
+    if rc in _DONE_RC and evidence.read_results(run.dir):
         return "done", "", rc
+    if rc in (*_DONE_RC, 5):
+        return "error", f"テストが 1 件も実行されませんでした（終了コード {rc}）。選んだケースとエラーログを確認してから再実行してください。", rc
     return "error", f"テストの実行が異常終了しました（終了コード {rc}）。エラーログを確認してから再実行してください。", rc
 
 

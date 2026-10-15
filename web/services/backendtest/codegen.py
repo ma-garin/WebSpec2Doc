@@ -9,8 +9,11 @@ from __future__ import annotations
 
 import pprint
 import re
+import shutil
+from pathlib import Path
 
 from web.services.backendtest.codegen_runtime import RUNTIME
+from web.services.backendtest.store import StoreError
 
 CONFIRMED_STATES = frozenset({"auto", "human"})
 METHOD_JA = {
@@ -92,7 +95,11 @@ def _assert_lines(case: dict) -> list[str]:
     lines: list[str] = []
     if method == "db_diff":
         lines.append('assert not result["truncated"], "スナップショットが行上限を超えたため前後比較できません"')
-        lines.append('assert bt.unexpected_changes(case) == {}, "変わってはいけないテーブルが変わりました"')
+        if is_rerun(case):  # 冪等性: 2 回とも正常終了し、2 回目でデータが変わらないこと
+            lines.append('assert result["rc"], "対象のジョブを起動できませんでした。対象の起動コマンドを設定してください"')
+            lines.append('assert all(rc == 0 for rc in result["rc"]), "ジョブが正常終了しませんでした。終了コードを確認してください"')
+        what = "2 回目の実行でデータが変わりました（冪等ではありません）" if is_rerun(case) else "変わってはいけないテーブルが変わりました"
+        lines.append(f"assert bt.unexpected_changes(case) == {{}}, {what!r}")
         for table, expect in sorted((oracle.get("expect") or {}).items()):
             for kind in ("added", "removed", "updated"):
                 if kind in expect:
@@ -112,13 +119,31 @@ def _doc(text: str) -> str:
     return str(text).replace("\\", "＼").replace('"', "”").replace("\n", " ")
 
 
-def _case_literal(case: dict) -> dict:
-    keys = ("id", "title", "steps", "data", "expected", "oracle")
-    return {k: case[k] for k in keys if k in case}
+def is_rerun(case: dict) -> bool:
+    """冪等性（再実行）のケース。同じ手順を 2 回起動し、2 回目の差分 0 を確かめる。"""
+    return case.get("check") == "rerun" or str(case.get("variant") or "") == "再実行"
 
 
-def _test_module(cases: list[dict], names: dict[str, str], summaries: dict[str, str]) -> str:
-    literal = {str(c["id"]): _case_literal(c) for c in cases}
+def _targets(job: dict) -> tuple[list[str], list[str]]:
+    """対象（ジョブ定義）の起動コマンドと出力テーブル。"""
+    targets = [t for t in job.get("targets") or [] if isinstance(t, dict)]
+    return ([str(t["command"]) for t in targets if t.get("command")],
+            [str(o) for t in targets for o in t.get("outputs") or []])
+
+
+def _case_literal(case: dict, commands: list[str], outputs: list[str]) -> dict:
+    out = {k: case[k] for k in ("id", "title", "data", "expected") if k in case}
+    oracle = dict(case.get("oracle") or {})
+    hit = [t for t in oracle.get("tables") or [] if t in outputs]
+    if hit and not oracle.get("table"):
+        oracle["table"] = hit[0]  # 別経路・ゴールデンは出力テーブルの実行後と比べる
+    return {**out, "steps_ja": list(case.get("steps") or []), "rerun": is_rerun(case),
+            "steps": [{"command": c} for c in commands], "oracle": oracle}
+
+
+def _test_module(cases: list[dict], names: dict[str, str], summaries: dict[str, str],
+                 targets: tuple[list[str], list[str]] = ([], [])) -> str:
+    literal = {str(c["id"]): _case_literal(c, *targets) for c in cases}
     out = [
         f'"""自動生成: ケース表から作ったテスト（{len(cases)} 件）。',
         "",
@@ -130,9 +155,11 @@ def _test_module(cases: list[dict], names: dict[str, str], summaries: dict[str, 
     ]
     for case in cases:
         cid = str(case["id"])
+        lines = _assert_lines(case)
+        run = [] if lines[0].startswith("pytest.skip") else ["    result = bt.run(case)"]  # 未確定はジョブを起動しない
         out += ["", "", f"@pytest.mark.bt_case({cid!r})", f"def {names[cid]}(bt):",
-                f'    """{_doc(summaries[cid])}"""', f"    case = CASES[{cid!r}]", "    result = bt.run(case)"]
-        out += ["    " + line for line in _assert_lines(case)]
+                f'    """{_doc(summaries[cid])}"""', f"    case = CASES[{cid!r}]", *run]
+        out += ["    " + line for line in lines]
     return "\n".join(out) + "\n"
 
 
@@ -144,9 +171,23 @@ def generate(job: dict) -> dict:
     files = [
         {"path": "bt_runtime.py", "text": RUNTIME},
         {"path": "tests/conftest.py", "text": CONFTEST},
-        {"path": "tests/test_cases.py", "text": _test_module(cases, names, summaries)},
+        {"path": "tests/test_cases.py", "text": _test_module(cases, names, summaries, _targets(job))},
     ]
     return {"files": files, "map": names, "summaries": summaries}
+
+
+def write_files(files: list[dict], dest: Path) -> int:
+    """生成物を案件の code/ に書き出す（実行と code.zip の元）。前の版は置き換える。"""
+    root = Path(dest).resolve()
+    paths = [(root / str(f.get("path") or "")).resolve() for f in files]
+    if not files or any(root not in p.parents for p in paths):
+        raise StoreError("テストコードが無いか、置き場所が正しくありません。段階 6 でテストコードを生成し直してください。")
+    if root.is_dir():
+        shutil.rmtree(root)
+    for path, f in zip(paths, files):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(str(f.get("text") or ""), encoding="utf-8")
+    return len(files)
 
 
 def merge_edits(prev_files: list[dict], edited_files: list[dict], fresh_files: list[dict]) -> dict:

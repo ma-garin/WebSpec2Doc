@@ -2907,11 +2907,17 @@
         "running_job_delete_rejected"
       ],
       "required_tests": [
-        "happy_path",
-        "error_path",
-        "evidence"
+        "tests/system08/test_api.py::test_create_job_makes_creator_senior_member",
+        "tests/system08/test_store.py::test_new_job_has_eight_draft_stages_and_defaults",
+        "tests/system08/test_store.py::test_new_rejects_invalid_input",
+        "tests/system08/test_store.py::test_save_rejects_secret_keys_and_writes_nothing",
+        "tests/system08/test_store.py::test_delete_rejects_running_job",
+        "tests/system08/test_store.py::test_purge_expired_respects_retention_and_running",
+        "tests/system08/test_store.py::test_versions_are_kept_and_trimmed_to_latest_ten",
+        "tests/system08/test_dbconn.py::test_classify_production_by_any_signal",
+        "tests/system08/test_dbconn.py::test_connect_failure_message_and_log_have_no_password"
       ],
-      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は暫定の共通 3 種で、ケース別の具体名は後続の単位で書く。"
+      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は tests/system08 の node id（2026-10-15）。"
     },
     {
       "feature_id": "s08-write-guard",
@@ -2951,11 +2957,14 @@
         "write_sql_in_read_only_rejected"
       ],
       "required_tests": [
-        "happy_path",
-        "error_path",
-        "evidence"
+        "tests/system08/test_dbconn.py::test_guard_sql_rejects_writes_on_read_only",
+        "tests/system08/test_dbconn.py::test_guard_sql_allows_reads",
+        "tests/system08/test_dbconn.py::test_must_read_only_for_production_or_not_writable",
+        "tests/system08/test_dbconn.py::test_classify_staging_is_not_production_unless_host_suffix_matches",
+        "tests/system08/test_dbconn.py::test_real_db_session_is_read_only",
+        "tests/system08/test_api.py::test_end_to_end_stages_run_guards_and_report"
       ],
-      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は暫定の共通 3 種で、ケース別の具体名は後続の単位で書く。"
+      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は tests/system08 の node id（2026-10-15）。"
     },
     {
       "feature_id": "s08-intake",
@@ -2992,11 +3001,14 @@
         "unparsed_statement_listed_not_dropped"
       ],
       "required_tests": [
-        "happy_path",
-        "error_path",
-        "evidence"
+        "tests/system08/test_api.py::test_stage2_reads_ddl_into_facts_with_source_lines",
+        "tests/system08/test_llm_gate.py::test_redact_scan_detects_secret_and_personal_values",
+        "tests/system08/test_llm_gate.py::test_openai_with_personal_data_is_blocked_and_record_has_hash_only",
+        "tests/system08/test_llm_gate.py::test_openai_with_imported_column_value_is_blocked",
+        "tests/system08/test_llm_gate.py::test_ollama_accepts_data_values_but_records_no_body",
+        "tests/system08/test_llm_gate.py::test_entered_secret_blocks_even_for_ollama"
       ],
-      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は暫定の共通 3 種で、ケース別の具体名は後続の単位で書く。"
+      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は tests/system08 の node id（2026-10-15）。"
     },
     {
       "feature_id": "s08-viewpoints-cases",
@@ -3037,11 +3049,14 @@
         "case_without_basis_flagged"
       ],
       "required_tests": [
-        "happy_path",
-        "error_path",
-        "evidence"
+        "tests/system08/test_stages.py::test_cannot_generate_before_previous_stage_is_approved",
+        "tests/system08/test_stages.py::test_reject_marks_downstream_stale_and_blocks_generation",
+        "tests/system08/test_stages.py::test_regenerating_approved_stage_becomes_proposal_and_adoption_stales_downstream",
+        "tests/system08/test_stages.py::test_stage4_blocks_cases_without_oracle_method",
+        "tests/system08/test_api.py::test_stage2_before_stage1_approval_is_409",
+        "tests/system08/test_api.py::test_qa_member_cannot_approve_stage4_and_outsider_is_rejected"
       ],
-      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は暫定の共通 3 種で、ケース別の具体名は後続の単位で書く。"
+      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は tests/system08 の node id（2026-10-15）。"
     },
     {
       "feature_id": "s08-oracle",
@@ -3084,11 +3099,13 @@
         "unknown_expectation_not_guessed"
       ],
       "required_tests": [
-        "happy_path",
-        "error_path",
-        "evidence"
+        "tests/system08/test_judge.py::test_auto_confirm_only_for_machine_checkable_expectations",
+        "tests/system08/test_judge.py::test_expected_value_based_only_on_source_cannot_be_confirmed",
+        "tests/system08/test_judge.py::test_evaluate_unconfirmed_is_undetermined_and_auto_compares",
+        "tests/system08/test_stages.py::test_stage4_approval_requires_senior_qa_even_if_configured_qa",
+        "tests/system08/test_stages.py::test_case_expected_value_confirm_is_senior_only"
       ],
-      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は暫定の共通 3 種で、ケース別の具体名は後続の単位で書く。"
+      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は tests/system08 の node id（2026-10-15）。"
     },
     {
       "feature_id": "s08-testdata-codegen",
@@ -3132,11 +3149,12 @@
         "unsafe_code_edit_blocked"
       ],
       "required_tests": [
-        "happy_path",
-        "error_path",
-        "evidence"
+        "tests/system08/test_codegen.py::test_generated_code_parses_and_passes_gate",
+        "tests/system08/test_codegen.py::test_gate_detects_weakened_assert",
+        "tests/system08/test_codegen.py::test_gate_detects_hardcoded_password",
+        "tests/system08/test_codegen.py::test_test_names_use_case_id_prefix"
       ],
-      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は暫定の共通 3 種で、ケース別の具体名は後続の単位で書く。"
+      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は tests/system08 の node id（2026-10-15）。"
     },
     {
       "feature_id": "s08-run",
@@ -3182,11 +3200,12 @@
         "cancel_reflected_in_status"
       ],
       "required_tests": [
-        "happy_path",
-        "error_path",
-        "evidence"
+        "tests/system08/test_api.py::test_end_to_end_stages_run_guards_and_report",
+        "tests/system08/test_judge.py::test_nonzero_exit_code_is_fail_even_if_test_passed",
+        "tests/system08/test_judge.py::test_unrun_rows_stay_unverified",
+        "tests/system08/test_codegen.py::test_test_names_use_case_id_prefix"
       ],
-      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は暫定の共通 3 種で、ケース別の具体名は後続の単位で書く。"
+      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は tests/system08 の node id（2026-10-15）。"
     },
     {
       "feature_id": "s08-judge-export",
@@ -3230,11 +3249,13 @@
         "export_before_results_rejected"
       ],
       "required_tests": [
-        "happy_path",
-        "error_path",
-        "evidence"
+        "tests/system08/test_judge.py::test_diff_detects_added_removed_updated",
+        "tests/system08/test_judge.py::test_diff_tolerance_and_exclude_columns",
+        "tests/system08/test_judge.py::test_diff_duplicate_key_is_indeterminate",
+        "tests/system08/test_judge.py::test_undetermined_and_unknown_states_are_not_counted_as_pass",
+        "tests/system08/test_api.py::test_end_to_end_stages_run_guards_and_report"
       ],
-      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は暫定の共通 3 種で、ケース別の具体名は後続の単位で書く。"
+      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は tests/system08 の node id（2026-10-15）。"
     }
   ]
 }

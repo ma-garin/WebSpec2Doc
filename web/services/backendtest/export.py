@@ -5,6 +5,7 @@
 """
 from __future__ import annotations
 
+import csv
 import io
 import re
 import zipfile
@@ -13,7 +14,8 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
-from web.services.backendtest import store
+from web.services.backendtest import cases as cases_mod
+from web.services.backendtest import evidence, store
 from web.services.backendtest.store import StoreError
 
 LEVEL_LABELS = {"integration_internal": "結合テスト（内部）", "integration_external": "結合テスト（外部）",
@@ -210,4 +212,36 @@ def code_zip(job: dict) -> bytes:
         for p in paths:
             if "__pycache__" not in p.parts:
                 z.write(p, "code/" + p.relative_to(root).as_posix())
+    return buf.getvalue()
+
+
+def trace_csv(job: dict) -> bytes:
+    """追跡表: 観点 → ケース → 根拠の事実 ID → 期待値方式・最新の結果。どのケースにも無い業務規則も行に出す。"""
+    vps = {v.get("id"): v for v in job.get("viewpoints") or []}
+    latest = _result_index(job)
+    buf = io.StringIO()
+    w = csv.writer(buf, lineterminator="\r\n")
+    w.writerow(["観点ID", "観点", "ケースID", "根拠の事実ID", "期待値方式", "期待値の状態", "最新の結果"])
+    for c in job.get("cases") or []:
+        o, r = c.get("oracle") or {}, (latest.get(c.get("id")) or [{}])[-1]
+        state = (r.get("judgement") or {}).get("state") if r else "not_run"
+        w.writerow([c.get("viewpoint", ""), (vps.get(c.get("viewpoint")) or {}).get("name", ""), c.get("id", ""),
+                    " ".join(c.get("req_ids") or []), METHOD_LABELS.get(o.get("method"), _s(o.get("method"))),
+                    ORACLE_STATE.get(o.get("state"), _s(o.get("state"))), STATE_LABELS.get(state, _s(state))])
+    for fid in cases_mod.trace(job.get("cases"), job.get("facts"))["uncovered_reqs"]:
+        w.writerow(["", "", "", fid, "", "", "どのケースにも結び付いていません"])
+    return buf.getvalue().encode("utf-8-sig")
+
+
+def evidence_zip(job: dict, run_id: str) -> bytes:
+    """1 回の実行の証跡フォルダを evidence/<run_id>/ 付きで固める。"""
+    root = evidence.run_dir(job["id"], run_id)
+    paths = sorted(p for p in root.rglob("*") if p.is_file()) if root.is_dir() else []
+    if not paths:
+        raise KeyError(run_id)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for p in paths:
+            if "__pycache__" not in p.parts and not p.name.startswith(".tmp-"):
+                z.write(p, f"evidence/{run_id}/" + p.relative_to(root).as_posix())
     return buf.getvalue()

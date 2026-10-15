@@ -64,7 +64,7 @@
   function go(view, push) {
     state.view = view;
     if (view !== 'job') state.job = null;
-    var url = view === 'library' ? '?view=library' : view === 'job' && state.job ? '?job=' + state.job.id : location.pathname;
+    var url = view === 'library' || view === 'guide' ? '?view=' + view : view === 'job' && state.job ? '?job=' + state.job.id : location.pathname;
     history[push ? 'pushState' : 'replaceState'](null, '', url);
     render();
   }
@@ -82,7 +82,7 @@
       b.disabled = inJob && b.dataset.step !== 'intake' && !state.job.analyzed_at;
     });
     var crumb = $('.app-topbar-crumb, #topbar-crumb');
-    var title = { home: 'ダッシュボード', library: '文書庫' }[state.view] || (state.job ? state.job.name : '');
+    var title = { home: 'ダッシュボード', library: '文書庫', guide: 'ユーザーガイド' }[state.view] || (state.job ? state.job.name : '');
     $('#topbar-title').textContent = title;
     if (crumb) crumb.textContent = state.view === 'job' ? '影響度分析 › ' + (STEPS.find(function (s) { return s.id === state.step; }) || {}).name : '影響度分析';
     document.title = title + ' - 影響度分析 - WebSpec2Doc';
@@ -378,7 +378,7 @@
   function boot() {
     var q = new URLSearchParams(location.search);
     if (q.get('job')) openJob(q.get('job'));
-    else go(q.get('view') === 'library' ? 'library' : 'home');
+    else go(['library', 'guide'].indexOf(q.get('view')) >= 0 ? q.get('view') : 'home');
   }
   window.addEventListener('popstate', boot);
   api('GET', '/api/impact/engine').then(function (d) { state.engine = d; renderEngine(); }).catch(function () {});

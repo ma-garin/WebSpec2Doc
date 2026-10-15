@@ -1,6 +1,6 @@
 """TA2（テスト自動化 System 02）API のテスト。
 
-契約: `docs/plan/ta2-contract.md` §3。ルート層だけを検証するため、永続化と導出
+契約: `docs/plans/ta2/ta2-contract.md` §3。ルート層だけを検証するため、永続化と導出
 （`web/services/ta2_store.py` = BE-A 担当）は偽物に差し替える。Playwright も
 偽物にして、実ブラウザ無しで「非同期実行 → 進捗 → 結果保存」を確認する。
 """

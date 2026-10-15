@@ -1,6 +1,6 @@
 """テスト自動化（System 02 / TA2）の API。
 
-契約は `docs/plan/ta2-contract.md` §3。ここはルーティングと入出力の整形だけを持ち、
+契約は `docs/plans/ta2/ta2-contract.md` §3。ここはルーティングと入出力の整形だけを持ち、
 永続化と導出ロジックは `web/services/ta2_store.py` に委ねる（契約 §1）。
 
 方針:

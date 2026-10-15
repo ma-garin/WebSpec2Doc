@@ -1,4 +1,0 @@
-=== [HostGuard] Host: evil.com -> expect 403 ===
-status=403
-=== [HostGuard] Host: 127.0.0.1:8765 (valid) -> expect 200 ===
-status=200

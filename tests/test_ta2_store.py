@@ -1,6 +1,6 @@
 """TA2（テスト自動化 System 02）の永続化・導出ロジックのテスト。
 
-実データ（`docs/demo/sample_output/report.json`）を種に、契約 `docs/plan/ta2-contract.md`
+実データ（`docs/demo/sample_output/report.json`）を種に、契約 `docs/plans/ta2/ta2-contract.md`
 の §2.1 導出・§2.2 要素辞書・§3.1 実行結果反映・§4 穴と生成 を機械的に検証する。
 """
 

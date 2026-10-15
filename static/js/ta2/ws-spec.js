@@ -1,7 +1,7 @@
 /* ws-spec.js — 仕様ワークスペース
  * A7: 画面一覧（#screen-items）＋画面仕様（#spec-screen）
  * A8: テストケース表（#spec-cases）＋書き出し（#spec-export-pop）＋CTA（#spec-cta-tests）
- * マークアップと CSS は docs/plan/design-ideas/workspace-mockup.html の #p-spec から写す。
+ * マークアップと CSS は docs/design/ideas/workspace-mockup.html の #p-spec から写す。
  * 画面仕様の中身は static/js/view-report.js renderReportDetail の移植（bbox ハイライトは持たない）。
  */
 (function () {

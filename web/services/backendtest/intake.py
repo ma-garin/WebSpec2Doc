@@ -66,15 +66,15 @@ def _lines(text):
 
 _SEP = r"\s*[:：=]\s*"
 _JOB_KEYS = (
-    ("command", r"(?:cmd|command|コマンド|実行コマンド|script|スクリプト|実行ファイル)"),
-    ("args", r"(?:args?|arguments?|引数|パラメータ|parameters?)"),
+    ("name", r"(?:ジョブ名|job\s*name|名称)"), ("rerun", r"(?:再実行|rerun|リラン)"),
+    ("command", r"(?:起動|実行)?(?:cmd|command|コマンド|実行コマンド|script|スクリプト|実行ファイル)"),
+    ("args", r"(?:args?|arguments?|引数|パラメータ|parameters?)\d*"),
     ("input", r"(?:input|in|入力|入力ファイル|入力元)"),
     ("output", r"(?:output|out|出力|出力ファイル|出力先)"),
     ("schedule", r"(?:schedule|スケジュール|起動|起動条件|起動日時|実行日時|cron|実行タイミング)"),
     ("before", r"(?:先行|先行ジョブ|前提ジョブ|after|depends?(?:_on)?|predecessors?)"),
     ("after", r"(?:後続|後続ジョブ|next|successors?|then)"),
-    ("commit", r"(?:commit|コミット|コミット単位|commit_interval)"),
-)
+    ("commit", r"(?:commit|コミット|コミット単位|commit_interval)"), )
 _JOB_RE = tuple((k, re.compile(r"^\s*-?\s*%s%s(.+)$" % (p, _SEP), re.I)) for k, p in _JOB_KEYS)
 _RC_LINE = re.compile(r"\brc\b|return\s*code|exit\s*code|終了コード|リターンコード|戻り値", re.I)
 _RC_PAIR = re.compile(r"(\d+)\s*[=:：]\s*([^\s,、;／/]+)")
@@ -92,7 +92,7 @@ def _job_key_facts(key, val, file, no, line):
     if key == "command":
         return [_fact("jobarg", "コマンド", val, "jobdef", file, no, line)] + _job_args(val, file, no, line)
     if key == "args":
-        return _job_args(val, file, no, line) or [_fact("jobarg", "引数", val, "jobdef", file, no, line)]
+        return (_job_args(val, file, no, line) if val.isascii() else []) or [_fact("jobarg", "引数", val, "jobdef", file, no, line)]
     if key in ("input", "output"):
         label = "入力" if key == "input" else "出力"
         return [_fact("io", label, p, "jobdef", file, no, line) for p in re.split(r"[,、;]", val) if p.strip()]
@@ -101,7 +101,8 @@ def _job_key_facts(key, val, file, no, line):
     if key in ("before", "after"):
         label = "先行ジョブ" if key == "before" else "後続ジョブ"
         return [_fact("rule", label, j, "jobdef", file, no, line) for j in re.split(r"[,、;\s]+", val) if j]
-    return [_fact("commit", "コミット", val, "jobdef", file, no, line)]
+    label = {"name": "ジョブ名", "rerun": "再実行"}.get(key)
+    return [_fact("rule" if label else "commit", label or "コミット", val, "jobdef", file, no, line)]
 
 
 def _jobdef_line(line, file, no):
@@ -111,7 +112,8 @@ def _jobdef_line(line, file, no):
             return _job_key_facts(key, m.group(1).strip(), file, no, line)
     if _RC_LINE.search(line):
         return [_fact("rc", "終了コード %s" % c, mean, "jobdef", file, no, line)
-                for c, mean in _RC_PAIR.findall(line)]
+                for c, mean in _RC_PAIR.findall(line)
+                or [(n, f"{w}終了") for w, n in re.findall(r"(正常|異常)終了\D*?(\d+)", line)]]
     if _CRON.match(line):
         return [_fact("date_rule", "スケジュール", line, "jobdef", file, no, line)]
     return []
@@ -176,11 +178,9 @@ _FUNC_FROM = re.compile(r"\b(?:extract|substring|trim|overlay|position)\s*\([^()
 _DYNAMIC = re.compile(r"\b(?:FROM|JOIN|INTO|UPDATE|TABLE)\s+[$%{]|\bEXECUTE\s+(?:IMMEDIATE\s+)?['\"(\w]"
                       r"|\bformat\s*\(\s*['\"][^'\"]*%I", re.I)
 _NOT_TABLE = {"select", "lateral", "values", "where", "set", "only", "the", "a", "an"}
-_ARG_RULES = (
-    (re.compile(r"\$\{?([1-9])\}?"), "$%s", "位置引数 %s"),
+_ARG_RULES = ((re.compile(r"\$\{?([1-9])\}?"), "$%s", "位置引数 %s"),
     (re.compile(r"sys\.argv\[([1-9]\d*)\]"), "sys.argv[%s]", "位置引数 %s"),
-    (re.compile(r"add_argument\(\s*['\"](--?[\w-]+)['\"]"), "%s", "名前付き引数"),
-)
+    (re.compile(r"add_argument\(\s*['\"](--?[\w-]+)['\"]"), "%s", "名前付き引数"), )
 _BIND = re.compile(r"(?<![:\w]):([A-Za-z_]\w*)")
 _COMMIT = re.compile(r"\bcommit\b", re.I)
 

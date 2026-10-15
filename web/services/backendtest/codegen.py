@@ -7,6 +7,7 @@
 """
 from __future__ import annotations
 
+import json
 import pprint
 import re
 import shutil
@@ -97,7 +98,7 @@ def _assert_lines(case: dict) -> list[str]:
         lines.append('assert not result["truncated"], "スナップショットが行上限を超えたため前後比較できません"')
         if is_rerun(case):  # 冪等性: 2 回とも正常終了し、2 回目でデータが変わらないこと
             lines.append('assert result["rc"], "対象のジョブを起動できませんでした。対象の起動コマンドを設定してください"')
-            lines.append('assert all(rc == 0 for rc in result["rc"]), "ジョブが正常終了しませんでした。終了コードを確認してください"')
+            lines.append('assert all(rc in case.get("ok_rc", [0]) for rc in result["rc"]), "ジョブが正常終了しませんでした。終了コードを確認してください"')
         what = "2 回目の実行でデータが変わりました（冪等ではありません）" if is_rerun(case) else "変わってはいけないテーブルが変わりました"
         lines.append(f"assert bt.unexpected_changes(case) == {{}}, {what!r}")
         for table, expect in sorted((oracle.get("expect") or {}).items()):
@@ -124,25 +125,45 @@ def is_rerun(case: dict) -> bool:
     return case.get("check") == "rerun" or str(case.get("variant") or "") == "再実行"
 
 
-def _targets(job: dict) -> tuple[list[str], list[str]]:
-    """対象（ジョブ定義）の起動コマンドと出力テーブル。"""
+def ok_codes(job: dict) -> list[int]:
+    """正常とする終了コード。対象の ok_rc → 取り込んだ定義の「正常終了: リターンコード N」→ 0。"""
+    for t in job.get("targets") or []:
+        if isinstance(t, dict) and isinstance(t.get("ok_rc"), list) and t["ok_rc"]:
+            return [int(x) for x in t["ok_rc"]]
+    text = json.dumps([job.get("facts"), job.get("unread")], ensure_ascii=False, default=str)
+    found = re.findall(r"正常終了[^0-9\"]{0,20}?(\d+)", text) + [
+        str(f.get("subject")).split()[-1] for f in job.get("facts") or [] if isinstance(f, dict) and f.get("kind") == "rc"
+        and "正常" in str(f.get("value")) and "異常" not in str(f.get("value")) and str(f.get("subject")).split()[-1].isdigit()]
+    return sorted({int(x) for x in found}) or [0]
+
+
+def case_date(case: dict) -> str:
+    """ケース固有の業務日付（手順・前提に「業務日付を YYYY-MM-DD」とあるとき）。無ければ空。"""
+    text = " ".join(str(x) for x in [*(case.get("steps") or []), case.get("pre") or ""])
+    m = re.search(r"業務日付を?\s*(\d{4}-\d{2}-\d{2})", text)
+    return m.group(1) if m else ""
+
+
+def _targets(job: dict) -> tuple[list[str], list[str], list[int]]:
+    """対象（ジョブ定義）の起動コマンド・出力テーブル・正常とする終了コード。"""
     targets = [t for t in job.get("targets") or [] if isinstance(t, dict)]
     return ([str(t["command"]) for t in targets if t.get("command")],
-            [str(o) for t in targets for o in t.get("outputs") or []])
+            [str(o) for t in targets for o in t.get("outputs") or []], ok_codes(job))
 
 
-def _case_literal(case: dict, commands: list[str], outputs: list[str]) -> dict:
+def _case_literal(case: dict, commands: list[str], outputs: list[str], ok_rc: list[int] = (0,)) -> dict:
     out = {k: case[k] for k in ("id", "title", "data", "expected") if k in case}
     oracle = dict(case.get("oracle") or {})
     hit = [t for t in oracle.get("tables") or [] if t in outputs]
     if hit and not oracle.get("table"):
         oracle["table"] = hit[0]  # 別経路・ゴールデンは出力テーブルの実行後と比べる
-    return {**out, "steps_ja": list(case.get("steps") or []), "rerun": is_rerun(case),
+    extra = {"business_date": case_date(case)} if case_date(case) else {}
+    return {**out, **extra, "ok_rc": list(ok_rc), "steps_ja": list(case.get("steps") or []), "rerun": is_rerun(case),
             "steps": [{"command": c} for c in commands], "oracle": oracle}
 
 
 def _test_module(cases: list[dict], names: dict[str, str], summaries: dict[str, str],
-                 targets: tuple[list[str], list[str]] = ([], [])) -> str:
+                 targets: tuple = ([], [], [0])) -> str:
     literal = {str(c["id"]): _case_literal(c, *targets) for c in cases}
     out = [
         f'"""自動生成: ケース表から作ったテスト（{len(cases)} 件）。',

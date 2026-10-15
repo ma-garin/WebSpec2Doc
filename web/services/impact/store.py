@@ -80,7 +80,10 @@ def delete(job: dict) -> None:
 
 
 def summary(job: dict) -> dict:
-    p1 = sum(1 for r in job.get("impacts") or [] if r.get("priority") == 1)
+    def pri(r):
+        return (r.get("review") or {}).get("priority") or r.get("priority")
+    p1 = sum(1 for r in job.get("impacts") or []
+             if pri(r) == 1 and (r.get("review") or {}).get("status") != "rejected")
     return {**{k: v for k, v in job.items() if k not in _SUMMARY_EXCLUDE},
             "impact_count": len(job.get("impacts") or []), "p1_count": p1}
 
@@ -173,3 +176,106 @@ def remove_doc(job: dict, name: str) -> dict:
 def read_passages(job: dict, name: str) -> list[dict]:
     path = passages_path(job, name)
     return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else []
+
+
+# ---- 文書庫（テナント内の全分析で共有する検索先） ----
+LIB_ID = "library0000"
+
+
+def _lib_dir() -> Path:
+    return _root() / "_library"
+
+
+def library() -> dict:
+    path = _lib_dir() / "library.json"
+    if not path.is_file():
+        return {"id": LIB_ID, "docs": []}
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _save_library(lib: dict) -> dict:
+    _write_json(_lib_dir() / "library.json", lib)
+    return lib
+
+
+def library_add(job: dict, name: str) -> tuple[dict, dict]:
+    """分析の文書を文書庫へ移す。以後はどの分析でも検索先として使われる。"""
+    doc = next((d for d in job["docs"] if d["name"] == name), None)
+    if doc is None:
+        raise KeyError(name)
+    if doc["role"] != "store":
+        raise StoreError("文書庫に入れられるのは「検索先」の文書だけです。使い方を検索先にしてから入れてください。")
+    lib = library()
+    lib_dir = _lib_dir()
+    (lib_dir / "files").mkdir(parents=True, exist_ok=True)
+    (lib_dir / "passages").mkdir(parents=True, exist_ok=True)
+    os.replace(file_path(job, name), lib_dir / "files" / safe_name(name))
+    os.replace(passages_path(job, name), lib_dir / "passages" / (safe_name(name) + ".json"))
+    docs = [d for d in lib["docs"] if d["name"] != name] + [{**doc, "added_at": now()}]
+    return {**job, "docs": [d for d in job["docs"] if d["name"] != name]}, _save_library({**lib, "docs": docs})
+
+
+def library_remove(name: str) -> dict:
+    lib = library()
+    if not any(d["name"] == name for d in lib["docs"]):
+        raise KeyError(name)
+    (_lib_dir() / "files" / safe_name(name)).unlink(missing_ok=True)
+    (_lib_dir() / "passages" / (safe_name(name) + ".json")).unlink(missing_ok=True)
+    return _save_library({**lib, "docs": [d for d in lib["docs"] if d["name"] != name]})
+
+
+def library_passages(name: str) -> list[dict]:
+    path = _lib_dir() / "passages" / (safe_name(name) + ".json")
+    return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else []
+
+
+# ---- 人の判断（採否・優先度の修正） ----
+REVIEW_STATUS = ("accepted", "rejected", "")
+
+
+def impact_key(row: dict) -> str:
+    return f"{row.get('doc', '')}|{row.get('location', '')}|{'・'.join(row.get('changes') or [])}"
+
+
+def carry_reviews(old: list[dict], new: list[dict]) -> list[dict]:
+    """再分析しても、同じ箇所・同じ変更への人の判断は引き継ぐ。"""
+    reviews = {impact_key(r): r["review"] for r in old if r.get("review")}
+    return [{**r, "review": reviews[impact_key(r)]} if impact_key(r) in reviews else r for r in new]
+
+
+def set_review(job: dict, iid: str, status: str, priority: int | None, note: str) -> dict:
+    if status not in REVIEW_STATUS or (priority is not None and priority not in (1, 2, 3)):
+        raise StoreError("選べない値です。一覧から選び直してください。")
+    if not any(r["id"] == iid for r in job["impacts"]):
+        raise KeyError(iid)
+    review = {"status": status, "priority": priority, "note": note[:500], "at": now()}
+    return {**job, "impacts": [{**r, "review": review} if r["id"] == iid else r for r in job["impacts"]]}
+
+
+def library_put(filename: str, data: bytes) -> dict:
+    """文書庫へ直接入れる。同じ名前は置き換える（版の入れ替え）。"""
+    from web.services.docverify.ingest import IngestError, ingest
+    name = safe_name(filename)
+    if len(data) > MAX_FILE_BYTES:
+        raise StoreError(f"{name} が 20MB を超えています。分割してから入れてください。")
+    try:
+        _, passages = ingest(name, data, _lib_dir() / "work")
+    except IngestError as exc:
+        raise StoreError(f"{name}: {exc}") from exc
+    lib = library()
+    prev = next((d for d in lib["docs"] if d["name"] == name), None)
+    if prev is None and len(lib["docs"]) >= MAX_FILES * 5:
+        raise StoreError("文書庫に入れられるのは 300 文書までです。古い文書を外してください。")
+    (_lib_dir() / "files").mkdir(parents=True, exist_ok=True)
+    (_lib_dir() / "files" / name).write_bytes(data)
+    _write_json(_lib_dir() / "passages" / (name + ".json"), passages)
+    entry = {"name": name, "role": "store", "store": prev["store"] if prev else guess_store(name),
+             "size": len(data), "passages": len(passages), "indexed_at": now(), "added_at": now()}
+    return _save_library({**lib, "docs": [d for d in lib["docs"] if d["name"] != name] + [entry]})
+
+
+def library_set_store(name: str, kind: str) -> dict:
+    lib = library()
+    if not any(d["name"] == name for d in lib["docs"]):
+        raise KeyError(name)
+    return _save_library({**lib, "docs": [{**d, "store": kind} if d["name"] == name else d for d in lib["docs"]]})

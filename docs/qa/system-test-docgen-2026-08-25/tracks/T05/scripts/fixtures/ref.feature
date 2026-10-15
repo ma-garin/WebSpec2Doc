@@ -1,2 +1,0 @@
-Feature: login
-  Scenario: ok

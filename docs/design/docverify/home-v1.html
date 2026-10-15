@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ドキュメント検証 見本</title>
+<link rel="stylesheet" href="http://127.0.0.1:8766/static/tokens.css">
+<link rel="stylesheet" href="http://127.0.0.1:8766/static/app.css">
+<link rel="stylesheet" href="http://127.0.0.1:8766/static/app-components.css">
+<link rel="stylesheet" href="http://127.0.0.1:8766/static/css/components.css">
+<link rel="stylesheet" href="http://127.0.0.1:8766/static/css/user-menu.css">
+<style>
+/* 見本専用の追加（dashboard に無い部品だけ。値は tokens.css の変数のみ） */
+.dv-drop{display:flex;align-items:center;gap:14px;padding:18px 20px;border:1.5px dashed var(--border-strong,#c9d2de);border-radius:12px;background:var(--surface-2,#f7f9fc);flex:1;min-width:0}
+.dv-drop strong{display:block;font-size:15px}
+.dv-drop small{color:var(--text-muted,#6b7280)}
+.dv-drop svg{width:28px;height:28px;color:var(--primary,#1a73e8);flex:none}
+.dv-hero-row{display:flex;gap:12px;align-items:stretch;margin-top:18px}
+.dv-hero-side{display:flex;flex-direction:column;gap:8px;width:260px}
+.dv-hero-side select{height:38px}
+.dv-score{display:inline-flex;align-items:center;gap:8px;font-variant-numeric:tabular-nums}
+.dv-score-bar{width:72px;height:6px;border-radius:3px;background:var(--surface-3,#e8edf3);overflow:hidden}
+.dv-score-bar i{display:block;height:100%;background:var(--primary,#1a73e8)}
+.dv-score-bar i.is-warn{background:var(--warning,#e8a317)}
+.dv-score-bar i.is-bad{background:var(--danger,#d93025)}
+.dv-stage{display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;background:var(--primary-soft,#e8f0fe);color:var(--primary,#1a73e8)}
+.dv-stage.is-done{background:var(--success-soft,#e6f4ea);color:var(--success,#188038)}
+.dv-sev{font-weight:700}
+.dv-sev.c{color:var(--danger,#d93025)}
+.dv-grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0}
+.dashboard-table td,.dashboard-table th{white-space:nowrap}
+.dashboard-table .history-actions{display:flex;gap:6px}
+.dv-hero-side select{height:38px;width:100%}
+.dv-card{background:var(--surface,#fff);border:1px solid var(--border,#e3e8ef);border-radius:12px;padding:18px 20px}
+.dv-card h3{margin:0 0 4px;font-size:15px}
+.dv-card p.sub{margin:0 0 12px;color:var(--text-muted,#6b7280);font-size:13px}
+.dv-qrow{display:grid;grid-template-columns:96px 1fr 40px;align-items:center;gap:10px;padding:6px 0;font-size:13px}
+.dv-qrow .dv-score-bar{width:100%}
+.dv-qrow b{text-align:right;font-variant-numeric:tabular-nums}
+.dv-todo li{display:flex;justify-content:space-between;gap:8px;padding:9px 0;border-bottom:1px solid var(--border,#e3e8ef);font-size:13px}
+.dv-todo{list-style:none;margin:0;padding:0}
+.dv-todo a{color:var(--primary,#1a73e8);text-decoration:none;font-weight:600}
+.dv-hero-side select.url-input{height:38px!important;padding:0 10px!important;font-size:14px}
+.app-content{overflow:auto}
+</style>
+</head>
+<body class="app-page">
+<div class="app-shell">
+  <aside class="app-sidebar">
+    <a class="app-brand"><span class="app-brand-mark">W</span><span class="app-brand-text"><strong>WebSpec2Doc</strong><span>ドキュメント検証</span></span></a>
+    <a class="sys-switcher"><span class="sys-switcher-label">システム</span><span class="sys-switcher-cur">ドキュメント検証</span><span class="sys-switcher-swap">切替</span></a>
+    <button type="button" class="btn-primary sidebar-primary-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="16" height="16"><path d="M12 5v14M5 12h14"/></svg><span>新しいレビュー</span></button>
+    <nav class="app-nav">
+      <a class="app-nav-item active" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span class="nav-label">ホーム</span></a>
+      <a class="app-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span class="nav-label">レビュー一覧</span></a>
+      <a class="app-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg><span class="nav-label">指摘一覧</span></a>
+      <div class="app-nav-group">管理</div>
+      <a class="app-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg><span class="nav-label">観点プリセット</span></a>
+      <a class="app-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span class="nav-label">メトリクス</span></a>
+      <a class="app-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg><span class="nav-label">設定</span></a>
+    </nav>
+  </aside>
+
+  <div class="app-main">
+    <header class="app-topbar"><div class="app-topbar-lead"><div class="app-breadcrumb"><span>WebSpec2Doc</span><span class="sep">/</span><span>ドキュメント検証</span></div><h1 class="app-topbar-title">ホーム</h1></div><div class="app-topbar-right"><div class="usermenu"><button type="button" class="usermenu-trigger"><span class="usermenu-avatar">ゲ</span><span class="usermenu-name">ゲスト</span></button></div></div></header>
+    <main class="app-content">
+      <section class="dash-hero">
+        <div class="dash-hero-main">
+          <h1 class="dash-hero-title">仕様書を検証して、指摘と質問票を作る</h1>
+          <p class="dash-hero-sub">要件定義書・設計書を読み込み、ISO/IEC/IEEE 29148 の品質特性で曖昧さ・抜け・検証できない記述を洗い出します。</p>
+          <div class="dv-hero-row">
+            <label class="dv-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg><span><strong>ファイルをここへドラッグ、またはクリックして選ぶ</strong><small>Word・Excel・PDF・Markdown・テキスト（1 ファイル 200MB まで）</small></span></label>
+            <div class="dv-hero-side">
+              <select class="url-input select-compact"><option>レビューの種類: インスペクション</option></select>
+              <select class="url-input select-compact"><option>観点: 29148 標準（8 特性）</option></select>
+              <button type="button" class="btn-primary dash-hero-start">検証を始める</button>
+            </div>
+          </div>
+          <div class="dash-hero-steps"><span class="dash-hero-step"><b>1</b> 取り込み</span><span class="dash-hero-arrow">→</span><span class="dash-hero-step"><b>2</b> 自動検出</span><span class="dash-hero-arrow">→</span><span class="dash-hero-step"><b>3</b> 仕分け</span><span class="dash-hero-arrow">→</span><span class="dash-hero-step"><b>4</b> 質問票・報告</span><span class="dash-hero-note">目安: 50 頁で約 10 秒（外部への送信なし）</span><button type="button" class="dash-hero-sample">見本のレビューを見る<span class="sample-zero">取り込みなし</span></button></div>
+        </div>
+      </section>
+
+      <div class="dashboard-section-head">
+        <div><h2 class="dash-section-title">レビュー</h2><p class="dashboard-section-copy">進行中のレビューと、品質スコアの推移を確認できます。</p></div>
+        <div class="dashboard-section-actions"><button class="btn-outline-sm">再読み込み</button><button class="btn-outline-sm">+ 新しいレビュー</button></div>
+      </div>
+      <div class="stat-cards">
+        <div class="stat-card"><div class="stat-card-head"><span class="stat-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg></span><span class="stat-card-label">進行中のレビュー</span></div><div class="stat-card-num">4</div><div class="stat-card-sub">うち自分の担当 2 件</div></div>
+        <div class="stat-card is-warn"><div class="stat-card-head"><span class="stat-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></span><span class="stat-card-label">未対応の重大な指摘</span></div><div class="stat-card-num">3</div><div class="stat-card-sub">終了判定を止めています</div></div>
+        <div class="stat-card"><div class="stat-card-head"><span class="stat-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M8 10h8M8 14h5"/><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg></span><span class="stat-card-label">回答待ちの質問</span></div><div class="stat-card-num">12</div><div class="stat-card-sub">仕様の持ち主に送付済み</div></div>
+        <div class="stat-card"><div class="stat-card-head"><span class="stat-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 20V10M10 20V4M16 20v-7"/></svg></span><span class="stat-card-label">品質スコア（平均）</span></div><div class="stat-card-num">78</div><div class="stat-card-sub">前週から +6</div></div>
+      </div>
+
+      <div class="dv-grid2">
+        
+          <section class="dv-card"><h3>特性別の品質スコア</h3><p class="sub">進行中 4 件の平均（ISO/IEC/IEEE 29148）</p>
+            <div class="dv-qrow"><span>曖昧でない</span><span class="dv-score-bar"><i class="is-warn" style="width:58%"></i></span><b>58</b></div>
+            <div class="dv-qrow"><span>検証可能</span><span class="dv-score-bar"><i class="is-warn" style="width:66%"></i></span><b>66</b></div>
+            <div class="dv-qrow"><span>完全</span><span class="dv-score-bar"><i style="width:84%"></i></span><b>84</b></div>
+            <div class="dv-qrow"><span>単一</span><span class="dv-score-bar"><i style="width:91%"></i></span><b>91</b></div>
+            <div class="dv-qrow"><span>一貫</span><span class="dv-score-bar"><i style="width:100%"></i></span><b>100</b></div>
+          </section>
+          <section class="dv-card"><h3>次にやること</h3><p class="sub">自分の担当から</p>
+            <ul class="dv-todo"><li><span>重大な指摘 2 件を仕分ける</span><a>基本設計書 →</a></li><li><span>回答 5 件を取り込む</span><a>要件定義書 →</a></li><li><span>改版を取り込んで再検査</span><a>画面設計書 →</a></li></ul>
+          </section>
+      </div>
+        <table class="data dashboard-table">
+          <thead><tr><th>文書</th><th>工程</th><th>品質スコア</th><th class="num">未対応</th><th>更新</th><th>操作</th></tr></thead>
+          <tbody>
+            <tr><td class="site-cell">基本設計書_会員登録 v1.3 <span class="diff-badge">改版あり</span></td><td><span class="dv-stage">仕分け</span></td><td><span class="dv-score"><span class="dv-score-bar"><i class="is-warn" style="width:62%"></i></span>62</span></td><td class="num"><span class="dv-sev c">重大 2</span> / 9</td><td>今日</td><td class="history-actions"><button class="btn-primary hist-open">開く</button><button class="btn-outline-sm">報告</button></td></tr>
+            <tr><td class="site-cell">要件定義書_ポイント機能 v2.0</td><td><span class="dv-stage">質問票</span></td><td><span class="dv-score"><span class="dv-score-bar"><i style="width:81%"></i></span>81</span></td><td class="num">4</td><td>2日前</td><td class="history-actions"><button class="btn-primary hist-open">開く</button><button class="btn-outline-sm">報告</button></td></tr>
+            <tr><td class="site-cell">画面設計書_管理画面.xlsx</td><td><span class="dv-stage">取り込み済み</span></td><td><span class="dv-score"><span class="dv-score-bar"><i class="is-bad" style="width:44%"></i></span>44</span></td><td class="num"><span class="dv-sev c">重大 1</span> / 17</td><td>3日前</td><td class="history-actions"><button class="btn-primary hist-open">開く</button><button class="btn-outline-sm">報告</button></td></tr>
+            <tr><td class="site-cell">外部IF仕様書 v1.0</td><td><span class="dv-stage is-done">完了</span></td><td><span class="dv-score"><span class="dv-score-bar"><i style="width:93%"></i></span>93</span></td><td class="num">0</td><td>9日前</td><td class="history-actions"><button class="btn-primary hist-open">開く</button><button class="btn-outline-sm">報告</button></td></tr>
+          </tbody>
+        </table>
+    </main>
+  </div>
+</div>
+</body>
+</html>

@@ -1,8 +1,0 @@
-===== C030 サイズ境界: 20MB ちょうど（OK期待） =====
-{"ok":true,"saved":[{"name":"exact20mb.md","path":"/Users/fujimagariyuki/dev/active/webspec2doc/output/127.0.0.1:9105/reference_docs/exact20mb.md"}]}
-
-[HTTP 200]
-===== C031 サイズ境界: 20MB+1（400期待） =====
-{"error":"\u30d5\u30a1\u30a4\u30eb\u30b5\u30a4\u30ba\u304c\u4e0a\u9650\uff0820MB\uff09\u3092\u8d85\u3048\u3066\u3044\u307e\u3059: over20mb.md","ok":false}
-
-[HTTP 400]

@@ -1,9 +1,0 @@
-{
-  "status": 200,
-  "ok": true,
-  "field_types": [
-    "password",
-    "text"
-  ],
-  "n_fields": 2
-}

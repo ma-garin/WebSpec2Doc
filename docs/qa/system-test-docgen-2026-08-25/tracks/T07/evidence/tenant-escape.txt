@@ -1,8 +1,0 @@
-=== [Tenant/Traversal] domain traversal attempts ===
-GET /api/result domain='../tenants/other' -> 404
-GET /api/result domain='127.0.0.1:9107/../9102' -> 404
-GET /api/result domain='..%2Ftenants' -> 404
-GET /api/result domain='127.0.0.1:9102' -> 404
-GET /api/result domain='/etc' -> 404
---- login/simple with traversal domain (expect 400) ---
-login/simple domain=../x -> 400

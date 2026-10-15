@@ -2,7 +2,7 @@
 
 不具合: 呼び出し側が `demomart` を渡しても、クローラ CLI が URL のホストから
 出力先を作り直すため `output/127.0.0.1:8766/` に書かれ、drift の基準が永久に
-できなかった（docs/plan/unified-verify.md B-1 / B-2）。
+できなかった（docs/plans/ta2/unified-verify.md B-1 / B-2）。
 
 契約: `--domain-name` があれば出力先ディレクトリ名はそれに従う。無ければ従来
 どおり URL のホストから決める（既存の挙動を変えない）。

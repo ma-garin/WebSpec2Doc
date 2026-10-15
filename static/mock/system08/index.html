@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ja"><head><meta charset="UTF-8"><title>バッチ・バックエンドのテスト 画面案</title>
+<link rel="stylesheet" href="/static/tokens.css">
+<link rel="stylesheet" href="/static/app.css">
+<link rel="stylesheet" href="/static/css/components.css">
+<link rel="stylesheet" href="/static/css/user-menu.css">
+<link rel="stylesheet" href="/static/css/ta2.css">
+<link rel="stylesheet" href="/static/css/ws.css">
+<link rel="stylesheet" href="/static/css/batch-test.css">
+<style>
+html,body{height:auto;overflow:auto}
+body.mk{background:var(--bg)}
+.mk-head{padding:20px 24px 8px}
+.mk-head h1{font-size:18px;font-weight:700}
+.mk-head p{color:var(--tx2);font-size:12.5px;margin-top:4px}
+.mk-toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.mk-toc a{font-size:12px;padding:3px 10px;border:1px solid var(--line);border-radius:999px;background:var(--sf);color:var(--tx2);text-decoration:none}
+.mk-toc a:hover{border-color:var(--ac);color:var(--ac)}
+.mk-state{padding:20px 24px 8px}
+.mk-state>h2{font-size:14px;font-weight:700;margin-bottom:2px}
+.mk-state>p{font-size:12px;color:var(--tx3);margin-bottom:8px}
+.mk-frame{container-type:inline-size;border:1px solid var(--line2);border-radius:12px;overflow:hidden;background:var(--bg);position:relative}
+.mk-frame .app{position:relative;inset:auto;min-height:600px}
+.mk-frame .rail.app-sidebar{height:auto}
+.mk-frame .bt-content{overflow:visible;min-width:0}
+.mk-note{padding:8px 16px 0}
+.bt-cases td:nth-child(2){min-width:6.5em}
+.bt-cases td:nth-child(3){white-space:normal;color:var(--tx);font-size:12.5px}
+.bt-cases td .pill{display:inline-block;margin-top:4px}
+.mk-step2{display:block;color:var(--tx3);font-size:11.5px;margin-top:4px}
+.mk-frame .main{min-width:0}
+.mk-narrow{width:1024px;max-width:100%}
+.mk-b .app{grid-template-columns:56px minmax(0,1fr)}
+.mk-b .rail svg{width:18px;height:18px}
+.mk-full{flex:1;justify-content:center}
+.mk-user{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;color:var(--tx2);font-weight:600;white-space:nowrap}
+.mk-casesel{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--tx3);white-space:nowrap}
+.mk-casesel select{padding:5px 8px;border:1px solid var(--line2);border-radius:8px;background:var(--sf);color:var(--tx);font-size:12.5px}
+.app-topbar-right{display:flex;align-items:center;gap:14px}
+.app-nav-item:disabled{opacity:.5;cursor:not-allowed}
+.mk-num{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700;background:var(--sf);color:var(--tx3);border:1px solid var(--line2);flex:none}
+.mk-num.ok{background:var(--ok-bg);color:var(--ok-tx);border-color:var(--ok-bg)}
+.mk-num.on{background:var(--ac);color:var(--sf);border-color:var(--ac)}
+.mk-num.wait{background:var(--wa-bg);color:var(--wa-tx);border-color:var(--wa)}
+.mk-navst{font-size:11px;font-weight:500;color:var(--tx3);flex:none}
+.mk-navst.wait{color:var(--wa-tx)}
+.mk-itst{font-size:11px;color:var(--tx3);white-space:nowrap}
+.mk-stagehead{display:flex;align-items:center;gap:10px;padding:12px 20px;background:var(--sf);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.mk-stagehead small{font-size:11.5px;color:var(--tx3);font-family:var(--mono)}
+.mk-stagehead b{font-size:14px}
+.mk-board{background:var(--sf);border-bottom:1px solid var(--line);padding:10px 20px 12px;display:flex;flex-direction:column;gap:8px}
+.mk-board-h{display:flex;align-items:center;gap:12px;font-size:12px;color:var(--tx2);flex-wrap:wrap}
+.mk-board-h b{color:var(--tx)}
+.mk-steps{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px}
+.mk-step{border:1px solid var(--line);border-radius:8px;padding:6px 8px;min-width:0;display:flex;flex-direction:column;gap:2px;text-align:left;background:var(--sf);color:var(--tx2)}
+.mk-step-t{display:flex;align-items:center;gap:6px;font-weight:600;font-size:12px;color:var(--tx);min-width:0}
+.mk-step-t span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mk-step small{font-size:11px;color:var(--tx3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mk-step.ok{border-color:var(--ok);background:var(--ok-bg)}.mk-step.ok small{color:var(--ok-tx)}
+.mk-step.on{border-color:var(--ac);background:var(--ac-bg);box-shadow:0 0 0 1px var(--ac) inset}.mk-step.on small{color:var(--ac-dk)}
+.mk-step.wait{border-color:var(--wa);background:var(--wa-bg)}.mk-step.wait small{color:var(--wa-tx)}
+.mk-step:disabled{opacity:.6;cursor:not-allowed}
+.mk-approve{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--sf);border:1px solid var(--line);border-radius:12px;flex-wrap:wrap}
+.mk-approve-t{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 260px}
+.mk-approve-t b{font-size:13px}
+.mk-approve-t span{font-size:12px;color:var(--tx2)}
+.mk-approve input{flex:1 1 220px;min-width:0;padding:7px 10px;border:1px solid var(--line2);border-radius:8px;font-size:12.5px}
+.mk-approve.locked{background:var(--bg)}
+.mk-reason{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--wa-tx);background:var(--wa-bg);padding:6px 10px;border-radius:8px}
+.mk-reason svg{width:14px;height:14px;flex:none}
+.mk-banner{display:flex;gap:10px;align-items:flex-start;padding:10px 14px;border-radius:10px;font-size:12.5px;line-height:1.6}
+.mk-banner svg{width:18px;height:18px;flex:none;margin-top:1px}
+.mk-banner b{display:block}
+.mk-banner .sp{flex:1}
+.mk-banner.ro{background:var(--wa-bg);color:var(--wa-tx);border:1px solid var(--wa)}
+.mk-banner.err{background:var(--ng-bg);color:var(--ng-tx);border:1px solid var(--ng)}
+.mk-banner.info{background:var(--ac-bg);color:var(--ac-dk);border:1px solid var(--ac-bg)}
+.mk-choices{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.mk-choices.c3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.mk-choice{border:1px solid var(--line2);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;background:var(--sf);text-align:left;min-width:0}
+.mk-choice b{font-size:13px}
+.mk-choice span{font-size:11.5px;color:var(--tx3)}
+.mk-choice.on{border-color:var(--ac);background:var(--ac-bg);box-shadow:0 0 0 1px var(--ac) inset}
+.mk-choice:disabled{opacity:.55;cursor:not-allowed}
+.mk-checks{display:flex;flex-wrap:wrap;gap:6px}
+.mk-checks label{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;padding:5px 10px;border:1px solid var(--line2);border-radius:999px;background:var(--sf)}
+.mk-mt{margin-top:14px}
+.mk-quote{font-family:var(--mono);font-size:11.5px;background:var(--bg);border-left:3px solid var(--line2);padding:4px 8px;border-radius:4px;color:var(--tx2);white-space:pre-wrap;overflow-wrap:anywhere}
+.mk-src{font-size:12px;color:var(--ac-dk)}
+.mk-src small{display:block;color:var(--tx3);font-size:11px}
+.mk-ja{font-size:12px;color:var(--tx2);margin-top:4px}
+.mk-ja::before{content:"日本語の要約: ";color:var(--tx3)}
+.mk-sql{display:block;font-family:var(--mono);font-size:11px;color:var(--tx2);background:var(--bg);border-radius:4px;padding:3px 6px;overflow-wrap:anywhere}
+.sev{font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700;white-space:nowrap}
+.sev.hi{background:var(--color-high-bg);color:var(--wa-tx)}
+.sev.lo{background:var(--color-low-bg);color:var(--ok-tx)}
+.mk-tabs{display:flex;gap:6px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--line)}
+.mk-codepair{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);border-bottom:1px solid var(--line)}
+.mk-codepair .bt-pre{min-height:0}
+.mk-sum{padding:14px 16px;font-size:12.5px;color:var(--tx2);display:flex;flex-direction:column;gap:8px}
+.mk-sum h4{font-size:12.5px;color:var(--tx)}
+.mk-sum dt{font-size:11px;color:var(--tx3);font-weight:600}
+.mk-sum dd{margin:0 0 4px}
+.mk-prog{height:8px;border-radius:999px;background:var(--bg);overflow:hidden;border:1px solid var(--line);margin:4px 0 8px}
+.mk-prog i{display:block;height:100%;width:39%;background:var(--ac)}
+.mk-runmeta{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--tx2)}
+.mk-split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.mk-tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;margin-bottom:8px}
+.mk-tag.fact{background:var(--ac-bg);color:var(--ac-dk)}
+.mk-tag.judge{background:var(--wa-bg);color:var(--wa-tx)}
+.mk-uv{border-color:var(--wa);background:var(--wa-bg)}
+.mk-uv h3{color:var(--wa-tx)}
+.mk-uv li{color:var(--tx)}
+.mk-uv small{display:block;color:var(--tx2)}
+.mk-body2{display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:12px;align-items:start}
+.mk-body2>.bt-panel{min-width:0}
+.mk-log ol{list-style:none;display:flex;flex-direction:column;gap:10px}
+.mk-log li{border-left:3px solid var(--ok);padding-left:8px;font-size:12px}
+.mk-log li.back{border-left-color:var(--ng)}
+.mk-log li.wait{border-left-color:var(--wa)}
+.mk-log li span{display:block;color:var(--tx3);font-size:11.5px}
+.mk-overlay{position:absolute;inset:0;background:color-mix(in srgb,var(--tx) 45%,transparent);display:grid;place-items:center;z-index:40;padding:20px}
+.mk-modal{width:min(540px,100%);background:var(--sf);border-radius:14px;box-shadow:var(--shadow-lg);padding:20px 22px;display:flex;flex-direction:column;gap:12px}
+.mk-modal h3{font-size:15px}
+.mk-modal p{font-size:12.5px;color:var(--tx2)}
+.mk-modal dl{display:grid;grid-template-columns:120px minmax(0,1fr);gap:6px 12px;font-size:12.5px}
+.mk-modal dt{color:var(--tx3)}
+.mk-modal ul{padding-left:16px}
+.mk-modal label{display:flex;gap:8px;align-items:center;font-size:12.5px}
+.mk-modal .bt-actions{justify-content:flex-end}
+.mk-idx{max-width:900px;margin:0 auto;padding:32px 24px;display:flex;flex-direction:column;gap:16px}
+.mk-idx .bt-card ol{padding-left:20px;display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;font-size:12.5px}
+.mk-idx a{color:var(--ac-dk)}
+@container (max-width:1200px){
+  .mk-a .app{grid-template-columns:180px 180px minmax(0,1fr)}
+  .mk-navst:not(.wait){display:none}
+  .bt-tbl th{white-space:normal}
+  .mk-choices{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .mk-codepair,.mk-split,.mk-body2{grid-template-columns:minmax(0,1fr)}
+  .bt-grid2{grid-template-columns:minmax(0,1fr)}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .app-topbar{padding:12px 16px}
+  .mk-step small{white-space:normal}
+}
+</style></head>
+<body class="mk"><main class="mk-idx"><h1>バッチ・バックエンドのテスト 画面案（承認用）</h1><p class="bt-mut">2 案から 1 つを選んでください。どちらも同じ 12 の表示状態を縦に並べています。見本データです。</p><div class="bt-card"><div class="bt-card-h"><h3><a href="a.html">案 A　段階ナビ型</a></h3></div><p class="bt-mut">System 07 と同じ 3 列（左に段階 1〜8、中央に案件一覧、右に段階の本体）。初級 QA が上から順に押して進む形。承認バーは本体の最後。</p><ol class="mk-mt"><li><a href="a.html#s1">1. 案件 0 件（空状態と最初の 1 手）</a></li><li><a href="a.html#s2">2. 段階 1 目的・範囲</a></li><li><a href="a.html#s3">3. 段階 2 対象の読み取り</a></li><li><a href="a.html#s4">4. 段階 3 観点表</a></li><li><a href="a.html#s5">5. 段階 4 ケース表</a></li><li><a href="a.html#s6">6. 段階 6 テストコード</a></li><li><a href="a.html#s7">7. 段階 7 実行中と途中の結果</a></li><li><a href="a.html#s8">8. 段階 8 判定・報告</a></li><li><a href="a.html#s9a">9-1. 承認バー（シニア QA が開いたとき）</a></li><li><a href="a.html#s9b">9-2. 承認バー（初級 QA が開いたとき）</a></li><li><a href="a.html#s10a">10-1. 本番らしい接続先（読み取り専用）</a></li><li><a href="a.html#s10b">10-2. 書き込みの前の確認</a></li><li><a href="a.html#s11">11. エラー（接続できない）</a></li><li><a href="a.html#s12">12. 狭い幅（1024px）</a></li></ol></div><div class="bt-card"><div class="bt-card-h"><h3><a href="b.html">案 B　指揮ボード型</a></h3></div><p class="bt-mut">左は細いアイコン列。上部に段階 1〜8 の横並びと承認状況、右に承認の記録。シニア QA が全体を見渡して差し戻す形。承認バーは本体の先頭。</p><ol class="mk-mt"><li><a href="b.html#s1">1. 案件 0 件（空状態と最初の 1 手）</a></li><li><a href="b.html#s2">2. 段階 1 目的・範囲</a></li><li><a href="b.html#s3">3. 段階 2 対象の読み取り</a></li><li><a href="b.html#s4">4. 段階 3 観点表</a></li><li><a href="b.html#s5">5. 段階 4 ケース表</a></li><li><a href="b.html#s6">6. 段階 6 テストコード</a></li><li><a href="b.html#s7">7. 段階 7 実行中と途中の結果</a></li><li><a href="b.html#s8">8. 段階 8 判定・報告</a></li><li><a href="b.html#s9a">9-1. 承認バー（シニア QA が開いたとき）</a></li><li><a href="b.html#s9b">9-2. 承認バー（初級 QA が開いたとき）</a></li><li><a href="b.html#s10a">10-1. 本番らしい接続先（読み取り専用）</a></li><li><a href="b.html#s10b">10-2. 書き込みの前の確認</a></li><li><a href="b.html#s11">11. エラー（接続できない）</a></li><li><a href="b.html#s12">12. 狭い幅（1024px）</a></li></ol></div></main></body></html>

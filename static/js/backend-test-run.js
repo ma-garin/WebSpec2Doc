@@ -40,7 +40,7 @@
     clearTimeout(toast.id); toast.id = setTimeout(function () { t.hidden = true; }, 3000); }
   function busy(el, on) { if (el) { el.disabled = on; el.setAttribute('aria-busy', on ? 'true' : 'false'); } }
   function fill(tplId, values) { var node = document.getElementById(tplId).content.firstElementChild.cloneNode(true);
-    Object.keys(values).forEach(function (k) { var el = node.querySelector('[data-f="' + k + '"]');
+    Object.keys(values).forEach(function (k) { var sel = '[data-f="' + k + '"]', el = node.matches(sel) ? node : node.querySelector(sel);
       if (el && el.tagName !== 'SELECT' && el.tagName !== 'INPUT') el.textContent = values[k] == null ? '' : values[k]; });
     return node; }
   function pill(el, st) { el.className = 'pill ' + (PILL[st] || ''); el.textContent = STATE_JA[st] || st || '—'; }
@@ -96,7 +96,9 @@
     var ids = Object.keys(sums).filter(function (cid) { if (!cur) return false;
       var test = map[cid] || '';
       return (cur.text && test && cur.text.indexOf(test) >= 0) || cur.path.toLowerCase().indexOf(cid.toLowerCase()) >= 0; });
-    if (!ids.length && cur && !/test_/.test(cur.path)) { box.textContent = '接続やデータ投入の共通部品です。期待値は含みません。'; return; }
+    if (!cur) { box.textContent = 'コードを作ると、ここに各ケースが何を確かめるかを日本語で出します。'; return; }
+    if (!ids.length && !/test_/.test(cur.path)) { box.textContent = '接続やデータ投入の共通部品です。期待値は含みません。'; return; }
+    if (!ids.length) { box.textContent = 'このファイルのケースの要約はまだありません。ケース表の「日本語の要約」で確かめられます。'; return; }
     ids.forEach(function (cid) { var p = document.createElement('p'), b = document.createElement('b');
       b.textContent = cid + ' '; p.appendChild(b);
       p.appendChild(document.createTextNode(sums[cid] || '要約はまだありません。'));
@@ -240,12 +242,12 @@
       if (v.unverified && v.decision !== 'excluded' && v.decision !== 'discarded') out.push('観点 ' + v.id + ' ' + v.name + ': 根拠を確かめていません'); });
     return out; }
   function renderKpis(latest, uv, candidates) { var c = {}; latest.forEach(function (r) { c[r.state] = (c[r.state] || 0) + 1; });
-    var tiles = [['未検証', uv.length, 'is-warn'], ['合格', c.pass || 0, 'is-pass'], ['不合格', c.fail || 0, 'is-fail'],
-      ['判定できない', c.undetermined || 0, ''], ['未実行・実行エラー', (c.not_run || 0) + (c.error || 0), ''], ['不具合候補', candidates.length, '']];
-    var box = $('#bs-result-kpis'); box.innerHTML = '';
-    tiles.forEach(function (t) { var d = document.createElement('div'); d.className = 'kpi' + (t[2] ? ' ' + t[2] : '');
-      d.innerHTML = '<div class="kpi-num"></div><div class="kpi-l"></div>';
-      d.firstChild.textContent = t[1] + ' 件'; d.lastChild.textContent = t[0]; box.appendChild(d); }); }
+    var tiles = [[uv.length, '未検証', uv.length ? 'wa' : '', 'この結果では確かめていないこと', 'eye'], [c.pass || 0, '合格', c.pass ? 'ok' : '', '期待値どおりだったケース', 'pass'],
+      [c.fail || 0, '不合格', c.fail ? 'ng' : '', '期待値と違ったケース', 'fail'], [c.undetermined || 0, '判定できない', '', '期待値が決まらず判定できない', 'help'],
+      [(c.not_run || 0) + (c.error || 0), '未実行・実行エラー', '', '実行していない・途中で止まった', 'minus'], [candidates.length, '不具合候補', candidates.length ? 'wa' : '', '記録を検討する不一致', 'flag']];
+    var box = $('#bs-result-kpis'), bt = window.BackendTest;
+    if (bt && bt.kpis) return bt.kpis(box, tiles);
+    box.innerHTML = ''; tiles.forEach(function (t) { var d = document.createElement('div'); d.className = 'stat-card'; d.textContent = t[1] + ' ' + t[0]; box.appendChild(d); }); }
   function renderFacts(latest) { var f = $('#bs-judge-facts'), h = $('#bs-judge-human'); f.innerHTML = ''; h.innerHTML = '';
     var last = (S.job.runs || []).slice(-1)[0];
     var add = function (ul, text) { var li = document.createElement('li'); li.textContent = text; ul.appendChild(li); };

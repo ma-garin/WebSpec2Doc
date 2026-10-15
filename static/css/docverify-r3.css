@@ -1,0 +1,35 @@
+/* ドキュメント検証 R3（SCR-06-07 集合の検査・追跡）。tokens.css の変数だけを使う */
+.dv3 { display: flex; flex-direction: column; gap: var(--space-4); min-height: 0; overflow: auto; }
+.dv3-card { display: flex; flex-direction: column; gap: var(--space-3); }
+.dv3-h { margin: 0; font-size: var(--text-md); color: var(--color-text); }
+.dv3-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
+.dv3-actions { display: flex; align-items: flex-end; gap: var(--space-3); flex-wrap: wrap; }
+.dv3-coverage { margin: 0; color: var(--color-medium); background: var(--color-medium-bg); padding: var(--space-2) var(--space-3); border-radius: var(--radius-full); align-self: flex-start; font-size: var(--text-sm); }
+.dv3-msg { color: var(--color-text-secondary); font-size: var(--text-sm); }
+.dv3-upload, .dv3-rules { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-3); }
+.dv3-rules { flex-direction: column; align-items: stretch; }
+.dv3-field { display: flex; flex-direction: column; gap: var(--space-2); font-size: var(--text-sm); color: var(--color-text-secondary); }
+.dv3-check { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); color: var(--color-text); margin-right: var(--space-3); }
+.dv3-fieldset { border: 1px solid var(--color-border); padding: var(--space-3); display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.dv3-table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+.dv3-table th, .dv3-table td { border-bottom: 1px solid var(--color-divider); padding: var(--space-2) var(--space-3); text-align: left; vertical-align: top; }
+.dv3-table thead th { background: var(--color-surface-2); color: var(--color-text-secondary); }
+.dv3-table .num { text-align: right; font-family: var(--font-mono); }
+.dv3-gap { color: var(--color-critical); background: var(--color-critical-bg); }
+.dv3-loc { color: var(--color-text-secondary); font-size: var(--text-sm); }
+.dv3-kind { display: inline-block; padding: 0 var(--space-2); border-radius: var(--radius-full); background: var(--color-info-bg); color: var(--color-info); }
+.dv3-kind-contradiction { background: var(--color-critical-bg); color: var(--color-critical); }
+.dv3-decs { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.dv3-dec { border: 1px solid var(--color-border-strong); background: var(--color-surface); color: var(--color-text); border-radius: var(--radius-full); padding: 0 var(--space-3); cursor: pointer; }
+.dv3-dec.is-on { background: var(--color-primary); border-color: var(--color-primary-dark); color: var(--color-surface); }
+.dv3-dec:focus-visible { outline: 2px solid var(--color-primary-dark); }
+.dv3-empty { color: var(--color-text-secondary); margin: 0; }
+.dv3-sub { margin: 0; font-size: var(--text-sm); color: var(--color-text-secondary); }
+.dv3-warn { margin: 0; color: var(--color-critical); background: var(--color-critical-bg); border: 1px solid var(--color-critical-border); padding: var(--space-2) var(--space-3); }
+.dv3-notes { margin: 0; padding-left: var(--space-4); color: var(--color-text-secondary); font-size: var(--text-sm); }
+.dv3-stats { display: flex; gap: var(--space-3); flex-wrap: wrap; }
+.dv3-stat { display: flex; flex-direction: column; gap: var(--space-2); border: 1px solid var(--color-border); background: var(--color-surface-2); padding: var(--space-3); min-width: 0; }
+.dv3-stat span { color: var(--color-text-secondary); font-size: var(--text-sm); }
+.dv3-stat b { font-size: var(--text-lg); color: var(--color-text); }
+.dv3-cands summary { cursor: pointer; color: var(--color-primary-dark); }
+.dv3-cands ul { margin: var(--space-2) 0 0; padding-left: var(--space-4); }

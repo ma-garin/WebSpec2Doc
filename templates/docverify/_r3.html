@@ -1,0 +1,47 @@
+{# SCR-06-07 集合の検査・追跡（R3）。描画は static/js/docverify-r3.js。網羅性は常に「未検証」と出す #}
+<section class="dv-view dvr-view dv3" data-view="setcheck" hidden>
+  <div class="dvr-head"><h2 class="dvr-title">集合の検査・追跡</h2></div>
+  <p class="dv3-coverage" role="note">網羅性: 未検証</p>
+  <div class="dv3-msg" id="dv3Msg" role="status" aria-live="polite"></div>
+
+  <section class="dv-card dv3-card" aria-labelledby="dv3DocsH">
+    <h3 class="dv3-h" id="dv3DocsH">文書の登録</h3>
+    <form class="dv3-upload" id="dv3Upload">
+      <label class="dv3-field">種別<select id="dv3Kind" required><option value="">選んでください</option></select></label>
+      <label class="dv3-field">文書<input type="file" id="dv3File" accept=".txt,.md,.docx,.xlsx,.pdf" required></label>
+      <label class="dv3-check"><input type="checkbox" id="dv3Hidden" checked> 非表示のシート・列も検出の対象にする</label>
+      <button type="submit" class="btn-primary" id="dv3UploadBtn">登録する</button>
+    </form>
+    <div class="dv-tscroll" id="dv3Docs"></div>
+  </section>
+
+  <section class="dv-card dv3-card" aria-labelledby="dv3SetH">
+    <div class="dv3-row"><h3 class="dv3-h" id="dv3SetH">集合の検査（重複・矛盾の候補）</h3>
+      <button type="button" class="btn-outline-sm" id="dv3Run">検査を実行</button></div>
+    <p class="mut">登録した文書と、このレビューの文書をまとめて比べます。候補は人が「矛盾」「重複」「問題なし」を選ぶまで指摘になりません。</p>
+    <p class="dv3-coverage" role="note">網羅性: 未検証</p>
+    <div class="dv-tscroll" id="dv3Pairs"></div>
+  </section>
+
+  <section class="dv-card dv3-card" aria-labelledby="dv3TraceH">
+    <div class="dv3-row"><h3 class="dv3-h" id="dv3TraceH">追跡表（要件 → 設計 → テスト）</h3>
+      <div class="dv3-actions">
+        <label class="dv3-field">ID の書式<select id="dv3Format"></select></label>
+        <button type="button" class="btn-outline-sm" id="dv3Xlsx">xlsx で出力</button>
+      </div></div>
+    <p class="dv3-coverage" role="note">網羅性: 未検証</p>
+    <div id="dv3TraceSummary"></div>
+    <div class="dv-tscroll" id="dv3Trace"></div>
+  </section>
+
+  <section class="dv-card dv3-card" aria-labelledby="dv3RulesH">
+    <h3 class="dv3-h" id="dv3RulesH">規則と組織の語彙（テナント共通）</h3>
+    <form id="dv3Rules" class="dv3-rules">
+      <fieldset class="dv3-fieldset"><legend>使う規則</legend><div id="dv3RuleList"></div></fieldset>
+      <label class="dv3-field">禁止語（1 行に 1 つ）<textarea id="dv3Forbidden" rows="3"></textarea></label>
+      <label class="dv3-field">許容語（候補から外す語。1 行に 1 つ）<textarea id="dv3Allowed" rows="3"></textarea></label>
+      <label class="dv3-field">同義語（標準語＝社内語。1 行に 1 組）<textarea id="dv3Synonyms" rows="3" placeholder="お客様＝顧客"></textarea></label>
+      <button type="submit" class="btn-primary">設定を保存</button>
+    </form>
+  </section>
+</section>

@@ -1,0 +1,24 @@
+/* ドキュメント検証 R4（種別・工程・工数と指標・プリセット・判定と記録）。値は tokens.css の変数のみ。 */
+.dv-r4 { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.dv-r4-title { margin: 6px 0 0; font-size: 14px; font-weight: 700; color: var(--color-text); }
+.dv-r4-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.dv-r4-row label, .dv-r4-label { font-size: 13px; color: var(--color-text-secondary); }
+.dv-r4-hint { margin: 0; padding: 8px 10px; border-radius: 6px; background: var(--color-primary-light); color: var(--color-primary-dark); font-size: 13px; }
+.dv-r4-warn { margin: 0; padding: 8px 10px; border-radius: 6px; background: var(--color-critical-bg); color: var(--color-critical); font-size: 13px; }
+.dv-r4-muted { margin: 0; color: var(--color-text-secondary); font-size: 12px; }
+.dv-r4-result { margin: 0; font-size: 13px; color: var(--color-text); min-height: 1em; }
+.dv-r4-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.dv-r4-table th, .dv-r4-table td { padding: 6px 8px; border-bottom: 1px solid var(--color-border); text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+.dv-r4-table input[type="text"] { width: 100%; min-width: 120px; }
+.dv-r4-fieldset { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 8px 10px; border: 1px solid var(--color-border); border-radius: 6px; font-size: 13px; }
+.dv-r4-fieldset legend { padding: 0 4px; color: var(--color-text-secondary); font-size: 12px; }
+.dv-r4-errors { margin: 0; padding-left: 18px; color: var(--color-critical); font-size: 13px; }
+.dv-r4-errors:empty { display: none; }
+.dv-r4-list { margin: 0; padding-left: 18px; font-size: 13px; }
+.dv-r4-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; font-size: 13px; }
+.dv-r4-grid label { display: flex; flex-direction: column; gap: 4px; color: var(--color-text-secondary); }
+.dv-r4-metrics { display: flex; flex-direction: column; gap: 6px; }
+.dv-r4-dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 0; font-size: 13px; }
+.dv-r4-dl dt { color: var(--color-text-secondary); }
+.dv-r4-dl dd { margin: 0; font-variant-numeric: tabular-nums; }
+.dv-r4 :focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }

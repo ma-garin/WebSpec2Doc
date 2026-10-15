@@ -4,12 +4,15 @@
 """
 from __future__ import annotations
 
+import hashlib
 import logging
 import re
 import tempfile
 from pathlib import Path
 
 from flask import Blueprint, Response, jsonify, render_template, request
+
+from web.services.docverify import perm as _perm
 
 bp = Blueprint("doc_verify", __name__)
 log = logging.getLogger(__name__)
@@ -18,7 +21,7 @@ _IID = re.compile(r"^[0-9a-f]{12}$")
 _STATUSES = ("candidate", "adopted", "rejected", "fixed", "verified")
 _SEVERITIES = ("critical", "major", "minor")
 _PHASES = ("plan", "individual", "triage", "rework", "followup", "closed")
-_ROLES = ("author", "moderator", "reviewer", "approver")
+_ROLES = ("author", "moderator", "reviewer", "scribe", "approver")
 _DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
@@ -59,7 +62,7 @@ def _norm(text: str) -> str:
 def page() -> str:
     # 静的ファイルの更新が古い版の読み込みで隠れないよう、JS/CSS の更新時刻を URL に付ける
     static = Path(__file__).resolve().parents[2] / "static"
-    files = ["js/docverify-core.js", "js/docverify-global.js", "js/docverify-review.js", "css/docverify.css"]
+    files = ["js/docverify-core.js", "js/docverify-global.js", "js/docverify-review.js", "css/docverify.css", "js/docverify-r5.js", "js/docverify-r3.js", "css/docverify-r3.css", "js/docverify-r2.js", "js/docverify-r4.js", "css/docverify-r4.css"]
     dv_ver = max(int((static / f).stat().st_mtime) for f in files if (static / f).exists())
     return render_template("doc_verify.html", dv_ver=dv_ver)
 
@@ -100,8 +103,9 @@ def get_inspection(iid: str):
 
 
 @bp.route("/api/docverify/inspections/<iid>/document", methods=["POST"])
+@_perm.require("import_doc")
 def upload_document(iid: str):
-    from web.services.docverify import checks, diff, ingest, store
+    from web.services.docverify import checks, diff, ingest, setcheck, store
     insp, err = _load(iid)
     if err:
         return err
@@ -110,7 +114,8 @@ def upload_document(iid: str):
         return _err("文書ファイルを選んでください。", 400)
     try:
         with tempfile.TemporaryDirectory() as tmp:
-            document, passages = ingest.ingest(file.filename, file.read(), Path(tmp))
+            data = file.read()
+            document, passages = ingest.ingest(file.filename, data, Path(tmp))
     except ingest.IngestError as e:
         return _err(str(e), 400)
     except Exception:
@@ -120,17 +125,17 @@ def upload_document(iid: str):
     old_passages = insp.get("passages") or []
     old_findings = insp.get("findings") or []
     version = len(insp.get("versions") or []) + 1
-    document = {**document, "version": version}
+    document = {**document, "version": version, "sha256": hashlib.sha256(data).hexdigest()}
     try:
         if insp.get("document") is None:
-            findings = _renumber([], checks.candidates(passages))
+            findings = _renumber([], setcheck.apply_rules(checks.candidates(passages), passages, setcheck.load_settings()))
             changes = None
         else:
             changes = diff.compare(old_passages, passages)
             carried = diff.carry_findings(old_findings, old_passages, passages)
             old_texts = {_norm(p["text"]) for p in old_passages}
             fresh = [p for p in passages if _norm(p["text"]) not in old_texts]
-            findings = carried + _renumber(carried, checks.candidates(fresh))
+            findings = carried + _renumber(carried, setcheck.apply_rules(checks.candidates(fresh), fresh, setcheck.load_settings()))
     except Exception:
         log.exception("指摘候補の生成に失敗")
         return _err("指摘の候補を作れませんでした。もう一度取り込んでください。", 500)
@@ -190,6 +195,7 @@ def update_finding(iid: str, fid: str):
 
 
 @bp.route("/api/docverify/inspections/<iid>/findings", methods=["POST"])
+@_perm.require("finding_edit")
 def add_finding(iid: str):
     from web.services.docverify import store
     insp, err = _load(iid)
@@ -242,6 +248,7 @@ def questions_xlsx(iid: str):
 
 
 @bp.route("/api/docverify/inspections/<iid>/answers", methods=["POST"])
+@_perm.require("finding_edit")
 def import_answers(iid: str):
     from web.services.docverify import questions, store
     insp, err = _load(iid)
@@ -301,6 +308,7 @@ def match_screens(iid: str):
 
 
 @bp.route("/api/docverify/inspections/<iid>/close", methods=["POST"])
+@_perm.require("plan_edit")
 def close(iid: str):
     from web.services.docverify import metrics, store
     insp, err = _load(iid)
@@ -437,7 +445,8 @@ def patch_inspection(iid: str):
         if not isinstance(ap, dict) or not all(v is None or isinstance(v, str) for v in ap.values()):
             return _err("承認者の名前と日時を入力してください。", 400)
         changes["approval"] = {"approver": (ap.get("approver") or "").strip() or None,
-                               "decided_at": (ap.get("decided_at") or "").strip() or None}
+                               "decided_at": (ap.get("decided_at") or "").strip() or None,
+                               "doc_version": (insp.get("document") or {}).get("version")}
     if not changes:
         return _err("変更する項目がありません。画面を再読み込みしてやり直してください。", 400)
     updated = {**insp, **changes}

@@ -1,5 +1,5 @@
 """システムテスト L3: テナント選択〜システム選択〜画面遷移
-（docs/system_test_cases.csv ST-006〜ST-009, ST-031）。
+（docs/process/quality/system_test_cases.csv ST-006〜ST-009, ST-031）。
 
 実行方法:
     make e2e-system

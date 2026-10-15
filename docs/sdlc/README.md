@@ -175,10 +175,10 @@ venv/bin/python scripts/extract_asbuilt.py # as-built 情報の再抽出（差�
 
 | 内容 | 正本 |
 |---|---|
-| 障害報告フォーマット | `docs/INCIDENT_POSTMORTEM.md` |
-| テスト戦略の詳細 | `docs/TESTING_STRATEGY.md` / `docs/TEST_LEVEL_POLICY.md` |
-| 完了定義 | `docs/DEFINITION_OF_DONE.md` |
+| 障害報告フォーマット | `docs/process/INCIDENT_POSTMORTEM.md` |
+| テスト戦略の詳細 | `docs/process/TESTING_STRATEGY.md` / `docs/process/TEST_LEVEL_POLICY.md` |
+| 完了定義 | `docs/process/DEFINITION_OF_DONE.md` |
 | 機能整合ゲート | `docs/process/functional-integrity-gate.md` |
-| 設計判断の記録 | `docs/adr/*.md` |
-| 認証・テナント方式 | `docs/AUTH_TENANCY.md` |
-| バックアップ運用 | `docs/OPERATIONS_BACKUP.md` |
+| 設計判断の記録 | `docs/process/adr/*.md` |
+| 認証・テナント方式 | `docs/process/AUTH_TENANCY.md` |
+| バックアップ運用 | `docs/process/OPERATIONS_BACKUP.md` |

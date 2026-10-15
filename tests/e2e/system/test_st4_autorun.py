@@ -1,4 +1,4 @@
-"""システムテスト L3: AutoRun（docs/system_test_cases.csv ST-014〜ST-017）。
+"""システムテスト L3: AutoRun（docs/process/quality/system_test_cases.csv ST-014〜ST-017）。
 
 実行方法:
     make e2e-system

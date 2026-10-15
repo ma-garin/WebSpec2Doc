@@ -2,7 +2,7 @@
 
 - 文書ID: WS2D-RL-001
 - 版数: 2.0 / 作成日: 2026-08-02
-- 依存更新方針は `docs/specs/spec-6-2_dependency_update_strategy.md` を正本とする。本書はリリースプロセス全体（ブランチ運用〜配布物生成〜ロールバック）を統合したビューである。
+- 依存更新方針は `docs/design/specs/spec-6-2_dependency_update_strategy.md` を正本とする。本書はリリースプロセス全体（ブランチ運用〜配布物生成〜ロールバック）を統合したビューである。
 
 ## 1. リリース方針とバージョニング規則
 
@@ -51,7 +51,7 @@ make coverage             # カバレッジ80%以上を確認
 ## 4. リリース手順（番号付き）
 
 1. **ブランチ作成**: `main`から`<type>/<説明>`形式のブランチを作成する（例: `feat/multi-tenant-auth`）。種別は§2の定期/緊急/ホットフィックスのいずれかを最初に判断する。
-2. **実装**: `docs/specs/CONVENTIONS.md`と`WS2D-CS-001`（コーディング規約）に従って実装する。新機能は同時に`quality/feature_contracts.yml`へ契約を追加する（`core_files`・`failure_modes`・`required_tests`必須）。
+2. **実装**: `docs/design/specs/CONVENTIONS.md`と`WS2D-CS-001`（コーディング規約）に従って実装する。新機能は同時に`quality/feature_contracts.yml`へ契約を追加する（`core_files`・`failure_modes`・`required_tests`必須）。
 3. **ローカルゲート実行**: 本書§3のリリース前チェックリストを実行し、全項目を満たす。
 4. **コミット**: `git commit`実行時、`.githooks/pre-commit`が構文チェック・pytest・（該当時）UIハッシュ照合を自動実行する。失敗した場合は§3に戻り修正する。
 5. **PR作成**: `gh pr create`でPRを作成する。タイトルは70字以内、本文にSummary・Test planを含める。
@@ -64,7 +64,7 @@ make coverage             # カバレッジ80%以上を確認
 
 ## 5. 依存更新の手順
 
-`docs/specs/spec-6-2_dependency_update_strategy.md`（依存更新戦略）の要点を統合する。playwright 1.44.0固定という制約が、`src/doctor.py`・`src/crawler/playwright_runtime.py`・`.github/workflows/ci.yml`・`docs/specs/CONVENTIONS.md`§2の4箇所に分散しているため、更新時は次の判断基準と手順に従う。
+`docs/design/specs/spec-6-2_dependency_update_strategy.md`（依存更新戦略）の要点を統合する。playwright 1.44.0固定という制約が、`src/doctor.py`・`src/crawler/playwright_runtime.py`・`.github/workflows/ci.yml`・`docs/design/specs/CONVENTIONS.md`§2の4箇所に分散しているため、更新時は次の判断基準と手順に従う。
 
 **更新判断基準**:
 
@@ -149,7 +149,7 @@ WebSpec2Docのリリース時の配布物（納品物）として想定される
 
 ## 12. 環境変数とシークレット管理
 
-- 環境変数は`WEBSPEC2DOC_`プレフィックスで統一する（`docs/specs/CONVENTIONS.md`§2）。既定値は安全側に倒す（例: ローカルURL拒否、`WEBSPEC2DOC_ALLOW_LOCAL`未設定時は127.0.0.1等を拒否）。
+- 環境変数は`WEBSPEC2DOC_`プレフィックスで統一する（`docs/design/specs/CONVENTIONS.md`§2）。既定値は安全側に倒す（例: ローカルURL拒否、`WEBSPEC2DOC_ALLOW_LOCAL`未設定時は127.0.0.1等を拒否）。
 - リリース・デプロイ時に確認が必要な主な環境変数: `WEBSPEC2DOC_AUTH_MODE`（利用者認証モード、既定`auto`）、`OPENAI_API_KEY`（LLM機能、未設定時はルールベースにフォールバック）、`WEBSPEC2DOC_LLM_BASE_URL`/`WEBSPEC2DOC_LLM_MODEL`（Ollama等の代替LLMエンドポイント指定）、`PLAYWRIGHT_BROWSERS_PATH`（Chromium格納場所、`.runtime/ms-playwright`固定）。
 - シークレット（パスワード・APIトークン・`instance/secret_key`）は`.env`ファイルまたは環境変数で管理し、リポジトリにコミットしない。`.env`の変更は`web/env_store.py`が扱う。
 - ローカル動作確認時は`FLASK_TESTING=1 WEBSPEC2DOC_ALLOW_LOCAL=1`を必ず付与して起動する。付与しないと`webbrowser.open`でブラウザタブが毎回増える（開発運用上の既知の注意点）。
@@ -236,7 +236,7 @@ WebSpec2Docのリリース時の配布物（納品物）として想定される
 |---|---|---|
 | `WS2D-CS-001`（コーディング規約） | 実装規約 | §3のリリース前チェックリストが要求するゲートの詳細を定義 |
 | `WS2D-QA-001`（品質保証計画書） | 品質ゲート全体像 | §3のゲート一覧・DoDの一次情報源 |
-| `docs/specs/spec-6-2_dependency_update_strategy.md` | 依存更新の判断基準・手順 | §5はこの文書の要約統合 |
+| `docs/design/specs/spec-6-2_dependency_update_strategy.md` | 依存更新の判断基準・手順 | §5はこの文書の要約統合 |
 | `WS2D-OP-001`（運用手順書） | 通常運用・バックアップ手順 | §6のロールバック手順がリストア手順を参照 |
 | `WS2D-TS-001`（障害対応手順書） | 障害時のエスカレーション | §21が参照 |
 | `WS2D-TR-001`（テストサマリレポート） | リリース判定の記録先 | §9のリリース記録がここに集約される |

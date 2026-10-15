@@ -1,4 +1,4 @@
-"""システムテスト（docs/system_test_cases.csv）共通基盤。
+"""システムテスト（docs/process/quality/system_test_cases.csv）共通基盤。
 
 実行方法:
     make e2e-system

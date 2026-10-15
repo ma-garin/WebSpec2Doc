@@ -6,7 +6,7 @@
 
 - **テスト技法エンジンの研究ベース更新**: Wave R（先行研究調査）と Wave 1（組合せ統合・
   偽ペアワイズ修正）まで完了、Wave 2 以降が未着手。
-  引き継ぎ書 → [docs/HANDOFF_technique-engine.md](docs/HANDOFF_technique-engine.md)
+  引き継ぎ書 → [docs/plans/HANDOFF_technique-engine.md](docs/plans/HANDOFF_technique-engine.md)
   （文脈ゼロから再開できるように、既知バグ・設計原則・ウェーブ計画・前後比較手順を集約してある）
 
 ## クレジット節約方針（明示依頼がない限り順守）
@@ -216,9 +216,9 @@ git commit
 ```
 
 **参照**:
-- テスト戦略: [docs/TESTING_STRATEGY.md](docs/TESTING_STRATEGY.md)
-- 完了の定義: [docs/DEFINITION_OF_DONE.md](docs/DEFINITION_OF_DONE.md)
-- インシデント記録: [docs/INCIDENT_POSTMORTEM.md](docs/INCIDENT_POSTMORTEM.md)
+- テスト戦略: [docs/process/TESTING_STRATEGY.md](docs/process/TESTING_STRATEGY.md)
+- 完了の定義: [docs/process/DEFINITION_OF_DONE.md](docs/process/DEFINITION_OF_DONE.md)
+- インシデント記録: [docs/process/INCIDENT_POSTMORTEM.md](docs/process/INCIDENT_POSTMORTEM.md)
 
 ## 進捗バー（応答末尾の慣習）
 
@@ -238,4 +238,4 @@ WebSpec2Doc  ████████░░ NN%
 ## 検証とドキュメント
 
 - 変更後は `./scripts/verify.sh`（py_compile + pytest + スモークパイプライン）を実行。
-- アーキテクチャ・拡張手順・ロードマップ・ハマりどころは **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)** を参照。
+- アーキテクチャ・拡張手順・ロードマップ・ハマりどころは **[docs/process/DEVELOPMENT.md](docs/process/DEVELOPMENT.md)** を参照。

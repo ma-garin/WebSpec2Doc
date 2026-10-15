@@ -42,8 +42,8 @@ help:
 	@echo "  make clean            生成ファイルを削除"
 	@echo ""
 	@echo "  Functional Integrity Gate: docs/process/functional-integrity-gate.md"
-	@echo "  Definition of Done:         docs/DEFINITION_OF_DONE.md"
-	@echo "  テスト戦略:                 docs/TESTING_STRATEGY.md"
+	@echo "  Definition of Done:         docs/process/DEFINITION_OF_DONE.md"
+	@echo "  テスト戦略:                 docs/process/TESTING_STRATEGY.md"
 	@echo ""
 
 # =============================================================================

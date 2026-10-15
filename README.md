@@ -6,7 +6,7 @@
 
 > 「ドキュメントがないので、まず触って覚えてください」という現場でも、初日からテスト設計を始められる状態を実現します。
 
-> **はじめての方へ（非エンジニアの方も歓迎）**: 専門用語なしの入門ガイドを用意しています → **[docs/GUIDE_ja.md](docs/GUIDE_ja.md)**（日本語）／ [docs/GUIDE_en.md](docs/GUIDE_en.md)（English）。英語版 README は [README_en.md](README_en.md)。
+> **はじめての方へ（非エンジニアの方も歓迎）**: 専門用語なしの入門ガイドを用意しています → **[docs/guide/GUIDE_ja.md](docs/guide/GUIDE_ja.md)**（日本語）／ [docs/guide/GUIDE_en.md](docs/guide/GUIDE_en.md)（English）。英語版 README は [README_en.md](README_en.md)。
 
 > **📱 オンラインショーケース（スマホ対応）**: インストール不要で画面と動きを確認できます → **https://ma-garin.github.io/WebSpec2Doc/**（実機UIの操作動画・スクリーンショット・生成レポートのサンプル。ソースは [`pages/`](pages/)、公開手順は [pages/README.md](pages/README.md)）。
 
@@ -277,10 +277,10 @@ WantedBy=multi-user.target
 
 **[docs/README.md](docs/README.md) が全文書のインデックス**（現行/歴史のステータス付き）。主要な入口:
 
-- [はじめての方へ（非エンジニア向けガイド）](docs/GUIDE_ja.md) / [English](docs/GUIDE_en.md)
-- [クイックスタートガイド](docs/userguide.md)
-- [開発者向けハンドブック](docs/DEVELOPMENT.md)
-- [機能拡張ロードマップ](docs/11_機能拡張ロードマップ_現新比較とUX検証.md)
+- [はじめての方へ（非エンジニア向けガイド）](docs/guide/GUIDE_ja.md) / [English](docs/guide/GUIDE_en.md)
+- [クイックスタートガイド](docs/guide/userguide.md)
+- [開発者向けハンドブック](docs/process/DEVELOPMENT.md)
+- [機能拡張ロードマップ](docs/plans/11_機能拡張ロードマップ_現新比較とUX検証.md)
 - [デモ台本](docs/demo/DEMO_SCRIPT.md)
 
 ---

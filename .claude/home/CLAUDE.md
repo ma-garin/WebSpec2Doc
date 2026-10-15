@@ -69,6 +69,6 @@ output 780,758 / 1 ターン平均 cache_read 411,292。**消費の 95% は cach
   今回 LLM 由来の設定値は 4 箇所が誤っていた（`DISABLE_AUTOCOMPACT` は存在すらしない）。
 
 根拠: 1 時間ごとの自己チェックインが Fable の週間上限を週初に使い切らせた
-（WebSpec2Doc `docs/INCIDENT_POSTMORTEM.md` INC-2026-002、
+（WebSpec2Doc `docs/process/INCIDENT_POSTMORTEM.md` INC-2026-002、
 検証手順は `docs/process/token-economics.md`）。
 `~/.claude/hooks/block-ci.py` がツール実行の段で物理的に拒否する。

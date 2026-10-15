@@ -12,7 +12,7 @@ pytest-playwright のセッション fixture が保持する asyncio ループ�
 避けるため、ブラウザ処理は専用スレッドで実行する
 （tests/e2e/test_capture_realbrowser_e2e.py と同じパターン）。
 
-ポートについて: 仕様書（docs/specs/spec-3-2_auth_recorder.md §6-2）は 8900 を
+ポートについて: 仕様書（docs/design/specs/spec-3-2_auth_recorder.md §6-2）は 8900 を
 指定しているが、8900 は本タスクの実行環境で他ワークフローに予約済みのため
 （CONVENTIONS §4-7 の一覧に含まれる）、衝突を避けて 8910 を用いる
 （仕様外判断: ポート番号のみ変更。動作・検証内容は仕様通り）。

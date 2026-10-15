@@ -1,5 +1,6 @@
-/* 影響度分析（System 08）の画面。いまは見本データのみで、API はまだ無い。
- * 工程: 入力（入力受付・文書確認）→ 変更点と検索（クエリ生成・文書検索・統合）→ 影響と優先度（影響度・優先度の判定）。 */
+/* 影響度分析（System 08）の画面。API: /api/impact/*（web/routes/impact.py）。
+ * 工程: 入力（入力受付・文書確認）→ 変更点と検索（クエリ生成・文書検索・統合）→ 影響と優先度（影響度・優先度の判定）。
+ * 選んだ分析は URL の ?job= に持つ。 */
 (function () {
   'use strict';
   var $ = function (s) { return document.querySelector(s); };
@@ -8,104 +9,217 @@
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   };
+  var API = '/api/impact/jobs';
   var STEPS = [{ id: 'intake', name: '入力' }, { id: 'search', name: '変更点と検索' }, { id: 'impact', name: '影響と優先度' }];
-  var LV = { 4: '致命', 3: '大', 2: '中', 1: '小' };
+  var ROLES = { 'new': '変更後', old: '変更前', store: '検索先' };
+  var STORES = ['設計書', '画面仕様書', 'テストケース', 'その他'];
+  var LVS = [4, 3, 2, 1, 0];
+  var LVN = { 4: '致命', 3: '大', 2: '中', 1: '小', 0: '未確認' };
+  var state = { jobs: [], job: null, step: 'intake', pri: 0 };
 
-  var SAMPLE = {
-    jobs: [{ name: '会員登録: 電話番号を必須に', at: '10/15 10:20' }, { name: '注文確定: クーポン併用の上限', at: '10/14 17:05' }],
-    order: '会員登録画面で電話番号を任意から必須に変える。あわせて桁数チェックを 10〜11 桁に変更する。',
-    docs: [
-      { name: '画面仕様書_会員登録.xlsx', ver: 'v2.3 → v2.4', kind: '画面仕様書' },
-      { name: '基本設計書_会員管理.docx', ver: 'v1.8', kind: '設計書' }
-    ],
-    stores: [
-      { name: '設計書', n: 42, at: '10/15 09:00', ok: true },
-      { name: '画面仕様書', n: 118, at: '10/15 09:00', ok: true },
-      { name: 'テストケース（既存）', n: 1260, at: '10/10 18:30', ok: false }
-    ],
-    diffs: [
-      { id: 'C1', where: '会員登録 / 電話番号', before: '任意', after: '必須' },
-      { id: 'C2', where: '会員登録 / 電話番号', before: '桁数 10〜13', after: '桁数 10〜11' }
-    ],
-    queries: [
-      { id: 'Q1', from: 'C1', q: '電話番号 AND (必須 OR 任意 OR 未入力)', store: '設計書・画面仕様書', hit: 9, merged: 5 },
-      { id: 'Q2', from: 'C1', q: 'member.tel を参照する処理', store: '設計書', hit: 6, merged: 3 },
-      { id: 'Q3', from: 'C2', q: '電話番号 AND (桁数 OR 文字数 OR 13桁)', store: '設計書・画面仕様書', hit: 4, merged: 2 },
-      { id: 'Q4', from: 'C1, C2', q: '電話番号 入力チェック', store: 'テストケース（既存）', hit: 14, merged: 4 }
-    ],
-    rows: [
-      { p: 1, lv: 4, where: '既存会員のログイン後プロフィール更新', why: '電話番号が空の既存会員は、更新時に必須チェックで保存できなくなる。', doc: '基本設計書_会員管理.docx §4.2 会員情報の更新', quote: '更新時は登録時と同じ入力チェックを行う。', test: '電話番号が未登録の既存会員で、他の項目だけを更新する' },
-      { p: 1, lv: 4, where: 'CSV 一括会員取込（管理画面）', why: '取込データの電話番号は空欄を許していた。必須化で取込全体が失敗する恐れ。', doc: '基本設計書_会員管理.docx §6.1 一括取込', quote: '項目チェックは画面登録と共通の検証部品を用いる。', test: '電話番号が空の行を含む CSV を取り込む' },
-      { p: 2, lv: 3, where: '会員登録 確認画面', why: '電話番号の表示欄が「未入力」表記を持つ。必須化で表記が不要になる。', doc: '画面仕様書_会員登録.xlsx 確認画面 No.12', quote: '未入力の場合は「（未入力）」と表示する。', test: '確認画面で電話番号の表示と戻る操作を確かめる' },
-      { p: 2, lv: 3, where: '12 桁・13 桁の番号で登録済みの会員', why: '桁数の上限が 13 → 11 に下がる。既存データが新しいチェックに通らない。', doc: '画面仕様書_会員登録.xlsx 入力項目 No.7', quote: '電話番号: 半角数字 10〜13 桁', test: '12 桁の電話番号を持つ会員で、情報を更新する' },
-      { p: 3, lv: 2, where: '会員登録 入力画面のエラー文言', why: '必須と桁数のエラー文言が変わる。', doc: '画面仕様書_会員登録.xlsx メッセージ一覧 M-021', quote: '電話番号は 10〜13 桁で入力してください。', test: '未入力・9 桁・12 桁でエラー文言を確かめる' },
-      { p: 3, lv: 1, where: '既存テストケース TC-REG-031〜034', why: '旧仕様（任意・13 桁まで）を期待値にしている。期待値の書き換えが要る。', doc: 'テストケース（既存） TC-REG-031', quote: '電話番号を空欄で登録できること', test: '該当ケースの期待値を新仕様に直してから再実行する' }
-    ]
-  };
-  var state = { step: 'intake', pri: 0 };
+  function api(method, path, body) {
+    var opt = { method: method, headers: {} };
+    if (body instanceof FormData) opt.body = body;
+    else if (body) { opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body); }
+    return fetch(path, opt).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (d) {
+        if (!r.ok) throw new Error(d.error || '処理できませんでした（' + r.status + '）。時間をおいてもう一度お試しください。');
+        return d;
+      });
+    }, function () { throw new Error('サーバにつながりません。画面を再読み込みしてください。'); });
+  }
+  function banner(msg) { var b = $('#bt-banner'); b.textContent = msg || ''; b.hidden = !msg; }
+  function toast(msg) {
+    var t = $('#bt-toast'); t.textContent = msg; t.hidden = false;
+    clearTimeout(toast.id); toast.id = setTimeout(function () { t.hidden = true; }, 3000);
+  }
+  function busy(el, on) { if (el) { el.classList.toggle('bt-busy', on); el.disabled = on; } }
+  function run(el, p, okMsg) {
+    banner(''); busy(el, true);
+    return p.then(function (d) {
+      if (d.job) setJob(d.job);
+      if (d.notes && d.notes.length) banner('取り込めなかった文書があります: ' + d.notes.join(' / '));
+      if (okMsg) toast(okMsg);
+      return d;
+    }).catch(function (e) { banner(e.message); }).then(function (d) { busy(el, false); return d; });
+  }
+  function fmtTime(t) {
+    var d = t ? new Date(t) : null;
+    return d && !isNaN(d) ? d.toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+  }
 
-  function renderSteps() {
+  /* ---- 分析一覧 ---- */
+  function loadJobs() {
+    return api('GET', API).then(function (d) { state.jobs = d.jobs; renderJobs(); }).catch(function (e) { banner(e.message); });
+  }
+  function renderJobs() {
+    $('#im-cnt').textContent = state.jobs.length;
+    var cur = state.job && state.job.id;
+    $('#im-jobs').innerHTML = state.jobs.length ? state.jobs.map(function (j) {
+      var on = j.id === cur;
+      var foot = j.analyzed_at ? '影響 ' + j.impact_count + ' 件（P1 ' + j.p1_count + '）' : '未分析';
+      return '<div class="it' + (on ? ' on' : '') + '" role="listitem"><button type="button" class="it-main" data-job="' + esc(j.id) + '" aria-current="' + on + '">'
+        + '<i class="' + (j.analyzed_at ? (j.p1_count ? 'i-flaky' : 'i-pass') : 'i-new') + '"></i>'
+        + '<span class="grow"><b>' + esc(j.name) + '</b><small>文書 ' + j.docs.length + ' 件 · ' + esc(foot) + '</small><small>' + esc(fmtTime(j.updated_at)) + '</small></span></button>'
+        + '<button type="button" class="bt-x" data-deljob="' + esc(j.id) + '" title="この分析を消す" aria-label="' + esc(j.name) + ' を消す">×</button></div>';
+    }).join('') : '<div class="it empty">まだ分析がありません</div>';
+  }
+  function setJob(job) {
+    state.job = job;
+    var i = state.jobs.findIndex(function (j) { return j.id === job.id; });
+    var sum = Object.assign({}, job, { impact_count: job.impacts.length,
+      p1_count: job.impacts.filter(function (r) { return r.priority === 1; }).length });
+    if (i >= 0) state.jobs[i] = sum; else state.jobs.unshift(sum);
+    renderJobs(); render();
+  }
+  function openJob(id) {
+    return api('GET', API + '/' + id).then(function (d) {
+      state.step = d.job.analyzed_at ? 'impact' : 'intake'; state.pri = 0;
+      history.replaceState(null, '', '?job=' + id); setJob(d.job);
+    }).catch(function (e) { banner(e.message); });
+  }
+
+  /* ---- 描画 ---- */
+  function render() {
+    var j = state.job;
+    $('#im-empty').hidden = !!j;
     var at = STEPS.findIndex(function (s) { return s.id === state.step; });
+    var done = { intake: j && j.docs.length + (j.order ? 1 : 0) > 0, search: j && !!j.analyzed_at, impact: j && !!j.analyzed_at };
     $('#im-steps').innerHTML = STEPS.map(function (s, i) {
-      var cls = i === at ? 'on' : i < at ? 'done' : '';
-      return '<button type="button" role="tab" class="bt-step ' + cls + '" data-go="' + s.id + '" aria-selected="' + (i === at) + '"><b>' + (i + 1) + '</b><span>' + s.name + '</span></button>';
+      var cls = i === at ? ' on' : (done[s.id] ? ' done' : '');
+      var ok = j && (i === 0 || j.analyzed_at);
+      return '<button type="button" role="tab" class="bt-step' + cls + '" data-go="' + s.id + '" aria-selected="' + (i === at) + '"' + (ok ? '' : ' disabled') + '><b>' + (done[s.id] && i !== at ? '✓' : i + 1) + '</b><span>' + s.name + '</span></button>';
     }).join('');
-    document.querySelectorAll('.app-nav-item[data-step]').forEach(function (b) { b.classList.toggle('on', b.dataset.step === state.step); });
-    document.querySelectorAll('[data-panel]').forEach(function (p) { p.hidden = p.dataset.panel !== state.step; });
-    var t = $('#topbar-title');
-    if (t) t.textContent = STEPS[at].name;
+    document.querySelectorAll('.rail [data-step]').forEach(function (b) {
+      b.classList.toggle('on', !!j && b.dataset.step === state.step);
+      b.disabled = !j || (b.dataset.step !== 'intake' && !j.analyzed_at);
+    });
+    document.querySelectorAll('[data-panel]').forEach(function (p) { p.hidden = !j || p.dataset.panel !== state.step; });
+    $('#topbar-title').textContent = STEPS[at].name;
+    var notes = j && j.notes && j.notes.length ? j.notes : [];
+    $('#im-notes').hidden = !notes.length || state.step === 'intake';
+    $('#im-notes').textContent = notes.join(' ');
+    if (!j) return;
+    renderIntake(j);
+    renderSearch(j);
+    renderImpact(j);
   }
 
-  function renderStatic() {
-    $('#im-cnt').textContent = SAMPLE.jobs.length;
-    $('#im-jobs').innerHTML = SAMPLE.jobs.map(function (j, i) {
-      return '<div class="it' + (i === 0 ? ' on' : '') + '" role="listitem"><button type="button" class="it-main" aria-current="' + (i === 0) + '"><span class="grow"><b>' + esc(j.name) + '</b><small>' + esc(j.at) + '</small></span></button></div>';
-    }).join('');
-    $('#im-order').value = SAMPLE.order;
-    $('#im-docs').innerHTML = SAMPLE.docs.map(function (d) {
-      return '<tr><td>' + esc(d.name) + '</td><td>' + esc(d.ver) + '</td><td>' + esc(d.kind) + '</td></tr>';
-    }).join('');
-    $('#im-stores').innerHTML = SAMPLE.stores.map(function (s) {
-      return '<li><b>' + esc(s.name) + '</b><small>' + s.n + ' 件 ・ 索引 ' + esc(s.at) + '</small>' +
-        '<span class="pill ' + (s.ok ? 'p-pass' : 'p-flaky') + '">' + (s.ok ? '最新' : '5 日前') + '</span></li>';
-    }).join('');
-    $('#im-diffs').innerHTML = SAMPLE.diffs.map(function (d) {
-      return '<div class="im-diff"><code>' + d.id + '</code><span>' + esc(d.where) + '</span><span><del>' + esc(d.before) + '</del></span><span><ins>' + esc(d.after) + '</ins></span></div>';
-    }).join('');
-    var hit = 0, merged = 0;
-    $('#im-queries').innerHTML = SAMPLE.queries.map(function (q) {
-      hit += q.hit; merged += q.merged;
-      return '<tr><td><code>' + q.id + '</code></td><td>' + esc(q.from) + '</td><td><code>' + esc(q.q) + '</code></td><td>' + esc(q.store) + '</td><td>' + q.hit + '</td><td>' + q.merged + '</td></tr>';
-    }).join('');
-    $('#im-qsum').textContent = 'ヒット ' + hit + ' 件 → 統合後 ' + merged + ' 件';
+  function renderIntake(j) {
+    var order = $('#im-order');
+    if (document.activeElement !== order) order.value = j.order || '';
+    $('#im-docs').innerHTML = j.docs.length ? j.docs.map(function (d) {
+      var n = esc(d.name);
+      return '<tr><td>' + n + '</td>'
+        + '<td><select data-doc="' + n + '" data-key="role" aria-label="' + n + ' の使い方">' + Object.keys(ROLES).map(function (k) {
+          return '<option value="' + k + '"' + (d.role === k ? ' selected' : '') + '>' + ROLES[k] + '</option>'; }).join('') + '</select></td>'
+        + '<td><select data-doc="' + n + '" data-key="store" aria-label="' + n + ' の種類">' + STORES.map(function (k) {
+          return '<option' + (d.store === k ? ' selected' : '') + '>' + k + '</option>'; }).join('') + '</select></td>'
+        + '<td>' + d.passages + '</td><td><button type="button" class="bt-x" data-deldoc="' + n + '" aria-label="' + n + ' を外す">×</button></td></tr>';
+    }).join('') : '<tr><td colspan="5" class="bt-none">まだ文書がありません。変更の内容だけでも分析できます。</td></tr>';
+    var stores = STORES.map(function (s) {
+      var docs = j.docs.filter(function (d) { return d.store === s && d.role !== 'old'; });
+      var last = docs.map(function (d) { return d.indexed_at; }).sort().pop();
+      var n = docs.reduce(function (a, d) { return a + d.passages; }, 0);
+      return '<li><b>' + s + '</b><small>' + docs.length + ' 文書 ・ ' + n + ' 断片' + (last ? ' ・ 読み取り ' + esc(fmtTime(last)) : '') + '</small>'
+        + '<span class="pill ' + (docs.length ? 'p-pass' : 'p-new') + '">' + (docs.length ? 'あり' : 'なし') + '</span></li>';
+    });
+    $('#im-stores').innerHTML = stores.join('');
+    var hasNew = j.docs.some(function (d) { return d.role === 'new'; });
+    var hasOld = j.docs.some(function (d) { return d.role === 'old'; });
+    $('#im-intake-note').textContent = hasNew && hasOld ? '変更前と変更後の差分から変更箇所を抜き出します。'
+      : '変更前の版が無いので、変更の内容（指示）から変更箇所を作ります。';
   }
 
-  function renderImpact() {
-    var cnt = [0, 0, 0, 0, 0];
-    SAMPLE.rows.forEach(function (r) { cnt[r.lv] += 1; });
-    $('#im-kpis').innerHTML = [4, 3, 2, 1].map(function (lv) {
-      return '<div class="kpi"><b>' + cnt[lv] + '</b><span>影響度 ' + LV[lv] + '</span></div>';
+  function renderSearch(j) {
+    $('#im-diffs').innerHTML = j.changes.length ? j.changes.map(function (c) {
+      return '<div class="im-diff"><code>' + esc(c.id) + ' ' + esc(c.kind) + '</code><span>' + esc(c.location) + '</span>'
+        + '<span>' + (c.before ? '<del>' + esc(c.before) + '</del>' : '<span class="bt-mut">（なし）</span>') + '</span>'
+        + '<span>' + (c.after ? '<ins>' + esc(c.after) + '</ins>' : '<span class="bt-mut">（なし）</span>') + '</span></div>';
+    }).join('') : '<p class="bt-none">変更箇所はまだありません。</p>';
+    var hit = 0;
+    $('#im-queries').innerHTML = j.queries.length ? j.queries.map(function (q) {
+      hit += q.hit;
+      return '<tr><td><code>' + esc(q.id) + '</code></td><td>' + esc(q.from) + '</td><td>' + esc(q.subject.join('・')) + '</td>'
+        + '<td>' + esc(q.diff.join('・') || '—') + '</td><td>' + esc(q.stores.join('・') || '—') + '</td><td>' + q.hit + '</td><td>' + q.merged + '</td></tr>';
+    }).join('') : '<tr><td colspan="7" class="bt-none">クエリはまだありません。</td></tr>';
+    $('#im-qsum').textContent = j.queries.length ? 'ヒット ' + hit + ' 件 → 統合後 ' + j.impacts.filter(function (r) { return r.confirmed; }).length + ' 件' : '';
+  }
+
+  function renderImpact(j) {
+    var cnt = {};
+    j.impacts.forEach(function (r) { cnt[r.level] = (cnt[r.level] || 0) + 1; });
+    $('#im-kpis').innerHTML = LVS.map(function (lv) {
+      return '<div class="kpi' + (lv === 4 && cnt[4] ? ' ng' : '') + '"><b>' + (cnt[lv] || 0) + '</b><span>影響度 ' + LVN[lv] + '</span></div>';
     }).join('');
     $('#im-filter').innerHTML = [0, 1, 2, 3].map(function (p) {
       return '<button type="button" class="fchip' + (state.pri === p ? ' on' : '') + '" data-pri="' + p + '">' + (p ? 'P' + p : 'すべて') + '</button>';
     }).join('');
-    var rows = SAMPLE.rows.filter(function (r) { return !state.pri || r.p === state.pri; });
+    var rows = j.impacts.filter(function (r) { return !state.pri || r.priority === state.pri; });
     $('#im-shown').textContent = rows.length + ' 件';
-    $('#im-rows').innerHTML = rows.map(function (r) {
-      return '<tr><td><span class="im-pri p' + r.p + '">P' + r.p + '</span></td><td>' + esc(r.where) + '</td>' +
-        '<td><span class="im-lv l' + r.lv + '">' + LV[r.lv] + '</span></td><td>' + esc(r.why) + '</td>' +
-        '<td>' + esc(r.doc) + '<q>' + esc(r.quote) + '</q></td><td>' + esc(r.test) + '</td></tr>';
-    }).join('');
+    $('#im-csv').href = API + '/' + j.id + '/export.csv';
+    $('#im-csv').setAttribute('aria-disabled', String(!j.impacts.length));
+    $('#im-rows').innerHTML = rows.length ? rows.map(function (r) {
+      return '<tr><td><span class="im-pri p' + r.priority + '">P' + r.priority + '</span></td>'
+        + '<td>' + esc(r.place || r.location) + '<small>' + esc(r.doc || '') + ' · 変更 ' + esc(r.changes.join('・')) + '</small></td>'
+        + '<td><span class="im-lv l' + r.level + '">' + esc(r.level_name) + '</span></td><td>' + esc(r.why) + '</td>'
+        + '<td>' + (r.doc ? esc(r.doc) + ' ' + esc(r.location) + '<q>' + esc(r.quote) + '</q>' : '<span class="bt-mut">見つからない</span>') + '</td>'
+        + '<td>' + esc(r.test) + '</td></tr>';
+    }).join('') : '<tr><td colspan="6" class="bt-none">' + (j.analyzed_at ? 'この優先度の影響はありません。' : 'まだ分析していません。') + '</td></tr>';
   }
 
+  /* ---- 操作 ---- */
+  function upload(files) {
+    if (!state.job || !files.length) return;
+    var fd = new FormData();
+    Array.prototype.forEach.call(files, function (f) { fd.append('files', f); });
+    run($('#im-drop'), api('POST', API + '/' + state.job.id + '/docs', fd), files.length + ' 件の文書を取り込みました');
+  }
   document.addEventListener('click', function (e) {
-    var go = e.target.closest('[data-go],[data-step]');
-    if (go) { state.step = go.dataset.go || go.dataset.step; renderSteps(); return; }
-    var f = e.target.closest('[data-pri]');
-    if (f) { state.pri = Number(f.dataset.pri); renderImpact(); }
+    var t = e.target.closest('[data-go],[data-step],[data-pri],[data-job],[data-deljob],[data-deldoc],#im-new,#im-newcancel,#im-run');
+    if (!t || t.disabled) return;
+    if (t.dataset.go || t.dataset.step) { state.step = t.dataset.go || t.dataset.step; render(); return; }
+    if (t.dataset.pri != null) { state.pri = Number(t.dataset.pri); renderImpact(state.job); return; }
+    if (t.dataset.job) { openJob(t.dataset.job); return; }
+    if (t.dataset.deljob) {
+      var id = t.dataset.deljob;
+      run(t, api('DELETE', API + '/' + id), '分析を消しました').then(function () {
+        state.jobs = state.jobs.filter(function (j) { return j.id !== id; });
+        if (state.job && state.job.id === id) { state.job = null; history.replaceState(null, '', location.pathname); }
+        renderJobs(); render();
+      });
+      return;
+    }
+    if (t.dataset.deldoc) { run(t, api('DELETE', API + '/' + state.job.id + '/docs/' + encodeURIComponent(t.dataset.deldoc)), '文書を外しました'); return; }
+    if (t.id === 'im-new') { $('#im-newform').hidden = false; $('#im-newname').focus(); return; }
+    if (t.id === 'im-newcancel') { $('#im-newform').hidden = true; return; }
+    if (t.id === 'im-run') {
+      run(t, api('POST', API + '/' + state.job.id + '/analyze', { order: $('#im-order').value }), '分析しました').then(function (d) {
+        if (d && d.job) { state.step = 'impact'; state.pri = 0; render(); }
+      });
+    }
   });
+  document.addEventListener('change', function (e) {
+    var s = e.target.closest('select[data-doc]');
+    if (s) { var b = {}; b[s.dataset.key] = s.value; run(null, api('PATCH', API + '/' + state.job.id + '/docs/' + encodeURIComponent(s.dataset.doc), b)); }
+    if (e.target.id === 'im-file') { upload(e.target.files); e.target.value = ''; }
+    if (e.target.id === 'im-order' && state.job) run(null, api('PATCH', API + '/' + state.job.id, { order: e.target.value }));
+  });
+  $('#im-newform').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var name = $('#im-newname').value.trim();
+    if (!name) return;
+    run(null, api('POST', API, { name: name }), '分析を作りました').then(function (d) {
+      if (d && d.job) { $('#im-newform').hidden = true; $('#im-newname').value = ''; state.step = 'intake'; history.replaceState(null, '', '?job=' + d.job.id); render(); }
+    });
+  });
+  var drop = $('#im-drop');
+  ['dragover', 'dragenter'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('over'); }); });
+  ['dragleave', 'drop'].forEach(function (ev) { drop.addEventListener(ev, function () { drop.classList.remove('over'); }); });
+  drop.addEventListener('drop', function (e) { e.preventDefault(); upload(e.dataTransfer.files); });
 
-  renderStatic();
-  renderImpact();
-  renderSteps();
+  loadJobs().then(function () {
+    var id = new URLSearchParams(location.search).get('job') || (state.jobs[0] && state.jobs[0].id);
+    if (id) openJob(id); else render();
+  });
 })();

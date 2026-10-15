@@ -16,7 +16,7 @@
 </head>
 {# 影響度分析（System 08）。骨格はバッチのテスト（batch_test.html）と同じ 3 列で、部品は batch-test.css を共用する。
    工程は 入力（受付・文書確認）→ 変更点と検索（クエリ生成・検索・統合）→ 影響と優先度（判定）。
-   いまは画面のみで、表示は static/js/impact.js の見本データ。 #}
+   API は web/routes/impact.py、処理は web/services/impact/。 #}
 <body class="bt-page im-page">
 <a href="#bt-content" class="skip-link">本文へスキップ</a>
 <div class="app">
@@ -57,8 +57,13 @@
       <h2 class="list-title">分析 <span id="im-cnt"></span></h2>
       <p>変更 1 件ごとに 1 件</p>
     </div>
+    <form class="bt-newform" id="im-newform" hidden>
+      <input id="im-newname" maxlength="100" placeholder="例: 電話番号を必須に" aria-label="分析の名前" required>
+      <button type="submit" class="btn pri sm">作成</button>
+      <button type="button" class="btn sm ghost" id="im-newcancel">やめる</button>
+    </form>
     <div class="items" id="im-jobs" role="list" aria-label="分析一覧"></div>
-    <div class="list-f"><button type="button" class="btn pri" style="flex:1;justify-content:center" id="im-new" disabled title="見本データの表示中は作れません">＋ 新しい分析</button></div>
+    <div class="list-f"><button type="button" class="btn pri" style="flex:1;justify-content:center" id="im-new">＋ 新しい分析</button></div>
   </aside>
 
   <main class="main bt-main">
@@ -66,7 +71,13 @@
     {% include 'partials/topbar.html' %}
     <div class="bt-steps im-steps" id="im-steps" role="tablist" aria-label="工程"></div>
     <div class="bt-content" id="bt-content">
-      <p class="bt-sample">見本データを表示しています。検索と判定の処理は次の段階で入ります。</p>
+      <div class="bt-banner" id="bt-banner" role="alert" hidden></div>
+      <div class="bt-sample" id="im-notes" hidden></div>
+      <section class="bt-empty" id="im-empty" hidden>
+        <h2>分析を選んでください</h2>
+        <p>左の一覧から選ぶか、「＋ 新しい分析」で作ります。1 分析 = 変更 1 件です。</p>
+        <ol><li>変更の内容を書き、変更後（と変更前）の仕様書を取り込む</li><li>検索先の設計書・画面仕様書・既存テストケースを取り込む</li><li>分析すると、影響範囲とテストの優先度が根拠の文書つきで出ます</li></ol>
+      </section>
 
       {# ① 入力: 入力受付・文書確認 #}
       <section class="bt-panel" data-panel="intake" hidden>
@@ -74,24 +85,25 @@
           <div class="bt-card">
             <h3>変更の内容</h3>
             <label class="bt-field">どういう変更をしたいか
-              <textarea id="im-order" rows="4" class="im-ta" maxlength="2000"></textarea></label>
-            <label class="bt-drop" for="im-file">
-              <b>変更後の仕様書をここへ落とすか、押して選ぶ</b>
-              <span>設計書・画面仕様書（.xlsx / .docx / .md / .pdf）。変更前の版もあれば差分を正確に取れます</span>
-              <input id="im-file" type="file" multiple hidden disabled>
+              <textarea id="im-order" rows="4" class="im-ta" maxlength="2000" placeholder="例: 会員登録の電話番号を任意から必須にし、桁数を 10〜11 桁にする。"></textarea></label>
+            <label class="bt-drop" id="im-drop" for="im-file">
+              <b>文書をここへ落とすか、押して選ぶ</b>
+              <span>変更後・変更前の仕様書と、検索先の設計書・画面仕様書・既存テストケース（.xlsx / .docx / .md / .txt / .pdf）</span>
+              <input id="im-file" type="file" multiple hidden accept=".xlsx,.docx,.md,.txt,.pdf">
             </label>
-            <table class="bt-tbl" aria-label="受け付けた文書">
-              <thead><tr><th>文書</th><th>版</th><th>種類</th></tr></thead>
+            <table class="bt-tbl" aria-label="取り込んだ文書">
+              <thead><tr><th>文書</th><th>使い方</th><th>種類</th><th>断片</th><th><span class="sr-only">操作</span></th></tr></thead>
               <tbody id="im-docs"></tbody>
             </table>
+            <p class="bt-hint">名前に「旧・変更前」があれば変更前、「新・変更後」があれば変更後として扱います。違うときは選び直してください。</p>
           </div>
           <div class="bt-card">
             <h3>検索先の文書（データストア）</h3>
-            <p class="bt-hint im-gap">影響を探しにいく先です。索引が古いと見落とすので、更新日を確かめてください。</p>
+            <p class="bt-hint im-gap">影響を探しにいく先です。足りない種類があると見落とすので、揃っているか確かめてください。</p>
             <ul class="im-stores" id="im-stores"></ul>
           </div>
         </div>
-        <div class="bt-actions"><span class="sp"></span><button type="button" class="btn pri" data-go="search">変更点を抜き出して検索 →</button></div>
+        <div class="bt-actions"><span class="bt-mut" id="im-intake-note"></span><span class="sp"></span><button type="button" class="btn pri" id="im-run">分析する →</button></div>
       </section>
 
       {# ② 変更点と検索: クエリ生成・文書検索・検索結果の統合 #}
@@ -104,7 +116,7 @@
           <div class="bt-card-h"><h3>検索クエリと結果</h3><span class="bt-mut" id="im-qsum"></span></div>
           <div class="bt-tblwrap">
             <table class="bt-tbl" aria-label="検索クエリ">
-              <thead><tr><th>ID</th><th>元の変更</th><th>検索クエリ</th><th>検索先</th><th>ヒット</th><th>統合後</th></tr></thead>
+              <thead><tr><th>ID</th><th>元の変更</th><th>主題の語</th><th>変わった語と言い換え</th><th>検索先</th><th>ヒット</th><th>統合後</th></tr></thead>
               <tbody id="im-queries"></tbody>
             </table>
           </div>
@@ -119,7 +131,7 @@
         <div class="kpis" id="im-kpis"></div>
         <div class="bt-card bt-card-flush">
           <div class="bt-card-h"><h3>影響範囲 <span class="bt-mut" id="im-shown"></span></h3><span class="sp"></span>
-            <div class="fchips im-filter" id="im-filter"></div></div>
+            <div class="fchips im-filter" id="im-filter"></div><a class="btn sm" id="im-csv" download>CSV で書き出す</a></div>
           <div class="bt-tblwrap">
             <table class="bt-tbl im-tbl" aria-label="影響範囲">
               <thead><tr><th>優先度</th><th>影響を受ける箇所</th><th>影響度</th><th>判断</th><th>根拠の文書</th><th>確かめるテスト</th></tr></thead>
@@ -130,7 +142,7 @@
         <div class="bt-card">
           <h3>判定の基準</h3>
           <ul class="bt-list">
-            <li><b>影響度</b>: 変更箇所との関係（直接参照・データの受け渡し・画面の共有・記述のみ）と、壊れたときの業務への害で 4 段に分けます。</li>
+            <li><b>影響度</b>: 主題の語だけ一致＝小、変わった規則の語（値・条件とその言い換え）も一致＝大、「共通・同じ・参照」など同じ部品を使う記述で一段上げ、お金・認証・一括取込など害の大きい語があれば致命。</li>
             <li><b>優先度</b>: P1＝致命（お金・個人情報・データ消失・止まる）、P2＝主要な業務の流れ、P3＝表示や文言。テストの順番に使います。</li>
             <li>根拠の文書が見つからない箇所は「影響なし」とせず「未確認」と表示します。</li>
           </ul>

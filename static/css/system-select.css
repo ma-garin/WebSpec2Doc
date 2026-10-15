@@ -174,3 +174,9 @@
 
 /* ta2.css の html,body{overflow:hidden} で 2 段目が切れる（8 枚になって 1440x900 に収まらない）。この画面だけ縦スクロールを許す */
 html:has(body.sysselect-body), body.sysselect-body { overflow-y: auto; height: auto; }
+/* System 08 影響度分析。既存の識別色と重ならない橙。 */
+.syscard-impact:hover { border-color: #C2410C; }
+.syscard-impact .syscard-accent { background: #C2410C; }
+.syscard-impact .syscard-icon { background: #FFEDD5; color: #9A3412; }
+.syscard-impact .syscard-no { color: #9A3412; }
+.syscard-impact .syscard-open { color: #9A3412; }

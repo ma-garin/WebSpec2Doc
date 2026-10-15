@@ -179,6 +179,12 @@ def cli_mode() -> str:
     return render_template("cli.html", domains=domains)
 
 
+@bp.route("/impact")
+def impact_analysis() -> str:
+    """影響度分析（System 08）。いまは画面のみで、表示は見本データ。"""
+    return render_template("impact_analysis.html")
+
+
 @bp.route("/settings/<tab>")
 def settings_tab(tab: str) -> str:
     """設定画面をタブ指定で開く（例: /settings/api）。

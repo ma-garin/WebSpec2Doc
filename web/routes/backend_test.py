@@ -8,7 +8,7 @@ import re
 from flask import Blueprint, g, jsonify, render_template, request
 
 from web.auth import effective_auth_mode
-from web.services.backendtest import dbconn, intake, redact, store
+from web.services.backendtest import catalog, dbconn, intake, redact, store
 
 bp = Blueprint("backend_test", __name__)
 log = logging.getLogger(__name__)
@@ -311,6 +311,41 @@ def put_targets(jid: str):   # PUT は一覧ごと置き換え（targets[]）、
     except store.StoreError as exc:
         return err(str(exc), 400)
     return respond({**job, "targets": targets}, 201 if request.method == "POST" else 200)
+
+
+def _target_text(targets: list) -> str:
+    """対象の要約（入力 → 出力）。入出力が無ければ起動のしかた。"""
+    first = targets[0] if targets and isinstance(targets[0], dict) else {}
+
+    def names(items) -> str:
+        out = []
+        for x in items or []:
+            n = (x.get("name") or x.get("table") or x.get("path")) if isinstance(x, dict) else x
+            if n:
+                out.append(str(n))
+        return "・".join(out)
+
+    src, dst = names(first.get("inputs")), names(first.get("outputs"))
+    if src or dst:
+        return f"{src or '入力未設定'} → {dst or '出力未設定'}"
+    return str(first.get("command") or "")
+
+
+@bp.route("/api/backend-test/summary", methods=["GET"])
+def home_summary():
+    """ホーム用のまとめ: 案件ごとの対象の要約（一覧の応答は targets を外すため）と観点カタログ。"""
+    targets: dict[str, str] = {}
+    try:
+        for item in store.list_all():
+            try:
+                targets[item["id"]] = _target_text(store.load(item["id"]).get("targets") or [])
+            except (KeyError, ValueError, OSError):
+                log.warning("案件の対象を読めませんでした %s", item.get("id"))
+    except OSError:
+        log.exception("案件のまとめの取得に失敗")
+        return err("案件のまとめを読めませんでした。時間をおいて再読み込みしてください。", 500)
+    keys = ("id", "cat_name", "name", "technique", "priority", "levels")
+    return jsonify(targets=targets, catalog=[{k: v.get(k) for k in keys} for v in catalog.CATALOG])
 
 
 from web.routes import backend_test_stages, backend_test_run, backend_test_envs  # noqa: E402,F401  段階・実行のルートを同じ bp に載せる

@@ -142,7 +142,7 @@ def seed(conn, data):
             execute(conn, f"INSERT INTO {_ident(table)} ({', '.join(cols)}) VALUES ({marks})", list(row.values()))
 
 
-def run_step(conn, step, out_dir):
+def run_step(conn, step, out_dir, business_date=None):
     if not isinstance(step, dict):
         return None
     if step.get("sql"):
@@ -152,13 +152,15 @@ def run_step(conn, step, out_dir):
         return None
     if is_production():
         raise PermissionError(_PROD_REFUSED)
-    argv = shlex.split(str(step["command"]).replace("{business_date}", env("BUSINESS_DATE")))
+    argv = shlex.split(str(step["command"]).replace("{business_date}", business_date or env("BUSINESS_DATE")))
     proc = subprocess.run(argv, capture_output=True, text=True, timeout=step.get("timeout") or case_timeout())
     with open(out_dir / "stdout.txt", "a", encoding="utf-8") as fh:
         fh.write(proc.stdout)
     with open(out_dir / "stderr.txt", "a", encoding="utf-8") as fh:
         fh.write(proc.stderr)
     (out_dir / "rc.txt").write_text(str(proc.returncode), encoding="utf-8")
+    with open(out_dir / "rcs.txt", "a", encoding="utf-8") as fh:  # 冪等性の 2 回目を含む全回の終了コード
+        fh.write(f"{proc.returncode}\n")
     return proc.returncode
 
 
@@ -183,12 +185,14 @@ class CaseRun:
         out_dir = evidence_dir() / re.sub(r"[^A-Za-z0-9_\-]", "_", str(case.get("id", "case")))
         out_dir.mkdir(parents=True, exist_ok=True)
         self.node.bt_evidence = str(out_dir)
+        bd = self.node.bt_business_date = case.get("business_date") or env("BUSINESS_DATE")  # ケース固有の日付を優先
         seed(self.conn, case.get("data"))
         before = {t: snapshot(self.conn, t, _key_for(oracle, t)) for t in tables}
-        rcs = [run_step(self.conn, s, out_dir) for s in case.get("steps") or []]
+        rcs = [run_step(self.conn, s, out_dir, bd) for s in case.get("steps") or []]
         if case.get("rerun"):  # 冪等性: 1 回目の後を「前」とし、同じ手順の 2 回目で変わらないことを見る
             before = {t: snapshot(self.conn, t, _key_for(oracle, t)) for t in tables}
-            rcs += [run_step(self.conn, s, out_dir) for s in case.get("steps") or []]
+            rcs += [run_step(self.conn, s, out_dir, bd) for s in case.get("steps") or []]
+        self.node.bt_rc = [rc for rc in rcs if rc is not None]
         after = {t: snapshot(self.conn, t, _key_for(oracle, t)) for t in tables}
         diffs = {t: diff(before[t]["rows"], after[t]["rows"], _key_for(oracle, t),
                          oracle.get("exclude"), oracle.get("tolerance")) for t in tables}
@@ -286,7 +290,8 @@ def pytest_runtest_makereport(item, call):
     marker = item.get_closest_marker("bt_case")
     state, reason = _state(rep, call)
     facts = {"test": item.name, "reason": reason, "outcome": rep.outcome, "duration": round(rep.duration, 3),
-             "run_id": env("RUN_ID"), "business_date": env("BUSINESS_DATE"),
+             "run_id": env("RUN_ID"), "business_date": getattr(item, "bt_business_date", "") or env("BUSINESS_DATE"),
+             "rc": getattr(item, "bt_rc", None),
              "message": "" if rep.passed else str(rep.longrepr)[-1000:],
              "evidence": getattr(item, "bt_evidence", "")}
     line = {"case": marker.args[0] if marker and marker.args else item.name, "state": state, "facts": facts}

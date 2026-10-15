@@ -284,11 +284,6 @@ def _builtin_check(job: dict, n: int) -> str | None:
         runs = job.get("runs") or []
         if not runs or runs[-1].get("status") not in _RUN_FINISHED:
             return "実行が終わっていません。実行の終了を待ってから承認してください。"
-    if n == 8:
-        pending = [r for r in job.get("results") or []
-                   if r.get("state") == "undetermined" and not (r.get("human") or {}).get("verdict")]
-        if pending:
-            return f"判定待ちが {len(pending)} 件あります。判定を入れてから承認してください。"
     return None
 
 
@@ -311,6 +306,12 @@ def approve(job: dict, n: int, version: int, role, actor: str) -> dict:
             raise StoreError(reason)
     st = {**st, "status": "approved", "approved_by_role": actor_role, "approved_by": actor,
           "approved_at": _now(), "reject_reason": None}
+    if n == 8:  # 未判定・未実行が残っても承認できる。判定は「保留（未検証 n 件）」として残す
+        pending = [r for r in job.get("results") or [] if r.get("state") in ("undetermined", "not_run", "cancelled", "error")
+                   and not (r.get("human") or {}).get("verdict")]
+        verdict = (job.get("judgement") or {}).get("verdict") or ""
+        if pending and verdict != "不合格":
+            job = {**job, "judgement": {**(job.get("judgement") or {}), "verdict": f"保留（未検証 {len(pending)} 件）"}}
     return _audit(_with_stages(job, {n: st}), "approve", n, st["version"], "", actor)
 
 

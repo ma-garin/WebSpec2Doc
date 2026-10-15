@@ -350,6 +350,12 @@ def api_case_oracle(jid: str, cid: str):
     if case is None:
         return _err("ケースが見つかりません。画面を読み込み直してください。", 404)
     body = _body()
+    tol = body.get("tolerance")
+    if isinstance(tol, str):
+        try:
+            body = {**body, "tolerance": float(tol.strip())}
+        except ValueError:
+            return _err("許容差は数値で入力してください。例: 0.01 のように半角数字で入れ直してください。", 400)
     try:
         new_case, denied = _apply_oracle(job, case, body, role, actor)
     except StoreError as exc:

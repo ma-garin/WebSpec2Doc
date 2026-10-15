@@ -15,7 +15,7 @@ import time
 
 from flask import Response, jsonify, request
 
-from web.services.backendtest import dbconn, export, judge, results, runner, stages, store
+from web.services.backendtest import dbconn, export, judge, results, run_prep, runner, stages, store
 
 from web.routes.backend_test import actor as _case_actor
 from web.routes.backend_test import bp
@@ -108,19 +108,9 @@ def _latest_states(job: dict) -> dict:
     return states
 
 
-def _effective(job: dict, chosen: list[str]) -> tuple[list[str], list[str]]:
-    """pytest -k は部分一致・大文字小文字無視。実際に走るケースと -k に渡すテスト名を返す。"""
-    names = (job.get("code") or {}).get("map") or {}
-    terms = [names.get(c) or f"test_{c.lower()}" for c in chosen]
-    if not chosen:
-        return [], []
-    hit = [cid for cid, name in names.items() if any(t.lower() in str(name).lower() for t in terms)]
-    return sorted(set(hit) | set(chosen)), terms
-
-
 def _plan(job: dict, env: dict, chosen: list[str]) -> dict:
     by_id = {str(c.get("id")): c for c in job.get("cases") or []}
-    effective, terms = _effective(job, chosen)
+    effective = list(chosen)  # ケース ID のまま runner へ渡す（テスト名への変換は runner だけが行う）
     tables: list[str] = []
     writes = False
     for cid in effective:
@@ -142,7 +132,7 @@ def _plan(job: dict, env: dict, chosen: list[str]) -> dict:
     return {"env_id": env.get("id"), "env_name": env.get("name") or "", "production": production,
             "production_reasons": reasons, "read_only": production or dbconn.must_read_only(env),
             "writes": writes, "affected_tables": tables, "case_ids": chosen, "effective_case_ids": effective,
-            "extra_case_ids": extra, "k_terms": terms,
+            "extra_case_ids": extra,
             "code_version": ((job.get("stages") or {}).get(CODE_STAGE) or {}).get("version")}
 
 
@@ -232,11 +222,16 @@ def run_start(jid):
         return gate
     run_env = {**env, "production": plan["production"],
                "writable": bool(env.get("writable")) and not plan["read_only"]}
+    try:
+        run_prep.write_code(job, store.job_dir(jid) / "code")
+    except (store.StoreError, OSError) as exc:
+        log.error("テストコードを置けません %s: %s", jid, exc)
+        return _err(str(exc) if isinstance(exc, store.StoreError) else "テストコードを置けませんでした。時間をおいて再実行してください。", 409)
     password = str(data.get("secret") or data.get("password") or "")
     try:
         rid = runner.start(jid, run_env, {"password": password} if password else None,
                            int(data.get("timeout_sec") or runner.DEFAULT_TIMEOUT_SEC),
-                           case_ids=plan["k_terms"], business_date=str(data.get("business_date") or ""))
+                           case_ids=plan["effective_case_ids"], business_date=str(data.get("business_date") or ""))
     except store.StoreError as exc:
         return _err(str(exc), 409)
     except (TypeError, ValueError):
@@ -279,7 +274,7 @@ def _sync(job: dict, rid: str, raw: dict) -> dict:
     stored = _stored_run(job, rid) or {}
     summary = _summary(raw, stored.get("case_ids") or [])
     if raw.get("status") not in runner.ACTIVE and stored.get("status") != raw.get("status"):
-        if _save(_with_run(job, summary))[1] is not None:
+        if _save(run_prep.finish_stage(_with_run(job, summary), raw.get("status"), _actor()))[1] is not None:
             log.error("実行 %s の終了状態を保存できませんでした", rid)
     return {**stored, **summary}
 
@@ -306,11 +301,14 @@ def run_cancel(jid, rid):
     if _stored_run(job, rid) is None:
         return _err("実行が見つかりません。実行一覧から選び直してください。", 404)
     try:
+        if runner.status(rid).get("status") not in runner.ACTIVE:  # 終わった実行の停止は受け付けない
+            raise KeyError(rid)
         raw = runner.cancel(rid, _actor())
     except KeyError:
         return _err("この実行はすでに終わっています。結果を確認してください。", 409)
     summary = _summary(raw, (_stored_run(job, rid) or {}).get("case_ids") or [])
-    job = store.audit(_with_run(job, summary), "cancel", RUN_STAGE, rid, _actor())
+    job = store.audit(run_prep.finish_stage(_with_run(job, summary), summary.get("status"), _actor()),
+                      "cancel", RUN_STAGE, rid, _actor())
     _job, err = _save(job)
     if err:
         return err

@@ -338,6 +338,12 @@ def _eval_schema(observed: Mapping) -> dict:
                    violations=len(violations), samples=violations[:10])
 
 
+def _keyless_rerun(case: Mapping, oracle: Mapping) -> bool:
+    """冪等性（再実行）の前後比較は、突合キーが無くても行全体の個数の増減で判定できる。"""
+    rerun = case.get("check") == "rerun" or case.get("variant") == "再実行"
+    return rerun and oracle.get("method") == "db_diff" and not oracle.get("key")
+
+
 def evaluate(case: Mapping, observed: Mapping | None) -> dict:
     """方式ごとに pass / fail / undetermined と根拠を返す。未確定の期待値は undetermined（合格に数えない）。
 
@@ -351,7 +357,7 @@ def evaluate(case: Mapping, observed: Mapping | None) -> dict:
     if (oracle.get("state") or "unconfirmed") not in ("auto", "human"):
         return _result(UNDETERMINED, method, "期待値が未確定のため未判定です。シニア QA に確定を依頼してください。")
     ok, reason = _method_ready(oracle)
-    if not ok:
+    if not ok and not _keyless_rerun(case, oracle):
         return _result(UNDETERMINED, method, reason)
     observed = observed or {}
     try:

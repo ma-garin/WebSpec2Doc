@@ -108,6 +108,11 @@ def _index(rows, key):
     out, dup = {}, False
     for row in rows:
         k = json.dumps([row.get(c) for c in key] if key else row, sort_keys=True, default=str)
+        if not key:  # キーなしは行全体で比べる。同じ行が複数あれば別の行として数える
+            n = 1
+            while f"{k}#{n}" in out:
+                n += 1
+            k = f"{k}#{n}"
         dup = dup or k in out
         out[k] = row
     return out, dup
@@ -181,6 +186,9 @@ class CaseRun:
         seed(self.conn, case.get("data"))
         before = {t: snapshot(self.conn, t, _key_for(oracle, t)) for t in tables}
         rcs = [run_step(self.conn, s, out_dir) for s in case.get("steps") or []]
+        if case.get("rerun"):  # 冪等性: 1 回目の後を「前」とし、同じ手順の 2 回目で変わらないことを見る
+            before = {t: snapshot(self.conn, t, _key_for(oracle, t)) for t in tables}
+            rcs += [run_step(self.conn, s, out_dir) for s in case.get("steps") or []]
         after = {t: snapshot(self.conn, t, _key_for(oracle, t)) for t in tables}
         diffs = {t: diff(before[t]["rows"], after[t]["rows"], _key_for(oracle, t),
                          oracle.get("exclude"), oracle.get("tolerance")) for t in tables}

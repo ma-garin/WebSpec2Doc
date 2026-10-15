@@ -12,6 +12,7 @@ from __future__ import annotations
 import datetime as _dt
 import hashlib
 import json
+from collections import Counter
 from decimal import Decimal, InvalidOperation
 from typing import Any, Iterable, Mapping, Sequence
 
@@ -183,6 +184,19 @@ def _changed_cols(b: Mapping, a: Mapping, exclude: frozenset, tolerance: Mapping
     return cols
 
 
+def _excess(rows: Sequence[Mapping], other: Sequence[Mapping], ex: frozenset, mk: frozenset) -> list[dict]:
+    """rows のうち、other に同じ行が同じ数だけ無いもの。"""
+    left = Counter(row_hash(r, ex, mk) for r in other)
+    out = []
+    for r in rows:
+        h = row_hash(r, ex, mk)
+        if left[h]:
+            left[h] -= 1
+        else:
+            out.append(dict(r))
+    return out
+
+
 def diff(before: Sequence[Mapping[str, Any]], after: Sequence[Mapping[str, Any]],
          key: Sequence[str], exclude: Iterable[str] = (),
          tolerance: Mapping[str, Any] | None = None, mask: Iterable[str] = (),
@@ -195,10 +209,13 @@ def diff(before: Sequence[Mapping[str, Any]], after: Sequence[Mapping[str, Any]]
     indeterminate（キー欠損・重複で未判定の件数）/ totals / warnings。
     """
     key = list(key)
-    if not key:
-        raise ValueError("突合キーが指定されていません。1 列以上の突合キーを選んでください。")
     tol = dict(tolerance or {})
     ex, mk = frozenset(exclude), frozenset(mask)
+    if not key:  # 突合キーなし（冪等性の確認など）は行全体の個数の増減で比べる
+        totals, w_t = _totals(before, after, list(aggregate), tol)
+        added, removed = _excess(after, before, ex, mk), _excess(before, after, ex, mk)
+        return {"added": added, "removed": removed, "updated": [], "unchanged": len(before) - len(removed),
+                "indeterminate": 0, "totals": totals, "warnings": w_t}
 
     b_idx, b_dup, b_miss, w_b = _index(before, key, "before")
     a_idx, a_dup, a_miss, w_a = _index(after, key, "after")

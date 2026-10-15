@@ -233,3 +233,12 @@
 .bs-filter select{padding:5px 8px;border:1px solid var(--line2);border-radius:8px;font-size:12.5px;background:var(--sf);color:var(--tx);min-width:0;max-width:16em}
 .bs-pager{display:flex;align-items:center;gap:8px;padding:10px 16px;border-top:1px solid var(--line)}
 .bs-pager [data-pg="count"]{font-variant-numeric:tabular-nums}
+
+.bs-uv-head{margin:0 0 8px;font-weight:600}
+.bs-uv-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.bs-uv-chip{padding:3px 10px;border:1px solid var(--line2);border-radius:999px;font-size:12.5px;background:var(--bg);font-variant-numeric:tabular-nums}
+.bs-uv-table{margin-top:10px;max-height:320px;overflow:auto;border:1px solid var(--line);border-radius:8px}
+.bs-uv-table[hidden]{display:none}
+.bs-uv-table table{width:100%;border-collapse:collapse;font-size:12.5px}
+.bs-uv-table th{position:sticky;top:0;background:var(--bg);text-align:left}
+.bs-uv-table th,.bs-uv-table td{padding:6px 10px;border-bottom:1px solid var(--line)}

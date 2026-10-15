@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>バッチ・バックエンドのテスト - WebSpec2Doc</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}?v={{ _ver }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}?v={{ _ver }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ta2.css') }}?v={{ _ver }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ws.css') }}?v={{ _ver }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/backend-test.css') }}?v={{ _ver }}">
+</head>
+{# バッチ・バックエンドのテスト（System 08）。承認済みの案 A（段階ナビ型・3 列）＋承認バーは本体の先頭（案 B）。
+   サイドバー = 段階 1〜8（data-stage）／案件一覧／本体。本体は id="bs-stage-1"〜8 を JS が出し分ける。
+   見本の値は入れない。行は <template> を複製して埋める。API は /api/backend-test/...（BD-008 5 章）。 #}
+<body class="bs-page">
+<a href="#bs-content" class="skip-link">本文へスキップ</a>
+<div class="app">
+  <aside class="app-sidebar rail">
+    <a class="app-brand" href="/systems" title="システム選択に戻る">
+      <span class="app-brand-mark">W</span>
+      <span class="app-brand-text"><strong>WebSpec2Doc</strong><span>バックエンドのテスト</span></span>
+    </a>
+    <a href="/systems" class="sys-switcher" title="システムを切り替える"><span class="sys-switcher-label">システム</span><span class="sys-switcher-cur">バックエンド</span><span class="sys-switcher-swap">切替</span></a>
+
+    <nav class="app-nav bs-nav" id="bs-nav" aria-label="段階">
+      <div class="app-nav-group">読む・決める</div>
+      <button type="button" class="app-nav-item" data-stage="1" disabled><span class="bs-num" data-num>1</span><span class="nav-label">目的・範囲</span><span class="bs-navst" data-state></span></button>
+      <button type="button" class="app-nav-item" data-stage="2" disabled><span class="bs-num" data-num>2</span><span class="nav-label">対象の読み取り</span><span class="bs-navst" data-state></span></button>
+      <button type="button" class="app-nav-item" data-stage="3" disabled><span class="bs-num" data-num>3</span><span class="nav-label">観点表</span><span class="bs-navst" data-state></span></button>
+      <div class="app-nav-group">つくる</div>
+      <button type="button" class="app-nav-item" data-stage="4" disabled><span class="bs-num" data-num>4</span><span class="nav-label">ケース表</span><span class="bs-navst" data-state></span></button>
+      <button type="button" class="app-nav-item" data-stage="5" disabled><span class="bs-num" data-num>5</span><span class="nav-label">テストデータ</span><span class="bs-navst" data-state></span></button>
+      <button type="button" class="app-nav-item" data-stage="6" disabled><span class="bs-num" data-num>6</span><span class="nav-label">テストコード</span><span class="bs-navst" data-state></span></button>
+      <div class="app-nav-group">確かめる</div>
+      <button type="button" class="app-nav-item" data-stage="7" disabled><span class="bs-num" data-num>7</span><span class="nav-label">実行</span><span class="bs-navst" data-state></span></button>
+      <button type="button" class="app-nav-item" data-stage="8" disabled><span class="bs-num" data-num>8</span><span class="nav-label">判定・報告</span><span class="bs-navst" data-state></span></button>
+    </nav>
+    <div class="sp"></div>
+    <nav class="app-nav" aria-label="サポート">
+      <div class="app-nav-group">サポート</div>
+      <a class="app-nav-item" href="/user-guide">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.2 2.4c-.6.2-.8.7-.8 1.4"/><path d="M12 16.6h.01"/></svg>
+        <span class="nav-label">使い方</span>
+      </a>
+    </nav>
+  </aside>
+
+  <aside class="list">
+    <div class="list-h">
+      <h2 class="list-title">案件 <span id="bs-cnt"></span></h2>
+      <p>テストするバッチごとに 1 件</p>
+    </div>
+    <form class="bs-newform" id="bs-newform" hidden>
+      <input id="bs-newname" maxlength="100" placeholder="例: 月次請求集計バッチ" aria-label="案件名" required>
+      <button type="submit" class="btn pri sm">作成</button>
+      <button type="button" class="btn sm ghost" id="bs-newcancel">やめる</button>
+    </form>
+    <div class="search"><input id="bs-q" placeholder="案件名で絞り込み" aria-label="案件の絞り込み"></div>
+    <div class="items" id="bs-jobs" role="list" aria-label="案件一覧"></div>
+    <div class="list-f"><button type="button" class="btn pri bs-full" id="bs-new">＋ 新しい案件</button></div>
+  </aside>
+
+  <main class="main bs-main">
+    {% set topbar_crumb = 'バッチ・バックエンドのテスト' %}{% set topbar_title = '案件を選んでください' %}
+    {% include 'partials/topbar.html' %}
+    <div class="bs-stagehead" id="bs-stagehead" hidden>
+      <small id="bs-stage-no"></small><b id="bs-stage-name"></b><span class="pill" id="bs-stage-pill"></span>
+      <span class="bs-stale" id="bs-stage-stale" hidden>前段が変わりました。内容を確かめて作り直してください</span>
+      <span class="sp"></span><span class="bs-mut" id="bs-stage-meta"></span>
+    </div>
+    <div class="bs-content" id="bs-content">
+      {# 本番らしい接続先（読み取り専用）の帯 #}
+      <div class="bs-banner ro" id="bs-prod-banner" role="status" hidden>
+        <div><b>本番らしい接続先（<span id="bs-prod-env"></span>）に読み取り専用で接続しています</b>
+          <p>データを書き換える操作はすべて止めます。テストデータの投入を伴うケースは実行せず、判定で「未検証」として示します。</p>
+          <p class="bs-mut" id="bs-prod-reasons"></p></div>
+      </div>
+      {# 失敗の通知（理由＋次の行動 1 行） #}
+      <div class="bs-banner err" id="bs-banner" role="alert" hidden>
+        <div><b id="bs-banner-title"></b><p id="bs-banner-msg"></p><p id="bs-banner-next"></p></div>
+        <span class="sp"></span><button type="button" class="btn sm" id="bs-banner-retry" hidden>もう一度接続する</button>
+      </div>
+
+      {# 承認バー（本体の先頭）。権限がない操作は理由付きで無効 #}
+      <div class="bs-approve" id="bs-approve" data-stage="" data-version="" hidden>
+        <div class="bs-approve-t">
+          <b id="bs-approve-title"></b>
+          <span id="bs-approve-desc"></span>
+          <span class="bs-approve-meta">版 <b id="bs-approve-version">-</b>・人の確定待ち <b id="bs-approve-open">0</b> 件</span>
+        </div>
+        <input id="bs-reject-reason" maxlength="500" placeholder="差し戻す理由（例: 締め日の境界値の観点が無い）" aria-label="差し戻す理由">
+        <button type="button" class="btn" id="bs-reject">差し戻す</button>
+        <button type="button" class="btn ghost" id="bs-revert" hidden>前の版に戻す</button>
+        <button type="button" class="btn pri" id="bs-approve-btn" aria-describedby="bs-approve-lock">承認して次へ</button>
+        <p class="bs-approve-lock" id="bs-approve-lock" hidden>この段階の承認はシニア QA が行います。気づいたことは理由を書いて差し戻せます。</p>
+      </div>
+
+      {# 案件 0 件・未選択 #}
+      <section class="bs-empty" id="bs-empty" hidden>
+        <h2>テストするバッチを登録してください</h2>
+        <p>左の一覧の「＋ 新しい案件」から始めます。1 案件 = バッチ 1 本です。案件を作ったら、上から順に段階を進めます。</p>
+        <ol><li>目的・範囲</li><li>対象の読み取り</li><li>観点表</li><li>ケース表</li><li>テストデータ</li><li>テストコード</li><li>実行</li><li>判定・報告</li></ol>
+        <div class="bs-actions"><button type="button" class="btn pri" id="bs-empty-new">＋ 新しい案件を作る</button></div>
+      </section>
+
+      {# 段階 1 目的・範囲 #}
+      <section class="bs-panel" id="bs-stage-1" data-stage="1" hidden>
+        <div class="bs-card">
+          <div class="bs-card-h"><h3>テストレベル</h3><span class="bs-mut">選ぶと、観点のセットと期待値の確かめ方の既定が変わります</span></div>
+          <div class="bs-choices" id="bs-level" role="radiogroup" aria-label="テストレベル">
+            <button type="button" class="bs-choice" role="radio" aria-checked="false" data-level="integration_internal"><b>結合（内部）</b><span>同じシステム内のテーブル・ファイルとのつながり</span></button>
+            <button type="button" class="bs-choice" role="radio" aria-checked="false" data-level="integration_external"><b>結合（外部）</b><span>他システムへ渡すファイル・連携テーブル</span></button>
+            <button type="button" class="bs-choice" role="radio" aria-checked="false" data-level="system"><b>システム</b><span>業務日付を与えて、ジョブ全体の入力から出力まで</span></button>
+            <button type="button" class="bs-choice" role="radio" aria-checked="false" data-level="acceptance"><b>受け入れ</b><span>業務の担当者が決めた期待結果と突き合わせる</span></button>
+          </div>
+        </div>
+        <div class="bs-grid2">
+          <div class="bs-card">
+            <h3>テストする対象</h3>
+            <div class="bs-choices c3" id="bs-target-kind" role="radiogroup" aria-label="テストする対象">
+              <button type="button" class="bs-choice" role="radio" aria-checked="true" data-kind="batch"><b>バッチジョブ</b><span>データベースとファイルを読み書きする処理</span></button>
+              <button type="button" class="bs-choice" role="radio" aria-checked="false" data-kind="api" disabled><b>API</b><span>次の版で対応します</span></button>
+              <button type="button" class="bs-choice" role="radio" aria-checked="false" data-kind="jobnet" disabled><b>ジョブネット</b><span>次の版で対応します</span></button>
+            </div>
+            <label class="bs-field">起動のしかた
+              <input id="bs-target-cmd" maxlength="300" placeholder="例: python bin/close.py --date {business_date}"></label>
+            <p class="bs-hint">{business_date} の所に、実行のたびに選ぶ業務日付が入ります。</p>
+          </div>
+          <div class="bs-card">
+            <label class="bs-field">テストの目的
+              <textarea id="bs-purpose" rows="3" maxlength="1000" placeholder="例: 3 月の締めで請求額が正しく集計されることを確かめる"></textarea></label>
+            <label class="bs-field">範囲
+              <textarea id="bs-scope" rows="3" maxlength="1000" placeholder="例: 請求集計テーブルの作成まで。帳票の出力は含めない"></textarea></label>
+            <div class="bs-row">
+              <label class="bs-field">資料を読ませる AI
+                <select id="bs-llm"><option value="openai">外部の AI（仕様と構造だけを送る）</option><option value="ollama">この PC の AI（データの値も扱える）</option></select></label>
+              <label class="bs-field">保存する日数
+                <input id="bs-retention" type="number" min="1" max="3650" value="90"></label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {# 段階 2 対象の読み取り #}
+      <section class="bs-panel" id="bs-stage-2" data-stage="2" hidden>
+        <div class="bs-card">
+          <div class="bs-card-h"><h3>読み取る資料</h3><span class="bs-mut">テーブル定義・ジョブ定義・仕様書・ソース</span><span class="sp"></span>
+            <button type="button" class="btn sm pri" data-act="generate" data-stage="2">読み取る</button></div>
+          <label class="bs-drop" id="bs-drop" for="bs-file">
+            <b>ファイルをここへ落とすか、押して選ぶ</b>
+            <span>テーブル定義（.sql）・ジョブ定義・仕様書（.xlsx / .docx / .md / .txt / .pdf）・ソース・入出力のサンプル（.csv）</span>
+            <input id="bs-file" type="file" multiple hidden>
+          </label>
+          <div class="bs-tblwrap"><table class="bs-tbl" aria-label="取り込んだ資料">
+            <thead><tr><th>ファイル</th><th>種類</th><th>大きさ</th><th>伏せた箇所</th><th><span class="sr-only">操作</span></th></tr></thead>
+            <tbody id="bs-files"></tbody>
+          </table></div>
+        </div>
+        <div class="kpis" id="bs-facts-kpis"></div>
+        <div class="bs-card bs-card-flush">
+          <div class="bs-card-h"><h3>読み取った事実</h3><span class="bs-mut">どの事実にも根拠の行が付きます。根拠の無い推測は載せません</span></div>
+          <div class="bs-tblwrap"><table class="bs-tbl" aria-label="読み取った事実">
+            <thead><tr><th>ID</th><th>読み取った事実</th><th>根拠</th><th>引用</th></tr></thead>
+            <tbody id="bs-facts"></tbody>
+          </table></div>
+          <p class="bs-none" id="bs-facts-none" hidden>まだ読み取っていません。資料を入れて「読み取る」を押してください。</p>
+        </div>
+        <div class="bs-grid2">
+          <div class="bs-card"><h3>仕様に記載が無いこと</h3><ul class="bs-list" id="bs-questions"></ul></div>
+          <div class="bs-card"><h3>読めなかった資料・文</h3><ul class="bs-list" id="bs-unread"></ul></div>
+        </div>
+      </section>
+
+      {# 段階 3 観点表 #}
+      <section class="bs-panel" id="bs-stage-3" data-stage="3" hidden>
+        <div class="bs-card">
+          <div class="bs-card-h"><h3>使った技法</h3><span class="bs-mut">ISO/IEC/IEEE 29119-4 の技法名です</span><span class="sp"></span>
+            <button type="button" class="btn sm pri" data-act="generate" data-stage="3">観点を作る</button></div>
+          <div class="fchips bs-chips" id="bs-techs"></div>
+        </div>
+        <div class="bs-card bs-card-flush">
+          <div class="bs-card-h"><h3>観点表</h3><span class="bs-mut" id="bs-vp-count"></span><span class="sp"></span>
+            <button type="button" class="btn sm" id="bs-vp-add">＋ 観点を追加</button></div>
+          <div class="bs-tblwrap"><table class="bs-tbl" aria-label="観点表">
+            <thead><tr><th>ID</th><th>観点</th><th>技法</th><th>根拠</th><th>扱い</th><th>理由</th></tr></thead>
+            <tbody id="bs-viewpoints"></tbody>
+          </table></div>
+        </div>
+      </section>
+
+      {# 段階 4 ケース表 #}
+      <section class="bs-panel" id="bs-stage-4" data-stage="4" hidden>
+        <div class="kpis" id="bs-case-kpis"></div>
+        <div class="bs-card bs-card-flush">
+          <div class="bs-card-h"><h3>ケース表</h3><span class="bs-mut">期待値は「機械が判定」か「人が確定」のどちらかです。人の確定はシニア QA が行います</span><span class="sp"></span>
+            <button type="button" class="btn sm pri" data-act="generate" data-stage="4">ケースを作る</button></div>
+          <div class="bs-tblwrap"><table class="bs-tbl bs-cases" aria-label="テストケース">
+            <thead><tr><th>ID</th><th>観点</th><th>前提データ</th><th>手順</th><th>期待値</th><th>確かめ方</th><th>確定</th><th>日本語の要約</th></tr></thead>
+            <tbody id="bs-cases"></tbody>
+          </table></div>
+        </div>
+      </section>
+
+      {# 段階 5 テストデータ仕様 #}
+      <section class="bs-panel" id="bs-stage-5" data-stage="5" hidden>
+        <div class="bs-card bs-card-flush">
+          <div class="bs-card-h"><h3>テストデータ仕様</h3><span class="bs-mut">ケースごとに入れるデータの条件です。個人情報らしい列は伏せて作ります</span><span class="sp"></span>
+            <button type="button" class="btn sm pri" data-act="generate" data-stage="5">データ仕様を作る</button></div>
+          <div class="bs-tblwrap"><table class="bs-tbl" aria-label="テストデータ仕様">
+            <thead><tr><th>ID</th><th>ケース</th><th>テーブル</th><th>条件</th><th>行数</th><th>文字コード</th><th>伏せる列</th><th>根拠</th></tr></thead>
+            <tbody id="bs-data-specs"></tbody>
+          </table></div>
+        </div>
+      </section>
+
+      {# 段階 6 テストコード（コードと日本語の要約を併記） #}
+      <section class="bs-panel" id="bs-stage-6" data-stage="6" hidden>
+        <div class="bs-card bs-card-flush">
+          <div class="bs-card-h"><h3>テストコード</h3><span class="bs-mut" id="bs-code-meta"></span><span class="sp"></span>
+            <button type="button" class="btn sm" id="bs-code-edit-open" hidden>コードを直接直す</button>
+            <button type="button" class="btn sm pri" data-act="generate" data-stage="6">コードを作る</button></div>
+          <div class="bs-tabs fchips" id="bs-code-tabs" role="tablist" aria-label="生成したファイル"></div>
+          <div class="bs-codepair">
+            <pre class="bs-pre" id="bs-code" tabindex="0" aria-label="テストコード"></pre>
+            <div class="bs-sum" id="bs-code-sum" aria-label="日本語の要約"></div>
+          </div>
+          <form class="bs-code-edit" id="bs-code-edit" hidden>
+            <textarea id="bs-code-text" spellcheck="false" aria-label="テストコードの編集"></textarea>
+            <div class="bs-actions"><span class="bs-mut">保存すると、期待値が変わっていないかを確かめ直します</span><span class="sp"></span>
+              <button type="button" class="btn sm ghost" id="bs-code-cancel">やめる</button><button type="submit" class="btn sm pri">保存する</button></div>
+          </form>
+        </div>
+        <div class="bs-card"><h3>確かめた結果</h3><ul class="bs-list" id="bs-gate"></ul></div>
+      </section>
+
+      {# 段階 7 実行 #}
+      <section class="bs-panel" id="bs-stage-7" data-stage="7" hidden>
+        <div class="bs-card" id="bs-run-setup">
+          <div class="bs-card-h"><h3>実行の前に</h3></div>
+          <div class="bs-row">
+            <label class="bs-field">接続先<select id="bs-env"></select></label>
+            <label class="bs-field">業務日付<input id="bs-bizdate" type="date"></label>
+            <label class="bs-field">実行するケース<select id="bs-run-scope"><option value="all">すべてのケース</option><option value="remaining">まだ実行していないケース</option></select></label>
+          </div>
+          <label class="bs-field">接続先のパスワード<input id="bs-secret" type="password" autocomplete="off"></label>
+          <p class="bs-hint">パスワードは保存しません。実行が終わると消えます。</p>
+          <div class="bs-actions"><span class="bs-mut" id="bs-env-status" role="status"></span><span class="sp"></span>
+            <button type="button" class="btn" id="bs-env-check">接続を確かめる</button>
+            <button type="button" class="btn pri" id="bs-run">実行する</button></div>
+        </div>
+        <div class="bs-card" id="bs-run-card" hidden>
+          <div class="bs-card-h"><h3 id="bs-run-title">実行中</h3><span class="pill p-running" id="bs-run-count"></span><span class="sp"></span>
+            <button type="button" class="btn" id="bs-run-cancel">キャンセル</button>
+            <button type="button" class="btn" id="bs-rollback" hidden>実行前の状態に戻す</button></div>
+          <div class="bs-prog" id="bs-run-prog" role="progressbar" aria-label="進み具合" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="bs-run-bar"></i></div>
+          <div class="bs-runmeta"><span id="bs-run-env"></span><span id="bs-run-elapsed"></span><span id="bs-run-current"></span></div>
+          <p class="bs-mut">キャンセルしても、終わったケースの結果は残ります。同時に実行できるのは 1 本です。</p>
+        </div>
+        <div class="bs-card bs-card-flush">
+          <div class="bs-card-h"><h3>ここまでの結果</h3><span class="bs-mut" id="bs-run-summary"></span></div>
+          <div class="bs-tblwrap"><table class="bs-tbl bs-cases" aria-label="実行の結果">
+            <thead><tr><th>ID</th><th>ケース</th><th>結果</th><th>時間</th><th>実際の値</th></tr></thead>
+            <tbody id="bs-run-rows"></tbody>
+          </table></div>
+          <p class="bs-none" id="bs-run-none">まだ実行していません。</p>
+        </div>
+      </section>
+
+      {# 段階 8 判定・報告（事実／判断／未検証） #}
+      <section class="bs-panel" id="bs-stage-8" data-stage="8" hidden>
+        <div class="kpis" id="bs-result-kpis"></div>
+        <div class="bs-split">
+          <div class="bs-card"><span class="bs-tag fact">事実 — 実行で確かめたこと</span><ul class="bs-list" id="bs-judge-facts"></ul></div>
+          <div class="bs-card"><span class="bs-tag judge">判断 — QA の評価</span><ul class="bs-list" id="bs-judge-human"></ul></div>
+        </div>
+        <div class="bs-card bs-card-flush">
+          <div class="bs-card-h"><h3>ケースごとの判定</h3><span class="bs-mut">合格に数えるのは「合格」だけです</span></div>
+          <div class="bs-tblwrap"><table class="bs-tbl bs-cases" aria-label="ケースごとの判定">
+            <thead><tr><th>ID</th><th>ケース</th><th>観測した事実</th><th>機械の判定</th><th>人の判断</th><th>状態</th></tr></thead>
+            <tbody id="bs-results"></tbody>
+          </table></div>
+        </div>
+        <div class="bs-card bs-card-flush">
+          <div class="bs-card-h"><h3>見つかった不具合</h3><span class="bs-mut">重大度は ISTQB の分類</span><span class="sp"></span>
+            <button type="button" class="btn sm" id="bs-defect-open">＋ 不具合を記録</button></div>
+          <form class="bs-defect-form" id="bs-defect-form" hidden>
+            <select name="case_id" aria-label="根拠のケース" required></select>
+            <select name="severity" aria-label="重大度"><option value="critical">致命的</option><option value="high">高</option><option value="medium" selected>中</option><option value="low">低</option></select>
+            <select name="priority" aria-label="優先度"><option value="high">優先度 高</option><option value="medium" selected>優先度 中</option><option value="low">優先度 低</option></select>
+            <input name="title" maxlength="200" placeholder="内容（例: 月末の売上が当月に入らない）" aria-label="内容" required>
+            <button type="submit" class="btn sm pri">記録</button><button type="button" class="btn sm ghost" id="bs-defect-cancel">やめる</button>
+          </form>
+          <div class="bs-tblwrap"><table class="bs-tbl" aria-label="見つかった不具合">
+            <thead><tr><th>ID</th><th>内容</th><th>重大度</th><th>根拠のケース</th><th>状態</th></tr></thead>
+            <tbody id="bs-defects"></tbody>
+          </table></div>
+        </div>
+        <div class="bs-card bs-uv"><h3>未検証 — この結果では確かめていないこと</h3><ul class="bs-list" id="bs-unverified"></ul></div>
+        <div class="bs-card">
+          <h3>書き出し</h3>
+          <div class="bs-actions bs-wrap">
+            <a class="btn" data-export="report.xlsx" download>報告書（Excel）</a>
+            <a class="btn" data-export="report.md" download>報告書（Markdown）</a>
+            <a class="btn" data-export="trace.csv" download>追跡表（CSV）</a>
+            <a class="btn" data-export="code.zip" download>テストコード一式（zip）</a>
+            <a class="btn" data-export="evidence.zip" download>実行の証跡（zip）</a>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+{# 書き込み前の確認 #}
+<div class="bs-overlay" id="bs-confirm" hidden>
+  <div class="bs-modal" role="dialog" aria-modal="true" aria-labelledby="bs-confirm-t">
+    <h3 id="bs-confirm-t">データベースを書き換えて実行します</h3>
+    <p>このまま実行すると、次の接続先のテーブルを書き換えます。接続先が正しいか確かめてください。</p>
+    <dl><dt>環境</dt><dd id="bs-confirm-env"></dd><dt>書き換えるテーブル</dt><dd><ul id="bs-confirm-tables"></ul></dd></dl>
+    <label><input type="checkbox" id="bs-confirm-check"><span id="bs-confirm-label">上の接続先がテスト用の環境であることを確かめました</span></label>
+    <div class="bs-actions"><span class="sp"></span><button type="button" class="btn" id="bs-confirm-cancel">やめる</button><button type="button" class="btn pri" id="bs-confirm-ok" disabled>書き換えて実行する</button></div>
+  </div>
+</div>
+<div class="bs-toast" id="bs-toast" role="status" hidden></div>
+
+{# 行のひな形（JS が複製して埋める。data-f は埋める欄の名前） #}
+<template id="bs-tpl-job"><div class="item" role="listitem" tabindex="0"><div class="item-t" data-f="name"></div><div class="item-s"><span data-f="level"></span><span class="bs-itst" data-f="state"></span></div></div></template>
+<template id="bs-tpl-file"><tr><td data-f="name"></td><td><select data-f="kind" aria-label="資料の種類"><option value="ddl">テーブル定義</option><option value="jobdef">ジョブ定義</option><option value="spec">仕様書</option><option value="source">ソース</option><option value="io">入出力のサンプル</option><option value="golden">承認済みの期待値</option><option value="other">その他</option></select></td><td data-f="size"></td><td data-f="redactions"></td><td><button type="button" class="bs-x" data-act="file-del" aria-label="取り除く">×</button></td></tr></template>
+<template id="bs-tpl-fact"><tr><td data-f="id"></td><td data-f="text"></td><td><span class="bs-src"><span data-f="file"></span><small data-f="line"></small></span></td><td><div class="bs-quote" data-f="quote"></div></td></tr></template>
+<template id="bs-tpl-viewpoint"><tr><td data-f="id"></td><td data-f="name"></td><td class="bs-mut" data-f="technique"></td><td data-f="basis"></td><td><select data-f="decision" aria-label="扱い"><option value="emit">出す</option><option value="adopted">採用</option><option value="edited">修正して採用</option><option value="excluded">対象外</option><option value="discarded">破棄</option></select><span class="pill p-flaky" data-f="unverified" hidden>未検証</span></td><td><input data-f="reason" maxlength="200" placeholder="対象外・破棄の理由" aria-label="理由"></td></tr></template>
+<template id="bs-tpl-case"><tr><td data-f="id"></td><td data-f="viewpoint"></td><td data-f="pre"></td><td><ol class="bs-steps" data-f="steps"></ol></td><td data-f="expected"></td><td><span data-f="method"></span><code class="bs-sql" data-f="sql" hidden></code></td><td><span class="pill" data-f="state"></span><button type="button" class="btn sm" data-act="oracle" hidden>確定する</button></td><td class="bs-ja" data-f="summary"></td></tr></template>
+<template id="bs-tpl-oracle"><form class="bs-oracle"><label class="bs-field">確かめ方<select name="method"><option value="db_diff">実行前後のデータを比べる</option><option value="alt_sql">別の計算で求めた値と比べる</option><option value="golden">承認済みの期待値と比べる</option><option value="schema">テーブル定義に合うか確かめる</option></select></label><label class="bs-field">行を突き合わせる列<input name="key" maxlength="200" placeholder="例: 顧客番号, 請求月"></label><label class="bs-field">比べない列<input name="exclude" maxlength="200" placeholder="例: 更新日時"></label><label class="bs-field">許す差<input name="tolerance" maxlength="100" placeholder="例: 請求金額は 1 円まで"></label><p class="bs-hint" data-f="warn"></p><div class="bs-actions"><span class="sp"></span><button type="button" class="btn sm ghost" data-act="oracle-cancel">やめる</button><button type="submit" class="btn sm pri">確定する</button></div></form></template>
+<template id="bs-tpl-dataspec"><tr><td data-f="id"></td><td data-f="case"></td><td data-f="table"></td><td data-f="conditions"></td><td data-f="rows"></td><td data-f="encoding"></td><td data-f="mask"></td><td data-f="basis"></td></tr></template>
+<template id="bs-tpl-codetab"><button type="button" class="fchip" role="tab" aria-selected="false" data-f="path"></button></template>
+<template id="bs-tpl-run"><tr><td data-f="id"></td><td data-f="name"></td><td><span class="pill" data-f="state"></span></td><td data-f="time"></td><td data-f="actual"></td></tr></template>
+<template id="bs-tpl-result"><tr><td data-f="id"></td><td data-f="name"></td><td data-f="fact"></td><td data-f="auto"></td><td><select data-f="human" aria-label="人の判断"><option value="">判断していない</option><option value="pass">合格</option><option value="fail">不合格</option></select><input data-f="reason" maxlength="200" placeholder="判断の理由" aria-label="判断の理由"></td><td><span class="pill" data-f="state"></span></td></tr></template>
+<template id="bs-tpl-defect"><tr><td data-f="id"></td><td data-f="title"></td><td><span class="bs-sev" data-f="severity"></span></td><td data-f="case"></td><td><span class="pill p-new" data-f="state">未対応</span></td></tr></template>
+
+<script src="{{ url_for('static', filename='js/user-menu.js') }}?v={{ _ver }}"></script>
+<script src="{{ url_for('static', filename='js/backend-test.js') }}?v={{ _ver }}"></script>
+<script src="{{ url_for('static', filename='js/backend-test-run.js') }}?v={{ _ver }}"></script>
+</body>
+</html>

@@ -1,0 +1,186 @@
+/* バッチ・バックエンドのテスト（System 08）。骨格・部品は ta2.css / ws.css / components.css を使い、
+   ここは段階ナビ・承認バー・本体の中身だけ。色はすべてトークン（固定色を書かない）。
+   骨格: html,body は ta2.css で overflow:hidden。本体は grid-template-rows で分け、内側の .bs-content だけ overflow:auto。 */
+
+/* 本体の骨格 */
+.bs-main{display:grid;grid-template-rows:auto auto minmax(0,1fr);min-height:0;min-width:0}
+.bs-content{overflow:auto;min-height:0;min-width:0;padding:16px 20px 24px;display:flex;flex-direction:column;gap:12px}
+.bs-full{flex:1;justify-content:center}
+.bs-mut{font-size:12px;color:var(--tx3);font-weight:400}
+.bs-hint{font-size:11.5px;color:var(--tx3)}
+.bs-actions{display:flex;align-items:center;gap:8px}
+.bs-actions.bs-wrap{flex-wrap:wrap}
+.bs-row{display:flex;gap:12px;flex-wrap:wrap}
+.bs-row>.bs-field{flex:1 1 160px;min-width:0}
+
+/* 段階ナビ（サイドバー） */
+.bs-nav .app-nav-item{gap:8px}
+.bs-nav .app-nav-item:disabled{opacity:.5;cursor:not-allowed}
+.bs-nav .app-nav-item .nav-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bs-num{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700;background:var(--sf);color:var(--tx3);border:1px solid var(--line2);flex:none}
+.bs-num.ok{background:var(--ok-bg);color:var(--ok-tx);border-color:var(--ok-bg)}
+.bs-num.on{background:var(--ac);color:var(--sf);border-color:var(--ac)}
+.bs-num.wait{background:var(--wa-bg);color:var(--wa-tx);border-color:var(--wa)}
+.bs-num.back{background:var(--ng-bg);color:var(--ng-tx);border-color:var(--ng)}
+.bs-navst{font-size:11px;font-weight:500;color:var(--tx3);flex:none}
+.bs-navst.wait{color:var(--wa-tx)}
+.bs-navst.back{color:var(--ng-tx)}
+.bs-itst{font-size:11px;color:var(--tx3);white-space:nowrap}
+
+/* 段階の見出し */
+.bs-stagehead{display:flex;align-items:center;gap:10px;padding:12px 20px;background:var(--sf);border-bottom:1px solid var(--line);flex-wrap:wrap;min-width:0}
+.bs-stagehead[hidden]{display:none}
+.bs-stagehead small{font-size:11.5px;color:var(--tx3);font-family:var(--mono)}
+.bs-stagehead b{font-size:14px}
+.bs-stale{font-size:12px;color:var(--wa-tx);background:var(--wa-bg);border-radius:6px;padding:2px 8px}
+
+/* 承認バー（本体の先頭。スクロールしても見える） */
+.bs-approve{position:sticky;top:-16px;z-index:5;display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--sf);border:1px solid var(--line);border-radius:12px;flex-wrap:wrap;box-shadow:var(--shadow-sm)}
+.bs-approve[hidden]{display:none}
+.bs-approve-t{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 260px}
+.bs-approve-t b{font-size:13px}
+.bs-approve-t span{font-size:12px;color:var(--tx2)}
+.bs-approve-meta b{font-size:12px}
+.bs-approve input{flex:1 1 220px;min-width:0;padding:7px 10px;border:1px solid var(--line2);border-radius:8px;background:var(--sf);color:var(--tx);font-size:12.5px}
+.bs-approve-lock{flex-basis:100%;font-size:12px;color:var(--tx2);background:var(--bg);border-radius:8px;padding:6px 10px}
+.bs-approve-lock[hidden]{display:none}
+.bs-approve.locked #bs-approve-btn{opacity:.55;cursor:not-allowed}
+
+/* 帯（本番の読み取り専用・失敗の通知） */
+.bs-banner{display:flex;align-items:flex-start;gap:10px;border-radius:10px;padding:10px 14px;font-size:12.5px;border:1px solid var(--line)}
+.bs-banner[hidden]{display:none}
+.bs-banner b{display:block;font-size:13px;margin-bottom:2px}
+.bs-banner p{margin:2px 0 0}
+.bs-banner.ro{background:var(--wa-bg);color:var(--wa-tx);border-color:var(--wa)}
+.bs-banner.err{background:var(--ng-bg);color:var(--ng-tx);border-color:var(--ng)}
+.bs-banner .bs-mut{color:inherit;opacity:.85}
+
+/* 空状態 */
+.bs-empty{max-width:560px;margin:48px auto;background:var(--sf);border:1px solid var(--line);border-radius:12px;padding:24px 28px}
+.bs-empty[hidden]{display:none}
+.bs-empty h2{font-size:16px;margin-bottom:6px}
+.bs-empty p{color:var(--tx2);margin-bottom:12px}
+.bs-empty ol{padding-left:20px;color:var(--tx2);display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;margin-bottom:14px}
+
+/* 段階の本体・カード */
+.bs-panel{display:flex;flex-direction:column;gap:12px;min-width:0}
+.bs-panel[hidden]{display:none}
+.bs-panel .kpis{margin-bottom:0}
+.bs-grid2{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:12px}
+.bs-split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.bs-card{background:var(--sf);border:1px solid var(--line);border-radius:12px;padding:14px 16px;min-width:0}
+.bs-card[hidden]{display:none}
+.bs-card h3{font-size:13.5px;font-weight:600;margin-bottom:10px}
+.bs-card-h{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.bs-card-h h3{margin:0}
+.bs-card-flush{padding:0;overflow:hidden;display:flex;flex-direction:column;min-height:0}
+.bs-card-flush .bs-card-h{padding:12px 16px;margin:0;border-bottom:1px solid var(--line)}
+.bs-none{color:var(--tx3);font-size:12px;padding:14px 16px}
+.bs-none[hidden]{display:none}
+.bs-list{padding-left:18px;font-size:12.5px;color:var(--tx2);display:flex;flex-direction:column;gap:4px}
+.bs-list small{display:block;color:var(--tx3);font-size:11.5px}
+
+/* 選ぶだけの入力 */
+.bs-choices{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.bs-choices.c3{grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:12px}
+.bs-choice{display:flex;flex-direction:column;gap:4px;text-align:left;padding:10px 12px;border:1px solid var(--line2);border-radius:10px;background:var(--sf);color:var(--tx);min-width:0;cursor:pointer}
+.bs-choice b{font-size:13px}
+.bs-choice span{font-size:11.5px;color:var(--tx3)}
+.bs-choice:hover:not(:disabled){border-color:var(--ac)}
+.bs-choice[aria-checked="true"]{border-color:var(--ac);background:var(--ac-bg);box-shadow:0 0 0 1px var(--ac) inset}
+.bs-choice:disabled{opacity:.55;cursor:not-allowed}
+.bs-field{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--tx2);margin-bottom:10px}
+.bs-field select,.bs-field input,.bs-field textarea{padding:7px 10px;border:1px solid var(--line2);border-radius:8px;background:var(--sf);color:var(--tx);font-size:12.5px;min-width:0}
+.bs-field textarea{resize:vertical;font-family:inherit}
+.bs-drop{display:flex;flex-direction:column;gap:4px;align-items:center;text-align:center;border:1.5px dashed var(--line2);border-radius:10px;padding:16px;margin-bottom:12px;cursor:pointer;color:var(--tx2)}
+.bs-drop:hover,.bs-drop.over{border-color:var(--ac);background:var(--ac-bg)}
+.bs-drop span{font-size:12px;color:var(--tx3)}
+.bs-newform{display:flex;gap:6px;padding:0 12px 10px}
+.bs-newform[hidden]{display:none}
+.bs-newform input{flex:1;min-width:0;padding:6px 8px;border:1px solid var(--line2);border-radius:8px;font-size:12.5px;background:var(--sf);color:var(--tx)}
+
+/* 表 */
+.bs-tblwrap{overflow:auto;min-height:0}
+.bs-tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.bs-tbl th{position:sticky;top:0;background:var(--bg);text-align:left;font-weight:600;color:var(--tx2);font-size:11.5px;padding:7px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.bs-tbl td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top;overflow-wrap:anywhere}
+.bs-tbl tbody tr:hover{background:var(--bg)}
+.bs-tbl select,.bs-tbl input{padding:3px 6px;border:1px solid var(--line2);border-radius:6px;font-size:12px;background:var(--sf);color:var(--tx);min-width:0;max-width:100%}
+.bs-tbl td:first-child{font-family:var(--mono);font-size:11.5px;white-space:nowrap;color:var(--tx2)}
+.bs-tbl .pill{display:inline-block;margin-top:2px}
+.bs-cases td:nth-child(2){min-width:6.5em}
+.bs-steps{padding-left:16px;margin:0}
+.bs-x{border:0;background:none;color:var(--tx3);padding:2px 6px;border-radius:6px}
+.bs-x:hover{background:var(--ng-bg);color:var(--ng-tx)}
+.bs-src{font-size:12px;color:var(--ac-dk)}
+.bs-src small{display:block;color:var(--tx3);font-size:11px}
+.bs-quote{font-family:var(--mono);font-size:11.5px;background:var(--bg);border-left:3px solid var(--line2);padding:4px 8px;border-radius:4px;color:var(--tx2);white-space:pre-wrap;overflow-wrap:anywhere}
+.bs-ja{font-size:12px;color:var(--tx2)}
+.bs-sql{display:block;margin-top:4px;font-family:var(--mono);font-size:11px;color:var(--tx2);background:var(--bg);border-radius:4px;padding:3px 6px;overflow-wrap:anywhere}
+.bs-sql[hidden]{display:none}
+.bs-chips{padding:0}
+.bs-chips .fchip em{font-style:normal;font-family:var(--mono);font-size:11px;opacity:.75}
+.bs-oracle{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 12px;padding:12px;background:var(--bg);border-radius:8px}
+.bs-oracle .bs-actions,.bs-oracle .bs-hint{grid-column:1/-1}
+.bs-sev{font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700;white-space:nowrap;background:var(--bg);color:var(--tx2)}
+.bs-sev.critical{background:var(--color-critical-bg);color:var(--ng-tx)}
+.bs-sev.high{background:var(--color-high-bg);color:var(--wa-tx)}
+.bs-sev.medium{background:var(--color-medium-bg);color:var(--tx)}
+.bs-sev.low{background:var(--color-low-bg);color:var(--ok-tx)}
+.bs-defect-form{display:grid;grid-template-columns:140px 90px 110px minmax(0,1fr) auto auto;gap:6px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--bg)}
+.bs-defect-form[hidden]{display:none}
+.bs-defect-form select,.bs-defect-form input{padding:6px 8px;border:1px solid var(--line2);border-radius:8px;font-size:12.5px;min-width:0;background:var(--sf);color:var(--tx)}
+
+/* テストコードと日本語の要約 */
+.bs-tabs{display:flex;gap:6px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--line)}
+.bs-codepair{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);min-height:320px}
+.bs-pre{margin:0;padding:14px 16px;overflow:auto;font-family:var(--mono);font-size:12px;line-height:1.6;background:var(--tx);color:var(--sf);min-height:0;white-space:pre}
+.bs-sum{padding:14px 16px;font-size:12.5px;color:var(--tx2);display:flex;flex-direction:column;gap:8px;overflow:auto;min-height:0;border-left:1px solid var(--line)}
+.bs-sum h4{font-size:12.5px;color:var(--tx)}
+.bs-sum dt{font-size:11px;color:var(--tx3);font-weight:600}
+.bs-sum dd{margin:0 0 4px}
+.bs-code-edit{display:flex;flex-direction:column;gap:8px;padding:12px 16px;border-top:1px solid var(--line)}
+.bs-code-edit[hidden]{display:none}
+.bs-code-edit textarea{min-height:260px;font-family:var(--mono);font-size:12px;line-height:1.6;padding:10px 12px;border:1px solid var(--line2);border-radius:8px;background:var(--sf);color:var(--tx);resize:vertical}
+
+/* 実行 */
+.bs-prog{height:8px;border-radius:999px;background:var(--bg);overflow:hidden;border:1px solid var(--line);margin:4px 0 8px}
+.bs-prog i{display:block;height:100%;width:0;background:var(--ac);transition:width var(--motion-normal,.2s)}
+.bs-runmeta{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--tx2);margin-bottom:6px}
+
+/* 判定（事実／判断／未検証） */
+.bs-tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;margin-bottom:8px}
+.bs-tag.fact{background:var(--ac-bg);color:var(--ac-dk)}
+.bs-tag.judge{background:var(--wa-bg);color:var(--wa-tx)}
+.bs-uv{border-color:var(--wa);background:var(--wa-bg)}
+.bs-uv h3{color:var(--wa-tx)}
+.bs-uv li{color:var(--tx)}
+
+/* 書き込み前の確認 */
+.bs-overlay{position:fixed;inset:0;background:color-mix(in srgb,var(--tx) 45%,transparent);display:grid;place-items:center;z-index:60;padding:20px}
+.bs-overlay[hidden]{display:none}
+.bs-modal{width:min(540px,100%);max-height:calc(100vh - 40px);overflow:auto;background:var(--sf);border-radius:14px;box-shadow:var(--shadow-lg);padding:20px 22px;display:flex;flex-direction:column;gap:12px}
+.bs-modal h3{font-size:15px}
+.bs-modal p{font-size:12.5px;color:var(--tx2)}
+.bs-modal dl{display:grid;grid-template-columns:120px minmax(0,1fr);gap:6px 12px;font-size:12.5px}
+.bs-modal dt{color:var(--tx3)}
+.bs-modal dd{margin:0}
+.bs-modal ul{padding-left:16px}
+.bs-modal label{display:flex;gap:8px;align-items:center;font-size:12.5px}
+
+.bs-toast{position:fixed;right:20px;bottom:20px;background:var(--tx);color:var(--sf);border-radius:8px;padding:10px 14px;font-size:12.5px;z-index:70;box-shadow:var(--shadow-md)}
+.bs-toast[hidden]{display:none}
+
+/* 狭い幅（1024px まで崩さない） */
+@media (max-width:1200px){
+  .bs-page .app{grid-template-columns:180px 180px minmax(0,1fr)}
+  .bs-navst:not(.wait):not(.back){display:none}
+  .bs-tbl th{white-space:normal}
+  .bs-choices{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .bs-grid2,.bs-split,.bs-codepair{grid-template-columns:minmax(0,1fr)}
+  .bs-sum{border-left:0;border-top:1px solid var(--line)}
+  .bs-panel .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .bs-defect-form{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .bs-defect-form input{grid-column:1/-1}
+  .bs-content{padding:12px 14px 20px}
+}

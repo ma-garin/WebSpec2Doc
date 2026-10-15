@@ -1,11 +1,20 @@
 <section class="dv-view" data-view="home" hidden>
-  <h2 class="dvg-h">ホーム</h2>
-  <p class="mut">自分の担当と、進行中のレビューをまとめて見られます。</p>
-  <div id="dvgHomeCounts" class="dvg-cards"></div>
-  <h3 class="dvg-h3">自分の担当</h3>
-  <div id="dvgHomeMine"></div>
-  <h3 class="dvg-h3">進行中のレビュー</h3>
-  <div id="dvgHomeActive"></div>
+  <section class="dash-hero"><div class="dash-hero-main">
+    <h2 class="dash-hero-title">仕様書を検証して、指摘と質問票を作る</h2>
+    <p class="dash-hero-sub">要件定義書・設計書を読み込み、ISO/IEC/IEEE 29148 の品質特性で曖昧さ・抜け・検証できない記述を洗い出します。</p>
+    <button type="button" class="btn-primary dash-hero-start" id="dvgHeroStart">検証を始める</button>
+    <div class="dash-hero-steps"><span class="dash-hero-step"><b>1</b> 取り込み</span><span class="dash-hero-arrow">→</span><span class="dash-hero-step"><b>2</b> 自動検出</span><span class="dash-hero-arrow">→</span><span class="dash-hero-step"><b>3</b> 仕分け</span><span class="dash-hero-arrow">→</span><span class="dash-hero-step"><b>4</b> 質問票</span><span class="dash-hero-arrow">→</span><span class="dash-hero-step"><b>5</b> 判定</span></div>
+  </div></section>
+  <div class="dashboard-section-head">
+    <div><h2 class="dash-section-title">レビュー</h2><p class="dashboard-section-copy">進行中のレビューと品質スコアを確認できます。</p></div>
+    <div class="dashboard-section-actions"><button type="button" class="btn-outline-sm" id="dvgHomeReload">再読み込み</button><button type="button" class="btn-outline-sm" id="dvgHomeNew">＋ 新しいレビュー</button></div>
+  </div>
+  <div class="stat-cards" id="dvgHomeStats" aria-live="polite"></div>
+  <div class="dv-grid2">
+    <section class="dv-card" id="dvgHomeQuality"></section>
+    <section class="dv-card" id="dvgHomeTodo"></section>
+  </div>
+  <div class="dv-tscroll" id="dvgHomeTable"></div>
 </section>
 
 <section class="dv-view" data-view="mine" hidden>

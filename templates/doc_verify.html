@@ -20,6 +20,7 @@
   <aside class="app-sidebar">
     <a href="/systems" class="app-brand"><span class="app-brand-mark">W</span><span class="app-brand-text"><strong>WebSpec2Doc</strong><span>ドキュメント検証</span></span></a>
     <a href="/systems" class="sys-switcher" title="システムを切り替える"><span class="sys-switcher-label">システム</span><span class="sys-switcher-cur">ドキュメント検証</span><span class="sys-switcher-swap">切替</span></a>
+    <button type="button" class="btn-primary sidebar-primary-action" id="dv-new-review">＋ 新しいレビュー</button>
     <nav class="app-nav" aria-label="メインナビゲーション">
       <div class="dv-grp">ドキュメント検証</div>
       <a class="app-nav-item" href="#home" data-nav="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg><span class="nav-label">ホーム</span></a>
@@ -53,6 +54,7 @@
       <div class="dv-toast" id="dv-toast" role="status" hidden></div>
       {% include 'docverify/_global.html' %}
       {% include 'docverify/_review.html' %}
+      <dialog class="dv-modal" id="dv-modal" aria-labelledby="dv-modal-title"><h2 class="dv-modal-title" id="dv-modal-title"></h2><div class="dv-modal-body" id="dv-modal-body"></div><div class="dv-modal-actions"><button type="button" class="b" data-modal="cancel"></button><button type="button" class="b p" data-modal="ok"></button></div></dialog>
     </main>
   </div>
 </div>

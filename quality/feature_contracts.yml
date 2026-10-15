@@ -2835,7 +2835,7 @@
         "generate",
         "cases_xlsx",
         "code_zip",
-        "questions_csv",
+        "compare",
         "add_file"
       ],
       "outputs": [
@@ -3211,7 +3211,7 @@
       ],
       "symbols": [
         "approve",
-        "report_xlsx",
+        "carry_findings",
         "report_md",
         "code_zip",
         "audit"
@@ -3235,6 +3235,70 @@
         "evidence"
       ],
       "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は暫定の共通 3 種で、ケース別の具体名は後続の単位で書く。"
+    },
+    {
+      "feature_id": "document_inspection",
+      "name": "ドキュメント検証（System 06）",
+      "risk_level": "high",
+      "status": "implemented",
+      "ui_files": [
+        "templates/doc_verify.html",
+        "templates/docverify/_global.html",
+        "templates/docverify/_review.html",
+        "static/css/docverify.css",
+        "static/js/docverify-core.js",
+        "static/js/docverify-global.js",
+        "static/js/docverify-review.js"
+      ],
+      "route_files": [
+        "web/routes/doc_verify.py"
+      ],
+      "core_files": [
+        "web/services/docverify/checks.py",
+        "web/services/docverify/diff.py",
+        "web/services/docverify/home.py",
+        "web/services/docverify/ingest.py",
+        "web/services/docverify/match.py",
+        "web/services/docverify/metrics.py",
+        "web/services/docverify/questions.py",
+        "web/services/docverify/settings.py",
+        "web/services/docverify/store.py",
+        "web/services/docverify/unread.py"
+      ],
+      "symbols": [
+        "candidates",
+        "ingest",
+        "scan",
+        "summary",
+        "quality",
+        "scope",
+        "to_xlsx",
+        "home",
+        "compare",
+        "carry_findings"
+      ],
+      "outputs": [
+        "自動検出の候補（規則 ID・29148 特性・原文）",
+        "品質スコア（総合・特性別・版ごと）",
+        "読めなかった要素の件数",
+        "質問票 CSV/xlsx",
+        "報告 xlsx（検査した範囲／検査していないこと）"
+      ],
+      "persistence": [
+        "data/tenants/{slug}/docverify/{iid}.json"
+      ],
+      "failure_modes": [
+        "oversized_or_corrupt_document_rejected_with_message",
+        "xml_entity_declaration_rejected",
+        "unread_elements_reported_not_silently_dropped",
+        "quality_shown_as_dash_when_no_document",
+        "unknown_inspection_404"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "evidence"
+      ]
     }
   ]
 }

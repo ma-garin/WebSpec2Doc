@@ -97,3 +97,17 @@ iid は uuid4().hex[:12]。受け取った iid は `^[0-9a-f]{12}$` で照合し
 - JS: static/js/docverify-core.js（本線: ルータ・API 呼び出し・esc・エラー帯）、static/js/docverify-global.js、static/js/docverify-review.js
 - core が公開するもの: `window.DV = {api(path, opts) -> Promise<json>（失敗時は帯を出して reject）, esc(s), show(view), state: {review: null|inspection, summary}, openReview(iid), toast(msg), on(view, fn)}`。`DV.on(view, fn)` は画面を開くたびに fn() を呼ぶ。
 - CSS: static/css/docverify.css（本線が v2 見本の CSS を移す。各担当は追記してよいが、既存の規則を消さない）
+
+# R1 追補（WS2D-DD-006 詳細設計書 System06 R1。食い違う所は R1 を正とする）
+
+## API 差分
+- GET /api/docverify/home → 集計は web/services/docverify/home.py `build(reviews, me)`。既存キー（me, mine, active, counts の 4 件）は残し、次を追加:
+  - `active[]` に `quality_overall`・`open`（採用＝未対応）・`open_critical`・`candidates`（未検討の候補）・`updated_at`（無い旧 JSON は `created_at`）・`versions`（版数）・`document_name`
+  - `counts.awaiting_answers`（回答待ちの質問。BD-006 6 章の定義）
+  - `quality` → `{"overall", "items": {k: {"score", "label"}}, "n_reviews", "n_scored"}`（進行中レビューの平均。null を除き四捨五入）
+  - `next_actions[]` → `{"review_id", "review_name", "kind", "view", "label"}`（kind: critical / candidates / answers / my_review / no_document / ready_to_close の優先順。同順位は期限の早い順。最大 5 件）と `next_scope`（`"mine"` | `"active"`）
+  - 失敗は 500 `{"error": "ホームを読めませんでした。時間をおいて再読み込みしてください。"}`
+- GET/POST で返す `summary` に `history`・`unread_lines`・`scope` を追加（metrics.summary。DD 5.2）。`quality` に `items[k].label` と `note` を追加
+- POST /api/docverify/inspections/<iid>/document → 取り込みの前に、最後の版に旧の断片・指摘でのスコアを確定（`metrics.freeze_current`）。新しい版の記録に `"quality": quality_brief(新しい検査, final=false)` を入れる。`document.unread` は ingest の値をそのまま保存
+- POST /api/docverify/inspections/<iid>/close → `status: closed` と同時に `versions` を `metrics.freeze_current` で確定して保存
+- GET /api/docverify/inspections/<iid>/report.xlsx → シート「検査した範囲」を追加。作成に失敗したら 500 `{"error": "報告を作れませんでした。もう一度出力してください。"}`

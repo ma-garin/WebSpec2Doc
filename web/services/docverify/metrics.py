@@ -34,25 +34,33 @@ def summary(insp: dict) -> dict:
             "density": round(adopted / n, 3) if n else 0.0,
             "open_critical": open_critical, "open_major": open_major,
             "open_warning": open_major,  # v1 画面との互換
-            "exit_ok": not reasons, "reasons": reasons}
+            "exit_ok": not reasons, "reasons": reasons,
+            "history": history(insp), "unread_lines": unread_lines(insp), "scope": scope(insp)}
 
 
 _ITEMS = ("necessary", "unambiguous", "complete", "consistent", "feasible", "verifiable", "traceable", "singular")
 _LIVE = {"candidate", "adopted"}  # 却下・修正済みは減点しない
 
 
+def half_up(x: float) -> int:
+    """四捨五入（0 以上の値）。round() は偶数丸めのため使わない。"""
+    return int(x + 0.5)
+
+
 def quality(insp: dict) -> dict:
     """29148 の特性ごとに「未解決の指摘が無い断片の割合」を 0〜100 で返す。指摘の無い特性は検査対象外と区別しない。"""
     passages = insp.get("passages", []) or []
     n = len(passages)
-    live = [f for f in insp.get("findings", []) or [] if f.get("status") in _LIVE and f.get("checklist_item")]
+    live_all = [f for f in insp.get("findings", []) or [] if f.get("status") in _LIVE]
+    live = [f for f in live_all if f.get("checklist_item")]  # 特性別は特性の付いた指摘だけ。総合は全指摘
     items = {}
     for item in _ITEMS:
         hit = {f.get("passage_id") for f in live if f["checklist_item"] == item}
         items[item] = {"open": sum(1 for f in live if f["checklist_item"] == item),
-                       "score": round(100 * (1 - len(hit) / n)) if n else None}
-    hit_any = {f.get("passage_id") for f in live}
-    return {"items": items, "overall": round(100 * (1 - len(hit_any) / n)) if n else None, "passages": n}
+                       "score": half_up(100 * (1 - len(hit) / n)) if n else None}
+        items[item]["label"] = ITEM_LABEL.get(item, item)
+    hit_any = {f.get("passage_id") for f in live_all}
+    return {"items": items, "note": list(QUALITY_NOTE), "overall": half_up(100 * (1 - len(hit_any) / n)) if n else None, "passages": n}
 
 
 def _safe(v):
@@ -81,17 +89,21 @@ def to_xlsx(insp: dict) -> bytes:
     ws2.append(["未対応の主要", s["open_major"]])
     ws2.append(["品質スコア（全体）", s["quality"]["overall"]])
     for k, v in s["quality"]["items"].items():
-        ws2.append([f"品質スコア: {_ITEM_LABEL.get(k, k)}", v["score"]])
+        ws2.append([f"品質スコア: {ITEM_LABEL.get(k, k)}", v["score"]])
     ws2.append(["終了判定", "可" if s["exit_ok"] else "不可"])
     for r in s["reasons"]:
         ws2.append(["理由", r])
+    for h in s["history"]:
+        ws2.append([f"版 {h['version']} の品質スコア", "—" if h["overall"] is None else h["overall"]])
+    _scope_sheet(wb, s["scope"])
     buf = io.BytesIO()
     wb.save(buf)
     return buf.getvalue()
 
 
-_ITEM_LABEL = {"necessary": "必要", "unambiguous": "曖昧でない", "complete": "完全", "consistent": "一貫",
+ITEM_LABEL = {"necessary": "必要", "unambiguous": "曖昧でない", "complete": "完全", "consistent": "一貫",
                "feasible": "実現可能", "verifiable": "検証可能", "traceable": "追跡可能", "singular": "単一"}
+_ITEM_LABEL = ITEM_LABEL  # 旧名（互換）
 _LABEL = {"critical": "重大", "major": "主要", "minor": "軽微"}
 
 
@@ -117,3 +129,111 @@ def overall(inspections: list[dict]) -> dict:
     return {"by_review": by_review, "by_viewpoint": dict(by_viewpoint), "by_severity": dict(by_severity),
             "density": round(total_valid / total_passages, 3) if total_passages else 0.0,
             "fix_rate": round(total_fixed / total_valid, 3) if total_valid else 0.0}
+
+
+# ---- R1: 品質スコアの説明・版ごとの記録・検査した範囲（WS2D-DD-006 5 章・9 章・10 章） ----
+
+QUALITY_NOTE = (
+    "スコアは、未解決の指摘（候補・採用）が無い断片の割合を 0〜100 で示します。",
+    "式は 100 ×（1 − 未解決の指摘がある断片数 ÷ 断片数）です。",
+    "指摘が無い特性も 100 になるため、文書の内容が正しいことや、検査の網羅性は示しません。",
+)
+_M04 = "読めなかった要素は数えていません。文書を取り込み直すと数えます。"
+_M13 = "— 文書を取り込むと表示されます。"
+_M20 = "文書はまだ取り込まれていません。"
+_M21 = "参加者が登録されていません。計画の画面で登録できます。"
+_M22 = "観点チェックリストを使っていません。"
+_M30 = "未検証。見つかった指摘は検出規則と人の確認の範囲に限られ、ほかに欠陥が無いことは示しません。"
+_M31 = "未検証。記述が業務として正しいかは判断していません。"
+_M33 = "未測定。規則ごとの適合率・再現率はまだ測っていません。"
+_UNREAD_KINDS = (("images", "画像"), ("comments", "コメント"), ("shapes", "図形"))
+_ADOPTED = {"adopted", "fixed", "verified"}
+
+
+def quality_brief(insp: dict, final: bool) -> dict:
+    q = quality(insp)
+    return {"overall": q["overall"], "items": {k: v["score"] for k, v in q["items"].items()}, "final": bool(final)}
+
+
+def freeze_current(insp: dict) -> list[dict]:
+    versions = list(insp.get("versions") or [])
+    if not versions:
+        return []
+    return [*versions[:-1], {**versions[-1], "quality": quality_brief(insp, True)}]
+
+
+def _ended(insp: dict) -> bool:
+    return insp.get("phase") == "closed" or insp.get("status") == "closed"
+
+
+def history(insp: dict) -> list[dict]:
+    versions = insp.get("versions") or []
+    out = []
+    for i, v in enumerate(versions):
+        q = v.get("quality") or None
+        final = bool(q and q.get("final"))
+        row = {"version": v.get("version"), "name": v.get("name"), "uploaded_at": v.get("uploaded_at"),
+               "overall": q.get("overall") if q else None, "final": final, "current": False}
+        if i == len(versions) - 1 and not final and not _ended(insp):
+            row = {**row, "overall": quality(insp)["overall"], "current": True}
+        out.append(row)
+    return out
+
+
+def unread_lines(insp: dict) -> list[str]:
+    doc = insp.get("document")
+    if not doc:
+        return []
+    if doc.get("unread") is None:
+        return [_M04]
+    from web.services.docverify import unread
+    return unread.lines(doc["unread"])
+
+
+def _unread_content(insp: dict) -> str:
+    if not insp.get("document"):
+        return "該当なし"
+    u = (insp.get("document") or {}).get("unread") or {}
+    if not u.get("scanned"):
+        return "読めなかった要素は数えていません（未確認）。"
+    parts = [f"{label} {u.get(k, 0)}" for k, label in _UNREAD_KINDS if u.get(k, 0)]
+    return f"{'・'.join(parts)} の中身は検査していません。" if parts else "該当なし"
+
+
+def _checked(insp: dict) -> list[dict]:
+    doc = insp.get("document")
+    fs = [f for f in insp.get("findings") or [] if f.get("origin", "auto") == "auto"]
+    st = Counter(f.get("status") for f in fs)
+    ps = insp.get("participants") or []
+    overall_ = quality(insp)["overall"]
+    rows = [
+        ("文書", f"{doc.get('name')}（版 {doc.get('version')}・{doc.get('format')}）" if doc else _M20),
+        ("断片数", f"{len(insp.get('passages') or [])} 断片"),
+        ("読めなかった要素", " ".join(unread_lines(insp))),
+        ("自動検出", f"規則による候補 {len(fs)} 件（採用 {sum(st[k] for k in _ADOPTED)}・"
+                     f"却下 {st['rejected']}・未検討 {st['candidate']}）"),
+        ("人の確認", f"レビュアー {sum(1 for p in ps if p.get('done'))}/{len(ps)} 人が確認を終えました" if ps else _M21),
+        ("観点チェックリスト", f"確認済みの観点 {sum(1 for v in (insp.get('checks') or {}).values() if v)} 項目"
+                               if insp.get("checklist_id") else _M22),
+        ("品質スコア", _M13 if overall_ is None else f"総合 {overall_}"),
+    ]
+    return [{"label": k, "value": v} for k, v in rows]
+
+
+def scope(insp: dict) -> dict:
+    unchecked = [("網羅性", _M30), ("意味の正しさ", _M31), ("読めなかった要素の中身", _unread_content(insp)),
+                 ("スコアの限界", QUALITY_NOTE[2]), ("規則の精度", _M33)]
+    return {"checked": _checked(insp), "unchecked": [{"label": k, "value": v} for k, v in unchecked]}
+
+
+def _scope_sheet(wb, sc: dict) -> None:
+    from openpyxl.styles import Alignment
+    ws = wb.create_sheet("検査した範囲")
+    ws.append([_safe(h) for h in ("区分", "項目", "内容")])
+    for kind, key in (("検査した範囲", "checked"), ("検査していないこと", "unchecked")):
+        for row in sc[key]:
+            ws.append([_safe(kind), _safe(row["label"]), _safe(row["value"])])
+    for col, width in (("A", 18), ("B", 24), ("C", 80)):
+        ws.column_dimensions[col].width = width
+    for cell in ws["C"]:
+        cell.alignment = Alignment(wrap_text=True, vertical="top")

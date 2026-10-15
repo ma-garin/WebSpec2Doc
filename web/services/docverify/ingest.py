@@ -6,6 +6,7 @@ import re
 import zipfile
 from pathlib import Path
 
+from web.services.docverify import unread
 from web.vendor.reverse_doc.docs_ingest import readers
 
 MAX_BYTES = 20 * 1024 * 1024
@@ -52,6 +53,19 @@ def _check_zip(path: Path) -> None:
         raise IngestError("文書の中身が多すぎます。分割してから取り込んでください。")
     if sum(i.file_size for i in infos) > MAX_ZIP_TOTAL:
         raise IngestError("文書を展開すると大きすぎます。画像を減らすか分割してから取り込んでください。")
+    if has_xml_declarations(path):
+        raise IngestError("文書に外部参照の宣言が含まれているため、安全のため読みませんでした。元のアプリで保存し直してから取り込んでください。")
+
+
+def has_xml_declarations(path: Path) -> bool:
+    """XML の DOCTYPE / ENTITY 宣言（実体展開・外部参照の攻撃に使われる）が 1 つでもあれば True。"""
+    with zipfile.ZipFile(path) as zf:
+        for info in zf.infolist():
+            if info.filename.endswith((".xml", ".rels")):
+                head = zf.read(info)
+                if b"<!DOCTYPE" in head or b"<!ENTITY" in head:
+                    return True
+    return False
 
 
 def _check_pdf_pages(path: Path) -> None:
@@ -117,5 +131,8 @@ def ingest(filename: str, data: bytes, work_dir: Path) -> tuple[dict, list[dict]
         ]
     if not passages:
         raise IngestError("文書から文章を読み取れませんでした。文字が画像になっていないか確かめてください。")
-    document = {"name": name, "format": suffix.lstrip("."), "passages": len(passages), "version": 1}
+    document = {
+        "name": name, "format": suffix.lstrip("."), "passages": len(passages), "version": 1,
+        "unread": unread.scan(path, suffix),
+    }
     return document, passages

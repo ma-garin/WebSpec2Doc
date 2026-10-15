@@ -154,3 +154,7 @@ button.im-btn-danger.btn-danger{background:var(--ng-tx);color:#fff!important;bor
 /* fieldset の legend は visually-hidden の絶対配置が効かず、幅いっぱいに広がって横スクロールを生む */
 .im-radios{position:relative;min-width:0;border:0;padding:0;margin:0}
 .im-radios legend.visually-hidden{position:absolute!important;float:left;width:1px!important;height:1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+/* DEF-010: 線が点の上に重なってクリックを奪わない */
+.im-graph path, svg path.im-edge, #im-root svg path{pointer-events:none}
+/* DEF-011: 状態・優先度の列は折り返さない */
+.im-irow td:nth-child(4), .im-irow td:nth-child(1){white-space:nowrap}

@@ -13,6 +13,23 @@
     return '<div class="bt-tblwrap im-tblwrap"><table class="bt-tbl" aria-label="' + esc(label) + '"><thead><tr>' +
       cols.map(function (c) { return '<th scope="col">' + c + '</th>'; }).join('') + '</tr></thead><tbody>' + rows.join('') + '</tbody></table></div>';
   }
+  var ACTION = { 'system.create': '対象システムを作成', 'system.update': '設定を変更', 'system.delete': '対象システムを削除',
+    'member.set': '役割を付与', 'member.remove': 'メンバーを外す', 'document.add': '文書を取り込み', 'document.kind': '文書の種類を変更',
+    'document.remove': '文書を外す', 'baseline.create': 'ベースラインを作成', 'link.add': 'つながりを登録', 'link.remove': 'つながりを削除',
+    'link.suggest.accept': 'つながり候補を採用', 'link.suggest.reject': 'つながり候補を却下', 'cr.create': '変更要求を起票', 'cr.update': '変更要求を編集',
+    'cr.transition': '状態を変更', 'cr.approve': '承認', 'cr.return': '差し戻し', 'impact.resolve': '影響を解消', 'impact.override': '影響度・発生可能性を修正',
+    'actual.record': '改修後レビューを記録', 'llm.send': 'LLM へ送信', 'analysis.done': '分析が完了', 'migrate': '旧データを移行' };
+  var FIELD = { status: '状態', role: '役割', policy: '送信方針', name: '名前', reason: '理由', state: '判断', decision: '決定', note: '注記',
+    kind: '種類', p1_min: 'P1 下限', p2_min: 'P2 下限', depth_default: '既定の段数', impact_level: '影響度', likelihood: '発生可能性' };
+  function fmtVal(v) {
+    if (v === null || v === undefined || v === '') return '';
+    if (typeof v === 'string') { try { v = JSON.parse(v); } catch (_) { return v; } }
+    if (typeof v !== 'object') return String(v);
+    return Object.keys(v).map(function (k) {
+      var x = v[k], t = (ui.STATUS && ui.STATUS[x]) || (ui.ROLE && ui.ROLE[x]) || (ui.POLICY && ui.POLICY[x]) || x;
+      return (FIELD[k] || k) + ': ' + (x === null ? '（なし）' : typeof t === 'object' ? JSON.stringify(t) : t);
+    }).join(' ／ ');
+  }
   function num(v) { return esc(v === undefined || v === null ? 0 : v); }
   function on(el, sel, fn) { $$(sel, el).forEach(function (b) { b.addEventListener('click', function (e) { fn(b, e); }); }); }
   function rerender() { IM.app.render(); }
@@ -92,7 +109,7 @@
     files.reduce(function (p, f) {
       return p.then(function () {
         return api.uploadDocument(ctx.sid, f).then(function (d) {
-          var doc = api.obj(d, 'document'); results.push({ name: f.name, ok: true, msg: '項目 ' + (doc.item_count || 0) + ' 件・' + (ui.KIND[doc.kind] || '種類未設定') });
+          var doc = (d && d.added && d.added[0]) || api.obj(d, 'document'); results.push({ name: f.name, ok: true, msg: '項目 ' + (doc.item_count || 0) + ' 件・' + (ui.KIND[doc.kind] || '種類未設定') });
         }, function (e) { results.push({ name: f.name, ok: false, msg: e.message }); }).then(function () { draw(true); });
       });
     }, Promise.resolve()).then(function () {
@@ -131,7 +148,7 @@
     if (a === b) { out.innerHTML = '<p class="bt-hint im-ng">違う 2 つの版を選んでください。</p>'; return; }
     ui.loading(out, '差分を計算しています…');
     api.baselineDiff(ctx.sid, a, b).then(function (d) {
-      var add = d.added || [], mod = d.modified || [], rem = d.removed || [];
+      d = (d && d.diff) || d; var add = d.added || [], mod = d.modified || [], rem = d.removed || [];
       if (!add.length && !mod.length && !rem.length) { out.innerHTML = '<p class="bt-hint">2 つの版に差はありません。</p>'; return; }
       var rows = add.map(function (i) { return '<tr><td><span class="pill p-pass">追加</span></td><td><code>' + esc(i.code) + '</code></td><td></td><td>' + esc(i.text) + '</td></tr>'; })
         .concat(mod.map(function (m) { return '<tr><td><span class="pill p-warn">変更</span></td><td><code>' + esc((m.new || m.old || {}).code) + '</code></td><td><del>' + esc((m.old || {}).text) + '</del></td><td><ins>' + esc((m.new || {}).text) + '</ins></td></tr>'; }))
@@ -317,8 +334,8 @@
       api.audit(ctx.sid, q).then(function (d) {
         var rows = api.list(d, 'audit');
         box.innerHTML = rows.length ? table(['日時', '操作者', '操作', '対象', '変更要求', '変更前', '変更後'], rows.map(function (a) {
-          return '<tr><td>' + ui.fmtDate(a.at) + '</td><td>' + esc(a.actor) + '</td><td>' + esc(a.action) + '</td><td>' + esc(a.target || '') + '</td><td>' + esc(a.cr_code || a.cr_id || '') + '</td>' +
-            '<td class="im-clip">' + esc(a.before || '') + '</td><td class="im-clip">' + esc(a.after || '') + '</td></tr>'; }), '監査ログ') : '<p class="bt-hint">条件に合う記録はありません。</p>';
+          return '<tr><td>' + ui.fmtDate(a.at) + '</td><td>' + esc(a.actor) + '</td><td>' + esc(ACTION[a.action] || a.action) + '</td><td>' + esc(a.target || '') + '</td><td>' + esc(a.cr_code || a.cr_id || '') + '</td>' +
+            '<td class="im-clip">' + esc(fmtVal(a.before)) + '</td><td class="im-clip">' + esc(fmtVal(a.after)) + '</td></tr>'; }), '監査ログ') : '<p class="bt-hint">条件に合う記録はありません。</p>';
       }, function (e) { ui.failed(box, e, run); });
     };
     f.addEventListener('submit', function (e) { e.preventDefault(); run(); });

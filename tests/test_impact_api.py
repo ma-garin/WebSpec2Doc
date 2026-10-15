@@ -235,3 +235,19 @@ def test_it012_input_validation(client):
     assert not (config.DATA_DIR.parent / "evil.md").exists()
     assert client.get(f"{API}/systems/../../etc").status_code == 404
     assert client.get(f"{API}/systems/zzz/crs/CR-001").status_code == 404
+
+
+def test_it013_ui_contract_regressions(client):
+    """IT-013 画面検証の欠陥の再発防止: 見積（外部可）・つながり（a_item/b_item）・改修後レビュー・全件失敗の理由・差分の包み。"""
+    sid = _system_with_docs(client)
+    code = _cr_with_baselines(client, sid)
+    client.patch(f"{API}/systems/{sid}", json={"policy": "external"})
+    est = client.post(f"{API}/systems/{sid}/crs/{code}/estimate")
+    assert est.status_code == 200 and est.get_json()["send"]["count"] >= 1          # DEF-005
+    items = client.get(f"{API}/systems/{sid}/items?q=電話番号").get_json()["items"]
+    r = client.post(f"{API}/systems/{sid}/links", json={"a_item": items[0]["id"], "b_item": items[1]["id"]})
+    assert r.status_code == 201                                                       # DEF-002
+    assert client.get(f"{API}/systems/{sid}/crs/{code}/review").status_code == 200   # DEF-001
+    bad = client.post(f"{API}/systems/{sid}/documents", data={"files": [(io.BytesIO(b"MZ"), "a.exe")]},
+                      content_type="multipart/form-data")
+    assert bad.status_code == 400 and "a.exe" in bad.get_json()["error"]             # DEF-007

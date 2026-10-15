@@ -279,7 +279,8 @@
   function tabApproval(el, cr, ctx) {
     var hist = cr.approvals || [];
     var canA = ui.can(ctx.role, 'approve') && cr.status === 'review';
-    el.innerHTML = (canA ? '<div class="bt-card"><h3>判断</h3><p class="bt-hint">起票者・解消者本人は承認できません。</p><div class="bt-actions"><button type="button" class="btn-primary" data-dec="approved">承認する</button><button type="button" class="btn-outline-sm im-btn-danger" data-dec="returned">差し戻す</button></div></div>'
+    var solo = (IM.app.state.system || {}).my_role === 'admin' && (cr.created_by === 'local');
+    el.innerHTML = (canA ? '<div class="bt-card"><h3>判断</h3><p class="bt-hint">' + (solo ? 'ログインなしで使っているため、本人による承認になります。監査ログに「認証オフのため本人承認」と記録されます。' : '起票者・解消者本人は承認できません。') + '</p><div class="bt-actions"><button type="button" class="btn-primary" data-dec="approved">承認する</button><button type="button" class="btn-outline-sm im-btn-danger" data-dec="returned">差し戻す</button></div></div>'
       : '<p class="bt-hint">' + (cr.status === 'review' ? '承認・差し戻しは承認者の役割が必要です。' : 'レビュー待ちになると承認・差し戻しができます。') + '</p>') +
       '<h3 class="im-h3">承認の履歴</h3>' + (hist.length ? table(['日時', '判断', '理由', '担当'], hist.map(function (h) {
         return '<tr><td>' + ui.fmtDate(h.at) + '</td><td>' + (h.decision === 'approved' ? '<span class="pill p-pass">承認</span>' : '<span class="pill p-fail">差し戻し</span>') + '</td><td>' + esc(h.reason || '') + '</td><td>' + esc(h.actor || '') + '</td></tr>'; }), '承認の履歴')

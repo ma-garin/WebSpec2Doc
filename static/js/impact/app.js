@@ -264,5 +264,13 @@
     modal: modal, confirm: confirmBox, closeModal: closeModal, need: need, setTitle: setTitle };
   IM.app = { go: go, render: render, state: state, refreshSystem: refreshSystem };
 
+  // DEF-009: ブラウザ標準の英語の入力エラーを日本語にする
+  document.addEventListener('invalid', function (e) {
+    var t = e.target;
+    if (t && t.validity && t.validity.valueMissing) t.setCustomValidity(t.tagName === 'SELECT' || t.type === 'radio' ? '選んでください。' : '入力してください。');
+  }, true);
+  document.addEventListener('input', function (e) { if (e.target && e.target.setCustomValidity) e.target.setCustomValidity(''); }, true);
+  document.addEventListener('change', function (e) { if (e.target && e.target.setCustomValidity) e.target.setCustomValidity(''); }, true);
+
   document.addEventListener('DOMContentLoaded', function () { initShell(); render(); });
 })();

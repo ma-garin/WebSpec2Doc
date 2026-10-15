@@ -151,8 +151,10 @@ def upload_documents(sid: str):
                 added.append(documents.add(conn, sid, f.filename or "", f.read(), who, work))
             except ImpactError as exc:
                 failed.append({"name": f.filename or "", "error": exc.message})
-        status = 400 if failed and not added else 200
-        return jsonify(added=added, failed=failed, documents=documents.list(conn, sid)), status
+        if failed and not added:
+            return jsonify(error=" / ".join(f"{x['name']}: {x['error']}" for x in failed), failed=failed,
+                           documents=documents.list(conn, sid)), 400
+        return jsonify(added=added, failed=failed, documents=documents.list(conn, sid))
 
 
 @bp.patch("/systems/<sid>/documents/<doc_id>")
@@ -223,7 +225,8 @@ def add_link(sid: str):
     b = body()
     with open_db() as conn:
         who = guard(conn, sid, "links")
-        return jsonify(link=links.add(conn, sid, str(b.get("a") or ""), str(b.get("b") or ""), who)), 201
+        a_item, b_item = str(b.get("a") or b.get("a_item") or ""), str(b.get("b") or b.get("b_item") or "")
+        return jsonify(link=links.add(conn, sid, a_item, b_item, who)), 201
 
 
 @bp.delete("/systems/<sid>/links/<link_id>")

@@ -99,7 +99,8 @@ def estimate(sid: str, code: str):
         guard(conn, sid, "analyze")
         policy = systems.get(conn, sid)["policy"]
         found, cands = _prepare(conn, sid, _cr(conn, sid, code), "none")
-        est = llm_judge.estimate(cands) if policy != "none" else {"count": 0, "chars": 0}
+        from web.services.impact.engine.run import _llm_input
+        est = llm_judge.estimate(_llm_input(cands)) if policy != "none" else {"count": 0, "chars": 0}
         return jsonify(policy=policy, changes=len(found), candidates=len(cands), send=est)
 
 
@@ -210,6 +211,7 @@ def approval(sid: str, code: str):
         return jsonify(cr=_cr(conn, sid, code))
 
 
+@bp.get("/systems/<sid>/crs/<code>/review")
 @bp.get("/systems/<sid>/crs/<code>/actuals")
 def list_actuals(sid: str, code: str):
     with open_db() as conn:

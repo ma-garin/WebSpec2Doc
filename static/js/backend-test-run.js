@@ -286,9 +286,39 @@
     var recorded = {}; (S.job.defects || []).forEach(function (d) { recorded[d.case] = 1; });
     var candidates = latest.filter(function (r) { return r.state === 'fail' && !recorded[r.case]; });
     renderKpis(latest, uv, candidates); renderFacts(latest); renderResults(latest); renderDefects(latest, candidates);
-    var ul = $('#bs-unverified'); ul.innerHTML = '';
-    (uv.length ? uv : ['確かめていない項目はありません。']).forEach(function (t) {
-      var li = document.createElement('li'); li.textContent = t; ul.appendChild(li); }); }
+    renderUnverified(uv); }
+  /* 未検証: 件数と理由別チップを先頭に、一覧は既定で折りたたみ（開くと高さ固定の内側スクロール） */
+  function renderUnverified(uv) { var ul = $('#bs-unverified'), box = $('#bs-uv-box');
+    if (!box) { box = document.createElement('div'); box.id = 'bs-uv-box'; ul.parentNode.appendChild(box); }
+    var wasOpen = !!box.querySelector('.bs-uv-table:not([hidden])'); box.innerHTML = '';
+    if (!uv.length) { ul.hidden = false; ul.innerHTML = ''; var li0 = document.createElement('li');
+      li0.textContent = '確かめていない項目はありません。'; ul.appendChild(li0); return; }
+    ul.hidden = true; ul.innerHTML = '';
+    var rows = [], order = [], cnt = {};
+    uv.forEach(function (t) { var m = /^([^:：\s]+)[:：]\s*(.*)$/.exec(t), id = m ? m[1] : '—', rsn = m ? m[2] : t;
+      var key = rsn.replace(/[（(].*$/, '').trim() || rsn;
+      if (!(key in cnt)) { cnt[key] = 0; order.push(key); } cnt[key]++; rows.push([id, rsn, key]); });
+    var head = document.createElement('p'); head.className = 'bs-uv-head';
+    head.textContent = '未検証 ' + uv.length + ' 件 — 合格には数えません'; box.appendChild(head);
+    var chips = document.createElement('div'); chips.className = 'bs-uv-chips';
+    order.sort(function (a, b) { return cnt[b] - cnt[a]; }).forEach(function (k) { var c = document.createElement('span');
+      c.className = 'bs-uv-chip'; c.textContent = k + ' ' + cnt[k] + ' 件'; chips.appendChild(c); });
+    box.appendChild(chips);
+    var btn = document.createElement('button'); btn.type = 'button'; btn.className = 'btn btn-sm bs-uv-toggle';
+    var wrap = document.createElement('div'); wrap.className = 'bs-uv-table'; wrap.hidden = !wasOpen;
+    var table = document.createElement('table'); table.className = 'bs-table';
+    var thead = document.createElement('thead'), hr = document.createElement('tr');
+    ['ID', 'ケース名', '理由'].forEach(function (h) { var th = document.createElement('th'); th.textContent = h; hr.appendChild(th); });
+    thead.appendChild(hr); table.appendChild(thead);
+    var tb = document.createElement('tbody');
+    rows.forEach(function (r) { var tr = document.createElement('tr');
+      [r[0], r[0] === '—' ? '—' : (caseName(r[0]) || '—'), r[1]].forEach(function (v) { var td = document.createElement('td');
+        td.textContent = v; tr.appendChild(td); }); tb.appendChild(tr); });
+    table.appendChild(tb); wrap.appendChild(table);
+    var label = function () { btn.textContent = wrap.hidden ? '一覧を表示（' + uv.length + ' 件）' : '一覧を閉じる'; };
+    btn.setAttribute('aria-expanded', String(!wrap.hidden)); label();
+    btn.addEventListener('click', function () { wrap.hidden = !wrap.hidden; btn.setAttribute('aria-expanded', String(!wrap.hidden)); label(); });
+    box.appendChild(btn); box.appendChild(wrap); }
   function bindJudge() { $('#bs-defect-open').addEventListener('click', function () { openDefect(''); });
     $('#bs-defect-cancel').addEventListener('click', function () { $('#bs-defect-form').hidden = true; });
     $('#bs-defect-form').addEventListener('submit', function (e) { e.preventDefault(); clearError();

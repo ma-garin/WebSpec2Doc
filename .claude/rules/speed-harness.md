@@ -79,6 +79,7 @@ curl -s --retry 15 --retry-delay 1 --retry-connrefused -o /dev/null -w "%{http_c
 - **報告本文を返させない。**成果物をファイルに書かせ、返答は 1 語にする
   （返答は自分の文脈に入り、以後の全ターンで再読される）。
 - 作った本人に検証させない。検証系は「壊れている箇所を探せ」で出す。
+- **結線（routes 登録・画面との接続）の単位は、完了条件に「実データで入口から出力まで 1 本通す」を必ず含める。**単体の `ok` だけで次の波へ進まない（2026-10-15 System 08: 単体は全部 ok だったが通しで Critical 5）。
 
 ## H-5. 進捗はステータスラインに任せる
 
@@ -91,6 +92,7 @@ curl -s --retry 15 --retry-delay 1 --retry-connrefused -o /dev/null -w "%{http_c
 
 - **pytest / make test / verify-ui / lint はユーザーが要求した時だけ実行する。**
   コミットは `--no-verify` で直行。無断のゲート実行は `.claude/hooks/block-gates.py` が拒否する。
+- **共有ツリーでブランチを切り替えない。**コミットは現在の HEAD で作り、rebase・push・PR は `git worktree add <scratchpad>/wt -b <name>` の別ツリーで行う（他セッションの未コミット変更と衝突しない。2026-10-15 に checkout で 3 回失敗）。
 - 手順は一直線: `git pull --ff-only` → ブランチを切る → `git add <path...>` →
   `commit --no-verify` → push → PR 作成 → マージ（作成とマージは別コマンド）。
 - **検証を省いた箇所は「未実行」「未検証」と明記して納品する。**黙って省くのとは別物。

@@ -2862,6 +2862,379 @@
         "error_path",
         "evidence"
       ]
+    },
+    {
+      "feature_id": "s08-job-env",
+      "name": "System 08 案件・対象・環境の登録と接続確認（FR-08-001〜005・007）",
+      "risk_level": "critical",
+      "status": "implemented",
+      "ui_files": [
+        "templates/backend_test.html",
+        "static/css/backend-test.css",
+        "static/js/backend-test.js",
+        "static/js/backend-test-run.js"
+      ],
+      "route_files": [
+        "web/routes/backend_test.py",
+        "web/routes/backend_test_stages.py",
+        "web/routes/backend_test_run.py"
+      ],
+      "core_files": [
+        "web/services/backendtest/store.py",
+        "web/services/backendtest/dbconn.py",
+        "web/services/backendtest/redact.py"
+      ],
+      "symbols": [
+        "new",
+        "save",
+        "load",
+        "delete",
+        "classify",
+        "check"
+      ],
+      "outputs": [
+        "/api/backend-test/jobs JSON",
+        "案件一覧と段階 1 の状態",
+        "接続確認の結果と次の行動 1 行"
+      ],
+      "persistence": [
+        "instance/tenants/{slug}/backendtest/{job_id}/job.json"
+      ],
+      "failure_modes": [
+        "secret_in_envs_rejected",
+        "unreachable_env_reported_with_next_action",
+        "other_tenant_job_404",
+        "running_job_delete_rejected"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "evidence"
+      ],
+      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は暫定の共通 3 種で、ケース別の具体名は後続の単位で書く。"
+    },
+    {
+      "feature_id": "s08-write-guard",
+      "name": "System 08 書き込み保護・本番の読み取り専用・書き込み前確認（FR-08-008・009）",
+      "risk_level": "critical",
+      "status": "implemented",
+      "ui_files": [
+        "templates/backend_test.html",
+        "static/css/backend-test.css",
+        "static/js/backend-test.js",
+        "static/js/backend-test-run.js"
+      ],
+      "route_files": [
+        "web/routes/backend_test.py",
+        "web/routes/backend_test_stages.py",
+        "web/routes/backend_test_run.py"
+      ],
+      "core_files": [
+        "web/services/backendtest/dbconn.py",
+        "web/services/backendtest/runner.py"
+      ],
+      "symbols": [
+        "guard_sql",
+        "must_read_only",
+        "execute"
+      ],
+      "outputs": [
+        "実行前の確認（環境名と影響テーブル）",
+        "本番判定の表示"
+      ],
+      "persistence": [
+        "instance/tenants/{slug}/backendtest/{job_id}/job.json"
+      ],
+      "failure_modes": [
+        "write_on_production_409",
+        "missing_confirm_token_428",
+        "write_sql_in_read_only_rejected"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "evidence"
+      ],
+      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は暫定の共通 3 種で、ケース別の具体名は後続の単位で書く。"
+    },
+    {
+      "feature_id": "s08-intake",
+      "name": "System 08 資料の取り込みと DDL の読み取り（FR-08-006・011）",
+      "risk_level": "high",
+      "status": "implemented",
+      "ui_files": [
+        "templates/backend_test.html",
+        "static/css/backend-test.css",
+        "static/js/backend-test.js",
+        "static/js/backend-test-run.js"
+      ],
+      "route_files": [
+        "web/routes/backend_test.py",
+        "web/routes/backend_test_stages.py",
+        "web/routes/backend_test_run.py"
+      ],
+      "core_files": [
+        "web/services/backendtest/intake.py",
+        "web/services/backendtest/intake_ddl.py"
+      ],
+      "symbols": [
+        "read_ddl"
+      ],
+      "outputs": [
+        "事実一覧（根拠行付き）",
+        "未解析文の一覧"
+      ],
+      "persistence": [
+        "instance/tenants/{slug}/backendtest/{job_id}/job.json"
+      ],
+      "failure_modes": [
+        "oversized_file_rejected",
+        "unparsed_statement_listed_not_dropped"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "evidence"
+      ],
+      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は暫定の共通 3 種で、ケース別の具体名は後続の単位で書く。"
+    },
+    {
+      "feature_id": "s08-viewpoints-cases",
+      "name": "System 08 観点とテストケースの生成・追跡",
+      "risk_level": "high",
+      "status": "implemented",
+      "ui_files": [
+        "templates/backend_test.html",
+        "static/css/backend-test.css",
+        "static/js/backend-test.js",
+        "static/js/backend-test-run.js"
+      ],
+      "route_files": [
+        "web/routes/backend_test.py",
+        "web/routes/backend_test_stages.py",
+        "web/routes/backend_test_run.py"
+      ],
+      "core_files": [
+        "web/services/backendtest/viewpoints.py",
+        "web/services/backendtest/catalog.py",
+        "web/services/backendtest/cases.py"
+      ],
+      "symbols": [
+        "build",
+        "trace",
+        "merge",
+        "renumber"
+      ],
+      "outputs": [
+        "観点一覧",
+        "ケース表（根拠事実 ID 付き）"
+      ],
+      "persistence": [
+        "instance/tenants/{slug}/backendtest/{job_id}/job.json"
+      ],
+      "failure_modes": [
+        "zero_facts_yields_provisional_viewpoints",
+        "case_without_basis_flagged"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "evidence"
+      ],
+      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は暫定の共通 3 種で、ケース別の具体名は後続の単位で書く。"
+    },
+    {
+      "feature_id": "s08-oracle",
+      "name": "System 08 期待値（前後比較・別経路・ゴールデン）の設定と確定",
+      "risk_level": "critical",
+      "status": "implemented",
+      "ui_files": [
+        "templates/backend_test.html",
+        "static/css/backend-test.css",
+        "static/js/backend-test.js",
+        "static/js/backend-test-run.js"
+      ],
+      "route_files": [
+        "web/routes/backend_test.py",
+        "web/routes/backend_test_stages.py",
+        "web/routes/backend_test_run.py"
+      ],
+      "core_files": [
+        "web/services/backendtest/oracle.py",
+        "web/services/backendtest/diffing.py"
+      ],
+      "symbols": [
+        "can_confirm",
+        "confirm",
+        "evaluate",
+        "check_alt_sql",
+        "default_method",
+        "diff"
+      ],
+      "outputs": [
+        "期待値の状態（unconfirmed / auto / human）",
+        "前後比較の差分"
+      ],
+      "persistence": [
+        "instance/tenants/{slug}/backendtest/{job_id}/job.json"
+      ],
+      "failure_modes": [
+        "non_member_cannot_confirm",
+        "expectation_patch_after_stage4_approval_409",
+        "unknown_expectation_not_guessed"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "evidence"
+      ],
+      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は暫定の共通 3 種で、ケース別の具体名は後続の単位で書く。"
+    },
+    {
+      "feature_id": "s08-testdata-codegen",
+      "name": "System 08 テストデータとテストコードの生成",
+      "risk_level": "high",
+      "status": "implemented",
+      "ui_files": [
+        "templates/backend_test.html",
+        "static/css/backend-test.css",
+        "static/js/backend-test.js",
+        "static/js/backend-test-run.js"
+      ],
+      "route_files": [
+        "web/routes/backend_test.py",
+        "web/routes/backend_test_stages.py",
+        "web/routes/backend_test_run.py"
+      ],
+      "core_files": [
+        "web/services/backendtest/testdata.py",
+        "web/services/backendtest/codegen.py",
+        "web/services/backendtest/codegen_runtime.py",
+        "web/services/backendtest/codegen_gate.py",
+        "web/services/backendtest/llm_gate.py"
+      ],
+      "symbols": [
+        "generate",
+        "gate",
+        "guard",
+        "send"
+      ],
+      "outputs": [
+        "生成テストコード（tests/test_cases.py ほか）",
+        "LLM 送信前検査の記録"
+      ],
+      "persistence": [
+        "instance/tenants/{slug}/backendtest/{job_id}/job.json"
+      ],
+      "failure_modes": [
+        "secret_in_generated_code_rejected",
+        "personal_data_not_sent_to_openai",
+        "unsafe_code_edit_blocked"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "evidence"
+      ],
+      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は暫定の共通 3 種で、ケース別の具体名は後続の単位で書く。"
+    },
+    {
+      "feature_id": "s08-run",
+      "name": "System 08 テストの実行・中止・証跡",
+      "risk_level": "critical",
+      "status": "implemented",
+      "ui_files": [
+        "templates/backend_test.html",
+        "static/css/backend-test.css",
+        "static/js/backend-test.js",
+        "static/js/backend-test-run.js"
+      ],
+      "route_files": [
+        "web/routes/backend_test.py",
+        "web/routes/backend_test_stages.py",
+        "web/routes/backend_test_run.py"
+      ],
+      "core_files": [
+        "web/services/backendtest/runner.py",
+        "web/services/backendtest/evidence.py",
+        "web/services/backendtest/results.py"
+      ],
+      "symbols": [
+        "start",
+        "status",
+        "cancel",
+        "read_results",
+        "write_snapshot",
+        "list_runs"
+      ],
+      "outputs": [
+        "実行の進捗と要約",
+        "junit.xml とスナップショット（パスワードは伏せ字）"
+      ],
+      "persistence": [
+        "instance/tenants/{slug}/backendtest/{job_id}/job.json",
+        "instance/tenants/{slug}/backendtest/{job_id}/runs/{run_id}/"
+      ],
+      "failure_modes": [
+        "timeout_marked_not_run",
+        "output_over_1mb_stopped",
+        "concurrent_run_in_tenant_rejected",
+        "cancel_reflected_in_status"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "evidence"
+      ],
+      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は暫定の共通 3 種で、ケース別の具体名は後続の単位で書く。"
+    },
+    {
+      "feature_id": "s08-judge-export",
+      "name": "System 08 判定・段階承認・書き出し・監査記録",
+      "risk_level": "high",
+      "status": "implemented",
+      "ui_files": [
+        "templates/backend_test.html",
+        "static/css/backend-test.css",
+        "static/js/backend-test.js",
+        "static/js/backend-test-run.js"
+      ],
+      "route_files": [
+        "web/routes/backend_test.py",
+        "web/routes/backend_test_stages.py",
+        "web/routes/backend_test_run.py"
+      ],
+      "core_files": [
+        "web/services/backendtest/judge.py",
+        "web/services/backendtest/stages.py",
+        "web/services/backendtest/export.py"
+      ],
+      "symbols": [
+        "approve",
+        "report_xlsx",
+        "report_md",
+        "code_zip",
+        "audit"
+      ],
+      "outputs": [
+        "判定結果と欠陥（severity: critical/high/medium/low）",
+        "report.xlsx / report.md / code.zip",
+        "監査記録"
+      ],
+      "persistence": [
+        "instance/tenants/{slug}/backendtest/{job_id}/job.json"
+      ],
+      "failure_modes": [
+        "non_member_approval_rejected",
+        "reject_requires_reason",
+        "export_before_results_rejected"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "evidence"
+      ],
+      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は暫定の共通 3 種で、ケース別の具体名は後続の単位で書く。"
     }
   ]
 }

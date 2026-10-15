@@ -237,6 +237,11 @@ def _child_env(run: _Run, env: dict, password: str) -> dict:
     return child
 
 
+def _case_selector(case_id: str) -> str:
+    cid = re.sub(r"\W+", "_", str(case_id), flags=re.ASCII).strip("_").lower() or "case"
+    return f"test_{cid}_"
+
+
 def _command(run: _Run) -> list[str]:
     code = run.workdir / "code"
     junit = (run.dir / evidence.JUNIT_FILE).relative_to(run.workdir).as_posix()
@@ -245,7 +250,8 @@ def _command(run: _Run) -> list[str]:
     if (code / "bt_runtime.py").is_file():
         cmd += ["-p", "bt_runtime"]
     if run.case_ids:
-        cmd += ["-k", " or ".join(run.case_ids)]
+        # 生成テスト名は test_<id 小文字>_<slug>（codegen._test_names）。ID の直後の "_" まで含めて完全一致させる
+        cmd += ["-k", " or ".join(_case_selector(c) for c in run.case_ids)]
     return cmd
 
 

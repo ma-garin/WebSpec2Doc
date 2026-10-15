@@ -218,9 +218,27 @@ class CaseRun:
                  _key_for(oracle, table), oracle.get("exclude"), oracle.get("tolerance"))
         return d["added"] + d["removed"] + d["updated"] + d["warnings"]
 
+    def changed_rows(self, table, key):
+        """この起動で追加・更新された行（後スナップショット側）と、削除された行の件数（比較はしない）。"""
+        d = self.result.get("diff", {}).get(table, {})
+        keys = {tuple(str(u["key"].get(c)) for c in key) for u in d.get("updated", [])}
+        updated = [r for r in self.result.get("after", {}).get(table, [])
+                   if key and tuple(str(r.get(c)) for c in key) in keys]
+        return list(d.get("added", [])) + updated, len(d.get("removed", []))
+
     def alt_sql_mismatch(self, case):
-        rows = execute(self.conn, case["oracle"]["alt_sql"], read_only=True)
-        return self._mismatch(case, rows)
+        """別経路 SQL の結果を、この起動で変わった行とだけ比べる（前のケースが残した行は比べない）。"""
+        oracle = case.get("oracle") or {}
+        table = oracle.get("table") or (list(oracle.get("tables") or []) or [""])[0]
+        key = _key_for(oracle, table)
+        changed, removed = self.changed_rows(table, key)
+        expected = _plain(execute(self.conn, oracle["alt_sql"], read_only=True))
+        d = diff(changed, expected, key, oracle.get("exclude"), oracle.get("tolerance"))
+        mismatch = d["added"] + d["removed"] + d["updated"] + d["warnings"]
+        _write(Path(self.node.bt_evidence) / "alt_sql.json",
+               {"table": table, "key": key, "expected": expected, "changed": changed, "removed_count": removed,
+                "counts": {"expected": len(expected), "changed": len(changed), "mismatch": len(mismatch)}})
+        return mismatch
 
     def golden_mismatch(self, case):
         name = Path(str((case["oracle"].get("golden") or {}).get("file", ""))).name

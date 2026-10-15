@@ -237,9 +237,9 @@ def _aggregate(vp, facts):
     rules = [f for f in facts if f.get("kind") in ("rule", "formula")]
     rules = rules or [{"id": None, "subject": "出力の集計値", "value": ""}]
     return [_human(f"集計:{f['subject']}", "集計の元になる入力を用意する",
-                   ["ジョブを実行する", f"{f['subject']} を別の SQL で計算して出力と突き合わせる"],
+                   ["ジョブを実行する", f"この実行で変わった行の {f['subject']} を、別の SQL で計算した値と比べる"],
                    f"{f['subject']} が仕様の規則どおりの値になる",
-                   f"{f['subject']}を別の計算で求め、出力と一致するかを確かめます（計算式は人が承認します）。",
+                   f"この実行で変わった行の{f['subject']}を、別の計算で求めた値と比べます（前の実行で残った行は比べません。計算式は人が承認します）。",
                    [f["id"]] if f.get("id") else [])
             for f in rules]
 

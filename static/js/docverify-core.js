@@ -70,7 +70,8 @@
     doc: ['home', 'mine', 'reviews', 'findings', 'plan', 'read', 'triage', 'questions', 'followup', 'gate', 'screen'],
     trace: ['setcheck'], hist: ['metrics'], vp: ['checklists', 'accuracy'], set: ['settings'],
   };
-  const DOC_TOP = ['home', 'mine', 'reviews', 'findings'];
+  // ドキュメント検証はレビュー一覧 1 画面。ホーム・自分の担当・指摘一覧は廃止（タブ不要・2026-10-18）。
+  const DOC_GONE = ['home', 'mine', 'findings'];
   const STEPS = ['plan', 'read', 'triage', 'questions', 'followup', 'gate', 'screen'];
   const COUNT = { mine: 'mine', findings: 'open red', read: 'candidates', triage: 'adopted' };
   const sectionOf = (view) => Object.keys(SECTIONS).find((k) => SECTIONS[k].includes(view)) || 'doc';
@@ -88,8 +89,7 @@
       html = `<a href="#reviews" data-nav="reviews" class="dv-back">← レビュー一覧</a><span class="dv-subtabs-name">${esc(r.name)}</span>`
         + STEPS.map((v) => tab(v, view)).join('');
     } else if (sectionOf(view) === 'doc') {
-      html = DOC_TOP.map((v) => tab(v, view)).join('')
-        + (r ? `<span class="dv-subtabs-sep"></span><a href="#read" data-nav="read" class="dv-open">開いているレビュー: ${esc(r.name)}</a>` : '');
+      html = '';
     } else {
       const list = SECTIONS[sectionOf(view)];
       html = list.length > 1 ? list.map((v) => tab(v, view)).join('') : '';
@@ -100,11 +100,11 @@
   }
 
   function renderReviewNav() {
-    renderSubtabs(DV.current || 'home');
+    renderSubtabs(DV.current || 'reviews');
   }
 
   function show(view) {
-    if (!TITLES[view]) view = 'home';
+    if (!TITLES[view] || DOC_GONE.includes(view)) view = 'reviews';
     const needReview = REVIEW_VIEWS.includes(view) && !DV.state.review;
     if (needReview) view = 'reviews';
     document.querySelectorAll('.dv-view').forEach((v) => { v.hidden = v.dataset.view !== view; });
@@ -151,7 +151,7 @@
     let saved = null;
     try { saved = sessionStorage.getItem('dv-review'); } catch (e) { saved = null; }
     if (saved) { try { await openReview(saved, location.hash.slice(1) || 'read'); return; } catch (e) { banner(''); } }
-    show(location.hash.slice(1) || 'home');
+    show(location.hash.slice(1) || 'reviews');
   }
 
   const NO_SCORE = '— 文書を取り込むと表示されます。';

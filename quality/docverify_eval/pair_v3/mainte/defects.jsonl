@@ -1,0 +1,12 @@
+{"pair": "mainte", "id": "mainte-D01", "type": "MISSING_IN_DESIGN", "req_lines": [35, 35], "design_lines": [], "req_quote": "設備の故障は、設備・発生日時", "design_quote": "", "explanation": "要件が基本設計に反映されていない。"}
+{"pair": "mainte", "id": "mainte-D02", "type": "EXTRA_IN_DESIGN", "req_lines": [], "design_lines": [31, 31], "req_quote": "", "design_quote": "購入年から減価償却費を算出し", "explanation": "要件に根拠の無い減価償却費の算出が設計にある。"}
+{"pair": "mainte", "id": "mainte-D03", "type": "EXTRA_IN_DESIGN", "req_lines": [], "design_lines": [32, 32], "req_quote": "", "design_quote": "点検件数を月別に集計し", "explanation": "要件に根拠の無い担当者別の点検件数の集計が設計にある。"}
+{"pair": "mainte", "id": "mainte-D04", "type": "CONTRADICTION", "req_lines": [27, 27], "design_lines": [28, 28], "req_quote": "点検予定日の 3 日前", "design_quote": "点検予定日の 5 日前", "explanation": "点検の事前通知が要件は3日前、設計は5日前で食い違う。"}
+{"pair": "mainte", "id": "mainte-D05", "type": "CONTRADICTION", "req_lines": [30, 30], "design_lines": [30, 30], "req_quote": "点検の履歴は 5 年間", "design_quote": "点検の履歴は 3 年間", "explanation": "履歴の保存期間が要件は5年、設計は3年で食い違う。"}
+{"pair": "mainte", "id": "mainte-D06", "type": "TABLE_MISMATCH", "req_lines": [41, 41], "design_lines": [39, 39], "req_quote": "| 中 | 性能が低下している | 3 営業日以内", "design_quote": "| 中 | 性能が低下している | 5 営業日以内", "explanation": "優先度中の対応期限が要件は3営業日、設計は5営業日で食い違う。"}
+{"pair": "mainte", "id": "mainte-D07", "type": "TERM_INCONSISTENCY", "req_lines": [26, 26], "design_lines": [21, 21], "req_quote": "設備ごとに、点検の周期", "design_quote": "機器を選び", "explanation": "同じ対象を要件は設備、設計は機器と呼んでいる。"}
+{"pair": "mainte", "id": "mainte-D08", "type": "TERM_INCONSISTENCY", "req_lines": [27, 27], "design_lines": [16, 16], "req_quote": "担当の作業員へ通知", "design_quote": "| S01 | 点検周期登録 | 保全担当者", "explanation": "同じ担当者を要件は作業員、設計は保全担当者と呼んでいる。"}
+{"pair": "mainte", "id": "mainte-D09", "type": "TERM_INCONSISTENCY", "req_lines": [28, 28], "design_lines": [17, 17], "req_quote": "点検票に結果", "design_quote": "チェックシート入力", "explanation": "同じ帳票を要件は点検票、設計はチェックシートと呼んでいる。"}
+{"pair": "mainte", "id": "mainte-D10", "type": "TERM_INCONSISTENCY", "req_lines": [51, 51], "design_lines": [10, 10], "req_quote": "Web ブラウザから", "design_quote": "ウェブブラウザから", "explanation": "Web の表記がゆれている。"}
+{"pair": "mainte", "id": "mainte-D11", "type": "AMBIGUOUS", "req_lines": [31, 31], "design_lines": [], "req_quote": "目立つように表示", "design_quote": "", "explanation": "判断基準が無く解釈が割れる。"}
+{"pair": "mainte", "id": "mainte-D12", "type": "UNTESTABLE", "req_lines": [52, 52], "design_lines": [], "req_quote": "現場で使いやすい", "design_quote": "", "explanation": "合否の基準が無く検証できない。"}

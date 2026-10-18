@@ -1,0 +1,12 @@
+{"pair": "event", "id": "event-D01", "type": "MISSING_IN_DESIGN", "req_lines": [39, 39], "design_lines": [], "req_quote": "主催者は、イベントごとの受付済み", "design_quote": "", "explanation": "要件が基本設計に反映されていない。"}
+{"pair": "event", "id": "event-D02", "type": "EXTRA_IN_DESIGN", "req_lines": [], "design_lines": [32, 32], "req_quote": "", "design_quote": "アンケート回答を集計し", "explanation": "要件に根拠の無いアンケート集計と満足度の算出が設計にある。"}
+{"pair": "event", "id": "event-D03", "type": "EXTRA_IN_DESIGN", "req_lines": [], "design_lines": [33, 33], "req_quote": "", "design_quote": "過去の申込履歴から", "explanation": "要件に根拠の無いおすすめイベントの表示が設計にある。"}
+{"pair": "event", "id": "event-D04", "type": "CONTRADICTION", "req_lines": [30, 30], "design_lines": [31, 31], "req_quote": "開催日の 7 日前まで", "design_quote": "開催日の 3 日前まで", "explanation": "取消の期限が要件は7日前、設計は3日前で食い違う。"}
+{"pair": "event", "id": "event-D05", "type": "CONTRADICTION", "req_lines": [44, 44], "design_lines": [45, 45], "req_quote": "開催時刻の 60 分前から", "design_quote": "開催時刻の 30 分前から", "explanation": "受付の開始時刻が要件は60分前、設計は30分前で食い違う。"}
+{"pair": "event", "id": "event-D06", "type": "TABLE_MISMATCH", "req_lines": [36, 36], "design_lines": [40, 40], "req_quote": "| 学生 | 学生証を提示した方 | 1,500 円", "design_quote": "| 学生 | 学生証を提示した方 | 2,000 円", "explanation": "学生の参加費が要件の表は1,500円、設計の表は2,000円で食い違う。"}
+{"pair": "event", "id": "event-D07", "type": "TERM_INCONSISTENCY", "req_lines": [27, 27], "design_lines": [17, 17], "req_quote": "参加者は、氏名とメールアドレスを入力", "design_quote": "| S02 | 参加申込 | 来場者", "explanation": "同じ利用者を要件は参加者、設計は来場者と呼んでいる。"}
+{"pair": "event", "id": "event-D08", "type": "TERM_INCONSISTENCY", "req_lines": [26, 26], "design_lines": [16, 16], "req_quote": "主催者は、イベント名", "design_quote": "| S01 | イベント登録 | 運営担当", "explanation": "同じ担当者を要件は主催者、設計は運営担当と呼んでいる。"}
+{"pair": "event", "id": "event-D09", "type": "TERM_INCONSISTENCY", "req_lines": [29, 29], "design_lines": [30, 30], "req_quote": "QR コード付きの受付票をメール", "design_quote": "入場券（QR コード付き）", "explanation": "同じ確認票を要件は受付票、設計は入場券と呼んでいる。"}
+{"pair": "event", "id": "event-D10", "type": "TERM_INCONSISTENCY", "req_lines": [56, 56], "design_lines": [10, 10], "req_quote": "Web ブラウザから行い", "design_quote": "ウェブブラウザと受付用", "explanation": "Web の表記がゆれている。"}
+{"pair": "event", "id": "event-D11", "type": "AMBIGUOUS", "req_lines": [46, 46], "design_lines": [], "req_quote": "迅速に行える", "design_quote": "", "explanation": "判断基準が無く解釈が割れる。"}
+{"pair": "event", "id": "event-D12", "type": "UNTESTABLE", "req_lines": [52, 52], "design_lines": [], "req_quote": "見やすく分かりやすい", "design_quote": "", "explanation": "合否の基準が無く検証できない。"}

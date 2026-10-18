@@ -1,0 +1,10 @@
+{"pair": "purchase", "id": "purchase-D01", "type": "MISSING_IN_DESIGN", "req_lines": [38, 38], "design_lines": [], "req_quote": "申請者は、自分の申請の状況を", "design_quote": "", "explanation": "要件が基本設計に反映されていない。"}
+{"pair": "purchase", "id": "purchase-D02", "type": "EXTRA_IN_DESIGN", "req_lines": [], "design_lines": [43, 43], "req_quote": "", "design_quote": "書店ごとの値引率を設定し", "explanation": "要件に根拠の無い書店別の値引率設定が設計にある。"}
+{"pair": "purchase", "id": "purchase-D03", "type": "EXTRA_IN_DESIGN", "req_lines": [], "design_lines": [44, 44], "req_quote": "", "design_quote": "購入冊数の順位を作り", "explanation": "要件に根拠の無い部門別の購入冊数の順位表示が設計にある。"}
+{"pair": "purchase", "id": "purchase-D04", "type": "CONTRADICTION", "req_lines": [36, 36], "design_lines": [37, 37], "req_quote": "差戻しから 14 日以内", "design_quote": "差戻しから 30 日を過ぎた", "explanation": "再申請の期限が要件は14日、設計は30日で食い違う。"}
+{"pair": "purchase", "id": "purchase-D05", "type": "TABLE_MISMATCH", "req_lines": [33, 33], "design_lines": [32, 32], "req_quote": "| 3 | 10 万円以上 | 部門長、経理課長、館長", "design_quote": "| 3 | 10 万円以上 | 部門長、経理課長 |", "explanation": "区分3の承認ルートが要件は館長まで、設計は経理課長までで食い違う。"}
+{"pair": "purchase", "id": "purchase-D06", "type": "TERM_INCONSISTENCY", "req_lines": [26, 26], "design_lines": [16, 16], "req_quote": "申請者は、書名・著者", "design_quote": "| S01 | 購入申請 | 依頼者", "explanation": "同じ利用者を要件は申請者、設計は依頼者と呼んでいる。"}
+{"pair": "purchase", "id": "purchase-D07", "type": "TERM_INCONSISTENCY", "req_lines": [35, 35], "design_lines": [17, 17], "req_quote": "承認者は、申請を承認", "design_quote": "| S02 | 承認 | 決裁権限者", "explanation": "同じ役職者を要件は承認者、設計は決裁権限者と呼んでいる。"}
+{"pair": "purchase", "id": "purchase-D08", "type": "TERM_INCONSISTENCY", "req_lines": [56, 56], "design_lines": [55, 55], "req_quote": "学内のサーバー", "design_quote": "学内のサーバに", "explanation": "サーバーの長音の有無で表記がゆれている。"}
+{"pair": "purchase", "id": "purchase-D09", "type": "AMBIGUOUS", "req_lines": [39, 39], "design_lines": [], "req_quote": "必要に応じて", "design_quote": "", "explanation": "判断基準が無く解釈が割れる。"}
+{"pair": "purchase", "id": "purchase-D10", "type": "UNTESTABLE", "req_lines": [52, 52], "design_lines": [], "req_quote": "迷わず操作できる", "design_quote": "", "explanation": "合否の基準が無く検証できない。"}

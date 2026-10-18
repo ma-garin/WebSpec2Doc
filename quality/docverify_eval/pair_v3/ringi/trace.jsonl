@@ -1,0 +1,11 @@
+{"pair": "ringi", "req_key": "REQ-001", "req_lines": [26, 26], "design_lines": [[20, 20]]}
+{"pair": "ringi", "req_key": "REQ-002", "req_lines": [27, 27], "design_lines": [[20, 20]]}
+{"pair": "ringi", "req_key": "REQ-003", "req_lines": [28, 28], "design_lines": [[27, 27]]}
+{"pair": "ringi", "req_key": "REQ-004", "req_lines": [29, 29], "design_lines": [[37, 37]]}
+{"pair": "ringi", "req_key": "REQ-005", "req_lines": [37, 37], "design_lines": [[28, 28]]}
+{"pair": "ringi", "req_key": "REQ-006", "req_lines": [43, 43], "design_lines": [[42, 42]]}
+{"pair": "ringi", "req_key": "REQ-007", "req_lines": [44, 44], "design_lines": [[43, 43]]}
+{"pair": "ringi", "req_key": "REQ-008", "req_lines": [45, 45], "design_lines": [[44, 44]]}
+{"pair": "ringi", "req_key": "REQ-009", "req_lines": [49, 49], "design_lines": [[48, 48]]}
+{"pair": "ringi", "req_key": "REQ-010", "req_lines": [50, 50], "design_lines": [[49, 49]]}
+{"pair": "ringi", "req_key": "ringi-M1", "req_lines": [38, 38], "design_lines": []}

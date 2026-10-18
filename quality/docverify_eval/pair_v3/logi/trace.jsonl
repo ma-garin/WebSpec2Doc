@@ -1,0 +1,12 @@
+{"pair": "logi", "req_key": "REQ-001", "req_lines": [26, 26], "design_lines": [[22, 22], [30, 30]]}
+{"pair": "logi", "req_key": "REQ-002", "req_lines": [27, 27], "design_lines": [[30, 30]]}
+{"pair": "logi", "req_key": "REQ-003", "req_lines": [28, 28], "design_lines": [[31, 31]]}
+{"pair": "logi", "req_key": "REQ-004", "req_lines": [33, 33], "design_lines": [[17, 17]]}
+{"pair": "logi", "req_key": "REQ-005", "req_lines": [34, 34], "design_lines": [[23, 23]]}
+{"pair": "logi", "req_key": "REQ-006", "req_lines": [35, 35], "design_lines": [[35, 35], [36, 36]]}
+{"pair": "logi", "req_key": "REQ-007", "req_lines": [40, 40], "design_lines": [[44, 44]]}
+{"pair": "logi", "req_key": "REQ-008", "req_lines": [48, 48], "design_lines": [[47, 47]]}
+{"pair": "logi", "req_key": "REQ-009", "req_lines": [52, 52], "design_lines": [[52, 52]]}
+{"pair": "logi", "req_key": "REQ-010", "req_lines": [57, 57], "design_lines": [[57, 57]]}
+{"pair": "logi", "req_key": "REQ-011", "req_lines": [58, 58], "design_lines": [[58, 58]]}
+{"pair": "logi", "req_key": "logi-M1", "req_lines": [29, 29], "design_lines": []}

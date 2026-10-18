@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 
-from . import contradiction, link, single, table, terms
+from . import contradiction, link, semantic, single, table, terms
 from .segment import Unit, requirement_units, segment
 
 
@@ -43,6 +43,16 @@ def _dedupe(defects: list[dict]) -> list[dict]:
     return out
 
 
+def _semantic_on(errors: list[dict]) -> bool:
+    """二段目（埋め込み）を使うか。使えないときは errors に理由を足す（明示 off は足さない）。"""
+    if semantic.disabled():
+        return False
+    if not semantic.available():
+        errors.append({"detector": "semantic", "error": semantic.NO_KEY_ERROR})
+        return False
+    return True
+
+
 def inspect(req_md: str, design_md: str) -> dict:
     """2 文書を検査し {"defects", "links", "errors"} を返す。"""
     req_all, des_all = segment(req_md), segment(design_md)
@@ -54,12 +64,16 @@ def inspect(req_md: str, design_md: str) -> dict:
     defects = [{"type": "MISSING_IN_DESIGN", "req_lines": _span(u), "design_lines": [],
                 "reason": "対応する設計が見つからない"}
                for u in _run("missing", link.missing, errors, targets, links)]
+    use_sem = _semantic_on(errors)
+    extra_fn, extra_name = (semantic.extra, "semantic_extra") if use_sem else (link.extra, "extra")
     defects += [{"type": "EXTRA_IN_DESIGN", "req_lines": [], "design_lines": _span(u),
                  "reason": "根拠となる要件が見つからない"}
-                for u in _run("extra", link.extra, errors, des_all, targets, links)]
+                for u in _run(extra_name, extra_fn, errors, des_all, targets, links)]
     defects += _run("contradiction", contradiction.detect, errors, reqs, des_all, links)
     defects += _run("table", table.detect, errors, req_all, des_all)
     defects += _run("terms", terms.detect, errors, req_all, des_all, links)
+    if use_sem:
+        defects += _run("semantic_terms", semantic.term_defects, errors, req_all, des_all, links)
     defects += _run("single", single.detect, errors, reqs)
     # 設計に対応の無い要件も、追跡表では「反映なし」の行として残す
     unlinked = [{"req_lines": d["req_lines"], "design_lines": []}

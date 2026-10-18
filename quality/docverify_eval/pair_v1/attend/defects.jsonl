@@ -1,0 +1,9 @@
+{"pair": "attend", "id": "attend-D01", "type": "MISSING_IN_DESIGN", "req_lines": [78, 78], "design_lines": [], "req_quote": "振替休日を登録できる", "design_quote": "", "explanation": "法定休日に勤務した場合の振替休日の登録が設計に無い。"}
+{"pair": "attend", "id": "attend-D02", "type": "EXTRA_IN_DESIGN", "req_lines": [], "design_lines": [124, 126], "req_quote": "", "design_quote": "勤怠スコアを算出する", "explanation": "要件に根拠の無い勤怠スコアの算出とランキング表示が設計にある。"}
+{"pair": "attend", "id": "attend-D03", "type": "CONTRADICTION", "req_lines": [89, 89], "design_lines": [109, 109], "req_quote": "月 45 時間を超えた", "design_quote": "月 40 時間を超えた", "explanation": "時間外労働のアラートのしきい値が要件は月45時間、設計は月40時間で食い違う。"}
+{"pair": "attend", "id": "attend-D04", "type": "CONTRADICTION", "req_lines": [58, 58], "design_lines": [76, 76], "req_quote": "3 営業日以内", "design_quote": "5 営業日以内", "explanation": "打刻修正の申請期限が要件は3営業日以内、設計は5営業日以内で食い違う。"}
+{"pair": "attend", "id": "attend-D05", "type": "TABLE_MISMATCH", "req_lines": [70, 70], "design_lines": [88, 88], "req_quote": "| 法定休日労働 | 法定休日の勤務 | 35% |", "design_quote": "| 04 | 法定休日労働 | 30 |", "explanation": "法定休日労働の割増率が要件の表は35%、設計の表は30%で食い違う。"}
+{"pair": "attend", "id": "attend-D06", "type": "TABLE_MISMATCH", "req_lines": [], "design_lines": [87, 90], "req_quote": "", "design_quote": "区分コード 02 で保存する", "explanation": "深夜労働の区分コードが設計の表では03、直後の注記では02で食い違う。"}
+{"pair": "attend", "id": "attend-D07", "type": "TERM_INCONSISTENCY", "req_lines": [102, 102], "design_lines": [116, 116], "req_quote": "月次締め", "design_quote": "月次確定処理", "explanation": "同じ処理を要件は「月次締め」、設計の見出しは「月次確定処理」と呼ぶ。"}
+{"pair": "attend", "id": "attend-D08", "type": "AMBIGUOUS", "req_lines": [55, 55], "design_lines": [], "req_quote": "速やかに通知する", "design_quote": "", "explanation": "「速やかに」の基準が無く、通知までの時間の解釈が割れる。"}
+{"pair": "attend", "id": "attend-D09", "type": "UNTESTABLE", "req_lines": [137, 137], "design_lines": [], "req_quote": "画面は使いやすいこと", "design_quote": "", "explanation": "使いやすさの合否を判定する基準が無い。"}

@@ -1,0 +1,100 @@
+{
+ "schema": 1,
+ "mode": "defects",
+ "dataset": {
+  "path": "/Users/fujimagariyuki/dev/active/webspec2doc/quality/docverify_eval/pair_v1",
+  "pairs": [
+   "attend",
+   "bank",
+   "clinic",
+   "ec",
+   "expense",
+   "gov",
+   "helpdesk",
+   "library",
+   "lms",
+   "reserve",
+   "stock"
+  ],
+  "n_gold": 98,
+  "sha256": "b75b52cbbb20"
+ },
+ "predictions": {
+  "path": "/private/tmp/claude-501/-Users-fujimagariyuki-dev-active-webspec2doc/79cf6b2e-c169-49f5-af67-512e92c1b496/scratchpad/base_defects.jsonl",
+  "n": 133,
+  "n_scored": 133,
+  "sha256": "4607a052d839"
+ },
+ "ignored_pairs": [],
+ "by_type": {
+  "MISSING_IN_DESIGN": {
+   "tp": 5,
+   "fp": 62,
+   "fn": 6,
+   "precision": 0.075,
+   "recall": 0.455,
+   "f1": 0.128
+  },
+  "EXTRA_IN_DESIGN": {
+   "tp": 0,
+   "fp": 0,
+   "fn": 11,
+   "precision": null,
+   "recall": 0.0,
+   "f1": null
+  },
+  "CONTRADICTION": {
+   "tp": 4,
+   "fp": 13,
+   "fn": 17,
+   "precision": 0.235,
+   "recall": 0.19,
+   "f1": 0.211
+  },
+  "TABLE_MISMATCH": {
+   "tp": 0,
+   "fp": 0,
+   "fn": 22,
+   "precision": null,
+   "recall": 0.0,
+   "f1": null
+  },
+  "TERM_INCONSISTENCY": {
+   "tp": 0,
+   "fp": 0,
+   "fn": 11,
+   "precision": null,
+   "recall": 0.0,
+   "f1": null
+  },
+  "AMBIGUOUS": {
+   "tp": 11,
+   "fp": 13,
+   "fn": 0,
+   "precision": 0.458,
+   "recall": 1.0,
+   "f1": 0.629
+  },
+  "UNTESTABLE": {
+   "tp": 0,
+   "fp": 25,
+   "fn": 11,
+   "precision": 0.0,
+   "recall": 0.0,
+   "f1": 0.0
+  }
+ },
+ "overall": {
+  "tp": 20,
+  "fp": 113,
+  "fn": 78,
+  "precision": 0.15,
+  "recall": 0.204,
+  "f1": 0.173
+ },
+ "limits": [
+  "AI が生成し AI 1 名が注釈した合成データ。注釈者間一致（kappa）は未測定。",
+  "実文書での精度を示すものではない。",
+  "照合は行範囲の重なりだけで判定し、指摘の説明文の正しさは見ていない。"
+ ]
+}

@@ -1,0 +1,9 @@
+{"pair": "gov", "id": "gov-D01", "type": "MISSING_IN_DESIGN", "req_lines": [62, 62], "design_lines": [], "req_quote": "控えをPDFでダウンロード", "design_quote": "", "explanation": "申請内容の控えのPDFダウンロードが設計に存在しない。"}
+{"pair": "gov", "id": "gov-D02", "type": "EXTRA_IN_DESIGN", "req_lines": [], "design_lines": [117, 118], "req_quote": "", "design_quote": "SMSでも通知する", "explanation": "要件に無いSMS通知が設計にあり、要件は通知手段を電子メールに限定している。"}
+{"pair": "gov", "id": "gov-D03", "type": "CONTRADICTION", "req_lines": [55, 55], "design_lines": [70, 70], "req_quote": "下書きとして30日間保存", "design_quote": "保存期間は60日", "explanation": "下書きの保存期間が要件30日に対し設計60日。"}
+{"pair": "gov", "id": "gov-D04", "type": "CONTRADICTION", "req_lines": [50, 50], "design_lines": [64, 64], "req_quote": "連続して5回誤ると", "design_quote": "連続して3回誤ると", "explanation": "アカウントロックの誤り回数が要件5回に対し設計3回。"}
+{"pair": "gov", "id": "gov-D05", "type": "TABLE_MISMATCH", "req_lines": [71, 71], "design_lines": [140, 140], "req_quote": "転出届 | 3営業日", "design_quote": "転出届 | 5", "explanation": "転出届の処理期限が要件の表1は3営業日、設計の申請種別マスタは5営業日。"}
+{"pair": "gov", "id": "gov-D06", "type": "TABLE_MISMATCH", "req_lines": [], "design_lines": [79, 125], "req_quote": "", "design_quote": "受付番号 | CHAR | 12", "explanation": "受付番号の桁が設計のデータ表は12桁、設計本文は14桁。"}
+{"pair": "gov", "id": "gov-D07", "type": "TERM_INCONSISTENCY", "req_lines": [78, 78], "design_lines": [89, 89], "req_quote": "審査担当者は申請を承認", "design_quote": "審査員は申請詳細画面", "explanation": "要件の審査担当者を設計の審査機能の説明だけ審査員と呼んでいる。"}
+{"pair": "gov", "id": "gov-D08", "type": "AMBIGUOUS", "req_lines": [80, 80], "design_lines": [], "req_quote": "速やかに", "design_quote": "", "explanation": "通知の時限を「速やかに」とし、解釈が割れて合否を判定できない。"}
+{"pair": "gov", "id": "gov-D09", "type": "UNTESTABLE", "req_lines": [102, 102], "design_lines": [], "req_quote": "使いやすいこと", "design_quote": "", "explanation": "使いやすさに合否の基準が無く、検証できない。"}

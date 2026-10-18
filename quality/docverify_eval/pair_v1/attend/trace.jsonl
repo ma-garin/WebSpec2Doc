@@ -1,0 +1,23 @@
+{"pair": "attend", "req_key": "REQ-001", "req_lines": [49, 49], "design_lines": [[29, 32], [66, 69]]}
+{"pair": "attend", "req_key": "REQ-002", "req_lines": [52, 52], "design_lines": [[29, 32], [66, 69]]}
+{"pair": "attend", "req_key": "attend-R01", "req_lines": [55, 55], "design_lines": [[71, 73]]}
+{"pair": "attend", "req_key": "REQ-003", "req_lines": [58, 58], "design_lines": [[39, 41], [43, 45], [75, 78]]}
+{"pair": "attend", "req_key": "REQ-004", "req_lines": [63, 70], "design_lines": [[80, 91]]}
+{"pair": "attend", "req_key": "attend-R02", "req_lines": [72, 72], "design_lines": [[93, 95]]}
+{"pair": "attend", "req_key": "attend-R03", "req_lines": [75, 75], "design_lines": [[34, 37], [97, 99]]}
+{"pair": "attend", "req_key": "attend-R04", "req_lines": [78, 78], "design_lines": []}
+{"pair": "attend", "req_key": "attend-R05", "req_lines": [83, 83], "design_lines": [[34, 37], [101, 102]]}
+{"pair": "attend", "req_key": "REQ-005", "req_lines": [86, 86], "design_lines": [[47, 48], [104, 105]]}
+{"pair": "attend", "req_key": "REQ-006", "req_lines": [89, 89], "design_lines": [[107, 109]]}
+{"pair": "attend", "req_key": "REQ-007", "req_lines": [94, 94], "design_lines": [[50, 52], [111, 114]]}
+{"pair": "attend", "req_key": "attend-R06", "req_lines": [97, 97], "design_lines": [[52, 52], [114, 114]]}
+{"pair": "attend", "req_key": "REQ-008", "req_lines": [102, 102], "design_lines": [[54, 56], [116, 118]]}
+{"pair": "attend", "req_key": "REQ-009", "req_lines": [105, 105], "design_lines": [[58, 59], [120, 122]]}
+{"pair": "attend", "req_key": "REQ-010", "req_lines": [110, 110], "design_lines": [[25, 27]]}
+{"pair": "attend", "req_key": "REQ-011", "req_lines": [113, 113], "design_lines": [[128, 129]]}
+{"pair": "attend", "req_key": "REQ-012", "req_lines": [120, 120], "design_lines": [[181, 183]]}
+{"pair": "attend", "req_key": "REQ-013", "req_lines": [123, 123], "design_lines": [[185, 187]]}
+{"pair": "attend", "req_key": "REQ-014", "req_lines": [126, 126], "design_lines": [[189, 191]]}
+{"pair": "attend", "req_key": "REQ-015", "req_lines": [129, 129], "design_lines": [[193, 194]]}
+{"pair": "attend", "req_key": "attend-R07", "req_lines": [134, 134], "design_lines": [[196, 197]]}
+{"pair": "attend", "req_key": "attend-R08", "req_lines": [137, 137], "design_lines": [[199, 200]]}

@@ -1,0 +1,26 @@
+{"pair": "ec", "req_key": "REQ-001", "req_lines": [43, 43], "design_lines": [[61, 64]]}
+{"pair": "ec", "req_key": "REQ-002", "req_lines": [44, 44], "design_lines": [[65, 68]]}
+{"pair": "ec", "req_key": "ec-R01", "req_lines": [45, 45], "design_lines": [[69, 72]]}
+{"pair": "ec", "req_key": "REQ-003", "req_lines": [51, 51], "design_lines": [[73, 76]]}
+{"pair": "ec", "req_key": "REQ-004", "req_lines": [52, 52], "design_lines": [[77, 79], [157, 162]]}
+{"pair": "ec", "req_key": "REQ-005", "req_lines": [53, 59], "design_lines": [[80, 83], [151, 156]]}
+{"pair": "ec", "req_key": "REQ-006", "req_lines": [61, 61], "design_lines": [[84, 86]]}
+{"pair": "ec", "req_key": "ec-R02", "req_lines": [62, 62], "design_lines": [[87, 89]]}
+{"pair": "ec", "req_key": "REQ-007", "req_lines": [63, 63], "design_lines": [[90, 92]]}
+{"pair": "ec", "req_key": "ec-R03", "req_lines": [64, 64], "design_lines": [[93, 96]]}
+{"pair": "ec", "req_key": "ec-R04", "req_lines": [70, 70], "design_lines": [[97, 101]]}
+{"pair": "ec", "req_key": "REQ-008", "req_lines": [71, 71], "design_lines": [[102, 105]]}
+{"pair": "ec", "req_key": "ec-R05", "req_lines": [72, 72], "design_lines": [[106, 109]]}
+{"pair": "ec", "req_key": "REQ-009", "req_lines": [73, 73], "design_lines": [[110, 112]]}
+{"pair": "ec", "req_key": "REQ-010", "req_lines": [79, 79], "design_lines": [[113, 116]]}
+{"pair": "ec", "req_key": "REQ-011", "req_lines": [80, 80], "design_lines": []}
+{"pair": "ec", "req_key": "ec-R06", "req_lines": [81, 81], "design_lines": [[119, 121]]}
+{"pair": "ec", "req_key": "REQ-012", "req_lines": [82, 82], "design_lines": [[122, 125]]}
+{"pair": "ec", "req_key": "REQ-013", "req_lines": [88, 88], "design_lines": [[126, 129], [163, 170]]}
+{"pair": "ec", "req_key": "REQ-014", "req_lines": [94, 94], "design_lines": [[190, 190]]}
+{"pair": "ec", "req_key": "REQ-015", "req_lines": [95, 95], "design_lines": [[191, 191]]}
+{"pair": "ec", "req_key": "ec-R07", "req_lines": [96, 96], "design_lines": [[192, 192]]}
+{"pair": "ec", "req_key": "REQ-016", "req_lines": [100, 100], "design_lines": [[194, 194]]}
+{"pair": "ec", "req_key": "ec-R08", "req_lines": [101, 101], "design_lines": [[195, 196]]}
+{"pair": "ec", "req_key": "ec-R09", "req_lines": [105, 105], "design_lines": [[198, 198]]}
+{"pair": "ec", "req_key": "ec-R10", "req_lines": [106, 106], "design_lines": [[199, 199]]}

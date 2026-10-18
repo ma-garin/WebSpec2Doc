@@ -1,0 +1,24 @@
+{"pair": "expense", "req_key": "REQ-001", "req_lines": [37, 40], "design_lines": [[31, 35], [54, 59], [124, 134]]}
+{"pair": "expense", "req_key": "REQ-002", "req_lines": [42, 45], "design_lines": [[54, 59], [136, 142]]}
+{"pair": "expense", "req_key": "REQ-003", "req_lines": [47, 49], "design_lines": [[54, 59], [124, 134]]}
+{"pair": "expense", "req_key": "REQ-004", "req_lines": [61, 69], "design_lines": [[61, 70]]}
+{"pair": "expense", "req_key": "REQ-005", "req_lines": [71, 74], "design_lines": [[42, 44], [72, 76]]}
+{"pair": "expense", "req_key": "REQ-006", "req_lines": [76, 78], "design_lines": [[78, 80]]}
+{"pair": "expense", "req_key": "REQ-007", "req_lines": [80, 82], "design_lines": []}
+{"pair": "expense", "req_key": "REQ-008", "req_lines": [95, 97], "design_lines": [[46, 48], [94, 95]]}
+{"pair": "expense", "req_key": "REQ-009", "req_lines": [99, 101], "design_lines": [[50, 51], [97, 99], [159, 159]]}
+{"pair": "expense", "req_key": "REQ-010", "req_lines": [109, 111], "design_lines": [[37, 40]]}
+{"pair": "expense", "req_key": "REQ-011", "req_lines": [84, 87], "design_lines": [[86, 88]]}
+{"pair": "expense", "req_key": "REQ-012", "req_lines": [113, 115], "design_lines": [[116, 117], [144, 152]]}
+{"pair": "expense", "req_key": "expense-R01", "req_lines": [51, 53], "design_lines": [[82, 84]]}
+{"pair": "expense", "req_key": "expense-R02", "req_lines": [55, 57], "design_lines": [[105, 107]]}
+{"pair": "expense", "req_key": "expense-R03", "req_lines": [89, 91], "design_lines": [[90, 92], [158, 158]]}
+{"pair": "expense", "req_key": "expense-R04", "req_lines": [103, 105], "design_lines": [[101, 103]]}
+{"pair": "expense", "req_key": "expense-R05", "req_lines": [117, 119], "design_lines": [[113, 114]]}
+{"pair": "expense", "req_key": "expense-R06", "req_lines": [121, 123], "design_lines": [[119, 121], [157, 157]]}
+{"pair": "expense", "req_key": "REQ-101", "req_lines": [129, 131], "design_lines": [[164, 166]]}
+{"pair": "expense", "req_key": "REQ-102", "req_lines": [133, 135], "design_lines": [[168, 169]]}
+{"pair": "expense", "req_key": "REQ-103", "req_lines": [139, 141], "design_lines": [[171, 172]]}
+{"pair": "expense", "req_key": "REQ-104", "req_lines": [143, 145], "design_lines": [[174, 175]]}
+{"pair": "expense", "req_key": "expense-R07", "req_lines": [147, 149], "design_lines": [[177, 178]]}
+{"pair": "expense", "req_key": "expense-R08", "req_lines": [151, 153], "design_lines": [[180, 182]]}

@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "mode": "trace",
+ "dataset": {
+  "path": "/Users/fujimagariyuki/dev/active/webspec2doc/quality/docverify_eval/pair_v1",
+  "pairs": [
+   "attend",
+   "bank",
+   "clinic",
+   "ec",
+   "expense",
+   "gov",
+   "helpdesk",
+   "library",
+   "lms",
+   "reserve",
+   "stock"
+  ],
+  "n_gold": 273,
+  "sha256": "7040dfb80b3e"
+ },
+ "predictions": {
+  "path": "/private/tmp/claude-501/-Users-fujimagariyuki-dev-active-webspec2doc/79cf6b2e-c169-49f5-af67-512e92c1b496/scratchpad/base_trace.jsonl",
+  "n": 107,
+  "n_scored": 107,
+  "sha256": "080c4ccc89eb"
+ },
+ "ignored_pairs": [],
+ "links": {
+  "tp": 84,
+  "fp": 23,
+  "fn": 261,
+  "precision": 0.785,
+  "recall": 0.243,
+  "f1": 0.372
+ },
+ "unreflected": {
+  "tp": 0,
+  "fp": 0,
+  "fn": 11,
+  "precision": null,
+  "recall": 0.0,
+  "f1": null
+ },
+ "limits": [
+  "AI が生成し AI 1 名が注釈した合成データ。注釈者間一致（kappa）は未測定。",
+  "実文書での精度を示すものではない。",
+  "照合は行範囲の重なりだけで判定し、指摘の説明文の正しさは見ていない。"
+ ]
+}

@@ -1,0 +1,25 @@
+{"pair": "gov", "req_key": "REQ-001", "req_lines": [49, 49], "design_lines": [[60, 61], [34, 34]]}
+{"pair": "gov", "req_key": "REQ-002", "req_lines": [50, 50], "design_lines": [[63, 64], [35, 35]]}
+{"pair": "gov", "req_key": "REQ-003", "req_lines": [54, 54], "design_lines": [[66, 67], [36, 36], [135, 142]]}
+{"pair": "gov", "req_key": "REQ-004", "req_lines": [55, 55], "design_lines": [[69, 70]]}
+{"pair": "gov", "req_key": "REQ-005", "req_lines": [56, 56], "design_lines": [[72, 73]]}
+{"pair": "gov", "req_key": "REQ-006", "req_lines": [57, 57], "design_lines": [[75, 76], [53, 53]]}
+{"pair": "gov", "req_key": "REQ-007", "req_lines": [58, 58], "design_lines": [[78, 80], [39, 39]]}
+{"pair": "gov", "req_key": "REQ-008", "req_lines": [59, 59], "design_lines": [[82, 83], [54, 54]]}
+{"pair": "gov", "req_key": "REQ-009", "req_lines": [77, 77], "design_lines": [[85, 86], [55, 55]]}
+{"pair": "gov", "req_key": "REQ-010", "req_lines": [78, 78], "design_lines": [[88, 90]]}
+{"pair": "gov", "req_key": "REQ-011", "req_lines": [79, 79], "design_lines": [[92, 94]]}
+{"pair": "gov", "req_key": "REQ-012", "req_lines": [80, 80], "design_lines": [[96, 97]]}
+{"pair": "gov", "req_key": "gov-R01", "req_lines": [60, 60], "design_lines": [[99, 100]]}
+{"pair": "gov", "req_key": "gov-R02", "req_lines": [61, 61], "design_lines": [[108, 109]]}
+{"pair": "gov", "req_key": "gov-R03", "req_lines": [62, 62], "design_lines": []}
+{"pair": "gov", "req_key": "gov-R04", "req_lines": [63, 63], "design_lines": [[114, 115]]}
+{"pair": "gov", "req_key": "gov-R05", "req_lines": [84, 84], "design_lines": [[102, 103]]}
+{"pair": "gov", "req_key": "gov-R06", "req_lines": [85, 85], "design_lines": [[105, 106]]}
+{"pair": "gov", "req_key": "gov-R07", "req_lines": [86, 86], "design_lines": [[111, 112]]}
+{"pair": "gov", "req_key": "REQ-013", "req_lines": [92, 92], "design_lines": [[174, 176]]}
+{"pair": "gov", "req_key": "REQ-014", "req_lines": [93, 93], "design_lines": [[174, 176]]}
+{"pair": "gov", "req_key": "REQ-015", "req_lines": [97, 97], "design_lines": [[179, 179]]}
+{"pair": "gov", "req_key": "REQ-016", "req_lines": [102, 102], "design_lines": [[183, 183]]}
+{"pair": "gov", "req_key": "gov-R08", "req_lines": [98, 98], "design_lines": [[180, 180]]}
+{"pair": "gov", "req_key": "gov-R09", "req_lines": [103, 103], "design_lines": [[184, 184]]}

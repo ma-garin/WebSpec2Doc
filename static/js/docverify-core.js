@@ -74,6 +74,8 @@
   const DOC_GONE = ['home', 'mine', 'findings'];
   const STEPS = ['plan', 'read', 'triage', 'questions', 'followup', 'gate', 'screen'];
   const COUNT = { mine: 'mine', findings: 'open red', read: 'candidates', triage: 'adopted' };
+  // 検証観点の精度は観点の行に表示する予定のため、上部のタブには出さない（2026-10-18 保守者指示）
+  const NO_TAB = ['accuracy'];
   const sectionOf = (view) => Object.keys(SECTIONS).find((k) => SECTIONS[k].includes(view)) || 'doc';
   const tab = (v, cur) => {
     const c = COUNT[v] ? `<span class="dv-n${COUNT[v].includes('red') ? ' red' : ''}" data-count="${COUNT[v].split(' ')[0]}"></span>` : '';
@@ -91,7 +93,7 @@
     } else if (sectionOf(view) === 'doc') {
       html = '';
     } else {
-      const list = SECTIONS[sectionOf(view)];
+      const list = SECTIONS[sectionOf(view)].filter((v) => !NO_TAB.includes(v));
       html = list.length > 1 ? list.map((v) => tab(v, view)).join('') : '';
     }
     nav.innerHTML = html;

@@ -139,7 +139,8 @@ def add_documents(iid: str):
             est = {"tier": 3, "confidence": 0.0, "reason": "格を推定できませんでした。手で選んでください。"}
         doc = {"id": "T" + uuid.uuid4().hex[:8], "name": name, "format": document.get("format", ""),
                "tier": est["tier"], "tier_source": "ai", "confidence": est["confidence"],
-               "reason": est["reason"], "uploaded_at": _now(), "passages": passages,
+               "reason": est["reason"], "kind": est.get("kind", "other"),
+               "kind_label": est.get("kind_label", "その他"), "uploaded_at": _now(), "passages": passages,
                "prev_passages": (old.get("passages") if old else None)}
         docs = [d for d in docs if d is not old] + [doc] if old else [*docs, doc]
         added += 1

@@ -4,32 +4,6 @@
       "Bash(python scripts/quality_harness.py)"
     ]
   },
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/block-ci.py\"",
-            "timeout": 10,
-            "statusMessage": "CI・自己ウェイクの禁止を確認中"
-          }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/block-gates.py\"",
-            "timeout": 10,
-            "statusMessage": "ゲート実行の要否を確認中"
-          }
-        ]
-      }
-    ]
-  },
   "statusLine": {
     "type": "command",
     "command": "python3 \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/statusline.py\"",

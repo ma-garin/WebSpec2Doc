@@ -38,8 +38,9 @@
     busy = true;
     return Promise.resolve(window.DVT.api(path, opts)).then(function () {
       return window.DVT.refresh();
-    }).then(function () { busy = false; }, function (e) {
+    }).then(function () { busy = false; render(); }, function (e) {
       busy = false;
+      render();
       toast((e && e.message) || '通信できませんでした。少し待ってからもう一度お試しください。');
     });
   }

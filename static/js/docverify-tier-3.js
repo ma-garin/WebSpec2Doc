@@ -96,7 +96,8 @@
     const isProb = e => e.type !== 'follows' && (e.finding_ids || []).some(id => !reported(st)[id]);
     const up = dir !== 'down' ? edges.filter(e => e.from === b.id && by[e.to]) : [];
     const dn = dir !== 'up' ? edges.filter(e => e.to === b.id && by[e.from]) : [];
-    const H = Math.max(up.length, dn.length, 1) * 62, W = 560, cw = 170, ch = 48, cx = (W - cw) / 2, cy = (H - ch) / 2;
+    const none = !up.length && !dn.length;
+    const H = none ? 100 : Math.max(up.length, dn.length, 1) * 62, W = 560, cw = 170, ch = 48, cx = (W - cw) / 2, cy = none ? 0 : (H - ch) / 2;
     map.style.cssText = 'width:' + W + 'px;height:' + H + 'px';
     let svg = '<svg width="' + W + '" height="' + H + '">', html = '';
     const place = (list, side) => list.forEach((e, k) => {
@@ -113,7 +114,7 @@
     html += '<div class="nd base' + (isBad(b) ? ' bad' : '') + '" style="left:' + cx + 'px;top:' + cy + 'px;cursor:default">' + esc(b.name) + '<small>' + esc(TN[b.tier] || '') + '</small></div>';
     if (up.length) html += '<span class="col-t" style="left:0">上流（従う先）</span>';
     if (dn.length) html += '<span class="col-t" style="left:' + (W - cw) + 'px">下流（従う側）</span>';
-    if (!up.length && !dn.length) html += '<p class="dvt-s3-none">この向きにつながる文書はありません</p>';
+    if (none) html += '<p class="dvt-s3-none" style="top:' + (ch + 16) + 'px">この向きにつながる文書はありません</p>';
     map.innerHTML = svg + html;
     why.className = 'dvt-s3-why';
     why.textContent = (up.length + dn.length) ? '線を押すと、つながりの理由がここに出ます。' : 'つながりが無いこと自体は問題ではありません。';

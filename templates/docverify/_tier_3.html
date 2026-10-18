@@ -1,0 +1,43 @@
+<div class="dvt-s3" data-dvt3>
+  <div class="dvt-s3-head">
+    <div>
+      <h1 class="dvt-s3-h1">つながりとレポート</h1>
+      <p class="dvt-s3-lead" data-lead>表から文書を選ぶと、その文書が従う先と従う側が見えます。内容を確かめたら、レポートを確定してください。</p>
+    </div>
+    <div class="dvt-s3-act" data-act></div>
+  </div>
+  <div class="dvt-s3-sum">
+    <div class="dvt-s3-verdict" data-verdict></div>
+    <button type="button" class="dvt-s3-num on" data-f="all"><strong data-n-all>0</strong><span>登録した文書</span></button>
+    <button type="button" class="dvt-s3-num" data-f="bad"><strong data-n-bad>0</strong><span>課題のある文書（押すと絞り込み）</span></button>
+    <button type="button" class="dvt-s3-num" data-f="major"><strong data-n-major>0</strong><span>重大（直すまで合格にできません）</span></button>
+  </div>
+  <div class="dvt-s3-body">
+    <div class="dvt-s3-card">
+      <h2>文書の一覧<span class="dvt-s3-sub">行を押すと右に表示</span></h2>
+      <div class="dvt-s3-scroll"><table><thead><tr><th>文書</th><th>格</th><th>状態</th></tr></thead><tbody data-rows></tbody></table></div>
+    </div>
+    <div class="dvt-s3-card">
+      <h2><span data-title>基点の文書</span>
+        <span class="dvt-s3-seg" data-seg><button type="button" data-d="up">上流</button><button type="button" data-d="both" class="on">両方</button><button type="button" data-d="down">下流</button></span></h2>
+      <div class="dvt-s3-scroll">
+        <p class="dvt-s3-note">左が「従う先」（上流）、右が「従う側」（下流）。線を押すと理由が出ます。</p>
+        <div class="dvt-s3-map" data-map></div>
+        <div class="dvt-s3-legend"><span><i></i>問題なし</span><span class="r"><i></i>問題あり</span></div>
+        <div class="dvt-s3-why" data-why>線を押すと、つながりの理由がここに出ます。</div>
+      </div>
+    </div>
+  </div>
+  <div class="dvt-s3-redo" data-redo-wrap><button type="button" class="dvt-s3-link" data-redo>検査からやり直す</button></div>
+  <div class="dvt-s3-mask" data-mask>
+    <div class="dvt-s3-dlg" role="dialog" aria-modal="true">
+      <h3>このレポートを確定しますか</h3>
+      <p class="dvt-s3-dlg-p">確定すると、次の内容が結果として残ります。</p>
+      <ul data-sum></ul>
+      <label class="dvt-s3-fld">確定する人<input type="text" data-by maxlength="60"></label>
+      <label class="dvt-s3-fld">コメント<textarea data-comment rows="3" maxlength="500"></textarea></label>
+      <p class="dvt-s3-err" data-err hidden></p>
+      <div class="dvt-s3-acts"><button type="button" class="dvt-s3-btn" data-cancel>戻る</button><button type="button" class="dvt-s3-btn main" data-ok>確定する</button></div>
+    </div>
+  </div>
+</div>

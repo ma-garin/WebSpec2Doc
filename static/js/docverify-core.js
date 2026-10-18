@@ -2,11 +2,11 @@
  * 各画面は docverify-global.js / docverify-review.js が DV.on(view, fn) で描く。 */
 (() => {
   'use strict';
-  const REVIEW_VIEWS = ['plan', 'read', 'triage', 'questions', 'followup', 'screen', 'gate', 'setcheck'];
+  const REVIEW_VIEWS = ['plan', 'read', 'triage', 'questions', 'followup', 'screen', 'gate'];
   const TITLES = {
     home: 'ホーム', mine: '自分の担当', reviews: 'レビュー一覧', findings: '指摘一覧',
     plan: '計画', read: '文書を読む', triage: '指摘の検討', questions: '質問票', followup: '修正版の確認',
-    screen: '実画面との照合', gate: '判定と記録', setcheck: 'トレーサビリティ', checklists: '検証観点', metrics: 'メトリクス', accuracy: '精度', settings: '設定',
+    screen: '実画面との照合', gate: '判定と記録', trace: 'トレーサビリティ', checklists: '検証観点', metrics: 'メトリクス', accuracy: '精度', settings: '設定',
   };
   const NET_ERR = 'サーバに接続できませんでした。少し待ってから、もう一度お試しください。';
   const handlers = {};
@@ -68,7 +68,7 @@
   // サイドは固定の 5 項目。各項目の中の画面は上部のタブで切り替える。
   const SECTIONS = {
     doc: ['home', 'mine', 'reviews', 'findings', 'plan', 'read', 'triage', 'questions', 'followup', 'gate', 'screen'],
-    trace: ['setcheck'], hist: ['metrics'], vp: ['checklists', 'accuracy'], set: ['settings'],
+    trace: ['trace'], hist: ['metrics'], vp: ['checklists', 'accuracy'], set: ['settings'],
   };
   // ドキュメント検証はレビュー一覧 1 画面。ホーム・自分の担当・指摘一覧は廃止（タブ不要・2026-10-18）。
   const DOC_GONE = ['home', 'mine', 'findings'];

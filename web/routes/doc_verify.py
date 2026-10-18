@@ -238,7 +238,7 @@ def questions_csv(iid: str):
     if err:
         return err
     text = questions.to_csv(questions.build(insp.get("findings") or []))
-    return Response(text, mimetype="text/csv; charset=utf-8",
+    return Response(text, mimetype="text/csv",
                     headers={"Content-Disposition": f"attachment; filename=questions-{iid}.csv"})
 
 
@@ -486,12 +486,26 @@ def viewpoints():
         if request.method == "PUT":
             vp.update(request.get_json(silent=True))
         return jsonify(viewpoints=vp.load(), scopes=[
-            {"id": i, "name": n, "test": t, "desc": d} for i, n, t, d in vp.SCOPES])
+            {"id": i, "name": n, "test": t, "desc": d} for i, n, t, d in vp.SCOPES],
+            accuracy_note=vp.ACCURACY_NOTE)
     except ValueError as e:
         return _err(str(e), 400)
     except Exception:
         log.exception("検証観点の読み書きに失敗")
         return _err("検証観点を読み書きできませんでした。時間をおいてやり直してください。", 500)
+
+
+@bp.route("/api/docverify/viewpoints/export", methods=["GET"])
+def viewpoints_export():
+    from web.services.docverify import viewpoints as vp
+    try:
+        resp = Response(vp.export_csv(), mimetype="text/csv")
+        resp.headers["Content-Disposition"] = (
+            "attachment; filename=\"viewpoints.csv\"; filename*=UTF-8''%E6%A4%9C%E8%A8%BC%E8%A6%B3%E7%82%B9.csv")
+        return resp
+    except Exception:
+        log.exception("検証観点の書き出しに失敗")
+        return _err("書き出せませんでした。時間をおいてやり直してください。", 500)
 
 
 @bp.route("/api/docverify/viewpoints/import", methods=["POST"])

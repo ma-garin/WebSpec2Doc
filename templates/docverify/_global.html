@@ -49,11 +49,11 @@
 
 <section class="dv-view" data-view="checklists" hidden>
   <div class="vp-head">
-    <div>
-      <h2 class="dvg-h">検証観点</h2>
-      <p class="mut">要件定義書と基本設計書を検査する観点を決めます。V 字の対になるテストに合わせて整理しています。</p>
+    <p class="mut">文書の検査で何を見るか、見つけた指摘をどれだけ重く扱うかを区分ごとに決めます。</p>
+    <div class="vp-acts">
+      <button class="btn" type="button" id="dvgVpExport">CSV に書き出す</button>
+      <button class="btn" type="button" id="dvgVpImport">Excel/CSV から取り込む</button>
     </div>
-    <button class="btn" type="button" id="dvgVpImport">Excel/CSV から取り込む</button>
     <input type="file" id="dvgVpFile" accept=".xlsx,.csv" hidden>
   </div>
   <div id="dvgClEdit"></div>

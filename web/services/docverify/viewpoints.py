@@ -44,15 +44,47 @@ DEFAULTS = [{"id": f"{s}-{i + 1}", "scope": s, "name": n, "desc": d, "kind": k, 
              "enabled": bool(e), "source": "builtin"} for i, (s, n, d, k, v, e) in enumerate(_D)]
 
 
-def load() -> list:
+ACCURACY = {
+    ("pair", "反映漏れ"): (0.312, 0.833),
+    ("pair", "余分な設計"): (None, 0.0),
+    ("pair", "数値条件の矛盾"): (1.0, 0.909),
+    ("pair", "表の食い違い"): (1.0, 0.667),
+    ("pair", "用語ゆれ"): (1.0, 0.045),
+    ("req", "曖昧な表現"): (1.0, 0.667),
+    ("req", "検証できない要件"): (1.0, 0.833),
+}
+ACCURACY_NOTE = "精度は、開発に使っていない 6 組の文書（指摘 69 件）で測った値です。"
+SEV_LABEL = {"critical": "重大", "major": "主要", "minor": "軽微"}
+SCOPE_LABEL = {k: n for k, n, _t, _d in SCOPES}
+
+
+def _raw() -> list:
     return settings._read("_viewpoints.json", DEFAULTS)
+
+
+def load() -> list:
+    out = []
+    for r in _raw():
+        p, rc = ACCURACY.get((r.get("scope"), r.get("name")), (None, None))
+        out.append({**r, "precision": p, "recall": rc})
+    return out
+
+
+def export_csv() -> bytes:
+    buf = io.StringIO()
+    w = csv.writer(buf, lineterminator="\r\n")
+    w.writerow(["観点名", "説明", "対象書類", "重大度"])
+    for r in _raw():
+        w.writerow([r["name"], r.get("desc", ""), SCOPE_LABEL.get(r["scope"], r["scope"]),
+                    SEV_LABEL.get(r["severity"], r["severity"])])
+    return b"\xef\xbb\xbf" + buf.getvalue().encode("utf-8")
 
 
 def update(body) -> list:
     """変更分 [{id, enabled?, severity?}] を反映して保存する。"""
     if not isinstance(body, list):
         raise ValueError("変更の形が正しくありません。画面を再読み込みしてやり直してください。")
-    rows = load()
+    rows = _raw()
     by_id = {r["id"]: r for r in rows}
     for ch in body:
         if not isinstance(ch, dict) or ch.get("id") not in by_id:
@@ -101,7 +133,7 @@ def parse(name: str, data: bytes) -> dict:
         raise ValueError("見出し行に「観点名」「対象書類」「重大度」が必要です（「説明」は空でも可）。見出しを直して選び直してください。")
     if len(grid) - 1 > MAX_ROWS:
         raise ValueError(f"行が多すぎます（{MAX_ROWS} 行まで）。ファイルを分けて取り込んでください。")
-    existing = {(r["scope"], r["name"]) for r in load()}
+    existing = {(r["scope"], r["name"]) for r in _raw()}
     seen, items, issues = set(), [], []
     for n, row in enumerate(grid[1:], start=2):
         def cell(k):
@@ -136,7 +168,7 @@ def parse(name: str, data: bytes) -> dict:
 
 def commit(name: str, data: bytes, overwrite: bool) -> dict:
     res = parse(name, data)
-    rows = load()
+    rows = _raw()
     idx = {(r["scope"], r["name"]): r for r in rows}
     added = updated = skipped = 0
     for it in res["items"]:

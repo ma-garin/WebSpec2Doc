@@ -12,7 +12,7 @@
   var VSEV = [['critical', '重大'], ['major', '主要'], ['minor', '軽微']];
   var SCOPE_NOTE = { req: 'システムテストと対になる', design: '結合テストと対になる', pair: '要件定義書と基本設計書の突き合わせ' };
   var SCOPE_NAME = { req: '要件定義書', design: '基本設計書', pair: '対検査' };
-  var vp = { rows: [], scopes: [], note: '', dirty: {}, saveErr: false, busy: false, error: false, saving: false };
+  var vp = { filter: 'all', rows: [], scopes: [], note: '', dirty: {}, saveErr: false, busy: false, error: false, saving: false };
 
   function cnt() { return Object.keys(vp.dirty).length; }
   function sevOf(r) { return vp.dirty[r.id] || r.severity; }
@@ -51,10 +51,17 @@
       '<button class="btn" type="button" id="vpReload">もう一度読み込む</button></div></div>';
   }
   function legend() {
-    return '<p class="vp-legend"><span><i class="vp-dot critical"></i>重大 直すまで次の工程へ進めない</span>' +
-      '<span><i class="vp-dot major"></i>主要 直してから承認する</span>' +
-      '<span><i class="vp-dot minor"></i>軽微 記録に残す</span>' +
+    return '<p class="vp-legend"><span><i class="vp-dot critical"></i><b>重大</b> 直すまで次の工程へ進めない</span>' +
+      '<span><i class="vp-dot major"></i><b>主要</b> 直してから承認する</span>' +
+      '<span><i class="vp-dot minor"></i><b>軽微</b> 記録に残す</span>' +
       '<span class="mut">指摘一覧はこの重さの順に並びます</span></p>';
+  }
+  function chips() {
+    var o = [['all', 'すべて']].concat(vp.scopes.map(function (x) { return [x.id, SCOPE_NAME[x.id] || x.name]; }));
+    return '<div class="vp-filter" role="group" aria-label="対象書類"><span class="vp-fl">対象書類</span>' +
+      o.map(function (c) {
+        return '<button type="button" class="vp-chip" data-f="' + esc(c[0]) + '" aria-pressed="' + (vp.filter === c[0]) + '">' + esc(c[1]) + '</button>';
+      }).join('') + '</div>';
   }
   function rowHtml(r) {
     var auto = r.kind === 'auto';
@@ -66,8 +73,7 @@
   function secHtml(s) {
     var rows = vp.rows.filter(function (r) { return r.scope === s.id; });
     var nm = SCOPE_NAME[s.id] || s.name, note = SCOPE_NOTE[s.id] || (s.test ? s.test + 'と対になる' : '');
-    return '<section class="vp-sec"><h3 class="vp-sh">' + esc(nm) + ' <span class="mut">' + esc(note) + '</span></h3>' +
-      '<div class="vp-card"><table class="vp-t">' + COLS + HEAD + '<tbody>' + rows.map(rowHtml).join('') + '</tbody></table></div></section>';
+    return '<section class="vp-sec"><div class="vp-card"><h3 class="vp-sh">' + esc(nm) + '<em>' + esc(note) + '</em></h3><table class="vp-t">' + COLS + HEAD + '<tbody>' + rows.map(rowHtml).join('') + '</tbody></table></div></section>';
   }
   function saveBar() {
     var n = cnt(); if (!n) return '';
@@ -91,7 +97,7 @@
       el.innerHTML = errHtml(); return;
     }
     setBtns(false);
-    el.innerHTML = legend() + vp.scopes.map(secHtml).join('') +
+    el.innerHTML = legend() + chips() + vp.scopes.filter(function (x) { return vp.filter === 'all' || x.id === vp.filter; }).map(secHtml).join('') +
       (vp.note ? '<p class="mut vp-note">' + esc(vp.note) + '</p>' : '') + saveBar();
   }
   function setSev(id, v) {
@@ -150,6 +156,7 @@
   if (el) {
     el.addEventListener('click', function (e) {
       var b = e.target.closest('button'); if (!b) return;
+      if (b.dataset.f) { vp.filter = b.dataset.f; return render(); }
       if (b.dataset.s) return setSev(b.dataset.id, b.dataset.s);
       if (b.id === 'vpDiscard') { vp.dirty = {}; vp.saveErr = false; return render(); }
       if (b.id === 'vpSave') return vpSave();

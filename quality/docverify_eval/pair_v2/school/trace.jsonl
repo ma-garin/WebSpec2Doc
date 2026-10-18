@@ -1,0 +1,26 @@
+{"pair": "school", "req_key": "REQ-001", "req_lines": [35, 35], "design_lines": [[24, 24], [36, 37], [52, 52]]}
+{"pair": "school", "req_key": "REQ-002", "req_lines": [37, 37], "design_lines": [[24, 24], [53, 53], [136, 141]]}
+{"pair": "school", "req_key": "school-R03", "req_lines": [39, 39], "design_lines": [[54, 54]]}
+{"pair": "school", "req_key": "REQ-003", "req_lines": [41, 41], "design_lines": [[25, 25], [39, 39], [55, 55]]}
+{"pair": "school", "req_key": "school-R05", "req_lines": [43, 43], "design_lines": [[56, 56]]}
+{"pair": "school", "req_key": "REQ-004", "req_lines": [45, 45], "design_lines": [[26, 26], [40, 40], [57, 57]]}
+{"pair": "school", "req_key": "REQ-005", "req_lines": [47, 47], "design_lines": []}
+{"pair": "school", "req_key": "REQ-011", "req_lines": [49, 49], "design_lines": [[38, 38], [58, 58]]}
+{"pair": "school", "req_key": "REQ-013", "req_lines": [51, 51], "design_lines": [[31, 31], [45, 45], [59, 59]]}
+{"pair": "school", "req_key": "school-R08", "req_lines": [55, 55], "design_lines": [[27, 27], [41, 41], [63, 63]]}
+{"pair": "school", "req_key": "REQ-006", "req_lines": [57, 57], "design_lines": [[27, 27], [64, 64], [157, 159]]}
+{"pair": "school", "req_key": "school-R10", "req_lines": [59, 67], "design_lines": [[65, 65], [144, 151]]}
+{"pair": "school", "req_key": "REQ-007", "req_lines": [69, 69], "design_lines": [[28, 28], [66, 66]]}
+{"pair": "school", "req_key": "REQ-008", "req_lines": [71, 71], "design_lines": [[28, 28], [42, 42], [67, 67]]}
+{"pair": "school", "req_key": "school-R13", "req_lines": [73, 73], "design_lines": [[68, 68]]}
+{"pair": "school", "req_key": "REQ-009", "req_lines": [77, 77], "design_lines": [[29, 29], [43, 43], [73, 73]]}
+{"pair": "school", "req_key": "REQ-010", "req_lines": [79, 79], "design_lines": [[74, 74], [76, 76]]}
+{"pair": "school", "req_key": "REQ-012", "req_lines": [83, 83], "design_lines": [[30, 30], [44, 44], [80, 80]]}
+{"pair": "school", "req_key": "school-R18", "req_lines": [85, 85], "design_lines": [[81, 81]]}
+{"pair": "school", "req_key": "school-R20", "req_lines": [87, 87], "design_lines": [[32, 32], [82, 82]]}
+{"pair": "school", "req_key": "REQ-014", "req_lines": [91, 91], "design_lines": [[171, 171]]}
+{"pair": "school", "req_key": "REQ-015", "req_lines": [93, 93], "design_lines": [[172, 172]]}
+{"pair": "school", "req_key": "school-R23", "req_lines": [95, 95], "design_lines": [[173, 173]]}
+{"pair": "school", "req_key": "REQ-016", "req_lines": [97, 97], "design_lines": [[174, 174]]}
+{"pair": "school", "req_key": "school-R25", "req_lines": [99, 99], "design_lines": [[175, 175]]}
+{"pair": "school", "req_key": "REQ-017", "req_lines": [101, 101], "design_lines": [[176, 176]]}

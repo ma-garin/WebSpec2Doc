@@ -1,0 +1,9 @@
+{"pair": "claim", "id": "claim-D01", "type": "MISSING_IN_DESIGN", "req_lines": [68, 68], "design_lines": [], "req_quote": "二重請求の疑いとして警告を表示すること", "design_quote": "", "explanation": "二重請求の警告が基本設計書のどこにも設計されていない"}
+{"pair": "claim", "id": "claim-D02", "type": "EXTRA_IN_DESIGN", "req_lines": [], "design_lines": [84, 84], "req_quote": "", "design_quote": "携帯電話宛にSMSで受付番号を通知する", "explanation": "要件に無いSMS通知が設計に加えられている"}
+{"pair": "claim", "id": "claim-D03", "type": "CONTRADICTION", "req_lines": [54, 54], "design_lines": [69, 69], "req_quote": "最大10点", "design_quote": "最大5点", "explanation": "添付書類の上限点数が要件は10点、設計は5点で食い違う"}
+{"pair": "claim", "id": "claim-D04", "type": "TABLE_MISMATCH", "req_lines": [92, 92], "design_lines": [107, 107], "req_quote": "| 訂正 | 可 | 可 |", "design_quote": "| 訂正 | 不可 | 可 |", "explanation": "権限表で、受付担当者の訂正が要件は可、設計は不可"}
+{"pair": "claim", "id": "claim-D05", "type": "TERM_INCONSISTENCY", "req_lines": [34, 34], "design_lines": [111, 111], "req_quote": "受付担当者", "design_quote": "オペレータ", "explanation": "用語表の受付担当者を、設計がオペレータと呼んでいる"}
+{"pair": "claim", "id": "claim-D06", "type": "TERM_INCONSISTENCY", "req_lines": [32, 32], "design_lines": [169, 169], "req_quote": "保険証券番号", "design_quote": "証券番号を渡し", "explanation": "用語表の保険証券番号を、設計が証券番号と略している"}
+{"pair": "claim", "id": "claim-D07", "type": "AMBIGUOUS", "req_lines": [60, 60], "design_lines": [], "req_quote": "速やかに", "design_quote": "", "explanation": "速やかにの期限が数値で定められていない"}
+{"pair": "claim", "id": "claim-D08", "type": "UNTESTABLE", "req_lines": [116, 116], "design_lines": [], "req_quote": "使いやすく、十分な応答性能", "design_quote": "", "explanation": "使いやすさと十分な応答性能に判定基準が無く検証できない"}
+{"pair": "claim", "id": "claim-D09", "type": "CONTRADICTION", "req_lines": [49, 49], "design_lines": [122, 122], "req_quote": "連番6桁", "design_quote": "連番5桁", "explanation": "受付番号の連番の桁数が要件は6桁、設計は5桁で食い違う"}

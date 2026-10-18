@@ -1,0 +1,26 @@
+{"pair": "claim", "req_key": "REQ-001", "req_lines": [45, 45], "design_lines": [[60, 60], [33, 33]]}
+{"pair": "claim", "req_key": "REQ-002", "req_lines": [46, 46], "design_lines": [[61, 61], [62, 62], [169, 169]]}
+{"pair": "claim", "req_key": "REQ-003", "req_lines": [47, 47], "design_lines": [[32, 32], [124, 124]]}
+{"pair": "claim", "req_key": "REQ-004", "req_lines": [49, 49], "design_lines": [[64, 64], [122, 122]]}
+{"pair": "claim", "req_key": "REQ-005", "req_lines": [50, 50], "design_lines": [[31, 31], [65, 65]]}
+{"pair": "claim", "req_key": "REQ-006", "req_lines": [54, 54], "design_lines": [[69, 69]]}
+{"pair": "claim", "req_key": "REQ-007", "req_lines": [59, 59], "design_lines": [[74, 74], [151, 151]]}
+{"pair": "claim", "req_key": "REQ-008", "req_lines": [64, 64], "design_lines": [[80, 80], [174, 174]]}
+{"pair": "claim", "req_key": "REQ-009", "req_lines": [66, 66], "design_lines": [[82, 82]]}
+{"pair": "claim", "req_key": "REQ-010", "req_lines": [72, 81], "design_lines": [[88, 97]]}
+{"pair": "claim", "req_key": "REQ-011", "req_lines": [84, 84], "design_lines": [[50, 50]]}
+{"pair": "claim", "req_key": "REQ-012", "req_lines": [96, 96], "design_lines": [[112, 112], [161, 161]]}
+{"pair": "claim", "req_key": "REQ-013", "req_lines": [102, 102], "design_lines": [[185, 185]]}
+{"pair": "claim", "req_key": "REQ-014", "req_lines": [106, 106], "design_lines": [[189, 189], [190, 190]]}
+{"pair": "claim", "req_key": "REQ-015", "req_lines": [110, 110], "design_lines": [[194, 194]]}
+{"pair": "claim", "req_key": "REQ-016", "req_lines": [115, 115], "design_lines": [[199, 199]]}
+{"pair": "claim", "req_key": "claim-R01", "req_lines": [48, 48], "design_lines": [[63, 63]]}
+{"pair": "claim", "req_key": "claim-R02", "req_lines": [55, 55], "design_lines": [[70, 70], [141, 141], [142, 142]]}
+{"pair": "claim", "req_key": "claim-R03", "req_lines": [60, 60], "design_lines": [[76, 76], [42, 42]]}
+{"pair": "claim", "req_key": "claim-R04", "req_lines": [65, 65], "design_lines": [[81, 81]]}
+{"pair": "claim", "req_key": "claim-R05", "req_lines": [67, 67], "design_lines": [[83, 83]]}
+{"pair": "claim", "req_key": "claim-R06", "req_lines": [68, 68], "design_lines": []}
+{"pair": "claim", "req_key": "claim-R07", "req_lines": [83, 83], "design_lines": [[99, 99]]}
+{"pair": "claim", "req_key": "claim-R08", "req_lines": [85, 94], "design_lines": [[100, 109]]}
+{"pair": "claim", "req_key": "claim-R09", "req_lines": [116, 116], "design_lines": [[200, 200]]}
+{"pair": "claim", "req_key": "claim-R10", "req_lines": [111, 111], "design_lines": [[195, 195]]}

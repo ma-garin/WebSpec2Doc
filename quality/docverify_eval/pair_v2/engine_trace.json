@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "mode": "trace",
+ "dataset": {
+  "path": "quality/docverify_eval/pair_v2",
+  "pairs": [
+   "claim",
+   "delivery",
+   "hr",
+   "parking",
+   "school"
+  ],
+  "n_gold": 128,
+  "sha256": "44faf4d62e87"
+ },
+ "predictions": {
+  "path": "/private/tmp/claude-501/-Users-fujimagariyuki-dev-active-webspec2doc/79cf6b2e-c169-49f5-af67-512e92c1b496/scratchpad/v2_t.jsonl",
+  "n": 129,
+  "n_scored": 129,
+  "sha256": "a56bcde1a290"
+ },
+ "ignored_pairs": [],
+ "links": {
+  "tp": 134,
+  "fp": 17,
+  "fn": 64,
+  "precision": 0.887,
+  "recall": 0.677,
+  "f1": 0.768
+ },
+ "unreflected": {
+  "tp": 4,
+  "fp": 2,
+  "fn": 1,
+  "precision": 0.667,
+  "recall": 0.8,
+  "f1": 0.727
+ },
+ "limits": [
+  "AI が生成し AI 1 名が注釈した合成データ。注釈者間一致（kappa）は未測定。",
+  "実文書での精度を示すものではない。",
+  "照合は行範囲の重なりだけで判定し、指摘の説明文の正しさは見ていない。"
+ ]
+}

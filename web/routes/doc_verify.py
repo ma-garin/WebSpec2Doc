@@ -479,6 +479,42 @@ def participant_done(iid: str):
     return _respond(updated)
 
 
+@bp.route("/api/docverify/viewpoints", methods=["GET", "PUT"])
+def viewpoints():
+    from web.services.docverify import viewpoints as vp
+    try:
+        if request.method == "PUT":
+            vp.update(request.get_json(silent=True))
+        return jsonify(viewpoints=vp.load(), scopes=[
+            {"id": i, "name": n, "test": t, "desc": d} for i, n, t, d in vp.SCOPES])
+    except ValueError as e:
+        return _err(str(e), 400)
+    except Exception:
+        log.exception("検証観点の読み書きに失敗")
+        return _err("検証観点を読み書きできませんでした。時間をおいてやり直してください。", 500)
+
+
+@bp.route("/api/docverify/viewpoints/import", methods=["POST"])
+def viewpoints_import():
+    from web.services.docverify import viewpoints as vp
+    f = request.files.get("file")
+    if not f or not f.filename:
+        return _err("ファイルが選ばれていません。Excel か CSV を選んでください。", 400)
+    try:
+        data = f.read(vp.MAX_BYTES + 1)
+        if request.form.get("commit") == "1":
+            return jsonify(vp.commit(f.filename, data, request.form.get("overwrite") == "1"))
+        res = vp.parse(f.filename, data)
+        res.pop("items")
+        res["file"] = f.filename
+        return jsonify(res)
+    except ValueError as e:
+        return _err(str(e), 400)
+    except Exception:
+        log.exception("検証観点の取り込みに失敗")
+        return _err("取り込めませんでした。ファイルを確かめてやり直してください。", 500)
+
+
 @bp.route("/api/docverify/checklists", methods=["GET", "PUT"])
 def checklists():
     from web.services.docverify import settings

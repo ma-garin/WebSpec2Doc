@@ -217,55 +217,103 @@
   ['dvgFStatus', 'dvgFSeverity', 'dvgFReview'].forEach(function (id) { var s = $(id); if (s) s.addEventListener('change', loadFindings); });
   DV.on('findings', loadFindings);
 
-  /* checklists */
-  var cls = [];
-  function renderChecklist() {
-    var el = $('dvgClEdit'); var sel = $('dvgClSel');
-    var c = cls.filter(function (x) { return x.id === sel.value; })[0];
-    if (!c) return empty(el, 'チェックリストがありません。「新しいリスト」で作成してください。');
-    el.innerHTML = '<div class="card dvg-form"><label>リスト名 <input id="dvgClName" maxlength="100"></label><ol id="dvgClItems" class="dvg-items"></ol>' +
-      '<div><button class="btn" type="button" id="dvgClAdd">項目を足す</button> <button class="btn btn-primary" type="button" id="dvgClSave">保存</button></div></div>';
-    $('dvgClName').value = c.name || '';
-    var ol = $('dvgClItems');
-    function addItem(it) {
-      var li = document.createElement('li');
-      li.innerHTML = '<input class="dvg-item" maxlength="300"> <button class="btn btn-sm" type="button">削除</button>';
-      li.dataset.id = it.id || ''; li.querySelector('input').value = it.text || '';
-      li.querySelector('button').addEventListener('click', function () { li.remove(); });
-      ol.appendChild(li);
-    }
-    (c.items || []).forEach(addItem);
-    if (!(c.items || []).length) addItem({});
-    $('dvgClAdd').addEventListener('click', function () { addItem({}); });
-    $('dvgClSave').addEventListener('click', function () {
-      var n = 0;
-      var next = cls.map(function (x) {
-        if (x !== c) return x;
-        return { id: x.id, name: $('dvgClName').value.trim() || x.name,
-          items: Array.prototype.map.call(ol.children, function (li) {
-            n += 1; return { id: li.dataset.id || (x.id + '-' + Date.now() + '-' + n), text: li.querySelector('input').value.trim() };
-          }).filter(function (it) { return it.text; }) };
-      });
-      DV.api('/api/docverify/checklists', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(next) })
-        .then(function (r) { r = (r && r.checklists) || r; cls = Array.isArray(r) ? r : next; DV.toast('保存しました'); fillSel(sel.value); }).catch(function () {});
+  /* 検証観点（承認済み案 checklists-v1.html）。区分は V 字の対: 要件定義書・基本設計書・対検査 */
+  var vp = { rows: [], scopes: [], cur: 'pair', dirty: {} };
+  var VSEV = [['critical', '重大'], ['major', '主要'], ['minor', '軽微']];
+  function vpRowsOf(scope) { return vp.rows.filter(function (r) { return r.scope === scope; }); }
+  function vpVal(r, k) { var d = vp.dirty[r.id]; return d && k in d ? d[k] : r[k]; }
+  function vpChange(id, k, v) {
+    var r = vp.rows.filter(function (x) { return x.id === id; })[0]; if (!r) return;
+    var d = Object.assign({}, vp.dirty[id]); d[k] = v;
+    if (d.enabled === r.enabled) delete d.enabled;
+    if (d.severity === r.severity) delete d.severity;
+    var next = Object.assign({}, vp.dirty);
+    if (Object.keys(d).length) next[id] = d; else delete next[id];
+    vp.dirty = next; vpRender();
+  }
+  function vpRender() {
+    var el = $('dvgClEdit'); if (!el) return;
+    var sc = vp.scopes.filter(function (s) { return s.id === vp.cur; })[0] || vp.scopes[0]; if (!sc) return;
+    var rows = vpRowsOf(sc.id);
+    var tabs = vp.scopes.map(function (s) {
+      return '<button type="button" class="vp-tab' + (s.id === sc.id ? ' on' : '') + '" data-t="' + esc(s.id) + '"><b>' + esc(s.name) + '</b><span>' +
+        (s.id === 'pair' ? '' : '↔ ') + esc(s.test) + '</span></button>';
+    }).join('');
+    var body = rows.map(function (r) {
+      var on = vpVal(r, 'enabled'), sv = vpVal(r, 'severity'), ch = !!vp.dirty[r.id];
+      var auto = r.kind === 'auto';
+      return '<tr class="' + (on ? '' : 'vp-off') + (ch ? ' vp-chg' : '') + '"><td><label class="vp-sw"><input type="checkbox" data-id="' + esc(r.id) + '"' + (on ? ' checked' : '') +
+        ' aria-label="' + esc(r.name) + 'を有効にする"><span></span></label></td>' +
+        '<td><div class="vp-nm">' + esc(r.name) + (r.source === 'import' ? ' <span class="vp-src">自社基準</span>' : '') + '</div><div class="vp-ds">' + esc(r.desc) + '</div></td>' +
+        '<td><span class="vp-kind ' + (auto ? 'auto' : 'hum') + '">' + (auto ? '自動で検査' : '人が確認') + '</span></td>' +
+        '<td class="vp-acc">' + (auto ? '再現率 <i>測定中</i><br>適合率 <i>測定中</i>' : '−') + '</td>' +
+        '<td><div class="vp-seg">' + VSEV.map(function (s) {
+          return '<button type="button" class="' + s[0] + (s[0] === sv ? ' on' : '') + '" data-id="' + esc(r.id) + '" data-s="' + s[0] + '"' + (on ? '' : ' disabled') + '>' + s[1] + '</button>';
+        }).join('') + '</div></td></tr>';
+    }).join('');
+    var n = Object.keys(vp.dirty).length;
+    el.innerHTML = '<div class="vp-tabs">' + tabs + '</div><div class="card vp-card"><div class="vp-bar"><span>' + esc(sc.desc) + '</span><span>有効 <b>' +
+      rows.filter(function (r) { return vpVal(r, 'enabled'); }).length + ' / ' + rows.length + '</b></span></div>' +
+      '<table class="vp-t"><thead><tr><th style="width:68px">有効</th><th>観点</th><th>検査の方法</th><th>精度</th><th>重大度</th></tr></thead><tbody>' + body + '</tbody></table></div>' +
+      '<p class="mut vp-note">' + (sc.id === 'pair' ? '「自動で検査」は文書から機械的に確かめます。精度は測定が終わるまで数値を出しません。「人が確認」は検査結果に確認項目として出ます。' : 'この区分の観点は、それぞれの書類を単体で検査するときに使います。') + '</p>' +
+      (n ? '<div class="vp-save"><span><b>' + n + '</b> 件の変更が未保存です。保存するまで検査には反映されません。</span><span><button class="btn" type="button" id="vpDiscard">変更を破棄</button> <button class="btn btn-primary" type="button" id="vpSave">保存する</button></span></div>' : '');
+  }
+  function vpLoad() {
+    var el = $('dvgClEdit');
+    return load(el, '/api/docverify/viewpoints', function (d) { vp.rows = d.viewpoints || []; vp.scopes = d.scopes || []; vp.dirty = {}; vpRender(); });
+  }
+  function vpSave() {
+    var body = Object.keys(vp.dirty).map(function (id) { return Object.assign({ id: id }, vp.dirty[id]); });
+    DV.api('/api/docverify/viewpoints', { method: 'PUT', json: body }).then(function (d) {
+      vp.rows = d.viewpoints || vp.rows; vp.dirty = {}; vpRender(); DV.toast('保存しました。次の検査から反映されます。');
+    }).catch(function () {});
+  }
+  function vpImportDialog(file, p) {
+    var s = p.summary;
+    var tag = { error: ['e', 'エラー'], dup: ['d', '重複'] };
+    var list = p.issues.slice(0, 50).map(function (i) {
+      return '<tr><td>' + i.row + '</td><td><span class="vp-tag ' + tag[i.result][0] + '">' + tag[i.result][1] + '</span></td><td>' + esc(i.text) + '</td></tr>';
+    }).join('');
+    var ok = s.rows - s.dup;
+    var rest = '<tr><td>ほか</td><td><span class="vp-tag o">取り込める</span></td><td>問題ありません（' + ok + ' 行）。</td></tr>';
+    var html = '<div class="vp-file"><b>' + esc(p.file || file.name) + '</b></div>' +
+      '<div class="vp-sum"><div>取り込む行<b>' + s.rows + '</b></div><div class="d">重複（既存と同じ名前）<b>' + s.dup + '</b></div><div class="e">エラー<b>' + s.error + '</b></div></div>' +
+      '<div class="vp-scroll"><table class="vp-t"><thead><tr><th style="width:64px">行</th><th style="width:96px">結果</th><th>内容と次の行動</th></tr></thead><tbody>' + list + rest + '</tbody></table></div>' +
+      (s.dup ? '<label class="vp-ow"><input type="checkbox" id="vpOw"> 重複した観点は上書きする（外すと取り込まない）</label>' : '') +
+      '<p class="mut vp-note">エラーの行は取り込まれません。エラー行を直したファイルを選び直すと、全行を取り込めます。取り込んだ観点は「人が確認」として追加されます。</p>';
+    DV.modal({ title: '取り込み内容の確認', html: html, ok: s.rows ? 'エラー行を除いて ' + s.rows + ' 行を取り込む' : null, cancel: '閉じる' }).then(function (go) {
+      if (!go) return;
+      var ow = $('vpOw');
+      var fd = new FormData(); fd.append('file', file); fd.append('commit', '1'); fd.append('overwrite', ow && ow.checked ? '1' : '0');
+      DV.api('/api/docverify/viewpoints/import', { method: 'POST', form: fd }).then(function (r) {
+        DV.toast(r.added + ' 行を追加、' + r.updated + ' 行を上書きしました。' + (r.errors ? r.errors + ' 行はエラーのため取り込んでいません。' : ''));
+        vpLoad();
+      }).catch(function () {});
     });
   }
-  function fillSel(keep) {
-    var sel = $('dvgClSel');
-    sel.innerHTML = cls.map(function (c) { return '<option value="' + esc(c.id) + '">' + esc(c.name) + '</option>'; }).join('');
-    if (keep) sel.value = keep;
-    renderChecklist();
+  var vpEl = $('dvgClEdit');
+  if (vpEl) {
+    vpEl.addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b) return;
+      if (b.dataset.t) { vp.cur = b.dataset.t; return vpRender(); }
+      if (b.dataset.s) return vpChange(b.dataset.id, 'severity', b.dataset.s);
+      if (b.id === 'vpDiscard') { vp.dirty = {}; return vpRender(); }
+      if (b.id === 'vpSave') return vpSave();
+    });
+    vpEl.addEventListener('change', function (e) {
+      if (e.target.dataset.id && e.target.type === 'checkbox') vpChange(e.target.dataset.id, 'enabled', e.target.checked);
+    });
   }
-  DV.on('checklists', function () {
-    var el = $('dvgClEdit');
-    load(el, '/api/docverify/checklists', function (d) { d = (d && d.checklists) || d; cls = Array.isArray(d) ? d : []; fillSel(); });
-  });
-  var clSel = $('dvgClSel'); if (clSel) clSel.addEventListener('change', renderChecklist);
-  var clNew = $('dvgClNew'); if (clNew) clNew.addEventListener('click', function () {
-    var id = 'cl-' + Date.now();
-    cls = cls.concat([{ id: id, name: '新しいチェックリスト', items: [] }]);
-    fillSel(id);
-  });
+  var vpFile = $('dvgVpFile'), vpOpen = $('dvgVpImport');
+  if (vpOpen && vpFile) {
+    vpOpen.addEventListener('click', function () { vpFile.value = ''; vpFile.click(); });
+    vpFile.addEventListener('change', function () {
+      var f = vpFile.files[0]; if (!f) return;
+      var fd = new FormData(); fd.append('file', f);
+      DV.api('/api/docverify/viewpoints/import', { method: 'POST', form: fd }).then(function (p) { vpImportDialog(f, p); }).catch(function () {});
+    });
+  }
+  DV.on('checklists', vpLoad);
 
   /* metrics */
   function bars(title, obj, labels) {

@@ -200,6 +200,18 @@
 
   const mask = q('[data-mask]'), err = q('[data-err]'), byIn = q('[data-by]');
   let opener = null;
+  // 確定する人はログイン中の名前を使い、入力させない。コメントは押したときだけ開く
+  const myName = () => ((document.querySelector('.usermenu-name') || {}).textContent || '').trim() || 'ゲスト';
+  const byLbl = byIn.closest('label'); if (byLbl) byLbl.hidden = true;
+  const cmIn = q('[data-comment]'), cmLbl = cmIn && cmIn.closest('label');
+  let cmBtn = null;
+  if (cmLbl) {
+    cmLbl.hidden = true;
+    cmBtn = document.createElement('button');
+    cmBtn.type = 'button'; cmBtn.className = 'dvt-s3-addcm'; cmBtn.textContent = '＋ コメントを添える';
+    cmBtn.addEventListener('click', () => { cmLbl.hidden = false; cmBtn.hidden = true; cmIn.focus(); });
+    cmLbl.parentNode.insertBefore(cmBtn, cmLbl);
+  }
   const showErr = m => {
     err.textContent = m; err.hidden = !m;
     byIn.classList.toggle('inv', !!m);
@@ -214,18 +226,16 @@
     live.forEach(f => { c[f.severity] = (c[f.severity] || 0) + 1; });
     const bad = nodes(st).filter(n => isBad(st, n)).length;
     q('[data-sum]').innerHTML = '<li>結論：' + esc(st.level_label || '') + '</li><li>課題のある文書：' + bad + ' 件（重大 ' + c.high + '・注意 ' + c.mid + '・軽微 ' + c.low + '）</li><li>文書か検査の結果が変わると、確定は取り消されます</li>';
-    // ログイン中の名前を初期値にする（認証オフの「ゲスト」は入れない）
-    const me = (document.querySelector('.usermenu-name') || {}).textContent || '';
-    if (!byIn.value.trim() && me.trim() && me.trim() !== 'ゲスト') byIn.value = me.trim();
-    opener = ob; showErr(''); mask.classList.add('on'); byIn.focus();
+    byIn.value = myName();
+    if (cmLbl && !cmIn.value.trim()) { cmLbl.hidden = true; cmBtn.hidden = false; }
+    opener = ob; showErr(''); mask.classList.add('on'); q('[data-ok]').focus();
   });
   q('[data-cancel]').addEventListener('click', closeDlg);
   mask.addEventListener('mousedown', e => { if (e.target === mask) closeDlg(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && mask.classList.contains('on')) { e.preventDefault(); closeDlg(); } });
   byIn.addEventListener('input', () => { if (!err.hidden) showErr(''); });
   q('[data-ok]').addEventListener('click', async () => {
-    const by = byIn.value.trim();
-    if (!by) { showErr('確定する人の名前を入力してください。'); byIn.focus(); return; }
+    const by = byIn.value.trim() || myName();
     const btn = q('[data-ok]'); btn.disabled = true;
     try {
       const r = await window.DVT.api('tier/confirm', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({by, comment: q('[data-comment]').value.trim()})});

@@ -94,3 +94,5 @@
 .dvt-s3-card{min-height:320px}
 .dvt-s3 th,.dvt-s3 td{padding-left:12px;padding-right:12px}
 }
+.dvt-s3-addcm{background:none;border:0;padding:4px 0;color:var(--ac,#2563EB);font:inherit;font-size:13px;cursor:pointer;text-align:left}
+.dvt-s3-addcm:hover{text-decoration:underline}

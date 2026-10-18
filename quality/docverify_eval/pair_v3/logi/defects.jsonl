@@ -1,0 +1,11 @@
+{"pair": "logi", "id": "logi-D01", "type": "MISSING_IN_DESIGN", "req_lines": [29, 29], "design_lines": [], "req_quote": "荷主は、依頼の内容を", "design_quote": "", "explanation": "要件が基本設計に反映されていない。"}
+{"pair": "logi", "id": "logi-D02", "type": "EXTRA_IN_DESIGN", "req_lines": [], "design_lines": [37, 37], "req_quote": "", "design_quote": "ドライバーの走行距離を日別に集計し", "explanation": "要件に根拠の無い走行距離の集計と給与連携が設計にある。"}
+{"pair": "logi", "id": "logi-D03", "type": "EXTRA_IN_DESIGN", "req_lines": [], "design_lines": [53, 53], "req_quote": "", "design_quote": "経過日数を算出し", "explanation": "要件に根拠の無い経過日数の集計画面が設計にある。"}
+{"pair": "logi", "id": "logi-D04", "type": "CONTRADICTION", "req_lines": [35, 35], "design_lines": [36, 36], "req_quote": "再配達は最大 2 回", "design_quote": "再配達は 3 回まで", "explanation": "再配達の回数が要件は2回、設計は3回で食い違う。"}
+{"pair": "logi", "id": "logi-D05", "type": "CONTRADICTION", "req_lines": [27, 27], "design_lines": [30, 30], "req_quote": "前日 17 時まで", "design_quote": "前日 15 時を過ぎた", "explanation": "集荷依頼の締切が要件は17時、設計は15時で食い違う。"}
+{"pair": "logi", "id": "logi-D06", "type": "TABLE_MISMATCH", "req_lines": [45, 45], "design_lines": [44, 44], "req_quote": "| M | 5 kg 超 15 kg 以下 | 1,200 円", "design_quote": "| M | 5 kg 超 15 kg 以下 | 1,500 円", "explanation": "区分Mの料金が要件の表は1,200円、設計の表は1,500円で食い違う。"}
+{"pair": "logi", "id": "logi-D07", "type": "TERM_INCONSISTENCY", "req_lines": [26, 26], "design_lines": [16, 16], "req_quote": "荷主は、荷物の個数", "design_quote": "| S01 | 集荷依頼 | 依頼元", "explanation": "同じ利用者を要件は荷主、設計は依頼元と呼んでいる。"}
+{"pair": "logi", "id": "logi-D08", "type": "TERM_INCONSISTENCY", "req_lines": [33, 33], "design_lines": [17, 17], "req_quote": "配送員は、担当する荷物", "design_quote": "| S02 | 担当一覧 | ドライバー", "explanation": "同じ担当者を要件は配送員、設計はドライバーと呼んでいる。"}
+{"pair": "logi", "id": "logi-D09", "type": "TERM_INCONSISTENCY", "req_lines": [34, 34], "design_lines": [23, 23], "req_quote": "お届け先で配達完了", "design_quote": "お届先の住所", "explanation": "お届け先の表記が送り仮名の有無でゆれている。"}
+{"pair": "logi", "id": "logi-D10", "type": "AMBIGUOUS", "req_lines": [53, 53], "design_lines": [], "req_quote": "速やかに", "design_quote": "", "explanation": "判断基準が無く解釈が割れる。"}
+{"pair": "logi", "id": "logi-D11", "type": "UNTESTABLE", "req_lines": [59, 59], "design_lines": [], "req_quote": "直感的で扱いやすい", "design_quote": "", "explanation": "合否の基準が無く検証できない。"}

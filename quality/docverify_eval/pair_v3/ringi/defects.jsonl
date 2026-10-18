@@ -1,0 +1,12 @@
+{"pair": "ringi", "id": "ringi-D01", "type": "MISSING_IN_DESIGN", "req_lines": [38, 38], "design_lines": [], "req_quote": "起案者は、承認の途中で", "design_quote": "", "explanation": "要件が基本設計に反映されていない。"}
+{"pair": "ringi", "id": "ringi-D02", "type": "EXTRA_IN_DESIGN", "req_lines": [], "design_lines": [29, 29], "req_quote": "", "design_quote": "処理に要した日数を集計し", "explanation": "要件に根拠の無い承認者別の処理日数の集計が設計にある。"}
+{"pair": "ringi", "id": "ringi-D03", "type": "EXTRA_IN_DESIGN", "req_lines": [], "design_lines": [30, 30], "req_quote": "", "design_quote": "予算の消化率を算出し", "explanation": "要件に根拠の無い予算消化率の算出が設計にある。"}
+{"pair": "ringi", "id": "ringi-D04", "type": "CONTRADICTION", "req_lines": [27, 27], "design_lines": [20, 20], "req_quote": "5 件まで添付", "design_quote": "添付は 10 件まで", "explanation": "添付ファイルの上限が要件は5件、設計は10件で食い違う。"}
+{"pair": "ringi", "id": "ringi-D05", "type": "CONTRADICTION", "req_lines": [37, 37], "design_lines": [28, 28], "req_quote": "5 営業日以内に処理しない", "design_quote": "3 営業日以内に処理しない", "explanation": "催促までの日数が要件は5営業日、設計は3営業日で食い違う。"}
+{"pair": "ringi", "id": "ringi-D06", "type": "TABLE_MISMATCH", "req_lines": [34, 34], "design_lines": [37, 37], "req_quote": "| 2 | 50 万円以上 300 万円未満 | 課長、部長", "design_quote": "| 2 | 50 万円以上 300 万円未満 | 部長", "explanation": "区分2の承認ルートが要件は課長と部長、設計は部長のみで食い違う。"}
+{"pair": "ringi", "id": "ringi-D07", "type": "TERM_INCONSISTENCY", "req_lines": [26, 26], "design_lines": [16, 16], "req_quote": "起案者は、件名・金額", "design_quote": "| S01 | 稟議書作成 | 提出者", "explanation": "同じ作成者を要件は起案者、設計は提出者と呼んでいる。"}
+{"pair": "ringi", "id": "ringi-D08", "type": "TERM_INCONSISTENCY", "req_lines": [28, 28], "design_lines": [17, 17], "req_quote": "承認者は、承認・差戻し・否決を選べる", "design_quote": "| S02 | 承認 | 決裁権限者", "explanation": "同じ役職者を要件は承認者、設計は決裁権限者と呼んでいる。"}
+{"pair": "ringi", "id": "ringi-D09", "type": "TERM_INCONSISTENCY", "req_lines": [27, 27], "design_lines": [21, 21], "req_quote": "稟議書には、見積書", "design_quote": "決裁文書の内容", "explanation": "同じ文書を要件は稟議書、設計は決裁文書と呼んでいる。"}
+{"pair": "ringi", "id": "ringi-D10", "type": "TERM_INCONSISTENCY", "req_lines": [28, 28], "design_lines": [27, 27], "req_quote": "差戻しの際は", "design_quote": "差し戻しのとき", "explanation": "差戻しの送り仮名の表記がゆれている。"}
+{"pair": "ringi", "id": "ringi-D11", "type": "AMBIGUOUS", "req_lines": [39, 39], "design_lines": [], "req_quote": "優先して処理", "design_quote": "", "explanation": "判断基準が無く解釈が割れる。"}
+{"pair": "ringi", "id": "ringi-D12", "type": "UNTESTABLE", "req_lines": [51, 51], "design_lines": [], "req_quote": "判断しやすい表示", "design_quote": "", "explanation": "合否の基準が無く検証できない。"}

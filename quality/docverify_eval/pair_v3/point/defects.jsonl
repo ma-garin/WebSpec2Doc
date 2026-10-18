@@ -1,0 +1,12 @@
+{"pair": "point", "id": "point-D01", "type": "MISSING_IN_DESIGN", "req_lines": [39, 39], "design_lines": [], "req_quote": "有効期限が近いポイントのお知らせ", "design_quote": "", "explanation": "要件が基本設計に反映されていない。"}
+{"pair": "point", "id": "point-D02", "type": "EXTRA_IN_DESIGN", "req_lines": [], "design_lines": [30, 30], "req_quote": "", "design_quote": "誕生月には、ボーナスのポイント", "explanation": "要件に根拠の無い誕生月のボーナスポイント進呈が設計にある。"}
+{"pair": "point", "id": "point-D03", "type": "EXTRA_IN_DESIGN", "req_lines": [], "design_lines": [31, 31], "req_quote": "", "design_quote": "店舗別のポイント進呈額を集計し", "explanation": "要件に根拠の無い店舗別の進呈額集計と分析画面が設計にある。"}
+{"pair": "point", "id": "point-D04", "type": "CONTRADICTION", "req_lines": [27, 27], "design_lines": [28, 28], "req_quote": "購入金額 100 円につき", "design_quote": "購入金額 200 円につき", "explanation": "付与の単位が要件は100円、設計は200円で食い違う。"}
+{"pair": "point", "id": "point-D05", "type": "CONTRADICTION", "req_lines": [30, 30], "design_lines": [35, 35], "req_quote": "500 ポイント単位", "design_quote": "1,000 ポイント単位", "explanation": "交換の単位が要件は500ポイント、設計は1,000ポイントで食い違う。"}
+{"pair": "point", "id": "point-D06", "type": "TABLE_MISMATCH", "req_lines": [37, 37], "design_lines": [41, 41], "req_quote": "| ゴールド | 30 万円以上 | 2.0 倍", "design_quote": "| ゴールド | 30 万円以上 | 1.8 倍", "explanation": "ゴールドの付与率が要件の表は2.0倍、設計の表は1.8倍で食い違う。"}
+{"pair": "point", "id": "point-D07", "type": "TERM_INCONSISTENCY", "req_lines": [26, 26], "design_lines": [16, 16], "req_quote": "会員登録できる。会員の ID", "design_quote": "| S01 | 会員登録 | 顧客", "explanation": "同じ利用者を要件は会員、設計は顧客と呼んでいる。"}
+{"pair": "point", "id": "point-D08", "type": "TERM_INCONSISTENCY", "req_lines": [27, 27], "design_lines": [28, 28], "req_quote": "購入金額 100 円につき、1 ポイントを付与", "design_quote": "購入金額 200 円につき 1 ポイントを進呈", "explanation": "同じ操作を要件は付与、設計は進呈と呼んでいる。"}
+{"pair": "point", "id": "point-D09", "type": "TERM_INCONSISTENCY", "req_lines": [28, 28], "design_lines": [29, 29], "req_quote": "ポイントの有効期限は", "design_quote": "失効日として保持", "explanation": "同じ概念を要件は有効期限、設計は失効日と呼んでいる。"}
+{"pair": "point", "id": "point-D10", "type": "TERM_INCONSISTENCY", "req_lines": [26, 26], "design_lines": [21, 21], "req_quote": "会員の ID は英数字", "design_quote": "会員ＩＤを表示", "explanation": "ID の全角半角の表記がゆれている。"}
+{"pair": "point", "id": "point-D11", "type": "AMBIGUOUS", "req_lines": [40, 40], "design_lines": [], "req_quote": "なるべく早く", "design_quote": "", "explanation": "判断基準が無く解釈が割れる。"}
+{"pair": "point", "id": "point-D12", "type": "UNTESTABLE", "req_lines": [51, 51], "design_lines": [], "req_quote": "親しみやすい印象", "design_quote": "", "explanation": "合否の基準が無く検証できない。"}

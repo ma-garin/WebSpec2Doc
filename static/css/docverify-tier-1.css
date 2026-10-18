@@ -7,6 +7,9 @@
 .dvt-s1 .drop:hover,.dvt-s1 .drop.over{border-color:var(--ac,#2563EB);background:#F5F8FF}
 .dvt-s1 .drop svg{flex:none;color:var(--tx3,#667085)}
 .dvt-s1 .drop:focus-visible,.dvt-s1 .pri:focus-visible,.dvt-s1 .row .lk:focus-visible,.dvt-s1 .notice button:focus-visible{outline:3px solid var(--ac,#2563EB);outline-offset:2px}
+.dvt-s1 .drop.loading{pointer-events:none;border-color:var(--ac,#2563EB);background:#F5F8FF;color:var(--ac,#2563EB)}
+.dvt-s1 .drop .spin{display:inline-block;width:16px;height:16px;margin-right:8px;vertical-align:-3px;border:2px solid #C7D7FE;border-top-color:var(--ac,#2563EB);border-radius:50%;animation:dvt-s1-spin .8s linear infinite}
+@keyframes dvt-s1-spin{to{transform:rotate(360deg)}}
 .dvt-s1 .drop .dt{flex:none;white-space:nowrap}
 .dvt-s1 .drop small{margin-left:auto;color:var(--tx3,#667085);font-size:13px;min-width:0;text-align:right;word-break:auto-phrase;text-wrap:balance}
 .dvt-s1 .drop.big{flex-direction:column;justify-content:center;text-align:center;padding:64px 18px;font-size:16px;gap:10px}

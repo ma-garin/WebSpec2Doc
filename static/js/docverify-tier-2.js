@@ -156,7 +156,7 @@
       .then(function () { busy = false; dlg.hidden = true; reportFor = null; toast('誤検知として通報しました。', 'ok'); },
         function (err) { busy = false; toast((err && err.message) || '通報できませんでした。少し待ってからもう一度お試しください。'); });
   });
-  $('[data-go]').addEventListener('click', function () { window.DVT.go(3); });
+  $('[data-to-report]').addEventListener('click', function () { window.DVT.go(3); });
   $('[data-redo]').addEventListener('click', function () {
     if (busy) return;
     busy = true;

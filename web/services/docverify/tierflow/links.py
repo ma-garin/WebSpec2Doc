@@ -13,6 +13,14 @@ ID_RE = re.compile(r"(?<![A-Za-z0-9-])[A-Z]{2,5}-\d{1,4}(?!\d)")
 SINGLE_DOC_NOTE = "文書が 1 件だけです。つながりを確かめるには 2 件以上の文書が必要です。"
 
 
+def _is_heading(text: str, first_id: str) -> bool:
+    """行がその ID を定義する見出しか。Markdown の「#」見出し、または行頭が ID で句点で終わらない 80 字以内の行。"""
+    t = text.strip()
+    if t.startswith("#"):
+        return t.lstrip("#").strip().startswith(first_id)
+    return t.startswith(first_id) and len(t) <= 80 and not t.endswith(("。", "."))
+
+
 def ids(documents: list[dict]) -> dict[str, dict]:
     """文書ごとの定義 ID（見出し行に出る ID）と参照 ID（それ以外の本文に出る ID）。
 
@@ -24,9 +32,12 @@ def ids(documents: list[dict]) -> dict[str, dict]:
         refs: dict[str, list[dict]] = {}
         for p in d.get("passages") or []:
             text = p.get("text") or ""
-            head = text.lstrip().startswith("#")
-            for m in ID_RE.findall(text):
-                if head:
+            found = ID_RE.findall(text)
+            # 見出し行の先頭の ID だけを定義とみなす。Word 等は「#」が無いので、
+            # 行頭が ID で始まり文で終わらない短い行（例「REQ-001 会員登録」）も見出しとして扱う
+            own = found[0] if found and _is_heading(text, found[0]) else None
+            for m in found:
+                if m == own:
                     defined.setdefault(m, p)
                 else:
                     refs.setdefault(m, []).append(p)

@@ -20,3 +20,4 @@
 .dvt button,.dv-modal button{align-items:center;align-content:center;justify-content:center}
 /* 実行名と「新しく始める」の行は出さない（開くたびに新しい実行、過去の実行は履歴から開く） */
 .dvt .dvt-head{display:none}
+.dvt-hist tr[data-iid]{cursor:pointer}.dvt-hist tr[data-iid]:hover td{background:#F5F8FF}

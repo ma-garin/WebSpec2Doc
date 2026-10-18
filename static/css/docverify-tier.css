@@ -18,3 +18,5 @@
 
 /* ボタンの文字を上下中央に */
 .dvt button,.dv-modal button{align-items:center;align-content:center;justify-content:center}
+/* 実行名と「新しく始める」の行は出さない（開くたびに新しい実行、過去の実行は履歴から開く） */
+.dvt .dvt-head{display:none}

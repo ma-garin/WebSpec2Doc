@@ -1,8 +1,64 @@
 """文書のつながり（ノードと線）と結論の自動判定。"""
 from __future__ import annotations
 
+import re
+
+from . import tiers
+
 LEVEL_LABEL = {"pass": "合格", "conditional": "条件付き", "fail": "不合格"}
 _EDGE_TYPE = {"CONFLICT": "conflict", "REVERSE_REF": "reverse_ref", "DUPLICATE": "duplicate"}
+
+
+ID_RE = re.compile(r"(?<![A-Za-z0-9-])[A-Z]{2,5}-\d{1,4}(?!\d)")
+SINGLE_DOC_NOTE = "文書が 1 件だけです。つながりを確かめるには 2 件以上の文書が必要です。"
+
+
+def ids(documents: list[dict]) -> dict[str, dict]:
+    """文書ごとの定義 ID（見出し行に出る ID）と参照 ID（それ以外の本文に出る ID）。
+
+    戻り値: {文書id: {"defined": {ID: passage}, "refs": {ID: [passage, ...]}}}（出現順を保つ）
+    """
+    out: dict[str, dict] = {}
+    for d in documents:
+        defined: dict[str, dict] = {}
+        refs: dict[str, list[dict]] = {}
+        for p in d.get("passages") or []:
+            text = p.get("text") or ""
+            head = text.lstrip().startswith("#")
+            for m in ID_RE.findall(text):
+                if head:
+                    defined.setdefault(m, p)
+                else:
+                    refs.setdefault(m, []).append(p)
+        out[d["id"]] = {"defined": defined, "refs": {k: v for k, v in refs.items() if k not in defined}}
+    return out
+
+
+def definers(table: dict[str, dict]) -> dict[str, list[str]]:
+    """ID → それを定義した文書 id の一覧。"""
+    out: dict[str, list[str]] = {}
+    for doc_id, t in table.items():
+        for i in t["defined"]:
+            out.setdefault(i, []).append(doc_id)
+    return out
+
+
+def _traces(documents: list[dict]) -> list[dict]:
+    table = ids(documents)
+    owner = definers(table)
+    grouped: dict[tuple, list[str]] = {}
+    for d in documents:
+        for i in table[d["id"]]["refs"]:
+            for to in owner.get(i, []):
+                if to != d["id"]:
+                    grouped.setdefault((d["id"], to), []).append(i)
+    return [{"from": a, "to": b, "type": "traces", "finding_ids": [], "ids": found,
+             "reason": f"{'、'.join(found)} を参照"} for (a, b), found in grouped.items()]
+
+
+def note(documents: list[dict]) -> str | None:
+    """結論に添える注記。合否は変えない。"""
+    return SINGLE_DOC_NOTE if len(documents) == 1 else None
 
 
 def _live(findings: list[dict], reports: dict) -> list[dict]:
@@ -19,7 +75,9 @@ def _nodes(documents: list[dict], live: list[dict]) -> list[dict]:
     out = []
     for d in documents:
         mine = [f for f in live if f["doc_id"] == d["id"] or f.get("related_doc_id") == d["id"]]
-        out.append({"id": d["id"], "name": d["name"], "tier": d["tier"], "status": _status(mine), "issues": len(mine)})
+        k = d.get("kind") or tiers.kind(d.get("name") or "", d.get("passages") or [])[0]
+        out.append({"id": d["id"], "name": d["name"], "tier": d["tier"], "kind": k, "kind_label": tiers.KIND_LABEL[k],
+                    "status": _status(mine), "issues": len(mine)})
     return out
 
 
@@ -53,7 +111,9 @@ def _problem_edges(documents: list[dict], live: list[dict]) -> list[dict]:
 
 def build(documents: list[dict], findings: list[dict], reports: dict) -> dict:
     live = _live(findings, reports)
-    return {"nodes": _nodes(documents, live), "edges": _follows(documents) + _problem_edges(documents, live)}
+    return {"nodes": _nodes(documents, live),
+            "edges": _follows(documents) + _traces(documents) + _problem_edges(documents, live),
+            "note": note(documents)}
 
 
 def conclude(findings: list[dict], reports: dict) -> str:

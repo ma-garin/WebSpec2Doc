@@ -6,6 +6,7 @@
     </div>
     <div class="dvt-s3-act" data-act></div>
   </div>
+  <div class="dvt-s3-concl" data-concl hidden></div>
   <div class="dvt-s3-sum">
     <div class="dvt-s3-verdict" data-verdict></div>
     <button type="button" class="dvt-s3-num on" data-f="all"><strong data-n-all>0</strong><span>登録した文書</span></button>
@@ -30,13 +31,13 @@
   </div>
   <div class="dvt-s3-redo" data-redo-wrap><button type="button" class="dvt-s3-link" data-redo>検査からやり直す</button></div>
   <div class="dvt-s3-mask" data-mask>
-    <div class="dvt-s3-dlg" role="dialog" aria-modal="true">
-      <h3>このレポートを確定しますか</h3>
+    <div class="dvt-s3-dlg" role="dialog" aria-modal="true" aria-labelledby="dvt3Ttl">
+      <h3 id="dvt3Ttl">このレポートを確定しますか</h3>
       <p class="dvt-s3-dlg-p">確定すると、次の内容が結果として残ります。</p>
       <ul data-sum></ul>
-      <label class="dvt-s3-fld">確定する人<input type="text" data-by maxlength="60"></label>
+      <label class="dvt-s3-fld">確定する人<input type="text" data-by maxlength="80"></label>
+      <p class="dvt-s3-err" id="dvt3Err" data-err role="alert" hidden></p>
       <label class="dvt-s3-fld">コメント<textarea data-comment rows="3" maxlength="500"></textarea></label>
-      <p class="dvt-s3-err" data-err hidden></p>
       <div class="dvt-s3-acts"><button type="button" class="dvt-s3-btn" data-cancel>戻る</button><button type="button" class="dvt-s3-btn main" data-ok>確定する</button></div>
     </div>
   </div>

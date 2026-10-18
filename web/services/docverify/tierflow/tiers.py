@@ -1,4 +1,4 @@
-"""文書の格（1 方針〜4 メモ）を、ファイル名と見出し・語彙から決定的に推定する。"""
+"""文書の格（1 方針〜4 メモ）と種別（要件・設計・テスト・その他）を、ファイル名と見出し・語彙から決定的に推定する。"""
 from __future__ import annotations
 
 import re
@@ -27,7 +27,7 @@ def _heading(passages: list[dict]) -> str:
     return ""
 
 
-def estimate(name: str, passages: list[dict]) -> dict:
+def _estimate_tier(name: str, passages: list[dict]) -> dict:
     by_name = _hits(name)
     by_head = _hits(_heading(passages))
     if len(by_name) == 1:
@@ -44,3 +44,57 @@ def estimate(name: str, passages: list[dict]) -> dict:
         conf = 0.7 if len(by_head) == 1 else 0.5
         return {"tier": tier, "confidence": conf, "reason": f"先頭の見出しの語から{TIER_HINT[tier]}と推定しました。"}
     return {"tier": 3, "confidence": 0.3, "reason": "名前にも見出しにも手がかりが無く、仕様と仮置きしました。"}
+
+
+KINDS = (("requirement", "要件"), ("design", "設計"), ("test", "テスト"), ("other", "その他"))
+KIND_LABEL = dict(KINDS)
+_KIND_WORDS = {
+    "requirement": re.compile(r"要件|要求|PRD|requirement", re.I),
+    "design": re.compile(r"設計|ADR|design|architecture", re.I),
+    "test": re.compile(r"テスト|試験|test", re.I),
+}
+_KIND_PREFIX = {
+    "requirement": {"REQ", "RQ", "FR", "NFR", "US"},
+    "design": {"DES", "DD", "BD", "SD", "ADR", "DS"},
+    "test": {"TC", "TS", "TEST", "UT", "IT", "ST", "TP"},
+}
+_HEAD_ID = re.compile(r"(?<![A-Za-z0-9-])([A-Z]{2,5})-\d{1,4}(?!\d)")
+
+
+def _kind_by_words(text: str) -> str | None:
+    hits = [k for k, rx in _KIND_WORDS.items() if rx.search(text or "")]
+    return hits[0] if len(hits) == 1 else None
+
+
+def _kind_by_prefix(passages: list[dict]) -> str | None:
+    count: dict[str, int] = {}
+    for p in passages or []:
+        text = (p.get("text") or "").strip()
+        if not text.startswith("#"):
+            continue
+        for pre in _HEAD_ID.findall(text):
+            for k, pres in _KIND_PREFIX.items():
+                if pre in pres:
+                    count[k] = count.get(k, 0) + 1
+    return max(count, key=lambda k: count[k]) if count else None
+
+
+def kind(name: str, passages: list[dict]) -> tuple[str, str]:
+    """種別と、その根拠の文を返す。ファイル名 → 先頭の見出し → 見出しの ID 接頭辞の順に見る。"""
+    k = _kind_by_words(name)
+    if k:
+        return k, f"ファイル名から{KIND_LABEL[k]}の文書と判断しました。"
+    k = _kind_by_words(_heading(passages))
+    if k:
+        return k, f"先頭の見出しから{KIND_LABEL[k]}の文書と判断しました。"
+    k = _kind_by_prefix(passages)
+    if k:
+        return k, f"見出しの番号（ID）の形から{KIND_LABEL[k]}の文書と判断しました。"
+    return "other", "要件・設計・テストのどれにも当たる手がかりがありませんでした。"
+
+
+def estimate(name: str, passages: list[dict]) -> dict:
+    est = _estimate_tier(name, passages)
+    k, why = kind(name, passages)
+    return {**est, "kind": k, "kind_label": KIND_LABEL[k], "kind_reason": why,
+            "reason": f"{est['reason']} 種別: {why}"}

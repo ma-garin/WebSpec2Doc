@@ -2,13 +2,14 @@
   <div class="in">
     <h1>文書を登録</h1>
     <p class="lead" data-lead>文書を登録すると、AI が文書の格を決めます。</p>
-    <label class="drop" data-drop data-big>
+    <label class="drop" data-drop data-big tabindex="0" role="button" aria-label="文書を選んで登録する（Enter または Space で選択画面を開きます）">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4m0 0L7 9m5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
-      <span data-droptext>文書をここにドロップ、またはクリックして選ぶ</span>
+      <span data-droptext class="dt">文書をここにドロップ、またはクリックして選ぶ</span>
       <small>md / docx / xlsx ・ 複数まとめて登録できます ・ 読めない文書は理由を表示します</small>
-      <input type="file" multiple hidden data-file>
+      <input type="file" multiple hidden data-file accept=".md,.docx,.xlsx">
     </label>
+    <div class="notice" data-notice role="status" aria-live="polite"></div>
     <div data-body></div>
   </div>
-  <div class="ft"><p data-msg>文書を登録すると、承認できます。</p><button class="pri" type="button" data-approve disabled>この内容で承認</button></div>
+  <div class="ft"><p data-msg>文書を登録すると、承認できます。</p><button class="pri" type="button" data-approve disabled aria-busy="false">この内容で承認</button></div>
 </div>

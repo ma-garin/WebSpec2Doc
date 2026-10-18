@@ -1,4 +1,4 @@
-"""6 つの規則。文書群から指摘（Finding）を決定的に作る。"""
+"""8 つの規則。文書群から指摘（Finding）を決定的に作る。"""
 from __future__ import annotations
 
 import hashlib
@@ -6,14 +6,16 @@ import logging
 import re
 
 from .. import setcheck
+from . import links
 
 log = logging.getLogger(__name__)
 
 RULES = (("STATE", "日付や状態を書いていない"), ("TERMS", "用語集どおりの言葉"),
          ("PROTECTED_CHANGE", "勝手に直してはいけない文書を直していない"), ("CONFLICT", "上の格と食い違っていない"),
-         ("REVERSE_REF", "上の格が下の格を参照していない"), ("DUPLICATE", "同じことを 2 か所に書いていない"))
+         ("REVERSE_REF", "上の格が下の格を参照していない"), ("DUPLICATE", "同じことを 2 か所に書いていない"),
+         ("UNDEFINED_REF", "参照している ID が定義されている"), ("UNCOVERED", "要件がどこかから参照されている"))
 SEVERITY = {"CONFLICT": "high", "REVERSE_REF": "mid", "PROTECTED_CHANGE": "high",
-            "DUPLICATE": "mid", "TERMS": "low", "STATE": "low"}
+            "DUPLICATE": "mid", "TERMS": "low", "STATE": "low", "UNDEFINED_REF": "high", "UNCOVERED": "mid"}
 _LABEL = dict(RULES)
 _STATE = re.compile(r"20\d{2}[-/年]\s?\d{1,2}[-/月]\s?\d{1,2}日?|未実装|裁定待ち|TODO|対応中|検討中|未定|暫定")
 _TERM_ARROW = re.compile(r"([^\s:：→|]{1,30})\s*(?:[:：]|→)\s*([^\s:：→|]{1,30})")
@@ -142,8 +144,53 @@ def _duplicate(docs: list[dict]) -> list[dict]:
     return out
 
 
+_REQ_PREFIX = {"REQ", "RQ", "FR", "NFR", "US"}
+
+
+def _prefix(i: str) -> str:
+    return i.split("-", 1)[0]
+
+
+def _undefined_ref(docs: list[dict]) -> list[dict]:
+    """どの文書も定義していない ID への参照。接頭辞がどこかで定義に使われている ID だけを見る（UTF-8 等の誤検知を避ける）。"""
+    table = links.ids(docs)
+    owner = links.definers(table)
+    known = {_prefix(i) for i in owner}
+    out = []
+    for d in docs:
+        for i, psgs in table[d["id"]]["refs"].items():
+            if i in owner or _prefix(i) not in known:
+                continue
+            f = _finding("UNDEFINED_REF", d, psgs[0], i, f"「{i}」を参照していますが、定義が見つかりません。",
+                         f"「{i}」の番号が正しいか確かめ、誤りなら直すか、参照先の文書に「{i}」を定義してください。")
+            if f:
+                out.append(f)
+    return out
+
+
+def _uncovered(docs: list[dict]) -> list[dict]:
+    if len(docs) < 2:
+        return []
+    table = links.ids(docs)
+    out = []
+    for d in docs:
+        others = set()
+        for oid, t in table.items():
+            if oid != d["id"]:
+                others.update(t["refs"])
+        for i, psg in table[d["id"]]["defined"].items():
+            if _prefix(i) not in _REQ_PREFIX or i in others:
+                continue
+            f = _finding("UNCOVERED", d, psg, i, f"要件「{i}」はどの設計・テストからも参照されていません。",
+                         f"「{i}」を実現する設計と、確かめるテストに「{i}」の参照を書いてください。")
+            if f:
+                out.append(f)
+    return out
+
+
 _FUNCS = {"STATE": _state, "TERMS": _terms, "PROTECTED_CHANGE": _protected, "CONFLICT": _conflict,
-          "REVERSE_REF": _reverse, "DUPLICATE": _duplicate}
+          "REVERSE_REF": _reverse, "DUPLICATE": _duplicate,
+          "UNDEFINED_REF": _undefined_ref, "UNCOVERED": _uncovered}
 
 
 def run(documents: list[dict]) -> list[dict]:

@@ -14,3 +14,4 @@
 .dvt-empty{padding:40px;text-align:center;color:var(--tx3);border:1px dashed var(--line2);border-radius:8px}
 .dvt-body{min-height:0}
 .dvt-pane[hidden]{display:none}
+.dvt-hist{margin-bottom:24px}

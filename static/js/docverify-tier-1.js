@@ -123,7 +123,15 @@
     call('tier/documents/' + did, json('PATCH', { tier: tier }));
   }
 
+  function kindLabel(d) {
+    if (d.kind_label) return d.kind_label;
+    var n = (((st() || {}).links || {}).nodes || []).filter(function (x) { return x.id === d.id; })[0];
+    return (n && n.kind_label) || 'その他';
+  }
+
   function render() {
+    // 実行が変わったら、前の実行で出した通知を残さない
+    if (render._iid !== window.DVT.iid) { notice.innerHTML = ''; render._iid = window.DVT.iid; }
     var s = st();
     if (!s) return;
     var docs = (s.documents || []).filter(function (d) { return !pendingDel[d.id]; }), low = s.low == null ? 0.6 : s.low;
@@ -158,13 +166,18 @@
       });
       var rest = docs.filter(function (d) { return cards.indexOf(d) < 0; });
       if (rest.length) {
-        h += '<h2>自動で決まった文書（' + rest.length + ' 件）</h2>';
+        h += '<h2>自動で決まった文書（' + rest.length + ' 件）</h2>' +
+          '<p class="lead">格は文書どうしの上下関係です。格1 方針 → 格2 決まりごと → 格3 仕様 → 格4 メモ の順に、下の格の文書が上の格の文書に従います。</p>';
         tiers().forEach(function (t) {
           var L = rest.filter(function (d) { return d.tier === t.id; });
           if (!L.length) return;
-          h += '<details data-t="' + t.id + '"' + (R._open && R._open[t.id] ? ' open' : '') + '><summary>' + chev + '格' + t.id + ' ' + esc(t.label) +
+          var kinds = {};
+          L.forEach(function (d) { var k = kindLabel(d); kinds[k] = (kinds[k] || 0) + 1; });
+          var open = R._open && t.id in R._open ? R._open[t.id] : true;
+          h += '<details data-t="' + t.id + '"' + (open ? ' open' : '') + '><summary>' + chev + '格' + t.id + ' ' + esc(t.label) +
+            '<span class="kds">' + Object.keys(kinds).map(function (k) { return esc(k) + ' ' + kinds[k]; }).join('・') + '</span>' +
             '<span class="n">' + L.length + ' 件</span></summary>' + L.map(function (d) {
-              return '<div class="row" data-id="' + esc(d.id) + '"><span class="nm">' + esc(d.name) +
+              return '<div class="row" data-id="' + esc(d.id) + '"><span class="kd">' + esc(kindLabel(d)) + '</span><span class="nm">' + esc(d.name) +
                 (d.reason ? '<span class="rsn">分類理由: ' + esc(d.reason) + '</span>' : '') + '</span>' +
                 '<span class="mini">' + (d.tier_source === 'human' ? '手動' : '自動') + '</span>' +
                 '<select data-chg aria-label="格を変更"><option value="">変更</option>' + tiers().map(function (x) {

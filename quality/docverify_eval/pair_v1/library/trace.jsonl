@@ -1,0 +1,24 @@
+{"pair": "library", "req_key": "REQ-001", "req_lines": [43, 43], "design_lines": [[55, 57]]}
+{"pair": "library", "req_key": "library-R01", "req_lines": [45, 45], "design_lines": [[65, 69]]}
+{"pair": "library", "req_key": "REQ-002", "req_lines": [55, 55], "design_lines": [[73, 73]]}
+{"pair": "library", "req_key": "REQ-003", "req_lines": [59, 59], "design_lines": [[77, 79]]}
+{"pair": "library", "req_key": "REQ-004", "req_lines": [61, 61], "design_lines": [[81, 81]]}
+{"pair": "library", "req_key": "library-R02", "req_lines": [63, 63], "design_lines": [[85, 87]]}
+{"pair": "library", "req_key": "REQ-005", "req_lines": [65, 65], "design_lines": [[91, 93]]}
+{"pair": "library", "req_key": "library-R03", "req_lines": [69, 69], "design_lines": [[97, 97]]}
+{"pair": "library", "req_key": "library-R04", "req_lines": [71, 71], "design_lines": [[99, 99]]}
+{"pair": "library", "req_key": "REQ-009", "req_lines": [73, 73], "design_lines": []}
+{"pair": "library", "req_key": "REQ-006", "req_lines": [77, 77], "design_lines": [[103, 105]]}
+{"pair": "library", "req_key": "library-R05", "req_lines": [79, 79], "design_lines": [[107, 107]]}
+{"pair": "library", "req_key": "REQ-007", "req_lines": [81, 81], "design_lines": [[111, 111]]}
+{"pair": "library", "req_key": "REQ-008", "req_lines": [83, 83], "design_lines": [[115, 115]]}
+{"pair": "library", "req_key": "library-R06", "req_lines": [85, 85], "design_lines": [[119, 119]]}
+{"pair": "library", "req_key": "REQ-010", "req_lines": [89, 89], "design_lines": [[123, 123]]}
+{"pair": "library", "req_key": "library-R07", "req_lines": [91, 91], "design_lines": [[127, 127]]}
+{"pair": "library", "req_key": "REQ-011", "req_lines": [97, 97], "design_lines": [[189, 189]]}
+{"pair": "library", "req_key": "REQ-012", "req_lines": [99, 99], "design_lines": [[190, 190]]}
+{"pair": "library", "req_key": "library-R08", "req_lines": [101, 101], "design_lines": [[191, 191]]}
+{"pair": "library", "req_key": "REQ-013", "req_lines": [105, 105], "design_lines": [[40, 40]]}
+{"pair": "library", "req_key": "REQ-014", "req_lines": [107, 107], "design_lines": [[192, 192]]}
+{"pair": "library", "req_key": "REQ-015", "req_lines": [109, 109], "design_lines": [[193, 193]]}
+{"pair": "library", "req_key": "library-R09", "req_lines": [111, 111], "design_lines": [[194, 194]]}

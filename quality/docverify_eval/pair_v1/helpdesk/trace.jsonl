@@ -1,0 +1,27 @@
+{"pair": "helpdesk", "req_key": "REQ-001", "req_lines": [44, 44], "design_lines": [[28, 28]]}
+{"pair": "helpdesk", "req_key": "REQ-002", "req_lines": [45, 45], "design_lines": [[67, 67]]}
+{"pair": "helpdesk", "req_key": "helpdesk-R01", "req_lines": [46, 46], "design_lines": [[30, 30]]}
+{"pair": "helpdesk", "req_key": "REQ-003", "req_lines": [47, 47], "design_lines": [[70, 70]]}
+{"pair": "helpdesk", "req_key": "helpdesk-R02", "req_lines": [48, 48], "design_lines": [[33, 33]]}
+{"pair": "helpdesk", "req_key": "helpdesk-R03", "req_lines": [52, 52], "design_lines": [[75, 75]]}
+{"pair": "helpdesk", "req_key": "REQ-004", "req_lines": [53, 53], "design_lines": [[89, 89]]}
+{"pair": "helpdesk", "req_key": "helpdesk-R04", "req_lines": [54, 54], "design_lines": [[104, 104]]}
+{"pair": "helpdesk", "req_key": "REQ-005", "req_lines": [55, 55], "design_lines": [[48, 48]]}
+{"pair": "helpdesk", "req_key": "helpdesk-R05", "req_lines": [56, 56], "design_lines": [[51, 51]]}
+{"pair": "helpdesk", "req_key": "REQ-006", "req_lines": [57, 57], "design_lines": [[117, 117]]}
+{"pair": "helpdesk", "req_key": "helpdesk-R06", "req_lines": [58, 58], "design_lines": [[49, 49]]}
+{"pair": "helpdesk", "req_key": "REQ-007", "req_lines": [81, 81], "design_lines": [[37, 37]]}
+{"pair": "helpdesk", "req_key": "helpdesk-R07", "req_lines": [82, 82], "design_lines": []}
+{"pair": "helpdesk", "req_key": "REQ-008", "req_lines": [83, 83], "design_lines": [[112, 112]]}
+{"pair": "helpdesk", "req_key": "helpdesk-R08", "req_lines": [84, 84], "design_lines": [[31, 31], [127, 127]]}
+{"pair": "helpdesk", "req_key": "REQ-009", "req_lines": [85, 85], "design_lines": [[56, 56]]}
+{"pair": "helpdesk", "req_key": "REQ-010", "req_lines": [86, 86], "design_lines": [[60, 60]]}
+{"pair": "helpdesk", "req_key": "REQ-011", "req_lines": [87, 87], "design_lines": [[41, 41]]}
+{"pair": "helpdesk", "req_key": "REQ-012", "req_lines": [93, 93], "design_lines": [[189, 189]]}
+{"pair": "helpdesk", "req_key": "REQ-013", "req_lines": [94, 94], "design_lines": [[190, 190]]}
+{"pair": "helpdesk", "req_key": "REQ-014", "req_lines": [98, 98], "design_lines": [[191, 191]]}
+{"pair": "helpdesk", "req_key": "helpdesk-R09", "req_lines": [99, 99], "design_lines": [[197, 197]]}
+{"pair": "helpdesk", "req_key": "REQ-015", "req_lines": [103, 103], "design_lines": [[192, 192]]}
+{"pair": "helpdesk", "req_key": "REQ-016", "req_lines": [104, 104], "design_lines": [[193, 193]]}
+{"pair": "helpdesk", "req_key": "helpdesk-R10", "req_lines": [105, 105], "design_lines": [[194, 194]]}
+{"pair": "helpdesk", "req_key": "helpdesk-R11", "req_lines": [109, 109], "design_lines": [[195, 195]]}

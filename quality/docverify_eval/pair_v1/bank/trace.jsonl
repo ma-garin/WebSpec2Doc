@@ -1,0 +1,23 @@
+{"pair": "bank", "req_key": "REQ-001", "req_lines": [39, 39], "design_lines": [[51, 53]]}
+{"pair": "bank", "req_key": "REQ-002", "req_lines": [41, 41], "design_lines": [[55, 56]]}
+{"pair": "bank", "req_key": "REQ-003", "req_lines": [43, 43], "design_lines": [[58, 61], [29, 39]]}
+{"pair": "bank", "req_key": "REQ-004", "req_lines": [45, 45], "design_lines": [[63, 66]]}
+{"pair": "bank", "req_key": "REQ-005", "req_lines": [51, 58], "design_lines": [[68, 77]]}
+{"pair": "bank", "req_key": "REQ-006", "req_lines": [60, 67], "design_lines": [[79, 87]]}
+{"pair": "bank", "req_key": "REQ-007", "req_lines": [71, 71], "design_lines": [[41, 44], [89, 91]]}
+{"pair": "bank", "req_key": "REQ-008", "req_lines": [73, 73], "design_lines": [[93, 96]]}
+{"pair": "bank", "req_key": "REQ-009", "req_lines": [75, 75], "design_lines": [[98, 100]]}
+{"pair": "bank", "req_key": "REQ-010", "req_lines": [79, 79], "design_lines": [[102, 103]]}
+{"pair": "bank", "req_key": "REQ-011", "req_lines": [81, 81], "design_lines": [[105, 107]]}
+{"pair": "bank", "req_key": "REQ-012", "req_lines": [99, 99], "design_lines": [[180, 182]]}
+{"pair": "bank", "req_key": "REQ-013", "req_lines": [105, 105], "design_lines": [[184, 185]]}
+{"pair": "bank", "req_key": "REQ-014", "req_lines": [101, 101], "design_lines": [[187, 188]]}
+{"pair": "bank", "req_key": "REQ-015", "req_lines": [109, 109], "design_lines": [[190, 191], [162, 163]]}
+{"pair": "bank", "req_key": "bank-R01", "req_lines": [47, 47], "design_lines": [[109, 111]]}
+{"pair": "bank", "req_key": "bank-R02", "req_lines": [83, 83], "design_lines": [[113, 115]]}
+{"pair": "bank", "req_key": "bank-R03", "req_lines": [85, 85], "design_lines": [[124, 126], [46, 47]]}
+{"pair": "bank", "req_key": "bank-R04", "req_lines": [87, 87], "design_lines": []}
+{"pair": "bank", "req_key": "bank-R05", "req_lines": [91, 91], "design_lines": [[120, 122]]}
+{"pair": "bank", "req_key": "bank-R06", "req_lines": [93, 93], "design_lines": [[117, 118]]}
+{"pair": "bank", "req_key": "bank-R07", "req_lines": [113, 113], "design_lines": [[193, 194]]}
+{"pair": "bank", "req_key": "bank-R08", "req_lines": [115, 115], "design_lines": [[196, 198]]}

@@ -1,0 +1,9 @@
+{"pair": "library", "id": "library-D01", "type": "MISSING_IN_DESIGN", "req_lines": [73, 73], "design_lines": [], "req_quote": "督促のメールを送ること", "design_quote": "", "explanation": "要件の督促メール送信が基本設計に存在しない。"}
+{"pair": "library", "id": "library-D02", "type": "EXTRA_IN_DESIGN", "req_lines": [], "design_lines": [131, 131], "req_quote": "", "design_quote": "おすすめ資料を 5 件表示する", "explanation": "要件に無いおすすめ資料の表示機能が設計にある。"}
+{"pair": "library", "id": "library-D03", "type": "CONTRADICTION", "req_lines": [83, 83], "design_lines": [115, 115], "req_quote": "取置期間は通知日から 7 日間", "design_quote": "取置期間は通知日から 5 日間", "explanation": "取置期間が要件 7 日、設計 5 日で食い違う。"}
+{"pair": "library", "id": "library-D04", "type": "CONTRADICTION", "req_lines": [65, 65], "design_lines": [91, 91], "req_quote": "1 回だけ貸出期限を 7 日延長", "design_quote": "貸出期限を 14 日延長する", "explanation": "延長日数が要件 7 日、設計 14 日で食い違う。"}
+{"pair": "library", "id": "library-D05", "type": "TABLE_MISMATCH", "req_lines": [53, 53], "design_lines": [69, 69], "req_quote": "| 児童 | 3 冊", "design_quote": "| 3 | 児童 | 5 冊", "explanation": "児童の貸出冊数上限が要件の表 1 は 3 冊、設計の表 2 は 5 冊で食い違う。"}
+{"pair": "library", "id": "library-D06", "type": "TABLE_MISMATCH", "req_lines": [], "design_lines": [57, 57], "req_quote": "", "design_quote": "利用者番号は 10 桁の数字", "explanation": "利用者番号の桁数が設計本文は 10 桁、設計の利用者テーブルは 8 桁で食い違う。"}
+{"pair": "library", "id": "library-D07", "type": "TERM_INCONSISTENCY", "req_lines": [63, 63], "design_lines": [87, 87], "req_quote": "取置棚へ回す", "design_quote": "予約確保棚", "explanation": "要件の「取置棚」を設計では「予約確保棚」と呼んでいる。"}
+{"pair": "library", "id": "library-D08", "type": "AMBIGUOUS", "req_lines": [81, 81], "design_lines": [], "req_quote": "速やかに", "design_quote": "", "explanation": "「速やかに」の基準が無く通知までの時間の解釈が割れる。"}
+{"pair": "library", "id": "library-D09", "type": "UNTESTABLE", "req_lines": [105, 105], "design_lines": [], "req_quote": "誰にとっても使いやすい", "design_quote": "", "explanation": "「使いやすい」の合否基準が無く判定できない。"}

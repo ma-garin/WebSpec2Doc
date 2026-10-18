@@ -1,0 +1,25 @@
+{"pair": "stock", "req_key": "REQ-001", "req_lines": [47, 48], "design_lines": [[20, 20], [28, 30], [44, 45]]}
+{"pair": "stock", "req_key": "REQ-002", "req_lines": [49, 50], "design_lines": [[20, 20], [29, 29], [46, 46]]}
+{"pair": "stock", "req_key": "REQ-003", "req_lines": [54, 55], "design_lines": [[21, 21], [33, 34], [49, 51]]}
+{"pair": "stock", "req_key": "REQ-004", "req_lines": [62, 63], "design_lines": [[22, 22], [37, 39], [54, 54]]}
+{"pair": "stock", "req_key": "REQ-005", "req_lines": [64, 64], "design_lines": [[57, 57], [110, 114]]}
+{"pair": "stock", "req_key": "REQ-006", "req_lines": [76, 77], "design_lines": [[25, 25], [61, 64], [126, 130]]}
+{"pair": "stock", "req_key": "REQ-007", "req_lines": [88, 89], "design_lines": [[24, 24], [70, 72]]}
+{"pair": "stock", "req_key": "REQ-008", "req_lines": [90, 91], "design_lines": [[24, 24], [75, 76]]}
+{"pair": "stock", "req_key": "REQ-009", "req_lines": [95, 96], "design_lines": [[23, 23], [79, 81]]}
+{"pair": "stock", "req_key": "REQ-010", "req_lines": [56, 57], "design_lines": [[84, 86]]}
+{"pair": "stock", "req_key": "REQ-011", "req_lines": [58, 59], "design_lines": []}
+{"pair": "stock", "req_key": "REQ-012", "req_lines": [97, 98], "design_lines": [[89, 90], [145, 153]]}
+{"pair": "stock", "req_key": "REQ-013", "req_lines": [103, 104], "design_lines": [[182, 183]]}
+{"pair": "stock", "req_key": "REQ-014", "req_lines": [105, 105], "design_lines": [[186, 186]]}
+{"pair": "stock", "req_key": "REQ-015", "req_lines": [106, 106], "design_lines": [[189, 189]]}
+{"pair": "stock", "req_key": "REQ-016", "req_lines": [107, 107], "design_lines": [[192, 192]]}
+{"pair": "stock", "req_key": "stock-R01", "req_lines": [51, 51], "design_lines": [[96, 97], [162, 165]]}
+{"pair": "stock", "req_key": "stock-R02", "req_lines": [72, 72], "design_lines": [[58, 58]]}
+{"pair": "stock", "req_key": "stock-R03", "req_lines": [73, 73], "design_lines": [[100, 100]]}
+{"pair": "stock", "req_key": "stock-R04", "req_lines": [85, 85], "design_lines": [[67, 67], [169, 175]]}
+{"pair": "stock", "req_key": "stock-R05", "req_lines": [92, 92], "design_lines": [[76, 76]]}
+{"pair": "stock", "req_key": "stock-R06", "req_lines": [99, 99], "design_lines": [[93, 93], [177, 177]]}
+{"pair": "stock", "req_key": "stock-R07", "req_lines": [108, 108], "design_lines": [[195, 195]]}
+{"pair": "stock", "req_key": "stock-R08", "req_lines": [109, 109], "design_lines": [[198, 198]]}
+{"pair": "stock", "req_key": "stock-R09", "req_lines": [110, 110], "design_lines": [[198, 198]]}

@@ -1,0 +1,8 @@
+{"pair": "expense", "id": "expense-D01", "type": "MISSING_IN_DESIGN", "req_lines": [82, 82], "design_lines": [], "req_quote": "3営業日を経過しても承認されない", "design_quote": "", "explanation": "承認期限リマインド通知の要件が設計のどこにも反映されていない。"}
+{"pair": "expense", "id": "expense-D02", "type": "EXTRA_IN_DESIGN", "req_lines": [], "design_lines": [110, 110], "req_quote": "", "design_quote": "CSVファイルで一括取込", "explanation": "要件に根拠の無いCSV一括取込機能が設計にある。"}
+{"pair": "expense", "id": "expense-D03", "type": "CONTRADICTION", "req_lines": [78, 78], "design_lines": [79, 79], "req_quote": "差戻し日から14日以内", "design_quote": "差戻し日から30日以内", "explanation": "再申請の期限が要件は14日、設計は30日で食い違う。"}
+{"pair": "expense", "id": "expense-D04", "type": "TABLE_MISMATCH", "req_lines": [68, 69], "design_lines": [67, 68], "req_quote": "100,001円以上", "design_quote": "150,001円以上", "explanation": "承認ルートの金額帯の境界が要件の表は100,000円、設計の表は150,000円で食い違う。"}
+{"pair": "expense", "id": "expense-D05", "type": "TERM_INCONSISTENCY", "req_lines": [73, 73], "design_lines": [73, 73], "req_quote": "承認者は、経費申請を承認または差戻しできる", "design_quote": "決裁者は承認または差戻しを選択する", "explanation": "承認者を設計の3.3だけ決裁者と呼んでいる。"}
+{"pair": "expense", "id": "expense-D06", "type": "AMBIGUOUS", "req_lines": [91, 91], "design_lines": [], "req_quote": "速やかに通知する", "design_quote": "", "explanation": "速やかにの基準が無く、通知までの許容時間が解釈で割れる。"}
+{"pair": "expense", "id": "expense-D07", "type": "UNTESTABLE", "req_lines": [153, 153], "design_lines": [], "req_quote": "誰にとっても使いやすいもの", "design_quote": "", "explanation": "使いやすさの合否を判定する基準が無い。"}
+{"pair": "expense", "id": "expense-D08", "type": "TABLE_MISMATCH", "req_lines": [], "design_lines": [33, 133], "req_quote": "", "design_quote": "用途は100文字まで", "explanation": "用途の桁数が設計の表は200、設計の画面本文は100文字で食い違う。"}

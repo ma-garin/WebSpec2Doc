@@ -1,0 +1,26 @@
+{"pair": "clinic", "req_key": "REQ-001", "req_lines": [33, 33], "design_lines": [[38, 38]]}
+{"pair": "clinic", "req_key": "REQ-002", "req_lines": [35, 35], "design_lines": [[39, 39], [72, 72]]}
+{"pair": "clinic", "req_key": "REQ-003", "req_lines": [37, 37], "design_lines": [[73, 73], [81, 81]]}
+{"pair": "clinic", "req_key": "clinic-R01", "req_lines": [48, 48], "design_lines": [[83, 83]]}
+{"pair": "clinic", "req_key": "REQ-004", "req_lines": [50, 50], "design_lines": [[84, 84]]}
+{"pair": "clinic", "req_key": "REQ-005", "req_lines": [52, 52], "design_lines": [[44, 44]]}
+{"pair": "clinic", "req_key": "REQ-006", "req_lines": [54, 54], "design_lines": [[89, 89]]}
+{"pair": "clinic", "req_key": "REQ-007", "req_lines": [56, 56], "design_lines": [[93, 93]]}
+{"pair": "clinic", "req_key": "REQ-008", "req_lines": [58, 58], "design_lines": []}
+{"pair": "clinic", "req_key": "REQ-009", "req_lines": [62, 62], "design_lines": [[49, 49]]}
+{"pair": "clinic", "req_key": "clinic-R02", "req_lines": [64, 64], "design_lines": [[99, 99]]}
+{"pair": "clinic", "req_key": "REQ-010", "req_lines": [66, 66], "design_lines": [[53, 53]]}
+{"pair": "clinic", "req_key": "clinic-R03", "req_lines": [68, 68], "design_lines": [[98, 98]]}
+{"pair": "clinic", "req_key": "REQ-011", "req_lines": [70, 70], "design_lines": [[58, 58]]}
+{"pair": "clinic", "req_key": "REQ-012", "req_lines": [74, 74], "design_lines": [[105, 105]]}
+{"pair": "clinic", "req_key": "clinic-R04", "req_lines": [76, 76], "design_lines": [[106, 106]]}
+{"pair": "clinic", "req_key": "clinic-R05", "req_lines": [80, 80], "design_lines": [[109, 109]]}
+{"pair": "clinic", "req_key": "REQ-013", "req_lines": [82, 82], "design_lines": [[110, 110]]}
+{"pair": "clinic", "req_key": "clinic-R06", "req_lines": [86, 86], "design_lines": [[114, 114]]}
+{"pair": "clinic", "req_key": "REQ-014", "req_lines": [92, 92], "design_lines": [[178, 178]]}
+{"pair": "clinic", "req_key": "REQ-015", "req_lines": [96, 96], "design_lines": [[181, 181]]}
+{"pair": "clinic", "req_key": "clinic-R07", "req_lines": [98, 98], "design_lines": [[185, 185]]}
+{"pair": "clinic", "req_key": "clinic-R08", "req_lines": [102, 102], "design_lines": [[188, 188]]}
+{"pair": "clinic", "req_key": "REQ-016", "req_lines": [106, 106], "design_lines": [[191, 191]]}
+{"pair": "clinic", "req_key": "REQ-017", "req_lines": [108, 108], "design_lines": [[192, 192]]}
+{"pair": "clinic", "req_key": "clinic-R09", "req_lines": [112, 112], "design_lines": [[195, 195]]}

@@ -1,0 +1,9 @@
+{"pair": "lms", "id": "lms-D01", "type": "MISSING_IN_DESIGN", "req_lines": [78, 78], "design_lines": [], "req_quote": "必須研修を修了していない受講者に対し、毎月1日に催促メールを送る", "design_quote": "", "explanation": "必須研修の未修了者への毎月の催促メールが設計に無い。"}
+{"pair": "lms", "id": "lms-D02", "type": "EXTRA_IN_DESIGN", "req_lines": [], "design_lines": [61, 63], "req_quote": "", "design_quote": "受講者ランキング", "explanation": "要件に無い受講者ランキング画面が設計にある。"}
+{"pair": "lms", "id": "lms-D03", "type": "CONTRADICTION", "req_lines": [64, 64], "design_lines": [91, 91], "req_quote": "受験は1コースにつき最大3回まで", "design_quote": "受験回数は1コースにつき5回までとし", "explanation": "受験回数の上限が要件は3回、設計は5回で食い違う。"}
+{"pair": "lms", "id": "lms-D04", "type": "CONTRADICTION", "req_lines": [58, 58], "design_lines": [87, 87], "req_quote": "再生割合が90%以上になった時点で視聴済み", "design_quote": "再生割合が80%以上になった時点", "explanation": "視聴済みの基準が要件は90%、設計は80%で食い違う。"}
+{"pair": "lms", "id": "lms-D05", "type": "TABLE_MISMATCH", "req_lines": [54, 54], "design_lines": [120, 120], "req_quote": "| 管理職 | MGR | 85 |", "design_quote": "| MGR | 管理職 | 75 |", "explanation": "管理職の合格点が要件の表は85、設計の表は75で食い違う。"}
+{"pair": "lms", "id": "lms-D06", "type": "TABLE_MISMATCH", "req_lines": [], "design_lines": [54, 126], "req_quote": "", "design_quote": "コース名は全角50文字以内で入力させる", "explanation": "コース名の桁が画面設計の本文は全角50、データ設計の表は全角100で食い違う。"}
+{"pair": "lms", "id": "lms-D07", "type": "TERM_INCONSISTENCY", "req_lines": [68, 68], "design_lines": [96, 96], "req_quote": "修了証をPDFで発行する", "design_quote": "修了証明書", "explanation": "修了証が設計の一箇所だけ修了証明書と呼ばれている。"}
+{"pair": "lms", "id": "lms-D08", "type": "AMBIGUOUS", "req_lines": [44, 44], "design_lines": [], "req_quote": "速やかに管理者へ通知する", "design_quote": "", "explanation": "速やかにの基準が無く、解釈が割れる。"}
+{"pair": "lms", "id": "lms-D09", "type": "UNTESTABLE", "req_lines": [112, 112], "design_lines": [], "req_quote": "誰にとっても分かりやすいこと", "design_quote": "", "explanation": "分かりやすさの合否基準が無く判定できない。"}

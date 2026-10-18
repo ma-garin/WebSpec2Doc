@@ -1,0 +1,9 @@
+{"pair": "bank", "id": "bank-D01", "type": "MISSING_IN_DESIGN", "req_lines": [87, 87], "design_lines": [], "req_quote": "登録メールアドレスへ通知", "design_quote": "", "explanation": "要件の振込結果のメール通知が設計に存在しない。"}
+{"pair": "bank", "id": "bank-D02", "type": "EXTRA_IN_DESIGN", "req_lines": [], "design_lines": [128, 130], "req_quote": "", "design_quote": "手数料の1パーセントに相当するポイント", "explanation": "要件に根拠の無い手数料ポイント還元が設計にある。"}
+{"pair": "bank", "id": "bank-D03", "type": "CONTRADICTION", "req_lines": [73, 73], "design_lines": [95, 95], "req_quote": "有効期限は発行から3分", "design_quote": "有効期限は、発行から5分", "explanation": "ワンタイムパスワードの有効期限が要件は3分、設計は5分で食い違う。"}
+{"pair": "bank", "id": "bank-D04", "type": "CONTRADICTION", "req_lines": [81, 81], "design_lines": [106, 106], "req_quote": "当日から90日先まで", "design_quote": "当日から60日先まで", "explanation": "振込予約の指定可能範囲が要件は90日先、設計は60日先で食い違う。"}
+{"pair": "bank", "id": "bank-D05", "type": "TABLE_MISMATCH", "req_lines": [67, 67], "design_lines": [87, 87], "req_quote": "他行あて | 330円", "design_quote": "他行あて | 440円", "explanation": "他行あて手数料が要件の表2は330円、設計の表4は440円で食い違う。"}
+{"pair": "bank", "id": "bank-D06", "type": "TABLE_MISMATCH", "req_lines": [43, 43], "design_lines": [36, 36], "req_quote": "口座番号（7桁）", "design_quote": "口座番号 | 数字入力 | 8", "explanation": "口座番号の桁数が要件と設計のデータ表は7桁、画面項目表は8桁で食い違う。"}
+{"pair": "bank", "id": "bank-D07", "type": "TERM_INCONSISTENCY", "req_lines": [47, 47], "design_lines": [111, 111], "req_quote": "受取人口座の名義を照会し", "design_quote": "受益者名", "explanation": "受取人を設計の名義照会の節だけが受益者と呼んでいる。"}
+{"pair": "bank", "id": "bank-D08", "type": "AMBIGUOUS", "req_lines": [85, 85], "design_lines": [], "req_quote": "速やかに完了画面", "design_quote": "", "explanation": "「速やかに」は表示までの許容時間が定まらず解釈が割れる。"}
+{"pair": "bank", "id": "bank-D09", "type": "UNTESTABLE", "req_lines": [115, 115], "design_lines": [], "req_quote": "迷わず操作できる品質", "design_quote": "", "explanation": "「迷わず操作できる品質」には合否を判定する基準が無い。"}

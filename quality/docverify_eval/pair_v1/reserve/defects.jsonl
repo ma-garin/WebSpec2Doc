@@ -1,0 +1,9 @@
+{"pair": "reserve", "id": "reserve-D01", "type": "MISSING_IN_DESIGN", "req_lines": [63, 63], "design_lines": [], "req_quote": "朝食の有無を選択できる", "design_quote": "", "explanation": "朝食の選択要件が基本設計に反映されていない。"}
+{"pair": "reserve", "id": "reserve-D02", "type": "EXTRA_IN_DESIGN", "req_lines": [], "design_lines": [119, 119], "req_quote": "", "design_quote": "会員ポイントとして付与する", "explanation": "要件に根拠の無い会員ポイント付与が設計にある。"}
+{"pair": "reserve", "id": "reserve-D03", "type": "CONTRADICTION", "req_lines": [75, 75], "design_lines": [91, 91], "req_quote": "チェックイン日の 3 日前まで", "design_quote": "チェックイン日の 1 日前まで", "explanation": "宿泊日変更の期限が要件は3日前、設計は1日前で食い違う。"}
+{"pair": "reserve", "id": "reserve-D04", "type": "CONTRADICTION", "req_lines": [64, 64], "design_lines": [71, 71], "req_quote": "申込から 15 分間", "design_quote": "有効期間は 30 分間", "explanation": "仮押さえの保持時間が要件は15分、設計は30分で食い違う。"}
+{"pair": "reserve", "id": "reserve-D05", "type": "TABLE_MISMATCH", "req_lines": [82, 82], "design_lines": [103, 103], "req_quote": "宿泊料金の50%", "design_quote": "宿泊料金の30%", "explanation": "区分Cのキャンセル料が要件の表は50%、設計の表は30%で食い違う。"}
+{"pair": "reserve", "id": "reserve-D06", "type": "TABLE_MISMATCH", "req_lines": [70, 70], "design_lines": [82, 127], "req_quote": "英数字 8 桁", "design_quote": "英数字 10 桁", "explanation": "予約番号の桁数が設計の本文は10桁、データ設計の表と要件は8桁で食い違う。"}
+{"pair": "reserve", "id": "reserve-D07", "type": "TERM_INCONSISTENCY", "req_lines": [48, 48], "design_lines": [50, 50], "req_quote": "キャンセル料", "design_quote": "取消手数料", "explanation": "同じ概念を要件はキャンセル料、設計の画面項目は取消手数料と呼んでいる。"}
+{"pair": "reserve", "id": "reserve-D08", "type": "AMBIGUOUS", "req_lines": [69, 69], "design_lines": [], "req_quote": "速やかに", "design_quote": "", "explanation": "「速やかに」の基準が無く解釈が割れる。"}
+{"pair": "reserve", "id": "reserve-D09", "type": "UNTESTABLE", "req_lines": [112, 112], "design_lines": [], "req_quote": "快適に操作できること", "design_quote": "", "explanation": "分かりやすさ・快適さの合否基準が無く検証できない。"}

@@ -1,0 +1,26 @@
+{"pair": "lms", "req_key": "REQ-001", "req_lines": [32, 32], "design_lines": [[33, 36], [65, 67]]}
+{"pair": "lms", "req_key": "REQ-002", "req_lines": [38, 38], "design_lines": [[37, 41], [72, 75]]}
+{"pair": "lms", "req_key": "REQ-003", "req_lines": [34, 34], "design_lines": [[52, 55], [68, 71]]}
+{"pair": "lms", "req_key": "REQ-004", "req_lines": [48, 54], "design_lines": [[115, 120]]}
+{"pair": "lms", "req_key": "REQ-005", "req_lines": [58, 58], "design_lines": [[42, 45], [85, 88]]}
+{"pair": "lms", "req_key": "REQ-006", "req_lines": [64, 64], "design_lines": [[46, 48], [89, 92]]}
+{"pair": "lms", "req_key": "REQ-007", "req_lines": [68, 68], "design_lines": [[93, 96]]}
+{"pair": "lms", "req_key": "REQ-008", "req_lines": [76, 76], "design_lines": [[100, 102]]}
+{"pair": "lms", "req_key": "REQ-009", "req_lines": [82, 82], "design_lines": [[49, 51], [103, 105]]}
+{"pair": "lms", "req_key": "REQ-010", "req_lines": [86, 86], "design_lines": [[56, 57], [106, 108]]}
+{"pair": "lms", "req_key": "REQ-011", "req_lines": [42, 42], "design_lines": [[80, 82]]}
+{"pair": "lms", "req_key": "REQ-012", "req_lines": [84, 84], "design_lines": [[49, 51], [103, 105]]}
+{"pair": "lms", "req_key": "REQ-013", "req_lines": [96, 96], "design_lines": [[159, 161]]}
+{"pair": "lms", "req_key": "REQ-014", "req_lines": [98, 98], "design_lines": [[159, 161]]}
+{"pair": "lms", "req_key": "REQ-015", "req_lines": [102, 102], "design_lines": [[162, 163]]}
+{"pair": "lms", "req_key": "REQ-016", "req_lines": [106, 106], "design_lines": [[164, 167], [144, 146]]}
+{"pair": "lms", "req_key": "lms-R01", "req_lines": [40, 40], "design_lines": [[76, 79]]}
+{"pair": "lms", "req_key": "lms-R02", "req_lines": [44, 44], "design_lines": [[83, 84]]}
+{"pair": "lms", "req_key": "lms-R03", "req_lines": [60, 60], "design_lines": [[42, 45], [85, 88]]}
+{"pair": "lms", "req_key": "lms-R04", "req_lines": [70, 70], "design_lines": [[93, 96]]}
+{"pair": "lms", "req_key": "lms-R05", "req_lines": [72, 72], "design_lines": [[58, 60], [97, 99]]}
+{"pair": "lms", "req_key": "lms-R06", "req_lines": [78, 78], "design_lines": []}
+{"pair": "lms", "req_key": "lms-R07", "req_lines": [90, 90], "design_lines": [[112, 113]]}
+{"pair": "lms", "req_key": "lms-R08", "req_lines": [108, 108], "design_lines": [[6, 10], [148, 153]]}
+{"pair": "lms", "req_key": "lms-R09", "req_lines": [112, 112], "design_lines": [[173, 174]]}
+{"pair": "lms", "req_key": "lms-R10", "req_lines": [116, 116], "design_lines": [[168, 169]]}

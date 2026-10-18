@@ -4,7 +4,7 @@
   if (!R) return;
   var $ = function (s) { return R.querySelector(s); };
   var tabsEl = $('[data-tabs]'), docEl = $('[data-doc]'), cardsEl = $('[data-cards]'),
-      band = $('[data-band]'), dlg = $('[data-dlg]'), reasonEl = $('[data-reason]');
+      band = $('[data-band]'), dlg = $('[data-dlg]'), errEl = $('[data-err]'), reasonEl = $('[data-reason]');
   var cur = null, openId = null, showOk = false, reportFor = null, busy = false;
   var SEV = { high: '重大', mid: '注意', low: '軽微' };
   var COL = { high: 'var(--ng,#D92D20)', mid: 'var(--wa,#B54708)', low: '#98A2B3' };
@@ -19,6 +19,18 @@
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
+  }
+  function clearErr() { errEl.classList.remove('on'); reasonEl.classList.remove('bad'); }
+  reasonEl.addEventListener('input', clearErr);
+  function toTop() {
+    for (var n = R; n; n = n.parentElement) { if (n.scrollTop) n.scrollTop = 0; }
+    var se = document.scrollingElement; if (se && se.scrollTop) se.scrollTop = 0;
+  }
+  var shown = false;
+  function syncShown() {
+    var now = R.getClientRects().length > 0;
+    if (now && !shown) toTop();
+    shown = now;
   }
   function st() { return (window.DVT && window.DVT.state) || null; }
   function toast(m, k) { if (window.DVT) window.DVT.toast(m, k || 'error'); }
@@ -141,14 +153,14 @@
   });
   cardsEl.addEventListener('click', function (e) {
     var c = e.target.closest('.card'); if (!c) return;
-    if (e.target.closest('[data-rep]')) { reportFor = c.dataset.f; reasonEl.value = ''; dlg.hidden = false; reasonEl.focus(); return; }
+    if (e.target.closest('[data-rep]')) { reportFor = c.dataset.f; reasonEl.value = ''; clearErr(); dlg.hidden = false; reasonEl.focus(); return; }
     if (c.dataset.f === openId) { openId = null; render(); } else open(c.dataset.f, true);
   });
 
   $('[data-cancel]').addEventListener('click', function () { dlg.hidden = true; reportFor = null; });
   $('[data-send]').addEventListener('click', function () {
     var reason = reasonEl.value.trim();
-    if (!reason) { toast('通報の理由を書いてください。'); reasonEl.focus(); return; }
+    if (!reason) { errEl.classList.add('on'); reasonEl.classList.add('bad'); reasonEl.focus(); return; }
     if (busy || !reportFor) return;
     busy = true;
     Promise.resolve(window.DVT.api('tier/findings/' + reportFor + '/report', json('POST', { reason: reason, by: userName() })))
@@ -166,6 +178,7 @@
         function (err) { busy = false; toast((err && err.message) || 'やり直せませんでした。少し待ってからもう一度お試しください。'); });
   });
 
-  document.addEventListener('dvt:state', render);
+  document.addEventListener('dvt:state', function () { render(); syncShown(); });
   render();
+  syncShown();
 })();

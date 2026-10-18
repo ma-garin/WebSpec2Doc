@@ -18,6 +18,7 @@ _P = "/api/docverify/inspections/<iid>/tier"
 NOT_FOUND = "検査が見つかりません。検査を選び直してください。"
 SAVE_ERR = "保存できませんでした。もう一度お試しください。"
 LOW = 0.6
+_EXTS = (".md", ".docx", ".xlsx")
 
 
 def _err(message: str, status: int):
@@ -69,7 +70,7 @@ def _state(insp: dict) -> dict:
     if s2:
         auto = links.conclude(t["findings"], t["reports"])
         state.update(links=links.build(t["documents"], t["findings"], t["reports"]), auto_level=auto,
-                     level_label=links.LEVEL_LABEL)
+                     auto_note=links.note(t["documents"]), level_label=links.LEVEL_LABEL)
     else:
         state["level_label"] = links.LEVEL_LABEL
     return state
@@ -113,15 +114,22 @@ def add_documents(iid: str):
         return _err("文書ファイルを選んでください。", 400)
     t = _tier(insp)
     docs = list(t["documents"])
+    rejected, replaced, added = [], [], 0
     for f in files:
+        ext = Path(f.filename).suffix.lower()
+        if ext not in _EXTS:
+            rejected.append({"name": f.filename, "reason": "この形式は登録できません。md・docx・xlsx のどれかで保存し直してください。"})
+            continue
         try:
             with tempfile.TemporaryDirectory() as tmp:
                 document, passages = ingest_r3.ingest_r3(f.filename, f.read(), Path(tmp))
         except ingest.IngestError as e:
-            return _err(str(e), 400)
+            rejected.append({"name": f.filename, "reason": str(e)})
+            continue
         except Exception:
             log.exception("文書の取り込みに失敗")
-            return _err(f"「{f.filename}」を読めませんでした。別の形式で保存し直してから登録してください。", 500)
+            rejected.append({"name": f.filename, "reason": "読めませんでした。別の形式で保存し直してから登録してください。"})
+            continue
         name = document.get("name") or f.filename
         old = next((d for d in docs if d.get("name") == name), None)
         try:
@@ -134,10 +142,20 @@ def add_documents(iid: str):
                "reason": est["reason"], "uploaded_at": _now(), "passages": passages,
                "prev_passages": (old.get("passages") if old else None)}
         docs = [d for d in docs if d is not old] + [doc] if old else [*docs, doc]
+        added += 1
+        if old:
+            replaced.append(name)
+    if not added:
+        names = "、".join(f"「{r['name']}」" for r in rejected)
+        return jsonify(error=f"{names}を登録できませんでした。形式と内容を確かめてから、もう一度選んでください。",
+                       rejected=rejected), 400
     t = {**t, "documents": docs}
     if t["approved"]:
         t = {**t, "approved": None, "findings": [], "conclusion": None, "reports": {}}
-    return _save(insp, t, 201)
+    resp, status = _save(insp, t, 201)
+    if status == 201:
+        resp = jsonify(**{**resp.get_json(), "upload_report": {"added": added, "rejected": rejected, "replaced": replaced}})
+    return resp, status
 
 
 @bp.route(f"{_P}/documents/<did>", methods=["PATCH"])

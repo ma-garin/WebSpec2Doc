@@ -7,6 +7,10 @@
       fileIn = $('[data-file]'), msg = $('[data-msg]'), pri = $('[data-approve]');
   var confirmed = {};   // この画面で格を選んだ文書（カードを残す）
   var busy = false;
+  var approving = false;
+  var notice = $('[data-notice]');
+  var pendingDel = {};   // 取り消せる間だけ画面から隠している削除（id -> {timer, name, note}）
+  var UNDO_MS = 6000;
   var chev = '<svg class="cv" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>';
   var warnI = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v5m0 3.5v.01M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>';
   var okI = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg>';
@@ -48,11 +52,71 @@
     return { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(obj || {}) };
   }
 
+  function note(kind, inner, actionLabel, onAction) {
+    var el = document.createElement('div');
+    el.className = 'nt ' + kind;
+    el.innerHTML = '<div>' + inner + '</div>';
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = actionLabel || '閉じる';
+    b.addEventListener('click', function () { if (onAction) onAction(); if (el.parentNode) el.parentNode.removeChild(el); });
+    el.appendChild(b);
+    notice.appendChild(el);
+    return el;
+  }
+  function dropNote(el) { if (el && el.parentNode) el.parentNode.removeChild(el); }
+  function rejectList(list) {
+    return '<ul>' + list.map(function (x) {
+      return '<li>「' + esc(x.name) + '」: ' + esc(x.reason) + '</li>';
+    }).join('') + '</ul>';
+  }
+
   function upload(files) {
-    if (!files || !files.length) return;
+    if (!files || !files.length || busy) return;
     var fd = new FormData();
     for (var i = 0; i < files.length; i++) fd.append('file', files[i]);
-    call('tier/documents', { method: 'POST', body: fd });
+    busy = true;
+    Promise.resolve(window.DVT.api('tier/documents', { method: 'POST', body: fd })).then(function (d) {
+      var rep = (d && d.upload_report) || {};
+      if (rep.rejected && rep.rejected.length) {
+        note('er', '<strong>' + (rep.added || 0) + ' 件を登録しました。次の ' + rep.rejected.length + ' 件は登録できませんでした。</strong>' +
+          rejectList(rep.rejected) + '形式と内容を確かめて、もう一度選んでください。');
+      }
+      if (rep.replaced && rep.replaced.length) {
+        note('ok', '同じ名前の文書を新しい内容に置き換えました: ' + rep.replaced.map(function (n) { return '「' + esc(n) + '」'; }).join('、') +
+          '。置き換えた文書は格を決め直しています。');
+      }
+      return window.DVT.refresh();
+    }).then(function () { busy = false; render(); }, function (e) {
+      busy = false;
+      render();
+      note('er', esc((e && e.message) || '登録できませんでした。通信を確かめて、もう一度お試しください。'));
+    });
+  }
+  function flushDeletes() {
+    return Promise.all(Object.keys(pendingDel).map(function (id) { return runDelete(id); }));
+  }
+  function runDelete(id) {
+    var p = pendingDel[id];
+    if (!p) return Promise.resolve();
+    clearTimeout(p.timer);
+    delete pendingDel[id];
+    dropNote(p.note);
+    return Promise.resolve(window.DVT.api('tier/documents/' + id, { method: 'DELETE' })).then(function () {
+      return window.DVT.refresh();
+    }).then(function () { render(); }, function (e) {
+      render();
+      toast((e && e.message) || '削除できませんでした。少し待ってからもう一度お試しください。');
+    });
+  }
+  function softDelete(id, name) {
+    var el = note('ok', '「' + esc(name) + '」を削除しました。', '元に戻す', function () {
+      var p = pendingDel[id];
+      if (p) { clearTimeout(p.timer); delete pendingDel[id]; }
+      render();
+    });
+    pendingDel[id] = { name: name, note: el, timer: setTimeout(function () { runDelete(id); }, UNDO_MS) };
+    render();
   }
   function setTier(did, tier) {
     confirmed[did] = true;
@@ -62,11 +126,13 @@
   function render() {
     var s = st();
     if (!s) return;
-    var docs = s.documents || [], low = s.low == null ? 0.6 : s.low;
+    var docs = (s.documents || []).filter(function (d) { return !pendingDel[d.id]; }), low = s.low == null ? 0.6 : s.low;
     var need = docs.filter(function (d) { return isNeed(d, low); });
     var pending = docs.filter(function (d) { return !isNeed(d, low) && confirmed[d.id] && d.confidence < low; });
     var auto = docs.filter(function (d) { return !need.includes(d) && !confirmed[d.id]; });
     var empty = docs.length === 0;
+    var nManual = docs.filter(function (d) { return d.tier_source === 'human' && need.indexOf(d) < 0; }).length;
+    var nAuto = docs.length - need.length - nManual;
 
     drop.classList.toggle('big', empty);
     $('[data-droptext]').textContent = empty
@@ -76,7 +142,8 @@
     var h = '';
     if (!empty) {
       h += '<div class="sum"><span><strong>' + docs.length + '</strong>件を登録</span>' +
-        '<span class="ok">' + okI + '自動で格を決めた <strong>' + (docs.length - need.length - pending.length) + '</strong> 件</span>' +
+        '<span class="ok">' + okI + '自動で格を決めた <strong>' + nAuto + '</strong> 件</span>' +
+        (nManual ? '<span class="ok">' + okI + '自分で格を決めた <strong>' + nManual + '</strong> 件</span>' : '') +
         '<span class="' + (need.length ? 'wa' : 'ok') + '">' + (need.length ? warnI : okI) +
         '確認が要る <strong>' + need.length + '</strong> 件</span></div>';
       var cards = need.concat(pending);
@@ -97,7 +164,8 @@
           if (!L.length) return;
           h += '<details data-t="' + t.id + '"' + (R._open && R._open[t.id] ? ' open' : '') + '><summary>' + chev + '格' + t.id + ' ' + esc(t.label) +
             '<span class="n">' + L.length + ' 件</span></summary>' + L.map(function (d) {
-              return '<div class="row" data-id="' + esc(d.id) + '"><span class="nm">' + esc(d.name) + '</span>' +
+              return '<div class="row" data-id="' + esc(d.id) + '"><span class="nm">' + esc(d.name) +
+                (d.reason ? '<span class="rsn">分類理由: ' + esc(d.reason) + '</span>' : '') + '</span>' +
                 '<span class="mini">' + (d.tier_source === 'human' ? '手動' : '自動') + '</span>' +
                 '<select data-chg aria-label="格を変更"><option value="">変更</option>' + tiers().map(function (x) {
                   return '<option value="' + x.id + '">' + esc('格' + x.id + ' ' + x.label) + '</option>';
@@ -113,14 +181,20 @@
       : need.length ? 'AI が文書の格を決めました。確認が要るのは ' + need.length + ' 件だけです。選んでから承認してください。'
       : 'すべての文書の格が決まりました。内容を確かめて承認してください。';
     var approved = !!s.approved;
-    pri.disabled = empty || need.length > 0 || busy;
-    pri.textContent = 'この内容で承認';
-    msg.textContent = empty ? '文書を登録すると、承認できます。'
+    pri.disabled = empty || need.length > 0 || busy || approving;
+    pri.setAttribute('aria-busy', approving ? 'true' : 'false');
+    pri.textContent = approving ? '検査しています…' : 'この内容で承認';
+    msg.textContent = approving ? '検査しています。そのままお待ちください。'
+      : empty ? '文書を登録すると、承認できます。'
       : need.length ? '確認が要る文書を ' + need.length + ' 件選ぶと、承認できます。'
       : approved ? '承認済みです。もう一度承認すると検査をやり直します。'
       : '承認すると、次の「AI が検査」へ進みます。';
   }
 
+  drop.addEventListener('keydown', function (e) {
+    if (e.target !== drop) return;
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); fileIn.click(); }
+  });
   drop.addEventListener('click', function (e) { if (e.target !== fileIn) { e.preventDefault(); fileIn.click(); } });
   fileIn.addEventListener('change', function () { upload(fileIn.files); fileIn.value = ''; });
   ['dragenter', 'dragover'].forEach(function (ev) {
@@ -141,7 +215,7 @@
     var del = e.target.closest('[data-del]');
     if (del) {
       var row = del.closest('.row');
-      call('tier/documents/' + row.dataset.id, { method: 'DELETE' });
+      softDelete(row.dataset.id, (row.querySelector('.nm').firstChild || {}).textContent || '文書');
     }
   });
   body.addEventListener('change', function (e) {
@@ -149,11 +223,15 @@
     if (sel && sel.value) setTier(sel.closest('.row').dataset.id, +sel.value);
   });
   pri.addEventListener('click', function () {
-    if (pri.disabled) return;
-    pri.disabled = true;
-    Promise.resolve(window.DVT.api('tier/approve', json('POST', { by: userName() }))).then(function () {
+    if (pri.disabled || approving) return;
+    approving = true;
+    render();
+    flushDeletes().then(function () {
+      return window.DVT.api('tier/approve', json('POST', { by: userName() }));
+    }).then(function () {
       return window.DVT.refresh();
-    }).then(function () { window.DVT.go(2); }, function (err) {
+    }).then(function () { approving = false; render(); window.DVT.go(2); }, function (err) {
+      approving = false;
       toast((err && err.message) || '承認できませんでした。文書を登録してからもう一度お試しください。');
       render();
     });

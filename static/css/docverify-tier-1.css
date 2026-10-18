@@ -6,6 +6,8 @@
 .dvt-s1 .drop{border:1.5px dashed #C5CAD3;border-radius:10px;background:var(--sf,#fff);padding:14px 18px;display:flex;align-items:center;gap:12px;color:var(--tx2,#475467);cursor:pointer}
 .dvt-s1 .drop:hover,.dvt-s1 .drop.over{border-color:var(--ac,#2563EB);background:#F5F8FF}
 .dvt-s1 .drop svg{flex:none;color:var(--tx3,#667085)}
+.dvt-s1 .drop:focus-visible,.dvt-s1 .pri:focus-visible,.dvt-s1 .row .lk:focus-visible,.dvt-s1 .notice button:focus-visible{outline:3px solid var(--ac,#2563EB);outline-offset:2px}
+.dvt-s1 .drop .dt{word-break:keep-all;overflow-wrap:anywhere}
 .dvt-s1 .drop small{margin-left:auto;color:var(--tx3,#667085);font-size:13px}
 .dvt-s1 .drop.big{flex-direction:column;justify-content:center;text-align:center;padding:64px 18px;font-size:16px;gap:10px}
 .dvt-s1 .drop.big small{margin-left:0}
@@ -40,7 +42,23 @@
 .dvt-s1 .row .lk{background:none;border:0;padding:0;font:inherit;color:var(--tx3,#667085);font-size:13px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 .dvt-s1 .row .lk:hover{color:var(--ac,#2563EB)}
 .dvt-s1 .row select{font:inherit;font-size:13px;padding:4px 8px;border:1px solid var(--line,#E4E7EC);border-radius:6px;background:var(--sf,#fff);color:var(--tx,#101828)}
-.dvt-s1 .ft{border-top:1px solid var(--line,#E4E7EC);background:var(--sf,#fff);padding:14px 40px;display:flex;align-items:center;gap:16px;flex:none}
+.dvt-s1 .ft{position:sticky;bottom:0;z-index:5;border-top:1px solid var(--line,#E4E7EC);background:var(--sf,#fff);padding:14px 40px;display:flex;align-items:center;gap:16px;flex:none}
 .dvt-s1 .ft p{margin:0;color:var(--tx2,#475467);flex:1}
 .dvt-s1 .pri{font:inherit;font-weight:600;background:var(--ac,#2563EB);color:#fff;border:0;border-radius:8px;padding:11px 22px;cursor:pointer}
-.dvt-s1 .pri:disabled{background:#C5CAD3;cursor:not-allowed}
+.dvt-s1 .pri:disabled{background:#E4E7EC;color:#475467;cursor:not-allowed}
+.dvt-s1 .pri[aria-busy="true"]{cursor:progress}
+.dvt-s1 .why{overflow-wrap:anywhere}
+.dvt-s1 .why.rs{margin:4px 0 0;font-size:13px;color:var(--tx3,#667085)}
+.dvt-s1 .row .nm{overflow-wrap:anywhere}
+.dvt-s1 .row .rsn{display:block;color:var(--tx3,#667085);font-size:12px;margin-top:2px;overflow-wrap:anywhere}
+.dvt-s1 .tag{white-space:nowrap}
+.dvt-s1 .sum span{white-space:nowrap}
+.dvt-s1 .opts button b,.dvt-s1 .opts button span{overflow-wrap:anywhere}
+.dvt-s1 .notice:empty{display:none}
+.dvt-s1 .notice{margin:12px 0 0;display:flex;flex-direction:column;gap:8px}
+.dvt-s1 .notice .nt{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-radius:8px;border:1px solid var(--line,#E4E7EC);background:var(--sf,#fff);line-height:1.6;overflow-wrap:anywhere}
+.dvt-s1 .notice .nt.er{border-color:var(--wa,#B54708);background:#FFFAEB;color:#93370D}
+.dvt-s1 .notice .nt.ok{border-color:var(--ok,#067647);background:#F6FEF9;color:#05603A}
+.dvt-s1 .notice .nt ul{margin:4px 0 0;padding-left:18px}
+.dvt-s1 .notice .nt>div{flex:1}
+.dvt-s1 .notice button{font:inherit;font-size:13px;background:none;border:0;padding:0;color:inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer;white-space:nowrap}

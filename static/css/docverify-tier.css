@@ -15,3 +15,6 @@
 .dvt-body{min-height:0}
 .dvt-pane[hidden]{display:none}
 .dvt-hist{margin-bottom:24px}
+
+/* ボタンの文字を上下中央に */
+.dvt button,.dv-modal button{align-items:center;align-content:center;justify-content:center}

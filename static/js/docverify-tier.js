@@ -19,14 +19,25 @@
     });
   }
 
+  // 検査途中の実行を覚えておき、新しい実行の画面から続きを開けるようにする
+  function remember(id, name) { try { sessionStorage.setItem('dvt-last', JSON.stringify({ id: id, name: name || '' })); } catch (e) { /* 保存できなければ導線を出さないだけ */ } }
+  function forget() { try { sessionStorage.removeItem('dvt-last'); } catch (e) { /* 同上 */ } }
+  function last() { try { return JSON.parse(sessionStorage.getItem('dvt-last') || 'null'); } catch (e) { return null; } }
+  function renderResume() {
+    var b = $('dvtResume'); if (!b) return;
+    var l = last();
+    b.hidden = !l || l.id === DVT.iid;
+    if (l) b.title = l.name ? '「' + l.name + '」の続きを開きます' : '';
+  }
+
   // 実行は最初の操作（文書の登録）のときに作る。開いただけでは作らない
   function ensureRun() {
     if (DVT.iid) return Promise.resolve(DVT.iid);
-    var name = 'トレーサビリティ ' + new Date().toLocaleString('ja-JP', { dateStyle: 'short', timeStyle: 'short' });
+    var name = 'トレーサビリティ ' + new Date().toLocaleString('ja-JP', { dateStyle: 'short', timeStyle: 'medium' });
     return fetch('/api/docverify/r4/inspections', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: name, goal: '', review_type: 'informal' }) })
       .then(json)
-      .then(function (d) { DVT.iid = d.id || d.iid || (d.inspection && d.inspection.id); DVT.runName = name; return DVT.iid; });
+      .then(function (d) { DVT.iid = d.id || d.iid || (d.inspection && d.inspection.id); DVT.runName = name; remember(DVT.iid, name); return DVT.iid; });
   }
 
   DVT.api = function (path, opts) {
@@ -53,6 +64,7 @@
 
   DVT.setState = function (s) {
     DVT.state = norm(s);
+    if (s && s.conclusion && DVT.iid && last() && last().id === DVT.iid) forget();
     renderHead();
     document.dispatchEvent(new CustomEvent('dvt:state'));
   };
@@ -107,11 +119,13 @@
   // サイドから開くたびに新しい実行。履歴から開いたときだけ、その実行を表示する
   function start() {
     DVT.iid = opening ? opening.id : null; DVT.runName = opening ? opening.name : ''; opening = null; DVT.state = null; DVT.cur = 1;
+    renderResume();
     return DVT.refresh();
   }
 
   DVT.open = function (iid, name) {
     opening = { id: iid, name: name || '' };
+    remember(iid, name);
     location.hash = '#trace';
     if (window.DV && DV.show) DV.show('trace');
   };
@@ -150,6 +164,8 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     $('dvtRestart').addEventListener('click', function () { opening = null; start(); });
+    var rs = $('dvtResume');
+    if (rs) rs.addEventListener('click', function () { var l = last(); if (!l) return; opening = { id: l.id, name: l.name }; start(); });
   });
 
   if (window.DV) {

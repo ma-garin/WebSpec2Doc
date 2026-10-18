@@ -6,7 +6,7 @@
   const TITLES = {
     home: 'ホーム', mine: '自分の担当', reviews: 'レビュー一覧', findings: '指摘一覧',
     plan: '計画', read: '文書を読む', triage: '指摘の検討', questions: '質問票', followup: '修正版の確認',
-    screen: '実画面との照合', gate: '判定と記録', trace: 'トレーサビリティ', checklists: '検証観点', metrics: 'メトリクス', accuracy: '精度', settings: '設定',
+    screen: '実画面との照合', gate: '判定と記録', trace: 'トレーサビリティ', checklists: '検証観点', metrics: '履歴', accuracy: '精度', settings: '設定',
   };
   const NET_ERR = 'サーバに接続できませんでした。少し待ってから、もう一度お試しください。';
   const handlers = {};
@@ -21,12 +21,17 @@
   }
 
   let toastTimer = 0;
+  // 英語の通信エラーは日本語に直し、手で閉じるまで残す（クリックで閉じる）
+  const NET_RE = /failed to fetch|networkerror|load failed|network request failed/i;
   function toast(msg) {
     const t = $('#dv-toast');
-    t.textContent = msg;
+    const net = NET_RE.test(String(msg));
+    t.textContent = net ? NET_ERR + '（クリックで閉じる）' : msg;
     t.hidden = false;
+    t.style.cursor = net ? 'pointer' : '';
+    t.onclick = net ? () => { t.hidden = true; } : null;
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { t.hidden = true; }, 2600);
+    if (!net) toastTimer = setTimeout(() => { t.hidden = true; }, 2600);
   }
 
   async function api(path, opts = {}) {
@@ -148,8 +153,13 @@
       const a = e.target.closest('[data-nav], [data-go]');
       if (!a) return;
       e.preventDefault();
-      show(a.dataset.nav || a.dataset.go);
+      const v = a.dataset.nav || a.dataset.go;
+      if (location.hash.slice(1) !== v) history.pushState(null, '', `#${v}`);   // 戻る・進むで辿れるように履歴へ積む
+      show(v);
     });
+    const sync = () => { const h = location.hash.slice(1); if (h && h !== DV.current) show(h); };
+    window.addEventListener('hashchange', sync);
+    window.addEventListener('popstate', sync);
     let saved = null;
     try { saved = sessionStorage.getItem('dv-review'); } catch (e) { saved = null; }
     if (saved) { try { await openReview(saved, location.hash.slice(1) || 'read'); return; } catch (e) { banner(''); } }

@@ -8,7 +8,15 @@
   var confirmed = {};   // この画面で格を選んだ文書（カードを残す）
   var busy = false;
   var approving = false;
+  var uploading = 0;    // アップロード中のファイル数（0 なら待ちなし）
   var notice = $('[data-notice]');
+  if (!notice) {
+    // 古いテンプレートでも通知を出せるよう、ドロップ欄の直後に置く
+    notice = document.createElement('div');
+    notice.className = 'notice';
+    notice.setAttribute('data-notice', '');
+    drop.parentNode.insertBefore(notice, drop.nextSibling);
+  }
   var pendingDel = {};   // 取り消せる間だけ画面から隠している削除（id -> {timer, name, note}）
   var UNDO_MS = 6000;
   var chev = '<svg class="cv" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>';
@@ -76,6 +84,8 @@
     var fd = new FormData();
     for (var i = 0; i < files.length; i++) fd.append('file', files[i]);
     busy = true;
+    uploading = files.length;
+    render();
     Promise.resolve(window.DVT.api('tier/documents', { method: 'POST', body: fd })).then(function (d) {
       var rep = (d && d.upload_report) || {};
       if (rep.rejected && rep.rejected.length) {
@@ -87,8 +97,9 @@
           '。置き換えた文書は格を決め直しています。');
       }
       return window.DVT.refresh();
-    }).then(function () { busy = false; render(); }, function (e) {
+    }).then(function () { busy = false; uploading = 0; render(); }, function (e) {
       busy = false;
+      uploading = 0;
       render();
       note('er', esc((e && e.message) || '登録できませんでした。通信を確かめて、もう一度お試しください。'));
     });
@@ -143,9 +154,16 @@
     var nAuto = docs.length - need.length - nManual;
 
     drop.classList.toggle('big', empty);
-    $('[data-droptext]').textContent = empty
-      ? '文書をここにドロップ、またはクリックして選びます'
-      : '文書を追加する（ドロップ、またはクリック）';
+    drop.classList.toggle('loading', uploading > 0);
+    drop.setAttribute('aria-busy', uploading > 0 ? 'true' : 'false');
+    if (uploading > 0) {
+      $('[data-droptext]').innerHTML = '<span class="spin" aria-hidden="true"></span>' + uploading +
+        ' 件の文書をアップロードして、格を決めています…';
+    } else {
+      $('[data-droptext]').textContent = empty
+        ? '文書をここにドロップ、またはクリックして選びます'
+        : '文書を追加する（ドロップ、またはクリック）';
+    }
 
     var h = '';
     if (!empty) {
@@ -198,6 +216,7 @@
     pri.setAttribute('aria-busy', approving ? 'true' : 'false');
     pri.textContent = approving ? '検査しています…' : 'この内容で承認';
     msg.textContent = approving ? '検査しています。そのままお待ちください。'
+      : uploading ? 'アップロードしています。終わるまでお待ちください。'
       : empty ? '文書を登録すると、承認できます。'
       : need.length ? '確認が要る文書を ' + need.length + ' 件選ぶと、承認できます。'
       : approved ? '承認済みです。もう一度承認すると検査をやり直します。'

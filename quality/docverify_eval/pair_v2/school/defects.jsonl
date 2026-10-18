@@ -1,0 +1,9 @@
+{"pair": "school", "id": "school-D01", "type": "MISSING_IN_DESIGN", "req_lines": [47, 47], "design_lines": [], "req_quote": "欠席連絡のメールを自動送信すること", "design_quote": "", "explanation": "要件のメール自動送信が設計のどこにも無い"}
+{"pair": "school", "id": "school-D02", "type": "EXTRA_IN_DESIGN", "req_lines": [], "design_lines": [69, 69], "req_quote": "", "design_quote": "学級内の席次を算出し", "explanation": "要件に無い席次の算出・表示が設計にある"}
+{"pair": "school", "id": "school-D03", "type": "CONTRADICTION", "req_lines": [43, 43], "design_lines": [56, 56], "req_quote": "14日以内", "design_quote": "30日以内", "explanation": "出欠登録の修正期限が食い違う"}
+{"pair": "school", "id": "school-D04", "type": "TABLE_MISMATCH", "req_lines": [66, 66], "design_lines": [150, 150], "req_quote": "| 60から69 | 2 |", "design_quote": "| 60から69 | 3 |", "explanation": "換算表の60から69の評定が食い違う"}
+{"pair": "school", "id": "school-D05", "type": "TERM_INCONSISTENCY", "req_lines": [22, 22], "design_lines": [76, 76], "req_quote": "欠課時数", "design_quote": "欠時数", "explanation": "用語表の欠課時数を設計が略称の欠時数で呼ぶ"}
+{"pair": "school", "id": "school-D06", "type": "TERM_INCONSISTENCY", "req_lines": [28, 28], "design_lines": [75, 75], "req_quote": "通知表", "design_quote": "レポートカード", "explanation": "用語表の通知表を設計がカタカナ語で呼ぶ"}
+{"pair": "school", "id": "school-D07", "type": "AMBIGUOUS", "req_lines": [83, 83], "design_lines": [], "req_quote": "速やかに", "design_quote": "", "explanation": "反映までの時間が数値で示されていない"}
+{"pair": "school", "id": "school-D08", "type": "UNTESTABLE", "req_lines": [99, 99], "design_lines": [], "req_quote": "使いやすいもの", "design_quote": "", "explanation": "使いやすさに判定基準が無く検証できない"}
+{"pair": "school", "id": "school-D09", "type": "CONTRADICTION", "req_lines": [95, 95], "design_lines": [173, 173], "req_quote": "30分続いた", "design_quote": "60分続いた", "explanation": "自動ログアウトまでの時間が食い違う"}

@@ -1,0 +1,26 @@
+{"pair": "hr", "req_key": "REQ-001", "req_lines": [41, 42], "design_lines": [[47, 51]]}
+{"pair": "hr", "req_key": "REQ-002", "req_lines": [44, 45], "design_lines": [[47, 51], [124, 134]]}
+{"pair": "hr", "req_key": "REQ-003", "req_lines": [47, 47], "design_lines": [[53, 57]]}
+{"pair": "hr", "req_key": "REQ-004", "req_lines": [49, 50], "design_lines": [[53, 57]]}
+{"pair": "hr", "req_key": "hr-R05", "req_lines": [52, 52], "design_lines": [[59, 61]]}
+{"pair": "hr", "req_key": "REQ-005", "req_lines": [54, 54], "design_lines": [[63, 65]]}
+{"pair": "hr", "req_key": "hr-R07", "req_lines": [56, 56], "design_lines": [[67, 68]]}
+{"pair": "hr", "req_key": "REQ-006", "req_lines": [60, 60], "design_lines": [[70, 73], [136, 145]]}
+{"pair": "hr", "req_key": "REQ-007", "req_lines": [62, 62], "design_lines": [[70, 73], [136, 145]]}
+{"pair": "hr", "req_key": "REQ-008", "req_lines": [64, 72], "design_lines": [[75, 86]]}
+{"pair": "hr", "req_key": "hr-R11", "req_lines": [74, 74], "design_lines": [[88, 90]]}
+{"pair": "hr", "req_key": "REQ-009", "req_lines": [76, 77], "design_lines": [[92, 95]]}
+{"pair": "hr", "req_key": "REQ-010", "req_lines": [79, 79], "design_lines": [[92, 95]]}
+{"pair": "hr", "req_key": "REQ-011", "req_lines": [81, 81], "design_lines": [[97, 99], [147, 154]]}
+{"pair": "hr", "req_key": "REQ-012", "req_lines": [83, 84], "design_lines": []}
+{"pair": "hr", "req_key": "REQ-013", "req_lines": [88, 88], "design_lines": [[101, 102]]}
+{"pair": "hr", "req_key": "hr-R17", "req_lines": [90, 90], "design_lines": [[104, 106]]}
+{"pair": "hr", "req_key": "hr-R18", "req_lines": [92, 92], "design_lines": [[108, 110]]}
+{"pair": "hr", "req_key": "hr-R19", "req_lines": [94, 94], "design_lines": [[112, 114]]}
+{"pair": "hr", "req_key": "hr-R20", "req_lines": [96, 96], "design_lines": [[116, 117]]}
+{"pair": "hr", "req_key": "REQ-014", "req_lines": [100, 100], "design_lines": [[180, 181]]}
+{"pair": "hr", "req_key": "REQ-015", "req_lines": [102, 102], "design_lines": [[183, 184]]}
+{"pair": "hr", "req_key": "REQ-016", "req_lines": [104, 104], "design_lines": [[186, 188]]}
+{"pair": "hr", "req_key": "hr-R24", "req_lines": [106, 106], "design_lines": [[190, 191]]}
+{"pair": "hr", "req_key": "hr-R25", "req_lines": [108, 108], "design_lines": [[193, 194]]}
+{"pair": "hr", "req_key": "hr-R26", "req_lines": [110, 110], "design_lines": [[196, 197]]}

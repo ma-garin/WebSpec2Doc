@@ -1,0 +1,9 @@
+{"pair": "parking", "id": "parking-D01", "type": "MISSING_IN_DESIGN", "req_lines": [72, 72], "design_lines": [], "req_quote": "返還額として算出し", "design_quote": "", "explanation": "解約時の保証金返還額の算出と返還実績の記録が設計にない"}
+{"pair": "parking", "id": "parking-D02", "type": "EXTRA_IN_DESIGN", "req_lines": [], "design_lines": [45, 45], "req_quote": "", "design_quote": "区画配置図", "explanation": "要件にない区画配置図画面が設計にある"}
+{"pair": "parking", "id": "parking-D03", "type": "CONTRADICTION", "req_lines": [70, 70], "design_lines": [73, 73], "req_quote": "30 日前", "design_quote": "14 日前", "explanation": "解約の申出期限が要件は30日前、設計は14日前"}
+{"pair": "parking", "id": "parking-D04", "type": "CONTRADICTION", "req_lines": [77, 77], "design_lines": [78, 78], "req_quote": "請求月の末日", "design_quote": "請求月の 25 日", "explanation": "支払期限が要件は末日、設計は25日"}
+{"pair": "parking", "id": "parking-D05", "type": "TABLE_MISMATCH", "req_lines": [62, 62], "design_lines": [170, 170], "req_quote": "9,000円", "design_quote": "8,000円", "explanation": "機械式の標準の月額使用料が要件の表と設計の表で異なる"}
+{"pair": "parking", "id": "parking-D06", "type": "TERM_INCONSISTENCY", "req_lines": [38, 38], "design_lines": [50, 50], "req_quote": "区画", "design_quote": "スペース", "explanation": "用語表の「区画」を設計で「スペース」と呼ぶ"}
+{"pair": "parking", "id": "parking-D07", "type": "TERM_INCONSISTENCY", "req_lines": [42, 42], "design_lines": [80, 80], "req_quote": "入金消込", "design_quote": "消込入金", "explanation": "用語表の「入金消込」を設計で「消込入金」と語順を変えて呼ぶ"}
+{"pair": "parking", "id": "parking-D08", "type": "AMBIGUOUS", "req_lines": [93, 93], "design_lines": [], "req_quote": "必要に応じて保証人等へ適切に連絡する", "design_quote": "", "explanation": "「必要に応じて」「適切に」の基準が無く連絡の条件と方法が定まらない"}
+{"pair": "parking", "id": "parking-D09", "type": "UNTESTABLE", "req_lines": [110, 110], "design_lines": [], "req_quote": "画面は使いやすく、誰でも直感的に操作できること", "design_quote": "", "explanation": "使いやすさ・直感的の合否基準が無く検証できない"}

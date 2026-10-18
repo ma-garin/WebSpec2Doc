@@ -1,0 +1,94 @@
+{
+ "schema": 1,
+ "mode": "defects",
+ "dataset": {
+  "path": "quality/docverify_eval/pair_v2",
+  "pairs": [
+   "claim",
+   "delivery",
+   "hr",
+   "parking",
+   "school"
+  ],
+  "n_gold": 45,
+  "sha256": "a3fa8899f746"
+ },
+ "predictions": {
+  "path": "/private/tmp/claude-501/-Users-fujimagariyuki-dev-active-webspec2doc/79cf6b2e-c169-49f5-af67-512e92c1b496/scratchpad/v2_d.jsonl",
+  "n": 35,
+  "n_scored": 35,
+  "sha256": "4a631dd0f0e2"
+ },
+ "ignored_pairs": [],
+ "by_type": {
+  "MISSING_IN_DESIGN": {
+   "tp": 4,
+   "fp": 2,
+   "fn": 1,
+   "precision": 0.667,
+   "recall": 0.8,
+   "f1": 0.727
+  },
+  "EXTRA_IN_DESIGN": {
+   "tp": 0,
+   "fp": 2,
+   "fn": 5,
+   "precision": 0.0,
+   "recall": 0.0,
+   "f1": 0.0
+  },
+  "CONTRADICTION": {
+   "tp": 9,
+   "fp": 1,
+   "fn": 1,
+   "precision": 0.9,
+   "recall": 0.9,
+   "f1": 0.9
+  },
+  "TABLE_MISMATCH": {
+   "tp": 4,
+   "fp": 0,
+   "fn": 1,
+   "precision": 1.0,
+   "recall": 0.8,
+   "f1": 0.889
+  },
+  "TERM_INCONSISTENCY": {
+   "tp": 0,
+   "fp": 2,
+   "fn": 10,
+   "precision": 0.0,
+   "recall": 0.0,
+   "f1": 0.0
+  },
+  "AMBIGUOUS": {
+   "tp": 5,
+   "fp": 1,
+   "fn": 0,
+   "precision": 0.833,
+   "recall": 1.0,
+   "f1": 0.909
+  },
+  "UNTESTABLE": {
+   "tp": 5,
+   "fp": 0,
+   "fn": 0,
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  }
+ },
+ "overall": {
+  "tp": 27,
+  "fp": 8,
+  "fn": 18,
+  "precision": 0.771,
+  "recall": 0.6,
+  "f1": 0.675
+ },
+ "limits": [
+  "AI が生成し AI 1 名が注釈した合成データ。注釈者間一致（kappa）は未測定。",
+  "実文書での精度を示すものではない。",
+  "照合は行範囲の重なりだけで判定し、指摘の説明文の正しさは見ていない。"
+ ]
+}

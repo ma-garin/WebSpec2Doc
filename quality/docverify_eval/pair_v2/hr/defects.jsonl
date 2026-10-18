@@ -1,0 +1,9 @@
+{"pair": "hr", "id": "hr-D01", "type": "MISSING_IN_DESIGN", "req_lines": [83, 84], "design_lines": [], "req_quote": "通知から7日以内に、結果に対する異議を申し立てられる", "design_quote": "", "explanation": "異議申立ての受付と確認が設計に無い"}
+{"pair": "hr", "id": "hr-D02", "type": "EXTRA_IN_DESIGN", "req_lines": [], "design_lines": [119, 121], "req_quote": "", "design_quote": "評価結果通知書をPDFファイルでダウンロードできる", "explanation": "要件に無いPDF出力が設計にある"}
+{"pair": "hr", "id": "hr-D03", "type": "CONTRADICTION", "req_lines": [41, 41], "design_lines": [48, 48], "req_quote": "14日以内", "design_quote": "10日以内", "explanation": "目標登録の期限が14日と10日で食い違う"}
+{"pair": "hr", "id": "hr-D04", "type": "TABLE_MISMATCH", "req_lines": [69, 69], "design_lines": [83, 84], "req_quote": "3.5以上4.5未満", "design_quote": "3.0以上4.5未満", "explanation": "ランクAとBの境界値が要件の表と設計の表で違う"}
+{"pair": "hr", "id": "hr-D05", "type": "TERM_INCONSISTENCY", "req_lines": [28, 28], "design_lines": [60, 60], "req_quote": "評価期間", "design_quote": "評価ピリオド", "explanation": "用語表の評価期間を設計ではカタカナの別名で呼ぶ"}
+{"pair": "hr", "id": "hr-D06", "type": "TERM_INCONSISTENCY", "req_lines": [34, 34], "design_lines": [78, 78], "req_quote": "総合評価ランク", "design_quote": "総合ランク", "explanation": "用語表の総合評価ランクを設計では略称で呼ぶ"}
+{"pair": "hr", "id": "hr-D07", "type": "AMBIGUOUS", "req_lines": [79, 79], "design_lines": [], "req_quote": "速やかに通知", "design_quote": "", "explanation": "通知までの時間が定量でない"}
+{"pair": "hr", "id": "hr-D08", "type": "UNTESTABLE", "req_lines": [108, 108], "design_lines": [], "req_quote": "誰にとっても分かりやすく、使いやすい", "design_quote": "", "explanation": "分かりやすさ・使いやすさの判定基準が無く検証できない"}
+{"pair": "hr", "id": "hr-D09", "type": "CONTRADICTION", "req_lines": [90, 90], "design_lines": [105, 105], "req_quote": "3営業日前", "design_quote": "2営業日前", "explanation": "催促メールの送信時期が3営業日前と2営業日前で食い違う"}

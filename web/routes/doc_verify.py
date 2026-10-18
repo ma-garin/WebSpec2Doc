@@ -62,7 +62,7 @@ def _norm(text: str) -> str:
 def page() -> str:
     # 静的ファイルの更新が古い版の読み込みで隠れないよう、JS/CSS の更新時刻を URL に付ける
     static = Path(__file__).resolve().parents[2] / "static"
-    files = ["js/docverify-core.js", "js/docverify-global.js", "js/docverify-review.js", "css/docverify.css", "js/docverify-r5.js", "js/docverify-r3.js", "css/docverify-r3.css", "js/docverify-r2.js", "js/docverify-r4.js", "css/docverify-r4.css"]
+    files = ["js/docverify-core.js", "js/docverify-global.js", "js/docverify-review.js", "css/docverify.css", "js/docverify-r5.js", "js/docverify-r3.js", "css/docverify-r3.css", "js/docverify-r2.js", "js/docverify-r4.js", "css/docverify-r4.css", "js/docverify-tier.js", "js/docverify-tier-1.js", "js/docverify-tier-2.js", "js/docverify-tier-3.js", "css/docverify-tier.css", "css/docverify-tier-1.css", "css/docverify-tier-2.css", "css/docverify-tier-3.css"]
     dv_ver = max(int((static / f).stat().st_mtime) for f in files if (static / f).exists())
     return render_template("doc_verify.html", dv_ver=dv_ver)
 

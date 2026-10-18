@@ -1,43 +1,65 @@
-/* トレーサビリティ外枠: プロジェクト選択・ステッパー・状態の共有（window.DVT） */
+/* トレーサビリティ外枠: 実行の開始・ステッパー・状態の共有（window.DVT）と、履歴画面の実行一覧 */
 (function () {
   'use strict';
-  var KEY = 'dvt.iid';
   var $ = function (id) { return document.getElementById(id); };
   var DVT = window.DVT = { iid: null, state: null, cur: 1 };
-
-  try { DVT.iid = localStorage.getItem(KEY) || null; } catch (e) { /* 保存不可でも動く */ }
+  var TIERS = [{ id: 1, label: '方針', hint: 'ビジョン・憲章' }, { id: 2, label: '決まりごと', hint: '規約・ガイドライン・用語集' },
+    { id: 3, label: '仕様', hint: 'PRD・設計書・ADR' }, { id: 4, label: 'メモ', hint: '議事録・台帳・メモ' }];
+  var LEVEL = { pass: '合格', conditional: '条件付き', fail: '不合格' };
+  var opening = null;   // 履歴から開く実行の id
 
   DVT.toast = function (msg, kind) {
     if (window.DV && DV.toast) DV.toast(msg, kind);
   };
 
+  function json(r) {
+    return r.json().catch(function () { return {}; }).then(function (d) {
+      if (!r.ok) throw new Error(d.error || '処理できませんでした。もう一度お試しください。');
+      return d;
+    });
+  }
+
+  // 実行は最初の操作（文書の登録）のときに作る。開いただけでは作らない
+  function ensureRun() {
+    if (DVT.iid) return Promise.resolve(DVT.iid);
+    var name = 'トレーサビリティ ' + new Date().toLocaleString('ja-JP', { dateStyle: 'short', timeStyle: 'short' });
+    return fetch('/api/docverify/r4/inspections', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name, goal: '', review_type: 'informal' }) })
+      .then(json)
+      .then(function (d) { DVT.iid = d.id || d.iid || (d.inspection && d.inspection.id); DVT.runName = name; return DVT.iid; });
+  }
+
   DVT.api = function (path, opts) {
     opts = opts || {};
-    if (!DVT.iid) return Promise.reject(new Error('プロジェクトを選んでください。'));
     var init = { method: opts.method || 'GET', headers: Object.assign({}, opts.headers || {}) };
     if (opts.json !== undefined) { init.headers['Content-Type'] = 'application/json'; init.body = JSON.stringify(opts.json); }
     if (opts.form) init.body = opts.form;
     if (opts.body !== undefined && init.body === undefined) init.body = opts.body;
     // 画面ごとの書き方の違い（'tier/x'・'/x'・'x'）を吸収する
     path = String(path || '').replace(/^\/?tier/, '').replace(/^(?!\/|$)/, '/');
-    var url = '/api/docverify/inspections/' + encodeURIComponent(DVT.iid) + '/tier' + path;
-    return fetch(url, init).then(function (r) {
-      return r.json().catch(function () { return {}; }).then(function (d) {
-        if (!r.ok) throw new Error(d.error || '処理できませんでした。もう一度お試しください。');
-        return d;
-      });
-    }).then(function (d) { DVT.setState(d); return d; });
+    return ensureRun().then(function (iid) {
+      return fetch('/api/docverify/inspections/' + encodeURIComponent(iid) + '/tier' + path, init);
+    }).then(json).then(function (d) { DVT.setState(d); return d; });
   };
 
+  // level_label は {pass,conditional,fail} の表で届く。画面は今の結論の文言 1 つを使う
+  function norm(d) {
+    if (d && d.level_label && typeof d.level_label === 'object') {
+      var lv = (d.conclusion && d.conclusion.level) || d.auto_level;
+      d.level_labels = d.level_label; d.level_label = d.level_labels[lv] || '';
+    }
+    return d;
+  }
+
   DVT.setState = function (s) {
-    DVT.state = s;
+    DVT.state = norm(s);
+    renderHead();
     document.dispatchEvent(new CustomEvent('dvt:state'));
   };
 
   function renderSteps() {
-    var lis = document.querySelectorAll('#dvtSteps li');
     var done = DVT.state && DVT.state.step === 'done';
-    Array.prototype.forEach.call(lis, function (li) {
+    Array.prototype.forEach.call(document.querySelectorAll('#dvtSteps li'), function (li) {
       var n = +li.getAttribute('data-step');
       li.classList.toggle('on', n === DVT.cur);
       li.classList.toggle('done', n < DVT.cur || (done && n === 3));
@@ -47,64 +69,91 @@
     });
   }
 
+  function renderHead() {
+    var s = DVT.state || {};
+    $('dvtRunName').textContent = DVT.iid ? (s.name || DVT.runName || '') : '新しい実行';
+    $('dvtRestart').hidden = !DVT.iid;
+  }
+
   DVT.go = function (step) {
     DVT.cur = step;
     renderSteps();
     window.scrollTo(0, 0);
   };
 
+  function emptyState() {
+    return { step: 1, documents: [], tiers: TIERS, low: 0.6, approved: null, findings: [], reports: {},
+      rules: [], conclusion: null, level_label: '' };
+  }
+
   DVT.refresh = function () {
-    if (!DVT.iid) { $('dvtEmpty').hidden = false; $('dvtBody').hidden = true; return Promise.resolve(); }
-    return fetch('/api/docverify/inspections/' + encodeURIComponent(DVT.iid) + '/tier')
-      .then(function (r) { return r.json().then(function (d) { if (!r.ok) throw new Error(d.error || '読み込めませんでした。'); return d; }); })
+    if (!DVT.iid) {
+      DVT.state = emptyState(); DVT.cur = 1;
+      renderHead(); renderSteps();
+      document.dispatchEvent(new CustomEvent('dvt:state'));
+      return Promise.resolve();
+    }
+    return fetch('/api/docverify/inspections/' + encodeURIComponent(DVT.iid) + '/tier').then(json)
       .then(function (d) {
-        $('dvtEmpty').hidden = true; $('dvtBody').hidden = false;
-        var first = !DVT.state;
-        DVT.state = d;
+        var first = !DVT.state || !DVT.state.step || DVT.state._empty;
+        DVT.state = norm(d);
         if (first) DVT.cur = d.step === 1 ? 1 : (d.step === 2 ? 2 : 3);
-        renderSteps();
+        renderHead(); renderSteps();
         document.dispatchEvent(new CustomEvent('dvt:state'));
       })
-      .catch(function (e) {
-        DVT.toast(e.message, 'err');
-        if (/見つかりません/.test(e.message)) { DVT.iid = null; try { localStorage.removeItem(KEY); } catch (x) { /* 無視 */ } loadProjects(); }
-      });
+      .catch(function (e) { DVT.toast(e.message, 'err'); });
   };
 
-  function choose(iid) {
-    DVT.iid = iid || null; DVT.state = null; DVT.cur = 1;
-    try { if (iid) localStorage.setItem(KEY, iid); else localStorage.removeItem(KEY); } catch (e) { /* 無視 */ }
+  // サイドから開くたびに新しい実行。履歴から開いたときだけ、その実行を表示する
+  function start() {
+    DVT.iid = opening ? opening.id : null; DVT.runName = opening ? opening.name : ''; opening = null; DVT.state = null; DVT.cur = 1;
     return DVT.refresh();
   }
 
-  function loadProjects() {
-    return fetch('/api/docverify/inspections').then(function (r) { return r.json(); }).then(function (d) {
-      var list = Array.isArray(d) ? d : (d.inspections || d.items || []);
-      var sel = $('dvtProj');
-      sel.innerHTML = '<option value="">プロジェクトを選ぶ</option>' + list.map(function (x) {
-        var id = x.id || x.iid;
-        return '<option value="' + DV.esc(id) + '"' + (id === DVT.iid ? ' selected' : '') + '>' + DV.esc(x.name || id) + '</option>';
-      }).join('');
-      if (DVT.iid && !list.some(function (x) { return (x.id || x.iid) === DVT.iid; })) DVT.iid = null;
-      return DVT.refresh();
-    }).catch(function () { DVT.toast('プロジェクト一覧を読み込めませんでした。画面を開き直してください。', 'err'); });
+  DVT.open = function (iid, name) {
+    opening = { id: iid, name: name || '' };
+    location.hash = '#trace';
+    if (window.DV && DV.show) DV.show('trace');
+  };
+
+  // 履歴: トレーサビリティの実行一覧を先頭に出す
+  function renderHistory() {
+    var view = document.querySelector('.dv-view[data-view="metrics"]');
+    if (!view) return;
+    var box = $('dvtHist');
+    if (!box) {
+      box = document.createElement('section');
+      box.id = 'dvtHist'; box.className = 'dvt-hist';
+      view.insertBefore(box, view.firstChild);
+    }
+    fetch('/api/docverify/inspections').then(json).then(function (d) {
+      var list = (d.inspections || []).filter(function (x) { return x.tier && (x.tier.documents || []).length; })
+        .sort(function (a, b) { return String(b.updated_at || '').localeCompare(String(a.updated_at || '')); });
+      var esc = DV.esc;
+      box.innerHTML = '<h2 class="dvg-h">トレーサビリティの実行履歴</h2>' + (list.length
+        ? '<table class="dv-table"><thead><tr><th>実行</th><th>日時</th><th>文書</th><th>結論</th></tr></thead><tbody>'
+          + list.map(function (x) {
+            var c = x.tier.conclusion;
+            var lv = c ? LEVEL[c.level] + '（確定）' : (x.tier.approved ? '検査済み・未確定' : '登録中');
+            return '<tr data-iid="' + esc(x.id) + '" tabindex="0"><td>' + esc(x.name || x.id) + '</td><td>'
+              + esc(new Date(x.updated_at).toLocaleString('ja-JP', { dateStyle: 'short', timeStyle: 'short' }))
+              + '</td><td>' + x.tier.documents.length + ' 件</td><td>' + esc(lv) + '</td></tr>';
+          }).join('') + '</tbody></table>'
+        : '<p class="mut">まだ実行がありません。サイドの「トレーサビリティ」から文書を登録すると、ここに残ります。</p>');
+      Array.prototype.forEach.call(box.querySelectorAll('tr[data-iid]'), function (tr) {
+        var go = function () { DVT.open(tr.getAttribute('data-iid'), tr.cells[0].textContent); };
+        tr.addEventListener('click', go);
+        tr.addEventListener('keydown', function (e) { if (e.key === 'Enter') go(); });
+      });
+    }).catch(function () { box.innerHTML = '<p class="mut">実行履歴を読み込めませんでした。画面を開き直してください。</p>'; });
   }
 
   document.addEventListener('DOMContentLoaded', function () {
-    $('dvtProj').addEventListener('change', function (e) { choose(e.target.value); });
-    $('dvtNew').addEventListener('click', function () {
-      var name = window.prompt('プロジェクト名を入れてください。');
-      if (!name || !name.trim()) return;
-      fetch('/api/docverify/r4/inspections', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), goal: '', review_type: 'informal' }) })
-        .then(function (r) { return r.json().then(function (d) { if (!r.ok) throw new Error(d.error || '作れませんでした。もう一度お試しください。'); return d; }); })
-        .then(function (d) {
-          var id = d.id || d.iid || (d.inspection && d.inspection.id);
-          return loadProjects().then(function () { $('dvtProj').value = id; return choose(id); });
-        })
-        .catch(function (e) { DVT.toast(e.message, 'err'); });
-    });
+    $('dvtRestart').addEventListener('click', function () { opening = null; start(); });
   });
 
-  if (window.DV) DV.on('trace', loadProjects);
+  if (window.DV) {
+    DV.on('trace', start);
+    DV.on('metrics', renderHistory);
+  }
 })();

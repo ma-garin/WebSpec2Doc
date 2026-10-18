@@ -99,7 +99,7 @@
     fs.slice().sort(function (a, b) { return ['high', 'mid', 'low'].indexOf(a.severity) - ['high', 'mid', 'low'].indexOf(b.severity); }).forEach(function (f) {
       var rp = reported(s, f);
       ch += '<div class="card ' + esc(f.severity) + (rp ? ' rp' : '') + (f.id === openId ? ' open' : '') + '" data-f="' + esc(f.id) + '" data-d="' + esc(f.doc_id) + '">' +
-        '<div class="chead"><span class="sev">' + triI + esc(SEV[f.severity] || '') + '</span><span class="rule">' + esc(f.rule_label) + '</span><span class="doclabel">' + esc(dname(s, f.doc_id)) + '</span></div>' +
+        '<div class="chead"><span class="sev">' + triI + esc(SEV[f.severity] || '') + '</span><span class="rule">確認観点：' + esc(f.rule_label) + '</span><span class="doclabel">' + esc(dname(s, f.doc_id)) + '</span></div>' +
         '<p class="one">' + esc(f.reason) + '</p>' +
         '<div class="detail">' + (f.related_quote ? '関連する箇所: 「' + esc(f.related_quote) + '」' + (f.related_doc_id ? '（' + esc(dname(s, f.related_doc_id)) + '）' : '') : '') +
         (f.fix ? '<div class="fix"><b>修正案</b>' + esc(f.fix) + '</div>' : '') +
@@ -118,14 +118,19 @@
     ps.forEach(function (p) {
       var fl = (byDoc[d.id] || []).filter(function (f) { return f.passage_id === p.id; })
         .sort(function (a, b) { return a.start - b.start; });
-      var out = '', pos = 0, t = p.text || '';
+      var out = '', t = p.text || '';
+      // Markdown の見出し記号（# ）と箇条書き記号（- ）は記号のまま見せず、見出し・箇条として表示する
+      var mh = /^(#{1,6})\s+/.exec(t), ml = mh ? null : /^[-*]\s+/.exec(t);
+      var pos = mh ? mh[0].length : (ml ? ml[0].length : 0);
       fl.forEach(function (f) {
         if (f.start < pos || f.end > t.length || f.end <= f.start) return;
         out += esc(t.slice(pos, f.start)) + '<mark class="hl s-' + esc(f.severity) + (reported(s, f) ? ' rp' : '') + (f.id === openId ? ' cur' : '') + '" data-f="' + esc(f.id) + '">' + esc(t.slice(f.start, f.end)) + '</mark>';
         pos = f.end;
       });
       out += esc(t.slice(pos));
-      h += '<p>' + out + '</p>';
+      if (mh) h += '<p class="md-h md-h' + Math.min(mh[1].length, 3) + '">' + out + '</p>';
+      else if (ml) h += '<p class="md-li">・' + out + '</p>';
+      else h += '<p>' + out + '</p>';
     });
     docEl.innerHTML = h;
   }

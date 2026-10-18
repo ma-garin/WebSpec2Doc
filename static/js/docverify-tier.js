@@ -126,8 +126,10 @@
   DVT.open = function (iid, name) {
     opening = { id: iid, name: name || '' };
     remember(iid, name);
-    location.hash = '#trace';
-    if (window.DV && DV.show) DV.show('trace');
+    // ハッシュを変えると core の popstate/hashchange が画面を開く。続けて DV.show を呼ぶと
+    // start が二度走り、二度目は opening が空のため新しい実行になる。だから片方だけにする
+    if (location.hash !== '#trace') location.hash = '#trace';
+    else if (window.DV && DV.show) DV.show('trace');
   };
 
   // 履歴: トレーサビリティの実行一覧を先頭に出す

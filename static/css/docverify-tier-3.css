@@ -49,7 +49,7 @@
 .dvt-s3-map .ln.bad{stroke:var(--s3-ng);stroke-width:2.5}
 .dvt-s3-map .hit{fill:none;stroke:transparent;stroke-width:14;cursor:pointer;pointer-events:stroke}
 .dvt-s3-map .ln.pick{stroke:var(--s3-ac);stroke-width:3}
-.dvt-s3-map .nd{position:absolute;width:170px;height:48px;border:1px solid var(--s3-line);border-radius:10px;background:var(--s3-sf);padding:6px 10px;display:flex;flex-direction:column;justify-content:center;cursor:pointer;font-size:13px;overflow:hidden;min-width:0}
+.dvt-s3-map .nd{position:absolute;width:170px;height:48px;border:1px solid var(--s3-line);border-radius:10px;background:var(--s3-sf);padding:6px 8px;display:flex;flex-direction:column;justify-content:center;cursor:pointer;font-size:13px;overflow:hidden;min-width:0}
 .dvt-s3-map .nd .nm,.dvt-s3-map .nd small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4}
 .dvt-s3-map .nd:hover{border-color:var(--s3-ac)}
 .dvt-s3-map .nd small{color:var(--s3-tx3);font-size:12px}

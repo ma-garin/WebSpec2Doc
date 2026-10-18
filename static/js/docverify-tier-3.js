@@ -92,7 +92,7 @@
     const fm = fById(st), parts = [];
     (e.finding_ids || []).forEach(id => {
       const f = fm[id]; if (!f || reported(st)[id]) return;
-      parts.push('<b>' + esc(f.rule_label || '') + '（' + esc(SEV[f.severity] || '') + '）</b>' + esc(f.reason || '') +
+      parts.push('<b>確認観点：' + esc(f.rule_label || '') + '（' + esc(SEV[f.severity] || '') + '）</b>' + esc(f.reason || '') +
         (f.quote ? '<span class="dvt-s3-q">「' + esc(f.quote) + '」</span>' : '') +
         (f.fix ? '<span class="dvt-s3-fix">' + esc(f.fix) + '</span>' : ''));
     });
@@ -123,7 +123,7 @@
     const dn = dir !== 'up' ? group(edges.filter(e => e.to === b.id && by[e.from]), 'from') : [];
     const none = !up.length && !dn.length;
     const avail = (map.parentElement || host).clientWidth || 560;
-    const W = Math.max(320, Math.min(560, avail - 36)), cw = Math.max(110, Math.min(170, Math.floor((W - 60) / 2))), ch = 48;
+    const W = Math.max(320, Math.min(560, avail - 36)), cw = Math.max(110, Math.min(170, Math.floor((W - 64) / 3))), ch = 48;   // 上流・基点・下流の 3 列と、線が見える 32px の間隔
     const H = none ? 100 : Math.max(up.length, dn.length, 1) * 62, cx = (W - cw) / 2, cy = none ? 0 : (H - ch) / 2;
     map.style.cssText = 'width:' + W + 'px;height:' + H + 'px';
     let svg = '<svg width="' + W + '" height="' + H + '">', html = '';
@@ -180,10 +180,13 @@
     qa('.ln.pick').forEach(x => x.classList.remove('pick'));
     best.classList.add('pick');
     const why = q('[data-why]');
-    const rs = eds.map(ed => ed.type !== 'follows' ? edgeReason(st, ed) : '').filter(Boolean);
+    // follows（従っている）と traces（ID で参照している）は正常なつながり。問題として赤くしない
+    const ok = ed => ed.type === 'follows' || ed.type === 'traces';
+    const rs = eds.map(ed => ok(ed) ? '' : edgeReason(st, ed)).filter(Boolean);
+    const tr = eds.filter(ed => ed.type === 'traces').map(ed => esc(ed.reason || '')).filter(Boolean);
     const r = rs.join('<hr>');
     why.className = 'dvt-s3-why' + (r ? ' bad' : '');
-    why.innerHTML = '<b>' + esc(nm[eds[0].to]) + ' → ' + esc(nm[eds[0].from]) + '</b>' + (r || '問題はありません。上の格の内容に従って書かれています。');
+    why.innerHTML = '<b>' + esc(nm[eds[0].to]) + ' → ' + esc(nm[eds[0].from]) + '</b>' + (r || (tr.length ? tr.join('、') + '。問題はありません。' : '問題はありません。上の格の内容に従って書かれています。'));
   });
   q('[data-seg]').addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
@@ -211,6 +214,9 @@
     live.forEach(f => { c[f.severity] = (c[f.severity] || 0) + 1; });
     const bad = nodes(st).filter(n => isBad(st, n)).length;
     q('[data-sum]').innerHTML = '<li>結論：' + esc(st.level_label || '') + '</li><li>課題のある文書：' + bad + ' 件（重大 ' + c.high + '・注意 ' + c.mid + '・軽微 ' + c.low + '）</li><li>文書か検査の結果が変わると、確定は取り消されます</li>';
+    // ログイン中の名前を初期値にする（認証オフの「ゲスト」は入れない）
+    const me = (document.querySelector('.usermenu-name') || {}).textContent || '';
+    if (!byIn.value.trim() && me.trim() && me.trim() !== 'ゲスト') byIn.value = me.trim();
     opener = ob; showErr(''); mask.classList.add('on'); byIn.focus();
   });
   q('[data-cancel]').addEventListener('click', closeDlg);

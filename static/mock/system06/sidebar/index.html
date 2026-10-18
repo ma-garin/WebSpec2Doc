@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>サイドメニュー案（ドキュメント検証）</title>
+<style>
+:root{--ac:#2563EB;--ac-bg:#EFF4FF;--line:#E4E7EC;--sf:#FFFFFF;--bg:#F6F7F9;--tx:#101828;--tx2:#475467;--tx3:#667085;--ok:#12B76A;--ng:#F04438;--wa:#F79009}
+*{box-sizing:border-box}
+body{margin:0;background:#EEF0F3;color:var(--tx);font:13px/1.5 Inter,"Noto Sans JP",system-ui,sans-serif;min-width:1280px}
+header.pg{padding:20px 32px 0;background:var(--sf)}
+header.pg h1{font-size:18px;margin:0 0 4px}
+header.pg p{color:var(--tx2);margin:0 0 10px}
+.otabs{display:flex;gap:2px;padding:0 32px;border-bottom:1px solid var(--line);background:var(--sf);position:sticky;top:0;z-index:5}
+.otabs button{border:0;background:none;font:inherit;font-size:12.5px;padding:10px 12px;border-bottom:2px solid transparent;color:var(--tx2);cursor:pointer;font-weight:600;white-space:nowrap}
+.otabs button:hover{color:var(--tx)}
+.otabs button.on{color:var(--ac);border-bottom-color:var(--ac)}
+.otabs button i{font-style:normal;display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--bg);margin-right:6px;font-size:11px}
+.otabs button.on i{background:var(--ac);color:#fff}
+main{padding:16px 32px 40px}
+.opt{display:none;background:var(--sf);border:1px solid var(--line);border-radius:12px;padding:20px}
+.opt.on{display:block}
+.opt h2{font-size:16px;margin:0 0 2px;display:flex;align-items:center;gap:8px}
+.opt h2 .no{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--ac);color:#fff;font-size:13px}
+.opt h2 .tag{font-size:11px;font-weight:600;padding:2px 10px;border-radius:10px;background:var(--bg);color:var(--tx2);margin-left:auto}
+.opt .concept{color:var(--tx2);margin:0 0 12px}
+.opt .pc{display:flex;gap:24px;margin-top:12px}
+.opt .pc>div{flex:1}.opt .pc b{display:block;font-size:11px;color:var(--tx3)}
+.opt .pc .g{color:#067647}.opt .pc .n{color:#B42318}
+.app{display:flex;height:640px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--bg)}
+/* 共通の作業画面（文書を読む） */
+.work{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg)}
+.work .wh{height:56px;flex:0 0 56px;background:var(--sf);border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 20px;gap:12px}
+.work .bc{font-size:11.5px;color:var(--tx3)}
+.work .wt{font-size:16px;font-weight:700}
+.work .sp{flex:1}
+.work .btn{background:var(--ac);color:#fff;border-radius:7px;padding:6px 12px;font-weight:600;font-size:12px}
+.work .btn.o{background:var(--sf);color:var(--tx);border:1px solid var(--line)}
+.work .wb{flex:1;min-height:0;padding:16px 20px;display:grid;grid-template-columns:1.25fr 1fr;gap:14px}
+.work .pn{background:var(--sf);border:1px solid var(--line);border-radius:10px;padding:14px;overflow:hidden}
+.work .pn h4{margin:0 0 10px;font-size:13px;display:flex;gap:8px;align-items:center}
+.work .pn h4 small{color:var(--tx3);font-weight:400}
+.work .ln{display:flex;gap:12px;padding:5px 6px;border-radius:5px;font-size:12.5px}
+.work .ln span{color:var(--tx3);width:28px;flex:0 0 28px;text-align:right;font-size:11px;padding-top:1px}
+.work .ln.hl{background:#FFFAEB}
+.work mark{background:#FEDF89;border-radius:3px;padding:0 2px}
+.work .fd{border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:8px}
+.work .fd .tp{display:flex;gap:6px;align-items:center;font-size:11px;color:var(--tx3);margin-bottom:4px}
+.work .sv{font-size:10.5px;font-weight:700;border-radius:4px;padding:1px 6px}
+.work .sv.h{background:#FEE4E2;color:#B42318}.work .sv.m{background:#FEF0C7;color:#B54708}
+.work .fd p{margin:0 0 8px;font-size:12.5px}
+.work .acts{display:flex;gap:6px}
+.work .acts span{font-size:11.5px;border:1px solid var(--line);border-radius:6px;padding:3px 9px}
+.work .acts span.p{background:var(--ac);border-color:var(--ac);color:#fff}
+</style>
+</head>
+<body>
+<header class="pg">
+<h1>サイドメニュー案（ドキュメント検証）</h1>
+<p>サイドは 5 項目だけの最小構成 3 案（デザインのみ・動きません）。上のタブまたは ← → キーで切り替え、番号か組み合わせで選んでください。右側の作業画面は全案共通です。</p>
+</header>
+<nav class="otabs"></nav>
+<main>
+<section class="opt" data-n="1"><style>.s1>aside{flex:0 0 232px;background:var(--sf);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:16px 12px}.s1 .lg{display:flex;gap:10px;align-items:center;padding:0 6px 18px}.s1 .w{width:30px;height:30px;border-radius:8px;background:var(--ac);color:#fff;display:grid;place-items:center;font-weight:700}.s1 .lg b{display:block;font-size:13px}.s1 .lg small{color:var(--tx3);font-size:11px}.s1 nav a{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:8px;color:var(--tx2);text-decoration:none;font-size:14px;font-weight:500;margin-bottom:2px;white-space:nowrap}.s1 nav a.on{background:var(--ac-bg);color:var(--ac);font-weight:700}.s1 .us{margin-top:auto;display:flex;align-items:center;gap:10px;padding:10px 8px;border-top:1px solid var(--line);color:var(--tx2)}.s1 .av{width:28px;height:28px;border-radius:50%;background:var(--ac);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:700}</style><h2><span class="no">1</span>5 項目だけ<span class="tag">最小</span></h2><p class="concept">サイドは 5 項目だけ。押した先の画面の中に、その機能の一覧や作業がすべて入る。</p><div class="app s1"><aside><div class="lg"><span class="w">W</span><span><b>WebSpec2Doc</b><small>ドキュメント検証</small></span></div><nav><a class="on"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="m9 15 2 2 4-4"/></svg>ドキュメント検証</a><a class=""><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="12" r="2.5"/><circle cx="6" cy="18" r="2.5"/><path d="M8.5 6H12a3 3 0 0 1 3 3v.5M8.5 18H12a3 3 0 0 0 3-3v-.5"/></svg>トレーサビリティ</a><a class=""><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg>履歴</a><a class=""><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="m3 6 1.5 1.5L7 5M3 12l1.5 1.5L7 11M3 18l1.5 1.5L7 17"/></svg>検証観点</a><a class=""><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>設定</a></nav><div class="us"><span class="av">ゲ</span>ゲスト</div></aside><div class="work"></div></div><div class="pc"><div class="g"><b>良い点</b>覚える項目が 5 つだけで、迷う余地がない（6・8）</div><div class="n"><b>弱い点</b>画面の中の移動は各画面側の作り次第</div></div></section>
+<section class="opt" data-n="2"><style>.s2>aside{flex:0 0 264px;background:var(--sf);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:16px 12px}.s2 .lg{display:flex;gap:10px;align-items:center;padding:0 6px 18px}.s2 .w{width:30px;height:30px;border-radius:8px;background:var(--ac);color:#fff;display:grid;place-items:center;font-weight:700}.s2 .lg b{display:block;font-size:13px}.s2 .lg small{color:var(--tx3);font-size:11px}.s2 nav a{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:8px;color:var(--tx2);text-decoration:none;font-size:14px;font-weight:500;margin-bottom:2px;white-space:nowrap}.s2 nav a.on{background:var(--ac-bg);color:var(--ac);font-weight:700}.s2 .us{margin-top:auto;display:flex;align-items:center;gap:10px;padding:10px 8px;border-top:1px solid var(--line);color:var(--tx2)}.s2 .av{width:28px;height:28px;border-radius:50%;background:var(--ac);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:700}.s2 nav a{align-items:flex-start;padding:10px 12px}.s2 nav a svg{margin-top:2px}.s2 nav small{display:block;font-size:11.5px;color:var(--tx3);font-weight:400}.s2 nav a.on small{color:var(--ac);opacity:.8}</style><h2><span class="no">2</span>5 項目＋ひとこと説明<span class="tag">最小＋説明</span></h2><p class="concept">5 項目それぞれに、何をする場所かを 1 行で添える。初めての人でも選べる。</p><div class="app s2"><aside><div class="lg"><span class="w">W</span><span><b>WebSpec2Doc</b><small>ドキュメント検証</small></span></div><nav><a class="on"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="m9 15 2 2 4-4"/></svg><span>ドキュメント検証<small>レビューを作って進める</small></span></a><a class=""><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="12" r="2.5"/><circle cx="6" cy="18" r="2.5"/><path d="M8.5 6H12a3 3 0 0 1 3 3v.5M8.5 18H12a3 3 0 0 0 3-3v-.5"/></svg><span>トレーサビリティ<small>要件と設計・テストのつながり</small></span></a><a class=""><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg><span>履歴<small>過去の判定と記録</small></span></a><a class=""><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="m3 6 1.5 1.5L7 5M3 12l1.5 1.5L7 11M3 18l1.5 1.5L7 17"/></svg><span>検証観点<small>チェックする観点</small></span></a><a class=""><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>設定<small>用語・AI の送信先</small></span></a></nav><div class="us"><span class="av">ゲ</span>ゲスト</div></aside><div class="work"></div></div><div class="pc"><div class="g"><b>良い点</b>名前だけで分からない項目も、読めば選べる（2・6）</div><div class="n"><b>弱い点</b>慣れた人には説明がやや冗長（8）</div></div></section>
+<section class="opt" data-n="3"><style>.s3>aside{flex:0 0 96px;background:var(--sf);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:16px 12px}.s3 .lg{display:flex;gap:10px;align-items:center;padding:0 6px 18px}.s3 .w{width:30px;height:30px;border-radius:8px;background:var(--ac);color:#fff;display:grid;place-items:center;font-weight:700}.s3 .lg b{display:block;font-size:13px}.s3 .lg small{color:var(--tx3);font-size:11px}.s3 nav a{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:8px;color:var(--tx2);text-decoration:none;font-size:14px;font-weight:500;margin-bottom:2px;white-space:nowrap}.s3 nav a.on{background:var(--ac-bg);color:var(--ac);font-weight:700}.s3 .us{margin-top:auto;display:flex;align-items:center;gap:10px;padding:10px 8px;border-top:1px solid var(--line);color:var(--tx2)}.s3 .av{width:28px;height:28px;border-radius:50%;background:var(--ac);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:700}.s3>aside{padding:14px 8px;align-items:center}.s3 .lg{padding:0 0 16px}.s3 .lg>span:last-child{display:none}.s3 nav a{flex-direction:column;gap:6px;padding:12px 4px;width:80px;text-align:center;font-size:11.5px;white-space:normal;line-height:1.3}.s3 .us{flex-direction:column;gap:4px;font-size:11px;border:0}</style><h2><span class="no">3</span>5 項目・細い縦並び<span class="tag">最小・省スペース</span></h2><p class="concept">アイコンの下に名前を置いた細いサイド。作業画面を最も広く使える。</p><div class="app s3"><aside><div class="lg"><span class="w">W</span><span><b>WebSpec2Doc</b><small>ドキュメント検証</small></span></div><nav><a class="on"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="m9 15 2 2 4-4"/></svg><span>ドキュメント検証</span></a><a class=""><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="12" r="2.5"/><circle cx="6" cy="18" r="2.5"/><path d="M8.5 6H12a3 3 0 0 1 3 3v.5M8.5 18H12a3 3 0 0 0 3-3v-.5"/></svg><span>トレーサビリティ</span></a><a class=""><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg><span>履歴</span></a><a class=""><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="m3 6 1.5 1.5L7 5M3 12l1.5 1.5L7 11M3 18l1.5 1.5L7 17"/></svg><span>検証観点</span></a><a class=""><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>設定</span></a></nav><div class="us"><span class="av">ゲ</span>ゲスト</div></aside><div class="work"></div></div><div class="pc"><div class="g"><b>良い点</b>作業画面が広い。項目は 5 つで覚えやすい（8）</div><div class="n"><b>弱い点</b>文字が小さく、名前が長い項目は 2 行になる（6）</div></div></section>
+</main>
+<template id="work">
+<div class="wh"><div><div class="bc">ドキュメント検証 / 会員登録 要求仕様</div><div class="wt">文書を読む</div></div><div class="sp"></div><span class="btn o">AI の説明</span><span class="btn">自分の確認を終える</span></div>
+<div class="wb">
+<div class="pn"><h4>本文 <small>sample_spec.md ・ 12 文 ・ 候補 5 件</small></h4>
+<div class="ln"><span>7</span>REQ-001 利用者はメールアドレスとパスワードで会員登録できること。</div>
+<div class="ln"><span>8</span>REQ-002 パスワードは適切な長さであること。</div>
+<div class="ln hl"><span>9</span>REQ-003 登録完了後、<mark>速やかに</mark>確認メールを送信すること。</div>
+<div class="ln hl"><span>10</span>REQ-004 入力エラー時はエラーメッセージ<mark>等</mark>を表示すること。</div>
+<div class="ln hl"><span>11</span>REQ-005 登録処理は<mark>十分に高速</mark>であること。</div>
+<div class="ln hl"><span>12</span>REQ-006 退会機能の扱いは<mark>未定</mark>（TBD）。</div>
+<div class="ln"><span>13</span>REQ-007 パスワードは8文字以上であること。</div>
+<div class="ln"><span>14</span>REQ-008 パスワードは6文字以上であること。</div>
+</div>
+<div class="pn"><h4>指摘の候補 <small>5 件</small></h4>
+<div class="fd"><div class="tp"><span class="sv m">主要</span>F1 ・ 曖昧さ ・ 9 行</div><p>「速やかに」は解釈が分かれます。具体的な条件や値にしてください。</p><div class="acts"><span class="p">指摘にする</span><span>却下</span><span>作成者に質問</span></div></div>
+<div class="fd"><div class="tp"><span class="sv h">重大</span>F2 ・ 曖昧さ ・ 10 行</div><p>「等」は解釈が分かれます。具体的な条件や値にしてください。</p><div class="acts"><span class="p">指摘にする</span><span>却下</span><span>作成者に質問</span></div></div>
+<div class="fd"><div class="tp"><span class="sv m">主要</span>F3 ・ 曖昧さ ・ 11 行</div><p>「十分に高速」は解釈が分かれます。数値の基準にしてください。</p><div class="acts"><span class="p">指摘にする</span><span>却下</span><span>作成者に質問</span></div></div>
+</div>
+</div>
+</template>
+<script>
+const tpl=document.getElementById('work').innerHTML;
+document.querySelectorAll('.work').forEach(w=>{w.innerHTML=tpl;});
+const os=[...document.querySelectorAll('.opt')];
+const nav=document.querySelector('.otabs');
+os.forEach((o,k)=>{const b=document.createElement('button');const h=o.querySelector('h2');const name=h?[...h.childNodes].filter(n=>n.nodeType===3).map(n=>n.textContent).join('').trim():'案'+(k+1);b.innerHTML='<i>'+(k+1)+'</i>'+name;b.onclick=()=>show(k);nav.appendChild(b);});
+const bs=[...nav.children];let cur=0;
+function show(i){cur=(i+os.length)%os.length;os.forEach((o,k)=>o.classList.toggle('on',k===cur));bs.forEach((b,k)=>b.classList.toggle('on',k===cur));}
+document.addEventListener('keydown',e=>{if(e.key==='ArrowRight')show(cur+1);if(e.key==='ArrowLeft')show(cur-1);});
+show(0);
+</script>
+</body>
+</html>

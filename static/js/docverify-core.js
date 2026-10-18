@@ -65,20 +65,51 @@
     set('adopted', f.filter((x) => x.status === 'adopted').length);
   }
 
-  function renderReviewNav() {
+  // サイドは固定の 5 項目。各項目の中の画面は上部のタブで切り替える。
+  const SECTIONS = {
+    doc: ['home', 'mine', 'reviews', 'findings', 'plan', 'read', 'triage', 'questions', 'followup', 'gate', 'screen'],
+    trace: ['setcheck'], hist: ['metrics'], vp: ['checklists', 'accuracy'], set: ['settings'],
+  };
+  const DOC_TOP = ['home', 'mine', 'reviews', 'findings'];
+  const STEPS = ['plan', 'read', 'triage', 'questions', 'followup', 'gate', 'screen'];
+  const COUNT = { mine: 'mine', findings: 'open red', read: 'candidates', triage: 'adopted' };
+  const sectionOf = (view) => Object.keys(SECTIONS).find((k) => SECTIONS[k].includes(view)) || 'doc';
+  const tab = (v, cur) => {
+    const c = COUNT[v] ? `<span class="dv-n${COUNT[v].includes('red') ? ' red' : ''}" data-count="${COUNT[v].split(' ')[0]}"></span>` : '';
+    return `<a href="#${v}" data-nav="${v}" class="${v === cur ? 'active' : ''}">${esc(TITLES[v])}${c}</a>`;
+  };
+
+  function renderSubtabs(view) {
+    const nav = $('#dv-subtabs');
+    if (!nav) return;
     const r = DV.state.review;
-    $('#dv-review-nav').hidden = !r;
-    const name = $('#dv-review-name');
-    name.hidden = !r;
-    name.textContent = r ? r.name : '';
+    let html = '';
+    if (STEPS.includes(view) && r) {
+      html = `<a href="#reviews" data-nav="reviews" class="dv-back">← レビュー一覧</a><span class="dv-subtabs-name">${esc(r.name)}</span>`
+        + STEPS.map((v) => tab(v, view)).join('');
+    } else if (sectionOf(view) === 'doc') {
+      html = DOC_TOP.map((v) => tab(v, view)).join('')
+        + (r ? `<span class="dv-subtabs-sep"></span><a href="#read" data-nav="read" class="dv-open">開いているレビュー: ${esc(r.name)}</a>` : '');
+    } else {
+      const list = SECTIONS[sectionOf(view)];
+      html = list.length > 1 ? list.map((v) => tab(v, view)).join('') : '';
+    }
+    nav.innerHTML = html;
+    nav.hidden = !html;
     setCounts();
+  }
+
+  function renderReviewNav() {
+    renderSubtabs(DV.current || 'home');
   }
 
   function show(view) {
     if (!TITLES[view]) view = 'home';
-    if (REVIEW_VIEWS.includes(view) && !DV.state.review) view = 'reviews';
+    const needReview = REVIEW_VIEWS.includes(view) && !DV.state.review;
+    if (needReview) view = 'reviews';
     document.querySelectorAll('.dv-view').forEach((v) => { v.hidden = v.dataset.view !== view; });
-    document.querySelectorAll('[data-nav]').forEach((a) => a.classList.toggle('active', a.dataset.nav === view));
+    const sec = needReview && location.hash.slice(1) === 'setcheck' ? 'trace' : sectionOf(view);
+    document.querySelectorAll('.dv-sec').forEach((a) => a.classList.toggle('active', a.dataset.sec === sec));
     const title = $('#topbar-title');
     if (title) title.textContent = TITLES[view];
     const crumb = $('#topbar-breadcrumb');
@@ -89,8 +120,10 @@
     }
     DV.current = view;
     if (location.hash.slice(1) !== view) history.replaceState(null, '', `#${view}`);
-    banner('');
+    banner(needReview ? 'この画面はレビューを開いてから使えます。一覧からレビューを選んでください。' : '');
+    renderSubtabs(view);
     (handlers[view] || []).forEach((fn) => { try { fn(); } catch (e) { console.error(e); banner('画面を表示できませんでした。再読み込みしてください。'); } });
+    if (view === 'accuracy' && window.DVAccuracy) window.DVAccuracy.load();
   }
 
   async function openReview(iid, view = 'read') {
@@ -109,7 +142,12 @@
   }
 
   async function start() {
-    document.querySelectorAll('[data-nav]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); show(a.dataset.nav); }));
+    document.addEventListener('click', (e) => {
+      const a = e.target.closest('[data-nav], [data-go]');
+      if (!a) return;
+      e.preventDefault();
+      show(a.dataset.nav || a.dataset.go);
+    });
     let saved = null;
     try { saved = sessionStorage.getItem('dv-review'); } catch (e) { saved = null; }
     if (saved) { try { await openReview(saved, location.hash.slice(1) || 'read'); return; } catch (e) { banner(''); } }

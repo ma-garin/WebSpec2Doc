@@ -1,0 +1,19 @@
+<section class="dv-view dvt" data-view="trace" hidden>
+  <div class="dvt-head">
+    <label class="dvt-proj">プロジェクト
+      <select id="dvtProj" aria-label="プロジェクトを選ぶ"></select>
+    </label>
+    <button type="button" class="btn sm" id="dvtNew">新しく作る</button>
+  </div>
+  <ol class="dvt-steps" id="dvtSteps" aria-label="進み方">
+    <li data-step="1"><span class="dvt-n">1</span>文書を登録</li>
+    <li data-step="2"><span class="dvt-n">2</span>AI が検査</li>
+    <li data-step="3"><span class="dvt-n">3</span>つながりとレポート</li>
+  </ol>
+  <div class="dvt-empty" id="dvtEmpty" hidden>プロジェクトを選ぶか、新しく作ってください。</div>
+  <div class="dvt-body" id="dvtBody">
+    <div id="dvtS1" class="dvt-pane" data-pane="1">{% include 'docverify/_tier_1.html' %}</div>
+    <div id="dvtS2" class="dvt-pane" data-pane="2" hidden>{% include 'docverify/_tier_2.html' %}</div>
+    <div id="dvtS3" class="dvt-pane" data-pane="3" hidden>{% include 'docverify/_tier_3.html' %}</div>
+  </div>
+</section>

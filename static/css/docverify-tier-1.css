@@ -1,0 +1,46 @@
+.dvt-s1{font-size:14px;color:var(--tx,#101828);display:flex;flex-direction:column;min-height:0;height:100%}
+.dvt-s1 *{box-sizing:border-box}
+.dvt-s1 .in{flex:1;overflow:auto;max-width:900px;width:100%;margin:0 auto;padding:8px 40px 40px}
+.dvt-s1 h1{font-size:24px;margin:16px 0 4px;font-weight:650}
+.dvt-s1 .lead{color:var(--tx2,#475467);margin:0 0 20px;line-height:1.6}
+.dvt-s1 .drop{border:1.5px dashed #C5CAD3;border-radius:10px;background:var(--sf,#fff);padding:14px 18px;display:flex;align-items:center;gap:12px;color:var(--tx2,#475467);cursor:pointer}
+.dvt-s1 .drop:hover,.dvt-s1 .drop.over{border-color:var(--ac,#2563EB);background:#F5F8FF}
+.dvt-s1 .drop svg{flex:none;color:var(--tx3,#667085)}
+.dvt-s1 .drop small{margin-left:auto;color:var(--tx3,#667085);font-size:13px}
+.dvt-s1 .drop.big{flex-direction:column;justify-content:center;text-align:center;padding:64px 18px;font-size:16px;gap:10px}
+.dvt-s1 .drop.big small{margin-left:0}
+.dvt-s1 .sum{display:flex;align-items:center;gap:20px;margin:20px 0 14px;padding:14px 18px;background:var(--sf,#fff);border:1px solid var(--line,#E4E7EC);border-radius:10px}
+.dvt-s1 .sum span{display:flex;align-items:center;gap:8px}
+.dvt-s1 .sum strong{font-size:18px}
+.dvt-s1 .sum .ok{color:var(--ok,#067647)}.dvt-s1 .sum .wa{color:var(--wa,#B54708)}
+.dvt-s1 .card{background:var(--sf,#fff);border:1px solid var(--wa,#B54708);border-radius:10px;padding:20px 22px;margin-bottom:18px}
+.dvt-s1 .card.done{border-color:var(--ok,#067647);background:#F6FEF9}
+.dvt-s1 .card .top{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:600}
+.dvt-s1 .tag{font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;display:inline-flex;gap:4px;align-items:center}
+.dvt-s1 .tag.w{background:#FEF0C7;color:#93370D}.dvt-s1 .tag.g{background:#D1FADF;color:#05603A}
+.dvt-s1 .why{margin:10px 0 14px;color:var(--tx2,#475467);line-height:1.6}
+.dvt-s1 .why em{font-style:normal;color:var(--tx,#101828);font-weight:600}
+.dvt-s1 .opts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.dvt-s1 .opts button,.dvt-s1 .chg button{font:inherit;text-align:left;border:1px solid var(--line,#E4E7EC);background:var(--sf,#fff);border-radius:8px;padding:12px 14px;cursor:pointer;color:var(--tx,#101828)}
+.dvt-s1 .opts button:hover{border-color:var(--ac,#2563EB)}
+.dvt-s1 .opts button b{display:block;font-size:14px}
+.dvt-s1 .opts button span{display:block;color:var(--tx3,#667085);font-size:13px;margin-top:2px}
+.dvt-s1 .opts button.sel{border-color:var(--ac,#2563EB);background:#EFF4FF;box-shadow:0 0 0 1px var(--ac,#2563EB)}
+.dvt-s1 .opts button.rec::after{content:"AI の推定";display:inline-block;margin-top:6px;font-size:12px;color:var(--ac,#2563EB)}
+.dvt-s1 h2{font-size:15px;margin:24px 0 8px;font-weight:600;color:var(--tx2,#475467)}
+.dvt-s1 details{background:var(--sf,#fff);border:1px solid var(--line,#E4E7EC);border-radius:10px;margin-bottom:8px}
+.dvt-s1 summary{list-style:none;cursor:pointer;padding:13px 16px;display:flex;align-items:center;gap:10px;font-weight:600}
+.dvt-s1 summary::-webkit-details-marker{display:none}
+.dvt-s1 summary svg.cv{transition:transform .15s;color:var(--tx3,#667085)}
+.dvt-s1 details[open] summary svg.cv{transform:rotate(90deg)}
+.dvt-s1 summary .n{margin-left:auto;color:var(--tx3,#667085);font-weight:400}
+.dvt-s1 .row{display:flex;align-items:center;gap:10px;padding:10px 16px;border-top:1px solid var(--line,#E4E7EC)}
+.dvt-s1 .row .nm{flex:1;word-break:break-all}
+.dvt-s1 .row .mini{color:var(--tx3,#667085);font-size:13px}
+.dvt-s1 .row .lk{background:none;border:0;padding:0;font:inherit;color:var(--tx3,#667085);font-size:13px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.dvt-s1 .row .lk:hover{color:var(--ac,#2563EB)}
+.dvt-s1 .row select{font:inherit;font-size:13px;padding:4px 8px;border:1px solid var(--line,#E4E7EC);border-radius:6px;background:var(--sf,#fff);color:var(--tx,#101828)}
+.dvt-s1 .ft{border-top:1px solid var(--line,#E4E7EC);background:var(--sf,#fff);padding:14px 40px;display:flex;align-items:center;gap:16px;flex:none}
+.dvt-s1 .ft p{margin:0;color:var(--tx2,#475467);flex:1}
+.dvt-s1 .pri{font:inherit;font-weight:600;background:var(--ac,#2563EB);color:#fff;border:0;border-radius:8px;padding:11px 22px;cursor:pointer}
+.dvt-s1 .pri:disabled{background:#C5CAD3;cursor:not-allowed}

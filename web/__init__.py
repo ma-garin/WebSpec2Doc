@@ -35,6 +35,7 @@ def create_app() -> Flask:
         doc_verify_r3,
         doc_verify_r2,
         doc_verify_r4,
+        doc_verify_tier,
         history,
         integrations,
         llm_chat,
@@ -147,6 +148,7 @@ def create_app() -> Flask:
     app.register_blueprint(doc_verify_r3.bp)
     app.register_blueprint(doc_verify_r2.bp)
     app.register_blueprint(doc_verify_r4.bp)
+    app.register_blueprint(doc_verify_tier.bp)
     # バッチ・スクリプトのテスト（System 07）。独立した入口 /batch-test を持つ。
     app.register_blueprint(batch_test.bp)
     # バッチ・バックエンドのテスト（System 08）。独立した入口 /backend-test を持つ。

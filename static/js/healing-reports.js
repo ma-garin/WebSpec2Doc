@@ -42,6 +42,83 @@
     if (box) { box.hidden = true; box.textContent = ''; }
   }
 
+  /* ---------------- 共通部品 WS2D との接続 ---------------- */
+
+  function hasWS() { return !!(window.WS2D && window.WS2D.status && window.WS2D.reason); }
+
+  /* 内部の状態名は変えず、表示のときだけ標準語（WS2D.status）へ対応付ける。 */
+  var WS_REPORT_STATUS = {
+    awaiting: ['waiting_approval', null],
+    approved: ['done', '承認済み'],
+    returned: ['preparing', '差し戻し（再修正中）'],
+    rejected: ['cancelled', '却下'],
+    submitted: ['done', '提出済み'],
+    draft: ['not_started', '下書き']
+  };
+  var WS_REPORT_REASON = {
+    awaiting: '修正案と検証の結果が揃っています。下の証跡を読んでから、承認・差し戻し・却下を判断してください。',
+    approved: '承認済みです。内容は変更できません。',
+    returned: '差し戻されています。修正のやり直し結果が出るまで判断はできません。',
+    rejected: '却下されました。この修正は送られていません。',
+    submitted: '提出済みです。顧客に出した内容と証跡は固定されています。',
+    draft: '下書きです。承認欄は空のままです。'
+  };
+
+  /* 外部のリポジトリや顧客向け記録に影響する判断の確認。WS2D.confirm が無いときは window.confirm。 */
+  function askConfirm(opts) {
+    if (window.WS2D && typeof window.WS2D.confirm === 'function') { return window.WS2D.confirm(opts); }
+    return Promise.resolve(window.confirm(opts.title + '\n' + opts.message));
+  }
+
+  /* ページ先頭: 何の画面か・いまの状態・状態の理由。host が無い・WS2D が無いときは何もしない。 */
+  function renderHead(o) {
+    var head = document.getElementById('hl-page-head');
+    if (!head || !hasWS()) { return; }
+    var t = document.getElementById('hl-page-title');
+    var d = document.getElementById('hl-page-desc');
+    var st = document.getElementById('hl-ws-status');
+    if (t && o.title) { t.textContent = o.title; }
+    if (d && o.desc) { d.textContent = o.desc; }
+    if (st) { st.innerHTML = o.statusCode ? window.WS2D.status.html(o.statusCode, o.statusLabel || undefined) : ''; }
+    var r = document.getElementById('hl-ws-reason');
+    if (r && o.reason) { window.WS2D.reason(r, o.reason, o.reasonKind || 'info'); }
+    head.hidden = false;
+  }
+
+  /* 判断の文脈: 案件・対象・実行・PR・出力を 1 行に。どの実行の判断かを承認ボタンの前で見失わせない。 */
+  function renderContext(items) {
+    var box = document.getElementById('hl-doc-context');
+    if (!box) { return; }
+    box.textContent = '';
+    items.forEach(function (it) {
+      if (!it || !it.value) { return; }
+      var span = el('span', 'c-context__item');
+      span.appendChild(document.createTextNode(it.label + ': '));
+      var b = el('b');
+      if (it.href) {
+        var a = el('a', null, it.value);
+        a.href = it.href;
+        if (it.external) { a.target = '_blank'; a.rel = 'noopener'; }
+        b.appendChild(a);
+      } else { b.textContent = it.value; }
+      span.appendChild(b);
+      box.appendChild(span);
+    });
+    box.hidden = !box.firstChild;
+  }
+
+  /* 空・失敗は共通の状態表示（WS2D.state）で出す。無いときは従来の文だけ。 */
+  function showState(host, o, fallbackText) {
+    if (!host) { return; }
+    if (window.WS2D && typeof window.WS2D.state === 'function') {
+      host.hidden = false;
+      window.WS2D.state(host, o);
+    } else {
+      host.hidden = false;
+      host.textContent = fallbackText;
+    }
+  }
+
   function api(path, options) {
     return fetch(path, options || {}).then(function (res) {
       if (res.status === 403) {
@@ -252,6 +329,10 @@
     tdAction.appendChild(readBtn);
     tr.appendChild(tdAction);
 
+    ['', '案件', '画面 × 観点', '件数', '検証', '確認が必要な点', '更新', ''].forEach(function (lab, i) {
+      if (lab && tr.children[i]) { tr.children[i].setAttribute('data-label', lab); }
+    });
+
     frag.appendChild(tr);
 
     var holderRow = el('tr', 'hl-nested-row');
@@ -285,8 +366,8 @@
       var tri = details.querySelector('.hl-collapse-tri');
       if (tri) { tri.textContent = details.open ? '▾' : '▸'; }
     });
-    var innerWrap = el('div', 'hl-table-wrap');
-    var innerTable = el('table', 'hl-reports-table');
+    var innerWrap = el('div', 'hl-table-wrap c-table-wrap');
+    var innerTable = el('table', 'hl-reports-table c-table');
     innerTable.appendChild(table.querySelector('thead').cloneNode(true));
     var tbody = el('tbody');
     tbody.id = 'hl-no-review-body';
@@ -327,10 +408,27 @@
     if (table) { table.hidden = !has; }
     if (empty) {
       empty.hidden = has;
-      empty.textContent = state.view === 'needs_review'
-        ? '要確認の報告書はありません。'
-        : 'この状態の報告書はありません。';
+      if (!has) {
+        var emptyText = state.view === 'needs_review'
+          ? '要確認の報告書はありません。'
+          : 'この状態の報告書はありません。';
+        showState(empty, {
+          kind: 'empty', title: emptyText,
+          message: '報告書は、オートヒーリングの実行で修正案ができると並びます。',
+          next: '実行の状況は「設定」の実行ビューで確認できます。'
+        }, emptyText);
+      }
     }
+    var needN = state.allBundles.filter(function (b) { return bundleView(b) === 'needs_review'; }).length;
+    var highN = state.allBundles.filter(function (b) { return bundleView(b) === 'needs_review' && b.attention_high > 0; }).length;
+    renderHead({
+      statusCode: needN > 0 ? 'waiting_approval' : 'done',
+      statusLabel: needN > 0 ? '要確認 ' + needN + ' 件' : '要確認なし',
+      reason: needN > 0
+        ? '要確認の束が ' + needN + ' 件あります（うち重大な確認事項を含む束 ' + highN + ' 件）。束を開いて個票を読み、判断してください。'
+        : '要確認の束はありません。確認不要・提出済みの束は、上の絞り込みから読めます。',
+      reasonKind: needN > 0 ? 'warning' : 'info'
+    });
     state.expanded = {};
     bundles.forEach(function (b) { body.appendChild(renderBundleRow(b)); });
     renderNoReviewCollapse();
@@ -372,7 +470,16 @@
         renderChips();
         renderBundleList();
       })
-      .catch(function (e) { showError('報告書を読み込めませんでした: ' + e.message); });
+      .catch(function (e) {
+        showError('報告書を読み込めませんでした: ' + e.message);
+        var empty = document.getElementById('hl-reports-empty');
+        var kept = state.allBundles.length > 0;
+        showState(empty, {
+          kind: 'error', title: '報告書を読み込めませんでした', message: e.message,
+          retained: kept, next: '通信を確認して、もう一度読み込んでください。',
+          actionLabel: '再読み込み', onAction: loadBundleList
+        }, '報告書を読み込めませんでした。' + e.message);
+      });
   }
 
   function loadCount() {
@@ -488,9 +595,9 @@
     return d;
   }
 
-  function renderDiff(proposal) {
+  function renderDiff(proposal, openIt) {
     var files = (proposal && proposal.files_changed) || [];
-    var d = details('変更内容（差分 ' + files.length + ' ファイル）', '開発者向け', false);
+    var d = details('変更内容（差分 ' + files.length + ' ファイル）', '開発者向け', !!openIt);
     if (!proposal || !proposal.diff) {
       d.appendChild(el('p', 'hl-doc-p', '差分はありません。'));
       return d;
@@ -696,14 +803,34 @@
 
     // 折りたたみ 3 つ
     doc.appendChild(renderAttention(report));
-    doc.appendChild(renderDiff(proposal));
+    doc.appendChild(renderDiff(proposal, report.status === 'awaiting'));
     doc.appendChild(renderEvidence(proposal, report));
 
     // 5. 承認
     doc.appendChild(section('5. 承認'));
     doc.appendChild(renderApprovals(report));
 
+    renderReportHead(report, data.run);
     renderActions(report);
+  }
+
+  function renderReportHead(report, run) {
+    var m = WS_REPORT_STATUS[report.status] || ['unverified', report.status || '状態不明'];
+    renderHead({
+      title: '保守対応報告書' + (report.title ? '：' + report.title : ''),
+      desc: '1 つの欠陥について、事象・原因・対応・検証を上から順に読み、最後に承認します。',
+      statusCode: m[0], statusLabel: m[1],
+      reason: WS_REPORT_REASON[report.status] || '状態の理由を取得できませんでした。',
+      reasonKind: report.status === 'awaiting' ? 'warning' : (report.status === 'rejected' ? 'error' : 'info')
+    });
+    renderContext([
+      { label: '案件', value: report.project_name },
+      { label: '対象', value: report.target_url },
+      { label: '実行', value: report.run_id ? String(report.run_id).slice(0, 12) : '',
+        href: report.run_id ? '/healing/runs/' + encodeURIComponent(report.run_id) : '' },
+      { label: 'PR', value: report.pr_number ? '#' + report.pr_number : (report.fix_target === 'script' ? '不要（テスト側の修正）' : '未作成'),
+        href: report.pr_url || '', external: true }
+    ]);
   }
 
   /* 書き直せるのは承認待ちの報告書だけ。承認・差し戻しの後に本文が動くと、
@@ -756,6 +883,36 @@
     setTimeout(function () { box.hidden = true; }, 3000);
   }
 
+  /* 承認ボタンの横に出す阻害理由。件数 0 も「0 件」と出す（出ない＝問題なし、と読ませない）。 */
+  function blockersBox(parts, note) {
+    var box = el('div', 'hl-blockers');
+    box.setAttribute('aria-live', 'polite');
+    box.appendChild(el('b', 'hl-blockers-lead', '承認の前に確認'));
+    var ul = el('ul', 'hl-blockers-list');
+    parts.forEach(function (p) {
+      var li = el('li');
+      li.appendChild(el('span', 'hl-blocker' + (p.n > 0 ? ' ' + p.kind : ''), p.n + ' 件'));
+      li.appendChild(document.createTextNode(' ' + p.label));
+      ul.appendChild(li);
+    });
+    box.appendChild(ul);
+    box.appendChild(el('p', 'hl-doc-note', note));
+    return box;
+  }
+
+  function reportBlockers(report) {
+    var attn = report.attention || [];
+    var unresolved = attn.length;
+    var failed = (report.verify_after_ok === false ? 1 : 0) + (report.action_empty ? 1 : 0);
+    var unverified = (report.verify_after_ok == null ? 1 : 0) + (report.spec_match === '未照合' ? 1 : 0);
+    var total = unresolved + failed + unverified;
+    return blockersBox([
+      { n: failed, label: '失敗（検証が通っていない・直っていない）', kind: 'is-err' },
+      { n: unresolved, label: '未解決（確認が必要な点）', kind: 'is-warn' },
+      { n: unverified, label: '未確認（検証の未実行・画面仕様の未照合）', kind: 'is-warn' }
+    ], total > 0 ? '残っているものを読んでから判断してください。' : '機械的に分かる残りはありません。テストの通過は正しさの保証ではありません。');
+  }
+
   function renderActions(report) {
     var box = document.getElementById('hl-doc-actions');
     if (!box) { return; }
@@ -772,9 +929,20 @@
       box.appendChild(note);
 
       var approveLabel = report.fix_target === 'script' ? '承認' : '承認して修正を送る';
+      box.appendChild(reportBlockers(report));
       var approve = el('button', 'hl-btn' + (high > 0 ? '' : ' is-primary'), approveLabel);
       approve.type = 'button';
-      approve.addEventListener('click', function () { decide('approve', note.value, approve); });
+      approve.addEventListener('click', function () {
+        var script = report.fix_target === 'script';
+        askConfirm({
+          title: 'この報告書を承認しますか？',
+          message: script
+            ? '承認は報告書と証跡に記録され、以後は書き直せません。サイトのコードは変更しません。'
+            : '承認すると、この修正が接続先の GitHub リポジトリへ PR として送られます。外部のリポジトリに記録が残り、承認は取り消せません（PR は後から閉じられます）。',
+          detail: '案件: ' + (report.project_name || '—'),
+          confirmLabel: script ? '承認する' : '承認して PR を送る'
+        }).then(function (ok) { if (ok) { decide('approve', note.value, approve); } });
+      });
       box.appendChild(approve);
       if (report.fix_target !== 'script') {
         box.appendChild(el('p', 'hl-doc-note', '開発者には PR として届きます'));
@@ -864,7 +1032,14 @@
       .then(renderDoc)
       .catch(function (e) {
         var doc = document.getElementById('hl-doc');
-        if (doc) { doc.textContent = ''; doc.appendChild(el('p', 'hl-doc-p', '報告書を読み込めませんでした。')); }
+        if (doc) {
+          doc.setAttribute('aria-busy', 'false');
+          showState(doc, {
+            kind: 'error', title: '報告書を読み込めませんでした', message: e.message,
+            next: '一覧に戻って開き直すか、通信を確認してください。',
+            actionLabel: '再読み込み', onAction: loadDoc
+          }, '報告書を読み込めませんでした。');
+        }
         showError(e.message);
       });
   }
@@ -892,6 +1067,22 @@
     doc.appendChild(section('個票 ' + reports.length + ' 件（うち承認待ち ' + bundle.awaiting_count + '）'));
     doc.appendChild(renderReportTable(reports));
 
+    var bstatus = bundle.awaiting_count > 0 ? ['waiting_approval', null]
+      : (WS_REPORT_STATUS[bundle.status] || ['unverified', bundle.status || '状態不明']);
+    renderHead({
+      title: '束：' + (bundle.title || '（画面不明）'),
+      desc: '同じ画面 × 観点の個票をまとめて読み、まとめて判断します。',
+      statusCode: bstatus[0], statusLabel: bstatus[1],
+      reason: bundle.awaiting_count > 0
+        ? '承認待ちの個票が ' + bundle.awaiting_count + ' 件あります。個票を読んでから、まとめて判断してください。'
+        : (bundle.review_reason || 'この束に承認待ちの個票はありません。'),
+      reasonKind: bundle.awaiting_count > 0 ? 'warning' : 'info'
+    });
+    renderContext([
+      { label: '案件', value: bundle.project_name },
+      { label: '対象', value: bundle.target_url },
+      { label: '件数', value: bundle.count + ' 件（承認待ち ' + (bundle.awaiting_count || 0) + '）' }
+    ]);
     renderBundleActions(bundle);
   }
 
@@ -912,9 +1103,24 @@
       var fixTargets = bundle.fix_targets || [];
       var scriptOnly = fixTargets.length > 0 && fixTargets.every(function (t) { return t === 'script'; });
       var approveLabel = scriptOnly ? '承認' : '承認して修正を送る';
+      var bUnverified = Math.max(0, (bundle.count || 0) - (bundle.verify_after_ok_count || 0));
+      var bTotal = (bundle.attention_high || 0) + bUnverified;
+      box.appendChild(blockersBox([
+        { n: bUnverified, label: '検証が通っていない個票（失敗・未確認を含む）', kind: 'is-err' },
+        { n: bundle.attention_high || 0, label: '重大な確認事項', kind: 'is-err' }
+      ], bTotal > 0 ? '残っているものを個票で読んでから判断してください。' : '機械的に分かる残りはありません。テストの通過は正しさの保証ではありません。'));
       var approve = el('button', 'hl-btn' + (bundle.attention_high > 0 ? '' : ' is-primary'), approveLabel);
       approve.type = 'button';
-      approve.addEventListener('click', function () { decideBundle('approve', note.value, approve); });
+      approve.addEventListener('click', function () {
+        askConfirm({
+          title: 'この束の承認待ち ' + (bundle.awaiting_count || 0) + ' 件をまとめて承認しますか？',
+          message: scriptOnly
+            ? '承認は個票ごとに記録され、以後は書き直せません。サイトのコードは変更しません。'
+            : '承認すると、修正が接続先の GitHub リポジトリへ PR として送られます。外部のリポジトリに記録が残り、承認は取り消せません（PR は後から閉じられます）。',
+          detail: '案件: ' + (bundle.project_name || '—'),
+          confirmLabel: scriptOnly ? 'まとめて承認する' : 'まとめて承認して PR を送る'
+        }).then(function (ok) { if (ok) { decideBundle('approve', note.value, approve); } });
+      });
       box.appendChild(approve);
       if (!scriptOnly) {
         box.appendChild(el('p', 'hl-doc-note', '開発者には PR として届きます'));
@@ -985,7 +1191,14 @@
       .then(renderBundleDoc)
       .catch(function (e) {
         var doc = document.getElementById('hl-doc');
-        if (doc) { doc.textContent = ''; doc.appendChild(el('p', 'hl-doc-p', '束を読み込めませんでした。')); }
+        if (doc) {
+          doc.setAttribute('aria-busy', 'false');
+          showState(doc, {
+            kind: 'error', title: '束を読み込めませんでした', message: e.message,
+            next: '一覧に戻って開き直すか、通信を確認してください。',
+            actionLabel: '再読み込み', onAction: loadBundleDoc
+          }, '束を読み込めませんでした。');
+        }
         showError(e.message);
       });
   }

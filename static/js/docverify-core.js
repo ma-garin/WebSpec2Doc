@@ -70,10 +70,11 @@
     set('adopted', f.filter((x) => x.status === 'adopted').length);
   }
 
-  // サイドは固定の 5 項目。各項目の中の画面は上部のタブで切り替える。
+  // サイドは固定の 7 項目（レビュー／トレーサビリティ／指摘／根拠／履歴／観点／設定）。
+  // 指摘=「指摘の検討」、根拠=「実画面との照合」の既存画面に対応付ける（新画面は作らない）。
   const SECTIONS = {
-    doc: ['home', 'mine', 'reviews', 'findings', 'plan', 'read', 'triage', 'questions', 'followup', 'gate', 'screen'],
-    trace: ['trace'], hist: ['metrics'], vp: ['checklists', 'accuracy'], set: ['settings'],
+    doc: ['home', 'mine', 'reviews', 'findings', 'plan', 'read', 'questions', 'followup', 'gate'],
+    trace: ['trace'], find: ['triage'], evid: ['screen'], hist: ['metrics'], vp: ['checklists', 'accuracy'], set: ['settings'],
   };
   // ドキュメント検証はレビュー一覧 1 画面。ホーム・自分の担当・指摘一覧は廃止（タブ不要・2026-10-18）。
   const DOC_GONE = ['home', 'mine', 'findings'];
@@ -106,8 +107,43 @@
     setCounts();
   }
 
+  // 画面の頭（何の画面か 1 文・現在の状態・状態の理由 1 行）。語は c-hybrid の WS2D 語彙に合わせる
+  const PAGE = {
+    reviews: ['レビュー', 'レビューを作り、文書の検査から判定までを進めます。', 'AI の自動検出は「候補」です。人が「指摘にする」を押すまで、確定した指摘にはなりません。'],
+    plan: ['計画', 'レビューの目的・参加者・期限・終了基準を決めます。', '計画を保存して「個別レビューを始める」を押すと、文書を読む工程に進みます。'],
+    read: ['文書を読む', '本文を読み、指摘の候補を確かめて指摘にします。', '自動で見つけたものは候補です。本文に戻って確かめてから指摘にしてください。'],
+    triage: ['指摘', '見つかった指摘を採用・却下・保留に仕分けます。', '指摘ごとの「根拠」で、文書にある内容か、推論か、未確認かを確かめられます。'],
+    questions: ['質問票', '作成者に確かめたい事項をまとめます。', '回答が届くまで、その指摘は「未確認」のままです。'],
+    followup: ['修正版の確認', '修正された文書で、指摘が直ったかを確かめます。', '直ったと確かめられた指摘だけを「修正済み」にします。'],
+    screen: ['根拠', '実画面と文書を照らし合わせ、一致・不一致・未確認を見ます。', '照合できていない項目は「未確認」です。一致とは読まないでください。'],
+    gate: ['判定と記録', 'レビューの合否を決め、記録を残します。', '判定と承認は人が行います。AI は承認しません。'],
+    trace: ['トレーサビリティ', '要件・設計・テストの文書どうしのつながりを確かめます。', 'つながりは文書の記述から読み取った推論です。内容が正しいかは人が確かめてください。'],
+    metrics: ['履歴', '過去の判定と記録、指摘の件数と修正の進み具合を見ます。', '数値は、画面に表示された時点の記録です。'],
+    checklists: ['観点', '文書の検査で何を見るか、見つけた指摘をどれだけ重く扱うかを決めます。', '観点は区分ごとに、見る内容と重さを決められます。'],
+    settings: ['設定', 'レビューで使う言葉と基準、AI の送信先を確認します。', 'AI に文書を送る前には、必ず送る内容の確認が出ます。'],
+  };
+  const PHASE_STATUS = { plan: ['preparing', '計画'], individual: ['running', '個別レビュー'], triage: ['waiting_review', '指摘の検討'], rework: ['running', '修正'], followup: ['waiting_review', '修正版の確認'], closed: ['done', '判定と記録'] };
+  function renderPageHead(view) {
+    const info = PAGE[view];
+    const ws = window.WS2D;
+    if (!info) return;
+    const t = $('#dv-ph-title'), d = $('#dv-ph-desc'), st = $('#dv-ph-state'), rs = $('#dv-reason');
+    if (t) t.textContent = info[0];
+    if (d) d.textContent = info[1];
+    const r = DV.state.review;
+    if (st) {
+      st.innerHTML = '';
+      if (r && REVIEW_VIEWS.includes(view)) {
+        const ps = PHASE_STATUS[r.phase] || ['not_started', ''];
+        st.innerHTML = (ws && ws.status ? ws.status.html(ps[0]) : '') + `<span>${esc(r.name)} ・ ${esc(ps[1])}</span>`;
+      }
+    }
+    if (rs) { if (ws && ws.reason) ws.reason(rs, info[2]); else rs.textContent = info[2]; }
+  }
+
   function renderReviewNav() {
     renderSubtabs(DV.current || 'reviews');
+    renderPageHead(DV.current || 'reviews');
   }
 
   function show(view) {
@@ -129,6 +165,7 @@
     if (location.hash.slice(1) !== view) history.replaceState(null, '', `#${view}`);
     banner(needReview ? 'この画面はレビューを開いてから使えます。一覧からレビューを選んでください。' : '');
     renderSubtabs(view);
+    renderPageHead(view);
     (handlers[view] || []).forEach((fn) => { try { fn(); } catch (e) { console.error(e); banner('画面を表示できませんでした。再読み込みしてください。'); } });
     if (view === 'accuracy' && window.DVAccuracy) window.DVAccuracy.load();
   }

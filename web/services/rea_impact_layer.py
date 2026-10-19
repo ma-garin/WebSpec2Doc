@@ -32,6 +32,47 @@ def loc_file(location: Any) -> str:
         return ""
     return norm_module(_LOC.sub("", s))
 
+LINK_UNSET = ("サイト（コード依存）と対象システムの関連付けは未設定です。この結果が対象システムの変更に当たるかは確かめていません。")
+
+
+def _route_class(i: dict) -> str:
+    """route の到達を 3 区分に畳む（表示用）。認証済み実測 / 未認証実測 / 未確認。"""
+    if i.get("reach_status") == "observed":
+        return "observed_auth" if i.get("reach_authenticated") else "observed"
+    return "unverified"
+
+
+def flow_summary(res: dict) -> dict:
+    """変更 → module → route → test → 承認 の段ごとの件数と、承認の阻害理由（表示用・既存キーは変えない）。"""
+    own = res.get("own") or {}
+    imp = res.get("impacted") or []
+    routes: dict[str, dict] = {}
+    tests: dict[str, dict] = {}
+    for r in [own] + imp:
+        for i in r.get("routes", []):
+            routes.setdefault(i["id"], {**i, "reach_class": _route_class(i), "module": r.get("module")})
+        for t in r.get("tests", []):
+            tests.setdefault(t["evidence_id"], t)
+    cls = {"observed_auth": 0, "observed": 0, "unverified": 0}
+    for r in routes.values():
+        cls[r["reach_class"]] += 1
+    amb = sum(1 for c in imp if (c.get("via") or {}).get("state") == "ambiguous")
+    blockers = []
+    if cls["unverified"]:
+        blockers.append({"code": "routes_unverified", "label": "到達が未確認の route", "count": cls["unverified"]})
+    if amb:
+        blockers.append({"code": "ambiguous", "label": "依存が曖昧な module", "count": amb})
+    if not tests:
+        blockers.append({"code": "tests_zero", "label": "関連テストが 0 件", "count": 0})
+    return {"stages": {"change": 1 if res.get("module") else 0, "modules": 1 + len(imp) if res.get("module") else 0,
+                       "routes": len(routes), "tests": len(tests), "blockers": len(blockers)},
+            "route_reach": cls, "ambiguous_modules": amb,
+            "route_rows": [{"id": r["id"], "value": r["value"], "method": r.get("method"), "module": r["module"],
+                            "reach_class": r["reach_class"], "reach_label": r.get("reach_label"),
+                            "state": r.get("state"), "location": r.get("location")} for r in routes.values()],
+            "test_rows": list(tests.values()), "blockers": blockers,
+            "link": {"state": "unset", "reason": LINK_UNSET}}  # fmt: skip
+
 
 def _empty(site: str, module: str, message: str, state: str = "unconfirmed") -> dict:
     zero = {"dependency_edges": 0, "candidates": 0, "routes": 0, "apis": 0, "tests": 0, "observed_routes": 0,
@@ -191,6 +232,7 @@ def build_layer(site: str, ev: dict, module: str = "", probe: dict | None = None
                                "apis": len(apis), "tests": len((routes | apis) & set(vps)),
                                "observed_routes": observed_n(routes),
                                    "observed_routes_authenticated": observed_auth_n(routes)}  # fmt: skip
+    res["flow"] = flow_summary(res)
     return res
 
 

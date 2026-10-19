@@ -30,6 +30,16 @@
     <main class="app-content" id="app-content">
       <div id="hl-error" class="hl-banner" role="alert" hidden></div>
 
+      <header class="c-page-head hl-page-head" id="hl-page-head">
+        <div class="c-page-head__main">
+          <h1 class="c-page-head__title" id="hl-page-title">報告書</h1>
+          <p class="c-page-head__desc" id="hl-page-desc">修正案の報告書を、要確認のものから順に読んで判断します。</p>
+          <div class="c-page-head__state" id="hl-ws-status"></div>
+        </div>
+      </header>
+      <div id="hl-ws-reason"></div>
+
+
       <div class="hl-list-head">
         <div class="hl-chips" id="hl-chips" role="group" aria-label="状態で絞り込む"></div>
         <span class="hl-spacer"></span>
@@ -39,8 +49,8 @@
         </select>
       </div>
 
-      <div class="hl-table-wrap">
-        <table class="hl-reports-table" id="hl-reports-table">
+      <div class="hl-table-wrap c-table-wrap">
+        <table class="hl-reports-table c-table" id="hl-reports-table">
           <thead>
             <tr>
               <th></th>
@@ -55,7 +65,7 @@
           </thead>
           <tbody id="hl-reports-body"></tbody>
         </table>
-        <p class="hl-empty" id="hl-reports-empty" hidden>承認待ちの報告書はありません。</p>
+        <div class="hl-empty" id="hl-reports-empty" hidden>承認待ちの報告書はありません。</div>
       </div>
 
       <p class="hl-legend">1 行は画面 × 観点で束ねた単位。開くと個票（1 欠陥 = 1 報告書）が並びます。「直っていません」は、機械が直せなかったもの。原因の報告書だけが下書きされ、対応は人が書きます。</p>

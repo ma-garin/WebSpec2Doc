@@ -1,6 +1,8 @@
-/* ws-reverse.js — リバース解析表示
- * T.reverseRender(host, domain): GET /api/reverse-analysis?domain=... を取得して host に描く。
- * テキストは必ず esc() / textContent 経由。内部 JSON は画面に出さない（id のみ「詳細情報」内）。
+/* ws-reverse.js — リバース解析表示（C. Hybrid: window.WS2D の部品で描く）
+ * T.reverseRender(host, domain): GET /api/reverse-analysis?domain=... と
+ * GET /api/sites/<d>/static-routes/probe（System 03 の探索結果・無くても動く）を取得して host に描く。
+ * テキストは必ず esc() / textContent 経由。内部 JSON は画面に出さない（id のみ出典欄）。
+ * Product Truth: static を到達済みにしない／推論を実測にしない／method 不明を GET にしない／partial を成功にしない。
  */
 (function () {
   'use strict';
@@ -13,7 +15,16 @@
     });
   }
 
-  var STATE_LABEL = { observed: '実測', static: '静的', inferred: '推論', ambiguous: '曖昧', unknown: '未確認', unavailable: '利用不可' };
+  /* API の state → WS2D.evidence の code（unknown は「未確認」。観測に格上げしない） */
+  var EV_CODE = { observed: 'observed', static: 'static', inferred: 'inferred', ambiguous: 'ambiguous', unknown: 'unverified', unavailable: 'unavailable' };
+  var EV_REASON = {
+    observed: '実行時に観測した事実です。',
+    static: '静的解析で見つけた候補です。実行・到達の証明ではありません。',
+    inferred: '静的解析からの推論です。実行・到達の証明ではありません。',
+    ambiguous: '解釈が複数あり、1 つに決められません。',
+    unverified: '未確認です。確かめた記録がありません。',
+    unavailable: '解析ツールが利用できず、確認できていません。'
+  };
   var ORIGIN_LABEL = { runtime: '実行時に観測', static: '静的のみ' };
   var OUTCOME_LABEL = { partial: '一部のみ', success: '完了', failed: '失敗', unknown: '未確認' };
   var SEV_LABEL = { error: 'エラー', warning: '警告', info: '情報' };
@@ -25,106 +36,166 @@
     { key: 'source', label: 'Source' },
     { key: 'diag', label: '診断' }
   ];
+  /* KPI の行 → 根拠一覧のタブ・区分（事実／推論／未確認） */
+  var KPI_TAB = { static: 'all', route: 'route', api_static: 'api', api_runtime: 'api', module_dep: 'module', source_map: 'source', qa: 'all' };
+  var KPI_CAT = { api_runtime: 'fact', qa: 'unverified' };
+  var STATUS_LABEL = { complete: '完了', partial: '一部のみ', failed: '失敗' };
+  var RESULT_TITLE = { success: '解析が完了しました', partial: '一部のみ取得しました', error: '失敗しました', provider_unavailable: '実行できません', busy: '実行中のため待機しています', no_runtime: '実行時の記録がありません' };
+  var RESULT_KIND = { partial: 'partial', error: 'error', provider_unavailable: 'unavailable', busy: 'unavailable', no_runtime: 'unverified' };
   var seq = 0;
 
-  function badge(state) {
-    var s = STATE_LABEL[state] ? state : 'unknown';
-    return '<span class="rv-badge rv-st-' + s + '">' + esc(STATE_LABEL[s]) + '</span>';
-  }
   function isNum(v) { return typeof v === 'number' && isFinite(v); }
+  function fmtTime(v) {
+    var m = /^(\d{4})-(\d\d)-(\d\d)[T ](\d\d):(\d\d)/.exec(String(v || ''));
+    return m ? m[1] + '/' + m[2] + '/' + m[3] + ' ' + m[4] + ':' + m[5] : '';
+  }
 
   function reverseRender(host, domain) {
     if (!host) return;
+    var W = window.WS2D;
+    if (!W) {
+      host.textContent = '共通部品を読み込めませんでした。ページを再読み込みしてください。';
+      return;
+    }
     var token = ++seq;
     var data = null;
+    var lastGood = null;      // 直近に読めた正常な結果（読み込み失敗時も保持して見せる）
+    var netErr = null;
+    var probe = null;         // System 03 の探索結果 { state, byId }
     var tab = 'all';
-    var lastRow = null;
     var runningLocal = false;
     var runMsg = null;
     var pollTimer = null;
 
-    host.setAttribute('aria-busy', 'true');
-    host.innerHTML = '<div class="rv rv-card rv-loading" role="status">リバース解析の結果を読み込んでいます…</div>';
+    function evBadge(state, label) { return W.evidence.html(EV_CODE[state] || 'unverified', label); }
+    function slot(name) { return host.querySelector('[data-slot="' + name + '"]'); }
+    function fetchJson(url) {
+      return fetch(url, { headers: { 'Accept': 'application/json' } })
+        .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+    }
+    function mainUrl() { return '/api/reverse-analysis?domain=' + encodeURIComponent(domain || ''); }
+    function probeUrl() { return '/api/sites/' + encodeURIComponent(domain || '') + '/static-routes/probe'; }
+
+    function showLoading() {
+      host.setAttribute('aria-busy', 'true');
+      host.innerHTML = '<div class="rv"><div data-slot="loading"></div></div>';
+      W.state(slot('loading'), { kind: 'loading', message: 'リバース解析の結果を読み込んでいます…' });
+    }
+    function toProbe(j) {
+      var byId = {};
+      if (j && j.state === 'ok') (j.items || []).forEach(function (it) { if (it && it.evidence_id) byId[it.evidence_id] = it; });
+      return { state: j ? j.state : 'error', byId: byId };
+    }
 
     function load() {
       var my = ++seq; token = my;
       stopPoll();
-      host.setAttribute('aria-busy', 'true');
-      host.innerHTML = '<div class="rv rv-card rv-loading" role="status">リバース解析の結果を読み込んでいます…</div>';
-      fetch('/api/reverse-analysis?domain=' + encodeURIComponent(domain || ''), { headers: { 'Accept': 'application/json' } })
-        .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-        .then(function (j) { if (my !== token) return; data = j || {}; host.removeAttribute('aria-busy'); draw(); })
+      showLoading();
+      Promise.all([fetchJson(mainUrl()), fetchJson(probeUrl()).catch(function () { return null; })])
+        .then(function (res) {
+          if (my !== token) return;
+          data = res[0] || {};
+          probe = toProbe(res[1]);
+          netErr = null;
+          if (data.state === 'ok') lastGood = data;
+          host.removeAttribute('aria-busy');
+          draw();
+        })
         .catch(function () {
           if (my !== token) return;
           host.removeAttribute('aria-busy');
-          data = { state: 'error', message: 'リバース解析の結果を取得できませんでした。', next_action: '通信状態を確認して、再読み込みしてください。' };
+          netErr = { message: 'リバース解析の結果を取得できませんでした。', next_action: '通信状態を確認して、再読み込みしてください。' };
+          data = lastGood || { state: 'error', message: netErr.message, next_action: netErr.next_action };
           draw();
         });
     }
 
-    /* ---------- 実行バー ---------- */
-    var STATUS_LABEL = { complete: '完了', partial: '一部のみ', failed: '失敗' };
-    var RESULT_LABEL = { success: '完了', partial: '一部のみ', error: '失敗', provider_unavailable: '実行できません', busy: '実行中のため待機', no_runtime: '実行時の記録がありません' };
-    function fmtTime(v) {
-      var m = /^(\d{4})-(\d\d)-(\d\d)[T ](\d\d):(\d\d)/.exec(String(v || ''));
-      return m ? m[1] + '/' + m[2] + '/' + m[3] + ' ' + m[4] + ':' + m[5] : '';
-    }
+    /* ---------- 状態の対応付け ---------- */
     function isRunning() { return runningLocal || !!(data && data.running); }
-    function msgHtml(m) {
-      var ok = m.result === 'success';
-      var warn = m.result === 'partial';
-      var cls = ok ? 'rv-msg-ok' : (warn ? 'rv-msg-warn' : 'rv-msg-err');
-      var title = ok ? '解析が完了しました' : (warn ? '一部のみ取得しました' : (RESULT_LABEL[m.result] || '実行できませんでした'));
-      var h = '<div class="rv-runmsg ' + cls + '" role="status"><b>' + esc(title) + '</b>';
-      if (!ok && m.message) h += '<span> ' + esc(m.message) + '</span>';
-      if (m.next_action) h += '<span class="rv-runmsg-next"> 次の行動: ' + esc(m.next_action) + '</span>';
+    function statusCode() {
+      if (isRunning()) return 'running';
+      var st = data.state;
+      if (st === 'empty') return 'not_started';
+      if (st === 'provider_unavailable') return 'unavailable';
+      if (st === 'error') return 'failed';
+      if (st === 'mismatch') return 'unverified';
+      if (st === 'ok') {
+        if (data.status === 'complete') return 'done';
+        if (data.status === 'partial') return 'partial';
+        if (data.status === 'failed') return 'failed';
+        return 'unverified';
+      }
+      return 'unverified';
+    }
+    function reasonOf() {
+      var d = data;
+      if (isRunning()) return { t: 'リバース解析を実行しています（数十秒かかることがあります）。完了すると結果を更新します。', k: 'info' };
+      if (netErr) return { t: netErr.message + '前回の結果を表示しています。', k: 'error' };
+      if (d.state === 'empty') return { t: d.message || 'このサイトのリバース解析結果はまだありません。', k: 'info' };
+      if (d.state === 'provider_unavailable') return { t: d.message || '静的解析ツールを利用できません。', k: 'warning' };
+      if (d.state === 'error') return { t: d.message || '結果を表示できません。', k: 'error' };
+      if (d.state === 'mismatch') return { t: '保存済みの結果が現在のサイトの記録と対応しないため、未確認として扱い表示しません。', k: 'warning' };
+      if (d.status !== 'complete') return { t: '一部のみ取得しました。取得できた範囲だけを表示しており、成功とは扱いません。', k: 'warning' };
+      var warn = (d.diagnostics || []).filter(function (x) { return x.severity === 'warning'; })[0];
+      if (warn) return { t: warn.message, k: 'warning' };
+      return { t: '解析が完了しました。静的な根拠は「推論」であり、実行・到達の証明ではありません。', k: 'success' };
+    }
+
+    /* ---------- 上部（page header・context・理由） ---------- */
+    function runLabel() {
+      if (isRunning()) return '実行中…';
+      return (data.state === 'ok' || data.last_run) ? '再実行' : 'リバース解析を実行';
+    }
+    function headHtml() {
+      var d = data;
+      var dis = isRunning() || !d.can_run || !d.site;
+      var h = '<div class="c-page-head"><div class="c-page-head__main"><h2 class="c-page-head__title">リバース解析</h2>' +
+        '<p class="c-page-head__desc">実行時観測だけでは見えなかった構造を、静的解析で補完します。静的な根拠は「推論」で、動作の確認ではありません。</p>' +
+        '<div class="c-page-head__state">' + W.status.html(statusCode()) + '</div></div>';
+      if (d.site) {
+        h += '<div class="c-page-head__actions"><button type="button" class="c-btn c-btn--primary" data-rv="run"' + (dis ? ' disabled' : '') + '>' + esc(runLabel()) + '</button></div>';
+      }
       return h + '</div>';
     }
-    function runbarHtml() {
-      var d = data || {};
-      var msg = runMsg ? msgHtml(runMsg) : '';
-      if (!d.site) return msg ? '<section class="rv-runbar" aria-label="リバース解析の実行">' + msg + '</section>' : '';
-      var run = isRunning();
+    function contextHtml() {
+      var d = data;
+      if (!d.site) return '';
       var lr = d.last_run;
-      var last;
-      if (lr && fmtTime(lr.finished_at)) {
-        last = esc(fmtTime(lr.finished_at)) + (isNum(lr.seconds) ? '・' + lr.seconds.toFixed(1) + ' 秒' : '') +
-          (STATUS_LABEL[lr.status] ? ' <span class="rv-chip">' + esc(STATUS_LABEL[lr.status]) + '</span>' : '');
-      } else last = '<span class="rv-unk">未実行</span>';
+      var last = (lr && fmtTime(lr.finished_at)) ? esc(fmtTime(lr.finished_at)) : '<span class="rv-unk">未実行</span>';
+      var secs = (lr && isNum(lr.seconds)) ? lr.seconds.toFixed(1) + ' 秒' : '<span class="rv-unk">未計測</span>';
       var pv = d.provider_status || {};
-      var chip = pv.available
+      var prov = pv.available
         ? '<span class="rv-pchip rv-pchip-ok">利用可能・REA ' + esc(pv.version || '不明') + '</span>'
-        : '<span class="rv-pchip rv-pchip-ng">利用不可・静的解析ツール</span>';
-      var has = d.state === 'ok' || !!lr;
-      var label = run ? '実行中…' : (has ? '再実行' : 'リバース解析を実行');
-      var dis = run || !d.can_run;
-      var h = '<section class="rv-runbar" aria-label="リバース解析の実行"><div class="rv-runbar-row">' +
-        '<dl class="rv-runinfo"><div><dt>対象サイト</dt><dd>' + esc(d.site.domain) + '</dd></div>' +
-        '<div><dt>最終解析</dt><dd>' + last + '</dd></div></dl>' +
-        '<div class="rv-runact">' + chip +
-        '<button type="button" class="rv-btn rv-btn-pri" data-rv="run"' + (dis ? ' disabled' : '') + '>' + esc(label) + '</button></div></div>';
-      if (!d.can_run && !run) {
+        : W.status.html('unavailable', '利用不可・静的解析ツール');
+      var h = '<div class="c-context" aria-label="現在の解析対象">' +
+        '<span class="c-context__item">対象 <b>' + esc(d.site.domain) + '</b></span>' +
+        '<span class="c-context__item">最終解析 <b>' + last + '</b></span>' +
+        '<span class="c-context__item">所要 <b>' + secs + '</b></span>' +
+        '<span class="c-context__item">状態 ' + W.status.html(statusCode()) +
+        (lr && STATUS_LABEL[lr.status] ? ' <span class="rv-chip">前回: ' + esc(STATUS_LABEL[lr.status]) + '</span>' : '') + '</span>' +
+        '<span class="c-context__item">解析ツール ' + prov + '</span></div>';
+      if (!d.can_run && !isRunning()) {
         if (d.cannot_run_reason) h += '<p class="rv-runhint rv-runhint-ng">実行できない理由: ' + esc(d.cannot_run_reason) + '</p>';
         if (d.cannot_run_next) h += '<p class="rv-runhint">次の行動: ' + esc(d.cannot_run_next) + '</p>';
       }
-      h += '<div class="rv-runlive" aria-live="polite">' + (run ? '<span class="rv-runbusy">リバース解析を実行しています（数十秒かかることがあります）</span>' : '') + '</div>';
-      return h + msg + '</section>';
+      return h;
     }
-    function refreshBar() {
-      var el = host.querySelector('.rv-runbar');
-      if (!el) return;
-      var tmp = document.createElement('div');
-      tmp.innerHTML = runbarHtml();
-      if (tmp.firstChild) el.parentNode.replaceChild(tmp.firstChild, el);
+    function paintBar() {
+      var bar = slot('bar');
+      if (bar) bar.innerHTML = headHtml() + contextHtml();
+      var r = reasonOf();
+      W.reason(slot('reason'), r.t, r.k);
     }
+    function refreshBar() { paintBar(); }
+
+    /* ---------- 実行 ---------- */
     function stopPoll() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
     function startPoll() {
       if (pollTimer) return;
       var my = token;
       pollTimer = setInterval(function () {
         if (my !== token || !document.contains(host)) { stopPoll(); return; }
-        fetch('/api/reverse-analysis?domain=' + encodeURIComponent(domain || ''), { headers: { 'Accept': 'application/json' } })
-          .then(function (r) { return r.json(); })
+        fetchJson(mainUrl())
           .then(function (j) {
             if (my !== token || !document.contains(host)) { stopPoll(); return; }
             if (!j || !j.running) { stopPoll(); load(); }
@@ -151,65 +222,86 @@
         .then(function () {
           runningLocal = false;
           if (my !== token || !document.contains(host)) return;
+          if (runMsg && runMsg.result === 'success') W.toast('リバース解析が完了しました', 'success');
+          else if (runMsg && runMsg.result === 'partial') W.toast('一部のみ取得しました', 'warning');
+          else if (runMsg) W.toast('リバース解析を完了できませんでした', 'error');
           load();
         });
     }
 
-    /* ---------- 状態カード ---------- */
-    function noticeCard(title, d, withReload) {
-      var h = '<div class="rv rv-card rv-notice" role="status"><h3 class="rv-notice-title">' + esc(title) + '</h3>';
-      if (d.message) h += '<p class="rv-text">' + esc(d.message) + '</p>';
-      if (d.next_action) h += '<p class="rv-next"><b>次の行動</b> ' + esc(d.next_action) + '</p>';
-      if (withReload) h += '<button type="button" class="rv-btn rv-btn-pri" data-rv="reload">再読み込み</button>';
-      return h + '</div>';
+    /* ---------- 状態表示（WS2D.state） ---------- */
+    function paintState() {
+      var el = slot('state');
+      if (!el) return;
+      var d = data;
+      var cfg = null;
+      if (netErr) {
+        cfg = { kind: 'error', title: '最新の結果を取得できませんでした', message: netErr.message, next: netErr.next_action, retained: !!lastGood, actionLabel: '再読み込み', onAction: load };
+      } else if (d.state === 'empty') {
+        cfg = { kind: 'empty', title: 'リバース解析結果はまだありません', message: d.message, next: d.next_action };
+      } else if (d.state === 'provider_unavailable') {
+        cfg = { kind: 'unavailable', title: '静的解析ツールを利用できません', message: d.message, next: d.next_action, retained: true, actionLabel: '再読み込み', onAction: load };
+      } else if (d.state === 'error') {
+        cfg = { kind: 'error', title: 'リバース解析の結果を表示できません', message: d.message, next: d.next_action, retained: true, actionLabel: '再読み込み', onAction: load };
+      } else if (d.state === 'mismatch') {
+        cfg = { kind: 'unverified', title: 'この結果は現在のサイトの記録と対応しません（未確認）', message: d.message, next: d.next_action, retained: true };
+      } else if (d.state === 'ok' && d.status && d.status !== 'complete') {
+        cfg = { kind: 'partial', title: '一部のみ取得しました', message: (d.message || '') + (d.status !== 'partial' ? ' 解析の状態: ' + d.status : ''), next: d.next_action };
+      }
+      if (cfg) W.state(el, cfg); else el.innerHTML = '';
     }
-
-    /* ---------- 上部 ---------- */
-    function headHtml() {
-      var p = data.provider;
-      var h = '<div class="rv-head"><div class="rv-head-main"><h2 class="rv-title">リバース解析</h2>' +
-        '<p class="rv-lead">実行時観測だけでは見えなかった構造を、静的解析で補完しました。</p></div>';
-      if (p && p.name) h += '<div class="rv-prov">解析: ' + esc(p.name) + (p.version ? ' ' + esc(p.version) : '') + '</div>';
-      h += '</div>';
-      return h;
-    }
-
-    function partialHtml() {
-      if (!data.status || data.status === 'complete') return '';
-      var h = '<div class="rv-partial" role="status"><b>一部のみ取得しました</b>';
-      var msg = data.message || '';
-      if (msg) h += '<span> ' + esc(msg) + '</span>';
-      if (data.status !== 'partial') h += '<span> 解析の状態: ' + esc(data.status) + '</span>';
-      if (data.next_action) h += '<span class="rv-partial-next"> 次の行動: ' + esc(data.next_action) + '</span>';
-      return h + '</div>';
-    }
-
-    /* ---------- Before / After ---------- */
-    function diffHtml(b, a) {
-      if (!isNum(b) || !isNum(a)) return '<span class="rv-diff rv-diff-unk">未確認</span>';
-      var d = a - b;
-      if (d > 0) return '<span class="rv-diff rv-diff-up">+' + d + '</span>';
-      if (d === 0) return '<span class="rv-diff rv-diff-zero">変化なし</span>';
-      return '<span class="rv-diff rv-diff-down">' + d + '</span>';
-    }
-    function numHtml(v) { return isNum(v) ? String(v) : '<span class="rv-unk">未確認</span>'; }
-
-    function summaryHtml() {
-      var items = data.summary || [];
-      var h = '<section class="rv-sec" aria-label="実行時のみとリバース解析の比較"><div class="rv-cols" aria-hidden="true">' +
-        '<span>実行時のみ</span><span class="rv-cols-arrow">→</span><span>＋リバース解析</span></div><div class="rv-tiles">';
-      items.forEach(function (it) {
-        var up = isNum(it.before) && isNum(it.after) && it.after > it.before;
-        h += '<div class="rv-tile' + (up ? ' rv-tile-up' : '') + '"><div class="rv-tile-label">' + esc(it.label) + '</div>' +
-          '<div class="rv-tile-nums"><span class="rv-num-b" title="">' + numHtml(it.before) + '</span>' +
-          '<span class="rv-arrow" aria-hidden="true">→</span><span class="rv-num-a">' + numHtml(it.after) + '</span></div>' +
-          '<div class="rv-tile-foot">' + diffHtml(it.before, it.after) + '</div>' +
-          (it.note ? '<div class="rv-tile-note">' + esc(it.note) + '</div>' : '') + '</div>';
+    function paintRunMsg() {
+      var el = slot('msg');
+      if (!el) return;
+      var m = runMsg;
+      runMsg = null;
+      if (!m || m.result === 'success') { el.innerHTML = ''; return; }
+      W.state(el, {
+        kind: RESULT_KIND[m.result] || 'error', title: RESULT_TITLE[m.result] || '実行できませんでした',
+        message: m.message, next: m.next_action, retained: data.state === 'ok'
       });
-      var sec = isNum(data.added_seconds) ? data.added_seconds.toFixed(3) + ' 秒' : '<span class="rv-unk">未計測</span>';
-      h += '<div class="rv-tile rv-tile-time"><div class="rv-tile-label">追加解析時間</div><div class="rv-tile-nums"><span class="rv-num-a">' + sec + '</span></div>' +
-        (data.measured_once ? '<div class="rv-tile-note">単発測定</div>' : '') + '</div>';
-      return h + '</div></section>';
+    }
+
+    /* ---------- Before → After（WS2D.kpis） ---------- */
+    function kpiItems() {
+      var items = (data.summary || []).map(function (it) {
+        var meas = isNum(it.before) && isNum(it.after);
+        var sub;
+        if (it.key === 'api_runtime') {
+          sub = (meas && it.after === it.before) ? '変化なし・増分に数えない' : '実行時の観測。増分に数えない';
+        } else if (!meas) {
+          sub = it.note || '未計測';
+        } else {
+          var diff = it.after - it.before;
+          sub = (diff > 0 ? '増分 +' + diff : (diff === 0 ? '変化なし' : '増分 ' + diff)) + (it.note ? '・' + it.note : '');
+        }
+        var tabKey = KPI_TAB[it.key] || 'all';
+        return {
+          label: it.label,
+          value: meas ? it.before + ' → ' + it.after : null,
+          sub: sub,
+          category: KPI_CAT[it.key] || 'inference',
+          onClick: function () { selectTab(tabKey, false); var b = host.querySelector('#rv-body'); if (b && b.scrollIntoView) b.scrollIntoView({ block: 'nearest' }); }
+        };
+      });
+      items.push({
+        label: '追加解析時間',
+        value: isNum(data.added_seconds) ? data.added_seconds.toFixed(3) + ' 秒' : null,
+        sub: data.measured_once ? '単発測定' : (isNum(data.added_seconds) ? '' : '未計測'),
+        category: 'fact'
+      });
+      return items;
+    }
+
+    /* ---------- 事実／推論／未確認の帯 ---------- */
+    function splitHtml() {
+      var n = { fact: 0, inference: 0, unverified: 0 };
+      (data.evidence || []).forEach(function (e) { n[W.evidence.category(EV_CODE[e.state] || 'unverified')]++; });
+      function cell(k, label, v) {
+        return '<div class="c-split__cell c-split__cell--' + k + '"><span class="c-split__label">' + label + '</span><span class="c-split__value">' + v + '</span></div>';
+      }
+      return '<div class="c-split" role="group" aria-label="根拠の区分（事実・推論・未確認）">' +
+        cell('fact', '事実', n.fact) + cell('inference', '推論', n.inference) + cell('unverified', '未確認', n.unverified) + '</div>';
     }
 
     /* ---------- タブ ---------- */
@@ -220,14 +312,38 @@
       return rowsFor(key).length;
     }
     function tabsHtml() {
-      var h = '<div class="rv-tabs" role="tablist" aria-label="根拠の種類">';
+      var h = '<div class="c-tabs rv-ctabs" role="tablist" aria-label="根拠の種類">';
       TABS.forEach(function (t) {
         var on = t.key === tab;
-        h += '<button type="button" role="tab" class="rv-tab' + (on ? ' on' : '') + '" id="rv-tab-' + t.key + '-' + token + '" data-tab="' + t.key +
+        h += '<button type="button" role="tab" class="rv-ctab' + (on ? ' on' : '') + '" id="rv-tab-' + t.key + '-' + token + '" data-tab="' + t.key +
           '" aria-selected="' + on + '" aria-controls="rv-panel-' + token + '" tabindex="' + (on ? '0' : '-1') + '">' +
           esc(t.label) + '<span class="rv-count">' + count(t.key) + '</span></button>';
       });
       return h + '</div>';
+    }
+
+    /* ---------- System 03 の探索結果（route のみ。無ければ未確認） ---------- */
+    function probeOf(e) { return probe && probe.byId ? probe.byId[e.id] : null; }
+    function probeBadge(e) {
+      if (e.group !== 'route') return '<span class="rv-unk">対象外</span>';
+      var p = probeOf(e);
+      if (p && p.status === 'observed') {
+        return p.authenticated ? W.evidence.html('observed_auth') : W.evidence.html('observed', '未認証実測');
+      }
+      var why = p ? (p.status_label || '到達未確認') : (probe && probe.state === 'ok' ? '探索対象外' : '探索未実施');
+      return W.evidence.html('unverified') + '<div class="rv-sub">' + esc(why) + '</div>';
+    }
+    function probeNoteHtml() {
+      if (!probe || probe.state !== 'ok') {
+        return '<p class="rv-probe-note">Route の到達は未確認です（System 03 の探索を実行すると、実測／未確認を併記します）。</p>';
+      }
+      var obs = 0, auth = 0, other = 0;
+      group('route').forEach(function (e) {
+        var p = probeOf(e);
+        if (p && p.status === 'observed') { obs++; if (p.authenticated) auth++; } else other++;
+      });
+      return '<p class="rv-probe-note">System 03 の探索結果: 実測で到達 ' + obs + ' 件（うち認証済み ' + auth + ' 件）／未確認 ' + other +
+        ' 件。到達は機能の正常動作を意味しません。</p>';
     }
 
     /* ---------- 一覧 ---------- */
@@ -242,15 +358,16 @@
     }
     function tableHtml(rows) {
       if (!rows.length) return '<p class="rv-empty">該当する根拠はありません</p>';
-      var h = '<div class="rv-tablewrap"><table class="rv-table"><thead><tr><th scope="col">種別</th><th scope="col">値</th><th scope="col">状態</th><th scope="col">根拠の位置</th><th scope="col">出所</th></tr></thead><tbody>';
+      var h = '<div class="c-table-wrap"><table class="c-table"><thead><tr><th scope="col">種別</th><th scope="col">値</th><th scope="col">状態</th><th scope="col">探索結果</th><th scope="col">根拠の位置</th><th scope="col">出所</th></tr></thead><tbody>';
       rows.forEach(function (e) {
         var i = (data.evidence || []).indexOf(e);
         h += '<tr class="rv-row" tabindex="0" data-ev="' + i + '" aria-label="' + esc((e.kind_label || '') + ' ' + (e.value || '') + ' の詳細を開く') + '">' +
-          '<td data-l="種別">' + esc(e.kind_label) + '</td>' +
-          '<td data-l="値"><span class="rv-val">' + esc(e.value) + '</span>' + originHtml(e) + '</td>' +
-          '<td data-l="状態">' + badge(e.state) + '</td>' +
-          '<td data-l="根拠の位置">' + (e.location ? '<code class="rv-loc">' + esc(e.location) + '</code>' : '<span class="rv-unk">位置なし</span>') + '</td>' +
-          '<td data-l="出所">' + esc(e.provider) + '</td></tr>';
+          '<td data-label="種別">' + esc(e.kind_label) + '</td>' +
+          '<td data-label="値"><span class="rv-val">' + esc(e.value) + '</span>' + originHtml(e) + '</td>' +
+          '<td data-label="状態">' + evBadge(e.state) + '</td>' +
+          '<td data-label="探索結果">' + probeBadge(e) + '</td>' +
+          '<td data-label="根拠の位置">' + (e.location ? '<code class="rv-loc">' + esc(e.location) + '</code>' : '<span class="rv-unk">位置なし</span>') + '</td>' +
+          '<td data-label="出所">' + esc(e.provider) + '</td></tr>';
       });
       return h + '</tbody></table></div>';
     }
@@ -262,7 +379,7 @@
       deps.forEach(function (d) {
         h += '<li class="rv-dep"><div class="rv-dep-line"><span class="rv-val">' + esc(d.source) + '</span> <span aria-hidden="true">→</span><span class="rv-vh"> から </span> <span class="rv-val">' + esc(d.target) + '</span>' +
           (d.external ? ' <span class="rv-chip">外部パッケージ</span>' : '') + '</div>' +
-          '<div class="rv-dep-meta">' + esc(d.relation_label) + ' ' + badge(d.state) + ' ' +
+          '<div class="rv-dep-meta">' + esc(d.relation_label) + ' ' + evBadge(d.state) + ' ' +
           (d.location ? '<code class="rv-loc">' + esc(d.location) + '</code>' : '<span class="rv-unk">位置なし</span>') + '</div>';
         if (d.limitations && d.limitations.length) {
           h += '<details class="rv-dep-lim"><summary>制限事項（' + d.limitations.length + '）</summary><ul class="rv-lim">' +
@@ -278,9 +395,10 @@
       h += '<h3 class="rv-h3">解析ケースの結果</h3>';
       if (!sm.length) h += '<p class="rv-empty">該当する根拠はありません</p>';
       else {
-        h += '<div class="rv-tablewrap"><table class="rv-table rv-table-sm"><thead><tr><th scope="col">ケース</th><th scope="col">結果</th><th scope="col">意味</th></tr></thead><tbody>';
+        h += '<div class="c-table-wrap"><table class="c-table"><thead><tr><th scope="col">ケース</th><th scope="col">結果</th><th scope="col">意味</th></tr></thead><tbody>';
         sm.forEach(function (s) {
-          h += '<tr><td data-l="ケース">' + esc(s.label || s.case) + '</td><td data-l="結果"><span class="rv-badge rv-oc-' + esc(s.outcome) + '">' + esc(OUTCOME_LABEL[s.outcome] || s.outcome) + '</span></td><td data-l="意味">' + esc(s.meaning) + '</td></tr>';
+          var oc = s.outcome === 'success' ? 'done' : (s.outcome === 'partial' ? 'partial' : (s.outcome === 'failed' ? 'failed' : 'unverified'));
+          h += '<tr><td data-label="ケース">' + esc(s.label || s.case) + '</td><td data-label="結果">' + W.status.html(oc, OUTCOME_LABEL[s.outcome] || s.outcome) + '</td><td data-label="意味">' + esc(s.meaning) + '</td></tr>';
         });
         h += '</tbody></table></div>';
       }
@@ -309,6 +427,7 @@
         if (dr.length) h += '<h3 class="rv-h3">診断の根拠</h3>' + tableHtml(dr);
         h += diagHtml();
       } else {
+        if (tab === 'route' || tab === 'all') h += probeNoteHtml();
         h += tableHtml(rowsFor(tab));
         if (tab === 'module') h += depsHtml();
       }
@@ -317,19 +436,25 @@
 
     /* ---------- 全体 ---------- */
     function draw() {
-      var st = data.state;
-      var bar = runbarHtml();
-      runMsg = null;
-      if (st === 'empty') host.innerHTML = '<div class="rv">' + bar + noticeCard('リバース解析結果はまだありません', data, false) + '</div>';
-      else if (st === 'provider_unavailable') host.innerHTML = '<div class="rv">' + bar + noticeCard('静的解析ツールを利用できません', data, true) + '</div>';
-      else if (st === 'error') host.innerHTML = '<div class="rv">' + bar + noticeCard('リバース解析の結果を表示できません', data, true) + '</div>';
-      else if (st === 'mismatch') host.innerHTML = '<div class="rv">' + headHtml() + bar + noticeCard('この結果は現在のサイトの記録と対応しません（未確認）', data, false) + '</div>';
-      else host.innerHTML = '<div class="rv">' + headHtml() + bar + partialHtml() + summaryHtml() + '<div class="rv-card rv-main">' + tabsHtml() + '<div id="rv-body">' + panelHtml() + '</div></div></div>';
+      if (W.drawer) W.drawer.close();
+      var hasBody = data.state === 'ok';
+      var h = '<div class="rv"><div class="rv-bar" data-slot="bar"></div>' +
+        '<div data-slot="reason"></div><div data-slot="msg" class="rv-slot"></div><div data-slot="state" class="rv-slot"></div>';
+      if (hasBody) {
+        h += '<section class="rv-sec" aria-label="実行時のみとリバース解析の比較"><h3 class="rv-h3 rv-h3-first">実行時のみ → ＋リバース解析（Before → After）</h3>' +
+          '<div data-slot="kpis"></div>' + splitHtml() + '</section>' +
+          '<div class="rv-card rv-main">' + tabsHtml() + '<div id="rv-body">' + panelHtml() + '</div></div>';
+      }
+      host.innerHTML = h + '</div>';
+      paintBar();
+      paintRunMsg();
+      paintState();
+      if (hasBody) W.kpis(slot('kpis'), kpiItems());
       if (data.running && !runningLocal) startPoll();
     }
     function redrawBody() {
       var body = host.querySelector('#rv-body');
-      var tabs = host.querySelector('.rv-tabs');
+      var tabs = host.querySelector('.rv-ctabs');
       if (!body || !tabs) return;
       var tmp = document.createElement('div');
       tmp.innerHTML = tabsHtml();
@@ -337,43 +462,39 @@
       body.innerHTML = panelHtml();
     }
 
-    /* ---------- Drawer ---------- */
-    function closeDrawer() {
-      var d = host.querySelector('.rv-drawer-wrap');
-      if (d) d.parentNode.removeChild(d);
-      if (lastRow && document.contains(lastRow)) lastRow.focus();
-      lastRow = null;
-    }
-    function li(arr) {
-      if (!arr || !arr.length) return '<p class="rv-text">記載された制限はありません</p>';
-      return '<ul class="rv-lim">' + arr.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>';
-    }
+    /* ---------- ドロワー（WS2D.drawer 固定順: 主張→実測事実→推論→制限→出典） ---------- */
     function openDrawer(i, row) {
       var e = (data.evidence || [])[i];
       if (!e) return;
-      closeDrawer();
-      lastRow = row;
-      var w = document.createElement('div');
-      w.className = 'rv-drawer-wrap';
-      var methodLine = e.group === 'api' ? '<dt>メソッド</dt><dd>' + (e.method ? esc(e.method) : '不明') + '</dd>' : '';
-      w.innerHTML = '<div class="rv-backdrop" data-rv="close"></div>' +
-        '<aside class="rv-drawer" role="dialog" aria-modal="true" aria-labelledby="rv-dr-t-' + token + '">' +
-        '<div class="rv-dr-head"><h3 id="rv-dr-t-' + token + '" class="rv-dr-title">根拠の詳細</h3>' +
-        '<button type="button" class="rv-btn" data-rv="close" aria-label="詳細を閉じる">閉じる</button></div>' +
-        '<div class="rv-dr-body"><p class="rv-claim">' + esc(e.claim) + '</p><dl class="rv-dl">' +
-        '<dt>種別</dt><dd>' + esc(e.kind_label) + '</dd>' +
-        '<dt>値</dt><dd class="rv-val">' + esc(e.value) + '</dd>' + methodLine +
-        '<dt>状態</dt><dd>' + badge(e.state) + '</dd>' +
-        '<dt>出所</dt><dd>' + esc(e.provider) + '</dd>' +
-        '<dt>起点</dt><dd>' + esc(ORIGIN_LABEL[e.origin] || '不明') + '</dd>' +
-        '<dt>位置</dt><dd>' + (e.location ? '<code class="rv-loc">' + esc(e.location) + '</code>' : '位置なし') + '</dd>' +
-        '<dt>対応の根拠</dt><dd>' + esc(e.relation) + '</dd>' +
-        '<dt>制限事項</dt><dd>' + li(e.limitations) + '</dd>' +
-        '<dt>解析バージョン</dt><dd>' + (e.rea_version ? esc(e.rea_version) : '不明') + '</dd></dl>' +
-        '<details class="rv-details"><summary>詳細情報</summary><p class="rv-text">ID: <code>' + esc(e.id) + '</code></p></details></div></aside>';
-      host.appendChild(w);
-      var btn = w.querySelector('.rv-dr-head .rv-btn');
-      if (btn) btn.focus();
+      var code = EV_CODE[e.state] || 'unverified';
+      var p = e.group === 'route' ? probeOf(e) : null;
+      var facts = [], inf = [], lim = (e.limitations || []).slice();
+      if (e.origin === 'runtime') {
+        facts.push({ label: '種別', value: e.kind_label }, { label: '値', value: e.value });
+        if (e.group === 'api') facts.push({ label: 'メソッド', value: e.method || '不明' });
+        facts.push({ label: '位置', value: e.location || '位置なし' });
+      }
+      if (p && p.status === 'observed') {
+        facts.push({ label: '到達確認（System 03）', value: p.authenticated ? '認証済み実測（保存済みの認証状態で確認）' : '未認証実測' });
+        if (p.http_status != null) facts.push({ label: 'HTTP ステータス', value: String(p.http_status) });
+        if (p.final_url) facts.push({ label: '最終 URL', value: p.final_url });
+        if (p.observed_at) facts.push({ label: '観測日時', value: fmtTime(p.observed_at) || String(p.observed_at) });
+        if (p.limitation) lim.push(p.limitation);
+      } else if (e.group === 'route') {
+        lim.push('到達確認（System 03）: 未確認' + (p ? '（' + (p.status_label || '到達未確認') + (p.reason ? '：' + p.reason : '') + '）' : '（探索未実施）') + '。URL の到達は機能の正常動作を意味しません。');
+      }
+      if (e.origin === 'static') {
+        if (e.group === 'route') inf.push('ソースに画面ルートの宣言がある。実際に到達できるかは未確認。');
+        if (e.group === 'api') inf.push('ソースに API 呼び出しがある。実行されるか・HTTP method は' + (e.method ? ' ' + e.method + ' と記述されている。' : '不明のまま（GET とは見なさない）。'));
+        if (e.relation) inf.push('実行時の記録との対応: ' + e.relation);
+      }
+      var src = [{ label: '出所', value: e.provider || '不明' }, { label: '起点', value: ORIGIN_LABEL[e.origin] || '不明' },
+        { label: '位置', value: e.location || '位置なし' }, { label: '解析バージョン', value: e.rea_version || '不明' }, { label: 'ID', value: e.id || '' }];
+      W.drawer.open({
+        title: (e.kind_label || '根拠') + ': ' + (e.value || ''),
+        state: code, stateReason: EV_REASON[code],
+        claim: e.claim, facts: facts, inferences: inf, limitations: lim, sources: src, returnFocus: row
+      });
     }
 
     /* ---------- イベント（host に 1 回だけ付け替える） ---------- */
@@ -384,7 +505,7 @@
     function selectTab(key, focus) {
       tab = key;
       redrawBody();
-      if (focus) { var b = host.querySelector('.rv-tab[data-tab="' + key + '"]'); if (b) b.focus(); }
+      if (focus) { var b = host.querySelector('.rv-ctab[data-tab="' + key + '"]'); if (b) b.focus(); }
     }
     function onClick(ev) {
       var t = ev.target;
@@ -393,29 +514,15 @@
         var a = act.getAttribute('data-rv');
         if (a === 'reload') { load(); return; }
         if (a === 'run') { runAnalysis(); return; }
-        if (a === 'close') { closeDrawer(); return; }
       }
-      var tb = t.closest ? t.closest('.rv-tab') : null;
+      var tb = t.closest ? t.closest('.rv-ctab') : null;
       if (tb && host.contains(tb)) { selectTab(tb.getAttribute('data-tab'), false); return; }
       var row = t.closest ? t.closest('.rv-row') : null;
       if (row && host.contains(row)) openDrawer(parseInt(row.getAttribute('data-ev'), 10), row);
     }
     function onKey(ev) {
       var k = ev.key, t = ev.target;
-      var dr = host.querySelector('.rv-drawer');
-      if (dr) {
-        if (k === 'Escape') { ev.preventDefault(); ev.stopPropagation(); closeDrawer(); return; }
-        if (k === 'Tab') {
-          var f = dr.querySelectorAll('button, summary, a[href], [tabindex="0"]');
-          if (!f.length) return;
-          var first = f[0], last = f[f.length - 1];
-          if (!dr.contains(document.activeElement)) { ev.preventDefault(); first.focus(); }
-          else if (ev.shiftKey && document.activeElement === first) { ev.preventDefault(); last.focus(); }
-          else if (!ev.shiftKey && document.activeElement === last) { ev.preventDefault(); first.focus(); }
-        }
-        return;
-      }
-      if (t.classList && t.classList.contains('rv-tab')) {
+      if (t.classList && t.classList.contains('rv-ctab')) {
         var keys = TABS.map(function (x) { return x.key; });
         var idx = keys.indexOf(t.getAttribute('data-tab'));
         var n = -1;

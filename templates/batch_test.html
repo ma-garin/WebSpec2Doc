@@ -79,6 +79,16 @@
     {% include 'partials/topbar.html' %}
     <div class="bt-steps" id="bt-steps" role="tablist" aria-label="工程"></div>
     <div class="bt-content" id="bt-content">
+      <header class="c-page-head bt-head">
+        <div class="c-page-head__main">
+          <h1>バッチ・スクリプトのテスト</h1>
+          <p class="c-page-head__desc">バッチ・スクリプトからテストケースとテストコードを作り、書き出します。この画面ではテストを実行しません。</p>
+          <div class="c-page-head__state" id="bt-head-state"></div>
+        </div>
+        <div class="c-page-head__actions"><button type="button" class="c-btn c-btn--primary" id="bt-head-primary">＋ 新しい案件</button></div>
+      </header>
+      <div id="bt-reason" class="bt-reason"></div>
+      <ol class="bt-stages" id="bt-stages" aria-label="テストの状態（生成済み・書き出し済み・実行済み・確認済み）" hidden></ol>
       <div class="bt-banner" id="bt-banner" role="alert" hidden></div>
 
       <section class="bt-empty" id="bt-empty" hidden>
@@ -97,7 +107,8 @@
               <span>スクリプト（.bat / .cmd / .sh / .ps1）・仕様書（.xlsx / .docx / .md / .txt / .pdf）・入出力のサンプル（.csv / .txt）</span>
               <input id="bt-file" type="file" multiple hidden>
             </label>
-            <table class="bt-tbl" aria-label="取り込んだファイル">
+            <div id="bt-intake-state" class="bt-state"></div>
+            <table class="bt-tbl" id="bt-files-tbl" aria-label="取り込んだファイル">
               <thead><tr><th>ファイル</th><th>種類</th><th>大きさ</th><th><span class="sr-only">操作</span></th></tr></thead>
               <tbody id="bt-files"></tbody>
             </table>
@@ -123,6 +134,7 @@
 
       {# ② 観点とケース表 #}
       <section class="bt-panel" data-panel="cases" hidden>
+        <div id="bt-cases-state" class="bt-state"></div>
         <div class="kpis" id="bt-kpis"></div>
         <div class="bt-card">
           <div class="bt-card-h"><h3>観点</h3><span class="bt-mut">ISO/IEC/IEEE 29119-4 の技法を当てています。押すとその観点だけ表示します</span></div>
@@ -157,7 +169,8 @@
 
       {# ③ テストコード #}
       <section class="bt-panel" data-panel="code" hidden>
-        <div class="bt-code">
+        <div id="bt-code-state" class="bt-state"></div>
+        <div class="bt-code" id="bt-code-wrap">
           <div class="bt-card bt-card-flush">
             <div class="bt-card-h"><h3>生成したファイル</h3></div>
             <div class="items" id="bt-srcs" role="list"></div>
@@ -176,6 +189,7 @@
 
       {# ④ 書き出し #}
       <section class="bt-panel" data-panel="export" hidden>
+        <div id="bt-export-state" class="bt-state"></div>
         <div class="bt-grid3">
           <div class="bt-card bt-out"><h3>ケース表</h3><p>Excel（.xlsx）。ID・観点・技法・期待結果・根拠の列。そのままレビューに回せます。</p><a class="btn" id="bt-dl-cases" download>ケース表を書き出す</a></div>
           <div class="bt-card bt-out"><h3>テストコード一式</h3><p>テストコード・README・取り込んだスクリプトとサンプル（fixtures/）をまとめた zip。</p><a class="btn" id="bt-dl-code" download>zip を書き出す</a></div>

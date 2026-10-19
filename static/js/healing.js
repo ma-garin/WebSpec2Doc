@@ -96,7 +96,8 @@
       'hl-f-github', 'hl-f-agent', 'hl-f-max-iter', 'hl-f-concurrency',
       'hl-f-domain', 'hl-f-domain-status',
       'hl-connect-submit', 'hl-connect-cancel', 'hl-back-to-projects',
-      'hl-runs', 'hl-runs-empty', 'hl-runs-more'
+      'hl-runs', 'hl-runs-empty', 'hl-runs-more',
+      'hl-ws-status', 'hl-run-reason', 'hl-run-context', 'hl-blockers'
     ];
     ids.forEach(function (id) { $[id] = document.getElementById(id); });
   }
@@ -1505,6 +1506,8 @@
   function renderRun(run) {
     state.riskCounts = collectRiskCounts(run);
     renderStatusBadge(run);
+    renderWsStatus(run);
+    renderRunContext(run);
     updateRunSub(run);
     renderLoop(run);
     renderLogLines(run.log || [], run.error || '');
@@ -1512,6 +1515,7 @@
     renderUnverified(run);
     updateActionButtons(run);
     renderRiskSummary(run);
+    renderBlockers(run);
     applyFixedHint();
   }
 
@@ -1616,6 +1620,126 @@
     var noteRow = document.querySelector('.hl-decision-note-row');
     if (noteRow) { noteRow.hidden = !visible; }
     setLogSectionVisible(visible);
+  }
+
+  /* ---------------- 判断の文脈（共通部品 WS2D との対応） ----------------
+     内部の状態名は変えず、表示のときだけ標準語（WS2D.status）へ対応付ける。
+     WS2D が読み込めない場合は何も足さない（既存の表示だけで動く）。 */
+  var WS_STATUS_MAP = {
+    queued: ['preparing', '受付'], preparing: ['preparing', null], verifying: ['running', '検証中'],
+    analyzing: ['running', '欠陥の切り出し中'], fixing: ['running', '修正中'],
+    reverifying: ['running', '再検証中'], awaiting_human: ['waiting_approval', null],
+    succeeded: ['done', null], no_defects: ['done', '不具合なし'], failed: ['failed', null],
+    cancelled: ['cancelled', null]
+  };
+  var WS_REASONS = {
+    queued: '実行の受付が済みました。まもなく準備に入ります。',
+    preparing: '作業用のコピーを用意しています。',
+    verifying: '現在のテストを実行して、不具合があるかを実測しています。',
+    analyzing: 'テストの失敗から、修正する欠陥を切り出しています。',
+    fixing: 'エージェントが修正案を作っています。まだリポジトリには反映されていません。',
+    reverifying: '修正後のテストを実行して、直ったかを実測しています。',
+    awaiting_human: '修正案と再検証の結果が揃いました。内容を読んで、承認・却下などを判断してください。',
+    succeeded: 'この実行は完了しています。',
+    no_defects: 'テストに失敗がなく、直す対象がありませんでした。',
+    failed: '実行が途中で失敗しました。既存のリポジトリは変更していません。下の「次にすること」を確認してください。',
+    cancelled: 'この実行は中止されました。'
+  };
+  function hasWS() { return !!(window.WS2D && window.WS2D.status && window.WS2D.reason); }
+
+  /* 外部のリポジトリに副作用がある操作（PR 作成・承認・再検証）の確認。
+     WS2D.confirm が無いときは window.confirm にして、確認なしでは実行しない。 */
+  function askConfirm(opts) {
+    if (window.WS2D && typeof window.WS2D.confirm === 'function') {
+      return window.WS2D.confirm(opts);
+    }
+    return Promise.resolve(window.confirm(opts.title + '\n' + opts.message));
+  }
+
+  function proposalCounts(run) {
+    var c = { failed: 0, unresolved: 0 };
+    ((run && run.iterations) || []).forEach(function (iter) {
+      (iter.proposals || []).forEach(function (p) {
+        if (p.status === 'failed' || p.status === 'timeout') { c.failed += 1; }
+        else if (p.status === 'proposed') { c.unresolved += 1; }
+      });
+    });
+    return c;
+  }
+
+  /* 承認の前に残っている問題。失敗・未解決・未確認の件数と、高リスクの兆候を判断ボタンの直下に出す。
+     件数 0 のときも「0 件」と出す（出ない＝問題なし、と読ませない）。 */
+  function renderBlockers(run) {
+    var box = $['hl-blockers'];
+    if (!box) { return; }
+    box.textContent = '';
+    var map = actionAvailability(run);
+    if (!run || !(map['hl-approve'] || map['hl-create-pr'])) { box.hidden = true; return; }
+    var pc = proposalCounts(run);
+    var unverified = (run.unverified || []).length;
+    var high = riskCounts().high;
+    var parts = [
+      ['失敗', pc.failed, pc.failed > 0 ? 'is-err' : ''],
+      ['未解決', pc.unresolved, pc.unresolved > 0 ? 'is-warn' : ''],
+      ['未確認', unverified, unverified > 0 ? 'is-warn' : ''],
+      ['高リスクの兆候', high, high > 0 ? 'is-err' : '']
+    ];
+    box.appendChild(el('span', 'hl-blockers-lead', '承認の前に確認:'));
+    parts.forEach(function (p) {
+      box.appendChild(el('span', 'hl-blocker ' + p[2], p[0] + ' ' + p[1] + ' 件'));
+    });
+    var total = pc.failed + pc.unresolved + unverified + high;
+    box.appendChild(el('span', 'hl-blockers-note', total > 0
+      ? '残っているものを読んでから判断してください。'
+      : '機械的に分かる残りはありません。テストの通過は正しさの保証ではありません。'));
+    box.hidden = false;
+  }
+
+  /* 接続先・実行・PR・報告書を 1 行に。どの実行に対する判断かを承認ボタンの上で見失わせない。 */
+  function renderRunContext(run) {
+    var box = $['hl-run-context'];
+    if (!box) { return; }
+    box.textContent = '';
+    if (!run) { box.hidden = true; return; }
+    function item(label, nodeOrText) {
+      var s = el('span', 'c-context__item');
+      s.appendChild(document.createTextNode(label + ': '));
+      var b = el('b');
+      if (typeof nodeOrText === 'string') { b.textContent = nodeOrText; } else { b.appendChild(nodeOrText); }
+      s.appendChild(b);
+      box.appendChild(s);
+    }
+    item('接続先', (run.project_name || '—') + (run.branch ? '（' + run.branch + '）' : ''));
+    item('実行', String(run.run_id || '').slice(0, 12) || '—');
+    var pr = run.pull_request && run.pull_request.number ? run.pull_request : null;
+    if (pr && pr.url) {
+      var a = el('a', null, '#' + pr.number);
+      a.href = pr.url; a.target = '_blank'; a.rel = 'noopener';
+      item('PR', a);
+    } else {
+      item('PR', pr ? '#' + pr.number : '未作成');
+    }
+    var rep = el('a', null, '報告書の一覧');
+    rep.href = '/healing';
+    item('判断の記録', rep);
+    box.hidden = false;
+  }
+
+  function renderWsStatus(run) {
+    var host = $['hl-ws-status'];
+    var reasonHost = $['hl-run-reason'];
+    if (!hasWS() || !host || !reasonHost) { return; }
+    if (!run) {
+      host.innerHTML = window.WS2D.status.html('not_started', '実行なし');
+      reasonHost.textContent = '';
+      return;
+    }
+    var m = WS_STATUS_MAP[run.status] || ['unverified', run.status || '状態不明'];
+    host.innerHTML = window.WS2D.status.html(m[0], m[1] || undefined);
+    var kind = run.status === 'failed' ? 'error'
+      : (run.status === 'awaiting_human' ? 'warning'
+        : (run.status === 'succeeded' || run.status === 'no_defects' ? 'success' : 'info'));
+    window.WS2D.reason(reasonHost, WS_REASONS[run.status] || '状態の理由を取得できませんでした。', kind);
   }
 
   function renderStatusBadge(run) {
@@ -2377,6 +2501,16 @@
 
   function createPullRequest() {
     if (!state.selectedRunId) { return; }
+    var p = getProject(state.selectedProjectId);
+    askConfirm({
+      title: 'PR を作成しますか？',
+      message: '修正したブランチを接続先のリモートリポジトリへ push し、GitHub に PR を作成します。外部のリポジトリに記録が残り、push は取り消せません（PR は後から閉じられます）。',
+      detail: p ? '接続先: ' + (p.name || '') : '',
+      confirmLabel: 'push して PR を作成する'
+    }).then(function (ok) { if (ok) { doCreatePullRequest(); } });
+  }
+
+  function doCreatePullRequest() {
     clearError();
     apiFetch('/runs/' + state.selectedRunId + '/pull-request', { method: 'POST', body: JSON.stringify({}) })
       .then(function () { return fetchAndRenderRun(state.selectedRunId); })
@@ -2391,8 +2525,29 @@
       .catch(function (e) { showError('実行の中止に失敗しました: ' + e.message); });
   }
 
+  /* 承認・再検証は記録（監査ログ）と、再検証ではテスト実行を伴う。確認してから実行する。
+     却下・マージは従来のインライン確認行が別にある。 */
+  var DECISION_CONFIRM = {
+    approve: {
+      title: 'この実行を承認しますか？',
+      message: '承認は判断として記録されます。承認しても PR はマージされません。マージは別の操作で、取り消せません。',
+      confirmLabel: '承認する'
+    },
+    rerun: {
+      title: '再検証を実行しますか？',
+      message: 'この実行の作業用コピーで、検証コマンドをもう一度実行します。結果が出るまで他の操作は待ってください。',
+      confirmLabel: '再検証する'
+    }
+  };
+
   function submitDecision(action) {
     if (!state.selectedRunId) { return; }
+    var c = DECISION_CONFIRM[action];
+    if (!c) { doSubmitDecision(action); return; }
+    askConfirm(c).then(function (ok) { if (ok) { doSubmitDecision(action); } });
+  }
+
+  function doSubmitDecision(action) {
     clearError();
     var note = $['hl-decision-note'] ? $['hl-decision-note'].value.trim() : '';
     apiFetch('/runs/' + state.selectedRunId + '/decision', { method: 'POST', body: JSON.stringify({ action: action, note: note }) })
@@ -2425,7 +2580,18 @@
     return apiFetch('/runs?limit=' + limit).then(function (data) {
       state.historyRuns = asList(data, 'runs');
       renderHistory();
-    }).catch(function (e) { showError('実行履歴を取得できませんでした: ' + e.message); });
+    }).catch(function (e) {
+      showError('実行履歴を取得できませんでした: ' + e.message);
+      var host = document.getElementById('hl-runs-state');
+      if (hasWS() && window.WS2D.state && host) {
+        var kept = (state.historyRuns || []).length > 0;
+        window.WS2D.state(host, {
+          kind: 'error', title: '実行履歴を取得できませんでした', message: e.message,
+          retained: kept, next: '通信を確認して、もう一度読み込んでください。',
+          actionLabel: '再読み込み', onAction: function () { loadHistory(limit); }
+        });
+      }
+    });
   }
 
   function projectPath(projectId) {
@@ -2462,7 +2628,19 @@
     tbody.textContent = '';
     var runs = state.historyRuns || [];
     var limit = state.historyLimit || 20;
-    $['hl-runs-empty'].hidden = runs.length > 0;
+    var stateHost = document.getElementById('hl-runs-state');
+    if (stateHost) { stateHost.textContent = ''; }
+    if (runs.length === 0 && stateHost && window.WS2D && window.WS2D.state) {
+      // 空状態は共通部品で出す（旧い空表示は重複するので隠す）。
+      $['hl-runs-empty'].hidden = true;
+      window.WS2D.state(stateHost, {
+        kind: 'empty', title: 'まだ実行がありません',
+        message: '実行の履歴はここに並びます。',
+        next: '「実行」で対象のコードベースを選び、ヒーリングを開始してください。'
+      });
+    } else {
+      $['hl-runs-empty'].hidden = runs.length > 0;
+    }
     $['hl-runs-more'].hidden = runs.length < limit;
     renderHistoryMeta(runs.length, runs.length >= limit);
     runs.forEach(function (r) {
@@ -2551,8 +2729,29 @@
 
   /* ---------------- 初期化 ---------------- */
 
+  /* c-table は 816px 以下で行をカードにする。カードでは列見出しが消えるので、
+     各セルに見出しを data-label として付ける。行は JS が差し替えるので監視して付け直す。 */
+  function labelTableCells(tbody) {
+    var table = tbody && tbody.parentNode;
+    if (!table || !table.tHead) { return; }
+    var heads = Array.prototype.map.call(table.tHead.rows[0].cells, function (th) { return th.textContent.trim(); });
+    Array.prototype.forEach.call(tbody.rows, function (tr) {
+      Array.prototype.forEach.call(tr.cells, function (td, i) {
+        if (heads[i] && td.getAttribute('data-label') !== heads[i]) { td.setAttribute('data-label', heads[i]); }
+      });
+    });
+  }
+
+  function watchTableLabels(tbody) {
+    if (!tbody || typeof MutationObserver === 'undefined') { return; }
+    new MutationObserver(function () { labelTableCells(tbody); }).observe(tbody, { childList: true });
+    labelTableCells(tbody);
+  }
+
   function init() {
     cacheDom();
+    watchTableLabels($['hl-projects']);
+    watchTableLabels($['hl-runs']);
     state.focusRunId = document.body.getAttribute('data-focus-run-id') || '';
     IS_ADMIN = document.body.getAttribute('data-hl-admin') === 'true';
 

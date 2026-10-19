@@ -23,23 +23,27 @@
 <body class="app-page dv-page">
 <a href="#app-content" class="skip-link">本文へスキップ</a>
 <div class="app-shell">
-  {# ドキュメント検証（System 06）。IEEE 1028 のインスペクション工程に沿ったメニュー（2026-10-06 承認の見本 v2）。 #}
+  {# ドキュメント検証（System 06）。サイドは レビュー／トレーサビリティ／指摘／根拠／履歴／観点／設定 の 7 項目（指摘=指摘の検討、根拠=実画面との照合に対応付け）。 #}
   <aside class="app-sidebar">
     <a href="/systems" class="app-brand"><span class="app-brand-mark">W</span><span class="app-brand-text"><strong>WebSpec2Doc</strong><span>ドキュメント検証</span></span></a>
     <a href="/systems" class="sys-switcher" title="システムを切り替える"><span class="sys-switcher-label">システム</span><span class="sys-switcher-cur">ドキュメント検証</span><span class="sys-switcher-swap">切替</span></a>
     <nav class="app-nav dv-sidenav" aria-label="メインナビゲーション">
-      <a class="app-nav-item dv-sec" href="#reviews" data-sec="doc" data-go="reviews"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="m9 15 2 2 4-4"/></svg><span class="nav-label">ドキュメント検証<small>レビューを作って進める</small></span></a>
+      <a class="app-nav-item dv-sec" href="#reviews" data-sec="doc" data-go="reviews"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="m9 15 2 2 4-4"/></svg><span class="nav-label">レビュー<small>レビューを作って進める</small></span></a>
       <a class="app-nav-item dv-sec" href="#trace" data-sec="trace" data-go="trace"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="12" r="2.5"/><circle cx="6" cy="18" r="2.5"/><path d="M8.5 6H12a3 3 0 0 1 3 3v.5M8.5 18H12a3 3 0 0 0 3-3v-.5"/></svg><span class="nav-label">トレーサビリティ<small>要件と設計・テストのつながり</small></span></a>
+      <a class="app-nav-item dv-sec" href="#triage" data-sec="find" data-go="triage"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/></svg><span class="nav-label">指摘<small>見つかった指摘を検討する</small></span></a>
+      <a class="app-nav-item dv-sec" href="#screen" data-sec="evid" data-go="screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.2-4.2"/></svg><span class="nav-label">根拠<small>文書・推論・未確認の区別</small></span></a>
       <a class="app-nav-item dv-sec" href="#metrics" data-sec="hist" data-go="metrics"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg><span class="nav-label">履歴<small>過去の判定と記録</small></span></a>
-      <a class="app-nav-item dv-sec" href="#checklists" data-sec="vp" data-go="checklists"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><path d="m3 6 1.5 1.5L7 5M3 12l1.5 1.5L7 11M3 18l1.5 1.5L7 17"/></svg><span class="nav-label">検証観点<small>チェックする観点</small></span></a>
+      <a class="app-nav-item dv-sec" href="#checklists" data-sec="vp" data-go="checklists"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><path d="m3 6 1.5 1.5L7 5M3 12l1.5 1.5L7 11M3 18l1.5 1.5L7 17"/></svg><span class="nav-label">観点<small>チェックする観点</small></span></a>
       <a class="app-nav-item dv-sec" href="#settings" data-sec="set" data-go="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg><span class="nav-label">設定<small>用語・AI の送信先</small></span></a>
     </nav>
   </aside>
 
   <div class="app-main">
-    {% set topbar_crumb = 'ドキュメント検証' %}{% set topbar_title = 'ホーム' %}
+    {% set topbar_crumb = 'ドキュメント検証' %}{% set topbar_title = 'レビュー一覧' %}
     {% include 'partials/topbar.html' %}
     <main class="app-content dv-content" id="app-content">
+      <header class="c-page-head dv-pagehead" id="dv-pagehead"><div class="c-page-head__main"><h1 class="c-page-head__title" id="dv-ph-title">レビュー</h1><p class="c-page-head__desc" id="dv-ph-desc"></p><div class="c-page-head__state" id="dv-ph-state"></div></div></header>
+      <div class="dv-reason" id="dv-reason"></div>
       <nav class="dv-subtabs" id="dv-subtabs" aria-label="画面の切り替え" hidden></nav>
       <div class="dv-banner" id="dv-banner" role="alert" hidden></div>
       <div class="dv-toast" id="dv-toast" role="status" hidden></div>

@@ -173,7 +173,17 @@
   }
 
   /* ---- 案件と権限 ---- */
-  var STEP_LABEL = { draft: '未着手', generated: '承認待ち', approved: '承認済み', rejected: '差し戻し' };
+  /* 工程の状態は WS2D.status の語彙で出す（内部の state はそのまま）。差し戻しは語彙に無いので「確認待ち」の形で文字だけ残す */
+  var STEP_LABEL = { draft: '未開始', generated: '承認待ち', approved: '完了', rejected: '差し戻し' };
+  var WS_STATUS = { draft: ['not_started'], generated: ['waiting_approval'], approved: ['done'], rejected: ['waiting_review', '差し戻し'] };
+  function stageBadge(job, n) {
+    var st = stageOf(job, n), code, label, m;
+    if (st.stale) { code = 'waiting_review'; label = '前段が変わりました'; }
+    else if (n === 7 && st.status !== 'approved' && isRunning(job)) { code = 'running'; }
+    else { m = WS_STATUS[st.status] || WS_STATUS.draft; code = m[0]; label = m[1]; }
+    if (!window.WS2D) return esc(label || STEP_LABEL[st.status] || STEP_LABEL.draft);
+    return window.WS2D.status.html(code, label);
+  }
   var LEVEL_FULL = { integration_internal: '結合テスト（内部）', integration_external: '結合テスト（外部）', system: 'システムテスト', acceptance: '受け入れテスト' };
   var CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
   var RUN_ST = { running: ['実行中', 'badge-info'], queued: ['待機中', 'badge-info'], done: ['終了', 'badge-low'], error: ['失敗', 'badge-critical'], cancelled: ['キャンセル', 'badge-muted'] };
@@ -351,6 +361,25 @@
       var s = document.createElement('span'); s.className = 'badge ' + c[0]; s.textContent = c[1]; chips.appendChild(s);
     });
     act.hidden = false; rb.disabled = !!why; rb.title = why;
+    renderHeadState();
+  }
+  /* page header: 現在の工程状態（WS2D.status）と、その理由 1 行（WS2D.reason）。案件の外は画面の説明を 1 行 */
+  var VIEW_REASON = { home: '案件を作ると、資料の読み取りから判定までを 8 段階で進めます。各段階は承認してから次へ進みます。',
+    runs: '実行した結果の履歴です。合格に数えるのは実行で確かめたケースだけで、確かめていないものは未検証として別に数えます。',
+    catalog: '案件で使える観点の一覧です。ここは記録で、案件に取り込んで承認するまでは使われません。' };
+  function renderHeadState() {
+    var j = state.view === 'job' ? state.job : null, chips = $('#s8-chips'), host = $('#s8-reason'), old = $('#s8-state-chip'), n, st, msg, kind, lock, env, prod;
+    if (old) old.parentNode.removeChild(old);
+    if (!host) return;
+    if (!j) { host.hidden = false; if (window.WS2D) window.WS2D.reason(host, VIEW_REASON[state.view] || VIEW_REASON.home, 'info'); return; }
+    n = state.stage; st = stageOf(j, n);
+    var chip = document.createElement('span'); chip.id = 's8-state-chip'; chip.innerHTML = stageBadge(j, n); chips.insertBefore(chip, chips.firstChild);
+    lock = $('#bs-approve-lock'); msg = lock && !lock.hidden && lock.textContent ? lock.textContent : (st.stale ? '前の段階が変わりました。内容を確かめてから承認してください。' : DESC[st.status] || DESC.draft);
+    kind = st.stale || st.status === 'rejected' || (lock && !lock.hidden) ? 'warning' : st.status === 'approved' ? 'success' : 'info';
+    env = (j.envs || []).filter(function (e) { return e.id === j.current_env; })[0]; prod = !!(env && env.production);
+    if (prod) { msg += ' 接続先は本番らしいため、データを書き換える操作は止めています。'; kind = 'warning'; }
+    host.hidden = false;
+    if (window.WS2D) window.WS2D.reason(host, '段階 ' + n + ' ' + NAMES[n] + '：' + msg, kind); else host.textContent = msg;
   }
   function openJob(id, stage, fromUrl) {
     notify('');
@@ -386,7 +415,7 @@
       li.title = '段階 ' + n + ' ' + NAMES[n] + '：' + lab;
       if (cur) li.setAttribute('aria-current', 'step');
       li.innerHTML = '<span class="s8-step-n">' + (done && !cur ? CHECK : n) + '</span><span><span class="s8-step-name"></span><span class="s8-step-st"></span></span>';
-      $('.s8-step-name', li).textContent = NAMES[n]; $('.s8-step-st', li).textContent = lab;
+      $('.s8-step-name', li).textContent = NAMES[n]; $('.s8-step-st', li).innerHTML = stageBadge(j, n);
       ol.appendChild(li);
     }
   }
@@ -427,7 +456,7 @@
     $$('.bs-panel').forEach(function (p) { p.hidden = !j || +p.dataset.stage !== n; });
     $('#bs-approve').hidden = !j;
     if (!j) return;
-    renderApprove();
+    renderApprove(); renderHeadState();
     if (!fn) return;
     try { fn(j, n); } catch (e) { console.error('BackendTest stage ' + n, e); notify('画面の一部を表示できませんでした。画面を再読み込みしてください。'); }
   }
@@ -772,6 +801,8 @@
     row.className = 's8-title-row'; h1.parentNode.insertBefore(row, h1); row.appendChild(h1); row.appendChild($('#s8-chips'));
     var slot = $('#topbar-actions'); if (slot) slot.appendChild($('#s8-head-actions'));
   })();
+  /* 根拠の種類は WS2D.evidence の語（実測・記録・文書・未確認）で示す。data-ev に code を書く */
+  $$('[data-ev]').forEach(function (el) { if (window.WS2D) el.innerHTML = window.WS2D.evidence.html(el.dataset.ev); });
   setView('home');
   loadJobs().then(route); loadSummary();
 })();

@@ -141,3 +141,19 @@
 .rv-msg-ok{background:var(--color-low-bg);border-color:var(--color-low-border)}
 .rv-msg-warn{background:var(--color-medium-bg);border-color:var(--color-medium-border)}
 .rv-msg-err{background:var(--color-high-bg);border-color:var(--color-high-border)}
+/* System 02 リバース解析で増えたテスト観点（ws-rea-viewpoints.js） */
+.rt-wrap{display:flex;flex-direction:column;gap:var(--space-4);min-width:0}
+.rt-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--space-2)}
+.rt-row{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);min-width:0}
+.rt-row summary{cursor:pointer;padding:var(--space-2) var(--space-3);display:flex;flex-direction:column;gap:var(--space-1);overflow-wrap:anywhere}
+.rt-row summary:focus-visible{outline:2px solid var(--color-primary);outline-offset:2px}
+.rt-meta{display:flex;flex-wrap:wrap;gap:var(--space-2);align-items:center;font-size:var(--text-xs);color:var(--color-text-secondary)}
+.rt-loc,.rt-note,.rt-cov{overflow-wrap:anywhere;font-size:var(--text-xs);color:var(--color-text-secondary);margin:0}
+.rt-detail{padding:0 var(--space-3) var(--space-3);font-size:var(--text-sm);overflow-wrap:anywhere}
+.rt-detail p{margin:0 0 var(--space-2)}
+.rt-h{font-weight:600}
+
+.rt-run{margin-bottom:var(--space-4)}
+.rt-more>summary{cursor:pointer;font-weight:600;padding:var(--space-2) 0}
+.rt-more>summary:focus-visible{outline:2px solid var(--color-primary);outline-offset:2px}
+.rt-wrap .rv-head-main{flex:0 0 auto}

@@ -255,6 +255,7 @@
         <button class="btn" id="export-btn" hidden>証跡をまとめて書き出す</button><button class="btn" id="junit-btn" hidden>JUnit XML</button>
         <button class="btn" id="rerun-fail-btn">失敗のみ再実行</button><button class="btn pri" id="run-all-btn2">▶ 全件実行</button></div>
       <div class="pb">
+        <div id="run-reaview" class="rt-run" role="region" aria-label="リバース解析で増えたテスト観点"></div>
         <div class="kpis" id="kpis"></div>
         <div class="prog" id="prog"><i></i></div>
         <div class="tbl"><table><thead><tr><th style="width:34px"></th><th style="width:86px">ID</th><th>テスト</th><th style="width:130px">画面</th><th style="width:150px">直近 10 回</th><th style="width:70px;text-align:right">所要</th><th style="width:220px">結果</th></tr></thead><tbody id="run-rows"></tbody></table></div>
@@ -461,6 +462,7 @@
 <script src="{{ url_for('static', filename='js/testcase-grid-edit.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/ta2/ws-spec.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/ta2/ws-reverse.js') }}?v={{ _ver }}"></script>
+<script src="{{ url_for('static', filename='js/ta2/ws-rea-viewpoints.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/ta2/ws-drift.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/ta2/ws-schedule.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/ta2/ws-report.js') }}?v={{ _ver }}"></script>

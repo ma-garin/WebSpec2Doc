@@ -698,7 +698,7 @@ def api_ta2_techniques() -> dict:
     import sys
     from pathlib import Path as _Path
 
-    src = str((_Path(__file__).resolve().parents[2] / "src"))
+    src = str(_Path(__file__).resolve().parents[2] / "src")
     if src not in sys.path:
         sys.path.insert(0, src)
     from autorun.techniques import apply_all
@@ -948,3 +948,32 @@ def api_ta2_report() -> Any:
             f'attachment; filename="{domain}-report.html"'
         )
     return response
+
+
+def _existing_candidate_count(domain: str) -> int | None:
+    """System 02 既存のテスト候補数。取得できなければ None（呼び出し側が代替の Before を使う）。"""
+    try:
+        data = _store().load(domain) or {}
+        tests = data.get("tests")
+        if isinstance(tests, list) and tests:
+            return len(tests)
+        report_path = _out() / domain / "report.json"
+        if not report_path.is_file():
+            return None
+        derived = _store().derive_initial(domain, _report(domain)) or {}
+        return len(derived.get("tests") or [])
+    except Exception:  # noqa: BLE001  既存件数は補助情報。取れなくても観点の表示は止めない
+        logger.warning("既存のテスト候補数を取得できませんでした: %s", domain, exc_info=True)
+        return None
+
+
+@bp.get("/api/sites/<domain>/rea-test-viewpoints")
+def api_rea_test_viewpoints(domain: str) -> Any:
+    """リバース解析の根拠から増えるテスト観点候補（読み取りのみ）。"""
+    from web.routes.reverse_analysis import site_evidence
+    from web.services.rea_test_viewpoints import build_viewpoints
+
+    if not _valid_domain(domain):
+        return {"state": "error", "message": "サイトの指定が正しくありません。",
+                "next_action": "サイト一覧から開き直してください。"}, 400  # fmt: skip
+    return build_viewpoints(site_evidence(domain), _existing_candidate_count(domain))

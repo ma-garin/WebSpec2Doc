@@ -295,3 +295,24 @@ def export_csv(jid: str):
     body = "﻿" + buf.getvalue()
     return Response(body, mimetype="text/csv",
                     headers={"Content-Disposition": "attachment; filename*=UTF-8''impact.csv"})
+
+
+@bp.route("/api/impact/rea-layer", methods=["GET"])
+def rea_layer():
+    """リバース解析（System 01）の module 依存を別の Evidence 層として返す。既存の影響分析は変えない。"""
+    from web.config import OUTPUT_DIR
+    from web.routes.reverse_analysis import site_evidence
+    from web.services import rea_impact_layer as layer
+    from web.services import reverse_analysis_run as runner
+    from web.tenancy import scoped_output_dir
+    from web.validation import _valid_domain
+
+    domain = request.args.get("domain", "").strip()
+    if not domain:
+        sites = layer.sites_with_result(scoped_output_dir(OUTPUT_DIR), _valid_domain, runner.site_dir,
+                                        runner.RESULT_DIR, runner.RESULT_FILE)
+        return jsonify({"layer": layer.LAYER, "sites": sites})
+    if not _valid_domain(domain):
+        return jsonify({"error": "サイトの指定が正しくありません。一覧から選び直してください。"}), 400
+    module = request.args.get("module", "").strip()[:300]
+    return jsonify(layer.build_layer(domain, site_evidence(domain), module))

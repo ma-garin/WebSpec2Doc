@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   var IM = window.IM, api = IM.api, ui = IM.ui, esc = ui.esc, $ = ui.$, $$ = ui.$$;
-  var TITLE = { overview: '概要', docs: '文書', baselines: 'ベースライン', links: 'つながり', crs: '変更要求', settings: '設定', members: 'メンバー', audit: '監査' };
+  var TITLE = { overview: '概要', docs: '文書', baselines: 'ベースライン', links: 'つながり', rea: 'コード依存', crs: '変更要求', settings: '設定', members: 'メンバー', audit: '監査' };
   var COUNT = { documents: '文書', items: '項目', baselines: 'ベースライン', links: 'つながり', crs: '変更要求' };
 
   function head(title, copy, actions) {
@@ -342,7 +342,8 @@
     run();
   }
 
-  var VIEWS = { overview: overview, docs: docs, baselines: baselines, links: links, crs: crs, settings: settings, members: members, audit: audit };
+  function rea(el, ctx) { IM.rea.render(el, ctx); }
+  var VIEWS = { overview: overview, rea: rea, docs: docs, baselines: baselines, links: links, crs: crs, settings: settings, members: members, audit: audit };
   function render(root, ctx) {
     var tab = VIEWS[ctx.tab] ? ctx.tab : 'overview';
     ui.setTitle(ctx.system.name, TITLE[tab]);

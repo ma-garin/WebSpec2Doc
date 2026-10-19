@@ -100,7 +100,10 @@ def _static_evidence(doc: dict, version: str | None) -> list[dict]:
     for c in doc.get("static_candidates", []):
         kind = c.get("kind", "")
         loc = c.get("location") or {}
-        value = c.get("path") or c.get("expression") or c.get("artifact_path") or "（値なし）"
+        value = c.get("path") or c.get("expression")
+        if not value:  # route / API の値が無いときにファイル名を値として見せない
+            value = c.get("artifact_path") if kind in ("module", "source") else None
+        value = value or "（値を特定できない）"
         state = _STATIC_STATE.get(c.get("epistemic_state", ""), "unknown")
         if c.get("resolution") == "unavailable":
             state = "inferred" if state == "inferred" else "unavailable"
@@ -314,6 +317,20 @@ def _payload(domain: str) -> dict:
             + (coverage.get("runtime") or {}).get("limitations", [])
         ),
     }
+
+
+def site_evidence(domain: str) -> dict:
+    """他システム（System 02・09）向けの読み出し口。画面 API と同じ整形・同じ対象確認を通す。
+
+    state が "ok" のときだけ evidence / dependencies / summary を持つ。
+    それ以外（empty / mismatch / error）は結果を使わず、未確認として扱うこと。
+    """
+    if not _valid_domain(domain):
+        return {"state": "error", "message": "サイトの指定が正しくありません。"}
+    try:
+        return _payload(domain)
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        return {"state": "error", "message": "リバース解析の結果を読み込めませんでした。"}
 
 
 _BAD_SITE = {"state": "error", "message": "サイトの指定が正しくありません。",

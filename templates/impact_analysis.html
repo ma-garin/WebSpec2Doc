@@ -57,6 +57,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 4h14v16H5z"/><path d="M9 9h6M9 13h6M9 17h3"/></svg>
         <span class="nav-label">変更要求</span>
       </button>
+      <button type="button" class="app-nav-item" data-scope="sys" data-tab="rea" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/></svg>
+        <span class="nav-label">コード依存</span>
+      </button>
       <button type="button" class="app-nav-item" data-scope="sys" data-tab="settings" hidden>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>
         <span class="nav-label">設定</span>
@@ -140,6 +144,7 @@
 <script src="{{ url_for('static', filename='js/impact/api.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/impact/graph.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/impact/app.js') }}?v={{ _ver }}"></script>
+<script src="{{ url_for('static', filename='js/impact/rea.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/impact/system.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/impact/cr.js') }}?v={{ _ver }}"></script>
 </body>

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-  <title>WebSpec2Doc</title>
+  <title>{{ 'ドキュメント作成(app)［試作］ - WebSpec2Doc' if app_mode else 'WebSpec2Doc' }}</title>
   <!-- Google Fonts はローカル専用の CSP（style-src 'self'）でブロックされ読み込まれないため撤去。
        描画は --font-main / --font-mono のシステムフォント・フォールバックで確定する。 -->
   <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
@@ -53,7 +53,7 @@
       <span class="nav-label">折りたたむ</span>
     </button>
     <div class="app-sidebar-foot">
-      <span data-system="docs">{{ 'APK / .app から画面仕様書・テスト設計・画面遷移図を生成します。' if app_mode else 'URLから画面仕様書・テスト設計・画面遷移図を生成します。' }}</span>
+      <span data-system="docs">{{ 'サンプルデータで画面仕様書の形を確かめる試作です（実解析は未対応）' if app_mode else 'URLから画面仕様書・テスト設計・画面遷移図を生成します。' }}</span>
       <span data-system="autorun">受領から実行完了レポートの納品までを止めずに回します。</span>
     </div>
   </aside>

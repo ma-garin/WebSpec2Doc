@@ -247,15 +247,28 @@
       showErr((ex && ex.message) || '確定できませんでした。もう一度お試しください。');
     } finally { btn.disabled = false; }
   });
-  q('[data-redo]').addEventListener('click', async () => {
+  // 「検査からやり直す」は確定した結論を消すので、1 クリックでは実行せず確認行を挟む
+  const redoBtn = q('[data-redo]');
+  const cfm = document.createElement('div');
+  cfm.className = 'dvt-confirm'; cfm.hidden = true; cfm.setAttribute('role', 'alertdialog');
+  cfm.innerHTML = '<span class="dvt-confirm-msg">やり直すと、確定したレポートの結論が消え、指摘の確認画面に戻ります。指摘と通報は残り、再度確定できます。確定済みの結論は元に戻せません。</span>' +
+    '<button type="button" class="danger" data-cfm-ok>やり直す</button><button type="button" data-cfm-no>やめる</button>';
+  q('[data-redo-wrap]').insertAdjacentElement('beforebegin', cfm);
+  const setCfm = open => { cfm.hidden = !open; (open ? cfm.querySelector('[data-cfm-no]') : redoBtn).focus(); };
+  redoBtn.addEventListener('click', () => setCfm(cfm.hidden));
+  cfm.querySelector('[data-cfm-no]').addEventListener('click', () => setCfm(false));
+  cfm.addEventListener('keydown', e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); setCfm(false); } });
+  cfm.querySelector('[data-cfm-ok]').addEventListener('click', async () => {
+    const ok = cfm.querySelector('[data-cfm-ok]'); ok.disabled = true;
     try {
       const r = await window.DVT.api('tier/reset', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({to: 2})});
       if (r && r.error) throw new Error(r.error);
+      setCfm(false);
       await window.DVT.refresh();
       window.DVT.go(2);
     } catch (ex) {
       window.DVT.toast((ex && ex.message) || 'やり直せませんでした。もう一度お試しください。', 'error');
-    }
+    } finally { ok.disabled = false; }
   });
 
   document.addEventListener('dvt:state', render);

@@ -159,10 +159,12 @@ class TestWorkspaceShell:
         """「準備中」を出さない。押せない導線を並べないという方針の表れ。"""
         assert "準備中" not in workspace
 
-    def test_full_mode_shell_does_not_link_to_system_select(self, workspace: str) -> None:
-        """フル機能（ドキュメント作成）のシェルは自分がホームなので戻り先を出さない。
-        テスト自動化専用シェル（mode=test-only）だけがシステム選択へ戻る。"""
-        assert "/systems" not in workspace
+    def test_shell_has_labelled_system_switcher(self, workspace: str) -> None:
+        """どのシステムからも他のシステムへ移れる（2026-10-20 GUI 商用化 A-P0-4。旧方針
+        「フル機能シェルは /systems へのリンクを出さない」を置き換える）。
+        切替は文字ラベルと aria-label を持つ。"""
+        assert 'href="/systems"' in workspace
+        assert 'aria-label="システムを切り替える"' in workspace
 
 
 # ---------------------------------------------------------------- AutoRun 受付

@@ -1,7 +1,12 @@
 :root {
-  --color-primary: #1976D2;
-  --color-primary-light: #E3F2FD;
-  --color-primary-dark: #0D47A1;
+  /* primary 系は ta2 短縮名（--ac / --ac-bg / --ac-dk）と同値に揃える。
+     利用箇所数: --ac 139 > --color-primary 112 のため ta2 側の値(#2563EB)を正とする。 */
+  --color-primary: #2563EB;
+  --color-primary-light: #EFF4FF;
+  --color-primary-dark: #1D4ED8;
+  --color-primary-bg: var(--color-primary-light);
+  --color-primary-border: #BFD2FB;
+  --color-accent: var(--color-primary-dark);
   /* 濃色（primary 等）の上に載せる文字・アイコンの色。
      これが無いと、規約が求める「新規コードはトークンを使う」を白に対して守れない。 */
   --color-on-primary: #FFFFFF;
@@ -35,6 +40,54 @@
   --color-low-border: #A5D6A7;
   --color-info-bg: #E1F5FE;
   --color-info-border: #A9DDF5;
+
+  /* 重大度の文字色（淡色地に載せる用。*-bg 上で WCAG AA 4.5:1 以上） */
+  --color-low-tx: #1B5E20;
+  --color-info-tx: #01579B;
+  --color-medium-tx: #7A5600;
+  --color-high-tx: #A33F00;
+  --color-critical-tx: #C62828;
+
+  /* 意味色（状態の正本）。値は ta2 の --ok/--ng/--wa 系と同一。
+     -tx は淡色地(-bg)に載せる文字用の濃色（AA 4.5:1 以上）。 */
+  --color-success: #12B76A;
+  --color-success-bg: #DCFAE6;
+  --color-success-tx: #067647;
+  --color-success-border: #A8DFBF;
+  --color-warning: #F79009;
+  --color-warning-bg: #FEF0C7;
+  --color-warning-tx: #B54708;
+  --color-warning-border: #FEDF89;
+  --color-error: #F04438;
+  --color-error-bg: #FEE4E2;
+  --color-error-tx: #B42318;
+  --color-error-border: #FECDCA;
+
+  /* 旧・別名の未定義変数を正本へ寄せる alias（参照だけ残っていたもの） */
+  --success: var(--color-success-tx);
+  --success-bg: var(--color-success-bg);
+  --success-border: var(--color-success-border);
+  --warn: var(--color-warning-tx);
+  --warn-bg: var(--color-warning-bg);
+  --danger: var(--color-error-tx);
+  --er-bg: var(--color-error-bg);
+  --wn-bg: var(--color-warning-bg);
+  --high-bg: var(--color-high-bg);
+  --divider: var(--color-divider);
+  --primary-soft: var(--color-primary-light);
+  --primary-border: var(--color-primary-border);
+  --accent-soft: #EEF2FF;
+  --accent-border: #C7D2FE;
+  --accent-strong: #3730A3;
+  --ac-tx: var(--color-accent);
+  --surface-2: var(--color-surface-2);
+  --surface-alt: var(--color-surface-2);
+  --color-surface-alt: var(--color-surface-2);
+  --color-surface-muted: var(--color-surface-2);
+  --color-text-tertiary: #8A94A6;
+  --hl-line: var(--line2, #D0D5DD);
+  --hl-surface: var(--sf, #FFFFFF);
+  --hl-text-3: var(--tx3, #667085);
 
   --font-main: 'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', 'Consolas', 'SFMono-Regular', ui-monospace, monospace;

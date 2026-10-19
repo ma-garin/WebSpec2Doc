@@ -16,14 +16,13 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ta2.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ws.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/system-select.css') }}?v={{ _ver }}">
-  {# カードは 10 枚（指揮 + 01 + 01·app + 02 + 03 + 04 + 05 + 06 + 07 + 08）。3 列だと 4 段目に 1 枚だけ
-     余るので 4 + 4 + 2 に割る。 #}
+  {# カード枚数は SYSTEMS（web/system_registry.py）の件数で決まる。列数は幅で切り替える。 #}
   <style>
     .sysselect-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     @media (max-width: 1280px) { .sysselect-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
     @media (max-width: 1040px) { .sysselect-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     @media (max-width: 720px)  { .sysselect-grid { grid-template-columns: 1fr; } }
-    /* 指揮 = #3730A3 / #E0E7FF / #312E81。既存 5 システムのどの識別色とも重ならない。 */
+    /* 指揮 = #3730A3 / #E0E7FF / #312E81。他のシステムの識別色と重ならない。 */
     .syscard-cond:hover { border-color: #3730A3; }
     .syscard-cond .syscard-accent { background: #3730A3; }
     .syscard-cond .syscard-icon { background: #E0E7FF; color: #312E81; }
@@ -33,6 +32,22 @@
 </head>
 <body class="sysselect-body">
 
+{# アイコンは key ごとの SVG。一覧・番号・文言は web/system_registry.py（正本）から描く。 #}
+{% macro sysicon(key) -%}
+{% if key == "cond" %}<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"> <path d="M4 20l6.5-9"/><path d="M13 8.5l6.5-4.5"/><circle cx="11.8" cy="9.8" r="1.8"/> <path d="M3 6h3M3 11h3M3 16h3"/><path d="M18 14v6M15 17h6"/> </svg>
+{% elif key == "doc" %}<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"> <path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h6"/> </svg>
+{% elif key == "app" %}<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"> <rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/><path d="M10 2.5h4"/> </svg>
+{% elif key == "test" %}<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"> <path d="M9 3h6v3H9z"/><path d="M7 4.5H5.5A1.5 1.5 0 0 0 4 6v14a1.5 1.5 0 0 0 1.5 1.5h13A1.5 1.5 0 0 0 20 20V6a1.5 1.5 0 0 0-1.5-1.5H17"/><path d="M8 12l2.2 2.2L15 9.5"/><path d="M8 18h8"/> </svg>
+{% elif key == "autorun" %}<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"> <path d="M9 3h6M10 3v5.5L5.5 17a2 2 0 0 0 1.8 3h9.4a2 2 0 0 0 1.8-3L14 8.5V3"/><path d="M8 14h8"/> </svg>
+{% elif key == "cli" %}<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"> <rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3"/><path d="M13 15h4"/> </svg>
+{% elif key == "heal" %}<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"> <path d="M3.6 12a8.4 8.4 0 0 1 14.1-6.2l2.3 2.1"/><path d="M20.4 3.7V8h-4.3"/> <path d="M20.4 12a8.4 8.4 0 0 1-14.1 6.2L4 16.1"/><path d="M3.6 20.3V16h4.3"/> <path d="M9.4 11.9l1.9 1.9 3.4-3.6"/> </svg>
+{% elif key == "docverify" %}<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"> <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4"/><path d="M14 3v5h5v3"/><circle cx="16.5" cy="16.5" r="3.5"/><path d="M19 19l2.5 2.5"/> </svg>
+{% elif key == "batch" %}<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"> <path d="M5 4h10l4 4v12H5z"/><path d="M15 4v4h4"/><path d="M8 12l2 2-2 2"/><path d="M12 16h4"/> </svg>
+{% elif key == "backend" %}<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"> <ellipse cx="12" cy="6" rx="7" ry="2.5"/><path d="M5 6v12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V6"/><path d="M5 12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5"/> </svg>
+{% elif key == "impact" %}<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"> <circle cx="12" cy="12" r="2.5"/><circle cx="12" cy="12" r="6"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/> </svg>
+{% endif %}
+{%- endmacro %}
+
   {% set topbar_crumb = 'システム選択' %}
   {% set topbar_title = 'どのシステムを使いますか？' %}
   {% include 'partials/topbar.html' %}
@@ -40,236 +55,27 @@
   <main class="sysselect-stage">
     {# 見出しは共通ヘッダー（topbar）が出す。ここで繰り返すと h1 が二重になる。 #}
     <div class="sysselect-head">
-      <p>使うシステムを選んでください。8 つは独立したシステムで、入口・ナビは別です。CLI / API は画面を持たず、端末や外部システムから同じ機能を使います。</p>
+      <p>使うシステムを選んでください。各システムは独立していて、入口・ナビは別です。CLI / API は画面を持たず、端末や外部システムから同じ機能を使います。</p>
     </div>
 
     <div class="sysselect-grid">
-
-      {# 指揮。5 つのシステムを 1 本に束ねて毎日回す入口。既存 5 枚と同じ部品・同じ大きさで、
-         先頭に 1 枚だけ足す（既存カードの HTML・順序・文言はそのまま）。 #}
-      <a class="syscard syscard-cond" href="/orchestration">
+      {% for s in SYSTEMS %}
+      {% if not s.role or not auth_user or auth_user.role == s.role %}
+      {# 管理者専用の System は、押しても 403 になるカードを並べない。 #}
+      <a class="syscard syscard-{{ {'cond':'cond','doc':'doc','app':'app','test':'test','autorun':'run','cli':'cli','heal':'heal','docverify':'dv','batch':'batch','backend':'backend','impact':'impact'}[s.key] }}" href="{{ s.url }}">
         <span class="syscard-accent" aria-hidden="true"></span>
-        <span class="syscard-badge">新規</span>
-        <span class="syscard-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 20l6.5-9"/><path d="M13 8.5l6.5-4.5"/><circle cx="11.8" cy="9.8" r="1.8"/>
-            <path d="M3 6h3M3 11h3M3 16h3"/><path d="M18 14v6M15 17h6"/>
-          </svg>
-        </span>
-        <span class="syscard-no">まとめ役</span>
-        <span class="syscard-title">指揮</span>
-        <span class="syscard-desc">全サイトを毎日見張り、直して、報告書を下書きする。6 つのシステムを 1 本につないで回すので、あなたは<b>承認だけ</b>で済みます。</span>
+        {% if s.is_preview %}<span class="syscard-badge">試作（サンプルデータ）</span>{% elif s.badge %}<span class="syscard-badge">{{ s.badge }}</span>{% endif %}
+        <span class="syscard-icon" aria-hidden="true">{{ sysicon(s.key) }}</span>
+        <span class="syscard-no">{{ s.label }}</span>
+        <span class="syscard-title">{{ s.name }}</span>
+        <span class="syscard-desc">{{ s.description|safe }}</span>
         <span class="syscard-chips">
-          <span class="syscard-chip">全サイト一覧</span><span class="syscard-chip">毎日の見張り</span>
-          <span class="syscard-chip">自動の修正</span><span class="syscard-chip">報告書の下書き</span>
+          {% for c in s.chips %}<span class="syscard-chip">{{ c }}</span>{% endfor %}
         </span>
-        <span class="syscard-open">指揮を開く →</span>
-      </a>
-
-      <!-- 各システムの TOP へ送る。ドキュメント作成はダッシュボード（ホーム）が TOP。
-           /generate は「サイトを追加」の作業画面なので、入口にはしない。 -->
-      <a class="syscard syscard-doc" href="/dashboard">
-        <span class="syscard-accent" aria-hidden="true"></span>
-        <span class="syscard-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h6"/>
-          </svg>
-        </span>
-        <span class="syscard-no">System 01</span>
-        <span class="syscard-title">ドキュメント作成</span>
-        <span class="syscard-desc">URL を渡すと、画面仕様書・遷移図・項目定義を生成します。認証・対象範囲・前回差分にも対応。既存サイトの仕様化に。</span>
-        <span class="syscard-chips">
-          <span class="syscard-chip">画面仕様書</span><span class="syscard-chip">遷移図</span>
-          <span class="syscard-chip">フォーム定義</span><span class="syscard-chip">差分</span>
-        </span>
-        <span class="syscard-open">ドキュメント作成を開く →</span>
-      </a>
-
-      {# ドキュメント作成(app)。System 01 の派生で、URL ではなくスマホアプリ（APK / .app）を
-         対象にする。現段階はモック（入力と画面の流れだけ・解析は実行しない）。 #}
-      <a class="syscard syscard-app" href="/doc-app">
-        <span class="syscard-accent" aria-hidden="true"></span>
-        <span class="syscard-badge">モック</span>
-        <span class="syscard-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/><path d="M10 2.5h4"/>
-          </svg>
-        </span>
-        <span class="syscard-no">System 01 · app</span>
-        <span class="syscard-title">ドキュメント作成(app)</span>
-        <span class="syscard-desc">APK / .app を渡すと、画面仕様書・遷移図・項目定義を生成します。エミュレータ・シミュレータで探索し、未到達 Activity も洗い出す。スマホアプリの仕様化に。</span>
-        <span class="syscard-chips">
-          <span class="syscard-chip">画面仕様書</span><span class="syscard-chip">遷移図</span>
-          <span class="syscard-chip">フォーム定義</span><span class="syscard-chip">未到達 Activity</span>
-        </span>
-        <span class="syscard-open">ドキュメント作成(app)を開く →</span>
-      </a>
-
-      {# テスト自動化（System 02）は管理者のみ。押しても 403 になるカードは並べない。 #}
-      {% if not auth_user or auth_user.role == 'admin' %}
-      <!-- テスト自動化（System 02）。TOP は /test-automation の独立シェル。 -->
-      <a class="syscard syscard-test" href="/test-automation">
-        <span class="syscard-accent" aria-hidden="true"></span>
-        <span class="syscard-badge">新規</span>
-        <span class="syscard-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M9 3h6v3H9z"/><path d="M7 4.5H5.5A1.5 1.5 0 0 0 4 6v14a1.5 1.5 0 0 0 1.5 1.5h13A1.5 1.5 0 0 0 20 20V6a1.5 1.5 0 0 0-1.5-1.5H17"/><path d="M8 12l2.2 2.2L15 9.5"/><path d="M8 18h8"/>
-          </svg>
-        </span>
-        <span class="syscard-no">System 02</span>
-        <span class="syscard-title">テスト自動化</span>
-        <span class="syscard-desc">解析結果とテストケース表からテストを組み立て、<b>自動テストコードの生成と実行</b>までを画面上で行います。対象サイトの変更は実行前に検知し、どのテストが壊れるかを先に示します。</span>
-        <span class="syscard-chips">
-          <span class="syscard-chip">テスト設計</span><span class="syscard-chip">コード生成</span>
-          <span class="syscard-chip">自動テスト実行</span><span class="syscard-chip">変更の事前検知</span>
-          <span class="syscard-chip">トレーサビリティ</span>
-        </span>
-        <span class="syscard-open">テスト自動化を開く →</span>
+        <span class="syscard-open">{{ s.open_label }}</span>
       </a>
       {% endif %}
-
-      <a class="syscard syscard-run" href="/auto-run">
-        <span class="syscard-accent" aria-hidden="true"></span>
-        <span class="syscard-badge">独立システム</span>
-        <span class="syscard-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M9 3h6M10 3v5.5L5.5 17a2 2 0 0 0 1.8 3h9.4a2 2 0 0 0 1.8-3L14 8.5V3"/><path d="M8 14h8"/>
-          </svg>
-        </span>
-        <span class="syscard-no">System 03</span>
-        <span class="syscard-title">AutoRun</span>
-        <span class="syscard-desc">ベテラン QA として、受領から実行完了レポートの納品まで。フル QA を止めずに回し、未検証は明記・不在は証明しません。</span>
-        <span class="syscard-chips">
-          <span class="syscard-chip">テスト計画</span><span class="syscard-chip">設計・ケース</span>
-          <span class="syscard-chip">実行・証跡</span><span class="syscard-chip">カバレッジ</span>
-        </span>
-        <span class="syscard-open">AutoRun を開く →</span>
-      </a>
-
-      <a class="syscard syscard-cli" href="/cli">
-        <span class="syscard-accent" aria-hidden="true"></span>
-        <span class="syscard-badge">画面なし</span>
-        <span class="syscard-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3"/><path d="M13 15h4"/>
-          </svg>
-        </span>
-        <span class="syscard-no">System 04</span>
-        <span class="syscard-title">CLI / API</span>
-        <span class="syscard-desc">ブラウザを開かずに解析・AutoRun・テスト実行まで回せます。CI パイプラインからの呼び出しに。</span>
-        <span class="syscard-chips">
-          <span class="syscard-chip">CI 組み込み</span><span class="syscard-chip">REST API</span>
-          <span class="syscard-chip">JSON 出力</span><span class="syscard-chip">終了コード</span>
-        </span>
-        <span class="syscard-open">CLI / API の使い方を見る →</span>
-      </a>
-
-      {# オートヒーリング（System 05）は対象リポジトリのコードを書き換える。
-         実行できるのは管理者だけなので、押しても 403 になるカードは並べない
-         （System 02 と同じ判断）。 #}
-      {% if not auth_user or auth_user.role == 'admin' %}
-      <!-- オートヒーリング（System 05）。TOP は /healing の独立シェル。 -->
-      <a class="syscard syscard-heal" href="/healing">
-        <span class="syscard-accent" aria-hidden="true"></span>
-        <span class="syscard-badge">新規</span>
-        <span class="syscard-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3.6 12a8.4 8.4 0 0 1 14.1-6.2l2.3 2.1"/><path d="M20.4 3.7V8h-4.3"/>
-            <path d="M20.4 12a8.4 8.4 0 0 1-14.1 6.2L4 16.1"/><path d="M3.6 20.3V16h4.3"/>
-            <path d="M9.4 11.9l1.9 1.9 3.4-3.6"/>
-          </svg>
-        </span>
-        <span class="syscard-no">System 05</span>
-        <span class="syscard-title">オートヒーリング</span>
-        <span class="syscard-desc">接続したリポジトリで検証を実行し、失敗を不具合として切り出して<b>修正差分</b>まで作ります。<b>マージは人が判断します</b>。</span>
-        <span class="syscard-chips">
-          <span class="syscard-chip">不具合の検出</span><span class="syscard-chip">バグレポート</span>
-          <span class="syscard-chip">コード修正</span><span class="syscard-chip">PR 作成</span>
-          <span class="syscard-chip">再テストのループ</span>
-        </span>
-        <span class="syscard-open">オートヒーリングを開く →</span>
-      </a>
-      {% endif %}
-
-      <!-- ドキュメント検証（System 06）。TOP は /docverify の独立シェル。読み取り・曖昧語は reverse_doc。Doc2AI-Friendly は新版ができてから接続する。 -->
-      <a class="syscard syscard-dv" href="/docverify">
-        <span class="syscard-accent" aria-hidden="true"></span>
-        <span class="syscard-badge">新規</span>
-        <span class="syscard-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4"/><path d="M14 3v5h5v3"/><circle cx="16.5" cy="16.5" r="3.5"/><path d="M19 19l2.5 2.5"/>
-          </svg>
-        </span>
-        <span class="syscard-no">System 06</span>
-        <span class="syscard-title">ドキュメント検証</span>
-        <span class="syscard-desc">仕様書のインスペクションを 1 画面で進めます。取り込むと<b>曖昧な表現・抜け・食い違い</b>の候補が根拠の位置付きで並び、<b>採用か却下を選ぶだけ</b>。質問票・版の差分・実画面との照合・終了判定まで。</span>
-        <span class="syscard-chips">
-          <span class="syscard-chip">インスペクション</span><span class="syscard-chip">候補の採否</span>
-          <span class="syscard-chip">質問票</span><span class="syscard-chip">実画面との照合</span>
-        </span>
-        <span class="syscard-open">ドキュメント検証を開く →</span>
-      </a>
-
-
-          <!-- バッチ・スクリプトのテスト（System 07）。TOP は /batch-test の独立シェル。画面のない処理（.bat / .sh / .ps1）が対象。 -->
-      <a class="syscard syscard-batch" href="/batch-test">
-        <span class="syscard-accent" aria-hidden="true"></span>
-        <span class="syscard-badge">新規</span>
-        <span class="syscard-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M5 4h10l4 4v12H5z"/><path d="M15 4v4h4"/><path d="M8 12l2 2-2 2"/><path d="M12 16h4"/>
-          </svg>
-        </span>
-        <span class="syscard-no">System 07</span>
-        <span class="syscard-title">バッチ・スクリプトのテスト</span>
-        <span class="syscard-desc">.bat / .sh / .ps1 と仕様書を渡すと、<b>引数・入力ファイル・終了コード・出力・ログ</b>の観点でケース表を作り、<b>実行用のテストコード</b>まで生成します。画面のない処理のテストに。</span>
-        <span class="syscard-chips">
-          <span class="syscard-chip">テスト設計</span><span class="syscard-chip">ケース表</span>
-          <span class="syscard-chip">終了コード・出力</span><span class="syscard-chip">コード生成</span>
-        </span>
-        <span class="syscard-open">バッチ・スクリプトのテストを開く →</span>
-      </a>
-
-
-      <!-- バッチ・バックエンドのテスト（System 08）。TOP は /backend-test の独立シェル。バッチジョブ・API・DB を結合して確かめる。 -->
-      <a class="syscard syscard-backend" href="/backend-test">
-        <span class="syscard-accent" aria-hidden="true"></span>
-        <span class="syscard-badge">新規</span>
-        <span class="syscard-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <ellipse cx="12" cy="6" rx="7" ry="2.5"/><path d="M5 6v12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V6"/><path d="M5 12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5"/>
-          </svg>
-        </span>
-        <span class="syscard-no">System 08</span>
-        <span class="syscard-title">バッチ・バックエンドのテスト</span>
-        <span class="syscard-desc">バッチジョブ・API・DB を<b>結合・システム・受け入れ</b>のレベルで確かめます。観点からケース・テストデータ・テストコードを作り、<b>実行と判定</b>まで進めます。期待値は<b>前後比較・別経路・ゴールデン</b>で裏付けます。</span>
-        <span class="syscard-chips">
-          <span class="syscard-chip">テスト設計</span><span class="syscard-chip">DB 前後比較</span>
-          <span class="syscard-chip">実行と判定</span>
-        </span>
-        <span class="syscard-open">バッチ・バックエンドのテストを開く →</span>
-      </a>
-
-
-      <!-- 影響度分析（System 09）。TOP は /impact の独立シェル。仕様書の変更点から影響範囲とテストの優先度を出す。 -->
-      <a class="syscard syscard-impact" href="/impact">
-        <span class="syscard-accent" aria-hidden="true"></span>
-        <span class="syscard-badge">新規</span>
-        <span class="syscard-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="2.5"/><circle cx="12" cy="12" r="6"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/>
-          </svg>
-        </span>
-        <span class="syscard-no">System 09</span>
-        <span class="syscard-title">影響度分析</span>
-        <span class="syscard-desc">変更後の仕様書と変更内容を渡すと、<b>変更箇所</b>を抜き出して設計書・画面仕様書を検索し、<b>影響範囲</b>と<b>テストの優先度</b>を根拠の文書つきで示します。変更部分のテスト設計に。</span>
-        <span class="syscard-chips">
-          <span class="syscard-chip">変更箇所の抽出</span><span class="syscard-chip">影響範囲</span>
-          <span class="syscard-chip">テスト優先度</span><span class="syscard-chip">根拠の文書</span>
-        </span>
-        <span class="syscard-open">影響度分析を開く →</span>
-      </a>
-
+      {% endfor %}
     </div>
 
     <p class="sysselect-note">いつでもこの画面に戻って切り替えられます。</p>

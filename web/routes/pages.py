@@ -137,6 +137,9 @@ def site_workspace(domain: str, ws: str) -> str | Response:
 @bp.route("/test-automation")
 def test_automation() -> str:
     """テスト自動化単体モード。統合ワークスペースをテスト系パネルだけに絞って開く。"""
+    if not _may_use_testlab():
+        # /sites/<domain>/* と同じ。画面骨格に入れてから中の API で初めて拒否される不揃いを避ける。
+        abort(403)
     return render_template("workspace.html", ws="home", domain="", mode="test-only")
 
 
@@ -159,7 +162,7 @@ def doc_app() -> str:
 
 @bp.route("/cli")
 def cli_mode() -> str:
-    """CLI モード（System 03）の案内。
+    """CLI モード（System 04。番号の正本は web/system_registry.py）の案内。
 
     CLI 自体は画面を持たない（端末で動かす）ため、このページは実行はせず、
     貼り付けられるコマンドの組み立てと、できること・終了コードの案内だけを行う。

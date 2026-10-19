@@ -22,9 +22,9 @@
   <aside class="app-sidebar rail">
     <a class="app-brand" href="/systems" title="システム選択に戻る">
       <span class="app-brand-mark">W</span>
-      <span class="app-brand-text"><strong>WebSpec2Doc</strong><span>バッチのテスト</span></span>
+      <span class="app-brand-text"><strong>WebSpec2Doc</strong><span>{{ sysreg('batch').name }}</span></span>
     </a>
-    <a href="/systems" class="sys-switcher" title="システムを切り替える"><span class="sys-switcher-label">システム</span><span class="sys-switcher-cur">バッチのテスト</span><span class="sys-switcher-swap">切替</span></a>
+    <a href="/systems" class="sys-switcher" title="システムを切り替える"><span class="sys-switcher-label">システム</span><span class="sys-switcher-cur">{{ sysreg('batch').name }}</span><span class="sys-switcher-swap">切替</span></a>
 
     <nav class="app-nav" aria-label="工程">
       <div class="app-nav-group">つくる</div>

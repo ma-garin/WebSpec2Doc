@@ -62,12 +62,12 @@
 .rv-or-runtime{background:var(--color-low-bg);border-color:var(--color-low-border);color:var(--color-low)}
 .rv-or-static{background:var(--color-info-bg);border-color:var(--color-info-border);color:var(--color-info)}
 .rv-badge{display:inline-block;font-size:var(--text-xs);font-weight:600;border-radius:var(--radius-full);padding:1px var(--space-2);border:1px solid var(--color-border);background:var(--color-surface-2);color:var(--color-text);white-space:nowrap}
-.rv-st-observed{background:var(--color-low-bg);border-color:var(--color-low-border);color:var(--color-low)}
-.rv-st-static{background:var(--color-info-bg);border-color:var(--color-info-border);color:var(--color-info)}
-.rv-st-inferred{background:var(--color-medium-bg);border-color:var(--color-medium-border);color:var(--color-medium)}
-.rv-st-ambiguous{background:var(--color-high-bg);border-color:var(--color-high-border);color:var(--color-high)}
+.rv-st-observed{background:var(--color-low-bg);border-color:var(--color-low-border);color:var(--color-low-tx)}
+.rv-st-static{background:var(--color-info-bg);border-color:var(--color-info-border);color:var(--color-info-tx)}
+.rv-st-inferred{background:var(--color-medium-bg);border-color:var(--color-medium-border);color:var(--color-medium-tx)}
+.rv-st-ambiguous{background:var(--color-high-bg);border-color:var(--color-high-border);color:var(--color-high-tx)}
 .rv-st-unknown{background:var(--color-surface-3);border-style:dashed;border-color:var(--color-border-strong);color:var(--color-text-secondary)}
-.rv-st-unavailable{background:var(--color-critical-bg);border-color:var(--color-critical-border);color:var(--color-critical)}
+.rv-st-unavailable{background:var(--color-critical-bg);border-color:var(--color-critical-border);color:var(--color-critical-tx)}
 .rv-oc-success,.rv-sev-info{background:var(--color-info-bg);border-color:var(--color-info-border);color:var(--color-info)}
 .rv-oc-partial,.rv-sev-warning{background:var(--color-medium-bg);border-color:var(--color-medium-border);color:var(--color-medium)}
 .rv-oc-failed,.rv-sev-error{background:var(--color-critical-bg);border-color:var(--color-critical-border);color:var(--color-critical)}

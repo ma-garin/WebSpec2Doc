@@ -230,15 +230,36 @@
     return '';
   }
 
-  /** パスとハッシュを現在の view に合わせる。履歴は増やさない（replaceState） */
+  /** パスとハッシュを現在の view に合わせる。
+      画面（view）が変わったときは pushState（戻るで前の画面へ）、同じ画面内の選択（テスト切替など）は replaceState。
+      起動時・戻る/進むによる復元では履歴を積まない。 */
+  var lastSyncedView = null;
+  var restoring = false;
   function syncUrl() {
     var want = pathFor(state.view) + hashFor();
+    var push = !restoring && lastSyncedView !== null && lastSyncedView !== state.view;
+    lastSyncedView = state.view;
     if (location.pathname + location.hash === want) return;
     hashLock = true;
-    try { history.replaceState(null, '', want); }
+    try { history[push ? 'pushState' : 'replaceState'](null, '', want); }
     catch (e) { location.hash = hashFor(); }
     setTimeout(function () { hashLock = false; }, 0);
   }
+
+  /** 戻る・進む: URL（ハッシュ→無ければパス）から view を復元する。履歴は積まない */
+  var VIEW_OF_SEG = { spec: 'spec', tests: 'test', changes: 'drift', schedule: 'schedule', report: 'report', team: 'team' };
+  function restoreFromUrl() {
+    var v = null;
+    if (readHash()) { v = state.view; }
+    else {
+      var seg = (location.pathname.replace(/\/+$/, '').split('/').pop() || '');
+      v = VIEW_OF_SEG[seg] || (isTestOnly() ? 'test' : 'home');
+      if (!document.getElementById('p-' + v)) v = state.view;
+    }
+    restoring = true;
+    try { setView(v); render(); } finally { restoring = false; }
+  }
+  window.addEventListener('popstate', restoreFromUrl);
 
   /** URL ハッシュを読んで state.view / state.sel を決める。戻り値: 変化したか */
   function readHash() {

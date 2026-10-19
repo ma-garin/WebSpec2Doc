@@ -13,6 +13,8 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ta2.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/orchestration.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/c-hybrid.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/c-shell.css') }}?v={{ _ver }}">
 </head>
 <body class="app-page cw-page" data-site="{{ site }}" data-hl-admin="{{ 'true' if (not auth_user or auth_user.role == 'admin') else 'false' }}">
 <a href="#app-content" class="skip-link">本文へスキップ</a>
@@ -66,6 +68,7 @@
   </div>
 </div>
 
+<script src="{{ url_for('static', filename='js/c-hybrid.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/orchestration.js') }}?v={{ _ver }}"></script>
 </body>
 </html>

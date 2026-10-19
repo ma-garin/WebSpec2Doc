@@ -17,6 +17,8 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-tier-2.css') }}?v={{ dv_ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-tier-3.css') }}?v={{ dv_ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-r4.css') }}?v={{ dv_ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/c-hybrid.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/c-shell.css') }}?v={{ _ver }}">
 </head>
 <body class="app-page dv-page">
 <a href="#app-content" class="skip-link">本文へスキップ</a>
@@ -50,6 +52,7 @@
     </main>
   </div>
 </div>
+<script src="{{ url_for('static', filename='js/c-hybrid.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/user-menu.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/docverify-core.js') }}?v={{ dv_ver }}"></script>
 <script src="{{ url_for('static', filename='js/docverify-global.js') }}?v={{ dv_ver }}"></script>

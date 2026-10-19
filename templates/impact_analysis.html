@@ -12,6 +12,8 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/batch-test.css') }}?v={{ _ver }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/impact.css') }}?v={{ _ver }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/c-hybrid.css') }}?v={{ _ver }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/c-shell.css') }}?v={{ _ver }}">
 </head>
 {# 影響度分析（System 09・商用版）。契約は docs/lifecycle/system09-impact/03-detailed-design.md の DD-006〜DD-008。
    骨格・部品はドキュメント作成（index.html の app-shell / sidebar / dash-hero / dashboard-section-head / dashboard-empty）と同じ。
@@ -140,6 +142,7 @@
   </form>
 </div>
 <div class="dv-toast bt-toast" id="bt-toast" role="status" aria-live="polite" hidden></div>
+<script src="{{ url_for('static', filename='js/c-hybrid.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/user-menu.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/impact/api.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/impact/graph.js') }}?v={{ _ver }}"></script>

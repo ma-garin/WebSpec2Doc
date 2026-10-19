@@ -20,6 +20,8 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/healing.css') }}?v={{ _ver }}">
   {# サイドバー共通部品（件数バッジ）のためだけに読む。順序は healing.css の後。 #}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/healing-reports.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/c-hybrid.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/c-shell.css') }}?v={{ _ver }}">
 </head>
 {# 起動時にどのビューを開くかはサーバが決める。設定画面（/healing/settings）は
    接続先の一覧が入口で、実行の直リンク（/healing/runs/<id>）だけが実行ビューで開く。
@@ -312,6 +314,7 @@
   </div>
 </div>
 
+<script src="{{ url_for('static', filename='js/c-hybrid.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/user-menu.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/healing.js') }}?v={{ _ver }}"></script>
 </body>

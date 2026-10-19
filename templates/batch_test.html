@@ -12,6 +12,8 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/ta2.css') }}?v={{ _ver }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/ws.css') }}?v={{ _ver }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/batch-test.css') }}?v={{ _ver }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/c-hybrid.css') }}?v={{ _ver }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/c-shell.css') }}?v={{ _ver }}">
 </head>
 {# バッチ・スクリプトのテスト（System 07）。骨格はテスト自動化（workspace.html）と同じ
    サイドバー / 案件一覧 / 本体の 3 列。工程は 取り込み → 観点とケース表 → テストコード → 書き出し。
@@ -188,6 +190,7 @@
   </main>
 </div>
 <div class="dv-toast bt-toast" id="bt-toast" role="status" hidden></div>
+<script src="{{ url_for('static', filename='js/c-hybrid.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/user-menu.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/batch-test.js') }}?v={{ _ver }}"></script>
 </body>

@@ -10,6 +10,8 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/c-hybrid.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/c-shell.css') }}?v={{ _ver }}">
   <style>
     body { margin: 0; background: var(--bg); }
     .tc-page { max-width: 1180px; margin: 0 auto; padding: 24px 24px 60px; }
@@ -39,6 +41,7 @@
     <a class="tc-back" href="/">← ホームへ戻る</a>
     {% include "partials/view-traceability.html" %}
   </div>
+  <script src="{{ url_for('static', filename='js/c-hybrid.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/traceability.js') }}?v={{ _ver }}"></script>
   <script>
     // ドメインはサーバ側で検証済みの値をそのまま渡す（画面側で組み立てない）

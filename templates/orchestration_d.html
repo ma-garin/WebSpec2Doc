@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>指揮 - WebSpec2Doc</title>
+  <title>実行履歴 - 指揮 - WebSpec2Doc</title>
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
   {% set _ver = config.get('ASSET_VERSION', '1') %}
   <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
@@ -17,13 +17,19 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/c-shell.css') }}?v={{ _ver }}">
 </head>
 <body class="app-page" data-variant="d" data-site="{{ site or '' }}">
-<a href="#cd-body" class="skip-link">本文へスキップ</a>
-<div class="cd-shell">
+<a href="#app-content" class="skip-link">本文へスキップ</a>
+<div class="app-shell">
 
-  {# ここは指揮（/orchestration）から辿る「サイト別の記録」。戻り先を必ず見せる。 #}
-  {% set topbar_crumb = '<a href="/systems">システム選択</a> › <a href="/orchestration">指揮</a> › 記録'|safe %}
-  {% set topbar_title = '記録' %}
-  {% include 'partials/topbar.html' %}
+  {# 指揮の「実行履歴」（サイト別の記録）。殻は /orchestration と同じ共通シェル・サイドバー（D-P0-3）。 #}
+  {% with active = 'history' %}{% include 'partials/conductor-sidebar.html' %}{% endwith %}
+
+  <div class="app-main">
+    {% set topbar_crumb = '<a href="/orchestration">指揮</a>'|safe %}
+    {% set topbar_title = '実行履歴' %}
+    {% include 'partials/topbar.html' %}
+
+    <main class="app-content" id="app-content">
+<div class="cd-shell">
 
   <div id="cd-error" class="cd-banner" role="alert" hidden></div>
 
@@ -65,6 +71,9 @@
     </section>
 
   </main>
+</div>
+    </main>
+  </div>
 </div>
 
 <dialog class="cd-dialog" id="cd-dialog" aria-label="保守下に置く">

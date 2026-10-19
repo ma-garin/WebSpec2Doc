@@ -169,8 +169,7 @@
   }
 
   /**
-   * 1 サイトの状態タグ。案 B（static/js/orchestration-b.js の decideRow）と
-   * 同じ名前・同じ順序で書く。順序を変えるときは両方を同時に直すこと。
+   * 1 サイトの状態タグ（旧比較案 B は D-P0-3 で廃止。この関数が唯一の定義）。
    * ctx = { domain, run, awaiting: [...], monitor: {enabled, time} }
    */
   function decideRow(ctx) {

@@ -16,7 +16,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from flask import Blueprint, g, render_template, request
+from flask import Blueprint, g, redirect, render_template, request
 from jinja2 import TemplateNotFound
 
 from web.audit_context import record_admin_event
@@ -164,10 +164,9 @@ def _clean_params(data: dict[str, Any], domain: str) -> tuple[dict[str, Any], st
 
 
 #: 画面は 2 つ。b = 指揮（一覧・既定）、d = サイト別の記録。
-_VARIANTS: tuple[str, ...] = ("b", "d")
+_VARIANTS: tuple[str, ...] = ("d",)
 
 #: /orchestration は必ずこれを出す。A/B の振り分けと cookie は廃止した。
-_DEFAULT_VARIANT = "b"
 
 #: ?site= のサイト名。保守対象は "127.0.0.1:8765" のように :port を持つ。
 _SITE_RE = re.compile(r"^[0-9a-zA-Z][0-9a-zA-Z._-]{0,252}(?::[0-9]{1,5})?$")
@@ -197,8 +196,7 @@ def _render_variant(variant: str, site: str = "") -> str:
 def orchestration_page():
     """指揮の入口。ワークフロー画面（6 工程のステッパー）を出す。
 
-    旧案（b / 一覧・d / サイト別記録）は /orchestration/<variant> にまだ残る
-    （開発・比較用）。ここは新画面のテンプレートが無ければ 404 を返す
+    実行履歴（d / サイト別記録）は /orchestration/d。旧比較案 b は廃止し /orchestration へ転送する。ここは新画面のテンプレートが無ければ 404 を返す
     （別担当が同時に作っているため）。
     """
     site = _site_arg()
@@ -225,6 +223,9 @@ def api_home_summary():
 def orchestration_variant_page(variant: str):
     """画面を名指しで開く。d は ?site= でそのサイトの記録を開く。"""
     key = str(variant or "").strip().lower()
+    if key == "b":
+        # 旧比較案 b は廃止（D-P0-3）。ブックマークを 404 にせず正本の指揮へ送る
+        return redirect("/orchestration", code=301)
     if key not in _VARIANTS:
         return {"error": "その案はありません。"}, 404
     return _render_variant(key, _site_arg())

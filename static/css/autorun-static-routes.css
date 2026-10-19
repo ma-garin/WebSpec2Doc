@@ -81,3 +81,7 @@
   .asr-flow li { flex: none; width: 100%; box-sizing: border-box; }
   .asr-flow li:not(:last-child)::after { content: "\2193"; right: auto; left: 50%; top: auto; bottom: -24px; transform: translateX(-50%); }
 }
+
+/* 共通ステッパーの丸い形は小さな段用。この流れ図は大きな枠なので角丸の箱にし、番号の丸は出さない */
+.c-stepper.asr-flow li { border-radius: var(--radius-md, 8px); }
+.c-stepper.asr-flow li::before { display: none; }

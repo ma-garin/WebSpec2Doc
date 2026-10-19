@@ -74,7 +74,7 @@ _JS_EXTRA = r"""() => {
 }"""
 
 _JS_DRAWER = r"""() => {
-  const el = document.querySelector('.rv-drawer');
+  const el = document.querySelector('.c-drawer');
   if (!el) return ['ドロワーが見つからない'];
   const r = el.getBoundingClientRect(), vw = innerWidth, vh = innerHeight, out = [];
   if (r.left < -1 || r.top < -1 || r.right > vw + 1 || r.bottom > vh + 1)
@@ -97,7 +97,7 @@ def _check_reverse(page, base: str, domain: str, w: int, h: int) -> tuple[int, i
     try:
         page.goto(f"{base}/sites/{domain}/spec", wait_until="load", timeout=15000)
         page.click('#spec-seg button[data-m="reverse"]', timeout=10000)
-        page.wait_for_selector("#spec-reverse .rv", state="visible", timeout=10000)
+        page.wait_for_selector("#spec-reverse [role=tablist]", state="visible", timeout=10000)
     except Exception as exc:
         print(f"NG {w}x{h} {name}: 開けない（{type(exc).__name__}）")
         return 1, 1
@@ -111,20 +111,20 @@ def _check_reverse(page, base: str, domain: str, w: int, h: int) -> tuple[int, i
 
     run(name, "#spec-reverse")
     try:
-        page.click("#spec-reverse .rv-panel tbody tr", timeout=5000)
-        page.wait_for_selector(".rv-drawer", state="visible", timeout=5000)
+        page.click("#spec-reverse table tbody tr", timeout=5000)
+        page.wait_for_selector(".c-drawer", state="visible", timeout=5000)
         screens += 1
         page.wait_for_timeout(300)
-        total += _report(w, h, name + ":drawer", page.evaluate(_JS, ".rv-drawer") + page.evaluate(_JS_DRAWER))
+        total += _report(w, h, name + ":drawer", page.evaluate(_JS, ".c-drawer") + page.evaluate(_JS_DRAWER))
         page.keyboard.press("Escape")
         page.wait_for_timeout(200)
     except Exception as exc:
         print(f"NG {w}x{h} {name}:drawer: 開けない（{type(exc).__name__}）")
         total, screens = total + 1, screens + 1
-    tabs = page.eval_on_selector_all(".rv-tab[data-tab]", "els => els.map(e => e.dataset.tab)")
+    tabs = page.eval_on_selector_all("#spec-reverse [role=tab][data-tab]", "els => els.map(e => e.dataset.tab)")
     for tab in tabs:
         try:
-            page.click(f'.rv-tab[data-tab="{tab}"]', timeout=5000)
+            page.click(f'#spec-reverse [role=tab][data-tab="{tab}"]', timeout=5000)
         except Exception as exc:
             print(f"NG {w}x{h} {name}:{tab}: 開けない（{type(exc).__name__}）")
             total, screens = total + 1, screens + 1

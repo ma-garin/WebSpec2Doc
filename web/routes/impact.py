@@ -7,10 +7,20 @@ import logging
 
 from flask import Blueprint, Response, jsonify, render_template, request
 
+from web.auth import require_admin
 from web.services.impact import analyze, llm, store
 
 bp = Blueprint("impact", __name__)
 log = logging.getLogger(__name__)
+
+
+@bp.before_request
+def _admin_only_writes():
+    """旧 API（/api/impact/jobs・library・sample。新画面は /api/impact/v2 だけを使う）の書き込みは管理者だけ。
+    認証オフでは制限しない（require_admin の既定どおり）。"""
+    if request.method in ("GET", "HEAD", "OPTIONS"):
+        return None
+    return require_admin()
 
 
 def _err(message: str, status: int):

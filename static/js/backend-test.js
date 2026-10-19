@@ -349,12 +349,12 @@
       crumb.innerHTML = '<span>WebSpec2Doc</span><span class="sep">/</span><span></span>';
       crumb.lastChild.textContent = TITLES[state.view] || 'ホーム';
       $('#topbar-title').textContent = 'バッチ・バックエンドのテスト'; chips.innerHTML = ''; act.hidden = true;
-      document.title = 'バッチ・バックエンドのテスト | WebSpec2Doc';
+      document.title = 'ホーム - バッチ・バックエンドのテスト - WebSpec2Doc';
       return;
     }
     var nm = j.name || '名前のない案件', why = runBlock(j), env = envName(j), tg = targetText(j), rb = $('#s8-run-head');
     crumb.innerHTML = '<span><a href="#" data-nav="home">ホーム</a></span><span class="sep">/</span><span><a href="#" data-nav="jobs">案件</a></span><span class="sep">/</span><span></span>';
-    crumb.lastChild.textContent = nm; $('#topbar-title').textContent = nm; document.title = nm + ' | WebSpec2Doc';
+    crumb.lastChild.textContent = nm; $('#topbar-title').textContent = nm; document.title = nm + ' - バッチ・バックエンドのテスト - WebSpec2Doc';
     chips.innerHTML = '';
     [['badge-info', LEVEL_FULL[j.level] || ''], ['badge-muted', '対象: ' + (tg || '未設定')], ['badge-muted', '接続先: ' + (env || '未設定')]].forEach(function (c) {
       if (!c[1]) return;

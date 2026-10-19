@@ -296,7 +296,12 @@
     /* ---------- 事実／推論／未確認の帯 ---------- */
     function splitHtml() {
       var n = { fact: 0, inference: 0, unverified: 0 };
-      (data.evidence || []).forEach(function (e) { n[W.evidence.category(EV_CODE[e.state] || 'unverified')]++; });
+      // System 03 の到達確認があれば route の区分を実測どおりに置き換える（指揮ホーム・System02 と同じ規則）
+      var PROBE_CAT = { observed: 'fact', unreached: 'fact', auth_required: 'unverified', ambiguous: 'unverified', failed: 'unverified' };
+      (data.evidence || []).forEach(function (e) {
+        var p = e.group === 'route' ? probeOf(e) : null;
+        n[(p && PROBE_CAT[p.status]) || W.evidence.category(EV_CODE[e.state] || 'unverified')]++;
+      });
       function cell(k, label, v) {
         return '<div class="c-split__cell c-split__cell--' + k + '"><span class="c-split__label">' + label + '</span><span class="c-split__value">' + v + '</span></div>';
       }

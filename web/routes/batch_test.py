@@ -4,14 +4,63 @@ from __future__ import annotations
 import logging
 import re
 
-from flask import Blueprint, Response, jsonify, render_template, request
+from flask import Blueprint, Response, g, jsonify, render_template, request
 
+from web.auth import auth_enabled
+from web.routes.backend_test import actor
 from web.services.batchtest import codegen, design, export, parse, store
 
 bp = Blueprint("batch_test", __name__)
 log = logging.getLogger(__name__)
 _XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 _SPEC_SUFFIX = (".txt", ".md", ".docx", ".xlsx", ".pdf")
+
+
+_AUDIT_MAX = 50  # 操作履歴（誰がいつ何をしたか）の保持件数
+
+
+@bp.before_request
+def _check_write_permission():
+    """書き込みは案件の作成者・メンバーだけ（認証オン時）。操作者は System 08 と同じ actor() で取る。
+    メンバーを持たない従来の案件は誰でも書ける（操作者は記録する）。認証オフでは制限しない。"""
+    if request.method in ("GET", "HEAD", "OPTIONS") or not request.view_args or "jid" not in request.view_args:
+        return None
+    if not auth_enabled():
+        return None
+    try:
+        members = store.load(request.view_args["jid"]).get("members")
+    except (KeyError, ValueError, OSError):
+        return None  # 存在しない・壊れた案件は各ルートが 404/500 を返す
+    user = getattr(g, "auth_user", None)
+    if members and actor() not in members and not (isinstance(user, dict) and user.get("role") == "admin"):
+        return _err("この案件を変更する権限がありません。管理者に権限の付与を依頼してください。", 403)
+    return None
+
+
+@bp.after_request
+def _record_actor(resp):
+    """書き込みが成功したら、操作者・時刻・操作を案件に残す。新規作成者はメンバー（owner）になる。"""
+    if request.method in ("GET", "HEAD", "OPTIONS") or resp.status_code >= 400:
+        return resp
+    try:
+        jid = (request.view_args or {}).get("jid")
+        created = request.method == "POST" and jid is None
+        if created:
+            jid = ((resp.get_json(silent=True) or {}).get("job") or {}).get("id")
+        if not jid:
+            return resp
+        try:
+            job = store.load(jid)
+        except KeyError:  # 削除された案件には残す先がない
+            return resp
+        who = actor()
+        entry = {"at": store.now(), "actor": who, "op": f"{request.method} {request.url_rule.rule}"}
+        extra = {"members": {who: "owner"}, "created_by": who} if created else {}
+        store.save({**job, **extra, "updated_by": who,
+                    "audit": [*(job.get("audit") or []), entry][-_AUDIT_MAX:]})
+    except (ValueError, OSError):
+        log.exception("操作者の記録に失敗")
+    return resp
 
 
 def _err(message: str, status: int):

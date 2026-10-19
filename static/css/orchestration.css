@@ -315,3 +315,18 @@ textarea.cw-input { height: auto; padding: 7px 9px; resize: vertical; }
   font-size: 12.5px;
   z-index: 60;
 }
+
+/* ── 指揮ホーム（日常運用）。部品は c-hybrid.css。ここは配置だけ ── */
+.cw-home .app-content { overflow: auto; display: block; }
+.ch-home { max-width: 1280px; margin: 0 auto; padding-bottom: var(--space-6, 24px); }
+.ch-home .c-kpis { margin: var(--space-3, 12px) 0; }
+.ch-crumb { font-size: var(--text-sm, 13px); color: var(--color-text-secondary, #475569); margin: 0 0 var(--space-2, 8px); }
+.ch-ev { display: inline-flex; flex-wrap: wrap; gap: var(--space-1, 4px); }
+.ch-links { display: inline-flex; flex-wrap: wrap; gap: var(--space-2, 8px); align-items: center; }
+.ch-links a { color: var(--color-primary, #2563eb); font-weight: 600; text-decoration: none; }
+.ch-links a:hover { text-decoration: underline; }
+.ch-link-off { color: var(--color-text-disabled, #94a3b8); }
+.ch-detail { margin-left: var(--space-2, 8px); }
+.ch-tab-n { font-variant-numeric: tabular-nums; color: var(--color-text-secondary, #475569); }
+.ch-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.ch-home .c-table td { white-space: normal; }

@@ -4,130 +4,190 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-  <title>CLI モード - WebSpec2Doc</title>
+  <title>CLI / API - WebSpec2Doc</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/system-select.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/ta2.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/cli-mode.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/c-hybrid.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/c-shell.css') }}?v={{ _ver }}">
 </head>
-<body class="sysselect-body cli-body">
+{# CLI / API（番号は web/system_registry.py の cli）。この画面はコマンドを組み立てるだけで実行しない。
+   骨格は他 System と同じ サイドバー + トップバー（partials/topbar.html）。 #}
+<body class="cli-page">
+<a href="#cli-content" class="skip-link">本文へスキップ</a>
+<div class="app">
+  <aside class="app-sidebar rail">
+    <a class="app-brand" href="/systems" title="システム選択に戻る">
+      <span class="app-brand-mark">W</span>
+      <span class="app-brand-text"><strong>WebSpec2Doc</strong><span>{{ sysreg('cli').name }}</span></span>
+    </a>
+    <a href="/systems" class="sys-switcher" title="システムを切り替える"><span class="sys-switcher-label">システム</span><span class="sys-switcher-cur">{{ sysreg('cli').name }}</span><span class="sys-switcher-swap">切替</span></a>
+    <nav class="app-nav" aria-label="この画面の内容">
+      <div class="app-nav-group">つかう</div>
+      <a class="app-nav-item" href="#cli-builder"><span class="nav-label">コマンドを組み立てる</span></a>
+      <a class="app-nav-item" href="#cli-ready"><span class="nav-label">準備状況</span></a>
+      <a class="app-nav-item" href="#cli-commands"><span class="nav-label">できること</span></a>
+      <a class="app-nav-item" href="#cli-exit"><span class="nav-label">終了コード</span></a>
+      <a class="app-nav-item" href="#cli-dev"><span class="nav-label">開発者向け</span></a>
+    </nav>
+    <div class="sp"></div>
+    <nav class="app-nav" aria-label="サポート">
+      <div class="app-nav-group">サポート</div>
+      <a class="app-nav-item" href="/user-guide"><span class="nav-label">使い方</span></a>
+    </nav>
+  </aside>
 
-  <header class="sysselect-topbar">
-    <div class="sysselect-brand">
-      <span class="sysselect-brand-mark">W</span>
-      <span class="sysselect-brand-name">WebSpec2Doc</span>
-      <span class="sysselect-brand-tag">CLI モード</span>
-    </div>
-    <div class="sysselect-account">
-      <a class="cli-back" href="/systems">← システム選択へ戻る</a>
-    </div>
-  </header>
-
-  <main class="cli-stage">
-    <div class="cli-head">
-      <div class="sysselect-kicker">{{ sysreg('cli').label }}</div>
-      <h1>CLI モード（画面なし）</h1>
-      <p>
-        ブラウザを開かずに、ドキュメント作成・AutoRun・テスト実行を端末から回します。
-        <strong>この画面は使い方の案内です。実行は端末で行います。</strong>
-        CI や定期実行に組み込む用途を想定しています。
-      </p>
-    </div>
-
-    <section class="cli-section">
-      <h2>コマンドを組み立てる</h2>
-      <p class="cli-lead">
-        条件を選ぶと、そのまま貼り付けられるコマンドを作ります。
-        入口は <code>python src/cli.py &lt;コマンド&gt;</code> の一本で、
-        <code>--help</code> を付ければ端末側でも一覧を確認できます。
-      </p>
-      <p class="cli-lead">
-        実行前の準備: リポジトリのルートで <code>source venv/bin/activate</code> を実行し、仮想環境を有効化してください
-        （未作成の場合は <code>python -m venv venv &amp;&amp; source venv/bin/activate &amp;&amp; pip install -r requirements.txt</code>）。
-        OpenAI補完を使う場合のみ <code>export OPENAI_API_KEY=...</code> を設定します（未設定でも動作します）。
-      </p>
-      <div class="cli-builder">
-        <label class="cli-field">
-          <span>やること</span>
-          <select id="cli-cmd">
-            <option value="doc">{{ sysreg('doc').number }} {{ sysreg('doc').name }}（仕様書を生成）</option>
-            <option value="autorun">{{ sysreg('autorun').number }} {{ sysreg('autorun').name }}（解析からテスト実行まで全自動）</option>
-            <option value="test">テストケースを実行する</option>
-            <option value="sites">解析済みサイトを一覧する</option>
-            <option value="show">成果物の場所を確認する</option>
-            <option value="viewpoints">観点セットを一覧する</option>
-          </select>
-        </label>
-        <label class="cli-field" id="cli-url-field">
-          <span>対象 URL</span>
-          <input type="url" id="cli-url" placeholder="https://example.com" value="https://example.com">
-        </label>
-        <label class="cli-field cli-hidden" id="cli-domain-field">
-          <span>対象ドメイン</span>
-          <input type="text" id="cli-domain" placeholder="example.com" list="cli-domains">
-          <datalist id="cli-domains">
-            {% for d in domains %}<option value="{{ d }}"></option>{% endfor %}
-          </datalist>
-        </label>
-        <label class="cli-field cli-narrow" id="cli-depth-field">
-          <span>深さ</span>
-          <input type="number" id="cli-depth" value="2" min="1" max="10">
-        </label>
-        <label class="cli-field cli-narrow" id="cli-max-field">
-          <span>最大画面数</span>
-          <input type="number" id="cli-max" value="30" min="1" max="500">
-        </label>
-        <label class="cli-check"><input type="checkbox" id="cli-json"> 結果を JSON で受け取る（自動化向け）</label>
+  <main class="main">
+    {% set topbar_crumb = sysreg('cli').label ~ ' ' ~ sysreg('cli').name %}{% set topbar_title = 'コマンドビルダー' %}
+    {% include 'partials/topbar.html' %}
+    <div class="cli-content" id="cli-content">
+      <div class="c-page-head">
+        <div class="c-page-head__main">
+          <div class="sysselect-kicker">{{ sysreg('cli').label }}</div>
+          <p class="c-page-head__desc cli-first">端末で実行するコマンドを組み立てます。この画面では実行しません。</p>
+          <span class="c-page-head__state"><span class="c-status c-status--not_started"><span class="c-status__icon" aria-hidden="true">○</span>案内のみ</span></span>
+        </div>
       </div>
-      <div class="cli-out">
-        <code id="cli-command"></code>
-        <button type="button" class="cli-copy" id="cli-copy">コピー</button>
-      </div>
-    </section>
+      <p class="c-reason" id="cli-reason">状態の理由: この画面は端末の状況（Python・仮想環境・認証情報）を調べられないため、準備状況の多くは「未確認」です。端末で確かめてください。</p>
 
-    <section class="cli-section">
-      <h2>できること</h2>
-      <table class="cli-table">
-        <thead><tr><th>コマンド</th><th>内容</th><th>GUI の対応</th><th>コマンド例（コピペ可）</th></tr></thead>
-        <tbody>
-          <tr><td><code>doc</code></td><td>クロールして画面仕様書・遷移図・項目定義を生成</td><td>{{ sysreg('doc').number }} {{ sysreg('doc').name }}</td><td><code>python src/cli.py doc --url https://example.com --format html,md,json</code></td></tr>
-          <tr><td><code>autorun</code></td><td>解析 → 設計 → spec 生成 → テスト実行までを自動で通す</td><td>{{ sysreg('autorun').number }} {{ sysreg('autorun').name }}</td><td><code>python src/cli.py autorun --url https://example.com</code></td></tr>
-          <tr><td><code>test</code></td><td>テストケース表から Playwright を実行して結果を保存</td><td>レポートの「テスト実行」</td><td><code>python src/cli.py test --domain example.com</code></td></tr>
-          <tr><td><code>sites</code></td><td>解析済みサイトと画面数・項目数・履歴数の一覧</td><td>ホームの解析履歴</td><td><code>python src/cli.py sites</code></td></tr>
-          <tr><td><code>show</code></td><td>1 サイトの成果物の場所と、テスト実行の実績</td><td>レポートのエクスポート</td><td><code>python src/cli.py show --domain example.com</code></td></tr>
-          <tr><td><code>orchestrate</code></td><td>1 本の流れ（回す → 直す → 報告書）を起こして終わるまで待つ</td><td>指揮（全システム連携）</td><td><code>python -m web.services.cli_orchestration orchestrate --domain example.com --goal daily</code></td></tr>
-          <tr><td><code>viewpoints</code></td><td>観点セットの一覧（名称・公開版・観点数）</td><td>観点管理</td><td><code>python src/cli.py viewpoints</code></td></tr>
-        </tbody>
-      </table>
-    </section>
+      <section class="cli-section" id="cli-builder">
+        <h2>コマンドを組み立てる</h2>
+        <p class="cli-lead">
+          条件を選ぶと、貼り付けられるコマンドを作ります。入口は <code>python src/cli.py &lt;コマンド&gt;</code> の一本で、
+          <code>--help</code> を付ければ端末側でも一覧を確認できます。
+        </p>
+        <div class="cli-builder">
+          <label class="cli-field">
+            <span>モード</span>
+            <select id="cli-cmd">
+              <option value="doc">{{ sysreg('doc').number }} {{ sysreg('doc').name }}（仕様書を生成）</option>
+              <option value="autorun">{{ sysreg('autorun').number }} {{ sysreg('autorun').name }}（解析からテスト実行まで全自動）</option>
+              <option value="test">テストケースを実行する</option>
+              <option value="ci">CI の合否を判定する（ci gate）</option>
+              <option value="sites">解析済みサイトを一覧する</option>
+              <option value="show">成果物の場所を確認する</option>
+              <option value="viewpoints">観点セットを一覧する</option>
+            </select>
+          </label>
+          <label class="cli-field" id="cli-url-field">
+            <span>対象 URL</span>
+            <input type="url" id="cli-url" placeholder="https://example.com" value="https://example.com">
+          </label>
+          <label class="cli-field cli-hidden" id="cli-domain-field">
+            <span>対象サイト（解析済み）</span>
+            <input type="text" id="cli-domain" placeholder="example.com" list="cli-domains">
+            <datalist id="cli-domains">
+              {% for d in domains %}<option value="{{ d }}"></option>{% endfor %}
+            </datalist>
+          </label>
+          <label class="cli-field cli-narrow" id="cli-depth-field">
+            <span>深さ</span>
+            <input type="number" id="cli-depth" value="2" min="1" max="10">
+          </label>
+          <label class="cli-field cli-narrow" id="cli-max-field">
+            <span>最大画面数</span>
+            <input type="number" id="cli-max" value="30" min="1" max="500">
+          </label>
+          <label class="cli-field cli-narrow cli-hidden" id="cli-failon-field">
+            <span>落とす重大度</span>
+            <select id="cli-failon">
+              <option value="breaking">breaking</option>
+              <option value="warning">warning</option>
+              <option value="info">info</option>
+              <option value="any">any</option>
+              <option value="none">none</option>
+            </select>
+          </label>
+          <label class="cli-check"><input type="checkbox" id="cli-json"> 結果を JSON で受け取る（自動化向け）</label>
+        </div>
+        {% if not domains %}<p class="cli-hint" id="cli-nodomain">解析済みのサイトがまだありません。「ドキュメント作成」または「AutoRun」のコマンドで先に解析してください。</p>{% endif %}
+        <div class="cli-out">
+          <code id="cli-command" aria-label="組み立てたコマンド"></code>
+          <button type="button" class="c-btn c-btn--primary cli-copy" id="cli-copy">コピー</button>
+        </div>
+        <p class="cli-hint">コピーしても実行はされません。端末に貼り付けて実行してください。</p>
+      </section>
 
-    <section class="cli-section">
-      <h2>終了コード</h2>
-      <p class="cli-lead">CI から成否を判定できるように揃えてあります。</p>
-      <table class="cli-table cli-table-narrow">
-        <thead><tr><th>コード</th><th>意味</th></tr></thead>
-        <tbody>
-          <tr><td><code>0</code></td><td>正常終了</td></tr>
-          <tr><td><code>1</code></td><td>完了したが失敗を含む（テスト失敗・ドリフト検出）</td></tr>
-          <tr><td><code>2</code></td><td>実行エラー（対象に到達できない・設定不備など）</td></tr>
-          <tr><td><code>130</code></td><td>中止（タイムアウト・シグナル）</td></tr>
-        </tbody>
-      </table>
-    </section>
+      <section class="cli-section" id="cli-ready">
+        <h2>準備状況</h2>
+        <p class="cli-lead">この画面から分かる範囲だけ表示します。分からないものは「未確認」です。</p>
+        <div class="c-table-wrap">
+          <table class="c-table cli-ready-table">
+            <thead><tr><th>必要なもの</th><th>状態</th><th>確かめ方</th></tr></thead>
+            <tbody>
+              <tr><td data-label="必要なもの">Python 3</td><td data-label="状態"><span class="c-status c-status--unverified"><span class="c-status__icon" aria-hidden="true">◌</span>未確認</span></td><td data-label="確かめ方"><code>python --version</code></td></tr>
+              <tr><td data-label="必要なもの">仮想環境（venv）</td><td data-label="状態"><span class="c-status c-status--unverified"><span class="c-status__icon" aria-hidden="true">◌</span>未確認</span></td><td data-label="確かめ方"><code>source venv/bin/activate</code></td></tr>
+              <tr><td data-label="必要なもの">解析済みサイト</td><td data-label="状態">{% if domains %}<span class="c-status c-status--done"><span class="c-status__icon" aria-hidden="true">✓</span>確認済み</span> {{ domains|length }} 件{% else %}<span class="c-status c-status--not_started"><span class="c-status__icon" aria-hidden="true">○</span>未開始</span> 0 件{% endif %}</td><td data-label="確かめ方"><code>python src/cli.py sites</code></td></tr>
+              <tr><td data-label="必要なもの">ログイン情報（要る場合）</td><td data-label="状態"><span class="c-status c-status--unverified"><span class="c-status__icon" aria-hidden="true">◌</span>未確認</span></td><td data-label="確かめ方"><code>--login-user</code> / <code>--login-pass</code></td></tr>
+              <tr><td data-label="必要なもの">OpenAI 補完（使う場合のみ）</td><td data-label="状態"><span class="c-status c-status--unverified"><span class="c-status__icon" aria-hidden="true">◌</span>未確認</span></td><td data-label="確かめ方"><code>export OPENAI_API_KEY=...</code>（未設定でも動作します）</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="cli-hint">未作成なら <code>python -m venv venv &amp;&amp; source venv/bin/activate &amp;&amp; pip install -r requirements.txt</code>。</p>
+      </section>
 
-    <section class="cli-section">
-      <h2>知っておくこと</h2>
-      <ul class="cli-notes">
-        <li><strong>ログインが必要な画面</strong>は、<code>--login-user</code> / <code>--login-pass</code> を渡さない限りスキップします。
-          その場合は成果物に「未ログイン範囲のみ」と記録されます。スキップさせたくないときは <code>--require-login</code> を付けると、資格情報が無いときに中止します。</li>
-        <li><strong>段階承認</strong>は CLI では人が判断できないため自動で通します。何を自動で通したかは実行結果に必ず出ます。</li>
-        <li>GUI を起動する必要はありません。CLI は Flask のリクエストコンテキストを使いません。</li>
-      </ul>
-    </section>
+      <section class="cli-section" id="cli-commands">
+        <h2>できること</h2>
+        <div class="c-table-wrap">
+          <table class="c-table cli-table">
+            <thead><tr><th>コマンド</th><th>内容</th><th>GUI の対応</th><th>コマンド例</th></tr></thead>
+            <tbody>
+              <tr><td data-label="コマンド"><code>doc</code></td><td data-label="内容">クロールして画面仕様書・遷移図・項目定義を生成</td><td data-label="GUI の対応">{{ sysreg('doc').label }} {{ sysreg('doc').name }}</td><td data-label="コマンド例"><code>python src/cli.py doc --url https://example.com --format html,md,json</code></td></tr>
+              <tr><td data-label="コマンド"><code>autorun</code></td><td data-label="内容">解析 → 設計 → spec 生成 → テスト実行までを自動で通す</td><td data-label="GUI の対応">{{ sysreg('autorun').label }} {{ sysreg('autorun').name }}</td><td data-label="コマンド例"><code>python src/cli.py autorun --url https://example.com</code></td></tr>
+              <tr><td data-label="コマンド"><code>test</code></td><td data-label="内容">テストケース表から Playwright を実行して結果を保存</td><td data-label="GUI の対応">{{ sysreg('test').label }} {{ sysreg('test').name }}</td><td data-label="コマンド例"><code>python src/cli.py test --domain example.com</code></td></tr>
+              <tr><td data-label="コマンド"><code>ci gate</code></td><td data-label="内容">ドリフトとテスト結果で CI を通す／落とす（既存の成果物を読むだけ）</td><td data-label="GUI の対応">なし（CI 専用）</td><td data-label="コマンド例"><code>python src/cli.py ci gate --domain example.com --fail-on breaking</code></td></tr>
+              <tr><td data-label="コマンド"><code>sites</code></td><td data-label="内容">解析済みサイトと画面数・項目数・履歴数の一覧</td><td data-label="GUI の対応">ホームの解析履歴</td><td data-label="コマンド例"><code>python src/cli.py sites</code></td></tr>
+              <tr><td data-label="コマンド"><code>show</code></td><td data-label="内容">1 サイトの成果物の場所と、テスト実行の実績</td><td data-label="GUI の対応">レポートのエクスポート</td><td data-label="コマンド例"><code>python src/cli.py show --domain example.com</code></td></tr>
+              <tr><td data-label="コマンド"><code>orchestrate</code></td><td data-label="内容">1 本の流れ（回す → 直す → 報告書）を起こして終わるまで待つ</td><td data-label="GUI の対応">指揮（全システム連携）</td><td data-label="コマンド例"><code>python -m web.services.cli_orchestration orchestrate --domain example.com --goal daily</code></td></tr>
+              <tr><td data-label="コマンド"><code>viewpoints</code></td><td data-label="内容">観点セットの一覧（名称・公開版・観点数）</td><td data-label="GUI の対応">観点管理</td><td data-label="コマンド例"><code>python src/cli.py viewpoints</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="cli-section" id="cli-exit">
+        <h2>終了コード</h2>
+        <p class="cli-lead">CI から成否を判定できるように揃えてあります。<code>ci gate</code> も同じ規約で、基準を超えると 1 で落ちます。</p>
+        <div class="c-table-wrap">
+          <table class="c-table cli-table cli-table-narrow">
+            <thead><tr><th>コード</th><th>意味</th></tr></thead>
+            <tbody>
+              <tr><td data-label="コード"><code>0</code></td><td data-label="意味">正常終了（<code>ci gate</code> は合格）</td></tr>
+              <tr><td data-label="コード"><code>1</code></td><td data-label="意味">完了したが失敗を含む（テスト失敗・ドリフト検出・<code>ci gate</code> の不合格）</td></tr>
+              <tr><td data-label="コード"><code>2</code></td><td data-label="意味">実行エラー（対象に到達できない・設定不備など）</td></tr>
+              <tr><td data-label="コード"><code>130</code></td><td data-label="意味">中止（タイムアウト・シグナル）</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="cli-section">
+        <h2>知っておくこと</h2>
+        <ul class="cli-notes">
+          <li><strong>ログインが必要な画面</strong>は、<code>--login-user</code> / <code>--login-pass</code> を渡さない限りスキップします。
+            その場合は成果物に「未ログイン範囲のみ」と記録されます。スキップさせたくないときは <code>--require-login</code> を付けると、資格情報が無いときに中止します。</li>
+          <li><strong>段階承認</strong>は CLI では人が判断できないため自動で通します。何を自動で通したかは実行結果に必ず出ます。</li>
+        </ul>
+      </section>
+
+      <details class="cli-dev" id="cli-dev">
+        <summary>開発者向けの説明</summary>
+        <ul class="cli-notes">
+          <li>CLI は Flask のリクエストコンテキストを使いません。GUI を起動する必要はありません。</li>
+          <li>入口は <code>src/cli.py</code>。<code>--json</code> を付けると機械可読の結果を標準出力に出します。</li>
+          <li>CI では <code>ci gate --junit-xml out.xml</code> で JUnit XML を書き出せます。<code>GITHUB_STEP_SUMMARY</code> が設定されていれば要約も追記します。</li>
+          <li>許容値は <code>--max-failed</code>（テスト失敗数）・<code>--max-added</code> / <code>--max-removed</code>（画面の増減）で調整します。</li>
+        </ul>
+      </details>
+    </div>
   </main>
+</div>
 
-  <script src="{{ url_for('static', filename='js/c-hybrid.js') }}?v={{ _ver }}"></script>
-  <script src="{{ url_for('static', filename='js/cli-mode.js') }}?v={{ _ver }}"></script>
+<script src="{{ url_for('static', filename='js/c-hybrid.js') }}?v={{ _ver }}"></script>
+<script src="{{ url_for('static', filename='js/user-menu.js') }}?v={{ _ver }}"></script>
+<script src="{{ url_for('static', filename='js/cli-mode.js') }}?v={{ _ver }}"></script>
 </body>
 </html>

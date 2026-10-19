@@ -216,10 +216,30 @@ class TestCliModePage:
         res = client.get("/cli", headers=H)
         assert res.status_code == 200
         html = res.get_data(as_text=True)
-        assert "CLI モード" in html
+        assert "コマンドビルダー" in html
         assert "src/cli.py" in html
         # 終了コードの説明は CI 組み込みの前提なので必ず載せる
         assert "130" in html
+
+    def test_cli_page_is_guidance_only_and_numbers_match_registry(self, client) -> None:
+        """実行したように見せない・System 番号は registry と一致・ci gate を載せる。"""
+        from web.system_registry import SYSTEMS
+
+        s = {x.key: x for x in SYSTEMS}
+        html = client.get("/cli", headers=H).get_data(as_text=True)
+        assert "この画面では実行しません" in html
+        assert s["cli"].label == "System 04" and s["cli"].label in html
+        assert f"{s['autorun'].number} {s['autorun'].name}" in html
+        assert f"{s['doc'].number} {s['doc'].name}" in html
+        assert "ci gate" in html
+        assert "未確認" in html  # 端末の状況は分からないので準備状況は未確認で出す
+        assert "WebSpec2Doc" in html and "app-breadcrumb" in html
+
+    def test_cli_copy_messages_in_js(self) -> None:
+        js = (ROOT / "static" / "js" / "cli-mode.js").read_text(encoding="utf-8")
+        assert "コピーしました（端末に貼り付けて実行してください）" in js
+        assert "手動でコピーしてください" in js
+        assert "'gate'" in js  # ci モードは gate を付ける
 
 
 class TestViewpointAndReviewSubcommands:

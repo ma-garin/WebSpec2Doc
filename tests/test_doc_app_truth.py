@@ -31,6 +31,24 @@ def test_doc_app_shows_prototype_note() -> None:
     assert "APK / .app から" not in html
 
 
+def test_doc_app_prototype_panel_and_primary_action() -> None:
+    html = _html()
+    assert html.index("ドキュメント作成(app)は試作です") < html.index('id="wizard-p1"')
+    for word in ("できること", "できないこと", "SampleShop で出力の形を確かめる", "APK・.app の実解析",
+                 "エミュレータ・実機での操作", "未到達 Activity の洗い出し", "自分のアプリの解析",
+                 "サンプルデータ（固定 6 画面）", "実解析は未対応のため、サンプルデータで表示しています",
+                 "css/doc-app.css"):
+        assert word in html, word
+    assert re.search(r'id="discover-btn"[^>]*>\s*サンプルで出力を見る\s*<', html)
+    assert ">画面解析<" not in html
+    assert html.count("サンプルデータの再生結果（実アプリの仕様ではありません）") == 1
+
+
+def test_url_mode_has_no_prototype_panel() -> None:
+    html = appmod.app.test_client().get("/").get_data(as_text=True)
+    assert "doc-app-proto" not in html and "css/doc-app.css" not in html
+
+
 def test_doc_app_inputs_are_disabled() -> None:
     html = _html()
     for tag_id in ("app-file", "app-device"):

@@ -16,7 +16,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/c-hybrid.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/c-shell.css') }}?v={{ _ver }}">
 </head>
-<body class="app-page cw-page" data-site="{{ site }}" data-hl-admin="{{ 'true' if (not auth_user or auth_user.role == 'admin') else 'false' }}">
+<body class="app-page cw-page{% if mode == 'home' %} cw-home{% endif %}" data-mode="{{ mode }}" data-site="{{ site }}" data-hl-admin="{{ 'true' if (not auth_user or auth_user.role == 'admin') else 'false' }}">
 <a href="#app-content" class="skip-link">本文へスキップ</a>
 <div class="app-shell">
 
@@ -28,6 +28,31 @@
     {% include 'partials/topbar.html' %}
 
     <main class="app-content" id="app-content">
+      {% if mode == 'home' %}
+      <section id="ch-home" class="ch-home" aria-labelledby="ch-title">
+        <header class="c-page-head">
+          <div class="c-page-head__main">
+            <h1 id="ch-title" class="c-page-head__title">指揮ホーム</h1>
+            <p class="c-page-head__desc">全サイトの状態と、人の対応が必要なものを 1 画面で。</p>
+          </div>
+          <div class="c-page-head__actions">
+            <a class="c-btn c-btn--secondary" href="/orchestration?mode=detail">サイトを追加</a>
+            <button type="button" class="c-btn c-btn--ghost" id="ch-reload">再読み込み</button>
+          </div>
+        </header>
+        <div id="ch-reason" class="c-reason" role="status" aria-live="polite"></div>
+        <div id="ch-banner"></div>
+        <div id="ch-split" class="c-split" aria-label="根拠の 3 区分"></div>
+        <div id="ch-kpis" aria-label="全体の数字"></div>
+        <div id="ch-tabs" class="c-tabs" role="tablist" aria-label="保存ビュー"></div>
+        <div id="ch-body" role="tabpanel" aria-live="polite" tabindex="-1"></div>
+      </section>
+      {% else %}
+      <nav class="ch-crumb" aria-label="パンくず">
+        <a href="/orchestration">指揮ホーム</a><span aria-hidden="true"> › </span><span aria-current="page">個別実行詳細</span>
+      </nav>
+      {% endif %}
+      <div id="cw-detail"{% if mode == 'home' %} hidden{% endif %}>
       <header class="cw-head">
         <select id="cw-site" class="hl-select" hidden></select>
         <span id="cw-rounds" class="cw-rounds"></span>
@@ -64,6 +89,7 @@
       </section>
 
       <div id="cw-toast" class="cw-toast" hidden></div>
+      </div>
     </main>
   </div>
 </div>

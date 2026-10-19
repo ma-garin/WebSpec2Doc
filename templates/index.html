@@ -24,7 +24,8 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='vendor/driver.js/driver.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/c-hybrid.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/c-shell.css') }}?v={{ _ver }}">
-</head>
+{% if app_mode %}  <link rel="stylesheet" href="{{ url_for('static', filename='css/doc-app.css') }}?v={{ _ver }}">
+{% endif %}</head>
 <body class="app-page"{% if app_mode %} data-app-mode="1"{% endif %}>
 <a href="#app-content" class="skip-link">本文へスキップ</a>
 <div class="app-shell">

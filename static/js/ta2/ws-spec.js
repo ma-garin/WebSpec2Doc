@@ -357,6 +357,8 @@
     if (screen) { screen.hidden = (m !== 'screen'); screen.style.display = m === 'screen' ? '' : 'none'; }
     if (cases) { cases.hidden = (m !== 'cases'); cases.style.display = m === 'cases' ? '' : 'none'; }
     if (tech) { tech.hidden = (m !== 'tech'); tech.style.display = m === 'tech' ? '' : 'none'; }
+    var reverse = $('#spec-reverse');
+    if (reverse) { reverse.hidden = (m !== 'reverse'); reverse.style.display = m === 'reverse' ? '' : 'none'; }
     var seg = $('#spec-seg');
     if (seg) {
       Array.prototype.forEach.call(seg.querySelectorAll('button'), function (b, i) {
@@ -366,6 +368,7 @@
     }
     if (m === 'cases') mountCases();
     if (m === 'tech' && T.techRender) T.techRender((T.state.spec || {}).sel || '');
+    if (m === 'reverse' && T.reverseRender && reverse) T.reverseRender(reverse, T.state.domain);
   }
 
   function mountCases() {

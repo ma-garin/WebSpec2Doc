@@ -115,6 +115,9 @@ def create_app() -> Flask:
     app.register_blueprint(pages.bp)
     app.register_blueprint(discover.bp)
     app.register_blueprint(site.bp)
+    from web.routes import reverse_analysis as reverse_analysis_routes
+
+    app.register_blueprint(reverse_analysis_routes.bp)
     app.register_blueprint(login.bp)
     app.register_blueprint(record.bp)
     app.register_blueprint(report.bp)
